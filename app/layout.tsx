@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { ThemeProvider } from "@/components/theme-provider";
+import { ThemeToggle } from "@/components/theme-toggle";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -27,8 +29,19 @@ export default function RootLayout({
     <html
       lang="ko"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <ThemeProvider>
+          <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur">
+            <div className="mx-auto flex h-14 max-w-4xl items-center justify-between px-4">
+              <span className="font-semibold text-sm">한국 부동산 세금 계산기</span>
+              <ThemeToggle />
+            </div>
+          </header>
+          {children}
+        </ThemeProvider>
+      </body>
     </html>
   );
 }
