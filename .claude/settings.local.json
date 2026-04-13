@@ -9,7 +9,13 @@
       "Skill(pdca)",
       "Bash(npx create-next-app@latest:*)",
       "Bash(npm install:*)",
-      "Bash(npx shadcn@latest:*)"
+      "Bash(npx shadcn@latest:*)",
+      "Bash(mkdir -p /Users/mynote/workspace/claude-code-mastery/app/result/\\\\[id\\\\])",
+      "Bash(mkdir -p /Users/mynote/workspace/claude-code-mastery/app/guide/\\\\[slug\\\\])",
+      "Bash(npm test:*)",
+      "Bash(git init:*)",
+      "Bash(npm run:*)",
+      "Skill(commit)"
     ]
   }
 }
