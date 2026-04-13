@@ -17,3 +17,17 @@ export class TaxCalculationError extends Error {
     this.name = "TaxCalculationError";
   }
 }
+
+export class TaxRateNotFoundError extends TaxCalculationError {
+  constructor(message: string) {
+    super(TaxErrorCode.TAX_RATE_NOT_FOUND, message);
+    this.name = "TaxRateNotFoundError";
+  }
+}
+
+export class TaxRateValidationError extends TaxCalculationError {
+  constructor(message: string) {
+    super(TaxErrorCode.RATE_SCHEMA_MISMATCH, message);
+    this.name = "TaxRateValidationError";
+  }
+}
