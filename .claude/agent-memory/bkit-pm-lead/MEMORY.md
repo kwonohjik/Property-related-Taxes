@@ -1,0 +1,1 @@
+- [KoreanTaxCalc PM Analysis](project_korean_tax_calc.md) — PRD completed 2026-04-13, Beachhead: Seoul/Gyeonggi sellers, MVP: capital gains tax

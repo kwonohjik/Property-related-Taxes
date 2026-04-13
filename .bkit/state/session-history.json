@@ -1,0 +1,82 @@
+[
+  {
+    "sessionId": "689b7424-ed0f-45af-89e0-befa906db1db",
+    "reason": "other",
+    "endedAt": "2026-04-13T14:15:56.069Z",
+    "feature": null,
+    "phase": null,
+    "progress": null
+  },
+  {
+    "sessionId": "1e7fad13-ebf5-4ffe-b528-1acb3bad5024",
+    "reason": "other",
+    "endedAt": "2026-04-13T14:15:59.526Z",
+    "feature": null,
+    "phase": null,
+    "progress": null
+  },
+  {
+    "sessionId": "968b82ee-45d9-42f5-9747-6071e15b689d",
+    "reason": "clear",
+    "endedAt": "2026-04-13T14:39:05.428Z",
+    "feature": null,
+    "phase": null,
+    "progress": null
+  },
+  {
+    "sessionId": "466b1254-8cad-44c1-bf0a-a7a9a45385a4",
+    "reason": "prompt_input_exit",
+    "endedAt": "2026-04-13T14:47:29.908Z",
+    "feature": null,
+    "phase": null,
+    "progress": null
+  },
+  {
+    "sessionId": "52bafa97-fc84-4d39-8037-9db343a71a62",
+    "reason": "other",
+    "endedAt": "2026-04-13T15:01:15.500Z",
+    "feature": null,
+    "phase": null,
+    "progress": null
+  },
+  {
+    "sessionId": "37585d95-ba8b-4c44-b4ad-45014a0c7464",
+    "reason": "other",
+    "endedAt": "2026-04-13T15:02:50.287Z",
+    "feature": null,
+    "phase": null,
+    "progress": null
+  },
+  {
+    "sessionId": "ce3b9d1b-c046-4919-b694-9fbea4e49079",
+    "reason": "other",
+    "endedAt": "2026-04-13T15:03:43.799Z",
+    "feature": null,
+    "phase": null,
+    "progress": null
+  },
+  {
+    "sessionId": "3a5a5c1b-def0-4e79-ba81-4537cc4b76ab",
+    "reason": "prompt_input_exit",
+    "endedAt": "2026-04-13T15:28:45.806Z",
+    "feature": null,
+    "phase": null,
+    "progress": null
+  },
+  {
+    "sessionId": "e7278107-ce37-4e29-b283-9d79a6762053",
+    "reason": "other",
+    "endedAt": "2026-04-13T15:29:21.883Z",
+    "feature": null,
+    "phase": null,
+    "progress": null
+  },
+  {
+    "sessionId": "dd366626-e130-4620-af20-6d3ab98df24a",
+    "reason": "prompt_input_exit",
+    "endedAt": "2026-04-13T20:59:16.852Z",
+    "feature": null,
+    "phase": null,
+    "progress": null
+  }
+]

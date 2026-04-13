@@ -1,0 +1,29 @@
+[
+  {
+    "timestamp": "2026-04-13T13:52:25.687Z",
+    "errorType": "unknown",
+    "category": "unknown",
+    "severity": "low",
+    "agentId": "af2d5126f9935871e",
+    "agentType": null,
+    "message": ""
+  },
+  {
+    "timestamp": "2026-04-13T13:52:27.751Z",
+    "errorType": "unknown",
+    "category": "unknown",
+    "severity": "low",
+    "agentId": null,
+    "agentType": null,
+    "message": ""
+  },
+  {
+    "timestamp": "2026-04-13T15:28:10.250Z",
+    "errorType": "unknown",
+    "category": "unknown",
+    "severity": "low",
+    "agentId": null,
+    "agentType": null,
+    "message": ""
+  }
+]

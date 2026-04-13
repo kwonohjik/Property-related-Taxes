@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cp ~/.claude/settings.json ~/.claude/settings.json.bak)",
+      "Read(//Users/mynote/.claude/**)",
+      "Skill(update-config)",
+      "WebSearch",
+      "Skill(bkit:pdca)",
+      "Skill(pdca)",
+      "Bash(npx create-next-app@latest:*)",
+      "Bash(npm install:*)",
+      "Bash(npx shadcn@latest:*)"
+    ]
+  }
+}
