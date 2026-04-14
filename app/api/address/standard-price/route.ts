@@ -2,16 +2,17 @@
  * 공시지가·기준시가 조회 API — Vworld NED(국토정보) 오픈 API 프록시
  *
  * GET /api/address/standard-price
- *   ?jibun={지번주소}         필수 (PNU 구성에 사용)
- *   &propertyType={housing|land|building}
+ *   ?pnu={19자리PNU}           우선 사용 (검색 API의 item.id)
+ *   &jibun={지번주소}          pnu 없을 때 자동 PNU 구성에 사용
+ *   &propertyType={housing|land}
  *   &year={YYYY}
+ *   &dong={동명}               선택 시 해당 동·호 가격 반환
+ *   &ho={호명}
  *
- * PNU 구성 단계:
- *   1) jibun → Vworld 주소변환 API (/req/address) → 법정동코드(10자리) 획득
- *   2) 법정동코드 + 지번 본번/부번 → PNU(19자리) 직접 구성
- *   3) NED API로 공시가격 조회
- *
- * 필요 Vworld 서비스: "검색 2.0" (주소변환 포함) + "국토정보(NED)"
+ * 응답:
+ *   - units: 전체 동·호 목록 (프론트 드롭다운용)
+ *   - priceType: "apart_housing_price" | "indvd_housing_price" | "land_price"
+ *   - 선택된 dong·ho 기준 price 포함
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -19,12 +20,15 @@ import { NextRequest, NextResponse } from "next/server";
 const VWORLD_ADDR_URL = "https://api.vworld.kr/req/address";
 const VWORLD_NED_URL  = "https://api.vworld.kr/ned/data";
 
+const VWORLD_DOMAIN      = process.env.VWORLD_DOMAIN ?? "http://localhost:3000";
+const VWORLD_DOMAIN_HOST = new URL(VWORLD_DOMAIN).hostname;
+
 // ──────────────────────────────────────────────────
 // 타입
 // ──────────────────────────────────────────────────
 
 interface AddrStructure {
-  level4LC?: string; // 법정동코드 10자리
+  level4LC?: string;
   [key: string]: unknown;
 }
 
@@ -32,134 +36,159 @@ interface AddrResponse {
   response?: {
     status?: string;
     refined?: { structure?: AddrStructure };
-    error?: { text?: string };
   };
 }
 
-interface NedPriceItem {
+export interface NedPriceItem {
   pnu?: string;
   stdrYear?: string;
-  pblntfPclnd?: string; // 개별공시지가 (원/㎡)
-  pblntfPc?: string;    // 공시가격 (원)
+  stdrMt?: string;
+  pblntfPclnd?: string;
+  pblntfPc?: string;
+  dongNm?: string;
+  hoNm?: string;
+  floorNm?: string;
+  prvuseAr?: string;
+  aphusNm?: string;
+  aphusSeCodeNm?: string;
+  ldCodeNm?: string;
   [key: string]: unknown;
 }
 
-interface NedResponse {
-  indvdLandPrices?:    { field?: NedPriceItem | NedPriceItem[] };
-  apartHousingPrices?: { field?: NedPriceItem | NedPriceItem[] };
-  indvdHousingPrices?: { field?: NedPriceItem | NedPriceItem[] };
-  result?: { resultCode?: string; resultMsg?: string };
+interface NedRawResponse {
+  indvdLandPrices?:    { field?: NedPriceItem | NedPriceItem[]; totalCount?: string };
+  apartHousingPrices?: { field?: NedPriceItem | NedPriceItem[]; totalCount?: string };
+  indvdHousingPrices?: { field?: NedPriceItem | NedPriceItem[]; totalCount?: string };
+  response?: { totalCount?: string; resultCode?: string };
 }
 
 // ──────────────────────────────────────────────────
-// 법정동코드 조회 (Vworld /req/address)
+// 법정동코드 조회 → PNU 구성 (jibun 기반 fallback)
 // ──────────────────────────────────────────────────
 
 async function getLegalDongCode(jibun: string, apiKey: string): Promise<string | null> {
   const params = new URLSearchParams({
-    service: "address",
-    request: "getcoord",
-    version: "2.0",
-    crs: "epsg:4326",
-    address: jibun,
-    refine: "true",
-    simple: "false",
-    format: "json",
-    type: "parcel",
-    key: apiKey,
+    service: "address", request: "getcoord", version: "2.0",
+    crs: "epsg:4326", address: jibun, refine: "true",
+    simple: "false", format: "json", type: "parcel", key: apiKey,
   });
-
   try {
-    const res = await fetch(`${VWORLD_ADDR_URL}?${params.toString()}`, {
+    const res = await fetch(`${VWORLD_ADDR_URL}?${params}`, {
       cache: "no-store",
-      headers: { Accept: "application/json" },
+      headers: { Accept: "application/json", Referer: VWORLD_DOMAIN },
     });
     if (!res.ok) return null;
     const data: AddrResponse = await res.json();
     if (data.response?.status !== "OK") return null;
-
     const code = data.response?.refined?.structure?.level4LC;
-    if (!code || code.length < 10) return null;
-    return code.slice(0, 10); // 법정동코드 10자리
-  } catch {
-    return null;
-  }
+    return code && code.length >= 10 ? code.slice(0, 10) : null;
+  } catch { return null; }
 }
 
-// ──────────────────────────────────────────────────
-// PNU 구성 (법정동코드 + 지번 파싱)
-// 형식: 법정동코드(10) + 산여부(1) + 본번(4) + 부번(4) = 19자리
-// ──────────────────────────────────────────────────
-
 function buildPnu(legalDongCode: string, jibun: string): string | null {
-  // 지번 마지막 토큰 추출: "서울특별시 강남구 역삼동 123-45" → "123-45"
   const parts = jibun.trim().split(/\s+/);
   let token = parts[parts.length - 1] ?? "";
-
-  let isMountain = "0";
-  if (token.startsWith("산")) {
-    isMountain = "1";
-    token = token.slice(1);
-  }
-
+  // 대지구분: 1 = 대지(일반토지), 2 = 산(임야)
+  let landType = "1";
+  if (token.startsWith("산")) { landType = "2"; token = token.slice(1); }
   const [mainStr, subStr] = token.split("-");
   const mainNum = parseInt(mainStr ?? "0", 10);
   const subNum  = parseInt(subStr  ?? "0", 10);
-
   if (isNaN(mainNum) || mainNum <= 0) return null;
-
-  const pnu =
-    legalDongCode +
-    isMountain +
-    String(mainNum).padStart(4, "0") +
-    String(subNum).padStart(4, "0");
-
+  const pnu = legalDongCode + landType
+    + String(mainNum).padStart(4, "0")
+    + String(subNum).padStart(4, "0");
   return pnu.length === 19 ? pnu : null;
 }
 
 // ──────────────────────────────────────────────────
-// NED API 호출
+// NED API 호출 — 전체 페이지 수집
 // ──────────────────────────────────────────────────
 
-async function callNed(endpoint: string, pnu: string, year: string, apiKey: string): Promise<NedResponse | null> {
-  const params = new URLSearchParams({
-    key: apiKey,
-    pnu,
-    stdrYear: year,
-    format: "json",
-    numOfRows: "10",
-    pageNo: "1",
-  });
-  try {
-    const res = await fetch(`${VWORLD_NED_URL}/${endpoint}?${params.toString()}`, {
-      cache: "no-store",
-      headers: { Accept: "application/json" },
+async function callNedAllPages(
+  endpoint: string,
+  pnu: string,
+  year: string,
+  apiKey: string,
+  responseKey: "apartHousingPrices" | "indvdHousingPrices" | "indvdLandPrices",
+): Promise<NedPriceItem[]> {
+  const allItems: NedPriceItem[] = [];
+  let pageNo = 1;
+
+  while (true) {
+    const params = new URLSearchParams({
+      key: apiKey, pnu, stdrYear: year,
+      format: "json", numOfRows: "1000",
+      pageNo: String(pageNo),
+      domain: VWORLD_DOMAIN_HOST,
     });
-    if (!res.ok) return null;
-    return (await res.json()) as NedResponse;
-  } catch {
-    return null;
+    try {
+      const res = await fetch(`${VWORLD_NED_URL}/${endpoint}?${params}`, {
+        cache: "no-store",
+        headers: { Accept: "application/json", Referer: VWORLD_DOMAIN },
+      });
+      if (!res.ok) break;
+      const data = (await res.json()) as NedRawResponse;
+      const container = data[responseKey];
+      if (!container) break;
+
+      const raw = container.field;
+      const items = raw ? (Array.isArray(raw) ? raw : [raw]) : [];
+      allItems.push(...items);
+
+      const total = parseInt(container.totalCount ?? "0", 10);
+      if (allItems.length >= total || items.length === 0) break;
+      pageNo++;
+    } catch { break; }
   }
+
+  return allItems;
 }
 
-function extractPrice(
-  payload: NedResponse,
-  key: keyof NedResponse,
+// ──────────────────────────────────────────────────
+// 동·호 필터링 + 가격 추출
+// ──────────────────────────────────────────────────
+
+function pickUnit(
+  items: NedPriceItem[],
   priceField: "pblntfPclnd" | "pblntfPc",
-): { year: string; price: number } | null {
-  const container = payload[key] as { field?: NedPriceItem | NedPriceItem[] } | undefined;
-  if (!container) return null;
-  const raw = container.field;
-  if (!raw) return null;
-  const items = Array.isArray(raw) ? raw : [raw];
-  const sorted = items
+  dong?: string,
+  ho?: string,
+): { price: number; item: NedPriceItem } | null {
+  let candidates = items;
+
+  if (dong || ho) {
+    const cleanDong = dong?.replace(/동$/, "").trim() ?? "";
+    const cleanHo   = ho?.replace(/호$/, "").trim() ?? "";
+    const matched = items.filter((it) => {
+      const iDong = String(it.dongNm ?? "").replace(/동$/, "").trim();
+      const iHo   = String(it.hoNm   ?? "").replace(/호$/, "").trim();
+      return (!cleanDong || iDong === cleanDong) && (!cleanHo || iHo === cleanHo);
+    });
+    if (matched.length > 0) candidates = matched;
+  }
+
+  // 최신 연도 우선
+  const sorted = candidates
     .map((it) => ({
-      year: String(it.stdrYear ?? ""),
       price: parseInt(String(it[priceField] ?? "0").replace(/[^0-9]/g, ""), 10) || 0,
+      item: it,
     }))
-    .filter((it) => it.price > 0)
-    .sort((a, b) => b.year.localeCompare(a.year));
+    .filter((x) => x.price > 0)
+    .sort((a, b) => (b.item.stdrYear ?? "").localeCompare(a.item.stdrYear ?? ""));
   return sorted[0] ?? null;
+}
+
+// 동·호 드롭다운용 unit 목록 생성
+function buildUnitList(items: NedPriceItem[], priceField: "pblntfPclnd" | "pblntfPc") {
+  return items.map((it) => ({
+    dong:          it.dongNm ?? "",
+    ho:            it.hoNm ?? "",
+    floor:         it.floorNm ?? "",
+    exclusiveArea: it.prvuseAr ? parseFloat(it.prvuseAr) : undefined,
+    price:         parseInt(String(it[priceField] ?? "0").replace(/[^0-9]/g, ""), 10) || 0,
+    year:          it.stdrYear ?? "",
+  }));
 }
 
 // ──────────────────────────────────────────────────
@@ -168,16 +197,12 @@ function extractPrice(
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-  const jibun        = searchParams.get("jibun") ?? "";
+  let   pnu          = searchParams.get("pnu")?.trim() ?? "";
+  const jibun        = searchParams.get("jibun")?.trim() ?? "";
   const propertyType = searchParams.get("propertyType") ?? "housing";
   const year         = searchParams.get("year") ?? String(new Date().getFullYear());
-
-  if (!jibun.trim()) {
-    return NextResponse.json(
-      { error: { code: "MISSING_JIBUN", message: "jibun(지번 주소) 파라미터가 필요합니다." } },
-      { status: 400 },
-    );
-  }
+  const dong         = searchParams.get("dong") ?? undefined;
+  const ho           = searchParams.get("ho") ?? undefined;
 
   const apiKey = process.env.VWORLD_API_KEY;
   if (!apiKey) {
@@ -187,97 +212,86 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  // 1) 법정동코드 조회
-  const dongCode = await getLegalDongCode(jibun, apiKey);
-  if (!dongCode) {
-    return NextResponse.json(
-      {
-        error: {
-          code: "DONG_CODE_NOT_FOUND",
-          message:
-            "법정동코드를 조회할 수 없습니다. " +
-            "Vworld 인증키에 '주소변환' 서비스 권한이 필요하거나, 지번 주소를 확인해 주세요.",
-        },
-      },
-      { status: 404 },
-    );
-  }
-
-  // 2) PNU 구성
-  const pnu = buildPnu(dongCode, jibun);
+  // PNU 확보 — 직접 전달이 없으면 jibun에서 구성
   if (!pnu) {
-    return NextResponse.json(
-      {
-        error: {
-          code: "PNU_BUILD_FAILED",
-          message: `법정동코드(${dongCode})와 지번(${jibun})으로 PNU를 구성할 수 없습니다.`,
-        },
-      },
-      { status: 422 },
-    );
+    if (!jibun) {
+      return NextResponse.json(
+        { error: { code: "MISSING_PNU", message: "pnu 또는 jibun 파라미터가 필요합니다." } },
+        { status: 400 },
+      );
+    }
+    const dongCode = await getLegalDongCode(jibun, apiKey);
+    if (!dongCode) {
+      return NextResponse.json(
+        { error: { code: "DONG_CODE_NOT_FOUND", message: "법정동코드를 조회할 수 없습니다. 지번 주소를 확인해 주세요." } },
+        { status: 404 },
+      );
+    }
+    const built = buildPnu(dongCode, jibun);
+    if (!built) {
+      return NextResponse.json(
+        { error: { code: "PNU_BUILD_FAILED", message: `법정동코드(${dongCode})와 지번(${jibun})으로 PNU를 구성할 수 없습니다.` } },
+        { status: 422 },
+      );
+    }
+    pnu = built;
   }
 
-  // 3) NED API 호출
   try {
-    if (propertyType === "land" || propertyType === "building") {
-      const res = await callNed("getIndvdLandPriceAttr", pnu, year, apiKey);
-      const price = res ? extractPrice(res, "indvdLandPrices", "pblntfPclnd") : null;
-      if (!price) {
+    // ── 토지 ──────────────────────────────────────
+    if (propertyType === "land") {
+      const items = await callNedAllPages("getIndvdLandPriceAttr", pnu, year, apiKey, "indvdLandPrices");
+      const hit = pickUnit(items, "pblntfPclnd", dong, ho);
+      if (!hit) {
         return NextResponse.json(
-          {
-            error: {
-              code: "PRICE_NOT_FOUND",
-              message: `개별공시지가 조회 실패 (PNU: ${pnu}). Vworld 인증키에 '국토정보(NED)' 서비스 권한을 추가하세요.`,
-            },
-            pnu,
-            dongCode,
-          },
+          { error: { code: "PRICE_NOT_FOUND", message: `개별공시지가 없음 (PNU: ${pnu}, ${year}년)` }, pnu },
           { status: 404 },
         );
       }
       return NextResponse.json({
-        pnu, dongCode,
-        type: "land_price",
-        year: price.year,
-        pricePerSqm: price.price,
-        message: `${price.year}년 개별공시지가 (원/㎡)`,
+        pnu, priceType: "land_price",
+        year: hit.item.stdrYear, price: hit.price,
+        ldCodeNm: hit.item.ldCodeNm,
+        message: `${hit.item.stdrYear}년 개별공시지가 (원/㎡)`,
       });
     }
 
-    // housing: 공동주택 우선 → 개별주택 fallback
-    const apt = await callNed("getApartHousingPriceAttr", pnu, year, apiKey);
-    const aptPrice = apt ? extractPrice(apt, "apartHousingPrices", "pblntfPc") : null;
-    if (aptPrice) {
+    // ── 공동주택 우선 → 개별주택 fallback ─────────
+    const aptItems = await callNedAllPages("getApartHousingPriceAttr", pnu, year, apiKey, "apartHousingPrices");
+    if (aptItems.length > 0) {
+      const hit = pickUnit(aptItems, "pblntfPc", dong, ho);
       return NextResponse.json({
-        pnu, dongCode,
-        type: "apart_housing_price",
-        year: aptPrice.year,
-        price: aptPrice.price,
-        message: `${aptPrice.year}년 공동주택 공시가격`,
+        pnu, priceType: "apart_housing_price",
+        year:          hit?.item.stdrYear,
+        price:         hit?.price,
+        dong:          hit?.item.dongNm,
+        ho:            hit?.item.hoNm,
+        floor:         hit?.item.floorNm,
+        exclusiveArea: hit?.item.prvuseAr ? parseFloat(hit.item.prvuseAr) : undefined,
+        buildingName:  hit?.item.aphusNm,
+        buildingType:  hit?.item.aphusSeCodeNm,
+        ldCodeNm:      hit?.item.ldCodeNm,
+        stdrMt:        hit?.item.stdrMt,
+        // 전체 동·호 목록 (프론트 드롭다운용)
+        units: buildUnitList(aptItems, "pblntfPc"),
+        message: `${hit?.item.stdrYear}년 공동주택 공시가격`,
       });
     }
 
-    const indvd = await callNed("getIndvdHousingPriceAttr", pnu, year, apiKey);
-    const indvdPrice = indvd ? extractPrice(indvd, "indvdHousingPrices", "pblntfPc") : null;
-    if (indvdPrice) {
+    const indvdItems = await callNedAllPages("getIndvdHousingPriceAttr", pnu, year, apiKey, "indvdHousingPrices");
+    if (indvdItems.length > 0) {
+      const hit = pickUnit(indvdItems, "pblntfPc", dong, ho);
       return NextResponse.json({
-        pnu, dongCode,
-        type: "indvd_housing_price",
-        year: indvdPrice.year,
-        price: indvdPrice.price,
-        message: `${indvdPrice.year}년 개별주택 공시가격`,
+        pnu, priceType: "indvd_housing_price",
+        year: hit?.item.stdrYear, price: hit?.price,
+        ldCodeNm: hit?.item.ldCodeNm,
+        units: buildUnitList(indvdItems, "pblntfPc"),
+        message: `${hit?.item.stdrYear}년 개별주택 공시가격`,
       });
     }
 
     return NextResponse.json(
-      {
-        error: {
-          code: "PRICE_NOT_FOUND",
-          message: `공시가격 조회 실패 (PNU: ${pnu}). Vworld 인증키에 '국토정보(NED)' 서비스 권한을 추가하거나, 기준년도(${year})를 확인해 주세요.`,
-        },
-        pnu,
-        dongCode,
-      },
+      { error: { code: "PRICE_NOT_FOUND", message: `공시가격 없음 (PNU: ${pnu}, ${year}년)` }, pnu },
       { status: 404 },
     );
   } catch (err) {

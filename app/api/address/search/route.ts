@@ -77,9 +77,11 @@ export async function GET(request: NextRequest) {
     key: apiKey,
   });
 
+  const domain = process.env.VWORLD_DOMAIN ?? "http://localhost:3000";
+
   try {
     const res = await fetch(`${VWORLD_URL}?${params.toString()}`, {
-      headers: { Accept: "application/json" },
+      headers: { Accept: "application/json", Referer: domain },
       cache: "no-store",
     });
 
@@ -116,8 +118,8 @@ export async function GET(request: NextRequest) {
     }
 
     const items = data.response?.result?.items ?? [];
-    const results = items.map((item, idx) => ({
-      id: `${idx}-${item.id ?? ""}-${item.address?.road ?? item.address?.parcel ?? ""}`,
+    const results = items.map((item) => ({
+      pnu: item.id ?? "",   // Vworld item.id가 곧 PNU (19자리 필지고유번호)
       title: item.title ?? "",
       road: item.address?.road ?? "",
       jibun: item.address?.parcel ?? "",

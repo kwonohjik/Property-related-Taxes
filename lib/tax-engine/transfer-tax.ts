@@ -7,6 +7,7 @@
  * P0-2 원칙: 세율 × 금액 곱셈은 반드시 applyRate() 사용.
  */
 
+import { addYears } from "date-fns";
 import {
   applyRate,
   calculateEstimatedAcquisitionPrice,
@@ -22,10 +23,47 @@ import {
   parseDeductionRules,
   parseProgressiveRate,
   parseSurchargeRate,
+  parseHouseCountExclusion,
+  parseRegulatedAreaHistory,
+  parseNonBusinessLandJudgment,
   type DeductionRulesData,
   type OneHouseSpecialRulesData,
   type SurchargeRateData,
   type SurchargeSpecialRulesData,
+  type HouseCountExclusionData,
+  type RegulatedAreaHistoryData,
+  type NonBusinessLandJudgmentSchemaData,
+} from "./schemas/rate-table.schema";
+import {
+  type HouseInfo,
+  type PresaleRight,
+  type MultiHouseSurchargeInput,
+  type MultiHouseSurchargeResult,
+  type ExcludedHouse,
+  type ExclusionReason,
+  determineMultiHouseSurcharge,
+} from "./multi-house-surcharge";
+import {
+  type NonBusinessLandInput,
+  type NonBusinessLandJudgment,
+  judgeNonBusinessLand,
+} from "./non-business-land";
+import {
+  type RentalReductionInput,
+  type RentalReductionResult,
+  calculateRentalReduction,
+  getLongTermDeductionOverride,
+} from "./rental-housing-reduction";
+import {
+  type NewHousingReductionInput,
+  type NewHousingReductionResult,
+  determineNewHousingReduction,
+} from "./new-housing-reduction";
+import {
+  parseLongTermRentalRuleSet,
+  parseNewHousingMatrix,
+  type LongTermRentalRuleSet,
+  type NewHousingMatrixData,
 } from "./schemas/rate-table.schema";
 import { getRate } from "@/lib/db/tax-rates";
 import type { TaxBracket } from "./types";
@@ -77,6 +115,50 @@ export interface TransferTaxInput {
   reductions: TransferReduction[];
   /** 당해 연도 기사용 기본공제 (원) */
   annualBasicDeductionUsed: number;
+  /**
+   * 세대 보유 주택 상세 목록 (선택)
+   * 제공 시 주택 수 산정 엔진을 통해 정밀 계산.
+   * 미제공 시 householdHousingCount 사용 (하위 호환).
+   */
+  houses?: HouseInfo[];
+  /**
+   * 세대 보유 분양권/입주권 목록 (선택)
+   * houses 제공 시 함께 전달 권장.
+   */
+  presaleRights?: PresaleRight[];
+  /** 일시적 2주택 정보 (houses 제공 시 사용) */
+  multiHouseTemporaryTwoHouse?: {
+    previousHouseId: string;
+    newHouseId: string;
+  };
+  /** 혼인합가 정보 */
+  marriageMerge?: {
+    marriageDate: Date;
+  };
+  /** 동거봉양 합가 정보 */
+  parentalCareMerge?: {
+    mergeDate: Date;
+  };
+  /** 양도 주택 ID (houses 제공 시) */
+  sellingHouseId?: string;
+  /**
+   * 비사업용 토지 상세 정보 (선택)
+   * 제공 시 judgeNonBusinessLand()로 정밀 판정 후 isNonBusinessLand 덮어씀.
+   * 미제공 시 isNonBusinessLand 플래그 그대로 사용 (하위 호환).
+   */
+  nonBusinessLandDetails?: NonBusinessLandInput;
+  /**
+   * 장기임대주택 감면 상세 정보 (선택)
+   * 제공 시 calculateRentalReduction()으로 정밀 감면 판정.
+   * 미제공 시 reductions[] 배열의 long_term_rental 항목으로 단순 처리 (하위 호환).
+   */
+  rentalReductionDetails?: RentalReductionInput;
+  /**
+   * 신축주택·미분양주택 감면 상세 정보 (선택)
+   * 제공 시 determineNewHousingReduction()으로 정밀 감면 판정 (조문 매트릭스 기반).
+   * 미제공 시 reductions[] 배열의 new_housing/unsold_housing 항목으로 단순 처리 (하위 호환).
+   */
+  newHousingDetails?: NewHousingReductionInput;
 }
 
 export type TransferReduction =
@@ -137,6 +219,33 @@ export interface TransferTaxResult {
   totalTax: number;
   /** 계산 과정 steps */
   steps: CalculationStep[];
+  /**
+   * 다주택 중과세 상세 판정 결과 (houses[] 제공 시만 포함)
+   * UI에서 제외 주택 목록·배제 사유 표시용
+   */
+  multiHouseSurchargeDetail?: {
+    effectiveHouseCount: number;
+    rawHouseCount: number;
+    excludedHouses: ExcludedHouse[];
+    exclusionReasons: ExclusionReason[];
+    isRegulatedAtTransfer: boolean;
+    warnings: string[];
+  };
+  /**
+   * 비사업용 토지 판정 상세 결과 (nonBusinessLandDetails 제공 시만 포함)
+   * UI에서 사업용/비사업용 판정 근거 표시용
+   */
+  nonBusinessLandJudgmentDetail?: NonBusinessLandJudgment;
+  /**
+   * 장기임대 감면 상세 결과 (rentalReductionDetails 제공 시만 포함)
+   * UI에서 감면 자격·감면율·위반 사유 표시용
+   */
+  rentalReductionDetail?: RentalReductionResult;
+  /**
+   * 신축주택·미분양주택 감면 상세 결과 (newHousingDetails 제공 시만 포함)
+   * UI에서 매칭 조문·감면율·5년 안분 결과 표시용
+   */
+  newHousingReductionDetail?: NewHousingReductionResult;
 }
 
 // ============================================================
@@ -151,6 +260,16 @@ interface ParsedRates {
   surchargeSpecialRules: SurchargeSpecialRulesData;
   oneHouseSpecialRules: OneHouseSpecialRulesData;
   selfFarmingRules?: Extract<DeductionRulesData, { type: "self_farming" }>;
+  /** 주택 수 산정 배제 규칙 (optional — 없으면 householdHousingCount 사용) */
+  houseCountExclusionRules?: HouseCountExclusionData;
+  /** 조정대상지역 이력 (optional — 없으면 isRegulatedArea 플래그 사용) */
+  regulatedAreaHistory?: RegulatedAreaHistoryData;
+  /** 비사업용 토지 판정 기준 (optional — 없으면 DEFAULT_NON_BUSINESS_LAND_RULES 사용) */
+  nonBusinessLandJudgmentRules?: NonBusinessLandJudgmentSchemaData;
+  /** 장기임대주택 감면 규칙 V2 (optional) */
+  longTermRentalRules?: LongTermRentalRuleSet;
+  /** 신축주택·미분양주택 감면 매트릭스 (optional) */
+  newHousingMatrix?: NewHousingMatrixData;
 }
 
 // ============================================================
@@ -216,6 +335,41 @@ function parseRatesFromMap(rates: TaxRatesMap): ParsedRates {
     }
   }
 
+  // 주택 수 산정 배제 규칙 (선택적 — 없으면 householdHousingCount 사용)
+  const houseCountRecord = getRate(rates, "transfer", "special", "house_count_exclusion");
+  let houseCountExclusionRules: HouseCountExclusionData | undefined;
+  if (houseCountRecord?.specialRules) {
+    houseCountExclusionRules = parseHouseCountExclusion(houseCountRecord.specialRules);
+  }
+
+  // 조정대상지역 이력 (선택적 — 없으면 isRegulatedArea 플래그 사용)
+  const regulatedAreaRecord = getRate(rates, "transfer", "special", "regulated_areas");
+  let regulatedAreaHistory: RegulatedAreaHistoryData | undefined;
+  if (regulatedAreaRecord?.specialRules) {
+    regulatedAreaHistory = parseRegulatedAreaHistory(regulatedAreaRecord.specialRules);
+  }
+
+  // 비사업용 토지 판정 기준 (선택적 — 없으면 DEFAULT_NON_BUSINESS_LAND_RULES 사용)
+  const nonBizLandRecord = getRate(rates, "transfer", "special", "non_business_land_judgment");
+  let nonBusinessLandJudgmentRules: NonBusinessLandJudgmentSchemaData | undefined;
+  if (nonBizLandRecord?.specialRules) {
+    nonBusinessLandJudgmentRules = parseNonBusinessLandJudgment(nonBizLandRecord.specialRules);
+  }
+
+  // 장기임대주택 감면 규칙 V2 (선택적)
+  const longTermRentalRecord = getRate(rates, "transfer", "deduction", "long_term_rental_v2");
+  let longTermRentalRules: LongTermRentalRuleSet | undefined;
+  if (longTermRentalRecord?.deductionRules) {
+    longTermRentalRules = parseLongTermRentalRuleSet(longTermRentalRecord.deductionRules);
+  }
+
+  // 신축주택·미분양주택 감면 매트릭스 (선택적)
+  const newHousingRecord = getRate(rates, "transfer", "deduction", "new_housing_matrix");
+  let newHousingMatrix: NewHousingMatrixData | undefined;
+  if (newHousingRecord?.deductionRules) {
+    newHousingMatrix = parseNewHousingMatrix(newHousingRecord.deductionRules);
+  }
+
   return {
     brackets: normalizedBrackets,
     longTermHoldingRules: lthdRules,
@@ -224,6 +378,11 @@ function parseRatesFromMap(rates: TaxRatesMap): ParsedRates {
     surchargeSpecialRules,
     oneHouseSpecialRules,
     selfFarmingRules,
+    houseCountExclusionRules,
+    regulatedAreaHistory,
+    nonBusinessLandJudgmentRules,
+    longTermRentalRules,
+    newHousingMatrix,
   };
 }
 
@@ -252,7 +411,15 @@ function checkExemption(
 
   // E-3: 일시적 2주택
   if (input.householdHousingCount === 2 && input.temporaryTwoHouse && twoHouseRule) {
-    const { newAcquisitionDate } = input.temporaryTwoHouse;
+    const { previousAcquisitionDate, newAcquisitionDate } = input.temporaryTwoHouse;
+
+    // 종전 주택의 보유요건 검증 (시행령 §155① — 종전 주택이 §154① 요건 충족 전제)
+    // 종전 주택 보유기간 = previousAcquisitionDate ~ transferDate
+    const prevHolding = calculateHoldingPeriod(previousAcquisitionDate, input.transferDate);
+    if (prevHolding.years < rule.minHoldingYears) {
+      return { isExempt: false, isPartialExempt: false };
+    }
+
     // 처분 기한 계산
     let deadlineYears = twoHouseRule.disposalDeadlineYears; // 비조정: 3년
     if (input.isRegulatedArea) {
@@ -266,8 +433,8 @@ function checkExemption(
         deadlineYears = twoHouseRule.regulatedAreaDeadlineYears;
       }
     }
-    const deadline = new Date(newAcquisitionDate);
-    deadline.setFullYear(deadline.getFullYear() + deadlineYears);
+    // addYears 사용: setFullYear은 2월 29일(윤년) 취득 시 처분기한이 1일 연장되는 버그 있음
+    const deadline = addYears(newAcquisitionDate, deadlineYears);
     if (input.transferDate <= deadline) {
       return { isExempt: true, isPartialExempt: false, exemptReason: "일시적 2주택 비과세" };
     }
@@ -284,9 +451,11 @@ function checkExemption(
   const isRegulatedAtAcquisition = input.wasRegulatedAtAcquisition;
 
   // 거주 요건 판단
+  // 비과세 거주요건은 취득일 기준 조정대상지역 여부로 판단 (시행령 §154①)
+  // isRegulatedArea(양도일 기준)가 아닌 wasRegulatedAtAcquisition(취득일 기준) 사용
   const residenceYears = Math.floor(input.residencePeriodMonths / 12);
   const meetsResidence =
-    !input.isRegulatedArea ||
+    !input.wasRegulatedAtAcquisition ||
     (isPrePolicy && !isRegulatedAtAcquisition) ||
     residenceYears >= rule.regulatedAreaMinResidenceYears;
 
@@ -381,10 +550,33 @@ function calcLongTermHoldingDeduction(
   rules: ParsedRates["longTermHoldingRules"],
   isSurcharge: boolean,
   isSuspended: boolean,
+  longTermRentalRules?: LongTermRentalRuleSet,
 ): LongTermHoldingResult {
   // L-1: 중과세 적용 중(유예 해제)이면 공제 배제
   if (isSurcharge && !isSuspended) {
     return { deduction: 0, rate: 0, holdingPeriod: { years: 0, months: 0 } };
+  }
+
+  // L-1b: 비사업용 토지 — 장기보유특별공제 배제 (소득세법 §95 ② 단서)
+  if (input.isNonBusinessLand) {
+    return { deduction: 0, rate: 0, holdingPeriod: { years: 0, months: 0 } };
+  }
+
+  // L-1c: 장기임대주택 특례율 — 일반 공제 대신 특례율(50%/70%) 우선 적용
+  if (input.rentalReductionDetails && longTermRentalRules) {
+    const override = getLongTermDeductionOverride(
+      input.rentalReductionDetails,
+      longTermRentalRules,
+    );
+    if (override.hasOverride) {
+      const holding = calculateHoldingPeriod(input.acquisitionDate, input.transferDate);
+      const deduction = applyRate(taxableGain, override.overrideRate);
+      return {
+        deduction,
+        rate: override.overrideRate,
+        holdingPeriod: { years: holding.years, months: holding.months },
+      };
+    }
   }
 
   // L-2: 미등기 공제 배제
@@ -397,16 +589,18 @@ function calcLongTermHoldingDeduction(
   const residenceYears = Math.floor(input.residencePeriodMonths / 12);
 
   // L-3: 1세대1주택 특례
-  //   조건: 1세대 1주택 + 거주기간 2년 이상
+  //   조건: 1세대 1주택 + 보유기간 3년 이상 + 거주기간 2년 이상 (소득세법 §95②)
   //   공제율: 보유기간 × 4% + 거주기간 × 4% (80% 한도)
   const ONE_HOUSE_HOLDING_RATE = 0.04;   // 보유 연 4%
   const ONE_HOUSE_RESIDENCE_RATE = 0.04; // 거주 연 4%
   const ONE_HOUSE_MAX_RATE = 0.80;       // 최대 80%
+  const ONE_HOUSE_MIN_HOLDING_YEARS = 3; // 보유 3년 이상 (소득세법 §95②)
   const ONE_HOUSE_MIN_RESIDENCE_YEARS = 2;
 
   if (
     input.isOneHousehold &&
     input.householdHousingCount === 1 &&
+    holding.years >= ONE_HOUSE_MIN_HOLDING_YEARS &&
     residenceYears >= ONE_HOUSE_MIN_RESIDENCE_YEARS
   ) {
     const holdingRate = holding.years * ONE_HOUSE_HOLDING_RATE;
@@ -475,6 +669,7 @@ function calcTax(
   taxBase: number,
   parsedRates: ParsedRates,
   input: TransferTaxInput,
+  multiHouseSurchargeResult?: MultiHouseSurchargeResult,
 ): CalcTaxResult {
   const { brackets, surchargeRates, surchargeSpecialRules } = parsedRates;
 
@@ -490,18 +685,23 @@ function calcTax(
   }
 
   // 다주택 중과세 유예 판단
-  const isSurchargeCase =
-    input.propertyType === "housing" &&
-    input.isRegulatedArea &&
-    input.householdHousingCount >= 2;
+  // houses[] 제공 시: determineMultiHouseSurcharge 결과 사용
+  // 미제공 시: householdHousingCount + isRegulatedArea 플래그 사용 (하위 호환)
+  const isSurchargeCase = multiHouseSurchargeResult
+    ? multiHouseSurchargeResult.surchargeType !== "none"
+    : input.propertyType === "housing" &&
+      input.isRegulatedArea &&
+      input.householdHousingCount >= 2;
 
-  const suspended = isSurchargeCase
-    ? isSurchargeSuspended(
-        surchargeSpecialRules,
-        input.transferDate,
-        input.householdHousingCount >= 3 ? "multi_house_3plus" : "multi_house_2",
-      )
-    : false;
+  const suspended = multiHouseSurchargeResult
+    ? multiHouseSurchargeResult.isSurchargeSuspended
+    : isSurchargeCase
+      ? isSurchargeSuspended(
+          surchargeSpecialRules,
+          input.transferDate,
+          input.householdHousingCount >= 3 ? "multi_house_3plus" : "multi_house_2",
+        )
+      : false;
 
   // 부동소수점 오차 제거: 세율은 소수점 4자리(0.01% 단위)로 정규화
   const roundRate = (r: number) => Math.round(r * 10000) / 10000;
@@ -524,11 +724,20 @@ function calcTax(
     };
   }
 
-  // T-3: 다주택 중과세 (유예 해제 시)
-  if (isSurchargeCase && !suspended) {
-    const isThreePlus = input.householdHousingCount >= 3;
-    const surchargeKey = isThreePlus ? "multi_house_3plus" : "multi_house_2";
-    const surchargeInfo = isThreePlus ? surchargeRates.multi_house_3plus : surchargeRates.multi_house_2;
+  // T-3: 다주택 중과세 (유예 해제 + 배제 없음 시)
+  // houses[] 제공 시: surchargeApplicable (유예·배제 모두 반영한 최종 값) 사용
+  // 미제공 시: isSurchargeCase && !suspended 기존 로직
+  const surchargeApplicable = multiHouseSurchargeResult
+    ? multiHouseSurchargeResult.surchargeApplicable
+    : isSurchargeCase && !suspended;
+
+  const effectiveSurchargeType = multiHouseSurchargeResult?.surchargeType
+    ?? (input.householdHousingCount >= 3 ? "multi_house_3plus" : "multi_house_2");
+
+  if (surchargeApplicable && effectiveSurchargeType !== "none") {
+    const surchargeInfo = effectiveSurchargeType === "multi_house_3plus"
+      ? surchargeRates.multi_house_3plus
+      : surchargeRates.multi_house_2;
 
     if (surchargeInfo) {
       const additionalRate = surchargeInfo.additionalRate;
@@ -538,7 +747,7 @@ function calcTax(
       const surchargeAmount = applyRate(taxBase, additionalRate);
       return {
         calculatedTax: progressiveTax + surchargeAmount,
-        surchargeType: surchargeKey,
+        surchargeType: effectiveSurchargeType,
         surchargeRate: roundRate(additionalRate),
         appliedRate: roundRate(baseRate + additionalRate),
         progressiveDeduction: bracket?.deduction ?? 0,
@@ -547,7 +756,7 @@ function calcTax(
     }
   }
 
-  // T-4: 일반 누진세율
+  // T-4: 일반 누진세율 (또는 유예/배제로 일반세율 적용)
   const progressiveTax = calculateProgressiveTax(taxBase, brackets);
   const bracket = brackets.find((b) => taxBase <= (b.max ?? Infinity));
   const baseRate = bracket?.rate ?? brackets[brackets.length - 1].rate;
@@ -573,16 +782,52 @@ function calcReductions(
   calculatedTax: number,
   reductions: TransferReduction[],
   selfFarmingRules: ParsedRates["selfFarmingRules"] | undefined,
-): ReductionsResult {
-  if (reductions.length === 0) {
+  rentalReductionDetails?: RentalReductionInput,
+  longTermRentalRules?: LongTermRentalRuleSet,
+  newHousingDetails?: NewHousingReductionInput,
+  newHousingMatrix?: NewHousingMatrixData,
+): ReductionsResult & {
+  rentalReductionDetail?: RentalReductionResult;
+  newHousingReductionDetail?: NewHousingReductionResult;
+} {
+  if (reductions.length === 0 && !rentalReductionDetails && !newHousingDetails) {
     return { reductionAmount: 0 };
   }
 
   let totalReduction = 0;
   let firstType: string | undefined;
+  let rentalReductionDetail: RentalReductionResult | undefined;
+  let newHousingReductionDetail: NewHousingReductionResult | undefined;
 
   // 유형별 중복 방지: type별 첫 번째만 처리
   const processed = new Set<string>();
+
+  // R-2-V2: rentalReductionDetails 제공 시 정밀 엔진 우선 사용
+  // calculatedTax는 transfer-tax 엔진에서 계산한 값으로 덮어씀 (rentalReductionInput의 placeholder 0 대체)
+  if (rentalReductionDetails) {
+    const detailsWithTax: RentalReductionInput = { ...rentalReductionDetails, calculatedTax };
+    const rentalResult = calculateRentalReduction(detailsWithTax, longTermRentalRules);
+    rentalReductionDetail = rentalResult;
+    if (rentalResult.isEligible && rentalResult.reductionAmount > 0) {
+      if (!firstType) firstType = "long_term_rental";
+      totalReduction += rentalResult.reductionAmount;
+      processed.add("long_term_rental"); // 하위 호환 중복 방지
+    }
+  }
+
+  // R-3-V2: newHousingDetails 제공 시 정밀 엔진 우선 사용 (매트릭스 기반)
+  // calculatedTax를 덮어써서 전달
+  if (newHousingDetails) {
+    const detailsWithTax: NewHousingReductionInput = { ...newHousingDetails, calculatedTax };
+    const newHousingResult = determineNewHousingReduction(detailsWithTax, newHousingMatrix);
+    newHousingReductionDetail = newHousingResult;
+    if (newHousingResult.isEligible && newHousingResult.reductionAmount > 0) {
+      if (!firstType) firstType = "new_housing";
+      totalReduction += newHousingResult.reductionAmount;
+      processed.add("new_housing");    // 하위 호환 중복 방지
+      processed.add("unsold_housing"); // 미분양도 동일 엔진으로 처리되므로 중복 방지
+    }
+  }
 
   for (const reduction of reductions) {
     if (processed.has(reduction.type)) continue;
@@ -596,16 +841,16 @@ function calcReductions(
         amount = Math.min(applyRate(calculatedTax, selfFarmingRules.maxRate), selfFarmingRules.maxAmount);
       }
     } else if (reduction.type === "long_term_rental") {
-      // R-2: 장기임대 50% — 임대 8년+, 임대료 인상률 5% 이하
+      // R-2: 장기임대 하위 호환 (rentalReductionDetails 미제공 시) — 8년+, 5% 이하
       if (reduction.rentalYears >= 8 && reduction.rentIncreaseRate <= 0.05) {
         amount = applyRate(calculatedTax, 0.5);
       }
     } else if (reduction.type === "new_housing") {
-      // R-3: 신축주택 — 수도권 50%, 비수도권 100%
+      // R-3: 신축주택 하위 호환 (newHousingDetails 미제공 시) — 수도권 50%, 비수도권 100%
       const rate = reduction.region === "metropolitan" ? 0.5 : 1.0;
       amount = applyRate(calculatedTax, rate);
     } else if (reduction.type === "unsold_housing") {
-      // R-4: 미분양주택 100%
+      // R-4: 미분양주택 하위 호환 100%
       amount = calculatedTax;
     }
 
@@ -626,7 +871,7 @@ function calcReductions(
   };
   const reductionTypeDisplay = firstType ? (reductionTypeLabel[firstType] ?? firstType) : undefined;
 
-  return { reductionAmount, reductionType: reductionTypeDisplay };
+  return { reductionAmount, reductionType: reductionTypeDisplay, rentalReductionDetail, newHousingReductionDetail };
 }
 
 // ============================================================
@@ -642,8 +887,45 @@ export function calculateTransferTax(
   // STEP 0: 세율 파싱
   const parsedRates = parseRatesFromMap(rates);
 
+  // STEP 0.5: 다주택 중과세 판정 (houses[] 제공 + 주택 수 산정 규칙 로드 완료 시)
+  let multiHouseSurchargeResult: MultiHouseSurchargeResult | undefined;
+  if (input.houses && input.houses.length > 0 && parsedRates.houseCountExclusionRules) {
+    const mhInput: MultiHouseSurchargeInput = {
+      houses: input.houses,
+      sellingHouseId: input.sellingHouseId ?? input.houses[0].id,
+      transferDate: input.transferDate,
+      isOneHousehold: input.isOneHousehold,
+      temporaryTwoHouse: input.multiHouseTemporaryTwoHouse,
+      marriageMerge: input.marriageMerge,
+      parentalCareMerge: input.parentalCareMerge,
+      presaleRights: input.presaleRights ?? [],
+    };
+    multiHouseSurchargeResult = determineMultiHouseSurcharge(
+      mhInput,
+      parsedRates.houseCountExclusionRules,
+      parsedRates.regulatedAreaHistory ?? null,
+      parsedRates.surchargeSpecialRules,
+      input.isRegulatedArea,
+    );
+  }
+
+  // STEP 0.6: 비사업용 토지 정밀 판정 (nonBusinessLandDetails 제공 시)
+  let nonBusinessLandJudgment: NonBusinessLandJudgment | undefined;
+  // input은 readonly이므로 isNonBusinessLand override를 위한 mutable 복사본 사용
+  let effectiveInput = input;
+  if (input.nonBusinessLandDetails) {
+    nonBusinessLandJudgment = judgeNonBusinessLand(
+      input.nonBusinessLandDetails,
+      parsedRates.nonBusinessLandJudgmentRules,
+    );
+    // 판정 결과로 isNonBusinessLand 덮어씀
+    if (nonBusinessLandJudgment.isNonBusinessLand !== input.isNonBusinessLand) {
+      effectiveInput = { ...input, isNonBusinessLand: nonBusinessLandJudgment.isNonBusinessLand };
+    }
+  }
+
   // STEP 1: 비과세 판단
-  const exemptionResult = checkExemption(input, parsedRates.oneHouseSpecialRules);
+  const exemptionResult = checkExemption(effectiveInput, parsedRates.oneHouseSpecialRules);
 
   // STEP 1a: 전액 비과세 시 조기 반환
   if (exemptionResult.isExempt) {
@@ -739,19 +1021,27 @@ export function calculateTransferTax(
   }
 
   // 중과세 여부 판단 (장기보유공제·세액 결정에 공통 사용)
-  const isSurchargeCase =
-    input.propertyType === "housing" &&
-    input.isRegulatedArea &&
-    input.householdHousingCount >= 2;
+  // houses[] 제공 시: determineMultiHouseSurcharge 결과 사용
+  // 미제공 시: householdHousingCount + isRegulatedArea 플래그 기반 (하위 호환)
+  const isSurchargeCase = multiHouseSurchargeResult
+    ? multiHouseSurchargeResult.surchargeType !== "none"
+    : input.propertyType === "housing" &&
+      input.isRegulatedArea &&
+      input.householdHousingCount >= 2;
 
-  const surchargeTypeKey = input.householdHousingCount >= 3 ? "multi_house_3plus" : "multi_house_2";
-  const suspendedResult = isSurchargeCase
-    ? isSurchargeSuspended(parsedRates.surchargeSpecialRules, input.transferDate, surchargeTypeKey)
-    : false;
+  const effectiveHouseCount = multiHouseSurchargeResult
+    ? multiHouseSurchargeResult.effectiveHouseCount
+    : input.householdHousingCount;
+  const surchargeTypeKey = effectiveHouseCount >= 3 ? "multi_house_3plus" : "multi_house_2";
+  const suspendedResult = multiHouseSurchargeResult
+    ? multiHouseSurchargeResult.isSurchargeSuspended
+    : isSurchargeCase
+      ? isSurchargeSuspended(parsedRates.surchargeSpecialRules, input.transferDate, surchargeTypeKey)
+      : false;
 
-  // STEP 4: 장기보유특별공제
+  // STEP 4: 장기보유특별공제 (장기임대 특례율 포함)
   const { deduction: longTermHoldingDeduction, rate: longTermHoldingRate, holdingPeriod } =
-    calcLongTermHoldingDeduction(taxableGain, input, parsedRates.longTermHoldingRules, isSurchargeCase, suspendedResult);
+    calcLongTermHoldingDeduction(taxableGain, effectiveInput, parsedRates.longTermHoldingRules, isSurchargeCase, suspendedResult, parsedRates.longTermRentalRules);
   const holdingPeriodStr = holdingPeriod.years > 0 || holdingPeriod.months > 0
     ? `보유기간 ${holdingPeriod.years}년 ${holdingPeriod.months}개월`
     : "";
@@ -799,7 +1089,7 @@ export function calculateTransferTax(
   });
 
   // STEP 7: 산출세액
-  const taxResult = calcTax(taxBase, parsedRates, input);
+  const taxResult = calcTax(taxBase, parsedRates, effectiveInput, multiHouseSurchargeResult);
   const fmtPct = (r: number) => `${Math.round(r * 100)}%`;
   steps.push({
     label: "산출세액",
@@ -808,10 +1098,14 @@ export function calculateTransferTax(
   });
 
   // STEP 8: 감면세액
-  const { reductionAmount, reductionType } = calcReductions(
+  const { reductionAmount, reductionType, rentalReductionDetail, newHousingReductionDetail } = calcReductions(
     taxResult.calculatedTax,
     input.reductions,
     parsedRates.selfFarmingRules,
+    input.rentalReductionDetails,
+    parsedRates.longTermRentalRules,
+    input.newHousingDetails,
+    parsedRates.newHousingMatrix,
   );
   steps.push({
     label: "감면세액",
@@ -865,5 +1159,18 @@ export function calculateTransferTax(
     localIncomeTax,
     totalTax,
     steps,
+    multiHouseSurchargeDetail: multiHouseSurchargeResult
+      ? {
+          effectiveHouseCount: multiHouseSurchargeResult.effectiveHouseCount,
+          rawHouseCount: multiHouseSurchargeResult.rawHouseCount,
+          excludedHouses: multiHouseSurchargeResult.excludedHouses,
+          exclusionReasons: multiHouseSurchargeResult.exclusionReasons,
+          isRegulatedAtTransfer: multiHouseSurchargeResult.isRegulatedAtTransfer,
+          warnings: multiHouseSurchargeResult.warnings,
+        }
+      : undefined,
+    nonBusinessLandJudgmentDetail: nonBusinessLandJudgment,
+    rentalReductionDetail,
+    newHousingReductionDetail,
   };
 }

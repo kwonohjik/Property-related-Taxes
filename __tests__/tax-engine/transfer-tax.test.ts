@@ -10,6 +10,10 @@ import {
   calculateTransferTax,
   type TransferTaxInput,
 } from "@/lib/tax-engine/transfer-tax";
+import type { HouseInfo } from "@/lib/tax-engine/multi-house-surcharge";
+import type { NonBusinessLandInput } from "@/lib/tax-engine/non-business-land";
+import type { RentalReductionInput } from "@/lib/tax-engine/rental-housing-reduction";
+import type { NewHousingReductionInput } from "@/lib/tax-engine/new-housing-reduction";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import type { TaxRateKey } from "@/lib/tax-engine/types";
 
@@ -720,5 +724,848 @@ describe("T-22: 비과세 시 steps 배열", () => {
     expect(result.isExempt).toBe(true);
     expect(result.steps.length).toBeGreaterThan(0);
     expect(result.steps[0].label).toBe("1세대1주택 비과세");
+  });
+});
+
+// ============================================================
+// T-23~T-25: houses[] 배열 기반 주택 수 산정 엔진 통합 테스트
+// (주택 수 산정 규칙 + 조정지역 이력 포함 Mock 사용)
+// ============================================================
+
+/**
+ * 주택 수 산정 엔진 활성화 Mock 세율 (유예 없음 — 중과 실제 적용 확인)
+ * M-4 override: surcharge_suspended=false
+ * 신규 항목: house_count_exclusion, regulated_areas
+ */
+const mockRatesWithHouseEngine = makeMockRates({
+  // 유예 없음으로 override (중과 실제 적용 테스트용)
+  "transfer:surcharge:_default": {
+    taxType: "transfer",
+    category: "surcharge",
+    subCategory: "_default",
+    rateTable: {
+      multi_house_2: {
+        additionalRate: 0.20,
+        condition: "조정대상지역 2주택",
+        referenceDate: "transfer_date",
+      },
+      multi_house_3plus: {
+        additionalRate: 0.30,
+        condition: "조정대상지역 3주택+",
+        referenceDate: "transfer_date",
+      },
+      non_business_land: { additionalRate: 0.10 },
+      unregistered: {
+        flatRate: 0.70,
+        excludeDeductions: true,
+        excludeBasicDeduction: true,
+      },
+    },
+    deductionRules: null,
+    specialRules: { surcharge_suspended: false },
+  },
+  // 주택 수 산정 배제 규칙
+  "transfer:special:house_count_exclusion": {
+    taxType: "transfer",
+    category: "special",
+    subCategory: "house_count_exclusion",
+    rateTable: null,
+    deductionRules: null,
+    specialRules: {
+      type: "house_count_exclusion",
+      inheritedHouseYears: 5,
+      rentalHousingExempt: true,
+      lowPriceThreshold: { capital: null, non_capital: 100_000_000 },
+      presaleRightStartDate: "2021-01-01",
+      officetelStartDate: "2022-01-01",
+    },
+  },
+  // 조정대상지역 이력 (강남구 — 해제일 없음)
+  "transfer:special:regulated_areas": {
+    taxType: "transfer",
+    category: "special",
+    subCategory: "regulated_areas",
+    rateTable: null,
+    deductionRules: null,
+    specialRules: {
+      type: "regulated_area_history",
+      regions: [
+        {
+          code: "11680",
+          name: "서울 강남구",
+          designations: [{ designatedDate: "2017-08-03", releasedDate: null }],
+        },
+      ],
+    },
+  },
+});
+
+function makeHouseInfo(id: string, overrides?: Partial<HouseInfo>): HouseInfo {
+  return {
+    id,
+    acquisitionDate: new Date("2020-01-01"),
+    officialPrice: 300_000_000,
+    region: "capital",
+    isInherited: false,
+    isLongTermRental: false,
+    isApartment: true,
+    isOfficetel: false,
+    isUnsoldHousing: false,
+    ...overrides,
+  };
+}
+
+// ============================================================
+// T-23: houses[] 제공 시 householdHousingCount 무시하고 산정
+// ============================================================
+
+describe("T-23: houses[] 제공 시 유효 주택 수 산정 (householdHousingCount 무시)", () => {
+  it("3채 중 비수도권 1억 이하 1채 제외 → effectiveCount=2, surchargeType=multi_house_2", () => {
+    // houses: 3채 (비수도권 1억 이하 1채 포함)
+    // householdHousingCount: 3 (원래라면 3plus 중과)
+    // 기대: 유효 2주택 → multi_house_2 적용
+    const h1 = makeHouseInfo("h1", { regionCode: "11680" }); // 강남구 (조정, 양도주택)
+    const h2 = makeHouseInfo("h2", { region: "capital" });
+    const h3 = makeHouseInfo("h3", {
+      region: "non_capital",
+      officialPrice: 90_000_000, // 1억 미만
+    });
+
+    const input = baseInput({
+      transferPrice: 500_000_000,
+      acquisitionPrice: 300_000_000,
+      acquisitionDate: new Date("2020-01-01"),
+      transferDate: new Date("2024-06-01"),
+      isRegulatedArea: true, // 플래그도 조정 (fallback)
+      householdHousingCount: 3, // 잘못 제공된 값 — 무시되어야 함
+      isOneHousehold: true,
+      sellingHouseId: "h1",
+      houses: [h1, h2, h3],
+    });
+
+    const result = calculateTransferTax(input, mockRatesWithHouseEngine);
+
+    // 다주택 상세 결과 확인
+    expect(result.multiHouseSurchargeDetail).toBeDefined();
+    expect(result.multiHouseSurchargeDetail!.effectiveHouseCount).toBe(2);
+    expect(result.multiHouseSurchargeDetail!.excludedHouses).toHaveLength(1);
+    expect(result.multiHouseSurchargeDetail!.excludedHouses[0].reason).toBe("low_price_non_capital");
+
+    // 중과 유형: 2주택 (3주택+ 아님)
+    expect(result.surchargeType).toBe("multi_house_2");
+    expect(result.surchargeRate).toBeDefined();
+  });
+});
+
+// ============================================================
+// T-24: 일시적 2주택 배제 → 일반세율 적용 통합 검증
+// ============================================================
+
+describe("T-24: houses[] + 일시적 2주택 배제 → 일반세율", () => {
+  it("2주택 일시적 2주택 배제 → surchargeType 없음, 일반 누진세율 적용", () => {
+    // 종전주택(h1) 양도, 신규주택(h2) 취득 2022.5.10 이후 → 3년 처분기한
+    const h1 = makeHouseInfo("h1", { regionCode: "11680" }); // 강남구 (조정)
+    const h2 = makeHouseInfo("h2", { acquisitionDate: new Date("2022-06-01") });
+
+    const transferDate = new Date("2024-06-01"); // 신규주택 취득 후 2년 → 3년 이내
+
+    const input = baseInput({
+      transferPrice: 500_000_000,
+      acquisitionPrice: 300_000_000,
+      acquisitionDate: new Date("2020-01-01"),
+      transferDate,
+      isRegulatedArea: true,
+      householdHousingCount: 2,
+      isOneHousehold: true,
+      sellingHouseId: "h1",
+      houses: [h1, h2],
+      multiHouseTemporaryTwoHouse: { previousHouseId: "h1", newHouseId: "h2" },
+    });
+
+    const result = calculateTransferTax(input, mockRatesWithHouseEngine);
+
+    // 배제 → 중과 미적용
+    expect(result.surchargeType).toBeUndefined();
+    expect(result.isSurchargeSuspended).toBe(false);
+    expect(result.multiHouseSurchargeDetail!.exclusionReasons[0].type).toBe("temporary_two_house");
+
+    // 일반 누진세율로 세금 계산됨 → surchargeRate 없음
+    expect(result.surchargeRate).toBeUndefined();
+  });
+});
+
+// ============================================================
+// T-25: 장기임대 등록주택 보유 2주택자 → 유효 1주택 → 중과 미적용
+// ============================================================
+
+describe("T-25: 장기임대 등록주택 → 유효 1주택, 중과 미적용", () => {
+  it("임대 등록 유효 주택 1채 → effectiveCount=1, surchargeType 없음", () => {
+    const h1 = makeHouseInfo("h1", { regionCode: "11680" }); // 강남구 (조정, 양도주택)
+    const h2 = makeHouseInfo("h2", {
+      isLongTermRental: true,
+      rentalRegistrationDate: new Date("2020-01-01"),
+      rentalCancelledDate: undefined,
+    });
+
+    const input = baseInput({
+      transferPrice: 500_000_000,
+      acquisitionPrice: 300_000_000,
+      acquisitionDate: new Date("2020-01-01"),
+      transferDate: new Date("2024-06-01"),
+      isRegulatedArea: true,
+      householdHousingCount: 2,
+      isOneHousehold: true,
+      sellingHouseId: "h1",
+      houses: [h1, h2],
+    });
+
+    const result = calculateTransferTax(input, mockRatesWithHouseEngine);
+
+    // 유효 주택 1채 → 중과 미적용
+    expect(result.multiHouseSurchargeDetail!.effectiveHouseCount).toBe(1);
+    expect(result.surchargeType).toBeUndefined();
+    expect(result.surchargeRate).toBeUndefined();
+  });
+});
+
+// ============================================================
+// T-26: nonBusinessLandDetails 제공 → 판정 결과로 isNonBusinessLand 덮어쓰기
+// ============================================================
+
+describe("T-26: 비사업용 토지 정밀 판정 연동", () => {
+  it("input.isNonBusinessLand=false이나 nonBusinessLandDetails 판정 결과 비사업용 → 중과 적용 + 장기보유공제 0", () => {
+    // 나대지, 1년 보유, 사업용 사용 0일 → 비사업용 판정
+    const nbDetails: NonBusinessLandInput = {
+      landType: "vacant_lot",
+      landArea: 1000,
+      zoneType: "residential",
+      acquisitionDate: new Date("2020-01-01"),
+      transferDate: new Date("2025-01-01"),
+      businessUsePeriods: [],
+      gracePeriods: [],
+    };
+
+    const input = baseInput({
+      propertyType: "land",
+      transferPrice: 500_000_000,
+      acquisitionPrice: 200_000_000,
+      acquisitionDate: new Date("2020-01-01"),
+      transferDate: new Date("2025-01-01"),
+      isNonBusinessLand: false, // 플래그는 false지만 details로 덮어씀
+      nonBusinessLandDetails: nbDetails,
+    });
+
+    const result = calculateTransferTax(input, mockRates);
+
+    // 판정 결과: 비사업용
+    expect(result.nonBusinessLandJudgmentDetail).toBeDefined();
+    expect(result.nonBusinessLandJudgmentDetail!.isNonBusinessLand).toBe(true);
+    // 비사업용 → 중과 +10%p
+    expect(result.surchargeType).toBe("non_business_land");
+    expect(result.surchargeRate).toBe(0.1);
+    // 비사업용 → 장기보유공제 배제
+    expect(result.longTermHoldingDeduction).toBe(0);
+    expect(result.longTermHoldingRate).toBe(0);
+  });
+
+  it("input.isNonBusinessLand=true이나 nonBusinessLandDetails 판정 결과 사업용 → 중과 미적용, 장기보유공제 적용", () => {
+    // 농지, 자경 5년 이상 → 사업용
+    const nbDetails: NonBusinessLandInput = {
+      landType: "farmland",
+      landArea: 5000,
+      zoneType: "agriculture_forest",
+      acquisitionDate: new Date("2015-01-01"),
+      transferDate: new Date("2022-01-01"),
+      farmingSelf: true,
+      farmerResidenceDistance: 10,
+      businessUsePeriods: [
+        {
+          startDate: new Date("2015-01-02"),
+          endDate: new Date("2022-01-01"),
+          usageType: "자경",
+        },
+      ],
+      gracePeriods: [],
+    };
+
+    const input = baseInput({
+      propertyType: "land",
+      transferPrice: 300_000_000,
+      acquisitionPrice: 100_000_000,
+      acquisitionDate: new Date("2015-01-01"),
+      transferDate: new Date("2022-01-01"),
+      isNonBusinessLand: true, // 플래그는 true지만 details로 덮어씀 → 사업용
+      nonBusinessLandDetails: nbDetails,
+    });
+
+    const result = calculateTransferTax(input, mockRates);
+
+    // 판정 결과: 사업용
+    expect(result.nonBusinessLandJudgmentDetail!.isNonBusinessLand).toBe(false);
+    // 사업용 → 비사업용 중과 없음
+    expect(result.surchargeType).toBeUndefined();
+    // 7년 보유 → 장기보유공제 적용 (일반 2%/년, 7년=14%)
+    expect(result.longTermHoldingRate).toBeGreaterThan(0);
+  });
+
+  it("nonBusinessLandDetails 미제공 → isNonBusinessLand 플래그 그대로 사용 (하위 호환)", () => {
+    const input = baseInput({
+      propertyType: "land",
+      transferPrice: 300_000_000,
+      acquisitionPrice: 100_000_000,
+      acquisitionDate: new Date("2018-01-01"),
+      transferDate: new Date("2022-01-01"),
+      isNonBusinessLand: true,
+      // nonBusinessLandDetails: 미제공
+    });
+
+    const result = calculateTransferTax(input, mockRates);
+
+    expect(result.nonBusinessLandJudgmentDetail).toBeUndefined();
+    expect(result.surchargeType).toBe("non_business_land");
+  });
+});
+
+// ============================================================
+// T-27: rentalReductionDetails 제공 → 정밀 감면 엔진 연동
+// ============================================================
+
+const LONG_TERM_RENTAL_RULES_MOCK = {
+  "transfer:deduction:long_term_rental_v2": {
+    taxType: "transfer",
+    category: "deduction",
+    subCategory: "long_term_rental_v2",
+    rateTable: null,
+    deductionRules: {
+      type: "long_term_rental_v2",
+      subTypes: [
+        {
+          code: "long_term_private",
+          lawArticle: "97-3",
+          tiers: [
+            { mandatoryYears: 8, reductionRate: 0.5, longTermDeductionRate: 0.5 },
+            { mandatoryYears: 10, reductionRate: 0.7, longTermDeductionRate: 0.7 },
+          ],
+          maxOfficialPrice: { capital: 600_000_000, non_capital: 300_000_000 },
+          rentIncreaseLimit: 0.05,
+        },
+      ],
+    },
+    specialRules: null,
+  },
+};
+
+describe("T-27: 장기임대 감면 정밀 엔진 연동", () => {
+  it("T-27a: rentalReductionDetails 제공 → 8년 임대 50% 감면 적용", () => {
+    const rentalDetails: RentalReductionInput = {
+      isRegisteredLandlord: true,
+      isTaxRegistered: true,
+      registrationDate: new Date("2015-01-01"),
+      rentalHousingType: "long_term_private",
+      propertyType: "non_apartment",
+      region: "capital",
+      officialPriceAtStart: 500_000_000,
+      rentalStartDate: new Date("2015-01-01"),
+      transferDate: new Date("2024-06-01"),  // 9년 이상
+      vacancyPeriods: [],
+      rentHistory: [],
+      calculatedTax: 0, // calculateTransferTax에서 실제 세액으로 덮어씀
+    };
+
+    const rates = makeMockRates(LONG_TERM_RENTAL_RULES_MOCK as Partial<Record<TaxRateKey, object>>);
+
+    const input = baseInput({
+      transferPrice: 600_000_000,
+      acquisitionPrice: 300_000_000,
+      acquisitionDate: new Date("2014-06-01"),
+      transferDate: new Date("2024-06-01"),
+      isOneHousehold: false,        // 임대주택 다가구 시나리오 → 비과세 제외
+      householdHousingCount: 3,
+      reductions: [],
+      rentalReductionDetails: rentalDetails,
+    });
+
+    const result = calculateTransferTax(input, rates);
+    expect(result.isExempt).toBe(false);
+    expect(result.reductionAmount).toBeGreaterThan(0);
+    // 50% 감면 = 산출세액 × 0.5
+    expect(result.reductionAmount).toBe(Math.floor(result.calculatedTax * 0.5));
+    expect(result.rentalReductionDetail).toBeDefined();
+    expect(result.rentalReductionDetail?.isEligible).toBe(true);
+    expect(result.rentalReductionDetail?.reductionRate).toBe(0.5);
+  });
+
+  it("T-27b: rentalReductionDetails 의무기간 미충족 → 감면 0", () => {
+    const rentalDetails: RentalReductionInput = {
+      isRegisteredLandlord: true,
+      isTaxRegistered: true,
+      registrationDate: new Date("2019-01-01"),
+      rentalHousingType: "long_term_private",
+      propertyType: "non_apartment",
+      region: "capital",
+      officialPriceAtStart: 400_000_000,
+      rentalStartDate: new Date("2019-01-01"),
+      transferDate: new Date("2024-06-01"),  // 5년 → 8년 미충족
+      vacancyPeriods: [],
+      rentHistory: [],
+      calculatedTax: 0,
+    };
+
+    const rates = makeMockRates(LONG_TERM_RENTAL_RULES_MOCK as Partial<Record<TaxRateKey, object>>);
+
+    const input = baseInput({
+      isOneHousehold: false,        // 비과세 제외
+      householdHousingCount: 2,
+      reductions: [],
+      rentalReductionDetails: rentalDetails,
+    });
+
+    const result = calculateTransferTax(input, rates);
+    expect(result.reductionAmount).toBe(0);
+    expect(result.rentalReductionDetail?.isEligible).toBe(false);
+    expect(result.rentalReductionDetail?.ineligibleReasons.some(
+      (r) => r.code === "RENTAL_PERIOD_SHORT"
+    )).toBe(true);
+  });
+
+  it("T-27c: rentalReductionDetails 미제공 + reductions long_term_rental → 하위 호환 50%", () => {
+    const result = calculateTransferTax(
+      baseInput({
+        reductions: [{ type: "long_term_rental", rentalYears: 9, rentIncreaseRate: 0.03 }],
+        // rentalReductionDetails: 미제공
+      }),
+      makeMockRates(),
+    );
+    // 기존 단순 로직: 8년+ + 5% 이하 → 50%
+    expect(result.reductionAmount).toBe(Math.floor(result.calculatedTax * 0.5));
+    expect(result.rentalReductionDetail).toBeUndefined();
+  });
+});
+
+// ============================================================
+// T-28: 신축주택 감면 통합 시나리오
+// ============================================================
+
+const NEW_HOUSING_MATRIX_MOCK = {
+  "transfer:deduction:new_housing_matrix": {
+    taxType: "transfer",
+    category: "deduction",
+    subCategory: "new_housing_matrix",
+    rateTable: null,
+    deductionRules: {
+      type: "new_housing_matrix",
+      articles: [
+        {
+          code: "99-1",
+          article: "§99 ①",
+          acquisitionPeriod: { start: "2001-05-23", end: "2003-06-30" },
+          region: "outside_overconcentration",
+          maxAcquisitionPrice: null,
+          maxArea: null,
+          requiresFirstSale: true,
+          requiresUnsoldCertificate: false,
+          reductionScope: "capital_gain",
+          reductionRate: 1.0,
+          fiveYearWindowRule: true,
+          isExcludedFromHouseCount: true,
+          isExcludedFromMultiHouseSurcharge: true,
+        },
+      ],
+    },
+    specialRules: null,
+    effectiveDate: "2001-05-23",
+    isActive: true,
+  },
+};
+
+describe("T-28: 신축주택 감면 — newHousingDetails 통합", () => {
+  it("T-28a: §99 ① 5년 이내 양도 → reductionAmount ≈ calculatedTax (100%)", () => {
+    const newHousingDetails: NewHousingReductionInput = {
+      acquisitionDate: new Date("2002-01-01"),
+      transferDate: new Date("2005-01-01"), // 3년 이내
+      region: "outside_overconcentration",
+      acquisitionPrice: 200_000_000,
+      exclusiveAreaSquareMeters: 84,
+      isFirstSale: true,
+      hasUnsoldCertificate: false,
+      totalCapitalGain: 0,     // calculateTransferTax에서 실제 세액으로 덮어씀
+      calculatedTax: 0,
+    };
+
+    const rates = makeMockRates(NEW_HOUSING_MATRIX_MOCK as Partial<Record<TaxRateKey, object>>);
+
+    const input = baseInput({
+      transferPrice: 500_000_000,
+      acquisitionPrice: 200_000_000,
+      acquisitionDate: new Date("2002-01-01"),
+      transferDate: new Date("2005-01-01"),
+      isOneHousehold: false,
+      householdHousingCount: 2,
+      reductions: [],
+      newHousingDetails,
+    });
+
+    const result = calculateTransferTax(input, rates);
+    expect(result.isExempt).toBe(false);
+    expect(result.reductionAmount).toBeGreaterThan(0);
+    // 5년 이내 → ratio=1.0 → 100% 감면
+    expect(result.reductionAmount).toBe(result.calculatedTax);
+    expect(result.newHousingReductionDetail).toBeDefined();
+    expect(result.newHousingReductionDetail?.isEligible).toBe(true);
+    expect(result.newHousingReductionDetail?.reductionRate).toBe(1.0);
+    expect(result.newHousingReductionDetail?.isWithinFiveYearWindow).toBe(true);
+  });
+
+  it("T-28b: §99 ① 취득일 기간 외 → 감면 0, newHousingReductionDetail.isEligible false", () => {
+    const newHousingDetails: NewHousingReductionInput = {
+      acquisitionDate: new Date("2004-01-01"), // 기간 외
+      transferDate: new Date("2007-01-01"),
+      region: "outside_overconcentration",
+      acquisitionPrice: 200_000_000,
+      exclusiveAreaSquareMeters: 84,
+      isFirstSale: true,
+      hasUnsoldCertificate: false,
+      totalCapitalGain: 0,
+      calculatedTax: 0,
+    };
+
+    const rates = makeMockRates(NEW_HOUSING_MATRIX_MOCK as Partial<Record<TaxRateKey, object>>);
+
+    const input = baseInput({
+      acquisitionDate: new Date("2004-01-01"),
+      transferDate: new Date("2007-01-01"),
+      isOneHousehold: false,
+      householdHousingCount: 2,
+      reductions: [],
+      newHousingDetails,
+    });
+
+    const result = calculateTransferTax(input, rates);
+    expect(result.reductionAmount).toBe(0);
+    expect(result.newHousingReductionDetail?.isEligible).toBe(false);
+  });
+
+  it("T-28c: newHousingDetails 미제공 + reductions new_housing → 하위 호환 50% (수도권)", () => {
+    const result = calculateTransferTax(
+      baseInput({
+        isOneHousehold: false,
+        householdHousingCount: 2,
+        reductions: [{ type: "new_housing", region: "metropolitan" }],
+        // newHousingDetails: 미제공
+      }),
+      makeMockRates(),
+    );
+    // 기존 단순 로직: 수도권 50%
+    expect(result.reductionAmount).toBe(Math.floor(result.calculatedTax * 0.5));
+    expect(result.newHousingReductionDetail).toBeUndefined();
+  });
+});
+
+// ============================================================
+// T-29: 조정지역(취득일 기준) + 거주 2년 미충족 → 비과세 거부 [버그1 검증]
+// ============================================================
+
+describe("T-29: 취득일 기준 조정지역 + 거주 미충족 → 비과세 불가", () => {
+  it("wasRegulatedAtAcquisition=true, 거주 20개월 → isExempt=false", () => {
+    const input = baseInput({
+      transferPrice: 900_000_000, // 12억 이하
+      acquisitionPrice: 500_000_000,
+      acquisitionDate: new Date("2021-01-01"),
+      transferDate: new Date("2024-01-02"), // 보유 3년
+      residencePeriodMonths: 20,            // 1년 8개월 — 2년 미충족
+      isOneHousehold: true,
+      householdHousingCount: 1,
+      wasRegulatedAtAcquisition: true,      // 취득일 기준 조정지역
+      isRegulatedArea: true,
+    });
+    const result = calculateTransferTax(input, mockRates);
+    expect(result.isExempt).toBe(false);
+    expect(result.totalTax).toBeGreaterThan(0);
+  });
+});
+
+// ============================================================
+// T-30: 취득일 비조정 → 양도일 조정 → 거주요건 면제 [버그1 핵심]
+// ============================================================
+
+describe("T-30: 취득일 비조정, 양도일 조정 → 거주요건 없음 → 비과세", () => {
+  it("wasRegulatedAtAcquisition=false, isRegulatedArea=true, 거주 0개월 → isExempt=true", () => {
+    const input = baseInput({
+      transferPrice: 900_000_000,
+      acquisitionPrice: 500_000_000,
+      acquisitionDate: new Date("2021-01-01"),
+      transferDate: new Date("2024-01-02"), // 보유 3년
+      residencePeriodMonths: 0,
+      isOneHousehold: true,
+      householdHousingCount: 1,
+      wasRegulatedAtAcquisition: false, // 취득일 당시 비조정 → 거주요건 없음
+      isRegulatedArea: true,            // 양도일 기준 조정지역 (거주요건 판단에 사용 불가)
+    });
+    const result = calculateTransferTax(input, mockRates);
+    // 취득일 기준 비조정 → 거주요건 면제 → 비과세
+    expect(result.isExempt).toBe(true);
+    expect(result.totalTax).toBe(0);
+  });
+});
+
+// ============================================================
+// T-31: 취득일 조정 → 양도일 비조정 → 거주요건 발동 [버그1 역방향]
+// ============================================================
+
+describe("T-31: 취득일 조정, 양도일 비조정 → 거주요건 2년 미충족 → 비과세 불가", () => {
+  it("wasRegulatedAtAcquisition=true, isRegulatedArea=false, 거주 0개월 → isExempt=false", () => {
+    const input = baseInput({
+      transferPrice: 900_000_000,
+      acquisitionPrice: 500_000_000,
+      acquisitionDate: new Date("2021-01-01"),
+      transferDate: new Date("2024-01-02"),
+      residencePeriodMonths: 0,
+      isOneHousehold: true,
+      householdHousingCount: 1,
+      wasRegulatedAtAcquisition: true,  // 취득일 기준 조정지역 → 거주요건 발동
+      isRegulatedArea: false,           // 양도일 기준 비조정 (하지만 취득일 기준 적용)
+    });
+    const result = calculateTransferTax(input, mockRates);
+    // 취득일 기준 조정 → 거주요건 2년 필요 → 미충족 → 비과세 불가
+    expect(result.isExempt).toBe(false);
+    expect(result.totalTax).toBeGreaterThan(0);
+  });
+});
+
+// ============================================================
+// T-32: 2017.8.3 이전 취득 경과규정 — 취득 당시 비조정 → 거주요건 면제
+// ============================================================
+
+describe("T-32: 경과규정 — 2017.8.3 이전 취득, 취득 당시 비조정 → 거주요건 면제", () => {
+  it("acquisitionDate=2017-08-02, wasRegulatedAtAcquisition=false → isExempt=true", () => {
+    const input = baseInput({
+      transferPrice: 900_000_000,
+      acquisitionPrice: 300_000_000,
+      acquisitionDate: new Date("2017-08-02"), // 경과규정 기준일(2017-08-03) 하루 전
+      transferDate: new Date("2024-01-02"),    // 보유 6년+
+      residencePeriodMonths: 0,                // 거주 없음
+      isOneHousehold: true,
+      householdHousingCount: 1,
+      wasRegulatedAtAcquisition: false, // 취득 당시 비조정
+      isRegulatedArea: true,            // 양도일 기준 조정지역 (경과규정으로 면제)
+    });
+    const result = calculateTransferTax(input, mockRates);
+    // 경과규정: 2017.8.3 이전 취득 + 취득 당시 비조정 → 거주요건 면제 → 비과세
+    expect(result.isExempt).toBe(true);
+    expect(result.totalTax).toBe(0);
+  });
+});
+
+// ============================================================
+// T-33: 일시적 2주택 처분기한 1일 초과 → 비과세 불가
+// ============================================================
+
+describe("T-33: 일시적 2주택 처분기한 초과 → 비과세 불가", () => {
+  it("신규취득 후 3년+1일 양도 → isExempt=false", () => {
+    const input = baseInput({
+      transferPrice: 900_000_000,
+      acquisitionPrice: 400_000_000,
+      acquisitionDate: new Date("2018-01-01"),  // 종전주택 취득 (6년 보유)
+      transferDate: new Date("2024-01-02"),     // 처분기한(2024-01-01) 1일 초과
+      isOneHousehold: true,
+      householdHousingCount: 2,
+      isRegulatedArea: false,
+      wasRegulatedAtAcquisition: false,
+      residencePeriodMonths: 60,
+      temporaryTwoHouse: {
+        previousAcquisitionDate: new Date("2018-01-01"),
+        newAcquisitionDate: new Date("2021-01-01"), // deadline = 2024-01-01
+      },
+    });
+    const result = calculateTransferTax(input, mockRates);
+    // 처분기한(2024-01-01) 초과 → 비과세 불가
+    expect(result.isExempt).toBe(false);
+    expect(result.totalTax).toBeGreaterThan(0);
+  });
+
+  it("신규취득 후 정확히 3년 당일 양도 → isExempt=true", () => {
+    const input = baseInput({
+      transferPrice: 900_000_000,
+      acquisitionPrice: 400_000_000,
+      acquisitionDate: new Date("2018-01-01"),
+      transferDate: new Date("2024-01-01"),    // 처분기한 당일 (<=)
+      isOneHousehold: true,
+      householdHousingCount: 2,
+      isRegulatedArea: false,
+      wasRegulatedAtAcquisition: false,
+      residencePeriodMonths: 60,
+      temporaryTwoHouse: {
+        previousAcquisitionDate: new Date("2018-01-01"),
+        newAcquisitionDate: new Date("2021-01-01"), // deadline = 2024-01-01
+      },
+    });
+    const result = calculateTransferTax(input, mockRates);
+    expect(result.isExempt).toBe(true);
+  });
+});
+
+// ============================================================
+// T-34: 일시적 2주택 — 종전 주택 보유 1년 11개월 → 비과세 불가 [버그4 검증]
+// ============================================================
+
+describe("T-34: 일시적 2주택, 종전 주택 보유 2년 미만 → 비과세 불가", () => {
+  it("종전주택 보유 1년 11개월 → isExempt=false", () => {
+    const input = baseInput({
+      transferPrice: 900_000_000,
+      acquisitionPrice: 500_000_000,
+      acquisitionDate: new Date("2022-06-01"),  // 종전주택 취득
+      transferDate: new Date("2024-05-30"),     // 취득 후 1년 11개월 28일 → holding.years=1
+      isOneHousehold: true,
+      householdHousingCount: 2,
+      isRegulatedArea: false,
+      wasRegulatedAtAcquisition: false,
+      residencePeriodMonths: 24,
+      temporaryTwoHouse: {
+        previousAcquisitionDate: new Date("2022-06-01"), // 종전주택 취득
+        newAcquisitionDate: new Date("2024-01-01"),      // 신규취득 → deadline=2027-01-01
+      },
+    });
+    const result = calculateTransferTax(input, mockRates);
+    // 종전주택 보유 2년 미만 → 일시적 2주택 비과세 불가
+    expect(result.isExempt).toBe(false);
+    expect(result.totalTax).toBeGreaterThan(0);
+  });
+});
+
+// ============================================================
+// T-35: 보유기간 경계값 — 정확히 2년 → 비과세 충족
+// ============================================================
+
+describe("T-35: 보유기간 경계값 — 정확히 2년 → 비과세", () => {
+  it("취득일 2022-01-01, 양도일 2024-01-02 → holding.years=2 → isExempt=true", () => {
+    const input = baseInput({
+      transferPrice: 900_000_000,
+      acquisitionPrice: 600_000_000,
+      acquisitionDate: new Date("2022-01-01"),
+      transferDate: new Date("2024-01-02"), // 초일불산입: start=2022-01-02, 2년 충족
+      isOneHousehold: true,
+      householdHousingCount: 1,
+      wasRegulatedAtAcquisition: false,
+      isRegulatedArea: false,
+      residencePeriodMonths: 24,
+    });
+    const result = calculateTransferTax(input, mockRates);
+    expect(result.isExempt).toBe(true);
+  });
+
+  it("취득일 2022-01-01, 양도일 2024-01-01 → holding.years=1 → isExempt=false", () => {
+    const input = baseInput({
+      transferPrice: 900_000_000,
+      acquisitionPrice: 600_000_000,
+      acquisitionDate: new Date("2022-01-01"),
+      transferDate: new Date("2024-01-01"), // 1년 11개월 → 2년 미충족
+      isOneHousehold: true,
+      householdHousingCount: 1,
+      wasRegulatedAtAcquisition: false,
+      isRegulatedArea: false,
+      residencePeriodMonths: 24,
+    });
+    const result = calculateTransferTax(input, mockRates);
+    expect(result.isExempt).toBe(false);
+    expect(result.totalTax).toBeGreaterThan(0);
+  });
+});
+
+// ============================================================
+// T-36: 양도가액 정확히 12억 → 전액 비과세 (경계값)
+// ============================================================
+
+describe("T-36: 양도가액 12억 → 전액 비과세 경계값", () => {
+  it("transferPrice=1,200,000,000 → isExempt=true (≤ 기준 적용)", () => {
+    const input = baseInput({
+      transferPrice: 1_200_000_000, // 정확히 12억
+      acquisitionPrice: 800_000_000,
+      acquisitionDate: new Date("2021-01-01"),
+      transferDate: new Date("2024-01-02"),
+      isOneHousehold: true,
+      householdHousingCount: 1,
+      wasRegulatedAtAcquisition: false,
+      isRegulatedArea: false,
+      residencePeriodMonths: 36,
+    });
+    const result = calculateTransferTax(input, mockRates);
+    expect(result.isExempt).toBe(true);
+    expect(result.totalTax).toBe(0);
+  });
+
+  it("transferPrice=1,500,000,000 (12억 초과) → isExempt=false, isPartialExempt로 과세", () => {
+    // 12억 초과 시 isExempt=false이고 부분과세 처리
+    // (1원 초과는 taxableGain≈0이 되므로 의미있는 초과액 사용)
+    const input = baseInput({
+      transferPrice: 1_500_000_000, // 15억
+      acquisitionPrice: 800_000_000,
+      acquisitionDate: new Date("2021-01-01"),
+      transferDate: new Date("2024-01-02"),
+      isOneHousehold: true,
+      householdHousingCount: 1,
+      wasRegulatedAtAcquisition: false,
+      isRegulatedArea: false,
+      residencePeriodMonths: 36,
+    });
+    const result = calculateTransferTax(input, mockRates);
+    expect(result.isExempt).toBe(false);
+    // 과세 양도차익 = 7억 × (3억/15억) = 1.4억
+    expect(result.taxableGain).toBe(Math.floor(700_000_000 * 300_000_000 / 1_500_000_000));
+    expect(result.totalTax).toBeGreaterThan(0);
+  });
+});
+
+// ============================================================
+// T-37: 1세대1주택 보유 2년 + 거주 2년 → 특례 미적용, 일반 공제 4% [버그2 검증]
+// ============================================================
+
+describe("T-37: 1세대1주택 보유 2년 → 장기보유특별공제 1세대1주택 특례 미적용 (3년 미만)", () => {
+  it("보유 2년, 거주 2년 → 일반 공제 4% (특례 미적용)", () => {
+    // 보유 2년 < 3년 → 1세대1주택 특례 미적용
+    // 일반 공제: 2년 × 2% = 4%
+    const input = baseInput({
+      transferPrice: 1_500_000_000, // > 12억 → 부분과세로 장기보유공제 계산됨
+      acquisitionPrice: 1_000_000_000,
+      acquisitionDate: new Date("2022-01-01"),
+      transferDate: new Date("2024-01-02"), // 보유 2년
+      isOneHousehold: true,
+      householdHousingCount: 1,
+      wasRegulatedAtAcquisition: false,
+      isRegulatedArea: false,
+      residencePeriodMonths: 24, // 거주 2년
+    });
+    const result = calculateTransferTax(input, mockRates);
+    // 보유 2년 → 1세대1주택 특례(3년 이상) 미적용
+    // 일반 공제: 2 × 2% = 4%
+    expect(result.longTermHoldingRate).toBe(0.04);
+    expect(result.longTermHoldingDeduction).toBe(
+      Math.floor(result.taxableGain * 0.04)
+    );
+  });
+});
+
+// ============================================================
+// T-38: 1세대1주택 보유 3년 + 거주 2년 → 특례 공제 20% (3년 경계값)
+// ============================================================
+
+describe("T-38: 1세대1주택 보유 3년 + 거주 2년 → 특례 공제 20%", () => {
+  it("보유 3년, 거주 2년 → 3×4% + 2×4% = 20%", () => {
+    const input = baseInput({
+      transferPrice: 1_500_000_000,
+      acquisitionPrice: 1_000_000_000,
+      acquisitionDate: new Date("2021-01-01"),
+      transferDate: new Date("2024-01-02"), // 보유 3년
+      isOneHousehold: true,
+      householdHousingCount: 1,
+      wasRegulatedAtAcquisition: false,
+      isRegulatedArea: false,
+      residencePeriodMonths: 24, // 거주 2년
+    });
+    const result = calculateTransferTax(input, mockRates);
+    // 3×4% + 2×4% = 12% + 8% = 20%
+    expect(result.longTermHoldingRate).toBe(0.20);
+    expect(result.longTermHoldingDeduction).toBe(
+      Math.floor(result.taxableGain * 0.20)
+    );
   });
 });
