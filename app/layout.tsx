@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { AuthMigrationListener } from "@/components/auth/AuthMigrationListener";
+import { SelectOnFocusProvider } from "@/components/providers/SelectOnFocusProvider";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -34,14 +35,16 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <ThemeProvider>
-          <AuthMigrationListener />
-          <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur">
-            <div className="mx-auto flex h-14 max-w-4xl items-center justify-between px-4">
-              <span className="font-semibold text-sm">한국 부동산 세금 계산기</span>
-              <ThemeToggle />
-            </div>
-          </header>
-          {children}
+          <SelectOnFocusProvider>
+            <AuthMigrationListener />
+            <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur">
+              <div className="mx-auto flex h-14 max-w-4xl items-center justify-between px-4">
+                <span className="font-semibold text-sm">한국 부동산 세금 계산기</span>
+                <ThemeToggle />
+              </div>
+            </header>
+            {children}
+          </SelectOnFocusProvider>
         </ThemeProvider>
       </body>
     </html>
