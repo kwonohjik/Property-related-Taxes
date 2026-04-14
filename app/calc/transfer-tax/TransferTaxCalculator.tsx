@@ -12,6 +12,7 @@ import { StepIndicator } from "@/components/calc/StepIndicator";
 import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
 import { LoginPromptBanner } from "@/components/calc/shared/LoginPromptBanner";
 import { NonBusinessLandResultCard } from "@/components/calc/NonBusinessLandResultCard";
+import { MultiHouseSurchargeDetailCard } from "@/components/calc/MultiHouseSurchargeDetailCard";
 
 /** 세율 백분율 표시 */
 function formatRate(rate: number): string {
@@ -569,6 +570,16 @@ function Step4({ form, onChange }: { form: TransferFormData; onChange: (d: Parti
         )}
       </div>
 
+      {/* 토지: 비사업용 토지 정밀 판정 정보 (P0-A) */}
+      {form.propertyType === "land" && (
+        <NblDetailSection form={form} onChange={onChange} />
+      )}
+
+      {/* 주택: 다른 보유 주택 목록 (P0-B) */}
+      {form.propertyType === "housing" && parseInt(form.householdHousingCount) >= 2 && (
+        <HousesListSection form={form} onChange={onChange} />
+      )}
+
       {/* 일시적 2주택 특례 */}
       {form.propertyType === "housing" && (
         <div className="space-y-2">
@@ -613,7 +624,6 @@ function Step4({ form, onChange }: { form: TransferFormData; onChange: (d: Parti
                   <DateInput
                     value={form.previousHouseAcquisitionDate}
                     onChange={(v) => onChange({ previousHouseAcquisitionDate: v })}
-                    placeholder="YYYY-MM-DD"
                   />
                   <p className="text-xs text-muted-foreground">지금 양도하는 주택의 취득일</p>
                 </div>
@@ -624,7 +634,6 @@ function Step4({ form, onChange }: { form: TransferFormData; onChange: (d: Parti
                   <DateInput
                     value={form.newHouseAcquisitionDate}
                     onChange={(v) => onChange({ newHouseAcquisitionDate: v })}
-                    placeholder="YYYY-MM-DD"
                   />
                   <p className="text-xs text-muted-foreground">새로 취득한 주택의 취득일</p>
                 </div>
@@ -633,6 +642,426 @@ function Step4({ form, onChange }: { form: TransferFormData; onChange: (d: Parti
           </div>
         </div>
       )}
+
+      {/* 주택: 합가 특례 (P2) */}
+      {form.propertyType === "housing" && (
+        <MergeDateSection form={form} onChange={onChange} />
+      )}
+    </div>
+  );
+}
+
+// ============================================================
+// Step 4 보조 컴포넌트: 비사업용 토지 정밀 판정 (P0-A)
+// ============================================================
+
+const NBL_LAND_TYPE_OPTIONS = [
+  { value: "paddy", label: "답 (논)" },
+  { value: "field", label: "전 (밭)" },
+  { value: "orchard", label: "과수원" },
+  { value: "farmland", label: "농지 (통합)" },
+  { value: "forest", label: "임야" },
+  { value: "pasture", label: "목장용지" },
+  { value: "building_site", label: "건물 부수 토지" },
+  { value: "housing_site", label: "주택 부수 토지" },
+  { value: "vacant_lot", label: "나대지" },
+  { value: "miscellaneous", label: "잡종지" },
+  { value: "other", label: "기타" },
+] as const;
+
+const NBL_ZONE_TYPE_OPTIONS = [
+  { value: "exclusive_residential", label: "전용주거지역" },
+  { value: "general_residential", label: "일반주거지역" },
+  { value: "semi_residential", label: "준주거지역" },
+  { value: "residential", label: "주거지역 (통합)" },
+  { value: "commercial", label: "상업지역" },
+  { value: "industrial", label: "공업지역" },
+  { value: "green", label: "녹지지역" },
+  { value: "management", label: "관리지역" },
+  { value: "agriculture_forest", label: "농림지역" },
+  { value: "natural_env", label: "자연환경보전지역" },
+  { value: "undesignated", label: "미지정" },
+] as const;
+
+function isFarmlandNblType(landType: string) {
+  return ["farmland", "paddy", "field", "orchard"].includes(landType);
+}
+
+function NblDetailSection({
+  form,
+  onChange,
+}: {
+  form: TransferFormData;
+  onChange: (d: Partial<TransferFormData>) => void;
+}) {
+  const periods = form.nblBusinessUsePeriods;
+
+  function addPeriod() {
+    onChange({
+      nblBusinessUsePeriods: [
+        ...periods,
+        { startDate: "", endDate: "", usageType: "자경" },
+      ],
+    });
+  }
+
+  function removePeriod(idx: number) {
+    onChange({
+      nblBusinessUsePeriods: periods.filter((_, i) => i !== idx),
+    });
+  }
+
+  function updatePeriod(idx: number, patch: Partial<{ startDate: string; endDate: string; usageType: string }>) {
+    onChange({
+      nblBusinessUsePeriods: periods.map((p, i) => (i === idx ? { ...p, ...patch } : p)),
+    });
+  }
+
+  return (
+    <div className="space-y-4 rounded-lg border border-border/80 bg-muted/20 px-4 py-4">
+      <p className="text-sm font-medium">
+        비사업용 토지 정밀 판정{" "}
+        <span className="text-xs text-muted-foreground font-normal">(선택 — 입력 시 엔진이 자동 판정)</span>
+      </p>
+
+      {/* 지목 */}
+      <div className="space-y-1.5">
+        <label className="block text-xs font-medium text-muted-foreground">토지 지목</label>
+        <select
+          value={form.nblLandType}
+          onChange={(e) => onChange({ nblLandType: e.target.value })}
+          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <option value="">선택 안 함</option>
+          {NBL_LAND_TYPE_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
+        </select>
+      </div>
+
+      {/* 면적 + 용도지역 */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <label className="block text-xs font-medium text-muted-foreground">토지 면적 (㎡)</label>
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            value={form.nblLandArea}
+            onChange={(e) => onChange({ nblLandArea: e.target.value })}
+            onFocus={(e) => e.target.select()}
+            placeholder="예: 500.00"
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <label className="block text-xs font-medium text-muted-foreground">용도지역</label>
+          <select
+            value={form.nblZoneType}
+            onChange={(e) => onChange({ nblZoneType: e.target.value })}
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <option value="">선택 안 함</option>
+            {NBL_ZONE_TYPE_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* 농지계 자경 여부 */}
+      {isFarmlandNblType(form.nblLandType) && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-3">
+            <input
+              id="nblFarmingSelf"
+              type="checkbox"
+              checked={form.nblFarmingSelf}
+              onChange={(e) => onChange({ nblFarmingSelf: e.target.checked })}
+              className="h-4 w-4 rounded accent-primary"
+            />
+            <label htmlFor="nblFarmingSelf" className="text-sm cursor-pointer">직접 자경 (재촌자경)</label>
+          </div>
+          {form.nblFarmingSelf && (
+            <div className="ml-7 space-y-1.5">
+              <label className="block text-xs font-medium text-muted-foreground">거주지까지 직선거리 (km)</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  value={form.nblFarmerResidenceDistance}
+                  onChange={(e) => onChange({ nblFarmerResidenceDistance: e.target.value })}
+                  onFocus={(e) => e.target.select()}
+                  placeholder="예: 15.0"
+                  className="w-28 rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                />
+                <span className="text-xs text-muted-foreground">km (30km 이내 = 재촌 인정)</span>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 사업용 사용기간 */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <label className="text-xs font-medium text-muted-foreground">사업용 사용기간</label>
+          <button
+            type="button"
+            onClick={addPeriod}
+            className="text-xs text-primary hover:underline"
+          >
+            + 기간 추가
+          </button>
+        </div>
+        {periods.length === 0 && (
+          <p className="text-xs text-muted-foreground/70">없음 — 실제 사용기간이 있으면 추가하세요.</p>
+        )}
+        <div className="space-y-2">
+          {periods.map((p, idx) => (
+            <div key={idx} className="grid grid-cols-[1fr_1fr_auto_auto] gap-2 items-start">
+              <div>
+                <DateInput
+                  value={p.startDate}
+                  onChange={(v) => updatePeriod(idx, { startDate: v })}
+                />
+                <p className="text-[10px] text-muted-foreground mt-0.5">시작일</p>
+              </div>
+              <div>
+                <DateInput
+                  value={p.endDate}
+                  onChange={(v) => updatePeriod(idx, { endDate: v })}
+                />
+                <p className="text-[10px] text-muted-foreground mt-0.5">종료일</p>
+              </div>
+              <input
+                type="text"
+                value={p.usageType}
+                onChange={(e) => updatePeriod(idx, { usageType: e.target.value })}
+                onFocus={(e) => e.target.select()}
+                placeholder="자경"
+                className="rounded-md border border-input bg-background px-2 py-2 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring w-16"
+              />
+              <button
+                type="button"
+                onClick={() => removePeriod(idx)}
+                className="mt-1 text-destructive text-xs hover:underline"
+              >
+                삭제
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// Step 4 보조 컴포넌트: 다른 보유 주택 목록 (P0-B)
+// ============================================================
+
+function HousesListSection({
+  form,
+  onChange,
+}: {
+  form: TransferFormData;
+  onChange: (d: Partial<TransferFormData>) => void;
+}) {
+  const houses = form.houses;
+
+  function addHouse() {
+    onChange({
+      houses: [
+        ...houses,
+        {
+          id: `house_${Date.now()}`,
+          region: "capital",
+          acquisitionDate: "",
+          officialPrice: "",
+          isInherited: false,
+          isLongTermRental: false,
+          isApartment: false,
+          isOfficetel: false,
+          isUnsoldHousing: false,
+        },
+      ],
+    });
+  }
+
+  function removeHouse(id: string) {
+    onChange({ houses: houses.filter((h) => h.id !== id) });
+  }
+
+  function updateHouse(id: string, patch: Partial<(typeof houses)[number]>) {
+    onChange({ houses: houses.map((h) => (h.id === id ? { ...h, ...patch } : h)) });
+  }
+
+  return (
+    <div className="space-y-3 rounded-lg border border-border/80 bg-muted/20 px-4 py-4">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-medium">
+          다른 보유 주택 목록{" "}
+          <span className="text-xs text-muted-foreground font-normal">(정밀 중과세 판정용, 선택)</span>
+        </p>
+        <button
+          type="button"
+          onClick={addHouse}
+          className="text-xs text-primary hover:underline"
+        >
+          + 주택 추가
+        </button>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        현재 양도하는 주택 외 세대 구성원이 보유한 주택을 입력하세요.
+      </p>
+
+      {houses.length === 0 && (
+        <p className="text-xs text-muted-foreground/70">없음 — 주택 추가 시 정밀 주택 수 산정이 적용됩니다.</p>
+      )}
+
+      <div className="space-y-3">
+        {houses.map((h, idx) => (
+          <div key={h.id} className="rounded-md border border-border bg-background p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-muted-foreground">주택 {idx + 1}</span>
+              <button
+                type="button"
+                onClick={() => removeHouse(h.id)}
+                className="text-xs text-destructive hover:underline"
+              >
+                삭제
+              </button>
+            </div>
+
+            {/* 지역 + 취득일 */}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <label className="block text-[11px] text-muted-foreground">지역 구분</label>
+                <select
+                  value={h.region}
+                  onChange={(e) => updateHouse(h.id, { region: e.target.value as "capital" | "non_capital" })}
+                  className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                >
+                  <option value="capital">수도권</option>
+                  <option value="non_capital">지방</option>
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className="block text-[11px] text-muted-foreground">취득일</label>
+                <DateInput
+                  value={h.acquisitionDate}
+                  onChange={(v) => updateHouse(h.id, { acquisitionDate: v })}
+                />
+              </div>
+            </div>
+
+            {/* 공시가격 */}
+            <div className="space-y-1">
+              <label className="block text-[11px] text-muted-foreground">공시가격 (원)</label>
+              <input
+                type="number"
+                min="0"
+                step="1000000"
+                value={h.officialPrice}
+                onChange={(e) => updateHouse(h.id, { officialPrice: e.target.value })}
+                onFocus={(e) => e.target.select()}
+                placeholder="0"
+                className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              />
+            </div>
+
+            {/* 특례 체크 */}
+            <div className="flex flex-wrap gap-3">
+              <label className="flex items-center gap-1.5 text-xs cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={h.isInherited}
+                  onChange={(e) => updateHouse(h.id, { isInherited: e.target.checked })}
+                  className="h-3.5 w-3.5 rounded accent-primary"
+                />
+                상속주택
+              </label>
+              <label className="flex items-center gap-1.5 text-xs cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={h.isLongTermRental}
+                  onChange={(e) => updateHouse(h.id, { isLongTermRental: e.target.checked })}
+                  className="h-3.5 w-3.5 rounded accent-primary"
+                />
+                장기임대 등록
+              </label>
+              <label className="flex items-center gap-1.5 text-xs cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={h.isApartment}
+                  onChange={(e) => updateHouse(h.id, { isApartment: e.target.checked })}
+                  className="h-3.5 w-3.5 rounded accent-primary"
+                />
+                아파트
+              </label>
+              <label className="flex items-center gap-1.5 text-xs cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={h.isOfficetel}
+                  onChange={(e) => updateHouse(h.id, { isOfficetel: e.target.checked })}
+                  className="h-3.5 w-3.5 rounded accent-primary"
+                />
+                오피스텔
+              </label>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// Step 4 보조 컴포넌트: 합가 특례 (P2)
+// ============================================================
+
+function MergeDateSection({
+  form,
+  onChange,
+}: {
+  form: TransferFormData;
+  onChange: (d: Partial<TransferFormData>) => void;
+}) {
+  const hasAnyMerge = form.marriageDate || form.parentalCareMergeDate;
+
+  return (
+    <div className="space-y-2">
+      <p className="text-sm font-medium">
+        합가 특례{" "}
+        <span className="text-xs text-muted-foreground font-normal">(선택 — 혼인·동거봉양 합가 시 중과 배제)</span>
+      </p>
+      <div
+        className={cn(
+          "rounded-lg border px-4 py-3 space-y-4 transition-colors",
+          hasAnyMerge ? "border-primary/40 bg-primary/5" : "border-border",
+        )}
+      >
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium">혼인합가일</label>
+            <DateInput
+              value={form.marriageDate}
+              onChange={(v) => onChange({ marriageDate: v })}
+            />
+            <p className="text-xs text-muted-foreground">혼인합가 후 5년 이내 양도 시 중과 배제</p>
+          </div>
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium">동거봉양 합가일</label>
+            <DateInput
+              value={form.parentalCareMergeDate}
+              onChange={(v) => onChange({ parentalCareMergeDate: v })}
+            />
+            <p className="text-xs text-muted-foreground">동거봉양 합가 후 10년 이내 양도 시 중과 배제</p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -867,7 +1296,12 @@ function ResultView({
         </div>
       )}
 
-      {/* P1: 비사업용토지 판정 상세 결과 */}
+      {/* 다주택 중과세 상세 결과 (P1) */}
+      {result.multiHouseSurchargeDetail && (
+        <MultiHouseSurchargeDetailCard detail={result.multiHouseSurchargeDetail} />
+      )}
+
+      {/* 비사업용토지 판정 상세 결과 (P1) */}
       {result.nonBusinessLandJudgmentDetail && (
         <div>
           <p className="text-sm font-medium mb-2">비사업용토지 판정 결과</p>
@@ -1006,6 +1440,58 @@ async function callTransferTaxAPI(form: TransferFormData): Promise<TransferTaxRe
     reductions.push({ type: "unsold_housing", region: form.reductionRegion });
   }
 
+  // P0-A: 비사업용 토지 상세 정보 구성
+  const nblDetails =
+    form.propertyType === "land" && form.nblLandType && form.nblLandArea && form.nblZoneType
+      ? {
+          landType: form.nblLandType,
+          landArea: parseFloat(form.nblLandArea),
+          zoneType: form.nblZoneType,
+          acquisitionDate: form.acquisitionDate,
+          transferDate: form.transferDate,
+          farmingSelf: form.nblFarmingSelf || undefined,
+          farmerResidenceDistance: form.nblFarmerResidenceDistance
+            ? parseFloat(form.nblFarmerResidenceDistance)
+            : undefined,
+          businessUsePeriods: form.nblBusinessUsePeriods.filter(
+            (p) => p.startDate && p.endDate,
+          ),
+        }
+      : undefined;
+
+  // P0-B: 다른 보유 주택 목록 구성 (현재 양도 주택을 포함한 전체 배열 생성)
+  const housesPayload =
+    form.propertyType === "housing" && form.houses.length > 0
+      ? [
+          // 현재 양도 주택 (ID: "selling")
+          {
+            id: "selling",
+            region: form.isRegulatedArea ? "capital" : "non_capital",
+            acquisitionDate: form.acquisitionDate,
+            officialPrice: 0,
+            isInherited: false,
+            isLongTermRental: false,
+            isApartment: false,
+            isOfficetel: false,
+            isUnsoldHousing: false,
+          },
+          // 다른 보유 주택들
+          ...form.houses
+            .filter((h) => h.acquisitionDate)
+            .map((h) => ({
+              id: h.id,
+              region: h.region,
+              acquisitionDate: h.acquisitionDate,
+              officialPrice: parseInt(h.officialPrice) || 0,
+              isInherited: h.isInherited,
+              isLongTermRental: h.isLongTermRental,
+              isApartment: h.isApartment,
+              isOfficetel: h.isOfficetel,
+              isUnsoldHousing: h.isUnsoldHousing,
+            })),
+        ]
+      : undefined;
+
   const body = {
     propertyType: form.propertyType,
     transferPrice: parseAmount(form.transferPrice),
@@ -1035,10 +1521,19 @@ async function callTransferTaxAPI(form: TransferFormData): Promise<TransferTaxRe
       form.newHouseAcquisitionDate
       ? {
           temporaryTwoHouse: {
-            previousHouseAcquisitionDate: form.previousHouseAcquisitionDate,
-            newHouseAcquisitionDate: form.newHouseAcquisitionDate,
+            previousAcquisitionDate: form.previousHouseAcquisitionDate,
+            newAcquisitionDate: form.newHouseAcquisitionDate,
           },
         }
+      : {}),
+    // P0-A: 비사업용 토지 정밀 판정
+    ...(nblDetails ? { nonBusinessLandDetails: nblDetails } : {}),
+    // P0-B: 다주택 정밀 중과세 판정
+    ...(housesPayload ? { houses: housesPayload, sellingHouseId: "selling" } : {}),
+    // P2: 합가 특례
+    ...(form.marriageDate ? { marriageMerge: { marriageDate: form.marriageDate } } : {}),
+    ...(form.parentalCareMergeDate
+      ? { parentalCareMerge: { mergeDate: form.parentalCareMergeDate } }
       : {}),
   };
 

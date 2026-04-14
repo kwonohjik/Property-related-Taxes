@@ -6,6 +6,26 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 
+/** 비사업용 토지 사업용 사용기간 항목 (폼 문자열 버전) */
+export interface NblBusinessUsePeriod {
+  startDate: string;
+  endDate: string;
+  usageType: string;
+}
+
+/** 다른 보유 주택 항목 (폼 문자열 버전) */
+export interface HouseEntry {
+  id: string;
+  region: "capital" | "non_capital";
+  acquisitionDate: string;
+  officialPrice: string;
+  isInherited: boolean;
+  isLongTermRental: boolean;
+  isApartment: boolean;
+  isOfficetel: boolean;
+  isUnsoldHousing: boolean;
+}
+
 export interface TransferFormData {
   // Step 1: 물건 유형
   propertyType: "housing" | "land" | "building";
@@ -50,6 +70,18 @@ export interface TransferFormData {
   temporaryTwoHouseSpecial: boolean;
   previousHouseAcquisitionDate: string;
   newHouseAcquisitionDate: string;
+  // Step 4: 합가 특례 (P2)
+  marriageDate: string;
+  parentalCareMergeDate: string;
+  // Step 4: 비사업용 토지 정밀 판정 (P0-A)
+  nblLandType: string;
+  nblLandArea: string;
+  nblZoneType: string;
+  nblFarmingSelf: boolean;
+  nblFarmerResidenceDistance: string;
+  nblBusinessUsePeriods: NblBusinessUsePeriod[];
+  // Step 4: 다른 보유 주택 목록 (P0-B)
+  houses: HouseEntry[];
 }
 
 const defaultFormData: TransferFormData = {
@@ -84,6 +116,15 @@ const defaultFormData: TransferFormData = {
   temporaryTwoHouseSpecial: false,
   previousHouseAcquisitionDate: "",
   newHouseAcquisitionDate: "",
+  marriageDate: "",
+  parentalCareMergeDate: "",
+  nblLandType: "",
+  nblLandArea: "",
+  nblZoneType: "",
+  nblFarmingSelf: false,
+  nblFarmerResidenceDistance: "",
+  nblBusinessUsePeriods: [],
+  houses: [],
 };
 
 interface CalcWizardState {

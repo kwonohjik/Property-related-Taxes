@@ -22,6 +22,50 @@ const temporaryTwoHouseSchema = z.object({
   newAcquisitionDate: z.string().date(),
 });
 
+const businessUsePeriodSchema = z.object({
+  startDate: z.string().date(),
+  endDate: z.string().date(),
+  usageType: z.string().min(1),
+});
+
+const gracePeriodSchema = z.object({
+  type: z.enum([
+    "inheritance",
+    "legal_restriction",
+    "sale_contract",
+    "construction",
+    "unavoidable",
+    "preparation",
+    "land_replotting",
+  ]),
+  startDate: z.string().date(),
+  endDate: z.string().date(),
+});
+
+const nonBusinessLandDetailsSchema = z.object({
+  landType: z.string().min(1),
+  landArea: z.number().positive(),
+  zoneType: z.string().min(1),
+  acquisitionDate: z.string().date(),
+  transferDate: z.string().date(),
+  farmingSelf: z.boolean().optional(),
+  farmerResidenceDistance: z.number().nonnegative().optional(),
+  businessUsePeriods: z.array(businessUsePeriodSchema).default([]),
+  gracePeriods: z.array(gracePeriodSchema).default([]),
+});
+
+const houseSchema = z.object({
+  id: z.string().min(1),
+  region: z.enum(["capital", "non_capital"]),
+  acquisitionDate: z.string().date(),
+  officialPrice: z.number().int().nonnegative(),
+  isInherited: z.boolean(),
+  isLongTermRental: z.boolean(),
+  isApartment: z.boolean().default(false),
+  isOfficetel: z.boolean().default(false),
+  isUnsoldHousing: z.boolean().default(false),
+});
+
 const reductionSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("self_farming"),
@@ -82,6 +126,16 @@ const inputSchema = z
     reductions: z.array(reductionSchema).default([]),
     /** 19. 당해 연도 기사용 기본공제 */
     annualBasicDeductionUsed: z.number().int().nonnegative().default(0),
+    /** 20. 비사업용 토지 상세 정보 (선택 — 제공 시 정밀 판정) */
+    nonBusinessLandDetails: nonBusinessLandDetailsSchema.optional(),
+    /** 21. 세대 보유 주택 목록 (선택 — 제공 시 정밀 중과세 산정) */
+    houses: z.array(houseSchema).optional(),
+    /** 22. 양도 주택 ID (houses 제공 시) */
+    sellingHouseId: z.string().optional(),
+    /** 23. 혼인합가 정보 */
+    marriageMerge: z.object({ marriageDate: z.string().date() }).optional(),
+    /** 24. 동거봉양 합가 정보 */
+    parentalCareMerge: z.object({ mergeDate: z.string().date() }).optional(),
   })
   .superRefine((data, ctx) => {
     // V-1: 환산취득가 사용 시 취득시 기준시가 필수
@@ -184,6 +238,49 @@ export async function POST(request: NextRequest) {
       : undefined,
     reductions: data.reductions,
     annualBasicDeductionUsed: data.annualBasicDeductionUsed,
+    nonBusinessLandDetails: data.nonBusinessLandDetails
+      ? {
+          ...data.nonBusinessLandDetails,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          landType: data.nonBusinessLandDetails.landType as any,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          zoneType: data.nonBusinessLandDetails.zoneType as any,
+          acquisitionDate: new Date(data.nonBusinessLandDetails.acquisitionDate),
+          transferDate: new Date(data.nonBusinessLandDetails.transferDate),
+          businessUsePeriods: data.nonBusinessLandDetails.businessUsePeriods.map((p) => ({
+            startDate: new Date(p.startDate),
+            endDate: new Date(p.endDate),
+            usageType: p.usageType,
+          })),
+          gracePeriods: data.nonBusinessLandDetails.gracePeriods.map((g) => ({
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            type: g.type as any,
+            startDate: new Date(g.startDate),
+            endDate: new Date(g.endDate),
+          })),
+        }
+      : undefined,
+    houses: data.houses
+      ? data.houses.map((h) => ({
+          id: h.id,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          region: h.region as any,
+          acquisitionDate: new Date(h.acquisitionDate),
+          officialPrice: h.officialPrice,
+          isInherited: h.isInherited,
+          isLongTermRental: h.isLongTermRental,
+          isApartment: h.isApartment,
+          isOfficetel: h.isOfficetel,
+          isUnsoldHousing: h.isUnsoldHousing,
+        }))
+      : undefined,
+    sellingHouseId: data.sellingHouseId,
+    marriageMerge: data.marriageMerge
+      ? { marriageDate: new Date(data.marriageMerge.marriageDate) }
+      : undefined,
+    parentalCareMerge: data.parentalCareMerge
+      ? { mergeDate: new Date(data.parentalCareMerge.mergeDate) }
+      : undefined,
   };
 
   // 단계 4: 세율 로드
