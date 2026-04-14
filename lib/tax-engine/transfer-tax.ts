@@ -8,6 +8,7 @@
  */
 
 import { addYears } from "date-fns";
+import { TRANSFER } from "./legal-codes";
 import {
   applyRate,
   calculateEstimatedAcquisitionPrice,
@@ -174,6 +175,8 @@ export interface CalculationStep {
   formula: string;
   /** 결과 금액 */
   amount: number;
+  /** 법적 근거 조문 (P2: 결과 시각화용) */
+  legalBasis?: string;
 }
 
 export interface TransferTaxResult {
@@ -938,6 +941,7 @@ export function calculateTransferTax(
       label: "1세대1주택 비과세",
       formula: exemptionResult.exemptReason ?? "비과세",
       amount: 0,
+      legalBasis: TRANSFER.ONE_HOUSE_EXEMPT,
     });
     return {
       isExempt: true,
@@ -986,6 +990,7 @@ export function calculateTransferTax(
     label: "양도차익 계산",
     formula: gainFormula,
     amount: transferGain,
+    legalBasis: "소득세법 §94 ①",
   });
 
   // 양도 손실: 바로 0 반환
@@ -1020,6 +1025,7 @@ export function calculateTransferTax(
       label: "과세 양도차익 (12억 초과분)",
       formula: `${transferGain.toLocaleString()}원 × (양도가 ${input.transferPrice.toLocaleString()}원 - 12억) / 양도가`,
       amount: taxableGain,
+      legalBasis: TRANSFER.ONE_HOUSE_EXEMPT,
     });
   } else {
     taxableGain = transferGain;
@@ -1068,6 +1074,7 @@ export function calculateTransferTax(
       holdingPeriodStr,
     ].filter(Boolean).join(" | "),
     amount: longTermHoldingDeduction,
+    legalBasis: TRANSFER.LONG_TERM_DEDUCTION,
   });
 
   // STEP 5: 기본공제
@@ -1082,6 +1089,7 @@ export function calculateTransferTax(
     label: "기본공제",
     formula: `연 한도 ${parsedRates.basicDeductionRules.annualLimit.toLocaleString()}원 - 기사용 ${input.annualBasicDeductionUsed.toLocaleString()}원`,
     amount: basicDeduction,
+    legalBasis: TRANSFER.BASIC_DEDUCTION,
   });
 
   // STEP 6: 과세표준 (천원 미만 절사)
@@ -1091,6 +1099,7 @@ export function calculateTransferTax(
     label: "과세표준",
     formula: `${taxableGain.toLocaleString()}원 - ${longTermHoldingDeduction.toLocaleString()}원 - ${basicDeduction.toLocaleString()}원 (천원 미만 절사)`,
     amount: taxBase,
+    legalBasis: "소득세법 §92",
   });
 
   // STEP 7: 산출세액
@@ -1100,6 +1109,7 @@ export function calculateTransferTax(
     label: "산출세액",
     formula: `과세표준 ${taxBase.toLocaleString()}원 × 세율 ${fmtPct(taxResult.appliedRate)}${taxResult.surchargeRate ? ` (+중과 ${fmtPct(taxResult.surchargeRate)})` : ""}`,
     amount: taxResult.calculatedTax,
+    legalBasis: taxResult.surchargeRate ? TRANSFER.SURCHARGE : TRANSFER.TAX_RATE,
   });
 
   // STEP 8: 감면세액
@@ -1132,6 +1142,7 @@ export function calculateTransferTax(
     label: "지방소득세",
     formula: `${determinedTax.toLocaleString()}원 × 10%`,
     amount: localIncomeTax,
+    legalBasis: TRANSFER.LOCAL_INCOME_TAX,
   });
 
   // STEP 11: 총 납부세액

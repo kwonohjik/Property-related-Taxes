@@ -11,6 +11,7 @@ import { CurrencyInput, parseAmount, formatKRW } from "@/components/calc/inputs/
 import { StepIndicator } from "@/components/calc/StepIndicator";
 import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
 import { LoginPromptBanner } from "@/components/calc/shared/LoginPromptBanner";
+import { NonBusinessLandResultCard } from "@/components/calc/NonBusinessLandResultCard";
 
 /** 세율 백분율 표시 */
 function formatRate(rate: number): string {
@@ -538,19 +539,31 @@ function Step4({ form, onChange }: { form: TransferFormData; onChange: (d: Parti
         </div>
 
         {form.propertyType === "land" && (
-          <div className="flex items-center gap-3 rounded-lg border border-border px-4 py-3">
-            <input
-              id="isNonBusiness"
-              type="checkbox"
-              checked={form.isNonBusinessLand}
-              onChange={(e) => onChange({ isNonBusinessLand: e.target.checked })}
-              className="h-4 w-4 rounded accent-primary"
-            />
-            <div>
-              <label htmlFor="isNonBusiness" className="text-sm font-medium cursor-pointer">
-                비사업용 토지
-              </label>
-              <p className="text-xs text-muted-foreground">누진세율 + 10%p 중과세 적용</p>
+          <div className="rounded-lg border border-border px-4 py-3 space-y-2">
+            <div className="flex items-center gap-3">
+              <input
+                id="isNonBusiness"
+                type="checkbox"
+                checked={form.isNonBusinessLand}
+                onChange={(e) => onChange({ isNonBusinessLand: e.target.checked })}
+                className="h-4 w-4 rounded accent-primary"
+              />
+              <div>
+                <label htmlFor="isNonBusiness" className="text-sm font-medium cursor-pointer">
+                  비사업용 토지
+                </label>
+                <p className="text-xs text-muted-foreground">누진세율 + 10%p 중과세 · 장기보유공제 배제</p>
+              </div>
+            </div>
+            {/* P3: 재촌 요건 안내 (거주지 근접성 판단 기준 설명) */}
+            <div className="ml-7 rounded-md bg-muted/40 border border-border/60 px-3 py-2 text-xs text-muted-foreground space-y-1">
+              <p className="font-medium text-foreground/70">농지·임야 재촌(在村) 요건 — 아래 중 하나 충족 시 사업용</p>
+              <ul className="space-y-0.5 pl-2">
+                <li>• 토지 소재지와 <strong>동일 시·군·구</strong>에 거주</li>
+                <li>• 토지 소재지와 <strong>연접한 시·군·구</strong>에 거주</li>
+                <li>• 토지 소재지와 거주지 사이 <strong>직선거리 30km 이내</strong></li>
+              </ul>
+              <p className="text-muted-foreground/70 text-[10px] mt-1">소득세법 시행령 §168조의8 — 정밀 판정을 원하시면 세무사 확인 권장</p>
             </div>
           </div>
         )}
@@ -854,6 +867,14 @@ function ResultView({
         </div>
       )}
 
+      {/* P1: 비사업용토지 판정 상세 결과 */}
+      {result.nonBusinessLandJudgmentDetail && (
+        <div>
+          <p className="text-sm font-medium mb-2">비사업용토지 판정 결과</p>
+          <NonBusinessLandResultCard judgment={result.nonBusinessLandJudgmentDetail} />
+        </div>
+      )}
+
       {/* 계산 과정 토글 */}
       <button
         type="button"
@@ -868,9 +889,14 @@ function ResultView({
         <div className="rounded-lg border border-border divide-y divide-border text-sm">
           {result.steps.map((step, i) => (
             <div key={i} className="px-4 py-3 flex justify-between gap-4">
-              <div>
+              <div className="min-w-0">
                 <p className="font-medium">{step.label}</p>
                 <p className="text-xs text-muted-foreground mt-0.5">{step.formula}</p>
+                {step.legalBasis && (
+                  <span className="inline-block mt-1 text-[10px] text-muted-foreground/70 border border-border/60 rounded px-1.5 py-0.5">
+                    {step.legalBasis}
+                  </span>
+                )}
               </div>
               <p className="font-mono font-medium shrink-0">{formatKRW(step.amount)}</p>
             </div>

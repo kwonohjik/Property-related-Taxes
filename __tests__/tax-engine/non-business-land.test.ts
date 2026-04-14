@@ -6,6 +6,16 @@ import { describe, it, expect } from "vitest";
 import {
   judgeNonBusinessLand,
   mergeOverlappingPeriods,
+  checkUnconditionalExemption,
+  isResidenceValid,
+  checkIncorporationGrace,
+  judgePasture,
+  judgeVillaLand,
+  judgeOtherLand,
+  checkForestSpecialRequirement,
+  checkFarmlandDeeming,
+  getPeriodCriteriaThreshold,
+  isFarmlandType,
   DEFAULT_NON_BUSINESS_LAND_RULES,
   type NonBusinessLandInput,
   type BusinessUsePeriod,
@@ -325,14 +335,14 @@ describe("NB-09: 유예기간 중복 제거 (상속 + 법령제한 겹침)", () 
 // ─── NB-10: 건물 부수 토지 배율 초과 → 면적 안분 ────────────────────────────
 
 describe("NB-10: 건물 부수 토지 배율 초과 → 초과분 비사업용 (면적 안분)", () => {
-  it("주거지역 5배, 건물 바닥면적 100㎡, 토지 600㎡ → 100㎡(초과분) 비사업용", () => {
+  it("전용주거 5배, 건물 바닥면적 100㎡, 토지 600㎡ → 100㎡(초과분) 비사업용", () => {
+    // NBL-08: 전용주거 5배 (exclusive_residential) 정확한 배율
     // allowedArea = 100 * 5 = 500㎡
     // nonBusinessArea = 600 - 500 = 100㎡
-    // nonBusinessRatio = 100/600 ≈ 0.1667
     const input: NonBusinessLandInput = {
       landType: "building_site",
       landArea: 600,
-      zoneType: "residential",
+      zoneType: "exclusive_residential",
       acquisitionDate: new Date("2015-01-01"),
       transferDate: new Date("2022-01-01"),
       buildingFootprint: 100,
@@ -355,7 +365,7 @@ describe("NB-10: 건물 부수 토지 배율 초과 → 초과분 비사업용 (
     const input: NonBusinessLandInput = {
       landType: "building_site",
       landArea: 300,
-      zoneType: "residential",
+      zoneType: "exclusive_residential",
       acquisitionDate: new Date("2015-01-01"),
       transferDate: new Date("2022-01-01"),
       buildingFootprint: 100,
@@ -369,11 +379,12 @@ describe("NB-10: 건물 부수 토지 배율 초과 → 초과분 비사업용 (
     expect(result.areaProportioning!.nonBusinessArea).toBe(0);
   });
 
-  it("공업지역 배율 = 7배 적용", () => {
+  it("녹지지역 배율 = 7배 적용", () => {
+    // NBL-08: 녹지 7배 (과거 공업 7배에서 녹지 7배로 변경, 공업은 4배로 시정)
     const input: NonBusinessLandInput = {
       landType: "building_site",
       landArea: 1500,
-      zoneType: "industrial",
+      zoneType: "green",
       acquisitionDate: new Date("2018-01-01"),
       transferDate: new Date("2022-01-01"),
       buildingFootprint: 200,
@@ -778,5 +789,814 @@ describe("NB-16: 부득이한 사유 → 유예기간으로 산입", () => {
     const maxGraceDays = 2 * 365 + 2; // 윤년 포함 최대
     expect(result.gracePeriodDays).toBeLessThanOrEqual(maxGraceDays);
     expect(result.gracePeriodDays).toBeGreaterThan(0);
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// NBL-01 ~ NBL-10: 외부 프로젝트 비교 기반 보완 테스트
+// ══════════════════════════════════════════════════════════════════════════════
+
+// ─── NBL-01: 무조건 사업용 의제 7가지 ──────────────────────────────────────
+
+describe("NBL-01: 무조건 사업용 의제 7가지 (소령 §168-14 ③)", () => {
+  const baseInput: NonBusinessLandInput = {
+    landType: "farmland",
+    landArea: 5000,
+    zoneType: "agriculture_forest",
+    acquisitionDate: new Date("1990-01-01"),
+    transferDate: new Date("2008-06-01"),
+    farmingSelf: false,
+    farmerResidenceDistance: 100, // 자경 요건 미충족
+    businessUsePeriods: [],
+    gracePeriods: [],
+  };
+
+  it("① 2006.12.31 이전 상속 + 2009.12.31 이전 양도 → 사업용", () => {
+    const input: NonBusinessLandInput = {
+      ...baseInput,
+      unconditionalExemption: {
+        isInheritedBefore2007: true,
+        inheritanceDate: new Date("2005-06-01"),
+      },
+    };
+    const result = judgeNonBusinessLand(input);
+    expect(result.isNonBusinessLand).toBe(false);
+    expect(result.unconditionalExemption?.reason).toBe("inheritance_before_2007");
+  });
+
+  it("① 2007.1.1 이후 상속 → 의제 미적용", () => {
+    const result = checkUnconditionalExemption({
+      ...baseInput,
+      unconditionalExemption: {
+        isInheritedBefore2007: true,
+        inheritanceDate: new Date("2007-01-15"),
+      },
+    });
+    expect(result.isExempt).toBe(false);
+  });
+
+  it("② 20년 이상 소유 + 2006.12.31 이전 + 2009.12.31 이전 양도 → 사업용", () => {
+    const input: NonBusinessLandInput = {
+      ...baseInput,
+      unconditionalExemption: { ownedOver20YearsBefore2007: true },
+    };
+    const result = judgeNonBusinessLand(input);
+    expect(result.isNonBusinessLand).toBe(false);
+    expect(result.unconditionalExemption?.reason).toBe("long_owned_20years");
+  });
+
+  it("③ 직계존속 8년 재촌자경 상속 (농지) → 사업용", () => {
+    const input: NonBusinessLandInput = {
+      ...baseInput,
+      transferDate: new Date("2024-01-01"),
+      unconditionalExemption: { isAncestor8YearFarming: true },
+    };
+    const result = judgeNonBusinessLand(input);
+    expect(result.isNonBusinessLand).toBe(false);
+    expect(result.unconditionalExemption?.reason).toBe("ancestor_8year_farming");
+  });
+
+  it("③ 직계존속 8년 재촌자경 — 나대지(비농지) → 적용 안 됨", () => {
+    const result = checkUnconditionalExemption({
+      ...baseInput,
+      landType: "vacant_lot",
+      unconditionalExemption: { isAncestor8YearFarming: true },
+    });
+    expect(result.isExempt).toBe(false);
+  });
+
+  it("④ 공익사업 협의매수 (고시일 이전 취득) → 사업용", () => {
+    const input: NonBusinessLandInput = {
+      ...baseInput,
+      transferDate: new Date("2024-01-01"),
+      acquisitionDate: new Date("2018-01-01"),
+      unconditionalExemption: {
+        isPublicExpropriation: true,
+        publicNoticeDate: new Date("2020-01-01"),
+      },
+    };
+    const result = judgeNonBusinessLand(input);
+    expect(result.unconditionalExemption?.reason).toBe("public_expropriation");
+  });
+
+  it("⑤ 공장 인접 토지 (소유자 요구 매수) → 사업용", () => {
+    const input: NonBusinessLandInput = {
+      ...baseInput,
+      transferDate: new Date("2024-01-01"),
+      unconditionalExemption: { isFactoryAdjacent: true },
+    };
+    const result = judgeNonBusinessLand(input);
+    expect(result.unconditionalExemption?.reason).toBe("factory_adjacent");
+  });
+
+  it("⑥ 이농 (농지, 2006.12.31 이전 이농 + 2009.12.31 이전 양도) → 사업용", () => {
+    const input: NonBusinessLandInput = {
+      ...baseInput,
+      unconditionalExemption: {
+        isInong: true,
+        inongDate: new Date("2005-06-01"),
+      },
+    };
+    const result = judgeNonBusinessLand(input);
+    expect(result.unconditionalExemption?.reason).toBe("inong");
+  });
+
+  it("⑦ 종중 소유 (2005.12.31 이전 취득, 농지) → 사업용", () => {
+    const input: NonBusinessLandInput = {
+      ...baseInput,
+      transferDate: new Date("2024-01-01"),
+      unconditionalExemption: {
+        isJongjoongOwned: true,
+        jongjoongAcquisitionDate: new Date("2004-01-01"),
+      },
+    };
+    const result = judgeNonBusinessLand(input);
+    expect(result.unconditionalExemption?.reason).toBe("jongjoong_owned");
+  });
+
+  it("⑦ 종중 소유 — 2006.1.1 이후 취득 → 의제 미적용", () => {
+    const result = checkUnconditionalExemption({
+      ...baseInput,
+      transferDate: new Date("2024-01-01"),
+      unconditionalExemption: {
+        isJongjoongOwned: true,
+        jongjoongAcquisitionDate: new Date("2006-06-01"),
+      },
+    });
+    expect(result.isExempt).toBe(false);
+  });
+});
+
+// ─── NBL-02: 목장용지 판정 ─────────────────────────────────────────────────
+
+describe("NBL-02: 목장용지 판정 (소령 §168-9)", () => {
+  it("축산업 영위 + 기준면적 이내 → 사업용", () => {
+    const input: NonBusinessLandInput = {
+      landType: "pasture",
+      landArea: 3000,
+      zoneType: "agriculture_forest",
+      acquisitionDate: new Date("2015-01-01"),
+      transferDate: new Date("2024-01-01"),
+      businessUsePeriods: [],
+      gracePeriods: [],
+      pasture: {
+        isLivestockOperator: true,
+        livestockType: "한우",
+        livestockCount: 50,
+        standardArea: 3500,
+      },
+    };
+    const result = judgeNonBusinessLand(input);
+    expect(result.isNonBusinessLand).toBe(false);
+  });
+
+  it("축산업 미영위 → 비사업용", () => {
+    const input: NonBusinessLandInput = {
+      landType: "pasture",
+      landArea: 3000,
+      zoneType: "agriculture_forest",
+      acquisitionDate: new Date("2015-01-01"),
+      transferDate: new Date("2024-01-01"),
+      businessUsePeriods: [],
+      gracePeriods: [],
+      pasture: { isLivestockOperator: false },
+    };
+    const result = judgeNonBusinessLand(input);
+    expect(result.isNonBusinessLand).toBe(true);
+    expect(result.judgmentReason).toContain("축산업 미영위");
+  });
+
+  it("기준면적 초과 → 초과분 비사업용 (면적 안분)", () => {
+    const input: NonBusinessLandInput = {
+      landType: "pasture",
+      landArea: 5000,
+      zoneType: "agriculture_forest",
+      acquisitionDate: new Date("2015-01-01"),
+      transferDate: new Date("2024-01-01"),
+      businessUsePeriods: [],
+      gracePeriods: [],
+      pasture: {
+        isLivestockOperator: true,
+        livestockType: "한우",
+        livestockCount: 30,
+        standardArea: 3000,
+      },
+    };
+    const result = judgeNonBusinessLand(input);
+    expect(result.isNonBusinessLand).toBe(true);
+    expect(result.areaProportioning?.businessArea).toBe(3000);
+    expect(result.areaProportioning?.nonBusinessArea).toBe(2000);
+  });
+});
+
+// ─── NBL-03: 별장부수토지 판정 ──────────────────────────────────────────────
+
+describe("NBL-03: 별장부수토지 판정 (소령 §168-11)", () => {
+  it("2015.1.1 이후 양도 + 농어촌주택 아님 → 비사업용", () => {
+    const input: NonBusinessLandInput = {
+      landType: "villa_land",
+      landArea: 800,
+      zoneType: "green",
+      acquisitionDate: new Date("2010-01-01"),
+      transferDate: new Date("2020-06-01"),
+      businessUsePeriods: [],
+      gracePeriods: [],
+      villa: {
+        villaUsePeriods: [],
+        isEupMyeon: false,
+        isRuralHousing: false,
+      },
+    };
+    const result = judgeNonBusinessLand(input);
+    expect(result.isNonBusinessLand).toBe(true);
+  });
+
+  it("농어촌주택 특례 (150㎡·660㎡·2억 이하) → 사업용", () => {
+    const input: NonBusinessLandInput = {
+      landType: "villa_land",
+      landArea: 500,
+      zoneType: "green",
+      acquisitionDate: new Date("2010-01-01"),
+      transferDate: new Date("2024-01-01"),
+      businessUsePeriods: [],
+      gracePeriods: [],
+      villa: {
+        villaUsePeriods: [],
+        isEupMyeon: true,
+        isRuralHousing: true,
+      },
+    };
+    const result = judgeNonBusinessLand(input);
+    expect(result.isNonBusinessLand).toBe(false);
+    expect(result.judgmentReason).toContain("농어촌주택");
+  });
+
+  it("judgeVillaLand 헬퍼 — villa 미제공 시 비사업용", () => {
+    const input: NonBusinessLandInput = {
+      landType: "villa_land",
+      landArea: 500,
+      zoneType: "green",
+      acquisitionDate: new Date("2010-01-01"),
+      transferDate: new Date("2024-01-01"),
+      businessUsePeriods: [],
+      gracePeriods: [],
+    };
+    const res = judgeVillaLand(input);
+    expect(res.isBusiness).toBe(false);
+  });
+});
+
+// ─── NBL-04: 기타토지 판정 ─────────────────────────────────────────────────
+
+describe("NBL-04: 기타토지 판정 (재산세 분류 기반)", () => {
+  it("재산세 분리과세 → 사업용 의제", () => {
+    const input: NonBusinessLandInput = {
+      landType: "other_land",
+      landArea: 500,
+      zoneType: "commercial",
+      acquisitionDate: new Date("2015-01-01"),
+      transferDate: new Date("2024-01-01"),
+      businessUsePeriods: [],
+      gracePeriods: [],
+      otherLand: {
+        propertyTaxType: "separate",
+        hasBuilding: false,
+        isRelatedToResidenceOrBusiness: false,
+      },
+    };
+    const result = judgeNonBusinessLand(input);
+    expect(result.isNonBusinessLand).toBe(false);
+    expect(result.judgmentReason).toContain("분리과세");
+  });
+
+  it("재산세 별도합산과세 → 사업용 의제", () => {
+    const input: NonBusinessLandInput = {
+      landType: "other_land",
+      landArea: 500,
+      zoneType: "commercial",
+      acquisitionDate: new Date("2015-01-01"),
+      transferDate: new Date("2024-01-01"),
+      businessUsePeriods: [],
+      gracePeriods: [],
+      otherLand: {
+        propertyTaxType: "special_sum",
+        hasBuilding: true,
+        isRelatedToResidenceOrBusiness: false,
+      },
+    };
+    const result = judgeNonBusinessLand(input);
+    expect(result.isNonBusinessLand).toBe(false);
+  });
+
+  it("재산세 종합합산 + 건물·관련성 없음 → 비사업용", () => {
+    const input: NonBusinessLandInput = {
+      landType: "other_land",
+      landArea: 500,
+      zoneType: "commercial",
+      acquisitionDate: new Date("2015-01-01"),
+      transferDate: new Date("2024-01-01"),
+      businessUsePeriods: [],
+      gracePeriods: [],
+      otherLand: {
+        propertyTaxType: "comprehensive",
+        hasBuilding: false,
+        isRelatedToResidenceOrBusiness: false,
+      },
+    };
+    const result = judgeNonBusinessLand(input);
+    expect(result.isNonBusinessLand).toBe(true);
+  });
+
+  it("종합합산 + 건물 표준가 ≥ 토지표준가 3% → 사업용", () => {
+    const res = judgeOtherLand({
+      landType: "other_land",
+      landArea: 500,
+      zoneType: "commercial",
+      acquisitionDate: new Date("2015-01-01"),
+      transferDate: new Date("2024-01-01"),
+      businessUsePeriods: [],
+      gracePeriods: [],
+      otherLand: {
+        propertyTaxType: "comprehensive",
+        hasBuilding: true,
+        buildingStandardValue: 30_000_000,
+        landStandardValue: 500_000_000, // 건물/토지 = 6% ≥ 3%
+        isRelatedToResidenceOrBusiness: false,
+      },
+    });
+    expect(res.isBusiness).toBe(true);
+  });
+});
+
+// ─── NBL-05: 재촌 판정 (연접 시·군·구) ─────────────────────────────────────
+
+describe("NBL-05: 재촌 판정 — 동일/연접 시·군·구 + 30km fallback", () => {
+  it("동일 시·군·구 → 재촌 충족", () => {
+    expect(
+      isResidenceValid(
+        { sigunguCode: "47730" },  // 토지: 경북 청송군
+        { sigunguCode: "47730" },  // 거주: 경북 청송군
+      ),
+    ).toBe(true);
+  });
+
+  it("연접 시·군·구 → 재촌 충족", () => {
+    expect(
+      isResidenceValid(
+        { sigunguCode: "47730" },  // 토지: 경북 청송군
+        { sigunguCode: "47760" },  // 거주: 경북 청도군 (연접)
+        ["47760", "47750"],
+      ),
+    ).toBe(true);
+  });
+
+  it("30km 이내 거리 → 재촌 충족", () => {
+    expect(
+      isResidenceValid(
+        { sigunguCode: "47730" },
+        { sigunguCode: "41820", distanceKm: 25 },
+      ),
+    ).toBe(true);
+  });
+
+  it("30km 초과 + 다른 시군구 + 비연접 → 재촌 불충족", () => {
+    expect(
+      isResidenceValid(
+        { sigunguCode: "47730" },
+        { sigunguCode: "11680", distanceKm: 250 },
+      ),
+    ).toBe(false);
+  });
+
+  it("위치정보 미제공 + distanceKm fallback", () => {
+    expect(
+      isResidenceValid(undefined, { distanceKm: 20 }),
+    ).toBe(true);
+    expect(
+      isResidenceValid(undefined, { distanceKm: 50 }),
+    ).toBe(false);
+  });
+
+  it("농지 시나리오 — 연접 시·군·구 재촌 → 자경 기간 인정", () => {
+    const input: NonBusinessLandInput = {
+      landType: "farmland",
+      landArea: 3000,
+      zoneType: "agriculture_forest",
+      acquisitionDate: new Date("2015-01-01"),
+      transferDate: new Date("2024-01-01"),
+      farmingSelf: true,
+      landLocation: { sigunguCode: "47730" },
+      ownerLocation: { sigunguCode: "47760" },
+      adjacentSigunguCodes: ["47760"],
+      businessUsePeriods: [biz(new Date("2015-01-01"), new Date("2024-01-01"))],
+      gracePeriods: [],
+    };
+    const result = judgeNonBusinessLand(input);
+    expect(result.isNonBusinessLand).toBe(false);
+  });
+});
+
+// ─── NBL-06: 임야 세부 요건 ─────────────────────────────────────────────────
+
+describe("NBL-06: 임야 세부 요건 (소령 §168-9, §168-10)", () => {
+  it("공익상 임야 (보안림·채종림·개발제한) → 사업용", () => {
+    const input: NonBusinessLandInput = {
+      landType: "forest",
+      landArea: 20000,
+      zoneType: "agriculture_forest",
+      acquisitionDate: new Date("2015-01-01"),
+      transferDate: new Date("2024-01-01"),
+      businessUsePeriods: [],
+      gracePeriods: [],
+      forestDetail: { isPublicInterest: true },
+    };
+    const result = judgeNonBusinessLand(input);
+    expect(result.isNonBusinessLand).toBe(false);
+    expect(result.appliedLawArticles).toContain("시행령 §168조의9");
+  });
+
+  it("산림경영계획 인가 → 사업용", () => {
+    const input: NonBusinessLandInput = {
+      landType: "forest",
+      landArea: 20000,
+      zoneType: "agriculture_forest",
+      acquisitionDate: new Date("2015-01-01"),
+      transferDate: new Date("2024-01-01"),
+      businessUsePeriods: [],
+      gracePeriods: [],
+      forestDetail: { hasForestPlan: true },
+    };
+    const result = judgeNonBusinessLand(input);
+    expect(result.isNonBusinessLand).toBe(false);
+  });
+
+  it("임업후계자 임산물 생산 → 사업용", () => {
+    const res = checkForestSpecialRequirement({
+      landType: "forest",
+      landArea: 10000,
+      zoneType: "agriculture_forest",
+      acquisitionDate: new Date("2020-01-01"),
+      transferDate: new Date("2024-01-01"),
+      businessUsePeriods: [],
+      gracePeriods: [],
+      forestDetail: { isForestSuccessor: true },
+    });
+    expect(res.isBusiness).toBe(true);
+  });
+
+  it("상속 5년 이내 임야 → 사업용", () => {
+    const res = checkForestSpecialRequirement({
+      landType: "forest",
+      landArea: 10000,
+      zoneType: "agriculture_forest",
+      acquisitionDate: new Date("2020-01-01"),
+      transferDate: new Date("2024-01-01"),
+      businessUsePeriods: [],
+      gracePeriods: [],
+      forestDetail: {
+        inheritedForestWithin5Years: true,
+        forestInheritanceDate: new Date("2020-06-01"),
+      },
+    });
+    expect(res.isBusiness).toBe(true);
+  });
+
+  it("상속 5년 초과 → 미적용", () => {
+    const res = checkForestSpecialRequirement({
+      landType: "forest",
+      landArea: 10000,
+      zoneType: "agriculture_forest",
+      acquisitionDate: new Date("2015-01-01"),
+      transferDate: new Date("2024-01-01"),
+      businessUsePeriods: [],
+      gracePeriods: [],
+      forestDetail: {
+        inheritedForestWithin5Years: true,
+        forestInheritanceDate: new Date("2015-06-01"),
+      },
+    });
+    expect(res.isBusiness).toBe(false);
+  });
+});
+
+// ─── NBL-07: 농지 사용의제 확대 ────────────────────────────────────────────
+
+describe("NBL-07: 농지 사용의제 확대 (소령 §168-8 ③)", () => {
+  it("주말·체험영농 (1,000㎡ 이하, 2003~2021 취득) → 사업용", () => {
+    const input: NonBusinessLandInput = {
+      landType: "farmland",
+      landArea: 800,
+      zoneType: "agriculture_forest",
+      acquisitionDate: new Date("2010-01-01"),
+      transferDate: new Date("2020-01-01"),
+      farmingSelf: false,
+      farmerResidenceDistance: 500,
+      businessUsePeriods: [],
+      gracePeriods: [],
+      farmlandDeeming: { isWeekendFarm: true },
+    };
+    const result = judgeNonBusinessLand(input);
+    expect(result.isNonBusinessLand).toBe(false);
+    expect(result.judgmentReason).toContain("사업용");
+  });
+
+  it("주말농장 — 면적 초과 (1,100㎡) → 의제 미적용", () => {
+    const res = checkFarmlandDeeming({
+      landType: "farmland",
+      landArea: 1100,
+      zoneType: "agriculture_forest",
+      acquisitionDate: new Date("2010-01-01"),
+      transferDate: new Date("2020-01-01"),
+      businessUsePeriods: [],
+      gracePeriods: [],
+      farmlandDeeming: { isWeekendFarm: true },
+    });
+    expect(res.isBusiness).toBe(false);
+  });
+
+  it("농지전용허가 완료 → 사업용", () => {
+    const res = checkFarmlandDeeming({
+      landType: "farmland",
+      landArea: 2000,
+      zoneType: "agriculture_forest",
+      acquisitionDate: new Date("2015-01-01"),
+      transferDate: new Date("2024-01-01"),
+      businessUsePeriods: [],
+      gracePeriods: [],
+      farmlandDeeming: { isFarmConversionApproved: true },
+    });
+    expect(res.isBusiness).toBe(true);
+  });
+
+  it("한계농지정비사업지구 1,500㎡ 미만 → 사업용", () => {
+    const res = checkFarmlandDeeming({
+      landType: "farmland",
+      landArea: 1400,
+      zoneType: "agriculture_forest",
+      acquisitionDate: new Date("2015-01-01"),
+      transferDate: new Date("2024-01-01"),
+      businessUsePeriods: [],
+      gracePeriods: [],
+      farmlandDeeming: { isMarginalFarmProject: true },
+    });
+    expect(res.isBusiness).toBe(true);
+  });
+
+  it("매립농지 → 사업용", () => {
+    const res = checkFarmlandDeeming({
+      landType: "farmland",
+      landArea: 5000,
+      zoneType: "agriculture_forest",
+      acquisitionDate: new Date("2015-01-01"),
+      transferDate: new Date("2024-01-01"),
+      businessUsePeriods: [],
+      gracePeriods: [],
+      farmlandDeeming: { isReclaimed: true },
+    });
+    expect(res.isBusiness).toBe(true);
+  });
+});
+
+// ─── NBL-08: 주택부수토지 배율 세분화 ───────────────────────────────────────
+
+describe("NBL-08: 주택부수토지 배율 세분화 (소령 §168-12)", () => {
+  it("전용주거지역 = 5배", () => {
+    const input: NonBusinessLandInput = {
+      landType: "building_site",
+      landArea: 500,
+      zoneType: "exclusive_residential",
+      acquisitionDate: new Date("2015-01-01"),
+      transferDate: new Date("2024-01-01"),
+      buildingFootprint: 100,
+      businessUsePeriods: [],
+      gracePeriods: [],
+    };
+    const result = judgeNonBusinessLand(input);
+    expect(result.areaProportioning?.buildingMultiplier).toBe(5);
+  });
+
+  it("일반주거지역 = 4배", () => {
+    const input: NonBusinessLandInput = {
+      landType: "building_site",
+      landArea: 500,
+      zoneType: "general_residential",
+      acquisitionDate: new Date("2015-01-01"),
+      transferDate: new Date("2024-01-01"),
+      buildingFootprint: 100,
+      businessUsePeriods: [],
+      gracePeriods: [],
+    };
+    const result = judgeNonBusinessLand(input);
+    expect(result.areaProportioning?.buildingMultiplier).toBe(4);
+  });
+
+  it("준주거지역 = 3배", () => {
+    const input: NonBusinessLandInput = {
+      landType: "building_site",
+      landArea: 500,
+      zoneType: "semi_residential",
+      acquisitionDate: new Date("2015-01-01"),
+      transferDate: new Date("2024-01-01"),
+      buildingFootprint: 100,
+      businessUsePeriods: [],
+      gracePeriods: [],
+    };
+    const result = judgeNonBusinessLand(input);
+    expect(result.areaProportioning?.buildingMultiplier).toBe(3);
+  });
+
+  it("상업지역 = 3배 (수정됨)", () => {
+    const input: NonBusinessLandInput = {
+      landType: "building_site",
+      landArea: 500,
+      zoneType: "commercial",
+      acquisitionDate: new Date("2015-01-01"),
+      transferDate: new Date("2024-01-01"),
+      buildingFootprint: 100,
+      businessUsePeriods: [],
+      gracePeriods: [],
+    };
+    const result = judgeNonBusinessLand(input);
+    expect(result.areaProportioning?.buildingMultiplier).toBe(3);
+  });
+
+  it("공업지역 = 4배 (수정됨)", () => {
+    const input: NonBusinessLandInput = {
+      landType: "building_site",
+      landArea: 500,
+      zoneType: "industrial",
+      acquisitionDate: new Date("2015-01-01"),
+      transferDate: new Date("2024-01-01"),
+      buildingFootprint: 100,
+      businessUsePeriods: [],
+      gracePeriods: [],
+    };
+    const result = judgeNonBusinessLand(input);
+    expect(result.areaProportioning?.buildingMultiplier).toBe(4);
+  });
+
+  it("미계획지역 = 4배 (신규)", () => {
+    const input: NonBusinessLandInput = {
+      landType: "building_site",
+      landArea: 500,
+      zoneType: "unplanned",
+      acquisitionDate: new Date("2015-01-01"),
+      transferDate: new Date("2024-01-01"),
+      buildingFootprint: 100,
+      businessUsePeriods: [],
+      gracePeriods: [],
+    };
+    const result = judgeNonBusinessLand(input);
+    expect(result.areaProportioning?.buildingMultiplier).toBe(4);
+  });
+});
+
+// ─── NBL-09: 도시지역 편입유예 2년/3년 ─────────────────────────────────────
+
+describe("NBL-09: 도시지역 편입유예 차등 적용 (소령 §168-14 ①)", () => {
+  it("2015.2.2 이전 양도 = 2년 유예", () => {
+    const g = checkIncorporationGrace(
+      new Date("2014-01-01"),
+      new Date("2015-01-01"),
+      DEFAULT_NON_BUSINESS_LAND_RULES,
+    );
+    expect(g.graceYears).toBe(2);
+    expect(g.isApplied).toBe(true); // 1년 경과 ≤ 2년
+  });
+
+  it("2015.2.2 이후 양도 = 3년 유예", () => {
+    const g = checkIncorporationGrace(
+      new Date("2022-01-01"),
+      new Date("2024-06-01"),
+      DEFAULT_NON_BUSINESS_LAND_RULES,
+    );
+    expect(g.graceYears).toBe(3);
+    expect(g.isApplied).toBe(true); // 2.5년 경과 ≤ 3년
+  });
+
+  it("2015.2.2 이후 + 3년 초과 = 유예 만료", () => {
+    const g = checkIncorporationGrace(
+      new Date("2020-01-01"),
+      new Date("2024-01-02"),
+      DEFAULT_NON_BUSINESS_LAND_RULES,
+    );
+    expect(g.graceYears).toBe(3);
+    expect(g.isApplied).toBe(false);
+  });
+
+  it("농지 시나리오 — 도시지역 편입 후 2년 내 양도 (2015 이전) → 사업용", () => {
+    const input: NonBusinessLandInput = {
+      landType: "farmland",
+      landArea: 3000,
+      zoneType: "residential",
+      acquisitionDate: new Date("2010-01-01"),
+      transferDate: new Date("2014-06-01"),
+      farmingSelf: false, // 자경 미충족이지만
+      farmerResidenceDistance: 500,
+      urbanIncorporationDate: new Date("2013-01-01"), // 편입 1.5년 전
+      businessUsePeriods: [],
+      gracePeriods: [],
+    };
+    const result = judgeNonBusinessLand(input);
+    // 2년 유예 내이므로 편입유예 적용 → 사업용 간주
+    expect(result.isNonBusinessLand).toBe(false);
+  });
+});
+
+// ─── NBL-10: 기간기준 임계값 분기 ──────────────────────────────────────────
+
+describe("NBL-10: 기간기준 80% 임계값 분기 (2015.2.2 기준)", () => {
+  it("현행법 80% 임계값 (일반 토지)", () => {
+    const t = getPeriodCriteriaThreshold(
+      {
+        landType: "vacant_lot",
+        landArea: 500,
+        zoneType: "residential",
+        acquisitionDate: new Date("2015-01-01"),
+        transferDate: new Date("2024-01-01"),
+        businessUsePeriods: [],
+        gracePeriods: [],
+      },
+      DEFAULT_NON_BUSINESS_LAND_RULES,
+    );
+    expect(t).toBe(0.8);
+  });
+
+  it("2015.2.2 이전 농지 양도 — 80% 임계값", () => {
+    const t = getPeriodCriteriaThreshold(
+      {
+        landType: "farmland",
+        landArea: 3000,
+        zoneType: "agriculture_forest",
+        acquisitionDate: new Date("2005-01-01"),
+        transferDate: new Date("2014-12-01"),
+        businessUsePeriods: [],
+        gracePeriods: [],
+      },
+      DEFAULT_NON_BUSINESS_LAND_RULES,
+    );
+    expect(t).toBe(0.8);
+  });
+
+  it("isFarmlandType — paddy/field/orchard 분류", () => {
+    expect(isFarmlandType("paddy")).toBe(true);
+    expect(isFarmlandType("field")).toBe(true);
+    expect(isFarmlandType("orchard")).toBe(true);
+    expect(isFarmlandType("farmland")).toBe(true);
+    expect(isFarmlandType("forest")).toBe(false);
+    expect(isFarmlandType("vacant_lot")).toBe(false);
+  });
+});
+
+// ─── NBL-11: 지목 세분화 (답·전·과수원) ───────────────────────────────────
+
+describe("NBL-11: 농지 세분화 — 답/전/과수원", () => {
+  it("paddy(답) → 농지 판정 로직 적용", () => {
+    const input: NonBusinessLandInput = {
+      landType: "paddy",
+      landArea: 2000,
+      zoneType: "agriculture_forest",
+      acquisitionDate: new Date("2015-01-01"),
+      transferDate: new Date("2024-01-01"),
+      farmingSelf: true,
+      farmerResidenceDistance: 10,
+      businessUsePeriods: [biz(new Date("2015-01-01"), new Date("2024-01-01"))],
+      gracePeriods: [],
+    };
+    const result = judgeNonBusinessLand(input);
+    expect(result.isNonBusinessLand).toBe(false);
+    expect(result.businessUseRatio).toBeGreaterThanOrEqual(0.99);
+  });
+
+  it("field(전) → 자경 미충족 → 비사업용", () => {
+    const input: NonBusinessLandInput = {
+      landType: "field",
+      landArea: 2000,
+      zoneType: "agriculture_forest",
+      acquisitionDate: new Date("2015-01-01"),
+      transferDate: new Date("2024-01-01"),
+      farmingSelf: false,
+      farmerResidenceDistance: 100,
+      businessUsePeriods: [],
+      gracePeriods: [],
+    };
+    const result = judgeNonBusinessLand(input);
+    expect(result.isNonBusinessLand).toBe(true);
+  });
+
+  it("orchard(과수원) → 자경+재촌 시 사업용", () => {
+    const input: NonBusinessLandInput = {
+      landType: "orchard",
+      landArea: 3000,
+      zoneType: "agriculture_forest",
+      acquisitionDate: new Date("2015-01-01"),
+      transferDate: new Date("2024-01-01"),
+      farmingSelf: true,
+      farmerResidenceDistance: 10,
+      businessUsePeriods: [biz(new Date("2015-01-01"), new Date("2024-01-01"))],
+      gracePeriods: [],
+    };
+    const result = judgeNonBusinessLand(input);
+    expect(result.isNonBusinessLand).toBe(false);
   });
 });
