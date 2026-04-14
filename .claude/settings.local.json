@@ -53,5 +53,6 @@
       "Bash(tee /tmp/tsc-out.txt)",
       "Bash(wc:*)"
     ]
-  }
+  },
+  "outputStyle": "bkit:bkit-learning"
 }
