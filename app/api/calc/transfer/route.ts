@@ -12,6 +12,7 @@ import { z } from "zod";
 import { preloadTaxRates } from "@/lib/db/tax-rates";
 import { calculateTransferTax, type TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
 import { TaxCalculationError, TaxErrorCode } from "@/lib/tax-engine/tax-errors";
+import { checkRateLimit, getClientIp } from "@/lib/api/rate-limit";
 
 // ============================================================
 // Zod 입력 스키마 (⑫-1)
@@ -234,6 +235,24 @@ const inputSchema = z
 // ============================================================
 
 export async function POST(request: NextRequest) {
+  // 단계 0: Rate Limiting — 분당 30회 (C6)
+  const ip = getClientIp(request);
+  const rl = checkRateLimit(`transfer:${ip}`, { limit: 30, windowMs: 60_000 });
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: { code: "RATE_LIMITED", message: "요청이 너무 많습니다. 잠시 후 다시 시도해 주세요." } },
+      {
+        status: 429,
+        headers: {
+          "X-RateLimit-Limit": String(rl.limit),
+          "X-RateLimit-Remaining": "0",
+          "X-RateLimit-Reset": String(Math.ceil(rl.resetAt / 1000)),
+          "Retry-After": String(Math.ceil((rl.resetAt - Date.now()) / 1000)),
+        },
+      },
+    );
+  }
+
   // 단계 1: JSON 파싱
   let body: unknown;
   try {

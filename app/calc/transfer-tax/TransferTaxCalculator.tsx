@@ -3,21 +3,15 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useCalcWizardStore, type TransferFormData } from "@/lib/stores/calc-wizard-store";
-import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import { cn } from "@/lib/utils";
 import { DateInput } from "@/components/ui/date-input";
 import { AddressSearch, type AddressValue } from "@/components/ui/address-search";
-import { CurrencyInput, parseAmount, formatKRW } from "@/components/calc/inputs/CurrencyInput";
+import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { StepIndicator } from "@/components/calc/StepIndicator";
-import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
-import { LoginPromptBanner } from "@/components/calc/shared/LoginPromptBanner";
-import { NonBusinessLandResultCard } from "@/components/calc/NonBusinessLandResultCard";
-import { MultiHouseSurchargeDetailCard } from "@/components/calc/MultiHouseSurchargeDetailCard";
+import { TransferTaxResultView } from "@/components/calc/results/TransferTaxResultView";
+import { callTransferTaxAPI } from "@/lib/calc/transfer-tax-api";
+import { validateStep } from "@/lib/calc/transfer-tax-validate";
 
-/** 세율 백분율 표시 */
-function formatRate(rate: number): string {
-  return `${(rate * 100).toFixed(0)}%`;
-}
 
 const STEPS = ["물건 유형", "양도 정보", "취득 정보", "보유 상황", "감면 확인"];
 
@@ -1223,371 +1217,11 @@ function Step5({ form, onChange }: { form: TransferFormData; onChange: (d: Parti
   );
 }
 
-// ============================================================
-// 결과 화면
-// ============================================================
-function ResultView({
-  result,
-  onReset,
-  onBack,
-  onLoginPrompt = false,
-}: {
-  result: TransferTaxResult;
-  onReset: () => void;
-  onBack: () => void;
-  onLoginPrompt?: boolean;
-}) {
-  const [showSteps, setShowSteps] = useState(false);
-
-  return (
-    <div className="space-y-5">
-      {/* PDF 인쇄 버튼 */}
-      <div className="flex justify-end print:hidden">
-        <button
-          type="button"
-          onClick={() => window.print()}
-          className="rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors"
-        >
-          🖨️ PDF / 인쇄
-        </button>
-      </div>
-
-      {/* 핵심 결과 카드 */}
-      {result.isExempt ? (
-        <div className="rounded-xl border-2 border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30 p-6 text-center">
-          <div className="text-4xl mb-2">🎉</div>
-          <p className="text-lg font-bold text-emerald-700 dark:text-emerald-400">
-            {result.exemptReason ?? "비과세"}
-          </p>
-          <p className="text-2xl font-bold mt-1">납부세액 0원</p>
-        </div>
-      ) : (
-        <div className="rounded-xl border-2 border-primary bg-primary/5 p-5">
-          <p className="text-sm font-medium text-muted-foreground mb-1">총 납부세액</p>
-          <p className="text-3xl font-bold">{formatKRW(result.totalTax)}</p>
-          <div className="mt-3 flex gap-4 text-sm text-muted-foreground">
-            <span>결정세액 {formatKRW(result.determinedTax)}</span>
-            <span>+</span>
-            <span>지방소득세 {formatKRW(result.localIncomeTax)}</span>
-          </div>
-        </div>
-      )}
-
-      {/* 상세 내역 */}
-      {!result.isExempt && (
-        <div className="rounded-lg border border-border divide-y divide-border text-sm">
-          <Row label="양도차익" value={formatKRW(result.transferGain)} />
-          {result.taxableGain !== result.transferGain && (
-            <Row label="과세 양도차익 (12억 초과분)" value={formatKRW(result.taxableGain)} sub />
-          )}
-          <Row
-            label={`장기보유특별공제 (${formatRate(result.longTermHoldingRate)})`}
-            value={result.longTermHoldingDeduction > 0 ? `- ${formatKRW(result.longTermHoldingDeduction)}` : "해당없음"}
-          />
-          <Row
-            label="기본공제"
-            value={result.basicDeduction > 0 ? `- ${formatKRW(result.basicDeduction)}` : "0원"}
-          />
-          <Row label="과세표준" value={formatKRW(result.taxBase)} highlight />
-          <Row
-            label={`산출세액 (${formatRate(result.appliedRate)}${result.surchargeRate ? ` + 중과 ${formatRate(result.surchargeRate)}` : ""})`}
-            value={formatKRW(result.calculatedTax)}
-          />
-          {result.reductionAmount > 0 && (
-            <Row label={`감면 (${result.reductionType ?? ""})`} value={`- ${formatKRW(result.reductionAmount)}`} />
-          )}
-          <Row label="결정세액" value={formatKRW(result.determinedTax)} highlight />
-          <Row label="지방소득세 (10%)" value={formatKRW(result.localIncomeTax)} />
-        </div>
-      )}
-
-      {/* 중과세 정보 */}
-      {result.surchargeType && !result.isSurchargeSuspended && (
-        <div className="rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950/30 px-4 py-3 text-sm">
-          <p className="font-medium text-amber-800 dark:text-amber-400">
-            ⚠️ 중과세 적용 — {result.surchargeType === "multi_house_2" ? "2주택" : result.surchargeType === "multi_house_3plus" ? "3주택+" : "비사업용토지"}{" "}
-            (+{formatRate(result.surchargeRate ?? 0)})
-          </p>
-        </div>
-      )}
-      {result.isSurchargeSuspended && (
-        <div className="rounded-lg border border-blue-300 bg-blue-50 dark:bg-blue-950/30 px-4 py-3 text-sm">
-          <p className="font-medium text-blue-800 dark:text-blue-400">
-            ℹ️ 다주택 중과세 유예 기간 적용 — 일반세율로 계산됩니다.
-          </p>
-        </div>
-      )}
-
-      {/* 다주택 중과세 상세 결과 (P1) */}
-      {result.multiHouseSurchargeDetail && (
-        <MultiHouseSurchargeDetailCard detail={result.multiHouseSurchargeDetail} />
-      )}
-
-      {/* 비사업용토지 판정 상세 결과 (P1) */}
-      {result.nonBusinessLandJudgmentDetail && (
-        <div>
-          <p className="text-sm font-medium mb-2">비사업용토지 판정 결과</p>
-          <NonBusinessLandResultCard judgment={result.nonBusinessLandJudgmentDetail} />
-        </div>
-      )}
-
-      {/* 계산 과정 토글 */}
-      <button
-        type="button"
-        onClick={() => setShowSteps((v) => !v)}
-        className="w-full flex items-center justify-between rounded-lg border border-border px-4 py-3 text-sm font-medium hover:bg-muted/40 transition-colors"
-      >
-        <span>계산 과정 상세 보기</span>
-        <span className="text-muted-foreground">{showSteps ? "▲" : "▼"}</span>
-      </button>
-
-      {showSteps && (
-        <div className="rounded-lg border border-border divide-y divide-border text-sm">
-          {result.steps.map((step, i) => (
-            <div key={i} className="px-4 py-3 flex justify-between gap-4">
-              <div className="min-w-0">
-                <p className="font-medium">{step.label}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">{step.formula}</p>
-                {step.legalBasis && (
-                  <span className="inline-block mt-1 text-[10px] text-muted-foreground/70 border border-border/60 rounded px-1.5 py-0.5">
-                    {step.legalBasis}
-                  </span>
-                )}
-              </div>
-              <p className="font-mono font-medium shrink-0">{formatKRW(step.amount)}</p>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* 면책 고지 */}
-      <DisclaimerBanner />
-
-      {/* 비로그인 안내 */}
-      {onLoginPrompt && <LoginPromptBanner hasPendingResult />}
-
-      {/* 하단 버튼 */}
-      <div className="flex gap-3">
-        <button
-          type="button"
-          onClick={onBack}
-          className="flex-1 rounded-lg border border-border py-2.5 text-sm font-medium hover:bg-muted/40 transition-colors"
-        >
-          이전
-        </button>
-        <button
-          type="button"
-          onClick={onReset}
-          className="flex-1 rounded-lg bg-primary py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
-        >
-          다시 계산하기
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function Row({
-  label,
-  value,
-  sub = false,
-  highlight = false,
-}: {
-  label: string;
-  value: string;
-  sub?: boolean;
-  highlight?: boolean;
-}) {
-  return (
-    <div
-      className={cn(
-        "flex items-center justify-between px-4 py-2.5",
-        highlight && "bg-muted/50 font-semibold",
-        sub && "pl-7 text-muted-foreground",
-      )}
-    >
-      <span className={sub ? "text-xs" : ""}>{label}</span>
-      <span className="font-mono">{value}</span>
-    </div>
-  );
-}
-
-// ============================================================
-// 유효성 검사
-// ============================================================
-function validateStep(step: number, form: TransferFormData): string | null {
-  if (step === 0) {
-    if (!form.propertyType) return "양도하는 부동산 유형을 선택하세요.";
-  }
-  if (step === 1) {
-    if (!form.propertyAddressRoad && !form.propertyAddressJibun) return "양도자산 소재지를 검색·선택하세요.";
-    if (!form.transferPrice || parseAmount(form.transferPrice) <= 0) return "양도가액을 입력하세요.";
-    if (!form.transferDate) return "양도일을 선택하세요.";
-  }
-  if (step === 2) {
-    if (!form.acquisitionDate) return "취득일을 선택하세요.";
-    if (form.acquisitionDate >= form.transferDate) return "취득일은 양도일보다 이전이어야 합니다.";
-    if (form.useEstimatedAcquisition) {
-      if (!form.standardPriceAtAcquisition || parseAmount(form.standardPriceAtAcquisition) <= 0)
-        return "취득 당시 기준시가를 입력하세요.";
-      if (!form.standardPriceAtTransfer || parseAmount(form.standardPriceAtTransfer) <= 0)
-        return "양도 당시 기준시가를 입력하세요.";
-    } else {
-      if (!form.acquisitionPrice || parseAmount(form.acquisitionPrice) < 0)
-        return "취득가액을 입력하세요.";
-    }
-  }
-  if (step === 3) {
-    if (!form.householdHousingCount) return "세대 보유 주택 수를 선택하세요.";
-  }
-  return null;
-}
-
-// ============================================================
-// API 호출 — 폼 데이터 → API 요청
-// ============================================================
-async function callTransferTaxAPI(form: TransferFormData): Promise<TransferTaxResult> {
-  const reductions = [];
-  if (form.reductionType === "self_farming") {
-    reductions.push({ type: "self_farming", farmingYears: parseInt(form.farmingYears) });
-  } else if (form.reductionType === "long_term_rental") {
-    reductions.push({
-      type: "long_term_rental",
-      rentalYears: parseInt(form.rentalYears),
-      rentIncreaseRate: parseFloat(form.rentIncreaseRate) / 100,
-    });
-  } else if (form.reductionType === "new_housing") {
-    // outside_overconcentration은 simple 경로에서 metropolitan으로 폴백 (V2 newHousingDetails가 없는 경우)
-    const simpleRegion = form.reductionRegion === "outside_overconcentration"
-      ? "metropolitan"
-      : form.reductionRegion as "metropolitan" | "non_metropolitan";
-    reductions.push({ type: "new_housing", region: simpleRegion });
-  } else if (form.reductionType === "unsold_housing") {
-    const simpleRegion = form.reductionRegion === "outside_overconcentration"
-      ? "metropolitan"
-      : form.reductionRegion as "metropolitan" | "non_metropolitan";
-    reductions.push({ type: "unsold_housing", region: simpleRegion });
-  }
-
-  // P0-A: 비사업용 토지 상세 정보 구성
-  const nblDetails =
-    form.propertyType === "land" && form.nblLandType && form.nblLandArea && form.nblZoneType
-      ? {
-          landType: form.nblLandType,
-          landArea: parseFloat(form.nblLandArea),
-          zoneType: form.nblZoneType,
-          acquisitionDate: form.acquisitionDate,
-          transferDate: form.transferDate,
-          farmingSelf: form.nblFarmingSelf || undefined,
-          farmerResidenceDistance: form.nblFarmerResidenceDistance
-            ? parseFloat(form.nblFarmerResidenceDistance)
-            : undefined,
-          businessUsePeriods: form.nblBusinessUsePeriods.filter(
-            (p) => p.startDate && p.endDate,
-          ),
-        }
-      : undefined;
-
-  // P0-B: 다른 보유 주택 목록 구성 (현재 양도 주택을 포함한 전체 배열 생성)
-  const housesPayload =
-    form.propertyType === "housing" && form.houses.length > 0
-      ? [
-          // 현재 양도 주택 (ID: "selling")
-          // [C4] region: isRegulatedArea(조정대상지역) 대신 sellingHouseRegion(수도권/지방) 사용
-          // [C5] officialPrice: standardPriceAtTransfer(양도시 기준시가) 사용 — 0이면 3억 이하로 오판정 방지 목적으로 Step4에서 입력받음
-          {
-            id: "selling",
-            region: form.sellingHouseRegion,
-            acquisitionDate: form.acquisitionDate,
-            officialPrice: form.standardPriceAtTransfer ? parseAmount(form.standardPriceAtTransfer) : 0,
-            isInherited: false,
-            isLongTermRental: false,
-            isApartment: false,
-            isOfficetel: false,
-            isUnsoldHousing: false,
-          },
-          // 다른 보유 주택들
-          ...form.houses
-            .filter((h) => h.acquisitionDate)
-            .map((h) => ({
-              id: h.id,
-              region: h.region,
-              acquisitionDate: h.acquisitionDate,
-              officialPrice: parseInt(h.officialPrice) || 0,
-              isInherited: h.isInherited,
-              isLongTermRental: h.isLongTermRental,
-              isApartment: h.isApartment,
-              isOfficetel: h.isOfficetel,
-              isUnsoldHousing: h.isUnsoldHousing,
-            })),
-        ]
-      : undefined;
-
-  const body = {
-    propertyType: form.propertyType,
-    transferPrice: parseAmount(form.transferPrice),
-    transferDate: form.transferDate,
-    acquisitionPrice: form.useEstimatedAcquisition ? 0 : parseAmount(form.acquisitionPrice),
-    acquisitionDate: form.acquisitionDate,
-    // 환산취득가액 사용 시 개산공제(3%)는 엔진 내부에서 acquisitionCost에 포함 → expenses=0
-    expenses: form.useEstimatedAcquisition ? 0 : parseAmount(form.expenses),
-    useEstimatedAcquisition: form.useEstimatedAcquisition,
-    standardPriceAtAcquisition: form.useEstimatedAcquisition
-      ? parseAmount(form.standardPriceAtAcquisition)
-      : undefined,
-    standardPriceAtTransfer: form.useEstimatedAcquisition
-      ? parseAmount(form.standardPriceAtTransfer)
-      : undefined,
-    householdHousingCount: parseInt(form.householdHousingCount) || 0,
-    residencePeriodMonths: parseInt(form.residencePeriodMonths) || 0,
-    isRegulatedArea: form.isRegulatedArea,
-    wasRegulatedAtAcquisition: form.wasRegulatedAtAcquisition,
-    isUnregistered: form.isUnregistered,
-    isNonBusinessLand: form.isNonBusinessLand,
-    isOneHousehold: form.isOneHousehold,
-    reductions,
-    annualBasicDeductionUsed: parseAmount(form.annualBasicDeductionUsed),
-    ...(form.temporaryTwoHouseSpecial &&
-      form.previousHouseAcquisitionDate &&
-      form.newHouseAcquisitionDate
-      ? {
-          temporaryTwoHouse: {
-            previousAcquisitionDate: form.previousHouseAcquisitionDate,
-            newAcquisitionDate: form.newHouseAcquisitionDate,
-          },
-        }
-      : {}),
-    // P0-A: 비사업용 토지 정밀 판정
-    ...(nblDetails ? { nonBusinessLandDetails: nblDetails } : {}),
-    // P0-B: 다주택 정밀 중과세 판정
-    ...(housesPayload ? { houses: housesPayload, sellingHouseId: "selling" } : {}),
-    // P2: 합가 특례
-    ...(form.marriageDate ? { marriageMerge: { marriageDate: form.marriageDate } } : {}),
-    ...(form.parentalCareMergeDate
-      ? { parentalCareMerge: { mergeDate: form.parentalCareMergeDate } }
-      : {}),
-  };
-
-  const res = await fetch("/api/calc/transfer", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-
-  const json = await res.json();
-  if (!res.ok) {
-    const msg = json?.error?.message ?? "계산 중 오류가 발생했습니다.";
-    throw new Error(msg);
-  }
-  return json.data as TransferTaxResult;
-}
-
-// ============================================================
 // 메인 컴포넌트
 // ============================================================
 export default function TransferTaxCalculator() {
   const router = useRouter();
-  const { currentStep, formData, result, setStep, updateFormData, setResult, reset } =
+  const { currentStep, formData, result, setStep, updateFormData, setResult, reset, clearPendingMigration } =
     useCalcWizardStore();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -1643,8 +1277,11 @@ export default function TransferTaxCalculator() {
           taxType: "transfer",
           inputData: formData as unknown as Record<string, unknown>,
           resultData: res as unknown as Record<string, unknown>,
-          taxLawVersion: new Date().toISOString().split("T")[0],
+          // [I8] 양도일 기준 세법 버전 — 세법 적용 시점을 오늘이 아닌 양도일로 기록
+          taxLawVersion: formData.transferDate || new Date().toISOString().split("T")[0],
         });
+        // [I6] 이력 저장 성공 후 pendingMigration 플래그 해제
+        clearPendingMigration();
       }
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "계산 중 오류가 발생했습니다.");
@@ -1675,7 +1312,7 @@ export default function TransferTaxCalculator() {
       </div>
 
       {isResult && result ? (
-        <ResultView
+        <TransferTaxResultView
           result={result}
           onReset={handleReset}
           onBack={() => {
