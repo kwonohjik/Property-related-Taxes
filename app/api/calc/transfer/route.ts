@@ -42,16 +42,69 @@ const gracePeriodSchema = z.object({
   endDate: z.string().date(),
 });
 
+// [C3 수정] landType / zoneType을 열린 문자열 대신 고정 enum으로 제한 (타입 안전성)
+const LAND_TYPE_VALUES = [
+  "farmland", "paddy", "field", "orchard",
+  "forest", "pasture", "vacant_lot",
+  "building_site", "housing_site",
+  "villa_land", "other_land", "miscellaneous", "other",
+] as const;
+
+const ZONE_TYPE_VALUES = [
+  "residential", "exclusive_residential", "general_residential", "semi_residential",
+  "commercial", "industrial", "green", "management",
+  "agriculture_forest", "natural_env", "unplanned", "undesignated",
+] as const;
+
 const nonBusinessLandDetailsSchema = z.object({
-  landType: z.string().min(1),
+  landType: z.enum(LAND_TYPE_VALUES),
   landArea: z.number().positive(),
-  zoneType: z.string().min(1),
+  zoneType: z.enum(ZONE_TYPE_VALUES),
   acquisitionDate: z.string().date(),
   transferDate: z.string().date(),
   farmingSelf: z.boolean().optional(),
   farmerResidenceDistance: z.number().nonnegative().optional(),
   businessUsePeriods: z.array(businessUsePeriodSchema).default([]),
   gracePeriods: z.array(gracePeriodSchema).default([]),
+});
+
+// [C7 수정] 장기임대 감면 정밀 엔진 입력 스키마
+const rentHistorySchema = z.object({
+  contractDate: z.string().date(),
+  monthlyRent: z.number().int().nonnegative(),
+  deposit: z.number().int().nonnegative(),
+  contractType: z.enum(["jeonse", "monthly", "semi_jeonse"]),
+});
+const vacancyPeriodSchema = z.object({
+  startDate: z.string().date(),
+  endDate: z.string().date(),
+});
+const rentalReductionDetailsSchema = z.object({
+  isRegisteredLandlord: z.boolean(),
+  isTaxRegistered: z.boolean(),
+  registrationDate: z.string().date(),
+  rentalHousingType: z.enum(["public_construction", "long_term_private", "public_support_private", "public_purchase"]),
+  propertyType: z.enum(["apartment", "non_apartment"]),
+  region: z.enum(["capital", "non_capital"]),
+  officialPriceAtStart: z.number().int().nonnegative(),
+  rentalStartDate: z.string().date(),
+  transferDate: z.string().date(),
+  vacancyPeriods: z.array(vacancyPeriodSchema).default([]),
+  rentHistory: z.array(rentHistorySchema).default([]),
+  calculatedTax: z.number().int().nonnegative().default(0),
+});
+
+// [C7 수정] 신축/미분양 감면 정밀 엔진 입력 스키마
+const newHousingDetailsSchema = z.object({
+  acquisitionDate: z.string().date(),
+  transferDate: z.string().date(),
+  region: z.enum(["nationwide", "metropolitan", "non_metropolitan", "outside_overconcentration"]),
+  acquisitionPrice: z.number().int().nonnegative(),
+  exclusiveAreaSquareMeters: z.number().nonnegative(),
+  isFirstSale: z.boolean(),
+  hasUnsoldCertificate: z.boolean(),
+  totalCapitalGain: z.number().int().nonnegative().default(0),
+  calculatedTax: z.number().int().nonnegative().default(0),
 });
 
 const houseSchema = z.object({
@@ -136,6 +189,10 @@ const inputSchema = z
     marriageMerge: z.object({ marriageDate: z.string().date() }).optional(),
     /** 24. 동거봉양 합가 정보 */
     parentalCareMerge: z.object({ mergeDate: z.string().date() }).optional(),
+    /** 25. 장기임대주택 감면 정밀 정보 (선택 — C7) */
+    rentalReductionDetails: rentalReductionDetailsSchema.optional(),
+    /** 26. 신축/미분양 감면 정밀 정보 (선택 — C7) */
+    newHousingDetails: newHousingDetailsSchema.optional(),
   })
   .superRefine((data, ctx) => {
     // V-1: 환산취득가 사용 시 취득시 기준시가 필수
@@ -241,10 +298,8 @@ export async function POST(request: NextRequest) {
     nonBusinessLandDetails: data.nonBusinessLandDetails
       ? {
           ...data.nonBusinessLandDetails,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          landType: data.nonBusinessLandDetails.landType as any,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          zoneType: data.nonBusinessLandDetails.zoneType as any,
+          landType: data.nonBusinessLandDetails.landType,
+          zoneType: data.nonBusinessLandDetails.zoneType,
           acquisitionDate: new Date(data.nonBusinessLandDetails.acquisitionDate),
           transferDate: new Date(data.nonBusinessLandDetails.transferDate),
           businessUsePeriods: data.nonBusinessLandDetails.businessUsePeriods.map((p) => ({
@@ -280,6 +335,33 @@ export async function POST(request: NextRequest) {
       : undefined,
     parentalCareMerge: data.parentalCareMerge
       ? { mergeDate: new Date(data.parentalCareMerge.mergeDate) }
+      : undefined,
+    // [C7 수정] 장기임대 감면 정밀 입력
+    rentalReductionDetails: data.rentalReductionDetails
+      ? {
+          ...data.rentalReductionDetails,
+          registrationDate: new Date(data.rentalReductionDetails.registrationDate),
+          rentalStartDate: new Date(data.rentalReductionDetails.rentalStartDate),
+          transferDate: new Date(data.rentalReductionDetails.transferDate),
+          vacancyPeriods: data.rentalReductionDetails.vacancyPeriods.map((v) => ({
+            startDate: new Date(v.startDate),
+            endDate: new Date(v.endDate),
+          })),
+          rentHistory: data.rentalReductionDetails.rentHistory.map((r) => ({
+            contractDate: new Date(r.contractDate),
+            monthlyRent: r.monthlyRent,
+            deposit: r.deposit,
+            contractType: r.contractType,
+          })),
+        }
+      : undefined,
+    // [C7 수정] 신축/미분양 감면 정밀 입력
+    newHousingDetails: data.newHousingDetails
+      ? {
+          ...data.newHousingDetails,
+          acquisitionDate: new Date(data.newHousingDetails.acquisitionDate),
+          transferDate: new Date(data.newHousingDetails.transferDate),
+        }
       : undefined,
   };
 

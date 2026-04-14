@@ -64,7 +64,8 @@ export interface TransferFormData {
   farmingYears: string;
   rentalYears: string;
   rentIncreaseRate: string;
-  reductionRegion: "metropolitan" | "non_metropolitan";
+  /** [I4] 신축/미분양 감면 지역 — 4값으로 확장 (outside_overconcentration: 수도권 과밀억제권역 외) */
+  reductionRegion: "metropolitan" | "non_metropolitan" | "outside_overconcentration";
   annualBasicDeductionUsed: string;
   // Step 4: 일시적 2주택 특례
   temporaryTwoHouseSpecial: boolean;
@@ -82,6 +83,8 @@ export interface TransferFormData {
   nblBusinessUsePeriods: NblBusinessUsePeriod[];
   // Step 4: 다른 보유 주택 목록 (P0-B)
   houses: HouseEntry[];
+  /** [C4] 양도 주택의 권역 구분 (수도권/지방) — isRegulatedArea와 별개 */
+  sellingHouseRegion: "capital" | "non_capital";
 }
 
 const defaultFormData: TransferFormData = {
@@ -125,6 +128,7 @@ const defaultFormData: TransferFormData = {
   nblFarmerResidenceDistance: "",
   nblBusinessUsePeriods: [],
   houses: [],
+  sellingHouseRegion: "capital",
 };
 
 interface CalcWizardState {
@@ -170,6 +174,12 @@ export const useCalcWizardStore = create<CalcWizardState>()(
           setItem: () => {},
           removeItem: () => {},
         };
+      }),
+      // [I7] result(계산 결과)·pendingMigration은 sessionStorage 제외 — 민감정보 보호 + Date 직렬화 오류 방지
+      partialize: (state) => ({
+        currentStep: state.currentStep,
+        formData: state.formData,
+        pendingMigration: state.pendingMigration,
       }),
     },
   ),

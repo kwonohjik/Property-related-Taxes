@@ -621,8 +621,8 @@ describe("T-17: 누진세율 45% 구간 (과세표준 > 10억)", () => {
 // T-18: 지방소득세 = 결정세액 × 10%
 // ============================================================
 
-describe("T-18: 지방소득세 = 결정세액 × 10%", () => {
-  it("localIncomeTax = Math.floor(determinedTax × 0.10)", () => {
+describe("T-18: 지방소득세 = 결정세액 × 10% (천원 미만 절사)", () => {
+  it("localIncomeTax = truncateToThousand(determinedTax × 0.10) (지방세법 §103-27)", () => {
     const input = baseInput({
       transferPrice: 400_000_000,
       acquisitionPrice: 300_000_000,
@@ -632,7 +632,9 @@ describe("T-18: 지방소득세 = 결정세액 × 10%", () => {
       householdHousingCount: 1,
     });
     const result = calculateTransferTax(input, mockRates);
-    expect(result.localIncomeTax).toBe(Math.floor(result.determinedTax * 0.10));
+    // [I1] 지방세법 §103-27: 천원 미만 절사
+    const expectedLocalTax = Math.floor(Math.floor(result.determinedTax * 0.1) / 1000) * 1000;
+    expect(result.localIncomeTax).toBe(expectedLocalTax);
   });
 });
 

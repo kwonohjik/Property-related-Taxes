@@ -426,11 +426,12 @@ function checkExemption(
     // 처분 기한 계산
     let deadlineYears = twoHouseRule.disposalDeadlineYears; // 비조정: 3년
     if (input.isRegulatedArea) {
-      // 완화 기준일(2022-05-10) 이후 취득이면 3년, 이전이면 1년
+      // [C1 수정] 부칙 적용 기준: 양도일(transferDate)이 완화 시행일 이후이면 완화 기한 적용
+      // 소득세법 시행령 §155 ① 개정 부칙: "시행일(2022-05-10) 이후 종전 주택을 양도하는 경우"
       const relaxDate = twoHouseRule.regulatedAreaRelaxDate
         ? new Date(twoHouseRule.regulatedAreaRelaxDate)
         : null;
-      if (relaxDate && newAcquisitionDate >= relaxDate) {
+      if (relaxDate && input.transferDate >= relaxDate) {
         deadlineYears = twoHouseRule.regulatedAreaRelaxDeadlineYears ?? twoHouseRule.regulatedAreaDeadlineYears;
       } else {
         deadlineYears = twoHouseRule.regulatedAreaDeadlineYears;
@@ -587,10 +588,7 @@ function calcLongTermHoldingDeduction(
     }
   }
 
-  // L-2: 미등기 공제 배제
-  if (input.isUnregistered) {
-    return { deduction: 0, rate: 0, holdingPeriod: { years: 0, months: 0 } };
-  }
+  // (L-0에서 미등기를 이미 처리함 — dead code 제거, I2 수정)
 
   const holding = calculateHoldingPeriod(input.acquisitionDate, input.transferDate);
   const holdingPeriod = { years: holding.years, months: holding.months };
@@ -802,74 +800,65 @@ function calcReductions(
     return { reductionAmount: 0 };
   }
 
-  let totalReduction = 0;
-  let firstType: string | undefined;
+  // [I3 수정] 조특법 §127 ② 감면 중복 배제: 동일 자산에 복수 감면이 해당될 때 납세자에게 유리한 1건만 적용
+  // 각 감면 후보를 개별 계산 후 최대값 1건 선택
+  interface ReductionCandidate { amount: number; type: string; }
+  const candidates: ReductionCandidate[] = [];
   let rentalReductionDetail: RentalReductionResult | undefined;
   let newHousingReductionDetail: NewHousingReductionResult | undefined;
 
-  // 유형별 중복 방지: type별 첫 번째만 처리
-  const processed = new Set<string>();
-
-  // R-2-V2: rentalReductionDetails 제공 시 정밀 엔진 우선 사용
-  // calculatedTax는 transfer-tax 엔진에서 계산한 값으로 덮어씀 (rentalReductionInput의 placeholder 0 대체)
+  // R-2-V2: 장기임대 정밀 엔진
   if (rentalReductionDetails) {
     const detailsWithTax: RentalReductionInput = { ...rentalReductionDetails, calculatedTax };
     const rentalResult = calculateRentalReduction(detailsWithTax, longTermRentalRules);
     rentalReductionDetail = rentalResult;
     if (rentalResult.isEligible && rentalResult.reductionAmount > 0) {
-      if (!firstType) firstType = "long_term_rental";
-      totalReduction += rentalResult.reductionAmount;
-      processed.add("long_term_rental"); // 하위 호환 중복 방지
+      candidates.push({ amount: rentalResult.reductionAmount, type: "long_term_rental" });
     }
   }
 
-  // R-3-V2: newHousingDetails 제공 시 정밀 엔진 우선 사용 (매트릭스 기반)
-  // calculatedTax를 덮어써서 전달
+  // R-3-V2: 신축/미분양 정밀 엔진
   if (newHousingDetails) {
     const detailsWithTax: NewHousingReductionInput = { ...newHousingDetails, calculatedTax };
     const newHousingResult = determineNewHousingReduction(detailsWithTax, newHousingMatrix);
     newHousingReductionDetail = newHousingResult;
     if (newHousingResult.isEligible && newHousingResult.reductionAmount > 0) {
-      if (!firstType) firstType = "new_housing";
-      totalReduction += newHousingResult.reductionAmount;
-      processed.add("new_housing");    // 하위 호환 중복 방지
-      processed.add("unsold_housing"); // 미분양도 동일 엔진으로 처리되므로 중복 방지
+      candidates.push({ amount: newHousingResult.reductionAmount, type: "new_housing" });
     }
   }
 
+  // R-1~R-4: 하위 호환 단순 감면 (V2 정밀 엔진과 중복 유형은 이미 V2로 처리됨)
+  const v2Types = new Set(candidates.map((c) => c.type));
   for (const reduction of reductions) {
-    if (processed.has(reduction.type)) continue;
-    processed.add(reduction.type);
+    // V2 정밀 엔진으로 이미 처리된 유형은 중복 계산 방지
+    if (v2Types.has(reduction.type)) continue;
+    if (reduction.type === "unsold_housing" && v2Types.has("new_housing")) continue;
 
     let amount = 0;
-
     if (reduction.type === "self_farming" && selfFarmingRules) {
-      // R-1: 자경농지 — 8년 이상 시 전액 감면, 한도 1억
       if (reduction.farmingYears >= selfFarmingRules.conditions.minFarmingYears) {
         amount = Math.min(applyRate(calculatedTax, selfFarmingRules.maxRate), selfFarmingRules.maxAmount);
       }
     } else if (reduction.type === "long_term_rental") {
-      // R-2: 장기임대 하위 호환 (rentalReductionDetails 미제공 시) — 8년+, 5% 이하
       if (reduction.rentalYears >= 8 && reduction.rentIncreaseRate <= 0.05) {
         amount = applyRate(calculatedTax, 0.5);
       }
     } else if (reduction.type === "new_housing") {
-      // R-3: 신축주택 하위 호환 (newHousingDetails 미제공 시) — 수도권 50%, 비수도권 100%
       const rate = reduction.region === "metropolitan" ? 0.5 : 1.0;
       amount = applyRate(calculatedTax, rate);
     } else if (reduction.type === "unsold_housing") {
-      // R-4: 미분양주택 하위 호환 100%
       amount = calculatedTax;
     }
-
-    if (amount > 0) {
-      if (!firstType) firstType = reduction.type;
-      totalReduction += amount;
-    }
+    if (amount > 0) candidates.push({ amount, type: reduction.type });
   }
 
-  // 감면 합계 상한: 결정세액 음수 방지
-  const reductionAmount = Math.min(totalReduction, calculatedTax);
+  // 가장 유리한 감면 1건 선택 (조특법 §127 ②)
+  const best = candidates.reduce<ReductionCandidate>(
+    (a, b) => (a.amount >= b.amount ? a : b),
+    { amount: 0, type: "" },
+  );
+  const firstType = best.type || undefined;
+  const reductionAmount = Math.min(best.amount, calculatedTax);
 
   const reductionTypeLabel: Record<string, string> = {
     self_farming: "자경농지",
@@ -926,9 +915,15 @@ export function calculateTransferTax(
       input.nonBusinessLandDetails,
       parsedRates.nonBusinessLandJudgmentRules,
     );
-    // 판정 결과로 isNonBusinessLand 덮어씀
+    // [I5 수정] 판정 결과로 isNonBusinessLand 덮어씀 — 입력 플래그와 다를 때 step 경고 기록
     if (nonBusinessLandJudgment.isNonBusinessLand !== input.isNonBusinessLand) {
       effectiveInput = { ...input, isNonBusinessLand: nonBusinessLandJudgment.isNonBusinessLand };
+      steps.push({
+        label: "비사업용 토지 판정 (엔진 재판정)",
+        formula: `입력 플래그(${input.isNonBusinessLand ? "비사업용" : "사업용"}) → 정밀 판정 결과: ${nonBusinessLandJudgment.isNonBusinessLand ? "비사업용" : "사업용"}`,
+        amount: 0,
+        legalBasis: "소득세법 §104조의3",
+      });
     }
   }
 
@@ -1136,11 +1131,11 @@ export function calculateTransferTax(
     amount: determinedTax,
   });
 
-  // STEP 10: 지방소득세 (결정세액 × 10%)
-  const localIncomeTax = applyRate(determinedTax, 0.1);
+  // STEP 10: 지방소득세 (결정세액 × 10%, 1,000원 미만 절사 — 지방세법 §103-27, I1 수정)
+  const localIncomeTax = truncateToThousand(applyRate(determinedTax, 0.1));
   steps.push({
     label: "지방소득세",
-    formula: `${determinedTax.toLocaleString()}원 × 10%`,
+    formula: `${determinedTax.toLocaleString()}원 × 10% (천원 미만 절사)`,
     amount: localIncomeTax,
     legalBasis: TRANSFER.LOCAL_INCOME_TAX,
   });

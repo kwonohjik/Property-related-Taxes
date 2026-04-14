@@ -913,6 +913,25 @@ function HousesListSection({
           + 주택 추가
         </button>
       </div>
+      {/* C4: 양도 주택 권역 선택 (isRegulatedArea와 별개 — 중과세 가액기준 판정용) */}
+      <div className="flex items-center gap-3 rounded-md border border-border/60 bg-background px-3 py-2">
+        <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">양도 주택 소재지</span>
+        <div className="flex gap-3">
+          {([["capital", "수도권"], ["non_capital", "지방"]] as const).map(([val, label]) => (
+            <label key={val} className="flex items-center gap-1.5 text-xs cursor-pointer">
+              <input
+                type="radio"
+                name="sellingHouseRegion"
+                value={val}
+                checked={form.sellingHouseRegion === val}
+                onChange={() => onChange({ sellingHouseRegion: val })}
+                className="accent-primary"
+              />
+              {label}
+            </label>
+          ))}
+        </div>
+      </div>
       <p className="text-xs text-muted-foreground">
         현재 양도하는 주택 외 세대 구성원이 보유한 주택을 입력하세요.
       </p>
@@ -1163,10 +1182,12 @@ function Step5({ form, onChange }: { form: TransferFormData; onChange: (d: Parti
       {(form.reductionType === "new_housing" || form.reductionType === "unsold_housing") && (
         <div className="rounded-lg border border-dashed border-primary/40 bg-primary/3 p-4 space-y-3">
           <p className="text-xs font-medium text-primary">물건 소재지</p>
-          <div className="flex gap-3">
+          {/* [I4] 3지선다 — 수도권 과밀억제권역 외는 §99 ④~⑥에서 별도 감면율 적용 */}
+          <div className="flex flex-col gap-2">
             {[
-              { value: "metropolitan", label: "수도권 (50% 감면)" },
-              { value: "non_metropolitan", label: "비수도권 (100% 감면)" },
+              { value: "metropolitan", label: "수도권 (과밀억제권역)", desc: "50% 감면" },
+              { value: "outside_overconcentration", label: "수도권 (과밀억제권역 외)", desc: "조문별 상이" },
+              { value: "non_metropolitan", label: "비수도권 (지방)", desc: "100% 감면" },
             ].map((opt) => (
               <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
                 <input
@@ -1174,11 +1195,12 @@ function Step5({ form, onChange }: { form: TransferFormData; onChange: (d: Parti
                   name="reductionRegion"
                   value={opt.value}
                   checked={form.reductionRegion === opt.value}
-                  onChange={() => onChange({ reductionRegion: opt.value as "metropolitan" | "non_metropolitan" })}
+                  onChange={() => onChange({ reductionRegion: opt.value as typeof form.reductionRegion })}
                   className="accent-primary"
                   aria-label={opt.label}
                 />
                 <span className="text-sm">{opt.label}</span>
+                <span className="text-xs text-muted-foreground">({opt.desc})</span>
               </label>
             ))}
           </div>
@@ -1435,9 +1457,16 @@ async function callTransferTaxAPI(form: TransferFormData): Promise<TransferTaxRe
       rentIncreaseRate: parseFloat(form.rentIncreaseRate) / 100,
     });
   } else if (form.reductionType === "new_housing") {
-    reductions.push({ type: "new_housing", region: form.reductionRegion });
+    // outside_overconcentration은 simple 경로에서 metropolitan으로 폴백 (V2 newHousingDetails가 없는 경우)
+    const simpleRegion = form.reductionRegion === "outside_overconcentration"
+      ? "metropolitan"
+      : form.reductionRegion as "metropolitan" | "non_metropolitan";
+    reductions.push({ type: "new_housing", region: simpleRegion });
   } else if (form.reductionType === "unsold_housing") {
-    reductions.push({ type: "unsold_housing", region: form.reductionRegion });
+    const simpleRegion = form.reductionRegion === "outside_overconcentration"
+      ? "metropolitan"
+      : form.reductionRegion as "metropolitan" | "non_metropolitan";
+    reductions.push({ type: "unsold_housing", region: simpleRegion });
   }
 
   // P0-A: 비사업용 토지 상세 정보 구성
@@ -1464,11 +1493,13 @@ async function callTransferTaxAPI(form: TransferFormData): Promise<TransferTaxRe
     form.propertyType === "housing" && form.houses.length > 0
       ? [
           // 현재 양도 주택 (ID: "selling")
+          // [C4] region: isRegulatedArea(조정대상지역) 대신 sellingHouseRegion(수도권/지방) 사용
+          // [C5] officialPrice: standardPriceAtTransfer(양도시 기준시가) 사용 — 0이면 3억 이하로 오판정 방지 목적으로 Step4에서 입력받음
           {
             id: "selling",
-            region: form.isRegulatedArea ? "capital" : "non_capital",
+            region: form.sellingHouseRegion,
             acquisitionDate: form.acquisitionDate,
-            officialPrice: 0,
+            officialPrice: form.standardPriceAtTransfer ? parseAmount(form.standardPriceAtTransfer) : 0,
             isInherited: false,
             isLongTermRental: false,
             isApartment: false,
