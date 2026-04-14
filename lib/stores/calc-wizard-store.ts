@@ -83,9 +83,13 @@ interface CalcWizardState {
   currentStep: number;
   formData: TransferFormData;
   result: TransferTaxResult | null;
+  /** 비로그인 상태에서 계산 후 로그인 전환 시 이관할 대기 결과 */
+  pendingMigration: boolean;
   setStep: (step: number) => void;
   updateFormData: (data: Partial<TransferFormData>) => void;
   setResult: (result: TransferTaxResult) => void;
+  /** 비로그인 → 로그인 이관 완료 후 플래그 초기화 */
+  clearPendingMigration: () => void;
   reset: () => void;
 }
 
@@ -95,11 +99,13 @@ export const useCalcWizardStore = create<CalcWizardState>()(
       currentStep: 0,
       formData: defaultFormData,
       result: null,
+      pendingMigration: false,
       setStep: (step) => set({ currentStep: step }),
       updateFormData: (data) =>
         set((state) => ({ formData: { ...state.formData, ...data } })),
-      setResult: (result) => set({ result }),
-      reset: () => set({ currentStep: 0, formData: defaultFormData, result: null }),
+      setResult: (result) => set({ result, pendingMigration: true }),
+      clearPendingMigration: () => set({ pendingMigration: false }),
+      reset: () => set({ currentStep: 0, formData: defaultFormData, result: null, pendingMigration: false }),
     }),
     {
       name: "transfer-tax-wizard",

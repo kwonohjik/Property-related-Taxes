@@ -7,122 +7,17 @@ import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import { cn } from "@/lib/utils";
 import { DateInput } from "@/components/ui/date-input";
 import { AddressSearch, type AddressValue } from "@/components/ui/address-search";
-
-// ============================================================
-// 유틸 함수
-// ============================================================
-
-/** 숫자를 천 단위 콤마 포맷으로 변환 */
-function formatWithCommas(value: string): string {
-  const num = value.replace(/[^0-9]/g, "");
-  return num.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-}
-
-/** 콤마 제거 후 정수 반환 */
-function parseAmount(value: string): number {
-  return parseInt(value.replace(/,/g, "") || "0", 10);
-}
-
-/** 원화 표시 (아라비아 숫자 + 천단위 콤마) */
-function formatKRW(amount: number): string {
-  return amount.toLocaleString() + "원";
-}
+import { CurrencyInput, parseAmount, formatKRW } from "@/components/calc/inputs/CurrencyInput";
+import { StepIndicator } from "@/components/calc/StepIndicator";
+import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
+import { LoginPromptBanner } from "@/components/calc/shared/LoginPromptBanner";
 
 /** 세율 백분율 표시 */
 function formatRate(rate: number): string {
   return `${(rate * 100).toFixed(0)}%`;
 }
 
-// ============================================================
-// CurrencyInput 컴포넌트
-// ============================================================
-function CurrencyInput({
-  label,
-  value,
-  onChange,
-  placeholder = "금액 입력",
-  required = false,
-  hint,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  placeholder?: string;
-  required?: boolean;
-  hint?: string;
-}) {
-  return (
-    <div className="space-y-1.5">
-      <label className="block text-sm font-medium">
-        {label} {required && <span className="text-destructive">*</span>}
-      </label>
-      <div className="relative">
-        <input
-          type="text"
-          inputMode="numeric"
-          value={formatWithCommas(value.replace(/,/g, ""))}
-          onChange={(e) => onChange(e.target.value.replace(/,/g, ""))}
-          onFocus={(e) => e.target.select()}
-          placeholder={placeholder}
-          className="w-full rounded-md border border-input bg-background px-3 py-2 pr-8 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        />
-        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-          원
-        </span>
-      </div>
-      {value && parseAmount(value) > 0 && (
-        <p className="text-xs text-muted-foreground">= {formatKRW(parseAmount(value))}</p>
-      )}
-      {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
-    </div>
-  );
-}
-
-// ============================================================
-// StepIndicator
-// ============================================================
 const STEPS = ["물건 유형", "양도 정보", "취득 정보", "보유 상황", "감면 확인"];
-
-function StepIndicator({ current }: { current: number }) {
-  return (
-    <div className="flex items-center gap-1 mb-6">
-      {STEPS.map((label, i) => (
-        <div key={i} className="flex items-center flex-1 last:flex-none">
-          <div className="flex flex-col items-center">
-            <div
-              className={cn(
-                "flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold border-2 transition-colors",
-                i < current
-                  ? "bg-primary border-primary text-primary-foreground"
-                  : i === current
-                    ? "border-primary text-primary bg-background"
-                    : "border-muted-foreground/30 text-muted-foreground bg-background",
-              )}
-            >
-              {i < current ? "✓" : i + 1}
-            </div>
-            <span
-              className={cn(
-                "mt-1 text-[10px] font-medium whitespace-nowrap hidden sm:block",
-                i === current ? "text-primary" : "text-muted-foreground",
-              )}
-            >
-              {label}
-            </span>
-          </div>
-          {i < STEPS.length - 1 && (
-            <div
-              className={cn(
-                "h-0.5 flex-1 mx-1 transition-colors",
-                i < current ? "bg-primary" : "bg-muted-foreground/20",
-              )}
-            />
-          )}
-        </div>
-      ))}
-    </div>
-  );
-}
 
 // ============================================================
 // Step 1: 물건 유형
@@ -800,15 +695,28 @@ function ResultView({
   result,
   onReset,
   onBack,
+  onLoginPrompt = false,
 }: {
   result: TransferTaxResult;
   onReset: () => void;
   onBack: () => void;
+  onLoginPrompt?: boolean;
 }) {
   const [showSteps, setShowSteps] = useState(false);
 
   return (
     <div className="space-y-5">
+      {/* PDF 인쇄 버튼 */}
+      <div className="flex justify-end print:hidden">
+        <button
+          type="button"
+          onClick={() => window.print()}
+          className="rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors"
+        >
+          🖨️ PDF / 인쇄
+        </button>
+      </div>
+
       {/* 핵심 결과 카드 */}
       {result.isExempt ? (
         <div className="rounded-xl border-2 border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30 p-6 text-center">
@@ -898,6 +806,12 @@ function ResultView({
           ))}
         </div>
       )}
+
+      {/* 면책 고지 */}
+      <DisclaimerBanner />
+
+      {/* 비로그인 안내 */}
+      {onLoginPrompt && <LoginPromptBanner hasPendingResult />}
 
       {/* 하단 버튼 */}
       <div className="flex gap-3">
@@ -1038,6 +952,22 @@ export default function TransferTaxCalculator() {
     useCalcWizardStore();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  // 로그인 상태 확인 (클라이언트 사이드)
+  useEffect(() => {
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL) return;
+    import("@/lib/supabase/client").then(({ createClient }) => {
+      const supabase = createClient();
+      supabase.auth.getUser().then(({ data }) => {
+        setIsLoggedIn(!!data.user);
+      });
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+        setIsLoggedIn(!!session?.user);
+      });
+      return () => subscription.unsubscribe();
+    });
+  }, []);
 
   const totalSteps = 5;
   const isLastStep = currentStep === totalSteps - 1;
@@ -1066,6 +996,17 @@ export default function TransferTaxCalculator() {
       const res = await callTransferTaxAPI(formData);
       setResult(res);
       setStep(totalSteps); // 결과 화면
+
+      // 로그인된 사용자면 이력 자동 저장
+      if (isLoggedIn) {
+        const { saveCalculation } = await import("@/actions/calculations");
+        await saveCalculation({
+          taxType: "transfer",
+          inputData: formData as unknown as Record<string, unknown>,
+          resultData: res as unknown as Record<string, unknown>,
+          taxLawVersion: new Date().toISOString().split("T")[0],
+        });
+      }
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "계산 중 오류가 발생했습니다.");
     } finally {
@@ -1102,10 +1043,11 @@ export default function TransferTaxCalculator() {
             setStep(totalSteps - 1); // 마지막 입력 단계(감면 확인)로 복귀
             setError(null);
           }}
+          onLoginPrompt={!isLoggedIn}
         />
       ) : (
         <>
-          <StepIndicator current={currentStep} />
+          <StepIndicator steps={STEPS} current={currentStep} />
 
           {/* 단계 제목 */}
           <h2 className="text-base font-semibold mb-4">
