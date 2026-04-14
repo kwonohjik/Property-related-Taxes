@@ -313,10 +313,18 @@ function checkExemption(
 interface TransferGainResult {
   gain: number;
   usedEstimated: boolean;
+  /** 환산취득가액 본체 (개산공제 미포함) 또는 실거래 취득가액 */
+  estimatedBase: number;
+  /** 개산공제액 (취득 당시 기준시가 × 3%) — 일반 취득가 방식이면 0 */
+  estimatedDeduction: number;
+  /** 실거래가 방식 필요경비 */
+  expenses: number;
 }
 
 function calcTransferGain(input: TransferTaxInput): TransferGainResult {
   let acquisitionCost: number;
+  let estimatedBase = 0;
+  let estimatedDeduction = 0;
   let usedEstimated = false;
 
   if (input.useEstimatedAcquisition) {
@@ -325,16 +333,24 @@ function calcTransferGain(input: TransferTaxInput): TransferGainResult {
       input.standardPriceAtAcquisition ?? 0,
       input.standardPriceAtTransfer ?? 0,
     );
-    // 개산공제 3% (환산취득가의 3%)
-    const deduction = applyRate(estimated, 0.03);
+    // 개산공제 = 취득 당시 기준시가 × 3% (소득세법 §97①②)
+    const deduction = applyRate(input.standardPriceAtAcquisition ?? 0, 0.03);
     acquisitionCost = estimated + deduction;
+    estimatedBase = estimated;
+    estimatedDeduction = deduction;
     usedEstimated = true;
   } else {
     acquisitionCost = input.acquisitionPrice;
   }
 
   const gain = input.transferPrice - acquisitionCost - input.expenses;
-  return { gain: Math.max(0, gain), usedEstimated };
+  return {
+    gain: Math.max(0, gain),
+    usedEstimated,
+    estimatedBase,
+    estimatedDeduction,
+    expenses: input.expenses,
+  };
 }
 
 // ============================================================
@@ -355,6 +371,8 @@ function calcOneHouseProration(gain: number, transferPrice: number): number {
 interface LongTermHoldingResult {
   deduction: number;
   rate: number;
+  /** 보유기간 (표시용) — 예: { years: 7, months: 4 } */
+  holdingPeriod: { years: number; months: number };
 }
 
 function calcLongTermHoldingDeduction(
@@ -366,39 +384,52 @@ function calcLongTermHoldingDeduction(
 ): LongTermHoldingResult {
   // L-1: 중과세 적용 중(유예 해제)이면 공제 배제
   if (isSurcharge && !isSuspended) {
-    return { deduction: 0, rate: 0 };
+    return { deduction: 0, rate: 0, holdingPeriod: { years: 0, months: 0 } };
   }
 
   // L-2: 미등기 공제 배제
   if (input.isUnregistered) {
-    return { deduction: 0, rate: 0 };
+    return { deduction: 0, rate: 0, holdingPeriod: { years: 0, months: 0 } };
   }
 
   const holding = calculateHoldingPeriod(input.acquisitionDate, input.transferDate);
+  const holdingPeriod = { years: holding.years, months: holding.months };
+  const residenceYears = Math.floor(input.residencePeriodMonths / 12);
 
-  // L-3: 1세대1주택 특례 (3년 이상 보유)
+  // L-3: 1세대1주택 특례
+  //   조건: 1세대 1주택 + 거주기간 2년 이상
+  //   공제율: 보유기간 × 4% + 거주기간 × 4% (80% 한도)
+  const ONE_HOUSE_HOLDING_RATE = 0.04;   // 보유 연 4%
+  const ONE_HOUSE_RESIDENCE_RATE = 0.04; // 거주 연 4%
+  const ONE_HOUSE_MAX_RATE = 0.80;       // 최대 80%
+  const ONE_HOUSE_MIN_RESIDENCE_YEARS = 2;
+
   if (
     input.isOneHousehold &&
     input.householdHousingCount === 1 &&
-    holding.years >= rules.oneHouseSpecial.minHoldingYears
+    residenceYears >= ONE_HOUSE_MIN_RESIDENCE_YEARS
   ) {
-    const holdingRate = Math.min(holding.years * rules.oneHouseSpecial.holdingRatePerYear, rules.oneHouseSpecial.holdingMaxRate);
-    const residenceYears = Math.floor(input.residencePeriodMonths / 12);
-    const residenceRate = Math.min(residenceYears * rules.oneHouseSpecial.residenceRatePerYear, rules.oneHouseSpecial.residenceMaxRate);
-    const rate = Math.min(holdingRate + residenceRate, rules.oneHouseSpecial.combinedMaxRate);
+    const holdingRate = holding.years * ONE_HOUSE_HOLDING_RATE;
+    const residenceRate = residenceYears * ONE_HOUSE_RESIDENCE_RATE;
+    const rate = Math.min(holdingRate + residenceRate, ONE_HOUSE_MAX_RATE);
     const deduction = applyRate(taxableGain, rate);
-    return { deduction, rate };
+    return { deduction, rate, holdingPeriod };
   }
 
-  // L-4: 일반 (3년 이상 보유)
-  if (holding.years >= rules.general.minHoldingYears) {
-    const rate = Math.min(holding.years * rules.general.ratePerYear, rules.general.maxRate);
+  // L-4: 일반 (보유기간 2년 이상, 미등기 제외)
+  //   공제율: 보유기간 × 2% (30% 한도)
+  const GENERAL_HOLDING_RATE = 0.02;  // 보유 연 2%
+  const GENERAL_MAX_RATE = 0.30;      // 최대 30%
+  const GENERAL_MIN_HOLDING_YEARS = 2;
+
+  if (holding.years >= GENERAL_MIN_HOLDING_YEARS) {
+    const rate = Math.min(holding.years * GENERAL_HOLDING_RATE, GENERAL_MAX_RATE);
     const deduction = applyRate(taxableGain, rate);
-    return { deduction, rate };
+    return { deduction, rate, holdingPeriod };
   }
 
-  // 3년 미만 보유
-  return { deduction: 0, rate: 0 };
+  // 보유기간 2년 미만
+  return { deduction: 0, rate: 0, holdingPeriod };
 }
 
 // ============================================================
@@ -472,6 +503,9 @@ function calcTax(
       )
     : false;
 
+  // 부동소수점 오차 제거: 세율은 소수점 4자리(0.01% 단위)로 정규화
+  const roundRate = (r: number) => Math.round(r * 10000) / 10000;
+
   // T-2: 비사업용 토지 누진 + 10%p
   if (input.isNonBusinessLand && surchargeRates.non_business_land) {
     const additionalRate = surchargeRates.non_business_land.additionalRate;
@@ -483,8 +517,8 @@ function calcTax(
     return {
       calculatedTax: progressiveTax + surchargeAmount,
       surchargeType: "non_business_land",
-      surchargeRate: additionalRate,
-      appliedRate: baseRate + additionalRate,
+      surchargeRate: roundRate(additionalRate),
+      appliedRate: roundRate(baseRate + additionalRate),
       progressiveDeduction: bracket?.deduction ?? 0,
       surchargeSuspended: false,
     };
@@ -505,8 +539,8 @@ function calcTax(
       return {
         calculatedTax: progressiveTax + surchargeAmount,
         surchargeType: surchargeKey,
-        surchargeRate: additionalRate,
-        appliedRate: baseRate + additionalRate,
+        surchargeRate: roundRate(additionalRate),
+        appliedRate: roundRate(baseRate + additionalRate),
         progressiveDeduction: bracket?.deduction ?? 0,
         surchargeSuspended: false,
       };
@@ -583,7 +617,16 @@ function calcReductions(
 
   // 감면 합계 상한: 결정세액 음수 방지
   const reductionAmount = Math.min(totalReduction, calculatedTax);
-  return { reductionAmount, reductionType: firstType };
+
+  const reductionTypeLabel: Record<string, string> = {
+    self_farming: "자경농지",
+    long_term_rental: "장기임대주택",
+    new_housing: "신축주택",
+    unsold_housing: "미분양주택",
+  };
+  const reductionTypeDisplay = firstType ? (reductionTypeLabel[firstType] ?? firstType) : undefined;
+
+  return { reductionAmount, reductionType: reductionTypeDisplay };
 }
 
 // ============================================================
@@ -632,12 +675,29 @@ export function calculateTransferTax(
   }
 
   // STEP 2: 양도차익 계산
-  const { gain: rawGain, usedEstimated } = calcTransferGain(input);
+  const { gain: rawGain, usedEstimated, estimatedBase, estimatedDeduction, expenses: appliedExpenses } = calcTransferGain(input);
   // STEP 2a: 손실 → 0
   const transferGain = Math.max(0, rawGain);
+
+  // 환산취득가 방식: 취득가와 필요경비(개산공제)를 분리 표시
+  // 일반 방식: 취득가와 필요경비를 분리 표시
+  let gainFormula: string;
+  if (input.useEstimatedAcquisition) {
+    gainFormula = [
+      `양도가(${input.transferPrice.toLocaleString()}원)`,
+      `취득가(환산 ${estimatedBase.toLocaleString()}원)`,
+      `경비(개산공제 ${estimatedDeduction.toLocaleString()}원)`,
+    ].join(" - ");
+  } else {
+    gainFormula = [
+      `양도가(${input.transferPrice.toLocaleString()}원)`,
+      `취득가(${input.acquisitionPrice.toLocaleString()}원)`,
+      `경비(${appliedExpenses.toLocaleString()}원)`,
+    ].join(" - ");
+  }
   steps.push({
     label: "양도차익 계산",
-    formula: `양도가(${input.transferPrice}) - 취득가(${input.useEstimatedAcquisition ? "환산" : input.acquisitionPrice}) - 경비(${input.expenses})`,
+    formula: gainFormula,
     amount: transferGain,
   });
 
@@ -671,7 +731,7 @@ export function calculateTransferTax(
     taxableGain = calcOneHouseProration(transferGain, input.transferPrice);
     steps.push({
       label: "과세 양도차익 (12억 초과분)",
-      formula: `${transferGain} × (양도가 ${input.transferPrice} - 12억) / 양도가`,
+      formula: `${transferGain.toLocaleString()}원 × (양도가 ${input.transferPrice.toLocaleString()}원 - 12억) / 양도가`,
       amount: taxableGain,
     });
   } else {
@@ -690,11 +750,28 @@ export function calculateTransferTax(
     : false;
 
   // STEP 4: 장기보유특별공제
-  const { deduction: longTermHoldingDeduction, rate: longTermHoldingRate } =
+  const { deduction: longTermHoldingDeduction, rate: longTermHoldingRate, holdingPeriod } =
     calcLongTermHoldingDeduction(taxableGain, input, parsedRates.longTermHoldingRules, isSurchargeCase, suspendedResult);
+  const holdingPeriodStr = holdingPeriod.years > 0 || holdingPeriod.months > 0
+    ? `보유기간 ${holdingPeriod.years}년 ${holdingPeriod.months}개월`
+    : "";
+  // 1세대1주택 특례 여부에 따라 계산식 분리 표시
+  const residenceYearsForStep = Math.floor(input.residencePeriodMonths / 12);
+  const isOneHouseSpecial =
+    input.isOneHousehold &&
+    input.householdHousingCount === 1 &&
+    residenceYearsForStep >= 2 &&
+    longTermHoldingDeduction > 0;
+  const lthdFormulaRate = isOneHouseSpecial
+    ? `보유 ${holdingPeriod.years}년×4% + 거주 ${residenceYearsForStep}년×4% = ${Math.round(longTermHoldingRate * 100)}% (80% 한도)`
+    : `보유 ${holdingPeriod.years}년×2% = ${Math.round(longTermHoldingRate * 100)}% (30% 한도)`;
   steps.push({
     label: "장기보유특별공제",
-    formula: `${taxableGain} × ${longTermHoldingRate}`,
+    formula: [
+      `${taxableGain.toLocaleString()}원 × ${Math.round(longTermHoldingRate * 100)}%`,
+      lthdFormulaRate,
+      holdingPeriodStr,
+    ].filter(Boolean).join(" | "),
     amount: longTermHoldingDeduction,
   });
 
@@ -708,7 +785,7 @@ export function calculateTransferTax(
   );
   steps.push({
     label: "기본공제",
-    formula: `연 한도 ${parsedRates.basicDeductionRules.annualLimit} - 기사용 ${input.annualBasicDeductionUsed}`,
+    formula: `연 한도 ${parsedRates.basicDeductionRules.annualLimit.toLocaleString()}원 - 기사용 ${input.annualBasicDeductionUsed.toLocaleString()}원`,
     amount: basicDeduction,
   });
 
@@ -717,15 +794,16 @@ export function calculateTransferTax(
   const taxBase = Math.max(0, truncateToThousand(rawTaxBase));
   steps.push({
     label: "과세표준",
-    formula: `${taxableGain} - ${longTermHoldingDeduction} - ${basicDeduction} (천원 미만 절사)`,
+    formula: `${taxableGain.toLocaleString()}원 - ${longTermHoldingDeduction.toLocaleString()}원 - ${basicDeduction.toLocaleString()}원 (천원 미만 절사)`,
     amount: taxBase,
   });
 
   // STEP 7: 산출세액
   const taxResult = calcTax(taxBase, parsedRates, input);
+  const fmtPct = (r: number) => `${Math.round(r * 100)}%`;
   steps.push({
     label: "산출세액",
-    formula: `과세표준 ${taxBase} × 세율 ${taxResult.appliedRate}${taxResult.surchargeRate ? ` (+중과 ${taxResult.surchargeRate})` : ""}`,
+    formula: `과세표준 ${taxBase.toLocaleString()}원 × 세율 ${fmtPct(taxResult.appliedRate)}${taxResult.surchargeRate ? ` (+중과 ${fmtPct(taxResult.surchargeRate)})` : ""}`,
     amount: taxResult.calculatedTax,
   });
 
@@ -737,7 +815,7 @@ export function calculateTransferTax(
   );
   steps.push({
     label: "감면세액",
-    formula: reductionType ? `${reductionType} 감면` : "감면 없음",
+    formula: reductionType ? `${reductionType} 감면 ${reductionAmount.toLocaleString()}원` : "감면 없음",
     amount: reductionAmount,
   });
 
@@ -745,7 +823,7 @@ export function calculateTransferTax(
   const determinedTax = truncateToWon(Math.max(0, taxResult.calculatedTax - reductionAmount));
   steps.push({
     label: "결정세액",
-    formula: `산출세액 ${taxResult.calculatedTax} - 감면 ${reductionAmount} (원 미만 절사)`,
+    formula: `산출세액 ${taxResult.calculatedTax.toLocaleString()}원 - 감면 ${reductionAmount.toLocaleString()}원 (원 미만 절사)`,
     amount: determinedTax,
   });
 
@@ -753,7 +831,7 @@ export function calculateTransferTax(
   const localIncomeTax = applyRate(determinedTax, 0.1);
   steps.push({
     label: "지방소득세",
-    formula: `${determinedTax} × 10%`,
+    formula: `${determinedTax.toLocaleString()}원 × 10%`,
     amount: localIncomeTax,
   });
 
@@ -761,7 +839,7 @@ export function calculateTransferTax(
   const totalTax = determinedTax + localIncomeTax;
   steps.push({
     label: "총 납부세액",
-    formula: `결정세액 ${determinedTax} + 지방소득세 ${localIncomeTax}`,
+    formula: `결정세액 ${determinedTax.toLocaleString()}원 + 지방소득세 ${localIncomeTax.toLocaleString()}원`,
     amount: totalTax,
   });
 

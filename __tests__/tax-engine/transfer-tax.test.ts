@@ -271,11 +271,11 @@ describe("T-03: 1주택 장기보유공제 80% (10년 보유+거주)", () => {
 // T-04: 1주택 보유율만 (거주 0개월, 5년 보유)
 // ============================================================
 
-describe("T-04: 1주택 장기보유공제 보유율만 (거주 0개월, 5년)", () => {
-  it("longTermHoldingRate=0.20 (보유 5년 × 4%)", () => {
+describe("T-04: 1주택 거주 0개월 → 1세대1주택 특례 미적용, 일반 규정 (5년 × 2%)", () => {
+  it("longTermHoldingRate=0.10 (거주기간 2년 미만 → 일반: 보유 5년 × 2%)", () => {
     // 취득: 2019-01-01, 양도: 2024-01-02 → 보유 5년
     // 양도가 13억 > 12억 → isPartialExempt=true → 장기보유공제 계산됨
-    // 거주 0개월 → holdingRate만 0.20, residenceRate=0 → 합산 0.20
+    // 거주 0개월 < 2년 → 1세대1주택 특례 미적용 → 일반: 5년 × 2% = 10%
     const input = baseInput({
       transferPrice: 1_300_000_000,
       acquisitionPrice: 1_000_000_000,
@@ -286,7 +286,7 @@ describe("T-04: 1주택 장기보유공제 보유율만 (거주 0개월, 5년)",
       householdHousingCount: 1,
     });
     const result = calculateTransferTax(input, mockRates);
-    expect(result.longTermHoldingRate).toBe(0.20);
+    expect(result.longTermHoldingRate).toBe(0.10);
   });
 });
 
@@ -468,7 +468,8 @@ describe("T-12: 환산취득가 사용 (개산공제 3%)", () => {
     expect(result.usedEstimatedAcquisition).toBe(true);
 
     const estimated = Math.floor(1_000_000_000 * 500_000_000 / 800_000_000); // 625,000,000
-    const deduction = Math.floor(estimated * 0.03); // 18,750,000
+    // 개산공제 = 취득 당시 기준시가 × 3% (소득세법 §97①②)
+    const deduction = Math.floor(500_000_000 * 0.03); // 15,000,000
     const expectedGain = 1_000_000_000 - estimated - deduction;
     expect(result.transferGain).toBe(Math.max(0, expectedGain));
   });
