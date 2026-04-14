@@ -11,7 +11,7 @@
  * DB 직접 호출 금지 — 감면 규칙 데이터를 매개변수로 받아 순수 판단/계산만 수행
  */
 
-import { addMonths, differenceInDays, differenceInYears } from "date-fns";
+import { addDays, addMonths, differenceInDays, differenceInYears } from "date-fns";
 import { applyRate, truncateToWon } from "./tax-utils";
 import type { LongTermRentalRuleSet } from "./schemas/rate-table.schema";
 
@@ -173,8 +173,10 @@ export function calculateEffectiveRentalPeriod(
   }
 
   const effectiveDays = Math.max(0, totalDays - deductDays);
-  // 년 환산: differenceInYears과 동일 로직 (365.25일/년)
-  return Math.floor(effectiveDays / 365);
+  // 달력 기반 연수 계산: 공실 차감된 일수를 rentalStartDate에 더해 종료일 추산
+  // Math.floor(days/365) 대신 differenceInYears 사용 → 윤년 경계 오판 방지
+  const effectiveEndDate = addDays(rentalStartDate, effectiveDays);
+  return differenceInYears(effectiveEndDate, rentalStartDate);
 }
 
 // ============================================================
@@ -367,7 +369,7 @@ export function getLongTermDeductionOverride(
   }
 
   // 임대료 증액 위반 시 특례 없음
-  const CONVERSION_RATE = 0.04; // 전월세전환율 기본값 4%
+  const CONVERSION_RATE = rules.jeonseConversionRate ?? 0.04; // 전월세전환율 (DB 미설정 시 4%)
   const rentValidation = validateRentIncrease(input.rentHistory, CONVERSION_RATE);
   if (!rentValidation.isAllValid) {
     return { hasOverride: false, overrideRate: 0 };
@@ -394,7 +396,7 @@ export function calculateRentalReduction(
   const warnings: string[] = [];
 
   // ── 기본 구조 초기화 ──
-  const CONVERSION_RATE = 0.04; // 전월세전환율 4% (기본값)
+  const CONVERSION_RATE = rules?.jeonseConversionRate ?? 0.04; // 전월세전환율 (DB 미설정 시 4%)
   const rentIncreaseValidation = validateRentIncrease(
     input.rentHistory,
     CONVERSION_RATE,

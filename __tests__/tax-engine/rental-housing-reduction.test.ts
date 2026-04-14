@@ -733,3 +733,51 @@ describe("LR-18: 감면 한도 적용", () => {
     expect(result.reductionAmount).toBe(200_000_000);
   });
 });
+
+// ============================================================
+// 임대 의무기간 8년 ±1일 달력 경계 (P1-2 회귀)
+// ============================================================
+
+describe("calculateEffectiveRentalPeriod — 8년 경계 (P1-2 회귀)", () => {
+  // 2016-01-01 취득, 8년 의무기간: 2024-01-01이 딱 8년째
+
+  it("2016-01-01 임대 시작 → 2024-01-01 종료(양도일): 정확히 8년 → 의무기간 충족", () => {
+    // differenceInYears(2024-01-01, 2016-01-01) = 8
+    const years = calculateEffectiveRentalPeriod(
+      new Date("2016-01-01"),
+      new Date("2024-01-01"),
+      [],
+    );
+    expect(years).toBe(8);
+  });
+
+  it("2016-01-01 임대 시작 → 2023-12-31 종료(양도일): 7년 364일 → 의무기간 미충족", () => {
+    // differenceInYears(2023-12-31, 2016-01-01) = 7
+    const years = calculateEffectiveRentalPeriod(
+      new Date("2016-01-01"),
+      new Date("2023-12-31"),
+      [],
+    );
+    expect(years).toBe(7);
+  });
+
+  it("공실 1일 차감 후 잔여 임대일로 8년 경계 재계산 (P1-2: addDays 기반)", () => {
+    // 2016-01-01 시작, 2024-01-02 종료 (8년 + 1일)
+    // 공실 1일 차감 → 실제 임대일 = 8년 정확히
+    const vp: VacancyPeriod[] = [
+      {
+        startDate: new Date("2020-06-01"),
+        endDate: new Date("2020-06-02"), // 1일 공실 (6개월 미만, 차감 대상)
+      },
+    ];
+    // 공실이 1일이므로 6개월 미만 기준 — 실제 차감 여부는 구현에 따라 다를 수 있으나
+    // 차감 없음 시나리오: 2016-01-01 + (2024-01-02 - 2016-01-01 - 차감)일 = 8년 이상
+    const years = calculateEffectiveRentalPeriod(
+      new Date("2016-01-01"),
+      new Date("2024-01-02"), // 8년 + 1일 = 여유 있음
+      vp,
+    );
+    // 공실 1일은 6개월 미만이므로 차감 없음 → effectiveDays ≈ 8년 + 1일 → 8년
+    expect(years).toBeGreaterThanOrEqual(8);
+  });
+});

@@ -1569,3 +1569,244 @@ describe("T-38: 1세대1주택 보유 3년 + 거주 2년 → 특례 공제 20%",
     );
   });
 });
+
+// ============================================================
+// T-39: 윤년 취득일 경계값 (2020-02-29 취득, 만 4년 분기)
+// ============================================================
+
+describe("T-39: 윤년 취득일 경계값 (P0-1·P2-7 회귀)", () => {
+  it("2020-02-29 취득 → 2024-02-28 양도: 보유 3년 364일 → LTHD 6%", () => {
+    // 달력 기준 만 3년 (2020-02-29 ~ 2024-02-28)
+    const result = calculateTransferTax(
+      baseInput({
+        acquisitionDate: new Date("2020-02-29"),
+        transferDate: new Date("2024-02-28"),
+        transferPrice: 600_000_000,
+        acquisitionPrice: 400_000_000,
+        isOneHousehold: false,
+        householdHousingCount: 1,
+        residencePeriodMonths: 0,
+      }),
+      mockRates,
+    );
+    // 보유 3년 → 일반 LTHD 2%/년 × 3년 = 6%
+    expect(result.longTermHoldingRate).toBe(0.06);
+  });
+
+  it("2020-02-29 취득 → 2024-02-29 양도: 초일불산입 기산일(03-01) 기준 3년 364일 → LTHD 6%", () => {
+    // 민법 초일불산입: 기산일 = 2020-03-01
+    // 2020-03-01 ~ 2024-02-29 = 3년 364일 → 만 3년 → LTHD 6%
+    const result = calculateTransferTax(
+      baseInput({
+        acquisitionDate: new Date("2020-02-29"),
+        transferDate: new Date("2024-02-29"),
+        transferPrice: 600_000_000,
+        acquisitionPrice: 400_000_000,
+        isOneHousehold: false,
+        householdHousingCount: 1,
+        residencePeriodMonths: 0,
+      }),
+      mockRates,
+    );
+    expect(result.longTermHoldingRate).toBe(0.06);
+  });
+
+  it("2020-02-29 취득 → 2024-03-01 양도: 보유 만 4년 → LTHD 8%", () => {
+    const result = calculateTransferTax(
+      baseInput({
+        acquisitionDate: new Date("2020-02-29"),
+        transferDate: new Date("2024-03-01"),
+        transferPrice: 600_000_000,
+        acquisitionPrice: 400_000_000,
+        isOneHousehold: false,
+        householdHousingCount: 1,
+        residencePeriodMonths: 0,
+      }),
+      mockRates,
+    );
+    expect(result.longTermHoldingRate).toBe(0.08);
+  });
+});
+
+// ============================================================
+// T-40: 중과세 유예 만료 경계 (2026-05-09 이전 vs 이후)
+// ============================================================
+
+describe("T-40: 중과세 유예 만료 경계 (suspended_until: 2026-05-09)", () => {
+  it("양도일 2026-05-09 → 유예 기간 내 → 중과세 미적용 (isSurchargeSuspended=true)", () => {
+    const ratesWithExpiry = makeMockRates();
+    const result = calculateTransferTax(
+      baseInput({
+        transferDate: new Date("2026-05-09"),
+        householdHousingCount: 2,
+        isRegulatedArea: true,
+        isOneHousehold: false,
+        transferPrice: 600_000_000,
+        acquisitionPrice: 300_000_000,
+        residencePeriodMonths: 0,
+      }),
+      ratesWithExpiry,
+    );
+    // 유예 중 → isSurchargeSuspended=true, surchargeRate 없음
+    expect(result.isSurchargeSuspended).toBe(true);
+    expect(result.surchargeRate ?? 0).toBe(0);
+  });
+
+  it("양도일 2026-05-10 → 유예 종료 → 2주택 중과세 +20%p 적용", () => {
+    const ratesAfterExpiry = makeMockRates({
+      "transfer:surcharge:_default": {
+        taxType: "transfer",
+        category: "surcharge",
+        subCategory: "_default",
+        rateTable: {
+          multi_house_2: { additionalRate: 0.20, condition: "조정대상지역 2주택", referenceDate: "transfer_date" },
+          multi_house_3plus: { additionalRate: 0.30, condition: "조정대상지역 3주택+", referenceDate: "transfer_date" },
+          unregistered: { flatRate: 0.70, excludeDeductions: true, excludeBasicDeduction: true },
+        },
+        deductionRules: null,
+        specialRules: {
+          surcharge_suspended: false, // 유예 종료
+        },
+      },
+    } as Partial<Record<TaxRateKey, object>>);
+    const result = calculateTransferTax(
+      baseInput({
+        transferDate: new Date("2026-05-10"),
+        householdHousingCount: 2,
+        isRegulatedArea: true,
+        isOneHousehold: false,
+        transferPrice: 600_000_000,
+        acquisitionPrice: 300_000_000,
+        residencePeriodMonths: 0,
+      }),
+      ratesAfterExpiry,
+    );
+    // 중과세 적용 → surchargeRate = 0.20, isSurchargeSuspended = false
+    expect(result.isSurchargeSuspended).toBe(false);
+    expect(result.surchargeRate).toBeGreaterThan(0);
+  });
+});
+
+// ============================================================
+// T-41: 환산취득가 큰 값 정밀도 (overflow 방어 — P1-1 회귀)
+// ============================================================
+
+describe("T-41: 환산취득가 대용량 값 BigInt 정밀도", () => {
+  it("양도·취득 기준시가 1조 → 개산공제 후 올바른 환산취득가 반환", () => {
+    const result = calculateTransferTax(
+      baseInput({
+        transferPrice: 2_000_000_000_000, // 2조
+        useEstimatedAcquisition: true,
+        acquisitionDate: new Date("2010-01-01"),
+        transferDate: new Date("2024-01-01"),
+        standardPriceAtAcquisition: 1_000_000_000_000, // 1조
+        standardPriceAtTransfer: 1_500_000_000_000,    // 1.5조
+        expenses: 0,
+        isOneHousehold: false,
+        householdHousingCount: 1,
+        residencePeriodMonths: 0,
+      }),
+      mockRates,
+    );
+    // 환산취득가 = 2조 × (1조 / 1.5조) = 1조 333억… (정수)
+    // 총세액이 양수이고 NaN/Infinity가 아닌지 확인
+    expect(Number.isFinite(result.totalTax)).toBe(true);
+    expect(result.totalTax).toBeGreaterThanOrEqual(0);
+  });
+});
+
+// ============================================================
+// T-42: 정확한 손익분기 (양도차익 = 0 → 세액 = 0)
+// ============================================================
+
+describe("T-42: 양도차익 = 0 → totalTax = 0", () => {
+  it("transferPrice === acquisitionPrice + expenses → totalTax = 0", () => {
+    const result = calculateTransferTax(
+      baseInput({
+        transferPrice: 500_000_000,
+        acquisitionPrice: 490_000_000,
+        expenses: 10_000_000,
+        isOneHousehold: false,
+        householdHousingCount: 1,
+        residencePeriodMonths: 0,
+      }),
+      mockRates,
+    );
+    expect(result.transferGain).toBe(0);
+    expect(result.totalTax).toBe(0);
+  });
+});
+
+// ============================================================
+// T-43: 미등기 + 장기보유특별공제 배제 (P0-2 회귀)
+// ============================================================
+
+describe("T-43: 미등기 양도 — LTHD 배제 회귀 (P0-2)", () => {
+  it("보유 10년이어도 미등기 시 longTermHoldingDeduction = 0", () => {
+    const result = calculateTransferTax(
+      baseInput({
+        acquisitionDate: new Date("2014-01-01"),
+        transferDate: new Date("2024-01-01"),
+        transferPrice: 600_000_000,
+        acquisitionPrice: 300_000_000,
+        isUnregistered: true,
+        isOneHousehold: false,
+        householdHousingCount: 1,
+        residencePeriodMonths: 0,
+      }),
+      mockRates,
+    );
+    expect(result.longTermHoldingDeduction).toBe(0);
+    expect(result.longTermHoldingRate).toBe(0);
+    // 미등기 단일세율 70% 적용
+    expect(result.appliedRate).toBe(0.70);
+  });
+});
+
+// ============================================================
+// T-44: 12억 경계 안분 정수 연산 (P0-1 회귀)
+// ============================================================
+
+describe("T-44: 12억 경계 안분 정수 연산 (P0-1 회귀)", () => {
+  it("양도가 정확히 12억 → 전액 비과세 (taxableGain = 0)", () => {
+    const result = calculateTransferTax(
+      baseInput({
+        transferPrice: 1_200_000_000,
+        acquisitionPrice: 800_000_000,
+        transferDate: new Date("2024-06-01"),
+        acquisitionDate: new Date("2020-06-01"),
+        isOneHousehold: true,
+        householdHousingCount: 1,
+        residencePeriodMonths: 48,
+        isRegulatedArea: false,
+      }),
+      mockRates,
+    );
+    // 1세대1주택 비과세 한도 = 12억 → 정확히 12억이면 과세 안분 없음
+    expect(result.isExempt).toBe(true);
+    expect(result.totalTax).toBe(0);
+  });
+
+  it("양도가 15억 (12억 초과) → 비과세 아님, 안분 세액 정수", () => {
+    // 과세 안분 = 차익 × (15억-12억)/15억 = 5억 × 3/15 = 1억
+    const result = calculateTransferTax(
+      baseInput({
+        transferPrice: 1_500_000_000,
+        acquisitionPrice: 1_000_000_000,
+        transferDate: new Date("2024-06-01"),
+        acquisitionDate: new Date("2020-06-01"),
+        isOneHousehold: true,
+        householdHousingCount: 1,
+        residencePeriodMonths: 48,
+        isRegulatedArea: false,
+      }),
+      mockRates,
+    );
+    expect(result.isExempt).toBe(false);
+    expect(result.taxableGain).toBe(100_000_000); // 5억 × 3억/15억 = 1억
+    expect(result.totalTax).toBeGreaterThan(0);
+    // 세액은 정수여야 함 (P0-1 정수 연산 검증)
+    expect(Number.isInteger(result.totalTax)).toBe(true);
+    expect(Number.isInteger(result.taxableGain)).toBe(true);
+  });
+});

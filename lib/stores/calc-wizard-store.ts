@@ -46,6 +46,10 @@ export interface TransferFormData {
   rentIncreaseRate: string;
   reductionRegion: "metropolitan" | "non_metropolitan";
   annualBasicDeductionUsed: string;
+  // Step 4: 일시적 2주택 특례
+  temporaryTwoHouseSpecial: boolean;
+  previousHouseAcquisitionDate: string;
+  newHouseAcquisitionDate: string;
 }
 
 const defaultFormData: TransferFormData = {
@@ -77,6 +81,9 @@ const defaultFormData: TransferFormData = {
   rentIncreaseRate: "0",
   reductionRegion: "metropolitan",
   annualBasicDeductionUsed: "0",
+  temporaryTwoHouseSpecial: false,
+  previousHouseAcquisitionDate: "",
+  newHouseAcquisitionDate: "",
 };
 
 interface CalcWizardState {
@@ -105,7 +112,13 @@ export const useCalcWizardStore = create<CalcWizardState>()(
         set((state) => ({ formData: { ...state.formData, ...data } })),
       setResult: (result) => set({ result, pendingMigration: true }),
       clearPendingMigration: () => set({ pendingMigration: false }),
-      reset: () => set({ currentStep: 0, formData: defaultFormData, result: null, pendingMigration: false }),
+      reset: () => {
+        // sessionStorage persist 키도 함께 제거하여 새로고침 후 이전 입력값 재출현 방지
+        if (typeof window !== "undefined") {
+          sessionStorage.removeItem("transfer-tax-wizard");
+        }
+        set({ currentStep: 0, formData: defaultFormData, result: null, pendingMigration: false });
+      },
     }),
     {
       name: "transfer-tax-wizard",

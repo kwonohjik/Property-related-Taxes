@@ -305,6 +305,8 @@ const longTermRentalSubTypeSchema = z.object({
 export const longTermRentalRuleSetSchema = z.object({
   type: z.literal("long_term_rental_v2"),
   subTypes: z.array(longTermRentalSubTypeSchema),
+  /** 전월세전환율 (기본값 0.04 = 4%). DB에서 세법 개정 시 변경 가능 */
+  jeonseConversionRate: z.number().positive().optional(),
 });
 
 export type LongTermRentalRuleSet = z.infer<typeof longTermRentalRuleSetSchema>;

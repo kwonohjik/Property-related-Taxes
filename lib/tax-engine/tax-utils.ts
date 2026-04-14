@@ -72,7 +72,8 @@ export function truncateToWon(amount: number): number {
 export function safeMultiply(a: number, b: number): number {
   const result = a * b;
   if (Math.abs(result) > Number.MAX_SAFE_INTEGER) {
-    return Number(BigInt(Math.round(a)) * BigInt(Math.round(b)));
+    // Math.floor로 정수화: 피연산자를 정수로 변환 후 곱 (중간 반올림 금지)
+    return Number(BigInt(Math.floor(a)) * BigInt(Math.floor(b)));
   }
   return result;
 }
@@ -86,8 +87,9 @@ export function safeMultiplyThenDivide(a: number, b: number, c: number): number 
   if (c === 0) return 0;
   const product = a * b;
   if (Math.abs(product) > Number.MAX_SAFE_INTEGER) {
+    // Math.floor로 정수화: 피연산자를 정수로 변환 후 연산 (중간 반올림 금지)
     return Number(
-      BigInt(Math.round(a)) * BigInt(Math.round(b)) / BigInt(Math.round(c)),
+      BigInt(Math.floor(a)) * BigInt(Math.floor(b)) / BigInt(Math.floor(c)),
     );
   }
   return Math.floor(product / c);
@@ -106,9 +108,10 @@ export function calculateProration(
   denominator: number,
 ): number {
   if (denominator === 0) return 0;
-  // 비율 상한 1.0 — 분자가 분모를 초과해도 원금 이상 공제 방지
-  const ratio = Math.min(numerator / denominator, 1.0);
-  return Math.floor(amount * ratio);
+  // 상한(비율 1.0) 가드 — 분자가 분모 이상이면 amount 전액 반환
+  if (numerator >= denominator) return amount;
+  // P0-2 원칙: 부동소수점 비율 연산 금지 → 정수 곱셈 먼저 후 나눗셈
+  return Math.floor(safeMultiplyThenDivide(amount, numerator, denominator));
 }
 
 // ============================================================

@@ -8,7 +8,7 @@
  *   §167-10 (중과 배제), §155 ⑨ (상속주택), 소령 §167-11 (분양권 포함)
  */
 
-import { differenceInYears } from "date-fns";
+import { addYears, differenceInYears } from "date-fns";
 import { isSurchargeSuspended } from "./tax-utils";
 import type { SurchargeSpecialRulesData } from "./schemas/rate-table.schema";
 
@@ -325,8 +325,7 @@ function determineSurchargeExclusion(
         const relaxDate = new Date("2022-05-10");
         const deadlineYears = isRegulated && newHouse.acquisitionDate < relaxDate ? 1 : 3;
 
-        const deadline = new Date(newHouse.acquisitionDate);
-        deadline.setFullYear(deadline.getFullYear() + deadlineYears);
+        const deadline = addYears(newHouse.acquisitionDate, deadlineYears);
 
         if (input.transferDate <= deadline) {
           exclusionReasons.push({
@@ -481,7 +480,7 @@ export function determineMultiHouseSurcharge(
     isRegulatedAtTransfer,
     // 유예 중이면 실제 적용 안함, 유형은 표시용으로 유지
     surchargeApplicable: !isSuspended,
-    surchargeType: isSuspended ? surchargeType : surchargeType, // 유예여도 이론적 유형 표시
+    surchargeType, // 유예여도 이론적 유형 표시 (surchargeApplicable=false로 실제 미적용)
     isSurchargeSuspended: isSuspended,
     exclusionReasons,
     warnings,

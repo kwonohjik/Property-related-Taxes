@@ -1,0 +1,443 @@
+{
+  "timestamp": "2026-04-13T23:05:33.516Z",
+  "reason": "compaction",
+  "status": {
+    "version": "3.0",
+    "lastUpdated": "2026-04-13T22:54:22.498Z",
+    "activeFeatures": [
+      "claude-code-mastery",
+      "calc",
+      "inheritance-tax",
+      "gift-tax",
+      "acquisition-tax",
+      "property-tax",
+      "comprehensive-tax",
+      "tax-engine",
+      "supabase",
+      "callback",
+      "__tests__",
+      "Property-related-Taxes",
+      "db",
+      "schemas",
+      "scripts"
+    ],
+    "primaryFeature": "claude-code-mastery",
+    "features": {
+      "claude-code-mastery": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-04-13T21:03:59.232Z",
+          "lastUpdated": "2026-04-13T21:05:32.238Z"
+        },
+        "lastFile": "/Users/mynote/workspace/claude-code-mastery/vitest.config.ts"
+      },
+      "calc": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-04-13T21:04:14.863Z",
+          "lastUpdated": "2026-04-13T21:04:14.864Z"
+        },
+        "lastFile": "/Users/mynote/workspace/claude-code-mastery/app/calc/layout.tsx"
+      },
+      "inheritance-tax": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-04-13T21:04:28.274Z",
+          "lastUpdated": "2026-04-13T21:04:28.275Z"
+        },
+        "lastFile": "/Users/mynote/workspace/claude-code-mastery/app/calc/inheritance-tax/page.tsx"
+      },
+      "gift-tax": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-04-13T21:04:29.176Z",
+          "lastUpdated": "2026-04-13T21:04:29.177Z"
+        },
+        "lastFile": "/Users/mynote/workspace/claude-code-mastery/app/calc/gift-tax/page.tsx"
+      },
+      "acquisition-tax": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-04-13T21:04:30.622Z",
+          "lastUpdated": "2026-04-13T21:04:30.623Z"
+        },
+        "lastFile": "/Users/mynote/workspace/claude-code-mastery/app/calc/acquisition-tax/page.tsx"
+      },
+      "property-tax": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-04-13T21:04:32.047Z",
+          "lastUpdated": "2026-04-13T21:04:32.048Z"
+        },
+        "lastFile": "/Users/mynote/workspace/claude-code-mastery/app/calc/property-tax/page.tsx"
+      },
+      "comprehensive-tax": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-04-13T21:04:33.265Z",
+          "lastUpdated": "2026-04-13T21:04:33.266Z"
+        },
+        "lastFile": "/Users/mynote/workspace/claude-code-mastery/app/calc/comprehensive-tax/page.tsx"
+      },
+      "tax-engine": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-04-13T21:04:43.135Z",
+          "lastUpdated": "2026-04-13T22:54:22.497Z"
+        },
+        "lastFile": "/Users/mynote/workspace/Property-related-Taxes/__tests__/tax-engine/tax-utils.test.ts"
+      },
+      "supabase": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-04-13T21:05:08.706Z",
+          "lastUpdated": "2026-04-13T21:07:21.127Z"
+        },
+        "lastFile": "/Users/mynote/workspace/claude-code-mastery/lib/supabase/middleware.ts"
+      },
+      "callback": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-04-13T21:05:22.368Z",
+          "lastUpdated": "2026-04-13T21:05:22.369Z"
+        },
+        "lastFile": "/Users/mynote/workspace/claude-code-mastery/app/auth/callback/route.ts"
+      },
+      "__tests__": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-04-13T21:05:32.367Z",
+          "lastUpdated": "2026-04-13T21:05:32.367Z"
+        },
+        "lastFile": "/Users/mynote/workspace/claude-code-mastery/__tests__/setup.ts"
+      },
+      "Property-related-Taxes": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-04-13T21:42:18.239Z",
+          "lastUpdated": "2026-04-13T21:42:38.264Z"
+        },
+        "lastFile": "/Users/mynote/workspace/Property-related-Taxes/app/layout.tsx"
+      },
+      "db": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-04-13T22:02:15.467Z",
+          "lastUpdated": "2026-04-13T22:02:23.329Z"
+        },
+        "lastFile": "/Users/mynote/workspace/Property-related-Taxes/lib/db/regulated-areas.ts"
+      },
+      "schemas": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-04-13T22:02:58.475Z",
+          "lastUpdated": "2026-04-13T22:02:58.476Z"
+        },
+        "lastFile": "/Users/mynote/workspace/Property-related-Taxes/lib/tax-engine/schemas/rate-table.schema.ts"
+      },
+      "scripts": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-04-13T22:03:41.313Z",
+          "lastUpdated": "2026-04-13T22:03:41.314Z"
+        },
+        "lastFile": "/Users/mynote/workspace/Property-related-Taxes/scripts/seed-transfer-tax-rates.ts"
+      }
+    },
+    "pipeline": {
+      "currentPhase": 1,
+      "level": "Dynamic",
+      "phaseHistory": []
+    },
+    "session": {
+      "startedAt": "2026-04-13T10:11:34.572Z",
+      "onboardingCompleted": false,
+      "lastActivity": "2026-04-13T22:54:22.498Z"
+    },
+    "history": [
+      {
+        "timestamp": "2026-04-13T21:03:59.233Z",
+        "feature": "claude-code-mastery",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-13T21:04:09.276Z",
+        "feature": "claude-code-mastery",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-13T21:04:14.864Z",
+        "feature": "calc",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-13T21:04:28.275Z",
+        "feature": "inheritance-tax",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-13T21:04:29.177Z",
+        "feature": "gift-tax",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-13T21:04:30.623Z",
+        "feature": "acquisition-tax",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-13T21:04:32.049Z",
+        "feature": "property-tax",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-13T21:04:33.266Z",
+        "feature": "comprehensive-tax",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-13T21:04:43.136Z",
+        "feature": "tax-engine",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-13T21:04:52.409Z",
+        "feature": "tax-engine",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-13T21:04:54.642Z",
+        "feature": "tax-engine",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-13T21:05:08.707Z",
+        "feature": "supabase",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-13T21:05:10.576Z",
+        "feature": "supabase",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-13T21:05:13.557Z",
+        "feature": "supabase",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-13T21:05:17.368Z",
+        "feature": "claude-code-mastery",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-13T21:05:22.369Z",
+        "feature": "callback",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-13T21:05:32.239Z",
+        "feature": "claude-code-mastery",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-13T21:05:32.368Z",
+        "feature": "__tests__",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-13T21:05:47.232Z",
+        "feature": "tax-engine",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-13T21:07:21.128Z",
+        "feature": "supabase",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-13T21:42:18.241Z",
+        "feature": "Property-related-Taxes",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-13T21:42:29.308Z",
+        "feature": "Property-related-Taxes",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-13T21:42:32.898Z",
+        "feature": "Property-related-Taxes",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-13T21:42:38.265Z",
+        "feature": "Property-related-Taxes",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-13T22:02:15.468Z",
+        "feature": "db",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-13T22:02:23.330Z",
+        "feature": "db",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-13T22:02:58.476Z",
+        "feature": "schemas",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-13T22:03:41.314Z",
+        "feature": "scripts",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-13T22:04:01.283Z",
+        "feature": "tax-engine",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-13T22:53:38.521Z",
+        "feature": "tax-engine",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-13T22:53:43.684Z",
+        "feature": "tax-engine",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-13T22:54:22.498Z",
+        "feature": "tax-engine",
+        "phase": "do",
+        "action": "updated"
+      }
+    ],
+    "stateMachine": {
+      "defaultWorkflow": "default",
+      "activeWorkflows": {},
+      "totalTransitions": 0
+    },
+    "automation": {
+      "globalLevel": 2,
+      "trustScore": 40,
+      "pendingApprovals": 0,
+      "lastGateResult": null
+    },
+    "team": {
+      "enabled": true,
+      "stateFile": ".bkit/runtime/agent-state.json",
+      "eventsFile": ".bkit/runtime/agent-events.jsonl"
+    }
+  }
+}

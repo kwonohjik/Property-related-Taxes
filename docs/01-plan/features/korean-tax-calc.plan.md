@@ -189,46 +189,71 @@ const result = calculateComprehensiveTax(input, rates);  // 순수 함수
 ```
 lib/
   tax-engine/
-    transfer-tax.ts              # 양도소득세 계산 엔진
+    transfer-tax.ts              # [구현됨] 양도소득세 계산 엔진 (Orchestrator 통합 진입점)
+    multi-house-surcharge.ts     # [구현됨] 다주택 중과세 전담 엔진 (§104·§167-3·§167-10)
+                                 #   주택 수 산정, 배제(상속·임대·오피스텔), 일시적2주택·혼인합가·동거봉양 특례
+    non-business-land.ts         # [구현됨] 비사업용 토지 판정 엔진 (§104의3·시행령 §168의6~14)
+                                 #   사업용 기간 비율, 유예기간, 이력 판정
+    rental-housing-reduction.ts  # [구현됨] 장기임대주택 감면 엔진 (조특법 §97·§97의3·§97의4·§97의5)
+                                 #   유형별(장기일반·공공지원·공공임대) 감면율·의무기간·임대료제한 검증
+    new-housing-reduction.ts     # [구현됨] 신축·미분양주택 감면 엔진 (조특법 §99·§99의3·§98의2)
+                                 #   시기별·지역별 감면율 매트릭스, 5년 안분 계산
     inheritance-tax.ts           # 상속세 계산 엔진
     gift-tax.ts                  # 증여세 계산 엔진
     acquisition-tax.ts           # 취득세 계산 엔진
     property-tax.ts              # 재산세 계산 엔진
     comprehensive-tax.ts         # 종합부동산세 계산 엔진
       → property-tax.ts를 import하여 재산세 자동 계산 + 공제
-    tax-utils.ts                 # 공통 유틸 (누진세율 계산, 정수 연산, 세금별 절사)
-    tax-errors.ts                # 에러 코드 정의 (TAX_RATE_NOT_FOUND, INVALID_INPUT 등)
+    tax-utils.ts                 # [구현됨] 공통 유틸 (누진세율, 정수 연산, 절사, 보유기간)
+    tax-errors.ts                # [구현됨] 에러 코드 (TaxRateNotFoundError 등)
     schemas/
-      rate-table.schema.ts       # jsonb 입출력 Zod 검증 스키마
+      rate-table.schema.ts       # [구현됨] jsonb 입출력 Zod 검증 스키마
+                                 #   (진세율·감면·중과·주택수배제·조정지역이력·임대·신축 파서 포함)
     standard-price.ts            # 기준시가 조회 (API + DB)
   db/
-    tax-rates.ts                 # DB 세율 조회 + preloadTaxRates() 일괄 로드 함수
+    tax-rates.ts                 # [구현됨] DB 세율 조회 + preloadTaxRates() 일괄 로드 함수
+    regulated-areas.ts           # [구현됨] 조정대상지역 DB 조회 유틸
     calculations.ts              # 계산 이력 CRUD + 보존 정책 (200건 상한)
     standard-prices.ts           # 기준시가 DB 조회
-  validators/
-    transfer-input.ts            # Zod 스키마
-    inheritance-input.ts
-    gift-input.ts
-    acquisition-input.ts
-    property-input.ts
-    comprehensive-input.ts
   stores/
-    calc-wizard-store.ts         # zustand store (StepWizard 상태 + sessionStorage persist)
+    calc-wizard-store.ts         # [구현됨] zustand store (TransferFormData 포함, sessionStorage persist)
   database.types.ts              # Supabase CLI 자동 생성 타입
+app/
+  calc/
+    transfer-tax/
+      page.tsx                   # [구현됨] 양도소득세 계산기 페이지
+      TransferTaxCalculator.tsx  # [구현됨] 5단계 StepWizard + 결과 표시 통합 컴포넌트
+      loading.tsx                # [구현됨] 로딩 UI
+      error.tsx                  # [구현됨] 에러 바운더리
+    layout.tsx                   # [구현됨] /calc 공통 레이아웃
+  api/calc/transfer/route.ts     # [구현됨] Route Handler (Orchestrator 패턴)
 components/
   calc/
-    StepWizard.tsx               # 공통 단계별 입력 마법사 (react-hook-form + zustand)
-    TransferTaxForm.tsx          # 양도소득세 입력
+    StepIndicator.tsx            # [구현됨] 공통 단계 인디케이터
+    inputs/
+      CurrencyInput.tsx          # [구현됨] 금액 입력 컴포넌트 (parseAmount, formatKRW 포함)
+    shared/
+      DisclaimerBanner.tsx       # [구현됨] 면책 고지 공통 배너
+      LoginPromptBanner.tsx      # [구현됨] 비로그인 결과 저장 유도 배너
     InheritanceTaxForm.tsx       # 상속세 입력
     GiftTaxForm.tsx              # 증여세 입력
     AcquisitionTaxForm.tsx       # 취득세 입력
     PropertyTaxForm.tsx          # 재산세 입력
     ComprehensiveTaxForm.tsx     # 종부세 입력 (다주택 목록)
     PropertyListInput.tsx        # 복수 물건 입력 컴포넌트
-    TaxResult.tsx                # 계산 결과 표시
-    ResultBreakdown.tsx          # 세금 항목별 상세
     LinkedTaxResult.tsx          # 재산세↔종부세 연동 결과 표시
-  ui/                            # shadcn/ui 컴포넌트
+  ui/
+    address-search.tsx           # [구현됨] Vworld 주소 검색 컴포넌트
+    date-input.tsx               # [구현됨] 날짜 입력 컴포넌트 (연도 6자리 버그 해결)
+    (기타 shadcn/ui 컴포넌트)
+__tests__/
+  tax-engine/
+    transfer-tax.test.ts         # [구현됨] 양도소득세 엔진 단위 테스트
+    multi-house-surcharge.test.ts # [구현됨] 다주택 중과세 엔진 단위 테스트
+    non-business-land.test.ts    # [구현됨] 비사업용 토지 판정 단위 테스트
+    rental-housing-reduction.test.ts # [구현됨] 장기임대 감면 단위 테스트
+    new-housing-reduction.test.ts    # [구현됨] 신축·미분양 감면 단위 테스트
+    tax-utils.test.ts            # [구현됨] 공통 유틸 단위 테스트
 ```
 
 ### 2.5 재산세↔종합부동산세 연동 아키텍처
@@ -554,29 +579,31 @@ components/
   - **주의**: Supabase Auth 소셜 로그인은 **redirect 방식만 사용** (popup 방식 시 sessionStorage 탭 격리로 이관 실패)
 - [ ] users 프로필 테이블 자동 생성 (Auth trigger)
 
-### Phase 3: 양도소득세 계산 엔진 (4~5일) [v1.0]
+### Phase 3: 양도소득세 계산 엔진 (4~5일) [v1.0] ✅ 완료
 
-- [ ] DB에서 세율 로드하는 유틸 함수 (`db/tax-rates.ts`) — **시점별 조회** 지원
+- [x] DB에서 세율 로드하는 유틸 함수 (`db/tax-rates.ts`) — **시점별 조회** 지원
   - `getTaxRate(taxType, category, targetDate)` → `effective_date <= targetDate` 중 최신
   - `preloadTaxRates(taxTypes[], targetDate)` → 복수 세금 타입의 세율을 **1회 쿼리**로 일괄 로드 (DB 왕복 최소화)
   - 과거 세율 보존: `is_active = false`로 변경하지 않고 effective_date로 구분
   - 반환 데이터는 jsonb Zod 스키마로 `safeParse` 후 타입 확정
-- [ ] Zod 입력 유효성 검사 스키마 (`validators/transfer-input.ts`)
-- [ ] 1세대 1주택 비과세 판단 로직
+  - `db/regulated-areas.ts` — 조정대상지역 DB 조회 유틸 별도 구현
+- [x] 입력 데이터 타입 정의 — `TransferTaxInput` (transfer-tax.ts 내 정의, zustand store `TransferFormData`와 연동)
+  - ※ 당초 계획한 `validators/transfer-input.ts` (별도 파일) 대신 zustand store + 엔진 내 타입 정의 방식으로 구현
+- [x] 1세대 1주택 비과세 판단 로직
   - 보유기간 2년+ 판단 (**보유기간 기산일**: 취득일 다음날 ~ 양도일, date-fns `differenceInCalendarDays` 사용 시 +1일 보정 필요)
   - 조정대상지역 거주기간 2년+ 판단 (**취득일 기준** 조정대상지역 판단 — 비과세 판단은 취득일, 중과세 판단은 양도일 기준으로 구분)
   - 양도가액 12억 기준 판단
   - **일시적 2주택 비과세 특례**: 종전 주택 보유 중 신규 주택 취득 후 **3년 내** 종전 주택 양도 시 비과세 (조정대상지역은 2년 내, 2022.5.10 이후 3년으로 완화 경과규정 확인)
   - **2017.8.3 이전 취득분**: 조정대상지역이라도 거주요건 면제 (경과규정)
-- [ ] 양도차익 계산 (양도가액 - 취득가액 - 필요경비)
-- [ ] 12억 초과분 과세 대상 양도차익 산출
+- [x] 양도차익 계산 (양도가액 - 취득가액 - 필요경비)
+- [x] 12억 초과분 과세 대상 양도차익 산출
   - **계산 순서 주의**: 양도차익 산출 → 12억 초과 비율 적용 → 장기보유공제 적용 (순서 역전 시 세액 오류)
-- [ ] 장기보유특별공제 계산
+- [x] 장기보유특별공제 계산
   - 일반: 보유기간별 연 2% (최대 30%)
   - 1세대1주택: 보유 연 4%(최대 40%) + 거주 연 4%(최대 40%) = 최대 80%
   - **중과세 대상(다주택·비사업용토지·미등기) 시 장기보유특별공제 적용 배제** — `isSurchargeTarget` 플래그로 분기
-- [ ] 기본공제 250만원 적용 (**연간 합산 한도** — 동일 연도 복수 양도 시 합산 250만원, 미등기양도자산 제외)
-- [ ] 누진세율 세액 계산 (6~45%, 8단계)
+- [x] 기본공제 250만원 적용 (**연간 합산 한도** — 동일 연도 복수 양도 시 합산 250만원, 미등기양도자산 제외)
+- [x] 누진세율 세액 계산 (6~45%, 8단계)
   - **검증 참조용 세율 테이블 (2026년 기준)**:
     | 과세표준 구간 | 세율 | 누진공제 |
     |-------------|------|---------|
@@ -589,48 +616,60 @@ components/
     | 5억~10억원 | 42% | 3,594만원 |
     | 10억원 초과 | 45% | 6,594만원 |
   - 위 세율은 DB(`tax_rates`)에서 로드하되, 테스트 시 해당 구간별 정확성 검증에 활용
-- [ ] **미등기 양도 중과세 로직**
+- [x] **미등기 양도 중과세 로직**
   - 미등기 양도자산 **70% 단일세율** 적용 (누진세율 아님)
   - 장기보유특별공제 배제, 기본공제 배제
   - 미등기 여부 판단: 양도일 현재 소유권이전등기 미완료
-- [ ] 비사업용토지 중과세 로직 (+10%p, **장기보유특별공제 배제**)
-- [ ] 다주택 중과세 로직 (+20%p / +30%p, 유예 여부 DB 참조, **장기보유특별공제 배제**)
-- [ ] 조정대상지역 판단 로직 (`regulated_areas` 테이블 조회)
+- [x] 비사업용토지 중과세 로직 (+10%p, **장기보유특별공제 배제**)
+  - `lib/tax-engine/non-business-land.ts` — 별도 전담 엔진으로 분리 구현
+  - 소득세법 §104의3·시행령 §168의6~14 기반 정밀 판정 (`judgeNonBusinessLand()`)
+  - 사업용 기간 비율 계산, 유예기간, 이력 판정 지원
+  - `TransferTaxInput.nonBusinessLandDetails` 제공 시 정밀 판정 / 미제공 시 `isNonBusinessLand` 플래그 사용 (하위 호환)
+- [x] 다주택 중과세 로직 (+20%p / +30%p, 유예 여부 DB 참조, **장기보유특별공제 배제**)
+  - `lib/tax-engine/multi-house-surcharge.ts` — 별도 전담 엔진으로 분리 구현
+  - 소득세법 §104·§152·§167-3·§167-10 기반 주택 수 산정 (`determineMultiHouseSurcharge()`)
+  - 배제 처리: 상속주택(§155⑨), 장기임대사업자등록주택, 임대말소주택, 오피스텔(2022.1.1 이후), 분양권/입주권(§167-11)
+  - 특례: 일시적 2주택, 혼인합가(5년), 동거봉양 합가(10년)
+  - `TransferTaxInput.houses[]` 제공 시 정밀 주택 수 산정 / 미제공 시 `householdHousingCount` 사용 (하위 호환)
+- [x] 조정대상지역 판단 로직 (`regulated_areas` 테이블 조회)
   - **비과세 판단 시**: 취득일 기준 조정대상지역 여부
   - **중과세 판단 시**: 양도일 기준 조정대상지역 여부
-  - 판단 시점 구분 함수: `isRegulatedArea(areaCode, referenceDate)` — referenceDate를 호출측에서 취득일/양도일 전달
-- [ ] 조세특례제한법 감면 4종 로직
-  - 임대주택 감면
-  - 신축주택 감면
-  - 미분양주택 감면
-  - 8년 자경 농지 감면 (100%, 한도 1억/5년간 2억)
-- [ ] 기준시가 수동 입력 UI + 부동산공시가격알리미 외부 링크 안내 (자동 조회는 Phase 11에서)
-- [ ] 취득가액 환산 (수동 입력된 기준시가 기반, 매매사례가 → 감정가 → 환산취득가)
+  - `TransferTaxInput.regulatedAreaHistory` 주입 시 이력 기반 자동 판단
+- [x] 조세특례제한법 감면 4종 로직
+  - **장기임대주택 감면** — `lib/tax-engine/rental-housing-reduction.ts` 별도 엔진 구현
+    - 조특법 §97·§97의3·§97의4·§97의5 기반 유형별(장기일반민간·공공지원·공공임대) 감면율
+    - 의무임대기간·임대료증액제한·사업자등록 요건 검증
+    - `TransferTaxInput.rentalReductionDetails` 제공 시 정밀 감면 / 미제공 시 `reductions[]` 사용 (하위 호환)
+  - **신축주택 감면 / 미분양주택 감면** — `lib/tax-engine/new-housing-reduction.ts` 별도 엔진 구현
+    - 조특법 §99·§99의3·§98의2 기반 시기별·지역별 감면율 매트릭스
+    - 5년 안분 계산, 주택 수 제외 특례, 다주택 중과 배제 특례
+    - `TransferTaxInput.newHousingDetails` 제공 시 정밀 조문 매핑 / 미제공 시 `reductions[]` 사용 (하위 호환)
+  - **8년 자경 농지 감면** — transfer-tax.ts 내 직접 처리 (100%, 한도 1억/5년간 2억)
+- [x] 기준시가 수동 입력 UI + 부동산공시가격알리미 외부 링크 안내 (자동 조회는 Phase 11에서)
+- [x] 취득가액 환산 (수동 입력된 기준시가 기반, 매매사례가 → 감정가 → 환산취득가)
   - **환산취득가액 공식**: `양도실거래가 × (취득시 기준시가 ÷ 양도시 기준시가)`
   - **환산 적용 시 필요경비**: 개산공제 (토지·건물 3%, 지상권·전세권 등 7%) — 실제 필요경비 불인정
   - 환산 계산 시 비율 연산: **분자·분모 정수 유지, 곱셈 먼저 후 나눗셈** (`양도가 × 취득시가 / 양도시가`) — 중간값 오버플로우 주의 (Number.MAX_SAFE_INTEGER 9,007조원 초과 여부 검증)
-- [ ] 지방소득세 자동 계산 (양도소득세의 10%)
-- [ ] Route Handler 구현 (`api/calc/transfer/route.ts`)
+- [x] 지방소득세 자동 계산 (양도소득세의 10%)
+- [x] Route Handler 구현 (`app/api/calc/transfer/route.ts`)
   - Orchestrator 패턴: `preloadTaxRates` → 순수 계산 엔진 호출 → 결과 반환
   - Supabase 클라이언트는 모듈 스코프에서 1회 생성 (cold start 연결 재사용)
-- [ ] **검증 데이터 준비** (외부 권위 소스 기반)
+- [ ] **검증 데이터 준비** (외부 권위 소스 기반) — 미완료
   - 국세청 홈택스 양도소득세 계산 예시
   - 국세청 「양도소득세 실무 해설」 수록 사례
   - 세무사 실무사례집 공개 케이스
-- [ ] **보유기간 계산 유틸** (`calculateHoldingPeriod`)
+- [x] **보유기간 계산 유틸** (`calculateHoldingPeriod` — `lib/tax-engine/tax-utils.ts`)
   - 세법상 기산일: 취득일 다음날 ~ 양도일 (민법 초일불산입)
   - date-fns 주의: `differenceInYears`는 만 연수 반환 — 세법상 "3년 이상"은 취득일 다음날 기준 만 3년
   - 윤년 2/29 취득 시 만기일 처리 (2/28 vs 3/1)
   - 거주기간 계산도 동일 원칙 적용
-- [ ] 단위 테스트 작성 (계산 엔진 100% 커버리지, 위 검증 데이터 기반)
-  - 비과세 케이스 (1주택, 2년 보유, 12억 이하)
-  - 12억 초과 과세 케이스
-  - 장기보유특별공제 각 구간
-  - 비사업용토지 중과
-  - 다주택 중과 (조정대상지역 판단 포함)
-  - 감면 각 유형
-  - 취득가액 환산
-  - 과거 시점 세율 적용 (2024년 양도분 등)
+- [x] 단위 테스트 작성 (계산 엔진, 위 검증 데이터 기반)
+  - `transfer-tax.test.ts` — 비과세·12억초과·장기보유공제·중과세·감면·환산취득가·경계값
+  - `multi-house-surcharge.test.ts` — 주택 수 산정·배제 처리·특례
+  - `non-business-land.test.ts` — 비사업용 토지 판정·이력 계산
+  - `rental-housing-reduction.test.ts` — 장기임대 감면율·의무기간·위반 사유
+  - `new-housing-reduction.test.ts` — 신축·미분양 조문 매핑·5년 안분
+  - `tax-utils.test.ts` — 공통 유틸 (보유기간·환산·절사)
   - **경계값 테스트** (필수):
     - 양도가액 12억 정확히 / 12억 + 1원
     - 보유기간 2년 정확히 (하루 차이로 비과세/과세 분기)
@@ -644,33 +683,37 @@ components/
   - **일시적 2주택 비과세 특례 테스트**
   - **보유기간 계산 테스트**: 취득일 다음날 기산, 윤년 경계, 거주기간 동일 원칙
 
-### Phase 4: 양도소득세 UI + 이력 (3~4일) [v1.0]
+### Phase 4: 양도소득세 UI + 이력 (3~4일) [v1.0] ✅ UI 완료 / 이력 미완료
 
-- [ ] 공통 StepWizard 컴포넌트 (단계별 입력 마법사)
-- [ ] TransferTaxForm — 다단계 입력 폼
+- [x] 공통 StepWizard 인프라 구현
+  - `components/calc/StepIndicator.tsx` — 단계 진행 표시 공통 컴포넌트
+  - `lib/stores/calc-wizard-store.ts` — zustand store (TransferFormData + sessionStorage persist)
+  - `components/calc/inputs/CurrencyInput.tsx` — 금액 입력 컴포넌트 (parseAmount, formatKRW)
+  - `components/ui/address-search.tsx` — Vworld 주소 검색 연동 컴포넌트
+- [x] `app/calc/transfer-tax/TransferTaxCalculator.tsx` — 5단계 입력 + 결과 표시 통합 컴포넌트
+  - ※ 당초 계획한 `components/calc/TransferTaxForm.tsx` 대신 페이지 단위 통합 컴포넌트로 구현
   - Step 1: 물건 유형 선택 (주택/토지/건물) — 토지/건물 선택 시 Step 4에서 비사업용토지·미등기 필드 조건부 표시
-  - Step 2: 양도 정보 (양도가액, 양도일)
+  - Step 2: 양도 정보 (양도가액, 양도일, 주소 검색 연동)
   - Step 3: 취득 정보 (취득가액, 취득일, 필요경비, 취득가액 불명 시 환산취득가 선택 + 기준시가 입력 필드)
-  - Step 4: 보유 상황
-    - **주택 수**: 양도일 현재 세대 전체 보유 주택 수 (안내 문구: "양도일 기준 본인 및 세대원 보유 주택 수")
-    - **거주기간** (주택인 경우)
-    - **조정대상지역 여부**: 물건 소재지 기준 (안내 문구: "양도하는 부동산 소재지 기준")
-    - **미등기 여부** (체크박스, 주의 안내: "미등기 양도 시 70% 단일세율 적용")
-    - **비사업용토지 여부** (토지인 경우)
+  - Step 4: 보유 상황 (주택 수, 거주기간, 조정대상지역, 미등기, 비사업용토지)
   - Step 5: 감면 해당 여부 확인
-- [ ] **기본공제 연간 합산 한도 안내**
+- [ ] **기본공제 연간 합산 한도 안내** — 미완료
   - 동일 연도 양도 이력이 있는 경우 "이번 연도 기본공제 잔여 한도: OOO만원" 표시
   - 이력 미존재 또는 비로그인 시 기본공제 250만원 전액 적용 + "동일 연도 다른 양도 건이 있으면 합산 250만원 한도" 안내
-- [ ] TaxResult 계산 결과 표시 컴포넌트
-- [ ] ResultBreakdown 항목별 상세 (양도차익 → 공제 → 세율 → 세액 단계별)
-- [ ] 계산 이력 저장 로직 — **Server Action** (`actions/calculations.ts`)으로 구현 (로그인 필수 기능)
-- [ ] 비로그인 계산 결과 임시 저장 UI 표시 ("로그인하면 이 결과가 자동 저장됩니다" 안내 배너)
-- [ ] 이력 목록 페이지 (날짜순, 세금 종류별 필터)
-- [ ] 이력 상세 조회 페이지
-- [ ] 이력 삭제 기능 (Server Action)
-- [ ] 면책 고지 컴포넌트 (모든 결과 페이지에 표시)
-- [ ] 모바일 반응형 확인
-- [ ] 메인 랜딩 페이지 (6가지 세금 선택 카드)
+- [x] 계산 결과 표시 — TransferTaxCalculator.tsx 내 인라인 구현
+  - 비과세/과세 분기 표시, 단계별 계산 내역(steps) 표시
+  - 세액 합계 (결정세액 + 지방소득세 + 총납부세액)
+- [x] 면책 고지 컴포넌트 (`components/calc/shared/DisclaimerBanner.tsx`) — 결과 화면에 표시
+- [x] 비로그인 계산 결과 임시 저장 유도 UI (`components/calc/shared/LoginPromptBanner.tsx`)
+- [x] `app/calc/transfer-tax/loading.tsx` — 로딩 UI
+- [x] `app/calc/transfer-tax/error.tsx` — 에러 바운더리
+- [ ] ResultBreakdown 항목별 상세 컴포넌트 별도 분리 — 미완료 (현재 인라인 처리)
+- [ ] 계산 이력 저장 로직 — **Server Action** (`actions/calculations.ts`) — 미완료
+- [ ] 이력 목록 페이지 (`app/history/page.tsx`) — 미완료
+- [ ] 이력 상세 조회 페이지 (`app/result/[id]/page.tsx`) — 미완료
+- [ ] 이력 삭제 기능 (Server Action) — 미완료
+- [ ] 모바일 반응형 최종 확인
+- [ ] 메인 랜딩 페이지 (6가지 세금 선택 카드) — 미완료
 
 ### Phase 5: 취득세 계산 엔진 + UI (2~3일) [v1.1]
 

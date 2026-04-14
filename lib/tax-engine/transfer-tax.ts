@@ -552,6 +552,11 @@ function calcLongTermHoldingDeduction(
   isSuspended: boolean,
   longTermRentalRules?: LongTermRentalRuleSet,
 ): LongTermHoldingResult {
+  // L-0: 미등기 — 장기보유특별공제 배제 (소득세법 §95② 단서)
+  if (input.isUnregistered) {
+    return { deduction: 0, rate: 0, holdingPeriod: { years: 0, months: 0 } };
+  }
+
   // L-1: 중과세 적용 중(유예 해제)이면 공제 배제
   if (isSurcharge && !isSuspended) {
     return { deduction: 0, rate: 0, holdingPeriod: { years: 0, months: 0 } };

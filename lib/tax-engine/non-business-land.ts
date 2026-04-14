@@ -277,7 +277,10 @@ export function mergeOverlappingPeriods(periods: DateInterval[]): DateInterval[]
     const last = merged[merged.length - 1];
 
     if (cur.start <= last.end) {
-      // 겹침 또는 연접 → end 확장
+      // 겹침(overlapping) 또는 연접(touching) → end 확장
+      // ※ cur.start === last.end 인 "인접 구간"도 병합 처리:
+      //   세법상 사업용 기간은 시작일 포함·종료일 불포함(반열린 구간)으로 해석하므로
+      //   [1~5일], [5~10일] → [1~10일]로 합산해도 5일 이중 카운트 없음.
       if (cur.end > last.end) {
         last.end = new Date(cur.end);
       }

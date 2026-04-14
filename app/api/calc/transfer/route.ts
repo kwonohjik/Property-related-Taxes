@@ -108,6 +108,14 @@ const inputSchema = z
         message: "취득일은 양도일보다 이전이어야 합니다",
       });
     }
+    // V-4: 당해연도 기사용 기본공제는 연간 한도(250만 원) 이하
+    if (data.annualBasicDeductionUsed > 2_500_000) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["annualBasicDeductionUsed"],
+        message: "연간 기본공제 한도(2,500,000원)를 초과할 수 없습니다",
+      });
+    }
   });
 
 // ============================================================

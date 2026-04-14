@@ -15,6 +15,7 @@
  */
 
 import { addYears, differenceInDays, isWithinInterval } from "date-fns";
+import { safeMultiplyThenDivide } from "./tax-utils";
 import type { NewHousingMatrixData } from "./schemas/rate-table.schema";
 
 // ============================================================
@@ -117,8 +118,9 @@ function calculateReducibleGain(
 
   const isWithinWindow = totalDays <= differenceInDays(reductionEndDate, acquisitionDate);
   const ratio = reductionDays / totalDays;
-  // 곱셈 먼저, 나눗셈 나중 (P0-2 준수)
-  const reducibleGain = Math.floor(totalCapitalGain * reductionDays / totalDays);
+  // P0-2 준수: safeMultiplyThenDivide로 정수 연산 유지, reductionDays 음수 방어
+  const clampedDays = Math.max(0, reductionDays);
+  const reducibleGain = Math.floor(safeMultiplyThenDivide(totalCapitalGain, clampedDays, totalDays));
 
   return {
     reducibleGain,

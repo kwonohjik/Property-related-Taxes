@@ -234,11 +234,15 @@ function Step3({ form, onChange }: { form: TransferFormData; onChange: (d: Parti
               onChange={(v) => onChange({ standardPriceAtTransfer: v })}
               placeholder="양도 시점 공시가격"
               required
+              disabled={!form.standardPriceAtAcquisition || parseAmount(form.standardPriceAtAcquisition) <= 0}
             />
+            {(!form.standardPriceAtAcquisition || parseAmount(form.standardPriceAtAcquisition) <= 0) && (
+              <p className="text-xs text-muted-foreground">취득 당시 기준시가를 먼저 입력하세요.</p>
+            )}
             <button
               type="button"
               onClick={() => lookupStandardPrice("transfer")}
-              disabled={lookupLoading === "transfer"}
+              disabled={lookupLoading === "transfer" || !form.standardPriceAtAcquisition || parseAmount(form.standardPriceAtAcquisition) <= 0}
               className="text-xs text-primary underline disabled:opacity-50 hover:text-primary/80"
             >
               {lookupLoading === "transfer" ? "조회중..." : "🔎 Vworld 공시가격 자동 조회"}
@@ -551,6 +555,71 @@ function Step4({ form, onChange }: { form: TransferFormData; onChange: (d: Parti
           </div>
         )}
       </div>
+
+      {/* 일시적 2주택 특례 */}
+      {form.propertyType === "housing" && (
+        <div className="space-y-2">
+          <p className="text-sm font-medium">일시적 2주택 특례</p>
+          <div
+            className={cn(
+              "rounded-lg border px-4 py-3 transition-colors",
+              form.temporaryTwoHouseSpecial ? "border-primary/40 bg-primary/5" : "border-border",
+            )}
+          >
+            <div className="flex items-center gap-3">
+              <input
+                id="temporaryTwoHouse"
+                type="checkbox"
+                checked={form.temporaryTwoHouseSpecial}
+                onChange={(e) =>
+                  onChange({
+                    temporaryTwoHouseSpecial: e.target.checked,
+                    previousHouseAcquisitionDate: e.target.checked ? form.previousHouseAcquisitionDate : "",
+                    newHouseAcquisitionDate: e.target.checked ? form.newHouseAcquisitionDate : "",
+                  })
+                }
+                className="h-4 w-4 rounded accent-primary"
+                aria-describedby="temporaryTwoHouseDesc"
+              />
+              <div>
+                <label htmlFor="temporaryTwoHouse" className="text-sm font-medium cursor-pointer">
+                  일시적 2주택 특례 해당
+                </label>
+                <p id="temporaryTwoHouseDesc" className="text-xs text-muted-foreground">
+                  종전 주택 보유 중 신규 주택 취득 후 일정 기간 내 종전 주택 양도 시 비과세 특례
+                </p>
+              </div>
+            </div>
+
+            {form.temporaryTwoHouseSpecial && (
+              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 border-t border-border">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium">
+                    종전 주택 취득일 <span className="text-destructive">*</span>
+                  </label>
+                  <DateInput
+                    value={form.previousHouseAcquisitionDate}
+                    onChange={(v) => onChange({ previousHouseAcquisitionDate: v })}
+                    placeholder="YYYY-MM-DD"
+                  />
+                  <p className="text-xs text-muted-foreground">지금 양도하는 주택의 취득일</p>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium">
+                    신규 주택 취득일 <span className="text-destructive">*</span>
+                  </label>
+                  <DateInput
+                    value={form.newHouseAcquisitionDate}
+                    onChange={(v) => onChange({ newHouseAcquisitionDate: v })}
+                    placeholder="YYYY-MM-DD"
+                  />
+                  <p className="text-xs text-muted-foreground">새로 취득한 주택의 취득일</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -591,6 +660,7 @@ function Step5({ form, onChange }: { form: TransferFormData; onChange: (d: Parti
               checked={form.reductionType === opt.value}
               onChange={() => onChange({ reductionType: opt.value })}
               className="accent-primary"
+              aria-label={opt.label}
             />
             <div>
               <p className="text-sm font-medium">{opt.label}</p>
@@ -664,6 +734,7 @@ function Step5({ form, onChange }: { form: TransferFormData; onChange: (d: Parti
                   checked={form.reductionRegion === opt.value}
                   onChange={() => onChange({ reductionRegion: opt.value as "metropolitan" | "non_metropolitan" })}
                   className="accent-primary"
+                  aria-label={opt.label}
                 />
                 <span className="text-sm">{opt.label}</span>
               </label>
@@ -863,6 +934,9 @@ function Row({
 // 유효성 검사
 // ============================================================
 function validateStep(step: number, form: TransferFormData): string | null {
+  if (step === 0) {
+    if (!form.propertyType) return "양도하는 부동산 유형을 선택하세요.";
+  }
   if (step === 1) {
     if (!form.propertyAddressRoad && !form.propertyAddressJibun) return "양도자산 소재지를 검색·선택하세요.";
     if (!form.transferPrice || parseAmount(form.transferPrice) <= 0) return "양도가액을 입력하세요.";
@@ -880,6 +954,9 @@ function validateStep(step: number, form: TransferFormData): string | null {
       if (!form.acquisitionPrice || parseAmount(form.acquisitionPrice) < 0)
         return "취득가액을 입력하세요.";
     }
+  }
+  if (step === 3) {
+    if (!form.householdHousingCount) return "세대 보유 주택 수를 선택하세요.";
   }
   return null;
 }
@@ -927,6 +1004,16 @@ async function callTransferTaxAPI(form: TransferFormData): Promise<TransferTaxRe
     isOneHousehold: form.isOneHousehold,
     reductions,
     annualBasicDeductionUsed: parseAmount(form.annualBasicDeductionUsed),
+    ...(form.temporaryTwoHouseSpecial &&
+      form.previousHouseAcquisitionDate &&
+      form.newHouseAcquisitionDate
+      ? {
+          temporaryTwoHouse: {
+            previousHouseAcquisitionDate: form.previousHouseAcquisitionDate,
+            newHouseAcquisitionDate: form.newHouseAcquisitionDate,
+          },
+        }
+      : {}),
   };
 
   const res = await fetch("/api/calc/transfer", {
@@ -1062,7 +1149,16 @@ export default function TransferTaxCalculator() {
           {/* 에러 메시지 */}
           {error && (
             <div className="mt-4 rounded-lg border border-destructive/50 bg-destructive/5 px-4 py-3 text-sm text-destructive">
-              {error}
+              <p>{error}</p>
+              {isLastStep && (
+                <button
+                  type="button"
+                  onClick={() => { setError(null); handleSubmit(); }}
+                  className="mt-2 text-xs underline underline-offset-2 hover:opacity-70 transition-opacity"
+                >
+                  다시 계산하기
+                </button>
+              )}
             </div>
           )}
 
