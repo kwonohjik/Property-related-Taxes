@@ -51,7 +51,17 @@
       "Bash(pkill -f \"next dev\")",
       "Bash(echo \"TSC_EXIT: $?\")",
       "Bash(tee /tmp/tsc-out.txt)",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(git stash:*)",
+      "Bash(grep:*)",
+      "mcp__shrimp-task-manager__list_tasks",
+      "Bash(npx eslint:*)",
+      "Bash(node_modules/.bin/tsc --noEmit)",
+      "Bash(mkdir -p ~/.claude/agents)",
+      "Bash(cp .claude/agents/inheritance-gift-deduction-senior.md .claude/agents/inheritance-gift-nontax-teacher.md .claude/agents/inheritance-gift-tax-credit-senior.md .claude/agents/inheritance-valuation-senior.md ~/.claude/agents/)",
+      "Bash(PORT=3001 npm run:*)",
+      "Bash(kill 28963:*)",
+      "Bash(kill 5070:*)"
     ]
   },
   "outputStyle": "bkit:bkit-learning"

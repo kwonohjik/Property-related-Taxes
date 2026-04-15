@@ -1,35 +1,14 @@
 {
   "version": "1.0",
-  "enabled": true,
+  "enabled": false,
   "teamName": "",
   "feature": "claude-code-mastery",
   "pdcaPhase": "do",
   "orchestrationPattern": "leader",
   "ctoAgent": "opus",
-  "startedAt": "2026-04-14T12:45:12.966Z",
-  "lastUpdated": "2026-04-14T12:45:19.097Z",
-  "teammates": [
-    {
-      "name": "a85fe408e49f2bdc5",
-      "role": "Explore",
-      "model": "sonnet",
-      "status": "spawning",
-      "currentTask": null,
-      "taskId": null,
-      "startedAt": "2026-04-14T12:45:12.967Z",
-      "lastActivityAt": "2026-04-14T12:45:12.967Z"
-    },
-    {
-      "name": "a02d50a96826b48f4",
-      "role": "Explore",
-      "model": "sonnet",
-      "status": "spawning",
-      "currentTask": null,
-      "taskId": null,
-      "startedAt": "2026-04-14T12:45:19.097Z",
-      "lastActivityAt": "2026-04-14T12:45:19.097Z"
-    }
-  ],
+  "startedAt": "2026-04-15T06:53:41.639Z",
+  "lastUpdated": "2026-04-15T06:56:52.938Z",
+  "teammates": [],
   "progress": {
     "totalTasks": 0,
     "completedTasks": 0,
@@ -38,5 +17,5 @@
     "pendingTasks": 0
   },
   "recentMessages": [],
-  "sessionId": "a303bb99-a133-4b7b-bbdb-0b2f85046f51"
+  "sessionId": "b716d981-ed29-4aeb-9766-ef8496fc23fb"
 }
