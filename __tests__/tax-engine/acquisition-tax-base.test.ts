@@ -214,9 +214,9 @@ describe("determineTaxBase — 연부취득", () => {
       acquisitionCause: "purchase",
       reportedPrice: 0,
       installments: [
-        { installmentNo: 1, amount: 100_000_000, paymentDate: "2024-01-01" },
-        { installmentNo: 2, amount: 200_000_000, paymentDate: "2024-07-01" },
-        { installmentNo: 3, amount: 150_000_000, paymentDate: "2025-01-01" },
+        { amount: 100_000_000, paymentDate: "2024-01-01" },
+        { amount: 200_000_000, paymentDate: "2024-07-01" },
+        { amount: 150_000_000, paymentDate: "2025-01-01" },
       ],
     }));
     expect(result.method).toBe("installment");
