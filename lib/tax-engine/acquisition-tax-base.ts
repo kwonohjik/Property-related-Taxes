@@ -162,7 +162,7 @@ function calcGratuitousTaxBase(
   );
 
   if (!useStandardPrice && input.marketValue && input.marketValue > 0) {
-    // 시가인정액(매매사례가액·감정가) 사용
+    // 시가인정액(매매사례가액·감정가) 사용 — 지방세법 §10의3(무상취득 시가표준액 특례)
     const taxBase = truncateToThousand(input.marketValue);
     warnings.push(`무상취득 — 시가인정액(${input.marketValue.toLocaleString()}원) 적용`);
     return {
@@ -170,7 +170,7 @@ function calcGratuitousTaxBase(
       taxBase,
       rawTaxBase: input.marketValue,
       warnings,
-      legalBasis: ACQUISITION.RELATED_PARTY,
+      legalBasis: ACQUISITION.STANDARD_VALUE, // §10의3 (§10의2 특수관계인 조항 아님)
     };
   }
 

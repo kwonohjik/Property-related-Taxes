@@ -157,7 +157,8 @@ describe("calcAcquisitionTax — 주택 유상취득", () => {
     const result = calcAcquisitionTax(input);
 
     expect(result.rateType).toBe("linear_interpolation");
-    expect(result.acquisitionTax).toBe(Math.floor(700_000_000 * linearInterpolationRate(700_000_000)));
+    // BigInt 직접 계산: floor(700M × (700M×2 - 900M) / 30B) = floor(700M × 500M / 30B) = 11,666,666
+    expect(result.acquisitionTax).toBe(11_666_666);
     expect(result.isSurcharged).toBe(false);
   });
 

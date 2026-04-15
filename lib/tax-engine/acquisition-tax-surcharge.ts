@@ -88,8 +88,13 @@ export function assessSurcharge(input: SurchargeCheckInput): SurchargeDecision {
     }
   }
 
-  // ── 다주택 중과 (§13의2 — 조정대상지역) ──
-  if (isHousing && input.isRegulatedArea) {
+  // ── 다주택 중과 (§13의2 — 조정대상지역, 유상취득만 적용) ──
+  // 지방세법 §13의2: 상속·증여 등 무상취득은 다주택 중과 배제
+  const isOnerousForMultiHouse = [
+    "purchase", "exchange", "auction", "in_kind_investment",
+  ].includes(input.acquisitionCause);
+
+  if (isHousing && input.isRegulatedArea && isOnerousForMultiHouse) {
     const houseCount = input.houseCountAfter ?? 1;
 
     if (houseCount >= 3) {

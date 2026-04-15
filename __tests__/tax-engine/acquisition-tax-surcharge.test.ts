@@ -163,6 +163,44 @@ describe("assessSurcharge — 다주택 중과 (조정대상지역)", () => {
     expect(result.isSurcharged).toBe(false);
     expect(result.exceptions?.some(e => e.includes("비조정"))).toBe(true);
   });
+
+  // C1 버그 수정 검증: 상속·증여는 조정지역 다주택 중과 배제 (지방세법 §13의2 — 유상취득만 적용)
+  it("상속 + 조정지역 + 2주택: 중과 없음 (무상취득 배제)", () => {
+    const result = assessSurcharge({
+      propertyType: "housing",
+      acquisitionCause: "inheritance",
+      acquisitionValue: 500_000_000,
+      acquiredBy: "individual",
+      isRegulatedArea: true,
+      houseCountAfter: 2,
+    });
+    expect(result.isSurcharged).toBe(false);
+  });
+
+  it("증여 + 조정지역 + 3주택: 중과 없음 (무상취득 배제)", () => {
+    const result = assessSurcharge({
+      propertyType: "housing",
+      acquisitionCause: "gift",
+      acquisitionValue: 500_000_000,
+      acquiredBy: "individual",
+      isRegulatedArea: true,
+      houseCountAfter: 3,
+    });
+    expect(result.isSurcharged).toBe(false);
+  });
+
+  it("매매 + 조정지역 + 2주택: 8% 중과 적용 (유상취득)", () => {
+    const result = assessSurcharge({
+      propertyType: "housing",
+      acquisitionCause: "purchase",
+      acquisitionValue: 500_000_000,
+      acquiredBy: "individual",
+      isRegulatedArea: true,
+      houseCountAfter: 2,
+    });
+    expect(result.isSurcharged).toBe(true);
+    expect(result.surchargeRate).toBe(0.08);
+  });
 });
 
 // ============================================================

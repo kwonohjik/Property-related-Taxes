@@ -44,10 +44,23 @@ export function linearInterpolationRate(acquisitionValue: number): number {
 
 /**
  * 선형보간 세율 구간에서의 취득세액
+ *
+ * rate를 부동소수점으로 반올림한 뒤 곱하면 최대 ~3,000원 오차 발생.
+ * BigInt로 세액을 직접 계산해 정확한 원 미만 절사를 보장한다.
+ *
+ * 공식: floor(value × (value×2 − 900,000,000) / 30,000,000,000)
+ *   = floor(value × (value×2/300,000,000 − 3) / 100)
  */
 export function calcLinearInterpolationTax(acquisitionValue: number): number {
-  const rate = linearInterpolationRate(acquisitionValue);
-  return Math.floor(acquisitionValue * rate);
+  if (acquisitionValue <= ACQUISITION_CONST.HOUSING_BRACKET_LOW) {
+    return Math.floor(acquisitionValue * 0.01);
+  }
+  if (acquisitionValue >= ACQUISITION_CONST.HOUSING_BRACKET_HIGH) {
+    return Math.floor(acquisitionValue * 0.03);
+  }
+  const v = BigInt(acquisitionValue);
+  const tax = (v * (v * 2n - 900_000_000n)) / 30_000_000_000n;
+  return Number(tax);
 }
 
 // ============================================================
