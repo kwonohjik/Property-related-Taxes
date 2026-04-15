@@ -17,7 +17,7 @@ import {
 // ============================================================
 
 describe("assessSurcharge — 사치성 재산 (§13①)", () => {
-  it("사치성 재산: isSurcharged=true, 8%", () => {
+  it("사치성 재산: isSurcharged=true, 20% (기본세율 4% × 5)", () => {
     const result = assessSurcharge({
       propertyType: "housing",
       acquisitionCause: "purchase",
@@ -26,7 +26,9 @@ describe("assessSurcharge — 사치성 재산 (§13①)", () => {
       isLuxuryProperty: true,
     });
     expect(result.isSurcharged).toBe(true);
-    expect(result.surchargeRate).toBe(0.08);
+    // 지방세법 §13①: "해당 세율의 100분의 500" = basicRate × 5
+    // LUXURY_BASE_RATE(4%) × 5 = 20%
+    expect(result.surchargeRate).toBe(0.20);
     expect(result.surchargeReason).toContain("사치성 재산");
   });
 

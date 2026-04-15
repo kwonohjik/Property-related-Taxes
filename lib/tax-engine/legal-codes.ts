@@ -288,8 +288,8 @@ export const ACQUISITION_CONST = {
   FIRST_HOME_METRO_LIMIT: 400_000_000,
   /** 생애최초 비수도권 취득가액 한도 */
   FIRST_HOME_NON_METRO_LIMIT: 300_000_000,
-  /** 사치성 재산 중과 추가세율 (기본세율 + 4%p) */
-  LUXURY_SURCHARGE_EXTRA: 0.04,
+  /** 사치성 재산 중과 배수 (지방세법 §13① "해당 세율의 100분의 500" — 기본세율 × 5) */
+  LUXURY_SURCHARGE_EXTRA: 0.04, // @deprecated — getSurchargeRateForLuxury에서 × 5 공식 직접 사용
   /** 사치성 재산 기본세율 기본값 (토지·건물 매매 4%) */
   LUXURY_BASE_RATE: 0.04,
   /** 1억 이하 중과 배제 기준 */

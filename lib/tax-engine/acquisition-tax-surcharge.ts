@@ -64,7 +64,7 @@ export function assessSurcharge(input: SurchargeCheckInput): SurchargeDecision {
       surchargeReason: "사치성 재산 중과 (지방세법 §13①)",
       exceptions,
       warnings: [
-        `사치성 재산(골프장·별장·고급주택·고급오락장·고급선박)으로 기본세율(${((input.basicRate ?? ACQUISITION_CONST.LUXURY_BASE_RATE) * 100).toFixed(1)}%) + 중과분(4%p) = ${(luxuryRate * 100).toFixed(1)}% 중과세율 적용`,
+        `사치성 재산(골프장·별장·고급주택·고급오락장·고급선박)으로 기본세율(${((input.basicRate ?? ACQUISITION_CONST.LUXURY_BASE_RATE) * 100).toFixed(1)}%) × 5배 = ${(luxuryRate * 100).toFixed(1)}% 중과세율 적용 (지방세법 §13①)`,
       ],
       legalBasis: [ACQUISITION.SURCHARGE],
     };
@@ -148,15 +148,16 @@ export function assessSurcharge(input: SurchargeCheckInput): SurchargeDecision {
 // ============================================================
 
 /**
- * 사치성 재산 중과세율 (지방세법 §13①)
- * = 기본세율 + 중과분 4%p
+ * 사치성 재산 중과세율 (지방세법 §13① — "해당 세율의 100분의 500")
+ * = 기본세율 × 5
  *
- * 예) 매매 토지 기본세율 4% → 4% + 4% = 8%
- *     매매 주택 9억 이상 3% → 3% + 4% = 7%
- *     매매 주택 7.5억(선형보간 2%) → 2% + 4% = 6%
+ * 예) 매매 토지 기본세율 4% → 4% × 5 = 20%
+ *     매매 주택 9억 이상 3% → 3% × 5 = 15%
+ *     매매 주택 7.5억(선형보간 2%) → 2% × 5 = 10%
+ *     매매 주택 6억 이하 1% → 1% × 5 = 5%
  */
 function getSurchargeRateForLuxury(basicRate: number): number {
-  return basicRate + ACQUISITION_CONST.LUXURY_SURCHARGE_EXTRA;
+  return basicRate * 5;
 }
 
 // ============================================================

@@ -291,7 +291,7 @@ export function calcBurdenedGiftTax(
   onerousTax: number;
   gratuitousTax: number;
 } {
-  // 유상 부분: 매매세율
+  // 유상 부분: 매매세율 — 세율 구간 판정은 전체 취득가액 기준 (지방세법 § 취득가액 기준 세율 결정)
   const { rate: onerousRate } = getBasicRate(propertyType, "purchase", acquisitionValue);
   const onerousTax = Math.floor(onerousTaxBase * onerousRate);
 
