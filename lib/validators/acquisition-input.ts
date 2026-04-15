@@ -42,6 +42,10 @@ const acquisitionCauseSchema = z.enum([
   "deemed_major_shareholder",
   "deemed_land_category",
   "deemed_renovation",
+  // 비취득 (지방세법 §6 단서 — 취득세 과세 제외)
+  "redemption",
+  "corporate_merger",
+  "consensual_division",
 ]);
 
 const acquirerTypeSchema = z.enum(["individual", "corporation", "government", "nonprofit"]);

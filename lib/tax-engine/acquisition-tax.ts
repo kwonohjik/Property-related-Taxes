@@ -219,7 +219,7 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
   if (additional.ruralSpecialTax > 0) {
     steps.push({
       label: "농어촌특별세",
-      formula: "취득세 본세 × 10% (85㎡ 초과 또는 중과 대상)",
+      formula: "(적용세율 - 표준세율 2%) × 과세표준 × 10% (농어촌특별세법 §4①)",
       amount: additional.ruralSpecialTax,
       legalBasis: "농어촌특별세법 §5①",
     });
@@ -227,7 +227,7 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
   if (additional.localEducationTax > 0) {
     steps.push({
       label: "지방교육세",
-      formula: "취득세 본세 × 20%",
+      formula: "과세표준 × 표준세율 2% × 20% = 과세표준 × 0.4%",
       amount: additional.localEducationTax,
       legalBasis: "지방세법 §151",
     });
