@@ -26,13 +26,28 @@ export interface StandardPriceResult {
 // ============================================================
 
 /**
- * 건물 경과연수별 잔가율 (행안부 고시 기준)
- * 잔가율 = 1 - (0.9 × 경과연수 / 내용연수)
- * 최저 잔가율: 10% (경과연수 >= 내용연수)
+ * 건물 경과연수별 잔가율 (지방세법 시행령 §4조의2, 행안부 고시)
+ *
+ * 구간별 선형 보간 테이블:
+ *   0~ 1년: 1.000
+ *   1~ 5년: 1.000 → 0.870 (1년에 0.0325 감소)
+ *   5~10년: 0.870 → 0.750 (1년에 0.024 감소)
+ *  10~15년: 0.750 → 0.640 (1년에 0.022 감소)
+ *  15~20년: 0.640 → 0.540 (1년에 0.020 감소)
+ *  20~25년: 0.540 → 0.440 (1년에 0.020 감소)
+ *  25~30년: 0.440 → 0.350 (1년에 0.018 감소)
+ *  30년 이상: 0.350 (최저 잔가율)
  */
-function calculateResidualRatio(elapsedYears: number, usefulLife = 50): number {
-  const ratio = 1 - (0.9 * Math.min(elapsedYears, usefulLife) / usefulLife);
-  return Math.max(ratio, 0.1); // 최저 10%
+function calculateResidualRatio(elapsedYears: number): number {
+  const y = Math.max(0, elapsedYears);
+  if (y <= 1)  return 1.000;
+  if (y <= 5)  return 1.000 - (y - 1)  * 0.0325;
+  if (y <= 10) return 0.870 - (y - 5)  * 0.024;
+  if (y <= 15) return 0.750 - (y - 10) * 0.022;
+  if (y <= 20) return 0.640 - (y - 15) * 0.020;
+  if (y <= 25) return 0.540 - (y - 20) * 0.020;
+  if (y <= 30) return 0.440 - (y - 25) * 0.018;
+  return 0.350; // 최저 잔가율 35%
 }
 
 // ============================================================
