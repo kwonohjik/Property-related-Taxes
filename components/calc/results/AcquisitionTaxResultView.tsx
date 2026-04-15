@@ -4,6 +4,7 @@
  * 취득세 계산 결과 표시 컴포넌트
  */
 
+import { useState } from "react";
 import type { AcquisitionTaxResult } from "@/lib/tax-engine/types/acquisition.types";
 
 function formatKRW(amount: number): string {
@@ -54,6 +55,7 @@ function TaxRow({
 // ============================================================
 
 export function AcquisitionTaxResultView({ result }: Props) {
+  const [showSteps, setShowSteps] = useState(false);
   if (result.isExempt) {
     return (
       <div className="rounded-lg border bg-muted/50 p-4 text-center">
@@ -175,6 +177,43 @@ export function AcquisitionTaxResultView({ result }: Props) {
             ))}
           </ul>
         </div>
+      )}
+
+      {/* 계산 과정 토글 */}
+      {result.steps.length > 0 && (
+        <>
+          <button
+            type="button"
+            onClick={() => setShowSteps((v) => !v)}
+            className="w-full flex items-center justify-between rounded-lg border border-border px-4 py-3 text-sm font-medium hover:bg-muted/40 transition-colors"
+          >
+            <span>계산 과정 상세 보기</span>
+            <span className="text-muted-foreground">{showSteps ? "▲" : "▼"}</span>
+          </button>
+
+          {showSteps && (
+            <div className="rounded-lg border border-border divide-y divide-border text-sm">
+              {result.steps.map((step, i) => (
+                <div key={i} className="px-4 py-3 flex justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="font-medium">{step.label}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{step.formula}</p>
+                    {step.legalBasis && (
+                      <span className="inline-block mt-1 text-[10px] text-muted-foreground/70 border border-border/60 rounded px-1.5 py-0.5">
+                        {step.legalBasis}
+                      </span>
+                    )}
+                  </div>
+                  <p className="font-mono font-medium shrink-0">
+                    {step.amount < 0
+                      ? `−${Math.abs(step.amount).toLocaleString("ko-KR")}원`
+                      : formatKRW(step.amount)}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
       )}
 
       {/* 법령 근거 */}

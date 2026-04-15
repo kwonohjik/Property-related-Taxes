@@ -832,99 +832,164 @@ function determineNewHousingReduction(
 
 ### 3.2 취득세 — `lib/tax-engine/acquisition-tax.ts`
 
+> **구현 기준일**: 2026-04-15 (하위 필드명이 아래 실제 구현과 일치하도록 갱신)
+
 ```typescript
-// ── 입력 ──
+// ── 입력 (lib/tax-engine/types/acquisition.types.ts) ──
 interface AcquisitionTaxInput {
-  acquirerType: 'individual' | 'corporation';
-  propertyType: 'housing' | 'land' | 'building';
-  acquisitionCause: 'purchase' | 'inheritance' | 'gift' | 'original' | 'auction';
-  acquisitionPrice: number;         // 취득가액 (원)
-  acquisitionDate: Date;
-  areaSqm: number;                  // 전용면적 (㎡, 농특세 면제 판단)
-  isFarmland: boolean;              // 농지 여부 (상속 시 2.3%)
+  // 기본 정보
+  acquiredBy: 'individual' | 'corporation' | 'government' | 'nonprofit';
+  propertyType: PropertyObjectType;    // 12종: housing | land | land_farmland | building | vehicle | ...
+  acquisitionCause: AcquisitionCause;  // 16종: purchase | exchange | auction | in_kind_investment |
+                                       //        inheritance | inheritance_farmland | gift | burdened_gift |
+                                       //        donation | new_construction | extension | reconstruction |
+                                       //        reclamation | deemed_major_shareholder | deemed_land_category | deemed_renovation
 
-  // 중과 관련
-  householdHousingCount: number;
-  isRegulatedArea: boolean;         // 취득일 기준 조정대상지역
-  isLuxuryProperty: boolean;        // 사치성 재산
+  // 취득가액 (원인별로 하나만 입력)
+  reportedPrice?: number;              // 유상취득 신고가액 (실거래가)
+  marketValue?: number;                // 시가인정액 (특수관계인·부담부증여 시가)
+  standardValue?: number;              // 시가표준액 (공시가격)
+  constructionCost?: number;           // 공사비 (원시취득)
+  encumbrance?: number;                // 승계 채무액 (부담부증여 유상분)
 
-  // 감면
-  isFirstTimeHomeBuyer: boolean;    // 생애최초
-  isMetroArea: boolean;             // 수도권 여부
+  // 면적·물건 특성
+  areaSqm?: number;                    // 전용면적 (㎡, 85㎡ 이하 농특세 면제)
+  isLuxuryProperty?: boolean;          // 사치성 재산 (§13①, 기본세율 × 5배 중과)
+  isRelatedParty?: boolean;            // 특수관계인 거래 (시가 70%~130% 범위 벗어나면 시가 기준)
+
+  // 주택 중과 관련
+  houseCountAfter?: number;            // 취득 후 보유 주택 수 (취득 대상 포함)
+  isRegulatedArea?: boolean;           // 취득일 기준 조정대상지역 여부
+
+  // 생애최초 감면
+  isFirstHome?: boolean;               // 생애최초 주택 취득 (지방세특례제한법 §36의3)
+  isMetropolitan?: boolean;            // 수도권 여부 (한도: 4억, 비수도권: 3억)
+
+  // 취득일 (원인별 분기)
+  balancePaymentDate?: string;         // 잔금지급일 / 상속개시일 (YYYY-MM-DD)
+  registrationDate?: string;           // 등기접수일
+  contractDate?: string;               // 증여·기부 계약일
+  usageApprovalDate?: string;          // 사용승인서 발급일 (원시취득)
+  actualUsageDate?: string;            // 사실상 사용개시일 (원시취득)
+
+  // 간주취득 전용
+  deemedInput?: DeemedAcquisitionInput;
+
+  // 기타
+  targetDate?: string;                 // 적용 법령 기준일 (YYYY-MM-DD, 기본값: 오늘)
 }
 
-// ── 출력 ──
+// ── 출력 (lib/tax-engine/types/acquisition.types.ts) ──
 interface AcquisitionTaxResult {
-  taxBase: number;                  // 과세표준 (천원 미만 절사)
-  baseRate: number;                 // 기본세율
-  appliedRate: number;              // 적용세율 (중과 포함)
-  baseTax: number;                  // 취득세 본세
+  // 입력 요약
+  propertyType: PropertyObjectType;
+  acquisitionCause: AcquisitionCause;
+  acquisitionValue: number;            // 실제 적용 취득가액
 
-  // 선형보간 (주택 6~9억)
-  usedLinearInterpolation: boolean;
-  interpolatedRate?: number;
+  // 과세표준
+  taxBase: number;                     // 최종 과세표준 (천원 미만 절사)
+  taxBaseMethod: TaxBaseMethod;        // actual_price | recognized_market | standard_value | construction_cost | split_onerous | split_gratuitous | installment | deemed_difference
 
-  // 중과
-  surchargeType?: string;
-  surchargeRate?: number;
+  // 세율
+  appliedRate: number;                 // 최종 적용세율 (소수점 5자리)
+  rateType: TaxRateType;               // basic | linear_interpolation | reduced_* | surcharge_luxury | surcharge_corporate | surcharge_regulated
+  isSurcharged: boolean;
+  surchargeReason?: string;
+
+  // 세액
+  acquisitionTax: number;              // 취득세 본세
+  ruralSpecialTax: number;             // 농어촌특별세
+  localEducationTax: number;           // 지방교육세
+  totalTax: number;                    // 총 납부세액 (감면 전)
 
   // 감면
-  firstTimeBuyerReduction: number;  // 생애최초 감면 (최대 200만원)
+  reductionType?: 'first_home';
+  reductionAmount: number;             // 생애최초 감면액 (최대 200만원)
+  totalTaxAfterReduction: number;      // 감면 후 최종 납부세액
 
-  // 부가세
-  ruralSpecialTax: number;          // 농어촌특별세
-  localEducationTax: number;        // 지방교육세
+  // 부담부증여 분리
+  burdenedGiftBreakdown?: BurdenedGiftBreakdown;
 
-  // 최종
-  totalTax: number;                 // 총 납부세액
+  // 취득 시기·신고 기한
+  acquisitionDate: string;             // 확정 취득일 (YYYY-MM-DD)
+  filingDeadline: string;              // 신고 기한 (YYYY-MM-DD)
 
-  steps: CalculationStep[];
+  // 비과세
+  isExempt: boolean;
+  exemptionType?: AcquisitionExemptionType;
+
+  // 계산 과정 (결과 UI 상세 표시용)
+  steps: AcquisitionCalculationStep[];
+
+  // 메타
+  appliedLawDate: string;
+  warnings: string[];
+  legalBasis: string[];
 }
 ```
 
 **계산 흐름:**
 
 ```
-calculateAcquisitionTax(input, rates) → AcquisitionTaxResult
+calcAcquisitionTax(input) → AcquisitionTaxResult   // lib/tax-engine/acquisition-tax.ts
 
-1. 과세표준 = truncateToThousand(취득가액)
+1. 과세 대상 판정 (acquisition-object.ts)
+   └─ 열거주의: 지방세법 §7 12종 과세 대상 + 비과세 6유형
 
-2. 기본세율 결정
-   ├─ 매매 주택: 6억↓ 1% / 6~9억 선형보간 / 9억↑ 3%
+2. 간주취득 판정 (acquisition-deemed.ts)
+   ├─ 과점주주 (§7의2①): 비과점→과점 전체 지분율, 과점→증가분
+   ├─ 지목변경 (§7의2②): 변경 후 - 변경 전 시가표준액
+   └─ 건물 개수 (§7의2③): 개수 후 - 개수 전 시가표준액
+
+3. 취득 시기 확정 (acquisition-timing.ts, §20)
+   ├─ 유상취득: 잔금지급일·등기접수일 중 빠른 날
+   ├─ 상속: 상속개시일, 신고기한 6개월
+   ├─ 증여·기부: 계약일, 신고기한 60일
+   └─ 원시취득: 사용승인서 발급일 vs 사실상 사용개시일 중 빠른 날
+
+4. 과세표준 결정 (acquisition-tax-base.ts, §10)
+   ├─ 유상: 신고가액 (특수관계인 시가 70%~130% 범위 벗어나면 시가인정액)
+   ├─ 무상: 시가인정액 > 시가표준액 순 우선
+   ├─ 원시: 공사비
+   └─ 부담부증여: 유상분(채무) + 무상분(초과) 분리, 각 과세표준으로 계산
+
+5. 기본세율 결정 (acquisition-tax-rate.ts, §11)
+   ├─ 매매 주택: 6억↓ 1% / 6~9억 선형보간(BigInt) / 9억↑ 3%
    ├─ 매매 토지·건물: 4%
-   ├─ 상속: 2.8% (농지 2.3%)
-   ├─ 증여: 3.5%
-   ├─ 원시취득: 2.8%
-   └─ 공매: 매매와 동일
+   ├─ 상속: 2.8% (농지inheritance_farmland: 2.3%)
+   ├─ 증여·부담부증여 무상분: 3.5%
+   └─ 원시취득: 2.8%
 
-3. 중과세 판단 (조정지역 + 주택)
-   ├─ 개인 2주택(조정): 8%
-   ├─ 개인 3주택+(조정): 12%
-   ├─ 법인(주택): 12%
-   ├─ 사치성: 기본+중과
-   └─ 유예 여부 DB special_rules 확인
+6. 중과세 판정 (acquisition-tax-surcharge.ts, §13·§13의2)
+   ├─ 사치성 재산 (§13①): 기본세율 × 5배 (골프장·별장·고급주택·고급오락장·고급선박)
+   ├─ 법인 주택 유상취득 (§13의2): 12%
+   └─ 다주택 조정지역 (§13의2): 2주택 8% / 3주택+ 12%
 
-4. 생애최초 감면 (200만원 한도)
+7. 세액 계산
+   ├─ 선형보간 구간: calcLinearInterpolationTax(taxBase) — BigInt 정밀 계산
+   ├─ 부담부증여: 유상분·무상분 각각 적용세율 × 과세표준 합산
+   └─ 일반: Math.floor(taxBase × finalRate)
 
-5. 부가세 합산
-   ├─ 농어촌특별세: (적용세율 - 2%) × 과세표준 × 10% (85㎡↓ 면제)
-   └─ 지방교육세: 표준세율(2%) 기준 × 과세표준 × 20%
+8. 부가세 합산 (acquisition-tax-rate.ts)
+   ├─ 농어촌특별세: 취득세 본세 × 10% (85㎡ 이하 주택 면제)
+   └─ 지방교육세: 취득세 본세 × 20%
 
-6. 총 납부세액 = 본세 - 감면 + 농특세 + 지방교육세
+9. 생애최초 감면 적용 (지방세특례제한법 §36의3)
+   ├─ 조건: 주택·유상취득·개인·취득가액 수도권 4억·비수도권 3억 이하
+   └─ 감면액 = min(acquisitionTax, 2,000,000)
 ```
 
-**선형보간 구현:**
+**선형보간 구현 (BigInt):**
 
 ```typescript
-function calculateLinearInterpolation(acquisitionPrice: number): number {
-  // 6억 이하: 1%, 9억 이상: 3%, 그 사이: 보간
-  if (acquisitionPrice <= 600_000_000) return 0.01;
-  if (acquisitionPrice >= 900_000_000) return 0.03;
-
-  // 공식: (취득가액 × 2 / 300,000,000 - 3) / 100
-  // 정수 연산: 소수점 5자리 정밀도 유지
-  const rate = (acquisitionPrice * 2 / 300_000_000 - 3) / 100;
-  return Math.round(rate * 100_000) / 100_000; // 소수점 5자리 반올림
+// acquisition-tax-rate.ts — linearInterpolationRate()
+// 6억 이하: 1%, 9억 이상: 3%, 그 사이: (취득가액 × 2 - 9억) ÷ 300억
+function linearInterpolationRate(value: number): number {
+  if (value <= 600_000_000) return 0.01;
+  if (value >= 900_000_000) return 0.03;
+  const numerator = BigInt(value) * 2n - 900_000_000n;
+  const rate = Number(numerator) / 30_000_000_000;
+  return Math.round(rate * 100_000) / 100_000; // 소수점 5자리
 }
 ```
 
