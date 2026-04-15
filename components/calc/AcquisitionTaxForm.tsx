@@ -68,6 +68,7 @@ interface FormState {
   constructionCost: string;
   houseCountAfter: string;
   isRegulatedArea: boolean;
+  isLuxuryProperty: boolean;
   isRelatedParty: boolean;
   isFirstHome: boolean;
   isMetropolitan: boolean;
@@ -89,6 +90,7 @@ const INITIAL_FORM: FormState = {
   constructionCost: "",
   houseCountAfter: "1",
   isRegulatedArea: false,
+  isLuxuryProperty: false,
   isRelatedParty: false,
   isFirstHome: false,
   isMetropolitan: false,
@@ -141,6 +143,7 @@ async function callAcquisitionTaxAPI(form: FormState): Promise<AcquisitionTaxRes
     constructionCost: isOriginal ? (parseAmount(form.constructionCost) || undefined) : undefined,
     houseCountAfter: form.propertyType === "housing" ? (parseInt(form.houseCountAfter) || 1) : undefined,
     isRegulatedArea: form.propertyType === "housing" ? form.isRegulatedArea : undefined,
+    isLuxuryProperty: form.isLuxuryProperty || undefined,
     isRelatedParty: form.isRelatedParty || undefined,
     isFirstHome: form.isFirstHome || undefined,
     isMetropolitan: form.isFirstHome ? form.isMetropolitan : undefined,
@@ -415,6 +418,20 @@ export function AcquisitionTaxForm() {
               기본세율이 자동 적용됩니다.
             </div>
           )}
+
+          {/* 사치성 재산 중과 — 모든 물건 유형에 적용 가능 */}
+          <div className={checkboxWrapCls}>
+            <input
+              type="checkbox"
+              id="isLuxuryProperty"
+              checked={form.isLuxuryProperty}
+              onChange={(e) => set("isLuxuryProperty", e.target.checked)}
+              className="h-4 w-4 rounded border-input"
+            />
+            <label htmlFor="isLuxuryProperty" className={`${labelCls} cursor-pointer`}>
+              사치성 재산 (골프장·별장·고급주택·고급오락장·고급선박) — 기본세율 + 4%p 중과 (지방세법 §13①)
+            </label>
+          </div>
         </div>
       )}
 

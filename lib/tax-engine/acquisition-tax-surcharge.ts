@@ -29,6 +29,8 @@ interface SurchargeCheckInput {
   isRegulatedArea?: boolean;
   /** 사치성 재산 여부 (골프장·별장·고급주택·고급오락장·고급선박) */
   isLuxuryProperty?: boolean;
+  /** 기본세율 (사치성 재산 중과세율 계산용) */
+  basicRate?: number;
   /** 생애최초 주택 구매 여부 */
   isFirstHome?: boolean;
   /** 수도권 여부 (생애최초 감면 한도 구분) */
@@ -55,12 +57,15 @@ export function assessSurcharge(input: SurchargeCheckInput): SurchargeDecision {
 
   // ── 사치성 재산 중과 (§13①) ──
   if (input.isLuxuryProperty) {
+    const luxuryRate = getSurchargeRateForLuxury(input.basicRate ?? ACQUISITION_CONST.LUXURY_BASE_RATE);
     return {
       isSurcharged: true,
-      surchargeRate: getSurchargeRateForLuxury(input.acquisitionValue),
+      surchargeRate: luxuryRate,
       surchargeReason: "사치성 재산 중과 (지방세법 §13①)",
       exceptions,
-      warnings: ["사치성 재산(골프장·별장·고급주택·고급오락장·고급선박)으로 중과세율이 적용됩니다."],
+      warnings: [
+        `사치성 재산(골프장·별장·고급주택·고급오락장·고급선박)으로 기본세율(${((input.basicRate ?? ACQUISITION_CONST.LUXURY_BASE_RATE) * 100).toFixed(1)}%) + 중과분(4%p) = ${(luxuryRate * 100).toFixed(1)}% 중과세율 적용`,
+      ],
       legalBasis: [ACQUISITION.SURCHARGE],
     };
   }
@@ -143,14 +148,15 @@ export function assessSurcharge(input: SurchargeCheckInput): SurchargeDecision {
 // ============================================================
 
 /**
- * 사치성 재산 중과세율
- * = 기본세율(4%) + 중과분(4%) = 8%
- * 단, 계산 편의상 별도 비율로 관리
+ * 사치성 재산 중과세율 (지방세법 §13①)
+ * = 기본세율 + 중과분 4%p
+ *
+ * 예) 매매 토지 기본세율 4% → 4% + 4% = 8%
+ *     매매 주택 9억 이상 3% → 3% + 4% = 7%
+ *     매매 주택 7.5억(선형보간 2%) → 2% + 4% = 6%
  */
-function getSurchargeRateForLuxury(acquisitionValue: number): number {
-  // 사치성 재산: 기본세율에 중과분(4%p) 추가 → 합산 8%
-  // (취득원인이 매매인 경우 기본세율 4% + 중과 4%)
-  return 0.08;
+function getSurchargeRateForLuxury(basicRate: number): number {
+  return basicRate + ACQUISITION_CONST.LUXURY_SURCHARGE_EXTRA;
 }
 
 // ============================================================

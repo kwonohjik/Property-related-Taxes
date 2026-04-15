@@ -195,6 +195,8 @@ export interface AcquisitionTaxInput {
   houseCountAfter?: number;
   /** 조정대상지역 여부 (취득일 기준) */
   isRegulatedArea?: boolean;
+  /** 사치성 재산 여부 (골프장·별장·고급주택·고급오락장·고급선박) — 지방세법 §13① */
+  isLuxuryProperty?: boolean;
 
   // ─── 감면 ───
   /** 생애최초 주택 구매 여부 */

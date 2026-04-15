@@ -134,7 +134,8 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
     acquiredBy: input.acquiredBy,
     houseCountAfter: input.houseCountAfter,
     isRegulatedArea: input.isRegulatedArea,
-    isLuxuryProperty: false,
+    isLuxuryProperty: input.isLuxuryProperty,
+    basicRate: basicRateDecision.appliedRate,
     isFirstHome: input.isFirstHome,
     isMetropolitan: input.isMetropolitan,
   });
@@ -180,7 +181,8 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
     acquiredBy: input.acquiredBy,
     houseCountAfter: input.houseCountAfter,
     isRegulatedArea: input.isRegulatedArea,
-    isLuxuryProperty: false,
+    isLuxuryProperty: input.isLuxuryProperty,
+    basicRate: basicRateDecision.appliedRate,
     isFirstHome: input.isFirstHome,
     isMetropolitan: input.isMetropolitan,
     acquisitionTax,
@@ -211,7 +213,9 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
 
     appliedRate: finalRate,
     rateType: surchargeDecision.isSurcharged
-      ? (input.acquiredBy === "corporation" ? "surcharge_corporate" : "surcharge_regulated")
+      ? (input.isLuxuryProperty ? "surcharge_luxury"
+        : input.acquiredBy === "corporation" ? "surcharge_corporate"
+        : "surcharge_regulated")
       : basicRateDecision.rateType,
     isSurcharged: surchargeDecision.isSurcharged,
     surchargeReason: surchargeDecision.surchargeReason,

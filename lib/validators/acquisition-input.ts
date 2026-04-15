@@ -128,6 +128,7 @@ export const acquisitionTaxInputSchema = z.object({
   areaSqm: z.number().nonnegative().optional(),
   houseCountAfter: z.number().int().positive().optional(),
   isRegulatedArea: z.boolean().optional(),
+  isLuxuryProperty: z.boolean().optional(),
 
   // 감면
   isFirstHome: z.boolean().optional(),
