@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import Link from "next/link";
 
 interface ErrorPageProps {
   error: Error & { digest?: string };
@@ -35,12 +36,12 @@ export default function TransferTaxError({ error, reset }: ErrorPageProps) {
           >
             다시 시도
           </button>
-          <a
+          <Link
             href="/"
             className="rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-muted/40 transition-colors"
           >
             홈으로
-          </a>
+          </Link>
         </div>
       </div>
     </div>

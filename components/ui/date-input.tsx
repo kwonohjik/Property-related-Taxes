@@ -66,8 +66,9 @@ export function DateInput({ value, onChange, className, disabled }: DateInputPro
       pendingInternal.current -= 1;
       return;
     }
-    // 외부 value 변경 → 필드 동기화
+    // 외부 value 변경 → 필드 동기화 (controlled component 패턴 — intentional)
     const p = parseDateStr(value);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setYear(p.year);
     setMonth(p.month);
     setDay(p.day);

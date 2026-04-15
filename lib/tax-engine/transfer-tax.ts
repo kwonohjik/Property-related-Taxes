@@ -1117,10 +1117,18 @@ export function calculateTransferTax(
     input.newHousingDetails,
     parsedRates.newHousingMatrix,
   );
+  // 감면 유형별 법령 조문 매핑
+  const reductionLawMap: Record<string, string> = {
+    "자경농지":     TRANSFER.REDUCTION_SELF_FARMING,
+    "장기임대주택": TRANSFER.REDUCTION_LONG_RENTAL,
+    "신축주택":     TRANSFER.REDUCTION_NEW_HOUSING,
+    "미분양주택":   TRANSFER.REDUCTION_UNSOLD_HOUSING,
+  };
   steps.push({
     label: "감면세액",
     formula: reductionType ? `${reductionType} 감면 ${reductionAmount.toLocaleString()}원` : "감면 없음",
     amount: reductionAmount,
+    legalBasis: reductionType ? reductionLawMap[reductionType] : undefined,
   });
 
   // STEP 9: 결정세액 (원 미만 절사)
@@ -1129,6 +1137,7 @@ export function calculateTransferTax(
     label: "결정세액",
     formula: `산출세액 ${taxResult.calculatedTax.toLocaleString()}원 - 감면 ${reductionAmount.toLocaleString()}원 (원 미만 절사)`,
     amount: determinedTax,
+    legalBasis: TRANSFER.FINAL_TAX,
   });
 
   // STEP 10: 지방소득세 (결정세액 × 10%, 1,000원 미만 절사 — 지방세법 §103-27, I1 수정)
@@ -1146,6 +1155,7 @@ export function calculateTransferTax(
     label: "총 납부세액",
     formula: `결정세액 ${determinedTax.toLocaleString()}원 + 지방소득세 ${localIncomeTax.toLocaleString()}원`,
     amount: totalTax,
+    legalBasis: `${TRANSFER.FINAL_TAX} + ${TRANSFER.LOCAL_INCOME_TAX}`,
   });
 
   return {

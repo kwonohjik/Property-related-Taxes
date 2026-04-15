@@ -1,5 +1,6 @@
-import { addDays, addMonths, addYears, differenceInDays, differenceInMonths, differenceInYears } from "date-fns";
+import { addDays, addMonths, addYears, differenceInDays, differenceInMonths, differenceInYears, subMonths } from "date-fns";
 import type { TaxBracket } from "./types";
+import type { Heir } from "./types/inheritance-gift.types";
 
 // ============================================================
 // P0-2 원칙: 세율(rate) × 금액(amount) 곱셈은 반드시 applyRate()를 사용.
@@ -161,6 +162,109 @@ export function calculateEstimatedAcquisitionPrice(
     standardPriceAtAcquisition,
     standardPriceAtTransfer,
   );
+}
+
+// ============================================================
+// 상속·증여세 전용 유틸 (W1-D4~5)
+// ============================================================
+
+/**
+ * 법정상속분 비율 계산 (민법 §1009·§1010)
+ * 배우자 : 자녀 = 1.5 : 1 (기여분 무시, 단순 법정비율)
+ *
+ * @returns 각 상속인의 법정상속분 비율 (소수점) — 합계 = 1.0
+ */
+export function calcLegalShareRatios(heirs: Heir[]): Map<string, number> {
+  const ratioMap = new Map<string, number>();
+
+  // 단위: 배우자=1.5, 나머지=1
+  const units: { id: string; unit: number }[] = heirs.map((h) => ({
+    id: h.id,
+    unit: h.relation === "spouse" ? 1.5 : 1,
+  }));
+
+  const totalUnits = units.reduce((sum, u) => sum + u.unit, 0);
+  if (totalUnits === 0) return ratioMap;
+
+  for (const { id, unit } of units) {
+    ratioMap.set(id, unit / totalUnits);
+  }
+  return ratioMap;
+}
+
+/**
+ * 미성년자 인적공제액 계산 (상증법 §20 ①2호)
+ * 공식: (20 - 연령) × 10,000,000 (원 미만 절사)
+ * 20세 미만인 경우에만 적용. 연령은 만 나이.
+ */
+export function calcMinorPersonalDeduction(
+  birthDate: string,
+  baseDate: string,
+): number {
+  const birth = new Date(birthDate);
+  const base = new Date(baseDate);
+  // differenceInYears: 생일이 기준일 이후면 완성된 연도 수에서 1을 뺌 → 정확한 만 나이
+  const age = differenceInYears(base, birth);
+  if (age >= 20) return 0;
+  return Math.max(0, 20 - age) * 10_000_000;
+}
+
+/**
+ * 장애인 인적공제액 계산 (상증법 §20 ①4호)
+ * 공식: 기대여명(년) × 10,000,000 (원 미만 절사)
+ * 기대여명은 통계청 생명표 기준 — 단순화 버전: (78 - 현재나이) 사용
+ */
+export function calcDisabledPersonalDeduction(
+  birthDate: string,
+  baseDate: string,
+): number {
+  const birth = new Date(birthDate);
+  const base = new Date(baseDate);
+  // differenceInYears: 정확한 만 나이 계산 (생일 이후 여부 반영)
+  const age = differenceInYears(base, birth);
+  const lifeExpectancy = Math.max(0, 78 - age); // 78세 기대여명 단순 적용
+  return lifeExpectancy * 10_000_000;
+}
+
+/**
+ * 단기재상속 경과 연수 계산 (상증법 §30)
+ * 이전 상속개시일 ~ 현재 상속개시일의 경과 연수 (정수, 올림 아닌 버림)
+ */
+export function calcShortTermReinheritYears(
+  prevDeathDate: string,
+  currentDeathDate: string,
+): number {
+  const prev = new Date(prevDeathDate);
+  const current = new Date(currentDeathDate);
+  return differenceInYears(current, prev);
+}
+
+/**
+ * 평가기간 필터 — 상증법 §60 ② 기준
+ * 상속: 상속개시일 전후 6개월 이내
+ * 증여: 증여일 전 6개월 ~ 후 3개월
+ *
+ * @param txDate 매매·감정 등이 발생한 날짜
+ * @param baseDate 상속개시일 or 증여일
+ * @param mode 'inheritance' (±6개월) | 'gift' (전6 / 후3개월)
+ */
+export function isWithinValuationPeriod(
+  txDate: string,
+  baseDate: string,
+  mode: "inheritance" | "gift",
+): boolean {
+  const tx = new Date(txDate);
+  const base = new Date(baseDate);
+
+  if (mode === "inheritance") {
+    const from = subMonths(base, 6);
+    const to = addMonths(base, 6);
+    return tx >= from && tx <= to;
+  } else {
+    const from = subMonths(base, 6);
+    const to = addMonths(base, 3);
+    return tx >= from && tx <= to;
+  }
 }
 
 // ============================================================

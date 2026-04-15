@@ -272,7 +272,7 @@ export function determineNewHousingReduction(
   }
 
   // ── Step 2: 지역·가액·면적·미분양 요건으로 최종 1개 매칭 ──
-  let matchedArticle = candidates.find((a) => {
+  const matchedArticle = candidates.find((a) => {
     // 지역 요건
     if (!checkRegionalRequirement(input.region, a.region)) return false;
     // 가액 요건
