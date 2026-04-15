@@ -190,17 +190,16 @@ export function determineTaxableObject(
 // ============================================================
 
 /**
- * 취득으로 보지 않는 경우 — 지방세법 §6 제1호 단서
+ * 취득으로 보지 않는 경우 — 지방세법 §6 단서
  *
- * 이 케이스는 입력 단계에서 acquisitionCause로 필터링하거나,
- * 별도 비과세 판정 흐름에서 처리함.
+ * 환매권 행사·법인 합병·협의분할은 등기 형식상 취득이 있더라도
+ * 실질 취득으로 보지 않아 취득세 과세 제외 (지방세법 §6①단서).
  */
 export function isNonAcquisition(
   acquisitionCause: AcquisitionCause
 ): boolean {
-  // 현재 types에 없으나 향후 확장 가능한 비취득 케이스
-  // (환매권 행사·법인 합병·협의분할 등은 별도 입력으로 처리)
-  return false;
+  return (["redemption", "corporate_merger", "consensual_division"] as AcquisitionCause[])
+    .includes(acquisitionCause);
 }
 
 /**

@@ -56,7 +56,11 @@ export type AcquisitionCause =
   // ④ 간주취득
   | "deemed_major_shareholder" // 과점주주
   | "deemed_land_category"     // 지목변경
-  | "deemed_renovation";       // 건물 개수(改修)
+  | "deemed_renovation"        // 건물 개수(改修)
+  // ⑤ 비취득 (지방세법 §6 단서 — 취득세 과세 제외)
+  | "redemption"               // 환매권 행사 (§6①단서1)
+  | "corporate_merger"         // 법인 합병 (§6①단서2)
+  | "consensual_division";     // 협의분할 (§6①단서3)
 
 /**
  * 취득자 유형

@@ -201,7 +201,9 @@ export function AcquisitionTaxForm() {
     setError(null);
 
     if (step < STEPS.length - 1) {
-      setStep(step + 1);
+      // 비주택: Step 1 → Step 2(주택 현황) 건너뛰고 Step 3(감면 확인)으로
+      const nextStep = step === 1 && !isHousing ? step + 2 : step + 1;
+      setStep(nextStep);
     } else {
       // Step 3(감면 확인) → 계산 실행
       setLoading(true);
@@ -222,7 +224,9 @@ export function AcquisitionTaxForm() {
     } else {
       setError(null);
       setResult(null);
-      setStep(step - 1);
+      // 비주택: Step 3 → Step 2(주택 현황) 건너뛰고 Step 1(물건 상세)로
+      const prevStep = step === 3 && !isHousing ? step - 2 : step - 1;
+      setStep(prevStep);
     }
   };
 
