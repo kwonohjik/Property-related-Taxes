@@ -3,10 +3,10 @@
 /**
  * AcquisitionTaxForm — 취득세 계산 4단계 마법사
  *
- * Step 0: 물건 정보 (물건 유형, 취득 원인, 취득자)
- * Step 1: 취득가액·과세표준 (취득가액, 시가표준액, 특수 유형)
- * Step 2: 세율·중과 (주택 수, 조정지역, 생애최초)
- * Step 3: 취득 시기 → 결과
+ * Step 0: 취득 정보 (취득자유형, 물건종류, 취득원인, 취득가액, 취득일)
+ * Step 1: 물건 상세 (전용면적, 사치성재산, 특수관계인, 시가표준액)
+ * Step 2: 주택 현황 (보유 주택 수, 조정대상지역) — 주택 선택 시 활성
+ * Step 3: 감면 확인 (생애최초, 수도권) — 주택+개인 시 활성 → 계산
  */
 
 import { useState } from "react";
@@ -51,7 +51,7 @@ const ACQUISITION_CAUSE_LABELS: [string, string][] = [
   ["reclamation", "공유수면 매립·간척"],
 ];
 
-const STEPS = ["물건 정보", "취득가액", "세율·중과", "취득 시기·결과"];
+const STEPS = ["취득 정보", "물건 상세", "주택 현황", "감면 확인"];
 
 // ============================================================
 // 폼 상태
@@ -109,17 +109,12 @@ function validateStep(step: number, form: FormState): string | null {
   if (step === 0) {
     if (!form.propertyType) return "물건 유형을 선택하세요.";
     if (!form.acquisitionCause) return "취득 원인을 선택하세요.";
-  }
-  if (step === 1) {
-    const isOriginal = ["new_construction", "extension", "reconstruction", "reclamation"].includes(form.acquisitionCause);
-    const isGratuitous = ["inheritance", "inheritance_farmland", "gift", "donation"].includes(form.acquisitionCause);
-    if (!isOriginal && !isGratuitous && form.acquisitionCause !== "burdened_gift") {
-      if (!form.reportedPrice && !form.standardValue) {
-        return "취득가액 또는 시가표준액을 입력하세요.";
-      }
-    }
-    if (form.acquisitionCause === "burdened_gift") {
-      if (!form.encumbrance) return "부담부증여 채무액을 입력하세요.";
+    // 유상취득은 취득가액 필수
+    const isOnerous = ["purchase", "exchange", "auction", "in_kind_investment"].includes(form.acquisitionCause);
+    if (isOnerous && !form.reportedPrice) return "취득가액을 입력하세요.";
+    // 부담부증여는 채무액 필수
+    if (form.acquisitionCause === "burdened_gift" && !form.encumbrance) {
+      return "부담부증여 채무액을 입력하세요.";
     }
   }
   return null;
@@ -176,6 +171,8 @@ async function callAcquisitionTaxAPI(form: FormState): Promise<AcquisitionTaxRes
 const selectCls = "mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring";
 const labelCls = "text-sm font-medium leading-none";
 const checkboxWrapCls = "flex items-center gap-2";
+const infoBannerCls = "rounded-lg border bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800 p-3 text-sm text-blue-800 dark:text-blue-300";
+const warnBannerCls = "rounded-lg border bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800 p-3 text-sm text-amber-800 dark:text-amber-300";
 
 // ============================================================
 // 메인 폼 컴포넌트
@@ -191,10 +188,12 @@ export function AcquisitionTaxForm() {
   const isOriginal = ["new_construction", "extension", "reconstruction", "reclamation"].includes(form.acquisitionCause);
   const isGratuitous = ["inheritance", "inheritance_farmland", "gift", "donation"].includes(form.acquisitionCause);
   const isBurdened = form.acquisitionCause === "burdened_gift";
-  const isHousing = form.propertyType === "housing";
-  const isInheritance = ["inheritance", "inheritance_farmland"].includes(form.acquisitionCause);
-  const isGiftOrDonation = ["gift", "burdened_gift", "donation", "exchange"].includes(form.acquisitionCause);
   const isOnerous = ["purchase", "exchange", "auction", "in_kind_investment"].includes(form.acquisitionCause);
+  const isInheritance = ["inheritance", "inheritance_farmland"].includes(form.acquisitionCause);
+  const isGiftLike = ["gift", "burdened_gift", "donation"].includes(form.acquisitionCause);
+  const isHousing = form.propertyType === "housing";
+  const isIndividual = form.acquiredBy === "individual";
+  const isCorporation = form.acquiredBy === "corporation";
 
   const handleNext = async () => {
     const err = validateStep(step, form);
@@ -204,6 +203,7 @@ export function AcquisitionTaxForm() {
     if (step < STEPS.length - 1) {
       setStep(step + 1);
     } else {
+      // Step 3(감면 확인) → 계산 실행
       setLoading(true);
       try {
         const res = await callAcquisitionTaxAPI(form);
@@ -233,9 +233,23 @@ export function AcquisitionTaxForm() {
     <div className="space-y-6">
       <StepIndicator steps={STEPS} current={step} />
 
-      {/* ── Step 0: 물건 정보 ── */}
+      {/* ── Step 0: 취득 정보 ── */}
       {step === 0 && (
         <div className="space-y-4">
+          <div>
+            <label className={labelCls}>취득자 유형</label>
+            <select
+              className={selectCls}
+              value={form.acquiredBy}
+              onChange={(e) => set("acquiredBy", e.target.value)}
+            >
+              <option value="individual">개인</option>
+              <option value="corporation">법인</option>
+              <option value="government">국가·지방자치단체</option>
+              <option value="nonprofit">비영리법인</option>
+            </select>
+          </div>
+
           <div>
             <label className={labelCls}>물건 유형</label>
             <select
@@ -262,32 +276,31 @@ export function AcquisitionTaxForm() {
             </select>
           </div>
 
-          <div>
-            <label className={labelCls}>취득자 유형</label>
-            <select
-              className={selectCls}
-              value={form.acquiredBy}
-              onChange={(e) => set("acquiredBy", e.target.value)}
-            >
-              <option value="individual">개인</option>
-              <option value="corporation">법인</option>
-              <option value="government">국가·지방자치단체</option>
-              <option value="nonprofit">비영리법인</option>
-            </select>
-          </div>
-        </div>
-      )}
-
-      {/* ── Step 1: 취득가액·과세표준 ── */}
-      {step === 1 && (
-        <div className="space-y-4">
-          {!isOriginal && (
+          {/* 취득가액 — 취득 원인에 따라 분기 */}
+          {isOnerous && (
             <CurrencyInput
-              label={isBurdened ? "취득가액 (시가)" : isGratuitous ? "시가인정액 (선택)" : "취득가액 (실거래가)"}
-              value={isBurdened ? form.marketValue : form.reportedPrice}
-              onChange={(v) => set(isBurdened ? "marketValue" : "reportedPrice", v)}
-              placeholder={isGratuitous ? "없으면 시가표준액 사용" : "계약서상 거래금액 입력"}
+              label="취득가액 (실거래가)"
+              value={form.reportedPrice}
+              onChange={(v) => set("reportedPrice", v)}
+              placeholder="계약서상 거래금액"
             />
+          )}
+
+          {isBurdened && (
+            <>
+              <CurrencyInput
+                label="취득가액 (시가)"
+                value={form.marketValue}
+                onChange={(v) => set("marketValue", v)}
+                placeholder="부담부증여 전체 시가"
+              />
+              <CurrencyInput
+                label="승계 채무액"
+                value={form.encumbrance}
+                onChange={(v) => set("encumbrance", v)}
+                placeholder="유상분 (채무 승계 금액)"
+              />
+            </>
           )}
 
           {isOriginal && (
@@ -299,34 +312,86 @@ export function AcquisitionTaxForm() {
             />
           )}
 
-          <CurrencyInput
-            label={isHousing ? "주택공시가격 (시가표준액)" : "시가표준액 (개별공시지가 × 면적 등)"}
-            value={form.standardValue}
-            onChange={(v) => set("standardValue", v)}
-            placeholder="없으면 비워두세요"
-          />
-
-          {isBurdened && (
-            <CurrencyInput
-              label="승계 채무액 (부담부증여)"
-              value={form.encumbrance}
-              onChange={(v) => set("encumbrance", v)}
-              placeholder="채무 승계 금액"
-            />
+          {/* 취득일 — 원인별 분기 */}
+          {isOnerous && (
+            <>
+              <div>
+                <label className={labelCls}>잔금 지급일 <span className="text-muted-foreground font-normal">(선택)</span></label>
+                <DateInput
+                  value={form.balancePaymentDate}
+                  onChange={(v) => set("balancePaymentDate", v)}
+                />
+              </div>
+              <div>
+                <label className={labelCls}>등기접수일 <span className="text-muted-foreground font-normal">(선택)</span></label>
+                <DateInput
+                  value={form.registrationDate}
+                  onChange={(v) => set("registrationDate", v)}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground -mt-2">
+                잔금지급일·등기접수일 중 빠른 날이 취득일입니다. 미입력 시 오늘 날짜 사용.
+              </p>
+            </>
           )}
 
+          {isGiftLike && (
+            <div>
+              <label className={labelCls}>증여계약일 <span className="text-muted-foreground font-normal">(선택)</span></label>
+              <DateInput
+                value={form.contractDate}
+                onChange={(v) => set("contractDate", v)}
+              />
+            </div>
+          )}
+
+          {isInheritance && (
+            <div>
+              <label className={labelCls}>상속개시일 (피상속인 사망일) <span className="text-muted-foreground font-normal">(선택)</span></label>
+              <DateInput
+                value={form.balancePaymentDate}
+                onChange={(v) => set("balancePaymentDate", v)}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                상속 신고기한 = 상속개시일로부터 6개월
+              </p>
+            </div>
+          )}
+
+          {isOriginal && (
+            <div>
+              <label className={labelCls}>사용승인서 발급일 <span className="text-muted-foreground font-normal">(선택)</span></label>
+              <DateInput
+                value={form.usageApprovalDate}
+                onChange={(v) => set("usageApprovalDate", v)}
+              />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Step 1: 물건 상세 ── */}
+      {step === 1 && (
+        <div className="space-y-4">
           {isHousing && (
             <div>
-              <label className={labelCls}>전용면적 (㎡)</label>
+              <label className={labelCls}>전용면적 (㎡) <span className="text-muted-foreground font-normal">(선택)</span></label>
               <input
                 type="number"
                 className={selectCls}
                 value={form.areaSqm}
                 onChange={(e) => set("areaSqm", e.target.value)}
-                placeholder="85㎡ 이하면 농특세 면제"
+                placeholder="85㎡ 이하이면 농특세 면제"
               />
             </div>
           )}
+
+          <CurrencyInput
+            label={isHousing ? "주택공시가격 (시가표준액, 선택)" : "시가표준액 (선택)"}
+            value={form.standardValue}
+            onChange={(v) => set("standardValue", v)}
+            placeholder="없으면 신고가액으로 과세"
+          />
 
           <div className={checkboxWrapCls}>
             <input
@@ -337,7 +402,7 @@ export function AcquisitionTaxForm() {
               className="h-4 w-4 rounded border-input"
             />
             <label htmlFor="isRelatedParty" className={`${labelCls} cursor-pointer`}>
-              특수관계인 간 거래 (지방세기본법 §2④ — 시가 70%~130% 벗어나면 시가 기준 과세)
+              특수관계인 간 거래 (시가 70%~130% 벗어나면 시가 기준 과세)
             </label>
           </div>
 
@@ -349,16 +414,38 @@ export function AcquisitionTaxForm() {
               placeholder="시가 기준 금액"
             />
           )}
+
+          <div className={checkboxWrapCls}>
+            <input
+              type="checkbox"
+              id="isLuxuryProperty"
+              checked={form.isLuxuryProperty}
+              onChange={(e) => set("isLuxuryProperty", e.target.checked)}
+              className="h-4 w-4 rounded border-input"
+            />
+            <label htmlFor="isLuxuryProperty" className={`${labelCls} cursor-pointer`}>
+              사치성 재산 (골프장·별장·고급주택·고급오락장·고급선박) — 기본세율의 5배 중과 (지방세법 §13①)
+            </label>
+          </div>
         </div>
       )}
 
-      {/* ── Step 2: 세율·중과 ── */}
+      {/* ── Step 2: 주택 현황 ── */}
       {step === 2 && (
         <div className="space-y-4">
-          {isHousing && (
+          {isHousing ? (
             <>
+              {/* 법인 주택 취득 안내 */}
+              {isCorporation && (
+                <div className={infoBannerCls}>
+                  <strong>법인 주택 취득 안내</strong><br />
+                  법인의 주택 유상취득에는 <strong>12% 중과세율</strong>이 적용됩니다 (지방세법 §13의2).
+                  아래 주택 수·조정지역 설정에 관계없이 법인 중과가 우선 적용됩니다.
+                </div>
+              )}
+
               <div>
-                <label className={labelCls}>취득 후 주택 수 (취득 대상 포함)</label>
+                <label className={labelCls}>취득 후 보유 주택 수 (취득 대상 포함)</label>
                 <select
                   className={selectCls}
                   value={form.houseCountAfter}
@@ -383,121 +470,28 @@ export function AcquisitionTaxForm() {
                 </label>
               </div>
 
-              <div className={checkboxWrapCls}>
-                <input
-                  type="checkbox"
-                  id="isFirstHome"
-                  checked={form.isFirstHome}
-                  onChange={(e) => set("isFirstHome", e.target.checked)}
-                  className="h-4 w-4 rounded border-input"
-                />
-                <label htmlFor="isFirstHome" className={`${labelCls} cursor-pointer`}>
-                  생애최초 주택 구매 감면 신청 (지방세특례제한법 §36의3, 최대 200만원)
-                </label>
-              </div>
-
-              {form.isFirstHome && (
-                <div className={`${checkboxWrapCls} pl-6`}>
-                  <input
-                    type="checkbox"
-                    id="isMetropolitan"
-                    checked={form.isMetropolitan}
-                    onChange={(e) => set("isMetropolitan", e.target.checked)}
-                    className="h-4 w-4 rounded border-input"
-                  />
-                  <label htmlFor="isMetropolitan" className={`${labelCls} cursor-pointer`}>
-                    수도권 주택 (한도: 4억) — 비수도권은 3억
-                  </label>
+              {/* 다주택 + 조정지역 중과 안내 */}
+              {form.isRegulatedArea && parseInt(form.houseCountAfter) >= 2 && isIndividual && (
+                <div className={warnBannerCls}>
+                  {parseInt(form.houseCountAfter) === 2
+                    ? "조정대상지역 내 2주택 취득 — 8% 중과세율이 적용됩니다."
+                    : "조정대상지역 내 3주택 이상 취득 — 12% 중과세율이 적용됩니다."}
                 </div>
               )}
             </>
-          )}
-
-          {!isHousing && (
-            <div className="rounded-lg border bg-muted/30 p-4 text-sm text-muted-foreground">
-              주택 이외 물건은 조정대상지역 다주택 중과세 조건이 적용되지 않습니다.
-              <br />
+          ) : (
+            <div className={infoBannerCls}>
+              주택 이외 물건은 조정대상지역 다주택 중과 조건이 적용되지 않습니다.<br />
               기본세율이 자동 적용됩니다.
             </div>
           )}
-
-          {/* 사치성 재산 중과 — 모든 물건 유형에 적용 가능 */}
-          <div className={checkboxWrapCls}>
-            <input
-              type="checkbox"
-              id="isLuxuryProperty"
-              checked={form.isLuxuryProperty}
-              onChange={(e) => set("isLuxuryProperty", e.target.checked)}
-              className="h-4 w-4 rounded border-input"
-            />
-            <label htmlFor="isLuxuryProperty" className={`${labelCls} cursor-pointer`}>
-              사치성 재산 (골프장·별장·고급주택·고급오락장·고급선박) — 기본세율의 5배 중과 (지방세법 §13①)
-            </label>
-          </div>
         </div>
       )}
 
-      {/* ── Step 3: 취득 시기 + 결과 ── */}
+      {/* ── Step 3: 감면 확인 → 계산 ── */}
       {step === 3 && (
         <div className="space-y-4">
-          {!result && (
-            <>
-              <p className="text-sm text-muted-foreground">
-                취득 시기 관련 날짜를 입력하세요. 입력하지 않으면 오늘 날짜가 사용됩니다.
-              </p>
-
-              {isOnerous && (
-                <>
-                  <div>
-                    <label className={labelCls}>잔금 지급일</label>
-                    <DateInput
-                      value={form.balancePaymentDate}
-                      onChange={(v) => set("balancePaymentDate", v)}
-                    />
-                  </div>
-                  <div>
-                    <label className={labelCls}>등기접수일</label>
-                    <DateInput
-                      value={form.registrationDate}
-                      onChange={(v) => set("registrationDate", v)}
-                    />
-                  </div>
-                </>
-              )}
-
-              {isGiftOrDonation && !isInheritance && (
-                <div>
-                  <label className={labelCls}>계약일 (증여·기부채납 계약일)</label>
-                  <DateInput
-                    value={form.contractDate}
-                    onChange={(v) => set("contractDate", v)}
-                  />
-                </div>
-              )}
-
-              {isOriginal && (
-                <div>
-                  <label className={labelCls}>사용승인서 발급일</label>
-                  <DateInput
-                    value={form.usageApprovalDate}
-                    onChange={(v) => set("usageApprovalDate", v)}
-                  />
-                </div>
-              )}
-
-              {isInheritance && (
-                <div>
-                  <label className={labelCls}>상속개시일 (피상속인 사망일)</label>
-                  <DateInput
-                    value={form.balancePaymentDate}
-                    onChange={(v) => set("balancePaymentDate", v)}
-                  />
-                </div>
-              )}
-            </>
-          )}
-
-          {result && (
+          {result ? (
             <>
               <AcquisitionTaxResultView result={result} />
               <button
@@ -512,6 +506,58 @@ export function AcquisitionTaxForm() {
                 다시 계산하기
               </button>
             </>
+          ) : (
+            <>
+              {isHousing && isIndividual ? (
+                <>
+                  <div className={checkboxWrapCls}>
+                    <input
+                      type="checkbox"
+                      id="isFirstHome"
+                      checked={form.isFirstHome}
+                      onChange={(e) => set("isFirstHome", e.target.checked)}
+                      className="h-4 w-4 rounded border-input"
+                    />
+                    <label htmlFor="isFirstHome" className={`${labelCls} cursor-pointer`}>
+                      생애최초 주택 구매 감면 신청 (지방세특례제한법 §36의3, 최대 200만원)
+                    </label>
+                  </div>
+
+                  {form.isFirstHome && (
+                    <>
+                      <div className={`${checkboxWrapCls} pl-6`}>
+                        <input
+                          type="checkbox"
+                          id="isMetropolitan"
+                          checked={form.isMetropolitan}
+                          onChange={(e) => set("isMetropolitan", e.target.checked)}
+                          className="h-4 w-4 rounded border-input"
+                        />
+                        <label htmlFor="isMetropolitan" className={`${labelCls} cursor-pointer`}>
+                          수도권 주택 (취득가액 한도 4억) — 비수도권은 3억
+                        </label>
+                      </div>
+
+                      <div className={warnBannerCls}>
+                        <strong>추징 주의</strong><br />
+                        취득일로부터 3년 이내 처분·임대·주거 외 사용 시 감면세액이 추징됩니다
+                        (지방세특례제한법 §36의3 ④).
+                      </div>
+                    </>
+                  )}
+                </>
+              ) : (
+                <div className={infoBannerCls}>
+                  {!isHousing
+                    ? "주택 이외 물건은 생애최초 주택 감면 대상이 아닙니다."
+                    : "법인 취득은 생애최초 주택 감면 대상이 아닙니다."}
+                </div>
+              )}
+
+              <p className="text-xs text-muted-foreground pt-2">
+                모든 입력이 완료되면 아래 <strong>취득세 계산</strong> 버튼을 눌러주세요.
+              </p>
+            </>
           )}
         </div>
       )}
@@ -521,7 +567,7 @@ export function AcquisitionTaxForm() {
         <p className="text-sm text-destructive">{error}</p>
       )}
 
-      {/* 네비게이션 */}
+      {/* 네비게이션 — 결과 표시 중에는 숨김 */}
       {!result && (
         <div className="flex gap-3">
           <button
