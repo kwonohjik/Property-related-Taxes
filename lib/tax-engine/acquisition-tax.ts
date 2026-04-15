@@ -32,6 +32,7 @@ import { ACQUISITION_CONST } from "./legal-codes";
 import type {
   AcquisitionTaxInput,
   AcquisitionTaxResult,
+  AcquisitionCalculationStep,
   BurdenedGiftBreakdown,
 } from "./types/acquisition.types";
 
@@ -48,6 +49,7 @@ import type {
 export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxResult {
   const warnings: string[] = [];
   const legalBasis: string[] = [];
+  const steps: AcquisitionCalculationStep[] = [];
   const targetDate = input.targetDate ?? new Date().toISOString().slice(0, 10);
 
   // ── Step 1: 과세 대상 판정 ──
@@ -193,6 +195,62 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
     : 0;
   const totalTaxAfterReduction = Math.max(0, totalTax - reductionAmount);
 
+  // ── 계산 과정 정리 (결과 UI 상세 표시용) ──
+  steps.push(
+    {
+      label: "과세표준",
+      formula: taxBaseResult.method === "actual_price" || taxBaseResult.method === "recognized_market"
+        ? "신고가액 (천원 미만 절사)"
+        : "시가표준액 (천원 미만 절사)",
+      amount: taxBase,
+      legalBasis: "지방세법 §10",
+    },
+    {
+      label: "취득세 본세",
+      formula: surchargeDecision.isSurcharged
+        ? `과세표준 × 중과세율 ${(finalRate * 100).toFixed(1)}%`
+        : basicRateDecision.rateType === "linear_interpolation"
+          ? `과세표준 × 선형보간세율 (6~9억 구간, 지방세법 §11①8)`
+          : `과세표준 × ${(finalRate * 100).toFixed(1)}%`,
+      amount: acquisitionTax,
+      legalBasis: surchargeDecision.isSurcharged ? "지방세법 §13" : "지방세법 §11",
+    },
+  );
+  if (additional.ruralSpecialTax > 0) {
+    steps.push({
+      label: "농어촌특별세",
+      formula: "취득세 본세 × 10% (85㎡ 초과 또는 중과 대상)",
+      amount: additional.ruralSpecialTax,
+      legalBasis: "농어촌특별세법 §5①",
+    });
+  }
+  if (additional.localEducationTax > 0) {
+    steps.push({
+      label: "지방교육세",
+      formula: "취득세 본세 × 20%",
+      amount: additional.localEducationTax,
+      legalBasis: "지방세법 §151",
+    });
+  }
+  steps.push({
+    label: "합계 납부세액 (감면 전)",
+    formula: "취득세 + 농특세 + 지방교육세",
+    amount: totalTax,
+  });
+  if (reductionAmount > 0) {
+    steps.push({
+      label: "생애최초 감면",
+      formula: `취득세 본세 × 100% (한도 ${ACQUISITION_CONST.FIRST_HOME_MAX_REDUCTION.toLocaleString()}원)`,
+      amount: -reductionAmount,
+      legalBasis: "지방세특례제한법 §36의3",
+    });
+    steps.push({
+      label: "감면 후 최종 납부세액",
+      formula: "합계 − 생애최초 감면액",
+      amount: totalTaxAfterReduction,
+    });
+  }
+
   return {
     propertyType: input.propertyType,
     acquisitionCause: input.acquisitionCause,
@@ -225,6 +283,8 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
     filingDeadline: timingResult.filingDeadline,
 
     isExempt: false,
+
+    steps,
 
     appliedLawDate: targetDate,
     warnings: [...new Set(warnings)], // 중복 제거
@@ -283,6 +343,8 @@ function buildZeroResult(
 
     isExempt: !!exemptionType,
     exemptionType,
+
+    steps: [],
 
     appliedLawDate: targetDate,
     warnings,

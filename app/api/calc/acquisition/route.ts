@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
   const rateLimitResult = await checkRateLimit(`acquisition:${ip}`, { limit: 30, windowMs: 60_000 });
   if (!rateLimitResult.allowed) {
     return NextResponse.json(
-      { error: "요청이 너무 많습니다. 잠시 후 다시 시도하세요." },
+      { error: { code: "RATE_LIMIT_EXCEEDED", message: "요청이 너무 많습니다. 잠시 후 다시 시도하세요." } },
       { status: 429 },
     );
   }
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
     body = await req.json();
   } catch {
     return NextResponse.json(
-      { error: "요청 본문이 올바른 JSON이 아닙니다." },
+      { error: { code: "INVALID_JSON", message: "요청 본문이 올바른 JSON이 아닙니다." } },
       { status: 400 },
     );
   }
@@ -47,8 +47,11 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json(
       {
-        error: "입력값이 올바르지 않습니다.",
-        details: parsed.error.flatten().fieldErrors,
+        error: {
+          code: "INVALID_INPUT",
+          message: "입력값이 올바르지 않습니다.",
+          details: parsed.error.flatten().fieldErrors,
+        },
       },
       { status: 400 },
     );
@@ -65,13 +68,13 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     if (err instanceof TaxCalculationError) {
       return NextResponse.json(
-        { error: err.message, code: err.code },
+        { error: { code: err.code, message: err.message } },
         { status: 422 },
       );
     }
     console.error("[POST /api/calc/acquisition]", err);
     return NextResponse.json(
-      { error: "취득세 계산 중 오류가 발생했습니다." },
+      { error: { code: "INTERNAL_ERROR", message: "취득세 계산 중 오류가 발생했습니다." } },
       { status: 500 },
     );
   }

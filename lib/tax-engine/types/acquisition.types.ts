@@ -285,6 +285,20 @@ export interface BurdenedGiftBreakdown {
 }
 
 /**
+ * 계산 단계별 내역 (결과 UI 상세 표시용)
+ */
+export interface AcquisitionCalculationStep {
+  /** 단계명 (예: '과세표준', '적용세율') */
+  label: string;
+  /** 산식 설명 (예: '신고가액 × 세율') */
+  formula: string;
+  /** 결과 금액 (원) */
+  amount: number;
+  /** 법적 근거 조문 */
+  legalBasis?: string;
+}
+
+/**
  * 취득세 계산 최종 결과
  */
 export interface AcquisitionTaxResult {
@@ -324,6 +338,9 @@ export interface AcquisitionTaxResult {
   // ─── 비과세 ───
   isExempt: boolean;
   exemptionType?: AcquisitionExemptionType;
+
+  // ─── 계산 과정 ───
+  steps: AcquisitionCalculationStep[];
 
   // ─── 메타 ───
   appliedLawDate: string;

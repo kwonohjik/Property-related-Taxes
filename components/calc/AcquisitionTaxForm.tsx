@@ -162,7 +162,9 @@ async function callAcquisitionTaxAPI(form: FormState): Promise<AcquisitionTaxRes
 
   const json = await res.json();
   if (!res.ok || !json.data) {
-    throw new Error((json.error as string) ?? "계산 중 오류가 발생했습니다.");
+    const errObj = json.error;
+    const errMsg = typeof errObj === "object" ? errObj?.message : (errObj as string);
+    throw new Error(errMsg ?? "계산 중 오류가 발생했습니다.");
   }
   return json.data as AcquisitionTaxResult;
 }
@@ -429,7 +431,7 @@ export function AcquisitionTaxForm() {
               className="h-4 w-4 rounded border-input"
             />
             <label htmlFor="isLuxuryProperty" className={`${labelCls} cursor-pointer`}>
-              사치성 재산 (골프장·별장·고급주택·고급오락장·고급선박) — 기본세율 + 4%p 중과 (지방세법 §13①)
+              사치성 재산 (골프장·별장·고급주택·고급오락장·고급선박) — 기본세율의 5배 중과 (지방세법 §13①)
             </label>
           </div>
         </div>
