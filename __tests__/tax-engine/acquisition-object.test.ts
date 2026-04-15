@@ -138,7 +138,7 @@ describe("determineTaxableObject", () => {
       acquisitionCause: "purchase",
       acquiredBy: "individual",
     });
-    expect(result.isTaxable).toBe(true);
+    expect(result.isSubjectToTax).toBe(true);
     expect(result.isExempt).toBe(false);
   });
 
@@ -148,7 +148,7 @@ describe("determineTaxableObject", () => {
       acquisitionCause: "purchase",
       acquiredBy: "government",
     });
-    expect(result.isTaxable).toBe(true);
+    expect(result.isSubjectToTax).toBe(true);
     expect(result.isExempt).toBe(true);
     expect(result.exemptionType).toBe("government_acquisition");
   });

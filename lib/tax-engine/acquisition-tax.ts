@@ -64,7 +64,7 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
     isReligiousNonprofit: false,
   });
 
-  if (!taxableResult.isTaxable) {
+  if (!taxableResult.isSubjectToTax) {
     return buildZeroResult(input, targetDate, taxableResult.warnings, "열거주의 과세 대상 아님");
   }
 
@@ -210,7 +210,7 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
       formula: surchargeDecision.isSurcharged
         ? `과세표준 × 중과세율 ${(finalRate * 100).toFixed(1)}%`
         : basicRateDecision.rateType === "linear_interpolation"
-          ? `과세표준 × 선형보간세율 (6~9억 구간, 지방세법 §11①8)`
+          ? `과세표준 × 선형보간세율 ${(basicRateDecision.appliedRate * 100).toFixed(4).replace(/\.?0+$/, "")}% (6~9억 구간, 지방세법 §11①8)`
           : `과세표준 × ${(finalRate * 100).toFixed(1)}%`,
       amount: acquisitionTax,
       legalBasis: surchargeDecision.isSurcharged ? "지방세법 §13" : "지방세법 §11",

@@ -19,7 +19,7 @@ import type {
 // ============================================================
 
 export interface TaxableObjectResult {
-  isTaxable: boolean;
+  isSubjectToTax: boolean;
   isExempt: boolean;
   exemptionType?: AcquisitionExemptionType;
   warnings: string[];
@@ -158,7 +158,7 @@ export function determineTaxableObject(
   // Step 1: 과세 대상 8종 해당 여부
   if (!isTaxableObject(input.propertyType)) {
     return {
-      isTaxable: false,
+      isSubjectToTax: false,
       isExempt: false,
       warnings: [`${input.propertyType}은 지방세법 §7 과세 대상 물건에 해당하지 않습니다.`],
       legalBasis: ACQUISITION.TAXABLE_OBJECTS,
@@ -169,7 +169,7 @@ export function determineTaxableObject(
   const exemption = checkExemption(input);
   if (exemption.isExempt) {
     return {
-      isTaxable: true,
+      isSubjectToTax: true,
       isExempt: true,
       exemptionType: exemption.exemptionType,
       warnings,
@@ -178,7 +178,7 @@ export function determineTaxableObject(
   }
 
   return {
-    isTaxable: true,
+    isSubjectToTax: true,
     isExempt: false,
     warnings,
     legalBasis: ACQUISITION.TAXABLE_OBJECTS,

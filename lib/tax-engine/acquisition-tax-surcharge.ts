@@ -42,11 +42,11 @@ interface SurchargeCheckInput {
 /**
  * 취득세 중과세 종합 판정 (지방세법 §13, §13의2)
  *
- * 판단 순서:
- * 1. 사치성 재산 여부
- * 2. 법인 주택 중과 여부
- * 3. 다주택 중과 여부 (조정대상지역 2주택 8%, 3주택+ 12%)
- * 4. 생애최초 주택 감면 여부
+ * 판단 순서 (§13①이 §13의2보다 우선 적용 — 사치성 중과는 별도 세율 체계):
+ * 1. 사치성 재산 중과 (§13①) — 기본세율 × 5배, 가장 높은 세율로 즉시 확정
+ * 2. 법인 주택 중과 (§13의2) — 유상취득 12%, 사치성보다 낮으므로 2순위
+ * 3. 다주택 중과 (§13의2) — 조정대상지역 2주택 8%, 3주택+ 12%, 유상취득만 해당
+ * 4. 생애최초 주택 감면 (지방세특례제한법 §36의3) — 중과 미적용 시에만 가능
  */
 export function assessSurcharge(input: SurchargeCheckInput): SurchargeDecision {
   const warnings: string[] = [];
@@ -225,7 +225,8 @@ function calcFirstHomeReduction(
     reductionAmount,
     maxReductionAmount: ACQUISITION_CONST.FIRST_HOME_MAX_REDUCTION,
     warnings: [
-      "생애최초 주택 취득 감면 적용 — 취득일로부터 3년 내 처분·임대·주거 외 사용 시 추징됩니다.",
+      "생애최초 주택 취득 감면 적용 — 취득일로부터 3개월 내 전입신고 의무가 있습니다 (지방세특례제한법 §36의3②).",
+      "취득일로부터 3년 내 처분·임대·주거 외 사용 시 감면세액이 추징됩니다.",
     ],
   };
 }

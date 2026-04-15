@@ -83,7 +83,12 @@ export function getBasicRate(
 } {
   // ── 상속 ──
   if (acquisitionCause === "inheritance") {
-    const rate = propertyType === "housing" ? 0.028 : 0.04; // 주택 2.8%, 그 외 4%
+    // 주택 2.8% (§11①5), 농지 2.3% (§11①5 단서), 그 외 4% (§11①7)
+    const rate = propertyType === "housing"
+      ? 0.028
+      : propertyType === "land_farmland"
+        ? 0.023  // 농지 상속: 2.3% (§11①5 단서) — inheritance_farmland 원인과 동일 세율
+        : 0.04;
     return { rate, isLinearInterpolation: false, legalBasis: ACQUISITION.BASIC_RATE };
   }
   if (acquisitionCause === "inheritance_farmland") {
