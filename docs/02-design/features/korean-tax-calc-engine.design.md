@@ -1,6 +1,6 @@
 # Korean Tax Calc — 계산 엔진 & API 설계 (Design Document)
 
-> PDCA Design Phase | 2026-04-14
+> PDCA Design Phase | 2026-04-14 (코드 기반 업그레이드: 2026-04-15)
 > Plan Reference: `docs/01-plan/features/korean-tax-calc.plan.md`
 > DB Schema Reference: `docs/02-design/features/korean-tax-calc-db-schema.design.md`
 > Architecture: **2-Layer (Orchestrator + Pure Engine)** — Plan 원안 유지
@@ -95,37 +95,45 @@ function getRatesByCategory(
 **`TaxRateMap` 구조:**
 
 ```typescript
-type TaxType =
-  | 'transfer'
-  | 'inheritance'
-  | 'gift'
-  | 'acquisition'
-  | 'property'
-  | 'comprehensive_property';
+// lib/tax-engine/types.ts
+export const TAX_TYPES = [
+  "transfer", "inheritance", "gift",
+  "acquisition", "property", "comprehensive_property",
+] as const;
+export type TaxType = (typeof TAX_TYPES)[number];
 
-type TaxCategory =
-  | 'progressive_rate'
-  | 'deduction'
-  | 'surcharge'
-  | 'special'
-  | 'fair_market_ratio';
+export const RATE_CATEGORIES = [
+  "progressive_rate", "deduction", "surcharge",
+  "special", "fair_market_ratio",
+] as const;
+export type RateCategory = (typeof RATE_CATEGORIES)[number];
+
+// key 형식: `${tax_type}:${category}:${sub_category}`
+export type TaxRateKey = `${TaxType}:${RateCategory}:${string}`;
 
 // preloadTaxRates 반환 타입
-// key: `${tax_type}:${category}:${sub_category}`
-type TaxRateMap = Map<string, TaxRateRow>;
+export type TaxRateMap = Map<TaxRateKey, TaxRateRecord>;
 
-interface TaxRateRow {
+export interface TaxRateRecord {
   id: string;
-  tax_type: TaxType;
-  category: TaxCategory;
-  sub_category: string;        // 동일 category 내 세부 규칙 구분
-  effective_date: string;
-  rate_table: unknown;         // Zod safeParse로 타입 확정
-  deduction_rules: unknown;
-  special_rules: unknown;
-  is_active: boolean;
+  taxType: TaxType;
+  category: RateCategory;
+  subCategory: string;         // 동일 category 내 세부 규칙 구분
+  effectiveDate: string;
+  rateTable: unknown;          // Zod safeParse로 타입 확정
+  deductionRules: unknown;
+  specialRules: unknown;
+}
+
+export interface TaxBracket {
+  min: number;
+  max: number | null;
+  rate: number;
+  deduction: number;
 }
 ```
+
+> **변경 이력**: `TaxCategory` → `RateCategory`, `TaxRateRow` → `TaxRateRecord`, 필드명 camelCase 통일, `TaxRateKey` 타입 리터럴 추가, `TaxBracket` 인터페이스 추가
 
 **쿼리 전략 — Supabase RPC:**
 
@@ -169,52 +177,29 @@ const longTermHolding = getRate(rates, 'transfer', 'deduction', 'long_term_holdi
 
 ```typescript
 // ── 누진세율 계산 (공통) ──
-function applyProgressiveRate(
-  taxBase: number,
-  brackets: ProgressiveBracket[]
+function calculateProgressiveTax(
+  taxableAmount: number,
+  brackets: TaxBracket[]
 ): number
 // 과세표준에 누진세율 적용 → 산출세액 반환
-// 구현: Math.floor(taxBase × rate) - deduction (누진공제 방식)
-// ⚠️ 중요: rate × taxBase 곱셈 직후 Math.floor()로 원 미만 절사 필수
-//    (부동소수점 오차 누적 방지 — P0-2 참고)
+// 구현: applyRate(taxableAmount, bracket.rate) - bracket.deduction
+// ⚠️ 중요: rate × amount 곱셈 직후 Math.floor() 절사 (P0-2)
 
-interface ProgressiveBracket {
-  min?: number;   // 하한 (없으면 0)
-  max?: number;   // 상한 (없으면 무한)
-  rate: number;   // 세율 (소수)
-  deduction: number; // 누진공제액
-}
-
-// ── 중간 절사 규칙 (P0-2) ──
-// ⚠️ 부동소수점 안전 원칙: 소수 세율(rate)과 금액(amount)의
-//    곱셈 결과는 **즉시** Math.floor()로 원 미만을 절사한다.
-//    이를 지키지 않으면 0.38 × 100_000_000 = 37_999_999.99999... 같은
-//    부동소수점 오차가 후속 연산에 누적된다.
-//
-// 적용 대상:
-//   - applyProgressiveRate 내부: Math.floor(taxBase * rate) - deduction
-//   - 공정시장가액비율 적용: Math.floor(assessedValue * fairMarketRatio)
-//   - 세액공제율 적용: Math.floor(calculatedTax * deductionRate)
-//   - 세부담 상한 적용: Math.floor(previousTax * capRate)
-//   - 할증 적용: Math.floor(baseTax * surchargeRate)
-//
-// 구현 헬퍼:
+// ── P0-2: 세율 × 금액 헬퍼 ──
 function applyRate(amount: number, rate: number): number
 // 구현: Math.floor(amount * rate)
-// 모든 세율 곱셈에 이 헬퍼를 사용하여 일관성 보장
+// ⚠️ 모든 세율 곱셈에 이 함수를 사용. 직접 amount * rate 후 floor 금지.
+// 이유: 0.38 × 100_000_000 = 37_999_999.999... 같은 부동소수점 오차 방지
 
 // ── 절사 유틸 ──
 function truncateToThousand(amount: number): number
 // 천원 미만 절사 — 양도세·재산세·취득세·상속세·증여세 과세표준
-// 구현: Math.floor(amount / 1000) * 1000
 
 function truncateToTenThousand(amount: number): number
 // 만원 미만 절사 — 종합부동산세 과세표준
-// 구현: Math.floor(amount / 10000) * 10000
 
 function truncateToWon(amount: number): number
 // 원 미만 절사 — 산출세액 (공통)
-// 구현: Math.floor(amount)
 
 // ── 보유기간 계산 ──
 function calculateHoldingPeriod(
@@ -222,17 +207,15 @@ function calculateHoldingPeriod(
   disposalDate: Date
 ): { years: number; months: number; days: number }
 // 세법상 기산일: 취득일 다음날 ~ 양도일 (민법 초일불산입)
-// date-fns intervalToDuration 사용 후 기산일 보정 (+1일)
+// date-fns addDays/differenceInYears 조합 사용
 
 // ── 정수 안전 연산 ──
-function safeMultiplyThenDivide(
-  a: number,
-  b: number,
-  c: number
-): number
-// (a × b) / c — 곱셈 먼저 수행하여 정밀도 유지
-// Number.MAX_SAFE_INTEGER 초과 시 BigInt fallback
-// c === 0 방어: 0 반환
+function safeMultiply(a: number, b: number): number
+// 안전한 정수 곱셈 — MAX_SAFE_INTEGER 초과 시 BigInt fallback
+
+function safeMultiplyThenDivide(a: number, b: number, c: number): number
+// (a × b) ÷ c — 곱셈 먼저 수행하여 정밀도 유지
+// MAX_SAFE_INTEGER 초과 시 BigInt fallback, c === 0 → 0 반환
 
 // ── 비율 연산 (안분 공제용) ──
 function calculateProration(
@@ -240,43 +223,73 @@ function calculateProration(
   numerator: number,
   denominator: number
 ): number
-// amount × numerator / denominator
-// denominator === 0 방어: 0 반환
-// 비율 상한: min(numerator / denominator, 1.0) 적용
+// amount × (numerator / denominator), denominator === 0 → 0
+// 비율 상한: numerator >= denominator → amount 그대로 반환
+
+// ── 환산취득가액 ──
+function calculateEstimatedAcquisitionPrice(
+  transferPrice: number,
+  standardPriceAtAcquisition: number,
+  standardPriceAtTransfer: number
+): number
+// 공식: transferPrice × (standardPriceAtAcquisition ÷ standardPriceAtTransfer)
+// standardPriceAtTransfer === 0 → 0 반환
+
+// ── 중과세 유예 판단 ──
+function isSurchargeSuspended(
+  specialRules: { surcharge_suspended: boolean; suspended_types?: string[]; suspended_until?: string } | null | undefined,
+  referenceDate: Date,
+  surchargeType: string   // 'multi_house_2' | 'multi_house_3plus' 등
+): boolean
+// DB special_rules.suspended_until과 양도일을 비교하여 유예 여부 판단
+// suspended_until 없으면 false (유예 종료)
 ```
+
+> **변경 이력**: `applyProgressiveRate` → `calculateProgressiveTax` (rename), `safeMultiply`, `calculateEstimatedAcquisitionPrice`, `isSurchargeSuspended` 추가
 
 ### 2.3 에러 체계 — `lib/tax-engine/tax-errors.ts`
 
 ```typescript
-// 에러 코드 enum
-enum TaxErrorCode {
-  // 공통
-  TAX_RATE_NOT_FOUND = 'TAX_RATE_NOT_FOUND',
-  INVALID_INPUT = 'INVALID_INPUT',
-  CALC_TIMEOUT = 'CALC_TIMEOUT',
-  RATE_SCHEMA_MISMATCH = 'RATE_SCHEMA_MISMATCH',
+// lib/tax-engine/tax-errors.ts
 
-  // 양도소득세
-  REGULATED_AREA_LOOKUP_FAILED = 'REGULATED_AREA_LOOKUP_FAILED',
-
-  // 상속세
-  INVALID_HEIR_COMPOSITION = 'INVALID_HEIR_COMPOSITION',
-
-  // 종부세 연동
-  PROPERTY_TAX_CALC_FAILED = 'PROPERTY_TAX_CALC_FAILED',
-  PRORATION_DENOMINATOR_ZERO = 'PRORATION_DENOMINATOR_ZERO',
+export enum TaxErrorCode {
+  TAX_RATE_NOT_FOUND    = "TAX_RATE_NOT_FOUND",     // 세율 데이터 없음
+  INVALID_INPUT         = "INVALID_INPUT",            // 입력값 오류
+  INVALID_DATE          = "INVALID_DATE",             // 날짜 형식/범위 오류
+  CALCULATION_OVERFLOW  = "CALCULATION_OVERFLOW",     // 정수 연산 오버플로우
+  RATE_SCHEMA_MISMATCH  = "RATE_SCHEMA_MISMATCH",    // Zod 검증 실패
+  PROPERTY_TAX_REQUIRED = "PROPERTY_TAX_REQUIRED",   // 종부세 연동 시 재산세 미계산
 }
 
-class TaxCalculationError extends Error {
+export class TaxCalculationError extends Error {
   constructor(
-    public code: TaxErrorCode,
+    public readonly code: TaxErrorCode,
     message: string,
-    public details?: Record<string, unknown>
+    public readonly details?: Record<string, unknown>
   ) {
     super(message);
+    this.name = "TaxCalculationError";
+  }
+}
+
+// 세율 조회 실패 전용 서브클래스 (가장 자주 throw)
+export class TaxRateNotFoundError extends TaxCalculationError {
+  constructor(message: string) {
+    super(TaxErrorCode.TAX_RATE_NOT_FOUND, message);
+    this.name = "TaxRateNotFoundError";
+  }
+}
+
+// Zod 검증 실패 전용 서브클래스
+export class TaxRateValidationError extends TaxCalculationError {
+  constructor(message: string) {
+    super(TaxErrorCode.RATE_SCHEMA_MISMATCH, message);
+    this.name = "TaxRateValidationError";
   }
 }
 ```
+
+> **변경 이력**: `CALC_TIMEOUT`, `REGULATED_AREA_LOOKUP_FAILED`, `INVALID_HEIR_COMPOSITION`, `PROPERTY_TAX_CALC_FAILED`, `PRORATION_DENOMINATOR_ZERO` 제거 → `INVALID_DATE`, `CALCULATION_OVERFLOW`, `PROPERTY_TAX_REQUIRED` 추가. `TaxRateNotFoundError`, `TaxRateValidationError` 서브클래스 추가
 
 ### 2.4 Zod 검증 스키마 — `lib/tax-engine/schemas/rate-table.schema.ts`
 
@@ -308,6 +321,52 @@ function parseRateTable<T extends z.ZodSchema>(
   return result.data;
 }
 ```
+
+**파싱 함수 목록 (rate-table.schema.ts 실제 export):**
+
+| 함수 | 반환 타입 | 용도 |
+|------|----------|------|
+| `parseProgressiveRate(raw)` | `ProgressiveRateData` | 누진세율 구간 파싱 |
+| `parseDeductionRules(raw)` | `DeductionRulesData` | 공제 규칙 파싱 (long_term_holding / basic_deduction / self_farming) |
+| `parseSurchargeRate(raw)` | `SurchargeRateData` | 중과세율 파싱 |
+| `parseHouseCountExclusion(raw)` | `HouseCountExclusionData` | 주택 수 산정 배제 규칙 |
+| `parseRegulatedAreaHistory(raw)` | `RegulatedAreaHistoryData` | 조정대상지역 이력 |
+| `parseNonBusinessLandJudgment(raw)` | `NonBusinessLandJudgmentSchemaData` | 비사업용 토지 판정 기준 |
+| `parseLongTermRentalRuleSet(raw)` | `LongTermRentalRuleSet` | 장기임대 감면 규칙 V2 |
+| `parseNewHousingMatrix(raw)` | `NewHousingMatrixData` | 신축·미분양 감면 매트릭스 |
+
+### 2.5 법령 조문 상수 — `lib/tax-engine/legal-codes.ts`
+
+```typescript
+// ── 비사업용 토지 — 소득세법 §104조의3 + 시행령 §168조의6~14 ──
+export const NBL = {
+  MAIN:           "소득세법 §104조의3",      // 비사업용 토지의 범위
+  CRITERIA:       "시행령 §168조의6",         // 판정 3기준 (80%/5년3년/3년2년)
+  UNAVOIDABLE:    "시행령 §168조의7",         // 부득이한 사유 (질병·고령·징집 등)
+  FARMLAND:       "시행령 §168조의8",         // 농지 자경 요건 + 건물 부수 토지 배율
+  FARMLAND_DEEM:  "시행령 §168조의8 ③",      // 농지 사용의제
+  FOREST_PASTURE: "시행령 §168조의9",         // 목장용지·임야 사업용 요건
+  FOREST_SPECIAL: "시행령 §168조의10",        // 임야 특수 요건
+  VILLA_OTHER:    "시행령 §168조의11",        // 별장 부수·기타 토지
+  OTHER_LAND:     "시행령 §168조의11 ①",     // 기타토지 재산세 유형
+  BUILDING_SITE:  "시행령 §168조의8",         // 건물 부수 토지 용도지역별 배율
+  HOUSING_SITE:   "시행령 §168조의8",         // 주택 부수 토지 배율
+  URBAN_GRACE:    "시행령 §168조의14 ①",     // 도시지역 편입유예
+  UNCONDITIONAL:  "시행령 §168조의14 ③",     // 무조건 사업용 의제 (7가지 사유)
+} as const;
+
+// ── 양도소득세 — 소득세법 §89~§104 ──
+export const TRANSFER = {
+  ONE_HOUSE_EXEMPT:    "소득세법 §89 ①",     // 1세대 1주택 비과세
+  LONG_TERM_DEDUCTION: "소득세법 §95 ②",     // 장기보유특별공제
+  BASIC_DEDUCTION:     "소득세법 §103",       // 기본공제 (연 250만원)
+  TAX_RATE:            "소득세법 §104 ①",    // 양도소득세율
+  SURCHARGE:           "소득세법 §104 ②",    // 다주택 중과세율
+  LOCAL_INCOME_TAX:    "지방세법 §92",        // 지방소득세 (결정세액 × 10%)
+} as const;
+```
+
+> **사용 원칙**: 법령 조문 문자열을 코드에 직접 기입 금지. 반드시 `NBL.*` / `TRANSFER.*` 상수 사용. 세법 개정 시 이 파일만 수정하면 모든 단계의 법령 참조가 일괄 반영됨.
 
 ---
 
@@ -352,13 +411,53 @@ interface TransferTaxInput {
 
   // 기본공제
   annualBasicDeductionUsed: number; // 당해 연도 기사용 기본공제 (원)
+
+  // ── 서브엔진 입력 (선택적 — 정밀 계산 모드) ──
+
+  /**
+   * 세대 보유 주택 상세 목록 (선택)
+   * 제공 시 multi-house-surcharge 서브엔진으로 주택 수 정밀 산정.
+   * 미제공 시 householdHousingCount 사용 (하위 호환).
+   */
+  houses?: HouseInfo[];
+  presaleRights?: PresaleRight[];      // 분양권·입주권 목록
+
+  /** houses 제공 시 — 일시적 2주택 주택 ID 지정 */
+  multiHouseTemporaryTwoHouse?: {
+    previousHouseId: string;
+    newHouseId: string;
+  };
+  marriageMerge?: { marriageDate: Date };       // 혼인합가 정보
+  parentalCareMerge?: { mergeDate: Date };      // 동거봉양 합가 정보
+  sellingHouseId?: string;                      // 양도 주택 ID (houses 제공 시)
+
+  /**
+   * 비사업용 토지 상세 정보 (선택)
+   * 제공 시 non-business-land 서브엔진으로 정밀 판정.
+   * 미제공 시 isNonBusinessLand 플래그 사용 (하위 호환).
+   */
+  nonBusinessLandDetails?: NonBusinessLandInput;
+
+  /**
+   * 장기임대주택 감면 상세 정보 (선택)
+   * 제공 시 rental-housing-reduction 서브엔진으로 정밀 감면 판정.
+   * 미제공 시 reductions[] 배열의 long_term_rental 단순 처리 (하위 호환).
+   */
+  rentalReductionDetails?: RentalReductionInput;
+
+  /**
+   * 신축·미분양주택 감면 상세 정보 (선택)
+   * 제공 시 new-housing-reduction 서브엔진으로 조문 매트릭스 기반 감면 판정.
+   * 미제공 시 reductions[] 배열의 new_housing/unsold_housing 단순 처리 (하위 호환).
+   */
+  newHousingDetails?: NewHousingReductionInput;
 }
 
 type TransferReduction =
   | { type: 'self_farming'; farmingYears: number }
   | { type: 'long_term_rental'; rentalYears: number; rentIncreaseRate: number }
   | { type: 'new_housing'; region: 'metropolitan' | 'non_metropolitan' }
-  | { type: 'unsold_housing'; region: 'non_metropolitan' };
+  | { type: 'unsold_housing'; region: 'metropolitan' | 'non_metropolitan' };  // ← 수도권 포함으로 확장
 
 // ── 출력 ──
 interface TransferTaxResult {
@@ -383,12 +482,12 @@ interface TransferTaxResult {
   calculatedTax: number;             // 산출세액
 
   // 중과세
-  surchargeType?: 'multi_house_2' | 'multi_house_3plus' | 'non_business_land' | 'unregistered';
+  surchargeType?: string;            // 'multi_house_2' | 'multi_house_3plus' | 'non_business_land' | 'unregistered'
   surchargeRate?: number;            // 추가 세율
   isSurchargeSuspended: boolean;     // 중과세 유예 여부
 
   // 감면
-  reductionAmount: number;           // 감면세액
+  reductionAmount: number;           // 총 감면세액
   reductionType?: string;
 
   // 최종
@@ -398,12 +497,34 @@ interface TransferTaxResult {
 
   // 계산 과정 추적
   steps: CalculationStep[];
+
+  // ── 서브엔진 상세 결과 (선택적 — 해당 입력 제공 시만 포함) ──
+
+  /** 다주택 중과세 상세 (houses[] 제공 시) — UI 제외주택·배제사유 표시용 */
+  multiHouseSurchargeDetail?: {
+    effectiveHouseCount: number;     // 중과 적용 주택 수
+    rawHouseCount: number;           // 산정 전 총 주택 수
+    excludedHouses: ExcludedHouse[]; // 배제된 주택 목록
+    exclusionReasons: ExclusionReason[];
+    isRegulatedAtTransfer: boolean;
+    warnings: string[];
+  };
+
+  /** 비사업용 토지 판정 상세 (nonBusinessLandDetails 제공 시) */
+  nonBusinessLandJudgmentDetail?: NonBusinessLandJudgment;
+
+  /** 장기임대 감면 상세 (rentalReductionDetails 제공 시) */
+  rentalReductionDetail?: RentalReductionResult;
+
+  /** 신축·미분양 감면 상세 (newHousingDetails 제공 시) */
+  newHousingReductionDetail?: NewHousingReductionResult;
 }
 
 interface CalculationStep {
-  label: string;       // 예: '양도차익 계산'
-  formula: string;     // 예: '양도가액 - 취득가액 - 필요경비'
-  amount: number;      // 결과 금액
+  label: string;        // 예: '양도차익 계산'
+  formula: string;      // 예: '양도가액 - 취득가액 - 필요경비'
+  amount: number;       // 결과 금액
+  legalBasis?: string;  // 법적 근거 조문 (예: "소득세법 §95 ②") — 결과 시각화용
 }
 ```
 
@@ -440,11 +561,274 @@ calculateTransferTax(input, rates) → TransferTaxResult
    └─ 일반: 누진세율 (6~45%)
 
 8. 감면 적용 (조세특례제한법)
+   ├─ rentalReductionDetails 제공 → calculateRentalReduction() 호출 (정밀 감면)
+   ├─ newHousingDetails 제공 → determineNewHousingReduction() 호출 (조문 매트릭스)
+   └─ 복수 감면 해당 시 납세자 유리 1건 선택 (조특법 §127 ②)
 
 9. 결정세액 = truncateToWon(산출세액 - 감면세액)
 10. 지방소득세 = 결정세액 × 10%
 11. 총 납부세액 = 결정세액 + 지방소득세
 ```
+
+---
+
+### 3.1-A 서브엔진: 다주택 중과세 — `lib/tax-engine/multi-house-surcharge.ts`
+
+**역할**: 세대 보유 주택 목록(HouseInfo[])을 받아 소득세법 시행령 §167-3·§167-10 기준으로 주택 수를 정밀 산정하고 중과세 적용 여부를 판정.
+
+```typescript
+// ── 주요 타입 ──
+
+/** 장기임대주택 유형 (소령 §167-3 ① 2호 가목~자목) */
+type RentalHousingType = "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I";
+//  A: 민간매입임대 5년 (가목)
+//  B: 2003.10.29 이전 기존 등록 (나목)
+//  C: 민간건설임대 5년 (다목)
+//  D: 미분양 매입임대 (라목)
+//  E: 장기일반 매입임대 10년 (마목)
+//  F: 장기일반 건설임대 10년 (바목)
+//  G: 자진·자동 말소 후 양도 (사목)
+//  H: 단기 매입임대 6년 (2025.6.4 이후 신설, 아목)
+//  I: 단기 건설임대 6년 (2025.6.4 이후 신설, 자목)
+
+interface HouseInfo {
+  id: string;
+  acquisitionDate: Date;
+  officialPrice: number;             // 취득시 공시가격
+  transferOfficialPrice?: number;    // 양도시 공시가격 (VALUE 지역 가액기준 판정)
+  region: "capital" | "non_capital"; // 수도권 여부 (legacy 폴백)
+  regionCriteria?: "REGION" | "VALUE"; // 지역기준/가액기준 명시적 구분
+  isCapitalArea?: boolean;           // 수도권 여부 (장기임대 가액기준용)
+  isInherited: boolean;
+  inheritedDate?: Date;
+  isLongTermRental: boolean;
+  rentalType?: RentalHousingType;    // 유형별 세부 요건 검증
+  // ... (임대 등록일, 임대 기간, 면적, 임대료 증가율 등 상세 필드)
+}
+
+interface MultiHouseSurchargeInput {
+  houses: HouseInfo[];
+  presaleRights?: PresaleRight[];
+  transferDate: Date;
+  isRegulatedArea: boolean;
+  temporaryTwoHouse?: { previousHouseId: string; newHouseId: string };
+  marriageMerge?: { marriageDate: Date };
+  parentalCareMerge?: { mergeDate: Date };
+  sellingHouseId?: string;
+  surchargeSpecialRules?: SurchargeSpecialRulesData;
+}
+
+interface MultiHouseSurchargeResult {
+  isSurcharge: boolean;
+  surchargeType?: "multi_house_2" | "multi_house_3plus";
+  surchargeRate: number;             // 추가 세율 (0.2 = 20%p 등)
+  effectiveHouseCount: number;       // 중과 적용 주택 수
+  rawHouseCount: number;
+  excludedHouses: ExcludedHouse[];   // 산정 제외 주택 목록
+  exclusionReasons: ExclusionReason[];
+  isRegulatedAtTransfer: boolean;
+  isSurchargeSuspended: boolean;     // 유예 여부
+  warnings: string[];
+}
+
+// ── 메인 함수 ──
+function determineMultiHouseSurcharge(
+  input: MultiHouseSurchargeInput
+): MultiHouseSurchargeResult
+```
+
+**판정 흐름:**
+```
+1. 주택 수 산정 (소령 §167-3)
+   ├─ 전체 HouseInfo 순회
+   ├─ regionCriteria === "VALUE" + 양도시 공시가 3억 이하 → 제외
+   ├─ 장기임대 유형별 세부 요건 검증 (가목~자목) → 통과 시 제외
+   ├─ 상속주택 5년 내 → 제외
+   ├─ 혼인합가·동거봉양 5년 내 → 제외
+   └─ 일시적 2주택 → previousHouse 제외
+
+2. 중과 판정
+   ├─ 양도일 기준 조정대상지역 여부 확인
+   ├─ effectiveHouseCount >= 3 → 3주택+ 중과 (20%p 추가)
+   ├─ effectiveHouseCount == 2 → 2주택 중과 (10%p 추가)
+   └─ isSurchargeSuspended() 으로 유예 여부 최종 확인
+```
+
+---
+
+### 3.1-B 서브엔진: 비사업용 토지 판정 — `lib/tax-engine/non-business-land.ts`
+
+**역할**: 토지 속성과 보유·이용 이력을 받아 소득세법 §104조의3 + 시행령 §168조의6~14 기준으로 비사업용 토지 여부를 판정. 판정 단계별 상태(PASS/FAIL/SKIP)를 반환하여 UI 시각화에 활용.
+
+```typescript
+type StepStatus = "PASS" | "FAIL" | "SKIP" | "NOT_APPLICABLE";
+
+interface JudgmentStep {
+  id: string;           // 예: "unconditional_exemption", "criteria_80pct"
+  label: string;        // 예: "① 무조건 사업용 의제"
+  status: StepStatus;
+  detail: string;
+  legalBasis?: string;  // 예: "시행령 §168조의14 ③"
+}
+
+type LandType =
+  | "paddy" | "field" | "orchard" | "forest" | "pasture"
+  | "vacant_lot" | "building_site" | "housing_site"
+  | "villa_land" | "other_land" | "miscellaneous" | "other";
+  // "farmland" 레거시 타입(paddy/field/orchard 통합)도 허용
+
+type ZoneType =
+  | "exclusive_residential" | "general_residential" | "semi_residential"
+  | "residential" // 레거시 통합형
+  | "commercial" | "industrial" | "green" | "management"
+  | "agriculture_forest" | "natural_env" | "unplanned" | "undesignated";
+
+interface NonBusinessLandInput {
+  landType: LandType;
+  zoneType: ZoneType;
+  acquisitionDate: Date;
+  transferDate: Date;
+  // 자경·임대·이용 이력, 유예기간, 부득이한 사유 등 상세 필드
+}
+
+interface NonBusinessLandJudgment {
+  isNonBusinessLand: boolean;        // 최종 판정 (true = 비사업용)
+  steps: JudgmentStep[];             // 판정 단계별 상세
+  appliedCriteria?: string;          // 충족된 판정 기준
+  legalBasis: string;                // 메인 근거 조문
+}
+
+function judgeNonBusinessLand(
+  input: NonBusinessLandInput,
+  judgmentRules?: NonBusinessLandJudgmentSchemaData
+): NonBusinessLandJudgment
+```
+
+**판정 흐름 (법령 §168조의6):**
+```
+1. 무조건 사업용 의제 (시행령 §168조의14 ③) → PASS 시 종료
+2. 지목/유형별 분기 (농지/임야/목장/주택부수/건물부수/기타)
+3. 3가지 기준 중 하나 충족 시 사업용 판정
+   ├─ 기준1: 보유기간 80% 이상 사업용
+   ├─ 기준2: 5년 내 3년 이상 사업용
+   └─ 기준3: 3년 내 2년 이상 사업용
+4. 유예기간(상속·법령제한·매매계약·신축 등) 산입하여 재산정
+```
+
+---
+
+### 3.1-C 서브엔진: 장기임대 감면 — `lib/tax-engine/rental-housing-reduction.ts`
+
+**역할**: 조세특례제한법 §97·§97의3·§97의4·§97의5 기반 장기임대주택 감면 판정. 등록요건·임대기간·임대료 증액제한을 검증하고 감면율을 산출.
+
+```typescript
+type RentalHousingType =
+  | "public_construction"    // 공공건설임대 §97
+  | "long_term_private"      // 장기일반민간임대 §97의3
+  | "public_support_private" // 공공지원민간임대 §97의4
+  | "public_purchase";       // 공공매입임대 §97의5
+
+type ReductionLawVersion =
+  | "pre_2018_09_14"   // 구법
+  | "post_2018_09_14"  // 1차 개정 (2018.9.14 ~ 2020.7.10)
+  | "post_2020_07_11"  // 2차 개정 (~ 2020.8.17)
+  | "post_2020_08_18"; // 3차 개정 (2020.8.18 이후)
+
+interface RentalReductionInput {
+  isRegisteredLandlord: boolean;     // 지자체 임대사업자 등록 여부
+  isTaxRegistered: boolean;          // 세무서 사업자 등록 여부
+  registrationDate: Date;
+  rentalHousingType: RentalHousingType;
+  propertyType: "apartment" | "non_apartment";
+  region: "capital" | "non_capital";
+  officialPriceAtStart: number;      // 임대개시일 당시 기준시가
+  rentalStartDate: Date;
+  transferDate: Date;
+  vacancyPeriods: VacancyPeriod[];   // 공실 기간 (임대 기간 산정에서 제외)
+  rentHistory: RentHistory[];        // 임대료 이력 (5% 증액 제한 검증)
+  calculatedTax: number;             // transfer-tax 엔진에서 전달
+}
+
+interface RentalReductionResult {
+  isEligible: boolean;
+  ineligibleReasons: IneligibleReason[];
+  reductionType: RentalHousingType;
+  applicableLawVersion: ReductionLawVersion;
+  mandatoryPeriodYears: number;      // 의무임대기간
+  effectiveRentalYears: number;      // 실제 임대기간 (공실 제외)
+  reductionRate: number;             // 감면율 (0~1)
+  reductionAmount: number;           // 감면세액
+  longTermDeductionOverride?: number; // 장기보유공제율 override (§97의3)
+  warnings: string[];
+}
+
+function calculateRentalReduction(
+  input: RentalReductionInput,
+  ruleSet?: LongTermRentalRuleSet
+): RentalReductionResult
+
+// transfer-tax.ts에서 장기보유공제율 override 취득
+function getLongTermDeductionOverride(result: RentalReductionResult): number | undefined
+```
+
+---
+
+### 3.1-D 서브엔진: 신축·미분양 감면 — `lib/tax-engine/new-housing-reduction.ts`
+
+**역할**: 조세특례제한법 §98의2·§99①~⑥ 기반 신축·미분양주택 감면 판정. 취득 시기별 조문 매트릭스로 적용 조문·감면율·5년 안분 계산.
+
+```typescript
+type ReductionScope = "tax_amount" | "capital_gain";
+
+type NewHousingRegion =
+  | "nationwide" | "metropolitan" | "non_metropolitan"
+  | "outside_overconcentration"; // 수도권 과밀억제권역 외
+
+interface NewHousingReductionInput {
+  acquisitionDate: Date;
+  transferDate: Date;
+  region: NewHousingRegion;
+  acquisitionPrice: number;
+  exclusiveAreaSquareMeters: number; // 85㎡ 국민주택규모 기준
+  isFirstSale: boolean;             // 최초 분양(사업주체로부터 직접 취득)
+  hasUnsoldCertificate: boolean;    // 미분양 확인서 보유
+  totalCapitalGain: number;         // capital_gain 방식 감면 계산용
+  calculatedTax: number;            // tax_amount 방식 감면 계산용
+}
+
+interface NewHousingReductionResult {
+  isEligible: boolean;
+  matchedArticleCode?: string;      // 예: "99-1", "99-5"
+  matchedArticle?: string;          // 예: "§99 ①"
+  reductionScope?: ReductionScope;
+  reductionRate: number;
+  reductionAmount: number;
+  isWithinFiveYearWindow: boolean;  // 5년 이내 양도 여부
+  reducibleGain: number;            // 감면 대상 양도차익 (capital_gain 방식)
+  fiveYearRatio: number;            // 5년 안분 비율
+  isExcludedFromHouseCount: boolean;
+  isExcludedFromMultiHouseSurcharge: boolean;
+  warnings: string[];
+}
+
+function determineNewHousingReduction(
+  input: NewHousingReductionInput,
+  matrix?: NewHousingMatrixData
+): NewHousingReductionResult
+```
+
+**조문 매트릭스 취득 시기:**
+| 조문 | 취득 기간 | 감면율 |
+|------|----------|--------|
+| §98의2 | 1998.5.22~2001.12.31 | 과세특례 |
+| §99 ① | 2001.5.23~2003.6.30 | 100% |
+| §99 ② | 2009.2.12~2010.2.11 | 신축100%/미분양60% |
+| §99 ③ | 2010.2.12~2011.4.30 | 60% |
+| §99 ④ | 2012.9.24~2013.4.1 | 100% |
+| §99 ⑤ | 2013.4.1~2013.12.31 | 지역별 차등 |
+| §99 ⑥ | 2014.1.1~2014.12.31 | 지역별 차등 |
+
+---
 
 ### 3.2 취득세 — `lib/tax-engine/acquisition-tax.ts`
 
