@@ -161,10 +161,10 @@ async function callAcquisitionTaxAPI(form: FormState): Promise<AcquisitionTaxRes
   });
 
   const json = await res.json();
-  if (!res.ok || !json.success) {
+  if (!res.ok || !json.data) {
     throw new Error((json.error as string) ?? "계산 중 오류가 발생했습니다.");
   }
-  return json.result as AcquisitionTaxResult;
+  return json.data as AcquisitionTaxResult;
 }
 
 // ============================================================

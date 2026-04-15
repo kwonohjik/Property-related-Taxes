@@ -217,9 +217,9 @@ function calcRelatedPartyTaxBase(
     };
   }
 
-  // 정상가격 범위: 시가의 70%~130%
+  // 정상가격 범위: 시가의 70%~130% (원 미만 버림으로 대칭 처리)
   const lowerBound = Math.floor(marketBase * ACQUISITION_CONST.RELATED_PARTY_MIN_RATIO);
-  const upperBound = Math.ceil(marketBase * ACQUISITION_CONST.RELATED_PARTY_MAX_RATIO);
+  const upperBound = Math.floor(marketBase * ACQUISITION_CONST.RELATED_PARTY_MAX_RATIO);
 
   if (input.reportedPrice >= lowerBound && input.reportedPrice <= upperBound) {
     // 정상 거래 → 신고가 사용
@@ -321,6 +321,13 @@ function calcBurdenedGiftTaxBase(
   const onerousTaxBase = truncateToThousand(Math.min(encumbrance, totalValue));
   // 무상 취득 부분 (초과분) — 증여세율 적용
   const gratuitousTaxBase = truncateToThousand(Math.max(0, totalValue - encumbrance));
+
+  // 채무액이 취득가액 초과: 과세 실무상 채무액을 취득가액으로 간주 (경고 표시)
+  if (encumbrance > totalValue && totalValue > 0) {
+    warnings.push(
+      `채무액(${encumbrance.toLocaleString()}원)이 취득가액(${totalValue.toLocaleString()}원)을 초과합니다. 부담부증여 유상 부분을 취득가액 전액으로 처리합니다.`
+    );
+  }
 
   warnings.push(
     `부담부증여: 유상 부분(채무 ${encumbrance.toLocaleString()}원) → 매매세율 / 무상 부분(${Math.max(0, totalValue - encumbrance).toLocaleString()}원) → 증여세율`

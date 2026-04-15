@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
   // 1. Rate Limiting
   // ─────────────────────────────────────────────
   const ip = getClientIp(req);
-  const rateLimitResult = await checkRateLimit(ip);
+  const rateLimitResult = await checkRateLimit(`acquisition:${ip}`, { limit: 30, windowMs: 60_000 });
   if (!rateLimitResult.allowed) {
     return NextResponse.json(
       { error: "요청이 너무 많습니다. 잠시 후 다시 시도하세요." },
@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
   // ─────────────────────────────────────────────
   try {
     const result = calcAcquisitionTax(input);
-    return NextResponse.json({ success: true, result });
+    return NextResponse.json({ data: result });
   } catch (err) {
     if (err instanceof TaxCalculationError) {
       return NextResponse.json(

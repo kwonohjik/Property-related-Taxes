@@ -28,6 +28,7 @@ import {
   linearInterpolationRate,
 } from "./acquisition-tax-rate";
 import { assessSurcharge, resolveFinalRate } from "./acquisition-tax-surcharge";
+import { ACQUISITION_CONST } from "./legal-codes";
 import type {
   AcquisitionTaxInput,
   AcquisitionTaxResult,
@@ -173,21 +174,6 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
     acquisitionTax = Math.floor(taxBase * finalRate);
   }
 
-  // 생애최초 감면 금액 계산 시 취득세 본세 전달
-  const surchargeWithTax = assessSurcharge({
-    propertyType: input.propertyType,
-    acquisitionCause: input.acquisitionCause,
-    acquisitionValue: taxBase,
-    acquiredBy: input.acquiredBy,
-    houseCountAfter: input.houseCountAfter,
-    isRegulatedArea: input.isRegulatedArea,
-    isLuxuryProperty: input.isLuxuryProperty,
-    basicRate: basicRateDecision.appliedRate,
-    isFirstHome: input.isFirstHome,
-    isMetropolitan: input.isMetropolitan,
-    acquisitionTax,
-  });
-
   // ── 부가세 계산 ──
   const additional = calcTaxWithAdditional(
     taxBase,
@@ -200,7 +186,11 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
   const totalTax = acquisitionTax + additional.ruralSpecialTax + additional.localEducationTax;
 
   // ── Step 8: 감면 적용 ──
-  const reductionAmount = surchargeWithTax.firstHomeReduction?.reductionAmount ?? 0;
+  // 첫 번째 assessSurcharge의 isEligible 판정을 재사용, 취득세 본세 기준 감면액만 새로 계산
+  const firstHomeInfo = surchargeDecision.firstHomeReduction;
+  const reductionAmount = firstHomeInfo?.isEligible
+    ? Math.min(acquisitionTax, ACQUISITION_CONST.FIRST_HOME_MAX_REDUCTION)
+    : 0;
   const totalTaxAfterReduction = Math.max(0, totalTax - reductionAmount);
 
   return {
@@ -264,6 +254,10 @@ function buildZeroResult(
     warnings.push(reason);
   }
 
+  // 취득일: 잔금지급일 > 등기일 > 계약일 > 오늘 순으로 사용
+  const acquisitionDate =
+    input.balancePaymentDate ?? input.registrationDate ?? input.contractDate ?? today;
+
   return {
     propertyType: input.propertyType,
     acquisitionCause: input.acquisitionCause,
@@ -284,8 +278,8 @@ function buildZeroResult(
     reductionAmount: 0,
     totalTaxAfterReduction: 0,
 
-    acquisitionDate: today,
-    filingDeadline: addDays(today, 60),
+    acquisitionDate,
+    filingDeadline: addDays(acquisitionDate, 60),
 
     isExempt: !!exemptionType,
     exemptionType,
