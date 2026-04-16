@@ -28,7 +28,7 @@ import {
   linearInterpolationRate,
 } from "./acquisition-tax-rate";
 import { assessSurcharge, resolveFinalRate } from "./acquisition-tax-surcharge";
-import { ACQUISITION_CONST } from "./legal-codes";
+import { ACQUISITION, ACQUISITION_CONST } from "./legal-codes";
 import type {
   AcquisitionTaxInput,
   AcquisitionTaxResult,
@@ -203,7 +203,7 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
         ? "신고가액 (천원 미만 절사)"
         : "시가표준액 (천원 미만 절사)",
       amount: taxBase,
-      legalBasis: "지방세법 §10",
+      legalBasis: ACQUISITION.TAX_BASE,
     },
     {
       label: "취득세 본세",
@@ -213,15 +213,15 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
           ? `과세표준 × 선형보간세율 ${(basicRateDecision.appliedRate * 100).toFixed(4).replace(/\.?0+$/, "")}% (6~9억 구간, 지방세법 §11①8)`
           : `과세표준 × ${(finalRate * 100).toFixed(1)}%`,
       amount: acquisitionTax,
-      legalBasis: surchargeDecision.isSurcharged ? "지방세법 §13" : "지방세법 §11",
+      legalBasis: surchargeDecision.isSurcharged ? ACQUISITION.SURCHARGE : ACQUISITION.BASIC_RATE,
     },
   );
   if (additional.ruralSpecialTax > 0) {
     steps.push({
       label: "농어촌특별세",
-      formula: "(적용세율 - 표준세율 2%) × 과세표준 × 10% (농어촌특별세법 §4①)",
+      formula: `(적용세율 - 표준세율 2%) × 과세표준 × 10% (${ACQUISITION.RURAL_SPECIAL_TAX})`,
       amount: additional.ruralSpecialTax,
-      legalBasis: "농어촌특별세법 §5①",
+      legalBasis: ACQUISITION.RURAL_SPECIAL_TAX_RATE_BASIS,
     });
   }
   if (additional.localEducationTax > 0) {
@@ -229,7 +229,7 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
       label: "지방교육세",
       formula: "과세표준 × 표준세율 2% × 20% = 과세표준 × 0.4%",
       amount: additional.localEducationTax,
-      legalBasis: "지방세법 §151",
+      legalBasis: ACQUISITION.LOCAL_EDUCATION_TAX,
     });
   }
   steps.push({
@@ -242,7 +242,7 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
       label: "생애최초 감면",
       formula: `취득세 본세 × 100% (한도 ${ACQUISITION_CONST.FIRST_HOME_MAX_REDUCTION.toLocaleString()}원)`,
       amount: -reductionAmount,
-      legalBasis: "지방세특례제한법 §36의3",
+      legalBasis: ACQUISITION.FIRST_HOME_REDUCTION,
     });
     steps.push({
       label: "감면 후 최종 납부세액",

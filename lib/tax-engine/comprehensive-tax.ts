@@ -400,9 +400,9 @@ export function applyTaxCap(
 ): TaxCapResult | undefined {
   if (previousYearTotalTax === undefined) return undefined;
 
-  const capRate = isMultiHouseInAdjustedArea
-    ? COMPREHENSIVE_CONST.TAX_CAP_RATE_MULTI_HOUSE
-    : COMPREHENSIVE_CONST.TAX_CAP_RATE_GENERAL;
+  // 종합부동산세법 §10: 현행 150% 단일 상한 (구 다주택 300% 조항 삭제됨)
+  void isMultiHouseInAdjustedArea; // 현행법상 구분 불필요, 파라미터 호환성 유지
+  const capRate = COMPREHENSIVE_CONST.TAX_CAP_RATE_GENERAL;
 
   const capAmount = Math.floor(previousYearTotalTax * capRate);
 

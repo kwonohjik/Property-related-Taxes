@@ -185,7 +185,7 @@ export function calcInheritanceTax(
   allLaws.add(INH.TAX_RATE);
 
   allBreakdown.push({
-    label: "산출세액 (§26 누진세율)",
+    label: `산출세액 (${INH.TAX_RATE} 누진세율)`,
     amount: computedTax,
     lawRef: INH.TAX_RATE,
   });

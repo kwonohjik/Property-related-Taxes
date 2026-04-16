@@ -61,10 +61,10 @@ export function assessSurcharge(input: SurchargeCheckInput): SurchargeDecision {
     return {
       isSurcharged: true,
       surchargeRate: luxuryRate,
-      surchargeReason: "사치성 재산 중과 (지방세법 §13①)",
+      surchargeReason: `사치성 재산 중과 (${ACQUISITION.LUXURY_SURCHARGE_PROVISION})`,
       exceptions,
       warnings: [
-        `사치성 재산(골프장·별장·고급주택·고급오락장·고급선박)으로 기본세율(${((input.basicRate ?? ACQUISITION_CONST.LUXURY_BASE_RATE) * 100).toFixed(1)}%) × 5배 = ${(luxuryRate * 100).toFixed(1)}% 중과세율 적용 (지방세법 §13①)`,
+        `사치성 재산(골프장·별장·고급주택·고급오락장·고급선박)으로 기본세율(${((input.basicRate ?? ACQUISITION_CONST.LUXURY_BASE_RATE) * 100).toFixed(1)}%) × 5배 = ${(luxuryRate * 100).toFixed(1)}% 중과세율 적용 (${ACQUISITION.LUXURY_SURCHARGE_PROVISION})`,
       ],
       legalBasis: [ACQUISITION.SURCHARGE],
     };
@@ -80,7 +80,7 @@ export function assessSurcharge(input: SurchargeCheckInput): SurchargeDecision {
       return {
         isSurcharged: true,
         surchargeRate: ACQUISITION_CONST.SURCHARGE_CORPORATE,
-        surchargeReason: "법인 주택 유상취득 중과 (지방세법 §13의2)",
+        surchargeReason: `법인 주택 유상취득 중과 (${ACQUISITION.CORP_SURCHARGE})`,
         exceptions,
         warnings: ["법인의 주택 유상취득에는 12% 중과세율이 적용됩니다."],
         legalBasis: [ACQUISITION.CORP_SURCHARGE],
@@ -102,7 +102,7 @@ export function assessSurcharge(input: SurchargeCheckInput): SurchargeDecision {
       return {
         isSurcharged: true,
         surchargeRate: ACQUISITION_CONST.SURCHARGE_3HOUSE_PLUS,
-        surchargeReason: `조정대상지역 내 ${houseCount}주택 취득 중과 (지방세법 §13의2)`,
+        surchargeReason: `조정대상지역 내 ${houseCount}주택 취득 중과 (${ACQUISITION.CORP_SURCHARGE})`,
         firstHomeReduction: calcFirstHomeReduction(input, ACQUISITION_CONST.SURCHARGE_3HOUSE_PLUS),
         exceptions,
         warnings: [
@@ -117,7 +117,7 @@ export function assessSurcharge(input: SurchargeCheckInput): SurchargeDecision {
       return {
         isSurcharged: true,
         surchargeRate: ACQUISITION_CONST.SURCHARGE_2HOUSE,
-        surchargeReason: "조정대상지역 내 2주택 취득 중과 (지방세법 §13의2)",
+        surchargeReason: `조정대상지역 내 2주택 취득 중과 (${ACQUISITION.CORP_SURCHARGE})`,
         firstHomeReduction: calcFirstHomeReduction(input, ACQUISITION_CONST.SURCHARGE_2HOUSE),
         exceptions,
         warnings: [
@@ -188,10 +188,8 @@ function calcFirstHomeReduction(
 
   if (!isOnerousHousing) return undefined;
 
-  // 취득가액 한도 확인
-  const priceLimit = input.isMetropolitan
-    ? ACQUISITION_CONST.FIRST_HOME_METRO_LIMIT      // 수도권: 4억
-    : ACQUISITION_CONST.FIRST_HOME_NON_METRO_LIMIT; // 비수도권: 3억
+  // 취득가액 한도 확인 (지방세특례제한법 §36의3①: 12억원 이하 단일 기준, 수도권/비수도권 구분 없음)
+  const priceLimit = ACQUISITION_CONST.FIRST_HOME_PRICE_LIMIT; // 12억
 
   if (input.acquisitionValue > priceLimit) {
     return {
@@ -199,7 +197,7 @@ function calcFirstHomeReduction(
       reductionAmount: 0,
       maxReductionAmount: ACQUISITION_CONST.FIRST_HOME_MAX_REDUCTION,
       warnings: [
-        `생애최초 감면 불가 — 취득가액(${input.acquisitionValue.toLocaleString()}원)이 ${input.isMetropolitan ? "수도권" : "비수도권"} 한도(${priceLimit.toLocaleString()}원) 초과`,
+        `생애최초 감면 불가 — 취득가액(${input.acquisitionValue.toLocaleString()}원)이 한도(${priceLimit.toLocaleString()}원) 초과`,
       ],
     };
   }
@@ -211,7 +209,7 @@ function calcFirstHomeReduction(
       reductionAmount: 0,
       maxReductionAmount: ACQUISITION_CONST.FIRST_HOME_MAX_REDUCTION,
       warnings: [
-        "생애최초 감면 불가 — 중과세율 적용 대상 (지방세특례제한법 §36의3 제외 사유)",
+        `생애최초 감면 불가 — 중과세율 적용 대상 (${ACQUISITION.FIRST_HOME_REDUCTION} 제외 사유)`,
       ],
     };
   }
@@ -225,7 +223,7 @@ function calcFirstHomeReduction(
     reductionAmount,
     maxReductionAmount: ACQUISITION_CONST.FIRST_HOME_MAX_REDUCTION,
     warnings: [
-      "생애최초 주택 취득 감면 적용 — 취득일로부터 3개월 내 전입신고 의무가 있습니다 (지방세특례제한법 §36의3②).",
+      `생애최초 주택 취득 감면 적용 — 취득일로부터 3개월 내 전입신고 의무가 있습니다 (${ACQUISITION.FIRST_HOME_REDUCTION}②).`,
       "취득일로부터 3년 내 처분·임대·주거 외 사용 시 감면세액이 추징됩니다.",
     ],
   };

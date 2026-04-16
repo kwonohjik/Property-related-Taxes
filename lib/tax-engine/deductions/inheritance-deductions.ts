@@ -355,9 +355,9 @@ export function calcInheritanceDeductions(
   // breakdown 구성
   const breakdown: CalculationStep[] = [
     ...(chosenMethod === "lump_sum"
-      ? [{ label: "일괄공제 (§21)", amount: LUMP_SUM_DEDUCTION, lawRef: INH.LUMP_SUM }]
+      ? [{ label: `일괄공제 (${INH.LUMP_SUM})`, amount: LUMP_SUM_DEDUCTION, lawRef: INH.LUMP_SUM }]
       : [
-          { label: "기초공제 (§18)", amount: basicDeduction, lawRef: INH.BASIC_DEDUCTION },
+          { label: `기초공제 (${INH.BASIC_DEDUCTION})`, amount: basicDeduction, lawRef: INH.BASIC_DEDUCTION },
           ...personalResult.breakdown.slice(0, -1), // 합계 행 제외
         ]),
     ...spouseResult.breakdown,

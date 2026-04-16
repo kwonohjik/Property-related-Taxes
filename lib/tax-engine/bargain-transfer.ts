@@ -141,7 +141,7 @@ export function detectBargainTransfer(
     ...(nonRelatedDeduction > 0
       ? [
           {
-            label: "비특수관계인 공제 — min(시가×30%, 3억) (§35 ②)",
+            label: `비특수관계인 공제 — min(시가×30%, 3억) (${GIFT.BARGAIN_TRANSFER} ②)`,
             amount: -nonRelatedDeduction,
             lawRef: GIFT.BARGAIN_TRANSFER,
           },

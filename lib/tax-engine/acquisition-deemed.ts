@@ -61,7 +61,7 @@ export function assessMajorShareholder(
       newShareRatio,
       taxableRatio: 0,
       legalBasis: ACQUISITION.DEEMED_ACQUISITION,
-      warnings: ["상장법인 주식 취득은 과점주주 간주취득 과세 대상에서 제외됩니다 (지방세법 §9)."],
+      warnings: [`상장법인 주식 취득은 과점주주 간주취득 과세 대상에서 제외됩니다 (${ACQUISITION.NON_TAXABLE}).`],
     };
   }
 

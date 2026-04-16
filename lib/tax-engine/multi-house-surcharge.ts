@@ -12,6 +12,7 @@
 
 import { addYears, differenceInYears } from "date-fns";
 import { isSurchargeSuspended } from "./tax-utils";
+import { MULTI_HOUSE } from "./legal-codes";
 import type { SurchargeSpecialRulesData } from "./schemas/rate-table.schema";
 
 // ============================================================
@@ -1010,7 +1011,7 @@ export function countEffectiveHouses(
       excluded.push({
         houseId: house.id,
         reason: "unsold_housing",
-        detail: "미분양주택 (조특법 §99-3)",
+        detail: `미분양주택 (${MULTI_HOUSE.UNSOLD_HOUSING_EXEMPTION})`,
       });
       continue;
     }
@@ -1044,7 +1045,7 @@ export function countEffectiveHouses(
       excluded.push({
         houseId: house.id,
         reason: "population_decline_second_home",
-        detail: "인구감소지역 세컨드홈 특례 (소령 §167-3 ① 2호의2) — 주택 수 산정 배제",
+        detail: `인구감소지역 세컨드홈 특례 (${MULTI_HOUSE.SECOND_HOME_DEPOPULATION}) — 주택 수 산정 배제`,
       });
       continue;
     }
@@ -1376,7 +1377,7 @@ function determineSurchargeExclusion(
     if (hasUnavoidableHouse) {
       exclusionReasons.push({
         type: "unavoidable_reason_two_house",
-        detail: "취학·근무상 형편·질병 요양 등 부득이한 사유로 취득한 주택 (기준시가 3억 이하·1년 이상 거주) 보유 — 2주택 중과배제 (소령 §167-10 ① 3호)",
+        detail: `취학·근무상 형편·질병 요양 등 부득이한 사유로 취득한 주택 (기준시가 3억 이하·1년 이상 거주) 보유 — 2주택 중과배제 (${MULTI_HOUSE.TWO_HOUSE_UNAVOIDABLE})`,
       });
       return { isExcluded: true, exclusionReasons, isSuspended: false };
     }
@@ -1395,8 +1396,8 @@ function determineSurchargeExclusion(
     if (hasLitigationHouse) {
       const litigationHouse = otherEffectiveHouses.find((h) => h.isLitigationHousing)!;
       const detail = litigationHouse.litigationAcquisitionDate
-        ? `법원 결정 취득(${litigationHouse.litigationAcquisitionDate.toISOString().slice(0, 10)})로부터 3년 이내 — 2주택 중과배제 (소령 §167-10 ① 8호)`
-        : "소송 진행 중인 주택 보유 — 2주택 중과배제 (소령 §167-10 ① 8호)";
+        ? `법원 결정 취득(${litigationHouse.litigationAcquisitionDate.toISOString().slice(0, 10)})로부터 3년 이내 — 2주택 중과배제 (${MULTI_HOUSE.TWO_HOUSE_LITIGATION})`
+        : `소송 진행 중인 주택 보유 — 2주택 중과배제 (${MULTI_HOUSE.TWO_HOUSE_LITIGATION})`;
       exclusionReasons.push({ type: "litigation_housing_two_house", detail });
       return { isExcluded: true, exclusionReasons, isSuspended: false };
     }
@@ -1409,7 +1410,7 @@ function determineSurchargeExclusion(
     if (hasLowPriceSmallHouse) {
       exclusionReasons.push({
         type: "low_price_two_house",
-        detail: "기준시가 1억 이하 소형 주택 보유로 2주택 중과배제 (소령 §167-10 ⑩)",
+        detail: `기준시가 1억 이하 소형 주택 보유로 2주택 중과배제 (${MULTI_HOUSE.TWO_HOUSE_SMALL_HOUSE})`,
       });
       return { isExcluded: true, exclusionReasons, isSuspended: false };
     }
@@ -1532,7 +1533,7 @@ export function determineMultiHouseSurcharge(
       const exclusionReasons: ExclusionReason[] = [
         {
           type: "only_one_remaining",
-          detail: `양도 주택 외 다른 주택(${otherEffectiveHouses.length}채)이 모두 ①~⑨ 배제 항목에 해당하여 유일한 일반주택 (소령 §167-3 ① 2호 나목 10호)`,
+          detail: `양도 주택 외 다른 주택(${otherEffectiveHouses.length}채)이 모두 ①~⑨ 배제 항목에 해당하여 유일한 일반주택 (${MULTI_HOUSE.THREE_HOUSE_EXCLUSION_SOLE})`,
         },
       ];
       return {

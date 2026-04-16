@@ -174,15 +174,15 @@ describe("applyTaxCap — 세부담 상한", () => {
     expect(result!.isApplied).toBe(true);
   });
 
-  // T07: 다주택 조정대상지역 300% — 상한 미도달
-  it("T07: 다주택 300% — 당해 세액이 상한 미도달 시 isApplied=false", () => {
+  // T07: 현행법 §10 단일 150% 상한 — 다주택 여부 무관
+  it("T07: 현행법 150% 상한 — 종부세 §10 개정(300% 삭제) 반영", () => {
     // comprehensiveTax=20,000,000, propertyTax=3,000,000, prevYear=8,000,000
-    // capAmount = 24,000,000, cappedTax = min(20,000,000, 24,000,000 - 3,000,000) = 20,000,000
+    // 현행: capRate=1.5, capAmount=12,000,000, cappedTax=min(20M, 12M-3M)=9,000,000, isApplied=true
     const result = applyTaxCap(20_000_000, 3_000_000, 8_000_000, true);
     expect(result).not.toBeUndefined();
-    expect(result!.capRate).toBe(3.0);
-    expect(result!.isApplied).toBe(false);
-    expect(result!.cappedTax).toBe(20_000_000);
+    expect(result!.capRate).toBe(1.5);
+    expect(result!.isApplied).toBe(true);
+    expect(result!.cappedTax).toBe(9_000_000);
   });
 
   // T08: 전년도 세액 미입력 → undefined 반환

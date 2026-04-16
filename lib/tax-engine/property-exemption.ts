@@ -8,7 +8,7 @@
  * 과세대상 판정(property-object.ts)에서 먼저 호출됨
  */
 
-import { PROPERTY } from "./legal-codes";
+import { PROPERTY, PROPERTY_EXEMPT } from "./legal-codes";
 import type {
   PropertyObjectInput,
   PropertyTaxExemption,
@@ -192,7 +192,7 @@ export function checkPropertyTaxReduction(
       hasReduction: true,
       reductionType: "public_rental_housing",
       reductionRate: 0.50,
-      legalBasis: "지방세특례제한법 §31",
+      legalBasis: PROPERTY_EXEMPT.PUBLIC_RENTAL_HOUSING,
       reason: "공공임대주택 재산세 50% 감면",
     });
   }
@@ -203,7 +203,7 @@ export function checkPropertyTaxReduction(
       hasReduction: true,
       reductionType: "long_term_rental_housing",
       reductionRate: 0.25,
-      legalBasis: "지방세특례제한법 §31의3",
+      legalBasis: PROPERTY_EXEMPT.LONG_TERM_RENTAL_HOUSING,
       reason: "장기임대주택 재산세 25% 감면",
     });
   }
@@ -214,7 +214,7 @@ export function checkPropertyTaxReduction(
       hasReduction: true,
       reductionType: "small_business_factory",
       reductionRate: 0.35,
-      legalBasis: "지방세특례제한법 §58",
+      legalBasis: PROPERTY_EXEMPT.SMALL_BUSINESS_FACTORY,
       reason: "중소기업 공장 재산세 35% 감면",
     });
   }
@@ -225,7 +225,7 @@ export function checkPropertyTaxReduction(
       hasReduction: true,
       reductionType: "cultural_heritage",
       reductionRate: 0.50,
-      legalBasis: "지방세특례제한법 §52",
+      legalBasis: PROPERTY_EXEMPT.CULTURAL_HERITAGE,
       reason: "국가·시도 지정 문화재 재산세 50% 감면",
     });
   }
@@ -236,7 +236,7 @@ export function checkPropertyTaxReduction(
       hasReduction: true,
       reductionType: "disabled_person_residence",
       reductionRate: 0.50,
-      legalBasis: "지방세특례제한법 §17",
+      legalBasis: PROPERTY_EXEMPT.DISABLED_PERSON_RESIDENCE,
       reason: "장애인 거주용 주택 재산세 50% 감면",
     });
   }
@@ -249,7 +249,7 @@ export function checkPropertyTaxReduction(
       hasReduction: true,
       reductionType: "multi_child_family",
       reductionRate,
-      legalBasis: "지방세특례제한법 §36의2",
+      legalBasis: PROPERTY_EXEMPT.MULTI_CHILD_FAMILY,
       reason: `다자녀(${count}명) 가구 주택 재산세 ${reductionRate * 100}% 감면`,
     });
   }

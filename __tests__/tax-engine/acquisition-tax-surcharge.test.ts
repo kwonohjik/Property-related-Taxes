@@ -222,15 +222,15 @@ describe("assessSurcharge — 생애최초 감면", () => {
     expect(result.firstHomeReduction?.reductionAmount).toBe(2_000_000); // 최대 200만원
   });
 
-  it("생애최초 + 수도권 4억 초과: 감면 불가", () => {
+  it("생애최초 + 취득가액 12억 초과: 감면 불가 (§36의3① 단일 기준)", () => {
     const result = assessSurcharge({
       propertyType: "housing",
       acquisitionCause: "purchase",
-      acquisitionValue: 450_000_000,
+      acquisitionValue: 1_300_000_000, // 13억 — 현행 12억 한도 초과
       acquiredBy: "individual",
       isFirstHome: true,
       isMetropolitan: true,
-      acquisitionTax: 13_500_000,
+      acquisitionTax: 39_000_000,
     });
     expect(result.firstHomeReduction?.isEligible).toBe(false);
     expect(result.firstHomeReduction?.reductionAmount).toBe(0);
@@ -250,7 +250,8 @@ describe("assessSurcharge — 생애최초 감면", () => {
     expect(result.firstHomeReduction?.reductionAmount).toBe(2_000_000);
   });
 
-  it("생애최초 + 비수도권 3억 초과: 감면 불가", () => {
+  it("생애최초 + 취득가액 4억 (현행법 12억 한도 내): 감면 eligible", () => {
+    // 구법에서는 비수도권 3억 한도였으나 현행(§36의3) 12억 단일 기준으로 eligible
     const result = assessSurcharge({
       propertyType: "housing",
       acquisitionCause: "purchase",
@@ -258,9 +259,9 @@ describe("assessSurcharge — 생애최초 감면", () => {
       acquiredBy: "individual",
       isFirstHome: true,
       isMetropolitan: false,
-      acquisitionTax: 10_500_000,
+      acquisitionTax: 3_500_000,
     });
-    expect(result.firstHomeReduction?.isEligible).toBe(false);
+    expect(result.firstHomeReduction?.isEligible).toBe(true);
   });
 
   it("생애최초 + 취득세 100만원: 감면액 = 100만원 (본세 내)", () => {

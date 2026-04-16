@@ -5,7 +5,7 @@
  * 한도 초과분은 일반 과세분으로 분리
  */
 
-import { EXEMPTION } from "./legal-codes";
+import { EXEMPTION, GIFT } from "./legal-codes";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import {
   DISABLED_TRUST_LIMIT,
@@ -59,7 +59,7 @@ function evaluateSingleExemption(
   // === 문화재: 지정 취소 시 과세 ===
   if (rule.id === "inh_cultural_property") {
     if (item.culturalDesignationRevoked) {
-      warnings.push("문화재 지정 취소 — 상속세 추징 대상 (§12 1호 단서)");
+      warnings.push(`문화재 지정 취소 — 상속세 추징 대상 (${EXEMPTION.INH_NONTAXABLE} 1호 단서)`);
       exemptAmount = 0;
       taxableOverflow = item.claimedAmount;
       breakdown.push({
@@ -119,22 +119,22 @@ function evaluateSingleExemption(
       exemptAmount = Math.max(0, item.claimedAmount - taxableOverflow);
       breakdown.push({ label: "공익법인 출연재산 비과세 (5% 한도 내)", amount: exemptAmount, lawRef: EXEMPTION.PUBLIC_INTEREST });
       breakdown.push({
-        label: "동족주식 5% 초과분 — 상속세 과세 (§16 ②)",
+        label: `동족주식 5% 초과분 — 상속세 과세 (${EXEMPTION.INH_RELATED_STOCK})`,
         amount: taxableOverflow,
         lawRef: EXEMPTION.PUBLIC_INTEREST,
         note: `초과분 ${taxableOverflow.toLocaleString()}원은 상속재산 합산 과세`,
       });
-      warnings.push(`공익법인 동족주식 5% 초과 보유 — 초과분 ${taxableOverflow.toLocaleString()}원 상속세 과세 (§16 ②)`);
+      warnings.push(`공익법인 동족주식 5% 초과 보유 — 초과분 ${taxableOverflow.toLocaleString()}원 상속세 과세 (${EXEMPTION.INH_RELATED_STOCK})`);
     } else if (item.relatedStockExceeded) {
       // 초과 여부는 알지만 금액 미입력 시 경고만
-      warnings.push("공익법인 동족주식 5% 초과 보유 확인됨 — 초과분 금액 입력 필요 (§16 ②)");
+      warnings.push(`공익법인 동족주식 5% 초과 보유 확인됨 — 초과분 금액 입력 필요 (${EXEMPTION.INH_RELATED_STOCK})`);
       exemptAmount = item.claimedAmount;
       breakdown.push({ label: "공익법인 출연재산 비과세 (초과분 금액 미입력)", amount: exemptAmount, lawRef: EXEMPTION.PUBLIC_INTEREST });
     } else {
       exemptAmount = item.claimedAmount;
       breakdown.push({ label: "공익법인 출연재산 비과세", amount: exemptAmount, lawRef: EXEMPTION.PUBLIC_INTEREST });
     }
-    warnings.push("사후관리: 출연 후 3년 내 공익 목적 외 사용 시 추징 (§48)");
+    warnings.push(`사후관리: 출연 후 3년 내 공익 목적 외 사용 시 추징 (${EXEMPTION.PUBLIC_FOLLOWUP})`);
     return { ...base, exemptAmount, taxableOverflow, breakdown, warnings };
   }
 
@@ -154,7 +154,7 @@ function evaluateSingleExemption(
       breakdown.push({ label: "5억 초과 — 일반 증여세 과세", amount: taxableOverflow });
       warnings.push(`장애인 신탁 한도(5억) 초과 ${taxableOverflow.toLocaleString()}원은 일반 증여세 과세`);
     }
-    warnings.push("신탁 해지 시 잔존 원금 즉시 증여세 과세 (§46의2 ③)");
+    warnings.push(`신탁 해지 시 잔존 원금 즉시 증여세 과세 (${EXEMPTION.DISABLED_TRUST_REVOKE})`);
     return { ...base, exemptAmount, taxableOverflow, breakdown, warnings };
   }
 
@@ -191,7 +191,7 @@ export function validateMarriageExemptionOnce(
   const marriageItem = items.find((i) => i.ruleId === "gift_marriage_birth");
   if (marriageItem?.marriageExemptionAlreadyUsed) {
     warnings.push(
-      "혼인 증여재산공제(§53의2)는 평생 1회만 적용 가능합니다. 기사용 내역 확인이 필요합니다.",
+      `혼인 증여재산공제(${GIFT.MARRIAGE_DEDUCTION})는 평생 1회만 적용 가능합니다. 기사용 내역 확인이 필요합니다.`,
     );
   }
   return warnings;

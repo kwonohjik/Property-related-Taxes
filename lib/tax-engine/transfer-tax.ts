@@ -8,7 +8,7 @@
  */
 
 import { addYears } from "date-fns";
-import { TRANSFER } from "./legal-codes";
+import { TRANSFER, NBL } from "./legal-codes";
 import {
   applyRate,
   calculateEstimatedAcquisitionPrice,
@@ -922,7 +922,7 @@ export function calculateTransferTax(
         label: "비사업용 토지 판정 (엔진 재판정)",
         formula: `입력 플래그(${input.isNonBusinessLand ? "비사업용" : "사업용"}) → 정밀 판정 결과: ${nonBusinessLandJudgment.isNonBusinessLand ? "비사업용" : "사업용"}`,
         amount: 0,
-        legalBasis: "소득세법 §104조의3",
+        legalBasis: NBL.MAIN,
       });
     }
   }
@@ -985,7 +985,7 @@ export function calculateTransferTax(
     label: "양도차익 계산",
     formula: gainFormula,
     amount: transferGain,
-    legalBasis: "소득세법 §94 ①",
+    legalBasis: TRANSFER.TRANSFER_GAIN,
   });
 
   // 양도 손실: 바로 0 반환
@@ -1094,7 +1094,7 @@ export function calculateTransferTax(
     label: "과세표준",
     formula: `${taxableGain.toLocaleString()}원 - ${longTermHoldingDeduction.toLocaleString()}원 - ${basicDeduction.toLocaleString()}원 (천원 미만 절사)`,
     amount: taxBase,
-    legalBasis: "소득세법 §92",
+    legalBasis: TRANSFER.TAX_BASE_CALC,
   });
 
   // STEP 7: 산출세액

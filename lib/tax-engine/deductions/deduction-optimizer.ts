@@ -102,12 +102,12 @@ export function optimizeDeductionMethod(
 
   const breakdown: CalculationStep[] = [
     {
-      label: "일괄공제 (§21)",
+      label: `일괄공제 (${INH.LUMP_SUM})`,
       amount: lumpSumAmount,
       lawRef: INH.LUMP_SUM,
     },
     {
-      label: "기초공제 (§18)",
+      label: `기초공제 (${INH.BASIC_DEDUCTION})`,
       amount: BASIC,
       lawRef: INH.BASIC_DEDUCTION,
     },

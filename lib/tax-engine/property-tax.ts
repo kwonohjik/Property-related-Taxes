@@ -19,7 +19,7 @@
  */
 
 import { applyRate, truncateToThousand } from "./tax-utils";
-import { PROPERTY, PROPERTY_CONST, PROPERTY_CAL } from "./legal-codes";
+import { PROPERTY, PROPERTY_CONST, PROPERTY_CAL, COMPREHENSIVE_LAND } from "./legal-codes";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import {
   calculateSeparateAggregateTax,
@@ -214,15 +214,15 @@ export function calcBuildingTax(
     case "golf_course":
     case "luxury":
       rate = PROPERTY_CONST.BUILDING_LUXURY_RATE;
-      legalBasis = PROPERTY.TAX_RATE + " §111①2나 (골프장·고급오락장)";
+      legalBasis = PROPERTY.BUILDING_LUXURY_RATE;
       break;
     case "factory":
       rate = 0.005;
-      legalBasis = PROPERTY.TAX_RATE + " §111①2다 (공장)";
+      legalBasis = PROPERTY.BUILDING_FACTORY_RATE;
       break;
     default:
       rate = PROPERTY_CONST.BUILDING_GENERAL_RATE;
-      legalBasis = PROPERTY.TAX_RATE + " §111①2가 (일반)";
+      legalBasis = PROPERTY.BUILDING_GENERAL_RATE;
   }
 
   const tax = applyRate(taxBase, rate);
@@ -257,7 +257,7 @@ export function applyTaxCap(
 
   if (previousYearTax === undefined || previousYearTax <= 0) {
     warnings.push(
-      "전년도 납부세액 미입력으로 세부담상한(지방세법 §122)을 적용하지 않습니다. " +
+      `전년도 납부세액 미입력으로 세부담상한(${PROPERTY.TAX_CAP})을 적용하지 않습니다. ` +
       "정확한 계산을 위해 전년도 재산세 납부액을 입력하세요.",
     );
     return {
@@ -540,7 +540,7 @@ export function calculatePropertyTax(
 
         if (isExcluded) {
           warnings.push(
-            "분리과세 대상 토지는 종합부동산세 과세 대상에서 제외됩니다 (종부세법 §11).",
+            `분리과세 대상 토지는 종합부동산세 과세 대상에서 제외됩니다 (${COMPREHENSIVE_LAND.AGGREGATE_TAXPAYER}).`,
           );
         }
 
@@ -629,7 +629,7 @@ export function calculatePropertyTax(
       // 선박·항공기: 시가표준액 × 0.3% (지방세법 §111①4)
       calculatedTax = applyRate(taxBase, 0.003);
       appliedRate = 0.003;
-      legalBasis.push(PROPERTY.TAX_RATE + " §111①4 (선박·항공기)");
+      legalBasis.push(PROPERTY.VESSEL_AIRCRAFT_RATE);
       break;
     }
 

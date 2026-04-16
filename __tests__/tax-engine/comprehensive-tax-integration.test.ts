@@ -184,7 +184,7 @@ describe("SC3: 3주택 합산과세 — 9억 기본공제", () => {
 
     // 세부담 상한 계산됨 (전년도 미입력 시 undefined가 아님)
     expect(result.taxCap).toBeDefined();
-    expect(result.taxCap!.capRate).toBe(3.0);  // 300% 상한
+    expect(result.taxCap!.capRate).toBe(1.5);  // 현행 §10: 150% 단일 상한 (300% 삭제됨)
   });
 
   it("일반 다주택 — 세부담 상한 150%", () => {

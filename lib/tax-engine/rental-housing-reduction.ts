@@ -13,6 +13,7 @@
 
 import { addDays, addMonths, differenceInDays, differenceInYears } from "date-fns";
 import { applyRate, truncateToWon } from "./tax-utils";
+import { TRANSFER } from "./legal-codes";
 import type { LongTermRentalRuleSet } from "./schemas/rate-table.schema";
 
 // ============================================================
@@ -502,7 +503,7 @@ export function calculateRentalReduction(
 
   // 공공매입임대: 공공기관 매각 조건부 — 경고
   if (input.rentalHousingType === "public_purchase") {
-    warnings.push("공공매입임대(§97의5): 공공기관에 매각하는 조건이 충족된 경우에만 100% 감면 적용");
+    warnings.push(`공공매입임대(${TRANSFER.REDUCTION_LONG_RENTAL_PUBLIC}): 공공기관에 매각하는 조건이 충족된 경우에만 100% 감면 적용`);
   }
 
   // 구법 적용: 경고

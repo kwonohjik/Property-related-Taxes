@@ -393,7 +393,8 @@ describe("calcAcquisitionTax — 생애최초 감면", () => {
     expect(result.totalTaxAfterReduction).toBe(result.totalTax - 2_000_000);
   });
 
-  it("4억 주택 생애최초 (비수도권 한도 초과): 감면 불가", () => {
+  it("4억 주택 생애최초 (현행법 12억 한도 내): 감면 적용", () => {
+    // 구법에서는 비수도권 3억 한도 초과로 감면 불가였으나 현행(§36의3) 12억 단일 기준으로 적용 가능
     const input: AcquisitionTaxInput = {
       ...baseInput as AcquisitionTaxInput,
       propertyType: "housing",
@@ -408,7 +409,8 @@ describe("calcAcquisitionTax — 생애최초 감면", () => {
 
     const result = calcAcquisitionTax(input);
 
-    expect(result.reductionAmount).toBe(0);
+    // 취득세 1%: 4,000,000원 → 감면 min(4,000,000, 2,000,000) = 2,000,000원
+    expect(result.reductionAmount).toBe(2_000_000);
   });
 });
 
