@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // @react-pdf/renderer는 Node.js 전용 모듈 — 서버 외부 패키지로 처리
+  serverExternalPackages: ["@react-pdf/renderer"],
 };
 
 // NEXT_PUBLIC_SENTRY_DSN 설정 시에만 Sentry 래핑 (환경변수 미설정 시 원본 config 반환)
