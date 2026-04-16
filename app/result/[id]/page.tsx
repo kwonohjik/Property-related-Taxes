@@ -62,6 +62,7 @@ export default async function ResultPage({ params }: ResultPageProps) {
       </div>
 
       <ResultDetailClient
+        id={id}
         taxType={record.tax_type}
         result={record.result_data as unknown as TransferTaxResult}
         inputData={record.input_data}

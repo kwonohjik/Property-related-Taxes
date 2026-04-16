@@ -73,6 +73,35 @@ export function HistoryClient({
   const [total, setTotal] = useState(initialTotal);
   const [isFetching, setIsFetching] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [pdfLoading, setPdfLoading] = useState(false);
+
+  async function handlePdfDownload() {
+    setPdfLoading(true);
+    try {
+      const url =
+        activeFilter === "all"
+          ? "/api/pdf/history"
+          : `/api/pdf/history?taxType=${activeFilter}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("PDF 생성 실패");
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = objectUrl;
+      const dateStr = new Date().toLocaleDateString("ko-KR", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }).replace(/\. /g, "-").replace(".", "");
+      a.download = `세금계산이력_${dateStr}.pdf`;
+      a.click();
+      URL.revokeObjectURL(objectUrl);
+    } catch {
+      alert("PDF 생성에 실패했습니다. 잠시 후 다시 시도해 주세요.");
+    } finally {
+      setPdfLoading(false);
+    }
+  }
 
   async function handleFilterChange(filter: TaxType | "all") {
     setActiveFilter(filter);
@@ -116,27 +145,40 @@ export function HistoryClient({
 
   return (
     <div className="space-y-4">
-      {/* 세금 유형 필터 */}
-      <div className="flex flex-wrap gap-2">
-        {FILTER_OPTIONS.map(({ label, value }) => (
-          <button
-            key={value}
-            type="button"
-            onClick={() => handleFilterChange(value)}
-            disabled={isLoading}
-            className={[
-              "rounded-full px-3 py-1 text-xs font-medium transition-colors",
-              activeFilter === value
-                ? "bg-primary text-primary-foreground"
-                : "border border-border bg-background hover:bg-muted/60 text-muted-foreground",
-              isLoading ? "opacity-50 cursor-not-allowed" : "",
-            ]
-              .filter(Boolean)
-              .join(" ")}
-          >
-            {label}
-          </button>
-        ))}
+      {/* 상단 액션 바 */}
+      <div className="flex items-center justify-between gap-2">
+        {/* 세금 유형 필터 */}
+        <div className="flex flex-wrap gap-2">
+          {FILTER_OPTIONS.map(({ label, value }) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => handleFilterChange(value)}
+              disabled={isLoading}
+              className={[
+                "rounded-full px-3 py-1 text-xs font-medium transition-colors",
+                activeFilter === value
+                  ? "bg-primary text-primary-foreground"
+                  : "border border-border bg-background hover:bg-muted/60 text-muted-foreground",
+                isLoading ? "opacity-50 cursor-not-allowed" : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* PDF 저장 버튼 */}
+        <button
+          type="button"
+          onClick={handlePdfDownload}
+          disabled={pdfLoading || total === 0}
+          className="shrink-0 rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {pdfLoading ? "생성 중..." : "PDF 저장"}
+        </button>
       </div>
 
       {/* 건수 표시 */}
@@ -197,12 +239,19 @@ export function HistoryClient({
                 </div>
 
                 {/* 액션 버튼 */}
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-1.5 shrink-0">
                   <Link
                     href={`/result/${record.id}`}
                     className="rounded-md border border-border px-2.5 py-1.5 text-xs font-medium hover:bg-muted transition-colors"
                   >
                     상세보기
+                  </Link>
+                  <Link
+                    href={`/api/pdf/result/${record.id}`}
+                    target="_blank"
+                    className="rounded-md border border-border px-2.5 py-1.5 text-xs font-medium hover:bg-muted transition-colors"
+                  >
+                    PDF
                   </Link>
                   <button
                     type="button"

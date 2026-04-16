@@ -41,14 +41,35 @@ function Row({
 }
 
 interface ResultDetailClientProps {
+  id: string;
   taxType: string;
   result: TransferTaxResult;
   inputData: Record<string, unknown>;
 }
 
-export function ResultDetailClient({ taxType, result, inputData }: ResultDetailClientProps) {
+export function ResultDetailClient({ id, taxType, result, inputData }: ResultDetailClientProps) {
   const [showSteps, setShowSteps] = useState(false);
   const [showInput, setShowInput] = useState(false);
+  const [pdfLoading, setPdfLoading] = useState(false);
+
+  async function handlePdfDownload() {
+    setPdfLoading(true);
+    try {
+      const res = await fetch(`/api/pdf/result/${id}`);
+      if (!res.ok) throw new Error("PDF 생성 실패");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `세금계산결과_${taxType}_${id.slice(0, 8)}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      alert("PDF 생성에 실패했습니다. 잠시 후 다시 시도해 주세요.");
+    } finally {
+      setPdfLoading(false);
+    }
+  }
 
   if (taxType !== "transfer") {
     return (
@@ -60,14 +81,22 @@ export function ResultDetailClient({ taxType, result, inputData }: ResultDetailC
 
   return (
     <div className="space-y-5">
-      {/* PDF 인쇄 버튼 */}
-      <div className="flex justify-end">
+      {/* 액션 버튼 */}
+      <div className="flex justify-end gap-2 print:hidden">
+        <button
+          type="button"
+          onClick={handlePdfDownload}
+          disabled={pdfLoading}
+          className="rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {pdfLoading ? "생성 중..." : "PDF 저장"}
+        </button>
         <button
           type="button"
           onClick={() => window.print()}
-          className="rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors print:hidden"
+          className="rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors"
         >
-          🖨️ PDF / 인쇄
+          🖨️ 인쇄
         </button>
       </div>
 
