@@ -40,3 +40,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# 법령 조문 API 응답 캐시 (7일 TTL, 로컬 전용)
+.legal-cache/
+
+# 법령 검증 실행 로그 (로컬 전용)
+logs/

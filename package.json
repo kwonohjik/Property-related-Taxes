@@ -9,7 +9,9 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "seed:tax-rates": "tsx --env-file=.env.local scripts/seed-transfer-tax-rates.ts"
+    "seed:tax-rates": "tsx --env-file=.env.local scripts/seed-transfer-tax-rates.ts",
+    "verify:legal": "tsx --env-file=.env.local scripts/verify-legal-codes.ts",
+    "verify:legal:refresh": "tsx --env-file=.env.local scripts/verify-legal-codes.ts --clear"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.0",
