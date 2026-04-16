@@ -34,29 +34,16 @@ export default async function HistoryPage() {
       <div className="mb-6">
         <p className="text-xs text-muted-foreground mb-1">한국 부동산 세금 계산기</p>
         <h1 className="text-2xl font-bold">계산 이력</h1>
-        {!error && (
-          <p className="mt-1 text-sm text-muted-foreground">총 {total}건</p>
-        )}
       </div>
 
       {error ? (
         <div className="rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive">
           이력을 불러오지 못했습니다. Supabase 연결을 확인하세요.
         </div>
-      ) : records.length === 0 ? (
-        <div className="rounded-lg border border-border bg-muted/30 px-6 py-10 text-center text-sm text-muted-foreground">
-          <p className="text-2xl mb-2">📋</p>
-          <p>저장된 계산 이력이 없습니다.</p>
-          <a
-            href="/calc/transfer-tax"
-            className="mt-3 inline-block text-primary underline underline-offset-2"
-          >
-            양도소득세 계산하기
-          </a>
-        </div>
       ) : (
         <HistoryClient
-          records={records}
+          initialRecords={records}
+          initialTotal={total}
           taxTypeLabels={TAX_TYPE_LABELS}
           deleteAction={deleteCalculation}
         />
