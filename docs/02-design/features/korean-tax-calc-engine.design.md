@@ -1302,90 +1302,431 @@ calculatePropertyTax(input, rates) → PropertyTaxResult
 
 ### 3.6 종합부동산세 — `lib/tax-engine/comprehensive-tax.ts`
 
+> **에이전트 협업 범위**
+> - `comprehensive-tax-senior`: 전체 계산 흐름 오케스트레이터
+> - `comprehensive-tax-house-senior`: 1세대1주택 세액공제 + 세부담 상한
+> - `comprehensive-tax-exclusion-senior`: 합산배제 판정 모듈
+> - `comprehensive-tax-land-aggregate-senior`: 종합합산 토지분
+> - `comprehensive-tax-separate-land-senior`: 별도합산 토지분 (`comprehensive-separate-land.ts` 신규 파일)
+
+#### 3.6.1 전체 계산 흐름
+
+```
+[사용자 입력: 보유 주택·토지 목록]
+          │
+          ▼
+┌─── comprehensive-tax.ts ─────────────────────────────────────┐
+│                                                               │
+│  [Step 0] 합산배제 판정 (§8②, 시행령 §3~§4)                    │
+│    applyAggregationExclusion(properties, assessmentDate)      │
+│    → 배제 주택 공시가격을 합산에서 제외                           │
+│                                                               │
+│  ─── 주택분 ───                                                │
+│  [Step 1] 합산배제 후 공시가격 합산                              │
+│  [Step 2] 기본공제 차감 (일반 9억 / 1세대1주택 12억)              │
+│  [Step 3] 공정시장가액비율 적용 (60%)                            │
+│  [Step 4] 과세표준 (만원 미만 절사) ← 타 세금(천원)과 다름!       │
+│  [Step 5] 누진세율 7단계 → 산출세액                              │
+│  [Step 6] 1세대1주택 세액공제 (고령자+장기보유, 최대 80%)          │
+│           applyOneHouseDeduction(tax, birthDate, acquDate)     │
+│  [Step 7] 재산세 비율 안분 공제 ← 핵심!                          │
+│    property-tax.ts 호출 (각 주택별 재산세 자동 계산)              │
+│    공제액 = 재산세 × (종부세과세표준 / 재산세과세표준)              │
+│  [Step 8] 세부담 상한 (일반 150% / 조정대상지역 다주택 300%)       │
+│    applyTaxCap(compTax, propertyTax, prevYearTax, isMulti)    │
+│  [Step 9] 주택분 결정세액 확정                                   │
+│                                                               │
+│  ─── 토지분 종합합산 ───                                        │
+│  calculateAggregateLandTax(input, rates)                      │
+│    기본공제 5억 / 공정시장가액비율 100% / 3단계(1~3%) / 상한 150% │
+│                                                               │
+│  ─── 토지분 별도합산 ───                                        │
+│  calculateSeparateAggregateLandTax(input, rates)  ← 별도 파일  │
+│    기본공제 80억 / 공정시장가액비율 100% / 3단계(0.5~0.7%) / 상한無│
+│                                                               │
+│  [최종] 농어촌특별세 = 결정세액 합산 × 20%                        │
+│         grandTotal = 종부세 + 재산세 + 농특세                    │
+└───────────────────────────────────────────────────────────────┘
+```
+
+#### 3.6.2 합산배제 (종부세법 §8②, 시행령 §3~§4)
+
+합산배제 주택은 종부세 과세표준 합산에서 제외된다. 납세자가 매년 9/16~9/30 신고해야 효력 발생.
+
+**합산배제 임대주택 (시행령 §3) — 공통 요건:**
+- 민간임대주택에 관한 특별법에 의한 지자체 등록 필수
+- 임대료 증가율 연 5% 이내 (민간임대주택법 §44)
+- 과세기준일(6월 1일) 현재 요건 충족
+
+| 유형 | 면적 | 수도권 가격 | 비수도권 가격 | 의무기간 |
+|------|------|-----------|------------|---------|
+| 민간건설·매입 장기일반 (시행령 §3①1~2호) | 85㎡ 이하 | 6억 이하 | 3억 이하 | 10년 |
+| 공공지원민간임대 (시행령 §3①3호) | 85㎡ 이하 | 9억 이하 | 3억 이하 | 8년 |
+| 공공건설·매입임대 (시행령 §3①4~5호) | 85㎡ 이하 | 제한 없음 | - | 법정기간 |
+
+> ⚠️ 2020.8.18 이후 단기민간임대(4년)·아파트 매입임대 신규 등록 불가
+
+**기타 합산배제 주택 (시행령 §4):**
+- 미분양주택: 모집공고일 이후 최초 취득, 취득일부터 5년간
+- 가정어린이집용 주택: 영유아보육법 §13 인가 + 실사용
+- 사원용 주택: 시세 50% 이하 무상·저가 제공 + 85㎡ 이하
+
+**합산배제 핵심 함수:**
+```typescript
+function applyAggregationExclusion(
+  properties: PropertyForExclusion[],
+  assessmentDate: Date
+): AggregationExclusionResult {
+  // 각 주택별 유형별 요건 검증
+  // → { propertyResults, totalExcludedValue, excludedCount, includedCount }
+}
+```
+
+#### 3.6.3 주택분 계산 상세
+
+**과세표준 (종부세법 §8①)**
+```
+과세표준 = (합산배제 후 공시가격 합산 − 기본공제) × 공정시장가액비율
+기본공제: 일반 9억원 / 1세대1주택자 12억원
+공정시장가액비율: 60% (DB comprehensive_property:fair_market_ratio:housing)
+절사: 만원 미만 절사 (truncateToTenThousand) ← 양도세·재산세(천원)와 다름!
+```
+
+**누진세율 7단계 (DB에서 로드, 종부세법 §9①)**
+| 과세표준 구간 | 세율 | 누진공제 |
+|-------------|------|---------|
+| 3억원 이하 | 0.5% | — |
+| 3억~6억원 | 0.7% | 60만원 |
+| 6억~12억원 | 1.0% | 240만원 |
+| 12억~25억원 | 1.3% | 600만원 |
+| 25억~50억원 | 1.5% | 1,100만원 |
+| 50억~94억원 | 2.0% | 3,600만원 |
+| 94억원 초과 | 2.7% | 1억 180만원 |
+
+**1세대1주택 세액공제 (종부세법 §9②, 시행령 §4의2~3)**
+
+고령자 공제 — 과세기준일(6월 1일) 기준 만 나이:
+| 연령 | 공제율 |
+|------|--------|
+| 60세 이상 ~ 65세 미만 | 20% |
+| 65세 이상 ~ 70세 미만 | 30% |
+| 70세 이상 | 40% |
+
+장기보유 공제 — 취득일~과세기준일 실제 보유기간:
+| 보유기간 | 공제율 |
+|---------|--------|
+| 5년 이상 ~ 10년 미만 | 20% |
+| 10년 이상 ~ 15년 미만 | 40% |
+| 15년 이상 | 50% |
+
+```
+합산공제율 = seniorRate + longTermRate
+최종공제율 = Math.min(합산공제율, 0.80)  // 80% 상한 (§9②단서)
+공제금액   = Math.floor(산출세액 × 최종공제율)
+```
+
+> ⚠️ 입력값: `ownerAge: number` 대신 `birthDate: Date` + `acquisitionDate: Date` 사용.  
+> 과세기준일 당해연도 6월 1일 기준으로 만 나이·보유기간을 직접 계산해야 정확함.
+
+**재산세 비율 안분 공제 (종부세법 §9①, 시행령 §4의2) — 핵심!**
+
+전액 공제가 아닌 비율 안분:
+```
+공제할 재산세 = 재산세 부과세액 × min(종부세 과세표준 / 재산세 과세표준, 1.0)
+
+구현:
+const prorationCredit = Math.floor(
+  propertyTaxDetermined * comprehensiveTaxBase / propertyTaxBase
+);
+// 곱셈 먼저, 분모 0 방어, 비율 상한 1.0
+```
+
+계산 예시 (공시가격 15억, 1세대1주택):
+```
+재산세 과세표준: 15억 × 60% = 9억원
+재산세 부과세액: 약 297만원
+종부세 과세표준: (15억 - 12억) × 60% = 1.8억원
+안분 비율: 1.8억 / 9억 = 0.2
+공제할 재산세: 297만원 × 0.2 = 59.4만원 (전액 297만원이 아님!)
+```
+
+**세부담 상한 (종부세법 §10)**
+| 구분 | 상한율 |
+|------|-------|
+| 일반 (1주택 포함) | 전년도 총세액의 **150%** |
+| 조정대상지역 2주택 이상 | 전년도 총세액의 **300%** |
+
+```
+세부담 상한액 = 전년도 총세액(종부세+재산세) × 상한율
+결정세액     = Math.min(당해 종부세액, 상한액 - 당해 재산세)
+결정세액     = Math.max(결정세액, 0)  // 음수 방어
+
+⚠️ 농어촌특별세는 상한 계산 기준에서 제외
+⚠️ 전년도 세액 미입력 시: taxCap: undefined + UX 안내 문구
+```
+
+#### 3.6.4 토지분 종합합산 (종부세법 §11~§15)
+
+기본공제 **5억원**, 공정시장가액비율 **100%** (주택분 60%와 다름!):
+
+```
+과세표준 = (인별 공시지가 합산 - 5억) × 100%  →  만원 미만 절사
+```
+
+누진세율 3단계:
+| 과세표준 | 세율 | 누진공제 |
+|---------|------|---------|
+| 15억원 이하 | 1% | — |
+| 15억~45억원 | 2% | 1,500만원 |
+| 45억원 초과 | 3% | 6,000만원 |
+
+- 재산세 비율 안분 공제: 동일 공식 적용 (§14③)
+- 세부담 상한: **150% 단일** (다주택 300% 없음)
+- 농어촌특별세: 결정세액 × 20%
+- 핵심 함수: `calculateAggregateLandTax()` → `comprehensive-tax.ts` 내 구현
+
+#### 3.6.5 토지분 별도합산 (종부세법 §12, §14)
+
+기본공제 **80억원**, 공정시장가액비율 **100%**:
+
+```
+과세표준 = (인별 공시지가 합산 - 80억) × 100%  →  만원 미만 절사
+80억 이하 → isSubjectToTax: false, 세액 0원
+```
+
+누진세율 3단계:
+| 과세표준 | 세율 | 누진공제 |
+|---------|------|---------|
+| 200억원 이하 | 0.5% | — |
+| 200억~400억원 | 0.6% | 2,000만원 |
+| 400억원 초과 | 0.7% | 6,000만원 |
+
+- 재산세 비율 안분 공제: 동일 공식 적용 (시행령 §4의2)
+- **세부담 상한: 없음** (주택분·종합합산과 다름!)
+- 농어촌특별세: 결정세액 × 20%
+- 핵심 함수: `calculateSeparateAggregateLandTax()` → **신규 파일** `comprehensive-separate-land.ts`
+
+#### 3.6.6 파일 담당 범위
+
+```
+lib/tax-engine/
+  comprehensive-tax.ts            ← 메인 엔진 (주택분 + 종합합산토지 + 오케스트레이터)
+    applyAggregationExclusion()   ← exclusion-senior 담당
+    applyOneHouseDeduction()      ← house-senior 담당
+    applyTaxCap()                 ← house-senior 담당
+    calculateAggregateLandTax()   ← land-aggregate-senior 담당
+  comprehensive-separate-land.ts  ← 신규 파일 (별도합산 토지 전용)
+    calculateSeparateAggregateLandTax() ← separate-land-senior 담당
+
+lib/validators/
+  comprehensive-input.ts          ← Zod 입력 스키마
+
+app/api/calc/comprehensive/
+  route.ts                        ← Orchestrator
+    preloadTaxRates(['comprehensive_property', 'property'], taxBaseDate)
+
+app/calc/comprehensive-tax/
+  page.tsx                        ← StepWizard UI
+```
+
+#### 3.6.7 DB 세율 키 규칙
+
+```
+# 주택분
+comprehensive_property:housing:basic_deduction_general    → 9억
+comprehensive_property:housing:basic_deduction_one_house  → 12억
+comprehensive_property:housing:fair_market_ratio          → 0.60
+comprehensive_property:housing:rate_brackets              → 7단계 세율표
+comprehensive_property:housing:tax_cap_rate_general       → 1.5
+comprehensive_property:housing:tax_cap_rate_multi_house   → 3.0
+
+# 토지분 종합합산
+comprehensive_property:land_aggregate:basic_deduction     → 5억
+comprehensive_property:land_aggregate:fair_market_ratio   → 1.00
+comprehensive_property:land_aggregate:rate_brackets       → 3단계 세율표
+comprehensive_property:land_aggregate:tax_cap_rate        → 1.5
+
+# 토지분 별도합산
+comprehensive_property:land_separate:basic_deduction      → 80억
+comprehensive_property:land_separate:fair_market_ratio    → 1.00
+comprehensive_property:land_separate:rate_brackets        → 3단계 세율표
+```
+
+#### 3.6.8 법령 상수 (legal-codes.ts 추가)
+
+```typescript
+// ── 주택분 종합부동산세 ──
+export const COMPREHENSIVE = {
+  BASIC_DEDUCTION_GENERAL:    '종합부동산세법 제8조제1항제1호 (9억)',
+  BASIC_DEDUCTION_ONE_HOUSE:  '종합부동산세법 제8조제1항제2호 (12억)',
+  FAIR_MARKET_RATIO:          '종합부동산세법 제8조제1항, 시행령 제2조의4 (60%)',
+  RATE:                       '종합부동산세법 제9조제1항',
+  ONE_HOUSE_SENIOR_CREDIT:    '종합부동산세법 제9조제2항제1호',
+  ONE_HOUSE_LONG_TERM_CREDIT: '종합부동산세법 제9조제2항제2호',
+  ONE_HOUSE_COMBINED_CAP:     '종합부동산세법 제9조제2항 단서 (80% 상한)',
+  PROPERTY_TAX_CREDIT:        '종합부동산세법 제9조제1항, 시행령 제4조의2',
+  TAX_CAP_GENERAL:            '종합부동산세법 제10조제1항 (150%)',
+  TAX_CAP_MULTI_HOUSE:        '종합부동산세법 제10조제2항 (300%)',
+  RURAL_SPECIAL_TAX:          '농어촌특별세법 제5조제1항제5호 (20%)',
+  ASSESSMENT_DATE:            '종합부동산세법 제3조 (과세기준일 6월 1일)',
+  AGGREGATION_EXCLUSION:      '종합부동산세법 제8조제2항',
+} as const;
+
+// ── 토지분 종합합산 ──
+export const COMPREHENSIVE_LAND = {
+  AGGREGATE_TAXPAYER:          '종합부동산세법 §11',
+  AGGREGATE_TAX_BASE:          '종합부동산세법 §12',
+  AGGREGATE_FAIR_MARKET_RATIO: '종합부동산세법 §12, 시행령 §2의3',
+  AGGREGATE_RATE:              '종합부동산세법 §13①',
+  AGGREGATE_PROPERTY_CREDIT:   '종합부동산세법 §14③',
+  AGGREGATE_TAX_CAP:           '종합부동산세법 §15',
+  SEPARATE_SUBJECT:            '종합부동산세법 §12 (별도합산과세대상)',
+  SEPARATE_BASIC_DEDUCTION:    '종합부동산세법 §14① (기본공제 80억)',
+  SEPARATE_DEDUCTION_AMOUNT:   8_000_000_000,
+  SEPARATE_RATE:               '종합부동산세법 §14② (별도합산 세율 3단계)',
+  SEPARATE_PROPERTY_CREDIT:    '종합부동산세법 시행령 §4의2',
+  RURAL_SPECIAL_TAX:           '농어촌특별세법 §5①5호',
+} as const;
+
+// ── 합산배제 ──
+export const COMPREHENSIVE_EXCL = {
+  PRIVATE_CONSTRUCTION_RENTAL:  '종합부동산세법 §8②1호, 시행령 §3①1호',
+  PRIVATE_PURCHASE_RENTAL_LONG: '종합부동산세법 §8②1호, 시행령 §3①2호',
+  PUBLIC_SUPPORT_RENTAL:        '종합부동산세법 §8②1호, 시행령 §3①3호',
+  PUBLIC_CONSTRUCTION_RENTAL:   '종합부동산세법 §8②1호, 시행령 §3①4호',
+  PUBLIC_PURCHASE_RENTAL:       '종합부동산세법 §8②1호, 시행령 §3①5호',
+  UNSOLD_HOUSING:               '종합부동산세법 §8②2호, 시행령 §4①1호',
+  DAYCARE_HOUSING:              '종합부동산세법 §8②2호, 시행령 §4①2호',
+  EMPLOYEE_HOUSING:             '종합부동산세법 §8②2호, 시행령 §4①3호',
+  CULTURAL_HERITAGE:            '종합부동산세법 §8②2호, 시행령 §4①5호',
+  DECLARATION_OBLIGATION:       '종합부동산세법 §8②, §16② (신고 9/16~9/30)',
+  POST_MANAGEMENT_VIOLATION:    '종합부동산세법 §8③ (사후관리 위반 추징)',
+  NO_RENTAL_REGISTRATION:       '임대사업자 미등록',
+  AREA_EXCEEDED:                '국민주택 규모(85㎡) 초과',
+  PRICE_EXCEEDED:               '합산배제 가격 기준 초과',
+  RENT_INCREASE_EXCEEDED:       '임대료 증가율 5% 초과',
+  NOT_APPLIED:                  '합산배제 미신청',
+} as const;
+```
+
+#### 3.6.9 주요 타입
+
 ```typescript
 // ── 입력 ──
 interface ComprehensiveTaxInput {
   // 주택분
   properties: ComprehensiveProperty[];
-  isOneHouseOwner: boolean;         // 1세대1주택자
-  ownerAge: number;                 // 소유자 나이 (고령자 공제)
-  holdingYears: number;             // 보유기간 (장기보유 공제)
+  isOneHouseOwner: boolean;
+  birthDate?: Date;              // 고령자 공제용 (1세대1주택만)
+  acquisitionDate?: Date;        // 장기보유 공제용 (1세대1주택만)
+  assessmentDate?: Date;         // 과세기준일 (기본값: 당해연도 6월 1일)
+
+  // 합산배제 (§8②)
+  exclusionProperties?: PropertyForExclusion[];  // 합산배제 신청 주택
 
   // 토지분
-  landAggregate?: {                 // 종합합산 토지
-    totalAssessedValue: number;
+  landAggregate?: {
+    totalOfficialValue: number;  // 인별 합산 공시지가
+    propertyTaxData: {
+      taxBase: number;           // 재산세 과세표준 (비율 안분용)
+      taxAmount: number;         // 재산세 부과세액
+    };
+    previousYearTotalTax?: number;
   };
-  landSeparate?: {                  // 별도합산 토지
-    totalAssessedValue: number;
+  landSeparate?: {
+    lands: SeparateAggregateLandForComprehensive[];
+    previousYearTotalTax?: number;
   };
 
-  // 세부담 상한 (선택적) — 전년도 세액을 종부세·재산세 별도 입력
-  previousYearComprehensiveTax?: number;  // 전년도 종합부동산세 결정세액
-  previousYearPropertyTax?: number;       // 전년도 재산세 (부가세 포함 합계)
-  isRegulatedAreaMultiHouse: boolean; // 조정대상지역 2주택+ (상한 300%)
+  // 세부담 상한
+  previousYearTotalTax?: number;    // 전년도 종부세+재산세 합계
+  isMultiHouseInAdjustedArea: boolean;  // 조정대상지역 2주택+ 여부
 }
 
 interface ComprehensiveProperty {
-  assessedValue: number;            // 공시가격 (원)
-  areaSqm: number;
-  propertyType: 'housing';
-  isUrbanArea: boolean;             // 재산세 계산용
+  assessedValue: number;         // 공시가격
+  areaSqm: number;               // 전용면적
+  isUrbanArea: boolean;          // 재산세 계산용
+  exclusionType?: ExclusionType; // 합산배제 신청 유형
 }
 
 // ── 출력 ──
 interface ComprehensiveTaxResult {
+  // 합산배제
+  exclusionResult?: {
+    excludedCount: number;
+    totalExcludedValue: number;
+    propertyResults: ExclusionResult[];
+  };
+
   // 주택분
   housing: {
-    totalAssessedValue: number;     // 공시가격 합산
-    basicDeduction: number;         // 기본공제 (9억 또는 12억)
-    fairMarketRatio: number;        // 60%
-    taxBase: number;                // 과세표준 (만원 미만 절사)
-    calculatedTax: number;          // 산출세액
+    totalAssessedValue: number;
+    excludedAssessedValue: number;     // 합산배제 공시가격
+    taxableAssessedValue: number;      // 과세 대상 공시가격
+    basicDeduction: number;            // 9억 또는 12억
+    fairMarketRatio: number;           // 0.60
+    taxBase: number;                   // 과세표준 (만원 절사)
+    calculatedTax: number;             // 산출세액
 
-    // 1세대1주택 세액공제
-    seniorDeduction: number;        // 고령자 공제
-    seniorRate: number;
-    longTermDeduction: number;      // 장기보유 공제
-    longTermRate: number;
-    combinedDeductionRate: number;  // 합산 (최대 80%)
+    // 1세대1주택 세액공제 (isOneHouseOwner = true 시만)
+    oneHouseDeduction?: {
+      seniorRate: number;
+      longTermRate: number;
+      combinedRate: number;            // 최대 0.80
+      deductionAmount: number;
+      isMaxCapApplied: boolean;
+    };
 
-    // 재산세 비율 안분 공제 (핵심)
-    propertyTaxResults: PropertyTaxResult[];  // 주택별 재산세
-    propertyTaxTotal: number;                // 재산세 합계
-    propertyTaxProration: number;            // 안분 공제액
-    prorationRatio: number;                  // 안분 비율
+    // 재산세 비율 안분 공제
+    propertyTaxCredit: {
+      propertyTaxResults: PropertyTaxResult[];
+      totalPropertyTax: number;
+      propertyTaxBase: number;
+      comprehensiveTaxBase: number;
+      ratio: number;
+      creditAmount: number;
+    };
 
-    // 세부담 상한
-    taxCapApplied: boolean;
-    taxCapRate?: number;
+    // 세부담 상한 (전년도 입력 시)
+    taxCap?: {
+      previousYearTotalTax: number;
+      capRate: number;                 // 1.5 또는 3.0
+      capAmount: number;
+      cappedTax: number;
+      isApplied: boolean;
+    };
 
-    determinedTax: number;          // 주택분 결정세액
-  };
-
-  // 토지분
-  landAggregate?: {
-    taxBase: number;
-    calculatedTax: number;
     determinedTax: number;
-  };
-  landSeparate?: {
-    taxBase: number;
-    calculatedTax: number;
-    determinedTax: number;
+    ruralSpecialTax: number;           // 결정세액 × 20%
+    totalTax: number;
   };
 
-  // 부가세
-  ruralSpecialTax: number;          // 농어촌특별세 (종부세 × 20%)
+  // 토지분 종합합산 (해당 시)
+  landAggregate?: AggregateLandTaxResult;
 
-  // 최종
-  totalComprehensiveTax: number;    // 종부세 합계
-  totalPropertyTax: number;         // 재산세 합계
-  totalRuralTax: number;            // 농특세 합계
-  grandTotal: number;               // 총 납부세액
+  // 토지분 별도합산 (해당 시)
+  landSeparate?: SeparateAggregateLandTaxResult;
 
+  // 최종 합산
+  totalComprehensiveTax: number;   // 종부세 결정세액 합계
+  totalPropertyTax: number;        // 재산세 합계 (참고)
+  totalRuralSpecialTax: number;    // 농어촌특별세 합계
+  grandTotal: number;              // 종부세 + 재산세 + 농특세
+
+  appliedLawDate: string;
+  legalBasis: string[];
+  warnings: string[];
   steps: CalculationStep[];
 }
 ```
+
+#### 3.6.10 v1.3 scope 한계 (v2.0 이관)
+
+- **부부 공동명의 1주택 특례** (종부세법 §8): 12억 공제 vs 인별 9억 공제 유리한 것 선택 → v2.0
+- **법인 종합부동산세**: 기본공제 없음, 단일세율 6% → v2.0
+- **합산배제 모드 B** (이전 재산세 이력 참조) → v2.0
+- 결과 화면에 "정확한 세액은 세무사 상담 권장" 안내 표시 필수
 
 ---
 
@@ -1638,8 +1979,9 @@ lib/
     inheritance-tax.ts           # 상속세 순수 계산 엔진
     gift-tax.ts                  # 증여세 순수 계산 엔진
     property-tax.ts              # 재산세 순수 계산 엔진
-    comprehensive-tax.ts         # 종합부동산세 순수 계산 엔진
+    comprehensive-tax.ts         # 종합부동산세 순수 계산 엔진 (주택분 + 종합합산토지)
                                  #   → property-tax.ts import (단방향)
+    comprehensive-separate-land.ts # 별도합산 토지분 전용 엔진 (신규)
     tax-utils.ts                 # 공통 유틸
     tax-errors.ts                # 에러 코드 + TaxCalculationError
     schemas/
@@ -1649,7 +1991,7 @@ lib/
       inheritance-input.schema.ts
       gift-input.schema.ts
       property-input.schema.ts
-      comprehensive-input.schema.ts
+      comprehensive-input.schema.ts  # 다주택 목록 + 합산배제 Zod 스키마
   db/
     tax-rates.ts                 # getTaxRate, preloadTaxRates
     regulated-areas.ts           # isRegulatedArea
