@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LegalVerifyPanel } from "@/components/admin/LegalVerifyPanel";
 
 const TAX_TYPES = [
   {
@@ -71,6 +72,11 @@ export default function HomePage() {
         <p className="mt-12 text-center text-xs text-muted-foreground">
           본 계산기는 참고용이며, 정확한 세금 신고는 세무 전문가와 상담하세요.
         </p>
+
+        {/* 개발자 도구: 법령 조문 검증 */}
+        <div className="mt-10">
+          <LegalVerifyPanel />
+        </div>
       </div>
     </main>
   );
