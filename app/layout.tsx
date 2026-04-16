@@ -16,10 +16,33 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://korean-tax-calc.vercel.app";
+
 export const metadata: Metadata = {
-  title: "KoreanTaxCalc — 한국 부동산 세금 계산기",
+  title: {
+    default: "한국 부동산 세금 계산기",
+    template: "%s | 한국 부동산 세금 계산기",
+  },
   description:
-    "양도소득세·상속세·증여세·취득세·재산세·종합부동산세 자동 계산",
+    "양도소득세·취득세·상속세·증여세·재산세·종합부동산세 무료 자동 계산. 최신 세법(2024~2025) 반영.",
+  keywords: [
+    "부동산 세금", "부동산 세금 계산기",
+    "양도소득세 계산기", "취득세 계산기", "상속세 계산기",
+    "증여세 계산기", "재산세 계산기", "종합부동산세 계산기",
+    "종부세 계산기", "양도세 계산기", "1세대1주택 비과세",
+    "다주택 중과세", "생애최초 취득세 감면",
+  ],
+  openGraph: {
+    type: "website",
+    locale: "ko_KR",
+    url: SITE_URL,
+    siteName: "한국 부동산 세금 계산기",
+    title: "한국 부동산 세금 계산기",
+    description:
+      "양도소득세·취득세·상속세·증여세·재산세·종합부동산세 무료 자동 계산. 최신 세법(2024~2025) 반영.",
+  },
+  robots: { index: true, follow: true },
+  metadataBase: new URL(SITE_URL),
 };
 
 export default function RootLayout({

@@ -1,8 +1,15 @@
 import { GiftTaxForm } from "@/components/calc/GiftTaxForm";
 
 export const metadata = {
-  title: "증여세 계산기 | 한국 부동산 세금 계산기",
-  description: "증여세 자동 계산 — 관계별 공제, 10년 합산, 세액공제까지 한 번에",
+  title: "증여세 계산기",
+  description:
+    "증여세 자동 계산 — 관계별 증여재산공제(배우자 6억·직계존속 5천만), 세대생략 할증(30%), 10년 합산 (상증법 §53~§58)",
+  openGraph: {
+    title: "증여세 계산기",
+    description:
+      "증여세 자동 계산 — 관계별 증여재산공제(배우자 6억·직계존속 5천만), 세대생략 할증(30%), 10년 합산 (상증법 §53~§58)",
+    type: "website",
+  },
 };
 
 export default function GiftTaxPage() {

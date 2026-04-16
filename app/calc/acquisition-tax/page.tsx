@@ -1,8 +1,15 @@
 import { AcquisitionTaxForm } from "@/components/calc/AcquisitionTaxForm";
 
 export const metadata = {
-  title: "취득세 계산기 | 한국 부동산 세금 계산기",
-  description: "취득세 자동 계산 — 물건 유형별 기본세율, 다주택 중과, 생애최초 감면까지 한 번에 (지방세법 §11~§13의2)",
+  title: "취득세 계산기",
+  description:
+    "취득세 자동 계산 — 물건 유형별 기본세율, 6~9억 선형보간, 다주택 중과(8%·12%), 생애최초 감면, 농특세·지방교육세 합산 (지방세법 §11~§13의2)",
+  openGraph: {
+    title: "취득세 계산기",
+    description:
+      "취득세 자동 계산 — 물건 유형별 기본세율, 6~9억 선형보간, 다주택 중과(8%·12%), 생애최초 감면, 농특세·지방교육세 합산 (지방세법 §11~§13의2)",
+    type: "website",
+  },
 };
 
 export default function AcquisitionTaxPage() {
