@@ -13,7 +13,9 @@ import { useState } from "react";
 import { StepIndicator } from "@/components/calc/StepIndicator";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { DateInput } from "@/components/ui/date-input";
+import { AddressSearch, type AddressValue } from "@/components/ui/address-search";
 import { AcquisitionTaxResultView } from "@/components/calc/results/AcquisitionTaxResultView";
+import { useStandardPriceLookup } from "@/lib/hooks/useStandardPriceLookup";
 import type { AcquisitionTaxResult } from "@/lib/tax-engine/types/acquisition.types";
 
 // ============================================================
@@ -77,6 +79,10 @@ interface FormState {
   registrationDate: string;
   contractDate: string;
   usageApprovalDate: string;
+  // ── 소재지 (공시가격 조회용) ──
+  jibun: string;
+  road: string;
+  building: string;
 }
 
 const INITIAL_FORM: FormState = {
@@ -99,6 +105,9 @@ const INITIAL_FORM: FormState = {
   registrationDate: "",
   contractDate: "",
   usageApprovalDate: "",
+  jibun: "",
+  road: "",
+  building: "",
 };
 
 // ============================================================
@@ -184,6 +193,7 @@ export function AcquisitionTaxForm() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AcquisitionTaxResult | null>(null);
+  const priceLookup = useStandardPriceLookup();
 
   const isOriginal = ["new_construction", "extension", "reconstruction", "reclamation"].includes(form.acquisitionCause);
   const isGratuitous = ["inheritance", "inheritance_farmland", "gift", "donation"].includes(form.acquisitionCause);
@@ -278,6 +288,20 @@ export function AcquisitionTaxForm() {
                 <option key={v} value={v}>{l}</option>
               ))}
             </select>
+          </div>
+
+          {/* 소재지 (공시가격 조회용) */}
+          <div className="space-y-1.5">
+            <label className={labelCls}>
+              물건 소재지 <span className="text-muted-foreground font-normal">(선택)</span>
+            </label>
+            <AddressSearch
+              value={{ road: form.road, jibun: form.jibun, building: form.building, detail: "", lng: "", lat: "" } satisfies AddressValue}
+              onChange={(v) => setForm((f) => ({ ...f, jibun: v.jibun, road: v.road, building: v.building }))}
+            />
+            <p className="text-xs text-muted-foreground">
+              입력하면 다음 단계에서 시가표준액을 자동 조회할 수 있습니다.
+            </p>
           </div>
 
           {/* 취득가액 — 취득 원인에 따라 분기 */}
@@ -390,12 +414,37 @@ export function AcquisitionTaxForm() {
             </div>
           )}
 
-          <CurrencyInput
-            label={isHousing ? "주택공시가격 (시가표준액, 선택)" : "시가표준액 (선택)"}
-            value={form.standardValue}
-            onChange={(v) => set("standardValue", v)}
-            placeholder="없으면 신고가액으로 과세"
-          />
+          <div className="space-y-1.5">
+            <CurrencyInput
+              label={isHousing ? "주택공시가격 (시가표준액, 선택)" : "시가표준액 (선택)"}
+              value={form.standardValue}
+              onChange={(v) => set("standardValue", v)}
+              placeholder="없으면 신고가액으로 과세"
+            />
+            {["housing", "land", "land_farmland"].includes(form.propertyType) && (
+              <>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const price = await priceLookup.lookup({
+                      jibun: form.jibun,
+                      propertyType: form.propertyType,
+                    });
+                    if (price) set("standardValue", String(price));
+                  }}
+                  disabled={priceLookup.loading}
+                  className="text-xs text-primary underline disabled:opacity-50 hover:text-primary/80"
+                >
+                  {priceLookup.loading ? "조회중..." : "🔎 Vworld 공시가격 자동 조회"}
+                </button>
+                {priceLookup.msg && (
+                  <p className={`text-xs ${priceLookup.msg.kind === "ok" ? "text-emerald-700" : "text-destructive"}`}>
+                    {priceLookup.msg.text}
+                  </p>
+                )}
+              </>
+            )}
+          </div>
 
           <div className={checkboxWrapCls}>
             <input

@@ -16,7 +16,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { StepIndicator } from "@/components/calc/StepIndicator";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { AddressSearch, type AddressValue } from "@/components/ui/address-search";
 import { PropertyTaxResultView } from "@/components/calc/results/PropertyTaxResultView";
+import { useStandardPriceLookup } from "@/lib/hooks/useStandardPriceLookup";
 import type { PropertyTaxResult } from "@/lib/tax-engine/types/property.types";
 
 // ============================================================
@@ -66,6 +68,10 @@ const SEPARATED_TYPE_OPTIONS: { value: string; label: string; rate: string; hint
 // ============================================================
 
 interface FormState {
+  // ── 소재지 (공시가격 조회용) ──
+  jibun: string;
+  road: string;
+  building: string;
   // ── 공통 ──
   objectType: string;
   publishedPrice: string;
@@ -90,6 +96,9 @@ interface FormState {
 }
 
 const INITIAL_FORM: FormState = {
+  jibun: "",
+  road: "",
+  building: "",
   objectType: "housing",
   publishedPrice: "",
   isOneHousehold: false,
@@ -242,6 +251,7 @@ export function PropertyTaxForm() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<PropertyTaxResult | null>(null);
+  const priceLookup = useStandardPriceLookup();
 
   const needsLandDetail =
     form.objectType === "land" &&
@@ -391,6 +401,17 @@ export function PropertyTaxForm() {
             </div>
           </div>
 
+          {/* 소재지 (공시가격 조회용) */}
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">
+              물건 소재지 <span className="text-muted-foreground font-normal text-xs">(선택)</span>
+            </label>
+            <AddressSearch
+              value={{ road: form.road, jibun: form.jibun, building: form.building, detail: "", lng: "", lat: "" } satisfies AddressValue}
+              onChange={(v) => setForm((f) => ({ ...f, jibun: v.jibun, road: v.road, building: v.building }))}
+            />
+          </div>
+
           {/* 공시가격 */}
           <div className="space-y-1">
             <label className="text-sm font-medium">공시가격 (원)</label>
@@ -403,6 +424,31 @@ export function PropertyTaxForm() {
             <p className="text-xs text-muted-foreground">
               주택: 주택공시가격 / 토지: 개별공시지가 합계 / 건축물: 기준시가
             </p>
+            {form.objectType !== "building" ? (
+              <>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const apiType = form.objectType === "land" ? "land" : "housing";
+                    const price = await priceLookup.lookup({ jibun: form.jibun, propertyType: apiType });
+                    if (price) update("publishedPrice", String(price));
+                  }}
+                  disabled={priceLookup.loading}
+                  className="text-xs text-primary underline disabled:opacity-50 hover:text-primary/80"
+                >
+                  {priceLookup.loading ? "조회중..." : "🔎 Vworld 공시가격 자동 조회"}
+                </button>
+                {priceLookup.msg && (
+                  <p className={`text-xs ${priceLookup.msg.kind === "ok" ? "text-emerald-700" : "text-destructive"}`}>
+                    {priceLookup.msg.text}
+                  </p>
+                )}
+              </>
+            ) : (
+              <p className="text-xs text-amber-700">
+                ※ 건축물 기준시가는 국세청 홈택스에서 직접 확인 후 입력하세요.
+              </p>
+            )}
           </div>
 
           {/* 1세대1주택 (주택 전용) */}

@@ -11,6 +11,8 @@
 
 import { useState } from "react";
 import { CurrencyInput, parseAmount, formatKRW } from "@/components/calc/inputs/CurrencyInput";
+import { AddressSearch, type AddressValue } from "@/components/ui/address-search";
+import { useStandardPriceLookup } from "@/lib/hooks/useStandardPriceLookup";
 import type { EstateItem, AssetCategory, ValuationMethod } from "@/lib/tax-engine/types/inheritance-gift.types";
 
 // ============================================================
@@ -92,6 +94,17 @@ function ItemEditor({ item, index, onUpdate, onRemove }: ItemEditorProps) {
 
   const set = (patch: Partial<EstateItem>) => onUpdate({ ...item, ...patch });
 
+  // ── 공시가격 조회용 로컬 주소 상태 (EstateItem에 포함되지 않음) ──
+  const [addrValue, setAddrValue] = useState<AddressValue>({
+    road: "", jibun: "", building: "", detail: "", lng: "", lat: "",
+  });
+  const priceLookup = useStandardPriceLookup();
+
+  const apiPropertyType =
+    cat === "real_estate_apartment" ? "housing" :
+    cat === "real_estate_building" ? "housing" :
+    "land"; // real_estate_land
+
   return (
     <div className="border rounded-lg p-4 space-y-3 bg-white dark:bg-gray-900">
       {/* 헤더 */}
@@ -171,15 +184,47 @@ function ItemEditor({ item, index, onUpdate, onRemove }: ItemEditorProps) {
         />
       )}
 
-      {/* 보충적 평가 (공시지가·기준시가) */}
+      {/* 보충적 평가 (공시지가·기준시가) + 자동 조회 */}
       {showStandardPrice && (
-        <CurrencyInput
-          label={cat === "real_estate_land" ? "개별공시지가 (면적 포함 합산)" : "기준시가"}
-          value={item.standardPrice != null ? String(item.standardPrice) : ""}
-          onChange={(v) => set({ standardPrice: parseAmount(v) || undefined })}
-          placeholder="없으면 빈칸"
-          hint="시가·감정가 모두 없을 때 최종 적용"
-        />
+        <div className="space-y-2">
+          {/* 소재지 조회 */}
+          <div className="space-y-1">
+            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
+              소재지 <span className="text-gray-400">(공시가격 자동 조회용, 선택)</span>
+            </label>
+            <AddressSearch
+              value={addrValue}
+              onChange={(v) => setAddrValue(v)}
+            />
+          </div>
+
+          <CurrencyInput
+            label={cat === "real_estate_land" ? "개별공시지가 (면적 포함 합산)" : "기준시가"}
+            value={item.standardPrice != null ? String(item.standardPrice) : ""}
+            onChange={(v) => set({ standardPrice: parseAmount(v) || undefined })}
+            placeholder="없으면 빈칸"
+            hint="시가·감정가 모두 없을 때 최종 적용"
+          />
+          <button
+            type="button"
+            onClick={async () => {
+              const price = await priceLookup.lookup({
+                jibun: addrValue.jibun,
+                propertyType: apiPropertyType,
+              });
+              if (price) set({ standardPrice: price });
+            }}
+            disabled={priceLookup.loading}
+            className="text-xs text-primary underline disabled:opacity-50 hover:text-primary/80"
+          >
+            {priceLookup.loading ? "조회중..." : "🔎 Vworld 공시가격 자동 조회"}
+          </button>
+          {priceLookup.msg && (
+            <p className={`text-xs ${priceLookup.msg.kind === "ok" ? "text-emerald-700" : "text-destructive"}`}>
+              {priceLookup.msg.text}
+            </p>
+          )}
+        </div>
       )}
 
       {/* 임대보증금 차감 (아파트·건물) */}
