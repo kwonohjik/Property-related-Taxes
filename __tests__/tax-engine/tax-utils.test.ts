@@ -132,6 +132,64 @@ describe("safeMultiplyThenDivide", () => {
     // 10 × 1 ÷ 3 = 3.333... → 3
     expect(safeMultiplyThenDivide(10, 1, 3)).toBe(3);
   });
+
+  // ── BigInt fallback 경로 (종합부동산세 고가 자산 시나리오) ──
+
+  it("BigInt fallback: a * b가 MAX_SAFE_INTEGER 초과 시 정상 계산", () => {
+    // 10조 × 100만 = 10^19 → Number.MAX_SAFE_INTEGER(약 9 × 10^15) 초과
+    // BigInt 정확 계산: 10_000_000_000_000 × 1_000_000 ÷ 100 = 10^17 (10경)
+    const a = 10_000_000_000_000; // 10조
+    const b = 1_000_000;          // 100만
+    const c = 100;
+    expect(a * b).toBeGreaterThan(Number.MAX_SAFE_INTEGER); // BigInt 경로 진입 확인
+    expect(safeMultiplyThenDivide(a, b, c)).toBe(100_000_000_000_000_000);
+  });
+
+  it("BigInt fallback: 종합부동산세 재산세 비율안분공제 시나리오", () => {
+    // 공시가 합계 300억, 재산세 산출세액 1억 5천만, 분모 200억
+    // (150_000_000 × 30_000_000_000) ÷ 20_000_000_000
+    // = 4_500_000_000_000_000_000 ÷ 20_000_000_000 = 225_000_000 (2억 2천5백만)
+    const propertyTax = 150_000_000;
+    const totalAssessed = 30_000_000_000;
+    const denominator = 20_000_000_000;
+    expect(propertyTax * totalAssessed).toBeGreaterThan(Number.MAX_SAFE_INTEGER);
+    expect(safeMultiplyThenDivide(propertyTax, totalAssessed, denominator)).toBe(225_000_000);
+  });
+
+  it("BigInt fallback과 일반 경로가 동일한 결과를 반환한다", () => {
+    // 일반 경로로 계산 가능한 값과 BigInt 경로의 결과 비교
+    // 비율: a/c = 3, b = 1 → 일반 경로 결과 = 3
+    // BigInt 경로: a를 크게 키우고 c도 같은 비율로 키움
+    const smallA = 3_000_000;
+    const smallB = 2_000_000;
+    const smallC = 10_000_000;
+    const smallResult = safeMultiplyThenDivide(smallA, smallB, smallC); // 일반 경로
+
+    // 동일 비율을 BigInt 경로로 계산: 값을 1_000_000배 키움
+    const bigA = 3_000_000_000_000;   // 3_000_000 × 1_000_000
+    const bigB = 2_000_000;
+    const bigC = 10_000_000;
+    expect(bigA * bigB).toBeGreaterThan(Number.MAX_SAFE_INTEGER); // BigInt 경로 진입 확인
+    const bigResult = safeMultiplyThenDivide(bigA, bigB, bigC); // BigInt 경로
+
+    // 결과도 1_000_000배 관계
+    expect(bigResult).toBe(smallResult * 1_000_000);
+  });
+
+  it("BigInt fallback: c === 0 이면 BigInt 경로 이전에 0 반환", () => {
+    const a = 10_000_000_000_000;
+    const b = 1_000_000;
+    expect(safeMultiplyThenDivide(a, b, 0)).toBe(0);
+  });
+
+  it("BigInt fallback: 음수 입력 처리", () => {
+    // 음수 × 양수 = 음수 (절대값이 MAX_SAFE_INTEGER 초과)
+    const a = -10_000_000_000_000;
+    const b = 1_000_000;
+    const c = 100;
+    expect(Math.abs(a * b)).toBeGreaterThan(Number.MAX_SAFE_INTEGER);
+    expect(safeMultiplyThenDivide(a, b, c)).toBe(-100_000_000_000_000_000);
+  });
 });
 
 // ============================================================

@@ -320,6 +320,58 @@ describe("assessSurcharge — 생애최초 감면", () => {
 });
 
 // ============================================================
+// 생애최초 감면 12억 경계값 정밀 테스트 (지방세특례제한법 §36의3)
+// ============================================================
+
+describe("assessSurcharge — 생애최초 감면 12억 경계값", () => {
+  it("취득가액 정확히 12억(1,200,000,000원): 감면 가능", () => {
+    const result = assessSurcharge({
+      propertyType: "housing",
+      acquisitionCause: "purchase",
+      acquisitionValue: 1_200_000_000,
+      acquiredBy: "individual",
+      isFirstHome: true,
+      isMetropolitan: true,
+      acquisitionTax: 36_000_000, // 12억 × 3% = 3,600만원
+    });
+    expect(result.firstHomeReduction?.isEligible).toBe(true);
+    // 감면액은 200만원 한도 (본세 3,600만원 > 200만원)
+    expect(result.firstHomeReduction?.reductionAmount).toBe(2_000_000);
+  });
+
+  it("취득가액 12억 + 1원(1,200,000,001원): 감면 불가", () => {
+    const result = assessSurcharge({
+      propertyType: "housing",
+      acquisitionCause: "purchase",
+      acquisitionValue: 1_200_000_001,
+      acquiredBy: "individual",
+      isFirstHome: true,
+      isMetropolitan: true,
+      acquisitionTax: 36_000_000,
+    });
+    expect(result.firstHomeReduction?.isEligible).toBe(false);
+    expect(result.firstHomeReduction?.reductionAmount).toBe(0);
+  });
+
+  it("감면 적용 시 200만원 한도 확인 (취득세 본세가 한도 초과)", () => {
+    const result = assessSurcharge({
+      propertyType: "housing",
+      acquisitionCause: "purchase",
+      acquisitionValue: 800_000_000,
+      acquiredBy: "individual",
+      isFirstHome: true,
+      isMetropolitan: false,
+      acquisitionTax: 16_000_000, // 8억 × 2% = 1,600만원
+    });
+    expect(result.firstHomeReduction?.isEligible).toBe(true);
+    // maxReductionAmount = 200만원
+    expect(result.firstHomeReduction?.maxReductionAmount).toBe(2_000_000);
+    // 본세 1,600만원 > 200만원 한도 → 감면액 = 200만원
+    expect(result.firstHomeReduction?.reductionAmount).toBe(2_000_000);
+  });
+});
+
+// ============================================================
 // isExemptFromSurcharge_LowValue — 1억 이하 배제
 // ============================================================
 

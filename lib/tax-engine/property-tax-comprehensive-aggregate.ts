@@ -17,7 +17,7 @@
  *   - 세부담상한 → 안분 순서 준수
  */
 
-import { applyRate } from "./tax-utils";
+import { applyRate, truncateToThousand } from "./tax-utils";
 import { PROPERTY_CAL, PROPERTY_CONST, PROPERTY_SEPARATE_CONST } from "./legal-codes";
 
 // ============================================================
@@ -373,7 +373,7 @@ export function calculateComprehensiveAggregateTaxBase(
     totalOfficialValue += value;
   }
 
-  const taxBase = applyRate(totalOfficialValue, fairMarketValueRatio);
+  const taxBase = truncateToThousand(applyRate(totalOfficialValue, fairMarketValueRatio));
 
   return { totalOfficialValue, taxBase };
 }

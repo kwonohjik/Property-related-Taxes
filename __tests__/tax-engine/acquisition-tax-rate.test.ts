@@ -80,6 +80,56 @@ describe("calcLinearInterpolationTax", () => {
 });
 
 // ============================================================
+// 6~9억 선형보간 경계값 정밀 테스트
+// ============================================================
+
+describe("선형보간 경계값 — linearInterpolationRate & calcLinearInterpolationTax", () => {
+  it("정확히 6억(600,000,000원): 선형보간 시작점, 세율 1%", () => {
+    // linearInterpolationRate: <= 6억 → 0.01
+    expect(linearInterpolationRate(600_000_000)).toBe(0.01);
+    // calcLinearInterpolationTax: <= 6억 → floor(6억 × 0.01) = 6,000,000
+    expect(calcLinearInterpolationTax(600_000_000)).toBe(6_000_000);
+    // getBasicRate: 6억은 <= LOW이므로 기본세율 1%, 선형보간 아님
+    const result = getBasicRate("housing", "purchase", 600_000_000);
+    expect(result.rate).toBe(0.01);
+    expect(result.isLinearInterpolation).toBe(false);
+  });
+
+  it("정확히 9억(900,000,000원): 선형보간 종료점, 세율 3%", () => {
+    // linearInterpolationRate: >= 9억 → 0.03
+    expect(linearInterpolationRate(900_000_000)).toBe(0.03);
+    // calcLinearInterpolationTax: >= 9억 → floor(9억 × 0.03) = 27,000,000
+    expect(calcLinearInterpolationTax(900_000_000)).toBe(27_000_000);
+    // getBasicRate: 9억은 >= HIGH이므로 기본세율 3%, 선형보간 아님
+    const result = getBasicRate("housing", "purchase", 900_000_000);
+    expect(result.rate).toBe(0.03);
+    expect(result.isLinearInterpolation).toBe(false);
+  });
+
+  it("6억 - 1원(599,999,999원): 선형보간 미적용, 기본세율 1%", () => {
+    // linearInterpolationRate: <= 6억 → 0.01
+    expect(linearInterpolationRate(599_999_999)).toBe(0.01);
+    // calcLinearInterpolationTax: <= 6억 → floor(599,999,999 × 0.01) = 5,999,999
+    expect(calcLinearInterpolationTax(599_999_999)).toBe(5_999_999);
+    // getBasicRate: 599,999,999 <= LOW이므로 기본세율 1%, 선형보간 아님
+    const result = getBasicRate("housing", "purchase", 599_999_999);
+    expect(result.rate).toBe(0.01);
+    expect(result.isLinearInterpolation).toBe(false);
+  });
+
+  it("9억 + 1원(900,000,001원): 선형보간 미적용, 3% 고정세율", () => {
+    // linearInterpolationRate: >= 9억 → 0.03
+    expect(linearInterpolationRate(900_000_001)).toBe(0.03);
+    // calcLinearInterpolationTax: >= 9억 → floor(900,000,001 × 0.03) = 27,000,000
+    expect(calcLinearInterpolationTax(900_000_001)).toBe(27_000_000);
+    // getBasicRate: 900,000,001 >= HIGH이므로 기본세율 3%, 선형보간 아님
+    const result = getBasicRate("housing", "purchase", 900_000_001);
+    expect(result.rate).toBe(0.03);
+    expect(result.isLinearInterpolation).toBe(false);
+  });
+});
+
+// ============================================================
 // getBasicRate — 물건 × 취득원인 세율 조합
 // ============================================================
 

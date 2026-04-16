@@ -342,6 +342,135 @@ describe("상속세 메인 엔진 — calcInheritanceTax()", () => {
     expect(result.finalTax).toBe(110_968_000); // 88M + 26.4M - 3.432M
   });
 
+  // ──── E9-A2: §13 사전증여 합산 10년/5년 경계값 테스트 ─────
+  // differenceInYears(date-fns)는 만 연수(정수) 기준이므로
+  // 경계 판정은 "경과 만 연수 > limitYears" 조건.
+  // 10년 정확 → differenceInYears = 10 → 10 > 10 = false → 포함
+  // 11년 정확 → differenceInYears = 11 → 11 > 10 = true → 제외
+
+  it("[E9-A2a] 상속인 사전증여: 정확히 10년 전(경과 연수 = 10) → 합산 포함", () => {
+    /**
+     * deathDate = 2025-01-01, giftDate = 2015-01-01
+     * differenceInYears(2025-01-01, 2015-01-01) = 10
+     * 10 > 10 = false → 합산 포함
+     *
+     * 과세가액 = 5억 - 500만(장례min) + 1억(사전증여) = 595,000,000
+     * §24 한도 = 595M - 100M = 495M
+     * 일괄공제 5억 > 495M → 공제 = 495M
+     * 과세표준 = 595M - 495M = 100,000,000
+     * 산출세액 = floor(100M × 0.1) = 10,000,000
+     * 결정세액 = 10M (신고공제 미적용으로 단순화)
+     */
+    const input: InheritanceTaxInput = {
+      decedentType: "resident",
+      deathDate: "2025-01-01",
+      estateItems: [financialItem("1", 500_000_000)],
+      funeralExpense: 0,
+      funeralIncludesBongan: false,
+      debts: 0,
+      preGiftsWithin10Years: [
+        {
+          giftDate: "2015-01-01", // 정확히 10년 전
+          isHeir: true,
+          giftAmount: 100_000_000,
+          giftTaxPaid: 0,
+        },
+      ],
+      heirs: [heirChild()],
+      deductionInput: { heirs: [heirChild()] },
+      creditInput: { isFiledOnTime: false },
+    };
+    const result = calcInheritanceTax(input);
+    expect(result.priorGiftAggregated).toBe(100_000_000); // 합산 포함
+  });
+
+  it("[E9-A2b] 상속인 사전증여: 10년 초과(경과 연수 = 11) → 합산 제외", () => {
+    /**
+     * deathDate = 2025-01-01, giftDate = 2014-01-01
+     * differenceInYears(2025-01-01, 2014-01-01) = 11
+     * 11 > 10 = true → 합산 제외
+     */
+    const input: InheritanceTaxInput = {
+      decedentType: "resident",
+      deathDate: "2025-01-01",
+      estateItems: [financialItem("1", 500_000_000)],
+      funeralExpense: 0,
+      funeralIncludesBongan: false,
+      debts: 0,
+      preGiftsWithin10Years: [
+        {
+          giftDate: "2014-01-01", // 11년 전
+          isHeir: true,
+          giftAmount: 100_000_000,
+          giftTaxPaid: 0,
+        },
+      ],
+      heirs: [heirChild()],
+      deductionInput: { heirs: [heirChild()] },
+      creditInput: { isFiledOnTime: false },
+    };
+    const result = calcInheritanceTax(input);
+    expect(result.priorGiftAggregated).toBe(0); // 합산 제외
+  });
+
+  it("[E9-A2c] 비상속인 사전증여: 정확히 5년 전(경과 연수 = 5) → 합산 포함", () => {
+    /**
+     * deathDate = 2025-01-01, giftDate = 2020-01-01
+     * differenceInYears(2025-01-01, 2020-01-01) = 5
+     * 5 > 5 = false → 합산 포함
+     */
+    const input: InheritanceTaxInput = {
+      decedentType: "resident",
+      deathDate: "2025-01-01",
+      estateItems: [financialItem("1", 500_000_000)],
+      funeralExpense: 0,
+      funeralIncludesBongan: false,
+      debts: 0,
+      preGiftsWithin10Years: [
+        {
+          giftDate: "2020-01-01", // 정확히 5년 전
+          isHeir: false,
+          giftAmount: 100_000_000,
+          giftTaxPaid: 0,
+        },
+      ],
+      heirs: [heirChild()],
+      deductionInput: { heirs: [heirChild()] },
+      creditInput: { isFiledOnTime: false },
+    };
+    const result = calcInheritanceTax(input);
+    expect(result.priorGiftAggregated).toBe(100_000_000); // 합산 포함
+  });
+
+  it("[E9-A2d] 비상속인 사전증여: 5년 초과(경과 연수 = 6) → 합산 제외", () => {
+    /**
+     * deathDate = 2025-01-01, giftDate = 2019-01-01
+     * differenceInYears(2025-01-01, 2019-01-01) = 6
+     * 6 > 5 = true → 합산 제외
+     */
+    const input: InheritanceTaxInput = {
+      decedentType: "resident",
+      deathDate: "2025-01-01",
+      estateItems: [financialItem("1", 500_000_000)],
+      funeralExpense: 0,
+      funeralIncludesBongan: false,
+      debts: 0,
+      preGiftsWithin10Years: [
+        {
+          giftDate: "2019-01-01", // 6년 전
+          isHeir: false,
+          giftAmount: 100_000_000,
+          giftTaxPaid: 0,
+        },
+      ],
+      heirs: [heirChild()],
+      deductionInput: { heirs: [heirChild()] },
+      creditInput: { isFiledOnTime: false },
+    };
+    const result = calcInheritanceTax(input);
+    expect(result.priorGiftAggregated).toBe(0); // 합산 제외
+  });
+
   // ──── E9-B: §28 증여세액공제 — §13 기간 외 사전증여 제외 검증 ─
   it("[E9-B] §28 증여세액공제 — 비상속인 7년 전 증여(5년 초과)는 §13 합산 제외 → 공제 0", () => {
     /**
@@ -603,5 +732,85 @@ describe("증여세 메인 엔진 — calcGiftTax()", () => {
     expect(result.creditDetail.filingCredit).toBe(0);
     expect(result.computedTax).toBe(10_000_000);
     expect(result.finalTax).toBe(10_000_000);
+  });
+
+  // ──── E19: 세대생략 40% 경계값 — 미성년 정확히 20억 → 30% ──
+  it("[E19] 세대생략(미성년, 증여재산가액 정확히 20억) → 30% 할증 (초과 아님)", () => {
+    /**
+     * §57 ②: 미성년자 + 증여재산가액 20억 "초과" 시 40%.
+     * 정확히 20억은 초과가 아니므로 기본 30% 적용.
+     *
+     * 직계비속 20억, 공제 5천만 → 과세표준 1,950,000,000
+     * 산출세액: [10억+1~30억] 40% 구간
+     *   floor(1,950,000,000 × 0.4) - 160,000,000 = 780M - 160M = 620,000,000
+     * 세대생략 30%: floor(620M × 0.3) = 186,000,000
+     */
+    const input: GiftTaxInput = {
+      giftDate: "2025-01-01",
+      donorRelation: "lineal_descendant",
+      giftItems: [financialItem("1", 2_000_000_000)],
+      priorGiftsWithin10Years: [],
+      isGenerationSkip: true,
+      isMinorDonee: true,
+      deductionInput: { donorRelation: "lineal_descendant" },
+      creditInput: { isFiledOnTime: false },
+    };
+    const result = calcGiftTax(input);
+    expect(result.taxBase).toBe(1_950_000_000);
+    expect(result.computedTax).toBe(620_000_000);
+    expect(result.generationSkipSurcharge).toBe(186_000_000); // 30%, NOT 40%
+  });
+
+  // ──── E20: 세대생략 40% 경계값 — 미성년 20억+1원 → 40% ─────
+  it("[E20] 세대생략(미성년, 증여재산가액 20억+1원) → 40% 할증 (초과)", () => {
+    /**
+     * §57 ②: 미성년자 + 증여재산가액 20억 초과 → 40%.
+     * 2,000,000,001원은 20억 초과이므로 40% 적용.
+     *
+     * 직계비속 20억+1원, 공제 5천만
+     * 과세표준 = truncate(2,000,000,001 - 50,000,000) = 1,950,000,000 (1원 절사)
+     * 산출세액 = 620,000,000 (E19와 동일)
+     * 세대생략 40%: floor(620M × 0.4) = 248,000,000
+     */
+    const input: GiftTaxInput = {
+      giftDate: "2025-01-01",
+      donorRelation: "lineal_descendant",
+      giftItems: [financialItem("1", 2_000_000_001)],
+      priorGiftsWithin10Years: [],
+      isGenerationSkip: true,
+      isMinorDonee: true,
+      deductionInput: { donorRelation: "lineal_descendant" },
+      creditInput: { isFiledOnTime: false },
+    };
+    const result = calcGiftTax(input);
+    expect(result.taxBase).toBe(1_950_000_000);
+    expect(result.computedTax).toBe(620_000_000);
+    expect(result.generationSkipSurcharge).toBe(248_000_000); // 40%, 미성년+20억 초과
+  });
+
+  // ──── E21: 세대생략 — 성년 30억 → 항상 30% ─────────────────
+  it("[E21] 세대생략(성년, 증여재산가액 30억) → 30% 할증 (성년은 금액 무관 항상 30%)", () => {
+    /**
+     * §57 ②: 40%는 미성년자 조건 필수. 성년은 금액과 무관하게 30%.
+     *
+     * 직계비속 30억, 공제 5천만 → 과세표준 2,950,000,000
+     * 산출세액: [10억+1~30억] 40% 구간
+     *   floor(2,950,000,000 × 0.4) - 160,000,000 = 1,180M - 160M = 1,020,000,000
+     * 세대생략 30%: floor(1,020M × 0.3) = 306,000,000
+     */
+    const input: GiftTaxInput = {
+      giftDate: "2025-01-01",
+      donorRelation: "lineal_descendant",
+      giftItems: [financialItem("1", 3_000_000_000)],
+      priorGiftsWithin10Years: [],
+      isGenerationSkip: true,
+      isMinorDonee: false,
+      deductionInput: { donorRelation: "lineal_descendant" },
+      creditInput: { isFiledOnTime: false },
+    };
+    const result = calcGiftTax(input);
+    expect(result.taxBase).toBe(2_950_000_000);
+    expect(result.computedTax).toBe(1_020_000_000);
+    expect(result.generationSkipSurcharge).toBe(306_000_000); // 30%, 성년은 항상 30%
   });
 });
