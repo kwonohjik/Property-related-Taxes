@@ -8,6 +8,7 @@
 import { useState } from "react";
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import { cn } from "@/lib/utils";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
 import { LoginPromptBanner } from "@/components/calc/shared/LoginPromptBanner";
@@ -79,10 +80,23 @@ export function TransferTaxResultView({ result, onReset, onBack, onLoginPrompt =
         <div className="rounded-xl border-2 border-primary bg-primary/5 p-5">
           <p className="text-sm font-medium text-muted-foreground mb-1">총 납부세액</p>
           <p className="text-3xl font-bold">{formatKRW(result.totalTax)}</p>
-          <div className="mt-3 flex gap-4 text-sm text-muted-foreground">
-            <span>결정세액 {formatKRW(result.determinedTax)}</span>
-            <span>+</span>
-            <span>지방소득세 {formatKRW(result.localIncomeTax)}</span>
+          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
+            {(() => {
+              const totalAllPenalty = result.penaltyTax + (result.penaltyDetail?.totalPenalty ?? 0);
+              return (
+                <>
+                  <span>결정세액 {formatKRW(result.determinedTax)}</span>
+                  {totalAllPenalty > 0 && (
+                    <>
+                      <span>+</span>
+                      <span>가산세 {formatKRW(totalAllPenalty)}</span>
+                    </>
+                  )}
+                  <span>+</span>
+                  <span>지방소득세 {formatKRW(result.localIncomeTax)}</span>
+                </>
+              );
+            })()}
           </div>
         </div>
       )}
@@ -117,7 +131,50 @@ export function TransferTaxResultView({ result, onReset, onBack, onLoginPrompt =
               value={`- ${formatKRW(result.reductionAmount)}`}
             />
           )}
-          <Row label="결정세액" value={formatKRW(result.determinedTax)} highlight />
+          <Row
+            label="결정세액"
+            value={formatKRW(result.determinedTax)}
+            highlight={result.penaltyTax === 0 && !result.penaltyDetail?.totalPenalty}
+          />
+          {(() => {
+            const totalAllPenalty = result.penaltyTax + (result.penaltyDetail?.totalPenalty ?? 0);
+            if (totalAllPenalty === 0) return null;
+            const totalWithPenalty = result.determinedTax + totalAllPenalty;
+            return (
+              <>
+                <Row
+                  label="가산세 합계"
+                  value={`+ ${formatKRW(totalAllPenalty)}`}
+                />
+                {result.penaltyTax > 0 && (
+                  <Row
+                    label="환산가액적용가산세 (§114조의2)"
+                    value={formatKRW(result.penaltyTax)}
+                    sub
+                  />
+                )}
+                {result.penaltyDetail?.filingPenalty && result.penaltyDetail.filingPenalty.filingPenalty > 0 && (
+                  <Row
+                    label={`신고불성실가산세 (${(result.penaltyDetail.filingPenalty.penaltyRate * 100).toFixed(0)}%)`}
+                    value={formatKRW(result.penaltyDetail.filingPenalty.filingPenalty)}
+                    sub
+                  />
+                )}
+                {result.penaltyDetail?.delayedPaymentPenalty && result.penaltyDetail.delayedPaymentPenalty.delayedPaymentPenalty > 0 && (
+                  <Row
+                    label={`납부지연가산세 (${result.penaltyDetail.delayedPaymentPenalty.elapsedDays}일 × ${(result.penaltyDetail.delayedPaymentPenalty.dailyRate * 100).toFixed(3)}%)`}
+                    value={formatKRW(result.penaltyDetail.delayedPaymentPenalty.delayedPaymentPenalty)}
+                    sub
+                  />
+                )}
+                <Row
+                  label="총결정세액"
+                  value={formatKRW(totalWithPenalty)}
+                  highlight
+                />
+              </>
+            );
+          })()}
           <Row label="지방소득세 (10%)" value={formatKRW(result.localIncomeTax)} />
         </div>
       )}
@@ -170,17 +227,18 @@ export function TransferTaxResultView({ result, onReset, onBack, onLoginPrompt =
       {showSteps && (
         <div className="rounded-lg border border-border divide-y divide-border text-sm">
           {result.steps.map((step, i) => (
-            <div key={i} className="px-4 py-3 flex justify-between gap-4">
+            <div key={i} className={cn(
+              "py-2.5 flex justify-between gap-4",
+              step.sub ? "pl-8 pr-4 bg-muted/30" : "px-4",
+            )}>
               <div className="min-w-0">
-                <p className="font-medium">{step.label}</p>
+                <p className={cn("font-medium", step.sub && "text-muted-foreground text-xs")}>{step.label}</p>
                 <p className="text-xs text-muted-foreground mt-0.5">{step.formula}</p>
-                {step.legalBasis && (
-                  <span className="inline-block mt-1 text-[10px] text-muted-foreground/70 border border-border/60 rounded px-1.5 py-0.5">
-                    {step.legalBasis}
-                  </span>
+                {step.legalBasis && !step.sub && (
+                  <LawArticleModal legalBasis={step.legalBasis} />
                 )}
               </div>
-              <p className="font-mono font-medium shrink-0">{formatKRW(step.amount)}</p>
+              <p className={cn("font-mono shrink-0", step.sub ? "text-xs text-muted-foreground" : "font-medium")}>{formatKRW(step.amount)}</p>
             </div>
           ))}
         </div>
@@ -189,11 +247,15 @@ export function TransferTaxResultView({ result, onReset, onBack, onLoginPrompt =
       {/* 면책 고지 */}
       <DisclaimerBanner />
 
-      {/* 비로그인 안내 */}
-      {onLoginPrompt && <LoginPromptBanner hasPendingResult />}
+      {/* 비로그인 안내 — 인쇄 시 숨김 */}
+      {onLoginPrompt && (
+        <div className="print:hidden">
+          <LoginPromptBanner hasPendingResult />
+        </div>
+      )}
 
-      {/* 하단 버튼 */}
-      <div className="flex gap-3">
+      {/* 하단 버튼 — 인쇄 시 숨김 */}
+      <div className="flex gap-3 print:hidden">
         <button
           type="button"
           onClick={onBack}

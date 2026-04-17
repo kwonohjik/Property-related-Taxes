@@ -10,19 +10,25 @@ import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInp
 import { StepIndicator } from "@/components/calc/StepIndicator";
 import { TransferTaxResultView } from "@/components/calc/results/TransferTaxResultView";
 import { callTransferTaxAPI } from "@/lib/calc/transfer-tax-api";
+import type { TransferTaxPenaltyResult } from "@/lib/tax-engine/transfer-tax-penalty";
 import { validateStep } from "@/lib/calc/transfer-tax-validate";
 
 
-const STEPS = ["물건 유형", "양도 정보", "취득 정보", "보유 상황", "감면 확인"];
+const STEPS = ["물건 유형", "양도 정보", "취득 정보", "보유 상황", "감면 확인", "가산세"];
+
+const isHousingLike = (pt: string) =>
+  pt === "housing" || pt === "right_to_move_in" || pt === "presale_right";
 
 // ============================================================
 // Step 1: 물건 유형
 // ============================================================
 function Step1({ form, onChange }: { form: TransferFormData; onChange: (d: Partial<TransferFormData>) => void }) {
   const options = [
-    { value: "housing", label: "주택", icon: "🏠", desc: "아파트, 단독주택, 연립 등" },
-    { value: "land", label: "토지", icon: "🌱", desc: "농지, 임야, 나대지 등" },
-    { value: "building", label: "건물", icon: "🏢", desc: "상가, 오피스, 창고 등" },
+    { value: "housing",        label: "주택",   icon: "🏠", desc: "아파트, 단독주택, 연립 등" },
+    { value: "right_to_move_in", label: "입주권", icon: "🏗️", desc: "재개발·재건축 입주권" },
+    { value: "presale_right",  label: "분양권", icon: "📋", desc: "아파트 분양권" },
+    { value: "land",           label: "토지",   icon: "🌱", desc: "농지, 임야, 나대지 등" },
+    { value: "building",       label: "건물",   icon: "🏢", desc: "상가, 오피스, 창고 등" },
   ] as const;
 
   return (
@@ -116,52 +122,212 @@ function Step2({ form, onChange }: { form: TransferFormData; onChange: (d: Parti
 // ============================================================
 // Step 3: 취득 정보
 // ============================================================
-function Step3({ form, onChange }: { form: TransferFormData; onChange: (d: Partial<TransferFormData>) => void }) {
-  const [lookupLoading, setLookupLoading] = useState<"transfer" | "acquisition" | null>(null);
-  const [lookupMsg, setLookupMsg] = useState<{ target: "transfer" | "acquisition"; text: string; kind: "ok" | "err" } | null>(null);
 
-  async function lookupStandardPrice(target: "transfer" | "acquisition") {
+// 날짜와 물건 유형을 보고 공시가격 기본 조회 연도를 계산
+// 공시일 이전 날짜라면 전년도를 사용해야 함 (주택 4.29, 토지 5.31 기준)
+function getDefaultPriceYear(dateStr: string, propertyType: string): string {
+  if (!dateStr || dateStr.length < 10) return String(new Date().getFullYear());
+  const year = parseInt(dateStr.slice(0, 4));
+  const mmdd = dateStr.slice(5, 7) + dateStr.slice(8, 10); // "MMDD"
+  const cutoff = propertyType === "land" ? "0531" : "0429";
+  return mmdd < cutoff ? String(year - 1) : String(year);
+}
+
+function Step3({ form, onChange }: { form: TransferFormData; onChange: (d: Partial<TransferFormData>) => void }) {
+  const currentYear = new Date().getFullYear();
+  const yearOptions = Array.from({ length: currentYear - 2004 }, (_, i) => String(currentYear - i));
+
+  const [acqYear, setAcqYear] = useState<string>(
+    () => getDefaultPriceYear(form.acquisitionDate, form.propertyType)
+  );
+  const [tsfYear, setTsfYear] = useState<string>(
+    () => getDefaultPriceYear(form.transferDate, form.propertyType)
+  );
+  const [acqLoading, setAcqLoading] = useState(false);
+  const [tsfLoading, setTsfLoading] = useState(false);
+  const [lookupMsg, setLookupMsg] = useState<{ text: string; kind: "ok" | "err" } | null>(null);
+
+  // 날짜 변경 감지용 ref — 날짜가 바뀌면 공시가격 초기화 (Bug Fix)
+  const prevAcqDateRef = useRef(form.acquisitionDate);
+  const prevTsfDateRef = useRef(form.transferDate);
+
+  useEffect(() => {
+    if (!form.acquisitionDate) return;
+    setAcqYear(getDefaultPriceYear(form.acquisitionDate, form.propertyType));
+    if (prevAcqDateRef.current && prevAcqDateRef.current !== form.acquisitionDate) {
+      onChange({ standardPriceAtAcquisition: "", standardPriceAtAcquisitionLabel: "" });
+    }
+    prevAcqDateRef.current = form.acquisitionDate;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.acquisitionDate, form.propertyType]);
+
+  useEffect(() => {
+    if (!form.transferDate) return;
+    setTsfYear(getDefaultPriceYear(form.transferDate, form.propertyType));
+    if (prevTsfDateRef.current && prevTsfDateRef.current !== form.transferDate) {
+      onChange({ standardPriceAtTransfer: "", standardPriceAtTransferLabel: "" });
+    }
+    prevTsfDateRef.current = form.transferDate;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.transferDate, form.propertyType]);
+
+  // API 응답으로 레이블 생성
+  function buildLabel(data: Record<string, unknown>, year: string): string {
+    const announcedDate = String(data.announcedDate ?? "");
+    const effectiveDate = announcedDate.length === 8
+      ? announcedDate
+      : data.priceType === "land_price" ? `${year}0531` : `${year}0429`;
+    const typeName =
+      data.priceType === "apart_housing_price" ? "공동주택" :
+      data.priceType === "indvd_housing_price" ? "개별주택" :
+      data.priceType === "land_price" ? "개별공시지가" : "공시가격";
+    const d = effectiveDate;
+    const pubDate = `${d.slice(0, 4)}.${parseInt(d.slice(4, 6), 10)}.${parseInt(d.slice(6, 8), 10)}.`;
+    return `${typeName} 공시일 : ${pubDate}`;
+  }
+
+  function buildParams(year: string) {
+    const detail = form.propertyAddressDetail?.trim() ?? "";
+    const parts = detail.split(/\s+/);
+    const dong = parts.length >= 2 ? parts[0] : "";
+    const ho   = parts.length >= 2 ? parts.slice(1).join(" ") : "";
+    const params = new URLSearchParams({ jibun: form.propertyAddressJibun, propertyType: form.propertyType, year });
+    if (dong) params.set("dong", dong);
+    if (ho)   params.set("ho", ho);
+    return params;
+  }
+
+  // 지정 연도로 개별 조회 (조회 버튼)
+  async function fetchPriceForYear(target: "acquisition" | "transfer", year: string) {
     if (!form.propertyAddressJibun) {
-      setLookupMsg({ target, text: "먼저 Step 2에서 소재지를 검색·선택하세요. (지번 주소 필요)", kind: "err" });
+      setLookupMsg({ text: "먼저 Step 2에서 소재지를 검색·선택하세요. (지번 주소 필요)", kind: "err" });
+      return;
+    }
+    if (target === "acquisition") setAcqLoading(true);
+    else setTsfLoading(true);
+    setLookupMsg(null);
+    try {
+      const res = await fetch(`/api/address/standard-price?${buildParams(year)}`);
+      const data = await res.json() as Record<string, unknown>;
+      const price = Number(data.price ?? data.pricePerSqm ?? 0);
+      if (!res.ok || price <= 0) {
+        setLookupMsg({ text: `${year}년 공시가격 데이터를 찾을 수 없습니다.`, kind: "err" });
+        return;
+      }
+      const label = buildLabel(data, year);
+      if (target === "acquisition") {
+        onChange({ standardPriceAtAcquisition: String(price), standardPriceAtAcquisitionLabel: label });
+      } else {
+        onChange({ standardPriceAtTransfer: String(price), standardPriceAtTransferLabel: label });
+      }
+      setLookupMsg({ text: `${year}년 조회 완료`, kind: "ok" });
+    } catch {
+      setLookupMsg({ text: "네트워크 오류", kind: "err" });
+    } finally {
+      if (target === "acquisition") setAcqLoading(false);
+      else setTsfLoading(false);
+    }
+  }
+
+  // 날짜 기준 자동 연도 탐색 조회 (하단 통합 버튼 + 자동 조회용)
+  async function lookupStandardPrice(target: "transfer" | "acquisition", silent = false) {
+    if (!form.propertyAddressJibun) {
+      if (!silent) setLookupMsg({ text: "먼저 Step 2에서 소재지를 검색·선택하세요. (지번 주소 필요)", kind: "err" });
       return;
     }
     const dateStr = target === "transfer" ? form.transferDate : form.acquisitionDate;
-    const year = dateStr ? dateStr.slice(0, 4) : String(new Date().getFullYear());
-    setLookupLoading(target);
-    setLookupMsg(null);
+    if (!dateStr) {
+      if (!silent) setLookupMsg({ text: "날짜를 먼저 입력하세요.", kind: "err" });
+      return;
+    }
+    const detail = form.propertyAddressDetail?.trim() ?? "";
+    const parts = detail.split(/\s+/);
+    const dong = parts.length >= 2 ? parts[0] : "";
+    const ho   = parts.length >= 2 ? parts.slice(1).join(" ") : "";
+    const txDateCompact = dateStr.replace(/-/g, "");
+
+    if (!silent) {
+      if (target === "acquisition") setAcqLoading(true);
+      else setTsfLoading(true);
+      setLookupMsg(null);
+    }
+
     try {
-      const params = new URLSearchParams({
-        jibun: form.propertyAddressJibun,
-        propertyType: form.propertyType,
-        year,
-      });
-      const res = await fetch(`/api/address/standard-price?${params.toString()}`);
-      const data = await res.json();
-      if (!res.ok) {
-        setLookupMsg({
-          target,
-          text: data?.error?.message ?? "공시가격 조회 실패",
-          kind: "err",
-        });
+      const txYear = parseInt(dateStr.slice(0, 4));
+      const yearCandidates = [txYear, txYear - 1, txYear - 2, txYear - 3].map(String);
+
+      for (const year of yearCandidates) {
+        const params = new URLSearchParams({ jibun: form.propertyAddressJibun, propertyType: form.propertyType, year });
+        if (dong) params.set("dong", dong);
+        if (ho)   params.set("ho", ho);
+
+        const res = await fetch(`/api/address/standard-price?${params.toString()}`);
+        const data = await res.json() as Record<string, unknown>;
+        if (!res.ok) continue;
+
+        const price = Number(data.price ?? data.pricePerSqm ?? 0);
+        if (price <= 0) continue;
+
+        const announcedDate = String(data.announcedDate ?? "");
+        const effectiveAnnounced = announcedDate.length === 8
+          ? announcedDate
+          : data.priceType === "land_price" ? `${year}0531` : `${year}0429`;
+        if (txDateCompact < effectiveAnnounced) continue;
+
+        const label = buildLabel(data, year);
+        if (target === "acquisition") {
+          onChange({ standardPriceAtAcquisition: String(price), standardPriceAtAcquisitionLabel: label });
+          setAcqYear(year);
+        } else {
+          onChange({ standardPriceAtTransfer: String(price), standardPriceAtTransferLabel: label });
+          setTsfYear(year);
+        }
+        if (!silent) setLookupMsg({ text: `조회 완료 (${target === "acquisition" ? "취득" : "양도"} 시점)`, kind: "ok" });
         return;
       }
-      const price = data.price ?? data.pricePerSqm ?? 0;
-      if (price > 0) {
-        if (target === "acquisition") {
-          onChange({ standardPriceAtAcquisition: String(price) });
-        } else {
-          onChange({ standardPriceAtTransfer: String(price) });
-        }
-        setLookupMsg({ target, text: `${data.message ?? "조회 성공"}: ${price.toLocaleString()}원`, kind: "ok" });
-      } else {
-        setLookupMsg({ target, text: "가격 정보 없음", kind: "err" });
-      }
+      if (!silent) setLookupMsg({ text: "공시가격 데이터를 찾을 수 없습니다.", kind: "err" });
     } catch {
-      setLookupMsg({ target, text: "네트워크 오류", kind: "err" });
+      if (!silent) setLookupMsg({ text: "네트워크 오류", kind: "err" });
     } finally {
-      setLookupLoading(null);
+      if (!silent) {
+        if (target === "acquisition") setAcqLoading(false);
+        else setTsfLoading(false);
+      }
     }
   }
+
+  // 구 형식 레이블 마이그레이션
+  const isNewFormat = (label: string) => label.includes("공시일");
+  useEffect(() => {
+    if (form.standardPriceAtAcquisitionLabel && !isNewFormat(form.standardPriceAtAcquisitionLabel)) {
+      onChange({ standardPriceAtAcquisitionLabel: "" });
+    }
+    if (form.standardPriceAtTransferLabel && !isNewFormat(form.standardPriceAtTransferLabel)) {
+      onChange({ standardPriceAtTransferLabel: "" });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 주소·날짜·연도 준비되면 자동 조회 — 이미 해당 연도 가격이 있으면 스킵
+  useEffect(() => {
+    if (!form.propertyAddressJibun || !form.acquisitionDate) return;
+    if (!form.useEstimatedAcquisition) return;
+    if (form.standardPriceAtAcquisition && form.standardPriceAtAcquisitionLabel?.includes(acqYear)) return;
+    fetchPriceForYear("acquisition", acqYear);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.propertyAddressJibun, form.acquisitionDate, form.useEstimatedAcquisition, form.propertyType, acqYear]);
+
+  useEffect(() => {
+    if (!form.propertyAddressJibun || !form.transferDate) return;
+    if (!form.useEstimatedAcquisition) return;
+    if (form.standardPriceAtTransfer && form.standardPriceAtTransferLabel?.includes(tsfYear)) return;
+    fetchPriceForYear("transfer", tsfYear);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.propertyAddressJibun, form.transferDate, form.useEstimatedAcquisition, form.propertyType, tsfYear]);
+
+  // 연도 선택 드롭다운 공통 스타일
+  const yearSelectCls = "rounded-md border border-input bg-background px-2 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+  const fetchBtnCls = "px-3 py-2 rounded-md border border-primary text-primary text-sm font-medium hover:bg-primary/5 disabled:opacity-50 whitespace-nowrap transition-colors";
 
   return (
     <div className="space-y-5">
@@ -177,73 +343,151 @@ function Step3({ form, onChange }: { form: TransferFormData; onChange: (d: Parti
         />
       </div>
 
-      {/* 환산취득가 토글 */}
-      <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/30 px-4 py-3">
-        <input
-          id="useEstimated"
-          type="checkbox"
-          checked={form.useEstimatedAcquisition}
-          onChange={(e) => onChange({ useEstimatedAcquisition: e.target.checked, acquisitionPrice: "" })}
-          className="h-4 w-4 rounded accent-primary"
-        />
-        <div>
-          <label htmlFor="useEstimated" className="text-sm font-medium cursor-pointer">
-            환산취득가액 사용
-          </label>
-          <p className="text-xs text-muted-foreground">
-            취득 당시 실거래가 불명 시 기준시가 비율로 환산 (필요경비: 취득 당시 기준시가 × 3%)
-          </p>
+      {/* 취득가 산정 방식 — 3지선다 */}
+      <div className="space-y-1.5">
+        <p className="text-sm font-medium">취득가 산정 방식 <span className="text-destructive">*</span></p>
+        <div className="flex flex-col gap-2 rounded-lg border border-border bg-muted/30 px-4 py-3">
+          {(["actual", "estimated", "appraisal"] as const).map((method) => {
+            const labels: Record<string, string> = {
+              actual: "실거래가",
+              estimated: "환산취득가액 (기준시가 비율)",
+              appraisal: "감정가액",
+            };
+            const hints: Record<string, string> = {
+              actual: "취득 당시 실제 매매금액",
+              estimated: "취득 당시 실거래가 불명 시 기준시가 비율로 환산",
+              appraisal: "공인감정기관의 감정가액",
+            };
+            const isSelected = (form.acquisitionMethod || "actual") === method;
+            return (
+              <label key={method} className="flex items-start gap-2.5 cursor-pointer">
+                <input
+                  type="radio"
+                  name="acquisitionMethod"
+                  value={method}
+                  checked={isSelected}
+                  onChange={() => onChange({
+                    acquisitionMethod: method,
+                    useEstimatedAcquisition: method === "estimated",
+                    acquisitionPrice: "",
+                  })}
+                  className="mt-0.5 h-4 w-4 accent-primary"
+                />
+                <div>
+                  <span className="text-sm font-medium">{labels[method]}</span>
+                  <p className="text-xs text-muted-foreground">{hints[method]}</p>
+                </div>
+              </label>
+            );
+          })}
         </div>
       </div>
 
-      {form.useEstimatedAcquisition ? (
+      {(form.acquisitionMethod || "actual") === "estimated" || form.useEstimatedAcquisition ? (
         <div className="space-y-4 rounded-lg border border-dashed border-primary/40 bg-primary/3 p-4">
           <p className="text-xs font-medium text-primary">
             환산취득가 = 양도가액 × (취득 당시 기준시가 ÷ 양도 당시 기준시가)
           </p>
+
+          {/* 취득 당시 기준시가 */}
           <div className="space-y-1.5">
-            <CurrencyInput
-              label="취득 당시 기준시가"
-              value={form.standardPriceAtAcquisition}
-              onChange={(v) => onChange({ standardPriceAtAcquisition: v })}
-              placeholder="취득 시점 공시가격"
-              required
-            />
-            <button
-              type="button"
-              onClick={() => lookupStandardPrice("acquisition")}
-              disabled={lookupLoading === "acquisition"}
-              className="text-xs text-primary underline disabled:opacity-50 hover:text-primary/80"
-            >
-              {lookupLoading === "acquisition" ? "조회중..." : "🔎 Vworld 공시가격 자동 조회"}
-            </button>
-            {lookupMsg?.target === "acquisition" && (
-              <p className={cn("text-xs", lookupMsg.kind === "ok" ? "text-emerald-700" : "text-destructive")}>
-                {lookupMsg.text}
-              </p>
+            <label className="block text-sm font-medium">
+              취득 당시 기준시가 <span className="text-destructive">*</span>
+            </label>
+            <div className="flex gap-2 items-center">
+              <select
+                value={acqYear}
+                onChange={(e) => setAcqYear(e.target.value)}
+                className={yearSelectCls}
+                aria-label="취득 당시 기준시가 조회 연도"
+              >
+                {yearOptions.map((y) => (
+                  <option key={y} value={y}>{y}년</option>
+                ))}
+              </select>
+              <div className="flex-1">
+                <CurrencyInput
+                  label=""
+                  value={form.standardPriceAtAcquisition}
+                  onChange={(v) => onChange({ standardPriceAtAcquisition: v, standardPriceAtAcquisitionLabel: v ? form.standardPriceAtAcquisitionLabel : "" })}
+                  placeholder="취득 시점 공시가격"
+                  required
+                  hideFormatted
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => fetchPriceForYear("acquisition", acqYear)}
+                disabled={acqLoading || !form.propertyAddressJibun}
+                className={fetchBtnCls}
+              >
+                {acqLoading ? "조회중" : "조회"}
+              </button>
+            </div>
+            {form.standardPriceAtAcquisitionLabel && (
+              <p className="text-xs text-muted-foreground">{form.standardPriceAtAcquisitionLabel}</p>
             )}
           </div>
+
+          {/* 양도 당시 기준시가 */}
           <div className="space-y-1.5">
-            <CurrencyInput
-              label="양도 당시 기준시가"
-              value={form.standardPriceAtTransfer}
-              onChange={(v) => onChange({ standardPriceAtTransfer: v })}
-              placeholder="양도 시점 공시가격"
-              required
-              disabled={!form.standardPriceAtAcquisition || parseAmount(form.standardPriceAtAcquisition) <= 0}
-            />
+            <label className="block text-sm font-medium">
+              양도 당시 기준시가 <span className="text-destructive">*</span>
+            </label>
+            <div className="flex gap-2 items-center">
+              <select
+                value={tsfYear}
+                onChange={(e) => setTsfYear(e.target.value)}
+                className={yearSelectCls}
+                aria-label="양도 당시 기준시가 조회 연도"
+              >
+                {yearOptions.map((y) => (
+                  <option key={y} value={y}>{y}년</option>
+                ))}
+              </select>
+              <div className="flex-1">
+                <CurrencyInput
+                  label=""
+                  value={form.standardPriceAtTransfer}
+                  onChange={(v) => onChange({ standardPriceAtTransfer: v, standardPriceAtTransferLabel: v ? form.standardPriceAtTransferLabel : "" })}
+                  placeholder="양도 시점 공시가격"
+                  required
+                  disabled={!form.standardPriceAtAcquisition || parseAmount(form.standardPriceAtAcquisition) <= 0}
+                  hideFormatted
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => fetchPriceForYear("transfer", tsfYear)}
+                disabled={tsfLoading || !form.propertyAddressJibun || !form.standardPriceAtAcquisition || parseAmount(form.standardPriceAtAcquisition) <= 0}
+                className={fetchBtnCls}
+              >
+                {tsfLoading ? "조회중" : "조회"}
+              </button>
+            </div>
+            {form.standardPriceAtTransferLabel && (
+              <p className="text-xs text-muted-foreground">{form.standardPriceAtTransferLabel}</p>
+            )}
             {(!form.standardPriceAtAcquisition || parseAmount(form.standardPriceAtAcquisition) <= 0) && (
               <p className="text-xs text-muted-foreground">취득 당시 기준시가를 먼저 입력하세요.</p>
             )}
+          </div>
+
+          {/* 공시가격 조회 — 하단 통합 버튼 */}
+          <div className="space-y-1">
             <button
               type="button"
-              onClick={() => lookupStandardPrice("transfer")}
-              disabled={lookupLoading === "transfer" || !form.standardPriceAtAcquisition || parseAmount(form.standardPriceAtAcquisition) <= 0}
+              onClick={async () => {
+                setLookupMsg(null);
+                await lookupStandardPrice("acquisition");
+                await lookupStandardPrice("transfer");
+              }}
+              disabled={acqLoading || tsfLoading || !form.propertyAddressJibun}
               className="text-xs text-primary underline disabled:opacity-50 hover:text-primary/80"
             >
-              {lookupLoading === "transfer" ? "조회중..." : "🔎 Vworld 공시가격 자동 조회"}
+              {acqLoading || tsfLoading ? "조회중..." : "🔎 Vworld 공시가격 자동 조회"}
             </button>
-            {lookupMsg?.target === "transfer" && (
+            {lookupMsg && (
               <p className={cn("text-xs", lookupMsg.kind === "ok" ? "text-emerald-700" : "text-destructive")}>
                 {lookupMsg.text}
               </p>
@@ -273,7 +517,19 @@ function Step3({ form, onChange }: { form: TransferFormData; onChange: (d: Parti
         />
       )}
 
-      {form.useEstimatedAcquisition ? (
+      {/* 감정가액 입력 */}
+      {(form.acquisitionMethod === "appraisal") && (
+        <CurrencyInput
+          label="감정가액"
+          value={form.appraisalValue ?? ""}
+          onChange={(v) => onChange({ appraisalValue: v })}
+          placeholder="공인감정기관의 감정가액"
+          required
+          hint="취득 당시 공인감정기관이 평가한 가액"
+        />
+      )}
+
+      {(form.acquisitionMethod || "actual") === "estimated" || form.useEstimatedAcquisition ? (
         <div className="rounded-lg border border-border bg-muted/30 px-4 py-3">
           <p className="text-sm font-medium">필요경비</p>
           <p className="mt-0.5 text-sm text-muted-foreground">
@@ -281,7 +537,7 @@ function Step3({ form, onChange }: { form: TransferFormData; onChange: (d: Parti
             별도 필요경비는 입력하지 않습니다.
           </p>
         </div>
-      ) : (
+      ) : form.acquisitionMethod !== "appraisal" ? (
         <CurrencyInput
           label="필요경비"
           value={form.expenses}
@@ -289,6 +545,65 @@ function Step3({ form, onChange }: { form: TransferFormData; onChange: (d: Parti
           placeholder="0"
           hint="취득·양도 시 부대비용 (중개수수료, 취득세, 인테리어비 등)"
         />
+      ) : null}
+
+      {/* §114조의2 신축·증축 가산세 판정 섹션 */}
+      {(form.propertyType === "building" || form.propertyType === "housing") && (
+        <div className="space-y-3 rounded-lg border border-dashed border-amber-400/60 bg-amber-50/50 dark:bg-amber-950/20 px-4 py-3">
+          <label className="flex items-center gap-2.5 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={form.isSelfBuilt ?? false}
+              onChange={(e) => onChange({ isSelfBuilt: e.target.checked, buildingType: "", constructionDate: "", extensionFloorArea: "" })}
+              className="h-4 w-4 rounded accent-primary"
+            />
+            <span className="text-sm font-medium">본인이 신축 또는 증축한 건물입니까?</span>
+          </label>
+          {form.isSelfBuilt && (
+            <div className="space-y-3 pl-6">
+              <div className="flex gap-4">
+                {(["new", "extension"] as const).map((t) => (
+                  <label key={t} className="flex items-center gap-1.5 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="buildingType"
+                      value={t}
+                      checked={form.buildingType === t}
+                      onChange={() => onChange({ buildingType: t })}
+                      className="h-4 w-4 accent-primary"
+                    />
+                    <span className="text-sm">{t === "new" ? "신축" : "증축"}</span>
+                  </label>
+                ))}
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-sm">신축·증축 완공일 <span className="text-destructive">*</span></label>
+                <DateInput
+                  value={form.constructionDate ?? ""}
+                  onChange={(v) => onChange({ constructionDate: v })}
+                />
+              </div>
+              {form.buildingType === "extension" && (
+                <div className="space-y-1.5">
+                  <label className="block text-sm">증축 바닥면적 합계 (㎡) <span className="text-destructive">*</span></label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={form.extensionFloorArea ?? ""}
+                    onChange={(e) => onChange({ extensionFloorArea: e.target.value })}
+                    placeholder="예: 120.5"
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  />
+                  <p className="text-xs text-muted-foreground">85㎡ 초과 시 가산세 적용 (소득세법 §114조의2)</p>
+                </div>
+              )}
+              <p className="text-xs text-amber-700 dark:text-amber-400">
+                ⚠️ 신축·증축 후 5년 이내 양도 + 환산취득가액·감정가액 사용 시 5% 가산세가 부과됩니다.
+              </p>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
@@ -312,7 +627,7 @@ function Step4({ form, onChange }: { form: TransferFormData; onChange: (d: Parti
   // 주소·날짜가 준비되면 조정대상지역 자동 판별
   useEffect(() => {
     const address = form.propertyAddressRoad || form.propertyAddressJibun;
-    if (!address || !form.transferDate || form.propertyType !== "housing") {
+    if (!address || !form.transferDate || !isHousingLike(form.propertyType)) {
       setRegulatedAuto(null);
       appliedRef.current = false;
       return;
@@ -368,7 +683,7 @@ function Step4({ form, onChange }: { form: TransferFormData; onChange: (d: Parti
       <p className="text-sm text-muted-foreground">보유 기간과 과세 상황을 입력하세요.</p>
 
       {/* 조정대상지역 자동 판별 안내 */}
-      {form.propertyType === "housing" && (form.propertyAddressRoad || form.propertyAddressJibun) && (
+      {isHousingLike(form.propertyType) && (form.propertyAddressRoad || form.propertyAddressJibun) && (
         <div className="rounded-md border border-blue-300 bg-blue-50 dark:bg-blue-950/30 px-4 py-3 text-xs space-y-1">
           <p className="font-medium text-blue-800 dark:text-blue-300">
             📍 조정대상지역 자동 판별 {regulatedLoading && "(조회중...)"}
@@ -402,8 +717,8 @@ function Step4({ form, onChange }: { form: TransferFormData; onChange: (d: Parti
         </div>
       )}
 
-      {/* 주택 전용: 1세대 여부 + 주택 수 + 거주기간 + 조정대상지역 */}
-      {form.propertyType === "housing" && (
+      {/* 주택·입주권·분양권: 1세대 여부 + 주택 수 + 거주기간 + 조정대상지역 */}
+      {isHousingLike(form.propertyType) && (
         <>
           {/* 1세대 여부 */}
           <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/30 px-4 py-3">
@@ -569,13 +884,13 @@ function Step4({ form, onChange }: { form: TransferFormData; onChange: (d: Parti
         <NblDetailSection form={form} onChange={onChange} />
       )}
 
-      {/* 주택: 다른 보유 주택 목록 (P0-B) */}
-      {form.propertyType === "housing" && parseInt(form.householdHousingCount) >= 2 && (
+      {/* 주택·입주권·분양권: 다른 보유 주택 목록 (P0-B) */}
+      {isHousingLike(form.propertyType) && parseInt(form.householdHousingCount) >= 2 && (
         <HousesListSection form={form} onChange={onChange} />
       )}
 
       {/* 일시적 2주택 특례 */}
-      {form.propertyType === "housing" && (
+      {isHousingLike(form.propertyType) && (
         <div className="space-y-2">
           <p className="text-sm font-medium">일시적 2주택 특례</p>
           <div
@@ -637,8 +952,8 @@ function Step4({ form, onChange }: { form: TransferFormData; onChange: (d: Parti
         </div>
       )}
 
-      {/* 주택: 합가 특례 (P2) */}
-      {form.propertyType === "housing" && (
+      {/* 주택·입주권·분양권: 합가 특례 (P2) */}
+      {isHousingLike(form.propertyType) && (
         <MergeDateSection form={form} onChange={onChange} />
       )}
     </div>
@@ -1217,6 +1532,209 @@ function Step5({ form, onChange }: { form: TransferFormData; onChange: (d: Parti
   );
 }
 
+// ============================================================
+// Step 6: 가산세 (선택 입력)
+// ============================================================
+function Step6({
+  form,
+  onChange,
+  determinedTax,
+}: {
+  form: TransferFormData;
+  onChange: (d: Partial<TransferFormData>) => void;
+  determinedTax: number | null;
+}) {
+  const [showAdvanced, setShowAdvanced] = useState(false);
+
+  // 기납부세액 변경 시 미납세액 자동 재계산
+  function handlePriorPaidChange(v: string) {
+    onChange({ priorPaidTax: v });
+    if (determinedTax !== null) {
+      const priorPaid = parseAmount(v ?? "0");
+      const autoUnpaid = Math.max(0, determinedTax - priorPaid);
+      onChange({ priorPaidTax: v, unpaidTax: autoUnpaid > 0 ? String(autoUnpaid) : "0" });
+    }
+  }
+  return (
+    <div className="space-y-5">
+      <p className="text-sm text-muted-foreground">
+        가산세 계산이 필요한 경우에만 입력하세요. (선택 사항)
+      </p>
+
+      {/* 가산세 계산 토글 */}
+      <label className="flex items-center gap-3 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={form.enablePenalty}
+          onChange={(e) => onChange({ enablePenalty: e.target.checked })}
+          className="accent-primary w-4 h-4"
+        />
+        <span className="text-sm font-medium">가산세 계산하기</span>
+      </label>
+
+      {(form.enablePenalty ?? false) && (
+        <div className="space-y-5 rounded-lg border border-dashed border-primary/40 bg-primary/3 p-4">
+
+          {/* 신고불성실가산세 */}
+          <div className="space-y-3">
+            <p className="text-xs font-semibold text-primary">신고불성실가산세 (국세기본법 §47의2·§47의3)</p>
+
+            <div className="space-y-1.5">
+              <label className="block text-sm font-medium">신고 유형</label>
+              <div className="flex flex-col gap-2">
+                {([
+                  { value: "correct"      as const, label: "정상신고",    desc: "가산세 없음" },
+                  { value: "none"         as const, label: "무신고",      desc: "납부세액 × 20% (부정행위 40%)" },
+                  { value: "under"        as const, label: "과소신고",    desc: "납부세액 × 10% (부정행위 40%)" },
+                  { value: "excess_refund"as const, label: "초과환급신고",desc: "납부세액 × 10% (부정행위 40%)" },
+                ]).map((opt) => (
+                  <label key={opt.value} className={cn(
+                    "flex cursor-pointer items-center gap-3 rounded-lg border px-3 py-2 text-sm transition-colors",
+                    form.filingType === opt.value ? "border-primary bg-primary/5" : "border-border hover:bg-muted/40",
+                  )}>
+                    <input
+                      type="radio"
+                      name="filingType"
+                      value={opt.value}
+                      checked={form.filingType === opt.value}
+                      onChange={() => onChange({ filingType: opt.value })}
+                      className="accent-primary"
+                      aria-label={opt.label}
+                    />
+                    <div>
+                      <span className="font-medium">{opt.label}</span>
+                      <span className="ml-2 text-xs text-muted-foreground">{opt.desc}</span>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {(form.filingType ?? "correct") !== "correct" && (
+              <>
+                <div className="space-y-1.5">
+                  <label className="block text-sm font-medium">부정행위 여부</label>
+                  <div className="flex flex-col gap-2">
+                    {[
+                      { value: "normal",         label: "일반 (단순 착오·실수)",                  desc: "" },
+                      { value: "fraudulent",     label: "부정행위",                              desc: "이중장부·허위증빙·재산은닉 등 → 40%" },
+                      { value: "offshore_fraud", label: "역외거래 부정행위 (2015.7.1 이후)",     desc: "→ 60%" },
+                    ].map((opt) => (
+                      <label key={opt.value} className={cn(
+                        "flex cursor-pointer items-center gap-3 rounded-lg border px-3 py-2 text-sm transition-colors",
+                        form.penaltyReason === opt.value ? "border-primary bg-primary/5" : "border-border hover:bg-muted/40",
+                      )}>
+                        <input
+                          type="radio"
+                          name="penaltyReason"
+                          value={opt.value}
+                          checked={form.penaltyReason === opt.value}
+                          onChange={() => onChange({ penaltyReason: opt.value as typeof form.penaltyReason })}
+                          className="accent-primary"
+                          aria-label={opt.label}
+                        />
+                        <div>
+                          <span className="font-medium">{opt.label}</span>
+                          {opt.desc && <span className="ml-2 text-xs text-muted-foreground">{opt.desc}</span>}
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <CurrencyInput
+                  label="기납부세액"
+                  value={form.priorPaidTax}
+                  onChange={handlePriorPaidChange}
+                  placeholder="0"
+                  hint="예정신고 시 기납부한 세액"
+                />
+
+                {(form.filingType === "under" || form.filingType === "excess_refund") && (
+                  <CurrencyInput
+                    label="당초 신고세액"
+                    value={form.originalFiledTax}
+                    onChange={(v) => onChange({ originalFiledTax: v })}
+                    placeholder="0"
+                    hint="최초 신고한 납부세액"
+                  />
+                )}
+
+                {form.filingType === "excess_refund" && (
+                  <CurrencyInput
+                    label="초과환급신고 환급세액"
+                    value={form.excessRefundAmount}
+                    onChange={(v) => onChange({ excessRefundAmount: v })}
+                    placeholder="0"
+                    hint="과다 수령한 환급세액"
+                  />
+                )}
+
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => setShowAdvanced((p) => !p)}
+                    className="text-xs text-muted-foreground underline underline-offset-2"
+                  >
+                    {showAdvanced ? "고급 설정 접기 ▲" : "고급 설정 (이자상당액 가산액) ▼"}
+                  </button>
+                  {showAdvanced && (
+                    <div className="mt-2">
+                      <CurrencyInput
+                        label="이자상당액 가산액"
+                        value={form.interestSurcharge}
+                        onChange={(v) => onChange({ interestSurcharge: v })}
+                        placeholder="0"
+                        hint="세법에 따른 이자상당액 — 가산세 산정 납부세액에서 제외 (국세기본법 §47의2③)"
+                      />
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* 지연납부가산세 */}
+          <div className="space-y-3 border-t border-border/50 pt-4">
+            <p className="text-xs font-semibold text-primary">지연납부가산세 (국세기본법 §47의4)</p>
+
+            <CurrencyInput
+              label="미납·미달납부세액"
+              value={form.unpaidTax}
+              onChange={(v) => onChange({ unpaidTax: v })}
+              placeholder="0"
+              hint={
+                determinedTax !== null
+                  ? `결정세액 ${determinedTax.toLocaleString()}원 − 기납부세액 자동 계산`
+                  : "납부하지 않았거나 미달납부한 세액 (가산세 계산하기 클릭 시 자동 계산)"
+              }
+            />
+
+            <div className="space-y-1.5">
+              <label className="block text-sm font-medium">법정납부기한</label>
+              <DateInput
+                value={form.paymentDeadline}
+                onChange={(v) => onChange({ paymentDeadline: v })}
+              />
+              <p className="text-xs text-muted-foreground">
+                예정신고: 양도월 말일부터 2개월 / 확정신고: 다음해 5월 31일
+              </p>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-sm font-medium">실제 납부일 <span className="text-muted-foreground font-normal">(미입력 시 오늘 기준)</span></label>
+              <DateInput
+                value={form.actualPaymentDate}
+                onChange={(v) => onChange({ actualPaymentDate: v })}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // 메인 컴포넌트
 // ============================================================
 export default function TransferTaxCalculator() {
@@ -1226,6 +1744,10 @@ export default function TransferTaxCalculator() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [penaltyResult, setPenaltyResult] = useState<TransferTaxPenaltyResult | null>(null);
+  const [isPenaltyLoading, setIsPenaltyLoading] = useState(false);
+  /** 가산세 계산하기로 얻은 결정세액 — unpaidTax 자동 계산용 */
+  const [calcDeterminedTax, setCalcDeterminedTax] = useState<number | null>(null);
 
   // 로그인 상태 확인 (클라이언트 사이드)
   useEffect(() => {
@@ -1242,7 +1764,7 @@ export default function TransferTaxCalculator() {
     });
   }, []);
 
-  const totalSteps = 5;
+  const totalSteps = 6;
   const isLastStep = currentStep === totalSteps - 1;
   const isResult = result !== null && currentStep === totalSteps;
 
@@ -1290,9 +1812,38 @@ export default function TransferTaxCalculator() {
     }
   }
 
+  async function handlePenaltyCalc() {
+    setError(null);
+    setIsPenaltyLoading(true);
+    try {
+      // 1단계: enablePenalty 없이 결정세액만 확보
+      const baseRes = await callTransferTaxAPI({ ...formData, enablePenalty: false });
+      const detTax = baseRes.determinedTax;
+      setCalcDeterminedTax(detTax);
+
+      // 2단계: 미납세액 자동 계산
+      const priorPaid = parseAmount(formData.priorPaidTax ?? "0");
+      const autoUnpaid = Math.max(0, detTax - priorPaid);
+      const updatedUnpaidTax = autoUnpaid > 0 ? String(autoUnpaid) : "0";
+      updateFormData({ unpaidTax: updatedUnpaidTax });
+
+      // 3단계: 계산된 unpaidTax로 가산세 포함 재계산
+      const penaltyRes = await callTransferTaxAPI({ ...formData, unpaidTax: updatedUnpaidTax });
+      setPenaltyResult(penaltyRes.penaltyDetail ?? null);
+      if (!penaltyRes.penaltyDetail) {
+        setError("가산세 항목을 입력해 주세요. (신고 유형 또는 미납세액+납부기한)");
+      }
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "가산세 계산 중 오류가 발생했습니다.");
+    } finally {
+      setIsPenaltyLoading(false);
+    }
+  }
+
   function handleReset() {
     reset();
     setError(null);
+    setPenaltyResult(null);
   }
 
   const stepComponents = [
@@ -1301,6 +1852,7 @@ export default function TransferTaxCalculator() {
     <Step3 key={2} form={formData} onChange={updateFormData} />,
     <Step4 key={3} form={formData} onChange={updateFormData} />,
     <Step5 key={4} form={formData} onChange={updateFormData} />,
+    <Step6 key={5} form={formData} onChange={updateFormData} determinedTax={calcDeterminedTax} />,
   ];
 
   return (
@@ -1335,6 +1887,55 @@ export default function TransferTaxCalculator() {
             {stepComponents[currentStep]}
           </div>
 
+          {/* 가산세 계산 결과 인라인 카드 */}
+          {isLastStep && penaltyResult && (
+            <div className="mt-4 rounded-lg border border-primary/30 bg-primary/5 p-4 space-y-3">
+              <p className="text-sm font-semibold text-primary">가산세 계산 결과</p>
+              {penaltyResult.filingPenalty && (
+                <div className="space-y-1 text-sm">
+                  <p className="font-medium text-muted-foreground">신고불성실가산세</p>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">납부세액 기준</span>
+                    <span>{penaltyResult.filingPenalty.penaltyBase.toLocaleString()}원</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">적용 세율</span>
+                    <span>{(penaltyResult.filingPenalty.penaltyRate * 100).toFixed(0)}%</span>
+                  </div>
+                  <div className="flex justify-between font-medium">
+                    <span>신고불성실가산세</span>
+                    <span className="text-destructive">{penaltyResult.filingPenalty.filingPenalty.toLocaleString()}원</span>
+                  </div>
+                </div>
+              )}
+              {penaltyResult.delayedPaymentPenalty && (
+                <div className="space-y-1 text-sm border-t border-border/40 pt-3">
+                  <p className="font-medium text-muted-foreground">지연납부가산세</p>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">미납세액</span>
+                    <span>{penaltyResult.delayedPaymentPenalty.unpaidTax.toLocaleString()}원</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">경과일수</span>
+                    <span>{penaltyResult.delayedPaymentPenalty.elapsedDays}일</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">일 이자율</span>
+                    <span>{(penaltyResult.delayedPaymentPenalty.dailyRate * 100).toFixed(3)}%</span>
+                  </div>
+                  <div className="flex justify-between font-medium">
+                    <span>지연납부가산세</span>
+                    <span className="text-destructive">{penaltyResult.delayedPaymentPenalty.delayedPaymentPenalty.toLocaleString()}원</span>
+                  </div>
+                </div>
+              )}
+              <div className="flex justify-between border-t border-border pt-2 text-base font-bold">
+                <span>가산세 합계</span>
+                <span className="text-destructive">{penaltyResult.totalPenalty.toLocaleString()}원</span>
+              </div>
+            </div>
+          )}
+
           {/* 에러 메시지 */}
           {error && (
             <div className="mt-4 rounded-lg border border-destructive/50 bg-destructive/5 px-4 py-3 text-sm text-destructive">
@@ -1352,32 +1953,44 @@ export default function TransferTaxCalculator() {
           )}
 
           {/* 네비게이션 — 뒤로가기(항상) + 다음/계산 */}
-          <div className="mt-6 flex gap-3">
-            <button
-              type="button"
-              onClick={handleBack}
-              className="flex-1 rounded-lg border border-border py-2.5 text-sm font-medium hover:bg-muted/40 transition-colors"
-            >
-              {currentStep === 0 ? "홈으로" : "이전"}
-            </button>
-            {isLastStep ? (
+          <div className="mt-6 space-y-2">
+            {isLastStep && formData.enablePenalty && (
               <button
                 type="button"
-                onClick={handleSubmit}
-                disabled={isLoading}
-                className="flex-1 rounded-lg bg-primary py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-60 transition-colors"
+                onClick={handlePenaltyCalc}
+                disabled={isPenaltyLoading}
+                className="w-full rounded-lg border border-primary py-2.5 text-sm font-semibold text-primary hover:bg-primary/10 disabled:opacity-60 transition-colors"
               >
-                {isLoading ? "계산 중..." : "세금 계산하기"}
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={handleNext}
-                className="flex-1 rounded-lg bg-primary py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
-              >
-                다음
+                {isPenaltyLoading ? "계산 중..." : "가산세 계산하기"}
               </button>
             )}
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={handleBack}
+                className="flex-1 rounded-lg border border-border py-2.5 text-sm font-medium hover:bg-muted/40 transition-colors"
+              >
+                {currentStep === 0 ? "홈으로" : "이전"}
+              </button>
+              {isLastStep ? (
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={isLoading}
+                  className="flex-1 rounded-lg bg-primary py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-60 transition-colors"
+                >
+                  {isLoading ? "계산 중..." : "세금 계산하기"}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleNext}
+                  className="flex-1 rounded-lg bg-primary py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
+                >
+                  다음
+                </button>
+              )}
+            </div>
           </div>
         </>
       )}

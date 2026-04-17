@@ -28,7 +28,7 @@ export interface HouseEntry {
 
 export interface TransferFormData {
   // Step 1: 물건 유형
-  propertyType: "housing" | "land" | "building";
+  propertyType: "housing" | "land" | "building" | "right_to_move_in" | "presale_right";
   // Step 2: 양도 정보 + 소재지
   transferPrice: string;
   transferDate: string;
@@ -51,6 +51,8 @@ export interface TransferFormData {
   useEstimatedAcquisition: boolean;
   standardPriceAtAcquisition: string;
   standardPriceAtTransfer: string;
+  standardPriceAtAcquisitionLabel: string;
+  standardPriceAtTransferLabel: string;
   // Step 4: 보유 상황
   isOneHousehold: boolean;
   householdHousingCount: string;
@@ -85,6 +87,42 @@ export interface TransferFormData {
   houses: HouseEntry[];
   /** [C4] 양도 주택의 권역 구분 (수도권/지방) — isRegulatedArea와 별개 */
   sellingHouseRegion: "capital" | "non_capital";
+
+  // §114조의2 가산세 판정용 필드
+  /** 취득가 산정 방식 — "actual" = 실거래가, "estimated" = 환산취득가, "appraisal" = 감정가액 */
+  acquisitionMethod: "actual" | "estimated" | "appraisal";
+  /** 감정가액 (acquisitionMethod === "appraisal" 시 필수) */
+  appraisalValue: string;
+  /** 본인이 신축 또는 증축한 건물 여부 */
+  isSelfBuilt: boolean;
+  /** 신축/증축 구분: "new" = 신축, "extension" = 증축, "" = 미선택 */
+  buildingType: "new" | "extension" | "";
+  /** 신축일 또는 증축 완공일 */
+  constructionDate: string;
+  /** 증축 바닥면적 합계 (㎡) — buildingType === "extension" 시 필수 */
+  extensionFloorArea: string;
+
+  // Step 6: 가산세 (선택 입력)
+  /** 가산세 계산 여부 토글 */
+  enablePenalty: boolean;
+  /** 신고 유형: none=무신고, under=과소신고, excess_refund=초과환급신고, correct=정상신고 */
+  filingType: "none" | "under" | "excess_refund" | "correct";
+  /** 부정행위 유형: normal=일반, fraudulent=부정행위, offshore_fraud=역외거래부정행위 */
+  penaltyReason: "normal" | "fraudulent" | "offshore_fraud";
+  /** 기납부세액 (예정신고 납부액 포함) */
+  priorPaidTax: string;
+  /** 당초 신고세액 (과소신고 시) */
+  originalFiledTax: string;
+  /** 초과환급신고 환급세액 */
+  excessRefundAmount: string;
+  /** 세법에 따른 이자상당액 가산액 */
+  interestSurcharge: string;
+  /** 미납·미달납부세액 (지연납부가산세용) */
+  unpaidTax: string;
+  /** 납부기한 */
+  paymentDeadline: string;
+  /** 실제 납부일 */
+  actualPaymentDate: string;
 }
 
 const defaultFormData: TransferFormData = {
@@ -103,6 +141,8 @@ const defaultFormData: TransferFormData = {
   useEstimatedAcquisition: false,
   standardPriceAtAcquisition: "",
   standardPriceAtTransfer: "",
+  standardPriceAtAcquisitionLabel: "",
+  standardPriceAtTransferLabel: "",
   isOneHousehold: true,
   householdHousingCount: "1",
   residencePeriodMonths: "0",
@@ -129,6 +169,22 @@ const defaultFormData: TransferFormData = {
   nblBusinessUsePeriods: [],
   houses: [],
   sellingHouseRegion: "capital",
+  acquisitionMethod: "actual",
+  appraisalValue: "",
+  isSelfBuilt: false,
+  buildingType: "",
+  constructionDate: "",
+  extensionFloorArea: "",
+  enablePenalty: false,
+  filingType: "correct",
+  penaltyReason: "normal",
+  priorPaidTax: "0",
+  originalFiledTax: "0",
+  excessRefundAmount: "0",
+  interestSurcharge: "0",
+  unpaidTax: "0",
+  paymentDeadline: "",
+  actualPaymentDate: "",
 };
 
 interface CalcWizardState {
@@ -180,6 +236,15 @@ export const useCalcWizardStore = create<CalcWizardState>()(
         currentStep: state.currentStep,
         formData: state.formData,
         pendingMigration: state.pendingMigration,
+      }),
+      // 저장된 상태에 새 필드가 없을 때 defaultFormData로 채움 (필드 추가 시 하위 호환)
+      merge: (persisted, current) => ({
+        ...current,
+        ...(persisted as Partial<CalcWizardState>),
+        formData: {
+          ...defaultFormData,
+          ...((persisted as Partial<CalcWizardState>).formData ?? {}),
+        },
       }),
     },
   ),
