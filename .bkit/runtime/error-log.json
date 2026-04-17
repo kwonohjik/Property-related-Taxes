@@ -52,5 +52,68 @@
     "agentId": "a9c089e7edeac2731",
     "agentType": null,
     "message": ""
+  },
+  {
+    "timestamp": "2026-04-16T13:53:36.266Z",
+    "errorType": "unknown",
+    "category": "unknown",
+    "severity": "low",
+    "agentId": "ac53fd2b8608ad951",
+    "agentType": "general-purpose",
+    "message": ""
+  },
+  {
+    "timestamp": "2026-04-16T13:53:37.246Z",
+    "errorType": "unknown",
+    "category": "unknown",
+    "severity": "low",
+    "agentId": null,
+    "agentType": null,
+    "message": ""
+  },
+  {
+    "timestamp": "2026-04-16T13:53:37.576Z",
+    "errorType": "unknown",
+    "category": "unknown",
+    "severity": "low",
+    "agentId": "a2fe04847853997b0",
+    "agentType": "general-purpose",
+    "message": ""
+  },
+  {
+    "timestamp": "2026-04-16T13:53:38.434Z",
+    "errorType": "unknown",
+    "category": "unknown",
+    "severity": "low",
+    "agentId": "a8cb60574d6742cda",
+    "agentType": "general-purpose",
+    "message": ""
+  },
+  {
+    "timestamp": "2026-04-16T13:53:47.957Z",
+    "errorType": "unknown",
+    "category": "unknown",
+    "severity": "low",
+    "agentId": null,
+    "agentType": null,
+    "message": ""
+  },
+  {
+    "timestamp": "2026-04-16T14:11:15.793Z",
+    "errorType": "unknown",
+    "category": "unknown",
+    "severity": "low",
+    "agentId": "a8bcd4d3d0f334b46",
+    "agentType": null,
+    "message": ""
+  },
+  {
+    "timestamp": "2026-04-17T03:32:08.888Z",
+    "errorType": "unknown",
+    "category": "unknown",
+    "severity": "low",
+    "agentId": null,
+    "agentType": null,
+    "message": ""
   }
 ]

@@ -86,7 +86,10 @@
       "Bash(sed -n '294,310p' /Users/mynote/workspace/Property-related-Taxes/lib/tax-engine/types/acquisition.types.ts)",
       "Bash(cat .next/server/app/api/pdf/result/\\\\\\\\[id\\\\\\\\]/route.js)",
       "Bash(kill 79065)",
-      "Bash(git diff *)"
+      "Bash(git diff *)",
+      "Bash(vercel --version)",
+      "Bash(kill 77020 77055)",
+      "Skill(bkit:bkit)"
     ]
   },
   "outputStyle": "bkit:bkit-learning"
