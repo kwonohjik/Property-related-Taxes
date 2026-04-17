@@ -143,7 +143,7 @@ const reductionSchema = z.discriminatedUnion("type", [
 const inputSchema = z
   .object({
     /** 1. 물건 종류 */
-    propertyType: z.enum(["housing", "land", "building"]),
+    propertyType: z.enum(["housing", "land", "building", "right_to_move_in", "presale_right"]),
     /** 2. 양도가액 (원, 양수 정수) */
     transferPrice: z.number().int().positive(),
     /** 3. 양도일 (YYYY-MM-DD) */
@@ -194,6 +194,35 @@ const inputSchema = z
     rentalReductionDetails: rentalReductionDetailsSchema.optional(),
     /** 26. 신축/미분양 감면 정밀 정보 (선택 — C7) */
     newHousingDetails: newHousingDetailsSchema.optional(),
+    /** 27. 취득가 산정 방식 (§114조의2 가산세 판정용) */
+    acquisitionMethod: z.enum(["actual", "estimated", "appraisal"]).optional(),
+    /** 28. 감정가액 (acquisitionMethod === "appraisal" 시) */
+    appraisalValue: z.number().int().nonnegative().optional(),
+    /** 29. 본인 신축·증축 여부 */
+    isSelfBuilt: z.boolean().optional(),
+    /** 30. 신축/증축 구분 */
+    buildingType: z.enum(["new", "extension"]).optional(),
+    /** 31. 신축일 또는 증축 완공일 */
+    constructionDate: z.string().date().optional(),
+    /** 32. 증축 바닥면적 합계 (㎡) */
+    extensionFloorArea: z.number().nonnegative().optional(),
+    /** 33. 신고불성실가산세 입력 (선택) */
+    filingPenaltyDetails: z.object({
+      determinedTax:     z.number().int().nonnegative(),
+      reductionAmount:   z.number().int().nonnegative(),
+      priorPaidTax:      z.number().int().nonnegative(),
+      originalFiledTax:  z.number().int().nonnegative(),
+      excessRefundAmount:z.number().int().nonnegative(),
+      interestSurcharge: z.number().int().nonnegative(),
+      filingType:        z.enum(["none", "under", "excess_refund", "correct"]),
+      penaltyReason:     z.enum(["normal", "fraudulent", "offshore_fraud"]),
+    }).optional(),
+    /** 34. 지연납부가산세 입력 (선택) */
+    delayedPaymentDetails: z.object({
+      unpaidTax:          z.number().int().nonnegative(),
+      paymentDeadline:    z.string().date(),
+      actualPaymentDate:  z.string().date().optional(),
+    }).optional(),
   })
   .superRefine((data, ctx) => {
     // V-1: 환산취득가 사용 시 취득시 기준시가 필수
@@ -226,6 +255,30 @@ const inputSchema = z
         code: z.ZodIssueCode.custom,
         path: ["annualBasicDeductionUsed"],
         message: "연간 기본공제 한도(2,500,000원)를 초과할 수 없습니다",
+      });
+    }
+    // V-5: 감정가액 방식 선택 시 감정가액 필수
+    if (data.acquisitionMethod === "appraisal" && !data.appraisalValue) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["appraisalValue"],
+        message: "감정가액 방식 선택 시 감정가액을 입력하세요",
+      });
+    }
+    // V-6: 증축 선택 시 바닥면적 필수
+    if (data.isSelfBuilt && data.buildingType === "extension" && !data.extensionFloorArea) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["extensionFloorArea"],
+        message: "증축 시 바닥면적을 입력하세요",
+      });
+    }
+    // V-7: 신축/증축 선택 시 건축일 필수
+    if (data.isSelfBuilt && !data.constructionDate) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["constructionDate"],
+        message: "신축·증축일을 입력하세요",
       });
     }
   });
@@ -382,6 +435,26 @@ export async function POST(request: NextRequest) {
           transferDate: new Date(data.newHousingDetails.transferDate),
         }
       : undefined,
+    // §114조의2 가산세 판정 필드
+    acquisitionMethod: data.acquisitionMethod,
+    appraisalValue: data.appraisalValue,
+    isSelfBuilt: data.isSelfBuilt,
+    buildingType: data.buildingType,
+    constructionDate: data.constructionDate ? new Date(data.constructionDate) : undefined,
+    extensionFloorArea: data.extensionFloorArea,
+    // 신고불성실·지연납부 가산세 (선택)
+    filingPenaltyDetails: data.filingPenaltyDetails
+      ? { ...data.filingPenaltyDetails }
+      : undefined,
+    delayedPaymentDetails: data.delayedPaymentDetails
+      ? {
+          unpaidTax: data.delayedPaymentDetails.unpaidTax,
+          paymentDeadline: new Date(data.delayedPaymentDetails.paymentDeadline),
+          actualPaymentDate: data.delayedPaymentDetails.actualPaymentDate
+            ? new Date(data.delayedPaymentDetails.actualPaymentDate)
+            : undefined,
+        }
+      : undefined,
   };
 
   // 단계 4: 세율 로드
@@ -403,6 +476,16 @@ export async function POST(request: NextRequest) {
 
   // 단계 5: 계산 실행
   try {
+    // 신고불성실가산세의 determinedTax는 실제 결정세액으로 주입 필요
+    // → 먼저 가산세 없이 계산하여 determinedTax 확보 후, filingPenaltyDetails에 주입
+    if (engineInput.filingPenaltyDetails) {
+      const baseResult = calculateTransferTax(
+        { ...engineInput, filingPenaltyDetails: undefined, delayedPaymentDetails: undefined },
+        rates,
+      );
+      engineInput.filingPenaltyDetails.determinedTax = baseResult.determinedTax;
+      engineInput.filingPenaltyDetails.reductionAmount = baseResult.reductionAmount;
+    }
     const result = calculateTransferTax(engineInput, rates);
     return NextResponse.json({ data: result }, { status: 200 });
   } catch (err) {
