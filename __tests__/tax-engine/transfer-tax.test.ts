@@ -547,15 +547,12 @@ describe("T-15: 기본공제 한도 초과 방어", () => {
 });
 
 // ============================================================
-// T-16: 누진세율 15% 구간 경계값 (과세표준 5,000만원)
+// T-16: 단기보유 특례세율 (소득세법 §104①2~3호)
 // ============================================================
 
-describe("T-16: 누진세율 15% 구간 경계값 (5,000만원)", () => {
-  it("calculatedTax=6_240_000", () => {
-    // 50,000,000 × 0.15 - 1,260,000 = 6,240,000
-    // taxBase=50,000,000이 되도록 역산
-    // acquisitionPrice=450,000,000, transferPrice=500,000,000 → 차익=50,000,000
-    // 장기보유공제 없는 케이스 (2년 미만 보유)
+describe("T-16: 단기보유 특례세율", () => {
+  it("주택 1년~2년 미만 보유 → 60% 단일세율 (taxBase=50M → 30M)", () => {
+    // 취득 2023-01-01, 양도 2024-05-01 → 보유 약 1년 3개월 → 60% 적용
     const input = baseInput({
       transferPrice: 500_000_000,
       acquisitionPrice: 450_000_000,
@@ -563,26 +560,83 @@ describe("T-16: 누진세율 15% 구간 경계값 (5,000만원)", () => {
       transferDate: new Date("2024-05-01"),
       isOneHousehold: false,
       householdHousingCount: 2,
-      annualBasicDeductionUsed: 0,
+      annualBasicDeductionUsed: 2_500_000,
     });
     const result = calculateTransferTax(input, mockRates);
-    // taxBase = 50,000,000 - 0(LTHD) - 2,500,000(기본공제) = 47,500,000 → 아니면
-    // 조건 맞추기: annualBasicDeductionUsed=2_500_000 로 기본공제 0 만들기
-    // 정확한 6,240,000 → taxBase=50,000,000 필요
-    // annualBasicDeductionUsed=2_500_000 사용하는 버전으로 테스트
-    const input2 = baseInput({
+    expect(result.taxBase).toBe(50_000_000);
+    expect(result.appliedRate).toBeCloseTo(0.60);
+    expect(result.calculatedTax).toBe(30_000_000);
+  });
+
+  it("주택 1년 미만 보유 → 70% 단일세율", () => {
+    // 취득 2024-01-01, 양도 2024-10-01 → 보유 약 9개월 → 70% 적용
+    const input = baseInput({
+      transferPrice: 500_000_000,
+      acquisitionPrice: 450_000_000,
+      acquisitionDate: new Date("2024-01-01"),
+      transferDate: new Date("2024-10-01"),
+      isOneHousehold: false,
+      householdHousingCount: 1,
+      annualBasicDeductionUsed: 2_500_000,
+    });
+    const result = calculateTransferTax(input, mockRates);
+    expect(result.appliedRate).toBeCloseTo(0.70);
+    expect(result.calculatedTax).toBe(Math.floor(result.taxBase * 0.70));
+  });
+
+  it("건물 1년~2년 미만 보유 → 40% 단일세율", () => {
+    // 주택 이외 건물, 1년~2년 → 40% 적용
+    const input = baseInput({
+      propertyType: "building",
       transferPrice: 500_000_000,
       acquisitionPrice: 450_000_000,
       acquisitionDate: new Date("2023-01-01"),
       transferDate: new Date("2024-05-01"),
       isOneHousehold: false,
-      householdHousingCount: 2,
-      annualBasicDeductionUsed: 2_500_000, // 기본공제 소진
+      householdHousingCount: 0,
+      annualBasicDeductionUsed: 2_500_000,
     });
-    const result2 = calculateTransferTax(input2, mockRates);
-    // taxBase = 50,000,000 (보유 2년 미만 → LTHD=0, 기본공제=0)
-    expect(result2.taxBase).toBe(50_000_000);
-    expect(result2.calculatedTax).toBe(6_240_000);
+    const result = calculateTransferTax(input, mockRates);
+    expect(result.taxBase).toBe(50_000_000);
+    expect(result.appliedRate).toBeCloseTo(0.40);
+    expect(result.calculatedTax).toBe(20_000_000);
+  });
+
+  it("건물 1년 미만 보유 → 50% 단일세율", () => {
+    const input = baseInput({
+      propertyType: "building",
+      transferPrice: 500_000_000,
+      acquisitionPrice: 450_000_000,
+      acquisitionDate: new Date("2024-01-01"),
+      transferDate: new Date("2024-10-01"),
+      isOneHousehold: false,
+      householdHousingCount: 0,
+      annualBasicDeductionUsed: 2_500_000,
+    });
+    const result = calculateTransferTax(input, mockRates);
+    expect(result.appliedRate).toBeCloseTo(0.50);
+    expect(result.calculatedTax).toBe(Math.floor(result.taxBase * 0.50));
+  });
+
+  it("누진세율 15% 구간 — 건물 2년 이상 보유 (단기 적용 제외)", () => {
+    // 2년 이상 보유한 건물: 일반 누진세율 적용 (단기 특례세율 미적용)
+    // 취득 2021-01-01, 양도 2024-05-01 → 3년 4개월 보유
+    // 차익 = 500M - 450M = 50M, LTHD = 3년×2% = 6% → 3,000,000
+    // taxBase = 50,000,000 - 3,000,000 = 47,000,000 (기본공제 소진)
+    // 47,000,000 × 15% - 1,260,000 = 7,050,000 - 1,260,000 = 5,790,000
+    const input = baseInput({
+      propertyType: "building",
+      transferPrice: 500_000_000,
+      acquisitionPrice: 450_000_000,
+      acquisitionDate: new Date("2021-01-01"),
+      transferDate: new Date("2024-05-01"),
+      isOneHousehold: false,
+      householdHousingCount: 0,
+      annualBasicDeductionUsed: 2_500_000,
+    });
+    const result = calculateTransferTax(input, mockRates);
+    expect(result.appliedRate).toBeCloseTo(0.15);
+    expect(result.calculatedTax).toBe(5_790_000);
   });
 });
 
@@ -2012,5 +2066,165 @@ describe("T-45: 감면 중복배제 — 장기임대 + 신축 동시 해당 (조
     // 어느 쪽이든 신축 50%보다 크므로 장기임대 선택
     expect(result.reductionAmount).toBeGreaterThan(Math.floor(result.calculatedTax * 0.5));
     expect(result.reductionType).toBe("장기임대주택");
+  });
+});
+
+// ============================================================
+// T-17: §114조의2 신축·증축 가산세
+// ============================================================
+
+describe("T-17: §114조의2 신축·증축 가산세", () => {
+  const buildingBase = (overrides?: Partial<TransferTaxInput>): TransferTaxInput =>
+    baseInput({
+      propertyType: "building",
+      isOneHousehold: false,
+      householdHousingCount: 0,
+      residencePeriodMonths: 0,
+      useEstimatedAcquisition: true,
+      standardPriceAtAcquisition: 200_000_000,
+      standardPriceAtTransfer: 400_000_000,
+      transferPrice: 800_000_000,
+      acquisitionPrice: 0,
+      acquisitionDate: new Date("2015-01-01"),
+      transferDate: new Date("2026-03-01"),
+      ...overrides,
+    });
+
+  it("신축 + 환산취득가 + 5년 이내 → 5% 가산세", () => {
+    const input = buildingBase({
+      acquisitionMethod: "estimated",
+      isSelfBuilt: true,
+      buildingType: "new",
+      constructionDate: new Date("2023-01-01"),
+      transferDate: new Date("2026-03-01"),
+    });
+    const result = calculateTransferTax(input, mockRates);
+    expect(result.penaltyTax).toBeGreaterThan(0);
+    // 환산취득가 = 800M × (200M / 400M) = 400M → penalty = 400M × 5% = 20,000,000
+    expect(result.penaltyTax).toBe(Math.floor(400_000_000 * 0.05));
+  });
+
+  it("증축 85㎡ 초과 + 환산취득가 + 5년 이내 → 5% 가산세", () => {
+    const input = buildingBase({
+      acquisitionMethod: "estimated",
+      isSelfBuilt: true,
+      buildingType: "extension",
+      constructionDate: new Date("2023-01-01"),
+      extensionFloorArea: 100,
+      transferDate: new Date("2026-03-01"),
+    });
+    const result = calculateTransferTax(input, mockRates);
+    expect(result.penaltyTax).toBeGreaterThan(0);
+  });
+
+  it("증축 85㎡ 이하 → 가산세 0", () => {
+    const input = buildingBase({
+      acquisitionMethod: "estimated",
+      isSelfBuilt: true,
+      buildingType: "extension",
+      constructionDate: new Date("2023-01-01"),
+      extensionFloorArea: 60,
+      transferDate: new Date("2026-03-01"),
+    });
+    const result = calculateTransferTax(input, mockRates);
+    expect(result.penaltyTax).toBe(0);
+  });
+
+  it("5년 초과 보유 → 가산세 0", () => {
+    const input = buildingBase({
+      acquisitionMethod: "estimated",
+      isSelfBuilt: true,
+      buildingType: "new",
+      constructionDate: new Date("2019-01-01"),
+      transferDate: new Date("2026-03-01"),
+    });
+    const result = calculateTransferTax(input, mockRates);
+    expect(result.penaltyTax).toBe(0);
+  });
+
+  it("실거래가 사용 → 가산세 0", () => {
+    const input = buildingBase({
+      acquisitionMethod: "actual",
+      useEstimatedAcquisition: false,
+      acquisitionPrice: 300_000_000,
+      isSelfBuilt: true,
+      buildingType: "new",
+      constructionDate: new Date("2023-01-01"),
+      transferDate: new Date("2026-03-01"),
+    });
+    const result = calculateTransferTax(input, mockRates);
+    expect(result.penaltyTax).toBe(0);
+  });
+
+  it("감정가액 + 2020.1.1 이후 양도 → 5% 가산세", () => {
+    const input = buildingBase({
+      acquisitionMethod: "appraisal",
+      useEstimatedAcquisition: false,
+      appraisalValue: 300_000_000,
+      isSelfBuilt: true,
+      buildingType: "new",
+      constructionDate: new Date("2021-01-01"),
+      transferDate: new Date("2024-06-01"),
+    });
+    const result = calculateTransferTax(input, mockRates);
+    expect(result.penaltyTax).toBe(Math.floor(300_000_000 * 0.05));
+  });
+
+  it("감정가액 + 2019년 양도 → 가산세 0 (2020년 이전 감정가액 미적용)", () => {
+    const input = buildingBase({
+      acquisitionMethod: "appraisal",
+      useEstimatedAcquisition: false,
+      appraisalValue: 300_000_000,
+      isSelfBuilt: true,
+      buildingType: "new",
+      constructionDate: new Date("2017-01-01"),
+      transferDate: new Date("2019-06-01"),
+    });
+    const result = calculateTransferTax(input, mockRates);
+    expect(result.penaltyTax).toBe(0);
+  });
+
+  it("2017년 양도 → 가산세 0 (2018년 이전 적용 안됨)", () => {
+    const input = buildingBase({
+      acquisitionMethod: "estimated",
+      isSelfBuilt: true,
+      buildingType: "new",
+      constructionDate: new Date("2015-01-01"),
+      transferDate: new Date("2017-06-01"),
+    });
+    const result = calculateTransferTax(input, mockRates);
+    expect(result.penaltyTax).toBe(0);
+  });
+
+  it("산출세액 0 + 가산세만 부과 (§114조의2 ②)", () => {
+    const input = buildingBase({
+      acquisitionMethod: "estimated",
+      isSelfBuilt: true,
+      buildingType: "new",
+      constructionDate: new Date("2023-01-01"),
+      transferDate: new Date("2026-03-01"),
+      // 양도가 = 취득가 → 양도차익 0
+      transferPrice: 400_000_000,
+      standardPriceAtAcquisition: 200_000_000,
+      standardPriceAtTransfer: 200_000_000,
+    });
+    const result = calculateTransferTax(input, mockRates);
+    expect(result.determinedTax).toBe(0);
+    expect(result.penaltyTax).toBeGreaterThan(0);
+    expect(result.totalTax).toBeGreaterThan(0);
+  });
+
+  it("지방소득세 계산 시 가산세 포함 결정세액 × 10%", () => {
+    const input = buildingBase({
+      acquisitionMethod: "estimated",
+      isSelfBuilt: true,
+      buildingType: "new",
+      constructionDate: new Date("2023-01-01"),
+      transferDate: new Date("2026-03-01"),
+    });
+    const result = calculateTransferTax(input, mockRates);
+    const base = result.determinedTax + result.penaltyTax;
+    const expectedLocalTax = Math.floor(Math.floor(base * 0.1) / 1000) * 1000;
+    expect(result.localIncomeTax).toBe(expectedLocalTax);
   });
 });

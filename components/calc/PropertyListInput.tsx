@@ -10,6 +10,7 @@
  * - SelectOnFocusProvider 전역 적용으로 개별 onFocus 추가 불필요
  */
 
+import { useEffect } from "react";
 import { CurrencyInput, parseAmount, formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { AddressSearch, type AddressValue } from "@/components/ui/address-search";
 import { useStandardPriceLookup } from "@/lib/hooks/useStandardPriceLookup";
@@ -64,13 +65,26 @@ function PropertyCard({
   onRemove: () => void;
   onUpdate: (data: Partial<PropertyEntry>) => void;
 }) {
-  const priceLookup = useStandardPriceLookup();
+  const priceLookup = useStandardPriceLookup("housing");
+
+  // 주소 또는 연도 변경 시 자동 조회
+  useEffect(() => {
+    if (!property.jibun) return;
+    if (property.assessedValue && priceLookup.announcedLabel?.includes(priceLookup.year)) return;
+    priceLookup.lookup({
+      jibun: property.jibun,
+      propertyType: "housing",
+      dong: property.dong || undefined,
+      ho: property.ho || undefined,
+    }).then((price) => { if (price) onUpdate({ assessedValue: String(price) }); });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [property.jibun, property.dong, property.ho, priceLookup.year]);
 
   const addressValue: AddressValue = {
     road: property.road,
     jibun: property.jibun,
     building: property.building,
-    detail: "",
+    detail: [property.dong, property.ho].filter(Boolean).join(" "),
     lng: "",
     lat: "",
   };
@@ -98,9 +112,13 @@ function PropertyCard({
         </label>
         <AddressSearch
           value={addressValue}
-          onChange={(v) =>
-            onUpdate({ jibun: v.jibun, road: v.road, building: v.building })
-          }
+          onChange={(v) => {
+            // detail = "101동 1501호" 형태로 올 수 있으므로 dong/ho로 분리
+            const parts = v.detail.trim().split(/\s+/);
+            const dong = parts.length >= 2 ? parts[0] : (v.detail.includes("동") ? v.detail : "");
+            const ho   = parts.length >= 2 ? parts.slice(1).join(" ") : (v.detail.includes("호") ? v.detail : "");
+            onUpdate({ jibun: v.jibun, road: v.road, building: v.building, dong, ho });
+          }}
         />
       </div>
 
@@ -132,30 +150,49 @@ function PropertyCard({
 
       {/* 공시가격 */}
       <div className="space-y-1.5">
-        <CurrencyInput
-          label="공시가격 (과세기준일 기준)"
-          value={property.assessedValue}
-          onChange={(v) => onUpdate({ assessedValue: v })}
-          placeholder="0"
-          required
-          hint="주택공시가격 (개별주택 또는 공동주택 공시가격)"
-        />
-        <button
-          type="button"
-          onClick={async () => {
-            const price = await priceLookup.lookup({
-              jibun: property.jibun,
-              propertyType: "housing",
-              dong: property.dong || undefined,
-              ho: property.ho || undefined,
-            });
-            if (price) onUpdate({ assessedValue: String(price) });
-          }}
-          disabled={priceLookup.loading}
-          className="text-xs text-primary underline disabled:opacity-50 hover:text-primary/80"
-        >
-          {priceLookup.loading ? "조회중..." : "🔎 Vworld 공시가격 자동 조회"}
-        </button>
+        <label className="block text-sm font-medium">
+          공시가격 (과세기준일 기준) <span className="text-destructive">*</span>
+        </label>
+        <div className="flex gap-2 items-center">
+          <select
+            value={priceLookup.year}
+            onChange={(e) => priceLookup.setYear(e.target.value)}
+            className="rounded-md border border-input bg-background px-2 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label="공시가격 조회 연도"
+          >
+            {priceLookup.yearOptions.map((y) => (
+              <option key={y} value={y}>{y}년</option>
+            ))}
+          </select>
+          <div className="flex-1">
+            <CurrencyInput
+              label=""
+              value={property.assessedValue}
+              onChange={(v) => onUpdate({ assessedValue: v })}
+              placeholder="주택공시가격"
+              required
+            />
+          </div>
+          <button
+            type="button"
+            onClick={async () => {
+              const price = await priceLookup.lookup({
+                jibun: property.jibun,
+                propertyType: "housing",
+                dong: property.dong || undefined,
+                ho: property.ho || undefined,
+              });
+              if (price) onUpdate({ assessedValue: String(price) });
+            }}
+            disabled={priceLookup.loading || !property.jibun}
+            className="px-3 py-2 rounded-md border border-primary text-primary text-sm font-medium hover:bg-primary/5 disabled:opacity-50 whitespace-nowrap transition-colors"
+          >
+            {priceLookup.loading ? "조회중" : "조회"}
+          </button>
+        </div>
+        {priceLookup.announcedLabel && (
+          <p className="text-xs text-muted-foreground">{priceLookup.announcedLabel}</p>
+        )}
         {priceLookup.msg && (
           <p className={`text-xs ${priceLookup.msg.kind === "ok" ? "text-emerald-700" : "text-destructive"}`}>
             {priceLookup.msg.text}

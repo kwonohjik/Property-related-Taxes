@@ -43,6 +43,7 @@ export interface NedPriceItem {
   pnu?: string;
   stdrYear?: string;
   stdrMt?: string;
+  pblntfDe?: string;
   pblntfPclnd?: string;
   pblntfPc?: string;
   dongNm?: string;
@@ -136,8 +137,9 @@ async function callNedAllPages(
       const items = raw ? (Array.isArray(raw) ? raw : [raw]) : [];
       allItems.push(...items);
 
+      // totalCount가 없거나 0이면 빈 페이지가 올 때까지 계속 페이지 수집
       const total = parseInt(container.totalCount ?? "0", 10);
-      if (allItems.length >= total || items.length === 0) break;
+      if (items.length === 0 || (total > 0 && allItems.length >= total)) break;
       pageNo++;
     } catch { break; }
   }
@@ -188,6 +190,7 @@ function buildUnitList(items: NedPriceItem[], priceField: "pblntfPclnd" | "pblnt
     exclusiveArea: it.prvuseAr ? parseFloat(it.prvuseAr) : undefined,
     price:         parseInt(String(it[priceField] ?? "0").replace(/[^0-9]/g, ""), 10) || 0,
     year:          it.stdrYear ?? "",
+    announcedDate: it.pblntfDe ?? "",
   }));
 }
 
@@ -251,6 +254,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         pnu, priceType: "land_price",
         year: hit.item.stdrYear, price: hit.price,
+        announcedDate: hit.item.pblntfDe ?? "",
         ldCodeNm: hit.item.ldCodeNm,
         message: `${hit.item.stdrYear}년 개별공시지가 (원/㎡)`,
       });
@@ -264,6 +268,7 @@ export async function GET(request: NextRequest) {
         pnu, priceType: "apart_housing_price",
         year:          hit?.item.stdrYear,
         price:         hit?.price,
+        announcedDate: hit?.item.pblntfDe ?? "",
         dong:          hit?.item.dongNm,
         ho:            hit?.item.hoNm,
         floor:         hit?.item.floorNm,
@@ -284,6 +289,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         pnu, priceType: "indvd_housing_price",
         year: hit?.item.stdrYear, price: hit?.price,
+        announcedDate: hit?.item.pblntfDe ?? "",
         ldCodeNm: hit?.item.ldCodeNm,
         units: buildUnitList(indvdItems, "pblntfPc"),
         message: `${hit?.item.stdrYear}년 개별주택 공시가격`,

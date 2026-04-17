@@ -9,13 +9,13 @@
  * Step 3: 감면 확인 (생애최초, 수도권) — 주택+개인 시 활성 → 계산
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { StepIndicator } from "@/components/calc/StepIndicator";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { DateInput } from "@/components/ui/date-input";
 import { AddressSearch, type AddressValue } from "@/components/ui/address-search";
 import { AcquisitionTaxResultView } from "@/components/calc/results/AcquisitionTaxResultView";
-import { useStandardPriceLookup } from "@/lib/hooks/useStandardPriceLookup";
+import { useStandardPriceLookup, getDefaultPriceYear } from "@/lib/hooks/useStandardPriceLookup";
 import type { AcquisitionTaxResult } from "@/lib/tax-engine/types/acquisition.types";
 
 // ============================================================
@@ -193,7 +193,25 @@ export function AcquisitionTaxForm() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AcquisitionTaxResult | null>(null);
-  const priceLookup = useStandardPriceLookup();
+  const priceLookup = useStandardPriceLookup(form.propertyType);
+
+  // 취득일 변경 시 연도 동기화
+  useEffect(() => {
+    const acqDate = form.balancePaymentDate || form.contractDate;
+    if (!acqDate) return;
+    priceLookup.setYear(getDefaultPriceYear(acqDate, form.propertyType));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.balancePaymentDate, form.contractDate, form.propertyType]);
+
+  // 소재지 또는 연도 변경 시 자동 조회
+  useEffect(() => {
+    if (!form.jibun) return;
+    if (!["housing", "land", "land_farmland"].includes(form.propertyType)) return;
+    if (form.standardValue && priceLookup.announcedLabel?.includes(priceLookup.year)) return;
+    priceLookup.lookup({ jibun: form.jibun, propertyType: form.propertyType })
+      .then((price) => { if (price) set("standardValue", String(price)); });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.jibun, form.propertyType, priceLookup.year]);
 
   const isOriginal = ["new_construction", "extension", "reconstruction", "reclamation"].includes(form.acquisitionCause);
   const isGratuitous = ["inheritance", "inheritance_farmland", "gift", "donation"].includes(form.acquisitionCause);
@@ -415,34 +433,58 @@ export function AcquisitionTaxForm() {
           )}
 
           <div className="space-y-1.5">
-            <CurrencyInput
-              label={isHousing ? "주택공시가격 (시가표준액, 선택)" : "시가표준액 (선택)"}
-              value={form.standardValue}
-              onChange={(v) => set("standardValue", v)}
-              placeholder="없으면 신고가액으로 과세"
-            />
-            {["housing", "land", "land_farmland"].includes(form.propertyType) && (
+            <label className={labelCls}>
+              {isHousing ? "주택공시가격 (시가표준액, 선택)" : "시가표준액 (선택)"}
+            </label>
+            {["housing", "land", "land_farmland"].includes(form.propertyType) ? (
               <>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    const price = await priceLookup.lookup({
-                      jibun: form.jibun,
-                      propertyType: form.propertyType,
-                    });
-                    if (price) set("standardValue", String(price));
-                  }}
-                  disabled={priceLookup.loading}
-                  className="text-xs text-primary underline disabled:opacity-50 hover:text-primary/80"
-                >
-                  {priceLookup.loading ? "조회중..." : "🔎 Vworld 공시가격 자동 조회"}
-                </button>
+                <div className="flex gap-2 items-center">
+                  <select
+                    value={priceLookup.year}
+                    onChange={(e) => priceLookup.setYear(e.target.value)}
+                    className="rounded-md border border-input bg-background px-2 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    aria-label="공시가격 조회 연도"
+                  >
+                    {priceLookup.yearOptions.map((y) => (
+                      <option key={y} value={y}>{y}년</option>
+                    ))}
+                  </select>
+                  <div className="flex-1">
+                    <CurrencyInput
+                      label=""
+                      value={form.standardValue}
+                      onChange={(v) => set("standardValue", v)}
+                      placeholder="없으면 신고가액으로 과세"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const price = await priceLookup.lookup({ jibun: form.jibun, propertyType: form.propertyType });
+                      if (price) set("standardValue", String(price));
+                    }}
+                    disabled={priceLookup.loading || !form.jibun}
+                    className="px-3 py-2 rounded-md border border-primary text-primary text-sm font-medium hover:bg-primary/5 disabled:opacity-50 whitespace-nowrap transition-colors"
+                  >
+                    {priceLookup.loading ? "조회중" : "조회"}
+                  </button>
+                </div>
+                {priceLookup.announcedLabel && (
+                  <p className="text-xs text-muted-foreground">{priceLookup.announcedLabel}</p>
+                )}
                 {priceLookup.msg && (
                   <p className={`text-xs ${priceLookup.msg.kind === "ok" ? "text-emerald-700" : "text-destructive"}`}>
                     {priceLookup.msg.text}
                   </p>
                 )}
               </>
+            ) : (
+              <CurrencyInput
+                label=""
+                value={form.standardValue}
+                onChange={(v) => set("standardValue", v)}
+                placeholder="없으면 신고가액으로 과세"
+              />
             )}
           </div>
 

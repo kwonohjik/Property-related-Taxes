@@ -6,6 +6,7 @@
 
 import { useState } from "react";
 import type { AcquisitionTaxResult } from "@/lib/tax-engine/types/acquisition.types";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 
 function formatKRW(amount: number): string {
   return amount.toLocaleString("ko-KR") + "원";
@@ -199,9 +200,7 @@ export function AcquisitionTaxResultView({ result }: Props) {
                     <p className="font-medium">{step.label}</p>
                     <p className="text-xs text-muted-foreground mt-0.5">{step.formula}</p>
                     {step.legalBasis && (
-                      <span className="inline-block mt-1 text-[10px] text-muted-foreground/70 border border-border/60 rounded px-1.5 py-0.5">
-                        {step.legalBasis}
-                      </span>
+                      <LawArticleModal legalBasis={step.legalBasis} />
                     )}
                   </div>
                   <p className="font-mono font-medium shrink-0">
@@ -218,9 +217,11 @@ export function AcquisitionTaxResultView({ result }: Props) {
 
       {/* 법령 근거 */}
       {result.legalBasis.length > 0 && (
-        <div className="text-xs text-muted-foreground">
-          <span className="font-medium">적용 법령: </span>
-          {result.legalBasis.filter(Boolean).join(" / ")}
+        <div className="text-xs text-muted-foreground flex flex-wrap gap-1 items-center">
+          <span className="font-medium">적용 법령:</span>
+          {result.legalBasis.filter(Boolean).map((b, i) => (
+            <LawArticleModal key={i} legalBasis={b} />
+          ))}
         </div>
       )}
     </div>

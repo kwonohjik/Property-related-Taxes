@@ -11,6 +11,13 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export interface AddressValue {
   road: string;
@@ -19,10 +26,21 @@ export interface AddressValue {
   detail: string;
   lng: string;
   lat: string;
+  pnu?: string;
+}
+
+interface UnitItem {
+  dong: string;
+  ho: string;
+  floor: string;
+  exclusiveArea?: number;
+  price: number;
+  year: string;
+  announcedDate?: string;
 }
 
 interface AddressResult {
-  id: string;
+  pnu: string;
   title: string;
   road: string;
   jibun: string;
@@ -46,6 +64,11 @@ export function AddressSearch({ value, onChange, className, disabled }: AddressS
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searched, setSearched] = useState(false);
+
+  const [units, setUnits] = useState<UnitItem[]>([]);
+  const [unitsLoading, setUnitsLoading] = useState(false);
+  const [selectedDong, setSelectedDong] = useState<string>("");
+  const [selectedHo, setSelectedHo] = useState<string>("");
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -105,17 +128,56 @@ export function AddressSearch({ value, onChange, className, disabled }: AddressS
     debounceRef.current = setTimeout(() => search(q), 300);
   }
 
+  async function fetchUnits(pnu: string, jibun: string) {
+    setUnitsLoading(true);
+    setUnits([]);
+    try {
+      const base = new URLSearchParams({ propertyType: "housing" });
+      // jibun 기반 PNU 구성이 Vworld 검색 item.id보다 정확
+      if (jibun) {
+        base.set("jibun", jibun);
+      } else if (pnu && pnu.length === 19) {
+        base.set("pnu", pnu);
+      } else {
+        return;
+      }
+
+      // 현재 연도부터 최대 3년 전까지 순차 시도 (NED 데이터 공표 시차 대응)
+      const currentYear = new Date().getFullYear();
+      for (let y = currentYear; y >= currentYear - 3; y--) {
+        const params = new URLSearchParams(base);
+        params.set("year", String(y));
+        const res = await fetch(`/api/address/standard-price?${params.toString()}`);
+        if (!res.ok) continue;
+        const data = await res.json();
+        if ((data.units ?? []).length > 0) {
+          setUnits(data.units);
+          return;
+        }
+      }
+    } catch {
+      // API 실패 시 텍스트 input fallback (units 빈 배열 유지)
+    } finally {
+      setUnitsLoading(false);
+    }
+  }
+
   function handleSelect(r: AddressResult) {
     setQuery(r.road || r.jibun);
     setIsOpen(false);
+    setSelectedDong("");
+    setSelectedHo("");
+    setUnits([]);
     onChange({
       road: r.road,
       jibun: r.jibun,
       building: r.building,
-      detail: value.detail, // 상세주소는 유지
+      detail: "",
       lng: r.lng,
       lat: r.lat,
+      pnu: r.pnu,
     });
+    if (r.pnu || r.jibun) void fetchUnits(r.pnu, r.jibun);
   }
 
   function handleDetailChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -127,7 +189,10 @@ export function AddressSearch({ value, onChange, className, disabled }: AddressS
     setResults([]);
     setIsOpen(false);
     setSearched(false);
-    onChange({ road: "", jibun: "", building: "", detail: "", lng: "", lat: "" });
+    setUnits([]);
+    setSelectedDong("");
+    setSelectedHo("");
+    onChange({ road: "", jibun: "", building: "", detail: "", lng: "", lat: "", pnu: "" });
   }
 
   const hasSelected = Boolean(value.road || value.jibun);
@@ -162,7 +227,7 @@ export function AddressSearch({ value, onChange, className, disabled }: AddressS
             {results.length > 0 ? (
               <ul className="divide-y divide-border">
                 {results.map((r, idx) => (
-                  <li key={`${r.id}-${idx}`}>
+                  <li key={`${r.pnu}-${idx}`}>
                     <button
                       type="button"
                       onClick={() => handleSelect(r)}
@@ -240,18 +305,110 @@ export function AddressSearch({ value, onChange, className, disabled }: AddressS
 
       {/* 상세주소 */}
       {hasSelected && (
-        <div>
-          <input
-            type="text"
-            value={value.detail}
-            onChange={handleDetailChange}
-            onFocus={(e) => e.target.select()}
-            placeholder="상세주소 (동/호수/층 등 — 선택)"
-            disabled={disabled}
-            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-          />
+        <div className="space-y-2">
+          {unitsLoading ? (
+            <div className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-muted-foreground">
+              동/호수 조회 중...
+            </div>
+          ) : units.length > 0 ? (
+            <UnitSelector
+              units={units}
+              selectedDong={selectedDong}
+              selectedHo={selectedHo}
+              disabled={disabled}
+              onDongChange={(dong) => {
+                setSelectedDong(dong);
+                setSelectedHo("");
+                onChange({ ...value, detail: dong });
+              }}
+              onHoChange={(ho) => {
+                setSelectedHo(ho);
+                onChange({ ...value, detail: [selectedDong, ho].filter(Boolean).join(" ") });
+              }}
+            />
+          ) : (
+            <input
+              type="text"
+              value={value.detail}
+              onChange={handleDetailChange}
+              onFocus={(e) => e.target.select()}
+              placeholder="상세주소 (동/호수/층 등 — 선택)"
+              disabled={disabled}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+            />
+          )}
         </div>
       )}
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────────
+// 동/호수 드롭다운 서브컴포넌트
+// ──────────────────────────────────────────────────
+
+interface UnitSelectorProps {
+  units: UnitItem[];
+  selectedDong: string;
+  selectedHo: string;
+  disabled?: boolean;
+  onDongChange: (dong: string) => void;
+  onHoChange: (ho: string) => void;
+}
+
+// "101동" → 101, "3703호" → 3703, "202" → 202 으로 앞 숫자 추출 후 비교
+function sortNaturalKo(a: string, b: string): number {
+  const na = parseInt(a, 10);
+  const nb = parseInt(b, 10);
+  if (!isNaN(na) && !isNaN(nb)) return na - nb;
+  return a.localeCompare(b, "ko", { numeric: true, sensitivity: "base" });
+}
+
+function UnitSelector({ units, selectedDong, selectedHo, disabled, onDongChange, onHoChange }: UnitSelectorProps) {
+  // 고유 동 목록 — 숫자 오름차순 (예: 1동 < 2동 < 10동 < 101동)
+  const uniqueDongs = Array.from(new Set(units.map((u) => u.dong))).sort(sortNaturalKo);
+  const hasDongColumn = uniqueDongs.some((d) => d !== "");
+
+  // 선택된 동에 해당하는 호 목록 — 숫자 오름차순
+  const filteredHos = units
+    .filter((u) => !hasDongColumn || u.dong === selectedDong)
+    .map((u) => u.ho)
+    .filter((ho) => ho !== "");
+  const uniqueHos = Array.from(new Set(filteredHos)).sort(sortNaturalKo);
+
+  return (
+    <div className="flex gap-2">
+      {hasDongColumn && (
+        <Select value={selectedDong} onValueChange={(v) => v && onDongChange(v)} disabled={disabled}>
+          <SelectTrigger className="flex-1 text-sm">
+            <SelectValue placeholder="동 선택" />
+          </SelectTrigger>
+          <SelectContent>
+            {uniqueDongs.map((dong) => (
+              <SelectItem key={dong} value={dong}>
+                {dong || "단동"}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
+
+      <Select
+        value={selectedHo}
+        onValueChange={(v) => v && onHoChange(v)}
+        disabled={disabled || (hasDongColumn && !selectedDong)}
+      >
+        <SelectTrigger className="flex-1 text-sm">
+          <SelectValue placeholder={hasDongColumn && !selectedDong ? "동 먼저 선택" : "호수 선택"} />
+        </SelectTrigger>
+        <SelectContent>
+          {uniqueHos.map((ho) => (
+            <SelectItem key={ho} value={ho}>
+              {ho}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 }

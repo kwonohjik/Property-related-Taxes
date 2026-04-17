@@ -13,6 +13,7 @@
  */
 
 import type { PropertyTaxResult } from "@/lib/tax-engine/types/property.types";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 
 function formatKRW(amount: number): string {
   return amount.toLocaleString("ko-KR") + "원";
@@ -223,7 +224,9 @@ export function PropertyTaxResultView({ result }: Props) {
             </summary>
             <ul className="mt-2 space-y-0.5 pl-3 list-disc">
               {legalBasis.map((b, i) => (
-                <li key={i}>{b}</li>
+                <li key={i}>
+                  <LawArticleModal legalBasis={b} className="hover:text-primary hover:underline transition-colors text-xs" />
+                </li>
               ))}
             </ul>
           </details>
