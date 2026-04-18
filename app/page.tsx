@@ -40,6 +40,15 @@ const TAX_TYPES = [
   },
 ] as const;
 
+const RESEARCH_TOOLS = [
+  {
+    href: "/law",
+    title: "법령 리서치",
+    description: "부동산 세법 조문·판례·별표를 법제처 API로 통합 검색",
+    icon: "📚",
+  },
+] as const;
+
 export default function HomePage() {
   return (
     <main className="flex flex-1 flex-col items-center px-4 py-16">
@@ -72,6 +81,28 @@ export default function HomePage() {
         <p className="mt-12 text-center text-xs text-muted-foreground">
           본 계산기는 참고용이며, 정확한 세금 신고는 세무 전문가와 상담하세요.
         </p>
+
+        <section className="mt-16">
+          <h2 className="text-xl font-semibold tracking-tight">법령 리서치</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            세금 계산 전·후 관련 법령과 판례를 확인해 보세요.
+          </p>
+          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {RESEARCH_TOOLS.map((tool) => (
+              <Link
+                key={tool.href}
+                href={tool.href}
+                className="group rounded-lg border p-6 transition-colors hover:border-primary hover:bg-accent"
+              >
+                <span className="text-3xl">{tool.icon}</span>
+                <h3 className="mt-3 text-lg font-semibold group-hover:text-primary">
+                  {tool.title}
+                </h3>
+                <p className="mt-1 text-sm text-muted-foreground">{tool.description}</p>
+              </Link>
+            ))}
+          </div>
+        </section>
 
         {/* 개발자 도구: 법령 조문 검증 */}
         <div className="mt-10">

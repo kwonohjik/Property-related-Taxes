@@ -4,7 +4,8 @@
  * mst (법령일련번호): 특정 법령 개정본의 고유 식별자.
  * 아래 값은 2026-04-16 기준 현행 법령 기준.
  *
- * 법제처 조회 URL: https://www.law.go.kr/lsEfInfoR.do?lsiSeq={mst}
+ * 법제처 조회 URL: https://www.law.go.kr/법령/{법령명}
+ *   (과거 lsEfInfoR.do?lsiSeq= 형식은 법제처 리뉴얼 후 404 처리됨)
  */
 
 export interface LawMeta {
@@ -105,8 +106,28 @@ export function getLawMeta(lawName: string): LawMeta | null {
 }
 
 /**
- * mst로 법제처 법령 상세 URL 생성
+ * mst로 법제처 법령 상세 URL 생성.
+ * 법제처 리뉴얼 후 `lsEfInfoR.do?lsiSeq=` 경로가 404가 되어, 법령명 기반
+ * `/법령/{법령명}` 경로로 전환했다. LAW_META에서 mst→name 역조회 후 URL 생성.
  */
 export function buildLawUrl(mst: string): string {
-  return `https://www.law.go.kr/lsEfInfoR.do?lsiSeq=${mst}`;
+  for (const meta of Object.values(LAW_META)) {
+    if (meta.mst === mst) {
+      return `https://www.law.go.kr/법령/${encodeURIComponent(meta.name)}`;
+    }
+  }
+  // LAW_META에 없는 경우: 법제처 법령 검색 페이지로 fallback
+  return `https://www.law.go.kr/lsSc.do?section=&menuId=1&subMenuId=15&tabMenuId=81&query=${mst}`;
+}
+
+/**
+ * 법령명으로 직접 법제처 URL 생성 (mst 불필요 시).
+ * 가장 안정적인 URL 포맷.
+ */
+export function buildLawUrlByName(lawName: string, articleNo?: string): string {
+  const base = `https://www.law.go.kr/법령/${encodeURIComponent(lawName)}`;
+  if (articleNo) {
+    return `${base}/${encodeURIComponent(articleNo)}`;
+  }
+  return base;
 }

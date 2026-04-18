@@ -108,6 +108,11 @@ lib/
 │   ├── transfer-tax-api.ts         # callTransferTaxAPI() — UI → API 변환
 │   └── transfer-tax-validate.ts    # validateStep() — 단계별 유효성 검사
 ├── db/tax-rates.ts                 # preloadTaxRates(), getRate(), TaxRatesMap 타입
+├── korean-law/                     # 법령 리서치 모듈 (법제처 Open API 래퍼)
+│   ├── client.ts                   # searchLaw, getLawText, searchDecisions, getDecisionText, getAnnexes
+│   ├── aliases.ts                  # 세법 약칭 ↔ 정식명 사전 (상증법 → 상속세및증여세법 등)
+│   ├── chains.ts                   # 8개 리서치 체인 오케스트레이터 (full_research, document_review 등)
+│   └── types.ts                    # Zod 스키마 + TS 타입 (DECISION_DOMAINS 17, CHAIN_TYPES 8)
 ├── stores/calc-wizard-store.ts     # Zustand 마법사 상태 + sessionStorage persist
 └── tax-engine/
     ├── legal-codes.ts              # 법령 조문 상수 (NBL.*, TRANSFER.*)
@@ -128,7 +133,18 @@ lib/
 
 `middleware.ts`에서 Supabase 세션 기반으로 라우트 보호:
 - 보호 라우트 (`/history`, `/api/history`, `/api/pdf`): 미인증 시 `/auth/login`으로 리다이렉트
-- `/api/calc/*`: 인증 불필요 (비로그인 계산 허용)
+- `/api/calc/*`, `/api/law/*`: 인증 불필요 (비로그인 계산/리서치 허용)
+
+## 법령 리서치 (`/law`)
+
+korean-law-mcp(chrisryugj/korean-law-mcp)의 15개 MCP 도구를 법제처 Open API
+직접 호출로 재현한 통합 검색 페이지. 홈화면에서 "법령 리서치" 카드로 진입.
+
+- **API Route**: `app/api/law/{search-law, law-text, search-decisions, decision-text, annexes, chain}/route.ts`
+- **UI 탭 4종**: 법령·조문 / 판례·결정례 / 별표·서식 / 리서치 체인
+- **환경변수**: `KOREAN_LAW_OC` (법제처 Open API 인증키). 발급: https://open.law.go.kr → 회원가입 → Open API 신청 → 승인 후 `.env.local`에 `KOREAN_LAW_OC=계정ID` 추가
+- **캐시**: 기존 `.legal-cache/` 파일 캐시 7일 TTL 재사용
+- **별칭**: `상증법 → 상속세및증여세법`, `종부세법 → 종합부동산세법` 등 52종 자동 해석 (`lib/korean-law/aliases.ts`)
 
 ## Key Documents
 

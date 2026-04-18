@@ -131,7 +131,8 @@ function normalizeArray<T>(val: T | T[] | undefined | null): T[] {
 interface LawServiceResponse {
   법령?: {
     조문?: {
-      조문단위?: LawServiceUnit[];
+      // 결과 1건이면 단일 객체, 복수면 배열로 옴
+      조문단위?: LawServiceUnit | LawServiceUnit[];
     };
   };
 }
@@ -252,18 +253,20 @@ export async function searchLaw(lawName: string): Promise<LawSearchResult | null
   const cached = await readCache<LawSearchResult>(cacheKey);
   if (cached) return cached;
 
-  const data = await fetchLawApi("lawSearch.do", {
-    target: "law",
-    query: lawName,
-    display: "5",
-  }) as { LawSearch?: { law?: Array<{
+  type LawEntry = {
     법령명한글: string;   // API 실제 응답: 밑줄 없음
     법령ID: string;
     법령일련번호: string;
     공포일자: string;
-  }> } };
+  };
+  const data = await fetchLawApi("lawSearch.do", {
+    target: "law",
+    query: lawName,
+    display: "5",
+  }) as { LawSearch?: { law?: LawEntry | LawEntry[] } };
 
-  const laws = data?.LawSearch?.law ?? [];
+  // 법제처 API는 결과 1건 시 배열 대신 단일 객체를 반환 (XML→JSON 변환 특성)
+  const laws = normalizeArray<LawEntry>(data?.LawSearch?.law);
   // 정확한 법령명 우선, 없으면 첫 번째
   const match =
     laws.find((l) => l["법령명한글"] === lawName) ?? laws[0];
@@ -307,7 +310,8 @@ export async function fetchArticle(
       MST: mst,
     }) as LawServiceResponse;
 
-    units = data?.법령?.조문?.조문단위 ?? [];
+    // 단일 객체·배열·undefined 를 모두 배열로 정규화
+    units = normalizeArray(data?.법령?.조문?.조문단위);
     if (units.length === 0) return null;
     await writeCache(lawCacheKey, units);
   }
