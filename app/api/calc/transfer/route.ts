@@ -152,6 +152,12 @@ const inputSchema = z
     acquisitionPrice: z.number().int().nonnegative(),
     /** 5. 취득일 (YYYY-MM-DD) */
     acquisitionDate: z.string().date(),
+    /** 5a. 취득 원인 (매매·상속·증여) */
+    acquisitionCause: z.enum(["purchase", "inheritance", "gift"]).optional(),
+    /** 5b. 상속 시 피상속인 취득일 */
+    decedentAcquisitionDate: z.string().date().optional(),
+    /** 5c. 증여 시 증여자 취득일 */
+    donorAcquisitionDate: z.string().date().optional(),
     /** 6. 필요경비 */
     expenses: z.number().int().nonnegative(),
     /** 7. 환산취득가 사용 여부 */
@@ -172,6 +178,8 @@ const inputSchema = z
     isUnregistered: z.boolean(),
     /** 15. 비사업용 토지 여부 */
     isNonBusinessLand: z.boolean(),
+    /** 15a. 조합원입주권 승계취득 여부 (right_to_move_in 전용) */
+    isSuccessorRightToMoveIn: z.boolean().optional(),
     /** 16. 1세대 여부 */
     isOneHousehold: z.boolean(),
     /** 17. 일시적 2주택 정보 */
@@ -248,6 +256,38 @@ const inputSchema = z
         path: ["acquisitionDate"],
         message: "취득일은 양도일보다 이전이어야 합니다",
       });
+    }
+    // V-3a: 상속 시 피상속인 취득일 필수 + 취득일(상속개시일)보다 이전
+    if (data.acquisitionCause === "inheritance") {
+      if (!data.decedentAcquisitionDate) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["decedentAcquisitionDate"],
+          message: "상속의 경우 피상속인 취득일이 필수입니다",
+        });
+      } else if (data.decedentAcquisitionDate >= data.acquisitionDate) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["decedentAcquisitionDate"],
+          message: "피상속인 취득일은 상속개시일보다 이전이어야 합니다",
+        });
+      }
+    }
+    // V-3b: 증여 시 증여자 취득일 필수 + 증여일(취득일)보다 이전
+    if (data.acquisitionCause === "gift") {
+      if (!data.donorAcquisitionDate) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["donorAcquisitionDate"],
+          message: "증여의 경우 증여자 취득일이 필수입니다",
+        });
+      } else if (data.donorAcquisitionDate >= data.acquisitionDate) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["donorAcquisitionDate"],
+          message: "증여자 취득일은 증여일보다 이전이어야 합니다",
+        });
+      }
     }
     // V-4: 당해연도 기사용 기본공제는 연간 한도(250만 원) 이하
     if (data.annualBasicDeductionUsed > 2_500_000) {
@@ -358,6 +398,14 @@ export async function POST(request: NextRequest) {
     wasRegulatedAtAcquisition: data.wasRegulatedAtAcquisition,
     isUnregistered: data.isUnregistered,
     isNonBusinessLand: data.isNonBusinessLand,
+    isSuccessorRightToMoveIn: data.isSuccessorRightToMoveIn,
+    acquisitionCause: data.acquisitionCause,
+    decedentAcquisitionDate: data.decedentAcquisitionDate
+      ? new Date(data.decedentAcquisitionDate)
+      : undefined,
+    donorAcquisitionDate: data.donorAcquisitionDate
+      ? new Date(data.donorAcquisitionDate)
+      : undefined,
     isOneHousehold: data.isOneHousehold,
     temporaryTwoHouse: data.temporaryTwoHouse
       ? {
@@ -476,15 +524,21 @@ export async function POST(request: NextRequest) {
 
   // 단계 5: 계산 실행
   try {
-    // 신고불성실가산세의 determinedTax는 실제 결정세액으로 주입 필요
-    // → 먼저 가산세 없이 계산하여 determinedTax 확보 후, filingPenaltyDetails에 주입
-    if (engineInput.filingPenaltyDetails) {
+    // 신고불성실가산세의 determinedTax + 지연납부의 unpaidTax는 실제 결정세액으로 주입 필요
+    // → 먼저 가산세 없이 계산하여 결정세액 확보 후, 가산세 디테일에 주입
+    if (engineInput.filingPenaltyDetails || engineInput.delayedPaymentDetails) {
       const baseResult = calculateTransferTax(
         { ...engineInput, filingPenaltyDetails: undefined, delayedPaymentDetails: undefined },
         rates,
       );
-      engineInput.filingPenaltyDetails.determinedTax = baseResult.determinedTax;
-      engineInput.filingPenaltyDetails.reductionAmount = baseResult.reductionAmount;
+      if (engineInput.filingPenaltyDetails) {
+        engineInput.filingPenaltyDetails.determinedTax = baseResult.determinedTax;
+        engineInput.filingPenaltyDetails.reductionAmount = baseResult.reductionAmount;
+      }
+      // unpaidTax === 0이면 결정세액 전액 미납으로 가정 (자동 가산세 적용 흐름)
+      if (engineInput.delayedPaymentDetails && engineInput.delayedPaymentDetails.unpaidTax === 0) {
+        engineInput.delayedPaymentDetails.unpaidTax = baseResult.determinedTax;
+      }
     }
     const result = calculateTransferTax(engineInput, rates);
     return NextResponse.json({ data: result }, { status: 200 });

@@ -12,6 +12,7 @@ import { TransferTaxResultView } from "@/components/calc/results/TransferTaxResu
 import { callTransferTaxAPI } from "@/lib/calc/transfer-tax-api";
 import type { TransferTaxPenaltyResult } from "@/lib/tax-engine/transfer-tax-penalty";
 import { validateStep } from "@/lib/calc/transfer-tax-validate";
+import { getFilingDeadline, isFilingOverdue } from "@/lib/calc/filing-deadline";
 
 
 const STEPS = ["물건 유형", "양도 정보", "취득 정보", "보유 상황", "감면 확인", "가산세"];
@@ -53,6 +54,44 @@ function Step1({ form, onChange }: { form: TransferFormData; onChange: (d: Parti
           </button>
         ))}
       </div>
+
+      {form.propertyType === "right_to_move_in" && (
+        <div className="space-y-2 rounded-lg border border-border bg-muted/30 p-4">
+          <label className="block text-sm font-medium">조합원 유형</label>
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              {
+                value: false,
+                label: "원조합원",
+                desc: "재개발·재건축 조합원자격을 직접 취득",
+              },
+              {
+                value: true,
+                label: "승계조합원",
+                desc: "타인의 입주권을 양수(승계취득)",
+              },
+            ].map((opt) => (
+              <button
+                key={String(opt.value)}
+                type="button"
+                onClick={() => onChange({ isSuccessorRightToMoveIn: opt.value })}
+                className={cn(
+                  "rounded-md border-2 p-3 text-left transition-all",
+                  form.isSuccessorRightToMoveIn === opt.value
+                    ? "border-primary bg-primary/5 text-primary"
+                    : "border-border hover:border-muted-foreground/50 hover:bg-muted/40",
+                )}
+              >
+                <div className="text-sm font-semibold">{opt.label}</div>
+                <div className="text-[11px] text-muted-foreground leading-tight">{opt.desc}</div>
+              </button>
+            ))}
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            ※ 승계조합원은 장기보유특별공제가 적용되지 않습니다 (소득세법 §95② 단서).
+          </p>
+        </div>
+      )}
     </div>
   );
 }
@@ -105,15 +144,36 @@ function Step2({ form, onChange }: { form: TransferFormData; onChange: (d: Parti
         required
         hint="실제 매매계약서상 거래금액을 입력하세요."
       />
-      <div className="space-y-1.5">
-        <label className="block text-sm font-medium">
-          양도일 <span className="text-destructive">*</span>
-        </label>
-        <DateInput
-          value={form.transferDate}
-          onChange={(v) => onChange({ transferDate: v })}
-        />
-        <p className="text-xs text-muted-foreground">잔금 청산일 또는 등기 접수일 중 빠른 날</p>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="space-y-1.5">
+          <label className="block text-sm font-medium">
+            양도일 <span className="text-destructive">*</span>
+          </label>
+          <DateInput
+            value={form.transferDate}
+            onChange={(v) => onChange({ transferDate: v })}
+          />
+          <p className="text-xs text-muted-foreground">잔금 청산일 또는 등기 접수일 중 빠른 날</p>
+        </div>
+        <div className="space-y-1.5">
+          <label className="block text-sm font-medium">신고일</label>
+          <DateInput
+            value={form.filingDate}
+            onChange={(v) => onChange({ filingDate: v })}
+          />
+          {form.transferDate ? (
+            <p className="text-xs text-muted-foreground">
+              신고기한: {getFilingDeadline(form.transferDate)} (양도월 말일 + 2개월)
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground">양도일 입력 시 신고기한이 표시됩니다.</p>
+          )}
+          {isFilingOverdue(form.transferDate, form.filingDate) && (
+            <p className="text-xs font-medium text-destructive">
+              ⚠️ 신고기한({getFilingDeadline(form.transferDate)})을 지났습니다 — 무신고·지연납부 가산세가 자동 적용됩니다.
+            </p>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -329,19 +389,98 @@ function Step3({ form, onChange }: { form: TransferFormData; onChange: (d: Parti
   const yearSelectCls = "rounded-md border border-input bg-background px-2 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
   const fetchBtnCls = "px-3 py-2 rounded-md border border-primary text-primary text-sm font-medium hover:bg-primary/5 disabled:opacity-50 whitespace-nowrap transition-colors";
 
+  // 취득 원인 변경 시 부수 필드 초기화
+  useEffect(() => {
+    const patch: Partial<TransferFormData> = {};
+    if (form.acquisitionCause !== "inheritance" && form.decedentAcquisitionDate) {
+      patch.decedentAcquisitionDate = "";
+    }
+    if (form.acquisitionCause !== "gift" && form.donorAcquisitionDate) {
+      patch.donorAcquisitionDate = "";
+    }
+    if (Object.keys(patch).length > 0) onChange(patch);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.acquisitionCause]);
+
+  const acquisitionDateLabel =
+    form.acquisitionCause === "inheritance"
+      ? "상속개시일"
+      : form.acquisitionCause === "gift"
+        ? "증여일(취득일)"
+        : "취득일";
+
   return (
     <div className="space-y-5">
       <p className="text-sm text-muted-foreground">취득가액과 필요경비를 입력하세요.</p>
 
+      {/* 취득 원인 */}
       <div className="space-y-1.5">
         <label className="block text-sm font-medium">
-          취득일 <span className="text-destructive">*</span>
+          취득 원인 <span className="text-destructive">*</span>
+        </label>
+        <div className="grid grid-cols-3 gap-2">
+          {[
+            { value: "purchase" as const, label: "매매", desc: "유상취득" },
+            { value: "inheritance" as const, label: "상속", desc: "피상속인 사망" },
+            { value: "gift" as const, label: "증여", desc: "무상취득" },
+          ].map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => onChange({ acquisitionCause: opt.value })}
+              className={cn(
+                "flex flex-col items-center gap-0.5 rounded-md border-2 px-3 py-2.5 text-center transition-all",
+                form.acquisitionCause === opt.value
+                  ? "border-primary bg-primary/5 text-primary"
+                  : "border-border hover:border-muted-foreground/50 hover:bg-muted/40",
+              )}
+            >
+              <span className="text-sm font-semibold">{opt.label}</span>
+              <span className="text-[11px] text-muted-foreground leading-tight">{opt.desc}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <label className="block text-sm font-medium">
+          {acquisitionDateLabel} <span className="text-destructive">*</span>
         </label>
         <DateInput
           value={form.acquisitionDate}
           onChange={(v) => onChange({ acquisitionDate: v })}
         />
       </div>
+
+      {form.acquisitionCause === "inheritance" && (
+        <div className="space-y-1.5">
+          <label className="block text-sm font-medium">
+            피상속인 취득일 <span className="text-destructive">*</span>
+          </label>
+          <DateInput
+            value={form.decedentAcquisitionDate}
+            onChange={(v) => onChange({ decedentAcquisitionDate: v })}
+          />
+          <p className="text-[11px] text-muted-foreground">
+            ※ 단기보유 단일세율(50%/40%·70%/60%) 판정 시 피상속인 취득일부터 양도일까지 보유기간을 통산합니다 — 소득세법 §95④
+          </p>
+        </div>
+      )}
+
+      {form.acquisitionCause === "gift" && (
+        <div className="space-y-1.5">
+          <label className="block text-sm font-medium">
+            증여자 취득일 <span className="text-destructive">*</span>
+          </label>
+          <DateInput
+            value={form.donorAcquisitionDate}
+            onChange={(v) => onChange({ donorAcquisitionDate: v })}
+          />
+          <p className="text-[11px] text-muted-foreground">
+            ※ 단기보유 단일세율 판정 시 증여자 취득일부터 양도일까지 보유기간을 통산합니다.
+          </p>
+        </div>
+      )}
 
       {/* 취득가 산정 방식 — 3지선다 */}
       <div className="space-y-1.5">
@@ -412,7 +551,6 @@ function Step3({ form, onChange }: { form: TransferFormData; onChange: (d: Parti
                   onChange={(v) => onChange({ standardPriceAtAcquisition: v, standardPriceAtAcquisitionLabel: v ? form.standardPriceAtAcquisitionLabel : "" })}
                   placeholder="취득 시점 공시가격"
                   required
-                  hideFormatted
                 />
               </div>
               <button
@@ -453,7 +591,6 @@ function Step3({ form, onChange }: { form: TransferFormData; onChange: (d: Parti
                   placeholder="양도 시점 공시가격"
                   required
                   disabled={!form.standardPriceAtAcquisition || parseAmount(form.standardPriceAtAcquisition) <= 0}
-                  hideFormatted
                 />
               </div>
               <button
@@ -511,9 +648,21 @@ function Step3({ form, onChange }: { form: TransferFormData; onChange: (d: Parti
           label="취득가액"
           value={form.acquisitionPrice}
           onChange={(v) => onChange({ acquisitionPrice: v })}
-          placeholder="실제 취득금액"
+          placeholder={
+            form.acquisitionCause === "inheritance"
+              ? "상속 재산 평가액"
+              : form.acquisitionCause === "gift"
+                ? "증여 재산 평가액"
+                : "실제 취득금액"
+          }
           required
-          hint="취득 당시 실제 매매금액을 입력하세요."
+          hint={
+            form.acquisitionCause === "inheritance"
+              ? "상속 재산 평가액을 입력하세요."
+              : form.acquisitionCause === "gift"
+                ? "증여 재산 평가액을 입력하세요."
+                : "취득 당시 실제 매매금액을 입력하세요."
+          }
         />
       )}
 
@@ -678,6 +827,27 @@ function Step4({ form, onChange }: { form: TransferFormData; onChange: (d: Parti
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.propertyAddressRoad, form.propertyAddressJibun, form.transferDate, form.acquisitionDate, form.propertyType]);
 
+  // propertyType 변경 시 표시되지 않는 필드 값 초기화
+  //   - 조정대상지역 체크박스: 주택(housing)에서만 표시 → 그 외 false
+  //   - 미등기 양도: 토지·건물·주택에서만 표시 → 그 외 false
+  useEffect(() => {
+    const patch: Partial<TransferFormData> = {};
+    if (form.propertyType !== "housing") {
+      if (form.isRegulatedArea) patch.isRegulatedArea = false;
+      if (form.wasRegulatedAtAcquisition) patch.wasRegulatedAtAcquisition = false;
+    }
+    const allowsUnregistered =
+      form.propertyType === "housing" ||
+      form.propertyType === "land" ||
+      form.propertyType === "building";
+    if (!allowsUnregistered && form.isUnregistered) {
+      patch.isUnregistered = false;
+    }
+    if (Object.keys(patch).length > 0) onChange(patch);
+    // 의도적으로 onChange 의존성 제외 (안정적인 props 가정)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.propertyType]);
+
   return (
     <div className="space-y-5">
       <p className="text-sm text-muted-foreground">보유 기간과 과세 상황을 입력하세요.</p>
@@ -784,69 +954,76 @@ function Step4({ form, onChange }: { form: TransferFormData; onChange: (d: Parti
             </p>
           </div>
 
-          {/* 조정대상지역 */}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="flex items-center gap-3 rounded-lg border border-border px-4 py-3">
-              <input
-                id="isRegulated"
-                type="checkbox"
-                checked={form.isRegulatedArea}
-                onChange={(e) => onChange({ isRegulatedArea: e.target.checked })}
-                className="h-4 w-4 rounded accent-primary"
-              />
-              <div>
-                <label htmlFor="isRegulated" className="text-sm font-medium cursor-pointer">
-                  양도일 기준 조정대상지역
-                </label>
-                <p className="text-xs text-muted-foreground">중과세 판단 기준</p>
+          {/* 조정대상지역 — 주택만 표시 */}
+          {form.propertyType === "housing" && (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="flex items-center gap-3 rounded-lg border border-border px-4 py-3">
+                <input
+                  id="isRegulated"
+                  type="checkbox"
+                  checked={form.isRegulatedArea}
+                  onChange={(e) => onChange({ isRegulatedArea: e.target.checked })}
+                  className="h-4 w-4 rounded accent-primary"
+                />
+                <div>
+                  <label htmlFor="isRegulated" className="text-sm font-medium cursor-pointer">
+                    양도일 기준 조정대상지역
+                  </label>
+                  <p className="text-xs text-muted-foreground">중과세 판단 기준</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 rounded-lg border border-border px-4 py-3">
+                <input
+                  id="wasRegulated"
+                  type="checkbox"
+                  checked={form.wasRegulatedAtAcquisition}
+                  onChange={(e) => onChange({ wasRegulatedAtAcquisition: e.target.checked })}
+                  className="h-4 w-4 rounded accent-primary"
+                />
+                <div>
+                  <label htmlFor="wasRegulated" className="text-sm font-medium cursor-pointer">
+                    취득일 기준 조정대상지역
+                  </label>
+                  <p className="text-xs text-muted-foreground">비과세 거주요건 판단</p>
+                </div>
               </div>
             </div>
-            <div className="flex items-center gap-3 rounded-lg border border-border px-4 py-3">
-              <input
-                id="wasRegulated"
-                type="checkbox"
-                checked={form.wasRegulatedAtAcquisition}
-                onChange={(e) => onChange({ wasRegulatedAtAcquisition: e.target.checked })}
-                className="h-4 w-4 rounded accent-primary"
-              />
-              <div>
-                <label htmlFor="wasRegulated" className="text-sm font-medium cursor-pointer">
-                  취득일 기준 조정대상지역
-                </label>
-                <p className="text-xs text-muted-foreground">비과세 거주요건 판단</p>
-              </div>
-            </div>
-          </div>
+          )}
         </>
       )}
 
       {/* 특수 상황 */}
       <div className="space-y-2">
         <p className="text-sm font-medium">특수 상황</p>
-        <div
-          className={cn(
-            "flex items-center gap-3 rounded-lg border px-4 py-3 transition-colors",
-            form.isUnregistered ? "border-destructive bg-destructive/5" : "border-border",
-          )}
-        >
-          <input
-            id="isUnregistered"
-            type="checkbox"
-            checked={form.isUnregistered}
-            onChange={(e) => onChange({ isUnregistered: e.target.checked })}
-            className="h-4 w-4 rounded accent-primary"
-          />
-          <div>
-            <label htmlFor="isUnregistered" className="text-sm font-medium cursor-pointer">
-              미등기 양도
-            </label>
-            {form.isUnregistered && (
-              <p className="text-xs text-destructive font-medium mt-0.5">
-                ⚠️ 70% 단일세율 적용 — 장기보유공제·기본공제 전액 배제
-              </p>
+        {/* 미등기 양도 — 주택·토지·건물만 표시 (입주권·분양권은 등기 개념 없음) */}
+        {(form.propertyType === "housing" ||
+          form.propertyType === "land" ||
+          form.propertyType === "building") && (
+          <div
+            className={cn(
+              "flex items-center gap-3 rounded-lg border px-4 py-3 transition-colors",
+              form.isUnregistered ? "border-destructive bg-destructive/5" : "border-border",
             )}
+          >
+            <input
+              id="isUnregistered"
+              type="checkbox"
+              checked={form.isUnregistered}
+              onChange={(e) => onChange({ isUnregistered: e.target.checked })}
+              className="h-4 w-4 rounded accent-primary"
+            />
+            <div>
+              <label htmlFor="isUnregistered" className="text-sm font-medium cursor-pointer">
+                미등기 양도
+              </label>
+              {form.isUnregistered && (
+                <p className="text-xs text-destructive font-medium mt-0.5">
+                  ⚠️ 70% 단일세율 적용 — 장기보유공제·기본공제 전액 배제
+                </p>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         {form.propertyType === "land" && (
           <div className="rounded-lg border border-border px-4 py-3 space-y-2">
@@ -1768,6 +1945,53 @@ export default function TransferTaxCalculator() {
   const isLastStep = currentStep === totalSteps - 1;
   const isResult = result !== null && currentStep === totalSteps;
 
+  // 신고일·양도일 변경 시 가산세 필드 자동 설정
+  //   - 신고기한 초과 시: 무신고(filingType="none") + 지연납부 자동 ON, paymentDeadline=신고기한, actualPaymentDate=신고일
+  //   - 신고기한 이내 또는 신고일 미입력: 가산세 자동 OFF
+  useEffect(() => {
+    const { transferDate, filingDate } = formData;
+    if (!transferDate || !filingDate) {
+      if (formData.enablePenalty) {
+        updateFormData({
+          enablePenalty: false,
+          filingType: "correct",
+          paymentDeadline: "",
+          actualPaymentDate: "",
+        });
+      }
+      return;
+    }
+    const overdue = isFilingOverdue(transferDate, filingDate);
+    if (overdue) {
+      const deadline = getFilingDeadline(transferDate);
+      if (
+        !formData.enablePenalty ||
+        formData.filingType !== "none" ||
+        formData.paymentDeadline !== deadline ||
+        formData.actualPaymentDate !== filingDate
+      ) {
+        updateFormData({
+          enablePenalty: true,
+          filingType: "none",
+          penaltyReason: formData.penaltyReason || "normal",
+          paymentDeadline: deadline,
+          actualPaymentDate: filingDate,
+        });
+      }
+    } else {
+      if (formData.enablePenalty) {
+        updateFormData({
+          enablePenalty: false,
+          filingType: "correct",
+          paymentDeadline: "",
+          actualPaymentDate: "",
+        });
+      }
+    }
+    // 의도적으로 일부 필드만 의존성에 포함
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.transferDate, formData.filingDate]);
+
   function handleNext() {
     const err = validateStep(currentStep, formData);
     if (err) { setError(err); return; }
@@ -1875,7 +2099,15 @@ export default function TransferTaxCalculator() {
         />
       ) : (
         <>
-          <StepIndicator steps={STEPS} current={currentStep} />
+          <StepIndicator
+            steps={STEPS}
+            current={currentStep}
+            onStepClick={(i) => {
+              if (i === currentStep) return;
+              setError(null);
+              setStep(i);
+            }}
+          />
 
           {/* 단계 제목 */}
           <h2 className="text-base font-semibold mb-4">

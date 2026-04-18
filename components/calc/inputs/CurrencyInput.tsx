@@ -28,7 +28,6 @@ export interface CurrencyInputProps {
   placeholder?: string;
   required?: boolean;
   hint?: string;
-  hideFormatted?: boolean;
   disabled?: boolean;
 }
 
@@ -40,7 +39,6 @@ export function CurrencyInput({
   required = false,
   hint,
   disabled = false,
-  hideFormatted = false,
 }: CurrencyInputProps) {
   return (
     <div className="space-y-1.5">
@@ -64,9 +62,6 @@ export function CurrencyInput({
           원
         </span>
       </div>
-      {!hideFormatted && value && parseAmount(value) > 0 && (
-        <p className="text-xs text-muted-foreground">= {formatKRW(parseAmount(value))}</p>
-      )}
       {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
     </div>
   );

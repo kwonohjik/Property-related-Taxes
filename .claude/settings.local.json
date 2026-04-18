@@ -89,7 +89,22 @@
       "Bash(git diff *)",
       "Bash(vercel --version)",
       "Bash(kill 77020 77055)",
-      "Skill(bkit:bkit)"
+      "Skill(bkit:bkit)",
+      "Bash(gh repo *)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(gh api *)",
+      "Read(//tmp/**)",
+      "Bash(npx playwright *)",
+      "Read(//private/tmp/korean-law-mcp-study/korean-law-mcp/src/**)",
+      "Read(//private/tmp/korean-law-mcp-study/korean-law-mcp/src/tools/**)",
+      "Read(//private/tmp/korean-law-mcp-study/korean-law-mcp/src/lib/**)",
+      "Bash(find /Users/mynote/workspace/Property-related-Taxes/lib/korean-law -name \"*.ts\" -exec wc -l {} \\\\;)",
+      "Bash(awk '{s+=$1} END {print \"Total korean-law lines:\", s}')",
+      "Bash(tee /tmp/e2e-run-1.log)",
+      "Bash(tee /tmp/e2e-run-2.log)",
+      "Bash(tee /tmp/e2e-edge-1.log)",
+      "Bash(tee /tmp/e2e-edge-2.log)"
     ]
   },
   "outputStyle": "bkit:bkit-learning"

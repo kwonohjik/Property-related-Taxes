@@ -111,6 +111,12 @@ export interface TransferTaxInput {
   isUnregistered: boolean;
   /** 비사업용 토지 여부 */
   isNonBusinessLand: boolean;
+  /**
+   * 조합원입주권 승계취득 여부 (propertyType === "right_to_move_in" 일 때만 의미).
+   * true = 승계조합원 (장특공제 배제), false/미지정 = 원조합원.
+   * 소득세법 §95② 단서: 조합원입주권은 원조합원에 한해 장기보유특별공제 적용.
+   */
+  isSuccessorRightToMoveIn?: boolean;
   /** 1세대 여부 */
   isOneHousehold: boolean;
   /** 일시적 2주택 정보 */
@@ -118,6 +124,19 @@ export interface TransferTaxInput {
     previousAcquisitionDate: Date;
     newAcquisitionDate: Date;
   };
+  /** 취득 원인 (매매·상속·증여). 미지정 시 매매로 간주. */
+  acquisitionCause?: "purchase" | "inheritance" | "gift";
+  /**
+   * 상속 시 피상속인 취득일 — 단기보유 단일세율 판정 보유기간 통산용.
+   * 소득세법 §95④: 상속받은 자산은 피상속인이 그 자산을 취득한 날을 자산의 취득일로 본다.
+   * 장기보유특별공제 보유기간에는 적용하지 않음 (LTHD는 상속개시일 기산 유지).
+   */
+  decedentAcquisitionDate?: Date;
+  /**
+   * 증여 시 증여자 취득일 — 단기보유 단일세율 판정 보유기간 통산용 (이월과세 패턴).
+   * 장기보유특별공제 보유기간에는 적용하지 않음.
+   */
+  donorAcquisitionDate?: Date;
   /** 조세특례 감면 목록 */
   reductions: TransferReduction[];
   /** 당해 연도 기사용 기본공제 (원) */
@@ -594,6 +613,16 @@ function calcLongTermHoldingDeduction(
     return { deduction: 0, rate: 0, holdingPeriod: { years: 0, months: 0 } };
   }
 
+  // L-0a: propertyType 가드 (소득세법 §95② 단서)
+  //   - 분양권(presale_right): 장기보유특별공제 대상 아님
+  //   - 조합원입주권(right_to_move_in) + 승계조합원: 원조합원에 한해 적용되므로 배제
+  if (input.propertyType === "presale_right") {
+    return { deduction: 0, rate: 0, holdingPeriod: { years: 0, months: 0 } };
+  }
+  if (input.propertyType === "right_to_move_in" && input.isSuccessorRightToMoveIn === true) {
+    return { deduction: 0, rate: 0, holdingPeriod: { years: 0, months: 0 } };
+  }
+
   // L-1: 중과세 적용 중(유예 해제)이면 공제 배제
   if (isSurcharge && !isSuspended) {
     return { deduction: 0, rate: 0, holdingPeriod: { years: 0, months: 0 } };
@@ -649,11 +678,11 @@ function calcLongTermHoldingDeduction(
     return { deduction, rate, holdingPeriod };
   }
 
-  // L-4: 일반 (보유기간 2년 이상, 미등기 제외)
+  // L-4: 일반 (보유기간 3년 이상, 미등기 제외) — 소득세법 §95②
   //   공제율: 보유기간 × 2% (30% 한도)
   const GENERAL_HOLDING_RATE = 0.02;  // 보유 연 2%
   const GENERAL_MAX_RATE = 0.30;      // 최대 30%
-  const GENERAL_MIN_HOLDING_YEARS = 2;
+  const GENERAL_MIN_HOLDING_YEARS = 3;
 
   if (holding.years >= GENERAL_MIN_HOLDING_YEARS) {
     const rate = Math.min(holding.years * GENERAL_HOLDING_RATE, GENERAL_MAX_RATE);
@@ -661,7 +690,7 @@ function calcLongTermHoldingDeduction(
     return { deduction, rate, holdingPeriod };
   }
 
-  // 보유기간 2년 미만
+  // 보유기간 3년 미만
   return { deduction: 0, rate: 0, holdingPeriod };
 }
 
@@ -821,7 +850,18 @@ function calcTax(
   // T-2.5: 단기보유 특례세율 (소득세법 §104①2~3호, 7~8호)
   // 주택·입주권·분양권: 1년 미만 70%, 1~2년 미만 60%
   // 일반 건물·토지: 1년 미만 50%, 1~2년 미만 40%
-  const holdingForRate = calculateHoldingPeriod(input.acquisitionDate, input.transferDate);
+  //
+  // 보유기간 통산 (소득세법 §95④):
+  //   - 상속: 피상속인 취득일부터 양도일까지로 통산
+  //   - 증여: 증여자 취득일부터 양도일까지로 통산 (이월과세 패턴 단순화 적용)
+  //   - LTHD(장기보유특별공제) 보유기간에는 적용 금지 — 그쪽은 acquisitionDate 그대로 유지
+  const rateBasisAcquisitionDate =
+    input.acquisitionCause === "inheritance" && input.decedentAcquisitionDate
+      ? input.decedentAcquisitionDate
+      : input.acquisitionCause === "gift" && input.donorAcquisitionDate
+        ? input.donorAcquisitionDate
+        : input.acquisitionDate;
+  const holdingForRate = calculateHoldingPeriod(rateBasisAcquisitionDate, input.transferDate);
   const holdingMonthsTotal = holdingForRate.years * 12 + holdingForRate.months;
   const isHousingLikeProp =
     input.propertyType === "housing" ||

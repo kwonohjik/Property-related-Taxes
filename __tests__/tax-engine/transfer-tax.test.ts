@@ -641,6 +641,85 @@ describe("T-16: 단기보유 특례세율", () => {
 });
 
 // ============================================================
+// T-INH-RATE-LONG: 상속 — 단기보유 단일세율 판정에 피상속인 취득일 통산
+// ============================================================
+
+describe("T-INH-RATE-LONG: 상속 자산 — 피상속인 취득일 보유기간 통산 (단기 단일세율 미적용)", () => {
+  it("상속개시일 6개월 전 양도지만 피상속인 취득일 5년 전 → 누진세율 적용", () => {
+    // 상속개시일(취득일) 2023-07-01, 양도일 2024-01-01 → 상속 후 6개월
+    //   기존 로직이라면: 보유 6개월 < 12개월 → 70% 단일세율
+    // 피상속인 취득일 2019-01-01 → 통산 보유 5년 → 단기 미적용, 누진세율
+    const input = baseInput({
+      propertyType: "housing",
+      transferPrice: 600_000_000,
+      acquisitionPrice: 500_000_000,
+      acquisitionDate: new Date("2023-07-01"),
+      transferDate: new Date("2024-01-01"),
+      acquisitionCause: "inheritance",
+      decedentAcquisitionDate: new Date("2019-01-01"),
+      isOneHousehold: false,
+      householdHousingCount: 2,
+      annualBasicDeductionUsed: 2_500_000,
+    });
+    const result = calculateTransferTax(input, mockRates);
+    // 단기 단일세율(0.70/0.60)이 아닌 누진세율 적용 확인
+    expect(result.appliedRate).not.toBe(0.70);
+    expect(result.appliedRate).not.toBe(0.60);
+    expect(result.appliedRate).toBeLessThanOrEqual(0.45);
+  });
+});
+
+// ============================================================
+// T-GIFT-RATE-LONG: 증여 — 단기보유 단일세율 판정에 증여자 취득일 통산
+// ============================================================
+
+describe("T-GIFT-RATE-LONG: 증여 자산 — 증여자 취득일 보유기간 통산 (단기 단일세율 미적용)", () => {
+  it("증여일 6개월 전 양도지만 증여자 취득일 5년 전 → 누진세율 적용", () => {
+    const input = baseInput({
+      propertyType: "land",
+      transferPrice: 600_000_000,
+      acquisitionPrice: 500_000_000,
+      acquisitionDate: new Date("2023-07-01"),
+      transferDate: new Date("2024-01-01"),
+      acquisitionCause: "gift",
+      donorAcquisitionDate: new Date("2019-01-01"),
+      isOneHousehold: false,
+      householdHousingCount: 0,
+      annualBasicDeductionUsed: 2_500_000,
+    });
+    const result = calculateTransferTax(input, mockRates);
+    // 토지 단기 단일세율(0.50/0.40) 미적용 확인
+    expect(result.appliedRate).not.toBe(0.50);
+    expect(result.appliedRate).not.toBe(0.40);
+    expect(result.appliedRate).toBeLessThanOrEqual(0.45);
+  });
+});
+
+// ============================================================
+// T-INH-LTHD-UNCHANGED: 상속 — LTHD 보유기간은 상속개시일 기산 유지 (회귀)
+// ============================================================
+
+describe("T-INH-LTHD-UNCHANGED: 상속 자산의 LTHD 보유기간은 상속개시일 기산 유지", () => {
+  it("상속개시일 6개월 전 + 피상속인 취득일 10년 전 → LTHD = 0 (3년 미만)", () => {
+    const input = baseInput({
+      propertyType: "land",
+      transferPrice: 600_000_000,
+      acquisitionPrice: 500_000_000,
+      acquisitionDate: new Date("2023-07-01"),
+      transferDate: new Date("2024-01-01"),
+      acquisitionCause: "inheritance",
+      decedentAcquisitionDate: new Date("2014-01-01"),
+      isOneHousehold: false,
+      householdHousingCount: 0,
+      annualBasicDeductionUsed: 2_500_000,
+    });
+    const result = calculateTransferTax(input, mockRates);
+    expect(result.longTermHoldingDeduction).toBe(0);
+    expect(result.longTermHoldingRate).toBe(0);
+  });
+});
+
+// ============================================================
 // T-17: 누진세율 45% 구간 경계값 (10억+1원)
 // ============================================================
 
@@ -1572,13 +1651,12 @@ describe("T-36: 양도가액 12억 → 전액 비과세 경계값", () => {
 });
 
 // ============================================================
-// T-37: 1세대1주택 보유 2년 + 거주 2년 → 특례 미적용, 일반 공제 4% [버그2 검증]
+// T-37: 1세대1주택 보유 2년 + 거주 2년 → 일반·특례 모두 미적용 (3년 미만)
 // ============================================================
 
-describe("T-37: 1세대1주택 보유 2년 → 장기보유특별공제 1세대1주택 특례 미적용 (3년 미만)", () => {
-  it("보유 2년, 거주 2년 → 일반 공제 4% (특례 미적용)", () => {
-    // 보유 2년 < 3년 → 1세대1주택 특례 미적용
-    // 일반 공제: 2년 × 2% = 4%
+describe("T-37: 1세대1주택 보유 2년 → 장기보유특별공제 전부 미적용 (3년 미만)", () => {
+  it("보유 2년, 거주 2년 → 공제율 0% (일반·특례 모두 3년 이상 요건 미충족)", () => {
+    // 보유 2년 < 3년 → 1세대1주택 특례·일반 공제 모두 미적용 (소득세법 §95②)
     const input = baseInput({
       transferPrice: 1_500_000_000, // > 12억 → 부분과세로 장기보유공제 계산됨
       acquisitionPrice: 1_000_000_000,
@@ -1591,12 +1669,8 @@ describe("T-37: 1세대1주택 보유 2년 → 장기보유특별공제 1세대1
       residencePeriodMonths: 24, // 거주 2년
     });
     const result = calculateTransferTax(input, mockRates);
-    // 보유 2년 → 1세대1주택 특례(3년 이상) 미적용
-    // 일반 공제: 2 × 2% = 4%
-    expect(result.longTermHoldingRate).toBe(0.04);
-    expect(result.longTermHoldingDeduction).toBe(
-      Math.floor(result.taxableGain * 0.04)
-    );
+    expect(result.longTermHoldingRate).toBe(0);
+    expect(result.longTermHoldingDeduction).toBe(0);
   });
 });
 
@@ -1816,6 +1890,126 @@ describe("T-43: 미등기 양도 — LTHD 배제 회귀 (P0-2)", () => {
     expect(result.longTermHoldingRate).toBe(0);
     // 미등기 단일세율 70% 적용
     expect(result.appliedRate).toBe(0.70);
+  });
+});
+
+// ============================================================
+// T-LTH-PRSL: 분양권 양도 — 장기보유특별공제 배제 (소득세법 §95② 단서)
+// ============================================================
+
+describe("T-LTH-PRSL: 분양권 양도 — 장기보유특별공제 배제", () => {
+  it("propertyType='presale_right' + 보유 5년 → longTermHoldingDeduction = 0", () => {
+    const result = calculateTransferTax(
+      baseInput({
+        propertyType: "presale_right",
+        acquisitionDate: new Date("2019-01-01"),
+        transferDate: new Date("2024-01-02"),
+        transferPrice: 600_000_000,
+        acquisitionPrice: 300_000_000,
+        isOneHousehold: false,
+        householdHousingCount: 2,
+        residencePeriodMonths: 0,
+      }),
+      mockRates,
+    );
+    expect(result.longTermHoldingDeduction).toBe(0);
+    expect(result.longTermHoldingRate).toBe(0);
+  });
+});
+
+// ============================================================
+// T-LTH-SUCC: 조합원입주권 + 승계조합원 — 장기보유특별공제 배제
+// ============================================================
+
+describe("T-LTH-SUCC: 조합원입주권 승계취득 — 장기보유특별공제 배제", () => {
+  it("right_to_move_in + isSuccessorRightToMoveIn=true + 보유 5년 → 공제 0", () => {
+    const result = calculateTransferTax(
+      baseInput({
+        propertyType: "right_to_move_in",
+        isSuccessorRightToMoveIn: true,
+        acquisitionDate: new Date("2019-01-01"),
+        transferDate: new Date("2024-01-02"),
+        transferPrice: 600_000_000,
+        acquisitionPrice: 300_000_000,
+        isOneHousehold: false,
+        householdHousingCount: 2,
+        residencePeriodMonths: 0,
+      }),
+      mockRates,
+    );
+    expect(result.longTermHoldingDeduction).toBe(0);
+    expect(result.longTermHoldingRate).toBe(0);
+  });
+});
+
+// ============================================================
+// T-LTH-ORIG: 조합원입주권 + 원조합원 — 장기보유특별공제 정상 적용
+// ============================================================
+
+describe("T-LTH-ORIG: 조합원입주권 원조합원 — 장기보유특별공제 정상 적용", () => {
+  it("right_to_move_in + isSuccessorRightToMoveIn=false + 보유 5년 → 10%", () => {
+    const result = calculateTransferTax(
+      baseInput({
+        propertyType: "right_to_move_in",
+        isSuccessorRightToMoveIn: false,
+        acquisitionDate: new Date("2019-01-01"),
+        transferDate: new Date("2024-01-02"),
+        transferPrice: 600_000_000,
+        acquisitionPrice: 300_000_000,
+        isOneHousehold: false,
+        householdHousingCount: 2,
+        residencePeriodMonths: 0,
+      }),
+      mockRates,
+    );
+    expect(result.longTermHoldingRate).toBe(0.10);
+  });
+});
+
+// ============================================================
+// T-LTH-3Y-EDGE: 보유 2년 11개월 — 장기보유특별공제 배제 (3년 미만)
+// ============================================================
+
+describe("T-LTH-3Y-EDGE: 토지 보유 2년 11개월 — 장특공제 배제", () => {
+  it("propertyType='land' + 보유 2년 11개월 → longTermHoldingDeduction = 0", () => {
+    const result = calculateTransferTax(
+      baseInput({
+        propertyType: "land",
+        acquisitionDate: new Date("2021-01-01"),
+        transferDate: new Date("2023-12-02"),
+        transferPrice: 600_000_000,
+        acquisitionPrice: 300_000_000,
+        isOneHousehold: false,
+        householdHousingCount: 2,
+        residencePeriodMonths: 0,
+      }),
+      mockRates,
+    );
+    expect(result.longTermHoldingDeduction).toBe(0);
+    expect(result.longTermHoldingRate).toBe(0);
+  });
+});
+
+// ============================================================
+// T-LTH-3Y-ENTRY: 토지 보유 3년 — 장기보유특별공제 6% 적용
+// ============================================================
+
+describe("T-LTH-3Y-ENTRY: 토지 보유 3년 — 장특공제 6% 적용", () => {
+  it("propertyType='land' + 보유 3년 → longTermHoldingRate = 0.06", () => {
+    const result = calculateTransferTax(
+      baseInput({
+        propertyType: "land",
+        acquisitionDate: new Date("2021-01-01"),
+        transferDate: new Date("2024-01-02"),
+        transferPrice: 600_000_000,
+        acquisitionPrice: 300_000_000,
+        isOneHousehold: false,
+        householdHousingCount: 2,
+        residencePeriodMonths: 0,
+      }),
+      mockRates,
+    );
+    expect(result.longTermHoldingRate).toBe(0.06);
   });
 });
 

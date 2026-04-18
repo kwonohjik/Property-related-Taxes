@@ -17,7 +17,7 @@ interface LegalCitationProps {
  *
  * @example
  * <LegalCitation citation="소득세법 §94 ①" />
- * // → <a href="https://www.law.go.kr/lsEfInfoR.do?lsiSeq=276127" target="_blank">소득세법 §94 ①</a>
+ * // → <a href="https://www.law.go.kr/법령/소득세법" target="_blank">소득세법 §94 ①</a>
  */
 export function LegalCitation({ citation, className }: LegalCitationProps) {
   const parsed = parseLegalCitation(citation);

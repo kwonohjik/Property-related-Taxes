@@ -29,9 +29,16 @@ export interface HouseEntry {
 export interface TransferFormData {
   // Step 1: 물건 유형
   propertyType: "housing" | "land" | "building" | "right_to_move_in" | "presale_right";
+  /**
+   * 조합원입주권 승계취득 여부 (propertyType === "right_to_move_in" 일 때만 의미).
+   * true = 승계조합원 (장특공제 배제), false = 원조합원.
+   */
+  isSuccessorRightToMoveIn: boolean;
   // Step 2: 양도 정보 + 소재지
   transferPrice: string;
   transferDate: string;
+  /** 양도소득세 신고일 (YYYY-MM-DD) — 신고기한 초과 시 자동 가산세 적용 */
+  filingDate: string;
   /** 도로명 주소 (Vworld road) */
   propertyAddressRoad: string;
   /** 지번 주소 (Vworld parcel) */
@@ -45,8 +52,14 @@ export interface TransferFormData {
   /** 위도 (Vworld point.y) */
   propertyLatitude: string;
   // Step 3: 취득 정보
+  /** 취득 원인 — purchase=매매, inheritance=상속, gift=증여 */
+  acquisitionCause: "purchase" | "inheritance" | "gift";
   acquisitionPrice: string;
   acquisitionDate: string;
+  /** 상속 시 피상속인 취득일 (YYYY-MM-DD) — acquisitionCause === "inheritance" 시 의미 */
+  decedentAcquisitionDate: string;
+  /** 증여 시 증여자 취득일 (YYYY-MM-DD) — acquisitionCause === "gift" 시 의미 */
+  donorAcquisitionDate: string;
   expenses: string;
   useEstimatedAcquisition: boolean;
   standardPriceAtAcquisition: string;
@@ -127,16 +140,21 @@ export interface TransferFormData {
 
 const defaultFormData: TransferFormData = {
   propertyType: "housing",
+  isSuccessorRightToMoveIn: false,
   transferPrice: "",
   transferDate: "",
+  filingDate: "",
   propertyAddressRoad: "",
   propertyAddressJibun: "",
   propertyBuildingName: "",
   propertyAddressDetail: "",
   propertyLongitude: "",
   propertyLatitude: "",
+  acquisitionCause: "purchase",
   acquisitionPrice: "",
   acquisitionDate: "",
+  decedentAcquisitionDate: "",
+  donorAcquisitionDate: "",
   expenses: "0",
   useEstimatedAcquisition: false,
   standardPriceAtAcquisition: "",

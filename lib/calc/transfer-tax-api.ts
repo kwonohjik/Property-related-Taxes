@@ -122,6 +122,17 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     wasRegulatedAtAcquisition: form.wasRegulatedAtAcquisition,
     isUnregistered: form.isUnregistered,
     isNonBusinessLand: form.isNonBusinessLand,
+    isSuccessorRightToMoveIn:
+      form.propertyType === "right_to_move_in" ? form.isSuccessorRightToMoveIn : undefined,
+    acquisitionCause: form.acquisitionCause,
+    decedentAcquisitionDate:
+      form.acquisitionCause === "inheritance" && form.decedentAcquisitionDate
+        ? form.decedentAcquisitionDate
+        : undefined,
+    donorAcquisitionDate:
+      form.acquisitionCause === "gift" && form.donorAcquisitionDate
+        ? form.donorAcquisitionDate
+        : undefined,
     isOneHousehold: form.isOneHousehold,
     reductions,
     annualBasicDeductionUsed: parseAmount(form.annualBasicDeductionUsed),
@@ -158,7 +169,8 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
           },
         }
       : {}),
-    ...(form.enablePenalty && parseAmount(form.unpaidTax) > 0 && form.paymentDeadline
+    // delayedPaymentDetails — unpaidTax === 0이면 route에서 결정세액으로 자동 주입.
+    ...(form.enablePenalty && form.paymentDeadline
       ? {
           delayedPaymentDetails: {
             unpaidTax: parseAmount(form.unpaidTax),

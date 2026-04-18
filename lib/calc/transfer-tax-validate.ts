@@ -10,14 +10,22 @@ export function validateStep(step: number, form: TransferFormData): string | nul
     if (!form.propertyType) return "양도하는 부동산 유형을 선택하세요.";
   }
   if (step === 1) {
-    if (!form.propertyAddressRoad && !form.propertyAddressJibun)
-      return "양도자산 소재지를 검색·선택하세요.";
     if (!form.transferPrice || parseAmount(form.transferPrice) <= 0) return "양도가액을 입력하세요.";
     if (!form.transferDate) return "양도일을 선택하세요.";
   }
   if (step === 2) {
     if (!form.acquisitionDate) return "취득일을 선택하세요.";
     if (form.acquisitionDate >= form.transferDate) return "취득일은 양도일보다 이전이어야 합니다.";
+    if (form.acquisitionCause === "inheritance") {
+      if (!form.decedentAcquisitionDate) return "피상속인 취득일을 선택하세요.";
+      if (form.decedentAcquisitionDate >= form.acquisitionDate)
+        return "피상속인 취득일은 상속개시일보다 이전이어야 합니다.";
+    }
+    if (form.acquisitionCause === "gift") {
+      if (!form.donorAcquisitionDate) return "증여자 취득일을 선택하세요.";
+      if (form.donorAcquisitionDate >= form.acquisitionDate)
+        return "증여자 취득일은 증여일보다 이전이어야 합니다.";
+    }
     if (form.useEstimatedAcquisition) {
       if (!form.standardPriceAtAcquisition || parseAmount(form.standardPriceAtAcquisition) <= 0)
         return "취득 당시 기준시가를 입력하세요.";
