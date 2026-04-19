@@ -1,6 +1,6 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-04-19T12:50:39.799Z",
+  "lastUpdated": "2026-04-19T14:17:49.564Z",
   "activeFeatures": [
     "claude-code-mastery",
     "calc",
@@ -63,7 +63,8 @@
     "router",
     "route-router",
     "law-research-v2 — 빌드·테스트·Gap 검증",
-    "law-research-v2 실전 검증 · 오류 수정"
+    "law-research-v2 실전 검증 · 오류 수정",
+    "annex-content"
   ],
   "primaryFeature": "law-research-v2",
   "features": {
@@ -715,9 +716,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-18T11:02:38.851Z",
-        "lastUpdated": "2026-04-19T12:46:01.290Z"
+        "lastUpdated": "2026-04-19T13:45:42.097Z"
       },
-      "lastFile": "/Users/mynote/workspace/Property-related-Taxes/lib/korean-law/search-normalizer.ts"
+      "lastFile": "/Users/mynote/workspace/Property-related-Taxes/lib/korean-law/annex-body-parser.ts"
     },
     "search-law": {
       "phase": "do",
@@ -728,7 +729,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-18T11:05:07.359Z",
-        "lastUpdated": "2026-04-18T13:32:28.591Z"
+        "lastUpdated": "2026-04-19T13:56:33.796Z"
       },
       "lastFile": "/Users/mynote/workspace/Property-related-Taxes/app/api/law/search-law/route.ts"
     },
@@ -741,7 +742,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-18T11:05:10.811Z",
-        "lastUpdated": "2026-04-18T11:05:10.811Z"
+        "lastUpdated": "2026-04-19T13:23:29.898Z"
       },
       "lastFile": "/Users/mynote/workspace/Property-related-Taxes/app/api/law/law-text/route.ts"
     },
@@ -754,7 +755,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-18T11:05:14.220Z",
-        "lastUpdated": "2026-04-18T12:48:55.168Z"
+        "lastUpdated": "2026-04-19T13:56:46.458Z"
       },
       "lastFile": "/Users/mynote/workspace/Property-related-Taxes/app/api/law/search-decisions/route.ts"
     },
@@ -806,9 +807,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-18T11:06:09.575Z",
-        "lastUpdated": "2026-04-18T21:39:32.668Z"
+        "lastUpdated": "2026-04-19T14:17:49.563Z"
       },
-      "lastFile": "/Users/mynote/workspace/Property-related-Taxes/app/law/_components/LawResearchClient.tsx"
+      "lastFile": "/Users/mynote/workspace/Property-related-Taxes/app/law/_components/AnnexTab.tsx"
     },
     "verify-citations": {
       "phase": "do",
@@ -832,9 +833,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-18T12:53:21.719Z",
-        "lastUpdated": "2026-04-18T13:32:04.918Z"
+        "lastUpdated": "2026-04-19T13:45:29.430Z"
       },
-      "lastFile": "/Users/mynote/workspace/Property-related-Taxes/lib/korean-law/scenarios/index.ts"
+      "lastFile": "/Users/mynote/workspace/Property-related-Taxes/lib/korean-law/scenarios/timeline.ts"
     },
     "parse": {
       "phase": "do",
@@ -915,6 +916,19 @@
       },
       "previousPhase": "qa",
       "autoAdvanced": true
+    },
+    "annex-content": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-04-19T13:21:01.890Z",
+        "lastUpdated": "2026-04-19T13:21:01.891Z"
+      },
+      "lastFile": "/Users/mynote/workspace/Property-related-Taxes/app/api/law/annex-content/route.ts"
     }
   },
   "pipeline": {
@@ -925,7 +939,7 @@
   "session": {
     "startedAt": "2026-04-13T10:11:34.572Z",
     "onboardingCompleted": false,
-    "lastActivity": "2026-04-19T12:50:39.799Z"
+    "lastActivity": "2026-04-19T14:17:49.564Z"
   },
   "history": [
     {
@@ -9517,6 +9531,294 @@
     {
       "timestamp": "2026-04-19T12:50:39.799Z",
       "feature": "decision-text",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-19T13:15:12.988Z",
+      "feature": "korean-law",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-19T13:15:22.609Z",
+      "feature": "korean-law",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-19T13:15:34.164Z",
+      "feature": "korean-law",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-19T13:15:40.893Z",
+      "feature": "korean-law",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-19T13:15:55.650Z",
+      "feature": "scenarios",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-19T13:16:02.696Z",
+      "feature": "scenarios",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-19T13:16:07.969Z",
+      "feature": "scenarios",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-19T13:16:15.189Z",
+      "feature": "scenarios",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-19T13:16:28.707Z",
+      "feature": "scenarios",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-19T13:16:34.424Z",
+      "feature": "scenarios",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-19T13:16:58.003Z",
+      "feature": "scenarios",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-19T13:17:16.870Z",
+      "feature": "scenarios",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-19T13:17:21.843Z",
+      "feature": "scenarios",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-19T13:17:30.318Z",
+      "feature": "scenarios",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-19T13:17:52.430Z",
+      "feature": "_components",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-19T13:17:57.498Z",
+      "feature": "_components",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-19T13:18:10.799Z",
+      "feature": "_components",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-19T13:18:28.690Z",
+      "feature": "scenarios",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-19T13:18:33.884Z",
+      "feature": "scenarios",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-19T13:18:38.744Z",
+      "feature": "scenarios",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-19T13:20:07.390Z",
+      "feature": "korean-law",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-19T13:20:19.500Z",
+      "feature": "korean-law",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-19T13:20:30.300Z",
+      "feature": "korean-law",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-19T13:20:37.127Z",
+      "feature": "korean-law",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-19T13:21:01.891Z",
+      "feature": "annex-content",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-19T13:21:21.082Z",
+      "feature": "_components",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-19T13:21:34.503Z",
+      "feature": "_components",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-19T13:22:01.007Z",
+      "feature": "_components",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-19T13:22:58.184Z",
+      "feature": "korean-law",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-19T13:23:05.779Z",
+      "feature": "korean-law",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-19T13:23:23.483Z",
+      "feature": "search-decisions",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-19T13:23:29.899Z",
+      "feature": "law-text",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-19T13:23:35.454Z",
+      "feature": "_components",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-19T13:23:44.356Z",
+      "feature": "_components",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-19T13:23:54.255Z",
+      "feature": "_components",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-19T13:24:08.866Z",
+      "feature": "_components",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-19T13:24:17.445Z",
+      "feature": "_components",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-19T13:24:23.858Z",
+      "feature": "_components",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-19T13:45:01.791Z",
+      "feature": "scenarios",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-19T13:45:14.426Z",
+      "feature": "scenarios",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-19T13:45:29.431Z",
+      "feature": "scenarios",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-19T13:45:42.098Z",
+      "feature": "korean-law",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-19T13:56:25.439Z",
+      "feature": "search-law",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-19T13:56:33.797Z",
+      "feature": "search-law",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-19T13:56:39.588Z",
+      "feature": "search-decisions",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-19T13:56:46.459Z",
+      "feature": "search-decisions",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-19T14:10:43.219Z",
+      "feature": "_components",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-19T14:17:49.564Z",
+      "feature": "_components",
       "phase": "do",
       "action": "updated"
     }
