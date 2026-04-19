@@ -1,6 +1,6 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-04-18T21:26:42.721Z",
+  "lastUpdated": "2026-04-19T12:50:39.799Z",
   "activeFeatures": [
     "claude-code-mastery",
     "calc",
@@ -343,7 +343,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-14T00:05:36.016Z",
-        "lastUpdated": "2026-04-18T21:07:33.110Z"
+        "lastUpdated": "2026-04-18T21:39:22.069Z"
       },
       "lastFile": "/Users/mynote/workspace/Property-related-Taxes/components/ui/simple-tabs.tsx"
     },
@@ -637,7 +637,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-16T11:26:07.430Z",
-        "lastUpdated": "2026-04-18T21:26:42.720Z"
+        "lastUpdated": "2026-04-18T21:39:13.963Z"
       },
       "lastFile": "/Users/mynote/workspace/Property-related-Taxes/app/api/law/_helpers.ts"
     },
@@ -715,9 +715,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-18T11:02:38.851Z",
-        "lastUpdated": "2026-04-18T21:01:18.872Z"
+        "lastUpdated": "2026-04-19T12:46:01.290Z"
       },
-      "lastFile": "/Users/mynote/workspace/Property-related-Taxes/lib/korean-law/client.ts"
+      "lastFile": "/Users/mynote/workspace/Property-related-Taxes/lib/korean-law/search-normalizer.ts"
     },
     "search-law": {
       "phase": "do",
@@ -767,7 +767,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-18T11:05:17.294Z",
-        "lastUpdated": "2026-04-18T12:22:04.933Z"
+        "lastUpdated": "2026-04-19T12:50:39.798Z"
       },
       "lastFile": "/Users/mynote/workspace/Property-related-Taxes/app/api/law/decision-text/route.ts"
     },
@@ -806,9 +806,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-18T11:06:09.575Z",
-        "lastUpdated": "2026-04-18T20:59:13.279Z"
+        "lastUpdated": "2026-04-18T21:39:32.668Z"
       },
-      "lastFile": "/Users/mynote/workspace/Property-related-Taxes/app/law/_components/ChainResearchTab.tsx"
+      "lastFile": "/Users/mynote/workspace/Property-related-Taxes/app/law/_components/LawResearchClient.tsx"
     },
     "verify-citations": {
       "phase": "do",
@@ -925,7 +925,7 @@
   "session": {
     "startedAt": "2026-04-13T10:11:34.572Z",
     "onboardingCompleted": false,
-    "lastActivity": "2026-04-18T21:26:42.721Z"
+    "lastActivity": "2026-04-19T12:50:39.799Z"
   },
   "history": [
     {
@@ -9427,6 +9427,96 @@
     {
       "timestamp": "2026-04-18T21:26:42.721Z",
       "feature": "law",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-18T21:38:36.062Z",
+      "feature": "korean-law",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-18T21:39:02.036Z",
+      "feature": "korean-law",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-18T21:39:06.650Z",
+      "feature": "korean-law",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-18T21:39:13.964Z",
+      "feature": "law",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-18T21:39:22.070Z",
+      "feature": "ui",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-18T21:39:32.669Z",
+      "feature": "_components",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-19T12:39:51.870Z",
+      "feature": "korean-law",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-19T12:39:57.339Z",
+      "feature": "korean-law",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-19T12:41:45.106Z",
+      "feature": "korean-law",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-19T12:43:17.842Z",
+      "feature": "korean-law",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-19T12:43:59.030Z",
+      "feature": "korean-law",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-19T12:46:01.291Z",
+      "feature": "korean-law",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-19T12:49:05.741Z",
+      "feature": "decision-text",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-19T12:49:22.410Z",
+      "feature": "decision-text",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-19T12:50:39.799Z",
+      "feature": "decision-text",
       "phase": "do",
       "action": "updated"
     }

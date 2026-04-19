@@ -104,7 +104,12 @@
       "Bash(tee /tmp/e2e-run-1.log)",
       "Bash(tee /tmp/e2e-run-2.log)",
       "Bash(tee /tmp/e2e-edge-1.log)",
-      "Bash(tee /tmp/e2e-edge-2.log)"
+      "Bash(tee /tmp/e2e-edge-2.log)",
+      "Bash(tee /tmp/e2e-deep-1.log)",
+      "Bash(tee /tmp/e2e-deep-2.log)",
+      "Bash(tee /tmp/e2e-deep-3.log)",
+      "Bash(tee /tmp/e2e-deep-4.log)",
+      "Bash(tee /tmp/e2e-deep-5.log)"
     ]
   },
   "outputStyle": "bkit:bkit-learning"
