@@ -50,5 +50,6 @@ logs/
 # Playwright E2E 산출물 (스크린샷·비디오·trace — 로컬 전용)
 /scripts/e2e-artifacts/
 /scripts/e2e-artifacts-edge/
+/scripts/e2e-artifacts-deep/
 /test-results/
 /playwright-report/

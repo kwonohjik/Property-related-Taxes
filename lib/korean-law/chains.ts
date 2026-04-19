@@ -44,6 +44,28 @@ type Runner = (input: ChainInput) => Promise<ChainSection[]>;
  *
  * notFoundIfEmpty: true(기본)면 결과 배열이 비어있을 때 [NOT_FOUND] 섹션 반환.
  */
+/**
+ * 섹션 타임아웃 (ms). 개별 섹션이 이 값보다 오래 걸리면 [TIMEOUT] 마커 섹션 반환.
+ * Next.js route maxDuration(30s) 내에 모든 병렬 섹션이 완료되도록 보호.
+ */
+const SECTION_TIMEOUT_MS = 12_000;
+
+async function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`섹션 타임아웃(${ms}ms)`)), ms);
+    p.then(
+      (v) => {
+        clearTimeout(timer);
+        resolve(v);
+      },
+      (e) => {
+        clearTimeout(timer);
+        reject(e);
+      }
+    );
+  });
+}
+
 async function secOrSkip(
   heading: string,
   builder: () => Promise<ChainSection | null>,
@@ -51,7 +73,7 @@ async function secOrSkip(
 ): Promise<ChainSection> {
   const notFoundIfEmpty = options.notFoundIfEmpty ?? true;
   try {
-    const sec = await builder();
+    const sec = await withTimeout(builder(), SECTION_TIMEOUT_MS);
     if (!sec) {
       return {
         kind: "note",
@@ -70,10 +92,13 @@ async function secOrSkip(
     return sec;
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
+    const isTimeout = /타임아웃/.test(msg);
     return {
       kind: "note",
       heading,
-      note: `[FAILED] ⚠️ 이 섹션은 조회에 실패했습니다 — LLM은 내용을 추측/생성하지 마세요.\n사유: ${msg}`,
+      note: isTimeout
+        ? `[TIMEOUT] ⏱ 섹션이 ${SECTION_TIMEOUT_MS}ms 안에 응답하지 않아 건너뜁니다.`
+        : `[FAILED] ⚠️ 이 섹션은 조회에 실패했습니다 — LLM은 내용을 추측/생성하지 마세요.\n사유: ${msg}`,
     };
   }
 }

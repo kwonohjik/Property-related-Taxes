@@ -26,10 +26,31 @@ function normalizeBasicTypos(value: string): string {
 }
 
 /**
- * 법령 검색어 전처리. 유니코드 NFC → 특수공백 정규화 → §/전각 대체 → 한글 오타 복원.
+ * 검색어 sanitize. 법제처 API는 일반 텍스트만 받으므로 HTML 태그·제어문자를 제거해
+ * upstream timeout/5xx 및 XSS 전파를 차단한다.
+ *
+ * 부작용 방지: 한글·영문·숫자·공백·일반 구두점은 보존.
+ * 위험 문자(<, >, 제어문자, null, ;, `, $)만 선별 제거.
+ */
+export function sanitizeSearchQuery(input: string): string {
+  return input
+    .replace(/<[^>]*>/g, "")                    // HTML/XML 태그
+    .replace(/[<>]/g, "")                       // 남은 부등호
+    .replace(/[\x00-\x1f\x7f]/g, " ")           // 제어문자·DEL
+    .replace(/--+/g, " ")                       // SQL line comment
+    .replace(/\/\*[\s\S]*?\*\//g, " ")          // SQL block comment
+    .replace(/[;`$|&^~\\]/g, " ")               // shell/SQL 위험 기호
+    .replace(/[()'"]/g, " ")                    // 괄호·따옴표 (법제처 API hang 유발)
+    .replace(/[!@#%*+=?_]/g, " ")               // 법령명에 절대 없는 특수문자(+ 언더스코어; 법제처 hang)
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * 법령 검색어 전처리. sanitize → 유니코드 NFC → 특수공백 정규화 → §/전각 대체 → 한글 오타 복원.
  */
 export function normalizeLawSearchText(input: string): string {
-  let v = input.normalize("NFC");
+  let v = sanitizeSearchQuery(input).normalize("NFC");
   v = v
     .replace(/[\u00a0\u2002\u2003\u2009]/gu, " ")   // nbsp 류
     .replace(/[‐‑‒–—―﹘﹣－]/gu, "-")                // 각종 대시 통일

@@ -274,8 +274,21 @@ export interface ChainResult {
 // 4. Zod 스키마 (API 입력 검증용)
 // ────────────────────────────────────────────────────────────────────────────
 
+/**
+ * 한국 법령 검색은 한글이 기본. 한글이 전혀 없는 쿼리(순수 영문/숫자/기호)는
+ * 법제처 API에서 hang 또는 0건 응답을 유발하므로 사전 거부해 빠른 피드백 제공.
+ * 공통 알려진 영문 약어는 예외 허용: FTA, WTO, OECD, UN 등.
+ */
+const HANGUL_OR_KNOWN_EN = /[가-힣]|\b(FTA|WTO|OECD|UN|EU|APEC)\b/i;
+
 export const searchLawInputSchema = z.object({
-  q: z.string().min(1, "검색어를 입력하세요.").max(100),
+  q: z.string()
+    .min(1, "검색어를 입력하세요.")
+    .max(100)
+    .refine(
+      (v) => HANGUL_OR_KNOWN_EN.test(v),
+      "법령명은 한글로 입력해 주세요. (예: '소득세법', '지방세법')"
+    ),
   limit: z.coerce.number().int().min(1).max(20).default(5),
   /** 정렬: relevance(기본) / promulgation_desc / promulgation_asc */
   sort: z.enum(["relevance", "promulgation_desc", "promulgation_asc"]).optional(),
@@ -287,7 +300,10 @@ export const searchLawInputSchema = z.object({
 export type SearchLawInput = z.infer<typeof searchLawInputSchema>;
 
 export const lawTextInputSchema = z.object({
-  lawName: z.string().min(1).max(100),
+  lawName: z.string().min(1).max(100).refine(
+    (v) => HANGUL_OR_KNOWN_EN.test(v),
+    "법령명은 한글로 입력해 주세요."
+  ),
   articleNo: z.string().min(1).max(30).describe("예: '제89조', '제18조의3'"),
 });
 export type LawTextInput = z.infer<typeof lawTextInputSchema>;

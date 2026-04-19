@@ -77,6 +77,7 @@ export type LawApiErrorCode =
   | "API_KEY_MISSING"
   | "UPSTREAM"
   | "NOT_FOUND"
+  | "BAD_REQUEST"
   | "PARSE";
 
 export class LawApiError extends Error {
@@ -94,10 +95,12 @@ async function fetchJson<T>(endpoint: string, params: Record<string, string>): P
   const url = `${API_BASE}/${endpoint}?${qs}`;
   let res: Response;
   try {
+    // timeout 15s · retry 2회 — 최악 30초로 Next.js maxDuration 범위 내에서 실패.
+    // 재시도 중에도 사용자가 빠른 피드백을 받도록 공격적 설정.
     res = await fetchWithRetry(url, {
-      timeout: 30_000,
-      retries: 3,
-      baseDelay: 1_000,
+      timeout: 15_000,
+      retries: 2,
+      baseDelay: 500,
       retryOn: [429, 503, 504],
     });
   } catch (err) {
@@ -108,9 +111,14 @@ async function fetchJson<T>(endpoint: string, params: Record<string, string>): P
     );
   }
   if (!res.ok) {
+    // 법제처가 400을 돌려주면 사용자 입력 문제 → BAD_REQUEST 로 매핑
+    // (502 UPSTREAM 대신 400을 반환해 클라이언트가 "쿼리를 수정하세요" 안내 가능)
+    const isBadRequest = res.status === 400 || res.status === 404;
     throw new LawApiError(
-      `법제처 API 오류 (${res.status}) — ${maskSensitiveUrl(url)}`,
-      "UPSTREAM"
+      isBadRequest
+        ? `법제처가 쿼리를 해석하지 못했습니다. 법령명·조문번호를 확인하세요.`
+        : `법제처 API 오류 (${res.status}) — ${maskSensitiveUrl(url)}`,
+      isBadRequest ? "BAD_REQUEST" : "UPSTREAM"
     );
   }
 

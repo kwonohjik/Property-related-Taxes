@@ -87,12 +87,29 @@ export function TabsTrigger({ value, children }: { value: string; children: Reac
   );
 }
 
-export function TabsContent({ value, children, className }: { value: string; children: ReactNode; className?: string }) {
+export function TabsContent({
+  value,
+  children,
+  className,
+  keepMounted = false,
+}: {
+  value: string;
+  children: ReactNode;
+  className?: string;
+  /** true면 비활성 탭도 DOM에 유지(hidden)해 state를 보존한다. 기본 false. */
+  keepMounted?: boolean;
+}) {
   const ctx = useContext(Ctx);
   if (!ctx) throw new Error("TabsContent must be inside SimpleTabs");
-  if (ctx.value !== value) return null;
+  const active = ctx.value === value;
+  if (!active && !keepMounted) return null;
   return (
-    <div role="tabpanel" data-tab-value={value} className={cn("mt-4", className)}>
+    <div
+      role="tabpanel"
+      data-tab-value={value}
+      hidden={!active}
+      className={cn("mt-4", !active && "hidden", className)}
+    >
       {children}
     </div>
   );

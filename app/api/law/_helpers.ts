@@ -36,10 +36,15 @@ export function mapErrorToResponse(err: unknown): NextResponse<LawApiErrorEnvelo
     const status =
       err.code === "API_KEY_MISSING" ? 503 :
       err.code === "NOT_FOUND" ? 404 :
+      err.code === "BAD_REQUEST" ? 400 :
       err.code === "UPSTREAM" ? 502 :
       500;
+    const envelopeCode =
+      err.code === "API_KEY_MISSING" ? "API_KEY_MISSING" :
+      err.code === "BAD_REQUEST" ? "VALIDATION" :
+      "UPSTREAM";
     return NextResponse.json<LawApiErrorEnvelope>(
-      { error: err.message, code: err.code === "API_KEY_MISSING" ? "API_KEY_MISSING" : "UPSTREAM" },
+      { error: err.message, code: envelopeCode },
       { status }
     );
   }

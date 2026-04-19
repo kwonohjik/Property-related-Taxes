@@ -41,14 +41,15 @@ export function LawResearchClient() {
           <TabsTrigger value="verify">인용 검증</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="law">
+        {/* 주요 탭은 keepMounted — 탭 이동 후에도 방금 조회한 조문/검색결과를 보존한다. */}
+        <TabsContent value="law" keepMounted>
           <LawSearchTab
             initialQuery={initialLawQuery}
             initialArticleNo={initialArticleNo}
             autoSearch={routed?.targetTab === "law" ? routeNonce : 0}
           />
         </TabsContent>
-        <TabsContent value="decision">
+        <TabsContent value="decision" keepMounted>
           <DecisionSearchTab
             initialQuery={initialDecisionQuery}
             initialDomain={initialDecisionDomain}
@@ -65,7 +66,7 @@ export function LawResearchClient() {
             autoRun={routed?.targetTab === "chain" ? routeNonce : 0}
           />
         </TabsContent>
-        <TabsContent value="verify">
+        <TabsContent value="verify" keepMounted>
           <VerifyCitationsTab />
         </TabsContent>
       </SimpleTabs>

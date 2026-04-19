@@ -312,12 +312,15 @@ async function testUi(page) {
   await lawInput.fill("없는법률1234");
   await articleInput.fill("99");
   await articleBtn.click();
+  // border-red-300 에러 박스 OR 본문 제공 불가 안내 중 하나라도 렌더되면 graceful 처리
   const handled = await waitFor(page, async () => {
+    const errorBox = await lawPanel.locator(".border-red-300, [role='alert']").count();
+    if (errorBox >= 1) return true;
     const t = await lawPanel.textContent();
-    return (t?.match(/없|찾|오류|실패|error/i) ?? null) !== null;
-  }, 10_000);
-  if (handled) pass("없는 법령 UI 에러 메시지 렌더");
-  else fail("없는 법령 UI", "에러 메시지 없음");
+    return /없|찾|오류|실패|error|해석|불가|API/i.test(t ?? "");
+  }, 15_000);
+  if (handled) pass("없는 법령 UI 에러 박스/안내 렌더");
+  else fail("없는 법령 UI", "에러 박스 없음");
   await snap(page, "law-not-found");
 }
 

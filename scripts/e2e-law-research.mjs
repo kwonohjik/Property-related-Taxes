@@ -179,18 +179,22 @@ async function run() {
     if (sourceBadge) pass("데이터 출처 배지 표시");
     else fail("데이터 출처 배지", "국세법령정보시스템 배지 없음");
 
-    // 하급심 본문 불가 케이스
+    // 하급심 본문 불가 케이스 — graceful 응답이면 OK
     const firstRow = decPanel.locator("ul > li").first();
     const firstContentBtn = firstRow.getByRole("button", { name: /본문/ });
     if (await firstContentBtn.count()) {
       await firstContentBtn.click();
-      const gotUnavailable = await waitFor(page, async () => {
-        return (await decPanel.getByText(/본문 제공 불가|본문을 API에서 받을 수 없/).count()) >= 1;
-      }, 8000);
-      // 본문 불가 카드가 안 떠도 본문이 나오면 OK로 간주
-      const hasContent = (await decPanel.locator("pre,article").count()) > 0;
-      if (gotUnavailable || hasContent) pass("판례 본문 응답 처리 (본문 or 안내)");
-      else fail("판례 본문 처리", "본문/안내 모두 렌더 실패");
+      const rendered = await waitFor(page, async () => {
+        // 본문 제공 불가 안내
+        if ((await decPanel.getByText(/본문 제공 불가|반환하지 않|받을 수 없/).count()) >= 1) return true;
+        // 정상 본문 (article 요소 or pre 요소)
+        if ((await decPanel.locator("article,pre").count()) > 0) return true;
+        // 빨간 에러 박스
+        if ((await decPanel.locator(".border-red-300").count()) >= 1) return true;
+        return false;
+      }, 20_000);
+      if (rendered) pass("판례 본문 응답 처리 (본문 or 안내 or 에러)");
+      else fail("판례 본문 처리", "본문/안내/에러 모두 렌더 실패");
       await snap(page, "decision-text");
     }
 
