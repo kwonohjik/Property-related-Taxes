@@ -1,15 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import type { AnnexItem } from "@/lib/korean-law/types";
+import type { AnnexBodyResponse, AnnexItem } from "@/lib/korean-law/types";
+import { findMarker } from "@/lib/korean-law/markers";
 
 /**
  * 별표·서식 목록 탭
  *
  * Phase 1: 메타데이터 (annexNo, title, fileType, downloadUrl)
- * Phase 4 (PDF 경량): PDF 파일은 "본문 보기" 토글로 텍스트 추출 (pdfjs-dist)
- *                    그 외 형식(HWPX/HWP5/XLSX/DOCX)은 링크+배지만 표시
+ * Phase 4+ (kordoc 이식): PDF / HWPX / XLSX 를 서버에서 Markdown 으로 변환해 노출.
+ *                        HWP(레거시) · DOCX 는 다운로드 폴백 (NOT_CONVERTED 배지).
  */
+
+const SUPPORTED_EXTS = new Set(["pdf", "hwpx", "xlsx", "xls"]);
 export function AnnexTab() {
   const [lawName, setLawName] = useState("소득세법");
   const [items, setItems] = useState<AnnexItem[]>([]);
@@ -39,8 +42,11 @@ export function AnnexTab() {
       <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-xs text-blue-900 dark:border-blue-900/40 dark:bg-blue-900/10 dark:text-blue-200">
         <p className="font-medium">ⓘ 별표·서식 조회 안내</p>
         <p className="mt-1">
-          법제처 Open API는 현재 법령 기본 응답에 별표 메타데이터를 포함하지 않아 대부분 0건으로 반환됩니다.
-          <strong className="font-medium"> PDF 형식의 별표는 &ldquo;본문 보기&rdquo; 버튼으로 텍스트를 확인</strong>할 수 있으며, HWPX/HWP5/XLSX/DOCX 는 다운로드 후 확인해야 합니다.
+          법제처 Open API는 법령 기본 응답에 별표 메타데이터를 포함하지 않는 경우가 많아 검색 결과가 0건일 수 있습니다.
+          <strong className="font-medium">
+            {" "}PDF · HWPX · XLSX 형식은 &ldquo;본문 보기&rdquo; 버튼으로 Markdown 텍스트를 확인
+          </strong>
+          할 수 있으며, HWP(레거시 바이너리) · DOCX 는 다운로드 후 확인해야 합니다.
         </p>
       </div>
 
@@ -101,41 +107,44 @@ export function AnnexTab() {
 
 function detectExt(url?: string): string {
   if (!url) return "";
+  // 실제 파일 확장자만 매칭. 서버 핸들러 URL (`.do`, `.jsp` 등)은 확장자로 간주하지 않음.
+  const pattern = /\.(hwpx?|pdf|xlsx?|docx?)(?:$|[?#])/i;
   try {
     const u = new URL(url);
-    const m = u.pathname.match(/\.([a-zA-Z0-9]+)$/);
+    const m = u.pathname.match(pattern) ?? url.match(pattern);
     return m ? m[1].toLowerCase() : "";
   } catch {
-    const m = url.match(/\.([a-zA-Z0-9]+)(?:$|[?#])/);
+    const m = url.match(pattern);
     return m ? m[1].toLowerCase() : "";
   }
 }
 
 function AnnexRow({ item }: { item: AnnexItem }) {
-  const [text, setText] = useState<string | null>(null);
+  const [body, setBody] = useState<AnnexBodyResponse | null>(null);
   const [expanded, setExpanded] = useState(false);
   const [parseLoading, setParseLoading] = useState(false);
   const [parseError, setParseError] = useState<string | null>(null);
 
   const fileExt = detectExt(item.downloadUrl) || (item.fileType ?? "").toLowerCase();
-  const isPdf = fileExt === "pdf";
+  // flDownload.do?flSeq= 패턴은 URL에 확장자가 없어 추론 실패 → downloadUrl 만 있으면 시도 허용.
+  // 실제 변환 불가 포맷은 annex-body-parser 가 magic-byte 로 판정해 NOT_CONVERTED 배너로 안내.
+  const isSupported = SUPPORTED_EXTS.has(fileExt) || (!fileExt && !!item.downloadUrl);
 
-  async function parsePdf() {
+  async function loadBody() {
     if (!item.downloadUrl) return;
     setParseLoading(true);
     setParseError(null);
     try {
-      const res = await fetch("/api/law/annexes/parse", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          annexId: `${item.annexNo}-${(item.title ?? "").slice(0, 20)}`,
-          fileUrl: item.downloadUrl,
-        }),
+      const params = new URLSearchParams({
+        url: item.downloadUrl,
+        type: fileExt.toUpperCase(),
       });
-      const data = await res.json();
+      if (item.mst) params.set("mst", item.mst);
+      if (item.annexNo) params.set("annexNo", item.annexNo);
+      const res = await fetch(`/api/law/annex-content?${params.toString()}`);
+      const data = (await res.json()) as AnnexBodyResponse & { error?: string };
       if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
-      setText(data.text ?? "");
+      setBody(data);
       setExpanded(true);
     } catch (e) {
       setParseError(e instanceof Error ? e.message : String(e));
@@ -143,6 +152,9 @@ function AnnexRow({ item }: { item: AnnexItem }) {
       setParseLoading(false);
     }
   }
+
+  const marker = body?.content ? findMarker(body.content) : null;
+  const isFailed = body?.status === "NOT_CONVERTED";
 
   return (
     <li className="p-3 text-sm">
@@ -153,26 +165,31 @@ function AnnexRow({ item }: { item: AnnexItem }) {
           {fileExt && (
             <span
               className={`ml-2 rounded px-1.5 py-0.5 text-xs ${
-                isPdf
+                isSupported
                   ? "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300"
                   : "bg-muted text-muted-foreground"
               }`}
-              title={isPdf ? "본문 보기 지원" : "다운로드만 지원"}
+              title={isSupported ? "본문 보기 지원" : "다운로드만 지원"}
             >
               {fileExt.toUpperCase()}
             </span>
           )}
+          {body?.truncated && (
+            <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-900 dark:bg-amber-900/40 dark:text-amber-200">
+              축약본
+            </span>
+          )}
         </div>
         <div className="flex gap-2">
-          {isPdf && item.downloadUrl && (
+          {isSupported && item.downloadUrl && (
             <button
-              onClick={() => (text ? setExpanded(!expanded) : parsePdf())}
+              onClick={() => (body ? setExpanded(!expanded) : loadBody())}
               disabled={parseLoading}
               className="rounded border px-2 py-1 text-xs hover:bg-accent disabled:opacity-50"
             >
               {parseLoading
-                ? "파싱 중..."
-                : text
+                ? "변환 중..."
+                : body
                   ? expanded ? "접기" : "본문 보기"
                   : "본문 보기"}
             </button>
@@ -194,10 +211,25 @@ function AnnexRow({ item }: { item: AnnexItem }) {
           {parseError}
         </p>
       )}
-      {expanded && text !== null && (
-        <pre className="mt-2 max-h-96 overflow-auto rounded-md border bg-muted/20 p-3 text-xs whitespace-pre-wrap">
-          {text || "(텍스트가 추출되지 않았습니다. 이미지 기반 PDF일 수 있습니다.)"}
-        </pre>
+      {expanded && body && (
+        <div className="mt-2 space-y-2">
+          {isFailed && marker && (
+            <div
+              className={`rounded-md border p-2 text-xs ${marker.bgClass} ${marker.textClass}`}
+            >
+              <p className="font-medium">
+                {marker.icon} {marker.banner}
+              </p>
+              <p className="opacity-80">⚠️ {marker.llmWarning}</p>
+            </div>
+          )}
+          <pre className="max-h-96 overflow-auto rounded-md border bg-muted/20 p-3 text-xs whitespace-pre-wrap">
+            {body.content || "(본문이 비어 있습니다. 이미지 기반 PDF이거나 XML 구조가 비표준일 수 있습니다.)"}
+          </pre>
+          {body.pageCount && (
+            <p className="text-xs text-muted-foreground">페이지 {body.pageCount}쪽</p>
+          )}
+        </div>
       )}
     </li>
   );

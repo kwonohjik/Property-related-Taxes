@@ -23,19 +23,25 @@ export function LawSearchTab({
   const [sort, setSort] = useState<"relevance" | "promulgation_desc" | "promulgation_asc">("relevance");
   const [ancYd, setAncYd] = useState("");
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [searched, setSearched] = useState(false);
+  const [hint, setHint] = useState<string | null>(null);
 
   async function search() {
     setLoading(true);
     setError(null);
     setArticle(null);
     setResults([]);
+    setHint(null);
+    setSearched(true);
     try {
       const params = new URLSearchParams({ q: query });
       if (sort !== "relevance") params.set("sort", sort);
       if (ancYd.trim()) params.set("ancYd", ancYd.trim());
       const res = await fetch(`/api/law/search-law?${params.toString()}`);
-      if (!res.ok) throw new Error((await res.json()).error ?? `HTTP ${res.status}`);
-      setResults((await res.json()).results ?? []);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
+      setResults(data.results ?? []);
+      setHint(data.hint ?? null);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -83,13 +89,17 @@ export function LawSearchTab({
     setError(null);
     setArticle(null);
     setResults([]);
+    setHint(null);
+    setSearched(true);
     try {
       const params = new URLSearchParams({ q });
       if (sort !== "relevance") params.set("sort", sort);
       if (ancYd.trim()) params.set("ancYd", ancYd.trim());
       const res = await fetch(`/api/law/search-law?${params.toString()}`);
-      if (!res.ok) throw new Error((await res.json()).error ?? `HTTP ${res.status}`);
-      setResults((await res.json()).results ?? []);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
+      setResults(data.results ?? []);
+      setHint(data.hint ?? null);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -180,6 +190,17 @@ export function LawSearchTab({
       {error && (
         <div className="rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-800 dark:border-red-900/40 dark:bg-red-900/10 dark:text-red-300">
           {error}
+        </div>
+      )}
+
+      {searched && !loading && !error && results.length === 0 && (
+        <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+          <p>검색 결과가 없습니다.</p>
+          {hint && (
+            <p className="mt-2 whitespace-pre-wrap rounded-md border border-blue-200 bg-blue-50 p-2 text-xs text-blue-900 dark:border-blue-900/40 dark:bg-blue-900/10 dark:text-blue-200">
+              💡 {hint}
+            </p>
+          )}
         </div>
       )}
 

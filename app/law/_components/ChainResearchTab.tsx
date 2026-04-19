@@ -5,9 +5,9 @@ import {
   CHAIN_TYPES,
   CHAIN_LABELS,
   type ChainResult,
-  type ChainSection,
   type ChainType,
 } from "@/lib/korean-law/types";
+import { SectionView } from "./SectionView";
 
 /** 리서치 체인 8종 탭 */
 export function ChainResearchTab({
@@ -124,112 +124,3 @@ export function ChainResearchTab({
   );
 }
 
-function SectionView({ section }: { section: ChainSection }) {
-  const isNotFound = Boolean(
-    section.note && /\[NOT_FOUND\]|\[FAILED\]/.test(section.note)
-  );
-  return (
-    <section
-      className={
-        "rounded-md border p-4 " +
-        (isNotFound
-          ? "border-yellow-300 bg-yellow-50/50 dark:border-yellow-900/40 dark:bg-yellow-900/10"
-          : "bg-card")
-      }
-    >
-      <h3
-        className={
-          "mb-2 text-sm font-semibold " +
-          (isNotFound ? "text-yellow-900 dark:text-yellow-200" : "")
-        }
-      >
-        {isNotFound && <span className="mr-1">⚠️</span>}
-        {section.heading}
-      </h3>
-      {section.note && (
-        <p
-          className={
-            "whitespace-pre-wrap text-sm " +
-            (isNotFound ? "text-yellow-900/80 dark:text-yellow-100/80" : "text-muted-foreground")
-          }
-        >
-          {section.note}
-        </p>
-      )}
-
-      {section.laws && section.laws.length > 0 && (
-        <ul className="space-y-1 text-sm">
-          {section.laws.map((l) => (
-            <li key={l.mst} className="flex items-center justify-between">
-              <span>
-                {l.lawName}
-                <span className="ml-2 text-xs text-muted-foreground">공포 {l.promulgationDate}</span>
-              </span>
-              <a
-                href={`https://www.law.go.kr/법령/${encodeURIComponent(l.lawName)}`}
-                target="_blank"
-                rel="noreferrer"
-                className="text-xs text-primary hover:underline"
-              >
-                원문 ↗
-              </a>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {section.decisions && section.decisions.length > 0 && (
-        <ul className="space-y-1 text-sm">
-          {section.decisions.map((d, i) => (
-            <li key={d.id || i} className="truncate">
-              <span className="truncate">{d.title}</span>
-              <span className="ml-2 text-xs text-muted-foreground">
-                {d.court} · {d.caseNo} · {d.date}
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {section.annexes && section.annexes.length > 0 && (
-        <ul className="space-y-1 text-sm">
-          {section.annexes.map((a, i) => (
-            <li key={`${a.annexNo}-${i}`}>
-              별표 {a.annexNo} · {a.title || "(제목 없음)"}
-              {a.downloadUrl && (
-                <a
-                  href={a.downloadUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="ml-2 text-xs text-primary hover:underline"
-                >
-                  다운로드 ↗
-                </a>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {section.citations && section.citations.length > 0 && (
-        <ul className="space-y-1 text-sm">
-          {section.citations.map((c, i) => (
-            <li
-              key={i}
-              className={`rounded border-l-2 pl-2 ${
-                c.valid
-                  ? "border-green-500 text-green-800 dark:text-green-300"
-                  : "border-red-500 text-red-800 dark:text-red-300"
-              }`}
-            >
-              <span className="font-medium">{c.raw}</span>
-              <span className="ml-2 text-xs">
-                {c.valid ? "✓ 실존 확인" : `✗ ${c.reason ?? "검증 실패"}`}
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
-  );
-}

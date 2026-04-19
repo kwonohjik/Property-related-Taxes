@@ -931,6 +931,10 @@ export async function getDecisionText(
   const refPrecCleaned = refPrecRaw ? cleanHtml(refPrecRaw) : "";
   const refLawsStructured = refLawsCleaned ? parseLawRefs(refLawsCleaned) : undefined;
   const refPrecedentsStructured = refPrecCleaned ? parsePrecedentRefs(refPrecCleaned) : undefined;
+  // 구조화 배열이 성공적으로 파싱되면 레거시 문자열은 생략 (UI 중복 렌더 방지).
+  // 파싱 실패(빈 배열)인 경우만 densified 문자열을 유지해 정보 손실을 막는다.
+  const hasStructuredLaws = !!refLawsStructured && refLawsStructured.length > 0;
+  const hasStructuredPrec = !!refPrecedentsStructured && refPrecedentsStructured.length > 0;
 
   const result: DecisionText = {
     id,
@@ -948,11 +952,20 @@ export async function getDecisionText(
     summary: summary || undefined,
     ruling: ruling || undefined,
     reasoning,
-    refLaws: refLawsCleaned ? densifyLawRefs(refLawsCleaned) : undefined,
-    refPrecedents: refPrecCleaned ? densifyPrecedentRefs(refPrecCleaned) : undefined,
-    refLawsStructured: refLawsStructured && refLawsStructured.length > 0 ? refLawsStructured : undefined,
-    refPrecedentsStructured:
-      refPrecedentsStructured && refPrecedentsStructured.length > 0 ? refPrecedentsStructured : undefined,
+    refLaws:
+      hasStructuredLaws
+        ? undefined
+        : refLawsCleaned
+          ? densifyLawRefs(refLawsCleaned)
+          : undefined,
+    refPrecedents:
+      hasStructuredPrec
+        ? undefined
+        : refPrecCleaned
+          ? densifyPrecedentRefs(refPrecCleaned)
+          : undefined,
+    refLawsStructured: hasStructuredLaws ? refLawsStructured : undefined,
+    refPrecedentsStructured: hasStructuredPrec ? refPrecedentsStructured : undefined,
     caseType: container.사건종류명 || undefined,
     judgmentType: container.판결유형 || undefined,
     court:
@@ -1040,6 +1053,7 @@ export async function getAnnexes(lawName: string): Promise<AnnexItem[]> {
     downloadUrl: u.별표서식파일링크
       ? `https://www.law.go.kr${u.별표서식파일링크.startsWith("/") ? "" : "/"}${u.별표서식파일링크}`
       : undefined,
+    mst: meta.mst,
   }));
   await writeCache(cacheKey, results);
   return results;

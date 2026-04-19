@@ -19,7 +19,13 @@ export async function GET(req: NextRequest) {
     const article = await getLawText(lawName, articleNo);
     if (!article) {
       return NextResponse.json(
-        { error: "해당 조문을 찾을 수 없습니다.", code: "NOT_FOUND" },
+        {
+          error: "해당 조문을 찾을 수 없습니다.",
+          code: "NOT_FOUND",
+          hint:
+            `💡 다음 액션: search_law(q="${lawName}") 로 법령명을 재확인하거나, ` +
+            `조문번호 형식을 "제N조" · "제N조의M" 으로 수정해 재시도하세요.`,
+        },
         { status: 404 }
       );
     }

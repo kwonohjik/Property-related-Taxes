@@ -56,6 +56,7 @@ export function DecisionSearchTab({
   const [error, setError] = useState<string | null>(null);
   const [searched, setSearched] = useState(false);
   const [autoDateHint, setAutoDateHint] = useState<string | null>(null);
+  const [noResultHint, setNoResultHint] = useState<string | null>(null);
 
   async function fetchPage(targetPage: number) {
     setLoading(true);
@@ -93,16 +94,19 @@ export function DecisionSearchTab({
 
       const url = `/api/law/search-decisions?${params.toString()}`;
       const res = await fetch(url);
-      const data: DecisionSearchPage | { error: string } = await res.json();
+      const data: (DecisionSearchPage & { hint?: string }) | { error: string } =
+        await res.json();
       if (!res.ok) throw new Error(("error" in data ? data.error : null) ?? `HTTP ${res.status}`);
-      const payload = data as DecisionSearchPage;
+      const payload = data as DecisionSearchPage & { hint?: string };
       setItems(payload.items ?? []);
       setTotalCount(payload.totalCount ?? 0);
       setPage(payload.page ?? targetPage);
+      setNoResultHint(payload.hint ?? null);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
       setItems([]);
       setTotalCount(0);
+      setNoResultHint(null);
     } finally {
       setLoading(false);
     }
@@ -112,6 +116,7 @@ export function DecisionSearchTab({
     setItems([]);
     setTotalCount(0);
     setPage(1);
+    setNoResultHint(null);
     void fetchPage(1);
   }
 
@@ -331,6 +336,11 @@ export function DecisionSearchTab({
       {searched && !loading && !error && items.length === 0 && (
         <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
           <p>검색 결과가 없습니다.</p>
+          {noResultHint && (
+            <p className="mt-2 whitespace-pre-wrap rounded-md border border-blue-200 bg-blue-50 p-2 text-xs text-blue-900 dark:border-blue-900/40 dark:bg-blue-900/10 dark:text-blue-200">
+              {noResultHint}
+            </p>
+          )}
           <ul className="mt-2 ml-4 list-disc text-xs">
             <li>짧은 키워드로 다시 시도해 보세요 (예: &quot;증여세 감정평가&quot;).</li>
             <li>띄어쓰기·오타를 확인하세요. 법제처 검색은 완전일치에 민감합니다.</li>

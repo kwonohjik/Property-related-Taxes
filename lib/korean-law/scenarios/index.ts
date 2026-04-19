@@ -16,6 +16,7 @@
  */
 
 import type { ChainSection, ChainType } from "../types";
+import { formatMarkerMessage } from "../markers";
 import { penaltyScenario } from "./penalty";
 import { timelineScenario } from "./timeline";
 import { impactScenario } from "./impact";
@@ -104,12 +105,12 @@ export async function runScenarios(
       sections.push(...res.value);
     } else {
       // 시나리오 실패는 note 섹션으로 대체 (체인 전체는 보존)
+      const reason =
+        res.reason instanceof Error ? res.reason.message : String(res.reason);
       sections.push({
         kind: "note",
-        heading: `시나리오 ${runners[i].name} 실행 실패`,
-        note: `[FAILED] ⚠️ 시나리오 확장이 실패했습니다. LLM은 추측하지 마세요. 사유: ${
-          res.reason instanceof Error ? res.reason.message : String(res.reason)
-        }`,
+        heading: `[시나리오: ${runners[i].name}] 실행 실패`,
+        note: formatMarkerMessage("FAILED", `사유: ${reason}`),
       });
     }
   }

@@ -6,7 +6,8 @@
  * 트리거: "위임", "하위법령", "시행령 미이행"
  */
 
-import { searchLawMany } from "../client";
+import { searchLawMany, searchDecisions } from "../client";
+import { formatMarkerMessage } from "../markers";
 import type { ChainSection } from "../types";
 import type { ScenarioContext, ScenarioRunner } from "./index";
 
@@ -14,11 +15,14 @@ async function run(ctx: ScenarioContext): Promise<ChainSection[]> {
   const q = ctx.cleanedQuery || ctx.query;
   const sections: ChainSection[] = [];
 
-  // 상위법 + 시행령 + 시행규칙을 모두 검색하여 누락 확인
-  const [parent, decree, regulation] = await Promise.all([
+  // 상위법 + 시행령 + 시행규칙 + 행정규칙 (원본 MCP delegation 구성)
+  const [parent, decree, regulation, admrul] = await Promise.all([
     searchLawMany(q, 1).catch(() => []),
     searchLawMany(`${q} 시행령`, 1).catch(() => []),
     searchLawMany(`${q} 시행규칙`, 1).catch(() => []),
+    searchDecisions(q, "admrul", 1, 5).catch(
+      () => ({ items: [], totalCount: 0, page: 1, pageSize: 5 })
+    ),
   ]);
 
   const rows: { layer: string; found: boolean; name?: string; date?: string }[] = [
@@ -31,23 +35,38 @@ async function run(ctx: ScenarioContext): Promise<ChainSection[]> {
   const present = rows.filter((r) => r.found);
 
   if (present.length > 0) {
-    const lawItems = [parent[0], decree[0], regulation[0]].filter((x): x is NonNullable<typeof x> => Boolean(x));
-    sections.push({ kind: "laws", heading: "법체계 (본법·시행령·시행규칙)", laws: lawItems });
+    const lawItems = [parent[0], decree[0], regulation[0]].filter(
+      (x): x is NonNullable<typeof x> => Boolean(x)
+    );
+    sections.push({
+      kind: "laws",
+      heading: "[시나리오: delegation] 법체계 (본법·시행령·시행규칙)",
+      laws: lawItems,
+    });
+  }
+
+  if (admrul.items.length > 0) {
+    sections.push({
+      kind: "decisions",
+      heading: "[시나리오: delegation] 관련 행정규칙 (훈령·예규·고시)",
+      decisions: admrul.items,
+    });
   }
 
   if (missing.length > 0) {
+    const missingList = missing.map((r) => `  - ${r.layer}`).join("\n");
     sections.push({
       kind: "note",
-      heading: "위임입법 미이행 가능성",
-      note:
-        `⚠️ 다음 계층의 하위법령이 검색되지 않았습니다 (위임입법 미이행 의심 또는 단순 검색 실패):\n` +
-        missing.map((r) => `  - ${r.layer}`).join("\n") +
-        `\n\n실제 미이행 여부는 법제처 사이트에서 직접 확인하시기 바랍니다. LLM은 추측하지 마세요.`,
+      heading: "[시나리오: delegation] 위임입법 미이행 가능성",
+      note: formatMarkerMessage(
+        "NOT_FOUND",
+        `다음 계층의 하위법령이 검색되지 않았습니다 (위임입법 미이행 의심 또는 단순 검색 실패):\n${missingList}\n실제 미이행 여부는 법제처 사이트에서 직접 확인하세요.`
+      ),
     });
   } else {
     sections.push({
       kind: "note",
-      heading: "위임입법 현황",
+      heading: "[시나리오: delegation] 위임입법 현황",
       note: "상위·하위 법령 3개 계층 모두 검색됨. 위임입법 이행 상태로 추정.",
     });
   }
@@ -58,6 +77,12 @@ async function run(ctx: ScenarioContext): Promise<ChainSection[]> {
 export const delegationScenario: ScenarioRunner = {
   name: "delegation",
   chains: ["full_research", "law_system"],
-  triggers: [/위임/, /하위\s*법령/, /시행령\s*미?이행/, /위임\s*입법/],
+  triggers: [
+    /위임\s*입법/,
+    /위임/,
+    /포괄\s*위임/,
+    /하위\s*법령/,
+    /시행령\s*미?이행/,
+  ],
   run,
 };

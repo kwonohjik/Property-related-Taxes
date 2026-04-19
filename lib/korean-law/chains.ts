@@ -22,6 +22,7 @@ import {
 } from "./client";
 import { verifyCitations } from "./verify-citations";
 import { detectScenarios, runScenarios } from "./scenarios";
+import { formatMarkerMessage } from "./markers";
 import type {
   ChainInput,
   ChainResult,
@@ -66,7 +67,7 @@ async function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   });
 }
 
-async function secOrSkip(
+export async function secOrSkip(
   heading: string,
   builder: () => Promise<ChainSection | null>,
   options: { notFoundIfEmpty?: boolean } = {}
@@ -78,15 +79,14 @@ async function secOrSkip(
       return {
         kind: "note",
         heading,
-        note: "[NOT_FOUND] ⚠️ 이 섹션은 결과가 없습니다. LLM은 내용을 추측/생성하지 마세요.",
+        note: formatMarkerMessage("NOT_FOUND", "이 섹션은 결과가 없습니다"),
       };
     }
-    // kind 별로 비어있는지 검증
     if (notFoundIfEmpty && isEmpty(sec)) {
       return {
         kind: "note",
         heading,
-        note: "[NOT_FOUND] ⚠️ 이 섹션은 결과가 없습니다. LLM은 내용을 추측/생성하지 마세요.",
+        note: formatMarkerMessage("NOT_FOUND", "이 섹션은 결과가 없습니다"),
       };
     }
     return sec;
@@ -97,8 +97,8 @@ async function secOrSkip(
       kind: "note",
       heading,
       note: isTimeout
-        ? `[TIMEOUT] ⏱ 섹션이 ${SECTION_TIMEOUT_MS}ms 안에 응답하지 않아 건너뜁니다.`
-        : `[FAILED] ⚠️ 이 섹션은 조회에 실패했습니다 — LLM은 내용을 추측/생성하지 마세요.\n사유: ${msg}`,
+        ? formatMarkerMessage("TIMEOUT", `${SECTION_TIMEOUT_MS}ms 내 응답 없음`)
+        : formatMarkerMessage("FAILED", `사유: ${msg}`),
     };
   }
 }
@@ -148,7 +148,10 @@ const lawSystem: Runner = async ({ query }) => {
       {
         kind: "note",
         heading: "법령 없음",
-        note: `[NOT_FOUND] '${query}' 에 해당하는 법령을 찾지 못했습니다. — LLM은 내용을 추측/생성하지 마세요.`,
+        note: formatMarkerMessage(
+          "NOT_FOUND",
+          `'${query}' 에 해당하는 법령을 찾지 못했습니다`
+        ),
       },
     ];
   }

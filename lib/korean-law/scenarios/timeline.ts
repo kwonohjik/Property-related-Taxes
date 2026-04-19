@@ -11,6 +11,7 @@
  */
 
 import { searchDecisions } from "../client";
+import { formatMarkerMessage } from "../markers";
 import type { ChainSection } from "../types";
 import type { ScenarioRunner } from ".";
 import { parseDateRange } from "../date-parser";
@@ -74,6 +75,16 @@ export const timelineScenario: ScenarioRunner = {
           decisions: filtered,
         });
       }
+    }
+    if (sections.length === 0) {
+      sections.push({
+        kind: "note",
+        heading: "[시나리오: timeline] 타임라인 자료 없음",
+        note: formatMarkerMessage(
+          "NOT_FOUND",
+          `"${q}" 에 대한 판례·해석례 타임라인 데이터가 조회되지 않았습니다.`
+        ),
+      });
     }
     return sections;
   },

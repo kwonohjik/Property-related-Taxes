@@ -116,9 +116,15 @@ export interface DecisionText {
   ruling?: string;
   /** 이유 / 본문 — 길면 compactBody로 계단식 축약 */
   reasoning: string;
-  /** 참조 조문 (densifyLawRefs 적용) */
+  /**
+   * @deprecated 구조화 필드 `refLawsStructured` 를 우선 사용하세요.
+   * 구조화 파싱이 실패했을 때만 폴백 렌더용으로 채워집니다.
+   */
   refLaws?: string;
-  /** 참조 판례 (densifyPrecedentRefs 적용) */
+  /**
+   * @deprecated 구조화 필드 `refPrecedentsStructured` 를 우선 사용하세요.
+   * 구조화 파싱이 실패했을 때만 폴백 렌더용으로 채워집니다.
+   */
   refPrecedents?: string;
   /** v2 신규 — 참조조문 구조화 배열 (UI 클릭 시 자동 조문 로드용) */
   refLawsStructured?: LawRef[];
@@ -218,6 +224,22 @@ export interface AnnexItem {
   fileType?: string;
   /** 법제처 다운로드 URL */
   downloadUrl?: string;
+  /**
+   * 법령 MST — UI 가 `/api/law/annex-content` 를 호출할 때 캐시 키로 활용.
+   * getAnnexes() 응답에만 포함되며, 체인 섹션의 annexes 는 축약을 위해 생략 가능.
+   */
+  mst?: string;
+}
+
+/** 별표 본문 변환 API 응답 (`/api/law/annex-content`) */
+export interface AnnexBodyResponse {
+  content: string;
+  truncated: boolean;
+  status: "ok" | "NOT_CONVERTED";
+  fileType: string;
+  pageCount?: number;
+  originalSize?: number;
+  error?: string;
 }
 
 // ────────────────────────────────────────────────────────────────────────────
