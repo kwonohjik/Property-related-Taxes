@@ -197,6 +197,17 @@ function PropertyBreakdownAccordion({
 }) {
   const [open, setOpen] = useState(false);
 
+  // 단건 엔진 steps에서 항목별 formula 조회
+  const getStep = (labelKeyword: string) =>
+    breakdown.steps.find((s) => s.label.includes(labelKeyword));
+
+  const gainStep = getStep("양도차익");
+  const lthdStep = getStep("장기보유특별공제");
+  const taxBaseStep = getStep("과세표준");
+  const calcTaxStep = getStep("산출세액");
+  const reductionStep = getStep("감면세액");
+  const determinedStep = getStep("결정세액");
+
   return (
     <Card>
       <div
@@ -233,33 +244,176 @@ function PropertyBreakdownAccordion({
 
       {open && (
         <CardContent className="pt-0 border-t">
-          <div className="grid grid-cols-2 gap-3 py-3 text-sm">
-            <ResultRow label="양도차익" value={breakdown.transferGain} compact />
-            {breakdown.longTermHoldingDeduction > 0 && (
-              <ResultRow label="장기보유특별공제" value={-breakdown.longTermHoldingDeduction} compact />
-            )}
-            <ResultRow label="양도소득금액" value={breakdown.income} compact />
-            {breakdown.lossOffsetFromSameGroup > 0 && (
-              <ResultRow label="차손 통산 (동일그룹)" value={-breakdown.lossOffsetFromSameGroup} compact />
-            )}
-            {breakdown.lossOffsetFromOtherGroup > 0 && (
-              <ResultRow label="차손 통산 (타군안분)" value={-breakdown.lossOffsetFromOtherGroup} compact />
-            )}
-            <ResultRow label="통산 후 소득금액" value={breakdown.incomeAfterOffset} compact />
-            {breakdown.allocatedBasicDeduction > 0 && (
-              <ResultRow label="기본공제 배분액" value={-breakdown.allocatedBasicDeduction} compact />
-            )}
-            <ResultRow label="과세표준 기여분" value={breakdown.taxBaseShare} compact highlight />
-            {breakdown.reductionAmount > 0 && (
-              <ResultRow label="감면세액" value={-breakdown.reductionAmount} compact />
-            )}
-            {breakdown.penaltyTax > 0 && (
-              <ResultRow label="건별 가산세 (§114조의2)" value={breakdown.penaltyTax} compact />
-            )}
-          </div>
+          {breakdown.isExempt ? (
+            <p className="py-4 text-sm text-muted-foreground text-center">
+              {breakdown.exemptReason ?? "비과세 대상"}
+            </p>
+          ) : (
+            <div className="py-3 space-y-0 text-sm divide-y divide-border/50">
+              {/* 양도차익 */}
+              <DetailRow
+                label="양도차익"
+                formula={gainStep?.formula}
+                legalBasis={gainStep?.legalBasis}
+                value={breakdown.transferGain}
+              />
+
+              {/* 장기보유특별공제 */}
+              {breakdown.longTermHoldingDeduction > 0 && (
+                <DetailRow
+                  label="장기보유특별공제"
+                  formula={lthdStep?.formula}
+                  legalBasis={lthdStep?.legalBasis}
+                  value={-breakdown.longTermHoldingDeduction}
+                />
+              )}
+
+              {/* 양도소득금액 */}
+              <DetailRow
+                label="양도소득금액"
+                formula={
+                  breakdown.longTermHoldingDeduction > 0
+                    ? `${formatKRW(breakdown.transferGain)} - ${formatKRW(breakdown.longTermHoldingDeduction)}`
+                    : undefined
+                }
+                value={breakdown.income}
+              />
+
+              {/* 차손 통산 */}
+              {breakdown.lossOffsetFromSameGroup > 0 && (
+                <DetailRow
+                  label="차손 통산 (동일그룹)"
+                  formula="같은 세율군 내 손익 통산 (소득세법 §102②)"
+                  value={-breakdown.lossOffsetFromSameGroup}
+                />
+              )}
+              {breakdown.lossOffsetFromOtherGroup > 0 && (
+                <DetailRow
+                  label="차손 통산 (타군안분)"
+                  formula="타 세율군 잔여 차손 비율안분 (시행령 §167의2)"
+                  value={-breakdown.lossOffsetFromOtherGroup}
+                />
+              )}
+
+              {/* 통산 후 소득금액 */}
+              {(breakdown.lossOffsetFromSameGroup > 0 || breakdown.lossOffsetFromOtherGroup > 0) && (
+                <DetailRow
+                  label="통산 후 소득금액"
+                  value={breakdown.incomeAfterOffset}
+                />
+              )}
+
+              {/* 기본공제 배분액 */}
+              {breakdown.allocatedBasicDeduction > 0 && (
+                <DetailRow
+                  label="기본공제 배분액"
+                  formula="연 250만원 한도 — 소득금액 비율안분"
+                  value={-breakdown.allocatedBasicDeduction}
+                />
+              )}
+
+              {/* 과세표준 기여분 */}
+              <DetailRow
+                label="과세표준 기여분"
+                formula={taxBaseStep?.formula}
+                legalBasis={taxBaseStep?.legalBasis}
+                value={breakdown.taxBaseShare}
+                highlight
+              />
+
+              {/* 산출세액 참고 */}
+              {calcTaxStep && (
+                <DetailRow
+                  label="산출세액 (참고)"
+                  formula={calcTaxStep.formula}
+                  legalBasis={calcTaxStep.legalBasis}
+                  value={calcTaxStep.amount}
+                  muted
+                />
+              )}
+
+              {/* 감면세액 */}
+              {breakdown.reductionAmount > 0 && (
+                <DetailRow
+                  label="감면세액"
+                  formula={reductionStep?.formula}
+                  legalBasis={reductionStep?.legalBasis}
+                  value={-breakdown.reductionAmount}
+                />
+              )}
+
+              {/* 결정세액 참고 */}
+              {determinedStep && (
+                <DetailRow
+                  label="결정세액 (참고)"
+                  formula={determinedStep.formula}
+                  legalBasis={determinedStep.legalBasis}
+                  value={determinedStep.amount}
+                  muted
+                />
+              )}
+
+              {/* 가산세 */}
+              {breakdown.penaltyTax > 0 && (
+                <DetailRow
+                  label="건별 가산세"
+                  legalBasis="소득세법 §114조의2"
+                  value={breakdown.penaltyTax}
+                />
+              )}
+            </div>
+          )}
         </CardContent>
       )}
     </Card>
+  );
+}
+
+// ─── 상세 행 — 수식 포함 ──────────────────────────────────────
+
+function DetailRow({
+  label,
+  formula,
+  legalBasis,
+  value,
+  highlight,
+  muted,
+}: {
+  label: string;
+  formula?: string;
+  legalBasis?: string;
+  value: number;
+  highlight?: boolean;
+  muted?: boolean;
+}) {
+  return (
+    <div
+      className={cn(
+        "flex items-start justify-between gap-4 py-2.5",
+        highlight && "font-semibold",
+        muted && "opacity-60",
+      )}
+    >
+      <div className="min-w-0 flex-1">
+        <p className={cn("text-sm", highlight ? "font-semibold" : "text-muted-foreground")}>
+          {label}
+        </p>
+        {formula && (
+          <p className="text-xs text-muted-foreground/70 mt-0.5 break-words">{formula}</p>
+        )}
+        {legalBasis && (
+          <p className="text-[10px] text-muted-foreground/50 mt-0.5">{legalBasis}</p>
+        )}
+      </div>
+      <span
+        className={cn(
+          "text-sm tabular-nums shrink-0",
+          value < 0 ? "text-red-600" : highlight ? "" : "text-foreground",
+        )}
+      >
+        {formatKRW(value)}
+      </span>
+    </div>
   );
 }
 
@@ -344,9 +498,51 @@ export function MultiTransferTaxResultView({
   savedId,
 }: MultiTransferTaxResultViewProps) {
   const [showSteps, setShowSteps] = useState(false);
+  const [isPdfLoading, setIsPdfLoading] = useState(false);
+
+  async function handlePdfDownload() {
+    if (!savedId) return;
+    setIsPdfLoading(true);
+    try {
+      const res = await fetch(`/api/pdf/result/${savedId}`);
+      if (!res.ok) throw new Error("PDF 생성 실패");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `양도소득세_다건_${savedId.slice(0, 8)}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      alert("PDF 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.");
+    } finally {
+      setIsPdfLoading(false);
+    }
+  }
 
   return (
     <div className="space-y-4">
+      {/* PDF / 인쇄 버튼 */}
+      <div className="flex justify-end gap-2 print:hidden">
+        <button
+          type="button"
+          onClick={() => window.print()}
+          className="rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors"
+        >
+          🖨️ 인쇄
+        </button>
+        {savedId && isLoggedIn && (
+          <button
+            type="button"
+            onClick={handlePdfDownload}
+            disabled={isPdfLoading}
+            className="rounded-md border border-primary/60 bg-primary/5 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
+          >
+            {isPdfLoading ? "생성 중..." : "📄 PDF 다운로드"}
+          </button>
+        )}
+      </div>
+
       {/* 합산 결과 카드 */}
       <SummaryCard result={result} taxYear={taxYear} />
 
@@ -364,13 +560,13 @@ export function MultiTransferTaxResultView({
         ))}
       </div>
 
-      {/* 전체 계산 과정 토글 */}
+      {/* 합산 계산 과정 토글 */}
       <Card>
         <div
           className="flex items-center justify-between p-4 cursor-pointer"
           onClick={() => setShowSteps((s) => !s)}
         >
-          <span className="text-sm font-medium">전체 계산 과정 보기</span>
+          <span className="text-sm font-medium">합산 계산 과정 보기</span>
           {showSteps ? (
             <ChevronUp className="h-4 w-4 text-muted-foreground" />
           ) : (
@@ -379,19 +575,21 @@ export function MultiTransferTaxResultView({
         </div>
         {showSteps && (
           <CardContent className="pt-0 border-t">
-            <div className="space-y-2 text-sm">
+            <div className="divide-y divide-border/50 text-sm">
               {result.steps.map((s, i) => (
-                <div key={i} className="flex justify-between py-1 border-b border-border/50 last:border-0">
-                  <div>
+                <div key={i} className="flex items-start justify-between gap-4 py-2.5">
+                  <div className="min-w-0 flex-1">
                     <p className="font-medium">{s.label}</p>
-                    {s.legalBasis && (
-                      <p className="text-xs text-muted-foreground">{s.legalBasis}</p>
-                    )}
                     {s.formula && (
-                      <p className="text-xs text-muted-foreground">{s.formula}</p>
+                      <p className="text-xs text-muted-foreground/70 mt-0.5 break-words">{s.formula}</p>
+                    )}
+                    {s.legalBasis && (
+                      <p className="text-[10px] text-muted-foreground/50 mt-0.5">{s.legalBasis}</p>
                     )}
                   </div>
-                  <span className="font-medium tabular-nums">{formatKRW(s.amount)}</span>
+                  <span className={cn("tabular-nums shrink-0 font-medium", s.amount < 0 ? "text-red-600" : "")}>
+                    {formatKRW(s.amount)}
+                  </span>
                 </div>
               ))}
             </div>
@@ -401,9 +599,9 @@ export function MultiTransferTaxResultView({
 
       {/* 이력 안내 */}
       {!isLoggedIn && (
-        <Card className="border-dashed">
+        <Card className="border-dashed print:hidden">
           <CardContent className="py-4 text-center text-sm text-muted-foreground">
-            로그인하면 계산 이력이 자동 저장됩니다.{" "}
+            로그인하면 계산 이력이 자동 저장되고 PDF 다운로드가 가능합니다.{" "}
             <a href="/auth/login" className="text-primary underline">
               로그인
             </a>

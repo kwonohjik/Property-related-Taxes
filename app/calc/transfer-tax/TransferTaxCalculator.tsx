@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useCalcWizardStore, type TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { cn } from "@/lib/utils";
 import { DateInput } from "@/components/ui/date-input";
@@ -15,7 +15,8 @@ import { validateStep } from "@/lib/calc/transfer-tax-validate";
 import { getFilingDeadline, isFilingOverdue } from "@/lib/calc/filing-deadline";
 
 
-const STEPS = ["물건 유형", "양도 정보", "취득 정보", "보유 상황", "감면 확인", "가산세"];
+const STEPS_SINGLE = ["물건 유형", "양도 정보", "취득 정보", "보유 상황", "감면 확인", "가산세"];
+const STEPS_MULTI = ["물건 유형", "양도 정보", "취득 정보", "보유 상황", "감면 확인"];
 
 const isHousingLike = (pt: string) =>
   pt === "housing" || pt === "right_to_move_in" || pt === "presale_right";
@@ -1914,8 +1915,23 @@ function Step6({
 
 // 메인 컴포넌트
 // ============================================================
-export default function TransferTaxCalculator() {
+interface TransferTaxCalculatorProps {
+  /** 다건 모드: 현재 자산 저장 후 새 자산 추가 (마법사 step 0으로 리셋) */
+  onSaveAndAddNext?: () => void;
+  /** 다건 모드: 현재 자산 저장 후 공통 설정 단계로 이동 */
+  onSaveAndGoToSettings?: () => void;
+}
+
+export default function TransferTaxCalculator({
+  onSaveAndAddNext,
+  onSaveAndGoToSettings,
+}: TransferTaxCalculatorProps = {}) {
   const router = useRouter();
+  const pathname = usePathname();
+  // 다건 양도 편집 모드 내 임베딩 여부
+  const isEmbeddedInMulti = pathname?.includes("/multi") ?? false;
+  // 다건 모드는 5단계 (가산세 제외 — 합산 결과 기준이므로 공통 설정에서 입력)
+  const STEPS = isEmbeddedInMulti ? STEPS_MULTI : STEPS_SINGLE;
   const { currentStep, formData, result, setStep, updateFormData, setResult, reset, clearPendingMigration } =
     useCalcWizardStore();
   const [error, setError] = useState<string | null>(null);
@@ -1941,9 +1957,16 @@ export default function TransferTaxCalculator() {
     });
   }, []);
 
-  const totalSteps = 6;
+  const totalSteps = STEPS.length;
   const isLastStep = currentStep === totalSteps - 1;
   const isResult = result !== null && currentStep === totalSteps;
+
+  // 잘못된 step 상태 복구: currentStep >= totalSteps인데 result가 없으면 step 0으로 리셋
+  useEffect(() => {
+    if (currentStep >= totalSteps && !result) {
+      setStep(0);
+    }
+  }, [currentStep, result, setStep]);
 
   // 신고일·양도일 변경 시 가산세 필드 자동 설정
   //   - 신고기한 초과 시: 무신고(filingType="none") + 지연납부 자동 ON, paymentDeadline=신고기한, actualPaymentDate=신고일
@@ -2002,7 +2025,7 @@ export default function TransferTaxCalculator() {
   function handleBack() {
     setError(null);
     if (currentStep === 0) {
-      router.push("/");
+      if (!isEmbeddedInMulti) router.push("/");
     } else {
       setStep(currentStep - 1);
     }
@@ -2070,7 +2093,7 @@ export default function TransferTaxCalculator() {
     setPenaltyResult(null);
   }
 
-  const stepComponents = [
+  const stepComponentsAll = [
     <Step1 key={0} form={formData} onChange={updateFormData} />,
     <Step2 key={1} form={formData} onChange={updateFormData} />,
     <Step3 key={2} form={formData} onChange={updateFormData} />,
@@ -2078,6 +2101,8 @@ export default function TransferTaxCalculator() {
     <Step5 key={4} form={formData} onChange={updateFormData} />,
     <Step6 key={5} form={formData} onChange={updateFormData} determinedTax={calcDeterminedTax} />,
   ];
+  // 다건 모드는 가산세(Step6) 제외
+  const stepComponents = isEmbeddedInMulti ? stepComponentsAll.slice(0, 5) : stepComponentsAll;
 
   return (
     <div className="mx-auto max-w-lg px-4 py-8">
@@ -2085,12 +2110,14 @@ export default function TransferTaxCalculator() {
       <div className="mb-6">
         <p className="text-xs text-muted-foreground mb-1">한국 부동산 세금 계산기</p>
         <h1 className="text-2xl font-bold">양도소득세 계산기</h1>
-        <p className="text-xs text-muted-foreground mt-1">
-          같은 해에 여러 건을 양도하셨나요?{" "}
-          <a href="/calc/transfer-tax/multi" className="text-primary underline hover:no-underline">
-            다건 동시 양도 계산 →
+        <div className="mt-2">
+          <a
+            href="/calc/transfer-tax/multi"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-primary text-primary text-xs font-medium hover:bg-primary hover:text-primary-foreground transition-colors"
+          >
+            여러건 양도 계산 →
           </a>
-        </p>
+        </div>
       </div>
 
       {isResult && result ? (
@@ -2117,7 +2144,7 @@ export default function TransferTaxCalculator() {
 
           {/* 단계 제목 */}
           <h2 className="text-base font-semibold mb-4">
-            {["물건 유형 선택", "양도 정보 입력", "취득 정보 입력", "보유 상황 입력", "감면 확인"][currentStep]}
+            {["물건 유형 선택", "양도 정보 입력", "취득 정보 입력", "보유 상황 입력", "감면 확인", "가산세 입력"][currentStep]}
           </h2>
 
           {/* 폼 내용 */}
@@ -2192,7 +2219,7 @@ export default function TransferTaxCalculator() {
 
           {/* 네비게이션 — 뒤로가기(항상) + 다음/계산 */}
           <div className="mt-6 space-y-2">
-            {isLastStep && formData.enablePenalty && (
+            {isLastStep && !isEmbeddedInMulti && formData.enablePenalty && (
               <button
                 type="button"
                 onClick={handlePenaltyCalc}
@@ -2203,22 +2230,54 @@ export default function TransferTaxCalculator() {
               </button>
             )}
             <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={handleBack}
-                className="flex-1 rounded-lg border border-border py-2.5 text-sm font-medium hover:bg-muted/40 transition-colors"
-              >
-                {currentStep === 0 ? "홈으로" : "이전"}
-              </button>
-              {isLastStep ? (
+              {/* 다건 편집 모드 내 step 0에서는 홈으로 버튼 미표시 */}
+              {!(isEmbeddedInMulti && currentStep === 0) && (
                 <button
                   type="button"
-                  onClick={handleSubmit}
-                  disabled={isLoading}
-                  className="flex-1 rounded-lg bg-primary py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-60 transition-colors"
+                  onClick={handleBack}
+                  className="flex-1 rounded-lg border border-border py-2.5 text-sm font-medium hover:bg-muted/40 transition-colors"
                 >
-                  {isLoading ? "계산 중..." : "세금 계산하기"}
+                  {currentStep === 0 ? "홈으로" : "이전"}
                 </button>
+              )}
+              {isLastStep ? (
+                isEmbeddedInMulti ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const err = validateStep(currentStep, formData);
+                        if (err) { setError(err); return; }
+                        setError(null);
+                        onSaveAndAddNext?.();
+                      }}
+                      className="flex-1 rounded-lg border border-primary py-2.5 text-sm font-semibold text-primary hover:bg-primary/10 transition-colors"
+                    >
+                      + 양도 건 추가
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const err = validateStep(currentStep, formData);
+                        if (err) { setError(err); return; }
+                        setError(null);
+                        onSaveAndGoToSettings?.();
+                      }}
+                      className="flex-1 rounded-lg bg-primary py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
+                    >
+                      공통 설정으로 →
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleSubmit}
+                    disabled={isLoading}
+                    className="flex-1 rounded-lg bg-primary py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-60 transition-colors"
+                  >
+                    {isLoading ? "계산 중..." : "세금 계산하기"}
+                  </button>
+                )
               ) : (
                 <button
                   type="button"

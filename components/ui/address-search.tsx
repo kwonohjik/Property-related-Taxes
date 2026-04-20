@@ -364,6 +364,152 @@ function sortNaturalKo(a: string, b: string): number {
   return a.localeCompare(b, "ko", { numeric: true, sensitivity: "base" });
 }
 
+// 호수에서 층 번호 추출 (1804→"18층", 305→"3층", 기타→"")
+function extractFloor(ho: string): string {
+  const num = ho.replace(/[^0-9]/g, "");
+  if (num.length >= 4) return `${parseInt(num.slice(0, num.length - 2), 10)}층`;
+  if (num.length === 3) return `${parseInt(num.slice(0, 1), 10)}층`;
+  return "";
+}
+
+// 층별 네비게이션 바가 있는 호수 커스텀 드롭다운
+function HoSelector({
+  value,
+  hos,
+  disabled,
+  placeholder,
+  onChange,
+}: {
+  value: string;
+  hos: string[];
+  disabled?: boolean;
+  placeholder: string;
+  onChange: (ho: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const floorRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  // 층 그룹핑
+  const floorGroups = hos.reduce<Record<string, string[]>>((acc, ho) => {
+    const floor = extractFloor(ho) || "기타";
+    if (!acc[floor]) acc[floor] = [];
+    acc[floor].push(ho);
+    return acc;
+  }, {});
+  const floors = Object.keys(floorGroups);
+  const hasFloors = floors.length > 1;
+
+  // 외부 클릭 닫기
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  const scrollToFloor = (floor: string) => {
+    const el = floorRefs.current[floor];
+    if (el && scrollRef.current) {
+      const containerTop = scrollRef.current.getBoundingClientRect().top;
+      const elTop = el.getBoundingClientRect().top;
+      scrollRef.current.scrollTop += elTop - containerTop - 4;
+    }
+  };
+
+  if (!hasFloors) {
+    // 층 구분 없으면 기본 Select 유지
+    return (
+      <Select value={value} onValueChange={(v) => v && onChange(v)} disabled={disabled}>
+        <SelectTrigger className="flex-1 text-sm">
+          <SelectValue placeholder={placeholder} />
+        </SelectTrigger>
+        <SelectContent>
+          {hos.map((ho) => (
+            <SelectItem key={ho} value={ho}>
+              {ho}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    );
+  }
+
+  return (
+    <div ref={dropdownRef} className="relative flex-1">
+      {/* 트리거 버튼 */}
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => setOpen((o) => !o)}
+        className={cn(
+          "flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs ring-offset-background",
+          "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+          "disabled:cursor-not-allowed disabled:opacity-50",
+          open && "ring-2 ring-ring ring-offset-2"
+        )}
+      >
+        <span className={cn(!value && "text-muted-foreground")}>{value || placeholder}</span>
+        <svg className="h-4 w-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {/* 드롭다운 패널 */}
+      {open && (
+        <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover shadow-md overflow-hidden">
+          <div className="flex" style={{ height: "220px" }}>
+            {/* 호수 목록 */}
+            <div ref={scrollRef} className="flex-1 overflow-y-auto py-1">
+              {floors.map((floor) => (
+                <div
+                  key={floor}
+                  ref={(el) => { floorRefs.current[floor] = el; }}
+                >
+                  <div className="px-3 py-0.5 text-[10px] font-semibold text-muted-foreground bg-muted/50 sticky top-0">
+                    {floor}
+                  </div>
+                  {floorGroups[floor].map((ho) => (
+                    <div
+                      key={ho}
+                      onClick={() => { onChange(ho); setOpen(false); }}
+                      className={cn(
+                        "px-3 py-1.5 text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground",
+                        ho === value && "bg-accent font-medium"
+                      )}
+                    >
+                      {ho}
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+
+            {/* 층 네비게이션 바 */}
+            <div className="flex flex-col overflow-y-auto border-l bg-muted/30 py-1" style={{ minWidth: "36px" }}>
+              {floors.map((floor) => (
+                <button
+                  key={floor}
+                  type="button"
+                  onClick={() => scrollToFloor(floor)}
+                  className="px-1 py-0.5 text-[10px] text-muted-foreground hover:text-foreground hover:bg-accent transition-colors text-center leading-tight"
+                >
+                  {floor.replace("층", "")}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function UnitSelector({ units, selectedDong, selectedHo, disabled, onDongChange, onHoChange }: UnitSelectorProps) {
   // 고유 동 목록 — 숫자 오름차순 (예: 1동 < 2동 < 10동 < 101동)
   const uniqueDongs = Array.from(new Set(units.map((u) => u.dong))).sort(sortNaturalKo);
@@ -393,22 +539,13 @@ function UnitSelector({ units, selectedDong, selectedHo, disabled, onDongChange,
         </Select>
       )}
 
-      <Select
+      <HoSelector
         value={selectedHo}
-        onValueChange={(v) => v && onHoChange(v)}
+        hos={uniqueHos}
         disabled={disabled || (hasDongColumn && !selectedDong)}
-      >
-        <SelectTrigger className="flex-1 text-sm">
-          <SelectValue placeholder={hasDongColumn && !selectedDong ? "동 먼저 선택" : "호수 선택"} />
-        </SelectTrigger>
-        <SelectContent>
-          {uniqueHos.map((ho) => (
-            <SelectItem key={ho} value={ho}>
-              {ho}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+        placeholder={hasDongColumn && !selectedDong ? "동 먼저 선택" : "호수 선택"}
+        onChange={onHoChange}
+      />
     </div>
   );
 }

@@ -77,9 +77,6 @@ export default function HomePage() {
               <h2 className="mt-3 text-lg font-semibold group-hover:text-primary">
                 {tax.title}
               </h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {tax.description}
-              </p>
             </Link>
           ))}
         </div>

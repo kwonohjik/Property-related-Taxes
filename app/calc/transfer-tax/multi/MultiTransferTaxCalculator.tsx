@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -355,8 +355,40 @@ export default function MultiTransferTaxCalculator() {
       form: wizardForm,
       completionPercent: completion,
     });
+    resetWizard(); // wizard 상태를 step 0으로 초기화
     setStep("list");
-  }, [form.activePropertyIndex, updateProperty, setStep]);
+  }, [form.activePropertyIndex, updateProperty, resetWizard, setStep]);
+
+  // 마법사 마지막 단계에서 호출 — 현재 자산 저장 후 새 자산 추가 (step 0으로 리셋)
+  const handleSaveAndAddNext = useCallback(() => {
+    const wizardForm = useCalcWizardStore.getState().formData;
+    const completion = calcPropertyCompletion(wizardForm);
+    updateProperty(form.activePropertyIndex, {
+      form: wizardForm,
+      completionPercent: completion,
+    });
+    handleAddProperty();
+  }, [form.activePropertyIndex, updateProperty, handleAddProperty]);
+
+  // 마법사 마지막 단계에서 호출 — 현재 자산 저장 후 공통 설정 단계로 이동
+  const handleSaveAndGoToSettings = useCallback(() => {
+    const wizardForm = useCalcWizardStore.getState().formData;
+    const completion = calcPropertyCompletion(wizardForm);
+    updateProperty(form.activePropertyIndex, {
+      form: wizardForm,
+      completionPercent: completion,
+    });
+    resetWizard();
+    setStep("settings");
+  }, [form.activePropertyIndex, updateProperty, resetWizard, setStep]);
+
+  // 진입 시 자산이 0개면 자동으로 첫 자산 추가 → 즉시 마법사 step 0으로 이동
+  useEffect(() => {
+    if (form.properties.length === 0 && form.activeStep === "list") {
+      handleAddProperty();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSelectPropertyInEdit = useCallback(
     (index: number) => {
@@ -523,7 +555,10 @@ export default function MultiTransferTaxCalculator() {
             onRemove={(i) => removeProperty(i)}
           />
 
-          <TransferTaxCalculator />
+          <TransferTaxCalculator
+            onSaveAndAddNext={handleSaveAndAddNext}
+            onSaveAndGoToSettings={handleSaveAndGoToSettings}
+          />
         </div>
       )}
 

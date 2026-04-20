@@ -270,25 +270,109 @@ function TransferMultiSection({ r }: { r: R }) {
 
       {props.length > 0 && (
         <>
-          <Text style={s.sectionTitle}>건별 내역</Text>
-          {props.map((p, idx) => (
-            <View key={idx} style={{ marginBottom: 6 }}>
-              <Text style={{ fontSize: 8, fontWeight: 700, color: C.muted, marginBottom: 3 }}>
-                {str(p.propertyLabel) ?? `자산 ${idx + 1}`}
-                {bool(p.isExempt) ? "  [비과세]" : ""}
-              </Text>
-              {!bool(p.isExempt) && (
-                <View style={s.table}>
-                  <View style={s.row}><Text style={s.lbl}>양도차익</Text><Text style={s.val}>{fmt(p.transferGain)}</Text></View>
-                  {num(p.longTermHoldingDeduction) !== undefined && (p.longTermHoldingDeduction as number) > 0 && (
-                    <View style={s.row}><Text style={s.lbl}>장기보유특별공제</Text><Text style={s.val}>- {fmt(p.longTermHoldingDeduction)}</Text></View>
-                  )}
-                  <View style={s.row}><Text style={s.lbl}>양도소득금액</Text><Text style={s.val}>{fmt(p.income)}</Text></View>
-                  <View style={s.rowBg}><Text style={s.lbl}>과세표준 기여분</Text><Text style={s.valAccent}>{fmt(p.taxBaseShare)}</Text></View>
-                </View>
-              )}
-            </View>
-          ))}
+          <Text style={s.sectionTitle}>건별 상세 내역</Text>
+          {props.map((p, idx) => {
+            const propSteps = Array.isArray(p.steps) ? (p.steps as CalcStep[]) : [];
+            const gainStep = propSteps.find((st) => st.label.includes("양도차익"));
+            const lthdStep = propSteps.find((st) => st.label.includes("장기보유특별공제"));
+            const taxBaseStep = propSteps.find((st) => st.label.includes("과세표준"));
+            const calcTaxStep = propSteps.find((st) => st.label.includes("산출세액"));
+            const determinedStep = propSteps.find((st) => st.label.includes("결정세액"));
+
+            return (
+              <View key={idx} style={{ marginBottom: 8 }}>
+                <Text style={{ fontSize: 8, fontWeight: 700, color: C.muted, marginBottom: 3 }}>
+                  {str(p.propertyLabel) ?? `자산 ${idx + 1}`}
+                  {bool(p.isExempt) ? "  [비과세]" : ""}
+                </Text>
+                {bool(p.isExempt) ? (
+                  <Text style={{ fontSize: 8, color: C.muted, paddingLeft: 8 }}>
+                    {str(p.exemptReason) ?? "비과세 대상"}
+                  </Text>
+                ) : (
+                  <View style={s.stepsTable}>
+                    {gainStep && (
+                      <View style={s.stepRow}>
+                        <View style={s.stepInfo}>
+                          <Text style={s.stepLabel}>양도차익</Text>
+                          <Text style={s.stepFormula}>{gainStep.formula}</Text>
+                          {gainStep.legalBasis && <Text style={s.stepLegal}>{gainStep.legalBasis}</Text>}
+                        </View>
+                        <Text style={s.stepAmount}>{fmt(p.transferGain)}</Text>
+                      </View>
+                    )}
+                    {lthdStep && (num(p.longTermHoldingDeduction) ?? 0) > 0 && (
+                      <View style={s.stepRow}>
+                        <View style={s.stepInfo}>
+                          <Text style={s.stepLabel}>장기보유특별공제</Text>
+                          <Text style={s.stepFormula}>{lthdStep.formula}</Text>
+                          {lthdStep.legalBasis && <Text style={s.stepLegal}>{lthdStep.legalBasis}</Text>}
+                        </View>
+                        <Text style={s.stepAmount}>- {fmt(p.longTermHoldingDeduction)}</Text>
+                      </View>
+                    )}
+                    <View style={s.stepRow}>
+                      <View style={s.stepInfo}><Text style={s.stepLabel}>양도소득금액</Text></View>
+                      <Text style={s.stepAmount}>{fmt(p.income)}</Text>
+                    </View>
+                    {(num(p.lossOffsetFromSameGroup) ?? 0) > 0 && (
+                      <View style={s.stepRow}>
+                        <View style={s.stepInfo}>
+                          <Text style={s.stepLabel}>차손 통산 (동일그룹)</Text>
+                          <Text style={s.stepFormula}>§102② 그룹 내 손익 통산</Text>
+                        </View>
+                        <Text style={s.stepAmount}>- {fmt(p.lossOffsetFromSameGroup)}</Text>
+                      </View>
+                    )}
+                    {(num(p.lossOffsetFromOtherGroup) ?? 0) > 0 && (
+                      <View style={s.stepRow}>
+                        <View style={s.stepInfo}>
+                          <Text style={s.stepLabel}>차손 통산 (타군안분)</Text>
+                          <Text style={s.stepFormula}>시행령 §167의2 비율안분</Text>
+                        </View>
+                        <Text style={s.stepAmount}>- {fmt(p.lossOffsetFromOtherGroup)}</Text>
+                      </View>
+                    )}
+                    {taxBaseStep && (
+                      <View style={s.stepRow}>
+                        <View style={s.stepInfo}>
+                          <Text style={s.stepLabel}>과세표준 기여분</Text>
+                          <Text style={s.stepFormula}>{taxBaseStep.formula}</Text>
+                          {taxBaseStep.legalBasis && <Text style={s.stepLegal}>{taxBaseStep.legalBasis}</Text>}
+                        </View>
+                        <Text style={[s.stepAmount, { color: C.accent }]}>{fmt(p.taxBaseShare)}</Text>
+                      </View>
+                    )}
+                    {calcTaxStep && (
+                      <View style={s.stepRow}>
+                        <View style={s.stepInfo}>
+                          <Text style={s.stepLabel}>산출세액 (참고)</Text>
+                          <Text style={s.stepFormula}>{calcTaxStep.formula}</Text>
+                        </View>
+                        <Text style={s.stepAmount}>{fmt(calcTaxStep.amount)}</Text>
+                      </View>
+                    )}
+                    {determinedStep && (
+                      <View style={s.stepRowLast}>
+                        <View style={s.stepInfo}>
+                          <Text style={s.stepLabel}>결정세액 (참고)</Text>
+                          <Text style={s.stepFormula}>{determinedStep.formula}</Text>
+                        </View>
+                        <Text style={[s.stepAmount, { color: C.accent }]}>{fmt(determinedStep.amount)}</Text>
+                      </View>
+                    )}
+                    {!gainStep && !taxBaseStep && (
+                      <>
+                        <View style={s.stepRow}><View style={s.stepInfo}><Text style={s.stepLabel}>양도차익</Text></View><Text style={s.stepAmount}>{fmt(p.transferGain)}</Text></View>
+                        <View style={s.stepRow}><View style={s.stepInfo}><Text style={s.stepLabel}>양도소득금액</Text></View><Text style={s.stepAmount}>{fmt(p.income)}</Text></View>
+                        <View style={s.stepRowLast}><View style={s.stepInfo}><Text style={[s.stepLabel, { color: C.accent }]}>과세표준 기여분</Text></View><Text style={[s.stepAmount, { color: C.accent }]}>{fmt(p.taxBaseShare)}</Text></View>
+                      </>
+                    )}
+                  </View>
+                )}
+              </View>
+            );
+          })}
         </>
       )}
     </>
