@@ -51,5 +51,6 @@ logs/
 /scripts/e2e-artifacts/
 /scripts/e2e-artifacts-edge/
 /scripts/e2e-artifacts-deep/
+/scripts/e2e-artifacts-p0p1/
 /test-results/
 /playwright-report/
