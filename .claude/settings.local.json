@@ -112,7 +112,17 @@
       "Bash(tee /tmp/e2e-deep-5.log)",
       "Bash(E2E_BYPASS_RATE_LIMIT=1 LAW_ANNEX_BODY_ENABLED=true npm run *)",
       "Bash(xxd)",
-      "Bash(xargs kill *)"
+      "Bash(xargs kill *)",
+      "Bash(git -C /Users/mynote/workspace/Property-related-Taxes log --oneline --all -5 -- .claude/plans/dynamic-baking-trinket.md)",
+      "Bash(git -C /Users/mynote/workspace/Property-related-Taxes status --short .claude/ .bkit/)",
+      "Bash(npm run *)",
+      "Bash(echo \"PID=$!\")",
+      "Bash(mkdir -p ~/.claude/channels/telegram)",
+      "Bash(touch ~/.claude/channels/telegram/.env)",
+      "Bash(chmod 600 ~/.claude/channels/telegram/.env)",
+      "Bash(mkdir -p ~/.claude/channels/telegram/approved)",
+      "Bash(echo \"5904810188\")",
+      "mcp__plugin_telegram_telegram__reply"
     ]
   },
   "outputStyle": "bkit:bkit-learning"
