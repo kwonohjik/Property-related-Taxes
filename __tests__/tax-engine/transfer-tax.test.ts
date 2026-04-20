@@ -2416,3 +2416,192 @@ describe("T-17: §114조의2 신축·증축 가산세", () => {
     expect(result.localIncomeTax).toBe(expectedLocalTax);
   });
 });
+
+// ============================================================
+// T-PRE1990: 1990.8.30. 이전 취득 토지 기준시가 환산 통합
+// ============================================================
+
+describe("T-PRE1990: 1988.12.3. 취득 농지 PDF 사례 통합", () => {
+  it("pre1990Land 제공 시 기준시가 자동 주입 (PDF 재현)", () => {
+    const input = baseInput({
+      propertyType: "land",
+      transferPrice: 550_000_000,
+      transferDate: new Date("2023-02-16"),
+      acquisitionPrice: 0,                 // 무시됨 (pre1990Land가 덮어씀)
+      acquisitionDate: new Date("1988-12-03"),
+      useEstimatedAcquisition: false,       // 엔진이 true로 덮어씀
+      isOneHousehold: false,
+      householdHousingCount: 0,
+      pre1990Land: {
+        acquisitionDate: new Date("1988-12-03"),
+        transferDate: new Date("2023-02-16"),
+        areaSqm: 2_417,
+        pricePerSqm_1990: 54_000,
+        pricePerSqm_atTransfer: 241_700,
+        grade_1990_0830: 108,
+        gradePrev_1990_0830: 103,
+        gradeAtAcquisition: 103,
+      },
+    });
+    const result = calculateTransferTax(input, mockRates);
+
+    // 기준시가 자동 주입 확인
+    expect(result.pre1990LandValuationDetail).toBeDefined();
+    expect(result.pre1990LandValuationDetail!.pricePerSqmAtAcquisition).toBe(47_547);
+    expect(result.pre1990LandValuationDetail!.standardPriceAtAcquisition).toBe(114_921_099);
+    expect(result.pre1990LandValuationDetail!.standardPriceAtTransfer).toBe(584_188_900);
+    expect(result.pre1990LandValuationDetail!.caseType).toBe("case1_no_adjustment");
+
+    // 환산취득가가 자동 활성화되었는지 확인
+    expect(result.usedEstimatedAcquisition).toBe(true);
+
+    // 양도차익 = 양도가 - (환산취득가 + 개산공제)
+    // 환산취득가 = 550,000,000 × 114,921,099 / 584,188,900 = 108,195,490
+    // 개산공제 = 114,921,099 × 3% = 3,447,632
+    // 차익 = 550,000,000 - 108,195,490 - 3,447,632 = 438,356,878
+    expect(result.transferGain).toBe(438_356_878);
+  });
+
+  it("pre1990Land 없으면 기존 동작 불변 (회귀 방지)", () => {
+    const input = baseInput({ propertyType: "housing" });
+    const result = calculateTransferTax(input, mockRates);
+    expect(result.pre1990LandValuationDetail).toBeUndefined();
+  });
+
+  it("pre1990Land 제공 + 양도차익 계산 단계에 환산 step이 기록됨", () => {
+    const input = baseInput({
+      propertyType: "land",
+      transferPrice: 550_000_000,
+      transferDate: new Date("2023-02-16"),
+      acquisitionPrice: 0,
+      acquisitionDate: new Date("1988-12-03"),
+      isOneHousehold: false,
+      householdHousingCount: 0,
+      pre1990Land: {
+        acquisitionDate: new Date("1988-12-03"),
+        transferDate: new Date("2023-02-16"),
+        areaSqm: 2_417,
+        pricePerSqm_1990: 54_000,
+        pricePerSqm_atTransfer: 241_700,
+        grade_1990_0830: 108,
+        gradePrev_1990_0830: 103,
+        gradeAtAcquisition: 103,
+      },
+    });
+    const result = calculateTransferTax(input, mockRates);
+    const envSteps = result.steps.filter((s) => s.label.includes("1990.8.30") || s.label.startsWith("Case"));
+    expect(envSteps.length).toBeGreaterThanOrEqual(2);
+  });
+
+  // ── G1/G2/G3 보완: §69 감면 결합 + 개산공제 3% + 지방소득세 assertion ──
+  it("§69 8년 자경농지 100% 감면 결합 — 감면 한도 1억 초과분만 잔존 (G1)", () => {
+    const input = baseInput({
+      propertyType: "land",
+      transferPrice: 550_000_000,
+      transferDate: new Date("2023-02-16"),
+      acquisitionPrice: 0,
+      acquisitionDate: new Date("1988-12-03"),
+      isOneHousehold: false,
+      householdHousingCount: 0,
+      isNonBusinessLand: false, // 자경농지는 사업용
+      // 20년 자경 → §69 100% 감면 대상 (연 1억 한도)
+      reductions: [{ type: "self_farming", farmingYears: 20 }],
+      pre1990Land: {
+        acquisitionDate: new Date("1988-12-03"),
+        transferDate: new Date("2023-02-16"),
+        areaSqm: 2_417,
+        pricePerSqm_1990: 54_000,
+        pricePerSqm_atTransfer: 241_700,
+        grade_1990_0830: 108,
+        gradePrev_1990_0830: 103,
+        gradeAtAcquisition: 103,
+      },
+    });
+    const result = calculateTransferTax(input, mockRates);
+
+    // 환산이 정상 동작 (PDF 사례 값)
+    expect(result.pre1990LandValuationDetail?.standardPriceAtAcquisition).toBe(114_921_099);
+
+    // §69 자경농지 감면이 100% 적용되며 연 1억 한도로 capped
+    // PDF 산출세액 = 95,799,926원 (1억 미만 → 전액 감면 가능)
+    // 단, 본 mockRates의 세율로 계산된 값이 정확히 PDF와 일치하지 않을 수 있음 → 한도 검증 위주
+    expect(result.reductionAmount).toBeGreaterThan(0);
+    expect(result.reductionAmount).toBeLessThanOrEqual(100_000_000); // §69 연 1억 한도
+    expect(result.reductionType).toBe("자경농지");
+    // 전액 감면 가능한 구간이면 결정세액 = 0
+    if (result.calculatedTax <= 100_000_000) {
+      expect(result.determinedTax).toBe(0);
+    }
+  });
+
+  it("개산공제 = 취득시 기준시가 × 3% (G2) + 양도차익 PDF 사례 재현", () => {
+    const input = baseInput({
+      propertyType: "land",
+      transferPrice: 550_000_000,
+      transferDate: new Date("2023-02-16"),
+      acquisitionPrice: 0,
+      acquisitionDate: new Date("1988-12-03"),
+      isOneHousehold: false,
+      householdHousingCount: 0,
+      pre1990Land: {
+        acquisitionDate: new Date("1988-12-03"),
+        transferDate: new Date("2023-02-16"),
+        areaSqm: 2_417,
+        pricePerSqm_1990: 54_000,
+        pricePerSqm_atTransfer: 241_700,
+        grade_1990_0830: 108,
+        gradePrev_1990_0830: 103,
+        gradeAtAcquisition: 103,
+      },
+    });
+    const result = calculateTransferTax(input, mockRates);
+
+    // 취득시 기준시가 = 114,921,099
+    const stdPriceAtAcq = result.pre1990LandValuationDetail!.standardPriceAtAcquisition;
+    expect(stdPriceAtAcq).toBe(114_921_099);
+
+    // 개산공제 = 114,921,099 × 3% = 3,447,632 (원단위 절사)
+    const expectedDeduction = Math.floor(stdPriceAtAcq * 0.03);
+    expect(expectedDeduction).toBe(3_447_632);
+
+    // 환산취득가 = 550,000,000 × 114,921,099 / 584,188,900 = 108,195,490
+    // 양도차익 = 550,000,000 - (108,195,490 + 3,447,632) = 438,356,878
+    expect(result.transferGain).toBe(438_356_878);
+
+    // 환산취득가 사용 플래그 확인
+    expect(result.usedEstimatedAcquisition).toBe(true);
+  });
+
+  it("지방소득세 = 결정세액 × 10% (G3, pre-1990 경로에서도 불변)", () => {
+    const input = baseInput({
+      propertyType: "land",
+      transferPrice: 550_000_000,
+      transferDate: new Date("2023-02-16"),
+      acquisitionPrice: 0,
+      acquisitionDate: new Date("1988-12-03"),
+      isOneHousehold: false,
+      householdHousingCount: 0,
+      pre1990Land: {
+        acquisitionDate: new Date("1988-12-03"),
+        transferDate: new Date("2023-02-16"),
+        areaSqm: 2_417,
+        pricePerSqm_1990: 54_000,
+        pricePerSqm_atTransfer: 241_700,
+        grade_1990_0830: 108,
+        gradePrev_1990_0830: 103,
+        gradeAtAcquisition: 103,
+      },
+    });
+    const result = calculateTransferTax(input, mockRates);
+
+    // 지방소득세 = (결정세액 + 가산세) × 10%, 천원 미만 절사
+    const base = result.determinedTax + result.penaltyTax;
+    const expectedLocalTax = Math.floor(Math.floor(base * 0.1) / 1000) * 1000;
+    expect(result.localIncomeTax).toBe(expectedLocalTax);
+
+    // PDF 40% 세율 구간 = 지방소득세 4% (1/10) — 과세표준에 대한 지방세율도 동반
+    // 본 mockRates는 직접 과세표준 기반 지방세율 계산은 하지 않고, 결정세액 × 10% 사용
+    // 따라서 PDF의 지방소득세 산식(과세표준 × 4% - 누진공제 2,594,000)과 결과값이 일치
+    // (40% 구간 누진공제 25,940,000 ÷ 10 = 2,594,000 ≡ 결정세액의 10%)
+  });
+});

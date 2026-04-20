@@ -26,7 +26,23 @@ export function validateStep(step: number, form: TransferFormData): string | nul
       if (form.donorAcquisitionDate >= form.acquisitionDate)
         return "증여자 취득일은 증여일보다 이전이어야 합니다.";
     }
-    if (form.useEstimatedAcquisition) {
+    // 1990.8.30. 이전 토지 환산 모드: 엔진이 기준시가·취득가를 자동 산정하므로
+    // 일반 가격 필드 검증을 건너뛰고 pre1990 고유 필드만 검증한다.
+    if (form.pre1990Enabled && form.propertyType === "land") {
+      const areaSqm = parseFloat((form.pre1990AreaSqm || "").replace(/,/g, ""));
+      if (!areaSqm || areaSqm <= 0) return "토지 면적(㎡)을 입력하세요.";
+      if (!form.pre1990PricePerSqm_1990 || parseAmount(form.pre1990PricePerSqm_1990) <= 0)
+        return "1990.1.1. 개별공시지가(원/㎡)를 입력하세요.";
+      if (!form.pre1990PricePerSqm_atTransfer || parseAmount(form.pre1990PricePerSqm_atTransfer) <= 0)
+        return "양도당시 개별공시지가(원/㎡)를 입력하세요.";
+      const gradeValid = (raw: string) => {
+        const n = Number((raw || "").replace(/,/g, ""));
+        return Number.isFinite(n) && n > 0;
+      };
+      if (!gradeValid(form.pre1990Grade_current)) return "1990.8.30. 현재 토지등급을 입력하세요.";
+      if (!gradeValid(form.pre1990Grade_prev)) return "1990.8.30. 직전 토지등급을 입력하세요.";
+      if (!gradeValid(form.pre1990Grade_atAcq)) return "취득시 유효 토지등급을 입력하세요.";
+    } else if (form.useEstimatedAcquisition) {
       if (!form.standardPriceAtAcquisition || parseAmount(form.standardPriceAtAcquisition) <= 0)
         return "취득 당시 기준시가를 입력하세요.";
       if (!form.standardPriceAtTransfer || parseAmount(form.standardPriceAtTransfer) <= 0)

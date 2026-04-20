@@ -117,6 +117,11 @@ export function TransferTaxResultView({ result, onReset, onBack, onLoginPrompt =
             }
           />
           <Row
+            label="양도소득금액"
+            value={formatKRW(result.taxableGain - result.longTermHoldingDeduction)}
+            sub
+          />
+          <Row
             label="기본공제"
             value={result.basicDeduction > 0 ? `- ${formatKRW(result.basicDeduction)}` : "0원"}
           />
@@ -211,6 +216,46 @@ export function TransferTaxResultView({ result, onReset, onBack, onLoginPrompt =
         <div>
           <p className="text-sm font-medium mb-2">비사업용토지 판정 결과</p>
           <NonBusinessLandResultCard judgment={result.nonBusinessLandJudgmentDetail} />
+        </div>
+      )}
+
+      {/* 1990.8.30. 이전 취득 토지 기준시가 환산 상세 */}
+      {result.pre1990LandValuationDetail && (
+        <div className="rounded-lg border border-amber-500/50 bg-amber-50/40 dark:bg-amber-950/20 p-4 space-y-2">
+          <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+            1990.8.30. 이전 취득 토지 기준시가 환산
+          </p>
+          <p className="text-xs text-muted-foreground">{result.pre1990LandValuationDetail.caseLabel}</p>
+          <div className="text-xs space-y-1 mt-2">
+            <div>
+              <span className="text-muted-foreground">공식: </span>
+              <code className="text-[11px]">{result.pre1990LandValuationDetail.breakdown.formula}</code>
+            </div>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-1 pt-2">
+              <span className="text-muted-foreground">취득시 등급가액</span>
+              <span className="font-mono text-right">{result.pre1990LandValuationDetail.breakdown.gradeValueAtAcquisition.toLocaleString()}</span>
+              <span className="text-muted-foreground">90.8.30. 현재 등급가액</span>
+              <span className="font-mono text-right">{result.pre1990LandValuationDetail.breakdown.gradeValue_1990_0830.toLocaleString()}</span>
+              <span className="text-muted-foreground">90.8.30. 직전 등급가액</span>
+              <span className="font-mono text-right">{result.pre1990LandValuationDetail.breakdown.gradeValuePrev_1990_0830.toLocaleString()}</span>
+              <span className="text-muted-foreground">분모 (min(평균, 현재))</span>
+              <span className="font-mono text-right">{result.pre1990LandValuationDetail.breakdown.appliedDenominator.toLocaleString()}</span>
+              <span className="text-muted-foreground">적용 비율</span>
+              <span className="font-mono text-right">{(result.pre1990LandValuationDetail.breakdown.appliedRatio * 100).toFixed(2)}%</span>
+              <span className="text-muted-foreground">㎡당 가액</span>
+              <span className="font-mono text-right">{result.pre1990LandValuationDetail.pricePerSqmAtAcquisition.toLocaleString()}원</span>
+              <span className="text-muted-foreground font-medium">취득시 기준시가</span>
+              <span className="font-mono text-right font-medium">{result.pre1990LandValuationDetail.standardPriceAtAcquisition.toLocaleString()}원</span>
+              <span className="text-muted-foreground font-medium">양도시 기준시가</span>
+              <span className="font-mono text-right font-medium">{result.pre1990LandValuationDetail.standardPriceAtTransfer.toLocaleString()}원</span>
+            </div>
+            {result.pre1990LandValuationDetail.warnings.length > 0 && (
+              <ul className="mt-2 list-disc pl-5 text-destructive">
+                {result.pre1990LandValuationDetail.warnings.map((w, i) => <li key={i}>{w}</li>)}
+              </ul>
+            )}
+            <p className="text-[10px] text-muted-foreground pt-1">{result.pre1990LandValuationDetail.breakdown.legalBasis}</p>
+          </div>
         </div>
       )}
 

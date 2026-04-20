@@ -189,6 +189,19 @@ export async function POST(request: NextRequest) {
       buildingType: p.buildingType,
       constructionDate: p.constructionDate ? new Date(p.constructionDate) : undefined,
       extensionFloorArea: p.extensionFloorArea,
+      pre1990Land: p.pre1990Land
+        ? {
+            acquisitionDate: new Date(p.pre1990Land.acquisitionDate),
+            transferDate: new Date(p.pre1990Land.transferDate),
+            areaSqm: p.pre1990Land.areaSqm,
+            pricePerSqm_1990: p.pre1990Land.pricePerSqm_1990,
+            pricePerSqm_atTransfer: p.pre1990Land.pricePerSqm_atTransfer,
+            grade_1990_0830: p.pre1990Land.grade_1990_0830,
+            gradePrev_1990_0830: p.pre1990Land.gradePrev_1990_0830,
+            gradeAtAcquisition: p.pre1990Land.gradeAtAcquisition,
+            forceRatioCap: p.pre1990Land.forceRatioCap,
+          }
+        : undefined,
     };
 
     return {

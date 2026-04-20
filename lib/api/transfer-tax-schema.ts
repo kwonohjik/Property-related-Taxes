@@ -117,6 +117,24 @@ const newHousingDetailsSchema = z.object({
   calculatedTax: z.number().int().nonnegative().default(0),
 });
 
+// ─── 1990.8.30. 이전 취득 토지 기준시가 환산 ─────────────────────
+const landGradeInputSchema = z.union([
+  z.number().int().min(1).max(365),
+  z.object({ gradeValue: z.number().positive() }),
+]);
+
+const pre1990LandSchema = z.object({
+  acquisitionDate: z.string().date(),
+  transferDate: z.string().date(),
+  areaSqm: z.number().positive(),
+  pricePerSqm_1990: z.number().positive(),
+  pricePerSqm_atTransfer: z.number().positive(),
+  grade_1990_0830: landGradeInputSchema,
+  gradePrev_1990_0830: landGradeInputSchema,
+  gradeAtAcquisition: landGradeInputSchema,
+  forceRatioCap: z.boolean().optional(),
+});
+
 const houseSchema = z.object({
   id: z.string().min(1),
   region: z.enum(["capital", "non_capital"]),
@@ -307,6 +325,7 @@ const propertyBaseShape = {
   buildingType: z.enum(["new", "extension"]).optional(),
   constructionDate: z.string().date().optional(),
   extensionFloorArea: z.number().nonnegative().optional(),
+  pre1990Land: pre1990LandSchema.optional(),
 };
 
 // ─── 단건 스키마 (기존 inputSchema와 동일) ─────────────────────

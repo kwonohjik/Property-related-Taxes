@@ -93,22 +93,26 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
 
   const isEstimated = form.acquisitionMethod === "estimated" || form.useEstimatedAcquisition;
   const isAppraisal = form.acquisitionMethod === "appraisal";
+  // 1990.8.30. 이전 토지 환산 모드: 엔진이 내부에서 useEstimatedAcquisition/standardPrice를
+  // 자동 주입하므로(lib/tax-engine/transfer-tax.ts) 프론트 body에서는 해당 필드를 비활성화해
+  // Zod superRefine ("환산취득가 사용 시 취득시 기준시가 필수") 충돌을 피한다.
+  const hasPre1990 = form.pre1990Enabled && form.propertyType === "land";
 
   const body = {
     propertyType: form.propertyType,
     transferPrice: parseAmount(form.transferPrice),
     transferDate: form.transferDate,
-    acquisitionPrice: (isEstimated || isAppraisal) ? 0 : parseAmount(form.acquisitionPrice),
+    acquisitionPrice: (hasPre1990 || isEstimated || isAppraisal) ? 0 : parseAmount(form.acquisitionPrice),
     acquisitionDate: form.acquisitionDate,
-    expenses: (isEstimated || isAppraisal) ? 0 : parseAmount(form.expenses),
-    useEstimatedAcquisition: isEstimated,
-    standardPriceAtAcquisition: isEstimated
-      ? parseAmount(form.standardPriceAtAcquisition)
-      : undefined,
-    standardPriceAtTransfer: isEstimated
-      ? parseAmount(form.standardPriceAtTransfer)
-      : undefined,
-    acquisitionMethod: form.acquisitionMethod || "actual",
+    expenses: (hasPre1990 || isEstimated || isAppraisal) ? 0 : parseAmount(form.expenses),
+    useEstimatedAcquisition: hasPre1990 ? false : isEstimated,
+    standardPriceAtAcquisition: hasPre1990
+      ? undefined
+      : (isEstimated ? parseAmount(form.standardPriceAtAcquisition) : undefined),
+    standardPriceAtTransfer: hasPre1990
+      ? undefined
+      : (isEstimated ? parseAmount(form.standardPriceAtTransfer) : undefined),
+    acquisitionMethod: hasPre1990 ? ("actual" as const) : (form.acquisitionMethod || "actual"),
     appraisalValue: isAppraisal ? parseAmount(form.appraisalValue) : undefined,
     isSelfBuilt: form.isSelfBuilt || undefined,
     buildingType: form.buildingType || undefined,
@@ -178,6 +182,37 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
             actualPaymentDate: form.actualPaymentDate || undefined,
           },
         }
+      : {}),
+    // 1990.8.30. 이전 취득 토지 기준시가 환산 (선택)
+    ...(form.pre1990Enabled && form.propertyType === "land"
+      ? (() => {
+          const buildGrade = (raw: string) => {
+            const n = Number(raw.replace(/,/g, ""));
+            if (!Number.isFinite(n) || n <= 0) return undefined;
+            return form.pre1990GradeMode === "number"
+              ? Math.trunc(n)
+              : { gradeValue: n };
+          };
+          const gCur = buildGrade(form.pre1990Grade_current);
+          const gPrev = buildGrade(form.pre1990Grade_prev);
+          const gAcq = buildGrade(form.pre1990Grade_atAcq);
+          const areaSqm = parseFloat(form.pre1990AreaSqm.replace(/,/g, "")) || 0;
+          const p1990 = parseAmount(form.pre1990PricePerSqm_1990);
+          const pTsf = parseAmount(form.pre1990PricePerSqm_atTransfer);
+          if (!gCur || !gPrev || !gAcq || areaSqm <= 0 || p1990 <= 0 || pTsf <= 0) return {};
+          return {
+            pre1990Land: {
+              acquisitionDate: form.acquisitionDate,
+              transferDate: form.transferDate,
+              areaSqm,
+              pricePerSqm_1990: p1990,
+              pricePerSqm_atTransfer: pTsf,
+              grade_1990_0830: gCur,
+              gradePrev_1990_0830: gPrev,
+              gradeAtAcquisition: gAcq,
+            },
+          };
+        })()
       : {}),
   };
 

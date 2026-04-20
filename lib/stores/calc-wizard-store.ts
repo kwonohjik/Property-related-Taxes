@@ -136,6 +136,24 @@ export interface TransferFormData {
   paymentDeadline: string;
   /** 실제 납부일 */
   actualPaymentDate: string;
+
+  // ── 1990.8.30. 이전 취득 토지 기준시가 환산 ──
+  /** 사용 여부 (propertyType === "land" + acquisitionDate < 1990-08-30 시 UI 노출) */
+  pre1990Enabled: boolean;
+  /** 면적 (㎡) */
+  pre1990AreaSqm: string;
+  /** 1990.1.1. 개별공시지가 (원/㎡) */
+  pre1990PricePerSqm_1990: string;
+  /** 양도당시 개별공시지가 (원/㎡) */
+  pre1990PricePerSqm_atTransfer: string;
+  /** 1990.8.30. 현재 토지등급 (숫자 or 직접 입력 문자열 → 파싱) */
+  pre1990Grade_current: string;
+  /** 1990.8.30. 직전 토지등급 */
+  pre1990Grade_prev: string;
+  /** 취득시 유효 토지등급 */
+  pre1990Grade_atAcq: string;
+  /** 등급 입력 모드: "number" = 등급번호 조회, "value" = 등급가액 직접 입력 */
+  pre1990GradeMode: "number" | "value";
 }
 
 const defaultFormData: TransferFormData = {
@@ -203,6 +221,14 @@ const defaultFormData: TransferFormData = {
   unpaidTax: "0",
   paymentDeadline: "",
   actualPaymentDate: "",
+  pre1990Enabled: false,
+  pre1990AreaSqm: "",
+  pre1990PricePerSqm_1990: "",
+  pre1990PricePerSqm_atTransfer: "",
+  pre1990Grade_current: "",
+  pre1990Grade_prev: "",
+  pre1990Grade_atAcq: "",
+  pre1990GradeMode: "number",
 };
 
 interface CalcWizardState {

@@ -67,6 +67,11 @@ import {
   calculateTransferTaxPenalty,
 } from "./transfer-tax-penalty";
 import {
+  type Pre1990LandValuationInput,
+  type Pre1990LandValuationResult,
+  calculatePre1990LandValuation,
+} from "./pre-1990-land-valuation";
+import {
   parseLongTermRentalRuleSet,
   parseNewHousingMatrix,
   type LongTermRentalRuleSet,
@@ -214,6 +219,13 @@ export interface TransferTaxInput {
    * default false → 기존 `Math.max(0, gain)` 동작 유지.
    */
   skipLossFloor?: boolean;
+  /**
+   * 1990.8.30. 이전 취득 토지 기준시가 환산 입력 (선택).
+   * 제공 시 엔진이 calculatePre1990LandValuation()으로 기준시가를 산출하여
+   * useEstimatedAcquisition=true, acquisitionPrice=0, standardPriceAt*를 자동 주입한다.
+   * propertyType === "land" + acquisitionDate < 1990-08-30 일 때만 의미 있음.
+   */
+  pre1990Land?: Pre1990LandValuationInput;
 }
 
 export type TransferReduction =
@@ -312,6 +324,11 @@ export interface TransferTaxResult {
    * filingPenaltyDetails 또는 delayedPaymentDetails 제공 시만 포함
    */
   penaltyDetail?: TransferTaxPenaltyResult;
+  /**
+   * 1990.8.30. 이전 취득 토지 기준시가 환산 상세 결과
+   * pre1990Land 제공 시만 포함. UI에 5유형 분류·분모/비율 capping 내역 표시용.
+   */
+  pre1990LandValuationDetail?: Pre1990LandValuationResult;
 }
 
 // ============================================================
@@ -1060,7 +1077,7 @@ export function calcReductions(
 // ============================================================
 
 export function calculateTransferTax(
-  input: TransferTaxInput,
+  rawInput: TransferTaxInput,
   rates: TaxRatesMap,
 ): TransferTaxResult {
   const steps: CalculationStep[] = [];
@@ -1068,43 +1085,79 @@ export function calculateTransferTax(
   // STEP 0: 세율 파싱
   const parsedRates = parseRatesFromMap(rates);
 
+  // STEP 0.4: 1990.8.30. 이전 취득 토지 기준시가 환산 (pre1990Land 제공 시)
+  // - 환산취득가 자동 활성화 + standardPriceAtAcquisition/Transfer 주입
+  // - acquisitionPrice=0, acquisitionMethod="estimated" 강제
+  // 이후 모든 다운스트림 로직이 이 조정된 입력값을 사용하도록 `input`으로 재바인딩.
+  let pre1990LandResult: Pre1990LandValuationResult | undefined;
+  let input: TransferTaxInput = rawInput;
+  if (rawInput.pre1990Land) {
+    pre1990LandResult = calculatePre1990LandValuation(rawInput.pre1990Land);
+    input = {
+      ...rawInput,
+      acquisitionPrice: 0,
+      useEstimatedAcquisition: true,
+      standardPriceAtAcquisition: pre1990LandResult.standardPriceAtAcquisition,
+      standardPriceAtTransfer: pre1990LandResult.standardPriceAtTransfer,
+      acquisitionMethod: "estimated",
+    };
+    steps.push({
+      label: "1990.8.30. 이전 취득 토지 기준시가 환산",
+      formula: pre1990LandResult.breakdown.formula,
+      amount: pre1990LandResult.standardPriceAtAcquisition,
+      legalBasis: pre1990LandResult.breakdown.legalBasis,
+    });
+    steps.push({
+      label: pre1990LandResult.caseLabel,
+      formula:
+        `취득기준시가 = ${pre1990LandResult.pricePerSqmAtAcquisition.toLocaleString()}원/㎡ × ` +
+        `${rawInput.pre1990Land.areaSqm.toLocaleString()}㎡ = ` +
+        `${pre1990LandResult.standardPriceAtAcquisition.toLocaleString()}원`,
+      amount: pre1990LandResult.standardPriceAtAcquisition,
+      sub: true,
+    });
+  }
+
+  // 이 지점 이후 로컬 input/workingInput은 동일 (pre-1990 적용 완료).
+  const workingInput = input;
+
   // STEP 0.5: 다주택 중과세 판정 (houses[] 제공 + 주택 수 산정 규칙 로드 완료 시)
   let multiHouseSurchargeResult: MultiHouseSurchargeResult | undefined;
-  if (input.houses && input.houses.length > 0 && parsedRates.houseCountExclusionRules) {
+  if (workingInput.houses && workingInput.houses.length > 0 && parsedRates.houseCountExclusionRules) {
     const mhInput: MultiHouseSurchargeInput = {
-      houses: input.houses,
-      sellingHouseId: input.sellingHouseId ?? input.houses[0].id,
-      transferDate: input.transferDate,
-      isOneHousehold: input.isOneHousehold,
-      temporaryTwoHouse: input.multiHouseTemporaryTwoHouse,
-      marriageMerge: input.marriageMerge,
-      parentalCareMerge: input.parentalCareMerge,
-      presaleRights: input.presaleRights ?? [],
+      houses: workingInput.houses,
+      sellingHouseId: workingInput.sellingHouseId ?? workingInput.houses[0].id,
+      transferDate: workingInput.transferDate,
+      isOneHousehold: workingInput.isOneHousehold,
+      temporaryTwoHouse: workingInput.multiHouseTemporaryTwoHouse,
+      marriageMerge: workingInput.marriageMerge,
+      parentalCareMerge: workingInput.parentalCareMerge,
+      presaleRights: workingInput.presaleRights ?? [],
     };
     multiHouseSurchargeResult = determineMultiHouseSurcharge(
       mhInput,
       parsedRates.houseCountExclusionRules,
       parsedRates.regulatedAreaHistory ?? null,
       parsedRates.surchargeSpecialRules,
-      input.isRegulatedArea,
+      workingInput.isRegulatedArea,
     );
   }
 
   // STEP 0.6: 비사업용 토지 정밀 판정 (nonBusinessLandDetails 제공 시)
   let nonBusinessLandJudgment: NonBusinessLandJudgment | undefined;
   // input은 readonly이므로 isNonBusinessLand override를 위한 mutable 복사본 사용
-  let effectiveInput = input;
-  if (input.nonBusinessLandDetails) {
+  let effectiveInput = workingInput;
+  if (workingInput.nonBusinessLandDetails) {
     nonBusinessLandJudgment = judgeNonBusinessLand(
-      input.nonBusinessLandDetails,
+      workingInput.nonBusinessLandDetails,
       parsedRates.nonBusinessLandJudgmentRules,
     );
     // [I5 수정] 판정 결과로 isNonBusinessLand 덮어씀 — 입력 플래그와 다를 때 step 경고 기록
-    if (nonBusinessLandJudgment.isNonBusinessLand !== input.isNonBusinessLand) {
-      effectiveInput = { ...input, isNonBusinessLand: nonBusinessLandJudgment.isNonBusinessLand };
+    if (nonBusinessLandJudgment.isNonBusinessLand !== workingInput.isNonBusinessLand) {
+      effectiveInput = { ...workingInput, isNonBusinessLand: nonBusinessLandJudgment.isNonBusinessLand };
       steps.push({
         label: "비사업용 토지 판정 (엔진 재판정)",
-        formula: `입력 플래그(${input.isNonBusinessLand ? "비사업용" : "사업용"}) → 정밀 판정 결과: ${nonBusinessLandJudgment.isNonBusinessLand ? "비사업용" : "사업용"}`,
+        formula: `입력 플래그(${workingInput.isNonBusinessLand ? "비사업용" : "사업용"}) → 정밀 판정 결과: ${nonBusinessLandJudgment.isNonBusinessLand ? "비사업용" : "사업용"}`,
         amount: 0,
         legalBasis: NBL.MAIN,
       });
@@ -1127,7 +1180,7 @@ export function calculateTransferTax(
       exemptReason: exemptionResult.exemptReason,
       transferGain: 0,
       taxableGain: 0,
-      usedEstimatedAcquisition: input.useEstimatedAcquisition,
+      usedEstimatedAcquisition: effectiveInput.useEstimatedAcquisition,
       longTermHoldingDeduction: 0,
       longTermHoldingRate: 0,
       basicDeduction: 0,
@@ -1142,11 +1195,12 @@ export function calculateTransferTax(
       localIncomeTax: 0,
       totalTax: 0,
       steps,
+      pre1990LandValuationDetail: pre1990LandResult,
     };
   }
 
   // STEP 2: 양도차익 계산
-  const { gain: rawGain, usedEstimated, estimatedBase, estimatedDeduction, expenses: appliedExpenses } = calcTransferGain(input);
+  const { gain: rawGain, usedEstimated, estimatedBase, estimatedDeduction, expenses: appliedExpenses } = calcTransferGain(effectiveInput);
   // STEP 2a: 손실 → 0 (aggregate 엔진에서 skipLossFloor=true 시 음수 허용 — §102② 통산용)
   const transferGain = input.skipLossFloor ? rawGain : Math.max(0, rawGain);
 
@@ -1468,5 +1522,6 @@ export function calculateTransferTax(
     rentalReductionDetail,
     newHousingReductionDetail,
     penaltyDetail,
+    pre1990LandValuationDetail: pre1990LandResult,
   };
 }

@@ -105,6 +105,14 @@ function makeDefaultForm(): TransferFormData {
     unpaidTax: "0",
     paymentDeadline: "",
     actualPaymentDate: "",
+    pre1990Enabled: false,
+    pre1990AreaSqm: "",
+    pre1990PricePerSqm_1990: "",
+    pre1990PricePerSqm_atTransfer: "",
+    pre1990Grade_current: "",
+    pre1990Grade_prev: "",
+    pre1990Grade_atAcq: "",
+    pre1990GradeMode: "number",
   };
 }
 

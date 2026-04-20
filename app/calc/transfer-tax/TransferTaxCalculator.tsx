@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { DateInput } from "@/components/ui/date-input";
 import { AddressSearch, type AddressValue } from "@/components/ui/address-search";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { Pre1990LandValuationInput } from "@/components/calc/inputs/Pre1990LandValuationInput";
 import { StepIndicator } from "@/components/calc/StepIndicator";
 import { TransferTaxResultView } from "@/components/calc/results/TransferTaxResultView";
 import { callTransferTaxAPI } from "@/lib/calc/transfer-tax-api";
@@ -591,13 +592,12 @@ function Step3({ form, onChange }: { form: TransferFormData; onChange: (d: Parti
                   onChange={(v) => onChange({ standardPriceAtTransfer: v, standardPriceAtTransferLabel: v ? form.standardPriceAtTransferLabel : "" })}
                   placeholder="양도 시점 공시가격"
                   required
-                  disabled={!form.standardPriceAtAcquisition || parseAmount(form.standardPriceAtAcquisition) <= 0}
                 />
               </div>
               <button
                 type="button"
                 onClick={() => fetchPriceForYear("transfer", tsfYear)}
-                disabled={tsfLoading || !form.propertyAddressJibun || !form.standardPriceAtAcquisition || parseAmount(form.standardPriceAtAcquisition) <= 0}
+                disabled={tsfLoading || !form.propertyAddressJibun}
                 className={fetchBtnCls}
               >
                 {tsfLoading ? "조회중" : "조회"}
@@ -605,9 +605,6 @@ function Step3({ form, onChange }: { form: TransferFormData; onChange: (d: Parti
             </div>
             {form.standardPriceAtTransferLabel && (
               <p className="text-xs text-muted-foreground">{form.standardPriceAtTransferLabel}</p>
-            )}
-            {(!form.standardPriceAtAcquisition || parseAmount(form.standardPriceAtAcquisition) <= 0) && (
-              <p className="text-xs text-muted-foreground">취득 당시 기준시가를 먼저 입력하세요.</p>
             )}
           </div>
 
@@ -676,6 +673,23 @@ function Step3({ form, onChange }: { form: TransferFormData; onChange: (d: Parti
           placeholder="공인감정기관의 감정가액"
           required
           hint="취득 당시 공인감정기관이 평가한 가액"
+        />
+      )}
+
+      {/* 1990.8.30. 이전 취득 토지 환산 (land + acquisitionDate < 1990-08-30) */}
+      {form.propertyType === "land" && form.acquisitionDate && form.acquisitionDate < "1990-08-30" && (
+        <Pre1990LandValuationInput
+          form={{
+            pre1990Enabled: form.pre1990Enabled,
+            pre1990AreaSqm: form.pre1990AreaSqm,
+            pre1990PricePerSqm_1990: form.pre1990PricePerSqm_1990,
+            pre1990PricePerSqm_atTransfer: form.pre1990PricePerSqm_atTransfer,
+            pre1990Grade_current: form.pre1990Grade_current,
+            pre1990Grade_prev: form.pre1990Grade_prev,
+            pre1990Grade_atAcq: form.pre1990Grade_atAcq,
+            pre1990GradeMode: form.pre1990GradeMode,
+          }}
+          onChange={(patch) => onChange(patch)}
         />
       )}
 

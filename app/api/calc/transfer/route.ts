@@ -181,6 +181,20 @@ export async function POST(request: NextRequest) {
     buildingType: data.buildingType,
     constructionDate: data.constructionDate ? new Date(data.constructionDate) : undefined,
     extensionFloorArea: data.extensionFloorArea,
+    // 1990.8.30. 이전 취득 토지 기준시가 환산 (선택)
+    pre1990Land: data.pre1990Land
+      ? {
+          acquisitionDate: new Date(data.pre1990Land.acquisitionDate),
+          transferDate: new Date(data.pre1990Land.transferDate),
+          areaSqm: data.pre1990Land.areaSqm,
+          pricePerSqm_1990: data.pre1990Land.pricePerSqm_1990,
+          pricePerSqm_atTransfer: data.pre1990Land.pricePerSqm_atTransfer,
+          grade_1990_0830: data.pre1990Land.grade_1990_0830,
+          gradePrev_1990_0830: data.pre1990Land.gradePrev_1990_0830,
+          gradeAtAcquisition: data.pre1990Land.gradeAtAcquisition,
+          forceRatioCap: data.pre1990Land.forceRatioCap,
+        }
+      : undefined,
     // 신고불성실·지연납부 가산세 (선택)
     filingPenaltyDetails: data.filingPenaltyDetails
       ? { ...data.filingPenaltyDetails }
