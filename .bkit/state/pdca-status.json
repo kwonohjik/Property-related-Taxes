@@ -1,6 +1,6 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-04-20T05:39:19.308Z",
+  "lastUpdated": "2026-04-20T07:22:27.942Z",
   "activeFeatures": [
     "claude-code-mastery",
     "calc",
@@ -66,7 +66,8 @@
     "law-research-v2 실전 검증 · 오류 수정",
     "annex-content",
     "_helpers",
-    "multi"
+    "multi",
+    "data"
   ],
   "primaryFeature": "law-research-v2",
   "features": {
@@ -125,9 +126,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-13T21:04:14.863Z",
-        "lastUpdated": "2026-04-20T03:02:18.932Z"
+        "lastUpdated": "2026-04-20T07:06:58.814Z"
       },
-      "lastFile": "/Users/mynote/workspace/Property-related-Taxes/lib/calc/multi-transfer-tax-validate.ts"
+      "lastFile": "/Users/mynote/workspace/Property-related-Taxes/lib/calc/transfer-tax-api.ts"
     },
     "inheritance-tax": {
       "phase": "do",
@@ -203,9 +204,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-13T21:04:43.135Z",
-        "lastUpdated": "2026-04-20T03:52:07.411Z"
+        "lastUpdated": "2026-04-20T06:54:34.856Z"
       },
-      "lastFile": "/Users/mynote/workspace/Property-related-Taxes/lib/tax-engine/transfer-tax-aggregate.ts"
+      "lastFile": "/Users/mynote/workspace/Property-related-Taxes/__tests__/tax-engine/transfer-tax.test.ts"
     },
     "supabase": {
       "phase": "do",
@@ -307,9 +308,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-13T23:20:05.996Z",
-        "lastUpdated": "2026-04-20T03:14:21.363Z"
+        "lastUpdated": "2026-04-20T06:41:50.256Z"
       },
-      "lastFile": "/Users/mynote/workspace/Property-related-Taxes/components/calc/transfer/AggregateSettingsPanel.tsx"
+      "lastFile": "/Users/mynote/workspace/Property-related-Taxes/app/api/calc/transfer/route.ts"
     },
     "stores": {
       "phase": "do",
@@ -320,9 +321,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-13T23:45:07.391Z",
-        "lastUpdated": "2026-04-20T03:01:15.960Z"
+        "lastUpdated": "2026-04-20T06:43:22.226Z"
       },
-      "lastFile": "/Users/mynote/workspace/Property-related-Taxes/lib/stores/multi-transfer-tax-store.ts"
+      "lastFile": "/Users/mynote/workspace/Property-related-Taxes/lib/stores/calc-wizard-store.ts"
     },
     "transfer-tax": {
       "phase": "do",
@@ -333,7 +334,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-13T23:47:18.127Z",
-        "lastUpdated": "2026-04-20T05:38:37.020Z"
+        "lastUpdated": "2026-04-20T06:55:21.879Z"
       },
       "lastFile": "/Users/mynote/workspace/Property-related-Taxes/app/calc/transfer-tax/TransferTaxCalculator.tsx"
     },
@@ -359,7 +360,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-14T02:01:07.431Z",
-        "lastUpdated": "2026-04-14T08:30:52.468Z"
+        "lastUpdated": "2026-04-20T07:22:27.941Z"
       },
       "lastFile": "/Users/mynote/workspace/Property-related-Taxes/app/api/address/search/route.ts"
     },
@@ -398,9 +399,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-14T10:55:34.465Z",
-        "lastUpdated": "2026-04-18T09:23:52.838Z"
+        "lastUpdated": "2026-04-20T06:43:58.812Z"
       },
-      "lastFile": "/Users/mynote/workspace/Property-related-Taxes/components/calc/inputs/CurrencyInput.tsx"
+      "lastFile": "/Users/mynote/workspace/Property-related-Taxes/components/calc/inputs/Pre1990LandValuationInput.tsx"
     },
     "actions": {
       "phase": "do",
@@ -476,7 +477,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-14T21:11:59.142Z",
-        "lastUpdated": "2026-04-20T02:58:08.279Z"
+        "lastUpdated": "2026-04-20T06:41:42.168Z"
       },
       "lastFile": "/Users/mynote/workspace/Property-related-Taxes/lib/api/transfer-tax-schema.ts"
     },
@@ -489,9 +490,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-14T21:13:57.680Z",
-        "lastUpdated": "2026-04-20T05:16:19.780Z"
+        "lastUpdated": "2026-04-20T07:15:16.125Z"
       },
-      "lastFile": "/Users/mynote/workspace/Property-related-Taxes/components/calc/results/MultiTransferTaxResultView.tsx"
+      "lastFile": "/Users/mynote/workspace/Property-related-Taxes/components/calc/results/TransferTaxResultView.tsx"
     },
     "providers": {
       "phase": "do",
@@ -954,9 +955,22 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-20T03:00:29.249Z",
-        "lastUpdated": "2026-04-20T05:39:19.307Z"
+        "lastUpdated": "2026-04-20T06:46:01.505Z"
       },
       "lastFile": "/Users/mynote/workspace/Property-related-Taxes/app/calc/transfer-tax/multi/MultiTransferTaxCalculator.tsx"
+    },
+    "data": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-04-20T06:32:09.150Z",
+        "lastUpdated": "2026-04-20T06:32:09.151Z"
+      },
+      "lastFile": "/Users/mynote/workspace/Property-related-Taxes/lib/tax-engine/data/land-grade-values.ts"
     }
   },
   "pipeline": {
@@ -967,7 +981,7 @@
   "session": {
     "startedAt": "2026-04-13T10:11:34.572Z",
     "onboardingCompleted": false,
-    "lastActivity": "2026-04-20T05:39:19.308Z"
+    "lastActivity": "2026-04-20T07:22:27.942Z"
   },
   "history": [
     {
@@ -10561,6 +10575,204 @@
     {
       "timestamp": "2026-04-20T05:39:19.308Z",
       "feature": "multi",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-20T06:32:09.155Z",
+      "feature": "data",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-20T06:32:38.135Z",
+      "feature": "tax-engine",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-20T06:33:46.442Z",
+      "feature": "tax-engine",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-20T06:35:24.695Z",
+      "feature": "tax-engine",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-20T06:36:16.865Z",
+      "feature": "tax-engine",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-20T06:36:27.560Z",
+      "feature": "tax-engine",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-20T06:36:34.737Z",
+      "feature": "tax-engine",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-20T06:36:49.827Z",
+      "feature": "tax-engine",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-20T06:37:36.066Z",
+      "feature": "tax-engine",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-20T06:37:44.567Z",
+      "feature": "tax-engine",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-20T06:37:49.894Z",
+      "feature": "tax-engine",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-20T06:38:05.880Z",
+      "feature": "tax-engine",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-20T06:38:21.310Z",
+      "feature": "tax-engine",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-20T06:39:36.806Z",
+      "feature": "tax-engine",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-20T06:40:32.909Z",
+      "feature": "tax-engine",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-20T06:41:35.833Z",
+      "feature": "api",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-20T06:41:42.169Z",
+      "feature": "api",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-20T06:41:50.256Z",
+      "feature": "transfer",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-20T06:42:12.326Z",
+      "feature": "multi",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-20T06:43:11.812Z",
+      "feature": "stores",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-20T06:43:22.227Z",
+      "feature": "stores",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-20T06:43:58.813Z",
+      "feature": "inputs",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-20T06:44:14.798Z",
+      "feature": "transfer-tax",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-20T06:44:38.380Z",
+      "feature": "transfer-tax",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-20T06:45:05.011Z",
+      "feature": "calc",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-20T06:45:32.715Z",
+      "feature": "results",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-20T06:46:01.506Z",
+      "feature": "multi",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-20T06:54:34.857Z",
+      "feature": "tax-engine",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-20T06:55:21.880Z",
+      "feature": "transfer-tax",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-20T07:03:49.285Z",
+      "feature": "calc",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-20T07:06:58.815Z",
+      "feature": "calc",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-20T07:15:16.126Z",
+      "feature": "results",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-20T07:22:27.942Z",
+      "feature": "search",
       "phase": "do",
       "action": "updated"
     }
