@@ -9,6 +9,7 @@ import { AddressSearch, type AddressValue } from "@/components/ui/address-search
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { Pre1990LandValuationInput } from "@/components/calc/inputs/Pre1990LandValuationInput";
 import { StepIndicator } from "@/components/calc/StepIndicator";
+import { ResetButton } from "@/components/calc/shared/ResetButton";
 import { TransferTaxResultView } from "@/components/calc/results/TransferTaxResultView";
 import { callTransferTaxAPI } from "@/lib/calc/transfer-tax-api";
 import type { TransferTaxPenaltyResult } from "@/lib/tax-engine/transfer-tax-penalty";
@@ -25,7 +26,15 @@ const isHousingLike = (pt: string) =>
 // ============================================================
 // Step 1: 물건 유형
 // ============================================================
-function Step1({ form, onChange }: { form: TransferFormData; onChange: (d: Partial<TransferFormData>) => void }) {
+function Step1({
+  form,
+  onChange,
+  onReset,
+}: {
+  form: TransferFormData;
+  onChange: (d: Partial<TransferFormData>) => void;
+  onReset: () => void;
+}) {
   const options = [
     { value: "housing",        label: "주택",   icon: "🏠", desc: "아파트, 단독주택, 연립 등" },
     { value: "right_to_move_in", label: "입주권", icon: "🏗️", desc: "재개발·재건축 입주권" },
@@ -36,7 +45,10 @@ function Step1({ form, onChange }: { form: TransferFormData; onChange: (d: Parti
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">양도하는 부동산의 유형을 선택하세요.</p>
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-sm text-muted-foreground">양도하는 부동산의 유형을 선택하세요.</p>
+        <ResetButton onReset={onReset} />
+      </div>
       <div className="grid grid-cols-3 gap-3">
         {options.map((opt) => (
           <button
@@ -1596,6 +1608,7 @@ function Step5({ form, onChange }: { form: TransferFormData; onChange: (d: Parti
     { value: "long_term_rental", label: "장기임대주택 감면", desc: "8년 이상 임대, 임대료 인상 5% 이하" },
     { value: "new_housing", label: "신축주택 감면", desc: "신축주택 취득 특례 (50%~100%)" },
     { value: "unsold_housing", label: "미분양주택 감면", desc: "미분양주택 취득 특례 (100%)" },
+    { value: "public_expropriation", label: "공익사업 수용 감면 (조특법 §77)", desc: "현금 10% / 채권 15%·30%·40% 산출세액 감면 (1년 한도 2억)" },
   ] as const;
 
   return (
@@ -1676,6 +1689,69 @@ function Step5({ form, onChange }: { form: TransferFormData; onChange: (d: Parti
               className="w-20 rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
             <span className="text-sm text-muted-foreground">% 임대료 인상률 (5% 이하여야 감면)</span>
+          </div>
+        </div>
+      )}
+
+      {form.reductionType === "public_expropriation" && (
+        <div className="rounded-lg border border-dashed border-primary/40 bg-primary/3 p-4 space-y-4">
+          <div>
+            <p className="text-xs font-medium text-primary">공익사업 수용·협의매수 (조특법 §77)</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              현금보상은 10%, 채권보상은 15% 감면 (3년 만기특약 30%, 5년 만기특약 40%). 연간 한도 2억원.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium mb-1">현금 보상액</label>
+              <CurrencyInput
+                label=""
+                value={form.expropriationCash}
+                onChange={(v) => onChange({ expropriationCash: v })}
+                placeholder="0"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium mb-1">채권 보상액</label>
+              <CurrencyInput
+                label=""
+                value={form.expropriationBond}
+                onChange={(v) => onChange({ expropriationBond: v })}
+                placeholder="0"
+              />
+            </div>
+          </div>
+          <div>
+            <p className="block text-xs font-medium mb-1">채권 만기보유 특약</p>
+            <div className="flex gap-4 text-sm">
+              {[
+                { value: "none", label: "없음 (15%)" },
+                { value: "3", label: "3년 (30%)" },
+                { value: "5", label: "5년 (40%)" },
+              ].map((opt) => (
+                <label key={opt.value} className="flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="expropriationBondHoldingYears"
+                    value={opt.value}
+                    checked={form.expropriationBondHoldingYears === opt.value}
+                    onChange={() => onChange({ expropriationBondHoldingYears: opt.value as "none" | "3" | "5" })}
+                    className="accent-primary"
+                  />
+                  <span>{opt.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-medium mb-1">사업인정고시일</label>
+            <DateInput
+              value={form.expropriationApprovalDate}
+              onChange={(v) => onChange({ expropriationApprovalDate: v })}
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              부칙 §53 적용 판정용 (2015-12-31 이전 고시 + 2017-12-31 이전 양도 시 종전 감면율).
+            </p>
           </div>
         </div>
       )}
@@ -2108,7 +2184,16 @@ export default function TransferTaxCalculator({
   }
 
   const stepComponentsAll = [
-    <Step1 key={0} form={formData} onChange={updateFormData} />,
+    <Step1
+      key={0}
+      form={formData}
+      onChange={updateFormData}
+      onReset={() => {
+        reset();
+        setError(null);
+        setPenaltyResult(null);
+      }}
+    />,
     <Step2 key={1} form={formData} onChange={updateFormData} />,
     <Step3 key={2} form={formData} onChange={updateFormData} />,
     <Step4 key={3} form={formData} onChange={updateFormData} />,

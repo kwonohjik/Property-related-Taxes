@@ -104,7 +104,11 @@ export async function POST(request: NextRequest) {
           newAcquisitionDate: new Date(data.temporaryTwoHouse.newAcquisitionDate),
         }
       : undefined,
-    reductions: data.reductions,
+    reductions: data.reductions.map((r) =>
+      r.type === "public_expropriation"
+        ? { ...r, businessApprovalDate: new Date(r.businessApprovalDate) }
+        : r,
+    ),
     annualBasicDeductionUsed: data.annualBasicDeductionUsed,
     nonBusinessLandDetails: data.nonBusinessLandDetails
       ? {

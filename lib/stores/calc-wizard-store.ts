@@ -75,12 +75,20 @@ export interface TransferFormData {
   isUnregistered: boolean;
   isNonBusinessLand: boolean;
   // Step 5: 감면 확인
-  reductionType: "" | "self_farming" | "long_term_rental" | "new_housing" | "unsold_housing";
+  reductionType: "" | "self_farming" | "long_term_rental" | "new_housing" | "unsold_housing" | "public_expropriation";
   farmingYears: string;
   rentalYears: string;
   rentIncreaseRate: string;
   /** [I4] 신축/미분양 감면 지역 — 4값으로 확장 (outside_overconcentration: 수도권 과밀억제권역 외) */
   reductionRegion: "metropolitan" | "non_metropolitan" | "outside_overconcentration";
+  /** 공익사업용 수용 감면 (조특법 §77) — 현금 보상액 */
+  expropriationCash: string;
+  /** 공익사업용 수용 감면 (조특법 §77) — 채권 보상액 */
+  expropriationBond: string;
+  /** 채권 만기보유 특약 (null=일반 15%, 3=30%, 5=40%) */
+  expropriationBondHoldingYears: "none" | "3" | "5";
+  /** 사업인정고시일 (YYYY-MM-DD) */
+  expropriationApprovalDate: string;
   annualBasicDeductionUsed: string;
   // Step 4: 일시적 2주택 특례
   temporaryTwoHouseSpecial: boolean;
@@ -191,6 +199,10 @@ const defaultFormData: TransferFormData = {
   rentalYears: "0",
   rentIncreaseRate: "0",
   reductionRegion: "metropolitan",
+  expropriationCash: "",
+  expropriationBond: "",
+  expropriationBondHoldingYears: "none",
+  expropriationApprovalDate: "",
   annualBasicDeductionUsed: "0",
   temporaryTwoHouseSpecial: false,
   previousHouseAcquisitionDate: "",

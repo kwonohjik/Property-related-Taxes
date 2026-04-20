@@ -158,6 +158,14 @@ export const TRANSFER = {
   REDUCTION_UNSOLD_HOUSING:      "조특법 §98의3",
   /** 조특법 §127 ② — 감면 중복배제 (동일 자산 복수 감면 시 납세자 유리 1건 선택) */
   REDUCTION_OVERLAP_EXCLUSION:   "조특법 §127 ②",
+  /** 조특법 §77 — 공익사업용 토지 등에 대한 양도소득세 감면 */
+  REDUCTION_PUBLIC_EXPROPRIATION: "조특법 §77",
+  /** 조특법 부칙 제53조 — 공익사업 수용 감면 종전 감면율 경과조치 */
+  REDUCTION_PUBLIC_EXPROPRIATION_TRANSITIONAL: "조특법 부칙 제53조",
+  /** 조특법 §133 — 감면 종합한도 (공익사업 수용 1년 2억 / 5년 3억) */
+  REDUCTION_ANNUAL_LIMIT:        "조특법 §133",
+  /** 소득세법 시행령 §168의14 ③ 3호 — 공익사업 수용 토지 당연사업용 인정 (2년/5년) */
+  PUBLIC_EXPROPRIATION_NBL_EXCLUSION: "소득세법 시행령 §168의14 ③ 3호",
   /** 소득세법 §114조의2 — 신축·증축 건물 환산취득가액·감정가액 적용 시 가산세 (5%) */
   BUILDING_PENALTY:              "소득세법 §114조의2",
 

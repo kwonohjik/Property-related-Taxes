@@ -55,5 +55,15 @@ export function validateStep(step: number, form: TransferFormData): string | nul
   if (step === 3) {
     if (!form.householdHousingCount) return "세대 보유 주택 수를 선택하세요.";
   }
+  if (step === 4) {
+    if (form.reductionType === "public_expropriation") {
+      const cash = parseAmount(form.expropriationCash || "0");
+      const bond = parseAmount(form.expropriationBond || "0");
+      if (cash + bond <= 0) return "현금 또는 채권 보상액 중 최소 하나를 입력하세요.";
+      if (!form.expropriationApprovalDate) return "사업인정고시일을 선택하세요.";
+      if (form.expropriationApprovalDate >= form.transferDate)
+        return "사업인정고시일은 양도일보다 이전이어야 합니다.";
+    }
+  }
   return null;
 }

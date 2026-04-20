@@ -11,6 +11,7 @@ import { AssetTabBar } from "@/components/calc/transfer/AssetTabBar";
 import { AggregateSettingsPanel } from "@/components/calc/transfer/AggregateSettingsPanel";
 import { MultiTransferTaxResultView } from "@/components/calc/results/MultiTransferTaxResultView";
 import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
+import { ResetButton } from "@/components/calc/shared/ResetButton";
 import { StepIndicator } from "@/components/calc/StepIndicator";
 import {
   useMultiTransferStore,
@@ -75,6 +76,10 @@ function makeDefaultForm(): TransferFormData {
     rentalYears: "0",
     rentIncreaseRate: "5",
     reductionRegion: "metropolitan",
+    expropriationCash: "",
+    expropriationBond: "",
+    expropriationBondHoldingYears: "none",
+    expropriationApprovalDate: "",
     annualBasicDeductionUsed: "0",
     temporaryTwoHouseSpecial: false,
     previousHouseAcquisitionDate: "",
@@ -125,14 +130,18 @@ interface StepListProps {
   onDuplicate: (index: number) => void;
   onRemove: (index: number) => void;
   onNext: () => void;
+  onReset: () => void;
 }
 
-function StepList({ properties, onAdd, onEdit, onDuplicate, onRemove, onNext }: StepListProps) {
+function StepList({ properties, onAdd, onEdit, onDuplicate, onRemove, onNext, onReset }: StepListProps) {
   return (
     <div className="space-y-6">
-      <p className="text-sm text-muted-foreground">
-        동일 과세연도에 양도하는 모든 자산을 추가하세요. 최대 20건까지 입력 가능합니다.
-      </p>
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-sm text-muted-foreground">
+          동일 과세연도에 양도하는 모든 자산을 추가하세요. 최대 20건까지 입력 가능합니다.
+        </p>
+        <ResetButton onReset={onReset} />
+      </div>
 
       {properties.length === 0 ? (
         <div className="flex flex-col items-center gap-4 py-12 border-2 border-dashed border-border rounded-lg">
@@ -304,6 +313,7 @@ export default function MultiTransferTaxCalculator() {
     setStep,
     setResult,
     setIsCalculating,
+    reset: resetMulti,
   } = useMultiTransferStore();
 
   const {
@@ -530,6 +540,11 @@ export default function MultiTransferTaxCalculator() {
               onDuplicate={(i) => duplicateProperty(i)}
               onRemove={(i) => removeProperty(i)}
               onNext={() => setStep("settings")}
+              onReset={() => {
+                resetMulti();
+                resetWizard();
+                setError(null);
+              }}
             />
           </CardContent>
         </Card>

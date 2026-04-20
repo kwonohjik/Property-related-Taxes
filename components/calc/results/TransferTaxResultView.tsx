@@ -136,6 +136,69 @@ export function TransferTaxResultView({ result, onReset, onBack, onLoginPrompt =
               value={`- ${formatKRW(result.reductionAmount)}`}
             />
           )}
+          {result.publicExpropriationDetail?.isEligible && (() => {
+            const d = result.publicExpropriationDetail;
+            const bd = d.breakdown;
+            return (
+              <div className="mx-2 my-2 rounded-md border border-dashed border-primary/30 bg-primary/5 px-3 py-2 text-xs space-y-1.5">
+                <p className="font-medium text-primary">공익사업 수용 감면 상세 (조특법 §77)</p>
+
+                <div className="space-y-0.5">
+                  <p className="text-muted-foreground">① 보상 구성</p>
+                  <p>
+                    현금보상 {formatKRW(bd.cashAmount)} · 채권보상 {formatKRW(bd.bondAmount)}
+                  </p>
+                </div>
+
+                <div className="space-y-0.5">
+                  <p className="text-muted-foreground">② 양도소득금액 안분 (보상액 비율)</p>
+                  <p>
+                    현금분 소득 {formatKRW(bd.cashIncome)} · 채권분 소득 {formatKRW(bd.bondIncome)}
+                  </p>
+                </div>
+
+                {(bd.basicDeductionOnCash > 0 || bd.basicDeductionOnBond > 0) && (
+                  <div className="space-y-0.5">
+                    <p className="text-muted-foreground">③ 기본공제 배정 (§103② — 감면율 낮은 자산 우선)</p>
+                    <p>
+                      {bd.basicDeductionOnCash > 0 && <>현금분 −{formatKRW(bd.basicDeductionOnCash)}</>}
+                      {bd.basicDeductionOnCash > 0 && bd.basicDeductionOnBond > 0 && " · "}
+                      {bd.basicDeductionOnBond > 0 && <>채권분 −{formatKRW(bd.basicDeductionOnBond)}</>}
+                    </p>
+                  </div>
+                )}
+
+                <div className="space-y-0.5">
+                  <p className="text-muted-foreground">④ 자산별 감면금액</p>
+                  <p>
+                    현금 {formatKRW(bd.cashReduction)} ({(bd.cashRate * 100).toFixed(0)}%)
+                    {" · "}
+                    채권 {formatKRW(bd.bondReduction)} ({(bd.bondRate * 100).toFixed(0)}%)
+                  </p>
+                  <p>감면대상소득금액 = {formatKRW(bd.reducibleIncome)}</p>
+                </div>
+
+                <div className="space-y-0.5 border-t border-primary/20 pt-1.5">
+                  <p className="text-muted-foreground">⑤ 감면세액 = 산출세액 × 감면대상소득금액 / 과세표준</p>
+                  <p className="font-medium">
+                    {formatKRW(result.calculatedTax)} × {formatKRW(bd.reducibleIncome)} / {formatKRW(result.taxBase)}
+                    {" = "}{formatKRW(d.rawReductionAmount)}
+                  </p>
+                </div>
+
+                {d.cappedByAnnualLimit && (
+                  <p className="text-red-600">
+                    ※ 연간 한도 {formatKRW(d.appliedAnnualLimit)} 초과 → capping
+                  </p>
+                )}
+                {d.useLegacyRates && (
+                  <p className="text-amber-700">
+                    ※ 조특법 부칙 §53 종전 감면율 적용 (2015-12-31 이전 고시 + 2017-12-31 이전 양도)
+                  </p>
+                )}
+              </div>
+            );
+          })()}
           <Row
             label="결정세액"
             value={formatKRW(result.determinedTax)}

@@ -162,7 +162,12 @@ export const useMultiTransferStore = create<MultiTransferState>()(
       setResult: (result) => set({ result }),
       setIsCalculating: (v) => set({ isCalculating: v }),
 
-      reset: () => set({ form: defaultFormData, result: null, isCalculating: false }),
+      reset: () => {
+        if (typeof window !== "undefined") {
+          sessionStorage.removeItem("multi-transfer-tax-wizard");
+        }
+        set({ form: defaultFormData, result: null, isCalculating: false });
+      },
     }),
     {
       name: "multi-transfer-tax-wizard",

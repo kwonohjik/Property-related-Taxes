@@ -165,6 +165,16 @@ const reductionSchema = z.discriminatedUnion("type", [
     type: z.literal("unsold_housing"),
     region: z.enum(["metropolitan", "non_metropolitan"]),
   }),
+  z.object({
+    type: z.literal("public_expropriation"),
+    cashCompensation: z.number().int().nonnegative(),
+    bondCompensation: z.number().int().nonnegative(),
+    bondHoldingYears: z.union([z.literal(3), z.literal(5), z.null()]).optional(),
+    businessApprovalDate: z.string().date(),
+  }).refine(
+    (v) => v.cashCompensation + v.bondCompensation > 0,
+    { message: "현금 또는 채권 보상액 중 최소 하나는 0보다 커야 합니다" },
+  ),
 ]);
 
 const filingPenaltyDetailsSchema = z.object({

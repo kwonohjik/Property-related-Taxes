@@ -15,6 +15,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { StepIndicator } from "@/components/calc/StepIndicator";
+import { ResetButton } from "@/components/calc/shared/ResetButton";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { AddressSearch, type AddressValue } from "@/components/ui/address-search";
 import { PropertyTaxResultView } from "@/components/calc/results/PropertyTaxResultView";
@@ -389,7 +390,17 @@ export function PropertyTaxForm() {
       {/* ─── Step 0: 기본 정보 ─── */}
       {step === 0 && (
         <div className="space-y-5">
-          <h2 className="text-lg font-semibold">기본 정보</h2>
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-lg font-semibold">기본 정보</h2>
+            <ResetButton
+              onReset={() => {
+                setForm(INITIAL_FORM);
+                setStep(0);
+                setResult(null);
+                setError(null);
+              }}
+            />
+          </div>
 
           {/* 물건 유형 */}
           <div className="space-y-2">

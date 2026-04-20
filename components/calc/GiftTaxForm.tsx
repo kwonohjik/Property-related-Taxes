@@ -11,6 +11,7 @@
 
 import { useState } from "react";
 import { StepIndicator } from "@/components/calc/StepIndicator";
+import { ResetButton } from "@/components/calc/shared/ResetButton";
 import { PropertyValuationForm } from "@/components/calc/PropertyValuationForm";
 import { StockValuationForm } from "@/components/calc/StockValuationForm";
 import { ExemptionChecklist } from "@/components/calc/exemption/ExemptionChecklist";
@@ -108,15 +109,20 @@ function validateStep(step: number, form: FormState): string | null {
 function Step0({
   form,
   set,
+  onReset,
 }: {
   form: FormState;
   set: (p: Partial<FormState>) => void;
+  onReset: () => void;
 }) {
   return (
     <div className="space-y-5">
-      <p className="text-sm text-muted-foreground">
-        증여의 기본 정보를 입력하세요.
-      </p>
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-sm text-muted-foreground">
+          증여의 기본 정보를 입력하세요.
+        </p>
+        <ResetButton onReset={onReset} />
+      </div>
 
       <div className="space-y-1.5">
         <label className="block text-sm font-medium">
@@ -485,7 +491,18 @@ export function GiftTaxForm() {
       <StepIndicator steps={STEPS} current={step} />
 
       <div className="min-h-[300px]">
-        {step === 0 && <Step0 form={form} set={set} />}
+        {step === 0 && (
+          <Step0
+            form={form}
+            set={set}
+            onReset={() => {
+              setForm(INITIAL_FORM);
+              setStep(0);
+              setResult(null);
+              setError(null);
+            }}
+          />
+        )}
         {step === 1 && <Step1 form={form} set={set} />}
         {step === 2 && <Step2 form={form} set={set} />}
         {step === 3 && <Step3 form={form} set={set} />}

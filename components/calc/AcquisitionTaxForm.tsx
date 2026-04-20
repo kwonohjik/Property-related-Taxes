@@ -15,6 +15,7 @@ import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInp
 import { DateInput } from "@/components/ui/date-input";
 import { AddressSearch, type AddressValue } from "@/components/ui/address-search";
 import { AcquisitionTaxResultView } from "@/components/calc/results/AcquisitionTaxResultView";
+import { ResetButton } from "@/components/calc/shared/ResetButton";
 import { useStandardPriceLookup, getDefaultPriceYear } from "@/lib/hooks/useStandardPriceLookup";
 import type { AcquisitionTaxResult } from "@/lib/tax-engine/types/acquisition.types";
 
@@ -268,6 +269,16 @@ export function AcquisitionTaxForm() {
       {/* ── Step 0: 취득 정보 ── */}
       {step === 0 && (
         <div className="space-y-4">
+          <div className="flex justify-end">
+            <ResetButton
+              onReset={() => {
+                setForm(INITIAL_FORM);
+                setStep(0);
+                setResult(null);
+                setError(null);
+              }}
+            />
+          </div>
           <div>
             <label className={labelCls}>취득자 유형</label>
             <select

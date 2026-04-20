@@ -754,8 +754,8 @@ describe("T-17: 누진세율 45% 구간 (과세표준 > 10억)", () => {
 // T-18: 지방소득세 = 결정세액 × 10%
 // ============================================================
 
-describe("T-18: 지방소득세 = 결정세액 × 10% (천원 미만 절사)", () => {
-  it("localIncomeTax = truncateToThousand(determinedTax × 0.10) (지방세법 §103-27)", () => {
+describe("T-18: 지방소득세 = 결정세액 × 10% (원 미만 절사)", () => {
+  it("localIncomeTax = floor(determinedTax × 0.10) (지방세법 §103의3)", () => {
     const input = baseInput({
       transferPrice: 400_000_000,
       acquisitionPrice: 300_000_000,
@@ -765,8 +765,8 @@ describe("T-18: 지방소득세 = 결정세액 × 10% (천원 미만 절사)", (
       householdHousingCount: 1,
     });
     const result = calculateTransferTax(input, mockRates);
-    // [I1] 지방세법 §103-27: 천원 미만 절사
-    const expectedLocalTax = Math.floor(Math.floor(result.determinedTax * 0.1) / 1000) * 1000;
+    // 지방세법 §103의3: 원 미만 절사 (천원 절사 규정 없음)
+    const expectedLocalTax = Math.floor(result.determinedTax * 0.1);
     expect(result.localIncomeTax).toBe(expectedLocalTax);
   });
 });
@@ -2412,7 +2412,7 @@ describe("T-17: §114조의2 신축·증축 가산세", () => {
     });
     const result = calculateTransferTax(input, mockRates);
     const base = result.determinedTax + result.penaltyTax;
-    const expectedLocalTax = Math.floor(Math.floor(base * 0.1) / 1000) * 1000;
+    const expectedLocalTax = Math.floor(base * 0.1);
     expect(result.localIncomeTax).toBe(expectedLocalTax);
   });
 });
@@ -2594,14 +2594,163 @@ describe("T-PRE1990: 1988.12.3. 취득 농지 PDF 사례 통합", () => {
     });
     const result = calculateTransferTax(input, mockRates);
 
-    // 지방소득세 = (결정세액 + 가산세) × 10%, 천원 미만 절사
+    // 지방소득세 = (결정세액 + 가산세) × 10%, 원 미만 절사 (지방세법 §103의3)
     const base = result.determinedTax + result.penaltyTax;
-    const expectedLocalTax = Math.floor(Math.floor(base * 0.1) / 1000) * 1000;
+    const expectedLocalTax = Math.floor(base * 0.1);
     expect(result.localIncomeTax).toBe(expectedLocalTax);
 
     // PDF 40% 세율 구간 = 지방소득세 4% (1/10) — 과세표준에 대한 지방세율도 동반
     // 본 mockRates는 직접 과세표준 기반 지방세율 계산은 하지 않고, 결정세액 × 10% 사용
     // 따라서 PDF의 지방소득세 산식(과세표준 × 4% - 누진공제 2,594,000)과 결과값이 일치
     // (40% 구간 누진공제 25,940,000 ÷ 10 = 2,594,000 ≡ 결정세액의 10%)
+  });
+});
+
+// ============================================================
+// §77 공익사업 수용 감면 통합 시나리오
+// PDF 이미지 사례: 부재지주 서울거주 · 2002-05-24 매입 임야 · 2023-02-16 수용
+// 현금 168,287,470 + 채권 392,000,000 = 560,287,470 / 취득 138,000,000 / 경비 6,800,000
+// 사업인정고시 2017-04-23 → §168의14③3호 당연사업용 (2년 전 취득 충족)
+// ============================================================
+
+describe("T-IMG-1: 공익사업 수용 감면 — 부재지주 임야 쌍방실가 (이미지 사례)", () => {
+  const imgInput: TransferTaxInput = {
+    propertyType: "land",
+    transferPrice: 560_287_470,
+    transferDate: new Date("2023-02-16"),
+    acquisitionPrice: 138_000_000,
+    acquisitionDate: new Date("2002-05-24"),
+    expenses: 6_800_000,
+    useEstimatedAcquisition: false,
+    householdHousingCount: 0,
+    residencePeriodMonths: 0,
+    isRegulatedArea: false,
+    wasRegulatedAtAcquisition: false,
+    isUnregistered: false,
+    isNonBusinessLand: false,
+    isOneHousehold: false,
+    reductions: [
+      {
+        type: "public_expropriation",
+        cashCompensation: 168_287_470,
+        bondCompensation: 392_000_000,
+        bondHoldingYears: null,
+        businessApprovalDate: new Date("2017-04-23"),
+      },
+    ],
+    annualBasicDeductionUsed: 0,
+  };
+
+  it("양도차익 = 양도가 − 취득가 − 경비 = 415,487,470", () => {
+    const result = calculateTransferTax(imgInput, mockRates);
+    expect(result.transferGain).toBe(415_487_470);
+  });
+
+  it("장특공제율 30% 한도 (일반 토지 20년 보유)", () => {
+    const result = calculateTransferTax(imgInput, mockRates);
+    expect(result.longTermHoldingRate).toBe(0.30);
+    expect(result.longTermHoldingDeduction).toBe(124_646_241);
+  });
+
+  it("§77 감면 — 소득 안분·§103② 기본공제 배정 · capping 없음", () => {
+    const result = calculateTransferTax(imgInput, mockRates);
+    expect(result.publicExpropriationDetail).toBeDefined();
+    expect(result.publicExpropriationDetail!.isEligible).toBe(true);
+    expect(result.publicExpropriationDetail!.useLegacyRates).toBe(false);
+    expect(result.publicExpropriationDetail!.cappedByAnnualLimit).toBe(false);
+    const bd = result.publicExpropriationDetail!.breakdown;
+    expect(bd.cashRate).toBe(0.10);
+    expect(bd.bondRate).toBe(0.15);
+    // 양도소득금액 290,841,229 안분
+    expect(bd.cashIncome).toBe(87_356_825);
+    expect(bd.bondIncome).toBe(203_484_404);
+    // §103② — 감면율 낮은 현금에 기본공제 전액 배정
+    expect(bd.basicDeductionOnCash).toBe(2_500_000);
+    expect(bd.basicDeductionOnBond).toBe(0);
+    // 자산별 감면금액
+    expect(bd.cashReduction).toBe(8_485_682);
+    expect(bd.bondReduction).toBe(30_522_660);
+    expect(bd.reducibleIncome).toBe(39_008_342);
+  });
+
+  it("감면 적용 후 결정세액 = 산출세액 − §77 감면세액", () => {
+    const result = calculateTransferTax(imgInput, mockRates);
+    expect(result.reductionAmount).toBeGreaterThan(0);
+    expect(result.reductionAmount).toBe(result.publicExpropriationDetail!.reductionAmount);
+    expect(result.determinedTax).toBe(result.calculatedTax - result.reductionAmount);
+  });
+
+  it("최종 수치 스냅샷 (회귀 앵커) — 이미지 정답 일치", () => {
+    const r = calculateTransferTax(imgInput, mockRates);
+    expect(r.transferGain).toBe(415_487_470);
+    expect(r.longTermHoldingDeduction).toBe(124_646_241);
+    expect(r.taxBase).toBe(288_341_229);
+    expect(r.calculatedTax).toBe(89_629_667);
+    // §77 감면세액 = 산출세액 × 감면대상소득금액 / 과세표준 (이미지 산식)
+    //           = 89,629,667 × 39,008,342 / 288,341,229 = 12,125,580
+    expect(r.reductionAmount).toBe(12_125_580);
+    // 결정세액 = 89,629,667 − 12,125,580 = 77,504,087
+    expect(r.determinedTax).toBe(77_504_087);
+    // 지방소득세 = floor(77,504,087 × 10%) = 7,750,408 (지방세법 §103의3 원 미만 절사)
+    expect(r.localIncomeTax).toBe(7_750_408);
+    // 총부담세액 = 77,504,087 + 7,750,408 = 85,254,495
+    expect(r.totalTax).toBe(85_254_495);
+  });
+});
+
+describe("T-IMG-2: 부칙 §53 경계 판정", () => {
+  function legacyInput(approval: Date, transfer: Date): TransferTaxInput {
+    return {
+      propertyType: "land",
+      transferPrice: 500_000_000,
+      transferDate: transfer,
+      acquisitionPrice: 100_000_000,
+      acquisitionDate: new Date("2000-01-01"),
+      expenses: 0,
+      useEstimatedAcquisition: false,
+      householdHousingCount: 0,
+      residencePeriodMonths: 0,
+      isRegulatedArea: false,
+      wasRegulatedAtAcquisition: false,
+      isUnregistered: false,
+      isNonBusinessLand: false,
+      isOneHousehold: false,
+      reductions: [
+        {
+          type: "public_expropriation",
+          cashCompensation: 500_000_000,
+          bondCompensation: 0,
+          bondHoldingYears: null,
+          businessApprovalDate: approval,
+        },
+      ],
+      annualBasicDeductionUsed: 0,
+    };
+  }
+
+  it("고시 2015-06-30 + 양도 2017-06-30 → LEGACY (현금 20%)", () => {
+    const result = calculateTransferTax(
+      legacyInput(new Date("2015-06-30"), new Date("2017-06-30")),
+      mockRates,
+    );
+    expect(result.publicExpropriationDetail!.useLegacyRates).toBe(true);
+    expect(result.publicExpropriationDetail!.breakdown.cashRate).toBe(0.20);
+  });
+
+  it("고시 2015-06-30 + 양도 2018-01-01 → CURRENT (양도 경계 초과)", () => {
+    const result = calculateTransferTax(
+      legacyInput(new Date("2015-06-30"), new Date("2018-01-01")),
+      mockRates,
+    );
+    expect(result.publicExpropriationDetail!.useLegacyRates).toBe(false);
+    expect(result.publicExpropriationDetail!.breakdown.cashRate).toBe(0.10);
+  });
+
+  it("고시 2016-01-01 + 양도 2017-06-30 → CURRENT (고시 경계 초과)", () => {
+    const result = calculateTransferTax(
+      legacyInput(new Date("2016-01-01"), new Date("2017-06-30")),
+      mockRates,
+    );
+    expect(result.publicExpropriationDetail!.useLegacyRates).toBe(false);
   });
 });

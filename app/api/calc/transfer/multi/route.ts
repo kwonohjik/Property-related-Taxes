@@ -122,7 +122,11 @@ export async function POST(request: NextRequest) {
             newAcquisitionDate: new Date(p.temporaryTwoHouse.newAcquisitionDate),
           }
         : undefined,
-      reductions: p.reductions,
+      reductions: p.reductions.map((r) =>
+        r.type === "public_expropriation"
+          ? { ...r, businessApprovalDate: new Date(r.businessApprovalDate) }
+          : r,
+      ),
       nonBusinessLandDetails: p.nonBusinessLandDetails
         ? {
             ...p.nonBusinessLandDetails,

@@ -892,20 +892,18 @@ export function checkUnconditionalExemption(
     }
   }
 
-  // ④ 공익사업 협의매수·수용
-  // 고시일 이전 취득 또는 고시일 5년(사업자지정)·2년(일반) 전 취득
+  // ④ 공익사업 협의매수·수용 (소득령 §168의14 ③ 3호)
+  //    · 2021.5.3. 이전 고시: 고시일 기준 2년 전 이전 취득 시 당연사업용
+  //    · 2021.5.4. 이후 고시: 고시일 기준 5년 전 이전 취득 시 당연사업용
   if (u.isPublicExpropriation && u.publicNoticeDate) {
-    const yearsBefore5 = addYears(u.publicNoticeDate, -5);
-    const yearsBefore2 = addYears(u.publicNoticeDate, -2);
-    if (
-      input.acquisitionDate <= u.publicNoticeDate ||
-      input.acquisitionDate <= yearsBefore5 ||
-      input.acquisitionDate <= yearsBefore2
-    ) {
+    const PUBLIC_NOTICE_CUTOFF = new Date("2021-05-03T23:59:59");
+    const yearsBefore = u.publicNoticeDate <= PUBLIC_NOTICE_CUTOFF ? 2 : 5;
+    const boundary = addYears(u.publicNoticeDate, -yearsBefore);
+    if (input.acquisitionDate <= boundary) {
       return {
         isExempt: true,
         reason: "public_expropriation",
-        detail: `공익사업 협의매수·수용 (고시일 ${u.publicNoticeDate.toISOString().slice(0, 10)} 기준)`,
+        detail: `공익사업 협의매수·수용 (고시일 ${u.publicNoticeDate.toISOString().slice(0, 10)} / 고시일 ${yearsBefore}년 전 이전 취득)`,
       };
     }
   }

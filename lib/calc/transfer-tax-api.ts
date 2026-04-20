@@ -33,6 +33,22 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
         ? "metropolitan"
         : (form.reductionRegion as "metropolitan" | "non_metropolitan");
     reductions.push({ type: "unsold_housing", region: simpleRegion });
+  } else if (form.reductionType === "public_expropriation") {
+    const cash = parseAmount(form.expropriationCash || "0");
+    const bond = parseAmount(form.expropriationBond || "0");
+    const bondHoldingYears =
+      form.expropriationBondHoldingYears === "3"
+        ? 3
+        : form.expropriationBondHoldingYears === "5"
+          ? 5
+          : null;
+    reductions.push({
+      type: "public_expropriation",
+      cashCompensation: cash,
+      bondCompensation: bond,
+      bondHoldingYears,
+      businessApprovalDate: form.expropriationApprovalDate,
+    });
   }
 
   // P0-A: 비사업용 토지 상세 정보 구성

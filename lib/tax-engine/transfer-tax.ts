@@ -72,6 +72,10 @@ import {
   calculatePre1990LandValuation,
 } from "./pre-1990-land-valuation";
 import {
+  type PublicExpropriationReductionResult,
+  calculatePublicExpropriationReduction,
+} from "./public-expropriation-reduction";
+import {
   parseLongTermRentalRuleSet,
   parseNewHousingMatrix,
   type LongTermRentalRuleSet,
@@ -232,7 +236,14 @@ export type TransferReduction =
   | { type: "self_farming"; farmingYears: number }
   | { type: "long_term_rental"; rentalYears: number; rentIncreaseRate: number }
   | { type: "new_housing"; region: "metropolitan" | "non_metropolitan" }
-  | { type: "unsold_housing"; region: "metropolitan" | "non_metropolitan" };
+  | { type: "unsold_housing"; region: "metropolitan" | "non_metropolitan" }
+  | {
+      type: "public_expropriation";
+      cashCompensation: number;
+      bondCompensation: number;
+      bondHoldingYears?: 3 | 5 | null;
+      businessApprovalDate: Date;
+    };
 
 export interface CalculationStep {
   /** 단계명 (예: '양도차익 계산') */
@@ -319,6 +330,11 @@ export interface TransferTaxResult {
    * UI에서 매칭 조문·감면율·5년 안분 결과 표시용
    */
   newHousingReductionDetail?: NewHousingReductionResult;
+  /**
+   * 공익사업용 토지 수용 감면 상세 결과 (조특법 §77)
+   * reductions에 public_expropriation 유형 포함 시만 세팅
+   */
+  publicExpropriationDetail?: PublicExpropriationReductionResult;
   /**
    * 신고불성실·지연납부 가산세 상세 결과
    * filingPenaltyDetails 또는 delayedPaymentDetails 제공 시만 포함
@@ -993,9 +1009,17 @@ export function calcReductions(
   longTermRentalRules?: LongTermRentalRuleSet,
   newHousingDetails?: NewHousingReductionInput,
   newHousingMatrix?: NewHousingMatrixData,
+  transferDate?: Date,
+  /** 양도소득금액 (양도차익 − 장특공제) — §77 정확 산식용 */
+  transferIncome?: number,
+  /** 실제 적용된 기본공제 — §77 기본공제 배정용 */
+  basicDeduction?: number,
+  /** 과세표준 (taxableGain − longTermDed − basicDeduction) — §77 분모 */
+  taxBase?: number,
 ): ReductionsResult & {
   rentalReductionDetail?: RentalReductionResult;
   newHousingReductionDetail?: NewHousingReductionResult;
+  publicExpropriationDetail?: PublicExpropriationReductionResult;
 } {
   if (reductions.length === 0 && !rentalReductionDetails && !newHousingDetails) {
     return { reductionAmount: 0 };
@@ -1007,6 +1031,7 @@ export function calcReductions(
   const candidates: ReductionCandidate[] = [];
   let rentalReductionDetail: RentalReductionResult | undefined;
   let newHousingReductionDetail: NewHousingReductionResult | undefined;
+  let publicExpropriationDetail: PublicExpropriationReductionResult | undefined;
 
   // R-2-V2: 장기임대 정밀 엔진
   if (rentalReductionDetails) {
@@ -1025,6 +1050,34 @@ export function calcReductions(
     newHousingReductionDetail = newHousingResult;
     if (newHousingResult.isEligible && newHousingResult.reductionAmount > 0) {
       candidates.push({ amount: newHousingResult.reductionAmount, type: "new_housing" });
+    }
+  }
+
+  // R-5: 공익사업용 토지 수용 감면 (조특법 §77)
+  for (const reduction of reductions) {
+    if (reduction.type !== "public_expropriation") continue;
+    if (!transferDate) continue;
+    if (
+      transferIncome === undefined ||
+      basicDeduction === undefined ||
+      taxBase === undefined
+    ) {
+      continue;
+    }
+    const result = calculatePublicExpropriationReduction({
+      cashCompensation: reduction.cashCompensation,
+      bondCompensation: reduction.bondCompensation,
+      bondHoldingYears: reduction.bondHoldingYears ?? null,
+      businessApprovalDate: reduction.businessApprovalDate,
+      transferDate,
+      calculatedTax,
+      transferIncome,
+      basicDeduction,
+      taxBase,
+    });
+    publicExpropriationDetail = result;
+    if (result.isEligible && result.reductionAmount > 0) {
+      candidates.push({ amount: result.reductionAmount, type: "public_expropriation" });
     }
   }
 
@@ -1066,10 +1119,17 @@ export function calcReductions(
     long_term_rental: "장기임대주택",
     new_housing: "신축주택",
     unsold_housing: "미분양주택",
+    public_expropriation: "공익사업용 토지 수용(§77)",
   };
   const reductionTypeDisplay = firstType ? (reductionTypeLabel[firstType] ?? firstType) : undefined;
 
-  return { reductionAmount, reductionType: reductionTypeDisplay, rentalReductionDetail, newHousingReductionDetail };
+  return {
+    reductionAmount,
+    reductionType: reductionTypeDisplay,
+    rentalReductionDetail,
+    newHousingReductionDetail,
+    publicExpropriationDetail,
+  };
 }
 
 // ============================================================
@@ -1243,9 +1303,9 @@ export function calculateTransferTax(
         legalBasis: TRANSFER.BUILDING_PENALTY,
       });
     }
-    const lit0 = pt0 > 0 ? truncateToThousand(applyRate(pt0, 0.1)) : 0;
+    const lit0 = pt0 > 0 ? applyRate(pt0, 0.1) : 0;
     if (pt0 > 0) {
-      steps.push({ label: "지방소득세", formula: `${pt0.toLocaleString()}원 × 10% (천원 미만 절사)`, amount: lit0, legalBasis: TRANSFER.LOCAL_INCOME_TAX });
+      steps.push({ label: "지방소득세", formula: `${pt0.toLocaleString()}원 × 10%`, amount: lit0, legalBasis: TRANSFER.LOCAL_INCOME_TAX });
       steps.push({ label: "총 납부세액", formula: `가산세 ${pt0.toLocaleString()}원 + 지방소득세 ${lit0.toLocaleString()}원`, amount: pt0 + lit0, legalBasis: TRANSFER.BUILDING_PENALTY });
     }
     return {
@@ -1331,6 +1391,15 @@ export function calculateTransferTax(
     legalBasis: TRANSFER.LONG_TERM_DEDUCTION,
   });
 
+  // STEP 4.5: 양도소득금액 = 양도차익 − 장기보유특별공제 (소득세법 §95 ①)
+  const transferIncome = Math.max(0, taxableGain - longTermHoldingDeduction);
+  steps.push({
+    label: "양도소득금액",
+    formula: `양도차익 ${taxableGain.toLocaleString()}원 - 장기보유특별공제 ${longTermHoldingDeduction.toLocaleString()}원`,
+    amount: transferIncome,
+    legalBasis: TRANSFER.LONG_TERM_DEDUCTION,
+  });
+
   // STEP 5: 기본공제 (aggregate 엔진에서 호출 시 skipBasicDeduction=true로 스킵)
   const basicDeduction = input.skipBasicDeduction
     ? 0
@@ -1350,11 +1419,11 @@ export function calculateTransferTax(
     });
   }
 
-  // STEP 6: 과세표준 (소득세법 §92 — 원 단위, 절사 규정 없음)
-  const taxBase = Math.max(0, taxableGain - longTermHoldingDeduction - basicDeduction);
+  // STEP 6: 과세표준 = 양도소득금액 − 기본공제 (소득세법 §92 — 원 단위, 절사 규정 없음)
+  const taxBase = Math.max(0, transferIncome - basicDeduction);
   steps.push({
     label: "과세표준",
-    formula: `${taxableGain.toLocaleString()}원 - ${longTermHoldingDeduction.toLocaleString()}원 - ${basicDeduction.toLocaleString()}원`,
+    formula: `양도소득금액 ${transferIncome.toLocaleString()}원 - 기본공제 ${basicDeduction.toLocaleString()}원`,
     amount: taxBase,
     legalBasis: TRANSFER.TAX_BASE_CALC,
   });
@@ -1370,7 +1439,13 @@ export function calculateTransferTax(
   });
 
   // STEP 8: 감면세액
-  const { reductionAmount, reductionType, rentalReductionDetail, newHousingReductionDetail } = calcReductions(
+  const {
+    reductionAmount,
+    reductionType,
+    rentalReductionDetail,
+    newHousingReductionDetail,
+    publicExpropriationDetail,
+  } = calcReductions(
     taxResult.calculatedTax,
     input.reductions,
     parsedRates.selfFarmingRules,
@@ -1378,13 +1453,21 @@ export function calculateTransferTax(
     parsedRates.longTermRentalRules,
     input.newHousingDetails,
     parsedRates.newHousingMatrix,
+    input.transferDate,
+    // 양도소득금액 = 과세양도차익 − 장기보유특별공제 (§77 감면 소득 안분 기준)
+    Math.max(0, taxableGain - longTermHoldingDeduction),
+    basicDeduction,
+    taxBase,
   );
   // 감면 유형별 법령 조문 매핑
   const reductionLawMap: Record<string, string> = {
-    "자경농지":     TRANSFER.REDUCTION_SELF_FARMING,
-    "장기임대주택": TRANSFER.REDUCTION_LONG_RENTAL,
-    "신축주택":     TRANSFER.REDUCTION_NEW_HOUSING,
-    "미분양주택":   TRANSFER.REDUCTION_UNSOLD_HOUSING,
+    "자경농지":                TRANSFER.REDUCTION_SELF_FARMING,
+    "장기임대주택":            TRANSFER.REDUCTION_LONG_RENTAL,
+    "신축주택":                TRANSFER.REDUCTION_NEW_HOUSING,
+    "미분양주택":              TRANSFER.REDUCTION_UNSOLD_HOUSING,
+    "공익사업용 토지 수용(§77)": publicExpropriationDetail?.useLegacyRates
+      ? `${TRANSFER.REDUCTION_PUBLIC_EXPROPRIATION} + ${TRANSFER.REDUCTION_PUBLIC_EXPROPRIATION_TRANSITIONAL}`
+      : TRANSFER.REDUCTION_PUBLIC_EXPROPRIATION,
   };
   steps.push({
     label: "감면세액",
@@ -1412,11 +1495,11 @@ export function calculateTransferTax(
   // 총결정세액 = 결정세액 + §114조의2 가산세
   const determinedTaxWithPenalty = determinedTax + penaltyTax;
 
-  // STEP 10: 지방소득세 (총결정세액 × 10%, 1,000원 미만 절사)
-  const localIncomeTax = truncateToThousand(applyRate(determinedTaxWithPenalty, 0.1));
+  // STEP 10: 지방소득세 (총결정세액 × 10%, 원 미만 절사 — 지방세법 §103의3)
+  const localIncomeTax = applyRate(determinedTaxWithPenalty, 0.1);
   steps.push({
     label: "지방소득세",
-    formula: `${determinedTaxWithPenalty.toLocaleString()}원 × 10% (천원 미만 절사)`,
+    formula: `${determinedTaxWithPenalty.toLocaleString()}원 × 10%`,
     amount: localIncomeTax,
     legalBasis: TRANSFER.LOCAL_INCOME_TAX,
   });
@@ -1521,6 +1604,7 @@ export function calculateTransferTax(
     nonBusinessLandJudgmentDetail: nonBusinessLandJudgment,
     rentalReductionDetail,
     newHousingReductionDetail,
+    publicExpropriationDetail,
     penaltyDetail,
     pre1990LandValuationDetail: pre1990LandResult,
   };

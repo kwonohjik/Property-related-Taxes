@@ -334,8 +334,8 @@ export function calculateTransferTaxAggregate(
     penaltyTax += penaltyDetail.totalPenalty;
   }
 
-  // M-10: 지방소득세
-  const localIncomeTax = truncateToThousand(applyRate(determinedTaxBeforePenalty + penaltyTax, 0.1));
+  // M-10: 지방소득세 (원 미만 절사 — 지방세법 §103의3)
+  const localIncomeTax = applyRate(determinedTaxBeforePenalty + penaltyTax, 0.1);
   const totalTax = determinedTaxBeforePenalty + penaltyTax + localIncomeTax;
 
   steps.push({

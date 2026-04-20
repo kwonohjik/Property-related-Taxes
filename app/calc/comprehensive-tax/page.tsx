@@ -22,6 +22,7 @@ import { ExclusionInfoInput } from "@/components/calc/ExclusionInfoInput";
 import { ComprehensiveTaxResultView } from "@/components/calc/results/ComprehensiveTaxResultView";
 import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
 import { LoginPromptBanner } from "@/components/calc/shared/LoginPromptBanner";
+import { ResetButton } from "@/components/calc/shared/ResetButton";
 import { useComprehensiveWizardStore } from "@/lib/stores/comprehensive-wizard-store";
 import type { ComprehensiveTaxResult } from "@/lib/tax-engine/types/comprehensive.types";
 
@@ -91,10 +92,13 @@ function NavButtons({
 // ============================================================
 
 function Step1Basic() {
-  const { formData, updateFormData } = useComprehensiveWizardStore();
+  const { formData, updateFormData, reset } = useComprehensiveWizardStore();
 
   return (
     <div className="space-y-6">
+      <div className="flex justify-end">
+        <ResetButton onReset={reset} />
+      </div>
       {/* 과세연도 */}
       <div className="space-y-1.5">
         <label className="block text-sm font-medium">
