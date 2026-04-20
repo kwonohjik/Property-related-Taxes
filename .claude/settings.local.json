@@ -123,7 +123,9 @@
       "Bash(mkdir -p ~/.claude/channels/telegram/approved)",
       "Bash(echo \"5904810188\")",
       "mcp__plugin_telegram_telegram__reply",
-      "Bash(awk 'NR>=1200 && NR<=1500' lib/tax-engine/transfer-tax.ts)"
+      "Bash(awk 'NR>=1200 && NR<=1500' lib/tax-engine/transfer-tax.ts)",
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(echo \"TSC_EXIT=$?\")"
     ]
   },
   "outputStyle": "bkit:bkit-learning"

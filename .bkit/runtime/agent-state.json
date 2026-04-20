@@ -1,14 +1,25 @@
 {
   "version": "1.0",
-  "enabled": false,
+  "enabled": true,
   "teamName": "",
   "feature": "law-research-v2",
   "pdcaPhase": "completed",
   "orchestrationPattern": "leader",
   "ctoAgent": "opus",
-  "startedAt": "2026-04-20T06:56:47.177Z",
-  "lastUpdated": "2026-04-20T07:18:45.227Z",
-  "teammates": [],
+  "startedAt": "2026-04-20T11:35:12.424Z",
+  "lastUpdated": "2026-04-20T11:41:15.612Z",
+  "teammates": [
+    {
+      "name": "a3131ba4baa545415",
+      "role": "Plan",
+      "model": "sonnet",
+      "status": "completed",
+      "currentTask": null,
+      "taskId": null,
+      "startedAt": "2026-04-20T11:35:12.424Z",
+      "lastActivityAt": "2026-04-20T11:41:15.611Z"
+    }
+  ],
   "progress": {
     "totalTasks": 0,
     "completedTasks": 0,
@@ -17,5 +28,5 @@
     "pendingTasks": 0
   },
   "recentMessages": [],
-  "sessionId": "ce586c9f-ae0b-4aa3-9a04-2bd9522cf588"
+  "sessionId": "552c3b3b-459d-4b16-a8ac-93d9b3a12da3"
 }
