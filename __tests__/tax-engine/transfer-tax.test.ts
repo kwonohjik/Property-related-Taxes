@@ -812,30 +812,24 @@ describe("T-20: 3년 미만 보유 → 장기보유공제 0%", () => {
 });
 
 // ============================================================
-// T-21: 과세표준 천원 미만 절사
+// T-21: 과세표준 원 단위 계산 (소득세법 §92 — 절사 규정 없음)
 // ============================================================
 
-describe("T-21: 과세표준 천원 미만 절사 검증", () => {
-  it("taxBase가 천원 미만 버림 처리됨", () => {
-    // 양도차익 - 기본공제 = 소수점 포함 → 천원 절사
-    // 50,001,500 → 50,001,000
+describe("T-21: 과세표준 원 단위 계산 검증", () => {
+  it("taxBase는 절사 없이 양도소득금액 - 기본공제와 정확히 일치함", () => {
     const input = baseInput({
-      transferPrice: 352_501_500, // 양도가
-      acquisitionPrice: 300_000_000, // 취득가
+      transferPrice: 352_501_500,
+      acquisitionPrice: 300_000_000,
       acquisitionDate: new Date("2021-01-01"),
       transferDate: new Date("2024-01-02"),
       isOneHousehold: false,
       householdHousingCount: 1,
       annualBasicDeductionUsed: 0,
-      // 양도차익 = 52,501,500
-      // 기본공제 = 2,500,000
-      // 세전 taxBase = 50,001,500 → 절사 = 50,001,000
     });
     const result = calculateTransferTax(input, mockRates);
-    expect(result.taxBase % 1000).toBe(0);
-    // 명시적 절사 값 확인
     const rawBase = result.taxableGain - result.longTermHoldingDeduction - result.basicDeduction;
-    expect(result.taxBase).toBe(Math.floor(rawBase / 1000) * 1000);
+    // 소득세법 §92: 과세표준 절사 규정 없음 → 원 단위 그대로
+    expect(result.taxBase).toBe(Math.max(0, rawBase));
   });
 });
 

@@ -37,7 +37,57 @@ export const NBL = {
   URBAN_GRACE:    "시행령 §168조의14 ①",
   /** 시행령 §168조의14 ③ — 무조건 사업용 의제 (7가지 사유) */
   UNCONDITIONAL:  "시행령 §168조의14 ③",
+  /** 시행령 §168조의11 ② + 기획재정부령 §83의5 — 수입금액 비율 테스트 (업종별 기준) */
+  REVENUE_TEST:   "시행령 §168조의11 ② + 기획재정부령 §83의5",
 } as const;
+
+/**
+ * 업종별 수입금액 비율 기준 (소득세법 시행령 §168조의11 ② + 기획재정부령 §83의5)
+ *
+ * 연간 수입금액 ÷ 양도당시 토지가액 ≥ 기준비율 이면 사업용으로 인정.
+ * 기준에 미달하면 해당 기간은 비사업용 사용기간으로 간주.
+ */
+export const NBL_REVENUE_THRESHOLDS = {
+  /** 자동차운전학원·자동차정비학원 등 자동차학원: 10% */
+  CAR_DRIVING_SCHOOL: 0.10,
+  /** 체육시설업 (골프장 외): 10% */
+  SPORTS_FACILITY:    0.10,
+  /** 청소년수련시설: 10% */
+  YOUTH_FACILITY:     0.10,
+  /** 관광숙박업·국제회의업: 7% */
+  TOURIST_LODGING:    0.07,
+  /** 전문휴양업·종합휴양업: 7% */
+  RESORT_BUSINESS:    0.07,
+  /** 창고업·운수업·주차장업: 3% */
+  TRANSPORTATION:     0.03,
+  /** 그 밖의 업종 (기본): 3% */
+  DEFAULT:            0.03,
+  /** 적용 대상 아님 (수입금액 테스트 생략) */
+  NONE:               0,
+} as const;
+
+export type NblRevenueBusinessType =
+  | "car_driving_school"
+  | "sports_facility"
+  | "youth_facility"
+  | "tourist_lodging"
+  | "resort_business"
+  | "transportation"
+  | "default"
+  | "none";
+
+export function getNblRevenueThreshold(type: NblRevenueBusinessType): number {
+  switch (type) {
+    case "car_driving_school": return NBL_REVENUE_THRESHOLDS.CAR_DRIVING_SCHOOL;
+    case "sports_facility":    return NBL_REVENUE_THRESHOLDS.SPORTS_FACILITY;
+    case "youth_facility":     return NBL_REVENUE_THRESHOLDS.YOUTH_FACILITY;
+    case "tourist_lodging":    return NBL_REVENUE_THRESHOLDS.TOURIST_LODGING;
+    case "resort_business":    return NBL_REVENUE_THRESHOLDS.RESORT_BUSINESS;
+    case "transportation":     return NBL_REVENUE_THRESHOLDS.TRANSPORTATION;
+    case "default":            return NBL_REVENUE_THRESHOLDS.DEFAULT;
+    case "none":               return NBL_REVENUE_THRESHOLDS.NONE;
+  }
+}
 
 // ============================================================
 // 양도소득세 — 소득세법 §89 ~ §104
@@ -48,6 +98,14 @@ export const TRANSFER = {
   // ── 과세대상·양도차익 ──
   /** 소득세법 §94 ① — 양도소득 과세대상 (양도차익 계산 근거) */
   TRANSFER_GAIN:                 "소득세법 §94 ①",
+
+  // ── 다건 동시 양도 ──
+  /** 소득세법 §92 — 동일 과세기간 양도소득금액 합산 → 통합 과세표준 */
+  TRANSFER_GAIN_AGGREGATION:     "소득세법 §92",
+  /** 소득세법 §102 ② + 시행령 §167의2 — 양도차손 통산 (그룹 내 + 타군 pro-rata 안분) */
+  LOSS_OFFSET:                   "소득세법 §102 ② + 시행령 §167의2",
+  /** 소득세법 §104의2 — 비교과세 (MAX(세율군별 분리세액, 전체 누진세액)) */
+  COMPARATIVE_TAXATION:          "소득세법 §104의2",
   /** 소득세법 §97 — 양도소득 필요경비 (취득가액·자본지출·양도비용) */
   ACQUISITION_COST:              "소득세법 §97",
   /** 소득세법 §97 ① 1호 나목, 시행령 §163 ⑨ — 환산취득가액 (기준시가 비율) */

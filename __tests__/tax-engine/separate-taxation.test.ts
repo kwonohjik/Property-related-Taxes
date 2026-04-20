@@ -220,13 +220,13 @@ describe("P5-13: 세액 정밀도 — 천원 절사·BigInt overflow 없음", ()
     expect(result.calculatedTax).toBe(49_000);
   });
 
-  it("TC-15: 시가표준액 999,999원 (천원 미만) → 천원 절사 후 taxBase = 699,000", () => {
-    // 999,999 × 70% = 699,999.3 → floor = 699,999 → truncateToThousand → 699,000
+  it("TC-15: 시가표준액 999,999원 → 과세표준 699,999 (지방세법 §113 절사 규정 없음)", () => {
+    // 999,999 × 70% = 699,999.3 → applyRate(floor) = 699,999 (원 단위)
     const result = calculateSeparateTax(
       makeInput({ assessedValue: 999_999, isFarmland: true }),
     );
 
-    expect(result.taxBase).toBe(699_000);
+    expect(result.taxBase).toBe(699_999);
   });
 
   it("TC-16: 초대형 시가표준액 (100조원) → BigInt overflow 없이 계산", () => {

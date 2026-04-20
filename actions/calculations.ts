@@ -12,6 +12,7 @@ import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 
 export type TaxType =
   | "transfer"
+  | "transfer_multi"
   | "inheritance"
   | "gift"
   | "acquisition"

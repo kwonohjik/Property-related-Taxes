@@ -160,7 +160,7 @@ function bool(v: unknown): boolean {
 
 // 세금 유형별 총 납부세액 필드 매핑
 function getTotalTax(taxType: string, r: R): number | undefined {
-  if (taxType === "transfer") return num(r.totalTax);
+  if (taxType === "transfer" || taxType === "transfer_multi") return num(r.totalTax);
   if (taxType === "acquisition") return num(r.totalTaxAfterReduction) ?? num(r.totalTax);
   if (taxType === "inheritance" || taxType === "gift") return num(r.finalTax) ?? num(r.totalTax);
   if (taxType === "property") return num(r.totalPayable) ?? num(r.totalTax);
@@ -211,6 +211,86 @@ function TransferSection({ r }: { r: R }) {
           <View style={s.rowLast}><Text style={s.lbl}>지방소득세 (10%)</Text><Text style={s.val}>{fmt(r.localIncomeTax)}</Text></View>
         )}
       </View>
+    </>
+  );
+}
+
+function TransferMultiSection({ r }: { r: R }) {
+  const props = Array.isArray(r.properties) ? (r.properties as R[]) : [];
+  const lossTable = Array.isArray(r.lossOffsetTable) ? (r.lossOffsetTable as R[]) : [];
+  const comparedTax = str(r.comparedTaxApplied) ?? "none";
+
+  return (
+    <>
+      <Text style={s.sectionTitle}>합산 계산 내역</Text>
+      <View style={s.table}>
+        <View style={s.row}><Text style={s.lbl}>총 양도차익</Text><Text style={s.val}>{fmt(r.totalTransferGain)}</Text></View>
+        {num(r.totalLongTermHoldingDeduction) !== undefined && (r.totalLongTermHoldingDeduction as number) > 0 && (
+          <View style={s.row}><Text style={s.lbl}>장기보유특별공제</Text><Text style={s.val}>- {fmt(r.totalLongTermHoldingDeduction)}</Text></View>
+        )}
+        <View style={s.row}><Text style={s.lbl}>통산 후 양도소득금액</Text><Text style={s.val}>{fmt(r.totalIncomeAfterOffset)}</Text></View>
+        {num(r.unusedLoss) !== undefined && (r.unusedLoss as number) > 0 && (
+          <View style={s.row}><Text style={s.lbl}>소멸 차손 (이월 불인정)</Text><Text style={s.val}>- {fmt(r.unusedLoss)}</Text></View>
+        )}
+        <View style={s.row}><Text style={s.lbl}>기본공제 (§103)</Text><Text style={s.val}>- {fmt(r.basicDeduction)}</Text></View>
+        <View style={s.rowBg}><Text style={s.lbl}>과세표준</Text><Text style={s.valAccent}>{fmt(r.taxBase)}</Text></View>
+        {comparedTax !== "none" && (
+          <>
+            <View style={s.row}><Text style={s.lbl}>방법 A — 전체 누진</Text><Text style={s.val}>{fmt(r.calculatedTaxByGeneral)}</Text></View>
+            <View style={s.row}><Text style={s.lbl}>방법 B — 세율군별 (§104의2)</Text><Text style={s.val}>{fmt(r.calculatedTaxByGroups)}</Text></View>
+          </>
+        )}
+        <View style={s.row}><Text style={s.lbl}>산출세액{comparedTax !== "none" ? ` (${comparedTax === "groups" ? "방법 B" : "방법 A"} 적용)` : ""}</Text><Text style={s.val}>{fmt(r.calculatedTax)}</Text></View>
+        {num(r.reductionAmount) !== undefined && (r.reductionAmount as number) > 0 && (
+          <View style={s.row}><Text style={s.lbl}>감면세액 합계</Text><Text style={s.val}>- {fmt(r.reductionAmount)}</Text></View>
+        )}
+        <View style={s.rowBg}><Text style={s.lbl}>결정세액</Text><Text style={s.valAccent}>{fmt(r.determinedTax)}</Text></View>
+        {num(r.penaltyTax) !== undefined && (r.penaltyTax as number) > 0 && (
+          <View style={s.row}><Text style={s.lbl}>가산세</Text><Text style={s.val}>{fmt(r.penaltyTax)}</Text></View>
+        )}
+        <View style={s.rowLast}><Text style={s.lbl}>지방소득세 (10%)</Text><Text style={s.val}>{fmt(r.localIncomeTax)}</Text></View>
+      </View>
+
+      {lossTable.length > 0 && (
+        <>
+          <Text style={s.sectionTitle}>양도차손 통산 내역 (§102②)</Text>
+          <View style={s.table}>
+            {lossTable.map((row, i) => (
+              <View key={i} style={i === lossTable.length - 1 ? s.rowLast : s.row}>
+                <Text style={s.lbl}>
+                  [{str(row.fromPropertyId) ?? ""}] → [{str(row.toPropertyId) ?? ""}]{" "}
+                  ({str(row.scope) === "same_group" ? "동일그룹" : "타군안분"})
+                </Text>
+                <Text style={s.val}>- {fmt(row.amount)}</Text>
+              </View>
+            ))}
+          </View>
+        </>
+      )}
+
+      {props.length > 0 && (
+        <>
+          <Text style={s.sectionTitle}>건별 내역</Text>
+          {props.map((p, idx) => (
+            <View key={idx} style={{ marginBottom: 6 }}>
+              <Text style={{ fontSize: 8, fontWeight: 700, color: C.muted, marginBottom: 3 }}>
+                {str(p.propertyLabel) ?? `자산 ${idx + 1}`}
+                {bool(p.isExempt) ? "  [비과세]" : ""}
+              </Text>
+              {!bool(p.isExempt) && (
+                <View style={s.table}>
+                  <View style={s.row}><Text style={s.lbl}>양도차익</Text><Text style={s.val}>{fmt(p.transferGain)}</Text></View>
+                  {num(p.longTermHoldingDeduction) !== undefined && (p.longTermHoldingDeduction as number) > 0 && (
+                    <View style={s.row}><Text style={s.lbl}>장기보유특별공제</Text><Text style={s.val}>- {fmt(p.longTermHoldingDeduction)}</Text></View>
+                  )}
+                  <View style={s.row}><Text style={s.lbl}>양도소득금액</Text><Text style={s.val}>{fmt(p.income)}</Text></View>
+                  <View style={s.rowBg}><Text style={s.lbl}>과세표준 기여분</Text><Text style={s.valAccent}>{fmt(p.taxBaseShare)}</Text></View>
+                </View>
+              )}
+            </View>
+          ))}
+        </>
+      )}
     </>
   );
 }
@@ -507,6 +587,7 @@ export function ResultPdfDocument({
 
         {/* 세금 유형별 상세 섹션 */}
         {taxType === "transfer" && <TransferSection r={r} />}
+        {taxType === "transfer_multi" && <TransferMultiSection r={r} />}
         {taxType === "acquisition" && <AcquisitionSection r={r} />}
         {(taxType === "inheritance" || taxType === "gift") && <InheritanceGiftSection r={r} taxType={taxType} />}
         {taxType === "property" && <PropertySection r={r} />}

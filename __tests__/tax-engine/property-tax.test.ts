@@ -1,7 +1,7 @@
 /**
  * 재산세 메인 엔진 단위 테스트
  *
- * T01~T05: calcTaxBase — 공정시장가액비율 + 천원 절사
+ * T01~T05: calcTaxBase — 공정시장가액비율 (지방세법 §110, 절사 규정 없음)
  * T06~T10: calcHousingTax — 일반 4구간 + 1세대1주택 특례
  * T11~T12: calcBuildingTax — 일반 / 사치성
  * T13~T15: applyTaxCap — 주택 3구간 + 전년도 미입력
@@ -25,7 +25,7 @@ import { TaxCalculationError } from "../../lib/tax-engine/tax-errors";
 // T01~T05: calcTaxBase
 // ============================================================
 
-describe("calcTaxBase — 공정시장가액비율 + 천원 절사", () => {
+describe("calcTaxBase — 공정시장가액비율 (원 단위)", () => {
   it("T01: 주택 10억 → 과세표준 6억 (60%)", () => {
     const { taxBase, fairMarketRatio } = calcTaxBase(1_000_000_000, "housing");
     expect(fairMarketRatio).toBe(0.60);
@@ -43,10 +43,10 @@ describe("calcTaxBase — 공정시장가액비율 + 천원 절사", () => {
     expect(taxBase).toBe(350_000_000);
   });
 
-  it("T04: 주택 1억 1,500원 → 천원 절사 확인", () => {
-    // 100_001_500 × 0.60 = 60_000_900 → 절사 → 60_000_000
+  it("T04: 주택 1억 1,500원 → 원 단위 그대로 (지방세법 §110 절사 규정 없음)", () => {
+    // 100_001_500 × 0.60 = 60_000_900 (원 단위 유지)
     const { taxBase } = calcTaxBase(100_001_500, "housing");
-    expect(taxBase).toBe(60_000_000);
+    expect(taxBase).toBe(60_000_900);
   });
 
   it("T05: 공시가격 0원 → 과세표준 0원", () => {

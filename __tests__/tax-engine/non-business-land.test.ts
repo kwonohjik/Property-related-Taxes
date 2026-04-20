@@ -379,6 +379,57 @@ describe("NB-10: 건물 부수 토지 배율 초과 → 초과분 비사업용 (
     expect(result.areaProportioning!.nonBusinessArea).toBe(0);
   });
 
+  // ─── 수입금액 비율 테스트 (자동차학원 10% 등) ────────────────────────
+  it("자동차학원 — 수입금액 비율 10% 초과 → 사업용 유지", () => {
+    // 시행령 §168조의11 ② + 기획재정부령 §83의5: 자동차학원 기준 10%
+    // 연간 수입금액 149,000,000 / 토지가액 315,670,500 = 47.2% ≥ 10% → PASS
+    const input: NonBusinessLandInput = {
+      landType: "building_site",
+      landArea: 314.1,
+      zoneType: "commercial",
+      acquisitionDate: new Date("1997-02-03"),
+      transferDate: new Date("2023-02-18"),
+      buildingFootprint: 150, // 150 × 5 = 750 ≥ 314.1 (배율 이내)
+      businessUsePeriods: [],
+      gracePeriods: [],
+      revenueTest: {
+        businessType: "car_driving_school",
+        annualRevenue: 149_000_000,
+        landValue: 315_670_500,
+      },
+    };
+
+    const result = judgeNonBusinessLand(input, DEFAULT_NON_BUSINESS_LAND_RULES);
+    expect(result.isNonBusinessLand).toBe(false);
+    expect(result.appliedLawArticles).toContain("시행령 §168조의11 ② + 기획재정부령 §83의5");
+    const revStep = result.judgmentSteps.find((s) => s.id === "revenue_ratio_test");
+    expect(revStep?.status).toBe("PASS");
+  });
+
+  it("자동차학원 — 수입금액 비율 10% 미달 → 비사업용", () => {
+    // 연간 수입금액 1,000,000 / 토지가액 315,670,500 = 0.32% < 10% → FAIL
+    const input: NonBusinessLandInput = {
+      landType: "building_site",
+      landArea: 314.1,
+      zoneType: "commercial",
+      acquisitionDate: new Date("1997-02-03"),
+      transferDate: new Date("2023-02-18"),
+      buildingFootprint: 150,
+      businessUsePeriods: [],
+      gracePeriods: [],
+      revenueTest: {
+        businessType: "car_driving_school",
+        annualRevenue: 1_000_000,
+        landValue: 315_670_500,
+      },
+    };
+
+    const result = judgeNonBusinessLand(input, DEFAULT_NON_BUSINESS_LAND_RULES);
+    expect(result.isNonBusinessLand).toBe(true);
+    const revStep = result.judgmentSteps.find((s) => s.id === "revenue_ratio_test");
+    expect(revStep?.status).toBe("FAIL");
+  });
+
   it("녹지지역 배율 = 7배 적용", () => {
     // NBL-08: 녹지 7배 (과거 공업 7배에서 녹지 7배로 변경, 공업은 4배로 시정)
     const input: NonBusinessLandInput = {

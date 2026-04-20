@@ -15,6 +15,7 @@ interface HistoryClientProps {
 const FILTER_OPTIONS: { label: string; value: TaxType | "all" }[] = [
   { label: "전체", value: "all" },
   { label: "양도소득세", value: "transfer" },
+  { label: "양도소득세 (다건)", value: "transfer_multi" },
   { label: "취득세", value: "acquisition" },
   { label: "상속세", value: "inheritance" },
   { label: "증여세", value: "gift" },
@@ -48,6 +49,10 @@ function extractSummary(record: CalculationRecord): string | null {
   if (tax_type === "transfer") {
     const price = input_data?.transferPrice;
     if (typeof price === "number" && price > 0) return `양도가액 ${formatKRW(price)}`;
+  }
+  if (tax_type === "transfer_multi") {
+    const props = input_data?.properties;
+    if (Array.isArray(props)) return `${props.length}건 동시 양도`;
   }
   if (tax_type === "acquisition") {
     const price = input_data?.acquisitionPrice;

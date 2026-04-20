@@ -123,11 +123,12 @@ describe("P4-08: 별도합산 누진세율 경계값", () => {
   it("TC-02: 과세표준 1원 → 1구간 0.2% → 세액 0원 (floor)", () => {
     const land = makeLand({
       landArea: 1,
-      officialLandPrice: 2, // 공시지가 합산 2원 × 70% = 1.4 → 천원절사 → 0
+      officialLandPrice: 2, // 공시지가 합산 2원 × 70% = 1 (applyRate floor, 원 단위)
       buildingFloorArea: 10,
     });
     const result = calculateSeparateAggregateTax(makeInput([land]));
-    expect(result.taxBase).toBe(0);
+    // 지방세법 §110 — 과세표준 절사 규정 없음: applyRate(2, 0.7)=1
+    expect(result.taxBase).toBe(1);
     expect(result.grossTax).toBe(0);
   });
 
@@ -135,9 +136,9 @@ describe("P4-08: 별도합산 누진세율 경계값", () => {
     // taxBase = 200,000,000 → 0.2% → floor(200,000,000 × 0.002) = 400,000
     const input = makeInputForTaxBase(200_000_000);
     const result = calculateSeparateAggregateTax(input);
-    // taxBase는 천원절사로 200,000,000에 근접 (오차 최대 999원)
+    // 지방세법 §110 — 과세표준 절사 규정 없음 (원 단위)
     expect(result.taxBase).toBeGreaterThanOrEqual(199_999_000);
-    expect(result.taxBase).toBeLessThanOrEqual(200_000_000);
+    expect(result.taxBase).toBeLessThanOrEqual(200_000_999);
     // 세액: floor(taxBase × 0.002)
     expect(result.grossTax).toBe(Math.floor(result.taxBase * 0.002));
   });
@@ -156,8 +157,9 @@ describe("P4-08: 별도합산 누진세율 경계값", () => {
     // 10억 × 0.3% - 200,000 = 3,000,000 - 200,000 = 2,800,000
     const input = makeInputForTaxBase(1_000_000_000);
     const result = calculateSeparateAggregateTax(input);
+    // 지방세법 §110 — 과세표준 절사 규정 없음 (원 단위)
     expect(result.taxBase).toBeGreaterThanOrEqual(999_999_000);
-    expect(result.taxBase).toBeLessThanOrEqual(1_000_000_000);
+    expect(result.taxBase).toBeLessThanOrEqual(1_000_000_999);
     expect(result.grossTax).toBe(Math.floor(result.taxBase * 0.003) - 200_000);
   });
 

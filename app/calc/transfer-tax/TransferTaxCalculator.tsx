@@ -2085,6 +2085,12 @@ export default function TransferTaxCalculator() {
       <div className="mb-6">
         <p className="text-xs text-muted-foreground mb-1">한국 부동산 세금 계산기</p>
         <h1 className="text-2xl font-bold">양도소득세 계산기</h1>
+        <p className="text-xs text-muted-foreground mt-1">
+          같은 해에 여러 건을 양도하셨나요?{" "}
+          <a href="/calc/transfer-tax/multi" className="text-primary underline hover:no-underline">
+            다건 동시 양도 계산 →
+          </a>
+        </p>
       </div>
 
       {isResult && result ? (

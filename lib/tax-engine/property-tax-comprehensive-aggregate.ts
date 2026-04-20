@@ -373,7 +373,8 @@ export function calculateComprehensiveAggregateTaxBase(
     totalOfficialValue += value;
   }
 
-  const taxBase = truncateToThousand(applyRate(totalOfficialValue, fairMarketValueRatio));
+  // 지방세법 §110 — 과세표준 절사 규정 없음, 원 단위
+  const taxBase = applyRate(totalOfficialValue, fairMarketValueRatio);
 
   return { totalOfficialValue, taxBase };
 }

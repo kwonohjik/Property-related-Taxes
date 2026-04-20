@@ -458,10 +458,9 @@ export function calculateSeparateAggregateTax(
     legalBasis.push(PROPERTY_SEPARATE.SUBJECT + " (초과분 → 종합합산 이관)");
   }
 
-  // ── Step 3: 과세표준 계산 (공정시장가액비율 70% × 천원 절사) ──
+  // ── Step 3: 과세표준 계산 (공정시장가액비율 70%, 지방세법상 절사 규정 없음) ──
   const fairMarketValueRatio = PROPERTY_SEPARATE_CONST.FAIR_MARKET_RATIO;
-  const rawTaxBase = applyRate(totalSeparateOfficialValue, fairMarketValueRatio);
-  const taxBase = truncateToThousand(rawTaxBase);
+  const taxBase = applyRate(totalSeparateOfficialValue, fairMarketValueRatio);
   legalBasis.push(PROPERTY_SEPARATE.FAIR_MARKET_RATIO);
 
   // ── Step 4: 누진세율 적용 ──

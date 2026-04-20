@@ -3,6 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
+import type { AggregateTransferResult } from "@/lib/tax-engine/transfer-tax-aggregate";
+import { MultiTransferTaxResultView } from "@/components/calc/results/MultiTransferTaxResultView";
 import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
 
 function formatKRW(amount: number): string {
@@ -43,7 +45,8 @@ function Row({
 interface ResultDetailClientProps {
   id: string;
   taxType: string;
-  result: TransferTaxResult;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  result: any;
   inputData: Record<string, unknown>;
 }
 
@@ -69,6 +72,40 @@ export function ResultDetailClient({ id, taxType, result, inputData }: ResultDet
     } finally {
       setPdfLoading(false);
     }
+  }
+
+  if (taxType === "transfer_multi") {
+    const multiResult = result as AggregateTransferResult;
+    const taxYear = (inputData?.taxYear as number) ?? new Date().getFullYear();
+    const properties = (inputData?.properties as Array<{ propertyId: string; propertyLabel: string }>) ?? [];
+    const propertyItems = properties.map((p) => ({
+      propertyId: p.propertyId,
+      propertyLabel: p.propertyLabel,
+      form: {} as Parameters<typeof MultiTransferTaxResultView>[0]["properties"][number]["form"],
+      completionPercent: 100,
+    }));
+    return (
+      <div className="space-y-5">
+        <div className="flex justify-end gap-2 print:hidden">
+          <button
+            type="button"
+            onClick={handlePdfDownload}
+            disabled={pdfLoading}
+            className="rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {pdfLoading ? "생성 중..." : "PDF 저장"}
+          </button>
+        </div>
+        <MultiTransferTaxResultView
+          result={multiResult}
+          properties={propertyItems}
+          taxYear={taxYear}
+          isLoggedIn
+          savedId={id}
+        />
+        <DisclaimerBanner />
+      </div>
+    );
   }
 
   if (taxType !== "transfer") {
@@ -192,7 +229,7 @@ export function ResultDetailClient({ id, taxType, result, inputData }: ResultDet
 
           {showSteps && (
             <div className="rounded-lg border border-border divide-y divide-border text-sm">
-              {result.steps.map((step, i) => (
+              {(result.steps as Array<{ label: string; formula?: string; amount: number }>).map((step, i) => (
                 <div key={i} className="px-4 py-3 flex justify-between gap-4">
                   <div>
                     <p className="font-medium">{step.label}</p>

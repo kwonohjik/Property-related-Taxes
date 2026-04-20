@@ -768,8 +768,8 @@ describe("증여세 메인 엔진 — calcGiftTax()", () => {
      * 2,000,000,001원은 20억 초과이므로 40% 적용.
      *
      * 직계비속 20억+1원, 공제 5천만
-     * 과세표준 = truncate(2,000,000,001 - 50,000,000) = 1,950,000,000 (1원 절사)
-     * 산출세액 = 620,000,000 (E19와 동일)
+     * 과세표준 = 2,000,000,001 - 50,000,000 = 1,950,000,001 (상증법 §55 절사 규정 없음)
+     * 산출세액 = floor(1,950,000,001×0.4 - 160,000,000) = 620,000,000
      * 세대생략 40%: floor(620M × 0.4) = 248,000,000
      */
     const input: GiftTaxInput = {
@@ -783,7 +783,7 @@ describe("증여세 메인 엔진 — calcGiftTax()", () => {
       creditInput: { isFiledOnTime: false },
     };
     const result = calcGiftTax(input);
-    expect(result.taxBase).toBe(1_950_000_000);
+    expect(result.taxBase).toBe(1_950_000_001);
     expect(result.computedTax).toBe(620_000_000);
     expect(result.generationSkipSurcharge).toBe(248_000_000); // 40%, 미성년+20억 초과
   });

@@ -9,6 +9,12 @@ const TAX_TYPES = [
     icon: "🏠",
   },
   {
+    slug: "transfer-tax/multi",
+    title: "양도소득세 (다건)",
+    description: "동일 과세연도 여러 자산 동시 양도 — 차손 통산·비교과세 자동 적용",
+    icon: "🏘️",
+  },
+  {
     slug: "inheritance-tax",
     title: "상속세",
     description: "피상속인의 재산을 상속받을 때 부과되는 세금",

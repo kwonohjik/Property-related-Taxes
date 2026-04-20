@@ -159,12 +159,12 @@ describe("classifyLandForComprehensive — 3분류 오케스트레이터", () =>
 });
 
 // ============================================================
-// TC-07b: 비정형 공시지가 천원 절사 검증
+// TC-07b: 비정형 공시지가 과세표준 (지방세법 §110 — 절사 규정 없음)
 // ============================================================
 
-describe("calculateComprehensiveAggregateTaxBase — 천원 절사", () => {
-  it("TC-07b: 비정형 공시지가 합계 123,456,789원 → 공정시장가액비율 0.70 적용 후 천원 절사", () => {
-    // 123,456,789 × 0.70 = 86,419,752.3 → floor → 86,419,752 → 천원 절사 → 86,419,000
+describe("calculateComprehensiveAggregateTaxBase — 원 단위", () => {
+  it("TC-07b: 비정형 공시지가 합계 123,456,789원 → 공정시장가액비율 0.70 적용 (원 단위)", () => {
+    // 123,456,789 × 0.70 = 86,419,752.3 → applyRate(floor) → 86,419,752 (원 단위)
     const land: LandInfo = {
       id: "L_odd",
       address: "서울시 강남구 비정형로 1",
@@ -192,9 +192,8 @@ describe("calculateComprehensiveAggregateTaxBase — 천원 절사", () => {
     );
 
     expect(result.totalOfficialValue).toBe(123_456_789);
-    // applyRate(123_456_789, 0.70) = floor(123_456_789 × 0.70) = floor(86_419_752.3) = 86_419_752
-    // truncateToThousand(86_419_752) = 86_419_000 ← 천원 미만 절사
-    expect(result.taxBase).toBe(86_419_000);
+    // applyRate(123_456_789, 0.70) = floor(123_456_789 × 0.70) = 86,419,752 (원 단위, 절사 없음)
+    expect(result.taxBase).toBe(86_419_752);
   });
 });
 

@@ -403,11 +403,8 @@ export function calculateSeparateTaxationTax(
 
   const fairMarketRatio = FAIR_MARKET_RATIO;
 
-  // Step 1: 시가표준액 × 70%
-  const rawTaxBase = applyRate(assessedValue, fairMarketRatio);
-
-  // Step 2: 천원 절사
-  const taxBase = truncateToThousand(rawTaxBase);
+  // Step 1·2: 과세표준 = 시가표준액 × 70% (지방세법 §113 — 절사 규정 없음)
+  const taxBase = applyRate(assessedValue, fairMarketRatio);
 
   // Step 3: 세액 = 과세표준 × 단일세율, 원 미만 절사 (P0-2: applyRate 사용)
   const calculatedTax = applyRate(taxBase, classification.appliedRate);

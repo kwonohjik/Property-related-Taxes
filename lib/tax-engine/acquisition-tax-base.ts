@@ -7,11 +7,12 @@
  * - §10의3 시가표준액 적용 특례
  * - §10의4 부담부증여 과세표준
  * - §10의5 연부취득 과세표준
+ *
+ * 주의: 지방세법상 취득세 과세표준 절사 규정 없음 — 원 단위로 계산
  */
 
 import { ACQUISITION, ACQUISITION_CONST } from "./legal-codes";
 import { calcStandardPrice, shouldUseStandardPrice } from "./acquisition-standard-price";
-import { truncateToThousand } from "./tax-utils";
 import type {
   AcquisitionTaxInput,
   TaxBaseResult,
@@ -40,10 +41,9 @@ export function determineTaxBase(input: AcquisitionTaxInput): TaxBaseResult {
   // ── 연부취득 (§10의5) ──
   if (input.installments && input.installments.length > 0) {
     const totalInstallment = input.installments.reduce((sum, p) => sum + p.amount, 0);
-    const taxBase = truncateToThousand(totalInstallment);
     return {
       method: "installment",
-      taxBase,
+      taxBase: totalInstallment,
       rawTaxBase: totalInstallment,
       warnings: ["연부취득: 각 회차 지급액 합산을 과세표준으로 사용합니다."],
       legalBasis: ACQUISITION.INSTALLMENT,
@@ -59,10 +59,9 @@ export function determineTaxBase(input: AcquisitionTaxInput): TaxBaseResult {
 
   if (isDeemedAcquisition) {
     // 간주취득 과세표준은 acquisition-deemed.ts에서 계산된 값을 reportedPrice로 전달
-    const taxBase = truncateToThousand(input.reportedPrice);
     return {
       method: "deemed_difference",
-      taxBase,
+      taxBase: input.reportedPrice,
       rawTaxBase: input.reportedPrice,
       warnings: ["간주취득: 전후 시가표준액 차액을 과세표준으로 사용합니다."],
       legalBasis: ACQUISITION.DEEMED_ACQUISITION,
@@ -134,11 +133,10 @@ function calcOnerousTaxBase(
 
   // 신고가가 없으면 시가표준액 사용
   const rawTaxBase = input.reportedPrice > 0 ? input.reportedPrice : standardValue;
-  const taxBase = truncateToThousand(rawTaxBase);
 
   return {
     method: input.reportedPrice > 0 ? "actual_price" : "standard_value",
-    taxBase,
+    taxBase: rawTaxBase,
     rawTaxBase,
     warnings,
     legalBasis: input.reportedPrice > 0 ? ACQUISITION.TAX_BASE : ACQUISITION.STANDARD_VALUE,
@@ -163,11 +161,10 @@ function calcGratuitousTaxBase(
 
   if (!useStandardPrice && input.marketValue && input.marketValue > 0) {
     // 시가인정액(매매사례가액·감정가) 사용 — 지방세법 §10의3(무상취득 시가표준액 특례)
-    const taxBase = truncateToThousand(input.marketValue);
     warnings.push(`무상취득 — 시가인정액(${input.marketValue.toLocaleString()}원) 적용`);
     return {
       method: "recognized_market",
-      taxBase,
+      taxBase: input.marketValue,
       rawTaxBase: input.marketValue,
       warnings,
       legalBasis: ACQUISITION.STANDARD_VALUE, // §10의3 (§10의2 특수관계인 조항 아님)
@@ -180,13 +177,12 @@ function calcGratuitousTaxBase(
   }
 
   const rawTaxBase = standardValue > 0 ? standardValue : 0;
-  const taxBase = truncateToThousand(rawTaxBase);
 
   warnings.push(reason);
 
   return {
     method: "standard_value",
-    taxBase,
+    taxBase: rawTaxBase,
     rawTaxBase,
     warnings,
     legalBasis: ACQUISITION.STANDARD_VALUE,
@@ -207,10 +203,9 @@ function calcRelatedPartyTaxBase(
 
   if (marketBase <= 0) {
     warnings.push("특수관계인 거래 — 시가 산정 불가. 신고가액을 과세표준으로 사용합니다.");
-    const taxBase = truncateToThousand(input.reportedPrice);
     return {
       method: "actual_price",
-      taxBase,
+      taxBase: input.reportedPrice,
       rawTaxBase: input.reportedPrice,
       warnings,
       legalBasis: ACQUISITION.RELATED_PARTY,
@@ -226,10 +221,9 @@ function calcRelatedPartyTaxBase(
     warnings.push(
       `특수관계인 거래 — 신고가(${input.reportedPrice.toLocaleString()}원)가 시가(${marketBase.toLocaleString()}원)의 70%~130% 이내(정상 범위). 신고가 사용.`
     );
-    const taxBase = truncateToThousand(input.reportedPrice);
     return {
       method: "actual_price",
-      taxBase,
+      taxBase: input.reportedPrice,
       rawTaxBase: input.reportedPrice,
       warnings,
       legalBasis: ACQUISITION.RELATED_PARTY,
@@ -240,10 +234,9 @@ function calcRelatedPartyTaxBase(
   warnings.push(
     `특수관계인 거래 — 신고가(${input.reportedPrice.toLocaleString()}원)가 시가의 70% 미만이거나 130% 초과. 시가인정액(${marketBase.toLocaleString()}원)을 과세표준으로 사용합니다.`
   );
-  const taxBase = truncateToThousand(marketBase);
   return {
     method: "recognized_market",
-    taxBase,
+    taxBase: marketBase,
     rawTaxBase: marketBase,
     warnings,
     legalBasis: ACQUISITION.RELATED_PARTY,
@@ -259,10 +252,9 @@ function calcOriginalAcquisitionTaxBase(
   warnings: string[]
 ): TaxBaseResult {
   if (input.constructionCost && input.constructionCost > 0) {
-    const taxBase = truncateToThousand(input.constructionCost);
     return {
       method: "construction_cost",
-      taxBase,
+      taxBase: input.constructionCost,
       rawTaxBase: input.constructionCost,
       warnings: ["원시취득: 사실상 취득가액(공사비 + 부대비용)을 과세표준으로 사용합니다."],
       legalBasis: ACQUISITION.TAX_BASE,
@@ -278,10 +270,9 @@ function calcOriginalAcquisitionTaxBase(
   warnings.push(...standardPriceResult.warnings);
   warnings.push("원시취득 — 공사비 미입력. 시가표준액(완공 후 건물 기준시가)을 과세표준으로 사용합니다.");
 
-  const taxBase = truncateToThousand(standardPriceResult.standardValue);
   return {
     method: "standard_value",
-    taxBase,
+    taxBase: standardPriceResult.standardValue,
     rawTaxBase: standardPriceResult.standardValue,
     warnings,
     legalBasis: ACQUISITION.STANDARD_VALUE,
@@ -318,9 +309,9 @@ function calcBurdenedGiftTaxBase(
   }
 
   // 유상 취득 부분 (채무액) — 매매세율 적용
-  const onerousTaxBase = truncateToThousand(Math.min(encumbrance, totalValue));
+  const onerousTaxBase = Math.min(encumbrance, totalValue);
   // 무상 취득 부분 (초과분) — 증여세율 적용
-  const gratuitousTaxBase = truncateToThousand(Math.max(0, totalValue - encumbrance));
+  const gratuitousTaxBase = Math.max(0, totalValue - encumbrance);
 
   // 채무액이 취득가액 초과: 과세 실무상 채무액을 취득가액으로 간주 (경고 표시)
   if (encumbrance > totalValue && totalValue > 0) {

@@ -9,6 +9,7 @@ export const metadata = {
 
 const TAX_TYPE_LABELS: Record<string, string> = {
   transfer: "양도소득세",
+  transfer_multi: "양도소득세 (다건)",
   inheritance: "상속세",
   gift: "증여세",
   acquisition: "취득세",

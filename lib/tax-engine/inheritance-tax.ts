@@ -35,7 +35,6 @@ import {
   aggregatePriorGiftsForInheritance,
   calcFuneralExpenseDeduction,
   calcGenerationSkipSurcharge,
-  truncateTaxBase,
 } from "./inheritance-gift-common";
 import { calcInheritanceTaxCredits } from "./inheritance-gift-tax-credit";
 import type { TaxBracket } from "./types";
@@ -167,13 +166,12 @@ export function calcInheritanceTax(
   for (const law of deductionResult.appliedLaws) allLaws.add(law);
 
   // ─────────────────────────────────────────────
-  // STEP 7: 과세표준 (1,000원 미만 절사)
+  // STEP 7: 과세표준 (상증법 §25 — 절사 규정 없음, 원 단위)
   // ─────────────────────────────────────────────
-  const rawTaxBase = Math.max(0, taxableEstateValue - totalDeduction);
-  const taxBase = truncateTaxBase(rawTaxBase);
+  const taxBase = Math.max(0, taxableEstateValue - totalDeduction);
 
   allBreakdown.push({
-    label: "과세표준 (1,000원 미만 절사)",
+    label: "과세표준",
     amount: taxBase,
     lawRef: INH.TAX_RATE,
   });

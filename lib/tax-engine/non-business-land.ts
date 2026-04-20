@@ -11,7 +11,7 @@
  */
 
 import { differenceInDays, addYears } from "date-fns";
-import { NBL } from "./legal-codes";
+import { NBL, getNblRevenueThreshold, type NblRevenueBusinessType } from "./legal-codes";
 
 // ============================================================
 // 타입 정의
@@ -355,6 +355,67 @@ export interface NonBusinessLandInput {
    * gracePeriods와 중복 없이 병합됨.
    */
   unavoidableReasons?: UnavoidableReason[];
+
+  // ---- 수입금액 비율 테스트 (시행령 §168조의11 ②) ----
+  /**
+   * 업종별 수입금액 비율 판정 입력.
+   * 자동차학원(10%), 체육시설(10%), 운수업(3%) 등 특정 업종 판정 시 사용.
+   * 연간 수입금액 ÷ 양도당시 토지가액 ≥ 업종별 기준비율 이면 사업용.
+   */
+  revenueTest?: RevenueTestInput;
+}
+
+/** 수입금액 비율 테스트 입력 (시행령 §168조의11 ②) */
+export interface RevenueTestInput {
+  /** 업종 구분 — 자동차학원·체육시설 등은 10% 기준 적용 */
+  businessType: NblRevenueBusinessType;
+  /** 연간 수입금액 (원) — 보유기간 각 사업연도 평균 수입금액 */
+  annualRevenue: number;
+  /** 양도 당시 토지가액 (원) — 기준시가(개별공시지가×면적) 또는 실지거래가 */
+  landValue: number;
+}
+
+/** 수입금액 비율 테스트 결과 */
+export interface RevenueTestResult {
+  businessType: NblRevenueBusinessType;
+  threshold: number;
+  actualRatio: number;
+  pass: boolean;
+  detail: string;
+}
+
+/**
+ * 업종별 수입금액 비율 판정.
+ * 연간 수입금액 / 양도당시 토지가액 ≥ 업종별 기준비율 이면 사업용 인정.
+ *
+ * 소득세법 시행령 §168조의11 ② + 기획재정부령 §83의5
+ */
+export function testRevenueRatio(input: RevenueTestInput): RevenueTestResult {
+  const threshold = getNblRevenueThreshold(input.businessType);
+  const actualRatio =
+    input.landValue > 0 ? input.annualRevenue / input.landValue : 0;
+  const pass = threshold > 0 ? actualRatio >= threshold : true;
+
+  const pct = (r: number) => `${(r * 100).toFixed(2)}%`;
+  const labelMap: Record<NblRevenueBusinessType, string> = {
+    car_driving_school: "자동차학원",
+    sports_facility:    "체육시설업",
+    youth_facility:     "청소년수련시설",
+    tourist_lodging:    "관광숙박·국제회의",
+    resort_business:    "전문·종합휴양업",
+    transportation:     "창고·운수·주차장업",
+    default:            "일반 업종",
+    none:               "수입금액 테스트 대상 아님",
+  };
+
+  const detail =
+    input.businessType === "none"
+      ? "수입금액 비율 테스트 생략 (적용 대상 아님)"
+      : `${labelMap[input.businessType]} 수입금액 비율 ${pct(actualRatio)} ${
+          pass ? "≥" : "<"
+        } 기준 ${pct(threshold)} → ${pass ? "사업용 인정" : "기준 미달"}`;
+
+  return { businessType: input.businessType, threshold, actualRatio, pass, detail };
 }
 
 /** 면적 안분 결과 */
@@ -1368,14 +1429,49 @@ export function judgeNonBusinessLand(
     );
 
     if (area.nonBusinessArea <= 0) {
-      // 배율 이내 → 전체 사업용
+      // 배율 이내 → 1차 사업용 인정
       judgmentSteps.push({
         id: "land_type_judgment",
         label: "건물 부수 토지 면적 안분",
         status: "PASS",
-        detail: `용도지역 배율(${area.buildingMultiplier}배) 이내 — 전체 사업용`,
+        detail: `용도지역 배율(${area.buildingMultiplier}배) 이내 — 면적 기준 사업용`,
         legalBasis: NBL.BUILDING_SITE,
       });
+
+      // 수입금액 비율 테스트 (시행령 §168조의11 ② + 기획재정부령 §83의5)
+      // 자동차학원·체육시설(10%), 운수·주차·창고업(3%) 등 특정 업종
+      if (input.revenueTest && input.revenueTest.businessType !== "none") {
+        appliedLawArticles.push(NBL.REVENUE_TEST);
+        const rev = testRevenueRatio(input.revenueTest);
+        judgmentSteps.push({
+          id: "revenue_ratio_test",
+          label: "수입금액 비율 테스트",
+          status: rev.pass ? "PASS" : "FAIL",
+          detail: rev.detail,
+          legalBasis: NBL.REVENUE_TEST,
+        });
+
+        if (!rev.pass) {
+          // 수입금액 미달 → 해당 업종 토지는 비사업용
+          return makeSurchargeResult(
+            true,
+            `수입금액 비율(${(rev.actualRatio * 100).toFixed(2)}%)이 업종 기준(${(rev.threshold * 100).toFixed(0)}%) 미달 — 비사업용`,
+            {
+              totalOwnershipDays,
+              businessUseDays: 0,
+              gracePeriodDays: 0,
+              effectiveBusinessDays: 0,
+              businessUseRatio: 0,
+              criteria: { rule80Percent: false, rule5Years: false, rule2of3Years: false },
+              areaProportioning: area,
+              appliedLawArticles,
+              warnings,
+              judgmentSteps,
+            }
+          );
+        }
+      }
+
       return makeSurchargeResult(false, "건물 부수 토지 배율 이내 — 전체 사업용", {
         totalOwnershipDays,
         businessUseDays: totalOwnershipDays,

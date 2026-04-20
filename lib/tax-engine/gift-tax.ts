@@ -30,7 +30,6 @@ import {
   calcInheritanceGiftTax,
   calcGenerationSkipSurcharge,
   aggregatePriorGiftsForGift,
-  truncateTaxBase,
 } from "./inheritance-gift-common";
 import { calcGiftTaxCredits } from "./inheritance-gift-tax-credit";
 import type { TaxBracket } from "./types";
@@ -138,11 +137,10 @@ export function calcGiftTax(
   for (const law of deductionResult.appliedLaws) allLaws.add(law);
 
   // ─────────────────────────────────────────────
-  // STEP 5: 과세표준 (§55 — 50만원 미만이면 0)
+  // STEP 5: 과세표준 (상증법 §55② — 50만원 미만이면 과세 없음, 절사 규정 없음)
   // ─────────────────────────────────────────────
   const rawTaxBase = Math.max(0, aggregatedGiftValue - totalDeduction);
-  const taxBase =
-    rawTaxBase < TAX_BASE_MIN ? 0 : truncateTaxBase(rawTaxBase);
+  const taxBase = rawTaxBase < TAX_BASE_MIN ? 0 : rawTaxBase;
 
   allBreakdown.push({
     label: "증여세 과세표준",
@@ -151,7 +149,7 @@ export function calcGiftTax(
     note:
       taxBase === 0 && rawTaxBase > 0
         ? `50만원 미만(${rawTaxBase.toLocaleString()}원) — 과세 없음`
-        : "1,000원 미만 절사",
+        : undefined,
   });
 
   // ─────────────────────────────────────────────

@@ -25,10 +25,10 @@ function base(override: Partial<AcquisitionTaxInput> = {}): AcquisitionTaxInput 
 // ============================================================
 
 describe("determineTaxBase — 유상취득", () => {
-  it("신고가 > 0: 사실상취득가격 = 신고가 (천원 미만 절사)", () => {
+  it("신고가 > 0: 사실상취득가격 = 신고가 (지방세법 §10 절사 규정 없음)", () => {
     const result = determineTaxBase(base({ reportedPrice: 500_001_500 }));
     expect(result.method).toBe("actual_price");
-    expect(result.taxBase).toBe(500_001_000); // 500,001,500 → 천원 절사 → 500,001,000
+    expect(result.taxBase).toBe(500_001_500); // 원 단위 그대로
   });
 
   it("신고가 = 0: 시가표준액 사용", () => {

@@ -76,7 +76,7 @@ function getFairMarketRatio(
  *
  * - 주택: 공시가격 × 60%
  * - 토지·건축물: 공시가격 × 70%
- * - 결과는 천원 미만 절사
+ * - 지방세법상 과세표준 절사 규정 없음 — 원 단위
  */
 export function calcTaxBase(
   publishedPrice: number,
@@ -101,7 +101,7 @@ export function calcTaxBase(
     ? PROPERTY.FAIR_MARKET_RATIO_HOUSING
     : PROPERTY.FAIR_MARKET_RATIO_LAND;
 
-  const taxBase = truncateToThousand(applyRate(publishedPrice, fairMarketRatio));
+  const taxBase = applyRate(publishedPrice, fairMarketRatio);
 
   return { taxBase, fairMarketRatio, legalBasis };
 }

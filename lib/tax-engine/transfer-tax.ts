@@ -203,6 +203,17 @@ export interface TransferTaxInput {
   filingPenaltyDetails?: FilingPenaltyInput;
   /** 지연납부가산세 입력 (선택, 미제공 시 가산세 계산 생략) */
   delayedPaymentDetails?: DelayedPaymentInput;
+  /**
+   * 기본공제 스킵 (§103). aggregate 엔진에서 호출 시 true로 세팅.
+   * default false → 기존 동작 유지.
+   */
+  skipBasicDeduction?: boolean;
+  /**
+   * 양도차익 음수 바닥 처리 생략 (§102② 차손 통산용).
+   * aggregate 엔진에서 호출 시 true로 세팅하여 음수 `gain` 반환.
+   * default false → 기존 `Math.max(0, gain)` 동작 유지.
+   */
+  skipLossFloor?: boolean;
 }
 
 export type TransferReduction =
@@ -241,7 +252,7 @@ export interface TransferTaxResult {
   longTermHoldingRate: number;
   /** 기본공제 */
   basicDeduction: number;
-  /** 과세표준 (천원 미만 절사) */
+  /** 과세표준 (소득세법 §92 — 원 단위) */
   taxBase: number;
   /** 적용 세율 */
   appliedRate: number;
@@ -331,7 +342,7 @@ interface ParsedRates {
 // H-1: parseRatesFromMap — DB 세율 Map 파싱
 // ============================================================
 
-function parseRatesFromMap(rates: TaxRatesMap): ParsedRates {
+export function parseRatesFromMap(rates: TaxRatesMap): ParsedRates {
   // 누진세율
   const progressiveRecord = getRate(rates, "transfer", "progressive_rate");
   if (!progressiveRecord) {
@@ -451,7 +462,7 @@ interface ExemptionResult {
   exemptReason?: string;
 }
 
-function checkExemption(
+export function checkExemption(
   input: TransferTaxInput,
   oneHouseRules: OneHouseSpecialRulesData,
 ): ExemptionResult {
@@ -546,7 +557,7 @@ interface TransferGainResult {
   expenses: number;
 }
 
-function calcTransferGain(input: TransferTaxInput): TransferGainResult {
+export function calcTransferGain(input: TransferTaxInput): TransferGainResult {
   let acquisitionCost: number;
   let estimatedBase = 0;
   let estimatedDeduction = 0;
@@ -569,8 +580,10 @@ function calcTransferGain(input: TransferTaxInput): TransferGainResult {
   }
 
   const gain = input.transferPrice - acquisitionCost - input.expenses;
+  // §102② 차손 통산용: skipLossFloor=true이면 음수 허용
+  const flooredGain = input.skipLossFloor ? gain : Math.max(0, gain);
   return {
-    gain: Math.max(0, gain),
+    gain: flooredGain,
     usedEstimated,
     estimatedBase,
     estimatedDeduction,
@@ -582,7 +595,7 @@ function calcTransferGain(input: TransferTaxInput): TransferGainResult {
 // H-4: calcOneHouseProration — 12억 초과분 안분
 // ============================================================
 
-function calcOneHouseProration(gain: number, transferPrice: number): number {
+export function calcOneHouseProration(gain: number, transferPrice: number): number {
   const threshold = 1_200_000_000;
   if (transferPrice <= threshold) return gain;
   // 과세 양도차익 = 양도차익 × (양도가 - 12억) / 양도가
@@ -600,7 +613,7 @@ interface LongTermHoldingResult {
   holdingPeriod: { years: number; months: number };
 }
 
-function calcLongTermHoldingDeduction(
+export function calcLongTermHoldingDeduction(
   taxableGain: number,
   input: TransferTaxInput,
   rules: ParsedRates["longTermHoldingRules"],
@@ -698,7 +711,7 @@ function calcLongTermHoldingDeduction(
 // H-6: calcBasicDeduction — 기본공제
 // ============================================================
 
-function calcBasicDeduction(
+export function calcBasicDeduction(
   taxableGain: number,
   longTermDed: number,
   annualUsed: number,
@@ -724,7 +737,7 @@ function calcBasicDeduction(
 // H-6.5: calculateBuildingPenalty — 소득세법 §114조의2 가산세
 // ============================================================
 
-function calculateBuildingPenalty(
+export function calculateBuildingPenalty(
   input: TransferTaxInput,
   acquisitionPriceForPenalty: number,
 ): { penalty: number; note: string } | null {
@@ -778,7 +791,7 @@ interface CalcTaxResult {
   shortTermNote?: string;
 }
 
-function calcTax(
+export function calcTax(
   taxBase: number,
   parsedRates: ParsedRates,
   input: TransferTaxInput,
@@ -955,7 +968,7 @@ interface ReductionsResult {
   reductionType?: string;
 }
 
-function calcReductions(
+export function calcReductions(
   calculatedTax: number,
   reductions: TransferReduction[],
   selfFarmingRules: ParsedRates["selfFarmingRules"] | undefined,
@@ -1134,8 +1147,8 @@ export function calculateTransferTax(
 
   // STEP 2: 양도차익 계산
   const { gain: rawGain, usedEstimated, estimatedBase, estimatedDeduction, expenses: appliedExpenses } = calcTransferGain(input);
-  // STEP 2a: 손실 → 0
-  const transferGain = Math.max(0, rawGain);
+  // STEP 2a: 손실 → 0 (aggregate 엔진에서 skipLossFloor=true 시 음수 허용 — §102② 통산용)
+  const transferGain = input.skipLossFloor ? rawGain : Math.max(0, rawGain);
 
   // 환산취득가 방식: 취득가와 필요경비(개산공제)를 분리 표시
   // 일반 방식: 취득가와 필요경비를 분리 표시
@@ -1161,7 +1174,8 @@ export function calculateTransferTax(
   });
 
   // 양도 손실(또는 0): 가산세는 §114조의2 ②에 따라 산출세액 없어도 부과
-  if (transferGain === 0) {
+  // aggregate 엔진에서 skipLossFloor=true로 호출 시 음수 차익도 이 분기로 흡수되어야 함
+  if (transferGain <= 0) {
     const pb0 = input.acquisitionMethod === "appraisal"
       ? (input.appraisalValue ?? 0)
       : (input.useEstimatedAcquisition ? estimatedBase : 0);
@@ -1183,8 +1197,8 @@ export function calculateTransferTax(
     return {
       isExempt: false,
       exemptReason: exemptionResult.exemptReason,
-      transferGain: 0,
-      taxableGain: 0,
+      transferGain: transferGain,
+      taxableGain: transferGain,
       usedEstimatedAcquisition: usedEstimated,
       longTermHoldingDeduction: 0,
       longTermHoldingRate: 0,
@@ -1263,27 +1277,30 @@ export function calculateTransferTax(
     legalBasis: TRANSFER.LONG_TERM_DEDUCTION,
   });
 
-  // STEP 5: 기본공제
-  const basicDeduction = calcBasicDeduction(
-    taxableGain,
-    longTermHoldingDeduction,
-    input.annualBasicDeductionUsed,
-    input.isUnregistered,
-    parsedRates.basicDeductionRules,
-  );
-  steps.push({
-    label: "기본공제",
-    formula: `연 한도 ${parsedRates.basicDeductionRules.annualLimit.toLocaleString()}원 - 기사용 ${input.annualBasicDeductionUsed.toLocaleString()}원`,
-    amount: basicDeduction,
-    legalBasis: TRANSFER.BASIC_DEDUCTION,
-  });
+  // STEP 5: 기본공제 (aggregate 엔진에서 호출 시 skipBasicDeduction=true로 스킵)
+  const basicDeduction = input.skipBasicDeduction
+    ? 0
+    : calcBasicDeduction(
+        taxableGain,
+        longTermHoldingDeduction,
+        input.annualBasicDeductionUsed,
+        input.isUnregistered,
+        parsedRates.basicDeductionRules,
+      );
+  if (!input.skipBasicDeduction) {
+    steps.push({
+      label: "기본공제",
+      formula: `연 한도 ${parsedRates.basicDeductionRules.annualLimit.toLocaleString()}원 - 기사용 ${input.annualBasicDeductionUsed.toLocaleString()}원`,
+      amount: basicDeduction,
+      legalBasis: TRANSFER.BASIC_DEDUCTION,
+    });
+  }
 
-  // STEP 6: 과세표준 (천원 미만 절사)
-  const rawTaxBase = taxableGain - longTermHoldingDeduction - basicDeduction;
-  const taxBase = Math.max(0, truncateToThousand(rawTaxBase));
+  // STEP 6: 과세표준 (소득세법 §92 — 원 단위, 절사 규정 없음)
+  const taxBase = Math.max(0, taxableGain - longTermHoldingDeduction - basicDeduction);
   steps.push({
     label: "과세표준",
-    formula: `${taxableGain.toLocaleString()}원 - ${longTermHoldingDeduction.toLocaleString()}원 - ${basicDeduction.toLocaleString()}원 (천원 미만 절사)`,
+    formula: `${taxableGain.toLocaleString()}원 - ${longTermHoldingDeduction.toLocaleString()}원 - ${basicDeduction.toLocaleString()}원`,
     amount: taxBase,
     legalBasis: TRANSFER.TAX_BASE_CALC,
   });
