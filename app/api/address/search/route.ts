@@ -62,63 +62,58 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const params = new URLSearchParams({
-    service: "search",
-    request: "search",
-    version: "2.0",
-    crs: "epsg:4326",
-    size,
-    page,
-    query,
-    type: "address",
-    category: "road", // road | parcel — 도로명 우선 검색
-    format: "json",
-    errorformat: "json",
-    key: apiKey,
-  });
-
   const domain = process.env.VWORLD_DOMAIN ?? "http://localhost:3000";
 
-  try {
-    const res = await fetch(`${VWORLD_URL}?${params.toString()}`, {
-      headers: { Accept: "application/json", Referer: domain },
-      cache: "no-store",
+  const buildParams = (category: "road" | "parcel") =>
+    new URLSearchParams({
+      service: "search",
+      request: "search",
+      version: "2.0",
+      crs: "epsg:4326",
+      size,
+      page,
+      query,
+      type: "address",
+      category,
+      format: "json",
+      errorformat: "json",
+      key: apiKey,
     });
 
-    if (!res.ok) {
-      return NextResponse.json(
-        {
-          error: {
-            code: "VWORLD_HTTP_ERROR",
-            message: `Vworld API 응답 오류 (${res.status})`,
-          },
-        },
-        { status: 502 },
-      );
+  // Vworld는 category별 인덱스가 분리돼 있어 도로명·지번을 각각 호출해 병합한다.
+  // (도로명만 검색하면 "제주특별자치도 서귀포시 호근동 628-2" 같은 순수 지번주소가 누락됨)
+  const fetchCategory = async (category: "road" | "parcel"): Promise<VworldItem[]> => {
+    try {
+      const r = await fetch(`${VWORLD_URL}?${buildParams(category).toString()}`, {
+        headers: { Accept: "application/json", Referer: domain },
+        cache: "no-store",
+      });
+      if (!r.ok) return [];
+      const d: VworldResponse = await r.json();
+      if (d.response?.status !== "OK") return [];
+      return d.response?.result?.items ?? [];
+    } catch {
+      return [];
+    }
+  };
+
+  try {
+    const [roadItems, parcelItems] = await Promise.all([
+      fetchCategory("road"),
+      fetchCategory("parcel"),
+    ]);
+
+    // PNU(item.id) 기준 dedup — 도로명 결과를 우선 노출.
+    const seen = new Set<string>();
+    const merged: VworldItem[] = [];
+    for (const it of [...roadItems, ...parcelItems]) {
+      const key = it.id ?? `${it.address?.road ?? ""}|${it.address?.parcel ?? ""}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      merged.push(it);
     }
 
-    const data: VworldResponse = await res.json();
-    const status = data.response?.status;
-
-    // NOT_FOUND: 검색 결과 없음
-    if (status === "NOT_FOUND") {
-      return NextResponse.json({ results: [] });
-    }
-
-    if (status !== "OK") {
-      return NextResponse.json(
-        {
-          error: {
-            code: "VWORLD_ERROR",
-            message: data.response?.error?.text ?? "Vworld API 오류",
-          },
-        },
-        { status: 502 },
-      );
-    }
-
-    const items = data.response?.result?.items ?? [];
-    const results = items.map((item) => ({
+    const results = merged.map((item) => ({
       pnu: item.id ?? "",   // Vworld item.id가 곧 PNU (19자리 필지고유번호)
       title: item.title ?? "",
       road: item.address?.road ?? "",
