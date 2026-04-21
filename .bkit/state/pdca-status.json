@@ -1,6 +1,6 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-04-21T06:34:51.257Z",
+  "lastUpdated": "2026-04-21T09:04:20.259Z",
   "activeFeatures": [
     "claude-code-mastery",
     "calc",
@@ -209,9 +209,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-13T21:04:43.135Z",
-        "lastUpdated": "2026-04-21T03:38:03.912Z"
+        "lastUpdated": "2026-04-21T09:04:20.258Z"
       },
-      "lastFile": "/Users/mynote/workspace/Property-related-Taxes/lib/tax-engine/multi-house-surcharge.ts"
+      "lastFile": "/Users/mynote/workspace/Property-related-Taxes/lib/tax-engine/transfer-tax-helpers.ts"
     },
     "supabase": {
       "phase": "do",
@@ -1051,7 +1051,7 @@
   "session": {
     "startedAt": "2026-04-13T10:11:34.572Z",
     "onboardingCompleted": false,
-    "lastActivity": "2026-04-21T06:34:51.257Z"
+    "lastActivity": "2026-04-21T09:04:20.259Z"
   },
   "history": [
     {
@@ -11821,6 +11821,12 @@
     {
       "timestamp": "2026-04-21T06:34:51.257Z",
       "feature": "_helpers",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-21T09:04:20.259Z",
+      "feature": "tax-engine",
       "phase": "do",
       "action": "updated"
     }

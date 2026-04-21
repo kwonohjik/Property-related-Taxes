@@ -127,7 +127,8 @@
       "Bash(echo \"EXIT=$?\")",
       "Bash(echo \"TSC_EXIT=$?\")",
       "Bash(xargs -I{} echo \"{}\")",
-      "Bash(awk -F: '{sum+=$2; print} END{print \"TOTAL:\", sum}')"
+      "Bash(awk -F: '{sum+=$2; print} END{print \"TOTAL:\", sum}')",
+      "Bash(awk '$1 > 800 {print}')"
     ]
   },
   "outputStyle": "bkit:bkit-learning"
