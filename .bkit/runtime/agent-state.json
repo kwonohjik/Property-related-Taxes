@@ -1,25 +1,14 @@
 {
   "version": "1.0",
-  "enabled": true,
+  "enabled": false,
   "teamName": "",
   "feature": "law-research-v2",
   "pdcaPhase": "completed",
   "orchestrationPattern": "leader",
   "ctoAgent": "opus",
   "startedAt": "2026-04-20T11:35:12.424Z",
-  "lastUpdated": "2026-04-20T11:41:15.612Z",
-  "teammates": [
-    {
-      "name": "a3131ba4baa545415",
-      "role": "Plan",
-      "model": "sonnet",
-      "status": "completed",
-      "currentTask": null,
-      "taskId": null,
-      "startedAt": "2026-04-20T11:35:12.424Z",
-      "lastActivityAt": "2026-04-20T11:41:15.611Z"
-    }
-  ],
+  "lastUpdated": "2026-04-21T01:16:48.047Z",
+  "teammates": [],
   "progress": {
     "totalTasks": 0,
     "completedTasks": 0,
