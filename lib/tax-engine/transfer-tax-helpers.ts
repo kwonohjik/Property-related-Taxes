@@ -5,6 +5,8 @@
  * calculateTransferTax() 오케스트레이터가 이들을 조립하여 결과를 산출한다.
  *
  * 법적 근거 및 단계명은 각 함수 주석 참조.
+ *
+ * TODO: 이 파일은 800줄 정책 초과 (846줄). 추후 타입·파싱·세부 헬퍼로 추가 분할 필요.
  */
 
 import { addYears } from "date-fns";
