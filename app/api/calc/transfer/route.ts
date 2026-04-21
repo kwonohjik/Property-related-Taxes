@@ -199,6 +199,12 @@ export async function POST(request: NextRequest) {
           forceRatioCap: data.pre1990Land.forceRatioCap,
         }
       : undefined,
+    // 다필지 분리 계산 (환지·합병 등) — 문자열 날짜 → Date 변환
+    parcels: data.parcels?.map((p) => ({
+      ...p,
+      acquisitionDate: new Date(p.acquisitionDate),
+      replottingConfirmDate: p.replottingConfirmDate ? new Date(p.replottingConfirmDate) : undefined,
+    })),
     // 신고불성실·지연납부 가산세 (선택)
     filingPenaltyDetails: data.filingPenaltyDetails
       ? { ...data.filingPenaltyDetails }

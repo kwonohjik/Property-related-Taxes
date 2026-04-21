@@ -206,6 +206,11 @@ export async function POST(request: NextRequest) {
             forceRatioCap: p.pre1990Land.forceRatioCap,
           }
         : undefined,
+      parcels: p.parcels?.map((parcel) => ({
+        ...parcel,
+        acquisitionDate: new Date(parcel.acquisitionDate),
+        replottingConfirmDate: parcel.replottingConfirmDate ? new Date(parcel.replottingConfirmDate) : undefined,
+      })),
     };
 
     return {

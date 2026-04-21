@@ -162,6 +162,27 @@ export interface TransferFormData {
   pre1990Grade_atAcq: string;
   /** 등급 입력 모드: "number" = 등급번호 조회, "value" = 등급가액 직접 입력 */
   pre1990GradeMode: "number" | "value";
+
+  // ── 다필지 분리 계산 ──
+  /** 다필지 모드 활성 여부 (환지·합병 등) */
+  parcelMode: boolean;
+  /** 필지 목록 (parcelMode=true 시 사용) */
+  parcels: ParcelFormItem[];
+}
+
+/** 다필지 UI 폼 상태 (문자열 기반) */
+export interface ParcelFormItem {
+  id: string;
+  acquisitionDate: string;
+  acquisitionMethod: "actual" | "estimated";
+  acquisitionPrice: string;
+  acquisitionArea: string;
+  transferArea: string;
+  standardPricePerSqmAtAcq: string;
+  standardPricePerSqmAtTransfer: string;
+  expenses: string;
+  useDayAfterReplotting: boolean;
+  replottingConfirmDate: string;
 }
 
 const defaultFormData: TransferFormData = {
@@ -241,6 +262,8 @@ const defaultFormData: TransferFormData = {
   pre1990Grade_prev: "",
   pre1990Grade_atAcq: "",
   pre1990GradeMode: "number",
+  parcelMode: false,
+  parcels: [],
 };
 
 interface CalcWizardState {

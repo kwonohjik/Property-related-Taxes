@@ -8,6 +8,8 @@ import { DateInput } from "@/components/ui/date-input";
 import { AddressSearch, type AddressValue } from "@/components/ui/address-search";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { Pre1990LandValuationInput } from "@/components/calc/inputs/Pre1990LandValuationInput";
+import { ParcelListInput } from "@/components/calc/inputs/ParcelListInput";
+import type { ParcelFormItem } from "@/lib/stores/calc-wizard-store";
 import { StepIndicator } from "@/components/calc/StepIndicator";
 import { ResetButton } from "@/components/calc/shared/ResetButton";
 import { TransferTaxResultView } from "@/components/calc/results/TransferTaxResultView";
@@ -189,6 +191,47 @@ function Step2({ form, onChange }: { form: TransferFormData; onChange: (d: Parti
           )}
         </div>
       </div>
+
+      {form.propertyType === "land" && (
+        <div className="space-y-2 rounded-lg border border-dashed border-primary/40 bg-primary/3 p-4">
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="parcel-mode"
+              checked={form.parcelMode ?? false}
+              onChange={(e) => {
+                const checked = e.target.checked;
+                const defaultParcel: ParcelFormItem = {
+                  id: `parcel-${Date.now()}-0`,
+                  acquisitionDate: "",
+                  acquisitionMethod: "estimated",
+                  acquisitionPrice: "",
+                  acquisitionArea: "",
+                  transferArea: "",
+                  standardPricePerSqmAtAcq: "",
+                  standardPricePerSqmAtTransfer: "",
+                  expenses: "0",
+                  useDayAfterReplotting: false,
+                  replottingConfirmDate: "",
+                };
+                onChange({
+                  parcelMode: checked,
+                  parcels: checked && (!form.parcels || form.parcels.length === 0)
+                    ? [defaultParcel]
+                    : form.parcels,
+                });
+              }}
+              className="h-4 w-4"
+            />
+            <label htmlFor="parcel-mode" className="text-sm font-medium cursor-pointer">
+              다필지 분리 계산 (환지·합병 등)
+            </label>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            환지된 토지 등 취득원인·취득일이 다른 2필지 이상인 경우 선택 (소득세법 시행령 §162①6호)
+          </p>
+        </div>
+      )}
     </div>
   );
 }
@@ -425,6 +468,19 @@ function Step3({ form, onChange }: { form: TransferFormData; onChange: (d: Parti
 
   return (
     <div className="space-y-5">
+      {/* 다필지 모드 */}
+      {form.parcelMode && form.propertyType === "land" && (
+        <>
+          <p className="text-sm text-muted-foreground">필지별 취득 정보를 입력하세요.</p>
+          <ParcelListInput
+            parcels={form.parcels ?? []}
+            totalTransferPrice={parseAmount(form.transferPrice)}
+            onChange={(parcels) => onChange({ parcels })}
+          />
+        </>
+      )}
+
+      {(!form.parcelMode || form.propertyType !== "land") && (<>
       <p className="text-sm text-muted-foreground">취득가액과 필요경비를 입력하세요.</p>
 
       {/* 취득 원인 */}
@@ -781,6 +837,7 @@ function Step3({ form, onChange }: { form: TransferFormData; onChange: (d: Parti
           )}
         </div>
       )}
+      </>)}
     </div>
   );
 }

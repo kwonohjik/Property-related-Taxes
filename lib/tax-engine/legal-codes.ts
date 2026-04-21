@@ -39,6 +39,27 @@ export const NBL = {
   UNCONDITIONAL:  "시행령 §168조의14 ③",
   /** 시행령 §168조의11 ② + 기획재정부령 §83의5 — 수입금액 비율 테스트 (업종별 기준) */
   REVENUE_TEST:   "시행령 §168조의11 ② + 기획재정부령 §83의5",
+
+  // ── v2 엔진 전용 정확 조문 상수 (PDF p.1695~1707 매핑) ──
+  CATEGORY:                       "시행령 §168조의7",
+  FARMLAND_URBAN_GRACE:           "시행령 §168조의8 ⑤⑥",
+  FOREST:                         "시행령 §168조의9",
+  FOREST_PUBLIC:                  "시행령 §168조의9 ①",
+  FOREST_RESIDENCE:               "시행령 §168조의9 ②",
+  FOREST_BUSINESS:                "시행령 §168조의9 ③",
+  PASTURE:                        "시행령 §168조의10",
+  PASTURE_RELATED:                "시행령 §168조의10 ②",
+  PASTURE_AREA:                   "시행령 §168조의10 ③",
+  PASTURE_URBAN:                  "시행령 §168조의10 ④",
+  PASTURE_URBAN_GRACE:            "시행령 §168조의10 ⑤",
+  OTHER_LAND_BUSINESS:            "시행령 §168조의11 ①",
+  HOUSING_MULTIPLIER:             "시행령 §168조의12",
+  VILLA:                          "시행령 §168조의13",
+  UNAVOIDABLE_PERIOD:             "시행령 §168조의14 ①",
+  TRANSFER_DATE_PRESUMED:         "시행령 §168조의14 ②",
+  UNCONDITIONAL_ANCESTOR:         "시행령 §168조의14 ③ 1의2호",
+  UNCONDITIONAL_PUBLIC:           "시행령 §168조의14 ③ 3호",
+  UNCONDITIONAL_JONGJOONG_INHERIT: "시행령 §168조의14 ③ 4호",
 } as const;
 
 /**
@@ -178,6 +199,8 @@ export const TRANSFER = {
   PRE1990_CAP_RULE:              "소득세법 시행규칙 §80 ⑥",
   /** 국세청 양도소득세 집행기준 97-176의2 — 1990.8.30. 전 취득토지 산정예시 5가지 */
   PRE1990_GUIDELINE:             "국세청 양도소득세 집행기준 97-176의2",
+  /** 환지처분 확정일 다음날을 취득일로 보는 특례 */
+  REPLOTTING_ACQ_DATE:           "소득세법 시행령 §162 ① 6호",
 } as const;
 
 // ============================================================

@@ -297,6 +297,38 @@ function addPropertyRefines(
   }
 }
 
+// ─── 다필지 스키마 ────────────────────────────────────────────
+
+const parcelSchema = z.object({
+  id: z.string().min(1),
+  acquisitionDate: z.string().date(),
+  acquisitionMethod: z.enum(["actual", "estimated"]),
+  acquisitionPrice: z.number().int().nonnegative().optional(),
+  acquisitionArea: z.number().positive(),
+  transferArea: z.number().positive(),
+  standardPricePerSqmAtAcq: z.number().nonnegative().optional(),
+  standardPricePerSqmAtTransfer: z.number().nonnegative().optional(),
+  expenses: z.number().int().nonnegative().optional(),
+  useDayAfterReplotting: z.boolean().optional(),
+  replottingConfirmDate: z.string().date().optional(),
+}).superRefine((p, ctx) => {
+  if (p.acquisitionMethod === "estimated") {
+    if (!p.standardPricePerSqmAtAcq || p.standardPricePerSqmAtAcq <= 0) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "환산취득가 방식: 취득시 ㎡당 기준시가 필수", path: ["standardPricePerSqmAtAcq"] });
+    }
+    if (!p.standardPricePerSqmAtTransfer || p.standardPricePerSqmAtTransfer <= 0) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "환산취득가 방식: 양도시 ㎡당 기준시가 필수", path: ["standardPricePerSqmAtTransfer"] });
+    }
+  } else {
+    if (p.acquisitionPrice === undefined || p.acquisitionPrice <= 0) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "실가 방식: 취득가액 필수", path: ["acquisitionPrice"] });
+    }
+  }
+  if (p.useDayAfterReplotting && !p.replottingConfirmDate) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "환지처분확정일 입력 필요", path: ["replottingConfirmDate"] });
+  }
+});
+
 // ─── 단건 기본 필드 객체 (단건·다건 공유) ───────────────────────
 
 const propertyBaseShape = {
@@ -336,6 +368,7 @@ const propertyBaseShape = {
   constructionDate: z.string().date().optional(),
   extensionFloorArea: z.number().nonnegative().optional(),
   pre1990Land: pre1990LandSchema.optional(),
+  parcels: z.array(parcelSchema).max(10).optional(),
 };
 
 // ─── 단건 스키마 (기존 inputSchema와 동일) ─────────────────────

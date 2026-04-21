@@ -118,6 +118,8 @@ function makeDefaultForm(): TransferFormData {
     pre1990Grade_prev: "",
     pre1990Grade_atAcq: "",
     pre1990GradeMode: "number",
+    parcelMode: false,
+    parcels: [],
   };
 }
 

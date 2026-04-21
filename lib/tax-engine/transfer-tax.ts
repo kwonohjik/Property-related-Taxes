@@ -84,6 +84,11 @@ import {
 import { getRate } from "@/lib/db/tax-rates";
 import type { TaxBracket } from "./types";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
+import {
+  type ParcelInput,
+  type ParcelResult,
+  calculateMultiParcelTransfer,
+} from "./multi-parcel-transfer";
 
 // ============================================================
 // 1-A. 타입 정의
@@ -230,6 +235,12 @@ export interface TransferTaxInput {
    * propertyType === "land" + acquisitionDate < 1990-08-30 일 때만 의미 있음.
    */
   pre1990Land?: Pre1990LandValuationInput;
+  /**
+   * 다필지 분리 계산 입력 (선택).
+   * 제공 시 각 필지별로 면적 안분 → 취득가 산출 → 장특공제를 독립 계산 후 합산.
+   * propertyType === "land" + 환지·합병 등 2필지 이상인 경우 사용.
+   */
+  parcels?: ParcelInput[];
 }
 
 export type TransferReduction =
@@ -345,6 +356,8 @@ export interface TransferTaxResult {
    * pre1990Land 제공 시만 포함. UI에 5유형 분류·분모/비율 capping 내역 표시용.
    */
   pre1990LandValuationDetail?: Pre1990LandValuationResult;
+  /** 다필지 계산 상세 결과 (parcels 제공 시만 포함) */
+  parcelDetails?: ParcelResult[];
 }
 
 // ============================================================
@@ -1256,6 +1269,103 @@ export function calculateTransferTax(
       totalTax: 0,
       steps,
       pre1990LandValuationDetail: pre1990LandResult,
+    };
+  }
+
+  // STEP 1.5: 다필지 분리 계산 (환지·합병 등)
+  if (rawInput.parcels && rawInput.parcels.length > 0) {
+    const mpResult = calculateMultiParcelTransfer({
+      totalTransferPrice: effectiveInput.transferPrice,
+      transferDate: effectiveInput.transferDate,
+      parcels: rawInput.parcels,
+    });
+    for (const pr of mpResult.parcelResults) {
+      steps.push({ label: `[필지] ${pr.id} 양도차익`, formula: `안분가 ${pr.allocatedTransferPrice.toLocaleString()} - 취득가 ${pr.acquisitionPrice.toLocaleString()} - 경비 ${pr.expenses.toLocaleString()}`, amount: pr.transferGain });
+      steps.push({ label: `[필지] ${pr.id} 장특공제`, formula: `${(pr.longTermHoldingRate * 100).toFixed(0)}%`, amount: pr.longTermHoldingDeduction, sub: true });
+    }
+    const mpTaxableGain = mpResult.totalTransferGain;
+    const mpLtd = mpResult.totalLongTermHoldingDeduction;
+    const mpTransferIncome = mpResult.totalTransferIncome;
+    steps.push({ label: "양도차익 합계", formula: "필지별 합산", amount: mpTaxableGain, legalBasis: TRANSFER.TRANSFER_GAIN });
+    steps.push({ label: "장기보유특별공제 합계", formula: "필지별 합산", amount: mpLtd, legalBasis: TRANSFER.LONG_TERM_DEDUCTION, sub: true });
+    steps.push({ label: "양도소득금액 합계", formula: `${mpTaxableGain.toLocaleString()} - ${mpLtd.toLocaleString()}`, amount: mpTransferIncome });
+
+    const mpBasicDeduction = input.skipBasicDeduction
+      ? 0
+      : calcBasicDeduction(mpTaxableGain, mpLtd, input.annualBasicDeductionUsed ?? 0, input.isUnregistered, parsedRates.basicDeductionRules);
+    const mpTaxBase = Math.max(0, mpTransferIncome - mpBasicDeduction);
+    steps.push({ label: "기본공제", formula: `${mpBasicDeduction.toLocaleString()}원`, amount: mpBasicDeduction, legalBasis: TRANSFER.BASIC_DEDUCTION });
+    steps.push({ label: "과세표준", formula: `${mpTransferIncome.toLocaleString()} - ${mpBasicDeduction.toLocaleString()}`, amount: mpTaxBase, legalBasis: TRANSFER.TAX_BASE_CALC });
+
+    const mpTaxResult = calcTax(mpTaxBase, parsedRates, effectiveInput, multiHouseSurchargeResult);
+    steps.push({ label: "산출세액", formula: `${mpTaxBase.toLocaleString()}원 × ${Math.round(mpTaxResult.appliedRate * 100)}%`, amount: mpTaxResult.calculatedTax, legalBasis: TRANSFER.TAX_RATE });
+
+    const {
+      reductionAmount: mpReduction,
+      reductionType: mpReductionType,
+      rentalReductionDetail: mpRentalDetail,
+      newHousingReductionDetail: mpNewHousingDetail,
+      publicExpropriationDetail: mpExproDetail,
+    } = calcReductions(
+      mpTaxResult.calculatedTax,
+      input.reductions,
+      parsedRates.selfFarmingRules,
+      input.rentalReductionDetails,
+      parsedRates.longTermRentalRules,
+      input.newHousingDetails,
+      parsedRates.newHousingMatrix,
+      input.transferDate,
+      mpTransferIncome,
+      mpBasicDeduction,
+      mpTaxBase,
+    );
+    const mpDeterminedTax = truncateToWon(Math.max(0, mpTaxResult.calculatedTax - mpReduction));
+    const mpPenaltyBase = effectiveInput.acquisitionMethod === "appraisal"
+      ? (effectiveInput.appraisalValue ?? 0)
+      : 0;
+    const mpPenaltyResult = calculateBuildingPenalty(effectiveInput, mpPenaltyBase);
+    const mpPenaltyTax = mpPenaltyResult?.penalty ?? 0;
+    const mpDeterminedTaxWithPenalty = mpDeterminedTax + mpPenaltyTax;
+    const mpLocalIncomeTax = applyRate(mpDeterminedTaxWithPenalty, 0.1);
+
+    // 가산세
+    let mpFilingDelayedPenalty = 0;
+    let mpPenaltyDetail: TransferTaxPenaltyResult | undefined;
+    if (input.filingPenaltyDetails || input.delayedPaymentDetails) {
+      mpPenaltyDetail = calculateTransferTaxPenalty({
+        filing: input.filingPenaltyDetails,
+        delayedPayment: input.delayedPaymentDetails,
+      });
+      mpFilingDelayedPenalty = mpPenaltyDetail?.totalPenalty ?? 0;
+    }
+
+    return {
+      isExempt: false,
+      transferGain: mpTaxableGain,
+      taxableGain: mpTaxableGain,
+      usedEstimatedAcquisition: false,
+      longTermHoldingDeduction: mpLtd,
+      longTermHoldingRate: mpTaxableGain > 0 ? mpLtd / mpTaxableGain : 0,
+      basicDeduction: mpBasicDeduction,
+      taxBase: mpTaxBase,
+      appliedRate: mpTaxResult.appliedRate,
+      progressiveDeduction: mpTaxResult.progressiveDeduction,
+      calculatedTax: mpTaxResult.calculatedTax,
+      surchargeType: mpTaxResult.surchargeType,
+      surchargeRate: mpTaxResult.surchargeRate,
+      isSurchargeSuspended: mpTaxResult.surchargeSuspended,
+      reductionAmount: mpReduction,
+      reductionType: mpReductionType,
+      determinedTax: mpDeterminedTax,
+      penaltyTax: mpPenaltyTax,
+      localIncomeTax: mpLocalIncomeTax,
+      totalTax: mpDeterminedTaxWithPenalty + mpLocalIncomeTax + mpFilingDelayedPenalty,
+      steps,
+      rentalReductionDetail: mpRentalDetail,
+      newHousingReductionDetail: mpNewHousingDetail,
+      publicExpropriationDetail: mpExproDetail,
+      penaltyDetail: mpPenaltyDetail,
+      parcelDetails: mpResult.parcelResults,
     };
   }
 

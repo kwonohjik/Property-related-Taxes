@@ -113,15 +113,17 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
   // 자동 주입하므로(lib/tax-engine/transfer-tax.ts) 프론트 body에서는 해당 필드를 비활성화해
   // Zod superRefine ("환산취득가 사용 시 취득시 기준시가 필수") 충돌을 피한다.
   const hasPre1990 = form.pre1990Enabled && form.propertyType === "land";
+  const parcelModeActive = form.parcelMode && form.propertyType === "land" && (form.parcels?.length ?? 0) > 0;
+  const firstParcelAcqDate = parcelModeActive ? (form.parcels[0]?.acquisitionDate || form.transferDate) : form.acquisitionDate;
 
   const body = {
     propertyType: form.propertyType,
     transferPrice: parseAmount(form.transferPrice),
     transferDate: form.transferDate,
-    acquisitionPrice: (hasPre1990 || isEstimated || isAppraisal) ? 0 : parseAmount(form.acquisitionPrice),
-    acquisitionDate: form.acquisitionDate,
-    expenses: (hasPre1990 || isEstimated || isAppraisal) ? 0 : parseAmount(form.expenses),
-    useEstimatedAcquisition: hasPre1990 ? false : isEstimated,
+    acquisitionPrice: (hasPre1990 || isEstimated || isAppraisal || parcelModeActive) ? 0 : parseAmount(form.acquisitionPrice),
+    acquisitionDate: parcelModeActive ? firstParcelAcqDate : form.acquisitionDate,
+    expenses: (hasPre1990 || isEstimated || isAppraisal || parcelModeActive) ? 0 : parseAmount(form.expenses),
+    useEstimatedAcquisition: (hasPre1990 || parcelModeActive) ? false : isEstimated,
     standardPriceAtAcquisition: hasPre1990
       ? undefined
       : (isEstimated ? parseAmount(form.standardPriceAtAcquisition) : undefined),
@@ -197,6 +199,36 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
             paymentDeadline: form.paymentDeadline,
             actualPaymentDate: form.actualPaymentDate || undefined,
           },
+        }
+      : {}),
+    // 다필지 분리 계산 (환지·합병 등)
+    ...(parcelModeActive
+      ? {
+          parcels: form.parcels.map((p) => ({
+            id: p.id,
+            acquisitionDate: p.useDayAfterReplotting && p.replottingConfirmDate
+              ? p.replottingConfirmDate
+              : p.acquisitionDate,
+            acquisitionMethod: p.acquisitionMethod,
+            acquisitionPrice: p.acquisitionMethod === "actual"
+              ? parseAmount(p.acquisitionPrice)
+              : undefined,
+            acquisitionArea: parseFloat(p.acquisitionArea) || 0,
+            transferArea: parseFloat(p.transferArea) || 0,
+            standardPricePerSqmAtAcq: p.acquisitionMethod === "estimated"
+              ? parseFloat(p.standardPricePerSqmAtAcq) || 0
+              : undefined,
+            standardPricePerSqmAtTransfer: p.acquisitionMethod === "estimated"
+              ? parseFloat(p.standardPricePerSqmAtTransfer) || 0
+              : undefined,
+            expenses: p.acquisitionMethod === "actual"
+              ? parseAmount(p.expenses)
+              : undefined,
+            useDayAfterReplotting: p.useDayAfterReplotting || undefined,
+            replottingConfirmDate: p.useDayAfterReplotting && p.replottingConfirmDate
+              ? p.replottingConfirmDate
+              : undefined,
+          })),
         }
       : {}),
     // 1990.8.30. 이전 취득 토지 기준시가 환산 (선택)

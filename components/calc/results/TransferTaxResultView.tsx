@@ -101,6 +101,40 @@ export function TransferTaxResultView({ result, onReset, onBack, onLoginPrompt =
         </div>
       )}
 
+      {/* 필지별 계산 내역 (다필지 모드) */}
+      {result.parcelDetails && result.parcelDetails.length > 0 && (
+        <div className="space-y-2">
+          <h3 className="text-sm font-semibold text-muted-foreground">필지별 계산 내역</h3>
+          {result.parcelDetails.map((pr, i) => (
+            <details key={pr.id} className="rounded-lg border border-border overflow-hidden">
+              <summary className="flex items-center justify-between px-4 py-3 cursor-pointer bg-muted/20 hover:bg-muted/40 text-sm font-medium list-none">
+                <span>필지 {i + 1} ({pr.id})</span>
+                <span className="font-mono text-xs text-muted-foreground">
+                  양도차익 {formatKRW(pr.transferGain)}
+                </span>
+              </summary>
+              <div className="divide-y divide-border text-sm">
+                <Row label="안분 양도가액" value={formatKRW(pr.allocatedTransferPrice)} sub />
+                <Row label="취득가액" value={formatKRW(pr.acquisitionPrice)} sub />
+                {pr.estimatedDeduction > 0 && (
+                  <Row label="개산공제" value={`- ${formatKRW(pr.estimatedDeduction)}`} sub />
+                )}
+                {pr.expenses > 0 && pr.estimatedDeduction === 0 && (
+                  <Row label="필요경비" value={`- ${formatKRW(pr.expenses)}`} sub />
+                )}
+                <Row label="양도차익" value={formatKRW(pr.transferGain)} />
+                <Row
+                  label={`장기보유특별공제 (${(pr.longTermHoldingRate * 100).toFixed(0)}%)`}
+                  value={pr.longTermHoldingDeduction > 0 ? `- ${formatKRW(pr.longTermHoldingDeduction)}` : "해당없음"}
+                  sub
+                />
+                <Row label="양도소득금액" value={formatKRW(pr.transferIncome)} highlight />
+              </div>
+            </details>
+          ))}
+        </div>
+      )}
+
       {/* 상세 내역 */}
       {!result.isExempt && (
         <div className="rounded-lg border border-border divide-y divide-border text-sm">

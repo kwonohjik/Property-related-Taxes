@@ -14,6 +14,27 @@ export function validateStep(step: number, form: TransferFormData): string | nul
     if (!form.transferDate) return "양도일을 선택하세요.";
   }
   if (step === 2) {
+    // 다필지 모드: 필지 배열 검증
+    if (form.parcelMode && form.propertyType === "land") {
+      if (!form.parcels || form.parcels.length === 0) return "필지를 최소 1개 추가하세요.";
+      for (let i = 0; i < form.parcels.length; i++) {
+        const p = form.parcels[i];
+        const label = `필지 ${i + 1}`;
+        if (!p.useDayAfterReplotting && !p.acquisitionDate) return `${label}: 취득일을 선택하세요.`;
+        if (p.useDayAfterReplotting && !p.replottingConfirmDate) return `${label}: 환지처분확정일을 선택하세요.`;
+        if (!p.transferArea || parseFloat(p.transferArea) <= 0) return `${label}: 양도면적을 입력하세요.`;
+        if (p.acquisitionMethod === "estimated") {
+          if (!p.standardPricePerSqmAtAcq || parseFloat(p.standardPricePerSqmAtAcq) <= 0)
+            return `${label}: 취득시 ㎡당 기준시가를 입력하세요.`;
+          if (!p.standardPricePerSqmAtTransfer || parseFloat(p.standardPricePerSqmAtTransfer) <= 0)
+            return `${label}: 양도시 ㎡당 기준시가를 입력하세요.`;
+        } else {
+          if (!p.acquisitionPrice || parseAmount(p.acquisitionPrice) <= 0)
+            return `${label}: 취득가액을 입력하세요.`;
+        }
+      }
+      return null;
+    }
     if (!form.acquisitionDate) return "취득일을 선택하세요.";
     if (form.acquisitionDate >= form.transferDate) return "취득일은 양도일보다 이전이어야 합니다.";
     if (form.acquisitionCause === "inheritance") {
