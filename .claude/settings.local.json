@@ -126,7 +126,8 @@
       "Bash(awk 'NR>=1200 && NR<=1500' lib/tax-engine/transfer-tax.ts)",
       "Bash(echo \"EXIT=$?\")",
       "Bash(echo \"TSC_EXIT=$?\")",
-      "Bash(xargs -I{} echo \"{}\")"
+      "Bash(xargs -I{} echo \"{}\")",
+      "Bash(awk -F: '{sum+=$2; print} END{print \"TOTAL:\", sum}')"
     ]
   },
   "outputStyle": "bkit:bkit-learning"
