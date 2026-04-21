@@ -8,6 +8,7 @@
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import type { TaxRateKey } from "@/lib/tax-engine/types";
 import type { TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
+import type { HouseInfo } from "@/lib/tax-engine/multi-house-surcharge";
 
 export function makeMockRates(
   overrides?: Partial<Record<TaxRateKey, object>>,
@@ -186,3 +187,114 @@ export function baseTransferInput(
     ...overrides,
   };
 }
+
+/**
+ * 주택 수 산정 엔진 활성화 Mock 세율 (유예 없음 — 중과 실제 적용 확인).
+ * T-23/T-24/T-25 등 houses[] 정밀 판정 시나리오에서 사용.
+ */
+export function makeMockRatesWithHouseEngine(): TaxRatesMap {
+  return makeMockRates({
+    // 유예 없음으로 override (중과 실제 적용 테스트용)
+    "transfer:surcharge:_default": {
+      taxType: "transfer",
+      category: "surcharge",
+      subCategory: "_default",
+      rateTable: {
+        multi_house_2: {
+          additionalRate: 0.20,
+          condition: "조정대상지역 2주택",
+          referenceDate: "transfer_date",
+        },
+        multi_house_3plus: {
+          additionalRate: 0.30,
+          condition: "조정대상지역 3주택+",
+          referenceDate: "transfer_date",
+        },
+        non_business_land: { additionalRate: 0.10 },
+        unregistered: {
+          flatRate: 0.70,
+          excludeDeductions: true,
+          excludeBasicDeduction: true,
+        },
+      },
+      deductionRules: null,
+      specialRules: { surcharge_suspended: false },
+    },
+    // 주택 수 산정 배제 규칙
+    "transfer:special:house_count_exclusion": {
+      taxType: "transfer",
+      category: "special",
+      subCategory: "house_count_exclusion",
+      rateTable: null,
+      deductionRules: null,
+      specialRules: {
+        type: "house_count_exclusion",
+        inheritedHouseYears: 5,
+        rentalHousingExempt: true,
+        lowPriceThreshold: { capital: null, non_capital: 100_000_000 },
+        presaleRightStartDate: "2021-01-01",
+        officetelStartDate: "2022-01-01",
+      },
+    },
+    // 조정대상지역 이력 (강남구 — 해제일 없음)
+    "transfer:special:regulated_areas": {
+      taxType: "transfer",
+      category: "special",
+      subCategory: "regulated_areas",
+      rateTable: null,
+      deductionRules: null,
+      specialRules: {
+        type: "regulated_area_history",
+        regions: [
+          {
+            code: "11680",
+            name: "서울 강남구",
+            designations: [{ designatedDate: "2017-08-03", releasedDate: null }],
+          },
+        ],
+      },
+    },
+  });
+}
+
+/** 주택 정보 팩토리 (테스트별로 재정의) — 다주택 중과세 시나리오에서 공유 */
+export function makeHouseInfo(id: string, overrides?: Partial<HouseInfo>): HouseInfo {
+  return {
+    id,
+    acquisitionDate: new Date("2020-01-01"),
+    officialPrice: 300_000_000,
+    region: "capital",
+    isInherited: false,
+    isLongTermRental: false,
+    isApartment: true,
+    isOfficetel: false,
+    isUnsoldHousing: false,
+    ...overrides,
+  };
+}
+
+/** 장기임대 감면 V2 Mock 세율 — T-27(장기임대 정밀), T-45(중복배제) 에서 공유 */
+export const LONG_TERM_RENTAL_RULES_MOCK: Partial<Record<TaxRateKey, object>> = {
+  "transfer:deduction:long_term_rental_v2": {
+    taxType: "transfer",
+    category: "deduction",
+    subCategory: "long_term_rental_v2",
+    rateTable: null,
+    deductionRules: {
+      type: "long_term_rental_v2",
+      subTypes: [
+        {
+          code: "long_term_private",
+          lawArticle: "97-3",
+          tiers: [
+            { mandatoryYears: 8, reductionRate: 0.5, longTermDeductionRate: 0.5 },
+            { mandatoryYears: 10, reductionRate: 0.7, longTermDeductionRate: 0.7 },
+          ],
+          maxOfficialPrice: { capital: 600_000_000, non_capital: 300_000_000 },
+          rentIncreaseLimit: 0.05,
+        },
+      ],
+    },
+    specialRules: null,
+  },
+};

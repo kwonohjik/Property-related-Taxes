@@ -9,184 +9,28 @@
  * Step 3: 감면 확인 (생애최초, 수도권) — 주택+개인 시 활성 → 계산
  */
 
+
 import { useState, useEffect } from "react";
 import { StepIndicator } from "@/components/calc/StepIndicator";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { DateInput } from "@/components/ui/date-input";
-import { AddressSearch, type AddressValue } from "@/components/ui/address-search";
 import { AcquisitionTaxResultView } from "@/components/calc/results/AcquisitionTaxResultView";
-import { ResetButton } from "@/components/calc/shared/ResetButton";
 import { useStandardPriceLookup, getDefaultPriceYear } from "@/lib/hooks/useStandardPriceLookup";
 import type { AcquisitionTaxResult } from "@/lib/tax-engine/types/acquisition.types";
-
-// ============================================================
-// 상수 레이블
-// ============================================================
-
-const PROPERTY_TYPE_LABELS: [string, string][] = [
-  ["housing", "주택 (아파트·단독·연립·다세대)"],
-  ["land", "토지 (주택 외)"],
-  ["land_farmland", "농지 (전·답·과수원)"],
-  ["building", "건물 (비주거용)"],
-  ["vehicle", "차량"],
-  ["machinery", "기계장비"],
-  ["aircraft", "항공기"],
-  ["vessel", "선박"],
-  ["mining_right", "광업권"],
-  ["fishing_right", "어업권"],
-  ["membership", "회원권 (골프·승마·콘도 등)"],
-  ["standing_tree", "입목"],
-];
-
-const ACQUISITION_CAUSE_LABELS: [string, string][] = [
-  ["purchase", "매매"],
-  ["exchange", "교환"],
-  ["auction", "공매·경매"],
-  ["in_kind_investment", "현물출자"],
-  ["inheritance", "상속"],
-  ["inheritance_farmland", "농지 상속 (2.3% 특례)"],
-  ["gift", "증여"],
-  ["burdened_gift", "부담부증여"],
-  ["donation", "기부"],
-  ["new_construction", "신축"],
-  ["extension", "증축"],
-  ["reconstruction", "개축"],
-  ["reclamation", "공유수면 매립·간척"],
-];
-
-const STEPS = ["취득 정보", "물건 상세", "주택 현황", "감면 확인"];
-
-// ============================================================
-// 폼 상태
-// ============================================================
-
-interface FormState {
-  propertyType: string;
-  acquisitionCause: string;
-  acquiredBy: string;
-  reportedPrice: string;
-  marketValue: string;
-  standardValue: string;
-  encumbrance: string;
-  constructionCost: string;
-  houseCountAfter: string;
-  isRegulatedArea: boolean;
-  isLuxuryProperty: boolean;
-  isRelatedParty: boolean;
-  isFirstHome: boolean;
-  isMetropolitan: boolean;
-  areaSqm: string;
-  balancePaymentDate: string;
-  registrationDate: string;
-  contractDate: string;
-  usageApprovalDate: string;
-  // ── 소재지 (공시가격 조회용) ──
-  jibun: string;
-  road: string;
-  building: string;
-}
-
-const INITIAL_FORM: FormState = {
-  propertyType: "housing",
-  acquisitionCause: "purchase",
-  acquiredBy: "individual",
-  reportedPrice: "",
-  marketValue: "",
-  standardValue: "",
-  encumbrance: "",
-  constructionCost: "",
-  houseCountAfter: "1",
-  isRegulatedArea: false,
-  isLuxuryProperty: false,
-  isRelatedParty: false,
-  isFirstHome: false,
-  isMetropolitan: false,
-  areaSqm: "",
-  balancePaymentDate: "",
-  registrationDate: "",
-  contractDate: "",
-  usageApprovalDate: "",
-  jibun: "",
-  road: "",
-  building: "",
-};
-
-// ============================================================
-// 유효성 검사
-// ============================================================
-
-function validateStep(step: number, form: FormState): string | null {
-  if (step === 0) {
-    if (!form.propertyType) return "물건 유형을 선택하세요.";
-    if (!form.acquisitionCause) return "취득 원인을 선택하세요.";
-    // 유상취득은 취득가액 필수
-    const isOnerous = ["purchase", "exchange", "auction", "in_kind_investment"].includes(form.acquisitionCause);
-    if (isOnerous && !form.reportedPrice) return "취득가액을 입력하세요.";
-    // 부담부증여는 채무액 필수
-    if (form.acquisitionCause === "burdened_gift" && !form.encumbrance) {
-      return "부담부증여 채무액을 입력하세요.";
-    }
-  }
-  return null;
-}
-
-// ============================================================
-// API 호출
-// ============================================================
-
-async function callAcquisitionTaxAPI(form: FormState): Promise<AcquisitionTaxResult> {
-  const isOriginal = ["new_construction", "extension", "reconstruction", "reclamation"].includes(form.acquisitionCause);
-
-  const body = {
-    propertyType: form.propertyType,
-    acquisitionCause: form.acquisitionCause,
-    acquiredBy: form.acquiredBy,
-    reportedPrice: parseAmount(form.reportedPrice) ?? 0,
-    marketValue: parseAmount(form.marketValue) || undefined,
-    standardValue: parseAmount(form.standardValue) || undefined,
-    encumbrance: parseAmount(form.encumbrance) || undefined,
-    constructionCost: isOriginal ? (parseAmount(form.constructionCost) || undefined) : undefined,
-    houseCountAfter: form.propertyType === "housing" ? (parseInt(form.houseCountAfter) || 1) : undefined,
-    isRegulatedArea: form.propertyType === "housing" ? form.isRegulatedArea : undefined,
-    isLuxuryProperty: form.isLuxuryProperty || undefined,
-    isRelatedParty: form.isRelatedParty || undefined,
-    isFirstHome: form.isFirstHome || undefined,
-    isMetropolitan: form.isFirstHome ? form.isMetropolitan : undefined,
-    areaSqm: parseAmount(form.areaSqm) || undefined,
-    balancePaymentDate: form.balancePaymentDate || undefined,
-    registrationDate: form.registrationDate || undefined,
-    contractDate: form.contractDate || undefined,
-    usageApprovalDate: form.usageApprovalDate || undefined,
-  };
-
-  const res = await fetch("/api/calc/acquisition", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-
-  const json = await res.json();
-  if (!res.ok || !json.data) {
-    const errObj = json.error;
-    const errMsg = typeof errObj === "object" ? errObj?.message : (errObj as string);
-    throw new Error(errMsg ?? "계산 중 오류가 발생했습니다.");
-  }
-  return json.data as AcquisitionTaxResult;
-}
-
-// ============================================================
-// 공통 스타일 유틸
-// ============================================================
-
-const selectCls = "mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring";
-const labelCls = "text-sm font-medium leading-none";
-const checkboxWrapCls = "flex items-center gap-2";
-const infoBannerCls = "rounded-lg border bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800 p-3 text-sm text-blue-800 dark:text-blue-300";
-const warnBannerCls = "rounded-lg border bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800 p-3 text-sm text-amber-800 dark:text-amber-300";
-
-// ============================================================
-// 메인 폼 컴포넌트
-// ============================================================
+import {
+  STEPS,
+  INITIAL_FORM,
+  validateStep,
+  callAcquisitionTaxAPI,
+  labelCls,
+  selectCls,
+  checkboxWrapCls,
+  infoBannerCls,
+  warnBannerCls,
+  type FormState,
+} from "./acquisition/shared";
+import { Step0 } from "./acquisition/Step0";
+import { Step1 } from "./acquisition/Step1";
 
 export function AcquisitionTaxForm() {
   const [step, setStep] = useState(0);
@@ -268,272 +112,29 @@ export function AcquisitionTaxForm() {
 
       {/* ── Step 0: 취득 정보 ── */}
       {step === 0 && (
-        <div className="space-y-4">
-          <div className="flex justify-end">
-            <ResetButton
-              onReset={() => {
-                setForm(INITIAL_FORM);
-                setStep(0);
-                setResult(null);
-                setError(null);
-              }}
-            />
-          </div>
-          <div>
-            <label className={labelCls}>취득자 유형</label>
-            <select
-              className={selectCls}
-              value={form.acquiredBy}
-              onChange={(e) => set("acquiredBy", e.target.value)}
-            >
-              <option value="individual">개인</option>
-              <option value="corporation">법인</option>
-              <option value="government">국가·지방자치단체</option>
-              <option value="nonprofit">비영리법인</option>
-            </select>
-          </div>
-
-          <div>
-            <label className={labelCls}>물건 유형</label>
-            <select
-              className={selectCls}
-              value={form.propertyType}
-              onChange={(e) => set("propertyType", e.target.value)}
-            >
-              {PROPERTY_TYPE_LABELS.map(([v, l]) => (
-                <option key={v} value={v}>{l}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className={labelCls}>취득 원인</label>
-            <select
-              className={selectCls}
-              value={form.acquisitionCause}
-              onChange={(e) => set("acquisitionCause", e.target.value)}
-            >
-              {ACQUISITION_CAUSE_LABELS.map(([v, l]) => (
-                <option key={v} value={v}>{l}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* 소재지 (공시가격 조회용) */}
-          <div className="space-y-1.5">
-            <label className={labelCls}>
-              물건 소재지 <span className="text-muted-foreground font-normal">(선택)</span>
-            </label>
-            <AddressSearch
-              value={{ road: form.road, jibun: form.jibun, building: form.building, detail: "", lng: "", lat: "" } satisfies AddressValue}
-              onChange={(v) => setForm((f) => ({ ...f, jibun: v.jibun, road: v.road, building: v.building }))}
-            />
-            <p className="text-xs text-muted-foreground">
-              입력하면 다음 단계에서 시가표준액을 자동 조회할 수 있습니다.
-            </p>
-          </div>
-
-          {/* 취득가액 — 취득 원인에 따라 분기 */}
-          {isOnerous && (
-            <CurrencyInput
-              label="취득가액 (실거래가)"
-              value={form.reportedPrice}
-              onChange={(v) => set("reportedPrice", v)}
-              placeholder="계약서상 거래금액"
-            />
-          )}
-
-          {isBurdened && (
-            <>
-              <CurrencyInput
-                label="취득가액 (시가)"
-                value={form.marketValue}
-                onChange={(v) => set("marketValue", v)}
-                placeholder="부담부증여 전체 시가"
-              />
-              <CurrencyInput
-                label="승계 채무액"
-                value={form.encumbrance}
-                onChange={(v) => set("encumbrance", v)}
-                placeholder="유상분 (채무 승계 금액)"
-              />
-            </>
-          )}
-
-          {isOriginal && (
-            <CurrencyInput
-              label="공사비 (사실상 취득가액)"
-              value={form.constructionCost}
-              onChange={(v) => set("constructionCost", v)}
-              placeholder="공사비 + 설계비 합계"
-            />
-          )}
-
-          {/* 취득일 — 원인별 분기 */}
-          {isOnerous && (
-            <>
-              <div>
-                <label className={labelCls}>잔금 지급일 <span className="text-muted-foreground font-normal">(선택)</span></label>
-                <DateInput
-                  value={form.balancePaymentDate}
-                  onChange={(v) => set("balancePaymentDate", v)}
-                />
-              </div>
-              <div>
-                <label className={labelCls}>등기접수일 <span className="text-muted-foreground font-normal">(선택)</span></label>
-                <DateInput
-                  value={form.registrationDate}
-                  onChange={(v) => set("registrationDate", v)}
-                />
-              </div>
-              <p className="text-xs text-muted-foreground -mt-2">
-                잔금지급일·등기접수일 중 빠른 날이 취득일입니다. 미입력 시 오늘 날짜 사용.
-              </p>
-            </>
-          )}
-
-          {isGiftLike && (
-            <div>
-              <label className={labelCls}>증여계약일 <span className="text-muted-foreground font-normal">(선택)</span></label>
-              <DateInput
-                value={form.contractDate}
-                onChange={(v) => set("contractDate", v)}
-              />
-            </div>
-          )}
-
-          {isInheritance && (
-            <div>
-              <label className={labelCls}>상속개시일 (피상속인 사망일) <span className="text-muted-foreground font-normal">(선택)</span></label>
-              <DateInput
-                value={form.balancePaymentDate}
-                onChange={(v) => set("balancePaymentDate", v)}
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                상속 신고기한 = 상속개시일로부터 6개월
-              </p>
-            </div>
-          )}
-
-          {isOriginal && (
-            <div>
-              <label className={labelCls}>사용승인서 발급일 <span className="text-muted-foreground font-normal">(선택)</span></label>
-              <DateInput
-                value={form.usageApprovalDate}
-                onChange={(v) => set("usageApprovalDate", v)}
-              />
-            </div>
-          )}
-        </div>
+        <Step0
+          form={form}
+          set={set}
+          setForm={setForm}
+          setStep={setStep}
+          setResult={setResult}
+          setError={setError}
+          isOnerous={isOnerous}
+          isBurdened={isBurdened}
+          isOriginal={isOriginal}
+          isGiftLike={isGiftLike}
+          isInheritance={isInheritance}
+        />
       )}
 
       {/* ── Step 1: 물건 상세 ── */}
       {step === 1 && (
-        <div className="space-y-4">
-          {isHousing && (
-            <div>
-              <label className={labelCls}>전용면적 (㎡) <span className="text-muted-foreground font-normal">(선택)</span></label>
-              <input
-                type="number"
-                className={selectCls}
-                value={form.areaSqm}
-                onChange={(e) => set("areaSqm", e.target.value)}
-                placeholder="85㎡ 이하이면 농특세 면제"
-              />
-            </div>
-          )}
-
-          <div className="space-y-1.5">
-            <label className={labelCls}>
-              {isHousing ? "주택공시가격 (시가표준액, 선택)" : "시가표준액 (선택)"}
-            </label>
-            {["housing", "land", "land_farmland"].includes(form.propertyType) ? (
-              <>
-                <div className="flex gap-2 items-center">
-                  <select
-                    value={priceLookup.year}
-                    onChange={(e) => priceLookup.setYear(e.target.value)}
-                    className="rounded-md border border-input bg-background px-2 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    aria-label="공시가격 조회 연도"
-                  >
-                    {priceLookup.yearOptions.map((y) => (
-                      <option key={y} value={y}>{y}년</option>
-                    ))}
-                  </select>
-                  <div className="flex-1">
-                    <CurrencyInput
-                      label=""
-                      value={form.standardValue}
-                      onChange={(v) => set("standardValue", v)}
-                      placeholder="없으면 신고가액으로 과세"
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      const price = await priceLookup.lookup({ jibun: form.jibun, propertyType: form.propertyType });
-                      if (price) set("standardValue", String(price));
-                    }}
-                    disabled={priceLookup.loading || !form.jibun}
-                    className="px-3 py-2 rounded-md border border-primary text-primary text-sm font-medium hover:bg-primary/5 disabled:opacity-50 whitespace-nowrap transition-colors"
-                  >
-                    {priceLookup.loading ? "조회중" : "조회"}
-                  </button>
-                </div>
-                {priceLookup.announcedLabel && (
-                  <p className="text-xs text-muted-foreground">{priceLookup.announcedLabel}</p>
-                )}
-                {priceLookup.msg && (
-                  <p className={`text-xs ${priceLookup.msg.kind === "ok" ? "text-emerald-700" : "text-destructive"}`}>
-                    {priceLookup.msg.text}
-                  </p>
-                )}
-              </>
-            ) : (
-              <CurrencyInput
-                label=""
-                value={form.standardValue}
-                onChange={(v) => set("standardValue", v)}
-                placeholder="없으면 신고가액으로 과세"
-              />
-            )}
-          </div>
-
-          <div className={checkboxWrapCls}>
-            <input
-              type="checkbox"
-              id="isRelatedParty"
-              checked={form.isRelatedParty}
-              onChange={(e) => set("isRelatedParty", e.target.checked)}
-              className="h-4 w-4 rounded border-input"
-            />
-            <label htmlFor="isRelatedParty" className={`${labelCls} cursor-pointer`}>
-              특수관계인 간 거래 (시가 70%~130% 벗어나면 시가 기준 과세)
-            </label>
-          </div>
-
-          {form.isRelatedParty && (
-            <CurrencyInput
-              label="시가인정액 (감정가·매매사례가액)"
-              value={form.marketValue}
-              onChange={(v) => set("marketValue", v)}
-              placeholder="시가 기준 금액"
-            />
-          )}
-
-          <div className={checkboxWrapCls}>
-            <input
-              type="checkbox"
-              id="isLuxuryProperty"
-              checked={form.isLuxuryProperty}
-              onChange={(e) => set("isLuxuryProperty", e.target.checked)}
-              className="h-4 w-4 rounded border-input"
-            />
-            <label htmlFor="isLuxuryProperty" className={`${labelCls} cursor-pointer`}>
-              사치성 재산 (골프장·별장·고급주택·고급오락장·고급선박) — 기본세율의 5배 중과 (지방세법 §13①)
-            </label>
-          </div>
-        </div>
+        <Step1
+          form={form}
+          set={set}
+          priceLookup={priceLookup}
+          isHousing={isHousing}
+        />
       )}
 
       {/* ── Step 2: 주택 현황 ── */}
