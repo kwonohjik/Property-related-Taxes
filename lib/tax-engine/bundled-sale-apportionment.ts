@@ -2,23 +2,29 @@
  * 일괄양도 안분 Pure Engine
  *
  * 하나의 매매계약으로 여러 자산(예: 1세대 1주택 + 별도 필지 농지)을 양도할 때,
- * 기준시가 비율로 자산별 양도가액·취득가액·공통경비를 안분한다.
+ * 양도가액을 다음 두 방식 중 하나로 결정한다.
+ *
+ *   (1) §166⑥ 본문 — `fixedSalePrice`가 지정된 자산은 안분 대상에서 제외하고
+ *       그 값을 그대로 `allocatedSalePrice`로 사용한다(계약서에 가액이 구분 기재된 경우).
+ *   (2) §166⑥ 단서 — `fixedSalePrice`가 없는 자산은 잔여 totalSalePrice를
+ *       기준시가(`standardPriceAtTransfer`) 비율로 안분한다(구분 불분명한 경우).
  *
  * Layer 2 원칙: DB 직접 호출 없음. 순수 함수.
- * 모든 금액 정수 연산. 곱셈-후-나눗셈 원칙, Math.floor 중간 절사.
+ * 모든 금액 정수 연산. 곱셈-후-나눗셈 원칙, 비례 안분은 반올림(국세청 계산사례 관행).
  *
  * 근거 조문:
  *   - 소득세법 시행령 §166 ⑥ — 양도가액 안분 (TRANSFER.BUNDLED_APPORTIONMENT)
  *
  * 알고리즘:
- *   - 분모 = Σ standardPriceAtTransfer (모든 자산)
- *   - 각 자산 양도가 = Math.floor(safeMultiplyThenDivide(total, num, denom))
- *   - **말단 자산 = total − Σ(이전 자산들)** → 원 단위 오차 완벽 흡수
+ *   - fixedSet  = assets.filter(a => a.fixedSalePrice !== undefined)
+ *   - variableSet = assets.filter(a => a.fixedSalePrice === undefined)
+ *   - residual = totalSalePrice - Σ(fixedSet.fixedSalePrice)
+ *   - variableSet 안분: 분모 = Σ(variableSet.standardPriceAtTransfer), 말단 잔여값 흡수
  *   - 취득가액: fixedAcquisitionPrice 있으면 그대로, 없으면 totalAcquisitionPrice 비율 안분
- *   - 공통경비: 양도가 비율과 동일 키로 안분 + 자산별 directExpenses 합산
+ *   - 공통경비: 양도가 비율(allocatedSalePrice 기준)로 안분 + 자산별 directExpenses 합산
  *
  * 다필지 안분(`./multi-parcel-transfer.ts`)은 **같은 토지를 면적으로** 안분하는 반면,
- * 본 모듈은 **종류가 다른 자산(주택·토지·건물 혼재)을 기준시가 비율로** 안분한다.
+ * 본 모듈은 **종류가 다른 자산(주택·토지·건물 혼재)을 가액·기준시가로** 결정한다.
  */
 
 import { TRANSFER } from "./legal-codes";
@@ -74,16 +80,49 @@ export function apportionBundledSale(
     throw new Error("총 양도가액은 0보다 커야 합니다");
   }
 
-  // ── Step 1: 안분 분모 ──────────────────────────
-  const totalStandardAtTransfer = assets.reduce(
-    (sum, a) => sum + a.standardPriceAtTransfer,
-    0,
-  );
-  if (totalStandardAtTransfer <= 0) {
-    throw new Error("자산 기준시가 합이 0 이하입니다 — 안분 불가");
+  // ── Step 1: fixed/variable 자산 분리 (§166⑥ 본문 vs 단서) ──
+  const fixedIndices: number[] = [];
+  const variableIndices: number[] = [];
+  for (let i = 0; i < assets.length; i++) {
+    if (assets[i].fixedSalePrice !== undefined) {
+      fixedIndices.push(i);
+    } else {
+      variableIndices.push(i);
+    }
   }
 
-  for (const a of assets) {
+  const sumFixedSale = fixedIndices.reduce(
+    (s, i) => s + (assets[i].fixedSalePrice ?? 0),
+    0,
+  );
+  const residualSale = totalSalePrice - sumFixedSale;
+
+  if (residualSale < 0) {
+    throw new Error(
+      `구분 기재된 양도가액 합(${sumFixedSale.toLocaleString()})이 ` +
+      `총 양도가액(${totalSalePrice.toLocaleString()})을 초과합니다`,
+    );
+  }
+  if (variableIndices.length === 0 && residualSale > 0) {
+    throw new Error(
+      `잔여 양도가액(${residualSale.toLocaleString()})이 있으나 안분 대상 자산이 없습니다`,
+    );
+  }
+
+  // ── Step 2: variableSet 안분 분모 (variable 자산의 standardPriceAtTransfer 합) ──
+  const totalStandardAtTransfer = variableIndices.reduce(
+    (s, i) => s + assets[i].standardPriceAtTransfer,
+    0,
+  );
+
+  if (variableIndices.length > 0 && totalStandardAtTransfer <= 0 && residualSale > 0) {
+    throw new Error(
+      "자산 기준시가 합이 0 이하입니다 — 안분 분모 부족, 안분 불가",
+    );
+  }
+
+  for (const i of variableIndices) {
+    const a = assets[i];
     if (a.standardPriceAtTransfer <= 0) {
       warnings.push(
         `자산 "${a.assetLabel}"의 양도시점 기준시가가 0 이하입니다 — 비율 0으로 처리됩니다`,
@@ -91,29 +130,40 @@ export function apportionBundledSale(
     }
   }
 
-  // ── Step 2: 양도가액 비율 안분 (말단 잔여값 보정) ──
-  const allocatedSales: number[] = [];
-  let accSale = 0;
-  for (let i = 0; i < assets.length; i++) {
-    if (i === assets.length - 1) {
-      // 말단: 잔여값으로 원 단위 오차 완벽 흡수
-      allocatedSales.push(totalSalePrice - accSale);
-    } else {
-      const v = apportionAmount(
-        totalSalePrice,
-        assets[i].standardPriceAtTransfer,
-        totalStandardAtTransfer,
-      );
-      allocatedSales.push(v);
-      accSale += v;
+  // ── Step 3: 양도가액 결정 ──
+  // - fixed 자산: fixedSalePrice 그대로
+  // - variable 자산: residualSale를 기준시가 비율로 안분, 말단 자산이 잔여값 흡수
+  const allocatedSales: number[] = new Array(assets.length).fill(0);
+
+  for (const i of fixedIndices) {
+    allocatedSales[i] = assets[i].fixedSalePrice!;
+  }
+
+  if (variableIndices.length > 0) {
+    let accSale = 0;
+    for (let k = 0; k < variableIndices.length; k++) {
+      const i = variableIndices[k];
+      const isLast = k === variableIndices.length - 1;
+      if (isLast) {
+        // 말단: 잔여값으로 원 단위 오차 완벽 흡수
+        allocatedSales[i] = residualSale - accSale;
+      } else {
+        const v = apportionAmount(
+          residualSale,
+          assets[i].standardPriceAtTransfer,
+          totalStandardAtTransfer,
+        );
+        allocatedSales[i] = v;
+        accSale += v;
+      }
     }
   }
 
-  // ── Step 3: 취득가액 안분 ─────────────────────
+  // ── Step 4: 취득가액 결정 ─────────────────────
   // 우선순위:
-  //   (1) fixedAcquisitionPrice 있는 자산은 그대로 사용 (상속·증여 등)
+  //   (1) fixedAcquisitionPrice 있는 자산은 그대로 사용 (상속·증여·매매 actual 등)
   //   (2) totalAcquisitionPrice 제공 → 취득시 기준시가(또는 양도시 기준시가) 비율 안분
-  //   (3) 둘 다 없으면 0
+  //   (3) 둘 다 없으면 0 (라우트 어댑터에서 환산취득가 등 사후 결정 가능)
   const hasAnyFixed = assets.some((a) => a.fixedAcquisitionPrice !== undefined);
   const allocatedAcqs: number[] = [];
 
@@ -155,9 +205,10 @@ export function apportionBundledSale(
     for (let i = 0; i < assets.length; i++) allocatedAcqs.push(0);
   }
 
-  // ── Step 4: 공통경비 안분 + 직접경비 합산 ────
+  // ── Step 5: 공통경비 안분 + 직접경비 합산 ────
+  // 공통경비는 결정된 양도가액(allocatedSales) 비율로 안분 — fixed/variable 무관 일관 처리.
   const allocatedExpenses: number[] = [];
-  if (commonExpenses > 0) {
+  if (commonExpenses > 0 && totalSalePrice > 0) {
     let accExp = 0;
     for (let i = 0; i < assets.length; i++) {
       const direct = assets[i].directExpenses ?? 0;
@@ -167,8 +218,8 @@ export function apportionBundledSale(
       } else {
         commonShare = apportionAmount(
           commonExpenses,
-          assets[i].standardPriceAtTransfer,
-          totalStandardAtTransfer,
+          allocatedSales[i],
+          totalSalePrice,
         );
         accExp += commonShare;
       }
@@ -178,23 +229,29 @@ export function apportionBundledSale(
     for (const a of assets) allocatedExpenses.push(a.directExpenses ?? 0);
   }
 
-  // ── Step 5: 결과 조립 ─────────────────────────
-  const apportioned: BundledApportionedAsset[] = assets.map((a, i) => ({
-    assetId: a.assetId,
-    assetLabel: a.assetLabel,
-    assetKind: a.assetKind,
-    allocatedSalePrice: allocatedSales[i],
-    allocatedAcquisitionPrice: allocatedAcqs[i],
-    allocatedExpenses: allocatedExpenses[i],
-    displayRatio:
-      totalStandardAtTransfer > 0
-        ? Math.round((a.standardPriceAtTransfer / totalStandardAtTransfer) * 10000) / 10000
-        : 0,
-    standardPriceAtTransfer: a.standardPriceAtTransfer,
-    standardPriceAtAcquisition: a.standardPriceAtAcquisition,
-  }));
+  // ── Step 6: 결과 조립 ─────────────────────────
+  // displayRatio 계산:
+  //   - fixed 자산: 자기 가액 / totalSalePrice
+  //   - variable 자산: 자기 standardPriceAtTransfer / Σ(variable standardPriceAtTransfer)
+  //     (단, 표시상 일관성을 위해 자기 가액 / totalSalePrice도 가능 — 후자가 사용자 직관에 부합)
+  const apportioned: BundledApportionedAsset[] = assets.map((a, i) => {
+    const isFixed = a.fixedSalePrice !== undefined;
+    const ratio = totalSalePrice > 0 ? allocatedSales[i] / totalSalePrice : 0;
+    return {
+      assetId: a.assetId,
+      assetLabel: a.assetLabel,
+      assetKind: a.assetKind,
+      allocatedSalePrice: allocatedSales[i],
+      allocatedAcquisitionPrice: allocatedAcqs[i],
+      allocatedExpenses: allocatedExpenses[i],
+      displayRatio: Math.round(ratio * 10000) / 10000,
+      standardPriceAtTransfer: a.standardPriceAtTransfer,
+      standardPriceAtAcquisition: a.standardPriceAtAcquisition,
+      saleMode: isFixed ? "actual" : "apportioned",
+    };
+  });
 
-  // ── Step 6: 합계 일치 검증 (방어적) ────────────
+  // ── Step 7: 합계 일치 검증 (방어적) ────────────
   const sumAllocated = apportioned.reduce((s, a) => s + a.allocatedSalePrice, 0);
   if (sumAllocated !== totalSalePrice) {
     warnings.push(
@@ -202,10 +259,16 @@ export function apportionBundledSale(
     );
   }
 
+  // residualAbsorbedBy: variable 자산이 있으면 그 말단, 없으면 null (모두 fixed)
+  const residualAbsorbedBy =
+    variableIndices.length > 0
+      ? assets[variableIndices[variableIndices.length - 1]].assetId
+      : null;
+
   return {
     apportioned,
     totalStandardAtTransfer,
-    residualAbsorbedBy: assets[assets.length - 1].assetId,
+    residualAbsorbedBy,
     legalBasis: TRANSFER.BUNDLED_APPORTIONMENT,
     warnings,
   };
@@ -225,6 +288,7 @@ export function toBundledAsset(
     standardPriceAtAcquisition?: number;
     directExpenses?: number;
     fixedAcquisitionPrice?: number;
+    fixedSalePrice?: number;
   },
 ): BundledAssetInput {
   return {
@@ -235,5 +299,6 @@ export function toBundledAsset(
     standardPriceAtAcquisition: options?.standardPriceAtAcquisition,
     directExpenses: options?.directExpenses,
     fixedAcquisitionPrice: options?.fixedAcquisitionPrice,
+    fixedSalePrice: options?.fixedSalePrice,
   };
 }

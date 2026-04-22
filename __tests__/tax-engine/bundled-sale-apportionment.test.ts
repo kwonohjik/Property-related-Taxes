@@ -252,11 +252,157 @@ describe("apportionBundledSale — PDF p387~391 상속주택+농지 일괄양도
         },
       ],
     });
-    // 116 / 208.781 ≈ 0.5556 (4자리)
+    // displayRatio = allocatedSalePrice / totalSalePrice
+    // 주택 ANS_HOUSE_ALLOCATED_SALE / TOTAL_SALE_PRICE ≈ 0.5556
     expect(r.apportioned[0].displayRatio).toBeGreaterThan(0.55);
     expect(r.apportioned[0].displayRatio).toBeLessThan(0.56);
     // 두 비율 합은 1에 근접 (반올림 오차 허용)
     const sumRatio = r.apportioned[0].displayRatio + r.apportioned[1].displayRatio;
     expect(Math.abs(sumRatio - 1)).toBeLessThan(0.001);
+  });
+});
+
+// ─── §166⑥ 본문 — fixedSalePrice (계약서 구분 기재) ───────────────
+
+describe("apportionBundledSale — §166⑥ 본문 fixedSalePrice", () => {
+  const baseHouse: BundledAssetInput = {
+    assetId: "house",
+    assetLabel: "주택",
+    assetKind: "housing",
+    standardPriceAtTransfer: 100_000_000,
+  };
+  const baseLand: BundledAssetInput = {
+    assetId: "land",
+    assetLabel: "농지",
+    assetKind: "land",
+    standardPriceAtTransfer: 50_000_000,
+  };
+
+  it("모두 actual: 안분 분모 0이어도 OK, 합계 = totalSalePrice", () => {
+    const r = apportionBundledSale({
+      totalSalePrice: 300_000_000,
+      assets: [
+        { ...baseHouse, standardPriceAtTransfer: 0, fixedSalePrice: 200_000_000 },
+        { ...baseLand, standardPriceAtTransfer: 0, fixedSalePrice: 100_000_000 },
+      ],
+    });
+    expect(r.apportioned[0].allocatedSalePrice).toBe(200_000_000);
+    expect(r.apportioned[1].allocatedSalePrice).toBe(100_000_000);
+    expect(r.apportioned[0].saleMode).toBe("actual");
+    expect(r.apportioned[1].saleMode).toBe("actual");
+    expect(r.residualAbsorbedBy).toBeNull();
+    expect(r.totalStandardAtTransfer).toBe(0);
+  });
+
+  it("주+컴패니언 모두 actual: 합계가 totalSalePrice와 일치", () => {
+    const r = apportionBundledSale({
+      totalSalePrice: 500_000_000,
+      assets: [
+        { ...baseHouse, fixedSalePrice: 350_000_000 },
+        { ...baseLand, fixedSalePrice: 150_000_000 },
+      ],
+    });
+    expect(
+      r.apportioned[0].allocatedSalePrice + r.apportioned[1].allocatedSalePrice,
+    ).toBe(500_000_000);
+  });
+
+  it("actual 합 > totalSalePrice → throw", () => {
+    expect(() =>
+      apportionBundledSale({
+        totalSalePrice: 200_000_000,
+        assets: [
+          { ...baseHouse, fixedSalePrice: 150_000_000 },
+          { ...baseLand, fixedSalePrice: 100_000_000 },
+        ],
+      }),
+    ).toThrow(/초과/);
+  });
+
+  it("일부 actual + 일부 apportioned: 잔여를 variable에 안분", () => {
+    // total 300M, fixed 100M(주택) → 잔여 200M, variable 농지 단독 → 200M 흡수
+    const r = apportionBundledSale({
+      totalSalePrice: 300_000_000,
+      assets: [
+        { ...baseHouse, fixedSalePrice: 100_000_000 },
+        baseLand,
+      ],
+    });
+    expect(r.apportioned[0].allocatedSalePrice).toBe(100_000_000);
+    expect(r.apportioned[0].saleMode).toBe("actual");
+    expect(r.apportioned[1].allocatedSalePrice).toBe(200_000_000);
+    expect(r.apportioned[1].saleMode).toBe("apportioned");
+    expect(r.residualAbsorbedBy).toBe("land");
+  });
+
+  it("일부 actual + 다수 apportioned: 잔여를 기준시가 비율로 안분", () => {
+    // total 600M, 주택 actual 200M → 잔여 400M
+    // 농지A(std 100M) + 농지B(std 100M) → 각 200M 안분
+    const r = apportionBundledSale({
+      totalSalePrice: 600_000_000,
+      assets: [
+        { ...baseHouse, fixedSalePrice: 200_000_000 },
+        { assetId: "land-a", assetLabel: "농지A", assetKind: "land", standardPriceAtTransfer: 100_000_000 },
+        { assetId: "land-b", assetLabel: "농지B", assetKind: "land", standardPriceAtTransfer: 100_000_000 },
+      ],
+    });
+    expect(r.apportioned[0].allocatedSalePrice).toBe(200_000_000);
+    expect(r.apportioned[1].allocatedSalePrice).toBe(200_000_000);
+    expect(r.apportioned[2].allocatedSalePrice).toBe(200_000_000);
+    expect(r.residualAbsorbedBy).toBe("land-b");
+  });
+
+  it("variableSet 비어있고 잔여 > 0 → throw", () => {
+    expect(() =>
+      apportionBundledSale({
+        totalSalePrice: 300_000_000,
+        assets: [
+          { ...baseHouse, fixedSalePrice: 100_000_000 },
+          { ...baseLand, fixedSalePrice: 100_000_000 },
+        ],
+      }),
+    ).toThrow(/잔여 양도가액/);
+  });
+
+  it("displayRatio: actual 자산도 자기 가액/totalSalePrice 기준으로 표시", () => {
+    const r = apportionBundledSale({
+      totalSalePrice: 400_000_000,
+      assets: [
+        { ...baseHouse, fixedSalePrice: 300_000_000 },
+        { ...baseLand, fixedSalePrice: 100_000_000 },
+      ],
+    });
+    expect(r.apportioned[0].displayRatio).toBe(0.75);
+    expect(r.apportioned[1].displayRatio).toBe(0.25);
+  });
+
+  it("commonExpenses는 결정된 양도가액 비율로 안분 (fixed/variable 모두 적용)", () => {
+    const r = apportionBundledSale({
+      totalSalePrice: 400_000_000,
+      commonExpenses: 4_000_000,
+      assets: [
+        { ...baseHouse, fixedSalePrice: 300_000_000, directExpenses: 1_000_000 },
+        baseLand, // variable, 잔여 100M
+      ],
+    });
+    // 주택: 4M × (300M / 400M) = 3M, + direct 1M = 4M
+    // 농지(말단): 4M - 3M = 1M, + direct 0 = 1M
+    expect(r.apportioned[0].allocatedExpenses).toBe(4_000_000);
+    expect(r.apportioned[1].allocatedExpenses).toBe(1_000_000);
+  });
+
+  it("회귀: 모든 자산 apportioned (기존 동작) — fixedSalePrice 미사용 시 변동 없음", () => {
+    const r = apportionBundledSale({
+      totalSalePrice: TOTAL_SALE_PRICE,
+      assets: [
+        { ...baseHouse, standardPriceAtTransfer: HOUSE_STD_AT_TRANSFER },
+        { ...baseLand, standardPriceAtTransfer: LAND_STD_AT_TRANSFER },
+      ],
+    });
+    expect(r.apportioned[0].allocatedSalePrice).toBe(ANS_HOUSE_ALLOCATED_SALE);
+    expect(r.apportioned[1].allocatedSalePrice).toBe(ANS_LAND_ALLOCATED_SALE);
+    expect(r.residualAbsorbedBy).toBe("land");
+    expect(r.apportioned[0].saleMode).toBe("apportioned");
+    expect(r.apportioned[1].saleMode).toBe("apportioned");
   });
 });

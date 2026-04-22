@@ -8,15 +8,16 @@ import { validateStep } from "./transfer-tax-validate";
 
 /** 단건 자산의 필수 입력 완성도 검사 (0~100 정수) */
 export function calcPropertyCompletion(form: PropertyItem["form"]): number {
+  const primary = form.assets?.[0];
   const checks = [
-    !!form.propertyType,
-    !!(form.transferPrice && parseAmount(form.transferPrice) > 0),
+    !!primary?.assetKind,
+    !!(form.contractTotalPrice && parseAmount(form.contractTotalPrice) > 0),
     !!form.transferDate,
-    !!form.acquisitionDate,
+    !!primary?.acquisitionDate,
     !!(
-      form.useEstimatedAcquisition
-        ? form.standardPriceAtAcquisition && form.standardPriceAtTransfer
-        : form.acquisitionPrice !== undefined
+      primary?.useEstimatedAcquisition
+        ? primary.standardPriceAtAcq && primary.standardPriceAtTransfer
+        : true
     ),
     !!form.householdHousingCount,
   ];

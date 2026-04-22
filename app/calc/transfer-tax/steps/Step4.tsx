@@ -24,11 +24,15 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
   const [regulatedLoading, setRegulatedLoading] = useState(false);
   const [regulatedError, setRegulatedError] = useState<string | null>(null);
   const appliedRef = useRef(false);
+  const primaryKind = form.assets?.[0]?.assetKind ?? "";
+  const primaryAcquisitionDate = form.assets?.[0]?.acquisitionDate ?? "";
+
+  const primaryAddress =
+    (form.assets?.[0]?.addressRoad || form.assets?.[0]?.addressJibun) ?? "";
 
   // 주소·날짜가 준비되면 조정대상지역 자동 판별
   useEffect(() => {
-    const address = form.propertyAddressRoad || form.propertyAddressJibun;
-    if (!address || !form.transferDate || !isHousingLike(form.propertyType)) {
+    if (!primaryAddress || !form.transferDate || !isHousingLike(primaryKind)) {
       setRegulatedAuto(null);
       appliedRef.current = false;
       return;
@@ -40,9 +44,9 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        address,
+        address: primaryAddress,
         transferDate: form.transferDate,
-        acquisitionDate: form.acquisitionDate || undefined,
+        acquisitionDate: primaryAcquisitionDate || undefined,
       }),
     })
       .then((res) => res.json())
@@ -54,7 +58,6 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
           return;
         }
         setRegulatedAuto(data);
-        // 사용자가 아직 손대지 않은 경우에만 자동 반영
         if (!appliedRef.current) {
           onChange({
             isRegulatedArea: data.isRegulatedAtTransfer,
@@ -75,37 +78,36 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
     return () => {
       cancelled = true;
     };
-    // 주소·날짜·유형 변경 시에만 재실행
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form.propertyAddressRoad, form.propertyAddressJibun, form.transferDate, form.acquisitionDate, form.propertyType]);
+  }, [primaryAddress, form.transferDate, primaryAcquisitionDate, primaryKind]);
 
-  // propertyType 변경 시 표시되지 않는 필드 값 초기화
+  // assetKind 변경 시 표시되지 않는 필드 값 초기화
   //   - 조정대상지역 체크박스: 주택(housing)에서만 표시 → 그 외 false
   //   - 미등기 양도: 토지·건물·주택에서만 표시 → 그 외 false
   useEffect(() => {
     const patch: Partial<TransferFormData> = {};
-    if (form.propertyType !== "housing") {
+    if (primaryKind !== "housing") {
       if (form.isRegulatedArea) patch.isRegulatedArea = false;
       if (form.wasRegulatedAtAcquisition) patch.wasRegulatedAtAcquisition = false;
     }
     const allowsUnregistered =
-      form.propertyType === "housing" ||
-      form.propertyType === "land" ||
-      form.propertyType === "building";
+      primaryKind === "housing" ||
+      primaryKind === "land" ||
+      primaryKind === "building";
     if (!allowsUnregistered && form.isUnregistered) {
       patch.isUnregistered = false;
     }
     if (Object.keys(patch).length > 0) onChange(patch);
     // 의도적으로 onChange 의존성 제외 (안정적인 props 가정)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form.propertyType]);
+  }, [primaryKind]);
 
   return (
     <div className="space-y-5">
       <p className="text-sm text-muted-foreground">보유 기간과 과세 상황을 입력하세요.</p>
 
       {/* 조정대상지역 자동 판별 안내 */}
-      {isHousingLike(form.propertyType) && (form.propertyAddressRoad || form.propertyAddressJibun) && (
+      {isHousingLike(primaryKind) && primaryAddress && (
         <div className="rounded-md border border-blue-300 bg-blue-50 dark:bg-blue-950/30 px-4 py-3 text-xs space-y-1">
           <p className="font-medium text-blue-800 dark:text-blue-300">
             📍 조정대상지역 자동 판별 {regulatedLoading && "(조회중...)"}
@@ -122,7 +124,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
               </p>
               {regulatedAuto.acquisitionBasis && (
                 <p className="text-muted-foreground">
-                  취득일({form.acquisitionDate}):{" "}
+                  취득일({primaryAcquisitionDate}):{" "}
                   <span className={regulatedAuto.wasRegulatedAtAcquisition ? "font-semibold text-amber-700 dark:text-amber-400" : ""}>
                     {regulatedAuto.wasRegulatedAtAcquisition ? "조정대상지역 ✓" : "미지정"}
                   </span>{" "}
@@ -140,7 +142,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
       )}
 
       {/* 주택·입주권·분양권: 1세대 여부 + 주택 수 + 거주기간 + 조정대상지역 */}
-      {isHousingLike(form.propertyType) && (
+      {isHousingLike(primaryKind) && (
         <>
           {/* 1세대 여부 */}
           <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/30 px-4 py-3">
@@ -207,7 +209,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
           </div>
 
           {/* 조정대상지역 — 주택만 표시 */}
-          {form.propertyType === "housing" && (
+          {primaryKind === "housing" && (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="flex items-center gap-3 rounded-lg border border-border px-4 py-3">
                 <input
@@ -248,9 +250,9 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
       <div className="space-y-2">
         <p className="text-sm font-medium">특수 상황</p>
         {/* 미등기 양도 — 주택·토지·건물만 표시 (입주권·분양권은 등기 개념 없음) */}
-        {(form.propertyType === "housing" ||
-          form.propertyType === "land" ||
-          form.propertyType === "building") && (
+        {(primaryKind === "housing" ||
+          primaryKind === "land" ||
+          primaryKind === "building") && (
           <div
             className={cn(
               "flex items-center gap-3 rounded-lg border px-4 py-3 transition-colors",
@@ -277,7 +279,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
           </div>
         )}
 
-        {form.propertyType === "land" && (
+        {primaryKind === "land" && (
           <div className="rounded-lg border border-border px-4 py-3 space-y-2">
             <div className="flex items-center gap-3">
               <input
@@ -309,17 +311,17 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
       </div>
 
       {/* 토지: 비사업용 토지 정밀 판정 정보 (P0-A) */}
-      {form.propertyType === "land" && (
+      {primaryKind === "land" && (
         <NblDetailSection form={form} onChange={onChange} />
       )}
 
       {/* 주택·입주권·분양권: 다른 보유 주택 목록 (P0-B) */}
-      {isHousingLike(form.propertyType) && parseInt(form.householdHousingCount) >= 2 && (
+      {isHousingLike(primaryKind) && parseInt(form.householdHousingCount) >= 2 && (
         <HousesListSection form={form} onChange={onChange} />
       )}
 
       {/* 일시적 2주택 특례 */}
-      {isHousingLike(form.propertyType) && (
+      {isHousingLike(primaryKind) && (
         <div className="space-y-2">
           <p className="text-sm font-medium">일시적 2주택 특례</p>
           <div
@@ -382,7 +384,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
       )}
 
       {/* 주택·입주권·분양권: 합가 특례 (P2) */}
-      {isHousingLike(form.propertyType) && (
+      {isHousingLike(primaryKind) && (
         <MergeDateSection form={form} onChange={onChange} />
       )}
     </div>

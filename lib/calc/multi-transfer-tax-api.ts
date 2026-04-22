@@ -7,42 +7,24 @@ import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { MultiTransferFormData, PropertyItem } from "@/lib/stores/multi-transfer-tax-store";
 import type { AggregateTransferResult } from "@/lib/tax-engine/transfer-tax-aggregate";
+import { toEngineReductions } from "@/lib/calc/transfer-tax-api";
 
 const isHousingLike = (pt: string) =>
   pt === "housing" || pt === "right_to_move_in" || pt === "presale_right";
 
 /** TransferFormData → API 전송용 건별 payload 변환 (단건 API 로직 재사용) */
 export function buildPropertyPayload(form: TransferFormData) {
-  const reductions: object[] = [];
-  if (form.reductionType === "self_farming") {
-    reductions.push({ type: "self_farming", farmingYears: parseInt(form.farmingYears) });
-  } else if (form.reductionType === "long_term_rental") {
-    reductions.push({
-      type: "long_term_rental",
-      rentalYears: parseInt(form.rentalYears),
-      rentIncreaseRate: parseFloat(form.rentIncreaseRate) / 100,
-    });
-  } else if (form.reductionType === "new_housing") {
-    const simpleRegion =
-      form.reductionRegion === "outside_overconcentration"
-        ? "metropolitan"
-        : (form.reductionRegion as "metropolitan" | "non_metropolitan");
-    reductions.push({ type: "new_housing", region: simpleRegion });
-  } else if (form.reductionType === "unsold_housing") {
-    const simpleRegion =
-      form.reductionRegion === "outside_overconcentration"
-        ? "metropolitan"
-        : (form.reductionRegion as "metropolitan" | "non_metropolitan");
-    reductions.push({ type: "unsold_housing", region: simpleRegion });
-  }
+  const primary = form.assets?.[0];
+  const reductions = toEngineReductions(primary?.reductions ?? [], primary?.acquisitionCause ?? "purchase");
+  const primaryKind = primary?.assetKind ?? "";
 
   const nblDetails =
-    form.propertyType === "land" && form.nblLandType && form.nblLandArea && form.nblZoneType
+    primaryKind === "land" && form.nblLandType && form.nblLandArea && form.nblZoneType
       ? {
           landType: form.nblLandType,
           landArea: parseFloat(form.nblLandArea),
           zoneType: form.nblZoneType,
-          acquisitionDate: form.acquisitionDate,
+          acquisitionDate: primary?.acquisitionDate ?? "",
           transferDate: form.transferDate,
           farmingSelf: form.nblFarmingSelf || undefined,
           farmerResidenceDistance: form.nblFarmerResidenceDistance
@@ -55,14 +37,14 @@ export function buildPropertyPayload(form: TransferFormData) {
       : undefined;
 
   const housesPayload =
-    isHousingLike(form.propertyType) && form.houses.length > 0
+    isHousingLike(primaryKind) && form.houses.length > 0
       ? [
           {
             id: "selling",
             region: form.sellingHouseRegion,
-            acquisitionDate: form.acquisitionDate,
-            officialPrice: form.standardPriceAtTransfer
-              ? parseAmount(form.standardPriceAtTransfer)
+            acquisitionDate: primary?.acquisitionDate ?? "",
+            officialPrice: primary?.standardPriceAtTransfer
+              ? parseAmount(primary.standardPriceAtTransfer)
               : 0,
             isInherited: false,
             isLongTermRental: false,
@@ -86,19 +68,20 @@ export function buildPropertyPayload(form: TransferFormData) {
         ]
       : undefined;
 
-  const isEstimated = form.acquisitionMethod === "estimated" || form.useEstimatedAcquisition;
+  const isEstimated = form.acquisitionMethod === "estimated" || (primary?.useEstimatedAcquisition ?? false);
   const isAppraisal = form.acquisitionMethod === "appraisal";
+  const acquisitionCause = primary?.acquisitionCause ?? "purchase";
 
   return {
-    propertyType: form.propertyType,
-    transferPrice: parseAmount(form.transferPrice),
+    propertyType: primaryKind,
+    transferPrice: parseAmount(form.contractTotalPrice),
     transferDate: form.transferDate,
-    acquisitionPrice: (isEstimated || isAppraisal) ? 0 : parseAmount(form.acquisitionPrice),
-    acquisitionDate: form.acquisitionDate,
-    expenses: (isEstimated || isAppraisal) ? 0 : parseAmount(form.expenses),
+    acquisitionPrice: (isEstimated || isAppraisal) ? 0 : parseAmount(primary?.fixedAcquisitionPrice ?? "0"),
+    acquisitionDate: primary?.acquisitionDate ?? "",
+    expenses: (isEstimated || isAppraisal) ? 0 : parseAmount(primary?.directExpenses ?? "0"),
     useEstimatedAcquisition: isEstimated,
-    standardPriceAtAcquisition: isEstimated ? parseAmount(form.standardPriceAtAcquisition) : undefined,
-    standardPriceAtTransfer: isEstimated ? parseAmount(form.standardPriceAtTransfer) : undefined,
+    standardPriceAtAcquisition: isEstimated ? parseAmount(primary?.standardPriceAtAcq ?? "") : undefined,
+    standardPriceAtTransfer: isEstimated ? parseAmount(primary?.standardPriceAtTransfer ?? "") : undefined,
     acquisitionMethod: form.acquisitionMethod || "actual",
     appraisalValue: isAppraisal ? parseAmount(form.appraisalValue) : undefined,
     isSelfBuilt: form.isSelfBuilt || undefined,
@@ -115,15 +98,15 @@ export function buildPropertyPayload(form: TransferFormData) {
     isUnregistered: form.isUnregistered,
     isNonBusinessLand: form.isNonBusinessLand,
     isSuccessorRightToMoveIn:
-      form.propertyType === "right_to_move_in" ? form.isSuccessorRightToMoveIn : undefined,
-    acquisitionCause: form.acquisitionCause,
+      primaryKind === "right_to_move_in" ? (primary?.isSuccessorRightToMoveIn ?? false) : undefined,
+    acquisitionCause,
     decedentAcquisitionDate:
-      form.acquisitionCause === "inheritance" && form.decedentAcquisitionDate
-        ? form.decedentAcquisitionDate
+      acquisitionCause === "inheritance" && primary?.decedentAcquisitionDate
+        ? primary.decedentAcquisitionDate
         : undefined,
     donorAcquisitionDate:
-      form.acquisitionCause === "gift" && form.donorAcquisitionDate
-        ? form.donorAcquisitionDate
+      acquisitionCause === "gift" && primary?.donorAcquisitionDate
+        ? primary.donorAcquisitionDate
         : undefined,
     isOneHousehold: form.isOneHousehold,
     reductions,

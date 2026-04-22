@@ -49,6 +49,13 @@ export interface BundledAssetInput {
    * 지정 시 해당 자산은 안분 대상에서 제외되고 이 값이 그대로 `allocatedAcquisitionPrice`로 사용된다.
    */
   fixedAcquisitionPrice?: number;
+  /**
+   * 계약서에 구분 기재된 실제 양도가액 (원, 선택).
+   * 소득세법 시행령 §166 ⑥ 본문 — 지정 시 이 자산은 양도가액 안분 대상에서 제외되고
+   * 이 값이 그대로 `allocatedSalePrice`로 사용된다. 잔여 totalSalePrice는 다른
+   * (fixedSalePrice가 없는) 자산들에 기준시가 비율로 안분된다.
+   */
+  fixedSalePrice?: number;
 }
 
 /**
@@ -95,15 +102,29 @@ export interface BundledApportionedAsset {
   standardPriceAtTransfer: number;
   /** 취득시점 기준시가 (원) — 참조용 passthrough */
   standardPriceAtAcquisition?: number;
+  /**
+   * 양도가액 결정 방식 (결과 표시용).
+   * - "actual": 계약서에 구분 기재된 실제가액 사용(§166⑥ 본문)
+   * - "apportioned": 기준시가 비율 안분(§166⑥ 단서)
+   */
+  saleMode?: "actual" | "apportioned";
+  /**
+   * 매매 환산취득가 사용 여부 (결과 표시용).
+   * 라우트 어댑터에서 안분 후 환산 적용 시 true.
+   */
+  usedEstimatedAcquisition?: boolean;
 }
 
 export interface BundledApportionmentResult {
   /** 자산별 안분 결과 (입력 순서 유지) */
   apportioned: BundledApportionedAsset[];
-  /** 사용된 양도시점 기준시가 합계 (분모) */
+  /** 사용된 양도시점 기준시가 합계 (분모, fixedSalePrice 없는 자산만) */
   totalStandardAtTransfer: number;
-  /** 말단 잔여값을 흡수한 자산 id (원 단위 오차 보정 대상) */
-  residualAbsorbedBy: string;
+  /**
+   * 말단 잔여값을 흡수한 자산 id (원 단위 오차 보정 대상).
+   * 모든 자산이 fixedSalePrice인 경우 안분 자체가 없으므로 null.
+   */
+  residualAbsorbedBy: string | null;
   /** 법적 근거 조문 (legal-codes/transfer.ts BUNDLED_APPORTIONMENT) */
   legalBasis: string;
   /** 안분 경고 (0 기준시가 자산, 합계 불일치 경고 등) */

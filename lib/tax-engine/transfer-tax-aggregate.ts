@@ -23,7 +23,11 @@ import {
 import { calculateProgressiveTax } from "./tax-utils";
 import { TRANSFER } from "./legal-codes";
 import { applyRate, truncateToThousand, safeMultiplyThenDivide } from "./tax-utils";
-import { applyAnnualLimits, lookupLimit } from "./aggregate-reduction-limits";
+import {
+  applyAnnualLimits,
+  applyFiveYearLimits,
+  lookupLimit,
+} from "./aggregate-reduction-limits";
 
 /** 감면 유형별 주 법령 조문 매핑 (한도 조문과 별개) */
 function resolveTypeLegalBasis(type: string): string {
@@ -244,7 +248,16 @@ export function calculateTransferTaxAggregate(
         : 0;
     rawByType.set(type, raw);
   }
-  const { cappedByType, capInfoByType } = applyAnnualLimits(rawByType);
+  const { cappedByType: annuallyCapped, capInfoByType } = applyAnnualLimits(rawByType);
+
+  // §133 5년 누적 한도 추가 capping
+  const transferYear = input.taxYear;
+  const { fiveYearCappedByType, fiveYearCapInfoByType } = applyFiveYearLimits(
+    annuallyCapped,
+    input.priorReductionUsage ?? [],
+    transferYear,
+  );
+  const cappedByType = fiveYearCappedByType;
 
   const reductionBreakdown: ReductionBreakdownEntry[] = [];
   let totalAggregatedReduction = 0;
@@ -252,8 +265,12 @@ export function calculateTransferTaxAggregate(
     const raw = rawByType.get(type) ?? 0;
     const capped = cappedByType.get(type) ?? 0;
     const info = capInfoByType.get(type);
+    const fiveInfo = fiveYearCapInfoByType.get(type);
     const annualLimit =
       info && Number.isFinite(info.annualLimit) ? info.annualLimit : 0;
+    const annuallyCappedReduction = annuallyCapped.get(type) ?? capped;
+    const fiveYearLimitVal =
+      fiveInfo && Number.isFinite(fiveInfo.fiveYearLimit) ? fiveInfo.fiveYearLimit : 0;
     reductionBreakdown.push({
       type,
       legalBasis: info?.legalBasis
@@ -264,8 +281,13 @@ export function calculateTransferTaxAggregate(
       aggregateCalculatedTax: calculatedTax,
       rawAggregateReduction: raw,
       annualLimit,
+      annuallyCappedReduction,
       cappedAggregateReduction: capped,
       cappedByLimit: info?.cappedByLimit ?? false,
+      fiveYearLimit: fiveYearLimitVal,
+      priorGroupSum: fiveInfo?.priorGroupSum ?? 0,
+      fiveYearRemaining: fiveInfo && Number.isFinite(fiveInfo.remaining) ? fiveInfo.remaining : 0,
+      cappedByFiveYearLimit: fiveInfo?.cappedByFiveYear ?? false,
       assetIds: entry.assetIds,
     });
     totalAggregatedReduction += capped;

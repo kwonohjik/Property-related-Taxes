@@ -27,202 +27,197 @@ export interface HouseEntry {
   isUnsoldHousing: boolean;
 }
 
-export interface TransferFormData {
-  // Step 1: 물건 유형
-  propertyType: "housing" | "land" | "building" | "right_to_move_in" | "presale_right";
-  /**
-   * 조합원입주권 승계취득 여부 (propertyType === "right_to_move_in" 일 때만 의미).
-   * true = 승계조합원 (장특공제 배제), false = 원조합원.
-   */
-  isSuccessorRightToMoveIn: boolean;
-  // Step 2: 양도 정보 + 소재지
-  transferPrice: string;
-  transferDate: string;
-  /** 양도소득세 신고일 (YYYY-MM-DD) — 신고기한 초과 시 자동 가산세 적용 */
-  filingDate: string;
-  /** 도로명 주소 (Vworld road) */
-  propertyAddressRoad: string;
-  /** 지번 주소 (Vworld parcel) */
-  propertyAddressJibun: string;
-  /** 건물명 (Vworld bldnm) */
-  propertyBuildingName: string;
-  /** 상세주소 (동/호수 등 사용자 직접 입력) */
-  propertyAddressDetail: string;
-  /** 경도 (Vworld point.x) */
-  propertyLongitude: string;
-  /** 위도 (Vworld point.y) */
-  propertyLatitude: string;
-  // Step 3: 취득 정보
-  /** 취득 원인 — purchase=매매, inheritance=상속, gift=증여 */
-  acquisitionCause: "purchase" | "inheritance" | "gift";
-  acquisitionPrice: string;
-  acquisitionDate: string;
-  /** 상속 시 피상속인 취득일 (YYYY-MM-DD) — acquisitionCause === "inheritance" 시 의미 */
-  decedentAcquisitionDate: string;
-  /** 증여 시 증여자 취득일 (YYYY-MM-DD) — acquisitionCause === "gift" 시 의미 */
-  donorAcquisitionDate: string;
-  expenses: string;
-  useEstimatedAcquisition: boolean;
-  standardPriceAtAcquisition: string;
-  standardPriceAtTransfer: string;
-  standardPriceAtAcquisitionLabel: string;
-  standardPriceAtTransferLabel: string;
-  // Step 4: 보유 상황
-  isOneHousehold: boolean;
-  householdHousingCount: string;
-  residencePeriodMonths: string;
-  isRegulatedArea: boolean;
-  wasRegulatedAtAcquisition: boolean;
-  isUnregistered: boolean;
-  isNonBusinessLand: boolean;
-  // Step 5: 감면 확인
-  reductionType: "" | "self_farming" | "long_term_rental" | "new_housing" | "unsold_housing" | "public_expropriation";
-  farmingYears: string;
-  // ── 자경농지 편입일 부분감면 (조특령 §66 ⑤⑥) ──
-  /** 편입일 입력 사용 여부 (UI 토글) */
-  useSelfFarmingIncorporation: boolean;
-  /** 주거·상업·공업지역 편입일 (YYYY-MM-DD) */
-  selfFarmingIncorporationDate: string;
-  /** 편입 지역 유형 */
-  selfFarmingIncorporationZone: "residential" | "commercial" | "industrial" | "";
-  /** 편입일 당시 기준시가 (문자열, 단위는 취득·양도 기준시가와 동일) */
-  selfFarmingStandardPriceAtIncorporation: string;
-  rentalYears: string;
-  rentIncreaseRate: string;
-  /** [I4] 신축/미분양 감면 지역 — 4값으로 확장 (outside_overconcentration: 수도권 과밀억제권역 외) */
-  reductionRegion: "metropolitan" | "non_metropolitan" | "outside_overconcentration";
-  /** 공익사업용 수용 감면 (조특법 §77) — 현금 보상액 */
-  expropriationCash: string;
-  /** 공익사업용 수용 감면 (조특법 §77) — 채권 보상액 */
-  expropriationBond: string;
-  /** 채권 만기보유 특약 (null=일반 15%, 3=30%, 5=40%) */
-  expropriationBondHoldingYears: "none" | "3" | "5";
-  /** 사업인정고시일 (YYYY-MM-DD) */
-  expropriationApprovalDate: string;
-  annualBasicDeductionUsed: string;
-  // Step 4: 일시적 2주택 특례
-  temporaryTwoHouseSpecial: boolean;
-  previousHouseAcquisitionDate: string;
-  newHouseAcquisitionDate: string;
-  // Step 4: 합가 특례 (P2)
-  marriageDate: string;
-  parentalCareMergeDate: string;
-  // Step 4: 비사업용 토지 정밀 판정 (P0-A)
-  nblLandType: string;
-  nblLandArea: string;
-  nblZoneType: string;
-  nblFarmingSelf: boolean;
-  nblFarmerResidenceDistance: string;
-  nblBusinessUsePeriods: NblBusinessUsePeriod[];
-  // Step 4: 다른 보유 주택 목록 (P0-B)
-  houses: HouseEntry[];
-  /** [C4] 양도 주택의 권역 구분 (수도권/지방) — isRegulatedArea와 별개 */
-  sellingHouseRegion: "capital" | "non_capital";
+// ─── 자산별 감면 폼 타입 ──────────────────────────────────────────
+// Zod reductionSchema(lib/api/transfer-tax-schema.ts)와 1:1 대응.
+// 숫자 입력 필드는 string 타입(빈 문자열 = 미입력).
 
-  // §114조의2 가산세 판정용 필드
-  /** 취득가 산정 방식 — "actual" = 실거래가, "estimated" = 환산취득가, "appraisal" = 감정가액 */
-  acquisitionMethod: "actual" | "estimated" | "appraisal";
-  /** 감정가액 (acquisitionMethod === "appraisal" 시 필수) */
-  appraisalValue: string;
-  /** 본인이 신축 또는 증축한 건물 여부 */
-  isSelfBuilt: boolean;
-  /** 신축/증축 구분: "new" = 신축, "extension" = 증축, "" = 미선택 */
-  buildingType: "new" | "extension" | "";
-  /** 신축일 또는 증축 완공일 */
-  constructionDate: string;
-  /** 증축 바닥면적 합계 (㎡) — buildingType === "extension" 시 필수 */
-  extensionFloorArea: string;
+export type AssetReductionForm =
+  | {
+      type: "self_farming";
+      /** 본인 자경기간(년) */
+      farmingYears: string;
+      /** 피상속인 자경기간(년) — 상속 취득 + 본인 미달 시 합산 (조특령 §66⑪) */
+      decedentFarmingYears?: string;
+      /** 주거·상업·공업지역 편입 부분감면 적용 여부 (조특령 §66⑤⑥) */
+      useSelfFarmingIncorporation?: boolean;
+      /** 편입일 (YYYY-MM-DD) */
+      selfFarmingIncorporationDate?: string;
+      /** 편입 지역 유형 */
+      selfFarmingIncorporationZone?: "residential" | "commercial" | "industrial" | "";
+      /** 편입일 당시 기준시가 (원) */
+      selfFarmingStandardPriceAtIncorporation?: string;
+    }
+  | {
+      type: "long_term_rental";
+      /** 임대기간(년) */
+      rentalYears: string;
+      /** 임대료 인상률(%) — 5% 이하 요건 */
+      rentIncreaseRate: string;
+    }
+  | {
+      type: "new_housing";
+      /** 소재지 유형 — 감면율 결정 */
+      reductionRegion: "metropolitan" | "non_metropolitan" | "outside_overconcentration";
+    }
+  | {
+      type: "unsold_housing";
+      /** 소재지 유형 */
+      reductionRegion: "metropolitan" | "non_metropolitan" | "outside_overconcentration";
+    }
+  | {
+      type: "public_expropriation";
+      /** 현금 보상액 (원) */
+      expropriationCash: string;
+      /** 채권 보상액 (원) */
+      expropriationBond: string;
+      /** 채권 만기보유 특약 */
+      expropriationBondHoldingYears: "none" | "3" | "5";
+      /** 사업인정고시일 (YYYY-MM-DD) */
+      expropriationApprovalDate: string;
+    };
 
-  // Step 6: 가산세 (선택 입력)
-  /** 가산세 계산 여부 토글 */
-  enablePenalty: boolean;
-  /** 신고 유형: none=무신고, under=과소신고, excess_refund=초과환급신고, correct=정상신고 */
-  filingType: "none" | "under" | "excess_refund" | "correct";
-  /** 부정행위 유형: normal=일반, fraudulent=부정행위, offshore_fraud=역외거래부정행위 */
-  penaltyReason: "normal" | "fraudulent" | "offshore_fraud";
-  /** 기납부세액 (예정신고 납부액 포함) */
-  priorPaidTax: string;
-  /** 당초 신고세액 (과소신고 시) */
-  originalFiledTax: string;
-  /** 초과환급신고 환급세액 */
-  excessRefundAmount: string;
-  /** 세법에 따른 이자상당액 가산액 */
-  interestSurcharge: string;
-  /** 미납·미달납부세액 (지연납부가산세용) */
-  unpaidTax: string;
-  /** 납부기한 */
-  paymentDeadline: string;
-  /** 실제 납부일 */
-  actualPaymentDate: string;
+export type ReductionType = AssetReductionForm["type"];
 
-  // ── 1990.8.30. 이전 취득 토지 기준시가 환산 ──
-  /** 사용 여부 (propertyType === "land" + acquisitionDate < 1990-08-30 시 UI 노출) */
-  pre1990Enabled: boolean;
-  /** 면적 (㎡) */
-  pre1990AreaSqm: string;
-  /** 1990.1.1. 개별공시지가 (원/㎡) */
-  pre1990PricePerSqm_1990: string;
-  /** 양도당시 개별공시지가 (원/㎡) */
-  pre1990PricePerSqm_atTransfer: string;
-  /** 1990.8.30. 현재 토지등급 (숫자 or 직접 입력 문자열 → 파싱) */
-  pre1990Grade_current: string;
-  /** 1990.8.30. 직전 토지등급 */
-  pre1990Grade_prev: string;
-  /** 취득시 유효 토지등급 */
-  pre1990Grade_atAcq: string;
-  /** 등급 입력 모드: "number" = 등급번호 조회, "value" = 등급가액 직접 입력 */
-  pre1990GradeMode: "number" | "value";
-
-  // ── 다필지 분리 계산 ──
-  /** 다필지 모드 활성 여부 (환지·합병 등) */
-  parcelMode: boolean;
-  /** 필지 목록 (parcelMode=true 시 사용) */
-  parcels: ParcelFormItem[];
-
-  // ── 일괄양도 안분 (소득세법 시행령 §166 ⑥) ──
-  /** 함께 양도된 자산 목록 (비어있으면 단건 처리) */
-  companionAssets: CompanionAssetForm[];
-  /** 피상속인 경작기간(년) — acquisitionCause=inheritance + reductionType=self_farming 시 사용 */
-  decedentFarmingYears: string;
-  /** 주 자산 상속 취득가액 산정 모드 */
-  inheritanceValuationMode: "auto" | "manual";
-  /** 주 자산 상속개시일 직전 공시지가 (원/㎡, 토지인 경우) */
-  inheritanceLandPricePerM2: string;
-  /** 주 자산 상속개시일 직전 개별주택가격 (원, 주택인 경우) */
-  inheritanceHousePrice: string;
+/** 인별 5년 합산 한도 산정용 과거 감면 이력 항목 */
+export interface PriorReductionUsageItem {
+  year: number;
+  type: ReductionType;
+  amount: number;
 }
 
-/** 일괄양도 함께 양도된 자산 폼 상태 (문자열 기반) */
-export interface CompanionAssetForm {
+/**
+ * 자산 1건의 폼 상태 (문자열 기반).
+ * 주된 자산과 동반 자산을 구분하지 않고 동일한 구조로 관리.
+ * assets[0]이 대표 자산 (isPrimaryForHouseholdFlags = true).
+ */
+export interface AssetForm {
   assetId: string;
   assetLabel: string;
-  assetKind: "housing" | "land" | "building";
+  /**
+   * 자산 종류 — 5종 (API 전달 시 right_to_move_in/presale_right → housing 으로 변환)
+   */
+  assetKind: "housing" | "land" | "building" | "right_to_move_in" | "presale_right";
+  /** 입주권 승계조합원 여부 (assetKind === "right_to_move_in" 일 때만 의미) */
+  isSuccessorRightToMoveIn: boolean;
+  /** 세대 Step(Step3/4)의 1세대1주택 비과세·다주택 중과 판정 기준 대표 자산 여부 */
+  isPrimaryForHouseholdFlags: boolean;
   /** 양도시점 기준시가 (안분 키, 문자열) */
   standardPriceAtTransfer: string;
+  /** 양도시 기준시가 레이블 (API 조회 결과 표시용) */
+  standardPriceAtTransferLabel: string;
   /** 직접 귀속 필요경비 */
   directExpenses: string;
-  /** 자산별 감면 유형 (자경농지 등) */
-  reductionType: "" | "self_farming";
-  /** 자경농지 경작기간(년) */
-  farmingYears: string;
-  /** 상속 취득가액 산정 모드: auto=주소검색+상속일 자동채움, manual=직접입력 */
+
+  // ── 자산별 감면 (복수 선택 허용, 조특법 §127②) ──
+  /** 이 자산에 적용할 감면 목록. 복수 체크 가능, 엔진이 §127② 규칙 적용. */
+  reductions: AssetReductionForm[];
+
+  /** 상속 취득가액 산정 모드: auto=보충적평가, manual=직접입력 */
   inheritanceValuationMode: "auto" | "manual";
   /** 상속개시일 (YYYY-MM-DD) */
   inheritanceDate: string;
-  /** 자산 종류 (토지: land, 단독주택: house_individual, 공동주택: house_apart) */
+  /** 자산 종류 (토지/단독주택/공동주택 — 보충적평가용) */
   inheritanceAssetKind: "land" | "house_individual" | "house_apart";
   /** 토지 면적 (㎡, land일 때 사용) */
   landAreaM2: string;
   /** 상속개시일 직전 공시가격: 토지=원/㎡, 주택=원 총액 */
   publishedValueAtInheritance: string;
-  /** 직접 입력 취득가액 (manual 모드) */
+  /** 직접 입력 취득가액 (매매 actual / 상속 manual / 증여 신고가액) */
   fixedAcquisitionPrice: string;
+
+  // ── 자산별 소재지 (Step1 자산 편집 Sheet에서 입력) ──
   /** 주소 (Vworld 도로명) */
   addressRoad: string;
   /** 주소 (Vworld 지번) */
   addressJibun: string;
+  /** 상세주소 */
+  addressDetail: string;
+  /** 건물명 */
+  buildingName: string;
+  /** 경도 */
+  longitude: string;
+  /** 위도 */
+  latitude: string;
+
+  // ── 조정대상지역 조회 결과 (주택 전용) ──
+  /** 취득 시점 조정대상지역 여부 (주택만 조회, 비주택은 null) */
+  isRegulatedAreaAtAcq: boolean | null;
+  /** 양도 시점 조정대상지역 여부 (주택만 조회, 비주택은 null) */
+  isRegulatedAreaAtTransfer: boolean | null;
+
+  // ── 취득시기 상이 필지 분리 (assetKind === "land" 전용) ──
+  /** 토지 내 취득시기 상이 필지 분리 계산 여부 (소득세법 시행령 §162①6호) */
+  parcelMode: boolean;
+  /** 취득시기 상이 필지 목록 */
+  parcels: ParcelFormItem[];
+
   isOneHousehold: boolean;
+  /** actual 모드 시 이 자산의 계약서상 양도가액 */
+  actualSalePrice: string;
+  /** 취득 원인 — purchase=매매, inheritance=상속, gift=증여 */
+  acquisitionCause: "purchase" | "inheritance" | "gift";
+  /** 본인 취득일 (YYYY-MM-DD) */
+  acquisitionDate: string;
+  /** 피상속인 취득일 (상속 시 단기보유 통산용, YYYY-MM-DD) */
+  decedentAcquisitionDate: string;
+  /** 증여자 취득일 (YYYY-MM-DD) */
+  donorAcquisitionDate: string;
+  /** 매매 환산취득가 사용 여부 */
+  useEstimatedAcquisition: boolean;
+  /** 매매 estimated 시 취득시점 기준시가 (원, 환산 분자) */
+  standardPriceAtAcq: string;
+  /** 취득시 기준시가 레이블 (API 조회 결과 표시용) */
+  standardPriceAtAcqLabel: string;
 }
+
+/** 하위 호환 별칭 — 기존 코드에서 CompanionAssetForm을 참조하는 곳에 사용 */
+export type CompanionAssetForm = AssetForm;
+
+/**
+ * AssetForm 기본값 팩토리.
+ * index === 1 인 경우 isPrimaryForHouseholdFlags = true 로 설정.
+ */
+export function makeDefaultAsset(index: number = 1): AssetForm {
+  return {
+    assetId: `asset-${Date.now()}-${index}`,
+    assetLabel: `자산 ${index}`,
+    assetKind: "housing",
+    isSuccessorRightToMoveIn: false,
+    isPrimaryForHouseholdFlags: index === 1,
+    standardPriceAtTransfer: "",
+    standardPriceAtTransferLabel: "",
+    directExpenses: "0",
+    reductions: [],
+    inheritanceValuationMode: "auto",
+    inheritanceDate: "",
+    inheritanceAssetKind: "land",
+    landAreaM2: "",
+    publishedValueAtInheritance: "",
+    fixedAcquisitionPrice: "",
+    addressRoad: "",
+    addressJibun: "",
+    addressDetail: "",
+    buildingName: "",
+    longitude: "",
+    latitude: "",
+    isRegulatedAreaAtAcq: null,
+    isRegulatedAreaAtTransfer: null,
+    parcelMode: false,
+    parcels: [],
+    isOneHousehold: false,
+    actualSalePrice: "",
+    acquisitionCause: "purchase",
+    acquisitionDate: "",
+    decedentAcquisitionDate: "",
+    donorAcquisitionDate: "",
+    useEstimatedAcquisition: false,
+    standardPriceAtAcq: "",
+    standardPriceAtAcqLabel: "",
+  };
+}
+
+/** 하위 호환 별칭 */
+export const makeDefaultCompanionAsset = makeDefaultAsset;
 
 /** 다필지 UI 폼 상태 (문자열 기반) */
 export interface ParcelFormItem {
@@ -237,40 +232,110 @@ export interface ParcelFormItem {
   expenses: string;
   useDayAfterReplotting: boolean;
   replottingConfirmDate: string;
-  // 환지 감환지/증환지 (소득세법 시행령 §162의2)
-  /** 감환지 입력 사용 여부 (UI 토글) */
   useExchangeLandReduction: boolean;
-  /** 환지예정지 권리면적 (㎡, 문자열) */
   entitlementArea: string;
-  /** 환지확정 교부면적 (㎡, 문자열) */
   allocatedArea: string;
-  /** 환지 전 종전토지면적 (㎡, 문자열) */
   priorLandArea: string;
 }
 
+export interface TransferFormData {
+  // ── Step 1: 자산 목록 + 양도 기본 정보 ──
+  /** 모든 양도 자산 (최소 1건). assets[0]이 대표 자산. */
+  assets: AssetForm[];
+  /** 계약서 단위 총 양도가액 (모든 자산 합계) */
+  contractTotalPrice: string;
+  /**
+   * 일괄양도 양도가액 결정 모드 (계약서 단위 단일 결정).
+   * - "actual": 계약서에 자산별 가액이 구분 기재된 경우 (§166⑥ 본문)
+   * - "apportioned": 구분 불분명 → 기준시가 비율 안분 (§166⑥ 단서)
+   */
+  bundledSaleMode: "actual" | "apportioned";
+  /** 양도일 (YYYY-MM-DD) */
+  transferDate: string;
+  /** 양도소득세 신고일 (YYYY-MM-DD) */
+  filingDate: string;
+
+  // ── Step 2 (구 Step3 잔여): 대표 자산 고급 취득 정보 ──
+  /** 대표 자산 취득가 산정 방식 (3지선다 — assets[0].useEstimatedAcquisition 과 동기화) */
+  acquisitionMethod: "actual" | "estimated" | "appraisal";
+  appraisalValue: string;
+  isSelfBuilt: boolean;
+  buildingType: "new" | "extension" | "";
+  constructionDate: string;
+  extensionFloorArea: string;
+  pre1990Enabled: boolean;
+  pre1990AreaSqm: string;
+  pre1990PricePerSqm_1990: string;
+  pre1990PricePerSqm_atTransfer: string;
+  pre1990Grade_current: string;
+  pre1990Grade_prev: string;
+  pre1990Grade_atAcq: string;
+  pre1990GradeMode: "number" | "value";
+
+  // ── Step 3 (구 Step4): 보유 상황 (세대·납세자 단위) ──
+  isOneHousehold: boolean;
+  householdHousingCount: string;
+  residencePeriodMonths: string;
+  isRegulatedArea: boolean;
+  wasRegulatedAtAcquisition: boolean;
+  isUnregistered: boolean;
+  isNonBusinessLand: boolean;
+  temporaryTwoHouseSpecial: boolean;
+  previousHouseAcquisitionDate: string;
+  newHouseAcquisitionDate: string;
+  marriageDate: string;
+  parentalCareMergeDate: string;
+  nblLandType: string;
+  nblLandArea: string;
+  nblZoneType: string;
+  nblFarmingSelf: boolean;
+  nblFarmerResidenceDistance: string;
+  nblBusinessUsePeriods: NblBusinessUsePeriod[];
+  houses: HouseEntry[];
+  sellingHouseRegion: "capital" | "non_capital";
+
+  // ── Step 4 (구 Step5): 감면·공제 ──
+  /** 당해 연도 기사용 기본공제 (사람 단위, 연간 한도 250만원) */
+  annualBasicDeductionUsed: string;
+  /**
+   * 인별 5년 합산 한도 산정용 과거 감면 이력 (조특법 §133).
+   * 최근 4개 과세연도 사용분을 입력.
+   */
+  priorReductionUsage: PriorReductionUsageItem[];
+
+  // ── Step 5 (가산세) ──
+  enablePenalty: boolean;
+  filingType: "none" | "under" | "excess_refund" | "correct";
+  penaltyReason: "normal" | "fraudulent" | "offshore_fraud";
+  priorPaidTax: string;
+  originalFiledTax: string;
+  excessRefundAmount: string;
+  interestSurcharge: string;
+  unpaidTax: string;
+  paymentDeadline: string;
+  actualPaymentDate: string;
+}
+
 const defaultFormData: TransferFormData = {
-  propertyType: "housing",
-  isSuccessorRightToMoveIn: false,
-  transferPrice: "",
+  assets: [makeDefaultAsset(1)],
+  contractTotalPrice: "",
+  bundledSaleMode: "apportioned",
   transferDate: "",
   filingDate: "",
-  propertyAddressRoad: "",
-  propertyAddressJibun: "",
-  propertyBuildingName: "",
-  propertyAddressDetail: "",
-  propertyLongitude: "",
-  propertyLatitude: "",
-  acquisitionCause: "purchase",
-  acquisitionPrice: "",
-  acquisitionDate: "",
-  decedentAcquisitionDate: "",
-  donorAcquisitionDate: "",
-  expenses: "0",
-  useEstimatedAcquisition: false,
-  standardPriceAtAcquisition: "",
-  standardPriceAtTransfer: "",
-  standardPriceAtAcquisitionLabel: "",
-  standardPriceAtTransferLabel: "",
+  acquisitionMethod: "actual",
+  appraisalValue: "",
+  isSelfBuilt: false,
+  buildingType: "",
+  constructionDate: "",
+  extensionFloorArea: "",
+  pre1990Enabled: false,
+  pre1990AreaSqm: "",
+  pre1990PricePerSqm_1990: "",
+  pre1990PricePerSqm_atTransfer: "",
+  pre1990Grade_current: "",
+  pre1990Grade_prev: "",
+  pre1990Grade_atAcq: "",
+  pre1990GradeMode: "number",
   isOneHousehold: true,
   householdHousingCount: "1",
   residencePeriodMonths: "0",
@@ -278,20 +343,6 @@ const defaultFormData: TransferFormData = {
   wasRegulatedAtAcquisition: false,
   isUnregistered: false,
   isNonBusinessLand: false,
-  reductionType: "",
-  farmingYears: "0",
-  useSelfFarmingIncorporation: false,
-  selfFarmingIncorporationDate: "",
-  selfFarmingIncorporationZone: "",
-  selfFarmingStandardPriceAtIncorporation: "",
-  rentalYears: "0",
-  rentIncreaseRate: "0",
-  reductionRegion: "metropolitan",
-  expropriationCash: "",
-  expropriationBond: "",
-  expropriationBondHoldingYears: "none",
-  expropriationApprovalDate: "",
-  annualBasicDeductionUsed: "0",
   temporaryTwoHouseSpecial: false,
   previousHouseAcquisitionDate: "",
   newHouseAcquisitionDate: "",
@@ -305,12 +356,8 @@ const defaultFormData: TransferFormData = {
   nblBusinessUsePeriods: [],
   houses: [],
   sellingHouseRegion: "capital",
-  acquisitionMethod: "actual",
-  appraisalValue: "",
-  isSelfBuilt: false,
-  buildingType: "",
-  constructionDate: "",
-  extensionFloorArea: "",
+  annualBasicDeductionUsed: "0",
+  priorReductionUsage: [],
   enablePenalty: false,
   filingType: "correct",
   penaltyReason: "normal",
@@ -321,33 +368,196 @@ const defaultFormData: TransferFormData = {
   unpaidTax: "0",
   paymentDeadline: "",
   actualPaymentDate: "",
-  pre1990Enabled: false,
-  pre1990AreaSqm: "",
-  pre1990PricePerSqm_1990: "",
-  pre1990PricePerSqm_atTransfer: "",
-  pre1990Grade_current: "",
-  pre1990Grade_prev: "",
-  pre1990Grade_atAcq: "",
-  pre1990GradeMode: "number",
-  parcelMode: false,
-  parcels: [],
-  companionAssets: [],
-  decedentFarmingYears: "0",
-  inheritanceValuationMode: "auto",
-  inheritanceLandPricePerM2: "",
-  inheritanceHousePrice: "",
 };
+
+/** 세션스토리지에 저장된 구 포맷(propertyType + companionAssets / 루트 감면 필드)을 신규 assets[] 포맷으로 변환 */
+function migrateLegacyForm(legacy: Record<string, unknown>): TransferFormData {
+  const primaryAsset = makeDefaultAsset(1);
+  primaryAsset.assetKind =
+    (legacy.propertyType as AssetForm["assetKind"]) ?? "housing";
+  primaryAsset.isSuccessorRightToMoveIn = Boolean(legacy.isSuccessorRightToMoveIn);
+  primaryAsset.isPrimaryForHouseholdFlags = true;
+  primaryAsset.standardPriceAtTransfer = String(legacy.standardPriceAtTransfer ?? "");
+  primaryAsset.standardPriceAtTransferLabel = String(legacy.standardPriceAtTransferLabel ?? "");
+  primaryAsset.directExpenses = String(legacy.expenses ?? "0");
+  primaryAsset.inheritanceValuationMode =
+    (legacy.inheritanceValuationMode as "auto" | "manual") ?? "auto";
+  primaryAsset.inheritanceDate = String(legacy.acquisitionDate ?? "");
+  primaryAsset.publishedValueAtInheritance = String(
+    legacy.inheritanceLandPricePerM2 || legacy.inheritanceHousePrice || ""
+  );
+  primaryAsset.fixedAcquisitionPrice = String(legacy.acquisitionPrice ?? "");
+
+  // 구 주소 필드 → 자산별 주소로 이관
+  primaryAsset.addressRoad = String(legacy.propertyAddressRoad ?? "");
+  primaryAsset.addressJibun = String(legacy.propertyAddressJibun ?? "");
+  primaryAsset.addressDetail = String(legacy.propertyAddressDetail ?? "");
+  primaryAsset.buildingName = String(legacy.propertyBuildingName ?? "");
+  primaryAsset.longitude = String(legacy.propertyLongitude ?? "");
+  primaryAsset.latitude = String(legacy.propertyLatitude ?? "");
+
+  primaryAsset.isOneHousehold = Boolean(legacy.isOneHousehold ?? true);
+  primaryAsset.actualSalePrice = "";
+  primaryAsset.acquisitionCause =
+    (legacy.acquisitionCause as "purchase" | "inheritance" | "gift") ?? "purchase";
+  primaryAsset.acquisitionDate = String(legacy.acquisitionDate ?? "");
+  primaryAsset.decedentAcquisitionDate = String(legacy.decedentAcquisitionDate ?? "");
+  primaryAsset.donorAcquisitionDate = String(legacy.donorAcquisitionDate ?? "");
+  primaryAsset.useEstimatedAcquisition = Boolean(legacy.useEstimatedAcquisition);
+  primaryAsset.standardPriceAtAcq = String(legacy.standardPriceAtAcquisition ?? "");
+  primaryAsset.standardPriceAtAcqLabel = String(legacy.standardPriceAtAcquisitionLabel ?? "");
+
+  // 구 다필지 필드 → 자산별 parcelMode/parcels 로 이관
+  if (legacy.parcelMode) {
+    primaryAsset.parcelMode = Boolean(legacy.parcelMode);
+    primaryAsset.parcels = (legacy.parcels as ParcelFormItem[]) ?? [];
+  }
+
+  // 구 루트 감면 필드 → primaryAsset.reductions 배열로 이관
+  const legacyReductionType = legacy.reductionType as string | undefined;
+  if (legacyReductionType && legacyReductionType !== "") {
+    if (legacyReductionType === "self_farming") {
+      primaryAsset.reductions = [{
+        type: "self_farming",
+        farmingYears: String(legacy.farmingYears ?? "0"),
+        decedentFarmingYears: String(legacy.decedentFarmingYears ?? "0"),
+        useSelfFarmingIncorporation: Boolean(legacy.useSelfFarmingIncorporation),
+        selfFarmingIncorporationDate: String(legacy.selfFarmingIncorporationDate ?? ""),
+        selfFarmingIncorporationZone: (legacy.selfFarmingIncorporationZone as "residential" | "commercial" | "industrial" | "") ?? "",
+        selfFarmingStandardPriceAtIncorporation: String(legacy.selfFarmingStandardPriceAtIncorporation ?? ""),
+      }];
+    } else if (legacyReductionType === "long_term_rental") {
+      primaryAsset.reductions = [{
+        type: "long_term_rental",
+        rentalYears: String(legacy.rentalYears ?? "0"),
+        rentIncreaseRate: String(legacy.rentIncreaseRate ?? "0"),
+      }];
+    } else if (legacyReductionType === "new_housing") {
+      primaryAsset.reductions = [{
+        type: "new_housing",
+        reductionRegion: (legacy.reductionRegion as "metropolitan" | "non_metropolitan" | "outside_overconcentration") ?? "metropolitan",
+      }];
+    } else if (legacyReductionType === "unsold_housing") {
+      primaryAsset.reductions = [{
+        type: "unsold_housing",
+        reductionRegion: (legacy.reductionRegion as "metropolitan" | "non_metropolitan" | "outside_overconcentration") ?? "metropolitan",
+      }];
+    } else if (legacyReductionType === "public_expropriation") {
+      primaryAsset.reductions = [{
+        type: "public_expropriation",
+        expropriationCash: String(legacy.expropriationCash ?? ""),
+        expropriationBond: String(legacy.expropriationBond ?? ""),
+        expropriationBondHoldingYears: (legacy.expropriationBondHoldingYears as "none" | "3" | "5") ?? "none",
+        expropriationApprovalDate: String(legacy.expropriationApprovalDate ?? ""),
+      }];
+    }
+  }
+
+  const companions: AssetForm[] = (
+    (legacy.companionAssets as Array<Record<string, unknown>>) ?? []
+  ).map((ca, i) => {
+    const base = ca as unknown as AssetForm;
+    // 구 companion의 reductionType: "" | "self_farming" → reductions 배열로 변환
+    const legacyCaReductionType = (ca.reductionType as string | undefined) ?? "";
+    const caReductions: AssetReductionForm[] = [];
+    if (legacyCaReductionType === "self_farming") {
+      caReductions.push({
+        type: "self_farming",
+        farmingYears: String(ca.farmingYears ?? "0"),
+      });
+    }
+    return {
+      ...base,
+      assetLabel: (base.assetLabel ?? `동반자산 ${i + 1}`)
+        .replace(/^동반자산/, "자산"),
+      isSuccessorRightToMoveIn: false,
+      isPrimaryForHouseholdFlags: false,
+      standardPriceAtAcqLabel: String(ca.standardPriceAtAcqLabel ?? ""),
+      standardPriceAtTransferLabel: String(ca.standardPriceAtTransferLabel ?? ""),
+      addressDetail: String(ca.addressDetail ?? ""),
+      buildingName: String(ca.buildingName ?? ""),
+      longitude: String(ca.longitude ?? ""),
+      latitude: String(ca.latitude ?? ""),
+      isRegulatedAreaAtAcq: null,
+      isRegulatedAreaAtTransfer: null,
+      parcelMode: Boolean(ca.parcelMode ?? false),
+      parcels: (ca.parcels as ParcelFormItem[]) ?? [],
+      reductions: caReductions,
+    };
+  });
+
+  const {
+    propertyType: _pt,
+    isSuccessorRightToMoveIn: _isr,
+    transferPrice,
+    acquisitionCause: _ac,
+    acquisitionDate: _ad,
+    decedentAcquisitionDate: _dad,
+    donorAcquisitionDate: _doad,
+    acquisitionPrice: _ap,
+    expenses: _exp,
+    useEstimatedAcquisition: _uea,
+    standardPriceAtAcquisition: _spa,
+    standardPriceAtTransfer: _spt,
+    standardPriceAtAcquisitionLabel: _spaal,
+    standardPriceAtTransferLabel: _spttl,
+    inheritanceValuationMode: _ivm,
+    inheritanceLandPricePerM2: _ilpp,
+    inheritanceHousePrice: _ihp,
+    companionAssets: _ca,
+    primaryActualSalePrice: _pasp,
+    // 구 주소 필드 제거
+    propertyAddressRoad: _par,
+    propertyAddressJibun: _paj,
+    propertyBuildingName: _pbn,
+    propertyAddressDetail: _pad,
+    propertyLongitude: _plon,
+    propertyLatitude: _plat,
+    // 구 다필지 필드 제거
+    parcelMode: _pm,
+    parcels: _parcels,
+    // 구 감면 필드 제거
+    reductionType: _rt,
+    farmingYears: _fy,
+    useSelfFarmingIncorporation: _usfi,
+    selfFarmingIncorporationDate: _sfid,
+    selfFarmingIncorporationZone: _sfiz,
+    selfFarmingStandardPriceAtIncorporation: _sfspa,
+    decedentFarmingYears: _dfy,
+    rentalYears: _ry,
+    rentIncreaseRate: _rir,
+    reductionRegion: _rr,
+    expropriationCash: _ec,
+    expropriationBond: _eb,
+    expropriationBondHoldingYears: _ebhy,
+    expropriationApprovalDate: _ead,
+    ...rest
+  } = legacy as Record<string, unknown>;
+
+  return {
+    ...defaultFormData,
+    ...(rest as Partial<TransferFormData>),
+    contractTotalPrice: String(transferPrice ?? ""),
+    assets: [primaryAsset, ...companions],
+  };
+}
+
+/** defaultFormData를 복사하여 반환하는 팩토리 (MultiTransferTaxCalculator 등 외부에서 사용) */
+export function createDefaultTransferFormData(): TransferFormData {
+  return {
+    ...defaultFormData,
+    assets: [makeDefaultAsset(1)],
+  };
+}
 
 interface CalcWizardState {
   currentStep: number;
   formData: TransferFormData;
   result: TransferAPIResult | null;
-  /** 비로그인 상태에서 계산 후 로그인 전환 시 이관할 대기 결과 */
   pendingMigration: boolean;
   setStep: (step: number) => void;
   updateFormData: (data: Partial<TransferFormData>) => void;
   setResult: (result: TransferAPIResult) => void;
-  /** 비로그인 → 로그인 이관 완료 후 플래그 초기화 */
   clearPendingMigration: () => void;
   reset: () => void;
 }
@@ -365,7 +575,6 @@ export const useCalcWizardStore = create<CalcWizardState>()(
       setResult: (result) => set({ result, pendingMigration: true }),
       clearPendingMigration: () => set({ pendingMigration: false }),
       reset: () => {
-        // sessionStorage persist 키도 함께 제거하여 새로고침 후 이전 입력값 재출현 방지
         if (typeof window !== "undefined") {
           sessionStorage.removeItem("transfer-tax-wizard");
         }
@@ -382,21 +591,36 @@ export const useCalcWizardStore = create<CalcWizardState>()(
           removeItem: () => {},
         };
       }),
-      // [I7] result(계산 결과)·pendingMigration은 sessionStorage 제외 — 민감정보 보호 + Date 직렬화 오류 방지
       partialize: (state) => ({
         currentStep: state.currentStep,
         formData: state.formData,
         pendingMigration: state.pendingMigration,
       }),
-      // 저장된 상태에 새 필드가 없을 때 defaultFormData로 채움 (필드 추가 시 하위 호환)
-      merge: (persisted, current) => ({
-        ...current,
-        ...(persisted as Partial<CalcWizardState>),
-        formData: {
-          ...defaultFormData,
-          ...((persisted as Partial<CalcWizardState>).formData ?? {}),
-        },
-      }),
+      merge: (persisted, current) => {
+        const ps = persisted as Partial<CalcWizardState>;
+        const legacyForm = ps.formData as Record<string, unknown> | undefined;
+
+        let formData: TransferFormData;
+        if (
+          legacyForm &&
+          (
+            "propertyType" in legacyForm ||
+            "companionAssets" in legacyForm ||
+            "propertyAddressRoad" in legacyForm ||
+            "reductionType" in legacyForm ||
+            "parcelMode" in legacyForm
+          )
+        ) {
+          formData = migrateLegacyForm(legacyForm);
+        } else {
+          formData = {
+            ...defaultFormData,
+            ...(ps.formData ?? {}),
+          };
+        }
+
+        return { ...current, ...ps, formData };
+      },
     },
   ),
 );

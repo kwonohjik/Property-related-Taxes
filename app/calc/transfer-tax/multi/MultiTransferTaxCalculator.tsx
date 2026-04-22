@@ -19,7 +19,11 @@ import {
   type PropertyItem,
   type MultiStep,
 } from "@/lib/stores/multi-transfer-tax-store";
-import { useCalcWizardStore, type TransferFormData } from "@/lib/stores/calc-wizard-store";
+import {
+  useCalcWizardStore,
+  createDefaultTransferFormData,
+  type TransferFormData,
+} from "@/lib/stores/calc-wizard-store";
 import { callMultiTransferTaxAPI } from "@/lib/calc/multi-transfer-tax-api";
 import {
   calcPropertyCompletion,
@@ -40,97 +44,6 @@ const PROPERTY_TYPE_LABELS: Record<string, string> = {
   presale_right: "분양권",
 };
 
-function makeDefaultForm(): TransferFormData {
-  return {
-    propertyType: "housing",
-    isSuccessorRightToMoveIn: false,
-    transferPrice: "",
-    transferDate: "",
-    filingDate: "",
-    propertyAddressRoad: "",
-    propertyAddressJibun: "",
-    propertyBuildingName: "",
-    propertyAddressDetail: "",
-    propertyLongitude: "",
-    propertyLatitude: "",
-    acquisitionCause: "purchase",
-    acquisitionPrice: "",
-    acquisitionDate: "",
-    decedentAcquisitionDate: "",
-    donorAcquisitionDate: "",
-    expenses: "0",
-    useEstimatedAcquisition: false,
-    standardPriceAtAcquisition: "",
-    standardPriceAtTransfer: "",
-    standardPriceAtAcquisitionLabel: "",
-    standardPriceAtTransferLabel: "",
-    isOneHousehold: true,
-    householdHousingCount: "1",
-    residencePeriodMonths: "0",
-    isRegulatedArea: false,
-    wasRegulatedAtAcquisition: false,
-    isUnregistered: false,
-    isNonBusinessLand: false,
-    reductionType: "",
-    farmingYears: "0",
-    useSelfFarmingIncorporation: false,
-    selfFarmingIncorporationDate: "",
-    selfFarmingIncorporationZone: "",
-    selfFarmingStandardPriceAtIncorporation: "",
-    rentalYears: "0",
-    rentIncreaseRate: "5",
-    reductionRegion: "metropolitan",
-    expropriationCash: "",
-    expropriationBond: "",
-    expropriationBondHoldingYears: "none",
-    expropriationApprovalDate: "",
-    annualBasicDeductionUsed: "0",
-    temporaryTwoHouseSpecial: false,
-    previousHouseAcquisitionDate: "",
-    newHouseAcquisitionDate: "",
-    marriageDate: "",
-    parentalCareMergeDate: "",
-    nblLandType: "",
-    nblLandArea: "",
-    nblZoneType: "",
-    nblFarmingSelf: false,
-    nblFarmerResidenceDistance: "",
-    nblBusinessUsePeriods: [],
-    houses: [],
-    sellingHouseRegion: "capital",
-    acquisitionMethod: "actual",
-    appraisalValue: "",
-    isSelfBuilt: false,
-    buildingType: "",
-    constructionDate: "",
-    extensionFloorArea: "",
-    enablePenalty: false,
-    filingType: "none",
-    penaltyReason: "normal",
-    priorPaidTax: "0",
-    originalFiledTax: "0",
-    excessRefundAmount: "0",
-    interestSurcharge: "0",
-    unpaidTax: "0",
-    paymentDeadline: "",
-    actualPaymentDate: "",
-    pre1990Enabled: false,
-    pre1990AreaSqm: "",
-    pre1990PricePerSqm_1990: "",
-    pre1990PricePerSqm_atTransfer: "",
-    pre1990Grade_current: "",
-    pre1990Grade_prev: "",
-    pre1990Grade_atAcq: "",
-    pre1990GradeMode: "number",
-    parcelMode: false,
-    parcels: [],
-    companionAssets: [],
-    decedentFarmingYears: "0",
-    inheritanceValuationMode: "auto",
-    inheritanceLandPricePerM2: "",
-    inheritanceHousePrice: "",
-  };
-}
 
 // ─── Step A: 자산 목록 ────────────────────────────────────────
 
@@ -171,7 +84,7 @@ function StepList({ properties, onAdd, onEdit, onDuplicate, onRemove, onNext, on
                   <p className="font-medium">{p.propertyLabel}</p>
                   <div className="flex items-center gap-2 mt-1">
                     <Badge variant="outline" className="text-xs">
-                      {PROPERTY_TYPE_LABELS[p.form.propertyType] ?? p.form.propertyType}
+                      {PROPERTY_TYPE_LABELS[p.form.assets[0]?.assetKind ?? ""] ?? p.form.assets[0]?.assetKind ?? ""}
                     </Badge>
                     {p.form.transferDate && (
                       <span className="text-xs text-muted-foreground">
@@ -345,7 +258,7 @@ export default function MultiTransferTaxCalculator() {
     const newItem: PropertyItem = {
       propertyId: newId,
       propertyLabel: `양도 ${form.properties.length + 1}번`,
-      form: makeDefaultForm(),
+      form: createDefaultTransferFormData(),
       completionPercent: 0,
     };
     addProperty(newItem);

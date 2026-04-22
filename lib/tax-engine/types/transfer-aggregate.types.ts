@@ -56,6 +56,8 @@ export interface AggregateTransferInput {
   filingPenaltyDetails?: FilingPenaltyInput;
   /** 납부지연 가산세 (합산 결정세액 기준 계산) */
   delayedPaymentDetails?: DelayedPaymentInput;
+  /** 과거 4개 과세연도 감면 이력 (§133 5년 누적 한도 계산용, 사용자 직접 입력) */
+  priorReductionUsage?: { year: number; type: string; amount: number }[];
 }
 
 /** 자산별 breakdown */
@@ -126,10 +128,20 @@ export interface ReductionBreakdownEntry {
   rawAggregateReduction: number;
   /** §133 유형별 연간 한도 (없으면 0) */
   annualLimit: number;
-  /** 한도 적용 후 최종 감면세액 */
+  /** 연간 한도 적용 후 금액 */
+  annuallyCappedReduction: number;
+  /** 한도 적용 후 최종 감면세액 (연간 + 5년 한도 모두 적용) */
   cappedAggregateReduction: number;
-  /** 한도에 걸려 원시값이 절사된 경우 true */
+  /** 연간 한도에 걸려 절사된 경우 true */
   cappedByLimit: boolean;
+  /** §133 5년 누적 한도 (없으면 0) */
+  fiveYearLimit: number;
+  /** 과거 4개 연도 그룹 누적 감면액 */
+  priorGroupSum: number;
+  /** 5년 한도 잔여액 */
+  fiveYearRemaining: number;
+  /** 5년 한도에 걸려 추가 절사된 경우 true */
+  cappedByFiveYearLimit: boolean;
   /** 이 유형에 속한 자산 식별자 목록 */
   assetIds: string[];
 }

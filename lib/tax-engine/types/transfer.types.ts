@@ -186,6 +186,12 @@ export interface TransferTaxInput {
    * propertyType === "land" + 환지·합병 등 2필지 이상인 경우 사용.
    */
   parcels?: ParcelInput[];
+  /**
+   * 인별 5년 감면 이력 (선택, 조특법 §133).
+   * 제공 시 5년 누적 한도를 초과하는 분은 당해 감면에서 자동 차감.
+   * 미제공 또는 빈 배열 시 연간 한도만 적용(기존 동작 유지).
+   */
+  priorReductionUsage?: { year: number; type: string; amount: number }[];
 }
 
 export type TransferReduction =

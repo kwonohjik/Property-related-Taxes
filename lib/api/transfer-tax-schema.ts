@@ -232,13 +232,16 @@ const companionAssetSchema = z.object({
   assetId: z.string().min(1),
   assetLabel: z.string().min(1),
   assetKind: z.enum(["housing", "land", "building"]),
-  /** 양도시점 기준시가 (안분 키) — 주택: 개별주택가격, 토지: 공시지가×면적 */
-  standardPriceAtTransfer: z.number().int().positive(),
-  /** 취득시점 기준시가 (선택) — totalAcquisitionPrice 안분 시 키 */
+  /**
+   * 양도시점 기준시가 (안분 키) — 주택: 개별주택가격, 토지: 공시지가×면적.
+   * apportioned 모드에서 필수, actual 모드(fixedSalePrice 사용)에서는 선택.
+   */
+  standardPriceAtTransfer: z.number().int().positive().optional(),
+  /** 취득시점 기준시가 (선택) — totalAcquisitionPrice 안분 또는 매매 estimated 환산 시 키 */
   standardPriceAtAcquisition: z.number().int().positive().optional(),
   /** 자산 직접 귀속 필요경비 (원, 선택) */
   directExpenses: z.number().int().nonnegative().optional(),
-  /** 상속·증여 등 취득가액이 자산별로 확정된 경우 (선택) */
+  /** 상속·증여·매매(actual) 등 취득가액이 자산별로 확정된 경우 (선택) */
   fixedAcquisitionPrice: z.number().int().nonnegative().optional(),
   /** 상속 보충적평가액 산정용 입력 (선택) — 지정 시 fixedAcquisitionPrice로 주입됨 */
   inheritanceValuation: inheritanceValuationSchema.optional(),
@@ -252,6 +255,22 @@ const companionAssetSchema = z.object({
   isUnregistered: z.boolean().optional(),
   /** 자산별 비사업용 토지 여부 */
   isNonBusinessLand: z.boolean().optional(),
+  // ── 일괄양도 보완: 양도가액 모드 + 취득원인 분기 ──
+  /**
+   * 계약서에 구분 기재된 실제 양도가액 (원, 선택).
+   * §166⑥ 본문 — 지정 시 안분 대상 제외, 그대로 allocatedSalePrice로 사용.
+   */
+  fixedSalePrice: z.number().int().positive().optional(),
+  /** 동반자산 취득 원인 — 기본 "inheritance" (기존 동작 호환) */
+  acquisitionCause: z.enum(["purchase", "inheritance", "gift"]).default("inheritance"),
+  /** 매매 시 환산취득가 사용 여부 */
+  useEstimatedAcquisition: z.boolean().optional(),
+  /** 본인 취득일 (YYYY-MM-DD) — 보유기간 산정용 */
+  acquisitionDate: z.string().date().optional(),
+  /** 상속 시 피상속인 취득일 (자산별 단기보유 통산용) */
+  decedentAcquisitionDate: z.string().date().optional(),
+  /** 증여 시 증여자 취득일 */
+  donorAcquisitionDate: z.string().date().optional(),
 });
 
 // ─── superRefine 공통 검증 ──────────────────────────────────────
@@ -451,18 +470,35 @@ const propertyBaseShape = {
   totalSalePrice: z.number().int().positive().optional(),
   /** 안분 방식 (v1은 standard_price_transfer만 지원) */
   apportionmentMethod: z.literal("standard_price_transfer").optional(),
-  /** 주 자산의 양도시점 기준시가 — 일괄양도 안분 키 */
+  /** 주 자산의 양도시점 기준시가 — 일괄양도 안분 키 (apportioned 모드 시 필수) */
   standardPriceAtTransferForApportion: z.number().int().positive().optional(),
   /** 주 자산이 상속 보충적평가액 산정 대상인 경우 */
   primaryInheritanceValuation: inheritanceValuationSchema.optional(),
+  /**
+   * 일괄양도 양도가액 결정 모드 (계약서 단위 단일 결정).
+   * - "actual": 계약서에 자산별 가액이 구분 기재된 경우 (§166⑥ 본문)
+   * - "apportioned": 구분 불분명 → 기준시가 비율 안분 (§166⑥ 단서, 기본값)
+   */
+  bundledSaleMode: z.enum(["actual", "apportioned"]).default("apportioned"),
+  /** actual 모드 시 주 자산의 계약서상 양도가액 (원) */
+  primaryActualSalePrice: z.number().int().positive().optional(),
 };
 
 // ─── 단건 스키마 (기존 inputSchema와 동일) ─────────────────────
+
+const priorReductionUsageSchema = z.array(
+  z.object({
+    year: z.number().int().min(1990).max(new Date().getFullYear()),
+    type: z.enum(["self_farming", "long_term_rental", "new_housing", "unsold_housing", "public_expropriation"]),
+    amount: z.number().int().nonnegative(),
+  }),
+).default([]);
 
 export const propertySchema = z
   .object({
     ...propertyBaseShape,
     annualBasicDeductionUsed: z.number().int().nonnegative().default(0),
+    priorReductionUsage: priorReductionUsageSchema,
     filingPenaltyDetails: filingPenaltyDetailsSchema.optional(),
     delayedPaymentDetails: delayedPaymentDetailsSchema.optional(),
   })
@@ -480,17 +516,142 @@ export const propertySchema = z
           message: "일괄양도 시 총 양도가액(totalSalePrice)이 필수입니다",
         });
       }
-      // 주 자산 양도시점 기준시가 필수 (안분 키)
-      if (
-        data.standardPriceAtTransferForApportion === undefined ||
-        data.standardPriceAtTransferForApportion <= 0
-      ) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["standardPriceAtTransferForApportion"],
-          message: "일괄양도 시 주 자산의 양도시점 기준시가가 필수입니다",
-        });
+
+      // ── 양도가액 모드 단일 결정 검증 (계약서 단위) ──
+      if (data.bundledSaleMode === "actual") {
+        // 주 자산 actual 가액 필수
+        if (!data.primaryActualSalePrice || data.primaryActualSalePrice <= 0) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["primaryActualSalePrice"],
+            message: "actual 모드: 주 자산의 계약서상 양도가액 필수",
+          });
+        }
+        // 모든 컴패니언이 fixedSalePrice 가져야 함
+        for (let i = 0; i < companions.length; i++) {
+          if (!companions[i].fixedSalePrice || companions[i].fixedSalePrice! <= 0) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ["companionAssets", i, "fixedSalePrice"],
+              message: "actual 모드: 모든 자산의 계약서상 양도가액 필수",
+            });
+          }
+        }
+        // 합계 = totalSalePrice 검증
+        if (data.totalSalePrice && data.primaryActualSalePrice) {
+          const sumFixed =
+            data.primaryActualSalePrice +
+            companions.reduce((s, c) => s + (c.fixedSalePrice ?? 0), 0);
+          if (sumFixed !== data.totalSalePrice) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ["primaryActualSalePrice"],
+              message: `구분 기재된 양도가액 합(${sumFixed.toLocaleString()})이 총 양도가액(${data.totalSalePrice.toLocaleString()})과 일치하지 않습니다`,
+            });
+          }
+        }
+      } else {
+        // apportioned: 주 자산 양도시점 기준시가 필수 (안분 키)
+        if (
+          data.standardPriceAtTransferForApportion === undefined ||
+          data.standardPriceAtTransferForApportion <= 0
+        ) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["standardPriceAtTransferForApportion"],
+            message: "apportioned 모드: 주 자산의 양도시점 기준시가 필수",
+          });
+        }
+        // 모든 컴패니언이 standardPriceAtTransfer 가져야 함
+        for (let i = 0; i < companions.length; i++) {
+          if (!companions[i].standardPriceAtTransfer || companions[i].standardPriceAtTransfer! <= 0) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ["companionAssets", i, "standardPriceAtTransfer"],
+              message: "apportioned 모드: 양도시 기준시가 필수",
+            });
+          }
+        }
       }
+
+      // ── 컴패니언별 acquisitionCause 검증 ──
+      for (let i = 0; i < companions.length; i++) {
+        const c = companions[i];
+        if (c.acquisitionCause === "purchase") {
+          if (c.useEstimatedAcquisition) {
+            if (!c.standardPriceAtAcquisition || c.standardPriceAtAcquisition <= 0) {
+              ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: ["companionAssets", i, "standardPriceAtAcquisition"],
+                message: "매매(환산) 시 취득시 기준시가 필수",
+              });
+            }
+            if (!c.standardPriceAtTransfer || c.standardPriceAtTransfer <= 0) {
+              ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: ["companionAssets", i, "standardPriceAtTransfer"],
+                message: "매매(환산) 시 양도시 기준시가 필수",
+              });
+            }
+          } else {
+            if (!c.fixedAcquisitionPrice || c.fixedAcquisitionPrice <= 0) {
+              ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: ["companionAssets", i, "fixedAcquisitionPrice"],
+                message: "매매(실가) 시 취득가액 필수",
+              });
+            }
+          }
+          if (!c.acquisitionDate) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ["companionAssets", i, "acquisitionDate"],
+              message: "매매 자산은 취득일 필수",
+            });
+          }
+        } else if (c.acquisitionCause === "gift") {
+          if (!c.fixedAcquisitionPrice || c.fixedAcquisitionPrice <= 0) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ["companionAssets", i, "fixedAcquisitionPrice"],
+              message: "증여 자산은 신고가액(취득가액) 필수",
+            });
+          }
+          if (!c.donorAcquisitionDate) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ["companionAssets", i, "donorAcquisitionDate"],
+              message: "증여 자산은 증여자 취득일 필수",
+            });
+          }
+          if (!c.acquisitionDate) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ["companionAssets", i, "acquisitionDate"],
+              message: "증여 자산은 증여일 필수",
+            });
+          }
+        } else if (c.acquisitionCause === "inheritance") {
+          // 상속: inheritanceValuation(auto) 또는 fixedAcquisitionPrice(manual) 중 하나 필요
+          const hasAuto = c.inheritanceValuation !== undefined;
+          const hasManual = c.fixedAcquisitionPrice !== undefined && c.fixedAcquisitionPrice > 0;
+          if (!hasAuto && !hasManual) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ["companionAssets", i, "fixedAcquisitionPrice"],
+              message: "상속 자산은 보충적평가 또는 직접입력 취득가액 필수",
+            });
+          }
+          if (!c.decedentAcquisitionDate) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ["companionAssets", i, "decedentAcquisitionDate"],
+              message: "상속 자산은 피상속인 취득일 필수",
+            });
+          }
+        }
+      }
+
       // assetId 중복 금지
       const ids = companions.map((a) => a.assetId);
       const seen = new Set<string>();
@@ -542,6 +703,7 @@ export const multiInputSchema = z
     taxYear: z.number().int().min(2000).max(2100),
     properties: z.array(propertyItemSchema).min(1).max(20),
     annualBasicDeductionUsed: z.number().int().nonnegative().default(0),
+    priorReductionUsage: priorReductionUsageSchema,
     basicDeductionAllocation: z
       .enum(["MAX_BENEFIT", "FIRST", "EARLIEST_TRANSFER"])
       .default("MAX_BENEFIT"),

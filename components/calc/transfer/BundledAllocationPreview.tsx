@@ -3,46 +3,41 @@
 import { useMemo } from "react";
 import { apportionBundledSale, type BundledAssetInput } from "@/lib/tax-engine/bundled-sale-apportionment";
 import { formatKRW, parseAmount } from "@/components/calc/inputs/CurrencyInput";
-import type { CompanionAssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
+import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 
 interface Props {
   form: TransferFormData;
 }
 
+function toEngineKind(kind: string): "housing" | "land" | "building" {
+  if (kind === "land") return "land";
+  if (kind === "building") return "building";
+  return "housing";
+}
+
 export function BundledAllocationPreview({ form }: Props) {
   const result = useMemo(() => {
-    const totalSalePrice = parseAmount(form.transferPrice);
-    const primaryStd = parseAmount(form.standardPriceAtTransfer);
-    if (!totalSalePrice || !primaryStd || !form.companionAssets?.length) return null;
+    const { assets, contractTotalPrice, bundledSaleMode } = form;
+    if (bundledSaleMode !== "apportioned" || assets.length < 2) return null;
 
-    const companionValid = form.companionAssets.every(
-      (a) => parseAmount(a.standardPriceAtTransfer) > 0,
-    );
-    if (!companionValid) return null;
+    const totalSalePrice = parseAmount(contractTotalPrice);
+    if (!totalSalePrice) return null;
 
-    const assets: BundledAssetInput[] = [
-      {
-        assetId: "primary",
-        assetLabel: "주된 자산",
-        assetKind: form.propertyType === "land" ? "land" : "housing",
-        standardPriceAtTransfer: primaryStd,
-      },
-      ...form.companionAssets.map(
-        (a: CompanionAssetForm): BundledAssetInput => ({
-          assetId: a.assetId,
-          assetLabel: a.assetLabel,
-          assetKind: a.assetKind,
-          standardPriceAtTransfer: parseAmount(a.standardPriceAtTransfer),
-        }),
-      ),
-    ];
+    const engineAssets: BundledAssetInput[] = assets.map((a, i) => ({
+      assetId: a.assetId,
+      assetLabel: a.assetLabel || `자산 ${i + 1}`,
+      assetKind: toEngineKind(a.assetKind),
+      standardPriceAtTransfer: parseAmount(a.standardPriceAtTransfer),
+    }));
+
+    if (engineAssets.some((a) => a.standardPriceAtTransfer <= 0)) return null;
 
     try {
-      return apportionBundledSale({ totalSalePrice, assets });
+      return apportionBundledSale({ totalSalePrice, assets: engineAssets });
     } catch {
       return null;
     }
-  }, [form.transferPrice, form.standardPriceAtTransfer, form.companionAssets, form.propertyType]);
+  }, [form]);
 
   if (!result) return null;
 
@@ -62,28 +57,20 @@ export function BundledAllocationPreview({ form }: Props) {
           </tr>
         </thead>
         <tbody>
-          {result.apportioned.map((a) => (
-            <tr key={a.assetId} className="border-b last:border-0">
-              <td className="py-1 pr-2">{
-                a.assetId === "primary"
-                  ? "주된 자산"
-                  : form.companionAssets?.find((c) => c.assetId === a.assetId)?.assetLabel ?? a.assetId
-              }</td>
-              <td className="py-1 pr-2 text-right font-mono">
-                {formatKRW(
-                  a.assetId === "primary"
-                    ? parseAmount(form.standardPriceAtTransfer)
-                    : parseAmount(
-                        form.companionAssets?.find((c) => c.assetId === a.assetId)
-                          ?.standardPriceAtTransfer ?? "0",
-                      ),
-                )}
-              </td>
-              <td className="py-1 text-right font-mono font-medium">
-                {formatKRW(a.allocatedSalePrice)}
-              </td>
-            </tr>
-          ))}
+          {result.apportioned.map((a) => {
+            const asset = form.assets.find((x) => x.assetId === a.assetId);
+            return (
+              <tr key={a.assetId} className="border-b last:border-0">
+                <td className="py-1 pr-2">{asset?.assetLabel ?? a.assetId}</td>
+                <td className="py-1 pr-2 text-right font-mono">
+                  {formatKRW(parseAmount(asset?.standardPriceAtTransfer ?? "0"))}
+                </td>
+                <td className="py-1 text-right font-mono font-medium">
+                  {formatKRW(a.allocatedSalePrice)}
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
         <tfoot>
           <tr className="font-medium text-blue-900">

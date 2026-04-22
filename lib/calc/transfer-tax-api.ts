@@ -1,10 +1,13 @@
 /**
  * 양도소득세 계산 API 호출 함수
- * TransferFormData → POST /api/calc/transfer → TransferTaxResult | BundledTransferResult
+ * TransferFormData (assets[] 기반) → POST /api/calc/transfer → TransferAPIResult
+ *
+ * Phase 1: 서버 Zod 스키마 미변경 — 클라이언트에서 기존 포맷으로 변환하여 전송.
+ * assets.length === 1 → single 엔드포인트, >= 2 → bundled 엔드포인트.
  */
 
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
-import type { TransferFormData, CompanionAssetForm } from "@/lib/stores/calc-wizard-store";
+import type { TransferFormData, AssetForm, AssetReductionForm } from "@/lib/stores/calc-wizard-store";
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import type { BundledApportionmentResult } from "@/lib/tax-engine/bundled-sale-apportionment";
 import type { AggregateTransferResult } from "@/lib/tax-engine/transfer-tax-aggregate";
@@ -17,107 +20,155 @@ export type BundledTransferResult = {
 };
 export type TransferAPIResult = SingleTransferResult | BundledTransferResult;
 
-const isHousingLike = (pt: string) =>
-  pt === "housing" || pt === "right_to_move_in" || pt === "presale_right";
+/** 엔진이 이해하는 3종 assetKind (right_to_move_in / presale_right → housing) */
+function toEngineAssetKind(kind: AssetForm["assetKind"]): "housing" | "land" | "building" {
+  if (kind === "right_to_move_in" || kind === "presale_right") return "housing";
+  return kind;
+}
 
-function buildCompanionAssetPayload(asset: CompanionAssetForm) {
-  const reductions = [];
-  if (asset.reductionType === "self_farming") {
-    reductions.push({ type: "self_farming", farmingYears: parseInt(asset.farmingYears) || 0 });
-  }
+const isHousingLike = (kind: AssetForm["assetKind"]) =>
+  kind === "housing" || kind === "right_to_move_in" || kind === "presale_right";
+
+/** AssetReductionForm[] → 엔진 reductions payload 변환 */
+export function toEngineReductions(
+  formReductions: AssetReductionForm[],
+  acquisitionCause: AssetForm["acquisitionCause"],
+) {
+  return formReductions.map((r) => {
+    if (r.type === "self_farming") {
+      const decedentYears = parseInt(r.decedentFarmingYears ?? "0") || 0;
+      const incorpDate = r.useSelfFarmingIncorporation ? (r.selfFarmingIncorporationDate ?? "") : "";
+      const incorpZone = r.useSelfFarmingIncorporation ? (r.selfFarmingIncorporationZone ?? "") : "";
+      const incorpStdPrice = r.useSelfFarmingIncorporation
+        ? parseAmount(r.selfFarmingStandardPriceAtIncorporation ?? "")
+        : 0;
+      return {
+        type: "self_farming" as const,
+        farmingYears: parseInt(r.farmingYears) || 0,
+        ...(acquisitionCause === "inheritance" && decedentYears > 0
+          ? { decedentFarmingYears: decedentYears }
+          : {}),
+        ...(incorpDate ? { incorporationDate: incorpDate } : {}),
+        ...(incorpZone ? { incorporationZoneType: incorpZone } : {}),
+        ...(incorpStdPrice > 0 ? { standardPriceAtIncorporation: incorpStdPrice } : {}),
+      };
+    }
+    if (r.type === "long_term_rental") {
+      return {
+        type: "long_term_rental" as const,
+        rentalYears: parseInt(r.rentalYears) || 0,
+        rentIncreaseRate: parseFloat(r.rentIncreaseRate) / 100,
+      };
+    }
+    if (r.type === "new_housing") {
+      const region =
+        r.reductionRegion === "outside_overconcentration"
+          ? "metropolitan"
+          : (r.reductionRegion as "metropolitan" | "non_metropolitan");
+      return { type: "new_housing" as const, region };
+    }
+    if (r.type === "unsold_housing") {
+      const region =
+        r.reductionRegion === "outside_overconcentration"
+          ? "metropolitan"
+          : (r.reductionRegion as "metropolitan" | "non_metropolitan");
+      return { type: "unsold_housing" as const, region };
+    }
+    if (r.type === "public_expropriation") {
+      const cash = parseAmount(r.expropriationCash || "0");
+      const bond = parseAmount(r.expropriationBond || "0");
+      const bondHoldingYears =
+        r.expropriationBondHoldingYears === "3"
+          ? 3
+          : r.expropriationBondHoldingYears === "5"
+            ? 5
+            : null;
+      return {
+        type: "public_expropriation" as const,
+        cashCompensation: cash,
+        bondCompensation: bond,
+        bondHoldingYears,
+        businessApprovalDate: r.expropriationApprovalDate,
+      };
+    }
+    // exhaustive check
+    const _never: never = r;
+    return _never;
+  });
+}
+
+/** 자산 1건 → 번들 companionAssets 배열 항목 변환 */
+function buildAssetPayload(asset: AssetForm, bundledSaleMode: "actual" | "apportioned") {
+  const reductions = toEngineReductions(asset.reductions ?? [], asset.acquisitionCause);
+
   const inheritanceValuation =
-    asset.inheritanceValuationMode === "auto"
+    asset.acquisitionCause === "inheritance" && asset.inheritanceValuationMode === "auto"
       ? {
-          inheritanceDate: asset.inheritanceDate,
+          inheritanceDate: asset.inheritanceDate || asset.acquisitionDate,
           assetKind: asset.inheritanceAssetKind,
           landAreaM2: asset.landAreaM2 ? parseFloat(asset.landAreaM2) : undefined,
           publishedValueAtInheritance: parseAmount(asset.publishedValueAtInheritance),
         }
-      : asset.fixedAcquisitionPrice
-        ? undefined
-        : undefined;
+      : undefined;
+
+  const fixedAcquisitionPrice =
+    (asset.acquisitionCause === "purchase" && !asset.useEstimatedAcquisition && asset.fixedAcquisitionPrice) ||
+    (asset.acquisitionCause === "gift" && asset.fixedAcquisitionPrice) ||
+    (asset.acquisitionCause === "inheritance" && asset.inheritanceValuationMode === "manual" && asset.fixedAcquisitionPrice)
+      ? parseAmount(asset.fixedAcquisitionPrice)
+      : undefined;
+
   return {
     assetId: asset.assetId,
     assetLabel: asset.assetLabel,
-    assetKind: asset.assetKind,
-    standardPriceAtTransfer: parseAmount(asset.standardPriceAtTransfer),
+    assetKind: toEngineAssetKind(asset.assetKind),
+    standardPriceAtTransfer:
+      parseAmount(asset.standardPriceAtTransfer) > 0
+        ? parseAmount(asset.standardPriceAtTransfer)
+        : undefined,
+    standardPriceAtAcquisition:
+      asset.acquisitionCause === "purchase" && asset.useEstimatedAcquisition && asset.standardPriceAtAcq
+        ? parseAmount(asset.standardPriceAtAcq)
+        : undefined,
     directExpenses: parseAmount(asset.directExpenses),
     reductions,
-    inheritanceValuation: inheritanceValuation ?? undefined,
-    fixedAcquisitionPrice:
-      asset.inheritanceValuationMode === "manual" && asset.fixedAcquisitionPrice
-        ? parseAmount(asset.fixedAcquisitionPrice)
-        : undefined,
+    inheritanceValuation,
+    fixedAcquisitionPrice,
     isOneHousehold: asset.isOneHousehold,
+    fixedSalePrice:
+      bundledSaleMode === "actual" && asset.actualSalePrice
+        ? parseAmount(asset.actualSalePrice)
+        : undefined,
+    acquisitionCause: asset.acquisitionCause,
+    useEstimatedAcquisition:
+      asset.acquisitionCause === "purchase" ? asset.useEstimatedAcquisition : undefined,
+    acquisitionDate: asset.acquisitionDate || undefined,
+    decedentAcquisitionDate:
+      asset.acquisitionCause === "inheritance" && asset.decedentAcquisitionDate
+        ? asset.decedentAcquisitionDate
+        : undefined,
+    donorAcquisitionDate:
+      asset.acquisitionCause === "gift" && asset.donorAcquisitionDate
+        ? asset.donorAcquisitionDate
+        : undefined,
   };
 }
 
 export async function callTransferTaxAPI(form: TransferFormData): Promise<TransferAPIResult> {
-  const reductions = [];
-  if (form.reductionType === "self_farming") {
-    const ownYears = parseInt(form.farmingYears) || 0;
-    const decedentYears = parseInt(form.decedentFarmingYears) || 0;
-    // 조특령 §66 ⑤⑥ 편입일 부분감면 매핑 (토글 + 날짜 + 지역 + 기준시가 모두 있을 때만)
-    const incorpDate = form.useSelfFarmingIncorporation ? form.selfFarmingIncorporationDate : "";
-    const incorpZone = form.useSelfFarmingIncorporation ? form.selfFarmingIncorporationZone : "";
-    const incorpStdPrice = form.useSelfFarmingIncorporation
-      ? parseAmount(form.selfFarmingStandardPriceAtIncorporation)
-      : 0;
-    reductions.push({
-      type: "self_farming",
-      farmingYears: ownYears,
-      ...(form.acquisitionCause === "inheritance" && decedentYears > 0
-        ? { decedentFarmingYears: decedentYears }
-        : {}),
-      ...(incorpDate ? { incorporationDate: incorpDate } : {}),
-      ...(incorpZone ? { incorporationZoneType: incorpZone } : {}),
-      ...(incorpStdPrice > 0 ? { standardPriceAtIncorporation: incorpStdPrice } : {}),
-    });
-  } else if (form.reductionType === "long_term_rental") {
-    reductions.push({
-      type: "long_term_rental",
-      rentalYears: parseInt(form.rentalYears),
-      rentIncreaseRate: parseFloat(form.rentIncreaseRate) / 100,
-    });
-  } else if (form.reductionType === "new_housing") {
-    // outside_overconcentration은 simple 경로에서 metropolitan으로 폴백 (V2 newHousingDetails가 없는 경우)
-    const simpleRegion =
-      form.reductionRegion === "outside_overconcentration"
-        ? "metropolitan"
-        : (form.reductionRegion as "metropolitan" | "non_metropolitan");
-    reductions.push({ type: "new_housing", region: simpleRegion });
-  } else if (form.reductionType === "unsold_housing") {
-    const simpleRegion =
-      form.reductionRegion === "outside_overconcentration"
-        ? "metropolitan"
-        : (form.reductionRegion as "metropolitan" | "non_metropolitan");
-    reductions.push({ type: "unsold_housing", region: simpleRegion });
-  } else if (form.reductionType === "public_expropriation") {
-    const cash = parseAmount(form.expropriationCash || "0");
-    const bond = parseAmount(form.expropriationBond || "0");
-    const bondHoldingYears =
-      form.expropriationBondHoldingYears === "3"
-        ? 3
-        : form.expropriationBondHoldingYears === "5"
-          ? 5
-          : null;
-    reductions.push({
-      type: "public_expropriation",
-      cashCompensation: cash,
-      bondCompensation: bond,
-      bondHoldingYears,
-      businessApprovalDate: form.expropriationApprovalDate,
-    });
-  }
+  const primary = form.assets[0];
+  if (!primary) throw new Error("자산이 없습니다.");
 
-  // P0-A: 비사업용 토지 상세 정보 구성
+  // ── 대표 자산 감면 (자산별 reductions 배열에서 빌드) ──
+  const reductions = toEngineReductions(primary.reductions ?? [], primary.acquisitionCause);
+
+  // ── 비사업용 토지 상세 ──
   const nblDetails =
-    form.propertyType === "land" && form.nblLandType && form.nblLandArea && form.nblZoneType
+    primary.assetKind === "land" && form.nblLandType && form.nblLandArea && form.nblZoneType
       ? {
           landType: form.nblLandType,
           landArea: parseFloat(form.nblLandArea),
           zoneType: form.nblZoneType,
-          acquisitionDate: form.acquisitionDate,
+          acquisitionDate: primary.acquisitionDate,
           transferDate: form.transferDate,
           farmingSelf: form.nblFarmingSelf || undefined,
           farmerResidenceDistance: form.nblFarmerResidenceDistance
@@ -129,27 +180,21 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
         }
       : undefined;
 
-  // P0-B: 다른 보유 주택 목록 구성 (현재 양도 주택을 포함한 전체 배열 생성)
+  // ── 다른 보유 주택 목록 ──
   const housesPayload =
-    isHousingLike(form.propertyType) && form.houses.length > 0
+    isHousingLike(primary.assetKind) && form.houses.length > 0
       ? [
-          // 현재 양도 주택 (ID: "selling")
-          // [C4] region: isRegulatedArea(조정대상지역) 대신 sellingHouseRegion(수도권/지방) 사용
-          // [C5] officialPrice: standardPriceAtTransfer(양도시 기준시가) 사용
           {
             id: "selling",
             region: form.sellingHouseRegion,
-            acquisitionDate: form.acquisitionDate,
-            officialPrice: form.standardPriceAtTransfer
-              ? parseAmount(form.standardPriceAtTransfer)
-              : 0,
+            acquisitionDate: primary.acquisitionDate,
+            officialPrice: parseAmount(primary.standardPriceAtTransfer) || 0,
             isInherited: false,
             isLongTermRental: false,
             isApartment: false,
             isOfficetel: false,
             isUnsoldHousing: false,
           },
-          // 다른 보유 주택들
           ...form.houses
             .filter((h) => h.acquisitionDate)
             .map((h) => ({
@@ -166,37 +211,51 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
         ]
       : undefined;
 
-  const isEstimated = form.acquisitionMethod === "estimated" || form.useEstimatedAcquisition;
+  const isEstimated = form.acquisitionMethod === "estimated" || primary.useEstimatedAcquisition;
   const isAppraisal = form.acquisitionMethod === "appraisal";
-  // 1990.8.30. 이전 토지 환산 모드: 엔진이 내부에서 useEstimatedAcquisition/standardPrice를
-  // 자동 주입하므로(lib/tax-engine/transfer-tax.ts) 프론트 body에서는 해당 필드를 비활성화해
-  // Zod superRefine ("환산취득가 사용 시 취득시 기준시가 필수") 충돌을 피한다.
-  const hasPre1990 = form.pre1990Enabled && form.propertyType === "land";
-  const parcelModeActive = form.parcelMode && form.propertyType === "land" && (form.parcels?.length ?? 0) > 0;
-  const firstParcelAcqDate = parcelModeActive ? (form.parcels[0]?.acquisitionDate || form.transferDate) : form.acquisitionDate;
+  const hasPre1990 = form.pre1990Enabled && primary.assetKind === "land";
+  const parcelModeActive =
+    primary.parcelMode && primary.assetKind === "land" && (primary.parcels?.length ?? 0) > 0;
+  const firstParcelAcqDate = parcelModeActive
+    ? (primary.parcels[0]?.acquisitionDate || form.transferDate)
+    : primary.acquisitionDate;
 
   const body = {
-    propertyType: form.propertyType,
-    transferPrice: parseAmount(form.transferPrice),
+    propertyType: primary.assetKind,
+    transferPrice: parseAmount(form.contractTotalPrice),
     transferDate: form.transferDate,
-    acquisitionPrice: (hasPre1990 || isEstimated || isAppraisal || parcelModeActive) ? 0 : parseAmount(form.acquisitionPrice),
-    acquisitionDate: parcelModeActive ? firstParcelAcqDate : form.acquisitionDate,
-    expenses: (hasPre1990 || isEstimated || isAppraisal || parcelModeActive) ? 0 : parseAmount(form.expenses),
-    useEstimatedAcquisition: (hasPre1990 || parcelModeActive) ? false : isEstimated,
+    acquisitionPrice:
+      hasPre1990 || isEstimated || isAppraisal || parcelModeActive
+        ? 0
+        : parseAmount(primary.fixedAcquisitionPrice),
+    acquisitionDate: parcelModeActive ? firstParcelAcqDate : primary.acquisitionDate,
+    expenses:
+      hasPre1990 || isEstimated || isAppraisal || parcelModeActive
+        ? 0
+        : parseAmount(primary.directExpenses),
+    useEstimatedAcquisition: hasPre1990 || parcelModeActive ? false : isEstimated,
     standardPriceAtAcquisition: hasPre1990
       ? undefined
-      : (isEstimated ? parseAmount(form.standardPriceAtAcquisition) : undefined),
+      : isEstimated
+        ? parseAmount(primary.standardPriceAtAcq)
+        : undefined,
     standardPriceAtTransfer: hasPre1990
       ? undefined
-      : (isEstimated ? parseAmount(form.standardPriceAtTransfer) : undefined),
-    acquisitionMethod: hasPre1990 ? ("actual" as const) : (form.acquisitionMethod || "actual"),
+      : isEstimated
+        ? parseAmount(primary.standardPriceAtTransfer)
+        : undefined,
+    acquisitionMethod: hasPre1990
+      ? ("actual" as const)
+      : (form.acquisitionMethod || "actual"),
     appraisalValue: isAppraisal ? parseAmount(form.appraisalValue) : undefined,
     isSelfBuilt: form.isSelfBuilt || undefined,
     buildingType: form.buildingType || undefined,
-    constructionDate: form.isSelfBuilt && form.constructionDate ? form.constructionDate : undefined,
-    extensionFloorArea: form.buildingType === "extension" && form.extensionFloorArea
-      ? parseFloat(form.extensionFloorArea)
-      : undefined,
+    constructionDate:
+      form.isSelfBuilt && form.constructionDate ? form.constructionDate : undefined,
+    extensionFloorArea:
+      form.buildingType === "extension" && form.extensionFloorArea
+        ? parseFloat(form.extensionFloorArea)
+        : undefined,
     householdHousingCount: parseInt(form.householdHousingCount) || 0,
     residencePeriodMonths: parseInt(form.residencePeriodMonths) || 0,
     isRegulatedArea: form.isRegulatedArea,
@@ -204,15 +263,17 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     isUnregistered: form.isUnregistered,
     isNonBusinessLand: form.isNonBusinessLand,
     isSuccessorRightToMoveIn:
-      form.propertyType === "right_to_move_in" ? form.isSuccessorRightToMoveIn : undefined,
-    acquisitionCause: form.acquisitionCause,
+      primary.assetKind === "right_to_move_in"
+        ? primary.isSuccessorRightToMoveIn
+        : undefined,
+    acquisitionCause: primary.acquisitionCause,
     decedentAcquisitionDate:
-      form.acquisitionCause === "inheritance" && form.decedentAcquisitionDate
-        ? form.decedentAcquisitionDate
+      primary.acquisitionCause === "inheritance" && primary.decedentAcquisitionDate
+        ? primary.decedentAcquisitionDate
         : undefined,
     donorAcquisitionDate:
-      form.acquisitionCause === "gift" && form.donorAcquisitionDate
-        ? form.donorAcquisitionDate
+      primary.acquisitionCause === "gift" && primary.donorAcquisitionDate
+        ? primary.donorAcquisitionDate
         : undefined,
     isOneHousehold: form.isOneHousehold,
     reductions,
@@ -233,13 +294,10 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     ...(form.parentalCareMergeDate
       ? { parentalCareMerge: { mergeDate: form.parentalCareMergeDate } }
       : {}),
-    // 가산세 (enablePenalty 토글 시만 포함)
     ...(form.enablePenalty && form.filingType !== "correct"
       ? {
           filingPenaltyDetails: {
-            // determinedTax·reductionAmount는 API route에서 계산 결과로 주입됨
-            // 여기서는 UI 입력값만 전달, API route에서 결정세액 연동
-            determinedTax: 0, // placeholder — route에서 실제값으로 교체
+            determinedTax: 0,
             reductionAmount: 0,
             priorPaidTax: parseAmount(form.priorPaidTax),
             originalFiledTax: parseAmount(form.originalFiledTax),
@@ -250,7 +308,6 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
           },
         }
       : {}),
-    // delayedPaymentDetails — unpaidTax === 0이면 route에서 결정세액으로 자동 주입.
     ...(form.enablePenalty && form.paymentDeadline
       ? {
           delayedPaymentDetails: {
@@ -260,34 +317,34 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
           },
         }
       : {}),
-    // 다필지 분리 계산 (환지·합병 등)
     ...(parcelModeActive
       ? {
-          parcels: form.parcels.map((p) => ({
+          parcels: primary.parcels.map((p) => ({
             id: p.id,
-            acquisitionDate: p.useDayAfterReplotting && p.replottingConfirmDate
-              ? p.replottingConfirmDate
-              : p.acquisitionDate,
+            acquisitionDate:
+              p.useDayAfterReplotting && p.replottingConfirmDate
+                ? p.replottingConfirmDate
+                : p.acquisitionDate,
             acquisitionMethod: p.acquisitionMethod,
-            acquisitionPrice: p.acquisitionMethod === "actual"
-              ? parseAmount(p.acquisitionPrice)
-              : undefined,
+            acquisitionPrice:
+              p.acquisitionMethod === "actual" ? parseAmount(p.acquisitionPrice) : undefined,
             acquisitionArea: parseFloat(p.acquisitionArea) || 0,
             transferArea: parseFloat(p.transferArea) || 0,
-            standardPricePerSqmAtAcq: p.acquisitionMethod === "estimated"
-              ? parseFloat(p.standardPricePerSqmAtAcq) || 0
-              : undefined,
-            standardPricePerSqmAtTransfer: p.acquisitionMethod === "estimated"
-              ? parseFloat(p.standardPricePerSqmAtTransfer) || 0
-              : undefined,
-            expenses: p.acquisitionMethod === "actual"
-              ? parseAmount(p.expenses)
-              : undefined,
+            standardPricePerSqmAtAcq:
+              p.acquisitionMethod === "estimated"
+                ? parseFloat(p.standardPricePerSqmAtAcq) || 0
+                : undefined,
+            standardPricePerSqmAtTransfer:
+              p.acquisitionMethod === "estimated"
+                ? parseFloat(p.standardPricePerSqmAtTransfer) || 0
+                : undefined,
+            expenses:
+              p.acquisitionMethod === "actual" ? parseAmount(p.expenses) : undefined,
             useDayAfterReplotting: p.useDayAfterReplotting || undefined,
-            replottingConfirmDate: p.useDayAfterReplotting && p.replottingConfirmDate
-              ? p.replottingConfirmDate
-              : undefined,
-            // 환지 감환지/증환지 (소득세법 시행령 §162의2)
+            replottingConfirmDate:
+              p.useDayAfterReplotting && p.replottingConfirmDate
+                ? p.replottingConfirmDate
+                : undefined,
             entitlementArea: p.useExchangeLandReduction
               ? parseFloat(p.entitlementArea) || undefined
               : undefined,
@@ -300,29 +357,36 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
           })),
         }
       : {}),
-    // 일괄양도 (companionAssets 존재 시)
-    ...(form.companionAssets && form.companionAssets.length > 0
+    // ── 일괄양도 (assets 2건 이상) ──
+    ...(form.assets.length > 1
       ? {
-          totalSalePrice: parseAmount(form.transferPrice),
-          standardPriceAtTransferForApportion: parseAmount(form.standardPriceAtTransfer),
+          totalSalePrice: parseAmount(form.contractTotalPrice),
+          standardPriceAtTransferForApportion:
+            parseAmount(primary.standardPriceAtTransfer) > 0
+              ? parseAmount(primary.standardPriceAtTransfer)
+              : undefined,
           primaryInheritanceValuation:
-            form.acquisitionCause === "inheritance"
+            primary.acquisitionCause === "inheritance" &&
+            primary.inheritanceValuationMode === "auto"
               ? {
-                  inheritanceDate: form.acquisitionDate,
-                  assetKind:
-                    form.propertyType === "land"
-                      ? ("land" as const)
-                      : ("house_individual" as const),
-                  landAreaM2: undefined,
-                  publishedValueAtInheritance: parseAmount(form.inheritanceHousePrice) ||
-                    parseAmount(form.inheritanceLandPricePerM2),
+                  inheritanceDate: primary.acquisitionDate,
+                  assetKind: toEngineAssetKind(primary.assetKind),
+                  landAreaM2: primary.landAreaM2 ? parseFloat(primary.landAreaM2) : undefined,
+                  publishedValueAtInheritance: parseAmount(primary.publishedValueAtInheritance),
                 }
               : undefined,
-          companionAssets: form.companionAssets.map(buildCompanionAssetPayload),
+          companionAssets: form.assets
+            .slice(1)
+            .map((a) => buildAssetPayload(a, form.bundledSaleMode)),
+          bundledSaleMode: form.bundledSaleMode,
+          primaryActualSalePrice:
+            form.bundledSaleMode === "actual" && primary.actualSalePrice
+              ? parseAmount(primary.actualSalePrice)
+              : undefined,
         }
       : {}),
-    // 1990.8.30. 이전 취득 토지 기준시가 환산 (선택)
-    ...(form.pre1990Enabled && form.propertyType === "land"
+    // ── 1990.8.30. 이전 취득 토지 기준시가 환산 ──
+    ...(hasPre1990
       ? (() => {
           const buildGrade = (raw: string) => {
             const n = Number(raw.replace(/,/g, ""));
@@ -340,7 +404,7 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
           if (!gCur || !gPrev || !gAcq || areaSqm <= 0 || p1990 <= 0 || pTsf <= 0) return {};
           return {
             pre1990Land: {
-              acquisitionDate: form.acquisitionDate,
+              acquisitionDate: primary.acquisitionDate,
               transferDate: form.transferDate,
               areaSqm,
               pricePerSqm_1990: p1990,

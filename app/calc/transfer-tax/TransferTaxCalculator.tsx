@@ -12,14 +12,13 @@ import type { TransferTaxPenaltyResult } from "@/lib/tax-engine/transfer-tax-pen
 import { validateStep } from "@/lib/calc/transfer-tax-validate";
 import { getFilingDeadline, isFilingOverdue } from "@/lib/calc/filing-deadline";
 import { Step1 } from "./steps/Step1";
-import { Step2 } from "./steps/Step2";
 import { Step3 } from "./steps/Step3";
 import { Step4 } from "./steps/Step4";
 import { Step5 } from "./steps/Step5";
 import { Step6 } from "./steps/Step6";
 
-const STEPS_SINGLE = ["물건 유형", "양도 정보", "취득 정보", "보유 상황", "감면 확인", "가산세"];
-const STEPS_MULTI = ["물건 유형", "양도 정보", "취득 정보", "보유 상황", "감면 확인"];
+const STEPS_SINGLE = ["자산 목록", "취득 정보", "보유 상황", "감면·공제", "가산세"];
+const STEPS_MULTI = ["자산 목록", "취득 정보", "보유 상황", "감면·공제"];
 
 // 메인 컴포넌트
 // ============================================================
@@ -214,14 +213,13 @@ export default function TransferTaxCalculator({
         setPenaltyResult(null);
       }}
     />,
-    <Step2 key={1} form={formData} onChange={updateFormData} />,
-    <Step3 key={2} form={formData} onChange={updateFormData} />,
-    <Step4 key={3} form={formData} onChange={updateFormData} />,
-    <Step5 key={4} form={formData} onChange={updateFormData} />,
-    <Step6 key={5} form={formData} onChange={updateFormData} determinedTax={calcDeterminedTax} />,
+    <Step3 key={1} form={formData} onChange={updateFormData} />,
+    <Step4 key={2} form={formData} onChange={updateFormData} />,
+    <Step5 key={3} form={formData} onChange={updateFormData} />,
+    <Step6 key={4} form={formData} onChange={updateFormData} determinedTax={calcDeterminedTax} />,
   ];
   // 다건 모드는 가산세(Step6) 제외
-  const stepComponents = isEmbeddedInMulti ? stepComponentsAll.slice(0, 5) : stepComponentsAll;
+  const stepComponents = isEmbeddedInMulti ? stepComponentsAll.slice(0, 4) : stepComponentsAll;
 
   return (
     <div className="mx-auto max-w-lg px-4 py-8">
@@ -280,7 +278,7 @@ export default function TransferTaxCalculator({
 
           {/* 단계 제목 */}
           <h2 className="text-base font-semibold mb-4">
-            {["물건 유형 선택", "양도 정보 입력", "취득 정보 입력", "보유 상황 입력", "감면 확인", "가산세 입력"][currentStep]}
+            {["자산 목록 입력", "양도 정보 입력", "취득 정보 입력", "보유 상황 입력", "감면 확인", "가산세 입력"][currentStep]}
           </h2>
 
           {/* 폼 내용 */}
