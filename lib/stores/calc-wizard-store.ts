@@ -5,6 +5,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
+import type { TransferAPIResult } from "@/lib/calc/transfer-tax-api";
 
 /** 비사업용 토지 사업용 사용기간 항목 (폼 문자열 버전) */
 export interface NblBusinessUsePeriod {
@@ -168,6 +169,50 @@ export interface TransferFormData {
   parcelMode: boolean;
   /** 필지 목록 (parcelMode=true 시 사용) */
   parcels: ParcelFormItem[];
+
+  // ── 일괄양도 안분 (소득세법 시행령 §166 ⑥) ──
+  /** 함께 양도된 자산 목록 (비어있으면 단건 처리) */
+  companionAssets: CompanionAssetForm[];
+  /** 피상속인 경작기간(년) — acquisitionCause=inheritance + reductionType=self_farming 시 사용 */
+  decedentFarmingYears: string;
+  /** 주 자산 상속 취득가액 산정 모드 */
+  inheritanceValuationMode: "auto" | "manual";
+  /** 주 자산 상속개시일 직전 공시지가 (원/㎡, 토지인 경우) */
+  inheritanceLandPricePerM2: string;
+  /** 주 자산 상속개시일 직전 개별주택가격 (원, 주택인 경우) */
+  inheritanceHousePrice: string;
+}
+
+/** 일괄양도 함께 양도된 자산 폼 상태 (문자열 기반) */
+export interface CompanionAssetForm {
+  assetId: string;
+  assetLabel: string;
+  assetKind: "housing" | "land" | "building";
+  /** 양도시점 기준시가 (안분 키, 문자열) */
+  standardPriceAtTransfer: string;
+  /** 직접 귀속 필요경비 */
+  directExpenses: string;
+  /** 자산별 감면 유형 (자경농지 등) */
+  reductionType: "" | "self_farming";
+  /** 자경농지 경작기간(년) */
+  farmingYears: string;
+  /** 상속 취득가액 산정 모드: auto=주소검색+상속일 자동채움, manual=직접입력 */
+  inheritanceValuationMode: "auto" | "manual";
+  /** 상속개시일 (YYYY-MM-DD) */
+  inheritanceDate: string;
+  /** 자산 종류 (토지: land, 단독주택: house_individual, 공동주택: house_apart) */
+  inheritanceAssetKind: "land" | "house_individual" | "house_apart";
+  /** 토지 면적 (㎡, land일 때 사용) */
+  landAreaM2: string;
+  /** 상속개시일 직전 공시가격: 토지=원/㎡, 주택=원 총액 */
+  publishedValueAtInheritance: string;
+  /** 직접 입력 취득가액 (manual 모드) */
+  fixedAcquisitionPrice: string;
+  /** 주소 (Vworld 도로명) */
+  addressRoad: string;
+  /** 주소 (Vworld 지번) */
+  addressJibun: string;
+  isOneHousehold: boolean;
 }
 
 /** 다필지 UI 폼 상태 (문자열 기반) */
@@ -264,17 +309,22 @@ const defaultFormData: TransferFormData = {
   pre1990GradeMode: "number",
   parcelMode: false,
   parcels: [],
+  companionAssets: [],
+  decedentFarmingYears: "0",
+  inheritanceValuationMode: "auto",
+  inheritanceLandPricePerM2: "",
+  inheritanceHousePrice: "",
 };
 
 interface CalcWizardState {
   currentStep: number;
   formData: TransferFormData;
-  result: TransferTaxResult | null;
+  result: TransferAPIResult | null;
   /** 비로그인 상태에서 계산 후 로그인 전환 시 이관할 대기 결과 */
   pendingMigration: boolean;
   setStep: (step: number) => void;
   updateFormData: (data: Partial<TransferFormData>) => void;
-  setResult: (result: TransferTaxResult) => void;
+  setResult: (result: TransferAPIResult) => void;
   /** 비로그인 → 로그인 이관 완료 후 플래그 초기화 */
   clearPendingMigration: () => void;
   reset: () => void;

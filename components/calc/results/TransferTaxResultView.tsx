@@ -108,7 +108,7 @@ export function TransferTaxResultView({ result, onReset, onBack, onLoginPrompt =
           {result.parcelDetails.map((pr, i) => (
             <details key={pr.id} className="rounded-lg border border-border overflow-hidden">
               <summary className="flex items-center justify-between px-4 py-3 cursor-pointer bg-muted/20 hover:bg-muted/40 text-sm font-medium list-none">
-                <span>필지 {i + 1} ({pr.id})</span>
+                <span>필지 {i + 1}</span>
                 <span className="font-mono text-xs text-muted-foreground">
                   양도차익 {formatKRW(pr.transferGain)}
                 </span>

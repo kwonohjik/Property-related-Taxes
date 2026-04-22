@@ -584,5 +584,78 @@ describe("T-39: 윤년 취득일 경계값 (P0-1·P2-7 회귀)", () => {
 });
 
 // ============================================================
+// T-41: 자경농지 감면 — 피상속인 경작기간 합산 (조특령 §66⑪ 1호)
+// ============================================================
+
+describe("T-41: 자경농지 감면 — 피상속인 경작기간 합산 회귀 (P0-F)", () => {
+  // 공통: 자경농지 감면 대상 토지, 양도차익이 커서 100% 감면시 한도(1억) 도달 케이스
+  const farmlandBase = () =>
+    baseInput({
+      propertyType: "land",
+      transferPrice: 1_000_000_000,
+      acquisitionPrice: 300_000_000,
+      acquisitionDate: new Date("2009-01-01"),
+      transferDate: new Date("2024-01-02"),
+      isOneHousehold: false,
+      householdHousingCount: 0,
+    });
+
+  it("본인 자경 8년 충족 시 피상속인 기간 없어도 감면 적용 (기존 로직 불변)", () => {
+    const input = farmlandBase();
+    input.reductions = [{ type: "self_farming", farmingYears: 8 }];
+    const result = calculateTransferTax(input, mockRates);
+    expect(result.reductionAmount).toBeGreaterThan(0);
+    // 라벨: 일반 자경농지 (상속 합산 아님)
+    expect(result.reductionType).toBe("자경농지");
+  });
+
+  it("본인 자경 6년 단독 → 요건 미충족으로 감면 0", () => {
+    const input = farmlandBase();
+    input.reductions = [{ type: "self_farming", farmingYears: 6 }];
+    const result = calculateTransferTax(input, mockRates);
+    expect(result.reductionAmount).toBe(0);
+  });
+
+  it("본인 자경 6년 + 피상속인 3년 = effective 9년 → 감면 적용 (합산)", () => {
+    const input = farmlandBase();
+    input.reductions = [
+      { type: "self_farming", farmingYears: 6, decedentFarmingYears: 3 },
+    ];
+    const result = calculateTransferTax(input, mockRates);
+    expect(result.reductionAmount).toBeGreaterThan(0);
+    expect(result.reductionType).toBe("자경농지(§69·상속인 경작기간 합산 §66⑪)");
+  });
+
+  it("본인 자경 8년 충족 + 피상속인 3년 지정 → 합산 불필요, 일반 자경 라벨 유지", () => {
+    const input = farmlandBase();
+    input.reductions = [
+      { type: "self_farming", farmingYears: 8, decedentFarmingYears: 3 },
+    ];
+    const result = calculateTransferTax(input, mockRates);
+    expect(result.reductionAmount).toBeGreaterThan(0);
+    // 본인 8년 충족 시 합산 로직 타지 않음 → 기존 라벨
+    expect(result.reductionType).toBe("자경농지");
+  });
+
+  it("본인 5년 + 피상속인 2년 = 7년 → 여전히 미충족, 감면 0", () => {
+    const input = farmlandBase();
+    input.reductions = [
+      { type: "self_farming", farmingYears: 5, decedentFarmingYears: 2 },
+    ];
+    const result = calculateTransferTax(input, mockRates);
+    expect(result.reductionAmount).toBe(0);
+  });
+
+  it("decedentFarmingYears 0으로 명시 + 본인 7년 → 미충족, 감면 0", () => {
+    const input = farmlandBase();
+    input.reductions = [
+      { type: "self_farming", farmingYears: 7, decedentFarmingYears: 0 },
+    ];
+    const result = calculateTransferTax(input, mockRates);
+    expect(result.reductionAmount).toBe(0);
+  });
+});
+
+// ============================================================
 // T-40: 중과세 유예 만료 경계 (2026-05-09 이전 vs 이후)
 // ============================================================

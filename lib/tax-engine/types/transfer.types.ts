@@ -188,7 +188,17 @@ export interface TransferTaxInput {
 }
 
 export type TransferReduction =
-  | { type: "self_farming"; farmingYears: number }
+  | {
+      type: "self_farming";
+      /** 상속인 본인이 해당 농지를 직접 경작한 기간(년). */
+      farmingYears: number;
+      /**
+       * 피상속인의 경작기간(년) — 선택.
+       * 본인 자경기간이 조특법 §69 요건(8년)에 미달할 때 조특령 §66⑪ 1호에 따라 합산.
+       * 본인 자경기간만으로 요건 충족 시 무시된다.
+       */
+      decedentFarmingYears?: number;
+    }
   | { type: "long_term_rental"; rentalYears: number; rentIncreaseRate: number }
   | { type: "new_housing"; region: "metropolitan" | "non_metropolitan" }
   | { type: "unsold_housing"; region: "metropolitan" | "non_metropolitan" }

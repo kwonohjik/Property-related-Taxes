@@ -10,17 +10,12 @@ import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 // ============================================================
 
 const NBL_LAND_TYPE_OPTIONS = [
-  { value: "paddy", label: "답 (논)" },
-  { value: "field", label: "전 (밭)" },
-  { value: "orchard", label: "과수원" },
-  { value: "farmland", label: "농지 (통합)" },
+  { value: "farmland", label: "농지 (전·답·과수원)" },
   { value: "forest", label: "임야" },
   { value: "pasture", label: "목장용지" },
-  { value: "building_site", label: "건물 부수 토지" },
   { value: "housing_site", label: "주택 부수 토지" },
-  { value: "vacant_lot", label: "나대지" },
-  { value: "miscellaneous", label: "잡종지" },
-  { value: "other", label: "기타" },
+  { value: "villa_land", label: "별장 부수 토지" },
+  { value: "other_land", label: "기타 토지 (나대지·잡종지)" },
 ] as const;
 
 const NBL_ZONE_TYPE_OPTIONS = [

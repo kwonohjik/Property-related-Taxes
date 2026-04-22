@@ -4,7 +4,7 @@ import { updateSession } from "@/lib/supabase/middleware";
 const PROTECTED_ROUTES = ["/history", "/api/history", "/api/pdf"];
 const AUTH_ROUTES = ["/auth/login", "/auth/signup"];
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const { supabaseResponse, user } = await updateSession(request);
 

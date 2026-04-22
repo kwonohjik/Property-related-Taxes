@@ -1,6 +1,8 @@
 import { cn } from "@/lib/utils";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { ResetButton } from "@/components/calc/shared/ResetButton";
+import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
+import { CompanionAssetsSection } from "@/components/calc/transfer/CompanionAssetsSection";
 
 // ============================================================
 // Step 1: 물건 유형
@@ -46,6 +48,74 @@ export function Step1({
             <span className="text-[11px] text-muted-foreground leading-tight">{opt.desc}</span>
           </button>
         ))}
+      </div>
+
+      {/* 일괄양도 토글 */}
+      <div className="rounded-lg border border-dashed border-border bg-muted/20 p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium">함께 양도된 다른 자산이 있나요?</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              예: 주택과 농지를 하나의 매매계약으로 일괄 양도 (소득령 §166⑥ 기준시가 비율 안분)
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() =>
+              onChange({
+                companionAssets:
+                  form.companionAssets.length === 0
+                    ? [
+                        {
+                          assetId: `companion-${Date.now()}`,
+                          assetLabel: "동반자산 1",
+                          assetKind: "land" as const,
+                          standardPriceAtTransfer: "",
+                          directExpenses: "0",
+                          reductionType: "",
+                          farmingYears: "0",
+                          inheritanceValuationMode: "auto" as const,
+                          inheritanceDate: "",
+                          inheritanceAssetKind: "land" as const,
+                          landAreaM2: "",
+                          publishedValueAtInheritance: "",
+                          fixedAcquisitionPrice: "",
+                          addressRoad: "",
+                          addressJibun: "",
+                          isOneHousehold: false,
+                        },
+                      ]
+                    : [],
+              })
+            }
+            className={cn(
+              "relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors",
+              form.companionAssets.length > 0 ? "bg-primary" : "bg-muted-foreground/30",
+            )}
+          >
+            <span
+              className={cn(
+                "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition-transform",
+                form.companionAssets.length > 0 ? "translate-x-5" : "translate-x-0",
+              )}
+            />
+          </button>
+        </div>
+
+        {form.companionAssets.length > 0 && (
+          <div className="space-y-4">
+            <CurrencyInput
+              label="총 양도가액 (주된 자산 + 동반자산 합계, 원)"
+              value={form.transferPrice}
+              onChange={(v) => onChange({ transferPrice: v })}
+              required
+            />
+            <CompanionAssetsSection
+              assets={form.companionAssets}
+              onChange={(assets) => onChange({ companionAssets: assets })}
+            />
+          </div>
+        )}
       </div>
 
       {form.propertyType === "right_to_move_in" && (

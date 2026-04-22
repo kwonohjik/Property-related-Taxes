@@ -65,6 +65,45 @@ export function Step5({ form, onChange }: { form: TransferFormData; onChange: (d
             />
             <span className="text-sm text-muted-foreground">년 (8년 이상이어야 감면 적용)</span>
           </div>
+
+          {/* 피상속인 자경기간 합산 (상속 취득 + 8년 미달 시) */}
+          {form.acquisitionCause === "inheritance" && (
+            <div className="space-y-2 pt-1 border-t border-primary/20">
+              {parseInt(form.farmingYears) >= 8 ? (
+                <p className="text-xs text-muted-foreground">
+                  ✓ 본인 자경기간 {form.farmingYears}년 ≥ 8년 — 피상속인 합산 불필요
+                </p>
+              ) : (
+                <>
+                  <p className="text-xs text-muted-foreground">
+                    본인 자경기간 {form.farmingYears}년 {"<"} 8년 → 피상속인 자경기간을 합산할 수 있습니다
+                    (조특령 §66⑪)
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm text-muted-foreground whitespace-nowrap">
+                      피상속인 자경기간:
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={form.decedentFarmingYears}
+                      onChange={(e) => onChange({ decedentFarmingYears: e.target.value })}
+                      onFocus={(e) => e.target.select()}
+                      className="w-20 rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    />
+                    <span className="text-sm text-muted-foreground">년</span>
+                  </div>
+                  {parseInt(form.farmingYears) + parseInt(form.decedentFarmingYears || "0") >= 8 && (
+                    <p className="text-xs text-green-700">
+                      ✓ 합산 자경기간{" "}
+                      {parseInt(form.farmingYears) + parseInt(form.decedentFarmingYears || "0")}
+                      년 — 감면 요건 충족
+                    </p>
+                  )}
+                </>
+              )}
+            </div>
+          )}
         </div>
       )}
 

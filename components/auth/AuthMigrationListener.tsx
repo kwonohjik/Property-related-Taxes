@@ -34,7 +34,7 @@ export function AuthMigrationListener() {
           const saveResult = await migratePendingResult({
             taxType: "transfer",
             inputData: formData as unknown as Record<string, unknown>,
-            resultData: result,
+            resultData: result as unknown as Record<string, unknown>,
           });
 
           if (saveResult.success) {

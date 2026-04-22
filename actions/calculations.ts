@@ -236,7 +236,7 @@ export async function deleteCalculation(id: string): Promise<SaveResult> {
 export async function migratePendingResult(params: {
   taxType: TaxType;
   inputData: Record<string, unknown>;
-  resultData: TransferTaxResult;
+  resultData: Record<string, unknown>;
   taxLawVersion?: string;
 }): Promise<SaveResult> {
   return saveCalculation({

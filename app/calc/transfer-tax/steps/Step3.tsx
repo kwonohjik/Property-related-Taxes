@@ -293,17 +293,66 @@ export function Step3({ form, onChange }: { form: TransferFormData; onChange: (d
       </div>
 
       {form.acquisitionCause === "inheritance" && (
-        <div className="space-y-1.5">
-          <label className="block text-sm font-medium">
-            피상속인 취득일 <span className="text-destructive">*</span>
-          </label>
-          <DateInput
-            value={form.decedentAcquisitionDate}
-            onChange={(v) => onChange({ decedentAcquisitionDate: v })}
-          />
-          <p className="text-[11px] text-muted-foreground">
-            ※ 단기보유 단일세율(50%/40%·70%/60%) 판정 시 피상속인 취득일부터 양도일까지 보유기간을 통산합니다 — 소득세법 §95④
-          </p>
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium">
+              피상속인 취득일 <span className="text-destructive">*</span>
+            </label>
+            <DateInput
+              value={form.decedentAcquisitionDate}
+              onChange={(v) => onChange({ decedentAcquisitionDate: v })}
+            />
+            <p className="text-[11px] text-muted-foreground">
+              ※ 단기보유 단일세율(50%/40%·70%/60%) 판정 시 피상속인 취득일부터 양도일까지 보유기간을 통산합니다 — 소득세법 §95④
+            </p>
+          </div>
+
+          {/* 주된 자산 상속 취득가액 (일괄양도 모드일 때만) */}
+          {form.companionAssets.length > 0 && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50/50 p-3 space-y-2">
+              <p className="text-sm font-medium text-amber-900">
+                주된 자산 상속 취득가액 산정 (소득령 §163⑨)
+              </p>
+              <div className="flex gap-2">
+                {(["auto", "manual"] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => onChange({ inheritanceValuationMode: mode })}
+                    className={`px-3 py-1.5 rounded-md text-sm border transition-colors ${
+                      form.inheritanceValuationMode === mode
+                        ? "bg-amber-600 text-white border-amber-600"
+                        : "bg-white border-border hover:bg-muted"
+                    }`}
+                  >
+                    {mode === "auto" ? "자동 (보충적평가액)" : "직접 입력"}
+                  </button>
+                ))}
+              </div>
+              {form.inheritanceValuationMode === "auto" ? (
+                <div className="space-y-2 pl-1">
+                  {form.propertyType === "land" ? (
+                    <>
+                      <CurrencyInput
+                        label="상속개시일 직전 고시 개별공시지가 (원/㎡)"
+                        value={form.inheritanceLandPricePerM2}
+                        onChange={(v) => onChange({ inheritanceLandPricePerM2: v })}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        ※ 토지 면적은 동반자산 각각에서 입력합니다.
+                      </p>
+                    </>
+                  ) : (
+                    <CurrencyInput
+                      label="상속개시일 직전 고시 개별주택가격 (원)"
+                      value={form.inheritanceHousePrice}
+                      onChange={(v) => onChange({ inheritanceHousePrice: v })}
+                    />
+                  )}
+                </div>
+              ) : null}
+            </div>
+          )}
         </div>
       )}
 

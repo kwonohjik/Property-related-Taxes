@@ -6,8 +6,21 @@ import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 
 export function validateStep(step: number, form: TransferFormData): string | null {
+  const isBundled = form.companionAssets && form.companionAssets.length > 0;
+
   if (step === 0) {
     if (!form.propertyType) return "양도하는 부동산 유형을 선택하세요.";
+    if (isBundled) {
+      if (!form.transferPrice || parseAmount(form.transferPrice) <= 0)
+        return "총 양도가액을 입력하세요.";
+      if (!form.standardPriceAtTransfer || parseAmount(form.standardPriceAtTransfer) <= 0)
+        return "주된 자산의 양도시 기준시가를 입력하세요.";
+      for (let i = 0; i < form.companionAssets.length; i++) {
+        const a = form.companionAssets[i];
+        if (!a.standardPriceAtTransfer || parseAmount(a.standardPriceAtTransfer) <= 0)
+          return `동반자산 ${i + 1}: 양도시 기준시가를 입력하세요.`;
+      }
+    }
   }
   if (step === 1) {
     if (!form.transferPrice || parseAmount(form.transferPrice) <= 0) return "양도가액을 입력하세요.";

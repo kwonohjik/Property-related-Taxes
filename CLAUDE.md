@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **현재 구현 상태**
 - ✅ **양도소득세**: 엔진·UI·API·테스트 완전 구현 (2025 세법 기준, 꾸준히 업그레이드 중)
-- 🚧 **취득세·재산세·종합부동산세·상속·증여**: 엔진 구현 완료, UI 부분 구현
+- 🚧 **취득세·재산세·종합부동산세·상속·증여**: 엔진 구현 완료, UI 부분 구현 (`components/calc/property/` 재산세 UI 진행 중)
 
 ## Commands
 
@@ -16,7 +16,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 npm run dev          # 개발 서버 (Turbopack)
 npm run build        # 프로덕션 빌드
 npm run lint         # ESLint
-npm test             # vitest 전체 (72 파일 / 1,407 tests)
+npm test             # vitest 전체 (73 파일 / 1,407 tests)
 npm run test:watch   # watch 모드
 npx vitest run <path>  # 단일 파일/디렉터리 실행
 npx shadcn@latest add <name>  # shadcn/ui 컴포넌트 추가
@@ -94,6 +94,7 @@ korean-law-mcp 15개 도구를 법제처 Open API 직접 호출로 재현한 통
 - **환경변수**: `KOREAN_LAW_OC` (법제처 Open API 인증키, https://open.law.go.kr 에서 발급)
 - **캐시**: `.legal-cache/` 파일 캐시 7일 TTL
 - **별칭**: `상증법 → 상속세및증여세법` 등 52종 자동 해석 (`lib/korean-law/aliases.ts`)
+- **클라이언트 구조**: `lib/korean-law/client.ts` 는 barrel. 실체는 `client-core.ts` / `client-law.ts` / `client-decisions-search.ts` / `client-decisions-text.ts` / `client-annexes.ts` 5개 파일로 분리됨.
 
 ## Key Documents
 

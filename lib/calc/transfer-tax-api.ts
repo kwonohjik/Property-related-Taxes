@@ -1,19 +1,69 @@
 /**
  * 양도소득세 계산 API 호출 함수
- * TransferFormData → POST /api/calc/transfer → TransferTaxResult
+ * TransferFormData → POST /api/calc/transfer → TransferTaxResult | BundledTransferResult
  */
 
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
-import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
+import type { TransferFormData, CompanionAssetForm } from "@/lib/stores/calc-wizard-store";
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
+import type { BundledApportionmentResult } from "@/lib/tax-engine/bundled-sale-apportionment";
+import type { AggregateTransferResult } from "@/lib/tax-engine/transfer-tax-aggregate";
+
+export type SingleTransferResult = { mode: "single"; result: TransferTaxResult };
+export type BundledTransferResult = {
+  mode: "bundled";
+  apportionment: BundledApportionmentResult;
+  aggregated: AggregateTransferResult;
+};
+export type TransferAPIResult = SingleTransferResult | BundledTransferResult;
 
 const isHousingLike = (pt: string) =>
   pt === "housing" || pt === "right_to_move_in" || pt === "presale_right";
 
-export async function callTransferTaxAPI(form: TransferFormData): Promise<TransferTaxResult> {
+function buildCompanionAssetPayload(asset: CompanionAssetForm) {
+  const reductions = [];
+  if (asset.reductionType === "self_farming") {
+    reductions.push({ type: "self_farming", farmingYears: parseInt(asset.farmingYears) || 0 });
+  }
+  const inheritanceValuation =
+    asset.inheritanceValuationMode === "auto"
+      ? {
+          inheritanceDate: asset.inheritanceDate,
+          assetKind: asset.inheritanceAssetKind,
+          landAreaM2: asset.landAreaM2 ? parseFloat(asset.landAreaM2) : undefined,
+          publishedValueAtInheritance: parseAmount(asset.publishedValueAtInheritance),
+        }
+      : asset.fixedAcquisitionPrice
+        ? undefined
+        : undefined;
+  return {
+    assetId: asset.assetId,
+    assetLabel: asset.assetLabel,
+    assetKind: asset.assetKind,
+    standardPriceAtTransfer: parseAmount(asset.standardPriceAtTransfer),
+    directExpenses: parseAmount(asset.directExpenses),
+    reductions,
+    inheritanceValuation: inheritanceValuation ?? undefined,
+    fixedAcquisitionPrice:
+      asset.inheritanceValuationMode === "manual" && asset.fixedAcquisitionPrice
+        ? parseAmount(asset.fixedAcquisitionPrice)
+        : undefined,
+    isOneHousehold: asset.isOneHousehold,
+  };
+}
+
+export async function callTransferTaxAPI(form: TransferFormData): Promise<TransferAPIResult> {
   const reductions = [];
   if (form.reductionType === "self_farming") {
-    reductions.push({ type: "self_farming", farmingYears: parseInt(form.farmingYears) });
+    const ownYears = parseInt(form.farmingYears) || 0;
+    const decedentYears = parseInt(form.decedentFarmingYears) || 0;
+    reductions.push({
+      type: "self_farming",
+      farmingYears: ownYears,
+      ...(form.acquisitionCause === "inheritance" && decedentYears > 0
+        ? { decedentFarmingYears: decedentYears }
+        : {}),
+    });
   } else if (form.reductionType === "long_term_rental") {
     reductions.push({
       type: "long_term_rental",
@@ -231,6 +281,27 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
           })),
         }
       : {}),
+    // 일괄양도 (companionAssets 존재 시)
+    ...(form.companionAssets && form.companionAssets.length > 0
+      ? {
+          totalSalePrice: parseAmount(form.transferPrice),
+          standardPriceAtTransferForApportion: parseAmount(form.standardPriceAtTransfer),
+          primaryInheritanceValuation:
+            form.acquisitionCause === "inheritance"
+              ? {
+                  inheritanceDate: form.acquisitionDate,
+                  assetKind:
+                    form.propertyType === "land"
+                      ? ("land" as const)
+                      : ("house_individual" as const),
+                  landAreaM2: undefined,
+                  publishedValueAtInheritance: parseAmount(form.inheritanceHousePrice) ||
+                    parseAmount(form.inheritanceLandPricePerM2),
+                }
+              : undefined,
+          companionAssets: form.companionAssets.map(buildCompanionAssetPayload),
+        }
+      : {}),
     // 1990.8.30. 이전 취득 토지 기준시가 환산 (선택)
     ...(form.pre1990Enabled && form.propertyType === "land"
       ? (() => {
@@ -275,5 +346,5 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     const msg = json?.error?.message ?? "계산 중 오류가 발생했습니다.";
     throw new Error(msg);
   }
-  return json.data as TransferTaxResult;
+  return json.data as TransferAPIResult;
 }

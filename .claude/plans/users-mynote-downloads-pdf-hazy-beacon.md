@@ -13,16 +13,21 @@ PDF 사례(2023 양도·상속·증여세 이론 및 계산실무 p387~391)의 "
 - 상속 취득가액: 소득령 §163⑨ → 상속개시일 **상증법상 보충적평가액**
 - 농지 과세표준 60,631,001원 → 산출세액 8,791,440원 → 100% 감면 → 납부 0원
 
-**프로젝트에 없는 기능(탐색 결과)**
-1. 🔴 일괄양도 기준시가 비율 안분 로직 — 현 다건 엔진은 건별 독립 계산만 지원
-2. 🔴 상속·증여 취득가액 = 상속개시일 보충적평가액 산정(`acquisitionMethod` 3번째 선택지 없음)
-3. 🔴 피상속인 경작기간 합산(조특령 §66⑪) — 스키마·UI 모두 없음
-4. 🟡 자경농지 감면 5년 누적한도(2억) UI 반영
+**프로젝트에 없는 기능(실측 탐색 결과)**
+1. 🔴 일괄양도 기준시가 비율 안분 로직 — 다필지 안분(`multi-parcel-transfer.ts`)은 있으나 자산 종류가 다른 일괄양도 안분은 없음
+2. 🔴 상속·증여 취득가액 = 상속개시일 보충적평가액 산정 — `propertyBaseShape` L364 `acquisitionMethod: "actual" | "estimated" | "appraisal"`에 보충적평가 선택지 없음
+3. 🔴 피상속인 경작기간 합산(조특령 §66⑪) — 스키마·UI·`calcReductions` L327 모두 본인 자경만 판정
+4. 🟡 자경농지 감면 5년 누적한도(2억) — Zod 스키마에 필드는 있으나 UI 반영 없음
 
 **이미 구현된 것(재사용 대상)**
-- `transfer-tax.ts` 1세대 1주택 비과세(12억 기준 부분과세), 장특공 표1/표2, `acquisitionCause: inheritance` 분기
+- `transfer-tax.ts` + `transfer-tax-helpers.ts` + `transfer-tax-rate-calc.ts`: 1세대 1주택 비과세(12억 기준 부분과세), 장특공 표1/표2, 기본 자경농지 감면, `acquisitionCause: inheritance` 분기
 - `transfer-tax-aggregate.ts` 다건 엔진(§92/§102②/§103/§104의2/§127②)
+- `types/transfer.types.ts` L86 `acquisitionCause`, L92 `decedentAcquisitionDate` 필드
+- `calc-wizard-store.ts` L56/L60/L78/L79 관련 폼 필드
+- Step3.tsx L295~L310 상속 선택 시 `decedentAcquisitionDate` 입력 UI
+- Step5.tsx L54~L62 자경농지 감면 선택 + `farmingYears` 입력 UI
 - `/api/address/standard-price` (Vworld NED) 연도별 공시지가·개별주택가격 실시간 조회
+- `multi-parcel-transfer.ts` L178~L200 안분 + 말단 잔여값 보정 패턴
 
 **사용자 결정사항 (AskUserQuestion 반영)**
 - UI: **기존 단건 `/calc/transfer-tax`에 '함께 양도된 자산 추가' 확장** (다건 마법사 분리 X)
@@ -57,43 +62,74 @@ PDF 사례(2023 양도·상속·증여세 이론 및 계산실무 p387~391)의 "
 
 ---
 
-## 현재 프로젝트 분리 구조 (2026-04 리팩터링 후)
-
-기존 플랜이 가정한 단일파일 구조가 아니라, 다음과 같이 분리되어 있음:
+## 현재 프로젝트 분리 구조 (2026-04 리팩터링 후, 실측 확인)
 
 ```
 lib/tax-engine/
-├── transfer-tax.ts                   # Orchestrator (706줄)
-├── transfer-tax-helpers.ts           # 내부 헬퍼 — calcReductions(), parseRatesFromMap() 등
+├── transfer-tax.ts                   # Orchestrator — calculateTransferTax() L141
+├── transfer-tax-helpers.ts           # H-1~H-6 기초 계산 (parseRatesFromMap, checkExemption, calcTransferGain…)
+├── transfer-tax-rate-calc.ts         # H-6.5~H-8 세액·감면 계산 ★
+│   └── calcReductions() L251         # ★ self_farming 분기 L327~L330 (수정 대상)
+├── transfer-tax-penalty.ts           # 가산세
 ├── transfer-tax-aggregate.ts         # 다건 엔진 (재사용 대상)
+├── multi-parcel-transfer.ts          # 다필지 안분 — 말단 잔여값 패턴 L178~L200 (레퍼런스)
 ├── types/
-│   └── transfer.types.ts             # 공개 타입 — TransferTaxInput(L41), TransferReduction(L190), TransferTaxResult(L216)
-├── legal-codes/                      # barrel: ../legal-codes.ts
-│   ├── transfer.ts                   # TRANSFER.*, NBL.*, MULTI_HOUSE.* 상수
-│   └── ...
-└── non-business-land/                # 서브엔진 디렉터리 (14 파일)
+│   └── transfer.types.ts
+│       ├── TransferTaxInput L41 (acquisitionCause L86, decedentAcquisitionDate L92)
+│       ├── TransferReduction L190 (self_farming variant L191)
+│       └── TransferTaxResult L216
+├── legal-codes/
+│   ├── transfer.ts                   # TRANSFER.*, NBL.*, MULTI_HOUSE.* (3개 상수 추가 대상)
+│   └── index가 없으면 ../legal-codes.ts 가 barrel
+└── non-business-land/ (14 파일 서브엔진)
+
+lib/api/transfer-tax-schema.ts
+├── reductionSchema L150 (discriminatedUnion)
+│   └── self_farming L152~L154 (decedentFarmingYears 추가 대상)
+├── propertyBaseShape L334~L372 ★  (acquisitionCause L340, decedentAcquisitionDate L341 이미 존재)
+│   → companionAssets 필드를 여기에 추가하면 propertySchema·propertyItemSchema 양쪽 자동 반영
+├── propertySchema L376 (단건)
+├── propertyItemSchema L387 (다건 개별)
+└── multiInputSchema L397 (다건 집합)
+
+app/api/calc/transfer/
+├── route.ts                          # 단건 — propertySchema 사용 (companionAssets 분기 추가 대상)
+└── multi/route.ts                    # 다건 — 건드리지 않음
 
 app/calc/transfer-tax/
-├── TransferTaxCalculator.tsx          # Orchestrator (412줄)
+├── TransferTaxCalculator.tsx         # Orchestrator 412줄 (최소 수정 — API 호출 분기만)
+├── multi/MultiTransferTaxCalculator.tsx
 └── steps/
-    ├── Step1.tsx   # 물건 유형
-    ├── Step2.tsx   # 양도 정보
-    ├── Step3.tsx   # 취득 정보 ← 상속 취득가액·환산·1990 토지
-    ├── Step4.tsx   # 보유 상황 (NBL·다주택·합가)
-    ├── Step5.tsx   # 감면 확인 ← 자경농지·decedentFarmingYears
-    └── Step6.tsx   # 가산세
+    ├── Step1.tsx (물건 유형)         # ← "함께 양도된 자산" 토글 추가
+    ├── Step2.tsx (양도 정보)
+    ├── Step3.tsx (취득 정보)         # ← L264 "상속" 버튼 / L295~L310 decedentAcquisitionDate 이미 있음
+    │                                   → "보충적평가액 자동/수동 토글"만 추가
+    ├── Step4.tsx (보유 상황)
+    ├── Step5.tsx (감면)              # ← L54 self_farming / L61 farmingYears 이미 있음
+    │                                   → decedentFarmingYears 필드만 조건부 추가
+    └── Step6.tsx (가산세)
 
-__tests__/tax-engine/
-├── _helpers/
-│   ├── mock-rates.ts                 # makeMockRates, baseTransferInput
-│   └── multi-house-mock.ts
-├── transfer-tax/
-│   ├── basic.test.ts
-│   ├── multi-house-and-nbl.test.ts
-│   ├── reductions-and-exempt.test.ts  # ← 피상속인 자경 합산 회귀 추가 대상
-│   ├── edge-and-overlap.test.ts
-│   └── integration.test.ts           # ← PDF end-to-end 추가 후보
-└── ... (비분할 단일 주제 테스트는 이 레벨)
+lib/stores/calc-wizard-store.ts
+└── TransferFormData L29
+    ├── acquisitionCause L56 ✅ 있음
+    ├── decedentAcquisitionDate L60 ✅ 있음
+    ├── reductionType L78 ✅ 있음
+    └── farmingYears L79 ✅ 있음
+    → 추가 대상: companionAssets, decedentFarmingYears, inheritanceValuationMode 등
+
+__tests__/
+├── tax-engine/
+│   ├── _helpers/
+│   │   ├── mock-rates.ts             # baseTransferInput(overrides) L167
+│   │   └── multi-house-mock.ts
+│   ├── transfer-tax/
+│   │   ├── basic.test.ts
+│   │   ├── multi-house-and-nbl.test.ts
+│   │   ├── reductions-and-exempt.test.ts  # ← 피상속인 자경 합산 회귀 추가 대상
+│   │   ├── edge-and-overlap.test.ts
+│   │   └── integration.test.ts      # ← PDF end-to-end 추가 후보
+│   └── (단일 주제 테스트는 이 레벨, 분할 아님)
+└── api/                              # API 라우트 테스트
 ```
 
 ---
@@ -110,7 +146,7 @@ __tests__/tax-engine/
 | 4 | `lib/tax-engine/inheritance-acquisition-price.ts` | **신규 (서브엔진)** | `calculateInheritanceAcquisitionPrice()` — 소득령 §163⑨. 시가 > 감정가 > 보충적평가(토지: 공시지가×면적, 주택: 개별주택가격) 우선순위 |
 | 5 | `lib/tax-engine/legal-codes/transfer.ts` | **수정** (TRANSFER 상수에 추가) | `REDUCTION_SELF_FARMING_INHERITED: "조특령 §66⑪ (피상속인 경작기간 합산)"`, `ACQ_INHERITED_SUPPLEMENTARY: "소득세법 §97 · 시행령 §163⑨"`, `BUNDLED_APPORTIONMENT: "소득세법 시행령 §166⑥"` 추가 (barrel `legal-codes.ts` 변경 불필요 — re-export 자동) |
 | 6 | `lib/tax-engine/types/transfer.types.ts` | **수정** (L190 `TransferReduction` 유니온의 self_farming 변형) | `{ type: "self_farming"; farmingYears: number; decedentFarmingYears?: number }` — optional 추가로 하위호환 |
-| 7 | `lib/tax-engine/transfer-tax-helpers.ts` | **수정** (L805 근방 `calcReductions()` self_farming 분기) | 본인 자경 8년 충족 여부 먼저 판정 → 미충족 시에만 `decedentFarmingYears` 합산. `legalBasis`에 `TRANSFER.REDUCTION_SELF_FARMING_INHERITED` 사용 (합산 경로) |
+| 7 | `lib/tax-engine/transfer-tax-rate-calc.ts` | **수정** (L251 `calcReductions()` L327~L330 self_farming 분기) | 본인 자경 `reduction.farmingYears >= minFarmingYears` 선판정 → 미충족 시 `effective = farmingYears + (decedentFarmingYears ?? 0)` 재판정. `legalBasis` 라벨은 합산 경로일 때 `TRANSFER.REDUCTION_SELF_FARMING_INHERITED`, 아니면 기존 `TRANSFER.REDUCTION_SELF_FARMING` |
 | 8 | `__tests__/fixtures/pdf-bundled-farmland.ts` | **신규 (테스트 fixture)** | PDF 고정 상수 centralization (입력·정답값 `toBe()` 앵커) |
 | 9 | `__tests__/tax-engine/bundled-sale-apportionment.test.ts` | **신규 (비분할 단일 주제)** | 2자산 PDF 수치(125,011,376 / 99,988,624), 3자산 말단 잔여, 0 기준시가 엣지 케이스 |
 | 10 | `__tests__/tax-engine/inheritance-acquisition-price.test.ts` | **신규** | 토지 보충적평가 / 주택 개별주택가격 / 시가·감정가 우선순위 |
@@ -120,8 +156,8 @@ __tests__/tax-engine/
 
 | # | 파일 | 작업 | 주요 변경 |
 |---|------|------|-----------|
-| 12 | `lib/api/transfer-tax-schema.ts` | **수정** | (1) `reductionSchema`의 `self_farming` variant에 `decedentFarmingYears: z.number().int().nonnegative().optional()` 추가. (2) 최상위 스키마에 `companionAssets?: z.array(companionAssetSchema).optional()`, `totalSalePrice?: z.number().int().positive().optional()`, `apportionmentMethod?: z.literal("standard_price_transfer").optional()` 추가. (3) `companionAssetSchema` 신규 정의 (`assetKind`, `standardPriceAtTransfer`, `fixedAcquisitionPrice?`, `inheritanceValuation?`, `reductions?`) |
-| 13 | `app/api/calc/transfer/route.ts` | **수정** (Orchestrator 분기) | `companionAssets` 존재 시: (1) `inheritanceValuation` 있으면 `calculateInheritanceAcquisitionPrice` 호출해 `fixedAcquisitionPrice` 주입 (2) `apportionBundledSale` (3) `TransferTaxItemInput[]` 조립 (4) `calculateTransferTaxAggregate` 호출. 응답에 `mode: "bundled"` + `apportionment` + `aggregated` 추가. `companionAssets` 없으면 기존 경로 그대로 |
+| 12 | `lib/api/transfer-tax-schema.ts` | **수정** | (1) L150 `reductionSchema`의 `self_farming` variant(L152~L154)에 `decedentFarmingYears: z.number().int().nonnegative().optional()` 추가. (2) L334 `propertyBaseShape`에 `companionAssets?`, `totalSalePrice?`, `apportionmentMethod?` 추가 → propertySchema·propertyItemSchema 동시 반영. (3) 파일 상단 섹션에 `companionAssetSchema` 신규 정의 (`assetKind`, `standardPriceAtTransfer`, `standardPriceAtAcquisition?`, `fixedAcquisitionPrice?`, `directExpenses?`, `inheritanceValuation?`, `reductions?: z.array(reductionSchema).default([])`). (4) `propertySchema.superRefine`에 companionAssets 유효성(총양도가 > 0, 자산 2개 이상 시 totalSalePrice 필수) 추가 |
+| 13 | `app/api/calc/transfer/route.ts` | **수정** (Orchestrator 분기, 다건 `multi/route.ts`는 건드리지 않음) | L15 `propertySchema as inputSchema` 유지. Zod 통과 후 `data.companionAssets`가 비어있지 않으면 분기: (1) `inheritanceValuation` 있는 자산에 대해 `calculateInheritanceAcquisitionPrice` 호출해 `fixedAcquisitionPrice` 주입 (2) `apportionBundledSale` 실행 (3) 기본 자산 + companionAssets를 `TransferTaxItemInput[]`로 조립 (4) `calculateTransferTaxAggregate` 호출. 응답: `mode: "bundled"` + `apportionment` + `aggregated`. companionAssets 없으면 L203 `parcels` 매핑 포함 기존 단건 경로 그대로 |
 | 14 | `__tests__/api/transfer.route.bundled.test.ts` | **신규** | PDF end-to-end: 주택 `isExempt=true`, 농지 `determinedTax=0`, 총 결정세액 0 |
 | 15 | 회귀 | **확인** | 기존 `__tests__/api/` 하위 모든 route 테스트 통과 (companionAssets 미지정 시 기존 경로 유지) |
 
@@ -129,15 +165,15 @@ __tests__/tax-engine/
 
 | # | 파일 | 작업 | 주요 변경 |
 |---|------|------|-----------|
-| 16 | `lib/stores/calc-wizard-store.ts` | **수정** (`TransferFormData`) | `companionAssets: CompanionAssetForm[]`, `decedentFarmingYears: string`, `inheritanceValuationMode: "manual" \| "auto"`, `inheritanceLandPricePerM2: string`, `inheritanceHousePrice: string` 추가. `result`는 partialize 제외 유지 |
+| 16 | `lib/stores/calc-wizard-store.ts` | **수정** (L29 `TransferFormData` + L188 `defaultFormData` + L174 `ParcelFormItem` 옆에 `CompanionAssetForm` 신규) | 추가 필드: `companionAssets: CompanionAssetForm[]` (기본 []), `decedentFarmingYears: string` (기본 "0"), `inheritanceValuationMode: "manual" \| "auto"` (기본 "auto"), `inheritanceLandPricePerM2: string`, `inheritanceHousePrice: string`. 기존 `acquisitionCause`(L56)/`decedentAcquisitionDate`(L60)/`farmingYears`(L79)는 그대로 재사용. `result` partialize 제외 정책 유지 |
 | 17 | `lib/calc/transfer-tax-api.ts` | **수정** | `callTransferTaxAPI()`에 `companionAssets` → API 페이로드 매핑 추가. 기존 단일 자산 매핑과 공존 |
 | 18 | `lib/calc/transfer-tax-validate.ts` | **수정** | 일괄양도 모드용 step별 유효성: Step1에서 `companionAssets.length > 0`이면 `totalSalePrice > 0` + 자산별 `standardPriceAtTransfer > 0` 필수 |
 | 19 | `components/calc/transfer/CompanionAssetsSection.tsx` | **신규** | 자산 추가/삭제 UI. `AddressSearch` + Vworld NED API 호출로 공시가격 자동 채움. 상속 취득가액 "자동(주소+상속일)" / "수동 입력" 토글. Props: `{ assets, onChange }` |
 | 20 | `components/calc/transfer/BundledAllocationPreview.tsx` | **신규** | 안분 결과 실시간 테이블 — PDF p388 표 재현(구분/기준시가/안분계산/양도가액 안분액). `apportionBundledSale` client-side 호출로 미리보기 |
 | 21 | `components/calc/results/BundledAllocationCard.tsx` | **신규** | 결과 화면 안분 내역 카드 — 자산별 비과세/감면 상세 + `legalBasis` 표시 |
-| 22 | `app/calc/transfer-tax/steps/Step1.tsx` | **수정** | 물건 유형 하단에 "함께 양도된 다른 자산이 있음" 토글 + `CompanionAssetsSection` 조건부 렌더. 주 자산 외 2~3개 입력 가능 |
-| 23 | `app/calc/transfer-tax/steps/Step3.tsx` | **수정** | 취득원인 "상속" 선택 시 "상속 취득가액(보충적평가액) 자동/수동" 토글 + 자동 선택 시 상속개시일·주소 기반 Vworld NED 호출 |
-| 24 | `app/calc/transfer-tax/steps/Step5.tsx` | **수정** | `reductionType === "self_farming"` + 주 자산이 상속 취득인 경우 "피상속인 자경기간(년)" 입력 노출. 본인 자경 8년 충족 시 "합산 불필요" 안내 |
+| 22 | `app/calc/transfer-tax/steps/Step1.tsx` | **수정** (L25~L89 options 그리드 뒤) | 물건 유형 선택 하단에 "함께 양도된 다른 자산이 있음" 토글 + 총 양도가 입력 + `CompanionAssetsSection` 조건부 렌더. L51 `right_to_move_in` 조건부 UI 패턴 참조. Props에 onChange 통해 companionAssets 배열 관리 |
+| 23 | `app/calc/transfer-tax/steps/Step3.tsx` | **수정** (L295~L310 `acquisitionCause === "inheritance"` 블록 내부) | 기존 `decedentAcquisitionDate`(L301) 아래에 "상속 취득가액 산정" 라디오(자동/수동) 추가. 자동 선택 시 `inheritanceLandPricePerM2`·`inheritanceHousePrice`를 주소검색 + Vworld NED로 자동 채움. 수동 선택 시 직접 입력 필드 노출 |
+| 24 | `app/calc/transfer-tax/steps/Step5.tsx` | **수정** (L54 `reductionType === "self_farming"` 블록 / L61 farmingYears 입력 바로 뒤) | 조건: `form.acquisitionCause === "inheritance"` + `form.reductionType === "self_farming"` → "피상속인 자경기간(년)" 입력(`decedentFarmingYears`) 노출. 본인 자경 ≥ 8년이면 "합산 불필요" 회색 안내. 본인 + 피상속인 합산 실시간 표시 |
 | 25 | `app/calc/transfer-tax/TransferTaxCalculator.tsx` | **수정** (Orchestrator, 최소 변경) | `companionAssets` 존재 시 API 호출 분기 유지. Step 흐름은 기존 6단계 유지 (Step1·3·5만 내부 수정) |
 | 26 | `components/calc/results/TransferTaxResultView.tsx` | **수정** | 결과에 `mode: "bundled"` 있으면 `BundledAllocationCard` 렌더. 자산별 결과 탭 또는 아코디언 |
 
@@ -352,7 +388,7 @@ export const PDF_P387_INHERITED_BUNDLED = {
 | T1-7 | `__tests__/tax-engine/inheritance-acquisition-price.test.ts` 신규 | `npx vitest run __tests__/tax-engine/inheritance-acquisition-price.test.ts` | ✅ 전 테스트 통과 |
 | T1-8 | `lib/tax-engine/legal-codes/transfer.ts` 상수 3개 추가 (barrel 자동 재수출) | `grep "REDUCTION_SELF_FARMING_INHERITED\|ACQ_INHERITED_SUPPLEMENTARY\|BUNDLED_APPORTIONMENT" lib/tax-engine/legal-codes/transfer.ts` | 3개 모두 히트 |
 | T1-9 | `lib/tax-engine/types/transfer.types.ts` L190 — `self_farming` variant에 `decedentFarmingYears?: number` 추가 | `npx tsc --noEmit` | 타입 오류 0 (기존 호출자는 optional 미지정으로 통과) |
-| T1-10 | `lib/tax-engine/transfer-tax-helpers.ts` L805 근방 `calcReductions()` self_farming 분기 수정 — 본인 자경 8년 판정 → 미충족 시 `decedentFarmingYears` 합산. `legalBasis` 분기 | `npx tsc --noEmit` | 타입 오류 0 |
+| T1-10 | `lib/tax-engine/transfer-tax-rate-calc.ts` L327~L330 `calcReductions()` self_farming 분기 수정 — 본인 자경 8년 판정 → 미충족 시 `effective = farmingYears + (decedentFarmingYears ?? 0)`로 재판정. `reductionTypeLabel`과 `legalBasis` 라벨 분기 | `npx tsc --noEmit` | 타입 오류 0 |
 | T1-11 | `__tests__/tax-engine/transfer-tax/reductions-and-exempt.test.ts` 확장 — 피상속인 합산 ON/OFF 회귀 describe 추가. 기존 T-13(자경 1억 한도) 수치 불변 확인 | `npx vitest run __tests__/tax-engine/transfer-tax/reductions-and-exempt.test.ts` | ✅ 기존 + 신규 **전부 통과** |
 | T1-12 | Phase 1 전체 회귀 | `npx vitest run __tests__/tax-engine/` | ✅ transfer-tax 하위 4개 파일 + 단일 주제 모두 통과 |
 
@@ -431,28 +467,30 @@ npm run build                                 # 빌드 성공
 - `__tests__/api/transfer.route.bundled.test.ts`
 
 **수정**
-- `lib/tax-engine/legal-codes/transfer.ts` — TRANSFER 상수 3개 추가 (barrel 자동 재수출)
-- `lib/tax-engine/types/transfer.types.ts` (L190) — `self_farming` variant 확장
-- `lib/tax-engine/transfer-tax-helpers.ts` (L805 근방 `calcReductions`) — 피상속인 자경 합산
-- `lib/api/transfer-tax-schema.ts` — reductionSchema + companionAssetSchema + 최상위
-- `app/api/calc/transfer/route.ts` — Orchestrator 분기
-- `lib/stores/calc-wizard-store.ts` — `TransferFormData` 확장
-- `lib/calc/transfer-tax-api.ts` — 매핑 확장
-- `lib/calc/transfer-tax-validate.ts` — 일괄양도 유효성
-- `app/calc/transfer-tax/steps/Step1.tsx` — 컴패니언 토글
-- `app/calc/transfer-tax/steps/Step3.tsx` — 상속 취득가액 자동/수동
-- `app/calc/transfer-tax/steps/Step5.tsx` — `decedentFarmingYears` 입력
-- `app/calc/transfer-tax/TransferTaxCalculator.tsx` — 최소 수정
-- `components/calc/results/TransferTaxResultView.tsx` — bundled 모드 분기
-- `__tests__/tax-engine/transfer-tax/reductions-and-exempt.test.ts` — 피상속인 합산 회귀
+- `lib/tax-engine/legal-codes/transfer.ts` — TRANSFER 상수 3개 추가 (barrel `legal-codes.ts` 자동 재수출)
+- `lib/tax-engine/types/transfer.types.ts` L191 — `self_farming` variant에 `decedentFarmingYears?` 추가
+- `lib/tax-engine/transfer-tax-rate-calc.ts` L251 `calcReductions()` L327~L330 self_farming 분기 — 피상속인 자경 합산
+- `lib/api/transfer-tax-schema.ts` L150 `reductionSchema`·L334 `propertyBaseShape`·L376 `propertySchema.superRefine` — self_farming 확장 + companionAssets + `companionAssetSchema` 신규
+- `app/api/calc/transfer/route.ts` L15 (inputSchema) L203 (parcels 매핑) 근방 — Orchestrator 분기 (`multi/route.ts`는 건드리지 않음)
+- `lib/stores/calc-wizard-store.ts` L29 `TransferFormData` + L188 `defaultFormData` — 5개 필드 추가
+- `lib/calc/transfer-tax-api.ts` — companionAssets API 페이로드 매핑
+- `lib/calc/transfer-tax-validate.ts` — 일괄양도 step별 유효성
+- `app/calc/transfer-tax/steps/Step1.tsx` L25~L89 — 컴패니언 토글 + 총양도가 입력
+- `app/calc/transfer-tax/steps/Step3.tsx` L295~L310 (상속 블록 내부) — 보충적평가액 자동/수동 토글
+- `app/calc/transfer-tax/steps/Step5.tsx` L54~L62 (self_farming 블록 내부) — decedentFarmingYears 조건부 입력
+- `app/calc/transfer-tax/TransferTaxCalculator.tsx` — API 호출 분기만 (Step 흐름 불변)
+- `components/calc/results/TransferTaxResultView.tsx` — `mode: "bundled"` 분기하여 BundledAllocationCard 렌더
+- `__tests__/tax-engine/transfer-tax/reductions-and-exempt.test.ts` — 피상속인 자경 합산 회귀 describe 추가
 
 **참고(재사용 — 변경 없음)**
-- `lib/tax-engine/transfer-tax.ts` — Orchestrator (706줄) — 직접 수정 없음 (helpers만 수정)
-- `lib/tax-engine/transfer-tax-aggregate.ts` — 호출 대상 다건 엔진
-- `lib/tax-engine/multi-parcel-transfer.ts` — 안분 + 말단 잔여값 보정 패턴 레퍼런스
+- `lib/tax-engine/transfer-tax.ts` — Orchestrator `calculateTransferTax()` L141. 직접 수정 없음 (rate-calc.ts만 수정)
+- `lib/tax-engine/transfer-tax-helpers.ts` — H-1~H-6 기초 계산. 변경 없음
+- `lib/tax-engine/transfer-tax-aggregate.ts` — 호출 대상 다건 엔진. 인터페이스·결과 shape 변경 없음
+- `lib/tax-engine/multi-parcel-transfer.ts` L178~L200 — 안분 + 말단 잔여값 보정 패턴 레퍼런스 (apportionBundledSale 구현 시 이 패턴 복제)
 - `lib/tax-engine/tax-utils.ts` — `safeMultiplyThenDivide`, `applyRate`, `calculateProration`
-- `__tests__/tax-engine/_helpers/mock-rates.ts` — `makeMockRates()`, `baseTransferInput()` (기존 호출자에 합류)
-- `app/api/address/standard-price/route.ts` — Vworld NED 연도별 공시가격 (UI 자동채움용)
+- `__tests__/tax-engine/_helpers/mock-rates.ts` L167 `baseTransferInput()` — 테스트 입력 팩토리
+- `app/api/address/standard-price/route.ts` — Vworld NED 연도별 공시가격 (UI 자동채움용, 이미 존재)
+- `app/api/calc/transfer/multi/route.ts` — 다건 경로. **변경하지 않음** (일괄양도는 단건 경로에 escalate)
 
 ---
 

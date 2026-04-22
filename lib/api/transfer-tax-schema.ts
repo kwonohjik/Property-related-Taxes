@@ -151,6 +151,11 @@ const reductionSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("self_farming"),
     farmingYears: z.number().int().nonnegative(),
+    /**
+     * 조특령 §66 ⑪ 1호 — 피상속인이 경작한 기간(년).
+     * 본인 자경기간이 §69 요건(8년)에 미달할 때 합산한다.
+     */
+    decedentFarmingYears: z.number().int().nonnegative().optional(),
   }),
   z.object({
     type: z.literal("long_term_rental"),
@@ -192,6 +197,54 @@ const delayedPaymentDetailsSchema = z.object({
   unpaidTax:          z.number().int().nonnegative(),
   paymentDeadline:    z.string().date(),
   actualPaymentDate:  z.string().date().optional(),
+});
+
+// ─── 일괄양도 안분 — 상속 보충적평가액 입력 스키마 ───────────────
+
+const inheritanceValuationSchema = z.object({
+  /** 상속개시일 */
+  inheritanceDate: z.string().date(),
+  /** 자산 종류 */
+  assetKind: z.enum(["land", "house_individual", "house_apart"]),
+  /** 토지 면적 (㎡) — assetKind=land 필수 */
+  landAreaM2: z.number().positive().optional(),
+  /** 상속개시일 직전 공시가격 (원/㎡ for land, 원 총액 for house) */
+  publishedValueAtInheritance: z.number().int().nonnegative(),
+  /** 시가 (우선순위 1) */
+  marketValue: z.number().int().nonnegative().optional(),
+  /** 감정평가 평균 (우선순위 2) */
+  appraisalAverage: z.number().int().nonnegative().optional(),
+});
+
+// ─── 함께 양도된 자산(Companion Asset) 스키마 ────────────────────
+// 소득세법 시행령 §166 ⑥ — 주 자산과 한 계약으로 일괄양도된 다른 자산.
+// 주 자산 정보는 propertyBaseShape의 기본 필드로 들어오고,
+// companionAssets는 주 자산과 기준시가 비율로 안분될 보조 자산들이다.
+
+const companionAssetSchema = z.object({
+  assetId: z.string().min(1),
+  assetLabel: z.string().min(1),
+  assetKind: z.enum(["housing", "land", "building"]),
+  /** 양도시점 기준시가 (안분 키) — 주택: 개별주택가격, 토지: 공시지가×면적 */
+  standardPriceAtTransfer: z.number().int().positive(),
+  /** 취득시점 기준시가 (선택) — totalAcquisitionPrice 안분 시 키 */
+  standardPriceAtAcquisition: z.number().int().positive().optional(),
+  /** 자산 직접 귀속 필요경비 (원, 선택) */
+  directExpenses: z.number().int().nonnegative().optional(),
+  /** 상속·증여 등 취득가액이 자산별로 확정된 경우 (선택) */
+  fixedAcquisitionPrice: z.number().int().nonnegative().optional(),
+  /** 상속 보충적평가액 산정용 입력 (선택) — 지정 시 fixedAcquisitionPrice로 주입됨 */
+  inheritanceValuation: inheritanceValuationSchema.optional(),
+  /** 자산별 감면 (예: 농지 자경 감면) */
+  reductions: z.array(reductionSchema).default([]),
+  /** 자산별 1세대 1주택 여부 (주택 자산에 적용) */
+  isOneHousehold: z.boolean().optional(),
+  /** 자산별 거주기간(월) — 주택의 1세대1주택 판정용 */
+  residencePeriodMonths: z.number().int().nonnegative().optional(),
+  /** 자산별 미등기 여부 */
+  isUnregistered: z.boolean().optional(),
+  /** 자산별 비사업용 토지 여부 */
+  isNonBusinessLand: z.boolean().optional(),
 });
 
 // ─── superRefine 공통 검증 ──────────────────────────────────────
@@ -369,6 +422,18 @@ const propertyBaseShape = {
   extensionFloorArea: z.number().nonnegative().optional(),
   pre1990Land: pre1990LandSchema.optional(),
   parcels: z.array(parcelSchema).max(10).optional(),
+
+  // ─── 일괄양도 안분 (소득세법 시행령 §166 ⑥) ────────────────
+  /** 함께 양도된 자산들 (2개 이상 일괄 양도 시). 없거나 빈 배열이면 단건으로 처리. */
+  companionAssets: z.array(companionAssetSchema).max(10).optional(),
+  /** 매매계약 상 총 양도가액 (일괄양도 시 필수). 없으면 transferPrice가 총액으로 간주. */
+  totalSalePrice: z.number().int().positive().optional(),
+  /** 안분 방식 (v1은 standard_price_transfer만 지원) */
+  apportionmentMethod: z.literal("standard_price_transfer").optional(),
+  /** 주 자산의 양도시점 기준시가 — 일괄양도 안분 키 */
+  standardPriceAtTransferForApportion: z.number().int().positive().optional(),
+  /** 주 자산이 상속 보충적평가액 산정 대상인 경우 */
+  primaryInheritanceValuation: inheritanceValuationSchema.optional(),
 };
 
 // ─── 단건 스키마 (기존 inputSchema와 동일) ─────────────────────
@@ -380,7 +445,64 @@ export const propertySchema = z
     filingPenaltyDetails: filingPenaltyDetailsSchema.optional(),
     delayedPaymentDetails: delayedPaymentDetailsSchema.optional(),
   })
-  .superRefine((data, ctx) => addPropertyRefines(data, ctx));
+  .superRefine((data, ctx) => {
+    addPropertyRefines(data, ctx);
+
+    // 일괄양도 유효성 (소득세법 시행령 §166 ⑥)
+    const companions = data.companionAssets ?? [];
+    if (companions.length > 0) {
+      // 총 양도가액 필수
+      if (data.totalSalePrice === undefined || data.totalSalePrice <= 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["totalSalePrice"],
+          message: "일괄양도 시 총 양도가액(totalSalePrice)이 필수입니다",
+        });
+      }
+      // 주 자산 양도시점 기준시가 필수 (안분 키)
+      if (
+        data.standardPriceAtTransferForApportion === undefined ||
+        data.standardPriceAtTransferForApportion <= 0
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["standardPriceAtTransferForApportion"],
+          message: "일괄양도 시 주 자산의 양도시점 기준시가가 필수입니다",
+        });
+      }
+      // assetId 중복 금지
+      const ids = companions.map((a) => a.assetId);
+      const seen = new Set<string>();
+      for (let i = 0; i < ids.length; i++) {
+        if (ids[i] === "primary") {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["companionAssets", i, "assetId"],
+            message: `"primary"는 주 자산 예약 식별자입니다`,
+          });
+        }
+        if (seen.has(ids[i])) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["companionAssets", i, "assetId"],
+            message: `assetId "${ids[i]}"가 중복됩니다`,
+          });
+        }
+        seen.add(ids[i]);
+      }
+      // inheritanceValuation 사용 시 landAreaM2 일관성
+      for (let i = 0; i < companions.length; i++) {
+        const v = companions[i].inheritanceValuation;
+        if (v?.assetKind === "land" && (!v.landAreaM2 || v.landAreaM2 <= 0)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["companionAssets", i, "inheritanceValuation", "landAreaM2"],
+            message: "토지 상속평가액 산정 시 면적(㎡)이 필수입니다",
+          });
+        }
+      }
+    }
+  });
 
 // ─── 다건 개별 자산 스키마 (propertyId·propertyLabel 추가) ──────
 

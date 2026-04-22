@@ -10,6 +10,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { preloadTaxRates } from "@/lib/db/tax-rates";
 import { calculateTransferTax, type TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
+import {
+  calculateTransferTaxAggregate,
+  type TransferTaxItemInput,
+} from "@/lib/tax-engine/transfer-tax-aggregate";
+import {
+  apportionBundledSale,
+  type BundledAssetInput,
+} from "@/lib/tax-engine/bundled-sale-apportionment";
+import { calculateInheritanceAcquisitionPrice } from "@/lib/tax-engine/inheritance-acquisition-price";
 import { TaxCalculationError, TaxErrorCode } from "@/lib/tax-engine/tax-errors";
 import { checkRateLimit, getClientIp } from "@/lib/api/rate-limit";
 import { propertySchema as inputSchema } from "@/lib/api/transfer-tax-schema";
@@ -239,6 +248,156 @@ export async function POST(request: NextRequest) {
 
   // 단계 5: 계산 실행
   try {
+    // ─── 5-a. 일괄양도 분기 (소득세법 시행령 §166 ⑥) ─────────────
+    // companionAssets 존재 시 안분 → 자산별 상속 취득가액 → 다건 엔진
+    const companions = data.companionAssets ?? [];
+    if (
+      companions.length > 0 &&
+      data.totalSalePrice !== undefined &&
+      data.standardPriceAtTransferForApportion !== undefined
+    ) {
+      // (1) 주 자산 상속 보충적평가액 산정 (선택)
+      let primaryFixedAcq: number | undefined;
+      if (data.primaryInheritanceValuation) {
+        const v = data.primaryInheritanceValuation;
+        const r = calculateInheritanceAcquisitionPrice({
+          inheritanceDate: new Date(v.inheritanceDate),
+          assetKind: v.assetKind,
+          landAreaM2: v.landAreaM2,
+          publishedValueAtInheritance: v.publishedValueAtInheritance,
+          marketValue: v.marketValue,
+          appraisalAverage: v.appraisalAverage,
+        });
+        primaryFixedAcq = r.acquisitionPrice;
+      }
+
+      // (2) 컴패니언 자산별 상속 보충적평가액 산정
+      const companionFixedAcq: (number | undefined)[] = companions.map((c) => {
+        if (!c.inheritanceValuation) return c.fixedAcquisitionPrice;
+        const v = c.inheritanceValuation;
+        return calculateInheritanceAcquisitionPrice({
+          inheritanceDate: new Date(v.inheritanceDate),
+          assetKind: v.assetKind,
+          landAreaM2: v.landAreaM2,
+          publishedValueAtInheritance: v.publishedValueAtInheritance,
+          marketValue: v.marketValue,
+          appraisalAverage: v.appraisalAverage,
+        }).acquisitionPrice;
+      });
+
+      // (3) BundledAssetInput 배열 구성
+      const bundleAssets: BundledAssetInput[] = [
+        {
+          assetId: "primary",
+          assetLabel:
+            data.propertyType === "housing"
+              ? "주 자산(주택)"
+              : data.propertyType === "land"
+                ? "주 자산(토지)"
+                : "주 자산",
+          assetKind:
+            data.propertyType === "housing"
+              ? "housing"
+              : data.propertyType === "building"
+                ? "building"
+                : "land",
+          standardPriceAtTransfer: data.standardPriceAtTransferForApportion,
+          directExpenses: data.expenses,
+          fixedAcquisitionPrice:
+            primaryFixedAcq ??
+            (data.acquisitionPrice > 0 ? data.acquisitionPrice : undefined),
+        },
+        ...companions.map(
+          (c, i): BundledAssetInput => ({
+            assetId: c.assetId,
+            assetLabel: c.assetLabel,
+            assetKind: c.assetKind,
+            standardPriceAtTransfer: c.standardPriceAtTransfer,
+            standardPriceAtAcquisition: c.standardPriceAtAcquisition,
+            directExpenses: c.directExpenses,
+            fixedAcquisitionPrice: companionFixedAcq[i],
+          }),
+        ),
+      ];
+
+      // (4) 안분 실행
+      const apportionment = apportionBundledSale({
+        totalSalePrice: data.totalSalePrice,
+        assets: bundleAssets,
+      });
+
+      // (5) TransferTaxItemInput[] 조립 — 주 자산은 engineInput 파생, 컴패니언은 기본값 + override
+      const items: TransferTaxItemInput[] = apportionment.apportioned.map((a, idx) => {
+        if (a.assetId === "primary") {
+          // 주 자산: engineInput을 복제 + 안분 결과로 양도·취득·필요경비 덮어쓰기
+          return {
+            ...engineInput,
+            transferPrice: a.allocatedSalePrice,
+            acquisitionPrice: a.allocatedAcquisitionPrice,
+            expenses: a.allocatedExpenses,
+            propertyId: "primary",
+            propertyLabel: a.assetLabel,
+          } satisfies TransferTaxItemInput;
+        }
+        // 컴패니언 자산: propertyType·기본 플래그는 companion에서, 공통은 주 자산에서 상속
+        const c = companions[idx - 1]; // primary가 첫 번째
+        const companionEngine: TransferTaxItemInput = {
+          propertyType:
+            c.assetKind === "housing"
+              ? "housing"
+              : c.assetKind === "building"
+                ? "building"
+                : "land",
+          transferPrice: a.allocatedSalePrice,
+          transferDate,
+          acquisitionPrice: a.allocatedAcquisitionPrice,
+          acquisitionDate,
+          expenses: a.allocatedExpenses,
+          useEstimatedAcquisition: false,
+          householdHousingCount: engineInput.householdHousingCount,
+          residencePeriodMonths: c.residencePeriodMonths ?? 0,
+          isRegulatedArea: engineInput.isRegulatedArea,
+          wasRegulatedAtAcquisition: engineInput.wasRegulatedAtAcquisition,
+          isUnregistered: c.isUnregistered ?? false,
+          isNonBusinessLand: c.isNonBusinessLand ?? false,
+          isOneHousehold: c.isOneHousehold ?? false,
+          acquisitionCause: engineInput.acquisitionCause,
+          decedentAcquisitionDate: engineInput.decedentAcquisitionDate,
+          donorAcquisitionDate: engineInput.donorAcquisitionDate,
+          reductions: c.reductions.map((r) =>
+            r.type === "public_expropriation"
+              ? { ...r, businessApprovalDate: new Date(r.businessApprovalDate) }
+              : r,
+          ),
+          propertyId: c.assetId,
+          propertyLabel: c.assetLabel,
+        };
+        return companionEngine;
+      });
+
+      // (6) 다건 엔진 호출
+      const aggregated = calculateTransferTaxAggregate(
+        {
+          taxYear: transferDate.getFullYear(),
+          properties: items,
+          annualBasicDeductionUsed: data.annualBasicDeductionUsed,
+        },
+        rates,
+      );
+
+      return NextResponse.json(
+        {
+          data: {
+            mode: "bundled" as const,
+            apportionment,
+            aggregated,
+          },
+        },
+        { status: 200 },
+      );
+    }
+
+    // ─── 5-b. 기존 단건 경로 ───────────────────────────────────
     // 신고불성실가산세의 determinedTax + 지연납부의 unpaidTax는 실제 결정세액으로 주입 필요
     // → 먼저 가산세 없이 계산하여 결정세액 확보 후, 가산세 디테일에 주입
     if (engineInput.filingPenaltyDetails || engineInput.delayedPaymentDetails) {
@@ -256,7 +415,7 @@ export async function POST(request: NextRequest) {
       }
     }
     const result = calculateTransferTax(engineInput, rates);
-    return NextResponse.json({ data: result }, { status: 200 });
+    return NextResponse.json({ data: { mode: "single" as const, result } }, { status: 200 });
   } catch (err) {
     if (err instanceof TaxCalculationError) {
       return NextResponse.json(

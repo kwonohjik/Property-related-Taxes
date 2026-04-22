@@ -101,8 +101,10 @@ export function ParcelListInput({ parcels, totalTransferPrice, onChange }: Parce
                 value={p.acquisitionMethod}
                 onValueChange={(v) => update(i, { acquisitionMethod: v as "actual" | "estimated" })}
               >
-                <SelectTrigger className="h-9">
-                  <SelectValue />
+                <SelectTrigger className="h-9 w-full">
+                  <SelectValue placeholder="취득 원인 선택">
+                    {p.acquisitionMethod === "estimated" ? "환산취득가 (기준시가 비율)" : "실지취득가액"}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="estimated">환산취득가 (기준시가 비율)</SelectItem>

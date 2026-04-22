@@ -6,7 +6,8 @@ import { useCalcWizardStore } from "@/lib/stores/calc-wizard-store";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { StepIndicator } from "@/components/calc/StepIndicator";
 import { TransferTaxResultView } from "@/components/calc/results/TransferTaxResultView";
-import { callTransferTaxAPI } from "@/lib/calc/transfer-tax-api";
+import { BundledAllocationCard } from "@/components/calc/results/BundledAllocationCard";
+import { callTransferTaxAPI, type SingleTransferResult } from "@/lib/calc/transfer-tax-api";
 import type { TransferTaxPenaltyResult } from "@/lib/tax-engine/transfer-tax-penalty";
 import { validateStep } from "@/lib/calc/transfer-tax-validate";
 import { getFilingDeadline, isFilingOverdue } from "@/lib/calc/filing-deadline";
@@ -170,9 +171,10 @@ export default function TransferTaxCalculator({
     setError(null);
     setIsPenaltyLoading(true);
     try {
-      // 1단계: enablePenalty 없이 결정세액만 확보
+      // 1단계: enablePenalty 없이 결정세액만 확보 (단건 모드만 가산세 지원)
       const baseRes = await callTransferTaxAPI({ ...formData, enablePenalty: false });
-      const detTax = baseRes.determinedTax;
+      if (baseRes.mode !== "single") return;
+      const detTax = baseRes.result.determinedTax;
       setCalcDeterminedTax(detTax);
 
       // 2단계: 미납세액 자동 계산
@@ -183,8 +185,9 @@ export default function TransferTaxCalculator({
 
       // 3단계: 계산된 unpaidTax로 가산세 포함 재계산
       const penaltyRes = await callTransferTaxAPI({ ...formData, unpaidTax: updatedUnpaidTax });
-      setPenaltyResult(penaltyRes.penaltyDetail ?? null);
-      if (!penaltyRes.penaltyDetail) {
+      const penaltyResult = penaltyRes.mode === "single" ? (penaltyRes.result.penaltyDetail ?? null) : null;
+      setPenaltyResult(penaltyResult);
+      if (!penaltyResult) {
         setError("가산세 항목을 입력해 주세요. (신고 유형 또는 미납세액+납부기한)");
       }
     } catch (e: unknown) {
@@ -237,15 +240,32 @@ export default function TransferTaxCalculator({
       </div>
 
       {isResult && result ? (
-        <TransferTaxResultView
-          result={result}
-          onReset={handleReset}
-          onBack={() => {
-            setStep(totalSteps - 1); // 마지막 입력 단계(감면 확인)로 복귀
-            setError(null);
-          }}
-          onLoginPrompt={!isLoggedIn}
-        />
+        result.mode === "single" ? (
+          <TransferTaxResultView
+            result={result.result}
+            onReset={handleReset}
+            onBack={() => {
+              setStep(totalSteps - 1);
+              setError(null);
+            }}
+            onLoginPrompt={!isLoggedIn}
+          />
+        ) : (
+          <div className="space-y-4">
+            <div className="flex gap-3">
+              <button
+                onClick={handleReset}
+                className="text-sm text-muted-foreground hover:text-foreground underline"
+              >
+                다시 계산하기
+              </button>
+            </div>
+            <BundledAllocationCard
+              apportionment={result.apportionment}
+              aggregated={result.aggregated}
+            />
+          </div>
+        )
       ) : (
         <>
           <StepIndicator

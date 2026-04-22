@@ -121,13 +121,17 @@ import {
   calcOneHouseProration,
   calcLongTermHoldingDeduction,
   calcBasicDeduction,
+} from "./transfer-tax-helpers";
+
+import {
   calculateBuildingPenalty,
   calcTax,
   calcReductions,
-} from "./transfer-tax-helpers";
+} from "./transfer-tax-rate-calc";
 
 // 하위 호환: transfer-tax-aggregate 등 외부 소비자를 위해 일부 헬퍼를 재수출
-export { parseRatesFromMap, calcTax } from "./transfer-tax-helpers";
+export { parseRatesFromMap } from "./transfer-tax-helpers";
+export { calcTax } from "./transfer-tax-rate-calc";
 
 
 // ============================================================
@@ -264,9 +268,14 @@ export function calculateTransferTax(
       transferDate: effectiveInput.transferDate,
       parcels: rawInput.parcels,
     });
-    for (const pr of mpResult.parcelResults) {
-      steps.push({ label: `[필지] ${pr.id} 양도차익`, formula: `안분가 ${pr.allocatedTransferPrice.toLocaleString()} - 취득가 ${pr.acquisitionPrice.toLocaleString()} - 경비 ${pr.expenses.toLocaleString()}`, amount: pr.transferGain });
-      steps.push({ label: `[필지] ${pr.id} 장특공제`, formula: `${(pr.longTermHoldingRate * 100).toFixed(0)}%`, amount: pr.longTermHoldingDeduction, sub: true });
+    for (let pi = 0; pi < mpResult.parcelResults.length; pi++) {
+      const pr = mpResult.parcelResults[pi];
+      const parcelLabel = `필지 ${pi + 1}`;
+      const expenseDesc = pr.estimatedDeduction > 0
+        ? `개산공제 ${pr.estimatedDeduction.toLocaleString()}`
+        : pr.expenses.toLocaleString();
+      steps.push({ label: `[${parcelLabel}] 양도차익`, formula: `안분가 ${pr.allocatedTransferPrice.toLocaleString()} - 취득가 ${pr.acquisitionPrice.toLocaleString()} - 경비 ${expenseDesc}`, amount: pr.transferGain });
+      steps.push({ label: `[${parcelLabel}] 장특공제`, formula: `${(pr.longTermHoldingRate * 100).toFixed(0)}%`, amount: pr.longTermHoldingDeduction, sub: true });
     }
     const mpTaxableGain = mpResult.totalTransferGain;
     const mpLtd = mpResult.totalLongTermHoldingDeduction;

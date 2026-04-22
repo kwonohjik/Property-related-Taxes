@@ -120,6 +120,11 @@ function makeDefaultForm(): TransferFormData {
     pre1990GradeMode: "number",
     parcelMode: false,
     parcels: [],
+    companionAssets: [],
+    decedentFarmingYears: "0",
+    inheritanceValuationMode: "auto",
+    inheritanceLandPricePerM2: "",
+    inheritanceHousePrice: "",
   };
 }
 
