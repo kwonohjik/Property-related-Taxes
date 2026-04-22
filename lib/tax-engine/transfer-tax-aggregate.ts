@@ -22,7 +22,30 @@ import {
 } from "./transfer-tax";
 import { calculateProgressiveTax } from "./tax-utils";
 import { TRANSFER } from "./legal-codes";
-import { applyRate, truncateToThousand } from "./tax-utils";
+import { applyRate, truncateToThousand, safeMultiplyThenDivide } from "./tax-utils";
+import { applyAnnualLimits, lookupLimit } from "./aggregate-reduction-limits";
+
+/** 감면 유형별 주 법령 조문 매핑 (한도 조문과 별개) */
+function resolveTypeLegalBasis(type: string): string {
+  switch (type) {
+    case "self_farming":
+      return TRANSFER.REDUCTION_SELF_FARMING;
+    case "self_farming_inherited":
+      return `${TRANSFER.REDUCTION_SELF_FARMING} + ${TRANSFER.REDUCTION_SELF_FARMING_INHERITED}`;
+    case "self_farming_incorp":
+      return `${TRANSFER.REDUCTION_SELF_FARMING} + ${TRANSFER.REDUCTION_SELF_FARMING_INCORP}`;
+    case "public_expropriation":
+      return TRANSFER.REDUCTION_PUBLIC_EXPROPRIATION;
+    case "long_term_rental":
+      return TRANSFER.REDUCTION_LONG_RENTAL;
+    case "new_housing":
+      return TRANSFER.REDUCTION_NEW_HOUSING;
+    case "unsold_housing":
+      return TRANSFER.REDUCTION_UNSOLD_HOUSING;
+    default:
+      return TRANSFER.REDUCTION_OVERLAP_EXCLUSION;
+  }
+}
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import {
   calculateTransferTaxPenalty,
@@ -32,153 +55,31 @@ import {
 } from "./transfer-tax-penalty";
 
 // ============================================================
-// 타입
+// 타입 — ./types/transfer-aggregate.types 로 분리 (800줄 정책)
+// 기존 소비자들을 위해 본체 파일에서 재수출한다.
 // ============================================================
 
-/** 세율군 (소득세법 §102 ① 각 호 구분) */
-export type RateGroup =
-  | "progressive"              // 일반 누진 6~45% (보유 2년+, 중과·특례 해당 없음)
-  | "short_term"               // 단기보유 단일세율 (보유 2년 미만)
-  | "multi_house_surcharge"    // 다주택 중과 (+20%p / +30%p)
-  | "non_business_land"        // 비사업용 토지 (+10%p)
-  | "unregistered";            // 미등기 70% 단일
+import type {
+  RateGroup,
+  TransferTaxItemInput,
+  AggregateTransferInput,
+  PerPropertyBreakdown,
+  ReductionBreakdownEntry,
+  GroupTaxResult,
+  LossOffsetRow,
+  AggregateTransferResult,
+} from "./types/transfer-aggregate.types";
 
-/** 다건 입력 (건별 + 공통) */
-export interface AggregateTransferInput {
-  /** 과세기간 (YYYY) */
-  taxYear: number;
-  /** 건별 양도 자산 목록 (1..20건) */
-  properties: TransferTaxItemInput[];
-  /** 당해 연도에 이미 사용한 기본공제액 (타 계산 건 포함) */
-  annualBasicDeductionUsed: number;
-  /** 기본공제 배분 전략 (기본 MAX_BENEFIT) */
-  basicDeductionAllocation?: "MAX_BENEFIT" | "FIRST" | "EARLIEST_TRANSFER";
-  /** 신고불성실 가산세 (합산 결정세액 기준 계산) */
-  filingPenaltyDetails?: FilingPenaltyInput;
-  /** 납부지연 가산세 (합산 결정세액 기준 계산) */
-  delayedPaymentDetails?: DelayedPaymentInput;
-}
-
-/** 자산 단위 입력 — TransferTaxInput에서 공통 필드 제외 + 식별자 추가 */
-export type TransferTaxItemInput = Omit<
-  TransferTaxInput,
-  | "annualBasicDeductionUsed"
-  | "filingPenaltyDetails"
-  | "delayedPaymentDetails"
-  | "skipBasicDeduction"
-  | "skipLossFloor"
-> & {
-  propertyId: string;
-  propertyLabel: string;
+export type {
+  RateGroup,
+  TransferTaxItemInput,
+  AggregateTransferInput,
+  PerPropertyBreakdown,
+  ReductionBreakdownEntry,
+  GroupTaxResult,
+  LossOffsetRow,
+  AggregateTransferResult,
 };
-
-/** 자산별 breakdown */
-export interface PerPropertyBreakdown {
-  propertyId: string;
-  propertyLabel: string;
-  isExempt: boolean;
-  exemptReason?: string;
-  /** 양도차익 (skipLossFloor=true → 음수 가능) */
-  transferGain: number;
-  /** 장기보유특별공제 */
-  longTermHoldingDeduction: number;
-  /**
-   * 원시 양도소득금액 = taxableGain - longTermHoldingDeduction (음수 가능)
-   * §102② 차손 통산의 입력값.
-   */
-  income: number;
-  /** 세율군 */
-  rateGroup: RateGroup;
-  /** 같은 그룹에서 받은 차손 공제 (양수) */
-  lossOffsetFromSameGroup: number;
-  /** 타군에서 안분 받은 차손 공제 (양수) */
-  lossOffsetFromOtherGroup: number;
-  /** 통산 후 소득금액 (≥ 0) */
-  incomeAfterOffset: number;
-  /** 배분된 기본공제액 */
-  allocatedBasicDeduction: number;
-  /** 그룹 과세표준 중 본 자산 기여분 */
-  taxBaseShare: number;
-  /** 건별 감면액 (단건 엔진이 이미 중복배제 적용) */
-  reductionAmount: number;
-  /** §114조의2 건별 가산세 */
-  penaltyTax: number;
-  /** 건별 세부 계산 steps (단건 엔진에서 생성) */
-  steps: CalculationStep[];
-}
-
-/** 세율군별 집계 */
-export interface GroupTaxResult {
-  group: RateGroup;
-  /** 그룹 내 자산 IDs */
-  assetIds: string[];
-  /** 그룹 차익 합 (양수 자산만) */
-  groupGrossGain: number;
-  /** 그룹 차손 합 (음수 자산만, 절댓값) */
-  groupGrossLoss: number;
-  /** 통산 후 그룹 소득금액 (≥ 0) */
-  groupIncomeAmount: number;
-  /** 그룹 배분 기본공제 */
-  groupBasicDeduction: number;
-  /** 그룹 과세표준 = max(0, groupIncomeAmount - groupBasicDeduction) */
-  groupTaxBase: number;
-  /** 그룹 산출세액 */
-  groupCalculatedTax: number;
-  appliedRate: number;
-  surchargeRate?: number;
-  progressiveDeduction: number;
-}
-
-export interface LossOffsetRow {
-  fromPropertyId: string;
-  toPropertyId: string;
-  amount: number;
-  scope: "same_group" | "other_group";
-}
-
-export interface AggregateTransferResult {
-  properties: PerPropertyBreakdown[];
-
-  totalTransferGain: number;
-  totalLongTermHoldingDeduction: number;
-  totalIncomeBeforeOffset: number;
-  totalLoss: number;
-
-  lossOffsetTable: LossOffsetRow[];
-  /** 통산 후에도 남아 소멸된 차손 (이월 불인정) */
-  unusedLoss: number;
-  totalIncomeAfterOffset: number;
-
-  basicDeduction: number;
-  taxBase: number;
-
-  groupTaxes: GroupTaxResult[];
-
-  /** 방법 B: 세율군별 분리 산출세액 합 */
-  calculatedTaxByGroups: number;
-  /** 방법 A: 전체 누진세율 적용 산출세액 */
-  calculatedTaxByGeneral: number;
-  /** 비교과세(§104의2) 적용 결과 */
-  comparedTaxApplied: "groups" | "general" | "none";
-  /** MAX(byGroups, byGeneral) */
-  calculatedTax: number;
-
-  /** 건별 감면액 합 */
-  reductionAmount: number;
-  /** 결정세액 = max(0, calculatedTax - reductionAmount) */
-  determinedTax: number;
-
-  /** §114의2 건별 합 + 신고불성실·납부지연 */
-  penaltyTax: number;
-  penaltyDetail?: TransferTaxPenaltyResult;
-
-  /** 지방소득세 = (결정+가산) × 10%, 천원 절사 */
-  localIncomeTax: number;
-  totalTax: number;
-
-  steps: CalculationStep[];
-  warnings: string[];
-}
 
 // ============================================================
 // 메인 진입점
@@ -312,11 +213,93 @@ export function calculateTransferTaxAggregate(
     legalBasis: TRANSFER.COMPARATIVE_TAXATION,
   });
 
-  // M-8: 감면 합산 (건별 독립 계산 결과 합)
-  const reductionAmount = assetRecords.reduce(
-    (s, r) => s + (r.result.isExempt ? 0 : r.result.reductionAmount ?? 0),
-    0,
+  // M-8: 감면 합산 — 유형별 비율 재계산 (조특법 §69 + §127의2 + §133)
+  // 1) 각 자산이 노출한 reducibleIncome을 유형별로 집계
+  // 2) 합산 과세표준 기준으로 `safeMultiplyThenDivide(calculatedTax, 유형별 reducibleIncome, taxBase)` 재계산
+  // 3) §133 유형별 연간 한도 적용 (자경·축산·어업 1억원 그룹 / 공익수용 2억원 단독 등)
+  // 4) 유형이 없는 레거시 감면은 건별 단순 합산으로 폴백
+  //
+  // 분모 주의: 반드시 aggregate taxBase(차손 통산 + 기본공제 반영)여야 한다.
+  // 합산양도소득금액이나 각 건별 taxBase를 쓰면 과대감면이 발생한다.
+  const aggregateTaxBase = Math.max(0, totalIncomeAfterOffset - totalBasicDeduction);
+  const reducibleByType = new Map<string, { income: number; assetIds: string[] }>();
+  for (const r of assetRecords) {
+    if (r.result.isExempt) continue;
+    const type = r.result.reductionTypeApplied;
+    const income = r.result.reducibleIncome ?? 0;
+    if (!type || income <= 0) continue;
+    const existing = reducibleByType.get(type) ?? { income: 0, assetIds: [] };
+    existing.income += income;
+    existing.assetIds.push(r.item.propertyId);
+    reducibleByType.set(type, existing);
+  }
+
+  // 조특법 §133 유형별 연간 한도 — `aggregate-reduction-limits.ts` 모듈 사용.
+  // 유형별 원시 감면세액을 계산한 뒤 그룹 단위로 capping.
+  const rawByType = new Map<string, number>();
+  for (const [type, entry] of reducibleByType.entries()) {
+    const raw =
+      aggregateTaxBase > 0
+        ? safeMultiplyThenDivide(calculatedTax, entry.income, aggregateTaxBase)
+        : 0;
+    rawByType.set(type, raw);
+  }
+  const { cappedByType, capInfoByType } = applyAnnualLimits(rawByType);
+
+  const reductionBreakdown: ReductionBreakdownEntry[] = [];
+  let totalAggregatedReduction = 0;
+  for (const [type, entry] of reducibleByType.entries()) {
+    const raw = rawByType.get(type) ?? 0;
+    const capped = cappedByType.get(type) ?? 0;
+    const info = capInfoByType.get(type);
+    const annualLimit =
+      info && Number.isFinite(info.annualLimit) ? info.annualLimit : 0;
+    reductionBreakdown.push({
+      type,
+      legalBasis: info?.legalBasis
+        ? `${lookupLimit(type).groupTypes.length > 0 ? resolveTypeLegalBasis(type) : TRANSFER.REDUCTION_OVERLAP_EXCLUSION} + ${info.legalBasis}`
+        : resolveTypeLegalBasis(type),
+      totalReducibleIncome: entry.income,
+      aggregateTaxBase,
+      aggregateCalculatedTax: calculatedTax,
+      rawAggregateReduction: raw,
+      annualLimit,
+      cappedAggregateReduction: capped,
+      cappedByLimit: info?.cappedByLimit ?? false,
+      assetIds: entry.assetIds,
+    });
+    totalAggregatedReduction += capped;
+  }
+
+  // 유형이 지정되지 않은 감면(reducibleIncome 미노출 레거시 경로)은 건별 단순 합산
+  const legacyReductionAmount = assetRecords.reduce((s, r) => {
+    if (r.result.isExempt) return s;
+    if (r.result.reductionTypeApplied) return s; // 재계산 경로에서 이미 처리
+    return s + (r.result.reductionAmount ?? 0);
+  }, 0);
+
+  const reductionAmount = Math.min(
+    calculatedTax,
+    totalAggregatedReduction + legacyReductionAmount,
   );
+
+  // 세율군 혼재 시 경고 (PDF 사례 범위 외)
+  if (comparedTaxApplied === "groups" && reducibleByType.size > 0) {
+    warnings.push(
+      "비교과세가 세율군별로 적용된 상황에서 감면 재계산은 전체 산출세액 기준으로 이루어졌습니다. 세율군 혼재 시 정확한 안분은 별도 로직이 필요합니다.",
+    );
+  }
+
+  steps.push({
+    label: "감면세액 (합산 재계산)",
+    formula:
+      reducibleByType.size > 0
+        ? `유형별 재계산: ${[...reducibleByType.keys()].join(", ")} | 원시 ${(totalAggregatedReduction === 0 ? "0" : totalAggregatedReduction.toLocaleString())}원 + 레거시 ${legacyReductionAmount.toLocaleString()}원`
+        : `건별 단순합 ${legacyReductionAmount.toLocaleString()}원 (유형 미지정 감면만 존재)`,
+    amount: reductionAmount,
+    legalBasis: TRANSFER.REDUCTION_ANNUAL_LIMIT,
+  });
+
   const determinedTaxBeforePenalty = Math.max(0, calculatedTax - reductionAmount);
 
   // M-9: 가산세 (§114의2 건별 합 + 신고·납부)
@@ -344,25 +327,49 @@ export function calculateTransferTaxAggregate(
     amount: totalTax,
   });
 
-  // properties breakdown 조립
-  const properties: PerPropertyBreakdown[] = assetRecords.map((r, idx) => ({
-    propertyId: r.item.propertyId,
-    propertyLabel: r.item.propertyLabel,
-    isExempt: r.result.isExempt,
-    exemptReason: r.result.exemptReason,
-    transferGain: r.result.transferGain,
-    longTermHoldingDeduction: r.lthd,
-    income: r.income,
-    rateGroup: r.rateGroup,
-    lossOffsetFromSameGroup: lossOffsetFromSame[idx],
-    lossOffsetFromOtherGroup: lossOffsetFromOther[idx],
-    incomeAfterOffset: incomeAfterOffset[idx],
-    allocatedBasicDeduction: allocatedBasic[idx],
-    taxBaseShare: Math.max(0, incomeAfterOffset[idx] - allocatedBasic[idx]),
-    reductionAmount: r.result.isExempt ? 0 : r.result.reductionAmount ?? 0,
-    penaltyTax: r.result.isExempt ? 0 : r.result.penaltyTax ?? 0,
-    steps: r.result.steps,
-  }));
+  // properties breakdown 조립 — 합산 재계산 후 건별 배분액 포함
+  const properties: PerPropertyBreakdown[] = assetRecords.map((r, idx) => {
+    const reductionType = r.result.reductionTypeApplied;
+    const reducibleIncome = r.result.isExempt ? 0 : r.result.reducibleIncome ?? 0;
+    const standalone = r.result.isExempt ? 0 : r.result.reductionAmount ?? 0;
+
+    // 유형별 재계산 엔트리가 있으면 비율 배분, 없으면 단독값 그대로
+    let reductionAggregated = standalone;
+    let reductionAllocationRatio = 0;
+    if (reductionType && reducibleIncome > 0) {
+      const entry = reductionBreakdown.find((b) => b.type === reductionType);
+      if (entry && entry.totalReducibleIncome > 0) {
+        reductionAllocationRatio = reducibleIncome / entry.totalReducibleIncome;
+        // 최종 capped 감면액을 reducibleIncome 비율로 자산에 배분 (원 미만 절사)
+        reductionAggregated = Math.floor(
+          entry.cappedAggregateReduction * reductionAllocationRatio,
+        );
+      }
+    }
+
+    return {
+      propertyId: r.item.propertyId,
+      propertyLabel: r.item.propertyLabel,
+      isExempt: r.result.isExempt,
+      exemptReason: r.result.exemptReason,
+      transferGain: r.result.transferGain,
+      longTermHoldingDeduction: r.lthd,
+      income: r.income,
+      rateGroup: r.rateGroup,
+      lossOffsetFromSameGroup: lossOffsetFromSame[idx],
+      lossOffsetFromOtherGroup: lossOffsetFromOther[idx],
+      incomeAfterOffset: incomeAfterOffset[idx],
+      allocatedBasicDeduction: allocatedBasic[idx],
+      taxBaseShare: Math.max(0, incomeAfterOffset[idx] - allocatedBasic[idx]),
+      reductionAmount: standalone,
+      reductionType,
+      reducibleIncome,
+      reductionAggregated,
+      reductionAllocationRatio,
+      penaltyTax: r.result.isExempt ? 0 : r.result.penaltyTax ?? 0,
+      steps: r.result.steps,
+    };
+  });
 
   return {
     properties,
@@ -383,6 +390,7 @@ export function calculateTransferTaxAggregate(
     comparedTaxApplied,
     calculatedTax,
     reductionAmount,
+    reductionBreakdown,
     determinedTax: determinedTaxBeforePenalty,
     penaltyTax,
     penaltyDetail,

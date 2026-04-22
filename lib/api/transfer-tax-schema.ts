@@ -156,6 +156,13 @@ const reductionSchema = z.discriminatedUnion("type", [
      * 본인 자경기간이 §69 요건(8년)에 미달할 때 합산한다.
      */
     decedentFarmingYears: z.number().int().nonnegative().optional(),
+    // ── 조특령 §66 ⑤⑥ 편입일 부분감면 ──
+    /** 주거·상업·공업지역 편입일 (YYYY-MM-DD). 2002.1.1 이후 편입 시 부분감면 적용. */
+    incorporationDate: z.string().date().optional(),
+    /** 편입 지역 유형 */
+    incorporationZoneType: z.enum(["residential", "commercial", "industrial"]).optional(),
+    /** 편입일 당시 기준시가 (원 총액 또는 ㎡당, 취득·양도시 기준시가와 동일 단위) */
+    standardPriceAtIncorporation: z.number().int().nonnegative().optional(),
   }),
   z.object({
     type: z.literal("long_term_rental"),
@@ -364,6 +371,10 @@ const parcelSchema = z.object({
   expenses: z.number().int().nonnegative().optional(),
   useDayAfterReplotting: z.boolean().optional(),
   replottingConfirmDate: z.string().date().optional(),
+  // 환지 감환지/증환지 (소득세법 시행령 §162의2)
+  entitlementArea: z.number().positive().optional(),
+  allocatedArea: z.number().positive().optional(),
+  priorLandArea: z.number().positive().optional(),
 }).superRefine((p, ctx) => {
   if (p.acquisitionMethod === "estimated") {
     if (!p.standardPricePerSqmAtAcq || p.standardPricePerSqmAtAcq <= 0) {
@@ -379,6 +390,16 @@ const parcelSchema = z.object({
   }
   if (p.useDayAfterReplotting && !p.replottingConfirmDate) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, message: "환지처분확정일 입력 필요", path: ["replottingConfirmDate"] });
+  }
+  // 환지 면적 3필드 일관성 검증 — 일부만 제공되면 오류
+  const ex = [p.entitlementArea, p.allocatedArea, p.priorLandArea];
+  const providedCount = ex.filter((v) => v !== undefined).length;
+  if (providedCount > 0 && providedCount < 3) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["entitlementArea"],
+      message: "환지 면적은 권리·교부·종전 3필드 모두 입력하거나 모두 비워야 합니다",
+    });
   }
 });
 

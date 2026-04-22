@@ -10,6 +10,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { preloadTaxRates } from "@/lib/db/tax-rates";
 import { calculateTransferTax, type TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
+import type { TransferReduction } from "@/lib/tax-engine/types/transfer.types";
 import {
   calculateTransferTaxAggregate,
   type TransferTaxItemInput,
@@ -113,11 +114,18 @@ export async function POST(request: NextRequest) {
           newAcquisitionDate: new Date(data.temporaryTwoHouse.newAcquisitionDate),
         }
       : undefined,
-    reductions: data.reductions.map((r) =>
-      r.type === "public_expropriation"
-        ? { ...r, businessApprovalDate: new Date(r.businessApprovalDate) }
-        : r,
-    ),
+    reductions: data.reductions.map((r): TransferReduction => {
+      if (r.type === "public_expropriation") {
+        return { ...r, businessApprovalDate: new Date(r.businessApprovalDate) };
+      }
+      if (r.type === "self_farming") {
+        return {
+          ...r,
+          incorporationDate: r.incorporationDate ? new Date(r.incorporationDate) : undefined,
+        };
+      }
+      return r;
+    }),
     annualBasicDeductionUsed: data.annualBasicDeductionUsed,
     nonBusinessLandDetails: data.nonBusinessLandDetails
       ? {
@@ -364,11 +372,18 @@ export async function POST(request: NextRequest) {
           acquisitionCause: engineInput.acquisitionCause,
           decedentAcquisitionDate: engineInput.decedentAcquisitionDate,
           donorAcquisitionDate: engineInput.donorAcquisitionDate,
-          reductions: c.reductions.map((r) =>
-            r.type === "public_expropriation"
-              ? { ...r, businessApprovalDate: new Date(r.businessApprovalDate) }
-              : r,
-          ),
+          reductions: c.reductions.map((r): TransferReduction => {
+            if (r.type === "public_expropriation") {
+              return { ...r, businessApprovalDate: new Date(r.businessApprovalDate) };
+            }
+            if (r.type === "self_farming") {
+              return {
+                ...r,
+                incorporationDate: r.incorporationDate ? new Date(r.incorporationDate) : undefined,
+              };
+            }
+            return r;
+          }),
           propertyId: c.assetId,
           propertyLabel: c.assetLabel,
         };

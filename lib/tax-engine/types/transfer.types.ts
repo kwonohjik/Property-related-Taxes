@@ -36,6 +36,7 @@ import type {
   Pre1990LandValuationResult,
 } from "../pre-1990-land-valuation";
 import type { PublicExpropriationReductionResult } from "../public-expropriation-reduction";
+import type { SelfFarmingReductionResult } from "../self-farming-reduction";
 import type { ParcelInput, ParcelResult } from "../multi-parcel-transfer";
 
 export interface TransferTaxInput {
@@ -198,6 +199,20 @@ export type TransferReduction =
        * 본인 자경기간만으로 요건 충족 시 무시된다.
        */
       decedentFarmingYears?: number;
+      /**
+       * 주거·상업·공업지역 편입일 — 선택.
+       * 2002.1.1 이후 편입인 경우 조특령 §66 ⑤⑥에 따라 부분감면 적용:
+       *   - 편입일까지의 양도소득(기준시가 증가분 비율)만 감면 대상
+       *   - 편입일부터 3년 내 양도해야 감면 적용 (경과 시 감면 상실)
+       */
+      incorporationDate?: Date;
+      /** 편입 지역 유형 (표시·판정용) */
+      incorporationZoneType?: "residential" | "commercial" | "industrial";
+      /**
+       * 편입일 당시 기준시가 (원, 총액 또는 ㎡당 단가).
+       * `standardPriceAtAcquisition`·`standardPriceAtTransfer`(TransferTaxInput 기본)와 같은 단위여야 한다.
+       */
+      standardPriceAtIncorporation?: number;
     }
   | { type: "long_term_rental"; rentalYears: number; rentIncreaseRate: number }
   | { type: "new_housing"; region: "metropolitan" | "non_metropolitan" }
@@ -256,8 +271,19 @@ export interface TransferTaxResult {
   isSurchargeSuspended: boolean;
   /** 총 감면세액 */
   reductionAmount: number;
-  /** 감면 유형 */
+  /** 감면 유형 (표시용 한글 라벨 — "자경농지", "장기임대주택" 등) */
   reductionType?: string;
+  /**
+   * 적용된 감면의 내부 식별자 (재계산·§133 한도 그룹핑용).
+   * "self_farming" | "long_term_rental" | "new_housing" | "unsold_housing" | "public_expropriation"
+   */
+  reductionTypeApplied?: string;
+  /**
+   * 감면대상 양도소득금액 (합산 재계산의 분자, 조특령 §66 비율 적용 후).
+   * 자경농지 편입일 부분감면 시 편입일 비율로 안분된 양도소득금액.
+   * 편입 없으면 전체 양도소득금액과 동일.
+   */
+  reducibleIncome?: number;
   /** 결정세액 (원 미만 절사) */
   determinedTax: number;
   /** §114조의2 신축·증축 가산세 (환산취득가액 or 감정가액 × 5%) */
@@ -300,6 +326,12 @@ export interface TransferTaxResult {
    * reductions에 public_expropriation 유형 포함 시만 세팅
    */
   publicExpropriationDetail?: PublicExpropriationReductionResult;
+  /**
+   * 자경농지 감면 상세 결과 (조특법 §69 + 시행령 §66 ⑤⑥)
+   * reductions에 self_farming 유형 포함 시만 세팅.
+   * 편입일 부분감면·3년 유예 경과 여부·감면대상 양도소득금액 포함.
+   */
+  selfFarmingReductionDetail?: SelfFarmingReductionResult;
   /**
    * 신고불성실·지연납부 가산세 상세 결과
    * filingPenaltyDetails 또는 delayedPaymentDetails 제공 시만 포함

@@ -105,6 +105,10 @@ export function Step2({ form, onChange }: { form: TransferFormData; onChange: (d
                   expenses: "0",
                   useDayAfterReplotting: false,
                   replottingConfirmDate: "",
+                  useExchangeLandReduction: false,
+                  entitlementArea: "",
+                  allocatedArea: "",
+                  priorLandArea: "",
                 };
                 onChange({
                   parcelMode: checked,

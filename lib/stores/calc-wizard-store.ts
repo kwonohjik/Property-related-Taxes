@@ -78,6 +78,15 @@ export interface TransferFormData {
   // Step 5: 감면 확인
   reductionType: "" | "self_farming" | "long_term_rental" | "new_housing" | "unsold_housing" | "public_expropriation";
   farmingYears: string;
+  // ── 자경농지 편입일 부분감면 (조특령 §66 ⑤⑥) ──
+  /** 편입일 입력 사용 여부 (UI 토글) */
+  useSelfFarmingIncorporation: boolean;
+  /** 주거·상업·공업지역 편입일 (YYYY-MM-DD) */
+  selfFarmingIncorporationDate: string;
+  /** 편입 지역 유형 */
+  selfFarmingIncorporationZone: "residential" | "commercial" | "industrial" | "";
+  /** 편입일 당시 기준시가 (문자열, 단위는 취득·양도 기준시가와 동일) */
+  selfFarmingStandardPriceAtIncorporation: string;
   rentalYears: string;
   rentIncreaseRate: string;
   /** [I4] 신축/미분양 감면 지역 — 4값으로 확장 (outside_overconcentration: 수도권 과밀억제권역 외) */
@@ -228,6 +237,15 @@ export interface ParcelFormItem {
   expenses: string;
   useDayAfterReplotting: boolean;
   replottingConfirmDate: string;
+  // 환지 감환지/증환지 (소득세법 시행령 §162의2)
+  /** 감환지 입력 사용 여부 (UI 토글) */
+  useExchangeLandReduction: boolean;
+  /** 환지예정지 권리면적 (㎡, 문자열) */
+  entitlementArea: string;
+  /** 환지확정 교부면적 (㎡, 문자열) */
+  allocatedArea: string;
+  /** 환지 전 종전토지면적 (㎡, 문자열) */
+  priorLandArea: string;
 }
 
 const defaultFormData: TransferFormData = {
@@ -262,6 +280,10 @@ const defaultFormData: TransferFormData = {
   isNonBusinessLand: false,
   reductionType: "",
   farmingYears: "0",
+  useSelfFarmingIncorporation: false,
+  selfFarmingIncorporationDate: "",
+  selfFarmingIncorporationZone: "",
+  selfFarmingStandardPriceAtIncorporation: "",
   rentalYears: "0",
   rentIncreaseRate: "0",
   reductionRegion: "metropolitan",

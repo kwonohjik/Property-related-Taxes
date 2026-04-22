@@ -297,9 +297,12 @@ export function calculateTransferTax(
     const {
       reductionAmount: mpReduction,
       reductionType: mpReductionType,
+      reductionTypeApplied: mpReductionTypeApplied,
+      reducibleIncome: mpReducibleIncome,
       rentalReductionDetail: mpRentalDetail,
       newHousingReductionDetail: mpNewHousingDetail,
       publicExpropriationDetail: mpExproDetail,
+      selfFarmingReductionDetail: mpSelfFarmingDetail,
     } = calcReductions(
       mpTaxResult.calculatedTax,
       input.reductions,
@@ -312,6 +315,9 @@ export function calculateTransferTax(
       mpTransferIncome,
       mpBasicDeduction,
       mpTaxBase,
+      input.acquisitionDate,
+      input.standardPriceAtAcquisition,
+      input.standardPriceAtTransfer,
     );
     const mpDeterminedTax = truncateToWon(Math.max(0, mpTaxResult.calculatedTax - mpReduction));
     const mpPenaltyBase = effectiveInput.acquisitionMethod === "appraisal"
@@ -350,6 +356,8 @@ export function calculateTransferTax(
       isSurchargeSuspended: mpTaxResult.surchargeSuspended,
       reductionAmount: mpReduction,
       reductionType: mpReductionType,
+      reductionTypeApplied: mpReductionTypeApplied,
+      reducibleIncome: mpReducibleIncome,
       determinedTax: mpDeterminedTax,
       penaltyTax: mpPenaltyTax,
       localIncomeTax: mpLocalIncomeTax,
@@ -358,6 +366,7 @@ export function calculateTransferTax(
       rentalReductionDetail: mpRentalDetail,
       newHousingReductionDetail: mpNewHousingDetail,
       publicExpropriationDetail: mpExproDetail,
+      selfFarmingReductionDetail: mpSelfFarmingDetail,
       penaltyDetail: mpPenaltyDetail,
       parcelDetails: mpResult.parcelResults,
     };
@@ -546,9 +555,12 @@ export function calculateTransferTax(
   const {
     reductionAmount,
     reductionType,
+    reductionTypeApplied,
+    reducibleIncome,
     rentalReductionDetail,
     newHousingReductionDetail,
     publicExpropriationDetail,
+    selfFarmingReductionDetail,
   } = calcReductions(
     taxResult.calculatedTax,
     input.reductions,
@@ -562,10 +574,15 @@ export function calculateTransferTax(
     Math.max(0, taxableGain - longTermHoldingDeduction),
     basicDeduction,
     taxBase,
+    input.acquisitionDate,
+    input.standardPriceAtAcquisition,
+    input.standardPriceAtTransfer,
   );
   // 감면 유형별 법령 조문 매핑
   const reductionLawMap: Record<string, string> = {
     "자경농지":                TRANSFER.REDUCTION_SELF_FARMING,
+    "자경농지(§69·상속인 경작기간 합산 §66⑪)": `${TRANSFER.REDUCTION_SELF_FARMING} + ${TRANSFER.REDUCTION_SELF_FARMING_INHERITED}`,
+    "자경농지(§69·편입일 부분감면 §66⑤⑥)":  `${TRANSFER.REDUCTION_SELF_FARMING} + ${TRANSFER.REDUCTION_SELF_FARMING_INCORP}`,
     "장기임대주택":            TRANSFER.REDUCTION_LONG_RENTAL,
     "신축주택":                TRANSFER.REDUCTION_NEW_HOUSING,
     "미분양주택":              TRANSFER.REDUCTION_UNSOLD_HOUSING,
@@ -690,6 +707,8 @@ export function calculateTransferTax(
     isSurchargeSuspended: taxResult.surchargeSuspended,
     reductionAmount,
     reductionType,
+    reductionTypeApplied,
+    reducibleIncome,
     determinedTax,
     penaltyTax,
     localIncomeTax,
@@ -709,6 +728,7 @@ export function calculateTransferTax(
     rentalReductionDetail,
     newHousingReductionDetail,
     publicExpropriationDetail,
+    selfFarmingReductionDetail,
     penaltyDetail,
     pre1990LandValuationDetail: pre1990LandResult,
   };

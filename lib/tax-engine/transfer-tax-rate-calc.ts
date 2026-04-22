@@ -12,6 +12,7 @@ import {
   calculateProgressiveTax,
   calculateHoldingPeriod,
   isSurchargeSuspended,
+  safeMultiplyThenDivide,
 } from "./tax-utils";
 import type { MultiHouseSurchargeResult } from "./multi-house-surcharge";
 import type { ParsedRates } from "./transfer-tax-helpers";
@@ -29,6 +30,10 @@ import {
   type PublicExpropriationReductionResult,
   calculatePublicExpropriationReduction,
 } from "./public-expropriation-reduction";
+import {
+  type SelfFarmingReductionResult,
+  calculateSelfFarmingReduction,
+} from "./self-farming-reduction";
 import type { LongTermRentalRuleSet, NewHousingMatrixData } from "./schemas/rate-table.schema";
 import type { TransferTaxInput, TransferReduction } from "./types/transfer.types";
 
@@ -246,6 +251,13 @@ export function calcTax(
 interface ReductionsResult {
   reductionAmount: number;
   reductionType?: string;
+  /** 적용된 감면의 내부 식별자 (합산 재계산·§133 한도 그룹핑용) */
+  reductionTypeApplied?: string;
+  /**
+   * 감면대상 양도소득금액 (합산 재계산의 분자).
+   * 편입일 부분감면 시 편입일 비율로 안분된 소득, 편입 없으면 전체 소득.
+   */
+  reducibleIncome?: number;
 }
 
 export function calcReductions(
@@ -260,21 +272,32 @@ export function calcReductions(
   transferIncome?: number,
   basicDeduction?: number,
   taxBase?: number,
+  // NEW: 자경농지 편입일 부분감면을 위한 주 자산 취득일·기준시가 3점값 전파
+  acquisitionDate?: Date,
+  standardPriceAtAcquisition?: number,
+  standardPriceAtTransfer?: number,
 ): ReductionsResult & {
   rentalReductionDetail?: RentalReductionResult;
   newHousingReductionDetail?: NewHousingReductionResult;
   publicExpropriationDetail?: PublicExpropriationReductionResult;
+  selfFarmingReductionDetail?: SelfFarmingReductionResult;
 } {
   if (reductions.length === 0 && !rentalReductionDetails && !newHousingDetails) {
     return { reductionAmount: 0 };
   }
 
   // 조특법 §127 ② 감면 중복 배제: 납세자에게 유리한 1건만 적용
-  interface ReductionCandidate { amount: number; type: string; }
+  interface ReductionCandidate {
+    amount: number;
+    type: string;
+    /** 감면대상 양도소득금액 (합산 재계산용 분자, 편입 부분감면 시 비율 적용 후) */
+    reducibleIncome?: number;
+  }
   const candidates: ReductionCandidate[] = [];
   let rentalReductionDetail: RentalReductionResult | undefined;
   let newHousingReductionDetail: NewHousingReductionResult | undefined;
   let publicExpropriationDetail: PublicExpropriationReductionResult | undefined;
+  let selfFarmingReductionDetail: SelfFarmingReductionResult | undefined;
 
   // R-2-V2: 장기임대 정밀 엔진
   if (rentalReductionDetails) {
@@ -325,18 +348,67 @@ export function calcReductions(
 
     let amount = 0;
     let candidateType: string = reduction.type;
+    let candidateReducibleIncome: number | undefined;
+
     if (reduction.type === "self_farming" && selfFarmingRules) {
       // 조특법 §69 자경농지 감면 + 조특령 §66 ⑪ 1호 피상속인 경작기간 합산
+      // + 조특령 §66 ⑤⑥ 주거·상업·공업지역 편입 시 부분감면
       const minYears = selfFarmingRules.conditions.minFarmingYears;
       const own = reduction.farmingYears;
       const needsDecedent = own < minYears;
       const decedent = reduction.decedentFarmingYears ?? 0;
-      const effective = needsDecedent ? own + decedent : own;
 
-      if (effective >= minYears) {
-        amount = Math.min(applyRate(calculatedTax, selfFarmingRules.maxRate), selfFarmingRules.maxAmount);
-        if (needsDecedent && decedent > 0) {
-          candidateType = "self_farming_inherited";
+      // 편입일·기준시가·과세표준 등 재계산에 필요한 입력이 모두 있으면 신규 엔진 경로 사용.
+      // (일반 STEP 8 및 STEP 1.5 다필지 경로는 모두 해당 입력을 제공하도록 transfer-tax.ts 에서 보장한다.)
+      const canUseNewEngine =
+        transferDate !== undefined &&
+        transferIncome !== undefined &&
+        taxBase !== undefined &&
+        acquisitionDate !== undefined;
+
+      if (canUseNewEngine) {
+        const sfResult = calculateSelfFarmingReduction({
+          transferIncome: transferIncome!,
+          farmingYears: own,
+          decedentFarmingYears: decedent > 0 ? decedent : undefined,
+          minFarmingYears: minYears,
+          acquisitionDate: acquisitionDate!,
+          transferDate: transferDate!,
+          incorporationDate: reduction.incorporationDate,
+          incorporationZoneType: reduction.incorporationZoneType,
+          standardPriceAtAcquisition,
+          standardPriceAtIncorporation: reduction.standardPriceAtIncorporation,
+          standardPriceAtTransfer,
+        });
+        selfFarmingReductionDetail = sfResult;
+
+        if (sfResult.qualifies && sfResult.reducibleIncome > 0 && taxBase! > 0) {
+          // 감면세액 = 산출세액 × (감면대상소득 / 과세표준), 조특법 §133 한도 1억원.
+          const rawAmount = safeMultiplyThenDivide(
+            calculatedTax,
+            sfResult.reducibleIncome,
+            taxBase!,
+          );
+          amount = Math.min(rawAmount, selfFarmingRules.maxAmount);
+          candidateReducibleIncome = sfResult.reducibleIncome;
+
+          if (sfResult.partialReductionApplied) {
+            candidateType = "self_farming_incorp";
+          } else if (needsDecedent && decedent > 0) {
+            candidateType = "self_farming_inherited";
+          }
+        }
+      } else {
+        // 레거시 경로 — 파라미터 부족 시 기존 단순 계산 유지 (하위 호환)
+        const effective = needsDecedent ? own + decedent : own;
+        if (effective >= minYears) {
+          amount = Math.min(
+            applyRate(calculatedTax, selfFarmingRules.maxRate),
+            selfFarmingRules.maxAmount,
+          );
+          if (needsDecedent && decedent > 0) {
+            candidateType = "self_farming_inherited";
+          }
         }
       }
     } else if (reduction.type === "long_term_rental") {
@@ -349,7 +421,13 @@ export function calcReductions(
     } else if (reduction.type === "unsold_housing") {
       amount = calculatedTax;
     }
-    if (amount > 0) candidates.push({ amount, type: candidateType });
+    if (amount > 0) {
+      candidates.push({
+        amount,
+        type: candidateType,
+        reducibleIncome: candidateReducibleIncome,
+      });
+    }
   }
 
   const best = candidates.reduce<ReductionCandidate>(
@@ -360,6 +438,7 @@ export function calcReductions(
   const reductionTypeLabel: Record<string, string> = {
     self_farming: "자경농지",
     self_farming_inherited: "자경농지(§69·상속인 경작기간 합산 §66⑪)",
+    self_farming_incorp: "자경농지(§69·편입일 부분감면 §66⑤⑥)",
     long_term_rental: "장기임대주택",
     new_housing: "신축주택",
     unsold_housing: "미분양주택",
@@ -370,8 +449,11 @@ export function calcReductions(
   return {
     reductionAmount,
     reductionType: reductionTypeDisplay,
+    reductionTypeApplied: best.type || undefined,
+    reducibleIncome: best.amount > 0 ? best.reducibleIncome : undefined,
     rentalReductionDetail,
     newHousingReductionDetail,
     publicExpropriationDetail,
+    selfFarmingReductionDetail,
   };
 }

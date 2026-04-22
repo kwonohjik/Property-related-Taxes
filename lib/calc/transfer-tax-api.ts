@@ -57,12 +57,21 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
   if (form.reductionType === "self_farming") {
     const ownYears = parseInt(form.farmingYears) || 0;
     const decedentYears = parseInt(form.decedentFarmingYears) || 0;
+    // 조특령 §66 ⑤⑥ 편입일 부분감면 매핑 (토글 + 날짜 + 지역 + 기준시가 모두 있을 때만)
+    const incorpDate = form.useSelfFarmingIncorporation ? form.selfFarmingIncorporationDate : "";
+    const incorpZone = form.useSelfFarmingIncorporation ? form.selfFarmingIncorporationZone : "";
+    const incorpStdPrice = form.useSelfFarmingIncorporation
+      ? parseAmount(form.selfFarmingStandardPriceAtIncorporation)
+      : 0;
     reductions.push({
       type: "self_farming",
       farmingYears: ownYears,
       ...(form.acquisitionCause === "inheritance" && decedentYears > 0
         ? { decedentFarmingYears: decedentYears }
         : {}),
+      ...(incorpDate ? { incorporationDate: incorpDate } : {}),
+      ...(incorpZone ? { incorporationZoneType: incorpZone } : {}),
+      ...(incorpStdPrice > 0 ? { standardPriceAtIncorporation: incorpStdPrice } : {}),
     });
   } else if (form.reductionType === "long_term_rental") {
     reductions.push({
@@ -277,6 +286,16 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
             useDayAfterReplotting: p.useDayAfterReplotting || undefined,
             replottingConfirmDate: p.useDayAfterReplotting && p.replottingConfirmDate
               ? p.replottingConfirmDate
+              : undefined,
+            // 환지 감환지/증환지 (소득세법 시행령 §162의2)
+            entitlementArea: p.useExchangeLandReduction
+              ? parseFloat(p.entitlementArea) || undefined
+              : undefined,
+            allocatedArea: p.useExchangeLandReduction
+              ? parseFloat(p.allocatedArea) || undefined
+              : undefined,
+            priorLandArea: p.useExchangeLandReduction
+              ? parseFloat(p.priorLandArea) || undefined
               : undefined,
           })),
         }

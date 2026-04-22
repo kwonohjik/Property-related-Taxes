@@ -28,7 +28,25 @@ function newParcel(index: number): ParcelFormItem {
     expenses: "0",
     useDayAfterReplotting: false,
     replottingConfirmDate: "",
+    useExchangeLandReduction: false,
+    entitlementArea: "",
+    allocatedArea: "",
+    priorLandArea: "",
   };
+}
+
+/**
+ * 감환지 자동 취득면적 프리뷰.
+ * 3필드 모두 유효하고 권리면적 > 교부면적이면 priorLandArea × (allocatedArea / entitlementArea) 반환.
+ */
+function calcExchangeEffectiveArea(p: ParcelFormItem): number | null {
+  if (!p.useExchangeLandReduction) return null;
+  const ent = parseFloat(p.entitlementArea);
+  const all = parseFloat(p.allocatedArea);
+  const prior = parseFloat(p.priorLandArea);
+  if (!ent || !all || !prior || ent <= 0 || all <= 0 || prior <= 0) return null;
+  if (ent <= all) return null; // 증환지 또는 변동 없음
+  return (prior * all) / ent;
 }
 
 /** 면적비 안분 프리뷰 (마지막 필지 잔여값) */
@@ -148,6 +166,91 @@ export function ParcelListInput({ parcels, totalTransferPrice, onChange }: Parce
                   value={p.acquisitionDate}
                   onChange={(v) => update(i, { acquisitionDate: v })}
                 />
+              </div>
+            )}
+
+            {/* 감환지/증환지 (소득세법 시행령 §162의2) */}
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id={`exchange-${p.id}`}
+                checked={p.useExchangeLandReduction}
+                onChange={(e) =>
+                  update(i, {
+                    useExchangeLandReduction: e.target.checked,
+                    ...(e.target.checked
+                      ? {}
+                      : { entitlementArea: "", allocatedArea: "", priorLandArea: "" }),
+                  })
+                }
+                className="h-4 w-4"
+              />
+              <Label htmlFor={`exchange-${p.id}`} className="text-sm cursor-pointer">
+                환지 감환지/증환지 면적 입력 (소득령 §162의2)
+              </Label>
+            </div>
+
+            {p.useExchangeLandReduction && (
+              <div className="space-y-3 rounded border-l-2 border-amber-200 bg-amber-50/40 pl-3 py-2">
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-sm">권리면적 (㎡)</Label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
+                      value={p.entitlementArea}
+                      onChange={(e) => update(i, { entitlementArea: e.target.value })}
+                      placeholder="0.00"
+                      onFocus={(e) => e.target.select()}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-sm">교부면적 (㎡)</Label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
+                      value={p.allocatedArea}
+                      onChange={(e) => update(i, { allocatedArea: e.target.value })}
+                      placeholder="0.00"
+                      onFocus={(e) => e.target.select()}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-sm">종전토지면적 (㎡)</Label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
+                      value={p.priorLandArea}
+                      onChange={(e) => update(i, { priorLandArea: e.target.value })}
+                      placeholder="0.00"
+                      onFocus={(e) => e.target.select()}
+                    />
+                  </div>
+                </div>
+                {(() => {
+                  const eff = calcExchangeEffectiveArea(p);
+                  if (eff !== null) {
+                    return (
+                      <p className="text-xs text-amber-700">
+                        감환지 자동 취득면적: 종전 {p.priorLandArea}㎡ × (교부 {p.allocatedArea}㎡ / 권리 {p.entitlementArea}㎡) ={" "}
+                        <strong>{eff.toFixed(4)}㎡</strong> (상단 취득 면적 대신 자동 사용)
+                      </p>
+                    );
+                  }
+                  const ent = parseFloat(p.entitlementArea);
+                  const all = parseFloat(p.allocatedArea);
+                  if (ent && all && ent < all) {
+                    return (
+                      <p className="text-xs text-orange-700">
+                        증환지(권리 {ent}㎡ &lt; 교부 {all}㎡) — 증가면적은 별도 취득으로 분리 계산 필요 (경고만)
+                      </p>
+                    );
+                  }
+                  return null;
+                })()}
               </div>
             )}
 

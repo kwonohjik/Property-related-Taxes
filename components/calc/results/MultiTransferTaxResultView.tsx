@@ -136,6 +136,123 @@ function ComparativeTaxBadge({ applied }: { applied: "groups" | "general" | "non
   );
 }
 
+// ─── 감면세액 합산 재계산 내역 ─────────────────────────────────
+// 조특법 §69(자경) + §127의2(중복배제) + §133(종합한도) 기반 재계산 결과 표시.
+// 단건 산출세액 × 감면대상소득 / 과세표준 → §133 유형별 한도 적용.
+
+function ReductionRecalculationSection({
+  result,
+  properties,
+}: {
+  result: AggregateTransferResult;
+  properties: PropertyItem[];
+}) {
+  if (!result.reductionBreakdown || result.reductionBreakdown.length === 0) return null;
+
+  const labelMap = new Map(properties.map((p) => [p.propertyId, p.propertyLabel]));
+
+  const typeLabel: Record<string, string> = {
+    self_farming: "자경농지 (§69)",
+    self_farming_inherited: "자경농지 (§69·상속인 경작기간 합산 §66⑪)",
+    self_farming_incorp: "자경농지 (§69·편입일 부분감면 §66⑤⑥)",
+    livestock: "축산업 (§69의2)",
+    fishing: "어업 (§69의3)",
+    public_expropriation: "공익사업 수용 (§77)",
+  };
+
+  return (
+    <Card>
+      <div className="p-4 space-y-3">
+        <h3 className="text-sm font-medium">
+          감면세액 합산 재계산 (조특법 §127의2 + §133)
+        </h3>
+        <p className="text-xs text-muted-foreground">
+          산출세액 × (감면대상 양도소득금액 / 과세표준)으로 재계산한 뒤 유형별 연간 한도를 적용합니다.
+        </p>
+        <div className="space-y-3">
+          {result.reductionBreakdown.map((entry) => {
+            const perAsset = result.properties.filter(
+              (p) => p.reductionType === entry.type,
+            );
+            return (
+              <div key={entry.type} className="rounded border border-amber-200/60 bg-amber-50/30 p-3">
+                <p className="text-sm font-medium">
+                  {typeLabel[entry.type] ?? entry.type}
+                  {entry.cappedByLimit && (
+                    <span className="ml-2 text-xs text-amber-700">
+                      ⚠ 한도 적용 ({entry.annualLimit.toLocaleString()}원)
+                    </span>
+                  )}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">{entry.legalBasis}</p>
+
+                <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                  <span className="text-muted-foreground">합산 산출세액</span>
+                  <span className="text-right tabular-nums">
+                    {entry.aggregateCalculatedTax.toLocaleString()}원
+                  </span>
+                  <span className="text-muted-foreground">합산 감면대상소득</span>
+                  <span className="text-right tabular-nums">
+                    {entry.totalReducibleIncome.toLocaleString()}원
+                  </span>
+                  <span className="text-muted-foreground">합산 과세표준</span>
+                  <span className="text-right tabular-nums">
+                    {entry.aggregateTaxBase.toLocaleString()}원
+                  </span>
+                  <span className="text-muted-foreground">재계산 원시 감면</span>
+                  <span className="text-right tabular-nums">
+                    {entry.rawAggregateReduction.toLocaleString()}원
+                  </span>
+                  <span className="text-muted-foreground font-medium">최종 감면세액</span>
+                  <span className="text-right tabular-nums font-medium text-primary">
+                    {entry.cappedAggregateReduction.toLocaleString()}원
+                  </span>
+                </div>
+
+                {perAsset.length > 0 && (
+                  <div className="mt-2 pt-2 border-t border-amber-200/60">
+                    <p className="text-xs text-muted-foreground mb-1">건별 배분</p>
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="text-muted-foreground">
+                          <th className="text-left font-normal">자산</th>
+                          <th className="text-right font-normal">건별 산출세액</th>
+                          <th className="text-right font-normal">건별 단독감면</th>
+                          <th className="text-right font-normal">감면대상소득</th>
+                          <th className="text-right font-normal">배분 감면</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {perAsset.map((p) => (
+                          <tr key={p.propertyId}>
+                            <td>{labelMap.get(p.propertyId) ?? p.propertyLabel}</td>
+                            <td className="text-right tabular-nums">
+                              {p.reductionAmount.toLocaleString()}원 → {/* standaloneTax 필드는 미노출 */}
+                            </td>
+                            <td className="text-right tabular-nums">
+                              {p.reductionAmount.toLocaleString()}원
+                            </td>
+                            <td className="text-right tabular-nums">
+                              {p.reducibleIncome.toLocaleString()}원
+                            </td>
+                            <td className="text-right tabular-nums font-medium">
+                              {p.reductionAggregated.toLocaleString()}원
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </Card>
+  );
+}
+
 // ─── 차손 통산 표 ──────────────────────────────────────────────
 
 function LossOffsetTable({ result, properties }: { result: AggregateTransferResult; properties: PropertyItem[] }) {
@@ -545,6 +662,9 @@ export function MultiTransferTaxResultView({
 
       {/* 합산 결과 카드 */}
       <SummaryCard result={result} taxYear={taxYear} />
+
+      {/* 감면세액 합산 재계산 내역 (자경·공익수용 등) */}
+      <ReductionRecalculationSection result={result} properties={properties} />
 
       {/* 세율군별 분리 산출 (2개 이상 그룹일 때) */}
       <GroupTaxCards result={result} />

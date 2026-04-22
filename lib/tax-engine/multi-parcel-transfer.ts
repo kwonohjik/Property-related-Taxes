@@ -62,6 +62,20 @@ export interface ParcelInput {
   expenses?: number;
   /** 미등기 여부 (true이면 장기보유특별공제 0%) */
   isUnregistered?: boolean;
+
+  // ─── 환지 감환지/증환지 (소득세법 시행령 §162의2) ─────────────
+  // 3필드가 모두 제공되고 entitlementArea > allocatedArea 이면 감환지로 판정하여
+  // 환산취득가액 계산 시 취득면적을 다음과 같이 자동 산정한다:
+  //   effectiveAcquisitionArea = priorLandArea × (allocatedArea / entitlementArea)
+  // (예: 773.25㎡ × 595 / 651.7 ≈ 705.9748㎡)
+  // 감환지 별건(entitlement - allocated)은 환지처분공고일 익일에 별도 양도로
+  // 간주되므로 본 엔진에서는 현재 양도분에만 집중하고 별건 신고는 범위 외로 둔다.
+  /** 환지예정지 지정 시 받기로 한 권리면적 (㎡) */
+  entitlementArea?: number;
+  /** 환지처분확정 후 실제 교부받은 면적 (㎡) */
+  allocatedArea?: number;
+  /** 환지 전 종전토지면적 (㎡) */
+  priorLandArea?: number;
 }
 
 export interface ParcelResult {
@@ -92,6 +106,14 @@ export interface ParcelResult {
   standardAtAcq?: number;
   /** 환산 방식에서의 양도기준시가 합계 (standardAtTransfer, 표시용) */
   standardAtTransfer?: number;
+  /**
+   * 환산 방식에서 실제 사용된 취득 면적 (㎡).
+   * 감환지 자동 산정이 적용된 경우 priorLandArea × allocatedArea / entitlementArea,
+   * 아니면 parcel.acquisitionArea 그대로.
+   */
+  effectiveAcquisitionArea?: number;
+  /** 감환지 자동 산정 적용 여부 (소득세법 시행령 §162의2) */
+  exchangeLandReductionApplied?: boolean;
   /** 취득일 의제 적용 여부 */
   didUseReplotting: boolean;
   /** 실제 사용된 취득일 (의제 적용 후) */
@@ -220,12 +242,44 @@ export function calculateMultiParcelTransfer(input: MultiParcelInput): MultiParc
     let expenses = 0;
     let standardAtAcq: number | undefined;
     let standardAtTransfer: number | undefined;
+    let effectiveAcquisitionArea: number | undefined;
+    let exchangeLandReductionApplied = false;
 
     if (parcel.acquisitionMethod === "estimated") {
       // 환산취득가액 방식
       // standardAtAcq = 취득 면적 × 취득 당시 단가
       // standardAtTransfer = 양도 면적 × 양도 당시 단가
-      const acqArea = parcel.acquisitionArea;
+      //
+      // 감환지 판정 (소득세법 시행령 §162의2):
+      // 3필드 모두 제공 + 권리면적 > 교부면적일 때 취득면적을 자동 산정한다.
+      // 입력 parcel.acquisitionArea가 있어도 감환지 계산 결과로 덮어쓴다.
+      let acqArea: number;
+      if (
+        parcel.entitlementArea !== undefined &&
+        parcel.allocatedArea !== undefined &&
+        parcel.priorLandArea !== undefined &&
+        parcel.entitlementArea > 0 &&
+        parcel.entitlementArea > parcel.allocatedArea
+      ) {
+        acqArea = (parcel.priorLandArea * parcel.allocatedArea) / parcel.entitlementArea;
+        exchangeLandReductionApplied = true;
+      } else {
+        acqArea = parcel.acquisitionArea;
+      }
+      effectiveAcquisitionArea = acqArea;
+
+      // 증환지(권리면적 < 교부면적) 경고 — 증가 면적은 별도 취득으로 처리 필요
+      if (
+        parcel.entitlementArea !== undefined &&
+        parcel.allocatedArea !== undefined &&
+        parcel.entitlementArea > 0 &&
+        parcel.entitlementArea < parcel.allocatedArea
+      ) {
+        warnings.push(
+          `필지 ${parcel.id}: 증환지(권리면적 ${parcel.entitlementArea}㎡ < 교부면적 ${parcel.allocatedArea}㎡) — 증가면적은 별도 취득으로 분리 계산해야 합니다 (시행령 §162의2, 본 엔진 범위 외)`,
+        );
+      }
+
       const sqmAtAcq = parcel.standardPricePerSqmAtAcq ?? 0;
       const sqmAtTransfer = parcel.standardPricePerSqmAtTransfer ?? 0;
 
@@ -276,9 +330,15 @@ export function calculateMultiParcelTransfer(input: MultiParcelInput): MultiParc
       transferIncome,
       standardAtAcq,
       standardAtTransfer,
+      effectiveAcquisitionArea,
+      exchangeLandReductionApplied,
       didUseReplotting,
       effectiveAcquisitionDate,
-      legalBasis: didUseReplotting ? TRANSFER.REPLOTTING_ACQ_DATE : undefined,
+      legalBasis: didUseReplotting
+        ? TRANSFER.REPLOTTING_ACQ_DATE
+        : exchangeLandReductionApplied
+          ? TRANSFER.EXCHANGE_LAND_REDUCTION
+          : undefined,
     });
   }
 

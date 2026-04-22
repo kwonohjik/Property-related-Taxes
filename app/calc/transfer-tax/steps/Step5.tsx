@@ -2,6 +2,7 @@ import { cn } from "@/lib/utils";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { DateInput } from "@/components/ui/date-input";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
+import { SelfFarmingIncorporationInput } from "@/components/calc/inputs/SelfFarmingIncorporationInput";
 
 // ============================================================
 // Step 5: 감면 확인
@@ -104,6 +105,15 @@ export function Step5({ form, onChange }: { form: TransferFormData; onChange: (d
               )}
             </div>
           )}
+
+          {/* 편입일 부분감면 (조특령 §66 ⑤⑥) */}
+          <SelfFarmingIncorporationInput
+            useSelfFarmingIncorporation={form.useSelfFarmingIncorporation}
+            selfFarmingIncorporationDate={form.selfFarmingIncorporationDate}
+            selfFarmingIncorporationZone={form.selfFarmingIncorporationZone}
+            selfFarmingStandardPriceAtIncorporation={form.selfFarmingStandardPriceAtIncorporation}
+            onChange={onChange}
+          />
         </div>
       )}
 
