@@ -42,7 +42,7 @@ export function getDefaultPriceYear(dateStr: string, propertyType: string): stri
 
 export function useStandardPriceLookup(defaultPropertyType = "housing") {
   const currentYear = new Date().getFullYear();
-  const yearOptions = Array.from({ length: currentYear - 2004 }, (_, i) => String(currentYear - i));
+  const yearOptions = Array.from({ length: currentYear - 1984 }, (_, i) => String(currentYear - i));
 
   const [year, setYear] = useState(() => getDefaultPriceYear("", defaultPropertyType));
   const [loading, setLoading] = useState(false);

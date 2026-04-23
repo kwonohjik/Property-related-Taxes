@@ -131,7 +131,9 @@
       "Bash(awk '$1 > 800 {print}')",
       "Bash(awk '$1 > 800 && NF > 1')",
       "Bash(awk '{print $NF, $5}')",
-      "Bash(awk '{print $1}')"
+      "Bash(awk '{print $1}')",
+      "Bash(claude mcp *)",
+      "Bash(claude *)"
     ]
   },
   "outputStyle": "bkit:bkit-learning"

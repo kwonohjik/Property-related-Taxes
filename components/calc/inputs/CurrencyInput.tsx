@@ -51,7 +51,7 @@ export function CurrencyInput({
         <input
           type="text"
           inputMode="numeric"
-          value={formatWithCommas(value.replace(/,/g, ""))}
+          value={formatWithCommas((value ?? "").replace(/,/g, ""))}
           onChange={(e) => onChange(e.target.value.replace(/,/g, ""))}
           onFocus={(e) => e.target.select()}
           placeholder={placeholder}

@@ -44,8 +44,9 @@ export interface NedPriceItem {
   stdrYear?: string;
   stdrMt?: string;
   pblntfDe?: string;
-  pblntfPclnd?: string;
-  pblntfPc?: string;
+  pblntfPclnd?: string;  // 개별공시지가 (원/㎡)
+  pblntfPc?: string;     // 공동주택 공시가격 (원)
+  housePc?: string;      // 개별단독주택 공시가격 (원) ← getIndvdHousingPriceAttr 전용 필드
   dongNm?: string;
   hoNm?: string;
   floorNm?: string;
@@ -124,17 +125,26 @@ async function callNedAllPages(
       domain: VWORLD_DOMAIN_HOST,
     });
     try {
-      const res = await fetch(`${VWORLD_NED_URL}/${endpoint}?${params}`, {
+      const url = `${VWORLD_NED_URL}/${endpoint}?${params}`;
+      const res = await fetch(url, {
         cache: "no-store",
         headers: { Accept: "application/json", Referer: VWORLD_DOMAIN },
       });
-      if (!res.ok) break;
+      if (!res.ok) {
+        console.warn(`[NED] ${endpoint} HTTP ${res.status}`);
+        break;
+      }
       const data = (await res.json()) as NedRawResponse;
-      const container = data[responseKey];
+      // case-insensitive key fallback (Vworld API casing은 버전마다 다를 수 있음)
+      const container: { field?: NedPriceItem | NedPriceItem[]; totalCount?: string } | undefined =
+        data[responseKey] ??
+        (Object.entries(data).find(([k]) => k.toLowerCase() === responseKey.toLowerCase())?.[1] as typeof container);
       if (!container) break;
 
       const raw = container.field;
-      const items = raw ? (Array.isArray(raw) ? raw : [raw]) : [];
+      const items = raw
+        ? (Array.isArray(raw) ? raw : [raw]).filter((it) => it && typeof it === "object" && Object.keys(it).length > 0)
+        : [];
       allItems.push(...items);
 
       // totalCount가 없거나 0이면 빈 페이지가 올 때까지 계속 페이지 수집
@@ -153,7 +163,7 @@ async function callNedAllPages(
 
 function pickUnit(
   items: NedPriceItem[],
-  priceField: "pblntfPclnd" | "pblntfPc",
+  priceField: string,
   dong?: string,
   ho?: string,
 ): { price: number; item: NedPriceItem } | null {
@@ -182,7 +192,7 @@ function pickUnit(
 }
 
 // 동·호 드롭다운용 unit 목록 생성
-function buildUnitList(items: NedPriceItem[], priceField: "pblntfPclnd" | "pblntfPc") {
+function buildUnitList(items: NedPriceItem[], priceField: string) {
   return items.map((it) => ({
     dong:          it.dongNm ?? "",
     ho:            it.hoNm ?? "",
@@ -262,37 +272,41 @@ export async function GET(request: NextRequest) {
 
     // ── 공동주택 우선 → 개별주택 fallback ─────────
     const aptItems = await callNedAllPages("getApartHousingPriceAttr", pnu, year, apiKey, "apartHousingPrices");
-    if (aptItems.length > 0) {
-      const hit = pickUnit(aptItems, "pblntfPc", dong, ho);
+    const aptHit = pickUnit(aptItems, "pblntfPc", dong, ho);
+    if (aptHit) {
       return NextResponse.json({
         pnu, priceType: "apart_housing_price",
-        year:          hit?.item.stdrYear,
-        price:         hit?.price,
-        announcedDate: hit?.item.pblntfDe ?? "",
-        dong:          hit?.item.dongNm,
-        ho:            hit?.item.hoNm,
-        floor:         hit?.item.floorNm,
-        exclusiveArea: hit?.item.prvuseAr ? parseFloat(hit.item.prvuseAr) : undefined,
-        buildingName:  hit?.item.aphusNm,
-        buildingType:  hit?.item.aphusSeCodeNm,
-        ldCodeNm:      hit?.item.ldCodeNm,
-        stdrMt:        hit?.item.stdrMt,
-        // 전체 동·호 목록 (프론트 드롭다운용)
+        year:          aptHit.item.stdrYear,
+        price:         aptHit.price,
+        announcedDate: aptHit.item.pblntfDe ?? "",
+        dong:          aptHit.item.dongNm,
+        ho:            aptHit.item.hoNm,
+        floor:         aptHit.item.floorNm,
+        exclusiveArea: aptHit.item.prvuseAr ? parseFloat(aptHit.item.prvuseAr) : undefined,
+        buildingName:  aptHit.item.aphusNm,
+        buildingType:  aptHit.item.aphusSeCodeNm,
+        ldCodeNm:      aptHit.item.ldCodeNm,
+        stdrMt:        aptHit.item.stdrMt,
         units: buildUnitList(aptItems, "pblntfPc"),
-        message: `${hit?.item.stdrYear}년 공동주택 공시가격`,
+        message: `${aptHit.item.stdrYear}년 공동주택 공시가격`,
       });
     }
 
+    // 공동주택 없음 → 개별단독주택 시도
+    // ※ getIndvdHousingPriceAttr 응답 가격 필드는 pblntfPc가 아닌 housePc
     const indvdItems = await callNedAllPages("getIndvdHousingPriceAttr", pnu, year, apiKey, "indvdHousingPrices");
-    if (indvdItems.length > 0) {
-      const hit = pickUnit(indvdItems, "pblntfPc", dong, ho);
+    const indvdHit = pickUnit(indvdItems, "housePc", dong, ho);
+    if (indvdHit) {
+      // pblntfDe 없음 → stdrYear + "0429" 로 공시일 추정
+      const announcedDate = indvdHit.item.pblntfDe
+        ?? `${indvdHit.item.stdrYear ?? year}0429`;
       return NextResponse.json({
         pnu, priceType: "indvd_housing_price",
-        year: hit?.item.stdrYear, price: hit?.price,
-        announcedDate: hit?.item.pblntfDe ?? "",
-        ldCodeNm: hit?.item.ldCodeNm,
-        units: buildUnitList(indvdItems, "pblntfPc"),
-        message: `${hit?.item.stdrYear}년 개별주택 공시가격`,
+        year: indvdHit.item.stdrYear, price: indvdHit.price,
+        announcedDate,
+        ldCodeNm: indvdHit.item.ldCodeNm,
+        units: buildUnitList(indvdItems, "housePc"),
+        message: `${indvdHit.item.stdrYear}년 개별주택 공시가격`,
       });
     }
 

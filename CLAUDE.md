@@ -61,7 +61,7 @@ Layer 2: Pure Engine (lib/tax-engine/*.ts)
 
 - **DB 기반 세율 관리**: 세율·공제한도를 `tax_rates` 테이블 jsonb로 관리. 세법 변경 시 배포 없이 업데이트. TaxRateMap key 형식: `${tax_type}:${category}:${sub_category}`.
 - **정수 연산 원칙**: 모든 금액은 원(KRW, 정수). 곱셈-후-나눗셈 순서. `lib/tax-engine/tax-utils.ts`의 `applyRate()` / `safeMultiply()` 사용. BigInt fallback for overflow.
-- **중간 절사 원칙**: 소수 세율 × 금액 곱셈 직후 반드시 `Math.floor()`. 지방소득세는 `truncateToThousand()` (천원 미만 절사).
+- **중간 절사 원칙**: 소수 세율 × 금액 곱셈 직후 반드시 `Math.floor()`. 지방소득세는 `applyRate()` (원 미만 절사 — 지방세법 §103의3, 천원 절사 규정 없음).
 - **감면 중복배제 (조특법 §127 ②)**: 동일 자산에 복수 감면 해당 시 납세자 유리 1건만 선택. 후보 배열에서 max 선택 패턴.
 - **법령 조문 상수**: 문자열 리터럴 직접 사용 금지. `lib/tax-engine/legal-codes/` 에서 `TRANSFER.*` / `NBL.*` / `ACQUISITION.*` 등 세목별 상수 사용.
 - **Auth**: 비로그인도 계산 가능. 로그인 시 이력·PDF. sessionStorage로 게스트 결과 보존 → 로그인 후 마이그레이션. `result`는 partialize에서 제외 (민감정보 + Date 직렬화).

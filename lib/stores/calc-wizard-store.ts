@@ -168,6 +168,16 @@ export interface AssetForm {
   standardPriceAtAcq: string;
   /** 취득시 기준시가 레이블 (API 조회 결과 표시용) */
   standardPriceAtAcqLabel: string;
+
+  // ── 1990.8.30. 이전 취득 토지 환산 (assetKind === "land" + acquisitionDate < 1990-08-30) ──
+  pre1990Enabled: boolean;
+  pre1990AreaSqm: string;
+  pre1990PricePerSqm_1990: string;
+  pre1990PricePerSqm_atTransfer: string;
+  pre1990Grade_current: string;
+  pre1990Grade_prev: string;
+  pre1990Grade_atAcq: string;
+  pre1990GradeMode: "number" | "value";
 }
 
 /** 하위 호환 별칭 — 기존 코드에서 CompanionAssetForm을 참조하는 곳에 사용 */
@@ -213,6 +223,14 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     useEstimatedAcquisition: false,
     standardPriceAtAcq: "",
     standardPriceAtAcqLabel: "",
+    pre1990Enabled: false,
+    pre1990AreaSqm: "",
+    pre1990PricePerSqm_1990: "",
+    pre1990PricePerSqm_atTransfer: "",
+    pre1990Grade_current: "",
+    pre1990Grade_prev: "",
+    pre1990Grade_atAcq: "",
+    pre1990GradeMode: "number",
   };
 }
 

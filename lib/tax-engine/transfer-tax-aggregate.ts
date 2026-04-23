@@ -22,7 +22,7 @@ import {
 } from "./transfer-tax";
 import { calculateProgressiveTax } from "./tax-utils";
 import { TRANSFER } from "./legal-codes";
-import { applyRate, truncateToThousand, safeMultiplyThenDivide } from "./tax-utils";
+import { applyRate, safeMultiplyThenDivide } from "./tax-utils";
 import {
   applyAnnualLimits,
   applyFiveYearLimits,

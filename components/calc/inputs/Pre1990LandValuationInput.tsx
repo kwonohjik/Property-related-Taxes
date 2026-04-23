@@ -5,10 +5,18 @@
  *
  * 진입 조건: propertyType === "land" + acquisitionDate < 1990-08-30
  * (상위에서 `pre1990Enabled` 토글로 제어)
+ *
+ * 동작:
+ *   - 면적은 상위 자산 면적과 자동 연동 (CompanionAcqPurchaseBlock에서 useEffect로 동기화)
+ *   - 1990.8.30. 개별공시지가는 vworld API(year=1990)로 자동 조회 가능
+ *   - 모든 입력값 충족 시 클라이언트에서 환산 계산 → onCalculatedPrice 콜백으로 취득시 기준시가 자동 입력
+ *   - 양도당시 개별공시지가는 별도 입력하지 않음 (양도시 기준시가는 상위에서 별도 관리)
  */
 
+import { useEffect, useState } from "react";
 import { CurrencyInput } from "./CurrencyInput";
 import { getGradeValue } from "@/lib/tax-engine/data/land-grade-values";
+import { calculatePre1990LandValuation } from "@/lib/tax-engine/pre-1990-land-valuation";
 
 export interface Pre1990FormSlice {
   pre1990Enabled: boolean;
@@ -24,10 +32,19 @@ export interface Pre1990FormSlice {
 interface Props {
   form: Pre1990FormSlice;
   onChange: (patch: Partial<Pre1990FormSlice>) => void;
+  /** vworld 조회용 지번 주소 (1990.8.30. 개별공시지가 자동 조회) */
+  jibun?: string;
+  /** 취득일 — 환산 계산 + CAP-2 트리거 판정용 */
+  acquisitionDate?: string;
+  /** 양도일 — 엔진 입력 형식상 필요 (계산엔 미사용) */
+  transferDate?: string;
+  /** 환산 결과(취득시 기준시가, 원 총액)를 부모에게 전달 — 자동 입력용 */
+  onCalculatedPrice?: (standardPriceAtAcq: number) => void;
 }
 
 /** 등급 입력을 파싱해 등급가액을 반환. 실패 시 null. */
-function tryResolveGrade(mode: "number" | "value", input: string): { value: number; note: string } | null {
+function tryResolveGrade(mode: "number" | "value", input: string | undefined): { value: number; note: string } | null {
+  if (!input) return null;
   const n = Number(input.replace(/,/g, ""));
   if (!Number.isFinite(n) || n <= 0) return null;
   if (mode === "number") {
@@ -40,14 +57,101 @@ function tryResolveGrade(mode: "number" | "value", input: string): { value: numb
   return { value: n, note: `등급가액 직접 입력: ${n.toLocaleString()}` };
 }
 
-export function Pre1990LandValuationInput({ form, onChange }: Props) {
-  const mode = form.pre1990GradeMode;
+function parseAmount(s: string | undefined): number {
+  if (!s) return 0;
+  const n = Number(s.replace(/,/g, ""));
+  return Number.isFinite(n) ? n : 0;
+}
+
+export function Pre1990LandValuationInput({
+  form,
+  onChange,
+  jibun,
+  acquisitionDate,
+  transferDate,
+  onCalculatedPrice,
+}: Props) {
+  const mode = form.pre1990GradeMode ?? "number";
+  const [lookupLoading, setLookupLoading] = useState(false);
+  const [lookupMsg, setLookupMsg] = useState<{ text: string; kind: "ok" | "err" } | null>(null);
 
   const previews = {
     current: tryResolveGrade(mode, form.pre1990Grade_current),
     prev:    tryResolveGrade(mode, form.pre1990Grade_prev),
     atAcq:   tryResolveGrade(mode, form.pre1990Grade_atAcq),
   };
+
+  const area = parseAmount(form.pre1990AreaSqm);
+  const price1990 = parseAmount(form.pre1990PricePerSqm_1990);
+
+  // 모든 입력 충족 시 자동 환산 계산 → 취득시 기준시가 자동 입력
+  useEffect(() => {
+    if (!form.pre1990Enabled) return;
+    if (!onCalculatedPrice) return;
+    if (!acquisitionDate || !transferDate) return;
+    if (area <= 0 || price1990 <= 0) return;
+    if (!previews.current || !previews.prev || !previews.atAcq) return;
+
+    try {
+      const result = calculatePre1990LandValuation({
+        acquisitionDate: new Date(acquisitionDate),
+        transferDate: new Date(transferDate),
+        areaSqm: area,
+        pricePerSqm_1990: price1990,
+        // 양도시 가액은 상위에서 별도 입력 — 환산엔 사용 안 함, validateInput 통과용으로 동일값 주입
+        pricePerSqm_atTransfer: price1990,
+        grade_1990_0830: { gradeValue: previews.current.value },
+        gradePrev_1990_0830: { gradeValue: previews.prev.value },
+        gradeAtAcquisition: { gradeValue: previews.atAcq.value },
+      });
+      onCalculatedPrice(result.standardPriceAtAcquisition);
+    } catch {
+      // 입력 불완전 — 무시 (사용자가 채우는 중)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    form.pre1990Enabled,
+    acquisitionDate,
+    transferDate,
+    area,
+    price1990,
+    previews.current?.value,
+    previews.prev?.value,
+    previews.atAcq?.value,
+  ]);
+
+  async function handleLookup1990Price() {
+    if (!jibun) {
+      setLookupMsg({ text: "먼저 소재지를 검색·선택하세요. (지번 주소 필요)", kind: "err" });
+      return;
+    }
+    setLookupLoading(true);
+    setLookupMsg(null);
+    try {
+      const params = new URLSearchParams({
+        jibun,
+        propertyType: "land",
+        year: "1990",
+      });
+      const res = await fetch(`/api/address/standard-price?${params}`);
+      const data = await res.json();
+      if (!res.ok) {
+        setLookupMsg({ text: data?.error?.message ?? "공시가격 조회 실패", kind: "err" });
+        return;
+      }
+      const price = data.price ?? data.pricePerSqm ?? 0;
+      if (price > 0) {
+        onChange({ pre1990PricePerSqm_1990: String(price) });
+        setLookupMsg({ text: `1990년 개별공시지가: ${price.toLocaleString()}원/㎡`, kind: "ok" });
+      } else {
+        setLookupMsg({ text: "1990년 가격 정보 없음 — 직접 입력해주세요.", kind: "err" });
+      }
+    } catch {
+      setLookupMsg({ text: "네트워크 오류 — 직접 입력해주세요.", kind: "err" });
+    } finally {
+      setLookupLoading(false);
+    }
+  }
 
   return (
     <div className="space-y-4 rounded-lg border border-dashed border-amber-500/50 bg-amber-50/50 dark:bg-amber-950/20 p-4">
@@ -73,40 +177,48 @@ export function Pre1990LandValuationInput({ form, onChange }: Props) {
 
       {!form.pre1990Enabled ? null : (
         <div className="space-y-4">
-          {/* 면적 */}
+          {/* 면적 — 상위 자산 면적과 자동 연동 */}
           <div className="space-y-1.5">
-            <label className="block text-sm font-medium">면적 (㎡) <span className="text-destructive">*</span></label>
+            <label className="block text-sm font-medium">
+              면적 (㎡) <span className="text-destructive">*</span>
+              <span className="ml-1 text-[11px] text-muted-foreground font-normal">(자산 면적 자동 연동)</span>
+            </label>
             <CurrencyInput
               label=""
-              value={form.pre1990AreaSqm}
+              value={form.pre1990AreaSqm ?? ""}
               onChange={(v) => onChange({ pre1990AreaSqm: v })}
               placeholder="예: 2417"
             />
           </div>
 
-          {/* 개별공시지가 */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <label className="block text-sm font-medium">1990.1.1. 개별공시지가 (원/㎡) <span className="text-destructive">*</span></label>
-              <CurrencyInput
-                label=""
-                value={form.pre1990PricePerSqm_1990}
-                onChange={(v) => onChange({ pre1990PricePerSqm_1990: v })}
-                placeholder="예: 54000"
-              />
+          {/* 1990.8.30. 개별공시지가 + 조회 버튼 */}
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium">
+              1990.8.30. 개별공시지가 (원/㎡) <span className="text-destructive">*</span>
+            </label>
+            <div className="flex items-center gap-2">
+              <div className="flex-1">
+                <CurrencyInput
+                  label=""
+                  value={form.pre1990PricePerSqm_1990 ?? ""}
+                  onChange={(v) => onChange({ pre1990PricePerSqm_1990: v })}
+                  placeholder="예: 54000"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={handleLookup1990Price}
+                disabled={lookupLoading || !jibun}
+                className="shrink-0 px-3 py-2 rounded-md text-sm border border-border bg-background hover:bg-muted disabled:opacity-50 transition-colors"
+              >
+                {lookupLoading ? "조회 중…" : "공시가격 조회"}
+              </button>
             </div>
-            <div className="space-y-1.5">
-              <label className="block text-sm font-medium">양도당시 개별공시지가 (원/㎡) <span className="text-destructive">*</span></label>
-              <CurrencyInput
-                label=""
-                value={form.pre1990PricePerSqm_atTransfer}
-                onChange={(v) => onChange({ pre1990PricePerSqm_atTransfer: v })}
-                placeholder="예: 241700"
-              />
-              <p className="text-[11px] text-muted-foreground">
-                ※ 양도일이 5월 31일 이전이면 전년도 공시지가를 사용합니다.
+            {lookupMsg && (
+              <p className={`text-xs ${lookupMsg.kind === "ok" ? "text-green-700 dark:text-green-400" : "text-destructive"}`}>
+                {lookupMsg.text}
               </p>
-            </div>
+            )}
           </div>
 
           {/* 등급 입력 모드 토글 */}
@@ -137,22 +249,22 @@ export function Pre1990LandValuationInput({ form, onChange }: Props) {
           </div>
 
           {/* 3개 등급 */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-2">
             <GradeField
               label="1990.8.30. 현재 등급"
-              value={form.pre1990Grade_current}
+              value={form.pre1990Grade_current ?? ""}
               onChange={(v) => onChange({ pre1990Grade_current: v })}
               preview={previews.current}
             />
             <GradeField
               label="1990.8.30. 직전 등급"
-              value={form.pre1990Grade_prev}
+              value={form.pre1990Grade_prev ?? ""}
               onChange={(v) => onChange({ pre1990Grade_prev: v })}
               preview={previews.prev}
             />
             <GradeField
               label="취득시 유효 등급"
-              value={form.pre1990Grade_atAcq}
+              value={form.pre1990Grade_atAcq ?? ""}
               onChange={(v) => onChange({ pre1990Grade_atAcq: v })}
               preview={previews.atAcq}
             />
@@ -181,7 +293,7 @@ function GradeField({
 }) {
   return (
     <div className="space-y-1">
-      <label className="block text-sm font-medium">{label} <span className="text-destructive">*</span></label>
+      <label className="block text-xs font-medium leading-snug">{label} <span className="text-destructive">*</span></label>
       <input
         type="text"
         inputMode="numeric"

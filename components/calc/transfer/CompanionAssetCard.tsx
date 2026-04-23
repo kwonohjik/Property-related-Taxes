@@ -40,6 +40,10 @@ interface Props {
   onChange: (patch: Partial<AssetForm>) => void;
   /** undefined이면 삭제 버튼을 숨김 (1건일 때) */
   onRemove?: () => void;
+  /** 단일 자산 모드: 양도가액 레이블·힌트를 §166⑥ 없이 단순화 */
+  singleMode?: boolean;
+  /** 양도일 (공시가격 기준연도 자동 계산용) */
+  transferDate?: string;
 }
 
 export function CompanionAssetCard({
@@ -48,8 +52,10 @@ export function CompanionAssetCard({
   bundledSaleMode,
   onChange,
   onRemove,
+  singleMode,
+  transferDate,
 }: Props) {
-  const isMultiBundled = bundledSaleMode !== undefined;
+  const isMultiBundled = !singleMode && bundledSaleMode !== undefined;
   const isPrimary = asset.isPrimaryForHouseholdFlags;
   const kindLabel = ASSET_KIND_LABELS[asset.assetKind] ?? asset.assetKind;
 
@@ -181,14 +187,34 @@ export function CompanionAssetCard({
         </div>
       )}
 
-      {/* 양도가액 (다자산 시 자산별 모드) */}
+      {/* 토지 면적 — 양도시 기준시가 자동계산 + 상속 보충적평가액에 공통 사용 */}
+      {asset.assetKind === "land" && (
+        <div className="space-y-1.5">
+          <label className="block text-sm font-medium">토지 면적 (㎡)</label>
+          <input
+            type="number"
+            value={asset.landAreaM2}
+            onChange={(e) => onChange({ landAreaM2: e.target.value })}
+            min={0}
+            placeholder="예: 793"
+            className="w-48 border rounded-md px-3 py-2 text-sm bg-background"
+          />
+        </div>
+      )}
+
+      {/* 양도가액 */}
       <CompanionSaleModeBlock
-        bundledSaleMode={bundledSaleMode}
+        bundledSaleMode={singleMode ? "actual" : bundledSaleMode}
         assetKind={asset.assetKind}
         actualSalePrice={asset.actualSalePrice}
         onActualSalePriceChange={(v) => onChange({ actualSalePrice: v })}
         standardPriceAtTransfer={asset.standardPriceAtTransfer}
         onStandardPriceAtTransferChange={(v) => onChange({ standardPriceAtTransfer: v })}
+        singleMode={singleMode}
+        jibun={asset.addressJibun || undefined}
+        transferDate={transferDate}
+        landAreaM2={asset.assetKind === "land" ? asset.landAreaM2 : undefined}
+        onLandAreaM2Change={asset.assetKind === "land" ? (v) => onChange({ landAreaM2: v }) : undefined}
       />
 
       {/* 취득 원인 */}
@@ -222,6 +248,23 @@ export function CompanionAssetCard({
             onFixedAcquisitionPriceChange={(v) => onChange({ fixedAcquisitionPrice: v })}
             standardPriceAtAcq={asset.standardPriceAtAcq}
             onStandardPriceAtAcqChange={(v) => onChange({ standardPriceAtAcq: v })}
+            standardPriceAtTransfer={asset.standardPriceAtTransfer}
+            onStandardPriceAtTransferChange={(v) => onChange({ standardPriceAtTransfer: v })}
+            transferDate={transferDate}
+            jibun={asset.addressJibun || undefined}
+            assetKind={asset.assetKind}
+            landAreaM2={asset.assetKind === "land" ? asset.landAreaM2 : undefined}
+            pre1990Form={{
+              pre1990Enabled: asset.pre1990Enabled,
+              pre1990AreaSqm: asset.pre1990AreaSqm,
+              pre1990PricePerSqm_1990: asset.pre1990PricePerSqm_1990,
+              pre1990PricePerSqm_atTransfer: asset.pre1990PricePerSqm_atTransfer,
+              pre1990Grade_current: asset.pre1990Grade_current,
+              pre1990Grade_prev: asset.pre1990Grade_prev,
+              pre1990Grade_atAcq: asset.pre1990Grade_atAcq,
+              pre1990GradeMode: asset.pre1990GradeMode,
+            }}
+            onPre1990Change={(patch) => onChange(patch)}
           />
         )}
 
@@ -244,13 +287,13 @@ export function CompanionAssetCard({
             inheritanceDate={asset.inheritanceDate}
             onInheritanceDateChange={(v) => onChange({ inheritanceDate: v })}
             landAreaM2={asset.landAreaM2}
-            onLandAreaM2Change={(v) => onChange({ landAreaM2: v })}
             publishedValueAtInheritance={asset.publishedValueAtInheritance}
             onPublishedValueAtInheritanceChange={(v) =>
               onChange({ publishedValueAtInheritance: v })
             }
             fixedAcquisitionPrice={asset.fixedAcquisitionPrice}
             onFixedAcquisitionPriceChange={(v) => onChange({ fixedAcquisitionPrice: v })}
+            jibun={asset.addressJibun || undefined}
           />
         )}
 

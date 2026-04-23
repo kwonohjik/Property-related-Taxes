@@ -9,9 +9,13 @@ interface Props {
   assets: AssetForm[];
   bundledSaleMode: BundledSaleMode;
   onChange: (assets: AssetForm[]) => void;
+  /** 단일 자산 모드: 첫 번째 카드에 singleMode를 전달 */
+  singleMode?: boolean;
+  /** 양도일 (공시가격 기준연도 자동 계산용) */
+  transferDate?: string;
 }
 
-export function CompanionAssetsSection({ assets, bundledSaleMode, onChange }: Props) {
+export function CompanionAssetsSection({ assets, bundledSaleMode, onChange, singleMode, transferDate }: Props) {
   function addAsset() {
     onChange([...assets, makeDefaultAsset(assets.length + 1)]);
   }
@@ -35,6 +39,8 @@ export function CompanionAssetsSection({ assets, bundledSaleMode, onChange }: Pr
           onChange={(patch) => updateAsset(idx, patch)}
           // 자산이 2건 이상일 때만 삭제 버튼 노출
           onRemove={assets.length > 1 ? () => removeAsset(idx) : undefined}
+          singleMode={singleMode && assets.length === 1}
+          transferDate={transferDate}
         />
       ))}
 

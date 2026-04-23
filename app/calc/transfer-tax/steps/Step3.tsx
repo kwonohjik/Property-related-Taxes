@@ -67,7 +67,7 @@ export function Step3({ form, onChange }: { form: TransferFormData; onChange: (d
   );
 
   const currentYear = new Date().getFullYear();
-  const yearOptions = Array.from({ length: currentYear - 2004 }, (_, i) => String(currentYear - i));
+  const yearOptions = Array.from({ length: currentYear - 1984 }, (_, i) => String(currentYear - i));
 
   const [acqYear, setAcqYear] = useState<string>(
     () => getDefaultPriceYear(primary.acquisitionDate, primary.assetKind)
@@ -75,6 +75,8 @@ export function Step3({ form, onChange }: { form: TransferFormData; onChange: (d
   const [tsfYear, setTsfYear] = useState<string>(
     () => getDefaultPriceYear(form.transferDate, primary.assetKind)
   );
+  const isAcqYearPre1990 = parseInt(acqYear) < 1990;
+
   const [acqLoading, setAcqLoading] = useState(false);
   const [tsfLoading, setTsfLoading] = useState(false);
   const [lookupMsg, setLookupMsg] = useState<{ text: string; kind: "ok" | "err" } | null>(null);
@@ -252,6 +254,7 @@ export function Step3({ form, onChange }: { form: TransferFormData; onChange: (d
   useEffect(() => {
     if (!primary.addressJibun || !primary.acquisitionDate) return;
     if (!primary.useEstimatedAcquisition) return;
+    if (parseAmount(primary.standardPriceAtAcq) > 0) return;
     if (primary.standardPriceAtAcq && primary.standardPriceAtAcqLabel?.includes(acqYear)) return;
     fetchPriceForYear("acquisition", acqYear);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -260,6 +263,7 @@ export function Step3({ form, onChange }: { form: TransferFormData; onChange: (d
   useEffect(() => {
     if (!primary.addressJibun || !form.transferDate) return;
     if (!primary.useEstimatedAcquisition) return;
+    if (parseAmount(primary.standardPriceAtTransfer) > 0) return;
     if (primary.standardPriceAtTransfer && primary.standardPriceAtTransferLabel?.includes(tsfYear)) return;
     fetchPriceForYear("transfer", tsfYear);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -267,6 +271,9 @@ export function Step3({ form, onChange }: { form: TransferFormData; onChange: (d
 
   const isEstimated = (form.acquisitionMethod || "actual") === "estimated" || primary.useEstimatedAcquisition;
   const isAppraisal = form.acquisitionMethod === "appraisal";
+  const hasBothStandardPrices =
+    parseAmount(primary.standardPriceAtAcq) > 0 &&
+    parseAmount(primary.standardPriceAtTransfer) > 0;
 
   const yearSelectCls =
     "rounded-md border border-input bg-background px-2 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
@@ -295,6 +302,22 @@ export function Step3({ form, onChange }: { form: TransferFormData; onChange: (d
               여기서는 공시가격 조회, 감정가액, 1990년 이전 토지, 신축·증축 특례를 추가 입력하세요.
             </p>
           </div>
+
+          {isEstimated && hasBothStandardPrices && (
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 dark:bg-emerald-950/20 px-4 py-3 space-y-1">
+              <p className="text-sm font-medium text-emerald-800 dark:text-emerald-300">
+                ✓ 환산취득가 기준시가 (Step 1에서 입력됨)
+              </p>
+              <p className="text-xs text-muted-foreground">
+                취득 당시 {Number(primary.standardPriceAtAcq).toLocaleString()} 원
+                {primary.standardPriceAtAcqLabel && ` · ${primary.standardPriceAtAcqLabel}`}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                양도 당시 {Number(primary.standardPriceAtTransfer).toLocaleString()} 원
+                {primary.standardPriceAtTransferLabel && ` · ${primary.standardPriceAtTransferLabel}`}
+              </p>
+            </div>
+          )}
 
           {/* 취득가 산정 방식 */}
           <div className="space-y-1.5">
@@ -338,9 +361,12 @@ export function Step3({ form, onChange }: { form: TransferFormData; onChange: (d
             </div>
           </div>
 
-          {/* 환산취득가 — 공시가격 조회 */}
-          {isEstimated && (
+          {/* 환산취득가 — 공시가격 조회 (Step 1에서 미입력 시 fallback) */}
+          {isEstimated && !hasBothStandardPrices && (
             <div className="space-y-4 rounded-lg border border-dashed border-primary/40 bg-primary/3 p-4">
+              <p className="text-xs font-medium text-amber-700 dark:text-amber-400">
+                ⬆ Step 1에서 기준시가가 입력되지 않았습니다. 여기서 직접 조회·입력하거나 이전 단계로 돌아가세요.
+              </p>
               <p className="text-xs font-medium text-primary">
                 환산취득가 = 양도가액 × (취득 당시 기준시가 ÷ 양도 당시 기준시가)
               </p>
@@ -378,13 +404,18 @@ export function Step3({ form, onChange }: { form: TransferFormData; onChange: (d
                   <button
                     type="button"
                     onClick={() => fetchPriceForYear("acquisition", acqYear)}
-                    disabled={acqLoading || !primary.addressJibun}
+                    disabled={acqLoading || !primary.addressJibun || isAcqYearPre1990}
                     className={fetchBtnCls}
                   >
-                    {acqLoading ? "조회중" : "조회"}
+                    {acqLoading ? "조회중" : isAcqYearPre1990 ? "조회불가" : "조회"}
                   </button>
                 </div>
-                {primary.standardPriceAtAcqLabel && (
+                {isAcqYearPre1990 && (
+                  <p className="text-xs text-amber-700 dark:text-amber-400">
+                    1990년 이전은 개별공시지가가 없어 API 조회가 불가합니다. 아래 토지등급 환산 기능을 사용하세요.
+                  </p>
+                )}
+                {!isAcqYearPre1990 && primary.standardPriceAtAcqLabel && (
                   <p className="text-xs text-muted-foreground">{primary.standardPriceAtAcqLabel}</p>
                 )}
               </div>
@@ -481,8 +512,7 @@ export function Step3({ form, onChange }: { form: TransferFormData; onChange: (d
 
           {/* 1990.8.30. 이전 취득 토지 환산 */}
           {primary.assetKind === "land" &&
-            primary.acquisitionDate &&
-            primary.acquisitionDate < "1990-08-30" && (
+            (isAcqYearPre1990 || (primary.acquisitionDate && primary.acquisitionDate < "1990-08-30")) && (
               <Pre1990LandValuationInput
                 form={{
                   pre1990Enabled: form.pre1990Enabled,
@@ -495,6 +525,12 @@ export function Step3({ form, onChange }: { form: TransferFormData; onChange: (d
                   pre1990GradeMode: form.pre1990GradeMode,
                 }}
                 onChange={(patch) => onChange(patch)}
+                jibun={primary.addressJibun}
+                acquisitionDate={primary.acquisitionDate}
+                transferDate={form.transferDate}
+                onCalculatedPrice={(price) =>
+                  onPrimaryChange({ standardPriceAtAcq: String(price) })
+                }
               />
             )}
 

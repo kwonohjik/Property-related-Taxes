@@ -16,7 +16,6 @@ import {
   calculateProgressiveTax,
   calculateProration,
   isSurchargeSuspended,
-  truncateToThousand,
   truncateToWon,
 } from "./tax-utils";
 import { TaxRateNotFoundError } from "./tax-errors";

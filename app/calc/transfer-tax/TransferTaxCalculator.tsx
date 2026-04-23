@@ -11,6 +11,7 @@ import { callTransferTaxAPI, type SingleTransferResult } from "@/lib/calc/transf
 import type { TransferTaxPenaltyResult } from "@/lib/tax-engine/transfer-tax-penalty";
 import { validateStep } from "@/lib/calc/transfer-tax-validate";
 import { getFilingDeadline, isFilingOverdue } from "@/lib/calc/filing-deadline";
+import { ResetButton } from "@/components/calc/shared/ResetButton";
 import { Step1 } from "./steps/Step1";
 import { Step3 } from "./steps/Step3";
 import { Step4 } from "./steps/Step4";
@@ -207,11 +208,6 @@ export default function TransferTaxCalculator({
       key={0}
       form={formData}
       onChange={updateFormData}
-      onReset={() => {
-        reset();
-        setError(null);
-        setPenaltyResult(null);
-      }}
     />,
     <Step3 key={1} form={formData} onChange={updateFormData} />,
     <Step4 key={2} form={formData} onChange={updateFormData} />,
@@ -226,13 +222,16 @@ export default function TransferTaxCalculator({
       {/* 헤더 */}
       <div className="mb-6">
         <p className="text-xs text-muted-foreground mb-1">한국 부동산 세금 계산기</p>
-        <h1 className="text-2xl font-bold">양도소득세 계산기</h1>
+        <div className="flex items-center justify-between gap-2">
+          <h1 className="text-2xl font-bold">양도소득세 계산기</h1>
+          <ResetButton onReset={handleReset} />
+        </div>
         <div className="mt-2">
           <a
             href="/calc/transfer-tax/multi"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-primary text-primary text-xs font-medium hover:bg-primary hover:text-primary-foreground transition-colors"
+            className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-md bg-black text-white text-base font-semibold hover:bg-neutral-800 transition-colors"
           >
-            여러건 양도 계산 →
+            동일연도 다른 양도건 계산하기
           </a>
         </div>
       </div>
@@ -249,20 +248,15 @@ export default function TransferTaxCalculator({
             onLoginPrompt={!isLoggedIn}
           />
         ) : (
-          <div className="space-y-4">
-            <div className="flex gap-3">
-              <button
-                onClick={handleReset}
-                className="text-sm text-muted-foreground hover:text-foreground underline"
-              >
-                다시 계산하기
-              </button>
-            </div>
-            <BundledAllocationCard
-              apportionment={result.apportionment}
-              aggregated={result.aggregated}
-            />
-          </div>
+          <BundledAllocationCard
+            apportionment={result.apportionment}
+            aggregated={result.aggregated}
+            onBack={() => {
+              setStep(STEPS.length - 1);
+              setError(null);
+            }}
+            onReset={handleReset}
+          />
         )
       ) : (
         <>

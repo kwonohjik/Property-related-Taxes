@@ -43,7 +43,7 @@ describe("국세청 집행기준 97-176의2 — 5가지 유형 재현", () => {
       gradePrev_1990_0830: { gradeValue:  80_000 },
       gradeAtAcquisition:  { gradeValue:  80_000 },
     });
-    expect(r.pricePerSqmAtAcquisition).toBe(8_888);
+    expect(Math.floor(r.pricePerSqmAtAcquisition)).toBe(8_888);
     expect(r.caseType).toBe("case1_no_adjustment");
     expect(r.breakdown.denominatorCap1Applied).toBe(false);
     expect(r.breakdown.ratioCap2Applied).toBe(false);
@@ -57,7 +57,7 @@ describe("국세청 집행기준 97-176의2 — 5가지 유형 재현", () => {
       gradePrev_1990_0830: { gradeValue: 180_000 },
       gradeAtAcquisition:  { gradeValue:  80_000 },
     });
-    expect(r.pricePerSqmAtAcquisition).toBe(4_444);
+    expect(Math.floor(r.pricePerSqmAtAcquisition)).toBe(4_444);
     expect(r.caseType).toBe("case2_no_1990_adjustment");
     expect(r.breakdown.appliedDenominator).toBe(180_000);
     expect(r.breakdown.denominatorCap1Applied).toBe(false);
@@ -102,7 +102,7 @@ describe("국세청 집행기준 97-176의2 — 5가지 유형 재현", () => {
       gradePrev_1990_0830: { gradeValue:  90_000 },
       gradeAtAcquisition:  { gradeValue: 100_000 },
     });
-    expect(r.pricePerSqmAtAcquisition).toBe(10_526);
+    expect(Math.floor(r.pricePerSqmAtAcquisition)).toBe(10_526);
     expect(r.caseType).toBe("case5_ratio_no_cap");
     expect(r.breakdown.ratioCap2Triggered).toBe(false);
     expect(r.breakdown.ratioCap2Applied).toBe(false);
@@ -126,14 +126,14 @@ describe("PDF 실사례 재현 — 1988.12.3. 취득 농지, 2023.2.16. 양도",
     gradeAtAcquisition: 103,       // 번호 조회 → 689
   };
 
-  it("㎡당 가액 = 47,547원 (원단위 절사)", () => {
+  it("㎡당 가액 = 47,547.xx원 (중간 절사 없음, floor 시 47,547)", () => {
     const r = calculatePre1990LandValuation(input);
-    expect(r.pricePerSqmAtAcquisition).toBe(47_547);
+    expect(Math.floor(r.pricePerSqmAtAcquisition)).toBe(47_547);
   });
 
-  it("취득시 기준시가 = 114,921,099원", () => {
+  it("취득시 기준시가 = 114,922,558원 (최종 원단위 절사)", () => {
     const r = calculatePre1990LandValuation(input);
-    expect(r.standardPriceAtAcquisition).toBe(114_921_099);
+    expect(r.standardPriceAtAcquisition).toBe(114_922_558);
   });
 
   it("양도시 기준시가 = 584,188,900원", () => {
@@ -157,7 +157,7 @@ describe("PDF 실사례 재현 — 1988.12.3. 취득 농지, 2023.2.16. 양도",
     const acqCost = Math.floor(
       (550_000_000 * r.standardPriceAtAcquisition) / r.standardPriceAtTransfer,
     );
-    expect(acqCost).toBe(108_195_490);
+    expect(acqCost).toBe(108_196_863);
   });
 });
 
@@ -191,7 +191,7 @@ describe("경계 일자 — CAP-2 트리거 (1990.1.1.) 판정", () => {
       acquisitionDate: new Date("1989-12-31"),
     });
     expect(r.breakdown.ratioCap2Triggered).toBe(false);
-    expect(r.pricePerSqmAtAcquisition).toBe(10_526);
+    expect(Math.floor(r.pricePerSqmAtAcquisition)).toBe(10_526);
   });
 
   it("GRADE_CAP_TRIGGER_DATE 경계 상수 노출 확인", () => {
@@ -256,7 +256,7 @@ describe("forceRatioCap override", () => {
       forceRatioCap: false,
     });
     expect(r.breakdown.ratioCap2Triggered).toBe(false);
-    expect(r.pricePerSqmAtAcquisition).toBe(10_526);
+    expect(Math.floor(r.pricePerSqmAtAcquisition)).toBe(10_526);
   });
 });
 

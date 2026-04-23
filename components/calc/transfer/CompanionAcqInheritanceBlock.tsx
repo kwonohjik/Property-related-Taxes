@@ -10,9 +10,11 @@
  * 자산별 단기보유 통산을 위해 피상속인 취득일을 자체 입력받는다.
  */
 
+import { useEffect } from "react";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { DateInput } from "@/components/ui/date-input";
 import { cn } from "@/lib/utils";
+import { useStandardPriceLookup, getDefaultPriceYear } from "@/lib/hooks/useStandardPriceLookup";
 
 const INHERITANCE_ASSET_KIND_OPTIONS = [
   { value: "land", label: "토지 (공시지가 × 면적)" },
@@ -34,13 +36,154 @@ interface BlockProps {
   inheritanceDate: string;
   onInheritanceDateChange: (v: string) => void;
   landAreaM2: string;
-  onLandAreaM2Change: (v: string) => void;
   publishedValueAtInheritance: string;
   onPublishedValueAtInheritanceChange: (v: string) => void;
   // manual 모드용
   fixedAcquisitionPrice: string;
   onFixedAcquisitionPriceChange: (v: string) => void;
+  /** 공시가격 조회용 지번 주소 */
+  jibun?: string;
 }
+
+// ─── 토지 공시지가 조회 ───────────────────────────────────────────
+
+function LandPublishedValueLookup({
+  jibun,
+  inheritanceDate,
+  value,
+  onChange,
+}: {
+  jibun?: string;
+  inheritanceDate: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const { loading, msg, year, setYear, yearOptions, lookup } =
+    useStandardPriceLookup("land");
+
+  useEffect(() => {
+    setYear(getDefaultPriceYear(inheritanceDate, "land"));
+  }, [inheritanceDate, setYear]);
+
+  async function handleLookup() {
+    const price = await lookup({ jibun: jibun ?? "", propertyType: "land", year });
+    if (price !== null) onChange(String(price));
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2">
+        <select
+          value={year}
+          onChange={(e) => setYear(e.target.value)}
+          className="border rounded-md px-2 py-1.5 text-sm bg-background"
+        >
+          {yearOptions.map((y) => (
+            <option key={y} value={y}>
+              {y}년
+            </option>
+          ))}
+        </select>
+        <button
+          type="button"
+          onClick={handleLookup}
+          disabled={loading}
+          className="px-3 py-1.5 rounded-md text-sm border border-border bg-background hover:bg-muted disabled:opacity-50 transition-colors"
+        >
+          {loading ? "조회 중…" : "공시가격 조회"}
+        </button>
+      </div>
+      <CurrencyInput
+        label="상속개시일 직전 고시 개별공시지가 (원/㎡)"
+        value={value}
+        onChange={onChange}
+      />
+      {msg && (
+        <p
+          className={cn(
+            "text-xs",
+            msg.kind === "ok"
+              ? "text-green-600 dark:text-green-400"
+              : "text-destructive",
+          )}
+        >
+          {msg.text}
+        </p>
+      )}
+    </div>
+  );
+}
+
+// ─── 주택 공시가격 조회 ────────────────────────────────────────────
+
+function HousePublishedValueLookup({
+  jibun,
+  inheritanceDate,
+  value,
+  onChange,
+}: {
+  jibun?: string;
+  inheritanceDate: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const { loading, msg, year, setYear, yearOptions, lookup } =
+    useStandardPriceLookup("housing");
+
+  useEffect(() => {
+    setYear(getDefaultPriceYear(inheritanceDate, "housing"));
+  }, [inheritanceDate, setYear]);
+
+  async function handleLookup() {
+    const price = await lookup({ jibun: jibun ?? "", propertyType: "housing", year });
+    if (price !== null) onChange(String(price));
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2">
+        <select
+          value={year}
+          onChange={(e) => setYear(e.target.value)}
+          className="border rounded-md px-2 py-1.5 text-sm bg-background"
+        >
+          {yearOptions.map((y) => (
+            <option key={y} value={y}>
+              {y}년
+            </option>
+          ))}
+        </select>
+        <button
+          type="button"
+          onClick={handleLookup}
+          disabled={loading}
+          className="px-3 py-1.5 rounded-md text-sm border border-border bg-background hover:bg-muted disabled:opacity-50 transition-colors"
+        >
+          {loading ? "조회 중…" : "공시가격 조회"}
+        </button>
+      </div>
+      <CurrencyInput
+        label="상속개시일 직전 고시 주택가격 (원)"
+        value={value}
+        onChange={onChange}
+      />
+      {msg && (
+        <p
+          className={cn(
+            "text-xs",
+            msg.kind === "ok"
+              ? "text-green-600 dark:text-green-400"
+              : "text-destructive",
+          )}
+        >
+          {msg.text}
+        </p>
+      )}
+    </div>
+  );
+}
+
+// ─── 메인 블록 ────────────────────────────────────────────────────
 
 export function CompanionAcqInheritanceBlock(props: BlockProps) {
   return (
@@ -114,19 +257,9 @@ export function CompanionAcqInheritanceBlock(props: BlockProps) {
 
             {props.inheritanceAssetKind === "land" && (
               <div className="space-y-3">
-                <div className="space-y-1.5">
-                  <label className="block text-sm font-medium">토지 면적 (㎡)</label>
-                  <input
-                    type="number"
-                    value={props.landAreaM2}
-                    onChange={(e) => props.onLandAreaM2Change(e.target.value)}
-                    min={0}
-                    placeholder="예: 793"
-                    className="w-48 border rounded-md px-3 py-2 text-sm bg-background"
-                  />
-                </div>
-                <CurrencyInput
-                  label="상속개시일 직전 고시 개별공시지가 (원/㎡)"
+                <LandPublishedValueLookup
+                  jibun={props.jibun}
+                  inheritanceDate={props.inheritanceDate}
                   value={props.publishedValueAtInheritance}
                   onChange={props.onPublishedValueAtInheritanceChange}
                 />
@@ -145,8 +278,9 @@ export function CompanionAcqInheritanceBlock(props: BlockProps) {
 
             {(props.inheritanceAssetKind === "house_individual" ||
               props.inheritanceAssetKind === "house_apart") && (
-              <CurrencyInput
-                label="상속개시일 직전 고시 주택가격 (원)"
+              <HousePublishedValueLookup
+                jibun={props.jibun}
+                inheritanceDate={props.inheritanceDate}
                 value={props.publishedValueAtInheritance}
                 onChange={props.onPublishedValueAtInheritanceChange}
               />
