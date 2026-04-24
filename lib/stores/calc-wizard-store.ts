@@ -124,11 +124,21 @@ export interface AssetForm {
   transferArea: string;
   /**
    * 면적 입력 시나리오 (UI 전용, API 전송 시 제외)
-   * - "same"    : 취득면적 = 양도면적 (일반, 기본값)
-   * - "partial" : 일부 양도 — 취득 토지 중 일부만 양도
-   * (감환지는 parcelMode 전용이므로 여기선 미사용)
+   * - "same"      : 취득면적 = 양도면적 (일반, 기본값)
+   * - "partial"   : 일부 양도 — 취득 토지 중 일부만 양도
+   * - "reduction" : 환지처분 (감환지) — 교부면적 < 권리면적 (소득령 §162의2)
+   * - "increase"  : 환지처분 (증환지) — 교부면적 > 권리면적 (증가분은 별도 취득 분리)
+   * UI에서 의제취득면적을 acquisitionArea에, 환지확정일 익일을 acquisitionDate에 사전 반영.
    */
-  areaScenario: "same" | "partial";
+  areaScenario: "same" | "partial" | "reduction" | "increase";
+  /** 환지처분확정일 (areaScenario=reduction/increase 시, YYYY-MM-DD) */
+  replottingConfirmDate: string;
+  /** 환지 권리면적 (㎡, areaScenario=reduction 시) */
+  entitlementArea: string;
+  /** 환지 교부면적 (㎡, areaScenario=reduction 시) */
+  allocatedArea: string;
+  /** 환지 이전 종전면적 (㎡, areaScenario=reduction 시, 의제취득면적 산식에 사용) */
+  priorLandArea: string;
   /** 상속개시일 직전 공시가격: 토지=원/㎡, 주택=원 총액 */
   publishedValueAtInheritance: string;
   /** 직접 입력 취득가액 (매매 actual / 상속 manual / 증여 신고가액) */
@@ -177,6 +187,11 @@ export interface AssetForm {
   standardPriceAtAcq: string;
   /** 취득시 기준시가 레이블 (API 조회 결과 표시용) */
   standardPriceAtAcqLabel: string;
+
+  /** 취득 시점 ㎡당 공시지가 (원/㎡, 토지·비주거건물 전용) */
+  standardPricePerSqmAtAcq: string;
+  /** 양도 시점 ㎡당 공시지가 (원/㎡, 토지·비주거건물 전용) */
+  standardPricePerSqmAtTransfer: string;
 
   // ── 1990.8.30. 이전 취득 토지 환산 (assetKind === "land" + acquisitionDate < 1990-08-30) ──
   pre1990Enabled: boolean;
@@ -233,6 +248,8 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     useEstimatedAcquisition: false,
     standardPriceAtAcq: "",
     standardPriceAtAcqLabel: "",
+    standardPricePerSqmAtAcq: "",
+    standardPricePerSqmAtTransfer: "",
     pre1990Enabled: false,
     pre1990PricePerSqm_1990: "",
     pre1990PricePerSqm_atTransfer: "",
@@ -240,6 +257,10 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     pre1990Grade_prev: "",
     pre1990Grade_atAcq: "",
     pre1990GradeMode: "number",
+    replottingConfirmDate: "",
+    entitlementArea: "",
+    allocatedArea: "",
+    priorLandArea: "",
   };
 }
 
@@ -267,6 +288,9 @@ export function migrateAsset(raw: unknown): AssetForm {
         ? "partial"
         : "same";
   }
+  // standardPricePerSqm 신규 필드 마이그레이션
+  if (!a.standardPricePerSqmAtAcq) a.standardPricePerSqmAtAcq = "";
+  if (!a.standardPricePerSqmAtTransfer) a.standardPricePerSqmAtTransfer = "";
   return a as unknown as AssetForm;
 }
 
@@ -558,10 +582,14 @@ function migrateLegacyForm(legacy: Record<string, unknown>): TransferFormData {
       // landAreaM2 → acquisitionArea / transferArea 마이그레이션
       acquisitionArea: String(ca.acquisitionArea ?? legacyLandArea),
       transferArea: String(ca.transferArea ?? legacyLandArea),
-      areaScenario: (ca.areaScenario as "same" | "partial") ??
+      areaScenario: (ca.areaScenario as AssetForm["areaScenario"]) ??
         (ca.acquisitionArea && ca.transferArea && ca.acquisitionArea !== ca.transferArea
           ? "partial"
           : "same"),
+      replottingConfirmDate: String(ca.replottingConfirmDate ?? ""),
+      entitlementArea: String(ca.entitlementArea ?? ""),
+      allocatedArea: String(ca.allocatedArea ?? ""),
+      priorLandArea: String(ca.priorLandArea ?? ""),
       reductions: caReductions,
     };
   });

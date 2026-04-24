@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { StepIndicator } from "@/components/calc/StepIndicator";
 import { PropertyTaxResultView } from "@/components/calc/results/PropertyTaxResultView";
-import { useStandardPriceLookup } from "@/lib/hooks/useStandardPriceLookup";
 import { INITIAL_FORM, validateStep, callPropertyTaxAPI, type FormState } from "./property/shared";
 import { Step0 } from "./property/Step0";
 import { Step1 } from "./property/Step1";
@@ -20,16 +19,8 @@ export function PropertyTaxForm() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<PropertyTaxResult | null>(null);
-  const priceLookup = useStandardPriceLookup(form.objectType === "land" ? "land" : "housing");
-
-  useEffect(() => {
-    if (!form.jibun || form.objectType === "building") return;
-    if (form.publishedPrice && priceLookup.announcedLabel?.includes(priceLookup.year)) return;
-    const apiType = form.objectType === "land" ? "land" : "housing";
-    priceLookup.lookup({ jibun: form.jibun, propertyType: apiType })
-      .then((price) => { if (price) update("publishedPrice", String(price)); });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form.jibun, form.objectType, priceLookup.year]);
+  /** 토지 전용 단가 (StandardPriceInput 내부 상태 유지용) */
+  const [publishedPricePerSqm, setPublishedPricePerSqm] = useState("");
 
   const needsLandDetail =
     form.objectType === "land" &&
@@ -151,7 +142,11 @@ export function PropertyTaxForm() {
           form={form}
           onChange={onChange}
           onReset={handleReset}
-          priceLookup={priceLookup}
+          publishedPrice={form.publishedPrice}
+          onPublishedPriceChange={(v) => update("publishedPrice", v)}
+          publishedPricePerSqm={publishedPricePerSqm}
+          onPublishedPricePerSqmChange={setPublishedPricePerSqm}
+          jibun={form.jibun}
         />
       )}
 

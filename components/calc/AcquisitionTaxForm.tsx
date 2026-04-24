@@ -10,12 +10,9 @@
  */
 
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { StepIndicator } from "@/components/calc/StepIndicator";
-import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
-import { DateInput } from "@/components/ui/date-input";
 import { AcquisitionTaxResultView } from "@/components/calc/results/AcquisitionTaxResultView";
-import { useStandardPriceLookup, getDefaultPriceYear } from "@/lib/hooks/useStandardPriceLookup";
 import type { AcquisitionTaxResult } from "@/lib/tax-engine/types/acquisition.types";
 import {
   STEPS,
@@ -38,28 +35,10 @@ export function AcquisitionTaxForm() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AcquisitionTaxResult | null>(null);
-  const priceLookup = useStandardPriceLookup(form.propertyType);
-
-  // 취득일 변경 시 연도 동기화
-  useEffect(() => {
-    const acqDate = form.balancePaymentDate || form.contractDate;
-    if (!acqDate) return;
-    priceLookup.setYear(getDefaultPriceYear(acqDate, form.propertyType));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form.balancePaymentDate, form.contractDate, form.propertyType]);
-
-  // 소재지 또는 연도 변경 시 자동 조회
-  useEffect(() => {
-    if (!form.jibun) return;
-    if (!["housing", "land", "land_farmland"].includes(form.propertyType)) return;
-    if (form.standardValue && priceLookup.announcedLabel?.includes(priceLookup.year)) return;
-    priceLookup.lookup({ jibun: form.jibun, propertyType: form.propertyType })
-      .then((price) => { if (price) set("standardValue", String(price)); });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form.jibun, form.propertyType, priceLookup.year]);
+  /** 토지·농지 시가표준액 단가 (StandardPriceInput 내부 상태 유지용) */
+  const [standardValuePerSqm, setStandardValuePerSqm] = useState("");
 
   const isOriginal = ["new_construction", "extension", "reconstruction", "reclamation"].includes(form.acquisitionCause);
-  const isGratuitous = ["inheritance", "inheritance_farmland", "gift", "donation"].includes(form.acquisitionCause);
   const isBurdened = form.acquisitionCause === "burdened_gift";
   const isOnerous = ["purchase", "exchange", "auction", "in_kind_investment"].includes(form.acquisitionCause);
   const isInheritance = ["inheritance", "inheritance_farmland"].includes(form.acquisitionCause);
@@ -132,7 +111,9 @@ export function AcquisitionTaxForm() {
         <Step1
           form={form}
           set={set}
-          priceLookup={priceLookup}
+          standardValuePerSqm={standardValuePerSqm}
+          onStandardValuePerSqmChange={setStandardValuePerSqm}
+          referenceDate={form.balancePaymentDate || form.contractDate}
           isHousing={isHousing}
         />
       )}

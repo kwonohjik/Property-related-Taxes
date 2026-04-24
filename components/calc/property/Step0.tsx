@@ -3,7 +3,7 @@
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { AddressSearch, type AddressValue } from "@/components/ui/address-search";
 import { ResetButton } from "@/components/calc/shared/ResetButton";
-import type { useStandardPriceLookup } from "@/lib/hooks/useStandardPriceLookup";
+import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
 import {
   OBJECT_TYPE_LABELS,
   BUILDING_TYPE_LABELS,
@@ -14,10 +14,34 @@ interface Props {
   form: FormState;
   onChange: (d: Partial<FormState>) => void;
   onReset: () => void;
-  priceLookup: ReturnType<typeof useStandardPriceLookup>;
+  /** 공시가격 총액 (원) */
+  publishedPrice: string;
+  onPublishedPriceChange: (v: string) => void;
+  /** 토지 단가 (원/㎡) */
+  publishedPricePerSqm?: string;
+  onPublishedPricePerSqmChange?: (v: string) => void;
+  jibun?: string;
+  referenceDate?: string;
 }
 
-export function Step0({ form, onChange, onReset, priceLookup }: Props) {
+/** form.objectType → StandardPriceInput propertyKind 변환 */
+function toPropertyKind(objectType: string): "land" | "building_non_residential" | "house_individual" | "house_apart" {
+  if (objectType === "housing") return "house_apart";
+  if (objectType === "land") return "land";
+  return "building_non_residential";
+}
+
+export function Step0({
+  form,
+  onChange,
+  onReset,
+  publishedPrice,
+  onPublishedPriceChange,
+  publishedPricePerSqm,
+  onPublishedPricePerSqmChange,
+  jibun,
+  referenceDate,
+}: Props) {
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between gap-3">
@@ -63,54 +87,23 @@ export function Step0({ form, onChange, onReset, priceLookup }: Props) {
           주택: 주택공시가격 / 토지: 개별공시지가 합계 / 건축물: 기준시가
         </p>
         {form.objectType !== "building" ? (
-          <>
-            <div className="flex gap-2 items-center">
-              <select
-                value={priceLookup.year}
-                onChange={(e) => priceLookup.setYear(e.target.value)}
-                className="rounded-md border border-input bg-background px-2 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                aria-label="공시가격 조회 연도"
-              >
-                {priceLookup.yearOptions.map((y) => (
-                  <option key={y} value={y}>{y}년</option>
-                ))}
-              </select>
-              <div className="flex-1">
-                <CurrencyInput
-                  label=""
-                  value={form.publishedPrice}
-                  onChange={(v) => onChange({ publishedPrice: v })}
-                  placeholder="예: 300,000,000"
-                />
-              </div>
-              <button
-                type="button"
-                onClick={async () => {
-                  const apiType = form.objectType === "land" ? "land" : "housing";
-                  const price = await priceLookup.lookup({ jibun: form.jibun, propertyType: apiType });
-                  if (price) onChange({ publishedPrice: String(price) });
-                }}
-                disabled={priceLookup.loading || !form.jibun}
-                className="px-3 py-2 rounded-md border border-primary text-primary text-sm font-medium hover:bg-primary/5 disabled:opacity-50 whitespace-nowrap transition-colors"
-              >
-                {priceLookup.loading ? "조회중" : "조회"}
-              </button>
-            </div>
-            {priceLookup.announcedLabel && (
-              <p className="text-xs text-muted-foreground">{priceLookup.announcedLabel}</p>
-            )}
-            {priceLookup.msg && (
-              <p className={`text-xs ${priceLookup.msg.kind === "ok" ? "text-emerald-700" : "text-destructive"}`}>
-                {priceLookup.msg.text}
-              </p>
-            )}
-          </>
+          <StandardPriceInput
+            propertyKind={toPropertyKind(form.objectType)}
+            totalPrice={publishedPrice}
+            onTotalPriceChange={onPublishedPriceChange}
+            pricePerSqm={publishedPricePerSqm}
+            onPricePerSqmChange={onPublishedPricePerSqmChange}
+            jibun={jibun ?? form.jibun}
+            referenceDate={referenceDate}
+            label=""
+            enableLookup={true}
+          />
         ) : (
           <>
             <CurrencyInput
               label=""
-              value={form.publishedPrice}
-              onChange={(v) => onChange({ publishedPrice: v })}
+              value={publishedPrice}
+              onChange={onPublishedPriceChange}
               placeholder="예: 300,000,000"
             />
             <p className="text-xs text-amber-700">

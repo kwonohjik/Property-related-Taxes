@@ -9,10 +9,10 @@
  * 주식(listed_stock, unlisted_stock)은 StockValuationForm을 사용
  */
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { CurrencyInput, parseAmount, formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { AddressSearch, type AddressValue } from "@/components/ui/address-search";
-import { useStandardPriceLookup } from "@/lib/hooks/useStandardPriceLookup";
+import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
 import type { EstateItem, AssetCategory, ValuationMethod } from "@/lib/tax-engine/types/inheritance-gift.types";
 
 // ============================================================
@@ -94,25 +94,17 @@ function ItemEditor({ item, index, onUpdate, onRemove }: ItemEditorProps) {
 
   const set = (patch: Partial<EstateItem>) => onUpdate({ ...item, ...patch });
 
-  const apiPropertyType =
-    cat === "real_estate_apartment" ? "housing" :
-    cat === "real_estate_building" ? "housing" :
+  const propertyKind: "land" | "building_non_residential" | "house_individual" | "house_apart" =
+    cat === "real_estate_apartment" ? "house_apart" :
+    cat === "real_estate_building" ? "building_non_residential" :
     "land"; // real_estate_land
 
   // ── 공시가격 조회용 로컬 주소 상태 (EstateItem에 포함되지 않음) ──
   const [addrValue, setAddrValue] = useState<AddressValue>({
     road: "", jibun: "", building: "", detail: "", lng: "", lat: "",
   });
-  const priceLookup = useStandardPriceLookup(apiPropertyType);
-
-  // 소재지 또는 연도 변경 시 자동 조회
-  useEffect(() => {
-    if (!showStandardPrice || !addrValue.jibun) return;
-    if (item.standardPrice && priceLookup.announcedLabel?.includes(priceLookup.year)) return;
-    priceLookup.lookup({ jibun: addrValue.jibun, propertyType: apiPropertyType })
-      .then((price) => { if (price) set({ standardPrice: price }); });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [addrValue.jibun, priceLookup.year]);
+  /** 토지·건물용 단가 (원/㎡) — StandardPriceInput 내부 상태 유지용 */
+  const [standardPricePerSqm, setStandardPricePerSqm] = useState("");
 
   return (
     <div className="border rounded-lg p-4 space-y-3 bg-white dark:bg-gray-900">
@@ -210,46 +202,17 @@ function ItemEditor({ item, index, onUpdate, onRemove }: ItemEditorProps) {
           <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
             {cat === "real_estate_land" ? "개별공시지가 (면적 포함 합산)" : "기준시가"}
           </label>
-          <div className="flex gap-2 items-center">
-            <select
-              value={priceLookup.year}
-              onChange={(e) => priceLookup.setYear(e.target.value)}
-              className="rounded-md border border-input bg-background px-2 py-2 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              aria-label="공시가격 조회 연도"
-            >
-              {priceLookup.yearOptions.map((y) => (
-                <option key={y} value={y}>{y}년</option>
-              ))}
-            </select>
-            <div className="flex-1">
-              <CurrencyInput
-                label=""
-                value={item.standardPrice != null ? String(item.standardPrice) : ""}
-                onChange={(v) => set({ standardPrice: parseAmount(v) || undefined })}
-                placeholder="없으면 빈칸"
-              />
-            </div>
-            <button
-              type="button"
-              onClick={async () => {
-                const price = await priceLookup.lookup({ jibun: addrValue.jibun, propertyType: apiPropertyType });
-                if (price) set({ standardPrice: price });
-              }}
-              disabled={priceLookup.loading || !addrValue.jibun}
-              className="px-3 py-2 rounded-md border border-primary text-primary text-xs font-medium hover:bg-primary/5 disabled:opacity-50 whitespace-nowrap transition-colors"
-            >
-              {priceLookup.loading ? "조회중" : "조회"}
-            </button>
-          </div>
-          <p className="text-xs text-gray-400">시가·감정가 모두 없을 때 최종 적용</p>
-          {priceLookup.announcedLabel && (
-            <p className="text-xs text-gray-500">{priceLookup.announcedLabel}</p>
-          )}
-          {priceLookup.msg && (
-            <p className={`text-xs ${priceLookup.msg.kind === "ok" ? "text-emerald-700" : "text-destructive"}`}>
-              {priceLookup.msg.text}
-            </p>
-          )}
+          <StandardPriceInput
+            propertyKind={propertyKind}
+            totalPrice={item.standardPrice != null ? String(item.standardPrice) : ""}
+            onTotalPriceChange={(v) => set({ standardPrice: parseAmount(v) || undefined })}
+            pricePerSqm={standardPricePerSqm}
+            onPricePerSqmChange={setStandardPricePerSqm}
+            jibun={addrValue.jibun}
+            label=""
+            hint="시가·감정가 모두 없을 때 최종 적용"
+            enableLookup={true}
+          />
         </div>
       )}
 

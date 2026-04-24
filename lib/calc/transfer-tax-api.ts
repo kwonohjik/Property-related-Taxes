@@ -101,12 +101,15 @@ export function toEngineReductions(
 function buildAssetPayload(asset: AssetForm, bundledSaleMode: "actual" | "apportioned") {
   const reductions = toEngineReductions(asset.reductions ?? [], asset.acquisitionCause);
 
+  // 감환지: acquisitionArea에 의제취득면적이 UI에서 이미 계산됨
+  const effectiveLandArea = asset.acquisitionArea ? parseFloat(asset.acquisitionArea) : undefined;
+
   const inheritanceValuation =
     asset.acquisitionCause === "inheritance" && asset.inheritanceValuationMode === "auto"
       ? {
           inheritanceDate: asset.inheritanceDate || asset.acquisitionDate,
           assetKind: asset.inheritanceAssetKind,
-          landAreaM2: asset.acquisitionArea ? parseFloat(asset.acquisitionArea) : undefined,
+          landAreaM2: effectiveLandArea,
           publishedValueAtInheritance: parseAmount(asset.publishedValueAtInheritance),
         }
       : undefined;

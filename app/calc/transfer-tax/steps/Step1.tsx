@@ -37,6 +37,12 @@ export function Step1({
   }
 
   function updateAssets(assets: AssetForm[]) {
+    // 증환지 증가분 추가 등으로 자산이 2건 이상이 되면 일괄양도 모드 자동 활성화
+    if (assets.length > 1 && !hasBundledAssets) {
+      setHasBundledAssets(true);
+      onChange({ assets });
+      return;
+    }
     if (!hasBundledAssets && assets.length === 1) {
       // 단일 자산 모드: actualSalePrice → contractTotalPrice 자동 동기화
       onChange({ assets, contractTotalPrice: assets[0].actualSalePrice || "" });

@@ -30,7 +30,7 @@ export function AggregateSettingsPanel({ form, onChange }: AggregateSettingsPane
           onValueChange={(v) => { if (v) onChange({ taxYear: parseInt(v) }); }}
         >
           <SelectTrigger className="w-32">
-            <SelectValue />
+            <span>{form.taxYear}년</span>
           </SelectTrigger>
           <SelectContent>
             {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - i).map((y) => (
@@ -120,7 +120,15 @@ export function AggregateSettingsPanel({ form, onChange }: AggregateSettingsPane
                   onValueChange={(v) => { if (v) onChange({ filingType: v as MultiTransferFormData["filingType"] }); }}
                 >
                   <SelectTrigger className="max-w-xs">
-                    <SelectValue />
+                    <span>
+                      {form.filingType === "none"
+                        ? "무신고"
+                        : form.filingType === "under"
+                          ? "과소신고"
+                          : form.filingType === "excess_refund"
+                            ? "초과환급신고"
+                            : "정상신고 (가산세 없음)"}
+                    </span>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">무신고</SelectItem>
@@ -142,7 +150,13 @@ export function AggregateSettingsPanel({ form, onChange }: AggregateSettingsPane
                       }}
                     >
                       <SelectTrigger className="max-w-xs">
-                        <SelectValue />
+                        <span>
+                          {form.penaltyReason === "normal"
+                            ? "일반 (무/과소신고)"
+                            : form.penaltyReason === "fraudulent"
+                              ? "부정행위"
+                              : "역외거래 부정행위"}
+                        </span>
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="normal">일반 (무/과소신고)</SelectItem>

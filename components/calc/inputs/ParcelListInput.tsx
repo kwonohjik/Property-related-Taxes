@@ -230,7 +230,13 @@ export function ParcelListInput({ parcels, totalTransferPrice, onChange }: Parce
                     }
                   >
                     <SelectTrigger className="h-9 w-full">
-                      <SelectValue />
+                      <span className="text-left">
+                        {scenario === "reduction"
+                          ? "감환지 — 환지 후 교부받은 면적이 줄어든 경우"
+                          : scenario === "partial"
+                            ? "일부 양도 — 취득 토지 중 일부 면적만 이번에 양도"
+                            : "취득면적 = 양도면적 (일반)"}
+                      </span>
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="same">취득면적 = 양도면적 (일반)</SelectItem>

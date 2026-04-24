@@ -10,16 +10,28 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - ✅ **양도소득세**: 엔진·UI·API·테스트 완전 구현 (2025 세법 기준, 꾸준히 업그레이드 중)
 - 🚧 **취득세·재산세·종합부동산세·상속·증여**: 엔진 구현 완료, UI 부분 구현 (`components/calc/property/` 재산세 UI 진행 중)
 
+## ⚠️ Next.js 16 주의사항
+
+이 프로젝트는 **Next.js 16**을 사용합니다. `AGENTS.md`의 경고 참조: *"This is NOT the Next.js you know"* — API·컨벤션·파일 구조가 학습 데이터와 다를 수 있습니다.
+
+- **`middleware.ts` → `proxy.ts`**: Next.js 16에서 rename. 세션 처리는 `proxy.ts`에서 수행.
+- 변경 사항 확인 시 `node_modules/next/dist/docs/` 내 가이드를 먼저 읽을 것.
+
 ## Commands
 
 ```bash
-npm run dev          # 개발 서버 (Turbopack)
-npm run build        # 프로덕션 빌드
-npm run lint         # ESLint
-npm test             # vitest 전체 (73 파일 / 1,407 tests)
-npm run test:watch   # watch 모드
-npx vitest run <path>  # 단일 파일/디렉터리 실행
+npm run dev                   # 개발 서버 (Turbopack)
+npm run build                 # 프로덕션 빌드
+npm run lint                  # ESLint
+npm test                      # vitest 전체 (80 파일 / 1,484 tests)
+npm run test:watch            # watch 모드
+npx vitest run <path>         # 단일 파일/디렉터리 실행
 npx shadcn@latest add <name>  # shadcn/ui 컴포넌트 추가
+
+# 데이터·법령 시딩·검증 (.env.local 필요)
+npm run seed:tax-rates        # Supabase tax_rates 시딩 (scripts/seed-transfer-tax-rates.ts)
+npm run verify:legal          # 법령 조문 상수 검증 (scripts/verify-legal-codes.ts)
+npm run verify:legal:refresh  # 캐시 무효화 후 재검증
 ```
 
 ## Tech Stack
@@ -28,6 +40,7 @@ npx shadcn@latest add <name>  # shadcn/ui 컴포넌트 추가
 - **UI**: shadcn/ui + Tailwind CSS v4 + zustand (마법사 폼 상태)
 - **Backend**: Next.js Route Handlers (계산 API) + Server Actions (`actions/calculations.ts`, 이력 CRUD)
 - **Auth/DB**: Supabase (Auth + PostgreSQL) — `lib/supabase/`
+- **Observability**: Sentry (`sentry.{client,edge,server}.config.ts`)
 - **Testing**: vitest + jsdom — `__tests__/tax-engine/`
 
 ## Architecture — 2-Layer Tax Engine
@@ -77,13 +90,22 @@ Layer 2: Pure Engine (lib/tax-engine/*.ts)
 
 각 서브 CLAUDE.md는 해당 디렉터리에서 작업할 때 자동으로 Claude Code 컨텍스트에 포함됩니다.
 
-## Route Protection
+## Database (Supabase)
 
-`middleware.ts`에서 Supabase 세션 기반:
-- 보호 라우트 (`/history`, `/api/history`, `/api/pdf`): 미인증 시 `/auth/login` 리다이렉트
-- `/api/calc/*`, `/api/law/*`: 인증 불필요 (비로그인 계산·리서치 허용)
+- **마이그레이션**: `supabase/migrations/` — `tax_rates`·`regulated_areas`·`standard_prices`·`users`·`calculations` 테이블 DDL.
+- **초기 데이터**: `supabase/seed/`·`supabase/seeds/` — `npm run seed:tax-rates`로 반영.
+- **환경변수**: `NEXT_PUBLIC_SUPABASE_URL`·`NEXT_PUBLIC_SUPABASE_ANON_KEY`·`SUPABASE_SERVICE_ROLE_KEY`. 미설정 시에도 `proxy.ts`가 graceful 통과 → Supabase 없이 로컬 개발 가능.
 
-Supabase 환경변수(`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`) 미설정 시에도 middleware가 graceful 통과 → Supabase 없이 로컬 개발 가능.
+## Route Protection (`proxy.ts`)
+
+Supabase 세션 기반:
+- 보호 라우트 (`/history`, `/api/history`, `/api/pdf`): 미인증 시 `/auth/login` 리다이렉트.
+- `/api/calc/*`, `/api/law/*`: 인증 불필요 (비로그인 계산·리서치 허용).
+
+## Observability (Sentry)
+
+- 3개 환경별 설정: `sentry.client.config.ts` / `sentry.edge.config.ts` / `sentry.server.config.ts`.
+- 운영 이슈 재현 시 Sentry 이벤트의 `tax_type`·`request_id` 태그로 역추적.
 
 ## 법령 리서치 (`/law`)
 
@@ -115,15 +137,13 @@ korean-law-mcp 15개 도구를 법제처 Open API 직접 호출로 재현한 통
 
 ## Custom Agents
 
-`.claude/agents/`에 세금별·특례별 전문 에이전트:
+`.claude/agents/`에 세목별·특례별 전문 에이전트. 새 기능 구현 시 해당 전문 에이전트를 활성화할 것.
 
 | 세목 | 에이전트 |
 |---|---|
-| 양도소득세 | `transfer-tax-senior.md` + `multi-house-surcharge-senior.md` / `one-house-tax-senior.md` / `non-business-land-tax-senior.md` / `long-term-rental-tax-senior.md` / `new-housing-tax-senior.md` / `transfer-deduction-senior.md` |
-| 취득세 | `acquisition-tax-senior.md` + `-base` / `-object` / `-rate` / `-standard-price` / `-surcharge` / `-qa` |
-| 재산세 | `property-tax-senior.md` + `-object` / `-comprehensive-aggregate` / `-separate-aggregate` / `-separate` / `-qa` |
-| 종합부동산세 | `comprehensive-tax-senior.md` + `-house` / `-land-aggregate` / `-separate-land` / `-exclusion` / `-qa` |
-| 상속·증여 | `inheritance-gift-tax-senior.md` + `-deduction` / `-credit` / `-nontax-teacher` / `property-valuation-senior.md` |
-| QA 리더 | `tax-qa-lead.md` (6대 세목 QA 병렬 실행) |
-
-새 기능 구현 시 해당 전문 에이전트를 활성화하여 도메인 지식을 활용할 것.
+| 양도소득세 | `transfer-tax-senior` + `multi-house-surcharge-senior` / `one-house-tax-senior` / `non-business-land-tax-senior` / `long-term-rental-tax-senior` / `new-housing-tax-senior` / `transfer-deduction-senior` |
+| 취득세 | `acquisition-tax-senior` + `-base` / `-object` / `-rate` / `-standard-price` / `-surcharge` / `-qa` |
+| 재산세 | `property-tax-senior` + `-object` / `-comprehensive-aggregate` / `-separate-aggregate` / `-separate` / `-qa` |
+| 종합부동산세 | `comprehensive-tax-senior` + `-house` / `-land-aggregate` / `-separate-land` / `-exclusion` / `-qa` |
+| 상속·증여 | `inheritance-gift-tax-senior` + `-deduction` / `-credit` / `-nontax-teacher` / `property-valuation-senior` |
+| QA 리더 | `tax-qa-lead` (6대 세목 QA 병렬 실행) |

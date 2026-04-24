@@ -11,11 +11,9 @@
  *   - 조회 성공 시: 단가(원/㎡) × 면적(㎡) = 기준시가 자동 입력
  */
 
-import { useState } from "react";
 import { Label } from "@/components/ui/label";
 import { DateInput } from "@/components/ui/date-input";
-import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
-import { useStandardPriceLookup, getDefaultPriceYear } from "@/lib/hooks/useStandardPriceLookup";
+import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
 
 const ZONE_OPTIONS = [
   { value: "residential", label: "주거지역" },
@@ -38,78 +36,6 @@ interface SelfFarmingIncorporationInputProps {
   jibun?: string;
   /** 면적 (㎡) — 기준시가 자동 계산용 */
   landAreaM2?: string;
-}
-
-function PriceLookupSection({
-  jibun,
-  landAreaM2,
-  incorporationDate,
-  onStandardPriceCalculated,
-}: {
-  jibun?: string;
-  landAreaM2?: string;
-  incorporationDate: string;
-  onStandardPriceCalculated: (price: string) => void;
-}) {
-  const { loading, msg, year, setYear, yearOptions, lookup } =
-    useStandardPriceLookup("land");
-
-  // 편입일에서 기본 연도 초기화 (한 번만)
-  const defaultYear = incorporationDate
-    ? getDefaultPriceYear(incorporationDate, "land")
-    : year;
-
-  const [initialized, setInitialized] = useState(false);
-  if (!initialized && incorporationDate) {
-    setYear(defaultYear);
-    setInitialized(true);
-  }
-
-  async function handleLookup() {
-    const price = await lookup({ jibun: jibun ?? "", propertyType: "land", year });
-    if (price === null) return;
-    const area = parseFloat((landAreaM2 ?? "").replace(/,/g, ""));
-    if (area > 0) {
-      const total = Math.floor(area * price);
-      onStandardPriceCalculated(String(total));
-    }
-  }
-
-  return (
-    <div className="space-y-1.5">
-      <label className="block text-sm font-medium">
-        편입당시 개별공시지가 조회 <span className="text-xs text-muted-foreground font-normal">(원/㎡)</span>
-      </label>
-      <div className="flex items-center gap-2">
-        <select
-          value={year}
-          onChange={(e) => setYear(e.target.value)}
-          className="border rounded-md px-2 py-1.5 text-sm bg-background"
-        >
-          {yearOptions.map((y) => (
-            <option key={y} value={y}>{y}년</option>
-          ))}
-        </select>
-        <button
-          type="button"
-          onClick={handleLookup}
-          disabled={loading || !jibun}
-          className="px-3 py-1.5 rounded-md text-sm border border-border bg-background hover:bg-muted disabled:opacity-50 transition-colors"
-        >
-          {loading ? "조회 중…" : "공시가격 조회"}
-        </button>
-      </div>
-      {!jibun && (
-        <p className="text-xs text-muted-foreground">소재지를 먼저 입력하세요.</p>
-      )}
-      {msg && (
-        <p className={`text-xs ${msg.kind === "ok" ? "text-green-700 dark:text-green-400" : "text-destructive"}`}>
-          {msg.text}
-          {msg.kind === "ok" && landAreaM2 && ` → 기준시가 자동 계산됨`}
-        </p>
-      )}
-    </div>
-  );
 }
 
 export function SelfFarmingIncorporationInput({
@@ -180,27 +106,22 @@ export function SelfFarmingIncorporationInput({
             </div>
           </div>
 
-          {/* 편입당시 개별공시지가 조회 */}
-          <PriceLookupSection
-            jibun={jibun}
-            landAreaM2={landAreaM2}
-            incorporationDate={selfFarmingIncorporationDate}
-            onStandardPriceCalculated={(price) =>
-              onChange({ selfFarmingStandardPriceAtIncorporation: price })
-            }
-          />
-
-          {/* 편입일 당시 기준시가 */}
+          {/* 편입당시 기준시가 (개별공시지가 × 면적) */}
           <div className="space-y-1.5">
-            <CurrencyInput
-              label="편입일 당시 기준시가 (개별공시지가 × 면적, 원)"
-              value={selfFarmingStandardPriceAtIncorporation}
-              onChange={(v) => onChange({ selfFarmingStandardPriceAtIncorporation: v })}
+            <label className="block text-sm font-medium">
+              편입일 당시 기준시가 <span className="text-xs text-muted-foreground font-normal">(개별공시지가 × 면적, 원)</span>
+            </label>
+            <StandardPriceInput
+              propertyKind="land"
+              totalPrice={selfFarmingStandardPriceAtIncorporation}
+              onTotalPriceChange={(v) => onChange({ selfFarmingStandardPriceAtIncorporation: v })}
+              area={landAreaM2}
+              jibun={jibun}
+              referenceDate={selfFarmingIncorporationDate}
+              label=""
+              hint="편입일 직전 개별공시지가 × 토지면적(㎡)"
+              enableLookup={true}
             />
-            <p className="text-xs text-muted-foreground">
-              취득·양도 기준시가와 동일한 단위(총액 원)로 입력하세요. 편입일 직전 개별공시지가 ×
-              토지면적(㎡)으로 계산합니다.
-            </p>
           </div>
         </div>
       )}

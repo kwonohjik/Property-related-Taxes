@@ -142,6 +142,29 @@ export function validateStep(step: number, form: TransferFormData): string | nul
       return null;
     }
 
+    // 자산 레벨 환지처분 (단일 필지, parcelMode=false)
+    if (primaryKind === "land" && !primary?.parcelMode) {
+      const scenario = primary?.areaScenario ?? "same";
+      if (scenario === "reduction") {
+        if (!primary?.replottingConfirmDate) return "환지처분확정일을 입력하세요.";
+        if (!primary?.entitlementArea || parseFloat(primary.entitlementArea) <= 0)
+          return "환지 권리면적을 입력하세요.";
+        if (!primary?.allocatedArea || parseFloat(primary.allocatedArea) <= 0)
+          return "환지 교부면적을 입력하세요.";
+        if (!primary?.priorLandArea || parseFloat(primary.priorLandArea) <= 0)
+          return "환지 이전 종전면적을 입력하세요.";
+        if (parseFloat(primary.entitlementArea) <= parseFloat(primary.allocatedArea))
+          return "감환지는 권리면적이 교부면적보다 커야 합니다.";
+      }
+      if (scenario === "increase") {
+        if (!primary?.replottingConfirmDate) return "환지처분확정일을 입력하세요.";
+        if (!primary?.acquisitionArea || parseFloat(primary.acquisitionArea) <= 0)
+          return "취득 당시 면적(권리면적 기준)을 입력하세요.";
+        if (!primary?.transferArea || parseFloat(primary.transferArea) <= 0)
+          return "양도 당시 면적을 입력하세요.";
+      }
+    }
+
     // 1990.8.30. 이전 토지 환산
     if (form.pre1990Enabled && primaryKind === "land") {
       const areaSqm = parseFloat((primary?.acquisitionArea || "").replace(/,/g, ""));

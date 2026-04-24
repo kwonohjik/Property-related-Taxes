@@ -1,6 +1,6 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-04-23T10:12:44.305Z",
+  "lastUpdated": "2026-04-24T04:12:42.878Z",
   "activeFeatures": [
     "claude-code-mastery",
     "calc",
@@ -134,9 +134,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-13T21:04:14.863Z",
-        "lastUpdated": "2026-04-22T21:32:18.921Z"
+        "lastUpdated": "2026-04-24T04:12:33.451Z"
       },
-      "lastFile": "/Users/mynote/workspace/Property-related-Taxes/lib/calc/transfer-tax-validate.ts"
+      "lastFile": "/Users/mynote/workspace/Property-related-Taxes/components/calc/AcquisitionTaxForm.tsx"
     },
     "inheritance-tax": {
       "phase": "do",
@@ -212,7 +212,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-13T21:04:43.135Z",
-        "lastUpdated": "2026-04-23T10:00:40.211Z"
+        "lastUpdated": "2026-04-24T01:51:15.849Z"
       },
       "lastFile": "/Users/mynote/workspace/Property-related-Taxes/__tests__/tax-engine/pre-1990-land-valuation.test.ts"
     },
@@ -316,7 +316,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-13T23:20:05.996Z",
-        "lastUpdated": "2026-04-23T07:49:38.892Z"
+        "lastUpdated": "2026-04-24T04:02:49.612Z"
       },
       "lastFile": "/Users/mynote/workspace/Property-related-Taxes/components/calc/transfer/CompanionAcqPurchaseBlock.tsx"
     },
@@ -329,7 +329,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-13T23:45:07.391Z",
-        "lastUpdated": "2026-04-23T06:46:58.430Z"
+        "lastUpdated": "2026-04-24T04:01:30.327Z"
       },
       "lastFile": "/Users/mynote/workspace/Property-related-Taxes/lib/stores/calc-wizard-store.ts"
     },
@@ -355,7 +355,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-14T00:05:36.016Z",
-        "lastUpdated": "2026-04-23T07:36:42.013Z"
+        "lastUpdated": "2026-04-23T22:45:17.523Z"
       },
       "lastFile": "/Users/mynote/workspace/Property-related-Taxes/components/ui/date-input.tsx"
     },
@@ -407,7 +407,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-14T10:55:34.465Z",
-        "lastUpdated": "2026-04-23T09:49:39.371Z"
+        "lastUpdated": "2026-04-24T04:12:42.877Z"
       },
       "lastFile": "/Users/mynote/workspace/Property-related-Taxes/components/calc/inputs/SelfFarmingIncorporationInput.tsx"
     },
@@ -615,9 +615,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-16T02:20:20.728Z",
-        "lastUpdated": "2026-04-21T10:17:51.839Z"
+        "lastUpdated": "2026-04-24T04:08:45.445Z"
       },
-      "lastFile": "/Users/mynote/workspace/Property-related-Taxes/components/calc/property/Step3.tsx"
+      "lastFile": "/Users/mynote/workspace/Property-related-Taxes/components/calc/property/Step0.tsx"
     },
     "comprehensive": {
       "phase": "do",
@@ -968,7 +968,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-20T03:00:29.249Z",
-        "lastUpdated": "2026-04-22T12:08:54.911Z"
+        "lastUpdated": "2026-04-23T22:33:11.114Z"
       },
       "lastFile": "/Users/mynote/workspace/Property-related-Taxes/app/calc/transfer-tax/multi/MultiTransferTaxCalculator.tsx"
     },
@@ -1020,9 +1020,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-21T02:27:47.645Z",
-        "lastUpdated": "2026-04-23T09:49:47.822Z"
+        "lastUpdated": "2026-04-24T02:39:47.666Z"
       },
-      "lastFile": "/Users/mynote/workspace/Property-related-Taxes/app/calc/transfer-tax/steps/Step5.tsx"
+      "lastFile": "/Users/mynote/workspace/Property-related-Taxes/app/calc/transfer-tax/steps/Step1.tsx"
     },
     "legal-codes": {
       "phase": "do",
@@ -1046,7 +1046,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-21T05:44:09.289Z",
-        "lastUpdated": "2026-04-21T05:49:03.627Z"
+        "lastUpdated": "2026-04-24T04:10:04.371Z"
       },
       "lastFile": "/Users/mynote/workspace/Property-related-Taxes/components/calc/acquisition/Step1.tsx"
     },
@@ -1085,7 +1085,7 @@
   "session": {
     "startedAt": "2026-04-13T10:11:34.572Z",
     "onboardingCompleted": false,
-    "lastActivity": "2026-04-23T10:12:44.305Z"
+    "lastActivity": "2026-04-24T04:12:42.878Z"
   },
   "history": [
     {
@@ -14171,6 +14171,768 @@
     {
       "timestamp": "2026-04-23T10:12:44.305Z",
       "feature": "transfer-tax",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-23T21:47:02.970Z",
+      "feature": "stores",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-23T21:47:06.433Z",
+      "feature": "stores",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-23T21:47:09.657Z",
+      "feature": "stores",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-23T21:48:23.278Z",
+      "feature": "inputs",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-23T21:49:04.034Z",
+      "feature": "calc",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-23T21:49:17.052Z",
+      "feature": "calc",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-23T21:49:23.968Z",
+      "feature": "transfer",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-23T22:33:11.115Z",
+      "feature": "multi",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-23T22:45:09.211Z",
+      "feature": "ui",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-23T22:45:12.412Z",
+      "feature": "ui",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-23T22:45:17.524Z",
+      "feature": "ui",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-23T22:45:24.472Z",
+      "feature": "transfer",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-23T22:45:29.817Z",
+      "feature": "transfer",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-23T22:48:31.688Z",
+      "feature": "transfer",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-23T22:49:10.085Z",
+      "feature": "steps",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-23T22:49:57.488Z",
+      "feature": "steps",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-23T22:50:03.505Z",
+      "feature": "steps",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T01:40:07.905Z",
+      "feature": "stores",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T01:40:12.555Z",
+      "feature": "stores",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T01:40:16.218Z",
+      "feature": "stores",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T01:40:19.526Z",
+      "feature": "stores",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T01:40:25.340Z",
+      "feature": "stores",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T01:40:28.836Z",
+      "feature": "stores",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T01:40:39.553Z",
+      "feature": "stores",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T01:40:43.975Z",
+      "feature": "stores",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T01:40:48.113Z",
+      "feature": "stores",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T01:41:16.694Z",
+      "feature": "stores",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T01:41:30.222Z",
+      "feature": "inputs",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T01:41:38.006Z",
+      "feature": "inputs",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T01:41:42.452Z",
+      "feature": "inputs",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T01:41:51.944Z",
+      "feature": "inputs",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T01:41:57.877Z",
+      "feature": "transfer",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T01:42:03.968Z",
+      "feature": "transfer",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T01:42:12.486Z",
+      "feature": "transfer",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T01:42:16.109Z",
+      "feature": "transfer",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T01:42:26.438Z",
+      "feature": "transfer",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T01:42:30.086Z",
+      "feature": "transfer",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T01:42:37.654Z",
+      "feature": "transfer",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T01:42:40.575Z",
+      "feature": "transfer",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T01:42:50.183Z",
+      "feature": "transfer",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T01:43:09.669Z",
+      "feature": "transfer",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T01:43:14.018Z",
+      "feature": "transfer",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T01:43:22.282Z",
+      "feature": "transfer",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T01:43:37.137Z",
+      "feature": "transfer",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T01:44:01.270Z",
+      "feature": "transfer",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T01:44:11.924Z",
+      "feature": "transfer",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T01:44:15.959Z",
+      "feature": "transfer",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T01:44:21.893Z",
+      "feature": "transfer",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T01:44:25.309Z",
+      "feature": "transfer",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T01:44:37.940Z",
+      "feature": "steps",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T01:44:41.658Z",
+      "feature": "calc",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T01:44:45.153Z",
+      "feature": "calc",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T01:44:51.826Z",
+      "feature": "calc",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T01:44:56.491Z",
+      "feature": "calc",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T01:45:09.852Z",
+      "feature": "steps",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T01:49:47.263Z",
+      "feature": "tax-engine",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T01:51:12.458Z",
+      "feature": "tax-engine",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T01:51:15.850Z",
+      "feature": "tax-engine",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T01:55:43.829Z",
+      "feature": "stores",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T01:55:47.607Z",
+      "feature": "stores",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T01:55:55.346Z",
+      "feature": "stores",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T01:56:03.483Z",
+      "feature": "stores",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T01:56:16.617Z",
+      "feature": "transfer",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T01:56:32.448Z",
+      "feature": "transfer",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T01:59:15.300Z",
+      "feature": "inputs",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T01:59:19.843Z",
+      "feature": "inputs",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T01:59:24.147Z",
+      "feature": "inputs",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T01:59:29.828Z",
+      "feature": "inputs",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T01:59:37.577Z",
+      "feature": "inputs",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T01:59:44.081Z",
+      "feature": "transfer",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T01:59:48.511Z",
+      "feature": "transfer",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T01:59:52.517Z",
+      "feature": "transfer",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T02:00:11.121Z",
+      "feature": "transfer",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T02:00:16.612Z",
+      "feature": "transfer",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T02:07:16.201Z",
+      "feature": "transfer",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T02:07:23.757Z",
+      "feature": "transfer",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T02:07:41.878Z",
+      "feature": "inputs",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T02:07:59.476Z",
+      "feature": "transfer",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T02:08:05.192Z",
+      "feature": "transfer",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T02:08:11.351Z",
+      "feature": "transfer",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T02:30:27.210Z",
+      "feature": "stores",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T02:30:31.348Z",
+      "feature": "stores",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T02:30:36.170Z",
+      "feature": "stores",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T02:30:40.151Z",
+      "feature": "transfer",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T02:31:04.264Z",
+      "feature": "transfer",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T02:31:45.931Z",
+      "feature": "transfer",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T02:31:57.318Z",
+      "feature": "calc",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T02:32:08.424Z",
+      "feature": "calc",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T02:38:49.468Z",
+      "feature": "transfer",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T02:38:56.620Z",
+      "feature": "transfer",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T02:39:00.074Z",
+      "feature": "transfer",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T02:39:04.808Z",
+      "feature": "transfer",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T02:39:12.088Z",
+      "feature": "transfer",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T02:39:40.423Z",
+      "feature": "transfer",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T02:39:47.667Z",
+      "feature": "steps",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T02:40:06.167Z",
+      "feature": "transfer",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T03:59:16.372Z",
+      "feature": "inputs",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T03:59:57.684Z",
+      "feature": "transfer",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T04:00:33.081Z",
+      "feature": "transfer",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T04:01:04.815Z",
+      "feature": "transfer",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T04:01:12.894Z",
+      "feature": "stores",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T04:01:16.320Z",
+      "feature": "stores",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T04:01:30.328Z",
+      "feature": "stores",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T04:01:43.020Z",
+      "feature": "transfer",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T04:01:47.136Z",
+      "feature": "transfer",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T04:02:37.948Z",
+      "feature": "transfer",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T04:02:49.613Z",
+      "feature": "transfer",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T04:08:45.446Z",
+      "feature": "property",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T04:08:50.581Z",
+      "feature": "calc",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T04:08:57.561Z",
+      "feature": "calc",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T04:09:01.496Z",
+      "feature": "calc",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T04:09:19.545Z",
+      "feature": "calc",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T04:09:26.377Z",
+      "feature": "calc",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T04:09:36.257Z",
+      "feature": "calc",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T04:10:04.372Z",
+      "feature": "acquisition",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T04:10:10.705Z",
+      "feature": "calc",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T04:10:19.300Z",
+      "feature": "calc",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T04:10:23.728Z",
+      "feature": "calc",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T04:10:29.529Z",
+      "feature": "calc",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T04:10:43.338Z",
+      "feature": "calc",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T04:10:57.872Z",
+      "feature": "calc",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T04:11:03.065Z",
+      "feature": "inputs",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T04:11:30.552Z",
+      "feature": "inputs",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T04:11:39.221Z",
+      "feature": "inputs",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T04:12:29.652Z",
+      "feature": "calc",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T04:12:33.452Z",
+      "feature": "calc",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-24T04:12:42.878Z",
+      "feature": "inputs",
       "phase": "do",
       "action": "updated"
     }

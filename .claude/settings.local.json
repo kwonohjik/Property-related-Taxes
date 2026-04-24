@@ -133,7 +133,8 @@
       "Bash(awk '{print $NF, $5}')",
       "Bash(awk '{print $1}')",
       "Bash(claude mcp *)",
-      "Bash(claude *)"
+      "Bash(claude *)",
+      "Bash(echo \"개발 서버 시작됨 \\(PID: $!\\)\")"
     ]
   },
   "outputStyle": "bkit:bkit-learning"

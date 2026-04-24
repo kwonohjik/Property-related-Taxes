@@ -16,8 +16,9 @@ interface Props {
 }
 
 export function CompanionAssetsSection({ assets, bundledSaleMode, onChange, singleMode, transferDate }: Props) {
-  function addAsset() {
-    onChange([...assets, makeDefaultAsset(assets.length + 1)]);
+  function addAsset(patch?: Partial<AssetForm>) {
+    const base = makeDefaultAsset(assets.length + 1);
+    onChange([...assets, patch ? { ...base, ...patch } : base]);
   }
 
   function removeAsset(idx: number) {
@@ -37,15 +38,15 @@ export function CompanionAssetsSection({ assets, bundledSaleMode, onChange, sing
           asset={asset}
           bundledSaleMode={bundledSaleMode}
           onChange={(patch) => updateAsset(idx, patch)}
-          // 자산이 2건 이상일 때만 삭제 버튼 노출
           onRemove={assets.length > 1 ? () => removeAsset(idx) : undefined}
           singleMode={singleMode && assets.length === 1}
           transferDate={transferDate}
+          onAddAsset={(patch) => addAsset(patch)}
         />
       ))}
 
       {assets.length > 1 && (
-        <Button type="button" variant="outline" onClick={addAsset} className="w-full">
+        <Button type="button" variant="outline" onClick={() => addAsset()} className="w-full">
           + 자산 추가
         </Button>
       )}
