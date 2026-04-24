@@ -126,14 +126,14 @@ describe("PDF 실사례 재현 — 1988.12.3. 취득 농지, 2023.2.16. 양도",
     gradeAtAcquisition: 103,       // 번호 조회 → 689
   };
 
-  it("㎡당 가액 = 47,547.xx원 (중간 절사 없음, floor 시 47,547)", () => {
+  it("㎡당 가액 = 47,547원 (원/㎡ 단위 이하 절사, 집행기준 97-176의2)", () => {
     const r = calculatePre1990LandValuation(input);
-    expect(Math.floor(r.pricePerSqmAtAcquisition)).toBe(47_547);
+    expect(r.pricePerSqmAtAcquisition).toBe(47_547);
   });
 
-  it("취득시 기준시가 = 114,922,558원 (최종 원단위 절사)", () => {
+  it("취득시 기준시가 = 114,921,099원 (㎡당 가액 절사 후 곱셈, PDF 정답)", () => {
     const r = calculatePre1990LandValuation(input);
-    expect(r.standardPriceAtAcquisition).toBe(114_922_558);
+    expect(r.standardPriceAtAcquisition).toBe(114_921_099);
   });
 
   it("양도시 기준시가 = 584,188,900원", () => {
@@ -157,7 +157,7 @@ describe("PDF 실사례 재현 — 1988.12.3. 취득 농지, 2023.2.16. 양도",
     const acqCost = Math.floor(
       (550_000_000 * r.standardPriceAtAcquisition) / r.standardPriceAtTransfer,
     );
-    expect(acqCost).toBe(108_196_863);
+    expect(acqCost).toBe(108_195_490);
   });
 });
 

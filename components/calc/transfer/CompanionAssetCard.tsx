@@ -1,6 +1,7 @@
 "use client";
 
 import type { AssetForm, ParcelFormItem } from "@/lib/stores/calc-wizard-store";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -187,18 +188,89 @@ export function CompanionAssetCard({
         </div>
       )}
 
-      {/* 토지 면적 — 양도시 기준시가 자동계산 + 상속 보충적평가액에 공통 사용 */}
+      {/* 면적 정보 — 토지 자산만 표시 */}
       {asset.assetKind === "land" && (
-        <div className="space-y-1.5">
-          <label className="block text-sm font-medium">토지 면적 (㎡)</label>
-          <input
-            type="number"
-            value={asset.landAreaM2}
-            onChange={(e) => onChange({ landAreaM2: e.target.value })}
-            min={0}
-            placeholder="예: 793"
-            className="w-48 border rounded-md px-3 py-2 text-sm bg-background"
-          />
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium">면적 입력 방식</label>
+            <Select
+              value={asset.areaScenario ?? "same"}
+              onValueChange={(v) => {
+                const next = v as AssetForm["areaScenario"];
+                if (next === "same") {
+                  const val = asset.transferArea || asset.acquisitionArea || "";
+                  onChange({ areaScenario: next, acquisitionArea: val, transferArea: val });
+                } else {
+                  onChange({ areaScenario: next });
+                }
+              }}
+            >
+              <SelectTrigger className="h-9 w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="same">취득면적 = 양도면적 (일반)</SelectItem>
+                <SelectItem value="partial">일부 양도 — 취득 토지 중 일부만 양도</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* same: 단일 면적 입력 */}
+          {(asset.areaScenario ?? "same") === "same" && (
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground">
+                취득·양도 당시 면적 (㎡)
+                <span
+                  title="취득·양도 기준시가 = ㎡ 단가 × 이 면적. 공시가격 자동 조회 및 환산취득가 계산에 사용됩니다."
+                  className="ml-1 cursor-help"
+                >ⓘ</span>
+              </label>
+              <input
+                type="number"
+                value={asset.transferArea}
+                onChange={(e) =>
+                  onChange({ acquisitionArea: e.target.value, transferArea: e.target.value })
+                }
+                min={0}
+                placeholder="예: 793"
+                className="w-full border rounded-md px-3 py-2 text-sm bg-background"
+              />
+            </div>
+          )}
+
+          {/* partial: 취득·양도 분리 입력 */}
+          {asset.areaScenario === "partial" && (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">
+                취득 당시 면적 (㎡)
+                <span title="처음 취득 시 보유한 전체 면적. 취득 기준시가 = ㎡ 단가 × 이 면적." className="ml-1 cursor-help">ⓘ</span>
+              </label>
+                <input
+                  type="number"
+                  value={asset.acquisitionArea}
+                  onChange={(e) => onChange({ acquisitionArea: e.target.value })}
+                  min={0}
+                  placeholder="전체 취득한 면적"
+                  className="w-full border rounded-md px-3 py-2 text-sm bg-background"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">
+                양도 당시 면적 (㎡)
+                <span title="이번 양도 계약에서 매매하는 면적. 양도 기준시가 = ㎡ 단가 × 이 면적." className="ml-1 cursor-help">ⓘ</span>
+              </label>
+                <input
+                  type="number"
+                  value={asset.transferArea}
+                  onChange={(e) => onChange({ transferArea: e.target.value })}
+                  min={0}
+                  placeholder="이번에 파는 면적"
+                  className="w-full border rounded-md px-3 py-2 text-sm bg-background"
+                />
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -213,8 +285,8 @@ export function CompanionAssetCard({
         singleMode={singleMode}
         jibun={asset.addressJibun || undefined}
         transferDate={transferDate}
-        landAreaM2={asset.assetKind === "land" ? asset.landAreaM2 : undefined}
-        onLandAreaM2Change={asset.assetKind === "land" ? (v) => onChange({ landAreaM2: v }) : undefined}
+        transferArea={asset.assetKind === "land" ? asset.transferArea : undefined}
+        onTransferAreaChange={asset.assetKind === "land" ? (v) => onChange({ transferArea: v }) : undefined}
       />
 
       {/* 취득 원인 */}
@@ -253,10 +325,10 @@ export function CompanionAssetCard({
             transferDate={transferDate}
             jibun={asset.addressJibun || undefined}
             assetKind={asset.assetKind}
-            landAreaM2={asset.assetKind === "land" ? asset.landAreaM2 : undefined}
+            acquisitionArea={asset.assetKind === "land" ? asset.acquisitionArea : undefined}
+            transferArea={asset.assetKind === "land" ? asset.transferArea : undefined}
             pre1990Form={{
               pre1990Enabled: asset.pre1990Enabled,
-              pre1990AreaSqm: asset.pre1990AreaSqm,
               pre1990PricePerSqm_1990: asset.pre1990PricePerSqm_1990,
               pre1990PricePerSqm_atTransfer: asset.pre1990PricePerSqm_atTransfer,
               pre1990Grade_current: asset.pre1990Grade_current,
@@ -286,7 +358,7 @@ export function CompanionAssetCard({
             onInheritanceAssetKindChange={(v) => onChange({ inheritanceAssetKind: v })}
             inheritanceDate={asset.inheritanceDate}
             onInheritanceDateChange={(v) => onChange({ inheritanceDate: v })}
-            landAreaM2={asset.landAreaM2}
+            landAreaM2={asset.acquisitionArea}
             publishedValueAtInheritance={asset.publishedValueAtInheritance}
             onPublishedValueAtInheritanceChange={(v) =>
               onChange({ publishedValueAtInheritance: v })
@@ -335,6 +407,7 @@ export function CompanionAssetCard({
                   entitlementArea: "",
                   allocatedArea: "",
                   priorLandArea: "",
+                  areaScenario: "same",
                 };
                 onChange({
                   parcelMode: checked,

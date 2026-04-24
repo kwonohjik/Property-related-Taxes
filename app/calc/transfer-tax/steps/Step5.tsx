@@ -187,7 +187,7 @@ function AssetReductionBlock({
               updateReduction("self_farming", patch as Partial<AssetReductionForm>)
             }
             jibun={asset.addressJibun || undefined}
-            landAreaM2={asset.assetKind === "land" ? asset.landAreaM2 : undefined}
+            landAreaM2={asset.assetKind === "land" ? asset.acquisitionArea : undefined}
           />
         </div>
       )}

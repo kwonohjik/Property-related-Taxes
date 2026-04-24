@@ -99,12 +99,36 @@ export function validateStep(step: number, form: TransferFormData): string | nul
       for (let i = 0; i < parcels.length; i++) {
         const p = parcels[i];
         const label = `필지 ${i + 1}`;
+        const scenario = p.areaScenario ?? "partial";
+
+        // 취득일 검증
         if (!p.useDayAfterReplotting && !p.acquisitionDate)
           return `${label}: 취득일을 선택하세요.`;
         if (p.useDayAfterReplotting && !p.replottingConfirmDate)
           return `${label}: 환지처분확정일을 선택하세요.`;
-        if (!p.transferArea || parseFloat(p.transferArea) <= 0)
-          return `${label}: 양도면적을 입력하세요.`;
+
+        // 시나리오별 면적 검증
+        if (scenario === "reduction") {
+          if (!p.entitlementArea || parseFloat(p.entitlementArea) <= 0)
+            return `${label}: 권리면적을 입력하세요.`;
+          if (!p.allocatedArea || parseFloat(p.allocatedArea) <= 0)
+            return `${label}: 교부면적을 입력하세요.`;
+          if (!p.priorLandArea || parseFloat(p.priorLandArea) <= 0)
+            return `${label}: 종전토지면적을 입력하세요.`;
+          if (parseFloat(p.entitlementArea) <= parseFloat(p.allocatedArea))
+            return `${label}: 감환지는 권리면적이 교부면적보다 커야 합니다.`;
+        } else {
+          if (!p.transferArea || parseFloat(p.transferArea) <= 0)
+            return `${label}: 양도면적을 입력하세요.`;
+          if (scenario === "partial") {
+            if (!p.acquisitionArea || parseFloat(p.acquisitionArea) <= 0)
+              return `${label}: 총 취득면적을 입력하세요.`;
+            if (parseFloat(p.acquisitionArea) < parseFloat(p.transferArea))
+              return `${label}: 취득면적은 양도면적 이상이어야 합니다.`;
+          }
+        }
+
+        // 취득원인별 검증
         if (p.acquisitionMethod === "estimated") {
           if (!p.standardPricePerSqmAtAcq || parseFloat(p.standardPricePerSqmAtAcq) <= 0)
             return `${label}: 취득시 ㎡당 기준시가를 입력하세요.`;
@@ -120,8 +144,8 @@ export function validateStep(step: number, form: TransferFormData): string | nul
 
     // 1990.8.30. 이전 토지 환산
     if (form.pre1990Enabled && primaryKind === "land") {
-      const areaSqm = parseFloat((form.pre1990AreaSqm || "").replace(/,/g, ""));
-      if (!areaSqm || areaSqm <= 0) return "토지 면적(㎡)을 입력하세요.";
+      const areaSqm = parseFloat((primary?.acquisitionArea || "").replace(/,/g, ""));
+      if (!areaSqm || areaSqm <= 0) return "취득 당시 면적(㎡)을 입력하세요.";
       if (!form.pre1990PricePerSqm_1990 || parseAmount(form.pre1990PricePerSqm_1990) <= 0)
         return "1990.1.1. 개별공시지가(원/㎡)를 입력하세요.";
       if (!form.pre1990PricePerSqm_atTransfer || parseAmount(form.pre1990PricePerSqm_atTransfer) <= 0)

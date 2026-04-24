@@ -20,7 +20,6 @@ import { calculatePre1990LandValuation } from "@/lib/tax-engine/pre-1990-land-va
 
 export interface Pre1990FormSlice {
   pre1990Enabled: boolean;
-  pre1990AreaSqm: string;
   pre1990PricePerSqm_1990: string;
   pre1990PricePerSqm_atTransfer: string;
   pre1990Grade_current: string;
@@ -32,6 +31,8 @@ export interface Pre1990FormSlice {
 interface Props {
   form: Pre1990FormSlice;
   onChange: (patch: Partial<Pre1990FormSlice>) => void;
+  /** 취득 당시 면적 (㎡) — 환산 계산의 areaSqm. 상위 자산 aquisitionArea 주입. */
+  acquisitionArea?: string;
   /** vworld 조회용 지번 주소 (1990.8.30. 개별공시지가 자동 조회) */
   jibun?: string;
   /** 취득일 — 환산 계산 + CAP-2 트리거 판정용 */
@@ -66,6 +67,7 @@ function parseAmount(s: string | undefined): number {
 export function Pre1990LandValuationInput({
   form,
   onChange,
+  acquisitionArea,
   jibun,
   acquisitionDate,
   transferDate,
@@ -81,7 +83,7 @@ export function Pre1990LandValuationInput({
     atAcq:   tryResolveGrade(mode, form.pre1990Grade_atAcq),
   };
 
-  const area = parseAmount(form.pre1990AreaSqm);
+  const area = parseAmount(acquisitionArea);
   const price1990 = parseAmount(form.pre1990PricePerSqm_1990);
 
   // 모든 입력 충족 시 자동 환산 계산 → 취득시 기준시가 자동 입력
@@ -112,6 +114,7 @@ export function Pre1990LandValuationInput({
   }, [
     form.pre1990Enabled,
     acquisitionDate,
+    acquisitionArea,
     transferDate,
     area,
     price1990,
@@ -177,19 +180,18 @@ export function Pre1990LandValuationInput({
 
       {!form.pre1990Enabled ? null : (
         <div className="space-y-4">
-          {/* 면적 — 상위 자산 면적과 자동 연동 */}
-          <div className="space-y-1.5">
-            <label className="block text-sm font-medium">
-              면적 (㎡) <span className="text-destructive">*</span>
-              <span className="ml-1 text-[11px] text-muted-foreground font-normal">(자산 면적 자동 연동)</span>
-            </label>
-            <CurrencyInput
-              label=""
-              value={form.pre1990AreaSqm ?? ""}
-              onChange={(v) => onChange({ pre1990AreaSqm: v })}
-              placeholder="예: 2417"
-            />
-          </div>
+          {/* 면적 — 상위 자산 취득 당시 면적 자동 연동 (직접 수정 불필요) */}
+          {acquisitionArea && (
+            <p className="text-xs text-muted-foreground">
+              환산 면적: <strong>{parseAmount(acquisitionArea).toLocaleString()}㎡</strong>
+              <span className="ml-1">(취득 당시 면적 자동 적용)</span>
+            </p>
+          )}
+          {!acquisitionArea && (
+            <p className="text-xs text-amber-700">
+              ⚠ 취득 당시 면적을 먼저 입력하면 환산 계산이 자동으로 실행됩니다.
+            </p>
+          )}
 
           {/* 1990.8.30. 개별공시지가 + 조회 버튼 */}
           <div className="space-y-1.5">

@@ -420,6 +420,30 @@ export function Step3({ form, onChange }: { form: TransferFormData; onChange: (d
                 )}
               </div>
 
+              {/* 1990.8.30. 이전 취득 토지 환산 — 취득시/양도시 기준시가 사이에 배치 */}
+              {primary.assetKind === "land" &&
+                (isAcqYearPre1990 || (primary.acquisitionDate && primary.acquisitionDate < "1990-08-30")) && (
+                  <Pre1990LandValuationInput
+                    form={{
+                      pre1990Enabled: form.pre1990Enabled,
+                      pre1990PricePerSqm_1990: form.pre1990PricePerSqm_1990,
+                      pre1990PricePerSqm_atTransfer: form.pre1990PricePerSqm_atTransfer,
+                      pre1990Grade_current: form.pre1990Grade_current,
+                      pre1990Grade_prev: form.pre1990Grade_prev,
+                      pre1990Grade_atAcq: form.pre1990Grade_atAcq,
+                      pre1990GradeMode: form.pre1990GradeMode,
+                    }}
+                    acquisitionArea={primary.acquisitionArea}
+                    onChange={(patch) => onChange(patch)}
+                    jibun={primary.addressJibun}
+                    acquisitionDate={primary.acquisitionDate}
+                    transferDate={form.transferDate}
+                    onCalculatedPrice={(price) =>
+                      onPrimaryChange({ standardPriceAtAcq: String(price) })
+                    }
+                  />
+                )}
+
               {/* 양도 당시 기준시가 */}
               <div className="space-y-1.5">
                 <label className="block text-sm font-medium">
@@ -509,30 +533,6 @@ export function Step3({ form, onChange }: { form: TransferFormData; onChange: (d
               hint="취득 당시 공인감정기관이 평가한 가액"
             />
           )}
-
-          {/* 1990.8.30. 이전 취득 토지 환산 */}
-          {primary.assetKind === "land" &&
-            (isAcqYearPre1990 || (primary.acquisitionDate && primary.acquisitionDate < "1990-08-30")) && (
-              <Pre1990LandValuationInput
-                form={{
-                  pre1990Enabled: form.pre1990Enabled,
-                  pre1990AreaSqm: form.pre1990AreaSqm,
-                  pre1990PricePerSqm_1990: form.pre1990PricePerSqm_1990,
-                  pre1990PricePerSqm_atTransfer: form.pre1990PricePerSqm_atTransfer,
-                  pre1990Grade_current: form.pre1990Grade_current,
-                  pre1990Grade_prev: form.pre1990Grade_prev,
-                  pre1990Grade_atAcq: form.pre1990Grade_atAcq,
-                  pre1990GradeMode: form.pre1990GradeMode,
-                }}
-                onChange={(patch) => onChange(patch)}
-                jibun={primary.addressJibun}
-                acquisitionDate={primary.acquisitionDate}
-                transferDate={form.transferDate}
-                onCalculatedPrice={(price) =>
-                  onPrimaryChange({ standardPriceAtAcq: String(price) })
-                }
-              />
-            )}
 
           {/* §114조의2 신축·증축 가산세 판정 */}
           {(primary.assetKind === "building" || primary.assetKind === "housing") && (

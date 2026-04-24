@@ -17,6 +17,8 @@ import { cn } from "@/lib/utils";
 interface DateInputProps {
   value: string; // YYYY-MM-DD
   onChange: (value: string) => void;
+  /** 포커스가 위젯 전체를 벗어날 때 발생 (연·월·일 필드 간 이동 시엔 발생하지 않음) */
+  onBlur?: () => void;
   className?: string;
   disabled?: boolean;
 }
@@ -44,7 +46,7 @@ function buildDateStr(year: string, month: string, day: string): string {
   return "";
 }
 
-export function DateInput({ value, onChange, className, disabled }: DateInputProps) {
+export function DateInput({ value, onChange, onBlur, className, disabled }: DateInputProps) {
   const parsed = parseDateStr(value);
   const [year, setYear] = useState(parsed.year);
   const [month, setMonth] = useState(parsed.month);
@@ -116,6 +118,12 @@ export function DateInput({ value, onChange, className, disabled }: DateInputPro
         disabled && "opacity-50 cursor-not-allowed",
         className,
       )}
+      onBlur={(e) => {
+        // 연·월·일 필드 간 포커스 이동은 무시하고 위젯 전체를 벗어날 때만 발생
+        if (onBlur && !e.currentTarget.contains(e.relatedTarget as Node)) {
+          onBlur();
+        }
+      }}
     >
       <input
         type="text"

@@ -258,8 +258,8 @@ export function calculatePre1990LandValuation(
   const appliedRatio = ratioCap2Triggered && rawRatio > 1.0 ? 1.0 : rawRatio;
   const ratioCap2Applied = ratioCap2Triggered && rawRatio > 1.0;
 
-  // ㎡당 가액 = 1990.1.1. 개별공시지가 × 비율 — 중간 절사 없이 소수 유지
-  const pricePerSqmAtAcquisition = input.pricePerSqm_1990 * appliedRatio;
+  // ㎡당 가액 = 1990.1.1. 개별공시지가 × 비율 → 원/㎡ 단위 이하 절사 (집행기준 97-176의2)
+  const pricePerSqmAtAcquisition = Math.floor(input.pricePerSqm_1990 * appliedRatio);
 
   // 기준시가 = ㎡당 가액 × 면적 → 모든 계산 완료 후 최종에서만 원단위 이하 절사
   const standardPriceAtAcquisition = Math.floor(

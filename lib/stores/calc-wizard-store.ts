@@ -118,8 +118,17 @@ export interface AssetForm {
   inheritanceDate: string;
   /** 자산 종류 (토지/단독주택/공동주택 — 보충적평가용) */
   inheritanceAssetKind: "land" | "house_individual" | "house_apart";
-  /** 토지 면적 (㎡, land일 때 사용) */
-  landAreaM2: string;
+  /** 취득 당시 면적 (㎡) — 취득 기준시가 산정, Pre1990 환산 */
+  acquisitionArea: string;
+  /** 양도 당시 면적 (㎡) — 양도 기준시가 산정 */
+  transferArea: string;
+  /**
+   * 면적 입력 시나리오 (UI 전용, API 전송 시 제외)
+   * - "same"    : 취득면적 = 양도면적 (일반, 기본값)
+   * - "partial" : 일부 양도 — 취득 토지 중 일부만 양도
+   * (감환지는 parcelMode 전용이므로 여기선 미사용)
+   */
+  areaScenario: "same" | "partial";
   /** 상속개시일 직전 공시가격: 토지=원/㎡, 주택=원 총액 */
   publishedValueAtInheritance: string;
   /** 직접 입력 취득가액 (매매 actual / 상속 manual / 증여 신고가액) */
@@ -171,7 +180,6 @@ export interface AssetForm {
 
   // ── 1990.8.30. 이전 취득 토지 환산 (assetKind === "land" + acquisitionDate < 1990-08-30) ──
   pre1990Enabled: boolean;
-  pre1990AreaSqm: string;
   pre1990PricePerSqm_1990: string;
   pre1990PricePerSqm_atTransfer: string;
   pre1990Grade_current: string;
@@ -201,7 +209,9 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     inheritanceValuationMode: "auto",
     inheritanceDate: "",
     inheritanceAssetKind: "land",
-    landAreaM2: "",
+    acquisitionArea: "",
+    transferArea: "",
+    areaScenario: "same",
     publishedValueAtInheritance: "",
     fixedAcquisitionPrice: "",
     addressRoad: "",
@@ -224,7 +234,6 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     standardPriceAtAcq: "",
     standardPriceAtAcqLabel: "",
     pre1990Enabled: false,
-    pre1990AreaSqm: "",
     pre1990PricePerSqm_1990: "",
     pre1990PricePerSqm_atTransfer: "",
     pre1990Grade_current: "",
@@ -236,6 +245,30 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
 
 /** 하위 호환 별칭 */
 export const makeDefaultCompanionAsset = makeDefaultAsset;
+
+/**
+ * 구형 AssetForm (landAreaM2, pre1990AreaSqm 있음) → 현재 타입으로 마이그레이션.
+ * sessionStorage 또는 이력 데이터 rehydrate 시 호출.
+ */
+export function migrateAsset(raw: unknown): AssetForm {
+  const a = raw as Record<string, unknown>;
+  // landAreaM2 → acquisitionArea / transferArea (비어있을 때만 복사)
+  if (a.landAreaM2 && !a.acquisitionArea) {
+    a.acquisitionArea = a.landAreaM2;
+    a.transferArea = a.landAreaM2;
+  }
+  delete a.landAreaM2;
+  // pre1990AreaSqm 제거 (Pre1990LandValuationInput이 acquisitionArea를 직접 받음)
+  delete a.pre1990AreaSqm;
+  // areaScenario 추론
+  if (!a.areaScenario) {
+    a.areaScenario =
+      a.acquisitionArea && a.transferArea && a.acquisitionArea !== a.transferArea
+        ? "partial"
+        : "same";
+  }
+  return a as unknown as AssetForm;
+}
 
 /** 다필지 UI 폼 상태 (문자열 기반) */
 export interface ParcelFormItem {
@@ -254,6 +287,28 @@ export interface ParcelFormItem {
   entitlementArea: string;
   allocatedArea: string;
   priorLandArea: string;
+  /**
+   * 면적 입력 시나리오 (UI 전용, API 전송 시 제외)
+   * - "same"      : 취득면적 = 양도면적 (일반)
+   * - "reduction" : 감환지 — 교부면적 < 권리면적 (소득령 §162의2)
+   * - "partial"   : 일부 양도 — 취득 토지 중 일부만 양도
+   */
+  areaScenario: "same" | "reduction" | "partial";
+}
+
+/** 구형 ParcelFormItem(areaScenario 없음)을 현재 타입으로 마이그레이션 */
+function migrateParcel(p: unknown): ParcelFormItem {
+  const parcel = p as Record<string, unknown>;
+  if (parcel.areaScenario) return parcel as unknown as ParcelFormItem;
+  let areaScenario: ParcelFormItem["areaScenario"];
+  if (parcel.useExchangeLandReduction) {
+    areaScenario = "reduction";
+  } else if (parcel.acquisitionArea && parcel.acquisitionArea === parcel.transferArea) {
+    areaScenario = "same";
+  } else {
+    areaScenario = "partial";
+  }
+  return { ...(parcel as unknown as ParcelFormItem), areaScenario };
 }
 
 export interface TransferFormData {
@@ -282,7 +337,6 @@ export interface TransferFormData {
   constructionDate: string;
   extensionFloorArea: string;
   pre1990Enabled: boolean;
-  pre1990AreaSqm: string;
   pre1990PricePerSqm_1990: string;
   pre1990PricePerSqm_atTransfer: string;
   pre1990Grade_current: string;
@@ -347,7 +401,6 @@ const defaultFormData: TransferFormData = {
   constructionDate: "",
   extensionFloorArea: "",
   pre1990Enabled: false,
-  pre1990AreaSqm: "",
   pre1990PricePerSqm_1990: "",
   pre1990PricePerSqm_atTransfer: "",
   pre1990Grade_current: "",
@@ -428,7 +481,8 @@ function migrateLegacyForm(legacy: Record<string, unknown>): TransferFormData {
   // 구 다필지 필드 → 자산별 parcelMode/parcels 로 이관
   if (legacy.parcelMode) {
     primaryAsset.parcelMode = Boolean(legacy.parcelMode);
-    primaryAsset.parcels = (legacy.parcels as ParcelFormItem[]) ?? [];
+    primaryAsset.parcels = ((legacy.parcels as unknown[]) ?? []).map(migrateParcel);
+  migrateAsset(primaryAsset);
   }
 
   // 구 루트 감면 필드 → primaryAsset.reductions 배열로 이관
@@ -484,6 +538,7 @@ function migrateLegacyForm(legacy: Record<string, unknown>): TransferFormData {
         farmingYears: String(ca.farmingYears ?? "0"),
       });
     }
+    const legacyLandArea = String(ca.landAreaM2 ?? "");
     return {
       ...base,
       assetLabel: (base.assetLabel ?? `동반자산 ${i + 1}`)
@@ -499,7 +554,14 @@ function migrateLegacyForm(legacy: Record<string, unknown>): TransferFormData {
       isRegulatedAreaAtAcq: null,
       isRegulatedAreaAtTransfer: null,
       parcelMode: Boolean(ca.parcelMode ?? false),
-      parcels: (ca.parcels as ParcelFormItem[]) ?? [],
+      parcels: ((ca.parcels as unknown[]) ?? []).map(migrateParcel),
+      // landAreaM2 → acquisitionArea / transferArea 마이그레이션
+      acquisitionArea: String(ca.acquisitionArea ?? legacyLandArea),
+      transferArea: String(ca.transferArea ?? legacyLandArea),
+      areaScenario: (ca.areaScenario as "same" | "partial") ??
+        (ca.acquisitionArea && ca.transferArea && ca.acquisitionArea !== ca.transferArea
+          ? "partial"
+          : "same"),
       reductions: caReductions,
     };
   });

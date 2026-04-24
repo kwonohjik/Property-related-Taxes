@@ -106,7 +106,7 @@ function buildAssetPayload(asset: AssetForm, bundledSaleMode: "actual" | "apport
       ? {
           inheritanceDate: asset.inheritanceDate || asset.acquisitionDate,
           assetKind: asset.inheritanceAssetKind,
-          landAreaM2: asset.landAreaM2 ? parseFloat(asset.landAreaM2) : undefined,
+          landAreaM2: asset.acquisitionArea ? parseFloat(asset.acquisitionArea) : undefined,
           publishedValueAtInheritance: parseAmount(asset.publishedValueAtInheritance),
         }
       : undefined;
@@ -319,42 +319,58 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
       : {}),
     ...(parcelModeActive
       ? {
-          parcels: primary.parcels.map((p) => ({
-            id: p.id,
-            acquisitionDate:
-              p.useDayAfterReplotting && p.replottingConfirmDate
-                ? p.replottingConfirmDate
-                : p.acquisitionDate,
-            acquisitionMethod: p.acquisitionMethod,
-            acquisitionPrice:
-              p.acquisitionMethod === "actual" ? parseAmount(p.acquisitionPrice) : undefined,
-            acquisitionArea: parseFloat(p.acquisitionArea) || 0,
-            transferArea: parseFloat(p.transferArea) || 0,
-            standardPricePerSqmAtAcq:
-              p.acquisitionMethod === "estimated"
-                ? parseFloat(p.standardPricePerSqmAtAcq) || 0
+          parcels: primary.parcels.map((p) => {
+            const scenario = p.areaScenario ?? "partial";
+            const isReduction = scenario === "reduction";
+
+            // 감환지: 의제 취득면적을 직접 계산해 API에 전달 (스키마 positive() 충족)
+            const finalAcqArea = isReduction
+              ? (parseFloat(p.priorLandArea) * parseFloat(p.allocatedArea)) /
+                parseFloat(p.entitlementArea)
+              : parseFloat(p.acquisitionArea) || 0;
+
+            // 감환지: 양도면적 = 교부면적 (UI에서 transferArea=allocatedArea로 이미 동기화)
+            const finalTransferArea = isReduction
+              ? parseFloat(p.allocatedArea) || 0
+              : parseFloat(p.transferArea) || 0;
+
+            return {
+              id: p.id,
+              acquisitionDate:
+                p.useDayAfterReplotting && p.replottingConfirmDate
+                  ? p.replottingConfirmDate
+                  : p.acquisitionDate,
+              acquisitionMethod: p.acquisitionMethod,
+              acquisitionPrice:
+                p.acquisitionMethod === "actual" ? parseAmount(p.acquisitionPrice) : undefined,
+              acquisitionArea: finalAcqArea,
+              transferArea: finalTransferArea,
+              standardPricePerSqmAtAcq:
+                p.acquisitionMethod === "estimated"
+                  ? parseFloat(p.standardPricePerSqmAtAcq) || 0
+                  : undefined,
+              standardPricePerSqmAtTransfer:
+                p.acquisitionMethod === "estimated"
+                  ? parseFloat(p.standardPricePerSqmAtTransfer) || 0
+                  : undefined,
+              expenses:
+                p.acquisitionMethod === "actual" ? parseAmount(p.expenses) : undefined,
+              useDayAfterReplotting: p.useDayAfterReplotting || undefined,
+              replottingConfirmDate:
+                p.useDayAfterReplotting && p.replottingConfirmDate
+                  ? p.replottingConfirmDate
+                  : undefined,
+              entitlementArea: isReduction
+                ? parseFloat(p.entitlementArea) || undefined
                 : undefined,
-            standardPricePerSqmAtTransfer:
-              p.acquisitionMethod === "estimated"
-                ? parseFloat(p.standardPricePerSqmAtTransfer) || 0
+              allocatedArea: isReduction
+                ? parseFloat(p.allocatedArea) || undefined
                 : undefined,
-            expenses:
-              p.acquisitionMethod === "actual" ? parseAmount(p.expenses) : undefined,
-            useDayAfterReplotting: p.useDayAfterReplotting || undefined,
-            replottingConfirmDate:
-              p.useDayAfterReplotting && p.replottingConfirmDate
-                ? p.replottingConfirmDate
+              priorLandArea: isReduction
+                ? parseFloat(p.priorLandArea) || undefined
                 : undefined,
-            entitlementArea: p.useExchangeLandReduction
-              ? parseFloat(p.entitlementArea) || undefined
-              : undefined,
-            allocatedArea: p.useExchangeLandReduction
-              ? parseFloat(p.allocatedArea) || undefined
-              : undefined,
-            priorLandArea: p.useExchangeLandReduction
-              ? parseFloat(p.priorLandArea) || undefined
-              : undefined,
-          })),
+            };
+          }),
         }
       : {}),
     // ── 일괄양도 (assets 2건 이상) ──
@@ -371,7 +387,7 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
               ? {
                   inheritanceDate: primary.acquisitionDate,
                   assetKind: toEngineAssetKind(primary.assetKind),
-                  landAreaM2: primary.landAreaM2 ? parseFloat(primary.landAreaM2) : undefined,
+                  landAreaM2: primary.acquisitionArea ? parseFloat(primary.acquisitionArea) : undefined,
                   publishedValueAtInheritance: parseAmount(primary.publishedValueAtInheritance),
                 }
               : undefined,
@@ -398,7 +414,7 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
           const gCur = buildGrade(form.pre1990Grade_current);
           const gPrev = buildGrade(form.pre1990Grade_prev);
           const gAcq = buildGrade(form.pre1990Grade_atAcq);
-          const areaSqm = parseFloat(form.pre1990AreaSqm.replace(/,/g, "")) || 0;
+          const areaSqm = parseFloat((primary.acquisitionArea ?? "").replace(/,/g, "")) || 0;
           const p1990 = parseAmount(form.pre1990PricePerSqm_1990);
           const pTsf = parseAmount(form.pre1990PricePerSqm_atTransfer);
           if (!gCur || !gPrev || !gAcq || areaSqm <= 0 || p1990 <= 0 || pTsf <= 0) return {};

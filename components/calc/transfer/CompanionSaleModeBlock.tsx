@@ -83,9 +83,9 @@ interface BlockProps {
   jibun?: string;
   /** 양도일 (기준연도 자동 계산용) */
   transferDate?: string;
-  /** 토지 면적 (㎡) — 안분 모드 토지에서 기준시가 자동 계산에 사용 */
-  landAreaM2?: string;
-  onLandAreaM2Change?: (v: string) => void;
+  /** 양도 당시 면적 (㎡) — 안분 모드 토지에서 기준시가 자동 계산에 사용 */
+  transferArea?: string;
+  onTransferAreaChange?: (v: string) => void;
 }
 
 // ─── 안분 모드 기준시가 입력 + 공시가격 조회 ─────────────────────
@@ -96,16 +96,16 @@ function ApportionedPriceBlock({
   onStandardPriceAtTransferChange,
   jibun,
   transferDate,
-  landAreaM2,
-  onLandAreaM2Change,
+  transferArea,
+  onTransferAreaChange,
 }: {
   assetKind: BlockProps["assetKind"];
   standardPriceAtTransfer: string;
   onStandardPriceAtTransferChange: (v: string) => void;
   jibun?: string;
   transferDate?: string;
-  landAreaM2?: string;
-  onLandAreaM2Change?: (v: string) => void;
+  transferArea?: string;
+  onTransferAreaChange?: (v: string) => void;
 }) {
   const propertyType = assetKind === "housing" ? "housing" : "land";
   const { loading, msg, year, setYear, yearOptions, lookup } =
@@ -127,7 +127,7 @@ function ApportionedPriceBlock({
   }
 
   function handleAreaChange(v: string) {
-    onLandAreaM2Change?.(v);
+    onTransferAreaChange?.(v);
     computeAndFill(v, pricePerSqm);
   }
 
@@ -137,7 +137,7 @@ function ApportionedPriceBlock({
 
     if (assetKind === "land") {
       setPricePerSqm(price);
-      computeAndFill(landAreaM2 ?? "", price);
+      computeAndFill(transferArea ?? "", price);
     } else {
       onStandardPriceAtTransferChange(String(price));
     }
@@ -171,7 +171,7 @@ function ApportionedPriceBlock({
       <CurrencyInput
         label={
           assetKind === "land"
-            ? "양도시 기준시가 (공시지가 × 면적, 원)"
+            ? "양도시 기준시가 (공시지가 × 양도 당시 면적, 원)"
             : "양도시 기준시가 (원)"
         }
         value={standardPriceAtTransfer}
@@ -191,9 +191,9 @@ function ApportionedPriceBlock({
           {msg.text}
         </p>
       )}
-      {assetKind === "land" && pricePerSqm > 0 && !landAreaM2 && (
+      {assetKind === "land" && pricePerSqm > 0 && !transferArea && (
         <p className="text-xs text-muted-foreground">
-          위 면적(㎡)을 입력하면 기준시가가 자동 계산됩니다.
+          자산 카드에서 양도 당시 면적(㎡)을 입력하면 기준시가가 자동 계산됩니다.
         </p>
       )}
     </div>
@@ -227,8 +227,8 @@ export function CompanionSaleModeBlock(props: BlockProps) {
       onStandardPriceAtTransferChange={props.onStandardPriceAtTransferChange}
       jibun={props.jibun}
       transferDate={props.transferDate}
-      landAreaM2={props.landAreaM2}
-      onLandAreaM2Change={props.onLandAreaM2Change}
+      transferArea={props.transferArea}
+      onTransferAreaChange={props.onTransferAreaChange}
     />
   );
 }

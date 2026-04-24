@@ -40,8 +40,10 @@ interface BlockProps {
   jibun?: string;
   /** 자산 종류 — 공시가격 API 선택 및 토지 면적 계산용 */
   assetKind?: string;
-  /** 토지 면적 (㎡) — land 기준시가 자동계산용, pre1990AreaSqm 자동 연동 */
-  landAreaM2?: string;
+  /** 취득 당시 면적 (㎡) — 취득시 기준시가 자동계산, Pre1990 환산용 */
+  acquisitionArea?: string;
+  /** 양도 당시 면적 (㎡) — 양도시 기준시가 자동계산용 */
+  transferArea?: string;
   /** 1990 이전 취득 토지 환산 슬라이스 */
   pre1990Form?: Pre1990FormSlice;
   onPre1990Change?: (patch: Partial<Pre1990FormSlice>) => void;
@@ -53,7 +55,7 @@ function StandardPriceLookup({
   jibun,
   dateStr,
   assetKind,
-  landAreaM2,
+  areaM2,
   value,
   onChange,
   hint,
@@ -65,7 +67,7 @@ function StandardPriceLookup({
   jibun?: string;
   dateStr: string;
   assetKind?: string;
-  landAreaM2?: string;
+  areaM2?: string;
   value: string;
   onChange: (v: string) => void;
   hint: string;
@@ -101,7 +103,7 @@ function StandardPriceLookup({
     if (assetKind === "land") {
       setPricePerSqm(price);
       onPricePerSqm?.(price);
-      const area = parseFloat(landAreaM2 ?? "");
+      const area = parseFloat(areaM2 ?? "");
       if (area > 0) onChange(String(Math.floor(area * price)));
     } else {
       onChange(String(price));
@@ -156,9 +158,9 @@ function StandardPriceLookup({
           {msg.text}
         </p>
       )}
-      {assetKind === "land" && pricePerSqm > 0 && !landAreaM2 && (
+      {assetKind === "land" && pricePerSqm > 0 && !areaM2 && (
         <p className="text-xs text-muted-foreground">
-          위 면적(㎡)을 입력하면 기준시가가 자동 계산됩니다.
+          취득 당시 면적(㎡)을 입력하면 기준시가가 자동 계산됩니다.
         </p>
       )}
     </div>
@@ -188,23 +190,19 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
     }
   }, [acqDatePre1990]);
 
-  // landAreaM2 → pre1990AreaSqm 자동 연동
-  useEffect(() => {
-    if (props.landAreaM2 && props.onPre1990Change) {
-      props.onPre1990Change({ pre1990AreaSqm: props.landAreaM2 });
-    }
-  // props.onPre1990Change는 매 렌더마다 새 참조가 아니므로 landAreaM2만 의존
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [props.landAreaM2]);
 
-  // 1번: 취득일 1985.1.1. 미만 입력 시 클램핑
+  // 1번: 취득일 1985.1.1. 미만 클램핑 — 입력 완료(포커스 이탈) 시에만 적용
+  // onChange 중 클램핑하면 일 첫 자리 입력 시점에 연도가 바뀌어 엉뚱한 날짜가 되는 버그 발생
   function handleAcquisitionDateChange(v: string) {
+    props.onAcquisitionDateChange(v);
+    setDateClampMsg(false);
+  }
+
+  function handleAcquisitionDateBlur() {
+    const v = props.acquisitionDate;
     if (v && v < MIN_ACQ_DATE) {
       props.onAcquisitionDateChange(MIN_ACQ_DATE);
       setDateClampMsg(true);
-    } else {
-      props.onAcquisitionDateChange(v);
-      setDateClampMsg(false);
     }
   }
 
@@ -220,6 +218,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
         <DateInput
           value={props.acquisitionDate}
           onChange={handleAcquisitionDateChange}
+          onBlur={handleAcquisitionDateBlur}
         />
         {dateClampMsg && (
           <p className="text-xs text-amber-700 dark:text-amber-400">
@@ -282,7 +281,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
               jibun={props.jibun}
               dateStr={props.acquisitionDate}
               assetKind={props.assetKind}
-              landAreaM2={props.landAreaM2}
+              areaM2={props.acquisitionArea}
               value={props.standardPriceAtAcq}
               onChange={props.onStandardPriceAtAcqChange}
               hint="환산 분자 — 안분 후 양도가액에 (취득시/양도시) 비율 적용"
@@ -293,6 +292,19 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
             />
           </div>
 
+          {/* 1990.8.30. 이전 취득 토지 환산 */}
+          {showPre1990 && (
+            <Pre1990LandValuationInput
+              form={props.pre1990Form!}
+              onChange={props.onPre1990Change!}
+              acquisitionArea={props.acquisitionArea}
+              jibun={props.jibun}
+              acquisitionDate={props.acquisitionDate}
+              transferDate={props.transferDate}
+              onCalculatedPrice={(price) => props.onStandardPriceAtAcqChange(String(price))}
+            />
+          )}
+
           {/* 양도시 기준시가 */}
           <div className="space-y-1.5">
             <label className="text-sm font-medium">
@@ -302,24 +314,12 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
               jibun={props.jibun}
               dateStr={props.transferDate ?? ""}
               assetKind={props.assetKind}
-              landAreaM2={props.landAreaM2}
+              areaM2={props.transferArea}
               value={props.standardPriceAtTransfer}
               onChange={props.onStandardPriceAtTransferChange}
               hint="환산 분모 — 취득시/양도시 기준시가 비율의 분모"
             />
           </div>
-
-          {/* 1990.8.30. 이전 취득 토지 환산 */}
-          {showPre1990 && (
-            <Pre1990LandValuationInput
-              form={props.pre1990Form!}
-              onChange={props.onPre1990Change!}
-              jibun={props.jibun}
-              acquisitionDate={props.acquisitionDate}
-              transferDate={props.transferDate}
-              onCalculatedPrice={(price) => props.onStandardPriceAtAcqChange(String(price))}
-            />
-          )}
         </>
       )}
     </div>

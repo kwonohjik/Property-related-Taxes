@@ -325,7 +325,12 @@ export default function MultiTransferTaxCalculator() {
   }, [form.activePropertyIndex, updateProperty, resetWizard, setStep]);
 
   // 진입 시 자산이 0개면 자동으로 첫 자산 추가 → 즉시 마법사 step 0으로 이동
+  // result는 partialize 제외 → 재진입 시 null. activeStep="result"+result=null 이면 settings로 복구
   useEffect(() => {
+    if (form.activeStep === "result" && !result) {
+      setStep(form.properties.length > 0 ? "settings" : "list");
+      return;
+    }
     if (form.properties.length === 0 && form.activeStep === "list") {
       handleAddProperty();
     }
