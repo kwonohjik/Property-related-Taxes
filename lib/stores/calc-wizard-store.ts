@@ -294,6 +294,7 @@ export interface AssetForm {
   nblForestIsProtected: boolean;
   nblForestIsSuccessor: boolean;
   nblForestInheritedWithin3Years: boolean;
+  nblForestInheritanceDate: string;         // 상속일 (YYYY-MM-DD) — forest.ts forestInheritanceDate
 
   // ── NBL 목장 세부 ──
   nblPastureIsLivestockOperator: boolean;
@@ -417,6 +418,7 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     nblForestIsProtected: false,
     nblForestIsSuccessor: false,
     nblForestInheritedWithin3Years: false,
+    nblForestInheritanceDate: "",
     nblPastureIsLivestockOperator: false,
     nblPastureLivestockType: "",
     nblPastureLivestockCount: "",

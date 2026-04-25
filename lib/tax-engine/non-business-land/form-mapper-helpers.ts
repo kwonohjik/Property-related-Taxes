@@ -121,6 +121,7 @@ export function buildFarmlandDeeming(a: Record<string, unknown>): FarmlandDeemin
 export function buildForestDetail(
   a: Record<string, unknown>,
   landType: LandType,
+  parseDate?: ParseDate,
 ): ForestUsageDetail | undefined {
   if (landType !== "forest") return undefined;
   return {
@@ -129,6 +130,7 @@ export function buildForestDetail(
     isSpecialForestZone:         asBool(a.nblForestIsProtected),
     isForestSuccessor:           asBool(a.nblForestIsSuccessor),
     inheritedForestWithin3Years: asBool(a.nblForestInheritedWithin3Years),
+    forestInheritanceDate:       parseDate?.(asString(a.nblForestInheritanceDate)),
   };
 }
 

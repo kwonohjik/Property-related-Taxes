@@ -105,7 +105,7 @@ export function mapAssetToNblInput(
     farmingSelf:             asBool(asset.nblFarmingSelf),
     farmerResidenceDistance: parseNumber(asString(asset.nblFarmerResidenceDistance)),
     farmlandDeeming:         buildFarmlandDeeming(asset),
-    forestDetail:            buildForestDetail(asset, landType),
+    forestDetail:            buildForestDetail(asset, landType, parseDate),
     pasture:                 buildPasture(asset, landType, parseDate, parseNumber),
     villa:                   buildVilla(asset, landType, parseDate),
     otherLand:               buildOtherLand(asset, landType, parseNumber),

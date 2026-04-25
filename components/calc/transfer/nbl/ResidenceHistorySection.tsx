@@ -109,6 +109,25 @@ export function ResidenceHistorySection({
       >
         + 거주지 추가
       </button>
+
+      {/* 거주지 이력 미입력 시 fallback — 거주지~토지 직선거리로 재촌 판정 */}
+      {histories.length === 0 && (
+        <FieldCard
+          label="직선거리 (km)"
+          hint="거주지 이력 미입력 시 대체 판정에 사용됩니다. (소득령 §168-8)"
+        >
+          <input
+            type="number"
+            min="0"
+            step="0.1"
+            value={asset.nblFarmerResidenceDistance}
+            onChange={(e) => onAssetChange({ nblFarmerResidenceDistance: e.target.value })}
+            onFocus={(e) => e.target.select()}
+            placeholder="0.0"
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          />
+        </FieldCard>
+      )}
     </div>
   );
 }

@@ -2,6 +2,7 @@
 
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
+import { DateInput } from "@/components/ui/date-input";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 
 export interface ForestDetailSectionProps {
@@ -68,16 +69,38 @@ export function ForestDetailSection({
         </label>
       </FieldCard>
 
+      {/* 상속 3년 이내 — 체크 + 날짜 입력 필수 (forest.ts: inheritedFlag && forestInheritanceDate) */}
       <FieldCard label="상속 3년 이내">
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={asset.nblForestInheritedWithin3Years}
-            onChange={(e) => onAssetChange({ nblForestInheritedWithin3Years: e.target.checked })}
-            className="h-4 w-4 rounded accent-primary"
-          />
-          <span className="text-sm">상속 3년 이내 양도</span>
-        </label>
+        <div className="space-y-2">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={asset.nblForestInheritedWithin3Years}
+              onChange={(e) =>
+                onAssetChange({
+                  nblForestInheritedWithin3Years: e.target.checked,
+                  nblForestInheritanceDate: e.target.checked ? asset.nblForestInheritanceDate : "",
+                })
+              }
+              className="h-4 w-4 rounded accent-primary"
+            />
+            <span className="text-sm">상속 3년 이내 양도</span>
+          </label>
+          {asset.nblForestInheritedWithin3Years && (
+            <div className="pl-6">
+              <label className="block text-xs text-muted-foreground mb-1">
+                상속일 <span className="text-destructive">*</span>
+              </label>
+              <DateInput
+                value={asset.nblForestInheritanceDate}
+                onChange={(v) => onAssetChange({ nblForestInheritanceDate: v })}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                상속일로부터 3년 이내 양도 여부를 엔진이 자동 계산합니다.
+              </p>
+            </div>
+          )}
+        </div>
       </FieldCard>
 
       <div className="rounded-md bg-muted/50 border px-3 py-2 text-xs text-muted-foreground">
