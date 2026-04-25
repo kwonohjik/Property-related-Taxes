@@ -12,6 +12,8 @@ import { parseLawRef, buildLawUrl } from "@/lib/utils/law-url";
 
 interface Props {
   legalBasis: string;
+  /** 버튼에 표시할 짧은 레이블. 없으면 legalBasis 전체를 표시. */
+  label?: string;
   className?: string;
 }
 
@@ -56,7 +58,16 @@ function LawContent({ content }: { content: string }) {
   );
 }
 
-export function LawArticleModal({ legalBasis, className }: Props) {
+/** "168의14" → "제168조의14", "89" → "제89조" */
+function formatArticleTitle(articleNum: string): string {
+  if (articleNum.includes("의")) {
+    const idx = articleNum.indexOf("의");
+    return `제${articleNum.slice(0, idx)}조의${articleNum.slice(idx + 1)}`;
+  }
+  return `제${articleNum}조`;
+}
+
+export function LawArticleModal({ legalBasis, label, className }: Props) {
   const [open, setOpen] = useState(false);
   const [state, setState] = useState<FetchState>({ status: "idle" });
 
@@ -85,7 +96,7 @@ export function LawArticleModal({ legalBasis, className }: Props) {
   }
 
   const title = ref
-    ? `${ref.lawName} 제${ref.articleNum}조`
+    ? `${ref.lawName} ${formatArticleTitle(ref.articleNum)}`
     : legalBasis;
 
   return (
@@ -98,7 +109,7 @@ export function LawArticleModal({ legalBasis, className }: Props) {
           "inline-block mt-1 text-[10px] text-muted-foreground/70 border border-border/60 rounded px-1.5 py-0.5 hover:text-primary hover:border-primary/50 transition-colors cursor-pointer"
         }
       >
-        {legalBasis} ↗
+        {label ?? legalBasis} ↗
       </button>
 
       <DialogContent className="sm:max-w-2xl">

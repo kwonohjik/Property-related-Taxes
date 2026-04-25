@@ -488,8 +488,8 @@ export function CompanionAssetCard({
         onChange={(v) => onChange({ directExpenses: v })}
       />
 
-      {/* 비사업용 토지 정밀 판정 (토지 자산 전용) */}
-      {asset.assetKind === "land" && (
+      {/* 비사업용 토지 정밀 판정 (토지 자산 전용, 비사업용 체크 시만 표시) */}
+      {asset.assetKind === "land" && asset.isNonBusinessLand && (
         <div className="pt-2 border-t border-border/60">
           <NblSectionContainer asset={asset} onAssetChange={onChange} />
         </div>

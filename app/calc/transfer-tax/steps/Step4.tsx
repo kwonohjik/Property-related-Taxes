@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { DateInput } from "@/components/ui/date-input";
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
+import { NblSectionContainer } from "@/components/calc/transfer/nbl/NblSectionContainer";
 import { HousesListSection } from "./step4-sections/HousesListSection";
 import { MergeDateSection } from "./step4-sections/MergeDateSection";
 
@@ -290,7 +291,17 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
                 checked={primary?.isNonBusinessLand ?? false}
                 onChange={(e) => {
                   if (!primary) return;
-                  onChange({ assets: form.assets.map((a, i) => i === 0 ? { ...a, isNonBusinessLand: e.target.checked } : a) });
+                  onChange({
+                    assets: form.assets.map((a, i) =>
+                      i === 0
+                        ? {
+                            ...a,
+                            isNonBusinessLand: e.target.checked,
+                            nblUseDetailedJudgment: e.target.checked ? true : a.nblUseDetailedJudgment,
+                          }
+                        : a
+                    ),
+                  });
                 }}
                 className="h-4 w-4 rounded accent-primary"
               />
@@ -315,7 +326,15 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
         )}
       </div>
 
-      {/* 토지 비사업용 판정 — CompanionAssetCard(Step1 자산 카드) 내부로 이전됨 */}
+      {/* 비사업용 토지 상세 판정 — 체크 시 자동 펼침 */}
+      {primaryKind === "land" && primary?.isNonBusinessLand && primary && (
+        <NblSectionContainer
+          asset={primary}
+          onAssetChange={(patch) =>
+            onChange({ assets: form.assets.map((a, i) => (i === 0 ? { ...a, ...patch } : a)) })
+          }
+        />
+      )}
 
       {/* 주택·입주권·분양권: 다른 보유 주택 목록 (P0-B) */}
       {isHousingLike(primaryKind) && parseInt(form.householdHousingCount) >= 2 && <SectionHeader title="다른 보유 주택 목록" description="세대 전체의 보유 주택을 입력하세요 (다주택 중과세 판단)" />}
