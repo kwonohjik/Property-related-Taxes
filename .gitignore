@@ -54,3 +54,4 @@ logs/
 /scripts/e2e-artifacts-p0p1/
 /test-results/
 /playwright-report/
+.bkit/audit/
