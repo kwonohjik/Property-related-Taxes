@@ -463,6 +463,32 @@ const propertyBaseShape = {
   pre1990Land: pre1990LandSchema.optional(),
   parcels: z.array(parcelSchema).max(10).optional(),
 
+  // ─── 토지/건물 취득일 분리 (소득령 §166⑥·§168②) ────────────────
+  /** 토지 취득일 (건물 acquisitionDate와 다를 때) */
+  landAcquisitionDate: z.coerce.date().optional(),
+  /** 분리 입력 방식 */
+  landSplitMode: z.enum(["apportioned", "actual"]).optional(),
+  /** 토지 양도가액 (원) */
+  landTransferPrice: z.number().int().positive().optional(),
+  /** 건물 양도가액 (원) */
+  buildingTransferPrice: z.number().int().positive().optional(),
+  /** 토지 취득가액 (원) */
+  landAcquisitionPrice: z.number().int().nonnegative().optional(),
+  /** 건물 취득가액 (원) */
+  buildingAcquisitionPrice: z.number().int().nonnegative().optional(),
+  /** 토지 자본적지출·필요경비 (원) */
+  landDirectExpenses: z.number().int().nonnegative().optional(),
+  /** 건물 자본적지출·필요경비 (원) */
+  buildingDirectExpenses: z.number().int().nonnegative().optional(),
+  /** 토지 양도시 기준시가 — 환산취득가 분리 계산용 */
+  landStandardPriceAtTransfer: z.number().int().positive().optional(),
+  /** 건물 양도시 기준시가 — 환산취득가 분리 계산용 */
+  buildingStandardPriceAtTransfer: z.number().int().positive().optional(),
+  /** 취득시 토지 단위 기준시가 (원/㎡) — 안분 비율 산출용 */
+  standardPricePerSqmAtAcquisition: z.number().positive().optional(),
+  /** 취득 면적 (㎡) — 토지 기준시가 = standardPricePerSqmAtAcquisition × acquisitionArea */
+  acquisitionArea: z.number().positive().optional(),
+
   // ─── 일괄양도 안분 (소득세법 시행령 §166 ⑥) ────────────────
   /** 함께 양도된 자산들 (2개 이상 일괄 양도 시). 없거나 빈 배열이면 단건으로 처리. */
   companionAssets: z.array(companionAssetSchema).max(10).optional(),

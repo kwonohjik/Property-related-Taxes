@@ -264,6 +264,30 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
       primary.buildingType === "extension" && primary.extensionFloorArea
         ? parseFloat(primary.extensionFloorArea)
         : undefined,
+    // 토지/건물 취득일 분리
+    landAcquisitionDate:
+      primary.hasSeperateLandAcquisitionDate && primary.landAcquisitionDate
+        ? primary.landAcquisitionDate
+        : undefined,
+    landSplitMode: primary.hasSeperateLandAcquisitionDate
+      ? primary.landSplitMode
+      : undefined,
+    landTransferPrice: parseAmount(primary.landTransferPrice) || undefined,
+    buildingTransferPrice: parseAmount(primary.buildingTransferPrice) || undefined,
+    landAcquisitionPrice: parseAmount(primary.landAcquisitionPrice) || undefined,
+    buildingAcquisitionPrice: parseAmount(primary.buildingAcquisitionPrice) || undefined,
+    landDirectExpenses: parseAmount(primary.landDirectExpenses) || undefined,
+    buildingDirectExpenses: parseAmount(primary.buildingDirectExpenses) || undefined,
+    landStandardPriceAtTransfer: parseAmount(primary.landStandardPriceAtTransfer) || undefined,
+    buildingStandardPriceAtTransfer: parseAmount(primary.buildingStandardPriceAtTransfer) || undefined,
+    standardPricePerSqmAtAcquisition:
+      primary.standardPricePerSqmAtAcq
+        ? parseFloat(primary.standardPricePerSqmAtAcq) || undefined
+        : undefined,
+    acquisitionArea:
+      primary.acquisitionArea
+        ? parseFloat(primary.acquisitionArea) || undefined
+        : undefined,
     householdHousingCount: parseInt(form.householdHousingCount) || 0,
     residencePeriodMonths: parseInt(form.residencePeriodMonths) || 0,
     isRegulatedArea: form.isRegulatedArea,

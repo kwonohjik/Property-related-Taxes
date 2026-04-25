@@ -43,7 +43,8 @@ import { getLongTermDeductionOverride } from "./rental-housing-reduction";
 import { getRate } from "@/lib/db/tax-rates";
 import type { TaxBracket } from "./types";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
-import type { TransferTaxInput } from "./types/transfer.types";
+import type { TransferTaxInput, SplitGainResult } from "./types/transfer.types";
+import { calcSplitGain } from "./transfer-tax-split-gain";
 
 // ============================================================
 // 내부 파싱 결과 타입 — transfer-tax-rate-calc.ts 에서도 import
@@ -242,9 +243,30 @@ interface TransferGainResult {
   estimatedBase: number;
   estimatedDeduction: number;
   expenses: number;
+  splitDetail?: SplitGainResult;
 }
 
 export function calcTransferGain(input: TransferTaxInput): TransferGainResult {
+  // 토지/건물 취득일 분리 케이스 — 각각 양도차익 계산 후 합산
+  const splitResult = calcSplitGain(input);
+  if (splitResult) {
+    const totalGain = splitResult.land.gain + splitResult.building.gain;
+    const flooredGain = input.skipLossFloor ? totalGain : Math.max(0, totalGain);
+    const totalDeduction = splitResult.land.appraisalDeduction + splitResult.building.appraisalDeduction;
+    const totalExpenses = splitResult.land.directExpenses + splitResult.building.directExpenses;
+    const usedEstimated = input.useEstimatedAcquisition || input.acquisitionMethod === "appraisal";
+    return {
+      gain: flooredGain,
+      usedEstimated,
+      estimatedBase: usedEstimated
+        ? splitResult.land.acquisitionPrice + splitResult.building.acquisitionPrice
+        : 0,
+      estimatedDeduction: totalDeduction,
+      expenses: totalExpenses,
+      splitDetail: splitResult,
+    };
+  }
+
   let acquisitionCost: number;
   let estimatedBase = 0;
   let estimatedDeduction = 0;
@@ -312,6 +334,7 @@ export function calcLongTermHoldingDeduction(
   isSurcharge: boolean,
   isSuspended: boolean,
   longTermRentalRules?: LongTermRentalRuleSet,
+  splitDetail?: SplitGainResult,
 ): LongTermHoldingResult {
   // L-0: 미등기 — 배제
   if (input.isUnregistered) {
@@ -348,25 +371,48 @@ export function calcLongTermHoldingDeduction(
     }
   }
 
-  const holding = calculateHoldingPeriod(input.acquisitionDate, input.transferDate);
-  const holdingPeriod = { years: holding.years, months: holding.months };
+  const isOneHouseSingle =
+    input.isOneHousehold && input.householdHousingCount === 1;
   const residenceYears = Math.floor(input.residencePeriodMonths / 12);
 
-  // L-3: 1세대1주택 특례 (보유 × 4% + 거주 × 4%, 최대 80%)
-  if (
-    input.isOneHousehold &&
-    input.householdHousingCount === 1 &&
-    holding.years >= 3 &&
-    residenceYears >= 2
-  ) {
-    const rate = Math.min(holding.years * 0.04 + residenceYears * 0.04, 0.80);
-    const deduction = applyRate(taxableGain, rate);
-    return { deduction, rate, holdingPeriod };
+  // 공제율 산식 (L-3/L-4 통합 헬퍼)
+  const rateForYears = (years: number): number => {
+    if (years < 3) return 0;
+    if (isOneHouseSingle && residenceYears >= 2) {
+      // L-3: 1세대1주택 (보유 × 4% + 거주 × 4%, 최대 80%)
+      return Math.min(years * 0.04 + residenceYears * 0.04, 0.80);
+    }
+    // L-4: 일반 (보유 × 2%, 최대 30%)
+    return Math.min(years * 0.02, 0.30);
+  };
+
+  // 토지/건물 분리 케이스 — 각각 보유연수 적용 후 합산
+  if (splitDetail) {
+    const landRate = rateForYears(splitDetail.land.holdingYears);
+    const buildingRate = rateForYears(splitDetail.building.holdingYears);
+    const landDed = applyRate(Math.max(splitDetail.land.gain, 0), landRate);
+    const buildingDed = applyRate(Math.max(splitDetail.building.gain, 0), buildingRate);
+
+    // SplitPartResult 에 공제율·공제액 채우기 (참조 수정)
+    splitDetail.land.longTermRate = landRate;
+    splitDetail.land.longTermDeduction = landDed;
+    splitDetail.building.longTermRate = buildingRate;
+    splitDetail.building.longTermDeduction = buildingDed;
+
+    const buildingHolding = calculateHoldingPeriod(input.acquisitionDate, input.transferDate);
+    return {
+      deduction: landDed + buildingDed,
+      rate: 0, // 단일 공제율 없음 (혼합) — splitDetail.land/building.longTermRate 참조
+      holdingPeriod: { years: buildingHolding.years, months: buildingHolding.months },
+    };
   }
 
-  // L-4: 일반 (보유 × 2%, 최대 30%)
-  if (holding.years >= 3) {
-    const rate = Math.min(holding.years * 0.02, 0.30);
+  // 단일 취득일 케이스 — 기존 로직
+  const holding = calculateHoldingPeriod(input.acquisitionDate, input.transferDate);
+  const holdingPeriod = { years: holding.years, months: holding.months };
+
+  const rate = rateForYears(holding.years);
+  if (rate > 0) {
     const deduction = applyRate(taxableGain, rate);
     return { deduction, rate, holdingPeriod };
   }

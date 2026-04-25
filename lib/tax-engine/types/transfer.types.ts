@@ -192,6 +192,53 @@ export interface TransferTaxInput {
    * 미제공 또는 빈 배열 시 연간 한도만 적용(기존 동작 유지).
    */
   priorReductionUsage?: { year: number; type: string; amount: number }[];
+
+  // ── 토지/건물 취득일 분리 계산 (housing·building 공통) ──
+  /**
+   * 토지 취득일 — housing·building에서 토지와 건물의 취득일이 다를 때 제공.
+   * 미제공 시 acquisitionDate 단일값으로 보유기간 계산 (기존 동작).
+   * 소득령 §162①: 토지는 등기접수일, 건물은 사용승인일이 취득일.
+   */
+  landAcquisitionDate?: Date;
+  /**
+   * 토지/건물 가액 분리 방식.
+   * "apportioned": 기준시가 비율로 자동 안분 (기본, 소득령 §166⑥).
+   * "actual": 사용자가 각 가액을 직접 입력.
+   */
+  landSplitMode?: "apportioned" | "actual";
+  /** 토지 양도가액 (실제 모드 or 안분 override 시) */
+  landTransferPrice?: number;
+  /** 건물 양도가액 (실제 모드 or 안분 override 시) */
+  buildingTransferPrice?: number;
+  /** 토지 취득가액 (실거래가 모드 시) */
+  landAcquisitionPrice?: number;
+  /** 건물 취득가액 (실거래가 모드 시) */
+  buildingAcquisitionPrice?: number;
+  /** 토지 자본적지출·필요경비 */
+  landDirectExpenses?: number;
+  /** 건물 자본적지출·필요경비 */
+  buildingDirectExpenses?: number;
+  /**
+   * 토지 양도시 기준시가 — 환산취득가 분리 계산 시 사용.
+   * 미제공 시 standardPriceAtTransfer × 토지 안분비율로 추정.
+   */
+  landStandardPriceAtTransfer?: number;
+  /**
+   * 건물 양도시 기준시가 — 환산취득가 분리 계산 시 사용.
+   * 미제공 시 standardPriceAtTransfer - landStandardPriceAtTransfer로 추정.
+   */
+  buildingStandardPriceAtTransfer?: number;
+  /**
+   * 취득시 토지 단위 기준시가 (원/㎡) — 토지 기준시가 산출용.
+   * 토지 기준시가 = standardPricePerSqmAtAcquisition × acquisitionArea.
+   * 주택: 개별공시지가, 일반건물: 개별공시지가.
+   */
+  standardPricePerSqmAtAcquisition?: number;
+  /**
+   * 취득 면적 (㎡) — 토지 기준시가 산출용.
+   * standardPricePerSqmAtAcquisition과 함께 사용.
+   */
+  acquisitionArea?: number;
 }
 
 export type TransferReduction =
@@ -350,4 +397,28 @@ export interface TransferTaxResult {
   pre1990LandValuationDetail?: Pre1990LandValuationResult;
   /** 다필지 계산 상세 결과 (parcels 제공 시만 포함) */
   parcelDetails?: ParcelResult[];
+  /**
+   * 토지/건물 분리 계산 상세 결과 (landAcquisitionDate 제공 시만 포함).
+   * UI에서 토지·건물 각각의 양도차익·장특공제 내역 표시용.
+   */
+  splitDetail?: SplitGainResult;
+}
+
+/** 토지/건물 분리 계산 결과 */
+export interface SplitPartResult {
+  transferPrice: number;
+  acquisitionPrice: number;
+  directExpenses: number;
+  appraisalDeduction: number;
+  gain: number;
+  holdingYears: number;
+  longTermRate: number;
+  longTermDeduction: number;
+}
+
+export interface SplitGainResult {
+  land: SplitPartResult;
+  building: SplitPartResult;
+  apportionRatio: { land: number; building: number };
+  note: string;
 }

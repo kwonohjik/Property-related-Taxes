@@ -383,6 +383,34 @@ export function CompanionAssetCard({
             onConstructionDateChange={(v) => onChange({ constructionDate: v })}
             extensionFloorArea={asset.extensionFloorArea}
             onExtensionFloorAreaChange={(v) => onChange({ extensionFloorArea: v })}
+            hasSeperateLandAcquisitionDate={asset.hasSeperateLandAcquisitionDate}
+            onHasSeperateLandAcquisitionDateChange={(v) =>
+              onChange({ hasSeperateLandAcquisitionDate: v })
+            }
+            landAcquisitionDate={asset.landAcquisitionDate}
+            onLandAcquisitionDateChange={(v) => onChange({ landAcquisitionDate: v })}
+            landSplitMode={asset.landSplitMode}
+            onLandSplitModeChange={(v) => onChange({ landSplitMode: v })}
+            landTransferPrice={asset.landTransferPrice}
+            onLandTransferPriceChange={(v) => onChange({ landTransferPrice: v })}
+            buildingTransferPrice={asset.buildingTransferPrice}
+            onBuildingTransferPriceChange={(v) => onChange({ buildingTransferPrice: v })}
+            landAcquisitionPrice={asset.landAcquisitionPrice}
+            onLandAcquisitionPriceChange={(v) => onChange({ landAcquisitionPrice: v })}
+            buildingAcquisitionPrice={asset.buildingAcquisitionPrice}
+            onBuildingAcquisitionPriceChange={(v) => onChange({ buildingAcquisitionPrice: v })}
+            landDirectExpenses={asset.landDirectExpenses}
+            onLandDirectExpensesChange={(v) => onChange({ landDirectExpenses: v })}
+            buildingDirectExpenses={asset.buildingDirectExpenses}
+            onBuildingDirectExpensesChange={(v) => onChange({ buildingDirectExpenses: v })}
+            landStandardPriceAtTransfer={asset.landStandardPriceAtTransfer}
+            onLandStandardPriceAtTransferChange={(v) =>
+              onChange({ landStandardPriceAtTransfer: v })
+            }
+            buildingStandardPriceAtTransfer={asset.buildingStandardPriceAtTransfer}
+            onBuildingStandardPriceAtTransferChange={(v) =>
+              onChange({ buildingStandardPriceAtTransfer: v })
+            }
           />
         )}
 

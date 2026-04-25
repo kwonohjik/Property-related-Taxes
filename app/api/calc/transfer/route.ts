@@ -204,6 +204,19 @@ export async function POST(request: NextRequest) {
     buildingType: data.buildingType,
     constructionDate: data.constructionDate ? new Date(data.constructionDate) : undefined,
     extensionFloorArea: data.extensionFloorArea,
+    // 토지/건물 취득일 분리 (선택)
+    landAcquisitionDate: data.landAcquisitionDate,
+    landSplitMode: data.landSplitMode,
+    landTransferPrice: data.landTransferPrice,
+    buildingTransferPrice: data.buildingTransferPrice,
+    landAcquisitionPrice: data.landAcquisitionPrice,
+    buildingAcquisitionPrice: data.buildingAcquisitionPrice,
+    landDirectExpenses: data.landDirectExpenses,
+    buildingDirectExpenses: data.buildingDirectExpenses,
+    landStandardPriceAtTransfer: data.landStandardPriceAtTransfer,
+    buildingStandardPriceAtTransfer: data.buildingStandardPriceAtTransfer,
+    standardPricePerSqmAtAcquisition: data.standardPricePerSqmAtAcquisition,
+    acquisitionArea: data.acquisitionArea,
     // 1990.8.30. 이전 취득 토지 기준시가 환산 (선택)
     pre1990Land: data.pre1990Land
       ? {

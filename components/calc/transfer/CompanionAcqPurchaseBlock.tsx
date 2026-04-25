@@ -19,6 +19,8 @@ import { DateInput } from "@/components/ui/date-input";
 import { cn } from "@/lib/utils";
 import { Pre1990LandValuationInput, type Pre1990FormSlice } from "@/components/calc/inputs/Pre1990LandValuationInput";
 import { SelfBuiltSection } from "./SelfBuiltSection";
+import { LandBuildingSplitSection } from "./LandBuildingSplitSection";
+import { FieldCard } from "@/components/calc/inputs/FieldCard";
 
 const MIN_ACQ_DATE = "1985-01-01";
 
@@ -78,6 +80,29 @@ interface BlockProps {
   onConstructionDateChange?: (v: string) => void;
   extensionFloorArea?: string;
   onExtensionFloorAreaChange?: (v: string) => void;
+  /** 토지/건물 취득일 분리 (housing·building 공통) */
+  hasSeperateLandAcquisitionDate?: boolean;
+  onHasSeperateLandAcquisitionDateChange?: (v: boolean) => void;
+  landAcquisitionDate?: string;
+  onLandAcquisitionDateChange?: (v: string) => void;
+  landSplitMode?: "apportioned" | "actual";
+  onLandSplitModeChange?: (v: "apportioned" | "actual") => void;
+  landTransferPrice?: string;
+  onLandTransferPriceChange?: (v: string) => void;
+  buildingTransferPrice?: string;
+  onBuildingTransferPriceChange?: (v: string) => void;
+  landAcquisitionPrice?: string;
+  onLandAcquisitionPriceChange?: (v: string) => void;
+  buildingAcquisitionPrice?: string;
+  onBuildingAcquisitionPriceChange?: (v: string) => void;
+  landDirectExpenses?: string;
+  onLandDirectExpensesChange?: (v: string) => void;
+  buildingDirectExpenses?: string;
+  onBuildingDirectExpensesChange?: (v: string) => void;
+  landStandardPriceAtTransfer?: string;
+  onLandStandardPriceAtTransferChange?: (v: string) => void;
+  buildingStandardPriceAtTransfer?: string;
+  onBuildingStandardPriceAtTransferChange?: (v: string) => void;
 }
 
 // ─── 메인 블록 ────────────────────────────────────────────────────
@@ -141,10 +166,15 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
     }
   }
 
+  const isSplitable =
+    props.assetKind === "housing" || props.assetKind === "building";
+  const isSplit = isSplitable && !!props.hasSeperateLandAcquisitionDate;
+  const acqDateLabel = isSplit ? "건물 취득일 (사용승인일·매매 등기접수일)" : "취득일";
+
   return (
     <div className="space-y-3 rounded-md border border-border bg-background p-3">
       <div className="space-y-1.5">
-        <label className="block text-sm font-medium">취득일</label>
+        <label className="block text-sm font-medium">{acqDateLabel}</label>
         <DateInput
           value={props.acquisitionDate}
           onChange={handleAcquisitionDateChange}
@@ -156,6 +186,89 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
           </p>
         )}
       </div>
+
+      {/* 토지/건물 취득일 분리 토글 (housing·building 전용) */}
+      {isSplitable && props.onHasSeperateLandAcquisitionDateChange && (
+        <div className="space-y-2">
+          <label className="flex cursor-pointer items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={!!props.hasSeperateLandAcquisitionDate}
+              onChange={(e) =>
+                props.onHasSeperateLandAcquisitionDateChange!(e.target.checked)
+              }
+              className="rounded border-border"
+            />
+            <span>토지와 건물의 취득일이 다른가요?</span>
+            <span className="text-xs text-muted-foreground">(원시취득·신축 등)</span>
+          </label>
+
+          {isSplit && (
+            <div className="space-y-2 pl-1">
+              <FieldCard
+                label="토지 취득일"
+                hint="등기부등본상 등기접수일 (소득령 §162①1호)"
+              >
+                <DateInput
+                  value={props.landAcquisitionDate ?? ""}
+                  onChange={props.onLandAcquisitionDateChange ?? (() => {})}
+                />
+              </FieldCard>
+
+              <FieldCard label="가액 분리 방식" hint="실제 가액 미확인 시 기준시가 비율로 자동 안분">
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => props.onLandSplitModeChange?.("apportioned")}
+                    className={cn(
+                      "flex-1 rounded-md border-2 px-3 py-1.5 text-sm transition-all",
+                      (props.landSplitMode ?? "apportioned") === "apportioned"
+                        ? "border-primary bg-primary/5 text-primary"
+                        : "border-border hover:border-muted-foreground/50",
+                    )}
+                  >
+                    기준시가 비율 안분
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => props.onLandSplitModeChange?.("actual")}
+                    className={cn(
+                      "flex-1 rounded-md border-2 px-3 py-1.5 text-sm transition-all",
+                      props.landSplitMode === "actual"
+                        ? "border-primary bg-primary/5 text-primary"
+                        : "border-border hover:border-muted-foreground/50",
+                    )}
+                  >
+                    직접 입력
+                  </button>
+                </div>
+              </FieldCard>
+
+              {props.landSplitMode === "actual" && (
+                <LandBuildingSplitSection
+                  useEstimatedAcquisition={props.useEstimatedAcquisition}
+                  landTransferPrice={props.landTransferPrice ?? ""}
+                  onLandTransferPriceChange={props.onLandTransferPriceChange ?? (() => {})}
+                  buildingTransferPrice={props.buildingTransferPrice ?? ""}
+                  onBuildingTransferPriceChange={props.onBuildingTransferPriceChange ?? (() => {})}
+                  landAcquisitionPrice={props.landAcquisitionPrice ?? ""}
+                  onLandAcquisitionPriceChange={props.onLandAcquisitionPriceChange ?? (() => {})}
+                  buildingAcquisitionPrice={props.buildingAcquisitionPrice ?? ""}
+                  onBuildingAcquisitionPriceChange={props.onBuildingAcquisitionPriceChange ?? (() => {})}
+                  landStandardPriceAtTransfer={props.landStandardPriceAtTransfer ?? ""}
+                  onLandStandardPriceAtTransferChange={props.onLandStandardPriceAtTransferChange ?? (() => {})}
+                  buildingStandardPriceAtTransfer={props.buildingStandardPriceAtTransfer ?? ""}
+                  onBuildingStandardPriceAtTransferChange={props.onBuildingStandardPriceAtTransferChange ?? (() => {})}
+                  landDirectExpenses={props.landDirectExpenses ?? ""}
+                  onLandDirectExpensesChange={props.onLandDirectExpensesChange ?? (() => {})}
+                  buildingDirectExpenses={props.buildingDirectExpenses ?? ""}
+                  onBuildingDirectExpensesChange={props.onBuildingDirectExpensesChange ?? (() => {})}
+                />
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="space-y-2">
         <label className="block text-sm font-medium">취득가액 산정 방식</label>

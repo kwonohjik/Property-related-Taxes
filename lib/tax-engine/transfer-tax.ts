@@ -372,7 +372,7 @@ export function calculateTransferTax(
   }
 
   // STEP 2: 양도차익 계산
-  const { gain: rawGain, usedEstimated, estimatedBase, estimatedDeduction, expenses: appliedExpenses } = calcTransferGain(effectiveInput);
+  const { gain: rawGain, usedEstimated, estimatedBase, estimatedDeduction, expenses: appliedExpenses, splitDetail } = calcTransferGain(effectiveInput);
   // STEP 2a: 손실 → 0 (aggregate 엔진에서 skipLossFloor=true 시 음수 허용 — §102② 통산용)
   const transferGain = input.skipLossFloor ? rawGain : Math.max(0, rawGain);
 
@@ -478,7 +478,7 @@ export function calculateTransferTax(
 
   // STEP 4: 장기보유특별공제 (장기임대 특례율 포함)
   const { deduction: longTermHoldingDeduction, rate: longTermHoldingRate, holdingPeriod } =
-    calcLongTermHoldingDeduction(taxableGain, effectiveInput, parsedRates.longTermHoldingRules, isSurchargeCase, suspendedResult, parsedRates.longTermRentalRules);
+    calcLongTermHoldingDeduction(taxableGain, effectiveInput, parsedRates.longTermHoldingRules, isSurchargeCase, suspendedResult, parsedRates.longTermRentalRules, splitDetail);
   const holdingPeriodStr = holdingPeriod.years > 0 || holdingPeriod.months > 0
     ? `보유기간 ${holdingPeriod.years}년 ${holdingPeriod.months}개월`
     : "";
@@ -730,5 +730,6 @@ export function calculateTransferTax(
     selfFarmingReductionDetail,
     penaltyDetail,
     pre1990LandValuationDetail: pre1990LandResult,
+    splitDetail: splitDetail ?? undefined,
   };
 }
