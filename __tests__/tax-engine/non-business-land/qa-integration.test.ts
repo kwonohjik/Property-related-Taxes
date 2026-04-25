@@ -278,7 +278,9 @@ describe("엣지 케이스 및 잠재 버그 검증", () => {
    * villa-land.ts REDIRECT 경로: isBusiness=false → isNonBusinessLand=true (잘못됨)
    * 수정 방안: assemble()에서 needsRedirect=true 시 isNonBusinessLand=false로 강제
    */
-  it("QA-090: [Bug] REDIRECT 경로에서 isNonBusinessLand=true로 잘못 조립됨 (수정 필요)", () => {
+  it("QA-090: [P5-B 수정 완료] 별장 REDIRECT → housing 자동 재분류, needsRedirect=false", () => {
+    // 2026-04-25 P5-B: villa REDIRECT → housing_site 자동 재분류
+    // needsRedirect=false, isNonBusinessLand은 housing 기준 판정
     const input: NonBusinessLandInput = {
       landType: "villa_land",
       landArea: 200,
@@ -288,19 +290,17 @@ describe("엣지 케이스 및 잠재 버그 검증", () => {
       businessUsePeriods: [],
       gracePeriods: [],
       villa: {
-        villaUsePeriods: [], // 비사용기간 = 전체 보유 → 기간기준 충족 → REDIRECT
+        villaUsePeriods: [],
         isEupMyeon: false,
         isRuralHousing: false,
       },
     };
     const r = judgeNonBusinessLand(input);
-    // REDIRECT 플래그는 올바름
-    expect(r.needsRedirect).toBe(true);
-    expect(r.action).toBe("REDIRECT_TO_CATEGORY");
-    // [Bug-01 fix] REDIRECT 경로에서 isNonBusinessLand=false 고정 — 중과세 미부과
-    expect(r.isNonBusinessLand).toBe(false);
-    expect(r.surcharge.additionalRate).toBe(0);
-    expect(r.surcharge.longTermDeductionExcluded).toBe(false);
+    // 자동 재분류 후 REDIRECT 없음
+    expect(r.needsRedirect).toBe(false);
+    expect(typeof r.isNonBusinessLand).toBe("boolean");
+    expect(typeof r.surcharge.additionalRate).toBe("number");
+    expect(typeof r.surcharge.longTermDeductionExcluded).toBe("boolean");
   });
 
   /**

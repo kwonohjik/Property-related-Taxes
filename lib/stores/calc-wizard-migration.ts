@@ -95,6 +95,22 @@ export function migrateLegacyForm(
     migrateAsset(primaryAsset);
   }
 
+  // 구 폼-전역 nbl* 6필드 → assets[0] (isNonBusinessLand 포함)
+  if (legacy.isNonBusinessLand || legacy.nblLandType) {
+    primaryAsset.isNonBusinessLand = Boolean(legacy.isNonBusinessLand);
+    primaryAsset.nblLandType = String(legacy.nblLandType ?? "") as AssetForm["nblLandType"];
+    primaryAsset.nblZoneType = String(legacy.nblZoneType ?? "");
+    primaryAsset.nblFarmingSelf = Boolean(legacy.nblFarmingSelf);
+    primaryAsset.nblFarmerResidenceDistance = String(legacy.nblFarmerResidenceDistance ?? "");
+    primaryAsset.nblBusinessUsePeriods =
+      (legacy.nblBusinessUsePeriods as AssetForm["nblBusinessUsePeriods"]) ?? [];
+    // nblLandArea → acquisitionArea (비어있을 때만, area-taxonomy.md 원칙 B)
+    if (legacy.nblLandArea && !primaryAsset.acquisitionArea) {
+      primaryAsset.acquisitionArea = String(legacy.nblLandArea);
+      primaryAsset.transferArea = String(legacy.nblLandArea);
+    }
+  }
+
   const legacyReductionType = legacy.reductionType as string | undefined;
   if (legacyReductionType && legacyReductionType !== "") {
     if (legacyReductionType === "self_farming") {
@@ -219,6 +235,13 @@ export function migrateLegacyForm(
     expropriationBond: _eb,
     expropriationBondHoldingYears: _ebhy,
     expropriationApprovalDate: _ead,
+    isNonBusinessLand: _inbl,
+    nblLandType: _nlt,
+    nblLandArea: _nla,
+    nblZoneType: _nzt,
+    nblFarmingSelf: _nfs,
+    nblFarmerResidenceDistance: _nfrd,
+    nblBusinessUsePeriods: _nbup,
     ...rest
   } = legacy as Record<string, unknown>;
 
@@ -229,6 +252,7 @@ export function migrateLegacyForm(
   void _plon; void _plat; void _pm; void _parcels; void _rt; void _fy; void _usfi;
   void _sfid; void _sfiz; void _sfspa; void _dfy; void _ry; void _rir; void _rr;
   void _ec; void _eb; void _ebhy; void _ead;
+  void _inbl; void _nlt; void _nla; void _nzt; void _nfs; void _nfrd; void _nbup;
 
   return {
     ...defaultFormData,

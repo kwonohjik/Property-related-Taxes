@@ -19,6 +19,31 @@ export interface NblBusinessUsePeriod {
   usageType: string;
 }
 
+/** 소유자 거주 이력 1건 (NBL 재촌 판정용) */
+export interface ResidenceHistoryInput {
+  sigunguCode: string;
+  sigunguName: string;
+  startDate: string;
+  endDate: string;
+  /** 주민등록 여부 — 임야 재촌 필수 요건 */
+  hasResidentRegistration: boolean;
+}
+
+/** 부득이한 사유 유예기간 1건 (§168-14①) */
+export interface GracePeriodInput {
+  type:
+    | "inheritance"
+    | "legal_restriction"
+    | "sale_contract"
+    | "construction"
+    | "unavoidable"
+    | "preparation"
+    | "land_replotting";
+  startDate: string;
+  endDate: string;
+  description: string;
+}
+
 /** 다른 보유 주택 항목 (폼 문자열 버전) */
 export interface HouseEntry {
   id: string;
@@ -217,6 +242,80 @@ export interface AssetForm {
   pre1990Grade_prev: string;
   pre1990Grade_atAcq: string;
   pre1990GradeMode: "number" | "value";
+
+  // ── 비사업용 토지 정밀 판정 (assetKind === "land" 전용) ──
+  /** 단순 체크박스 경로 — 상세 판정 없이 플래그만 전달 */
+  isNonBusinessLand: boolean;
+  /** true 시 엔진 자동 판정, isNonBusinessLand 체크박스 무시 */
+  nblUseDetailedJudgment: boolean;
+
+  // ── NBL 공통 ──
+  /** 지목 (nblLandArea는 acquisitionArea 재사용 — area-taxonomy.md 원칙 B) */
+  nblLandType: "" | "farmland" | "forest" | "pasture" | "housing_site" | "villa_land" | "other_land";
+  nblZoneType: string;
+  nblBusinessUsePeriods: NblBusinessUsePeriod[];
+
+  // ── NBL 위치·거주 ──
+  nblLandSigunguCode: string;
+  nblLandSigunguName: string;
+  nblResidenceHistories: ResidenceHistoryInput[];
+
+  // ── NBL 무조건 면제 §168-14③ ──
+  nblExemptInheritBefore2007: boolean;
+  nblExemptInheritDate: string;
+  nblExemptLongOwned20y: boolean;
+  nblExemptAncestor8YearFarming: boolean;
+  nblExemptPublicExpropriation: boolean;
+  nblExemptPublicNoticeDate: string;
+  nblExemptFactoryAdjacent: boolean;
+  nblExemptJongjoongOwned: boolean;
+  nblExemptJongjoongAcqDate: string;
+  nblExemptUrbanFarmlandJongjoong: boolean;
+
+  // ── NBL 도시편입·수도권·공동상속 ──
+  nblUrbanIncorporationDate: string;
+  nblIsMetropolitanArea: "" | "yes" | "no" | "unknown";
+  nblOwnershipRatio: string;
+
+  // ── NBL 농지 세부 ──
+  nblFarmingSelf: boolean;
+  nblFarmerResidenceDistance: string;
+  nblFarmlandIsWeekendFarm: boolean;
+  nblFarmlandIsConversionApproved: boolean;
+  nblFarmlandConversionDate: string;
+  nblFarmlandIsMarginalFarm: boolean;
+  nblFarmlandIsReclaimedLand: boolean;
+  nblFarmlandIsPublicProjectUse: boolean;
+  nblFarmlandIsSickElderlyRental: boolean;
+
+  // ── NBL 임야 세부 ──
+  nblForestHasPlan: boolean;
+  nblForestIsPublicInterest: boolean;
+  nblForestIsProtected: boolean;
+  nblForestIsSuccessor: boolean;
+  nblForestInheritedWithin3Years: boolean;
+
+  // ── NBL 목장 세부 ──
+  nblPastureIsLivestockOperator: boolean;
+  nblPastureLivestockType: string;
+  nblPastureLivestockCount: string;
+  nblPastureLivestockPeriods: NblBusinessUsePeriod[];
+  nblPastureInheritanceDate: string;
+  nblPastureIsSpecialOrgUse: boolean;
+
+  // ── NBL 주택·별장·나대지 세부 ──
+  nblHousingFootprint: string;
+  nblVillaUsePeriods: NblBusinessUsePeriod[];
+  nblVillaIsEupMyeon: boolean;
+  nblVillaIsRuralHousing: boolean;
+  nblVillaIsAfter20150101: boolean;
+  nblOtherPropertyTaxType: "" | "exempt" | "comprehensive" | "separate" | "special_sum";
+  nblOtherBuildingValue: string;
+  nblOtherLandValue: string;
+  nblOtherIsRelatedToResidence: boolean;
+
+  // ── NBL 부득이한 사유 ──
+  nblGracePeriods: GracePeriodInput[];
 }
 
 /** 하위 호환 별칭 — 기존 코드에서 CompanionAssetForm을 참조하는 곳에 사용 */
@@ -282,6 +381,58 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     entitlementArea: "",
     allocatedArea: "",
     priorLandArea: "",
+    // ── 비사업용 토지 정밀 판정 ──
+    isNonBusinessLand: false,
+    nblUseDetailedJudgment: false,
+    nblLandType: "",
+    nblZoneType: "",
+    nblBusinessUsePeriods: [],
+    nblLandSigunguCode: "",
+    nblLandSigunguName: "",
+    nblResidenceHistories: [],
+    nblExemptInheritBefore2007: false,
+    nblExemptInheritDate: "",
+    nblExemptLongOwned20y: false,
+    nblExemptAncestor8YearFarming: false,
+    nblExemptPublicExpropriation: false,
+    nblExemptPublicNoticeDate: "",
+    nblExemptFactoryAdjacent: false,
+    nblExemptJongjoongOwned: false,
+    nblExemptJongjoongAcqDate: "",
+    nblExemptUrbanFarmlandJongjoong: false,
+    nblUrbanIncorporationDate: "",
+    nblIsMetropolitanArea: "",
+    nblOwnershipRatio: "",
+    nblFarmingSelf: false,
+    nblFarmerResidenceDistance: "",
+    nblFarmlandIsWeekendFarm: false,
+    nblFarmlandIsConversionApproved: false,
+    nblFarmlandConversionDate: "",
+    nblFarmlandIsMarginalFarm: false,
+    nblFarmlandIsReclaimedLand: false,
+    nblFarmlandIsPublicProjectUse: false,
+    nblFarmlandIsSickElderlyRental: false,
+    nblForestHasPlan: false,
+    nblForestIsPublicInterest: false,
+    nblForestIsProtected: false,
+    nblForestIsSuccessor: false,
+    nblForestInheritedWithin3Years: false,
+    nblPastureIsLivestockOperator: false,
+    nblPastureLivestockType: "",
+    nblPastureLivestockCount: "",
+    nblPastureLivestockPeriods: [],
+    nblPastureInheritanceDate: "",
+    nblPastureIsSpecialOrgUse: false,
+    nblHousingFootprint: "",
+    nblVillaUsePeriods: [],
+    nblVillaIsEupMyeon: false,
+    nblVillaIsRuralHousing: false,
+    nblVillaIsAfter20150101: false,
+    nblOtherPropertyTaxType: "",
+    nblOtherBuildingValue: "",
+    nblOtherLandValue: "",
+    nblOtherIsRelatedToResidence: false,
+    nblGracePeriods: [],
   };
 }
 
@@ -396,18 +547,11 @@ export interface TransferFormData {
   isRegulatedArea: boolean;
   wasRegulatedAtAcquisition: boolean;
   isUnregistered: boolean;
-  isNonBusinessLand: boolean;
   temporaryTwoHouseSpecial: boolean;
   previousHouseAcquisitionDate: string;
   newHouseAcquisitionDate: string;
   marriageDate: string;
   parentalCareMergeDate: string;
-  nblLandType: string;
-  nblLandArea: string;
-  nblZoneType: string;
-  nblFarmingSelf: boolean;
-  nblFarmerResidenceDistance: string;
-  nblBusinessUsePeriods: NblBusinessUsePeriod[];
   houses: HouseEntry[];
   sellingHouseRegion: "capital" | "non_capital";
 
@@ -458,18 +602,11 @@ const defaultFormData: TransferFormData = {
   isRegulatedArea: false,
   wasRegulatedAtAcquisition: false,
   isUnregistered: false,
-  isNonBusinessLand: false,
   temporaryTwoHouseSpecial: false,
   previousHouseAcquisitionDate: "",
   newHouseAcquisitionDate: "",
   marriageDate: "",
   parentalCareMergeDate: "",
-  nblLandType: "",
-  nblLandArea: "",
-  nblZoneType: "",
-  nblFarmingSelf: false,
-  nblFarmerResidenceDistance: "",
-  nblBusinessUsePeriods: [],
   houses: [],
   sellingHouseRegion: "capital",
   annualBasicDeductionUsed: "0",

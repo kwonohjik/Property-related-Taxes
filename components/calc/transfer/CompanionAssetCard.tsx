@@ -13,6 +13,7 @@ import { CompanionSaleModeBlock, type BundledSaleMode } from "./CompanionSaleMod
 import { CompanionAcqPurchaseBlock } from "./CompanionAcqPurchaseBlock";
 import { CompanionAcqInheritanceBlock } from "./CompanionAcqInheritanceBlock";
 import { CompanionAcqGiftBlock } from "./CompanionAcqGiftBlock";
+import { NblSectionContainer } from "./nbl/NblSectionContainer";
 
 const ASSET_KIND_LABELS: Record<string, string> = {
   housing: "주택",
@@ -486,6 +487,13 @@ export function CompanionAssetCard({
         value={asset.directExpenses}
         onChange={(v) => onChange({ directExpenses: v })}
       />
+
+      {/* 비사업용 토지 정밀 판정 (토지 자산 전용) */}
+      {asset.assetKind === "land" && (
+        <div className="pt-2 border-t border-border/60">
+          <NblSectionContainer asset={asset} onAssetChange={onChange} />
+        </div>
+      )}
 
       {/* 감면은 Step 5(감면·공제)에서 자산별로 선택합니다 */}
     </div>

@@ -7,6 +7,47 @@
 > **관련 엔진**: `lib/tax-engine/non-business-land/` (13 파일, types.ts 542줄 / engine.ts 317줄)
 > **관련 UI (현재)**: `app/calc/transfer-tax/steps/step4-sections/NblDetailSection.tsx` (209줄)
 > ⚠️ **v1.1 (2026-04-25)**: Stream A 업그레이드 반영 — NBL 필드 AssetForm 이전, 마운트 위치 CompanionAssetCard로 변경, API 경로 정정
+> ⚠️ **v1.2 (2026-04-25)**: 시스템 UI 전면 개편 반영 — 4단계 마법사로 단순화(Step3 제거), 공용 컴포넌트(FieldCard·SectionHeader·WizardSidebar) 도입, 마이그레이션 모듈(`calc-wizard-migration.ts`) 분리, form-visibility-improvement 패턴 채택
+
+---
+
+## 0. v1.2 — 시스템 UI 전면 개편으로 인한 변경 (2026-04-25)
+
+### 0.1 4단계 마법사 구조 (Step3 제거)
+
+기존 5단계(Step1·Step3·Step4·Step5·Step6) → **4단계(Step1·Step4·Step5·Step6)**.
+- **Step1**: 자산 목록 + 양도·취득 정보 통합 (구 Step3 흡수)
+- **Step4**: 보유 상황 (1세대1주택, 다른 보유 주택, NBL 정밀 판정 임시 위치)
+- **Step5**: 감면·공제 (자산별 reductions)
+- **Step6**: 가산세
+
+마이그레이션: `lib/stores/calc-wizard-migration.ts`의 `migrateLegacyForm()` (239줄, 신규 분리 모듈)에서 5→4 인덱스 매핑 + companionAssets 평탄화 + 13개 취득 필드 root→assets[0] 이전.
+
+### 0.2 공용 컴포넌트 도입 (FieldCard 패턴)
+
+`form-visibility-improvement` feature(별도 plan/design)에서 도입한 표준 UI 빌딩 블록:
+- `components/calc/inputs/FieldCard.tsx` (76줄) — label + input + hint + warning + trailing 슬롯의 일관된 필드 레이아웃
+- `components/calc/shared/SectionHeader.tsx` (43줄) — 섹션 헤더 (아이콘 + 설명 + action)
+- `components/calc/shared/WizardSidebar.tsx` (138줄) — 데스크톱 좌측 사이드바 (단계 + 5개 합계 요약)
+- `components/calc/transfer/SelfBuiltSection.tsx` (115줄) — 자가건축 섹션 (참고용 패턴)
+
+NBL 신규 컴포넌트는 **반드시 FieldCard·SectionHeader 패턴 재사용**. 자체 div+label 구조 금지.
+
+### 0.3 calc-wizard-migration.ts 분리 패턴
+
+기존 plan은 `migrateAsset` 함수를 store 파일(`calc-wizard-store.ts`)에 추가하려 했으나, 800줄 정책 + 관심사 분리 원칙에 따라 **마이그레이션 로직은 `calc-wizard-migration.ts`에 별도 함수로 추가**해야 함.
+- `migrateLegacyForm()`이 이미 5→4 마이그레이션 처리 중 → 이 함수에 NBL root→asset 이전 로직 inject
+- `calc-wizard-store.ts`는 인터페이스 정의 + persist 설정만 담당
+
+### 0.4 현재 NBL 상태 재확인 (commit 1118a45 분석 결과)
+
+전 commit 1118a45에서 시스템 UI는 전면 개편됐으나, **NBL 자체 구현은 시작되지 않은 상태**:
+- ❌ NBL 필드는 여전히 `TransferFormData` root (lines 405-410, 6개 필드)
+- ❌ `components/calc/transfer/nbl/` 디렉터리 미생성
+- ❌ 엔진 Gap 6건 미해소 (grace-period.ts, co-ownership.ts, form-mapper.ts, livestock-standards.ts 모두 미존재)
+- ❌ `NblDetailSection` 단일 파일이 여전히 `Step4.tsx`에 마운트 (글로벌, 자산별 아님)
+
+이 plan의 모든 마일스톤(M1~M7)은 그대로 유효, 단 작업 시 **0.1~0.3의 새 패턴을 따라야 함**.
 
 ---
 

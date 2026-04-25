@@ -57,7 +57,16 @@ export function judgeHousingLand(
     };
   }
 
-  const isMetropolitan = input.isMetropolitanArea ?? false;
+  // isMetropolitanArea 미지정 시 수도권으로 보수적 처리 (납세자에게 불리한 쪽 적용)
+  let isMetropolitan: boolean;
+  if (input.isMetropolitanArea === undefined) {
+    warnings.push(
+      "수도권 여부(isMetropolitanArea) 미제공 — 보수적 기본값(수도권)으로 배율 산정. 수도권 여부를 명시하면 정확한 배율이 적용됩니다.",
+    );
+    isMetropolitan = true;
+  } else {
+    isMetropolitan = input.isMetropolitanArea;
+  }
   const { multiplier, detail: multiplierDetail } = getHousingMultiplier(input.zoneType, isMetropolitan);
   const allowedArea = footprint * multiplier;
 

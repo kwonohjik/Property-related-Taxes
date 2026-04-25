@@ -1,6 +1,6 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-04-25T07:12:47.912Z",
+  "lastUpdated": "2026-04-25T09:36:18.786Z",
   "activeFeatures": [
     "claude-code-mastery",
     "calc",
@@ -75,7 +75,8 @@
     "acquisition",
     "inheritance-gift",
     "fixtures",
-    "step4-sections"
+    "step4-sections",
+    "nbl"
   ],
   "primaryFeature": "law-research-v2",
   "features": {
@@ -134,9 +135,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-13T21:04:14.863Z",
-        "lastUpdated": "2026-04-25T07:08:50.117Z"
+        "lastUpdated": "2026-04-25T09:29:41.905Z"
       },
-      "lastFile": "/Users/mynote/workspace/Property-related-Taxes/lib/calc/multi-transfer-tax-validate.ts"
+      "lastFile": "/Users/mynote/workspace/Property-related-Taxes/components/calc/NonBusinessLandResultCard.tsx"
     },
     "inheritance-tax": {
       "phase": "do",
@@ -316,7 +317,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-13T23:20:05.996Z",
-        "lastUpdated": "2026-04-25T07:11:38.485Z"
+        "lastUpdated": "2026-04-25T09:33:24.657Z"
       },
       "lastFile": "/Users/mynote/workspace/Property-related-Taxes/components/calc/transfer/CompanionAssetCard.tsx"
     },
@@ -329,9 +330,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-13T23:45:07.391Z",
-        "lastUpdated": "2026-04-25T07:12:47.911Z"
+        "lastUpdated": "2026-04-25T09:05:37.661Z"
       },
-      "lastFile": "/Users/mynote/workspace/Property-related-Taxes/lib/stores/calc-wizard-store.ts"
+      "lastFile": "/Users/mynote/workspace/Property-related-Taxes/lib/stores/calc-wizard-migration.ts"
     },
     "transfer-tax": {
       "phase": "do",
@@ -732,9 +733,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-18T11:02:38.851Z",
-        "lastUpdated": "2026-04-21T10:17:40.515Z"
+        "lastUpdated": "2026-04-25T09:26:19.651Z"
       },
-      "lastFile": "/Users/mynote/workspace/Property-related-Taxes/lib/korean-law/client.ts"
+      "lastFile": "/Users/mynote/workspace/Property-related-Taxes/lib/korean-law/sigungu-codes.ts"
     },
     "search-law": {
       "phase": "do",
@@ -981,9 +982,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-20T06:32:09.150Z",
-        "lastUpdated": "2026-04-21T10:05:11.114Z"
+        "lastUpdated": "2026-04-25T09:04:45.069Z"
       },
-      "lastFile": "/Users/mynote/workspace/Property-related-Taxes/lib/tax-engine/data/population-decline-areas.ts"
+      "lastFile": "/Users/mynote/workspace/Property-related-Taxes/lib/tax-engine/non-business-land/data/livestock-standards.ts"
     },
     "tmp": {
       "phase": "do",
@@ -1007,9 +1008,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-20T21:42:26.067Z",
-        "lastUpdated": "2026-04-20T23:03:40.686Z"
+        "lastUpdated": "2026-04-25T09:36:18.785Z"
       },
-      "lastFile": "/Users/mynote/workspace/Property-related-Taxes/lib/tax-engine/non-business-land/villa-land.ts"
+      "lastFile": "/Users/mynote/workspace/Property-related-Taxes/__tests__/tax-engine/non-business-land/qa-integration.test.ts"
     },
     "steps": {
       "phase": "do",
@@ -1020,9 +1021,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-21T02:27:47.645Z",
-        "lastUpdated": "2026-04-25T01:04:45.022Z"
+        "lastUpdated": "2026-04-25T09:33:39.086Z"
       },
-      "lastFile": "/Users/mynote/workspace/Property-related-Taxes/app/calc/transfer-tax/steps/Step6.tsx"
+      "lastFile": "/Users/mynote/workspace/Property-related-Taxes/app/calc/transfer-tax/steps/Step4.tsx"
     },
     "legal-codes": {
       "phase": "do",
@@ -1072,9 +1073,22 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-21T12:46:56.784Z",
-        "lastUpdated": "2026-04-21T12:53:45.872Z"
+        "lastUpdated": "2026-04-25T09:23:55.121Z"
       },
       "lastFile": "/Users/mynote/workspace/Property-related-Taxes/app/calc/transfer-tax/steps/step4-sections/NblDetailSection.tsx"
+    },
+    "nbl": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-04-25T09:28:39.107Z",
+        "lastUpdated": "2026-04-25T09:33:01.162Z"
+      },
+      "lastFile": "/Users/mynote/workspace/Property-related-Taxes/components/calc/transfer/nbl/NblSectionContainer.tsx"
     }
   },
   "pipeline": {
@@ -1085,7 +1099,7 @@
   "session": {
     "startedAt": "2026-04-13T10:11:34.572Z",
     "onboardingCompleted": false,
-    "lastActivity": "2026-04-25T07:12:47.912Z"
+    "lastActivity": "2026-04-25T09:36:18.786Z"
   },
   "history": [
     {
@@ -16091,6 +16105,402 @@
     {
       "timestamp": "2026-04-25T07:12:47.912Z",
       "feature": "stores",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:04:23.313Z",
+      "feature": "non-business-land",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:04:25.179Z",
+      "feature": "stores",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:04:34.758Z",
+      "feature": "non-business-land",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:04:45.070Z",
+      "feature": "data",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:04:47.550Z",
+      "feature": "stores",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:04:56.729Z",
+      "feature": "stores",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:05:02.471Z",
+      "feature": "stores",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:05:06.713Z",
+      "feature": "stores",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:05:21.668Z",
+      "feature": "stores",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:05:34.231Z",
+      "feature": "stores",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:05:37.560Z",
+      "feature": "non-business-land",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:05:37.661Z",
+      "feature": "stores",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:05:46.790Z",
+      "feature": "calc",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:05:59.508Z",
+      "feature": "calc",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:06:14.233Z",
+      "feature": "non-business-land",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:06:21.031Z",
+      "feature": "calc",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:06:21.975Z",
+      "feature": "calc",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:06:30.587Z",
+      "feature": "steps",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:06:34.643Z",
+      "feature": "steps",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:06:43.187Z",
+      "feature": "step4-sections",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:06:52.492Z",
+      "feature": "step4-sections",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:06:54.714Z",
+      "feature": "non-business-land",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:07:10.425Z",
+      "feature": "non-business-land",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:07:42.386Z",
+      "feature": "non-business-land",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:08:05.145Z",
+      "feature": "non-business-land",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:23:32.674Z",
+      "feature": "step4-sections",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:23:46.997Z",
+      "feature": "steps",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:23:55.122Z",
+      "feature": "step4-sections",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:24:50.280Z",
+      "feature": "non-business-land",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:25:06.535Z",
+      "feature": "non-business-land",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:25:14.781Z",
+      "feature": "non-business-land",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:25:21.968Z",
+      "feature": "non-business-land",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:25:29.296Z",
+      "feature": "non-business-land",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:25:40.584Z",
+      "feature": "non-business-land",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:25:48.869Z",
+      "feature": "non-business-land",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:26:03.638Z",
+      "feature": "non-business-land",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:26:08.741Z",
+      "feature": "non-business-land",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:26:19.652Z",
+      "feature": "korean-law",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:28:39.108Z",
+      "feature": "nbl",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:28:49.944Z",
+      "feature": "nbl",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:28:59.937Z",
+      "feature": "nbl",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:29:22.143Z",
+      "feature": "nbl",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:29:36.306Z",
+      "feature": "nbl",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:29:41.906Z",
+      "feature": "calc",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:29:51.216Z",
+      "feature": "nbl",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:30:03.350Z",
+      "feature": "nbl",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:30:18.121Z",
+      "feature": "nbl",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:30:31.549Z",
+      "feature": "nbl",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:30:40.209Z",
+      "feature": "nbl",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:30:53.932Z",
+      "feature": "nbl",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:30:57.249Z",
+      "feature": "non-business-land",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:31:09.033Z",
+      "feature": "nbl",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:31:52.502Z",
+      "feature": "non-business-land",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:32:02.409Z",
+      "feature": "non-business-land",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:32:12.859Z",
+      "feature": "non-business-land",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:33:01.163Z",
+      "feature": "nbl",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:33:19.048Z",
+      "feature": "transfer",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:33:24.658Z",
+      "feature": "transfer",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:33:29.251Z",
+      "feature": "steps",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:33:39.087Z",
+      "feature": "steps",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:33:52.929Z",
+      "feature": "non-business-land",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:33:56.504Z",
+      "feature": "non-business-land",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:35:23.897Z",
+      "feature": "non-business-land",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:35:50.764Z",
+      "feature": "non-business-land",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:36:00.528Z",
+      "feature": "non-business-land",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T09:36:18.786Z",
+      "feature": "non-business-land",
       "phase": "do",
       "action": "updated"
     }

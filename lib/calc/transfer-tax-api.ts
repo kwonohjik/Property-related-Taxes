@@ -164,20 +164,23 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
   // ── 대표 자산 감면 (자산별 reductions 배열에서 빌드) ──
   const reductions = toEngineReductions(primary.reductions ?? [], primary.acquisitionCause);
 
-  // ── 비사업용 토지 상세 ──
+  // ── 비사업용 토지 상세 — asset 단위 읽기 (v1.2: form.nbl* → primary.nbl*) ──
   const nblDetails =
-    primary.assetKind === "land" && form.nblLandType && form.nblLandArea && form.nblZoneType
+    primary.assetKind === "land" &&
+    primary.nblLandType &&
+    primary.nblZoneType &&
+    primary.acquisitionArea
       ? {
-          landType: form.nblLandType,
-          landArea: parseFloat(form.nblLandArea),
-          zoneType: form.nblZoneType,
+          landType: primary.nblLandType,
+          landArea: parseFloat(primary.acquisitionArea),   // nblLandArea 폐지, acquisitionArea 재사용
+          zoneType: primary.nblZoneType,
           acquisitionDate: primary.acquisitionDate,
           transferDate: form.transferDate,
-          farmingSelf: form.nblFarmingSelf || undefined,
-          farmerResidenceDistance: form.nblFarmerResidenceDistance
-            ? parseFloat(form.nblFarmerResidenceDistance)
+          farmingSelf: primary.nblFarmingSelf || undefined,
+          farmerResidenceDistance: primary.nblFarmerResidenceDistance
+            ? parseFloat(primary.nblFarmerResidenceDistance)
             : undefined,
-          businessUsePeriods: form.nblBusinessUsePeriods.filter(
+          businessUsePeriods: (primary.nblBusinessUsePeriods ?? []).filter(
             (p) => p.startDate && p.endDate,
           ),
         }
@@ -266,7 +269,7 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     isRegulatedArea: form.isRegulatedArea,
     wasRegulatedAtAcquisition: form.wasRegulatedAtAcquisition,
     isUnregistered: form.isUnregistered,
-    isNonBusinessLand: form.isNonBusinessLand,
+    isNonBusinessLand: primary.isNonBusinessLand ?? false,
     isSuccessorRightToMoveIn:
       primary.assetKind === "right_to_move_in"
         ? primary.isSuccessorRightToMoveIn

@@ -3,7 +3,6 @@ import { cn } from "@/lib/utils";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { DateInput } from "@/components/ui/date-input";
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
-import { NblDetailSection } from "./step4-sections/NblDetailSection";
 import { HousesListSection } from "./step4-sections/HousesListSection";
 import { MergeDateSection } from "./step4-sections/MergeDateSection";
 
@@ -27,6 +26,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
   const appliedRef = useRef(false);
   const primaryKind = form.assets?.[0]?.assetKind ?? "";
   const primaryAcquisitionDate = form.assets?.[0]?.acquisitionDate ?? "";
+  const primary = form.assets?.[0];
 
   const primaryAddress =
     (form.assets?.[0]?.addressRoad || form.assets?.[0]?.addressJibun) ?? "";
@@ -287,8 +287,11 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
               <input
                 id="isNonBusiness"
                 type="checkbox"
-                checked={form.isNonBusinessLand}
-                onChange={(e) => onChange({ isNonBusinessLand: e.target.checked })}
+                checked={primary?.isNonBusinessLand ?? false}
+                onChange={(e) => {
+                  if (!primary) return;
+                  onChange({ assets: form.assets.map((a, i) => i === 0 ? { ...a, isNonBusinessLand: e.target.checked } : a) });
+                }}
                 className="h-4 w-4 rounded accent-primary"
               />
               <div>
@@ -312,10 +315,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
         )}
       </div>
 
-      {/* 토지: 비사업용 토지 정밀 판정 정보 (P0-A) */}
-      {primaryKind === "land" && (
-        <NblDetailSection form={form} onChange={onChange} />
-      )}
+      {/* 토지 비사업용 판정 — CompanionAssetCard(Step1 자산 카드) 내부로 이전됨 */}
 
       {/* 주택·입주권·분양권: 다른 보유 주택 목록 (P0-B) */}
       {isHousingLike(primaryKind) && parseInt(form.householdHousingCount) >= 2 && <SectionHeader title="다른 보유 주택 목록" description="세대 전체의 보유 주택을 입력하세요 (다주택 중과세 판단)" />}

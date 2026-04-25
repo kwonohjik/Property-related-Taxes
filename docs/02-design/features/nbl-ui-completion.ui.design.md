@@ -4,6 +4,7 @@
 > **작성일**: 2026-04-24
 > **범위**: UI 컴포넌트 구조·props·플로우·결과 카드 개편
 > **v1.1 변경 (2026-04-25)**: 마운트 위치 Step4 → CompanionAssetCard, props 시그니처 TransferFormData → AssetForm
+> **v1.2 변경 (2026-04-25)**: 시스템 UI 개편 반영 — FieldCard·SectionHeader 필수 재사용, 4단계 마법사 (Step3 제거), 마이그레이션 모듈 분리
 
 ---
 
@@ -52,6 +53,32 @@ interface NblSectionProps {
   onAssetChange: (patch: Partial<AssetForm>) => void;
 }
 ```
+
+### 2.1 v1.2 — FieldCard 필수 사용 패턴
+
+각 섹션 컴포넌트는 내부에서 입력을 작성할 때 `FieldCard`로 wrap해야 함 (자체 div+label 금지):
+
+```tsx
+import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import { SectionHeader } from "@/components/calc/shared/SectionHeader";
+
+export function ForestDetailSection({ asset, onAssetChange }: NblSectionProps) {
+  return (
+    <div className="space-y-3">
+      <SectionHeader icon={<TreePine />} title="임야 세부 정보" description="..." />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <FieldCard label="산림경영계획 인가" hint="시장·군수 인가 받은 경우">
+          <input type="checkbox" checked={asset.nblForestHasPlan}
+            onChange={(e) => onAssetChange({ nblForestHasPlan: e.target.checked })} />
+        </FieldCard>
+        {/* ... */}
+      </div>
+    </div>
+  );
+}
+```
+
+`FieldCard`의 정확한 props는 `docs/02-design/features/form-visibility-improvement.components.md` 참조.
 
 예외 — `SigunguSelect`:
 

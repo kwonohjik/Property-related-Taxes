@@ -4,6 +4,7 @@
 > **작성일**: 2026-04-24
 > **범위**: 엔진 Gap 6건 해소 + Form ↔ Input 매퍼 + 타입 확장
 > **v1.1 변경 (2026-04-25)**: TransferFormData → AssetForm으로 NBL 필드 이전 (Stream A 업그레이드 반영)
+> **v1.2 변경 (2026-04-25)**: 마이그레이션 로직을 `calc-wizard-migration.ts`로 분리 (commit 1118a45 반영) — store 파일에 직접 추가 금지
 
 ---
 
@@ -108,30 +109,54 @@ export interface GracePeriodInput {
 }
 ```
 
-### 1.1.1 마이그레이션 — root → AssetForm 이전
+### 1.1.1 마이그레이션 — root → AssetForm 이전 (⚠️ v1.2: 위치 변경)
+
+⚠️ **v1.2**: `calc-wizard-store.ts` 내부에 `migrateAsset` 추가 금지 (800줄 정책 위반 우려).
+기존 `lib/stores/calc-wizard-migration.ts:29-239` 의 `migrateLegacyForm()` 함수에 NBL 이전 로직을 inject:
 
 ```ts
-// lib/stores/calc-wizard-store.ts — migrateAsset 함수 확장
-function migrateAsset(asset: any, rootForm: any): AssetForm {
-  // root nbl* → primary asset으로 이전 (persist v3→v4)
-  if (asset.isPrimaryForHouseholdFlags && rootForm.nblLandType) {
-    asset.nblLandType       = rootForm.nblLandType;
-    asset.nblZoneType       = rootForm.nblZoneType ?? "";
-    asset.nblFarmingSelf    = rootForm.nblFarmingSelf ?? false;
-    asset.nblFarmerResidenceDistance = rootForm.nblFarmerResidenceDistance ?? "";
-    asset.nblBusinessUsePeriods = rootForm.nblBusinessUsePeriods ?? [];
-    asset.isNonBusinessLand = rootForm.isNonBusinessLand ?? false;
+// lib/stores/calc-wizard-migration.ts — migrateLegacyForm() 내부에 추가
+export function migrateLegacyForm(
+  legacy: Record<string, unknown>,
+  defaultFormData: TransferFormData,
+): TransferFormData {
+  const primaryAsset = makeDefaultAsset(1);
+  // ... 기존 13 필드 이전 로직 (acquisitionDate, fixedAcquisitionPrice 등) ...
+
+  // ▼ v1.2 추가: NBL root → primary asset 이전 (persist v? → v?+1)
+  if (legacy.nblLandType) {
+    primaryAsset.isNonBusinessLand        = Boolean(legacy.isNonBusinessLand);
+    primaryAsset.nblLandType              = String(legacy.nblLandType ?? "");
+    primaryAsset.nblZoneType              = String(legacy.nblZoneType ?? "");
+    primaryAsset.nblFarmingSelf           = Boolean(legacy.nblFarmingSelf);
+    primaryAsset.nblFarmerResidenceDistance = String(legacy.nblFarmerResidenceDistance ?? "");
+    primaryAsset.nblBusinessUsePeriods    = (legacy.nblBusinessUsePeriods as NblBusinessUsePeriod[]) ?? [];
+    // 면적은 acquisitionArea로 이전 (nblLandArea 폐지)
+    if (legacy.nblLandArea && !primaryAsset.acquisitionArea) {
+      primaryAsset.acquisitionArea = String(legacy.nblLandArea);
+    }
   }
-  // 기본값 주입 (신규 필드)
-  asset.nblUseDetailedJudgment   ??= false;
-  asset.nblResidenceHistories    ??= [];
-  asset.nblGracePeriods          ??= [];
-  asset.nblExemptInheritBefore2007 ??= false;
-  // ... 나머지 신규 필드 모두 false/"" 기본값
-  return asset;
+
+  // 기본값 주입 (모든 신규 NBL 필드)
+  primaryAsset.nblUseDetailedJudgment   = false;
+  primaryAsset.nblResidenceHistories    = [];
+  primaryAsset.nblGracePeriods          = [];
+  primaryAsset.nblExemptInheritBefore2007 = false;
+  // ... 모든 신규 필드 falsy 기본값
+
+  // 기존 root nbl* 필드 제거 (destructuring filter — line 180-231 패턴 따름)
+  // 이미 migrateLegacyForm 끝부분에 root 필드 제거 패턴 존재, 거기에 nbl* 추가
+
+  return { ... };
 }
-// persist version: 3 → 4
 ```
+
+`calc-wizard-store.ts`에서 추가할 것:
+- `AssetForm`에 NBL 필드 30개 인터페이스 정의
+- `makeDefaultAsset()`에 NBL 필드 기본값 추가
+- `TransferFormData`에서 root nbl* 7개 필드 제거 (lines 405-410)
+- persist version bump
+- migration 호출은 store 설정에서 `migrateLegacyForm()` 호출 (이미 wired-up 상태 추정)
 
 ### 1.2 엔진 `NonBusinessLandInput` 확장
 
