@@ -54,3 +54,9 @@ logs/
 /scripts/e2e-artifacts-p0p1/
 /test-results/
 /playwright-report/
+
+# bkit 시스템 파일 (로컬 개발 환경 전용)
+.bkit/
+
+# Claude Code 로컬 설정 (개인별 커스터마이제이션)
+.claude/settings.local.json
