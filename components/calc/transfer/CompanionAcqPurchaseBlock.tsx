@@ -18,6 +18,7 @@ import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput"
 import { DateInput } from "@/components/ui/date-input";
 import { cn } from "@/lib/utils";
 import { Pre1990LandValuationInput, type Pre1990FormSlice } from "@/components/calc/inputs/Pre1990LandValuationInput";
+import { SelfBuiltSection } from "./SelfBuiltSection";
 
 const MIN_ACQ_DATE = "1985-01-01";
 
@@ -38,6 +39,9 @@ interface BlockProps {
   onAcquisitionDateChange: (v: string) => void;
   useEstimatedAcquisition: boolean;
   onUseEstimatedChange: (v: boolean) => void;
+  /** 감정가액 모드 — 자산-수준 (Step1↔Step3 통합 후) */
+  isAppraisalAcquisition?: boolean;
+  onIsAppraisalAcquisitionChange?: (v: boolean) => void;
   fixedAcquisitionPrice: string;
   onFixedAcquisitionPriceChange: (v: string) => void;
   /** 환산취득가 분자: 취득시 기준시가 총액 (원) */
@@ -65,6 +69,15 @@ interface BlockProps {
   /** 양도시 기준시가 ㎡당 단가 (외부 저장 — 없으면 내부 state fallback) */
   standardPricePerSqmAtTransfer?: string;
   onStandardPricePerSqmAtTransferChange?: (v: string) => void;
+  /** 신축·증축 자산-수준 4필드 (Step1↔Step3 통합 후) */
+  isSelfBuilt?: boolean;
+  onIsSelfBuiltChange?: (v: boolean) => void;
+  buildingType?: "new" | "extension" | "";
+  onBuildingTypeChange?: (v: "new" | "extension" | "") => void;
+  constructionDate?: string;
+  onConstructionDateChange?: (v: string) => void;
+  extensionFloorArea?: string;
+  onExtensionFloorAreaChange?: (v: string) => void;
 }
 
 // ─── 메인 블록 ────────────────────────────────────────────────────
@@ -146,25 +159,31 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
 
       <div className="space-y-2">
         <label className="block text-sm font-medium">취득가액 산정 방식</label>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-3 gap-2">
           <button
             type="button"
-            onClick={() => props.onUseEstimatedChange(false)}
+            onClick={() => {
+              props.onUseEstimatedChange(false);
+              props.onIsAppraisalAcquisitionChange?.(false);
+            }}
             className={cn(
               "rounded-md border-2 p-2 text-left transition-all",
-              !props.useEstimatedAcquisition
+              !props.useEstimatedAcquisition && !props.isAppraisalAcquisition
                 ? "border-primary bg-primary/5 text-primary"
                 : "border-border hover:border-muted-foreground/50 hover:bg-muted/40",
             )}
           >
             <div className="text-sm font-semibold">실거래가</div>
             <div className="text-[11px] text-muted-foreground leading-tight">
-              매매계약서상 실거래가 입력
+              계약서상 실거래가
             </div>
           </button>
           <button
             type="button"
-            onClick={() => props.onUseEstimatedChange(true)}
+            onClick={() => {
+              props.onUseEstimatedChange(true);
+              props.onIsAppraisalAcquisitionChange?.(false);
+            }}
             className={cn(
               "rounded-md border-2 p-2 text-left transition-all",
               props.useEstimatedAcquisition
@@ -174,19 +193,52 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
           >
             <div className="text-sm font-semibold">환산취득가</div>
             <div className="text-[11px] text-muted-foreground leading-tight">
-              양도가 × (취득시 ÷ 양도시 기준시가)
+              양도가 × 기준시가 비율
+            </div>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              props.onUseEstimatedChange(false);
+              props.onIsAppraisalAcquisitionChange?.(true);
+            }}
+            className={cn(
+              "rounded-md border-2 p-2 text-left transition-all",
+              props.isAppraisalAcquisition
+                ? "border-primary bg-primary/5 text-primary"
+                : "border-border hover:border-muted-foreground/50 hover:bg-muted/40",
+            )}
+          >
+            <div className="text-sm font-semibold">감정가액</div>
+            <div className="text-[11px] text-muted-foreground leading-tight">
+              개산공제 자동 적용
             </div>
           </button>
         </div>
       </div>
 
       {!props.useEstimatedAcquisition ? (
-        <CurrencyInput
-          label="취득가액 (원)"
-          value={props.fixedAcquisitionPrice}
-          onChange={props.onFixedAcquisitionPriceChange}
-          required
-        />
+        <>
+          <CurrencyInput
+            label={props.isAppraisalAcquisition ? "감정가액 (원)" : "취득가액 (원)"}
+            value={props.fixedAcquisitionPrice}
+            onChange={props.onFixedAcquisitionPriceChange}
+            required
+            hint={
+              props.isAppraisalAcquisition
+                ? "공인감정기관의 감정가액. 소득세법 시행령 §163⑥에 따라 필요경비 개산공제(취득시 기준시가 × 3%)가 자동 적용됩니다."
+                : undefined
+            }
+          />
+          {props.isAppraisalAcquisition && (
+            <CurrencyInput
+              label="취득시 기준시가 (원) — 개산공제 base"
+              value={props.standardPriceAtAcq}
+              onChange={props.onStandardPriceAtAcqChange}
+              hint="필요경비 개산공제 = 이 금액의 3%. 미입력 시 0% 적용."
+            />
+          )}
+        </>
       ) : (
         <>
           {/* 취득시 기준시가 */}
@@ -246,6 +298,24 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
           </div>
         </>
       )}
+
+      {/* 신축·증축 특례 (자산 카드 마지막 부분, 매매 + housing/building 자산만) */}
+      {(props.assetKind === "housing" || props.assetKind === "building") &&
+        props.onIsSelfBuiltChange &&
+        props.onBuildingTypeChange &&
+        props.onConstructionDateChange &&
+        props.onExtensionFloorAreaChange && (
+          <SelfBuiltSection
+            isSelfBuilt={props.isSelfBuilt ?? false}
+            onIsSelfBuiltChange={props.onIsSelfBuiltChange}
+            buildingType={props.buildingType ?? ""}
+            onBuildingTypeChange={props.onBuildingTypeChange}
+            constructionDate={props.constructionDate ?? ""}
+            onConstructionDateChange={props.onConstructionDateChange}
+            extensionFloorArea={props.extensionFloorArea ?? ""}
+            onExtensionFloorAreaChange={props.onExtensionFloorAreaChange}
+          />
+        )}
     </div>
   );
 }

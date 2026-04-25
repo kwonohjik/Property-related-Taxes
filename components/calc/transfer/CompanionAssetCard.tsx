@@ -347,6 +347,8 @@ export function CompanionAssetCard({
             onAcquisitionDateChange={(v) => onChange({ acquisitionDate: v })}
             useEstimatedAcquisition={asset.useEstimatedAcquisition}
             onUseEstimatedChange={(v) => onChange({ useEstimatedAcquisition: v })}
+            isAppraisalAcquisition={asset.isAppraisalAcquisition}
+            onIsAppraisalAcquisitionChange={(v) => onChange({ isAppraisalAcquisition: v })}
             fixedAcquisitionPrice={asset.fixedAcquisitionPrice}
             onFixedAcquisitionPriceChange={(v) => onChange({ fixedAcquisitionPrice: v })}
             standardPriceAtAcq={asset.standardPriceAtAcq}
@@ -372,6 +374,14 @@ export function CompanionAssetCard({
               pre1990GradeMode: asset.pre1990GradeMode,
             }}
             onPre1990Change={(patch) => onChange(patch)}
+            isSelfBuilt={asset.isSelfBuilt}
+            onIsSelfBuiltChange={(v) => onChange({ isSelfBuilt: v })}
+            buildingType={asset.buildingType}
+            onBuildingTypeChange={(v) => onChange({ buildingType: v })}
+            constructionDate={asset.constructionDate}
+            onConstructionDateChange={(v) => onChange({ constructionDate: v })}
+            extensionFloorArea={asset.extensionFloorArea}
+            onExtensionFloorAreaChange={(v) => onChange({ extensionFloorArea: v })}
           />
         )}
 

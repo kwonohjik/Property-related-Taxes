@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { DateInput } from "@/components/ui/date-input";
+import { SectionHeader } from "@/components/calc/shared/SectionHeader";
 import { NblDetailSection } from "./step4-sections/NblDetailSection";
 import { HousesListSection } from "./step4-sections/HousesListSection";
 import { MergeDateSection } from "./step4-sections/MergeDateSection";
@@ -142,6 +143,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
       )}
 
       {/* 주택·입주권·분양권: 1세대 여부 + 주택 수 + 거주기간 + 조정대상지역 */}
+      {isHousingLike(primaryKind) && <SectionHeader title="세대·주택 현황" description="1세대 여부, 보유 주택 수, 거주기간을 입력하세요" />}
       {isHousingLike(primaryKind) && (
         <>
           {/* 1세대 여부 */}
@@ -247,8 +249,8 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
       )}
 
       {/* 특수 상황 */}
+      <SectionHeader title="특수 상황" description="미등기·비사업용 토지·다주택 중과 해당 여부를 확인하세요" />
       <div className="space-y-2">
-        <p className="text-sm font-medium">특수 상황</p>
         {/* 미등기 양도 — 주택·토지·건물만 표시 (입주권·분양권은 등기 개념 없음) */}
         {(primaryKind === "housing" ||
           primaryKind === "land" ||
@@ -316,11 +318,13 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
       )}
 
       {/* 주택·입주권·분양권: 다른 보유 주택 목록 (P0-B) */}
+      {isHousingLike(primaryKind) && parseInt(form.householdHousingCount) >= 2 && <SectionHeader title="다른 보유 주택 목록" description="세대 전체의 보유 주택을 입력하세요 (다주택 중과세 판단)" />}
       {isHousingLike(primaryKind) && parseInt(form.householdHousingCount) >= 2 && (
         <HousesListSection form={form} onChange={onChange} />
       )}
 
       {/* 일시적 2주택 특례 */}
+      {isHousingLike(primaryKind) && <SectionHeader title="일시적 2주택·합가 특례" description="종전 주택 보유 중 신규 주택 취득 후 일정 기간 내 양도 시 비과세 특례" />}
       {isHousingLike(primaryKind) && (
         <div className="space-y-2">
           <p className="text-sm font-medium">일시적 2주택 특례</p>

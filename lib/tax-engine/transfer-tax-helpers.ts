@@ -261,6 +261,15 @@ export function calcTransferGain(input: TransferTaxInput): TransferGainResult {
     estimatedBase = estimated;
     estimatedDeduction = deduction;
     usedEstimated = true;
+  } else if (input.acquisitionMethod === "appraisal") {
+    // 감정가액 모드: 소득세법 시행령 §163⑥에 따라 환산취득가와 동일하게 개산공제 자동 적용.
+    // base = appraisalValue (없으면 acquisitionPrice fallback), 개산공제 = 취득당시 기준시가 × 3%.
+    const appraisal = input.appraisalValue ?? input.acquisitionPrice;
+    const deduction = applyRate(input.standardPriceAtAcquisition ?? 0, 0.03);
+    acquisitionCost = appraisal + deduction;
+    estimatedBase = appraisal;
+    estimatedDeduction = deduction;
+    usedEstimated = true;
   } else {
     acquisitionCost = input.acquisitionPrice;
   }

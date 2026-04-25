@@ -51,15 +51,18 @@ components/calc/transfer/nbl/                (신규 디렉터리 — 10 파일)
     └── BusinessUsePeriodsInput.tsx          # 사업용 기간 배열 입력 (재사용)
 
 app/calc/transfer-tax/steps/
-├── Step4.tsx                                (수정) — NblDetailSection → NblSectionContainer
-└── step4-sections/
-    └── NblDetailSection.tsx                 (제거 — 내용을 nbl/ 디렉터리로 이전)
+└── Step4.tsx                                (수정) — 글로벌 NblDetailSection 제거
+    step4-sections/
+    └── NblDetailSection.tsx                 (제거)
+
+components/calc/transfer/
+└── CompanionAssetCard.tsx                   (수정) — assetKind==="land" 조건부로 NblSectionContainer 마운트
 
 components/calc/results/
 └── NonBusinessLandResultCard.tsx            (수정) — 조문 강조·면적 안분 시각화·자연어 요약
 
 lib/stores/
-└── calc-wizard-store.ts                     (수정) — TransferFormData 확장 (약 30 필드)
+└── calc-wizard-store.ts                     (수정) — AssetForm에 NBL 필드 추가 (~30 필드) + root nbl* 7개 제거 + migrateAsset 확장
 
 lib/korean-law/
 └── sigungu-codes.ts                         (신규) — 행안부 시군구 표준코드 (~250개)
@@ -84,10 +87,12 @@ __tests__/ui/
 - 기존 14개 엔진 테스트 100% 통과 필수
 - `TransferFormData.isNonBusinessLand` (기존 간단 체크박스) 유지 — `nblUseDetailedJudgment` 플래그로 분기
 
-### 3.2 flat 필드 유지
+### 3.2 AssetForm 자산별 통합 원칙
 
-- `TransferFormData`는 flat 구조(`nbl*` prefix) 유지. zustand persist 직렬화 호환성 + sessionStorage 게스트 마이그레이션 호환
-- nested 구조로의 변환은 `lib/tax-engine/non-business-land/form-mapper.ts`에 집중
+- NBL 필드는 **`AssetForm`에 배치** — 2026-04-25 Stream A 업그레이드로 자산별 통합 패턴이 정착됨
+- `TransferFormData` root의 기존 nbl* 7개 필드는 `migrateAsset`에서 primary AssetForm으로 이전 후 root 삭제
+- `nblLandArea` 별도 필드 없음 — `AssetForm.acquisitionArea` 재사용 (area-taxonomy.md 원칙 B)
+- nested 구조로의 변환은 `lib/tax-engine/non-business-land/form-mapper.ts`의 `mapAssetToNblInput(asset, dates)`에 집중
 
 ### 3.3 조건부 렌더링
 
@@ -105,8 +110,9 @@ __tests__/ui/
 
 ### 4.1 API 스키마 변경 없음
 
-- `app/api/calc/transfer-tax/route.ts`의 Zod 스키마는 그대로
-- UI의 flat 필드는 Orchestrator 진입 직전 `mapFormToNblInput()`으로 변환 후 기존 nested 구조로 전달
+- `app/api/calc/transfer/route.ts`의 Zod 스키마는 그대로 (경로 정정: transfer-tax/route.ts 아님)
+- UI의 AssetForm 필드는 Orchestrator 진입 직전 `mapAssetToNblInput(asset, dates)`으로 변환 후 기존 nested 구조로 전달
+- `lib/calc/transfer-tax-api.ts:168` — `form.nbl*` 읽기를 `primary.nbl*` 읽기로 수정
 
 ### 4.2 데이터 마이그레이션
 
@@ -134,7 +140,7 @@ __tests__/ui/
 
 Plan의 성공 지표(§8)를 Design 수준에서 재확인:
 
-- [ ] `TransferFormData` 확장 필드 전체 타입 정의 (약 30개)
+- [ ] `AssetForm` 확장 필드 전체 타입 정의 (약 30개) + root nbl* 7개 필드 제거
 - [ ] 엔진 `NonBusinessLandInput` 신규 optional 필드 1개 (`ownershipRatio`) + 기존 필드 전부 유지
 - [ ] UI 컴포넌트 10개 구조 + props 시그니처 확정
 - [ ] 엔진 Gap 6건 해소 설계 (grace, co-ownership, livestock, REDIRECT, 수도권, `gracePeriods` 실제 반영)
@@ -174,3 +180,4 @@ Plan의 성공 지표(§8)를 Design 수준에서 재확인:
 | 날짜 | 버전 | 변경 |
 |---|---|---|
 | 2026-04-24 | v1.0 | 최초 작성 — Plan M1 산출물, 3파일 분할 구조 |
+| 2026-04-25 | v1.1 | Stream A 업그레이드 반영 — NBL 필드를 AssetForm으로 이전, API 경로 정정, CompanionAssetCard 마운트 위치 변경 |

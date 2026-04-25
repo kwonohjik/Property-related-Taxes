@@ -1,264 +1,300 @@
-# NBL 작업 격리 전략 — 다른 세션과 병행 진행 계획
+# NBL UI 완전화 계획 — Stream A 업그레이드 반영판
 
 ## Context
 
-다른 세션에서 양도소득세 계산기의 **다중 양도 / 일괄양도 / 집계** 관련 대규모 업그레이드가 진행 중이다 (`git status` 기준 27개 변경 파일). 이 작업은 비사업용 토지(NBL)와 무관하지만, 두 작업 모두 양도세 영역의 핵심 파일을 건드리므로 단순 병렬 진행 시 머지 충돌이 발생한다.
+직전 세션에서 NBL(비사업용 토지) UI·엔진 완전화를 위한 격리 작업 계획을 세웠으나, 그 사이 다른 세션에서 진행 중이던 양도소득세 계산기 업그레이드가 **master에 머지 완료**되었다 (`git status` clean, 최근 5개 커밋 모두 transfer 관련).
 
-본 문서는 **NBL UI 완전화 작업**(`docs/01-plan/features/nbl-ui-completion.plan.md`)을 다른 세션의 진행에 영향을 주지 않으면서 **지금 즉시 시작**하기 위한 격리 전략을 정의한다. 목표는:
-- Stream A(다중 양도 업그레이드)의 파일 변경에 NBL 작업이 영향받지 않을 것
-- NBL 작업이 Stream A의 머지 시점에 충돌을 최소화하고 빠르게 rebase 가능할 것
-- NBL 작업의 첫 5개 마일스톤(M1~M5)은 충돌 위험 없는 파일에서만 진행할 것
+업그레이드는 NBL과 무관한 영역(다중 양도, 자산별 입력 통합, 면적 시나리오, Step2 제거)이지만 결과적으로 **양도세 계산기의 입력 모델이 자산별(per-asset) 통합 구조로 전환**되었다. NBL은 이 통합에서 누락된 마지막 영역으로 남았다.
 
----
+본 계획서는:
+1. 업그레이드된 아키텍처 분석 결과
+2. 기존 NBL plan(`docs/01-plan/features/nbl-ui-completion.plan.md`)에 반영해야 할 변동사항
+3. 이를 반영한 새 작업 전략
 
-## 충돌 표면 분석 결과
-
-### Stream A가 현재 수정 중인 파일 (27개)
-
-핵심:
-- `app/calc/transfer-tax/TransferTaxCalculator.tsx`
-- `app/calc/transfer-tax/multi/MultiTransferTaxCalculator.tsx` (다중 양도 모드)
-- `lib/api/transfer-tax-schema.ts`
-- `lib/calc/multi-transfer-tax-api.ts`
-- `lib/stores/multi-transfer-tax-store.ts`
-- `lib/tax-engine/transfer-tax-aggregate.ts` + 신규 `transfer-tax-aggregate-helpers.ts` (대규모 helper 추출 리팩터)
-- `lib/tax-engine/types/transfer-aggregate.types.ts`
-- `components/calc/results/MultiTransferTaxResultView.tsx`, `TransferTaxResultView.tsx`
-- `components/calc/transfer/AggregateSettingsPanel.tsx`, `CompanionAcqPurchaseBlock.tsx`, `CompanionAssetsSection.tsx`
-- `components/calc/inputs/CurrencyInput.tsx`, `StandardPriceInput.tsx`
-- `__tests__/tax-engine/five-year-cumulative-aggregate.test.ts`
-
-### NBL 작업이 건드릴 파일 분류
-
-**🟢 Safe (Stream A 미수정 — 충돌 0)**:
-- `lib/tax-engine/non-business-land/*` (engine.ts, types.ts, period-criteria.ts, pasture.ts, villa-land.ts 수정)
-- `lib/tax-engine/non-business-land/co-ownership.ts`, `grace-period.ts`, `form-mapper.ts`, `data/livestock-standards.ts` (신규)
-- `components/calc/transfer/nbl/*` (전부 신규 디렉터리)
-- `app/calc/transfer-tax/steps/Step4.tsx` (Stream A는 Step1·Step3만)
-- `app/calc/transfer-tax/steps/step4-sections/NblDetailSection.tsx` (제거 대상)
-- `components/calc/results/NonBusinessLandResultCard.tsx`
-- `lib/korean-law/sigungu-codes.ts` (신규)
-- `lib/stores/calc-wizard-store.ts` (Stream A 미수정 — TransferFormData 확장 안전)
-- `__tests__/tax-engine/non-business-land/*` (신규)
-
-**🔴 Hard Conflict (양 스트림 모두 편집 필요)**:
-1. `app/calc/transfer-tax/TransferTaxCalculator.tsx` — Stream A는 multi-mode 통합, NBL은 form-mapper 호출 1줄 + import 1줄
-2. `lib/tax-engine/transfer-tax.ts` — Stream A 수정 중. NBL은 `judgeNonBusinessLand` 호출부(라인 207~225)에서 입력 형태 확장 가능성
-
-**🟡 Soft Conflict (같은 파일이지만 영역 분리됨)**:
-- `lib/api/transfer-tax-schema.ts` — Stream A 수정 중. NBL은 `nonBusinessLandDetailsSchema`(라인 67) 영역만 확장
-- `lib/calc/transfer-tax-api.ts` — Stream A 미수정으로 보임. NBL은 라인 168, 294의 `nblDetails`→`nonBusinessLandDetails` plumbing 확장
-
-### 핵심 발견 — 이미 plumbing 완성
-
-NBL의 UI→API→엔진 경로는 **이미 wiring 완료** 상태:
-- `lib/calc/transfer-tax-api.ts:168` `const nblDetails = ...`
-- `lib/calc/transfer-tax-api.ts:294` `nonBusinessLandDetails: nblDetails` 전달
-- `lib/api/transfer-tax-schema.ts:67, 450` Zod 스키마 정의·라우팅
-- `lib/tax-engine/transfer-tax.ts:49, 207-213` 엔진 호출
-
-**즉, NBL 작업은 신규 경로를 만들지 않고 기존 경로의 입력 필드만 확장**하면 된다. 충돌 표면은 매우 작다.
-
-### 기존 Plan 문서의 정정 필요
-
-`docs/01-plan/features/nbl-ui-completion.plan.md`에서 API 경로를 `app/api/calc/transfer-tax/route.ts`로 표기했으나, **실제 경로는 `app/api/calc/transfer/route.ts`**. 첫 작업 단계에서 plan·design 문서 모두 정정.
+을 정리하여 NBL plan·design 문서 정정 + 즉시 구현 진입 경로를 확정한다.
 
 ---
 
-## 격리 전략 — Git Worktree 방식 (권장)
+## 발견된 업그레이드 (master HEAD = 5dce876)
 
-### 왜 Worktree인가
+### 1. Step2 제거, 5단계 마법사로 단순화
 
-- Stream A가 27개 dirty 파일을 가진 상태이므로 같은 working tree에서 branch switch는 stash 위험
-- worktree는 별도 디렉터리에 별도 working tree를 두므로 Stream A의 진행에 **완전 격리**
-- 각 worktree는 같은 `.git/`을 공유하므로 디스크·git history는 분리되지 않음 (효율적)
+이전: Step1~Step6 (6단계) → 현재: Step1, Step3, Step4, Step5, Step6 (Step2 제거, 5개 파일)
+- Step1 자산 목록 (구 Step1+Step2 통합, 자산 카드 내부 입력)
+- Step3 양도 정보
+- Step4 취득 정보 + 1세대1주택 + NBL 정밀 판정 (현재 NBL이 마운트된 곳)
+- Step5 감면·공제
+- Step6 가산세
 
-### 권장 setup
+`TransferTaxCalculator.tsx:332` step indicator가 새 순서.
+
+### 2. AssetForm 자산별 통합 패턴
+
+`lib/stores/calc-wizard-store.ts:93~204` `AssetForm`이 자산 1건의 모든 입력을 보유:
+- 자산 종류 / 취득원인 / 취득·양도일
+- 취득가액 / 양도가액 / 기준시가
+- **면적 시나리오** (`acquisitionArea`, `transferArea`, `areaScenario`, 환지 3필드) — area-taxonomy.md 원칙 적용
+- 감면 (자산별 `reductions[]`)
+- 상속 평가 (보충적평가·신고가액)
+- 다필지 `parcels[]`
+
+`CompanionAssetsSection.tsx`는 `formData.assets`를 map으로 렌더 → `CompanionAssetCard.tsx`(704줄)가 자산 1건의 모든 입력 UI 보유.
+
+**Mental model**: 1 AssetForm = 1 양도 자산. 자산-specific anything goes into AssetForm.
+
+### 3. 면적 3필드 표준 (area-taxonomy.md)
+
+`AssetForm`에 다음 필드 도입됨:
+- `acquisitionArea` (취득 당시 면적)
+- `transferArea` (양도 당시 면적)
+- `areaScenario`: "same" | "partial" | "reduction" | "increase"
+- 환지 시 `replottingConfirmDate`, `entitlementArea`, `allocatedArea`, `priorLandArea`
+
+원칙 B(계산 편의용 중간값 제거)에 따라 `landAreaM2`·`pre1990AreaSqm` 등은 폐지됨.
+
+### 4. NBL은 자산별 통합에서 누락 (마지막 holdout)
+
+`TransferFormData`(calc-wizard-store.ts:378, 384~389)에 NBL 필드 7종 여전히 ROOT 레벨:
+```ts
+isNonBusinessLand, nblLandType, nblLandArea, nblZoneType,
+nblFarmingSelf, nblFarmerResidenceDistance, nblBusinessUsePeriods
+```
+
+`transfer-tax-api.ts:168`은 `form.nbl*`(root) + `primary.acquisitionDate`(asset)를 결합하여 nblDetails 생성. **다중 토지 자산을 한 양도 신고에 담는 케이스에서 primary 자산 외에는 NBL 정밀 판정 불가**.
+
+### 5. Integration seam은 그대로
+
+- `lib/calc/transfer-tax-api.ts:168, 294` — `nblDetails` → `nonBusinessLandDetails`
+- `lib/calc/multi-transfer-tax-api.ts:21, 123` — 같은 패턴
+- `lib/api/transfer-tax-schema.ts:67, 450` — `nonBusinessLandDetailsSchema`
+- `lib/tax-engine/transfer-tax.ts:49, 211~213` — `judgeNonBusinessLand` 호출
+
+API/엔진 경계는 안전하게 유지 — UI·매퍼만 수정하면 된다.
+
+---
+
+## NBL Plan 변경 영향 (5건)
+
+### 영향 1: 격리 전략 자체 폐기
+
+기존 plan은 `git worktree`로 Stream A와 격리하는 전략을 핵심으로 했으나, **Stream A 머지 완료**로 격리는 더 이상 필요하지 않다. 단순 feature branch(`feature/nbl-ui-completion`)만 사용.
+
+### 영향 2: NBL 필드 위치 변경 — TransferFormData → AssetForm
+
+기존 plan: TransferFormData에 ~30개 nbl* 필드 추가
+**새 plan**: AssetForm에 NBL 필드 이전 + 신규 필드 추가
+- 자산별 통합 패턴(Stream A가 정착시킨 원칙)에 일관성 부여
+- 다중 토지 자산 각각이 NBL 판정 가능 (multi-asset 본질적 개선)
+- 기존 root nbl* 7개는 `migrateAsset`에서 primary AssetForm으로 이전 후 root에서 삭제
+
+### 영향 3: 면적 필드 중복 제거 — `nblLandArea` 폐지
+
+기존 plan: `nblLandArea`를 별도 필드로 유지
+**새 plan**: area-taxonomy.md 원칙 B 준수 — `AssetForm.acquisitionArea` 또는 `transferArea` 재사용
+- form-mapper에서 시나리오에 따라 분기
+- `nblLandArea` 신규 추가 안 함 (기존 root 필드는 migrate에서 acquisitionArea로 이전 후 삭제)
+
+### 영향 4: NblDetailSection 마운트 위치 변경
+
+기존 plan: Step4 내부 `NblSectionContainer` (글로벌)
+**새 plan**: `CompanionAssetCard.tsx` 내부 (자산 카드별, `assetKind === "land"`일 때만)
+- Step4의 NBL 섹션은 제거 (이미 자산 카드에서 모든 자산 입력 처리됨)
+- 자산 카드의 신규 sub-section으로 NBL 정밀 판정 블록 추가
+
+### 영향 5: API 어댑터 수정 영역
+
+기존 plan: `transfer-tax-api.ts:168`은 그대로 두고 form-mapper 추가
+**새 plan**: `transfer-tax-api.ts:168~184`를 자산별 read로 수정
+- `form.nbl*` → `asset.nbl*` 읽기로 변경
+- multi-mode loop에서 자산별로 nblDetails 빌드 가능
+- `multi-transfer-tax-api.ts:21~37` 동일 패턴 적용
+
+---
+
+## 새 작업 전략
+
+### Phase 0: 브랜치 & Plan 정정 (0.5일)
 
 ```bash
-# 1. 깨끗한 master 기준으로 worktree 생성 (Stream A는 master에서 그대로 진행)
-git worktree add -b feature/nbl-ui-completion ../Property-related-Taxes-nbl master
-
-# 2. 새 worktree로 이동
-cd ../Property-related-Taxes-nbl
-
-# 3. 의존성 설치 (node_modules는 worktree마다 별도)
-npm install
-
-# 4. 환경변수 복사
-cp ../Property-related-Taxes/.env.local .env.local 2>/dev/null || true
-
-# 5. 별도 dev 서버 포트로 실행 (Stream A가 3000을 쓰는 경우)
-PORT=3001 npm run dev
+# master에서 직접 작업하지 않고 feature branch
+git checkout -b feature/nbl-ui-completion master
 ```
 
-### 작업 디렉터리 구조
+워크트리 불필요 (Stream A 머지 완료). 단일 working tree에서 작업.
 
-```
-~/workspace/
-├── Property-related-Taxes/            ← Stream A (다중 양도 업그레이드, master + dirty)
-└── Property-related-Taxes-nbl/        ← Stream B (NBL UI 완전화, feature/nbl-ui-completion)
-```
+**Plan/Design 문서 정정**:
+1. `docs/01-plan/features/nbl-ui-completion.plan.md`
+   - API 경로 정정: `app/api/calc/transfer-tax/route.ts` → `app/api/calc/transfer/route.ts`
+   - "TransferFormData에 nbl* 필드 추가" → "AssetForm에 nbl* 필드 이전·추가"
+   - "Step4 NblSectionContainer 마운트" → "CompanionAssetCard 내부 마운트"
+   - "nblLandArea 별도 필드" → "AssetForm.acquisitionArea 재사용"
+   - 부록 A 매핑 테이블 — TransferFormData 행 → AssetForm 행으로 변경
+2. `docs/02-design/features/nbl-ui-completion.design.md` (메인) — 파일 구조 표 정정
+3. `docs/02-design/features/nbl-ui-completion.engine.design.md` — TransferFormData 정의를 AssetForm 정의로 교체
+4. `docs/02-design/features/nbl-ui-completion.ui.design.md` — 컨테이너 플로우 다이어그램에서 Step4.tsx 위치를 CompanionAssetCard로 교체
 
-각 디렉터리에서 독립적으로 `git status` / `git commit` 가능. 같은 `.git`을 공유하므로 한쪽에서 commit하면 다른 쪽 `git log`에서 보임.
+### Phase 1: AssetForm 확장 + 마이그레이션 (M2 일부, 1일)
 
----
+- `lib/stores/calc-wizard-store.ts`
+  - `AssetForm`에 NBL 필드 추가 (~30개) — area 필드 다음 위치(line 141 직후)
+  - root `TransferFormData`의 nbl* 7개 필드 제거
+  - `migrateAsset`에 root → asset 이전 로직 추가:
+    ```ts
+    function migrateAsset(asset, rootForm) {
+      // root.nblLandType이 있으면 primary asset으로 이전
+      if (rootForm.nblLandType && asset.isPrimaryForHouseholdFlags) {
+        asset.nblLandType = rootForm.nblLandType;
+        asset.nblZoneType = rootForm.nblZoneType;
+        asset.nblFarmingSelf = rootForm.nblFarmingSelf;
+        // ... 7개 모두
+      }
+      return asset;
+    }
+    ```
+  - persist version bump (3 → 4)
+- 기존 사용자 데이터 호환성 확보
 
-## 작업 순서 — Phase 분리
+### Phase 2: 무조건 면제 + 거주 이력 (M2 나머지, 2일)
 
-NBL 작업의 **M1~M5는 100% Safe 파일에서만** 수행하여 Stream A와의 충돌을 0으로 유지. M6~M7의 통합 단계만 Stream A 머지 이후로 미룬다.
-
-### Phase 0: Worktree Setup (5분)
-
-위 setup 명령 실행 + `.env.local` 복사 + dev 서버 기동 확인.
-
-### Phase 1 — M1~M5: Safe 파일만 (총 9 man-day)
-
-순서대로 진행. 모두 🟢 Safe 파일.
-
-**M1 설계 정정 (0.5일)**
-- `docs/01-plan/features/nbl-ui-completion.plan.md` API 경로 정정
-- `docs/02-design/features/nbl-ui-completion.design.md` 동일 정정
-- 기존 `transfer-tax-api.ts:168,294` plumbing 재사용 명시
-
-**M2 무조건 면제 + 거주 이력 (2일)**
-- `lib/stores/calc-wizard-store.ts` — TransferFormData 확장 (M2~M5 한 번에 모든 필드 추가하는 것 권장 — 머지 충돌 표면 단축)
-- `components/calc/transfer/nbl/UnconditionalExemptionSection.tsx`
-- `components/calc/transfer/nbl/ResidenceHistorySection.tsx`
+- `components/calc/transfer/nbl/UnconditionalExemptionSection.tsx` — 자산 props 받음
+- `components/calc/transfer/nbl/ResidenceHistorySection.tsx` — 자산 props 받음
 - `components/calc/transfer/nbl/shared/SigunguSelect.tsx`
-- `lib/korean-law/sigungu-codes.ts`
+- `lib/korean-law/sigungu-codes.ts` — 행안부 시군구 코드 상수 (~250개)
 
-**M3 지목별 세부 6개 섹션 (3일)**
+모든 섹션 컴포넌트 시그니처:
+```ts
+interface NblSectionProps {
+  asset: AssetForm;
+  onAssetChange: (patch: Partial<AssetForm>) => void;
+}
+```
+
+### Phase 3: 지목별 6개 섹션 (M3, 3일)
+
 - `components/calc/transfer/nbl/{Farmland,Forest,Pasture,HousingLand,VillaLand,OtherLand}DetailSection.tsx`
 
-**M4 지원 필드 + 플로우 통합 (2일)**
-- `components/calc/transfer/nbl/NblSectionContainer.tsx`
+### Phase 4: NblSectionContainer + 자산 카드 통합 (M4, 2일)
+
+- `components/calc/transfer/nbl/NblSectionContainer.tsx` — 무조건 면제 + 지목 스위처 + 거주 이력 + 부득이한 사유 통합
 - `components/calc/transfer/nbl/GracePeriodSection.tsx`
-- `app/calc/transfer-tax/steps/Step4.tsx` 수정 (Stream A는 Step1·Step3만 수정 → 충돌 없음)
+- `components/calc/transfer/CompanionAssetCard.tsx` 수정 — `assetKind === "land"` 조건부 렌더에 NblSectionContainer 마운트
+- `app/calc/transfer-tax/steps/Step4.tsx` 수정 — 글로벌 NblDetailSection import 제거, 단순 `isNonBusinessLand` 체크박스만 유지(또는 제거)
 - `app/calc/transfer-tax/steps/step4-sections/NblDetailSection.tsx` 제거
 
-**M5 엔진 Gap 해소 (2일)**
+### Phase 5: 엔진 Gap 해소 (M5, 2일) — UI 변경과 무관, 병렬 가능
+
 - `lib/tax-engine/non-business-land/grace-period.ts` 신규
 - `lib/tax-engine/non-business-land/co-ownership.ts` 신규
 - `lib/tax-engine/non-business-land/data/livestock-standards.ts` 신규
-- `lib/tax-engine/non-business-land/form-mapper.ts` 신규
+- `lib/tax-engine/non-business-land/form-mapper.ts` 신규 — `mapAssetToNblInput(asset, dates)`
 - `lib/tax-engine/non-business-land/{engine,types,period-criteria,pasture,villa-land}.ts` 수정
-- 엔진 단위 테스트 작성
+- 엔진 단위 테스트 신규 25건
 
-이 시점에 Phase 1 commit. NBL 엔진 Gap 해소·UI 컴포넌트·신규 매퍼가 Stream A와 독립적으로 동작.
+### Phase 6: API 어댑터 수정 (M6 일부, 0.5일)
 
-### Phase 2 — Sync Point (Stream A 머지 대기 또는 rebase)
+- `lib/calc/transfer-tax-api.ts:168~184` 수정 — `form.nbl*` → `primary.nbl*` 읽기
+- `lib/calc/multi-transfer-tax-api.ts:21~37` 동일 — 자산별 loop에서 `asset.nbl*` 읽기
+- form-mapper 통합 — primary asset에서 nblInput 생성하여 API payload에 넣음
 
-Stream A가 master에 머지되면:
+### Phase 7: 결과 카드 강화 (M6 나머지, 1일)
 
-```bash
-cd ../Property-related-Taxes-nbl
-git fetch origin
-git rebase origin/master
-```
-
-Conflict 예상:
-- `lib/stores/calc-wizard-store.ts` — Stream A가 form 필드를 추가했다면 충돌 가능 (현재 git status에서는 미수정 상태이므로 가능성 낮음)
-
-이 단계에서 충돌이 적게 발생하도록 Phase 1을 **단일 커밋이 아닌 의미 단위 커밋**으로 분할 권장 (M2/M3/M4/M5 각각).
-
-### Phase 3 — M6~M7: 통합 + Hard Conflict 영역 (2일)
-
-Stream A의 머지가 완료된 master 기준으로 진행. 이 시점에는 충돌 발생 시 즉시 해결 가능.
-
-**M6 결과 표시 강화 (1일)**
 - `components/calc/results/NonBusinessLandResultCard.tsx` 개편
-- `components/calc/results/TransferTaxResultView.tsx`에서 NBL 카드 props 확장 (Stream A가 이 파일을 수정했으므로 conflict 가능 — Phase 3에서 처리)
+- 무조건 면제 강조 / 면적 안분 시각화 / 유예기간 타임라인
 
-**M6 통합 seam (TransferTaxCalculator.tsx 1줄 추가)**
-- `app/calc/transfer-tax/TransferTaxCalculator.tsx` — `mapFormToNblInput()` 호출 1줄 + import 1줄 추가
-- 충돌 영역 최소화: API submit 함수 내부에 `const nblInput = mapFormToNblInput(form, context); payload.nblDetails = nblInput;` 형태로 단 한 곳만 편집
+### Phase 8: 통합 테스트 + QA (M7, 1일)
 
-**M6 스키마 확장 (transfer-tax-schema.ts)**
-- `lib/api/transfer-tax-schema.ts:67`의 `nonBusinessLandDetailsSchema` 확장 (신규 필드 추가)
-- 영역 분리되어 있으므로 충돌 가능성 낮음
-
-**M7 통합 테스트 + QA (1일)**
 - `__tests__/tax-engine/non-business-land/integration.test.ts` (17 시나리오)
 - `__tests__/ui/nbl-wizard.test.tsx`
-- `npm test` 전체 통과 확인 + `tax-qa-lead` 에이전트로 양도세 regression 확인
-- `gap-detector` 1회 실행 → Match Rate 측정
+- 기존 1,407 테스트 + 신규 ~46건 모두 통과 확인
+- `tax-qa-lead` 에이전트로 양도세 regression 검증
+- `gap-detector` Match Rate 측정
+
+**총 예상 공수**: Phase 0~8 합계 = 약 12 man-day (기존 plan과 동일)
 
 ---
 
-## Critical Files (수정 또는 참조 필수)
+## Critical Files
 
-### 격리 전략 setup
-- `~/workspace/Property-related-Taxes-nbl/` (신규 worktree, NBL 작업 전용)
-- `feature/nbl-ui-completion` 브랜치
+### Plan/Design 정정 (Phase 0)
+- `docs/01-plan/features/nbl-ui-completion.plan.md`
+- `docs/02-design/features/nbl-ui-completion.design.md`
+- `docs/02-design/features/nbl-ui-completion.ui.design.md`
+- `docs/02-design/features/nbl-ui-completion.engine.design.md`
 
-### Stream A 미수정 (Phase 1에서 자유롭게 작업)
-- `lib/stores/calc-wizard-store.ts` (TransferFormData 확장)
-- `lib/tax-engine/non-business-land/*` (전체)
-- `lib/tax-engine/legal-codes/transfer.ts` (NBL.* 상수 추가)
-- `app/calc/transfer-tax/steps/Step4.tsx` (수정)
-- `lib/calc/transfer-tax-api.ts` (Stream A 미수정 — `nblDetails` 변환 plumbing)
+### Phase 1 (AssetForm 확장)
+- `lib/stores/calc-wizard-store.ts:93~204` (AssetForm 정의 영역)
+- `lib/stores/calc-wizard-store.ts:274~322` (migrateAsset, ParcelFormItem 등)
+- `lib/stores/calc-wizard-store.ts:378, 384~389` (root nbl* 필드 제거)
+- `lib/stores/calc-wizard-store.ts:440, 446~451` (defaults 정리)
 
-### Phase 3 (Stream A 머지 후 처리)
-- `app/calc/transfer-tax/TransferTaxCalculator.tsx` ← form-mapper 호출 1줄 + import
-- `lib/api/transfer-tax-schema.ts` ← `nonBusinessLandDetailsSchema` 확장
-- `lib/tax-engine/transfer-tax.ts` ← (필요 시) 엔진 호출부 확장
-- `components/calc/results/TransferTaxResultView.tsx` ← NBL 카드 props 확장
+### Phase 2~4 (UI)
+- `components/calc/transfer/nbl/*` (전부 신규 디렉터리, 약 10 파일)
+- `components/calc/transfer/CompanionAssetCard.tsx:704줄` 내부에 NblSectionContainer 마운트 1곳
+- `app/calc/transfer-tax/steps/Step4.tsx` (NblDetailSection 제거)
+
+### Phase 5 (엔진)
+- `lib/tax-engine/non-business-land/*`
+
+### Phase 6 (API 어댑터)
+- `lib/calc/transfer-tax-api.ts:160~205` (callTransferTaxAPI, primary 자산 읽기)
+- `lib/calc/multi-transfer-tax-api.ts:15~50` (자산별 loop)
 
 ### 재사용할 기존 함수·경로
-- `lib/calc/transfer-tax-api.ts:168` `const nblDetails = ...` — 이미 `nblDetails` 변환 패턴 존재, NBL form-mapper 결과를 여기로 흘려보내면 됨
-- `lib/calc/transfer-tax-api.ts:294` `nonBusinessLandDetails: nblDetails` — 이미 wiring 완료
-- `lib/tax-engine/transfer-tax.ts:49,207-225` — `judgeNonBusinessLand()` 호출 패턴 그대로 재사용
-- `lib/api/transfer-tax-schema.ts:67,450` — `nonBusinessLandDetailsSchema` 확장
+- `lib/calc/transfer-tax-api.ts:168` `nblDetails` 변환 패턴 — 위치만 root → asset로 옮김
+- `lib/api/transfer-tax-schema.ts:67` `nonBusinessLandDetailsSchema` — 신규 필드 optional 추가
+- `lib/tax-engine/transfer-tax.ts:49, 211~213` `judgeNonBusinessLand` 호출 — 변경 없음
+- `lib/stores/calc-wizard-store.ts` `migrateAsset` 패턴 — root → asset 이전 로직 동일 형태로 추가
+- `components/calc/transfer/CompanionAssetCard.tsx` 자산 카드 내부 sub-section 패턴 — 면적 시나리오 섹션과 동일 패턴으로 NBL 섹션 추가
 
 ---
 
 ## Verification
 
-### Phase 0 verification
+### Phase 0 verification (Plan/Design 정정 후)
+- 4개 문서 모두 AssetForm 기준으로 정정되었는지 grep:
+  ```bash
+  grep -n "TransferFormData.*nbl\|nblLandArea\|app/api/calc/transfer-tax/route" \
+    docs/01-plan/features/nbl-ui-completion.plan.md \
+    docs/02-design/features/nbl-ui-completion*.design.md
+  ```
+  결과 0개여야 함.
+
+### Phase 1 verification (AssetForm 확장)
 ```bash
-cd ../Property-related-Taxes-nbl
-git status              # clean
-git branch --show-current   # feature/nbl-ui-completion
-PORT=3001 npm run dev   # http://localhost:3001 정상 기동
+npm test -- calc-wizard-store
+# migrate 함수 테스트 통과
+npm run build
+# 타입 체크 통과
 ```
 
-### Phase 1 verification (각 마일스톤별)
-```bash
-# 격리된 worktree에서
-cd ../Property-related-Taxes-nbl
-npm test -- non-business-land   # 엔진 신규 테스트 통과
-npm test                        # 전체 1,407+신규 통과
-npm run lint                    # 0 error
-npm run build                   # 빌드 성공
+### Phase 2~4 verification (UI 컴포넌트)
+- 자산 카드에서 토지 선택 시 NblSectionContainer 렌더 확인
+- 다른 자산(주택)에서 미렌더 확인
+- 무조건 면제 체크 시 하위 섹션 음영 처리
 
-# Stream A 영향 확인 (다른 worktree)
-cd ../Property-related-Taxes
-git status              # NBL 작업이 이쪽 status에 영향 없음 확인
+### Phase 5 verification (엔진)
+```bash
+npm test -- non-business-land
+# 신규 25건 + 기존 14건 = 39건 통과
 ```
 
-### Phase 2 verification (rebase 후)
-```bash
-cd ../Property-related-Taxes-nbl
-git rebase origin/master
-# conflict 발생 시 영역별 처리
-npm test                # rebase 후 전체 테스트 통과
-```
+### Phase 6 verification (API)
+- 단일 토지 자산: `form.nbl*` 마이그레이션 후에도 기존 API 응답 동일 (regression 0)
+- 다중 토지 자산: 각 자산별 nblDetails 별도 생성 확인
 
-### Phase 3 verification (통합)
+### Phase 7~8 verification (통합)
 ```bash
-# 1. 양도세 단순 계산 (NBL 미사용) — Stream A 기능 정상 동작
-curl -X POST http://localhost:3001/api/calc/transfer ...
-
+# 1. 양도세 단순 계산 — Stream A 업그레이드 기능 정상
 # 2. NBL 단순 체크박스 경로 — 기존 동작 유지
-# 3. NBL 상세 판정 17개 시나리오 — 신규 동작
-# 4. tax-qa-lead 에이전트로 양도세 전체 regression
+# 3. NBL 상세 판정 17개 시나리오 — Plan §1.2 시나리오 매트릭스
+# 4. 다중 토지 양도 — 자산별 NBL 판정 합계
+npm test
+# 1,407 + ~46 = ~1,453건 통과
+npm run build
+# 빌드 성공
+# /pdca check nbl-ui-completion
+# gap-detector Match Rate ≥95%
 ```
-
-### 머지 시 Conflict 해결 가이드
-- `TransferTaxCalculator.tsx`: Stream A의 multi-mode 변경은 그대로 두고, NBL form-mapper 호출 1줄만 submit 함수 내부 적절한 위치에 추가
-- `transfer-tax-schema.ts`: Stream A 변경 영역과 `nonBusinessLandDetailsSchema` 영역 분리되어 있으면 양쪽 변경 모두 보존
-- `transfer-tax.ts`: NBL은 라인 207~225 영역만 건드리므로 Stream A의 다른 영역과 분리 가능
 
 ---
 
@@ -266,14 +302,17 @@ curl -X POST http://localhost:3001/api/calc/transfer ...
 
 | 리스크 | 완화책 |
 |---|---|
-| Stream A가 `calc-wizard-store.ts`를 나중에 수정 | M2 시작 전 `git diff master..origin/master -- lib/stores/calc-wizard-store.ts`로 사전 확인 |
-| Stream A가 머지되지 않은 상태로 NBL이 먼저 완성 | M5까지 진행 후 Phase 2 대기, Stream A 머지 후 Phase 3 |
-| worktree 디스크 사용량 증가 (`node_modules`) | 1회성 비용, 작업 종료 시 `git worktree remove ../Property-related-Taxes-nbl` |
-| 두 worktree에서 같은 파일을 동시에 편집 | Phase 1은 Safe 파일만이라 발생 불가, Phase 3에 진입 시점에 한 worktree로 통합 |
-| 머지 시 `nonBusinessLandDetailsSchema` 영역 충돌 | 영역 분리 명확, conflict marker 만나면 양쪽 변경 모두 keep |
+| `AssetForm`에 30 필드 추가로 인터페이스 비대화 | 주석 섹션 구분(// ── NBL 공통 ── 등), area 시나리오와 같은 그룹 패턴 사용 |
+| migrateAsset에서 root → asset 이전 시 데이터 손실 | persist version bump + migrate 함수 단위 테스트 (5건+) 작성 |
+| Step4의 단순 isNonBusinessLand 체크박스 처리 결정 | 자산 카드 내부 NblSectionContainer가 모든 케이스 흡수 → root 체크박스 제거 권장 |
+| `transfer-tax-api.ts` 수정 시 single/multi 양쪽 깨질 위험 | 한 번에 두 어댑터 모두 수정, 단위 테스트로 회귀 차단 |
+| 자산 카드 컴포넌트(704줄)가 800줄 초과할 위험 | NblSectionContainer를 별도 파일로 두고 import만, CompanionAssetCard 내부는 ~10줄 추가에 그침 |
+| 엔진 변경으로 기존 14건 깨짐 | additive only 원칙 — `ownershipRatio`·`gracePeriods` 처리 모두 optional 분기 |
 
 ---
 
 ## Next Action
 
-Phase 0 setup 명령 4줄 실행. 이후 Phase 1 M1부터 NBL 작업 시작.
+1. 본 plan 사용자 승인
+2. ExitPlanMode 후 Phase 0 시작 — `feature/nbl-ui-completion` 브랜치 생성 + Plan/Design 4개 문서 정정
+3. 정정 후 Phase 1 (`/pdca do nbl-ui-completion`) 진입

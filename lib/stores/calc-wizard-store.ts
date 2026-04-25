@@ -6,6 +6,11 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import type { TransferAPIResult } from "@/lib/calc/transfer-tax-api";
+import { migrateLegacyForm } from "./calc-wizard-migration";
+
+function parseRaw(v: string | undefined): number {
+  return parseInt((v ?? "").replace(/[^0-9]/g, "") || "0", 10);
+}
 
 /** 비사업용 토지 사업용 사용기간 항목 (폼 문자열 버전) */
 export interface NblBusinessUsePeriod {
@@ -183,6 +188,17 @@ export interface AssetForm {
   donorAcquisitionDate: string;
   /** 매매 환산취득가 사용 여부 */
   useEstimatedAcquisition: boolean;
+  /** 매매 감정가액 사용 여부 (소득세법 §97 + 시행령 §163⑥). useEstimatedAcquisition과 상호 배타.
+   *  true 시 fixedAcquisitionPrice를 감정가액으로 해석, 개산공제 자동 적용. */
+  isAppraisalAcquisition: boolean;
+  /** 본인이 신축·증축한 건물 여부 (§114조의2 가산세). acquisitionCause === "purchase" + 매매·housing/building 전용 */
+  isSelfBuilt: boolean;
+  /** 신축·증축 구분 */
+  buildingType: "new" | "extension" | "";
+  /** 신축·증축 완공일 (YYYY-MM-DD) */
+  constructionDate: string;
+  /** 증축 시 증축 부분 바닥면적 (㎡) — buildingType === "extension" 필수 */
+  extensionFloorArea: string;
   /** 매매 estimated 시 취득시점 기준시가 (원, 환산 분자) */
   standardPriceAtAcq: string;
   /** 취득시 기준시가 레이블 (API 조회 결과 표시용) */
@@ -246,6 +262,11 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     decedentAcquisitionDate: "",
     donorAcquisitionDate: "",
     useEstimatedAcquisition: false,
+    isAppraisalAcquisition: false,
+    isSelfBuilt: false,
+    buildingType: "",
+    constructionDate: "",
+    extensionFloorArea: "",
     standardPriceAtAcq: "",
     standardPriceAtAcqLabel: "",
     standardPricePerSqmAtAcq: "",
@@ -465,190 +486,6 @@ const defaultFormData: TransferFormData = {
   actualPaymentDate: "",
 };
 
-/** 세션스토리지에 저장된 구 포맷(propertyType + companionAssets / 루트 감면 필드)을 신규 assets[] 포맷으로 변환 */
-function migrateLegacyForm(legacy: Record<string, unknown>): TransferFormData {
-  const primaryAsset = makeDefaultAsset(1);
-  primaryAsset.assetKind =
-    (legacy.propertyType as AssetForm["assetKind"]) ?? "housing";
-  primaryAsset.isSuccessorRightToMoveIn = Boolean(legacy.isSuccessorRightToMoveIn);
-  primaryAsset.isPrimaryForHouseholdFlags = true;
-  primaryAsset.standardPriceAtTransfer = String(legacy.standardPriceAtTransfer ?? "");
-  primaryAsset.standardPriceAtTransferLabel = String(legacy.standardPriceAtTransferLabel ?? "");
-  primaryAsset.directExpenses = String(legacy.expenses ?? "0");
-  primaryAsset.inheritanceValuationMode =
-    (legacy.inheritanceValuationMode as "auto" | "manual") ?? "auto";
-  primaryAsset.inheritanceDate = String(legacy.acquisitionDate ?? "");
-  primaryAsset.publishedValueAtInheritance = String(
-    legacy.inheritanceLandPricePerM2 || legacy.inheritanceHousePrice || ""
-  );
-  primaryAsset.fixedAcquisitionPrice = String(legacy.acquisitionPrice ?? "");
-
-  // 구 주소 필드 → 자산별 주소로 이관
-  primaryAsset.addressRoad = String(legacy.propertyAddressRoad ?? "");
-  primaryAsset.addressJibun = String(legacy.propertyAddressJibun ?? "");
-  primaryAsset.addressDetail = String(legacy.propertyAddressDetail ?? "");
-  primaryAsset.buildingName = String(legacy.propertyBuildingName ?? "");
-  primaryAsset.longitude = String(legacy.propertyLongitude ?? "");
-  primaryAsset.latitude = String(legacy.propertyLatitude ?? "");
-
-  primaryAsset.isOneHousehold = Boolean(legacy.isOneHousehold ?? true);
-  primaryAsset.actualSalePrice = "";
-  primaryAsset.acquisitionCause =
-    (legacy.acquisitionCause as "purchase" | "inheritance" | "gift") ?? "purchase";
-  primaryAsset.acquisitionDate = String(legacy.acquisitionDate ?? "");
-  primaryAsset.decedentAcquisitionDate = String(legacy.decedentAcquisitionDate ?? "");
-  primaryAsset.donorAcquisitionDate = String(legacy.donorAcquisitionDate ?? "");
-  primaryAsset.useEstimatedAcquisition = Boolean(legacy.useEstimatedAcquisition);
-  primaryAsset.standardPriceAtAcq = String(legacy.standardPriceAtAcquisition ?? "");
-  primaryAsset.standardPriceAtAcqLabel = String(legacy.standardPriceAtAcquisitionLabel ?? "");
-
-  // 구 다필지 필드 → 자산별 parcelMode/parcels 로 이관
-  if (legacy.parcelMode) {
-    primaryAsset.parcelMode = Boolean(legacy.parcelMode);
-    primaryAsset.parcels = ((legacy.parcels as unknown[]) ?? []).map(migrateParcel);
-  migrateAsset(primaryAsset);
-  }
-
-  // 구 루트 감면 필드 → primaryAsset.reductions 배열로 이관
-  const legacyReductionType = legacy.reductionType as string | undefined;
-  if (legacyReductionType && legacyReductionType !== "") {
-    if (legacyReductionType === "self_farming") {
-      primaryAsset.reductions = [{
-        type: "self_farming",
-        farmingYears: String(legacy.farmingYears ?? "0"),
-        decedentFarmingYears: String(legacy.decedentFarmingYears ?? "0"),
-        useSelfFarmingIncorporation: Boolean(legacy.useSelfFarmingIncorporation),
-        selfFarmingIncorporationDate: String(legacy.selfFarmingIncorporationDate ?? ""),
-        selfFarmingIncorporationZone: (legacy.selfFarmingIncorporationZone as "residential" | "commercial" | "industrial" | "") ?? "",
-        selfFarmingStandardPriceAtIncorporation: String(legacy.selfFarmingStandardPriceAtIncorporation ?? ""),
-      }];
-    } else if (legacyReductionType === "long_term_rental") {
-      primaryAsset.reductions = [{
-        type: "long_term_rental",
-        rentalYears: String(legacy.rentalYears ?? "0"),
-        rentIncreaseRate: String(legacy.rentIncreaseRate ?? "0"),
-      }];
-    } else if (legacyReductionType === "new_housing") {
-      primaryAsset.reductions = [{
-        type: "new_housing",
-        reductionRegion: (legacy.reductionRegion as "metropolitan" | "non_metropolitan" | "outside_overconcentration") ?? "metropolitan",
-      }];
-    } else if (legacyReductionType === "unsold_housing") {
-      primaryAsset.reductions = [{
-        type: "unsold_housing",
-        reductionRegion: (legacy.reductionRegion as "metropolitan" | "non_metropolitan" | "outside_overconcentration") ?? "metropolitan",
-      }];
-    } else if (legacyReductionType === "public_expropriation") {
-      primaryAsset.reductions = [{
-        type: "public_expropriation",
-        expropriationCash: String(legacy.expropriationCash ?? ""),
-        expropriationBond: String(legacy.expropriationBond ?? ""),
-        expropriationBondHoldingYears: (legacy.expropriationBondHoldingYears as "none" | "3" | "5") ?? "none",
-        expropriationApprovalDate: String(legacy.expropriationApprovalDate ?? ""),
-      }];
-    }
-  }
-
-  const companions: AssetForm[] = (
-    (legacy.companionAssets as Array<Record<string, unknown>>) ?? []
-  ).map((ca, i) => {
-    const base = ca as unknown as AssetForm;
-    // 구 companion의 reductionType: "" | "self_farming" → reductions 배열로 변환
-    const legacyCaReductionType = (ca.reductionType as string | undefined) ?? "";
-    const caReductions: AssetReductionForm[] = [];
-    if (legacyCaReductionType === "self_farming") {
-      caReductions.push({
-        type: "self_farming",
-        farmingYears: String(ca.farmingYears ?? "0"),
-      });
-    }
-    const legacyLandArea = String(ca.landAreaM2 ?? "");
-    return {
-      ...base,
-      assetLabel: (base.assetLabel ?? `동반자산 ${i + 1}`)
-        .replace(/^동반자산/, "자산"),
-      isSuccessorRightToMoveIn: false,
-      isPrimaryForHouseholdFlags: false,
-      standardPriceAtAcqLabel: String(ca.standardPriceAtAcqLabel ?? ""),
-      standardPriceAtTransferLabel: String(ca.standardPriceAtTransferLabel ?? ""),
-      addressDetail: String(ca.addressDetail ?? ""),
-      buildingName: String(ca.buildingName ?? ""),
-      longitude: String(ca.longitude ?? ""),
-      latitude: String(ca.latitude ?? ""),
-      isRegulatedAreaAtAcq: null,
-      isRegulatedAreaAtTransfer: null,
-      parcelMode: Boolean(ca.parcelMode ?? false),
-      parcels: ((ca.parcels as unknown[]) ?? []).map(migrateParcel),
-      // landAreaM2 → acquisitionArea / transferArea 마이그레이션
-      acquisitionArea: String(ca.acquisitionArea ?? legacyLandArea),
-      transferArea: String(ca.transferArea ?? legacyLandArea),
-      areaScenario: (ca.areaScenario as AssetForm["areaScenario"]) ??
-        (ca.acquisitionArea && ca.transferArea && ca.acquisitionArea !== ca.transferArea
-          ? "partial"
-          : "same"),
-      replottingConfirmDate: String(ca.replottingConfirmDate ?? ""),
-      entitlementArea: String(ca.entitlementArea ?? ""),
-      allocatedArea: String(ca.allocatedArea ?? ""),
-      priorLandArea: String(ca.priorLandArea ?? ""),
-      reductions: caReductions,
-    };
-  });
-
-  const {
-    propertyType: _pt,
-    isSuccessorRightToMoveIn: _isr,
-    transferPrice,
-    acquisitionCause: _ac,
-    acquisitionDate: _ad,
-    decedentAcquisitionDate: _dad,
-    donorAcquisitionDate: _doad,
-    acquisitionPrice: _ap,
-    expenses: _exp,
-    useEstimatedAcquisition: _uea,
-    standardPriceAtAcquisition: _spa,
-    standardPriceAtTransfer: _spt,
-    standardPriceAtAcquisitionLabel: _spaal,
-    standardPriceAtTransferLabel: _spttl,
-    inheritanceValuationMode: _ivm,
-    inheritanceLandPricePerM2: _ilpp,
-    inheritanceHousePrice: _ihp,
-    companionAssets: _ca,
-    primaryActualSalePrice: _pasp,
-    // 구 주소 필드 제거
-    propertyAddressRoad: _par,
-    propertyAddressJibun: _paj,
-    propertyBuildingName: _pbn,
-    propertyAddressDetail: _pad,
-    propertyLongitude: _plon,
-    propertyLatitude: _plat,
-    // 구 다필지 필드 제거
-    parcelMode: _pm,
-    parcels: _parcels,
-    // 구 감면 필드 제거
-    reductionType: _rt,
-    farmingYears: _fy,
-    useSelfFarmingIncorporation: _usfi,
-    selfFarmingIncorporationDate: _sfid,
-    selfFarmingIncorporationZone: _sfiz,
-    selfFarmingStandardPriceAtIncorporation: _sfspa,
-    decedentFarmingYears: _dfy,
-    rentalYears: _ry,
-    rentIncreaseRate: _rir,
-    reductionRegion: _rr,
-    expropriationCash: _ec,
-    expropriationBond: _eb,
-    expropriationBondHoldingYears: _ebhy,
-    expropriationApprovalDate: _ead,
-    ...rest
-  } = legacy as Record<string, unknown>;
-
-  return {
-    ...defaultFormData,
-    ...(rest as Partial<TransferFormData>),
-    contractTotalPrice: String(transferPrice ?? ""),
-    assets: [primaryAsset, ...companions],
-  };
-}
 
 /** defaultFormData를 복사하여 반환하는 팩토리 (MultiTransferTaxCalculator 등 외부에서 사용) */
 export function createDefaultTransferFormData(): TransferFormData {
@@ -668,6 +505,14 @@ interface CalcWizardState {
   setResult: (result: TransferAPIResult) => void;
   clearPendingMigration: () => void;
   reset: () => void;
+}
+
+export interface TransferSummary {
+  totalSalePrice: number;
+  totalAcqPrice: number;
+  totalNecessaryExpense: number;
+  netTransferIncome: number;
+  estimatedTax: number | null;
 }
 
 export const useCalcWizardStore = create<CalcWizardState>()(
@@ -716,10 +561,14 @@ export const useCalcWizardStore = create<CalcWizardState>()(
             "companionAssets" in legacyForm ||
             "propertyAddressRoad" in legacyForm ||
             "reductionType" in legacyForm ||
-            "parcelMode" in legacyForm
+            "parcelMode" in legacyForm ||
+            "acquisitionMethod" in legacyForm ||
+            "appraisalValue" in legacyForm ||
+            "isSelfBuilt" in legacyForm ||
+            "pre1990Enabled" in legacyForm
           )
         ) {
-          formData = migrateLegacyForm(legacyForm);
+          formData = migrateLegacyForm(legacyForm, defaultFormData);
         } else {
           formData = {
             ...defaultFormData,
@@ -727,8 +576,43 @@ export const useCalcWizardStore = create<CalcWizardState>()(
           };
         }
 
-        return { ...current, ...ps, formData };
+        // Step1↔Step3 통합 후 5단계 → 4단계 인덱스 매핑
+        // 0=자산 → 0, 1=취득정보(폐지) → 0, 2=보유 → 1, 3=감면 → 2, 4=가산세 → 3, 5=결과 → 4
+        const STEP_MIGRATION: Record<number, number> = { 0: 0, 1: 0, 2: 1, 3: 2, 4: 3, 5: 4 };
+        const persistedStep = ps.currentStep ?? 0;
+        const migratedStep = STEP_MIGRATION[persistedStep] ?? Math.min(persistedStep, 4);
+
+        return { ...current, ...ps, formData, currentStep: migratedStep };
       },
     },
   ),
 );
+
+/** useMemo 없이 사용하면 매 렌더마다 새 객체가 생성되어 무한 루프 발생.
+ *  TransferTaxCalculator 에서 useMemo(() => computeTransferSummary(...), [formData, result]) 패턴으로 사용할 것. */
+export function computeTransferSummary(
+  formData: TransferFormData,
+  result: import("@/lib/calc/transfer-tax-api").TransferAPIResult | null
+): TransferSummary {
+  const totalSalePrice = formData.assets.reduce(
+    (acc, a) => acc + parseRaw(a.actualSalePrice),
+    0
+  );
+  const totalAcqPrice = formData.assets.reduce(
+    (acc, a) => acc + parseRaw(a.fixedAcquisitionPrice),
+    0
+  );
+  const totalNecessaryExpense = formData.assets.reduce(
+    (acc, a) => acc + parseRaw(a.directExpenses),
+    0
+  );
+  const estimatedTax =
+    result?.mode === "single" ? (result.result.totalTax ?? null) : null;
+  return {
+    totalSalePrice,
+    totalAcqPrice,
+    totalNecessaryExpense,
+    netTransferIncome: totalSalePrice - totalAcqPrice - totalNecessaryExpense,
+    estimatedTax,
+  };
+}

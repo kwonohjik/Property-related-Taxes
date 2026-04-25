@@ -1,6 +1,6 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-04-25T00:17:04.488Z",
+  "lastUpdated": "2026-04-25T07:12:47.912Z",
   "activeFeatures": [
     "claude-code-mastery",
     "calc",
@@ -134,9 +134,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-13T21:04:14.863Z",
-        "lastUpdated": "2026-04-24T22:12:53.255Z"
+        "lastUpdated": "2026-04-25T07:08:50.117Z"
       },
-      "lastFile": "/Users/mynote/workspace/Property-related-Taxes/lib/calc/multi-transfer-tax-api.ts"
+      "lastFile": "/Users/mynote/workspace/Property-related-Taxes/lib/calc/multi-transfer-tax-validate.ts"
     },
     "inheritance-tax": {
       "phase": "do",
@@ -212,9 +212,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-13T21:04:43.135Z",
-        "lastUpdated": "2026-04-24T23:54:35.137Z"
+        "lastUpdated": "2026-04-25T07:01:03.099Z"
       },
-      "lastFile": "/Users/mynote/workspace/Property-related-Taxes/lib/tax-engine/transfer-tax-aggregate.ts"
+      "lastFile": "/Users/mynote/workspace/Property-related-Taxes/lib/tax-engine/transfer-tax-helpers.ts"
     },
     "supabase": {
       "phase": "do",
@@ -251,9 +251,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-13T21:05:32.367Z",
-        "lastUpdated": "2026-04-18T09:39:48.193Z"
+        "lastUpdated": "2026-04-25T07:05:40.764Z"
       },
-      "lastFile": "/Users/mynote/workspace/Property-related-Taxes/__tests__/lib/filing-deadline.test.ts"
+      "lastFile": "/Users/mynote/workspace/Property-related-Taxes/__tests__/lib/transfer-step-migration.test.ts"
     },
     "Property-related-Taxes": {
       "phase": "do",
@@ -316,9 +316,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-13T23:20:05.996Z",
-        "lastUpdated": "2026-04-25T00:13:37.865Z"
+        "lastUpdated": "2026-04-25T07:11:38.485Z"
       },
-      "lastFile": "/Users/mynote/workspace/Property-related-Taxes/components/calc/transfer/AssetTabBar.tsx"
+      "lastFile": "/Users/mynote/workspace/Property-related-Taxes/components/calc/transfer/CompanionAssetCard.tsx"
     },
     "stores": {
       "phase": "do",
@@ -329,9 +329,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-13T23:45:07.391Z",
-        "lastUpdated": "2026-04-24T22:10:54.368Z"
+        "lastUpdated": "2026-04-25T07:12:47.911Z"
       },
-      "lastFile": "/Users/mynote/workspace/Property-related-Taxes/lib/stores/multi-transfer-tax-store.ts"
+      "lastFile": "/Users/mynote/workspace/Property-related-Taxes/lib/stores/calc-wizard-store.ts"
     },
     "transfer-tax": {
       "phase": "do",
@@ -342,7 +342,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-13T23:47:18.127Z",
-        "lastUpdated": "2026-04-24T22:48:11.088Z"
+        "lastUpdated": "2026-04-25T07:12:07.973Z"
       },
       "lastFile": "/Users/mynote/workspace/Property-related-Taxes/app/calc/transfer-tax/TransferTaxCalculator.tsx"
     },
@@ -407,7 +407,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-14T10:55:34.465Z",
-        "lastUpdated": "2026-04-24T05:09:54.243Z"
+        "lastUpdated": "2026-04-25T00:59:55.709Z"
       },
       "lastFile": "/Users/mynote/workspace/Property-related-Taxes/components/calc/inputs/CurrencyInput.tsx"
     },
@@ -1020,9 +1020,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-21T02:27:47.645Z",
-        "lastUpdated": "2026-04-24T02:39:47.666Z"
+        "lastUpdated": "2026-04-25T01:04:45.022Z"
       },
-      "lastFile": "/Users/mynote/workspace/Property-related-Taxes/app/calc/transfer-tax/steps/Step1.tsx"
+      "lastFile": "/Users/mynote/workspace/Property-related-Taxes/app/calc/transfer-tax/steps/Step6.tsx"
     },
     "legal-codes": {
       "phase": "do",
@@ -1085,7 +1085,7 @@
   "session": {
     "startedAt": "2026-04-13T10:11:34.572Z",
     "onboardingCompleted": false,
-    "lastActivity": "2026-04-25T00:17:04.488Z"
+    "lastActivity": "2026-04-25T07:12:47.912Z"
   },
   "history": [
     {
@@ -15683,6 +15683,414 @@
     {
       "timestamp": "2026-04-25T00:17:04.488Z",
       "feature": "multi",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T00:59:13.474Z",
+      "feature": "inputs",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T00:59:17.270Z",
+      "feature": "calc",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T00:59:36.063Z",
+      "feature": "calc",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T00:59:42.787Z",
+      "feature": "inputs",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T00:59:46.357Z",
+      "feature": "inputs",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T00:59:52.432Z",
+      "feature": "inputs",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T00:59:55.710Z",
+      "feature": "inputs",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T01:00:12.119Z",
+      "feature": "stores",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T01:00:20.888Z",
+      "feature": "stores",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T01:00:29.430Z",
+      "feature": "transfer-tax",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T01:00:35.845Z",
+      "feature": "transfer-tax",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T01:00:41.543Z",
+      "feature": "transfer-tax",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T01:00:52.521Z",
+      "feature": "transfer-tax",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T01:01:01.973Z",
+      "feature": "transfer-tax",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T01:01:35.561Z",
+      "feature": "transfer-tax",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T01:02:04.103Z",
+      "feature": "steps",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T01:02:41.730Z",
+      "feature": "steps",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T01:02:46.824Z",
+      "feature": "steps",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T01:02:52.405Z",
+      "feature": "steps",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T01:02:58.559Z",
+      "feature": "steps",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T01:03:04.402Z",
+      "feature": "steps",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T01:03:16.942Z",
+      "feature": "steps",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T01:03:22.271Z",
+      "feature": "steps",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T01:03:27.131Z",
+      "feature": "steps",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T01:03:38.137Z",
+      "feature": "steps",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T01:03:46.250Z",
+      "feature": "steps",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T01:03:58.602Z",
+      "feature": "steps",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T01:04:04.417Z",
+      "feature": "steps",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T01:04:17.979Z",
+      "feature": "steps",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T01:04:28.137Z",
+      "feature": "steps",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T01:04:32.625Z",
+      "feature": "steps",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T01:04:45.023Z",
+      "feature": "steps",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T01:05:54.153Z",
+      "feature": "__tests__",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T01:06:16.608Z",
+      "feature": "__tests__",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T06:20:44.929Z",
+      "feature": "stores",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T06:20:52.331Z",
+      "feature": "stores",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T06:22:01.471Z",
+      "feature": "stores",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T06:22:07.521Z",
+      "feature": "transfer-tax",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T06:22:13.789Z",
+      "feature": "transfer-tax",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T06:22:21.112Z",
+      "feature": "transfer-tax",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T06:22:41.585Z",
+      "feature": "__tests__",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T07:01:03.100Z",
+      "feature": "tax-engine",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T07:01:56.827Z",
+      "feature": "stores",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T07:02:06.136Z",
+      "feature": "stores",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T07:02:23.073Z",
+      "feature": "stores",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T07:04:00.123Z",
+      "feature": "stores",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T07:04:06.899Z",
+      "feature": "stores",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T07:04:53.041Z",
+      "feature": "stores",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T07:04:57.476Z",
+      "feature": "stores",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T07:05:40.765Z",
+      "feature": "__tests__",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T07:06:10.715Z",
+      "feature": "calc",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T07:06:18.446Z",
+      "feature": "calc",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T07:06:38.553Z",
+      "feature": "calc",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T07:08:21.588Z",
+      "feature": "calc",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T07:08:50.118Z",
+      "feature": "calc",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T07:09:55.899Z",
+      "feature": "transfer",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T07:10:04.602Z",
+      "feature": "transfer",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T07:10:12.330Z",
+      "feature": "transfer",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T07:10:19.967Z",
+      "feature": "transfer",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T07:10:28.125Z",
+      "feature": "transfer",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T07:10:36.697Z",
+      "feature": "transfer",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T07:10:57.274Z",
+      "feature": "transfer",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T07:11:18.658Z",
+      "feature": "transfer",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T07:11:38.486Z",
+      "feature": "transfer",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T07:11:51.560Z",
+      "feature": "transfer-tax",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T07:12:00.341Z",
+      "feature": "transfer-tax",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T07:12:07.974Z",
+      "feature": "transfer-tax",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-25T07:12:47.912Z",
+      "feature": "stores",
       "phase": "do",
       "action": "updated"
     }

@@ -2,6 +2,8 @@ import { cn } from "@/lib/utils";
 import type { TransferFormData, AssetForm, AssetReductionForm, PriorReductionUsageItem } from "@/lib/stores/calc-wizard-store";
 import { DateInput } from "@/components/ui/date-input";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import { SectionHeader } from "@/components/calc/shared/SectionHeader";
 import { SelfFarmingIncorporationInput } from "@/components/calc/inputs/SelfFarmingIncorporationInput";
 
 // ============================================================
@@ -440,6 +442,7 @@ export function Step5({
       </p>
 
       {/* 자산별 감면 선택 */}
+      <SectionHeader title="자산별 감면·공제" description="조특법 §127② — 유리한 감면이 자동 선택됩니다" />
       {form.assets.map((asset, i) => (
         <AssetReductionBlock
           key={asset.assetId || i}
@@ -456,16 +459,16 @@ export function Step5({
       />
 
       {/* 연간 기사용 기본공제 */}
-      <div className="space-y-1.5">
-        <label className="block text-sm font-medium">당해 연도 기사용 기본공제</label>
+      <SectionHeader title="기본공제" description="연간 한도 250만원, 동일 연도 다른 양도에서 이미 사용한 금액을 입력하세요" />
+      <FieldCard label="기사용 기본공제" unit="원" hint="동일 연도 다른 양도에서 이미 사용한 기본공제 금액 (연간 한도 2,500,000원)">
         <CurrencyInput
           label=""
+          hideUnit
           value={form.annualBasicDeductionUsed}
           onChange={(v) => onChange({ annualBasicDeductionUsed: v })}
           placeholder="0"
-          hint="동일 연도 다른 양도에서 이미 사용한 기본공제 금액 (연간 한도 250만원)"
         />
-      </div>
+      </FieldCard>
     </div>
   );
 }

@@ -3,36 +3,42 @@
 > **Parent Design**: `nbl-ui-completion.design.md`
 > **작성일**: 2026-04-24
 > **범위**: 엔진 Gap 6건 해소 + Form ↔ Input 매퍼 + 타입 확장
+> **v1.1 변경 (2026-04-25)**: TransferFormData → AssetForm으로 NBL 필드 이전 (Stream A 업그레이드 반영)
 
 ---
 
 ## 1. 타입 확장
 
-### 1.1 `TransferFormData` (flat 필드)
+### 1.1 `AssetForm` 확장 (NBL 필드 추가) — ⚠️ v1.1 변경
 
-기존 `nbl*` prefix 컨벤션 유지. zustand persist 직렬화 호환성을 위해 모든 필드를 primitive · 배열 · 단순 객체로 제한.
+> **Stream A 업그레이드 반영**: NBL 필드를 `TransferFormData` root에서 `AssetForm`으로 이전.
+> - 기존 root nbl* 7개 (`isNonBusinessLand`, `nblLandType`, `nblLandArea`, `nblZoneType`, `nblFarmingSelf`, `nblFarmerResidenceDistance`, `nblBusinessUsePeriods`) → AssetForm으로 이전 후 root 삭제
+> - `nblLandArea` 신규 추가 안 함 — `AssetForm.acquisitionArea` 재사용 (area-taxonomy.md 원칙 B)
+> - `isNonBusinessLand`는 `AssetForm`에 그대로 유지 (자산 단위 플래그)
 
 ```ts
-// lib/stores/calc-wizard-store.ts
-export interface TransferFormData {
-  // ── NBL 단순 경로 (기존) ──
-  isNonBusinessLand: boolean;
+// lib/stores/calc-wizard-store.ts — AssetForm 인터페이스에 추가 (line 141 직후)
+export interface AssetForm {
+  // ... 기존 필드 유지 (assetId ~ priorLandArea) ...
 
-  // ── NBL 상세 판정 활성화 (신규) ──
+  // ── NBL 자산 판정 (line 141 직후 삽입) ──
+  /** 비사업용 토지 여부 — 단순 체크박스 경로 */
+  isNonBusinessLand: boolean;
+  /** true 시 엔진 자동 판정, isNonBusinessLand 체크박스 무시 */
   nblUseDetailedJudgment: boolean;
 
-  // ── NBL 공통 (기존 유지) ──
+  // ── NBL 공통 ──
   nblLandType: "" | "farmland" | "forest" | "pasture" | "housing_site" | "villa_land" | "other_land";
-  nblLandArea: string;
+  /** 면적: acquisitionArea 재사용 (별도 nblLandArea 없음) */
   nblZoneType: string;
-  nblBusinessUsePeriods: BusinessUsePeriodInput[];
+  nblBusinessUsePeriods: NblBusinessUsePeriod[];  // 기존 타입 재사용
 
-  // ── NBL 위치·거주 (신규) ──
+  // ── 위치·거주 ──
   nblLandSigunguCode: string;
   nblLandSigunguName: string;
   nblResidenceHistories: ResidenceHistoryInput[];
 
-  // ── 무조건 면제 §168-14③ (신규) ──
+  // ── 무조건 면제 §168-14③ ──
   nblExemptInheritBefore2007: boolean;
   nblExemptInheritDate: string;
   nblExemptLongOwned20y: boolean;
@@ -44,7 +50,7 @@ export interface TransferFormData {
   nblExemptJongjoongAcqDate: string;
   nblExemptUrbanFarmlandJongjoong: boolean;
 
-  // ── 도시편입 유예·수도권·공동상속 (신규) ──
+  // ── 도시편입 유예·수도권·공동상속 ──
   nblUrbanIncorporationDate: string;
   nblIsMetropolitanArea: "" | "yes" | "no" | "unknown";
   nblOwnershipRatio: string;
@@ -71,13 +77,13 @@ export interface TransferFormData {
   nblPastureIsLivestockOperator: boolean;
   nblPastureLivestockType: string;
   nblPastureLivestockCount: string;
-  nblPastureLivestockPeriods: BusinessUsePeriodInput[];
+  nblPastureLivestockPeriods: NblBusinessUsePeriod[];
   nblPastureInheritanceDate: string;
   nblPastureIsSpecialOrgUse: boolean;
 
   // ── 주택·별장·나대지 세부 ──
   nblHousingFootprint: string;
-  nblVillaUsePeriods: BusinessUsePeriodInput[];
+  nblVillaUsePeriods: NblBusinessUsePeriod[];
   nblVillaIsEupMyeon: boolean;
   nblVillaIsRuralHousing: boolean;
   nblVillaIsAfter20150101: boolean;
@@ -90,9 +96,7 @@ export interface TransferFormData {
   nblGracePeriods: GracePeriodInput[];
 }
 
-export interface BusinessUsePeriodInput {
-  startDate: string; endDate: string; usageType: string;
-}
+// 신규 타입 (calc-wizard-store.ts에 추가)
 export interface ResidenceHistoryInput {
   sigunguCode: string; sigunguName: string;
   startDate: string; endDate: string;
@@ -102,6 +106,31 @@ export interface GracePeriodInput {
   type: "inheritance" | "legal_restriction" | "sale_contract" | "construction" | "unavoidable" | "preparation" | "land_replotting";
   startDate: string; endDate: string; description: string;
 }
+```
+
+### 1.1.1 마이그레이션 — root → AssetForm 이전
+
+```ts
+// lib/stores/calc-wizard-store.ts — migrateAsset 함수 확장
+function migrateAsset(asset: any, rootForm: any): AssetForm {
+  // root nbl* → primary asset으로 이전 (persist v3→v4)
+  if (asset.isPrimaryForHouseholdFlags && rootForm.nblLandType) {
+    asset.nblLandType       = rootForm.nblLandType;
+    asset.nblZoneType       = rootForm.nblZoneType ?? "";
+    asset.nblFarmingSelf    = rootForm.nblFarmingSelf ?? false;
+    asset.nblFarmerResidenceDistance = rootForm.nblFarmerResidenceDistance ?? "";
+    asset.nblBusinessUsePeriods = rootForm.nblBusinessUsePeriods ?? [];
+    asset.isNonBusinessLand = rootForm.isNonBusinessLand ?? false;
+  }
+  // 기본값 주입 (신규 필드)
+  asset.nblUseDetailedJudgment   ??= false;
+  asset.nblResidenceHistories    ??= [];
+  asset.nblGracePeriods          ??= [];
+  asset.nblExemptInheritBefore2007 ??= false;
+  // ... 나머지 신규 필드 모두 false/"" 기본값
+  return asset;
+}
+// persist version: 3 → 4
 ```
 
 ### 1.2 엔진 `NonBusinessLandInput` 확장
@@ -123,8 +152,9 @@ export interface OwnerProfile {
 
 ```ts
 // lib/tax-engine/non-business-land/form-mapper.ts (신규)
-export function mapFormToNblInput(
-  form: TransferFormData,
+// ⚠️ v1.1: form → asset 기반으로 시그니처 변경
+export function mapAssetToNblInput(
+  asset: AssetForm,
   context: {
     acquisitionDate: Date;
     transferDate: Date;
@@ -132,43 +162,46 @@ export function mapFormToNblInput(
     parseNumber: (s: string) => number | undefined;
   },
 ): NonBusinessLandInput | null {
-  if (!form.nblUseDetailedJudgment || !form.nblLandType) return null;
+  if (!asset.nblUseDetailedJudgment || !asset.nblLandType) return null;
   return {
-    landType: form.nblLandType,
-    landArea: context.parseNumber(form.nblLandArea),
-    zoneType: form.nblZoneType || undefined,
+    landType: asset.nblLandType,
+    // ⚠️ v1.1: nblLandArea 폐지 → acquisitionArea 재사용 (area-taxonomy.md 원칙 B)
+    landArea: context.parseNumber(asset.acquisitionArea),
+    zoneType: asset.nblZoneType || undefined,
     acquisitionDate: context.acquisitionDate,
     transferDate: context.transferDate,
-    businessUsePeriods: form.nblBusinessUsePeriods
+    businessUsePeriods: asset.nblBusinessUsePeriods
       .filter((p) => p.startDate && p.endDate)
       .map((p) => ({
         startDate: context.parseDate(p.startDate)!,
         endDate: context.parseDate(p.endDate)!,
         usageType: p.usageType,
       })),
-    landLocation: form.nblLandSigunguCode
-      ? { sigunguCode: form.nblLandSigunguCode }
+    landLocation: asset.nblLandSigunguCode
+      ? { sigunguCode: asset.nblLandSigunguCode }
       : undefined,
     ownerProfile: {
-      residenceHistories: form.nblResidenceHistories.map(/* ... */),
-      ownershipRatio: context.parseNumber(form.nblOwnershipRatio) ?? 1,
+      residenceHistories: asset.nblResidenceHistories.map(/* ... */),
+      ownershipRatio: context.parseNumber(asset.nblOwnershipRatio) ?? 1,
     },
-    unconditionalExemption: buildUnconditional(form, context),
-    urbanIncorporationDate: context.parseDate(form.nblUrbanIncorporationDate),
-    isMetropolitanArea: form.nblIsMetropolitanArea === "yes",
-    farmlandDeeming: buildFarmlandDeeming(form, context),
-    forestDetail: buildForestDetail(form),
-    pasture: buildPasture(form, context),
-    villa: buildVilla(form, context),
-    otherLand: buildOtherLand(form, context),
-    gracePeriods: buildGracePeriods(form, context),
-    isFarmingSelf: form.nblFarmingSelf,
-    farmerResidenceDistance: context.parseNumber(form.nblFarmerResidenceDistance),
+    unconditionalExemption: buildUnconditional(asset, context),
+    urbanIncorporationDate: context.parseDate(asset.nblUrbanIncorporationDate),
+    isMetropolitanArea: asset.nblIsMetropolitanArea === "yes",
+    farmlandDeeming: buildFarmlandDeeming(asset, context),
+    forestDetail: buildForestDetail(asset),
+    pasture: buildPasture(asset, context),
+    villa: buildVilla(asset, context),
+    otherLand: buildOtherLand(asset, context),
+    gracePeriods: buildGracePeriods(asset, context),
+    isFarmingSelf: asset.nblFarmingSelf,
+    farmerResidenceDistance: context.parseNumber(asset.nblFarmerResidenceDistance),
   };
 }
 ```
 
-**API 스키마 변경 없음**. UI의 flat 필드는 Orchestrator 진입 직전 매퍼를 통해 nested 구조로 변환되어 기존 API 타입에 그대로 전달.
+**API 스키마 변경 없음**. AssetForm 필드는 `lib/calc/transfer-tax-api.ts:168`에서 `mapAssetToNblInput(primary, dates)`을 통해 nested 구조로 변환 후 기존 API 타입에 전달.
+- `lib/calc/transfer-tax-api.ts:168` 수정: `form.nbl*` → `primary.nbl*` 읽기
+- `lib/calc/multi-transfer-tax-api.ts:21` 동일 패턴 적용
 
 ---
 
