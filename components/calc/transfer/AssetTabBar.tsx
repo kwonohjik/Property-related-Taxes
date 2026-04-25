@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus, Trash2, Copy, ChevronRight } from "lucide-react";
+import { Plus, Trash2, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import type { PropertyItem } from "@/lib/stores/multi-transfer-tax-store";
@@ -10,7 +10,6 @@ interface AssetTabBarProps {
   activeIndex: number;
   onSelect: (index: number) => void;
   onAdd: () => void;
-  onDuplicate: (index: number) => void;
   onRemove: (index: number) => void;
   maxCount?: number;
 }
@@ -20,7 +19,6 @@ export function AssetTabBar({
   activeIndex,
   onSelect,
   onAdd,
-  onDuplicate,
   onRemove,
   maxCount = 20,
 }: AssetTabBarProps) {
@@ -34,7 +32,6 @@ export function AssetTabBar({
             index={i}
             isActive={i === activeIndex}
             onSelect={() => onSelect(i)}
-            onDuplicate={() => onDuplicate(i)}
             onRemove={() => onRemove(i)}
             canRemove={properties.length > 1}
           />
@@ -64,7 +61,6 @@ interface AssetTabProps {
   index: number;
   isActive: boolean;
   onSelect: () => void;
-  onDuplicate: () => void;
   onRemove: () => void;
   canRemove: boolean;
 }
@@ -73,7 +69,6 @@ function AssetTab({
   item,
   isActive,
   onSelect,
-  onDuplicate,
   onRemove,
   canRemove,
 }: AssetTabProps) {
@@ -109,22 +104,12 @@ function AssetTab({
         </div>
       </div>
 
-      {/* 액션 버튼 (hover 시 표시) */}
-      <div
-        className="hidden group-hover:flex items-center gap-0.5 ml-1"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="h-5 w-5"
-          title="복제"
-          onClick={onDuplicate}
+      {/* 삭제 버튼 (hover 시 표시) */}
+      {canRemove && (
+        <div
+          className="hidden group-hover:flex items-center gap-0.5 ml-1"
+          onClick={(e) => e.stopPropagation()}
         >
-          <Copy className="h-3 w-3" />
-        </Button>
-        {canRemove && (
           <Button
             type="button"
             variant="ghost"
@@ -135,8 +120,8 @@ function AssetTab({
           >
             <Trash2 className="h-3 w-3" />
           </Button>
-        )}
-      </div>
+        </div>
+      )}
 
       {isActive && <ChevronRight className="h-3.5 w-3.5 text-primary ml-auto" />}
     </div>

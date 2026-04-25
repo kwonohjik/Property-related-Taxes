@@ -94,9 +94,16 @@ const REDUCTION_TYPE_LABELS: Record<string, string> = {
 function AggregatedTaxSummary({ aggregated }: { aggregated: AggregateTransferResult }) {
   const hasMultipleGroups = aggregated.groupTaxes.length > 1;
 
-  // aggregated.penaltyTax = §114조의2 건별 합 + penaltyDetail.totalPenalty (이미 포함)
+  // aggregated.penaltyTax = 자산별 §114조의2 + 자산별 신고불성실/납부지연 합계
   const totalPenalty = aggregated.penaltyTax;
-  const buildingPenalty = totalPenalty - (aggregated.penaltyDetail?.totalPenalty ?? 0);
+  const buildingPenaltySum = aggregated.properties.reduce(
+    (s, p) => s + (p.penaltyTax ?? 0),
+    0,
+  );
+  const filingDelayedSum = aggregated.properties.reduce(
+    (s, p) => s + (p.filingDelayedPenaltyTax ?? 0),
+    0,
+  );
   const nationalTax = aggregated.determinedTax + totalPenalty;
 
   return (
@@ -174,26 +181,15 @@ function AggregatedTaxSummary({ aggregated }: { aggregated: AggregateTransferRes
           {/* 결정세액 */}
           <Row label="결정세액" value={formatKRW(aggregated.determinedTax)} highlight />
 
-          {/* 가산세 */}
+          {/* 가산세 — 자산별 합계 */}
           {totalPenalty > 0 && (
             <>
               <Row label="가산세" value={`+ ${formatKRW(totalPenalty)}`} />
-              {buildingPenalty > 0 && (
-                <Row label="· 환산가액가산세 (§114조의2)" value={formatKRW(buildingPenalty)} sub />
+              {buildingPenaltySum > 0 && (
+                <Row label="· 환산가액가산세 (§114조의2)" value={formatKRW(buildingPenaltySum)} sub />
               )}
-              {aggregated.penaltyDetail?.filingPenalty && aggregated.penaltyDetail.filingPenalty.filingPenalty > 0 && (
-                <Row
-                  label={`· 신고불성실가산세 (${(aggregated.penaltyDetail.filingPenalty.penaltyRate * 100).toFixed(0)}%)`}
-                  value={formatKRW(aggregated.penaltyDetail.filingPenalty.filingPenalty)}
-                  sub
-                />
-              )}
-              {aggregated.penaltyDetail?.delayedPaymentPenalty && aggregated.penaltyDetail.delayedPaymentPenalty.delayedPaymentPenalty > 0 && (
-                <Row
-                  label={`· 납부지연가산세 (${aggregated.penaltyDetail.delayedPaymentPenalty.elapsedDays}일)`}
-                  value={formatKRW(aggregated.penaltyDetail.delayedPaymentPenalty.delayedPaymentPenalty)}
-                  sub
-                />
+              {filingDelayedSum > 0 && (
+                <Row label="· 신고불성실·납부지연 가산세" value={formatKRW(filingDelayedSum)} sub />
               )}
             </>
           )}

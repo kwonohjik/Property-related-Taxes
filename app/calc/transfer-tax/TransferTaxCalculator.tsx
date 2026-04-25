@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { useCalcWizardStore } from "@/lib/stores/calc-wizard-store";
+import { useCalcWizardStore, createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
+import { useMultiTransferStore, generatePropertyId } from "@/lib/stores/multi-transfer-tax-store";
+import { calcPropertyCompletion } from "@/lib/calc/multi-transfer-tax-validate";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { StepIndicator } from "@/components/calc/StepIndicator";
 import { TransferTaxResultView } from "@/components/calc/results/TransferTaxResultView";
@@ -19,7 +21,6 @@ import { Step5 } from "./steps/Step5";
 import { Step6 } from "./steps/Step6";
 
 const STEPS_SINGLE = ["자산 목록", "취득 정보", "보유 상황", "감면·공제", "가산세"];
-const STEPS_MULTI = ["자산 목록", "취득 정보", "보유 상황", "감면·공제"];
 
 // 메인 컴포넌트
 // ============================================================
@@ -38,8 +39,8 @@ export default function TransferTaxCalculator({
   const pathname = usePathname();
   // 다건 양도 편집 모드 내 임베딩 여부
   const isEmbeddedInMulti = pathname?.includes("/multi") ?? false;
-  // 다건 모드는 5단계 (가산세 제외 — 합산 결과 기준이므로 공통 설정에서 입력)
-  const STEPS = isEmbeddedInMulti ? STEPS_MULTI : STEPS_SINGLE;
+  // 단건/다건 모두 6단계 — 가산세는 자산별 입력
+  const STEPS = STEPS_SINGLE;
   const { currentStep, formData, result, setStep, updateFormData, setResult, reset, clearPendingMigration } =
     useCalcWizardStore();
   const [error, setError] = useState<string | null>(null);
@@ -147,6 +148,26 @@ export default function TransferTaxCalculator({
       setResult(res);
       setStep(totalSteps); // 결과 화면
 
+      // 단건 계산 완료 시 multi-store.properties[0]에 자동 백업.
+      // 사용자가 이후 "동일연도 다른 양도건 계산하기"를 눌러도, 또는 직접 /multi로 이동해도 자산1 데이터가 보존된다.
+      // 다건 임베드(isEmbeddedInMulti)일 때는 multi 흐름이 이미 properties를 관리하므로 백업하지 않는다.
+      if (!isEmbeddedInMulti) {
+        const multiStore = useMultiTransferStore.getState();
+        const completion = calcPropertyCompletion(formData);
+        const newItem = {
+          propertyId: generatePropertyId(),
+          propertyLabel: "양도 1번",
+          form: formData,
+          completionPercent: completion,
+        };
+        multiStore.reset();
+        multiStore.addProperty(newItem);
+        if (formData.transferDate) {
+          const year = parseInt(formData.transferDate.slice(0, 4), 10);
+          if (!Number.isNaN(year)) multiStore.setForm({ taxYear: year });
+        }
+      }
+
       // 로그인된 사용자면 이력 자동 저장
       if (isLoggedIn) {
         const { saveCalculation } = await import("@/actions/calculations");
@@ -203,6 +224,49 @@ export default function TransferTaxCalculator({
     setPenaltyResult(null);
   }
 
+  // 단건 결과 화면의 "동일연도 다른 양도건 계산하기" 버튼 핸들러.
+  // 단건 입력값을 다건 store의 자산1로 이전하고 빈 자산2를 추가한 뒤 다건 페이지로 이동.
+  // 자산1은 보존되며 사용자는 곧장 자산2 입력으로 넘어간다.
+  const handleContinueToMulti = useCallback(() => {
+    const multiStore = useMultiTransferStore.getState();
+    const wizardStore = useCalcWizardStore.getState();
+
+    multiStore.reset();
+
+    const asset1Form = formData;
+    const asset1Completion = calcPropertyCompletion(asset1Form);
+    multiStore.addProperty({
+      propertyId: generatePropertyId(),
+      propertyLabel: "양도 1번",
+      form: asset1Form,
+      completionPercent: asset1Completion,
+    });
+
+    const asset2Form = createDefaultTransferFormData();
+    multiStore.addProperty({
+      propertyId: generatePropertyId(),
+      propertyLabel: "양도 2번",
+      form: asset2Form,
+      completionPercent: 0,
+    });
+
+    if (formData.transferDate) {
+      const year = parseInt(formData.transferDate.slice(0, 4), 10);
+      if (!Number.isNaN(year)) {
+        multiStore.setForm({ taxYear: year });
+      }
+    }
+
+    multiStore.setActiveProperty(1);
+    multiStore.setStep("edit");
+
+    wizardStore.reset();
+    wizardStore.updateFormData(asset2Form);
+    wizardStore.setStep(0);
+
+    router.push("/calc/transfer-tax/multi");
+  }, [formData, router]);
+
   const stepComponentsAll = [
     <Step1
       key={0}
@@ -214,8 +278,7 @@ export default function TransferTaxCalculator({
     <Step5 key={3} form={formData} onChange={updateFormData} />,
     <Step6 key={4} form={formData} onChange={updateFormData} determinedTax={calcDeterminedTax} />,
   ];
-  // 다건 모드는 가산세(Step6) 제외
-  const stepComponents = isEmbeddedInMulti ? stepComponentsAll.slice(0, 4) : stepComponentsAll;
+  const stepComponents = stepComponentsAll;
 
   return (
     <div className="mx-auto max-w-lg px-4 py-8">
@@ -225,14 +288,6 @@ export default function TransferTaxCalculator({
         <div className="flex items-center justify-between gap-2">
           <h1 className="text-2xl font-bold">양도소득세 계산기</h1>
           <ResetButton onReset={handleReset} />
-        </div>
-        <div className="mt-2">
-          <a
-            href="/calc/transfer-tax/multi"
-            className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-md bg-black text-white text-base font-semibold hover:bg-neutral-800 transition-colors"
-          >
-            동일연도 다른 양도건 계산하기
-          </a>
         </div>
       </div>
 
@@ -246,6 +301,8 @@ export default function TransferTaxCalculator({
               setError(null);
             }}
             onLoginPrompt={!isLoggedIn}
+            showMultiTransferButton={!isEmbeddedInMulti}
+            onContinueToMulti={handleContinueToMulti}
           />
         ) : (
           <BundledAllocationCard
@@ -347,7 +404,7 @@ export default function TransferTaxCalculator({
 
           {/* 네비게이션 — 뒤로가기(항상) + 다음/계산 */}
           <div className="mt-6 space-y-2">
-            {isLastStep && !isEmbeddedInMulti && formData.enablePenalty && (
+            {isLastStep && formData.enablePenalty && (
               <button
                 type="button"
                 onClick={handlePenaltyCalc}
@@ -358,16 +415,17 @@ export default function TransferTaxCalculator({
               </button>
             )}
             <div className="flex gap-3">
-              {/* 다건 편집 모드 내 step 0에서는 홈으로 버튼 미표시 */}
-              {!(isEmbeddedInMulti && currentStep === 0) && (
-                <button
-                  type="button"
-                  onClick={handleBack}
-                  className="flex-1 rounded-lg border border-border py-2.5 text-sm font-medium hover:bg-muted/40 transition-colors"
-                >
-                  {currentStep === 0 ? "홈으로" : "이전"}
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={
+                  isEmbeddedInMulti && currentStep === 0
+                    ? () => router.push("/")
+                    : handleBack
+                }
+                className="flex-1 rounded-lg border border-border py-2.5 text-sm font-medium hover:bg-muted/40 transition-colors"
+              >
+                {currentStep === 0 ? "홈으로" : "이전"}
+              </button>
               {isLastStep ? (
                 isEmbeddedInMulti ? (
                   <>

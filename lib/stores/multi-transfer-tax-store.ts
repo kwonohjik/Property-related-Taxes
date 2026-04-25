@@ -32,16 +32,7 @@ export interface MultiTransferFormData {
   // 공통 설정 (Step C)
   annualBasicDeductionUsed: string;
   basicDeductionAllocation: "MAX_BENEFIT" | "FIRST" | "EARLIEST_TRANSFER";
-  enablePenalty: boolean;
-  filingType: "none" | "under" | "excess_refund" | "correct";
-  penaltyReason: "normal" | "fraudulent" | "offshore_fraud";
-  priorPaidTax: string;
-  originalFiledTax: string;
-  excessRefundAmount: string;
-  interestSurcharge: string;
-  unpaidTax: string;
-  paymentDeadline: string;
-  actualPaymentDate: string;
+  // 가산세는 자산별로 입력 — 자산 form(TransferFormData)에 보관됨.
 }
 
 const defaultFormData: MultiTransferFormData = {
@@ -51,16 +42,6 @@ const defaultFormData: MultiTransferFormData = {
   activeStep: "list",
   annualBasicDeductionUsed: "0",
   basicDeductionAllocation: "MAX_BENEFIT",
-  enablePenalty: false,
-  filingType: "none",
-  penaltyReason: "normal",
-  priorPaidTax: "0",
-  originalFiledTax: "0",
-  excessRefundAmount: "0",
-  interestSurcharge: "0",
-  unpaidTax: "0",
-  paymentDeadline: "",
-  actualPaymentDate: "",
 };
 
 interface MultiTransferState {

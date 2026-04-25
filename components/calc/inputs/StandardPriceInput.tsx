@@ -111,18 +111,10 @@ export function StandardPriceInput({
     }
   }
 
-  // ── 총액 수동 편집 → 단가 역산 ──────────────────────────────────
+  // ── 총액 수동 편집 ───────────────────────────────────────────────
   function handleTotalPriceChange(v: string) {
     onTotalPriceChange(v);
     onSourceChange?.("lookup-edited");
-    if (!isAreaMode) return;
-    const total = parseFloat(v.replace(/,/g, "") || "0");
-    const areaNum = parseFloat(area?.replace(/,/g, "") || "0");
-    if (total > 0 && areaNum > 0) {
-      // 단가 역산: 소수점 3자리 반올림 → 문자열로 전달
-      const reversed = Math.round((total / areaNum) * 1000) / 1000;
-      onPricePerSqmChange?.(String(reversed));
-    }
   }
 
   // ── 조회 버튼 클릭 ─────────────────────────────────────────────

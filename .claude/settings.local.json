@@ -134,7 +134,9 @@
       "Bash(awk '{print $1}')",
       "Bash(claude mcp *)",
       "Bash(claude *)",
-      "Bash(echo \"개발 서버 시작됨 \\(PID: $!\\)\")"
+      "Bash(echo \"개발 서버 시작됨 \\(PID: $!\\)\")",
+      "mcp__plugin_bkit_bkit-pdca__bkit_feature_list",
+      "mcp__plugin_bkit_bkit-pdca__bkit_pdca_history"
     ]
   },
   "outputStyle": "bkit:bkit-learning"

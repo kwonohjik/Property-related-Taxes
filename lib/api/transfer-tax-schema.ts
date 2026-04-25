@@ -693,6 +693,9 @@ export const propertyItemSchema = z
     propertyId: z.string().min(1),
     propertyLabel: z.string().min(1),
     ...propertyBaseShape,
+    // 자산별 가산세 — 단건 엔진이 자산별 결정세액 기준으로 계산.
+    filingPenaltyDetails: filingPenaltyDetailsSchema.optional(),
+    delayedPaymentDetails: delayedPaymentDetailsSchema.optional(),
   })
   .superRefine((data, ctx) => addPropertyRefines(data, ctx));
 
@@ -707,8 +710,7 @@ export const multiInputSchema = z
     basicDeductionAllocation: z
       .enum(["MAX_BENEFIT", "FIRST", "EARLIEST_TRANSFER"])
       .default("MAX_BENEFIT"),
-    filingPenaltyDetails: filingPenaltyDetailsSchema.optional(),
-    delayedPaymentDetails: delayedPaymentDetailsSchema.optional(),
+    // 가산세는 자산별로 입력 (propertyItemSchema.filingPenaltyDetails / delayedPaymentDetails).
   })
   .superRefine((data, ctx) => {
     // taxYear 일관성 — 모든 양도일이 taxYear 내에 있어야 함

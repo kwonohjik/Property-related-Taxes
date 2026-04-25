@@ -14,11 +14,7 @@
  *   - 조특법 §133 — 감면 종합한도 (자경 1억 / 수용 2억)
  */
 
-import type {
-  FilingPenaltyInput,
-  DelayedPaymentInput,
-  TransferTaxPenaltyResult,
-} from "../transfer-tax-penalty";
+import type { TransferTaxPenaltyResult } from "../transfer-tax-penalty";
 import type { TransferTaxInput, CalculationStep } from "./transfer.types";
 
 /** 세율군 (소득세법 §102 ① 각 호 구분) */
@@ -29,12 +25,13 @@ export type RateGroup =
   | "non_business_land"        // 비사업용 토지 (+10%p)
   | "unregistered";            // 미등기 70% 단일
 
-/** 자산 단위 입력 — TransferTaxInput에서 공통 필드 제외 + 식별자 추가 */
+/**
+ * 자산 단위 입력 — TransferTaxInput에서 공통 필드 제외 + 식별자 추가.
+ * `filingPenaltyDetails`/`delayedPaymentDetails`는 자산별로 입력 가능 (단건 엔진이 자산별 결정세액 기준 계산).
+ */
 export type TransferTaxItemInput = Omit<
   TransferTaxInput,
   | "annualBasicDeductionUsed"
-  | "filingPenaltyDetails"
-  | "delayedPaymentDetails"
   | "skipBasicDeduction"
   | "skipLossFloor"
 > & {
@@ -46,16 +43,12 @@ export type TransferTaxItemInput = Omit<
 export interface AggregateTransferInput {
   /** 과세기간 (YYYY) */
   taxYear: number;
-  /** 건별 양도 자산 목록 (1..20건) */
+  /** 건별 양도 자산 목록 (1..20건) — 자산별 가산세 입력은 각 item의 filingPenaltyDetails/delayedPaymentDetails. */
   properties: TransferTaxItemInput[];
   /** 당해 연도에 이미 사용한 기본공제액 (타 계산 건 포함) */
   annualBasicDeductionUsed: number;
   /** 기본공제 배분 전략 (기본 MAX_BENEFIT) */
   basicDeductionAllocation?: "MAX_BENEFIT" | "FIRST" | "EARLIEST_TRANSFER";
-  /** 신고불성실 가산세 (합산 결정세액 기준 계산) */
-  filingPenaltyDetails?: FilingPenaltyInput;
-  /** 납부지연 가산세 (합산 결정세액 기준 계산) */
-  delayedPaymentDetails?: DelayedPaymentInput;
   /** 과거 4개 과세연도 감면 이력 (§133 5년 누적 한도 계산용, 사용자 직접 입력) */
   priorReductionUsage?: { year: number; type: string; amount: number }[];
 }
@@ -66,6 +59,14 @@ export interface PerPropertyBreakdown {
   propertyLabel: string;
   isExempt: boolean;
   exemptReason?: string;
+  /** 양도가액 (입력값) */
+  transferPrice: number;
+  /** 취득가액 (환산취득가 사용 시 환산 후 값) */
+  acquisitionPrice: number;
+  /** 필요경비 */
+  necessaryExpense: number;
+  /** 건별 결정세액 (단건 엔진 결과) */
+  determinedTax: number;
   /** 양도차익 (skipLossFloor=true → 음수 가능) */
   transferGain: number;
   /** 장기보유특별공제 */
@@ -87,6 +88,24 @@ export interface PerPropertyBreakdown {
   allocatedBasicDeduction: number;
   /** 그룹 과세표준 중 본 자산 기여분 */
   taxBaseShare: number;
+  /** 자산별 적용 세율 (단건 엔진 결과) — 자산별 산출세액 재계산용 */
+  appliedRate: number;
+  /** 자산별 누진 차감액 */
+  progressiveDeduction: number;
+  /** 자산별 중과세율 (해당 시) */
+  surchargeRate?: number;
+  /**
+   * 자산별 산출세액 (다건 컨텍스트, 참고).
+   * = max(0, floor(taxBaseShare × (appliedRate + surchargeRate)) - progressiveDeduction)
+   * 자산이 1건일 때 합산 산출세액과 일치. 비교과세 적용 시 합산값과 차이 가능.
+   */
+  refCalculatedTax: number;
+  /**
+   * 자산별 결정세액 (다건 컨텍스트, 참고).
+   * = max(0, refCalculatedTax - reductionAmount)
+   * 기납부세액 자동 계산(앞 자산들의 결정세액 합) 등에 사용된다.
+   */
+  refDeterminedTax: number;
   /**
    * 건별 단독 감면액 (단건 엔진이 이미 중복배제 적용).
    * 합산 재계산 전의 값으로 비교·디버깅용.
@@ -106,8 +125,12 @@ export interface PerPropertyBreakdown {
   reductionAggregated: number;
   /** 배분 비율 (= 이 건 reducibleIncome / 유형별 총 reducibleIncome) */
   reductionAllocationRatio: number;
-  /** §114조의2 건별 가산세 */
+  /** §114조의2 건별 환산가액적용가산세 */
   penaltyTax: number;
+  /** 건별 신고불성실·납부지연 가산세 합계 */
+  filingDelayedPenaltyTax: number;
+  /** 건별 신고불성실·납부지연 가산세 상세 (입력 시) */
+  penaltyDetail?: TransferTaxPenaltyResult;
   /** 건별 세부 계산 steps (단건 엔진에서 생성) */
   steps: CalculationStep[];
 }
@@ -215,9 +238,8 @@ export interface AggregateTransferResult {
   /** 결정세액 = max(0, calculatedTax - reductionAmount) */
   determinedTax: number;
 
-  /** §114의2 건별 합 + 신고불성실·납부지연 */
+  /** 자산별 §114의2 + 자산별 신고불성실/납부지연 합계 (자산별 상세는 properties[i].penaltyDetail). */
   penaltyTax: number;
-  penaltyDetail?: TransferTaxPenaltyResult;
 
   /** 지방소득세 = (결정+가산) × 10%, 천원 절사 */
   localIncomeTax: number;

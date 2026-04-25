@@ -49,9 +49,12 @@ interface Props {
   onReset: () => void;
   onBack: () => void;
   onLoginPrompt?: boolean;
+  showMultiTransferButton?: boolean;
+  /** "동일연도 다른 양도건 계산하기" 클릭 시 호출. 단건 데이터를 다건 store로 이전하고 라우팅하는 역할은 호출자가 담당. */
+  onContinueToMulti?: () => void;
 }
 
-export function TransferTaxResultView({ result, onReset, onBack, onLoginPrompt = false }: Props) {
+export function TransferTaxResultView({ result, onReset, onBack, onLoginPrompt = false, showMultiTransferButton = false, onContinueToMulti }: Props) {
   const [showSteps, setShowSteps] = useState(false);
 
   return (
@@ -413,6 +416,15 @@ export function TransferTaxResultView({ result, onReset, onBack, onLoginPrompt =
           다시 계산하기
         </button>
       </div>
+      {showMultiTransferButton && onContinueToMulti && (
+        <button
+          type="button"
+          onClick={onContinueToMulti}
+          className="block w-full text-center rounded-lg bg-black py-2.5 text-sm font-semibold text-white hover:bg-neutral-800 transition-colors print:hidden"
+        >
+          동일연도 다른 양도건 계산하기
+        </button>
+      )}
     </div>
   );
 }

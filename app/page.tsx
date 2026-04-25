@@ -11,7 +11,7 @@ const TAX_TYPES = [
   {
     slug: "transfer-tax/multi",
     title: "양도소득세 (다건)",
-    description: "동일 과세연도 여러 자산 동시 양도 — 차손 통산·비교과세 자동 적용",
+    description: "동일 과세연도 복수 양도 — 연간 합산 과세, 차손 통산·비교과세 자동 적용",
     icon: "🏘️",
   },
   {

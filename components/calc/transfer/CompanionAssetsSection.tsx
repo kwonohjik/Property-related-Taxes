@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import { type AssetForm, makeDefaultAsset } from "@/lib/stores/calc-wizard-store";
 import { Button } from "@/components/ui/button";
 import { CompanionAssetCard } from "./CompanionAssetCard";
@@ -16,17 +17,31 @@ interface Props {
 }
 
 export function CompanionAssetsSection({ assets, bundledSaleMode, onChange, singleMode, transferDate }: Props) {
+  // 연속된 onChange 호출에서 stale closure를 피하기 위해
+  // 최신 assets를 ref로 동기 추적 (렌더링 중 동기화)
+  const assetsRef = useRef(assets);
+  if (assetsRef.current !== assets) {
+    assetsRef.current = assets;
+  }
+
+  function commitAssets(next: AssetForm[]) {
+    assetsRef.current = next;
+    onChange(next);
+  }
+
   function addAsset(patch?: Partial<AssetForm>) {
-    const base = makeDefaultAsset(assets.length + 1);
-    onChange([...assets, patch ? { ...base, ...patch } : base]);
+    const base = makeDefaultAsset(assetsRef.current.length + 1);
+    commitAssets([...assetsRef.current, patch ? { ...base, ...patch } : base]);
   }
 
   function removeAsset(idx: number) {
-    onChange(assets.filter((_, i) => i !== idx));
+    commitAssets(assetsRef.current.filter((_, i) => i !== idx));
   }
 
   function updateAsset(idx: number, patch: Partial<AssetForm>) {
-    onChange(assets.map((a, i) => (i === idx ? { ...a, ...patch } : a)));
+    commitAssets(
+      assetsRef.current.map((a, i) => (i === idx ? { ...a, ...patch } : a)),
+    );
   }
 
   return (

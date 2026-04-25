@@ -2,15 +2,12 @@
 
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Switch } from "@/components/ui/switch";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
-import { DateInput } from "@/components/ui/date-input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select";
 import type { MultiTransferFormData } from "@/lib/stores/multi-transfer-tax-store";
 
@@ -97,154 +94,9 @@ export function AggregateSettingsPanel({ form, onChange }: AggregateSettingsPane
         </RadioGroup>
       </div>
 
-      {/* 가산세 옵션 */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-3">
-          <Switch
-            id="enable-penalty"
-            checked={form.enablePenalty}
-            onCheckedChange={(v) => onChange({ enablePenalty: v })}
-          />
-          <Label htmlFor="enable-penalty">가산세 계산 포함</Label>
-        </div>
-
-        {form.enablePenalty && (
-          <div className="space-y-4 pl-2 border-l-2 border-muted">
-            {/* 신고불성실 가산세 */}
-            <div className="space-y-3">
-              <Label className="text-sm font-medium">신고불성실 가산세</Label>
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">신고 유형</Label>
-                <Select
-                  value={form.filingType}
-                  onValueChange={(v) => { if (v) onChange({ filingType: v as MultiTransferFormData["filingType"] }); }}
-                >
-                  <SelectTrigger className="max-w-xs">
-                    <span>
-                      {form.filingType === "none"
-                        ? "무신고"
-                        : form.filingType === "under"
-                          ? "과소신고"
-                          : form.filingType === "excess_refund"
-                            ? "초과환급신고"
-                            : "정상신고 (가산세 없음)"}
-                    </span>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">무신고</SelectItem>
-                    <SelectItem value="under">과소신고</SelectItem>
-                    <SelectItem value="excess_refund">초과환급신고</SelectItem>
-                    <SelectItem value="correct">정상신고 (가산세 없음)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {form.filingType !== "correct" && (
-                <>
-                  <div className="space-y-2">
-                    <Label className="text-xs text-muted-foreground">부정행위 구분</Label>
-                    <Select
-                      value={form.penaltyReason}
-                      onValueChange={(v) => {
-                        if (v) onChange({ penaltyReason: v as MultiTransferFormData["penaltyReason"] });
-                      }}
-                    >
-                      <SelectTrigger className="max-w-xs">
-                        <span>
-                          {form.penaltyReason === "normal"
-                            ? "일반 (무/과소신고)"
-                            : form.penaltyReason === "fraudulent"
-                              ? "부정행위"
-                              : "역외거래 부정행위"}
-                        </span>
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="normal">일반 (무/과소신고)</SelectItem>
-                        <SelectItem value="fraudulent">부정행위</SelectItem>
-                        <SelectItem value="offshore_fraud">역외거래 부정행위</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {form.filingType === "under" && (
-                    <div className="space-y-2">
-                      <Label className="text-xs text-muted-foreground">당초 신고세액</Label>
-                      <div className="max-w-xs">
-                        <CurrencyInput
-                          label="당초 신고세액"
-                          value={form.originalFiledTax}
-                          onChange={(v) => onChange({ originalFiledTax: v })}
-                          placeholder="0"
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  {form.filingType === "excess_refund" && (
-                    <div className="space-y-2">
-                      <Label className="text-xs text-muted-foreground">초과환급 신청세액</Label>
-                      <div className="max-w-xs">
-                        <CurrencyInput
-                          label="초과환급 신청세액"
-                          value={form.excessRefundAmount}
-                          onChange={(v) => onChange({ excessRefundAmount: v })}
-                          placeholder="0"
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="space-y-2">
-                    <Label className="text-xs text-muted-foreground">기납부세액</Label>
-                    <div className="max-w-xs">
-                      <CurrencyInput
-                        label="기납부세액"
-                        value={form.priorPaidTax}
-                        onChange={(v) => onChange({ priorPaidTax: v })}
-                        placeholder="0"
-                      />
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-
-            {/* 납부지연 가산세 */}
-            <div className="space-y-3">
-              <Label className="text-sm font-medium">납부지연 가산세</Label>
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">납부기한</Label>
-                <DateInput
-                  value={form.paymentDeadline}
-                  onChange={(v) => onChange({ paymentDeadline: v })}
-                />
-              </div>
-              {form.paymentDeadline && (
-                <>
-                  <div className="space-y-2">
-                    <Label className="text-xs text-muted-foreground">미납세액 (0이면 결정세액 자동 적용)</Label>
-                    <div className="max-w-xs">
-                      <CurrencyInput
-                        label="미납세액"
-                        value={form.unpaidTax}
-                        onChange={(v) => onChange({ unpaidTax: v })}
-                        placeholder="0"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs text-muted-foreground">실제 납부일 (선택)</Label>
-                    <DateInput
-                      value={form.actualPaymentDate}
-                      onChange={(v) => onChange({ actualPaymentDate: v })}
-                    />
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
+      <p className="text-xs text-muted-foreground border-t pt-4">
+        가산세(신고불성실·납부지연)는 자산별로 다를 수 있어 각 자산 편집 마법사 마지막 단계에서 입력합니다.
+      </p>
     </div>
   );
 }

@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { ChevronDown, ChevronUp, ArrowRight, AlertTriangle } from "lucide-react";
+import { ChevronDown, ChevronUp, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type {
   AggregateTransferResult,
@@ -13,6 +13,7 @@ import type {
   RateGroup,
 } from "@/lib/tax-engine/transfer-tax-aggregate";
 import type { PropertyItem } from "@/lib/stores/multi-transfer-tax-store";
+import { MultiTransferTaxSummaryCard } from "./MultiTransferTaxSummaryCard";
 
 interface MultiTransferTaxResultViewProps {
   result: AggregateTransferResult;
@@ -20,6 +21,10 @@ interface MultiTransferTaxResultViewProps {
   taxYear: number;
   isLoggedIn?: boolean;
   savedId?: string | null;
+  /** 기납부세액 (국세) — 이전 회차 양도분의 결정세액 등 */
+  priorPaidTax?: number;
+  /** 기납부 지방소득세 */
+  priorPaidLocalTax?: number;
 }
 
 function formatKRW(amount: number): string {
@@ -44,97 +49,6 @@ const RATE_GROUP_COLORS: Record<RateGroup, string> = {
   non_business_land: "bg-purple-100 text-purple-800",
   unregistered: "bg-gray-100 text-gray-800",
 };
-
-// ─── 합산 결과 카드 ──────────────────────────────────────────
-
-function SummaryCard({ result, taxYear }: { result: AggregateTransferResult; taxYear: number }) {
-  return (
-    <Card className="border-primary/20 bg-primary/5">
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle>{taxYear}년 양도소득세 합산 결과</CardTitle>
-          <ComparativeTaxBadge applied={result.comparedTaxApplied} />
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <ResultRow label="총 양도차익" value={result.totalTransferGain} />
-          <ResultRow label="장기보유특별공제" value={-result.totalLongTermHoldingDeduction} />
-          <ResultRow label="양도차손 통산 후 소득금액" value={result.totalIncomeAfterOffset} />
-          {result.unusedLoss > 0 && (
-            <ResultRow
-              label="소멸 차손 (이월 불인정)"
-              value={-result.unusedLoss}
-              className="text-muted-foreground"
-            />
-          )}
-          <ResultRow label="기본공제" value={-result.basicDeduction} />
-          <ResultRow label="과세표준" value={result.taxBase} highlight />
-        </div>
-
-        <Separator />
-
-        {result.comparedTaxApplied !== "none" && (
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between text-muted-foreground">
-              <span>방법 A (전체 누진)</span>
-              <span>{formatKRW(result.calculatedTaxByGeneral)}</span>
-            </div>
-            <div className="flex justify-between text-muted-foreground">
-              <span>방법 B (세율군별 분리)</span>
-              <span>{formatKRW(result.calculatedTaxByGroups)}</span>
-            </div>
-          </div>
-        )}
-
-        <div className="grid grid-cols-2 gap-4">
-          <ResultRow label="산출세액" value={result.calculatedTax} />
-          {result.reductionAmount > 0 && (
-            <ResultRow label="감면세액" value={-result.reductionAmount} />
-          )}
-          <ResultRow label="결정세액" value={result.determinedTax} highlight />
-          {result.penaltyTax > 0 && (
-            <ResultRow label="가산세" value={result.penaltyTax} />
-          )}
-          <ResultRow label="지방소득세" value={result.localIncomeTax} />
-        </div>
-
-        <Separator />
-
-        <div className="flex justify-between items-center">
-          <span className="text-lg font-bold">총 납부세액</span>
-          <span className="text-2xl font-bold text-primary">{formatKRW(result.totalTax)}</span>
-        </div>
-
-        {result.warnings.length > 0 && (
-          <div className="space-y-1">
-            {result.warnings.map((w, i) => (
-              <div key={i} className="flex gap-2 text-sm text-amber-700 bg-amber-50 rounded p-2">
-                <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
-                <span>{w}</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-// ─── 비교과세 배지 ────────────────────────────────────────────
-
-function ComparativeTaxBadge({ applied }: { applied: "groups" | "general" | "none" }) {
-  if (applied === "none") return null;
-  return (
-    <Badge
-      variant={applied === "groups" ? "destructive" : "default"}
-      className="text-xs"
-      title="소득세법 §104의2 비교과세"
-    >
-      §104의2 비교과세 — {applied === "groups" ? "세율군별(방법 B)" : "전체 누진(방법 A)"} 적용
-    </Badge>
-  );
-}
 
 // ─── 감면세액 합산 재계산 내역 ─────────────────────────────────
 // 조특법 §69(자경) + §127의2(중복배제) + §133(종합한도) 기반 재계산 결과 표시.
@@ -320,10 +234,26 @@ function PropertyBreakdownAccordion({
 
   const gainStep = getStep("양도차익");
   const lthdStep = getStep("장기보유특별공제");
-  const taxBaseStep = getStep("과세표준");
-  const calcTaxStep = getStep("산출세액");
   const reductionStep = getStep("감면세액");
-  const determinedStep = getStep("결정세액");
+
+  // 자산별 산출세액·결정세액(참고) — 엔진이 다건 컨텍스트로 미리 계산한 값 사용.
+  // 자산이 1건일 때 합산 산출세액과 일치. 비교과세 적용 시 자산별 합 ≠ 합산 산출세액일 수 있어 "(참고)" 표기.
+  // 옛 데이터·HMR 부분 적용 등으로 새 필드가 누락된 경우 인라인 재계산 fallback (NaN 차단).
+  const effectiveRate = (breakdown.appliedRate ?? 0) + (breakdown.surchargeRate ?? 0);
+  const refCalculatedTaxFallback = breakdown.isExempt
+    ? 0
+    : Math.max(
+        0,
+        Math.floor((breakdown.taxBaseShare ?? 0) * effectiveRate) - (breakdown.progressiveDeduction ?? 0),
+      );
+  const refCalculatedTax =
+    typeof breakdown.refCalculatedTax === "number"
+      ? breakdown.refCalculatedTax
+      : refCalculatedTaxFallback;
+  const refDeterminedTax =
+    typeof breakdown.refDeterminedTax === "number"
+      ? breakdown.refDeterminedTax
+      : Math.max(0, refCalculatedTax - (breakdown.reductionAmount ?? 0));
 
   return (
     <Card>
@@ -429,22 +359,30 @@ function PropertyBreakdownAccordion({
                 />
               )}
 
-              {/* 과세표준 기여분 */}
+              {/* 과세표준 기여분 — 다건 컨텍스트 수식 직접 생성 */}
               <DetailRow
                 label="과세표준 기여분"
-                formula={taxBaseStep?.formula}
-                legalBasis={taxBaseStep?.legalBasis}
+                formula={
+                  breakdown.allocatedBasicDeduction > 0
+                    ? `통산후 소득 ${formatKRW(breakdown.incomeAfterOffset)} - 기본공제 배분 ${formatKRW(breakdown.allocatedBasicDeduction)}`
+                    : `통산후 소득 ${formatKRW(breakdown.incomeAfterOffset)}`
+                }
+                legalBasis="소득세법 §92"
                 value={breakdown.taxBaseShare}
                 highlight
               />
 
-              {/* 산출세액 참고 */}
-              {calcTaxStep && (
+              {/* 산출세액 참고 — 자산별 과세표준 기여분 × 자산 세율 - 누진 차감 */}
+              {!breakdown.isExempt && breakdown.taxBaseShare > 0 && (
                 <DetailRow
                   label="산출세액 (참고)"
-                  formula={calcTaxStep.formula}
-                  legalBasis={calcTaxStep.legalBasis}
-                  value={calcTaxStep.amount}
+                  formula={
+                    breakdown.progressiveDeduction > 0
+                      ? `과세표준 기여분 ${formatKRW(breakdown.taxBaseShare)} × 세율 ${(effectiveRate * 100).toFixed(0)}%${breakdown.surchargeRate ? ` (기본 ${(breakdown.appliedRate * 100).toFixed(0)}% + 중과 ${(breakdown.surchargeRate * 100).toFixed(0)}%p)` : ""} - 누진차감 ${formatKRW(breakdown.progressiveDeduction)}`
+                      : `과세표준 기여분 ${formatKRW(breakdown.taxBaseShare)} × 세율 ${(effectiveRate * 100).toFixed(0)}%`
+                  }
+                  legalBasis="소득세법 §104"
+                  value={refCalculatedTax}
                   muted
                 />
               )}
@@ -459,23 +397,36 @@ function PropertyBreakdownAccordion({
                 />
               )}
 
-              {/* 결정세액 참고 */}
-              {determinedStep && (
+              {/* 결정세액 참고 — 산출세액(참고) - 감면세액으로 직접 재계산 */}
+              {!breakdown.isExempt && breakdown.taxBaseShare > 0 && (
                 <DetailRow
                   label="결정세액 (참고)"
-                  formula={determinedStep.formula}
-                  legalBasis={determinedStep.legalBasis}
-                  value={determinedStep.amount}
+                  formula={
+                    breakdown.reductionAmount > 0
+                      ? `산출세액 ${formatKRW(refCalculatedTax)} - 감면 ${formatKRW(breakdown.reductionAmount)}`
+                      : `산출세액 ${formatKRW(refCalculatedTax)}`
+                  }
+                  legalBasis="소득세법 §92③2호"
+                  value={refDeterminedTax}
                   muted
                 />
               )}
 
-              {/* 가산세 */}
+              {/* 가산세 — 자산별 §114조의2 환산가액적용가산세 */}
               {breakdown.penaltyTax > 0 && (
                 <DetailRow
-                  label="건별 가산세"
+                  label="환산가액적용가산세"
                   legalBasis="소득세법 §114조의2"
                   value={breakdown.penaltyTax}
+                />
+              )}
+
+              {/* 가산세 — 자산별 신고불성실/납부지연 */}
+              {breakdown.filingDelayedPenaltyTax > 0 && (
+                <DetailRow
+                  label="신고불성실·납부지연 가산세"
+                  legalBasis="국세기본법 §47의2~의5"
+                  value={breakdown.filingDelayedPenaltyTax}
                 />
               )}
             </div>
@@ -613,6 +564,8 @@ export function MultiTransferTaxResultView({
   taxYear,
   isLoggedIn,
   savedId,
+  priorPaidTax,
+  priorPaidLocalTax,
 }: MultiTransferTaxResultViewProps) {
   const [showSteps, setShowSteps] = useState(false);
   const [isPdfLoading, setIsPdfLoading] = useState(false);
@@ -661,7 +614,13 @@ export function MultiTransferTaxResultView({
       </div>
 
       {/* 합산 결과 카드 */}
-      <SummaryCard result={result} taxYear={taxYear} />
+      <MultiTransferTaxSummaryCard
+        result={result}
+        properties={properties}
+        taxYear={taxYear}
+        priorPaidTax={priorPaidTax}
+        priorPaidLocalTax={priorPaidLocalTax}
+      />
 
       {/* 감면세액 합산 재계산 내역 (자경·공익수용 등) */}
       <ReductionRecalculationSection result={result} properties={properties} />

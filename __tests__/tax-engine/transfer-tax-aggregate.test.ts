@@ -442,8 +442,8 @@ describe("T-M10: 3건 누진 합산", () => {
 // T-M11: 가산세 — §114조의2 건별 + 신고불성실 합산
 // ============================================================
 
-describe("T-M11: 가산세 건별 + 합산", () => {
-  it("filingPenalty는 합산 결정세액 기반", () => {
+describe("T-M11: 가산세 건별 + 합산 (자산별 가산세)", () => {
+  it("자산별 filingPenalty가 자산별 결정세액 기반으로 단건 엔진에서 산출되어 합산된다", () => {
     const input: AggregateTransferInput = {
       taxYear: 2024,
       annualBasicDeductionUsed: 0,
@@ -452,23 +452,24 @@ describe("T-M11: 가산세 건별 + 합산", () => {
           propertyType: "land", transferPrice: 500_000_000, acquisitionPrice: 300_000_000,
           acquisitionDate: new Date("2018-06-01"), transferDate: new Date("2024-06-01"),
           isOneHousehold: false, householdHousingCount: 0,
+          filingPenaltyDetails: {
+            determinedTax: 100_000_000,
+            reductionAmount: 0,
+            priorPaidTax: 0,
+            originalFiledTax: 0,
+            excessRefundAmount: 0,
+            interestSurcharge: 0,
+            filingType: "none",
+            penaltyReason: "normal",
+          },
         }),
       ],
-      filingPenaltyDetails: {
-        determinedTax: 100_000_000,
-        reductionAmount: 0,
-        priorPaidTax: 0,
-        originalFiledTax: 0,
-        excessRefundAmount: 0,
-        interestSurcharge: 0,
-        filingType: "none",
-        penaltyReason: "normal",
-      },
     };
 
     const r = calculateTransferTaxAggregate(input, mockRates);
     expect(r.penaltyTax).toBeGreaterThanOrEqual(0);
-    expect(r.penaltyDetail).toBeDefined();
+    expect(r.properties[0].filingDelayedPenaltyTax).toBeGreaterThanOrEqual(0);
+    expect(r.properties[0].penaltyDetail).toBeDefined();
   });
 });
 

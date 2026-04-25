@@ -12,7 +12,7 @@
  *   - 1990.8.30. 이전이면 공시지가 연도 자동 1990년, Pre1990 섹션 자동 활성화
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
 import { DateInput } from "@/components/ui/date-input";
@@ -107,6 +107,19 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
     }
   }
 
+  // 환산취득가 + 1990.8.30. 이전 취득 토지 → pre1990Enabled 자동 체크
+  useEffect(() => {
+    if (
+      props.useEstimatedAcquisition &&
+      isLand &&
+      acqDatePre1990 &&
+      props.onPre1990Change &&
+      !props.pre1990Form?.pre1990Enabled
+    ) {
+      props.onPre1990Change({ pre1990Enabled: true });
+    }
+  }, [props.useEstimatedAcquisition, isLand, acqDatePre1990]);
+
   // 취득시 기준시가 조회 단가 → pre1990PricePerSqm_1990 자동 입력
   function handleAcqPricePerSqmChange(v: string) {
     onAcqPricePerSqmChange(v);
@@ -118,7 +131,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
   return (
     <div className="space-y-3 rounded-md border border-border bg-background p-3">
       <div className="space-y-1.5">
-        <label className="block text-sm font-medium">취득일 (매매계약일)</label>
+        <label className="block text-sm font-medium">취득일</label>
         <DateInput
           value={props.acquisitionDate}
           onChange={handleAcquisitionDateChange}
@@ -126,7 +139,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
         />
         {dateClampMsg && (
           <p className="text-xs text-amber-700 dark:text-amber-400">
-            1985.1.1. 이전 취득은 입력할 수 없어 1985.1.1.로 설정되었습니다.
+            1985.1.1. 의제 취득일로 취득일 변경했습니다.
           </p>
         )}
       </div>

@@ -1,5 +1,5 @@
 /**
- * 양도소득세 다건 동시 양도 계산 API Route
+ * 양도소득세 연간 합산 과세 계산 API Route
  *
  * POST /api/calc/transfer/multi
  *
@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
 
   // string → Date 변환 (건별)
   const properties: TransferTaxItemInput[] = data.properties.map((p) => {
-    const base: Omit<TransferTaxInput, "annualBasicDeductionUsed" | "filingPenaltyDetails" | "delayedPaymentDetails" | "skipBasicDeduction" | "skipLossFloor"> = {
+    const base: Omit<TransferTaxInput, "annualBasicDeductionUsed" | "skipBasicDeduction" | "skipLossFloor"> = {
       propertyType: p.propertyType,
       transferPrice: p.transferPrice,
       transferDate: new Date(p.transferDate),
@@ -219,6 +219,17 @@ export async function POST(request: NextRequest) {
         acquisitionDate: new Date(parcel.acquisitionDate),
         replottingConfirmDate: parcel.replottingConfirmDate ? new Date(parcel.replottingConfirmDate) : undefined,
       })),
+      // 자산별 가산세 — 단건 엔진이 자산별 결정세액 기준으로 계산.
+      filingPenaltyDetails: p.filingPenaltyDetails,
+      delayedPaymentDetails: p.delayedPaymentDetails
+        ? {
+            unpaidTax: p.delayedPaymentDetails.unpaidTax,
+            paymentDeadline: new Date(p.delayedPaymentDetails.paymentDeadline),
+            actualPaymentDate: p.delayedPaymentDetails.actualPaymentDate
+              ? new Date(p.delayedPaymentDetails.actualPaymentDate)
+              : undefined,
+          }
+        : undefined,
     };
 
     return {
@@ -237,31 +248,37 @@ export async function POST(request: NextRequest) {
   };
 
   try {
-    // 가산세 2-pass
-    if (data.filingPenaltyDetails || data.delayedPaymentDetails) {
-      const baseResult = calculateTransferTaxAggregate(engineInput, rates);
+    // 자산별 가산세 2-pass — 자산별 단건 엔진 호출 시 결정세액을 사전 계산해 주입.
+    // 1차: 가산세 미주입 상태로 자산별 결정세액 산출.
+    const baseResult = calculateTransferTaxAggregate(engineInput, rates);
 
-      if (data.filingPenaltyDetails) {
-        engineInput.filingPenaltyDetails = {
-          ...data.filingPenaltyDetails,
-          determinedTax: baseResult.determinedTax,
-          reductionAmount: baseResult.reductionAmount,
+    // 자산별 결정세액·미납세액 주입 후 2차 계산 (가산세 자산별 합산 반영).
+    const enrichedProperties = engineInput.properties.map((p, idx) => {
+      const breakdown = baseResult.properties[idx];
+      const determinedTax = breakdown?.determinedTax ?? 0;
+      const reductionAmount = breakdown?.reductionAmount ?? 0;
+      const enriched: TransferTaxItemInput = { ...p };
+      if (p.filingPenaltyDetails) {
+        enriched.filingPenaltyDetails = {
+          ...p.filingPenaltyDetails,
+          determinedTax,
+          reductionAmount,
         };
       }
-      if (data.delayedPaymentDetails) {
-        engineInput.delayedPaymentDetails = {
-          unpaidTax: data.delayedPaymentDetails.unpaidTax === 0
-            ? baseResult.determinedTax
-            : data.delayedPaymentDetails.unpaidTax,
-          paymentDeadline: new Date(data.delayedPaymentDetails.paymentDeadline),
-          actualPaymentDate: data.delayedPaymentDetails.actualPaymentDate
-            ? new Date(data.delayedPaymentDetails.actualPaymentDate)
-            : undefined,
+      if (p.delayedPaymentDetails) {
+        enriched.delayedPaymentDetails = {
+          ...p.delayedPaymentDetails,
+          unpaidTax:
+            p.delayedPaymentDetails.unpaidTax === 0
+              ? determinedTax
+              : p.delayedPaymentDetails.unpaidTax,
         };
       }
-    }
+      return enriched;
+    });
 
-    const result = calculateTransferTaxAggregate(engineInput, rates);
+    const finalInput: AggregateTransferInput = { ...engineInput, properties: enrichedProperties };
+    const result = calculateTransferTaxAggregate(finalInput, rates);
     return NextResponse.json({ data: result }, { status: 200 });
   } catch (err) {
     if (err instanceof TaxCalculationError) {

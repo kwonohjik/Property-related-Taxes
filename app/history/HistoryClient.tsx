@@ -52,7 +52,7 @@ function extractSummary(record: CalculationRecord): string | null {
   }
   if (tax_type === "transfer_multi") {
     const props = input_data?.properties;
-    if (Array.isArray(props)) return `${props.length}건 동시 양도`;
+    if (Array.isArray(props)) return `${props.length}건 연간 합산`;
   }
   if (tax_type === "acquisition") {
     const price = input_data?.acquisitionPrice;

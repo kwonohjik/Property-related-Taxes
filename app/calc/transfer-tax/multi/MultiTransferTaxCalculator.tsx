@@ -51,13 +51,13 @@ interface StepListProps {
   properties: PropertyItem[];
   onAdd: () => void;
   onEdit: (index: number) => void;
-  onDuplicate: (index: number) => void;
   onRemove: (index: number) => void;
   onNext: () => void;
+  onPrev: () => void;
   onReset: () => void;
 }
 
-function StepList({ properties, onAdd, onEdit, onDuplicate, onRemove, onNext, onReset }: StepListProps) {
+function StepList({ properties, onAdd, onEdit, onRemove, onNext, onPrev, onReset }: StepListProps) {
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-3">
@@ -103,15 +103,6 @@ function StepList({ properties, onAdd, onEdit, onDuplicate, onRemove, onNext, on
                   <Button type="button" variant="outline" size="sm" onClick={() => onEdit(i)}>
                     편집
                   </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onDuplicate(i)}
-                    title="복제"
-                  >
-                    복제
-                  </Button>
                   {properties.length > 1 && (
                     <Button
                       type="button"
@@ -151,7 +142,7 @@ function StepList({ properties, onAdd, onEdit, onDuplicate, onRemove, onNext, on
       )}
 
       <div className="flex justify-between pt-4">
-        <Button type="button" variant="ghost" onClick={() => window.history.back()} className="gap-2">
+        <Button type="button" variant="ghost" onClick={onPrev} className="gap-2">
           <ArrowLeft className="h-4 w-4" />
           이전
         </Button>
@@ -175,7 +166,6 @@ interface StepEditProps {
   properties: PropertyItem[];
   activeIndex: number;
   onSelectProperty: (i: number) => void;
-  onDuplicate: (i: number) => void;
   onRemove: (i: number) => void;
   onSaveAndBack: () => void;
   onAdd: () => void;
@@ -185,7 +175,6 @@ function StepEdit({
   properties,
   activeIndex,
   onSelectProperty,
-  onDuplicate,
   onRemove,
   onSaveAndBack,
   onAdd,
@@ -198,7 +187,6 @@ function StepEdit({
         activeIndex={activeIndex}
         onSelect={onSelectProperty}
         onAdd={onAdd}
-        onDuplicate={onDuplicate}
         onRemove={onRemove}
       />
 
@@ -326,9 +314,21 @@ export default function MultiTransferTaxCalculator() {
 
   // 진입 시 자산이 0개면 자동으로 첫 자산 추가 → 즉시 마법사 step 0으로 이동
   // result는 partialize 제외 → 재진입 시 null. activeStep="result"+result=null 이면 settings로 복구
+  // 단건 계산기 → 다건 진입 흐름은 호출자(TransferTaxCalculator.handleContinueToMulti)가 properties 채우고
+  // activeStep="edit", activePropertyIndex=1 으로 세팅한 채 라우팅하므로 여기서 별도 분기 불필요.
+  // 단, activeStep="edit"으로 진입했는데 wizard store가 아직 해당 자산 form과 동기화되지 않았을 수 있어
+  // 활성 자산의 form을 wizard로 한 번 끌어온다.
   useEffect(() => {
     if (form.activeStep === "result" && !result) {
       setStep(form.properties.length > 0 ? "settings" : "list");
+      return;
+    }
+    if (form.activeStep === "edit" && form.properties[form.activePropertyIndex]) {
+      const wizardForm = useCalcWizardStore.getState().formData;
+      const targetForm = form.properties[form.activePropertyIndex].form;
+      if (wizardForm !== targetForm) {
+        syncToWizardStore(targetForm);
+      }
       return;
     }
     if (form.properties.length === 0 && form.activeStep === "list") {
@@ -427,9 +427,9 @@ export default function MultiTransferTaxCalculator() {
             양도소득세
           </button>
           <span>/</span>
-          <span className="text-foreground">다건 동시 양도</span>
+          <span className="text-foreground">연간 합산 과세</span>
         </div>
-        <h1 className="text-2xl font-bold">양도소득세 다건 동시 양도 계산</h1>
+        <h1 className="text-2xl font-bold">양도소득세 연간 합산 과세 계산</h1>
         <p className="text-sm text-muted-foreground">
           같은 과세연도에 여러 자산을 양도하는 경우, 양도차손 통산 및 비교과세를 적용하여 정확한 세액을 산출합니다.
         </p>
@@ -451,7 +451,9 @@ export default function MultiTransferTaxCalculator() {
 
       {error && (
         <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription className="whitespace-pre-wrap break-words">
+            {error}
+          </AlertDescription>
         </Alert>
       )}
 
@@ -466,9 +468,9 @@ export default function MultiTransferTaxCalculator() {
               properties={form.properties}
               onAdd={handleAddProperty}
               onEdit={handleEditProperty}
-              onDuplicate={(i) => duplicateProperty(i)}
               onRemove={(i) => removeProperty(i)}
               onNext={() => setStep("settings")}
+              onPrev={() => router.push("/")}
               onReset={() => {
                 resetMulti();
                 resetWizard();
@@ -503,7 +505,6 @@ export default function MultiTransferTaxCalculator() {
             activeIndex={form.activePropertyIndex}
             onSelect={handleSelectPropertyInEdit}
             onAdd={handleAddProperty}
-            onDuplicate={(i) => duplicateProperty(i)}
             onRemove={(i) => removeProperty(i)}
           />
 
@@ -579,6 +580,38 @@ export default function MultiTransferTaxCalculator() {
             isLoggedIn={isLoggedIn}
             savedId={savedId}
           />
+
+          {/* 결과 화면 하단 네비게이션 — 다른 양도건 추가, 자산 목록, 홈 */}
+          <Card className="print:hidden">
+            <CardContent className="pt-6 flex flex-wrap gap-3 justify-center">
+              <Button
+                type="button"
+                onClick={handleAddProperty}
+                className="gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                동일연도 다른 양도건 추가 계산하기
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setStep("list")}
+                className="gap-2"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                자산 목록으로
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => router.push("/")}
+                className="gap-2"
+              >
+                <Home className="h-4 w-4" />
+                홈으로
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       )}
 
