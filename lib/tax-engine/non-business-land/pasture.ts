@@ -26,6 +26,7 @@ import {
 } from "./period-criteria";
 import { isUrbanForPasture } from "./urban-area";
 import { getOwnershipStart } from "./utils/period-math";
+import { getLivestockStandardArea } from "./data/livestock-standards";
 
 function getLivestockPeriods(input: NonBusinessLandInput): DateInterval[] {
   const p = input.pasture;
@@ -144,14 +145,26 @@ export function judgePasture(
   // ── Step 3-2: 축산업용 기준면적 ────────────────────────────────
   const p = input.pasture;
   let areaProportioning: AreaProportioning | undefined;
-  if (p?.standardArea !== undefined && input.landArea > p.standardArea) {
+
+  // 기준면적 결정: 직접 입력 > getLivestockStandardArea 자동 계산 > 미확정
+  let resolvedStandardArea: number | undefined = p?.standardArea;
+  if (resolvedStandardArea === undefined && p?.livestockType && p.livestockCount !== undefined) {
+    resolvedStandardArea = getLivestockStandardArea(p.livestockType, p.livestockCount);
+    if (resolvedStandardArea > 0) {
+      warnings.push(
+        `기준면적 미입력 — 축종(${p.livestockType}) × 사육두수(${p.livestockCount}두) = ${resolvedStandardArea}㎡ 자동 산출 (축산법 시행규칙 별표2)`,
+      );
+    }
+  }
+
+  if (resolvedStandardArea !== undefined && input.landArea > resolvedStandardArea) {
     appliedLaws.push(NBL.PASTURE_AREA);
-    areaProportioning = computeAreaProportioning(input.landArea, p.standardArea);
+    areaProportioning = computeAreaProportioning(input.landArea, resolvedStandardArea);
     steps.push({
       id: "pasture_area",
       label: "Step 3-2 축산업용 기준면적",
       status: "FAIL",
-      detail: `기준면적 ${p.standardArea}㎡ 초과 → 초과분 ${areaProportioning.nonBusinessArea}㎡ 비사업용`,
+      detail: `기준면적 ${resolvedStandardArea}㎡ 초과 → 초과분 ${areaProportioning.nonBusinessArea}㎡ 비사업용`,
       legalBasis: NBL.PASTURE_AREA,
     });
     return {
@@ -172,7 +185,9 @@ export function judgePasture(
     id: "pasture_area",
     label: "Step 3-2 축산업용 기준면적",
     status: "PASS",
-    detail: p?.standardArea !== undefined ? `${input.landArea}㎡ ≤ ${p.standardArea}㎡` : "기준면적 미제공 (검증 생략)",
+    detail: resolvedStandardArea !== undefined
+      ? `${input.landArea}㎡ ≤ ${resolvedStandardArea}㎡`
+      : "기준면적 미제공 (검증 생략)",
     legalBasis: NBL.PASTURE_AREA,
   });
 

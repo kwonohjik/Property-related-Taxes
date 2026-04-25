@@ -3,15 +3,20 @@
 > **Parent Design**: `nbl-ui-completion.design.md`
 > **작성일**: 2026-04-24
 > **범위**: UI 컴포넌트 구조·props·플로우·결과 카드 개편
+> **v1.1 변경 (2026-04-25)**: 마운트 위치 Step4 → CompanionAssetCard, props 시그니처 TransferFormData → AssetForm
+> **v1.2 변경 (2026-04-25)**: 시스템 UI 개편 반영 — FieldCard·SectionHeader 필수 재사용, 4단계 마법사 (Step3 제거), 마이그레이션 모듈 분리
 
 ---
 
 ## 1. 컨테이너 플로우
 
+> ⚠️ **v1.1 변경**: `Step4.tsx` 전역 마운트 → `CompanionAssetCard.tsx` 자산 카드 내부 마운트.
+> 자산 카드에서 `assetKind === "land"`일 때만 조건부 렌더. 자산별 통합 원칙(Stream A) 준수.
+
 ```
-Step4.tsx
+Step1.tsx → CompanionAssetsSection → CompanionAssetCard (assetKind === "land")
 └─ NblSectionContainer
-   ├─ [토글] "비사업용 토지 상세 판정 활성화"  (nblUseDetailedJudgment)
+   ├─ [토글] "비사업용 토지 상세 판정 활성화"  (asset.nblUseDetailedJudgment)
    │
    └─ (활성화 시)
       ├─ UnconditionalExemptionSection                 ← 최우선 노출
@@ -40,14 +45,40 @@ Step4.tsx
 
 ## 2. 컴포넌트 props 시그니처
 
-모든 섹션 컴포넌트 공통:
+모든 섹션 컴포넌트 공통 (⚠️ v1.1: TransferFormData → AssetForm):
 
 ```ts
 interface NblSectionProps {
-  form: TransferFormData;
-  onChange: (patch: Partial<TransferFormData>) => void;
+  asset: AssetForm;
+  onAssetChange: (patch: Partial<AssetForm>) => void;
 }
 ```
+
+### 2.1 v1.2 — FieldCard 필수 사용 패턴
+
+각 섹션 컴포넌트는 내부에서 입력을 작성할 때 `FieldCard`로 wrap해야 함 (자체 div+label 금지):
+
+```tsx
+import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import { SectionHeader } from "@/components/calc/shared/SectionHeader";
+
+export function ForestDetailSection({ asset, onAssetChange }: NblSectionProps) {
+  return (
+    <div className="space-y-3">
+      <SectionHeader icon={<TreePine />} title="임야 세부 정보" description="..." />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <FieldCard label="산림경영계획 인가" hint="시장·군수 인가 받은 경우">
+          <input type="checkbox" checked={asset.nblForestHasPlan}
+            onChange={(e) => onAssetChange({ nblForestHasPlan: e.target.checked })} />
+        </FieldCard>
+        {/* ... */}
+      </div>
+    </div>
+  );
+}
+```
+
+`FieldCard`의 정확한 props는 `docs/02-design/features/form-visibility-improvement.components.md` 참조.
 
 예외 — `SigunguSelect`:
 
@@ -221,36 +252,37 @@ interface SigunguSelectProps {
 ### 7.1 단순 → 상세 전환
 
 ```
-[초기 상태]
-  isNonBusinessLand: false
-  nblUseDetailedJudgment: false
+[초기 상태 — AssetForm]
+  asset.isNonBusinessLand: false
+  asset.nblUseDetailedJudgment: false
 
 [사용자가 "상세 판정 활성화" 토글 ON]
-  nblUseDetailedJudgment: true
-  isNonBusinessLand: (기존 값 보존, 엔진에서 무시)
+  asset.nblUseDetailedJudgment: true
+  asset.isNonBusinessLand: (기존 값 보존, 엔진에서 무시)
   → NblSectionContainer 펼침
 
 [사용자가 지목 선택]
-  nblLandType: "farmland"
+  asset.nblLandType: "farmland"
   → FarmlandDetailSection 렌더, 다른 지목 섹션 숨김
 
 [무조건 면제 체크]
-  nblExemptInheritBefore2007: true
+  asset.nblExemptInheritBefore2007: true
   → 지목별 섹션 음영 처리 (여전히 입력 가능)
   → Badge "사업용 확정 (§168-14③)"
 
 [사용자가 "상세 판정 비활성화" 토글 OFF]
-  nblUseDetailedJudgment: false
-  → 기존 isNonBusinessLand 플래그로 복귀
-  → 상세 필드 값은 폼에 보존 (재활성화 시 복원)
+  asset.nblUseDetailedJudgment: false
+  → 기존 asset.isNonBusinessLand 플래그로 복귀
+  → 상세 필드 값은 AssetForm에 보존 (재활성화 시 복원)
 ```
 
 ### 7.2 충돌 감지
 
 ```ts
-if (form.nblUseDetailedJudgment && judgmentResult) {
+// CompanionAssetCard 내부 (asset 단위)
+if (asset.nblUseDetailedJudgment && judgmentResult) {
   const engineJudged = judgmentResult.isNonBusinessLand;
-  const userFlag = form.isNonBusinessLand;
+  const userFlag = asset.isNonBusinessLand;
   if (engineJudged !== userFlag) {
     showWarning("간단 체크박스 값과 엔진 판정이 다릅니다. 엔진 판정이 우선 적용됩니다.");
   }
@@ -294,9 +326,9 @@ NonBusinessLandResultCard
 
 ---
 
-## 9. 마이그레이션 (UI 측)
+## 9. 마이그레이션 (UI 측) — ⚠️ v1.1 변경
 
-zustand persist의 `migrate` 함수에 버전 bump:
+zustand persist version bump + **root nbl* → AssetForm 이전**:
 
 ```ts
 persist(
@@ -306,14 +338,34 @@ persist(
     version: 4,  // 기존 3 → 4
     migrate: (persistedState: any, version: number) => {
       if (version < 4) {
-        return {
-          ...persistedState,
+        const state = { ...persistedState };
+        // root nbl* 7개를 primary asset(assets[0])으로 이전
+        if (state.assets?.[0] && state.nblLandType) {
+          state.assets[0].isNonBusinessLand    = state.isNonBusinessLand ?? false;
+          state.assets[0].nblLandType          = state.nblLandType ?? "";
+          state.assets[0].nblZoneType          = state.nblZoneType ?? "";
+          state.assets[0].nblFarmingSelf       = state.nblFarmingSelf ?? false;
+          state.assets[0].nblFarmerResidenceDistance = state.nblFarmerResidenceDistance ?? "";
+          state.assets[0].nblBusinessUsePeriods = state.nblBusinessUsePeriods ?? [];
+        }
+        // 신규 필드 기본값 주입 (모든 자산)
+        state.assets = state.assets?.map((a: any) => ({
+          ...a,
           nblUseDetailedJudgment: false,
-          nblLandSigunguCode: "",
           nblResidenceHistories: [],
+          nblGracePeriods: [],
           nblExemptInheritBefore2007: false,
-          // ... 모든 신규 필드 기본값
-        };
+          // ... 나머지 신규 boolean 모두 false, string ""
+        })) ?? [];
+        // root nbl* 필드 제거
+        delete state.isNonBusinessLand;
+        delete state.nblLandType;
+        delete state.nblLandArea;
+        delete state.nblZoneType;
+        delete state.nblFarmingSelf;
+        delete state.nblFarmerResidenceDistance;
+        delete state.nblBusinessUsePeriods;
+        return state;
       }
       return persistedState;
     },

@@ -17,6 +17,7 @@
 import { addYears, differenceInDays } from "date-fns";
 import type {
   DateInterval,
+  GracePeriod,
   LandCategoryGroup,
   NonBusinessLandJudgmentRules,
 } from "./types";
@@ -26,6 +27,7 @@ import {
   mergeOverlappingPeriods,
   sumDaysInWindow,
 } from "./utils/period-math";
+import { calculateGraceDaysInWindow } from "./grace-period";
 
 export type PeriodCriteriaUsed = "3y-2y" | "5y-3y" | "ratio" | "none";
 
@@ -86,6 +88,8 @@ export function getThresholdRatio(
 /**
  * 3가지 기간기준 중 하나라도 충족하면 사업용 인정 (OR 판정).
  * PASS 즉시 반환하여 최소 비용으로 판정.
+ *
+ * @param gracePeriods - 유예기간 목록 (§168조의14 ①). 제공 시 각 window에 가산됨.
  */
 export function meetsPeriodCriteria(
   effectivePeriods: DateInterval[],
@@ -93,24 +97,43 @@ export function meetsPeriodCriteria(
   transferDate: Date,
   categoryGroup: LandCategoryGroup,
   rules: NonBusinessLandJudgmentRules = DEFAULT_NON_BUSINESS_LAND_RULES,
+  gracePeriods?: GracePeriod[],
 ): PeriodCriteriaResult {
   const ownershipStart = getOwnershipStart(acquisitionDate);
   const totalOwnershipDays = Math.max(0, differenceInDays(transferDate, ownershipStart));
   const merged = mergeOverlappingPeriods(effectivePeriods);
 
-  // 전체 보유기간 내 사업용 일수
-  const effectiveBusinessDays = sumDaysInWindow(merged, ownershipStart, transferDate);
-  const ratio = totalOwnershipDays > 0 ? effectiveBusinessDays / totalOwnershipDays : 0;
-
   // 직전 3년 창
   const threeYearsAgo = addYears(transferDate, -3);
   const windowStart3 = threeYearsAgo > ownershipStart ? threeYearsAgo : ownershipStart;
-  const bizInLast3 = sumDaysInWindow(merged, windowStart3, transferDate);
+  const window3Years: DateInterval = { start: windowStart3, end: transferDate };
 
   // 직전 5년 창
   const fiveYearsAgo = addYears(transferDate, -5);
   const windowStart5 = fiveYearsAgo > ownershipStart ? fiveYearsAgo : ownershipStart;
-  const bizInLast5 = sumDaysInWindow(merged, windowStart5, transferDate);
+  const window5Years: DateInterval = { start: windowStart5, end: transferDate };
+
+  // 전체 보유기간 창
+  const windowFull: DateInterval = { start: ownershipStart, end: transferDate };
+
+  // 사업용 사용 일수 (각 창)
+  let effectiveBusinessDays3y = sumDaysInWindow(merged, window3Years.start, window3Years.end);
+  let effectiveBusinessDays5y = sumDaysInWindow(merged, window5Years.start, window5Years.end);
+  let totalEffectiveBusinessDays = sumDaysInWindow(merged, windowFull.start, windowFull.end);
+
+  // 유예기간 가산 (§168조의14 ①) — 제공된 경우에만
+  if (gracePeriods && gracePeriods.length > 0) {
+    effectiveBusinessDays3y += calculateGraceDaysInWindow(gracePeriods, window3Years);
+    effectiveBusinessDays5y += calculateGraceDaysInWindow(gracePeriods, window5Years);
+    totalEffectiveBusinessDays += calculateGraceDaysInWindow(gracePeriods, windowFull);
+  }
+
+  // 전체 보유기간 초과 클리핑
+  const effectiveBusinessDays = Math.min(totalEffectiveBusinessDays, totalOwnershipDays);
+  const bizInLast3 = Math.min(effectiveBusinessDays3y, differenceInDays(window3Years.end, window3Years.start));
+  const bizInLast5 = Math.min(effectiveBusinessDays5y, differenceInDays(window5Years.end, window5Years.start));
+
+  const ratio = totalOwnershipDays > 0 ? effectiveBusinessDays / totalOwnershipDays : 0;
 
   const thresholdRatio = getThresholdRatio(transferDate, categoryGroup, rules);
 

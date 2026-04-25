@@ -30,6 +30,7 @@ import { judgeHousingLand } from "./housing-land";
 import { judgeVillaLand } from "./villa-land";
 import { judgeOtherLand } from "./other-land";
 import { checkIncorporationGrace } from "./period-criteria";
+import { applyCoOwnershipRatio } from "./co-ownership";
 
 /**
  * 메인 진입점 — 기존 v1 시그니처 호환.
@@ -115,9 +116,25 @@ export function judgeNonBusinessLand(
     case "housing":
       catResult = judgeHousingLand(engineInput, rules);
       break;
-    case "villa":
-      catResult = judgeVillaLand(engineInput, rules);
+    case "villa": {
+      const villaResult = judgeVillaLand(engineInput, rules);
+      if (villaResult.action === "REDIRECT_TO_CATEGORY") {
+        // 별장 비사용기간이 기간기준 충족 → 주택부수토지로 자동 재분류
+        catResult = judgeHousingLand(
+          { ...engineInput, landType: "housing_site" },
+          rules,
+        );
+        catResult = {
+          ...catResult,
+          steps: [...villaResult.steps, ...catResult.steps],
+          appliedLaws: [...villaResult.appliedLaws, ...catResult.appliedLaws],
+          warnings: [...(villaResult.warnings ?? []), ...(catResult.warnings ?? [])],
+        };
+      } else {
+        catResult = villaResult;
+      }
       break;
+    }
     case "other_land":
       catResult = judgeOtherLand(engineInput, rules);
       break;
@@ -146,7 +163,7 @@ export function judgeNonBusinessLand(
   appliedLawArticles.push(...catResult.appliedLaws);
   if (catResult.warnings) warnings.push(...catResult.warnings);
 
-  return assemble({
+  const judgment = assemble({
     isNonBusinessLand: !catResult.isBusiness,
     reason: catResult.reason,
     category: category.categoryGroup,
@@ -157,6 +174,14 @@ export function judgeNonBusinessLand(
     input: engineInput,
     rules,
   });
+
+  // 공동소유 지분 적용 (대법원 2015두39439) — 지분율이 1 미만인 경우에만
+  const ownershipRatio = input.ownerProfile?.ownershipRatio;
+  if (ownershipRatio !== undefined && ownershipRatio < 1) {
+    return applyCoOwnershipRatio(judgment, ownershipRatio);
+  }
+
+  return judgment;
 }
 
 // ============================================================

@@ -164,20 +164,23 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
   // ── 대표 자산 감면 (자산별 reductions 배열에서 빌드) ──
   const reductions = toEngineReductions(primary.reductions ?? [], primary.acquisitionCause);
 
-  // ── 비사업용 토지 상세 ──
+  // ── 비사업용 토지 상세 — asset 단위 읽기 (v1.2: form.nbl* → primary.nbl*) ──
   const nblDetails =
-    primary.assetKind === "land" && form.nblLandType && form.nblLandArea && form.nblZoneType
+    primary.assetKind === "land" &&
+    primary.nblLandType &&
+    primary.nblZoneType &&
+    primary.acquisitionArea
       ? {
-          landType: form.nblLandType,
-          landArea: parseFloat(form.nblLandArea),
-          zoneType: form.nblZoneType,
+          landType: primary.nblLandType,
+          landArea: parseFloat(primary.acquisitionArea),   // nblLandArea 폐지, acquisitionArea 재사용
+          zoneType: primary.nblZoneType,
           acquisitionDate: primary.acquisitionDate,
           transferDate: form.transferDate,
-          farmingSelf: form.nblFarmingSelf || undefined,
-          farmerResidenceDistance: form.nblFarmerResidenceDistance
-            ? parseFloat(form.nblFarmerResidenceDistance)
+          farmingSelf: primary.nblFarmingSelf || undefined,
+          farmerResidenceDistance: primary.nblFarmerResidenceDistance
+            ? parseFloat(primary.nblFarmerResidenceDistance)
             : undefined,
-          businessUsePeriods: form.nblBusinessUsePeriods.filter(
+          businessUsePeriods: (primary.nblBusinessUsePeriods ?? []).filter(
             (p) => p.startDate && p.endDate,
           ),
         }
@@ -214,9 +217,11 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
         ]
       : undefined;
 
-  const isEstimated = form.acquisitionMethod === "estimated" || primary.useEstimatedAcquisition;
-  const isAppraisal = form.acquisitionMethod === "appraisal";
-  const hasPre1990 = form.pre1990Enabled && primary.assetKind === "land";
+  // 취득가 산정방식은 자산-수준 플래그에서 도출 (Step1↔Step3 통합 후).
+  // 폼-전역 form.acquisitionMethod / form.appraisalValue 는 더 이상 사용하지 않음.
+  const isAppraisal = primary.isAppraisalAcquisition === true;
+  const isEstimated = !isAppraisal && primary.useEstimatedAcquisition;
+  const hasPre1990 = (primary.pre1990Enabled ?? false) && primary.assetKind === "land";
   const parcelModeActive =
     primary.parcelMode && primary.assetKind === "land" && (primary.parcels?.length ?? 0) > 0;
   const firstParcelAcqDate = parcelModeActive
@@ -249,22 +254,22 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
         : undefined,
     acquisitionMethod: hasPre1990
       ? ("actual" as const)
-      : (form.acquisitionMethod || "actual"),
-    appraisalValue: isAppraisal ? parseAmount(form.appraisalValue) : undefined,
-    isSelfBuilt: form.isSelfBuilt || undefined,
-    buildingType: form.buildingType || undefined,
+      : (isAppraisal ? "appraisal" : isEstimated ? "estimated" : "actual"),
+    appraisalValue: isAppraisal ? parseAmount(primary.fixedAcquisitionPrice) : undefined,
+    isSelfBuilt: primary.isSelfBuilt || undefined,
+    buildingType: primary.buildingType || undefined,
     constructionDate:
-      form.isSelfBuilt && form.constructionDate ? form.constructionDate : undefined,
+      primary.isSelfBuilt && primary.constructionDate ? primary.constructionDate : undefined,
     extensionFloorArea:
-      form.buildingType === "extension" && form.extensionFloorArea
-        ? parseFloat(form.extensionFloorArea)
+      primary.buildingType === "extension" && primary.extensionFloorArea
+        ? parseFloat(primary.extensionFloorArea)
         : undefined,
     householdHousingCount: parseInt(form.householdHousingCount) || 0,
     residencePeriodMonths: parseInt(form.residencePeriodMonths) || 0,
     isRegulatedArea: form.isRegulatedArea,
     wasRegulatedAtAcquisition: form.wasRegulatedAtAcquisition,
     isUnregistered: form.isUnregistered,
-    isNonBusinessLand: form.isNonBusinessLand,
+    isNonBusinessLand: primary.isNonBusinessLand ?? false,
     isSuccessorRightToMoveIn:
       primary.assetKind === "right_to_move_in"
         ? primary.isSuccessorRightToMoveIn
@@ -404,22 +409,22 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
               : undefined,
         }
       : {}),
-    // ── 1990.8.30. 이전 취득 토지 기준시가 환산 ──
+    // ── 1990.8.30. 이전 취득 토지 기준시가 환산 (자산-수준 필드 사용) ──
     ...(hasPre1990
       ? (() => {
           const buildGrade = (raw: string) => {
             const n = Number(raw.replace(/,/g, ""));
             if (!Number.isFinite(n) || n <= 0) return undefined;
-            return form.pre1990GradeMode === "number"
+            return primary.pre1990GradeMode === "number"
               ? Math.trunc(n)
               : { gradeValue: n };
           };
-          const gCur = buildGrade(form.pre1990Grade_current);
-          const gPrev = buildGrade(form.pre1990Grade_prev);
-          const gAcq = buildGrade(form.pre1990Grade_atAcq);
+          const gCur = buildGrade(primary.pre1990Grade_current ?? "");
+          const gPrev = buildGrade(primary.pre1990Grade_prev ?? "");
+          const gAcq = buildGrade(primary.pre1990Grade_atAcq ?? "");
           const areaSqm = parseFloat((primary.acquisitionArea ?? "").replace(/,/g, "")) || 0;
-          const p1990 = parseAmount(form.pre1990PricePerSqm_1990);
-          const pTsf = parseAmount(form.pre1990PricePerSqm_atTransfer);
+          const p1990 = parseAmount(primary.pre1990PricePerSqm_1990 ?? "");
+          const pTsf = parseAmount(primary.pre1990PricePerSqm_atTransfer ?? "");
           if (!gCur || !gPrev || !gAcq || areaSqm <= 0 || p1990 <= 0 || pTsf <= 0) return {};
           return {
             pre1990Land: {

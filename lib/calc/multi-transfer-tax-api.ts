@@ -18,19 +18,23 @@ export function buildPropertyPayload(form: TransferFormData) {
   const reductions = toEngineReductions(primary?.reductions ?? [], primary?.acquisitionCause ?? "purchase");
   const primaryKind = primary?.assetKind ?? "";
 
+  // v1.2: form.nbl* → primary.nbl* (asset 단위 읽기)
   const nblDetails =
-    primaryKind === "land" && form.nblLandType && form.nblLandArea && form.nblZoneType
+    primaryKind === "land" &&
+    primary?.nblLandType &&
+    primary?.nblZoneType &&
+    primary?.acquisitionArea
       ? {
-          landType: form.nblLandType,
-          landArea: parseFloat(form.nblLandArea),
-          zoneType: form.nblZoneType,
-          acquisitionDate: primary?.acquisitionDate ?? "",
+          landType: primary.nblLandType,
+          landArea: parseFloat(primary.acquisitionArea),
+          zoneType: primary.nblZoneType,
+          acquisitionDate: primary.acquisitionDate ?? "",
           transferDate: form.transferDate,
-          farmingSelf: form.nblFarmingSelf || undefined,
-          farmerResidenceDistance: form.nblFarmerResidenceDistance
-            ? parseFloat(form.nblFarmerResidenceDistance)
+          farmingSelf: primary.nblFarmingSelf || undefined,
+          farmerResidenceDistance: primary.nblFarmerResidenceDistance
+            ? parseFloat(primary.nblFarmerResidenceDistance)
             : undefined,
-          businessUsePeriods: form.nblBusinessUsePeriods.filter(
+          businessUsePeriods: (primary.nblBusinessUsePeriods ?? []).filter(
             (p) => p.startDate && p.endDate,
           ),
         }
@@ -96,7 +100,7 @@ export function buildPropertyPayload(form: TransferFormData) {
     isRegulatedArea: form.isRegulatedArea,
     wasRegulatedAtAcquisition: form.wasRegulatedAtAcquisition,
     isUnregistered: form.isUnregistered,
-    isNonBusinessLand: form.isNonBusinessLand,
+    isNonBusinessLand: primary?.isNonBusinessLand ?? false,
     isSuccessorRightToMoveIn:
       primaryKind === "right_to_move_in" ? (primary?.isSuccessorRightToMoveIn ?? false) : undefined,
     acquisitionCause,

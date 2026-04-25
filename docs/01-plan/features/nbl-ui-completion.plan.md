@@ -6,6 +6,48 @@
 > **목적**: 소득세법 §104조의3 + 시행령 §168조의6~14 기반 비사업용 토지 판정을 사용자가 **UI만으로 완전하게 수행할 수 있도록** UI를 확장하고, 엔진이 요구하는 모든 입력 경로를 노출하며, 엔진의 일부 미구현 분기를 보강한다.
 > **관련 엔진**: `lib/tax-engine/non-business-land/` (13 파일, types.ts 542줄 / engine.ts 317줄)
 > **관련 UI (현재)**: `app/calc/transfer-tax/steps/step4-sections/NblDetailSection.tsx` (209줄)
+> ⚠️ **v1.1 (2026-04-25)**: Stream A 업그레이드 반영 — NBL 필드 AssetForm 이전, 마운트 위치 CompanionAssetCard로 변경, API 경로 정정
+> ⚠️ **v1.2 (2026-04-25)**: 시스템 UI 전면 개편 반영 — 4단계 마법사로 단순화(Step3 제거), 공용 컴포넌트(FieldCard·SectionHeader·WizardSidebar) 도입, 마이그레이션 모듈(`calc-wizard-migration.ts`) 분리, form-visibility-improvement 패턴 채택
+
+---
+
+## 0. v1.2 — 시스템 UI 전면 개편으로 인한 변경 (2026-04-25)
+
+### 0.1 4단계 마법사 구조 (Step3 제거)
+
+기존 5단계(Step1·Step3·Step4·Step5·Step6) → **4단계(Step1·Step4·Step5·Step6)**.
+- **Step1**: 자산 목록 + 양도·취득 정보 통합 (구 Step3 흡수)
+- **Step4**: 보유 상황 (1세대1주택, 다른 보유 주택, NBL 정밀 판정 임시 위치)
+- **Step5**: 감면·공제 (자산별 reductions)
+- **Step6**: 가산세
+
+마이그레이션: `lib/stores/calc-wizard-migration.ts`의 `migrateLegacyForm()` (239줄, 신규 분리 모듈)에서 5→4 인덱스 매핑 + companionAssets 평탄화 + 13개 취득 필드 root→assets[0] 이전.
+
+### 0.2 공용 컴포넌트 도입 (FieldCard 패턴)
+
+`form-visibility-improvement` feature(별도 plan/design)에서 도입한 표준 UI 빌딩 블록:
+- `components/calc/inputs/FieldCard.tsx` (76줄) — label + input + hint + warning + trailing 슬롯의 일관된 필드 레이아웃
+- `components/calc/shared/SectionHeader.tsx` (43줄) — 섹션 헤더 (아이콘 + 설명 + action)
+- `components/calc/shared/WizardSidebar.tsx` (138줄) — 데스크톱 좌측 사이드바 (단계 + 5개 합계 요약)
+- `components/calc/transfer/SelfBuiltSection.tsx` (115줄) — 자가건축 섹션 (참고용 패턴)
+
+NBL 신규 컴포넌트는 **반드시 FieldCard·SectionHeader 패턴 재사용**. 자체 div+label 구조 금지.
+
+### 0.3 calc-wizard-migration.ts 분리 패턴
+
+기존 plan은 `migrateAsset` 함수를 store 파일(`calc-wizard-store.ts`)에 추가하려 했으나, 800줄 정책 + 관심사 분리 원칙에 따라 **마이그레이션 로직은 `calc-wizard-migration.ts`에 별도 함수로 추가**해야 함.
+- `migrateLegacyForm()`이 이미 5→4 마이그레이션 처리 중 → 이 함수에 NBL root→asset 이전 로직 inject
+- `calc-wizard-store.ts`는 인터페이스 정의 + persist 설정만 담당
+
+### 0.4 현재 NBL 상태 재확인 (commit 1118a45 분석 결과)
+
+전 commit 1118a45에서 시스템 UI는 전면 개편됐으나, **NBL 자체 구현은 시작되지 않은 상태**:
+- ❌ NBL 필드는 여전히 `TransferFormData` root (lines 405-410, 6개 필드)
+- ❌ `components/calc/transfer/nbl/` 디렉터리 미생성
+- ❌ 엔진 Gap 6건 미해소 (grace-period.ts, co-ownership.ts, form-mapper.ts, livestock-standards.ts 모두 미존재)
+- ❌ `NblDetailSection` 단일 파일이 여전히 `Step4.tsx`에 마운트 (글로벌, 자산별 아님)
+
+이 plan의 모든 마일스톤(M1~M7)은 그대로 유효, 단 작업 시 **0.1~0.3의 새 패턴을 따라야 함**.
 
 ---
 
@@ -86,7 +128,7 @@
 
 ### 3.1 In Scope
 
-1. **UI 확장**: Step 4 `NblDetailSection`을 지목별 탭/아코디언 구조로 전면 개편
+1. **UI 확장**: `CompanionAssetCard.tsx` 내부에 지목별 아코디언 구조 추가 (Step4 글로벌 방식 → 자산 카드 내부로 이전)
 2. **신규 섹션 추가**:
    - 거주 이력 타임라인 입력기
    - 무조건 사업용 체크리스트 (§168-14③ 7종)
@@ -100,8 +142,9 @@
    - 목장용지 표준면적 테이블 현행화
    - 별장 REDIRECT 자동 재분류
 4. **상태 관리**:
-   - `calc-wizard-store.ts`의 `TransferFormData` 확장
-   - 단순 체크박스 → 상세 입력 전환 플로우
+   - `calc-wizard-store.ts`의 `AssetForm` 확장 (~30 필드) + root nbl* 7개 제거 + `migrateAsset` root→asset 이전
+   - `nblLandArea` 별도 추가 없음 — `AssetForm.acquisitionArea` 재사용 (area-taxonomy.md 원칙 B)
+   - 단순 체크박스 → 상세 입력 전환 플로우 (자산 카드 단위)
 5. **결과 표시 강화**:
    - `NonBusinessLandResultCard`에 안분 계산 상세 표시
    - 무조건 면제 적용 시 조문·이유 prominent 표시
@@ -129,7 +172,7 @@
 - UI↔엔진 매핑 테이블
 
 **작업**:
-- [ ] `NonBusinessLandInput` 전체 필드를 `TransferFormData` flat 필드로 매핑 설계
+- [ ] `NonBusinessLandInput` 전체 필드를 `AssetForm` flat 필드로 매핑 설계 (root TransferFormData 아님)
 - [ ] 지목별 조건부 렌더링 규칙 정의
 - [ ] 단순 체크박스 → 상세 전환 UX 플로우 정의
 - [ ] 모든 필드에 대한 legal basis (조문 번호) 매핑
@@ -145,7 +188,7 @@
 **산출물**:
 - `components/calc/transfer/nbl/UnconditionalExemptionSection.tsx` (신규)
 - `components/calc/transfer/nbl/ResidenceHistorySection.tsx` (신규)
-- `TransferFormData` 확장
+- `AssetForm` 확장 + root nbl* 제거 + migrateAsset
 
 **작업**:
 - [ ] `UnconditionalExemptionSection` 구현 — 7개 체크박스 + 각 케이스별 날짜·플래그 입력
@@ -229,10 +272,12 @@
   - 질병·취학·근무상 형편
 - [ ] `urbanIncorporationDate` 입력 필드 (도시편입일)
 - [ ] `landLocation.sigunguCode` + `adjacentSigunguCodes` 입력기 (시군구 선택 컴포넌트 필요)
-- [ ] 단순 `isNonBusinessLand` 체크박스 → 상세 입력 활성화 버튼으로 전환
+- [ ] `asset.isNonBusinessLand` 체크박스 → 상세 입력 활성화 버튼으로 전환 (자산 카드 내부)
   - 체크 시 `NblSectionContainer` 펼침
-  - 상세 입력 있으면 엔진 판정 결과가 플래그 덮어씀 + 충돌 경고 표시
+  - 상세 입력 있으면 엔진 판정 결과가 `asset.isNonBusinessLand` 덮어씀 + 충돌 경고 표시
 - [ ] `NblSectionContainer`: 지목 선택에 따라 해당 지목 섹션만 렌더
+- [ ] `CompanionAssetCard.tsx` 수정 — `asset.assetKind === "land"` 조건부 블록에 NblSectionContainer 마운트
+- [ ] `Step4.tsx` 수정 — 글로벌 NblDetailSection 제거, `step4-sections/NblDetailSection.tsx` 삭제
 
 **완료 기준**: 단순→상세 전환 플로우 E2E 동작, 충돌 경고 표시
 
@@ -311,9 +356,10 @@
 - 이유: 지목은 1개만 선택되므로 탭은 과한 UI. 아코디언은 접혀있어 인지 부하 낮음.
 - 예외: 무조건 면제 섹션은 지목 선택 전에 먼저 노출 (적용되면 이후 필드 불필요).
 
-**결정 B**: `TransferFormData` 확장 방식은 **flat 필드**로 유지 (기존 `nbl*` prefix 컨벤션).
-- 이유: zustand persist 직렬화 호환성, sessionStorage 게스트 마이그레이션 호환.
-- trade-off: 타입 정의 장황해짐. 대신 `lib/tax-engine/non-business-land/form-mapper.ts` 신규 파일에서 flat→nested 변환 집중.
+**결정 B**: `AssetForm` 확장 방식은 **flat 필드**로 유지 (기존 `nbl*` prefix 컨벤션). ⚠️ v1.1 수정: TransferFormData root → AssetForm으로 위치 변경.
+- 이유: zustand persist 직렬화 호환성 + 자산별 통합 원칙(Stream A) 일관성.
+- trade-off: AssetForm 인터페이스 비대화. 대신 주석 섹션으로 그룹화. `lib/tax-engine/non-business-land/form-mapper.ts`의 `mapAssetToNblInput(asset, dates)` 에서 flat→nested 변환 집중.
+- `nblLandArea` 별도 필드 없음 — `asset.acquisitionArea` 재사용.
 
 **결정 C**: 시군구 입력은 **자동완성 Select**로 구현.
 - 데이터: `lib/korean-law/sigungu-codes.ts` (신규 상수) — 행안부 시군구 표준코드 (약 250개)
@@ -331,10 +377,18 @@
 - 예: `NBL.GRACE_INHERITANCE`, `NBL.GRACE_LEGAL_RESTRICTION`, `NBL.CO_OWNERSHIP`
 - UI의 툴팁·결과 조문 표시에 동일 상수 사용
 
-### 5.4 데이터 마이그레이션
+### 5.4 데이터 마이그레이션 ⚠️ v1.1 추가
 
-- 기존 세션 중인 사용자(`isNonBusinessLand: true`만 있는 form)는 그대로 유지
+- zustand persist version 3 → 4 bump
+- `migrateAsset` 함수에서 root `nbl*` 7개 필드를 primary AssetForm(`assets[0]`)으로 이전 후 root에서 삭제
+- 기존 세션 사용자의 데이터 손실 없음 (migrate 함수가 이전 보장)
 - `NblSectionContainer`에서 "상세 입력으로 전환" CTA 제공 → 기존 플래그 유지한 채 상세 입력 가능
+
+### 5.5 API 경로 정정 ⚠️ v1.1 추가
+
+- `app/api/calc/transfer/route.ts` (기존 오기: `app/api/calc/transfer-tax/route.ts`)
+- `lib/calc/transfer-tax-api.ts:168` — `form.nbl*` 읽기를 `primary.nbl*`(AssetForm) 읽기로 수정
+- `lib/calc/multi-transfer-tax-api.ts` — 자산별 loop에서 `asset.nbl*` 읽기
 
 ---
 
@@ -433,16 +487,18 @@ Week 3 (Day 11-12)
 
 ## 부록 A: `NonBusinessLandInput` 필드 전체 매핑 초안
 
-| 엔진 필드 | 현재 UI | 신규 UI 컴포넌트 | Milestone |
+> ⚠️ v1.1: 모든 `AssetForm` 컬럼은 이제 `TransferFormData` root가 아닌 `AssetForm` 소속임.
+
+| 엔진 필드 | 현재 UI | 신규 `AssetForm` 필드 | Milestone |
 |---|---|---|---|
-| `landType` | ✅ `nblLandType` | 기존 유지 | - |
-| `landArea` | ✅ `nblLandArea` | 기존 유지 | - |
-| `zoneType` | ✅ `nblZoneType` | 기존 유지 | - |
-| `acquisitionDate`, `transferDate` | ✅ Step 1~3에서 수집 | 기존 유지 | - |
-| `isFarmingSelf` | ✅ `nblFarmingSelf` | 농지 섹션으로 이관 | M3 |
-| `farmerResidenceDistance` | ✅ `nblFarmerResidenceDistance` | 시군구 미지정 시 fallback | M4 |
-| `businessUsePeriods` | ✅ `nblBusinessUsePeriods` | 기존 유지 | - |
-| `landLocation.sigunguCode` | ❌ | 시군구 Select | M4 |
+| `landType` | ✅ root `nblLandType` | `asset.nblLandType` (migrate) | Phase 1 |
+| `landArea` | ✅ root `nblLandArea` | **`asset.acquisitionArea` 재사용** (nblLandArea 폐지) | Phase 1 |
+| `zoneType` | ✅ root `nblZoneType` | `asset.nblZoneType` (migrate) | Phase 1 |
+| `acquisitionDate`, `transferDate` | ✅ AssetForm.acquisitionDate / form.transferDate | 기존 유지 | - |
+| `isFarmingSelf` | ✅ root `nblFarmingSelf` | `asset.nblFarmingSelf` (migrate) | Phase 1 |
+| `farmerResidenceDistance` | ✅ root `nblFarmerResidenceDistance` | `asset.nblFarmerResidenceDistance` (migrate) | Phase 1 |
+| `businessUsePeriods` | ✅ root `nblBusinessUsePeriods` | `asset.nblBusinessUsePeriods` (migrate) | Phase 1 |
+| `landLocation.sigunguCode` | ❌ | `asset.nblLandSigunguCode` | Phase 2 |
 | `ownerLocation.sigunguCode` | ❌ | 거주 이력과 연동 | M2 |
 | `adjacentSigunguCodes` | ❌ | (자동 계산 또는 수동) | M4 |
 | `ownerProfile.residenceHistories[]` | ❌ | `ResidenceHistorySection` | M2 |
@@ -466,7 +522,7 @@ Week 3 (Day 11-12)
 ### 시나리오 1: 2006.12.31. 이전 상속 농지 (무조건 면제)
 
 ```
-1. Step 4 → NblSectionContainer 열기
+1. 자산 카드(토지) → NblSectionContainer 열기  [v1.1: Step4 → 자산 카드]
 2. 지목 = "농지" 선택
 3. 무조건 면제 섹션에서 "2006.12.31. 이전 상속" 체크
 4. 상속일 DateInput = 2004-05-15
@@ -478,8 +534,8 @@ Week 3 (Day 11-12)
 ### 시나리오 2: 도시편입 농지 3년 유예
 
 ```
-1. Step 4 → NblSectionContainer 열기
-2. 지목 = "농지", 면적 = 800㎡, 용도지역 = "일반주거지역" 입력
+1. 자산 카드(토지) → NblSectionContainer 열기  [v1.1: Step4 → 자산 카드]
+2. 지목 = "농지", 면적: asset.acquisitionArea = 800, 용도지역 = "일반주거지역" 입력
 3. 도시편입일 = 2020-03-01 입력 (신규 필드)
 4. 농지 세부 섹션에서 자경 여부 체크
 5. 거주 이력에서 편입 전 1년 연속 거주 확인 (시군구 일치 + 주민등록)
@@ -491,7 +547,7 @@ Week 3 (Day 11-12)
 ### 시나리오 3: 상속받은 임야 3년 내 양도
 
 ```
-1. Step 4 → NblSectionContainer 열기
+1. 자산 카드(토지) → NblSectionContainer 열기  [v1.1: Step4 → 자산 카드]
 2. 지목 = "임야" 선택
 3. 임야 세부 섹션에서 "상속 3년 내 양도" 체크
 4. 상속일 입력 (예: 2024-02-10)

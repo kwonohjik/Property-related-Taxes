@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useCalcWizardStore, createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
 import { useMultiTransferStore, generatePropertyId } from "@/lib/stores/multi-transfer-tax-store";
 import { calcPropertyCompletion } from "@/lib/calc/multi-transfer-tax-validate";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { StepIndicator } from "@/components/calc/StepIndicator";
+import { WizardSidebar, type WizardSidebarStep, type WizardSidebarSummaryItem } from "@/components/calc/shared/WizardSidebar";
 import { TransferTaxResultView } from "@/components/calc/results/TransferTaxResultView";
 import { BundledAllocationCard } from "@/components/calc/results/BundledAllocationCard";
 import { callTransferTaxAPI, type SingleTransferResult } from "@/lib/calc/transfer-tax-api";
@@ -14,13 +15,14 @@ import type { TransferTaxPenaltyResult } from "@/lib/tax-engine/transfer-tax-pen
 import { validateStep } from "@/lib/calc/transfer-tax-validate";
 import { getFilingDeadline, isFilingOverdue } from "@/lib/calc/filing-deadline";
 import { ResetButton } from "@/components/calc/shared/ResetButton";
+import { computeTransferSummary } from "@/lib/stores/calc-wizard-store";
 import { Step1 } from "./steps/Step1";
-import { Step3 } from "./steps/Step3";
 import { Step4 } from "./steps/Step4";
 import { Step5 } from "./steps/Step5";
 import { Step6 } from "./steps/Step6";
 
-const STEPS_SINGLE = ["자산 목록", "취득 정보", "보유 상황", "감면·공제", "가산세"];
+const STEPS_SINGLE = ["자산 목록", "보유 상황", "감면·공제", "가산세"] as const;
+const STEP_TITLES = ["자산 목록·취득 정보 입력", "보유 상황 입력", "감면 확인", "가산세 입력"] as const;
 
 // 메인 컴포넌트
 // ============================================================
@@ -50,6 +52,11 @@ export default function TransferTaxCalculator({
   const [isPenaltyLoading, setIsPenaltyLoading] = useState(false);
   /** 가산세 계산하기로 얻은 결정세액 — unpaidTax 자동 계산용 */
   const [calcDeterminedTax, setCalcDeterminedTax] = useState<number | null>(null);
+  const transferSummary = useMemo(
+    () => computeTransferSummary(formData, result),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [formData.assets, formData.contractTotalPrice, result]
+  );
 
   // 로그인 상태 확인 (클라이언트 사이드)
   useEffect(() => {
@@ -268,20 +275,29 @@ export default function TransferTaxCalculator({
   }, [formData, router]);
 
   const stepComponentsAll = [
-    <Step1
-      key={0}
-      form={formData}
-      onChange={updateFormData}
-    />,
-    <Step3 key={1} form={formData} onChange={updateFormData} />,
-    <Step4 key={2} form={formData} onChange={updateFormData} />,
-    <Step5 key={3} form={formData} onChange={updateFormData} />,
-    <Step6 key={4} form={formData} onChange={updateFormData} determinedTax={calcDeterminedTax} />,
+    <Step1 key={0} form={formData} onChange={updateFormData} />,
+    <Step4 key={1} form={formData} onChange={updateFormData} />,
+    <Step5 key={2} form={formData} onChange={updateFormData} />,
+    <Step6 key={3} form={formData} onChange={updateFormData} determinedTax={calcDeterminedTax} />,
   ];
   const stepComponents = stepComponentsAll;
 
+  const sidebarSteps: WizardSidebarStep[] = STEPS_SINGLE.map((label, i) => ({
+    label,
+    status: i < currentStep ? "done" : i === currentStep ? "active" : "todo",
+    onClick: () => { setError(null); setStep(i); },
+  }));
+
+  const sidebarSummary: WizardSidebarSummaryItem[] = [
+    { label: "양도가액 합계", value: transferSummary.totalSalePrice },
+    { label: "취득가액 합계", value: transferSummary.totalAcqPrice },
+    { label: "필요경비 합계", value: transferSummary.totalNecessaryExpense },
+    { label: "양도소득금액", value: transferSummary.netTransferIncome },
+    { label: "납부할 세액", value: transferSummary.estimatedTax, highlight: true },
+  ];
+
   return (
-    <div className="mx-auto max-w-lg px-4 py-8">
+    <div className="mx-auto max-w-6xl px-4 py-8">
       {/* 헤더 */}
       <div className="mb-6">
         <p className="text-xs text-muted-foreground mb-1">한국 부동산 세금 계산기</p>
@@ -317,25 +333,38 @@ export default function TransferTaxCalculator({
         )
       ) : (
         <>
-          <StepIndicator
-            steps={STEPS}
-            current={currentStep}
-            onStepClick={(i) => {
-              if (i === currentStep) return;
-              setError(null);
-              setStep(i);
-            }}
-          />
-
-          {/* 단계 제목 */}
-          <h2 className="text-base font-semibold mb-4">
-            {["자산 목록 입력", "양도 정보 입력", "취득 정보 입력", "보유 상황 입력", "감면 확인", "가산세 입력"][currentStep]}
-          </h2>
-
-          {/* 폼 내용 */}
-          <div className="min-h-[280px]">
-            {stepComponents[currentStep]}
+          {/* 모바일: 상단 가로 진행 바 */}
+          <div className="lg:hidden mb-6">
+            <StepIndicator
+              steps={Array.from(STEPS_SINGLE)}
+              current={currentStep}
+              onStepClick={(i) => {
+                if (i === currentStep) return;
+                setError(null);
+                setStep(i);
+              }}
+            />
           </div>
+
+          <div className="lg:grid lg:grid-cols-[16rem_1fr] lg:gap-8">
+            {/* 사이드바 (데스크톱) */}
+            <WizardSidebar
+              title="양도소득세"
+              steps={sidebarSteps}
+              summary={sidebarSummary}
+            />
+
+            {/* 본문 */}
+            <main className="min-w-0">
+              {/* 단계 제목 */}
+              <h2 className="text-base font-semibold mb-4">
+                {STEP_TITLES[currentStep]}
+              </h2>
+
+              {/* 폼 내용 */}
+              <div className="min-h-[280px]">
+                {stepComponents[currentStep]}
+              </div>
 
           {/* 가산세 계산 결과 인라인 카드 */}
           {isLastStep && penaltyResult && (
@@ -474,6 +503,8 @@ export default function TransferTaxCalculator({
                 </button>
               )}
             </div>
+            </div>
+          </main>
           </div>
         </>
       )}

@@ -3,6 +3,8 @@ import { cn } from "@/lib/utils";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { DateInput } from "@/components/ui/date-input";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import { SectionHeader } from "@/components/calc/shared/SectionHeader";
 
 // ============================================================
 // Step 6: 가산세 (선택 입력)
@@ -48,8 +50,8 @@ export function Step6({
         <div className="space-y-5 rounded-lg border border-dashed border-primary/40 bg-primary/3 p-4">
 
           {/* 신고불성실가산세 */}
+          <SectionHeader title="신고불성실가산세" description="국세기본법 §47의2·§47의3" />
           <div className="space-y-3">
-            <p className="text-xs font-semibold text-primary">신고불성실가산세 (국세기본법 §47의2·§47의3)</p>
 
             <div className="space-y-1.5">
               <label className="block text-sm font-medium">신고 유형</label>
@@ -168,38 +170,45 @@ export function Step6({
 
           {/* 지연납부가산세 */}
           <div className="space-y-3 border-t border-border/50 pt-4">
-            <p className="text-xs font-semibold text-primary">지연납부가산세 (국세기본법 §47의4)</p>
+            <SectionHeader title="지연납부가산세" description="국세기본법 §47의4" />
 
-            <CurrencyInput
+            <FieldCard
               label="미납·미달납부세액"
-              value={form.unpaidTax}
-              onChange={(v) => onChange({ unpaidTax: v })}
-              placeholder="0"
+              unit="원"
               hint={
                 determinedTax !== null
                   ? `결정세액 ${determinedTax.toLocaleString()}원 − 기납부세액 자동 계산`
                   : "납부하지 않았거나 미달납부한 세액 (가산세 계산하기 클릭 시 자동 계산)"
               }
-            />
+            >
+              <CurrencyInput
+                label=""
+                hideUnit
+                value={form.unpaidTax}
+                onChange={(v) => onChange({ unpaidTax: v })}
+                placeholder="0"
+              />
+            </FieldCard>
 
-            <div className="space-y-1.5">
-              <label className="block text-sm font-medium">법정납부기한</label>
+            <FieldCard
+              label="법정납부기한"
+              hint="예정신고: 양도월 말일부터 2개월 / 확정신고: 다음해 5월 31일"
+            >
               <DateInput
                 value={form.paymentDeadline}
                 onChange={(v) => onChange({ paymentDeadline: v })}
               />
-              <p className="text-xs text-muted-foreground">
-                예정신고: 양도월 말일부터 2개월 / 확정신고: 다음해 5월 31일
-              </p>
-            </div>
+            </FieldCard>
 
-            <div className="space-y-1.5">
-              <label className="block text-sm font-medium">실제 납부일 <span className="text-muted-foreground font-normal">(미입력 시 오늘 기준)</span></label>
+            <FieldCard
+              label="실제 납부일"
+              hint="미입력 시 오늘 기준으로 계산"
+            >
               <DateInput
                 value={form.actualPaymentDate}
                 onChange={(v) => onChange({ actualPaymentDate: v })}
               />
-            </div>
+            </FieldCard>
           </div>
         </div>
       )}

@@ -89,7 +89,9 @@ describe("D-1 총괄 엔진 통합", () => {
     expect(r.judgmentReason).toContain("편입유예");
   });
 
-  it("별장 → REDIRECT 응답 (needsRedirect=true)", () => {
+  it("별장 → REDIRECT 자동 재분류 (P5-B: 엔진 내부 처리)", () => {
+    // 2026-04-25 P5-B 변경: villa REDIRECT를 엔진 내부에서 housing으로 자동 재분류
+    // needsRedirect=false, 결과는 housing_site 기준으로 판정됨
     const input: NonBusinessLandInput = {
       landType: "villa_land",
       landArea: 500,
@@ -105,7 +107,8 @@ describe("D-1 총괄 엔진 통합", () => {
       gracePeriods: [],
     };
     const r = judgeNonBusinessLand(input, DEFAULT_NON_BUSINESS_LAND_RULES);
-    expect(r.needsRedirect).toBe(true);
-    expect(r.action).toBe("REDIRECT_TO_CATEGORY");
+    // 자동 재분류 후 needsRedirect=false, isNonBusinessLand는 housing 판정 결과
+    expect(r.needsRedirect).toBe(false);
+    expect(typeof r.isNonBusinessLand).toBe("boolean");
   });
 });

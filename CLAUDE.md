@@ -7,8 +7,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **KoreanTaxCalc** — 한국 부동산 6대 세금 자동계산 웹 앱 (양도소득세·상속세·증여세·취득세·재산세·종합부동산세).
 
 **현재 구현 상태**
-- ✅ **양도소득세**: 엔진·UI·API·테스트 완전 구현 (2025 세법 기준, 꾸준히 업그레이드 중)
+- ✅ **양도소득세**: 엔진·UI·API·테스트 완전 구현 (2025 세법 기준). 2026-04-25 Step1↔Step3 통합으로 마법사 5→4단계 축소, 취득 정보 13필드 자산-수준 마이그레이션 완료
 - 🚧 **취득세·재산세·종합부동산세·상속·증여**: 엔진 구현 완료, UI 부분 구현 (`components/calc/property/` 재산세 UI 진행 중)
+- ✨ **공용 입력 가시성 개선**: `FieldCard`·`SectionHeader`·`WizardSidebar` 3종 (2026-04-25). 양도세 마법사 적용 완료, 타 세목 점진 확장 예정
 
 ## ⚠️ Next.js 16 주의사항
 
@@ -77,7 +78,10 @@ Layer 2: Pure Engine (lib/tax-engine/*.ts)
 - **중간 절사 원칙**: 소수 세율 × 금액 곱셈 직후 반드시 `Math.floor()`. 지방소득세는 `applyRate()` (원 미만 절사 — 지방세법 §103의3, 천원 절사 규정 없음).
 - **감면 중복배제 (조특법 §127 ②)**: 동일 자산에 복수 감면 해당 시 납세자 유리 1건만 선택. 후보 배열에서 max 선택 패턴.
 - **법령 조문 상수**: 문자열 리터럴 직접 사용 금지. `lib/tax-engine/legal-codes/` 에서 `TRANSFER.*` / `NBL.*` / `ACQUISITION.*` 등 세목별 상수 사용.
+- **자산-수준 통합 (양도세, 2026-04-25)**: 취득 정보(취득가 산정방식·감정가액·신축·1990 환산·부속 7필드)는 모두 **`AssetForm` 자산-수준**으로 저장. 폼-전역 `acquisitionMethod`·`appraisalValue`·`isSelfBuilt` 등은 deprecated. 다건 양도 시 자산별로 다른 산정방식·신축 여부 입력 가능.
+- **감정가액 + 개산공제 자동 적용 (소령 §163⑥)**: `isAppraisalAcquisition === true` 시 엔진이 자동으로 `취득시 기준시가 × 3%` 개산공제 적용. `lib/tax-engine/transfer-tax-helpers.ts` `calcTransferGain` 분기.
 - **Auth**: 비로그인도 계산 가능. 로그인 시 이력·PDF. sessionStorage로 게스트 결과 보존 → 로그인 후 마이그레이션. `result`는 partialize에서 제외 (민감정보 + Date 직렬화).
+- **Store legacy 마이그레이션**: `lib/stores/calc-wizard-migration.ts`로 분리(800줄 정책). `migrateLegacyForm` + `STEP_MIGRATION` (5→4단계 인덱스 매핑) 자동 적용.
 - **Supabase RPC**: `DISTINCT ON`은 Supabase JS 미지원 → DB Function `preload_tax_rates()`로 구현.
 
 ## 서브 CLAUDE.md (도메인별 심화)

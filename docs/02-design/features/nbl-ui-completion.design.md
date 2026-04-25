@@ -5,6 +5,7 @@
 > **Plan**: `docs/01-plan/features/nbl-ui-completion.plan.md`
 > **목적**: Plan M1 산출물. 전체 아키텍처 개요 + 하위 설계 문서 인덱스.
 > **범위**: `NblDetailSection` 전면 개편 + 지목별 섹션 6종 신규 + 엔진 Gap 6건 해소.
+> **v1.2 (2026-04-25)**: 시스템 UI 개편 반영 — FieldCard·SectionHeader 패턴 채택, calc-wizard-migration.ts 분리 패턴, 4단계 마법사
 
 ---
 
@@ -51,15 +52,26 @@ components/calc/transfer/nbl/                (신규 디렉터리 — 10 파일)
     └── BusinessUsePeriodsInput.tsx          # 사업용 기간 배열 입력 (재사용)
 
 app/calc/transfer-tax/steps/
-├── Step4.tsx                                (수정) — NblDetailSection → NblSectionContainer
-└── step4-sections/
-    └── NblDetailSection.tsx                 (제거 — 내용을 nbl/ 디렉터리로 이전)
+└── Step4.tsx                                (수정) — 글로벌 NblDetailSection 제거
+    step4-sections/
+    └── NblDetailSection.tsx                 (제거)
+
+components/calc/transfer/
+└── CompanionAssetCard.tsx                   (수정) — assetKind==="land" 조건부로 NblSectionContainer 마운트
 
 components/calc/results/
 └── NonBusinessLandResultCard.tsx            (수정) — 조문 강조·면적 안분 시각화·자연어 요약
 
 lib/stores/
-└── calc-wizard-store.ts                     (수정) — TransferFormData 확장 (약 30 필드)
+├── calc-wizard-store.ts                     (수정) — AssetForm에 NBL 필드 추가 (~30 필드) + root nbl* 7개 제거
+└── calc-wizard-migration.ts                 (수정) — migrateLegacyForm()에 NBL root→asset 이전 inject (v1.2)
+
+components/calc/inputs/                      (재사용 — form-visibility-improvement에서 도입)
+└── FieldCard.tsx                            # 모든 NBL 입력 필드의 표준 wrapper
+
+components/calc/shared/                      (재사용)
+├── SectionHeader.tsx                        # NBL 섹션 헤더 표준 컴포넌트
+└── WizardSidebar.tsx                        # 사이드바 합계 영역 (참고용, 변경 없음)
 
 lib/korean-law/
 └── sigungu-codes.ts                         (신규) — 행안부 시군구 표준코드 (~250개)
@@ -84,10 +96,12 @@ __tests__/ui/
 - 기존 14개 엔진 테스트 100% 통과 필수
 - `TransferFormData.isNonBusinessLand` (기존 간단 체크박스) 유지 — `nblUseDetailedJudgment` 플래그로 분기
 
-### 3.2 flat 필드 유지
+### 3.2 AssetForm 자산별 통합 원칙
 
-- `TransferFormData`는 flat 구조(`nbl*` prefix) 유지. zustand persist 직렬화 호환성 + sessionStorage 게스트 마이그레이션 호환
-- nested 구조로의 변환은 `lib/tax-engine/non-business-land/form-mapper.ts`에 집중
+- NBL 필드는 **`AssetForm`에 배치** — 2026-04-25 Stream A 업그레이드로 자산별 통합 패턴이 정착됨
+- `TransferFormData` root의 기존 nbl* 7개 필드는 `migrateAsset`에서 primary AssetForm으로 이전 후 root 삭제
+- `nblLandArea` 별도 필드 없음 — `AssetForm.acquisitionArea` 재사용 (area-taxonomy.md 원칙 B)
+- nested 구조로의 변환은 `lib/tax-engine/non-business-land/form-mapper.ts`의 `mapAssetToNblInput(asset, dates)`에 집중
 
 ### 3.3 조건부 렌더링
 
@@ -99,14 +113,31 @@ __tests__/ui/
 - UI 툴팁·결과 카드 조문 표시는 `lib/tax-engine/legal-codes/transfer.ts`의 `NBL.*` 네임스페이스만 사용
 - 문자열 리터럴 직접 사용 금지
 
+### 3.5 공용 컴포넌트 재사용 (v1.2 신규)
+
+**필수 재사용 — 자체 구현 금지**:
+- 모든 입력 필드는 `components/calc/inputs/FieldCard.tsx`로 wrap (label + input + hint + warning + trailing 슬롯 일관 유지)
+- 섹션 헤더는 `components/calc/shared/SectionHeader.tsx`로 통일 (icon + title + description + action)
+- 양식 그리드는 `form-visibility-improvement` plan §3.2의 2-column grid 규칙 준수
+- 위 컴포넌트들의 props 시그니처는 `docs/02-design/features/form-visibility-improvement.components.md` 참조
+
+이유: 시스템 UI 개편(commit 1118a45)으로 모든 양식이 동일 패턴을 사용. NBL만 다른 패턴 사용 시 시각적 일관성 깨짐.
+
+### 3.6 마이그레이션 모듈 분리 (v1.2 신규)
+
+- `migrateAsset` 함수를 `calc-wizard-store.ts`에 추가하지 않음 (800줄 정책)
+- 대신 `lib/stores/calc-wizard-migration.ts`의 기존 `migrateLegacyForm()` 함수에 NBL root→asset 이전 로직 inject
+- store 파일은 인터페이스 정의 + persist 설정만 유지
+
 ---
 
 ## 4. 하위 호환 및 API
 
 ### 4.1 API 스키마 변경 없음
 
-- `app/api/calc/transfer-tax/route.ts`의 Zod 스키마는 그대로
-- UI의 flat 필드는 Orchestrator 진입 직전 `mapFormToNblInput()`으로 변환 후 기존 nested 구조로 전달
+- `app/api/calc/transfer/route.ts`의 Zod 스키마는 그대로 (경로 정정: transfer-tax/route.ts 아님)
+- UI의 AssetForm 필드는 Orchestrator 진입 직전 `mapAssetToNblInput(asset, dates)`으로 변환 후 기존 nested 구조로 전달
+- `lib/calc/transfer-tax-api.ts:168` — `form.nbl*` 읽기를 `primary.nbl*` 읽기로 수정
 
 ### 4.2 데이터 마이그레이션
 
@@ -134,7 +165,7 @@ __tests__/ui/
 
 Plan의 성공 지표(§8)를 Design 수준에서 재확인:
 
-- [ ] `TransferFormData` 확장 필드 전체 타입 정의 (약 30개)
+- [ ] `AssetForm` 확장 필드 전체 타입 정의 (약 30개) + root nbl* 7개 필드 제거
 - [ ] 엔진 `NonBusinessLandInput` 신규 optional 필드 1개 (`ownershipRatio`) + 기존 필드 전부 유지
 - [ ] UI 컴포넌트 10개 구조 + props 시그니처 확정
 - [ ] 엔진 Gap 6건 해소 설계 (grace, co-ownership, livestock, REDIRECT, 수도권, `gracePeriods` 실제 반영)
@@ -174,3 +205,5 @@ Plan의 성공 지표(§8)를 Design 수준에서 재확인:
 | 날짜 | 버전 | 변경 |
 |---|---|---|
 | 2026-04-24 | v1.0 | 최초 작성 — Plan M1 산출물, 3파일 분할 구조 |
+| 2026-04-25 | v1.1 | Stream A 업그레이드 반영 — NBL 필드를 AssetForm으로 이전, API 경로 정정, CompanionAssetCard 마운트 위치 변경 |
+| 2026-04-25 | v1.2 | 시스템 UI 전면 개편 반영 (commit 1118a45) — 4단계 마법사(Step3 제거), FieldCard·SectionHeader 패턴 채택, calc-wizard-migration.ts 분리 패턴, form-visibility-improvement 의존성 추가 |

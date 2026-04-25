@@ -13,6 +13,7 @@ import { CompanionSaleModeBlock, type BundledSaleMode } from "./CompanionSaleMod
 import { CompanionAcqPurchaseBlock } from "./CompanionAcqPurchaseBlock";
 import { CompanionAcqInheritanceBlock } from "./CompanionAcqInheritanceBlock";
 import { CompanionAcqGiftBlock } from "./CompanionAcqGiftBlock";
+import { NblSectionContainer } from "./nbl/NblSectionContainer";
 
 const ASSET_KIND_LABELS: Record<string, string> = {
   housing: "주택",
@@ -347,6 +348,8 @@ export function CompanionAssetCard({
             onAcquisitionDateChange={(v) => onChange({ acquisitionDate: v })}
             useEstimatedAcquisition={asset.useEstimatedAcquisition}
             onUseEstimatedChange={(v) => onChange({ useEstimatedAcquisition: v })}
+            isAppraisalAcquisition={asset.isAppraisalAcquisition}
+            onIsAppraisalAcquisitionChange={(v) => onChange({ isAppraisalAcquisition: v })}
             fixedAcquisitionPrice={asset.fixedAcquisitionPrice}
             onFixedAcquisitionPriceChange={(v) => onChange({ fixedAcquisitionPrice: v })}
             standardPriceAtAcq={asset.standardPriceAtAcq}
@@ -372,6 +375,14 @@ export function CompanionAssetCard({
               pre1990GradeMode: asset.pre1990GradeMode,
             }}
             onPre1990Change={(patch) => onChange(patch)}
+            isSelfBuilt={asset.isSelfBuilt}
+            onIsSelfBuiltChange={(v) => onChange({ isSelfBuilt: v })}
+            buildingType={asset.buildingType}
+            onBuildingTypeChange={(v) => onChange({ buildingType: v })}
+            constructionDate={asset.constructionDate}
+            onConstructionDateChange={(v) => onChange({ constructionDate: v })}
+            extensionFloorArea={asset.extensionFloorArea}
+            onExtensionFloorAreaChange={(v) => onChange({ extensionFloorArea: v })}
           />
         )}
 
@@ -476,6 +487,13 @@ export function CompanionAssetCard({
         value={asset.directExpenses}
         onChange={(v) => onChange({ directExpenses: v })}
       />
+
+      {/* 비사업용 토지 정밀 판정 (토지 자산 전용) */}
+      {asset.assetKind === "land" && (
+        <div className="pt-2 border-t border-border/60">
+          <NblSectionContainer asset={asset} onAssetChange={onChange} />
+        </div>
+      )}
 
       {/* 감면은 Step 5(감면·공제)에서 자산별로 선택합니다 */}
     </div>

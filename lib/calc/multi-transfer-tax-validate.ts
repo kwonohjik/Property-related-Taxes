@@ -27,8 +27,9 @@ export function calcPropertyCompletion(form: PropertyItem["form"]): number {
 
 /** 건별 편집이 최소 조건을 충족하는지 (다음 단계 이동 가능 여부) */
 export function isPropertyReady(item: PropertyItem): boolean {
-  // 단건 단계 0~3 검증 (Step 4 이후는 선택 사항)
-  for (let step = 0; step <= 3; step++) {
+  // Step1↔Step3 통합 후 4단계 구조: Step 0(자산·취득) ~ Step 2(감면) 검증.
+  // Step 3(가산세)은 선택이므로 제외.
+  for (let step = 0; step <= 2; step++) {
     if (validateStep(step, item.form) !== null) return false;
   }
   return true;
