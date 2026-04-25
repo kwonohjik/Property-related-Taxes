@@ -24,7 +24,7 @@ export function NonBusinessLandResultCard({ judgment }: Props) {
           <div>
             <p className={`text-sm font-bold ${isNonBusiness ? "text-red-700 dark:text-red-400" : "text-emerald-700 dark:text-emerald-400"}`}>
               {isNonBusiness
-                ? "비사업용 토지 — 기본세율 +10%p 중과, 장기보유특별공제 배제됩니다."
+                ? "비사업용 토지 — 기본세율 +10%p 중과 (장기보유특별공제 표1 적용)."
                 : "사업용 토지 — 일반세율이 적용됩니다."}
             </p>
             <p className="text-xs text-muted-foreground mt-0.5">{judgment.judgmentReason}</p>

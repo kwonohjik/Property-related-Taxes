@@ -297,7 +297,8 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
                         ? {
                             ...a,
                             isNonBusinessLand: e.target.checked,
-                            nblUseDetailedJudgment: e.target.checked ? true : a.nblUseDetailedJudgment,
+                            // 체크 해제 시 상세 판정도 끔. 체크 시는 현재 상태 유지(라디오로 선택).
+                            nblUseDetailedJudgment: e.target.checked ? a.nblUseDetailedJudgment : false,
                           }
                         : a
                     ),
@@ -309,10 +310,11 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
                 <label htmlFor="isNonBusiness" className="text-sm font-medium cursor-pointer">
                   비사업용 토지
                 </label>
-                <p className="text-xs text-muted-foreground">누진세율 + 10%p 중과세 · 장기보유공제 배제</p>
+                <p className="text-xs text-muted-foreground">누진세율 + 10%p 중과세 (장기보유특별공제 표1 적용)</p>
               </div>
             </div>
-            {/* P3: 재촌 요건 안내 (거주지 근접성 판단 기준 설명) */}
+
+            {/* P3: 재촌 요건 안내 */}
             <div className="ml-7 rounded-md bg-muted/40 border border-border/60 px-3 py-2 text-xs text-muted-foreground space-y-1">
               <p className="font-medium text-foreground/70">농지·임야 재촌(在村) 요건 — 아래 중 하나 충족 시 사업용</p>
               <ul className="space-y-0.5 pl-2">
@@ -322,12 +324,49 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
               </ul>
               <p className="text-muted-foreground/70 text-[10px] mt-1">소득세법 시행령 §168조의8 — 정밀 판정을 원하시면 세무사 확인 권장</p>
             </div>
+
+            {/* 판정 상태 라디오 — 체크 시만 표시 */}
+            {primary?.isNonBusinessLand && (
+              <div className="ml-7 space-y-1.5 pt-1 border-t border-border/40">
+                <p className="text-xs font-medium text-foreground/70 pt-1">판정 상태</p>
+                <label className="flex items-start gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name={`nbl-mode-${primary.assetId}`}
+                    checked={!primary.nblUseDetailedJudgment}
+                    onChange={() =>
+                      onChange({ assets: form.assets.map((a, i) => i === 0 ? { ...a, nblUseDetailedJudgment: false } : a) })
+                    }
+                    className="mt-0.5 accent-primary"
+                  />
+                  <div>
+                    <span className="text-sm">이미 비사업용으로 판정 완료</span>
+                    <p className="text-xs text-muted-foreground">바로 +10%p 중과세 적용</p>
+                  </div>
+                </label>
+                <label className="flex items-start gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name={`nbl-mode-${primary.assetId}`}
+                    checked={primary.nblUseDetailedJudgment}
+                    onChange={() =>
+                      onChange({ assets: form.assets.map((a, i) => i === 0 ? { ...a, nblUseDetailedJudgment: true } : a) })
+                    }
+                    className="mt-0.5 accent-primary"
+                  />
+                  <div>
+                    <span className="text-sm">판정 도움 필요</span>
+                    <p className="text-xs text-muted-foreground">지목·재촌·자경 입력으로 엔진이 자동 판정</p>
+                  </div>
+                </label>
+              </div>
+            )}
           </div>
         )}
       </div>
 
-      {/* 비사업용 토지 상세 판정 — 체크 시 자동 펼침 */}
-      {primaryKind === "land" && primary?.isNonBusinessLand && primary && (
+      {/* 비사업용 토지 상세 판정 — "판정 도움" 모드 선택 시만 표시 */}
+      {primaryKind === "land" && primary?.isNonBusinessLand && primary?.nblUseDetailedJudgment && primary && (
         <NblSectionContainer
           asset={primary}
           onAssetChange={(patch) =>

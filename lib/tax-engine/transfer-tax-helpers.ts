@@ -331,11 +331,6 @@ export function calcLongTermHoldingDeduction(
     return { deduction: 0, rate: 0, holdingPeriod: { years: 0, months: 0 } };
   }
 
-  // L-1b: 비사업용 토지 — 배제
-  if (input.isNonBusinessLand) {
-    return { deduction: 0, rate: 0, holdingPeriod: { years: 0, months: 0 } };
-  }
-
   // L-1c: 장기임대주택 특례율 우선 적용
   if (input.rentalReductionDetails && longTermRentalRules) {
     const override = getLongTermDeductionOverride(

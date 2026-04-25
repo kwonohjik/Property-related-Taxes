@@ -219,7 +219,7 @@ function assemble(args: AssembleArgs): NonBusinessLandJudgment {
 
   // [Bug-01 fix] REDIRECT 경로에서는 비사업용으로 조립하지 말 것.
   // 별장 비사용기간이 기간기준을 충족하면 실제 용도 재입력이 필요하므로
-  // 중과세·장기보유공제 배제가 잘못 부과되지 않도록 isNonBusinessLand를 false로 강제한다.
+  // 중과세가 잘못 부과되지 않도록 isNonBusinessLand를 false로 강제한다.
   const needsRedirect = categoryResult?.action === "REDIRECT_TO_CATEGORY";
   const isNonBusinessLand = needsRedirect ? false : args.isNonBusinessLand;
 

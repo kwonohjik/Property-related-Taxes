@@ -129,8 +129,8 @@ describe("T-25: 장기임대 등록주택 → 유효 1주택, 중과 미적용",
 // ============================================================
 
 describe("T-26: 비사업용 토지 정밀 판정 연동", () => {
-  it("input.isNonBusinessLand=false이나 nonBusinessLandDetails 판정 결과 비사업용 → 중과 적용 + 장기보유공제 0", () => {
-    // 나대지, 1년 보유, 사업용 사용 0일 → 비사업용 판정
+  it("input.isNonBusinessLand=false이나 nonBusinessLandDetails 판정 결과 비사업용 → 중과 적용 + 장기보유공제 표1 적용", () => {
+    // 나대지, 5년 보유, 사업용 사용 0일 → 비사업용 판정
     const nbDetails: NonBusinessLandInput = {
       landType: "vacant_lot",
       landArea: 1000,
@@ -148,6 +148,7 @@ describe("T-26: 비사업용 토지 정밀 판정 연동", () => {
       acquisitionDate: new Date("2020-01-01"),
       transferDate: new Date("2025-01-01"),
       isNonBusinessLand: false, // 플래그는 false지만 details로 덮어씀
+      isOneHousehold: false,    // land에 1세대1주택 특례 미적용 → 표1(연2%) 경로
       nonBusinessLandDetails: nbDetails,
     });
 
@@ -159,9 +160,10 @@ describe("T-26: 비사업용 토지 정밀 판정 연동", () => {
     // 비사업용 → 중과 +10%p
     expect(result.surchargeType).toBe("non_business_land");
     expect(result.surchargeRate).toBe(0.1);
-    // 비사업용 → 장기보유공제 배제
-    expect(result.longTermHoldingDeduction).toBe(0);
-    expect(result.longTermHoldingRate).toBe(0);
+    // 비사업용이어도 장기보유특별공제 표1 적용 (현행 소득세법)
+    // 민법 초일불산입: 2020-01-02 기산 → 2025-01-01까지 4년 11개월 → years=4, rate=4×2%=8%
+    expect(result.longTermHoldingRate).toBe(0.08);
+    expect(result.longTermHoldingDeduction).toBeGreaterThan(0);
   });
 
   it("input.isNonBusinessLand=true이나 nonBusinessLandDetails 판정 결과 사업용 → 중과 미적용, 장기보유공제 적용", () => {
