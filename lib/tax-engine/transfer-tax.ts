@@ -373,8 +373,16 @@ export function calculateTransferTax(
 
   // STEP 2: 양도차익 계산
   const { gain: rawGain, usedEstimated, estimatedBase, estimatedDeduction, expenses: appliedExpenses, splitDetail } = calcTransferGain(effectiveInput);
+
+  // 소유자 분리: 본인 신고분 양도차익만 추출 (소령 §166⑥, §168②)
+  // splitDetail이 있고 selfOwns !== "both" 이면 본인 소유 파트의 gain만 사용
+  const selfOwns = effectiveInput.selfOwns ?? "both";
+  const ownerRawGain = splitDetail && selfOwns !== "both"
+    ? (selfOwns === "building_only" ? splitDetail.building.gain : splitDetail.land.gain)
+    : rawGain;
+
   // STEP 2a: 손실 → 0 (aggregate 엔진에서 skipLossFloor=true 시 음수 허용 — §102② 통산용)
-  const transferGain = input.skipLossFloor ? rawGain : Math.max(0, rawGain);
+  const transferGain = input.skipLossFloor ? ownerRawGain : Math.max(0, ownerRawGain);
 
   // 환산취득가 방식: 취득가와 필요경비(개산공제)를 분리 표시
   // 일반 방식: 취득가와 필요경비를 분리 표시
@@ -391,6 +399,15 @@ export function calculateTransferTax(
       `취득가(${input.acquisitionPrice.toLocaleString()}원)`,
       `경비(${appliedExpenses.toLocaleString()}원)`,
     ].join(" - ");
+  }
+  if (selfOwns !== "both" && splitDetail) {
+    const selfLabel = selfOwns === "building_only" ? "건물" : "토지";
+    steps.push({
+      label: `본인 신고분: ${selfLabel} (소령 §166⑥, §168②)`,
+      formula: `일괄양도가액 ${input.transferPrice.toLocaleString()}원 중 ${selfLabel} 분만 신고 — 나머지는 타인 소유`,
+      amount: transferGain,
+      legalBasis: TRANSFER.TRANSFER_GAIN,
+    });
   }
   steps.push({
     label: "양도차익 계산",
@@ -440,6 +457,8 @@ export function calculateTransferTax(
       localIncomeTax: lit0,
       totalTax: pt0 + lit0,
       steps,
+      splitDetail: splitDetail ?? undefined,
+      preHousingDisclosureDetail: splitDetail?.preHousingDisclosureDetail,
     };
   }
 
@@ -541,7 +560,11 @@ export function calculateTransferTax(
   });
 
   // STEP 7: 산출세액
-  const taxResult = calcTax(taxBase, parsedRates, effectiveInput, multiHouseSurchargeResult);
+  // selfOwns="land_only" 시 단기/장기 세율 판정은 토지 취득일 기준 (소령 §166⑥)
+  const taxRateInput = selfOwns === "land_only" && effectiveInput.landAcquisitionDate
+    ? { ...effectiveInput, acquisitionDate: effectiveInput.landAcquisitionDate }
+    : effectiveInput;
+  const taxResult = calcTax(taxBase, parsedRates, taxRateInput, multiHouseSurchargeResult);
   const fmtPct = (r: number) => `${Math.round(r * 100)}%`;
   steps.push({
     label: "산출세액",

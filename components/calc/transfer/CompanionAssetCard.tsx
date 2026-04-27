@@ -383,6 +383,13 @@ export function CompanionAssetCard({
             onConstructionDateChange={(v) => onChange({ constructionDate: v })}
             extensionFloorArea={asset.extensionFloorArea}
             onExtensionFloorAreaChange={(v) => onChange({ extensionFloorArea: v })}
+            selfOwns={asset.selfOwns ?? "both"}
+            onSelfOwnsChange={(v) => {
+              onChange({
+                selfOwns: v,
+                hasSeperateLandAcquisitionDate: v !== "both" ? true : asset.hasSeperateLandAcquisitionDate,
+              });
+            }}
             hasSeperateLandAcquisitionDate={asset.hasSeperateLandAcquisitionDate}
             onHasSeperateLandAcquisitionDateChange={(v) =>
               onChange({ hasSeperateLandAcquisitionDate: v })

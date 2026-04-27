@@ -245,6 +245,14 @@ export interface TransferTaxInput {
    * standardPricePerSqmAtAcquisition과 함께 사용.
    */
   acquisitionArea?: number;
+  /**
+   * 토지·건물의 소유자가 다른 경우 본인 소유 부분 지정 (소령 §166⑥, §168②).
+   * "both" (기본): 토지·건물 모두 본인 → 분리 양도차익 양쪽 합산.
+   * "building_only": 건물만 본인 (토지는 배우자·타인 소유) → 건물 분만 자기 신고.
+   * "land_only": 토지만 본인 → 토지 분만 자기 신고.
+   * "both" 외 값 사용 시 landAcquisitionDate 필수.
+   */
+  selfOwns?: "both" | "building_only" | "land_only";
 }
 
 export type TransferReduction =
@@ -553,6 +561,8 @@ export interface SplitGainResult {
   building: SplitPartResult;
   apportionRatio: { land: number; building: number };
   note: string;
+  /** 본인 신고 부분 — UI 결과 뷰 표시용 */
+  selfOwns: "both" | "building_only" | "land_only";
   /** §164⑤ 경로 시만 포함 — calculateTransferTax가 result.preHousingDisclosureDetail로 승격 */
   preHousingDisclosureDetail?: PreHousingDisclosureResult;
 }

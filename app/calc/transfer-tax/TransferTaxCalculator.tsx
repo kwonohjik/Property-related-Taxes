@@ -288,12 +288,28 @@ export default function TransferTaxCalculator({
     onClick: () => { setError(null); setStep(i); },
   }));
 
+  // 입력된 값을 기준으로 계산 가능한 항목만 사이드바에 표시.
+  //   양도가액 합계:  actualSalePrice 입력 시
+  //   취득가액 합계:  fixedAcquisitionPrice 입력 시 (실가/감정 모드만, 환산은 엔진 계산)
+  //   필요경비 합계:  directExpenses 입력 시
+  //   양도소득금액:  양도가액 + 취득가액 모두 입력된 경우 (환산 모드에선 API 결과 필요)
+  //   납부할 세액:   API 계산 완료 시
   const sidebarSummary: WizardSidebarSummaryItem[] = [
-    { label: "양도가액 합계", value: transferSummary.totalSalePrice },
-    { label: "취득가액 합계", value: transferSummary.totalAcqPrice },
-    { label: "필요경비 합계", value: transferSummary.totalNecessaryExpense },
-    { label: "양도소득금액", value: transferSummary.netTransferIncome },
-    { label: "납부할 세액", value: transferSummary.estimatedTax, highlight: true },
+    ...(transferSummary.totalSalePrice > 0
+      ? [{ label: "양도가액 합계", value: transferSummary.totalSalePrice }]
+      : []),
+    ...(transferSummary.totalAcqPrice > 0
+      ? [{ label: "취득가액 합계", value: transferSummary.totalAcqPrice }]
+      : []),
+    ...(transferSummary.totalNecessaryExpense > 0
+      ? [{ label: "필요경비 합계", value: transferSummary.totalNecessaryExpense }]
+      : []),
+    ...(transferSummary.totalSalePrice > 0 && transferSummary.totalAcqPrice > 0
+      ? [{ label: "양도소득금액", value: transferSummary.netTransferIncome }]
+      : []),
+    ...(transferSummary.estimatedTax !== null
+      ? [{ label: "납부할 세액", value: transferSummary.estimatedTax, highlight: true }]
+      : []),
   ];
 
   return (

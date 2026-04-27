@@ -266,14 +266,16 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
       primary.buildingType === "extension" && primary.extensionFloorArea
         ? parseFloat(primary.extensionFloorArea)
         : undefined,
-    // 토지/건물 취득일 분리
+    // 토지/건물 취득일 분리 + 소유자 분리 (소령 §166⑥, §168②)
+    selfOwns: primary.selfOwns !== "both" ? primary.selfOwns : undefined,
     landAcquisitionDate:
-      primary.hasSeperateLandAcquisitionDate && primary.landAcquisitionDate
+      (primary.hasSeperateLandAcquisitionDate || primary.selfOwns !== "both") && primary.landAcquisitionDate
         ? primary.landAcquisitionDate
         : undefined,
-    landSplitMode: primary.hasSeperateLandAcquisitionDate
-      ? primary.landSplitMode
-      : undefined,
+    landSplitMode:
+      primary.hasSeperateLandAcquisitionDate || primary.selfOwns !== "both"
+        ? primary.landSplitMode
+        : undefined,
     landTransferPrice: parseAmount(primary.landTransferPrice) || undefined,
     buildingTransferPrice: parseAmount(primary.buildingTransferPrice) || undefined,
     landAcquisitionPrice: parseAmount(primary.landAcquisitionPrice) || undefined,

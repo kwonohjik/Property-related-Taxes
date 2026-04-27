@@ -388,21 +388,30 @@ export function calcLongTermHoldingDeduction(
 
   // 토지/건물 분리 케이스 — 각각 보유연수 적용 후 합산
   if (splitDetail) {
-    // 1세대1주택 12억 초과 안분: 각 파트에도 동일 비율 적용
+    const selfOwns = splitDetail.selfOwns ?? "both";
+    const ownsLand = selfOwns !== "building_only";
+    const ownsBuilding = selfOwns !== "land_only";
+
+    // 1세대1주택 12억 초과 안분: 본인 소유 파트 양도가액 기준
     const THRESHOLD = 1_200_000_000;
-    const isProratedSplit = isOneHouseSingle && input.transferPrice > THRESHOLD;
+    const selfTransferPrice = selfOwns === "building_only"
+      ? splitDetail.building.transferPrice
+      : selfOwns === "land_only"
+        ? splitDetail.land.transferPrice
+        : input.transferPrice;
+    const isProratedSplit = isOneHouseSingle && selfTransferPrice > THRESHOLD;
     const proratePartGain = (g: number): number => {
       if (!isProratedSplit || g <= 0) return g;
-      return Math.floor(g * (input.transferPrice - THRESHOLD) / input.transferPrice);
+      return Math.floor(g * (selfTransferPrice - THRESHOLD) / selfTransferPrice);
     };
 
-    const landTaxableGain = proratePartGain(splitDetail.land.gain);
-    const buildingTaxableGain = proratePartGain(splitDetail.building.gain);
+    const landTaxableGain = ownsLand ? proratePartGain(splitDetail.land.gain) : 0;
+    const buildingTaxableGain = ownsBuilding ? proratePartGain(splitDetail.building.gain) : 0;
 
-    const landRate = rateForYears(splitDetail.land.holdingYears);
-    const buildingRate = rateForYears(splitDetail.building.holdingYears);
-    const landDed = applyRate(Math.max(landTaxableGain, 0), landRate);
-    const buildingDed = applyRate(Math.max(buildingTaxableGain, 0), buildingRate);
+    const landRate = ownsLand ? rateForYears(splitDetail.land.holdingYears) : 0;
+    const buildingRate = ownsBuilding ? rateForYears(splitDetail.building.holdingYears) : 0;
+    const landDed = ownsLand ? applyRate(Math.max(landTaxableGain, 0), landRate) : 0;
+    const buildingDed = ownsBuilding ? applyRate(Math.max(buildingTaxableGain, 0), buildingRate) : 0;
 
     // SplitPartResult 에 공제율·공제액 채우기 (참조 수정)
     splitDetail.land.longTermRate = landRate;
@@ -410,11 +419,14 @@ export function calcLongTermHoldingDeduction(
     splitDetail.building.longTermRate = buildingRate;
     splitDetail.building.longTermDeduction = buildingDed;
 
-    const buildingHolding = calculateHoldingPeriod(input.acquisitionDate, input.transferDate);
+    const anchorDate = selfOwns === "land_only" && input.landAcquisitionDate
+      ? input.landAcquisitionDate
+      : input.acquisitionDate;
+    const anchorHolding = calculateHoldingPeriod(anchorDate, input.transferDate);
     return {
       deduction: landDed + buildingDed,
       rate: 0, // 단일 공제율 없음 (혼합) — splitDetail.land/building.longTermRate 참조
-      holdingPeriod: { years: buildingHolding.years, months: buildingHolding.months },
+      holdingPeriod: { years: anchorHolding.years, months: anchorHolding.months },
     };
   }
 

@@ -258,6 +258,13 @@ export interface AssetForm {
   extensionFloorArea: string;
 
   // ── 토지/건물 취득일 분리 (housing·building 공통) ──
+  /**
+   * 토지·건물의 소유자가 다른 경우 본인 소유 부분 지정 (소령 §166⑥, §168②).
+   * "both" (기본): 토지·건물 모두 본인.
+   * "building_only": 건물만 본인 (토지는 배우자·타인 소유).
+   * "land_only": 토지만 본인.
+   */
+  selfOwns: "both" | "building_only" | "land_only";
   /** 토지와 건물의 취득일이 다른지 여부 (원시취득·신축 등) */
   hasSeperateLandAcquisitionDate: boolean;
   /** 토지 취득일 (YYYY-MM-DD) — hasSeperateLandAcquisitionDate === true 시 필수 */
@@ -458,6 +465,7 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     buildingType: "",
     constructionDate: "",
     extensionFloorArea: "",
+    selfOwns: "both",
     hasSeperateLandAcquisitionDate: false,
     landAcquisitionDate: "",
     landSplitMode: "apportioned",
@@ -578,6 +586,7 @@ export function migrateAsset(raw: unknown): AssetForm {
   }
   if (!a.standardPricePerSqmAtAcq) a.standardPricePerSqmAtAcq = "";
   if (!a.standardPricePerSqmAtTransfer) a.standardPricePerSqmAtTransfer = "";
+  if (!a.selfOwns) a.selfOwns = "both";
   if (a.hasSeperateLandAcquisitionDate === undefined) a.hasSeperateLandAcquisitionDate = false;
   if (!a.landAcquisitionDate) a.landAcquisitionDate = "";
   if (!a.landSplitMode) a.landSplitMode = "apportioned";

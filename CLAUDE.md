@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **KoreanTaxCalc** — 한국 부동산 6대 세금 자동계산 웹 앱 (양도소득세·상속세·증여세·취득세·재산세·종합부동산세).
 
 **현재 구현 상태**
-- ✅ **양도소득세**: 엔진·UI·API·테스트 완전 구현 (2025 세법 기준). 2026-04-25 Step1↔Step3 통합으로 마법사 5→4단계 축소, 취득 정보 13필드 자산-수준 마이그레이션 완료
+- ✅ **양도소득세**: 엔진·UI·API·테스트 완전 구현 (2025 세법 기준). 2026-04-25 Step1↔Step3 통합으로 마법사 5→4단계 축소, 취득 정보 13필드 자산-수준 마이그레이션 완료. 2026-04-27 토지/건물 분리 양도차익 + 개별주택가격 미공시 취득(§164⑤) 3-시점 환산 추가
 - 🚧 **취득세·재산세·종합부동산세·상속·증여**: 엔진 구현 완료, UI 부분 구현 (`components/calc/property/` 재산세 UI 진행 중)
 - ✨ **공용 입력 가시성 개선**: `FieldCard`·`SectionHeader`·`WizardSidebar` 3종 (2026-04-25). 양도세 마법사 적용 완료, 타 세목 점진 확장 예정
 
@@ -80,9 +80,23 @@ Layer 2: Pure Engine (lib/tax-engine/*.ts)
 - **법령 조문 상수**: 문자열 리터럴 직접 사용 금지. `lib/tax-engine/legal-codes/` 에서 `TRANSFER.*` / `NBL.*` / `ACQUISITION.*` 등 세목별 상수 사용.
 - **자산-수준 통합 (양도세, 2026-04-25)**: 취득 정보(취득가 산정방식·감정가액·신축·1990 환산·부속 7필드)는 모두 **`AssetForm` 자산-수준**으로 저장. 폼-전역 `acquisitionMethod`·`appraisalValue`·`isSelfBuilt` 등은 deprecated. 다건 양도 시 자산별로 다른 산정방식·신축 여부 입력 가능.
 - **감정가액 + 개산공제 자동 적용 (소령 §163⑥)**: `isAppraisalAcquisition === true` 시 엔진이 자동으로 `취득시 기준시가 × 3%` 개산공제 적용. `lib/tax-engine/transfer-tax-helpers.ts` `calcTransferGain` 분기.
+- **토지/건물 분리 양도차익 (소령 §166⑥·§168②)**: `hasSeperateLandAcquisitionDate === true` 시 `transfer-tax-split-gain.ts`가 토지·건물 각각의 양도차익을 계산. `landSplitMode === "actual"` 시 직접 입력 가능, 미입력 필드는 기준시가 비율로 자동 안분. 자본적지출은 자동 안분 대상이지만 UI는 "없으면 비워두세요" placeholder로 명시(귀속 명확한 항목만 입력 권장).
+- **개별주택가격 미공시 취득 환산 (§164⑤·§166⑥·§163⑥)**: `usePreHousingDisclosure === true` 경로. `transfer-tax-pre-housing-disclosure.ts`의 3-시점(취득·최초공시·양도) 알고리즘으로 취득시 기준시가를 역산. 11필드 입력(`phd*` prefix, asset-수준), Excel 검증 완료. PHD의 "취득시" 참조일은 **`landAcquisitionDate`**(건물 취득일이 아님). 결과 뷰는 한국어 라벨 + 단순화 산식(중간 산술 표시 X, 결과값만 표시).
+- **Vworld API 공시지가 조회**: `/api/address/standard-price?propertyType=land&jibun=...&year=...` 엔드포인트로 개별공시지가(원/㎡) 조회. PHD 3-시점 입력에서 각 시점별 조회 버튼 + 토지기준시가 자동 계산(공시지가 × 면적).
+- **공시지가 추천 연도**: `lib/utils/land-price-year.ts` `recommendLandPriceYear()` — 5월 31일 이하는 전년도, 6월 1일 이후는 해당연도(공시일 기준). PHD에서는 토지 취득일(`landAcquisitionDate`) 기준으로 추천.
 - **Auth**: 비로그인도 계산 가능. 로그인 시 이력·PDF. sessionStorage로 게스트 결과 보존 → 로그인 후 마이그레이션. `result`는 partialize에서 제외 (민감정보 + Date 직렬화).
 - **Store legacy 마이그레이션**: `lib/stores/calc-wizard-migration.ts`로 분리(800줄 정책). `migrateLegacyForm` + `STEP_MIGRATION` (5→4단계 인덱스 매핑) 자동 적용.
 - **Supabase RPC**: `DISTINCT ON`은 Supabase JS 미지원 → DB Function `preload_tax_rates()`로 구현.
+
+## UI 작성 원칙
+
+- **계산 로직 순서 = UI 표시 순서 (강제 규칙)**: 새 UI 또는 입력 필드를 추가할 때, 화면상의 배치는 **엔진의 계산 순서**를 따른다.
+  - 예: PHD 섹션은 ①토지 면적 → ②최초 고시일 → ③최초 고시 주택가격 → ④양도시 주택가격 → ⑤3-시점 기준시가 입력 순서. 알고리즘이 이 순서로 값을 사용하기 때문.
+  - 예: 취득가액 산정 방식 → PHD 토글(환산 모드 의존) → 취득시 기준시가. 환산 모드를 먼저 결정해야 PHD 노출 여부가 결정되므로.
+  - "토지와 건물의 취득일이 다른가요?" 토글은 "취득일" 라벨 옆 인라인. 분리 모드 결정이 후속 입력(가액 분리 방식·PHD)을 좌우하기 때문.
+- **사이드바 합계 표시**: `WizardSidebar`의 합계 항목은 **이전 단계에서 입력된 값으로 계산 가능한 항목만** 노출. 환산 모드의 취득가액처럼 엔진 계산 후에야 알 수 있는 값은 API 결과 도착 후 표시. 0원 항목은 사이드바에서 제외.
+- **결과 뷰 산식 표기**: 기술 변수명(`P_F`, `Sum_A`, `floor()`) 사용 금지. 한국어 풀어쓰기(`최초 고시 주택가격`, `취득시 합계`). 중간 산술 결과는 표시하지 않고 우측 결과값으로 단일 표기. 곱셈 후 내림은 결과값 자체가 floor된 값이므로 산식에 `floor()` 미표기.
+- **placeholder 정확성**: "자동 안분" 표현은 엔진이 실제로 안분할 때만 사용. 자본적지출처럼 귀속이 명확해야 하는 필드는 "없으면 비워두세요"로 표기.
 
 ## 서브 CLAUDE.md (도메인별 심화)
 

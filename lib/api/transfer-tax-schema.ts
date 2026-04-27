@@ -113,6 +113,14 @@ const propertyBaseShape = {
   primaryActualSalePrice: z.number().int().positive().optional(),
   /** 개별주택가격 미공시 취득 시 3-시점 환산취득가 계산 입력 (§164⑤) */
   preHousingDisclosure: preHousingDisclosureSchema.optional(),
+  /**
+   * 토지·건물의 소유자가 다른 경우 본인 소유 부분 지정 (소령 §166⑥, §168②).
+   * "both" (기본): 토지·건물 모두 본인.
+   * "building_only": 건물만 본인 (토지는 배우자·타인 소유).
+   * "land_only": 토지만 본인.
+   * "building_only"/"land_only" 사용 시 landAcquisitionDate 필수.
+   */
+  selfOwns: z.enum(["both", "building_only", "land_only"]).optional(),
 };
 
 // ─── 단건 스키마 (기존 inputSchema와 동일) ─────────────────────
@@ -135,6 +143,24 @@ export const propertySchema = z
   })
   .superRefine((data, ctx) => {
     addPropertyRefines(data, ctx);
+
+    // 소유자 분리 유효성 (소령 §166⑥, §168②)
+    if (data.selfOwns && data.selfOwns !== "both") {
+      if (!data.landAcquisitionDate) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["landAcquisitionDate"],
+          message: "토지·건물 소유자가 다른 경우 토지 취득일을 입력해 주세요",
+        });
+      }
+      if (data.propertyType !== "housing" && data.propertyType !== "building") {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["selfOwns"],
+          message: "소유자 분리는 주택(housing) 또는 건물(building) 자산에만 적용됩니다",
+        });
+      }
+    }
 
     // 일괄양도 유효성 (소득세법 시행령 §166 ⑥)
     const companions = data.companionAssets ?? [];

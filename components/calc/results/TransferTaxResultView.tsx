@@ -496,37 +496,54 @@ export function TransferTaxResultView({ result, onReset, onBack, onLoginPrompt =
       })()}
 
       {/* 토지/건물 분리 양도차익 상세 (§164⑤ 포함) */}
-      {result.splitDetail && (
-        <div className="rounded-lg border border-border p-4 space-y-2">
-          <p className="text-sm font-semibold">토지/건물 분리 양도차익 ({result.splitDetail.note})</p>
-          <div className="text-xs grid grid-cols-3 gap-x-2 gap-y-1">
-            <span />
-            <span className="font-medium text-center">토지</span>
-            <span className="font-medium text-center">건물</span>
-            <span className="text-muted-foreground">양도가액</span>
-            <span className="font-mono text-right">{result.splitDetail.land.transferPrice.toLocaleString()}</span>
-            <span className="font-mono text-right">{result.splitDetail.building.transferPrice.toLocaleString()}</span>
-            <span className="text-muted-foreground">환산취득가</span>
-            <span className="font-mono text-right">{result.splitDetail.land.acquisitionPrice.toLocaleString()}</span>
-            <span className="font-mono text-right">{result.splitDetail.building.acquisitionPrice.toLocaleString()}</span>
-            <span className="text-muted-foreground">개산공제</span>
-            <span className="font-mono text-right">{result.splitDetail.land.appraisalDeduction.toLocaleString()}</span>
-            <span className="font-mono text-right">{result.splitDetail.building.appraisalDeduction.toLocaleString()}</span>
-            <span className="text-muted-foreground">양도차익</span>
-            <span className="font-mono text-right font-semibold">{result.splitDetail.land.gain.toLocaleString()}</span>
-            <span className="font-mono text-right font-semibold">{result.splitDetail.building.gain.toLocaleString()}</span>
-            <span className="text-muted-foreground">보유연수</span>
-            <span className="font-mono text-right">{result.splitDetail.land.holdingYears}년</span>
-            <span className="font-mono text-right">{result.splitDetail.building.holdingYears}년</span>
-            <span className="text-muted-foreground">장특공제율</span>
-            <span className="font-mono text-right">{(result.splitDetail.land.longTermRate * 100).toFixed(0)}%</span>
-            <span className="font-mono text-right">{(result.splitDetail.building.longTermRate * 100).toFixed(0)}%</span>
-            <span className="text-muted-foreground">장특공제액</span>
-            <span className="font-mono text-right">{result.splitDetail.land.longTermDeduction.toLocaleString()}</span>
-            <span className="font-mono text-right">{result.splitDetail.building.longTermDeduction.toLocaleString()}</span>
+      {result.splitDetail && (() => {
+        const selfOwns = result.splitDetail.selfOwns ?? "both";
+        const landIsOwned = selfOwns !== "building_only";
+        const buildingIsOwned = selfOwns !== "land_only";
+        const ownerLabel = selfOwns === "building_only" ? "건물" : selfOwns === "land_only" ? "토지" : null;
+        const colCls = (owned: boolean) =>
+          owned ? "font-mono text-right" : "font-mono text-right text-muted-foreground/50 line-through";
+        const headerCls = (owned: boolean) =>
+          owned ? "font-medium text-center" : "font-medium text-center text-muted-foreground/50";
+        return (
+          <div className="rounded-lg border border-border p-4 space-y-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="text-sm font-semibold">토지/건물 분리 양도차익</p>
+              {ownerLabel && (
+                <span className="text-xs rounded-full bg-primary/10 text-primary px-2 py-0.5 font-medium">
+                  본인 신고분: {ownerLabel} (소령 §166⑥·§168②)
+                </span>
+              )}
+            </div>
+            <div className="text-xs grid grid-cols-3 gap-x-2 gap-y-1">
+              <span />
+              <span className={headerCls(landIsOwned)}>토지{!landIsOwned && " (타인 소유)"}</span>
+              <span className={headerCls(buildingIsOwned)}>건물{!buildingIsOwned && " (타인 소유)"}</span>
+              <span className="text-muted-foreground">양도가액</span>
+              <span className={colCls(landIsOwned)}>{result.splitDetail.land.transferPrice.toLocaleString()}</span>
+              <span className={colCls(buildingIsOwned)}>{result.splitDetail.building.transferPrice.toLocaleString()}</span>
+              <span className="text-muted-foreground">환산취득가</span>
+              <span className={colCls(landIsOwned)}>{result.splitDetail.land.acquisitionPrice.toLocaleString()}</span>
+              <span className={colCls(buildingIsOwned)}>{result.splitDetail.building.acquisitionPrice.toLocaleString()}</span>
+              <span className="text-muted-foreground">개산공제</span>
+              <span className={colCls(landIsOwned)}>{result.splitDetail.land.appraisalDeduction.toLocaleString()}</span>
+              <span className={colCls(buildingIsOwned)}>{result.splitDetail.building.appraisalDeduction.toLocaleString()}</span>
+              <span className="text-muted-foreground">양도차익</span>
+              <span className={cn(colCls(landIsOwned), landIsOwned && "font-semibold")}>{result.splitDetail.land.gain.toLocaleString()}</span>
+              <span className={cn(colCls(buildingIsOwned), buildingIsOwned && "font-semibold")}>{result.splitDetail.building.gain.toLocaleString()}</span>
+              <span className="text-muted-foreground">보유연수</span>
+              <span className={colCls(landIsOwned)}>{result.splitDetail.land.holdingYears}년</span>
+              <span className={colCls(buildingIsOwned)}>{result.splitDetail.building.holdingYears}년</span>
+              <span className="text-muted-foreground">장특공제율</span>
+              <span className={colCls(landIsOwned)}>{(result.splitDetail.land.longTermRate * 100).toFixed(0)}%</span>
+              <span className={colCls(buildingIsOwned)}>{(result.splitDetail.building.longTermRate * 100).toFixed(0)}%</span>
+              <span className="text-muted-foreground">장특공제액</span>
+              <span className={colCls(landIsOwned)}>{result.splitDetail.land.longTermDeduction.toLocaleString()}</span>
+              <span className={colCls(buildingIsOwned)}>{result.splitDetail.building.longTermDeduction.toLocaleString()}</span>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* 계산 과정 토글 */}
       <button

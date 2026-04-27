@@ -166,6 +166,7 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
     building: buildingPart,
     apportionRatio: { land: landRatio, building: buildingRatio },
     note: `토지 ${landHoldingYears}년 + 건물 ${buildingHoldingYears}년 분리 (안분비 토지 ${(landRatio * 100).toFixed(1)}% : 건물 ${(buildingRatio * 100).toFixed(1)}%)`,
+    selfOwns: input.selfOwns ?? "both",
   };
 }
 
@@ -221,6 +222,7 @@ function calcSplitGainPreDisclosure(input: TransferTaxInput): SplitGainResult {
     building: buildingPart,
     apportionRatio: phd.transferApportionRatio,
     note: `개별주택가격 미공시(§164⑤) — 토지 ${landHoldingYears}년 + 건물 ${buildingHoldingYears}년 분리`,
+    selfOwns: input.selfOwns ?? "both",
     preHousingDisclosureDetail: phd,
   };
 }

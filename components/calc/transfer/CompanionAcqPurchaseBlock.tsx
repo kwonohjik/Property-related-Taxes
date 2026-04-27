@@ -112,6 +112,9 @@ interface BlockProps {
    */
   asset?: AssetForm;
   onAssetChange?: (patch: Partial<AssetForm>) => void;
+  /** 토지·건물 소유자 분리 — 본인 소유 부분 (소령 §166⑥, §168②) */
+  selfOwns?: "both" | "building_only" | "land_only";
+  onSelfOwnsChange?: (v: "both" | "building_only" | "land_only") => void;
 }
 
 // ─── 메인 블록 ────────────────────────────────────────────────────
@@ -211,6 +214,48 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
           </p>
         )}
       </div>
+
+      {/* 토지/건물 소유자 분리 (housing·building 전용) */}
+      {isSplitable && props.onSelfOwnsChange && (
+        <div className="space-y-1.5">
+          <label className="flex cursor-pointer items-center gap-1.5 text-sm text-muted-foreground">
+            <input
+              type="checkbox"
+              checked={(props.selfOwns ?? "both") !== "both"}
+              onChange={(e) => {
+                if (e.target.checked) {
+                  props.onSelfOwnsChange!("building_only");
+                  props.onHasSeperateLandAcquisitionDateChange?.(true);
+                } else {
+                  props.onSelfOwnsChange!("both");
+                }
+              }}
+              className="rounded border-border"
+            />
+            <span>토지와 건물의 소유자가 다른가요?</span>
+            <span className="text-xs">(배우자·공유자 등)</span>
+          </label>
+          {(props.selfOwns ?? "both") !== "both" && (
+            <div className="ml-5 flex gap-2 flex-wrap">
+              {(["building_only", "land_only"] as const).map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => props.onSelfOwnsChange!(v)}
+                  className={cn(
+                    "rounded-md border-2 px-3 py-1 text-sm transition-all",
+                    props.selfOwns === v
+                      ? "border-primary bg-primary/5 text-primary"
+                      : "border-border hover:border-muted-foreground/50",
+                  )}
+                >
+                  {v === "building_only" ? "건물만 본인 소유 (토지는 타인)" : "토지만 본인 소유 (건물은 타인)"}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* 토지/건물 취득일 분리 상세 (housing·building 전용) */}
       {isSplitable && props.onHasSeperateLandAcquisitionDateChange && (
