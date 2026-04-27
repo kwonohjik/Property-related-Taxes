@@ -34,7 +34,11 @@ export function LandBuildingSplitSection(props: Props) {
   return (
     <div className="space-y-3 rounded-md border border-dashed border-border bg-muted/20 p-3">
       <p className="text-xs font-semibold text-muted-foreground">
-        토지 / 건물 각 가액 직접 입력 (미입력 시 기준시가 비율로 자동 안분)
+        토지 / 건물 각 가액 직접 입력 — 필드별 독립 입력 가능
+      </p>
+      <p className="text-xs text-muted-foreground -mt-1">
+        양도가액만 알고 취득가액을 모르는 경우, 양도가액만 입력하고 나머지는 비워두세요.
+        비워둔 항목은 기준시가 비율로 자동 안분됩니다.
       </p>
 
       <div className="grid grid-cols-2 gap-2">
@@ -69,11 +73,11 @@ export function LandBuildingSplitSection(props: Props) {
       )}
 
       <div className="grid grid-cols-2 gap-2">
-        <FieldCard label="토지 자본적지출">
-          <CurrencyInput label="" value={props.landDirectExpenses} onChange={props.onLandDirectExpensesChange} placeholder="미입력 시 자동 안분" />
+        <FieldCard label="토지 자본적지출" hint="토지에 귀속되는 자본적지출만 입력, 없으면 비워두세요">
+          <CurrencyInput label="" value={props.landDirectExpenses} onChange={props.onLandDirectExpensesChange} placeholder="없으면 비워두세요" />
         </FieldCard>
-        <FieldCard label="건물 자본적지출">
-          <CurrencyInput label="" value={props.buildingDirectExpenses} onChange={props.onBuildingDirectExpensesChange} placeholder="미입력 시 자동 안분" />
+        <FieldCard label="건물 자본적지출" hint="건물에 귀속되는 자본적지출만 입력, 없으면 비워두세요">
+          <CurrencyInput label="" value={props.buildingDirectExpenses} onChange={props.onBuildingDirectExpensesChange} placeholder="없으면 비워두세요" />
         </FieldCard>
       </div>
     </div>

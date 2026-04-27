@@ -9,16 +9,20 @@
  * 각 시점별 연도 선택은 landPriceYearOptions()의 추천값이 기본으로 선택되며,
  * 사용자가 수동 변경 시 "수동" 배지와 "↻ 자동" 복원 버튼이 표시된다.
  *
+ * jibun + year 제공 시 Vworld 개별공시지가 자동 조회 버튼 활성화.
+ * 공시지가(원/㎡)와 면적(㎡)이 모두 있으면 토지기준시가를 표시한다.
+ *
  * 법령 근거: 소득세법 시행령 §164 ⑤
  */
 
+import { useState } from "react";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
 } from "@/components/ui/select";
-import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
+import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { landPriceYearOptions, recommendLandPriceYear } from "@/lib/utils/land-price-year";
 
@@ -54,6 +58,11 @@ export interface ThreePointStandardPriceInputProps {
   onLandPricePerSqmAtTransferChange: (v: string) => void;
   buildingStdPriceAtTransfer: string;
   onBuildingStdPriceAtTransferChange: (v: string) => void;
+
+  /** 지번 주소 — Vworld 개별공시지가 조회용 */
+  jibun?: string;
+  /** 토지 면적 (㎡) — 토지기준시가 = 공시지가 × 면적 */
+  landArea?: string;
 }
 
 // ─── 시점별 단일 입력 블록 ─────────────────────────────────────────
@@ -68,6 +77,8 @@ interface PointBlockProps {
   onLandPricePerSqmChange: (v: string) => void;
   buildingStdPrice: string;
   onBuildingStdPriceChange: (v: string) => void;
+  jibun?: string;
+  landArea?: string;
 }
 
 function PointBlock({
@@ -80,11 +91,17 @@ function PointBlock({
   onLandPricePerSqmChange,
   buildingStdPrice,
   onBuildingStdPriceChange,
+  jibun,
+  landArea,
 }: PointBlockProps) {
+  const [isLookingUp, setIsLookingUp] = useState(false);
+  const [lookupError, setLookupError] = useState<string | null>(null);
+
   const options = referenceDate ? landPriceYearOptions(referenceDate) : [];
   const recommendedYear = referenceDate
     ? String(recommendLandPriceYear(referenceDate))
     : "";
+  const effectiveYear = selectedYear || recommendedYear;
 
   function handleYearSelect(value: string | null) {
     if (!value) return;
@@ -95,6 +112,41 @@ function PointBlock({
   function handleResetToAuto() {
     onYearChange(recommendedYear, false);
   }
+
+  async function handleLookup() {
+    if (!jibun || !effectiveYear) return;
+    setIsLookingUp(true);
+    setLookupError(null);
+    try {
+      const params = new URLSearchParams({
+        jibun,
+        propertyType: "land",
+        year: effectiveYear,
+      });
+      const res = await fetch(`/api/address/standard-price?${params}`);
+      const json = await res.json();
+      if (!res.ok || json.error) {
+        setLookupError(json.error?.message ?? "조회 실패");
+        return;
+      }
+      // json.price: 개별공시지가 (원/㎡)
+      if (json.price && json.price > 0) {
+        onLandPricePerSqmChange(String(json.price));
+        setLookupError(null);
+      } else {
+        setLookupError("해당 연도 공시지가 없음");
+      }
+    } catch {
+      setLookupError("네트워크 오류");
+    } finally {
+      setIsLookingUp(false);
+    }
+  }
+
+  // 토지기준시가 = 공시지가(원/㎡) × 면적(㎡)
+  const pricePerSqm = parseAmount(landPricePerSqm);
+  const area = landArea ? parseFloat(landArea) : 0;
+  const landStdPrice = pricePerSqm > 0 && area > 0 ? Math.floor(pricePerSqm * area) : null;
 
   const yearBadge = isManual ? (
     <span className="flex items-center gap-1">
@@ -115,46 +167,81 @@ function PointBlock({
     </span>
   );
 
+  const canLookup = !!jibun && !!effectiveYear;
+
   return (
     <div className="space-y-2 rounded-md border border-dashed border-border bg-muted/20 p-3">
       <p className="text-xs font-semibold text-muted-foreground">{label}</p>
 
-      {/* 공시지가 기준 연도 선택 */}
+      {/* 공시지가 기준 연도 선택 + 조회 버튼 */}
       <FieldCard label="공시지가 연도" badge={yearBadge}>
-        <Select
-          value={selectedYear || recommendedYear}
-          onValueChange={handleYearSelect}
-          disabled={!referenceDate}
-        >
-          <SelectTrigger className="h-9 w-full">
-            <span>
-              {selectedYear
-                ? `${selectedYear}년${!isManual ? " (자동)" : ""}`
-                : referenceDate
-                  ? `${recommendedYear}년 (자동)`
-                  : "기준일 미입력"}
-            </span>
-          </SelectTrigger>
-          <SelectContent>
-            {options.map((opt) => (
-              <SelectItem key={opt.year} value={String(opt.year)}>
-                {opt.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex gap-2">
+          <div className="flex-1">
+            <Select
+              value={effectiveYear}
+              onValueChange={handleYearSelect}
+              disabled={!referenceDate}
+            >
+              <SelectTrigger className="h-9 w-full">
+                <span>
+                  {selectedYear
+                    ? `${selectedYear}년${!isManual ? " (자동)" : ""}`
+                    : referenceDate
+                      ? `${recommendedYear}년 (자동)`
+                      : "기준일 미입력"}
+                </span>
+              </SelectTrigger>
+              <SelectContent>
+                {options.map((opt) => (
+                  <SelectItem key={opt.year} value={String(opt.year)}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <button
+            type="button"
+            onClick={handleLookup}
+            disabled={!canLookup || isLookingUp}
+            className="h-9 shrink-0 rounded-md border border-border bg-background px-3 text-xs font-medium hover:bg-muted/60 disabled:opacity-40 transition-colors"
+          >
+            {isLookingUp ? "조회 중…" : "공시지가 조회"}
+          </button>
+        </div>
+        {lookupError && (
+          <p className="mt-1 text-xs text-destructive">{lookupError}</p>
+        )}
+        {!canLookup && (
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            지번 주소 입력 후 조회 가능합니다
+          </p>
+        )}
       </FieldCard>
 
-      {/* 토지 단위 공시지가 (원/㎡) */}
-      <FieldCard label="공시지가" unit="원/㎡" hint="개별공시지가 (원/㎡) — 부동산공시가격알리미 조회">
-        <CurrencyInput
-          label=""
-          value={landPricePerSqm}
-          onChange={onLandPricePerSqmChange}
-          placeholder="원/㎡"
-          hideUnit
-        />
-      </FieldCard>
+      {/* 토지 단위 공시지가 (원/㎡) + 토지기준시가 */}
+      <div className="grid grid-cols-2 gap-2">
+        <FieldCard label="공시지가" unit="원/㎡" hint="개별공시지가 (원/㎡)">
+          <CurrencyInput
+            label=""
+            value={landPricePerSqm}
+            onChange={onLandPricePerSqmChange}
+            placeholder="원/㎡"
+            hideUnit
+          />
+        </FieldCard>
+        <FieldCard
+          label="토지기준시가"
+          unit="원"
+          hint="공시지가(원/㎡) × 토지면적(㎡)"
+        >
+          <div className="flex h-9 items-center rounded-md border border-input bg-muted/40 px-3 text-sm tabular-nums text-muted-foreground">
+            {landStdPrice !== null
+              ? landStdPrice.toLocaleString()
+              : <span className="text-muted-foreground/50">자동 계산</span>}
+          </div>
+        </FieldCard>
+      </div>
 
       {/* 건물 기준시가 (원) */}
       <FieldCard label="건물기준시가" unit="원" hint="국세청 건물기준시가 (원) — 양도·취득 당시 기준시가">
@@ -185,6 +272,8 @@ export function ThreePointStandardPriceInput(props: ThreePointStandardPriceInput
         onLandPricePerSqmChange={props.onLandPricePerSqmAtAcqChange}
         buildingStdPrice={props.buildingStdPriceAtAcq}
         onBuildingStdPriceChange={props.onBuildingStdPriceAtAcqChange}
+        jibun={props.jibun}
+        landArea={props.landArea}
       />
 
       <PointBlock
@@ -197,6 +286,8 @@ export function ThreePointStandardPriceInput(props: ThreePointStandardPriceInput
         onLandPricePerSqmChange={props.onLandPricePerSqmAtFirstChange}
         buildingStdPrice={props.buildingStdPriceAtFirst}
         onBuildingStdPriceChange={props.onBuildingStdPriceAtFirstChange}
+        jibun={props.jibun}
+        landArea={props.landArea}
       />
 
       <PointBlock
@@ -209,6 +300,8 @@ export function ThreePointStandardPriceInput(props: ThreePointStandardPriceInput
         onLandPricePerSqmChange={props.onLandPricePerSqmAtTransferChange}
         buildingStdPrice={props.buildingStdPriceAtTransfer}
         onBuildingStdPriceChange={props.onBuildingStdPriceAtTransferChange}
+        jibun={props.jibun}
+        landArea={props.landArea}
       />
     </div>
   );

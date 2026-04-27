@@ -51,7 +51,25 @@ export function PreHousingDisclosureSection({ asset, transferDate, onChange }: P
         <LegalBadge />
       </div>
 
-      {/* ① 최초 고시일 */}
+      {/* ① 토지 면적 */}
+      <FieldCard
+        label="토지 면적"
+        required
+        hint="단위공시지가(원/㎡) × 면적으로 기준시가 계산 — 등기부등본의 토지 면적 기재"
+        unit="㎡"
+      >
+        <input
+          type="number"
+          min="0"
+          step="0.01"
+          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm tabular-nums placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+          placeholder="예: 212"
+          value={asset.acquisitionArea}
+          onChange={(e) => onChange({ acquisitionArea: e.target.value })}
+        />
+      </FieldCard>
+
+      {/* ② 최초 고시일 */}
       <FieldCard
         label="최초 고시일"
         required
@@ -63,7 +81,7 @@ export function PreHousingDisclosureSection({ asset, transferDate, onChange }: P
         />
       </FieldCard>
 
-      {/* ② 최초 고시 개별주택가격 P_F */}
+      {/* ③ 최초 고시 개별주택가격 P_F */}
       <FieldCard
         label="최초 고시 개별주택가격"
         required
@@ -80,7 +98,7 @@ export function PreHousingDisclosureSection({ asset, transferDate, onChange }: P
         />
       </FieldCard>
 
-      {/* ③ 양도시 개별주택가격 P_T */}
+      {/* ④ 양도시 개별주택가격 P_T */}
       <FieldCard
         label="양도시 개별주택가격"
         required
@@ -97,33 +115,16 @@ export function PreHousingDisclosureSection({ asset, transferDate, onChange }: P
         />
       </FieldCard>
 
-      {/* ④ 토지 면적 — 항상 편집 가능 (주택 자산은 별도 면적 섹션이 없으므로) */}
-      <FieldCard
-        label="토지 면적"
-        required
-        hint="단위공시지가(원/㎡) × 면적으로 기준시가 계산 — 등기부등본의 토지 면적 기재"
-        unit="㎡"
-        warning={!asset.acquisitionArea ? "미입력 시 토지기준시가 계산 불가" : undefined}
-      >
-        <input
-          type="number"
-          min="0"
-          step="0.01"
-          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm tabular-nums placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-          placeholder="예: 212"
-          value={asset.acquisitionArea}
-          onChange={(e) => onChange({ acquisitionArea: e.target.value })}
-        />
-      </FieldCard>
-
       {/* ⑤ 3-시점 기준시가 입력 */}
       <div className="space-y-2">
         <p className="text-xs font-semibold text-muted-foreground">
           3시점 기준시가 입력 — 토지 단위 공시지가(원/㎡) + 건물 기준시가(원)
         </p>
         <ThreePointStandardPriceInput
-          // 취득시
-          acquisitionDate={asset.acquisitionDate}
+          jibun={asset.addressJibun || undefined}
+          landArea={asset.acquisitionArea || undefined}
+          // 취득시 — PHD는 토지 취득일 기준 (건물과 다를 수 있음)
+          acquisitionDate={asset.landAcquisitionDate || asset.acquisitionDate}
           landPriceYearAtAcq={asset.phdLandPriceYearAtAcq}
           landPriceYearAtAcqIsManual={asset.phdLandPriceYearAtAcqIsManual}
           onLandPriceYearAtAcqChange={(year, isManual) =>

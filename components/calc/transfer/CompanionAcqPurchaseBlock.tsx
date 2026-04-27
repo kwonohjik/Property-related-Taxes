@@ -183,7 +183,23 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
   return (
     <div className="space-y-3 rounded-md border border-border bg-background p-3">
       <div className="space-y-1.5">
-        <label className="block text-sm font-medium">{acqDateLabel}</label>
+        <div className="flex items-center gap-3 flex-wrap">
+          <span className="text-sm font-medium">{acqDateLabel}</span>
+          {isSplitable && props.onHasSeperateLandAcquisitionDateChange && (
+            <label className="flex cursor-pointer items-center gap-1.5 text-sm font-normal text-muted-foreground">
+              <input
+                type="checkbox"
+                checked={!!props.hasSeperateLandAcquisitionDate}
+                onChange={(e) =>
+                  props.onHasSeperateLandAcquisitionDateChange!(e.target.checked)
+                }
+                className="rounded border-border"
+              />
+              <span>토지와 건물의 취득일이 다른가요?</span>
+              <span className="text-xs">(원시취득·신축 등)</span>
+            </label>
+          )}
+        </div>
         <DateInput
           value={props.acquisitionDate}
           onChange={handleAcquisitionDateChange}
@@ -196,21 +212,9 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
         )}
       </div>
 
-      {/* 토지/건물 취득일 분리 토글 (housing·building 전용) */}
+      {/* 토지/건물 취득일 분리 상세 (housing·building 전용) */}
       {isSplitable && props.onHasSeperateLandAcquisitionDateChange && (
         <div className="space-y-2">
-          <label className="flex cursor-pointer items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={!!props.hasSeperateLandAcquisitionDate}
-              onChange={(e) =>
-                props.onHasSeperateLandAcquisitionDateChange!(e.target.checked)
-              }
-              className="rounded border-border"
-            />
-            <span>토지와 건물의 취득일이 다른가요?</span>
-            <span className="text-xs text-muted-foreground">(원시취득·신축 등)</span>
-          </label>
 
           {isSplit && (
             <div className="space-y-2 pl-1">
@@ -224,7 +228,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
                 />
               </FieldCard>
 
-              <FieldCard label="가액 분리 방식" hint="실제 가액 미확인 시 기준시가 비율로 자동 안분">
+              <FieldCard label="취득·양도가액 분리 방식" hint="토지/건물 각각의 취득가액·양도가액 구분 방법 (소득령 §166⑥)">
                 <div className="flex gap-2">
                   <button
                     type="button"
@@ -253,30 +257,6 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
                 </div>
               </FieldCard>
 
-              {/* 개별주택가격 미공시 취득 토글 — 환산취득가 + 취득일 분리 모드에서만 표시 */}
-              {props.useEstimatedAcquisition && props.asset && props.onAssetChange && (
-                <div className="mt-2 space-y-2">
-                  <label className="flex cursor-pointer items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={!!props.asset.usePreHousingDisclosure}
-                      onChange={(e) =>
-                        props.onAssetChange!({ usePreHousingDisclosure: e.target.checked })
-                      }
-                      className="rounded border-border"
-                    />
-                    <span>취득 당시 개별주택가격 미공시 (§164⑤ 3-시점 계산)</span>
-                  </label>
-
-                  {props.asset.usePreHousingDisclosure && (
-                    <PreHousingDisclosureSection
-                      asset={props.asset}
-                      transferDate={props.transferDate ?? ""}
-                      onChange={props.onAssetChange}
-                    />
-                  )}
-                </div>
-              )}
 
               {props.landSplitMode === "actual" && (
                 <LandBuildingSplitSection
@@ -363,6 +343,31 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
           </button>
         </div>
       </div>
+
+      {/* 개별주택가격 미공시 취득 토글 — 환산취득가 + 취득일 분리 모드 + housing·building 전용 */}
+      {isSplit && props.useEstimatedAcquisition && props.asset && props.onAssetChange && (
+        <div className="space-y-2">
+          <label className="flex cursor-pointer items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={!!props.asset.usePreHousingDisclosure}
+              onChange={(e) =>
+                props.onAssetChange!({ usePreHousingDisclosure: e.target.checked })
+              }
+              className="rounded border-border"
+            />
+            <span>취득 당시 개별주택가격 미공시 (§164⑤ 3-시점 계산)</span>
+          </label>
+
+          {props.asset.usePreHousingDisclosure && (
+            <PreHousingDisclosureSection
+              asset={props.asset}
+              transferDate={props.transferDate ?? ""}
+              onChange={props.onAssetChange}
+            />
+          )}
+        </div>
+      )}
 
       {!props.useEstimatedAcquisition ? (
         <>
