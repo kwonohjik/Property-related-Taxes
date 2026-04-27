@@ -205,7 +205,7 @@ export async function POST(request: NextRequest) {
     constructionDate: data.constructionDate ? new Date(data.constructionDate) : undefined,
     extensionFloorArea: data.extensionFloorArea,
     // 토지/건물 취득일 분리 (선택)
-    landAcquisitionDate: data.landAcquisitionDate,
+    landAcquisitionDate: data.landAcquisitionDate ? new Date(data.landAcquisitionDate) : undefined,
     landSplitMode: data.landSplitMode,
     landTransferPrice: data.landTransferPrice,
     buildingTransferPrice: data.buildingTransferPrice,
@@ -229,6 +229,13 @@ export async function POST(request: NextRequest) {
           gradePrev_1990_0830: data.pre1990Land.gradePrev_1990_0830,
           gradeAtAcquisition: data.pre1990Land.gradeAtAcquisition,
           forceRatioCap: data.pre1990Land.forceRatioCap,
+        }
+      : undefined,
+    // 개별주택가격 미공시 취득 환산 (§164⑤) — 문자열 날짜 → Date 변환
+    preHousingDisclosure: data.preHousingDisclosure
+      ? {
+          ...data.preHousingDisclosure,
+          firstDisclosureDate: new Date(data.preHousingDisclosure.firstDisclosureDate),
         }
       : undefined,
     // 다필지 분리 계산 (환지·합병 등) — 문자열 날짜 → Date 변환

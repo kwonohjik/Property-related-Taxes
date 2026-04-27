@@ -176,6 +176,7 @@ function TransferSection({ r }: { r: R }) {
   return (
     <>
       <Text style={s.sectionTitle}>계산 내역</Text>
+      <TransferSplitSection r={r} />
       <View style={s.table}>
         {num(r.transferGain) !== undefined && (
           <View style={s.row}><Text style={s.lbl}>양도차익</Text><Text style={s.val}>{fmt(r.transferGain)}</Text></View>
@@ -210,6 +211,59 @@ function TransferSection({ r }: { r: R }) {
         {num(r.localIncomeTax) !== undefined && (
           <View style={s.rowLast}><Text style={s.lbl}>지방소득세 (10%)</Text><Text style={s.val}>{fmt(r.localIncomeTax)}</Text></View>
         )}
+      </View>
+    </>
+  );
+}
+
+function TransferSplitSection({ r }: { r: R }) {
+  const sd = r.splitDetail as R | undefined;
+  const phd = r.preHousingDisclosureDetail as R | undefined;
+  if (!sd) return null;
+  const land = sd.land as R;
+  const bldg = sd.building as R;
+  return (
+    <>
+      <Text style={s.sectionTitle}>토지/건물 분리 내역 (§164⑤·§166⑥)</Text>
+      {phd && (
+        <View style={s.table}>
+          <View style={s.row}><Text style={s.lbl}>취득시 기준시가 합계 Sum_A</Text><Text style={s.val}>{fmt(phd.sumAtAcquisition)}</Text></View>
+          <View style={s.row}><Text style={s.lbl}>최초공시일 기준시가 합계 Sum_F</Text><Text style={s.val}>{fmt(phd.sumAtFirstDisclosure)}</Text></View>
+          <View style={s.rowBg}><Text style={s.lbl}>추정 취득시 주택가격 P_A_est</Text><Text style={s.valAccent}>{fmt(phd.estimatedHousingPriceAtAcquisition)}</Text></View>
+          <View style={s.row}><Text style={s.lbl}>총 환산취득가</Text><Text style={s.val}>{fmt(phd.totalEstimatedAcquisitionPrice)}</Text></View>
+        </View>
+      )}
+      <View style={s.table}>
+        <View style={[s.row, { backgroundColor: "#f3f4f6" }]}>
+          <Text style={{ ...s.lbl, flex: 2 }}> </Text>
+          <Text style={{ ...s.val, flex: 1, textAlign: "center" }}>토지</Text>
+          <Text style={{ ...s.val, flex: 1, textAlign: "center" }}>건물</Text>
+        </View>
+        <View style={s.row}>
+          <Text style={{ ...s.lbl, flex: 2 }}>양도가액</Text>
+          <Text style={{ ...s.val, flex: 1 }}>{fmt(land.transferPrice)}</Text>
+          <Text style={{ ...s.val, flex: 1 }}>{fmt(bldg.transferPrice)}</Text>
+        </View>
+        <View style={s.row}>
+          <Text style={{ ...s.lbl, flex: 2 }}>환산취득가</Text>
+          <Text style={{ ...s.val, flex: 1 }}>{fmt(land.acquisitionPrice)}</Text>
+          <Text style={{ ...s.val, flex: 1 }}>{fmt(bldg.acquisitionPrice)}</Text>
+        </View>
+        <View style={s.row}>
+          <Text style={{ ...s.lbl, flex: 2 }}>양도차익</Text>
+          <Text style={{ ...s.val, flex: 1 }}>{fmt(land.gain)}</Text>
+          <Text style={{ ...s.val, flex: 1 }}>{fmt(bldg.gain)}</Text>
+        </View>
+        <View style={s.row}>
+          <Text style={{ ...s.lbl, flex: 2 }}>보유연수</Text>
+          <Text style={{ ...s.val, flex: 1 }}>{num(land.holdingYears)}년</Text>
+          <Text style={{ ...s.val, flex: 1 }}>{num(bldg.holdingYears)}년</Text>
+        </View>
+        <View style={s.rowLast}>
+          <Text style={{ ...s.lbl, flex: 2 }}>장기보유특별공제</Text>
+          <Text style={{ ...s.val, flex: 1 }}>{fmt(land.longTermDeduction)}</Text>
+          <Text style={{ ...s.val, flex: 1 }}>{fmt(bldg.longTermDeduction)}</Text>
+        </View>
       </View>
     </>
   );

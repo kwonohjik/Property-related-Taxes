@@ -359,6 +359,171 @@ export function TransferTaxResultView({ result, onReset, onBack, onLoginPrompt =
         </div>
       )}
 
+      {/* 개별주택가격 미공시 취득 환산 상세 (§164⑤) */}
+      {result.preHousingDisclosureDetail && (() => {
+        const phd = result.preHousingDisclosureDetail;
+        const i = phd.inputs;
+        if (!i) return null;
+        const fmt = (n: number) => n.toLocaleString();
+        // 산식 행 — 라벨 / 값 / 산식 설명 3단 구성
+        const Row = ({ label, value, formula, highlight }: {
+          label: string; value: number; formula: string; highlight?: boolean;
+        }) => (
+          <div className="border-b border-blue-200/50 dark:border-blue-900/40 last:border-0 py-2">
+            <div className="flex items-baseline justify-between gap-4">
+              <span className={highlight ? "text-sm font-medium text-blue-900 dark:text-blue-200" : "text-sm text-muted-foreground"}>
+                {label}
+              </span>
+              <span className={highlight
+                ? "font-mono text-right font-bold text-blue-800 dark:text-blue-200 tabular-nums"
+                : "font-mono text-right tabular-nums"}>
+                {fmt(value)}원
+              </span>
+            </div>
+            <p className="mt-0.5 text-[11px] text-muted-foreground font-mono leading-relaxed">{formula}</p>
+          </div>
+        );
+        return (
+          <div className="rounded-lg border border-blue-500/50 bg-blue-50/40 dark:bg-blue-950/20 p-4 space-y-1">
+            <p className="text-sm font-semibold text-blue-900 dark:text-blue-200 mb-2">
+              개별주택가격 미공시 취득 환산 (소득세법 시행령 §164 ⑤)
+            </p>
+
+            {/* ─── 1. 기준시가 합계 (Sum_A, Sum_F, Sum_T) ─── */}
+            <Row
+              label="취득시 기준시가 합계 Sum_A"
+              value={phd.sumAtAcquisition}
+              formula={`= 토지(${fmt(i.landPricePerSqmAtAcquisition)}원/㎡ × ${fmt(i.landArea)}㎡) + 건물(${fmt(i.buildingStdPriceAtAcquisition)}원) = ${fmt(phd.landStdAtAcquisition)} + ${fmt(phd.buildingStdAtAcquisition)}`}
+            />
+            <Row
+              label="최초공시일 기준시가 합계 Sum_F"
+              value={phd.sumAtFirstDisclosure}
+              formula={`= 토지(${fmt(i.landPricePerSqmAtFirstDisclosure)}원/㎡ × ${fmt(i.landArea)}㎡) + 건물(${fmt(i.buildingStdPriceAtFirstDisclosure)}원) = ${fmt(i.landPricePerSqmAtFirstDisclosure * i.landArea)} + ${fmt(i.buildingStdPriceAtFirstDisclosure)}`}
+            />
+
+            {/* ─── 2. P_A_est ─── */}
+            <Row
+              label="추정 취득시 개별주택가격 P_A_est"
+              value={phd.estimatedHousingPriceAtAcquisition}
+              highlight
+              formula={`= floor(P_F × Sum_A / Sum_F) = floor(${fmt(i.firstDisclosureHousingPrice)} × ${fmt(phd.sumAtAcquisition)} / ${fmt(phd.sumAtFirstDisclosure)})`}
+            />
+
+            <Row
+              label="양도시 기준시가 합계 Sum_T"
+              value={phd.sumAtTransfer}
+              formula={`= 토지(${fmt(i.landPricePerSqmAtTransfer)}원/㎡ × ${fmt(i.landArea)}㎡) + 건물(${fmt(i.buildingStdPriceAtTransfer)}원) = ${fmt(phd.landStdAtTransfer)} + ${fmt(phd.buildingStdAtTransfer)}`}
+            />
+
+            {/* ─── 3. 총 환산취득가 ─── */}
+            <Row
+              label="총 환산취득가"
+              value={phd.totalEstimatedAcquisitionPrice}
+              formula={`= floor(양도가액 × P_A_est / P_T) = floor(${fmt(i.totalTransferPrice)} × ${fmt(phd.estimatedHousingPriceAtAcquisition)} / ${fmt(i.transferHousingPrice)})`}
+            />
+
+            {/* ─── 4. 양도가액 분리 (양도시 기준시가 비율) ─── */}
+            <div className="pt-2 mt-2 border-t border-border">
+              <p className="text-[11px] font-medium text-muted-foreground mb-1">
+                양도가액 분리 (양도시 기준시가 비율 적용)
+              </p>
+              <Row
+                label="양도시 토지 안분 성분"
+                value={phd.landHousingAtTransfer}
+                formula={`= floor(P_T × 토지기준시가_양도 / Sum_T) = floor(${fmt(i.transferHousingPrice)} × ${fmt(phd.landStdAtTransfer)} / ${fmt(phd.sumAtTransfer)})`}
+              />
+              <Row
+                label="토지 양도가액"
+                value={phd.landTransferPrice}
+                formula={`= floor(양도가액 × 양도시 토지 성분 / P_T) = floor(${fmt(i.totalTransferPrice)} × ${fmt(phd.landHousingAtTransfer)} / ${fmt(i.transferHousingPrice)})`}
+              />
+              <Row
+                label="건물 양도가액"
+                value={phd.buildingTransferPrice}
+                formula={`= 양도가액 - 토지 양도가액 = ${fmt(i.totalTransferPrice)} - ${fmt(phd.landTransferPrice)}`}
+              />
+            </div>
+
+            {/* ─── 5. 취득가액 분리 (취득시 P_A_est 비율) ─── */}
+            <div className="pt-2 mt-2 border-t border-border">
+              <p className="text-[11px] font-medium text-muted-foreground mb-1">
+                환산취득가 분리 (취득시 추정 기준시가 비율 적용)
+              </p>
+              <Row
+                label="취득시 토지 안분 성분"
+                value={phd.landHousingAtAcquisition}
+                formula={`= floor(P_A_est × 토지기준시가_취득 / Sum_A) = floor(${fmt(phd.estimatedHousingPriceAtAcquisition)} × ${fmt(phd.landStdAtAcquisition)} / ${fmt(phd.sumAtAcquisition)})`}
+              />
+              <Row
+                label="취득시 건물 안분 성분"
+                value={phd.buildingHousingAtAcquisition}
+                formula={`= P_A_est - 취득시 토지 성분 = ${fmt(phd.estimatedHousingPriceAtAcquisition)} - ${fmt(phd.landHousingAtAcquisition)}`}
+              />
+              <Row
+                label="토지 환산취득가"
+                value={phd.landAcquisitionPrice}
+                formula={`= floor(총 환산취득가 × 취득시 토지 성분 / P_A_est) = floor(${fmt(phd.totalEstimatedAcquisitionPrice)} × ${fmt(phd.landHousingAtAcquisition)} / ${fmt(phd.estimatedHousingPriceAtAcquisition)})`}
+              />
+              <Row
+                label="건물 환산취득가"
+                value={phd.buildingAcquisitionPrice}
+                formula={`= 총 환산취득가 - 토지 환산취득가 = ${fmt(phd.totalEstimatedAcquisitionPrice)} - ${fmt(phd.landAcquisitionPrice)}`}
+              />
+            </div>
+
+            {/* ─── 6. 개산공제 (시행령 §163 ⑥) ─── */}
+            <div className="pt-2 mt-2 border-t border-border">
+              <p className="text-[11px] font-medium text-muted-foreground mb-1">
+                개산공제 (소득세법 시행령 §163 ⑥)
+              </p>
+              <Row
+                label="토지 개산공제"
+                value={phd.landLumpDeduction}
+                formula={`= floor(취득시 토지 안분 성분 × 3%) = floor(${fmt(phd.landHousingAtAcquisition)} × 0.03)`}
+              />
+              <Row
+                label="건물 개산공제"
+                value={phd.buildingLumpDeduction}
+                formula={`= floor(취득시 건물 안분 성분 × 3%) = floor(${fmt(phd.buildingHousingAtAcquisition)} × 0.03)`}
+              />
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* 토지/건물 분리 양도차익 상세 (§164⑤ 포함) */}
+      {result.splitDetail && (
+        <div className="rounded-lg border border-border p-4 space-y-2">
+          <p className="text-sm font-semibold">토지/건물 분리 양도차익 ({result.splitDetail.note})</p>
+          <div className="text-xs grid grid-cols-3 gap-x-2 gap-y-1">
+            <span />
+            <span className="font-medium text-center">토지</span>
+            <span className="font-medium text-center">건물</span>
+            <span className="text-muted-foreground">양도가액</span>
+            <span className="font-mono text-right">{result.splitDetail.land.transferPrice.toLocaleString()}</span>
+            <span className="font-mono text-right">{result.splitDetail.building.transferPrice.toLocaleString()}</span>
+            <span className="text-muted-foreground">환산취득가</span>
+            <span className="font-mono text-right">{result.splitDetail.land.acquisitionPrice.toLocaleString()}</span>
+            <span className="font-mono text-right">{result.splitDetail.building.acquisitionPrice.toLocaleString()}</span>
+            <span className="text-muted-foreground">개산공제</span>
+            <span className="font-mono text-right">{result.splitDetail.land.appraisalDeduction.toLocaleString()}</span>
+            <span className="font-mono text-right">{result.splitDetail.building.appraisalDeduction.toLocaleString()}</span>
+            <span className="text-muted-foreground">양도차익</span>
+            <span className="font-mono text-right font-semibold">{result.splitDetail.land.gain.toLocaleString()}</span>
+            <span className="font-mono text-right font-semibold">{result.splitDetail.building.gain.toLocaleString()}</span>
+            <span className="text-muted-foreground">보유연수</span>
+            <span className="font-mono text-right">{result.splitDetail.land.holdingYears}년</span>
+            <span className="font-mono text-right">{result.splitDetail.building.holdingYears}년</span>
+            <span className="text-muted-foreground">장특공제율</span>
+            <span className="font-mono text-right">{(result.splitDetail.land.longTermRate * 100).toFixed(0)}%</span>
+            <span className="font-mono text-right">{(result.splitDetail.building.longTermRate * 100).toFixed(0)}%</span>
+            <span className="text-muted-foreground">장특공제액</span>
+            <span className="font-mono text-right">{result.splitDetail.land.longTermDeduction.toLocaleString()}</span>
+            <span className="font-mono text-right">{result.splitDetail.building.longTermDeduction.toLocaleString()}</span>
+          </div>
+        </div>
+      )}
+
       {/* 계산 과정 토글 */}
       <button
         type="button"

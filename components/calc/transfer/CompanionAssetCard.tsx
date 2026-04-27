@@ -359,8 +359,8 @@ export function CompanionAssetCard({
             transferDate={transferDate}
             jibun={asset.addressJibun || undefined}
             assetKind={asset.assetKind}
-            acquisitionArea={asset.assetKind === "land" ? asset.acquisitionArea : undefined}
-            transferArea={asset.assetKind === "land" ? asset.transferArea : undefined}
+            acquisitionArea={asset.acquisitionArea || undefined}
+            transferArea={asset.transferArea || undefined}
             standardPricePerSqmAtAcq={asset.standardPricePerSqmAtAcq}
             onStandardPricePerSqmAtAcqChange={(v) => onChange({ standardPricePerSqmAtAcq: v })}
             standardPricePerSqmAtTransfer={asset.standardPricePerSqmAtTransfer}
@@ -411,6 +411,8 @@ export function CompanionAssetCard({
             onBuildingStandardPriceAtTransferChange={(v) =>
               onChange({ buildingStandardPriceAtTransfer: v })
             }
+            asset={asset}
+            onAssetChange={onChange}
           />
         )}
 

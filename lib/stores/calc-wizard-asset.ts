@@ -281,6 +281,40 @@ export interface AssetForm {
   /** 건물 양도시 기준시가 — 환산취득가 분리 계산 시 사용 */
   buildingStandardPriceAtTransfer: string;
 
+  // ── 개별주택가격 미공시 취득 환산 (§164⑤) ──
+  /** true 시 3-시점 미공시 취득 환산 모드 활성화 */
+  usePreHousingDisclosure: boolean;
+  /** 최초 고시일 (YYYY-MM-DD, 사용자 직접 입력) */
+  phdFirstDisclosureDate: string;
+  /** 최초 고시 개별주택가격 P_F (원) */
+  phdFirstDisclosureHousingPrice: string;
+  /** 취득당시 선택 연도 (문자열 "2013" 등, 자동추천 또는 수동 변경) */
+  phdLandPriceYearAtAcq: string;
+  /** true = 수동 변경됨, false = 자동추천 */
+  phdLandPriceYearAtAcqIsManual: boolean;
+  /** 취득당시 토지 단위 공시지가 (원/㎡) */
+  phdLandPricePerSqmAtAcq: string;
+  /** 취득당시 건물 기준시가 (원) */
+  phdBuildingStdPriceAtAcq: string;
+  /** 최초공시일 선택 연도 */
+  phdLandPriceYearAtFirst: string;
+  /** true = 수동 변경됨 */
+  phdLandPriceYearAtFirstIsManual: boolean;
+  /** 최초공시일 토지 단위 공시지가 (원/㎡) */
+  phdLandPricePerSqmAtFirst: string;
+  /** 최초공시일 건물 기준시가 (원) */
+  phdBuildingStdPriceAtFirst: string;
+  /** 양도시 개별주택가격 P_T (원) */
+  phdTransferHousingPrice: string;
+  /** 양도시 선택 연도 */
+  phdLandPriceYearAtTransfer: string;
+  /** true = 수동 변경됨 */
+  phdLandPriceYearAtTransferIsManual: boolean;
+  /** 양도시 토지 단위 공시지가 (원/㎡) */
+  phdLandPricePerSqmAtTransfer: string;
+  /** 양도시 건물 기준시가 (원) */
+  phdBuildingStdPriceAtTransfer: string;
+
   /** 매매 estimated 시 취득시점 기준시가 (원, 환산 분자) */
   standardPriceAtAcq: string;
   /** 취득시 기준시가 레이블 (API 조회 결과 표시용) */
@@ -427,6 +461,22 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     hasSeperateLandAcquisitionDate: false,
     landAcquisitionDate: "",
     landSplitMode: "apportioned",
+    usePreHousingDisclosure: false,
+    phdFirstDisclosureDate: "",
+    phdFirstDisclosureHousingPrice: "",
+    phdLandPriceYearAtAcq: "",
+    phdLandPriceYearAtAcqIsManual: false,
+    phdLandPricePerSqmAtAcq: "",
+    phdBuildingStdPriceAtAcq: "",
+    phdLandPriceYearAtFirst: "",
+    phdLandPriceYearAtFirstIsManual: false,
+    phdLandPricePerSqmAtFirst: "",
+    phdBuildingStdPriceAtFirst: "",
+    phdTransferHousingPrice: "",
+    phdLandPriceYearAtTransfer: "",
+    phdLandPriceYearAtTransferIsManual: false,
+    phdLandPricePerSqmAtTransfer: "",
+    phdBuildingStdPriceAtTransfer: "",
     landTransferPrice: "",
     buildingTransferPrice: "",
     landAcquisitionPrice: "",
@@ -539,5 +589,22 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (!a.buildingDirectExpenses) a.buildingDirectExpenses = "";
   if (!a.landStandardPriceAtTransfer) a.landStandardPriceAtTransfer = "";
   if (!a.buildingStandardPriceAtTransfer) a.buildingStandardPriceAtTransfer = "";
+  // §164⑤ 미공시 취득 환산 필드
+  if (a.usePreHousingDisclosure === undefined) a.usePreHousingDisclosure = false;
+  if (!a.phdFirstDisclosureDate) a.phdFirstDisclosureDate = "";
+  if (!a.phdFirstDisclosureHousingPrice) a.phdFirstDisclosureHousingPrice = "";
+  if (!a.phdLandPriceYearAtAcq) a.phdLandPriceYearAtAcq = "";
+  if (a.phdLandPriceYearAtAcqIsManual === undefined) a.phdLandPriceYearAtAcqIsManual = false;
+  if (!a.phdLandPricePerSqmAtAcq) a.phdLandPricePerSqmAtAcq = "";
+  if (!a.phdBuildingStdPriceAtAcq) a.phdBuildingStdPriceAtAcq = "";
+  if (!a.phdLandPriceYearAtFirst) a.phdLandPriceYearAtFirst = "";
+  if (a.phdLandPriceYearAtFirstIsManual === undefined) a.phdLandPriceYearAtFirstIsManual = false;
+  if (!a.phdLandPricePerSqmAtFirst) a.phdLandPricePerSqmAtFirst = "";
+  if (!a.phdBuildingStdPriceAtFirst) a.phdBuildingStdPriceAtFirst = "";
+  if (!a.phdTransferHousingPrice) a.phdTransferHousingPrice = "";
+  if (!a.phdLandPriceYearAtTransfer) a.phdLandPriceYearAtTransfer = "";
+  if (a.phdLandPriceYearAtTransferIsManual === undefined) a.phdLandPriceYearAtTransferIsManual = false;
+  if (!a.phdLandPricePerSqmAtTransfer) a.phdLandPricePerSqmAtTransfer = "";
+  if (!a.phdBuildingStdPriceAtTransfer) a.phdBuildingStdPriceAtTransfer = "";
   return a as unknown as AssetForm;
 }

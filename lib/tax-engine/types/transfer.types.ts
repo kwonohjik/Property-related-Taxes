@@ -187,6 +187,12 @@ export interface TransferTaxInput {
    */
   parcels?: ParcelInput[];
   /**
+   * 개별주택가격 미공시 취득 시 3-시점 환산취득가 계산 입력 (선택).
+   * 제공 시 calcSplitGain이 §164⑤ 2-단계 추정 알고리즘으로 취득시 기준시가를 산출.
+   * useEstimatedAcquisition===true + landAcquisitionDate 제공 시에만 의미 있음.
+   */
+  preHousingDisclosure?: PreHousingDisclosureInput;
+  /**
    * 인별 5년 감면 이력 (선택, 조특법 §133).
    * 제공 시 5년 누적 한도를 초과하는 분은 당해 감면에서 자동 차감.
    * 미제공 또는 빈 배열 시 연간 한도만 적용(기존 동작 유지).
@@ -402,6 +408,132 @@ export interface TransferTaxResult {
    * UI에서 토지·건물 각각의 양도차익·장특공제 내역 표시용.
    */
   splitDetail?: SplitGainResult;
+  /**
+   * 개별주택가격 미공시 취득 환산 상세 결과 (preHousingDisclosure 제공 시만 포함).
+   * UI에서 Sum_A/Sum_F/P_A_est·안분비율·각 항목 산식 표시용.
+   */
+  preHousingDisclosureDetail?: PreHousingDisclosureResult;
+}
+
+// ============================================================
+// 개별주택가격 미공시 취득 환산 — 소득세법 시행령 §164 ⑤
+// ============================================================
+
+/**
+ * 개별주택가격 미공시 취득 시 환산취득가액 3-시점 계산 입력
+ *
+ * 주택 취득 당시 개별주택가격이 공시되지 않아 최초 공시 시점을 기준으로
+ * 3-시점(취득·최초공시·양도) 기준시가를 사용해 취득시 기준시가를 역산한 뒤
+ * 환산취득가액을 계산한다. 소득세법 시행령 §164 ⑤.
+ *
+ * 핵심 공식:
+ *   Sum_A = landPricePerSqmAtAcquisition × landArea + buildingStdPriceAtAcquisition
+ *   Sum_F = landPricePerSqmAtFirstDisclosure × landArea + buildingStdPriceAtFirstDisclosure
+ *   P_A_est = Math.floor(firstDisclosureHousingPrice × Sum_A / Sum_F)
+ *   totalEstAcq = Math.floor(totalTransfer × P_A_est / transferHousingPrice)
+ */
+export interface PreHousingDisclosureInput {
+  /** 최초 고시일 (개별주택가격이 처음 고시된 날, 사용자 직접 입력) */
+  firstDisclosureDate: Date;
+  /** 최초 고시 개별주택가격 P_F (원) */
+  firstDisclosureHousingPrice: number;
+  /** 토지 면적 (㎡) */
+  landArea: number;
+
+  /** 취득당시 토지 단위 공시지가 (원/㎡) — 자동추천 연도에서 조회 */
+  landPricePerSqmAtAcquisition: number;
+  /** 취득당시 건물 기준시가 (원) — 국세청 건물기준시가 */
+  buildingStdPriceAtAcquisition: number;
+
+  /** 최초공시일 토지 단위 공시지가 (원/㎡) — 자동추천 연도에서 조회 */
+  landPricePerSqmAtFirstDisclosure: number;
+  /** 최초공시일 건물 기준시가 (원) — 국세청 건물기준시가 */
+  buildingStdPriceAtFirstDisclosure: number;
+
+  /** 양도시 개별주택가격 P_T (원) — 양도시 현재 공시가격 */
+  transferHousingPrice: number;
+  /** 양도시 토지 단위 공시지가 (원/㎡) */
+  landPricePerSqmAtTransfer: number;
+  /** 양도시 건물 기준시가 (원) */
+  buildingStdPriceAtTransfer: number;
+}
+
+/**
+ * 개별주택가격 미공시 취득 시 환산취득가액 계산 중간/결과값
+ * UI에서 단계별 산식 표시용
+ */
+export interface PreHousingDisclosureResult {
+  /** 취득시 기준시가 합계 Sum_A = landPricePerSqm × area + buildingStd */
+  sumAtAcquisition: number;
+  /** 최초공시일 기준시가 합계 Sum_F = landPricePerSqm × area + buildingStd */
+  sumAtFirstDisclosure: number;
+  /** 양도시 기준시가 합계 Sum_T = landPricePerSqm × area + buildingStd */
+  sumAtTransfer: number;
+
+  /** 추정 취득시 개별주택가격 P_A_est = floor(P_F × Sum_A / Sum_F) */
+  estimatedHousingPriceAtAcquisition: number;
+
+  /** 취득시 토지 기준시가 (= landPricePerSqm × area) */
+  landStdAtAcquisition: number;
+  /** 취득시 건물 기준시가 */
+  buildingStdAtAcquisition: number;
+  /** 양도시 토지 기준시가 (= landPricePerSqm × area) */
+  landStdAtTransfer: number;
+  /** 양도시 건물 기준시가 */
+  buildingStdAtTransfer: number;
+
+  /** 주택 공시가액 안분 — 취득시 토지 성분 (= floor(P_A_est × landStdAtAcq / Sum_A)) */
+  landHousingAtAcquisition: number;
+  /** 주택 공시가액 안분 — 취득시 건물 성분 */
+  buildingHousingAtAcquisition: number;
+  /** 주택 공시가액 안분 — 양도시 토지 성분 */
+  landHousingAtTransfer: number;
+  /** 주택 공시가액 안분 — 양도시 건물 성분 */
+  buildingHousingAtTransfer: number;
+
+  /** 안분 비율 (양도시 기준시가 비율) — 양도가액 분리 */
+  transferApportionRatio: { land: number; building: number };
+  /** 안분 비율 (취득시 기준시가 비율) — 취득가액·개산공제 분리 */
+  acquisitionApportionRatio: { land: number; building: number };
+
+  /** 총 환산취득가 = floor(totalTransfer × P_A_est / P_T) */
+  totalEstimatedAcquisitionPrice: number;
+  /** 토지 양도가액 */
+  landTransferPrice: number;
+  /** 건물 양도가액 */
+  buildingTransferPrice: number;
+  /** 토지 환산취득가 */
+  landAcquisitionPrice: number;
+  /** 건물 환산취득가 */
+  buildingAcquisitionPrice: number;
+  /** 토지 개산공제 = floor(landHousingAtAcquisition × 3%) */
+  landLumpDeduction: number;
+  /** 건물 개산공제 = floor(buildingHousingAtAcquisition × 3%) */
+  buildingLumpDeduction: number;
+
+  /** 입력값 echo — UI에서 산식 분해 표시용 */
+  inputs: {
+    /** 총 양도가액 (계약서 합계) */
+    totalTransferPrice: number;
+    /** 토지 면적 (㎡) */
+    landArea: number;
+    /** 취득시 토지 단위공시지가 (원/㎡) */
+    landPricePerSqmAtAcquisition: number;
+    /** 취득시 건물 기준시가 (원) */
+    buildingStdPriceAtAcquisition: number;
+    /** 최초공시일 토지 단위공시지가 (원/㎡) */
+    landPricePerSqmAtFirstDisclosure: number;
+    /** 최초공시일 건물 기준시가 (원) */
+    buildingStdPriceAtFirstDisclosure: number;
+    /** 최초 고시 개별주택가격 P_F */
+    firstDisclosureHousingPrice: number;
+    /** 양도시 토지 단위공시지가 (원/㎡) */
+    landPricePerSqmAtTransfer: number;
+    /** 양도시 건물 기준시가 (원) */
+    buildingStdPriceAtTransfer: number;
+    /** 양도시 개별주택가격 P_T */
+    transferHousingPrice: number;
+  };
 }
 
 /** 토지/건물 분리 계산 결과 */
@@ -421,4 +553,6 @@ export interface SplitGainResult {
   building: SplitPartResult;
   apportionRatio: { land: number; building: number };
   note: string;
+  /** §164⑤ 경로 시만 포함 — calculateTransferTax가 result.preHousingDisclosureDetail로 승격 */
+  preHousingDisclosureDetail?: PreHousingDisclosureResult;
 }

@@ -731,5 +731,6 @@ export function calculateTransferTax(
     penaltyDetail,
     pre1990LandValuationDetail: pre1990LandResult,
     splitDetail: splitDetail ?? undefined,
+    preHousingDisclosureDetail: splitDetail?.preHousingDisclosureDetail,
   };
 }

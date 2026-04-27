@@ -110,11 +110,38 @@ function validateAssetAcquisition(asset: AssetForm, label: string): string | nul
   }
 
   // 4) 환산취득가 — 기준시가
-  if (isEstimated && !hasPre1990) {
+  // 주의: usePreHousingDisclosure === true 경로에서는 §164⑤ 3-시점 입력으로 자동 도출되므로
+  //   standardPriceAtAcq / standardPriceAtTransfer 직접 입력 불요.
+  const usesPhd = asset.usePreHousingDisclosure === true && asset.hasSeperateLandAcquisitionDate === true;
+  if (isEstimated && !hasPre1990 && !usesPhd) {
     if (!asset.standardPriceAtAcq || parseAmount(asset.standardPriceAtAcq) <= 0)
       return `${label}: 취득 당시 기준시가를 입력하세요.`;
     if (!asset.standardPriceAtTransfer || parseAmount(asset.standardPriceAtTransfer) <= 0)
       return `${label}: 양도 당시 기준시가를 입력하세요.`;
+  }
+
+  // 4-2) 개별주택가격 미공시 취득 환산 (§164⑤) — 11개 필수 필드
+  if (usesPhd) {
+    if (!asset.phdFirstDisclosureDate)
+      return `${label}: 최초 고시일을 입력하세요.`;
+    if (!asset.phdFirstDisclosureHousingPrice || parseAmount(asset.phdFirstDisclosureHousingPrice) <= 0)
+      return `${label}: 최초 고시 개별주택가격을 입력하세요.`;
+    if (!asset.acquisitionArea || parseFloat(asset.acquisitionArea) <= 0)
+      return `${label}: 토지 면적(㎡)을 입력하세요. (자산 기본 정보)`;
+    if (!asset.phdLandPricePerSqmAtAcq || parseAmount(asset.phdLandPricePerSqmAtAcq) <= 0)
+      return `${label}: 취득시 토지 단위 공시지가를 입력하세요.`;
+    if (!asset.phdBuildingStdPriceAtAcq || parseAmount(asset.phdBuildingStdPriceAtAcq) <= 0)
+      return `${label}: 취득시 건물 기준시가를 입력하세요.`;
+    if (!asset.phdLandPricePerSqmAtFirst || parseAmount(asset.phdLandPricePerSqmAtFirst) <= 0)
+      return `${label}: 최초공시일 토지 단위 공시지가를 입력하세요.`;
+    if (!asset.phdBuildingStdPriceAtFirst || parseAmount(asset.phdBuildingStdPriceAtFirst) <= 0)
+      return `${label}: 최초공시일 건물 기준시가를 입력하세요.`;
+    if (!asset.phdTransferHousingPrice || parseAmount(asset.phdTransferHousingPrice) <= 0)
+      return `${label}: 양도시 개별주택가격을 입력하세요.`;
+    if (!asset.phdLandPricePerSqmAtTransfer || parseAmount(asset.phdLandPricePerSqmAtTransfer) <= 0)
+      return `${label}: 양도시 토지 단위 공시지가를 입력하세요.`;
+    if (!asset.phdBuildingStdPriceAtTransfer || parseAmount(asset.phdBuildingStdPriceAtTransfer) <= 0)
+      return `${label}: 양도시 건물 기준시가를 입력하세요.`;
   }
 
   // 5) 취득가액 — 실거래가·감정가액 모두 fixedAcquisitionPrice 입력 루틴

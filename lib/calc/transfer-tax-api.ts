@@ -222,6 +222,8 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
   const isAppraisal = primary.isAppraisalAcquisition === true;
   const isEstimated = !isAppraisal && primary.useEstimatedAcquisition;
   const hasPre1990 = (primary.pre1990Enabled ?? false) && primary.assetKind === "land";
+  // §164⑤ PHD 모드: standardPriceAt* 는 3-시점 입력으로 자동 도출 → API body에서 제외
+  const usesPhd = primary.usePreHousingDisclosure === true && primary.hasSeperateLandAcquisitionDate === true;
   const parcelModeActive =
     primary.parcelMode && primary.assetKind === "land" && (primary.parcels?.length ?? 0) > 0;
   const firstParcelAcqDate = parcelModeActive
@@ -242,15 +244,15 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
         ? 0
         : parseAmount(primary.directExpenses),
     useEstimatedAcquisition: hasPre1990 || parcelModeActive ? false : isEstimated,
-    standardPriceAtAcquisition: hasPre1990
+    standardPriceAtAcquisition: hasPre1990 || usesPhd
       ? undefined
       : isEstimated
-        ? parseAmount(primary.standardPriceAtAcq)
+        ? parseAmount(primary.standardPriceAtAcq) || undefined
         : undefined,
-    standardPriceAtTransfer: hasPre1990
+    standardPriceAtTransfer: hasPre1990 || usesPhd
       ? undefined
       : isEstimated
-        ? parseAmount(primary.standardPriceAtTransfer)
+        ? parseAmount(primary.standardPriceAtTransfer) || undefined
         : undefined,
     acquisitionMethod: hasPre1990
       ? ("actual" as const)
@@ -403,6 +405,26 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
                 : undefined,
             };
           }),
+        }
+      : {}),
+    // ── 개별주택가격 미공시 취득 환산 §164⑤ ──
+    ...(primary.usePreHousingDisclosure &&
+    primary.hasSeperateLandAcquisitionDate &&
+    primary.phdFirstDisclosureDate &&
+    parseAmount(primary.phdFirstDisclosureHousingPrice) > 0
+      ? {
+          preHousingDisclosure: {
+            firstDisclosureDate: primary.phdFirstDisclosureDate,
+            firstDisclosureHousingPrice: parseAmount(primary.phdFirstDisclosureHousingPrice),
+            landArea: parseFloat(primary.acquisitionArea) || 0,
+            landPricePerSqmAtAcquisition: parseAmount(primary.phdLandPricePerSqmAtAcq) || 0,
+            buildingStdPriceAtAcquisition: parseAmount(primary.phdBuildingStdPriceAtAcq) || 0,
+            landPricePerSqmAtFirstDisclosure: parseAmount(primary.phdLandPricePerSqmAtFirst) || 0,
+            buildingStdPriceAtFirstDisclosure: parseAmount(primary.phdBuildingStdPriceAtFirst) || 0,
+            transferHousingPrice: parseAmount(primary.phdTransferHousingPrice) || 0,
+            landPricePerSqmAtTransfer: parseAmount(primary.phdLandPricePerSqmAtTransfer) || 0,
+            buildingStdPriceAtTransfer: parseAmount(primary.phdBuildingStdPriceAtTransfer) || 0,
+          },
         }
       : {}),
     // ── 일괄양도 (assets 2건 이상) ──

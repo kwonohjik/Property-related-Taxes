@@ -388,10 +388,21 @@ export function calcLongTermHoldingDeduction(
 
   // 토지/건물 분리 케이스 — 각각 보유연수 적용 후 합산
   if (splitDetail) {
+    // 1세대1주택 12억 초과 안분: 각 파트에도 동일 비율 적용
+    const THRESHOLD = 1_200_000_000;
+    const isProratedSplit = isOneHouseSingle && input.transferPrice > THRESHOLD;
+    const proratePartGain = (g: number): number => {
+      if (!isProratedSplit || g <= 0) return g;
+      return Math.floor(g * (input.transferPrice - THRESHOLD) / input.transferPrice);
+    };
+
+    const landTaxableGain = proratePartGain(splitDetail.land.gain);
+    const buildingTaxableGain = proratePartGain(splitDetail.building.gain);
+
     const landRate = rateForYears(splitDetail.land.holdingYears);
     const buildingRate = rateForYears(splitDetail.building.holdingYears);
-    const landDed = applyRate(Math.max(splitDetail.land.gain, 0), landRate);
-    const buildingDed = applyRate(Math.max(splitDetail.building.gain, 0), buildingRate);
+    const landDed = applyRate(Math.max(landTaxableGain, 0), landRate);
+    const buildingDed = applyRate(Math.max(buildingTaxableGain, 0), buildingRate);
 
     // SplitPartResult 에 공제율·공제액 채우기 (참조 수정)
     splitDetail.land.longTermRate = landRate;

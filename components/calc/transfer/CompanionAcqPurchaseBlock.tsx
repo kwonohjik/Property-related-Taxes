@@ -21,6 +21,8 @@ import { Pre1990LandValuationInput, type Pre1990FormSlice } from "@/components/c
 import { SelfBuiltSection } from "./SelfBuiltSection";
 import { LandBuildingSplitSection } from "./LandBuildingSplitSection";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import { PreHousingDisclosureSection } from "./PreHousingDisclosureSection";
+import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 const MIN_ACQ_DATE = "1985-01-01";
 
@@ -103,6 +105,13 @@ interface BlockProps {
   onLandStandardPriceAtTransferChange?: (v: string) => void;
   buildingStandardPriceAtTransfer?: string;
   onBuildingStandardPriceAtTransferChange?: (v: string) => void;
+  /**
+   * 개별주택가격 미공시 취득 §164⑤ 3-시점 모드.
+   * 환산취득가 + hasSeperateLandAcquisitionDate === true 일 때만 표시.
+   * asset·onAssetChange와 함께 제공해야 한다.
+   */
+  asset?: AssetForm;
+  onAssetChange?: (patch: Partial<AssetForm>) => void;
 }
 
 // ─── 메인 블록 ────────────────────────────────────────────────────
@@ -244,6 +253,31 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
                 </div>
               </FieldCard>
 
+              {/* 개별주택가격 미공시 취득 토글 — 환산취득가 + 취득일 분리 모드에서만 표시 */}
+              {props.useEstimatedAcquisition && props.asset && props.onAssetChange && (
+                <div className="mt-2 space-y-2">
+                  <label className="flex cursor-pointer items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={!!props.asset.usePreHousingDisclosure}
+                      onChange={(e) =>
+                        props.onAssetChange!({ usePreHousingDisclosure: e.target.checked })
+                      }
+                      className="rounded border-border"
+                    />
+                    <span>취득 당시 개별주택가격 미공시 (§164⑤ 3-시점 계산)</span>
+                  </label>
+
+                  {props.asset.usePreHousingDisclosure && (
+                    <PreHousingDisclosureSection
+                      asset={props.asset}
+                      transferDate={props.transferDate ?? ""}
+                      onChange={props.onAssetChange}
+                    />
+                  )}
+                </div>
+              )}
+
               {props.landSplitMode === "actual" && (
                 <LandBuildingSplitSection
                   useEstimatedAcquisition={props.useEstimatedAcquisition}
@@ -352,6 +386,12 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
             />
           )}
         </>
+      ) : props.asset?.usePreHousingDisclosure ? (
+        // §164⑤ PHD 모드: 위쪽 PreHousingDisclosureSection의 3-시점 입력으로 자동 도출.
+        // 기존 "취득시/양도시 기준시가" 입력은 중복되므로 표시하지 않음.
+        <p className="text-xs text-muted-foreground italic">
+          취득시/양도시 기준시가는 위 §164⑤ 3-시점 입력으로부터 자동 도출됩니다.
+        </p>
       ) : (
         <>
           {/* 취득시 기준시가 */}
