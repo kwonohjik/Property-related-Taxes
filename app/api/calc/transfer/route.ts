@@ -217,6 +217,7 @@ export async function POST(request: NextRequest) {
     buildingStandardPriceAtTransfer: data.buildingStandardPriceAtTransfer,
     standardPricePerSqmAtAcquisition: data.standardPricePerSqmAtAcquisition,
     acquisitionArea: data.acquisitionArea,
+    selfOwns: data.selfOwns,
     // 1990.8.30. 이전 취득 토지 기준시가 환산 (선택)
     pre1990Land: data.pre1990Land
       ? {

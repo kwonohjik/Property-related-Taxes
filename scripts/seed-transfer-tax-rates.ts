@@ -129,13 +129,7 @@ const transferTaxSeeds = [
       },
     },
     deduction_rules: null,
-    // 다주택 중과세 한시 유예 (2026.05.09까지)
-    special_rules: {
-      surcharge_suspended: true,
-      suspended_types: ["multi_house_2", "multi_house_3plus"],
-      suspended_until: "2026-05-09",
-      legal_basis: "소득세법 부칙 (2024.1.1 시행)",
-    },
+    special_rules: null,
     is_active: true,
   },
 
@@ -605,7 +599,14 @@ const transferTaxSeeds = [
 // Zod 검증 함수
 // ============================================================
 
-function validateSeed(seed: (typeof transferTaxSeeds)[number], index: number): void {
+function validateSeed(seed: {
+  tax_type: string;
+  category: string;
+  sub_category: string;
+  rate_table: unknown;
+  deduction_rules: unknown;
+  special_rules: unknown;
+}, index: number): void {
   if (seed.rate_table && seed.category === "progressive_rate") {
     const result = progressiveRateSchema.safeParse(seed.rate_table);
     if (!result.success) {

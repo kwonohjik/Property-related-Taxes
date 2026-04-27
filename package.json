@@ -9,7 +9,8 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "seed:tax-rates": "tsx --env-file=.env.local scripts/seed-transfer-tax-rates.ts",
+    "seed:tax-rates": "tsx --env-file=.env.local scripts/seed-transfer-tax-rates.ts && tsx --env-file=.env.local scripts/seed-transfer-tax-rates-historical.ts",
+    "seed:tax-rates:historical": "tsx --env-file=.env.local scripts/seed-transfer-tax-rates-historical.ts",
     "verify:legal": "tsx --env-file=.env.local scripts/verify-legal-codes.ts",
     "verify:legal:refresh": "tsx --env-file=.env.local scripts/verify-legal-codes.ts --clear"
   },
