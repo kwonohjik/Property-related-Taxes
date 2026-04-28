@@ -326,6 +326,10 @@ export interface AssetForm {
   standardPriceAtAcq: string;
   /** 취득시 기준시가 레이블 (API 조회 결과 표시용) */
   standardPriceAtAcqLabel: string;
+  /** 의제취득일(1985.1.1.) 시점 기준시가 직접 입력 override 사용 여부 (PreDeemedInputs 전용) */
+  useStandardPriceAtAcqOverride: boolean;
+  /** 양도시 기준시가 직접 입력 override 사용 여부 (PreDeemedInputs 전용) */
+  useStandardPriceAtTransferOverride: boolean;
 
   /** 취득 시점 ㎡당 공시지가 (원/㎡, 토지·비주거건물 전용) */
   standardPricePerSqmAtAcq: string;
@@ -559,6 +563,8 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     buildingStandardPriceAtTransfer: "",
     standardPriceAtAcq: "",
     standardPriceAtAcqLabel: "",
+    useStandardPriceAtAcqOverride: false,
+    useStandardPriceAtTransferOverride: false,
     standardPricePerSqmAtAcq: "",
     standardPricePerSqmAtTransfer: "",
     inhHouseValEnabled: false,
@@ -730,5 +736,7 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (!a.inhHouseValBuildingStdPriceAtInheritance) a.inhHouseValBuildingStdPriceAtInheritance = "";
   if (a.inhHouseValUseHousePriceOverride === undefined) a.inhHouseValUseHousePriceOverride = false;
   if (!a.inhHouseValHousePriceAtInheritanceOverride) a.inhHouseValHousePriceAtInheritanceOverride = "";
+  if (a.useStandardPriceAtAcqOverride === undefined) a.useStandardPriceAtAcqOverride = false;
+  if (a.useStandardPriceAtTransferOverride === undefined) a.useStandardPriceAtTransferOverride = false;
   return a as unknown as AssetForm;
 }

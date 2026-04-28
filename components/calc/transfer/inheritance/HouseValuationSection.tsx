@@ -274,9 +274,16 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
         />
       </FieldCard>
 
-      {/* ② 양도시 */}
-      <div className="space-y-2">
-        <p className="text-xs font-medium text-foreground">양도시 (양도일 기준)</p>
+      {/* ② 양도시 — emerald 톤 (최신 시점) */}
+      <div className="space-y-2 rounded-md border-2 border-emerald-300 dark:border-emerald-700 bg-emerald-50/70 dark:bg-emerald-950/30 p-3">
+        <div className="flex items-center gap-2">
+          <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-emerald-600 text-[11px] font-bold text-white dark:bg-emerald-500">
+            1
+          </span>
+          <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-300">
+            양도시 (양도일 기준)
+          </p>
+        </div>
         <LandPriceLookup
           label="양도시 토지 개별공시지가"
           referenceDate={transferDate ?? ""}
@@ -285,31 +292,40 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
           landArea={asset.inhHouseValLandArea}
           jibun={asset.addressJibun || undefined}
         />
-        <FieldCard label="양도시 공시된 개별주택가격 (P_T)" unit="원" hint="홈택스/부동산공시가격알리미 — 양도일 직전 공시된 개별주택가격">
-          <CurrencyInput
-            label=""
-            hideUnit
-            value={asset.inhHouseValHousePriceAtTransfer}
-            onChange={(v) => onChange({ inhHouseValHousePriceAtTransfer: v })}
-            placeholder="홈택스 개별주택가격 조회"
-          />
+        <FieldCard label="양도 당시 공시된 개별주택 가격" unit="원" hint="홈택스/부동산공시가격알리미 — 양도일 직전 공시된 개별주택가격" className="sm:grid-cols-[220px_1fr]">
+          <div className="w-1/2">
+            <CurrencyInput
+              label=""
+              hideUnit
+              value={asset.inhHouseValHousePriceAtTransfer}
+              onChange={(v) => onChange({ inhHouseValHousePriceAtTransfer: v })}
+              placeholder="홈택스 개별주택가격 조회"
+            />
+          </div>
         </FieldCard>
-        <FieldCard label="양도당시 건물기준시가" unit="원" hint="국세청 기준시가 — 양도시 합계 기준시가의 건물 성분. 미입력 시 P_T로 대체.">
-          <CurrencyInput
-            label=""
-            hideUnit
-            value={asset.inhHouseValBuildingStdPriceAtTransfer}
-            onChange={(v) => onChange({ inhHouseValBuildingStdPriceAtTransfer: v })}
-            placeholder="국세청 기준시가 조회"
-          />
+        <FieldCard label="양도당시 건물기준시가" unit="원" hint="국세청 기준시가 — 양도시 합계 기준시가의 건물 성분. 미입력 시 P_T로 대체." className="sm:grid-cols-[160px_1fr]">
+          <div className="w-1/2">
+            <CurrencyInput
+              label=""
+              hideUnit
+              value={asset.inhHouseValBuildingStdPriceAtTransfer}
+              onChange={(v) => onChange({ inhHouseValBuildingStdPriceAtTransfer: v })}
+              placeholder="국세청 기준시가 조회"
+            />
+          </div>
         </FieldCard>
       </div>
 
-      {/* ③ 최초고시 시점 (기본 2005-04-30) */}
-      <div className="space-y-2">
-        <p className="text-xs font-medium text-foreground">
-          최초고시 시점 (기본 {HOUSE_FIRST_DISCLOSURE_DATE})
-        </p>
+      {/* ③ 최초고시 시점 (기본 2005-04-30) — violet 톤 (중간 시점) */}
+      <div className="space-y-2 rounded-md border-2 border-violet-300 dark:border-violet-700 bg-violet-50/70 dark:bg-violet-950/30 p-3">
+        <div className="flex items-center gap-2">
+          <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-violet-600 text-[11px] font-bold text-white dark:bg-violet-500">
+            2
+          </span>
+          <p className="text-xs font-semibold text-violet-800 dark:text-violet-300">
+            최초고시 시점 (기본 {HOUSE_FIRST_DISCLOSURE_DATE})
+          </p>
+        </div>
         <LandPriceLookup
           label="최초고시 토지 개별공시지가"
           referenceDate={asset.inhHouseValFirstDisclosureDate || HOUSE_FIRST_DISCLOSURE_DATE}
@@ -318,23 +334,27 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
           landArea={asset.inhHouseValLandArea}
           jibun={asset.addressJibun || undefined}
         />
-        <FieldCard label="최초 공시된 개별주택가격 (P_F)" unit="원" hint="홈택스/부동산공시가격알리미 — 최초 공시 시점 개별주택가격. §164⑤ 추정 공식의 분자 승수.">
-          <CurrencyInput
-            label=""
-            hideUnit
-            value={asset.inhHouseValHousePriceAtFirst}
-            onChange={(v) => onChange({ inhHouseValHousePriceAtFirst: v })}
-            placeholder="홈택스 개별주택가격 조회"
-          />
+        <FieldCard label="최초 공시된 개별주택가격" unit="원" hint="홈택스/부동산공시가격알리미 — 최초 공시 시점 개별주택가격. §164⑤ 추정 공식의 분자 승수." className="sm:grid-cols-[185px_1fr]">
+          <div className="w-1/2">
+            <CurrencyInput
+              label=""
+              hideUnit
+              value={asset.inhHouseValHousePriceAtFirst}
+              onChange={(v) => onChange({ inhHouseValHousePriceAtFirst: v })}
+              placeholder="홈택스 개별주택가격 조회"
+            />
+          </div>
         </FieldCard>
-        <FieldCard label="최초 공시 당시 건물기준시가" unit="원" hint="국세청 기준시가 — §164⑤ Sum_F 분모 (최초고시 토지기준시가 + 이 값). 개별주택가격과 별개.">
-          <CurrencyInput
-            label=""
-            hideUnit
-            value={asset.inhHouseValBuildingStdPriceAtFirst}
-            onChange={(v) => onChange({ inhHouseValBuildingStdPriceAtFirst: v })}
-            placeholder="국세청 기준시가 조회"
-          />
+        <FieldCard label="최초 공시 당시 건물기준시가" unit="원" hint="국세청 기준시가 — §164⑤ Sum_F 분모 (최초고시 토지기준시가 + 이 값). 개별주택가격과 별개." className="sm:grid-cols-[200px_1fr]">
+          <div className="w-1/2">
+            <CurrencyInput
+              label=""
+              hideUnit
+              value={asset.inhHouseValBuildingStdPriceAtFirst}
+              onChange={(v) => onChange({ inhHouseValBuildingStdPriceAtFirst: v })}
+              placeholder="국세청 기준시가 조회"
+            />
+          </div>
         </FieldCard>
         {(() => {
           const area = parseFloat(asset.inhHouseValLandArea) || 0;
@@ -351,11 +371,16 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
         })()}
       </div>
 
-      {/* ④ 상속개시일 시점 토지단가 */}
-      <div className="space-y-2">
-        <p className="text-xs font-medium text-foreground">
-          상속개시일 시점 ({inheritanceDate || "미입력"})
-        </p>
+      {/* ④ 상속개시일 시점 토지단가 — rose 톤 (가장 오래된 시점) */}
+      <div className="space-y-2 rounded-md border-2 border-rose-300 dark:border-rose-700 bg-rose-50/70 dark:bg-rose-950/30 p-3">
+        <div className="flex items-center gap-2">
+          <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-rose-600 text-[11px] font-bold text-white dark:bg-rose-500">
+            3
+          </span>
+          <p className="text-xs font-semibold text-rose-800 dark:text-rose-300">
+            상속개시일 시점 ({inheritanceDate || "미입력"})
+          </p>
+        </div>
 
         {isBefore1990 ? (
           /* 1990-08-30 이전 → 등급가액 환산 (Pre1990LandValuationInput 재사용, acquisitionDate 대신 inheritanceDate) */
