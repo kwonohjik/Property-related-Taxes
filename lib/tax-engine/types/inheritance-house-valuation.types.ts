@@ -46,16 +46,31 @@ export interface InheritanceHouseValuationInput {
   // ── 양도시 시점 ──
   /** 양도시 개별공시지가 (원/㎡) */
   landPricePerSqmAtTransfer: number;
-  /** 양도시 개별주택가격 (원) */
+  /** 양도시 공시된 개별주택가격 P_T (원) — 홈택스/부동산공시가격알리미 조회 */
   housePriceAtTransfer: number;
+  /**
+   * 양도당시 건물기준시가 (원) — 국세청 기준시가.
+   * 제공 시 totalStdPriceAtTransfer = 양도시 토지기준시가 + 이 값.
+   * 미제공 시 housePriceAtTransfer(P_T)를 대신 사용.
+   */
+  buildingStdPriceAtTransfer?: number;
 
   // ── 최초고시 시점 ──
   /** 최초 고시일 (기본 "2005-04-30", 사용자가 다른 날짜로 보정 가능) */
   firstDisclosureDate?: Date;
   /** 최초고시 시점 개별공시지가 (원/㎡) */
   landPricePerSqmAtFirstDisclosure: number;
-  /** 최초고시 시점 개별주택가격 (원) */
+  /**
+   * 최초 공시된 개별주택가격 P_F (원) — 홈택스/부동산공시가격알리미 조회.
+   * §164⑤ 추정 공식의 분자 승수. Sum_F 분모에는 별도 건물기준시가 사용.
+   */
   housePriceAtFirstDisclosure: number;
+  /**
+   * 최초고시 시점 건물기준시가 (원) — 국세청 기준시가.
+   * §164⑤ Sum_F 분모: 최초고시 토지기준시가 + 이 값.
+   * 미입력 시 Sum_F = 토지기준시가만 사용.
+   */
+  buildingStdPriceAtFirstDisclosure?: number;
 
   // ── 상속개시일 시점 토지 ──
   /**
@@ -73,9 +88,15 @@ export interface InheritanceHouseValuationInput {
 
   // ── 상속개시일 시점 주택 ──
   /**
+   * 상속개시일 시점 건물기준시가 (원).
+   * §164⑤ 정식 공식의 분자 Sum_A = 취득시 토지기준시가 + 취득시 건물기준시가에 사용.
+   * 미입력 시 Sum_A = 취득시 토지기준시가만 사용 (토지 비율 근사).
+   */
+  buildingStdPriceAtInheritance?: number;
+
+  /**
    * 상속개시일 시점 개별주택가격 직접 입력 override (원).
-   * - 미입력 시: floor(housePriceAtFirstDisclosure × landStdAtInheritance / landStdAtFirstDisclosure)
-   *   로 자동 추정 (§164⑤ 토지 비율 적용).
+   * - 미입력 시: §164⑤ 정식 공식으로 자동 추정.
    * - 엑셀처럼 별도 산정근거가 있을 때 직접 입력.
    */
   housePriceAtInheritanceOverride?: number;

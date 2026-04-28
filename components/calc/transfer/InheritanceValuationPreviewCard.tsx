@@ -137,7 +137,7 @@ export function InheritanceValuationPreviewCard({ result, houseValuationResult }
             )}
             <div className="flex justify-between">
               <span>
-                주택 ({houseValuationResult.estimationMethod === "user_override" ? "직접 입력" : "§164⑤ 자동 추정"})
+                주택 ({houseValuationResult.estimationMethod === "user_override" ? "직접 입력" : "§164⑤ 환산"})
               </span>
               <span>{fmt(houseValuationResult.housePriceAtInheritanceUsed)}원</span>
             </div>

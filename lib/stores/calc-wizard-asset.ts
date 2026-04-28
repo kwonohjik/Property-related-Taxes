@@ -349,6 +349,12 @@ export interface AssetForm {
   inhHouseValHousePriceAtTransfer: string;
   /** 최초고시 시점 개별주택가격 (원) */
   inhHouseValHousePriceAtFirst: string;
+  /** 양도당시 건물기준시가 (원) — 국세청 기준시가. 양도시 합계 기준시가의 건물 성분 */
+  inhHouseValBuildingStdPriceAtTransfer: string;
+  /** 최초고시 시점 건물기준시가 (원) — §164⑤ Sum_F 분모: 토지기준시가 + 이 값. 국세청 기준시가 */
+  inhHouseValBuildingStdPriceAtFirst: string;
+  /** 상속개시일 시점 건물기준시가 (원) — §164⑤ Sum_A 분자의 건물 성분. 국세청 기준시가 */
+  inhHouseValBuildingStdPriceAtInheritance: string;
   /** 상속개시일 시점 주택가격 직접 입력 override 사용 여부 */
   inhHouseValUseHousePriceOverride: boolean;
   /** 상속개시일 시점 주택가격 직접 입력 override (원) */
@@ -563,6 +569,9 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     inhHouseValLandPricePerSqmAtInheritance: "",
     inhHouseValHousePriceAtTransfer: "",
     inhHouseValHousePriceAtFirst: "",
+    inhHouseValBuildingStdPriceAtTransfer: "",
+    inhHouseValBuildingStdPriceAtFirst: "",
+    inhHouseValBuildingStdPriceAtInheritance: "",
     inhHouseValUseHousePriceOverride: false,
     inhHouseValHousePriceAtInheritanceOverride: "",
     pre1990Enabled: false,
@@ -716,6 +725,9 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (!a.inhHouseValLandPricePerSqmAtInheritance) a.inhHouseValLandPricePerSqmAtInheritance = "";
   if (!a.inhHouseValHousePriceAtTransfer) a.inhHouseValHousePriceAtTransfer = "";
   if (!a.inhHouseValHousePriceAtFirst) a.inhHouseValHousePriceAtFirst = "";
+  if (!a.inhHouseValBuildingStdPriceAtTransfer) a.inhHouseValBuildingStdPriceAtTransfer = "";
+  if (!a.inhHouseValBuildingStdPriceAtFirst) a.inhHouseValBuildingStdPriceAtFirst = "";
+  if (!a.inhHouseValBuildingStdPriceAtInheritance) a.inhHouseValBuildingStdPriceAtInheritance = "";
   if (a.inhHouseValUseHousePriceOverride === undefined) a.inhHouseValUseHousePriceOverride = false;
   if (!a.inhHouseValHousePriceAtInheritanceOverride) a.inhHouseValHousePriceAtInheritanceOverride = "";
   return a as unknown as AssetForm;

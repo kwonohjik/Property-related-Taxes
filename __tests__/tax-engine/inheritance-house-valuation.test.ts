@@ -24,6 +24,9 @@ describe("Excel 13번 케이스 — 상속주택 환산가액 anchor", () => {
     landPricePerSqmAtFirstDisclosure: fx.landPricePerSqmAtFirstDisclosure,
     housePriceAtTransfer: fx.housePriceAtTransfer,
     housePriceAtFirstDisclosure: fx.housePriceAtFirstDisclosure,
+    buildingStdPriceAtTransfer: fx.buildingStdPriceAtTransfer,
+    buildingStdPriceAtFirstDisclosure: fx.buildingStdPriceAtFirstDisclosure,
+    buildingStdPriceAtInheritance: fx.buildingStdPriceAtInheritance,
     housePriceAtInheritanceOverride: fx.housePriceAtInheritanceOverride,
     pre1990: fx.pre1990,
   };
@@ -137,12 +140,19 @@ describe("1990-08-30 이전 + 주택가격 자동 추정 (estimationMethod=estim
     expect(r.estimationMethod).toBe("estimated_phd");
   });
 
-  it("추정값 = floor(42,630,000 × landStdA / landStdF)", () => {
+  it("추정값 = §164⑤ 정식 공식: P_F × sumA / sumF (buildingStdAtFirst 미입력 시 sumF = landStdF)", () => {
     const r = calculateInheritanceHouseValuation(input);
     // landStdA = floor(184.2 × 598,517) = 110,246,831
+    // buildingA = 0 (buildingStdPriceAtInheritance 미입력)
+    // sumA = 110,246,831
     // landStdF = floor(184.2 × 1,560,000) = 287,352,000
+    // buildingStdF = 0 (buildingStdPriceAtFirstDisclosure 미입력)
+    // sumF = 287,352,000
     // estimated = floor(42,630,000 × 110,246,831 / 287,352,000)
-    const expected = Math.floor(42_630_000 * 110_246_831 / 287_352_000);
+    const landStdA = Math.floor(184.2 * 598_517);
+    const landStdF = Math.floor(184.2 * 1_560_000);
+    const P_F = 42_630_000;
+    const expected = Math.floor(P_F * landStdA / landStdF); // sumF = landStdF (buildingStdF = 0)
     expect(r.housePriceAtInheritanceUsed).toBe(expected);
   });
 
@@ -255,6 +265,9 @@ describe("출력 형식 검증", () => {
     landPricePerSqmAtFirstDisclosure: fx.landPricePerSqmAtFirstDisclosure,
     housePriceAtTransfer: fx.housePriceAtTransfer,
     housePriceAtFirstDisclosure: fx.housePriceAtFirstDisclosure,
+    buildingStdPriceAtTransfer: fx.buildingStdPriceAtTransfer,
+    buildingStdPriceAtFirstDisclosure: fx.buildingStdPriceAtFirstDisclosure,
+    buildingStdPriceAtInheritance: fx.buildingStdPriceAtInheritance,
     housePriceAtInheritanceOverride: fx.housePriceAtInheritanceOverride,
     pre1990: fx.pre1990,
   };

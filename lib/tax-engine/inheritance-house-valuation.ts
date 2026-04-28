@@ -64,8 +64,10 @@ export function calculateInheritanceHouseValuation(
   );
 
   // ── Step 4: 합계 기준시가 3시점 ──
+  // 양도시: buildingStdPriceAtTransfer 제공 시 우선 사용, 미제공 시 P_T(개별주택가격) 사용
+  const buildingAtTransfer = input.buildingStdPriceAtTransfer ?? input.housePriceAtTransfer;
   const totalStdPriceAtInheritance      = landStdAtInheritance + housePriceAtInheritanceUsed;
-  const totalStdPriceAtTransfer         = landStdAtTransfer + input.housePriceAtTransfer;
+  const totalStdPriceAtTransfer         = landStdAtTransfer + buildingAtTransfer;
   const totalStdPriceAtFirstDisclosure  = landStdAtFirstDisclosure + input.housePriceAtFirstDisclosure;
 
   const formula = buildFormula(
@@ -196,9 +198,17 @@ function resolveHousePriceAtInheritance(
     };
   }
 
-  // §164⑤ 토지 비율 추정: 최초고시 주택가격 × (상속개시일 토지기준시가 / 최초고시 토지기준시가)
-  const estimated = landStdAtFirstDisclosure > 0
-    ? Math.floor(safeMultiply(input.housePriceAtFirstDisclosure, landStdAtInheritance) / landStdAtFirstDisclosure)
+  // §164⑤ 정식 공식:
+  //   P_A_est = P_F × (취득시 토지기준시가 + 취득시 건물기준시가)
+  //                  / (최초고시 토지기준시가 + 최초고시 건물기준시가)
+  // - P_F = housePriceAtFirstDisclosure (최초 공시된 개별주택가격, 분자 승수)
+  // - 분모 Sum_F: 건물기준시가(국세청)를 별도 입력받아 사용. P_F를 분모에 재사용하지 않음.
+  const sumAtInheritance = landStdAtInheritance + (input.buildingStdPriceAtInheritance ?? 0);
+  const buildingStdF = input.buildingStdPriceAtFirstDisclosure ?? 0;
+  const sumAtFirstDisclosure = landStdAtFirstDisclosure + buildingStdF;
+
+  const estimated = sumAtFirstDisclosure > 0
+    ? Math.floor(safeMultiply(input.housePriceAtFirstDisclosure, sumAtInheritance) / sumAtFirstDisclosure)
     : 0;
 
   return { housePriceAtInheritanceUsed: estimated, estimationMethod: "estimated_phd" };

@@ -101,8 +101,11 @@ function resolveInheritedAcquisitionInput(
   let standardPriceAtTransfer = base.standardPriceAtTransfer ?? currentInput.standardPriceAtTransfer;
 
   if (shouldInjectHouseValuation) {
-    standardPriceAtDeemedDate = houseValuationResult.totalStdPriceAtInheritance;
-    standardPriceAtTransfer = houseValuationResult.totalStdPriceAtTransfer;
+    // 주택 §176조의2④ 환산취득가는 개별주택가격 단일값을 분자/분모로 사용
+    // (토지+건물 합계 기준시가가 아님). 개산공제도 동일 base × 3%.
+    standardPriceAtDeemedDate = houseValuationResult.housePriceAtInheritanceUsed;
+    standardPriceAtTransfer =
+      rawInput.inheritedHouseValuation?.housePriceAtTransfer ?? standardPriceAtTransfer;
   } else if (shouldInjectPre1990) {
     standardPriceAtDeemedDate = pre1990LandResult.standardPriceAtAcquisition;
   }

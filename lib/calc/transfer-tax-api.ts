@@ -457,9 +457,68 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
               : undefined,
         }
       : {}),
+    // ── 상속 취득가액 의제 (소령 §176조의2 ④ pre-deemed / §163 ⑨ post-deemed) ──
+    // 자동(보충적평가) 모드 + 토지/주택 자산 → STEP 0.45 트리거.
+    // case A(상속개시일 < 1985-01-01): 환산 vs 실가×CPI max 선택 → 채택에 따라 개산공제/실가경비 자동 분기.
+    // case B(상속개시일 ≥ 1985-01-01): 상속세 신고가액(=공시가격) 적용.
+    // standardPriceAtDeemedDate / standardPriceAtTransfer 미전송 시 엔진이
+    // inheritedHouseValuation/pre1990Land 결과로 자동 주입 (helpers.ts 92-108).
+    ...((primary.acquisitionCause === "inheritance" &&
+        primary.inheritanceValuationMode === "auto" &&
+        (primary.inheritanceAssetKind === "land" ||
+         primary.inheritanceAssetKind === "house_individual" ||
+         primary.inheritanceAssetKind === "house_apart"))
+      ? (() => {
+          const inheritanceStartDate = primary.inheritanceStartDate || primary.acquisitionDate || "";
+          if (!inheritanceStartDate) return {};
+          const isPreDeemed = inheritanceStartDate < "1985-01-01";
+
+          if (isPreDeemed) {
+            const stdAtDeemed = parseAmount(primary.standardPriceAtAcq);
+            const stdAtTransfer = parseAmount(primary.standardPriceAtTransfer);
+            const hasDecPrice = !!primary.hasDecedentActualPrice;
+            const decPrice = parseAmount(primary.decedentAcquisitionPrice);
+            const decPriceValid = hasDecPrice && decPrice > 0 && !!primary.decedentAcquisitionDate;
+
+            return {
+              inheritedAcquisition: {
+                mode: "pre-deemed" as const,
+                inheritanceStartDate,
+                assetKind: primary.inheritanceAssetKind,
+                ...(stdAtDeemed > 0 && { standardPriceAtDeemedDate: stdAtDeemed }),
+                ...(stdAtTransfer > 0 && { standardPriceAtTransfer: stdAtTransfer }),
+                hasDecedentActualPrice: decPriceValid,
+                ...(decPriceValid && {
+                  decedentAcquisitionDate: primary.decedentAcquisitionDate,
+                  decedentActualPrice: decPrice,
+                }),
+              },
+            };
+          }
+
+          // case B post-deemed
+          const reportedValue = parseAmount(primary.publishedValueAtInheritance);
+          if (reportedValue <= 0) return {};
+          return {
+            inheritedAcquisition: {
+              mode: "post-deemed" as const,
+              inheritanceStartDate,
+              assetKind: primary.inheritanceAssetKind,
+              reportedValue,
+              reportedMethod: "supplementary" as const,
+              useSupplementaryHelper: true,
+              ...(primary.acquisitionArea && parseFloat(primary.acquisitionArea) > 0 && {
+                landAreaM2: parseFloat(primary.acquisitionArea),
+              }),
+              publishedValueAtInheritance: reportedValue,
+            },
+          };
+        })()
+      : {}),
     // ── 상속 주택 환산취득가 보조 입력 (주택 + 상속개시일 < 2005-04-30) ──
-    ...(primary.inhHouseValEnabled &&
-    (primary.inheritanceAssetKind === "house_individual" || primary.inheritanceAssetKind === "house_apart") &&
+    // inhHouseValEnabled는 dead flag — UI 토글이 없어 항상 false였음.
+    // 필수 필드가 모두 입력되었다면 사용자가 환산 보조 사용 의사를 표명한 것으로 간주.
+    ...((primary.inheritanceAssetKind === "house_individual" || primary.inheritanceAssetKind === "house_apart") &&
     primary.acquisitionCause === "inheritance" &&
     parseFloat(primary.inhHouseValLandArea) > 0 &&
     parseAmount(primary.inhHouseValLandPricePerSqmAtTransfer) > 0 &&
@@ -501,6 +560,9 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
               landPricePerSqmAtInheritance: landPriceAtInheritance || undefined,
               housePriceAtTransfer: parseAmount(primary.inhHouseValHousePriceAtTransfer) || 0,
               housePriceAtFirstDisclosure: parseAmount(primary.inhHouseValHousePriceAtFirst),
+              buildingStdPriceAtTransfer: parseAmount(primary.inhHouseValBuildingStdPriceAtTransfer) || undefined,
+              buildingStdPriceAtFirstDisclosure: parseAmount(primary.inhHouseValBuildingStdPriceAtFirst) || undefined,
+              buildingStdPriceAtInheritance: parseAmount(primary.inhHouseValBuildingStdPriceAtInheritance) || undefined,
               housePriceAtInheritanceOverride: primary.inhHouseValUseHousePriceOverride
                 ? (parseAmount(primary.inhHouseValHousePriceAtInheritanceOverride) || undefined)
                 : undefined,

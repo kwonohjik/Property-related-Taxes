@@ -85,23 +85,63 @@ export const EXCEL_13_INHERITED_HOUSE_PRE_DISCLOSURE = {
   },
 
   // ── 주택 입력 ──
-  housePriceAtTransfer: 26_136_250,
-  housePriceAtFirstDisclosure: 42_630_000,
-  /** 상속개시일 시점 주택가격 — 엑셀 E37 직접 입력값 (PHD 자동 추정 아님) */
+  /** 양도시 공시된 개별주택가격 P_T (홈택스/부동산공시가격알리미) */
+  housePriceAtTransfer: 1_287_000_000,
+  /** 최초 공시(2005-04-30) 시점 개별주택가격 P_F */
+  housePriceAtFirstDisclosure: 341_000_000,
+  /** 양도시 건물기준시가 (국세청) — 합계 기준시가 산출용 */
+  buildingStdPriceAtTransfer: 26_136_250,
+  /** 최초 공시 시점 건물기준시가 — §164⑤ Sum_F 분모 */
+  buildingStdPriceAtFirstDisclosure: 42_630_000,
+  /** 상속개시일 시점 건물기준시가 — §164⑤ Sum_A 분자 */
+  buildingStdPriceAtInheritance: 38_135_580,
+  /**
+   * 상속개시일 시점 주택가격 직접 입력 override.
+   * Excel E37 직접 입력값(38,135,580). 이 값은 본래 건물기준시가지만,
+   * 기존 override-mode 테스트(inheritance-house-valuation.test.ts)에서
+   * `housePriceAtInheritanceUsed`로 직접 채택하는 시나리오 검증에 사용된다.
+   * 자동 추정 시나리오(E-6a)에서는 이 필드를 사용하지 않는다.
+   */
   housePriceAtInheritanceOverride: 38_135_580,
 
   firstDisclosureDate: "2005-04-30",
 
   // ── 기대값 (원단위 anchor) ──
+  // 시나리오별로 분리: override 모드(기존) vs 자동 추정 모드(E-6a)
   expected: {
+    // ── 공통 ──
     landPricePerSqmAtInheritance: 598_517,         // 토지 환산단가
-    landStdAtInheritance: 110_246_831,              // 토지 상속개시일 기준시가 (floor(184.2 × 598,517))
-    totalStdAtInheritance: 148_382_411,             // 합계 기준시가 (토지 + 주택 override)
+    landStdAtInheritance: 110_246_831,              // 토지 상속개시일 기준시가
     landStdAtTransfer: 1_243_350_000,               // 토지 양도시 기준시가
-    totalStdAtTransfer: 1_269_486_250,              // 합계 양도시 기준시가 (토지 + 주택)
-    // 환산취득가 = floor(920,000,000 × 148,382,411 / 1,269,486,250) = 107,599,938
-    // ↑ 합계 기준시가로 단일 환산하는 경우
-    // Excel C9 = 109,611,427은 C30=1,287,000,000(official 양도시 합계)으로 나눈 값
-    // → Phase 2에서 standardPriceAtTransfer = C30 입력 시 재현 가능
+    /**
+     * 양도시 합계 기준시가 = 토지 + 양도시 건물기준시가 (Excel C36)
+     * = 1,243,350,000 + 26,136,250 = 1,269,486,250
+     */
+    totalStdAtTransfer: 1_269_486_250,
+
+    // ── override 모드 (housePriceAtInheritanceOverride 사용) ──
+    /**
+     * 상속개시일 합계 기준시가 = 토지 + override(38,135,580) = 148,382,411 (Excel C37)
+     * 이 값은 inheritance-house-valuation.test.ts의 override-mode 테스트에서 사용.
+     */
+    totalStdAtInheritance: 148_382_411,
+
+    // ── 자동 추정 모드 (P_A_est) ──
+    /**
+     * 추정 상속개시일 개별주택가격 P_A_est = floor(P_F × Sum_A / Sum_F)
+     * = floor(341,000,000 × 148,382,411 / 329,982,000) = 153,336,855
+     * (Sum_A = 110,246,831 + 38,135,580 = 148,382,411,
+     *  Sum_F = 287,352,000 + 42,630,000 = 329,982,000)
+     */
+    autoEstimatedHousePrice: 153_336_855,
+    /** 자동 추정 시 합계 기준시가 = 토지 + P_A_est = 110.2M + 153.3M = 263,583,686 */
+    autoEstimatedTotalStdAtInheritance: 263_583_686,
+    /**
+     * Excel C9: 환산취득가 = floor(920M × 153,336,855 / 1,287,000,000) = 109,611,427
+     * (개별주택가격 단일 분자/분모로 §176조의2④ 적용)
+     */
+    convertedAcquisition: 109_611_427,
+    /** Excel C10: 개산공제 = floor(153,336,855 × 3%) = 4,600,105 */
+    estimatedDeduction: 4_600_105,
   },
 } as const;

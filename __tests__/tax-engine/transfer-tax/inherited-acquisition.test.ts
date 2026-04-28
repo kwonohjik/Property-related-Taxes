@@ -285,9 +285,12 @@ describe("E-6: Excel 13번 — 상속주택 환산가액 전체 통합 시나리
         landArea: fx.landArea,
         landPricePerSqmAtTransfer: fx.landPricePerSqmAtTransfer,
         landPricePerSqmAtFirstDisclosure: fx.landPricePerSqmAtFirstDisclosure,
-        housePriceAtTransfer: fx.housePriceAtTransfer,
-        housePriceAtFirstDisclosure: fx.housePriceAtFirstDisclosure,
-        housePriceAtInheritanceOverride: fx.housePriceAtInheritanceOverride,
+        housePriceAtTransfer: fx.housePriceAtTransfer,                       // 1,287,000,000
+        housePriceAtFirstDisclosure: fx.housePriceAtFirstDisclosure,         // 341,000,000
+        buildingStdPriceAtTransfer: fx.buildingStdPriceAtTransfer,           // 26,136,250
+        buildingStdPriceAtFirstDisclosure: fx.buildingStdPriceAtFirstDisclosure, // 42,630,000
+        buildingStdPriceAtInheritance: fx.buildingStdPriceAtInheritance,     // 38,135,580
+        // housePriceAtInheritanceOverride 미입력 → §164⑤ 자동 추정 (P_A_est = 153,336,855)
         pre1990: fx.pre1990,
       },
       inheritedAcquisition: {
@@ -296,6 +299,7 @@ describe("E-6: Excel 13번 — 상속주택 환산가액 전체 통합 시나리
         transferDate: fx.transferDate,
         transferPrice: fx.transferPrice,
         // standardPriceAtDeemedDate / standardPriceAtTransfer 미입력 → houseValuation 자동 주입
+        // 주택은 개별주택가격(P_A_est, P_T) 단일값 사용 (§176조의2④)
       },
     });
 
@@ -304,10 +308,13 @@ describe("E-6: Excel 13번 — 상속주택 환산가액 전체 통합 시나리
     // inheritedHouseValuationDetail 존재 + anchor 검증
     expect(result.inheritedHouseValuationDetail).toBeDefined();
     expect(result.inheritedHouseValuationDetail!.totalStdPriceAtInheritance).toBe(
-      fx.expected.totalStdAtInheritance,   // 148,382,411 — Excel C37
+      fx.expected.autoEstimatedTotalStdAtInheritance,   // 263,583,686 (토지 + P_A_est)
     );
     expect(result.inheritedHouseValuationDetail!.totalStdPriceAtTransfer).toBe(
       fx.expected.totalStdAtTransfer,       // 1,269,486,250 — Excel C36
+    );
+    expect(result.inheritedHouseValuationDetail!.housePriceAtInheritanceUsed).toBe(
+      fx.expected.autoEstimatedHousePrice,   // 153,336,855 — §164⑤ 자동 추정
     );
     expect(result.inheritedHouseValuationDetail!.pre1990Result).toBeDefined();
     expect(result.inheritedHouseValuationDetail!.pre1990Result!.pricePerSqmAtAcquisition).toBe(
@@ -318,12 +325,10 @@ describe("E-6: Excel 13번 — 상속주택 환산가액 전체 통합 시나리
     expect(result.inheritedAcquisitionDetail).toBeDefined();
     expect(result.inheritedAcquisitionDetail!.method).toBe("pre_deemed_max");
 
-    // 환산취득가 = floor(920M × 148,382,411 / 1,269,486,250) — BigInt 정확 계산
-    const expectedConverted = Number(
-      BigInt(fx.transferPrice) * BigInt(fx.expected.totalStdAtInheritance) /
-      BigInt(fx.expected.totalStdAtTransfer),
+    // 환산취득가 = floor(920M × 153,336,855 / 1,287,000,000) = 109,611,427 (Excel C9)
+    expect(result.inheritedAcquisitionDetail!.preDeemedBreakdown!.convertedAmount).toBe(
+      fx.expected.convertedAcquisition,   // 109,611,427
     );
-    expect(result.inheritedAcquisitionDetail!.preDeemedBreakdown!.convertedAmount).toBe(expectedConverted);
 
     // 양도차익 > 0
     expect(result.transferGain).toBeGreaterThan(0);
