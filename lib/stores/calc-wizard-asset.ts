@@ -332,6 +332,29 @@ export interface AssetForm {
   /** 양도 시점 ㎡당 공시지가 (원/㎡, 토지·비주거건물 전용) */
   standardPricePerSqmAtTransfer: string;
 
+  // ── 상속 주택 환산취득가 보조 입력 (주택 자산 + 상속개시일 < 2005-04-30) ──
+  /** true 시 3-시점 보조 계산 활성화 */
+  inhHouseValEnabled: boolean;
+  /** 최초 고시일 (기본 "2005-04-30") */
+  inhHouseValFirstDisclosureDate: string;
+  /** 토지 면적 (㎡) */
+  inhHouseValLandArea: string;
+  /** 양도시 개별공시지가 (원/㎡) */
+  inhHouseValLandPricePerSqmAtTransfer: string;
+  /** 최초고시 시점 개별공시지가 (원/㎡) */
+  inhHouseValLandPricePerSqmAtFirst: string;
+  /** 상속개시일 시점 개별공시지가 (원/㎡) — 1990-08-30 이후 시 직접 입력 */
+  inhHouseValLandPricePerSqmAtInheritance: string;
+  /** 양도시 개별주택가격 (원) */
+  inhHouseValHousePriceAtTransfer: string;
+  /** 최초고시 시점 개별주택가격 (원) */
+  inhHouseValHousePriceAtFirst: string;
+  /** 상속개시일 시점 주택가격 직접 입력 override 사용 여부 */
+  inhHouseValUseHousePriceOverride: boolean;
+  /** 상속개시일 시점 주택가격 직접 입력 override (원) */
+  inhHouseValHousePriceAtInheritanceOverride: string;
+  // 1990-08-30 이전 토지 등급가액 환산은 기존 pre1990* 7필드 재사용
+
   // ── 1990.8.30. 이전 취득 토지 환산 (assetKind === "land" + acquisitionDate < 1990-08-30) ──
   pre1990Enabled: boolean;
   pre1990PricePerSqm_1990: string;
@@ -415,6 +438,41 @@ export interface AssetForm {
 
   // ── NBL 부득이한 사유 ──
   nblGracePeriods: GracePeriodInput[];
+
+  // ── 상속 부동산 취득가액 의제 (소령 §176조의2④·§163⑨) ──
+  /**
+   * 의제취득일(1985.1.1.) 기준 자동 분기 결과 (UI read-only).
+   * - "pre-deemed": 상속개시일 < 1985-01-01 → max(환산가액, 실가×물가상승률)
+   * - "post-deemed": 상속개시일 ≥ 1985-01-01 → 상속세 신고가액
+   * - null: 상속개시일 미입력 또는 미적용
+   */
+  inheritanceMode: "pre-deemed" | "post-deemed" | null;
+  /** 상속개시일 (YYYY-MM-DD, 피상속인 사망일) */
+  inheritanceStartDate: string;
+  /** 피상속인 실지취득가액 입증 가능 여부 (case A 전용) */
+  hasDecedentActualPrice: boolean;
+  /** 피상속인 실지취득가액 (원 단위 문자열, hasDecedentActualPrice=true 시) */
+  decedentAcquisitionPrice: string;
+  /** 상속세 신고가액 (원 단위 문자열, case B) */
+  inheritanceReportedValue: string;
+  /** 상속세 신고 시 적용한 평가방법 (case B) */
+  inheritanceValuationMethod:
+    | "market_value"
+    | "appraisal"
+    | "auction_public_sale"
+    | "similar_sale"
+    | "supplementary"
+    | "";
+  /** 평가 근거 메모 (감정평가서 번호·매매사례 일자 등, 선택) */
+  inheritanceValuationEvidence: string;
+  /** 보충적평가 보조계산 사용 여부 (case B + supplementary 선택 시) */
+  useSupplementaryHelper: boolean;
+  /** 보조계산: 토지 면적 (㎡) */
+  supplementaryLandArea: string;
+  /** 보조계산: 개별공시지가 (원/㎡) */
+  supplementaryLandUnitPrice: string;
+  /** 보조계산: 건물 공시가격 (원 총액) */
+  supplementaryBuildingValue: string;
 }
 
 /** 하위 호환 별칭 — 기존 코드에서 CompanionAssetForm을 참조하는 곳에 사용 */
@@ -497,6 +555,16 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     standardPriceAtAcqLabel: "",
     standardPricePerSqmAtAcq: "",
     standardPricePerSqmAtTransfer: "",
+    inhHouseValEnabled: false,
+    inhHouseValFirstDisclosureDate: "2005-04-30",
+    inhHouseValLandArea: "",
+    inhHouseValLandPricePerSqmAtTransfer: "",
+    inhHouseValLandPricePerSqmAtFirst: "",
+    inhHouseValLandPricePerSqmAtInheritance: "",
+    inhHouseValHousePriceAtTransfer: "",
+    inhHouseValHousePriceAtFirst: "",
+    inhHouseValUseHousePriceOverride: false,
+    inhHouseValHousePriceAtInheritanceOverride: "",
     pre1990Enabled: false,
     pre1990PricePerSqm_1990: "",
     pre1990PricePerSqm_atTransfer: "",
@@ -560,6 +628,18 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     nblOtherLandValue: "",
     nblOtherIsRelatedToResidence: false,
     nblGracePeriods: [],
+    // ── 상속 부동산 취득가액 의제 ──
+    inheritanceMode: null,
+    inheritanceStartDate: "",
+    hasDecedentActualPrice: false,
+    decedentAcquisitionPrice: "",
+    inheritanceReportedValue: "",
+    inheritanceValuationMethod: "",
+    inheritanceValuationEvidence: "",
+    useSupplementaryHelper: false,
+    supplementaryLandArea: "",
+    supplementaryLandUnitPrice: "",
+    supplementaryBuildingValue: "",
   };
 }
 
@@ -615,5 +695,28 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (a.phdLandPriceYearAtTransferIsManual === undefined) a.phdLandPriceYearAtTransferIsManual = false;
   if (!a.phdLandPricePerSqmAtTransfer) a.phdLandPricePerSqmAtTransfer = "";
   if (!a.phdBuildingStdPriceAtTransfer) a.phdBuildingStdPriceAtTransfer = "";
+  // 상속 취득가액 의제 필드
+  if (a.inheritanceMode === undefined) a.inheritanceMode = null;
+  if (!a.inheritanceStartDate) a.inheritanceStartDate = "";
+  if (a.hasDecedentActualPrice === undefined) a.hasDecedentActualPrice = false;
+  if (!a.decedentAcquisitionPrice) a.decedentAcquisitionPrice = "";
+  if (!a.inheritanceReportedValue) a.inheritanceReportedValue = "";
+  if (!a.inheritanceValuationMethod) a.inheritanceValuationMethod = "";
+  if (!a.inheritanceValuationEvidence) a.inheritanceValuationEvidence = "";
+  if (a.useSupplementaryHelper === undefined) a.useSupplementaryHelper = false;
+  if (!a.supplementaryLandArea) a.supplementaryLandArea = "";
+  if (!a.supplementaryLandUnitPrice) a.supplementaryLandUnitPrice = "";
+  if (!a.supplementaryBuildingValue) a.supplementaryBuildingValue = "";
+  // 상속 주택 환산취득가 보조 입력 필드
+  if (a.inhHouseValEnabled === undefined) a.inhHouseValEnabled = false;
+  if (!a.inhHouseValFirstDisclosureDate) a.inhHouseValFirstDisclosureDate = "2005-04-30";
+  if (!a.inhHouseValLandArea) a.inhHouseValLandArea = "";
+  if (!a.inhHouseValLandPricePerSqmAtTransfer) a.inhHouseValLandPricePerSqmAtTransfer = "";
+  if (!a.inhHouseValLandPricePerSqmAtFirst) a.inhHouseValLandPricePerSqmAtFirst = "";
+  if (!a.inhHouseValLandPricePerSqmAtInheritance) a.inhHouseValLandPricePerSqmAtInheritance = "";
+  if (!a.inhHouseValHousePriceAtTransfer) a.inhHouseValHousePriceAtTransfer = "";
+  if (!a.inhHouseValHousePriceAtFirst) a.inhHouseValHousePriceAtFirst = "";
+  if (a.inhHouseValUseHousePriceOverride === undefined) a.inhHouseValUseHousePriceOverride = false;
+  if (!a.inhHouseValHousePriceAtInheritanceOverride) a.inhHouseValHousePriceAtInheritanceOverride = "";
   return a as unknown as AssetForm;
 }

@@ -419,6 +419,68 @@ export const parcelSchema = z.object({
   }
 });
 
+// ─── 상속 부동산 취득가액 의제 스키마 (소령 §176조의2④·§163⑨) ──
+
+export const inheritedAcquisitionSchema = z.discriminatedUnion("mode", [
+  // case A: 의제취득일(1985.1.1.) 전 상속 — max(환산가액, 피상속인 실가×물가상승률)
+  z
+    .object({
+      mode: z.literal("pre-deemed"),
+      /** 상속개시일 */
+      inheritanceStartDate: z.string().date(),
+      /** 자산 종류 */
+      assetKind: z.enum(["land", "house_individual", "house_apart"]),
+      /** 의제취득일(1985.1.1.) 시점 기준시가 (원) */
+      standardPriceAtDeemedDate: z.number().int().nonnegative().optional(),
+      /** 양도시 기준시가 (원) */
+      standardPriceAtTransfer: z.number().int().positive().optional(),
+      /** 피상속인 실지취득가액 입증 가능 여부 */
+      hasDecedentActualPrice: z.boolean().default(false),
+      /** 피상속인 취득일 (hasDecedentActualPrice=true 시 필수) */
+      decedentAcquisitionDate: z.string().date().optional(),
+      /** 피상속인 실지취득가액 (원, hasDecedentActualPrice=true 시 필수) */
+      decedentActualPrice: z.number().int().nonnegative().optional(),
+    })
+    .refine(
+      (v) =>
+        !v.hasDecedentActualPrice ||
+        (!!v.decedentAcquisitionDate &&
+          v.decedentActualPrice !== undefined &&
+          v.decedentActualPrice > 0),
+      {
+        message: "피상속인 실지취득가액 입증 시 취득일과 취득가가 필수입니다",
+        path: ["decedentAcquisitionDate"],
+      },
+    ),
+
+  // case B: 의제취득일 이후 상속 — 상속세 신고가액을 취득가로 인정
+  z.object({
+    mode: z.literal("post-deemed"),
+    /** 상속개시일 */
+    inheritanceStartDate: z.string().date(),
+    /** 자산 종류 */
+    assetKind: z.enum(["land", "house_individual", "house_apart"]),
+    /** 상속세 신고가액 (원) */
+    reportedValue: z.number().int().nonnegative(),
+    /** 신고 시 적용한 평가방법 */
+    reportedMethod: z.enum([
+      "market_value",
+      "appraisal",
+      "auction_public_sale",
+      "similar_sale",
+      "supplementary",
+    ]),
+    /** 평가 근거 메모 (감정평가서 번호 등, 선택) */
+    evidenceMemo: z.string().max(200).optional(),
+    /** 보충적평가 보조계산 사용 여부 (supplementary 선택 시만) */
+    useSupplementaryHelper: z.boolean().default(false),
+    /** 보조계산: 토지 면적 (㎡) */
+    landAreaM2: z.number().nonnegative().optional(),
+    /** 보조계산: 개별공시지가 (원/㎡) 또는 주택 공시가격 (원) */
+    publishedValueAtInheritance: z.number().int().nonnegative().optional(),
+  }),
+]);
+
 // ─── 개별주택가격 미공시 취득 환산 스키마 (§164⑤) ──────────────
 
 export const preHousingDisclosureSchema = z.object({
@@ -443,4 +505,66 @@ export const preHousingDisclosureSchema = z.object({
   /** 양도시 건물 기준시가 (원) */
   buildingStdPriceAtTransfer: z.number().int().nonnegative(),
 });
+
+// ─── 상속 주택 환산취득가 — 개별주택 미공시 + 1990 이전 토지 스키마 ──
+
+/** 등급가액 입력 스키마: 등급 번호 또는 등급가액 직접 입력 */
+const gradeInputSchema = z.union([
+  z.number().int().positive(),                          // 등급 번호 (1~365)
+  z.object({ gradeValue: z.number().positive() }),      // 등급가액 직접 입력
+]);
+
+export const inheritanceHouseValuationSchema = z
+  .object({
+    /** 상속개시일 (1990-08-30 분기 + 2005-04-30 적용 여부 판단) */
+    inheritanceDate: z.string().date(),
+    /** 양도일 */
+    transferDate: z.string().date(),
+    /** 토지 면적 (㎡) */
+    landArea: z.number().positive(),
+    /** 양도시 개별공시지가 (원/㎡) */
+    landPricePerSqmAtTransfer: z.number().int().positive(),
+    /** 최초고시 시점 개별공시지가 (원/㎡) */
+    landPricePerSqmAtFirstDisclosure: z.number().int().positive(),
+    /** 양도시 개별주택가격 (원) */
+    housePriceAtTransfer: z.number().int().nonnegative(),
+    /** 최초고시 시점 개별주택가격 (원) */
+    housePriceAtFirstDisclosure: z.number().int().positive(),
+    /** 상속개시일 시점 개별공시지가 (원/㎡) — 1990-08-30 이후 시 필수 */
+    landPricePerSqmAtInheritance: z.number().int().positive().optional(),
+    /** 상속개시일 시점 주택가격 직접 입력 override (원) */
+    housePriceAtInheritanceOverride: z.number().int().nonnegative().optional(),
+    /** 최초 고시일 (기본 "2005-04-30") */
+    firstDisclosureDate: z.string().date().default("2005-04-30"),
+    /** 1990-08-30 이전 취득 토지 등급가액 환산 입력 */
+    pre1990: z
+      .object({
+        grade_1990_0830: gradeInputSchema,
+        gradePrev_1990_0830: gradeInputSchema,
+        gradeAtAcquisition: gradeInputSchema,
+        pricePerSqm_1990: z.number().int().positive(),
+        forceRatioCap: z.boolean().optional(),
+      })
+      .optional(),
+  })
+  .superRefine((v, ctx) => {
+    const isBefore1990 = v.inheritanceDate < "1990-08-30";
+    const hasDirectInput = v.landPricePerSqmAtInheritance !== undefined;
+    const hasPre1990 = v.pre1990 !== undefined;
+
+    if (isBefore1990 && !hasDirectInput && !hasPre1990) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "상속개시일이 1990-08-30 이전이면 pre1990 등급가액 또는 landPricePerSqmAtInheritance 중 하나가 필수입니다",
+        path: ["pre1990"],
+      });
+    }
+    if (!isBefore1990 && !hasDirectInput && !hasPre1990) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "상속개시일이 1990-08-30 이후이면 landPricePerSqmAtInheritance가 필수입니다",
+        path: ["landPricePerSqmAtInheritance"],
+      });
+    }
+  });
 

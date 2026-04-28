@@ -13,6 +13,7 @@ import { CompanionSaleModeBlock, type BundledSaleMode } from "./CompanionSaleMod
 import { CompanionAcqPurchaseBlock } from "./CompanionAcqPurchaseBlock";
 import { CompanionAcqInheritanceBlock } from "./CompanionAcqInheritanceBlock";
 import { CompanionAcqGiftBlock } from "./CompanionAcqGiftBlock";
+import { InheritedAcquisitionDeemedSection } from "./InheritedAcquisitionDeemedSection";
 import { NblSectionContainer } from "./nbl/NblSectionContainer";
 
 const ASSET_KIND_LABELS: Record<string, string> = {
@@ -429,6 +430,9 @@ export function CompanionAssetCard({
             acquisitionDate={asset.acquisitionDate}
             onAcquisitionDateChange={(v) => onChange({
               acquisitionDate: v,
+              // 의제 특례 섹션의 inheritanceStartDate와 자동 동기화
+              // (한 번 입력으로 두 섹션의 상속개시일이 일치하도록)
+              inheritanceStartDate: v,
               // auto 모드일 때 보충적평가용 inheritanceDate를 하나의 patch로 동기화
               // (두 번 연속 onChange를 호출하면 stale 클로저로 두 번째가 첫 번째를 덮어씀)
               ...(asset.inheritanceValuationMode === "auto" ? { inheritanceDate: v } : {}),
@@ -449,6 +453,15 @@ export function CompanionAssetCard({
             fixedAcquisitionPrice={asset.fixedAcquisitionPrice}
             onFixedAcquisitionPriceChange={(v) => onChange({ fixedAcquisitionPrice: v })}
             jibun={asset.addressJibun || undefined}
+          />
+        )}
+
+        {/* 상속 취득가액 의제 특례 — 기존 보충적평가 블록 아래에 추가 */}
+        {asset.acquisitionCause === "inheritance" && (
+          <InheritedAcquisitionDeemedSection
+            asset={asset}
+            onChange={onChange}
+            transferDate={transferDate}
           />
         )}
 

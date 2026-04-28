@@ -457,6 +457,59 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
               : undefined,
         }
       : {}),
+    // ── 상속 주택 환산취득가 보조 입력 (주택 + 상속개시일 < 2005-04-30) ──
+    ...(primary.inhHouseValEnabled &&
+    (primary.inheritanceAssetKind === "house_individual" || primary.inheritanceAssetKind === "house_apart") &&
+    primary.acquisitionCause === "inheritance" &&
+    parseFloat(primary.inhHouseValLandArea) > 0 &&
+    parseAmount(primary.inhHouseValLandPricePerSqmAtTransfer) > 0 &&
+    parseAmount(primary.inhHouseValLandPricePerSqmAtFirst) > 0 &&
+    parseAmount(primary.inhHouseValHousePriceAtFirst) > 0
+      ? (() => {
+          const inheritanceDate = primary.inheritanceStartDate || primary.acquisitionDate || "";
+          const isBefore1990 = !!inheritanceDate && inheritanceDate < "1990-08-30";
+          const buildGrade = (raw: string) => {
+            const n = Number(raw.replace(/,/g, ""));
+            if (!Number.isFinite(n) || n <= 0) return undefined;
+            return primary.pre1990GradeMode === "number" ? Math.trunc(n) : { gradeValue: n };
+          };
+
+          const pre1990Payload = isBefore1990
+            ? (() => {
+                const gCur = buildGrade(primary.pre1990Grade_current ?? "");
+                const gPrev = buildGrade(primary.pre1990Grade_prev ?? "");
+                const gAcq = buildGrade(primary.pre1990Grade_atAcq ?? "");
+                const p1990 = parseAmount(primary.pre1990PricePerSqm_1990 ?? "");
+                if (!gCur || !gPrev || !gAcq || p1990 <= 0) return undefined;
+                return { grade_1990_0830: gCur, gradePrev_1990_0830: gPrev, gradeAtAcquisition: gAcq, pricePerSqm_1990: p1990 };
+              })()
+            : undefined;
+
+          const landPriceAtInheritance = parseAmount(primary.inhHouseValLandPricePerSqmAtInheritance);
+
+          // 1990 이전이면 pre1990 필요, 이후이면 landPriceAtInheritance 필요
+          if (isBefore1990 && !pre1990Payload && !landPriceAtInheritance) return {};
+          if (!isBefore1990 && !landPriceAtInheritance) return {};
+
+          return {
+            inheritedHouseValuation: {
+              inheritanceDate,
+              transferDate: form.transferDate,
+              landArea: parseFloat(primary.inhHouseValLandArea),
+              landPricePerSqmAtTransfer: parseAmount(primary.inhHouseValLandPricePerSqmAtTransfer),
+              landPricePerSqmAtFirstDisclosure: parseAmount(primary.inhHouseValLandPricePerSqmAtFirst),
+              landPricePerSqmAtInheritance: landPriceAtInheritance || undefined,
+              housePriceAtTransfer: parseAmount(primary.inhHouseValHousePriceAtTransfer) || 0,
+              housePriceAtFirstDisclosure: parseAmount(primary.inhHouseValHousePriceAtFirst),
+              housePriceAtInheritanceOverride: primary.inhHouseValUseHousePriceOverride
+                ? (parseAmount(primary.inhHouseValHousePriceAtInheritanceOverride) || undefined)
+                : undefined,
+              firstDisclosureDate: primary.inhHouseValFirstDisclosureDate || "2005-04-30",
+              pre1990: pre1990Payload,
+            },
+          };
+        })()
+      : {}),
     // ── 1990.8.30. 이전 취득 토지 기준시가 환산 (자산-수준 필드 사용) ──
     ...(hasPre1990
       ? (() => {

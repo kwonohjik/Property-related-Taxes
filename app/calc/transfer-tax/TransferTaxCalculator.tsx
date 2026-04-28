@@ -294,9 +294,30 @@ export default function TransferTaxCalculator({
   //   필요경비 합계:  directExpenses 입력 시
   //   양도소득금액:  양도가액 + 취득가액 모두 입력된 경우 (환산 모드에선 API 결과 필요)
   //   납부할 세액:   API 계산 완료 시
+  // 상속 취득가액 의제 — case B는 사용자 입력 즉시, case A는 API 응답 후 표시
+  const inheritedAcqSidebarValue = (() => {
+    const primaryAsset = formData.assets[0];
+    if (!primaryAsset || primaryAsset.inheritanceMode === null || !primaryAsset.inheritanceStartDate) {
+      return null;
+    }
+    // case B: 신고가액 즉시 표시
+    if (primaryAsset.inheritanceMode === "post-deemed") {
+      const v = parseAmount(primaryAsset.inheritanceReportedValue);
+      return v > 0 ? v : null;
+    }
+    // case A: API 응답 후 inheritedAcquisitionDetail에서 표시
+    if (result?.mode === "single" && result.result.inheritedAcquisitionDetail) {
+      return result.result.inheritedAcquisitionDetail.acquisitionPrice || null;
+    }
+    return null;
+  })();
+
   const sidebarSummary: WizardSidebarSummaryItem[] = [
     ...(transferSummary.totalSalePrice > 0
       ? [{ label: "양도가액 합계", value: transferSummary.totalSalePrice }]
+      : []),
+    ...(inheritedAcqSidebarValue !== null
+      ? [{ label: "상속 취득가액", value: inheritedAcqSidebarValue }]
       : []),
     ...(transferSummary.totalAcqPrice > 0
       ? [{ label: "취득가액 합계", value: transferSummary.totalAcqPrice }]

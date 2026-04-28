@@ -23,7 +23,52 @@ import { calculateInheritanceAcquisitionPrice } from "@/lib/tax-engine/inheritan
 import { calculateEstimatedAcquisitionPrice } from "@/lib/tax-engine/tax-utils";
 import { TaxCalculationError, TaxErrorCode } from "@/lib/tax-engine/tax-errors";
 import { checkRateLimit, getClientIp } from "@/lib/api/rate-limit";
-import { propertySchema as inputSchema } from "@/lib/api/transfer-tax-schema";
+import {
+  propertySchema as inputSchema,
+} from "@/lib/api/transfer-tax-schema";
+import type { inheritedAcquisitionSchema } from "@/lib/api/transfer-tax-schema-sub";
+import type { z } from "zod";
+import type { InheritanceAcquisitionInput } from "@/lib/tax-engine/types/inheritance-acquisition.types";
+
+// ─── 상속 취득가액 의제: zod 입력 → 엔진 입력 변환 ──────────────
+
+function buildInheritedAcquisition(
+  ia: z.infer<typeof inheritedAcquisitionSchema>,
+  transferDate: Date,
+  transferPrice: number,
+): InheritanceAcquisitionInput {
+  const inheritanceDate = new Date(ia.inheritanceStartDate);
+  const { assetKind } = ia;
+
+  if (ia.mode === "pre-deemed") {
+    return {
+      inheritanceDate,
+      assetKind,
+      standardPriceAtDeemedDate: ia.standardPriceAtDeemedDate,
+      standardPriceAtTransfer: ia.standardPriceAtTransfer,
+      transferDate,
+      transferPrice,
+      decedentAcquisitionDate:
+        ia.hasDecedentActualPrice && ia.decedentAcquisitionDate
+          ? new Date(ia.decedentAcquisitionDate)
+          : undefined,
+      decedentActualPrice:
+        ia.hasDecedentActualPrice ? ia.decedentActualPrice : undefined,
+    };
+  }
+
+  // post-deemed
+  return {
+    inheritanceDate,
+    assetKind,
+    reportedValue: ia.reportedValue,
+    reportedMethod: ia.reportedMethod,
+    ...(ia.useSupplementaryHelper && {
+      landAreaM2: ia.landAreaM2,
+      publishedValueAtInheritance: ia.publishedValueAtInheritance,
+    }),
+  };
+}
 
 // ============================================================
 // POST handler (⑫-2, ⑫-3)
@@ -237,6 +282,21 @@ export async function POST(request: NextRequest) {
       ? {
           ...data.preHousingDisclosure,
           firstDisclosureDate: new Date(data.preHousingDisclosure.firstDisclosureDate),
+        }
+      : undefined,
+    // 상속 부동산 취득가액 의제 (소령 §176조의2④·§163⑨)
+    inheritedAcquisition: data.inheritedAcquisition
+      ? buildInheritedAcquisition(data.inheritedAcquisition, transferDate, data.transferPrice)
+      : undefined,
+    // 상속 주택 환산취득가 보조 입력 (§164⑤·§176조의2④) — Date 변환
+    inheritedHouseValuation: data.inheritedHouseValuation
+      ? {
+          ...data.inheritedHouseValuation,
+          inheritanceDate: new Date(data.inheritedHouseValuation.inheritanceDate),
+          transferDate: new Date(data.inheritedHouseValuation.transferDate),
+          firstDisclosureDate: data.inheritedHouseValuation.firstDisclosureDate
+            ? new Date(data.inheritedHouseValuation.firstDisclosureDate)
+            : undefined,
         }
       : undefined,
     // 다필지 분리 계산 (환지·합병 등) — 문자열 날짜 → Date 변환

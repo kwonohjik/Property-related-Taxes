@@ -88,6 +88,10 @@ import {
   type ParcelResult,
   calculateMultiParcelTransfer,
 } from "./multi-parcel-transfer";
+import {
+  runInheritedAcquisitionStep,
+  type InheritedAcquisitionStepResult,
+} from "./inheritance-acquisition-helpers";
 
 // ============================================================
 // 1-A. 타입 정의 — 공개 타입은 ./types/transfer.types 로 분리
@@ -179,7 +183,16 @@ export function calculateTransferTax(
     });
   }
 
-  // 이 지점 이후 로컬 input/workingInput은 동일 (pre-1990 적용 완료).
+  // STEP 0.45: 상속 부동산 취득가액 의제 (소령 §176조의2④·§163⑨)
+  const inheritedStep = runInheritedAcquisitionStep(rawInput, input, pre1990LandResult);
+  let inheritedAcquisitionStep: InheritedAcquisitionStepResult | undefined;
+  if (inheritedStep) {
+    inheritedAcquisitionStep = inheritedStep;
+    input = inheritedStep.updatedInput;
+    steps.push(inheritedStep.step);
+  }
+
+  // 이 지점 이후 로컬 input/workingInput은 동일 (pre-1990 + 상속 취득가액 적용 완료).
   const workingInput = input;
 
   // STEP 0.5: 다주택 중과세 판정 (houses[] 제공 + 주택 수 산정 규칙 로드 완료 시)
@@ -755,5 +768,7 @@ export function calculateTransferTax(
     pre1990LandValuationDetail: pre1990LandResult,
     splitDetail: splitDetail ?? undefined,
     preHousingDisclosureDetail: splitDetail?.preHousingDisclosureDetail,
+    inheritedAcquisitionDetail: inheritedAcquisitionStep?.result,
+    inheritedHouseValuationDetail: inheritedAcquisitionStep?.houseValuationResult,
   };
 }

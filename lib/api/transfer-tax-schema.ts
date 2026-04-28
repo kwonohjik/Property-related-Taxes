@@ -19,6 +19,8 @@ import {
   filingPenaltyDetailsSchema,
   delayedPaymentDetailsSchema,
   inheritanceValuationSchema,
+  inheritedAcquisitionSchema,
+  inheritanceHouseValuationSchema,
   companionAssetSchema,
   parcelSchema,
   preHousingDisclosureSchema,
@@ -113,6 +115,10 @@ const propertyBaseShape = {
   primaryActualSalePrice: z.number().int().positive().optional(),
   /** 개별주택가격 미공시 취득 시 3-시점 환산취득가 계산 입력 (§164⑤) */
   preHousingDisclosure: preHousingDisclosureSchema.optional(),
+  /** 상속 부동산 취득가액 의제 (소령 §176조의2④·§163⑨) — 의제취득일 전/후 분기 */
+  inheritedAcquisition: inheritedAcquisitionSchema.optional(),
+  /** 상속 주택 환산취득가 보조 입력 — 주택 + 상속개시일 < 2005-04-30 시 3-시점 합계 기준시가 자동 산출 */
+  inheritedHouseValuation: inheritanceHouseValuationSchema.optional(),
   /**
    * 토지·건물의 소유자가 다른 경우 본인 소유 부분 지정 (소령 §166⑥, §168②).
    * "both" (기본): 토지·건물 모두 본인.

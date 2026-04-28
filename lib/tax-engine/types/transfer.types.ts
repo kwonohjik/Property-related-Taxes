@@ -38,6 +38,8 @@ import type {
 import type { PublicExpropriationReductionResult } from "../public-expropriation-reduction";
 import type { SelfFarmingReductionResult } from "../self-farming-reduction";
 import type { ParcelInput, ParcelResult } from "../multi-parcel-transfer";
+import type { InheritanceAcquisitionInput } from "./inheritance-acquisition.types";
+import type { InheritanceHouseValuationInput, InheritanceHouseValuationResult } from "./inheritance-house-valuation.types";
 
 export interface TransferTaxInput {
   /** 물건 종류 */
@@ -198,6 +200,21 @@ export interface TransferTaxInput {
    * 미제공 또는 빈 배열 시 연간 한도만 적용(기존 동작 유지).
    */
   priorReductionUsage?: { year: number; type: string; amount: number }[];
+  /**
+   * 상속 부동산 취득가액 의제 입력 (선택, 소령 §176조의2④·§163⑨).
+   * 제공 시 STEP 0.45에서 상속개시일을 기준으로 의제취득일 전/후 분기:
+   *   - 전: max(환산가액, 피상속인 실가×물가상승률)
+   *   - 후: 상속세 신고가액 (매매사례·감정·수용·경매·유사매매·보충적평가 중 신고한 가액)
+   * acquisitionCause === "inheritance" 일 때만 의미 있음.
+   */
+  inheritedAcquisition?: InheritanceAcquisitionInput;
+
+  /**
+   * 상속 주택 환산취득가 보조 입력 (자산 종류 = 주택 + 상속개시일 < 2005-04-30 시 사용).
+   * 3-시점 토지·주택 분리 입력으로 상속개시일 시점 합계 기준시가를 자동 산출.
+   * 결과는 inheritedAcquisition.standardPriceAtDeemedDate/standardPriceAtTransfer에 자동 주입.
+   */
+  inheritedHouseValuation?: InheritanceHouseValuationInput;
 
   // ── 토지/건물 취득일 분리 계산 (housing·building 공통) ──
   /**
@@ -421,6 +438,16 @@ export interface TransferTaxResult {
    * UI에서 Sum_A/Sum_F/P_A_est·안분비율·각 항목 산식 표시용.
    */
   preHousingDisclosureDetail?: PreHousingDisclosureResult;
+  /**
+   * 상속 취득가액 의제 상세 결과 (inheritedAcquisition 제공 시만 포함).
+   * UI에서 case A 환산/실가×CPI 비교 또는 case B 신고가액·평가방법 표시용.
+   */
+  inheritedAcquisitionDetail?: import("./inheritance-acquisition.types").InheritanceAcquisitionResult;
+  /**
+   * 상속 주택 환산취득가 상세 결과 (inheritedHouseValuation 제공 시만 포함).
+   * UI에서 3-시점 합계 기준시가·추정 주택가격·1990 등급가액 환산 산식 표시용.
+   */
+  inheritedHouseValuationDetail?: InheritanceHouseValuationResult;
 }
 
 // ============================================================

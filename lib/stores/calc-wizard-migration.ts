@@ -95,6 +95,23 @@ export function migrateLegacyForm(
     migrateAsset(primaryAsset);
   }
 
+  // 상속 취득가액 의제 신규 필드 기본값 주입 (신규 필드 미존재 시 안전 초기화)
+  if (primaryAsset.inheritanceMode === undefined) primaryAsset.inheritanceMode = null;
+  if (!primaryAsset.inheritanceStartDate) primaryAsset.inheritanceStartDate = "";
+  if (primaryAsset.hasDecedentActualPrice === undefined) primaryAsset.hasDecedentActualPrice = false;
+  if (!primaryAsset.decedentAcquisitionPrice) primaryAsset.decedentAcquisitionPrice = "";
+  if (!primaryAsset.inheritanceReportedValue) primaryAsset.inheritanceReportedValue = "";
+  if (!primaryAsset.inheritanceValuationMethod) primaryAsset.inheritanceValuationMethod = "";
+  if (!primaryAsset.inheritanceValuationEvidence) primaryAsset.inheritanceValuationEvidence = "";
+  if (primaryAsset.useSupplementaryHelper === undefined) primaryAsset.useSupplementaryHelper = false;
+  if (!primaryAsset.supplementaryLandArea) primaryAsset.supplementaryLandArea = "";
+  if (!primaryAsset.supplementaryLandUnitPrice) primaryAsset.supplementaryLandUnitPrice = "";
+  if (!primaryAsset.supplementaryBuildingValue) primaryAsset.supplementaryBuildingValue = "";
+  // 기존 사용자가 publishedValueAtInheritance를 입력했던 경우 → supplementary 자동 분류
+  if (primaryAsset.publishedValueAtInheritance && !primaryAsset.inheritanceValuationMethod) {
+    primaryAsset.inheritanceValuationMethod = "supplementary";
+  }
+
   // 구 폼-전역 nbl* 6필드 → assets[0] (isNonBusinessLand 포함)
   if (legacy.isNonBusinessLand || legacy.nblLandType) {
     primaryAsset.isNonBusinessLand = Boolean(legacy.isNonBusinessLand);
