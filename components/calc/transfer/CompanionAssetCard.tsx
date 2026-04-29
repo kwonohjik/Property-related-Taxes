@@ -15,7 +15,7 @@ import { CompanionAcqInheritanceBlock } from "./CompanionAcqInheritanceBlock";
 import { CompanionAcqGiftBlock } from "./CompanionAcqGiftBlock";
 import { InheritedAcquisitionDeemedSection } from "./InheritedAcquisitionDeemedSection";
 import { NblSectionContainer } from "./nbl/NblSectionContainer";
-import { MixedUseSection } from "./MixedUseSection";
+import { MixedUseToggleRow, MixedUseExpandedPanel } from "./MixedUseSection";
 
 const ASSET_KIND_LABELS: Record<string, string> = {
   housing: "주택",
@@ -123,16 +123,10 @@ export function CompanionAssetCard({
         </div>
       </div>
 
-      {/* 검용주택 분리계산 — 자산 종류가 주택일 때 노출
-         transferDate는 폼-전역 양도일을 사용 (PHD 양도시 시점 기준연도용). */}
+      {/* 검용주택 분리계산 토글 — 자산 종류가 주택일 때 상단에 노출.
+         확장 패널은 자산 카드 하단(직접 귀속 필요경비 위)에 별도 배치. */}
       {asset.assetKind === "housing" && (
-        <MixedUseSection
-          asset={asset}
-          onChange={onChange}
-          transferDate={transferDate}
-          useEstimatedAcquisition={asset.useEstimatedAcquisition}
-          jibun={asset.addressJibun || undefined}
-        />
+        <MixedUseToggleRow asset={asset} onChange={onChange} />
       )}
 
       {/* 소재지 검색 */}
@@ -542,6 +536,18 @@ export function CompanionAssetCard({
             />
           )}
         </div>
+      )}
+
+      {/* 검용주택 확장 패널 — 체크박스 ON 시 직접 귀속 필요경비 위에 노출.
+         transferDate는 폼-전역 양도일을 사용 (PHD 양도시 시점 기준연도용). */}
+      {asset.assetKind === "housing" && (
+        <MixedUseExpandedPanel
+          asset={asset}
+          onChange={onChange}
+          transferDate={transferDate}
+          useEstimatedAcquisition={asset.useEstimatedAcquisition}
+          jibun={asset.addressJibun || undefined}
+        />
       )}
 
       {/* 직접 필요경비 */}

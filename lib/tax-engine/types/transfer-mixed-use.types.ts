@@ -210,6 +210,10 @@ export interface MixedUseTotalTax {
   taxBase: number;
   /** 기본세율 산출세액 */
   taxByBasicRate: number;
+  /** 산출세액에 적용된 누진세율 (소수, 예: 0.40) */
+  appliedRate: number;
+  /** 산출세액에 적용된 누진공제액 */
+  progressiveDeduction: number;
   /** 비사업용토지 +10%p 가산세 */
   nonBusinessSurcharge: number;
   /** 양도소득세 */

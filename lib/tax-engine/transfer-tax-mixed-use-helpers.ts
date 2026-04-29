@@ -557,6 +557,10 @@ export function buildTotalTax(
   const aggregateIncome = housingIncome + commercialIncome + nonBizIncome;
   const taxBase = Math.max(0, aggregateIncome - BASIC_DEDUCTION);
   const taxByBasicRate = calculateProgressiveTax(taxBase, brackets);
+  // 적용된 누진세율 구간 추출 (UI 산식 표시용)
+  const applicable = brackets.find((b) => taxBase <= (b.max ?? Infinity)) ?? brackets[brackets.length - 1];
+  const appliedRate = taxBase > 0 ? applicable.rate : 0;
+  const progressiveDeduction = taxBase > 0 ? applicable.deduction : 0;
   const nonBusinessSurcharge = applyRate(nonBizIncome, 0.10);
   const transferTax = taxByBasicRate + nonBusinessSurcharge;
   const localTax = applyRate(transferTax, 0.10);
@@ -566,6 +570,8 @@ export function buildTotalTax(
     basicDeduction: BASIC_DEDUCTION,
     taxBase,
     taxByBasicRate,
+    appliedRate,
+    progressiveDeduction,
     nonBusinessSurcharge,
     transferTax,
     localTax,

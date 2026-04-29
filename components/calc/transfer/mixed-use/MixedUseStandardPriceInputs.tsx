@@ -169,7 +169,7 @@ export function MixedUseStandardPriceInputs({
           </FieldCard>
         )}
 
-        <FieldCard label="상가건물 기준시가">
+        <FieldCard label="취득시 상가건물 기준시가">
           <CurrencyInput
             label=""
             value={asset.mixedAcqCommercialBuildingPrice}
@@ -185,7 +185,7 @@ export function MixedUseStandardPriceInputs({
           area={commercialLandArea > 0 ? commercialLandArea : undefined}
           referenceDate={acqReferenceDate}
           jibun={jibun}
-          label="개별공시지가 (원/㎡)"
+          label="취득시 개별공시지가(상가)(원/㎡)"
           placeholder="취득시 개별공시지가 /㎡"
         />
 

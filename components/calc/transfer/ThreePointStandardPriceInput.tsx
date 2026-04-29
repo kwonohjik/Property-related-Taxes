@@ -67,8 +67,26 @@ export interface ThreePointStandardPriceInputProps {
 
 // ─── 시점별 단일 입력 블록 ─────────────────────────────────────────
 
+type PointBlockTone = "amber" | "violet" | "emerald";
+
+const TONE_CLASSES: Record<PointBlockTone, { container: string; label: string }> = {
+  amber: {
+    container: "border-amber-200 bg-amber-50/60 dark:border-amber-900/40 dark:bg-amber-950/20",
+    label: "text-amber-800 dark:text-amber-300",
+  },
+  violet: {
+    container: "border-violet-200 bg-violet-50/60 dark:border-violet-900/40 dark:bg-violet-950/20",
+    label: "text-violet-800 dark:text-violet-300",
+  },
+  emerald: {
+    container: "border-emerald-200 bg-emerald-50/60 dark:border-emerald-900/40 dark:bg-emerald-950/20",
+    label: "text-emerald-800 dark:text-emerald-300",
+  },
+};
+
 interface PointBlockProps {
   label: string;
+  tone?: PointBlockTone;
   referenceDate: string;
   selectedYear: string;
   isManual: boolean;
@@ -83,6 +101,7 @@ interface PointBlockProps {
 
 function PointBlock({
   label,
+  tone,
   referenceDate,
   selectedYear,
   isManual,
@@ -94,6 +113,7 @@ function PointBlock({
   jibun,
   landArea,
 }: PointBlockProps) {
+  const toneClasses = tone ? TONE_CLASSES[tone] : null;
   const [isLookingUp, setIsLookingUp] = useState(false);
   const [lookupError, setLookupError] = useState<string | null>(null);
 
@@ -170,8 +190,16 @@ function PointBlock({
   const canLookup = !!jibun && !!effectiveYear;
 
   return (
-    <div className="space-y-2 rounded-md border border-dashed border-border bg-muted/20 p-3">
-      <p className="text-xs font-semibold text-muted-foreground">{label}</p>
+    <div
+      className={
+        toneClasses
+          ? `space-y-2 rounded-md border ${toneClasses.container} p-3`
+          : "space-y-2 rounded-md border border-dashed border-border bg-muted/20 p-3"
+      }
+    >
+      <p className={`text-xs font-semibold ${toneClasses ? toneClasses.label : "text-muted-foreground"}`}>
+        {label}
+      </p>
 
       {/* 공시지가 기준 연도 선택 + 조회 버튼 */}
       <FieldCard label="공시지가 연도" badge={yearBadge}>
@@ -264,6 +292,7 @@ export function ThreePointStandardPriceInput(props: ThreePointStandardPriceInput
     <div className="space-y-3">
       <PointBlock
         label="① 취득시 기준시가"
+        tone="amber"
         referenceDate={props.acquisitionDate}
         selectedYear={props.landPriceYearAtAcq}
         isManual={props.landPriceYearAtAcqIsManual}
@@ -278,6 +307,7 @@ export function ThreePointStandardPriceInput(props: ThreePointStandardPriceInput
 
       <PointBlock
         label="② 최초공시일 기준시가"
+        tone="violet"
         referenceDate={props.firstDisclosureDate}
         selectedYear={props.landPriceYearAtFirst}
         isManual={props.landPriceYearAtFirstIsManual}
@@ -292,6 +322,7 @@ export function ThreePointStandardPriceInput(props: ThreePointStandardPriceInput
 
       <PointBlock
         label="③ 양도시 기준시가"
+        tone="emerald"
         referenceDate={props.transferDate}
         selectedYear={props.landPriceYearAtTransfer}
         isManual={props.landPriceYearAtTransferIsManual}

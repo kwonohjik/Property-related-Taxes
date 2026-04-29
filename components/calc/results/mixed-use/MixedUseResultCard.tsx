@@ -15,6 +15,18 @@ const fmtPlain = (n: number | undefined | null) => (n ?? 0).toLocaleString();
 const fmtPct = (r: number | undefined | null) => `${((r ?? 0) * 100).toFixed(2)}%`;
 const fmtSqm = (n: number | undefined | null) => `${(n ?? 0).toFixed(2)} ㎡`;
 
+/** 양도소득세 기본세율 8구간 (소득세법 §104) — 캐시된 결과 fallback용 */
+function deriveBasicRateBracket(taxBase: number): { rate: number; deduction: number } {
+  if (taxBase <= 14_000_000) return { rate: 0.06, deduction: 0 };
+  if (taxBase <= 50_000_000) return { rate: 0.15, deduction: 1_260_000 };
+  if (taxBase <= 88_000_000) return { rate: 0.24, deduction: 5_760_000 };
+  if (taxBase <= 150_000_000) return { rate: 0.35, deduction: 15_440_000 };
+  if (taxBase <= 300_000_000) return { rate: 0.38, deduction: 19_940_000 };
+  if (taxBase <= 500_000_000) return { rate: 0.40, deduction: 25_940_000 };
+  if (taxBase <= 1_000_000_000) return { rate: 0.42, deduction: 35_940_000 };
+  return { rate: 0.45, deduction: 65_940_000 };
+}
+
 interface Props {
   breakdown: MixedUseGainBreakdown;
 }
@@ -232,7 +244,14 @@ export function MixedUseResultCard({ breakdown }: Props) {
         <Row
           label="산출세액 (기본세율)"
           value={fmt(t.taxByBasicRate)}
-          formula="과세표준 × 누진세율 (6%~45% 8구간) — 소득세법 §104"
+          formula={(() => {
+            if (t.taxBase <= 0) return "과세표준 × 누진세율 (6%~45% 8구간) — 소득세법 §104";
+            // 엔진이 신규 필드를 채웠으면 그대로 사용, 아니면 taxBase로부터 도출 (캐시 fallback)
+            const fallback = deriveBasicRateBracket(t.taxBase);
+            const rate = t.appliedRate && t.appliedRate > 0 ? t.appliedRate : fallback.rate;
+            const deduction = t.progressiveDeduction && t.progressiveDeduction > 0 ? t.progressiveDeduction : fallback.deduction;
+            return `${fmtPlain(t.taxBase)} × ${fmtPct(rate)} - ${fmtPlain(deduction)} (소득세법 §104)`;
+          })()}
         />
         {t.nonBusinessSurcharge > 0 && (
           <Row

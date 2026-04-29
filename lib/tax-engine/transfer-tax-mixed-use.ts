@@ -264,6 +264,8 @@ function buildRejectionResult(warning: string): MixedUseGainBreakdown {
       basicDeduction: 0,
       taxBase: 0,
       taxByBasicRate: 0,
+      appliedRate: 0,
+      progressiveDeduction: 0,
       nonBusinessSurcharge: 0,
       transferTax: 0,
       localTax: 0,
