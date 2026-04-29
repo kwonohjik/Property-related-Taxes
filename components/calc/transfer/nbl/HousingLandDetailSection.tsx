@@ -1,6 +1,7 @@
 "use client";
 
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 
@@ -10,8 +11,9 @@ export interface HousingLandDetailSectionProps {
 }
 
 type MetroValue = "" | "yes" | "no" | "unknown";
+type SelectableMetroValue = Exclude<MetroValue, "">;
 
-const METRO_OPTIONS: { value: MetroValue; label: string }[] = [
+const METRO_OPTIONS: { value: SelectableMetroValue; label: string }[] = [
   { value: "yes", label: "수도권" },
   { value: "no", label: "비수도권" },
   { value: "unknown", label: "미확인" },
@@ -45,20 +47,14 @@ export function HousingLandDetailSection({
       />
 
       <FieldCard label="수도권 여부" badge={badge ?? undefined}>
-        <div className="flex flex-wrap gap-4">
-          {METRO_OPTIONS.map((o) => (
-            <label key={o.value} className="flex items-center gap-1.5 cursor-pointer">
-              <input
-                type="radio"
-                name={`nblIsMetropolitanArea-${asset.assetId}`}
-                checked={asset.nblIsMetropolitanArea === o.value}
-                onChange={() => onAssetChange({ nblIsMetropolitanArea: o.value as MetroValue })}
-                className="h-4 w-4 accent-primary"
-              />
-              <span className="text-sm">{o.label}</span>
-            </label>
-          ))}
-        </div>
+        <RadioCardGroup
+          name={`nblIsMetropolitanArea-${asset.assetId}`}
+          tone="rose"
+          layout="inline"
+          options={METRO_OPTIONS}
+          value={(asset.nblIsMetropolitanArea ?? "") as SelectableMetroValue | ""}
+          onChange={(v) => onAssetChange({ nblIsMetropolitanArea: v })}
+        />
         {metro === "yes" && (
           <p className="text-xs text-muted-foreground mt-1">
             도시지역: 3배 / 그 외 수도권: 5배

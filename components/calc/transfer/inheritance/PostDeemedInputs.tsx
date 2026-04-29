@@ -14,6 +14,7 @@ import { useState, useEffect } from "react";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { HouseValuationSection } from "./HouseValuationSection";
 import {
   Select,
@@ -189,26 +190,22 @@ export function PostDeemedInputs({ asset, onChange, transferDate }: Props) {
 
       {/* ③ 보충적평가 보조계산 (supplementary 선택 시만) */}
       {isSupplementary && (
-        <div className="space-y-2 rounded-md border border-dashed border-border bg-muted/30 p-2.5">
-          <label className="flex items-center gap-2 cursor-pointer text-sm">
-            <input
-              type="checkbox"
-              checked={asset.useSupplementaryHelper}
-              onChange={(e) => onChange({ useSupplementaryHelper: e.target.checked })}
-            />
-            <span>보충적평가 보조계산 사용</span>
+        <ToggleCard
+          tone="amber"
+          title="보충적평가 보조계산 사용"
+          description="토지·건물 공시가격을 입력하면 합산 후 신고가액 자동 채움"
+          trailing={
             <LawArticleModal
               legalBasis="상속세및증여세법 §61"
               label="상증법 §61"
               className={LAW_BADGE_CLASS}
             />
-          </label>
-          <p className="text-[11px] text-muted-foreground pl-5">
-            토지·건물 공시가격을 입력하면 합산 후 신고가액 자동 채움
-          </p>
-
+          }
+          checked={asset.useSupplementaryHelper}
+          onCheckedChange={(v) => onChange({ useSupplementaryHelper: v })}
+        >
           {asset.useSupplementaryHelper && (
-            <div className="pl-5 space-y-3 pt-1">
+            <div className="space-y-3">
               {/* 토지 */}
               <div className="space-y-2 rounded-md border border-border bg-background p-2.5">
                 <p className="text-xs font-medium text-muted-foreground">토지</p>
@@ -268,7 +265,7 @@ export function PostDeemedInputs({ asset, onChange, transferDate }: Props) {
               )}
             </div>
           )}
-        </div>
+        </ToggleCard>
       )}
 
       {/* 주택 + 보충적평가 + 미공시: 3-시점 보조 계산기 */}

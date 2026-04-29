@@ -3,6 +3,7 @@
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
 import { DateInput } from "@/components/ui/date-input";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { BusinessUsePeriodsInput } from "./shared/BusinessUsePeriodsInput";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 
@@ -33,17 +34,12 @@ export function PastureDetailSection({
         description="§168-10 목장용지 판정"
       />
 
-      <FieldCard label="축산업 영위">
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={asset.nblPastureIsLivestockOperator}
-            onChange={(e) => onAssetChange({ nblPastureIsLivestockOperator: e.target.checked })}
-            className="h-4 w-4 rounded accent-primary"
-          />
-          <span className="text-sm">축산업 영위</span>
-        </label>
-      </FieldCard>
+      <ToggleCard
+        tone="sky"
+        title="축산업 영위"
+        checked={asset.nblPastureIsLivestockOperator}
+        onCheckedChange={(v) => onAssetChange({ nblPastureIsLivestockOperator: v })}
+      />
 
       <FieldCard label="축종">
         <select
@@ -80,17 +76,12 @@ export function PastureDetailSection({
         <p className="text-xs text-muted-foreground mt-1">상속 3년 내 해당 시 입력</p>
       </FieldCard>
 
-      <FieldCard label="특수법인 직접 사용">
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={asset.nblPastureIsSpecialOrgUse}
-            onChange={(e) => onAssetChange({ nblPastureIsSpecialOrgUse: e.target.checked })}
-            className="h-4 w-4 rounded accent-primary"
-          />
-          <span className="text-sm">사회복지법인·학교·종교·정당 직접 사용</span>
-        </label>
-      </FieldCard>
+      <ToggleCard
+        tone="sky"
+        title="사회복지법인·학교·종교·정당 직접 사용"
+        checked={asset.nblPastureIsSpecialOrgUse}
+        onCheckedChange={(v) => onAssetChange({ nblPastureIsSpecialOrgUse: v })}
+      />
 
       <FieldCard label="축산 사육기간">
         <BusinessUsePeriodsInput

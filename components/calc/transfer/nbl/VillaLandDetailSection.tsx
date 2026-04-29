@@ -2,6 +2,7 @@
 
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { BusinessUsePeriodsInput } from "./shared/BusinessUsePeriodsInput";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 
@@ -29,41 +30,27 @@ export function VillaLandDetailSection({
         />
       </FieldCard>
 
-      <FieldCard label="읍·면 지역">
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={asset.nblVillaIsEupMyeon}
-            onChange={(e) => onAssetChange({ nblVillaIsEupMyeon: e.target.checked })}
-            className="h-4 w-4 rounded accent-primary"
-          />
-          <span className="text-sm">읍·면 지역 소재</span>
-        </label>
-      </FieldCard>
+      <ToggleCard
+        tone="sky"
+        title="읍·면 지역 소재"
+        checked={asset.nblVillaIsEupMyeon}
+        onCheckedChange={(v) => onAssetChange({ nblVillaIsEupMyeon: v })}
+      />
 
-      <FieldCard label="농어촌주택 요건">
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={asset.nblVillaIsRuralHousing}
-            onChange={(e) => onAssetChange({ nblVillaIsRuralHousing: e.target.checked })}
-            className="h-4 w-4 rounded accent-primary"
-          />
-          <span className="text-sm">농어촌주택 요건 충족 (연면적 150㎡, 기준가액 이하)</span>
-        </label>
-      </FieldCard>
+      <ToggleCard
+        tone="sky"
+        title="농어촌주택 요건 충족"
+        description="연면적 150㎡, 기준가액 이하"
+        checked={asset.nblVillaIsRuralHousing}
+        onCheckedChange={(v) => onAssetChange({ nblVillaIsRuralHousing: v })}
+      />
 
-      <FieldCard label="2015.1.1. 이후 취득">
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={asset.nblVillaIsAfter20150101}
-            onChange={(e) => onAssetChange({ nblVillaIsAfter20150101: e.target.checked })}
-            className="h-4 w-4 rounded accent-primary"
-          />
-          <span className="text-sm">2015.1.1. 이후 취득</span>
-        </label>
-      </FieldCard>
+      <ToggleCard
+        tone="sky"
+        title="2015.1.1. 이후 취득"
+        checked={asset.nblVillaIsAfter20150101}
+        onCheckedChange={(v) => onAssetChange({ nblVillaIsAfter20150101: v })}
+      />
     </div>
   );
 }

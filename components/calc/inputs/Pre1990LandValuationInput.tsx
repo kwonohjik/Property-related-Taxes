@@ -15,6 +15,8 @@
 
 import { useEffect, useState } from "react";
 import { CurrencyInput } from "./CurrencyInput";
+import { ToggleCard } from "./ToggleCard";
+import { RadioCardGroup } from "./RadioCardGroup";
 import { getGradeValue } from "@/lib/tax-engine/data/land-grade-values";
 import { calculatePre1990LandValuation } from "@/lib/tax-engine/pre-1990-land-valuation";
 
@@ -157,29 +159,14 @@ export function Pre1990LandValuationInput({
   }
 
   return (
-    <div className="space-y-4 rounded-lg border border-dashed border-amber-500/50 bg-amber-50/50 dark:bg-amber-950/20 p-4">
-      <div>
-        <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
-          1990.8.30. 이전 취득 토지 기준시가 환산
-        </p>
-        <p className="text-xs text-muted-foreground mt-1">
-          개별공시지가 고시(1990.8.30.) 이전 취득한 토지는 토지등급가액표를 이용해
-          취득 당시 기준시가를 환산합니다. (소득세법 시행규칙 §80⑥·집행기준 97-176의2)
-        </p>
-      </div>
-
-      <label className="flex items-center gap-2 text-sm">
-        <input
-          type="checkbox"
-          checked={form.pre1990Enabled}
-          onChange={(e) => onChange({ pre1990Enabled: e.target.checked })}
-          className="h-4 w-4 accent-amber-600"
-        />
-        <span className="font-medium">환산 기능 사용</span>
-      </label>
-
-      {!form.pre1990Enabled ? null : (
-        <div className="space-y-4">
+    <ToggleCard
+      tone="amber"
+      title="1990.8.30. 이전 취득 토지 기준시가 환산"
+      description="개별공시지가 고시(1990.8.30.) 이전 취득한 토지는 토지등급가액표를 이용해 취득 당시 기준시가를 환산합니다. (소득세법 시행규칙 §80⑥·집행기준 97-176의2)"
+      checked={form.pre1990Enabled}
+      onCheckedChange={(v) => onChange({ pre1990Enabled: v })}
+    >
+      <div className="space-y-4">
           {/* 면적 — 상위 자산 취득 당시 면적 자동 연동 (직접 수정 불필요) */}
           {acquisitionArea && (
             <p className="text-xs text-muted-foreground">
@@ -226,28 +213,17 @@ export function Pre1990LandValuationInput({
           {/* 등급 입력 모드 토글 */}
           <div className="space-y-1.5">
             <p className="text-sm font-medium">토지등급 입력 방식</p>
-            <div className="flex gap-4 text-sm">
-              <label className="flex items-center gap-1.5 cursor-pointer">
-                <input
-                  type="radio"
-                  name="pre1990GradeMode"
-                  checked={mode === "number"}
-                  onChange={() => onChange({ pre1990GradeMode: "number" })}
-                  className="h-4 w-4 accent-amber-600"
-                />
-                <span>등급번호 (1~365)</span>
-              </label>
-              <label className="flex items-center gap-1.5 cursor-pointer">
-                <input
-                  type="radio"
-                  name="pre1990GradeMode"
-                  checked={mode === "value"}
-                  onChange={() => onChange({ pre1990GradeMode: "value" })}
-                  className="h-4 w-4 accent-amber-600"
-                />
-                <span>등급가액 직접 입력</span>
-              </label>
-            </div>
+            <RadioCardGroup
+              name="pre1990GradeMode"
+              tone="amber"
+              layout="inline"
+              options={[
+                { value: "number", label: "등급번호 (1~365)" },
+                { value: "value", label: "등급가액 직접 입력" },
+              ]}
+              value={mode}
+              onChange={(v) => onChange({ pre1990GradeMode: v })}
+            />
           </div>
 
           {/* 3개 등급 */}
@@ -276,9 +252,8 @@ export function Pre1990LandValuationInput({
             ※ 토지대장 및 부동산공시가격 알리미(realtyprice.kr)에서 조회 가능합니다.
             1990.1.1. 등급조정이 없었다면 직전 등급은 현재 등급과 동일하게 입력하세요.
           </p>
-        </div>
-      )}
-    </div>
+      </div>
+    </ToggleCard>
   );
 }
 

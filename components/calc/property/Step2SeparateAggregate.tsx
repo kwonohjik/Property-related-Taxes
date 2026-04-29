@@ -1,6 +1,8 @@
 "use client";
 
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ZONING_DISTRICT_LABELS, type FormState } from "./shared";
 
 interface Props {
@@ -20,21 +22,14 @@ export function Step2SeparateAggregate({ form, onChange }: Props) {
       {/* 용도지역 */}
       <div className="space-y-2">
         <label className="text-sm font-medium">용도지역</label>
-        <div className="grid grid-cols-2 gap-2">
-          {ZONING_DISTRICT_LABELS.map(([val, label]) => (
-            <label key={val} className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="radio"
-                name="saZoningDistrict"
-                value={val}
-                checked={form.saZoningDistrict === val}
-                onChange={() => onChange({ saZoningDistrict: val })}
-                className="accent-primary"
-              />
-              <span className="text-sm">{label}</span>
-            </label>
-          ))}
-        </div>
+        <RadioCardGroup
+          name="saZoningDistrict"
+          tone="sky"
+          layout="inline"
+          options={ZONING_DISTRICT_LABELS.map(([value, label]) => ({ value, label }))}
+          value={form.saZoningDistrict}
+          onChange={(v) => onChange({ saZoningDistrict: v })}
+        />
       </div>
 
       {/* 토지 면적 */}
@@ -52,15 +47,13 @@ export function Step2SeparateAggregate({ form, onChange }: Props) {
       </div>
 
       {/* 공장 여부 */}
-      <label className="flex items-center gap-2 cursor-pointer">
-        <input
-          type="checkbox"
-          checked={form.saIsFactory}
-          onChange={(e) => onChange({ saIsFactory: e.target.checked })}
-          className="accent-primary"
-        />
-        <span className="text-sm">공장용지 (공장입지기준면적 적용)</span>
-      </label>
+      <ToggleCard
+        tone="sky"
+        title="공장용지"
+        description="공장입지기준면적 적용"
+        checked={form.saIsFactory}
+        onCheckedChange={(v) => onChange({ saIsFactory: v })}
+      />
 
       {/* 건물 바닥면적 (비공장) */}
       {!form.saIsFactory && (
@@ -95,15 +88,13 @@ export function Step2SeparateAggregate({ form, onChange }: Props) {
       )}
 
       {/* 건축물 철거 여부 */}
-      <label className="flex items-center gap-2 cursor-pointer">
-        <input
-          type="checkbox"
-          checked={form.saDemolished}
-          onChange={(e) => onChange({ saDemolished: e.target.checked })}
-          className="accent-primary"
-        />
-        <span className="text-sm">건축물 철거 완료 (6개월 이내 특례 적용 가능)</span>
-      </label>
+      <ToggleCard
+        tone="sky"
+        title="건축물 철거 완료"
+        description="6개월 이내 특례 적용 가능"
+        checked={form.saDemolished}
+        onCheckedChange={(v) => onChange({ saDemolished: v })}
+      />
 
       {form.saDemolished && (
         <div className="space-y-1">

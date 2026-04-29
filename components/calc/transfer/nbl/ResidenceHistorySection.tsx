@@ -3,6 +3,7 @@
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
 import { DateInput } from "@/components/ui/date-input";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { SigunguSelect } from "./shared/SigunguSelect";
 import type { AssetForm, ResidenceHistoryInput } from "@/lib/stores/calc-wizard-store";
 
@@ -88,17 +89,13 @@ export function ResidenceHistorySection({
             />
           </FieldCard>
 
-          <FieldCard label="주민등록">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={h.hasResidentRegistration}
-                onChange={(e) => updateHistory(i, { hasResidentRegistration: e.target.checked })}
-                className="h-4 w-4 rounded accent-primary"
-              />
-              <span className="text-sm">주민등록 있음</span>
-            </label>
-          </FieldCard>
+          <ToggleCard
+            tone="violet"
+            title="주민등록 있음"
+            description="임야 재촌 인정 요건"
+            checked={h.hasResidentRegistration}
+            onCheckedChange={(v) => updateHistory(i, { hasResidentRegistration: v })}
+          />
         </div>
       ))}
 

@@ -19,6 +19,7 @@ import { PriorGiftInput } from "@/components/calc/PriorGiftInput";
 import { GiftTaxResultView } from "@/components/calc/results/GiftTaxResultView";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { DateInput } from "@/components/ui/date-input";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import type {
   EstateItem,
   PriorGift,
@@ -167,43 +168,22 @@ function Step0({
         </div>
       </div>
 
-      <div className="space-y-3">
-        <label className="flex items-start gap-3 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={form.isGenerationSkip}
-            onChange={(e) => set({ isGenerationSkip: e.target.checked })}
-            className="mt-0.5 h-4 w-4 rounded border-gray-300 text-emerald-600"
-          />
-          <div>
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
-              세대생략 증여 (§57 할증)
-            </span>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-              수증자가 증여자의 자녀가 아닌 직계비속(손자 등) — 산출세액 30% 할증
-            </p>
-          </div>
-        </label>
-
-        {form.isGenerationSkip && (
-          <label className="flex items-start gap-3 ml-7 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={form.isMinorDonee}
-              onChange={(e) => set({ isMinorDonee: e.target.checked })}
-              className="mt-0.5 h-4 w-4 rounded border-gray-300 text-emerald-600"
-            />
-            <div>
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
-                수증자 미성년자
-              </span>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                20억 초과분에 대해 40% 할증 적용
-              </p>
-            </div>
-          </label>
-        )}
-      </div>
+      <ToggleCard
+        tone="violet"
+        title="세대생략 증여 (§57 할증)"
+        description="수증자가 증여자의 자녀가 아닌 직계비속(손자 등) — 산출세액 30% 할증"
+        checked={form.isGenerationSkip}
+        onCheckedChange={(v) => set({ isGenerationSkip: v })}
+      >
+        <ToggleCard
+          tone="violet"
+          size="sm"
+          title="수증자 미성년자"
+          description="20억 초과분에 대해 40% 할증 적용"
+          checked={form.isMinorDonee}
+          onCheckedChange={(v) => set({ isMinorDonee: v })}
+        />
+      </ToggleCard>
     </div>
   );
 }
@@ -322,22 +302,13 @@ function Step3({
       />
 
       {/* 신고세액공제 */}
-      <label className="flex items-start gap-3 cursor-pointer p-4 border rounded-lg">
-        <input
-          type="checkbox"
-          checked={form.isFiledOnTime}
-          onChange={(e) => set({ isFiledOnTime: e.target.checked })}
-          className="mt-0.5 h-4 w-4 rounded border-gray-300 text-emerald-600"
-        />
-        <div>
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
-            법정신고기한 내 신고 (§69 신고세액공제 3%)
-          </span>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-            증여일로부터 3개월 이내 신고 시 산출세액의 3% 공제
-          </p>
-        </div>
-      </label>
+      <ToggleCard
+        tone="violet"
+        title="법정신고기한 내 신고 (§69 신고세액공제 3%)"
+        description="증여일로부터 3개월 이내 신고 시 산출세액의 3% 공제"
+        checked={form.isFiledOnTime}
+        onCheckedChange={(v) => set({ isFiledOnTime: v })}
+      />
 
       {/* 외국납부세액 */}
       <CurrencyInput

@@ -18,6 +18,7 @@ import {
 } from "@/lib/tax-engine/exemption-rules";
 import type { ExemptionCheckedItem } from "@/lib/tax-engine/exemption-evaluator";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 
 // ============================================================
 // 리스크 배지
@@ -52,97 +53,75 @@ interface ExemptionRowProps {
 
 function ExemptionRow({ rule, checked, amount, onToggle, onAmountChange }: ExemptionRowProps) {
   return (
-    <div
-      className={`border rounded-lg p-4 transition-colors ${
-        checked
-          ? "border-indigo-300 bg-indigo-50 dark:border-indigo-700 dark:bg-indigo-950/30"
-          : "border-gray-200 dark:border-gray-700"
-      }`}
-    >
-      <div className="flex items-start gap-3">
-        <input
-          type="checkbox"
-          id={`exemption-${rule.id}`}
-          checked={checked}
-          onChange={() => onToggle(rule.id)}
-          className="mt-1 h-4 w-4 rounded border-gray-300 text-indigo-600"
-        />
-        <div className="flex-1 min-w-0">
-          <div className="flex flex-wrap items-center gap-2 mb-1">
-            <label
-              htmlFor={`exemption-${rule.id}`}
-              className="font-medium text-sm cursor-pointer"
-            >
-              {rule.name}
-            </label>
+    <ToggleCard
+      tone="violet"
+      title={rule.name}
+      description={
+        <span className="flex flex-col gap-0.5">
+          <span className="flex items-center gap-2">
             <RiskBadge level={rule.riskLevel} />
             <span className="text-xs text-gray-400 dark:text-gray-500">
               {rule.lawRef}
             </span>
-          </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-            {rule.description}
-          </p>
+          </span>
+          <span>{rule.description}</span>
+        </span>
+      }
+      checked={checked}
+      onCheckedChange={() => onToggle(rule.id)}
+    >
+      <ul className="text-xs text-gray-600 dark:text-gray-300 space-y-1 list-disc list-inside">
+        {rule.requirements.map((req, i) => (
+          <li key={i}>{req}</li>
+        ))}
+      </ul>
 
-          {/* 적용 요건 */}
-          {checked && (
-            <div className="mt-2 space-y-2">
-              <ul className="text-xs text-gray-600 dark:text-gray-300 space-y-1 list-disc list-inside">
-                {rule.requirements.map((req, i) => (
-                  <li key={i}>{req}</li>
-                ))}
-              </ul>
-
-              {/* 금액 입력 (사회통념 타입 제외하고 모두 표시) */}
-              {rule.limitType !== "social_norm" && (
-                <div className="mt-3">
-                  <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
-                    해당 자산 가액
-                    {rule.limitType === "fixed" && rule.limitAmount && (
-                      <span className="ml-1 text-amber-600">
-                        (최대 {rule.limitAmount.toLocaleString()}원)
-                      </span>
-                    )}
-                    {rule.limitType === "area" && rule.limitAreaM2 && (
-                      <span className="ml-1 text-amber-600">
-                        (면적 한도 {rule.limitAreaM2}㎡)
-                      </span>
-                    )}
-                  </label>
-                  <CurrencyInput
-                    label=""
-                    value={amount > 0 ? String(amount) : ""}
-                    onChange={(v) => onAmountChange(rule.id, parseInt(v.replace(/,/g, "") || "0", 10))}
-                    placeholder="금액 입력"
-                  />
-                </div>
-              )}
-
-              {/* 리스크 경고 */}
-              {rule.riskNote && (
-                <div className="mt-2 text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 rounded p-2">
-                  ⚠️ {rule.riskNote}
-                </div>
-              )}
-
-              {/* 제외 사유 */}
-              {rule.exclusions.length > 0 && (
-                <div className="mt-2">
-                  <p className="text-xs font-medium text-red-600 dark:text-red-400 mb-1">
-                    적용 제외 사유:
-                  </p>
-                  <ul className="text-xs text-red-500 dark:text-red-400 space-y-0.5 list-disc list-inside">
-                    {rule.exclusions.map((ex, i) => (
-                      <li key={i}>{ex}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          )}
+      {/* 금액 입력 (사회통념 타입 제외하고 모두 표시) */}
+      {rule.limitType !== "social_norm" && (
+        <div>
+          <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
+            해당 자산 가액
+            {rule.limitType === "fixed" && rule.limitAmount && (
+              <span className="ml-1 text-amber-600">
+                (최대 {rule.limitAmount.toLocaleString()}원)
+              </span>
+            )}
+            {rule.limitType === "area" && rule.limitAreaM2 && (
+              <span className="ml-1 text-amber-600">
+                (면적 한도 {rule.limitAreaM2}㎡)
+              </span>
+            )}
+          </label>
+          <CurrencyInput
+            label=""
+            value={amount > 0 ? String(amount) : ""}
+            onChange={(v) => onAmountChange(rule.id, parseInt(v.replace(/,/g, "") || "0", 10))}
+            placeholder="금액 입력"
+          />
         </div>
-      </div>
-    </div>
+      )}
+
+      {/* 리스크 경고 */}
+      {rule.riskNote && (
+        <div className="text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 rounded p-2">
+          ⚠️ {rule.riskNote}
+        </div>
+      )}
+
+      {/* 제외 사유 */}
+      {rule.exclusions.length > 0 && (
+        <div>
+          <p className="text-xs font-medium text-red-600 dark:text-red-400 mb-1">
+            적용 제외 사유:
+          </p>
+          <ul className="text-xs text-red-500 dark:text-red-400 space-y-0.5 list-disc list-inside">
+            {rule.exclusions.map((ex, i) => (
+              <li key={i}>{ex}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </ToggleCard>
   );
 }
 

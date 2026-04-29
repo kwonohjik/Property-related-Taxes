@@ -2,6 +2,7 @@
 
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 
 export interface OtherLandDetailSectionProps {
@@ -66,19 +67,12 @@ export function OtherLandDetailSection({
         />
       </FieldCard>
 
-      <FieldCard label="주택·사업장 부수">
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={asset.nblOtherIsRelatedToResidence}
-            onChange={(e) =>
-              onAssetChange({ nblOtherIsRelatedToResidence: e.target.checked })
-            }
-            className="h-4 w-4 rounded accent-primary"
-          />
-          <span className="text-sm">주택·사업장 부수 토지 여부</span>
-        </label>
-      </FieldCard>
+      <ToggleCard
+        tone="sky"
+        title="주택·사업장 부수 토지 여부"
+        checked={asset.nblOtherIsRelatedToResidence}
+        onCheckedChange={(v) => onAssetChange({ nblOtherIsRelatedToResidence: v })}
+      />
 
       {isLikelyBareground && (
         <div className="rounded-md bg-amber-50 border border-amber-200 dark:bg-amber-950/30 dark:border-amber-800 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">

@@ -18,6 +18,7 @@
 import { useMemo, useState } from "react";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { Pre1990LandValuationInput } from "@/components/calc/inputs/Pre1990LandValuationInput";
 import {
@@ -484,37 +485,33 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
           );
         })()}
 
-        <label className="flex items-center gap-2 cursor-pointer text-sm">
-          <input
-            type="checkbox"
-            checked={asset.inhHouseValUseHousePriceOverride}
-            onChange={(e) => {
-              onChange({
-                inhHouseValUseHousePriceOverride: e.target.checked,
-                ...(!e.target.checked && { inhHouseValHousePriceAtInheritanceOverride: "" }),
-              });
-            }}
-          />
-          상속개시일 시점 주택가격 직접 입력 (환산 가격 override)
-        </label>
-
-        {asset.inhHouseValUseHousePriceOverride && (
-          <div className="pl-5 pt-1">
-            <FieldCard
-              label="상속개시일 주택가격"
-              unit="원"
-              hint="별도 산정 근거가 있을 때 직접 입력 (국세청 기준시가, 감정가액 등)"
-            >
-              <CurrencyInput
-                label=""
-                hideUnit
-                value={asset.inhHouseValHousePriceAtInheritanceOverride}
-                onChange={(v) => onChange({ inhHouseValHousePriceAtInheritanceOverride: v })}
-                placeholder="상속개시일 시점 주택가격"
-              />
-            </FieldCard>
-          </div>
-        )}
+        <ToggleCard
+          tone="amber"
+          size="sm"
+          title="상속개시일 시점 주택가격 직접 입력"
+          description="환산 가격 override"
+          checked={asset.inhHouseValUseHousePriceOverride}
+          onCheckedChange={(v) => {
+            onChange({
+              inhHouseValUseHousePriceOverride: v,
+              ...(!v && { inhHouseValHousePriceAtInheritanceOverride: "" }),
+            });
+          }}
+        >
+          <FieldCard
+            label="상속개시일 주택가격"
+            unit="원"
+            hint="별도 산정 근거가 있을 때 직접 입력 (국세청 기준시가, 감정가액 등)"
+          >
+            <CurrencyInput
+              label=""
+              hideUnit
+              value={asset.inhHouseValHousePriceAtInheritanceOverride}
+              onChange={(v) => onChange({ inhHouseValHousePriceAtInheritanceOverride: v })}
+              placeholder="상속개시일 시점 주택가격"
+            />
+          </FieldCard>
+        </ToggleCard>
       </div>
     </div>
   );

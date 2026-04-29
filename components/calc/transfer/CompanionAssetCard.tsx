@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { AddressSearch, type AddressValue } from "@/components/ui/address-search";
 import { ParcelListInput } from "@/components/calc/inputs/ParcelListInput";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { CompanionSaleModeBlock, type BundledSaleMode } from "./CompanionSaleModeBlock";
 import { CompanionAcqPurchaseBlock } from "./CompanionAcqPurchaseBlock";
 import { CompanionAcqInheritanceBlock } from "./CompanionAcqInheritanceBlock";
@@ -486,56 +487,44 @@ export function CompanionAssetCard({
 
       {/* 다필지 토글 (토지 전용) */}
       {asset.assetKind === "land" && (
-        <div className="space-y-2 rounded-lg border border-dashed border-primary/40 bg-primary/3 p-4">
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id={`parcel-mode-${asset.assetId}`}
-              checked={asset.parcelMode ?? false}
-              onChange={(e) => {
-                const checked = e.target.checked;
-                const defaultParcel: ParcelFormItem = {
-                  id: `parcel-${Date.now()}-0`,
-                  acquisitionDate: "",
-                  acquisitionMethod: "estimated",
-                  acquisitionPrice: "",
-                  acquisitionArea: "",
-                  transferArea: "",
-                  standardPricePerSqmAtAcq: "",
-                  standardPricePerSqmAtTransfer: "",
-                  expenses: "0",
-                  useDayAfterReplotting: false,
-                  replottingConfirmDate: "",
-                  useExchangeLandReduction: false,
-                  entitlementArea: "",
-                  allocatedArea: "",
-                  priorLandArea: "",
-                  areaScenario: "same",
-                };
-                onChange({
-                  parcelMode: checked,
-                  parcels: checked && (!asset.parcels || asset.parcels.length === 0)
-                    ? [defaultParcel]
-                    : asset.parcels,
-                });
-              }}
-              className="h-4 w-4"
-            />
-            <label htmlFor={`parcel-mode-${asset.assetId}`} className="text-sm font-medium cursor-pointer">
-              취득시기 상이 (환지·합병 등 다필지)
-            </label>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            취득원인·취득일이 다른 2필지 이상인 경우 (소득세법 시행령 §162①6호)
-          </p>
-          {asset.parcelMode && (
-            <ParcelListInput
-              parcels={asset.parcels ?? []}
-              totalTransferPrice={parseAmount(asset.actualSalePrice || "0")}
-              onChange={(parcels) => onChange({ parcels })}
-            />
-          )}
-        </div>
+        <ToggleCard
+          tone="sky"
+          title="취득시기 상이 (환지·합병 등 다필지)"
+          description="취득원인·취득일이 다른 2필지 이상인 경우 (소득세법 시행령 §162①6호)"
+          checked={asset.parcelMode ?? false}
+          onCheckedChange={(checked) => {
+            const defaultParcel: ParcelFormItem = {
+              id: `parcel-${Date.now()}-0`,
+              acquisitionDate: "",
+              acquisitionMethod: "estimated",
+              acquisitionPrice: "",
+              acquisitionArea: "",
+              transferArea: "",
+              standardPricePerSqmAtAcq: "",
+              standardPricePerSqmAtTransfer: "",
+              expenses: "0",
+              useDayAfterReplotting: false,
+              replottingConfirmDate: "",
+              useExchangeLandReduction: false,
+              entitlementArea: "",
+              allocatedArea: "",
+              priorLandArea: "",
+              areaScenario: "same",
+            };
+            onChange({
+              parcelMode: checked,
+              parcels: checked && (!asset.parcels || asset.parcels.length === 0)
+                ? [defaultParcel]
+                : asset.parcels,
+            });
+          }}
+        >
+          <ParcelListInput
+            parcels={asset.parcels ?? []}
+            totalTransferPrice={parseAmount(asset.actualSalePrice || "0")}
+            onChange={(parcels) => onChange({ parcels })}
+          />
+        </ToggleCard>
       )}
 
       {/* 검용주택 확장 패널 — 체크박스 ON 시 직접 귀속 필요경비 위에 노출.

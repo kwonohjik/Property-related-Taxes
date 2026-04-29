@@ -11,6 +11,7 @@
 
 import { useState } from "react";
 import { CurrencyInput, parseAmount, formatKRW } from "@/components/calc/inputs/CurrencyInput";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import {
   evaluateListedStockValue,
   calcUnlistedStockPerShareValue,
@@ -206,31 +207,17 @@ function UnlistedStockEditor({
       </div>
 
       {/* 부동산과다보유법인 여부 */}
-      <div className="flex items-start gap-3 p-3 rounded-md bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
-        <input
-          type="checkbox"
-          id={`real-estate-heavy-${item.id}`}
-          checked={isRealEstateHeavy}
-          onChange={(e) => onUpdateHeavy(e.target.checked)}
-          className="mt-0.5 h-4 w-4 rounded border-gray-300 text-indigo-600"
-        />
-        <div>
-          <label
-            htmlFor={`real-estate-heavy-${item.id}`}
-            className="text-xs font-medium cursor-pointer text-amber-800 dark:text-amber-300"
-          >
-            부동산과다보유법인
-          </label>
-          <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
-            총자산 중 부동산 비율 80% 이상 — 순자산가치 비중 증가 (시행령 §54④)
-          </p>
-          {isRealEstateHeavy && (
-            <p className="text-xs text-amber-700 dark:text-amber-300 font-medium mt-1">
-              적용 가중치: 순손익가치×2 + 순자산가치×3 ÷ 5
-            </p>
-          )}
-        </div>
-      </div>
+      <ToggleCard
+        tone="amber"
+        title="부동산과다보유법인"
+        description="총자산 중 부동산 비율 80% 이상 — 순자산가치 비중 증가 (시행령 §54④)"
+        checked={isRealEstateHeavy}
+        onCheckedChange={(v) => onUpdateHeavy(v)}
+      >
+        <p className="text-xs text-amber-700 dark:text-amber-300 font-medium">
+          적용 가중치: 순손익가치×2 + 순자산가치×3 ÷ 5
+        </p>
+      </ToggleCard>
 
       {/* 총 발행주식 수 */}
       <div className="space-y-1">

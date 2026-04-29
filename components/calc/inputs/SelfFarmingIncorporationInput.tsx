@@ -14,6 +14,7 @@
 import { Label } from "@/components/ui/label";
 import { DateInput } from "@/components/ui/date-input";
 import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 
 const ZONE_OPTIONS = [
   { value: "residential", label: "주거지역" },
@@ -48,37 +49,26 @@ export function SelfFarmingIncorporationInput({
   landAreaM2,
 }: SelfFarmingIncorporationInputProps) {
   return (
-    <div className="space-y-3 rounded-lg border border-dashed border-amber-300/60 bg-amber-50/30 p-3">
-      <div className="flex items-center gap-2">
-        <input
-          type="checkbox"
-          id="self-farming-incorp"
-          checked={useSelfFarmingIncorporation}
-          onChange={(e) =>
-            onChange({
-              useSelfFarmingIncorporation: e.target.checked,
-              ...(e.target.checked
-                ? {}
-                : {
-                    selfFarmingIncorporationDate: "",
-                    selfFarmingIncorporationZone: "",
-                    selfFarmingStandardPriceAtIncorporation: "",
-                  }),
-            })
-          }
-          className="h-4 w-4"
-        />
-        <Label htmlFor="self-farming-incorp" className="text-sm cursor-pointer font-medium">
-          주거·상업·공업지역 편입 (조특령 §66 ⑤⑥ 편입일 부분감면)
-        </Label>
-      </div>
-      <p className="text-xs text-muted-foreground pl-6 -mt-1">
-        2002.1.1 이후 편입 시 편입일까지의 양도소득만 감면 대상이 됩니다. 편입일부터 3년이 지난 후 양도하면 감면이 전부 상실됩니다.
-      </p>
-
-      {useSelfFarmingIncorporation && (
-        <div className="space-y-3 pl-6">
-          {/* 편입일 + 편입 지역 */}
+    <ToggleCard
+      tone="amber"
+      title="주거·상업·공업지역 편입"
+      description="조특령 §66 ⑤⑥ 편입일 부분감면 — 2002.1.1 이후 편입 시 편입일까지의 양도소득만 감면 대상. 편입일부터 3년이 지난 후 양도하면 감면이 전부 상실됩니다."
+      checked={useSelfFarmingIncorporation}
+      onCheckedChange={(v) =>
+        onChange({
+          useSelfFarmingIncorporation: v,
+          ...(v
+            ? {}
+            : {
+                selfFarmingIncorporationDate: "",
+                selfFarmingIncorporationZone: "",
+                selfFarmingStandardPriceAtIncorporation: "",
+              }),
+        })
+      }
+    >
+      <div className="space-y-3">
+        {/* 편입일 + 편입 지역 */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label className="text-sm">편입일</Label>
@@ -123,8 +113,7 @@ export function SelfFarmingIncorporationInput({
               enableLookup={true}
             />
           </div>
-        </div>
-      )}
-    </div>
+      </div>
+    </ToggleCard>
   );
 }

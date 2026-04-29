@@ -1,11 +1,18 @@
 "use client";
 
+import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { SEPARATED_TYPE_OPTIONS, type FormState } from "./shared";
 
 interface Props {
   form: FormState;
   onChange: (d: Partial<FormState>) => void;
 }
+
+const FACTORY_LOCATION_OPTIONS = [
+  { value: "industrial_zone" as const, label: "산업단지·지정 공업지역 내" },
+  { value: "urban" as const, label: "도시지역 내 (기타)" },
+  { value: "other" as const, label: "도시지역 외" },
+];
 
 export function Step2Separated({ form, onChange }: Props) {
   return (
@@ -15,56 +22,32 @@ export function Step2Separated({ form, onChange }: Props) {
         해당하는 분리과세 토지 유형을 선택하세요 (지방세법 시행령 §102).
       </p>
 
-      <div className="space-y-2">
-        {SEPARATED_TYPE_OPTIONS.map(({ value, label, rate, hint }) => (
-          <label
-            key={value}
-            className="flex items-start gap-3 rounded-lg border p-3 cursor-pointer hover:bg-accent has-[:checked]:border-primary has-[:checked]:bg-accent/50"
-          >
-            <input
-              type="radio"
-              name="stSeparatedType"
-              value={value}
-              checked={form.stSeparatedType === value}
-              onChange={() => onChange({ stSeparatedType: value })}
-              className="mt-0.5 accent-primary"
-            />
-            <div className="flex-1">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-medium">{label}</p>
-                <span className="text-xs font-medium text-muted-foreground">세율 {rate}</span>
-              </div>
-              {hint && <p className="text-xs text-amber-600">{hint}</p>}
-            </div>
-          </label>
-        ))}
-      </div>
+      <RadioCardGroup
+        name="stSeparatedType"
+        tone="sky"
+        layout="stack"
+        options={SEPARATED_TYPE_OPTIONS.map((opt) => ({
+          value: opt.value,
+          label: opt.label,
+          trailing: `세율 ${opt.rate}`,
+          hint: opt.hint,
+        }))}
+        value={form.stSeparatedType}
+        onChange={(v) => onChange({ stSeparatedType: v })}
+      />
 
       {/* 공장 입지 유형 (공장용지 선택 시) */}
       {form.stSeparatedType === "factory" && (
-        <div className="space-y-2 rounded-lg border p-4 bg-muted/30">
+        <div className="space-y-2">
           <label className="text-sm font-medium">공장 입지 유형</label>
-          <div className="space-y-2">
-            {(
-              [
-                ["industrial_zone", "산업단지·지정 공업지역 내"],
-                ["urban", "도시지역 내 (기타)"],
-                ["other", "도시지역 외"],
-              ] as const
-            ).map(([val, label]) => (
-              <label key={val} className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="stFactoryLocation"
-                  value={val}
-                  checked={form.stFactoryLocation === val}
-                  onChange={() => onChange({ stFactoryLocation: val })}
-                  className="accent-primary"
-                />
-                <span className="text-sm">{label}</span>
-              </label>
-            ))}
-          </div>
+          <RadioCardGroup
+            name="stFactoryLocation"
+            tone="sky"
+            layout="inline"
+            options={FACTORY_LOCATION_OPTIONS}
+            value={form.stFactoryLocation}
+            onChange={(v) => onChange({ stFactoryLocation: v })}
+          />
         </div>
       )}
     </div>

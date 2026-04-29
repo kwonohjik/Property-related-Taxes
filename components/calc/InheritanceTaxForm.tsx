@@ -21,6 +21,7 @@ import { PriorGiftInput } from "@/components/calc/PriorGiftInput";
 import { HeirComposition } from "@/components/calc/HeirComposition";
 import { InheritanceTaxResultView } from "@/components/calc/results/InheritanceTaxResultView";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { DateInput } from "@/components/ui/date-input";
 import type {
   EstateItem,
@@ -248,17 +249,14 @@ function Step2({
           hint="최대 1,500만원 한도 자동 적용"
           placeholder="예: 10,000,000"
         />
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={form.funeralIncludesBongan}
-            onChange={(e) => set({ funeralIncludesBongan: e.target.checked })}
-            className="h-4 w-4 rounded border-gray-300 text-indigo-600"
-          />
-          <span className="text-sm text-gray-700 dark:text-gray-200">
-            봉안시설 이용 (추가 +500만원)
-          </span>
-        </label>
+        <ToggleCard
+          tone="violet"
+          size="sm"
+          title="봉안시설 이용"
+          description="추가 +500만원"
+          checked={form.funeralIncludesBongan}
+          onCheckedChange={(v) => set({ funeralIncludesBongan: v })}
+        />
       </div>
 
       <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
@@ -377,22 +375,13 @@ function Step4({
           )}
         </div>
 
-        <label className="flex items-start gap-3 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={form.preferLumpSum}
-            onChange={(e) => set({ preferLumpSum: e.target.checked })}
-            className="mt-0.5 h-4 w-4 rounded border-gray-300 text-indigo-600"
-          />
-          <div>
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
-              일괄공제 선택 (§21 5억)
-            </span>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-              미체크 시 기초공제+인적공제·배우자공제 합산과 자동 비교하여 큰 금액 적용
-            </p>
-          </div>
-        </label>
+        <ToggleCard
+          tone="violet"
+          title="일괄공제 선택 (§21 5억)"
+          description="미체크 시 기초공제+인적공제·배우자공제 합산과 자동 비교하여 큰 금액 적용"
+          checked={form.preferLumpSum}
+          onCheckedChange={(v) => set({ preferLumpSum: v })}
+        />
       </div>
     </div>
   );
@@ -423,70 +412,45 @@ function Step5({
         <p className="text-xs text-gray-500 dark:text-gray-400">
           자녀를 건너뛴 손자·외손자 등이 상속받는 경우 산출세액의 30%(또는 40%) 할증
         </p>
-        <label className="flex items-start gap-3 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={form.isGenerationSkip}
-            onChange={(e) =>
-              set({
-                isGenerationSkip: e.target.checked,
-                isMinorHeir: e.target.checked ? form.isMinorHeir : false,
-                generationSkipAssetAmount: e.target.checked
-                  ? form.generationSkipAssetAmount
-                  : "",
-              })
-            }
-            className="mt-0.5 h-4 w-4 rounded border-gray-300 text-indigo-600"
+        <ToggleCard
+          tone="violet"
+          title="세대생략 상속 해당"
+          checked={form.isGenerationSkip}
+          onCheckedChange={(v) =>
+            set({
+              isGenerationSkip: v,
+              isMinorHeir: v ? form.isMinorHeir : false,
+              generationSkipAssetAmount: v
+                ? form.generationSkipAssetAmount
+                : "",
+            })
+          }
+        >
+          <ToggleCard
+            tone="violet"
+            size="sm"
+            title="세대생략 상속인이 미성년자"
+            description="미성년자 + 과세표준 20억 초과 시 40% 할증"
+            checked={form.isMinorHeir}
+            onCheckedChange={(v) => set({ isMinorHeir: v })}
           />
-          <span className="text-sm text-gray-700 dark:text-gray-200">
-            세대생략 상속 해당
-          </span>
-        </label>
-        {form.isGenerationSkip && (
-          <div className="space-y-3 pl-4 border-l-2 border-indigo-200">
-            <label className="flex items-start gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={form.isMinorHeir}
-                onChange={(e) => set({ isMinorHeir: e.target.checked })}
-                className="mt-0.5 h-4 w-4 rounded border-gray-300 text-indigo-600"
-              />
-              <div>
-                <span className="text-sm text-gray-700 dark:text-gray-200">
-                  세대생략 상속인이 미성년자
-                </span>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                  미성년자 + 과세표준 20억 초과 시 40% 할증
-                </p>
-              </div>
-            </label>
-            <CurrencyInput
-              label="세대생략 해당 상속재산가액 (일부만 세대생략인 경우)"
-              value={form.generationSkipAssetAmount}
-              onChange={(v) => set({ generationSkipAssetAmount: v })}
-              hint="전체 상속인 중 일부만 세대생략인 경우 해당 재산가액 입력. 전체가 세대생략이면 빈칸."
-              placeholder="없으면 빈칸 (전액 할증 적용)"
-            />
-          </div>
-        )}
+          <CurrencyInput
+            label="세대생략 해당 상속재산가액 (일부만 세대생략인 경우)"
+            value={form.generationSkipAssetAmount}
+            onChange={(v) => set({ generationSkipAssetAmount: v })}
+            hint="전체 상속인 중 일부만 세대생략인 경우 해당 재산가액 입력. 전체가 세대생략이면 빈칸."
+            placeholder="없으면 빈칸 (전액 할증 적용)"
+          />
+        </ToggleCard>
       </div>
 
-      <label className="flex items-start gap-3 cursor-pointer p-4 border rounded-lg">
-        <input
-          type="checkbox"
-          checked={form.isFiledOnTime}
-          onChange={(e) => set({ isFiledOnTime: e.target.checked })}
-          className="mt-0.5 h-4 w-4 rounded border-gray-300 text-indigo-600"
-        />
-        <div>
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
-            법정신고기한 내 신고 (§69 신고세액공제 3%)
-          </span>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-            상속개시일로부터 6개월 이내 신고 시 산출세액의 3% 공제
-          </p>
-        </div>
-      </label>
+      <ToggleCard
+        tone="violet"
+        title="법정신고기한 내 신고 (§69 신고세액공제 3%)"
+        description="상속개시일로부터 6개월 이내 신고 시 산출세액의 3% 공제"
+        checked={form.isFiledOnTime}
+        onCheckedChange={(v) => set({ isFiledOnTime: v })}
+      />
 
       <CurrencyInput
         label="외국납부세액 (§29)"

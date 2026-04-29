@@ -8,6 +8,7 @@
  */
 
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { MixedUseAreaInputs } from "./mixed-use/MixedUseAreaInputs";
 import { MixedUseStandardPriceInputs } from "./mixed-use/MixedUseStandardPriceInputs";
 import { MixedUseResidencyInput } from "./mixed-use/MixedUseResidencyInput";
@@ -31,25 +32,21 @@ interface Props {
  */
 export function MixedUseToggleRow({ asset, onChange }: Pick<Props, "asset" | "onChange">) {
   return (
-    <div className="mt-4 border-t pt-4 space-y-2">
+    <div className="mt-4 border-t pt-4">
       {/* 검용주택 토글 — 활성화 시 토지/건물 분리도 자동 ON (SOT 일관성) */}
-      <label className="flex items-center gap-2 cursor-pointer select-none">
-        <input
-          type="checkbox"
-          className="rounded"
-          checked={!!asset.isMixedUseHouse}
-          onChange={(e) => {
-            const checked = e.target.checked;
-            onChange({
-              isMixedUseHouse: checked,
-              // 검용주택 ON: 토지/건물 분리 모드 자동 활성화 (취득시기 분리 일반화)
-              ...(checked ? { hasSeperateLandAcquisitionDate: true } : {}),
-            });
-          }}
-        />
-        <span className="text-sm font-medium">검용주택 분리계산</span>
-        <span className="text-xs text-muted-foreground">(주택+상가 복합건물, §160①단서)</span>
-      </label>
+      <ToggleCard
+        tone="amber"
+        title="검용주택 분리계산"
+        description="주택+상가 복합건물 (§160①단서)"
+        checked={!!asset.isMixedUseHouse}
+        onCheckedChange={(checked) => {
+          onChange({
+            isMixedUseHouse: checked,
+            // 검용주택 ON: 토지/건물 분리 모드 자동 활성화 (취득시기 분리 일반화)
+            ...(checked ? { hasSeperateLandAcquisitionDate: true } : {}),
+          });
+        }}
+      />
     </div>
   );
 }
@@ -111,25 +108,18 @@ export function MixedUseExpandedPanel({
       <MixedUseResidencyInput asset={asset} onChange={onChange} sectionNum={4} />
 
       {/* ⑤ 수도권 여부 */}
-      <div className="rounded-lg border border-rose-200 bg-rose-50/40 p-3 space-y-1.5">
+      <div className="rounded-lg border border-rose-200 bg-rose-50/40 p-3 space-y-2">
         <div className="flex items-center gap-2">
           <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-200 text-[10px] font-bold text-rose-800 select-none">5</span>
           <p className="text-xs font-semibold text-rose-700">부수토지 배율 지역</p>
         </div>
-        <label className="flex items-center gap-2 cursor-pointer select-none">
-          <input
-            type="checkbox"
-            className="rounded"
-            checked={!!asset.mixedIsMetropolitanArea}
-            onChange={(e) =>
-              onChange({ mixedIsMetropolitanArea: e.target.checked })
-            }
-          />
-          <span className="text-sm font-medium">수도권 지역 (배율 3배·5배 구분)</span>
-        </label>
-        <p className="text-xs text-muted-foreground ml-6">
-          수도권 주·상·공: 3배 / 수도권 녹지·밖: 5배 / 도시 외: 10배 (시행령 §168의12)
-        </p>
+        <ToggleCard
+          tone="rose"
+          title="수도권 지역"
+          description="배율 3배·5배 구분 — 수도권 주·상·공: 3배 / 수도권 녹지·밖: 5배 / 도시 외: 10배 (시행령 §168의12)"
+          checked={!!asset.mixedIsMetropolitanArea}
+          onCheckedChange={(v) => onChange({ mixedIsMetropolitanArea: v })}
+        />
       </div>
     </div>
   );

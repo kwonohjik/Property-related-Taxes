@@ -1,5 +1,6 @@
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import {
   labelCls,
   selectCls,
@@ -78,40 +79,28 @@ export function Step1({
         )}
       </div>
 
-      <div className={checkboxWrapCls}>
-        <input
-          type="checkbox"
-          id="isRelatedParty"
-          checked={form.isRelatedParty}
-          onChange={(e) => set("isRelatedParty", e.target.checked)}
-          className="h-4 w-4 rounded border-input"
-        />
-        <label htmlFor="isRelatedParty" className={`${labelCls} cursor-pointer`}>
-          특수관계인 간 거래 (시가 70%~130% 벗어나면 시가 기준 과세)
-        </label>
-      </div>
-
-      {form.isRelatedParty && (
+      <ToggleCard
+        tone="amber"
+        title="특수관계인 간 거래"
+        description="시가 70%~130% 벗어나면 시가 기준 과세"
+        checked={form.isRelatedParty}
+        onCheckedChange={(v) => set("isRelatedParty", v)}
+      >
         <CurrencyInput
           label="시가인정액 (감정가·매매사례가액)"
           value={form.marketValue}
           onChange={(v) => set("marketValue", v)}
           placeholder="시가 기준 금액"
         />
-      )}
+      </ToggleCard>
 
-      <div className={checkboxWrapCls}>
-        <input
-          type="checkbox"
-          id="isLuxuryProperty"
-          checked={form.isLuxuryProperty}
-          onChange={(e) => set("isLuxuryProperty", e.target.checked)}
-          className="h-4 w-4 rounded border-input"
-        />
-        <label htmlFor="isLuxuryProperty" className={`${labelCls} cursor-pointer`}>
-          사치성 재산 (골프장·별장·고급주택·고급오락장·고급선박) — 기본세율의 5배 중과 (지방세법 §13①)
-        </label>
-      </div>
+      <ToggleCard
+        tone="amber"
+        title="사치성 재산"
+        description="골프장·별장·고급주택·고급오락장·고급선박 — 기본세율의 5배 중과 (지방세법 §13①)"
+        checked={form.isLuxuryProperty}
+        onCheckedChange={(v) => set("isLuxuryProperty", v)}
+      />
     </div>
   );
 }

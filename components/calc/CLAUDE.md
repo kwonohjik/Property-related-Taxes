@@ -70,6 +70,8 @@ acquisitionMethod: isAppraisal ? "appraisal" : isEstimated ? "estimated" : "actu
 | 섹션 헤더 | `@/components/calc/shared/SectionHeader.tsx` | 큰 그룹 시작점 (점·아이콘 + 굵은 텍스트 + 우측 액션 슬롯). |
 | 진척 사이드바 | `@/components/calc/shared/WizardSidebar.tsx` | lg(1024px) 이상 좌측 sticky. 단계 + 합계 요약. 마법사용. |
 | 개별공시지가 입력 | `@/components/calc/inputs/LandPriceLookupField.tsx` (`LandPriceLookupField`) | 공시지가(원/㎡) 전용. 기준연도+Vworld 조회+토지기준시가 자동 계산 포함. CurrencyInput 단독 사용 금지. |
+| 분기 토글 / 옵션 토글 | `@/components/calc/inputs/ToggleCard.tsx` (`ToggleCard`) | 모드/분기 토글 통합 카드. ON 시 tone(amber·rose·violet·emerald·sky)으로 카드 전체 강조 + 펼침 children 지원. variant="card"(기본, 펼침)·"chip"(인라인). Switch 기반. native checkbox 신규 사용 금지. |
+| 라디오 그룹 | `@/components/calc/inputs/RadioCardGroup.tsx` (`RadioCardGroup`) | 라디오 그룹 통합 컴포넌트. ToggleCard와 동일한 가시성 원칙(미선택 옵션도 tone 배경 유지). layout="stack"(세로 카드)·"inline"(가로 컴팩트). options 배열로 일괄 렌더. native radio 신규 사용 금지. |
 | 신축·증축 입력 | `@/components/calc/transfer/SelfBuiltSection.tsx` | 자산-수준 4필드 (isSelfBuilt·buildingType·constructionDate·extensionFloorArea). `acquisitionCause === "purchase"` + housing/building 자산 전용. |
 | 1990 환산 | `@/components/calc/inputs/Pre1990LandValuationInput.tsx` | 토지 자산 + acquisitionDate < 1990-08-30 시 자동 활성화. 자산-수준 props (`form` = `Pre1990FormSlice`). |
 | 주소 검색 | `@/components/ui/address-search.tsx` | Vworld 주소 검색 API. 조정대상지역·공시가격 조회에 필수 (지번 주소). |
@@ -168,3 +170,52 @@ const transferSummary = useMemo(
 - 자동 계산 결과 박스도 해당 카드의 색조로 통일 (`bg-*/100/60 border border-*/200`)
 - 카드 간 간격은 `space-y-3`
 - **대표 구현**: `components/calc/transfer/mixed-use/` (MixedUseSection ①~⑤)
+
+## 토글 가시성 원칙 — ToggleCard (강제 규칙)
+
+분기·옵션 토글은 반드시 `@/components/calc/inputs/ToggleCard.tsx`(`ToggleCard`) 사용. native `<input type="checkbox">` 신규 작성 금지 (2026-04-29 프로젝트 전체 마이그레이션 완료, native checkbox 0건).
+
+라디오 그룹은 반드시 `@/components/calc/inputs/RadioCardGroup.tsx`(`RadioCardGroup`) 사용. native `<input type="radio">` 신규 작성 금지 (2026-04-30 프로젝트 전체 마이그레이션 완료, RadioCardGroup 컴포넌트 내부 외 native radio 0건). ToggleCard와 동일한 가시성 원칙 적용 — **미선택 옵션도 tone 배경 항상 유지**, 선택된 옵션만 ring·border 진하기·title 색으로 강조.
+
+### OFF 상태에도 tone 배경 항상 유지
+
+ToggleCard는 OFF/ON 모두 `bg-{tone}-50/70` 배경을 적용한다. 회색·중립 배경(`bg-card`·`bg-background`·`bg-muted/30`) **금지**.
+
+**이유**: 회색 배경을 OFF로 사용하면 분기 토글이 평범한 라벨에 묻혀 사용자가 토글 컨트롤의 존재조차 인지하지 못한다. 카드 자체가 색상으로 발견되어야 하며, 상태(ON/OFF)는 부차적 신호로 충분하다 (사용자 피드백, 2026-04-29).
+
+### ON/OFF 구분은 4가지 보조 신호
+
+배경은 동일해도 아래 신호로 상태가 명확히 구분된다:
+
+| 신호 | OFF | ON |
+|---|---|---|
+| Switch thumb 위치 | 좌측 | 우측 |
+| border | `border-{tone}-200/70` (옅음) | `border-{tone}-300` (진함) |
+| ring | 없음 | `ring-1 ring-{tone}-200/50` |
+| title 색 | 기본(`font-semibold`만) | `text-{tone}-900` |
+
+### tone 매핑 (의미별)
+
+| tone | 의미 | 사용 예 |
+|---|---|---|
+| `amber` | 취득·분리계산 모드 | 검용주택, 신축, PHD §164⑤, 토지/건물 분리·소유자 분리 |
+| `rose` | 지역·지정 정보 | 수도권 지역, 조정대상지역 |
+| `violet` | 거주·자격 정보 | 임대 최초계약, 어린이집 인가증·실사용, 사원주택 제공 |
+| `emerald` | 양도시점 정보 | (Phase 2 예정) |
+| `sky` | 면적·규모 정보 | (Phase 2 예정) |
+
+### variant
+
+- `card` (기본): 풀 카드. `children` 펼침 영역 지원 (ON 시에만 렌더, 좌측 색조 인디케이터 자동)
+- `chip`: 인라인 칩. 라벨 옆 짧은 토글에 사용 (예: "취득일" 라벨 옆 토지/건물 분리 토글). children 미지원
+
+### `disabled` + `disabledReason`
+
+비활성 사유가 있으면 `disabled` + `disabledReason`을 함께 전달. card variant는 description 자리에, chip variant는 hover title + description 자리에 자동 표시.
+
+### 직접 토글 카드를 만드는 경우(예외적)
+
+ToggleCard로 표현하기 어려운 특수 케이스에도 동일 원칙 준수:
+- OFF 상태에 `bg-{tone}-50/70` 배경 필수
+- 회색 배경(`bg-card`·`bg-muted`) 사용 금지
+- ON/OFF 구분은 위 4신호 중 최소 2개 이상 차별화

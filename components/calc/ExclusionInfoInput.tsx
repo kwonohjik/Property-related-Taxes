@@ -15,6 +15,7 @@
 
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DateInput } from "@/components/ui/date-input";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import type { PropertyEntry } from "@/lib/stores/comprehensive-wizard-store";
 
 // ============================================================
@@ -118,21 +119,13 @@ function RentalExclusionDetail({
       </div>
 
       {/* 최초 계약 여부 */}
-      <div className="flex items-center gap-3 rounded-md border bg-muted/30 px-4 py-3">
-        <input
-          type="checkbox"
-          id={`initial-contract-${property.id}`}
-          checked={property.isInitialContract}
-          onChange={(e) => onUpdate({ isInitialContract: e.target.checked })}
-          className="h-4 w-4 rounded border-input"
-        />
-        <label
-          htmlFor={`initial-contract-${property.id}`}
-          className="text-sm cursor-pointer"
-        >
-          최초 임대차 계약 (계약 갱신 아님)
-        </label>
-      </div>
+      <ToggleCard
+        tone="violet"
+        title="최초 임대차 계약"
+        description="계약 갱신 아님"
+        checked={property.isInitialContract}
+        onCheckedChange={(v) => onUpdate({ isInitialContract: v })}
+      />
 
       {/* 임대료 */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -190,21 +183,13 @@ function UnsoldHousingDetail({
   return (
     <div className="space-y-4">
       {/* 최초 매각 여부 */}
-      <div className="flex items-center gap-3 rounded-md border bg-muted/30 px-4 py-3">
-        <input
-          type="checkbox"
-          id={`first-sale-${property.id}`}
-          checked={property.isFirstSale}
-          onChange={(e) => onUpdate({ isFirstSale: e.target.checked })}
-          className="h-4 w-4 rounded border-input"
-        />
-        <label
-          htmlFor={`first-sale-${property.id}`}
-          className="text-sm cursor-pointer"
-        >
-          최초 매각 (주택건설사업자로부터 직접 취득)
-        </label>
-      </div>
+      <ToggleCard
+        tone="violet"
+        title="최초 매각"
+        description="주택건설사업자로부터 직접 취득"
+        checked={property.isFirstSale}
+        onCheckedChange={(v) => onUpdate({ isFirstSale: v })}
+      />
 
       {/* 입주자 모집공고일 */}
       <div className="space-y-1.5">
@@ -245,37 +230,20 @@ function DaycareHousingDetail({
 }) {
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-3 rounded-md border bg-muted/30 px-4 py-3">
-        <input
-          type="checkbox"
-          id={`daycare-permit-${property.id}`}
-          checked={property.hasDaycarePermit}
-          onChange={(e) => onUpdate({ hasDaycarePermit: e.target.checked })}
-          className="h-4 w-4 rounded border-input"
-        />
-        <label
-          htmlFor={`daycare-permit-${property.id}`}
-          className="text-sm cursor-pointer"
-        >
-          가정어린이집 인가증 보유
-        </label>
-      </div>
+      <ToggleCard
+        tone="violet"
+        title="가정어린이집 인가증 보유"
+        checked={property.hasDaycarePermit}
+        onCheckedChange={(v) => onUpdate({ hasDaycarePermit: v })}
+      />
 
-      <div className="flex items-center gap-3 rounded-md border bg-muted/30 px-4 py-3">
-        <input
-          type="checkbox"
-          id={`daycare-used-${property.id}`}
-          checked={property.isActuallyUsedAsDaycare}
-          onChange={(e) => onUpdate({ isActuallyUsedAsDaycare: e.target.checked })}
-          className="h-4 w-4 rounded border-input"
-        />
-        <label
-          htmlFor={`daycare-used-${property.id}`}
-          className="text-sm cursor-pointer"
-        >
-          과세기준일 현재 실제 가정어린이집으로 사용 중
-        </label>
-      </div>
+      <ToggleCard
+        tone="violet"
+        title="실제 가정어린이집으로 사용 중"
+        description="과세기준일 현재"
+        checked={property.isActuallyUsedAsDaycare}
+        onCheckedChange={(v) => onUpdate({ isActuallyUsedAsDaycare: v })}
+      />
 
       {(!property.hasDaycarePermit || !property.isActuallyUsedAsDaycare) && (
         <div className="rounded-md bg-amber-50 border border-amber-200 p-3">
@@ -304,21 +272,12 @@ function EmployeeHousingDetail({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3 rounded-md border bg-muted/30 px-4 py-3">
-        <input
-          type="checkbox"
-          id={`employee-provided-${property.id}`}
-          checked={property.isProvidedToEmployee}
-          onChange={(e) => onUpdate({ isProvidedToEmployee: e.target.checked })}
-          className="h-4 w-4 rounded border-input"
-        />
-        <label
-          htmlFor={`employee-provided-${property.id}`}
-          className="text-sm cursor-pointer"
-        >
-          종업원에게 무상 또는 저가로 제공
-        </label>
-      </div>
+      <ToggleCard
+        tone="violet"
+        title="종업원에게 무상 또는 저가로 제공"
+        checked={property.isProvidedToEmployee}
+        onCheckedChange={(v) => onUpdate({ isProvidedToEmployee: v })}
+      />
 
       <div className="space-y-1.5">
         <label className="block text-sm font-medium">

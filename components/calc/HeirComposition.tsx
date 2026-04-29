@@ -10,6 +10,7 @@
 
 import type { Heir, HeirRelation } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { DateInput } from "@/components/ui/date-input";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 
 // ============================================================
 // 관계 메타
@@ -125,41 +126,23 @@ function HeirEditor({ heir, index, onUpdate, onRemove }: HeirEditorProps) {
       )}
 
       {/* 장애인 여부 */}
-      <label className="flex items-start gap-3 cursor-pointer">
-        <input
-          type="checkbox"
-          checked={heir.isDisabled ?? false}
-          onChange={(e) => set({ isDisabled: e.target.checked })}
-          className="mt-0.5 h-4 w-4 rounded border-gray-300 text-indigo-600"
-        />
-        <div>
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
-            장애인
-          </span>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-            기대여명(년) × 1,000만원 추가 인적공제 (§20②, 2024 생명표 기준)
-          </p>
-        </div>
-      </label>
+      <ToggleCard
+        tone="violet"
+        title="장애인"
+        description="기대여명(년) × 1,000만원 추가 인적공제 (§20②, 2024 생명표 기준)"
+        checked={heir.isDisabled ?? false}
+        onCheckedChange={(v) => set({ isDisabled: v })}
+      />
 
       {/* 동거주택 요건 (자녀) */}
       {showCohabitant && (
-        <label className="flex items-start gap-3 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={heir.isCohabitant ?? false}
-            onChange={(e) => set({ isCohabitant: e.target.checked })}
-            className="mt-0.5 h-4 w-4 rounded border-gray-300 text-indigo-600"
-          />
-          <div>
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
-              동거주택 상속공제 해당
-            </span>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-              피상속인·상속인 10년 이상 동거, 무주택자 요건 등 (§23의2) — 공시가격의 80%, 최대 6억
-            </p>
-          </div>
-        </label>
+        <ToggleCard
+          tone="violet"
+          title="동거주택 상속공제 해당"
+          description="피상속인·상속인 10년 이상 동거, 무주택자 요건 등 (§23의2) — 공시가격의 80%, 최대 6억"
+          checked={heir.isCohabitant ?? false}
+          onCheckedChange={(v) => set({ isCohabitant: v })}
+        />
       )}
 
       {/* 법정상속분 외 실제 상속비율 */}

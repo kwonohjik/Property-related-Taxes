@@ -9,6 +9,7 @@
 import { useState } from "react";
 import { CurrencyInput, parseAmount, formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { DateInput } from "@/components/ui/date-input";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import type { PriorGift, DonorRelation } from "@/lib/tax-engine/types/inheritance-gift.types";
 
 // ============================================================
@@ -97,22 +98,13 @@ function GiftRowEditor({ gift, index, showIsHeir, onUpdate, onRemove }: GiftRowE
 
       {/* 상속인 여부 (상속세 전용) */}
       {showIsHeir && (
-        <label className="flex items-start gap-3 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={gift.isHeir}
-            onChange={(e) => set({ isHeir: e.target.checked })}
-            className="mt-0.5 h-4 w-4 rounded border-gray-300 text-indigo-600"
-          />
-          <div>
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
-              상속인에게 증여
-            </span>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-              상속인: 10년 이내 합산 (§13①1호) / 비상속인: 5년 이내 합산 (§13①2호)
-            </p>
-          </div>
-        </label>
+        <ToggleCard
+          tone="violet"
+          title="상속인에게 증여"
+          description="상속인: 10년 이내 합산 (§13①1호) / 비상속인: 5년 이내 합산 (§13①2호)"
+          checked={gift.isHeir}
+          onCheckedChange={(v) => set({ isHeir: v })}
+        />
       )}
 
       {/* 증여가액 */}

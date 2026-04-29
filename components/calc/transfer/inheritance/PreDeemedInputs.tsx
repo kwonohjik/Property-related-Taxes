@@ -15,6 +15,7 @@ import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInp
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { DateInput } from "@/components/ui/date-input";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { Pre1990LandValuationInput } from "@/components/calc/inputs/Pre1990LandValuationInput";
 import { HouseValuationSection } from "./HouseValuationSection";
 import { calculatePre1990LandValuation, type LandGradeInput } from "@/lib/tax-engine/pre-1990-land-valuation";
@@ -246,19 +247,19 @@ export function PreDeemedInputs({ asset, onChange, transferDate }: Props) {
           />
         </FieldCard>
         {autoStdPriceAtAcq !== null && (
-          <label className="flex items-center gap-2 cursor-pointer text-xs pl-3 text-muted-foreground">
-            <input
-              type="checkbox"
-              checked={asset.useStandardPriceAtAcqOverride}
-              onChange={(e) =>
-                onChange({
-                  useStandardPriceAtAcqOverride: e.target.checked,
-                  ...(!e.target.checked && { standardPriceAtAcq: "" }),
-                })
-              }
-            />
-            의제취득일 시점 기준시가 직접 입력 (자동 계산값 override)
-          </label>
+          <ToggleCard
+            tone="amber"
+            size="sm"
+            title="의제취득일 시점 기준시가 직접 입력"
+            description="자동 계산값 override"
+            checked={asset.useStandardPriceAtAcqOverride}
+            onCheckedChange={(v) =>
+              onChange({
+                useStandardPriceAtAcqOverride: v,
+                ...(!v && { standardPriceAtAcq: "" }),
+              })
+            }
+          />
         )}
       </div>
 
@@ -311,64 +312,54 @@ export function PreDeemedInputs({ asset, onChange, transferDate }: Props) {
           />
         </FieldCard>
         {autoStdPriceAtTransfer !== null && (
-          <label className="flex items-center gap-2 cursor-pointer text-xs pl-3 text-muted-foreground">
-            <input
-              type="checkbox"
-              checked={asset.useStandardPriceAtTransferOverride}
-              onChange={(e) =>
-                onChange({
-                  useStandardPriceAtTransferOverride: e.target.checked,
-                  ...(!e.target.checked && { standardPriceAtTransfer: "" }),
-                })
-              }
-            />
-            양도시 기준시가 직접 입력 (자동 계산값 override)
-          </label>
+          <ToggleCard
+            tone="emerald"
+            size="sm"
+            title="양도시 기준시가 직접 입력"
+            description="자동 계산값 override"
+            checked={asset.useStandardPriceAtTransferOverride}
+            onCheckedChange={(v) =>
+              onChange({
+                useStandardPriceAtTransferOverride: v,
+                ...(!v && { standardPriceAtTransfer: "" }),
+              })
+            }
+          />
         )}
       </div>
 
       {/* ③ 피상속인 실가 입증 */}
-      <div className="space-y-2 rounded-md border border-border bg-background p-2.5">
-        <label className="flex items-center gap-2 cursor-pointer text-sm">
-          <input
-            type="checkbox"
-            checked={asset.hasDecedentActualPrice}
-            onChange={(e) => {
-              onChange({
-                hasDecedentActualPrice: e.target.checked,
-                ...(!e.target.checked && {
-                  decedentAcquisitionDate: "",
-                  decedentAcquisitionPrice: "",
-                }),
-              });
-            }}
+      <ToggleCard
+        tone="amber"
+        title="피상속인 실지취득가액을 입증할 수 있습니다"
+        description="입증 시 실가 × 물가상승률과 환산취득가 중 큰 금액 적용"
+        checked={asset.hasDecedentActualPrice}
+        onCheckedChange={(v) => {
+          onChange({
+            hasDecedentActualPrice: v,
+            ...(!v && {
+              decedentAcquisitionDate: "",
+              decedentAcquisitionPrice: "",
+            }),
+          });
+        }}
+      >
+        <FieldCard label="피상속인 취득일" required>
+          <DateInput
+            value={asset.decedentAcquisitionDate}
+            onChange={(v) => onChange({ decedentAcquisitionDate: v })}
           />
-          피상속인 실지취득가액을 입증할 수 있습니다
-        </label>
-        <p className="text-[11px] text-muted-foreground pl-5">
-          입증 시 실가 × 물가상승률과 환산취득가 중 큰 금액 적용
-        </p>
-
-        {asset.hasDecedentActualPrice && (
-          <div className="pl-5 space-y-3 pt-1">
-            <FieldCard label="피상속인 취득일" required>
-              <DateInput
-                value={asset.decedentAcquisitionDate}
-                onChange={(v) => onChange({ decedentAcquisitionDate: v })}
-              />
-            </FieldCard>
-            <FieldCard label="피상속인 실지취득가액" required unit="원">
-              <CurrencyInput
-                label=""
-                hideUnit
-                value={asset.decedentAcquisitionPrice}
-                onChange={(v) => onChange({ decedentAcquisitionPrice: v })}
-                placeholder="피상속인이 실제 취득한 가액"
-              />
-            </FieldCard>
-          </div>
-        )}
-      </div>
+        </FieldCard>
+        <FieldCard label="피상속인 실지취득가액" required unit="원">
+          <CurrencyInput
+            label=""
+            hideUnit
+            value={asset.decedentAcquisitionPrice}
+            onChange={(v) => onChange({ decedentAcquisitionPrice: v })}
+            placeholder="피상속인이 실제 취득한 가액"
+          />
+        </FieldCard>
+      </ToggleCard>
 
       <p className="text-[11px] text-muted-foreground">
         환산취득가 = 양도가액 × (의제취득일 기준시가 ÷ 양도시 기준시가)

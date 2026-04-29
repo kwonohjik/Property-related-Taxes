@@ -28,6 +28,7 @@ import {
 } from "./acquisition/shared";
 import { Step0 } from "./acquisition/Step0";
 import { Step1 } from "./acquisition/Step1";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 
 export function AcquisitionTaxForm() {
   const [step, setStep] = useState(0);
@@ -145,18 +146,12 @@ export function AcquisitionTaxForm() {
                 </select>
               </div>
 
-              <div className={checkboxWrapCls}>
-                <input
-                  type="checkbox"
-                  id="isRegulatedArea"
-                  checked={form.isRegulatedArea}
-                  onChange={(e) => set("isRegulatedArea", e.target.checked)}
-                  className="h-4 w-4 rounded border-input"
-                />
-                <label htmlFor="isRegulatedArea" className={`${labelCls} cursor-pointer`}>
-                  조정대상지역 내 주택
-                </label>
-              </div>
+              <ToggleCard
+                tone="rose"
+                title="조정대상지역 내 주택"
+                checked={form.isRegulatedArea}
+                onCheckedChange={(v) => set("isRegulatedArea", v)}
+              />
 
               {/* 다주택 + 조정지역 중과 안내 */}
               {form.isRegulatedArea && parseInt(form.houseCountAfter) >= 2 && isIndividual && (
@@ -197,43 +192,28 @@ export function AcquisitionTaxForm() {
           ) : (
             <>
               {isHousing && isIndividual ? (
-                <>
-                  <div className={checkboxWrapCls}>
-                    <input
-                      type="checkbox"
-                      id="isFirstHome"
-                      checked={form.isFirstHome}
-                      onChange={(e) => set("isFirstHome", e.target.checked)}
-                      className="h-4 w-4 rounded border-input"
-                    />
-                    <label htmlFor="isFirstHome" className={`${labelCls} cursor-pointer`}>
-                      생애최초 주택 구매 감면 신청 (지방세특례제한법 §36의3, 최대 200만원)
-                    </label>
+                <ToggleCard
+                  tone="violet"
+                  title="생애최초 주택 구매 감면 신청"
+                  description="지방세특례제한법 §36의3, 최대 200만원"
+                  checked={form.isFirstHome}
+                  onCheckedChange={(v) => set("isFirstHome", v)}
+                >
+                  <ToggleCard
+                    tone="rose"
+                    size="sm"
+                    title="수도권 주택"
+                    description="취득가액 한도 4억 (비수도권은 3억)"
+                    checked={form.isMetropolitan}
+                    onCheckedChange={(v) => set("isMetropolitan", v)}
+                  />
+
+                  <div className={warnBannerCls}>
+                    <strong>추징 주의</strong><br />
+                    취득일로부터 3년 이내 처분·임대·주거 외 사용 시 감면세액이 추징됩니다
+                    (지방세특례제한법 §36의3 ④).
                   </div>
-
-                  {form.isFirstHome && (
-                    <>
-                      <div className={`${checkboxWrapCls} pl-6`}>
-                        <input
-                          type="checkbox"
-                          id="isMetropolitan"
-                          checked={form.isMetropolitan}
-                          onChange={(e) => set("isMetropolitan", e.target.checked)}
-                          className="h-4 w-4 rounded border-input"
-                        />
-                        <label htmlFor="isMetropolitan" className={`${labelCls} cursor-pointer`}>
-                          수도권 주택 (취득가액 한도 4억) — 비수도권은 3억
-                        </label>
-                      </div>
-
-                      <div className={warnBannerCls}>
-                        <strong>추징 주의</strong><br />
-                        취득일로부터 3년 이내 처분·임대·주거 외 사용 시 감면세액이 추징됩니다
-                        (지방세특례제한법 §36의3 ④).
-                      </div>
-                    </>
-                  )}
-                </>
+                </ToggleCard>
               ) : (
                 <div className={infoBannerCls}>
                   {!isHousing

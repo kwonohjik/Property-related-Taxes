@@ -4,6 +4,7 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { MixedUsePreHousingDisclosureSection } from "./MixedUsePreHousingDisclosureSection";
 
@@ -130,35 +131,32 @@ export function MixedUseStandardPriceInputs({
         </div>
 
         {/* PHD 토글 — 항상 표시. 체크 시 환산취득가 모드 자동 전환 */}
-        <label className="flex cursor-pointer items-center gap-2 rounded-md border border-dashed border-amber-400 bg-white/60 px-3 py-2 text-sm">
-          <input
-            type="checkbox"
-            checked={!!asset.usePreHousingDisclosure}
-            onChange={(e) => {
-              const checked = e.target.checked;
-              onChange({
-                usePreHousingDisclosure: checked,
-                // PHD는 환산취득가 모드에서만 의미 있으므로 체크 시 자동 전환
-                ...(checked ? { useEstimatedAcquisition: true } : {}),
-              });
-            }}
-            className="rounded border-border"
-          />
-          <span className="font-medium text-amber-800">취득 당시 개별주택가격 미공시 (§164⑤ 3-시점 환산)</span>
-          <span className="text-xs text-amber-600">
-            {useEstimatedAcquisition
+        <ToggleCard
+          tone="amber"
+          size="sm"
+          title="취득 당시 개별주택가격 미공시 (§164⑤ 3-시점 환산)"
+          description={
+            useEstimatedAcquisition
               ? "1996년 최초 고시 이전 취득 시 활성화"
-              : "활성화 시 환산취득가 모드로 자동 전환"}
-          </span>
-        </label>
-
-        {asset.usePreHousingDisclosure ? (
+              : "활성화 시 환산취득가 모드로 자동 전환"
+          }
+          checked={!!asset.usePreHousingDisclosure}
+          onCheckedChange={(checked) => {
+            onChange({
+              usePreHousingDisclosure: checked,
+              // PHD는 환산취득가 모드에서만 의미 있으므로 체크 시 자동 전환
+              ...(checked ? { useEstimatedAcquisition: true } : {}),
+            });
+          }}
+        >
           <MixedUsePreHousingDisclosureSection
             asset={asset}
             transferDate={transferDate ?? ""}
             onChange={onChange}
           />
-        ) : (
+        </ToggleCard>
+
+        {!asset.usePreHousingDisclosure && (
           <FieldCard label="개별주택공시가격" hint="미공시 시 비워두세요 — 위 §164⑤ 토글 사용">
             <CurrencyInput
               label=""

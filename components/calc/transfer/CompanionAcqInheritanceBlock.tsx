@@ -17,6 +17,7 @@
 
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
+import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { DateInput } from "@/components/ui/date-input";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -143,20 +144,17 @@ export function CompanionAcqInheritanceBlock(props: BlockProps) {
           <div className="pl-4 space-y-3 pt-2">
             <div className="space-y-1.5">
               <label className="block text-sm font-medium">자산 구분 (상속개시일 기준)</label>
-              <div className="flex flex-col gap-1.5">
-                {INHERITANCE_ASSET_KIND_OPTIONS.map((opt) => (
-                  <label key={opt.value} className="flex items-center gap-2 cursor-pointer text-sm">
-                    <input
-                      type="radio"
-                      name={`inh-kind-${props.assetId}`}
-                      value={opt.value}
-                      checked={props.inheritanceAssetKind === opt.value}
-                      onChange={() => props.onInheritanceAssetKindChange(opt.value)}
-                    />
-                    {opt.label}
-                  </label>
-                ))}
-              </div>
+              <RadioCardGroup
+                name={`inh-kind-${props.assetId}`}
+                tone="amber"
+                layout="stack"
+                options={INHERITANCE_ASSET_KIND_OPTIONS.map((opt) => ({
+                  value: opt.value,
+                  label: opt.label,
+                }))}
+                value={props.inheritanceAssetKind ?? ""}
+                onChange={(v) => props.onInheritanceAssetKindChange(v)}
+              />
             </div>
 
             {/* 토지: pricePerSqm = publishedValueAtInheritance (단가), totalPrice = 내부 계산용 */}

@@ -1,9 +1,9 @@
 "use client";
 
-import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
 import { DateInput } from "@/components/ui/date-input";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 
 export interface UnconditionalExemptionSectionProps {
@@ -45,8 +45,9 @@ export function UnconditionalExemptionSection({
         </div>
       )}
 
-      <FieldCard
-        label="2006.12.31. 이전 상속"
+      <ToggleCard
+        tone="violet"
+        title="2006.12.31. 이전 상속받은 토지"
         trailing={
           <LawArticleModal
             legalBasis="소득세법시행령 §168조의14"
@@ -54,31 +55,21 @@ export function UnconditionalExemptionSection({
             className={LAW_BADGE_CLASS}
           />
         }
+        checked={asset.nblExemptInheritBefore2007}
+        onCheckedChange={(v) => onAssetChange({ nblExemptInheritBefore2007: v })}
       >
-        <div className="space-y-2">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={asset.nblExemptInheritBefore2007}
-              onChange={(e) => onAssetChange({ nblExemptInheritBefore2007: e.target.checked })}
-              className="h-4 w-4 rounded accent-primary"
-            />
-            <span className="text-sm">2006.12.31. 이전 상속받은 토지</span>
-          </label>
-          {asset.nblExemptInheritBefore2007 && (
-            <div className="pl-6">
-              <label className="block text-xs text-muted-foreground mb-1">상속일</label>
-              <DateInput
-                value={asset.nblExemptInheritDate}
-                onChange={(v) => onAssetChange({ nblExemptInheritDate: v })}
-              />
-            </div>
-          )}
+        <div>
+          <label className="block text-xs text-muted-foreground mb-1">상속일</label>
+          <DateInput
+            value={asset.nblExemptInheritDate}
+            onChange={(v) => onAssetChange({ nblExemptInheritDate: v })}
+          />
         </div>
-      </FieldCard>
+      </ToggleCard>
 
-      <FieldCard
-        label="2007년 이전 장기보유"
+      <ToggleCard
+        tone="violet"
+        title="2007년 이전 20년 이상 보유"
         trailing={
           <LawArticleModal
             legalBasis="소득세법시행령 §168조의14"
@@ -86,20 +77,13 @@ export function UnconditionalExemptionSection({
             className={LAW_BADGE_CLASS}
           />
         }
-      >
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={asset.nblExemptLongOwned20y}
-            onChange={(e) => onAssetChange({ nblExemptLongOwned20y: e.target.checked })}
-            className="h-4 w-4 rounded accent-primary"
-          />
-          <span className="text-sm">2007년 이전 20년 이상 보유</span>
-        </label>
-      </FieldCard>
+        checked={asset.nblExemptLongOwned20y}
+        onCheckedChange={(v) => onAssetChange({ nblExemptLongOwned20y: v })}
+      />
 
-      <FieldCard
-        label="직계존속 자경 상속·증여"
+      <ToggleCard
+        tone="violet"
+        title="직계존속 8년 자경 후 상속·증여 (비도시지역)"
         trailing={
           <LawArticleModal
             legalBasis="소득세법시행령 §168조의14"
@@ -107,20 +91,13 @@ export function UnconditionalExemptionSection({
             className={LAW_BADGE_CLASS}
           />
         }
-      >
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={asset.nblExemptAncestor8YearFarming}
-            onChange={(e) => onAssetChange({ nblExemptAncestor8YearFarming: e.target.checked })}
-            className="h-4 w-4 rounded accent-primary"
-          />
-          <span className="text-sm">직계존속 8년 자경 후 상속·증여 (비도시지역)</span>
-        </label>
-      </FieldCard>
+        checked={asset.nblExemptAncestor8YearFarming}
+        onCheckedChange={(v) => onAssetChange({ nblExemptAncestor8YearFarming: v })}
+      />
 
-      <FieldCard
-        label="공익사업 수용"
+      <ToggleCard
+        tone="violet"
+        title="공익사업으로 수용"
         trailing={
           <LawArticleModal
             legalBasis="소득세법시행령 §168조의14"
@@ -128,31 +105,21 @@ export function UnconditionalExemptionSection({
             className={LAW_BADGE_CLASS}
           />
         }
+        checked={asset.nblExemptPublicExpropriation}
+        onCheckedChange={(v) => onAssetChange({ nblExemptPublicExpropriation: v })}
       >
-        <div className="space-y-2">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={asset.nblExemptPublicExpropriation}
-              onChange={(e) => onAssetChange({ nblExemptPublicExpropriation: e.target.checked })}
-              className="h-4 w-4 rounded accent-primary"
-            />
-            <span className="text-sm">공익사업으로 수용</span>
-          </label>
-          {asset.nblExemptPublicExpropriation && (
-            <div className="pl-6">
-              <label className="block text-xs text-muted-foreground mb-1">사업인정고시일</label>
-              <DateInput
-                value={asset.nblExemptPublicNoticeDate}
-                onChange={(v) => onAssetChange({ nblExemptPublicNoticeDate: v })}
-              />
-            </div>
-          )}
+        <div>
+          <label className="block text-xs text-muted-foreground mb-1">사업인정고시일</label>
+          <DateInput
+            value={asset.nblExemptPublicNoticeDate}
+            onChange={(v) => onAssetChange({ nblExemptPublicNoticeDate: v })}
+          />
         </div>
-      </FieldCard>
+      </ToggleCard>
 
-      <FieldCard
-        label="공장 인접지"
+      <ToggleCard
+        tone="violet"
+        title="공장 인접지 (구법 특례)"
         trailing={
           <LawArticleModal
             legalBasis="소득세법시행령 §168조의14"
@@ -160,20 +127,13 @@ export function UnconditionalExemptionSection({
             className={LAW_BADGE_CLASS}
           />
         }
-      >
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={asset.nblExemptFactoryAdjacent}
-            onChange={(e) => onAssetChange({ nblExemptFactoryAdjacent: e.target.checked })}
-            className="h-4 w-4 rounded accent-primary"
-          />
-          <span className="text-sm">공장 인접지 (구법 특례)</span>
-        </label>
-      </FieldCard>
+        checked={asset.nblExemptFactoryAdjacent}
+        onCheckedChange={(v) => onAssetChange({ nblExemptFactoryAdjacent: v })}
+      />
 
-      <FieldCard
-        label="종중 소유"
+      <ToggleCard
+        tone="violet"
+        title="종중 소유 + 2005.12.31. 이전 취득"
         trailing={
           <LawArticleModal
             legalBasis="소득세법시행령 §168조의14"
@@ -181,31 +141,21 @@ export function UnconditionalExemptionSection({
             className={LAW_BADGE_CLASS}
           />
         }
+        checked={asset.nblExemptJongjoongOwned}
+        onCheckedChange={(v) => onAssetChange({ nblExemptJongjoongOwned: v })}
       >
-        <div className="space-y-2">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={asset.nblExemptJongjoongOwned}
-              onChange={(e) => onAssetChange({ nblExemptJongjoongOwned: e.target.checked })}
-              className="h-4 w-4 rounded accent-primary"
-            />
-            <span className="text-sm">종중 소유 + 2005.12.31. 이전 취득</span>
-          </label>
-          {asset.nblExemptJongjoongOwned && (
-            <div className="pl-6">
-              <label className="block text-xs text-muted-foreground mb-1">취득일</label>
-              <DateInput
-                value={asset.nblExemptJongjoongAcqDate}
-                onChange={(v) => onAssetChange({ nblExemptJongjoongAcqDate: v })}
-              />
-            </div>
-          )}
+        <div>
+          <label className="block text-xs text-muted-foreground mb-1">취득일</label>
+          <DateInput
+            value={asset.nblExemptJongjoongAcqDate}
+            onChange={(v) => onAssetChange({ nblExemptJongjoongAcqDate: v })}
+          />
         </div>
-      </FieldCard>
+      </ToggleCard>
 
-      <FieldCard
-        label="도시지역 농지 종중·상속 특례"
+      <ToggleCard
+        tone="violet"
+        title="도시지역 농지 종중·상속 5년 이내 양도 특례"
         trailing={
           <LawArticleModal
             legalBasis="소득세법시행령 §168조의14"
@@ -213,17 +163,9 @@ export function UnconditionalExemptionSection({
             className={LAW_BADGE_CLASS}
           />
         }
-      >
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={asset.nblExemptUrbanFarmlandJongjoong}
-            onChange={(e) => onAssetChange({ nblExemptUrbanFarmlandJongjoong: e.target.checked })}
-            className="h-4 w-4 rounded accent-primary"
-          />
-          <span className="text-sm">도시지역 농지 종중·상속 5년 이내 양도 특례</span>
-        </label>
-      </FieldCard>
+        checked={asset.nblExemptUrbanFarmlandJongjoong}
+        onCheckedChange={(v) => onAssetChange({ nblExemptUrbanFarmlandJongjoong: v })}
+      />
     </div>
   );
 }

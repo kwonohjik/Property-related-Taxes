@@ -21,6 +21,7 @@ import { Pre1990LandValuationInput, type Pre1990FormSlice } from "@/components/c
 import { SelfBuiltSection } from "./SelfBuiltSection";
 import { LandBuildingSplitSection } from "./LandBuildingSplitSection";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { PreHousingDisclosureSection } from "./PreHousingDisclosureSection";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
@@ -193,27 +194,18 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
         <div className="flex items-center gap-3 flex-wrap">
           <span className="text-sm font-medium">{acqDateLabel}</span>
           {isSplitable && props.onHasSeperateLandAcquisitionDateChange && (
-            <label
-              className={cn(
-                "flex items-center gap-1.5 text-sm font-normal text-muted-foreground",
-                isMixedUse ? "cursor-not-allowed opacity-70" : "cursor-pointer",
-              )}
-              title={isMixedUse ? "검용주택 분리계산은 항상 토지/건물 분리로 처리됩니다" : undefined}
-            >
-              <input
-                type="checkbox"
-                checked={!!props.hasSeperateLandAcquisitionDate}
-                disabled={isMixedUse}
-                onChange={(e) =>
-                  props.onHasSeperateLandAcquisitionDateChange!(e.target.checked)
-                }
-                className="rounded border-border"
-              />
-              <span>토지와 건물의 취득일이 다른가요?</span>
-              <span className="text-xs">
-                {isMixedUse ? "(검용주택은 항상 분리)" : "(원시취득·신축 등)"}
-              </span>
-            </label>
+            <ToggleCard
+              variant="chip"
+              tone="amber"
+              title="토지·건물 취득일 다름"
+              description={isMixedUse ? "검용주택은 항상 분리" : "원시취득·신축 등"}
+              checked={!!props.hasSeperateLandAcquisitionDate}
+              disabled={isMixedUse}
+              disabledReason="검용주택 분리계산은 항상 토지/건물 분리로 처리됩니다"
+              onCheckedChange={(v) =>
+                props.onHasSeperateLandAcquisitionDateChange!(v)
+              }
+            />
           )}
         </div>
         <DateInput
@@ -231,23 +223,21 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
       {/* 토지/건물 소유자 분리 (housing·building 전용) */}
       {isSplitable && props.onSelfOwnsChange && (
         <div className="space-y-1.5">
-          <label className="flex cursor-pointer items-center gap-1.5 text-sm text-muted-foreground">
-            <input
-              type="checkbox"
-              checked={(props.selfOwns ?? "both") !== "both"}
-              onChange={(e) => {
-                if (e.target.checked) {
-                  props.onSelfOwnsChange!("building_only");
-                  props.onHasSeperateLandAcquisitionDateChange?.(true);
-                } else {
-                  props.onSelfOwnsChange!("both");
-                }
-              }}
-              className="rounded border-border"
-            />
-            <span>토지와 건물의 소유자가 다른가요?</span>
-            <span className="text-xs">(배우자·공유자 등)</span>
-          </label>
+          <ToggleCard
+            variant="chip"
+            tone="amber"
+            title="토지·건물 소유자 다름"
+            description="배우자·공유자 등"
+            checked={(props.selfOwns ?? "both") !== "both"}
+            onCheckedChange={(checked) => {
+              if (checked) {
+                props.onSelfOwnsChange!("building_only");
+                props.onHasSeperateLandAcquisitionDateChange?.(true);
+              } else {
+                props.onSelfOwnsChange!("both");
+              }
+            }}
+          />
           {(props.selfOwns ?? "both") !== "both" && (
             <div className="ml-5 flex gap-2 flex-wrap">
               {(["building_only", "land_only"] as const).map((v) => (
@@ -405,27 +395,21 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
       {/* 개별주택가격 미공시 취득 토글 — 환산취득가 + 취득일 분리 모드 + housing·building 전용
          검용주택 모드에서는 MixedUseStandardPriceInputs 내부의 PHD 토글을 사용하므로 여기서는 숨긴다. */}
       {!isMixedUse && isSplit && props.useEstimatedAcquisition && props.asset && props.onAssetChange && (
-        <div className="space-y-2">
-          <label className="flex cursor-pointer items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={!!props.asset.usePreHousingDisclosure}
-              onChange={(e) =>
-                props.onAssetChange!({ usePreHousingDisclosure: e.target.checked })
-              }
-              className="rounded border-border"
-            />
-            <span>취득 당시 개별주택가격 미공시 (§164⑤ 3-시점 계산)</span>
-          </label>
-
-          {props.asset.usePreHousingDisclosure && (
-            <PreHousingDisclosureSection
-              asset={props.asset}
-              transferDate={props.transferDate ?? ""}
-              onChange={props.onAssetChange}
-            />
-          )}
-        </div>
+        <ToggleCard
+          tone="amber"
+          size="sm"
+          title="취득 당시 개별주택가격 미공시 (§164⑤ 3-시점 계산)"
+          checked={!!props.asset.usePreHousingDisclosure}
+          onCheckedChange={(v) =>
+            props.onAssetChange!({ usePreHousingDisclosure: v })
+          }
+        >
+          <PreHousingDisclosureSection
+            asset={props.asset}
+            transferDate={props.transferDate ?? ""}
+            onChange={props.onAssetChange}
+          />
+        </ToggleCard>
       )}
 
       {!props.useEstimatedAcquisition ? (

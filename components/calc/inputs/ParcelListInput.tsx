@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, Trash2 } from "lucide-react";
 import { DateInput } from "@/components/ui/date-input";
 import { CurrencyInput, parseAmount, formatKRW } from "@/components/calc/inputs/CurrencyInput";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import type { ParcelFormItem } from "@/lib/stores/calc-wizard-store";
 
 interface ParcelListInputProps {
@@ -178,23 +179,19 @@ export function ParcelListInput({ parcels, totalTransferPrice, onChange }: Parce
 
               {/* 취득일 */}
               <div className="space-y-1.5">
-                <div className="flex items-center gap-2 mb-1">
-                  <input
-                    type="checkbox"
-                    id={`replotting-${p.id}`}
-                    checked={p.useDayAfterReplotting}
-                    onChange={(e) =>
-                      update(i, {
-                        useDayAfterReplotting: e.target.checked,
-                        replottingConfirmDate: "",
-                      })
-                    }
-                    className="h-4 w-4"
-                  />
-                  <Label htmlFor={`replotting-${p.id}`} className="text-sm cursor-pointer">
-                    환지처분확정일 익일을 취득일로 적용 (소득령 §162①6호)
-                  </Label>
-                </div>
+                <ToggleCard
+                  variant="chip"
+                  tone="amber"
+                  title="환지처분확정일 익일을 취득일로 적용"
+                  description="소득령 §162①6호"
+                  checked={p.useDayAfterReplotting}
+                  onCheckedChange={(v) =>
+                    update(i, {
+                      useDayAfterReplotting: v,
+                      replottingConfirmDate: "",
+                    })
+                  }
+                />
                 {p.useDayAfterReplotting ? (
                   <div className="space-y-1.5">
                     <Label className="text-sm">환지처분확정일</Label>
