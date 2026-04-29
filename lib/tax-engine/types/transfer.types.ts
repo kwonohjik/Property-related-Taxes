@@ -40,10 +40,11 @@ import type { SelfFarmingReductionResult } from "../self-farming-reduction";
 import type { ParcelInput, ParcelResult } from "../multi-parcel-transfer";
 import type { InheritanceAcquisitionInput } from "./inheritance-acquisition.types";
 import type { InheritanceHouseValuationInput, InheritanceHouseValuationResult } from "./inheritance-house-valuation.types";
+import type { MixedUseAssetInput, MixedUseGainBreakdown } from "./transfer-mixed-use.types";
 
 export interface TransferTaxInput {
   /** 물건 종류 */
-  propertyType: "housing" | "land" | "building" | "right_to_move_in" | "presale_right";
+  propertyType: "housing" | "land" | "building" | "right_to_move_in" | "presale_right" | "mixed-use-house";
   /** 양도가액 (원, 정수) */
   transferPrice: number;
   /** 양도일 */
@@ -215,6 +216,13 @@ export interface TransferTaxInput {
    * 결과는 inheritedAcquisition.standardPriceAtDeemedDate/standardPriceAtTransfer에 자동 주입.
    */
   inheritedHouseValuation?: InheritanceHouseValuationInput;
+
+  /**
+   * 검용주택(1세대 1주택 + 상가) 분리계산 입력.
+   * propertyType === "mixed-use-house" 일 때 필수.
+   * 소득세법 시행령 §160 ① 단서 — 2022.1.1 이후 양도분 강제 분리.
+   */
+  mixedUse?: MixedUseAssetInput;
 
   // ── 토지/건물 취득일 분리 계산 (housing·building 공통) ──
   /**
@@ -448,6 +456,11 @@ export interface TransferTaxResult {
    * UI에서 3-시점 합계 기준시가·추정 주택가격·1990 등급가액 환산 산식 표시용.
    */
   inheritedHouseValuationDetail?: InheritanceHouseValuationResult;
+  /**
+   * 검용주택 분리계산 상세 결과 (propertyType === "mixed-use-house" 시 포함).
+   * UI 결과 4-카드 (양도가액 안분 / 주택부분 / 상가부분 / 비사업용토지) 표시용.
+   */
+  mixedUseDetail?: MixedUseGainBreakdown;
 }
 
 // ============================================================

@@ -21,6 +21,7 @@ import {
 } from "@/lib/tax-engine/bundled-sale-apportionment";
 import { calculateInheritanceAcquisitionPrice } from "@/lib/tax-engine/inheritance-acquisition-price";
 import { calculateEstimatedAcquisitionPrice } from "@/lib/tax-engine/tax-utils";
+import { calcMixedUseTransferTax } from "@/lib/tax-engine/transfer-tax-mixed-use";
 import { TaxCalculationError, TaxErrorCode } from "@/lib/tax-engine/tax-errors";
 import { checkRateLimit, getClientIp } from "@/lib/api/rate-limit";
 import {
@@ -562,6 +563,35 @@ export async function POST(request: NextRequest) {
             aggregated,
           },
         },
+        { status: 200 },
+      );
+    }
+
+    // ─── 5-a-2. 검용주택 분리계산 경로 (sodt §160①단서, 2022.1.1 이후) ───
+    if (data.propertyType === "mixed-use-house" && data.mixedUse) {
+      const phdInput = data.mixedUse.preHousingDisclosure
+        ? {
+            ...data.mixedUse.preHousingDisclosure,
+            firstDisclosureDate: new Date(
+              data.mixedUse.preHousingDisclosure.firstDisclosureDate,
+            ),
+          }
+        : undefined;
+      const mixedAsset = {
+        ...data.mixedUse,
+        isMixedUseHouse: true as const,
+        landAcquisitionDate: new Date(data.mixedUse.landAcquisitionDate),
+        buildingAcquisitionDate: new Date(data.mixedUse.buildingAcquisitionDate),
+        preHousingDisclosure: phdInput,
+      };
+      const mixedResult = calcMixedUseTransferTax(
+        data.transferPrice,
+        new Date(data.transferDate),
+        mixedAsset,
+        rates,
+      );
+      return NextResponse.json(
+        { data: { mode: "mixed-use" as const, result: mixedResult } },
         { status: 200 },
       );
     }

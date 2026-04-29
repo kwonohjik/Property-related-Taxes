@@ -76,6 +76,7 @@ Layer 2: Pure Engine (lib/tax-engine/*.ts)
 - **DB 기반 세율 관리**: 세율·공제한도를 `tax_rates` 테이블 jsonb로 관리. 세법 변경 시 배포 없이 업데이트. TaxRateMap key 형식: `${tax_type}:${category}:${sub_category}`.
 - **정수 연산 원칙**: 모든 금액은 원(KRW, 정수). 곱셈-후-나눗셈 순서. `lib/tax-engine/tax-utils.ts`의 `applyRate()` / `safeMultiply()` 사용. BigInt fallback for overflow.
 - **중간 절사 원칙**: 소수 세율 × 금액 곱셈 직후 반드시 `Math.floor()`. 지방소득세는 `applyRate()` (원 미만 절사 — 지방세법 §103의3, 천원 절사 규정 없음).
+- **면적 반올림 일관성 원칙 (UI 계산)**: 비율 계산으로 파생한 면적(부수토지 등)을 단가와 곱할 때, 화면에 표시하는 소수점 자리수와 계산에 사용하는 자리수를 반드시 일치시킨다. `parseFloat(rawArea.toFixed(2))`로 반올림 후 곱셈. 미적용 시 표시(76.51㎡)와 계산(76.508...)이 달라 수천~수만 원 오차 발생 (2026-04-29 검용주택 부수토지 버그 사례). 엔진(tax-engine/) 내부 계산에는 적용 안 함 (정밀도 우선).
 - **감면 중복배제 (조특법 §127 ②)**: 동일 자산에 복수 감면 해당 시 납세자 유리 1건만 선택. 후보 배열에서 max 선택 패턴.
 - **법령 조문 상수**: 문자열 리터럴 직접 사용 금지. `lib/tax-engine/legal-codes/` 에서 `TRANSFER.*` / `NBL.*` / `ACQUISITION.*` 등 세목별 상수 사용.
 - **자산-수준 통합 (양도세, 2026-04-25)**: 취득 정보(취득가 산정방식·감정가액·신축·1990 환산·부속 7필드)는 모두 **`AssetForm` 자산-수준**으로 저장. 폼-전역 `acquisitionMethod`·`appraisalValue`·`isSelfBuilt` 등은 deprecated. 다건 양도 시 자산별로 다른 산정방식·신축 여부 입력 가능.

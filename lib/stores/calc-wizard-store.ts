@@ -178,6 +178,19 @@ export interface TransferSummary {
   totalNecessaryExpense: number;
   netTransferIncome: number;
   estimatedTax: number | null;
+  /** 검용주택 모드 시 입력값으로 즉시 계산되는 미리보기 메타 */
+  mixedUse?: {
+    /** 주택연면적 비율 (0~1) */
+    housingRatio: number;
+    /** 주택부수토지 면적 (㎡) */
+    residentialLandArea: number;
+    /** 상가부수토지 면적 (㎡) */
+    commercialLandArea: number;
+    /** 주택부분 양도가액 (안분 후) — 기준시가 모두 입력된 경우만 */
+    housingTransferPrice: number | null;
+    /** 상가부분 양도가액 (안분 후) — 기준시가 모두 입력된 경우만 */
+    commercialTransferPrice: number | null;
+  };
 }
 
 export const useCalcWizardStore = create<CalcWizardState>()(
@@ -271,12 +284,57 @@ export function computeTransferSummary(
     0
   );
   const estimatedTax =
-    result?.mode === "single" ? (result.result.totalTax ?? null) : null;
+    result?.mode === "single"
+      ? (result.result.totalTax ?? null)
+      : result?.mode === "mixed-use"
+        ? (result.result.total.totalPayable ?? null)
+        : null;
+
+  // 검용주택 모드 — 입력값만으로 산출 가능한 메타
+  const primary = formData.assets[0];
+  let mixedUse: TransferSummary["mixedUse"];
+  if (primary?.assetKind === "housing" && primary.isMixedUseHouse) {
+    const residentialFloor = parseFloat(primary.residentialFloorArea || "0") || 0;
+    const commercialFloor = parseFloat(primary.nonResidentialFloorArea || "0") || 0;
+    const totalLand = parseFloat(primary.mixedUseTotalLandArea || "0") || 0;
+    const totalFloor = residentialFloor + commercialFloor;
+    const housingRatioByArea = totalFloor > 0 ? residentialFloor / totalFloor : 0;
+    // 소수점 2자리 반올림 — 화면 표시와 계산값 일치
+    const residentialLandArea = parseFloat((totalLand * housingRatioByArea).toFixed(2));
+    const commercialLandArea = parseFloat((totalLand - residentialLandArea).toFixed(2));
+
+    // 양도가액 안분: 기준시가 합계 비율
+    const housingStdPrice = parseRaw(primary.mixedTransferHousingPrice);
+    const transferLandPerSqm = parseRaw(primary.mixedTransferLandPricePerSqm);
+    const transferCommercialBuilding = parseRaw(primary.mixedTransferCommercialBuildingPrice);
+    const commercialStdPrice =
+      Math.floor(transferLandPerSqm * commercialLandArea) + transferCommercialBuilding;
+    const totalStd = housingStdPrice + commercialStdPrice;
+    const transferPrice = parseRaw(primary.actualSalePrice);
+
+    let housingTransferPrice: number | null = null;
+    let commercialTransferPrice: number | null = null;
+    if (totalStd > 0 && transferPrice > 0) {
+      const ratio = housingStdPrice / totalStd;
+      housingTransferPrice = Math.floor(transferPrice * ratio);
+      commercialTransferPrice = transferPrice - housingTransferPrice;
+    }
+
+    mixedUse = {
+      housingRatio: housingRatioByArea,
+      residentialLandArea,
+      commercialLandArea,
+      housingTransferPrice,
+      commercialTransferPrice,
+    };
+  }
+
   return {
     totalSalePrice,
     totalAcqPrice,
     totalNecessaryExpense,
     netTransferIncome: totalSalePrice - totalAcqPrice - totalNecessaryExpense,
     estimatedTax,
+    mixedUse,
   };
 }

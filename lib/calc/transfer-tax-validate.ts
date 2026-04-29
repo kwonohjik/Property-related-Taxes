@@ -59,6 +59,33 @@ function validateParcelMode(primary: AssetForm): string | null {
 
 /** 자산 카드 1건의 취득 정보 검증 (취득가·환산·1990·신축) */
 function validateAssetAcquisition(asset: AssetForm, label: string): string | null {
+  // 검용주택 분리계산은 calcMixedUseTransferTax 엔진이 별도 처리 — 전용 검증 후 return
+  if (asset.isMixedUseHouse === true) {
+    if (!asset.acquisitionDate) return `${label}: 건물 취득일을 입력하세요.`;
+    if (!asset.landAcquisitionDate) return `${label}: 토지 취득일을 입력하세요.`;
+    if (!asset.residentialFloorArea || parseFloat(asset.residentialFloorArea) <= 0)
+      return `${label}: 주택 연면적(㎡)을 입력하세요. (면적 정보)`;
+    if (!asset.nonResidentialFloorArea || parseFloat(asset.nonResidentialFloorArea) <= 0)
+      return `${label}: 상가 연면적(㎡)을 입력하세요. (면적 정보)`;
+    if (!asset.mixedUseTotalLandArea || parseFloat(asset.mixedUseTotalLandArea) <= 0)
+      return `${label}: 전체 토지 면적(㎡)을 입력하세요. (면적 정보)`;
+    if (!asset.buildingFootprintArea || parseFloat(asset.buildingFootprintArea) <= 0)
+      return `${label}: 건물 정착면적(㎡)을 입력하세요. (면적 정보)`;
+    if (!asset.mixedTransferHousingPrice || parseAmount(asset.mixedTransferHousingPrice) <= 0)
+      return `${label}: 양도시 개별주택공시가격을 입력하세요. (양도시 기준시가)`;
+    if (!asset.mixedTransferLandPricePerSqm || parseAmount(asset.mixedTransferLandPricePerSqm) <= 0)
+      return `${label}: 양도시 개별공시지가(원/㎡)를 입력하세요. (양도시 기준시가)`;
+    // PHD 전용 검증 (취득시 면적 자동 계산 — acquisitionArea 불필요)
+    if (asset.usePreHousingDisclosure) {
+      if (!asset.phdFirstDisclosureDate) return `${label}: 최초 고시일을 입력하세요.`;
+      if (!asset.phdFirstDisclosureHousingPrice || parseAmount(asset.phdFirstDisclosureHousingPrice) <= 0)
+        return `${label}: 최초 고시 개별주택가격을 입력하세요.`;
+      if (!asset.phdTransferHousingPrice || parseAmount(asset.phdTransferHousingPrice) <= 0)
+        return `${label}: 양도시 개별주택가격을 입력하세요.`;
+    }
+    return null;
+  }
+
   if (!asset.acquisitionDate) return `${label}: 취득일을 입력하세요.`;
 
   const isAppraisal = asset.isAppraisalAcquisition === true;
@@ -112,7 +139,9 @@ function validateAssetAcquisition(asset: AssetForm, label: string): string | nul
   // 4) 환산취득가 — 기준시가
   // 주의: usePreHousingDisclosure === true 경로에서는 §164⑤ 3-시점 입력으로 자동 도출되므로
   //   standardPriceAtAcq / standardPriceAtTransfer 직접 입력 불요.
+  // 검용주택 PHD는 위 isMixedUseHouse 분기에서 이미 return되어 이 줄에 도달하지 않음.
   const usesPhd = asset.usePreHousingDisclosure === true && asset.hasSeperateLandAcquisitionDate === true;
+
   if (isEstimated && !hasPre1990 && !usesPhd) {
     if (!asset.standardPriceAtAcq || parseAmount(asset.standardPriceAtAcq) <= 0)
       return `${label}: 취득 당시 기준시가를 입력하세요.`;
@@ -120,12 +149,13 @@ function validateAssetAcquisition(asset: AssetForm, label: string): string | nul
       return `${label}: 양도 당시 기준시가를 입력하세요.`;
   }
 
-  // 4-2) 개별주택가격 미공시 취득 환산 (§164⑤) — 11개 필수 필드
+  // 4-2) 개별주택가격 미공시 취득 환산 (§164⑤) — 일반 자산: 11개 필수 필드
   if (usesPhd) {
     if (!asset.phdFirstDisclosureDate)
       return `${label}: 최초 고시일을 입력하세요.`;
     if (!asset.phdFirstDisclosureHousingPrice || parseAmount(asset.phdFirstDisclosureHousingPrice) <= 0)
       return `${label}: 최초 고시 개별주택가격을 입력하세요.`;
+    // 일반 자산: acquisitionArea 직접 입력 필요 (검용주택은 면적 자동 계산이므로 제외)
     if (!asset.acquisitionArea || parseFloat(asset.acquisitionArea) <= 0)
       return `${label}: 토지 면적(㎡)을 입력하세요. (자산 기본 정보)`;
     if (!asset.phdLandPricePerSqmAtAcq || parseAmount(asset.phdLandPricePerSqmAtAcq) <= 0)

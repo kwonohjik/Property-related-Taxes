@@ -24,13 +24,14 @@ import {
   companionAssetSchema,
   parcelSchema,
   preHousingDisclosureSchema,
+  mixedUseAssetSchema,
   addPropertyRefines,
 } from "./transfer-tax-schema-sub";
 
 // ─── 단건 기본 필드 객체 (단건·다건 공유) ───────────────────────
 
 const propertyBaseShape = {
-  propertyType: z.enum(["housing", "land", "building", "right_to_move_in", "presale_right"]),
+  propertyType: z.enum(["housing", "land", "building", "right_to_move_in", "presale_right", "mixed-use-house"]),
   transferPrice: z.number().int().positive(),
   transferDate: z.string().date(),
   acquisitionPrice: z.number().int().nonnegative(),
@@ -119,6 +120,8 @@ const propertyBaseShape = {
   inheritedAcquisition: inheritedAcquisitionSchema.optional(),
   /** 상속 주택 환산취득가 보조 입력 — 주택 + 상속개시일 < 2005-04-30 시 3-시점 합계 기준시가 자동 산출 */
   inheritedHouseValuation: inheritanceHouseValuationSchema.optional(),
+  /** 검용주택(1세대 1주택 + 상가) 분리계산 입력 — propertyType === "mixed-use-house" 시 필수 */
+  mixedUse: mixedUseAssetSchema.optional(),
   /**
    * 토지·건물의 소유자가 다른 경우 본인 소유 부분 지정 (소령 §166⑥, §168②).
    * "both" (기본): 토지·건물 모두 본인.

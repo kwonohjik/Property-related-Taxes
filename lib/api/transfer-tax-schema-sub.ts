@@ -270,6 +270,7 @@ export const companionAssetSchema = z.object({
 
 export function addPropertyRefines(
   data: {
+    propertyType?: string;
     useEstimatedAcquisition: boolean;
     standardPriceAtAcquisition?: number;
     standardPriceAtTransfer?: number;
@@ -287,19 +288,25 @@ export function addPropertyRefines(
     constructionDate?: string;
     /** §164⑤ PHD 입력 — 제공 시 standardPriceAt* 필수 검증 우회 */
     preHousingDisclosure?: unknown;
+    /** 검용주택 PHD — mixedUse.preHousingDisclosure 위치 */
+    mixedUse?: { preHousingDisclosure?: unknown };
   },
   ctx: z.RefinementCtx,
 ) {
   // §164⑤ PHD 경로: 3-시점 입력으로 기준시가 자동 도출되므로 standardPriceAt* 불요
-  const hasPhd = data.preHousingDisclosure !== undefined && data.preHousingDisclosure !== null;
-  if (data.useEstimatedAcquisition && !data.standardPriceAtAcquisition && !hasPhd) {
+  // 검용주택 모드는 calcMixedUseTransferTax 별도 엔진에서 처리 → 일반 환산 검증 우회
+  const hasPhd =
+    (data.preHousingDisclosure !== undefined && data.preHousingDisclosure !== null) ||
+    (data.mixedUse?.preHousingDisclosure !== undefined && data.mixedUse?.preHousingDisclosure !== null);
+  const isMixedUseHouse = data.propertyType === "mixed-use-house";
+  if (!isMixedUseHouse && data.useEstimatedAcquisition && !data.standardPriceAtAcquisition && !hasPhd) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["standardPriceAtAcquisition"],
       message: "환산취득가 사용 시 취득시 기준시가 필수",
     });
   }
-  if (data.useEstimatedAcquisition && !data.standardPriceAtTransfer && !hasPhd) {
+  if (!isMixedUseHouse && data.useEstimatedAcquisition && !data.standardPriceAtTransfer && !hasPhd) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["standardPriceAtTransfer"],
@@ -574,3 +581,40 @@ export const inheritanceHouseValuationSchema = z
     }
   });
 
+
+// ─── 검용주택 분리계산 Zod 스키마 ─────────────────────────────────
+
+const mixedUseStandardPriceSchema = z.object({
+  housingPrice: z.number().int().nonnegative(),
+  commercialBuildingPrice: z.number().int().nonnegative(),
+  landPricePerSqm: z.number().int().nonnegative(),
+});
+
+export const mixedUseAssetSchema = z.object({
+  isMixedUseHouse: z.literal(true),
+  residentialFloorArea: z.number().positive(),
+  nonResidentialFloorArea: z.number().positive(),
+  buildingFootprintArea: z.number().positive(),
+  totalLandArea: z.number().positive(),
+  landAcquisitionDate: z.string().date(),
+  buildingAcquisitionDate: z.string().date(),
+  transferStandardPrice: mixedUseStandardPriceSchema,
+  acquisitionStandardPrice: mixedUseStandardPriceSchema.extend({
+    housingPrice: z.number().int().nonnegative().optional(),
+  }),
+  usePreHousingDisclosure: z.boolean().optional(),
+  /** PHD 3-시점 환산 입력 (검용주택 모드 전용). landArea는 엔진이 주택부수토지로 자동 주입. */
+  preHousingDisclosure: preHousingDisclosureSchema.omit({ landArea: true }).optional(),
+  residencePeriodYears: z.number().nonnegative(),
+  isMetropolitanArea: z.boolean().optional(),
+  zoneType: z.enum([
+    "residential", "exclusive_residential", "general_residential", "semi_residential",
+    "commercial", "industrial", "green", "management",
+    "agriculture_forest", "natural_env", "unplanned", "undesignated",
+  ]).optional(),
+}).superRefine((v, ctx) => {
+  const total = v.residentialFloorArea + v.nonResidentialFloorArea;
+  if (total <= 0) {
+    ctx.addIssue({ code: "custom", message: "주택+상가 연면적 합계는 0보다 커야 합니다", path: ["residentialFloorArea"] });
+  }
+});

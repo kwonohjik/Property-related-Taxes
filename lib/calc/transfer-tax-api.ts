@@ -11,6 +11,7 @@ import type { TransferFormData, AssetForm, AssetReductionForm } from "@/lib/stor
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import type { BundledApportionmentResult } from "@/lib/tax-engine/bundled-sale-apportionment";
 import type { AggregateTransferResult } from "@/lib/tax-engine/transfer-tax-aggregate";
+import type { MixedUseGainBreakdown } from "@/lib/tax-engine/types/transfer-mixed-use.types";
 
 export type SingleTransferResult = { mode: "single"; result: TransferTaxResult };
 export type BundledTransferResult = {
@@ -18,7 +19,8 @@ export type BundledTransferResult = {
   apportionment: BundledApportionmentResult;
   aggregated: AggregateTransferResult;
 };
-export type TransferAPIResult = SingleTransferResult | BundledTransferResult;
+export type MixedUseTransferResult = { mode: "mixed-use"; result: MixedUseGainBreakdown };
+export type TransferAPIResult = SingleTransferResult | BundledTransferResult | MixedUseTransferResult;
 
 /** 엔진이 이해하는 3종 assetKind (right_to_move_in / presale_right → housing) */
 function toEngineAssetKind(kind: AssetForm["assetKind"]): "housing" | "land" | "building" {
@@ -230,8 +232,64 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     ? (primary.parcels[0]?.acquisitionDate || form.transferDate)
     : primary.acquisitionDate;
 
+  // 검용주택 분리계산 payload 빌드
+  const isMixed = primary.assetKind === "housing" && primary.isMixedUseHouse;
+  const mixedUsePayload = isMixed ? {
+    isMixedUseHouse: true as const,
+    // 면적은 소수점 (예: 333.06㎡) — parseAmount(parseInt)는 절단 발생, parseFloat 필수
+    residentialFloorArea: parseFloat(primary.residentialFloorArea) || 0,
+    nonResidentialFloorArea: parseFloat(primary.nonResidentialFloorArea) || 0,
+    buildingFootprintArea: parseFloat(primary.buildingFootprintArea) || 0,
+    totalLandArea: parseFloat(primary.mixedUseTotalLandArea) || 0,
+    landAcquisitionDate: primary.landAcquisitionDate || primary.acquisitionDate,
+    buildingAcquisitionDate: primary.acquisitionDate,
+    transferStandardPrice: {
+      housingPrice: parseAmount(primary.mixedTransferHousingPrice) || 0,
+      commercialBuildingPrice: parseAmount(primary.mixedTransferCommercialBuildingPrice) || 0,
+      landPricePerSqm: parseAmount(primary.mixedTransferLandPricePerSqm) || 0,
+    },
+    acquisitionStandardPrice: {
+      housingPrice: parseAmount(primary.mixedAcqHousingPrice) || undefined,
+      commercialBuildingPrice: parseAmount(primary.mixedAcqCommercialBuildingPrice) || 0,
+      landPricePerSqm: parseAmount(primary.mixedAcqLandPricePerSqm) || 0,
+    },
+    usePreHousingDisclosure: primary.usePreHousingDisclosure,
+    // PHD 페이로드는 모든 필수 필드(.positive() 제약)가 채워졌을 때만 전송.
+    // 누락 시 schema의 z.number().int().positive() 검증에서 0으로 실패하기 때문.
+    preHousingDisclosure:
+      primary.usePreHousingDisclosure &&
+      primary.phdFirstDisclosureDate &&
+      parseAmount(primary.phdFirstDisclosureHousingPrice) > 0 &&
+      parseAmount(primary.phdLandPricePerSqmAtAcq) > 0 &&
+      parseAmount(primary.phdLandPricePerSqmAtFirst) > 0 &&
+      parseAmount(primary.phdLandPricePerSqmAtTransfer) > 0 &&
+      (parseAmount(primary.phdTransferHousingPrice) > 0 ||
+        parseAmount(primary.mixedTransferHousingPrice) > 0)
+        ? {
+            firstDisclosureDate: primary.phdFirstDisclosureDate,
+            firstDisclosureHousingPrice: parseAmount(primary.phdFirstDisclosureHousingPrice),
+            landPricePerSqmAtAcquisition: parseAmount(primary.phdLandPricePerSqmAtAcq),
+            buildingStdPriceAtAcquisition:
+              parseAmount(primary.phdBuildingStdPriceAtAcq) || 0,
+            landPricePerSqmAtFirstDisclosure: parseAmount(primary.phdLandPricePerSqmAtFirst),
+            buildingStdPriceAtFirstDisclosure:
+              parseAmount(primary.phdBuildingStdPriceAtFirst) || 0,
+            transferHousingPrice:
+              parseAmount(primary.phdTransferHousingPrice) ||
+              parseAmount(primary.mixedTransferHousingPrice),
+            landPricePerSqmAtTransfer: parseAmount(primary.phdLandPricePerSqmAtTransfer),
+            buildingStdPriceAtTransfer:
+              parseAmount(primary.phdBuildingStdPriceAtTransfer) || 0,
+          }
+        : undefined,
+    // 거주기간은 소수점 가능 (예: 23.5년) — parseFloat 사용
+    residencePeriodYears: parseFloat(primary.mixedUseResidencePeriodYears) || 0,
+    isMetropolitanArea: primary.mixedIsMetropolitanArea,
+    zoneType: "residential" as const,
+  } : undefined;
+
   const body = {
-    propertyType: primary.assetKind,
+    propertyType: isMixed ? ("mixed-use-house" as const) : primary.assetKind,
     transferPrice: parseAmount(form.contractTotalPrice),
     transferDate: form.transferDate,
     acquisitionPrice:
@@ -243,7 +301,8 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
       hasPre1990 || isEstimated || isAppraisal || parcelModeActive
         ? 0
         : parseAmount(primary.directExpenses),
-    useEstimatedAcquisition: hasPre1990 || parcelModeActive ? false : isEstimated,
+    // 검용주택은 calcMixedUseTransferTax 별도 엔진에서 처리 → 일반 환산 검증 우회 위해 false 송신
+    useEstimatedAcquisition: hasPre1990 || parcelModeActive || isMixed ? false : isEstimated,
     standardPriceAtAcquisition: hasPre1990 || usesPhd
       ? undefined
       : isEstimated
@@ -254,11 +313,11 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
       : isEstimated
         ? parseAmount(primary.standardPriceAtTransfer) || undefined
         : undefined,
-    acquisitionMethod: hasPre1990
+    acquisitionMethod: hasPre1990 || isMixed
       ? ("actual" as const)
       : (isAppraisal ? "appraisal" : isEstimated ? "estimated" : "actual"),
-    appraisalValue: isAppraisal ? parseAmount(primary.fixedAcquisitionPrice) : undefined,
-    isSelfBuilt: primary.isSelfBuilt || undefined,
+    appraisalValue: !isMixed && isAppraisal ? parseAmount(primary.fixedAcquisitionPrice) : undefined,
+    isSelfBuilt: !isMixed && primary.isSelfBuilt || undefined,
     buildingType: primary.buildingType || undefined,
     constructionDate:
       primary.isSelfBuilt && primary.constructionDate ? primary.constructionDate : undefined,
@@ -409,8 +468,10 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
           }),
         }
       : {}),
-    // ── 개별주택가격 미공시 취득 환산 §164⑤ ──
-    ...(primary.usePreHousingDisclosure &&
+    // ── 개별주택가격 미공시 취득 환산 §164⑤ (일반 자산 전용) ──
+    // 검용주택은 mixedUse.preHousingDisclosure에서 별도 전송하므로 여기 송신 금지.
+    ...(!isMixed &&
+    primary.usePreHousingDisclosure &&
     primary.hasSeperateLandAcquisitionDate &&
     primary.phdFirstDisclosureDate &&
     parseAmount(primary.phdFirstDisclosureHousingPrice) > 0
@@ -603,6 +664,8 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
           };
         })()
       : {}),
+    // 검용주택 분리계산 입력
+    ...(mixedUsePayload ? { mixedUse: mixedUsePayload } : {}),
   };
 
   const res = await fetch("/api/calc/transfer", {
@@ -614,6 +677,17 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
   const json = await res.json();
   if (!res.ok) {
     const msg = json?.error?.message ?? "계산 중 오류가 발생했습니다.";
+    const fieldErrors = json?.error?.fieldErrors as
+      | Record<string, string[]>
+      | undefined;
+    if (fieldErrors && Object.keys(fieldErrors).length > 0) {
+      // 정확한 실패 필드 파악을 위해 콘솔에 전체 출력 + 첫 항목을 메시지에 첨부
+      // (zod 검증 실패 시 어느 필드가 문제인지 사용자/개발자가 즉시 확인 가능)
+      console.error("[transfer-tax API] fieldErrors:", fieldErrors);
+      const firstField = Object.keys(fieldErrors)[0];
+      const firstMsg = fieldErrors[firstField]?.[0] ?? "";
+      throw new Error(`${msg} (${firstField}: ${firstMsg})`);
+    }
     throw new Error(msg);
   }
   return json.data as TransferAPIResult;

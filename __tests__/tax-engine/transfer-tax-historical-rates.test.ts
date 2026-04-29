@@ -143,7 +143,7 @@ describe("2020년 양도 케이스 통과 (2018 7구간 매칭)", () => {
   it("H-7: 2017 이하 양도 — 6구간 fallback으로 5억 초과분 rate=40%", () => {
     const rates = makeRatesWithBrackets(BRACKETS_1990);
     const input = baseTransferInput({
-      propertyType: "general",
+      propertyType: "building",
       transferPrice: 600_000_000,
       transferDate: new Date("2017-06-01"),
       acquisitionDate: new Date("2010-06-01"),

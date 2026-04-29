@@ -10,6 +10,7 @@ import { StepIndicator } from "@/components/calc/StepIndicator";
 import { WizardSidebar, type WizardSidebarStep, type WizardSidebarSummaryItem } from "@/components/calc/shared/WizardSidebar";
 import { TransferTaxResultView } from "@/components/calc/results/TransferTaxResultView";
 import { BundledAllocationCard } from "@/components/calc/results/BundledAllocationCard";
+import { MixedUseResultCard } from "@/components/calc/results/mixed-use/MixedUseResultCard";
 import { callTransferTaxAPI, type SingleTransferResult } from "@/lib/calc/transfer-tax-api";
 import type { TransferTaxPenaltyResult } from "@/lib/tax-engine/transfer-tax-penalty";
 import { validateStep } from "@/lib/calc/transfer-tax-validate";
@@ -316,6 +317,29 @@ export default function TransferTaxCalculator({
     ...(transferSummary.totalSalePrice > 0
       ? [{ label: "양도가액 합계", value: transferSummary.totalSalePrice }]
       : []),
+    // 검용주택 미리보기: 주택비율·부수토지·안분 양도가액 (입력만으로 산출 가능)
+    ...(transferSummary.mixedUse && transferSummary.mixedUse.housingRatio > 0
+      ? [
+          {
+            label: "주택연면적 비율",
+            value: `${(transferSummary.mixedUse.housingRatio * 100).toFixed(2)}%`,
+          },
+          {
+            label: "주택부수토지",
+            value: `${transferSummary.mixedUse.residentialLandArea.toFixed(2)} ㎡`,
+          },
+          {
+            label: "상가부수토지",
+            value: `${transferSummary.mixedUse.commercialLandArea.toFixed(2)} ㎡`,
+          },
+        ]
+      : []),
+    ...(transferSummary.mixedUse?.housingTransferPrice
+      ? [{ label: "주택 양도가액(안분)", value: transferSummary.mixedUse.housingTransferPrice }]
+      : []),
+    ...(transferSummary.mixedUse?.commercialTransferPrice
+      ? [{ label: "상가 양도가액(안분)", value: transferSummary.mixedUse.commercialTransferPrice }]
+      : []),
     ...(inheritedAcqSidebarValue !== null
       ? [{ label: "상속 취득가액", value: inheritedAcqSidebarValue }]
       : []),
@@ -357,10 +381,40 @@ export default function TransferTaxCalculator({
             showMultiTransferButton={!isEmbeddedInMulti}
             onContinueToMulti={handleContinueToMulti}
           />
+        ) : result.mode === "mixed-use" ? (
+          <div className="space-y-4">
+            <MixedUseResultCard breakdown={result.result} />
+            {/* 결과 화면 하단 네비게이션 */}
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-4 mt-4">
+              <button
+                type="button"
+                className="px-4 py-2 text-sm rounded-lg border border-border hover:bg-muted/60 transition-colors"
+                onClick={() => { setStep(0); setError(null); }}
+              >
+                ← 처음으로 (자산 목록)
+              </button>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  className="px-4 py-2 text-sm rounded-lg border border-border hover:bg-muted/60 transition-colors"
+                  onClick={() => { setStep(totalSteps - 1); setError(null); }}
+                >
+                  이전 (가산세)
+                </button>
+                <button
+                  type="button"
+                  className="px-4 py-2 text-sm rounded-lg border border-destructive/50 text-destructive hover:bg-destructive/10 transition-colors"
+                  onClick={handleReset}
+                >
+                  초기화
+                </button>
+              </div>
+            </div>
+          </div>
         ) : (
           <BundledAllocationCard
-            apportionment={result.apportionment}
-            aggregated={result.aggregated}
+            apportionment={(result as import("@/lib/calc/transfer-tax-api").BundledTransferResult).apportionment}
+            aggregated={(result as import("@/lib/calc/transfer-tax-api").BundledTransferResult).aggregated}
             onBack={() => {
               setStep(STEPS.length - 1);
               setError(null);

@@ -15,6 +15,7 @@ import { CompanionAcqInheritanceBlock } from "./CompanionAcqInheritanceBlock";
 import { CompanionAcqGiftBlock } from "./CompanionAcqGiftBlock";
 import { InheritedAcquisitionDeemedSection } from "./InheritedAcquisitionDeemedSection";
 import { NblSectionContainer } from "./nbl/NblSectionContainer";
+import { MixedUseSection } from "./MixedUseSection";
 
 const ASSET_KIND_LABELS: Record<string, string> = {
   housing: "주택",
@@ -121,6 +122,18 @@ export function CompanionAssetCard({
           ))}
         </div>
       </div>
+
+      {/* 검용주택 분리계산 — 자산 종류가 주택일 때 노출
+         transferDate는 폼-전역 양도일을 사용 (PHD 양도시 시점 기준연도용). */}
+      {asset.assetKind === "housing" && (
+        <MixedUseSection
+          asset={asset}
+          onChange={onChange}
+          transferDate={transferDate}
+          useEstimatedAcquisition={asset.useEstimatedAcquisition}
+          jibun={asset.addressJibun || undefined}
+        />
+      )}
 
       {/* 소재지 검색 */}
       <div className="space-y-1.5">

@@ -483,6 +483,34 @@ export interface AssetForm {
   supplementaryLandUnitPrice: string;
   /** 보조계산: 건물 공시가격 (원 총액) */
   supplementaryBuildingValue: string;
+
+  // ── 검용주택 분리계산 (sodt §160①단서, 2022.1.1 이후) ──
+  /** 검용주택 여부 토글 */
+  isMixedUseHouse: boolean;
+  /** 주택 연면적 (㎡) */
+  residentialFloorArea: string;
+  /** 비주택(상가·사무·근린·주차장) 연면적 합계 (㎡) */
+  nonResidentialFloorArea: string;
+  /** 건물 정착면적 = 1층 면적 (㎡) */
+  buildingFootprintArea: string;
+  /** 전체 토지 면적 (㎡) — 검용주택용 */
+  mixedUseTotalLandArea: string;
+  /** 거주기간 (년) — 장기보유공제 표2 판정 */
+  mixedUseResidencePeriodYears: string;
+  /** 양도시 개별주택공시가격 (원) */
+  mixedTransferHousingPrice: string;
+  /** 양도시 상가건물 기준시가 (원, 토지 제외) */
+  mixedTransferCommercialBuildingPrice: string;
+  /** 양도시 개별공시지가 (원/㎡) */
+  mixedTransferLandPricePerSqm: string;
+  /** 취득시 개별주택공시가격 (원, PHD 토글 ON 시 비활성) */
+  mixedAcqHousingPrice: string;
+  /** 취득시 상가건물 기준시가 (원, 신축 시점) */
+  mixedAcqCommercialBuildingPrice: string;
+  /** 취득시 개별공시지가 (원/㎡) */
+  mixedAcqLandPricePerSqm: string;
+  /** 수도권 여부 */
+  mixedIsMetropolitanArea: boolean;
 }
 
 /** 하위 호환 별칭 — 기존 코드에서 CompanionAssetForm을 참조하는 곳에 사용 */
@@ -655,6 +683,20 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     supplementaryLandArea: "",
     supplementaryLandUnitPrice: "",
     supplementaryBuildingValue: "",
+    // ── 검용주택 분리계산 ──
+    isMixedUseHouse: false,
+    residentialFloorArea: "",
+    nonResidentialFloorArea: "",
+    buildingFootprintArea: "",
+    mixedUseTotalLandArea: "",
+    mixedUseResidencePeriodYears: "",
+    mixedTransferHousingPrice: "",
+    mixedTransferCommercialBuildingPrice: "",
+    mixedTransferLandPricePerSqm: "",
+    mixedAcqHousingPrice: "",
+    mixedAcqCommercialBuildingPrice: "",
+    mixedAcqLandPricePerSqm: "",
+    mixedIsMetropolitanArea: true,
   };
 }
 
@@ -738,5 +780,19 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (!a.inhHouseValHousePriceAtInheritanceOverride) a.inhHouseValHousePriceAtInheritanceOverride = "";
   if (a.useStandardPriceAtAcqOverride === undefined) a.useStandardPriceAtAcqOverride = false;
   if (a.useStandardPriceAtTransferOverride === undefined) a.useStandardPriceAtTransferOverride = false;
+  // 검용주택 분리계산 필드 마이그레이션
+  if (a.isMixedUseHouse === undefined) a.isMixedUseHouse = false;
+  if (!a.residentialFloorArea) a.residentialFloorArea = "";
+  if (!a.nonResidentialFloorArea) a.nonResidentialFloorArea = "";
+  if (!a.buildingFootprintArea) a.buildingFootprintArea = "";
+  if (!a.mixedUseTotalLandArea) a.mixedUseTotalLandArea = "";
+  if (!a.mixedUseResidencePeriodYears) a.mixedUseResidencePeriodYears = "";
+  if (!a.mixedTransferHousingPrice) a.mixedTransferHousingPrice = "";
+  if (!a.mixedTransferCommercialBuildingPrice) a.mixedTransferCommercialBuildingPrice = "";
+  if (!a.mixedTransferLandPricePerSqm) a.mixedTransferLandPricePerSqm = "";
+  if (!a.mixedAcqHousingPrice) a.mixedAcqHousingPrice = "";
+  if (!a.mixedAcqCommercialBuildingPrice) a.mixedAcqCommercialBuildingPrice = "";
+  if (!a.mixedAcqLandPricePerSqm) a.mixedAcqLandPricePerSqm = "";
+  if (a.mixedIsMetropolitanArea === undefined) a.mixedIsMetropolitanArea = true;
   return a as unknown as AssetForm;
 }

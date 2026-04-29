@@ -64,10 +64,12 @@ acquisitionMethod: isAppraisal ? "appraisal" : isEstimated ? "estimated" : "actu
 | 용도 | 컴포넌트 | 이유 |
 |---|---|---|
 | 날짜 입력 | `@/components/ui/date-input.tsx` (`DateInput`) | `<input type="date">` 사용 금지. 연도 6자리 표시 버그 회피 + 연/월/일 분리 입력. |
-| 금액 입력 | `@/components/calc/inputs/CurrencyInput.tsx` | 자동 콤마 포맷. `parseAmount()` 로 "1,500,000" → 1500000 정수 변환. `hideUnit` prop으로 카드 모드에서 단위 중복 방지. |
+| 금액 입력 (원·정수) | `@/components/calc/inputs/CurrencyInput.tsx` | 자동 콤마 포맷. `parseAmount()` 로 "1,500,000" → 1500000 정수 변환. `hideUnit` prop으로 카드 모드에서 단위 중복 방지. **소수점 입력 불가** — 소수점이 필요한 필드에 사용 시 333.06 → 33306 버그 발생. |
+| 소수점 숫자 입력 | `@/components/calc/inputs/DecimalInput.tsx` (`DecimalInput`) | 면적(㎡)·연수 등 소수점이 필요한 필드 전용. 콤마 포맷 없이 입력한 그대로 표시. `parseDecimal()` 로 문자열 → float 변환. **CurrencyInput 대체 불가** — 원화가 아닌 소수 숫자에는 반드시 이 컴포넌트를 사용. |
 | 필드 카드 | `@/components/calc/inputs/FieldCard.tsx` | 라벨·hint·warning·trailing·unit 슬롯을 통일. 데스크톱 좌-라벨 / 모바일 위-라벨. |
 | 섹션 헤더 | `@/components/calc/shared/SectionHeader.tsx` | 큰 그룹 시작점 (점·아이콘 + 굵은 텍스트 + 우측 액션 슬롯). |
 | 진척 사이드바 | `@/components/calc/shared/WizardSidebar.tsx` | lg(1024px) 이상 좌측 sticky. 단계 + 합계 요약. 마법사용. |
+| 개별공시지가 입력 | `@/components/calc/inputs/LandPriceLookupField.tsx` (`LandPriceLookupField`) | 공시지가(원/㎡) 전용. 기준연도+Vworld 조회+토지기준시가 자동 계산 포함. CurrencyInput 단독 사용 금지. |
 | 신축·증축 입력 | `@/components/calc/transfer/SelfBuiltSection.tsx` | 자산-수준 4필드 (isSelfBuilt·buildingType·constructionDate·extensionFloorArea). `acquisitionCause === "purchase"` + housing/building 자산 전용. |
 | 1990 환산 | `@/components/calc/inputs/Pre1990LandValuationInput.tsx` | 토지 자산 + acquisitionDate < 1990-08-30 시 자동 활성화. 자산-수준 props (`form` = `Pre1990FormSlice`). |
 | 주소 검색 | `@/components/ui/address-search.tsx` | Vworld 주소 검색 API. 조정대상지역·공시가격 조회에 필수 (지번 주소). |
@@ -110,7 +112,7 @@ const transferSummary = useMemo(
 ## UI 수정 시 체크리스트
 
 - [ ] `DateInput` 사용 (type="date" 아님)
-- [ ] 금액 input은 `CurrencyInput` + `parseAmount`
+- [ ] 금액(원) input은 `CurrencyInput` + `parseAmount`. 소수점 값(면적㎡·연수)에는 **반드시 `DecimalInput` + `parseDecimal`** 사용. CurrencyInput에 소수점 값 입력 시 333.06 → 33306 버그 발생
 - [ ] `FieldCard` 외부에서 `CurrencyInput` 사용 시 `hideUnit` prop으로 단위 중복 방지
 - [ ] `onFocus` 수동 추가 금지 (Provider가 처리)
 - [ ] StepWizard 네비게이션 버튼 빠짐 없음
@@ -123,3 +125,46 @@ const transferSummary = useMemo(
 - [ ] **placeholder 정확성**: "자동 안분"은 엔진이 실제로 안분할 때만. 자본적지출처럼 귀속이 명확해야 하는 필드는 "없으면 비워두세요"
 - [ ] **사이드바 합계**: 입력된 값으로 계산 가능한 항목만 표시 (0원·null 제외). 환산 모드의 취득가액처럼 API 결과 후에야 알 수 있는 값은 결과 도착 후 노출
 - [ ] **결과 뷰 산식**: 변수 약어(`P_F`, `Sum_A`) 금지·한국어 풀어쓰기, 법정 용어 우선, 중간 산술 결과 미표시, `floor()` 묵시 처리
+- [ ] **면적 반올림 일관성**: 비율 계산으로 파생한 면적(부수토지 등)은 단가 곱셈 전 `parseFloat(rawArea.toFixed(2))`로 반올림. 표시 자리수와 계산 자리수를 반드시 일치시킴 (미적용 시 표시 76.51 / 계산 76.508 → 오차 발생)
+- [ ] **개별공시지가 필드는 `LandPriceLookupField` 필수**: `components/calc/inputs/LandPriceLookupField.tsx`. 기준연도 드롭다운 + Vworld 조회 버튼 + 토지기준시가 자동 계산 포함. CurrencyInput 단독 사용 금지.
+- [ ] **다-섹션 입력 폼 색상 카드 + 섹션 번호**: 3개 이상 서브섹션이 연속되는 입력 영역은 반드시 색상 카드 + 섹션 번호 패턴 적용 (아래 참고)
+
+## 다-섹션 입력 폼 — 색상 카드 + 섹션 번호 패턴 (강제 규칙)
+
+3개 이상의 서브섹션이 연속되는 입력 폼에는 반드시 아래 패턴을 적용한다.
+
+### 구조
+
+```tsx
+// 부모: sectionNum prop으로 번호 주입 (순서 변경 시 한 곳만 수정)
+<SubSection sectionNum={1} />
+<SubSection sectionNum={2} />
+
+// 자식 컴포넌트
+<div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2">
+  <div className="flex items-center gap-2">
+    {sectionNum !== undefined && (
+      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-[10px] font-bold text-sky-800 select-none">
+        {sectionNum}
+      </span>
+    )}
+    <p className="text-xs font-semibold text-sky-700">섹션 제목</p>
+  </div>
+  {/* 내부 항목 — 항목별 번호 없음, 섹션 번호만 */}
+  <FieldCard ...>...</FieldCard>
+</div>
+```
+
+### 색상 가이드
+
+| 섹션 성격 | 테두리/배경/텍스트 |
+|---|---|
+| 면적·규모 | `border-sky-200 bg-sky-50/40` / `text-sky-700` / `bg-sky-200 text-sky-800` |
+| 양도시 기준시가 | `border-emerald-200 bg-emerald-50/40` / `text-emerald-700` / `bg-emerald-200 text-emerald-800` |
+| 취득시 기준시가 | `border-amber-200 bg-amber-50/40` / `text-amber-700` / `bg-amber-200 text-amber-800` |
+| 거주·보유 정보 | `border-violet-200 bg-violet-50/40` / `text-violet-700` / `bg-violet-200 text-violet-800` |
+| 지역·지정 정보 | `border-rose-200 bg-rose-50/40` / `text-rose-700` / `bg-rose-200 text-rose-800` |
+
+- 자동 계산 결과 박스도 해당 카드의 색조로 통일 (`bg-*/100/60 border border-*/200`)
+- 카드 간 간격은 `space-y-3`
+- **대표 구현**: `components/calc/transfer/mixed-use/` (MixedUseSection ①~⑤)

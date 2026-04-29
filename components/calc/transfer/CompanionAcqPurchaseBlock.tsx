@@ -183,23 +183,36 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
   const isSplit = isSplitable && !!props.hasSeperateLandAcquisitionDate;
   const acqDateLabel = isSplit ? "건물 취득일 (사용승인일·매매 등기접수일)" : "취득일";
 
+  // 검용주택 모드: 기준시가 입력은 MixedUseStandardPriceInputs에서 받으므로
+  // 일반 자산용 환산 입력(취득시/양도시 기준시가, PHD 토글)을 숨긴다.
+  const isMixedUse = !!props.asset?.isMixedUseHouse;
+
   return (
     <div className="space-y-3 rounded-md border border-border bg-background p-3">
       <div className="space-y-1.5">
         <div className="flex items-center gap-3 flex-wrap">
           <span className="text-sm font-medium">{acqDateLabel}</span>
           {isSplitable && props.onHasSeperateLandAcquisitionDateChange && (
-            <label className="flex cursor-pointer items-center gap-1.5 text-sm font-normal text-muted-foreground">
+            <label
+              className={cn(
+                "flex items-center gap-1.5 text-sm font-normal text-muted-foreground",
+                isMixedUse ? "cursor-not-allowed opacity-70" : "cursor-pointer",
+              )}
+              title={isMixedUse ? "검용주택 분리계산은 항상 토지/건물 분리로 처리됩니다" : undefined}
+            >
               <input
                 type="checkbox"
                 checked={!!props.hasSeperateLandAcquisitionDate}
+                disabled={isMixedUse}
                 onChange={(e) =>
                   props.onHasSeperateLandAcquisitionDateChange!(e.target.checked)
                 }
                 className="rounded border-border"
               />
               <span>토지와 건물의 취득일이 다른가요?</span>
-              <span className="text-xs">(원시취득·신축 등)</span>
+              <span className="text-xs">
+                {isMixedUse ? "(검용주택은 항상 분리)" : "(원시취득·신축 등)"}
+              </span>
             </label>
           )}
         </div>
@@ -389,8 +402,9 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
         </div>
       </div>
 
-      {/* 개별주택가격 미공시 취득 토글 — 환산취득가 + 취득일 분리 모드 + housing·building 전용 */}
-      {isSplit && props.useEstimatedAcquisition && props.asset && props.onAssetChange && (
+      {/* 개별주택가격 미공시 취득 토글 — 환산취득가 + 취득일 분리 모드 + housing·building 전용
+         검용주택 모드에서는 MixedUseStandardPriceInputs 내부의 PHD 토글을 사용하므로 여기서는 숨긴다. */}
+      {!isMixedUse && isSplit && props.useEstimatedAcquisition && props.asset && props.onAssetChange && (
         <div className="space-y-2">
           <label className="flex cursor-pointer items-center gap-2 text-sm">
             <input
@@ -436,6 +450,11 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
             />
           )}
         </>
+      ) : isMixedUse ? (
+        // 검용주택 모드: 양도시·취득시 기준시가는 위 "검용주택 분리계산" 영역에서 입력.
+        <p className="text-xs text-muted-foreground italic">
+          취득시/양도시 기준시가는 위 검용주택 분리계산 영역에서 입력합니다 (개별주택가격·상가건물·공시지가).
+        </p>
       ) : props.asset?.usePreHousingDisclosure ? (
         // §164⑤ PHD 모드: 위쪽 PreHousingDisclosureSection의 3-시점 입력으로 자동 도출.
         // 기존 "취득시/양도시 기준시가" 입력은 중복되므로 표시하지 않음.
