@@ -286,6 +286,10 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
             landPricePerSqmAtTransfer: parseAmount(primary.phdLandPricePerSqmAtTransfer),
             buildingStdPriceAtTransfer:
               parseAmount(primary.phdBuildingStdPriceAtTransfer) || 0,
+            // 미공시 취득 당시 토지 면적 직접 지정 — 미입력 시 엔진이 양도시 비율로 자동 계산
+            ...(parseFloat(primary.phdResidentialLandArea) > 0
+              ? { landArea: parseFloat(primary.phdResidentialLandArea) }
+              : {}),
           }
         : undefined,
     // 거주기간은 소수점 가능 (예: 23.5년) — parseFloat 사용
@@ -301,6 +305,12 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
             direction: primary.partialChangeDirection,
             acqResidentialArea: parseFloat(primary.partialChangeAcqResidentialArea) || undefined,
             acqCommercialArea: parseFloat(primary.partialChangeAcqCommercialArea) || undefined,
+            // 집행기준 89-154-24 취지 — 용도변경일 입력 시 LTHD 시간 비례 분할
+            usageChangeDate:
+              primary.partialChangeDate &&
+              !Number.isNaN(new Date(primary.partialChangeDate).getTime())
+                ? new Date(primary.partialChangeDate)
+                : undefined,
           }
         : undefined,
   } : undefined;

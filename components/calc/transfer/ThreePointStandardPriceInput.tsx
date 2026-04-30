@@ -63,6 +63,36 @@ export interface ThreePointStandardPriceInputProps {
   jibun?: string;
   /** 토지 면적 (㎡) — 토지기준시가 = 공시지가 × 면적 */
   landArea?: string;
+  /**
+   * 입력값의 대상 명시 — 라벨에 prefix 적용. 검용주택 PHD 등 주택분과 상가분이
+   * 같은 화면에 노출되는 컨텍스트에서 어느 쪽 입력인지 구별 표시용.
+   * 예: "주택" → "주택부수토지 공시지가", "주택 건물기준시가".
+   * 미주입 시 기존 라벨 유지 (단일 자산 PHD 등 backward compat).
+   */
+  targetLabel?: string;
+}
+
+// ─── 라벨 매핑 ──────────────────────────────────────────────────
+// targetLabel 값에 따라 입력 필드 라벨·hint를 명확화.
+function resolveLabels(targetLabel?: string) {
+  if (targetLabel === "주택") {
+    return {
+      landUnitPrice: "주택부수토지 공시지가",
+      landUnitPriceHint: "주택부수토지 개별공시지가 (원/㎡)",
+      landStdPrice: "주택부수토지 기준시가",
+      landStdPriceHint: "주택부수토지 공시지가 × 면적",
+      buildingStdPrice: "주택 건물기준시가",
+      buildingStdPriceHint: "국세청 건물기준시가 — 주택건물(상가건물 제외)",
+    };
+  }
+  return {
+    landUnitPrice: "공시지가",
+    landUnitPriceHint: "개별공시지가 (원/㎡)",
+    landStdPrice: "토지기준시가",
+    landStdPriceHint: "공시지가(원/㎡) × 토지면적(㎡)",
+    buildingStdPrice: "건물기준시가",
+    buildingStdPriceHint: "국세청 건물기준시가 (원) — 양도·취득 당시 기준시가",
+  };
 }
 
 // ─── 시점별 단일 입력 블록 ─────────────────────────────────────────
@@ -97,6 +127,8 @@ interface PointBlockProps {
   onBuildingStdPriceChange: (v: string) => void;
   jibun?: string;
   landArea?: string;
+  /** 라벨 prefix용 대상 명시 (예: "주택") */
+  targetLabel?: string;
 }
 
 function PointBlock({
@@ -112,8 +144,10 @@ function PointBlock({
   onBuildingStdPriceChange,
   jibun,
   landArea,
+  targetLabel,
 }: PointBlockProps) {
   const toneClasses = tone ? TONE_CLASSES[tone] : null;
+  const labels = resolveLabels(targetLabel);
   const [isLookingUp, setIsLookingUp] = useState(false);
   const [lookupError, setLookupError] = useState<string | null>(null);
 
@@ -249,7 +283,7 @@ function PointBlock({
 
       {/* 토지 단위 공시지가 (원/㎡) + 토지기준시가 */}
       <div className="grid grid-cols-2 gap-2">
-        <FieldCard label="공시지가" unit="원/㎡" hint="개별공시지가 (원/㎡)">
+        <FieldCard label={labels.landUnitPrice} unit="원/㎡" hint={labels.landUnitPriceHint}>
           <CurrencyInput
             label=""
             value={landPricePerSqm}
@@ -259,9 +293,9 @@ function PointBlock({
           />
         </FieldCard>
         <FieldCard
-          label="토지기준시가"
+          label={labels.landStdPrice}
           unit="원"
-          hint="공시지가(원/㎡) × 토지면적(㎡)"
+          hint={labels.landStdPriceHint}
         >
           <div className="flex h-9 items-center rounded-md border border-input bg-muted/40 px-3 text-sm tabular-nums text-muted-foreground">
             {landStdPrice !== null
@@ -272,7 +306,7 @@ function PointBlock({
       </div>
 
       {/* 건물 기준시가 (원) */}
-      <FieldCard label="건물기준시가" unit="원" hint="국세청 건물기준시가 (원) — 양도·취득 당시 기준시가">
+      <FieldCard label={labels.buildingStdPrice} unit="원" hint={labels.buildingStdPriceHint}>
         <CurrencyInput
           label=""
           value={buildingStdPrice}
@@ -291,7 +325,7 @@ export function ThreePointStandardPriceInput(props: ThreePointStandardPriceInput
   return (
     <div className="space-y-3">
       <PointBlock
-        label="① 취득시 기준시가"
+        label={`① 취득시 ${props.targetLabel ? `${props.targetLabel}분 ` : ""}기준시가`}
         tone="amber"
         referenceDate={props.acquisitionDate}
         selectedYear={props.landPriceYearAtAcq}
@@ -303,10 +337,11 @@ export function ThreePointStandardPriceInput(props: ThreePointStandardPriceInput
         onBuildingStdPriceChange={props.onBuildingStdPriceAtAcqChange}
         jibun={props.jibun}
         landArea={props.landArea}
+        targetLabel={props.targetLabel}
       />
 
       <PointBlock
-        label="② 최초공시일 기준시가"
+        label={`② 최초공시일 ${props.targetLabel ? `${props.targetLabel}분 ` : ""}기준시가`}
         tone="violet"
         referenceDate={props.firstDisclosureDate}
         selectedYear={props.landPriceYearAtFirst}
@@ -318,10 +353,11 @@ export function ThreePointStandardPriceInput(props: ThreePointStandardPriceInput
         onBuildingStdPriceChange={props.onBuildingStdPriceAtFirstChange}
         jibun={props.jibun}
         landArea={props.landArea}
+        targetLabel={props.targetLabel}
       />
 
       <PointBlock
-        label="③ 양도시 기준시가"
+        label={`③ 양도시 ${props.targetLabel ? `${props.targetLabel}분 ` : ""}기준시가`}
         tone="emerald"
         referenceDate={props.transferDate}
         selectedYear={props.landPriceYearAtTransfer}
@@ -333,6 +369,7 @@ export function ThreePointStandardPriceInput(props: ThreePointStandardPriceInput
         onBuildingStdPriceChange={props.onBuildingStdPriceAtTransferChange}
         jibun={props.jibun}
         landArea={props.landArea}
+        targetLabel={props.targetLabel}
       />
     </div>
   );

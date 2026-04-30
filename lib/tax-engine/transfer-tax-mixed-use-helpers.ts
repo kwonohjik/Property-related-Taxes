@@ -162,12 +162,42 @@ export function calcHousingEstimatedAcq(
   housingTransferPrice: number,
   asset: MixedUseAssetInput,
   derived: MixedUseDerivedAreas,
+  acqDerived?: MixedUseDerivedAreas,
 ): HousingEstimatedAcqResult {
   // §164⑤ PHD 분기 — 검용주택의 주택부수토지 면적을 토지면적으로 사용
   if (asset.usePreHousingDisclosure && asset.preHousingDisclosure) {
+    // 사용자가 면적을 직접 지정한 경우(최초 공시 당시 전체 주택 등) 우선 사용
+    const effectiveLandArea =
+      (asset.preHousingDisclosure.landArea ?? 0) > 0
+        ? asset.preHousingDisclosure.landArea!
+        : derived.residentialLandArea;
+
+    // ─── 보유 중 일부 용도변경 시 시점별 면적 분리 (사용자 결정: 용도변경 케이스만) ───
+    // - 취득시 면적 = acqDerived.residentialLandArea (취득시 주택연면적 비율)
+    // - 양도시 면적 = derived.residentialLandArea (양도시 주택연면적 비율)
+    // - 최초공시일 면적 = 용도변경일 비교로 자동 판정
+    //     firstDisclosureDate < usageChangeDate → 취득시 면적
+    //     firstDisclosureDate ≥ usageChangeDate → 양도시 면적
+    let landAreaAtAcquisition: number | undefined;
+    let landAreaAtFirstDisclosure: number | undefined;
+    let landAreaAtTransfer: number | undefined;
+    const usageChangeDate = asset.partialUsageChange?.usageChangeDate;
+    if (usageChangeDate && acqDerived) {
+      const firstDate = asset.preHousingDisclosure.firstDisclosureDate;
+      const isFirstBeforeChange = firstDate < usageChangeDate;
+      landAreaAtAcquisition = acqDerived.residentialLandArea;
+      landAreaAtTransfer = derived.residentialLandArea;
+      landAreaAtFirstDisclosure = isFirstBeforeChange
+        ? acqDerived.residentialLandArea
+        : derived.residentialLandArea;
+    }
+
     const phdResult = calcPreHousingDisclosureGain(housingTransferPrice, {
       ...asset.preHousingDisclosure,
-      landArea: derived.residentialLandArea,
+      landArea: effectiveLandArea,
+      landAreaAtAcquisition,
+      landAreaAtFirstDisclosure,
+      landAreaAtTransfer,
     });
     return {
       estimatedAcq: phdResult.totalEstimatedAcquisitionPrice,
@@ -377,6 +407,15 @@ export interface CommercialGainSplit {
   buildingAppraisalDed: number;
   landHoldingYears: number;
   buildingHoldingYears: number;
+  /**
+   * 취득시 상가부분 기준시가 산출 근거. 항상 사용자 직접 입력 (commercialBuildingPrice + landPricePerSqm).
+   * 과거 "fallback_apportion" 분기(개별주택공시가격 면적비율 자동 안분)는 2026-05-01 제거됨.
+   */
+  acqStandardSource: "user_input";
+  /** 취득시 상가부수토지 기준시가 (acqLandStd) — 산식 표시용 */
+  acqStandardLand: number;
+  /** 취득시 상가건물 기준시가 (acqBuildingStd) — 산식 표시용 */
+  acqStandardBuilding: number;
 }
 
 export function calcCommercialGainSplit(
@@ -385,63 +424,44 @@ export function calcCommercialGainSplit(
   derived: MixedUseDerivedAreas,
   transferDate: Date,
   acqDerived?: MixedUseDerivedAreas,
-  housingAcqResult?: HousingEstimatedAcqResult,
+  _housingAcqResult?: HousingEstimatedAcqResult,
 ): CommercialGainSplit {
   // acqDerived 미주입 시 derived 그대로 사용 (backward compat)
   const effectiveAcqDerived = acqDerived ?? derived;
 
-  // 양도시 상가부분 기준시가 (분기 위에서 먼저 계산 — 토지/건물 fallback에 사용)
+  // 양도시 상가부분 기준시가
   const transferLandStd =
     asset.transferStandardPrice.landPricePerSqm * derived.commercialLandArea;
   const transferTotalStd =
     transferLandStd + asset.transferStandardPrice.commercialBuildingPrice;
 
-  // 취득시 상가부분 기준시가
-  let acqLandStd: number;
-  let acqBuildingStd: number;
+  // 취득시 상가부분 기준시가 — 사용자 직접 입력만 허용 (모든 direction 동일)
+  // 과거 house_to_commercial 미입력 시 개별주택공시가격을 면적비율로 자동 안분하던 fallback은
+  // 세법상 부정확하여 2026-05-01 제거. 미입력 시 명확한 오류로 차단.
+  const userBuildingStd = asset.acquisitionStandardPrice.commercialBuildingPrice;
+  const userLandPerSqm = asset.acquisitionStandardPrice.landPricePerSqm;
 
-  if (asset.partialUsageChange?.direction === "house_to_commercial") {
-    // ─── 보유 중 일부 용도변경 (주택→상가) — 집행기준 99-164-10 ───
-    // 취득시점에 상가가 없었으므로 취득시 개별주택공시가격을 양도시 면적비율로 안분.
-    // PHD 결합 (이슈 17): usePreHousingDisclosure=true 시 PHD가 역산한 phdAcqHousingPrice 사용.
-    const housingTotal =
-      asset.usePreHousingDisclosure && housingAcqResult?.phdAcqHousingPrice
-        ? housingAcqResult.phdAcqHousingPrice
-        : (asset.acquisitionStandardPrice.housingPrice ?? 0);
-
-    if (housingTotal === 0) {
+  if (userBuildingStd <= 0 || userLandPerSqm <= 0) {
+    if (asset.partialUsageChange?.direction === "house_to_commercial") {
       throw new Error(
-        "용도변경(주택→상가): 취득시 개별주택공시가격이 0이거나 미입력. " +
-          "PHD 토글을 활성화하거나 직접 입력하세요.",
+        "보유 중 일부 용도변경(주택→상가): 취득시 상가건물 기준시가와 개별공시지가를 모두 입력하세요. " +
+          "취득 당시 동일 건물의 국세청 고시 기준시가를 직접 조회·입력해야 합니다.",
       );
     }
-
-    // 면적비율로 상가부분 합계 안분
-    const totalFloor = asset.residentialFloorArea + asset.nonResidentialFloorArea;
-    const commRatio = totalFloor > 0 ? asset.nonResidentialFloorArea / totalFloor : 0;
-    const acqCommercialTotal = Math.floor(housingTotal * commRatio);
-
-    // 토지/건물 내부 분리 (이슈 2·16):
-    // 취득시점 분리값이 없으므로 양도시 토지/건물 비율 차용.
-    // acqLandStd=0 두면 acqLandRatio=0이 되어 토지 환산취득가가 0이 되는 버그 방지.
-    // fallback도 면적비율로 (0.5 임의값보다 합리적).
-    const fallbackDenom =
-      effectiveAcqDerived.commercialLandArea + asset.buildingFootprintArea * commRatio;
-    const fallbackLandRatio =
-      fallbackDenom > 0
-        ? effectiveAcqDerived.commercialLandArea / fallbackDenom
-        : 0.5;
-    const transferLandRatioForFallback =
-      transferTotalStd > 0 ? transferLandStd / transferTotalStd : fallbackLandRatio;
-
-    acqLandStd = Math.floor(acqCommercialTotal * transferLandRatioForFallback);
-    acqBuildingStd = acqCommercialTotal - acqLandStd;
-  } else {
-    // 기존 일반 검용주택 분기
-    acqLandStd =
-      asset.acquisitionStandardPrice.landPricePerSqm * effectiveAcqDerived.commercialLandArea;
-    acqBuildingStd = asset.acquisitionStandardPrice.commercialBuildingPrice;
+    throw new Error(
+      "검용주택: 취득시 상가건물 기준시가와 개별공시지가를 모두 입력하세요.",
+    );
   }
+
+  // 토지분 = 단가 × 면적, 건물분 = 입력값.
+  // house_to_commercial은 acqDerived.commercialLandArea = 0이므로 양도시 면적 사용.
+  const landAreaForUserInput =
+    asset.partialUsageChange?.direction === "house_to_commercial"
+      ? derived.commercialLandArea
+      : effectiveAcqDerived.commercialLandArea;
+  const acqLandStd = userLandPerSqm * landAreaForUserInput;
+  const acqBuildingStd = userBuildingStd;
+  const acqStandardSource = "user_input" as const;
 
   const acqTotalStd = acqLandStd + acqBuildingStd;
 
@@ -497,6 +517,9 @@ export function calcCommercialGainSplit(
     buildingAppraisalDed,
     landHoldingYears,
     buildingHoldingYears,
+    acqStandardSource,
+    acqStandardLand: acqLandStd,
+    acqStandardBuilding: acqBuildingStd,
   };
 }
 
@@ -678,6 +701,10 @@ export function buildCommercialPart(
     longTermDeductionRate,
     longTermDeductionAmount,
     incomeAmount: Math.max(0, gainSplit.totalGain - longTermDeductionAmount),
+    acqStandardSource: gainSplit.acqStandardSource,
+    acqStandardTotal: gainSplit.acqStandardLand + gainSplit.acqStandardBuilding,
+    acqStandardLand: gainSplit.acqStandardLand,
+    acqStandardBuilding: gainSplit.acqStandardBuilding,
   };
 }
 

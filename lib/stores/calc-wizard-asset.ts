@@ -326,6 +326,12 @@ export interface AssetForm {
   phdLandPricePerSqmAtTransfer: string;
   /** 양도시 건물 기준시가 (원) */
   phdBuildingStdPriceAtTransfer: string;
+  /**
+   * 검용주택 PHD 주택부수토지 면적 수동 지정 (㎡).
+   * 비어 있으면 엔진이 양도시 주택연면적 비율로 자동 계산.
+   * 최초 공시 당시 전체가 주택이었던 경우 전체 토지 면적으로 수정.
+   */
+  phdResidentialLandArea: string;
 
   /** 매매 estimated 시 취득시점 기준시가 (원, 환산 분자) */
   standardPriceAtAcq: string;
@@ -598,6 +604,7 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     phdLandPriceYearAtTransferIsManual: false,
     phdLandPricePerSqmAtTransfer: "",
     phdBuildingStdPriceAtTransfer: "",
+    phdResidentialLandArea: "",
     landTransferPrice: "",
     buildingTransferPrice: "",
     landAcquisitionPrice: "",
@@ -757,6 +764,7 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (a.phdLandPriceYearAtTransferIsManual === undefined) a.phdLandPriceYearAtTransferIsManual = false;
   if (!a.phdLandPricePerSqmAtTransfer) a.phdLandPricePerSqmAtTransfer = "";
   if (!a.phdBuildingStdPriceAtTransfer) a.phdBuildingStdPriceAtTransfer = "";
+  if (!a.phdResidentialLandArea) a.phdResidentialLandArea = "";
   // 상속 취득가액 의제 필드
   if (a.inheritanceMode === undefined) a.inheritanceMode = null;
   if (!a.inheritanceStartDate) a.inheritanceStartDate = "";

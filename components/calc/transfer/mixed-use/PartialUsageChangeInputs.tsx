@@ -36,10 +36,15 @@ export function PartialUsageChangeInputs({ asset, onChange, sectionNum }: Props)
   // 자동 면적 (수정값 우선)
   const acqResAuto = isHouseToComm ? transferTotal : 0;
   const acqCommAuto = isHouseToComm ? 0 : transferTotal;
+  // parseDecimal("")=0 이므로 ?? 연산자로는 자동값 fallback 불가. 빈 문자열 여부로 분기.
   const acqResShown =
-    parseDecimal(asset.partialChangeAcqResidentialArea) ?? acqResAuto;
+    asset.partialChangeAcqResidentialArea !== ""
+      ? parseDecimal(asset.partialChangeAcqResidentialArea)
+      : acqResAuto;
   const acqCommShown =
-    parseDecimal(asset.partialChangeAcqCommercialArea) ?? acqCommAuto;
+    asset.partialChangeAcqCommercialArea !== ""
+      ? parseDecimal(asset.partialChangeAcqCommercialArea)
+      : acqCommAuto;
 
   const isCustomized =
     !!asset.partialChangeAcqResidentialArea ||
@@ -118,6 +123,11 @@ export function PartialUsageChangeInputs({ asset, onChange, sectionNum }: Props)
               partialChangeAcqResidentialArea: "",
               partialChangeAcqCommercialArea: "",
             });
+          } else {
+            onChange({
+              partialChangeAcqResidentialArea: acqResAuto.toFixed(2),
+              partialChangeAcqCommercialArea: acqCommAuto.toFixed(2),
+            });
           }
         }}
       />
@@ -143,8 +153,11 @@ export function PartialUsageChangeInputs({ asset, onChange, sectionNum }: Props)
         </div>
       )}
 
-      {/* 용도변경일 (선택, 메모용) */}
-      <FieldCard label="용도변경일 (선택)" hint="참고용 메모 — 계산에 사용 안 됨">
+      {/* 용도변경일 — 입력 시 LTHD 시간 비례 분할 적용 (집행기준 89-154-24) */}
+      <FieldCard
+        label="용도변경일 (선택)"
+        hint="입력 시 장기보유특별공제를 용도변경일 전후로 분리 계산 (집행기준 89-154-24 — 주택 사용 기간 통산 취지)"
+      >
         <DateInput
           value={asset.partialChangeDate}
           onChange={(v) => onChange({ partialChangeDate: v })}

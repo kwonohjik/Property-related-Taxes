@@ -30,6 +30,10 @@ import {
   buildNonBusinessPart,
   buildTotalTax,
 } from "./transfer-tax-mixed-use-helpers";
+import {
+  calcUsagePeriodInfo,
+  applyUsagePeriodSplit,
+} from "./transfer-tax-mixed-use-period-split";
 
 // ──────────────────────────────────────────
 // 상수
@@ -78,10 +82,12 @@ export function calcMixedUseTransferTax(
   steps.push(buildApportionmentStep(apportionment));
 
   // STEP 3: 주택부분 환산취득가액 (§97 또는 §164⑤ PHD)
+  // PHD + 보유 중 용도변경 케이스에서 시점별 면적 분리를 위해 acqDerived도 전달
   const housingAcqResult = calcHousingEstimatedAcq(
     apportionment.housingTransferPrice,
     asset,
     derived,
+    acqDerived,
   );
 
   // STEP 4: 주택 양도차익 (토지/건물 분리)
@@ -97,17 +103,8 @@ export function calcMixedUseTransferTax(
   // STEP 5·6: 12억 초과 비과세 안분 + 주택부수토지 배율초과 분리
   // 🚨 Critical: isOneHouseExempt 인자 전달 — 다주택자(false) 시 12억 비과세 미적용·표1
   const excessResult = calcExcessLandRatio(asset, derived);
-  const housingPart = buildHousingPart(
-    apportionment,
-    housingAcqResult,
-    housingGainSplit,
-    excessResult,
-    asset.residencePeriodYears,
-    asset.isOneHouseExempt ?? true,  // 미주입 시 true (기존 backward compat)
-  );
-  steps.push(buildHousingStep(housingPart, apportionment));
 
-  // STEP 7: 상가부분 환산취득가액 + 양도차익 (acqDerived + housingAcqResult — PHD 결합)
+  // STEP 7-prep: 상가부분 양도차익 (period-split에서도 housing 직전 commercial gain 필요)
   const commercialGainSplit = calcCommercialGainSplit(
     apportionment.commercialTransferPrice,
     asset,
@@ -116,7 +113,54 @@ export function calcMixedUseTransferTax(
     acqDerived,
     housingAcqResult,
   );
-  const commercialPart = buildCommercialPart(commercialGainSplit);
+
+  // ─── 용도변경일 기반 LTHD 시간 비례 분할 (집행기준 89-154-24 취지) ───
+  // partialUsageChange.usageChangeDate 입력 + 유효 시 period-split 모드로 LTHD 재계산.
+  // 미입력·취득일 이전·양도일 이후이면 null 반환되어 표준 모드로 fallback.
+  const acqDateForSplit =
+    asset.landAcquisitionDate < asset.buildingAcquisitionDate
+      ? asset.landAcquisitionDate
+      : asset.buildingAcquisitionDate;
+  const periodInfo = calcUsagePeriodInfo(
+    acqDateForSplit,
+    asset.partialUsageChange?.usageChangeDate,
+    transferDate,
+  );
+
+  let housingPart: ReturnType<typeof buildHousingPart>;
+  let commercialPart: ReturnType<typeof buildCommercialPart>;
+  let usagePeriodSplit:
+    | ReturnType<typeof applyUsagePeriodSplit>["usagePeriodSplit"]
+    | undefined;
+
+  if (periodInfo && asset.partialUsageChange) {
+    const split = applyUsagePeriodSplit(
+      housingGainSplit,
+      commercialGainSplit,
+      apportionment,
+      excessResult,
+      asset.residencePeriodYears,
+      asset.isOneHouseExempt ?? true,
+      periodInfo,
+      asset.partialUsageChange.direction,
+      housingAcqResult,
+    );
+    housingPart = split.housingPart;
+    commercialPart = split.commercialPart;
+    usagePeriodSplit = split.usagePeriodSplit;
+  } else {
+    housingPart = buildHousingPart(
+      apportionment,
+      housingAcqResult,
+      housingGainSplit,
+      excessResult,
+      asset.residencePeriodYears,
+      asset.isOneHouseExempt ?? true,  // 미주입 시 true (기존 backward compat)
+    );
+    commercialPart = buildCommercialPart(commercialGainSplit);
+  }
+
+  steps.push(buildHousingStep(housingPart, apportionment));
   steps.push(buildCommercialStep(commercialPart, apportionment));
 
   // STEP 8: 비사업용토지 부분 (배율초과 시)
@@ -139,7 +183,7 @@ export function calcMixedUseTransferTax(
   steps.push(buildTotalStep(total));
 
   // 계산 경로 메타 (학습·검증용)
-  const calculationRoute = buildCalculationRoute(asset, housingPart, excessResult);
+  const calculationRoute = buildCalculationRoute(asset, housingPart, excessResult, commercialPart);
 
   // 보유 중 일부 용도변경 메타 (결과 카드 표시용)
   const partialUsageChange = asset.partialUsageChange
@@ -172,6 +216,7 @@ export function calcMixedUseTransferTax(
     calculationRoute,
     warnings,
     partialUsageChange,
+    usagePeriodSplit,
   };
 }
 
@@ -183,6 +228,7 @@ function buildCalculationRoute(
   asset: MixedUseAssetInput,
   housingPart: ReturnType<typeof buildHousingPart>,
   excessResult: ReturnType<typeof calcExcessLandRatio>,
+  commercialPart: ReturnType<typeof buildCommercialPart>,
 ): MixedUseCalculationRoute {
   const acqHousing = asset.acquisitionStandardPrice.housingPrice;
   const housingAcqPriceSource =
@@ -215,7 +261,10 @@ function buildCalculationRoute(
 
   // 보유 중 일부 용도변경 사유 (사전 정의 템플릿)
   const partialUsageChangeReason = asset.partialUsageChange
-    ? PARTIAL_USAGE_CHANGE_REASONS[asset.partialUsageChange.direction]
+    ? buildPartialUsageChangeReason(
+        asset.partialUsageChange.direction,
+        commercialPart.acqStandardSource,
+      )
     : undefined;
 
   return {
@@ -228,13 +277,29 @@ function buildCalculationRoute(
   };
 }
 
-/** 보유 중 일부 용도변경 사유 — 사전 정의 템플릿 (이슈 9·19 반영) */
-const PARTIAL_USAGE_CHANGE_REASONS = {
-  house_to_commercial:
-    "양도시점에는 검용주택이나 취득시점에는 전체 주택이었으므로 시행령 §166⑥ 및 양도소득세 집행기준 99-164-10에 따라 환산취득가 산정 시 취득시 개별주택공시가격을 양도시 면적비율로 안분",
-  commercial_to_house:
-    "양도시점에는 검용주택이나 취득시점에는 전체 상가였으므로 시행령 §166⑥에 따라 환산취득가 산정 시 취득시 상가 기준시가(건물+토지)를 양도시 면적비율로 안분 — 직접 사례 제한적, 보수 검토 필요",
-} as const;
+/**
+ * 보유 중 일부 용도변경 사유 — 산출 근거 안내 템플릿.
+ *
+ * - house_to_commercial: 취득시 전체 주택 → 양도시 일부 상가화. 사용자가 취득시 상가건물 기준시가 +
+ *   개별공시지가를 직접 입력해야 함 (자동 안분 fallback 폐지, 2026-05-01).
+ * - commercial_to_house: 취득시 전체 상가 → 양도시 일부 주택화 (미러).
+ */
+function buildPartialUsageChangeReason(
+  direction: "house_to_commercial" | "commercial_to_house",
+  _acqStandardSource: "user_input",
+): string {
+  if (direction === "house_to_commercial") {
+    return (
+      "양도시점에는 검용주택이나 취득시점에는 전체 주택이었으므로 시행령 §166⑥에 따라, " +
+      "사용자가 입력한 취득시 상가건물 기준시가와 개별공시지가(상가)로 취득시 상가부분 기준시가를 직접 산정"
+    );
+  }
+  // commercial_to_house — 미러 (현재는 단일 메시지)
+  return (
+    "양도시점에는 검용주택이나 취득시점에는 전체 상가였으므로 시행령 §166⑥에 따라 " +
+    "환산취득가 산정 시 취득시 상가 기준시가(건물+토지)를 양도시 면적비율로 안분 — 직접 사례 제한적, 보수 검토 필요"
+  );
+}
 
 // ──────────────────────────────────────────
 // 경고 수집
@@ -304,6 +369,10 @@ function buildRejectionResult(warning: string): MixedUseGainBreakdown {
       longTermDeductionRate: 0,
       longTermDeductionAmount: 0,
       incomeAmount: 0,
+      acqStandardSource: "user_input",
+      acqStandardTotal: 0,
+      acqStandardLand: 0,
+      acqStandardBuilding: 0,
     },
     nonBusinessLandPart: null,
     total: {
@@ -371,11 +440,15 @@ function buildCommercialStep(
   c: ReturnType<typeof buildCommercialPart>,
   a: MixedUseApportionment,
 ): MixedUseStep {
+  // 취득시 상가부분 기준시가는 항상 사용자 직접 입력 (자동 안분 fallback 폐지)
+  const acqStdLabel = "취득시 상가부분 기준시가 합계";
+
   return {
     id: "step-7-commercial",
     title: "상가부분",
     legalBasis: MIXED_USE.APPORTIONMENT,
     values: [
+      { label: acqStdLabel, value: c.acqStandardTotal },
       { label: "상가 환산취득가액", value: c.estimatedAcquisitionPrice },
       { label: "상가 양도차익", value: c.transferGain },
       { label: `장기보유공제 (표1, ${(c.longTermDeductionRate * 100).toFixed(0)}%)`, value: c.longTermDeductionAmount },

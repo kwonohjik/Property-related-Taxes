@@ -100,6 +100,21 @@ function validateAssetAcquisition(asset: AssetForm, label: string): string | nul
           return `${label}: 취득시 상가 연면적이 잘못되었습니다.`;
         }
       }
+      // 주택→상가: 취득시 상가건물 기준시가·개별공시지가는 사용자 직접 입력 필수 (자동 안분 fallback 폐지)
+      if (asset.partialChangeDirection === "house_to_commercial") {
+        if (
+          !asset.mixedAcqCommercialBuildingPrice
+          || parseAmount(asset.mixedAcqCommercialBuildingPrice) <= 0
+        ) {
+          return `${label}: 보유 중 일부 용도변경(주택→상가) — 취득시 상가건물 기준시가를 입력하세요. 취득 당시 동일 건물의 국세청 고시 기준시가를 직접 조회·입력해야 합니다.`;
+        }
+        if (
+          !asset.mixedAcqLandPricePerSqm
+          || parseAmount(asset.mixedAcqLandPricePerSqm) <= 0
+        ) {
+          return `${label}: 보유 중 일부 용도변경(주택→상가) — 취득시 개별공시지가(상가)를 입력하세요.`;
+        }
+      }
       // PHD 강제 변경 금지 (이슈 5) — 사용자 직전 상태 보존, 경고만 결과 카드에 표시
     }
     return null;

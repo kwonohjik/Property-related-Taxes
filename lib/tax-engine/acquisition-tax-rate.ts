@@ -9,6 +9,9 @@
  * - 증여: 3.5%
  * - 원시취득: 2.8%
  * + 농어촌특별세 + 지방교육세 계산
+ *
+ * [Phase 4] 부가세 정밀화는 acquisition-tax-additional.ts로 분리.
+ * calcTaxWithAdditional은 내부적으로 calcAdditionalTaxesFull을 호출하는 래퍼.
  */
 
 import { ACQUISITION, ACQUISITION_CONST } from "./legal-codes";
@@ -18,6 +21,10 @@ import type {
   PropertyObjectType,
   AcquisitionCause,
 } from "./types/acquisition.types";
+import {
+  calcAdditionalTaxesFull,
+  type SurchargeBranchForEdu,
+} from "./acquisition-tax-additional";
 
 // ============================================================
 // 주택 선형보간 세율 (지방세법 §11①1의2)
@@ -107,7 +114,16 @@ export function getBasicRate(
   }
 
   // ── 간주취득 ──
-  if (["deemed_major_shareholder", "deemed_land_category", "deemed_renovation"].includes(acquisitionCause)) {
+  if (acquisitionCause === "deemed_renovation") {
+    // 건물 개수(改修)는 원시취득에 해당 (지방세법 §11①2호 가목 — 건축물의 건축·개수)
+    // 원시취득 기본세율 2.8% 적용
+    return { rate: 0.028, isLinearInterpolation: false, legalBasis: ACQUISITION.BASIC_RATE };
+  }
+  if (acquisitionCause === "deemed_land_category" || acquisitionCause === "deemed_major_shareholder") {
+    // 지목변경(§7의2②) 및 과점주주(§7의2①): 2% 적용
+    // 과점주주는 법인 보유 자산 종류별 표준세율 적용이 원칙이나,
+    // 현행 UI가 단일 자산가치를 입력받으므로 임시 2% 적용.
+    // (TODO: 자산 종류별 입력 구현 후 종류별 세율로 개선)
     return { rate: 0.02, isLinearInterpolation: false, legalBasis: ACQUISITION.DEEMED_ACQUISITION }; // 2%
   }
 
@@ -199,12 +215,19 @@ export function decideTaxRate(input: RateDecisionInput): TaxRateDecision {
 // 부가세 계산 (농어촌특별세 + 지방교육세)
 // ============================================================
 
-interface AdditionalTaxInput {
+export interface AdditionalTaxInput {
   taxBase: number;         // 과세표준
   appliedRate: number;     // 취득세 세율 (예: 0.03)
   acquisitionTax: number;  // 취득세 본세
   areaSqm?: number;        // 전용면적 ㎡ (농특세 85㎡ 이하 면제 판단)
   propertyType: PropertyObjectType;
+  // [P4-1] 주택 유상거래 분기
+  acquisitionCause?: string;
+  isSurcharged?: boolean;
+  // [P4-2] 중과세 교육세 매트릭스
+  surchargeType?: "multi_house_8" | "multi_house_12" | "luxury_solo" | "luxury_multi" | "corp_metro" | "gift_12";
+  // [P4-4] 농특세 읍·면 지역 100㎡ 분기
+  isRuralRegion?: boolean;
 }
 
 export interface AdditionalTaxResult {
@@ -221,14 +244,20 @@ export interface AdditionalTaxResult {
  *
  * 면제:
  * - 전용면적 85㎡ 이하 주택 (전면 면제)
+ * - [P4-4] 수도권 외 도시지역 외 읍·면 지역 100㎡ 이하 주택 (농특세법 §4②, 지방세법 시행령 §92②)
  * - 취득세율 ≤ 2% (기준세율 미초과)
  */
 export function calcRuralSpecialTax(input: AdditionalTaxInput): number {
-  // 주택 85㎡ 이하 면제
+  // [P4-4] 읍·면 지역: 100㎡ 이하 면제 (isRuralRegion = true)
+  const exemptLimitSqm = input.isRuralRegion
+    ? ACQUISITION_CONST.RURAL_RURAL_EXEMPT_AREA_SQM  // 100㎡
+    : ACQUISITION_CONST.RURAL_EXEMPT_AREA_SQM;        // 85㎡
+
+  // 주택 면제 기준 이하
   if (
     input.propertyType === "housing" &&
     input.areaSqm !== undefined &&
-    input.areaSqm <= ACQUISITION_CONST.RURAL_EXEMPT_AREA_SQM
+    input.areaSqm <= exemptLimitSqm
   ) {
     return 0;
   }
@@ -252,24 +281,60 @@ export function calcRuralSpecialTax(input: AdditionalTaxInput): number {
 /**
  * 지방교육세 계산 (지방세법 §151)
  *
- * 지방교육세 = 과세표준 × 표준세율 2% × 20%
- *           = 과세표준 × 0.4%
- *
- * 중과세가 적용되더라도 표준세율 2% 기준 취득세액에만 20% 적용
+ * [P4-1] 주택 유상거래(§151①1나): 취득세 본세 × 50% × 20% (표준세율 1~3% 적용분의 10%)
+ * [P4-2] 중과세 사치성: 과세표준 × 1.4%(단독) / 1.8%(다주택중복) 별도 매트릭스
+ * 그 외: 과세표준 × 2% × 20% = 과세표준 × 0.4%
  */
-export function calcLocalEducationTax(taxBase: number): number {
+export function calcLocalEducationTax(input: AdditionalTaxInput): number {
+  const { taxBase, acquisitionTax, propertyType, acquisitionCause, isSurcharged, surchargeType } = input;
+
+  // [P4-2] 사치성 중과세 매트릭스 (지방세법 §151④ — 사치성 부분 별도 가산)
+  if (surchargeType === "luxury_solo") {
+    // 사치성 단독: 과세표준 × 1.4% (표준 0.4% + 사치성 1.0%)
+    return Math.floor(taxBase * 0.014);
+  }
+  if (surchargeType === "luxury_multi") {
+    // 사치성 + 다주택 중복: 과세표준 × 1.8%
+    return Math.floor(taxBase * 0.018);
+  }
+
+  // [P4-1] 주택 유상거래 + 비중과: 본세 × 50% × 20% = 본세 × 10%
+  // 지방세법 §151①1나: §11①8 가목 세율(1~3%) 적용 취득세액의 50%의 20%
+  const isHousingOnerous =
+    propertyType === "housing" &&
+    ["purchase", "exchange", "auction", "in_kind_investment"].includes(acquisitionCause ?? "");
+
+  if (isHousingOnerous && !isSurcharged) {
+    return Math.floor(acquisitionTax * 0.5 * 0.2);
+  }
+
+  // 그 외 (무상취득·비주택·중과세): 표준세율분 × 20%
+  return Math.floor(taxBase * ACQUISITION_CONST.RURAL_STANDARD_RATE * ACQUISITION_CONST.EDU_RATE);
+}
+
+/** 하위 호환 래퍼 — taxBase만 전달 시 구 동작 유지 */
+export function calcLocalEducationTaxSimple(taxBase: number): number {
   return Math.floor(taxBase * ACQUISITION_CONST.RURAL_STANDARD_RATE * ACQUISITION_CONST.EDU_RATE);
 }
 
 /**
  * 취득세 본세 + 부가세 통합 계산
+ * [P4-1] acquisitionCause / isSurcharged 추가 — 주택 유상거래 교육세 분기
+ * [P4-2] surchargeType 추가 — 사치성 교육세 매트릭스
+ * [P4-4] isRuralRegion 추가 — 읍·면 지역 농특세 100㎡ 기준
  */
 export function calcTaxWithAdditional(
   taxBase: number,
   appliedRate: number,
   acquisitionTax: number,
   propertyType: PropertyObjectType,
-  areaSqm?: number
+  areaSqm?: number,
+  options?: {
+    acquisitionCause?: string;
+    isSurcharged?: boolean;
+    surchargeType?: AdditionalTaxInput["surchargeType"];
+    isRuralRegion?: boolean;
+  }
 ): AdditionalTaxResult {
   const input: AdditionalTaxInput = {
     taxBase,
@@ -277,10 +342,14 @@ export function calcTaxWithAdditional(
     acquisitionTax,
     areaSqm,
     propertyType,
+    acquisitionCause: options?.acquisitionCause,
+    isSurcharged: options?.isSurcharged,
+    surchargeType: options?.surchargeType,
+    isRuralRegion: options?.isRuralRegion,
   };
 
   const ruralSpecialTax = calcRuralSpecialTax(input);
-  const localEducationTax = calcLocalEducationTax(taxBase);
+  const localEducationTax = calcLocalEducationTax(input);
 
   return {
     ruralSpecialTax,

@@ -13,6 +13,7 @@
 | 2026-04-30 v1 | 초안 — 1·2차 젠스파크 검토 22개 이슈 반영 | Plan 승인 후 |
 | 2026-04-30 v1 | `calcCommercialGainSplit` 시그니처에 `acqDerived`·`housingAcqResult` 추가 명시 (이슈 17) | PHD 결합 필수 |
 | 2026-04-30 v1 | `acqLandStd=0` 버그 회귀 방지 — 양도시 비율 fallback 산식 추가 (이슈 2·16) | 토지 환산취득가 0 방지 |
+| 2026-05-01 v2 | **`fallback_apportion` 자동 안분 분기 전면 제거**. 취득시 상가건물 기준시가·개별공시지가는 사용자 직접 입력 필수. 미입력 시 검증 단계에서 명확한 한국어 오류로 차단. `acqStandardSource` 리터럴을 `"user_input"` 단일로 축소. `mixedUsePdfGap` 픽스처 default가 `commercialBuildingPrice`·`landPricePerSqm`을 양수로 채우도록 갱신, anchor 결과값(상가 환산취득가·세액 등) 8개 재산출. | 사용자 시정 지시: 개별주택공시가격을 면적비율로 자동 안분하면 취득시점의 토지/건물 비율과 무관한 임의값이 산출되어 세법상 부정확. 집행기준 99-164-10 원문도 자동 fallback을 보장하지 않음. 직접 조회·입력이 정확성의 유일한 경로. |
 
 ---
 
@@ -124,74 +125,65 @@ export interface MixedUseCalculationRoute {
 
 ### 2-A. `calcCommercialGainSplit` — house_to_commercial 분기 (PDF 갑氏 케이스)
 
-**파일**: `lib/tax-engine/transfer-tax-mixed-use-helpers.ts` (L285~356)
+**파일**: `lib/tax-engine/transfer-tax-mixed-use-helpers.ts`
 
-**시그니처 변경 (이슈 17)**:
+**v2 (2026-05-01) — 자동 안분 fallback 폐지**: 모든 direction에서 사용자 직접 입력만 허용. 미입력 시 명시적 throw.
+
+**시그니처 (v2 기준 — `housingAcqResult` 인자는 deprecated, 제거 예정)**:
 ```ts
 export function calcCommercialGainSplit(
   commercialTransferPrice: number,
   asset: MixedUseAssetInput,
   derived: MixedUseDerivedAreas,
-  acqDerived: MixedUseDerivedAreas,            // 신규
-  housingAcqResult: HousingEstimatedAcqResult, // 신규 (PHD 결합)
   transferDate: Date,
+  acqDerived?: MixedUseDerivedAreas,
+  _housingAcqResult?: HousingEstimatedAcqResult,  // v2: 사용 안 함 (PHD 분기 제거)
 ): CommercialGainSplit
 ```
 
-**알고리즘 (분기 위치: L301 이후 transferLandStd / transferTotalStd 선언 이후)**:
+**알고리즘 (단일 직접 입력 경로)**:
 
 ```ts
-let acqLandStd: number;
-let acqBuildingStd: number;
+// 양도시 상가부분 기준시가
+const transferLandStd =
+  asset.transferStandardPrice.landPricePerSqm * derived.commercialLandArea;
+const transferTotalStd =
+  transferLandStd + asset.transferStandardPrice.commercialBuildingPrice;
 
-if (asset.partialUsageChange?.direction === "house_to_commercial") {
-  // ─── STEP 1: 취득시 합계 기준시가 산정 ───
-  // PHD 결합 (이슈 17): usePreHousingDisclosure=true 시 PHD가 역산한 값 사용,
-  // 미적용 시 acquisitionStandardPrice.housingPrice 사용
-  const housingTotal = asset.usePreHousingDisclosure && housingAcqResult.phdAcqHousingPrice
-    ? housingAcqResult.phdAcqHousingPrice
-    : (asset.acquisitionStandardPrice.housingPrice ?? 0);
+// 취득시 상가부분 기준시가 — 사용자 직접 입력 필수
+const userBuildingStd = asset.acquisitionStandardPrice.commercialBuildingPrice;
+const userLandPerSqm = asset.acquisitionStandardPrice.landPricePerSqm;
 
-  if (housingTotal === 0) {
+if (userBuildingStd <= 0 || userLandPerSqm <= 0) {
+  if (asset.partialUsageChange?.direction === "house_to_commercial") {
     throw new Error(
-      "용도변경(주택→상가): 취득시 개별주택공시가격이 0이거나 미입력. " +
-      "PHD 토글을 활성화하거나 직접 입력하세요.",
+      "보유 중 일부 용도변경(주택→상가): 취득시 상가건물 기준시가와 개별공시지가를 모두 입력하세요. " +
+      "취득 당시 동일 건물의 국세청 고시 기준시가를 직접 조회·입력해야 합니다.",
     );
   }
-
-  // ─── STEP 2: 면적비율로 상가부분 합계 안분 (집행기준 99-164-10) ───
-  const totalFloor = asset.residentialFloorArea + asset.nonResidentialFloorArea;
-  const commRatio = totalFloor > 0 ? asset.nonResidentialFloorArea / totalFloor : 0;
-  const acqCommercialTotal = Math.floor(housingTotal * commRatio);
-
-  // ─── STEP 3: 토지/건물 내부 분리 (이슈 2·16) ───
-  // 취득시점에 상가 분리값이 없으므로 양도시 토지/건물 비율 차용.
-  // acqLandStd=0 두면 acqLandRatio=0이 되어 토지 환산취득가가 0이 되는 버그 방지.
-  // fallback도 면적비율로 (0.5 임의값보다 합리적).
-  const fallbackLandRatio = (acqDerived.commercialLandArea + asset.buildingFootprintArea * commRatio) > 0
-    ? acqDerived.commercialLandArea / (acqDerived.commercialLandArea + asset.buildingFootprintArea * commRatio)
-    : 0.5;
-  const transferLandRatio = transferTotalStd > 0
-    ? transferLandStd / transferTotalStd
-    : fallbackLandRatio;
-
-  acqLandStd = Math.floor(acqCommercialTotal * transferLandRatio);
-  acqBuildingStd = acqCommercialTotal - acqLandStd;
-} else {
-  // 기존 검용주택 일반 분기 (L292~295)
-  acqLandStd = asset.acquisitionStandardPrice.landPricePerSqm * acqDerived.commercialLandArea;
-  acqBuildingStd = asset.acquisitionStandardPrice.commercialBuildingPrice;
+  throw new Error("검용주택: 취득시 상가건물 기준시가와 개별공시지가를 모두 입력하세요.");
 }
 
+// house_to_commercial은 acqDerived.commercialLandArea = 0이므로 양도시 면적 사용
+const landAreaForUserInput =
+  asset.partialUsageChange?.direction === "house_to_commercial"
+    ? derived.commercialLandArea
+    : (acqDerived ?? derived).commercialLandArea;
+
+const acqLandStd = userLandPerSqm * landAreaForUserInput;
+const acqBuildingStd = userBuildingStd;
+const acqStandardSource = "user_input" as const;
+
 const acqTotalStd = acqLandStd + acqBuildingStd;
-// ... 이하 §97 환산취득가 산정 (기존 로직 그대로)
+// 이하 §97 환산취득가 산정
 ```
 
-**산식 근거 (집행기준 99-164-10)**:
+**산식 근거 (집행기준 99-164-10 + 사용자 직접 입력 원칙)**:
 - 환산취득가(상가) = 양도가액(상가) × (취득시 상가 기준시가 / 양도시 상가 기준시가) — §97 그대로
-- **취득시 상가 기준시가 = 취득시 개별주택공시가격 × (양도시 상가연면적 / 합계연면적)** ← 면적비율 안분
+- **취득시 상가 기준시가 = 사용자가 직접 입력한 상가건물 기준시가 + (개별공시지가 × 양도시 상가부수토지 면적)**
 - 양도시 상가 기준시가 = 양도시 (상가건물 기준시가 + 공시지가 × 상가부수토지면적)
-- 토지/건물 내부 분리 = 양도시 비율 fallback
+- v1 기준이었던 "취득시 개별주택공시가격 × 양도시 상가연면적 비율" 자동 안분 산식은 폐지
+  - 이유: 개별주택공시가격은 토지+건물 일괄가액이라 면적비율로 가르면 취득시점 토지/건물 비율과 무관한 임의값 → 세법상 부정확
 
 ### 2-B. `calcHousingGainSplit` — commercial_to_house 미러 분기
 
@@ -438,8 +430,9 @@ export function partialUsageChangeFixture(
 | `direction === ""` (토글 ON, 미선택) | API 매핑에서 명시적 throw |
 | 취득시 면적 미입력 | 양도시 합계로 자동 도출 |
 | 취득시 면적 음수 | Zod `nonnegative()` + 검증 함수 reject |
-| `housingPrice === 0` & `usePreHousingDisclosure === false` | 엔진에서 명시적 throw (silent 0 방지) |
-| 1985 의제취득 + PHD ON | `phdAcqHousingPrice`를 면적비율 안분 기준으로 사용 (PDF 갑氏 케이스) |
+| **`commercialBuildingPrice <= 0` 또는 `landPricePerSqm <= 0` (v2 신규)** | **검증 단계(`validateAssetAcquisition`)에서 사전 차단 → 우회 시 엔진에서 명시적 throw** |
+| `housingPrice === 0` & `usePreHousingDisclosure === false` | 검증 단계에서 사전 차단 (PHD 토글 또는 개별주택공시가격 입력 유도) |
+| 1985 의제취득 + PHD ON | `phdAcqHousingPrice`를 주택부분 환산에 사용. **상가부분은 별도로 사용자 직접 입력 필수 (v2)** |
 | 토지/건물 비율 분모 0 | 양도시 토지/건물 비율 fallback (0.5 임의값 회피) |
 | 분필·합필·도로편입 (취득시 토지면적 ≠ 양도시) | Phase 2에서 `partialChangeAcqLandArea` 추가. 1차 PR은 가정 + 결과 카드 안내 |
 | 2회 이상 용도변경 | 본 분기 범위 외. 사용자가 최초·최종 시점만 선택 |

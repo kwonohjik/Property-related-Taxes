@@ -111,6 +111,42 @@ const transferSummary = useMemo(
 
 `computeTransferSummary(formData, result)`은 순수 함수 (`lib/stores/calc-wizard-store.ts`). 양도가액·취득가액·필요경비·양도소득금액·납부세액 5필드 반환.
 
+## UI 시니어 분리 (2026-04-30)
+
+엔진 시니어가 input/result 타입을 명세하면, 대응 UI 시니어가 다음 모두를 구현. 엔진 시니어는 UI 작업을 직접 수행하지 않음.
+
+| 세목 | UI 에이전트 |
+|---|---|
+| 양도소득세 | `transfer-tax-ui-senior` |
+| 취득세 | `acquisition-tax-ui-senior` |
+| 재산세 | `property-tax-ui-senior` |
+| 종합부동산세 | `comprehensive-tax-ui-senior` |
+| 상속·증여 | `inheritance-gift-tax-ui-senior` |
+
+**자동 검증**: 작업 완료 직후 `ui-engine-sync-checker` 호출로 7개 동기화 지점 매핑 누락 점검.
+
+## UI 통합 7개 동기화 지점 (Definition of Done — 강제)
+
+엔진 input·result 타입에 새 필드가 추가되거나 변경될 때 다음이 **모두** 동기화되어야 작업 완료. 하나라도 누락되면 미완료.
+
+| # | 지점 | 위치 |
+|---|---|---|
+| ① | 폼 상태 타입 (FormData/AssetForm) | `lib/stores/calc-wizard-asset.ts` · `calc-wizard-store.ts` 또는 `components/calc/{tax-type}/shared.ts` |
+| ② | initial value | 동상 (`createInitialAssetForm` / `INITIAL_FORM_DATA` / `INITIAL_FORM`) |
+| ③ | normalize fallback | 동상 (`normalizeAsset` 등) — sessionStorage 마이그레이션 호환 |
+| ④ | API 변환 | `lib/calc/{tax-type}-api.ts` (없으면 route handler 진입 변환) |
+| ⑤ | UI 입력 위젯 | 마법사 단계 컴포넌트 — 활성화 조건·tone 색상 고려 |
+| ⑥ | 사이드바 합계 (해당 시) | `compute*Summary` selector |
+| ⑦ | 결과 카드 산식·표시 | `{TaxType}ResultView` + 상세 카드들 — 산식 숫자 옆 변수명 라벨 |
+
+자가 점검 후 보고:
+
+- [ ] 7개 지점 모두 동기화 확인
+- [ ] `npx tsc --noEmit` 오류 0건
+- [ ] 회귀 테스트 통과
+- [ ] 브라우저 수동 확인 또는 미수행 명시
+- [ ] (권장) `ui-engine-sync-checker` 호출 결과 첨부
+
 ## UI 수정 시 체크리스트
 
 - [ ] `DateInput` 사용 (type="date" 아님)

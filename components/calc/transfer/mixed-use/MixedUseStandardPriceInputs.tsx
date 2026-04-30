@@ -173,40 +173,55 @@ export function MixedUseStandardPriceInputs({
             </FieldCard>
           )}
 
-        {/* direction === "house_to_commercial" 시 취득시 상가가 없었으므로 hidden */}
-        {asset.partialChangeDirection !== "house_to_commercial" && (
-          <>
-            <FieldCard label="취득시 상가건물 기준시가">
-              <CurrencyInput
-                label=""
-                value={asset.mixedAcqCommercialBuildingPrice}
-                onChange={(v) => onChange({ mixedAcqCommercialBuildingPrice: v })}
-                placeholder="취득시 상가건물 기준시가"
-              />
-            </FieldCard>
+        {/* 취득시 상가건물 기준시가 + 개별공시지가 — 모든 direction에서 사용자 직접 입력 필수
+            (자동 안분 fallback 폐지, 2026-05-01) */}
+        <FieldCard
+          label="취득시 상가건물 기준시가"
+          hint={
+            asset.partialChangeDirection === "house_to_commercial"
+              ? "취득 당시 동일 건물의 국세청 고시 기준시가 — 직접 조회·입력 (필수)"
+              : "토지 제외 — 국세청 홈택스 > 기준시가 조회 (필수)"
+          }
+        >
+          <CurrencyInput
+            label=""
+            value={asset.mixedAcqCommercialBuildingPrice}
+            onChange={(v) => onChange({ mixedAcqCommercialBuildingPrice: v })}
+            placeholder="취득시 상가건물 기준시가 (필수)"
+          />
+        </FieldCard>
 
-            {/* 개별공시지가 — LandPriceLookupField: 연도 선택 + 조회 버튼 + 토지기준시가 자동 계산 */}
-            <LandPriceLookupField
-              pricePerSqm={asset.mixedAcqLandPricePerSqm}
-              onPricePerSqmChange={(v) => onChange({ mixedAcqLandPricePerSqm: v })}
-              area={commercialLandArea > 0 ? commercialLandArea : undefined}
-              referenceDate={acqReferenceDate}
-              jibun={jibun}
-              label="취득시 개별공시지가(상가)(원/㎡)"
-              placeholder="취득시 개별공시지가 /㎡"
-            />
-          </>
-        )}
+        {/* 개별공시지가 — LandPriceLookupField: 연도 선택 + 조회 버튼 + 토지기준시가 자동 계산 */}
+        <LandPriceLookupField
+          pricePerSqm={asset.mixedAcqLandPricePerSqm}
+          onPricePerSqmChange={(v) => onChange({ mixedAcqLandPricePerSqm: v })}
+          area={commercialLandArea > 0 ? commercialLandArea : undefined}
+          referenceDate={acqReferenceDate}
+          jibun={jibun}
+          label="취득시 개별공시지가(상가)(원/㎡)"
+          hint={
+            asset.partialChangeDirection === "house_to_commercial"
+              ? "취득 당시 동일 토지의 개별공시지가 — 직접 조회·입력 (필수)"
+              : "상가부수토지 기준시가 자동 계산용 (필수)"
+          }
+          placeholder="취득시 개별공시지가 /㎡"
+        />
 
         {/* 보유 중 일부 용도변경 안내 박스 (direction별) */}
         {asset.hasPartialUsageChange && asset.partialChangeDirection === "house_to_commercial" && (
-          <div className="rounded-lg bg-amber-100/60 border border-amber-200 px-3 py-2 text-xs text-amber-900">
-            ℹ 취득시점에 상가가 존재하지 않음 — 상가건물 기준시가·공시지가 입력 불필요. 엔진이 취득시 개별주택공시가격을 양도시 면적비율로 자동 안분합니다 (집행기준 99-164-10).
+          <div className="rounded-lg bg-amber-100/60 border border-amber-200 px-3 py-2 text-xs text-amber-900 space-y-1">
+            <p>
+              ℹ 취득시점에는 전체가 주택이었으므로 상가 부분 기준시가가 직접 존재하지 않습니다.
+              취득 당시 동일 건물의 국세청 고시 기준시가와 개별공시지가를 <strong>직접 조회하여 입력</strong>해야 합니다.
+            </p>
+            <p>
+              두 값 중 하나라도 미입력이면 계산을 진행할 수 없습니다 (시행령 §166⑥ + 집행기준 99-164-10).
+            </p>
           </div>
         )}
         {asset.hasPartialUsageChange && asset.partialChangeDirection === "commercial_to_house" && (
           <div className="rounded-lg bg-amber-100/60 border border-amber-200 px-3 py-2 text-xs text-amber-900">
-            ℹ 취득시점에 주택이 존재하지 않음 — 개별주택공시가격 입력 불필요. 엔진이 취득시 상가 기준시가(건물+토지)를 양도시 면적비율로 자동 안분합니다.
+            ℹ 취득시점에 주택이 존재하지 않음 — 개별주택공시가격 입력 불필요. 취득시 상가건물 기준시가 + 개별공시지가를 입력하면 양도시 면적비율로 안분되어 취득시 주택부분 기준시가를 산정합니다.
           </div>
         )}
 

@@ -485,8 +485,17 @@ export interface PreHousingDisclosureInput {
   firstDisclosureDate: Date;
   /** 최초 고시 개별주택가격 P_F (원) */
   firstDisclosureHousingPrice: number;
-  /** 토지 면적 (㎡) */
+  /** 토지 면적 (㎡) — 시점별 분리 미사용 시(검용주택 단일면적·일반 PHD) 3시점 모두 이 값 사용 */
   landArea: number;
+
+  /**
+   * 시점별 토지면적 override (선택). 검용주택 + 보유 중 일부 용도변경 케이스에서만 사용.
+   * 미제공 시 `landArea` 단일값을 3시점 모두에 적용 (backward compat).
+   * 제공 시 해당 시점의 토지기준시가 산출에 우선 적용.
+   */
+  landAreaAtAcquisition?: number;
+  landAreaAtFirstDisclosure?: number;
+  landAreaAtTransfer?: number;
 
   /** 취득당시 토지 단위 공시지가 (원/㎡) — 자동추천 연도에서 조회 */
   landPricePerSqmAtAcquisition: number;
@@ -563,8 +572,12 @@ export interface PreHousingDisclosureResult {
   inputs: {
     /** 총 양도가액 (계약서 합계) */
     totalTransferPrice: number;
-    /** 토지 면적 (㎡) */
+    /** 토지 면적 (㎡) — 단일면적 모드에서 3시점에 모두 적용된 값 */
     landArea: number;
+    /** 시점별 면적 (검용주택+용도변경 케이스). 단일면적 모드면 모두 landArea와 동일 */
+    landAreaAtAcquisition: number;
+    landAreaAtFirstDisclosure: number;
+    landAreaAtTransfer: number;
     /** 취득시 토지 단위공시지가 (원/㎡) */
     landPricePerSqmAtAcquisition: number;
     /** 취득시 건물 기준시가 (원) */

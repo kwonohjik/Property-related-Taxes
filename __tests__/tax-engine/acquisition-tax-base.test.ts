@@ -209,18 +209,124 @@ describe("determineTaxBase — 특수관계인 거래", () => {
 // ============================================================
 
 describe("determineTaxBase — 연부취득", () => {
-  it("회차별 지급액 합산을 과세표준으로 사용", () => {
+  it("정상 3회차 (2년 이상): 회차별 지급액 합산을 과세표준으로 사용", () => {
+    const result = determineTaxBase(base({
+      acquisitionCause: "purchase",
+      reportedPrice: 0,
+      installments: [
+        { amount: 50_000_000,  paymentDate: "2024-01-01", label: "계약금" },
+        { amount: 100_000_000, paymentDate: "2025-01-01", label: "중도금" },
+        { amount: 200_000_000, paymentDate: "2026-01-01", label: "잔금" },
+      ],
+    }));
+    expect(result.method).toBe("installment");
+    expect(result.taxBase).toBe(350_000_000);
+    // 정상 처리 경고 포함 확인
+    expect(result.warnings.some(w => w.includes("연부취득"))).toBe(true);
+  });
+
+  it("빈 배열 → 연부취득 미적용, 일반 매매 처리", () => {
+    const result = determineTaxBase(base({
+      acquisitionCause: "purchase",
+      reportedPrice: 300_000_000,
+      installments: [],
+    }));
+    // 빈 배열이면 installments 분기에 진입하지 않아 일반 유상취득으로 처리
+    expect(result.method).toBe("actual_price");
+    expect(result.taxBase).toBe(300_000_000);
+  });
+
+  it("단일 회차 → 일반 매매 처리 + 경고", () => {
+    const result = determineTaxBase(base({
+      acquisitionCause: "purchase",
+      reportedPrice: 0,
+      installments: [
+        { amount: 300_000_000, paymentDate: "2024-01-01", label: "일시불" },
+      ],
+      standardValue: 280_000_000,
+    }));
+    // 단일 회차는 연부취득 아님 → 일반 매매
+    expect(result.method).not.toBe("installment");
+    expect(result.warnings.some(w => w.includes("1개"))).toBe(true);
+  });
+
+  it("2년 미만 분할 → 일반 매매 처리 + 경고", () => {
     const result = determineTaxBase(base({
       acquisitionCause: "purchase",
       reportedPrice: 0,
       installments: [
         { amount: 100_000_000, paymentDate: "2024-01-01" },
-        { amount: 200_000_000, paymentDate: "2024-07-01" },
-        { amount: 150_000_000, paymentDate: "2025-01-01" },
+        { amount: 200_000_000, paymentDate: "2024-06-01" }, // 5개월 후 (2년 미만)
+      ],
+    }));
+    expect(result.method).not.toBe("installment");
+    expect(result.warnings.some(w => w.includes("2년 미만"))).toBe(true);
+  });
+
+  it("비유상취득(상속) + installments → installments 무시, 시가표준액 사용", () => {
+    const result = determineTaxBase(base({
+      acquisitionCause: "inheritance",
+      reportedPrice: 0,
+      standardValue: 400_000_000,
+      installments: [
+        { amount: 100_000_000, paymentDate: "2024-01-01" },
+        { amount: 300_000_000, paymentDate: "2026-01-01" },
+      ],
+    }));
+    // 상속은 비유상취득 → installments 무시 → 시가표준액 사용
+    expect(result.method).not.toBe("installment");
+    expect(result.taxBase).toBe(400_000_000);
+    expect(result.warnings.some(w => w.includes("연부취득 대상이 아닙니다"))).toBe(true);
+  });
+
+  it("부담부증여 + installments → 부담부증여 우선 처리", () => {
+    const result = determineTaxBase(base({
+      acquisitionCause: "burdened_gift",
+      reportedPrice: 0,
+      encumbrance: 40_000_000,
+      standardValue: 100_000_000,
+      installments: [
+        { amount: 40_000_000, paymentDate: "2024-01-01" },
+        { amount: 60_000_000, paymentDate: "2026-01-01" },
+      ],
+    }));
+    // 부담부증여는 연부취득보다 우선 → split_onerous 분기
+    expect(result.method).toBe("split_onerous");
+    expect(result.breakdown?.onerousTaxBase).toBe(40_000_000);
+    expect(result.breakdown?.gratuitousTaxBase).toBe(60_000_000);
+  });
+
+  it("특수관계인 + 합산금액이 시가표준액 70% 미달 → 경고 포함", () => {
+    const result = determineTaxBase(base({
+      acquisitionCause: "purchase",
+      reportedPrice: 0,
+      isRelatedParty: true,
+      standardValue: 500_000_000,
+      installments: [
+        { amount: 100_000_000, paymentDate: "2024-01-01" }, // 합산 300M = 표준가 60% (70% 미달)
+        { amount: 200_000_000, paymentDate: "2026-01-01" },
       ],
     }));
     expect(result.method).toBe("installment");
-    expect(result.taxBase).toBe(450_000_000);
+    expect(result.taxBase).toBe(300_000_000);
+    expect(result.warnings.some(w => w.includes("70%"))).toBe(true);
+    expect(result.warnings.some(w => w.includes("특수관계인"))).toBe(true);
+  });
+
+  it("2년 이상 분할 + 경고 문구에 회차 수와 합산금액 포함", () => {
+    const result = determineTaxBase(base({
+      acquisitionCause: "purchase",
+      reportedPrice: 0,
+      installments: [
+        { amount: 50_000_000,  paymentDate: "2024-01-01" },
+        { amount: 100_000_000, paymentDate: "2025-01-01" },
+        { amount: 200_000_000, paymentDate: "2026-06-01" },
+      ],
+    }));
+    expect(result.method).toBe("installment");
+    expect(result.taxBase).toBe(350_000_000);
+    // 경고 문구에 회차 수(3) 포함 확인
+    expect(result.warnings.some(w => w.includes("3회차"))).toBe(true);
   });
 });
 

@@ -62,9 +62,10 @@ export interface MixedUseAssetInput {
   usePreHousingDisclosure?: boolean;
   /**
    * PHD 3-시점 환산 입력 — usePreHousingDisclosure=true 시 필수.
-   * landArea는 엔진이 주택부수토지로 자동 주입하므로 불필요(받아도 무시).
+   * landArea: 미제공 시 엔진이 양도시 주택부수토지 면적으로 자동 주입.
+   * 최초 공시 당시 전체가 주택이었던 경우 등 사용자가 직접 지정 가능.
    */
-  preHousingDisclosure?: Omit<PreHousingDisclosureInput, "landArea">;
+  preHousingDisclosure?: Omit<PreHousingDisclosureInput, "landArea"> & { landArea?: number };
   /** 거주 연수 — 2년 이상이면 표2(보유 40%+거주 40%), 미만이면 표1(최대 30%) */
   residencePeriodYears: number;
 
@@ -97,6 +98,12 @@ export interface MixedUseAssetInput {
     acqResidentialArea?: number;
     /** 취득시 상가연면적 — 미주입 시 양도시 합계로 자동 도출 */
     acqCommercialArea?: number;
+    /**
+     * 용도변경일 — 입력 시 시간 비례 분할로 LTHD를 정확 계산.
+     * 집행기준 89-154-24 (주택 사용 기간 통산) 취지를 반영.
+     * 미입력·취득일/양도일 경계 밖이면 fallback (전체 보유기간 LTHD).
+     */
+    usageChangeDate?: Date;
   };
 }
 
@@ -206,6 +213,22 @@ export interface MixedUseCommercialPart {
   longTermDeductionAmount: number;
   /** 양도소득금액 */
   incomeAmount: number;
+  /**
+   * 취득시 상가부분 기준시가 산출 근거 — 결과 카드 산식 분기 표시용.
+   *
+   * - "user_input": 사용자가 취득시 상가건물 기준시가 + 개별공시지가를 직접 입력
+   *                 (일반 검용주택, commercial_to_house, house_to_commercial 모든 경로 동일)
+   *
+   * 참고: 과거에 존재하던 "fallback_apportion"(개별주택공시가격 면적비율 자동 안분) 분기는
+   * 세법상 부정확하여 2026-05-01 제거됨. 모든 경로에서 직접 입력만 허용.
+   */
+  acqStandardSource: "user_input";
+  /** 취득시 상가부분 기준시가 합계 (acqLandStd + acqBuildingStd) — 산식 표시용 */
+  acqStandardTotal: number;
+  /** 취득시 상가부수토지 기준시가 — 산식 표시용 */
+  acqStandardLand: number;
+  /** 취득시 상가건물 기준시가 — 산식 표시용 */
+  acqStandardBuilding: number;
 }
 
 /** 비사업용토지 부분 계산 결과 (배율초과 면적이 있을 때만 생성) */
@@ -318,5 +341,29 @@ export interface MixedUseGainBreakdown {
     acqCommercialArea: number;
     /** 사용자가 면적을 수정했는지 여부 */
     isAreaCustomized: boolean;
+  };
+
+  /**
+   * 용도변경일 기반 LTHD 시간 비례 분할 결과 (Part A).
+   * usageChangeDate 입력 + 유효 시에만 생성. 미입력 시 undefined.
+   * 집행기준 89-154-24 취지 반영.
+   */
+  usagePeriodSplit?: {
+    /** Period 1 = 취득일 ~ 용도변경일 (단일 용도 기간), 일 단위 */
+    period1Days: number;
+    /** Period 2 = 용도변경일 ~ 양도일 (혼용 기간), 일 단위 */
+    period2Days: number;
+    /** Period 1 양도차익 — 100% 단일 용도 */
+    period1Gain: number;
+    /** Period 2 양도차익 — 양도시점 기준시가 비율로 안분 */
+    period2HousingGain: number;
+    period2CommercialGain: number;
+    /** Period별 LTHD 공제율·공제액 */
+    period1LongTermDeductionRate: number;
+    period1LongTermDeductionAmount: number;
+    period2HousingLongTermDeductionRate: number;
+    period2HousingLongTermDeductionAmount: number;
+    period2CommercialLongTermDeductionRate: number;
+    period2CommercialLongTermDeductionAmount: number;
   };
 }

@@ -122,6 +122,7 @@ interface BlockProps {
 
 export function CompanionAcqPurchaseBlock(props: BlockProps) {
   const [dateClampMsg, setDateClampMsg] = useState(false);
+  const [landDateClampMsg, setLandDateClampMsg] = useState(false);
 
   // 내부 fallback state (외부 props 없을 때 사용)
   const [internalPricePerSqmAtAcq, setInternalPricePerSqmAtAcq] = useState("");
@@ -192,6 +193,22 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
   const isDeemedAcquisitionDate = !!(
     props.acquisitionDate && props.acquisitionDate <= "1985-01-01"
   );
+  const isLandDeemedAcquisitionDate = !!(
+    props.landAcquisitionDate && props.landAcquisitionDate <= "1985-01-01"
+  );
+
+  function handleLandAcquisitionDateChange(v: string) {
+    props.onLandAcquisitionDateChange?.(v);
+    setLandDateClampMsg(false);
+  }
+
+  function handleLandAcquisitionDateBlur() {
+    const v = props.landAcquisitionDate;
+    if (v && v < MIN_ACQ_DATE) {
+      props.onLandAcquisitionDateChange?.(MIN_ACQ_DATE);
+      setLandDateClampMsg(true);
+    }
+  }
 
   return (
     <div className="space-y-3 rounded-md border border-border bg-background p-3">
@@ -294,12 +311,25 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
             <div className="space-y-2 pl-1">
               <FieldCard
                 label="토지 취득일"
-                hint="등기부등본상 등기접수일 (소득령 §162①1호)"
+                hint="※ 1985.1.1 이전 취득은 모두 1985.1.1로 입력 (의제취득, 소득세법 §98)."
+                trailing={
+                  isLandDeemedAcquisitionDate ? (
+                    <span className="inline-flex items-center rounded border border-amber-300 bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-900">
+                      의제취득(§98)
+                    </span>
+                  ) : undefined
+                }
               >
                 <DateInput
                   value={props.landAcquisitionDate ?? ""}
-                  onChange={props.onLandAcquisitionDateChange ?? (() => {})}
+                  onChange={handleLandAcquisitionDateChange}
+                  onBlur={handleLandAcquisitionDateBlur}
                 />
+                {landDateClampMsg && (
+                  <p className="text-xs text-amber-700 dark:text-amber-400">
+                    1985.1.1. 의제 취득일로 취득일 변경했습니다.
+                  </p>
+                )}
               </FieldCard>
 
               <FieldCard label="취득·양도가액 분리 방식" hint="토지/건물 각각의 취득가액·양도가액 구분 방법 (소득령 §166⑥)">

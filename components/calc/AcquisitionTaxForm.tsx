@@ -1,34 +1,84 @@
 "use client";
 
 /**
- * AcquisitionTaxForm — 취득세 계산 4단계 마법사
+ * AcquisitionTaxForm — 취득세 계산 6단계 마법사 (P5UI-10 업그레이드)
  *
- * Step 0: 취득 정보 (취득자유형, 물건종류, 취득원인, 취득가액, 취득일)
- * Step 1: 물건 상세 (전용면적, 사치성재산, 특수관계인, 시가표준액)
- * Step 2: 주택 현황 (보유 주택 수, 조정대상지역) — 주택 선택 시 활성
- * Step 3: 감면 확인 (생애최초, 수도권) — 주택+개인 시 활성 → 계산
+ * Step 0: 취득 정보 (취득자유형·물건종류·취득원인·취득가액·취득일)
+ * Step 1: 물건 상세 (전용면적·시가표준액·사치성·특수관계인)
+ * Step 2: 주택 현황 (보유 주택 카드·세대·권리취득일) — 주택 선택 시 활성
+ * Step 3: 중과 분기 (조정대상지역·일시적·지정 전 계약·무상취득 단서)
+ * Step 4: 법인·특수 (법인 중과·세율특례 §15) — 해당 시 활성
+ * Step 5: 감면 확인 (생애최초·자경농지·농특세 분기) → 계산
  */
 
-
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { StepIndicator } from "@/components/calc/StepIndicator";
 import { AcquisitionTaxResultView } from "@/components/calc/results/AcquisitionTaxResultView";
+import { callAcquisitionTaxAPI } from "@/lib/calc/acquisition-tax-api";
 import type { AcquisitionTaxResult } from "@/lib/tax-engine/types/acquisition.types";
 import {
   STEPS,
   INITIAL_FORM,
   validateStep,
-  callAcquisitionTaxAPI,
-  labelCls,
-  selectCls,
-  checkboxWrapCls,
-  infoBannerCls,
-  warnBannerCls,
+  isDeemedAcquisitionCause,
   type FormState,
 } from "./acquisition/shared";
 import { Step0 } from "./acquisition/Step0";
 import { Step1 } from "./acquisition/Step1";
-import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { Step2 } from "./acquisition/Step2";
+import { Step3 } from "./acquisition/Step3";
+import { Step4 } from "./acquisition/Step4";
+import { Step5 } from "./acquisition/Step5";
+import { AcquisitionSidebar } from "./acquisition/AcquisitionSidebar";
+
+// ============================================================
+// Skip 로직
+// ============================================================
+
+/**
+ * 다음 단계 계산 (skip 포함)
+ * - 간주취득: Step 0 → Step 1 → -1 (API 호출 시그널)
+ * - Step 2 (주택 현황): 비주택이면 건너뜀
+ * - Step 4 (법인·특수): 비법인 + 비사치성 + 세율특례 없으면 건너뜀
+ */
+function computeNextStep(
+  current: number,
+  form: FormState,
+  forward: boolean,
+): number {
+  const isDeemed = isDeemedAcquisitionCause(form.acquisitionCause);
+
+  // 간주취득: Step 0 → Step 1 → API 호출 (-1 시그널)
+  if (isDeemed) {
+    if (forward) {
+      if (current === 0) return 1;
+      if (current === 1) return -1;
+    } else {
+      if (current === 1) return 0;
+      if (current === 0) return -99; // 홈으로
+    }
+  }
+
+  const isHousing = form.propertyType === "housing";
+  const isCorporation = form.acquiredBy === "corporation";
+  const isLuxury = form.isLuxuryProperty;
+  const hasSpecialRate = !!form.specialRateType;
+
+  const shouldSkipStep2 = !isHousing;
+  const shouldSkipStep4 = !isCorporation && !isLuxury && !hasSpecialRate;
+
+  if (forward) {
+    let next = current + 1;
+    if (next === 2 && shouldSkipStep2) next = 3;
+    if (next === 4 && shouldSkipStep4) next = 5;
+    return next;
+  } else {
+    let prev = current - 1;
+    if (prev === 4 && shouldSkipStep4) prev = 3;
+    if (prev === 2 && shouldSkipStep2) prev = 1;
+    return prev;
+  }
+}
 
 export function AcquisitionTaxForm() {
   const [step, setStep] = useState(0);
@@ -45,20 +95,45 @@ export function AcquisitionTaxForm() {
   const isInheritance = ["inheritance", "inheritance_farmland"].includes(form.acquisitionCause);
   const isGiftLike = ["gift", "burdened_gift", "donation"].includes(form.acquisitionCause);
   const isHousing = form.propertyType === "housing";
+  const isFarmland = form.propertyType === "land_farmland";
+  const isLand = form.propertyType === "land" || form.propertyType === "land_farmland";
   const isIndividual = form.acquiredBy === "individual";
   const isCorporation = form.acquiredBy === "corporation";
+  const isDeemed = isDeemedAcquisitionCause(form.acquisitionCause);
+
+  // 간주취득 시 2단계만 표시
+  const activeSteps = isDeemed
+    ? ["취득 정보", "간주취득 상세"]
+    : STEPS;
+
+  const totalSteps = isDeemed ? 2 : STEPS.length;
+  const isLastStep = isDeemed ? step === 1 : step === STEPS.length - 1;
 
   const handleNext = async () => {
     const err = validateStep(step, form);
     if (err) { setError(err); return; }
     setError(null);
 
-    if (step < STEPS.length - 1) {
-      // 비주택: Step 1 → Step 2(주택 현황) 건너뛰고 Step 3(감면 확인)으로
-      const nextStep = step === 1 && !isHousing ? step + 2 : step + 1;
+    const nextStep = computeNextStep(step, form, true);
+
+    if (nextStep === -1) {
+      // 간주취득: Step 1에서 바로 API 호출
+      setLoading(true);
+      try {
+        const res = await callAcquisitionTaxAPI(form);
+        setResult(res);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "계산 중 오류가 발생했습니다.");
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    if (!isLastStep) {
       setStep(nextStep);
     } else {
-      // Step 3(감면 확인) → 계산 실행
+      // Step 5 (감면 확인) → 계산 실행
       setLoading(true);
       try {
         const res = await callAcquisitionTaxAPI(form);
@@ -75,10 +150,13 @@ export function AcquisitionTaxForm() {
     if (step === 0) {
       window.location.href = "/";
     } else {
+      const prevStep = computeNextStep(step, form, false);
+      if (prevStep === -99) {
+        window.location.href = "/";
+        return;
+      }
       setError(null);
       setResult(null);
-      // 비주택: Step 3 → Step 2(주택 현황) 건너뛰고 Step 1(물건 상세)로
-      const prevStep = step === 3 && !isHousing ? step - 2 : step - 1;
       setStep(prevStep);
     }
   };
@@ -87,8 +165,19 @@ export function AcquisitionTaxForm() {
     setForm((f) => ({ ...f, [key]: value }));
 
   return (
-    <div className="space-y-6">
-      <StepIndicator steps={STEPS} current={step} />
+    <div className="lg:grid lg:grid-cols-[260px_1fr] lg:gap-6 lg:items-start">
+      {/* 사이드바 — lg 이상에서 좌측 sticky */}
+      <div className="hidden lg:block">
+        <AcquisitionSidebar
+          form={form}
+          currentStep={step}
+          onStepClick={(s) => { setResult(null); setError(null); setStep(s); }}
+        />
+      </div>
+
+      {/* 메인 마법사 */}
+      <div className="space-y-6">
+      <StepIndicator steps={activeSteps} current={step} />
 
       {/* ── Step 0: 취득 정보 ── */}
       {step === 0 && (
@@ -107,127 +196,106 @@ export function AcquisitionTaxForm() {
         />
       )}
 
-      {/* ── Step 1: 물건 상세 ── */}
+      {/* ── Step 1: 물건 상세 (간주취득 시: 결과 또는 간주취득 패널) ── */}
       {step === 1 && (
-        <Step1
-          form={form}
-          set={set}
-          standardValuePerSqm={standardValuePerSqm}
-          onStandardValuePerSqmChange={setStandardValuePerSqm}
-          referenceDate={form.balancePaymentDate || form.contractDate}
-          isHousing={isHousing}
-        />
+        <>
+          {isDeemed && result ? (
+            <div className="space-y-4">
+              <AcquisitionTaxResultView
+                result={result}
+                isRegulatedArea={form.isRegulatedArea}
+                isCorporation={isCorporation}
+                onGoToStep={(s) => { setResult(null); setError(null); setStep(s); }}
+                installmentRows={form.installments?.map((r) => ({ label: r.label, paymentDate: r.paymentDate, amount: r.amount }))}
+              />
+              <button
+                type="button"
+                className="mt-2 w-full rounded-md border border-input bg-background px-4 py-2 text-sm hover:bg-accent"
+                onClick={() => { setResult(null); }}
+              >
+                조건 변경 후 재계산
+              </button>
+            </div>
+          ) : (
+            <Step1
+              form={form}
+              set={set}
+              standardValuePerSqm={standardValuePerSqm}
+              onStandardValuePerSqmChange={setStandardValuePerSqm}
+              referenceDate={form.balancePaymentDate || form.contractDate}
+              isHousing={isHousing}
+            />
+          )}
+        </>
       )}
 
       {/* ── Step 2: 주택 현황 ── */}
       {step === 2 && (
-        <div className="space-y-4">
-          {isHousing ? (
-            <>
-              {/* 법인 주택 취득 안내 */}
-              {isCorporation && (
-                <div className={infoBannerCls}>
-                  <strong>법인 주택 취득 안내</strong><br />
-                  법인의 주택 유상취득에는 <strong>12% 중과세율</strong>이 적용됩니다 (지방세법 §13의2).
-                  아래 주택 수·조정지역 설정에 관계없이 법인 중과가 우선 적용됩니다.
-                </div>
-              )}
-
-              <div>
-                <label className={labelCls}>취득 후 보유 주택 수 (취득 대상 포함)</label>
-                <select
-                  className={selectCls}
-                  value={form.houseCountAfter}
-                  onChange={(e) => set("houseCountAfter", e.target.value)}
-                >
-                  <option value="1">1주택 (기본세율)</option>
-                  <option value="2">2주택 (조정지역 8% 중과)</option>
-                  <option value="3">3주택 이상 (조정지역 12% 중과)</option>
-                </select>
-              </div>
-
-              <ToggleCard
-                tone="rose"
-                title="조정대상지역 내 주택"
-                checked={form.isRegulatedArea}
-                onCheckedChange={(v) => set("isRegulatedArea", v)}
-              />
-
-              {/* 다주택 + 조정지역 중과 안내 */}
-              {form.isRegulatedArea && parseInt(form.houseCountAfter) >= 2 && isIndividual && (
-                <div className={warnBannerCls}>
-                  {parseInt(form.houseCountAfter) === 2
-                    ? "조정대상지역 내 2주택 취득 — 8% 중과세율이 적용됩니다."
-                    : "조정대상지역 내 3주택 이상 취득 — 12% 중과세율이 적용됩니다."}
-                </div>
-              )}
-            </>
-          ) : (
-            <div className={infoBannerCls}>
-              주택 이외 물건은 조정대상지역 다주택 중과 조건이 적용되지 않습니다.<br />
-              기본세율이 자동 적용됩니다.
-            </div>
-          )}
-        </div>
+        <Step2
+          form={form}
+          set={set}
+          isHousing={isHousing}
+          isCorporation={isCorporation}
+          isIndividual={isIndividual}
+        />
       )}
 
-      {/* ── Step 3: 감면 확인 → 계산 ── */}
+      {/* ── Step 3: 중과 분기 ── */}
       {step === 3 && (
-        <div className="space-y-4">
+        <Step3
+          form={form}
+          set={set}
+          isHousing={isHousing}
+          isIndividual={isIndividual}
+          isCorporation={isCorporation}
+          isGiftLike={isGiftLike}
+        />
+      )}
+
+      {/* ── Step 4: 법인·특수 ── */}
+      {step === 4 && (
+        <Step4
+          form={form}
+          set={set}
+          isHousing={isHousing}
+          isCorporation={isCorporation}
+          isLand={isLand}
+        />
+      )}
+
+      {/* ── Step 5: 감면 확인 → 계산 ── */}
+      {step === 5 && (
+        <>
           {result ? (
-            <>
-              <AcquisitionTaxResultView result={result} />
+            <div className="space-y-4">
+              <AcquisitionTaxResultView
+                result={result}
+                isRegulatedArea={form.isRegulatedArea}
+                isCorporation={isCorporation}
+                onGoToStep={(s) => { setResult(null); setError(null); setStep(s); }}
+                installmentRows={form.installments?.map((r) => ({ label: r.label, paymentDate: r.paymentDate, amount: r.amount }))}
+              />
               <button
                 type="button"
                 className="mt-2 w-full rounded-md border border-input bg-background px-4 py-2 text-sm hover:bg-accent"
                 onClick={() => {
                   setResult(null);
-                  setStep(0);
-                  setForm(INITIAL_FORM);
                 }}
               >
-                다시 계산하기
+                조건 변경 후 재계산
               </button>
-            </>
+            </div>
           ) : (
-            <>
-              {isHousing && isIndividual ? (
-                <ToggleCard
-                  tone="violet"
-                  title="생애최초 주택 구매 감면 신청"
-                  description="지방세특례제한법 §36의3, 최대 200만원"
-                  checked={form.isFirstHome}
-                  onCheckedChange={(v) => set("isFirstHome", v)}
-                >
-                  <ToggleCard
-                    tone="rose"
-                    size="sm"
-                    title="수도권 주택"
-                    description="취득가액 한도 4억 (비수도권은 3억)"
-                    checked={form.isMetropolitan}
-                    onCheckedChange={(v) => set("isMetropolitan", v)}
-                  />
-
-                  <div className={warnBannerCls}>
-                    <strong>추징 주의</strong><br />
-                    취득일로부터 3년 이내 처분·임대·주거 외 사용 시 감면세액이 추징됩니다
-                    (지방세특례제한법 §36의3 ④).
-                  </div>
-                </ToggleCard>
-              ) : (
-                <div className={infoBannerCls}>
-                  {!isHousing
-                    ? "주택 이외 물건은 생애최초 주택 감면 대상이 아닙니다."
-                    : "법인 취득은 생애최초 주택 감면 대상이 아닙니다."}
-                </div>
-              )}
-
-              <p className="text-xs text-muted-foreground pt-2">
-                모든 입력이 완료되면 아래 <strong>취득세 계산</strong> 버튼을 눌러주세요.
-              </p>
-            </>
+            <Step5
+              form={form}
+              set={set}
+              isHousing={isHousing}
+              isIndividual={isIndividual}
+              isFarmland={isFarmland}
+              isGiftLike={isGiftLike}
+            />
           )}
-        </div>
+        </>
       )}
 
       {/* 오류 표시 */}
@@ -251,10 +319,11 @@ export function AcquisitionTaxForm() {
             onClick={handleNext}
             disabled={loading}
           >
-            {loading ? "계산 중..." : step === STEPS.length - 1 ? "취득세 계산" : "다음"}
+            {loading ? "계산 중..." : (isDeemed && step === 1) || isLastStep ? "취득세 계산" : "다음"}
           </button>
         </div>
       )}
+      </div> {/* 메인 마법사 끝 */}
     </div>
   );
 }

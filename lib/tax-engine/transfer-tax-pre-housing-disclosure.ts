@@ -38,6 +38,9 @@ export function calcPreHousingDisclosureGain(
 ): PreHousingDisclosureResult {
   const {
     landArea,
+    landAreaAtAcquisition,
+    landAreaAtFirstDisclosure,
+    landAreaAtTransfer,
     landPricePerSqmAtAcquisition,
     buildingStdPriceAtAcquisition,
     landPricePerSqmAtFirstDisclosure,
@@ -48,10 +51,15 @@ export function calcPreHousingDisclosureGain(
     buildingStdPriceAtTransfer,
   } = input;
 
+  // 시점별 면적 — override 제공 시 사용, 미제공 시 단일 landArea fallback
+  const areaAtAcq = landAreaAtAcquisition ?? landArea;
+  const areaAtFirst = landAreaAtFirstDisclosure ?? landArea;
+  const areaAtTransfer = landAreaAtTransfer ?? landArea;
+
   // ── Step 1: 각 시점 기준시가 산출 ──
-  const landStdAtAcquisition = landPricePerSqmAtAcquisition * landArea;
-  const landStdAtFirstDisclosure = landPricePerSqmAtFirstDisclosure * landArea;
-  const landStdAtTransfer = landPricePerSqmAtTransfer * landArea;
+  const landStdAtAcquisition = landPricePerSqmAtAcquisition * areaAtAcq;
+  const landStdAtFirstDisclosure = landPricePerSqmAtFirstDisclosure * areaAtFirst;
+  const landStdAtTransfer = landPricePerSqmAtTransfer * areaAtTransfer;
 
   const sumAtAcquisition = landStdAtAcquisition + buildingStdPriceAtAcquisition;
   const sumAtFirstDisclosure = landStdAtFirstDisclosure + buildingStdPriceAtFirstDisclosure;
@@ -131,6 +139,9 @@ export function calcPreHousingDisclosureGain(
     inputs: {
       totalTransferPrice,
       landArea,
+      landAreaAtAcquisition: areaAtAcq,
+      landAreaAtFirstDisclosure: areaAtFirst,
+      landAreaAtTransfer: areaAtTransfer,
       landPricePerSqmAtAcquisition,
       buildingStdPriceAtAcquisition,
       landPricePerSqmAtFirstDisclosure,

@@ -97,9 +97,9 @@ describe("SC-1: PDF 갑氏 — 주택→상가 + 다주택자 + 1985 의제취�
     expect(result.commercialPart.landAcqPrice).toBeGreaterThan(0);
   });
 
-  it("calculationRoute에 partialUsageChangeReason 포함", () => {
+  it("calculationRoute에 partialUsageChangeReason 포함 (사용자 직접 입력 안내)", () => {
     expect(result.calculationRoute.partialUsageChangeReason).toBeDefined();
-    expect(result.calculationRoute.partialUsageChangeReason).toContain("99-164-10");
+    expect(result.calculationRoute.partialUsageChangeReason).toContain("사용자가 입력한");
   });
 
   it("총 납부세액 계산 정상 (양수)", () => {
@@ -162,6 +162,198 @@ describe("SC-1: PDF 갑氏 — 주택→상가 + 다주택자 + 1985 의제취�
     it("🎯 총 납부세액 — totalPayable (golden anchor)", () => {
       expect(result.total.totalPayable).toBe(a.totalPayable);
     });
+  });
+});
+
+// ──────────────────────────────────────────────────────────────
+// SC-1B: house_to_commercial 직접 입력 경로
+//   사용자가 취득시 상가건물 기준시가 + 개별공시지가를 명시 입력 (자동 안분 fallback 폐지).
+// ──────────────────────────────────────────────────────────────
+
+describe("SC-1B: house_to_commercial — 직접 입력 경로", () => {
+  // SC-1과 동일 픽스처 + 취득시 상가 기준시가 명시 입력
+  const ACQ_COMM_BUILDING = 25_000_000;       // 사용자 입력 — 취득시 상가건물 기준시가
+  const ACQ_LAND_PRICE_PER_SQM = 200_000;     // 사용자 입력 — 취득시 개별공시지가/㎡
+
+  it("acqStandardSource = 'user_input'", () => {
+    const asset = mixedUsePdfGap({
+      acquisitionStandardPrice: {
+        housingPrice: undefined,
+        commercialBuildingPrice: ACQ_COMM_BUILDING,
+        landPricePerSqm: ACQ_LAND_PRICE_PER_SQM,
+      },
+    });
+    const result = calcMixedUseTransferTax(
+      GAP_TRANSFER_PRICE,
+      GAP_TRANSFER_DATE,
+      asset,
+      mockRates,
+    );
+    expect(result.commercialPart.acqStandardSource).toBe("user_input");
+  });
+
+  it("취득시 상가부수토지 기준시가 = 개별공시지가 × 상가부수토지 면적 (자동 계산)", () => {
+    const asset = mixedUsePdfGap({
+      acquisitionStandardPrice: {
+        housingPrice: undefined,
+        commercialBuildingPrice: ACQ_COMM_BUILDING,
+        landPricePerSqm: ACQ_LAND_PRICE_PER_SQM,
+      },
+    });
+    const result = calcMixedUseTransferTax(
+      GAP_TRANSFER_PRICE,
+      GAP_TRANSFER_DATE,
+      asset,
+      mockRates,
+    );
+    // commercialLandArea = round2(198.3 - round2(198.3 × 37.79/118.02)) = 134.80
+    const COMMERCIAL_LAND_AREA = 134.80;
+    const expectedLand = COMMERCIAL_LAND_AREA * ACQ_LAND_PRICE_PER_SQM;
+    expect(result.commercialPart.acqStandardLand).toBeCloseTo(expectedLand, 0);
+    expect(result.commercialPart.acqStandardBuilding).toBe(ACQ_COMM_BUILDING);
+    expect(result.commercialPart.acqStandardTotal).toBeCloseTo(
+      expectedLand + ACQ_COMM_BUILDING,
+      0,
+    );
+  });
+
+  it("환산취득가 산식: 상가양도가액 × (취득시 합계 ÷ 양도시 합계)", () => {
+    const asset = mixedUsePdfGap({
+      acquisitionStandardPrice: {
+        housingPrice: undefined,
+        commercialBuildingPrice: ACQ_COMM_BUILDING,
+        landPricePerSqm: ACQ_LAND_PRICE_PER_SQM,
+      },
+    });
+    const result = calcMixedUseTransferTax(
+      GAP_TRANSFER_PRICE,
+      GAP_TRANSFER_DATE,
+      asset,
+      mockRates,
+    );
+    // §97: floor(상가양도가액 × (취득시 합계 ÷ 양도시 합계))
+    const expected = Math.floor(
+      result.apportionment.commercialTransferPrice
+        * result.commercialPart.acqStandardTotal
+        / result.apportionment.commercialStandardPrice,
+    );
+    expect(result.commercialPart.estimatedAcquisitionPrice).toBe(expected);
+  });
+
+  it("자동 안분 fallback 폐지 — 미입력 시 명확한 오류 throw", () => {
+    // commercialBuildingPrice = 0 → 엔진에서 명시적 오류
+    const missingBuildingAsset = mixedUsePdfGap({
+      acquisitionStandardPrice: {
+        housingPrice: undefined,
+        commercialBuildingPrice: 0,
+        landPricePerSqm: ACQ_LAND_PRICE_PER_SQM,
+      },
+    });
+    expect(() =>
+      calcMixedUseTransferTax(
+        GAP_TRANSFER_PRICE,
+        GAP_TRANSFER_DATE,
+        missingBuildingAsset,
+        mockRates,
+      ),
+    ).toThrow(/취득시 상가건물 기준시가/);
+
+    // landPricePerSqm = 0 → 동일 오류
+    const missingLandAsset = mixedUsePdfGap({
+      acquisitionStandardPrice: {
+        housingPrice: undefined,
+        commercialBuildingPrice: ACQ_COMM_BUILDING,
+        landPricePerSqm: 0,
+      },
+    });
+    expect(() =>
+      calcMixedUseTransferTax(
+        GAP_TRANSFER_PRICE,
+        GAP_TRANSFER_DATE,
+        missingLandAsset,
+        mockRates,
+      ),
+    ).toThrow(/취득시 상가건물 기준시가/);
+  });
+
+  it("direction 미지정(일반 검용주택) — 입력값 그대로 사용 (acqStandardSource = 'user_input')", () => {
+    const baseAsset = mixedUsePdfGap({
+      partialUsageChange: undefined,
+      acquisitionStandardPrice: {
+        housingPrice: 200_000_000,           // 일반 검용주택 — 주택공시가격 필수
+        commercialBuildingPrice: ACQ_COMM_BUILDING,
+        landPricePerSqm: ACQ_LAND_PRICE_PER_SQM,
+      },
+      usePreHousingDisclosure: false,
+      preHousingDisclosure: undefined,
+    });
+    const result = calcMixedUseTransferTax(
+      GAP_TRANSFER_PRICE,
+      GAP_TRANSFER_DATE,
+      baseAsset,
+      mockRates,
+    );
+    expect(result.commercialPart.acqStandardSource).toBe("user_input");
+    expect(result.commercialPart.acqStandardBuilding).toBe(ACQ_COMM_BUILDING);
+  });
+
+  it("partialUsageChangeReason — 직접 입력 경로 안내 문구 (사용자가 입력한)", () => {
+    const asset = mixedUsePdfGap({
+      acquisitionStandardPrice: {
+        housingPrice: undefined,
+        commercialBuildingPrice: ACQ_COMM_BUILDING,
+        landPricePerSqm: ACQ_LAND_PRICE_PER_SQM,
+      },
+    });
+    const result = calcMixedUseTransferTax(
+      GAP_TRANSFER_PRICE,
+      GAP_TRANSFER_DATE,
+      asset,
+      mockRates,
+    );
+    expect(result.calculationRoute.partialUsageChangeReason).toContain("사용자가 입력한");
+    // 자동 안분 fallback 안내 문구는 폐지됨
+    expect(result.calculationRoute.partialUsageChangeReason).not.toContain("자동 안분");
+  });
+
+  it("PHD ON + 직접 입력: PHD는 주택부분만 영향, 상가는 입력값 사용", () => {
+    // SC-1B 케이스는 이미 usePreHousingDisclosure=true (mixedUsePdfGap default)
+    const asset = mixedUsePdfGap({
+      acquisitionStandardPrice: {
+        housingPrice: undefined,
+        commercialBuildingPrice: ACQ_COMM_BUILDING,
+        landPricePerSqm: ACQ_LAND_PRICE_PER_SQM,
+      },
+    });
+    const result = calcMixedUseTransferTax(
+      GAP_TRANSFER_PRICE,
+      GAP_TRANSFER_DATE,
+      asset,
+      mockRates,
+    );
+    // PHD가 주택 환산은 정상 수행
+    expect(result.housingPart.phdEstimatedAcqHousingPrice).toBeGreaterThan(0);
+    // 상가는 사용자 입력값 사용 (PHD 영향 받지 않음)
+    expect(result.commercialPart.acqStandardSource).toBe("user_input");
+    expect(result.commercialPart.acqStandardBuilding).toBe(ACQ_COMM_BUILDING);
+  });
+
+  it("부분 입력(건물만, 토지 0) — 명확한 오류 throw", () => {
+    const asset = mixedUsePdfGap({
+      acquisitionStandardPrice: {
+        housingPrice: undefined,
+        commercialBuildingPrice: ACQ_COMM_BUILDING,
+        landPricePerSqm: 0,                // 미입력
+      },
+    });
+    expect(() =>
+      calcMixedUseTransferTax(
+        GAP_TRANSFER_PRICE,
+        GAP_TRANSFER_DATE,
+        asset,
+        mockRates,
+      ),
+    ).toThrow(/취득시 상가건물 기준시가/);
   });
 });
 
@@ -249,7 +441,7 @@ describe("SC-4: PHD 결합 — house_to_commercial + usePreHousingDisclosure=tru
     });
     expect(() => {
       calcMixedUseTransferTax(GAP_TRANSFER_PRICE, GAP_TRANSFER_DATE, asset, mockRates);
-    }).toThrow(/취득시 개별주택공시가격이 0이거나 미입력/);
+    }).toThrow(/취득시 상가건물 기준시가/);
   });
 
   it("PHD 적용 시 phdAcqHousingPrice가 면적비율 안분 기준값으로 사용됨", () => {

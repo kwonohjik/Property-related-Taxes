@@ -144,9 +144,12 @@ export const GAP_HOUSING_PRICE_AT_TRANSFER = 380_000_000;     // 개별주택가
 export const GAP_LAND_PRICE_PER_SQM_AT_TRANSFER = 3_300_000;  // 개별공시지가/㎡
 export const GAP_COMMERCIAL_BUILDING_AT_TRANSFER = 100_000_000; // 추정 (PDF 미명시 — 사용자 조회)
 
-// 취득시 (1985 의제취득) — house_to_commercial이므로 상가 기준시가 미사용
+// 취득시 (1985 의제취득) — house_to_commercial 시 사용자가 직접 입력해야 하는 값:
+// 취득 당시 동일 건물의 국세청 고시 기준시가에서 양도시 상가연면적 비율로 안분한 값.
 // PHD 사용 → 1990년 공시지가로 의제취득 시점 토지가격 환산
 export const GAP_LAND_PRICE_PER_SQM_AT_ACQ = 840_000;  // 1990년 공시지가 (의제취득)
+// 1985 의제취득 시점 추정 상가건물 기준시가 (PDF 미명시 — 사용자 직접 조회·입력 가정)
+export const GAP_COMMERCIAL_BUILDING_AT_ACQ = 10_000_000;
 
 // 거주기간 (PDF 미명시 — 갑氏는 A검용주택 임대등록 안함, 직접 거주 추정 안 함)
 export const GAP_RESIDENCE_PERIOD_YEARS = 0;
@@ -160,8 +163,8 @@ export const GAP_LAND_PRICE_PER_SQM_AT_2005 = 1_700_000;  // 2004년 가까운 �
 /**
  * PDF 갑氏 케이스 픽스처 — 보유 중 일부 용도변경(주택→상가) + 1985 의제취득 + 다주택자.
  *
- * direction = "house_to_commercial" 시 취득시 상가 기준시가/공시지가는 무시됨
- * (엔진이 취득시 개별주택공시가격을 양도시 면적비율로 자동 안분).
+ * direction = "house_to_commercial" 시에도 취득시 상가건물 기준시가 + 개별공시지가는
+ * 사용자가 직접 입력해야 함 (자동 안분 fallback 폐지, 2026-05-01).
  *
  * isOneHouseExempt = false (갑氏는 A+B 2주택자, 1세대1주택 비과세 미적용).
  */
@@ -184,7 +187,8 @@ export function mixedUsePdfGap(
     acquisitionStandardPrice: {
       // PHD 사용 시 housingPrice는 PHD가 역산. 미사용 시 사용자 직접 입력.
       housingPrice: undefined,
-      commercialBuildingPrice: 0,  // direction === "house_to_commercial" 시 무시
+      // 사용자 직접 입력 필수 (자동 안분 fallback 폐지)
+      commercialBuildingPrice: GAP_COMMERCIAL_BUILDING_AT_ACQ,
       landPricePerSqm: GAP_LAND_PRICE_PER_SQM_AT_ACQ,
     },
     usePreHousingDisclosure: true,  // 1985 의제취득 → PHD 필수
@@ -236,7 +240,7 @@ export function mixedUseCommercialToHouseMirror(
 }
 
 /**
- * PDF 갑氏 anchor — 엔진 첫 실행 결과로 고정 (golden test 패턴, 2026-04-30).
+ * PDF 갑氏 anchor — 엔진 첫 실행 결과로 고정 (golden test 패턴).
  * 회귀 방어용. 입력값 변경 없이 결과가 달라지면 엔진 버그.
  *
  * 입력 조건:
@@ -248,9 +252,11 @@ export function mixedUseCommercialToHouseMirror(
  * - 최초공시 2005.1.1 개별주택가격 150,000,000 / 1990 공시지가 840,000원/㎡
  * - 거주기간 0년 (다주택자 → 표1)
  * - 양도시 상가건물 기준시가 100,000,000 (PDF 미명시 — 추정값)
+ * - 취득시 상가건물 기준시가 10,000,000 (1985 의제취득 시점 추정 — 사용자 직접 입력)
  *
- * ⚠ 양도시 상가건물 기준시가가 추정값이므로 본 anchor는 "엔진 회귀 방어"용.
- *    실제 PDF 정답값은 사용자가 양도시 상가건물 기준시가 확정 후 재계산 필요.
+ * ⚠ 양도/취득시 상가건물 기준시가가 추정값이므로 본 anchor는 "엔진 회귀 방어"용.
+ *    실제 PDF 정답값은 사용자가 양도/취득시 상가건물 기준시가 확정 후 재계산 필요.
+ *    2026-05-01: 자동 안분 fallback 폐지 → 취득시 상가건물 기준시가가 입력값으로 직접 반영되어 anchor 재산출됨.
  */
 export const PARTIAL_USAGE_CHANGE_ANCHORS = {
   pdf_gap_house_to_commercial: {
@@ -262,18 +268,18 @@ export const PARTIAL_USAGE_CHANGE_ANCHORS = {
     housingRatio: 0.41088188227152805,
     // 환산취득가 (PHD 적용)
     housingEstimatedAcq: 104_183_362,
-    commercialEstimatedAcq: 70_823_852,
+    commercialEstimatedAcq: 173_220_881,
     // 양도차익
     housingTransferGain: 427_739_555,
-    commercialTransferGain: 693_518_147,
+    commercialTransferGain: 588_935_713,
     // 양도소득금액 (장기보유공제 후) — 다주택자 표1 적용
     housingIncomeAmount: 290_978_542,
-    commercialIncomeAmount: 485_462_704,
+    commercialIncomeAmount: 412_255_000,
     // 합산 세액
-    aggregateIncome: 784_880_394,
-    taxBase: 782_380_394,
-    transferTax: 293_503_679,
-    localTax: 29_350_367,
-    totalPayable: 322_854_046,
+    aggregateIncome: 711_672_690,
+    taxBase: 709_172_690,
+    transferTax: 262_756_443,
+    localTax: 26_275_644,
+    totalPayable: 289_032_087,
   },
 } as const;

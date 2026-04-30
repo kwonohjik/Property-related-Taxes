@@ -8,7 +8,7 @@
  */
 
 import { ACQUISITION } from "./legal-codes";
-import type { DeemedAcquisitionInput, DeemedMajorShareholderResult } from "./types/acquisition.types";
+import type { DeemedAcquisitionInput, DeemedMajorShareholderResult, LandCategory } from "./types/acquisition.types";
 
 // ============================================================
 // 간주취득 결과 타입
@@ -32,6 +32,9 @@ export interface DeemedRenovationResult {
   warnings: string[];
 }
 
+// LandCategory 타입 재수출 (외부에서 이 파일을 통해 접근할 수 있도록)
+export type { LandCategory };
+
 // ============================================================
 // 1. 과점주주 간주취득 (지방세법 §7의2 ①)
 // ============================================================
@@ -50,9 +53,9 @@ export function assessMajorShareholder(
   input: NonNullable<DeemedAcquisitionInput["majorShareholder"]>
 ): DeemedMajorShareholderResult {
   const warnings: string[] = [];
-  const { corporateAssetValue, prevShareRatio, newShareRatio, isListed } = input;
+  const { corporateAssetValue, prevShareRatio, newShareRatio, isListed, isMergerOrSplitShare, isFoundingShare } = input;
 
-  // 상장법인은 과점주주 간주취득 비과세
+  // ① 상장법인은 과점주주 간주취득 비과세 (지방세법 §9①)
   if (isListed) {
     return {
       isSubjectToTax: false,
@@ -60,8 +63,34 @@ export function assessMajorShareholder(
       prevShareRatio,
       newShareRatio,
       taxableRatio: 0,
-      legalBasis: ACQUISITION.DEEMED_ACQUISITION,
+      legalBasis: ACQUISITION.NON_TAXABLE,
       warnings: [`상장법인 주식 취득은 과점주주 간주취득 과세 대상에서 제외됩니다 (${ACQUISITION.NON_TAXABLE}).`],
+    };
+  }
+
+  // ② 합병·분할로 인한 주식 취득 — 비과세 (지방세법 §9②)
+  if (isMergerOrSplitShare) {
+    return {
+      isSubjectToTax: false,
+      deemedTaxBase: 0,
+      prevShareRatio,
+      newShareRatio,
+      taxableRatio: 0,
+      legalBasis: ACQUISITION.NON_TAXABLE,
+      warnings: [`법인 합병·분할로 인한 주식 취득은 과점주주 간주취득 과세 대상에서 제외됩니다 (${ACQUISITION.NON_TAXABLE}).`],
+    };
+  }
+
+  // ③ 법인 설립 시 주식 취득 — 비과세 (지방세법 §9③)
+  if (isFoundingShare) {
+    return {
+      isSubjectToTax: false,
+      deemedTaxBase: 0,
+      prevShareRatio,
+      newShareRatio,
+      taxableRatio: 0,
+      legalBasis: ACQUISITION.NON_TAXABLE,
+      warnings: [`법인 설립 시 주식 취득은 과점주주 간주취득 과세 대상에서 제외됩니다 (${ACQUISITION.NON_TAXABLE}).`],
     };
   }
 
@@ -156,6 +185,24 @@ export function assessLandCategoryChange(
 
   warnings.push(`지목변경: ${prevCategory} → ${newCategory} (시가표준액 증가분 ${diff.toLocaleString()}원 과세)`);
 
+  // 취득 시기 안내: 두 날짜 중 빠른 날 기준 (지방세법 §20)
+  if (input.actualChangeDate && input.registrationDate) {
+    const earlier = input.actualChangeDate < input.registrationDate
+      ? input.actualChangeDate
+      : input.registrationDate;
+    warnings.push(
+      `취득 시기: 사실상 변경 완료일(${input.actualChangeDate})과 공부 변경 등록일(${input.registrationDate}) 중 빠른 날(${earlier})을 기준으로 신고·납부 기한(60일)을 산정하세요 (${ACQUISITION.ACQUISITION_TIMING}).`
+    );
+  } else if (input.actualChangeDate) {
+    warnings.push(
+      `취득 시기: 사실상 변경 완료일(${input.actualChangeDate}) 기준. 공부 변경 등록일이 더 빠른 경우 등록일로 신고하세요 (${ACQUISITION.ACQUISITION_TIMING}).`
+    );
+  } else if (input.registrationDate) {
+    warnings.push(
+      `취득 시기: 공부 변경 등록일(${input.registrationDate}) 기준. 사실상 변경이 더 일찍 완료된 경우 해당 완료일로 신고하세요 (${ACQUISITION.ACQUISITION_TIMING}).`
+    );
+  }
+
   return {
     isSubjectToTax: true,
     deemedTaxBase: diff,
@@ -208,6 +255,24 @@ export function assessBuildingRenovation(
     renovationType === "use_change" ? "용도 변경" : "대수선";
 
   warnings.push(`건물 개수(${renovationTypeLabel}): 시가표준액 증가분 ${diff.toLocaleString()}원 간주취득 과세`);
+
+  // 취득 시기 안내: 사용승인일·사실상 사용개시일 중 빠른 날 기준 (지방세법 §20)
+  if (input.usageApprovalDate && input.actualUsageDate) {
+    const earlier = input.usageApprovalDate < input.actualUsageDate
+      ? input.usageApprovalDate
+      : input.actualUsageDate;
+    warnings.push(
+      `취득 시기: 사용승인일(${input.usageApprovalDate})과 사실상 사용개시일(${input.actualUsageDate}) 중 빠른 날(${earlier})을 기준으로 신고·납부 기한(60일)을 산정하세요 (${ACQUISITION.ACQUISITION_TIMING}).`
+    );
+  } else if (input.usageApprovalDate) {
+    warnings.push(
+      `취득 시기: 사용승인일(${input.usageApprovalDate}) 기준. 사용승인 전 실제 사용 시 사실상 사용개시일을 기준으로 신고하세요 (${ACQUISITION.ACQUISITION_TIMING}).`
+    );
+  } else if (input.actualUsageDate) {
+    warnings.push(
+      `취득 시기: 사실상 사용개시일(${input.actualUsageDate}) 기준 (${ACQUISITION.ACQUISITION_TIMING}).`
+    );
+  }
 
   return {
     isSubjectToTax: true,

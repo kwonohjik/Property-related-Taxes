@@ -17,30 +17,53 @@ import {
 // ============================================================
 
 describe("assessSurcharge — 사치성 재산 (§13①)", () => {
-  it("사치성 재산: isSurcharged=true, 20% (기본세율 4% × 5)", () => {
+  it("[P1-1 수정] 사치성 재산: isSurcharged=true, 12% (기본세율 4% + 8%p)", () => {
     const result = assessSurcharge({
       propertyType: "housing",
       acquisitionCause: "purchase",
       acquisitionValue: 500_000_000,
       acquiredBy: "individual",
       isLuxuryProperty: true,
+      // basicRate 미입력 → LUXURY_BASE_RATE(4%) 기본값 사용
     });
     expect(result.isSurcharged).toBe(true);
-    // 지방세법 §13①: "해당 세율의 100분의 500" = basicRate × 5
-    // LUXURY_BASE_RATE(4%) × 5 = 20%
-    expect(result.surchargeRate).toBe(0.20);
-    expect(result.surchargeReason).toContain("사치성 재산");
+    // G1 수정: 지방세법 §13⑤ 올바른 산식 = 표준세율 + 중과기준세율×400%(=8%p)
+    // LUXURY_BASE_RATE(4%) + 8% = 12%
+    // 구 공식(basicRate × 5 = 4%×5 = 20%)은 틀림
+    expect(result.surchargeRate).toBe(0.12);
+    expect(result.surchargeReason).toContain("사치성");
   });
 
-  it("사치성 재산 우선: 법인이어도 사치성 먼저 판정", () => {
+  it("[P1-1 수정] 사치성 재산: 9억 초과 주택 basicRate 3% → 11%", () => {
+    const result = assessSurcharge({
+      propertyType: "housing",
+      acquisitionCause: "purchase",
+      acquisitionValue: 1_000_000_000,
+      acquiredBy: "individual",
+      isLuxuryProperty: true,
+      basicRate: 0.03, // 9억 초과 주택 세율 3%
+    });
+    expect(result.isSurcharged).toBe(true);
+    // 3% + 8%p = 11%
+    expect(result.surchargeRate).toBe(0.11);
+  });
+
+  it("[P1-1 수정] 사치성 재산: 법인 취득 (다주택중복 분기) — surchargeReason에 사치성 포함", () => {
     const result = assessSurcharge({
       propertyType: "housing",
       acquisitionCause: "purchase",
       acquisitionValue: 500_000_000,
       acquiredBy: "corporation",
       isLuxuryProperty: true,
+      basicRate: 0.04,
+      // 법인이므로 다주택 중과 12% → 사치성 + 다주택 중복: 12% + 8%p = 20%
+      houseCountAfter: 1,
+      isRegulatedArea: false,
     });
-    expect(result.surchargeReason).toContain("사치성 재산");
+    // 법인은 §13의2①으로 12% → 다주택 중복 → luxury_multi 분기: 12% + 8% = 20%
+    expect(result.isSurcharged).toBe(true);
+    expect(result.appliedBranch).toBe("luxury_multi");
+    expect(result.surchargeRate).toBe(0.20);
   });
 });
 
@@ -151,7 +174,9 @@ describe("assessSurcharge — 다주택 중과 (조정대상지역)", () => {
     expect(result.exceptions?.some(e => e.includes("1주택"))).toBe(true);
   });
 
-  it("비조정지역 + 다주택: 중과 없음", () => {
+  it("[P1-2 수정] 비조정지역 + 3주택: 8% 중과 (§13의2① 2호)", () => {
+    // G2 수정: 비조정지역도 주택 수에 따라 중과 적용
+    // 비조정 3주택: §13의2① 2호 → 8%
     const result = assessSurcharge({
       propertyType: "housing",
       acquisitionCause: "purchase",
@@ -160,8 +185,22 @@ describe("assessSurcharge — 다주택 중과 (조정대상지역)", () => {
       isRegulatedArea: false,
       houseCountAfter: 3,
     });
+    expect(result.isSurcharged).toBe(true);
+    expect(result.surchargeRate).toBe(0.08);
+    expect(result.appliedBranch).toBe("multi_house_8");
+  });
+
+  it("[P1-2 수정] 비조정지역 + 2주택: 중과 없음 (비조정 2주택은 미해당)", () => {
+    // 비조정 2주택은 §13의2① 어느 호에도 해당 없음 → 기본세율
+    const result = assessSurcharge({
+      propertyType: "housing",
+      acquisitionCause: "purchase",
+      acquisitionValue: 500_000_000,
+      acquiredBy: "individual",
+      isRegulatedArea: false,
+      houseCountAfter: 2,
+    });
     expect(result.isSurcharged).toBe(false);
-    expect(result.exceptions?.some(e => e.includes("비조정"))).toBe(true);
   });
 
   // C1 버그 수정 검증: 상속·증여는 조정지역 다주택 중과 배제 (지방세법 §13의2 — 유상취득만 적용)

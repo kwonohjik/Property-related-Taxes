@@ -463,7 +463,7 @@ describe("calcAcquisitionTax — 간주취득 (과점주주)", () => {
 });
 
 describe("calcAcquisitionTax — 부가세 검증", () => {
-  it("주택 9억 초과: 지방교육세 = 과세표준 × 2% × 20%", () => {
+  it("[P4-1] 주택 9억 초과 매매: 지방교육세 = 본세(3%) × 50% × 20%", () => {
     const taxBase = 1_000_000_000;
     const input: AcquisitionTaxInput = {
       ...baseInput as AcquisitionTaxInput,
@@ -477,8 +477,9 @@ describe("calcAcquisitionTax — 부가세 검증", () => {
 
     const result = calcAcquisitionTax(input);
 
-    // 지방교육세 = 1,000,000,000 × 0.02 × 0.20 = 4,000,000
-    expect(result.localEducationTax).toBe(4_000_000);
+    // [P4-1] 본세 = 10억 × 3% = 30,000,000
+    // 교육세 = 30,000,000 × 50% × 20% = 3,000,000 (§151①1나)
+    expect(result.localEducationTax).toBe(3_000_000);
   });
 
   it("주택 85㎡ 이하 주택: 농특세 0원", () => {

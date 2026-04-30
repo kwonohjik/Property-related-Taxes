@@ -9,7 +9,7 @@
  */
 
 import { ACQUISITION, ACQUISITION_CONST } from "./legal-codes";
-import type { AcquisitionCause } from "./types/acquisition.types";
+import type { AcquisitionCause, InstallmentPayment } from "./types/acquisition.types";
 
 // ============================================================
 // 취득 시기 결과 타입
@@ -21,6 +21,12 @@ export interface AcquisitionTimingResult {
   timingBasis: string;       // 취득 시기 결정 근거
   legalBasis: string;
   warnings: string[];
+  /** 연부취득 회차별 신고기한 스케줄 (연부취득인 경우에만 포함) */
+  filingSchedule?: Array<{
+    paymentDate: string;      // 회차 지급일 (YYYY-MM-DD)
+    deadline: string;         // 신고기한 (YYYY-MM-DD, 지급일 + 60일)
+    label?: string;           // 회차 라벨
+  }>;
 }
 
 // ============================================================
@@ -80,6 +86,8 @@ interface AcquisitionTimingInput {
   actualUsageDate?: string;
   /** 간주취득 완료일 (과점주주 취득일 / 지목변경일 / 개수 완료일) */
   deemedAcquisitionDate?: string;
+  /** 연부취득 회차 목록 (§20⑤ — 각 지급일이 취득시기) */
+  installments?: InstallmentPayment[];
 }
 
 /**
@@ -99,6 +107,36 @@ export function determineAcquisitionTiming(
 
   // ── 유상취득 (매매·교환·공매경매·현물출자) ──
   if (["purchase", "exchange", "auction", "in_kind_investment"].includes(cause)) {
+    // 연부취득: §20⑤ — 각 연부금 지급일이 취득시기 (마지막 회차 = 실질 취득 완료일)
+    if (input.installments && input.installments.length >= 2) {
+      const lastPayment = input.installments[input.installments.length - 1];
+      const acquisitionDate = lastPayment.paymentDate;
+
+      // 각 회차별 신고기한 계산 (지급일 + 60일)
+      const filingSchedule = input.installments.map((p, i) => ({
+        paymentDate: p.paymentDate,
+        deadline: addDays(p.paymentDate, ACQUISITION_CONST.INSTALLMENT_FILING_DAYS),
+        label: p.label ?? `${i + 1}회차`,
+      }));
+
+      warnings.push(
+        `연부취득: 취득시기는 각 연부금 지급일입니다 (§20⑤). ` +
+        `신고기한은 각 지급일로부터 60일 이내입니다.`
+      );
+      filingSchedule.forEach(s => {
+        warnings.push(`${s.label} (${s.paymentDate}) 신고기한: ${s.deadline}`);
+      });
+
+      return {
+        acquisitionDate,
+        filingDeadline: filingSchedule[filingSchedule.length - 1].deadline,
+        timingBasis: `연부취득 마지막 회차 지급일(${acquisitionDate})`,
+        legalBasis: ACQUISITION.INSTALLMENT_TIMING,
+        filingSchedule,
+        warnings,
+      };
+    }
+
     const earlier = earlierDate(input.balancePaymentDate, input.registrationDate);
 
     if (!earlier) {

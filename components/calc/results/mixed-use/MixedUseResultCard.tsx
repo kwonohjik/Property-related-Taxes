@@ -63,6 +63,14 @@ export function MixedUseResultCard({ breakdown }: Props) {
         />
       )}
 
+      {/* 0-A. 용도변경일 기반 LTHD 시간 비례 분할 (집행기준 89-154-24 취지) */}
+      {breakdown.usagePeriodSplit && breakdown.partialUsageChange && (
+        <UsagePeriodSplitCard
+          ups={breakdown.usagePeriodSplit}
+          direction={breakdown.partialUsageChange.direction}
+        />
+      )}
+
       {/* 1세대 1주택 비과세 적용 여부 표시 */}
       <div
         className={`rounded-md px-3 py-2 text-xs border ${
@@ -118,11 +126,19 @@ export function MixedUseResultCard({ breakdown }: Props) {
         <Row
           label="주택 환산취득가액"
           value={fmt(h.estimatedAcquisitionPrice)}
-          formula={
-            h.phdEstimatedAcqHousingPrice
-              ? `§164⑤ 3-시점 환산: 주택 양도가액 × (PHD 환산 취득시 주택가격 ${fmtPlain(h.phdEstimatedAcqHousingPrice)} ÷ 양도시 개별주택공시가격)`
-              : `§97: 주택 양도가액 × (취득시 개별주택공시가격 ÷ 양도시 개별주택공시가격)`
-          }
+          formula={(() => {
+            if (!h.phdEstimatedAcqHousingPrice) {
+              return `§97: 주택 양도가액 ${fmtPlain(a.housingTransferPrice)} × (취득시 개별주택공시가격 ÷ 양도시 개별주택공시가격 ${fmtPlain(a.housingStandardPrice)})`;
+            }
+            const ph = h.phdResult?.inputs;
+            const isAreaSplit =
+              !!ph &&
+              (ph.landAreaAtAcquisition !== ph.landAreaAtTransfer ||
+                ph.landAreaAtFirstDisclosure !== ph.landAreaAtTransfer);
+            const base = `§164⑤ 3-시점 환산: 주택 양도가액 ${fmtPlain(a.housingTransferPrice)} × (PHD 환산 취득시 주택가격 ${fmtPlain(h.phdEstimatedAcqHousingPrice)} ÷ 양도시 개별주택공시가격 ${fmtPlain(a.housingStandardPrice)})`;
+            if (!isAreaSplit || !ph) return base;
+            return `${base} | 시점별 토지면적: 취득시 ${ph.landAreaAtAcquisition.toFixed(2)}㎡ · 최초공시 ${ph.landAreaAtFirstDisclosure.toFixed(2)}㎡ · 양도시 ${ph.landAreaAtTransfer.toFixed(2)}㎡`;
+          })()}
         />
         <Row
           label="주택 양도차익"
@@ -133,13 +149,13 @@ export function MixedUseResultCard({ breakdown }: Props) {
           label="  ▸ 토지분"
           value={fmt(h.landTransferGain)}
           small
-          formula={`${fmtPlain(h.landTransferPrice)} - ${fmtPlain(h.landAcqPrice)} - ${fmtPlain(h.landAppraisalDed)} (양도가액 - 환산취득가액 - 개산공제 3%)`}
+          formula={`양도가액 ${fmtPlain(h.landTransferPrice)} - 환산취득가액 ${fmtPlain(h.landAcqPrice)} - 개산공제 ${fmtPlain(h.landAppraisalDed)} (취득시 토지 기준시가 × 3%)`}
         />
         <Row
           label="  ▸ 건물분"
           value={fmt(h.buildingTransferGain)}
           small
-          formula={`${fmtPlain(h.buildingTransferPrice)} - ${fmtPlain(h.buildingAcqPrice)} - ${fmtPlain(h.buildingAppraisalDed)} (양도가액 - 환산취득가액 - 개산공제 3%)`}
+          formula={`양도가액 ${fmtPlain(h.buildingTransferPrice)} - 환산취득가액 ${fmtPlain(h.buildingAcqPrice)} - 개산공제 ${fmtPlain(h.buildingAppraisalDed)} (취득시 건물 기준시가 × 3%)`}
         />
         <DivRow />
         {h.isExempt ? (
@@ -180,9 +196,15 @@ export function MixedUseResultCard({ breakdown }: Props) {
       {/* 3. 상가부분 */}
       <ResultSection title="③ 상가부분" basis="소득세법 §95 ② 표1">
         <Row
+          label="취득시 상가부분 기준시가 합계"
+          value={fmt(c.acqStandardTotal)}
+          small
+          formula={`상가건물 기준시가 ${fmtPlain(c.acqStandardBuilding)} + 상가부수토지 기준시가 ${fmtPlain(c.acqStandardLand)} (= 개별공시지가 × 상가부수토지 면적, 자동)`}
+        />
+        <Row
           label="상가 환산취득가액"
           value={fmt(c.estimatedAcquisitionPrice)}
-          formula="상가 양도가액 × (취득시 상가부분 기준시가 ÷ 양도시 상가부분 기준시가) — §97"
+          formula={`§97: 상가 양도가액 ${fmtPlain(a.commercialTransferPrice)} × (취득시 상가부분 기준시가 ${fmtPlain(c.acqStandardTotal)} ÷ 양도시 상가부분 기준시가 ${fmtPlain(a.commercialStandardPrice)})`}
         />
         <Row
           label="상가 양도차익"
@@ -193,13 +215,13 @@ export function MixedUseResultCard({ breakdown }: Props) {
           label="  ▸ 토지분"
           value={fmt(c.landTransferGain)}
           small
-          formula={`${fmtPlain(c.landTransferPrice)} - ${fmtPlain(c.landAcqPrice)} - ${fmtPlain(c.landAppraisalDed)} (양도가액 - 환산취득가액 - 개산공제 3%)`}
+          formula={`양도가액 ${fmtPlain(c.landTransferPrice)} - 환산취득가액 ${fmtPlain(c.landAcqPrice)} - 개산공제 ${fmtPlain(c.landAppraisalDed)} (취득시 토지 기준시가 × 3%)`}
         />
         <Row
           label="  ▸ 건물분"
           value={fmt(c.buildingTransferGain)}
           small
-          formula={`${fmtPlain(c.buildingTransferPrice)} - ${fmtPlain(c.buildingAcqPrice)} - ${fmtPlain(c.buildingAppraisalDed)} (양도가액 - 환산취득가액 - 개산공제 3%)`}
+          formula={`양도가액 ${fmtPlain(c.buildingTransferPrice)} - 환산취득가액 ${fmtPlain(c.buildingAcqPrice)} - 개산공제 ${fmtPlain(c.buildingAppraisalDed)} (취득시 건물 기준시가 × 3%)`}
         />
         <DivRow />
         <Row
@@ -469,6 +491,89 @@ function PartialUsageChangeCard({
           💡 {reason}
         </p>
       )}
+    </div>
+  );
+}
+
+/**
+ * 용도변경일 기반 LTHD 시간 비례 분할 카드.
+ * 집행기준 89-154-24 취지 — 주택으로 사용한 기간 통산.
+ * Period 1 (단일 용도) + Period 2 (혼용)별 양도차익·LTHD 내역 표시.
+ */
+function UsagePeriodSplitCard({
+  ups,
+  direction,
+}: {
+  ups: NonNullable<MixedUseGainBreakdown["usagePeriodSplit"]>;
+  direction: "house_to_commercial" | "commercial_to_house";
+}) {
+  const isHtoC = direction === "house_to_commercial";
+  const fmtDays = (d: number) => `${d.toFixed(0)}일 (${(d / 365.25).toFixed(2)}년)`;
+  const period1Label = isHtoC ? "Period 1 (전체 주택)" : "Period 1 (전체 상가)";
+  const period1Cat = isHtoC ? "주택분" : "상가분";
+
+  return (
+    <div className="rounded-xl border border-violet-200 bg-violet-50/40 p-4 space-y-3">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <p className="text-sm font-semibold text-violet-900">
+          용도변경일 기반 LTHD 분리 계산
+        </p>
+        <span className="inline-flex items-center rounded-md border border-violet-300 bg-violet-100 px-2 py-0.5 text-[11px] font-semibold text-violet-900">
+          집행기준 89-154-24
+        </span>
+      </div>
+      <p className="text-[11px] text-violet-800 leading-relaxed">
+        용도변경일 입력 시 양도차익을 시간 비례로 분할하여, 각 기간의 보유연수로 장기보유특별공제를 적용합니다.
+        주택으로 사용한 기간을 통산하는 집행기준 취지를 반영.
+      </p>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+        <div className="rounded-md bg-white/60 border border-violet-200 px-3 py-2 space-y-1">
+          <div className="text-[11px] text-violet-700 font-semibold">{period1Label}</div>
+          <div className="flex justify-between text-xs text-violet-800">
+            <span>기간</span>
+            <span className="font-mono">{fmtDays(ups.period1Days)}</span>
+          </div>
+          <div className="flex justify-between text-xs text-violet-800">
+            <span>{period1Cat} 양도차익</span>
+            <span className="font-mono">{fmt(ups.period1Gain)}</span>
+          </div>
+          <div className="flex justify-between text-xs text-violet-800">
+            <span>LTHD 공제율 / 공제액</span>
+            <span className="font-mono">
+              {fmtPct(ups.period1LongTermDeductionRate)} / {fmt(ups.period1LongTermDeductionAmount)}
+            </span>
+          </div>
+        </div>
+
+        <div className="rounded-md bg-white/60 border border-violet-200 px-3 py-2 space-y-1">
+          <div className="text-[11px] text-violet-700 font-semibold">Period 2 (혼용 — 양도시점 비율)</div>
+          <div className="flex justify-between text-xs text-violet-800">
+            <span>기간</span>
+            <span className="font-mono">{fmtDays(ups.period2Days)}</span>
+          </div>
+          <div className="flex justify-between text-xs text-violet-800">
+            <span>주택분 양도차익</span>
+            <span className="font-mono">{fmt(ups.period2HousingGain)}</span>
+          </div>
+          <div className="flex justify-between text-xs text-violet-800">
+            <span>주택 LTHD 공제율 / 공제액</span>
+            <span className="font-mono">
+              {fmtPct(ups.period2HousingLongTermDeductionRate)} / {fmt(ups.period2HousingLongTermDeductionAmount)}
+            </span>
+          </div>
+          <div className="flex justify-between text-xs text-violet-800">
+            <span>상가분 양도차익</span>
+            <span className="font-mono">{fmt(ups.period2CommercialGain)}</span>
+          </div>
+          <div className="flex justify-between text-xs text-violet-800">
+            <span>상가 LTHD 공제율 / 공제액</span>
+            <span className="font-mono">
+              {fmtPct(ups.period2CommercialLongTermDeductionRate)} / {fmt(ups.period2CommercialLongTermDeductionAmount)}
+            </span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

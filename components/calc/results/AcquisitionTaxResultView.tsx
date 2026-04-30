@@ -1,12 +1,36 @@
 "use client";
 
 /**
- * 취득세 계산 결과 표시 컴포넌트
+ * 취득세 계산 결과 표시 컴포넌트 (P5UI-6 확장)
+ *
+ * - 신고기한 D-day 카운터
+ * - 중과 흐름도 (SurchargeFlowDiagram)
+ * - 주택 수 검산기 (HouseCountVerifier)
+ * - 보유 주택 수별 시뮬레이션 표 (RateScenarioTable)
+ * - 세율특례·법인 중과·자경농지 감면 상세
+ * - surchargeDetail 5개 UI 요소:
+ *   ① 일시적 2주택 처분기한 카드 (temporaryTwoHouseDeadlineDate)
+ *   ② 조정지역 지정 전 계약 보호 배지 (preRegulationContractApplied)
+ *   ③ 무상취득 단서 배제 사유 배지 (giftExclusionReason)
+ *   ④ 중과 배제 사유 목록 (surchargeExceptions)
+ *   ⑤ 실효 주택 수 (effectiveHouseCount)
  */
 
 import { useState } from "react";
+import { differenceInDays, parseISO } from "date-fns";
 import type { AcquisitionTaxResult } from "@/lib/tax-engine/types/acquisition.types";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { SurchargeFlowDiagram } from "./acquisition/SurchargeFlowDiagram";
+import { HouseCountVerifier } from "./acquisition/HouseCountVerifier";
+import { RateScenarioTable } from "./acquisition/RateScenarioTable";
+import { LinearInterpolationGraph } from "./acquisition/LinearInterpolationGraph";
+import { ReductionPossibilityPanel } from "./acquisition/ReductionPossibilityPanel";
+import { DeemedAcquisitionResultCard } from "./acquisition/DeemedAcquisitionResultCard";
+import { InstallmentResultCard } from "./acquisition/InstallmentResultCard";
+
+// ============================================================
+// 포맷 유틸
+// ============================================================
 
 function formatKRW(amount: number): string {
   return amount.toLocaleString("ko-KR") + "원";
@@ -16,8 +40,34 @@ function formatRate(rate: number): string {
   return (rate * 100).toFixed(5).replace(/\.?0+$/, "") + "%";
 }
 
-interface Props {
-  result: AcquisitionTaxResult;
+// ============================================================
+// D-day 카운터
+// ============================================================
+
+function FilingDeadlineCounter({ deadline }: { deadline: string }) {
+  let dday: number;
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    dday = differenceInDays(parseISO(deadline), today);
+  } catch {
+    return null;
+  }
+
+  const isUrgent = dday >= 0 && dday <= 5;
+  const isPast = dday < 0;
+
+  return (
+    <span className={`ml-2 text-xs font-bold px-1.5 py-0.5 rounded ${
+      isPast
+        ? "bg-destructive/20 text-destructive"
+        : isUrgent
+        ? "bg-red-100 text-red-700 animate-pulse"
+        : "bg-green-100 text-green-700"
+    }`}>
+      {isPast ? `D+${Math.abs(dday)} 기한 초과` : dday === 0 ? "D-day" : `D-${dday}`}
+    </span>
+  );
 }
 
 // ============================================================
@@ -36,15 +86,13 @@ function TaxRow({
   sub?: boolean;
 }) {
   return (
-    <div
-      className={`flex items-center justify-between py-2 ${
-        highlight
-          ? "border-t-2 border-foreground font-bold text-base"
-          : sub
-          ? "pl-4 text-sm text-muted-foreground"
-          : "text-sm"
-      }`}
-    >
+    <div className={`flex items-center justify-between py-2 ${
+      highlight
+        ? "border-t-2 border-foreground font-bold text-base"
+        : sub
+        ? "pl-4 text-sm text-muted-foreground"
+        : "text-sm"
+    }`}>
       <span>{label}</span>
       <span className={highlight ? "text-primary" : ""}>{formatKRW(amount)}</span>
     </div>
@@ -52,11 +100,252 @@ function TaxRow({
 }
 
 // ============================================================
+// 세율특례 상세 카드
+// ============================================================
+
+function SpecialRateDetailCard({ detail }: { detail: NonNullable<AcquisitionTaxResult["specialRateDetail"]> }) {
+  const specialTypeLabels: Record<string, string> = {
+    redemption: "환매권 행사",
+    inheritance_one_house: "상속 1가구1주택",
+    corp_merger: "법인 적격합병·분할",
+    co_ownership_split: "공유물 분할",
+    building_relocation: "건물 이전",
+    divorce_division: "이혼 재산분할",
+    hoyu_division: "가류 공유물 분할",
+    timber: "임목 취득",
+    leasing: "임차권 → 소유",
+  };
+  return (
+    <div className="rounded-lg border border-violet-200 bg-violet-50/30 p-3 text-sm">
+      <p className="font-semibold text-violet-800 mb-1">세율특례 적용 (지방세법 §15)</p>
+      <div className="space-y-1 text-muted-foreground text-xs">
+        <p>특례 사유: {specialTypeLabels[detail.type] ?? detail.type}</p>
+        <p>특례 전 세율: {formatRate(detail.basicRate)} → 적용 세율: {formatRate(detail.appliedRate)}</p>
+        <p>{detail.message}</p>
+        <LawArticleModal legalBasis={detail.legalBasis} />
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// 법인 중과 상세 카드
+// ============================================================
+
+function CorpSurchargeDetailCard({ detail }: { detail: NonNullable<AcquisitionTaxResult["corpSurchargeDetail"]> }) {
+  return (
+    <div className="rounded-lg border border-rose-200 bg-rose-50/30 p-3 text-sm">
+      <p className="font-semibold text-rose-800 mb-1">법인·공장 중과 적용</p>
+      <div className="space-y-1 text-muted-foreground text-xs">
+        <p>중과 유형: {detail.surchargeType}</p>
+        <p>기본세율 {formatRate(detail.basicRate)} → 중과세율 {formatRate(detail.surchargeRate)}</p>
+        <p>{detail.reason}</p>
+        {detail.legalBasis.map((b, i) => (
+          <LawArticleModal key={i} legalBasis={b} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// 자경농지 감면 상세 카드
+// ============================================================
+
+function SelfCultivationDetailCard({ detail }: { detail: NonNullable<AcquisitionTaxResult["selfCultivationReductionDetail"]> }) {
+  return (
+    <div className="rounded-lg border border-violet-200 bg-violet-50/30 p-3 text-sm">
+      <p className="font-semibold text-violet-800 mb-1">자경농지 감면 (지특법 §6)</p>
+      <div className="space-y-1 text-muted-foreground text-xs">
+        {detail.isEligible ? (
+          <p>감면액: {formatKRW(detail.reductionAmount)} (50% 감면)</p>
+        ) : (
+          <>
+            <p className="text-amber-700">요건 미충족 — 감면 미적용</p>
+            {detail.ineligibleReasons?.map((r, i) => (
+              <p key={i}>• {r}</p>
+            ))}
+          </>
+        )}
+        {detail.warnings.map((w, i) => (
+          <p key={i} className="text-amber-600">• {w}</p>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// 부가세 상세 카드
+// ============================================================
+
+function AdditionalTaxDetailCard({ detail, acquisitionTax }: {
+  detail: NonNullable<AcquisitionTaxResult["additionalTaxDetail"]>;
+  acquisitionTax: number;
+}) {
+  return (
+    <div className="rounded-lg border border-border bg-muted/10 p-3 text-sm">
+      <p className="font-semibold text-muted-foreground mb-2 text-xs">부가세 산출 상세</p>
+      <div className="space-y-1 text-xs text-muted-foreground">
+        <div className="flex justify-between">
+          <span>농어촌특별세</span>
+          <span>{formatKRW(detail.ruralSpecialTax)}</span>
+        </div>
+        {detail.isRuralExemption && (
+          <p className="text-green-700 pl-2">읍·면 지역 100㎡ 이하 — 면제</p>
+        )}
+        <div className="flex justify-between">
+          <span>지방교육세</span>
+          <span>{formatKRW(detail.localEducationTax)}</span>
+        </div>
+        <p className="pl-2">
+          {detail.isHousingPurchaseEduRule
+            ? `주택 유상거래: 본세 ${formatKRW(acquisitionTax)} × 50% × 20%`
+            : "과세표준 × 표준세율 × 20%"}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// ① 일시적 2주택 처분기한 카드
+// ============================================================
+
+function TemporaryTwoHouseDeadlineCard({
+  deadlineDate,
+  deadlineYears,
+}: {
+  deadlineDate: string;
+  deadlineYears?: 1 | 2 | 3;
+}) {
+  let deadline: Date;
+  try {
+    deadline = parseISO(deadlineDate);
+  } catch {
+    return null;
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const daysLeft = differenceInDays(deadline, today);
+  const isExpired = daysLeft < 0;
+  const isUrgent = !isExpired && daysLeft <= 5;
+
+  return (
+    <div className="rounded-lg border border-sky-200 bg-sky-50 p-4">
+      <p className="text-sm font-semibold text-sky-800 mb-2">
+        일시적 2주택 — 처분 기한 안내
+      </p>
+      <p className="text-sm text-sky-700">
+        종전 주택을{" "}
+        <strong>{deadline.toLocaleDateString("ko-KR")}까지</strong> 처분하면
+        취득세 중과가 적용되지 않습니다
+        {deadlineYears !== undefined && ` (처분기한: ${deadlineYears}년)`}.
+      </p>
+      <p className={`text-xs mt-2 font-medium ${
+        isExpired
+          ? "text-destructive"
+          : isUrgent
+          ? "text-red-600"
+          : "text-sky-600"
+      }`}>
+        {isExpired
+          ? `처분기한 경과 (${Math.abs(daysLeft)}일 초과)`
+          : daysLeft === 0
+          ? "오늘이 처분기한입니다"
+          : `D-${daysLeft}`}
+      </p>
+    </div>
+  );
+}
+
+// ============================================================
+// ② 조정지역 지정 전 계약 보호 배지
+// ============================================================
+
+function PreRegulationContractBadge() {
+  return (
+    <span className="inline-flex items-center rounded-full border border-emerald-400 px-2 py-0.5 text-xs text-emerald-700 font-medium">
+      §13의2④ 지정 전 계약 — 비조정지역 간주 적용
+    </span>
+  );
+}
+
+// ============================================================
+// ③ 무상취득 단서 배제 사유 배지
+// ============================================================
+
+const GIFT_EXCLUSION_REASON_LABELS: Record<string, string> = {
+  one_house_household: "1세대 1주택자 무상취득 단서 적용 (시행령 §28의6②)",
+  divorce_division: "이혼 재산분할 세율특례 적용 (§15①6)",
+};
+
+function GiftExclusionReasonBadge({ reason }: { reason: string }) {
+  const label = GIFT_EXCLUSION_REASON_LABELS[reason] ?? reason;
+  return (
+    <span className="inline-flex items-center rounded-full bg-violet-100 px-2.5 py-0.5 text-xs text-violet-800 font-medium">
+      {label}
+    </span>
+  );
+}
+
+// ============================================================
+// ④ 중과 배제 사유 목록
+// ============================================================
+
+function SurchargeExceptionsList({ exceptions }: { exceptions: string[] }) {
+  if (exceptions.length === 0) return null;
+  return (
+    <div className="text-sm">
+      <p className="font-medium text-foreground mb-1">중과 배제 적용 항목</p>
+      <ul className="list-disc pl-4 space-y-0.5 text-muted-foreground">
+        {exceptions.map((reason, i) => (
+          <li key={i}>{reason}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+// ============================================================
+// ⑤ 실효 주택 수 인라인 표시 (헬퍼 함수)
+// ============================================================
+
+function EffectiveHouseCountBadge({ count }: { count: number }) {
+  return (
+    <span className="text-sm text-muted-foreground">
+      산정 주택 수: <strong className="text-foreground">{count}채</strong>
+    </span>
+  );
+}
+
+// ============================================================
 // 메인 결과 컴포넌트
 // ============================================================
 
-export function AcquisitionTaxResultView({ result }: Props) {
+interface Props {
+  result: AcquisitionTaxResult;
+  /** 원본 폼 데이터 (시뮬레이션 표용) */
+  isRegulatedArea?: boolean;
+  isCorporation?: boolean;
+  /** 해당 단계로 이동 (감면 가능성 패널 클릭용) */
+  onGoToStep?: (step: number) => void;
+  /** 연부취득 폼 회차 데이터 (엔진 결과에 amount 없을 경우 보충용) */
+  installmentRows?: Array<{
+    label?: string;
+    paymentDate: string;
+    amount: string;
+  }>;
+}
+
+export function AcquisitionTaxResultView({ result, isRegulatedArea = false, isCorporation = false, onGoToStep, installmentRows }: Props) {
   const [showSteps, setShowSteps] = useState(false);
+
+  // 간주취득 판정 — deemedDetail 존재 여부 또는 acquisitionCause 기준
+  const isDeemedAcquisition = result.deemedDetail !== undefined ||
+    ["deemed_major_shareholder", "deemed_land_category", "deemed_renovation"].includes(result.acquisitionCause);
+
   if (result.isExempt) {
     return (
       <div className="rounded-lg border bg-muted/50 p-4 text-center">
@@ -75,6 +364,9 @@ export function AcquisitionTaxResultView({ result }: Props) {
 
   return (
     <div className="space-y-4">
+      {/* 간주취득 결과 카드 — 최상단 (요약 카드 직전) */}
+      {isDeemedAcquisition && <DeemedAcquisitionResultCard result={result} />}
+
       {/* 과세 정보 요약 */}
       <div className="rounded-lg border bg-muted/30 p-4">
         <h3 className="mb-3 text-sm font-semibold text-muted-foreground">과세 정보</h3>
@@ -88,9 +380,7 @@ export function AcquisitionTaxResultView({ result }: Props) {
             <p className="font-medium">
               {formatRate(result.appliedRate)}
               {result.isSurcharged && (
-                <span className="ml-1 text-xs text-destructive font-normal">
-                  중과
-                </span>
+                <span className="ml-1 text-xs text-destructive font-normal">중과</span>
               )}
             </p>
           </div>
@@ -100,9 +390,26 @@ export function AcquisitionTaxResultView({ result }: Props) {
           </div>
           <div>
             <span className="text-muted-foreground">신고 기한</span>
-            <p className="font-medium">{result.filingDeadline}</p>
+            <p className="font-medium">
+              {result.filingDeadline}
+              <FilingDeadlineCounter deadline={result.filingDeadline} />
+            </p>
           </div>
         </div>
+
+        {/* ② 조정지역 지정 전 계약 보호 배지 */}
+        {result.surchargeDetail?.preRegulationContractApplied === true && (
+          <div className="mt-2">
+            <PreRegulationContractBadge />
+          </div>
+        )}
+
+        {/* ③ 무상취득 단서 배제 사유 배지 */}
+        {result.surchargeDetail?.giftExclusionReason && (
+          <div className="mt-2">
+            <GiftExclusionReasonBadge reason={result.surchargeDetail.giftExclusionReason} />
+          </div>
+        )}
       </div>
 
       {/* 세액 상세 */}
@@ -136,7 +443,7 @@ export function AcquisitionTaxResultView({ result }: Props) {
         {result.reductionAmount > 0 && (
           <>
             <TaxRow
-              label={`생애최초 감면 (-)`}
+              label={`${result.reductionType === "first_home" ? "생애최초" : "자경농지"} 감면 (-)`}
               amount={result.reductionAmount}
               sub
             />
@@ -156,12 +463,91 @@ export function AcquisitionTaxResultView({ result }: Props) {
         )}
       </div>
 
+      {/* 부가세 상세 */}
+      {result.additionalTaxDetail && (
+        <AdditionalTaxDetailCard
+          detail={result.additionalTaxDetail}
+          acquisitionTax={result.acquisitionTax}
+        />
+      )}
+
+      {/* 연부취득 신고 일정 카드 */}
+      {result.installmentFilingSchedule && result.installmentFilingSchedule.length > 0 && (
+        <InstallmentResultCard
+          installmentFilingSchedule={result.installmentFilingSchedule}
+          acquisitionTax={result.acquisitionTax}
+          isSurcharged={result.isSurcharged}
+          installmentRows={installmentRows}
+        />
+      )}
+
+      {/* 6~9억 선형보간 그래프 — 간주취득 시 숨김 */}
+      {!isDeemedAcquisition && result.rateType === "linear_interpolation" && (
+        <LinearInterpolationGraph
+          acquisitionValue={result.acquisitionValue}
+          appliedRate={result.appliedRate}
+        />
+      )}
+
+      {/* 감면·배제 가능성 패널 — 간주취득 시 숨김 */}
+      {!isDeemedAcquisition && <ReductionPossibilityPanel result={result} onGoToStep={onGoToStep} />}
+
       {/* 중과 사유 */}
       {result.isSurcharged && result.surchargeReason && (
-        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3">
+        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 space-y-2">
           <p className="text-sm font-medium text-destructive">중과세 적용</p>
-          <p className="mt-1 text-xs text-muted-foreground">{result.surchargeReason}</p>
+          <p className="text-xs text-muted-foreground">{result.surchargeReason}</p>
         </div>
+      )}
+
+      {/* ④ 중과 배제 사유 목록 — 간주취득 시 숨김 */}
+      {!isDeemedAcquisition && result.surchargeDetail?.surchargeExceptions &&
+        result.surchargeDetail.surchargeExceptions.length > 0 && (
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3">
+          <SurchargeExceptionsList exceptions={result.surchargeDetail.surchargeExceptions} />
+        </div>
+      )}
+
+      {/* 중과 흐름도 — 간주취득 시 숨김 */}
+      {!isDeemedAcquisition && <SurchargeFlowDiagram result={result} />}
+
+      {/* ① 일시적 2주택 처분기한 카드 — 간주취득 시 숨김 */}
+      {!isDeemedAcquisition && result.surchargeDetail?.temporaryTwoHouseDeadlineDate && (
+        <TemporaryTwoHouseDeadlineCard
+          deadlineDate={result.surchargeDetail.temporaryTwoHouseDeadlineDate}
+          deadlineYears={result.surchargeDetail.temporaryTwoHouseDeadlineYears}
+        />
+      )}
+
+      {/* 세율특례 상세 */}
+      {result.specialRateDetail && <SpecialRateDetailCard detail={result.specialRateDetail} />}
+
+      {/* 법인 중과 상세 */}
+      {result.corpSurchargeDetail && <CorpSurchargeDetailCard detail={result.corpSurchargeDetail} />}
+
+      {/* 자경농지 감면 상세 */}
+      {result.selfCultivationReductionDetail && (
+        <SelfCultivationDetailCard detail={result.selfCultivationReductionDetail} />
+      )}
+
+      {/* ⑤ 실효 주택 수 — 간주취득 시 숨김 */}
+      {!isDeemedAcquisition && result.surchargeDetail?.effectiveHouseCount !== undefined && (
+        <div className="rounded-lg border border-border bg-muted/20 px-4 py-2 flex items-center justify-between">
+          <EffectiveHouseCountBadge count={result.surchargeDetail.effectiveHouseCount} />
+        </div>
+      )}
+
+      {/* 주택 수 검산기 — 간주취득 시 숨김 */}
+      {!isDeemedAcquisition && <HouseCountVerifier result={result} />}
+
+      {/* 세율 시뮬레이션 표 — 간주취득 시 숨김 */}
+      {!isDeemedAcquisition && (
+        <RateScenarioTable
+          result={result}
+          isRegulatedArea={isRegulatedArea}
+          isCorporation={isCorporation}
+          acquisitionValue={result.acquisitionValue}
+        />
       )}
 
       {/* 경고 메시지 */}

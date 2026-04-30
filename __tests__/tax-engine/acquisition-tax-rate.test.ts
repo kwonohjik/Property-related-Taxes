@@ -12,6 +12,7 @@ import {
   getBasicRate,
   calcRuralSpecialTax,
   calcLocalEducationTax,
+  calcLocalEducationTaxSimple,
 } from "../../lib/tax-engine/acquisition-tax-rate";
 
 // ============================================================
@@ -184,6 +185,13 @@ describe("getBasicRate — 간주취득", () => {
     const { rate } = getBasicRate("land", "deemed_land_category", 50_000_000);
     expect(rate).toBe(0.02);
   });
+
+  it("건물 개수(deemed_renovation): 원시취득에 해당 → 2.8% (§11①2호 가목)", () => {
+    // 건물 개수는 원시취득이므로 2.8% 적용 (구 2% 아님)
+    const { rate, isLinearInterpolation } = getBasicRate("building", "deemed_renovation", 50_000_000);
+    expect(rate).toBe(0.028);
+    expect(isLinearInterpolation).toBe(false);
+  });
 });
 
 describe("getBasicRate — 주택 유상취득 선형보간", () => {
@@ -310,20 +318,72 @@ describe("calcRuralSpecialTax", () => {
 // calcLocalEducationTax — 지방교육세
 // ============================================================
 
-describe("calcLocalEducationTax", () => {
+// calcLocalEducationTaxSimple: 기본 동작(과세표준×0.4%) 검증 — P4-1 분기 전 기존 산식 유지
+describe("calcLocalEducationTax (기본 — 비주택·무상취득·중과세)", () => {
   it("과세표준 5억: 5억 × 2% × 20% = 2,000,000원", () => {
-    expect(calcLocalEducationTax(500_000_000)).toBe(2_000_000);
+    expect(calcLocalEducationTaxSimple(500_000_000)).toBe(2_000_000);
   });
 
   it("과세표준 1억: 1억 × 0.02 × 0.20 = 400,000원", () => {
-    expect(calcLocalEducationTax(100_000_000)).toBe(400_000);
+    expect(calcLocalEducationTaxSimple(100_000_000)).toBe(400_000);
   });
 
   it("과세표준 1,000원 (최소): Math.floor(1000 × 0.02 × 0.20) = 4원", () => {
-    expect(calcLocalEducationTax(1_000)).toBe(4);
+    expect(calcLocalEducationTaxSimple(1_000)).toBe(4);
   });
 
   it("과세표준 0: 0원", () => {
-    expect(calcLocalEducationTax(0)).toBe(0);
+    expect(calcLocalEducationTaxSimple(0)).toBe(0);
+  });
+});
+
+// [P4-1] 주택 유상거래 분기 — 본세 × 50% × 20%
+describe("calcLocalEducationTax (P4-1 주택 유상거래 분기)", () => {
+  it("6억 이하 주택 매매 — 본세 0.1%: 6억×1%=600만 → 교육세 600만×50%×20%=600,000원", () => {
+    const result = calcLocalEducationTax({
+      taxBase: 600_000_000,
+      appliedRate: 0.01,
+      acquisitionTax: 6_000_000,
+      propertyType: "housing",
+      acquisitionCause: "purchase",
+      isSurcharged: false,
+    });
+    expect(result).toBe(600_000);  // 6,000,000 × 0.5 × 0.2 = 600,000
+  });
+
+  it("9억 초과 주택 매매 — 본세 3%: 9억×3%=2,700만 → 교육세 2,700만×50%×20%=2,700,000원", () => {
+    const result = calcLocalEducationTax({
+      taxBase: 900_000_000,
+      appliedRate: 0.03,
+      acquisitionTax: 27_000_000,
+      propertyType: "housing",
+      acquisitionCause: "purchase",
+      isSurcharged: false,
+    });
+    expect(result).toBe(2_700_000);
+  });
+
+  it("비주택(토지) 매매 — 기본 0.4%: 5억×2%×20%=2,000,000원", () => {
+    const result = calcLocalEducationTax({
+      taxBase: 500_000_000,
+      appliedRate: 0.04,
+      acquisitionTax: 20_000_000,
+      propertyType: "land",
+      acquisitionCause: "purchase",
+      isSurcharged: false,
+    });
+    expect(result).toBe(2_000_000);
+  });
+
+  it("주택 증여 (무상) — 기본 0.4%: 5억×2%×20%=2,000,000원", () => {
+    const result = calcLocalEducationTax({
+      taxBase: 500_000_000,
+      appliedRate: 0.035,
+      acquisitionTax: 17_500_000,
+      propertyType: "housing",
+      acquisitionCause: "gift",
+      isSurcharged: false,
+    });
+    expect(result).toBe(2_000_000);
   });
 });

@@ -54,13 +54,13 @@ export function MixedUseAreaInputs({ asset, onChange, sectionNum }: Props) {
       </FieldCard>
 
       <FieldCard
-        label="건물 정착면적 (1층 바닥면적, ㎡)"
-        hint="건축물대장의 1층 바닥면적 — 부수토지 배율(3·5·10배) 초과 판정 기준"
+        label="건물 정착면적 (수평 투영면적, ㎡)"
+        hint="건축물대장의 건축면적(수평 투영면적) — 부수토지 배율(3·5·10배) 초과 판정 기준"
       >
         <DecimalInput
           value={asset.buildingFootprintArea}
           onChange={(v) => onChange({ buildingFootprintArea: v })}
-          placeholder="예: 100 또는 37.79 (1층 면적)"
+          placeholder="예: 100 또는 37.79 (건축면적)"
           unit="㎡"
         />
       </FieldCard>
