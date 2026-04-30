@@ -234,6 +234,12 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
 
   // 검용주택 분리계산 payload 빌드
   const isMixed = primary.assetKind === "housing" && primary.isMixedUseHouse;
+
+  // 🚨 이슈 8: silent skip 방지 — 토글 ON & direction 미선택 시 명시적 throw
+  if (isMixed && primary.hasPartialUsageChange && !primary.partialChangeDirection) {
+    throw new Error("보유 중 일부 용도변경: 취득시 자산 구성을 선택하세요.");
+  }
+
   const mixedUsePayload = isMixed ? {
     isMixedUseHouse: true as const,
     // 면적은 소수점 (예: 333.06㎡) — parseAmount(parseInt)는 절단 발생, parseFloat 필수
@@ -286,6 +292,17 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     residencePeriodYears: parseFloat(primary.mixedUseResidencePeriodYears) || 0,
     isMetropolitanArea: primary.mixedIsMetropolitanArea,
     zoneType: "residential" as const,
+    // 🚨 Critical (이슈 8-A): 1세대 1주택 비과세 요건 충족 여부 (다주택자 분기)
+    isOneHouseExempt: primary.isOneHousehold,
+    // 보유 중 일부 용도변경 (시행령 §166⑥ + 집행기준 99-164-10)
+    partialUsageChange:
+      primary.hasPartialUsageChange && primary.partialChangeDirection
+        ? {
+            direction: primary.partialChangeDirection,
+            acqResidentialArea: parseFloat(primary.partialChangeAcqResidentialArea) || undefined,
+            acqCommercialArea: parseFloat(primary.partialChangeAcqCommercialArea) || undefined,
+          }
+        : undefined,
   } : undefined;
 
   const body = {

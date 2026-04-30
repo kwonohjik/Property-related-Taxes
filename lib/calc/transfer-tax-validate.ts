@@ -83,6 +83,25 @@ function validateAssetAcquisition(asset: AssetForm, label: string): string | nul
       if (!asset.phdTransferHousingPrice || parseAmount(asset.phdTransferHousingPrice) <= 0)
         return `${label}: 양도시 개별주택가격을 입력하세요.`;
     }
+    // 보유 중 일부 용도변경 검증 (시행령 §166⑥ + 집행기준 99-164-10)
+    if (asset.hasPartialUsageChange) {
+      if (!asset.partialChangeDirection) {
+        return `${label}: 보유 중 일부 용도변경 — 취득시 자산 구성을 선택하세요.`;
+      }
+      if (asset.partialChangeAcqResidentialArea) {
+        const v = parseFloat(asset.partialChangeAcqResidentialArea);
+        if (!Number.isFinite(v) || v < 0) {
+          return `${label}: 취득시 주택 연면적이 잘못되었습니다.`;
+        }
+      }
+      if (asset.partialChangeAcqCommercialArea) {
+        const v = parseFloat(asset.partialChangeAcqCommercialArea);
+        if (!Number.isFinite(v) || v < 0) {
+          return `${label}: 취득시 상가 연면적이 잘못되었습니다.`;
+        }
+      }
+      // PHD 강제 변경 금지 (이슈 5) — 사용자 직전 상태 보존, 경고만 결과 카드에 표시
+    }
     return null;
   }
 

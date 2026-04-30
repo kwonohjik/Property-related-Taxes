@@ -12,6 +12,7 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { MixedUseAreaInputs } from "./mixed-use/MixedUseAreaInputs";
 import { MixedUseStandardPriceInputs } from "./mixed-use/MixedUseStandardPriceInputs";
 import { MixedUseResidencyInput } from "./mixed-use/MixedUseResidencyInput";
+import { PartialUsageChangeInputs } from "./mixed-use/PartialUsageChangeInputs";
 
 interface Props {
   asset: AssetForm;
@@ -32,7 +33,7 @@ interface Props {
  */
 export function MixedUseToggleRow({ asset, onChange }: Pick<Props, "asset" | "onChange">) {
   return (
-    <div className="mt-4 border-t pt-4">
+    <div className="mt-4 border-t pt-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
       {/* 검용주택 토글 — 활성화 시 토지/건물 분리도 자동 ON (SOT 일관성) */}
       <ToggleCard
         tone="amber"
@@ -44,6 +45,24 @@ export function MixedUseToggleRow({ asset, onChange }: Pick<Props, "asset" | "on
             isMixedUseHouse: checked,
             // 검용주택 ON: 토지/건물 분리 모드 자동 활성화 (취득시기 분리 일반화)
             ...(checked ? { hasSeperateLandAcquisitionDate: true } : {}),
+          });
+        }}
+      />
+      {/* 보유 중 일부 용도변경 — 시행령 §166⑥ + 집행기준 99-164-10 */}
+      <ToggleCard
+        tone="amber"
+        title="보유 중 일부 용도변경"
+        description="취득시 자산 구성이 양도시와 다른 경우 (§166⑥ + 집행기준 99-164-10)"
+        checked={!!asset.hasPartialUsageChange}
+        disabled={!asset.isMixedUseHouse}
+        disabledReason="검용주택 분리계산 활성화 시 사용 가능"
+        onCheckedChange={(checked) => {
+          onChange({
+            hasPartialUsageChange: checked,
+            // 토글 ON 시 디폴트 direction 자동 선택 (PDF 갑氏 케이스가 더 흔한 시나리오)
+            ...(checked && !asset.partialChangeDirection
+              ? { partialChangeDirection: "house_to_commercial" as const }
+              : {}),
           });
         }}
       />
@@ -69,6 +88,27 @@ export function MixedUseExpandedPanel({
 
   return (
     <div className="mt-4 border-t pt-4 space-y-3">
+      {/* 🚨 Critical (이슈 8-A): 1세대 1주택 비과세 적용 여부 안내 */}
+      <div
+        className={`rounded-md px-3 py-2 text-xs border ${
+          asset.isOneHousehold
+            ? "bg-emerald-50/60 border-emerald-200 text-emerald-900"
+            : "bg-amber-50/60 border-amber-200 text-amber-900"
+        }`}
+      >
+        {asset.isOneHousehold ? (
+          <>
+            <span className="font-semibold">✓ 1세대 1주택 비과세 요건 충족</span>{" "}
+            — 주택분 양도가액 12억 이하 비과세, 거주 2년+ 시 표2 거주공제 (최대 80%) 적용 가능
+          </>
+        ) : (
+          <>
+            <span className="font-semibold">⚠ 1세대 1주택 비과세 미적용</span>{" "}
+            — 주택분 전액 과세, 표1 장기보유공제 (다주택자·2년 미거주 등). 자산 정보 영역의 1세대 1주택 토글을 확인하세요.
+          </>
+        )}
+      </div>
+
       {/* 2022.1.1 이전 경고 */}
       {!isAfter2022 && (
         <div className="px-3 py-2 rounded-lg bg-red-50 text-red-800 text-sm">
@@ -92,6 +132,11 @@ export function MixedUseExpandedPanel({
 
       {/* ① 면적 정보 */}
       <MixedUseAreaInputs asset={asset} onChange={onChange} sectionNum={1} />
+
+      {/* 1-A 보유 중 일부 용도변경 (시행령 §166⑥ + 집행기준 99-164-10) */}
+      {asset.hasPartialUsageChange && (
+        <PartialUsageChangeInputs asset={asset} onChange={onChange} sectionNum="1-A" />
+      )}
 
       {/* ② 양도시 기준시가 / ③ 취득시 기준시가 */}
       <MixedUseStandardPriceInputs

@@ -1,7 +1,12 @@
 /**
  * AssetForm 관련 타입·팩토리·마이그레이션
  * calc-wizard-store.ts 800줄 정책에 따라 분리.
+ *
+ * 검용주택 + 보유 중 일부 용도변경 관련 필드 디폴트·마이그레이션은
+ * `calc-wizard-asset-mixed-use.ts`로 별도 분리(800줄 정책 준수, 2026-04-30).
  */
+
+import { MIXED_USE_DEFAULTS, migrateMixedUseFields } from "./calc-wizard-asset-mixed-use";
 
 /** 비사업용 토지 사업용 사용기간 항목 (폼 문자열 버전) */
 export interface NblBusinessUsePeriod {
@@ -511,6 +516,18 @@ export interface AssetForm {
   mixedAcqLandPricePerSqm: string;
   /** 수도권 여부 */
   mixedIsMetropolitanArea: boolean;
+
+  // ── 보유 중 일부 용도변경 (시행령 §166⑥ + 집행기준 99-164-10) ──
+  /** 보유 중 일부 용도변경 토글 — 양도시 검용이지만 취득시 단일 용도였던 경우 */
+  hasPartialUsageChange: boolean;
+  /** 용도변경 방향 — 빈 문자열은 미선택 상태 */
+  partialChangeDirection: "" | "house_to_commercial" | "commercial_to_house";
+  /** 취득시 주택 연면적 (㎡) — 빈값이면 양도시 합계로 자동 도출 */
+  partialChangeAcqResidentialArea: string;
+  /** 취득시 상가 연면적 (㎡) — 빈값이면 양도시 합계로 자동 도출 */
+  partialChangeAcqCommercialArea: string;
+  /** 용도변경일 (YYYY-MM-DD, 메모용 — 계산 미사용) */
+  partialChangeDate: string;
 }
 
 /** 하위 호환 별칭 — 기존 코드에서 CompanionAssetForm을 참조하는 곳에 사용 */
@@ -683,20 +700,8 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     supplementaryLandArea: "",
     supplementaryLandUnitPrice: "",
     supplementaryBuildingValue: "",
-    // ── 검용주택 분리계산 ──
-    isMixedUseHouse: false,
-    residentialFloorArea: "",
-    nonResidentialFloorArea: "",
-    buildingFootprintArea: "",
-    mixedUseTotalLandArea: "",
-    mixedUseResidencePeriodYears: "",
-    mixedTransferHousingPrice: "",
-    mixedTransferCommercialBuildingPrice: "",
-    mixedTransferLandPricePerSqm: "",
-    mixedAcqHousingPrice: "",
-    mixedAcqCommercialBuildingPrice: "",
-    mixedAcqLandPricePerSqm: "",
-    mixedIsMetropolitanArea: true,
+    // ── 검용주택 분리계산 + 보유 중 일부 용도변경 (별도 모듈) ──
+    ...MIXED_USE_DEFAULTS,
   };
 }
 
@@ -780,19 +785,7 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (!a.inhHouseValHousePriceAtInheritanceOverride) a.inhHouseValHousePriceAtInheritanceOverride = "";
   if (a.useStandardPriceAtAcqOverride === undefined) a.useStandardPriceAtAcqOverride = false;
   if (a.useStandardPriceAtTransferOverride === undefined) a.useStandardPriceAtTransferOverride = false;
-  // 검용주택 분리계산 필드 마이그레이션
-  if (a.isMixedUseHouse === undefined) a.isMixedUseHouse = false;
-  if (!a.residentialFloorArea) a.residentialFloorArea = "";
-  if (!a.nonResidentialFloorArea) a.nonResidentialFloorArea = "";
-  if (!a.buildingFootprintArea) a.buildingFootprintArea = "";
-  if (!a.mixedUseTotalLandArea) a.mixedUseTotalLandArea = "";
-  if (!a.mixedUseResidencePeriodYears) a.mixedUseResidencePeriodYears = "";
-  if (!a.mixedTransferHousingPrice) a.mixedTransferHousingPrice = "";
-  if (!a.mixedTransferCommercialBuildingPrice) a.mixedTransferCommercialBuildingPrice = "";
-  if (!a.mixedTransferLandPricePerSqm) a.mixedTransferLandPricePerSqm = "";
-  if (!a.mixedAcqHousingPrice) a.mixedAcqHousingPrice = "";
-  if (!a.mixedAcqCommercialBuildingPrice) a.mixedAcqCommercialBuildingPrice = "";
-  if (!a.mixedAcqLandPricePerSqm) a.mixedAcqLandPricePerSqm = "";
-  if (a.mixedIsMetropolitanArea === undefined) a.mixedIsMetropolitanArea = true;
+  // 검용주택 분리계산 + 보유 중 일부 용도변경 필드 (별도 모듈)
+  migrateMixedUseFields(a);
   return a as unknown as AssetForm;
 }

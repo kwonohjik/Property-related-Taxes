@@ -53,6 +53,51 @@ export function computeDerivedAreas(asset: MixedUseAssetInput): MixedUseDerivedA
   };
 }
 
+/**
+ * 취득시 면적 파생값 산출 — 보유 중 일부 용도변경 (시행령 §166⑥).
+ *
+ * `partialUsageChange === undefined`이면 양도시 derived 그대로 반환 (backward compat).
+ *
+ * direction별 처리:
+ *   - house_to_commercial: 취득시 전체가 주택. acqResidentialArea = 사용자입력 ?? 양도시 합계,
+ *                          acqCommercialArea = 0
+ *   - commercial_to_house: 취득시 전체가 상가. 반대.
+ */
+export function computeAcqDerivedAreas(
+  asset: MixedUseAssetInput,
+  transferDerived: MixedUseDerivedAreas,
+): MixedUseDerivedAreas {
+  if (!asset.partialUsageChange) return transferDerived;
+
+  const { direction, acqResidentialArea, acqCommercialArea } = asset.partialUsageChange;
+  const transferTotal = asset.residentialFloorArea + asset.nonResidentialFloorArea;
+
+  const acqRes = direction === "house_to_commercial"
+    ? (acqResidentialArea ?? transferTotal)
+    : (acqResidentialArea ?? 0);
+  const acqComm = direction === "house_to_commercial"
+    ? (acqCommercialArea ?? 0)
+    : (acqCommercialArea ?? transferTotal);
+
+  const acqTotalFloor = acqRes + acqComm;
+  if (acqTotalFloor <= 0) {
+    return {
+      residentialRatio: 0,
+      residentialLandArea: 0,
+      commercialLandArea: round2(asset.totalLandArea),
+      residentialFootprintArea: 0,
+    };
+  }
+  const acqResRatio = acqRes / acqTotalFloor;
+  const acqResLand = round2(asset.totalLandArea * acqResRatio);
+  return {
+    residentialRatio: acqResRatio,
+    residentialLandArea: acqResLand,
+    commercialLandArea: round2(asset.totalLandArea - acqResLand),
+    residentialFootprintArea: round2(asset.buildingFootprintArea * acqResRatio),
+  };
+}
+
 // ──────────────────────────────────────────────────────────────
 // 2. 양도가액 안분 (STEP 2)
 //    주택부분 기준시가 = 개별주택공시가격 (토지+건물 일괄)
@@ -132,7 +177,25 @@ export function calcHousingEstimatedAcq(
   }
 
   // 기존 §97 직접 환산
-  const stdAtAcq = asset.acquisitionStandardPrice.housingPrice ?? 0;
+  let stdAtAcq = asset.acquisitionStandardPrice.housingPrice ?? 0;
+
+  // ─── 보유 중 일부 용도변경 (상가→주택) — 시행령 §166⑥ 미러 ───
+  // 취득시점에 주택이 없었으므로 취득시 상가 기준시가(건물+토지)를 양도시 면적비율로 안분.
+  if (asset.partialUsageChange?.direction === "commercial_to_house") {
+    const acqCommBuilding = asset.acquisitionStandardPrice.commercialBuildingPrice;
+    const acqLandPerSqm = asset.acquisitionStandardPrice.landPricePerSqm;
+    const acqCommTotal = acqCommBuilding + Math.floor(acqLandPerSqm * asset.totalLandArea);
+    const totalFloor = asset.residentialFloorArea + asset.nonResidentialFloorArea;
+    const housRatio = totalFloor > 0 ? asset.residentialFloorArea / totalFloor : 0;
+    stdAtAcq = Math.floor(acqCommTotal * housRatio);
+    if (stdAtAcq === 0) {
+      throw new Error(
+        "용도변경(상가→주택): 취득시 상가 기준시가(건물+토지)가 0이거나 미입력. " +
+          "취득시 상가건물 기준시가와 공시지가를 입력하세요.",
+      );
+    }
+  }
+
   const stdAtTransfer = asset.transferStandardPrice.housingPrice;
   if (stdAtTransfer <= 0) {
     return { estimatedAcq: 0 };
@@ -171,8 +234,10 @@ export function calcHousingGainSplit(
   asset: MixedUseAssetInput,
   derived: MixedUseDerivedAreas,
   transferDate: Date,
+  acqDerived?: MixedUseDerivedAreas,
 ): HousingGainSplit {
   const housingEstimatedAcq = housingAcqResult.estimatedAcq;
+  const effectiveAcqDerived = acqDerived ?? derived;
 
   // PHD 분기 — 산식 상세에서 토지/건물 안분값 직접 사용
   if (housingAcqResult.phdResult) {
@@ -205,15 +270,8 @@ export function calcHousingGainSplit(
   }
 
   // 기존 §97 분기 — 시행령 §166⑥: 양도가액은 양도시 비율, 취득가액은 취득시 비율로 안분
-  // 취득시 토지/건물 기준시가 (취득가액 안분 + 개산공제 base)
-  const acqLandStd =
-    asset.acquisitionStandardPrice.landPricePerSqm * derived.residentialLandArea;
-  const acqHousingTotal = asset.acquisitionStandardPrice.housingPrice ?? 0;
-  const acqBuildingStd = Math.max(acqHousingTotal - acqLandStd, 0);
-  const acqTotal = acqLandStd + acqBuildingStd;
-  const acqLandRatio = acqTotal > 0 ? acqLandStd / acqTotal : 0.5;
 
-  // 양도시 토지/건물 기준시가 (양도가액 안분용)
+  // 양도시 토지/건물 기준시가 (양도가액 안분용 — 분기 위에서 먼저 계산)
   // 개별주택공시가격은 토지+건물 일괄이므로, 양도시 토지분 = 공시지가 × 주택부수토지 면적,
   // 양도시 건물분 = 개별주택공시가격 - 토지분 (음수 방지).
   const transferLandStd =
@@ -221,6 +279,45 @@ export function calcHousingGainSplit(
   const transferHousingTotal = asset.transferStandardPrice.housingPrice;
   const transferBuildingStd = Math.max(transferHousingTotal - transferLandStd, 0);
   const transferTotal = transferLandStd + transferBuildingStd;
+
+  // 취득시 토지/건물 기준시가 (취득가액 안분 + 개산공제 base)
+  let acqLandStd: number;
+  let acqBuildingStd: number;
+
+  if (asset.partialUsageChange?.direction === "commercial_to_house") {
+    // ─── 보유 중 일부 용도변경 (상가→주택) — 시행령 §166⑥ 미러 ───
+    // 취득시점에 주택이 없었으므로 취득시 상가 기준시가(건물+토지)를 양도시 면적비율로 안분.
+    // ※ MixedUseAssetInput.totalLandArea는 types L46에 명시 정의됨 (필드 존재 확인).
+    const acqCommBuilding = asset.acquisitionStandardPrice.commercialBuildingPrice;
+    const acqLandPerSqm = asset.acquisitionStandardPrice.landPricePerSqm;
+    // 가정: 취득시 토지면적 = 양도시 토지면적 (단순 용도변경 케이스)
+    // 분필·합필·도로편입 시에는 사용자가 partialChangeAcqResidentialArea로 보정 가능
+    const acqCommTotal = acqCommBuilding + Math.floor(acqLandPerSqm * asset.totalLandArea);
+    const totalFloor = asset.residentialFloorArea + asset.nonResidentialFloorArea;
+    const housRatio = totalFloor > 0 ? asset.residentialFloorArea / totalFloor : 0;
+    const acqHousingTotal = Math.floor(acqCommTotal * housRatio);
+
+    if (acqHousingTotal === 0) {
+      throw new Error(
+        "용도변경(상가→주택): 취득시 상가 기준시가(건물+토지)가 0이거나 미입력. " +
+          "취득시 상가건물 기준시가와 공시지가를 입력하세요.",
+      );
+    }
+
+    // 토지/건물 내부 분리 — 양도시 토지/건물 비율 차용 (취득시 분리값 없음)
+    const transferLandRatioForFallback = transferTotal > 0 ? transferLandStd / transferTotal : 0.5;
+    acqLandStd = Math.floor(acqHousingTotal * transferLandRatioForFallback);
+    acqBuildingStd = acqHousingTotal - acqLandStd;
+  } else {
+    // 기존 일반 검용주택 분기
+    acqLandStd =
+      asset.acquisitionStandardPrice.landPricePerSqm * effectiveAcqDerived.residentialLandArea;
+    const acqHousingTotal = asset.acquisitionStandardPrice.housingPrice ?? 0;
+    acqBuildingStd = Math.max(acqHousingTotal - acqLandStd, 0);
+  }
+
+  const acqTotal = acqLandStd + acqBuildingStd;
+  const acqLandRatio = acqTotal > 0 ? acqLandStd / acqTotal : 0.5;
   const transferLandRatio = transferTotal > 0 ? transferLandStd / transferTotal : acqLandRatio;
 
   // 양도가액 안분 — 양도시 비율
@@ -287,18 +384,66 @@ export function calcCommercialGainSplit(
   asset: MixedUseAssetInput,
   derived: MixedUseDerivedAreas,
   transferDate: Date,
+  acqDerived?: MixedUseDerivedAreas,
+  housingAcqResult?: HousingEstimatedAcqResult,
 ): CommercialGainSplit {
-  // 취득시 상가부분 기준시가
-  const acqLandStd =
-    asset.acquisitionStandardPrice.landPricePerSqm * derived.commercialLandArea;
-  const acqBuildingStd = asset.acquisitionStandardPrice.commercialBuildingPrice;
-  const acqTotalStd = acqLandStd + acqBuildingStd;
+  // acqDerived 미주입 시 derived 그대로 사용 (backward compat)
+  const effectiveAcqDerived = acqDerived ?? derived;
 
-  // 양도시 상가부분 기준시가
+  // 양도시 상가부분 기준시가 (분기 위에서 먼저 계산 — 토지/건물 fallback에 사용)
   const transferLandStd =
     asset.transferStandardPrice.landPricePerSqm * derived.commercialLandArea;
   const transferTotalStd =
     transferLandStd + asset.transferStandardPrice.commercialBuildingPrice;
+
+  // 취득시 상가부분 기준시가
+  let acqLandStd: number;
+  let acqBuildingStd: number;
+
+  if (asset.partialUsageChange?.direction === "house_to_commercial") {
+    // ─── 보유 중 일부 용도변경 (주택→상가) — 집행기준 99-164-10 ───
+    // 취득시점에 상가가 없었으므로 취득시 개별주택공시가격을 양도시 면적비율로 안분.
+    // PHD 결합 (이슈 17): usePreHousingDisclosure=true 시 PHD가 역산한 phdAcqHousingPrice 사용.
+    const housingTotal =
+      asset.usePreHousingDisclosure && housingAcqResult?.phdAcqHousingPrice
+        ? housingAcqResult.phdAcqHousingPrice
+        : (asset.acquisitionStandardPrice.housingPrice ?? 0);
+
+    if (housingTotal === 0) {
+      throw new Error(
+        "용도변경(주택→상가): 취득시 개별주택공시가격이 0이거나 미입력. " +
+          "PHD 토글을 활성화하거나 직접 입력하세요.",
+      );
+    }
+
+    // 면적비율로 상가부분 합계 안분
+    const totalFloor = asset.residentialFloorArea + asset.nonResidentialFloorArea;
+    const commRatio = totalFloor > 0 ? asset.nonResidentialFloorArea / totalFloor : 0;
+    const acqCommercialTotal = Math.floor(housingTotal * commRatio);
+
+    // 토지/건물 내부 분리 (이슈 2·16):
+    // 취득시점 분리값이 없으므로 양도시 토지/건물 비율 차용.
+    // acqLandStd=0 두면 acqLandRatio=0이 되어 토지 환산취득가가 0이 되는 버그 방지.
+    // fallback도 면적비율로 (0.5 임의값보다 합리적).
+    const fallbackDenom =
+      effectiveAcqDerived.commercialLandArea + asset.buildingFootprintArea * commRatio;
+    const fallbackLandRatio =
+      fallbackDenom > 0
+        ? effectiveAcqDerived.commercialLandArea / fallbackDenom
+        : 0.5;
+    const transferLandRatioForFallback =
+      transferTotalStd > 0 ? transferLandStd / transferTotalStd : fallbackLandRatio;
+
+    acqLandStd = Math.floor(acqCommercialTotal * transferLandRatioForFallback);
+    acqBuildingStd = acqCommercialTotal - acqLandStd;
+  } else {
+    // 기존 일반 검용주택 분기
+    acqLandStd =
+      asset.acquisitionStandardPrice.landPricePerSqm * effectiveAcqDerived.commercialLandArea;
+    acqBuildingStd = asset.acquisitionStandardPrice.commercialBuildingPrice;
+  }
+
+  const acqTotalStd = acqLandStd + acqBuildingStd;
 
   // §97 환산취득가액
   const estimatedAcqPrice =
@@ -421,10 +566,15 @@ export function buildHousingPart(
   gainSplit: HousingGainSplit,
   excessResult: ExcessLandResult,
   residenceYears: number,
+  isOneHouseExempt: boolean = true,  // 미주입 시 true (기존 검용주택 사례14 등 backward compat)
 ): MixedUseHousingPart {
   const housingAcq = housingAcqResult.estimatedAcq;
   const HIGH_VALUE_THRESHOLD = 1_200_000_000;
-  const isExempt = apportionment.housingTransferPrice <= HIGH_VALUE_THRESHOLD;
+  // ─── 🚨 Critical (이슈 8-A): 다주택자 1세대1주택 비과세 미적용 분기 ───
+  // - isOneHouseExempt === false: 다주택자·요건 미충족 → 12억 비과세 미적용 (전액 과세)
+  // - isOneHouseExempt === true (기본): 12억 이하 비과세 + 표2 거주공제 가능
+  const isExempt =
+    isOneHouseExempt && apportionment.housingTransferPrice <= HIGH_VALUE_THRESHOLD;
 
   // ── ① 비사업용토지 이전 (안분 전 양도차익에서 분리) ──
   const nonBizRatio = excessResult.nonBizRatio;
@@ -433,17 +583,26 @@ export function buildHousingPart(
 
   // ── ② 12억 초과 비과세 안분 (비사업용 제외 주택부분 양도차익에만 적용) ──
   // §89 ① 3호 단서 — 비사업용토지는 1세대1주택 비과세 대상이 아니므로 비사업용 이전 후 잔여 양도차익에만 안분
-  const proratio = isExempt
-    ? 0
-    : (apportionment.housingTransferPrice - HIGH_VALUE_THRESHOLD) /
+  // 🚨 Critical: 다주택자(isOneHouseExempt === false)는 12억 안분이 아니라 전액 과세 (proratio = 1)
+  let proratio: number;
+  if (!isOneHouseExempt) {
+    proratio = 1;  // 다주택자: 전액 과세
+  } else if (isExempt) {
+    proratio = 0;  // 1세대1주택자 + 12억 이하: 전액 비과세
+  } else {
+    // 1세대1주택자 + 12억 초과: 안분 과세
+    proratio =
+      (apportionment.housingTransferPrice - HIGH_VALUE_THRESHOLD) /
       apportionment.housingTransferPrice;
+  }
 
   const proratedLandGain = Math.floor(Math.max(housingLandGainAfterNB, 0) * proratio);
   const proratedBuildingGain = Math.floor(Math.max(gainSplit.buildingGain, 0) * proratio);
   const proratedTaxableGain = proratedLandGain + proratedBuildingGain;
 
   // ── ③ 장기보유특별공제 (안분 후 과세대상 양도차익에 표율 적용) ──
-  const useTable2 = residenceYears >= 2;
+  // 🚨 Critical: 다주택자는 거주 2년+ 이어도 표1 적용 (1세대1주택 거주공제 미적용)
+  const useTable2 = isOneHouseExempt && residenceYears >= 2;
   const longTermDeductionTable: 1 | 2 = useTable2 ? 2 : 1;
 
   const landDedRate = calcLongTermRate(

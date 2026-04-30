@@ -80,7 +80,10 @@ export function MixedUseStandardPriceInputs({
           />
         </FieldCard>
 
-        <FieldCard label="상가건물 기준시가" hint="토지 제외 — 국세청 기준시가">
+        <FieldCard
+          label="상가건물 기준시가"
+          hint="토지 제외 — 국세청 홈택스 > 기준시가 조회 (개별주택가격확인서에 미포함)"
+        >
           <CurrencyInput
             label=""
             value={asset.mixedTransferCommercialBuildingPrice}
@@ -156,36 +159,56 @@ export function MixedUseStandardPriceInputs({
           />
         </ToggleCard>
 
-        {!asset.usePreHousingDisclosure && (
-          <FieldCard label="개별주택공시가격" hint="미공시 시 비워두세요 — 위 §164⑤ 토글 사용">
-            <CurrencyInput
-              label=""
-              value={asset.mixedAcqHousingPrice}
-              onChange={(v) => onChange({ mixedAcqHousingPrice: v })}
-              placeholder="취득시 개별주택공시가격 (미공시 시 빈값)"
+        {/* direction === "house_to_commercial" 시 개별주택공시가격은 PHD에서 처리 또는 직접 입력 (둘 다 가능).
+            direction === "commercial_to_house" 시 취득시 주택이 없었으므로 hidden. */}
+        {asset.partialChangeDirection !== "commercial_to_house" &&
+          !asset.usePreHousingDisclosure && (
+            <FieldCard label="개별주택공시가격" hint="미공시 시 비워두세요 — 위 §164⑤ 토글 사용">
+              <CurrencyInput
+                label=""
+                value={asset.mixedAcqHousingPrice}
+                onChange={(v) => onChange({ mixedAcqHousingPrice: v })}
+                placeholder="취득시 개별주택공시가격 (미공시 시 빈값)"
+              />
+            </FieldCard>
+          )}
+
+        {/* direction === "house_to_commercial" 시 취득시 상가가 없었으므로 hidden */}
+        {asset.partialChangeDirection !== "house_to_commercial" && (
+          <>
+            <FieldCard label="취득시 상가건물 기준시가">
+              <CurrencyInput
+                label=""
+                value={asset.mixedAcqCommercialBuildingPrice}
+                onChange={(v) => onChange({ mixedAcqCommercialBuildingPrice: v })}
+                placeholder="취득시 상가건물 기준시가"
+              />
+            </FieldCard>
+
+            {/* 개별공시지가 — LandPriceLookupField: 연도 선택 + 조회 버튼 + 토지기준시가 자동 계산 */}
+            <LandPriceLookupField
+              pricePerSqm={asset.mixedAcqLandPricePerSqm}
+              onPricePerSqmChange={(v) => onChange({ mixedAcqLandPricePerSqm: v })}
+              area={commercialLandArea > 0 ? commercialLandArea : undefined}
+              referenceDate={acqReferenceDate}
+              jibun={jibun}
+              label="취득시 개별공시지가(상가)(원/㎡)"
+              placeholder="취득시 개별공시지가 /㎡"
             />
-          </FieldCard>
+          </>
         )}
 
-        <FieldCard label="취득시 상가건물 기준시가">
-          <CurrencyInput
-            label=""
-            value={asset.mixedAcqCommercialBuildingPrice}
-            onChange={(v) => onChange({ mixedAcqCommercialBuildingPrice: v })}
-            placeholder="취득시 상가건물 기준시가"
-          />
-        </FieldCard>
-
-        {/* 개별공시지가 — LandPriceLookupField: 연도 선택 + 조회 버튼 + 토지기준시가 자동 계산 */}
-        <LandPriceLookupField
-          pricePerSqm={asset.mixedAcqLandPricePerSqm}
-          onPricePerSqmChange={(v) => onChange({ mixedAcqLandPricePerSqm: v })}
-          area={commercialLandArea > 0 ? commercialLandArea : undefined}
-          referenceDate={acqReferenceDate}
-          jibun={jibun}
-          label="취득시 개별공시지가(상가)(원/㎡)"
-          placeholder="취득시 개별공시지가 /㎡"
-        />
+        {/* 보유 중 일부 용도변경 안내 박스 (direction별) */}
+        {asset.hasPartialUsageChange && asset.partialChangeDirection === "house_to_commercial" && (
+          <div className="rounded-lg bg-amber-100/60 border border-amber-200 px-3 py-2 text-xs text-amber-900">
+            ℹ 취득시점에 상가가 존재하지 않음 — 상가건물 기준시가·공시지가 입력 불필요. 엔진이 취득시 개별주택공시가격을 양도시 면적비율로 자동 안분합니다 (집행기준 99-164-10).
+          </div>
+        )}
+        {asset.hasPartialUsageChange && asset.partialChangeDirection === "commercial_to_house" && (
+          <div className="rounded-lg bg-amber-100/60 border border-amber-200 px-3 py-2 text-xs text-amber-900">
+            ℹ 취득시점에 주택이 존재하지 않음 — 개별주택공시가격 입력 불필요. 엔진이 취득시 상가 기준시가(건물+토지)를 양도시 면적비율로 자동 안분합니다.
+          </div>
+        )}
 
         {(acqCommercialLandStd > 0 || acqCommercialBuilding > 0) && (
           <div className="rounded-lg bg-amber-100/60 border border-amber-200 px-3 py-2 text-sm space-y-1">

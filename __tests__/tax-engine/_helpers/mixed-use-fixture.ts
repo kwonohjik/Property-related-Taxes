@@ -121,3 +121,159 @@ export function mixedUseShortResidence(
     ...overrides,
   };
 }
+
+// ──────────────────────────────────────────────────────────────
+// PDF 갑氏 케이스 — 보유 중 일부 용도변경 (image-1, 2026-04-30 수령)
+//
+// 1985.1.1 의제취득한 단독주택을 2011.8.5에 일부면적(80.23㎡)을 근린생활시설로 용도변경
+// → 2023.2.16에 1,300,000,000원 양도. 갑氏는 2주택자(B주택 보유)이므로 1세대1주택 비과세 미적용.
+// ──────────────────────────────────────────────────────────────
+
+export const GAP_TRANSFER_PRICE = 1_300_000_000;
+export const GAP_TRANSFER_DATE = new Date("2023-02-16");
+export const GAP_DEEMED_ACQ_DATE = new Date("1985-01-01");  // 의제취득일
+
+// 양도시 면적 (개별주택가격확인서 2022.1.1)
+export const GAP_RESIDENTIAL_FLOOR = 37.79;          // 양도시 주택 (1층 단독주택)
+export const GAP_NON_RESIDENTIAL_FLOOR = 80.23;      // 양도시 상가 (2층 근린생활시설)
+export const GAP_BUILDING_FOOTPRINT = 37.79;         // 1층 바닥면적 (정착면적)
+export const GAP_TOTAL_LAND = 198.3;                 // 전체 토지
+
+// 양도시 기준시가 (2022.1.1)
+export const GAP_HOUSING_PRICE_AT_TRANSFER = 380_000_000;     // 개별주택가격
+export const GAP_LAND_PRICE_PER_SQM_AT_TRANSFER = 3_300_000;  // 개별공시지가/㎡
+export const GAP_COMMERCIAL_BUILDING_AT_TRANSFER = 100_000_000; // 추정 (PDF 미명시 — 사용자 조회)
+
+// 취득시 (1985 의제취득) — house_to_commercial이므로 상가 기준시가 미사용
+// PHD 사용 → 1990년 공시지가로 의제취득 시점 토지가격 환산
+export const GAP_LAND_PRICE_PER_SQM_AT_ACQ = 840_000;  // 1990년 공시지가 (의제취득)
+
+// 거주기간 (PDF 미명시 — 갑氏는 A검용주택 임대등록 안함, 직접 거주 추정 안 함)
+export const GAP_RESIDENCE_PERIOD_YEARS = 0;
+
+// PHD 3-시점 데이터
+export const GAP_PHD_FIRST_DISCLOSURE_DATE = new Date("2005-01-01");
+export const GAP_PHD_FIRST_DISCLOSURE_HOUSING_PRICE = 150_000_000;
+export const GAP_LAND_PRICE_PER_SQM_AT_2005 = 1_700_000;  // 2004년 가까운 시점 (대안: 1,200,000)
+// 양도시 PHD 토지단가는 GAP_LAND_PRICE_PER_SQM_AT_TRANSFER와 동일
+
+/**
+ * PDF 갑氏 케이스 픽스처 — 보유 중 일부 용도변경(주택→상가) + 1985 의제취득 + 다주택자.
+ *
+ * direction = "house_to_commercial" 시 취득시 상가 기준시가/공시지가는 무시됨
+ * (엔진이 취득시 개별주택공시가격을 양도시 면적비율로 자동 안분).
+ *
+ * isOneHouseExempt = false (갑氏는 A+B 2주택자, 1세대1주택 비과세 미적용).
+ */
+export function mixedUsePdfGap(
+  overrides?: Partial<MixedUseAssetInput>,
+): MixedUseAssetInput {
+  return {
+    isMixedUseHouse: true,
+    residentialFloorArea: GAP_RESIDENTIAL_FLOOR,
+    nonResidentialFloorArea: GAP_NON_RESIDENTIAL_FLOOR,
+    buildingFootprintArea: GAP_BUILDING_FOOTPRINT,
+    totalLandArea: GAP_TOTAL_LAND,
+    landAcquisitionDate: GAP_DEEMED_ACQ_DATE,
+    buildingAcquisitionDate: GAP_DEEMED_ACQ_DATE,
+    transferStandardPrice: {
+      housingPrice: GAP_HOUSING_PRICE_AT_TRANSFER,
+      commercialBuildingPrice: GAP_COMMERCIAL_BUILDING_AT_TRANSFER,
+      landPricePerSqm: GAP_LAND_PRICE_PER_SQM_AT_TRANSFER,
+    },
+    acquisitionStandardPrice: {
+      // PHD 사용 시 housingPrice는 PHD가 역산. 미사용 시 사용자 직접 입력.
+      housingPrice: undefined,
+      commercialBuildingPrice: 0,  // direction === "house_to_commercial" 시 무시
+      landPricePerSqm: GAP_LAND_PRICE_PER_SQM_AT_ACQ,
+    },
+    usePreHousingDisclosure: true,  // 1985 의제취득 → PHD 필수
+    preHousingDisclosure: {
+      firstDisclosureDate: GAP_PHD_FIRST_DISCLOSURE_DATE,
+      firstDisclosureHousingPrice: GAP_PHD_FIRST_DISCLOSURE_HOUSING_PRICE,
+      transferHousingPrice: GAP_HOUSING_PRICE_AT_TRANSFER,
+      landPricePerSqmAtAcquisition: GAP_LAND_PRICE_PER_SQM_AT_ACQ,
+      landPricePerSqmAtFirstDisclosure: GAP_LAND_PRICE_PER_SQM_AT_2005,
+      landPricePerSqmAtTransfer: GAP_LAND_PRICE_PER_SQM_AT_TRANSFER,
+      buildingStdPriceAtAcquisition: 0,    // 1985 시점 건물 기준시가 (추정)
+      buildingStdPriceAtFirstDisclosure: 0,  // 2005 시점 건물 기준시가 (추정)
+      buildingStdPriceAtTransfer: GAP_COMMERCIAL_BUILDING_AT_TRANSFER,
+      // landArea는 검용주택 엔진이 주택부수토지로 자동 주입 (Omit<PreHousingDisclosureInput, "landArea">)
+    },
+    residencePeriodYears: GAP_RESIDENCE_PERIOD_YEARS,
+    isMetropolitanArea: false,  // 가평군 = 비수도권
+    zoneType: "residential",
+    isOneHouseExempt: false,    // 🚨 Critical — 갑氏는 2주택자
+    partialUsageChange: {
+      direction: "house_to_commercial",
+      // acqResidentialArea/acqCommercialArea 미주입 → 양도시 합계로 자동 도출
+    },
+    ...overrides,
+  };
+}
+
+/**
+ * 미러 케이스 — commercial_to_house (취득시 전체 상가 → 양도시 일부 주택화).
+ * PDF 직접 사례 없음. 결과 카드에 "보수 검토 필요" 배지 노출 검증용.
+ */
+export function mixedUseCommercialToHouseMirror(
+  overrides?: Partial<MixedUseAssetInput>,
+): MixedUseAssetInput {
+  return {
+    ...mixedUsePdfGap(),
+    acquisitionStandardPrice: {
+      housingPrice: undefined,
+      commercialBuildingPrice: 50_000_000,           // 취득시 상가건물 기준시가 직접 입력
+      landPricePerSqm: GAP_LAND_PRICE_PER_SQM_AT_ACQ,
+    },
+    usePreHousingDisclosure: false,  // 미러 케이스에서는 PHD 의미 없음
+    preHousingDisclosure: undefined,
+    partialUsageChange: {
+      direction: "commercial_to_house",
+    },
+    ...overrides,
+  };
+}
+
+/**
+ * PDF 갑氏 anchor — 엔진 첫 실행 결과로 고정 (golden test 패턴, 2026-04-30).
+ * 회귀 방어용. 입력값 변경 없이 결과가 달라지면 엔진 버그.
+ *
+ * 입력 조건:
+ * - 양도일 2023.02.16, 양도가액 1,300,000,000원
+ * - 1985.1.1 의제취득(PHD 활성화), 다주택자(isOneHouseExempt=false)
+ * - direction: house_to_commercial (취득시 전체 주택, 양도시 일부 상가화)
+ * - 양도시 주택 37.79㎡ + 상가 80.23㎡ / 전체 토지 198.3㎡
+ * - 양도시 개별주택가격 380,000,000 / 공시지가 3,300,000원/㎡ (2022)
+ * - 최초공시 2005.1.1 개별주택가격 150,000,000 / 1990 공시지가 840,000원/㎡
+ * - 거주기간 0년 (다주택자 → 표1)
+ * - 양도시 상가건물 기준시가 100,000,000 (PDF 미명시 — 추정값)
+ *
+ * ⚠ 양도시 상가건물 기준시가가 추정값이므로 본 anchor는 "엔진 회귀 방어"용.
+ *    실제 PDF 정답값은 사용자가 양도시 상가건물 기준시가 확정 후 재계산 필요.
+ */
+export const PARTIAL_USAGE_CHANGE_ANCHORS = {
+  pdf_gap_house_to_commercial: {
+    transferPrice: GAP_TRANSFER_PRICE,
+    transferDate: GAP_TRANSFER_DATE,
+    // 양도가액 안분 (양도시 비율)
+    housingTransferPrice: 534_146_446,
+    commercialTransferPrice: 765_853_554,
+    housingRatio: 0.41088188227152805,
+    // 환산취득가 (PHD 적용)
+    housingEstimatedAcq: 104_183_362,
+    commercialEstimatedAcq: 70_823_852,
+    // 양도차익
+    housingTransferGain: 427_739_555,
+    commercialTransferGain: 693_518_147,
+    // 양도소득금액 (장기보유공제 후) — 다주택자 표1 적용
+    housingIncomeAmount: 290_978_542,
+    commercialIncomeAmount: 485_462_704,
+    // 합산 세액
+    aggregateIncome: 784_880_394,
+    taxBase: 782_380_394,
+    transferTax: 293_503_679,
+    localTax: 29_350_367,
+    totalPayable: 322_854_046,
+  },
+} as const;

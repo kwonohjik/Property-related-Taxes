@@ -188,17 +188,33 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
   // 일반 자산용 환산 입력(취득시/양도시 기준시가, PHD 토글)을 숨긴다.
   const isMixedUse = !!props.asset?.isMixedUseHouse;
 
+  // 8-B-4: 의제취득 (1985.1.1) 판정 — 1985.1.1 정확히 일치 또는 그 이전 입력
+  const isDeemedAcquisitionDate = !!(
+    props.acquisitionDate && props.acquisitionDate <= "1985-01-01"
+  );
+
   return (
     <div className="space-y-3 rounded-md border border-border bg-background p-3">
       <div className="space-y-1.5">
         <div className="flex items-center gap-3 flex-wrap">
           <span className="text-sm font-medium">{acqDateLabel}</span>
+          {isDeemedAcquisitionDate && (
+            <span className="inline-flex items-center rounded border border-amber-300 bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-900">
+              의제취득(§98)
+            </span>
+          )}
           {isSplitable && props.onHasSeperateLandAcquisitionDateChange && (
             <ToggleCard
               variant="chip"
               tone="amber"
               title="토지·건물 취득일 다름"
-              description={isMixedUse ? "검용주택은 항상 분리" : "원시취득·신축 등"}
+              description={
+                isMixedUse
+                  ? "검용주택은 항상 분리"
+                  : isDeemedAcquisitionDate
+                    ? "의제취득은 동일일 권장"
+                    : "원시취득·신축 등"
+              }
               checked={!!props.hasSeperateLandAcquisitionDate}
               disabled={isMixedUse}
               disabledReason="검용주택 분리계산은 항상 토지/건물 분리로 처리됩니다"
@@ -213,9 +229,19 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
           onChange={handleAcquisitionDateChange}
           onBlur={handleAcquisitionDateBlur}
         />
+        {/* 8-B-4: 취득일 안내 hint */}
+        <p className="text-[11px] text-muted-foreground leading-relaxed">
+          ※ 1985.1.1 이전 취득은 모두 1985.1.1로 입력 (의제취득, 소득세법 §98).
+        </p>
         {dateClampMsg && (
           <p className="text-xs text-amber-700 dark:text-amber-400">
             1985.1.1. 의제 취득일로 취득일 변경했습니다.
+          </p>
+        )}
+        {/* 8-B-5: 의제취득 + 분리 토글 ON 시 안내 (토지·건물 동일일 권장) */}
+        {isDeemedAcquisitionDate && props.hasSeperateLandAcquisitionDate && !isMixedUse && (
+          <p className="text-[11px] text-amber-700 leading-relaxed">
+            ⚠ 의제취득(1985.1.1)은 토지·건물이 동일 취득일로 의제됩니다. 분리 토글 비활성화 권장.
           </p>
         )}
       </div>

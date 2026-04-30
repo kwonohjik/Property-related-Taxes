@@ -72,6 +72,32 @@ export interface MixedUseAssetInput {
   isMetropolitanArea?: boolean;
   /** 도시지역 용도지역 — 배율 판정용 (non-business-land ZoneType과 동일) */
   zoneType?: ZoneType;
+
+  /**
+   * 1세대 1주택 비과세 요건 충족 여부.
+   * - true: 주택분 양도가액 12억 이하 비과세, 거주 2년+ 시 표2 거주공제 (최대 80%)
+   * - false: 다주택자·2년 미거주 등으로 1세대 1주택 비과세 미적용 → 12억 안분 X, 표1 적용
+   *
+   * AssetForm.isOneHousehold(L235) 값을 그대로 전달.
+   * 미주입 시 true (기존 검용주택 사례14 등 backward compat).
+   */
+  isOneHouseExempt?: boolean;
+
+  /**
+   * 보유 중 일부 용도변경 옵션 — 양도시 검용이지만 취득시 단일 용도였던 경우.
+   *
+   * - house_to_commercial: 취득시 전체 주택 → 양도시 일부 상가화 (PDF 갑氏)
+   * - commercial_to_house: 취득시 전체 상가 → 양도시 일부 주택화 (미러)
+   *
+   * 시행령 §166⑥ + 집행기준 99-164-10 (재산-1384, 2009.7.8.)
+   */
+  partialUsageChange?: {
+    direction: "house_to_commercial" | "commercial_to_house";
+    /** 취득시 주택연면적 — 미주입 시 양도시 합계로 자동 도출 */
+    acqResidentialArea?: number;
+    /** 취득시 상가연면적 — 미주입 시 양도시 합계로 자동 도출 */
+    acqCommercialArea?: number;
+  };
 }
 
 // ──────────────────────────────────────────
@@ -245,8 +271,15 @@ export interface MixedUseCalculationRoute {
   housingDeductionTableReason: string;
   /** 부수토지 배율 적용 근거 (지역 + 배율값) */
   landMultiplierReason: string;
-  /** 12억 비과세 적용 결과 */
-  highValueRule: "below_threshold_exempt" | "above_threshold_prorated";
+  /**
+   * 12억 비과세 적용 결과
+   * - below_threshold_exempt: 1세대1주택자 + 12억 이하 → 비과세
+   * - above_threshold_prorated: 1세대1주택자 + 12억 초과 → 안분 과세
+   * - non_one_house_full_taxation: 다주택자 등 1세대1주택 미적용 → 전액 과세
+   */
+  highValueRule: "below_threshold_exempt" | "above_threshold_prorated" | "non_one_house_full_taxation";
+  /** 보유 중 일부 용도변경 분기 사유 (사전 정의 템플릿) */
+  partialUsageChangeReason?: string;
 }
 
 /** 검용주택 분리계산 최종 결과 */
@@ -273,4 +306,17 @@ export interface MixedUseGainBreakdown {
   calculationRoute: MixedUseCalculationRoute;
   /** 경고 메시지 (PHD 적합성, 22.1.1 이전 양도일 등) */
   warnings: string[];
+  /**
+   * 보유 중 일부 용도변경 메타 — 결과 카드 "취득시점 자산 구성" 섹션 표시용.
+   * partialUsageChange 토글 OFF 시 undefined.
+   */
+  partialUsageChange?: {
+    direction: "house_to_commercial" | "commercial_to_house";
+    /** 취득시 주택연면적 (자동 또는 사용자 수정값) */
+    acqResidentialArea: number;
+    /** 취득시 상가연면적 */
+    acqCommercialArea: number;
+    /** 사용자가 면적을 수정했는지 여부 */
+    isAreaCustomized: boolean;
+  };
 }

@@ -135,6 +135,25 @@ export function MixedUsePreHousingDisclosureSection({
         <p className="text-xs font-semibold text-muted-foreground">
           3시점 기준시가 입력 — 토지 단위 공시지가(원/㎡) + 건물 기준시가(원)
         </p>
+
+        {/* 8-B-2: 1985 의제취득(§98) 안내 — 1990 공시지가 사용 권장 */}
+        {(() => {
+          const acqDate = asset.landAcquisitionDate || asset.acquisitionDate;
+          const isDeemedAcq = acqDate && acqDate <= "1985-01-01";
+          if (!isDeemedAcq) return null;
+          return (
+            <div className="rounded-md bg-amber-50/60 border border-amber-200 px-3 py-2 text-xs text-amber-900 space-y-1">
+              <p className="font-semibold">의제취득(소득세법 §98) 안내</p>
+              <p className="leading-relaxed">
+                1985.1.1 이전 취득은 모두 1985.1.1로 의제취득됩니다.
+                1985년 시점 공시지가가 없으므로 <strong>취득시 공시지가는 1990년(또는 가장 가까운 시점)의 개별공시지가</strong>를 입력하세요.
+              </p>
+              <p className="leading-relaxed">
+                예) PDF 갑氏 사례: 1985.1.1 의제취득 → 취득시 공시지가 = <strong>1990년 840,000원/㎡</strong>.
+              </p>
+            </div>
+          );
+        })()}
         <ThreePointStandardPriceInput
           jibun={asset.addressJibun || undefined}
           landArea={residentialLandArea > 0 ? residentialLandArea.toFixed(4) : undefined}

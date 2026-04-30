@@ -55,6 +55,32 @@ export function MixedUseResultCard({ breakdown }: Props) {
         </div>
       )}
 
+      {/* 0. 보유 중 일부 용도변경 (있을 때만) — 시행령 §166⑥ + 집행기준 99-164-10 */}
+      {breakdown.partialUsageChange && (
+        <PartialUsageChangeCard
+          puc={breakdown.partialUsageChange}
+          reason={breakdown.calculationRoute.partialUsageChangeReason}
+        />
+      )}
+
+      {/* 1세대 1주택 비과세 적용 여부 표시 */}
+      <div
+        className={`rounded-md px-3 py-2 text-xs border ${
+          breakdown.calculationRoute.highValueRule === "non_one_house_full_taxation"
+            ? "bg-amber-50/60 border-amber-200 text-amber-900"
+            : "bg-emerald-50/60 border-emerald-200 text-emerald-900"
+        }`}
+      >
+        <span className="font-semibold">
+          1세대 1주택 비과세:{" "}
+          {breakdown.calculationRoute.highValueRule === "non_one_house_full_taxation"
+            ? "미적용 (전액 과세 + 표1 공제)"
+            : breakdown.calculationRoute.highValueRule === "below_threshold_exempt"
+              ? "적용 (12억 이하 비과세)"
+              : "적용 (12억 초과 안분 과세)"}
+        </span>
+      </div>
+
       {/* 1. 양도가액 안분 */}
       <ResultSection title="① 양도가액 안분" basis="소득세법 §99 + 시행령 §164">
         <Row
@@ -389,4 +415,60 @@ function Row({
 
 function DivRow() {
   return <div className="border-t my-1" />;
+}
+
+/**
+ * 보유 중 일부 용도변경 — "취득시점 자산 구성" 섹션.
+ * direction별 설명 + 자동/수정 면적 비교표 + commercial_to_house 시 보수 검토 배지.
+ */
+function PartialUsageChangeCard({
+  puc,
+  reason,
+}: {
+  puc: NonNullable<MixedUseGainBreakdown["partialUsageChange"]>;
+  reason?: string;
+}) {
+  const isCommToHouse = puc.direction === "commercial_to_house";
+  return (
+    <div className="rounded-xl border border-amber-200 bg-amber-50/40 p-4 space-y-2">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <p className="text-sm font-semibold text-amber-900">
+          취득시점 자산 구성 (보유 중 일부 용도변경)
+        </p>
+        {isCommToHouse && (
+          <span className="inline-flex items-center rounded-md border border-yellow-300 bg-yellow-100 px-2 py-0.5 text-[11px] font-semibold text-yellow-900">
+            ⚠ 법령 적용에 보수 검토 필요
+          </span>
+        )}
+      </div>
+      <p className="text-xs text-amber-800">
+        취득시 자산 구성:{" "}
+        <span className="font-semibold">
+          {puc.direction === "house_to_commercial"
+            ? "전체 주택 → 양도시 일부 상가화"
+            : "전체 상가 → 양도시 일부 주택화"}
+        </span>
+      </p>
+      <div className="grid grid-cols-2 gap-2 text-sm">
+        <div className="rounded-md bg-white/60 border border-amber-200 px-3 py-2">
+          <div className="text-[11px] text-amber-700">취득시 주택 연면적</div>
+          <div className="font-mono text-amber-900">{puc.acqResidentialArea.toFixed(2)}㎡</div>
+        </div>
+        <div className="rounded-md bg-white/60 border border-amber-200 px-3 py-2">
+          <div className="text-[11px] text-amber-700">취득시 상가 연면적</div>
+          <div className="font-mono text-amber-900">{puc.acqCommercialArea.toFixed(2)}㎡</div>
+        </div>
+      </div>
+      {puc.isAreaCustomized && (
+        <p className="text-[11px] text-muted-foreground">
+          ※ 사용자가 취득시 면적을 직접 입력함 (자동값 대신 수동값 사용)
+        </p>
+      )}
+      {reason && (
+        <p className="text-[11px] text-amber-800 bg-amber-100/60 border border-amber-200 rounded-md px-2 py-1.5 leading-relaxed">
+          💡 {reason}
+        </p>
+      )}
+    </div>
+  );
 }

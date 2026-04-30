@@ -19,6 +19,7 @@ import type {
 } from "./types/transfer-mixed-use.types";
 import {
   computeDerivedAreas,
+  computeAcqDerivedAreas,
   apportionTransferPrice,
   calcHousingEstimatedAcq,
   calcHousingGainSplit,
@@ -69,6 +70,8 @@ export function calcMixedUseTransferTax(
 
   // 파생값 (면적 비율)
   const derived = computeDerivedAreas(asset);
+  // 보유 중 일부 용도변경 시 취득시 면적 파생값 (시행령 §166⑥)
+  const acqDerived = computeAcqDerivedAreas(asset, derived);
 
   // STEP 2: 양도가액 안분
   const apportionment = apportionTransferPrice(transferPrice, asset, derived);
@@ -88,9 +91,11 @@ export function calcMixedUseTransferTax(
     asset,
     derived,
     transferDate,
+    acqDerived,
   );
 
   // STEP 5·6: 12억 초과 비과세 안분 + 주택부수토지 배율초과 분리
+  // 🚨 Critical: isOneHouseExempt 인자 전달 — 다주택자(false) 시 12억 비과세 미적용·표1
   const excessResult = calcExcessLandRatio(asset, derived);
   const housingPart = buildHousingPart(
     apportionment,
@@ -98,15 +103,18 @@ export function calcMixedUseTransferTax(
     housingGainSplit,
     excessResult,
     asset.residencePeriodYears,
+    asset.isOneHouseExempt ?? true,  // 미주입 시 true (기존 backward compat)
   );
   steps.push(buildHousingStep(housingPart, apportionment));
 
-  // STEP 7: 상가부분 환산취득가액 + 양도차익
+  // STEP 7: 상가부분 환산취득가액 + 양도차익 (acqDerived + housingAcqResult — PHD 결합)
   const commercialGainSplit = calcCommercialGainSplit(
     apportionment.commercialTransferPrice,
     asset,
     derived,
     transferDate,
+    acqDerived,
+    housingAcqResult,
   );
   const commercialPart = buildCommercialPart(commercialGainSplit);
   steps.push(buildCommercialStep(commercialPart, apportionment));
@@ -133,6 +141,26 @@ export function calcMixedUseTransferTax(
   // 계산 경로 메타 (학습·검증용)
   const calculationRoute = buildCalculationRoute(asset, housingPart, excessResult);
 
+  // 보유 중 일부 용도변경 메타 (결과 카드 표시용)
+  const partialUsageChange = asset.partialUsageChange
+    ? {
+        direction: asset.partialUsageChange.direction,
+        acqResidentialArea:
+          asset.partialUsageChange.acqResidentialArea
+          ?? (asset.partialUsageChange.direction === "house_to_commercial"
+              ? asset.residentialFloorArea + asset.nonResidentialFloorArea
+              : 0),
+        acqCommercialArea:
+          asset.partialUsageChange.acqCommercialArea
+          ?? (asset.partialUsageChange.direction === "house_to_commercial"
+              ? 0
+              : asset.residentialFloorArea + asset.nonResidentialFloorArea),
+        isAreaCustomized:
+          asset.partialUsageChange.acqResidentialArea !== undefined
+          || asset.partialUsageChange.acqCommercialArea !== undefined,
+      }
+    : undefined;
+
   return {
     splitMode: "post-2022",
     apportionment,
@@ -143,6 +171,7 @@ export function calcMixedUseTransferTax(
     steps,
     calculationRoute,
     warnings,
+    partialUsageChange,
   };
 }
 
@@ -176,9 +205,18 @@ function buildCalculationRoute(
   const metroLabel = asset.isMetropolitanArea === false ? "수도권 외" : "수도권";
   const landMultiplierReason = `${metroLabel} ${zoneLabel} → ${excessResult.multiplier}배 (시행령 §168의12)`;
 
-  const highValueRule = housingPart.isExempt
-    ? ("below_threshold_exempt" as const)
-    : ("above_threshold_prorated" as const);
+  // 🚨 Critical: 다주택자(isOneHouseExempt === false) → non_one_house_full_taxation
+  const isOneHouseExempt = asset.isOneHouseExempt ?? true;
+  const highValueRule = !isOneHouseExempt
+    ? ("non_one_house_full_taxation" as const)
+    : housingPart.isExempt
+      ? ("below_threshold_exempt" as const)
+      : ("above_threshold_prorated" as const);
+
+  // 보유 중 일부 용도변경 사유 (사전 정의 템플릿)
+  const partialUsageChangeReason = asset.partialUsageChange
+    ? PARTIAL_USAGE_CHANGE_REASONS[asset.partialUsageChange.direction]
+    : undefined;
 
   return {
     housingAcqPriceSource,
@@ -186,8 +224,17 @@ function buildCalculationRoute(
     housingDeductionTableReason,
     landMultiplierReason,
     highValueRule,
+    partialUsageChangeReason,
   };
 }
+
+/** 보유 중 일부 용도변경 사유 — 사전 정의 템플릿 (이슈 9·19 반영) */
+const PARTIAL_USAGE_CHANGE_REASONS = {
+  house_to_commercial:
+    "양도시점에는 검용주택이나 취득시점에는 전체 주택이었으므로 시행령 §166⑥ 및 양도소득세 집행기준 99-164-10에 따라 환산취득가 산정 시 취득시 개별주택공시가격을 양도시 면적비율로 안분",
+  commercial_to_house:
+    "양도시점에는 검용주택이나 취득시점에는 전체 상가였으므로 시행령 §166⑥에 따라 환산취득가 산정 시 취득시 상가 기준시가(건물+토지)를 양도시 면적비율로 안분 — 직접 사례 제한적, 보수 검토 필요",
+} as const;
 
 // ──────────────────────────────────────────
 // 경고 수집

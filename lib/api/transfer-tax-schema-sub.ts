@@ -612,6 +612,14 @@ export const mixedUseAssetSchema = z.object({
     "commercial", "industrial", "green", "management",
     "agriculture_forest", "natural_env", "unplanned", "undesignated",
   ]).optional(),
+  /** 🚨 Critical (이슈 8-A): 1세대 1주택 비과세 요건 충족 여부. 다주택자는 false → 12억 비과세 미적용 */
+  isOneHouseExempt: z.boolean().optional(),
+  /** 보유 중 일부 용도변경 (시행령 §166⑥ + 집행기준 99-164-10) */
+  partialUsageChange: z.object({
+    direction: z.enum(["house_to_commercial", "commercial_to_house"]),
+    acqResidentialArea: z.number().nonnegative().optional(),
+    acqCommercialArea: z.number().nonnegative().optional(),
+  }).optional(),
 }).superRefine((v, ctx) => {
   const total = v.residentialFloorArea + v.nonResidentialFloorArea;
   if (total <= 0) {
