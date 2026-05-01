@@ -256,25 +256,47 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     },
     acquisitionStandardPrice: {
       housingPrice: parseAmount(primary.mixedAcqHousingPrice) || undefined,
-      commercialBuildingPrice: parseAmount(primary.mixedAcqCommercialBuildingPrice) || 0,
-      landPricePerSqm: parseAmount(primary.mixedAcqLandPricePerSqm) || 0,
+      commercialBuildingPrice: (() => {
+        const direct = parseAmount(primary.mixedAcqCommercialBuildingPrice);
+        if (direct > 0) return direct;
+        // house_to_commercial Case A: PHD 전체 건물 기준시가 × (상가면적 / 전체면적) 자동 안분
+        const phdBuilding = parseAmount(primary.phdBuildingStdPriceAtAcq);
+        const residentialArea = parseFloat(primary.residentialFloorArea) || 0;
+        const nonResidentialArea = parseFloat(primary.nonResidentialFloorArea) || 0;
+        const totalFloor = residentialArea + nonResidentialArea;
+        if (phdBuilding > 0 && totalFloor > 0) {
+          return Math.floor(phdBuilding * nonResidentialArea / totalFloor);
+        }
+        return 0;
+      })(),
+      // PHD ① 취득시 공시지가를 섹션 2에서 직접 입력하지 않은 경우 fallback
+      landPricePerSqm:
+        parseAmount(primary.mixedAcqLandPricePerSqm) ||
+        parseAmount(primary.phdLandPricePerSqmAtAcq) || 0,
     },
     usePreHousingDisclosure: primary.usePreHousingDisclosure,
     // PHD 페이로드는 모든 필수 필드(.positive() 제약)가 채워졌을 때만 전송.
     // 누락 시 schema의 z.number().int().positive() 검증에서 0으로 실패하기 때문.
-    preHousingDisclosure:
-      primary.usePreHousingDisclosure &&
-      primary.phdFirstDisclosureDate &&
-      parseAmount(primary.phdFirstDisclosureHousingPrice) > 0 &&
-      parseAmount(primary.phdLandPricePerSqmAtAcq) > 0 &&
-      parseAmount(primary.phdLandPricePerSqmAtFirst) > 0 &&
-      parseAmount(primary.phdLandPricePerSqmAtTransfer) > 0 &&
-      (parseAmount(primary.phdTransferHousingPrice) > 0 ||
-        parseAmount(primary.mixedTransferHousingPrice) > 0)
+    preHousingDisclosure: (() => {
+      // 검용주택 PHD: phdLandPricePerSqm* 미설정 시 섹션 2의 mixed 값으로 fallback
+      const landSqmAtAcq =
+        parseAmount(primary.phdLandPricePerSqmAtAcq) ||
+        parseAmount(primary.mixedAcqLandPricePerSqm);
+      const landSqmAtTransfer =
+        parseAmount(primary.phdLandPricePerSqmAtTransfer) ||
+        parseAmount(primary.mixedTransferLandPricePerSqm);
+      return primary.usePreHousingDisclosure &&
+        primary.phdFirstDisclosureDate &&
+        parseAmount(primary.phdFirstDisclosureHousingPrice) > 0 &&
+        landSqmAtAcq > 0 &&
+        parseAmount(primary.phdLandPricePerSqmAtFirst) > 0 &&
+        landSqmAtTransfer > 0 &&
+        (parseAmount(primary.phdTransferHousingPrice) > 0 ||
+          parseAmount(primary.mixedTransferHousingPrice) > 0)
         ? {
             firstDisclosureDate: primary.phdFirstDisclosureDate,
             firstDisclosureHousingPrice: parseAmount(primary.phdFirstDisclosureHousingPrice),
-            landPricePerSqmAtAcquisition: parseAmount(primary.phdLandPricePerSqmAtAcq),
+            landPricePerSqmAtAcquisition: landSqmAtAcq,
             buildingStdPriceAtAcquisition:
               parseAmount(primary.phdBuildingStdPriceAtAcq) || 0,
             landPricePerSqmAtFirstDisclosure: parseAmount(primary.phdLandPricePerSqmAtFirst),
@@ -283,7 +305,7 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
             transferHousingPrice:
               parseAmount(primary.phdTransferHousingPrice) ||
               parseAmount(primary.mixedTransferHousingPrice),
-            landPricePerSqmAtTransfer: parseAmount(primary.phdLandPricePerSqmAtTransfer),
+            landPricePerSqmAtTransfer: landSqmAtTransfer,
             buildingStdPriceAtTransfer:
               parseAmount(primary.phdBuildingStdPriceAtTransfer) || 0,
             // 미공시 취득 당시 토지 면적 직접 지정 — 미입력 시 엔진이 양도시 비율로 자동 계산
@@ -291,7 +313,8 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
               ? { landArea: parseFloat(primary.phdResidentialLandArea) }
               : {}),
           }
-        : undefined,
+        : undefined;
+    })(),
     // 거주기간은 소수점 가능 (예: 23.5년) — parseFloat 사용
     residencePeriodYears: parseFloat(primary.mixedUseResidencePeriodYears) || 0,
     isMetropolitanArea: primary.mixedIsMetropolitanArea,

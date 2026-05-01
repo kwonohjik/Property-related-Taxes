@@ -346,7 +346,7 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
             />
           </div>
         </FieldCard>
-        <FieldCard label="최초 공시 당시 건물기준시가" unit="원" hint="국세청 기준시가 — §164⑤ Sum_F 분모 (최초고시 토지기준시가 + 이 값). 개별주택가격과 별개." className="sm:grid-cols-[200px_1fr]">
+        <FieldCard label="최초 공시 당시 건물기준시가" unit="원" hint="국세청 기준시가 — 취득시 개별주택가격 역산 시 최초공시 합계(토지기준시가 + 이 값)의 건물 부분. 개별주택가격과 별개입니다." className="sm:grid-cols-[200px_1fr]">
           <div className="w-1/2">
             <CurrencyInput
               label=""

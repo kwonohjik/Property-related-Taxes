@@ -341,6 +341,17 @@ export interface MixedUseGainBreakdown {
     acqCommercialArea: number;
     /** 사용자가 면적을 수정했는지 여부 */
     isAreaCustomized: boolean;
+    /**
+     * PHD §164⑤ 환산 분기 (PHD ON + partialUsageChange ON 조합에서만 산출).
+     *
+     * - "case_a_whole_building": firstDisclosureDate < usageChangeDate.
+     *   최초공시 시점에 건물 전체가 주택이었으므로 P_F 가 "전체 건물(미래 상가 부분 포함)"의
+     *   가격을 의미. Sum_A·Sum_F 분모/분자에 전체 토지면적·전체 건물 기준시가 사용.
+     * - "case_b_housing_only": firstDisclosureDate ≥ usageChangeDate.
+     *   최초공시 시점에 이미 검용 상태. P_F 가 주택분만의 가격이므로 Sum_A·Sum_F 도 주택분만.
+     * - undefined: PHD 미사용 또는 일반 검용주택 (분기 의미 없음).
+     */
+    phdScopeBranch?: "case_a_whole_building" | "case_b_housing_only";
   };
 
   /**

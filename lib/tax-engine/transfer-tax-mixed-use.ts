@@ -202,6 +202,8 @@ export function calcMixedUseTransferTax(
         isAreaCustomized:
           asset.partialUsageChange.acqResidentialArea !== undefined
           || asset.partialUsageChange.acqCommercialArea !== undefined,
+        // PHD §164⑤ 환산 분기 — calcHousingEstimatedAcq 가 산출
+        phdScopeBranch: housingAcqResult.phdScopeBranch,
       }
     : undefined;
 

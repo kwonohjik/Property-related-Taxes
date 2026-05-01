@@ -61,15 +61,20 @@ export function MixedUsePreHousingDisclosureSection({
     !!asset.partialChangeDirection &&
     !!asset.partialChangeDate;
 
-  // 양도시 개별주택가격: 검용주택 입력(mixedTransferHousingPrice) → PHD 양도시 주택가격 자동 mirror
-  // PHD 입력이 비어 있을 때만 mixed 값을 자동 채움 (사용자 수동 입력 시 보호)
-  useEffect(() => {
-    const mixedAmount = parseAmount(asset.mixedTransferHousingPrice);
-    const phdAmount = parseAmount(asset.phdTransferHousingPrice);
-    if (mixedAmount > 0 && phdAmount === 0) {
-      onChange({ phdTransferHousingPrice: String(mixedAmount) });
-    }
-  }, [asset.mixedTransferHousingPrice, asset.phdTransferHousingPrice, onChange]);
+  // PHD §164⑤ Case A 식별 — 최초공시일 < 용도변경일 (전체 건물이 주택이었던 시점)
+  // Case A: 취득시·최초공시 시점 입력란은 "전체 건물 기준시가" 의미 (주택+상가 합계 = 그 시점엔 모두 주택)
+  // Case B: 모든 시점이 검용 상태 → "주택분만" 의미 (현재 로직)
+  const isCaseA = useMemo(() => {
+    if (!hasUsageChange) return false;
+    if (!asset.phdFirstDisclosureDate || !asset.partialChangeDate) return false;
+    const firstDate = new Date(asset.phdFirstDisclosureDate);
+    const ucDate = new Date(asset.partialChangeDate);
+    if (Number.isNaN(firstDate.getTime()) || Number.isNaN(ucDate.getTime())) return false;
+    return firstDate < ucDate;
+  }, [hasUsageChange, asset.phdFirstDisclosureDate, asset.partialChangeDate]);
+
+  // 개별주택가격·토지 공시지가는 useEffect로 store 업데이트하지 않음 (무한 루프 방지).
+  // 표시는 ThreePointStandardPriceInput에 mixed 값을 직접 전달, API는 fallback으로 처리.
 
   // ─── 1990.8.30. 이전 취득 토지 환산 자동 활성화 ───
   const acqDate = asset.landAcquisitionDate || asset.acquisitionDate;
@@ -145,18 +150,35 @@ export function MixedUsePreHousingDisclosureSection({
             검용주택의 주택부분 취득시 개별주택가격을 최초 공시일 기준으로 역산합니다.
             토지면적은 주택부수토지(자동 계산)를 사용합니다.
             {isPre1990 && " 1990.8.30. 이전 취득 토지는 토지등급가액 환산 결과를 자동 적용합니다."}
-            {hasUsageChange && " 보유 중 일부 용도변경 입력이 있어 취득시·양도시 주택부수토지 면적이 시점별로 자동 분리되어 PHD 환산에 적용됩니다 (최초공시일 면적은 용도변경일 기준 자동 판정)."}
+            {hasUsageChange && !isCaseA && " 보유 중 일부 용도변경 입력이 있어 취득시·양도시 주택부수토지 면적이 시점별로 자동 분리되어 취득시 개별주택가격 역산에 적용됩니다 (최초공시일 면적은 용도변경일 기준 자동 판정)."}
           </p>
         </div>
         <LegalBadge />
       </div>
+
+      {/* 최초공시일 < 용도변경일 진입 안내 — 전체 건물 기준 역산 모드 */}
+      {isCaseA && (
+        <div className="rounded-lg bg-rose-100/60 border border-rose-200 px-3 py-2 text-xs text-rose-900 space-y-1">
+          <p className="font-semibold">
+            ⚠ 최초공시일({asset.phdFirstDisclosureDate || "—"})이 용도변경일보다 이전 — 건물 전체 기준으로 취득시 주택가격을 역산합니다
+          </p>
+          <p>
+            최초공시 시점에는 건물 전체가 아직 주택이었으므로
+            최초공시 개별주택가격은 <strong>건물 전체</strong>(이후 상가로 변한 부분 포함)의 가격입니다.
+          </p>
+          <p>
+            ▶ 취득시·최초공시일 입력란의 <strong>"주택 건물기준시가"</strong>에는
+            그 시점의 <strong>전체 건물 기준시가</strong>(주택분 + 상가부분 합계 — 당시는 모두 주택)를 입력하세요.
+          </p>
+        </div>
+      )}
 
       {/* ① 주택부수토지 면적 (수정 가능) */}
       <FieldCard
         label={hasUsageChange ? "주택부수토지 면적 (양도시 기준)" : "주택부수토지 면적"}
         hint={
           hasUsageChange
-            ? `용도변경 입력 감지 — 양도시 면적 ${autoLandArea.toFixed(2)} ㎡ 자동 적용. 취득시 면적은 용도변경 입력값으로 별도 계산되어 PHD 환산에 자동 반영됩니다.`
+            ? `용도변경 입력 감지 — 양도시 면적 ${autoLandArea.toFixed(2)} ㎡ 자동 적용. 취득시 면적은 용도변경 입력값으로 별도 계산되어 취득시 개별주택가격 역산에 자동 반영됩니다.`
             : autoLandArea > 0
             ? `자동 계산: ${autoLandArea.toFixed(2)} ㎡ (전체 토지 × 주택연면적 비율). 최초 공시 당시 전체가 주택이었다면 전체 토지 면적으로 수정하세요.`
             : "면적 정보가 없어 자동 계산 불가. 직접 입력하세요."
@@ -183,7 +205,7 @@ export function MixedUsePreHousingDisclosureSection({
         />
       </FieldCard>
 
-      {/* ③ 최초 고시 개별주택가격 P_F */}
+      {/* ③ 최초 고시 개별주택가격 */}
       <FieldCard
         label="최초 고시 개별주택가격"
         required
@@ -200,22 +222,22 @@ export function MixedUsePreHousingDisclosureSection({
         />
       </FieldCard>
 
-      {/* ④ 양도시 개별주택가격 P_T (검용주택 입력과 자동 동기화) */}
-      <FieldCard
-        label="양도시 개별주택가격"
-        required
-        hint="양도일 당시 공시된 개별주택가격. 위 검용주택 영역의 양도시 개별주택공시가격과 자동 동기화"
-        unit="원"
-      >
-        <CurrencyInput
-          label=""
-          value={asset.phdTransferHousingPrice || asset.mixedTransferHousingPrice}
-          onChange={(v) => onChange({ phdTransferHousingPrice: v })}
-          placeholder="원"
-          hideUnit
-          required
-        />
-      </FieldCard>
+      {/* ④ 양도시 개별주택가격 — 위 양도시 기준시가 섹션 값을 자동 사용 (read-only) */}
+      <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-3">
+        <div className="flex items-baseline justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold text-amber-800">양도시 개별주택가격 (자동)</p>
+            <p className="mt-1 text-[11px] text-amber-700">
+              위 양도시 기준시가 섹션의 개별주택공시가격을 자동으로 사용합니다.
+            </p>
+          </div>
+          <p className="whitespace-nowrap text-sm font-semibold text-amber-900">
+            {parseAmount(asset.mixedTransferHousingPrice) > 0
+              ? `${parseAmount(asset.mixedTransferHousingPrice).toLocaleString()}원`
+              : "양도시 기준시가 섹션에서 입력하세요"}
+          </p>
+        </div>
+      </div>
 
       {/* ⑤ 1990.8.30. 이전 취득 토지 환산 (조건부) */}
       {isPre1990 && (
@@ -248,6 +270,11 @@ export function MixedUsePreHousingDisclosureSection({
           targetLabel="주택"
           jibun={asset.addressJibun || undefined}
           landArea={effectiveLandArea > 0 ? effectiveLandArea.toFixed(4) : undefined}
+          // Case A — 최초공시일 < 용도변경일 진입 시 ①·② 시점 라벨·면적을 "전체 토지·건물" 기준으로 전환
+          wholeBuildingForAcqAndFirst={isCaseA}
+          landAreaForAcqAndFirst={
+            isCaseA && totalLand > 0 ? totalLand.toFixed(4) : undefined
+          }
           // 취득시 — 토지 취득일 기준
           acquisitionDate={asset.landAcquisitionDate || asset.acquisitionDate}
           landPriceYearAtAcq={asset.phdLandPriceYearAtAcq}
@@ -255,7 +282,7 @@ export function MixedUsePreHousingDisclosureSection({
           onLandPriceYearAtAcqChange={(year, isManual) =>
             onChange({ phdLandPriceYearAtAcq: year, phdLandPriceYearAtAcqIsManual: isManual })
           }
-          landPricePerSqmAtAcq={asset.phdLandPricePerSqmAtAcq}
+          landPricePerSqmAtAcq={asset.phdLandPricePerSqmAtAcq || asset.mixedAcqLandPricePerSqm}
           onLandPricePerSqmAtAcqChange={(v) => onChange({ phdLandPricePerSqmAtAcq: v })}
           buildingStdPriceAtAcq={asset.phdBuildingStdPriceAtAcq}
           onBuildingStdPriceAtAcqChange={(v) => onChange({ phdBuildingStdPriceAtAcq: v })}
@@ -280,12 +307,19 @@ export function MixedUsePreHousingDisclosureSection({
               phdLandPriceYearAtTransferIsManual: isManual,
             })
           }
-          landPricePerSqmAtTransfer={asset.phdLandPricePerSqmAtTransfer}
+          landPricePerSqmAtTransfer={asset.phdLandPricePerSqmAtTransfer || asset.mixedTransferLandPricePerSqm}
           onLandPricePerSqmAtTransferChange={(v) => onChange({ phdLandPricePerSqmAtTransfer: v })}
           buildingStdPriceAtTransfer={asset.phdBuildingStdPriceAtTransfer}
           onBuildingStdPriceAtTransferChange={(v) =>
             onChange({ phdBuildingStdPriceAtTransfer: v })
           }
+          // 검용주택 — 토지는 같은 지번이므로 섹션 2의 공시지가를 자동 미러링 (read-only 표시)
+          landAutoSyncAtAcq={{
+            label: "위 취득시 기준시가 섹션의 개별공시지가를 자동 사용",
+          }}
+          landAutoSyncAtTransfer={{
+            label: "위 양도시 기준시가 섹션의 개별공시지가를 자동 사용",
+          }}
         />
       </div>
 

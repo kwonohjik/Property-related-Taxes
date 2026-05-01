@@ -135,7 +135,7 @@ export function MixedUseResultCard({ breakdown }: Props) {
               !!ph &&
               (ph.landAreaAtAcquisition !== ph.landAreaAtTransfer ||
                 ph.landAreaAtFirstDisclosure !== ph.landAreaAtTransfer);
-            const base = `§164⑤ 3-시점 환산: 주택 양도가액 ${fmtPlain(a.housingTransferPrice)} × (PHD 환산 취득시 주택가격 ${fmtPlain(h.phdEstimatedAcqHousingPrice)} ÷ 양도시 개별주택공시가격 ${fmtPlain(a.housingStandardPrice)})`;
+            const base = `시행령 §164⑤ 역산 환산: 주택 양도가액 ${fmtPlain(a.housingTransferPrice)} × (역산한 취득시 개별주택가격 ${fmtPlain(h.phdEstimatedAcqHousingPrice)} ÷ 양도시 개별주택공시가격 ${fmtPlain(a.housingStandardPrice)})`;
             if (!isAreaSplit || !ph) return base;
             return `${base} | 시점별 토지면적: 취득시 ${ph.landAreaAtAcquisition.toFixed(2)}㎡ · 최초공시 ${ph.landAreaAtFirstDisclosure.toFixed(2)}㎡ · 양도시 ${ph.landAreaAtTransfer.toFixed(2)}㎡`;
           })()}
@@ -338,13 +338,13 @@ export function MixedUseResultCard({ breakdown }: Props) {
 
 const ACQ_SOURCE_LABEL: Record<string, string> = {
   direct_input: "직접 입력",
-  phd_auto: "PHD 3-시점 자동산정",
+  phd_auto: "최초공시 기준 역산 (시행령 §164⑤)",
   missing: "미입력 (환산 불가)",
 };
 
 const CONVERSION_ROUTE_LABEL: Record<string, string> = {
   section97_direct: "§97 직접 환산 (양도가액 × 취득시 기준시가 / 양도시 기준시가)",
-  phd_corrected: "PHD 보정 후 §97 환산 (1992~2005 미공시 케이스)",
+  phd_corrected: "최초공시 기준 역산 후 §97 환산 (취득 당시 개별주택가격 미공시)",
 };
 
 const HIGH_VALUE_LABEL: Record<string, string> = {
@@ -451,17 +451,31 @@ function PartialUsageChangeCard({
   reason?: string;
 }) {
   const isCommToHouse = puc.direction === "commercial_to_house";
+  const isPhdCaseA = puc.phdScopeBranch === "case_a_whole_building";
+  const isPhdCaseB = puc.phdScopeBranch === "case_b_housing_only";
   return (
     <div className="rounded-xl border border-amber-200 bg-amber-50/40 p-4 space-y-2">
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <p className="text-sm font-semibold text-amber-900">
           취득시점 자산 구성 (보유 중 일부 용도변경)
         </p>
-        {isCommToHouse && (
-          <span className="inline-flex items-center rounded-md border border-yellow-300 bg-yellow-100 px-2 py-0.5 text-[11px] font-semibold text-yellow-900">
-            ⚠ 법령 적용에 보수 검토 필요
-          </span>
-        )}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {isPhdCaseA && (
+            <span className="inline-flex items-center rounded-md border border-rose-300 bg-rose-100 px-2 py-0.5 text-[11px] font-semibold text-rose-900">
+              최초공시일 &lt; 용도변경일 — 건물 전체 기준으로 취득시 주택가격 역산
+            </span>
+          )}
+          {isPhdCaseB && (
+            <span className="inline-flex items-center rounded-md border border-violet-300 bg-violet-100 px-2 py-0.5 text-[11px] font-semibold text-violet-900">
+              최초공시일 ≥ 용도변경일 — 주택 부분만 기준으로 취득시 주택가격 역산
+            </span>
+          )}
+          {isCommToHouse && (
+            <span className="inline-flex items-center rounded-md border border-yellow-300 bg-yellow-100 px-2 py-0.5 text-[11px] font-semibold text-yellow-900">
+              ⚠ 법령 적용에 보수 검토 필요
+            </span>
+          )}
+        </div>
       </div>
       <p className="text-xs text-amber-800">
         취득시 자산 구성:{" "}
@@ -485,6 +499,17 @@ function PartialUsageChangeCard({
         <p className="text-[11px] text-muted-foreground">
           ※ 사용자가 취득시 면적을 직접 입력함 (자동값 대신 수동값 사용)
         </p>
+      )}
+      {isPhdCaseA && (
+        <div className="rounded-md bg-rose-50 border border-rose-200 px-3 py-2 text-[11px] text-rose-900 space-y-1 leading-relaxed">
+          <p className="font-semibold">취득시 개별주택가격 역산 산식 — 건물 전체 기준 (시행령 §164⑤)</p>
+          <p>
+            역산한 취득시 개별주택가격 = 최초공시 개별주택가격 × (취득시 토지기준시가 + 취득시 건물기준시가) ÷ (최초공시 토지기준시가 + 최초공시 건물기준시가)
+          </p>
+          <p>
+            · 최초공시 시점에 건물 전체가 주택이었으므로 최초공시 개별주택가격에는 이후 상가로 변한 부분도 포함됩니다. 취득시·최초공시 시점 모두 전체 토지면적·전체 건물 기준시가를 사용하여 비율을 맞춥니다.
+          </p>
+        </div>
       )}
       {reason && (
         <p className="text-[11px] text-amber-800 bg-amber-100/60 border border-amber-200 rounded-md px-2 py-1.5 leading-relaxed">

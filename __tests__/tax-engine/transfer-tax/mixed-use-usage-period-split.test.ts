@@ -72,10 +72,17 @@ describe("SC-1: calcUsagePeriodInfo — 시간 분할 정보 산출", () => {
 
 describe("SC-2: 회귀 — usageChangeDate 미입력 fallback", () => {
   it("PDF 갑氏 (usageChangeDate 없음) — usagePeriodSplit undefined", () => {
+    // 기본 픽스처에는 2011 용도변경일이 포함됨 (Case A) — 본 회귀 테스트는 usageChangeDate를 명시적으로 제거
+    const asset = mixedUsePdfGap({
+      partialUsageChange: {
+        direction: "house_to_commercial",
+        // usageChangeDate 의도적으로 미지정
+      },
+    });
     const result = calcMixedUseTransferTax(
       GAP_TRANSFER_PRICE,
       GAP_TRANSFER_DATE,
-      mixedUsePdfGap(),
+      asset,
       mockRates,
     );
     expect(result.usagePeriodSplit).toBeUndefined();

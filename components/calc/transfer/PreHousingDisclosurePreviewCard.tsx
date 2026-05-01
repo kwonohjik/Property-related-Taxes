@@ -120,20 +120,20 @@ export function PreHousingDisclosurePreviewCard({ transferPrice, phdInput }: Pro
   return (
     <div className="rounded-md border border-border bg-card px-4 py-3 space-y-1">
       <p className="text-xs font-semibold text-muted-foreground mb-2">
-        §164 ⑤ 미리보기 (저장 전 추정값)
+        취득시 개별주택가격 역산 미리보기 (시행령 §164⑤, 저장 전 추정값)
       </p>
 
-      {/* 기준시가 합계 */}
-      <Row label="Sum_A (취득시 기준시가 합계)" value={formatKRW(result.sumAtAcquisition)} />
+      {/* 합계 기준시가 */}
+      <Row label="취득시 합계 기준시가 (토지+건물)" value={formatKRW(result.sumAtAcquisition)} />
       <Row
-        label="Sum_F (최초공시일 기준시가 합계)"
+        label="최초공시 합계 기준시가 (토지+건물)"
         value={formatKRW(result.sumAtFirstDisclosure)}
       />
-      <Row label="Sum_T (양도시 기준시가 합계)" value={formatKRW(result.sumAtTransfer)} />
+      <Row label="양도시 합계 기준시가 (토지+건물)" value={formatKRW(result.sumAtTransfer)} />
 
-      {/* P_A_est — 핵심 */}
+      {/* 역산 취득시 개별주택가격 — 핵심 */}
       <Row
-        label="P_A_est (추정 취득시 개별주택가격)"
+        label="역산한 취득시 개별주택가격"
         value={formatKRW(result.estimatedHousingPriceAtAcquisition)}
         emphasis
       />

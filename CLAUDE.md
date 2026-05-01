@@ -130,7 +130,7 @@ korean-law-mcp 15개 도구를 법제처 Open API 직접 호출로 재현.
 | 영역 | 파일 | 주제 |
 |---|---|---|
 | 세금 엔진 | [lib/tax-engine/CLAUDE.md](lib/tax-engine/CLAUDE.md) | 파일 조직, 신기능 워크플로, 정수 연산 디테일, 감면 중복배제 패턴 |
-| UI 마법사 | [components/calc/CLAUDE.md](components/calc/CLAUDE.md) | StepWizard, 공용 입력 컴포넌트, ToggleCard 가시성, 색상 카드, 7개 동기화 지점 |
+| UI 마법사 | [components/calc/CLAUDE.md](components/calc/CLAUDE.md) | StepWizard, 공용 입력 컴포넌트, ToggleCard 가시성, 색상 카드, 8개 동기화 지점 |
 | 테스트 | [__tests__/tax-engine/CLAUDE.md](__tests__/tax-engine/CLAUDE.md) | Mock 공유 패턴, 시나리오 분할, PDF 예시값 anchor |
 
 ## Key Documents
@@ -181,33 +181,36 @@ PM → Plan → Design → Do → Check → Act. 상태는 `.bkit/state/pdca-sta
 | 역할 | 에이전트 |
 |---|---|
 | QA 리더 | `tax-qa-lead` (6대 세목 QA 병렬 실행) |
-| UI-Engine 동기화 | `ui-engine-sync-checker` (read-only, 7개 동기화 지점 점검) |
+| UI-Engine 동기화 | `ui-engine-sync-checker` (read-only, 8개 동기화 지점 점검) |
 
 ## 기능 추가 작업 흐름 (강제 — PDCA 5단계)
 
 엔진에 새 input/result 필드를 추가하는 모든 작업은 다음 순서로:
 
 1. **PM/Plan**: 사용자 요구·법령 근거 정리. **엔진 + UI 시니어 동시 참여**로 시나리오·UI 노출 사전 검토.
-2. **Design**: 분리 패턴 권장 — `{feature}.engine.design.md` (엔진 시니어, 계산·타입·테스트) + `{feature}.ui.design.md` (UI 시니어, 7개 동기화 지점 사전 명세). 단일 패턴: `{feature}.design.md`에 "엔진 명세" + "UI 통합 명세" 섹션.
+2. **Design**: 분리 패턴 권장 — `{feature}.engine.design.md` (엔진 시니어, 계산·타입·테스트) + `{feature}.ui.design.md` (UI 시니어, 8개 동기화 지점 사전 명세). 단일 패턴: `{feature}.design.md`에 "엔진 명세" + "UI 통합 명세" 섹션.
 3. **Do**: 디자인 그대로 구현. 엔진 시니어 = 엔진 + 엔진 테스트, UI 시니어 = 7개 지점 모두. 누락 발견 시 우회 금지 — 디자인 갱신 후 구현.
 4. **Check**: `ui-engine-sync-checker` (read-only) + QA 에이전트 + 사용자 수동 확인 (브라우저).
 5. **Act**: 회귀 후속 + 디자인 환류.
 
 엔진 시니어 단독 작업 종료 보고 금지. UI 통합 미완성·디자인 미갱신 시 작업 미완료.
 
-## Definition of Done — UI 통합 7개 동기화 지점
+## Definition of Done — UI 통합 8개 동기화 지점
 
-엔진 input·result 타입 변경 시 다음 7개 지점이 **모두 동기화**되어야 완료. 위치 상세는 [components/calc/CLAUDE.md](components/calc/CLAUDE.md).
+엔진 input·result 타입 변경 시 다음 8개 지점이 **모두 동기화**되어야 완료. 위치 상세는 [components/calc/CLAUDE.md](components/calc/CLAUDE.md).
 
-① 폼 상태 타입 → ② initial value → ③ normalize fallback → ④ API 변환 (`lib/calc/{tax-type}-api.ts`) → ⑤ UI 입력 위젯 → ⑥ 사이드바 합계 (해당 시) → ⑦ 결과 카드 산식·표시.
+① 폼 상태 타입 → ② initial value → ③ normalize fallback → ④ API 변환 (`lib/calc/{tax-type}-api.ts`) → ⑤ UI 입력 위젯 → ⑥ 사이드바 합계 (해당 시) → ⑦ 결과 카드 산식·표시 → ⑧ **validation** (`lib/calc/{tax-type}-validate.ts`).
+
+**⑧ Validation 강제 규칙 (2026-05-01 추가)**: API/UI fallback이 있는 필드는 validation 단계에서도 같은 fallback을 인식해야 함. 예) `mixedAcqLandPricePerSqm`이 비었어도 `phdLandPricePerSqmAtAcq`로 fallback되는 경우, validate에서는 두 필드 중 하나라도 충족하면 통과해야 함. UI/API는 통과하는데 validate가 차단하는 모순 방지.
 
 **자가 점검 (작업 완료 보고 전 필수)**:
 
-- [ ] 디자인 문서에 7개 지점 사전 명세 작성됨
+- [ ] 디자인 문서에 8개 지점 사전 명세 작성됨
 - [ ] 엔진 input 타입의 모든 필드가 폼 타입에 매핑됨
 - [ ] 새 필드 모두 initial · normalize · API 변환에 등록됨
 - [ ] 입력 위젯 배치 (UI 순서 = 엔진 계산 로직 순서)
 - [ ] 새 결과 필드 모두 결과 화면 노출 (산식 + 숫자 라벨)
+- [ ] **API에 fallback 추가 시 validation에도 같은 fallback 인식** (⑧)
 - [ ] `npx tsc --noEmit` 오류 0건
 - [ ] `npx vitest run __tests__/tax-engine/{tax-type}/` 통과
 - [ ] 브라우저 수동 확인 또는 "수동 확인 미수행" 명시

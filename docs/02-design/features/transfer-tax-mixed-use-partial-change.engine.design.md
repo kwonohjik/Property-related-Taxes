@@ -14,6 +14,7 @@
 | 2026-04-30 v1 | `calcCommercialGainSplit` 시그니처에 `acqDerived`·`housingAcqResult` 추가 명시 (이슈 17) | PHD 결합 필수 |
 | 2026-04-30 v1 | `acqLandStd=0` 버그 회귀 방지 — 양도시 비율 fallback 산식 추가 (이슈 2·16) | 토지 환산취득가 0 방지 |
 | 2026-05-01 v2 | **`fallback_apportion` 자동 안분 분기 전면 제거**. 취득시 상가건물 기준시가·개별공시지가는 사용자 직접 입력 필수. 미입력 시 검증 단계에서 명확한 한국어 오류로 차단. `acqStandardSource` 리터럴을 `"user_input"` 단일로 축소. `mixedUsePdfGap` 픽스처 default가 `commercialBuildingPrice`·`landPricePerSqm`을 양수로 채우도록 갱신, anchor 결과값(상가 환산취득가·세액 등) 8개 재산출. | 사용자 시정 지시: 개별주택공시가격을 면적비율로 자동 안분하면 취득시점의 토지/건물 비율과 무관한 임의값이 산출되어 세법상 부정확. 집행기준 99-164-10 원문도 자동 fallback을 보장하지 않음. 직접 조회·입력이 정확성의 유일한 경로. |
+| 2026-05-01 v3 | **PHD §164⑤ 환산 Case A/B 분기 도입**. `firstDisclosureDate < usageChangeDate` 인 경우(Case A) Sum_A·Sum_F 분모/분자에 **전체 토지면적 + 전체 건물 기준시가** 사용. 그 외(Case B)는 기존 산식 유지. `MixedUseGainBreakdown.partialUsageChange.phdScopeBranch` 메타 추가 (`"case_a_whole_building"` / `"case_b_housing_only"`). `validateAssetAcquisition` 에서 `usePreHousingDisclosure + hasPartialUsageChange` 조합 시 `partialChangeDate` 필수 검증. UI: `MixedUsePreHousingDisclosureSection` 에 Case A 진입 안내 박스 + `MixedUseResultCard` 에 분기 배지·산식 노출. `mixedUsePdfGap` 픽스처 `usageChangeDate=2011-08-05` 추가 + 1985/2005 시점 건물 기준시가 추정값 채움 → anchor 10개 재산출. SC-A(분기 비교)·SC-C(시점별 면적 override) 테스트 신규. | 이미지 3~5 사례 사용자 보고: 1985 의제취득 + 2005 최초공시 + 2011 용도변경 케이스에서 P_F = 150,000,000원이 "건물 전체(미래 상가 부분 포함)" 가격인데 현재 알고리즘은 분모/분자를 모두 "주택분만"으로 잡아 P_A_est 가 부정확. P_F 가 가리키는 영역에 맞춰 시점별 면적·건물 기준시가 의미를 분기. |
 
 ---
 
@@ -433,6 +434,9 @@ export function partialUsageChangeFixture(
 | **`commercialBuildingPrice <= 0` 또는 `landPricePerSqm <= 0` (v2 신규)** | **검증 단계(`validateAssetAcquisition`)에서 사전 차단 → 우회 시 엔진에서 명시적 throw** |
 | `housingPrice === 0` & `usePreHousingDisclosure === false` | 검증 단계에서 사전 차단 (PHD 토글 또는 개별주택공시가격 입력 유도) |
 | 1985 의제취득 + PHD ON | `phdAcqHousingPrice`를 주택부분 환산에 사용. **상가부분은 별도로 사용자 직접 입력 필수 (v2)** |
+| **PHD ON + partialUsageChange ON 조합 (v3 신규)** | **`partialChangeDate` 필수 검증. 미입력 시 검증 단계에서 한국어 오류 반환** |
+| **`firstDisclosureDate < usageChangeDate` (Case A, v3 신규)** | **`landAreaAtAcquisition = landAreaAtFirstDisclosure = totalLandArea` 자동 적용. 사용자 입력란의 "주택 건물기준시가"는 "전체 건물 기준시가" 의미로 해석. 결과 카드에 분기 배지 노출** |
+| **`firstDisclosureDate ≥ usageChangeDate` (Case B, v3 신규)** | 기존 산식 유지 (시점별 주택부수토지·주택분 건물기준시가). 결과 카드에 Case B 배지 노출 |
 | 토지/건물 비율 분모 0 | 양도시 토지/건물 비율 fallback (0.5 임의값 회피) |
 | 분필·합필·도로편입 (취득시 토지면적 ≠ 양도시) | Phase 2에서 `partialChangeAcqLandArea` 추가. 1차 PR은 가정 + 결과 카드 안내 |
 | 2회 이상 용도변경 | 본 분기 범위 외. 사용자가 최초·최종 시점만 선택 |

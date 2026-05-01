@@ -47,7 +47,9 @@ export function MixedUseStandardPriceInputs({
   const transferCommercialTotal = transferCommercialLandStd + transferCommercialBuilding;
 
   // 취득시 상가부분 자동 계산
-  const acqLandPerSqm = parseAmount(asset.mixedAcqLandPricePerSqm) ?? 0;
+  const acqLandPerSqm =
+    parseAmount(asset.mixedAcqLandPricePerSqm) ||
+    parseAmount(asset.phdLandPricePerSqmAtAcq);
   const acqCommercialLandStd = Math.floor(acqLandPerSqm * commercialLandArea);
   const acqCommercialBuilding = parseAmount(asset.mixedAcqCommercialBuildingPrice) ?? 0;
   const acqCommercialTotal = acqCommercialLandStd + acqCommercialBuilding;
@@ -173,8 +175,7 @@ export function MixedUseStandardPriceInputs({
             </FieldCard>
           )}
 
-        {/* 취득시 상가건물 기준시가 + 개별공시지가 — 모든 direction에서 사용자 직접 입력 필수
-            (자동 안분 fallback 폐지, 2026-05-01) */}
+        {/* 취득시 상가건물 기준시가 — 직접 입력 (house_to_commercial 시 PHD ① 기준시가에서 자동 안분 API fallback) */}
         <FieldCard
           label="취득시 상가건물 기준시가"
           hint={
@@ -193,7 +194,7 @@ export function MixedUseStandardPriceInputs({
 
         {/* 개별공시지가 — LandPriceLookupField: 연도 선택 + 조회 버튼 + 토지기준시가 자동 계산 */}
         <LandPriceLookupField
-          pricePerSqm={asset.mixedAcqLandPricePerSqm}
+          pricePerSqm={asset.mixedAcqLandPricePerSqm || asset.phdLandPricePerSqmAtAcq}
           onPricePerSqmChange={(v) => onChange({ mixedAcqLandPricePerSqm: v })}
           area={commercialLandArea > 0 ? commercialLandArea : undefined}
           referenceDate={acqReferenceDate}

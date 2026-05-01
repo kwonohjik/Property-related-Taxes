@@ -85,7 +85,7 @@ export function PreHousingDisclosureSection({ asset, transferDate, onChange }: P
       <FieldCard
         label="최초 고시 개별주택가격"
         required
-        hint="최초 고시일 당시 공시된 개별주택가격 P_F (원) — 주택공시가격알리미 조회"
+        hint="최초 고시일 당시 공시된 개별주택가격 (원) — 주택공시가격알리미 조회"
         unit="원"
       >
         <CurrencyInput

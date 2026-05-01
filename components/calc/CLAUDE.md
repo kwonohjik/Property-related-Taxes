@@ -123,9 +123,9 @@ const transferSummary = useMemo(
 | 종합부동산세 | `comprehensive-tax-ui-senior` |
 | 상속·증여 | `inheritance-gift-tax-ui-senior` |
 
-**자동 검증**: 작업 완료 직후 `ui-engine-sync-checker` 호출로 7개 동기화 지점 매핑 누락 점검.
+**자동 검증**: 작업 완료 직후 `ui-engine-sync-checker` 호출로 8개 동기화 지점 매핑 누락 점검.
 
-## UI 통합 7개 동기화 지점 (Definition of Done — 강제)
+## UI 통합 8개 동기화 지점 (Definition of Done — 강제)
 
 엔진 input·result 타입에 새 필드가 추가되거나 변경될 때 다음이 **모두** 동기화되어야 작업 완료. 하나라도 누락되면 미완료.
 
@@ -138,10 +138,12 @@ const transferSummary = useMemo(
 | ⑤ | UI 입력 위젯 | 마법사 단계 컴포넌트 — 활성화 조건·tone 색상 고려 |
 | ⑥ | 사이드바 합계 (해당 시) | `compute*Summary` selector |
 | ⑦ | 결과 카드 산식·표시 | `{TaxType}ResultView` + 상세 카드들 — 산식 숫자 옆 변수명 라벨 |
+| ⑧ | **Validation** | `lib/calc/{tax-type}-validate.ts` — API/UI fallback이 있는 필드는 validate에서도 같은 fallback 인식 (UI/API 통과 ↔ validate 차단 모순 방지) |
 
 자가 점검 후 보고:
 
-- [ ] 7개 지점 모두 동기화 확인
+- [ ] 8개 지점 모두 동기화 확인
+- [ ] API에 fallback 추가 시 validation에도 같은 fallback 인식 (⑧)
 - [ ] `npx tsc --noEmit` 오류 0건
 - [ ] 회귀 테스트 통과
 - [ ] 브라우저 수동 확인 또는 미수행 명시

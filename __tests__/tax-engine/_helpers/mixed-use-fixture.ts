@@ -154,11 +154,22 @@ export const GAP_COMMERCIAL_BUILDING_AT_ACQ = 10_000_000;
 // 거주기간 (PDF 미명시 — 갑氏는 A검용주택 임대등록 안함, 직접 거주 추정 안 함)
 export const GAP_RESIDENCE_PERIOD_YEARS = 0;
 
+// 용도변경일 — 2011.8.5 (PDF 본문)
+export const GAP_USAGE_CHANGE_DATE = new Date("2011-08-05");
+
 // PHD 3-시점 데이터
 export const GAP_PHD_FIRST_DISCLOSURE_DATE = new Date("2005-01-01");
 export const GAP_PHD_FIRST_DISCLOSURE_HOUSING_PRICE = 150_000_000;
 export const GAP_LAND_PRICE_PER_SQM_AT_2005 = 1_700_000;  // 2004년 가까운 시점 (대안: 1,200,000)
 // 양도시 PHD 토지단가는 GAP_LAND_PRICE_PER_SQM_AT_TRANSFER와 동일
+
+// PHD 3-시점 건물 기준시가 (Case A — firstDisclosureDate < usageChangeDate)
+//   PDF 미명시 — 사용자가 NTS 조회 후 입력하는 값을 합리적 추정값으로 가정.
+//   1985 의제취득·2005 최초공시 모두 전체 주택이었으므로 "전체 건물 기준시가" 의미.
+//   양도시(2023)는 주택분만이므로 "주택분 건물기준시가" 의미.
+export const GAP_BUILDING_STD_AT_ACQ_WHOLE = 5_000_000;        // 1985 전체 건물 (추정)
+export const GAP_BUILDING_STD_AT_FIRST_WHOLE = 30_000_000;     // 2005 전체 건물 (추정)
+export const GAP_BUILDING_STD_AT_TRANSFER_HOUSING = 50_000_000;// 2023 주택분만 (추정)
 
 /**
  * PDF 갑氏 케이스 픽스처 — 보유 중 일부 용도변경(주택→상가) + 1985 의제취득 + 다주택자.
@@ -199,9 +210,12 @@ export function mixedUsePdfGap(
       landPricePerSqmAtAcquisition: GAP_LAND_PRICE_PER_SQM_AT_ACQ,
       landPricePerSqmAtFirstDisclosure: GAP_LAND_PRICE_PER_SQM_AT_2005,
       landPricePerSqmAtTransfer: GAP_LAND_PRICE_PER_SQM_AT_TRANSFER,
-      buildingStdPriceAtAcquisition: 0,    // 1985 시점 건물 기준시가 (추정)
-      buildingStdPriceAtFirstDisclosure: 0,  // 2005 시점 건물 기준시가 (추정)
-      buildingStdPriceAtTransfer: GAP_COMMERCIAL_BUILDING_AT_TRANSFER,
+      // Case A — 1985, 2005 모두 전체 주택이었으므로 "전체 건물 기준시가" 입력.
+      // 엔진이 totalLandArea 와 곱해 Sum_A·Sum_F 산정.
+      buildingStdPriceAtAcquisition: GAP_BUILDING_STD_AT_ACQ_WHOLE,
+      buildingStdPriceAtFirstDisclosure: GAP_BUILDING_STD_AT_FIRST_WHOLE,
+      // 양도시(2023)는 주택분만 — "주택분 건물기준시가" 입력
+      buildingStdPriceAtTransfer: GAP_BUILDING_STD_AT_TRANSFER_HOUSING,
       // landArea는 검용주택 엔진이 주택부수토지로 자동 주입 (Omit<PreHousingDisclosureInput, "landArea">)
     },
     residencePeriodYears: GAP_RESIDENCE_PERIOD_YEARS,
@@ -210,6 +224,7 @@ export function mixedUsePdfGap(
     isOneHouseExempt: false,    // 🚨 Critical — 갑氏는 2주택자
     partialUsageChange: {
       direction: "house_to_commercial",
+      usageChangeDate: GAP_USAGE_CHANGE_DATE,  // 2011.8.5 → Case A 진입
       // acqResidentialArea/acqCommercialArea 미주입 → 양도시 합계로 자동 도출
     },
     ...overrides,
@@ -266,20 +281,20 @@ export const PARTIAL_USAGE_CHANGE_ANCHORS = {
     housingTransferPrice: 534_146_446,
     commercialTransferPrice: 765_853_554,
     housingRatio: 0.41088188227152805,
-    // 환산취득가 (PHD 적용)
-    housingEstimatedAcq: 104_183_362,
+    // 환산취득가 — 주택분(Case A: 전체 건물 기준 환산), 상가분(사용자 직접 입력)
+    housingEstimatedAcq: 98_541_280,
     commercialEstimatedAcq: 173_220_881,
     // 양도차익
-    housingTransferGain: 427_739_555,
-    commercialTransferGain: 588_935_713,
-    // 양도소득금액 (장기보유공제 후) — 다주택자 표1 적용
-    housingIncomeAmount: 290_978_542,
-    commercialIncomeAmount: 412_255_000,
+    housingTransferGain: 433_502_054,
+    commercialTransferGain: 182_236_563,
+    // 양도소득금액 — 용도변경 시점 기반 LTHD 시간 비례 분할 (period split) 활성화
+    housingIncomeAmount: 574_986_364,
+    commercialIncomeAmount: 140_196_173,
     // 합산 세액
-    aggregateIncome: 711_672_690,
-    taxBase: 709_172_690,
-    transferTax: 262_756_443,
-    localTax: 26_275_644,
-    totalPayable: 289_032_087,
+    aggregateIncome: 736_822_125,
+    taxBase: 734_322_125,
+    transferTax: 274_639_250,
+    localTax: 27_463_925,
+    totalPayable: 302_103_175,
   },
 } as const;

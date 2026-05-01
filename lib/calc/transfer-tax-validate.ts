@@ -100,19 +100,37 @@ function validateAssetAcquisition(asset: AssetForm, label: string): string | nul
           return `${label}: 취득시 상가 연면적이 잘못되었습니다.`;
         }
       }
-      // 주택→상가: 취득시 상가건물 기준시가·개별공시지가는 사용자 직접 입력 필수 (자동 안분 fallback 폐지)
+      // 주택→상가: 취득시 상가건물 기준시가·개별공시지가는 직접 입력 또는 PHD ① fallback으로 충족
       if (asset.partialChangeDirection === "house_to_commercial") {
-        if (
-          !asset.mixedAcqCommercialBuildingPrice
-          || parseAmount(asset.mixedAcqCommercialBuildingPrice) <= 0
-        ) {
-          return `${label}: 보유 중 일부 용도변경(주택→상가) — 취득시 상가건물 기준시가를 입력하세요. 취득 당시 동일 건물의 국세청 고시 기준시가를 직접 조회·입력해야 합니다.`;
+        // 상가건물 기준시가: 직접 입력 또는 PHD ① 전체 건물 기준시가 × (상가면적 / 전체면적) 자동 안분
+        const directBuilding = parseAmount(asset.mixedAcqCommercialBuildingPrice);
+        const phdBuilding = parseAmount(asset.phdBuildingStdPriceAtAcq);
+        const resArea = parseFloat(asset.residentialFloorArea) || 0;
+        const nonResArea = parseFloat(asset.nonResidentialFloorArea) || 0;
+        const totalFloor = resArea + nonResArea;
+        const autoBuilding =
+          phdBuilding > 0 && totalFloor > 0
+            ? Math.floor((phdBuilding * nonResArea) / totalFloor)
+            : 0;
+        if (directBuilding <= 0 && autoBuilding <= 0) {
+          return `${label}: 보유 중 일부 용도변경(주택→상가) — 취득시 상가건물 기준시가를 입력하세요. PHD ① 전체 건물 기준시가 입력 시 자동 안분, 또는 직접 조회·입력해야 합니다.`;
         }
-        if (
-          !asset.mixedAcqLandPricePerSqm
-          || parseAmount(asset.mixedAcqLandPricePerSqm) <= 0
-        ) {
+        // 개별공시지가(상가): 직접 입력 또는 PHD ① 공시지가 fallback
+        const directLandPerSqm = parseAmount(asset.mixedAcqLandPricePerSqm);
+        const phdLandPerSqm = parseAmount(asset.phdLandPricePerSqmAtAcq);
+        if (directLandPerSqm <= 0 && phdLandPerSqm <= 0) {
           return `${label}: 보유 중 일부 용도변경(주택→상가) — 취득시 개별공시지가(상가)를 입력하세요.`;
+        }
+      }
+      // PHD ON + partialUsageChange ON 조합 시 용도변경일 필수
+      // (Case A/B 분기 식별을 위해 firstDisclosureDate 와 비교 필요)
+      if (asset.usePreHousingDisclosure) {
+        if (!asset.partialChangeDate) {
+          return `${label}: 보유 중 일부 용도변경 + 개별주택가격 미공시 환산 동시 사용 시 용도변경일이 필수입니다. 시행령 §164⑤ 환산 산식이 최초공시일과 용도변경일의 선후 관계에 따라 달라집니다.`;
+        }
+        const ucDate = new Date(asset.partialChangeDate);
+        if (Number.isNaN(ucDate.getTime())) {
+          return `${label}: 용도변경일 형식이 잘못되었습니다.`;
         }
       }
       // PHD 강제 변경 금지 (이슈 5) — 사용자 직전 상태 보존, 경고만 결과 카드에 표시

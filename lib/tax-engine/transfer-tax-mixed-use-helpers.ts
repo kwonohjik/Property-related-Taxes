@@ -156,6 +156,16 @@ export interface HousingEstimatedAcqResult {
   phdAcqHousingPrice?: number;
   /** PHD 3-시점 산식 상세 (UI 표시용) */
   phdResult?: PreHousingDisclosureResult;
+  /**
+   * PHD §164⑤ 환산 분기 — `partialUsageChange` 결합 시에만 산출.
+   *
+   * - "case_a_whole_building": firstDisclosureDate < usageChangeDate.
+   *   최초공시 시점에 아직 용도변경 전(전체 주택). Sum_A·Sum_F 에 전체 토지면적·전체 건물 사용.
+   * - "case_b_housing_only": firstDisclosureDate ≥ usageChangeDate.
+   *   최초공시 시점에 이미 검용. 주택분만 사용.
+   * - undefined: 일반 PHD (partialUsageChange 미사용).
+   */
+  phdScopeBranch?: "case_a_whole_building" | "case_b_housing_only";
 }
 
 export function calcHousingEstimatedAcq(
@@ -172,37 +182,50 @@ export function calcHousingEstimatedAcq(
         ? asset.preHousingDisclosure.landArea!
         : derived.residentialLandArea;
 
-    // ─── 보유 중 일부 용도변경 시 시점별 면적 분리 (사용자 결정: 용도변경 케이스만) ───
-    // - 취득시 면적 = acqDerived.residentialLandArea (취득시 주택연면적 비율)
-    // - 양도시 면적 = derived.residentialLandArea (양도시 주택연면적 비율)
-    // - 최초공시일 면적 = 용도변경일 비교로 자동 판정
-    //     firstDisclosureDate < usageChangeDate → 취득시 면적
-    //     firstDisclosureDate ≥ usageChangeDate → 양도시 면적
+    // ─── 보유 중 일부 용도변경 + PHD 결합 시 시점별 면적·기준시가 영역 분기 (Case A/B) ───
+    // Case A: firstDisclosureDate < usageChangeDate
+    //   최초공시 시점에 아직 용도변경 전(전체 주택). P_F = 건물 전체(미래 상가 부분 포함)의 가격.
+    //   → Sum_A·Sum_F 에 전체 토지면적·전체 건물 기준시가 사용
+    //   → landAreaAtAcquisition = landAreaAtFirstDisclosure = totalLandArea
+    // Case B: firstDisclosureDate ≥ usageChangeDate
+    //   최초공시 시점에 이미 검용. P_F = 주택분만의 가격.
+    //   → Sum_A·Sum_F 에 주택분만 사용 (시점별 검용 면적)
+    //   → landAreaAtAcquisition·AtFirstDisclosure 는 시점별 주택부수토지
     let landAreaAtAcquisition: number | undefined;
     let landAreaAtFirstDisclosure: number | undefined;
     let landAreaAtTransfer: number | undefined;
+    let phdScopeBranch: "case_a_whole_building" | "case_b_housing_only" | undefined;
     const usageChangeDate = asset.partialUsageChange?.usageChangeDate;
-    if (usageChangeDate && acqDerived) {
+    if (usageChangeDate) {
       const firstDate = asset.preHousingDisclosure.firstDisclosureDate;
-      const isFirstBeforeChange = firstDate < usageChangeDate;
-      landAreaAtAcquisition = acqDerived.residentialLandArea;
-      landAreaAtTransfer = derived.residentialLandArea;
-      landAreaAtFirstDisclosure = isFirstBeforeChange
-        ? acqDerived.residentialLandArea
-        : derived.residentialLandArea;
+      const isCaseA = firstDate < usageChangeDate;
+      phdScopeBranch = isCaseA ? "case_a_whole_building" : "case_b_housing_only";
+      if (isCaseA) {
+        // 취득·최초공시 시점에는 건물 전체가 주택 → 전체 토지면적 사용
+        landAreaAtAcquisition = asset.totalLandArea;
+        landAreaAtFirstDisclosure = asset.totalLandArea;
+        landAreaAtTransfer = derived.residentialLandArea;
+      } else if (acqDerived) {
+        // Case B: 시점별 주택부수토지 사용
+        landAreaAtAcquisition = acqDerived.residentialLandArea;
+        landAreaAtFirstDisclosure = derived.residentialLandArea;
+        landAreaAtTransfer = derived.residentialLandArea;
+      }
     }
 
+    // 사용자 override 가 자동값보다 우선 (Q2 사용자 결정: 자동 계산 + 사용자 수정 가능)
     const phdResult = calcPreHousingDisclosureGain(housingTransferPrice, {
       ...asset.preHousingDisclosure,
       landArea: effectiveLandArea,
-      landAreaAtAcquisition,
-      landAreaAtFirstDisclosure,
-      landAreaAtTransfer,
+      landAreaAtAcquisition: asset.preHousingDisclosure.landAreaAtAcquisition ?? landAreaAtAcquisition,
+      landAreaAtFirstDisclosure: asset.preHousingDisclosure.landAreaAtFirstDisclosure ?? landAreaAtFirstDisclosure,
+      landAreaAtTransfer: asset.preHousingDisclosure.landAreaAtTransfer ?? landAreaAtTransfer,
     });
     return {
       estimatedAcq: phdResult.totalEstimatedAcquisitionPrice,
       phdAcqHousingPrice: phdResult.estimatedHousingPriceAtAcquisition,
       phdResult,
+      phdScopeBranch,
     };
   }
 

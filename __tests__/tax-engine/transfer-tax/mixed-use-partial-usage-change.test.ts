@@ -489,3 +489,96 @@ describe("SC-5: 회귀 — 기존 검용주택 사례14 (partialUsageChange 미�
     expect(result.housingPart.longTermDeductionTable).toBe(1);  // 다주택자 → 표1
   });
 });
+
+// ──────────────────────────────────────────────────────────────
+// SC-A: PHD §164⑤ Case A vs Case B 분기 (2026-05-01)
+//   firstDisclosureDate < usageChangeDate → Case A (전체 건물 기준 환산)
+//   firstDisclosureDate ≥ usageChangeDate → Case B (주택분만 환산)
+// ──────────────────────────────────────────────────────────────
+
+describe("SC-A: PHD §164⑤ Case A vs Case B 분기", () => {
+  it("Case A — usageChangeDate(2011) > firstDisclosureDate(2005) → phdScopeBranch = case_a_whole_building", () => {
+    // 기본 픽스처 = 2011 용도변경 → Case A
+    const asset = mixedUsePdfGap();
+    const result = calcMixedUseTransferTax(
+      GAP_TRANSFER_PRICE,
+      GAP_TRANSFER_DATE,
+      asset,
+      mockRates,
+    );
+    expect(result.partialUsageChange?.phdScopeBranch).toBe("case_a_whole_building");
+  });
+
+  it("Case B — usageChangeDate(2004-12) < firstDisclosureDate(2005-01) → case_b_housing_only", () => {
+    const asset = mixedUsePdfGap({
+      partialUsageChange: {
+        direction: "house_to_commercial",
+        usageChangeDate: new Date("2004-12-01"),  // 최초공시 이전
+      },
+    });
+    const result = calcMixedUseTransferTax(
+      GAP_TRANSFER_PRICE,
+      GAP_TRANSFER_DATE,
+      asset,
+      mockRates,
+    );
+    expect(result.partialUsageChange?.phdScopeBranch).toBe("case_b_housing_only");
+  });
+
+  it("두 분기에서 P_A_est 와 환산취득가가 다르게 산출됨", () => {
+    const caseA = mixedUsePdfGap();
+    const caseB = mixedUsePdfGap({
+      partialUsageChange: {
+        direction: "house_to_commercial",
+        usageChangeDate: new Date("2004-12-01"),
+      },
+    });
+    const resultA = calcMixedUseTransferTax(GAP_TRANSFER_PRICE, GAP_TRANSFER_DATE, caseA, mockRates);
+    const resultB = calcMixedUseTransferTax(GAP_TRANSFER_PRICE, GAP_TRANSFER_DATE, caseB, mockRates);
+    expect(resultA.housingPart.phdEstimatedAcqHousingPrice).not.toBe(
+      resultB.housingPart.phdEstimatedAcqHousingPrice,
+    );
+    expect(resultA.housingPart.estimatedAcquisitionPrice).not.toBe(
+      resultB.housingPart.estimatedAcquisitionPrice,
+    );
+  });
+
+  it("PHD 미사용 + partialUsageChange ON → phdScopeBranch undefined", () => {
+    const asset = mixedUsePdfGap({
+      usePreHousingDisclosure: false,
+      preHousingDisclosure: undefined,
+      acquisitionStandardPrice: {
+        housingPrice: 200_000_000,
+        commercialBuildingPrice: 10_000_000,
+        landPricePerSqm: 840_000,
+      },
+    });
+    const result = calcMixedUseTransferTax(GAP_TRANSFER_PRICE, GAP_TRANSFER_DATE, asset, mockRates);
+    expect(result.partialUsageChange?.phdScopeBranch).toBeUndefined();
+  });
+});
+
+// ──────────────────────────────────────────────────────────────
+// SC-C: 시점별 면적 사용자 수정 (PHD landAreaAt* override)
+// ──────────────────────────────────────────────────────────────
+
+describe("SC-C: PHD 시점별 토지면적 사용자 수정", () => {
+  it("preHousingDisclosure.landAreaAtAcquisition override 가 자동값보다 우선", () => {
+    // Case A 기본값은 자동으로 totalLandArea(198.3) 적용. 사용자가 250으로 override.
+    const asset = mixedUsePdfGap();
+    const customAsset: typeof asset = {
+      ...asset,
+      preHousingDisclosure: asset.preHousingDisclosure
+        ? { ...asset.preHousingDisclosure, landAreaAtAcquisition: 250 }
+        : undefined,
+    };
+    const result = calcMixedUseTransferTax(
+      GAP_TRANSFER_PRICE,
+      GAP_TRANSFER_DATE,
+      customAsset,
+      mockRates,
+    );
+    // override 가 적용되면 phdResult.inputs.landAreaAtAcquisition 이 250
+    expect(result.housingPart.phdResult?.inputs.landAreaAtAcquisition).toBe(250);
+  });
+});
