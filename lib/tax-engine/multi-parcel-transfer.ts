@@ -58,8 +58,15 @@ export interface ParcelInput {
    * standardAtTransfer = transferArea × standardPricePerSqmAtTransfer
    */
   standardPricePerSqmAtTransfer?: number;
-  /** 실거래가 방식 기타 필요경비 (원, actual 방식 시 사용) */
+  /**
+   * 실거래가 방식 기타 필요경비 (원, actual 방식 시 사용) — deprecated.
+   * 신규 입력은 `capitalExpenditure` + `transferExpense` 분리 사용.
+   */
   expenses?: number;
+  /** 자본적 지출액 (§97① 가목) — §97② 단서 swap 비교에 사용 (actual/estimated 모드 공통) */
+  capitalExpenditure?: number;
+  /** 양도비 (§97① 나목) — §97② 단서 swap 비교에 사용 */
+  transferExpense?: number;
   /** 미등기 여부 (true이면 장기보유특별공제 0%) */
   isUnregistered?: boolean;
 
@@ -291,15 +298,34 @@ export function calculateMultiParcelTransfer(input: MultiParcelInput): MultiParc
       acquisitionPrice = safeMultiplyThenDivide(allocatedPrice, standardAtAcq, standardAtTransfer);
       // 개산공제 = 취득기준시가 × 3% (소득세법 §97 ①②)
       estimatedDeduction = Math.floor(standardAtAcq * 0.03);
-      expenses = estimatedDeduction; // 환산 방식에서는 개산공제만 인정
+
+      // §97② 단서 swap — 환산 + 개산공제 < 자본 + 양도비 시 자본+양도비 적용
+      const capExp = parcel.capitalExpenditure ?? 0;
+      const trExp = parcel.transferExpense ?? 0;
+      const directSide = capExp + trExp;
+      const swapEligible = parcel.capitalExpenditure !== undefined || parcel.transferExpense !== undefined;
+      const estimatedSide = acquisitionPrice + estimatedDeduction;
+
+      if (swapEligible && directSide > estimatedSide) {
+        // 단서 적용: 자본+양도비를 필요경비로 (개산공제 대체)
+        expenses = directSide;
+      } else {
+        // 본문: 개산공제만 인정
+        expenses = estimatedDeduction;
+      }
     } else {
       // 실지취득가액 방식
       acquisitionPrice = parcel.acquisitionPrice ?? 0;
-      expenses = parcel.expenses ?? 0;
+
+      // 실가 모드도 swap 가능: 자본+양도비 분리 입력 시 합산, 아니면 legacy expenses
+      const capExp = parcel.capitalExpenditure ?? 0;
+      const trExp = parcel.transferExpense ?? 0;
+      const swapEligible = parcel.capitalExpenditure !== undefined || parcel.transferExpense !== undefined;
+      expenses = swapEligible ? (capExp + trExp) : (parcel.expenses ?? 0);
     }
 
     // P-3: 양도차익
-    const rawGain = allocatedPrice - acquisitionPrice - (parcel.acquisitionMethod === "estimated" ? estimatedDeduction : expenses);
+    const rawGain = allocatedPrice - acquisitionPrice - expenses;
     const transferGain = Math.max(0, rawGain);
 
     if (rawGain < 0) {

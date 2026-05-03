@@ -370,6 +370,18 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
       hasPre1990 || isEstimated || isAppraisal || parcelModeActive
         ? 0
         : parseAmount(primary.directExpenses),
+    // §97② 단서 swap 분리 입력 — 두 필드가 명시되면 엔진이 swap 비교 수행.
+    // 둘 다 0이면 undefined로 보내 swapEligible=false (legacy 동작 유지).
+    capitalExpenditure:
+      parcelModeActive ? undefined :
+      (parseAmount(primary.capitalExpenditure) || parseAmount(primary.transferExpense))
+        ? parseAmount(primary.capitalExpenditure)
+        : undefined,
+    transferExpense:
+      parcelModeActive ? undefined :
+      (parseAmount(primary.capitalExpenditure) || parseAmount(primary.transferExpense))
+        ? parseAmount(primary.transferExpense)
+        : undefined,
     // 검용주택은 calcMixedUseTransferTax 별도 엔진에서 처리 → 일반 환산 검증 우회 위해 false 송신
     useEstimatedAcquisition: hasPre1990 || parcelModeActive || isMixed ? false : isEstimated,
     standardPriceAtAcquisition: hasPre1990 || usesPhd
@@ -523,6 +535,15 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
                   : undefined,
               expenses:
                 p.acquisitionMethod === "actual" ? parseAmount(p.expenses) : undefined,
+              // §97② 단서 swap — 두 필드 합 > 0이면 분리 전송, 아니면 undefined (swap 비활성)
+              capitalExpenditure:
+                (parseAmount(p.capitalExpenditure) || parseAmount(p.transferExpense))
+                  ? parseAmount(p.capitalExpenditure)
+                  : undefined,
+              transferExpense:
+                (parseAmount(p.capitalExpenditure) || parseAmount(p.transferExpense))
+                  ? parseAmount(p.transferExpense)
+                  : undefined,
               useDayAfterReplotting: p.useDayAfterReplotting || undefined,
               replottingConfirmDate:
                 p.useDayAfterReplotting && p.replottingConfirmDate

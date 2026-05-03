@@ -30,7 +30,7 @@ export function CoOwnershipInheritanceSection() {
         <ul className="text-xs text-muted-foreground space-y-1">
           <li>• <strong>상속 5년 미경과</strong>: 상속개시일로부터 5년 내 → 주택 수 제외 (§28의4⑥3호)</li>
           <li>• <strong>5년 경과 후</strong>: 공동상속 주택에서 지분이 가장 큰 상속인만 1주택 카운트</li>
-          <li>• <strong>지분 동순위</strong>: 거주자 우선 → 최연장자 순으로 "주된 상속자" 결정</li>
+          <li>• <strong>지분 동순위</strong>: 거주자 우선 → 최연장자 순으로 &ldquo;주된 상속자&rdquo; 결정</li>
           <li>• 주된 상속자 외의 상속인은 카운트 불산입</li>
         </ul>
         <div className="rounded bg-amber-100/60 p-2 text-xs text-amber-800">

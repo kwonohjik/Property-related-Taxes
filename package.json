@@ -12,7 +12,15 @@
     "seed:tax-rates": "tsx --env-file=.env.local scripts/seed-transfer-tax-rates.ts && tsx --env-file=.env.local scripts/seed-transfer-tax-rates-historical.ts",
     "seed:tax-rates:historical": "tsx --env-file=.env.local scripts/seed-transfer-tax-rates-historical.ts",
     "verify:legal": "tsx --env-file=.env.local scripts/verify-legal-codes.ts",
-    "verify:legal:refresh": "tsx --env-file=.env.local scripts/verify-legal-codes.ts --clear"
+    "verify:legal:refresh": "tsx --env-file=.env.local scripts/verify-legal-codes.ts --clear",
+    "typecheck": "tsc --noEmit",
+    "check:pre-pr": "npm run typecheck && npm run lint && npm run test",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix"
+    ]
   },
   "dependencies": {
     "@base-ui/react": "^1.4.0",
@@ -24,6 +32,8 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
+    "dexie": "^4.4.2",
+    "fake-indexeddb": "^6.2.5",
     "fast-xml-parser": "^5.7.1",
     "jszip": "^3.10.1",
     "lucide-react": "^1.8.0",
@@ -50,7 +60,9 @@
     "@vitejs/plugin-react": "^6.0.1",
     "eslint": "^9",
     "eslint-config-next": "16.2.3",
+    "husky": "^9.1.7",
     "jsdom": "^29.0.2",
+    "lint-staged": "^16.4.0",
     "playwright": "^1.59.1",
     "tailwindcss": "^4",
     "tsx": "^4.19.2",

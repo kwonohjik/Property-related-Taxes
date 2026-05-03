@@ -9,6 +9,8 @@
 import { MIXED_USE_DEFAULTS, migrateMixedUseFields } from "./calc-wizard-asset-mixed-use";
 import { type ResidencePeriod, RESIDENCE_DEFAULTS, migrateResidenceFields } from "./calc-wizard-asset-residence";
 export type { ResidencePeriod };
+export { type ParcelFormItem, migrateParcel } from "./calc-wizard-parcel";
+import type { ParcelFormItem } from "./calc-wizard-parcel";
 
 /** 비사업용 토지 사업용 사용기간 항목 (폼 문자열 버전) */
 export interface NblBusinessUsePeriod {
@@ -113,46 +115,6 @@ export interface PriorReductionUsageItem {
   amount: number;
 }
 
-/** 다필지 UI 폼 상태 (문자열 기반) */
-export interface ParcelFormItem {
-  id: string;
-  acquisitionDate: string;
-  acquisitionMethod: "actual" | "estimated";
-  acquisitionPrice: string;
-  acquisitionArea: string;
-  transferArea: string;
-  standardPricePerSqmAtAcq: string;
-  standardPricePerSqmAtTransfer: string;
-  expenses: string;
-  useDayAfterReplotting: boolean;
-  replottingConfirmDate: string;
-  useExchangeLandReduction: boolean;
-  entitlementArea: string;
-  allocatedArea: string;
-  priorLandArea: string;
-  /**
-   * 면적 입력 시나리오 (UI 전용, API 전송 시 제외)
-   * - "same"      : 취득면적 = 양도면적 (일반)
-   * - "reduction" : 감환지 — 교부면적 < 권리면적 (소득령 §162의2)
-   * - "partial"   : 일부 양도 — 취득 토지 중 일부만 양도
-   */
-  areaScenario: "same" | "reduction" | "partial";
-}
-
-/** 구형 ParcelFormItem(areaScenario 없음)을 현재 타입으로 마이그레이션 */
-export function migrateParcel(p: unknown): ParcelFormItem {
-  const parcel = p as Record<string, unknown>;
-  if (parcel.areaScenario) return parcel as unknown as ParcelFormItem;
-  let areaScenario: ParcelFormItem["areaScenario"];
-  if (parcel.useExchangeLandReduction) {
-    areaScenario = "reduction";
-  } else if (parcel.acquisitionArea && parcel.acquisitionArea === parcel.transferArea) {
-    areaScenario = "same";
-  } else {
-    areaScenario = "partial";
-  }
-  return { ...(parcel as unknown as ParcelFormItem), areaScenario };
-}
 
 /**
  * 자산 1건의 폼 상태 (문자열 기반).
@@ -174,8 +136,15 @@ export interface AssetForm {
   standardPriceAtTransfer: string;
   /** 양도시 기준시가 레이블 (API 조회 결과 표시용) */
   standardPriceAtTransferLabel: string;
-  /** 직접 귀속 필요경비 */
+  /**
+   * 직접 귀속 필요경비 (deprecated — backward-compat 유지).
+   * 신규 입력은 `capitalExpenditure` + `transferExpense` 분리 사용.
+   */
   directExpenses: string;
+  /** 자본적 지출액 (소득세법 §97① 가목) — §97② 단서 swap 비교에 사용 */
+  capitalExpenditure: string;
+  /** 양도비 (소득세법 §97① 나목) — §97② 단서 swap 비교에 사용 */
+  transferExpense: string;
 
   // ── 자산별 감면 (복수 선택 허용, 조특법 §127②) ──
   /** 이 자산에 적용할 감면 목록. 복수 체크 가능, 엔진이 §127② 규칙 적용. */
@@ -570,6 +539,8 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     standardPriceAtTransfer: "",
     standardPriceAtTransferLabel: "",
     directExpenses: "0",
+    capitalExpenditure: "0",
+    transferExpense: "0",
     reductions: [],
     inheritanceValuationMode: "auto",
     inheritanceDate: "",
@@ -765,6 +736,9 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (!a.buildingAcquisitionPrice) a.buildingAcquisitionPrice = "";
   if (!a.landDirectExpenses) a.landDirectExpenses = "";
   if (!a.buildingDirectExpenses) a.buildingDirectExpenses = "";
+  // §97② 단서 swap 분리 입력 (legacy directExpenses와 공존, 신규 자산은 두 필드 사용)
+  if (a.capitalExpenditure === undefined) a.capitalExpenditure = "0";
+  if (a.transferExpense === undefined) a.transferExpense = "0";
   if (!a.landStandardPriceAtTransfer) a.landStandardPriceAtTransfer = "";
   if (!a.buildingStandardPriceAtTransfer) a.buildingStandardPriceAtTransfer = "";
   // §164⑤ 미공시 취득 환산 필드

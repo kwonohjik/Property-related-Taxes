@@ -27,6 +27,8 @@ function newParcel(index: number): ParcelFormItem {
     standardPricePerSqmAtAcq: "",
     standardPricePerSqmAtTransfer: "",
     expenses: "0",
+    capitalExpenditure: "0",
+    transferExpense: "0",
     useDayAfterReplotting: false,
     replottingConfirmDate: "",
     useExchangeLandReduction: false,
@@ -427,23 +429,16 @@ export function ParcelListInput({ parcels, totalTransferPrice, onChange }: Parce
                 </div>
               )}
 
-              {/* 실가 방식 */}
+              {/* 실가 방식 — 취득가액 */}
               {p.acquisitionMethod === "actual" && (
-                <div className="grid grid-cols-2 gap-3">
-                  <CurrencyInput
-                    label="취득가액 (원)"
-                    value={p.acquisitionPrice}
-                    onChange={(v) => update(i, { acquisitionPrice: v })}
-                  />
-                  <CurrencyInput
-                    label="필요경비 (원)"
-                    value={p.expenses}
-                    onChange={(v) => update(i, { expenses: v })}
-                  />
-                </div>
+                <CurrencyInput
+                  label="취득가액 (원)"
+                  value={p.acquisitionPrice}
+                  onChange={(v) => update(i, { acquisitionPrice: v })}
+                />
               )}
 
-              {/* 환산 방식 개산공제 프리뷰 */}
+              {/* 환산 방식 — 개산공제 프리뷰 */}
               {p.acquisitionMethod === "estimated" &&
                 acqAreaForPreview > 0 &&
                 p.standardPricePerSqmAtAcq && (
@@ -458,6 +453,30 @@ export function ParcelListInput({ parcels, totalTransferPrice, onChange }: Parce
                     )}
                   </p>
                 )}
+
+              {/* 필요경비 분리 입력 (실가·환산 공통) — §97② 단서 swap */}
+              <div className="rounded-lg border border-border/60 bg-muted/20 p-3 space-y-2">
+                <p className="text-xs font-semibold text-foreground">
+                  필요경비 <span className="text-muted-foreground font-normal">(소득세법 §97①·②)</span>
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  <CurrencyInput
+                    label="자본적 지출액 (원)"
+                    value={p.capitalExpenditure}
+                    onChange={(v) => update(i, { capitalExpenditure: v })}
+                  />
+                  <CurrencyInput
+                    label="양도비 (원)"
+                    value={p.transferExpense}
+                    onChange={(v) => update(i, { transferExpense: v })}
+                  />
+                </div>
+                {p.acquisitionMethod === "estimated" && (
+                  <p className="text-[11px] text-muted-foreground">
+                    환산 모드: (자본+양도비) &gt; (환산+개산공제) 시 §97② 단서 적용
+                  </p>
+                )}
+              </div>
             </CardContent>
           </Card>
         );

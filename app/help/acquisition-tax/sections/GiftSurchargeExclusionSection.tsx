@@ -32,7 +32,7 @@ export function GiftSurchargeExclusionSection() {
             </tbody>
           </table>
           <p className="text-xs text-muted-foreground mt-2">
-            <strong>중요</strong>: 계부·계모(나목2), 의붓자녀(다목2)도 포함 — "법률상 가족"이면 해당 (v3 정밀화).
+            <strong>중요</strong>: 계부·계모(나목2), 의붓자녀(다목2)도 포함 — &ldquo;법률상 가족&rdquo;이면 해당 (v3 정밀화).
             사실혼은 모든 경우에서 제외.
           </p>
         </div>

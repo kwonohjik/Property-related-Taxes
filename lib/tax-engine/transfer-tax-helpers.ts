@@ -244,6 +244,73 @@ interface TransferGainResult {
   estimatedDeduction: number;
   expenses: number;
   splitDetail?: SplitGainResult;
+  /** 필요경비 산정 모드 */
+  necessaryExpenseMode?: "actual" | "estimated_with_deduction" | "swap_to_direct";
+  /** §97② 단서 swap 발동 여부 */
+  swapApplied?: boolean;
+  /** swap 비교 정보 (환산/감정가액 모드에서만) */
+  swapComparison?: {
+    /** 환산취득가(or 감정가액) + 개산공제 */
+    estimatedSide: number;
+    /** 자본적지출 + 양도비 */
+    directSide: number;
+    chosen: "estimated" | "direct";
+  };
+}
+
+/**
+ * 소득세법 §97② 2호 본문/단서 적용 — 필요경비 결정.
+ * - 실가 모드: capExp + trExp 직접 차감 (legacy `expenses` fallback)
+ * - 환산/감정가액 모드 (본문): 개산공제만 인정
+ * - 환산/감정가액 모드 (단서): 환산+개산 < 자본+양도비 → 자본+양도비를 필요경비로 swap
+ *
+ * swap 발동 조건: `capitalExpenditure` 또는 `transferExpense` 중 하나라도 명시 입력 + directSide > estimatedSide.
+ * 동률(==)은 본문 적용 (단서는 "적은 경우" 명시).
+ */
+function calcNecessaryExpense(
+  input: TransferTaxInput,
+  estimatedBase: number,
+  estimatedDeduction: number,
+  isEstimatedMode: boolean,
+): {
+  expensesApplied: number;
+  mode: "actual" | "estimated_with_deduction" | "swap_to_direct";
+  swap?: TransferGainResult["swapComparison"];
+} {
+  const capExp = input.capitalExpenditure ?? 0;
+  const trExp = input.transferExpense ?? 0;
+  const directSide = capExp + trExp;
+  const swapEligible =
+    input.capitalExpenditure !== undefined || input.transferExpense !== undefined;
+
+  if (!isEstimatedMode) {
+    // 실가 모드 — 자본+양도비 직접 차감. 분리 입력 없으면 legacy expenses 사용.
+    return {
+      expensesApplied: swapEligible ? directSide : input.expenses,
+      mode: "actual",
+    };
+  }
+
+  const estimatedSide = estimatedBase + estimatedDeduction;
+
+  if (swapEligible && directSide > estimatedSide) {
+    // §97② 2호 단서 — 환산+개산 < 자본+양도비 → 자본+양도비 적용
+    // acquisitionCost는 estimatedBase 유지, expenses를 directSide로 교체
+    return {
+      expensesApplied: directSide,
+      mode: "swap_to_direct",
+      swap: { estimatedSide, directSide, chosen: "direct" },
+    };
+  }
+
+  // 본문 — 환산 + 개산공제만 (legacy expenses 차감 안 함)
+  return {
+    expensesApplied: estimatedDeduction,
+    mode: "estimated_with_deduction",
+    swap: swapEligible
+      ? { estimatedSide, directSide, chosen: "estimated" }
+      : undefined,
+  };
 }
 
 export function calcTransferGain(input: TransferTaxInput): TransferGainResult {
@@ -264,12 +331,14 @@ export function calcTransferGain(input: TransferTaxInput): TransferGainResult {
       estimatedDeduction: totalDeduction,
       expenses: totalExpenses,
       splitDetail: splitResult,
+      necessaryExpenseMode: usedEstimated ? "estimated_with_deduction" : "actual",
+      // 토지/건물 split swap은 자산 단위 적용 — calcSplitGain 내부 처리는 별도 PR
     };
   }
 
-  let acquisitionCost: number;
   let estimatedBase = 0;
   let estimatedDeduction = 0;
+  let acquisitionCostBase: number;
   let usedEstimated = false;
 
   if (input.useEstimatedAcquisition) {
@@ -279,31 +348,34 @@ export function calcTransferGain(input: TransferTaxInput): TransferGainResult {
       input.standardPriceAtTransfer ?? 0,
     );
     const deduction = applyRate(input.standardPriceAtAcquisition ?? 0, 0.03);
-    acquisitionCost = estimated + deduction;
+    acquisitionCostBase = estimated;
     estimatedBase = estimated;
     estimatedDeduction = deduction;
     usedEstimated = true;
   } else if (input.acquisitionMethod === "appraisal") {
     // 감정가액 모드: 소득세법 시행령 §163⑥에 따라 환산취득가와 동일하게 개산공제 자동 적용.
-    // base = appraisalValue (없으면 acquisitionPrice fallback), 개산공제 = 취득당시 기준시가 × 3%.
     const appraisal = input.appraisalValue ?? input.acquisitionPrice;
     const deduction = applyRate(input.standardPriceAtAcquisition ?? 0, 0.03);
-    acquisitionCost = appraisal + deduction;
+    acquisitionCostBase = appraisal;
     estimatedBase = appraisal;
     estimatedDeduction = deduction;
     usedEstimated = true;
   } else {
-    acquisitionCost = input.acquisitionPrice;
+    acquisitionCostBase = input.acquisitionPrice;
   }
 
-  const gain = input.transferPrice - acquisitionCost - input.expenses;
+  const necessary = calcNecessaryExpense(input, estimatedBase, estimatedDeduction, usedEstimated);
+  const gain = input.transferPrice - acquisitionCostBase - necessary.expensesApplied;
   const flooredGain = input.skipLossFloor ? gain : Math.max(0, gain);
   return {
     gain: flooredGain,
     usedEstimated,
     estimatedBase,
     estimatedDeduction,
-    expenses: input.expenses,
+    expenses: necessary.expensesApplied,
+    necessaryExpenseMode: necessary.mode,
+    swapApplied: necessary.mode === "swap_to_direct",
+    swapComparison: necessary.swap,
   };
 }
 

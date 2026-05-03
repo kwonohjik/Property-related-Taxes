@@ -385,7 +385,7 @@ export function calculateTransferTax(
   }
 
   // STEP 2: 양도차익 계산
-  const { gain: rawGain, usedEstimated, estimatedBase, estimatedDeduction, expenses: appliedExpenses, splitDetail } = calcTransferGain(effectiveInput);
+  const { gain: rawGain, usedEstimated, estimatedBase, estimatedDeduction, expenses: appliedExpenses, splitDetail, swapApplied, swapComparison } = calcTransferGain(effectiveInput);
 
   // 소유자 분리: 본인 신고분 양도차익만 추출 (소령 §166⑥, §168②)
   // splitDetail이 있고 selfOwns !== "both" 이면 본인 소유 파트의 gain만 사용
@@ -730,6 +730,8 @@ export function calculateTransferTax(
     transferGain,
     taxableGain,
     usedEstimatedAcquisition: usedEstimated,
+    swapApplied,
+    swapComparison,
     longTermHoldingDeduction,
     longTermHoldingRate,
     basicDeduction,

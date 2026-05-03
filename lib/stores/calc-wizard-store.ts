@@ -280,7 +280,13 @@ export function computeTransferSummary(
     0
   );
   const totalNecessaryExpense = formData.assets.reduce(
-    (acc, a) => acc + parseRaw(a.directExpenses),
+    (acc, a) => {
+      // 두 분리 필드(capitalExpenditure + transferExpense) 우선, 미입력 시 legacy directExpenses
+      const capExp = parseRaw(a.capitalExpenditure);
+      const trExp = parseRaw(a.transferExpense);
+      const splitTotal = capExp + trExp;
+      return acc + (splitTotal > 0 ? splitTotal : parseRaw(a.directExpenses));
+    },
     0
   );
   const estimatedTax =

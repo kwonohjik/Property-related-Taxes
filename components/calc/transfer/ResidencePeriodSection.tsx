@@ -86,7 +86,7 @@ export function ResidencePeriodSection({
           <div className="space-y-2">
             {residencePeriods.length === 0 && (
               <p className="text-xs text-violet-700">
-                구간이 없습니다. "+ 구간 추가" 로 첫 입주일·퇴거일을 입력하세요.
+                구간이 없습니다. &ldquo;+ 구간 추가&rdquo; 로 첫 입주일·퇴거일을 입력하세요.
               </p>
             )}
             {residencePeriods.map((p, idx) => {

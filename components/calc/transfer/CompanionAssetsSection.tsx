@@ -19,10 +19,12 @@ interface Props {
 export function CompanionAssetsSection({ assets, bundledSaleMode, onChange, singleMode, transferDate }: Props) {
   // 연속된 onChange 호출에서 stale closure를 피하기 위해
   // 최신 assets를 ref로 동기 추적 (렌더링 중 동기화)
+  /* eslint-disable react-hooks/refs -- props→ref 동기 sync. useEffect로 옮기면 stale closure 발생 */
   const assetsRef = useRef(assets);
   if (assetsRef.current !== assets) {
     assetsRef.current = assets;
   }
+  /* eslint-enable react-hooks/refs */
 
   function commitAssets(next: AssetForm[]) {
     assetsRef.current = next;

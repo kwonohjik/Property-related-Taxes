@@ -4,6 +4,8 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { AuthMigrationListener } from "@/components/auth/AuthMigrationListener";
 import { SelectOnFocusProvider } from "@/components/providers/SelectOnFocusProvider";
+import { HeaderProfileBadge } from "@/components/layout/HeaderProfileBadge";
+import Link from "next/link";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -63,7 +65,16 @@ export default function RootLayout({
             <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur">
               <div className="mx-auto flex h-14 max-w-4xl items-center justify-between px-4">
                 <span className="font-semibold text-sm">한국 부동산 세금 계산기</span>
-                <ThemeToggle />
+                <div className="flex items-center gap-3">
+                  <Link
+                    href="/history"
+                    className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    계산 이력
+                  </Link>
+                  <HeaderProfileBadge />
+                  <ThemeToggle />
+                </div>
               </div>
             </header>
             {children}

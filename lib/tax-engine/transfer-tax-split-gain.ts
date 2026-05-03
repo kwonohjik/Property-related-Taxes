@@ -125,9 +125,47 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
   const landAppraisalDed = usesEstOrAppraisal ? applyRate(landStdAtAcq, 0.03) : 0;
   const buildingAppraisalDed = usesEstOrAppraisal ? applyRate(buildingStdAtAcq, 0.03) : 0;
 
-  // ⑤ 양도차익
-  const landGain = landTransferPrice - landAcqPrice - landDirectExp - landAppraisalDed;
-  const buildingGain = buildingTransferPrice - buildingAcqPrice - buildingDirectExp - buildingAppraisalDed;
+  // ⑤ §97② 단서 swap (환산/감정가액 모드 + 자산별 직접경비 명시 입력 시)
+  // 본문: acqPrice(환산) + appraisalDed(개산공제). directExp는 차감 안 함.
+  // 단서: directExp > (acqPrice + appraisalDed) → directExp로 swap.
+  // 자산 단위 독립 적용 — 토지/건물 각각 비교.
+  function applyAssetSwap(
+    acqPrice: number,
+    directExp: number,
+    appraisalDed: number,
+    explicitDirect: boolean,
+  ): { effectiveDirect: number; effectiveAppraisalDed: number; swapApplied: boolean } {
+    if (!usesEstOrAppraisal) {
+      // 실가 모드 — directExp 그대로 차감, 개산공제 없음
+      return { effectiveDirect: directExp, effectiveAppraisalDed: 0, swapApplied: false };
+    }
+    if (!explicitDirect) {
+      // 자산별 명시 입력 없음 → 본문만, swap 불가
+      return { effectiveDirect: 0, effectiveAppraisalDed: appraisalDed, swapApplied: false };
+    }
+    const estimatedSide = acqPrice + appraisalDed;
+    if (directExp > estimatedSide) {
+      // 단서 — directExp로 swap (개산공제 미적용)
+      return { effectiveDirect: directExp, effectiveAppraisalDed: 0, swapApplied: true };
+    }
+    // 본문 — 개산공제만, directExp 차감 안 함
+    return { effectiveDirect: 0, effectiveAppraisalDed: appraisalDed, swapApplied: false };
+  }
+  const landSwap = applyAssetSwap(
+    landAcqPrice,
+    landDirectExp,
+    landAppraisalDed,
+    input.landDirectExpenses !== undefined,
+  );
+  const buildingSwap = applyAssetSwap(
+    buildingAcqPrice,
+    buildingDirectExp,
+    buildingAppraisalDed,
+    input.buildingDirectExpenses !== undefined,
+  );
+
+  const landGain = landTransferPrice - landAcqPrice - landSwap.effectiveDirect - landSwap.effectiveAppraisalDed;
+  const buildingGain = buildingTransferPrice - buildingAcqPrice - buildingSwap.effectiveDirect - buildingSwap.effectiveAppraisalDed;
 
   // ⑥ 보유연수 (민법 초일불산입)
   const { years: landHoldingYears } = calculateHoldingPeriod(
@@ -142,25 +180,27 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
   const landPart: SplitPartResult = {
     transferPrice: landTransferPrice,
     acquisitionPrice: landAcqPrice,
-    directExpenses: landDirectExp,
-    appraisalDeduction: landAppraisalDed,
+    directExpenses: landSwap.effectiveDirect,
+    appraisalDeduction: landSwap.effectiveAppraisalDed,
     stdPriceAtAcq: usesEstOrAppraisal ? landStdAtAcq : undefined,
     gain: landGain,
     holdingYears: landHoldingYears,
     longTermRate: 0,
     longTermDeduction: 0,
+    swapApplied: landSwap.swapApplied,
   };
 
   const buildingPart: SplitPartResult = {
     transferPrice: buildingTransferPrice,
     acquisitionPrice: buildingAcqPrice,
-    directExpenses: buildingDirectExp,
-    appraisalDeduction: buildingAppraisalDed,
+    directExpenses: buildingSwap.effectiveDirect,
+    appraisalDeduction: buildingSwap.effectiveAppraisalDed,
     stdPriceAtAcq: usesEstOrAppraisal ? buildingStdAtAcq : undefined,
     gain: buildingGain,
     holdingYears: buildingHoldingYears,
     longTermRate: 0,
     longTermDeduction: 0,
+    swapApplied: buildingSwap.swapApplied,
   };
 
   return {

@@ -53,11 +53,13 @@ export function CurrencyInput({
   const inputRef = useRef<HTMLInputElement>(null);
 
   // 외부 value가 변경되면 로컬 raw 동기화 (단, 포커스 중에는 사용자 입력 보호)
+  /* eslint-disable react-hooks/set-state-in-effect -- 의도된 외부→로컬 sync. 포커스 가드로 cascading render 방지 */
   useEffect(() => {
     if (!focused) {
       setLocalRaw(toRawDigits(value));
     }
   }, [value, focused]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // 포커스 중에는 콤마 없이 raw 숫자만, 블러 시에는 천단위 콤마
   const displayValue = focused

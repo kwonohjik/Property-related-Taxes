@@ -106,3 +106,23 @@ const reductionAmount = Math.min(best.amount, calculatedTax);
 - **결과**: `PreHousingDisclosureResult.fourPartApportionment` 에 4부분(주택분토지·주택건물·상가분토지·상가건물) 시점별 기준시가·양도가액·환산취득가·개산공제·양도차익 분리값. 미활성 시 undefined.
 - **mixed-use 어댑터**: `buildHousingGainSplitFromFourPart` / `buildCommercialGainSplitFromFourPart` 가 4부분 결과를 HousingGainSplit/CommercialGainSplit 으로 변환. `housingPart.estimatedAcquisitionPrice`는 `fp.housingAcqPriceSum`(D11+E11) 사용 — 전체 환산취득가(C11) 아님.
 - **period-split 자동 비활성화**: 4부분 활성 시 `applyUsagePeriodSplit` 건너뜀 (엑셀 단일 LTHD 적용).
+
+## 양도세 자산-수준 통합 (2026-04-25)
+
+취득 정보 13필드가 모두 `AssetForm` 자산-수준에 있음. 폼-전역 `acquisitionMethod`·`appraisalValue`·`isSelfBuilt` deprecated.
+
+- **acquisitionMethod 도출**: `isAppraisalAcquisition` / `useEstimatedAcquisition` 플래그에서 API 변환 시 파생 (`lib/calc/transfer-tax-api.ts`).
+- **감정가액 + 개산공제 자동 (§163⑥)**: `acquisitionMethod === "appraisal"` 시 `취득시 기준시가 × 3%` 자동 적용 (`calcTransferGain`).
+- **토지/건물 분리 양도차익 (§166⑥)**: `hasSeperateLandAcquisitionDate === true` 시 `transfer-tax-split-gain.ts` 활성. PHD 취득시 참조일은 **`landAcquisitionDate`** (건물 취득일 아님).
+
+## §97② 2호 단서 swap (2026-05-03)
+
+환산취득가액·감정가액 모드에서 **(환산 + 개산공제) < (자본적지출 + 양도비)** 이면 후자를 필요경비로 swap.
+
+- **입력**: `TransferTaxInput.capitalExpenditure?` + `transferExpense?`. 두 필드 모두 undefined이면 swap 비활성 (legacy `expenses` 동작).
+- **환산 모드 본문**: `expenses = 개산공제만` (legacy `expenses` 필드 차감 안 함 — 이전 버그 수정됨).
+- **swap 비교**: `swapEligible && directSide > estimatedSide` → `expensesApplied = directSide`.
+- **결과**: `TransferTaxResult.swapApplied?` + `swapComparison?` 노출.
+- **다필지 모드**: `ParcelInput.capitalExpenditure?`/`transferExpense?` — 필지별 독립 swap.
+- **토지/건물 분리**: `SplitPartResult.swapApplied?` — 자산 단위 독립 swap (`landDirectExpenses`/`buildingDirectExpenses` 명시 입력 시만).
+- **헬퍼**: `calcNecessaryExpense()` (`transfer-tax-helpers.ts`) 내부 — 직접 호출 금지.

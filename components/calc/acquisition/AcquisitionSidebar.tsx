@@ -223,6 +223,7 @@ interface Props {
 export function AcquisitionSidebar({ form, currentStep, onStepClick }: Props) {
   const isDeemed = isDeemedAcquisitionCause(form.acquisitionCause);
 
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization -- 명시 deps로 selector 안정화. Compiler 자동 메모와 별도로 유지
   const summary = useMemo(() => computeAcquisitionSummary(form), [
     form.reportedPrice,
     form.marketValue,

@@ -1,7 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
 
-const PROTECTED_ROUTES = ["/history", "/api/history", "/api/pdf"];
+// 로컬 단계: /history는 IndexedDB 기반이므로 인증 불필요 — 보호 라우트에서 제외
+// 향후 Supabase 도입 시 "/history"를 다시 추가할 것
+const PROTECTED_ROUTES = ["/api/history", "/api/pdf"];
 const AUTH_ROUTES = ["/auth/login", "/auth/signup"];
 
 export async function proxy(request: NextRequest) {

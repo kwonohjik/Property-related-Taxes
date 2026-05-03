@@ -221,7 +221,7 @@ describe("MP-7: 기본공제 분리 원칙", () => {
     const result = calculateMultiParcelTransfer(input);
     // @ts-expect-error — basicDeduction 필드가 없어야 함
     expect(result.basicDeduction).toBeUndefined();
-    // @ts-expect-error
+    // @ts-expect-error — taxBase 필드가 없어야 함 (parcels 배열에 분산)
     expect(result.taxBase).toBeUndefined();
   });
 });

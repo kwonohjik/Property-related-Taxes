@@ -53,8 +53,16 @@ export interface TransferTaxInput {
   acquisitionPrice: number;
   /** 취득일 */
   acquisitionDate: Date;
-  /** 필요경비 */
+  /**
+   * 필요경비 (deprecated — 호환 유지).
+   * 신규 입력은 `capitalExpenditure` + `transferExpense` 분리 사용.
+   * 두 신규 필드 미입력 시 이 값을 자본+양도비 합으로 간주, §97② 단서 swap 비활성.
+   */
   expenses: number;
+  /** 자본적 지출액 (소득세법 §97① 2호 가목) — §97② 단서 swap 비교에 사용 */
+  capitalExpenditure?: number;
+  /** 양도비 (소득세법 §97① 2호 나목) — §97② 단서 swap 비교에 사용 */
+  transferExpense?: number;
   /** 환산취득가 사용 여부 */
   useEstimatedAcquisition: boolean;
   /** 취득시 기준시가 (환산취득가 사용 시 필수) */
@@ -341,6 +349,14 @@ export interface TransferTaxResult {
   taxableGain: number;
   /** 환산취득가 사용 여부 */
   usedEstimatedAcquisition: boolean;
+  /** §97② 단서 swap 발동 여부 (환산/감정가액 모드 + 자본+양도비 > 환산+개산공제) */
+  swapApplied?: boolean;
+  /** §97② 단서 swap 비교 (분리 입력 시만 표시) */
+  swapComparison?: {
+    estimatedSide: number;
+    directSide: number;
+    chosen: "estimated" | "direct";
+  };
   /** 장기보유특별공제액 */
   longTermHoldingDeduction: number;
   /** 장기보유특별공제율 */
@@ -711,6 +727,8 @@ export interface SplitPartResult {
   holdingYears: number;
   longTermRate: number;
   longTermDeduction: number;
+  /** §97② 단서 swap 발동 여부 (자산 단위) */
+  swapApplied?: boolean;
 }
 
 export interface SplitGainResult {

@@ -6,11 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **KoreanTaxCalc** — 한국 부동산 6대 세금 자동계산 웹 앱 (양도소득세·상속세·증여세·취득세·재산세·종합부동산세).
 
-**구현 상태**
-- ✅ **양도소득세**: 엔진·UI·API·테스트 완전 구현. 마법사 4단계, 자산-수준 취득정보 통합, 토지/건물 분리 양도차익(소령 §166⑥), §164⑤ 3-시점 환산.
-- 🚧 **취득세**: 엔진 구현 완료, UI 시니어 에이전트로 마법사·결과 화면 구현 진행 중 (`acquisition-tax-ui-senior`).
-- 🚧 **재산세·종합부동산세·상속세·증여세**: 엔진 구현 완료, UI 구현 예정 (`components/calc/property/` 대기).
-- ✨ **공용 입력 컴포넌트**: `FieldCard`·`SectionHeader`·`WizardSidebar`·`ToggleCard`·`RadioCardGroup`·`LandPriceLookupField` — 양도세 마법사 적용, 타 세목 점진 확장.
+구현 현황은 [`docs/00-pm/korean-tax-calc.roadmap.md`](docs/00-pm/korean-tax-calc.roadmap.md) 참조. 양도세만 엔진·UI·API·테스트 완전 구현됨. 취득세 이하 세목은 엔진 완료, UI 구현 대기.
 
 ## ⚠️ Next.js 16 주의사항
 
@@ -24,27 +20,30 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```bash
 npm run dev                   # 개발 서버 (Turbopack)
 npm run build                 # 프로덕션 빌드
+npm run typecheck             # tsc --noEmit
 npm run lint                  # ESLint
-npm test                      # vitest 전체 (90 파일 / 1,714 tests)
-npm run test:watch            # watch 모드
+npm run check:pre-pr          # typecheck + lint + test 일괄 (PR 전 수동 게이트)
+npm test                      # vitest 전체
 npx vitest run <path>         # 단일 파일/디렉터리
 npx vitest run -t "T-01"      # 이름 패턴
 npx shadcn@latest add <name>  # shadcn/ui 컴포넌트 추가
 
-# 데이터·법령 시딩·검증 (.env.local 필요)
+# 데이터·법령 (.env.local 필요)
 npm run seed:tax-rates        # Supabase tax_rates 시딩
 npm run verify:legal          # 법령 조문 상수 검증
 npm run verify:legal:refresh  # 캐시 무효화 후 재검증
 ```
 
+**자동 게이트**: husky pre-commit(lint-staged) + pre-push(typecheck + test) + GitHub Actions(typecheck + lint + test).
+
 ## Tech Stack
 
 - **Frontend**: Next.js 16 (App Router, React 19, Turbopack) + TypeScript strict
-- **UI**: shadcn/ui (BaseUI) + Tailwind CSS v4 + zustand (마법사 폼)
-- **Backend**: Next.js Route Handlers (계산 API) + Server Actions (`actions/calculations.ts`, 이력 CRUD)
+- **UI**: shadcn/ui (BaseUI) + Tailwind CSS v4 + zustand (마법사 폼 상태)
+- **Backend**: Next.js Route Handlers (계산 API) + Server Actions (`actions/calculations.ts`)
 - **Auth/DB**: Supabase (Auth + PostgreSQL) — `lib/supabase/`
-- **Observability**: Sentry (`sentry.{client,edge,server}.config.ts`) — 이슈 재현 시 `tax_type`·`request_id` 태그로 역추적
 - **Testing**: vitest + jsdom + @testing-library/react — `__tests__/tax-engine/`
+- **Observability**: Sentry — 이슈 재현 시 `tax_type`·`request_id` 태그로 역추적
 
 ## Architecture — 2-Layer Tax Engine
 
@@ -61,166 +60,149 @@ Layer 2: Pure Engine (lib/tax-engine/*.ts)
   → 단방향 의존만 허용: comprehensive → property (역방향 금지)
 ```
 
-세부는 [lib/tax-engine/CLAUDE.md](lib/tax-engine/CLAUDE.md) 참조.
+세부 파일 조직·의존 규칙·정수 연산은 [lib/tax-engine/CLAUDE.md](lib/tax-engine/CLAUDE.md) 참조.
 
 ## File Size Policy (강제)
 
-**모든 파일 800줄 이하**. PostToolUse hook이 초과 시 경고. 분할 패턴: orchestrator + helpers / types / sections.
+**모든 파일 800줄 이하**. PostToolUse hook이 초과 시 경고. 분할 패턴: orchestrator + helpers / types / sections. 위반 감지 시 즉시 분리 — 우회 금지.
 
-## Critical Design Decisions
+## 세금 엔진 규칙
 
-### 엔진 계산 원칙 (전 세목 공통)
+### 계산 원칙 (전 세목 공통)
 
-- **DB 기반 세율 관리**: `tax_rates` 테이블 jsonb. 세법 변경 시 배포 없이 업데이트. TaxRateMap key: `${tax_type}:${category}:${sub_category}`.
-- **정수 연산**: 모든 금액은 원(KRW, 정수). `lib/tax-engine/tax-utils.ts`의 `applyRate()` / `safeMultiply()` 사용. BigInt fallback for overflow.
-- **중간 절사**: 소수 세율 × 금액 곱셈 직후 반드시 `Math.floor()`. 지방소득세는 `applyRate()` (원 미만 절사 — 지방세법 §103의3, 천원 절사 규정 없음). `Math.round()` 절대 금지.
-- **감면 중복배제 (조특법 §127 ②)**: 동일 자산 복수 감면 시 납세자 유리 1건만 선택 (후보 배열 max 패턴).
-- **법령 조문 상수**: 문자열 리터럴 직접 사용 금지. `lib/tax-engine/legal-codes/` 의 `TRANSFER.*` / `NBL.*` / `ACQUISITION.*` 등 상수 사용.
+- **DB 기반 세율**: `tax_rates` 테이블 jsonb. 세법 변경 시 배포 없이 업데이트. TaxRateMap key: `${tax_type}:${category}:${sub_category}`.
+- **정수 연산**: 모든 금액은 원(KRW, 정수). `applyRate()` / `safeMultiply()` (`tax-utils.ts`). `Math.round()` 절대 금지.
+- **중간 절사**: 세율 × 금액 곱셈 직후 `Math.floor()`. 지방소득세는 원 미만 절사 (천원 절사 규정 없음).
+- **감면 중복배제 (조특법 §127②)**: 동일 자산 복수 감면 시 후보 배열 max 패턴.
+- **법령 조문 상수**: 문자열 리터럴 금지. `lib/tax-engine/legal-codes/` 의 `TRANSFER.*` / `ACQUISITION.*` 등 상수 사용.
 
-### 양도세 자산-수준 통합 (2026-04-25 이후)
+### API Date 직렬화 — `lib/api/date-coerce.ts` 필수
 
-- **취득 정보 13필드는 모두 `AssetForm` 자산-수준**: 폼-전역 `acquisitionMethod`·`appraisalValue`·`isSelfBuilt` deprecated. 다건 양도 시 자산별로 다른 산정방식·신축 입력 가능.
-- **감정가액 → 개산공제 자동 (소령 §163⑥)**: `isAppraisalAcquisition === true` 시 엔진이 `취득시 기준시가 × 3%` 개산공제 자동 적용 (`transfer-tax-helpers.ts` `calcTransferGain`).
-- **토지/건물 분리 양도차익 (소령 §166⑥·§168②)**: `hasSeperateLandAcquisitionDate === true` 시 `transfer-tax-split-gain.ts`가 토지·건물 각각 양도차익 계산. `landSplitMode === "actual"` 직접 입력, 미입력은 기준시가 비율로 자동 안분.
-- **개별주택가격 미공시 환산 (§164⑤·§166⑥·§163⑥)**: `usePreHousingDisclosure === true` 경로. `transfer-tax-pre-housing-disclosure.ts`의 3-시점(취득·최초공시·양도) 알고리즘으로 취득시 기준시가 역산. PHD의 "취득시" 참조일은 **`landAcquisitionDate`** (건물 취득일 아님).
+클라이언트 `new Date()`가 JSON 경유 후 string으로 도달 → `Date < string` 비교는 silent false. 신규 라우트·Date 필드는 반드시 헬퍼 사용:
 
-### 양도세 검용주택 PHD 분기 (2026-05-03 이후)
+```ts
+toDate(v, "fieldName")          // 필수 필드
+toOptionalDate(v)               // 옵션 필드
+coerceDates(obj, ["a", "b.c"]) // 선언형 bulk
+```
 
-- **일반 PHD** (`partialUsageChange` 미사용): 주택부수토지 단일 면적으로 §164⑤ 역산.
-- **Case A** (`house_to_commercial` AND `firstDisclosureDate < usageChangeDate`): **4부분 안분** 모드. 취득시·최초공시 시점에 건물 전체가 주택이었으므로 `fourPartApportionment`로 주택분토지·주택건물·상가분토지·상가건물 각각 안분. 사용자는 취득시·최초공시 시점에 주택건물/상가건물 기준시가 별도 입력 (홈택스 조회). 엑셀 사례 anchor 테스트(`mixed-use-phd-case-a-fourpart.test.ts`)로 검증.
-- **Case B** (`firstDisclosureDate >= usageChangeDate`): 최초공시 시점에 이미 검용. 시점별 주택부수토지 면적만 사용.
+`new Date(x)` 직접 호출 금지 (신규 코드 한정). 기존 코드 점진 마이그레이션.
 
-### 데이터·세션·통합
+### 설계 원칙 (UI 금지 사항)
 
-- **API 페이로드 Date 직렬화 주의**: 클라이언트가 `new Date()` 객체로 전달해도 JSON 직렬화 후 라우트 핸들러는 string으로 받음. 엔진 타입이 `Date`면 라우트에서 `new Date(...)` 명시 변환 필수. 누락 시 `Date < string` 비교는 silent false (조용한 버그). 예: `app/api/calc/transfer/route.ts` mixedAsset 생성 시 `partialUsageChange.usageChangeDate` 도 변환 필요.
-- **Vworld API 공시지가**: `/api/address/standard-price?propertyType=land&jibun=...&year=...`. PHD 3-시점 입력에서 시점별 조회 + 토지기준시가 자동 계산. 추천 연도는 `lib/utils/land-price-year.ts` `recommendLandPriceYear()` (5/31 이하=전년, 6/1 이후=당년).
-- **Auth**: 비로그인도 계산 가능. 로그인 시 이력·PDF. sessionStorage로 게스트 결과 보존 → 로그인 후 마이그레이션. zustand `result`는 partialize 제외 (민감정보 + Date 직렬화).
-- **Store legacy 마이그레이션**: `lib/stores/calc-wizard-migration.ts` (800줄 정책). `migrateLegacyForm` + `STEP_MIGRATION` (5→4단계 인덱스 매핑) 자동 적용.
-- **Supabase RPC**: `DISTINCT ON`은 Supabase JS 미지원 → DB Function `preload_tax_rates()`.
+- **자동 안분 fallback 금지**: 미입력 필드를 면적·시점비율로 자동 채우기 금지. 검증 오류로 차단 (예외: PHD §164⑤ 법령 명시 안분).
+- **useEffect → store 미러링 금지**: cross-field 자동 동기화는 onChange/useMemo. 무한 루프 유발.
+- **법령 정확성 최우선**: 납세자 유리/불리·절감 표현 금지. 결과는 중립 사실로만.
 
 ## UI 작성 원칙 (요약)
 
-상세는 [components/calc/CLAUDE.md](components/calc/CLAUDE.md). 요약:
+상세는 [components/calc/CLAUDE.md](components/calc/CLAUDE.md).
 
-- **계산 로직 순서 = UI 표시 순서**: 화면 배치는 엔진 변수 사용 순서. 모드 토글은 영향받는 필드 직전.
-- **사이드바 합계**: 이전 단계 입력값으로 계산 가능한 항목만. 0원 항목 제외.
-- **결과 뷰 산식**: 변수 약어(`P_F`, `floor()`) 금지. 한국어 풀어쓰기. 곱셈-후-내림은 결과값 단일 표기.
-- **분기·옵션 토글은 ToggleCard / RadioCardGroup 사용** — native checkbox·radio 신규 작성 금지. OFF 상태에도 tone 배경 항상 유지.
-- **공시지가 입력은 `LandPriceLookupField` 필수** — 기준연도+Vworld 조회+토지기준시가 자동 계산.
-- **면적 반올림 일관성 (UI 한정)**: 비율 파생 면적은 `parseFloat(toFixed(2))` 후 단가 곱셈. **엔진 내부 계산엔 미적용** (정밀도 우선).
-- **placeholder에 숫자 예시 금지 (전 세목 공통)**: 입력란 placeholder에 특정 숫자(계산 예제·Excel 예제 숫자 등)를 사용하지 않는다. 도움말이 필요한 경우 **한국어 설명**으로만 표시한다. 예) `"예: 91.78"` → `"양도시 주거용 합계 면적"`. 입력 형식 안내는 FieldCard의 `hint` prop에 한국어로 작성한다.
+- **계산 로직 순서 = UI 표시 순서**: 엔진 변수 사용 순서대로 배치. 모드 토글은 영향 필드 직전.
+- **사이드바 합계**: 이전 단계 입력으로 계산 가능한 항목만. 0원 제외.
+- **결과 뷰 산식**: 변수 약어·`floor()` 금지. 한국어 풀어쓰기.
+- **토글/라디오**: `ToggleCard` / `RadioCardGroup` 필수. native checkbox·radio 신규 작성 금지. OFF 상태에도 tone 배경 유지.
+- **공시지가 입력**: `LandPriceLookupField` 필수 (기준연도+Vworld+토지기준시가 자동).
+- **면적 반올림 (UI 한정)**: 비율 파생 면적은 `parseFloat(toFixed(2))` 후 단가 곱셈.
+- **placeholder 숫자 예시 금지**: 한국어 설명만. 입력 형식은 FieldCard `hint` prop에 작성.
 
-## Database (Supabase)
+## 인프라
+
+### Supabase / Database
 
 - **마이그레이션**: `supabase/migrations/` — `tax_rates`·`regulated_areas`·`standard_prices`·`users`·`calculations` DDL.
-- **시딩**: `supabase/seed/`·`supabase/seeds/` — `npm run seed:tax-rates`로 반영.
-- **환경변수**: `NEXT_PUBLIC_SUPABASE_URL`·`NEXT_PUBLIC_SUPABASE_ANON_KEY`·`SUPABASE_SERVICE_ROLE_KEY`. 미설정 시에도 `proxy.ts` graceful 통과 → Supabase 없이 로컬 개발 가능.
+- **시딩**: `npm run seed:tax-rates`.
+- **환경변수**: `NEXT_PUBLIC_SUPABASE_URL`·`NEXT_PUBLIC_SUPABASE_ANON_KEY`·`SUPABASE_SERVICE_ROLE_KEY`. 미설정 시에도 graceful 통과 → Supabase 없이 로컬 개발 가능.
+- **RPC**: `DISTINCT ON`은 Supabase JS 미지원 → DB Function `preload_tax_rates()`.
 
-## Route Protection (`proxy.ts`)
+### Route Protection (`proxy.ts`)
 
-Supabase 세션 기반:
-- 보호 라우트 (`/history`, `/api/history`, `/api/pdf`): 미인증 시 `/auth/login` 리다이렉트.
-- `/api/calc/*`, `/api/law/*`: 인증 불필요 (비로그인 계산·리서치 허용).
+- 보호: `/history`, `/api/history`, `/api/pdf` — 미인증 시 `/auth/login` 리다이렉트.
+- 미보호: `/api/calc/*`, `/api/law/*` — 비로그인 계산·법령 리서치 허용.
+
+### 로컬 데이터 저장소 (`lib/storage/`)
+
+IndexedDB(Dexie.js) 기반. 향후 Supabase 도입 시 데이터 폐기 후 새로 시작. Auth·세션·resultData 구조·전환 체크리스트는 [lib/storage/CLAUDE.md](lib/storage/CLAUDE.md) 참조.
+
+- **비로그인 계산 가능**: sessionStorage로 게스트 결과 보존 → 로그인 후 마이그레이션.
+- **zustand `result` partialize 제외**: 민감정보 + Date 직렬화 문제.
+- **Store legacy 마이그레이션**: `lib/stores/calc-wizard-migration.ts`. `migrateLegacyForm` + `STEP_MIGRATION` 자동 적용.
 
 ## 법령 리서치 (`/law`)
 
-korean-law-mcp 15개 도구를 법제처 Open API 직접 호출로 재현.
+법제처 Open API 직접 호출. 환경변수 `KOREAN_LAW_OC` 필요.
 
 - **API Routes**: `app/api/law/{search-law,law-text,search-decisions,decision-text,annexes,chain}/route.ts`
-- **UI 탭 4종**: 법령·조문 / 판례·결정례 / 별표·서식 / 리서치 체인
-- **환경변수**: `KOREAN_LAW_OC` (https://open.law.go.kr 발급). 캐시: `.legal-cache/` 7일 TTL.
-- **별칭**: `상증법 → 상속세및증여세법` 등 52종 (`lib/korean-law/aliases.ts`).
-- **클라이언트**: `lib/korean-law/client.ts`는 barrel — 실체는 `client-core` / `client-law` / `client-decisions-{search,text}` / `client-annexes` 5파일.
+- **클라이언트**: `lib/korean-law/client.ts` barrel — 실체는 `client-core` / `client-law` / `client-decisions-{search,text}` / `client-annexes` 5파일.
+- **별칭 52종**: `lib/korean-law/aliases.ts` (`상증법 → 상속세및증여세법` 등).
+- **캐시**: `.legal-cache/` 7일 TTL.
 
-## 서브 CLAUDE.md (도메인별 심화)
+## 새 기능 추가 워크플로 (강제)
 
-해당 디렉터리에서 작업 시 자동 컨텍스트 포함.
+### 에이전트 구성
 
-| 영역 | 파일 | 주제 |
-|---|---|---|
-| 세금 엔진 | [lib/tax-engine/CLAUDE.md](lib/tax-engine/CLAUDE.md) | 파일 조직, 신기능 워크플로, 정수 연산 디테일, 감면 중복배제 패턴 |
-| UI 마법사 | [components/calc/CLAUDE.md](components/calc/CLAUDE.md) | StepWizard, 공용 입력 컴포넌트, ToggleCard 가시성, 색상 카드, 8개 동기화 지점 |
-| 테스트 | [__tests__/tax-engine/CLAUDE.md](__tests__/tax-engine/CLAUDE.md) | Mock 공유 패턴, 시나리오 분할, PDF 예시값 anchor |
+| 역할 | 에이전트 |
+|---|---|
+| 양도세 엔진 | `transfer-tax-senior` + `multi-house-surcharge` / `one-house-tax` / `non-business-land` / `long-term-rental-tax` / `new-housing-tax` / `transfer-deduction` |
+| 취득세 엔진 | `acquisition-tax-senior` + `-base` / `-object` / `-rate` / `-standard-price` / `-surcharge` / `-qa` |
+| 재산세 엔진 | `property-tax-senior` + `-object` / `-comprehensive-aggregate` / `-separate-aggregate` / `-separate` / `-qa` |
+| 종부세 엔진 | `comprehensive-tax-senior` + `-house` / `-land-aggregate` / `-separate-land` / `-exclusion` / `-qa` |
+| 상속·증여 엔진 | `inheritance-gift-tax-senior` + `-deduction` / `-credit` / `-nontax-teacher` / `property-valuation` |
+| 양도세 UI | `transfer-tax-ui-senior` |
+| 취득세 UI | `acquisition-tax-ui-senior` |
+| 재산세 UI | `property-tax-ui-senior` |
+| 종부세 UI | `comprehensive-tax-ui-senior` |
+| 상속·증여 UI | `inheritance-gift-tax-ui-senior` |
+| QA 리더 | `tax-qa-lead` (6대 세목 병렬) |
+| UI-Engine 동기화 | `ui-engine-sync-checker` (read-only) |
 
-## Key Documents
+**핵심 규칙**: 엔진 시니어와 UI 시니어는 Plan 단계부터 병렬 참여. 한쪽만 단독 작업 종료 보고 금지.
 
-새 세금 계산기·특례 구현 시 반드시 해당 설계 문서를 먼저 읽을 것.
+### PDCA 5단계
+
+1. **PM/Plan**: 법령 근거 정리. 엔진+UI 시니어 **동시** 병렬 호출(Agent tool 단일 메시지). 신규 세목 UI 첫 진입 시 `docs/02-design/features/_new-tax-ui-kickoff.checklist.md` 복사·작성.
+2. **Design**: `docs/02-design/features/_template.engine.design.md` 복사로 시작. **케이스 인벤토리 표 필수(행≥1)** — 비어 있으면 Do 진입 금지. 사용자가 새 케이스 제시 시 코드보다 먼저 표에 행 추가 → anchor 약속.
+3. **Do**: 엔진 시니어 = 엔진 + anchor 테스트. UI 시니어 = 8개 동기화 지점 모두. 디자인 갱신 없이 우회 금지.
+4. **Check**: `ui-engine-sync-checker` + QA + 브라우저 수동 확인.
+5. **Act**: 회귀 후속 + 디자인 환류. PDCA 상태: `.bkit/state/pdca-status.json`.
+
+### Definition of Done — UI 통합 8개 동기화 지점
+
+엔진 input·result 타입 변경 시 아래 **8개 모두** 동기화되어야 완료.
+
+① 폼 상태 타입 → ② initial value → ③ normalize fallback → ④ API 변환 (`lib/calc/{tax-type}-api.ts`) → ⑤ UI 입력 위젯 → ⑥ 사이드바 합계 (해당 시) → ⑦ 결과 카드 산식 → ⑧ **validation** (`lib/calc/{tax-type}-validate.ts`)
+
+**⑧ 규칙**: API/UI fallback이 있는 필드는 validate에서도 같은 fallback 인식. UI 통과↔validate 차단 모순 금지.
+
+위치 상세는 [components/calc/CLAUDE.md](components/calc/CLAUDE.md).
+
+**자가 점검 (작업 완료 보고 전 필수)**:
+- [ ] 케이스 인벤토리 표 모든 행 ☑ (anchor 테스트 작성 완료)
+- [ ] 8개 동기화 지점 전부 반영됨
+- [ ] API fallback 추가 시 validation도 동기화 (⑧)
+- [ ] `npx tsc --noEmit` 0건
+- [ ] `npx vitest run __tests__/tax-engine/{tax-type}/` 통과
+- [ ] 브라우저 수동 확인 또는 "미수행" 명시
+
+## 참조 문서
+
+### 서브 CLAUDE.md (해당 디렉터리 작업 시 자동 로드)
+
+| 영역 | 파일 |
+|---|---|
+| 세금 엔진 (파일 조직·의존·정수 연산·양도세 특수 설계) | [lib/tax-engine/CLAUDE.md](lib/tax-engine/CLAUDE.md) |
+| UI 마법사 (StepWizard·공용 컴포넌트·8개 동기화 지점 상세) | [components/calc/CLAUDE.md](components/calc/CLAUDE.md) |
+| 테스트 (Mock 패턴·시나리오 분할·anchor) | [__tests__/tax-engine/CLAUDE.md](__tests__/tax-engine/CLAUDE.md) |
+| 로컬 저장소 (Dexie·resultData·Supabase 전환) | [lib/storage/CLAUDE.md](lib/storage/CLAUDE.md) |
+
+### 설계 문서 (신기능 구현 전 반드시 읽기)
 
 | 문서 | 경로 |
 |---|---|
 | PRD | `docs/00-pm/korean-tax-calc.prd.md` |
 | Roadmap | `docs/00-pm/korean-tax-calc.roadmap.md` |
 | Engine Design | `docs/02-design/features/korean-tax-calc-engine.design.md` |
-| DB Schema Design | `docs/02-design/features/korean-tax-calc-db-schema.design.md` |
+| DB Schema | `docs/02-design/features/korean-tax-calc-db-schema.design.md` |
 | UI Design | `docs/02-design/features/korean-tax-calc-ui.design.md` |
-| Auth Design | `docs/02-design/features/korean-tax-calc-auth.design.md` |
-
-## PDCA Workflow (bkit)
-
-PM → Plan → Design → Do → Check → Act. 상태는 `.bkit/state/pdca-status.json`. 구현 후 gap-detector로 설계 대비 일치도 검증 (목표 90%+).
-
-## Custom Agents
-
-`.claude/agents/`에 세목별·특례별 전문 에이전트. 새 기능 구현 시 해당 에이전트 활성화.
-
-### 엔진 시니어 (계산 로직 전담)
-
-| 세목 | 에이전트 |
-|---|---|
-| 양도소득세 | `transfer-tax-senior` + `multi-house-surcharge` / `one-house-tax` / `non-business-land` / `long-term-rental-tax` / `new-housing-tax` / `transfer-deduction` |
-| 취득세 | `acquisition-tax-senior` + `-base` / `-object` / `-rate` / `-standard-price` / `-surcharge` / `-qa` |
-| 재산세 | `property-tax-senior` + `-object` / `-comprehensive-aggregate` / `-separate-aggregate` / `-separate` / `-qa` |
-| 종합부동산세 | `comprehensive-tax-senior` + `-house` / `-land-aggregate` / `-separate-land` / `-exclusion` / `-qa` |
-| 상속·증여 | `inheritance-gift-tax-senior` + `-deduction` / `-credit` / `-nontax-teacher` / `property-valuation` |
-
-### UI 시니어 (UI 통합 전담, 2026-04-30 신설)
-
-엔진 시니어가 input/result 타입을 명세하면, 대응 UI 시니어가 마법사 폼·결과 카드·zustand·API 변환을 책임. **엔진 시니어가 UI 작업까지 직접 수행하지 않음** — UI 통합 누락 반복의 근본 원인.
-
-| 세목 | UI 에이전트 |
-|---|---|
-| 양도소득세 | `transfer-tax-ui-senior` |
-| 취득세 | `acquisition-tax-ui-senior` |
-| 재산세 | `property-tax-ui-senior` |
-| 종합부동산세 | `comprehensive-tax-ui-senior` |
-| 상속·증여 | `inheritance-gift-tax-ui-senior` |
-
-### QA·검증
-
-| 역할 | 에이전트 |
-|---|---|
-| QA 리더 | `tax-qa-lead` (6대 세목 QA 병렬 실행) |
-| UI-Engine 동기화 | `ui-engine-sync-checker` (read-only, 8개 동기화 지점 점검) |
-
-## 기능 추가 작업 흐름 (강제 — PDCA 5단계)
-
-엔진에 새 input/result 필드를 추가하는 모든 작업은 다음 순서로:
-
-1. **PM/Plan**: 사용자 요구·법령 근거 정리. **엔진 + UI 시니어 동시 참여**로 시나리오·UI 노출 사전 검토.
-2. **Design**: 분리 패턴 권장 — `{feature}.engine.design.md` (엔진 시니어, 계산·타입·테스트) + `{feature}.ui.design.md` (UI 시니어, 8개 동기화 지점 사전 명세). 단일 패턴: `{feature}.design.md`에 "엔진 명세" + "UI 통합 명세" 섹션.
-3. **Do**: 디자인 그대로 구현. 엔진 시니어 = 엔진 + 엔진 테스트, UI 시니어 = 7개 지점 모두. 누락 발견 시 우회 금지 — 디자인 갱신 후 구현.
-4. **Check**: `ui-engine-sync-checker` (read-only) + QA 에이전트 + 사용자 수동 확인 (브라우저).
-5. **Act**: 회귀 후속 + 디자인 환류.
-
-엔진 시니어 단독 작업 종료 보고 금지. UI 통합 미완성·디자인 미갱신 시 작업 미완료.
-
-## Definition of Done — UI 통합 8개 동기화 지점
-
-엔진 input·result 타입 변경 시 다음 8개 지점이 **모두 동기화**되어야 완료. 위치 상세는 [components/calc/CLAUDE.md](components/calc/CLAUDE.md).
-
-① 폼 상태 타입 → ② initial value → ③ normalize fallback → ④ API 변환 (`lib/calc/{tax-type}-api.ts`) → ⑤ UI 입력 위젯 → ⑥ 사이드바 합계 (해당 시) → ⑦ 결과 카드 산식·표시 → ⑧ **validation** (`lib/calc/{tax-type}-validate.ts`).
-
-**⑧ Validation 강제 규칙 (2026-05-01 추가)**: API/UI fallback이 있는 필드는 validation 단계에서도 같은 fallback을 인식해야 함. 예) `mixedAcqLandPricePerSqm`이 비었어도 `phdLandPricePerSqmAtAcq`로 fallback되는 경우, validate에서는 두 필드 중 하나라도 충족하면 통과해야 함. UI/API는 통과하는데 validate가 차단하는 모순 방지.
-
-**자가 점검 (작업 완료 보고 전 필수)**:
-
-- [ ] 디자인 문서에 8개 지점 사전 명세 작성됨
-- [ ] 엔진 input 타입의 모든 필드가 폼 타입에 매핑됨
-- [ ] 새 필드 모두 initial · normalize · API 변환에 등록됨
-- [ ] 입력 위젯 배치 (UI 순서 = 엔진 계산 로직 순서)
-- [ ] 새 결과 필드 모두 결과 화면 노출 (산식 + 숫자 라벨)
-- [ ] **API에 fallback 추가 시 validation에도 같은 fallback 인식** (⑧)
-- [ ] `npx tsc --noEmit` 오류 0건
-- [ ] `npx vitest run __tests__/tax-engine/{tax-type}/` 통과
-- [ ] 브라우저 수동 확인 또는 "수동 확인 미수행" 명시
-- [ ] (권장) `ui-engine-sync-checker` 호출
+| 신규 기능 설계 템플릿 | `docs/02-design/features/_template.engine.design.md` |
+| 신규 세목 UI 킥오프 체크리스트 | `docs/02-design/features/_new-tax-ui-kickoff.checklist.md` |

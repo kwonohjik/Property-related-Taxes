@@ -81,7 +81,7 @@ export function StandardRateSection() {
       </div>
 
       <div className="rounded-md bg-blue-50/60 border border-blue-200 p-3 text-xs text-blue-800">
-        <strong>중과기준세율</strong>: 지방세법 §13의2의 "중과기준세율"은 <strong>2%</strong>입니다.
+        <strong>중과기준세율</strong>: 지방세법 §13의2의 &ldquo;중과기준세율&rdquo;은 <strong>2%</strong>입니다.
         다주택 중과는 §11①7나(4%)를 표준세율로 하여 산정.
       </div>
     </section>
