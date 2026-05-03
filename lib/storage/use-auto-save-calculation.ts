@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { calculationRepository } from "./calculation-repository";
+import { clientRepository } from "./client-repository";
 import { generateTitle } from "./title-generator";
 import type { LocalTaxType } from "./types";
 
@@ -56,7 +57,10 @@ export function useAutoSaveCalculation({
       sessionStorage.removeItem(EDITING_KEY);
       calculationRepository
         .update(editingId, { taxType, title, inputData, resultData, taxLawVersion })
-        .then(() => setSavedId(editingId))
+        .then(() => {
+          setSavedId(editingId);
+          if (clientId) clientRepository.touch(clientId);
+        })
         .catch((err) => {
           savedRef.current = false;
           setError(err instanceof Error ? err.message : "저장 실패");
@@ -66,13 +70,16 @@ export function useAutoSaveCalculation({
       const title = generateTitle(taxType, inputData, now);
       calculationRepository
         .save({ taxType, title, inputData, resultData, taxLawVersion, linkedCalculationId: null, clientId })
-        .then((id) => setSavedId(id))
+        .then((id) => {
+          setSavedId(id);
+          if (clientId) clientRepository.touch(clientId);
+        })
         .catch((err) => {
           savedRef.current = false;
           setError(err instanceof Error ? err.message : "저장 실패");
         });
     }
-  }, [taxType, inputData, resultData, taxLawVersion]);
+  }, [taxType, inputData, resultData, taxLawVersion, clientId]);
 
   return { savedId, error };
 }

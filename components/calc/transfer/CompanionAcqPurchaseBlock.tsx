@@ -462,9 +462,10 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
         </div>
       </div>
 
-      {/* 개별주택가격 미공시 취득 토글 — 환산취득가 + 취득일 분리 모드 + housing·building 전용
+      {/* 개별주택가격 미공시 취득 토글 — 환산취득가 + housing 자산(또는 토지·건물 분리 모드)
+         자동 트리거 조건(housing || isMixedUse)과 일치시켜 모순 방지.
          검용주택 모드에서는 MixedUseStandardPriceInputs 내부의 PHD 토글을 사용하므로 여기서는 숨긴다. */}
-      {!isMixedUse && isSplit && props.useEstimatedAcquisition && props.asset && props.onAssetChange && (
+      {!isMixedUse && (props.assetKind === "housing" || isSplit) && props.useEstimatedAcquisition && props.asset && props.onAssetChange && (
         <ToggleCard
           tone="amber"
           size="sm"

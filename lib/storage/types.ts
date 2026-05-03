@@ -44,6 +44,8 @@ export interface Client {
   phone: string | null;
   email: string | null;
   memo: string | null;
+  /** 마지막 계산 저장 시 갱신 — 최근사용 정렬 기준. null = 미사용 */
+  lastUsedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }

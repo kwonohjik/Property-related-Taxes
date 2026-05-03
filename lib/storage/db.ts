@@ -26,7 +26,6 @@ class LocalTaxDB extends Dexie {
     });
 
     // v2: clients 테이블 추가 + calculations에 clientId 인덱스 추가
-    // UserProfile에 mode 필드 추가 (기존 레코드: undefined → upsertProfile 시 "taxpayer" 기본값 적용)
     this.version(2)
       .stores({
         userProfile: "id, updatedAt",
@@ -40,6 +39,23 @@ class LocalTaxDB extends Dexie {
           .toCollection()
           .modify((r) => {
             if (r.clientId === undefined) r.clientId = null;
+          })
+      );
+
+    // v3: clients에 lastUsedAt 필드 + 인덱스 추가 (최근사용 정렬)
+    this.version(3)
+      .stores({
+        userProfile: "id, updatedAt",
+        calculations:
+          "id, userId, taxType, createdAt, [userId+createdAt], [userId+taxType+createdAt], [userId+linkedCalculationId], [userId+clientId+createdAt]",
+        clients: "id, userId, name, lastUsedAt, [userId+name], [userId+createdAt], [userId+lastUsedAt]",
+      })
+      .upgrade((tx) =>
+        tx
+          .table("clients")
+          .toCollection()
+          .modify((c) => {
+            if (c.lastUsedAt === undefined) c.lastUsedAt = null;
           })
       );
   }
