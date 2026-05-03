@@ -117,7 +117,7 @@ export function evaluateApartment(item: EstateItem): PropertyValuationResult {
     warnings.push("공동주택 기준시가 보충적 평가 — 실거래가 확인 권장");
   }
   if (depositDeduction > 0) {
-    warnings.push(`임대보증금 ${depositDeduction.toLocaleString()}원 차감 적용`);
+    warnings.push(`임대보증금 ${depositDeduction.toLocaleString()} 차감 적용`);
   }
 
   return {

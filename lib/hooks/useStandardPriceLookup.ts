@@ -91,7 +91,7 @@ export function useStandardPriceLookup(defaultPropertyType = "housing") {
         const d = effectiveDate;
         const pubDate = `${d.slice(0, 4)}.${parseInt(d.slice(4, 6), 10)}.${parseInt(d.slice(6, 8), 10)}.`;
         setAnnouncedLabel(`${typeName} 공시일 : ${pubDate}`);
-        setMsg({ text: `${data.message ?? "조회 성공"}: ${price.toLocaleString()}원`, kind: "ok" });
+        setMsg({ text: `${data.message ?? "조회 성공"}: ${price.toLocaleString()}`, kind: "ok" });
         return price;
       }
 

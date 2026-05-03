@@ -179,12 +179,12 @@ export function calculateFilingPenalty(
   steps.push({
     label: "납부세액 (가산세 기준)",
     formula: [
-      `결정세액 ${input.determinedTax.toLocaleString()}원`,
-      input.reductionAmount   > 0 ? `− 감면 ${input.reductionAmount.toLocaleString()}원` : null,
-      input.priorPaidTax      > 0 ? `− 기납부 ${input.priorPaidTax.toLocaleString()}원` : null,
-      input.originalFiledTax  > 0 ? `− 당초신고 ${input.originalFiledTax.toLocaleString()}원` : null,
-      input.interestSurcharge > 0 ? `− 이자상당액 ${input.interestSurcharge.toLocaleString()}원` : null,
-      input.excessRefundAmount > 0 ? `+ 초과환급 ${input.excessRefundAmount.toLocaleString()}원` : null,
+      `결정세액 ${input.determinedTax.toLocaleString()}`,
+      input.reductionAmount   > 0 ? `− 감면 ${input.reductionAmount.toLocaleString()}` : null,
+      input.priorPaidTax      > 0 ? `− 기납부 ${input.priorPaidTax.toLocaleString()}` : null,
+      input.originalFiledTax  > 0 ? `− 당초신고 ${input.originalFiledTax.toLocaleString()}` : null,
+      input.interestSurcharge > 0 ? `− 이자상당액 ${input.interestSurcharge.toLocaleString()}` : null,
+      input.excessRefundAmount > 0 ? `+ 초과환급 ${input.excessRefundAmount.toLocaleString()}` : null,
     ].filter(Boolean).join(" "),
     amount: penaltyBase,
     legalBasis: PENALTY.ADDENDUM_2015,
@@ -223,7 +223,7 @@ export function calculateFilingPenalty(
 
   steps.push({
     label: "신고불성실가산세",
-    formula: `납부세액 ${penaltyBase.toLocaleString()}원 × ${rateLabel}`,
+    formula: `납부세액 ${penaltyBase.toLocaleString()} × ${rateLabel}`,
     amount: filingPenalty,
     legalBasis,
   });
@@ -281,7 +281,7 @@ export function calculateDelayedPaymentPenalty(
 
   steps.push({
     label: "지연납부가산세",
-    formula: `미납세액 ${input.unpaidTax.toLocaleString()}원 × ${elapsedDays}일 × ${rateLabel}`,
+    formula: `미납세액 ${input.unpaidTax.toLocaleString()} × ${elapsedDays}일 × ${rateLabel}`,
     amount: delayedPaymentPenalty,
     legalBasis: PENALTY.DAILY_RATE,
   });

@@ -275,7 +275,7 @@ export function calculatePre1990LandValuation(
     `${appliedDenominator.toLocaleString()}` +
     (denominatorCap1Applied ? " [분모 capping: min(평균, 현재)]" : "") +
     (ratioCap2Applied ? " [비율 100% capping]" : "") +
-    ` = ${pricePerSqmAtAcquisition.toLocaleString()}원/㎡ → 기준시가 ${standardPriceAtAcquisition.toLocaleString()}원`;
+    ` = ${pricePerSqmAtAcquisition.toLocaleString()}/㎡ → 기준시가 ${standardPriceAtAcquisition.toLocaleString()}`;
 
   const breakdown: Pre1990LandValuationBreakdown = {
     gradeValueAtAcquisition,

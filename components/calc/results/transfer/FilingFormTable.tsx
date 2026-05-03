@@ -179,6 +179,13 @@ function buildRows(
   const mu = result.mixedUseDetail;
   const sp = result.splitDetail;
 
+  // 거주 구간 (interval 모드 시): 첫 입주일 + 최종 퇴거일 도출
+  const periods = primary?.residenceInputMode === "interval" ? primary.residencePeriods ?? [] : [];
+  const firstMoveIn = periods.length > 0 ? periods[0].moveInDate : "";
+  const lastMoveOut = periods.length > 0
+    ? (periods[periods.length - 1].moveOutDate || transferDate)
+    : "";
+
   // ── 열별 양도가액·취득가액·필요경비·양도차익 추출 ──
   const v: Record<string, Record<ColumnKey, number | string | null>> = {};
 
@@ -199,13 +206,19 @@ function buildRows(
     "total",
     holdingPeriodFromDates(acquisitionDate, transferDate),
   );
-  setStr("moveOut", "total", "-");
-  setStr("moveIn", "total", "-");
-  setStr(
-    "residencePeriod",
-    "total",
-    fmtPeriod(Number(formData?.residencePeriodMonths || 0)),
-  );
+  // 거주 정보: interval 모드면 자산 데이터, 아니면 form-global/asset direct
+  const residenceMonthsTotal = (() => {
+    if (primary?.residenceInputMode === "interval" && periods.length > 0) {
+      return periods.reduce((sum, p) => {
+        const end = p.moveOutDate || transferDate;
+        return sum + holdingMonthsFromDates(p.moveInDate, end);
+      }, 0);
+    }
+    return parseInt(primary?.residencePeriodMonthsAsset || formData?.residencePeriodMonths || "0") || 0;
+  })();
+  setStr("moveOut", "total", lastMoveOut ? fmtDate(lastMoveOut) : "-");
+  setStr("moveIn", "total", firstMoveIn ? fmtDate(firstMoveIn) : "-");
+  setStr("residencePeriod", "total", fmtPeriod(residenceMonthsTotal));
 
   // 모드별 분할 열 채우기
   if (mode === "fourpart" && mu) {
@@ -227,12 +240,12 @@ function buildRows(
     for (const c of ["housingLand", "housingBuilding", "commercialLand", "commercialBuilding"]) {
       setStr("holdingPeriod", c, hold);
     }
-    setStr("moveOut", "housingLand", fmtDate(transferDate));
-    setStr("moveOut", "housingBuilding", fmtDate(transferDate));
-    setStr("moveIn", "housingLand", fmtDate(acquisitionDate));
-    setStr("moveIn", "housingBuilding", fmtDate(acquisitionDate));
-    setStr("residencePeriod", "housingLand", hold);
-    setStr("residencePeriod", "housingBuilding", hold);
+    setStr("moveOut", "housingLand", lastMoveOut ? fmtDate(lastMoveOut) : "-");
+    setStr("moveOut", "housingBuilding", lastMoveOut ? fmtDate(lastMoveOut) : "-");
+    setStr("moveIn", "housingLand", firstMoveIn ? fmtDate(firstMoveIn) : "-");
+    setStr("moveIn", "housingBuilding", firstMoveIn ? fmtDate(firstMoveIn) : "-");
+    setStr("residencePeriod", "housingLand", fmtPeriod(residenceMonthsTotal));
+    setStr("residencePeriod", "housingBuilding", fmtPeriod(residenceMonthsTotal));
 
     fourPartFinancials(hp, cp, setNum);
   } else if (mode === "mixed-2col" && mu) {
@@ -243,9 +256,9 @@ function buildRows(
     const hold = holdingPeriodFromDates(acquisitionDate, transferDate);
     setStr("holdingPeriod", "housing", hold);
     setStr("holdingPeriod", "commercial", hold);
-    setStr("moveOut", "housing", fmtDate(transferDate));
-    setStr("moveIn", "housing", fmtDate(acquisitionDate));
-    setStr("residencePeriod", "housing", hold);
+    setStr("moveOut", "housing", lastMoveOut ? fmtDate(lastMoveOut) : "-");
+    setStr("moveIn", "housing", firstMoveIn ? fmtDate(firstMoveIn) : "-");
+    setStr("residencePeriod", "housing", fmtPeriod(residenceMonthsTotal));
     mixedTwoColFinancials(mu.housingPart, mu.commercialPart, setNum);
   } else if (mode === "split-2col" && sp) {
     setStr("transferDate", "land", fmtDate(transferDate));
@@ -265,11 +278,51 @@ function buildRows(
     splitTwoColFinancials(sp.land, sp.building, setNum);
   }
 
-  // 합계 열 재무 항목 — 결과 기반
-  const totalAcqPrice = totalTransferPrice - result.transferGain - totalExpenses;
+  // 합계 열 재무 항목 — 분할 모드는 분할 열 합산, 단일 모드는 결과 기반 역산
   setNum("transferPrice", "total", totalTransferPrice || null);
-  setNum("acquisitionPrice", "total", totalAcqPrice > 0 ? totalAcqPrice : null);
-  setNum("expenses", "total", totalExpenses || null);
+  if (mode === "fourpart" && mu) {
+    const hp = mu.housingPart;
+    const cp = mu.commercialPart;
+    setNum(
+      "acquisitionPrice",
+      "total",
+      hp.landAcqPrice + hp.buildingAcqPrice + cp.landAcqPrice + cp.buildingAcqPrice,
+    );
+    setNum(
+      "expenses",
+      "total",
+      hp.landAppraisalDed + hp.buildingAppraisalDed + cp.landAppraisalDed + cp.buildingAppraisalDed,
+    );
+  } else if (mode === "mixed-2col" && mu) {
+    setNum(
+      "acquisitionPrice",
+      "total",
+      mu.housingPart.estimatedAcquisitionPrice + mu.commercialPart.estimatedAcquisitionPrice,
+    );
+    setNum(
+      "expenses",
+      "total",
+      mu.housingPart.landAppraisalDed +
+        mu.housingPart.buildingAppraisalDed +
+        mu.commercialPart.landAppraisalDed +
+        mu.commercialPart.buildingAppraisalDed,
+    );
+  } else if (mode === "split-2col" && sp) {
+    setNum("acquisitionPrice", "total", sp.land.acquisitionPrice + sp.building.acquisitionPrice);
+    setNum(
+      "expenses",
+      "total",
+      sp.land.directExpenses +
+        sp.land.appraisalDeduction +
+        sp.building.directExpenses +
+        sp.building.appraisalDeduction,
+    );
+  } else {
+    // 단일 모드: 양도차익 역산
+    const totalAcqPrice = totalTransferPrice - result.transferGain - totalExpenses;
+    setNum("acquisitionPrice", "total", totalAcqPrice > 0 ? totalAcqPrice : null);
+    setNum("expenses", "total", totalExpenses || null);
+  }
   setNum("transferGain", "total", result.transferGain);
   setNum(
     "exemptGain",
@@ -281,7 +334,7 @@ function buildRows(
 
   // 보유/거주 장특 분할
   const holdingMs = holdingMonthsFromDates(acquisitionDate, transferDate);
-  const residenceMs = Number(formData?.residencePeriodMonths || 0);
+  const residenceMs = residenceMonthsTotal;
   const useTable2 = mu ? mu.housingPart.longTermDeductionTable === 2 : residenceMs >= 24;
 
   if (mode === "fourpart" && mu) {

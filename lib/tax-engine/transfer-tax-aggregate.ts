@@ -146,7 +146,7 @@ export function calculateTransferTaxAggregate(
 
   steps.push({
     label: "양도차손 통산 (§102② · 시행령 §167의2)",
-    formula: `그룹 내 통산 + 타군 pro-rata 안분 (잔여 차손 ${unusedLoss.toLocaleString()}원 소멸, 이월 불인정)`,
+    formula: `그룹 내 통산 + 타군 pro-rata 안분 (잔여 차손 ${unusedLoss.toLocaleString()} 소멸, 이월 불인정)`,
     amount: lossOffsetTable.reduce((s, r) => s + r.amount, 0),
     legalBasis: TRANSFER.LOSS_OFFSET,
   });
@@ -171,7 +171,7 @@ export function calculateTransferTaxAggregate(
 
   steps.push({
     label: "기본공제",
-    formula: `연 한도 ${annualLimit.toLocaleString()}원 - 기사용 ${input.annualBasicDeductionUsed.toLocaleString()}원 = ${totalBasicDeduction.toLocaleString()}원 (${input.basicDeductionAllocation ?? "MAX_BENEFIT"} 배분)`,
+    formula: `연 한도 ${annualLimit.toLocaleString()} - 기사용 ${input.annualBasicDeductionUsed.toLocaleString()} = ${totalBasicDeduction.toLocaleString()} (${input.basicDeductionAllocation ?? "MAX_BENEFIT"} 배분)`,
     amount: totalBasicDeduction,
     legalBasis: TRANSFER.BASIC_DEDUCTION,
   });
@@ -214,7 +214,7 @@ export function calculateTransferTaxAggregate(
 
   steps.push({
     label: "비교과세 (§104의2)",
-    formula: `세율군별 ${calculatedTaxByGroups.toLocaleString()}원 vs 전체누진 ${calculatedTaxByGeneral.toLocaleString()}원 → ${comparedTaxApplied === "none" ? "비교 불필요 (중과·단기 없음)" : `MAX = ${calculatedTax.toLocaleString()}원 (${comparedTaxApplied === "groups" ? "세율군별" : "전체누진"})`}`,
+    formula: `세율군별 ${calculatedTaxByGroups.toLocaleString()} vs 전체누진 ${calculatedTaxByGeneral.toLocaleString()} → ${comparedTaxApplied === "none" ? "비교 불필요 (중과·단기 없음)" : `MAX = ${calculatedTax.toLocaleString()} (${comparedTaxApplied === "groups" ? "세율군별" : "전체누진"})`}`,
     amount: calculatedTax,
     legalBasis: TRANSFER.COMPARATIVE_TAXATION,
   });
@@ -318,8 +318,8 @@ export function calculateTransferTaxAggregate(
     label: "감면세액 (합산 재계산)",
     formula:
       reducibleByType.size > 0
-        ? `유형별 재계산: ${[...reducibleByType.keys()].join(", ")} | 원시 ${(totalAggregatedReduction === 0 ? "0" : totalAggregatedReduction.toLocaleString())}원 + 레거시 ${legacyReductionAmount.toLocaleString()}원`
-        : `건별 단순합 ${legacyReductionAmount.toLocaleString()}원 (유형 미지정 감면만 존재)`,
+        ? `유형별 재계산: ${[...reducibleByType.keys()].join(", ")} | 원시 ${totalAggregatedReduction === 0 ? "0" : totalAggregatedReduction.toLocaleString()} + 레거시 ${legacyReductionAmount.toLocaleString()}`
+        : `건별 단순합 ${legacyReductionAmount.toLocaleString()} (유형 미지정 감면만 존재)`,
     amount: reductionAmount,
     legalBasis: TRANSFER.REDUCTION_ANNUAL_LIMIT,
   });
@@ -343,7 +343,7 @@ export function calculateTransferTaxAggregate(
 
   steps.push({
     label: "총 납부세액",
-    formula: `결정세액 ${determinedTaxBeforePenalty.toLocaleString()}원 + 가산세 ${penaltyTax.toLocaleString()}원 + 지방소득세 ${localIncomeTax.toLocaleString()}원`,
+    formula: `결정세액 ${determinedTaxBeforePenalty.toLocaleString()} + 가산세 ${penaltyTax.toLocaleString()} + 지방소득세 ${localIncomeTax.toLocaleString()}`,
     amount: totalTax,
   });
 

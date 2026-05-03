@@ -34,7 +34,7 @@ function CreditRow({ label, amount, lawRef, highlight }: CreditRowProps) {
         )}
       </div>
       <span className={`font-mono text-sm ${highlight ? "text-emerald-700 dark:text-emerald-300" : "text-blue-600 dark:text-blue-400"}`}>
-        - {amount.toLocaleString()}원
+        - {amount.toLocaleString()}
       </span>
     </div>
   );

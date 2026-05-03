@@ -86,7 +86,7 @@ function evaluateSingleExemption(
       const exemptRatio = limitM2 / claimedM2;
       exemptAmount = Math.floor(item.claimedAmount * exemptRatio);
       taxableOverflow = item.claimedAmount - exemptAmount;
-      warnings.push(`금양임야 면적 ${claimedM2}㎡ 중 ${limitM2}㎡(600평)만 비과세, 초과분 ${taxableOverflow.toLocaleString()}원 과세`);
+      warnings.push(`금양임야 면적 ${claimedM2}㎡ 중 ${limitM2}㎡(600평)만 비과세, 초과분 ${taxableOverflow.toLocaleString()} 과세`);
     } else {
       exemptAmount = item.claimedAmount;
     }
@@ -124,7 +124,7 @@ function evaluateSingleExemption(
         lawRef: EXEMPTION.PUBLIC_INTEREST,
         note: `초과분 ${taxableOverflow.toLocaleString()}원은 상속재산 합산 과세`,
       });
-      warnings.push(`공익법인 동족주식 5% 초과 보유 — 초과분 ${taxableOverflow.toLocaleString()}원 상속세 과세 (${EXEMPTION.INH_RELATED_STOCK})`);
+      warnings.push(`공익법인 동족주식 5% 초과 보유 — 초과분 ${taxableOverflow.toLocaleString()} 상속세 과세 (${EXEMPTION.INH_RELATED_STOCK})`);
     } else if (item.relatedStockExceeded) {
       // 초과 여부는 알지만 금액 미입력 시 경고만
       warnings.push(`공익법인 동족주식 5% 초과 보유 확인됨 — 초과분 금액 입력 필요 (${EXEMPTION.INH_RELATED_STOCK})`);
@@ -146,7 +146,7 @@ function evaluateSingleExemption(
     taxableOverflow = item.claimedAmount - exemptAmount;
 
     breakdown.push({
-      label: `장애인 신탁 한도 (5억 - 기사용 ${priorUsed.toLocaleString()}원 = 잔여 ${remaining.toLocaleString()}원)`,
+      label: `장애인 신탁 한도 (5억 - 기사용 ${priorUsed.toLocaleString()} = 잔여 ${remaining.toLocaleString()}`,
       amount: exemptAmount,
       lawRef: EXEMPTION.PUBLIC_INTEREST,
     });

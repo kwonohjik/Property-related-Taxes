@@ -19,7 +19,7 @@ function formatKRW(amount: number) {
   if (eok > 0 && man > 0) return `${eok}억 ${man}만원`;
   if (eok > 0) return `${eok}억원`;
   if (man > 0) return `${man}만원`;
-  return `${amount.toLocaleString()}원`;
+  return `${amount.toLocaleString()}`;
 }
 
 // ============================================================

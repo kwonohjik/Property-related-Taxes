@@ -198,8 +198,8 @@ function calcInstallmentTaxBase(
     const stdValue = input.standardValue ?? 0;
     if (stdValue > 0 && totalInstallment < Math.floor(stdValue * ACQUISITION_CONST.RELATED_PARTY_MIN_RATIO)) {
       warnings.push(
-        `특수관계인 간 연부취득으로, 합산금액(${totalInstallment.toLocaleString()}원)이 ` +
-        `시가표준액의 70%(${Math.floor(stdValue * ACQUISITION_CONST.RELATED_PARTY_MIN_RATIO).toLocaleString()}원)에 미달합니다. ` +
+        `특수관계인 간 연부취득으로, 합산금액(${totalInstallment.toLocaleString()}이 ` +
+        `시가표준액의 70%(${Math.floor(stdValue * ACQUISITION_CONST.RELATED_PARTY_MIN_RATIO).toLocaleString()}에 미달합니다. ` +
         `과세관청이 시가인정액으로 과세표준을 경정할 수 있습니다 (§10의2).`
       );
     }
@@ -209,8 +209,8 @@ function calcInstallmentTaxBase(
   const stdValue = input.standardValue ?? 0;
   if (!input.isRelatedParty && stdValue > 0 && totalInstallment < stdValue) {
     warnings.push(
-      `연부취득 합산금액(${totalInstallment.toLocaleString()}원)이 ` +
-      `시가표준액(${stdValue.toLocaleString()}원)보다 낮습니다.`
+      `연부취득 합산금액(${totalInstallment.toLocaleString()}이 ` +
+      `시가표준액(${stdValue.toLocaleString()}보다 낮습니다.`
     );
   }
 
@@ -241,7 +241,7 @@ function calcOnerousTaxBase(
   // 실거래가가 시가표준액보다 낮으면 경고 (과세관청이 시가표준액으로 경정 가능)
   if (input.reportedPrice < standardValue && standardValue > 0) {
     warnings.push(
-      `신고가액(${input.reportedPrice.toLocaleString()}원)이 시가표준액(${standardValue.toLocaleString()}원) 미만입니다. 과세관청이 시가표준액으로 경정할 수 있습니다.`
+      `신고가액(${input.reportedPrice.toLocaleString()}이 시가표준액(${standardValue.toLocaleString()} 미만입니다. 과세관청이 시가표준액으로 경정할 수 있습니다.`
     );
   }
 
@@ -275,7 +275,7 @@ function calcGratuitousTaxBase(
 
   if (!useStandardPrice && input.marketValue && input.marketValue > 0) {
     // 시가인정액(매매사례가액·감정가) 사용 — 지방세법 §10의3(무상취득 시가표준액 특례)
-    warnings.push(`무상취득 — 시가인정액(${input.marketValue.toLocaleString()}원) 적용`);
+    warnings.push(`무상취득 — 시가인정액(${input.marketValue.toLocaleString()} 적용`);
     return {
       method: "recognized_market",
       taxBase: input.marketValue,
@@ -333,7 +333,7 @@ function calcRelatedPartyTaxBase(
   if (input.reportedPrice >= lowerBound && input.reportedPrice <= upperBound) {
     // 정상 거래 → 신고가 사용
     warnings.push(
-      `특수관계인 거래 — 신고가(${input.reportedPrice.toLocaleString()}원)가 시가(${marketBase.toLocaleString()}원)의 70%~130% 이내(정상 범위). 신고가 사용.`
+      `특수관계인 거래 — 신고가(${input.reportedPrice.toLocaleString()}가 시가(${marketBase.toLocaleString()}의 70%~130% 이내(정상 범위). 신고가 사용.`
     );
     return {
       method: "actual_price",
@@ -346,7 +346,7 @@ function calcRelatedPartyTaxBase(
 
   // 비정상 거래 → 시가인정액 사용
   warnings.push(
-    `특수관계인 거래 — 신고가(${input.reportedPrice.toLocaleString()}원)가 시가의 70% 미만이거나 130% 초과. 시가인정액(${marketBase.toLocaleString()}원)을 과세표준으로 사용합니다.`
+    `특수관계인 거래 — 신고가(${input.reportedPrice.toLocaleString()}가 시가의 70% 미만이거나 130% 초과. 시가인정액(${marketBase.toLocaleString()}을 과세표준으로 사용합니다.`
   );
   return {
     method: "recognized_market",
@@ -431,12 +431,12 @@ function calcBurdenedGiftTaxBase(
   // 채무액이 취득가액 초과: 과세 실무상 채무액을 취득가액으로 간주 (경고 표시)
   if (encumbrance > totalValue && totalValue > 0) {
     warnings.push(
-      `채무액(${encumbrance.toLocaleString()}원)이 취득가액(${totalValue.toLocaleString()}원)을 초과합니다. 부담부증여 유상 부분을 취득가액 전액으로 처리합니다.`
+      `채무액(${encumbrance.toLocaleString()}이 취득가액(${totalValue.toLocaleString()}을 초과합니다. 부담부증여 유상 부분을 취득가액 전액으로 처리합니다.`
     );
   }
 
   warnings.push(
-    `부담부증여: 유상 부분(채무 ${encumbrance.toLocaleString()}원) → 매매세율 / 무상 부분(${Math.max(0, totalValue - encumbrance).toLocaleString()}원) → 증여세율`
+    `부담부증여: 유상 부분(채무 ${encumbrance.toLocaleString()}) → 매매세율 / 무상 부분(${Math.max(0, totalValue - encumbrance).toLocaleString()}) → 증여세율`
   );
 
   return {

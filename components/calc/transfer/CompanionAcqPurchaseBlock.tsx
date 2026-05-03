@@ -172,6 +172,22 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
     }
   }, [props.useEstimatedAcquisition, isLand, acqDatePre1990]);
 
+  // 건물 취득일 < 2005.4.29. (개별주택공시가격 최초 고시 이전) → usePreHousingDisclosure 자동 체크
+  // §164⑤ 3-시점 환산이 필요한 시점이므로 디폴트 ON.
+  const acqDatePrePHD = !!(props.acquisitionDate && props.acquisitionDate < "2005-04-29");
+  useEffect(() => {
+    if (
+      acqDatePrePHD &&
+      props.asset &&
+      props.onAssetChange &&
+      !props.asset.usePreHousingDisclosure &&
+      (props.asset.assetKind === "housing" || isMixedUse)
+    ) {
+      props.onAssetChange({ usePreHousingDisclosure: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [acqDatePrePHD]);
+
   // 취득시 기준시가 조회 단가 → pre1990PricePerSqm_1990 자동 입력
   function handleAcqPricePerSqmChange(v: string) {
     onAcqPricePerSqmChange(v);

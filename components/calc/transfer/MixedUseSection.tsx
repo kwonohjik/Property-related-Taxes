@@ -149,7 +149,7 @@ export function MixedUseExpandedPanel({
         jibun={jibun}
       />
 
-      {/* ④ 거주 정보 */}
+      {/* ④ 거주 기간 입력 */}
       <MixedUseResidencyInput asset={asset} onChange={onChange} sectionNum={4} />
 
       {/* ⑤ 수도권 여부 */}

@@ -100,7 +100,7 @@ export function calcGiftTaxCredit(
     breakdown.push({
       label: `${TAX_CREDIT.GIFT_TAX_CREDIT} ① 안분 한도 (증여세 과세표준 × 산출세액 ÷ 상속세 과세표준)`,
       amount: ratioLimit,
-      note: `사전증여 과세표준 ${totalGiftTaxBase.toLocaleString()}원 / 상속세 과세표준 ${denominator.toLocaleString()}원`,
+      note: `사전증여 과세표준 ${totalGiftTaxBase.toLocaleString()} / 상속세 과세표준 ${denominator.toLocaleString()}`,
     });
   }
 
@@ -108,7 +108,7 @@ export function calcGiftTaxCredit(
     breakdown.push({
       label: "안분 한도 적용 후 증여세액공제",
       amount: creditAmount,
-      note: `초과 ${(totalGiftTaxPaid - ratioLimit).toLocaleString()}원 불공제`,
+      note: `초과 ${(totalGiftTaxPaid - ratioLimit).toLocaleString()} 불공제`,
     });
   }
 
@@ -313,7 +313,7 @@ export function calcGiftTaxCredits(params: GiftTaxCreditParams): TaxCreditResult
       label: `기납부세액공제 (${GIFT_LAW.PRIOR_TAX_CREDIT} ①) — 합산 기증여 납부 증여세`,
       amount: -priorPaidCredit,
       lawRef: GIFT_LAW.PRIOR_TAX_CREDIT,
-      note: `과거 납부액 ${priorGiftTaxPaid.toLocaleString()}원, 산출세액 한도 적용`,
+      note: `과거 납부액 ${priorGiftTaxPaid.toLocaleString()}, 산출세액 한도 적용`,
     });
     appliedLaws.add(GIFT_LAW.PRIOR_TAX_CREDIT);
   }

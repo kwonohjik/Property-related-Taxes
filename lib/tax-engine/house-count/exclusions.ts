@@ -119,7 +119,7 @@ export function getExclusionReasonsForHouse(
       assetType: "house",
       reason,
       legalBasis: ACQUISITION.HOUSE_COUNT_LOW_VALUE,
-      description: `시가표준액 ${house.standardValue.toLocaleString()}원 ≤ ${limit.toLocaleString()}원(${house.isMetropolitan ? "수도권" : "비수도권"} 기준) → 주택 수 제외`,
+      description: `시가표준액 ${house.standardValue.toLocaleString()} ≤ ${limit.toLocaleString()}원(${house.isMetropolitan ? "수도권" : "비수도권"} 기준) → 주택 수 제외`,
     });
     return excluded; // 저가 기준 해당 시 다른 제외 사유와 중복 검사 불필요
   }
@@ -155,7 +155,7 @@ export function getExclusionReasonsForHouse(
       assetType: "house",
       reason: "farmland_rural",
       legalBasis: ACQUISITION.HOUSE_COUNT_FARMLAND_RURAL,
-      description: `농어촌 주택 (대지 ${ACQUISITION_CONST.FARMLAND_RURAL_MAX_LAND_AREA}㎡·연면적 ${ACQUISITION_CONST.FARMLAND_RURAL_MAX_FLOOR_AREA}㎡·${ACQUISITION_CONST.FARMLAND_RURAL_MAX_VALUE.toLocaleString()}원 이내) → 주택 수 제외`,
+      description: `농어촌 주택 (대지 ${ACQUISITION_CONST.FARMLAND_RURAL_MAX_LAND_AREA}㎡·연면적 ${ACQUISITION_CONST.FARMLAND_RURAL_MAX_FLOOR_AREA}㎡·${ACQUISITION_CONST.FARMLAND_RURAL_MAX_VALUE.toLocaleString()} 이내) → 주택 수 제외`,
     });
     return excluded;
   }
@@ -374,7 +374,7 @@ export function getExclusionReasonsForOffice(
       assetType: "office",
       reason: "low_value_office",
       legalBasis: ACQUISITION.HOUSE_COUNT_LOW_VALUE,
-      description: `주거형 오피스텔 시가표준액 ${office.standardValue.toLocaleString()}원 ≤ 1억원 → 주택 수 카운트 제외`,
+      description: `주거형 오피스텔 시가표준액 ${office.standardValue.toLocaleString()} ≤ 1억원 → 주택 수 카운트 제외`,
     });
     return excluded;
   }

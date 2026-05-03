@@ -54,6 +54,11 @@ export function migrateLegacyForm(
   primaryAsset.latitude = String(legacy.propertyLatitude ?? "");
 
   primaryAsset.isOneHousehold = Boolean(legacy.isOneHousehold ?? true);
+  // legacy form-global residencePeriodMonths → 자산-수준 direct 모드로 1회 이전
+  if (legacy.residencePeriodMonths !== undefined) {
+    primaryAsset.residencePeriodMonthsAsset = String(legacy.residencePeriodMonths ?? "0");
+    primaryAsset.residenceInputMode = "direct";
+  }
   primaryAsset.actualSalePrice = "";
   primaryAsset.acquisitionCause =
     (legacy.acquisitionCause as "purchase" | "inheritance" | "gift") ?? "purchase";

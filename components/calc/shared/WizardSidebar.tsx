@@ -26,7 +26,7 @@ export interface WizardSidebarProps {
 
 function renderValue(value: number | string | null, unit?: string): string {
   if (value === null) return "—";
-  if (typeof value === "number") return value.toLocaleString() + (unit ?? "원");
+  if (typeof value === "number") return value.toLocaleString() + (unit ?? "");
   return value;
 }
 

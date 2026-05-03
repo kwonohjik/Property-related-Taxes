@@ -467,7 +467,7 @@ export default function TransferTaxCalculator({
                   <p className="font-medium text-muted-foreground">신고불성실가산세</p>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">납부세액 기준</span>
-                    <span>{penaltyResult.filingPenalty.penaltyBase.toLocaleString()}원</span>
+                    <span>{penaltyResult.filingPenalty.penaltyBase.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">적용 세율</span>
@@ -475,7 +475,7 @@ export default function TransferTaxCalculator({
                   </div>
                   <div className="flex justify-between font-medium">
                     <span>신고불성실가산세</span>
-                    <span className="text-destructive">{penaltyResult.filingPenalty.filingPenalty.toLocaleString()}원</span>
+                    <span className="text-destructive">{penaltyResult.filingPenalty.filingPenalty.toLocaleString()}</span>
                   </div>
                 </div>
               )}
@@ -484,7 +484,7 @@ export default function TransferTaxCalculator({
                   <p className="font-medium text-muted-foreground">지연납부가산세</p>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">미납세액</span>
-                    <span>{penaltyResult.delayedPaymentPenalty.unpaidTax.toLocaleString()}원</span>
+                    <span>{penaltyResult.delayedPaymentPenalty.unpaidTax.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">경과일수</span>
@@ -496,13 +496,13 @@ export default function TransferTaxCalculator({
                   </div>
                   <div className="flex justify-between font-medium">
                     <span>지연납부가산세</span>
-                    <span className="text-destructive">{penaltyResult.delayedPaymentPenalty.delayedPaymentPenalty.toLocaleString()}원</span>
+                    <span className="text-destructive">{penaltyResult.delayedPaymentPenalty.delayedPaymentPenalty.toLocaleString()}</span>
                   </div>
                 </div>
               )}
               <div className="flex justify-between border-t border-border pt-2 text-base font-bold">
                 <span>가산세 합계</span>
-                <span className="text-destructive">{penaltyResult.totalPenalty.toLocaleString()}원</span>
+                <span className="text-destructive">{penaltyResult.totalPenalty.toLocaleString()}</span>
               </div>
             </div>
           )}

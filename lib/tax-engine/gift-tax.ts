@@ -121,7 +121,7 @@ export function calcGiftTax(
     label: "10년 합산 증여가액",
     amount: aggregatedGiftValue,
     lawRef: GIFT_LAW.TAXABLE_VALUE,
-    note: `금번 ${netCurrentGiftValue.toLocaleString()}원 + 기증여 ${priorGiftTotal.toLocaleString()}원`,
+    note: `금번 ${netCurrentGiftValue.toLocaleString()} + 기증여 ${priorGiftTotal.toLocaleString()}`,
   });
 
   // ─────────────────────────────────────────────
@@ -148,7 +148,7 @@ export function calcGiftTax(
     lawRef: GIFT_LAW.TAX_BASE,
     note:
       taxBase === 0 && rawTaxBase > 0
-        ? `50만원 미만(${rawTaxBase.toLocaleString()}원) — 과세 없음`
+        ? `50만원 미만(${rawTaxBase.toLocaleString()} — 과세 없음`
         : undefined,
   });
 

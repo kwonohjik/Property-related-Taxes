@@ -24,7 +24,10 @@ export function MixedUseResidencyInput({ asset, onChange, sectionNum }: Props) {
             {sectionNum}
           </span>
         )}
-        <p className="text-xs font-semibold text-violet-700">거주 정보</p>
+        <p className="text-xs font-semibold text-violet-700">거주 기간 입력</p>
+        <span className="ml-auto rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-medium text-violet-700">
+          1세대1주택 비과세·표2 공제 판정에 사용
+        </span>
       </div>
 
       <FieldCard

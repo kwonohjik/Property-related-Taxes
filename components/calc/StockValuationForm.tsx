@@ -118,7 +118,7 @@ function ListedStockEditor({ item, index, onUpdate, onRemove }: ListedStockEdito
         <div className="rounded-md bg-gray-50 dark:bg-gray-800 px-3 py-2 text-xs space-y-1">
           <div className="flex justify-between text-gray-500 dark:text-gray-400">
             <span>평가 산식</span>
-            <span>{avgPrice.toLocaleString()}원 × {shares.toLocaleString()}주</span>
+            <span>{avgPrice.toLocaleString()} × {shares.toLocaleString()}주</span>
           </div>
           <div className="flex justify-between font-semibold border-t border-gray-200 dark:border-gray-700 pt-1">
             <span>상장주식 평가액</span>
@@ -354,24 +354,24 @@ function UnlistedStockPreview({
 
       <div className="flex justify-between text-gray-500 dark:text-gray-400">
         <span>1주당 순손익가치</span>
-        <span>{preview.perShareIncomeValue.toLocaleString()}원</span>
+        <span>{preview.perShareIncomeValue.toLocaleString()}</span>
       </div>
       <div className="flex justify-between text-gray-500 dark:text-gray-400">
         <span>1주당 순자산가치</span>
-        <span>{preview.perShareAssetValue.toLocaleString()}원</span>
+        <span>{preview.perShareAssetValue.toLocaleString()}</span>
       </div>
       <div className="flex justify-between text-gray-500 dark:text-gray-400">
         <span>가중평균 (순손익×{iw} + 순자산×{aw} ÷ 5)</span>
-        <span>{preview.perShareWeightedValue.toLocaleString()}원</span>
+        <span>{preview.perShareWeightedValue.toLocaleString()}</span>
       </div>
       <div className="flex justify-between text-gray-500 dark:text-gray-400">
         <span>최솟값 (순자산가치 × 80%)</span>
-        <span>{preview.perShareMinValue.toLocaleString()}원</span>
+        <span>{preview.perShareMinValue.toLocaleString()}</span>
       </div>
       <div className="flex justify-between font-semibold text-gray-700 dark:text-gray-200 border-t border-gray-200 dark:border-gray-700 pt-1">
         <span>1주당 최종 평가액</span>
         <span className={isMinValueApplied ? "text-amber-600 dark:text-amber-400" : ""}>
-          {preview.perShareFinalValue.toLocaleString()}원
+          {preview.perShareFinalValue.toLocaleString()}
           {isMinValueApplied && " (최솟값 적용)"}
         </span>
       </div>

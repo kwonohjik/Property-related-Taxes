@@ -133,7 +133,7 @@ export function calcStartupFundSpecialTax(
     // 50억 이하: 단일 10%
     specialTax = applyRate(taxBase, STARTUP_RATE_LOW);
     breakdown.push({
-      label: `특례세액 (10% × 과세표준 ${taxBase.toLocaleString()}원)`,
+      label: `특례세액 (10% × 과세표준 ${taxBase.toLocaleString()}`,
       amount: specialTax,
       lawRef: TAX_CREDIT.STARTUP_FUND,
     });
@@ -144,12 +144,12 @@ export function calcStartupFundSpecialTax(
     specialTax = lowPart + excessPart;
     breakdown.push(
       {
-        label: `특례세액 (50억 이하 10%: ${lowPart.toLocaleString()}원)`,
+        label: `특례세액 (50억 이하 10%: ${lowPart.toLocaleString()}`,
         amount: lowPart,
         lawRef: TAX_CREDIT.STARTUP_FUND,
       },
       {
-        label: `특례세액 (50억 초과 20%: ${excessPart.toLocaleString()}원)`,
+        label: `특례세액 (50억 초과 20%: ${excessPart.toLocaleString()}`,
         amount: excessPart,
         lawRef: TAX_CREDIT.STARTUP_FUND,
       },
@@ -160,7 +160,7 @@ export function calcStartupFundSpecialTax(
   breakdown.push({
     label: `일반세액 대비 절감 (공제 인정액)`,
     amount: creditAmount,
-    note: `일반 ${normalComputedTax.toLocaleString()}원 - 특례 ${specialTax.toLocaleString()}원`,
+    note: `일반 ${normalComputedTax.toLocaleString()} - 특례 ${specialTax.toLocaleString()}`,
   });
 
   return { specialTax, creditAmount, breakdown };
@@ -244,7 +244,7 @@ export function calcFamilyBusinessSpecialTax(
   const specialTax = applyRate(taxBase, FAMILY_BUSINESS_RATE);
 
   breakdown.push({
-    label: `가업승계 특례세액 (10% × ${taxBase.toLocaleString()}원)`,
+    label: `가업승계 특례세액 (10% × ${taxBase.toLocaleString()}`,
     amount: specialTax,
     lawRef: TAX_CREDIT.FAMILY_BUSINESS,
   });
@@ -253,7 +253,7 @@ export function calcFamilyBusinessSpecialTax(
   breakdown.push({
     label: "일반세액 대비 절감 (공제 인정액)",
     amount: creditAmount,
-    note: `일반 ${normalComputedTax.toLocaleString()}원 - 특례 ${specialTax.toLocaleString()}원`,
+    note: `일반 ${normalComputedTax.toLocaleString()} - 특례 ${specialTax.toLocaleString()}`,
   });
 
   return { specialTax, creditAmount, breakdown };

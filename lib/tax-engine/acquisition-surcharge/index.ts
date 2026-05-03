@@ -478,7 +478,7 @@ function calcFirstHomeReduction(
       reductionAmount: 0,
       maxReductionAmount: ACQUISITION_CONST.FIRST_HOME_MAX_REDUCTION,
       warnings: [
-        `생애최초 감면 불가 — 취득가액(${input.acquisitionValue.toLocaleString()}원)이 한도(${priceLimit.toLocaleString()}원) 초과`,
+        `생애최초 감면 불가 — 취득가액(${input.acquisitionValue.toLocaleString()}이 한도(${priceLimit.toLocaleString()} 초과`,
       ],
     };
   }

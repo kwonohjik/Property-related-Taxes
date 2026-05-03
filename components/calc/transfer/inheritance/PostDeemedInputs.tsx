@@ -256,7 +256,7 @@ export function PostDeemedInputs({ asset, onChange, transferDate }: Props) {
                     보충적평가액 합계:{" "}
                     {(
                       parseAmount(landTotal) + parseAmount(asset.supplementaryBuildingValue)
-                    ).toLocaleString()}원
+                    ).toLocaleString()}
                   </p>
                   <p className="text-[11px] text-muted-foreground mt-0.5">
                     위 금액이 신고가액 필드에 자동 반영됩니다

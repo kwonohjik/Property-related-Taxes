@@ -408,7 +408,7 @@ export const multiInputSchema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["annualBasicDeductionUsed"],
-        message: "연간 기본공제 한도(2,500,000원)를 초과할 수 없습니다",
+        message: "연간 기본공제 한도(2,500,000)를 초과할 수 없습니다",
       });
     }
   });

@@ -93,7 +93,7 @@ export function assessHansiBenefitForPendingAcquisition(
             assetType: "pending",
             reason: "pending_hansi_new_build",
             legalBasis: ACQUISITION.HOUSE_COUNT_HANSI_NEW_BUILD,
-            description: `한시 특례 신축 — 취득일(${acquisitionDate}) + 면적 ${pending.areaSqm ?? "미입력"}㎡ ≤ 60㎡ + 취득가 ${pending.acquisitionValue.toLocaleString()}원 ≤ ${priceLimit.toLocaleString()}원(${pending.isMetropolitan ? "수도권" : "비수도권"}) → 취득 주택 카운트 제외`,
+            description: `한시 특례 신축 — 취득일(${acquisitionDate}) + 면적 ${pending.areaSqm ?? "미입력"}㎡ ≤ 60㎡ + 취득가 ${pending.acquisitionValue.toLocaleString()} ≤ ${priceLimit.toLocaleString()}원(${pending.isMetropolitan ? "수도권" : "비수도권"}) → 취득 주택 카운트 제외`,
           },
           legalBasis: ACQUISITION.HOUSE_COUNT_HANSI_NEW_BUILD,
           description: `한시 특례 신축 주택 (§28의4② 1호) — 취득 후에도 주택 수에서 미포함`,
@@ -106,7 +106,7 @@ export function assessHansiBenefitForPendingAcquisition(
         warnings.push(`한시 특례 신축 — 전용면적(${pending.areaSqm}㎡)이 60㎡를 초과하여 카운트 제외 미적용.`);
       }
       if (!priceOk) {
-        warnings.push(`한시 특례 신축 — 취득가(${pending.acquisitionValue.toLocaleString()}원)가 ${priceLimit.toLocaleString()}원을 초과하여 카운트 제외 미적용.`);
+        warnings.push(`한시 특례 신축 — 취득가(${pending.acquisitionValue.toLocaleString()}가 ${priceLimit.toLocaleString()}원을 초과하여 카운트 제외 미적용.`);
       }
     } else {
       warnings.push(`한시 특례 신축 — 취득일(${acquisitionDate})이 한시 기간(2024.1.10~2027.12.31) 외 → 적용 불가.`);
@@ -180,7 +180,7 @@ export function assessHansiBenefitForPendingAcquisition(
           warnings.push(`한시 미분양 아파트 — 면적(${pending.areaSqm}㎡)이 85㎡를 초과 → 적용 불가.`);
         }
         if (!priceOk) {
-          warnings.push(`한시 미분양 아파트 — 취득가(${pending.acquisitionValue.toLocaleString()}원)가 6억원 초과 → 적용 불가.`);
+          warnings.push(`한시 미분양 아파트 — 취득가(${pending.acquisitionValue.toLocaleString()}가 6억원 초과 → 적용 불가.`);
         }
       } else {
         warnings.push("한시 미분양 아파트 특례 — 수도권 주택은 적용 불가 (비수도권 한정).");

@@ -129,7 +129,7 @@ export function calcShortTermReinheritCredit(
     breakdown.push({
       label: "당해 산출세액 한도 적용",
       amount: creditAmount,
-      note: `원래 공제액 ${rawCredit.toLocaleString()}원 → 한도 초과로 ${currentComputedTax.toLocaleString()}원 적용`,
+      note: `원래 공제액 ${rawCredit.toLocaleString()} → 한도 초과로 ${currentComputedTax.toLocaleString()} 적용`,
     });
   }
 

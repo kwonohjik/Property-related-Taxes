@@ -120,7 +120,7 @@ export function calcGenerationSkipSurcharge(
     breakdown.push({
       label: `세대생략 할증 — 안분기준세액 (산출세액 × 세대생략재산 / 전체재산)`,
       amount: proratedTax,
-      note: `${generationSkipAssetAmount!.toLocaleString()}원 / ${totalEstateValue!.toLocaleString()}원`,
+      note: `${generationSkipAssetAmount!.toLocaleString()} / ${totalEstateValue!.toLocaleString()}`,
       lawRef,
     });
   } else {

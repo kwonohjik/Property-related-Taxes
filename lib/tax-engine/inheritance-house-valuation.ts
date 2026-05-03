@@ -232,8 +232,8 @@ function buildFormula(
 
   // 양도시 합계
   lines.push(`양도시 합계 기준시가`);
-  lines.push(`  = 양도시 토지(${fmt(input.landArea)}㎡ × ${fmt(input.landPricePerSqmAtTransfer)}원/㎡) + 양도시 주택가격(${fmt(input.housePriceAtTransfer)}원)`);
-  lines.push(`  = ${fmt(landStdAtTransfer)}원 + ${fmt(input.housePriceAtTransfer)}원 = ${fmt(totalStdPriceAtTransfer)}원`);
+  lines.push(`  = 양도시 토지(${fmt(input.landArea)}㎡ × ${fmt(input.landPricePerSqmAtTransfer)}/㎡) + 양도시 주택가격(${fmt(input.housePriceAtTransfer)}`);
+  lines.push(`  = ${fmt(landStdAtTransfer)} + ${fmt(input.housePriceAtTransfer)} = ${fmt(totalStdPriceAtTransfer)}`);
   lines.push(``);
 
   // 상속개시일 토지단가
@@ -241,24 +241,24 @@ function buildFormula(
     lines.push(`상속개시일 토지단가 환산 (1990.8.30. 이전 등급가액 환산, ${pre1990Result.caseLabel})`);
     lines.push(`  ${pre1990Result.breakdown.formula}`);
   } else {
-    lines.push(`상속개시일 개별공시지가 = ${fmt(landPricePerSqmAtInheritance)}원/㎡`);
+    lines.push(`상속개시일 개별공시지가 = ${fmt(landPricePerSqmAtInheritance)}/㎡`);
   }
   lines.push(``);
 
   // 상속개시일 주택가격
   if (estimationMethod === "user_override") {
-    lines.push(`상속개시일 주택가격 = ${fmt(housePriceAtInheritanceUsed)}원 (직접 입력)`);
+    lines.push(`상속개시일 주택가격 = ${fmt(housePriceAtInheritanceUsed)} (직접 입력)`);
   } else {
     lines.push(`상속개시일 주택가격 추정 (§164⑤ 토지 비율)`);
-    lines.push(`  = 최초고시 주택가격(${fmt(input.housePriceAtFirstDisclosure)}원) × 상속개시일 토지기준시가 / 최초고시 토지기준시가`);
-    lines.push(`  = ${fmt(housePriceAtInheritanceUsed)}원`);
+    lines.push(`  = 최초고시 주택가격(${fmt(input.housePriceAtFirstDisclosure)}) × 상속개시일 토지기준시가 / 최초고시 토지기준시가`);
+    lines.push(`  = ${fmt(housePriceAtInheritanceUsed)}`);
   }
   lines.push(``);
 
   // 상속개시일 합계
   lines.push(`상속개시일 합계 기준시가`);
-  lines.push(`  = 토지(${fmt(landStdAtInheritance)}원) + 주택(${fmt(housePriceAtInheritanceUsed)}원)`);
-  lines.push(`  = ${fmt(totalStdPriceAtInheritance)}원`);
+  lines.push(`  = 토지(${fmt(landStdAtInheritance)}) + 주택(${fmt(housePriceAtInheritanceUsed)})`);
+  lines.push(`  = ${fmt(totalStdPriceAtInheritance)}`);
 
   return lines.join("\n");
 }

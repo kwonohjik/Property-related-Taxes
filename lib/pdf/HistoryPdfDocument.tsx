@@ -226,7 +226,7 @@ function formatDate(iso: string): string {
 }
 
 function formatKRW(amount: number): string {
-  return amount.toLocaleString("ko-KR") + "원";
+  return amount.toLocaleString("ko-KR");
 }
 
 function extractTotalTax(resultData: Record<string, unknown>): string {

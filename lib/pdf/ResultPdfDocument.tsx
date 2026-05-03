@@ -141,7 +141,7 @@ const s = StyleSheet.create({
 
 // ─── 헬퍼 ────────────────────────────────────────────────────────
 function fmt(v: unknown): string {
-  if (typeof v === "number") return v.toLocaleString("ko-KR") + "원";
+  if (typeof v === "number") return v.toLocaleString("ko-KR");
   return "-";
 }
 function fmtRate(v: unknown): string {
@@ -191,7 +191,7 @@ function TransferSection({ r }: { r: R }) {
           </View>
         )}
         {num(r.basicDeduction) !== undefined && (
-          <View style={s.row}><Text style={s.lbl}>기본공제</Text><Text style={s.val}>{(r.basicDeduction as number) > 0 ? `- ${fmt(r.basicDeduction)}` : "0원"}</Text></View>
+          <View style={s.row}><Text style={s.lbl}>기본공제</Text><Text style={s.val}>{(r.basicDeduction as number) > 0 ? `- ${fmt(r.basicDeduction)}` : "0"}</Text></View>
         )}
         {num(r.taxBase) !== undefined && (
           <View style={s.rowBg}><Text style={s.lbl}>과세표준</Text><Text style={s.valAccent}>{fmt(r.taxBase)}</Text></View>
@@ -705,7 +705,7 @@ export function ResultPdfDocument({
         {isExempt ? (
           <View style={s.totalCardExempt}>
             <Text style={s.exemptTitle}>비과세</Text>
-            <Text style={s.exemptSub}>{str(r.exemptReason) ?? "납부세액 0원"}</Text>
+            <Text style={s.exemptSub}>{str(r.exemptReason) ?? "납부세액 0"}</Text>
           </View>
         ) : (
           <View style={s.totalCard}>

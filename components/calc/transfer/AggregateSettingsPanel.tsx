@@ -54,7 +54,7 @@ export function AggregateSettingsPanel({ form, onChange }: AggregateSettingsPane
           />
         </div>
         <p className="text-xs text-muted-foreground">
-          이 계산 전에 당해 연도에 이미 사용한 기본공제액 (최대 2,500,000원).
+          이 계산 전에 당해 연도에 이미 사용한 기본공제액 (최대 2,500,000).
         </p>
       </div>
 

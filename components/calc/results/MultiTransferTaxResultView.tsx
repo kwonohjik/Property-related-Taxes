@@ -75,9 +75,9 @@ interface MultiTransferTaxResultViewProps {
 }
 
 function formatKRW(amount: number): string {
-  if (amount === 0) return "0원";
+  if (amount === 0) return "0";
   const abs = Math.abs(amount);
-  const formatted = abs.toLocaleString("ko-KR") + "원";
+  const formatted = abs.toLocaleString("ko-KR");
   return amount < 0 ? `-${formatted}` : formatted;
 }
 
@@ -141,8 +141,7 @@ function ReductionRecalculationSection({
                   {typeLabel[entry.type] ?? entry.type}
                   {entry.cappedByLimit && (
                     <span className="ml-2 text-xs text-amber-700">
-                      ⚠ 한도 적용 ({entry.annualLimit.toLocaleString()}원)
-                    </span>
+                      ⚠ 한도 적용 ({entry.annualLimit.toLocaleString()}                    </span>
                   )}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">{entry.legalBasis}</p>
@@ -150,23 +149,23 @@ function ReductionRecalculationSection({
                 <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
                   <span className="text-muted-foreground">합산 산출세액</span>
                   <span className="text-right tabular-nums">
-                    {entry.aggregateCalculatedTax.toLocaleString()}원
+                    {entry.aggregateCalculatedTax.toLocaleString()}
                   </span>
                   <span className="text-muted-foreground">합산 감면대상소득</span>
                   <span className="text-right tabular-nums">
-                    {entry.totalReducibleIncome.toLocaleString()}원
+                    {entry.totalReducibleIncome.toLocaleString()}
                   </span>
                   <span className="text-muted-foreground">합산 과세표준</span>
                   <span className="text-right tabular-nums">
-                    {entry.aggregateTaxBase.toLocaleString()}원
+                    {entry.aggregateTaxBase.toLocaleString()}
                   </span>
                   <span className="text-muted-foreground">재계산 원시 감면</span>
                   <span className="text-right tabular-nums">
-                    {entry.rawAggregateReduction.toLocaleString()}원
+                    {entry.rawAggregateReduction.toLocaleString()}
                   </span>
                   <span className="text-muted-foreground font-medium">최종 감면세액</span>
                   <span className="text-right tabular-nums font-medium text-primary">
-                    {entry.cappedAggregateReduction.toLocaleString()}원
+                    {entry.cappedAggregateReduction.toLocaleString()}
                   </span>
                 </div>
 
@@ -188,16 +187,16 @@ function ReductionRecalculationSection({
                           <tr key={p.propertyId}>
                             <td>{labelMap.get(p.propertyId) ?? p.propertyLabel}</td>
                             <td className="text-right tabular-nums">
-                              {p.reductionAmount.toLocaleString()}원 → {/* standaloneTax 필드는 미노출 */}
+                              {p.reductionAmount.toLocaleString()} → {/* standaloneTax 필드는 미노출 */}
                             </td>
                             <td className="text-right tabular-nums">
-                              {p.reductionAmount.toLocaleString()}원
+                              {p.reductionAmount.toLocaleString()}
                             </td>
                             <td className="text-right tabular-nums">
-                              {p.reducibleIncome.toLocaleString()}원
+                              {p.reducibleIncome.toLocaleString()}
                             </td>
                             <td className="text-right tabular-nums font-medium">
-                              {p.reductionAggregated.toLocaleString()}원
+                              {p.reductionAggregated.toLocaleString()}
                             </td>
                           </tr>
                         ))}
@@ -328,7 +327,7 @@ function PropertyBreakdownAccordion({
         </div>
         <div className="flex items-center gap-4">
           <span className="text-sm font-medium">
-            {breakdown.isExempt ? "0원" : formatKRW(breakdown.taxBaseShare)}
+            {breakdown.isExempt ? "0" : formatKRW(breakdown.taxBaseShare)}
           </span>
           {open ? (
             <ChevronUp className="h-4 w-4 text-muted-foreground" />

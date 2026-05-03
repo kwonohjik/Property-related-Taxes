@@ -35,9 +35,9 @@ export function getRefDeterminedTax(p: PerPropertyBreakdown): number {
 }
 
 export function formatKRW(amount: number): string {
-  if (amount === 0) return "0원";
+  if (amount === 0) return "0";
   const abs = Math.abs(amount);
-  const formatted = abs.toLocaleString("ko-KR") + "원";
+  const formatted = abs.toLocaleString("ko-KR");
   return amount < 0 ? `-${formatted}` : formatted;
 }
 

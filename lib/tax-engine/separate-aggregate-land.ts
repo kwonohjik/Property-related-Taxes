@@ -475,7 +475,7 @@ export function calculateSeparateAggregateTax(
   if (appliedCapRate !== undefined) {
     legalBasis.push(PROPERTY_SEPARATE.BURDEN_CAP);
     warnings.push(
-      `세부담상한(150%) 적용: 산출세액 ${grossTax.toLocaleString()}원 → 상한 세액 ${taxAfterCap.toLocaleString()}원`,
+      `세부담상한(150%) 적용: 산출세액 ${grossTax.toLocaleString()} → 상한 세액 ${taxAfterCap.toLocaleString()}`,
     );
   }
 

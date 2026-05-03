@@ -118,7 +118,7 @@ export function TransferTaxResultView({ result, onReset, onBack, onLoginPrompt =
           <p className="text-lg font-bold text-emerald-700 dark:text-emerald-400">
             {result.exemptReason ?? "비과세"}
           </p>
-          <p className="text-2xl font-bold mt-1">납부세액 0원</p>
+          <p className="text-2xl font-bold mt-1">납부세액 0</p>
         </div>
       ) : (
         <div className="rounded-xl border-2 border-primary bg-primary/5 p-5">
@@ -201,7 +201,7 @@ export function TransferTaxResultView({ result, onReset, onBack, onLoginPrompt =
           />
           <Row
             label="기본공제"
-            value={result.basicDeduction > 0 ? `- ${formatKRW(result.basicDeduction)}` : "0원"}
+            value={result.basicDeduction > 0 ? `- ${formatKRW(result.basicDeduction)}` : "0"}
           />
           <Row label="과세표준" value={formatKRW(result.taxBase)} highlight />
           <Row
@@ -384,11 +384,11 @@ export function TransferTaxResultView({ result, onReset, onBack, onLoginPrompt =
               <span className="text-muted-foreground">적용 비율</span>
               <span className="font-mono text-right">{(result.pre1990LandValuationDetail.breakdown.appliedRatio * 100).toFixed(2)}%</span>
               <span className="text-muted-foreground">㎡당 가액</span>
-              <span className="font-mono text-right">{result.pre1990LandValuationDetail.pricePerSqmAtAcquisition.toLocaleString()}원</span>
+              <span className="font-mono text-right">{result.pre1990LandValuationDetail.pricePerSqmAtAcquisition.toLocaleString()}</span>
               <span className="text-muted-foreground font-medium">취득시 기준시가</span>
-              <span className="font-mono text-right font-medium">{result.pre1990LandValuationDetail.standardPriceAtAcquisition.toLocaleString()}원</span>
+              <span className="font-mono text-right font-medium">{result.pre1990LandValuationDetail.standardPriceAtAcquisition.toLocaleString()}</span>
               <span className="text-muted-foreground font-medium">양도시 기준시가</span>
-              <span className="font-mono text-right font-medium">{result.pre1990LandValuationDetail.standardPriceAtTransfer.toLocaleString()}원</span>
+              <span className="font-mono text-right font-medium">{result.pre1990LandValuationDetail.standardPriceAtTransfer.toLocaleString()}</span>
             </div>
             {result.pre1990LandValuationDetail.warnings.length > 0 && (
               <ul className="mt-2 list-disc pl-5 text-destructive">
@@ -417,7 +417,7 @@ export function TransferTaxResultView({ result, onReset, onBack, onLoginPrompt =
               <span className={highlight
                 ? "font-mono text-right font-bold text-blue-800 dark:text-blue-200 tabular-nums"
                 : "font-mono text-right tabular-nums"}>
-                {fmt(value)}원
+                {fmt(value)}
               </span>
             </div>
             <p className="mt-0.5 text-[11px] text-muted-foreground leading-relaxed">{formula}</p>
@@ -433,17 +433,17 @@ export function TransferTaxResultView({ result, onReset, onBack, onLoginPrompt =
             <Row
               label="취득시 기준시가 합계"
               value={phd.sumAtAcquisition}
-              formula={`토지기준시가(${fmt(i.landPricePerSqmAtAcquisition)}원/㎡ × ${fmt(i.landArea)}㎡) + 건물기준시가(${fmt(i.buildingStdPriceAtAcquisition)}원)`}
+              formula={`토지기준시가(${fmt(i.landPricePerSqmAtAcquisition)}/㎡ × ${fmt(i.landArea)}㎡) + 건물기준시가(${fmt(i.buildingStdPriceAtAcquisition)}`}
             />
             <Row
               label="최초공시일 기준시가 합계"
               value={phd.sumAtFirstDisclosure}
-              formula={`토지기준시가(${fmt(i.landPricePerSqmAtFirstDisclosure)}원/㎡ × ${fmt(i.landArea)}㎡) + 건물기준시가(${fmt(i.buildingStdPriceAtFirstDisclosure)}원)`}
+              formula={`토지기준시가(${fmt(i.landPricePerSqmAtFirstDisclosure)}/㎡ × ${fmt(i.landArea)}㎡) + 건물기준시가(${fmt(i.buildingStdPriceAtFirstDisclosure)}`}
             />
             <Row
               label="양도시 기준시가 합계"
               value={phd.sumAtTransfer}
-              formula={`토지기준시가(${fmt(i.landPricePerSqmAtTransfer)}원/㎡ × ${fmt(i.landArea)}㎡) + 건물기준시가(${fmt(i.buildingStdPriceAtTransfer)}원)`}
+              formula={`토지기준시가(${fmt(i.landPricePerSqmAtTransfer)}/㎡ × ${fmt(i.landArea)}㎡) + 건물기준시가(${fmt(i.buildingStdPriceAtTransfer)}`}
             />
 
             {/* ─── 2. 추정 취득시 주택가격 ─── */}
@@ -451,14 +451,14 @@ export function TransferTaxResultView({ result, onReset, onBack, onLoginPrompt =
               label="취득시 환산 주택공시가격"
               value={phd.estimatedHousingPriceAtAcquisition}
               highlight
-              formula={`최초 고시 주택가격(${fmt(i.firstDisclosureHousingPrice)}원) × 취득시 합계(${fmt(phd.sumAtAcquisition)}원) ÷ 최초공시일 합계(${fmt(phd.sumAtFirstDisclosure)}원)`}
+              formula={`최초 고시 주택가격(${fmt(i.firstDisclosureHousingPrice)} × 취득시 합계(${fmt(phd.sumAtAcquisition)} ÷ 최초공시일 합계(${fmt(phd.sumAtFirstDisclosure)}`}
             />
 
             {/* ─── 3. 총 환산취득가 ─── */}
             <Row
               label="총 환산취득가"
               value={phd.totalEstimatedAcquisitionPrice}
-              formula={`양도가액(${fmt(i.totalTransferPrice)}원) × 추정 취득시 주택가격(${fmt(phd.estimatedHousingPriceAtAcquisition)}원) ÷ 양도시 주택가격(${fmt(i.transferHousingPrice)}원)`}
+              formula={`양도가액(${fmt(i.totalTransferPrice)} × 추정 취득시 주택가격(${fmt(phd.estimatedHousingPriceAtAcquisition)} ÷ 양도시 주택가격(${fmt(i.transferHousingPrice)}`}
             />
 
             {/* ─── 4. 양도가액 분리 ─── */}
@@ -469,19 +469,19 @@ export function TransferTaxResultView({ result, onReset, onBack, onLoginPrompt =
               <Row
                 label="양도시 토지 주택가격 성분"
                 value={phd.landHousingAtTransfer}
-                formula={`양도시 주택가격(${fmt(i.transferHousingPrice)}원) × 양도시 토지기준시가(${fmt(phd.landStdAtTransfer)}원) ÷ 양도시 합계(${fmt(phd.sumAtTransfer)}원)`}
+                formula={`양도시 주택가격(${fmt(i.transferHousingPrice)} × 양도시 토지기준시가(${fmt(phd.landStdAtTransfer)} ÷ 양도시 합계(${fmt(phd.sumAtTransfer)}`}
               />
               <Row
                 label="토지 양도가액"
                 value={phd.landTransferPrice}
                 highlight
-                formula={`양도가액(${fmt(i.totalTransferPrice)}원) × 양도시 토지 성분(${fmt(phd.landHousingAtTransfer)}원) ÷ 양도시 주택가격(${fmt(i.transferHousingPrice)}원)`}
+                formula={`양도가액(${fmt(i.totalTransferPrice)} × 양도시 토지 성분(${fmt(phd.landHousingAtTransfer)} ÷ 양도시 주택가격(${fmt(i.transferHousingPrice)}`}
               />
               <Row
                 label="건물 양도가액"
                 value={phd.buildingTransferPrice}
                 highlight
-                formula={`양도가액(${fmt(i.totalTransferPrice)}원) - 토지 양도가액(${fmt(phd.landTransferPrice)}원)`}
+                formula={`양도가액(${fmt(i.totalTransferPrice)} - 토지 양도가액(${fmt(phd.landTransferPrice)}`}
               />
             </div>
 
@@ -493,24 +493,24 @@ export function TransferTaxResultView({ result, onReset, onBack, onLoginPrompt =
               <Row
                 label="취득시 토지 주택가격 성분"
                 value={phd.landHousingAtAcquisition}
-                formula={`추정 취득시 주택가격(${fmt(phd.estimatedHousingPriceAtAcquisition)}원) × 취득시 토지기준시가(${fmt(phd.landStdAtAcquisition)}원) ÷ 취득시 합계(${fmt(phd.sumAtAcquisition)}원)`}
+                formula={`추정 취득시 주택가격(${fmt(phd.estimatedHousingPriceAtAcquisition)} × 취득시 토지기준시가(${fmt(phd.landStdAtAcquisition)} ÷ 취득시 합계(${fmt(phd.sumAtAcquisition)}`}
               />
               <Row
                 label="취득시 건물 주택가격 성분"
                 value={phd.buildingHousingAtAcquisition}
-                formula={`추정 취득시 주택가격(${fmt(phd.estimatedHousingPriceAtAcquisition)}원) - 취득시 토지 성분(${fmt(phd.landHousingAtAcquisition)}원)`}
+                formula={`추정 취득시 주택가격(${fmt(phd.estimatedHousingPriceAtAcquisition)} - 취득시 토지 성분(${fmt(phd.landHousingAtAcquisition)}`}
               />
               <Row
                 label="토지 환산취득가"
                 value={phd.landAcquisitionPrice}
                 highlight
-                formula={`총 환산취득가(${fmt(phd.totalEstimatedAcquisitionPrice)}원) × 취득시 토지 성분(${fmt(phd.landHousingAtAcquisition)}원) ÷ 추정 취득시 주택가격(${fmt(phd.estimatedHousingPriceAtAcquisition)}원)`}
+                formula={`총 환산취득가(${fmt(phd.totalEstimatedAcquisitionPrice)} × 취득시 토지 성분(${fmt(phd.landHousingAtAcquisition)} ÷ 추정 취득시 주택가격(${fmt(phd.estimatedHousingPriceAtAcquisition)}`}
               />
               <Row
                 label="건물 환산취득가"
                 value={phd.buildingAcquisitionPrice}
                 highlight
-                formula={`총 환산취득가(${fmt(phd.totalEstimatedAcquisitionPrice)}원) - 토지 환산취득가(${fmt(phd.landAcquisitionPrice)}원)`}
+                formula={`총 환산취득가(${fmt(phd.totalEstimatedAcquisitionPrice)} - 토지 환산취득가(${fmt(phd.landAcquisitionPrice)}`}
               />
             </div>
 
@@ -523,13 +523,13 @@ export function TransferTaxResultView({ result, onReset, onBack, onLoginPrompt =
                 label="토지 개산공제"
                 value={phd.landLumpDeduction}
                 highlight
-                formula={`취득시 토지 성분(${fmt(phd.landHousingAtAcquisition)}원) × 3%`}
+                formula={`취득시 토지 성분(${fmt(phd.landHousingAtAcquisition)} × 3%`}
               />
               <Row
                 label="건물 개산공제"
                 value={phd.buildingLumpDeduction}
                 highlight
-                formula={`취득시 건물 성분(${fmt(phd.buildingHousingAtAcquisition)}원) × 3%`}
+                formula={`취득시 건물 성분(${fmt(phd.buildingHousingAtAcquisition)} × 3%`}
               />
             </div>
           </div>

@@ -177,7 +177,7 @@ export function Step6({
               unit="원"
               hint={
                 determinedTax !== null
-                  ? `결정세액 ${determinedTax.toLocaleString()}원 − 기납부세액 자동 계산`
+                  ? `결정세액 ${determinedTax.toLocaleString()} − 기납부세액 자동 계산`
                   : "납부하지 않았거나 미달납부한 세액 (가산세 계산하기 클릭 시 자동 계산)"
               }
             >

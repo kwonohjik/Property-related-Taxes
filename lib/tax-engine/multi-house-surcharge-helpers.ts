@@ -429,7 +429,7 @@ export function countEffectiveHouses(
           excluded.push({
             houseId: house.id,
             reason: "low_price_local_300",
-            detail: `지방(VALUE) 양도 공시가격 ${priceToCheck.toLocaleString()}원 (${rules.lowPriceThreshold.local.toLocaleString()}원 이하)`,
+            detail: `지방(VALUE) 양도 공시가격 ${priceToCheck.toLocaleString()} (${rules.lowPriceThreshold.local.toLocaleString()} 이하)`,
           });
           continue;
         }
@@ -438,7 +438,7 @@ export function countEffectiveHouses(
           excluded.push({
             houseId: house.id,
             reason: "low_price_non_capital",
-            detail: `비수도권 공시가격 ${house.officialPrice.toLocaleString()}원 (${rules.lowPriceThreshold.non_capital.toLocaleString()}원 이하)`,
+            detail: `비수도권 공시가격 ${house.officialPrice.toLocaleString()} (${rules.lowPriceThreshold.non_capital.toLocaleString()} 이하)`,
           });
           continue;
         }
@@ -470,7 +470,7 @@ export function countEffectiveHouses(
       excluded.push({
         houseId: house.id,
         reason: "small_new_house",
-        detail: `소형 신축/미분양 특례 (전용 ${house.exclusiveArea ?? "?"}㎡, 취득가 ${(house.acquisitionPrice ?? 0).toLocaleString()}원)`,
+        detail: `소형 신축/미분양 특례 (전용 ${house.exclusiveArea ?? "?"}㎡, 취득가 ${(house.acquisitionPrice ?? 0).toLocaleString()}`,
       });
       continue;
     }

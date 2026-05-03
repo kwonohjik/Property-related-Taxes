@@ -83,8 +83,7 @@ function ExemptionRow({ rule, checked, amount, onToggle, onAmountChange }: Exemp
             해당 자산 가액
             {rule.limitType === "fixed" && rule.limitAmount && (
               <span className="ml-1 text-amber-600">
-                (최대 {rule.limitAmount.toLocaleString()}원)
-              </span>
+                (최대 {rule.limitAmount.toLocaleString()}              </span>
             )}
             {rule.limitType === "area" && rule.limitAreaM2 && (
               <span className="ml-1 text-amber-600">

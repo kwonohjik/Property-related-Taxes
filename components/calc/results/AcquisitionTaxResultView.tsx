@@ -33,7 +33,7 @@ import { InstallmentResultCard } from "./acquisition/InstallmentResultCard";
 // ============================================================
 
 function formatKRW(amount: number): string {
-  return amount.toLocaleString("ko-KR") + "원";
+  return amount.toLocaleString("ko-KR");
 }
 
 function formatRate(rate: number): string {
@@ -591,7 +591,7 @@ export function AcquisitionTaxResultView({ result, isRegulatedArea = false, isCo
                   </div>
                   <p className="font-mono font-medium shrink-0">
                     {step.amount < 0
-                      ? `−${Math.abs(step.amount).toLocaleString("ko-KR")}원`
+                      ? `−${Math.abs(step.amount).toLocaleString("ko-KR")}`
                       : formatKRW(step.amount)}
                   </p>
                 </div>

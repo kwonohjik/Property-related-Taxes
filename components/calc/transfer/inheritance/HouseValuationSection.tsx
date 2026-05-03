@@ -366,7 +366,7 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
           return (
             <div className="flex items-center justify-between rounded bg-muted/40 px-3 py-2">
               <span className="text-[11px] text-muted-foreground">최초고시 합산기준시가 (§164⑤ 분모)</span>
-              <span className="text-sm font-semibold tabular-nums">{sumF.toLocaleString()}원</span>
+              <span className="text-sm font-semibold tabular-nums">{sumF.toLocaleString()}</span>
             </div>
           );
         })()}
@@ -457,8 +457,8 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
             : null;
 
           const landStdAFormula = isBefore1990
-            ? `취득시 토지기준시가 = 등급가액 환산 ${landStdA.toLocaleString()}원`
-            : `취득시 토지기준시가 = 공시지가(${landPricePerSqmAtInheritance.toLocaleString()}원/㎡) × ${area}㎡ = ${landStdA.toLocaleString()}원`;
+            ? `취득시 토지기준시가 = 등급가액 환산 ${landStdA.toLocaleString()}`
+            : `취득시 토지기준시가 = 공시지가(${landPricePerSqmAtInheritance.toLocaleString()}/㎡) × ${area}㎡ = ${landStdA.toLocaleString()}`;
 
           return (
             <div className="space-y-1">
@@ -478,7 +478,7 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
                   )}
                 </div>
                 <span className="text-sm font-semibold tabular-nums shrink-0">
-                  {estimated !== null ? `${estimated.toLocaleString()}원` : "—"}
+                  {estimated !== null ? `${estimated.toLocaleString()}` : "—"}
                 </span>
               </div>
             </div>

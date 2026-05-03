@@ -595,8 +595,8 @@ export function calculateComprehensiveAggregate(
   if (appliedCapRate !== undefined) {
     legalBasis.push(PROPERTY_CAL.BURDEN_CAP);
     warnings.push(
-      `세부담상한(150%) 적용: 산출세액 ${grossTax.toLocaleString()}원 → ` +
-      `${taxAfterCap.toLocaleString()}원`,
+      `세부담상한(150%) 적용: 산출세액 ${grossTax.toLocaleString()} → ` +
+      `${taxAfterCap.toLocaleString()}`,
     );
   }
 

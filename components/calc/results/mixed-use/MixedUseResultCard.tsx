@@ -51,7 +51,7 @@ function mixedUseToFilingResult(b: MixedUseGainBreakdown): TransferTaxResult {
 }
 
 // 결과 데이터에 신규 필드가 누락된 캐시 케이스를 안전하게 처리하기 위해 nullish 가드.
-const fmt = (n: number | undefined | null) => (n ?? 0).toLocaleString() + "원";
+const fmt = (n: number | undefined | null) => (n ?? 0).toLocaleString();
 const fmtPlain = (n: number | undefined | null) => (n ?? 0).toLocaleString();
 const fmtPct = (r: number | undefined | null) => `${((r ?? 0) * 100).toFixed(2)}%`;
 const fmtSqm = (n: number | undefined | null) => `${(n ?? 0).toFixed(2)} ㎡`;
@@ -223,7 +223,7 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
         />
         <DivRow />
         {h.isExempt ? (
-          <Row label="12억 이하 → 전액 비과세" value="0원" />
+          <Row label="12억 이하 → 전액 비과세" value="0" />
         ) : (
           <Row
             label="12억 초과 안분 후 과세대상 양도차익"

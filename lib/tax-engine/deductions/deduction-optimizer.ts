@@ -89,13 +89,13 @@ export function optimizeDeductionMethod(
         : "납세자 선택: 기초+인적 항목별 공제";
   } else if (itemizedAmount > lumpSumAmount) {
     chosenMethod = "itemized";
-    reason = `항목별 공제(${itemizedAmount.toLocaleString()}원) > 일괄공제(${lumpSumAmount.toLocaleString()}원) — 항목별 선택`;
+    reason = `항목별 공제(${itemizedAmount.toLocaleString()} > 일괄공제(${lumpSumAmount.toLocaleString()} — 항목별 선택`;
   } else {
     chosenMethod = "lump_sum";
     reason =
       itemizedAmount === lumpSumAmount
         ? "항목별 = 일괄 (동률) — 일괄공제 선택 (정책)"
-        : `일괄공제(${lumpSumAmount.toLocaleString()}원) ≥ 항목별(${itemizedAmount.toLocaleString()}원) — 일괄 선택`;
+        : `일괄공제(${lumpSumAmount.toLocaleString()} ≥ 항목별(${itemizedAmount.toLocaleString()} — 일괄 선택`;
   }
 
   const chosenAmount = chosenMethod === "lump_sum" ? lumpSumAmount : itemizedAmount;

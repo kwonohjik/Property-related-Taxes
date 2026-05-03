@@ -175,9 +175,9 @@ export function calculateTransferTax(
     steps.push({
       label: pre1990LandResult.caseLabel,
       formula:
-        `취득기준시가 = ${pre1990LandResult.pricePerSqmAtAcquisition.toLocaleString()}원/㎡ × ` +
+        `취득기준시가 = ${pre1990LandResult.pricePerSqmAtAcquisition.toLocaleString()}/㎡ × ` +
         `${rawInput.pre1990Land.areaSqm.toLocaleString()}㎡ = ` +
-        `${pre1990LandResult.standardPriceAtAcquisition.toLocaleString()}원`,
+        `${pre1990LandResult.standardPriceAtAcquisition.toLocaleString()}`,
       amount: pre1990LandResult.standardPriceAtAcquisition,
       sub: true,
     });
@@ -300,11 +300,11 @@ export function calculateTransferTax(
       ? 0
       : calcBasicDeduction(mpTaxableGain, mpLtd, input.annualBasicDeductionUsed ?? 0, input.isUnregistered, parsedRates.basicDeductionRules);
     const mpTaxBase = Math.max(0, mpTransferIncome - mpBasicDeduction);
-    steps.push({ label: "기본공제", formula: `${mpBasicDeduction.toLocaleString()}원`, amount: mpBasicDeduction, legalBasis: TRANSFER.BASIC_DEDUCTION });
+    steps.push({ label: "기본공제", formula: `${mpBasicDeduction.toLocaleString()}`, amount: mpBasicDeduction, legalBasis: TRANSFER.BASIC_DEDUCTION });
     steps.push({ label: "과세표준", formula: `${mpTransferIncome.toLocaleString()} - ${mpBasicDeduction.toLocaleString()}`, amount: mpTaxBase, legalBasis: TRANSFER.TAX_BASE_CALC });
 
     const mpTaxResult = calcTax(mpTaxBase, parsedRates, effectiveInput, multiHouseSurchargeResult);
-    steps.push({ label: "산출세액", formula: `${mpTaxBase.toLocaleString()}원 × ${Math.round(mpTaxResult.appliedRate * 100)}%`, amount: mpTaxResult.calculatedTax, legalBasis: TRANSFER.TAX_RATE });
+    steps.push({ label: "산출세액", formula: `${mpTaxBase.toLocaleString()} × ${Math.round(mpTaxResult.appliedRate * 100)}%`, amount: mpTaxResult.calculatedTax, legalBasis: TRANSFER.TAX_RATE });
 
     const {
       reductionAmount: mpReduction,
@@ -402,22 +402,22 @@ export function calculateTransferTax(
   let gainFormula: string;
   if (input.useEstimatedAcquisition) {
     gainFormula = [
-      `양도가(${input.transferPrice.toLocaleString()}원)`,
-      `취득가(환산 ${estimatedBase.toLocaleString()}원)`,
-      `경비(개산공제 ${estimatedDeduction.toLocaleString()}원)`,
+      `양도가(${input.transferPrice.toLocaleString()}`,
+      `취득가(환산 ${estimatedBase.toLocaleString()}`,
+      `경비(개산공제 ${estimatedDeduction.toLocaleString()}`,
     ].join(" - ");
   } else {
     gainFormula = [
-      `양도가(${input.transferPrice.toLocaleString()}원)`,
-      `취득가(${input.acquisitionPrice.toLocaleString()}원)`,
-      `경비(${appliedExpenses.toLocaleString()}원)`,
+      `양도가(${input.transferPrice.toLocaleString()}`,
+      `취득가(${input.acquisitionPrice.toLocaleString()}`,
+      `경비(${appliedExpenses.toLocaleString()}`,
     ].join(" - ");
   }
   if (selfOwns !== "both" && splitDetail) {
     const selfLabel = selfOwns === "building_only" ? "건물" : "토지";
     steps.push({
       label: `본인 신고분: ${selfLabel} (소령 §166⑥, §168②)`,
-      formula: `일괄양도가액 ${input.transferPrice.toLocaleString()}원 중 ${selfLabel} 분만 신고 — 나머지는 타인 소유`,
+      formula: `일괄양도가액 ${input.transferPrice.toLocaleString()} 중 ${selfLabel} 분만 신고 — 나머지는 타인 소유`,
       amount: transferGain,
       legalBasis: TRANSFER.TRANSFER_GAIN,
     });
@@ -440,15 +440,15 @@ export function calculateTransferTax(
     if (pt0 > 0) {
       steps.push({
         label: "신축·증축 가산세",
-        formula: `${pb0.toLocaleString()}원 × 5% (${pr0!.note})`,
+        formula: `${pb0.toLocaleString()} × 5% (${pr0!.note})`,
         amount: pt0,
         legalBasis: TRANSFER.BUILDING_PENALTY,
       });
     }
     const lit0 = pt0 > 0 ? applyRate(pt0, 0.1) : 0;
     if (pt0 > 0) {
-      steps.push({ label: "지방소득세", formula: `${pt0.toLocaleString()}원 × 10%`, amount: lit0, legalBasis: TRANSFER.LOCAL_INCOME_TAX });
-      steps.push({ label: "총 납부세액", formula: `가산세 ${pt0.toLocaleString()}원 + 지방소득세 ${lit0.toLocaleString()}원`, amount: pt0 + lit0, legalBasis: TRANSFER.BUILDING_PENALTY });
+      steps.push({ label: "지방소득세", formula: `${pt0.toLocaleString()} × 10%`, amount: lit0, legalBasis: TRANSFER.LOCAL_INCOME_TAX });
+      steps.push({ label: "총 납부세액", formula: `가산세 ${pt0.toLocaleString()} + 지방소득세 ${lit0.toLocaleString()}`, amount: pt0 + lit0, legalBasis: TRANSFER.BUILDING_PENALTY });
     }
     return {
       isExempt: false,
@@ -481,7 +481,7 @@ export function calculateTransferTax(
     taxableGain = calcOneHouseProration(transferGain, input.transferPrice);
     steps.push({
       label: "과세 양도차익 (12억 초과분)",
-      formula: `${transferGain.toLocaleString()}원 × (양도가 ${input.transferPrice.toLocaleString()}원 - 12억) / 양도가`,
+      formula: `${transferGain.toLocaleString()} × (양도가 ${input.transferPrice.toLocaleString()} - 12억) / 양도가`,
       amount: taxableGain,
       legalBasis: TRANSFER.ONE_HOUSE_EXEMPT,
     });
@@ -527,7 +527,7 @@ export function calculateTransferTax(
   steps.push({
     label: "장기보유특별공제",
     formula: [
-      `${taxableGain.toLocaleString()}원 × ${Math.round(longTermHoldingRate * 100)}%`,
+      `${taxableGain.toLocaleString()} × ${Math.round(longTermHoldingRate * 100)}%`,
       lthdFormulaRate,
       holdingPeriodStr,
     ].filter(Boolean).join(" | "),
@@ -539,7 +539,7 @@ export function calculateTransferTax(
   const transferIncome = Math.max(0, taxableGain - longTermHoldingDeduction);
   steps.push({
     label: "양도소득금액",
-    formula: `양도차익 ${taxableGain.toLocaleString()}원 - 장기보유특별공제 ${longTermHoldingDeduction.toLocaleString()}원`,
+    formula: `양도차익 ${taxableGain.toLocaleString()} - 장기보유특별공제 ${longTermHoldingDeduction.toLocaleString()}`,
     amount: transferIncome,
     legalBasis: TRANSFER.LONG_TERM_DEDUCTION,
   });
@@ -557,7 +557,7 @@ export function calculateTransferTax(
   if (!input.skipBasicDeduction) {
     steps.push({
       label: "기본공제",
-      formula: `연 한도 ${parsedRates.basicDeductionRules.annualLimit.toLocaleString()}원 - 기사용 ${input.annualBasicDeductionUsed.toLocaleString()}원`,
+      formula: `연 한도 ${parsedRates.basicDeductionRules.annualLimit.toLocaleString()} - 기사용 ${input.annualBasicDeductionUsed.toLocaleString()}`,
       amount: basicDeduction,
       legalBasis: TRANSFER.BASIC_DEDUCTION,
     });
@@ -567,7 +567,7 @@ export function calculateTransferTax(
   const taxBase = Math.max(0, transferIncome - basicDeduction);
   steps.push({
     label: "과세표준",
-    formula: `양도소득금액 ${transferIncome.toLocaleString()}원 - 기본공제 ${basicDeduction.toLocaleString()}원`,
+    formula: `양도소득금액 ${transferIncome.toLocaleString()} - 기본공제 ${basicDeduction.toLocaleString()}`,
     amount: taxBase,
     legalBasis: TRANSFER.TAX_BASE_CALC,
   });
@@ -581,7 +581,7 @@ export function calculateTransferTax(
   const fmtPct = (r: number) => `${Math.round(r * 100)}%`;
   steps.push({
     label: "산출세액",
-    formula: `과세표준 ${taxBase.toLocaleString()}원 × 세율 ${fmtPct(taxResult.appliedRate)}${taxResult.surchargeRate ? ` (+중과 ${fmtPct(taxResult.surchargeRate)})` : ""}${taxResult.shortTermNote ? ` (${taxResult.shortTermNote})` : ""}`,
+    formula: `과세표준 ${taxBase.toLocaleString()} × 세율 ${fmtPct(taxResult.appliedRate)}${taxResult.surchargeRate ? ` (+중과 ${fmtPct(taxResult.surchargeRate)})` : ""}${taxResult.shortTermNote ? ` (${taxResult.shortTermNote})` : ""}`,
     amount: taxResult.calculatedTax,
     legalBasis: taxResult.surchargeRate ? TRANSFER.SURCHARGE : TRANSFER.TAX_RATE,
   });
@@ -627,7 +627,7 @@ export function calculateTransferTax(
   };
   steps.push({
     label: "감면세액",
-    formula: reductionType ? `${reductionType} 감면 ${reductionAmount.toLocaleString()}원` : "감면 없음",
+    formula: reductionType ? `${reductionType} 감면 ${reductionAmount.toLocaleString()}` : "감면 없음",
     amount: reductionAmount,
     legalBasis: reductionType ? reductionLawMap[reductionType] : undefined,
   });
@@ -636,7 +636,7 @@ export function calculateTransferTax(
   const determinedTax = truncateToWon(Math.max(0, taxResult.calculatedTax - reductionAmount));
   steps.push({
     label: "결정세액",
-    formula: `산출세액 ${taxResult.calculatedTax.toLocaleString()}원 - 감면 ${reductionAmount.toLocaleString()}원 (원 미만 절사)`,
+    formula: `산출세액 ${taxResult.calculatedTax.toLocaleString()} - 감면 ${reductionAmount.toLocaleString()} (원 미만 절사)`,
     amount: determinedTax,
     legalBasis: TRANSFER.FINAL_TAX,
   });
@@ -655,7 +655,7 @@ export function calculateTransferTax(
   const localIncomeTax = applyRate(determinedTaxWithPenalty, 0.1);
   steps.push({
     label: "지방소득세",
-    formula: `${determinedTaxWithPenalty.toLocaleString()}원 × 10%`,
+    formula: `${determinedTaxWithPenalty.toLocaleString()} × 10%`,
     amount: localIncomeTax,
     legalBasis: TRANSFER.LOCAL_INCOME_TAX,
   });
@@ -682,7 +682,7 @@ export function calculateTransferTax(
     if (penaltyTax > 0) {
       steps.push({
         label: "환산가액적용가산세 (§114조의2)",
-        formula: `${penaltyBase.toLocaleString()}원 × 5% (${penaltyResult!.note})`,
+        formula: `${penaltyBase.toLocaleString()} × 5% (${penaltyResult!.note})`,
         amount: penaltyTax,
         legalBasis: TRANSFER.BUILDING_PENALTY,
         sub: true,
@@ -691,7 +691,7 @@ export function calculateTransferTax(
     if (penaltyDetail?.filingPenalty && penaltyDetail.filingPenalty.filingPenalty > 0) {
       steps.push({
         label: `신고불성실가산세 (${(penaltyDetail.filingPenalty.penaltyRate * 100).toFixed(0)}%)`,
-        formula: `납부세액 ${penaltyDetail.filingPenalty.penaltyBase.toLocaleString()}원 × ${(penaltyDetail.filingPenalty.penaltyRate * 100).toFixed(0)}%`,
+        formula: `납부세액 ${penaltyDetail.filingPenalty.penaltyBase.toLocaleString()} × ${(penaltyDetail.filingPenalty.penaltyRate * 100).toFixed(0)}%`,
         amount: penaltyDetail.filingPenalty.filingPenalty,
         legalBasis: penaltyDetail.filingPenalty.legalBasis,
         sub: true,
@@ -701,7 +701,7 @@ export function calculateTransferTax(
       const d = penaltyDetail.delayedPaymentPenalty;
       steps.push({
         label: `납부지연가산세 (${d.elapsedDays}일 × ${(d.dailyRate * 100).toFixed(3)}%)`,
-        formula: `미납세액 ${d.unpaidTax.toLocaleString()}원 × ${d.elapsedDays}일 × ${(d.dailyRate * 100).toFixed(3)}%`,
+        formula: `미납세액 ${d.unpaidTax.toLocaleString()} × ${d.elapsedDays}일 × ${(d.dailyRate * 100).toFixed(3)}%`,
         amount: d.delayedPaymentPenalty,
         legalBasis: "국세기본법 §47의4",
         sub: true,
@@ -709,7 +709,7 @@ export function calculateTransferTax(
     }
     steps.push({
       label: "총결정세액",
-      formula: `결정세액 ${determinedTax.toLocaleString()}원 + 가산세 합계 ${totalAllPenalty.toLocaleString()}원`,
+      formula: `결정세액 ${determinedTax.toLocaleString()} + 가산세 합계 ${totalAllPenalty.toLocaleString()}`,
       amount: determinedTax + totalAllPenalty,
       legalBasis: TRANSFER.FINAL_TAX,
     });
@@ -719,7 +719,7 @@ export function calculateTransferTax(
   const totalTax = determinedTaxWithPenalty + localIncomeTax + filingDelayedPenalty;
   steps.push({
     label: "총 납부세액",
-    formula: `${totalAllPenalty > 0 ? "총결정세액" : "결정세액"} ${(determinedTax + totalAllPenalty).toLocaleString()}원 + 지방소득세 ${localIncomeTax.toLocaleString()}원`,
+    formula: `${totalAllPenalty > 0 ? "총결정세액" : "결정세액"} ${(determinedTax + totalAllPenalty).toLocaleString()} + 지방소득세 ${localIncomeTax.toLocaleString()}`,
     amount: totalTax,
     legalBasis: `${TRANSFER.FINAL_TAX} + ${TRANSFER.LOCAL_INCOME_TAX}`,
   });

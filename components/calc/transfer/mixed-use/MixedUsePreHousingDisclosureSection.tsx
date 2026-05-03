@@ -156,19 +156,6 @@ export function MixedUsePreHousingDisclosureSection({
         <LegalBadge />
       </div>
 
-      {/* 최초공시일 < 용도변경일 진입 안내 — Case A 4부분 분리 모드 */}
-      {isCaseA && (
-        <div className="rounded-lg bg-rose-100/60 border border-rose-200 px-3 py-2 text-xs text-rose-900 space-y-1">
-          <p className="font-semibold">
-            ⚠ 최초공시일({asset.phdFirstDisclosureDate || "—"})이 용도변경일보다 이전 — 4부분 안분 모드
-          </p>
-          <p>
-            최초공시 시점에는 건물 전체가 아직 주택이었으나, 양도시 일부가 상가로 변경되었습니다.
-            아래 ① 취득시·② 최초공시일 입력에서 건물기준시가를 <strong>주택건물 부분</strong>과 <strong>상가건물 부분</strong>으로 나누어 입력하세요(양도시 면적 기준).
-          </p>
-        </div>
-      )}
-
       {/* ① 주택부수토지 면적 (수정 가능) */}
       <FieldCard
         label={hasUsageChange ? "주택부수토지 면적 (양도시 기준)" : "주택부수토지 면적"}
@@ -201,6 +188,19 @@ export function MixedUsePreHousingDisclosureSection({
         />
       </FieldCard>
 
+      {/* 최초공시일 < 용도변경일 진입 안내 — Case A 4부분 분리 모드 */}
+      {isCaseA && (
+        <div className="rounded-lg bg-rose-100/60 border border-rose-200 px-3 py-2 text-xs text-rose-900 space-y-1">
+          <p className="font-semibold">
+            ⚠ 최초공시일({asset.phdFirstDisclosureDate || "—"})이 용도변경일보다 이전 — 4부분 안분 모드
+          </p>
+          <p>
+            최초공시 시점에는 건물 전체가 아직 주택이었으나, 양도시 일부가 상가로 변경되었습니다.
+            아래 ① 취득시·② 최초공시일 입력에서 건물기준시가를 <strong>주택건물 부분</strong>과 <strong>상가건물 부분</strong>으로 나누어 입력하세요(양도시 면적 기준).
+          </p>
+        </div>
+      )}
+
       {/* ③ 최초 고시 개별주택가격 */}
       <FieldCard
         label="최초 고시 개별주택가격"
@@ -229,7 +229,7 @@ export function MixedUsePreHousingDisclosureSection({
           </div>
           <p className="whitespace-nowrap text-sm font-semibold text-amber-900">
             {parseAmount(asset.mixedTransferHousingPrice) > 0
-              ? `${parseAmount(asset.mixedTransferHousingPrice).toLocaleString()}원`
+              ? `${parseAmount(asset.mixedTransferHousingPrice).toLocaleString()}`
               : "양도시 기준시가 섹션에서 입력하세요"}
           </p>
         </div>
@@ -266,6 +266,8 @@ export function MixedUsePreHousingDisclosureSection({
           targetLabel="주택"
           jibun={asset.addressJibun || undefined}
           landArea={effectiveLandArea > 0 ? effectiveLandArea.toFixed(4) : undefined}
+          // Case A: ③ 양도시 컬럼은 MixedUseStandardPriceInputs 양도시 섹션으로 통합
+          hideTransferColumn={isCaseA}
           // Case A 4부분 분리 모드 — ①·② 시점에서 토지·건물을 주택분/상가분 2 컬럼으로 분리
           splitHousingCommercialForAcqAndFirst={isCaseA}
           housingLandArea={

@@ -208,7 +208,7 @@ export function InstallmentPaymentsSection({ installments, contractDate, onChang
               {installments.length}회차 합계
             </span>
             <span className="font-bold text-emerald-800">
-              {total.toLocaleString("ko-KR")}원
+              {total.toLocaleString("ko-KR")}
             </span>
           </div>
           {lastDate && (

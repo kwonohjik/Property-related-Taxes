@@ -112,6 +112,11 @@ export interface ThreePointStandardPriceInputProps {
    * 검용주택 PHD에서 섹션 2의 `mixedTransferLandPricePerSqm`을 미러링할 때 사용.
    */
   landAutoSyncAtTransfer?: { label: string };
+  /**
+   * true 시 ③ 양도시 컬럼 전체를 렌더링하지 않음.
+   * Case A 4-part 통합 모드에서 양도시 섹션이 외부(MixedUseStandardPriceInputs)로 이동 시 사용.
+   */
+  hideTransferColumn?: boolean;
 }
 
 // ─── 라벨 매핑 ──────────────────────────────────────────────────
@@ -507,13 +512,23 @@ function PointBlock({
         const buildingAmt = parseAmount(buildingStdPrice);
         const commercialBuildingAmt = splitMode ? parseAmount(commercialBuildingStdPrice ?? "") : 0;
         if (splitMode) {
-          const total = (housingLandStd ?? 0) + (commercialLandStd ?? 0) + buildingAmt + commercialBuildingAmt;
+          const housingTotal = (housingLandStd ?? 0) + buildingAmt;
+          const commercialTotal = (commercialLandStd ?? 0) + commercialBuildingAmt;
+          const total = housingTotal + commercialTotal;
           if (total === 0) return null;
           return (
-            <div className={`rounded-md px-3 py-2 text-sm ${toneClasses ? toneClasses.summary : "bg-muted/40 border border-border text-foreground"}`}>
-              <div className="flex justify-between items-center">
-                <span className="text-xs font-semibold">4부분 합산기준시가 (주택분토지+주택건물+상가분토지+상가건물)</span>
-                <span className="font-semibold tabular-nums">{total.toLocaleString()}원</span>
+            <div className={`rounded-md px-3 py-2 text-sm space-y-1 ${toneClasses ? toneClasses.summary : "bg-muted/40 border border-border text-foreground"}`}>
+              <div className="flex justify-between items-center text-xs">
+                <span>주택분 기준시가 합계 (주택분토지 + 주택건물)</span>
+                <span className="font-mono tabular-nums">{housingTotal.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between items-center text-xs">
+                <span>상가분 기준시가 합계 (상가분토지 + 상가건물)</span>
+                <span className="font-mono tabular-nums">{commercialTotal.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between items-center pt-1 border-t border-current/20">
+                <span className="text-xs font-semibold">전체 합산기준시가 (주택분 + 상가분)</span>
+                <span className="font-semibold tabular-nums">{total.toLocaleString()}</span>
               </div>
             </div>
           );
@@ -524,7 +539,7 @@ function PointBlock({
           <div className={`rounded-md px-3 py-2 text-sm ${toneClasses ? toneClasses.summary : "bg-muted/40 border border-border text-foreground"}`}>
             <div className="flex justify-between items-center">
               <span className="text-xs font-semibold">{labels.totalLabel}</span>
-              <span className="font-semibold tabular-nums">{total.toLocaleString()}원</span>
+              <span className="font-semibold tabular-nums">{total.toLocaleString()}</span>
             </div>
           </div>
         );
@@ -595,28 +610,29 @@ export function ThreePointStandardPriceInput(props: ThreePointStandardPriceInput
         onCommercialBuildingStdPriceChange={props.onCommercialBuildingStdPriceAtFirstChange}
       />
 
-      <PointBlock
-        label={transferLabel}
-        tone="emerald"
-        referenceDate={props.transferDate}
-        selectedYear={props.landPriceYearAtTransfer}
-        isManual={props.landPriceYearAtTransferIsManual}
-        onYearChange={props.onLandPriceYearAtTransferChange}
-        landPricePerSqm={props.landPricePerSqmAtTransfer}
-        onLandPricePerSqmChange={props.onLandPricePerSqmAtTransferChange}
-        buildingStdPrice={props.buildingStdPriceAtTransfer}
-        onBuildingStdPriceChange={props.onBuildingStdPriceAtTransferChange}
-        jibun={props.jibun}
-        landArea={props.landArea}
-        targetLabel={props.targetLabel}
-        landAutoSync={props.landAutoSyncAtTransfer}
-        // Case A splitMode 활성 시 양도시도 ① ② 와 동일하게 주택분/상가분 분리 표시
-        splitMode={splitMode}
-        housingLandArea={props.housingLandArea}
-        commercialLandArea={props.commercialLandArea}
-        commercialBuildingStdPrice={props.commercialBuildingStdPriceAtTransfer}
-        onCommercialBuildingStdPriceChange={props.onCommercialBuildingStdPriceAtTransferChange}
-      />
+      {!props.hideTransferColumn && (
+        <PointBlock
+          label={transferLabel}
+          tone="emerald"
+          referenceDate={props.transferDate}
+          selectedYear={props.landPriceYearAtTransfer}
+          isManual={props.landPriceYearAtTransferIsManual}
+          onYearChange={props.onLandPriceYearAtTransferChange}
+          landPricePerSqm={props.landPricePerSqmAtTransfer}
+          onLandPricePerSqmChange={props.onLandPricePerSqmAtTransferChange}
+          buildingStdPrice={props.buildingStdPriceAtTransfer}
+          onBuildingStdPriceChange={props.onBuildingStdPriceAtTransferChange}
+          jibun={props.jibun}
+          landArea={props.landArea}
+          targetLabel={props.targetLabel}
+          landAutoSync={props.landAutoSyncAtTransfer}
+          splitMode={splitMode}
+          housingLandArea={props.housingLandArea}
+          commercialLandArea={props.commercialLandArea}
+          commercialBuildingStdPrice={props.commercialBuildingStdPriceAtTransfer}
+          onCommercialBuildingStdPriceChange={props.onCommercialBuildingStdPriceAtTransferChange}
+        />
+      )}
     </div>
   );
 }

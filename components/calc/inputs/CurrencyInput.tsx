@@ -15,9 +15,9 @@ export function parseAmount(value: string): number {
   return parseInt(value.replace(/,/g, "") || "0", 10);
 }
 
-/** 원화 표시 (아라비아 숫자 + 천단위 콤마) */
+/** 원화 표시 (아라비아 숫자 + 천단위 콤마, "원" 단위 생략 — 사용자 정책 2026-05-03) */
 export function formatKRW(amount: number): string {
-  return amount.toLocaleString() + "원";
+  return amount.toLocaleString();
 }
 
 /** 외부 value(문자열, 소수점·콤마 포함 가능) → 순수 숫자 문자열 */

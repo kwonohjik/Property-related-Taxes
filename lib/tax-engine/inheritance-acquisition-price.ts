@@ -156,13 +156,13 @@ function buildPreDeemedFormula(
   acquisitionPrice: number,
 ): string {
   const lines: string[] = [];
-  lines.push(`환산취득가: ${converted.toLocaleString()}원`);
+  lines.push(`환산취득가: ${converted.toLocaleString()}`);
   if (inflationAdjusted !== null) {
     const ratioStr = cpiRatio.toFixed(3);
-    lines.push(`취득실가 × 물가상승률(${ratioStr}배): ${inflationAdjusted.toLocaleString()}원`);
+    lines.push(`취득실가 × 물가상승률(${ratioStr}배): ${inflationAdjusted.toLocaleString()}`);
   }
   const selectedLabel = isInflationWin ? "취득실가×물가상승률" : "환산취득가";
-  lines.push(`→ 적용 (큰 금액, ${selectedLabel}): ${acquisitionPrice.toLocaleString()}원`);
+  lines.push(`→ 적용 (큰 금액, ${selectedLabel}): ${acquisitionPrice.toLocaleString()}`);
   return lines.join("\n");
 }
 
@@ -223,7 +223,7 @@ function legacyFallback(
       acquisitionPrice: Math.floor(marketValue),
       method: "market_value",
       legalBasis: "상증법 §60 ①",
-      formula: `시가 ${marketValue.toLocaleString()}원 적용`,
+      formula: `시가 ${marketValue.toLocaleString()} 적용`,
     };
   }
 
@@ -233,7 +233,7 @@ function legacyFallback(
       acquisitionPrice: Math.floor(appraisalAverage),
       method: "appraisal",
       legalBasis: "상증법 §60 ⑤",
-      formula: `감정평가액 평균 ${appraisalAverage.toLocaleString()}원 적용`,
+      formula: `감정평가액 평균 ${appraisalAverage.toLocaleString()} 적용`,
     };
   }
 
@@ -259,7 +259,7 @@ function computeSupplementary(
     const amount = Math.floor(publishedValue * area);
     return {
       amount,
-      formula: `개별공시지가 ${publishedValue.toLocaleString()}원/㎡ × ${area}㎡ = ${amount.toLocaleString()}원`,
+      formula: `개별공시지가 ${publishedValue.toLocaleString()}/㎡ × ${area}㎡ = ${amount.toLocaleString()}`,
     };
   }
 
@@ -267,6 +267,6 @@ function computeSupplementary(
   const label = assetKind === "house_individual" ? "개별주택가격" : "공동주택가격";
   return {
     amount,
-    formula: `${label} ${amount.toLocaleString()}원 적용`,
+    formula: `${label} ${amount.toLocaleString()} 적용`,
   };
 }

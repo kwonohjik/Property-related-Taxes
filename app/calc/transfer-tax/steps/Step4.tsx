@@ -6,6 +6,7 @@ import { SectionHeader } from "@/components/calc/shared/SectionHeader";
 import { NblSectionContainer } from "@/components/calc/transfer/nbl/NblSectionContainer";
 import { HousesListSection } from "./step4-sections/HousesListSection";
 import { MergeDateSection } from "./step4-sections/MergeDateSection";
+import { ResidencePeriodSection } from "@/components/calc/transfer/ResidencePeriodSection";
 
 // Step4 내부 공용 헬퍼 — 주택·입주권·분양권 계열 판정
 const isHousingLike = (pt: string) =>
@@ -185,31 +186,34 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
             </div>
           </div>
 
-          {/* 거주기간 */}
-          <div className="space-y-1.5">
-            <label className="block text-sm font-medium">거주기간</label>
-            <div className="flex items-center gap-2">
-              <input
-                type="number"
-                min="0"
-                max="480"
-                value={form.residencePeriodMonths}
-                onChange={(e) => onChange({ residencePeriodMonths: e.target.value })}
-                onFocus={(e) => e.target.select()}
-                className="w-24 rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              />
-              <span className="text-sm text-muted-foreground">개월</span>
-              {parseInt(form.residencePeriodMonths) > 0 && (
-                <span className="text-xs text-muted-foreground">
-                  ({Math.floor(parseInt(form.residencePeriodMonths) / 12)}년{" "}
-                  {parseInt(form.residencePeriodMonths) % 12}개월)
-                </span>
-              )}
+          {/* 1세대1주택 안내 배너 — 1세대 + 1채 선택 시 거주기간 입력 동기 부여 */}
+          {form.isOneHousehold && form.householdHousingCount === "1" && (
+            <div className="rounded-lg border border-violet-200 bg-violet-50/40 px-4 py-3 text-sm text-violet-900">
+              <p className="font-medium">1세대 1주택자 적용 효과</p>
+              <p className="mt-1 text-xs leading-relaxed text-violet-800">
+                보유 2년 이상 시 양도가액 12억 원까지 비과세이며, 12억 초과 고가주택 부분에 한해 과세됩니다.
+                거주 2년 이상이면 장기보유특별공제가 표2(보유 4%/년 + 거주 4%/년, 최대 80%)로 적용됩니다.
+                {primaryKind === "housing"
+                  ? " 아래 거주기간 입력이 표2 판정에 사용됩니다."
+                  : " 거주기간은 자산 카드의 ④ 거주 기간 입력에서 입력합니다."}
+              </p>
             </div>
-            <p className="text-xs text-muted-foreground">
-              1세대1주택 80% 장기보유공제에 거주기간이 반영됩니다.
-            </p>
-          </div>
+          )}
+
+          {/* 거주기간 — 1세대1주택 + 주택 자산일 때만 노출 */}
+          {form.isOneHousehold && primaryKind === "housing" && primary && (
+            <ResidencePeriodSection
+              residenceInputMode={primary.residenceInputMode}
+              residencePeriods={primary.residencePeriods}
+              residencePeriodMonthsAsset={primary.residencePeriodMonthsAsset}
+              transferDate={form.transferDate}
+              onChange={(patch) =>
+                onChange({
+                  assets: form.assets.map((a, i) => (i === 0 ? { ...a, ...patch } : a)),
+                })
+              }
+            />
+          )}
 
           {/* 조정대상지역 — 주택만 표시 */}
           {primaryKind === "housing" && (

@@ -13,7 +13,7 @@ import type { AcquisitionTaxResult } from "@/lib/tax-engine/types/acquisition.ty
 // ============================================================
 
 function formatKRW(amount: number): string {
-  return amount.toLocaleString("ko-KR") + "원";
+  return amount.toLocaleString("ko-KR");
 }
 
 function formatRate(rate: number): string {

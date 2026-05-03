@@ -512,7 +512,7 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
       label: bestReduction.label,
       formula: reductionType === "self_cultivation"
         ? `취득세 본세 × 50% (${ACQUISITION.SELF_CULTIVATION_REDUCTION})`
-        : `취득세 본세 × 100% (한도 ${ACQUISITION_CONST.FIRST_HOME_MAX_REDUCTION.toLocaleString()}원)`,
+        : `취득세 본세 × 100% (한도 ${ACQUISITION_CONST.FIRST_HOME_MAX_REDUCTION.toLocaleString()}`,
       amount: -reductionAmount,
       legalBasis: bestReduction.legalBasis,
     });

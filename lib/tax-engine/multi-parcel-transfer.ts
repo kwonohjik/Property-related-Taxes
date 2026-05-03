@@ -304,7 +304,7 @@ export function calculateMultiParcelTransfer(input: MultiParcelInput): MultiParc
 
     if (rawGain < 0) {
       warnings.push(
-        `필지 ${parcel.id}: 양도손실 발생 (차익 ${rawGain.toLocaleString()}원 → 0으로 처리)`,
+        `필지 ${parcel.id}: 양도손실 발생 (차익 ${rawGain.toLocaleString()} → 0으로 처리)`,
       );
     }
 

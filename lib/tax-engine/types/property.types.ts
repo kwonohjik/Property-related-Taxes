@@ -154,7 +154,7 @@ export interface PropertySurtaxDetail {
  * 분납 안내 (지방세법 §115)
  */
 export interface InstallmentInfo {
-  /** 분납 가능 여부 (산출세액 > 200,000원) */
+  /** 분납 가능 여부 (산출세액 > 200,000) */
   eligible: boolean;
   /** 1차 납부액 (7월) */
   firstPayment: number;

@@ -582,7 +582,7 @@ export function calculatePropertyTax(
         legalBasis.push(PROPERTY_CAL.RATE_COMPREHENSIVE);
         if (capRateComp !== undefined) {
           warnings.push(
-            `세부담상한(150%) 적용: 산출세액 ${grossTaxComp.toLocaleString()}원 → ${determinedTaxComp.toLocaleString()}원`,
+            `세부담상한(150%) 적용: 산출세액 ${grossTaxComp.toLocaleString()} → ${determinedTaxComp.toLocaleString()}`,
           );
         }
 

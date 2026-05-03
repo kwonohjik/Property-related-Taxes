@@ -147,7 +147,7 @@ export function Pre1990LandValuationInput({
       const price = data.price ?? data.pricePerSqm ?? 0;
       if (price > 0) {
         onChange({ pre1990PricePerSqm_1990: String(price) });
-        setLookupMsg({ text: `1990년 개별공시지가: ${price.toLocaleString()}원/㎡`, kind: "ok" });
+        setLookupMsg({ text: `1990년 개별공시지가: ${price.toLocaleString()}/㎡`, kind: "ok" });
       } else {
         setLookupMsg({ text: "1990년 가격 정보 없음 — 직접 입력해주세요.", kind: "err" });
       }

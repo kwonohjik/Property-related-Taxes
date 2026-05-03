@@ -352,6 +352,24 @@ export function validateStep(step: number, form: TransferFormData): string | nul
   // step 1: 보유 상황 (구 step 3)
   if (step === 1) {
     if (!form.householdHousingCount) return "세대 보유 주택 수를 선택하세요.";
+
+    // 1세대1주택 + housing 자산 + interval 모드 거주 구간 검증
+    const primary = form.assets?.[0];
+    if (form.isOneHousehold && primary && primary.assetKind === "housing"
+        && primary.residenceInputMode === "interval") {
+      const periods = primary.residencePeriods ?? [];
+      for (let i = 0; i < periods.length; i++) {
+        const p = periods[i];
+        const label = `거주 구간 #${i + 1}`;
+        if (!p.moveInDate) return `${label}: 입주일을 입력하세요.`;
+        if (p.moveOutDate && p.moveOutDate < p.moveInDate)
+          return `${label}: 퇴거일은 입주일보다 이후여야 합니다.`;
+        if (form.transferDate && p.moveInDate > form.transferDate)
+          return `${label}: 입주일은 양도일 이전이어야 합니다.`;
+        if (form.transferDate && p.moveOutDate && p.moveOutDate > form.transferDate)
+          return `${label}: 퇴거일은 양도일 이전이어야 합니다.`;
+      }
+    }
   }
 
   // step 2: 감면·공제 (구 step 4)

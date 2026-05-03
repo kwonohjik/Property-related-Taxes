@@ -447,7 +447,7 @@ export function calculateRentalReduction(
         : "3억원";
     ineligibleReasons.push({
       code: "OFFICIAL_PRICE_EXCEEDED",
-      message: `임대개시 당시 기준시가 ${limit} 초과 (입력값: ${input.officialPriceAtStart.toLocaleString()}원)`,
+      message: `임대개시 당시 기준시가 ${limit} 초과 (입력값: ${input.officialPriceAtStart.toLocaleString()}`,
       field: "officialPriceAtStart",
     });
   }

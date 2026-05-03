@@ -171,7 +171,7 @@ export function assessLandCategoryChange(
 
   if (diff <= 0) {
     warnings.push(
-      `지목변경 후 시가표준액(${newStandardValue.toLocaleString()}원)이 변경 전(${prevStandardValue.toLocaleString()}원) 이하 — 간주취득 과세 없음.`
+      `지목변경 후 시가표준액(${newStandardValue.toLocaleString()}이 변경 전(${prevStandardValue.toLocaleString()} 이하 — 간주취득 과세 없음.`
     );
     return {
       isSubjectToTax: false,
@@ -183,7 +183,7 @@ export function assessLandCategoryChange(
     };
   }
 
-  warnings.push(`지목변경: ${prevCategory} → ${newCategory} (시가표준액 증가분 ${diff.toLocaleString()}원 과세)`);
+  warnings.push(`지목변경: ${prevCategory} → ${newCategory} (시가표준액 증가분 ${diff.toLocaleString()} 과세)`);
 
   // 취득 시기 안내: 두 날짜 중 빠른 날 기준 (지방세법 §20)
   if (input.actualChangeDate && input.registrationDate) {
@@ -238,7 +238,7 @@ export function assessBuildingRenovation(
 
   if (diff <= 0) {
     warnings.push(
-      `개수 후 시가표준액(${newStandardValue.toLocaleString()}원)이 개수 전(${prevStandardValue.toLocaleString()}원) 이하 — 간주취득 과세 없음.`
+      `개수 후 시가표준액(${newStandardValue.toLocaleString()}이 개수 전(${prevStandardValue.toLocaleString()} 이하 — 간주취득 과세 없음.`
     );
     return {
       isSubjectToTax: false,
@@ -254,7 +254,7 @@ export function assessBuildingRenovation(
     renovationType === "structural_change" ? "구조 변경" :
     renovationType === "use_change" ? "용도 변경" : "대수선";
 
-  warnings.push(`건물 개수(${renovationTypeLabel}): 시가표준액 증가분 ${diff.toLocaleString()}원 간주취득 과세`);
+  warnings.push(`건물 개수(${renovationTypeLabel}): 시가표준액 증가분 ${diff.toLocaleString()} 간주취득 과세`);
 
   // 취득 시기 안내: 사용승인일·사실상 사용개시일 중 빠른 날 기준 (지방세법 §20)
   if (input.usageApprovalDate && input.actualUsageDate) {

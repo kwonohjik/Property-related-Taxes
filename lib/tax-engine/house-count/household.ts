@@ -66,7 +66,7 @@ function checkMemberSeparateEligibility(member: HouseholdMember): SeparateHouseh
       return {
         isSeparate: true,
         reason,
-        description: `30세 미만 자녀(${member.age}세) — 12개월 소득(${income.toLocaleString()}원) ≥ 기준중위소득 40%(${threshold.toLocaleString()}원) + 독립 생계 유지 → 별도 세대 인정`,
+        description: `30세 미만 자녀(${member.age}세) — 12개월 소득(${income.toLocaleString()} ≥ 기준중위소득 40%(${threshold.toLocaleString()} + 독립 생계 유지 → 별도 세대 인정`,
         legalBasis: ACQUISITION.SEPARATE_HOUSEHOLD_INCOME,
       };
     }

@@ -215,7 +215,7 @@ export function calculateSelfFarmingReduction(
   breakdown.push(
     `편입일까지 비율 = (편입기준시가 ${stdIncorp.toLocaleString()} - 취득기준시가 ${stdAcq.toLocaleString()}) / (양도기준시가 ${stdTransfer.toLocaleString()} - 취득기준시가 ${stdAcq.toLocaleString()})`,
     `감면비율 = ${numerator.toLocaleString()} / ${denom.toLocaleString()} = ${(ratio * 100).toFixed(4)}%`,
-    `감면대상 양도소득금액 = ${transferIncome.toLocaleString()} × ${(ratio * 100).toFixed(4)}% = ${reducibleIncome.toLocaleString()}원`,
+    `감면대상 양도소득금액 = ${transferIncome.toLocaleString()} × ${(ratio * 100).toFixed(4)}% = ${reducibleIncome.toLocaleString()}`,
   );
 
   return {

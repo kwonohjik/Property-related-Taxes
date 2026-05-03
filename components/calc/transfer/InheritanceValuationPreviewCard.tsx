@@ -47,7 +47,7 @@ export function InheritanceValuationPreviewCard({ result, houseValuationResult }
               : "text-muted-foreground"
           }`}>
             <span>환산취득가</span>
-            <span>{preDeemedBreakdown.convertedAmount.toLocaleString()}원</span>
+            <span>{preDeemedBreakdown.convertedAmount.toLocaleString()}</span>
           </div>
 
           {/* 실가×물가상승률 후보 */}
@@ -63,7 +63,7 @@ export function InheritanceValuationPreviewCard({ result, houseValuationResult }
                   ({preDeemedBreakdown.cpiRatio.toFixed(3)}배)
                 </span>
               </span>
-              <span>{preDeemedBreakdown.inflationAdjustedAmount.toLocaleString()}원</span>
+              <span>{preDeemedBreakdown.inflationAdjustedAmount.toLocaleString()}</span>
             </div>
           )}
 
@@ -72,7 +72,7 @@ export function InheritanceValuationPreviewCard({ result, houseValuationResult }
               적용 ({preDeemedBreakdown.selectedMethod === "converted" ? "환산취득가" : "취득실가×물가상승률"} 기준)
             </span>
             <span className="font-bold text-primary text-base">
-              {acquisitionPrice.toLocaleString()}원
+              {acquisitionPrice.toLocaleString()}
             </span>
           </div>
         </div>
@@ -88,7 +88,7 @@ export function InheritanceValuationPreviewCard({ result, houseValuationResult }
           <div className="flex items-center justify-between">
             <span className="text-xs text-muted-foreground">상속세 신고가액</span>
             <span className="font-bold text-primary text-base">
-              {acquisitionPrice.toLocaleString()}원
+              {acquisitionPrice.toLocaleString()}
             </span>
           </div>
         </div>
@@ -104,42 +104,42 @@ export function InheritanceValuationPreviewCard({ result, houseValuationResult }
           {/* 양도시 */}
           <div className="flex justify-between text-muted-foreground">
             <span>양도시 합계 기준시가</span>
-            <span>{fmt(houseValuationResult.totalStdPriceAtTransfer)}원</span>
+            <span>{fmt(houseValuationResult.totalStdPriceAtTransfer)}</span>
           </div>
           <div className="pl-3 space-y-0.5 text-[11px] text-muted-foreground">
             <div className="flex justify-between">
               <span>토지</span>
-              <span>{fmt(houseValuationResult.landStdAtTransfer)}원</span>
+              <span>{fmt(houseValuationResult.landStdAtTransfer)}</span>
             </div>
             <div className="flex justify-between">
               <span>주택</span>
-              <span>{fmt(houseValuationResult.totalStdPriceAtTransfer - houseValuationResult.landStdAtTransfer)}원</span>
+              <span>{fmt(houseValuationResult.totalStdPriceAtTransfer - houseValuationResult.landStdAtTransfer)}</span>
             </div>
           </div>
 
           {/* 상속개시일 */}
           <div className="flex justify-between">
             <span className="font-medium">상속개시일 합계 기준시가</span>
-            <span className="font-medium">{fmt(houseValuationResult.totalStdPriceAtInheritance)}원</span>
+            <span className="font-medium">{fmt(houseValuationResult.totalStdPriceAtInheritance)}</span>
           </div>
           <div className="pl-3 space-y-0.5 text-[11px] text-muted-foreground">
             {houseValuationResult.pre1990Result && (
               <div className="flex justify-between">
                 <span>토지 ({houseValuationResult.pre1990Result.caseLabel})</span>
-                <span>{fmt(houseValuationResult.landStdAtInheritance)}원</span>
+                <span>{fmt(houseValuationResult.landStdAtInheritance)}</span>
               </div>
             )}
             {!houseValuationResult.pre1990Result && (
               <div className="flex justify-between">
                 <span>토지</span>
-                <span>{fmt(houseValuationResult.landStdAtInheritance)}원</span>
+                <span>{fmt(houseValuationResult.landStdAtInheritance)}</span>
               </div>
             )}
             <div className="flex justify-between">
               <span>
                 주택 ({houseValuationResult.estimationMethod === "user_override" ? "직접 입력" : "§164⑤ 환산"})
               </span>
-              <span>{fmt(houseValuationResult.housePriceAtInheritanceUsed)}원</span>
+              <span>{fmt(houseValuationResult.housePriceAtInheritanceUsed)}</span>
             </div>
           </div>
         </div>

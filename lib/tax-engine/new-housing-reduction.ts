@@ -299,7 +299,7 @@ export function determineNewHousingReduction(
     if (!checkPriceRequirement(input.acquisitionPrice, candidate.maxAcquisitionPrice)) {
       ineligibleReasons.push({
         code: "PRICE_EXCEEDED",
-        message: `취득가액 ${input.acquisitionPrice.toLocaleString()}원이 한도 ${candidate.maxAcquisitionPrice?.toLocaleString()}원 초과`,
+        message: `취득가액 ${input.acquisitionPrice.toLocaleString()}원이 한도 ${candidate.maxAcquisitionPrice?.toLocaleString()} 초과`,
         field: "acquisitionPrice",
       });
     }

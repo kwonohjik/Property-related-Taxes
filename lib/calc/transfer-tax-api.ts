@@ -8,6 +8,7 @@
 
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { TransferFormData, AssetForm, AssetReductionForm } from "@/lib/stores/calc-wizard-store";
+import { sumResidenceMonths } from "@/lib/stores/calc-wizard-asset-residence";
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import type { BundledApportionmentResult } from "@/lib/tax-engine/bundled-sale-apportionment";
 import type { AggregateTransferResult } from "@/lib/tax-engine/transfer-tax-aggregate";
@@ -416,7 +417,11 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
         ? parseFloat(primary.acquisitionArea) || undefined
         : undefined,
     householdHousingCount: parseInt(form.householdHousingCount) || 0,
-    residencePeriodMonths: parseInt(form.residencePeriodMonths) || 0,
+    // 거주기간 — interval 모드면 자산 구간 합산, direct 모드는 자산 또는 form-global fallback
+    residencePeriodMonths:
+      primary.residenceInputMode === "interval" && primary.residencePeriods.length > 0
+        ? sumResidenceMonths(primary.residencePeriods, form.transferDate)
+        : parseInt(primary.residencePeriodMonthsAsset || form.residencePeriodMonths) || 0,
     isRegulatedArea: form.isRegulatedArea,
     wasRegulatedAtAcquisition: form.wasRegulatedAtAcquisition,
     isUnregistered: form.isUnregistered,

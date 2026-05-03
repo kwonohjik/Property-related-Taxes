@@ -7,6 +7,8 @@
  */
 
 import { MIXED_USE_DEFAULTS, migrateMixedUseFields } from "./calc-wizard-asset-mixed-use";
+import { type ResidencePeriod, RESIDENCE_DEFAULTS, migrateResidenceFields } from "./calc-wizard-asset-residence";
+export type { ResidencePeriod };
 
 /** 비사업용 토지 사업용 사용기간 항목 (폼 문자열 버전) */
 export interface NblBusinessUsePeriod {
@@ -238,6 +240,10 @@ export interface AssetForm {
   parcels: ParcelFormItem[];
 
   isOneHousehold: boolean;
+  /** 거주 정보 — 1세대1주택 표2 장특공제용 (자세한 타입은 calc-wizard-asset-residence.ts) */
+  residenceInputMode: "interval" | "direct";
+  residencePeriods: ResidencePeriod[];
+  residencePeriodMonthsAsset: string;
   /** actual 모드 시 이 자산의 계약서상 양도가액 */
   actualSalePrice: string;
   /** 취득 원인 — purchase=매매, inheritance=상속, gift=증여 */
@@ -584,6 +590,7 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     parcelMode: false,
     parcels: [],
     isOneHousehold: false,
+    ...RESIDENCE_DEFAULTS,
     actualSalePrice: "",
     acquisitionCause: "purchase",
     acquisitionDate: "",
@@ -810,5 +817,7 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (a.useStandardPriceAtTransferOverride === undefined) a.useStandardPriceAtTransferOverride = false;
   // 검용주택 분리계산 + 보유 중 일부 용도변경 필드 (별도 모듈)
   migrateMixedUseFields(a);
+  // 거주 정보 (자산-수준)
+  migrateResidenceFields(a);
   return a as unknown as AssetForm;
 }

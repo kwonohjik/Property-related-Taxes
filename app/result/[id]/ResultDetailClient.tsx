@@ -8,7 +8,7 @@ import { MultiTransferTaxResultView } from "@/components/calc/results/MultiTrans
 import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
 
 function formatKRW(amount: number): string {
-  return amount.toLocaleString() + "원";
+  return amount.toLocaleString();
 }
 
 function formatRate(rate: number): string {
@@ -144,7 +144,7 @@ export function ResultDetailClient({ id, taxType, result, inputData }: ResultDet
           <p className="text-lg font-bold text-emerald-700 dark:text-emerald-400">
             {result.exemptReason ?? "비과세"}
           </p>
-          <p className="text-2xl font-bold mt-1">납부세액 0원</p>
+          <p className="text-2xl font-bold mt-1">납부세액 0</p>
         </div>
       ) : (
         <div className="rounded-xl border-2 border-primary bg-primary/5 p-5">

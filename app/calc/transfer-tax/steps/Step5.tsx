@@ -460,7 +460,7 @@ export function Step5({
 
       {/* 연간 기사용 기본공제 */}
       <SectionHeader title="기본공제" description="연간 한도 250만원, 동일 연도 다른 양도에서 이미 사용한 금액을 입력하세요" />
-      <FieldCard label="기사용 기본공제" unit="원" hint="동일 연도 다른 양도에서 이미 사용한 기본공제 금액 (연간 한도 2,500,000원)">
+      <FieldCard label="기사용 기본공제" unit="원" hint="동일 연도 다른 양도에서 이미 사용한 기본공제 금액 (연간 한도 2,500,000)">
         <CurrencyInput
           label=""
           hideUnit
