@@ -247,7 +247,7 @@ function Step2({
           value={form.funeralExpense}
           onChange={(v) => set({ funeralExpense: v })}
           hint="최대 1,500만원 한도 자동 적용"
-          placeholder="예: 10,000,000"
+          placeholder="금액 입력 (원)"
         />
         <ToggleCard
           tone="violet"
@@ -368,7 +368,7 @@ function Step4({
                 inputMode="numeric"
                 value={form.familyBusinessYears}
                 onChange={(e) => set({ familyBusinessYears: e.target.value.replace(/\D/g, "") })}
-                placeholder="예: 15"
+                placeholder="보유기간 입력 (년)"
                 className="w-32 rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               />
             </div>
@@ -478,7 +478,7 @@ function Step5({
             onChange={(e) =>
               set({ shortTermReinheritYears: e.target.value.replace(/\D/g, "") })
             }
-            placeholder="예: 3 (0~10년)"
+            placeholder="거주기간 입력 (년)"
             className="w-32 rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
         </div>

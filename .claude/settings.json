@@ -1,16 +1,24 @@
 {
-    "plansDirectory": ".claude/plans/",
-    "hooks": {
-        "PostToolUse": [
-            {
-                "matcher": "Write|Edit",
-                "hooks": [
-                    {
-                        "type": "command",
-                        "command": "jq -r \".tool_input.file_path // empty\" | { read -r f; [ -z \"$f\" ] && exit 0; [ ! -f \"$f\" ] && exit 0; lines=$(wc -l < \"$f\" 2>/dev/null | tr -d \" \" || echo 0); if [ \"$lines\" -gt 800 ]; then jq -nc --arg f \"$f\" --arg n \"$lines\" \"{hookSpecificOutput:{hookEventName:\\\"PostToolUse\\\", additionalContext:\\\"⚠️ \\(\\$f) exceeds 800 lines (\\(\\$n)). Project policy: split files > 800 lines. Consider extracting helpers/types to sibling files.\\\"}}\"; fi; }"
-                    }
-                ]
-            }
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r \".tool_input.file_path // empty\" | { read -r f; [ -z \"$f\" ] && exit 0; [ ! -f \"$f\" ] && exit 0; lines=$(wc -l < \"$f\" 2>/dev/null | tr -d \" \" || echo 0); if [ \"$lines\" -gt 800 ]; then jq -nc --arg f \"$f\" --arg n \"$lines\" \"{hookSpecificOutput:{hookEventName:\\\"PostToolUse\\\", additionalContext:\\\"⚠️ \\(\\$f) exceeds 800 lines (\\(\\$n)). Project policy: split files > 800 lines. Consider extracting helpers/types to sibling files.\\\"}}\"; fi; }"
+          },
+          {
+            "type": "command",
+            "command": "jq -r \".tool_input.file_path // empty\" | { read -r f; [ -z \"$f\" ] && exit 0; case \"$f\" in *lib/tax-engine/types/*|*lib/tax-engine/*.types.ts|*lib/tax-engine/transfer-tax.ts|*lib/tax-engine/acquisition-tax.ts|*lib/tax-engine/property-tax.ts|*lib/tax-engine/comprehensive-tax.ts|*lib/tax-engine/inheritance-tax.ts|*lib/tax-engine/gift-tax.ts) jq -nc --arg f \"$f\" \"{hookSpecificOutput:{hookEventName:\\\"PostToolUse\\\", additionalContext:\\\"🔄 ui-sync-precheck — 엔진 타입/엔트리 변경: \\(\\$f). 작업 완료 전 8개 동기화 지점 전수 점검 필수: ① 폼 상태 타입 ② initial value ③ normalize fallback ④ API 변환(lib/calc/{tax}-api.ts) ⑤ UI 입력 위젯 ⑥ 사이드바 합계 ⑦ 결과 카드 산식 ⑧ validation(lib/calc/{tax}-validate.ts). ui-engine-sync-checker 에이전트 호출 권장. 3대 정책 위반 금지: (a) useEffect→store 미러링 금지 (b) 자동 안분 fallback 금지 (c) API/UI fallback 추가 시 validate도 동기화.\\\"}}\" ;; esac; }"
+          }
         ]
-    }
+      }
+    ]
+  },
+  "enabledPlugins": {
+    "session-report@claude-plugins-official": true,
+    "hookify@claude-plugins-official": true
+  },
+  "plansDirectory": ".claude/plans/"
 }

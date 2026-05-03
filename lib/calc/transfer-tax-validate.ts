@@ -62,7 +62,9 @@ function validateAssetAcquisition(asset: AssetForm, label: string): string | nul
   // 검용주택 분리계산은 calcMixedUseTransferTax 엔진이 별도 처리 — 전용 검증 후 return
   if (asset.isMixedUseHouse === true) {
     if (!asset.acquisitionDate) return `${label}: 건물 취득일을 입력하세요.`;
-    if (!asset.landAcquisitionDate) return `${label}: 토지 취득일을 입력하세요.`;
+    // 토지·건물 취득일 다름 토글 ON일 때만 토지 취득일 필수. OFF면 acquisitionDate로 폴백.
+    if (asset.hasSeperateLandAcquisitionDate && !asset.landAcquisitionDate)
+      return `${label}: 토지 취득일을 입력하세요.`;
     if (!asset.residentialFloorArea || parseFloat(asset.residentialFloorArea) <= 0)
       return `${label}: 주택 연면적(㎡)을 입력하세요. (면적 정보)`;
     if (!asset.nonResidentialFloorArea || parseFloat(asset.nonResidentialFloorArea) <= 0)
@@ -80,8 +82,33 @@ function validateAssetAcquisition(asset: AssetForm, label: string): string | nul
       if (!asset.phdFirstDisclosureDate) return `${label}: 최초 고시일을 입력하세요.`;
       if (!asset.phdFirstDisclosureHousingPrice || parseAmount(asset.phdFirstDisclosureHousingPrice) <= 0)
         return `${label}: 최초 고시 개별주택가격을 입력하세요.`;
-      if (!asset.phdTransferHousingPrice || parseAmount(asset.phdTransferHousingPrice) <= 0)
-        return `${label}: 양도시 개별주택가격을 입력하세요.`;
+      // ⑧ Validation fallback — API는 phdTransferHousingPrice || mixedTransferHousingPrice 로 fallback.
+      // 메인 양도시 섹션에서 입력한 값(mixedTransferHousingPrice)도 인정.
+      const transferHousingValue =
+        parseAmount(asset.phdTransferHousingPrice) ||
+        parseAmount(asset.mixedTransferHousingPrice);
+      if (transferHousingValue <= 0)
+        return `${label}: 양도시 개별주택가격을 입력하세요. (양도시 기준시가 섹션)`;
+      // Case A 4부분 안분 — house_to_commercial + 최초공시일 < 용도변경일 시 상가건물 기준시가 별도 입력 필수
+      if (
+        asset.hasPartialUsageChange &&
+        asset.partialChangeDirection === "house_to_commercial" &&
+        asset.partialChangeDate &&
+        asset.phdFirstDisclosureDate &&
+        asset.phdFirstDisclosureDate < asset.partialChangeDate
+      ) {
+        // ⑧ Validation fallback — API는 phdCommercialBuildingStdPriceAtAcq || mixedAcqCommercialBuildingPrice fallback.
+        // 메인 취득시 상가건물 기준시가도 인정 (UI 통합으로 단일 필드 공유).
+        const acqCommercialBuildingValue =
+          parseAmount(asset.phdCommercialBuildingStdPriceAtAcq) ||
+          parseAmount(asset.mixedAcqCommercialBuildingPrice);
+        if (acqCommercialBuildingValue <= 0) {
+          return `${label}: Case A 4부분 안분 — 취득시 상가건물 기준시가를 입력하세요. (홈택스 조회)`;
+        }
+        if (!asset.phdCommercialBuildingStdPriceAtFirst || parseAmount(asset.phdCommercialBuildingStdPriceAtFirst) <= 0) {
+          return `${label}: Case A 4부분 안분 — 최초고시 상가건물 기준시가를 입력하세요. (홈택스 조회)`;
+        }
+      }
     }
     // 보유 중 일부 용도변경 검증 (시행령 §166⑥ + 집행기준 99-164-10)
     if (asset.hasPartialUsageChange) {

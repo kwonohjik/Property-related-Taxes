@@ -511,6 +511,23 @@ export const preHousingDisclosureSchema = z.object({
   landPricePerSqmAtTransfer: z.number().int().positive(),
   /** 양도시 건물 기준시가 (원) */
   buildingStdPriceAtTransfer: z.number().int().nonnegative(),
+
+  // Case A 4부분 안분 전용 (검용주택 + house_to_commercial + firstDisclosure < usageChange)
+  // 모두 충족 시 PHD 엔진이 4부분 안분 모드로 분기.
+  /** 취득시 상가건물 기준시가 (원) */
+  commercialBuildingStdPriceAtAcq: z.number().int().nonnegative().optional(),
+  /** 최초공시일 상가건물 기준시가 (원) */
+  commercialBuildingStdPriceAtFirstDisclosure: z.number().int().nonnegative().optional(),
+  /** 양도시 상가건물 기준시가 (원) — 미입력 시 transferStandardPrice.commercialBuildingPrice 자동 사용 */
+  commercialBuildingStdPriceAtTransfer: z.number().int().nonnegative().optional(),
+  /** 주택부수토지 면적 (㎡) — 미입력 시 derived.residentialLandArea 자동 사용 */
+  housingLandArea: z.number().positive().optional(),
+  /** 상가부수토지 면적 (㎡) — 미입력 시 derived.commercialLandArea 자동 사용 */
+  commercialLandArea: z.number().positive().optional(),
+  /** 양도시 주택건물 기준시가 (원) — 미입력 시 buildingStdPriceAtTransfer 자동 fallback */
+  housingBuildingStdPriceAtTransfer: z.number().int().nonnegative().optional(),
+  /** 총 양도가액 (원) — 4부분 안분 시 필수 */
+  totalTransferPriceForFourPart: z.number().int().nonnegative().optional(),
 });
 
 // ─── 상속 주택 환산취득가 — 개별주택 미공시 + 1990 이전 토지 스키마 ──
@@ -619,6 +636,7 @@ export const mixedUseAssetSchema = z.object({
     direction: z.enum(["house_to_commercial", "commercial_to_house"]),
     acqResidentialArea: z.number().nonnegative().optional(),
     acqCommercialArea: z.number().nonnegative().optional(),
+    usageChangeDate: z.string().optional(),
   }).optional(),
 }).superRefine((v, ctx) => {
   const total = v.residentialFloorArea + v.nonResidentialFloorArea;

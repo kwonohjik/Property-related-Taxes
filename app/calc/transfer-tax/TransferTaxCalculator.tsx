@@ -380,10 +380,11 @@ export default function TransferTaxCalculator({
             onLoginPrompt={!isLoggedIn}
             showMultiTransferButton={!isEmbeddedInMulti}
             onContinueToMulti={handleContinueToMulti}
+            formData={formData}
           />
         ) : result.mode === "mixed-use" ? (
           <div className="space-y-4">
-            <MixedUseResultCard breakdown={result.result} />
+            <MixedUseResultCard breakdown={result.result} formData={formData} />
             {/* 결과 화면 하단 네비게이션 */}
             <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-4 mt-4">
               <button

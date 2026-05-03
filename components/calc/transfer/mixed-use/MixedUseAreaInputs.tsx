@@ -36,7 +36,7 @@ export function MixedUseAreaInputs({ asset, onChange, sectionNum }: Props) {
         <DecimalInput
           value={asset.residentialFloorArea}
           onChange={(v) => onChange({ residentialFloorArea: v })}
-          placeholder="예: 91.78 또는 37.79 (양도시 주택 부분)"
+          placeholder="양도시 주거용 합계 면적"
           unit="㎡"
         />
       </FieldCard>
@@ -48,7 +48,7 @@ export function MixedUseAreaInputs({ asset, onChange, sectionNum }: Props) {
         <DecimalInput
           value={asset.nonResidentialFloorArea}
           onChange={(v) => onChange({ nonResidentialFloorArea: v })}
-          placeholder="예: 333.06 또는 80.23 (양도시 상가 부분)"
+          placeholder="양도시 비주택 합계 면적"
           unit="㎡"
         />
       </FieldCard>
@@ -60,7 +60,7 @@ export function MixedUseAreaInputs({ asset, onChange, sectionNum }: Props) {
         <DecimalInput
           value={asset.buildingFootprintArea}
           onChange={(v) => onChange({ buildingFootprintArea: v })}
-          placeholder="예: 100 또는 37.79 (건축면적)"
+          placeholder="건축물대장의 건축면적"
           unit="㎡"
         />
       </FieldCard>
@@ -69,7 +69,7 @@ export function MixedUseAreaInputs({ asset, onChange, sectionNum }: Props) {
         <DecimalInput
           value={asset.mixedUseTotalLandArea}
           onChange={(v) => onChange({ mixedUseTotalLandArea: v })}
-          placeholder="예: 168.3"
+          placeholder="전체 토지 면적"
           unit="㎡"
         />
       </FieldCard>

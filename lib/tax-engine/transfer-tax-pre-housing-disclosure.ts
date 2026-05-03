@@ -49,21 +49,53 @@ export function calcPreHousingDisclosureGain(
     transferHousingPrice,
     landPricePerSqmAtTransfer,
     buildingStdPriceAtTransfer,
+    // Case A 4부분 안분 (검용주택 + 일부 용도변경(주택→상가) + 최초공시 < 용도변경)
+    commercialBuildingStdPriceAtAcq,
+    commercialBuildingStdPriceAtFirstDisclosure,
+    commercialBuildingStdPriceAtTransfer,
+    housingLandArea,
+    commercialLandArea,
+    housingBuildingStdPriceAtTransfer,
+    totalTransferPriceForFourPart,
   } = input;
 
-  // 시점별 면적 — override 제공 시 사용, 미제공 시 단일 landArea fallback
-  const areaAtAcq = landAreaAtAcquisition ?? landArea;
-  const areaAtFirst = landAreaAtFirstDisclosure ?? landArea;
-  const areaAtTransfer = landAreaAtTransfer ?? landArea;
+  // 4부분 모드 활성화 — Case A 한정 (모든 commercial 입력 + housing/commercialLandArea + 총양도가액)
+  const fourPartActive =
+    commercialBuildingStdPriceAtAcq !== undefined &&
+    commercialBuildingStdPriceAtFirstDisclosure !== undefined &&
+    commercialBuildingStdPriceAtTransfer !== undefined &&
+    housingLandArea !== undefined && housingLandArea > 0 &&
+    commercialLandArea !== undefined && commercialLandArea > 0 &&
+    totalTransferPriceForFourPart !== undefined && totalTransferPriceForFourPart > 0;
 
-  // ── Step 1: 각 시점 기준시가 산출 ──
+  // 시점별 면적 — 4부분 모드에서는 housingLandArea + commercialLandArea = 전체 토지면적.
+  // 비4부분 모드에서는 기존 단일 landArea / override 사용.
+  const areaAtAcq = fourPartActive
+    ? (housingLandArea! + commercialLandArea!)
+    : (landAreaAtAcquisition ?? landArea);
+  const areaAtFirst = fourPartActive
+    ? (housingLandArea! + commercialLandArea!)
+    : (landAreaAtFirstDisclosure ?? landArea);
+  const areaAtTransfer = fourPartActive
+    ? (housingLandArea! + commercialLandArea!)
+    : (landAreaAtTransfer ?? landArea);
+
+  // ── Step 1: 각 시점 토지·건물 기준시가 산출 ──
   const landStdAtAcquisition = landPricePerSqmAtAcquisition * areaAtAcq;
   const landStdAtFirstDisclosure = landPricePerSqmAtFirstDisclosure * areaAtFirst;
   const landStdAtTransfer = landPricePerSqmAtTransfer * areaAtTransfer;
 
-  const sumAtAcquisition = landStdAtAcquisition + buildingStdPriceAtAcquisition;
-  const sumAtFirstDisclosure = landStdAtFirstDisclosure + buildingStdPriceAtFirstDisclosure;
-  const sumAtTransfer = landStdAtTransfer + buildingStdPriceAtTransfer;
+  // 4부분 모드: 건물 합계 = 주택건물 + 상가건물 (사용자는 buildingStdPriceAt* 에 주택건물만 입력).
+  // 비4부분: 기존 단일 건물 기준시가 그대로.
+  const sumAtAcquisition = fourPartActive
+    ? landStdAtAcquisition + buildingStdPriceAtAcquisition + commercialBuildingStdPriceAtAcq!
+    : landStdAtAcquisition + buildingStdPriceAtAcquisition;
+  const sumAtFirstDisclosure = fourPartActive
+    ? landStdAtFirstDisclosure + buildingStdPriceAtFirstDisclosure + commercialBuildingStdPriceAtFirstDisclosure!
+    : landStdAtFirstDisclosure + buildingStdPriceAtFirstDisclosure;
+  const sumAtTransfer = fourPartActive
+    ? landStdAtTransfer + buildingStdPriceAtTransfer + commercialBuildingStdPriceAtTransfer!
+    : landStdAtTransfer + buildingStdPriceAtTransfer;
 
   // ── Step 2: P_A_est — 취득시 개별주택가격 추정 (§164⑤) ──
   const P_A_est = sumAtFirstDisclosure > 0
@@ -114,6 +146,114 @@ export function calcPreHousingDisclosureGain(
     building: P_A_est > 0 ? buildingHousingAtAcquisition / P_A_est : 0,
   };
 
+  // ── Case A 4부분 안분 결과 빌드 ──
+  // 위 fourPartActive 분기에서 sumAtAcquisition·sumAtFirstDisclosure·sumAtTransfer 가 4부분 합계로 계산됨.
+  // P_A_est 도 이미 4부분 sums 기준으로 계산됨.
+  let fourPartApportionment: PreHousingDisclosureResult["fourPartApportionment"] = undefined;
+  if (fourPartActive) {
+    const houseLand = housingLandArea!;
+    const commLand = commercialLandArea!;
+
+    // 4부분 시점별 토지/건물 기준시가 (엑셀 Row 40~42)
+    const housingLandStdAtAcq = landPricePerSqmAtAcquisition * houseLand;
+    const commercialLandStdAtAcq = landPricePerSqmAtAcquisition * commLand;
+    const housingBuildingStdAtAcq = buildingStdPriceAtAcquisition;        // 사용자 입력 = 취득시 주택건물
+    const commercialBuildingStdAtAcq = commercialBuildingStdPriceAtAcq!;  // 취득시 상가건물
+
+    const housingLandStdAtFirst = landPricePerSqmAtFirstDisclosure * houseLand;
+    const commercialLandStdAtFirst = landPricePerSqmAtFirstDisclosure * commLand;
+    const housingBuildingStdAtFirst = buildingStdPriceAtFirstDisclosure;
+    const commercialBuildingStdAtFirst = commercialBuildingStdPriceAtFirstDisclosure!;
+
+    const housingLandStdAtTransfer = landPricePerSqmAtTransfer * houseLand;
+    const commercialLandStdAtTransfer = landPricePerSqmAtTransfer * commLand;
+    // 양도시 주택건물은 housingBuildingStdPriceAtTransfer 명시 입력 우선, 없으면 buildingStdPriceAtTransfer 그대로
+    const housingBuildingStdAtTransfer = housingBuildingStdPriceAtTransfer ?? buildingStdPriceAtTransfer;
+    const commercialBuildingStdAtTransfer = commercialBuildingStdPriceAtTransfer!;
+
+    // 4부분 합산기준시가 (각 시점)
+    const sumAtAcq4 = housingLandStdAtAcq + housingBuildingStdAtAcq + commercialLandStdAtAcq + commercialBuildingStdAtAcq;
+    const sumAtFirst4 = housingLandStdAtFirst + housingBuildingStdAtFirst + commercialLandStdAtFirst + commercialBuildingStdAtFirst;
+    const sumAtTransfer4 = housingLandStdAtTransfer + housingBuildingStdAtTransfer + commercialLandStdAtTransfer + commercialBuildingStdAtTransfer;
+
+    // 양도시 주택공시가 안분 (D34/E34) — 주택건물·주택분토지 비율로 P_T 분리
+    const sumHousingAtTransfer = housingLandStdAtTransfer + housingBuildingStdAtTransfer;
+    const housingLandStdShare = sumHousingAtTransfer > 0
+      ? Math.floor(transferHousingPrice * housingLandStdAtTransfer / sumHousingAtTransfer)
+      : 0;
+    const housingBuildingStdShare = transferHousingPrice - housingLandStdShare;
+    // 양도시 안분 후 4부분 합계 (H34) = D34 + E34 + F40 + G40
+    const sumAtTransferShare = housingLandStdShare + housingBuildingStdShare + commercialLandStdAtTransfer + commercialBuildingStdAtTransfer;
+
+    // 양도가액 4부분 안분 (Row 10) — 총 양도가액 × (각 부분 / H34)
+    const totalTransfer4 = totalTransferPriceForFourPart!;
+    const housingLandTransferPrice = sumAtTransferShare > 0
+      ? Math.floor(totalTransfer4 * housingLandStdShare / sumAtTransferShare) : 0;
+    const housingBuildingTransferPrice = sumAtTransferShare > 0
+      ? Math.floor(totalTransfer4 * housingBuildingStdShare / sumAtTransferShare) : 0;
+    const commercialLandTransferPrice = sumAtTransferShare > 0
+      ? Math.floor(totalTransfer4 * commercialLandStdAtTransfer / sumAtTransferShare) : 0;
+    const commercialBuildingTransferPrice = totalTransfer4 - housingLandTransferPrice - housingBuildingTransferPrice - commercialLandTransferPrice;
+
+    // 환산취득가액 (C11) = INT(C10 × C35 / H34) — C35 = P_A_est, H34 = sumAtTransferShare
+    const totalEstAcq = sumAtTransferShare > 0
+      ? Math.floor(totalTransfer4 * P_A_est / sumAtTransferShare)
+      : 0;
+
+    // 취득시 4부분 P_A_est 안분 (Row 35, D35~G35) — 개산공제 base
+    const housingLandAcqShare = sumAtAcq4 > 0
+      ? Math.floor(P_A_est * housingLandStdAtAcq / sumAtAcq4) : 0;
+    const housingBuildingAcqShare = sumAtAcq4 > 0
+      ? Math.floor(P_A_est * housingBuildingStdAtAcq / sumAtAcq4) : 0;
+    const commercialLandAcqShare = sumAtAcq4 > 0
+      ? Math.floor(P_A_est * commercialLandStdAtAcq / sumAtAcq4) : 0;
+    const commercialBuildingAcqShare = P_A_est - housingLandAcqShare - housingBuildingAcqShare - commercialLandAcqShare;
+
+    // 환산취득가액 4부분 안분 (Row 11, D11~G11) — Excel: 소수 보존 후 마지막 G11에서 잔여 처리
+    const housingLandAcqPrice = P_A_est > 0 ? totalEstAcq * housingLandAcqShare / P_A_est : 0;
+    const housingBuildingAcqPrice = P_A_est > 0 ? totalEstAcq * housingBuildingAcqShare / P_A_est : 0;
+    const commercialLandAcqPrice = P_A_est > 0 ? totalEstAcq * commercialLandAcqShare / P_A_est : 0;
+    const commercialBuildingAcqPrice = totalEstAcq - housingLandAcqPrice - housingBuildingAcqPrice - commercialLandAcqPrice;
+
+    // 개산공제 4부분 (Row 12) = INT(D35~G35 × 3%)
+    const housingLandLumpDed = Math.floor(housingLandAcqShare * 0.03);
+    const housingBuildingLumpDed = Math.floor(housingBuildingAcqShare * 0.03);
+    const commercialLandLumpDed = Math.floor(commercialLandAcqShare * 0.03);
+    const commercialBuildingLumpDed = Math.floor(commercialBuildingAcqShare * 0.03);
+
+    // 양도차익 4부분 (Row 13) — 소수점 이하 절사 (사용자 요청)
+    const housingLandGain = Math.floor(housingLandTransferPrice - housingLandAcqPrice - housingLandLumpDed);
+    const housingBuildingGain = Math.floor(housingBuildingTransferPrice - housingBuildingAcqPrice - housingBuildingLumpDed);
+    const commercialLandGain = Math.floor(commercialLandTransferPrice - commercialLandAcqPrice - commercialLandLumpDed);
+    const commercialBuildingGain = Math.floor(commercialBuildingTransferPrice - commercialBuildingAcqPrice - commercialBuildingLumpDed);
+
+    // 주택/상가 합계
+    const housingTransferPriceSum = housingLandTransferPrice + housingBuildingTransferPrice;
+    const housingAcqPriceSum = Math.floor(housingLandAcqPrice + housingBuildingAcqPrice);
+    const housingLumpDedSum = housingLandLumpDed + housingBuildingLumpDed;
+    const housingGainSum = housingLandGain + housingBuildingGain;
+    const commercialTransferPriceSum = commercialLandTransferPrice + commercialBuildingTransferPrice;
+    const commercialAcqPriceSum = Math.floor(commercialLandAcqPrice + commercialBuildingAcqPrice);
+    const commercialLumpDedSum = commercialLandLumpDed + commercialBuildingLumpDed;
+    const commercialGainSum = commercialLandGain + commercialBuildingGain;
+
+    fourPartApportionment = {
+      housingLandStdAtAcq, housingBuildingStdAtAcq, commercialLandStdAtAcq, commercialBuildingStdAtAcq,
+      housingLandStdAtFirst, housingBuildingStdAtFirst, commercialLandStdAtFirst, commercialBuildingStdAtFirst,
+      housingLandStdAtTransfer, housingBuildingStdAtTransfer, commercialLandStdAtTransfer, commercialBuildingStdAtTransfer,
+      sumAtAcq4, sumAtFirst4, sumAtTransfer4,
+      housingLandStdShare, housingBuildingStdShare, sumAtTransferShare,
+      housingLandTransferPrice, housingBuildingTransferPrice, commercialLandTransferPrice, commercialBuildingTransferPrice,
+      totalEstAcq,
+      housingLandAcqPrice, housingBuildingAcqPrice, commercialLandAcqPrice, commercialBuildingAcqPrice,
+      housingLandAcqShare, housingBuildingAcqShare, commercialLandAcqShare, commercialBuildingAcqShare,
+      housingLandLumpDed, housingBuildingLumpDed, commercialLandLumpDed, commercialBuildingLumpDed,
+      housingLandGain, housingBuildingGain, commercialLandGain, commercialBuildingGain,
+      housingTransferPriceSum, housingAcqPriceSum, housingLumpDedSum, housingGainSum,
+      commercialTransferPriceSum, commercialAcqPriceSum, commercialLumpDedSum, commercialGainSum,
+    };
+  }
+
   return {
     sumAtAcquisition,
     sumAtFirstDisclosure,
@@ -121,6 +261,8 @@ export function calcPreHousingDisclosureGain(
     estimatedHousingPriceAtAcquisition: P_A_est,
     landStdAtAcquisition,
     buildingStdAtAcquisition: buildingStdPriceAtAcquisition,
+    landStdAtFirstDisclosure,
+    buildingStdAtFirstDisclosure: buildingStdPriceAtFirstDisclosure,
     landStdAtTransfer,
     buildingStdAtTransfer: buildingStdPriceAtTransfer,
     landHousingAtAcquisition,
@@ -151,5 +293,6 @@ export function calcPreHousingDisclosureGain(
       buildingStdPriceAtTransfer,
       transferHousingPrice: P_T,
     },
+    fourPartApportionment,
   };
 }

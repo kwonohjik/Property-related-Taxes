@@ -227,14 +227,12 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
               title="토지·건물 취득일 다름"
               description={
                 isMixedUse
-                  ? "검용주택은 항상 분리"
+                  ? undefined
                   : isDeemedAcquisitionDate
                     ? "의제취득은 동일일 권장"
                     : "원시취득·신축 등"
               }
               checked={!!props.hasSeperateLandAcquisitionDate}
-              disabled={isMixedUse}
-              disabledReason="검용주택 분리계산은 항상 토지/건물 분리로 처리됩니다"
               onCheckedChange={(v) =>
                 props.onHasSeperateLandAcquisitionDateChange!(v)
               }

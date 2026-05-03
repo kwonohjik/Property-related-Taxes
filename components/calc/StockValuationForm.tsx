@@ -89,7 +89,7 @@ function ListedStockEditor({ item, index, onUpdate, onRemove }: ListedStockEdito
             const v = parseInt(e.target.value.replace(/,/g, "") || "0", 10);
             set({ listedStockAvgPrice: v || undefined });
           }}
-          placeholder="예: 75,000"
+          placeholder="주당 순손익 입력 (원)"
           className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         />
         <p className="text-xs text-gray-400">평가기준일 기준 전 2개월 + 후 2개월(총 4개월) 종가 평균</p>
@@ -108,7 +108,7 @@ function ListedStockEditor({ item, index, onUpdate, onRemove }: ListedStockEdito
             const v = parseInt(e.target.value.replace(/,/g, "") || "0", 10);
             set({ listedStockShares: v || undefined });
           }}
-          placeholder="예: 1,000"
+          placeholder="주식 수 입력"
           className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         />
       </div>
@@ -232,7 +232,7 @@ function UnlistedStockEditor({
             const v = parseInt(e.target.value.replace(/,/g, "") || "0", 10);
             setStock({ totalShares: v });
           }}
-          placeholder="예: 100,000"
+          placeholder="주당 순자산 입력 (원)"
           className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         />
       </div>
@@ -250,7 +250,7 @@ function UnlistedStockEditor({
             const v = parseInt(e.target.value.replace(/,/g, "") || "0", 10);
             setStock({ ownedShares: v });
           }}
-          placeholder="예: 30,000"
+          placeholder="주당 가액 입력 (원)"
           className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         />
       </div>

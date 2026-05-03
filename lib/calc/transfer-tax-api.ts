@@ -312,6 +312,20 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
             ...(parseFloat(primary.phdResidentialLandArea) > 0
               ? { landArea: parseFloat(primary.phdResidentialLandArea) }
               : {}),
+            // Case A 4부분 안분 — 취득시·최초공시 상가건물 기준시가 + 총양도가액 함께 충족 시 활성화.
+            // 취득시 상가건물은 메인 mixedAcqCommercialBuildingPrice fallback 인식 (UI 통합 후 단일 필드).
+            // 최초공시 상가건물은 PHD-only 필드 (일반 검용주택 흐름에 없음).
+            ...((parseAmount(primary.phdCommercialBuildingStdPriceAtAcq) ||
+                 parseAmount(primary.mixedAcqCommercialBuildingPrice)) > 0 &&
+                parseAmount(primary.phdCommercialBuildingStdPriceAtFirst) > 0
+              ? {
+                  commercialBuildingStdPriceAtAcq:
+                    parseAmount(primary.phdCommercialBuildingStdPriceAtAcq) ||
+                    parseAmount(primary.mixedAcqCommercialBuildingPrice),
+                  commercialBuildingStdPriceAtFirstDisclosure: parseAmount(primary.phdCommercialBuildingStdPriceAtFirst),
+                  totalTransferPriceForFourPart: parseAmount(form.contractTotalPrice),
+                }
+              : {}),
           }
         : undefined;
     })(),

@@ -8,6 +8,10 @@
 import { calculateEstimatedAcquisitionPrice, calculateHoldingPeriod, applyRate } from "./tax-utils";
 import { getHousingMultiplier } from "./non-business-land/urban-area";
 import { calcPreHousingDisclosureGain } from "./transfer-tax-pre-housing-disclosure";
+import {
+  buildHousingGainSplitFromFourPart,
+  buildCommercialGainSplitFromFourPart,
+} from "./transfer-tax-mixed-use-fourpart";
 import type { PreHousingDisclosureResult } from "./types/transfer.types";
 import type {
   MixedUseAssetInput,
@@ -213,16 +217,41 @@ export function calcHousingEstimatedAcq(
       }
     }
 
-    // 사용자 override 가 자동값보다 우선 (Q2 사용자 결정: 자동 계산 + 사용자 수정 가능)
+    // Case A 4부분 안분 자동 주입 — phdScopeBranch === "case_a_whole_building" 이고
+    // 4부분 입력이 갖춰진 경우만. 양도시 상가건물은 transferStandardPrice.commercialBuildingPrice 자동 사용.
+    // PHD 의 buildingStdPriceAtTransfer 필드가 이미 양도시 주택건물 기준시가(홈택스) 역할.
+    const isCaseA = phdScopeBranch === "case_a_whole_building";
+    const fourPartFields = isCaseA &&
+      asset.preHousingDisclosure.commercialBuildingStdPriceAtAcq !== undefined &&
+      asset.preHousingDisclosure.commercialBuildingStdPriceAtFirstDisclosure !== undefined &&
+      asset.preHousingDisclosure.totalTransferPriceForFourPart !== undefined &&
+      asset.preHousingDisclosure.totalTransferPriceForFourPart > 0
+      ? {
+          commercialBuildingStdPriceAtAcq: asset.preHousingDisclosure.commercialBuildingStdPriceAtAcq,
+          commercialBuildingStdPriceAtFirstDisclosure: asset.preHousingDisclosure.commercialBuildingStdPriceAtFirstDisclosure,
+          commercialBuildingStdPriceAtTransfer: asset.transferStandardPrice.commercialBuildingPrice,
+          housingLandArea: derived.residentialLandArea,
+          commercialLandArea: derived.commercialLandArea,
+          totalTransferPriceForFourPart: asset.preHousingDisclosure.totalTransferPriceForFourPart,
+        }
+      : {};
+
     const phdResult = calcPreHousingDisclosureGain(housingTransferPrice, {
       ...asset.preHousingDisclosure,
       landArea: effectiveLandArea,
       landAreaAtAcquisition: asset.preHousingDisclosure.landAreaAtAcquisition ?? landAreaAtAcquisition,
       landAreaAtFirstDisclosure: asset.preHousingDisclosure.landAreaAtFirstDisclosure ?? landAreaAtFirstDisclosure,
       landAreaAtTransfer: asset.preHousingDisclosure.landAreaAtTransfer ?? landAreaAtTransfer,
+      ...fourPartFields,
     });
+    // Case A 4부분 모드 — 주택부분 환산취득가는 D11+E11 합계 (housingAcqPriceSum)
+    // 비4부분 모드 — 기존 totalEstimatedAcquisitionPrice (housingTransferPrice 기반 환산)
+    const fp = phdResult.fourPartApportionment;
+    const housingEstAcq = fp
+      ? fp.housingAcqPriceSum
+      : phdResult.totalEstimatedAcquisitionPrice;
     return {
-      estimatedAcq: phdResult.totalEstimatedAcquisitionPrice,
+      estimatedAcq: housingEstAcq,
       phdAcqHousingPrice: phdResult.estimatedHousingPriceAtAcquisition,
       phdResult,
       phdScopeBranch,
@@ -277,6 +306,8 @@ export interface HousingGainSplit {
   buildingAcqPrice: number;
   landAppraisalDed: number;
   buildingAppraisalDed: number;
+  landStdPriceAtAcq?: number;
+  buildingStdPriceAtAcq?: number;
   landHoldingYears: number;
   buildingHoldingYears: number;
 }
@@ -295,6 +326,11 @@ export function calcHousingGainSplit(
   // PHD 분기 — 산식 상세에서 토지/건물 안분값 직접 사용
   if (housingAcqResult.phdResult) {
     const phd = housingAcqResult.phdResult;
+    // Case A 4부분 안분 — 별도 파일로 분리 (transfer-tax-mixed-use-fourpart.ts)
+    if (phd.fourPartApportionment) {
+      // 동적 import 대신 require 회피 — 상위 helpers는 4부분 어댑터를 직접 호출
+      return buildHousingGainSplitFromFourPart(phd.fourPartApportionment, asset, transferDate);
+    }
     const landGain = phd.landTransferPrice - phd.landAcquisitionPrice - phd.landLumpDeduction;
     const buildingGain =
       phd.buildingTransferPrice - phd.buildingAcquisitionPrice - phd.buildingLumpDeduction;
@@ -317,6 +353,8 @@ export function calcHousingGainSplit(
       buildingAcqPrice: phd.buildingAcquisitionPrice,
       landAppraisalDed: phd.landLumpDeduction,
       buildingAppraisalDed: phd.buildingLumpDeduction,
+      landStdPriceAtAcq: phd.landHousingAtAcquisition,
+      buildingStdPriceAtAcq: phd.buildingHousingAtAcquisition,
       landHoldingYears,
       buildingHoldingYears,
     };
@@ -408,6 +446,8 @@ export function calcHousingGainSplit(
     buildingAcqPrice,
     landAppraisalDed,
     buildingAppraisalDed,
+    landStdPriceAtAcq: acqLandStd,
+    buildingStdPriceAtAcq: acqBuildingStd,
     landHoldingYears,
     buildingHoldingYears,
   };
@@ -428,16 +468,13 @@ export interface CommercialGainSplit {
   buildingAcqPrice: number;
   landAppraisalDed: number;
   buildingAppraisalDed: number;
+  /** 취득시 토지/건물 기준시가 — 개산공제 산식 표시용 */
+  landStdPriceAtAcq?: number;
+  buildingStdPriceAtAcq?: number;
   landHoldingYears: number;
   buildingHoldingYears: number;
-  /**
-   * 취득시 상가부분 기준시가 산출 근거. 항상 사용자 직접 입력 (commercialBuildingPrice + landPricePerSqm).
-   * 과거 "fallback_apportion" 분기(개별주택공시가격 면적비율 자동 안분)는 2026-05-01 제거됨.
-   */
   acqStandardSource: "user_input";
-  /** 취득시 상가부수토지 기준시가 (acqLandStd) — 산식 표시용 */
   acqStandardLand: number;
-  /** 취득시 상가건물 기준시가 (acqBuildingStd) — 산식 표시용 */
   acqStandardBuilding: number;
 }
 
@@ -447,8 +484,14 @@ export function calcCommercialGainSplit(
   derived: MixedUseDerivedAreas,
   transferDate: Date,
   acqDerived?: MixedUseDerivedAreas,
-  _housingAcqResult?: HousingEstimatedAcqResult,
+  housingAcqResult?: HousingEstimatedAcqResult,
 ): CommercialGainSplit {
+  // Case A 4부분 안분 — 별도 어댑터 호출
+  const fp = housingAcqResult?.phdResult?.fourPartApportionment;
+  if (fp) {
+    return buildCommercialGainSplitFromFourPart(fp, asset, transferDate);
+  }
+
   // acqDerived 미주입 시 derived 그대로 사용 (backward compat)
   const effectiveAcqDerived = acqDerived ?? derived;
 
@@ -538,6 +581,8 @@ export function calcCommercialGainSplit(
     buildingAcqPrice,
     landAppraisalDed,
     buildingAppraisalDed,
+    landStdPriceAtAcq: acqLandStd,
+    buildingStdPriceAtAcq: acqBuildingStd,
     landHoldingYears,
     buildingHoldingYears,
     acqStandardSource,
@@ -682,9 +727,11 @@ export function buildHousingPart(
     landTransferPrice: gainSplit.landTransferPrice,
     landAcqPrice: gainSplit.landAcqPrice,
     landAppraisalDed: gainSplit.landAppraisalDed,
+    landStdPriceAtAcq: gainSplit.landStdPriceAtAcq,
     buildingTransferPrice: gainSplit.buildingTransferPrice,
     buildingAcqPrice: gainSplit.buildingAcqPrice,
     buildingAppraisalDed: gainSplit.buildingAppraisalDed,
+    buildingStdPriceAtAcq: gainSplit.buildingStdPriceAtAcq,
     isExempt,
     proratedTaxableGain,
     longTermDeductionTable,
@@ -718,9 +765,11 @@ export function buildCommercialPart(
     landTransferPrice: gainSplit.landTransferPrice,
     landAcqPrice: gainSplit.landAcqPrice,
     landAppraisalDed: gainSplit.landAppraisalDed,
+    landStdPriceAtAcq: gainSplit.landStdPriceAtAcq,
     buildingTransferPrice: gainSplit.buildingTransferPrice,
     buildingAcqPrice: gainSplit.buildingAcqPrice,
     buildingAppraisalDed: gainSplit.buildingAppraisalDed,
+    buildingStdPriceAtAcq: gainSplit.buildingStdPriceAtAcq,
     longTermDeductionRate,
     longTermDeductionAmount,
     incomeAmount: Math.max(0, gainSplit.totalGain - longTermDeductionAmount),
@@ -731,59 +780,5 @@ export function buildCommercialPart(
   };
 }
 
-/** 비사업용토지 부분 조립 */
-export function buildNonBusinessPart(
-  housingPart: MixedUseHousingPart,
-  excessResult: ExcessLandResult,
-  landHoldingYears: number,
-): MixedUseNonBusinessLandPart | null {
-  if (excessResult.excessArea <= 0) return null;
-
-  const transferredGain = housingPart.nonBusinessTransferredGain;
-  const deductionRate = calcLongTermRate(landHoldingYears, 0, false);
-  const longTermDeductionAmount = applyRate(Math.max(transferredGain, 0), deductionRate);
-
-  return {
-    excessArea: excessResult.excessArea,
-    appliedMultiplier: excessResult.multiplier,
-    transferGain: transferredGain,
-    longTermDeductionRate: deductionRate,
-    longTermDeductionAmount,
-    incomeAmount: Math.max(0, transferredGain - longTermDeductionAmount),
-    additionalRate: 0.10,
-  };
-}
-
-/** 합산 세액 조립 */
-export function buildTotalTax(
-  housingIncome: number,
-  commercialIncome: number,
-  nonBizIncome: number,
-  brackets: TaxBracket[],
-): MixedUseTotalTax {
-  const BASIC_DEDUCTION = 2_500_000;
-
-  const aggregateIncome = housingIncome + commercialIncome + nonBizIncome;
-  const taxBase = Math.max(0, aggregateIncome - BASIC_DEDUCTION);
-  const taxByBasicRate = calculateProgressiveTax(taxBase, brackets);
-  // 적용된 누진세율 구간 추출 (UI 산식 표시용)
-  const applicable = brackets.find((b) => taxBase <= (b.max ?? Infinity)) ?? brackets[brackets.length - 1];
-  const appliedRate = taxBase > 0 ? applicable.rate : 0;
-  const progressiveDeduction = taxBase > 0 ? applicable.deduction : 0;
-  const nonBusinessSurcharge = applyRate(nonBizIncome, 0.10);
-  const transferTax = taxByBasicRate + nonBusinessSurcharge;
-  const localTax = applyRate(transferTax, 0.10);
-
-  return {
-    aggregateIncome,
-    basicDeduction: BASIC_DEDUCTION,
-    taxBase,
-    taxByBasicRate,
-    appliedRate,
-    progressiveDeduction,
-    nonBusinessSurcharge,
-    transferTax,
-    localTax,
-    totalPayable: transferTax + localTax,
-  };
-}
+// buildNonBusinessPart / buildTotalTax 는 transfer-tax-mixed-use-totals.ts 로 분리.
+export { buildNonBusinessPart, buildTotalTax } from "./transfer-tax-mixed-use-totals";

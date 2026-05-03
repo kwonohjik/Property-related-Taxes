@@ -61,6 +61,7 @@ makeInput(houses, overrides?): MultiHouseSurchargeInput
 
 - **경계값 테스트 필수**: 유예 만료일(2026-05-09) 전후, 12억 비과세 경계, 1년/2년 보유 경계, 윤년 취득일 등.
 - **PDF 예시값 상수화** (회귀 방어 패턴): 교재·국세청 집행기준 예제의 산출세액은 **원 단위까지 `toBe()`로 고정**. 예: `expect(result.calculatedTax).toBe(91_372_154)`. 반올림 `toBeCloseTo` 사용 시 세법 계산 오류를 놓친다.
+- **Excel anchor 검증 워크플로**: 사용자 제공 .xlsx 사례 검증 시 Python `openpyxl` 로 셀값/공식 추출 → 시점·4부분 합산기준시가·환산취득가·양도차익 등 핵심 anchor를 원단위 `toBe()`로 고정. 신규 케이스(예: `mixed-use-phd-case-a-fourpart.test.ts`)는 엔진 단독 anchor + 통합 anchor(산출세액·양도소득금액 합계) 양쪽 모두 작성.
 - **역사적 과세 데이터**: 토지등급가액 등 개정 없는 역사 확정 데이터는 DB 대신 `lib/tax-engine/data/*.ts` 정적 상수 사용.
 - **회귀 테스트 태깅**: 버그 수정 시 describe 이름에 `P0-2 회귀` 등 식별자 포함 → `it("미등기 LTHD 배제 회귀 (P0-2)")`.
 - **시나리오 파일당 하나의 주제**: 파일명과 describe 제목이 일치해야 회귀 발생 시 원인 추정 쉬움.

@@ -94,5 +94,15 @@ const reductionAmount = Math.min(best.amount, calculatedTax);
 - `comprehensive-tax.ts` → `property-tax.ts` (재산세 결과를 종부세 재산세 비율 안분 공제에 사용). **역방향 금지**.
 - `transfer-tax-aggregate.ts` → `transfer-tax.ts` (다건 양도 오케스트레이션은 단건 엔진을 반복 호출).
 - `transfer-tax.ts` → `multi-house-surcharge.ts` / `non-business-land/engine.ts` / `rental-housing-reduction.ts` / `new-housing-reduction.ts` / `public-expropriation-reduction.ts` / `transfer-tax-penalty.ts` / `pre-1990-land-valuation.ts` / `multi-parcel-transfer.ts` (서브엔진 fan-out).
+- `transfer-tax-mixed-use.ts` → `transfer-tax-mixed-use-helpers.ts` → `transfer-tax-mixed-use-fourpart.ts` (Case A 4부분 안분 어댑터) / `transfer-tax-mixed-use-totals.ts` (조립 헬퍼) / `transfer-tax-pre-housing-disclosure.ts` (PHD §164⑤).
 
 서브엔진은 상위 엔진 import 금지 (순환 금지).
+
+## 검용주택 PHD 4부분 안분 (Case A)
+
+`partialUsageChange.direction === "house_to_commercial"` AND `firstDisclosureDate < usageChangeDate` 조합에서만 활성화. 취득시·최초공시 시점에 건물 전체가 주택이었던 케이스.
+
+- **활성 조건**: PHD 입력에 `commercialBuildingStdPriceAtAcq/AtFirstDisclosure` + `housingLandArea` + `commercialLandArea` + `totalTransferPriceForFourPart` 모두 충족.
+- **결과**: `PreHousingDisclosureResult.fourPartApportionment` 에 4부분(주택분토지·주택건물·상가분토지·상가건물) 시점별 기준시가·양도가액·환산취득가·개산공제·양도차익 분리값. 미활성 시 undefined.
+- **mixed-use 어댑터**: `buildHousingGainSplitFromFourPart` / `buildCommercialGainSplitFromFourPart` 가 4부분 결과를 HousingGainSplit/CommercialGainSplit 으로 변환. `housingPart.estimatedAcquisitionPrice`는 `fp.housingAcqPriceSum`(D11+E11) 사용 — 전체 환산취득가(C11) 아님.
+- **period-split 자동 비활성화**: 4부분 활성 시 `applyUsagePeriodSplit` 건너뜀 (엑셀 단일 LTHD 적용).

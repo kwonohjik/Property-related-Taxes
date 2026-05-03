@@ -155,3 +155,16 @@
     border: 1px solid #ccc !important;
   }
 }
+/* 신고서 양식 표 분리 인쇄 — data-print-scope 토글 기반 */
+@media print {
+  /* form-table 모드: 표만 보이고 나머지 결과 화면 모두 숨김 */
+  body[data-print-scope="form-table"] [data-print-section="full"] > *:not([data-print-section="form-table"]) {
+    display: none !important;
+  }
+  /* form-table 모드에서도 표 자체는 항상 노출 */
+  body[data-print-scope="form-table"] [data-print-section="form-table"] {
+    display: block !important;
+    page-break-inside: auto;
+  }
+  /* full 모드: 기본 — 모든 섹션 표시 */
+}

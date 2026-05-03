@@ -261,7 +261,7 @@ export function CompanionAssetCard({
                   onChange({ acquisitionArea: e.target.value, transferArea: e.target.value })
                 }
                 min={0}
-                placeholder="예: 793"
+                placeholder="면적 입력"
                 className="w-full border rounded-md px-3 py-2 text-sm bg-background"
               />
             </div>

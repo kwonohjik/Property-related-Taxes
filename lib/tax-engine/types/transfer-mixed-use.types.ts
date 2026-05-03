@@ -161,12 +161,16 @@ export interface MixedUseHousingPart {
   landAcqPrice: number;
   /** 토지분 개산공제 (취득시 토지분 기준시가 × 3%, §163⑥) — 산식 표시용 */
   landAppraisalDed: number;
+  /** 취득시 토지분 기준시가 — 개산공제 산식 표시용 */
+  landStdPriceAtAcq?: number;
   /** 건물분 양도가액 (안분) — 산식 표시용 */
   buildingTransferPrice: number;
   /** 건물분 환산취득가액 (안분) — 산식 표시용 */
   buildingAcqPrice: number;
   /** 건물분 개산공제 (취득시 건물분 기준시가 × 3%, §163⑥) — 산식 표시용 */
   buildingAppraisalDed: number;
+  /** 취득시 건물분 기준시가 — 개산공제 산식 표시용 */
+  buildingStdPriceAtAcq?: number;
   /** 12억 이하 → 전액 비과세 */
   isExempt: boolean;
   /** 12억 초과 안분 후 과세대상 양도차익 */
@@ -201,12 +205,16 @@ export interface MixedUseCommercialPart {
   landAcqPrice: number;
   /** 토지분 개산공제 — 산식 표시용 */
   landAppraisalDed: number;
+  /** 취득시 토지분 기준시가 — 개산공제 산식 표시용 */
+  landStdPriceAtAcq?: number;
   /** 건물분 양도가액 (안분) — 산식 표시용 */
   buildingTransferPrice: number;
   /** 건물분 환산취득가액 (안분) — 산식 표시용 */
   buildingAcqPrice: number;
   /** 건물분 개산공제 — 산식 표시용 */
   buildingAppraisalDed: number;
+  /** 취득시 건물분 기준시가 — 개산공제 산식 표시용 */
+  buildingStdPriceAtAcq?: number;
   /** 장기보유공제율 (표1, 최대 30%) */
   longTermDeductionRate: number;
   /** 장기보유공제액 */

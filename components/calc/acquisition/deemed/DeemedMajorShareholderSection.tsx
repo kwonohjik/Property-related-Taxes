@@ -76,7 +76,7 @@ export function DeemedMajorShareholderSection({ form, set }: Props) {
           label="법인 보유 자산 시가표준액 합계"
           value={form.deemedMajorCorporateAssetValue ?? ""}
           onChange={(v) => set("deemedMajorCorporateAssetValue", v)}
-          placeholder="예: 1,000,000,000"
+          placeholder="금액 입력 (원)"
           disabled={isListed}
         />
         <p className="text-xs text-muted-foreground mt-1">

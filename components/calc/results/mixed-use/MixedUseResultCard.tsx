@@ -8,6 +8,47 @@
  */
 
 import type { MixedUseGainBreakdown } from "@/lib/tax-engine/types/transfer-mixed-use.types";
+import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
+import { FilingFormTable } from "@/components/calc/results/transfer/FilingFormTable";
+import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
+
+function printScoped(scope: "form-table" | "full") {
+  if (typeof document === "undefined") return;
+  document.body.dataset.printScope = scope;
+  const cleanup = () => {
+    delete document.body.dataset.printScope;
+    window.removeEventListener("afterprint", cleanup);
+  };
+  window.addEventListener("afterprint", cleanup);
+  setTimeout(() => window.print(), 0);
+}
+
+/** MixedUseGainBreakdown → TransferTaxResult 어댑터 (FilingFormTable 호환) */
+function mixedUseToFilingResult(b: MixedUseGainBreakdown): TransferTaxResult {
+  const t = b.total;
+  const localTax = t.localTax;
+  return {
+    isExempt: false,
+    transferGain: b.housingPart.transferGain + b.commercialPart.transferGain,
+    taxableGain: b.housingPart.proratedTaxableGain + b.commercialPart.transferGain,
+    usedEstimatedAcquisition: true,
+    longTermHoldingDeduction: b.housingPart.longTermDeductionAmount + b.commercialPart.longTermDeductionAmount,
+    longTermHoldingRate: 0,
+    basicDeduction: t.basicDeduction,
+    taxBase: t.taxBase,
+    appliedRate: t.appliedRate,
+    progressiveDeduction: t.progressiveDeduction,
+    calculatedTax: t.taxByBasicRate,
+    isSurchargeSuspended: false,
+    reductionAmount: 0,
+    determinedTax: t.transferTax,
+    penaltyTax: 0,
+    localIncomeTax: localTax,
+    totalTax: t.totalPayable,
+    steps: b.steps as never[],
+    mixedUseDetail: b,
+  };
+}
 
 // 결과 데이터에 신규 필드가 누락된 캐시 케이스를 안전하게 처리하기 위해 nullish 가드.
 const fmt = (n: number | undefined | null) => (n ?? 0).toLocaleString() + "원";
@@ -29,9 +70,10 @@ function deriveBasicRateBracket(taxBase: number): { rate: number; deduction: num
 
 interface Props {
   breakdown: MixedUseGainBreakdown;
+  formData?: TransferFormData;
 }
 
-export function MixedUseResultCard({ breakdown }: Props) {
+export function MixedUseResultCard({ breakdown, formData }: Props) {
   if (breakdown.splitMode === "pre-2022-rejected") {
     return (
       <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
@@ -131,6 +173,11 @@ export function MixedUseResultCard({ breakdown }: Props) {
               return `§97: 주택 양도가액 ${fmtPlain(a.housingTransferPrice)} × (취득시 개별주택공시가격 ÷ 양도시 개별주택공시가격 ${fmtPlain(a.housingStandardPrice)})`;
             }
             const ph = h.phdResult?.inputs;
+            const fp = h.phdResult?.fourPartApportionment;
+            // Case A 4부분 모드 — 주택부분 환산취득가 = 토지분(D11) + 건물분(E11)
+            if (fp) {
+              return `Case A 4부분 안분 — 주택부분 = 토지분(D11) ${fmtPlain(Math.floor(fp.housingLandAcqPrice))} + 건물분(E11) ${fmtPlain(Math.floor(fp.housingBuildingAcqPrice))} | 전체 환산취득가 ${fmtPlain(fp.totalEstAcq)} × (취득시 4부분 주택분 비율 ${fmtPlain(fp.housingLandAcqShare + fp.housingBuildingAcqShare)} ÷ 역산 취득시 개별주택가격 ${fmtPlain(h.phdEstimatedAcqHousingPrice)})`;
+            }
             const isAreaSplit =
               !!ph &&
               (ph.landAreaAtAcquisition !== ph.landAreaAtTransfer ||
@@ -140,6 +187,23 @@ export function MixedUseResultCard({ breakdown }: Props) {
             return `${base} | 시점별 토지면적: 취득시 ${ph.landAreaAtAcquisition.toFixed(2)}㎡ · 최초공시 ${ph.landAreaAtFirstDisclosure.toFixed(2)}㎡ · 양도시 ${ph.landAreaAtTransfer.toFixed(2)}㎡`;
           })()}
         />
+        {h.phdResult && h.phdEstimatedAcqHousingPrice && (() => {
+          const r = h.phdResult!;
+          const ph = r.inputs;
+          const fp = r.fourPartApportionment;
+          // Case A 4부분 안분 활성 시 — 4부분(주택분토지·주택건물·상가분토지·상가건물) 합산 표시
+          const formula = fp
+            ? `최초공시 개별주택가격 ${fmtPlain(ph.firstDisclosureHousingPrice)} × 취득시 합산기준시가(4부분) ${fmtPlain(r.sumAtAcquisition)} ÷ 최초공시 합산기준시가(4부분) ${fmtPlain(r.sumAtFirstDisclosure)} | 취득시: 주택분토지 ${fmtPlain(fp.housingLandStdAtAcq)} + 주택건물 ${fmtPlain(fp.housingBuildingStdAtAcq)} + 상가분토지 ${fmtPlain(fp.commercialLandStdAtAcq)} + 상가건물 ${fmtPlain(fp.commercialBuildingStdAtAcq)} | 최초공시: 주택분토지 ${fmtPlain(fp.housingLandStdAtFirst)} + 주택건물 ${fmtPlain(fp.housingBuildingStdAtFirst)} + 상가분토지 ${fmtPlain(fp.commercialLandStdAtFirst)} + 상가건물 ${fmtPlain(fp.commercialBuildingStdAtFirst)}`
+            : `최초공시 개별주택가격 ${fmtPlain(ph.firstDisclosureHousingPrice)} × 취득시 합산기준시가 ${fmtPlain(r.sumAtAcquisition)} ÷ 최초공시 합산기준시가 ${fmtPlain(r.sumAtFirstDisclosure)} | 취득시: 토지기준시가 ${fmtPlain(r.landStdAtAcquisition)} + 건물기준시가 ${fmtPlain(r.buildingStdAtAcquisition)} | 최초공시: 토지기준시가 ${fmtPlain(r.landStdAtFirstDisclosure)} + 건물기준시가 ${fmtPlain(r.buildingStdAtFirstDisclosure)}`;
+          return (
+            <Row
+              label={fp ? "  ▸ 역산한 취득시 개별주택가격 (Case A 4부분 안분)" : "  ▸ 역산한 취득시 개별주택가격"}
+              value={fmtPlain(h.phdEstimatedAcqHousingPrice)}
+              small
+              formula={formula}
+            />
+          );
+        })()}
         <Row
           label="주택 양도차익"
           value={fmt(h.transferGain)}
@@ -149,13 +213,13 @@ export function MixedUseResultCard({ breakdown }: Props) {
           label="  ▸ 토지분"
           value={fmt(h.landTransferGain)}
           small
-          formula={`양도가액 ${fmtPlain(h.landTransferPrice)} - 환산취득가액 ${fmtPlain(h.landAcqPrice)} - 개산공제 ${fmtPlain(h.landAppraisalDed)} (취득시 토지 기준시가 × 3%)`}
+          formula={`양도가액 ${fmtPlain(h.landTransferPrice)} - 환산취득가액 ${fmtPlain(h.landAcqPrice)} - 개산공제 ${fmtPlain(h.landAppraisalDed)} (취득시 토지 기준시가 ${h.landStdPriceAtAcq != null ? fmtPlain(h.landStdPriceAtAcq) + " " : ""}× 3%)`}
         />
         <Row
           label="  ▸ 건물분"
           value={fmt(h.buildingTransferGain)}
           small
-          formula={`양도가액 ${fmtPlain(h.buildingTransferPrice)} - 환산취득가액 ${fmtPlain(h.buildingAcqPrice)} - 개산공제 ${fmtPlain(h.buildingAppraisalDed)} (취득시 건물 기준시가 × 3%)`}
+          formula={`양도가액 ${fmtPlain(h.buildingTransferPrice)} - 환산취득가액 ${fmtPlain(h.buildingAcqPrice)} - 개산공제 ${fmtPlain(h.buildingAppraisalDed)} (취득시 건물 기준시가 ${h.buildingStdPriceAtAcq != null ? fmtPlain(h.buildingStdPriceAtAcq) + " " : ""}× 3%)`}
         />
         <DivRow />
         {h.isExempt ? (
@@ -215,13 +279,13 @@ export function MixedUseResultCard({ breakdown }: Props) {
           label="  ▸ 토지분"
           value={fmt(c.landTransferGain)}
           small
-          formula={`양도가액 ${fmtPlain(c.landTransferPrice)} - 환산취득가액 ${fmtPlain(c.landAcqPrice)} - 개산공제 ${fmtPlain(c.landAppraisalDed)} (취득시 토지 기준시가 × 3%)`}
+          formula={`양도가액 ${fmtPlain(c.landTransferPrice)} - 환산취득가액 ${fmtPlain(c.landAcqPrice)} - 개산공제 ${fmtPlain(c.landAppraisalDed)} (취득시 토지 기준시가 ${c.landStdPriceAtAcq != null ? fmtPlain(c.landStdPriceAtAcq) + " " : ""}× 3%)`}
         />
         <Row
           label="  ▸ 건물분"
           value={fmt(c.buildingTransferGain)}
           small
-          formula={`양도가액 ${fmtPlain(c.buildingTransferPrice)} - 환산취득가액 ${fmtPlain(c.buildingAcqPrice)} - 개산공제 ${fmtPlain(c.buildingAppraisalDed)} (취득시 건물 기준시가 × 3%)`}
+          formula={`양도가액 ${fmtPlain(c.buildingTransferPrice)} - 환산취득가액 ${fmtPlain(c.buildingAcqPrice)} - 개산공제 ${fmtPlain(c.buildingAppraisalDed)} (취득시 건물 기준시가 ${c.buildingStdPriceAtAcq != null ? fmtPlain(c.buildingStdPriceAtAcq) + " " : ""}× 3%)`}
         />
         <DivRow />
         <Row
@@ -330,6 +394,28 @@ export function MixedUseResultCard({ breakdown }: Props) {
 
       {/* 계산 경로 메타 (학습·검증용) */}
       <CalculationRouteCard route={breakdown.calculationRoute} />
+
+      {/* 신고서 양식 표 */}
+      <div className="flex justify-end gap-2 print:hidden">
+        <button
+          type="button"
+          onClick={() => printScoped("form-table")}
+          className="rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors"
+        >
+          🧾 신고서 양식 PDF
+        </button>
+        <button
+          type="button"
+          onClick={() => printScoped("full")}
+          className="rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors"
+        >
+          🖨️ 전체 PDF / 인쇄
+        </button>
+      </div>
+      <FilingFormTable
+        result={mixedUseToFilingResult(breakdown)}
+        formData={formData}
+      />
     </div>
   );
 }

@@ -14,6 +14,26 @@ import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
 import { LoginPromptBanner } from "@/components/calc/shared/LoginPromptBanner";
 import { NonBusinessLandResultCard } from "@/components/calc/NonBusinessLandResultCard";
 import { MultiHouseSurchargeDetailCard } from "@/components/calc/MultiHouseSurchargeDetailCard";
+import { FilingFormTable } from "@/components/calc/results/transfer/FilingFormTable";
+import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
+import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+
+/**
+ * 분리 인쇄 트리거.
+ * scope="form-table" → 신고서 양식 표만 출력
+ * scope="full" → 전체 결과 화면 출력
+ */
+function printScoped(scope: "form-table" | "full") {
+  if (typeof document === "undefined") return;
+  document.body.dataset.printScope = scope;
+  const cleanup = () => {
+    delete document.body.dataset.printScope;
+    window.removeEventListener("afterprint", cleanup);
+  };
+  window.addEventListener("afterprint", cleanup);
+  // 다음 tick에 print — DOM 속성 반영 후 매체 쿼리 적용
+  setTimeout(() => window.print(), 0);
+}
 
 function formatRate(rate: number): string {
   return `${(rate * 100).toFixed(0)}%`;
@@ -52,23 +72,44 @@ interface Props {
   showMultiTransferButton?: boolean;
   /** "동일연도 다른 양도건 계산하기" 클릭 시 호출. 단건 데이터를 다건 store로 이전하고 라우팅하는 역할은 호출자가 담당. */
   onContinueToMulti?: () => void;
+  /** 신고서 양식 표 입력측 데이터 (단건 모드) */
+  formData?: TransferFormData;
+  /** 다건 모드에서 자산 1개 — formData 대신 사용 */
+  asset?: AssetForm;
+  /** 다건 모드에서 자산별 양도가액 override */
+  transferPriceOverride?: number;
 }
 
-export function TransferTaxResultView({ result, onReset, onBack, onLoginPrompt = false, showMultiTransferButton = false, onContinueToMulti }: Props) {
+export function TransferTaxResultView({ result, onReset, onBack, onLoginPrompt = false, showMultiTransferButton = false, onContinueToMulti, formData, asset, transferPriceOverride }: Props) {
   const [showSteps, setShowSteps] = useState(false);
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5" data-print-section="full">
       {/* PDF 인쇄 버튼 */}
-      <div className="flex justify-end print:hidden">
+      <div className="flex justify-end gap-2 print:hidden">
         <button
           type="button"
-          onClick={() => window.print()}
+          onClick={() => printScoped("form-table")}
           className="rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors"
         >
-          🖨️ PDF / 인쇄
+          🧾 신고서 양식 PDF
+        </button>
+        <button
+          type="button"
+          onClick={() => printScoped("full")}
+          className="rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors"
+        >
+          🖨️ 전체 PDF / 인쇄
         </button>
       </div>
+
+      {/* 신고서 양식 표 — 결과 전 케이스 노출 */}
+      <FilingFormTable
+        result={result}
+        formData={formData}
+        asset={asset}
+        transferPriceOverride={transferPriceOverride}
+      />
 
       {/* 핵심 결과 카드 */}
       {result.isExempt ? (
@@ -526,8 +567,18 @@ export function TransferTaxResultView({ result, onReset, onBack, onLoginPrompt =
               <span className={colCls(landIsOwned)}>{result.splitDetail.land.acquisitionPrice.toLocaleString()}</span>
               <span className={colCls(buildingIsOwned)}>{result.splitDetail.building.acquisitionPrice.toLocaleString()}</span>
               <span className="text-muted-foreground">개산공제</span>
-              <span className={colCls(landIsOwned)}>{result.splitDetail.land.appraisalDeduction.toLocaleString()}</span>
-              <span className={colCls(buildingIsOwned)}>{result.splitDetail.building.appraisalDeduction.toLocaleString()}</span>
+              <span className={colCls(landIsOwned)}>
+                {result.splitDetail.land.appraisalDeduction.toLocaleString()}
+                {result.splitDetail.land.stdPriceAtAcq != null && (
+                  <span className="block text-muted-foreground/70 font-normal">취득시 기준시가 {result.splitDetail.land.stdPriceAtAcq.toLocaleString()} × 3%</span>
+                )}
+              </span>
+              <span className={colCls(buildingIsOwned)}>
+                {result.splitDetail.building.appraisalDeduction.toLocaleString()}
+                {result.splitDetail.building.stdPriceAtAcq != null && (
+                  <span className="block text-muted-foreground/70 font-normal">취득시 기준시가 {result.splitDetail.building.stdPriceAtAcq.toLocaleString()} × 3%</span>
+                )}
+              </span>
               <span className="text-muted-foreground">양도차익</span>
               <span className={cn(colCls(landIsOwned), landIsOwned && "font-semibold")}>{result.splitDetail.land.gain.toLocaleString()}</span>
               <span className={cn(colCls(buildingIsOwned), buildingIsOwned && "font-semibold")}>{result.splitDetail.building.gain.toLocaleString()}</span>

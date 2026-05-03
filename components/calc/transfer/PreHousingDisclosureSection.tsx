@@ -63,7 +63,7 @@ export function PreHousingDisclosureSection({ asset, transferDate, onChange }: P
           min="0"
           step="0.01"
           className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm tabular-nums placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-          placeholder="예: 212"
+          placeholder="토지 면적 입력"
           value={asset.acquisitionArea}
           onChange={(e) => onChange({ acquisitionArea: e.target.value })}
         />

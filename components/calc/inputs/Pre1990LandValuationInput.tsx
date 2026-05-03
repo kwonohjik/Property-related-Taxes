@@ -191,7 +191,7 @@ export function Pre1990LandValuationInput({
                   label=""
                   value={form.pre1990PricePerSqm_1990 ?? ""}
                   onChange={(v) => onChange({ pre1990PricePerSqm_1990: v })}
-                  placeholder="예: 54000"
+                  placeholder="㎡당 가액 입력"
                 />
               </div>
               <button
@@ -277,7 +277,7 @@ function GradeField({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-        placeholder="예: 103"
+        placeholder="등급 번호 또는 등급가액 입력"
       />
       {value && !preview && (
         <p className="text-[11px] text-destructive">등급 범위 밖이거나 올바르지 않은 값입니다.</p>

@@ -193,7 +193,7 @@ export function StandardPriceInput({
               min={0}
               value={area ?? ""}
               onChange={(e) => handleAreaChange(e.target.value)}
-              placeholder="예: 793.5"
+              placeholder="면적 입력"
               className="w-full border rounded-md px-3 py-2 text-sm bg-background"
             />
           </div>

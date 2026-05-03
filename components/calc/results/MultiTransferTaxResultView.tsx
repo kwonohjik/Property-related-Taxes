@@ -14,6 +14,53 @@ import type {
 } from "@/lib/tax-engine/transfer-tax-aggregate";
 import type { PropertyItem } from "@/lib/stores/multi-transfer-tax-store";
 import { MultiTransferTaxSummaryCard } from "./MultiTransferTaxSummaryCard";
+import { FilingFormTable } from "@/components/calc/results/transfer/FilingFormTable";
+import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
+
+/**
+ * PerPropertyBreakdown → TransferTaxResult 형태로 어댑팅 (FilingFormTable 호환).
+ * 다건 합산 결과의 자산별 값을 신고서 양식 표 형식으로 표시하기 위함.
+ * mixed-use·split detail은 다건 컨텍스트에서 사용되지 않으므로 undefined.
+ */
+function breakdownToFilingResult(b: PerPropertyBreakdown): TransferTaxResult {
+  const totalPenalty = b.penaltyTax + b.filingDelayedPenaltyTax;
+  const determinedTax = b.refDeterminedTax;
+  const localIncomeTax = Math.floor((determinedTax + totalPenalty) * 0.1);
+  return {
+    isExempt: b.isExempt,
+    exemptReason: b.exemptReason,
+    transferGain: b.transferGain,
+    taxableGain: Math.max(0, b.transferGain),
+    usedEstimatedAcquisition: false,
+    longTermHoldingDeduction: b.longTermHoldingDeduction,
+    longTermHoldingRate: 0,
+    basicDeduction: b.allocatedBasicDeduction,
+    taxBase: b.taxBaseShare,
+    appliedRate: b.appliedRate,
+    progressiveDeduction: b.progressiveDeduction,
+    calculatedTax: b.refCalculatedTax,
+    isSurchargeSuspended: false,
+    reductionAmount: b.reductionAggregated,
+    reductionType: b.reductionType,
+    reducibleIncome: b.reducibleIncome,
+    determinedTax,
+    penaltyTax: totalPenalty,
+    localIncomeTax,
+    totalTax: determinedTax + totalPenalty + localIncomeTax,
+    steps: b.steps,
+  };
+}
+
+function printScoped(scope: "form-table" | "full") {
+  if (typeof document === "undefined") return;
+  document.body.dataset.printScope = scope;
+  const cleanup = () => {
+    delete document.body.dataset.printScope;
+    window.removeEventListener("afterprint", cleanup);
+  };
+  window.addEventListener("afterprint", cleanup);
+  setTimeout(() => window.print(), 0);
+}
 
 interface MultiTransferTaxResultViewProps {
   result: AggregateTransferResult;
@@ -223,8 +270,10 @@ function LossOffsetTable({ result, properties }: { result: AggregateTransferResu
 
 function PropertyBreakdownAccordion({
   breakdown,
+  property,
 }: {
   breakdown: PerPropertyBreakdown;
+  property?: PropertyItem;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -431,6 +480,23 @@ function PropertyBreakdownAccordion({
               )}
             </div>
           )}
+
+          {/* 신고서 양식 표 — 자산별 */}
+          <div className="mt-3 print:hidden flex justify-end">
+            <button
+              type="button"
+              onClick={() => printScoped("form-table")}
+              className="rounded-md border border-border px-2.5 py-1 text-[11px] font-medium hover:bg-muted transition-colors"
+            >
+              🧾 이 자산 신고서 양식 PDF
+            </button>
+          </div>
+          <div className="mt-2">
+            <FilingFormTable
+              result={breakdownToFilingResult(breakdown)}
+              formData={property?.form}
+            />
+          </div>
         </CardContent>
       )}
     </Card>
@@ -591,15 +657,22 @@ export function MultiTransferTaxResultView({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" data-print-section="full">
       {/* PDF / 인쇄 버튼 */}
       <div className="flex justify-end gap-2 print:hidden">
         <button
           type="button"
-          onClick={() => window.print()}
+          onClick={() => printScoped("form-table")}
           className="rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors"
         >
-          🖨️ 인쇄
+          🧾 신고서 양식 PDF (전체)
+        </button>
+        <button
+          type="button"
+          onClick={() => printScoped("full")}
+          className="rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors"
+        >
+          🖨️ 전체 PDF / 인쇄
         </button>
         {savedId && isLoggedIn && (
           <button
@@ -635,7 +708,11 @@ export function MultiTransferTaxResultView({
       <div className="space-y-2">
         <h3 className="font-medium text-sm text-muted-foreground">건별 상세</h3>
         {result.properties.map((p) => (
-          <PropertyBreakdownAccordion key={p.propertyId} breakdown={p} />
+          <PropertyBreakdownAccordion
+            key={p.propertyId}
+            breakdown={p}
+            property={properties.find((x) => x.propertyId === p.propertyId)}
+          />
         ))}
       </div>
 

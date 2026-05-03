@@ -39,7 +39,7 @@ export function Step2SeparateAggregate({ form, onChange }: Props) {
           label="토지 면적"
           value={form.saLandArea}
           onChange={(v) => onChange({ saLandArea: v })}
-          placeholder="예: 500"
+          placeholder="면적 입력"
         />
         <p className="text-xs text-muted-foreground">
           공시가격 ÷ 면적 = 개별공시지가(원/㎡)로 자동 환산됩니다.
@@ -63,7 +63,7 @@ export function Step2SeparateAggregate({ form, onChange }: Props) {
             label="건물 바닥면적"
             value={form.saBuildingFloorArea}
             onChange={(v) => onChange({ saBuildingFloorArea: v })}
-            placeholder="예: 200"
+            placeholder="면적 입력"
           />
           <p className="text-xs text-muted-foreground">
             기준면적 = 건물 바닥면적 × 용도지역 배율 (지방세법 시행령 §101②)
@@ -79,7 +79,7 @@ export function Step2SeparateAggregate({ form, onChange }: Props) {
             label="공장입지기준면적"
             value={form.saFactoryStandardArea}
             onChange={(v) => onChange({ saFactoryStandardArea: v })}
-            placeholder="예: 1,000"
+            placeholder="면적 입력"
           />
           <p className="text-xs text-muted-foreground">
             산업집적활성화법상 공장입지기준면적 이내: 별도합산, 초과: 종합합산

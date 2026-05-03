@@ -8,7 +8,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **구현 상태**
 - ✅ **양도소득세**: 엔진·UI·API·테스트 완전 구현. 마법사 4단계, 자산-수준 취득정보 통합, 토지/건물 분리 양도차익(소령 §166⑥), §164⑤ 3-시점 환산.
-- 🚧 **취득세·재산세·종부세·상속·증여**: 엔진 구현 완료, UI 부분 구현 중 (`components/calc/property/` 진행).
+- 🚧 **취득세**: 엔진 구현 완료, UI 시니어 에이전트로 마법사·결과 화면 구현 진행 중 (`acquisition-tax-ui-senior`).
+- 🚧 **재산세·종합부동산세·상속세·증여세**: 엔진 구현 완료, UI 구현 예정 (`components/calc/property/` 대기).
 - ✨ **공용 입력 컴포넌트**: `FieldCard`·`SectionHeader`·`WizardSidebar`·`ToggleCard`·`RadioCardGroup`·`LandPriceLookupField` — 양도세 마법사 적용, 타 세목 점진 확장.
 
 ## ⚠️ Next.js 16 주의사항
@@ -83,8 +84,15 @@ Layer 2: Pure Engine (lib/tax-engine/*.ts)
 - **토지/건물 분리 양도차익 (소령 §166⑥·§168②)**: `hasSeperateLandAcquisitionDate === true` 시 `transfer-tax-split-gain.ts`가 토지·건물 각각 양도차익 계산. `landSplitMode === "actual"` 직접 입력, 미입력은 기준시가 비율로 자동 안분.
 - **개별주택가격 미공시 환산 (§164⑤·§166⑥·§163⑥)**: `usePreHousingDisclosure === true` 경로. `transfer-tax-pre-housing-disclosure.ts`의 3-시점(취득·최초공시·양도) 알고리즘으로 취득시 기준시가 역산. PHD의 "취득시" 참조일은 **`landAcquisitionDate`** (건물 취득일 아님).
 
+### 양도세 검용주택 PHD 분기 (2026-05-03 이후)
+
+- **일반 PHD** (`partialUsageChange` 미사용): 주택부수토지 단일 면적으로 §164⑤ 역산.
+- **Case A** (`house_to_commercial` AND `firstDisclosureDate < usageChangeDate`): **4부분 안분** 모드. 취득시·최초공시 시점에 건물 전체가 주택이었으므로 `fourPartApportionment`로 주택분토지·주택건물·상가분토지·상가건물 각각 안분. 사용자는 취득시·최초공시 시점에 주택건물/상가건물 기준시가 별도 입력 (홈택스 조회). 엑셀 사례 anchor 테스트(`mixed-use-phd-case-a-fourpart.test.ts`)로 검증.
+- **Case B** (`firstDisclosureDate >= usageChangeDate`): 최초공시 시점에 이미 검용. 시점별 주택부수토지 면적만 사용.
+
 ### 데이터·세션·통합
 
+- **API 페이로드 Date 직렬화 주의**: 클라이언트가 `new Date()` 객체로 전달해도 JSON 직렬화 후 라우트 핸들러는 string으로 받음. 엔진 타입이 `Date`면 라우트에서 `new Date(...)` 명시 변환 필수. 누락 시 `Date < string` 비교는 silent false (조용한 버그). 예: `app/api/calc/transfer/route.ts` mixedAsset 생성 시 `partialUsageChange.usageChangeDate` 도 변환 필요.
 - **Vworld API 공시지가**: `/api/address/standard-price?propertyType=land&jibun=...&year=...`. PHD 3-시점 입력에서 시점별 조회 + 토지기준시가 자동 계산. 추천 연도는 `lib/utils/land-price-year.ts` `recommendLandPriceYear()` (5/31 이하=전년, 6/1 이후=당년).
 - **Auth**: 비로그인도 계산 가능. 로그인 시 이력·PDF. sessionStorage로 게스트 결과 보존 → 로그인 후 마이그레이션. zustand `result`는 partialize 제외 (민감정보 + Date 직렬화).
 - **Store legacy 마이그레이션**: `lib/stores/calc-wizard-migration.ts` (800줄 정책). `migrateLegacyForm` + `STEP_MIGRATION` (5→4단계 인덱스 매핑) 자동 적용.
@@ -100,6 +108,7 @@ Layer 2: Pure Engine (lib/tax-engine/*.ts)
 - **분기·옵션 토글은 ToggleCard / RadioCardGroup 사용** — native checkbox·radio 신규 작성 금지. OFF 상태에도 tone 배경 항상 유지.
 - **공시지가 입력은 `LandPriceLookupField` 필수** — 기준연도+Vworld 조회+토지기준시가 자동 계산.
 - **면적 반올림 일관성 (UI 한정)**: 비율 파생 면적은 `parseFloat(toFixed(2))` 후 단가 곱셈. **엔진 내부 계산엔 미적용** (정밀도 우선).
+- **placeholder에 숫자 예시 금지 (전 세목 공통)**: 입력란 placeholder에 특정 숫자(계산 예제·Excel 예제 숫자 등)를 사용하지 않는다. 도움말이 필요한 경우 **한국어 설명**으로만 표시한다. 예) `"예: 91.78"` → `"양도시 주거용 합계 면적"`. 입력 형식 안내는 FieldCard의 `hint` prop에 한국어로 작성한다.
 
 ## Database (Supabase)
 

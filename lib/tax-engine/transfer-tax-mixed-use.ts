@@ -133,7 +133,9 @@ export function calcMixedUseTransferTax(
     | ReturnType<typeof applyUsagePeriodSplit>["usagePeriodSplit"]
     | undefined;
 
-  if (periodInfo && asset.partialUsageChange) {
+  // Case A 4부분 안분 활성화 시 period-split 건너뛰기 — 엑셀 기준 전체 보유기간 단일 LTHD 적용.
+  const skipPeriodSplitForFourPart = !!housingAcqResult.phdResult?.fourPartApportionment;
+  if (periodInfo && asset.partialUsageChange && !skipPeriodSplitForFourPart) {
     const split = applyUsagePeriodSplit(
       housingGainSplit,
       commercialGainSplit,

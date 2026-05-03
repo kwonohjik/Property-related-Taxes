@@ -156,19 +156,15 @@ export function MixedUsePreHousingDisclosureSection({
         <LegalBadge />
       </div>
 
-      {/* 최초공시일 < 용도변경일 진입 안내 — 전체 건물 기준 역산 모드 */}
+      {/* 최초공시일 < 용도변경일 진입 안내 — Case A 4부분 분리 모드 */}
       {isCaseA && (
         <div className="rounded-lg bg-rose-100/60 border border-rose-200 px-3 py-2 text-xs text-rose-900 space-y-1">
           <p className="font-semibold">
-            ⚠ 최초공시일({asset.phdFirstDisclosureDate || "—"})이 용도변경일보다 이전 — 건물 전체 기준으로 취득시 주택가격을 역산합니다
+            ⚠ 최초공시일({asset.phdFirstDisclosureDate || "—"})이 용도변경일보다 이전 — 4부분 안분 모드
           </p>
           <p>
-            최초공시 시점에는 건물 전체가 아직 주택이었으므로
-            최초공시 개별주택가격은 <strong>건물 전체</strong>(이후 상가로 변한 부분 포함)의 가격입니다.
-          </p>
-          <p>
-            ▶ 취득시·최초공시일 입력란의 <strong>"주택 건물기준시가"</strong>에는
-            그 시점의 <strong>전체 건물 기준시가</strong>(주택분 + 상가부분 합계 — 당시는 모두 주택)를 입력하세요.
+            최초공시 시점에는 건물 전체가 아직 주택이었으나, 양도시 일부가 상가로 변경되었습니다.
+            아래 ① 취득시·② 최초공시일 입력에서 건물기준시가를 <strong>주택건물 부분</strong>과 <strong>상가건물 부분</strong>으로 나누어 입력하세요(양도시 면적 기준).
           </p>
         </div>
       )}
@@ -270,10 +266,33 @@ export function MixedUsePreHousingDisclosureSection({
           targetLabel="주택"
           jibun={asset.addressJibun || undefined}
           landArea={effectiveLandArea > 0 ? effectiveLandArea.toFixed(4) : undefined}
-          // Case A — 최초공시일 < 용도변경일 진입 시 ①·② 시점 라벨·면적을 "전체 토지·건물" 기준으로 전환
-          wholeBuildingForAcqAndFirst={isCaseA}
-          landAreaForAcqAndFirst={
-            isCaseA && totalLand > 0 ? totalLand.toFixed(4) : undefined
+          // Case A 4부분 분리 모드 — ①·② 시점에서 토지·건물을 주택분/상가분 2 컬럼으로 분리
+          splitHousingCommercialForAcqAndFirst={isCaseA}
+          housingLandArea={
+            isCaseA && residential > 0 && totalFloor > 0
+              ? autoLandArea.toFixed(2)
+              : undefined
+          }
+          commercialLandArea={
+            isCaseA && commercial > 0 && totalFloor > 0
+              ? (totalLand - autoLandArea).toFixed(2)
+              : undefined
+          }
+          // ① 취득시 상가건물 — 메인 취득시 섹션의 mixedAcqCommercialBuildingPrice 양방향 read/write
+          // (별도 폼 필드 신설 X — 이전 phdCommercialBuildingStdPriceAtAcq deprecate, 동일 필드 공유)
+          commercialBuildingStdPriceAtAcq={asset.mixedAcqCommercialBuildingPrice}
+          onCommercialBuildingStdPriceAtAcqChange={(v) =>
+            onChange({ mixedAcqCommercialBuildingPrice: v })
+          }
+          commercialBuildingStdPriceAtFirst={asset.phdCommercialBuildingStdPriceAtFirst}
+          onCommercialBuildingStdPriceAtFirstChange={(v) =>
+            onChange({ phdCommercialBuildingStdPriceAtFirst: v })
+          }
+          // ③ 양도시 상가건물 — 메인 양도시 섹션의 mixedTransferCommercialBuildingPrice를 양방향 read/write
+          // (별도 폼 필드 신설 X — 같은 필드를 두 곳에서 편집 가능, 자동 동기화)
+          commercialBuildingStdPriceAtTransfer={asset.mixedTransferCommercialBuildingPrice}
+          onCommercialBuildingStdPriceAtTransferChange={(v) =>
+            onChange({ mixedTransferCommercialBuildingPrice: v })
           }
           // 취득시 — 토지 취득일 기준
           acquisitionDate={asset.landAcquisitionDate || asset.acquisitionDate}

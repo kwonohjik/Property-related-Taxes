@@ -513,6 +513,28 @@ export interface PreHousingDisclosureInput {
   landPricePerSqmAtTransfer: number;
   /** 양도시 건물 기준시가 (원) */
   buildingStdPriceAtTransfer: number;
+
+  /**
+   * Case A 4부분 안분 모드 (검용주택 + 보유 중 일부 용도변경 + 최초공시일 < 용도변경일).
+   * 취득시·최초공시 시점에 건물 전체가 주택이었지만 양도시 일부가 상가로 변경된 경우.
+   *
+   * 아래 commercial 4필드 + housingLandArea*·commercialLandArea* 모두 충족 시에만 4부분 안분 활성화.
+   * 미입력 시 기존 단일 안분(2부분) 유지.
+   */
+  /** 취득시 상가건물 기준시가 (홈택스, 양도시 상가 면적 부분에 해당하는 취득 당시 가격) */
+  commercialBuildingStdPriceAtAcq?: number;
+  /** 최초공시일 상가건물 기준시가 (홈택스) */
+  commercialBuildingStdPriceAtFirstDisclosure?: number;
+  /** 양도시 상가건물 기준시가 (홈택스) */
+  commercialBuildingStdPriceAtTransfer?: number;
+  /** 주택부수토지 면적 (㎡) — 양도시 기준 (시점별 동일 가정 — 분필 없음) */
+  housingLandArea?: number;
+  /** 상가부수토지 면적 (㎡) — 양도시 기준 */
+  commercialLandArea?: number;
+  /** 양도시 개별주택가격이 적용되는 주택건물 부분 기준시가 (= buildingStdPriceAtTransfer 와 동일하지만 명시적 필드) */
+  housingBuildingStdPriceAtTransfer?: number;
+  /** 총 양도가액 (1,300,000,000) — 4부분 안분 시 사용 */
+  totalTransferPriceForFourPart?: number;
 }
 
 /**
@@ -534,6 +556,10 @@ export interface PreHousingDisclosureResult {
   landStdAtAcquisition: number;
   /** 취득시 건물 기준시가 */
   buildingStdAtAcquisition: number;
+  /** 최초공시 토지 기준시가 (= landPricePerSqmAtFirstDisclosure × area) */
+  landStdAtFirstDisclosure: number;
+  /** 최초공시 건물 기준시가 */
+  buildingStdAtFirstDisclosure: number;
   /** 양도시 토지 기준시가 (= landPricePerSqm × area) */
   landStdAtTransfer: number;
   /** 양도시 건물 기준시가 */
@@ -595,6 +621,82 @@ export interface PreHousingDisclosureResult {
     /** 양도시 개별주택가격 P_T */
     transferHousingPrice: number;
   };
+
+  /**
+   * Case A 4부분 안분 결과 (검용주택 + 보유 중 일부 용도변경(주택→상가) + 최초공시일 < 용도변경일).
+   * 입력에 commercialBuildingStdPriceAt* + housing/commercialLandArea + totalTransferPriceForFourPart 모두 충족 시 산출.
+   * 미사용 시 undefined.
+   *
+   * 엑셀 행 매핑 — 4컬럼: D=주택분토지, E=주택건물, F=상가분토지, G=상가건물.
+   */
+  fourPartApportionment?: {
+    /** 4부분 시점별 기준시가 (Row 41~42, 40) */
+    housingLandStdAtAcq: number;             // D41 (주택부수토지 단가 × 주택부수토지면적)
+    housingBuildingStdAtAcq: number;         // E41 (취득시 주택건물 기준시가)
+    commercialLandStdAtAcq: number;          // F41 (상가부수토지 단가 × 상가부수토지면적)
+    commercialBuildingStdAtAcq: number;      // G41 (취득시 상가건물 기준시가)
+    housingLandStdAtFirst: number;           // D42
+    housingBuildingStdAtFirst: number;       // E42
+    commercialLandStdAtFirst: number;        // F42
+    commercialBuildingStdAtFirst: number;    // G42
+    housingLandStdAtTransfer: number;        // D40
+    housingBuildingStdAtTransfer: number;    // E40
+    commercialLandStdAtTransfer: number;     // F40
+    commercialBuildingStdAtTransfer: number; // G40
+
+    /** 4부분 합산기준시가 (각 시점별) */
+    sumAtAcq4: number;       // C41 = D41+E41+F41+G41
+    sumAtFirst4: number;     // C42
+    sumAtTransfer4: number;  // C40
+
+    /** 양도시 주택공시가 안분 — 토지(D34)/건물(E34). 상가는 F40/G40 그대로 사용 (F34=F40, G34=G40) */
+    housingLandStdShare: number;     // D34 = INT(P_T × D40 / (D40+E40))
+    housingBuildingStdShare: number; // E34 = P_T - D34
+    sumAtTransferShare: number;      // H34 = D34 + E34 + F40 + G40
+
+    /** 양도가액 4부분 안분 (Row 10) */
+    housingLandTransferPrice: number;        // D10
+    housingBuildingTransferPrice: number;    // E10
+    commercialLandTransferPrice: number;     // F10
+    commercialBuildingTransferPrice: number; // G10
+
+    /** 환산취득가액 합계 (C11) + 4부분 (Row 11). 4부분은 INT 미적용 (Excel 원본 그대로 — 양도차익 계산에 소수 사용) */
+    totalEstAcq: number;                  // C11 = INT(C10 × C35 / H34)
+    housingLandAcqPrice: number;          // D11 (소수 포함)
+    housingBuildingAcqPrice: number;      // E11 (소수)
+    commercialLandAcqPrice: number;       // F11 (소수)
+    commercialBuildingAcqPrice: number;   // G11 (소수, C11-D11-E11-F11)
+
+    /** 개산공제 4부분 (Row 12) — 취득시 안분 성분 × 3%, 각 INT */
+    housingLandLumpDed: number;        // D12 = INT(D35 × 3%)
+    housingBuildingLumpDed: number;    // E12 = INT(E35 × 3%)
+    commercialLandLumpDed: number;     // F12 = INT(F35 × 3%)
+    commercialBuildingLumpDed: number; // G12 = INT(G35 × 3%)
+
+    /** 취득시 4부분 P_A_est 안분 (Row 35) — 개산공제 base */
+    housingLandAcqShare: number;        // D35 = INT(P_A_est × D41/C41)
+    housingBuildingAcqShare: number;    // E35
+    commercialLandAcqShare: number;     // F35
+    commercialBuildingAcqShare: number; // G35 (= P_A_est - D35-E35-F35)
+
+    /** 양도차익 4부분 (Row 13) = 양도가액 - 환산취득가 - 개산공제 */
+    housingLandGain: number;        // D13
+    housingBuildingGain: number;    // E13
+    commercialLandGain: number;     // F13
+    commercialBuildingGain: number; // G13
+
+    /** 주택부분 합계 (D+E) */
+    housingTransferPriceSum: number;
+    housingAcqPriceSum: number;
+    housingLumpDedSum: number;
+    housingGainSum: number;
+
+    /** 상가부분 합계 (F+G) */
+    commercialTransferPriceSum: number;
+    commercialAcqPriceSum: number;
+    commercialLumpDedSum: number;
+    commercialGainSum: number;
+  };
 }
 
 /** 토지/건물 분리 계산 결과 */
@@ -603,6 +705,8 @@ export interface SplitPartResult {
   acquisitionPrice: number;
   directExpenses: number;
   appraisalDeduction: number;
+  /** 취득시 기준시가 — 개산공제 산식 표시용 (개산공제 = floor(stdPriceAtAcq × 3%)) */
+  stdPriceAtAcq?: number;
   gain: number;
   holdingYears: number;
   longTermRate: number;

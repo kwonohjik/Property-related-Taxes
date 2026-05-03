@@ -72,16 +72,36 @@ export interface ThreePointStandardPriceInputProps {
   targetLabel?: string;
   /**
    * 검용주택 + 보유 중 일부 용도변경에서 최초공시일 < 용도변경일 인 경우(Case A) 전용.
-   * true 일 때 ① 취득시 · ② 최초공시일 시점은 "당시 전체 주택"이었으므로 라벨이 변경되며,
-   * ③ 양도시는 그대로 검용 상태(주택분만) 라벨을 사용한다.
+   * true 일 때 ① 취득시 · ② 최초공시일 시점에 토지·건물 기준시가를
+   * "주택분 / 상가분" 두 컬럼으로 분리 입력·표시한다 (양도시 면적 기준 분리).
+   * ③ 양도시는 그대로 주택분만 표시.
    */
-  wholeBuildingForAcqAndFirst?: boolean;
+  splitHousingCommercialForAcqAndFirst?: boolean;
   /**
-   * Case A 시 ① 취득시 · ② 최초공시일 시점에 사용할 토지면적(㎡, 전체 토지면적).
-   * `wholeBuildingForAcqAndFirst === true` 일 때만 의미가 있으며,
-   * 미주입 시 `landArea` 로 fallback. ③ 양도시는 항상 `landArea` 사용.
+   * Case A 분리 모드에서 ① 취득시 · ② 최초공시일 토지기준시가 표시용.
+   * 주택부수토지 면적(㎡) — `splitHousingCommercialForAcqAndFirst === true` 일 때만 의미.
    */
-  landAreaForAcqAndFirst?: string;
+  housingLandArea?: string;
+  /**
+   * Case A 분리 모드에서 상가부수토지 면적(㎡).
+   */
+  commercialLandArea?: string;
+  /**
+   * Case A 분리 모드 — 취득시 상가건물 기준시가 (원). 미주입 시 입력 위젯 표시 안 함.
+   */
+  commercialBuildingStdPriceAtAcq?: string;
+  onCommercialBuildingStdPriceAtAcqChange?: (v: string) => void;
+  /**
+   * Case A 분리 모드 — 최초공시일 상가건물 기준시가 (원).
+   */
+  commercialBuildingStdPriceAtFirst?: string;
+  onCommercialBuildingStdPriceAtFirstChange?: (v: string) => void;
+  /**
+   * Case A 분리 모드 — 양도시 상가건물 기준시가 (원). 메인 양도시 섹션의
+   * `mixedTransferCommercialBuildingPrice` 와 동일 필드를 양방향 read/write 한다 (별도 폼 필드 X).
+   */
+  commercialBuildingStdPriceAtTransfer?: string;
+  onCommercialBuildingStdPriceAtTransferChange?: (v: string) => void;
   /**
    * ① 취득시 토지 공시지가/연도가 외부 섹션에서 자동 동기화되는 경우 read-only 표시 + 안내.
    * 검용주택 PHD에서 섹션 2의 `mixedAcqLandPricePerSqm`을 미러링할 때 사용.
@@ -177,6 +197,14 @@ interface PointBlockProps {
    * 건물 기준시가는 그대로 입력 유지.
    */
   landAutoSync?: { label: string };
+  /**
+   * Case A 4부분 분리 모드 — true 일 때 토지·건물 기준시가를 주택분/상가분 2컬럼으로 표시.
+   */
+  splitMode?: boolean;
+  housingLandArea?: string;
+  commercialLandArea?: string;
+  commercialBuildingStdPrice?: string;
+  onCommercialBuildingStdPriceChange?: (v: string) => void;
 }
 
 function PointBlock({
@@ -195,6 +223,11 @@ function PointBlock({
   targetLabel,
   useWholeBuildingLabels,
   landAutoSync,
+  splitMode,
+  housingLandArea,
+  commercialLandArea,
+  commercialBuildingStdPrice,
+  onCommercialBuildingStdPriceChange,
 }: PointBlockProps) {
   const toneClasses = tone ? TONE_CLASSES[tone] : null;
   const labels = resolveLabels(targetLabel, useWholeBuildingLabels);
@@ -251,6 +284,12 @@ function PointBlock({
   const pricePerSqm = parseAmount(landPricePerSqm);
   const area = landArea ? parseFloat(landArea) : 0;
   const landStdPrice = pricePerSqm > 0 && area > 0 ? Math.floor(pricePerSqm * area) : null;
+
+  // Case A 분리 모드 — 주택분/상가분 토지 기준시가 분리 계산
+  const housingArea = splitMode && housingLandArea ? parseFloat(housingLandArea) : 0;
+  const commercialArea = splitMode && commercialLandArea ? parseFloat(commercialLandArea) : 0;
+  const housingLandStd = splitMode && pricePerSqm > 0 && housingArea > 0 ? Math.floor(pricePerSqm * housingArea) : null;
+  const commercialLandStd = splitMode && pricePerSqm > 0 && commercialArea > 0 ? Math.floor(pricePerSqm * commercialArea) : null;
 
   const yearBadge = isManual ? (
     <span className="flex items-center gap-1">
@@ -351,58 +390,134 @@ function PointBlock({
         </FieldCard>
       )}
 
-      {/* 토지 단위 공시지가 (원/㎡) + 토지기준시가 — landAutoSync 시 단가는 read-only */}
-      <div className="grid grid-cols-2 gap-2">
-        <FieldCard
-          label={labels.landUnitPrice}
-          unit="원/㎡"
-          hint={landAutoSync ? landAutoSync.label : labels.landUnitPriceHint}
-        >
-          {landAutoSync ? (
-            <div className="flex h-9 items-center rounded-md border border-input bg-muted/40 px-3 text-sm tabular-nums text-muted-foreground">
-              {pricePerSqm > 0 ? (
-                pricePerSqm.toLocaleString()
-              ) : (
-                <span className="text-muted-foreground/40 text-xs">위 섹션에서 입력</span>
-              )}
-            </div>
-          ) : (
-            <CurrencyInput
-              label=""
-              value={landPricePerSqm}
-              onChange={onLandPricePerSqmChange}
-              placeholder="원/㎡"
-              hideUnit
-            />
-          )}
-        </FieldCard>
-        <FieldCard
-          label={labels.landStdPrice}
-          unit="원"
-          hint={labels.landStdPriceHint}
-        >
+      {/* 공시지가 단가 — Case A 분리 모드와 무관하게 단일 입력 (같은 지번) */}
+      <FieldCard
+        label={labels.landUnitPrice}
+        unit="원/㎡"
+        hint={landAutoSync ? landAutoSync.label : labels.landUnitPriceHint}
+      >
+        {landAutoSync ? (
           <div className="flex h-9 items-center rounded-md border border-input bg-muted/40 px-3 text-sm tabular-nums text-muted-foreground">
-            {landStdPrice !== null
-              ? landStdPrice.toLocaleString()
-              : <span className="text-muted-foreground/50">자동 계산</span>}
+            {pricePerSqm > 0 ? (
+              pricePerSqm.toLocaleString()
+            ) : (
+              <span className="text-muted-foreground/40 text-xs">위 섹션에서 입력</span>
+            )}
           </div>
-        </FieldCard>
-      </div>
-
-      {/* 건물 기준시가 (원) */}
-      <FieldCard label={labels.buildingStdPrice} unit="원" hint={labels.buildingStdPriceHint}>
-        <CurrencyInput
-          label=""
-          value={buildingStdPrice}
-          onChange={onBuildingStdPriceChange}
-          placeholder="원"
-          hideUnit
-        />
+        ) : (
+          <CurrencyInput
+            label=""
+            value={landPricePerSqm}
+            onChange={onLandPricePerSqmChange}
+            placeholder="원/㎡"
+            hideUnit
+          />
+        )}
       </FieldCard>
 
-      {/* 합계 — 토지기준시가 + 건물기준시가 */}
+      {splitMode ? (
+        <>
+          {/* Case A 분리 모드 — 주택분/상가분 토지기준시가 (자동 계산, 2 컬럼) */}
+          <div className="grid grid-cols-2 gap-2">
+            <FieldCard
+              label="주택분 토지기준시가"
+              unit="원"
+              hint={`공시지가 × 주택부수토지${housingArea > 0 ? ` (${housingArea}㎡)` : ""}`}
+            >
+              <div className="flex h-9 items-center rounded-md border border-input bg-muted/40 px-3 text-sm tabular-nums text-muted-foreground">
+                {housingLandStd !== null
+                  ? housingLandStd.toLocaleString()
+                  : <span className="text-muted-foreground/50">자동 계산</span>}
+              </div>
+            </FieldCard>
+            <FieldCard
+              label="상가분 토지기준시가"
+              unit="원"
+              hint={`공시지가 × 상가부수토지${commercialArea > 0 ? ` (${commercialArea}㎡)` : ""}`}
+            >
+              <div className="flex h-9 items-center rounded-md border border-input bg-muted/40 px-3 text-sm tabular-nums text-muted-foreground">
+                {commercialLandStd !== null
+                  ? commercialLandStd.toLocaleString()
+                  : <span className="text-muted-foreground/50">자동 계산</span>}
+              </div>
+            </FieldCard>
+          </div>
+
+          {/* Case A 분리 모드 — 주택건물/상가건물 기준시가 (사용자 입력, 2 컬럼) */}
+          <div className="grid grid-cols-2 gap-2">
+            <FieldCard
+              label="주택건물 기준시가"
+              unit="원"
+              hint="홈택스 — 양도시 주택 부분에 해당하는 면적의 당시 건물 기준시가"
+              required
+            >
+              <CurrencyInput
+                label=""
+                value={buildingStdPrice}
+                onChange={onBuildingStdPriceChange}
+                placeholder="원"
+                hideUnit
+              />
+            </FieldCard>
+            <FieldCard
+              label="상가건물 기준시가"
+              unit="원"
+              hint="홈택스 — 양도시 상가 부분에 해당하는 면적의 당시 건물 기준시가"
+              required
+            >
+              <CurrencyInput
+                label=""
+                value={commercialBuildingStdPrice ?? ""}
+                onChange={onCommercialBuildingStdPriceChange ?? (() => {})}
+                placeholder="원"
+                hideUnit
+              />
+            </FieldCard>
+          </div>
+        </>
+      ) : (
+        <>
+          {/* 일반 모드 — 단일 토지기준시가 + 단일 건물기준시가 */}
+          <FieldCard
+            label={labels.landStdPrice}
+            unit="원"
+            hint={labels.landStdPriceHint}
+          >
+            <div className="flex h-9 items-center rounded-md border border-input bg-muted/40 px-3 text-sm tabular-nums text-muted-foreground">
+              {landStdPrice !== null
+                ? landStdPrice.toLocaleString()
+                : <span className="text-muted-foreground/50">자동 계산</span>}
+            </div>
+          </FieldCard>
+
+          <FieldCard label={labels.buildingStdPrice} unit="원" hint={labels.buildingStdPriceHint}>
+            <CurrencyInput
+              label=""
+              value={buildingStdPrice}
+              onChange={onBuildingStdPriceChange}
+              placeholder="원"
+              hideUnit
+            />
+          </FieldCard>
+        </>
+      )}
+
+      {/* 합계 — splitMode: 4부분 합 / 일반: 토지+건물 합 */}
       {(() => {
         const buildingAmt = parseAmount(buildingStdPrice);
+        const commercialBuildingAmt = splitMode ? parseAmount(commercialBuildingStdPrice ?? "") : 0;
+        if (splitMode) {
+          const total = (housingLandStd ?? 0) + (commercialLandStd ?? 0) + buildingAmt + commercialBuildingAmt;
+          if (total === 0) return null;
+          return (
+            <div className={`rounded-md px-3 py-2 text-sm ${toneClasses ? toneClasses.summary : "bg-muted/40 border border-border text-foreground"}`}>
+              <div className="flex justify-between items-center">
+                <span className="text-xs font-semibold">4부분 합산기준시가 (주택분토지+주택건물+상가분토지+상가건물)</span>
+                <span className="font-semibold tabular-nums">{total.toLocaleString()}원</span>
+              </div>
+            </div>
+          );
+        }
         if (landStdPrice === null && buildingAmt === 0) return null;
         const total = (landStdPrice ?? 0) + buildingAmt;
         return (
@@ -421,19 +536,16 @@ function PointBlock({
 // ─── 메인 컴포넌트 ────────────────────────────────────────────────
 
 export function ThreePointStandardPriceInput(props: ThreePointStandardPriceInputProps) {
-  // Case A 분기 라벨/면적 결정
-  const useWholeForAcqFirst = props.wholeBuildingForAcqAndFirst === true;
-  const acqFirstLandArea = useWholeForAcqFirst
-    ? (props.landAreaForAcqAndFirst ?? props.landArea)
-    : props.landArea;
+  // Case A 분기 라벨 결정 (4부분 분리 모드)
+  const splitMode = props.splitHousingCommercialForAcqAndFirst === true;
 
   // 시점별 섹션 헤더 라벨
   const targetSuffix = props.targetLabel ? `${props.targetLabel}분 ` : "";
-  const acqLabel = useWholeForAcqFirst
-    ? "① 취득시 기준시가 (당시 전체 주택)"
+  const acqLabel = splitMode
+    ? "① 취득시 기준시가 (양도시 면적 기준 분리)"
     : `① 취득시 ${targetSuffix}기준시가`;
-  const firstLabel = useWholeForAcqFirst
-    ? "② 최초공시일 기준시가 (당시 전체 주택)"
+  const firstLabel = splitMode
+    ? "② 최초공시일 기준시가 (양도시 면적 기준 분리)"
     : `② 최초공시일 ${targetSuffix}기준시가`;
   // 양도시는 Case A 여부와 무관하게 항상 검용 상태 (주택분만)
   const transferLabel = `③ 양도시 ${targetSuffix}기준시가`;
@@ -452,10 +564,14 @@ export function ThreePointStandardPriceInput(props: ThreePointStandardPriceInput
         buildingStdPrice={props.buildingStdPriceAtAcq}
         onBuildingStdPriceChange={props.onBuildingStdPriceAtAcqChange}
         jibun={props.jibun}
-        landArea={acqFirstLandArea}
+        landArea={props.landArea}
         targetLabel={props.targetLabel}
-        useWholeBuildingLabels={useWholeForAcqFirst}
         landAutoSync={props.landAutoSyncAtAcq}
+        splitMode={splitMode}
+        housingLandArea={props.housingLandArea}
+        commercialLandArea={props.commercialLandArea}
+        commercialBuildingStdPrice={props.commercialBuildingStdPriceAtAcq}
+        onCommercialBuildingStdPriceChange={props.onCommercialBuildingStdPriceAtAcqChange}
       />
 
       <PointBlock
@@ -470,9 +586,13 @@ export function ThreePointStandardPriceInput(props: ThreePointStandardPriceInput
         buildingStdPrice={props.buildingStdPriceAtFirst}
         onBuildingStdPriceChange={props.onBuildingStdPriceAtFirstChange}
         jibun={props.jibun}
-        landArea={acqFirstLandArea}
+        landArea={props.landArea}
         targetLabel={props.targetLabel}
-        useWholeBuildingLabels={useWholeForAcqFirst}
+        splitMode={splitMode}
+        housingLandArea={props.housingLandArea}
+        commercialLandArea={props.commercialLandArea}
+        commercialBuildingStdPrice={props.commercialBuildingStdPriceAtFirst}
+        onCommercialBuildingStdPriceChange={props.onCommercialBuildingStdPriceAtFirstChange}
       />
 
       <PointBlock
@@ -490,7 +610,12 @@ export function ThreePointStandardPriceInput(props: ThreePointStandardPriceInput
         landArea={props.landArea}
         targetLabel={props.targetLabel}
         landAutoSync={props.landAutoSyncAtTransfer}
-        // 양도시는 Case A 여부와 무관하게 항상 주택분 라벨 사용
+        // Case A splitMode 활성 시 양도시도 ① ② 와 동일하게 주택분/상가분 분리 표시
+        splitMode={splitMode}
+        housingLandArea={props.housingLandArea}
+        commercialLandArea={props.commercialLandArea}
+        commercialBuildingStdPrice={props.commercialBuildingStdPriceAtTransfer}
+        onCommercialBuildingStdPriceChange={props.onCommercialBuildingStdPriceAtTransferChange}
       />
     </div>
   );

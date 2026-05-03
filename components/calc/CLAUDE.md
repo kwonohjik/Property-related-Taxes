@@ -71,6 +71,7 @@ acquisitionMethod: isAppraisal ? "appraisal" : isEstimated ? "estimated" : "actu
 | 진척 사이드바 | `@/components/calc/shared/WizardSidebar.tsx` | lg(1024px) 이상 좌측 sticky. 단계 + 합계 요약. 마법사용. |
 | 개별공시지가 입력 | `@/components/calc/inputs/LandPriceLookupField.tsx` (`LandPriceLookupField`) | 공시지가(원/㎡) 전용. 기준연도+Vworld 조회+토지기준시가 자동 계산 포함. CurrencyInput 단독 사용 금지. |
 | 분기 토글 / 옵션 토글 | `@/components/calc/inputs/ToggleCard.tsx` (`ToggleCard`) | 모드/분기 토글 통합 카드. ON 시 tone(amber·rose·violet·emerald·sky)으로 카드 전체 강조 + 펼침 children 지원. variant="card"(기본, 펼침)·"chip"(인라인). Switch 기반. native checkbox 신규 사용 금지. |
+| 3-시점 기준시가 입력 | `@/components/calc/transfer/ThreePointStandardPriceInput.tsx` | 취득·최초공시·양도 3시점 토지·건물 기준시가. `splitHousingCommercialForAcqAndFirst` prop 활성 시 모든 시점에서 주택분/상가분 같은 행 4부분 표시 (Case A 전용). |
 | 라디오 그룹 | `@/components/calc/inputs/RadioCardGroup.tsx` (`RadioCardGroup`) | 라디오 그룹 통합 컴포넌트. ToggleCard와 동일한 가시성 원칙(미선택 옵션도 tone 배경 유지). layout="stack"(세로 카드)·"inline"(가로 컴팩트). options 배열로 일괄 렌더. native radio 신규 사용 금지. |
 | 신축·증축 입력 | `@/components/calc/transfer/SelfBuiltSection.tsx` | 자산-수준 4필드 (isSelfBuilt·buildingType·constructionDate·extensionFloorArea). `acquisitionCause === "purchase"` + housing/building 자산 전용. |
 | 1990 환산 | `@/components/calc/inputs/Pre1990LandValuationInput.tsx` | 토지 자산 + acquisitionDate < 1990-08-30 시 자동 활성화. 자산-수준 props (`form` = `Pre1990FormSlice`). |
@@ -257,3 +258,24 @@ ToggleCard로 표현하기 어려운 특수 케이스에도 동일 원칙 준수
 - OFF 상태에 `bg-{tone}-50/70` 배경 필수
 - 회색 배경(`bg-card`·`bg-muted`) 사용 금지
 - ON/OFF 구분은 위 4신호 중 최소 2개 이상 차별화
+
+## 같은 의미 폼 필드의 양방향 read/write 통합 (2026-05-03 이후)
+
+검용주택 Case A 4부분 안분에서 "취득시 상가건물 기준시가"·"양도시 상가건물 기준시가"가 메인 섹션과 PHD 섹션 두 곳에서 입력되는 문제를 해결한 패턴.
+
+**원칙**: 별도 폼 필드 신설 금지. **단일 폼 필드를 두 위치에서 양방향 read/write**.
+
+- 같은 폼 필드 (예: `mixedAcqCommercialBuildingPrice`, `mixedTransferCommercialBuildingPrice`)를 두 컴포넌트에서 직접 read/write
+- `useEffect → store` 미러링 정책 위반 없음 (직접 동일 필드 수정 — 자동 동기화)
+- API/Validation은 fallback 패턴으로 양쪽 인식 (`phdField || mixedField`) — CLAUDE.md ⑧ 정책 준수
+- 사용자가 어디서 입력하든 자동 동기화, 데이터 중복 방지
+
+**적용 예**: `MixedUsePreHousingDisclosureSection.tsx` 의 `commercialBuildingStdPriceAtAcq/AtTransfer` props가 메인 섹션의 동일 필드를 직접 수정.
+
+## placeholder에 숫자 예시 금지 (전 세목 공통, 2026-05-03 이후)
+
+입력란 `placeholder`에 특정 숫자(계산 예제·Excel 예제 숫자 등) 사용 금지. 도움말이 필요한 경우 **한국어 설명**으로만 표시.
+
+- 잘못된 예: `placeholder="예: 91.78"`, `placeholder="예: 10,000,000"`
+- 올바른 예: `placeholder="양도시 주거용 합계 면적"`, `placeholder="금액 입력 (원)"`
+- 입력 형식 안내가 필요하면 FieldCard의 `hint` prop에 한국어로 작성

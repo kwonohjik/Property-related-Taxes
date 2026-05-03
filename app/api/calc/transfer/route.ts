@@ -583,6 +583,14 @@ export async function POST(request: NextRequest) {
         landAcquisitionDate: new Date(data.mixedUse.landAcquisitionDate),
         buildingAcquisitionDate: new Date(data.mixedUse.buildingAcquisitionDate),
         preHousingDisclosure: phdInput,
+        partialUsageChange: data.mixedUse.partialUsageChange
+          ? {
+              ...data.mixedUse.partialUsageChange,
+              usageChangeDate: data.mixedUse.partialUsageChange.usageChangeDate
+                ? new Date(data.mixedUse.partialUsageChange.usageChangeDate)
+                : undefined,
+            }
+          : undefined,
       };
       const mixedResult = calcMixedUseTransferTax(
         data.transferPrice,

@@ -333,6 +333,17 @@ export interface AssetForm {
    */
   phdResidentialLandArea: string;
 
+  /**
+   * Case A 4부분 안분 전용 (취득시 전체 주택 → 양도시 일부 상가, 최초공시 < 용도변경일).
+   * 엑셀 사례 기준: 취득시·최초공시 시점에는 건물 전체가 주택이었으나
+   * 양도시점 기준으로 "주택건물 부분"과 "상가건물 부분"의 기준시가를 각각 분리 입력.
+   * Case A 비활성 시 빈 문자열 유지.
+   */
+  /** 취득시 상가건물 기준시가 (원) — Case A 4부분 안분용 */
+  phdCommercialBuildingStdPriceAtAcq: string;
+  /** 최초공시일 상가건물 기준시가 (원) — Case A 4부분 안분용 */
+  phdCommercialBuildingStdPriceAtFirst: string;
+
   /** 매매 estimated 시 취득시점 기준시가 (원, 환산 분자) */
   standardPriceAtAcq: string;
   /** 취득시 기준시가 레이블 (API 조회 결과 표시용) */
@@ -605,6 +616,8 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     phdLandPricePerSqmAtTransfer: "",
     phdBuildingStdPriceAtTransfer: "",
     phdResidentialLandArea: "",
+    phdCommercialBuildingStdPriceAtAcq: "",
+    phdCommercialBuildingStdPriceAtFirst: "",
     landTransferPrice: "",
     buildingTransferPrice: "",
     landAcquisitionPrice: "",
@@ -764,6 +777,8 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (a.phdLandPriceYearAtTransferIsManual === undefined) a.phdLandPriceYearAtTransferIsManual = false;
   if (!a.phdLandPricePerSqmAtTransfer) a.phdLandPricePerSqmAtTransfer = "";
   if (!a.phdBuildingStdPriceAtTransfer) a.phdBuildingStdPriceAtTransfer = "";
+  if (!a.phdCommercialBuildingStdPriceAtAcq) a.phdCommercialBuildingStdPriceAtAcq = "";
+  if (!a.phdCommercialBuildingStdPriceAtFirst) a.phdCommercialBuildingStdPriceAtFirst = "";
   if (!a.phdResidentialLandArea) a.phdResidentialLandArea = "";
   // 상속 취득가액 의제 필드
   if (a.inheritanceMode === undefined) a.inheritanceMode = null;

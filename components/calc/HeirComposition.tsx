@@ -159,7 +159,7 @@ function HeirEditor({ heir, index, onUpdate, onRemove }: HeirEditorProps) {
               const v = parseFloat(e.target.value || "");
               set({ actualShareRatio: isNaN(v) ? undefined : Math.min(100, Math.max(0, v)) / 100 });
             }}
-            placeholder="예: 40"
+            placeholder="비율 입력 (%)"
             className="w-32 rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
           <span className="text-sm text-gray-500">%</span>
