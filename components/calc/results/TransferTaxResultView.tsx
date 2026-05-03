@@ -51,16 +51,30 @@ function Row({
   highlight?: boolean;
 }) {
   return (
-    <div
+    <tr
       className={cn(
-        "flex items-center justify-between px-4 py-2.5",
         highlight && "bg-muted/50 font-semibold",
-        sub && "pl-7 text-muted-foreground",
       )}
     >
-      <span className={sub ? "text-xs" : ""}>{label}</span>
-      <span className="font-mono">{value}</span>
-    </div>
+      <td
+        className={cn(
+          "px-4 py-2.5 whitespace-nowrap",
+          sub && "pl-7 text-xs text-muted-foreground",
+          highlight && "bg-muted/50",
+        )}
+      >
+        {label}
+      </td>
+      <td
+        className={cn(
+          "px-4 py-2.5 text-right font-mono whitespace-nowrap",
+          sub && "text-xs text-muted-foreground",
+          highlight && "bg-muted/50",
+        )}
+      >
+        {value}
+      </td>
+    </tr>
   );
 }
 
@@ -163,10 +177,10 @@ export function TransferTaxResultView({ result, onReset, onBack, onGoToFirst, on
                 <Row label="안분 양도가액" value={formatKRW(pr.allocatedTransferPrice)} sub />
                 <Row label="취득가액" value={formatKRW(pr.acquisitionPrice)} sub />
                 {pr.estimatedDeduction > 0 && (
-                  <Row label="개산공제" value={`- ${formatKRW(pr.estimatedDeduction)}`} sub />
+                  <Row label="필요경비 (개산공제 §163⑥)" value={`- ${formatKRW(pr.estimatedDeduction)}`} sub />
                 )}
-                {pr.expenses > 0 && pr.estimatedDeduction === 0 && (
-                  <Row label="필요경비" value={`- ${formatKRW(pr.expenses)}`} sub />
+                {pr.expenses > 0 && (
+                  <Row label={pr.estimatedDeduction > 0 ? "필요경비 (자본·양도비)" : "필요경비"} value={`- ${formatKRW(pr.expenses)}`} sub />
                 )}
                 <Row label="양도차익" value={formatKRW(pr.transferGain)} />
                 <Row
@@ -202,9 +216,10 @@ export function TransferTaxResultView({ result, onReset, onBack, onGoToFirst, on
         </div>
       )}
 
-      {/* 상세 내역 */}
+      {/* 상세 내역 — table 레이아웃으로 열 폭을 내용에 맞게 자동 조정 */}
       {!result.isExempt && (
-        <div className="rounded-lg border border-border divide-y divide-border text-sm">
+        <div className="rounded-lg border border-border overflow-hidden">
+        <table className="w-auto text-sm border-collapse [&_tr]:border-b [&_tr]:border-border [&_tr:last-child]:border-0">
           <Row label="양도차익" value={formatKRW(result.transferGain)} />
           {result.taxableGain !== result.transferGain && (
             <Row label="과세 양도차익 (12억 초과분)" value={formatKRW(result.taxableGain)} sub />
@@ -345,6 +360,7 @@ export function TransferTaxResultView({ result, onReset, onBack, onGoToFirst, on
             );
           })()}
           <Row label="지방소득세 (10%)" value={formatKRW(result.localIncomeTax)} />
+        </table>
         </div>
       )}
 
@@ -589,7 +605,7 @@ export function TransferTaxResultView({ result, onReset, onBack, onGoToFirst, on
               <span className="text-muted-foreground">환산취득가</span>
               <span className={colCls(landIsOwned)}>{result.splitDetail.land.acquisitionPrice.toLocaleString()}</span>
               <span className={colCls(buildingIsOwned)}>{result.splitDetail.building.acquisitionPrice.toLocaleString()}</span>
-              <span className="text-muted-foreground">개산공제</span>
+              <span className="text-muted-foreground">필요경비 (개산공제)</span>
               <span className={colCls(landIsOwned)}>
                 {result.splitDetail.land.appraisalDeduction.toLocaleString()}
                 {result.splitDetail.land.stdPriceAtAcq != null && (
@@ -659,43 +675,41 @@ export function TransferTaxResultView({ result, onReset, onBack, onGoToFirst, on
         </div>
       )}
 
-      {/* 하단 버튼 — 인쇄 시 숨김 */}
-      <div className="space-y-2 print:hidden">
+      {/* 하단 버튼 — 모든 버튼 한 행 표시, 인쇄 시 숨김 */}
+      <div className="flex gap-2 print:hidden">
         {onGoToFirst && (
           <button
             type="button"
             onClick={onGoToFirst}
-            className="w-full rounded-lg border border-border py-2.5 text-sm font-medium hover:bg-muted/40 transition-colors"
-          >
-            ← 자산 목록으로 (Step 1)
-          </button>
-        )}
-        <div className="flex gap-3">
-          <button
-            type="button"
-            onClick={onBack}
             className="flex-1 rounded-lg border border-border py-2.5 text-sm font-medium hover:bg-muted/40 transition-colors"
           >
-            이전
+            ← 자산 목록
           </button>
-          <button
-            type="button"
-            onClick={onReset}
-            className="flex-1 rounded-lg bg-primary py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
-          >
-            다시 계산하기
-          </button>
-        </div>
-      </div>
-      {showMultiTransferButton && onContinueToMulti && (
+        )}
         <button
           type="button"
-          onClick={onContinueToMulti}
-          className="block w-full text-center rounded-lg bg-black py-2.5 text-sm font-semibold text-white hover:bg-neutral-800 transition-colors print:hidden"
+          onClick={onBack}
+          className="flex-1 rounded-lg border border-border py-2.5 text-sm font-medium hover:bg-muted/40 transition-colors"
         >
-          동일연도 다른 양도건 계산하기
+          이전
         </button>
-      )}
+        <button
+          type="button"
+          onClick={onReset}
+          className="flex-1 rounded-lg bg-primary py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
+        >
+          다시 계산하기
+        </button>
+        {showMultiTransferButton && onContinueToMulti && (
+          <button
+            type="button"
+            onClick={onContinueToMulti}
+            className="flex-1 rounded-lg bg-black py-2.5 text-sm font-semibold text-white hover:bg-neutral-800 transition-colors"
+          >
+            동일연도 다른 양도건
+          </button>
+        )}
+      </div>
     </div>
   );
 }

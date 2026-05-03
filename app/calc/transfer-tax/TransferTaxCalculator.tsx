@@ -18,6 +18,7 @@ import { getFilingDeadline, isFilingOverdue } from "@/lib/calc/filing-deadline";
 import { ResetButton } from "@/components/calc/shared/ResetButton";
 import { computeTransferSummary } from "@/lib/stores/calc-wizard-store";
 import { useAutoSaveCalculation } from "@/lib/storage/use-auto-save-calculation";
+import { useProfessionalStore } from "@/lib/stores/professional-store";
 import { ChevronLeft } from "lucide-react";
 import { Step1 } from "./steps/Step1";
 import { Step4 } from "./steps/Step4";
@@ -80,12 +81,15 @@ export default function TransferTaxCalculator({
   const isLastStep = currentStep === totalSteps - 1;
   const isResult = result !== null && currentStep === totalSteps;
 
+  const { activeClientId } = useProfessionalStore();
+
   // 로컬 이력 자동 저장 — 결과 화면 진입 시 1회
   useAutoSaveCalculation({
     taxType: "transfer",
     inputData: formData as unknown as Record<string, unknown>,
     resultData: isResult ? (result as unknown as Record<string, unknown>) : null,
     taxLawVersion: formData.transferDate || new Date().toISOString().split("T")[0],
+    clientId: activeClientId,
   });
 
   // 잘못된 step 상태 복구: currentStep >= totalSteps인데 result가 없으면 step 0으로 리셋

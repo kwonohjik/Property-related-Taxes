@@ -317,8 +317,15 @@ function buildRows(
         sp.building.directExpenses +
         sp.building.appraisalDeduction,
     );
+  } else if (result.usedEstimatedAcquisition && result.estimatedBase !== undefined) {
+    // 환산/감정가액 모드: estimatedBase = 순수 환산취득가, estimatedDeduction = 개산공제(필요경비)
+    // 역산 금지 — 개산공제가 취득가액에 합산되는 버그 방지
+    setNum("acquisitionPrice", "total", result.estimatedBase > 0 ? result.estimatedBase : null);
+    const deduction = result.estimatedDeduction ?? 0;
+    const totalNecessaryExpenses = deduction + totalExpenses;
+    setNum("expenses", "total", totalNecessaryExpenses > 0 ? totalNecessaryExpenses : null);
   } else {
-    // 단일 모드: 양도차익 역산
+    // 실가 단일 모드: 양도차익 역산
     const totalAcqPrice = totalTransferPrice - result.transferGain - totalExpenses;
     setNum("acquisitionPrice", "total", totalAcqPrice > 0 ? totalAcqPrice : null);
     setNum("expenses", "total", totalExpenses || null);
@@ -656,16 +663,27 @@ export function FilingFormTable({
       data-print-section="form-table"
       className="rounded-xl border-2 border-slate-300 bg-white dark:bg-slate-900 overflow-hidden print:border print:border-black"
     >
-      <div className="px-4 py-3 bg-slate-100 dark:bg-slate-800 border-b border-slate-300 print:bg-white">
-        <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">
-          신고서 양식
-        </h3>
-        <p className="text-[11px] text-slate-500 mt-0.5">
-          양도소득세 신고서 항목별 자산-분할 계산 내역
-        </p>
-      </div>
       <div className="overflow-x-auto">
-        <table className="w-full text-xs border-collapse">
+        {/* inline-block으로 헤더+테이블을 묶어 동일 폭으로 유지 */}
+        <div className="inline-block min-w-full">
+        <div className="px-4 py-3 bg-slate-100 dark:bg-slate-800 border-b border-slate-300 print:bg-white">
+          <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">
+            신고서 양식
+          </h3>
+          <p className="text-[11px] text-slate-500 mt-0.5">
+            양도소득세 신고서 항목별 자산-분할 계산 내역
+          </p>
+        </div>
+        {/* 열 수에 따라 테이블 폭 자동 조정 — 1열이면 좁게, 4-5열이면 넓게 */}
+        <table className="text-xs border-collapse" style={{ width: "auto", tableLayout: "fixed" }}>
+          <colgroup>
+            {/* 항목 열: 고정 160px */}
+            <col style={{ width: "160px" }} />
+            {/* 값 열: 열당 130px */}
+            {columns.map((c) => (
+              <col key={c.key} style={{ width: "130px" }} />
+            ))}
+          </colgroup>
           <thead className="bg-slate-50 dark:bg-slate-800/50">
             <tr>
               <th className="text-left px-3 py-2 border-b border-r border-slate-200 font-semibold sticky left-0 bg-slate-50 dark:bg-slate-800/50 print:static">
@@ -718,6 +736,7 @@ export function FilingFormTable({
             ))}
           </tbody>
         </table>
+        </div>{/* inline-block 래퍼 닫기 */}
       </div>
     </div>
   );

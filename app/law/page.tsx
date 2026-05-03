@@ -11,14 +11,11 @@ export default function LawPage() {
 
   return (
     <main className="mx-auto w-full max-w-5xl px-4 py-10">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">법령 리서치</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            부동산 세법 관련 법령·판례·별표·인용 검증을 한 화면에서.
-          </p>
-        </div>
-        <HomeLink />
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold tracking-tight">법령 리서치</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          부동산 세법 관련 법령·판례·별표·인용 검증을 한 화면에서.
+        </p>
       </div>
 
       {!apiKeyConfigured ? (
@@ -26,6 +23,10 @@ export default function LawPage() {
       ) : (
         <LawResearchClient />
       )}
+
+      <div className="mt-8 pt-6 border-t border-border">
+        <HomeLink />
+      </div>
     </main>
   );
 }

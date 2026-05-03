@@ -349,6 +349,10 @@ export interface TransferTaxResult {
   taxableGain: number;
   /** 환산취득가 사용 여부 */
   usedEstimatedAcquisition: boolean;
+  /** 환산취득가 base 금액 (개산공제 제외) — 환산/감정가액 모드에서만 */
+  estimatedBase?: number;
+  /** 개산공제액 (취득시 기준시가 × 3%) — 환산/감정가액 모드에서만 */
+  estimatedDeduction?: number;
   /** §97② 단서 swap 발동 여부 (환산/감정가액 모드 + 자본+양도비 > 환산+개산공제) */
   swapApplied?: boolean;
   /** §97② 단서 swap 비교 (분리 입력 시만 표시) */

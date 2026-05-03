@@ -1,4 +1,5 @@
 import { PropertyTaxForm } from "@/components/calc/PropertyTaxForm";
+import { ProfessionalClientGate } from "@/components/calc/ProfessionalClientGate";
 
 export const metadata = {
   title: "재산세 계산기",
@@ -14,8 +15,10 @@ export const metadata = {
 
 export default function PropertyTaxPage() {
   return (
-    <div className="mx-auto max-w-2xl px-4 py-8">
-      <PropertyTaxForm />
-    </div>
+    <ProfessionalClientGate>
+      <div className="mx-auto max-w-2xl px-4 py-8">
+        <PropertyTaxForm />
+      </div>
+    </ProfessionalClientGate>
   );
 }

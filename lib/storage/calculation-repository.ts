@@ -12,7 +12,7 @@ export interface CalculationRepository {
   save(
     input: Omit<CalculationRecord, "id" | "userId" | "createdAt" | "updatedAt">
   ): Promise<string>;
-  list(filter?: { taxType?: LocalTaxType }): Promise<CalculationRecord[]>;
+  list(filter?: { taxType?: LocalTaxType; clientId?: string | null }): Promise<CalculationRecord[]>;
   get(id: string): Promise<CalculationRecord | null>;
   update(
     id: string,
@@ -58,21 +58,26 @@ export function createCalculationRepository(uid: UserId): CalculationRepository 
     },
 
     async list(filter) {
+      let arr: CalculationRecord[];
       if (filter?.taxType) {
-        const arr = await db.calculations
+        arr = await db.calculations
           .where("[userId+taxType+createdAt]")
           .between(
             [uid, filter.taxType, Dexie.minKey],
             [uid, filter.taxType, Dexie.maxKey]
           )
           .toArray();
-        return arr.reverse();
+      } else {
+        arr = await db.calculations
+          .where("[userId+createdAt]")
+          .between([uid, Dexie.minKey], [uid, Dexie.maxKey])
+          .toArray();
       }
-      const arr = await db.calculations
-        .where("[userId+createdAt]")
-        .between([uid, Dexie.minKey], [uid, Dexie.maxKey])
-        .toArray();
-      return arr.reverse();
+      arr.reverse();
+      if (filter?.clientId !== undefined) {
+        return arr.filter((r) => r.clientId === filter.clientId);
+      }
+      return arr;
     },
 
     async get(id) {

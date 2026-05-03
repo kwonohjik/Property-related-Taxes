@@ -18,6 +18,7 @@ function makeInput(taxType: "transfer" | "acquisition" = "transfer", title = "í…
     resultData: { tax: 100 },
     taxLawVersion: "2025-01-01",
     linkedCalculationId: null,
+    clientId: null,
   } as const;
 }
 

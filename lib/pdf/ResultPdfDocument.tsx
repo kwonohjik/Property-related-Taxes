@@ -249,6 +249,13 @@ function TransferSplitSection({ r }: { r: R }) {
           <Text style={{ ...s.val, flex: 1 }}>{fmt(land.acquisitionPrice)}</Text>
           <Text style={{ ...s.val, flex: 1 }}>{fmt(bldg.acquisitionPrice)}</Text>
         </View>
+        {(num(land.appraisalDeduction) ?? 0) > 0 || (num(bldg.appraisalDeduction) ?? 0) > 0 ? (
+          <View style={s.row}>
+            <Text style={{ ...s.lbl, flex: 2 }}>개산공제 (필요경비, §163⑥)</Text>
+            <Text style={{ ...s.val, flex: 1 }}>{num(land.appraisalDeduction) ? fmt(land.appraisalDeduction) : "-"}</Text>
+            <Text style={{ ...s.val, flex: 1 }}>{num(bldg.appraisalDeduction) ? fmt(bldg.appraisalDeduction) : "-"}</Text>
+          </View>
+        ) : null}
         <View style={s.row}>
           <Text style={{ ...s.lbl, flex: 2 }}>양도차익</Text>
           <Text style={{ ...s.val, flex: 1 }}>{fmt(land.gain)}</Text>

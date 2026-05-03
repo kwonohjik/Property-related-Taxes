@@ -730,6 +730,8 @@ export function calculateTransferTax(
     transferGain,
     taxableGain,
     usedEstimatedAcquisition: usedEstimated,
+    estimatedBase: usedEstimated ? estimatedBase : undefined,
+    estimatedDeduction: usedEstimated ? estimatedDeduction : undefined,
     swapApplied,
     swapComparison,
     longTermHoldingDeduction,

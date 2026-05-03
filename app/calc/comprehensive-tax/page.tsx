@@ -1,5 +1,7 @@
 "use client";
 
+import { ProfessionalClientGate } from "@/components/calc/ProfessionalClientGate";
+
 /**
  * 종합부동산세 계산기 — 5단계 StepWizard (T-16)
  *
@@ -629,6 +631,7 @@ export default function ComprehensiveTaxPage() {
   const showResult = currentStep === STEPS.length && result;
 
   return (
+    <ProfessionalClientGate>
     <div className="mx-auto max-w-2xl px-4 py-8">
       {/* 헤더 */}
       <div className="mb-6">
@@ -695,5 +698,6 @@ export default function ComprehensiveTaxPage() {
         </div>
       )}
     </div>
+    </ProfessionalClientGate>
   );
 }

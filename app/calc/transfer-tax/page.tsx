@@ -1,4 +1,5 @@
 import TransferTaxCalculator from "./TransferTaxCalculator";
+import { ProfessionalClientGate } from "@/components/calc/ProfessionalClientGate";
 
 export const metadata = {
   title: "양도소득세 계산기",
@@ -13,5 +14,9 @@ export const metadata = {
 };
 
 export default function TransferTaxPage() {
-  return <TransferTaxCalculator />;
+  return (
+    <ProfessionalClientGate>
+      <TransferTaxCalculator />
+    </ProfessionalClientGate>
+  );
 }

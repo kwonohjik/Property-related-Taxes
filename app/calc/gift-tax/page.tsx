@@ -1,4 +1,5 @@
 import { GiftTaxForm } from "@/components/calc/GiftTaxForm";
+import { ProfessionalClientGate } from "@/components/calc/ProfessionalClientGate";
 
 export const metadata = {
   title: "증여세 계산기",
@@ -14,14 +15,16 @@ export const metadata = {
 
 export default function GiftTaxPage() {
   return (
-    <div className="mx-auto max-w-2xl px-4 py-8">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">증여세 계산기</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          증여재산 평가 → 관계별 공제 → 세액공제까지 자동 계산 (상증법 §31~§59)
-        </p>
+    <ProfessionalClientGate>
+      <div className="mx-auto max-w-2xl px-4 py-8">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold">증여세 계산기</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            증여재산 평가 → 관계별 공제 → 세액공제까지 자동 계산 (상증법 §31~§59)
+          </p>
+        </div>
+        <GiftTaxForm />
       </div>
-      <GiftTaxForm />
-    </div>
+    </ProfessionalClientGate>
   );
 }

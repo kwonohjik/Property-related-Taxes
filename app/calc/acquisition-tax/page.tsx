@@ -1,4 +1,5 @@
 import { AcquisitionTaxForm } from "@/components/calc/AcquisitionTaxForm";
+import { ProfessionalClientGate } from "@/components/calc/ProfessionalClientGate";
 
 export const metadata = {
   title: "취득세 계산기",
@@ -14,14 +15,16 @@ export const metadata = {
 
 export default function AcquisitionTaxPage() {
   return (
-    <div className="mx-auto max-w-2xl px-4 py-8">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">취득세 계산기</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          물건 유형 · 취득 원인 → 과세표준 → 세율(선형보간·중과) → 농특세 · 지방교육세 자동 계산
-        </p>
+    <ProfessionalClientGate>
+      <div className="mx-auto max-w-2xl px-4 py-8">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold">취득세 계산기</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            물건 유형 · 취득 원인 → 과세표준 → 세율(선형보간·중과) → 농특세 · 지방교육세 자동 계산
+          </p>
+        </div>
+        <AcquisitionTaxForm />
       </div>
-      <AcquisitionTaxForm />
-    </div>
+    </ProfessionalClientGate>
   );
 }

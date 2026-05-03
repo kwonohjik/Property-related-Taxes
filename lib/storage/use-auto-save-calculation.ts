@@ -12,6 +12,7 @@ interface Params {
   inputData: Record<string, unknown>;
   resultData: Record<string, unknown> | null;
   taxLawVersion: string;
+  clientId?: string | null;
 }
 
 interface Return {
@@ -32,6 +33,7 @@ export function useAutoSaveCalculation({
   inputData,
   resultData,
   taxLawVersion,
+  clientId = null,
 }: Params): Return {
   const [savedId, setSavedId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -63,7 +65,7 @@ export function useAutoSaveCalculation({
       // 신규 저장
       const title = generateTitle(taxType, inputData, now);
       calculationRepository
-        .save({ taxType, title, inputData, resultData, taxLawVersion, linkedCalculationId: null })
+        .save({ taxType, title, inputData, resultData, taxLawVersion, linkedCalculationId: null, clientId })
         .then((id) => setSavedId(id))
         .catch((err) => {
           savedRef.current = false;

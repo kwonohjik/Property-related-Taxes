@@ -1,11 +1,15 @@
 import { db } from "./db";
 import { getCurrentUserId } from "./current-user";
 import type { UserId } from "./constants";
-import type { UserProfile } from "./types";
+import type { UserProfile, UserMode } from "./types";
 
 export interface UserRepository {
   getProfile(): Promise<UserProfile | null>;
-  upsertProfile(input: { displayName: string; birthDate: string | null }): Promise<UserProfile>;
+  upsertProfile(input: {
+    displayName?: string;
+    birthDate?: string | null;
+    mode?: UserMode;
+  }): Promise<UserProfile>;
   clearProfile(): Promise<void>;
 }
 
@@ -19,12 +23,24 @@ export function createUserRepository(uid: UserId): UserRepository {
       return rec ?? null;
     },
 
-    async upsertProfile({ displayName, birthDate }) {
+    async upsertProfile({ displayName, birthDate, mode }) {
       const now = new Date().toISOString();
       const existing = await db.userProfile.get(uid);
-      const next: UserProfile = existing
-        ? { ...existing, displayName, birthDate, updatedAt: now }
-        : { id: uid, displayName, birthDate, createdAt: now, updatedAt: now };
+      const base: UserProfile = existing ?? {
+        id: uid,
+        displayName: "",
+        birthDate: null,
+        mode: "taxpayer",
+        createdAt: now,
+        updatedAt: now,
+      };
+      const next: UserProfile = {
+        ...base,
+        ...(displayName !== undefined && { displayName }),
+        ...(birthDate !== undefined && { birthDate }),
+        ...(mode !== undefined && { mode }),
+        updatedAt: now,
+      };
       await db.userProfile.put(next);
       return next;
     },

@@ -3,7 +3,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { calculationRepository } from "@/lib/storage/calculation-repository";
-import type { CalculationRecord, LocalTaxType } from "@/lib/storage/types";
+import { clientRepository } from "@/lib/storage/client-repository";
+import { useUserProfile } from "@/lib/storage/use-user-profile";
+import type { CalculationRecord, LocalTaxType, Client } from "@/lib/storage/types";
 import { HistoryDetailDrawer } from "@/components/history/HistoryDetailDrawer";
 
 const TAX_TYPE_ROUTES: Partial<Record<LocalTaxType, string>> = {
@@ -74,62 +76,40 @@ function extractCardSummary(
   }
 
   if (taxType === "transfer") {
-    // transferDate는 TransferFormData top-level, 주소는 assets[0]
     const assets = inputData.assets as Array<Record<string, unknown>> | undefined;
     const first = Array.isArray(assets) && assets.length > 0 ? assets[0] : null;
     const address = first ? addr(first) : null;
     const dateLabel = fmt(inputData.transferDate as string | undefined, "양도일");
     return { address, dateLabel };
   }
-
   if (taxType === "acquisition") {
-    const address = addr(inputData);
-    const dateLabel = fmt(inputData.targetDate as string | undefined, "취득일");
-    return { address, dateLabel };
+    return { address: addr(inputData), dateLabel: fmt(inputData.targetDate as string | undefined, "취득일") };
   }
-
   if (taxType === "inheritance") {
-    const address = addr(inputData);
-    const dateLabel = fmt(inputData.deathDate as string | undefined, "상속개시일");
-    return { address, dateLabel };
+    return { address: addr(inputData), dateLabel: fmt(inputData.deathDate as string | undefined, "상속개시일") };
   }
-
   if (taxType === "gift") {
-    const address = addr(inputData);
-    const dateLabel = fmt(inputData.giftDate as string | undefined, "증여일");
-    return { address, dateLabel };
+    return { address: addr(inputData), dateLabel: fmt(inputData.giftDate as string | undefined, "증여일") };
   }
-
   if (taxType === "property") {
-    const address = addr(inputData);
-    const raw = inputData.targetDate as string | undefined;
-    const dateLabel = year(raw, "과세연도");
-    return { address, dateLabel };
+    return { address: addr(inputData), dateLabel: year(inputData.targetDate as string | undefined, "과세연도") };
   }
-
   if (taxType === "comprehensive_property") {
-    const address = addr(inputData);
     const raw = (inputData.assessmentYear ?? inputData.targetDate) as string | number | undefined;
-    const dateLabel = year(raw, "과세연도");
-    return { address, dateLabel };
+    return { address: addr(inputData), dateLabel: year(raw, "과세연도") };
   }
-
   return { address: null, dateLabel: null };
 }
 
 function extractTotalTax(resultData: Record<string, unknown>): string {
-  // single 모드: { mode: "single", result: TransferTaxResult }
   const inner = resultData?.result as Record<string, unknown> | undefined;
   if (inner) {
     if (inner.isExempt) return "비과세";
     if (typeof inner.totalTax === "number") return inner.totalTax.toLocaleString();
   }
-  // bundled 모드: { mode: "bundled", aggregated: { totalTax } }
   const agg = resultData?.aggregated as Record<string, unknown> | undefined;
   if (typeof agg?.totalTax === "number") return agg.totalTax.toLocaleString();
-  // mixed-use 모드: { mode: "mixed-use", result: { ... } }
   if (inner && typeof inner.totalTax === "number") return inner.totalTax.toLocaleString();
-  // 최상위 직접 저장된 경우 fallback
   if (resultData?.isExempt) return "비과세";
   if (typeof resultData?.totalTax === "number") return resultData.totalTax.toLocaleString();
   return "-";
@@ -137,37 +117,49 @@ function extractTotalTax(resultData: Record<string, unknown>): string {
 
 export function HistoryClient() {
   const router = useRouter();
+  const { mode } = useUserProfile();
   const [records, setRecords] = useState<CalculationRecord[]>([]);
   const [total, setTotal] = useState(0);
   const [activeFilter, setActiveFilter] = useState<LocalTaxType | "all">("all");
+  const [activeClientFilter, setActiveClientFilter] = useState<string | null | "all">("all");
+  const [clients, setClients] = useState<Client[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedRecord, setSelectedRecord] = useState<CalculationRecord | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const loadRecords = useCallback(async (filter: LocalTaxType | "all") => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const list = await calculationRepository.list(
-        filter === "all" ? undefined : { taxType: filter }
-      );
-      setRecords(list);
-      setTotal(filter === "all" ? list.length : list.length);
-    } catch (e) {
-      setError("이력을 불러오지 못했습니다.");
-      console.error(e);
-    } finally {
-      setIsLoading(false);
+  // 세무사 모드: 의뢰인 목록 로드
+  useEffect(() => {
+    if (mode === "professional") {
+      clientRepository.list().then(setClients);
     }
-  }, []);
+  }, [mode]);
+
+  const loadRecords = useCallback(
+    async (filter: LocalTaxType | "all", clientFilter: string | null | "all") => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const clientId = clientFilter === "all" ? undefined : clientFilter;
+        const list = await calculationRepository.list(
+          filter === "all"
+            ? clientId !== undefined ? { clientId } : undefined
+            : { taxType: filter, ...(clientId !== undefined && { clientId }) }
+        );
+        setRecords(list);
+        setTotal(list.length);
+      } catch (e) {
+        setError("이력을 불러오지 못했습니다.");
+        console.error(e);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    []
+  );
 
   useEffect(() => {
-    loadRecords(activeFilter);
-  }, [activeFilter, loadRecords]);
-
-  async function handleFilterChange(filter: LocalTaxType | "all") {
-    setActiveFilter(filter);
-  }
+    loadRecords(activeFilter, activeClientFilter);
+  }, [activeFilter, activeClientFilter, loadRecords]);
 
   async function handleDelete(id: string) {
     await calculationRepository.remove(id);
@@ -179,7 +171,6 @@ export function HistoryClient() {
   function handleResume(record: CalculationRecord) {
     const route = TAX_TYPE_ROUTES[record.taxType];
     if (!route) return;
-    // 수정 대상 id를 sessionStorage에 보관 → 재계산 완료 시 새 레코드 대신 덮어쓰기
     sessionStorage.setItem("editingCalculationId", record.id);
     if (record.taxType === "transfer") {
       import("@/lib/stores/calc-wizard-store").then(({ useCalcWizardStore }) => {
@@ -203,22 +194,67 @@ export function HistoryClient() {
 
   async function handleTitleUpdate(id: string, title: string) {
     await calculationRepository.update(id, { title });
-    setRecords((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, title } : r))
-    );
+    setRecords((prev) => prev.map((r) => (r.id === id ? { ...r, title } : r)));
     setSelectedRecord((prev) => (prev?.id === id ? { ...prev, title } : prev));
   }
 
+  const clientMap = Object.fromEntries(clients.map((c) => [c.id, c.name]));
+
   return (
     <div className="space-y-4">
-      {/* 필터 + 전체삭제 */}
+      {/* 세무사 모드: 의뢰인 필터 */}
+      {mode === "professional" && clients.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setActiveClientFilter("all")}
+            className={[
+              "rounded-full px-3 py-1 text-xs font-medium transition-colors",
+              activeClientFilter === "all"
+                ? "bg-violet-600 text-white"
+                : "border border-border bg-background hover:bg-muted/60 text-muted-foreground",
+            ].join(" ")}
+          >
+            모든 의뢰인
+          </button>
+          {clients.map((c) => (
+            <button
+              key={c.id}
+              type="button"
+              onClick={() => setActiveClientFilter(c.id)}
+              className={[
+                "rounded-full px-3 py-1 text-xs font-medium transition-colors",
+                activeClientFilter === c.id
+                  ? "bg-violet-600 text-white"
+                  : "border border-border bg-background hover:bg-muted/60 text-muted-foreground",
+              ].join(" ")}
+            >
+              {c.name}
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => setActiveClientFilter(null)}
+            className={[
+              "rounded-full px-3 py-1 text-xs font-medium transition-colors",
+              activeClientFilter === null
+                ? "bg-violet-600 text-white"
+                : "border border-border bg-background hover:bg-muted/60 text-muted-foreground",
+            ].join(" ")}
+          >
+            미지정
+          </button>
+        </div>
+      )}
+
+      {/* 세목 필터 + 전체삭제 */}
       <div className="flex items-start justify-between gap-2 flex-wrap">
         <div className="flex flex-wrap gap-2">
           {FILTER_OPTIONS.map(({ label, value }) => (
             <button
               key={value}
               type="button"
-              onClick={() => handleFilterChange(value)}
+              onClick={() => setActiveFilter(value)}
               disabled={isLoading}
               className={[
                 "rounded-full px-3 py-1 text-xs font-medium transition-colors",
@@ -288,10 +324,15 @@ export function HistoryClient() {
           >
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2 mb-1">
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
                   <span className="inline-block rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
                     {TAX_TYPE_LABELS[record.taxType] ?? record.taxType}
                   </span>
+                  {record.clientId && clientMap[record.clientId] && (
+                    <span className="inline-block rounded-full bg-violet-100 px-2 py-0.5 text-xs font-medium text-violet-700">
+                      {clientMap[record.clientId]}
+                    </span>
+                  )}
                   <span className="text-xs text-muted-foreground">
                     {formatDate(record.createdAt)}
                   </span>
@@ -300,7 +341,6 @@ export function HistoryClient() {
                 {(() => {
                   const { address, dateLabel } = extractCardSummary(record.taxType, record.inputData);
                   const strippedTitle = stripTaxLabel(record.title, record.taxType);
-                  // title에 이미 포함된 정보는 subtitle에서 제외
                   const addrInTitle = address ? strippedTitle.includes(address) : false;
                   const dateInTitle = dateLabel
                     ? strippedTitle.includes(dateLabel.split(" ").slice(1).join(" "))

@@ -12,8 +12,15 @@ export {
   type CalculationRepository,
 } from "./calculation-repository";
 export {
+  createClientRepository,
+  clientRepository,
+  type ClientRepository,
+} from "./client-repository";
+export {
   type UserProfile,
   type CalculationRecord,
   type LocalTaxType,
+  type UserMode,
+  type Client,
   MAX_CALCULATIONS_PER_USER,
 } from "./types";
