@@ -335,7 +335,11 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     isMetropolitanArea: primary.mixedIsMetropolitanArea,
     zoneType: "residential" as const,
     // 🚨 Critical (이슈 8-A): 1세대 1주택 비과세 요건 충족 여부 (다주택자 분기)
-    isOneHouseExempt: primary.isOneHousehold,
+    // 소득세법 §89①3 — 1세대 + 1주택. 일시적 2주택 특례 적용 시에도 비과세 요건 충족으로 본다.
+    isOneHouseExempt:
+      primary.isOneHousehold &&
+      (form.householdHousingCount === "1" ||
+        (form.householdHousingCount === "2" && form.temporaryTwoHouseSpecial === true)),
     // 보유 중 일부 용도변경 (시행령 §166⑥ + 집행기준 99-164-10)
     partialUsageChange:
       primary.hasPartialUsageChange && primary.partialChangeDirection

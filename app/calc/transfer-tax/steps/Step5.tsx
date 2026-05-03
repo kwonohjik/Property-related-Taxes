@@ -18,7 +18,7 @@ const REDUCTION_LABELS: Record<AssetReductionForm["type"], { label: string; desc
   public_expropriation: { label: "공익사업 수용 감면", desc: "현금 10%/채권 15%~40% (§77, 연간 2억)" },
 };
 
-function getDefaultReduction(type: AssetReductionForm["type"]): AssetReductionForm { // eslint-disable-line @typescript-eslint/no-explicit-any
+function getDefaultReduction(type: AssetReductionForm["type"]): AssetReductionForm {  
   switch (type) {
     case "self_farming":
       return { type: "self_farming", farmingYears: "0" };

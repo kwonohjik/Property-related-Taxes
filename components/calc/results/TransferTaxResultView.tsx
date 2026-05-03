@@ -68,6 +68,8 @@ interface Props {
   result: TransferTaxResult;
   onReset: () => void;
   onBack: () => void;
+  /** Step 1(자산 목록)으로 바로 이동 */
+  onGoToFirst?: () => void;
   onLoginPrompt?: boolean;
   showMultiTransferButton?: boolean;
   /** "동일연도 다른 양도건 계산하기" 클릭 시 호출. 단건 데이터를 다건 store로 이전하고 라우팅하는 역할은 호출자가 담당. */
@@ -80,7 +82,7 @@ interface Props {
   transferPriceOverride?: number;
 }
 
-export function TransferTaxResultView({ result, onReset, onBack, onLoginPrompt = false, showMultiTransferButton = false, onContinueToMulti, formData, asset, transferPriceOverride }: Props) {
+export function TransferTaxResultView({ result, onReset, onBack, onGoToFirst, onLoginPrompt = false, showMultiTransferButton = false, onContinueToMulti, formData, asset, transferPriceOverride }: Props) {
   const [showSteps, setShowSteps] = useState(false);
 
   return (
@@ -637,21 +639,32 @@ export function TransferTaxResultView({ result, onReset, onBack, onLoginPrompt =
       )}
 
       {/* 하단 버튼 — 인쇄 시 숨김 */}
-      <div className="flex gap-3 print:hidden">
-        <button
-          type="button"
-          onClick={onBack}
-          className="flex-1 rounded-lg border border-border py-2.5 text-sm font-medium hover:bg-muted/40 transition-colors"
-        >
-          이전
-        </button>
-        <button
-          type="button"
-          onClick={onReset}
-          className="flex-1 rounded-lg bg-primary py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
-        >
-          다시 계산하기
-        </button>
+      <div className="space-y-2 print:hidden">
+        {onGoToFirst && (
+          <button
+            type="button"
+            onClick={onGoToFirst}
+            className="w-full rounded-lg border border-border py-2.5 text-sm font-medium hover:bg-muted/40 transition-colors"
+          >
+            ← 자산 목록으로 (Step 1)
+          </button>
+        )}
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={onBack}
+            className="flex-1 rounded-lg border border-border py-2.5 text-sm font-medium hover:bg-muted/40 transition-colors"
+          >
+            이전
+          </button>
+          <button
+            type="button"
+            onClick={onReset}
+            className="flex-1 rounded-lg bg-primary py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
+          >
+            다시 계산하기
+          </button>
+        </div>
       </div>
       {showMultiTransferButton && onContinueToMulti && (
         <button

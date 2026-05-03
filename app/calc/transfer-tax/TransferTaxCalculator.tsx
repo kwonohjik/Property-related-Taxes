@@ -17,6 +17,7 @@ import { validateStep } from "@/lib/calc/transfer-tax-validate";
 import { getFilingDeadline, isFilingOverdue } from "@/lib/calc/filing-deadline";
 import { ResetButton } from "@/components/calc/shared/ResetButton";
 import { computeTransferSummary } from "@/lib/stores/calc-wizard-store";
+import { useAutoSaveCalculation } from "@/lib/storage/use-auto-save-calculation";
 import { Step1 } from "./steps/Step1";
 import { Step4 } from "./steps/Step4";
 import { Step5 } from "./steps/Step5";
@@ -77,6 +78,14 @@ export default function TransferTaxCalculator({
   const totalSteps = STEPS.length;
   const isLastStep = currentStep === totalSteps - 1;
   const isResult = result !== null && currentStep === totalSteps;
+
+  // 로컬 이력 자동 저장 — 결과 화면 진입 시 1회
+  useAutoSaveCalculation({
+    taxType: "transfer",
+    inputData: formData as unknown as Record<string, unknown>,
+    resultData: isResult ? (result as unknown as Record<string, unknown>) : null,
+    taxLawVersion: formData.transferDate || new Date().toISOString().split("T")[0],
+  });
 
   // 잘못된 step 상태 복구: currentStep >= totalSteps인데 result가 없으면 step 0으로 리셋
   useEffect(() => {
@@ -375,6 +384,10 @@ export default function TransferTaxCalculator({
             onReset={handleReset}
             onBack={() => {
               setStep(totalSteps - 1);
+              setError(null);
+            }}
+            onGoToFirst={() => {
+              setStep(0);
               setError(null);
             }}
             onLoginPrompt={!isLoggedIn}

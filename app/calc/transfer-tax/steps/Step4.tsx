@@ -145,9 +145,34 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
       )}
 
       {/* 주택·입주권·분양권: 1세대 여부 + 주택 수 + 거주기간 + 조정대상지역 */}
-      {isHousingLike(primaryKind) && <SectionHeader title="세대·주택 현황" description="1세대 여부, 보유 주택 수, 거주기간을 입력하세요" />}
       {isHousingLike(primaryKind) && (
-        <>
+        <section className="rounded-xl border border-sky-200 bg-sky-50/30 p-4 dark:border-sky-900/50 dark:bg-sky-950/20">
+        <SectionHeader title="① 세대·주택 현황" description="1세대 여부, 보유 주택 수, 거주기간을 입력하세요" />
+        <p className="-mt-2 mb-3 text-xs text-sky-800 dark:text-sky-300">
+          왜 필요한가요? — 1세대 1주택 비과세(§89①3)·고가주택 12억 안분·다주택 중과 판정·장기보유특별공제 표2 적용은 모두 이 섹션의 입력값으로 결정됩니다.
+        </p>
+        <div className="space-y-3">
+          {/* 비과세 특례 입력 안내 */}
+          <div className="rounded-lg border border-sky-200 bg-sky-50/50 px-4 py-3 text-xs leading-relaxed text-sky-900 dark:border-sky-900/50 dark:bg-sky-950/30 dark:text-sky-200">
+            <p className="font-semibold text-sky-800 dark:text-sky-300">📘 1세대 1주택 / 일시적 2주택 비과세 입력 방법</p>
+            <ul className="mt-1.5 list-disc space-y-1 pl-4">
+              <li>
+                <span className="font-medium">1세대 1주택 비과세</span> (소득세법 §89①3·시행령 §154①):{" "}
+                <b>① 1세대 해당 체크</b> + <b>② 보유 주택 수 1채 선택</b> + 보유 2년 이상(취득일 기준 조정대상지역이면 거주 2년 이상).
+                양도가액 12억 원 이하 전액 비과세, 12억 초과 고가주택 부분만 과세.
+              </li>
+              <li>
+                <span className="font-medium">일시적 2주택 비과세</span> (시행령 §155①):{" "}
+                <b>① 1세대 해당 체크</b> + <b>② 보유 주택 수 2채 선택</b> + 아래{" "}
+                <b>「일시적 2주택 특례 해당」 체크</b> + 종전·신규 주택 취득일 입력.
+                종전 주택을 일정 기한(보통 신규 취득일로부터 3년) 내 양도 시 종전 주택 양도분 비과세.
+              </li>
+              <li className="text-sky-700 dark:text-sky-300">
+                ※ 위 두 특례 모두 미해당 시 다주택자로 판정되어 12억 비과세가 적용되지 않습니다.
+              </li>
+            </ul>
+          </div>
+
           {/* 1세대 여부 */}
           <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/30 px-4 py-3">
             <input
@@ -180,7 +205,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
                       : "border-border hover:bg-muted",
                   )}
                 >
-                  {v}채
+                  {v === "3+" ? "3채 이상" : `${v}채`}
                 </button>
               ))}
             </div>
@@ -250,11 +275,98 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
               </div>
             </div>
           )}
-        </>
+        </div>
+        </section>
       )}
 
-      {/* 특수 상황 */}
-      <SectionHeader title="특수 상황" description="미등기·비사업용 토지·다주택 중과 해당 여부를 확인하세요" />
+      {/* ② 일시적 2주택·합가 특례 — 비과세 특례 (먼저 검토) */}
+      {isHousingLike(primaryKind) && (
+        <section className="rounded-xl border border-emerald-200 bg-emerald-50/30 p-4 dark:border-emerald-900/50 dark:bg-emerald-950/20">
+          <SectionHeader title="② 일시적 2주택·합가 특례" description="종전 주택 보유 중 신규 주택 취득 후 일정 기간 내 양도 시 비과세 특례" />
+          <p className="-mt-2 mb-3 text-xs text-emerald-800 dark:text-emerald-300">
+            왜 필요한가요? — 시행령 §155 일시적 2주택·혼인합가·동거봉양합가 특례에 해당하면 2주택 상태에서도 1세대 1주택 비과세가 그대로 적용됩니다. 해당 시 반드시 체크하고 날짜를 입력하세요.
+          </p>
+          <div className="space-y-3">
+            <p className="text-sm font-medium">일시적 2주택 특례</p>
+            <div
+              className={cn(
+                "rounded-lg border px-4 py-3 transition-colors",
+                form.temporaryTwoHouseSpecial ? "border-emerald-400 bg-emerald-100/40" : "border-border bg-background",
+              )}
+            >
+              <div className="flex items-center gap-3">
+                <input
+                  id="temporaryTwoHouse"
+                  type="checkbox"
+                  checked={form.temporaryTwoHouseSpecial}
+                  onChange={(e) =>
+                    onChange({
+                      temporaryTwoHouseSpecial: e.target.checked,
+                      previousHouseAcquisitionDate: e.target.checked ? form.previousHouseAcquisitionDate : "",
+                      newHouseAcquisitionDate: e.target.checked ? form.newHouseAcquisitionDate : "",
+                    })
+                  }
+                  className="h-4 w-4 rounded accent-primary"
+                  aria-describedby="temporaryTwoHouseDesc"
+                />
+                <div>
+                  <label htmlFor="temporaryTwoHouse" className="text-sm font-medium cursor-pointer">
+                    일시적 2주택 특례 해당
+                  </label>
+                  <p id="temporaryTwoHouseDesc" className="text-xs text-muted-foreground">
+                    종전 주택 보유 중 신규 주택 취득 후 일정 기간(보통 3년) 내 종전 주택 양도 시 비과세
+                  </p>
+                </div>
+              </div>
+
+              {form.temporaryTwoHouseSpecial && (
+                <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 border-t border-border">
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium">
+                      종전 주택 취득일 <span className="text-destructive">*</span>
+                    </label>
+                    <DateInput
+                      value={form.previousHouseAcquisitionDate}
+                      onChange={(v) => onChange({ previousHouseAcquisitionDate: v })}
+                    />
+                    <p className="text-xs text-muted-foreground">지금 양도하는 주택의 취득일</p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium">
+                      신규 주택 취득일 <span className="text-destructive">*</span>
+                    </label>
+                    <DateInput
+                      value={form.newHouseAcquisitionDate}
+                      onChange={(v) => onChange({ newHouseAcquisitionDate: v })}
+                    />
+                    <p className="text-xs text-muted-foreground">새로 취득한 주택의 취득일</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <MergeDateSection form={form} onChange={onChange} />
+          </div>
+        </section>
+      )}
+
+      {/* ③ 다른 보유 주택 목록 — 1세대 + 2채 이상 시 */}
+      {isHousingLike(primaryKind) && parseInt(form.householdHousingCount) >= 2 && (
+        <section className="rounded-xl border border-violet-200 bg-violet-50/30 p-4 dark:border-violet-900/50 dark:bg-violet-950/20">
+          <SectionHeader title="③ 다른 보유 주택 목록" description="세대 전체의 보유 주택을 입력하세요 (다주택 중과세 판단)" />
+          <p className="-mt-2 mb-3 text-xs text-violet-800 dark:text-violet-300">
+            왜 필요한가요? — 조정대상지역 다주택 중과(§104⑦), 주택 수 산정(시행령 §167의3), 일시적 2주택 판정의 기초가 됩니다. 세대 구성원 명의 모든 주택을 기재하세요.
+          </p>
+          <HousesListSection form={form} onChange={onChange} />
+        </section>
+      )}
+
+      {/* ④ 특수 상황 — 중과·배제 트리거 (비과세 특례 이후 위치) */}
+      <section className="rounded-xl border border-rose-200 bg-rose-50/30 p-4 dark:border-rose-900/50 dark:bg-rose-950/20">
+      <SectionHeader title="④ 특수 상황" description="미등기·비사업용 토지·다주택 중과 해당 여부를 확인하세요" />
+      <p className="-mt-2 mb-3 text-xs text-rose-800 dark:text-rose-300">
+        왜 필요한가요? — 미등기 양도(70% 단일세율)·비사업용 토지(+10%p 중과)는 장기보유공제·기본공제까지 배제되는 강한 페널티 항목이므로 별도 확인이 필요합니다.
+      </p>
       <div className="space-y-2">
         {/* 미등기 양도 — 주택·토지·건물만 표시 (입주권·분양권은 등기 개념 없음) */}
         {(primaryKind === "housing" ||
@@ -378,81 +490,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
           }
         />
       )}
-
-      {/* 주택·입주권·분양권: 다른 보유 주택 목록 (P0-B) */}
-      {isHousingLike(primaryKind) && parseInt(form.householdHousingCount) >= 2 && <SectionHeader title="다른 보유 주택 목록" description="세대 전체의 보유 주택을 입력하세요 (다주택 중과세 판단)" />}
-      {isHousingLike(primaryKind) && parseInt(form.householdHousingCount) >= 2 && (
-        <HousesListSection form={form} onChange={onChange} />
-      )}
-
-      {/* 일시적 2주택 특례 */}
-      {isHousingLike(primaryKind) && <SectionHeader title="일시적 2주택·합가 특례" description="종전 주택 보유 중 신규 주택 취득 후 일정 기간 내 양도 시 비과세 특례" />}
-      {isHousingLike(primaryKind) && (
-        <div className="space-y-2">
-          <p className="text-sm font-medium">일시적 2주택 특례</p>
-          <div
-            className={cn(
-              "rounded-lg border px-4 py-3 transition-colors",
-              form.temporaryTwoHouseSpecial ? "border-primary/40 bg-primary/5" : "border-border",
-            )}
-          >
-            <div className="flex items-center gap-3">
-              <input
-                id="temporaryTwoHouse"
-                type="checkbox"
-                checked={form.temporaryTwoHouseSpecial}
-                onChange={(e) =>
-                  onChange({
-                    temporaryTwoHouseSpecial: e.target.checked,
-                    previousHouseAcquisitionDate: e.target.checked ? form.previousHouseAcquisitionDate : "",
-                    newHouseAcquisitionDate: e.target.checked ? form.newHouseAcquisitionDate : "",
-                  })
-                }
-                className="h-4 w-4 rounded accent-primary"
-                aria-describedby="temporaryTwoHouseDesc"
-              />
-              <div>
-                <label htmlFor="temporaryTwoHouse" className="text-sm font-medium cursor-pointer">
-                  일시적 2주택 특례 해당
-                </label>
-                <p id="temporaryTwoHouseDesc" className="text-xs text-muted-foreground">
-                  종전 주택 보유 중 신규 주택 취득 후 일정 기간 내 종전 주택 양도 시 비과세 특례
-                </p>
-              </div>
-            </div>
-
-            {form.temporaryTwoHouseSpecial && (
-              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 border-t border-border">
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium">
-                    종전 주택 취득일 <span className="text-destructive">*</span>
-                  </label>
-                  <DateInput
-                    value={form.previousHouseAcquisitionDate}
-                    onChange={(v) => onChange({ previousHouseAcquisitionDate: v })}
-                  />
-                  <p className="text-xs text-muted-foreground">지금 양도하는 주택의 취득일</p>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium">
-                    신규 주택 취득일 <span className="text-destructive">*</span>
-                  </label>
-                  <DateInput
-                    value={form.newHouseAcquisitionDate}
-                    onChange={(v) => onChange({ newHouseAcquisitionDate: v })}
-                  />
-                  <p className="text-xs text-muted-foreground">새로 취득한 주택의 취득일</p>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* 주택·입주권·분양권: 합가 특례 (P2) */}
-      {isHousingLike(primaryKind) && (
-        <MergeDateSection form={form} onChange={onChange} />
-      )}
+      </section>
     </div>
   );
 }
