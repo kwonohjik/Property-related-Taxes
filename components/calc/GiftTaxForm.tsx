@@ -10,6 +10,7 @@
  */
 
 import { useState } from "react";
+import { ChevronLeft } from "lucide-react";
 import { StepIndicator } from "@/components/calc/StepIndicator";
 import { ResetButton } from "@/components/calc/shared/ResetButton";
 import { PropertyValuationForm } from "@/components/calc/PropertyValuationForm";
@@ -491,7 +492,8 @@ export function GiftTaxForm() {
           onClick={handleBack}
           className="flex-1 rounded-md border border-border py-2.5 text-sm font-medium hover:bg-muted transition-colors"
         >
-          {step === 0 ? "← 홈으로" : "← 이전"}
+          <ChevronLeft className="w-4 h-4" />
+          {step === 0 ? "홈으로" : "이전"}
         </button>
         <button
           type="button"

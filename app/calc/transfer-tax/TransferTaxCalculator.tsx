@@ -18,6 +18,7 @@ import { getFilingDeadline, isFilingOverdue } from "@/lib/calc/filing-deadline";
 import { ResetButton } from "@/components/calc/shared/ResetButton";
 import { computeTransferSummary } from "@/lib/stores/calc-wizard-store";
 import { useAutoSaveCalculation } from "@/lib/storage/use-auto-save-calculation";
+import { ChevronLeft } from "lucide-react";
 import { Step1 } from "./steps/Step1";
 import { Step4 } from "./steps/Step4";
 import { Step5 } from "./steps/Step5";
@@ -558,6 +559,7 @@ export default function TransferTaxCalculator({
                 }
                 className="flex-1 rounded-lg border border-border py-2.5 text-sm font-medium hover:bg-muted/40 transition-colors"
               >
+                <ChevronLeft className="w-4 h-4" />
                 {currentStep === 0 ? "홈으로" : "이전"}
               </button>
               {isLastStep ? (

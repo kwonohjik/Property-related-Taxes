@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { HomeLink } from "@/components/ui/home-link";
 import { LawResearchClient } from "./_components/LawResearchClient";
 
 export const metadata = {
@@ -18,12 +18,7 @@ export default function LawPage() {
             부동산 세법 관련 법령·판례·별표·인용 검증을 한 화면에서.
           </p>
         </div>
-        <Link
-          href="/"
-          className="text-sm text-muted-foreground hover:text-foreground"
-        >
-          ← 홈
-        </Link>
+        <HomeLink />
       </div>
 
       {!apiKeyConfigured ? (

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { ChevronLeft } from "lucide-react";
 import { StepIndicator } from "@/components/calc/StepIndicator";
 import { PropertyTaxResultView } from "@/components/calc/results/PropertyTaxResultView";
 import { INITIAL_FORM, validateStep, callPropertyTaxAPI, type FormState } from "./property/shared";
@@ -178,7 +179,8 @@ export function PropertyTaxForm() {
           onClick={handleBack}
           className="px-5 py-2 rounded-md border text-sm font-medium hover:bg-muted transition-colors"
         >
-          {step === 0 ? "홈으로" : "뒤로"}
+          <ChevronLeft className="w-4 h-4" />
+          {step === 0 ? "홈으로" : "이전"}
         </button>
         <button
           type="button"

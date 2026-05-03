@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ArrowLeft, ArrowRight, Calculator, Plus, Home } from "lucide-react";
+import { ArrowLeft, ArrowRight, Calculator, Plus, ChevronLeft } from "lucide-react";
 import { AssetTabBar } from "@/components/calc/transfer/AssetTabBar";
 import { AggregateSettingsPanel } from "@/components/calc/transfer/AggregateSettingsPanel";
 import { MultiTransferTaxResultView } from "@/components/calc/results/MultiTransferTaxResultView";
@@ -419,8 +419,8 @@ export default function MultiTransferTaxCalculator() {
       <div className="space-y-1">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <button onClick={() => router.push("/")} className="hover:text-foreground flex items-center gap-1">
-            <Home className="h-3.5 w-3.5" />
-            홈
+            <ChevronLeft className="h-3.5 w-3.5" />
+            홈으로
           </button>
           <span>/</span>
           <button onClick={() => router.push("/calc/transfer-tax")} className="hover:text-foreground">
@@ -607,7 +607,7 @@ export default function MultiTransferTaxCalculator() {
                 onClick={() => router.push("/")}
                 className="gap-2"
               >
-                <Home className="h-4 w-4" />
+                <ChevronLeft className="h-4 w-4" />
                 홈으로
               </Button>
             </CardContent>

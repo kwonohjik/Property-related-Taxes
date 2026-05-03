@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { HomeLinkButton } from "@/components/ui/home-link";
 import type { BundledApportionmentResult } from "@/lib/tax-engine/bundled-sale-apportionment";
 import type { AggregateTransferResult, PerPropertyBreakdown } from "@/lib/tax-engine/transfer-tax-aggregate";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
@@ -281,12 +281,7 @@ export function BundledAllocationCard({ apportionment, aggregated, onBack, onRes
 
       {/* 하단 네비게이션 버튼 */}
       <div className="flex gap-3 print:hidden">
-        <Link
-          href="/"
-          className="flex-1 rounded-lg border border-border py-2.5 text-center text-sm font-medium hover:bg-muted/40 transition-colors"
-        >
-          홈으로
-        </Link>
+        <HomeLinkButton className="flex-1" />
         {onBack && (
           <button
             type="button"

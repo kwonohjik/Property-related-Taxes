@@ -13,6 +13,7 @@
  */
 
 import { useState } from "react";
+import { ChevronLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { StepIndicator } from "@/components/calc/StepIndicator";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
@@ -73,6 +74,7 @@ function NavButtons({
         onClick={onPrev}
         className="flex-1 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-muted transition-colors"
       >
+        <ChevronLeft className="w-4 h-4" />
         {step === 0 ? "홈으로" : "이전"}
       </button>
       <button

@@ -12,6 +12,7 @@
  */
 
 import { useState, useMemo } from "react";
+import { ChevronLeft } from "lucide-react";
 import { StepIndicator } from "@/components/calc/StepIndicator";
 import { AcquisitionTaxResultView } from "@/components/calc/results/AcquisitionTaxResultView";
 import { callAcquisitionTaxAPI } from "@/lib/calc/acquisition-tax-api";
@@ -311,6 +312,7 @@ export function AcquisitionTaxForm() {
             className="flex-1 rounded-md border border-input bg-background px-4 py-2 text-sm hover:bg-accent"
             onClick={handleBack}
           >
+            <ChevronLeft className="w-4 h-4" />
             {step === 0 ? "홈으로" : "이전"}
           </button>
           <button
