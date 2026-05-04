@@ -9,9 +9,11 @@
  * 법령 근거: 소득세법 시행령 §164 ⑤
  */
 
+import { useState } from "react";
 import { DateInput } from "@/components/ui/date-input";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ThreePointStandardPriceInput } from "./ThreePointStandardPriceInput";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
@@ -35,21 +37,58 @@ function LegalBadge() {
 
 // ─── 메인 패널 ────────────────────────────────────────────────────
 
+// ─── 주택유형 옵션 ──────────────────────────────────────────────
+
+type HousingType = "individual" | "apartment";
+
+const HOUSING_TYPE_OPTIONS: { value: HousingType; label: string; description: string }[] = [
+  { value: "individual", label: "단독·다가구주택",  description: "개별주택가격 기준 (부동산공시가격알리미)" },
+  { value: "apartment",  label: "공동주택 (아파트)", description: "공동주택가격 기준 (부동산공시가격알리미)" },
+];
+
+// 주택유형별 최초고시일 안내 텍스트
+const FIRST_DISCLOSURE_GUIDE: Record<HousingType, string> = {
+  individual: "개별주택가격이 처음으로 고시된 날짜 — 단독주택 최초고시 2005.4.30 (주택공시가격알리미 확인)",
+  apartment:  "공동주택가격이 처음으로 고시된 날짜 — 아파트 최초고시 1993.2.1 또는 1990.4.30 (주택공시가격알리미 확인)",
+};
+
+// 주택유형별 공시가격 라벨
+const PRICE_LABEL: Record<HousingType, { first: string; transfer: string }> = {
+  individual: { first: "최초 고시 개별주택가격",  transfer: "양도시 개별주택가격" },
+  apartment:  { first: "최초 고시 공동주택가격",  transfer: "양도시 공동주택가격" },
+};
+
+// ─── 메인 패널 ────────────────────────────────────────────────
+
 export function PreHousingDisclosureSection({ asset, transferDate, onChange }: Props) {
+  // UI 로컬 상태 — 폼 state·API 페이로드에 포함되지 않음
+  const [housingType, setHousingType] = useState<HousingType>("individual");
+
+  const priceLabel = PRICE_LABEL[housingType];
 
   return (
     <div className="space-y-4 rounded-md border border-primary/30 bg-primary/5 p-4">
       {/* 헤더 */}
       <div className="flex items-start justify-between gap-2">
         <div>
-          <p className="text-sm font-semibold">개별주택가격 미공시 취득 (3-시점 환산)</p>
+          <p className="text-sm font-semibold">주택공시가격 미공시 취득 (3-시점 환산)</p>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            취득 당시 개별주택가격이 공시되지 않은 경우,
-            최초 공시일의 개별주택가격을 기준으로 취득시 기준시가를 역산합니다.
+            취득 당시 주택공시가격이 고시되지 않은 경우,
+            최초 공시일의 주택공시가격을 기준으로 취득시 기준시가를 역산합니다.
           </p>
         </div>
         <LegalBadge />
       </div>
+
+      {/* 주택유형 선택 */}
+      <RadioCardGroup
+        name="housingType"
+        value={housingType}
+        onChange={setHousingType}
+        options={HOUSING_TYPE_OPTIONS}
+        layout="inline"
+        tone="amber"
+      />
 
       {/* ① 토지 면적 */}
       <FieldCard
@@ -73,7 +112,7 @@ export function PreHousingDisclosureSection({ asset, transferDate, onChange }: P
       <FieldCard
         label="최초 고시일"
         required
-        hint="개별주택가격이 처음으로 고시된 날짜 (주택공시가격알리미 확인)"
+        hint={FIRST_DISCLOSURE_GUIDE[housingType]}
       >
         <DateInput
           value={asset.phdFirstDisclosureDate}
@@ -81,11 +120,11 @@ export function PreHousingDisclosureSection({ asset, transferDate, onChange }: P
         />
       </FieldCard>
 
-      {/* ③ 최초 고시 개별주택가격 P_F */}
+      {/* ③ 최초 고시 주택공시가격 P_F */}
       <FieldCard
-        label="최초 고시 개별주택가격"
+        label={priceLabel.first}
         required
-        hint="최초 고시일 당시 공시된 개별주택가격 (원) — 주택공시가격알리미 조회"
+        hint="최초 고시일 당시 공시된 주택공시가격 (원) — 부동산공시가격알리미(realtyprice.kr) 조회"
         unit="원"
       >
         <CurrencyInput
@@ -98,11 +137,11 @@ export function PreHousingDisclosureSection({ asset, transferDate, onChange }: P
         />
       </FieldCard>
 
-      {/* ④ 양도시 개별주택가격 P_T */}
+      {/* ④ 양도시 주택공시가격 P_T */}
       <FieldCard
-        label="양도시 개별주택가격"
+        label={priceLabel.transfer}
         required
-        hint="양도일 당시 공시된 개별주택가격 P_T (원) — 양도일 기준 공시가격알리미 조회"
+        hint="양도일 당시 공시된 주택공시가격 P_T (원) — 양도일 기준 부동산공시가격알리미 조회"
         unit="원"
       >
         <CurrencyInput
@@ -165,13 +204,23 @@ export function PreHousingDisclosureSection({ asset, transferDate, onChange }: P
       </div>
 
       {/* 안내 문구 */}
-      <p className="text-[11px] text-muted-foreground">
-        공시지가는{" "}
-        <span className="font-medium">부동산공시가격알리미(realtyprice.kr)</span>
-        에서 조회하실 수 있습니다.
-        건물기준시가는{" "}
-        <span className="font-medium">국세청 홈택스 &gt; 기준시가 조회</span>를 이용하세요.
-      </p>
+      <div className="space-y-1 text-[11px] text-muted-foreground">
+        <p>
+          주택공시가격은{" "}
+          <span className="font-medium">부동산공시가격알리미(realtyprice.kr)</span>
+          에서 조회하실 수 있습니다.
+        </p>
+        <p>
+          건물기준시가(원)는{" "}
+          <span className="font-medium">국세청 홈택스 &gt; 기준시가 조회</span>에서
+          연도별 값을 직접 확인 후 입력하세요.
+          {housingType === "apartment" && (
+            <span className="block mt-0.5 text-amber-700">
+              공동주택(아파트)의 경우 최초고시 이전 취득 시 1993.2.1 또는 1990.4.30이 최초고시일에 해당합니다.
+            </span>
+          )}
+        </p>
+      </div>
     </div>
   );
 }

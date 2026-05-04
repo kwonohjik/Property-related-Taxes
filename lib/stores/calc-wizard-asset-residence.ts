@@ -56,14 +56,20 @@ export function diffMonthsClamped(start: string, end: string): number {
 
 /**
  * 거주 구간 합산 개월수 — interval 모드 진입 함수.
- * moveOutDate가 빈값인 구간은 transferDate로 fallback.
+ *
+ * 정책: 자동 fallback 금지 (feedback_no_silent_apportion_fallback.md).
+ * 입주일·퇴거일 모두 명시 입력 필요. 한쪽이라도 비면 0으로 처리되어
+ * validation에서 차단됨. transferDate 자동 간주 로직은 제거됨.
+ *
+ * @param periods 거주 구간 배열
+ * @param _transferDate 인터페이스 호환을 위해 유지 (사용 안 함)
  */
 export function sumResidenceMonths(
   periods: ResidencePeriod[],
-  transferDate: string,
+  _transferDate: string,
 ): number {
+  void _transferDate;
   return periods.reduce((sum, p) => {
-    const end = p.moveOutDate || transferDate;
-    return sum + diffMonthsClamped(p.moveInDate, end);
+    return sum + diffMonthsClamped(p.moveInDate, p.moveOutDate);
   }, 0);
 }

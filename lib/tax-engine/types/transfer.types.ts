@@ -41,6 +41,11 @@ import type { ParcelInput, ParcelResult } from "../multi-parcel-transfer";
 import type { InheritanceAcquisitionInput } from "./inheritance-acquisition.types";
 import type { InheritanceHouseValuationInput, InheritanceHouseValuationResult } from "./inheritance-house-valuation.types";
 import type { MixedUseAssetInput, MixedUseGainBreakdown } from "./transfer-mixed-use.types";
+import type { CarryoverTaxationInput, CarryoverTaxationDetail } from "./transfer-carryover.types";
+
+// CarryoverTaxationInput, CarryoverTaxationDetail 은 transfer-carryover.types.ts 에 정의됨.
+// 외부 소비자 편의를 위해 재수출.
+export type { CarryoverTaxationInput, CarryoverTaxationDetail } from "./transfer-carryover.types";
 
 export interface TransferTaxInput {
   /** 물건 종류 */
@@ -94,8 +99,12 @@ export interface TransferTaxInput {
     previousAcquisitionDate: Date;
     newAcquisitionDate: Date;
   };
-  /** 취득 원인 (매매·상속·증여). 미지정 시 매매로 간주. */
-  acquisitionCause?: "purchase" | "inheritance" | "gift";
+  /**
+   * 취득 원인 (매매·상속·증여·이월과세증여). 미지정 시 매매로 간주.
+   * "carryover_gift" = 소득세법 §97조의2 이월과세 대상 증여 (배우자·직계존비속).
+   * 기존 "gift"는 이월과세 미적용 단순 증여 취득 — 하위 호환 유지.
+   */
+  acquisitionCause?: "purchase" | "inheritance" | "gift" | "carryover_gift";
   /**
    * 상속 시 피상속인 취득일 — 단기보유 단일세율 판정 보유기간 통산용.
    * 소득세법 §95④: 상속받은 자산은 피상속인이 그 자산을 취득한 날을 자산의 취득일로 본다.
@@ -231,6 +240,13 @@ export interface TransferTaxInput {
    * 소득세법 시행령 §160 ① 단서 — 2022.1.1 이후 양도분 강제 분리.
    */
   mixedUse?: MixedUseAssetInput;
+
+  /**
+   * 배우자등 이월과세 입력 (소득세법 §97조의2).
+   * acquisitionCause === "carryover_gift" 일 때만 유효.
+   * 기간 판정·비교과세 두 시나리오 계산·채택 시나리오 자동 결정을 엔진이 수행.
+   */
+  carryoverTaxation?: CarryoverTaxationInput;
 
   // ── 토지/건물 취득일 분리 계산 (housing·building 공통) ──
   /**
@@ -481,6 +497,19 @@ export interface TransferTaxResult {
    * UI 결과 4-카드 (양도가액 안분 / 주택부분 / 상가부분 / 비사업용토지) 표시용.
    */
   mixedUseDetail?: MixedUseGainBreakdown;
+  /**
+   * 배우자등 이월과세 상세 결과 (carryoverTaxation 제공 시만 포함).
+   * UI 결과 비교 카드 — Scenario A·B 결정세액 나란히 + 채택 ✓ 표시.
+   */
+  carryoverTaxationDetail?: CarryoverTaxationDetail;
+  /**
+   * 이월과세 모드에서 신고서 양식 표시용 취득일 ("YYYY-MM-DD").
+   * - Scenario A 채택 시: 증여자 취득일 (donorAcquisitionDate)
+   * - Scenario B 채택 시: 증여 등기접수일 (giftRegistryDate)
+   * - 일반 모드(carryover_gift 외): undefined
+   * FilingFormTableHelpers에서 `primary.acquisitionDate` 대신 이 값으로 보유기간 계산.
+   */
+  displayAcquisitionDate?: string;
 }
 
 // ============================================================

@@ -130,13 +130,19 @@
 }
 
 /* Print / PDF 스타일 */
+@page {
+  /* 브라우저 기본 인쇄 헤더(날짜·URL·제목)·푸터 제거 */
+  margin: 10mm;
+  size: auto;
+}
+
 @media print {
   /* 인쇄 불필요 UI 숨김 */
   .print\:hidden {
     display: none !important;
   }
 
-  /* 헤더·푸터 숨김 */
+  /* 헤더·푸터·네비 숨김 */
   header,
   footer,
   nav {
@@ -167,4 +173,21 @@
     page-break-inside: auto;
   }
   /* full 모드: 기본 — 모든 섹션 표시 */
+
+  /* 계산 내역만 인쇄 */
+  body[data-print-scope="calculation"] [data-print-section="full"] > *:not([data-print-section="calculation"]) {
+    display: none !important;
+  }
+  /* 개별주택 환산만 인쇄 */
+  body[data-print-scope="phd"] [data-print-section="full"] > *:not([data-print-section="phd"]) {
+    display: none !important;
+  }
+  /* 토지/건물 분리만 인쇄 */
+  body[data-print-scope="split-detail"] [data-print-section="full"] > *:not([data-print-section="split-detail"]) {
+    display: none !important;
+  }
+  /* 계산 과정만 인쇄 */
+  body[data-print-scope="steps"] [data-print-section="full"] > *:not([data-print-section="steps"]) {
+    display: none !important;
+  }
 }

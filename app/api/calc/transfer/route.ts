@@ -154,6 +154,18 @@ export async function POST(request: NextRequest) {
     donorAcquisitionDate: data.donorAcquisitionDate
       ? new Date(data.donorAcquisitionDate)
       : undefined,
+    carryoverTaxation: data.carryoverTaxation
+      ? {
+          giftRegistryDate: new Date(data.carryoverTaxation.giftRegistryDate),
+          donorAcquisitionDate: new Date(data.carryoverTaxation.donorAcquisitionDate),
+          donorAcquisitionPrice: data.carryoverTaxation.donorAcquisitionPrice,
+          useEstimatedAcquisition: data.carryoverTaxation.useEstimatedAcquisition,
+          giftTaxAmount: data.carryoverTaxation.giftTaxAmount,
+          donorCapitalExpenditure: data.carryoverTaxation.donorCapitalExpenditure,
+          giftDateValuation: data.carryoverTaxation.giftDateValuation,
+          exclusionDeclared: data.carryoverTaxation.exclusionDeclared,
+        }
+      : undefined,
     isOneHousehold: data.isOneHousehold,
     temporaryTwoHouse: data.temporaryTwoHouse
       ? {

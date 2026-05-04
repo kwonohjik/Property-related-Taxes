@@ -79,6 +79,54 @@ export const VERIFICATION_MANIFEST: VerificationRule[] = [
     keywords: ["미등기양도자산", "100분의 70"],
   },
 
+  // ── 배우자등 이월과세 + 비교과세 (소득세법 §97조의2) ──────────────
+  {
+    id: "TRANSFER.CARRYOVER_TAXATION",
+    citation: "소득세법 §97조의2",
+    keywords: ["배우자", "직계존비속", "증여", "취득가액"],
+  },
+  {
+    id: "TRANSFER.CARRYOVER_DONOR_BASIS",
+    citation: "소득세법 §97조의2 ① 1호",
+    keywords: ["취득가액", "증여자"],
+  },
+  {
+    id: "TRANSFER.CARRYOVER_GIFT_TAX_EXPENSE",
+    citation: "소득세법 §97조의2 ①",
+    keywords: ["증여세", "필요경비"],
+    keywordMode: "ALL",
+  },
+  {
+    id: "TRANSFER.CARRYOVER_EXCLUSION",
+    citation: "소득세법 §97조의2 ②",
+    keywords: ["이월과세", "적용하지 아니"],
+    keywordMode: "ALL",
+  },
+  {
+    id: "TRANSFER.CARRYOVER_COMPARISON",
+    citation: "소득세법 §97조의2 ②",
+    keywords: ["결정세액", "적은"],
+    keywordMode: "ALL",
+  },
+  {
+    id: "TRANSFER.CARRYOVER_PERIOD_REGISTRY",
+    citation: "소득세법 §97조의2 ③",
+    keywords: ["등기부", "소유기간"],
+    keywordMode: "ALL",
+  },
+  {
+    id: "TRANSFER.CARRYOVER_HOLDING_PERIOD",
+    citation: "소득세법 §95 ④",
+    keywords: ["증여자", "취득일"],
+    keywordMode: "ALL",
+  },
+  {
+    id: "TRANSFER.CARRYOVER_GIFT_TAX_FORMULA",
+    citation: "소득세법 시행령 §163의2",
+    keywords: ["증여세", "자산가액"],
+    keywordMode: "ALL",
+  },
+
   // ── 비사업용 토지 ──────────────────────────────────────────────────
   {
     id: "NBL.MAIN",

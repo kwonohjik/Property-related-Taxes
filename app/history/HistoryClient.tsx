@@ -199,51 +199,100 @@ export function HistoryClient() {
   }
 
   const clientMap = Object.fromEntries(clients.map((c) => [c.id, c.name]));
+  const [clientQuery, setClientQuery] = useState("");
+  const [clientDropdownOpen, setClientDropdownOpen] = useState(false);
+
+  const filteredClients = clientQuery.trim()
+    ? clients.filter((c) => c.name.includes(clientQuery.trim()))
+    : clients;
+
+  const activeClientLabel =
+    activeClientFilter === "all"
+      ? "모든 의뢰인"
+      : activeClientFilter === null
+      ? "미지정"
+      : (clientMap[activeClientFilter] ?? "의뢰인 선택");
+
+  function selectClient(id: string | null | "all") {
+    setActiveClientFilter(id);
+    setClientQuery("");
+    setClientDropdownOpen(false);
+  }
 
   return (
     <div className="space-y-4">
-      {/* 세무사 모드: 의뢰인 필터 */}
-      {mode === "professional" && clients.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => setActiveClientFilter("all")}
-            className={[
-              "rounded-full px-3 py-1 text-xs font-medium transition-colors",
-              activeClientFilter === "all"
-                ? "bg-violet-600 text-white"
-                : "border border-border bg-background hover:bg-muted/60 text-muted-foreground",
-            ].join(" ")}
-          >
-            모든 의뢰인
-          </button>
-          {clients.map((c) => (
-            <button
-              key={c.id}
-              type="button"
-              onClick={() => setActiveClientFilter(c.id)}
-              className={[
-                "rounded-full px-3 py-1 text-xs font-medium transition-colors",
-                activeClientFilter === c.id
-                  ? "bg-violet-600 text-white"
-                  : "border border-border bg-background hover:bg-muted/60 text-muted-foreground",
-              ].join(" ")}
-            >
-              {c.name}
-            </button>
-          ))}
-          <button
-            type="button"
-            onClick={() => setActiveClientFilter(null)}
-            className={[
-              "rounded-full px-3 py-1 text-xs font-medium transition-colors",
-              activeClientFilter === null
-                ? "bg-violet-600 text-white"
-                : "border border-border bg-background hover:bg-muted/60 text-muted-foreground",
-            ].join(" ")}
-          >
-            미지정
-          </button>
+      {/* 세무사 모드: 의뢰인 검색 필터 */}
+      {mode === "professional" && (
+        <div className="relative">
+          <div className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2">
+            <svg className="h-3.5 w-3.5 shrink-0 text-muted-foreground" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
+            </svg>
+            <input
+              type="text"
+              value={clientDropdownOpen ? clientQuery : ""}
+              placeholder={clientDropdownOpen ? "의뢰인 이름 검색..." : activeClientLabel}
+              onFocus={() => { setClientDropdownOpen(true); setClientQuery(""); }}
+              onChange={(e) => setClientQuery(e.target.value)}
+              onBlur={() => setTimeout(() => setClientDropdownOpen(false), 150)}
+              className="flex-1 bg-transparent text-xs outline-none placeholder:text-muted-foreground"
+            />
+            {activeClientFilter !== "all" && (
+              <button
+                type="button"
+                onMouseDown={(e) => { e.preventDefault(); selectClient("all"); }}
+                className="text-muted-foreground hover:text-foreground transition-colors"
+                aria-label="초기화"
+              >
+                <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path d="M18 6 6 18M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </div>
+
+          {clientDropdownOpen && (
+            <div className="absolute left-0 right-0 top-full z-30 mt-1 max-h-60 overflow-y-auto rounded-lg border border-border bg-background shadow-lg">
+              <button
+                type="button"
+                onMouseDown={(e) => { e.preventDefault(); selectClient("all"); }}
+                className={[
+                  "w-full px-3 py-2 text-left text-xs hover:bg-muted/60 transition-colors",
+                  activeClientFilter === "all" ? "font-semibold text-violet-700" : "text-foreground",
+                ].join(" ")}
+              >
+                모든 의뢰인
+              </button>
+              {filteredClients.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  onMouseDown={(e) => { e.preventDefault(); selectClient(c.id); }}
+                  className={[
+                    "w-full px-3 py-2 text-left text-xs hover:bg-muted/60 transition-colors",
+                    activeClientFilter === c.id ? "font-semibold text-violet-700" : "text-foreground",
+                  ].join(" ")}
+                >
+                  {c.name}
+                </button>
+              ))}
+              {filteredClients.length === 0 && clientQuery && (
+                <p className="px-3 py-2 text-xs text-muted-foreground">검색 결과 없음</p>
+              )}
+              <div className="border-t border-border">
+                <button
+                  type="button"
+                  onMouseDown={(e) => { e.preventDefault(); selectClient(null); }}
+                  className={[
+                    "w-full px-3 py-2 text-left text-xs hover:bg-muted/60 transition-colors",
+                    activeClientFilter === null ? "font-semibold text-violet-700" : "text-muted-foreground",
+                  ].join(" ")}
+                >
+                  미지정
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

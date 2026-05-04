@@ -59,6 +59,72 @@ function validateParcelMode(primary: AssetForm): string | null {
 
 /** 자산 카드 1건의 취득 정보 검증 (취득가·환산·1990·신축) */
 function validateAssetAcquisition(asset: AssetForm, label: string): string | null {
+  // ── 이월과세(증여) 전용 검증 — carryover_gift 시 일반 취득 검증 스킵 ──
+  if (asset.acquisitionCause === "carryover_gift") {
+    const c = asset.carryover;
+
+    // (a) 가업상속공제 최우선 차단 (§97조의2 ④)
+    if (c?.exclusionDeclared?.isFamilyBusinessInheritedAsset === true) {
+      return `${label}: 가업상속공제 적용 자산은 현재 버전에서 지원하지 않습니다. 세무사에게 수동 계산을 의뢰하세요 (소득세법 §97조의2 ④).`;
+    }
+
+    if (!c) return `${label}: 이월과세 증여 정보를 입력하세요.`;
+
+    // (b) 필수 날짜 필드
+    if (!c.giftRegistryDate) return `${label}: 증여 등기접수일을 입력하세요.`;
+    if (!c.donorAcquisitionDate) return `${label}: 증여자 취득일을 입력하세요.`;
+
+    // (c) 비교과세 B 시나리오 취득가
+    if (parseAmount(c.giftDateValuation) <= 0)
+      return `${label}: 증여 당시 평가액을 입력하세요.`;
+
+    // (d) 취득가액 — 환산 미사용 시 직접 입력 필수
+    if (!c.useEstimatedAcquisition && parseAmount(c.donorAcquisitionPrice) <= 0) {
+      return `${label}: 증여자 취득가액을 입력하세요. (환산취득가 사용 시 토글 켜기)`;
+    }
+
+    // (e) 환산 사용 시 모드 선택 필수 + 모드별 필수 필드 검증
+    if (c.useEstimatedAcquisition) {
+      // 환산 모드 미선택 차단
+      if (!c.estimationMode) {
+        return `${label}: 환산 방식(일반 기준시가/개별주택가격 미공시/공동주택 최초고시 전)을 선택하세요.`;
+      }
+
+      if (c.estimationMode === "general") {
+        // 일반 기준시가 환산 — donorStandardPrice* 2개 필수
+        if (parseAmount(c.donorStandardPriceAtAcquisition) <= 0)
+          return `${label}: 취득시 기준시가를 입력하세요.`;
+        if (parseAmount(c.donorStandardPriceAtTransfer) <= 0)
+          return `${label}: 양도시 기준시가를 입력하세요.`;
+      } else if (c.estimationMode === "phd") {
+        // PHD §164⑤ — asset 수준 phdFirstDisclosureDate 등 필수
+        if (!asset.phdFirstDisclosureDate) return `${label}: 최초 고시일을 입력하세요.`;
+        if (parseAmount(asset.phdFirstDisclosureHousingPrice) <= 0)
+          return `${label}: 최초 고시 개별주택가격을 입력하세요.`;
+        const transferPrice =
+          parseAmount(asset.phdTransferHousingPrice) || parseAmount(asset.standardPriceAtTransfer);
+        if (transferPrice <= 0) return `${label}: 양도시 개별주택가격을 입력하세요.`;
+      } else if (c.estimationMode === "apd") {
+        // APD — PHD와 동일 경로(preHousingDisclosure)를 사용하므로 같은 필드 검증
+        if (!asset.phdFirstDisclosureDate) return `${label}: 최초 고시일(공동주택 최초공시일)을 입력하세요.`;
+        if (parseAmount(asset.phdFirstDisclosureHousingPrice) <= 0)
+          return `${label}: 최초공시 공동주택가격을 입력하세요.`;
+        const transferPrice =
+          parseAmount(asset.phdTransferHousingPrice) || parseAmount(asset.standardPriceAtTransfer);
+        if (transferPrice <= 0) return `${label}: 양도시 공동주택가격을 입력하세요.`;
+      }
+    }
+
+    // (f) 음수 차단
+    if (parseAmount(c.donorCapitalExpenditure) < 0)
+      return `${label}: 증여자 자본적지출은 음수일 수 없습니다.`;
+    if (parseAmount(c.giftTaxAmount) < 0)
+      return `${label}: 증여세 상당액은 음수일 수 없습니다.`;
+
+    // carryover_gift 검증 완료 — 일반 취득 검증 스킵
+    return null;
+  }
+
   // 검용주택 분리계산은 calcMixedUseTransferTax 엔진이 별도 처리 — 전용 검증 후 return
   if (asset.isMixedUseHouse === true) {
     if (!asset.acquisitionDate) return `${label}: 건물 취득일을 입력하세요.`;
@@ -219,7 +285,8 @@ function validateAssetAcquisition(asset: AssetForm, label: string): string | nul
   // 주의: usePreHousingDisclosure === true 경로에서는 §164⑤ 3-시점 입력으로 자동 도출되므로
   //   standardPriceAtAcq / standardPriceAtTransfer 직접 입력 불요.
   // 검용주택 PHD는 위 isMixedUseHouse 분기에서 이미 return되어 이 줄에 도달하지 않음.
-  const usesPhd = asset.usePreHousingDisclosure === true && asset.hasSeperateLandAcquisitionDate === true;
+  // hasSeperateLandAcquisitionDate 무관 — 취득일 동일(사례 23 공동주택 등)해도 PHD 경로는 표준시가 직접 입력 불요.
+  const usesPhd = asset.usePreHousingDisclosure === true;
 
   if (isEstimated && !hasPre1990 && !usesPhd) {
     if (!asset.standardPriceAtAcq || parseAmount(asset.standardPriceAtAcq) <= 0)
@@ -232,6 +299,17 @@ function validateAssetAcquisition(asset: AssetForm, label: string): string | nul
   if (usesPhd) {
     if (!asset.phdFirstDisclosureDate)
       return `${label}: 최초 고시일을 입력하세요.`;
+    // ISO 날짜 유효성 — 존재하지 않는 날(1993-02-30 등) 차단
+    {
+      const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(asset.phdFirstDisclosureDate);
+      const d = m ? new Date(asset.phdFirstDisclosureDate) : null;
+      if (!m || !d || isNaN(d.getTime()) ||
+          d.getUTCFullYear() !== Number(m[1]) ||
+          d.getUTCMonth() + 1 !== Number(m[2]) ||
+          d.getUTCDate() !== Number(m[3])) {
+        return `${label}: 최초 고시일이 유효하지 않습니다. (예: 공동주택 최초고시 1993-02-01)`;
+      }
+    }
     if (!asset.phdFirstDisclosureHousingPrice || parseAmount(asset.phdFirstDisclosureHousingPrice) <= 0)
       return `${label}: 최초 고시 개별주택가격을 입력하세요.`;
     // 일반 자산: acquisitionArea 직접 입력 필요 (검용주택은 면적 자동 계산이므로 제외)
@@ -362,7 +440,9 @@ export function validateStep(step: number, form: TransferFormData): string | nul
         const p = periods[i];
         const label = `거주 구간 #${i + 1}`;
         if (!p.moveInDate) return `${label}: 입주일을 입력하세요.`;
-        if (p.moveOutDate && p.moveOutDate < p.moveInDate)
+        if (!p.moveOutDate)
+          return `${label}: 퇴거일을 입력하세요. (양도일까지 거주한 경우 양도일을 퇴거일로 입력)`;
+        if (p.moveOutDate < p.moveInDate)
           return `${label}: 퇴거일은 입주일보다 이후여야 합니다.`;
         if (form.transferDate && p.moveInDate > form.transferDate)
           return `${label}: 입주일은 양도일 이전이어야 합니다.`;

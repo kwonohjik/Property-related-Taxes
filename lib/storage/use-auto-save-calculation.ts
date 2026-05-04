@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { calculationRepository } from "./calculation-repository";
 import { clientRepository } from "./client-repository";
 import { generateTitle } from "./title-generator";
@@ -19,14 +19,25 @@ interface Params {
 interface Return {
   savedId: string | null;
   error: string | null;
+  /**
+   * 수정 모드 진입 시 원본 레코드 ID (sessionStorage 기반).
+   * null이면 신규 계산 모드 (자동 저장).
+   * non-null이면 사용자가 saveAsUpdate() / saveAsNew() 중 선택해야 함.
+   */
+  pendingEditId: string | null;
+  /** 기존 레코드를 현재 결과로 덮어쓰기 */
+  saveAsUpdate: () => void;
+  /** 새 레코드로 저장 (수정 대기 상태 해제) */
+  saveAsNew: () => void;
 }
 
 /**
  * 결과 화면 마운트 시 계산 이력을 자동 저장하는 훅.
  *
  * - resultData가 null이면 저장 skip.
- * - sessionStorage에 "editingCalculationId"가 있으면 해당 레코드를 덮어쓰기(update).
- *   없으면 새 레코드 생성(save). 덮어쓰기 후 키 삭제.
+ * - sessionStorage에 "editingCalculationId"가 없으면 신규 레코드 자동 저장.
+ * - sessionStorage에 "editingCalculationId"가 있으면 자동 저장하지 않고
+ *   pendingEditId를 반환. 호출자가 saveAsUpdate() 또는 saveAsNew()를 호출해야 함.
  * - 동일 컴포넌트 생애 내 1회만 실행 (savedRef 플래그).
  */
 export function useAutoSaveCalculation({
@@ -38,48 +49,65 @@ export function useAutoSaveCalculation({
 }: Params): Return {
   const [savedId, setSavedId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // 마운트 시점에 sessionStorage를 1회 읽어 초기값 결정.
+  // saveAsUpdate / saveAsNew에서만 명시적으로 null로 클리어.
+  const [pendingEditId, setPendingEditId] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    return sessionStorage.getItem(EDITING_KEY);
+  });
   const savedRef = useRef(false);
 
   useEffect(() => {
-    if (savedRef.current) return;
     if (!resultData) return;
-
+    // 수정 모드는 자동 저장 skip — 사용자가 saveAsUpdate / saveAsNew 선택해야 함
+    if (pendingEditId) return;
+    // 신규 자동 저장은 컴포넌트 생애 1회만
+    if (savedRef.current) return;
     savedRef.current = true;
 
     const now = new Date().toISOString();
-    const editingId = typeof window !== "undefined"
-      ? sessionStorage.getItem(EDITING_KEY)
-      : null;
+    const title = generateTitle(taxType, inputData, now);
+    calculationRepository
+      .save({ taxType, title, inputData, resultData, taxLawVersion, linkedCalculationId: null, clientId })
+      .then((id) => {
+        setSavedId(id);
+        if (clientId) clientRepository.touch(clientId);
+      })
+      .catch((err) => {
+        savedRef.current = false;
+        setError(err instanceof Error ? err.message : "저장 실패");
+      });
+  }, [taxType, inputData, resultData, taxLawVersion, clientId, pendingEditId]);
 
-    if (editingId) {
-      // 수정 모드 — 기존 레코드 덮어쓰기
-      const title = generateTitle(taxType, inputData, now);
-      sessionStorage.removeItem(EDITING_KEY);
-      calculationRepository
-        .update(editingId, { taxType, title, inputData, resultData, taxLawVersion })
-        .then(() => {
-          setSavedId(editingId);
-          if (clientId) clientRepository.touch(clientId);
-        })
-        .catch((err) => {
-          savedRef.current = false;
-          setError(err instanceof Error ? err.message : "저장 실패");
-        });
-    } else {
-      // 신규 저장
-      const title = generateTitle(taxType, inputData, now);
-      calculationRepository
-        .save({ taxType, title, inputData, resultData, taxLawVersion, linkedCalculationId: null, clientId })
-        .then((id) => {
-          setSavedId(id);
-          if (clientId) clientRepository.touch(clientId);
-        })
-        .catch((err) => {
-          savedRef.current = false;
-          setError(err instanceof Error ? err.message : "저장 실패");
-        });
-    }
-  }, [taxType, inputData, resultData, taxLawVersion, clientId]);
+  const saveAsUpdate = useCallback(() => {
+    if (!pendingEditId || !resultData) return;
+    const now = new Date().toISOString();
+    const title = generateTitle(taxType, inputData, now);
+    sessionStorage.removeItem(EDITING_KEY);
+    calculationRepository
+      .update(pendingEditId, { taxType, title, inputData, resultData, taxLawVersion })
+      .then(() => {
+        setSavedId(pendingEditId);
+        setPendingEditId(null);
+        if (clientId) clientRepository.touch(clientId);
+      })
+      .catch((err) => setError(err instanceof Error ? err.message : "저장 실패"));
+  }, [pendingEditId, resultData, taxType, inputData, taxLawVersion, clientId]);
 
-  return { savedId, error };
+  const saveAsNew = useCallback(() => {
+    if (!resultData) return;
+    const now = new Date().toISOString();
+    const title = generateTitle(taxType, inputData, now);
+    sessionStorage.removeItem(EDITING_KEY);
+    calculationRepository
+      .save({ taxType, title, inputData, resultData, taxLawVersion, linkedCalculationId: null, clientId })
+      .then((id) => {
+        setSavedId(id);
+        setPendingEditId(null);
+        if (clientId) clientRepository.touch(clientId);
+      })
+      .catch((err) => setError(err instanceof Error ? err.message : "저장 실패"));
+  }, [resultData, taxType, inputData, taxLawVersion, clientId]);
+
+  return { savedId, error, pendingEditId, saveAsUpdate, saveAsNew };
 }

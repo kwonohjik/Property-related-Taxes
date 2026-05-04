@@ -75,12 +75,20 @@ export function ResidencePeriodSection({
       <ToggleCard
         variant="card"
         tone="violet"
-        title="비연속 거주 구간 입력"
-        description="입주일·퇴거일 페어를 여러 개 입력해 정확한 거주기간을 합산합니다. OFF 시 개월수만 직접 입력."
+        title="거주 기간 입력"
+        description="입주일·퇴거일 페어를 입력해 거주기간을 합산합니다. 비연속 거주 시 구간을 추가할 수 있습니다. OFF 시 개월수만 직접 입력."
         checked={isInterval}
-        onCheckedChange={(v) =>
-          onChange({ residenceInputMode: v ? "interval" : "direct" })
-        }
+        onCheckedChange={(v) => {
+          // interval 모드 진입 시 구간이 비어 있으면 1개를 즉시 표시 — 사용자가 추가 버튼 클릭 없이 입력 가능.
+          if (v && residencePeriods.length === 0) {
+            onChange({
+              residenceInputMode: "interval",
+              residencePeriods: [{ moveInDate: "", moveOutDate: "" }],
+            });
+          } else {
+            onChange({ residenceInputMode: v ? "interval" : "direct" });
+          }
+        }}
       >
         {isInterval && (
           <div className="space-y-2">
@@ -90,7 +98,8 @@ export function ResidencePeriodSection({
               </p>
             )}
             {residencePeriods.map((p, idx) => {
-              const m = diffMonthsClamped(p.moveInDate, p.moveOutDate || transferDate);
+              const m = diffMonthsClamped(p.moveInDate, p.moveOutDate);
+              const isMoveInOnly = !!p.moveInDate && !p.moveOutDate;
               return (
                 <div
                   key={idx}
@@ -116,13 +125,23 @@ export function ResidencePeriodSection({
                         onChange={(v) => setPeriod(idx, { moveInDate: v })}
                       />
                     </FieldCard>
-                    <FieldCard label="퇴거일" hint="비워두면 양도일까지 거주">
+                    <FieldCard
+                      label="퇴거일"
+                      required
+                      hint="필수 입력 — 양도일까지 거주한 경우 양도일을 퇴거일로 입력"
+                    >
                       <DateInput
                         value={p.moveOutDate}
                         onChange={(v) => setPeriod(idx, { moveOutDate: v })}
                       />
                     </FieldCard>
                   </div>
+                  {isMoveInOnly && (
+                    <p className="text-[11px] text-rose-600">
+                      입주일이 입력되었는데 퇴거일이 비어 있습니다. 퇴거일을 입력하세요.
+                      (양도일까지 거주한 경우 양도일을 퇴거일로 입력)
+                    </p>
+                  )}
                   <p className="text-[11px] text-violet-700">
                     이 구간 거주: {fmtPeriod(m)}
                   </p>

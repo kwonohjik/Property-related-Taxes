@@ -6,11 +6,14 @@
  * `calc-wizard-asset-mixed-use.ts`로 별도 분리(800줄 정책 준수, 2026-04-30).
  */
 
-import { MIXED_USE_DEFAULTS, migrateMixedUseFields } from "./calc-wizard-asset-mixed-use";
-import { type ResidencePeriod, RESIDENCE_DEFAULTS, migrateResidenceFields } from "./calc-wizard-asset-residence";
-export type { ResidencePeriod };
+import type { ResidencePeriod } from "./calc-wizard-asset-residence";
+import type { CarryoverTaxationForm } from "./calc-wizard-asset-carryover";
+export type { ResidencePeriod, CarryoverTaxationForm };
 export { type ParcelFormItem, migrateParcel } from "./calc-wizard-parcel";
 import type { ParcelFormItem } from "./calc-wizard-parcel";
+
+// ── 팩토리·마이그레이션은 별도 모듈 (800줄 정책) ──
+export { makeDefaultAsset, makeDefaultCompanionAsset, migrateAsset } from "./calc-wizard-asset-factory";
 
 /** 비사업용 토지 사업용 사용기간 항목 (폼 문자열 버전) */
 export interface NblBusinessUsePeriod {
@@ -124,9 +127,7 @@ export interface PriorReductionUsageItem {
 export interface AssetForm {
   assetId: string;
   assetLabel: string;
-  /**
-   * 자산 종류 — 5종 (API 전달 시 right_to_move_in/presale_right → housing 으로 변환)
-   */
+  /** 자산 종류 — 5종 (API 전달 시 right_to_move_in/presale_right → housing 으로 변환) */
   assetKind: "housing" | "land" | "building" | "right_to_move_in" | "presale_right";
   /** 입주권 승계조합원 여부 (assetKind === "right_to_move_in" 일 때만 의미) */
   isSuccessorRightToMoveIn: boolean;
@@ -215,8 +216,10 @@ export interface AssetForm {
   residencePeriodMonthsAsset: string;
   /** actual 모드 시 이 자산의 계약서상 양도가액 */
   actualSalePrice: string;
-  /** 취득 원인 — purchase=매매, inheritance=상속, gift=증여 */
-  acquisitionCause: "purchase" | "inheritance" | "gift";
+  /** 취득 원인 — purchase=매매, inheritance=상속, gift=증여, carryover_gift=이월과세(증여) */
+  acquisitionCause: "purchase" | "inheritance" | "gift" | "carryover_gift";
+  /** 이월과세(증여) 서브객체 — acquisitionCause === "carryover_gift" 시만 사용 (§97조의2) */
+  carryover?: CarryoverTaxationForm;
   /** 본인 취득일 (YYYY-MM-DD) */
   acquisitionDate: string;
   /** 피상속인 취득일 (상속 시 단기보유 통산용, YYYY-MM-DD) */
@@ -524,274 +527,3 @@ export interface AssetForm {
 
 /** 하위 호환 별칭 — 기존 코드에서 CompanionAssetForm을 참조하는 곳에 사용 */
 export type CompanionAssetForm = AssetForm;
-
-/**
- * AssetForm 기본값 팩토리.
- * index === 1 인 경우 isPrimaryForHouseholdFlags = true 로 설정.
- */
-export function makeDefaultAsset(index: number = 1): AssetForm {
-  return {
-    assetId: `asset-${Date.now()}-${index}`,
-    assetLabel: `자산 ${index}`,
-    assetKind: "housing",
-    isSuccessorRightToMoveIn: false,
-    isPrimaryForHouseholdFlags: index === 1,
-    standardPriceAtTransfer: "",
-    standardPriceAtTransferLabel: "",
-    directExpenses: "0",
-    capitalExpenditure: "0",
-    transferExpense: "0",
-    reductions: [],
-    inheritanceValuationMode: "auto",
-    inheritanceDate: "",
-    inheritanceAssetKind: "land",
-    acquisitionArea: "",
-    transferArea: "",
-    areaScenario: "same",
-    publishedValueAtInheritance: "",
-    fixedAcquisitionPrice: "",
-    addressRoad: "",
-    addressJibun: "",
-    addressDetail: "",
-    buildingName: "",
-    longitude: "",
-    latitude: "",
-    isRegulatedAreaAtAcq: null,
-    isRegulatedAreaAtTransfer: null,
-    parcelMode: false,
-    parcels: [],
-    isOneHousehold: false,
-    ...RESIDENCE_DEFAULTS,
-    actualSalePrice: "",
-    acquisitionCause: "purchase",
-    acquisitionDate: "",
-    decedentAcquisitionDate: "",
-    donorAcquisitionDate: "",
-    useEstimatedAcquisition: false,
-    isAppraisalAcquisition: false,
-    isSelfBuilt: false,
-    buildingType: "",
-    constructionDate: "",
-    extensionFloorArea: "",
-    selfOwns: "both",
-    hasSeperateLandAcquisitionDate: false,
-    landAcquisitionDate: "",
-    landSplitMode: "apportioned",
-    usePreHousingDisclosure: false,
-    phdFirstDisclosureDate: "",
-    phdFirstDisclosureHousingPrice: "",
-    phdLandPriceYearAtAcq: "",
-    phdLandPriceYearAtAcqIsManual: false,
-    phdLandPricePerSqmAtAcq: "",
-    phdBuildingStdPriceAtAcq: "",
-    phdLandPriceYearAtFirst: "",
-    phdLandPriceYearAtFirstIsManual: false,
-    phdLandPricePerSqmAtFirst: "",
-    phdBuildingStdPriceAtFirst: "",
-    phdTransferHousingPrice: "",
-    phdLandPriceYearAtTransfer: "",
-    phdLandPriceYearAtTransferIsManual: false,
-    phdLandPricePerSqmAtTransfer: "",
-    phdBuildingStdPriceAtTransfer: "",
-    phdResidentialLandArea: "",
-    phdCommercialBuildingStdPriceAtAcq: "",
-    phdCommercialBuildingStdPriceAtFirst: "",
-    landTransferPrice: "",
-    buildingTransferPrice: "",
-    landAcquisitionPrice: "",
-    buildingAcquisitionPrice: "",
-    landDirectExpenses: "",
-    buildingDirectExpenses: "",
-    landStandardPriceAtTransfer: "",
-    buildingStandardPriceAtTransfer: "",
-    standardPriceAtAcq: "",
-    standardPriceAtAcqLabel: "",
-    useStandardPriceAtAcqOverride: false,
-    useStandardPriceAtTransferOverride: false,
-    standardPricePerSqmAtAcq: "",
-    standardPricePerSqmAtTransfer: "",
-    inhHouseValEnabled: false,
-    inhHouseValFirstDisclosureDate: "2005-04-30",
-    inhHouseValLandArea: "",
-    inhHouseValLandPricePerSqmAtTransfer: "",
-    inhHouseValLandPricePerSqmAtFirst: "",
-    inhHouseValLandPricePerSqmAtInheritance: "",
-    inhHouseValHousePriceAtTransfer: "",
-    inhHouseValHousePriceAtFirst: "",
-    inhHouseValBuildingStdPriceAtTransfer: "",
-    inhHouseValBuildingStdPriceAtFirst: "",
-    inhHouseValBuildingStdPriceAtInheritance: "",
-    inhHouseValUseHousePriceOverride: false,
-    inhHouseValHousePriceAtInheritanceOverride: "",
-    pre1990Enabled: false,
-    pre1990PricePerSqm_1990: "",
-    pre1990PricePerSqm_atTransfer: "",
-    pre1990Grade_current: "",
-    pre1990Grade_prev: "",
-    pre1990Grade_atAcq: "",
-    pre1990GradeMode: "number",
-    replottingConfirmDate: "",
-    entitlementArea: "",
-    allocatedArea: "",
-    priorLandArea: "",
-    isNonBusinessLand: false,
-    nblUseDetailedJudgment: false,
-    nblLandType: "",
-    nblZoneType: "",
-    nblBusinessUsePeriods: [],
-    nblLandSigunguCode: "",
-    nblLandSigunguName: "",
-    nblResidenceHistories: [],
-    nblExemptInheritBefore2007: false,
-    nblExemptInheritDate: "",
-    nblExemptLongOwned20y: false,
-    nblExemptAncestor8YearFarming: false,
-    nblExemptPublicExpropriation: false,
-    nblExemptPublicNoticeDate: "",
-    nblExemptFactoryAdjacent: false,
-    nblExemptJongjoongOwned: false,
-    nblExemptJongjoongAcqDate: "",
-    nblExemptUrbanFarmlandJongjoong: false,
-    nblUrbanIncorporationDate: "",
-    nblIsMetropolitanArea: "",
-    nblOwnershipRatio: "",
-    nblFarmingSelf: false,
-    nblFarmerResidenceDistance: "",
-    nblFarmlandIsWeekendFarm: false,
-    nblFarmlandIsConversionApproved: false,
-    nblFarmlandConversionDate: "",
-    nblFarmlandIsMarginalFarm: false,
-    nblFarmlandIsReclaimedLand: false,
-    nblFarmlandIsPublicProjectUse: false,
-    nblFarmlandIsSickElderlyRental: false,
-    nblForestHasPlan: false,
-    nblForestIsPublicInterest: false,
-    nblForestIsProtected: false,
-    nblForestIsSuccessor: false,
-    nblForestInheritedWithin3Years: false,
-    nblForestInheritanceDate: "",
-    nblPastureIsLivestockOperator: false,
-    nblPastureLivestockType: "",
-    nblPastureLivestockCount: "",
-    nblPastureLivestockPeriods: [],
-    nblPastureInheritanceDate: "",
-    nblPastureIsSpecialOrgUse: false,
-    nblHousingFootprint: "",
-    nblVillaUsePeriods: [],
-    nblVillaIsEupMyeon: false,
-    nblVillaIsRuralHousing: false,
-    nblVillaIsAfter20150101: false,
-    nblOtherPropertyTaxType: "",
-    nblOtherBuildingValue: "",
-    nblOtherLandValue: "",
-    nblOtherIsRelatedToResidence: false,
-    nblGracePeriods: [],
-    // ── 상속 부동산 취득가액 의제 ──
-    inheritanceMode: null,
-    inheritanceStartDate: "",
-    hasDecedentActualPrice: false,
-    decedentAcquisitionPrice: "",
-    inheritanceReportedValue: "",
-    inheritanceValuationMethod: "",
-    inheritanceValuationEvidence: "",
-    useSupplementaryHelper: false,
-    supplementaryLandArea: "",
-    supplementaryLandUnitPrice: "",
-    supplementaryBuildingValue: "",
-    // ── 검용주택 분리계산 + 보유 중 일부 용도변경 (별도 모듈) ──
-    ...MIXED_USE_DEFAULTS,
-  };
-}
-
-/** 하위 호환 별칭 */
-export const makeDefaultCompanionAsset = makeDefaultAsset;
-
-/**
- * 구형 AssetForm (landAreaM2, pre1990AreaSqm 있음) → 현재 타입으로 마이그레이션.
- * sessionStorage 또는 이력 데이터 rehydrate 시 호출.
- */
-export function migrateAsset(raw: unknown): AssetForm {
-  const a = raw as Record<string, unknown>;
-  if (a.landAreaM2 && !a.acquisitionArea) {
-    a.acquisitionArea = a.landAreaM2;
-    a.transferArea = a.landAreaM2;
-  }
-  delete a.landAreaM2;
-  delete a.pre1990AreaSqm;
-  if (!a.areaScenario) {
-    a.areaScenario =
-      a.acquisitionArea && a.transferArea && a.acquisitionArea !== a.transferArea
-        ? "partial"
-        : "same";
-  }
-  if (!a.standardPricePerSqmAtAcq) a.standardPricePerSqmAtAcq = "";
-  if (!a.standardPricePerSqmAtTransfer) a.standardPricePerSqmAtTransfer = "";
-  if (!a.selfOwns) a.selfOwns = "both";
-  if (a.hasSeperateLandAcquisitionDate === undefined) a.hasSeperateLandAcquisitionDate = false;
-  if (!a.landAcquisitionDate) a.landAcquisitionDate = "";
-  if (!a.landSplitMode) a.landSplitMode = "apportioned";
-  if (!a.landTransferPrice) a.landTransferPrice = "";
-  if (!a.buildingTransferPrice) a.buildingTransferPrice = "";
-  if (!a.landAcquisitionPrice) a.landAcquisitionPrice = "";
-  if (!a.buildingAcquisitionPrice) a.buildingAcquisitionPrice = "";
-  if (!a.landDirectExpenses) a.landDirectExpenses = "";
-  if (!a.buildingDirectExpenses) a.buildingDirectExpenses = "";
-  // §97② 단서 swap 분리 입력 (legacy directExpenses와 공존, 신규 자산은 두 필드 사용)
-  if (a.capitalExpenditure === undefined) a.capitalExpenditure = "0";
-  if (a.transferExpense === undefined) a.transferExpense = "0";
-  if (!a.landStandardPriceAtTransfer) a.landStandardPriceAtTransfer = "";
-  if (!a.buildingStandardPriceAtTransfer) a.buildingStandardPriceAtTransfer = "";
-  // §164⑤ 미공시 취득 환산 필드
-  if (a.usePreHousingDisclosure === undefined) a.usePreHousingDisclosure = false;
-  if (!a.phdFirstDisclosureDate) a.phdFirstDisclosureDate = "";
-  if (!a.phdFirstDisclosureHousingPrice) a.phdFirstDisclosureHousingPrice = "";
-  if (!a.phdLandPriceYearAtAcq) a.phdLandPriceYearAtAcq = "";
-  if (a.phdLandPriceYearAtAcqIsManual === undefined) a.phdLandPriceYearAtAcqIsManual = false;
-  if (!a.phdLandPricePerSqmAtAcq) a.phdLandPricePerSqmAtAcq = "";
-  if (!a.phdBuildingStdPriceAtAcq) a.phdBuildingStdPriceAtAcq = "";
-  if (!a.phdLandPriceYearAtFirst) a.phdLandPriceYearAtFirst = "";
-  if (a.phdLandPriceYearAtFirstIsManual === undefined) a.phdLandPriceYearAtFirstIsManual = false;
-  if (!a.phdLandPricePerSqmAtFirst) a.phdLandPricePerSqmAtFirst = "";
-  if (!a.phdBuildingStdPriceAtFirst) a.phdBuildingStdPriceAtFirst = "";
-  if (!a.phdTransferHousingPrice) a.phdTransferHousingPrice = "";
-  if (!a.phdLandPriceYearAtTransfer) a.phdLandPriceYearAtTransfer = "";
-  if (a.phdLandPriceYearAtTransferIsManual === undefined) a.phdLandPriceYearAtTransferIsManual = false;
-  if (!a.phdLandPricePerSqmAtTransfer) a.phdLandPricePerSqmAtTransfer = "";
-  if (!a.phdBuildingStdPriceAtTransfer) a.phdBuildingStdPriceAtTransfer = "";
-  if (!a.phdCommercialBuildingStdPriceAtAcq) a.phdCommercialBuildingStdPriceAtAcq = "";
-  if (!a.phdCommercialBuildingStdPriceAtFirst) a.phdCommercialBuildingStdPriceAtFirst = "";
-  if (!a.phdResidentialLandArea) a.phdResidentialLandArea = "";
-  // 상속 취득가액 의제 필드
-  if (a.inheritanceMode === undefined) a.inheritanceMode = null;
-  if (!a.inheritanceStartDate) a.inheritanceStartDate = "";
-  if (a.hasDecedentActualPrice === undefined) a.hasDecedentActualPrice = false;
-  if (!a.decedentAcquisitionPrice) a.decedentAcquisitionPrice = "";
-  if (!a.inheritanceReportedValue) a.inheritanceReportedValue = "";
-  if (!a.inheritanceValuationMethod) a.inheritanceValuationMethod = "";
-  if (!a.inheritanceValuationEvidence) a.inheritanceValuationEvidence = "";
-  if (a.useSupplementaryHelper === undefined) a.useSupplementaryHelper = false;
-  if (!a.supplementaryLandArea) a.supplementaryLandArea = "";
-  if (!a.supplementaryLandUnitPrice) a.supplementaryLandUnitPrice = "";
-  if (!a.supplementaryBuildingValue) a.supplementaryBuildingValue = "";
-  // 상속 주택 환산취득가 보조 입력 필드
-  if (a.inhHouseValEnabled === undefined) a.inhHouseValEnabled = false;
-  if (!a.inhHouseValFirstDisclosureDate) a.inhHouseValFirstDisclosureDate = "2005-04-30";
-  if (!a.inhHouseValLandArea) a.inhHouseValLandArea = "";
-  if (!a.inhHouseValLandPricePerSqmAtTransfer) a.inhHouseValLandPricePerSqmAtTransfer = "";
-  if (!a.inhHouseValLandPricePerSqmAtFirst) a.inhHouseValLandPricePerSqmAtFirst = "";
-  if (!a.inhHouseValLandPricePerSqmAtInheritance) a.inhHouseValLandPricePerSqmAtInheritance = "";
-  if (!a.inhHouseValHousePriceAtTransfer) a.inhHouseValHousePriceAtTransfer = "";
-  if (!a.inhHouseValHousePriceAtFirst) a.inhHouseValHousePriceAtFirst = "";
-  if (!a.inhHouseValBuildingStdPriceAtTransfer) a.inhHouseValBuildingStdPriceAtTransfer = "";
-  if (!a.inhHouseValBuildingStdPriceAtFirst) a.inhHouseValBuildingStdPriceAtFirst = "";
-  if (!a.inhHouseValBuildingStdPriceAtInheritance) a.inhHouseValBuildingStdPriceAtInheritance = "";
-  if (a.inhHouseValUseHousePriceOverride === undefined) a.inhHouseValUseHousePriceOverride = false;
-  if (!a.inhHouseValHousePriceAtInheritanceOverride) a.inhHouseValHousePriceAtInheritanceOverride = "";
-  if (a.useStandardPriceAtAcqOverride === undefined) a.useStandardPriceAtAcqOverride = false;
-  if (a.useStandardPriceAtTransferOverride === undefined) a.useStandardPriceAtTransferOverride = false;
-  // 검용주택 분리계산 + 보유 중 일부 용도변경 필드 (별도 모듈)
-  migrateMixedUseFields(a);
-  // 거주 정보 (자산-수준)
-  migrateResidenceFields(a);
-  return a as unknown as AssetForm;
-}

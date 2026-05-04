@@ -162,27 +162,35 @@ IndexedDB(Dexie.js) 기반. 향후 Supabase 도입 시 데이터 폐기 후 새�
 
 1. **PM/Plan**: 법령 근거 정리. 엔진+UI 시니어 **동시** 병렬 호출(Agent tool 단일 메시지). 신규 세목 UI 첫 진입 시 `docs/02-design/features/_new-tax-ui-kickoff.checklist.md` 복사·작성.
 2. **Design**: `docs/02-design/features/_template.engine.design.md` 복사로 시작. **케이스 인벤토리 표 필수(행≥1)** — 비어 있으면 Do 진입 금지. 사용자가 새 케이스 제시 시 코드보다 먼저 표에 행 추가 → anchor 약속.
-3. **Do**: 엔진 시니어 = 엔진 + anchor 테스트. UI 시니어 = 8개 동기화 지점 모두. 디자인 갱신 없이 우회 금지.
-4. **Check**: `ui-engine-sync-checker` + QA + 브라우저 수동 확인.
+3. **Do**: 엔진 시니어 = 엔진 + anchor 테스트. UI 시니어 = 14개 동기화 지점 모두. 디자인 갱신 없이 우회 금지.
+4. **Check**: `ui-engine-sync-checker` + QA + 브라우저 수동 확인 (실제 폼 입력 → 계산 → 결과 표시까지 전체 흐름).
 5. **Act**: 회귀 후속 + 디자인 환류. PDCA 상태: `.bkit/state/pdca-status.json`.
 
-### Definition of Done — UI 통합 8개 동기화 지점
+### Definition of Done — 14개 동기화 지점 (5단 파이프라인 전수)
 
-엔진 input·result 타입 변경 시 아래 **8개 모두** 동기화되어야 완료.
+엔진 input·result 타입 변경 시 아래 **14개 모두** 동기화되어야 완료. ⑫⑬⑭는 TypeScript 미감지 — 누락 시 데이터 침묵 stripping/엔진 미도달 (2026-05-04 이월과세 작업에서 발견).
 
+**클라이언트 8개 (기존)**:
 ① 폼 상태 타입 → ② initial value → ③ normalize fallback → ④ API 변환 (`lib/calc/{tax-type}-api.ts`) → ⑤ UI 입력 위젯 → ⑥ 사이드바 합계 (해당 시) → ⑦ 결과 카드 산식 → ⑧ **validation** (`lib/calc/{tax-type}-validate.ts`)
+
+**API/Route 6개 (신규 enum/입력객체 추가 시 추가)**:
+⑨ Zod enum (메인 — `lib/api/transfer-tax-schema.ts`) → ⑩ Zod enum (컴패니언 + `addPropertyRefines` 헬퍼 타입 — `transfer-tax-schema-sub.ts`) → ⑪ 자산-수준 `acquisitionDate` fallback (별도 서브객체에 등기접수일/취득일 받는 경우) → **⑫ Zod 입력 객체 정의** (신규 서브객체 자체를 Zod로 명시 — 미정의 시 침묵 stripping) → **⑬ callTransferTaxAPI body spread** (헬퍼만 만들고 메인 body 통합 누락 패턴 차단) → **⑭ Route handler 엔진 input 매핑** (Date 변환 포함)
+
+**핵심 원칙**: "엔진 타입에 추가했으니 끝"이 아니라 사용자 입력이 엔진 input에 도달하는 5단 파이프라인을 모두 점검:
+폼 상태(①②③) → API 변환 헬퍼(④⑬) → fetch body(⑬) → Zod 검증(⑨⑩⑫) → Route handler(⑪⑭) → 엔진 input
 
 **⑧ 규칙**: API/UI fallback이 있는 필드는 validate에서도 같은 fallback 인식. UI 통과↔validate 차단 모순 금지.
 
-위치 상세는 [components/calc/CLAUDE.md](components/calc/CLAUDE.md).
+위치 상세는 [components/calc/CLAUDE.md](components/calc/CLAUDE.md). 14개 매트릭스 상세는 메모리 `feedback_api_zod_schema_sync.md`.
 
 **자가 점검 (작업 완료 보고 전 필수)**:
-- [ ] 케이스 인벤토리 표 모든 행 ☑ (anchor 테스트 작성 완료)
-- [ ] 8개 동기화 지점 전부 반영됨
+- [ ] **케이스 매트릭스 표 모든 분기 enumerate 완료** (UI 시니어 — 모드/취득원인 신설 시 매트릭스 행 ≥ 모든 분기. 토글/라디오는 의미 단위 분리. 가장 단순한 케이스부터 점검)
+- [ ] anchor 테스트 작성 완료
+- [ ] 14개 동기화 지점 전부 반영됨 (특히 ⑫⑬⑭ TypeScript 미감지 영역 grep 자가 점검)
 - [ ] API fallback 추가 시 validation도 동기화 (⑧)
 - [ ] `npx tsc --noEmit` 0건
 - [ ] `npx vitest run __tests__/tax-engine/{tax-type}/` 통과
-- [ ] 브라우저 수동 확인 또는 "미수행" 명시
+- [ ] **브라우저 수동 확인** — 폼 입력 → 계산 → 결과 표시까지 전체 흐름 (Network 탭에서 request body에 신규 필드 포함 여부 확인). 미수행 시 명시.
 
 ## 참조 문서
 
@@ -191,7 +199,7 @@ IndexedDB(Dexie.js) 기반. 향후 Supabase 도입 시 데이터 폐기 후 새�
 | 영역 | 파일 |
 |---|---|
 | 세금 엔진 (파일 조직·의존·정수 연산·양도세 특수 설계) | [lib/tax-engine/CLAUDE.md](lib/tax-engine/CLAUDE.md) |
-| UI 마법사 (StepWizard·공용 컴포넌트·8개 동기화 지점 상세) | [components/calc/CLAUDE.md](components/calc/CLAUDE.md) |
+| UI 마법사 (StepWizard·공용 컴포넌트·14개 동기화 지점 상세) | [components/calc/CLAUDE.md](components/calc/CLAUDE.md) |
 | 테스트 (Mock 패턴·시나리오 분할·anchor) | [__tests__/tax-engine/CLAUDE.md](__tests__/tax-engine/CLAUDE.md) |
 | 로컬 저장소 (Dexie·resultData·Supabase 전환) | [lib/storage/CLAUDE.md](lib/storage/CLAUDE.md) |
 

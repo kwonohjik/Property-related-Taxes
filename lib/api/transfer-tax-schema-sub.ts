@@ -255,7 +255,7 @@ export const companionAssetSchema = z.object({
    */
   fixedSalePrice: z.number().int().positive().optional(),
   /** 동반자산 취득 원인 — 기본 "inheritance" (기존 동작 호환) */
-  acquisitionCause: z.enum(["purchase", "inheritance", "gift"]).default("inheritance"),
+  acquisitionCause: z.enum(["purchase", "inheritance", "gift", "carryover_gift"]).default("inheritance"),
   /** 매매 시 환산취득가 사용 여부 */
   useEstimatedAcquisition: z.boolean().optional(),
   /** 본인 취득일 (YYYY-MM-DD) — 보유기간 산정용 */
@@ -276,7 +276,7 @@ export function addPropertyRefines(
     standardPriceAtTransfer?: number;
     acquisitionDate: string;
     transferDate: string;
-    acquisitionCause?: "purchase" | "inheritance" | "gift";
+    acquisitionCause?: "purchase" | "inheritance" | "gift" | "carryover_gift";
     decedentAcquisitionDate?: string;
     donorAcquisitionDate?: string;
     annualBasicDeductionUsed?: number;

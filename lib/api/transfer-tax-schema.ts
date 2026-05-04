@@ -36,7 +36,7 @@ const propertyBaseShape = {
   transferDate: z.string().date(),
   acquisitionPrice: z.number().int().nonnegative(),
   acquisitionDate: z.string().date(),
-  acquisitionCause: z.enum(["purchase", "inheritance", "gift"]).optional(),
+  acquisitionCause: z.enum(["purchase", "inheritance", "gift", "carryover_gift"]).optional(),
   decedentAcquisitionDate: z.string().date().optional(),
   donorAcquisitionDate: z.string().date().optional(),
   expenses: z.number().int().nonnegative(),
@@ -116,6 +116,21 @@ const propertyBaseShape = {
   primaryActualSalePrice: z.number().int().positive().optional(),
   /** 개별주택가격 미공시 취득 시 3-시점 환산취득가 계산 입력 (§164⑤) */
   preHousingDisclosure: preHousingDisclosureSchema.optional(),
+  /** 배우자등 이월과세 (§97조의2) — acquisitionCause === "carryover_gift" 시 필수 */
+  carryoverTaxation: z.object({
+    giftRegistryDate: z.string().date(),
+    donorAcquisitionDate: z.string().date(),
+    donorAcquisitionPrice: z.number().int().nonnegative().optional(),
+    useEstimatedAcquisition: z.boolean(),
+    giftTaxAmount: z.number().int().nonnegative(),
+    donorCapitalExpenditure: z.number().int().nonnegative().optional(),
+    giftDateValuation: z.number().int().nonnegative(),
+    exclusionDeclared: z.object({
+      expropriationWithin2Years: z.boolean().optional(),
+      oneHouseExemptionApplies: z.boolean().optional(),
+      isFamilyBusinessInheritedAsset: z.boolean().optional(),
+    }).optional(),
+  }).optional(),
   /** 상속 부동산 취득가액 의제 (소령 §176조의2④·§163⑨) — 의제취득일 전/후 분기 */
   inheritedAcquisition: inheritedAcquisitionSchema.optional(),
   /** 상속 주택 환산취득가 보조 입력 — 주택 + 상속개시일 < 2005-04-30 시 3-시점 합계 기준시가 자동 산출 */

@@ -93,30 +93,17 @@ import {
   type InheritedAcquisitionStepResult,
 } from "./inheritance-acquisition-helpers";
 
-// ============================================================
-// 1-A. 타입 정의 — 공개 타입은 ./types/transfer.types 로 분리
-// ============================================================
-
+// 공개 타입 — ./types/transfer.types 참조
 import type {
   TransferTaxInput,
   TransferReduction,
   CalculationStep,
   TransferTaxResult,
 } from "./types/transfer.types";
+import type { CarryoverTaxationDetail } from "./types/transfer-carryover.types";
+export type { TransferTaxInput, TransferReduction, CalculationStep, TransferTaxResult };
 
-// 하위 호환: "./transfer-tax"에서 직접 타입을 import하던 기존 소비자들을 위해 재수출한다.
-export type {
-  TransferTaxInput,
-  TransferReduction,
-  CalculationStep,
-  TransferTaxResult,
-};
-
-
-// ============================================================
-// 내부 헬퍼 함수 — ./transfer-tax-helpers 로 분리
-// ============================================================
-
+// 내부 헬퍼 — 분리 파일
 import {
   parseRatesFromMap,
   checkExemption,
@@ -125,20 +112,15 @@ import {
   calcLongTermHoldingDeduction,
   calcBasicDeduction,
 } from "./transfer-tax-helpers";
+import { calculateBuildingPenalty, calcTax, calcReductions } from "./transfer-tax-rate-calc";
+import { calcCarryoverScenarios } from "./transfer-tax-carryover";
 
-import {
-  calculateBuildingPenalty,
-  calcTax,
-  calcReductions,
-} from "./transfer-tax-rate-calc";
-
-// 하위 호환: transfer-tax-aggregate 등 외부 소비자를 위해 일부 헬퍼를 재수출
+// 하위 호환 재수출
 export { parseRatesFromMap } from "./transfer-tax-helpers";
 export { calcTax } from "./transfer-tax-rate-calc";
 
-
 // ============================================================
-// 메인 함수: calculateTransferTax (1-G)
+// 메인 함수: calculateTransferTax
 // ============================================================
 
 export function calculateTransferTax(
@@ -193,7 +175,33 @@ export function calculateTransferTax(
   }
 
   // 이 지점 이후 로컬 input/workingInput은 동일 (pre-1990 + 상속 취득가액 적용 완료).
-  const workingInput = input;
+  let workingInput = input;
+
+  // STEP 0.475: 배우자등 이월과세 판정 및 비교과세 실행 (소득세법 §97조의2)
+  // carryoverTaxation 없거나 acquisitionCause !== "carryover_gift" 이면 null 반환 → skip.
+  // 재귀 호출 시 carryoverTaxation이 undefined이므로 자동으로 skip됨.
+  let carryoverDetail: CarryoverTaxationDetail | undefined;
+  if (rawInput.acquisitionCause === "carryover_gift" && rawInput.carryoverTaxation) {
+    const carryoverResult = calcCarryoverScenarios(
+      workingInput,
+      rates,
+      // calculateTransferTax를 주입 — 재귀 호출 시 carryoverTaxation=undefined이므로 무한 루프 없음
+      calculateTransferTax,
+    );
+    if (carryoverResult) {
+      carryoverDetail = carryoverResult.detail;
+      // 채택 시나리오 입력으로 workingInput 교체 → 이후 STEP 0.5~11이 그대로 통과
+      workingInput = carryoverResult.adoptedInput;
+      steps.push({
+        label: "배우자등 이월과세 판정",
+        formula: carryoverResult.detail.isEligible
+          ? `Scenario A(결정세액 ${carryoverResult.detail.scenarioA.determinedTax.toLocaleString()}) vs B(${carryoverResult.detail.scenarioB.determinedTax.toLocaleString()}) → ${carryoverResult.detail.adoptedScenario} 채택`
+          : `이월과세 적용배제 (사유: ${carryoverResult.detail.exclusionReason ?? "없음"})`,
+        amount: 0,
+        legalBasis: TRANSFER.CARRYOVER_TAXATION,
+      });
+    }
+  }
 
   // STEP 0.5: 다주택 중과세 판정 (houses[] 제공 + 주택 수 산정 규칙 로드 완료 시)
   let multiHouseSurchargeResult: MultiHouseSurchargeResult | undefined;
@@ -270,6 +278,7 @@ export function calculateTransferTax(
       totalTax: 0,
       steps,
       pre1990LandValuationDetail: pre1990LandResult,
+      carryoverTaxationDetail: carryoverDetail,
     };
   }
 
@@ -522,7 +531,11 @@ export function calculateTransferTax(
     residenceYearsForStep >= 2 &&
     longTermHoldingDeduction > 0;
   const lthdFormulaRate = isOneHouseSpecial
-    ? `보유 ${holdingPeriod.years}년×4% + 거주 ${residenceYearsForStep}년×4% = ${Math.round(longTermHoldingRate * 100)}% (80% 한도)`
+    ? (() => {
+        const hPart = Math.min(holdingPeriod.years * 4, 40);
+        const rPart = Math.min(residenceYearsForStep * 4, 40);
+        return `보유 ${holdingPeriod.years}년×4%=${hPart}% + 거주 ${residenceYearsForStep}년×4%=${rPart}% = ${Math.round(longTermHoldingRate * 100)}%`;
+      })()
     : `보유 ${holdingPeriod.years}년×2% = ${Math.round(longTermHoldingRate * 100)}% (30% 한도)`;
   steps.push({
     label: "장기보유특별공제",
@@ -774,5 +787,6 @@ export function calculateTransferTax(
     preHousingDisclosureDetail: splitDetail?.preHousingDisclosureDetail,
     inheritedAcquisitionDetail: inheritedAcquisitionStep?.result,
     inheritedHouseValuationDetail: inheritedAcquisitionStep?.houseValuationResult,
+    carryoverTaxationDetail: carryoverDetail,
   };
 }

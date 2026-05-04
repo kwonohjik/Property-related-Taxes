@@ -84,7 +84,7 @@ export default function TransferTaxCalculator({
   const { activeClientId } = useProfessionalStore();
 
   // 로컬 이력 자동 저장 — 결과 화면 진입 시 1회
-  useAutoSaveCalculation({
+  const { pendingEditId, saveAsUpdate, saveAsNew } = useAutoSaveCalculation({
     taxType: "transfer",
     inputData: formData as unknown as Record<string, unknown>,
     resultData: isResult ? (result as unknown as Record<string, unknown>) : null,
@@ -374,7 +374,7 @@ export default function TransferTaxCalculator({
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
       {/* 헤더 */}
-      <div className="mb-6">
+      <div className="mb-6 print:hidden">
         <p className="text-xs text-muted-foreground mb-1">한국 부동산 세금 계산기</p>
         <div className="flex items-center justify-between gap-2">
           <h1 className="text-2xl font-bold">양도소득세 계산기</h1>
@@ -384,22 +384,45 @@ export default function TransferTaxCalculator({
 
       {isResult && result ? (
         result.mode === "single" ? (
-          <TransferTaxResultView
-            result={result.result}
-            onReset={handleReset}
-            onBack={() => {
-              setStep(totalSteps - 1);
-              setError(null);
-            }}
-            onGoToFirst={() => {
-              setStep(0);
-              setError(null);
-            }}
-            onLoginPrompt={!isLoggedIn}
-            showMultiTransferButton={!isEmbeddedInMulti}
-            onContinueToMulti={handleContinueToMulti}
-            formData={formData}
-          />
+          <>
+            {pendingEditId && (
+              <div className="mb-4 flex items-center gap-3 rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950/30 px-4 py-3 text-sm">
+                <span className="flex-1 text-amber-800 dark:text-amber-300">
+                  이전 이력을 불러와 수정했습니다. 저장 방식을 선택하세요.
+                </span>
+                <button
+                  type="button"
+                  onClick={saveAsUpdate}
+                  className="shrink-0 rounded-md bg-amber-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-700 transition-colors"
+                >
+                  기존 이력 덮어쓰기
+                </button>
+                <button
+                  type="button"
+                  onClick={saveAsNew}
+                  className="shrink-0 rounded-md border border-amber-400 px-3 py-1.5 text-xs font-medium text-amber-800 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors"
+                >
+                  새 이력으로 저장
+                </button>
+              </div>
+            )}
+            <TransferTaxResultView
+              result={result.result}
+              onReset={handleReset}
+              onBack={() => {
+                setStep(totalSteps - 1);
+                setError(null);
+              }}
+              onGoToFirst={() => {
+                setStep(0);
+                setError(null);
+              }}
+              onLoginPrompt={!isLoggedIn}
+              showMultiTransferButton={!isEmbeddedInMulti}
+              onContinueToMulti={handleContinueToMulti}
+              formData={formData}
+            />
+          </>
         ) : result.mode === "mixed-use" ? (
           <div className="space-y-4">
             <MixedUseResultCard breakdown={result.result} formData={formData} />
@@ -528,7 +551,7 @@ export default function TransferTaxCalculator({
           {/* 에러 메시지 */}
           {error && (
             <div className="mt-4 rounded-lg border border-destructive/50 bg-destructive/5 px-4 py-3 text-sm text-destructive">
-              <p>{error}</p>
+              <p className="whitespace-pre-line">{error}</p>
               {isLastStep && (
                 <button
                   type="button"

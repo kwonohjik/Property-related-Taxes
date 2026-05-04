@@ -451,8 +451,10 @@ export function calcLongTermHoldingDeduction(
   const rateForYears = (years: number): number => {
     if (years < 3) return 0;
     if (isOneHouseSingle && residenceYears >= 2) {
-      // L-3: 1세대1주택 (보유 × 4% + 거주 × 4%, 최대 80%)
-      return Math.min(years * 0.04 + residenceYears * 0.04, 0.80);
+      // L-3: 1세대1주택 — 보유기간분·거주기간분 각각 40% 캡 후 합산 (소득세법 §95② 별표)
+      const holdingPart = Math.min(years * 0.04, 0.40);
+      const residencePart = Math.min(residenceYears * 0.04, 0.40);
+      return holdingPart + residencePart;
     }
     // L-4: 일반 (보유 × 2%, 최대 30%)
     return Math.min(years * 0.02, 0.30);

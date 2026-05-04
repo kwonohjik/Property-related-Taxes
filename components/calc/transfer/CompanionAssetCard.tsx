@@ -14,6 +14,7 @@ import { CompanionSaleModeBlock, type BundledSaleMode } from "./CompanionSaleMod
 import { CompanionAcqPurchaseBlock } from "./CompanionAcqPurchaseBlock";
 import { CompanionAcqInheritanceBlock } from "./CompanionAcqInheritanceBlock";
 import { CompanionAcqGiftBlock } from "./CompanionAcqGiftBlock";
+import { CarryoverGiftBlock } from "./CarryoverGiftBlock";
 import { InheritedAcquisitionDeemedSection } from "./InheritedAcquisitionDeemedSection";
 import { NblSectionContainer } from "./nbl/NblSectionContainer";
 import { MixedUseToggleRow, MixedUseExpandedPanel } from "./MixedUseSection";
@@ -38,6 +39,7 @@ const ACQUISITION_CAUSE_OPTIONS = [
   { value: "purchase", label: "매매" },
   { value: "inheritance", label: "상속" },
   { value: "gift", label: "증여" },
+  { value: "carryover_gift", label: "이월과세(증여)" },
 ] as const;
 
 interface Props {
@@ -333,7 +335,7 @@ export function CompanionAssetCard({
       {/* 취득 원인 */}
       <div className="space-y-2">
         <label className="block text-sm font-medium">취득 원인</label>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-4 gap-2">
           {ACQUISITION_CAUSE_OPTIONS.map((opt) => (
             <button
               key={opt.value}
@@ -481,6 +483,14 @@ export function CompanionAssetCard({
             onDonorAcquisitionDateChange={(v) => onChange({ donorAcquisitionDate: v })}
             fixedAcquisitionPrice={asset.fixedAcquisitionPrice}
             onFixedAcquisitionPriceChange={(v) => onChange({ fixedAcquisitionPrice: v })}
+          />
+        )}
+
+        {asset.acquisitionCause === "carryover_gift" && (
+          <CarryoverGiftBlock
+            asset={asset}
+            transferDate={transferDate ?? ""}
+            onChange={onChange}
           />
         )}
       </div>
