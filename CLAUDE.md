@@ -8,6 +8,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 구현 현황은 [`docs/00-pm/korean-tax-calc.roadmap.md`](docs/00-pm/korean-tax-calc.roadmap.md) 참조. 양도세만 엔진·UI·API·테스트 완전 구현됨. 취득세 이하 세목은 엔진 완료, UI 구현 대기.
 
+진행 중: 양도세 감면 23개 조문 확장 — `lib/tax-engine/transfer-reductions/` Phase 1 골격 완료 (§99의3 우선 구현 중). 계획서: `docs/00-pm/transfer-reduction-expansion.plan.md`.
+
 ## ⚠️ Next.js 16 주의사항
 
 **This is NOT the Next.js you know** — API·컨벤션·파일 구조가 학습 데이터와 다를 수 있다.
@@ -58,6 +60,7 @@ Layer 1: Orchestrator (app/api/calc/{tax-type}/route.ts)
 Layer 2: Pure Engine (lib/tax-engine/*.ts)
   → DB 직접 호출 없음, 순수 함수 — 테스트 시 DB mock 불필요
   → 단방향 의존만 허용: comprehensive → property (역방향 금지)
+  → 감면 라우터: lib/tax-engine/transfer-reductions/ (23개 조문 메타데이터·시한검증·개별 구현 모듈)
 ```
 
 세부 파일 조직·의존 규칙·정수 연산은 [lib/tax-engine/CLAUDE.md](lib/tax-engine/CLAUDE.md) 참조.

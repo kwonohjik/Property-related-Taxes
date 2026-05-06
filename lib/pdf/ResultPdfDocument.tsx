@@ -171,46 +171,44 @@ function getTotalTax(taxType: string, r: R): number | undefined {
 // ─── 세금 유형별 상세 섹션 ────────────────────────────────────────
 
 function TransferSection({ r }: { r: R }) {
-  const isExempt = bool(r.isExempt);
-  if (isExempt) return null;
+  if (bool(r.isExempt)) return null;
+  // Round 11 (2026-05-07): 양도세 신고서 양식 통일 — FilingFormTable과 동일 흐름.
+  const transferGain = (num(r.transferGain) ?? 0) as number;
+  const ltdAmount = (num(r.longTermHoldingDeduction) ?? 0) as number;
+  const taxableGain = (num(r.taxableGain) ?? transferGain) as number;
+  const incomeAmount = Math.max(0, taxableGain - ltdAmount);
+  const reducibleIncome = (num(r.reducibleIncome) ?? 0) as number;
+  const new993 = r.new993Detail as { isEligible?: boolean; reducibleTransferIncome?: number; ruralSurtax?: number } | undefined;
+  const new993Reducible = (new993?.isEligible && new993.reducibleTransferIncome) ? new993.reducibleTransferIncome : 0;
+  const incomeAmountAfter = Math.max(0, incomeAmount - reducibleIncome - new993Reducible);
+  const ruralSurtax = new993?.ruralSurtax ?? 0;
+  const penaltyTax = (num(r.penaltyTax) ?? 0) as number;
+  const determinedTax = (num(r.determinedTax) ?? 0) as number;
+  const totalDeterminedTax = determinedTax + penaltyTax;
   return (
     <>
-      <Text style={s.sectionTitle}>계산 내역</Text>
+      <Text style={s.sectionTitle}>신고서 양식</Text>
       <TransferSplitSection r={r} />
       <View style={s.table}>
-        {num(r.transferGain) !== undefined && (
-          <View style={s.row}><Text style={s.lbl}>양도차익</Text><Text style={s.val}>{fmt(r.transferGain)}</Text></View>
-        )}
-        {num(r.taxableGain) !== undefined && num(r.taxableGain) !== num(r.transferGain) && (
-          <View style={s.row}><Text style={s.lblSub}>과세 양도차익 (12억 초과분)</Text><Text style={s.val}>{fmt(r.taxableGain)}</Text></View>
-        )}
-        {num(r.longTermHoldingRate) !== undefined && (
-          <View style={s.row}>
-            <Text style={s.lbl}>장기보유특별공제 ({fmtRate(r.longTermHoldingRate)})</Text>
-            <Text style={s.val}>{num(r.longTermHoldingDeduction) && (r.longTermHoldingDeduction as number) > 0 ? `- ${fmt(r.longTermHoldingDeduction)}` : "해당없음"}</Text>
-          </View>
-        )}
-        {num(r.basicDeduction) !== undefined && (
-          <View style={s.row}><Text style={s.lbl}>기본공제</Text><Text style={s.val}>{(r.basicDeduction as number) > 0 ? `- ${fmt(r.basicDeduction)}` : "0"}</Text></View>
-        )}
-        {num(r.taxBase) !== undefined && (
-          <View style={s.rowBg}><Text style={s.lbl}>과세표준</Text><Text style={s.valAccent}>{fmt(r.taxBase)}</Text></View>
-        )}
-        {num(r.calculatedTax) !== undefined && (
-          <View style={s.row}>
-            <Text style={s.lbl}>산출세액 ({fmtRate(r.appliedRate)}{num(r.surchargeRate) ? ` + 중과 ${fmtRate(r.surchargeRate)}` : ""})</Text>
-            <Text style={s.val}>{fmt(r.calculatedTax)}</Text>
-          </View>
-        )}
-        {num(r.reductionAmount) !== undefined && (r.reductionAmount as number) > 0 && (
-          <View style={s.row}><Text style={s.lbl}>감면 ({str(r.reductionType) ?? ""})</Text><Text style={s.val}>- {fmt(r.reductionAmount)}</Text></View>
-        )}
-        {num(r.determinedTax) !== undefined && (
-          <View style={s.rowBg}><Text style={s.lbl}>결정세액</Text><Text style={s.valAccent}>{fmt(r.determinedTax)}</Text></View>
-        )}
-        {num(r.localIncomeTax) !== undefined && (
-          <View style={s.rowLast}><Text style={s.lbl}>지방소득세 (10%)</Text><Text style={s.val}>{fmt(r.localIncomeTax)}</Text></View>
-        )}
+        {num(r.transferPrice) !== undefined && (<View style={s.row}><Text style={s.lbl}>양도가액</Text><Text style={s.val}>{fmt(r.transferPrice)}</Text></View>)}
+        {num(r.acquisitionPrice) !== undefined && (<View style={s.row}><Text style={s.lbl}>취득가액</Text><Text style={s.val}>{fmt(r.acquisitionPrice)}</Text></View>)}
+        <View style={s.row}><Text style={s.lbl}>전체 양도차익</Text><Text style={s.val}>{fmt(transferGain)}</Text></View>
+        {taxableGain !== transferGain && (<View style={s.row}><Text style={s.lblSub}>과세대상 양도차익</Text><Text style={s.val}>{fmt(taxableGain)}</Text></View>)}
+        {num(r.longTermHoldingRate) !== undefined && (<View style={s.row}><Text style={s.lbl}>장기보유특별공제 ({fmtRate(r.longTermHoldingRate)})</Text><Text style={s.val}>{ltdAmount > 0 ? `- ${fmt(ltdAmount)}` : "해당없음"}</Text></View>)}
+        <View style={s.row}><Text style={s.lbl}>양도소득금액</Text><Text style={s.val}>{fmt(incomeAmount)}</Text></View>
+        {num(r.nontaxableGainAmount) !== undefined && (r.nontaxableGainAmount as number) > 0 && (<View style={s.row}><Text style={s.lblSub}>비과세 양도소득금액 (소령 §161①)</Text><Text style={s.val}>- {fmt(r.nontaxableGainAmount)}</Text></View>)}
+        <View style={s.row}><Text style={s.lbl}>세액감면대상금액</Text><Text style={s.val}>{reducibleIncome > 0 ? fmt(reducibleIncome) : "0"}</Text></View>
+        <View style={s.row}><Text style={s.lbl}>소득금액 감면대상</Text><Text style={s.val}>{new993Reducible > 0 ? fmt(new993Reducible) : "0"}</Text></View>
+        <View style={s.row}><Text style={s.lbl}>감면후 소득금액</Text><Text style={s.val}>{fmt(incomeAmountAfter)}</Text></View>
+        {num(r.basicDeduction) !== undefined && (<View style={s.row}><Text style={s.lbl}>기본공제</Text><Text style={s.val}>{(r.basicDeduction as number) > 0 ? `- ${fmt(r.basicDeduction)}` : "0"}</Text></View>)}
+        {num(r.taxBase) !== undefined && (<View style={s.rowBg}><Text style={s.lbl}>과세표준</Text><Text style={s.valAccent}>{fmt(r.taxBase)}</Text></View>)}
+        {num(r.calculatedTax) !== undefined && (<View style={s.row}><Text style={s.lbl}>산출세액 ({fmtRate(r.appliedRate)}{num(r.surchargeRate) ? ` + 중과 ${fmtRate(r.surchargeRate)}` : ""})</Text><Text style={s.val}>{fmt(r.calculatedTax)}</Text></View>)}
+        {num(r.reductionAmount) !== undefined && (r.reductionAmount as number) > 0 && (<View style={s.row}><Text style={s.lbl}>감면세액 ({str(r.reductionType) ?? ""})</Text><Text style={s.val}>- {fmt(r.reductionAmount)}</Text></View>)}
+        <View style={s.rowBg}><Text style={s.lbl}>결정세액</Text><Text style={s.valAccent}>{fmt(determinedTax)}</Text></View>
+        {penaltyTax > 0 && (<View style={s.row}><Text style={s.lbl}>가산세액</Text><Text style={s.val}>{fmt(penaltyTax)}</Text></View>)}
+        <View style={s.rowBg}><Text style={s.lbl}>총결정세액</Text><Text style={s.valAccent}>{fmt(totalDeterminedTax)}</Text></View>
+        {ruralSurtax > 0 && (<View style={s.row}><Text style={s.lbl}>농어촌특별세 (§99의3 등)</Text><Text style={s.val}>{fmt(ruralSurtax)}</Text></View>)}
+        {num(r.localIncomeTax) !== undefined && (<View style={s.rowLast}><Text style={s.lbl}>지방소득세 산출세액 (10%)</Text><Text style={s.val}>{fmt(r.localIncomeTax)}</Text></View>)}
       </View>
     </>
   );
@@ -281,35 +279,45 @@ function TransferMultiSection({ r }: { r: R }) {
   const lossTable = Array.isArray(r.lossOffsetTable) ? (r.lossOffsetTable as R[]) : [];
   const comparedTax = str(r.comparedTaxApplied) ?? "none";
 
+  // Round 11 (2026-05-07): 다건 모드 신고서 양식 통일 — 자산별 §99의3 reducible · 농특세 합산
+  let aggReducibleIncome = 0;
+  let aggNew993Reducible = 0;
+  let aggRuralSurtax = 0;
+  for (const p of props) {
+    aggReducibleIncome += (num(p.reducibleIncome) ?? 0) as number;
+    const np = p.new993Detail as { isEligible?: boolean; reducibleTransferIncome?: number; ruralSurtax?: number } | undefined;
+    if (np?.isEligible) {
+      aggNew993Reducible += np.reducibleTransferIncome ?? 0;
+      aggRuralSurtax += np.ruralSurtax ?? 0;
+    }
+  }
+  const totalIncomeAfterOffset = (num(r.totalIncomeAfterOffset) ?? 0) as number;
+  const incomeAmountAfter = Math.max(0, totalIncomeAfterOffset - aggReducibleIncome - aggNew993Reducible);
+  const determinedTax = (num(r.determinedTax) ?? 0) as number;
+  const penaltyTax = (num(r.penaltyTax) ?? 0) as number;
+  const totalDeterminedTax = determinedTax + penaltyTax;
+
   return (
     <>
-      <Text style={s.sectionTitle}>합산 계산 내역</Text>
+      <Text style={s.sectionTitle}>합산 신고서 양식</Text>
       <View style={s.table}>
         <View style={s.row}><Text style={s.lbl}>총 양도차익</Text><Text style={s.val}>{fmt(r.totalTransferGain)}</Text></View>
-        {num(r.totalLongTermHoldingDeduction) !== undefined && (r.totalLongTermHoldingDeduction as number) > 0 && (
-          <View style={s.row}><Text style={s.lbl}>장기보유특별공제</Text><Text style={s.val}>- {fmt(r.totalLongTermHoldingDeduction)}</Text></View>
-        )}
-        <View style={s.row}><Text style={s.lbl}>통산 후 양도소득금액</Text><Text style={s.val}>{fmt(r.totalIncomeAfterOffset)}</Text></View>
-        {num(r.unusedLoss) !== undefined && (r.unusedLoss as number) > 0 && (
-          <View style={s.row}><Text style={s.lbl}>소멸 차손 (이월 불인정)</Text><Text style={s.val}>- {fmt(r.unusedLoss)}</Text></View>
-        )}
+        {num(r.totalLongTermHoldingDeduction) !== undefined && (r.totalLongTermHoldingDeduction as number) > 0 && (<View style={s.row}><Text style={s.lbl}>장기보유특별공제</Text><Text style={s.val}>- {fmt(r.totalLongTermHoldingDeduction)}</Text></View>)}
+        <View style={s.row}><Text style={s.lbl}>통산 후 양도소득금액</Text><Text style={s.val}>{fmt(totalIncomeAfterOffset)}</Text></View>
+        {(num(r.unusedLoss) ?? 0) > 0 && (<View style={s.row}><Text style={s.lblSub}>소멸 차손 (이월 불인정)</Text><Text style={s.val}>- {fmt(r.unusedLoss)}</Text></View>)}
+        <View style={s.row}><Text style={s.lbl}>세액감면대상금액</Text><Text style={s.val}>{aggReducibleIncome > 0 ? fmt(aggReducibleIncome) : "0"}</Text></View>
+        <View style={s.row}><Text style={s.lbl}>소득금액 감면대상</Text><Text style={s.val}>{aggNew993Reducible > 0 ? fmt(aggNew993Reducible) : "0"}</Text></View>
+        <View style={s.row}><Text style={s.lbl}>감면후 소득금액</Text><Text style={s.val}>{fmt(incomeAmountAfter)}</Text></View>
         <View style={s.row}><Text style={s.lbl}>기본공제 (§103)</Text><Text style={s.val}>- {fmt(r.basicDeduction)}</Text></View>
         <View style={s.rowBg}><Text style={s.lbl}>과세표준</Text><Text style={s.valAccent}>{fmt(r.taxBase)}</Text></View>
-        {comparedTax !== "none" && (
-          <>
-            <View style={s.row}><Text style={s.lbl}>방법 A — 전체 누진</Text><Text style={s.val}>{fmt(r.calculatedTaxByGeneral)}</Text></View>
-            <View style={s.row}><Text style={s.lbl}>방법 B — 세율군별 (§104의2)</Text><Text style={s.val}>{fmt(r.calculatedTaxByGroups)}</Text></View>
-          </>
-        )}
+        {comparedTax !== "none" && (<><View style={s.row}><Text style={s.lblSub}>방법 A — 전체 누진</Text><Text style={s.val}>{fmt(r.calculatedTaxByGeneral)}</Text></View><View style={s.row}><Text style={s.lblSub}>방법 B — 세율군별 (§104의2)</Text><Text style={s.val}>{fmt(r.calculatedTaxByGroups)}</Text></View></>)}
         <View style={s.row}><Text style={s.lbl}>산출세액{comparedTax !== "none" ? ` (${comparedTax === "groups" ? "방법 B" : "방법 A"} 적용)` : ""}</Text><Text style={s.val}>{fmt(r.calculatedTax)}</Text></View>
-        {num(r.reductionAmount) !== undefined && (r.reductionAmount as number) > 0 && (
-          <View style={s.row}><Text style={s.lbl}>감면세액 합계</Text><Text style={s.val}>- {fmt(r.reductionAmount)}</Text></View>
-        )}
-        <View style={s.rowBg}><Text style={s.lbl}>결정세액</Text><Text style={s.valAccent}>{fmt(r.determinedTax)}</Text></View>
-        {num(r.penaltyTax) !== undefined && (r.penaltyTax as number) > 0 && (
-          <View style={s.row}><Text style={s.lbl}>가산세</Text><Text style={s.val}>{fmt(r.penaltyTax)}</Text></View>
-        )}
-        <View style={s.rowLast}><Text style={s.lbl}>지방소득세 (10%)</Text><Text style={s.val}>{fmt(r.localIncomeTax)}</Text></View>
+        {(num(r.reductionAmount) ?? 0) > 0 && (<View style={s.row}><Text style={s.lbl}>감면세액 합계</Text><Text style={s.val}>- {fmt(r.reductionAmount)}</Text></View>)}
+        <View style={s.rowBg}><Text style={s.lbl}>결정세액</Text><Text style={s.valAccent}>{fmt(determinedTax)}</Text></View>
+        {penaltyTax > 0 && (<View style={s.row}><Text style={s.lbl}>가산세액</Text><Text style={s.val}>{fmt(penaltyTax)}</Text></View>)}
+        <View style={s.rowBg}><Text style={s.lbl}>총결정세액</Text><Text style={s.valAccent}>{fmt(totalDeterminedTax)}</Text></View>
+        {aggRuralSurtax > 0 && (<View style={s.row}><Text style={s.lbl}>농어촌특별세 (§99의3 등)</Text><Text style={s.val}>{fmt(aggRuralSurtax)}</Text></View>)}
+        <View style={s.rowLast}><Text style={s.lbl}>지방소득세 산출세액 (10%)</Text><Text style={s.val}>{fmt(r.localIncomeTax)}</Text></View>
       </View>
 
       {lossTable.length > 0 && (
@@ -331,104 +339,34 @@ function TransferMultiSection({ r }: { r: R }) {
 
       {props.length > 0 && (
         <>
-          <Text style={s.sectionTitle}>건별 상세 내역</Text>
+          <Text style={s.sectionTitle}>자산별 신고서 양식</Text>
           {props.map((p, idx) => {
-            const propSteps = Array.isArray(p.steps) ? (p.steps as CalcStep[]) : [];
-            const gainStep = propSteps.find((st) => st.label.includes("양도차익"));
-            const lthdStep = propSteps.find((st) => st.label.includes("장기보유특별공제"));
-            const taxBaseStep = propSteps.find((st) => st.label.includes("과세표준"));
-            const calcTaxStep = propSteps.find((st) => st.label.includes("산출세액"));
-            const determinedStep = propSteps.find((st) => st.label.includes("결정세액"));
-
+            const np = p.new993Detail as { isEligible?: boolean; reducibleTransferIncome?: number; ruralSurtax?: number } | undefined;
+            const propIncome = (num(p.income) ?? 0) as number;
+            const propReducibleIncome = (num(p.reducibleIncome) ?? 0) as number;
+            const propNew993Reducible = (np?.isEligible && np.reducibleTransferIncome) ? np.reducibleTransferIncome : 0;
+            const propIncomeAfter = Math.max(0, propIncome - propReducibleIncome - propNew993Reducible);
             return (
               <View key={idx} style={{ marginBottom: 8 }}>
-                <Text style={{ fontSize: 8, fontWeight: 700, color: C.muted, marginBottom: 3 }}>
-                  {str(p.propertyLabel) ?? `자산 ${idx + 1}`}
-                  {bool(p.isExempt) ? "  [비과세]" : ""}
-                </Text>
+                <Text style={{ fontSize: 8, fontWeight: 700, color: C.muted, marginBottom: 3 }}>{str(p.propertyLabel) ?? `자산 ${idx + 1}`}{bool(p.isExempt) ? "  [비과세]" : ""}</Text>
                 {bool(p.isExempt) ? (
-                  <Text style={{ fontSize: 8, color: C.muted, paddingLeft: 8 }}>
-                    {str(p.exemptReason) ?? "비과세 대상"}
-                  </Text>
+                  <Text style={{ fontSize: 8, color: C.muted, paddingLeft: 8 }}>{str(p.exemptReason) ?? "비과세 대상"}</Text>
                 ) : (
-                  <View style={s.stepsTable}>
-                    {gainStep && (
-                      <View style={s.stepRow}>
-                        <View style={s.stepInfo}>
-                          <Text style={s.stepLabel}>양도차익</Text>
-                          <Text style={s.stepFormula}>{gainStep.formula}</Text>
-                          {gainStep.legalBasis && <Text style={s.stepLegal}>{gainStep.legalBasis}</Text>}
-                        </View>
-                        <Text style={s.stepAmount}>{fmt(p.transferGain)}</Text>
-                      </View>
-                    )}
-                    {lthdStep && (num(p.longTermHoldingDeduction) ?? 0) > 0 && (
-                      <View style={s.stepRow}>
-                        <View style={s.stepInfo}>
-                          <Text style={s.stepLabel}>장기보유특별공제</Text>
-                          <Text style={s.stepFormula}>{lthdStep.formula}</Text>
-                          {lthdStep.legalBasis && <Text style={s.stepLegal}>{lthdStep.legalBasis}</Text>}
-                        </View>
-                        <Text style={s.stepAmount}>- {fmt(p.longTermHoldingDeduction)}</Text>
-                      </View>
-                    )}
-                    <View style={s.stepRow}>
-                      <View style={s.stepInfo}><Text style={s.stepLabel}>양도소득금액</Text></View>
-                      <Text style={s.stepAmount}>{fmt(p.income)}</Text>
-                    </View>
-                    {(num(p.lossOffsetFromSameGroup) ?? 0) > 0 && (
-                      <View style={s.stepRow}>
-                        <View style={s.stepInfo}>
-                          <Text style={s.stepLabel}>차손 통산 (동일그룹)</Text>
-                          <Text style={s.stepFormula}>§102② 그룹 내 손익 통산</Text>
-                        </View>
-                        <Text style={s.stepAmount}>- {fmt(p.lossOffsetFromSameGroup)}</Text>
-                      </View>
-                    )}
-                    {(num(p.lossOffsetFromOtherGroup) ?? 0) > 0 && (
-                      <View style={s.stepRow}>
-                        <View style={s.stepInfo}>
-                          <Text style={s.stepLabel}>차손 통산 (타군안분)</Text>
-                          <Text style={s.stepFormula}>시행령 §167의2 비율안분</Text>
-                        </View>
-                        <Text style={s.stepAmount}>- {fmt(p.lossOffsetFromOtherGroup)}</Text>
-                      </View>
-                    )}
-                    {taxBaseStep && (
-                      <View style={s.stepRow}>
-                        <View style={s.stepInfo}>
-                          <Text style={s.stepLabel}>과세표준 기여분</Text>
-                          <Text style={s.stepFormula}>{taxBaseStep.formula}</Text>
-                          {taxBaseStep.legalBasis && <Text style={s.stepLegal}>{taxBaseStep.legalBasis}</Text>}
-                        </View>
-                        <Text style={[s.stepAmount, { color: C.accent }]}>{fmt(p.taxBaseShare)}</Text>
-                      </View>
-                    )}
-                    {calcTaxStep && (
-                      <View style={s.stepRow}>
-                        <View style={s.stepInfo}>
-                          <Text style={s.stepLabel}>산출세액 (참고)</Text>
-                          <Text style={s.stepFormula}>{calcTaxStep.formula}</Text>
-                        </View>
-                        <Text style={s.stepAmount}>{fmt(calcTaxStep.amount)}</Text>
-                      </View>
-                    )}
-                    {determinedStep && (
-                      <View style={s.stepRowLast}>
-                        <View style={s.stepInfo}>
-                          <Text style={s.stepLabel}>결정세액 (참고)</Text>
-                          <Text style={s.stepFormula}>{determinedStep.formula}</Text>
-                        </View>
-                        <Text style={[s.stepAmount, { color: C.accent }]}>{fmt(determinedStep.amount)}</Text>
-                      </View>
-                    )}
-                    {!gainStep && !taxBaseStep && (
-                      <>
-                        <View style={s.stepRow}><View style={s.stepInfo}><Text style={s.stepLabel}>양도차익</Text></View><Text style={s.stepAmount}>{fmt(p.transferGain)}</Text></View>
-                        <View style={s.stepRow}><View style={s.stepInfo}><Text style={s.stepLabel}>양도소득금액</Text></View><Text style={s.stepAmount}>{fmt(p.income)}</Text></View>
-                        <View style={s.stepRowLast}><View style={s.stepInfo}><Text style={[s.stepLabel, { color: C.accent }]}>과세표준 기여분</Text></View><Text style={[s.stepAmount, { color: C.accent }]}>{fmt(p.taxBaseShare)}</Text></View>
-                      </>
-                    )}
+                  <View style={s.table}>
+                    {num(p.transferPrice) !== undefined && (<View style={s.row}><Text style={s.lbl}>양도가액</Text><Text style={s.val}>{fmt(p.transferPrice)}</Text></View>)}
+                    {num(p.acquisitionPrice) !== undefined && (<View style={s.row}><Text style={s.lbl}>취득가액</Text><Text style={s.val}>{fmt(p.acquisitionPrice)}</Text></View>)}
+                    <View style={s.row}><Text style={s.lbl}>전체 양도차익</Text><Text style={s.val}>{fmt(p.transferGain)}</Text></View>
+                    {(num(p.longTermHoldingDeduction) ?? 0) > 0 && (<View style={s.row}><Text style={s.lbl}>장기보유특별공제</Text><Text style={s.val}>- {fmt(p.longTermHoldingDeduction)}</Text></View>)}
+                    <View style={s.row}><Text style={s.lbl}>양도소득금액</Text><Text style={s.val}>{fmt(propIncome)}</Text></View>
+                    {(num(p.lossOffsetFromSameGroup) ?? 0) > 0 && (<View style={s.row}><Text style={s.lblSub}>차손 통산 (동일그룹, §102②)</Text><Text style={s.val}>- {fmt(p.lossOffsetFromSameGroup)}</Text></View>)}
+                    {(num(p.lossOffsetFromOtherGroup) ?? 0) > 0 && (<View style={s.row}><Text style={s.lblSub}>차손 통산 (타군안분, 시행령 §167의2)</Text><Text style={s.val}>- {fmt(p.lossOffsetFromOtherGroup)}</Text></View>)}
+                    <View style={s.row}><Text style={s.lbl}>세액감면대상금액</Text><Text style={s.val}>{propReducibleIncome > 0 ? fmt(propReducibleIncome) : "0"}</Text></View>
+                    <View style={s.row}><Text style={s.lbl}>소득금액 감면대상</Text><Text style={s.val}>{propNew993Reducible > 0 ? fmt(propNew993Reducible) : "0"}</Text></View>
+                    <View style={s.row}><Text style={s.lbl}>감면후 소득금액</Text><Text style={s.val}>{fmt(propIncomeAfter)}</Text></View>
+                    <View style={s.rowBg}><Text style={s.lbl}>과세표준 기여분</Text><Text style={s.valAccent}>{fmt(p.taxBaseShare)}</Text></View>
+                    {num(p.calculatedTax) !== undefined && (<View style={s.row}><Text style={s.lblSub}>산출세액 기여분 (참고)</Text><Text style={s.val}>{fmt(p.calculatedTax)}</Text></View>)}
+                    {num(p.determinedTax) !== undefined && (<View style={s.row}><Text style={s.lblSub}>결정세액 기여분 (참고)</Text><Text style={s.val}>{fmt(p.determinedTax)}</Text></View>)}
+                    {(np?.ruralSurtax ?? 0) > 0 && (<View style={s.rowLast}><Text style={s.lbl}>농어촌특별세 (§99의3 등)</Text><Text style={s.val}>{fmt(np?.ruralSurtax)}</Text></View>)}
                   </View>
                 )}
               </View>

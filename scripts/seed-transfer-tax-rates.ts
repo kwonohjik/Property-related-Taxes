@@ -339,6 +339,25 @@ const transferTaxSeeds = [
   },
 
   // 11. 신축주택·미분양주택 감면 매트릭스 (조특법 §98의2, §99①~⑥, §99의3)
+  // ────────────────────────────────────────────────────────────────────
+  // ⚠️ Phase 0 매핑 감사 (2026-05-06): article 라벨 정정 예약
+  // 본 시드의 article 라벨 "§99 ①~⑥"은 코드 작성자 자체 식별자이며,
+  // 실제 조특법 조문번호와 일치하지 않습니다. 회귀 안전을 위해 라벨 자체는
+  // Phase 2 본격 구현 시점(anchor 테스트와 함께)에 정정합니다.
+  //
+  // 정정 매핑 (감사 결과):
+  //   code "98-2"      → 시기 1998.5.22~1999.6.30 = 실제 §99 ① (라벨은 §98의2로 적힘)
+  //   code "99-1"      → 시기 2001.5.23~2003.6.30 = 실제 §99의3
+  //   code "99-2-*"    → 시기 2009.2.12~2010.2.11 = 실제 §98의3
+  //   code "99-3"      → 시기 2010.2.12~2011.4.30 = 실제 §98의5
+  //   code "99-4"      → 시기 2012.9.24~2013.4.1  = 실제 §98의7 (정확 시기는 ~2012.12.31)
+  //   code "99-5-*"    → 시기 2013.4.1~2013.12.31 = 실제 §99의2
+  //   code "99-6-*"    → 시기 2014.1.1~2014.12.31 = 실제 §98의8 (정확 시기는 2015.1.1~2015.12.31)
+  //   code "99-3-2"    → 시기 2013.4.1~2013.12.31 = 실제 §99의2 (위 99-5-*와 중복 가능)
+  //
+  // 매핑 감사: docs/02-design/features/transfer-reduction-mapping-audit.md
+  // 정정 정책: 사용자 결정사항 #3 — 자동 변환 (이력 마이그레이션은 lib/storage/migrations/)
+  // ────────────────────────────────────────────────────────────────────
   {
     tax_type: "transfer",
     category: "deduction",
@@ -348,10 +367,12 @@ const transferTaxSeeds = [
     deduction_rules: {
       type: "new_housing_matrix",
       articles: [
-        // §98의2 — 1998.5.22~2001.12.31 신축주택 5년간 양도차익 면제
+        // §99 — 1998.5.22~1999.6.30 IMF 1차 신축주택 (국민주택 ~1999.12.31)
+        // ⚠ 라벨 정정 (Phase 0 매핑 감사, 2026-05-06): 기존 "§98의2"는 코드 작성자
+        // 자체 식별자였으며 실제 조특법 §98의2(미분양)와 무관. 실제 조문은 §99 ①항.
         {
-          code: "98-2",
-          article: "§98의2",
+          code: "99-main",
+          article: "§99 (IMF 1차)",
           acquisitionPeriod: { start: "1998-05-22", end: "2001-12-31" },
           region: "nationwide",
           maxAcquisitionPrice: null,
@@ -364,10 +385,12 @@ const transferTaxSeeds = [
           isExcludedFromHouseCount: true,
           isExcludedFromMultiHouseSurcharge: true,
         },
-        // §99 ① — 2001.5.23~2003.6.30 수도권 과밀억제권역 외 신축
+        // §99의3 — 2001.5.23~2003.6.30 IMF 2차 신축주택 (가격 급등 지역 외)
+        // ⚠ 라벨 정정 (Phase 0 매핑 감사, 2026-05-06): 기존 "§99 ①"은 코드 작성자
+        // 자체 식별자. 실제 조문은 §99의3 ①항 1호 + 2호.
         {
-          code: "99-1",
-          article: "§99 ①",
+          code: "99-3-main",
+          article: "§99의3",
           acquisitionPeriod: { start: "2001-05-23", end: "2003-06-30" },
           region: "outside_overconcentration",
           maxAcquisitionPrice: null,
@@ -380,10 +403,13 @@ const transferTaxSeeds = [
           isExcludedFromHouseCount: true,
           isExcludedFromMultiHouseSurcharge: true,
         },
-        // §99 ② — 2009.2.12~2010.2.11 비수도권 미분양/수도권 과밀억제권역 외 신축 (6억 이하 100%)
+        // §98의3 — 2009.2.12~2010.2.11 서울 외 미분양주택 (수도권과밀 60%, 그 외 100%)
+        // ⚠ 라벨 정정 (Phase 0 매핑 감사, 2026-05-06): 기존 "§99 ②"는 코드 작성자
+        // 자체 식별자. 실제 조문은 §98의3 ①항. 6억 이하/6~9억/9억 초과 차등은
+        // 코드 시드 자체 분기이며 §98의3 본문에는 없음 — Phase 2 본격 정정 시 검토.
         {
-          code: "99-2-low",
-          article: "§99 ② (6억 이하)",
+          code: "98-3-low",
+          article: "§98의3 (6억 이하)",
           acquisitionPeriod: { start: "2009-02-12", end: "2010-02-11" },
           region: "non_metropolitan",
           maxAcquisitionPrice: 600000000,
@@ -396,10 +422,9 @@ const transferTaxSeeds = [
           isExcludedFromHouseCount: true,
           isExcludedFromMultiHouseSurcharge: true,
         },
-        // §99 ② — 6억 초과 9억 이하 80%
         {
-          code: "99-2-mid",
-          article: "§99 ② (6억~9억)",
+          code: "98-3-mid",
+          article: "§98의3 (6억~9억)",
           acquisitionPeriod: { start: "2009-02-12", end: "2010-02-11" },
           region: "non_metropolitan",
           maxAcquisitionPrice: 900000000,
@@ -412,10 +437,9 @@ const transferTaxSeeds = [
           isExcludedFromHouseCount: true,
           isExcludedFromMultiHouseSurcharge: true,
         },
-        // §99 ② — 9억 초과 60%
         {
-          code: "99-2-high",
-          article: "§99 ② (9억 초과)",
+          code: "98-3-high",
+          article: "§98의3 (9억 초과)",
           acquisitionPeriod: { start: "2009-02-12", end: "2010-02-11" },
           region: "non_metropolitan",
           maxAcquisitionPrice: null,
@@ -428,10 +452,12 @@ const transferTaxSeeds = [
           isExcludedFromHouseCount: true,
           isExcludedFromMultiHouseSurcharge: true,
         },
-        // §99 ③ — 2010.2.12~2011.4.30 수도권 외 미분양 60%
+        // §98의5 — 2010.2.12~2011.4.30 수도권 외 미분양 (분양가 인하율 60%)
+        // ⚠ 라벨 정정 (Phase 0 매핑 감사): 기존 "§99 ③" 코드 자체 식별자.
+        // 실제 §98의5는 분양가 인하율별 60/80/100% 차등.
         {
-          code: "99-3",
-          article: "§99 ③",
+          code: "98-5",
+          article: "§98의5",
           acquisitionPeriod: { start: "2010-02-12", end: "2011-04-30" },
           region: "non_metropolitan",
           maxAcquisitionPrice: null,
@@ -444,11 +470,12 @@ const transferTaxSeeds = [
           isExcludedFromHouseCount: false,
           isExcludedFromMultiHouseSurcharge: false,
         },
-        // §99 ④ — 2012.9.24~2013.4.1 전국 미분양 (6억 이하 또는 국민주택규모)
+        // §98의7 — 2012.9.24~2012.12.31 9억 이하 미분양 100%
+        // ⚠ 라벨 정정 + 시기 정정 (Phase 0 매핑 감사): 시기 종료일 2013.4.1 → 2012.12.31.
         {
-          code: "99-4",
-          article: "§99 ④",
-          acquisitionPeriod: { start: "2012-09-24", end: "2013-04-01" },
+          code: "98-7",
+          article: "§98의7",
+          acquisitionPeriod: { start: "2012-09-24", end: "2012-12-31" },
           region: "nationwide",
           maxAcquisitionPrice: 600000000,
           maxArea: 85,
@@ -460,10 +487,12 @@ const transferTaxSeeds = [
           isExcludedFromHouseCount: false,
           isExcludedFromMultiHouseSurcharge: false,
         },
-        // §99 ⑤ — 2013.4.1~2013.12.31 수도권 6억 이하
+        // §99의2 — 2013.4.1~2013.12.31 신축·미분양·1세대1주택 매입자 (취득가 6억↓ OR 전용 85㎡↓)
+        // ⚠ 라벨 정정 (Phase 0 매핑 감사): 기존 "§99 ⑤" 코드 자체 식별자.
+        // 실제 §99의2는 가격·면적 OR 조건 (시드는 AND로 분기 — Phase 2 본격 정정 시 검토).
         {
-          code: "99-5-c",
-          article: "§99 ⑤ (수도권)",
+          code: "99-2-metro",
+          article: "§99의2 (수도권)",
           acquisitionPeriod: { start: "2013-04-01", end: "2013-12-31" },
           region: "metropolitan",
           maxAcquisitionPrice: 600000000,
@@ -476,10 +505,9 @@ const transferTaxSeeds = [
           isExcludedFromHouseCount: false,
           isExcludedFromMultiHouseSurcharge: false,
         },
-        // §99 ⑤ — 비수도권 3억 이하
         {
-          code: "99-5-nc",
-          article: "§99 ⑤ (비수도권)",
+          code: "99-2-non-metro",
+          article: "§99의2 (비수도권)",
           acquisitionPeriod: { start: "2013-04-01", end: "2013-12-31" },
           region: "non_metropolitan",
           maxAcquisitionPrice: 300000000,
@@ -492,11 +520,12 @@ const transferTaxSeeds = [
           isExcludedFromHouseCount: false,
           isExcludedFromMultiHouseSurcharge: false,
         },
-        // §99 ⑥ — 2014.1.1~2014.12.31 수도권 6억 이하
+        // §98의8 — 2015.1.1~2015.12.31 준공후미분양 6억·135㎡↓ (5년간 발생분 50% 차감)
+        // ⚠ 라벨 정정 + 시기 정정 (Phase 0 매핑 감사): 시기 2014 → 2015 정정.
         {
-          code: "99-6-c",
-          article: "§99 ⑥ (수도권)",
-          acquisitionPeriod: { start: "2014-01-01", end: "2014-12-31" },
+          code: "98-8-metro",
+          article: "§98의8 (수도권)",
+          acquisitionPeriod: { start: "2015-01-01", end: "2015-12-31" },
           region: "metropolitan",
           maxAcquisitionPrice: 600000000,
           maxArea: 85,
@@ -508,11 +537,10 @@ const transferTaxSeeds = [
           isExcludedFromHouseCount: false,
           isExcludedFromMultiHouseSurcharge: false,
         },
-        // §99 ⑥ — 비수도권 3억 이하
         {
-          code: "99-6-nc",
-          article: "§99 ⑥ (비수도권)",
-          acquisitionPeriod: { start: "2014-01-01", end: "2014-12-31" },
+          code: "98-8-non-metro",
+          article: "§98의8 (비수도권)",
+          acquisitionPeriod: { start: "2015-01-01", end: "2015-12-31" },
           region: "non_metropolitan",
           maxAcquisitionPrice: 300000000,
           maxArea: 85,
