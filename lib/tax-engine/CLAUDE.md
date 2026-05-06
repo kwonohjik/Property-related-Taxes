@@ -22,6 +22,13 @@ lib/tax-engine/
 │   ├── engine.ts              # judgeNonBusinessLand() 진입점
 │   ├── farmland.ts / forest.ts / pasture.ts / villa-land.ts / ...
 │   └── types.ts               # NonBusinessLandInput, 판정 결과 타입
+├── transfer-reductions/       # 감면 23개 조문 라우터 (Phase 1 골격, Phase 2~ 본격 구현)
+│   ├── index.ts               # evaluateReduction(input) 단일 진입점 + re-export
+│   ├── metadata.ts            # REDUCTION_METADATA (23개 조문 UI라벨·효과·isFullyImplemented)
+│   ├── period-check.ts        # checkReductionPeriod(id, ctx) — 일몰 시한 검증 (매매계약일 우선)
+│   ├── phd-helper.ts          # §164⑤ 환산 보조 — 신축주택 감면 조문의 "취득시 기준시가" 자동 도출
+│   ├── new-99-3.ts            # §99의3 신축주택 과세특례 (Phase 2 완전구현 1호)
+│   └── types.ts               # TransferReductionId · ReductionCategory 공개 타입
 └── schemas/rate-table.schema.ts  # DB jsonb 스키마 (parseProgressiveRate 등)
 ```
 
@@ -94,6 +101,7 @@ const reductionAmount = Math.min(best.amount, calculatedTax);
 - `comprehensive-tax.ts` → `property-tax.ts` (재산세 결과를 종부세 재산세 비율 안분 공제에 사용). **역방향 금지**.
 - `transfer-tax-aggregate.ts` → `transfer-tax.ts` (다건 양도 오케스트레이션은 단건 엔진을 반복 호출).
 - `transfer-tax.ts` → `multi-house-surcharge.ts` / `non-business-land/engine.ts` / `rental-housing-reduction.ts` / `new-housing-reduction.ts` / `public-expropriation-reduction.ts` / `transfer-tax-penalty.ts` / `pre-1990-land-valuation.ts` / `multi-parcel-transfer.ts` (서브엔진 fan-out).
+- `transfer-reductions/index.ts` — 독립 라우터. Phase 1: 시한 검증만. Phase 2~: 각 조문별 모듈(`new-99-3.ts` 등)이 switch 분기로 추가됨. `transfer-tax.ts` STEP 4.6~7.5에서 직접 호출 (§99의3은 이미 통합됨). 신규 조문 추가 시 `calcReductions()` 후보 배열에 push.
 - `transfer-tax-mixed-use.ts` → `transfer-tax-mixed-use-helpers.ts` → `transfer-tax-mixed-use-fourpart.ts` (Case A 4부분 안분 어댑터) / `transfer-tax-mixed-use-totals.ts` (조립 헬퍼) / `transfer-tax-pre-housing-disclosure.ts` (PHD §164⑤).
 
 서브엔진은 상위 엔진 import 금지 (순환 금지).

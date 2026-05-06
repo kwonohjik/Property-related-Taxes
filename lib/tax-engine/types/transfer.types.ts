@@ -39,6 +39,8 @@ import type { PublicExpropriationReductionResult } from "../public-expropriation
 import type { SelfFarmingReductionResult } from "../self-farming-reduction";
 import type { ParcelInput, ParcelResult } from "../multi-parcel-transfer";
 import type { InheritanceAcquisitionInput } from "./inheritance-acquisition.types";
+import type { TransferReductionStub } from "./transfer-reductions-stub.types";
+export type { TransferReductionStub } from "./transfer-reductions-stub.types";
 import type { InheritanceHouseValuationInput, InheritanceHouseValuationResult } from "./inheritance-house-valuation.types";
 import type { MixedUseAssetInput, MixedUseGainBreakdown } from "./transfer-mixed-use.types";
 import type { CarryoverTaxationInput, CarryoverTaxationDetail } from "./transfer-carryover.types";
@@ -58,6 +60,13 @@ export interface TransferTaxInput {
   acquisitionPrice: number;
   /** 취득일 */
   acquisitionDate: Date;
+  /**
+   * 매매계약일 — 분양·매매계약 + 계약금 납부 기준일 (선택).
+   * 조특법 §99·§99의3·§98 시리즈·§97의2·§97의5·§99의2 등 신축·미분양·임대 감면 13개 조문의
+   * 시한 판정 1차 기준. 미입력 시 acquisitionDate fallback (조문 단서 "매매계약 + 계약금 = 취득").
+   * 자산-수준 폼 필드 `AssetForm.assetContractDate`와 1:1 매핑.
+   */
+  assetContractDate?: Date;
   /**
    * 필요경비 (deprecated — 호환 유지).
    * 신규 입력은 `capitalExpenditure` + `transferExpense` 분리 사용.
@@ -345,7 +354,9 @@ export type TransferReduction =
       bondCompensation: number;
       bondHoldingYears?: 3 | 5 | null;
       businessApprovalDate: Date;
-    };
+    }
+  // Phase 1 (2026-05-06): 23개 조문 인벤토리 stub union — 별도 파일 분리 (800줄 정책)
+  | TransferReductionStub;
 
 export interface CalculationStep {
   /** 단계명 (예: '양도차익 계산') */
@@ -505,30 +516,16 @@ export interface TransferTaxResult {
    * UI에서 3-시점 합계 기준시가·추정 주택가격·1990 등급가액 환산 산식 표시용.
    */
   inheritedHouseValuationDetail?: InheritanceHouseValuationResult;
-  /**
-   * 검용주택 분리계산 상세 결과 (propertyType === "mixed-use-house" 시 포함).
-   * UI 결과 4-카드 (양도가액 안분 / 주택부분 / 상가부분 / 비사업용토지) 표시용.
-   */
+  /** 검용주택 분리계산 (propertyType === "mixed-use-house"). UI 4-카드. */
   mixedUseDetail?: MixedUseGainBreakdown;
-  /**
-   * 배우자등 이월과세 상세 결과 (carryoverTaxation 제공 시만 포함).
-   * UI 결과 비교 카드 — Scenario A·B 결정세액 나란히 + 채택 ✓ 표시.
-   */
+  /** 배우자등 이월과세 상세 (carryoverTaxation 제공 시). UI 비교 카드. */
   carryoverTaxationDetail?: CarryoverTaxationDetail;
-  /**
-   * 이월과세 모드에서 신고서 양식 표시용 취득일 ("YYYY-MM-DD").
-   * - Scenario A 채택 시: 증여자 취득일 (donorAcquisitionDate)
-   * - Scenario B 채택 시: 증여 등기접수일 (giftRegistryDate)
-   * - 일반 모드(carryover_gift 외): undefined
-   * FilingFormTableHelpers에서 `primary.acquisitionDate` 대신 이 값으로 보유기간 계산.
-   */
+  /** 이월과세 모드 신고서 표시용 취득일. A=증여자 취득일, B=등기접수일. FilingFormTable 보유기간 계산용. */
   displayAcquisitionDate?: string;
-  /**
-   * 장기임대주택 보유자 거주주택 비과세 특례 상세 결과 (소령 §155⑳).
-   * rentalHousingException 제공 시만 포함.
-   * UI에서 §161① 비율·과세·비과세 양도소득금액 산식 표시용.
-   */
+  /** 장기임대 거주주택 비과세 특례(§155⑳·§161). rentalHousingException 제공 시. */
   rentalHousingExceptionDetail?: import("../transfer-tax/rental-housing-exception/types").RentalHousingExceptionResult;
+  /** Phase 2: 조특법 §99의3 신축주택 과세특례 상세. type==="new_99_3" 시. UI 5년 안분·부호·농특세 산식. */
+  new993Detail?: import("../transfer-reductions/new-99-3").New993Result;
 }
 
 // ============================================================

@@ -13,9 +13,11 @@ import {
   calculateHoldingPeriod,
   isSurchargeSuspended,
   safeMultiplyThenDivide,
+  truncateToWon,
 } from "./tax-utils";
 import type { MultiHouseSurchargeResult } from "./multi-house-surcharge";
 import type { ParsedRates } from "./transfer-tax-helpers";
+import { calcBasicDeduction } from "./transfer-tax-helpers";
 import {
   type RentalReductionInput,
   type RentalReductionResult,
@@ -35,7 +37,17 @@ import {
   calculateSelfFarmingReduction,
 } from "./self-farming-reduction";
 import type { LongTermRentalRuleSet, NewHousingMatrixData } from "./schemas/rate-table.schema";
-import type { TransferTaxInput, TransferReduction } from "./types/transfer.types";
+import type { TransferTaxInput, TransferReduction, CalculationStep, TransferTaxResult } from "./types/transfer.types";
+import { TRANSFER } from "./legal-codes";
+import {
+  calculateMultiParcelTransfer,
+} from "./multi-parcel-transfer";
+import {
+  type TransferTaxPenaltyResult,
+  calculateTransferTaxPenalty,
+} from "./transfer-tax-penalty";
+import type { Pre1990LandValuationResult } from "./pre-1990-land-valuation";
+import type { CarryoverTaxationDetail } from "./types/transfer-carryover.types";
 
 // ============================================================
 // H-6.5: calculateBuildingPenalty — 소득세법 §114조의2 가산세
@@ -436,6 +448,7 @@ export function calcReductions(
   );
   const reductionAmount = Math.min(best.amount, calculatedTax);
   const reductionTypeLabel: Record<string, string> = {
+    // legacy 5개 (Round 8 자동변환 마이그레이션 + 1개월 alias)
     self_farming: "자경농지",
     self_farming_inherited: "자경농지(§69·상속인 경작기간 합산 §66⑪)",
     self_farming_incorp: "자경농지(§69·편입일 부분감면 §66⑤⑥)",
@@ -443,6 +456,28 @@ export function calcReductions(
     new_housing: "신축주택",
     unsold_housing: "미분양주택",
     public_expropriation: "공익사업용 토지 수용(§77)",
+    // Round 8 (2026-05-06): 신규 23개 ID 한국어 라벨 (방어 코드)
+    // Phase 2 본격 구현 시 calcReductions candidates 진입 케이스 대응
+    rental_97_main: "장기임대주택 (§97 ① 본문)",
+    rental_97_proviso: "장기임대주택 (§97 ① 단서)",
+    rental_97_2: "신축임대주택 (§97의2)",
+    rental_97_3: "장기일반민간임대 (§97의3)",
+    rental_97_4: "장기보유 임대주택 (§97의4)",
+    rental_97_5: "장기일반민간임대 100% (§97의5)",
+    new_99: "신축주택 (§99 IMF 1차)",
+    new_99_3: "신축주택 과세특례 (§99의3 IMF 2차)",
+    new_99_4_rural: "농어촌주택 (§99의4)",
+    new_99_4_hometown: "고향주택 (§99의4)",
+    unsold_98: "미분양 분리과세 (§98)",
+    unsold_98_2: "지방 미분양 (§98의2)",
+    unsold_98_3: "서울 외 미분양 (§98의3)",
+    unsold_98_4: "비거주자 일반주택 (§98의4)",
+    unsold_98_5: "수도권 외 미분양 (§98의5)",
+    unsold_98_6: "준공후미분양 (§98의6)",
+    unsold_98_7: "9억 이하 미분양 (§98의7)",
+    unsold_98_8: "준공후미분양 6억·135㎡ (§98의8)",
+    unsold_98_9: "수도권 밖 준공후미분양 (§98의9)",
+    unsold_99_2: "신축·미분양·1세대1주택 (§99의2)",
   };
   const reductionTypeDisplay = best.type ? (reductionTypeLabel[best.type] ?? best.type) : undefined;
 
@@ -455,5 +490,137 @@ export function calcReductions(
     newHousingReductionDetail,
     publicExpropriationDetail,
     selfFarmingReductionDetail,
+  };
+}
+
+// ============================================================
+// H-MP: handleMultiParcelBranch — 다필지 분리 계산 (소령 §166)
+// rawInput.parcels가 있으면 필지별 분리 계산 후 조기 반환.
+// 없으면 null 반환 → 오케스트레이터가 단일 자산 경로로 계속 진행.
+// ============================================================
+
+export interface MultiParcelBranchContext {
+  rawInput: TransferTaxInput;
+  effectiveInput: TransferTaxInput;
+  input: TransferTaxInput;
+  parsedRates: ParsedRates;
+  multiHouseSurchargeResult: MultiHouseSurchargeResult | undefined;
+  pre1990LandResult: Pre1990LandValuationResult | undefined;
+  carryoverDetail: CarryoverTaxationDetail | undefined;
+}
+
+export function handleMultiParcelBranch(
+  ctx: MultiParcelBranchContext,
+  steps: CalculationStep[],
+): TransferTaxResult | null {
+  const { rawInput, effectiveInput, input, parsedRates, multiHouseSurchargeResult, carryoverDetail } = ctx;
+
+  if (!rawInput.parcels || rawInput.parcels.length === 0) return null;
+
+  const mpResult = calculateMultiParcelTransfer({
+    totalTransferPrice: effectiveInput.transferPrice,
+    transferDate: effectiveInput.transferDate,
+    parcels: rawInput.parcels,
+  });
+  for (let pi = 0; pi < mpResult.parcelResults.length; pi++) {
+    const pr = mpResult.parcelResults[pi];
+    const parcelLabel = `필지 ${pi + 1}`;
+    const expenseDesc = pr.estimatedDeduction > 0
+      ? `개산공제 ${pr.estimatedDeduction.toLocaleString()}`
+      : pr.expenses.toLocaleString();
+    steps.push({ label: `[${parcelLabel}] 양도차익`, formula: `안분가 ${pr.allocatedTransferPrice.toLocaleString()} - 취득가 ${pr.acquisitionPrice.toLocaleString()} - 경비 ${expenseDesc}`, amount: pr.transferGain });
+    steps.push({ label: `[${parcelLabel}] 장특공제`, formula: `${(pr.longTermHoldingRate * 100).toFixed(0)}%`, amount: pr.longTermHoldingDeduction, sub: true });
+  }
+  const mpTaxableGain = mpResult.totalTransferGain;
+  const mpLtd = mpResult.totalLongTermHoldingDeduction;
+  const mpTransferIncome = mpResult.totalTransferIncome;
+  steps.push({ label: "양도차익 합계", formula: "필지별 합산", amount: mpTaxableGain, legalBasis: TRANSFER.TRANSFER_GAIN });
+  steps.push({ label: "장기보유특별공제 합계", formula: "필지별 합산", amount: mpLtd, legalBasis: TRANSFER.LONG_TERM_DEDUCTION, sub: true });
+  steps.push({ label: "양도소득금액 합계", formula: `${mpTaxableGain.toLocaleString()} - ${mpLtd.toLocaleString()}`, amount: mpTransferIncome });
+
+  const mpBasicDeduction = input.skipBasicDeduction
+    ? 0
+    : calcBasicDeduction(mpTaxableGain, mpLtd, input.annualBasicDeductionUsed ?? 0, input.isUnregistered, parsedRates.basicDeductionRules);
+  const mpTaxBase = Math.max(0, mpTransferIncome - mpBasicDeduction);
+  steps.push({ label: "기본공제", formula: `${mpBasicDeduction.toLocaleString()}`, amount: mpBasicDeduction, legalBasis: TRANSFER.BASIC_DEDUCTION });
+  steps.push({ label: "과세표준", formula: `${mpTransferIncome.toLocaleString()} - ${mpBasicDeduction.toLocaleString()}`, amount: mpTaxBase, legalBasis: TRANSFER.TAX_BASE_CALC });
+
+  const mpTaxResult = calcTax(mpTaxBase, parsedRates, effectiveInput, multiHouseSurchargeResult);
+  steps.push({ label: "산출세액", formula: `${mpTaxBase.toLocaleString()} × ${Math.round(mpTaxResult.appliedRate * 100)}%`, amount: mpTaxResult.calculatedTax, legalBasis: TRANSFER.TAX_RATE });
+
+  const {
+    reductionAmount: mpReduction,
+    reductionType: mpReductionType,
+    reductionTypeApplied: mpReductionTypeApplied,
+    reducibleIncome: mpReducibleIncome,
+    rentalReductionDetail: mpRentalDetail,
+    newHousingReductionDetail: mpNewHousingDetail,
+    publicExpropriationDetail: mpExproDetail,
+    selfFarmingReductionDetail: mpSelfFarmingDetail,
+  } = calcReductions(
+    mpTaxResult.calculatedTax,
+    input.reductions,
+    parsedRates.selfFarmingRules,
+    input.rentalReductionDetails,
+    parsedRates.longTermRentalRules,
+    input.newHousingDetails,
+    parsedRates.newHousingMatrix,
+    input.transferDate,
+    mpTransferIncome,
+    mpBasicDeduction,
+    mpTaxBase,
+    input.acquisitionDate,
+    input.standardPriceAtAcquisition,
+    input.standardPriceAtTransfer,
+  );
+  const mpDeterminedTax = truncateToWon(Math.max(0, mpTaxResult.calculatedTax - mpReduction));
+  const mpPenaltyBase = effectiveInput.acquisitionMethod === "appraisal"
+    ? (effectiveInput.appraisalValue ?? 0)
+    : 0;
+  const mpPenaltyResult = calculateBuildingPenalty(effectiveInput, mpPenaltyBase);
+  const mpPenaltyTax = mpPenaltyResult?.penalty ?? 0;
+  const mpDeterminedTaxWithPenalty = mpDeterminedTax + mpPenaltyTax;
+  const mpLocalIncomeTax = applyRate(mpDeterminedTaxWithPenalty, 0.1);
+
+  let mpFilingDelayedPenalty = 0;
+  let mpPenaltyDetail: TransferTaxPenaltyResult | undefined;
+  if (input.filingPenaltyDetails || input.delayedPaymentDetails) {
+    mpPenaltyDetail = calculateTransferTaxPenalty({
+      filing: input.filingPenaltyDetails,
+      delayedPayment: input.delayedPaymentDetails,
+    });
+    mpFilingDelayedPenalty = mpPenaltyDetail?.totalPenalty ?? 0;
+  }
+
+  return {
+    isExempt: false,
+    transferGain: mpTaxableGain,
+    taxableGain: mpTaxableGain,
+    usedEstimatedAcquisition: false,
+    longTermHoldingDeduction: mpLtd,
+    longTermHoldingRate: mpTaxableGain > 0 ? mpLtd / mpTaxableGain : 0,
+    basicDeduction: mpBasicDeduction,
+    taxBase: mpTaxBase,
+    appliedRate: mpTaxResult.appliedRate,
+    progressiveDeduction: mpTaxResult.progressiveDeduction,
+    calculatedTax: mpTaxResult.calculatedTax,
+    surchargeType: mpTaxResult.surchargeType,
+    surchargeRate: mpTaxResult.surchargeRate,
+    isSurchargeSuspended: mpTaxResult.surchargeSuspended,
+    reductionAmount: mpReduction,
+    reductionType: mpReductionType,
+    reductionTypeApplied: mpReductionTypeApplied,
+    reducibleIncome: mpReducibleIncome,
+    determinedTax: mpDeterminedTax,
+    penaltyTax: mpPenaltyTax,
+    localIncomeTax: mpLocalIncomeTax,
+    totalTax: mpDeterminedTaxWithPenalty + mpLocalIncomeTax + mpFilingDelayedPenalty,
+    steps,
+    rentalReductionDetail: mpRentalDetail,
+    newHousingReductionDetail: mpNewHousingDetail,
+    publicExpropriationDetail: mpExproDetail,
+    selfFarmingReductionDetail: mpSelfFarmingDetail,
+    penaltyDetail: mpPenaltyDetail,
+    parcelDetails: mpResult.parcelResults,
   };
 }

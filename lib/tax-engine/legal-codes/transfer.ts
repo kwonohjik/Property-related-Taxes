@@ -417,3 +417,58 @@ export const TRANSFER_RENTAL_HOUSING = {
    */
   PIT_RD_161_4: "소득세법 시행령 §161④",
 } as const;
+
+// ============================================================================
+// 양도세 감면 23개 조문 인벤토리 (Phase 1 — 골격 추가)
+// ----------------------------------------------------------------------------
+// 자경농지(§69) + 공익수용(§77)은 별도 카테고리. 본 객체는 장기임대·신축·미분양 그룹의
+// 23개 조문 본문 표기 + 효과 카테고리만 보유. 시한·감면율 등 상세 규칙은
+// transfer-reductions/<id>.ts 의 stub/구현체에서 정의.
+// 매핑 감사: docs/02-design/features/transfer-reduction-mapping-audit.md
+// ============================================================================
+
+export const TRANSFER_REDUCTION_ARTICLE = {
+  // ── 장기임대주택 (§97 시리즈, 6개) ──
+  RENTAL_97_MAIN:     "조특법 §97 ① 본문",
+  RENTAL_97_PROVISO:  "조특법 §97 ① 단서",
+  RENTAL_97_2:        "조특법 §97의2",
+  RENTAL_97_3:        "조특법 §97의3",
+  RENTAL_97_4:        "조특법 §97의4",
+  RENTAL_97_5:        "조특법 §97의5",
+  // ── 신축주택 (§99 시리즈, 4개) ──
+  NEW_99:             "조특법 §99",
+  NEW_99_3:           "조특법 §99의3",
+  NEW_99_4_RURAL:     "조특법 §99의4 (농어촌주택)",
+  NEW_99_4_HOMETOWN:  "조특법 §99의4 (고향주택)",
+  // ── 미분양주택 (§98 시리즈 + §99의2, 10개) ──
+  UNSOLD_98:          "조특법 §98",
+  UNSOLD_98_2:        "조특법 §98의2",
+  UNSOLD_98_3:        "조특법 §98의3",
+  UNSOLD_98_4:        "조특법 §98의4",
+  UNSOLD_98_5:        "조특법 §98의5",
+  UNSOLD_98_6:        "조특법 §98의6",
+  UNSOLD_98_7:        "조특법 §98의7",
+  UNSOLD_98_8:        "조특법 §98의8",
+  UNSOLD_98_9:        "조특법 §98의9",
+  UNSOLD_99_2:        "조특법 §99의2",
+  // ── 별도 카테고리 ──
+  SELF_FARMING:       "조특법 §69",
+  PUBLIC_EXPROPRIATION: "조특법 §77",
+} as const;
+
+/**
+ * 감면 효과 카테고리 — UI 라벨·계산 분기 분류.
+ * - tax_amount: 산출세액 단계 감면 (산출세액 × 감면율)
+ * - capital_gain: 양도소득금액 단계 차감
+ * - long_term_holding_special: 장기보유특별공제율/추가율 특례 (§97의3, §97의4)
+ * - house_count_exclusion: 1세대1주택 비과세 시 주택수 제외 (§99의4, §98의9, §99의2 등)
+ * - separated_taxation: 분리과세 선택 (§98)
+ * - cgt_with_normal_rate_and_ltsd: 누진세율 + 표1 장특공제 (§98의2)
+ */
+export type ReductionEffectCategory =
+  | "tax_amount"
+  | "capital_gain"
+  | "long_term_holding_special"
+  | "house_count_exclusion"
+  | "separated_taxation"
+  | "cgt_with_normal_rate_and_ltsd";

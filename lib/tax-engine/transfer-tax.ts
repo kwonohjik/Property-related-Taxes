@@ -24,18 +24,12 @@ import {
   judgeNonBusinessLand,
 } from "./non-business-land";
 import {
-  type TransferTaxPenaltyResult,
   calculateTransferTaxPenalty,
 } from "./transfer-tax-penalty";
 import {
   type Pre1990LandValuationResult,
   calculatePre1990LandValuation,
 } from "./pre-1990-land-valuation";
-import {
-  type ParcelInput,
-  type ParcelResult,
-  calculateMultiParcelTransfer,
-} from "./multi-parcel-transfer";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import {
   runInheritedAcquisitionStep,
@@ -56,6 +50,7 @@ import {
   type RentalHousingExceptionResult,
 } from "./transfer-tax/rental-housing-exception";
 import { TRANSFER_RENTAL_HOUSING } from "./legal-codes/transfer";
+import { evaluateNew993, type New993Result } from "./transfer-reductions/new-99-3";
 
 // 내부 헬퍼 — 분리 파일
 import {
@@ -66,7 +61,7 @@ import {
   calcLongTermHoldingDeduction,
   calcBasicDeduction,
 } from "./transfer-tax-helpers";
-import { calculateBuildingPenalty, calcTax, calcReductions } from "./transfer-tax-rate-calc";
+import { calculateBuildingPenalty, calcTax, calcReductions, handleMultiParcelBranch, type MultiParcelBranchContext } from "./transfer-tax-rate-calc";
 import { calcCarryoverScenarios } from "./transfer-tax-carryover";
 
 // 하위 호환 재수출
@@ -237,115 +232,11 @@ export function calculateTransferTax(
   }
 
   // STEP 1.5: 다필지 분리 계산 (환지·합병 등)
-  if (rawInput.parcels && rawInput.parcels.length > 0) {
-    const mpResult = calculateMultiParcelTransfer({
-      totalTransferPrice: effectiveInput.transferPrice,
-      transferDate: effectiveInput.transferDate,
-      parcels: rawInput.parcels,
-    });
-    for (let pi = 0; pi < mpResult.parcelResults.length; pi++) {
-      const pr = mpResult.parcelResults[pi];
-      const parcelLabel = `필지 ${pi + 1}`;
-      const expenseDesc = pr.estimatedDeduction > 0
-        ? `개산공제 ${pr.estimatedDeduction.toLocaleString()}`
-        : pr.expenses.toLocaleString();
-      steps.push({ label: `[${parcelLabel}] 양도차익`, formula: `안분가 ${pr.allocatedTransferPrice.toLocaleString()} - 취득가 ${pr.acquisitionPrice.toLocaleString()} - 경비 ${expenseDesc}`, amount: pr.transferGain });
-      steps.push({ label: `[${parcelLabel}] 장특공제`, formula: `${(pr.longTermHoldingRate * 100).toFixed(0)}%`, amount: pr.longTermHoldingDeduction, sub: true });
-    }
-    const mpTaxableGain = mpResult.totalTransferGain;
-    const mpLtd = mpResult.totalLongTermHoldingDeduction;
-    const mpTransferIncome = mpResult.totalTransferIncome;
-    steps.push({ label: "양도차익 합계", formula: "필지별 합산", amount: mpTaxableGain, legalBasis: TRANSFER.TRANSFER_GAIN });
-    steps.push({ label: "장기보유특별공제 합계", formula: "필지별 합산", amount: mpLtd, legalBasis: TRANSFER.LONG_TERM_DEDUCTION, sub: true });
-    steps.push({ label: "양도소득금액 합계", formula: `${mpTaxableGain.toLocaleString()} - ${mpLtd.toLocaleString()}`, amount: mpTransferIncome });
-
-    const mpBasicDeduction = input.skipBasicDeduction
-      ? 0
-      : calcBasicDeduction(mpTaxableGain, mpLtd, input.annualBasicDeductionUsed ?? 0, input.isUnregistered, parsedRates.basicDeductionRules);
-    const mpTaxBase = Math.max(0, mpTransferIncome - mpBasicDeduction);
-    steps.push({ label: "기본공제", formula: `${mpBasicDeduction.toLocaleString()}`, amount: mpBasicDeduction, legalBasis: TRANSFER.BASIC_DEDUCTION });
-    steps.push({ label: "과세표준", formula: `${mpTransferIncome.toLocaleString()} - ${mpBasicDeduction.toLocaleString()}`, amount: mpTaxBase, legalBasis: TRANSFER.TAX_BASE_CALC });
-
-    const mpTaxResult = calcTax(mpTaxBase, parsedRates, effectiveInput, multiHouseSurchargeResult);
-    steps.push({ label: "산출세액", formula: `${mpTaxBase.toLocaleString()} × ${Math.round(mpTaxResult.appliedRate * 100)}%`, amount: mpTaxResult.calculatedTax, legalBasis: TRANSFER.TAX_RATE });
-
-    const {
-      reductionAmount: mpReduction,
-      reductionType: mpReductionType,
-      reductionTypeApplied: mpReductionTypeApplied,
-      reducibleIncome: mpReducibleIncome,
-      rentalReductionDetail: mpRentalDetail,
-      newHousingReductionDetail: mpNewHousingDetail,
-      publicExpropriationDetail: mpExproDetail,
-      selfFarmingReductionDetail: mpSelfFarmingDetail,
-    } = calcReductions(
-      mpTaxResult.calculatedTax,
-      input.reductions,
-      parsedRates.selfFarmingRules,
-      input.rentalReductionDetails,
-      parsedRates.longTermRentalRules,
-      input.newHousingDetails,
-      parsedRates.newHousingMatrix,
-      input.transferDate,
-      mpTransferIncome,
-      mpBasicDeduction,
-      mpTaxBase,
-      input.acquisitionDate,
-      input.standardPriceAtAcquisition,
-      input.standardPriceAtTransfer,
-    );
-    const mpDeterminedTax = truncateToWon(Math.max(0, mpTaxResult.calculatedTax - mpReduction));
-    const mpPenaltyBase = effectiveInput.acquisitionMethod === "appraisal"
-      ? (effectiveInput.appraisalValue ?? 0)
-      : 0;
-    const mpPenaltyResult = calculateBuildingPenalty(effectiveInput, mpPenaltyBase);
-    const mpPenaltyTax = mpPenaltyResult?.penalty ?? 0;
-    const mpDeterminedTaxWithPenalty = mpDeterminedTax + mpPenaltyTax;
-    const mpLocalIncomeTax = applyRate(mpDeterminedTaxWithPenalty, 0.1);
-
-    // 가산세
-    let mpFilingDelayedPenalty = 0;
-    let mpPenaltyDetail: TransferTaxPenaltyResult | undefined;
-    if (input.filingPenaltyDetails || input.delayedPaymentDetails) {
-      mpPenaltyDetail = calculateTransferTaxPenalty({
-        filing: input.filingPenaltyDetails,
-        delayedPayment: input.delayedPaymentDetails,
-      });
-      mpFilingDelayedPenalty = mpPenaltyDetail?.totalPenalty ?? 0;
-    }
-
-    return {
-      isExempt: false,
-      transferGain: mpTaxableGain,
-      taxableGain: mpTaxableGain,
-      usedEstimatedAcquisition: false,
-      longTermHoldingDeduction: mpLtd,
-      longTermHoldingRate: mpTaxableGain > 0 ? mpLtd / mpTaxableGain : 0,
-      basicDeduction: mpBasicDeduction,
-      taxBase: mpTaxBase,
-      appliedRate: mpTaxResult.appliedRate,
-      progressiveDeduction: mpTaxResult.progressiveDeduction,
-      calculatedTax: mpTaxResult.calculatedTax,
-      surchargeType: mpTaxResult.surchargeType,
-      surchargeRate: mpTaxResult.surchargeRate,
-      isSurchargeSuspended: mpTaxResult.surchargeSuspended,
-      reductionAmount: mpReduction,
-      reductionType: mpReductionType,
-      reductionTypeApplied: mpReductionTypeApplied,
-      reducibleIncome: mpReducibleIncome,
-      determinedTax: mpDeterminedTax,
-      penaltyTax: mpPenaltyTax,
-      localIncomeTax: mpLocalIncomeTax,
-      totalTax: mpDeterminedTaxWithPenalty + mpLocalIncomeTax + mpFilingDelayedPenalty,
-      steps,
-      rentalReductionDetail: mpRentalDetail,
-      newHousingReductionDetail: mpNewHousingDetail,
-      publicExpropriationDetail: mpExproDetail,
-      selfFarmingReductionDetail: mpSelfFarmingDetail,
-      penaltyDetail: mpPenaltyDetail,
-      parcelDetails: mpResult.parcelResults,
-    };
-  }
+  const mpBranchResult = handleMultiParcelBranch(
+    { rawInput, effectiveInput, input, parsedRates, multiHouseSurchargeResult, pre1990LandResult, carryoverDetail },
+    steps,
+  );
+  if (mpBranchResult) return mpBranchResult;
 
   // STEP 2: 양도차익 계산
   const { gain: rawGain, usedEstimated, estimatedBase, estimatedDeduction, expenses: appliedExpenses, splitDetail, swapApplied, swapComparison } = calcTransferGain(effectiveInput);
@@ -586,13 +477,65 @@ export function calculateTransferTax(
   });
 
   // STEP 4.5: 양도소득금액 = 양도차익 − 장기보유특별공제 (소득세법 §95 ①)
-  const transferIncome = Math.max(0, taxableGain - longTermHoldingDeduction);
+  const transferIncomeBefore993 = Math.max(0, taxableGain - longTermHoldingDeduction);
   steps.push({
     label: "양도소득금액",
     formula: `양도차익 ${taxableGain.toLocaleString()} - 장기보유특별공제 ${longTermHoldingDeduction.toLocaleString()}`,
-    amount: transferIncome,
+    amount: transferIncomeBefore993,
     legalBasis: TRANSFER.LONG_TERM_DEDUCTION,
   });
+
+  // STEP 4.6 (Phase 2, 2026-05-06): §99의3 신축주택 과세특례 — 양도소득금액 차감 방식
+  // 5년 내 양도 = 취득~양도일까지 발생분 전액 / 5년 후 양도 = 5년 안분 산식
+  // 농특세 = (감면 전 산출세액 - 감면 후 산출세액) × 20% (STEP 7 이후 계산)
+  let transferIncome = transferIncomeBefore993;
+  const new993Reduction = input.reductions?.find((r) => r.type === "new_99_3");
+  let new993PreliminaryResult: New993Result | undefined;
+  if (new993Reduction && new993Reduction.type === "new_99_3") {
+    // Round 9 정정 (2026-05-06): contractDate 우선순위
+    //   1) reduction.contractDate993 (legacy 이력 호환, 1개월 alias 후 제거)
+    //   2) input.assetContractDate (자산-수준 매매계약일 — 상단 입력)
+    const effectiveContractDate = new993Reduction.contractDate993
+      ? new Date(new993Reduction.contractDate993)
+      : input.assetContractDate;
+    new993PreliminaryResult = evaluateNew993({
+      transferDate: input.transferDate,
+      acquisitionDate: input.acquisitionDate,
+      contractDate: effectiveContractDate,
+      usageApprovalDate: new993Reduction.usageApprovalDate993 ? new Date(new993Reduction.usageApprovalDate993) : undefined,
+      transferIncome: transferIncomeBefore993,
+      standardPriceAtAcquisition: new993Reduction.standardPriceAtAcquisition993 ?? 0,
+      standardPriceAt5Years: new993Reduction.standardPriceAt5Years ?? 0,
+      standardPriceAtTransfer:
+        new993Reduction.standardPriceAtTransfer993 ?? input.standardPriceAtTransfer ?? 0,
+      transferPrice: input.transferPrice,
+      exclusiveAreaSqm: 0, // 자산 면적 정보가 별도 — 고가주택 면적 기준은 호출자에서 사전 검증 권장
+      region: new993Reduction.region993 ?? "outside_speculation",
+      isResident: new993Reduction.isResident993 ?? true,
+      isHousingConstructionBusiness: new993Reduction.isHousingConstructionBusiness993 ?? false,
+      acquisitionType: new993Reduction.acquisitionType993 ?? "from_builder",
+      hasOccupancyAtContract: new993Reduction.hasOccupancyAtContract,
+      // 농특세는 STEP 7 산출세액 계산 후 별도로 재계산 (preliminary는 placeholder 0)
+      calculatedTaxBeforeReduction: 0,
+      calculatedTaxAfterReduction: 0,
+    });
+    if (new993PreliminaryResult.isEligible) {
+      transferIncome = Math.max(0, transferIncomeBefore993 - new993PreliminaryResult.reducibleTransferIncome);
+      steps.push({
+        label: "§99의3 신축주택 과세특례 — 양도소득금액 차감",
+        formula: `양도소득금액 ${transferIncomeBefore993.toLocaleString()} - 감면 양도소득금액 ${new993PreliminaryResult.reducibleTransferIncome.toLocaleString()} = ${transferIncome.toLocaleString()}`,
+        amount: transferIncome,
+        legalBasis: "조특법 §99의3",
+      });
+    } else {
+      steps.push({
+        label: "§99의3 신축주택 과세특례 — 적용 불가",
+        formula: new993PreliminaryResult.ineligibleReasons.map((r) => r.message).join(" · "),
+        amount: 0,
+        legalBasis: "조특법 §99의3",
+      });
+    }
+  }
 
   // STEP 5: 기본공제 (aggregate 엔진에서 호출 시 skipBasicDeduction=true로 스킵)
   const basicDeduction = input.skipBasicDeduction
@@ -635,6 +578,30 @@ export function calculateTransferTax(
     amount: taxResult.calculatedTax,
     legalBasis: taxResult.surchargeRate ? TRANSFER.SURCHARGE : TRANSFER.TAX_RATE,
   });
+
+  // STEP 7.5 (Phase 2, 2026-05-06): §99의3 농어촌특별세 = 감면세액 × 20%
+  // 감면세액 = (감면 전 양도소득금액 적용 산출세액) - (감면 후 산출세액 = taxResult.calculatedTax)
+  let new993FinalResult: New993Result | undefined = new993PreliminaryResult;
+  let ruralSurtax993 = 0;
+  if (new993PreliminaryResult?.isEligible) {
+    const taxBaseBefore993 = Math.max(0, transferIncomeBefore993 - basicDeduction);
+    const taxResultBefore993 = calcTax(taxBaseBefore993, parsedRates, taxRateInput, multiHouseSurchargeResult);
+    const taxReduction993 = Math.max(0, taxResultBefore993.calculatedTax - taxResult.calculatedTax);
+    ruralSurtax993 = applyRate(taxReduction993, 0.2);
+    new993FinalResult = {
+      ...new993PreliminaryResult,
+      taxReductionForRuralSurtax: taxReduction993,
+      ruralSurtax: ruralSurtax993,
+    };
+    if (taxReduction993 > 0) {
+      steps.push({
+        label: "§99의3 농어촌특별세 (감면세액 × 20%)",
+        formula: `(감면 전 산출세액 ${taxResultBefore993.calculatedTax.toLocaleString()} − 감면 후 산출세액 ${taxResult.calculatedTax.toLocaleString()}) × 20% = ${ruralSurtax993.toLocaleString()}`,
+        amount: ruralSurtax993,
+        legalBasis: "농특세법 §3·§5",
+      });
+    }
+  }
 
   // STEP 8: 감면세액
   const {
@@ -765,11 +732,11 @@ export function calculateTransferTax(
     });
   }
 
-  // STEP 11: 총 납부세액 = 총결정세액 + 지방소득세 + 신고불성실/납부지연가산세
-  const totalTax = determinedTaxWithPenalty + localIncomeTax + filingDelayedPenalty;
+  // STEP 11: 총 납부세액 = 총결정세액 + 지방소득세 + 신고불성실/납부지연가산세 + §99의3 농특세
+  const totalTax = determinedTaxWithPenalty + localIncomeTax + filingDelayedPenalty + ruralSurtax993;
   steps.push({
     label: "총 납부세액",
-    formula: `${totalAllPenalty > 0 ? "총결정세액" : "결정세액"} ${(determinedTax + totalAllPenalty).toLocaleString()} + 지방소득세 ${localIncomeTax.toLocaleString()}`,
+    formula: `${totalAllPenalty > 0 ? "총결정세액" : "결정세액"} ${(determinedTax + totalAllPenalty).toLocaleString()} + 지방소득세 ${localIncomeTax.toLocaleString()}${ruralSurtax993 > 0 ? ` + 농특세 ${ruralSurtax993.toLocaleString()}` : ""}`,
     amount: totalTax,
     legalBasis: `${TRANSFER.FINAL_TAX} + ${TRANSFER.LOCAL_INCOME_TAX}`,
   });
@@ -825,5 +792,6 @@ export function calculateTransferTax(
     inheritedAcquisitionDetail: inheritedAcquisitionStep?.result,
     inheritedHouseValuationDetail: inheritedAcquisitionStep?.houseValuationResult,
     carryoverTaxationDetail: carryoverDetail,
+    new993Detail: new993FinalResult,
   };
 }
