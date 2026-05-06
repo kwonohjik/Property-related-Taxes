@@ -15,6 +15,47 @@ import type { AggregateTransferResult } from "@/lib/tax-engine/transfer-tax-aggr
 import type { MixedUseGainBreakdown } from "@/lib/tax-engine/types/transfer-mixed-use.types";
 import { toEngineAssetKind, isHousingLike, toEngineReductions, buildAssetPayload } from "./transfer-tax-api-helpers";
 import { buildCarryoverPayload } from "./transfer-tax-api-carryover";
+
+// ─── ④ 장기임대주택 거주주택 비과세 특례 API 변환 헬퍼 (소령 §155⑳) ───
+
+/**
+ * AssetForm.rentalHousingException → API payload 변환.
+ * applyException=false 또는 rentalUnits 미입력 시 undefined 반환 (⑬ body 미포함).
+ * 자동 안분 fallback 금지 — 미입력은 validate에서 차단.
+ */
+function toRentalHousingExceptionApi(asset: AssetForm): object | undefined {
+  const rh = asset.rentalHousingException;
+  if (!rh?.applyException) return undefined;
+  if (!rh.rentalUnits || rh.rentalUnits.length === 0) return undefined;
+
+  return {
+    applyException: true,
+    scenario: rh.scenario,
+    rentalUnits: rh.rentalUnits.map((u) => ({
+      // ISO datetime string (날짜만 입력된 경우 T00:00:00Z로 변환)
+      registrationDate: u.registrationDate
+        ? (u.registrationDate.includes('T') ? u.registrationDate : `${u.registrationDate}T00:00:00.000Z`)
+        : undefined,
+      rentalType: u.rentalType,
+      rentalAcquisitionType: u.rentalAcquisitionType,
+      isApartment: u.isApartment,
+      region: u.region,
+      standardPriceAtRentalStart: parseAmount(u.standardPriceAtRentalStart) || 0,
+      rentalMonths: parseFloat(u.rentalMonths) || 0,
+      rentalAutoTermination: u.rentalAutoTermination,
+      requirementsConfirmed: u.requirementsConfirmed,
+    })),
+    // B 시나리오 전용 필드 — priorResidenceTransferDate는 datetime string으로 변환
+    priorResidenceTransferDate: rh.priorResidenceTransferDate
+      ? (rh.priorResidenceTransferDate.includes('T')
+        ? rh.priorResidenceTransferDate
+        : `${rh.priorResidenceTransferDate}T00:00:00.000Z`)
+      : undefined,
+    standardPriceAtAcquisitionForPhrp: parseAmount(rh.standardPriceAtAcquisitionForPhrp ?? "") || undefined,
+    standardPriceAtPriorTransfer: parseAmount(rh.standardPriceAtPriorTransfer ?? "") || undefined,
+    standardPriceAtTransferForPhrp: parseAmount(rh.standardPriceAtTransferForPhrp ?? "") || undefined,
+  };
+}
 // 하위 호환 재수출 — 기존 import 경로 유지
 export { toEngineReductions } from "./transfer-tax-api-helpers";
 
@@ -656,6 +697,11 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
           return payload ? { carryoverTaxation: payload.carryoverTaxation } : {};
         })()
       : {}),
+    // ⑬ 장기임대주택 거주주택 비과세 특례 (소령 §155⑳) — 토글 OFF 시 undefined, body에서 제외
+    ...((() => {
+      const rhPayload = toRentalHousingExceptionApi(primary);
+      return rhPayload ? { rentalHousingException: rhPayload } : {};
+    })()),
   };
 
   const res = await fetch("/api/calc/transfer", {

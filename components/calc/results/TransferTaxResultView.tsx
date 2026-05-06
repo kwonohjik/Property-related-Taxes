@@ -18,6 +18,7 @@ import { FilingFormTable } from "@/components/calc/results/transfer/FilingFormTa
 import { CarryoverComparisonCard } from "@/components/calc/results/transfer/CarryoverComparisonCard";
 import { CarryoverScenarioBFilingCard } from "@/components/calc/results/transfer/CarryoverScenarioBFilingCard";
 import { PreHousingDisclosureDetailSection } from "@/components/calc/results/transfer/PreHousingDisclosureDetailSection";
+import { RentalHousingExceptionDetailCard } from "@/components/calc/results/transfer/RentalHousingExceptionDetailCard";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
@@ -287,18 +288,35 @@ export function TransferTaxResultView({
           <div className="rounded-lg border border-border overflow-hidden">
             <table className="w-auto text-sm border-collapse [&_tr]:border-b [&_tr]:border-border [&_tr:last-child]:border-0">
               <Row label="양도차익" value={formatKRW(result.transferGain)} />
-              {result.taxableGain !== result.transferGain && (
+              {/* §161 적용 시: 12억 초과분 안분 행 숨김 (양도차익 단계에서 분리하지 않음) */}
+              {!result.rentalHousingExceptionDetail?.applied && result.taxableGain !== result.transferGain && (
                 <Row label="과세 양도차익 (12억 초과분)" value={formatKRW(result.taxableGain)} sub />
               )}
               <Row
                 label={`장기보유특별공제 (${formatRate(result.longTermHoldingRate)})`}
                 value={result.longTermHoldingDeduction > 0 ? `- ${formatKRW(result.longTermHoldingDeduction)}` : "해당없음"}
               />
+              {/* 양도소득금액 — §161 적용 시 양도차익 − 장기보유공제 (§95①), 일반 시 과세대상 양도차익 − 장기보유공제 */}
               <Row
                 label="양도소득금액"
-                value={formatKRW(result.taxableGain - result.longTermHoldingDeduction)}
+                value={formatKRW(
+                  result.rentalHousingExceptionDetail?.applied
+                    ? result.transferGain - result.longTermHoldingDeduction
+                    : result.taxableGain - result.longTermHoldingDeduction,
+                )}
                 sub
               />
+              {/* §161 적용 시: 비과세 양도소득금액 차감 행 + 과세대상 양도소득금액 행 추가 */}
+              {result.rentalHousingExceptionDetail?.applied && (result.nontaxableGainAmount ?? 0) > 0 && (
+                <>
+                  <Row
+                    label="비과세 양도소득금액 (소령 §161①)"
+                    value={`- ${formatKRW(result.nontaxableGainAmount ?? 0)}`}
+                    sub
+                  />
+                  <Row label="과세대상 양도소득금액" value={formatKRW(result.taxableGain)} sub />
+                </>
+              )}
               <Row
                 label="기본공제"
                 value={result.basicDeduction > 0 ? `- ${formatKRW(result.basicDeduction)}` : "0"}
@@ -592,6 +610,11 @@ export function TransferTaxResultView({
 
       {/* 면책 고지 */}
       <DisclaimerBanner />
+
+      {/* ⑦ 장기임대주택 보유자 거주주택 비과세 특례 상세 (소령 §155⑳) — applied=false 시 미적용 사유도 표시 */}
+      {result.rentalHousingExceptionDetail && (
+        <RentalHousingExceptionDetailCard detail={result.rentalHousingExceptionDetail} />
+      )}
 
       {/* 비로그인 안내 */}
       {onLoginPrompt && (

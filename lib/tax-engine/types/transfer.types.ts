@@ -302,6 +302,12 @@ export interface TransferTaxInput {
    * "both" 외 값 사용 시 landAcquisitionDate 필수.
    */
   selfOwns?: "both" | "building_only" | "land_only";
+  /**
+   * 장기임대주택 보유자 거주주택 비과세 특례 입력 (소령 §155⑳).
+   * applyException=true 시 임대주택을 주택수에서 제외하여 1세대1주택 비과세 적용.
+   * 시나리오 B(PHRP)는 §161① 기준시가 안분으로 직전거주주택 양도일 이후분만 비과세.
+   */
+  rentalHousingException?: import("../transfer-tax/rental-housing-exception/types").RentalHousingExceptionInput;
 }
 
 export type TransferReduction =
@@ -381,6 +387,13 @@ export interface TransferTaxResult {
   longTermHoldingDeduction: number;
   /** 장기보유특별공제율 */
   longTermHoldingRate: number;
+  /**
+   * 비과세 양도소득금액 — 소득세법 시행령 §161①·② 안분 결과 비과세 부분
+   * 장기임대주택 거주주택 비과세 특례(§155⑳ + §161) 적용 시에만 채워짐
+   * = §95① 양도소득금액 − 과세대상 양도소득금액
+   * 결과 표의 "비과세 양도소득금액" 행에 표시
+   */
+  nontaxableGainAmount?: number;
   /** 기본공제 */
   basicDeduction: number;
   /** 과세표준 (소득세법 §92 — 원 단위) */
@@ -510,6 +523,12 @@ export interface TransferTaxResult {
    * FilingFormTableHelpers에서 `primary.acquisitionDate` 대신 이 값으로 보유기간 계산.
    */
   displayAcquisitionDate?: string;
+  /**
+   * 장기임대주택 보유자 거주주택 비과세 특례 상세 결과 (소령 §155⑳).
+   * rentalHousingException 제공 시만 포함.
+   * UI에서 §161① 비율·과세·비과세 양도소득금액 산식 표시용.
+   */
+  rentalHousingExceptionDetail?: import("../transfer-tax/rental-housing-exception/types").RentalHousingExceptionResult;
 }
 
 // ============================================================

@@ -8,6 +8,32 @@ import { RESIDENCE_DEFAULTS, migrateResidenceFields } from "./calc-wizard-asset-
 import { CARRYOVER_DEFAULTS, migrateCarryoverFields } from "./calc-wizard-asset-carryover";
 import type { AssetForm } from "./calc-wizard-asset";
 
+/** 장기임대주택 거주주택 비과세 특례 초기값 (소령 §155⑳) */
+export const RENTAL_HOUSING_EXCEPTION_DEFAULTS: AssetForm["rentalHousingException"] = {
+  applyException: false,
+  scenario: 'A',
+  rentalUnits: [],
+  priorResidenceTransferDate: undefined,
+  standardPriceAtAcquisitionForPhrp: undefined,
+  standardPriceAtPriorTransfer: undefined,
+  standardPriceAtTransferForPhrp: undefined,
+};
+
+/** 빈 임대주택 1호 초기값 (토글 ON 시 자동 추가) */
+export function makeDefaultRentalUnit(): AssetForm["rentalHousingException"]["rentalUnits"][number] {
+  return {
+    registrationDate: "",
+    rentalType: "long-8",
+    rentalAcquisitionType: "purchase",
+    isApartment: false,
+    region: "seoul-metro",
+    standardPriceAtRentalStart: "",
+    rentalMonths: "",
+    rentalAutoTermination: false,
+    requirementsConfirmed: false,
+  };
+}
+
 /**
  * AssetForm 기본값 팩토리.
  * index === 1 인 경우 isPrimaryForHouseholdFlags = true 로 설정.
@@ -182,6 +208,7 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     supplementaryLandUnitPrice: "",
     supplementaryBuildingValue: "",
     ...MIXED_USE_DEFAULTS,
+    rentalHousingException: { ...RENTAL_HOUSING_EXCEPTION_DEFAULTS },
   };
 }
 
@@ -273,5 +300,18 @@ export function migrateAsset(raw: unknown): AssetForm {
   migrateMixedUseFields(a);
   // 거주 정보 (자산-수준)
   migrateResidenceFields(a);
+  // ③ 장기임대주택 거주주택 비과세 특례 마이그레이션 (sessionStorage 호환)
+  if (!a.rentalHousingException || typeof a.rentalHousingException !== "object") {
+    a.rentalHousingException = { ...RENTAL_HOUSING_EXCEPTION_DEFAULTS };
+  } else {
+    const rhe = a.rentalHousingException as Record<string, unknown>;
+    if (rhe.applyException === undefined) rhe.applyException = false;
+    if (!rhe.scenario) rhe.scenario = 'A';
+    if (!Array.isArray(rhe.rentalUnits)) rhe.rentalUnits = [];
+    if (rhe.priorResidenceTransferDate === undefined) rhe.priorResidenceTransferDate = undefined;
+    if (rhe.standardPriceAtAcquisitionForPhrp === undefined) rhe.standardPriceAtAcquisitionForPhrp = undefined;
+    if (rhe.standardPriceAtPriorTransfer === undefined) rhe.standardPriceAtPriorTransfer = undefined;
+    if (rhe.standardPriceAtTransferForPhrp === undefined) rhe.standardPriceAtTransferForPhrp = undefined;
+  }
   return a as unknown as AssetForm;
 }

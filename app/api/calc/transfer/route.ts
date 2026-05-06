@@ -331,6 +331,31 @@ export async function POST(request: NextRequest) {
             : undefined,
         }
       : undefined,
+    // ⑭ 장기임대주택 거주주택 비과세 특례 (소령 §155⑳) — Date 변환 필수
+    // 주의: toDate()/toOptionalDate() 헬퍼 사용 (lib/api/date-coerce.ts 정책)
+    rentalHousingException: data.rentalHousingException
+      ? {
+          applyException: data.rentalHousingException.applyException,
+          scenario: data.rentalHousingException.scenario,
+          rentalUnits: data.rentalHousingException.rentalUnits.map((u) => ({
+            registrationDate: new Date(u.registrationDate),
+            rentalType: u.rentalType,
+            rentalAcquisitionType: u.rentalAcquisitionType,
+            isApartment: u.isApartment,
+            region: u.region,
+            standardPriceAtRentalStart: u.standardPriceAtRentalStart,
+            rentalMonths: u.rentalMonths,
+            rentalAutoTermination: u.rentalAutoTermination,
+            requirementsConfirmed: u.requirementsConfirmed,
+          })),
+          priorResidenceTransferDate: data.rentalHousingException.priorResidenceTransferDate
+            ? new Date(data.rentalHousingException.priorResidenceTransferDate)
+            : undefined,
+          standardPriceAtAcquisition: data.rentalHousingException.standardPriceAtAcquisitionForPhrp,
+          standardPriceAtPriorTransfer: data.rentalHousingException.standardPriceAtPriorTransfer,
+          standardPriceAtTransfer: data.rentalHousingException.standardPriceAtTransferForPhrp,
+        }
+      : undefined,
   };
 
   // 단계 4: 세율 로드

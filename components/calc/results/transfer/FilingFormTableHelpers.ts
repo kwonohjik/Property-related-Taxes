@@ -417,14 +417,31 @@ export function buildRows(
     setNum("expenses", "total", totalExpenses || null);
   }
 
+  // §161 적용 분기 (장기임대주택 거주주택 비과세 특례) — 산식 순서:
+  // 양도차익 → 장기보유공제 → §95① 양도소득금액 → §161① 안분 → 비과세/과세 분리
+  // 비과세는 양도차익 단계가 아닌 양도소득금액 단계에서 분리하므로 비과세 양도차익=0,
+  // 과세대상 양도차익=전체 양도차익으로 표기.
+  const isRH = result.rentalHousingExceptionDetail?.applied === true;
+
   setNum("transferGain", "total", result.transferGain);
-  setNum("exemptGain", "total", Math.max(0, result.transferGain - result.taxableGain));
-  setNum("taxableGain", "total", result.taxableGain);
+  if (isRH) {
+    setNum("exemptGain", "total", 0);
+    setNum("taxableGain", "total", result.transferGain);
+  } else {
+    setNum("exemptGain", "total", Math.max(0, result.transferGain - result.taxableGain));
+    setNum("taxableGain", "total", result.taxableGain);
+  }
   setNum("ltDeduction", "total", result.longTermHoldingDeduction);
 
   const holdingMs = holdingMonthsFromDates(acquisitionDate, transferDate);
   const residenceMs = residenceMonthsTotal;
-  const useTable2 = mu ? mu.housingPart.longTermDeductionTable === 2 : residenceMs >= 24;
+  // §161 적용 + 표1(일반)인 경우 거주 기간분 개념 없음 — 보유 기간분에 전액 할당 (§161④)
+  // appliedTable === "mixed"(B2) 또는 "table-2"(A2)는 기존 분할 로직 유지
+  const isRHTable1Only = result.rentalHousingExceptionDetail?.applied === true
+    && result.rentalHousingExceptionDetail.appliedTable === "table-1";
+  const useTable2 = mu
+    ? mu.housingPart.longTermDeductionTable === 2
+    : (isRHTable1Only ? false : residenceMs >= 24);
 
   if (mode === "fourpart" && mu) {
     const hpSplit = splitLtDeduction(mu.housingPart.longTermDeductionAmount, holdingMs, residenceMs, useTable2);
@@ -467,11 +484,21 @@ export function buildRows(
     setNum("ltResidencePart", "total", split.residenceAmount);
   }
 
-  const incomeAmount = result.taxableGain - result.longTermHoldingDeduction;
+  // §161 적용 시: 양도소득금액(§95①) = 양도차익 − 장기보유공제 (전체 양도차익 기준)
+  // 일반 케이스: 양도소득금액 = 과세대상 양도차익 − 장기보유공제 (기존 로직)
+  const incomeAmount = isRH
+    ? result.transferGain - result.longTermHoldingDeduction
+    : result.taxableGain - result.longTermHoldingDeduction;
   setNum("incomeAmount", "total", incomeAmount);
+  // §161 비과세 양도소득금액 — 양도소득금액 단계 차감 (§95①에서 안분)
+  setNum("nontaxableIncome", "total", isRH ? (result.nontaxableGainAmount ?? 0) : 0);
   setNum("reductionTargetIncome", "total", result.reducibleIncome ?? 0);
   setNum("reductionTargetIncome2", "total", result.reducibleIncome ?? 0);
-  setNum("incomeAmountAfter", "total", incomeAmount);
+  // 양도소득금액(차감 후) = §161 비과세·감면 차감 결과 = 과세대상 양도소득금액
+  const incomeAmountAfter = isRH
+    ? result.taxableGain
+    : incomeAmount;
+  setNum("incomeAmountAfter", "total", incomeAmountAfter);
   setNum("priorIncomeAmount", "total", 0);
   setNum("basicDeduction", "total", result.basicDeduction);
   setNum("taxBase", "total", result.taxBase);
@@ -505,6 +532,7 @@ export function buildRows(
     ["ltHoldingPart", " 보유 기간분 장특", { indent: true }],
     ["ltResidencePart", " 거주 기간분 장특", { indent: true, separatorAfter: true }],
     ["incomeAmount", "양도소득금액"],
+    ["nontaxableIncome", "비과세 양도소득금액 (소령 §161①)", { indent: true }],
     ["reductionTargetIncome", "세액감면대상금액"],
     ["reductionTargetIncome2", "소득금액 감면대상"],
     ["incomeAmountAfter", "양도소득금액"],

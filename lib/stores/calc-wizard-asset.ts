@@ -484,6 +484,37 @@ export interface AssetForm {
   /** 보조계산: 건물 공시가격 (원 총액) */
   supplementaryBuildingValue: string;
 
+  // ── 장기임대주택 보유자 거주주택 비과세 특례 (소령 §155⑳) ──
+  rentalHousingException: {
+    applyException: boolean;
+    /** 거주주택 양도(A) / PHRP 양도(B) */
+    scenario: 'A' | 'B';
+    rentalUnits: Array<{
+      /** 임대사업자 등록일 (YYYY-MM-DD) */
+      registrationDate: string;
+      rentalType: 'short-4' | 'short-6' | 'long-8' | 'long-10' | 'pre-2018';
+      rentalAcquisitionType: 'purchase' | 'construction';
+      isApartment: boolean;
+      region: 'seoul-metro' | 'non-metro' | 'regulated-area';
+      /** 임대개시일 기준시가 (원, 문자열) */
+      standardPriceAtRentalStart: string;
+      /** 실제 임대 개월 수 */
+      rentalMonths: string;
+      /** 자동·자진말소 5년 내 양도 여부 */
+      rentalAutoTermination: boolean;
+      /** 기타 요건 충족 자기확인 (5%증액 등) */
+      requirementsConfirmed: boolean;
+    }>;
+    /** B 시나리오: 직전거주주택 양도일 (YYYY-MM-DD) */
+    priorResidenceTransferDate?: string;
+    /** B 시나리오: 취득 당시 기준시가 P_acq (원, 문자열) */
+    standardPriceAtAcquisitionForPhrp?: string;
+    /** B 시나리오: 직전양도 당시 기준시가 P_prior (원, 문자열) */
+    standardPriceAtPriorTransfer?: string;
+    /** B 시나리오: 현 양도 당시 기준시가 P_transfer (원, 문자열) */
+    standardPriceAtTransferForPhrp?: string;
+  };
+
   // ── 검용주택 분리계산 (sodt §160①단서, 2022.1.1 이후) ──
   /** 검용주택 여부 토글 */
   isMixedUseHouse: boolean;

@@ -1,9 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import type { AssetForm, ParcelFormItem } from "@/lib/stores/calc-wizard-store";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DateInput } from "@/components/ui/date-input";
+import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -18,6 +16,8 @@ import { CarryoverGiftBlock } from "./CarryoverGiftBlock";
 import { InheritedAcquisitionDeemedSection } from "./InheritedAcquisitionDeemedSection";
 import { NblSectionContainer } from "./nbl/NblSectionContainer";
 import { MixedUseToggleRow, MixedUseExpandedPanel } from "./MixedUseSection";
+import { RentalHousingExceptionSection } from "./RentalHousingExceptionSection";
+import { RENTAL_HOUSING_EXCEPTION_DEFAULTS } from "@/lib/stores/calc-wizard-asset-factory";
 
 const ASSET_KIND_LABELS: Record<string, string> = {
   housing: "주택",
@@ -591,15 +591,26 @@ export function CompanionAssetCard({
         </div>
       )}
 
+      {/* 장기임대주택 보유자 거주주택 비과세 특례 — 주택 자산에만 표시 (소령 §155⑳) */}
+      {(asset.assetKind === "housing" || asset.assetKind === "right_to_move_in") && (
+        <div className="pt-2 border-t border-border/60">
+          <RentalHousingExceptionSection
+            rh={asset.rentalHousingException ?? { ...RENTAL_HOUSING_EXCEPTION_DEFAULTS }}
+            acquisitionDate={asset.acquisitionDate}
+            transferDate={transferDate ?? ""}
+            residencePeriodMonthsAsset={asset.residencePeriodMonthsAsset}
+            onChangeResidencePeriodMonths={(v) => onChange({ residencePeriodMonthsAsset: v })}
+            onChange={(rh) => onChange({ rentalHousingException: rh })}
+          />
+        </div>
+      )}
+
       {/* 감면은 Step 5(감면·공제)에서 자산별로 선택합니다 */}
     </div>
   );
 }
 
 import {
-  AREA_INPUT_CLASS,
-  calcDayAfter,
-  calcEffectiveArea,
   ReplotReductionFields,
   ReplotIncreaseFields,
 } from "./CompanionAssetCardReplot";

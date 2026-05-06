@@ -11,7 +11,7 @@ import { WizardSidebar, type WizardSidebarStep, type WizardSidebarSummaryItem } 
 import { TransferTaxResultView } from "@/components/calc/results/TransferTaxResultView";
 import { BundledAllocationCard } from "@/components/calc/results/BundledAllocationCard";
 import { MixedUseResultCard } from "@/components/calc/results/mixed-use/MixedUseResultCard";
-import { callTransferTaxAPI, type SingleTransferResult } from "@/lib/calc/transfer-tax-api";
+import { callTransferTaxAPI } from "@/lib/calc/transfer-tax-api";
 import type { TransferTaxPenaltyResult } from "@/lib/tax-engine/transfer-tax-penalty";
 import { validateStep } from "@/lib/calc/transfer-tax-validate";
 import { getFilingDeadline, isFilingOverdue } from "@/lib/calc/filing-deadline";
@@ -97,7 +97,7 @@ export default function TransferTaxCalculator({
     if (currentStep >= totalSteps && !result) {
       setStep(0);
     }
-  }, [currentStep, result, setStep]);
+  }, [currentStep, totalSteps, result, setStep]);
 
   // 신고일·양도일 변경 시 가산세 필드 자동 설정
   //   - 신고기한 초과 시: 무신고(filingType="none") + 지연납부 자동 ON, paymentDeadline=신고기한, actualPaymentDate=신고일
@@ -327,7 +327,21 @@ export default function TransferTaxCalculator({
     return null;
   })();
 
+  // ⑥ 장기임대주택 거주주택 비과세 특례 배지 (소령 §155⑳)
+  const rentalExceptionApplied = formData.assets.some(
+    (a) => a.rentalHousingException?.applyException === true,
+  );
+  const rentalExceptionScenario = rentalExceptionApplied
+    ? formData.assets.find((a) => a.rentalHousingException?.applyException)?.rentalHousingException?.scenario
+    : undefined;
+
   const sidebarSummary: WizardSidebarSummaryItem[] = [
+    ...(rentalExceptionApplied
+      ? [{
+          label: "[특례] §155⑳ 장기임대주택 거주주택 비과세",
+          value: rentalExceptionScenario === "B" ? "PHRP §161① 안분" : "거주주택 양도 (A)",
+        }]
+      : []),
     ...(transferSummary.totalSalePrice > 0
       ? [{ label: "양도가액 합계", value: transferSummary.totalSalePrice }]
       : []),

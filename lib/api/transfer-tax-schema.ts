@@ -28,6 +28,44 @@ import {
   addPropertyRefines,
 } from "./transfer-tax-schema-sub";
 
+// ─── ⑨ 장기임대주택 거주주택 비과세 특례 Zod enum (소령 §155⑳) ──────
+
+/** 시나리오: A=거주주택 양도, B=임대주택→거주주택 전환 후 양도(PHRP) */
+export const RentalScenarioEnum = z.enum(['A', 'B']);
+
+/** 임대 유형: 단기(4·6년)·장기(8·10년)·2018 이전 등록 */
+export const RentalTypeEnum = z.enum(['short-4', 'short-6', 'long-8', 'long-10', 'pre-2018']);
+
+/** 취득 방법: 매입·건설 */
+export const RentalAcqTypeEnum = z.enum(['purchase', 'construction']);
+
+/** 소재지역: 수도권·비수도권·조정대상지역 */
+export const RentalRegionEnum = z.enum(['seoul-metro', 'non-metro', 'regulated-area']);
+
+/** ⑫ 임대주택 1호 Zod 객체 스키마 (미정의 시 침묵 stripping 방지) */
+export const rentalUnitSchema = z.object({
+  registrationDate: z.string().datetime(),
+  rentalType: RentalTypeEnum,
+  rentalAcquisitionType: RentalAcqTypeEnum,
+  isApartment: z.boolean(),
+  region: RentalRegionEnum,
+  standardPriceAtRentalStart: z.number().int().nonnegative(),
+  rentalMonths: z.number().nonnegative(),
+  rentalAutoTermination: z.boolean(),
+  requirementsConfirmed: z.boolean(),
+});
+
+/** ⑫ 장기임대주택 거주주택 비과세 특례 Zod 스키마 (미정의 시 침묵 stripping 방지) */
+export const rentalHousingExceptionSchema = z.object({
+  applyException: z.boolean(),
+  scenario: RentalScenarioEnum,
+  rentalUnits: z.array(rentalUnitSchema).min(1),
+  priorResidenceTransferDate: z.string().datetime().optional(),
+  standardPriceAtAcquisitionForPhrp: z.number().int().nonnegative().optional(),
+  standardPriceAtPriorTransfer: z.number().int().nonnegative().optional(),
+  standardPriceAtTransferForPhrp: z.number().int().nonnegative().optional(),
+});
+
 // ─── 단건 기본 필드 객체 (단건·다건 공유) ───────────────────────
 
 const propertyBaseShape = {
@@ -145,6 +183,8 @@ const propertyBaseShape = {
    * "building_only"/"land_only" 사용 시 landAcquisitionDate 필수.
    */
   selfOwns: z.enum(["both", "building_only", "land_only"]).optional(),
+  /** ⑫ 장기임대주택 거주주택 비과세 특례 (소령 §155⑳) — 미정의 시 침묵 stripping 방지 */
+  rentalHousingException: rentalHousingExceptionSchema.optional(),
 };
 
 // ─── 단건 스키마 (기존 inputSchema와 동일) ─────────────────────

@@ -230,6 +230,30 @@ export async function POST(request: NextRequest) {
               : undefined,
           }
         : undefined,
+      // ⑭ 장기임대주택 거주주택 비과세 특례 (소령 §155⑳) — Date 변환 (단건 route 패턴 동일)
+      rentalHousingException: p.rentalHousingException
+        ? {
+            applyException: p.rentalHousingException.applyException,
+            scenario: p.rentalHousingException.scenario,
+            rentalUnits: p.rentalHousingException.rentalUnits.map((u) => ({
+              registrationDate: new Date(u.registrationDate),
+              rentalType: u.rentalType,
+              rentalAcquisitionType: u.rentalAcquisitionType,
+              isApartment: u.isApartment,
+              region: u.region,
+              standardPriceAtRentalStart: u.standardPriceAtRentalStart,
+              rentalMonths: u.rentalMonths,
+              rentalAutoTermination: u.rentalAutoTermination,
+              requirementsConfirmed: u.requirementsConfirmed,
+            })),
+            priorResidenceTransferDate: p.rentalHousingException.priorResidenceTransferDate
+              ? new Date(p.rentalHousingException.priorResidenceTransferDate)
+              : undefined,
+            standardPriceAtAcquisition: p.rentalHousingException.standardPriceAtAcquisitionForPhrp,
+            standardPriceAtPriorTransfer: p.rentalHousingException.standardPriceAtPriorTransfer,
+            standardPriceAtTransfer: p.rentalHousingException.standardPriceAtTransferForPhrp,
+          }
+        : undefined,
     };
 
     return {

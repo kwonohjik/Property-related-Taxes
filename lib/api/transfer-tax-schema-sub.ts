@@ -1,5 +1,28 @@
 import { z } from "zod";
 
+// ─── ⑩ 장기임대주택 거주주택 비과세 특례 enum 재export (컴패니언) ─
+
+export {
+  RentalScenarioEnum,
+  RentalTypeEnum,
+  RentalAcqTypeEnum,
+  RentalRegionEnum,
+  rentalUnitSchema,
+  rentalHousingExceptionSchema,
+} from "./transfer-tax-schema";
+
+/**
+ * ⑩ addRentalHousingExceptionRefines — 장기임대주택 특례 B 시나리오 추가 검증 헬퍼.
+ * propertySchema.superRefine 내부에서 호출. 현재는 schema 수준 기본 검증만 수행.
+ */
+export function addRentalHousingExceptionRefines(
+  data: { rentalHousingException?: unknown },
+): void {
+  // B 시나리오 기준시가 3개 시점 일관성은 schema-level optional이므로
+  // validate.ts (⑧)에서 사용자 친화적 오류 메시지로 추가 검증.
+  void data;
+}
+
 // ─── 하위 스키마 ────────────────────────────────────────────────
 
 export const temporaryTwoHouseSchema = z.object({
