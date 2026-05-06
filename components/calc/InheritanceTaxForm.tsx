@@ -21,6 +21,8 @@ import { ExemptionChecklist } from "@/components/calc/exemption/ExemptionCheckli
 import { PriorGiftInput } from "@/components/calc/PriorGiftInput";
 import { HeirComposition } from "@/components/calc/HeirComposition";
 import { InheritanceTaxResultView } from "@/components/calc/results/InheritanceTaxResultView";
+import { useAutoSaveCalculation } from "@/lib/storage/use-auto-save-calculation";
+import { useProfessionalStore } from "@/lib/stores/professional-store";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { DateInput } from "@/components/ui/date-input";
@@ -506,6 +508,17 @@ export function InheritanceTaxForm() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<InheritanceTaxResult | null>(null);
+
+  const { activeClientId } = useProfessionalStore();
+
+  // 로컬 이력 자동 저장 — 결과 화면 진입 시 1회
+  useAutoSaveCalculation({
+    taxType: "inheritance",
+    inputData: form as unknown as Record<string, unknown>,
+    resultData: result ? (result as unknown as Record<string, unknown>) : null,
+    taxLawVersion: form.deathDate || new Date().toISOString().split("T")[0],
+    clientId: activeClientId,
+  });
 
   const set = (patch: Partial<FormState>) =>
     setForm((prev) => ({ ...prev, ...patch }));

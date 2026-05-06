@@ -18,6 +18,8 @@ import { StockValuationForm } from "@/components/calc/StockValuationForm";
 import { ExemptionChecklist } from "@/components/calc/exemption/ExemptionChecklist";
 import { PriorGiftInput } from "@/components/calc/PriorGiftInput";
 import { GiftTaxResultView } from "@/components/calc/results/GiftTaxResultView";
+import { useAutoSaveCalculation } from "@/lib/storage/use-auto-save-calculation";
+import { useProfessionalStore } from "@/lib/stores/professional-store";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
@@ -99,6 +101,10 @@ function validateStep(step: number, form: FormState): string | null {
   if (step === 1) {
     if (form.giftItems.length + form.stockItems.length === 0) {
       return "증여재산을 1개 이상 입력하세요.";
+    }
+    const allItems = [...form.giftItems, ...form.stockItems];
+    if (allItems.some((it) => !it.name.trim())) {
+      return "모든 증여재산에 자산명을 입력하세요.";
     }
   }
   return null;
@@ -362,6 +368,17 @@ export function GiftTaxForm() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<GiftTaxResult | null>(null);
+
+  const { activeClientId } = useProfessionalStore();
+
+  // 로컬 이력 자동 저장 — 결과 화면 진입 시 1회
+  useAutoSaveCalculation({
+    taxType: "gift",
+    inputData: form as unknown as Record<string, unknown>,
+    resultData: result ? (result as unknown as Record<string, unknown>) : null,
+    taxLawVersion: form.giftDate || new Date().toISOString().split("T")[0],
+    clientId: activeClientId,
+  });
 
   const set = (patch: Partial<FormState>) =>
     setForm((prev) => ({ ...prev, ...patch }));

@@ -27,6 +27,8 @@ import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
 import { LoginPromptBanner } from "@/components/calc/shared/LoginPromptBanner";
 import { ResetButton } from "@/components/calc/shared/ResetButton";
 import { useComprehensiveWizardStore } from "@/lib/stores/comprehensive-wizard-store";
+import { useAutoSaveCalculation } from "@/lib/storage/use-auto-save-calculation";
+import { useProfessionalStore } from "@/lib/stores/professional-store";
 import type { ComprehensiveTaxResult } from "@/lib/tax-engine/types/comprehensive.types";
 
 // ============================================================
@@ -591,6 +593,17 @@ export default function ComprehensiveTaxPage() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const { activeClientId } = useProfessionalStore();
+
+  // 로컬 이력 자동 저장 — 결과 화면 진입 시 1회
+  useAutoSaveCalculation({
+    taxType: "comprehensive_property",
+    inputData: formData as unknown as Record<string, unknown>,
+    resultData: result ? (result as unknown as Record<string, unknown>) : null,
+    taxLawVersion: `${formData.assessmentYear || new Date().getFullYear()}-06-01`,
+    clientId: activeClientId,
+  });
 
   // 이전 단계
   function handlePrev() {

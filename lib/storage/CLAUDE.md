@@ -13,6 +13,9 @@ user-repository.ts        # createUserRepository(uid) 클로저 패턴
 calculation-repository.ts # createCalculationRepository(uid)
 title-generator.ts        # 세목별 자동 title 생성
 use-auto-save-calculation.ts  # 결과 화면 마운트 시 자동 저장 훅
+migrations/
+  reduction-reclassification.ts  # 기존 이력의 §99의3 'unsold_housing' → 'new_99_3' 재분류
+                                 # ⚠️ 함수만 작성됨 — db.ts v4 스키마 연결은 Phase 2 활성화 대기
 ```
 
 ## 핵심 규칙

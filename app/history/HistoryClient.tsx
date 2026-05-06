@@ -83,7 +83,16 @@ function extractCardSummary(
     return { address, dateLabel };
   }
   if (taxType === "acquisition") {
-    return { address: addr(inputData), dateLabel: fmt(inputData.targetDate as string | undefined, "취득일") };
+    // 취득세 폼은 road/jibun 필드를 사용 — addressRoad/addressJibun fallback과 함께 인식
+    const road = (inputData.road ?? inputData.addressRoad) as string | undefined;
+    const jibun = (inputData.jibun ?? inputData.addressJibun) as string | undefined;
+    const address = road?.trim() || jibun?.trim() || null;
+    const dateRaw =
+      (inputData.targetDate as string | undefined) ||
+      (inputData.balancePaymentDate as string | undefined) ||
+      (inputData.registrationDate as string | undefined) ||
+      (inputData.contractDate as string | undefined);
+    return { address, dateLabel: fmt(dateRaw, "취득일") };
   }
   if (taxType === "inheritance") {
     return { address: addr(inputData), dateLabel: fmt(inputData.deathDate as string | undefined, "상속개시일") };
@@ -92,7 +101,11 @@ function extractCardSummary(
     return { address: addr(inputData), dateLabel: fmt(inputData.giftDate as string | undefined, "증여일") };
   }
   if (taxType === "property") {
-    return { address: addr(inputData), dateLabel: year(inputData.targetDate as string | undefined, "과세연도") };
+    // 재산세 폼은 road/jibun 필드 사용
+    const road = (inputData.road ?? inputData.addressRoad) as string | undefined;
+    const jibun = (inputData.jibun ?? inputData.addressJibun) as string | undefined;
+    const address = road?.trim() || jibun?.trim() || null;
+    return { address, dateLabel: year(inputData.targetDate as string | undefined, "과세연도") };
   }
   if (taxType === "comprehensive_property") {
     const raw = (inputData.assessmentYear ?? inputData.targetDate) as string | number | undefined;

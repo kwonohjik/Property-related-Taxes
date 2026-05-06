@@ -16,6 +16,8 @@ import { ChevronLeft } from "lucide-react";
 import { StepIndicator } from "@/components/calc/StepIndicator";
 import { AcquisitionTaxResultView } from "@/components/calc/results/AcquisitionTaxResultView";
 import { callAcquisitionTaxAPI } from "@/lib/calc/acquisition-tax-api";
+import { useAutoSaveCalculation } from "@/lib/storage/use-auto-save-calculation";
+import { useProfessionalStore } from "@/lib/stores/professional-store";
 import type { AcquisitionTaxResult } from "@/lib/tax-engine/types/acquisition.types";
 import {
   STEPS,
@@ -89,6 +91,21 @@ export function AcquisitionTaxForm() {
   const [result, setResult] = useState<AcquisitionTaxResult | null>(null);
   /** 토지·농지 시가표준액 단가 (StandardPriceInput 내부 상태 유지용) */
   const [standardValuePerSqm, setStandardValuePerSqm] = useState("");
+
+  const { activeClientId } = useProfessionalStore();
+
+  // 로컬 이력 자동 저장 — 결과 화면 진입 시 1회
+  useAutoSaveCalculation({
+    taxType: "acquisition",
+    inputData: form as unknown as Record<string, unknown>,
+    resultData: result ? (result as unknown as Record<string, unknown>) : null,
+    taxLawVersion:
+      form.balancePaymentDate ||
+      form.registrationDate ||
+      form.contractDate ||
+      new Date().toISOString().split("T")[0],
+    clientId: activeClientId,
+  });
 
   const isOriginal = ["new_construction", "extension", "reconstruction", "reclamation"].includes(form.acquisitionCause);
   const isBurdened = form.acquisitionCause === "burdened_gift";

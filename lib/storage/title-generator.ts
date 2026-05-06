@@ -33,9 +33,9 @@ function extractAddress(input: Record<string, unknown>): string | null {
     const addr = road?.trim() || jibun?.trim();
     if (addr) return addr;
   }
-  // 취득세 등 단일 구조
-  const road = input.addressRoad as string | undefined;
-  const jibun = input.addressJibun as string | undefined;
+  // 취득세 등 단일 구조 — road/jibun 또는 addressRoad/addressJibun 모두 인식
+  const road = (input.road ?? input.addressRoad) as string | undefined;
+  const jibun = (input.jibun ?? input.addressJibun) as string | undefined;
   return road?.trim() || jibun?.trim() || null;
 }
 

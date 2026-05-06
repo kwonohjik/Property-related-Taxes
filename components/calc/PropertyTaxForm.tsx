@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { StepIndicator } from "@/components/calc/StepIndicator";
 import { PropertyTaxResultView } from "@/components/calc/results/PropertyTaxResultView";
+import { useAutoSaveCalculation } from "@/lib/storage/use-auto-save-calculation";
+import { useProfessionalStore } from "@/lib/stores/professional-store";
 import { INITIAL_FORM, validateStep, callPropertyTaxAPI, type FormState } from "./property/shared";
 import { Step0 } from "./property/Step0";
 import { Step1 } from "./property/Step1";
@@ -22,6 +24,17 @@ export function PropertyTaxForm() {
   const [result, setResult] = useState<PropertyTaxResult | null>(null);
   /** 토지 전용 단가 (StandardPriceInput 내부 상태 유지용) */
   const [publishedPricePerSqm, setPublishedPricePerSqm] = useState("");
+
+  const { activeClientId } = useProfessionalStore();
+
+  // 로컬 이력 자동 저장 — 결과 화면 진입 시 1회
+  useAutoSaveCalculation({
+    taxType: "property",
+    inputData: form as unknown as Record<string, unknown>,
+    resultData: result ? (result as unknown as Record<string, unknown>) : null,
+    taxLawVersion: `${new Date().getFullYear()}-06-01`, // 재산세 과세기준일
+    clientId: activeClientId,
+  });
 
   const needsLandDetail =
     form.objectType === "land" &&
