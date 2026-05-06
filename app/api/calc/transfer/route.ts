@@ -129,6 +129,8 @@ export async function POST(request: NextRequest) {
   const data = parsed.data;
   const transferDate = new Date(data.transferDate);
   const acquisitionDate = new Date(data.acquisitionDate);
+  // Round 9 (2026-05-06): 자산-수준 매매계약일 string → Date 변환
+  const assetContractDate = data.assetContractDate ? new Date(data.assetContractDate) : undefined;
 
   const engineInput: TransferTaxInput = {
     propertyType: data.propertyType,
@@ -136,6 +138,7 @@ export async function POST(request: NextRequest) {
     transferDate,
     acquisitionPrice: data.acquisitionPrice,
     acquisitionDate,
+    assetContractDate,
     expenses: data.expenses,
     useEstimatedAcquisition: data.useEstimatedAcquisition,
     standardPriceAtAcquisition: data.standardPriceAtAcquisition,
@@ -183,6 +186,9 @@ export async function POST(request: NextRequest) {
           incorporationDate: r.incorporationDate ? new Date(r.incorporationDate) : undefined,
         };
       }
+      // §99의3 (Phase 2, 2026-05-06) + Phase 1 stub 20종: Zod schema에 본 요건 필드가
+      // 모두 정의되어 있으므로 r 그대로 통과. string 일자 필드(contractDate993 등)는
+      // transfer-tax.ts의 STEP 4.6 §99의3 분기에서 new Date() 변환.
       return r;
     }),
     annualBasicDeductionUsed: data.annualBasicDeductionUsed,
@@ -548,6 +554,8 @@ export async function POST(request: NextRequest) {
           transferDate,
           acquisitionPrice: companionAcqPrice,
           acquisitionDate: companionAcqDate,
+          // Round 9 (2026-05-06): 자산-수준 매매계약일 string → Date 변환
+          assetContractDate: c.assetContractDate ? new Date(c.assetContractDate) : undefined,
           expenses: a.allocatedExpenses,
           useEstimatedAcquisition:
             c.acquisitionCause === "purchase" && (c.useEstimatedAcquisition ?? false),

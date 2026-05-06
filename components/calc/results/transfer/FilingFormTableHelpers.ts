@@ -493,11 +493,16 @@ export function buildRows(
   // §161 비과세 양도소득금액 — 양도소득금액 단계 차감 (§95①에서 안분)
   setNum("nontaxableIncome", "total", isRH ? (result.nontaxableGainAmount ?? 0) : 0);
   setNum("reductionTargetIncome", "total", result.reducibleIncome ?? 0);
-  setNum("reductionTargetIncome2", "total", result.reducibleIncome ?? 0);
-  // 양도소득금액(차감 후) = §161 비과세·감면 차감 결과 = 과세대상 양도소득금액
+  // §99의3 5년 안분 차감액 (소득금액 단계) — Phase 2 result.new993Detail
+  // 산식: 양도소득금액 × (5년시점 공시가격 - 취득시 공시가격) / (양도시 공시가격 - 취득시 공시가격)
+  setNum("reductionTargetIncome2", "total", result.new993Detail?.reducibleTransferIncome ?? 0);
+  // 감면후 소득금액 = 양도소득금액 − 세액감면대상금액 − 소득금액 감면대상
+  // §161 (장기임대 거주주택 비과세) 케이스는 result.taxableGain이 이미 안분 후 값이므로 별도 처리.
+  const reductionTargetTotal = result.reducibleIncome ?? 0;
+  const new993Reducible = result.new993Detail?.reducibleTransferIncome ?? 0;
   const incomeAmountAfter = isRH
     ? result.taxableGain
-    : incomeAmount;
+    : Math.max(0, incomeAmount - reductionTargetTotal - new993Reducible);
   setNum("incomeAmountAfter", "total", incomeAmountAfter);
   setNum("priorIncomeAmount", "total", 0);
   setNum("basicDeduction", "total", result.basicDeduction);
@@ -507,6 +512,8 @@ export function buildRows(
   setNum("determinedTax", "total", result.determinedTax);
   setNum("penaltyTax", "total", result.penaltyTax);
   setNum("totalDeterminedTax", "total", result.determinedTax + result.penaltyTax);
+  // Round 11 (2026-05-06): §99의3 등 감면 적용 시 농어촌특별세 (감면세액 × 20%, 농특세법 §3·§5)
+  setNum("ruralSurtax", "total", result.new993Detail?.ruralSurtax ?? 0);
   const localCalc = Math.floor((result.determinedTax + result.penaltyTax) * 0.1);
   setNum("localCalculatedTax", "total", localCalc);
   setNum("localReduction", "total", 0);
@@ -535,7 +542,7 @@ export function buildRows(
     ["nontaxableIncome", "비과세 양도소득금액 (소령 §161①)", { indent: true }],
     ["reductionTargetIncome", "세액감면대상금액"],
     ["reductionTargetIncome2", "소득금액 감면대상"],
-    ["incomeAmountAfter", "양도소득금액"],
+    ["incomeAmountAfter", "감면후 소득금액"],
     ["priorIncomeAmount", "기신고 양도소득금액"],
     ["basicDeduction", "기본공제", { separatorAfter: true }],
     ["taxBase", "과세표준", { highlight: true }],
@@ -544,6 +551,7 @@ export function buildRows(
     ["determinedTax", "결정세액", { highlight: true }],
     ["penaltyTax", "가산세액"],
     ["totalDeterminedTax", "총결정세액", { highlight: true, separatorAfter: true }],
+    ["ruralSurtax", "농어촌특별세 (§99의3 등)"],
     ["localCalculatedTax", "지방소득세 산출세액"],
     ["localReduction", "지방세 감면세액"],
     ["localDeterminedTax", "지방세 결정세액", { highlight: true }],

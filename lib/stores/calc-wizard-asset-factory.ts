@@ -75,6 +75,7 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     acquisitionCause: "purchase",
     carryover: { ...CARRYOVER_DEFAULTS },
     acquisitionDate: "",
+    assetContractDate: "", // Round 9 (2026-05-06): 매매계약일 (감면 시한 판정용)
     decedentAcquisitionDate: "",
     donorAcquisitionDate: "",
     useEstimatedAcquisition: false,
@@ -235,6 +236,8 @@ export function migrateAsset(raw: unknown): AssetForm {
   }
   if (!a.standardPricePerSqmAtAcq) a.standardPricePerSqmAtAcq = "";
   if (!a.standardPricePerSqmAtTransfer) a.standardPricePerSqmAtTransfer = "";
+  // Round 9 (2026-05-06): 자산-수준 매매계약일 (감면 시한 판정)
+  if (a.assetContractDate === undefined) a.assetContractDate = "";
   if (!a.selfOwns) a.selfOwns = "both";
   if (a.hasSeperateLandAcquisitionDate === undefined) a.hasSeperateLandAcquisitionDate = false;
   if (!a.landAcquisitionDate) a.landAcquisitionDate = "";

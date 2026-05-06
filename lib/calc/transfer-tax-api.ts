@@ -287,6 +287,8 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
       : primary.acquisitionCause === "carryover_gift"
         ? (primary.acquisitionDate || primary.carryover?.giftRegistryDate || "")
         : primary.acquisitionDate,
+    // Round 9 (2026-05-06): 자산-수준 매매계약일 — §99의3 등 13개 매매계약일 기준 조문 시한 판정용
+    assetContractDate: primary.assetContractDate || undefined,
     expenses:
       hasPre1990 || isEstimated || isAppraisal || parcelModeActive
         ? 0

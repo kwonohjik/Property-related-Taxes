@@ -384,7 +384,9 @@ function validateAssetAcquisition(asset: AssetForm, label: string): string | nul
   }
 
   // 4-2) 개별주택가격 미공시 취득 환산 (§164⑤) — 일반 자산: 11개 필수 필드
-  if (usesPhd) {
+  // PHD §164⑤ 는 환산취득가 산식의 일부이므로 환산 모드(isEstimated)에서만 검증.
+  // 실거래가/감정가액 모드에서 usePreHousingDisclosure 플래그가 잔존해도 무시.
+  if (usesPhd && isEstimated) {
     if (!asset.phdFirstDisclosureDate)
       return `${label}: 최초 고시일을 입력하세요.`;
     // ISO 날짜 유효성 — 존재하지 않는 날(1993-02-30 등) 차단
@@ -555,6 +557,30 @@ export function validateStep(step: number, form: TransferFormData): string | nul
           if (!r.expropriationApprovalDate) return "사업인정고시일을 선택하세요.";
           if (form.transferDate && r.expropriationApprovalDate >= form.transferDate)
             return "사업인정고시일은 양도일보다 이전이어야 합니다.";
+        }
+        // Phase 2 (2026-05-06): §99의3 신축주택 과세특례 본 요건 검증
+        if (r.type === "new_99_3") {
+          // 취득 유형별 필수 일자 검증
+          // Round 9 (2026-05-06): 1호 매매계약일은 자산-수준 assetContractDate fallback
+          // 메모리 feedback_validation_sync_8th_point.md ⑧ 정책 (UI/API fallback ↔ validate 동기화)
+          if (r.acquisitionType993 === "from_builder") {
+            const hasContractDate = !!(r.contractDate993 || asset.assetContractDate);
+            if (!hasContractDate) return "§99의3 1호 적용: 매매계약일을 펼침 영역 상단에 입력하세요.";
+          } else if (r.acquisitionType993 === "self_built") {
+            if (!r.usageApprovalDate993) return "§99의3 2호 적용: 사용승인일을 선택하세요.";
+          }
+          // 취득시 기준시가 필수 (PHD 환산 결과 또는 직접 입력)
+          // Round 10 (2026-05-06): PHD 모드 ON 시 자동 산출되어 standardPriceAtAcquisition993에 적용됨
+          // PHD 모드 ON + 입력 부족 시 자동 적용 안 되므로 동일 검증으로 차단됨 (UI/API fallback ↔ validate 동기화 정책)
+          if (parseAmount(r.standardPriceAtAcquisition993 || "0") <= 0) {
+            return r.phdMode993
+              ? "§99의3 PHD 환산 모드: 환산 결과가 0입니다. 토지 공시지가·면적·최초공시 정보를 모두 입력했는지 확인 후 '적용' 버튼을 클릭하세요."
+              : "§99의3 적용: 취득시 기준시가를 입력하세요. (공동주택 최초고시 전 취득 시 PHD 환산 모드 ON 권장)";
+          }
+          // 5년 시점 기준시가 필수 (5년 후 양도인 경우 안분 산식에 사용)
+          if (parseAmount(r.standardPriceAt5Years || "0") <= 0) {
+            return "§99의3 적용: 5년 시점 기준시가를 입력하세요. (취득일+5년 인접 고시일 가격)";
+          }
         }
       }
     }

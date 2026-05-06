@@ -77,9 +77,48 @@ export function toEngineReductions(
         businessApprovalDate: r.expropriationApprovalDate,
       };
     }
-    // exhaustive check
-    const _never: never = r;
-    return _never;
+    // ── Phase 2 (2026-05-06): §99의3 신축주택 과세특례 본격 변환 ──
+    if (r.type === "new_99_3") {
+      return {
+        type: "new_99_3" as const,
+        contractDate993: r.contractDate993 || undefined,
+        usageApprovalDate993: r.usageApprovalDate993 || undefined,
+        standardPriceAt5Years: parseAmount(r.standardPriceAt5Years || "0"),
+        standardPriceAtAcquisition993: parseAmount(r.standardPriceAtAcquisition993 || "0"),
+        standardPriceAtTransfer993: r.standardPriceAtTransfer993
+          ? parseAmount(r.standardPriceAtTransfer993)
+          : undefined,
+        region993: r.region993,
+        acquisitionType993: r.acquisitionType993,
+        hasOccupancyAtContract: r.hasOccupancyAtContract ?? false,
+        isResident993: r.isResident993,
+        isHousingConstructionBusiness993: r.isHousingConstructionBusiness993,
+        // Round 10 (2026-05-06): PHD 환산 입력 (취득시 추정 공동주택가격 자동 산출)
+        phdMode993: r.phdMode993 ?? false,
+        phdFirstDisclosureDate993: r.phdFirstDisclosureDate993 || undefined,
+        phdFirstDisclosurePrice993: r.phdFirstDisclosurePrice993
+          ? parseAmount(r.phdFirstDisclosurePrice993)
+          : undefined,
+        phdLandAreaSqm993: r.phdLandAreaSqm993 ? parseFloat(r.phdLandAreaSqm993) : undefined,
+        phdLandPricePerSqmAtAcq993: r.phdLandPricePerSqmAtAcq993
+          ? parseAmount(r.phdLandPricePerSqmAtAcq993)
+          : undefined,
+        phdLandPricePerSqmAtFirst993: r.phdLandPricePerSqmAtFirst993
+          ? parseAmount(r.phdLandPricePerSqmAtFirst993)
+          : undefined,
+        phdBuildingStdAtAcq993: r.phdBuildingStdAtAcq993
+          ? parseAmount(r.phdBuildingStdAtAcq993)
+          : undefined,
+        phdBuildingStdAtFirst993: r.phdBuildingStdAtFirst993
+          ? parseAmount(r.phdBuildingStdAtFirst993)
+          : undefined,
+      };
+    }
+    // ── Phase 1 stub 20종: 본 요건 미구현 — type만 전달 (엔진은 시한 검증만 수행) ──
+    // 해당 ID들은 transfer.types.ts TransferReductionStub 정의 + Zod schema 통과 보장.
+    // TypeScript narrowing이 모든 케이스를 소진해 never로 좁혀지므로 unknown 캐스트로 우회.
+    const stubType = (r as unknown as { type: string }).type;
+    return { type: stubType, _phase1Stub: true as const };
   });
 }
 
@@ -136,6 +175,8 @@ export function buildAssetPayload(
     useEstimatedAcquisition:
       asset.acquisitionCause === "purchase" ? asset.useEstimatedAcquisition : undefined,
     acquisitionDate: asset.acquisitionDate || undefined,
+    // Round 9 (2026-05-06): 자산-수준 매매계약일 (§99의3 등 13개 매매계약일 기준 조문)
+    assetContractDate: asset.assetContractDate || undefined,
     decedentAcquisitionDate:
       asset.acquisitionCause === "inheritance" && asset.decedentAcquisitionDate
         ? asset.decedentAcquisitionDate

@@ -107,6 +107,50 @@ export type AssetReductionForm =
       expropriationBondHoldingYears: "none" | "3" | "5";
       /** 사업인정고시일 (YYYY-MM-DD) */
       expropriationApprovalDate: string;
+    }
+  // ── Phase 2 (2026-05-06): §99의3 신축주택 과세특례 본격 구현 ──
+  // 설계: docs/02-design/features/transfer-reduction-99-3.engine.design.md
+  | {
+      type: "new_99_3";
+      /** 분양계약일 (YYYY-MM-DD) — 1호 적용 시 시한 검증 + 고가주택 적용기준일 */
+      contractDate993?: string;
+      /** 사용승인일 (YYYY-MM-DD) — 2호 적용 시 시한 검증 */
+      usageApprovalDate993?: string;
+      /** 5년 시점 기준시가 (원) — 취득일+5년 인접 고시일 가격 */
+      standardPriceAt5Years: string;
+      /** 취득시 기준시가 (원) — PHD 환산 결과 또는 직접 입력 */
+      standardPriceAtAcquisition993: string;
+      /** 양도시 기준시가 (원) — 자산의 standardPriceAtTransfer와 별개로 §99의3 전용 입력 (필요 시) */
+      standardPriceAtTransfer993?: string;
+      /** 지역 — 가격 급등 지역 내/외 (서울·과천·5대 신도시) */
+      region993: "outside_speculation" | "speculation";
+      /** 취득 유형 — 1호(주건업 취득) | 2호(자기건설) */
+      acquisitionType993: "from_builder" | "self_built";
+      /** (1호만) 매매계약일 입주사실 있는 주택 — 적용 배제 */
+      hasOccupancyAtContract?: boolean;
+      /** 거주자 여부 — 비거주자는 §99의3 적용 배제 */
+      isResident993: boolean;
+      /** 본인이 주택건설사업자 — 적용 배제 */
+      isHousingConstructionBusiness993: boolean;
+      // ── Round 10 (2026-05-06): PHD 환산 입력 (취득시 추정 공동주택가격 자동 산출) ──
+      // 신축주택은 준공 후 1~2년 후 공시되므로 취득시 공시가격이 대부분 없음 → §164⑤ 환산 필수.
+      // PHD 모드 ON 시 standardPriceAtAcquisition993를 자동 산출.
+      /** PHD 환산 모드 ON/OFF (기본: 자동 — acquisitionDate < firstDisclosureDate 시 ON) */
+      phdMode993?: boolean;
+      /** 최초공시일자 (YYYY-MM-DD) */
+      phdFirstDisclosureDate993?: string;
+      /** 최초공시 공동주택가격 (원) */
+      phdFirstDisclosurePrice993?: string;
+      /** 토지면적 (㎡, 소수 가능) */
+      phdLandAreaSqm993?: string;
+      /** 취득시 토지 공시지가 (원/㎡) */
+      phdLandPricePerSqmAtAcq993?: string;
+      /** 최초공시시 토지 공시지가 (원/㎡) */
+      phdLandPricePerSqmAtFirst993?: string;
+      /** 취득시 건물 기준시가 (원, 선택) */
+      phdBuildingStdAtAcq993?: string;
+      /** 최초공시시 건물 기준시가 (원, 선택) */
+      phdBuildingStdAtFirst993?: string;
     };
 
 export type ReductionType = AssetReductionForm["type"];
@@ -222,6 +266,13 @@ export interface AssetForm {
   carryover?: CarryoverTaxationForm;
   /** 본인 취득일 (YYYY-MM-DD) */
   acquisitionDate: string;
+  /**
+   * 매매계약일 — 분양계약일/일반매매계약일 (계약금 납부 기준일).
+   * Round 9 (2026-05-06): 신축·미분양·임대 감면 13개 조문(§99·§99의3·§98 시리즈·§97의2·§97의5·§99의2)의
+   * 시한 판정 1차 기준. 미입력 시 acquisitionDate fallback (조문 단서: "매매계약 + 계약금 납부 = 취득").
+   * 주택 자산만 의미 있음. 토지·건물은 미사용.
+   */
+  assetContractDate?: string;
   /** 피상속인 취득일 (상속 시 단기보유 통산용, YYYY-MM-DD) */
   decedentAcquisitionDate: string;
   /** 증여자 취득일 (YYYY-MM-DD) */

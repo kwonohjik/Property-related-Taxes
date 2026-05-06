@@ -42,6 +42,13 @@ function toPropertyKind(
 interface BlockProps {
   acquisitionDate: string;
   onAcquisitionDateChange: (v: string) => void;
+  /**
+   * Round 9 (2026-05-06): 매매계약일 (분양/매매계약 + 계약금 납부 기준일).
+   * 신축·미분양·임대 감면 13개 조문(§99·§99의3·§98 시리즈·§97의2·§97의5·§99의2)의 시한 판정 1차 기준.
+   * 주택 자산만 의미 있음. 미입력 시 acquisitionDate fallback.
+   */
+  assetContractDate?: string;
+  onAssetContractDateChange?: (v: string) => void;
   useEstimatedAcquisition: boolean;
   onUseEstimatedChange: (v: boolean) => void;
   /** 감정가액 모드 — 자산-수준 (Step1↔Step3 통합 후) */
@@ -276,6 +283,9 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
           </p>
         )}
       </div>
+
+      {/* 매매계약일 입력은 Step4 감면·공제(UnifiedReductionPanel)의 펼침 영역 상단으로 이동 (Round 9 정정 2026-05-06)
+          이유: 입력 일관성 + 감면 사용 안 할 때 불필요한 입력 방지 */}
 
       {/* 토지/건물 소유자 분리 (housing·building 전용) */}
       {isSplitable && props.onSelfOwnsChange && (

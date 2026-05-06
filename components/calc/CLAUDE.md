@@ -74,6 +74,8 @@ acquisitionMethod: isAppraisal ? "appraisal" : isEstimated ? "estimated" : "actu
 | 3-시점 기준시가 입력 | `@/components/calc/transfer/ThreePointStandardPriceInput.tsx` | 취득·최초공시·양도 3시점 토지·건물 기준시가. `splitHousingCommercialForAcqAndFirst` prop 활성 시 모든 시점에서 주택분/상가분 같은 행 4부분 표시 (Case A 전용). |
 | 라디오 그룹 | `@/components/calc/inputs/RadioCardGroup.tsx` (`RadioCardGroup`) | 라디오 그룹 통합 컴포넌트. ToggleCard와 동일한 가시성 원칙(미선택 옵션도 tone 배경 유지). layout="stack"(세로 카드)·"inline"(가로 컴팩트). options 배열로 일괄 렌더. native radio 신규 사용 금지. |
 | 신축·증축 입력 | `@/components/calc/transfer/SelfBuiltSection.tsx` | 자산-수준 4필드 (isSelfBuilt·buildingType·constructionDate·extensionFloorArea). `acquisitionCause === "purchase"` + housing/building 자산 전용. |
+| 감면 통합 패널 | `@/components/calc/transfer/UnifiedReductionPanel.tsx` | 5카테고리·23개 조문 통합 UI. standalone(자경·공익)=체크박스, 그룹(장기임대·신축·미분양)=펼침 헤더+라디오. 시한 외/미구현 항목 자동 disabled. Step5 내 `ReductionExpansion.tsx` 대체 (폐지). |
+| 감면 조문 PHD 환산 입력 | `@/components/calc/transfer/ReductionPhdInput.tsx` | 신축주택 감면 조문(§99의3 등)용 §164⑤ 환산 위젯. 자산-수준 PHD와 별도 — 취득일 < 최초공시일 자동 감지 후 활성화. |
 | 1990 환산 | `@/components/calc/inputs/Pre1990LandValuationInput.tsx` | 토지 자산 + acquisitionDate < 1990-08-30 시 자동 활성화. 자산-수준 props (`form` = `Pre1990FormSlice`). |
 | 주소 검색 | `@/components/ui/address-search.tsx` | Vworld 주소 검색 API. 조정대상지역·공시가격 조회에 필수 (지번 주소). |
 | 리셋 버튼 | `@/components/calc/shared/ResetButton.tsx` | 1단계에만 배치. 확인 다이얼로그 포함. |

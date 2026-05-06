@@ -205,6 +205,7 @@ export function TransferTaxResultView({
             <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
               {(() => {
                 const totalAllPenalty = result.penaltyTax + (result.penaltyDetail?.totalPenalty ?? 0);
+                const ruralSurtax = result.new993Detail?.ruralSurtax ?? 0;
                 return (
                   <>
                     <span>결정세액 {formatKRW(result.determinedTax)}</span>
@@ -216,6 +217,12 @@ export function TransferTaxResultView({
                     )}
                     <span>+</span>
                     <span>지방소득세 {formatKRW(result.localIncomeTax)}</span>
+                    {ruralSurtax > 0 && (
+                      <>
+                        <span>+</span>
+                        <span>농어촌특별세 {formatKRW(ruralSurtax)}</span>
+                      </>
+                    )}
                   </>
                 );
               })()}
@@ -317,6 +324,24 @@ export function TransferTaxResultView({
                   <Row label="과세대상 양도소득금액" value={formatKRW(result.taxableGain)} sub />
                 </>
               )}
+              {/* Round 11 (2026-05-06): §99의3 소득금액 감면대상 차감 — 결과 요약 카드 */}
+              {result.new993Detail?.isEligible && result.new993Detail.reducibleTransferIncome > 0 && (() => {
+                const incomeBefore = result.rentalHousingExceptionDetail?.applied
+                  ? result.transferGain - result.longTermHoldingDeduction
+                  : result.taxableGain - result.longTermHoldingDeduction;
+                const reducible = result.new993Detail.reducibleTransferIncome;
+                const incomeAfter = Math.max(0, incomeBefore - reducible);
+                return (
+                  <>
+                    <Row
+                      label="소득금액 감면대상 (§99의3)"
+                      value={`- ${formatKRW(reducible)}`}
+                      sub
+                    />
+                    <Row label="감면후 소득금액" value={formatKRW(incomeAfter)} sub />
+                  </>
+                );
+              })()}
               <Row
                 label="기본공제"
                 value={result.basicDeduction > 0 ? `- ${formatKRW(result.basicDeduction)}` : "0"}
@@ -329,6 +354,45 @@ export function TransferTaxResultView({
               {result.reductionAmount > 0 && (
                 <Row label={`감면 (${result.reductionType ?? ""})`} value={`- ${formatKRW(result.reductionAmount)}`} />
               )}
+              {/* Phase 2 (2026-05-06): §99의3 신축주택 과세특례 상세 */}
+              {result.new993Detail && (() => {
+                const d = result.new993Detail;
+                if (!d.isEligible) {
+                  return (
+                    <div className="mx-2 my-2 rounded-md border border-dashed border-amber-300 bg-amber-50 dark:bg-amber-950/30 px-3 py-2 text-xs text-amber-900 dark:text-amber-200 space-y-1">
+                      <p className="font-medium">조특법 §99의3 신축주택 과세특례 — 적용 불가</p>
+                      <ul className="list-disc list-inside space-y-0.5">
+                        {d.ineligibleReasons.map((r, i) => (
+                          <li key={i}>{r.message}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  );
+                }
+                return (
+                  <div className="mx-2 my-2 rounded-md border border-dashed border-primary/30 bg-primary/5 px-3 py-2 text-xs space-y-1.5">
+                    <p className="font-medium text-primary">조특법 §99의3 신축주택 과세특례 (양도소득금액 차감 방식)</p>
+                    <p className="text-muted-foreground">
+                      {d.isWithin5Years
+                        ? "5년 이내 양도 — 양도소득금액 전액 차감"
+                        : `5년 후 양도 — 5년 안분 산식 (부호 케이스: ${d.signCase})`}
+                    </p>
+                    <div className="space-y-0.5">
+                      {d.formulaSteps.map((s, i) => (
+                        <p key={i}>
+                          <span className="text-muted-foreground">{s.label}: </span>
+                          {s.formula ?? formatKRW(typeof s.value === "number" ? s.value : 0)}
+                        </p>
+                      ))}
+                    </div>
+                    <div className="border-t border-primary/20 pt-1.5 space-y-0.5">
+                      <p>감면 양도소득금액 = {formatKRW(d.reducibleTransferIncome)}</p>
+                      <p>양도세 감면세액 = {formatKRW(d.taxReductionForRuralSurtax)}</p>
+                      <p className="font-medium">농어촌특별세 (20%) = {formatKRW(d.ruralSurtax)}</p>
+                    </div>
+                  </div>
+                );
+              })()}
               {result.publicExpropriationDetail?.isEligible && (() => {
                 const d = result.publicExpropriationDetail;
                 const bd = d.breakdown;

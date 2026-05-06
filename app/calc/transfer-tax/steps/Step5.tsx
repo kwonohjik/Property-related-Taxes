@@ -5,20 +5,28 @@ import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInp
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
 import { SelfFarmingIncorporationInput } from "@/components/calc/inputs/SelfFarmingIncorporationInput";
+import { UnifiedReductionPanel } from "@/components/calc/transfer/UnifiedReductionPanel";
 
 // ============================================================
 // Step 5 (→ Step 4): 감면·공제 (자산별 체크박스 복수 선택)
 // ============================================================
 
-const REDUCTION_LABELS: Record<AssetReductionForm["type"], { label: string; desc: string }> = {
+// REDUCTION_LABELS — Phase 1·2 (2026-05-06):
+// - 기존 5개 항목 유지 (legacy long_term_rental/new_housing/unsold_housing은 마이그레이션 후 deprecated)
+// - Phase 2: §99의3 신축주택 과세특례 (new_99_3) 추가 — UI 펼침 패널은 묶음 B에서 본격 통합
+// 매핑 감사: docs/02-design/features/transfer-reduction-mapping-audit.md
+const REDUCTION_LABELS = {
   self_farming: { label: "자경농지 감면", desc: "8년 이상 자경 (§69, 한도 1억)" },
-  long_term_rental: { label: "장기임대주택 감면", desc: "8년 이상 임대, 임대료 5% 이하 (§97의3)" },
-  new_housing: { label: "신축주택 감면", desc: "신축주택 취득 특례 50%~100% (§99)" },
-  unsold_housing: { label: "미분양주택 감면", desc: "미분양주택 취득 특례 100% (§99의3)" },
+  long_term_rental: { label: "장기임대주택 감면", desc: "공공지원/장기일반민간임대 10년+ → 장특공제율 70% (§97의3)" },
+  new_housing: { label: "신축주택 감면", desc: "신축주택 취득자 양도세 감면 (§99, 1998~1999 IMF 1차)" },
+  unsold_housing: { label: "미분양주택 감면", desc: "서울 외 미분양 5년 100% (수도권과밀 60%) — §98의3, 2009.2.12~2010.2.11" },
   public_expropriation: { label: "공익사업 수용 감면", desc: "현금 10%/채권 15%~40% (§77, 연간 2억)" },
-};
+  // new_99_3은 별도 펼침 패널(ReductionExpansion)에서 처리 — 옵션 Y 결정
+} as const;
 
-function getDefaultReduction(type: AssetReductionForm["type"]): AssetReductionForm {  
+type ReductionUiType = keyof typeof REDUCTION_LABELS;
+
+function getDefaultReduction(type: ReductionUiType): AssetReductionForm {
   switch (type) {
     case "self_farming":
       return { type: "self_farming", farmingYears: "0" };
@@ -43,15 +51,17 @@ function getDefaultReduction(type: AssetReductionForm["type"]): AssetReductionFo
 function AssetReductionBlock({
   asset,
   assetIndex,
+  transferDate,
   onChange,
 }: {
   asset: AssetForm;
   assetIndex: number;
+  transferDate: string;
   onChange: (patch: Partial<AssetForm>) => void;
 }) {
   const reductions = asset.reductions ?? [];
 
-  function toggleReduction(type: AssetReductionForm["type"]) {
+  function toggleReduction(type: ReductionUiType) {
     const has = reductions.some((r) => r.type === type);
     if (has) {
       onChange({ reductions: reductions.filter((r) => r.type !== type) });
@@ -82,34 +92,8 @@ function AssetReductionBlock({
     <div className="rounded-lg border border-border bg-muted/10 p-4 space-y-3">
       <p className="text-sm font-semibold">{label}</p>
 
-      {/* 감면 종류 체크박스 (5종 복수 선택) */}
-      <div className="space-y-2">
-        {(Object.keys(REDUCTION_LABELS) as AssetReductionForm["type"][]).map((type) => {
-          const { label: rLabel, desc } = REDUCTION_LABELS[type];
-          const checked = reductions.some((r) => r.type === type);
-          return (
-            <label
-              key={type}
-              className={cn(
-                "flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 transition-colors",
-                checked ? "border-primary bg-primary/5" : "border-border hover:bg-muted/40",
-              )}
-            >
-              <input
-                type="checkbox"
-                checked={checked}
-                onChange={() => toggleReduction(type)}
-                className="h-4 w-4 rounded accent-primary"
-                aria-label={rLabel}
-              />
-              <div>
-                <p className="text-sm font-medium">{rLabel}</p>
-                <p className="text-xs text-muted-foreground">{desc}</p>
-              </div>
-            </label>
-          );
-        })}
-      </div>
+      {/* Round 8 (2026-05-06): 5개 카테고리 통합 패널 (5개 평면 체크박스 → 카테고리 라디오/체크박스) */}
+      <UnifiedReductionPanel asset={asset} transferDate={transferDate} onChange={onChange} />
 
       {/* 자경 + 수용 동시 선택 시 경고 */}
       {selfFarming && expropriation && (
@@ -336,6 +320,8 @@ function AssetReductionBlock({
           </div>
         </div>
       )}
+
+      {/* Round 8 (2026-05-06): 별도 ReductionExpansion 패널 폐지 — UnifiedReductionPanel로 통합 */}
     </div>
   );
 }
@@ -387,7 +373,7 @@ function PriorReductionUsageInput({
             onChange={(e) => updateRow(i, { type: e.target.value as PriorReductionUsageItem["type"] })}
             className="rounded-md border border-input bg-background px-2 py-2 text-sm"
           >
-            {(Object.keys(REDUCTION_LABELS) as AssetReductionForm["type"][]).map((t) => (
+            {(Object.keys(REDUCTION_LABELS) as ReductionUiType[]).map((t) => (
               <option key={t} value={t}>{REDUCTION_LABELS[t].label}</option>
             ))}
           </select>
@@ -441,6 +427,19 @@ export function Step5({
         자산별로 해당 감면을 선택하세요. 조특법 §127② 규정에 따라 유리한 감면이 자동 선택됩니다.
       </p>
 
+      {/* Phase 1 확장 안내 — 23개 조문 골격 추가 완료, 본격 구현은 Phase 2~ */}
+      <div className="rounded-md border border-sky-200 bg-sky-50 dark:border-sky-900 dark:bg-sky-950/30 px-4 py-3 text-xs text-sky-900 dark:text-sky-200 space-y-1">
+        <p className="font-semibold">📋 감면 조문 확장 진행 중 (Phase 1 골격 완료)</p>
+        <p>
+          조특법 §97 시리즈 (장기임대 6개), §99 시리즈 (신축 4개), §98 시리즈 + §99의2 (미분양 10개) 등
+          <strong> 총 23개 조문</strong>의 식별·시한 검증 인프라가 추가되었습니다. 본격 계산 로직은 §99의3(신축주택 과세특례)부터
+          순차적으로 Phase 2~에서 구현 예정입니다.
+        </p>
+        <p className="text-sky-700 dark:text-sky-400">
+          현재 화면은 기존 5개 항목만 노출됩니다. 매핑 감사: <code className="text-[10px]">docs/02-design/features/transfer-reduction-mapping-audit.md</code>
+        </p>
+      </div>
+
       {/* 자산별 감면 선택 */}
       <SectionHeader title="자산별 감면·공제" description="조특법 §127② — 유리한 감면이 자동 선택됩니다" />
       {form.assets.map((asset, i) => (
@@ -448,6 +447,7 @@ export function Step5({
           key={asset.assetId || i}
           asset={asset}
           assetIndex={i}
+          transferDate={form.transferDate ?? ""}
           onChange={(patch) => updateAsset(i, patch)}
         />
       ))}

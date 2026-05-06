@@ -74,6 +74,8 @@ const propertyBaseShape = {
   transferDate: z.string().date(),
   acquisitionPrice: z.number().int().nonnegative(),
   acquisitionDate: z.string().date(),
+  // Round 9 (2026-05-06): 자산-수준 매매계약일 (§99·§99의3·§98 시리즈·§97의2·§97의5·§99의2 시한 판정용)
+  assetContractDate: z.string().date().optional(),
   acquisitionCause: z.enum(["purchase", "inheritance", "gift", "carryover_gift"]).optional(),
   decedentAcquisitionDate: z.string().date().optional(),
   donorAcquisitionDate: z.string().date().optional(),
@@ -192,7 +194,18 @@ const propertyBaseShape = {
 const priorReductionUsageSchema = z.array(
   z.object({
     year: z.number().int().min(1990).max(new Date().getFullYear()),
-    type: z.enum(["self_farming", "long_term_rental", "new_housing", "unsold_housing", "public_expropriation"]),
+    // Phase 1 (2026-05-06): 23개 조문 ID + legacy 5개 (long_term_rental/new_housing/unsold_housing은 마이그레이션 후 deprecated 예정)
+    type: z.enum([
+      // legacy (마이그레이션 후 deprecated)
+      "self_farming", "long_term_rental", "new_housing", "unsold_housing", "public_expropriation",
+      // 장기임대 §97 시리즈 신규
+      "rental_97_main", "rental_97_proviso", "rental_97_2", "rental_97_3", "rental_97_4", "rental_97_5",
+      // 신축 §99 시리즈 신규
+      "new_99", "new_99_3", "new_99_4_rural", "new_99_4_hometown",
+      // 미분양 §98 시리즈 + §99의2 신규
+      "unsold_98", "unsold_98_2", "unsold_98_3", "unsold_98_4", "unsold_98_5",
+      "unsold_98_6", "unsold_98_7", "unsold_98_8", "unsold_98_9", "unsold_99_2",
+    ]),
     amount: z.number().int().nonnegative(),
   }),
 ).default([]);

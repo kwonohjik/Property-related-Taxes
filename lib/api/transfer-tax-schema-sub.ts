@@ -203,6 +203,84 @@ export const reductionSchema = z.discriminatedUnion("type", [
     (v) => v.cashCompensation + v.bondCompensation > 0,
     { message: "현금 또는 채권 보상액 중 최소 하나는 0보다 커야 합니다" },
   ),
+  // ─────────────────────────────────────────────────────────────
+  // Phase 1 골격 (2026-05-06): 23개 조문 인벤토리 신규 stub 멤버 (20개)
+  // 본 단계는 type 식별 + 시한 검증만 — 본 요건 필드는 Phase 2~ 에서 추가.
+  // 매핑: lib/tax-engine/transfer-reductions/types.ts TransferReductionId
+  // ─────────────────────────────────────────────────────────────
+  z.object({ type: z.literal("rental_97_main"),    _phase1Stub: z.literal(true).optional() }),
+  z.object({ type: z.literal("rental_97_proviso"), _phase1Stub: z.literal(true).optional() }),
+  z.object({ type: z.literal("rental_97_2"),       _phase1Stub: z.literal(true).optional() }),
+  z.object({
+    type: z.literal("rental_97_3"),
+    rentalYears: z.number().int().nonnegative().optional(),
+    rentIncreaseRate: z.number().min(0).max(1).optional(),
+    _phase1Stub: z.literal(true).optional(),
+  }),
+  z.object({ type: z.literal("rental_97_4"),       _phase1Stub: z.literal(true).optional() }),
+  z.object({ type: z.literal("rental_97_5"),       _phase1Stub: z.literal(true).optional() }),
+  z.object({
+    type: z.literal("new_99"),
+    region: z.enum(["metropolitan", "non_metropolitan"]).optional(),
+    _phase1Stub: z.literal(true).optional(),
+  }),
+  // §99의3 — Phase 2 본격 구현 (2026-05-06): 본 요건 필드 추가 + Phase 1 stub 호환
+  z.object({
+    type: z.literal("new_99_3"),
+    /** Phase 1 stub 호환 region 필드 (deprecated, 마이그레이션 전 임시) */
+    region: z.enum(["metropolitan", "non_metropolitan"]).optional(),
+    _phase1Stub: z.literal(true).optional(),
+    // ── Phase 2 본 요건 필드 (모두 optional — Phase 1 stub 호환 + UI에서 필수 검증) ──
+    /** 분양계약일 (1호 적용) */
+    contractDate993: z.string().date().optional(),
+    /** 사용승인일 (2호 적용) */
+    usageApprovalDate993: z.string().date().optional(),
+    /** 5년 시점 기준시가 (원) */
+    standardPriceAt5Years: z.number().int().nonnegative().optional(),
+    /** 취득시 기준시가 (원) — PHD 환산 결과 */
+    standardPriceAtAcquisition993: z.number().int().nonnegative().optional(),
+    /** 양도시 기준시가 (원) */
+    standardPriceAtTransfer993: z.number().int().nonnegative().optional(),
+    /** 지역 — 가격 급등 지역 내/외 */
+    region993: z.enum(["outside_speculation", "speculation"]).optional(),
+    /** 취득 유형 — 1호 / 2호 */
+    acquisitionType993: z.enum(["from_builder", "self_built"]).optional(),
+    /** 매매계약일 입주사실 (1호 단서) */
+    hasOccupancyAtContract: z.boolean().optional(),
+    /** 거주자 여부 */
+    isResident993: z.boolean().optional(),
+    /** 본인이 주택건설사업자 */
+    isHousingConstructionBusiness993: z.boolean().optional(),
+    // Round 10 (2026-05-06): PHD 환산 입력 (취득시 추정 공동주택가격 자동 산출)
+    phdMode993: z.boolean().optional(),
+    phdFirstDisclosureDate993: z.string().date().optional(),
+    phdFirstDisclosurePrice993: z.number().int().nonnegative().optional(),
+    phdLandAreaSqm993: z.number().nonnegative().optional(),
+    phdLandPricePerSqmAtAcq993: z.number().int().nonnegative().optional(),
+    phdLandPricePerSqmAtFirst993: z.number().int().nonnegative().optional(),
+    phdBuildingStdAtAcq993: z.number().int().nonnegative().optional(),
+    phdBuildingStdAtFirst993: z.number().int().nonnegative().optional(),
+  }),
+  z.object({ type: z.literal("new_99_4_rural"),    _phase1Stub: z.literal(true).optional() }),
+  z.object({ type: z.literal("new_99_4_hometown"), _phase1Stub: z.literal(true).optional() }),
+  z.object({ type: z.literal("unsold_98"),         _phase1Stub: z.literal(true).optional() }),
+  z.object({ type: z.literal("unsold_98_2"),       _phase1Stub: z.literal(true).optional() }),
+  z.object({
+    type: z.literal("unsold_98_3"),
+    region: z.enum(["metropolitan", "non_metropolitan"]).optional(),
+    _phase1Stub: z.literal(true).optional(),
+  }),
+  z.object({ type: z.literal("unsold_98_4"),       _phase1Stub: z.literal(true).optional() }),
+  z.object({
+    type: z.literal("unsold_98_5"),
+    priceReductionRate: z.number().min(0).max(1).optional(),
+    _phase1Stub: z.literal(true).optional(),
+  }),
+  z.object({ type: z.literal("unsold_98_6"),       _phase1Stub: z.literal(true).optional() }),
+  z.object({ type: z.literal("unsold_98_7"),       _phase1Stub: z.literal(true).optional() }),
+  z.object({ type: z.literal("unsold_98_8"),       _phase1Stub: z.literal(true).optional() }),
+  z.object({ type: z.literal("unsold_98_9"),       _phase1Stub: z.literal(true).optional() }),
+  z.object({ type: z.literal("unsold_99_2"),       _phase1Stub: z.literal(true).optional() }),
 ]);
 
 export const filingPenaltyDetailsSchema = z.object({
@@ -283,6 +361,8 @@ export const companionAssetSchema = z.object({
   useEstimatedAcquisition: z.boolean().optional(),
   /** 본인 취득일 (YYYY-MM-DD) — 보유기간 산정용 */
   acquisitionDate: z.string().date().optional(),
+  /** Round 9 (2026-05-06): 자산-수준 매매계약일 — §99의3 등 13개 매매계약일 기준 조문 시한 판정 */
+  assetContractDate: z.string().date().optional(),
   /** 상속 시 피상속인 취득일 (자산별 단기보유 통산용) */
   decedentAcquisitionDate: z.string().date().optional(),
   /** 증여 시 증여자 취득일 */

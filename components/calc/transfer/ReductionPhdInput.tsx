@@ -1,0 +1,231 @@
+"use client";
+/**
+ * 감면 조문용 PHD 환산 입력 위젯 (Round 10, 2026-05-06)
+ *
+ * 신축주택은 준공 후 1~2년 후 공시가격이 공시되므로, 모든 신축주택 취득 당시에는
+ * 공시가격이 없음. 5년간 발생분 차감 안분 산식을 적용하는 8개 조문에서 "취득시 기준시가"가
+ * 필수이므로 §164⑤ 환산 자동화.
+ *
+ * 사용자 결정사항 #4 (b): 각 감면 조문 입력 폼에 PHD 입력 별도 (자산-수준 PHD와 분리)
+ *
+ * 활성화 모드:
+ *   - 자동: 자산의 acquisitionDate < firstDisclosureDate 자동 감지 → ON
+ *   - 수동: 토글로 ON/OFF
+ *
+ * 사용처:
+ *   - §99의3 본격 입력 폼 (Round 10.3)
+ *   - 향후 §99·§98의3·§98의5·§98의6·§98의7·§98의8·§99의2 본격 구현 시 재사용
+ */
+
+import { useMemo } from "react";
+import { DateInput } from "@/components/ui/date-input";
+import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import {
+  calcReductionAcquisitionStdPrice,
+  canCalcReductionPhd,
+} from "@/lib/tax-engine/transfer-reductions";
+
+// ============================================================================
+// Props
+// ============================================================================
+
+export interface ReductionPhdValue {
+  phdMode?: boolean;
+  firstDisclosureDate?: string;
+  firstDisclosurePrice?: string;
+  landAreaSqm?: string;
+  landPricePerSqmAtAcq?: string;
+  landPricePerSqmAtFirst?: string;
+  buildingStdAtAcq?: string;
+  buildingStdAtFirst?: string;
+}
+
+export interface ReductionPhdInputProps {
+  /** 자산의 취득일 (YYYY-MM-DD) — 자동 활성화 판정용 */
+  acquisitionDate?: string;
+  /** PHD 입력값 (위 ReductionPhdValue 형태) */
+  value: ReductionPhdValue;
+  /** 부분 갱신 콜백 */
+  onChange: (patch: Partial<ReductionPhdValue>) => void;
+  /** 환산 결과를 "취득시 기준시가" 필드에 자동 적용하는 콜백 (선택) */
+  onApplyResult?: (estimatedAcqStdPrice: number) => void;
+  /** "자산 카드 PHD 데이터 가져오기" — Round 10 사용자 친화 보조 (선택) */
+  onCopyFromAsset?: () => void;
+  /** 자산 카드에 PHD 데이터가 있는지 (버튼 활성 조건) */
+  assetHasPhdData?: boolean;
+}
+
+// ============================================================================
+// 컴포넌트
+// ============================================================================
+
+export function ReductionPhdInput({
+  acquisitionDate,
+  value,
+  onChange,
+  onApplyResult,
+  onCopyFromAsset,
+  assetHasPhdData,
+}: ReductionPhdInputProps) {
+  // 자동 활성화 권장 — 취득일 < 최초공시일
+  const autoRecommended = useMemo(() => {
+    if (!acquisitionDate || !value.firstDisclosureDate) return false;
+    return new Date(acquisitionDate) < new Date(value.firstDisclosureDate);
+  }, [acquisitionDate, value.firstDisclosureDate]);
+
+  const isOn = value.phdMode === true;
+
+  // 환산 결과 계산 (메모이즈)
+  const result = useMemo(() => {
+    if (!isOn) return null;
+    const phdInput = {
+      firstDisclosurePrice: parseAmount(value.firstDisclosurePrice ?? "0"),
+      landAreaSqm: parseDecimal(value.landAreaSqm ?? "0"),
+      landPricePerSqmAtAcquisition: parseAmount(value.landPricePerSqmAtAcq ?? "0"),
+      landPricePerSqmAtFirstDisclosure: parseAmount(value.landPricePerSqmAtFirst ?? "0"),
+      buildingStdPriceAtAcquisition: parseAmount(value.buildingStdAtAcq ?? "0"),
+      buildingStdPriceAtFirstDisclosure: parseAmount(value.buildingStdAtFirst ?? "0"),
+    };
+    if (!canCalcReductionPhd(phdInput)) return null;
+    return calcReductionAcquisitionStdPrice(phdInput);
+  }, [isOn, value]);
+
+  return (
+    <div className="space-y-2">
+      <ToggleCard
+        checked={isOn}
+        onCheckedChange={(v) => onChange({ phdMode: v })}
+        title="PHD 환산 — 최초공시 전 취득 (취득시 환산공시가격 자동 계산)"
+        description={
+          autoRecommended
+            ? "✓ 자산의 취득일이 최초공시일 이전 — 환산 권장"
+            : "신축주택 취득 당시 공시가격이 없는 경우 §164⑤ 환산 적용"
+        }
+        tone="amber"
+        size="sm"
+      >
+        <div className="space-y-3 mt-2">
+          {/* 자산 카드 데이터 가져오기 버튼 (Q4 b 선택의 사용자 친화 보조) */}
+          {onCopyFromAsset && assetHasPhdData && (
+            <button
+              type="button"
+              onClick={onCopyFromAsset}
+              className="w-full rounded-md border border-amber-300 bg-amber-100/60 px-3 py-1.5 text-xs font-medium text-amber-900 hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-200 dark:hover:bg-amber-900/50"
+            >
+              📋 자산 카드의 PHD 데이터 가져오기
+            </button>
+          )}
+
+          {/* 입력 그리드 */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="mb-1 block text-xs font-medium">최초공시일자</label>
+              <DateInput
+                value={value.firstDisclosureDate ?? ""}
+                onChange={(v) => onChange({ firstDisclosureDate: v })}
+              />
+              <p className="mt-1 text-[10px] text-muted-foreground">공동주택가격/개별주택가격 최초 고시일</p>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-medium">최초공시 공동주택가격 (원)</label>
+              <CurrencyInput
+                label=""
+                value={value.firstDisclosurePrice ?? ""}
+                onChange={(v) => onChange({ firstDisclosurePrice: v })}
+              />
+              <p className="mt-1 text-[10px] text-muted-foreground">최초고시 P_F 값</p>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-medium">토지면적 (㎡)</label>
+              <DecimalInput
+                value={value.landAreaSqm ?? ""}
+                onChange={(v) => onChange({ landAreaSqm: v })}
+              />
+            </div>
+
+            <div></div> {/* 그리드 정렬용 빈 칸 */}
+
+            <div>
+              <label className="mb-1 block text-xs font-medium">취득시 토지 공시지가 (원/㎡)</label>
+              <CurrencyInput
+                label=""
+                value={value.landPricePerSqmAtAcq ?? ""}
+                onChange={(v) => onChange({ landPricePerSqmAtAcq: v })}
+              />
+              <p className="mt-1 text-[10px] text-muted-foreground">취득연도 개별공시지가</p>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-medium">최초공시시 토지 공시지가 (원/㎡)</label>
+              <CurrencyInput
+                label=""
+                value={value.landPricePerSqmAtFirst ?? ""}
+                onChange={(v) => onChange({ landPricePerSqmAtFirst: v })}
+              />
+              <p className="mt-1 text-[10px] text-muted-foreground">최초공시연도 개별공시지가</p>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-medium">취득시 건물 기준시가 (원, 선택)</label>
+              <CurrencyInput
+                label=""
+                value={value.buildingStdAtAcq ?? ""}
+                onChange={(v) => onChange({ buildingStdAtAcq: v })}
+              />
+              <p className="mt-1 text-[10px] text-muted-foreground">국세청 건물기준시가 — 미입력 시 토지만 환산</p>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-medium">최초공시시 건물 기준시가 (원, 선택)</label>
+              <CurrencyInput
+                label=""
+                value={value.buildingStdAtFirst ?? ""}
+                onChange={(v) => onChange({ buildingStdAtFirst: v })}
+              />
+              <p className="mt-1 text-[10px] text-muted-foreground">미입력 시 취득시와 동일 가정</p>
+            </div>
+          </div>
+
+          {/* 환산 결과 박스 */}
+          {result && (
+            <div className="rounded-md border border-amber-300 bg-amber-50/80 dark:bg-amber-950/30 px-3 py-2 space-y-1">
+              <p className="text-xs font-semibold text-amber-900 dark:text-amber-200">
+                환산 결과 (소득세법 §164⑤)
+              </p>
+              <div className="space-y-0.5 text-[11px] text-amber-800 dark:text-amber-300">
+                {result.formulaSteps.map((s, i) => (
+                  <p key={i}>
+                    <span className="opacity-70">{s.label}: </span>
+                    {s.formula ?? s.value.toLocaleString()}
+                  </p>
+                ))}
+              </div>
+              <p className="mt-1.5 text-sm font-bold text-amber-900 dark:text-amber-100">
+                → 취득시 추정 공동주택가격 = {result.estimatedAcquisitionStdPrice.toLocaleString()}원
+              </p>
+              {onApplyResult && (
+                <button
+                  type="button"
+                  onClick={() => onApplyResult(result.estimatedAcquisitionStdPrice)}
+                  className="mt-2 w-full rounded-md border border-amber-400 bg-amber-100 px-3 py-1.5 text-xs font-semibold text-amber-900 hover:bg-amber-200 dark:bg-amber-900/50 dark:text-amber-100 dark:hover:bg-amber-900/70"
+                >
+                  ↓ 위 값을 &ldquo;취득시 기준시가&rdquo; 필드에 적용
+                </button>
+              )}
+            </div>
+          )}
+
+          {!result && isOn && (
+            <p className="text-[11px] text-amber-700 dark:text-amber-400">
+              ⚠ 환산을 위해 최초공시일·최초공시가격·토지면적·취득시·최초공시시 토지 공시지가를 모두 입력하세요.
+            </p>
+          )}
+        </div>
+      </ToggleCard>
+    </div>
+  );
+}
