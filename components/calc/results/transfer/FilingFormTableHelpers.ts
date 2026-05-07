@@ -299,11 +299,28 @@ export function buildRows(
       ? acquisitionDateOverride
       : primary?.acquisitionDate ?? "";
 
-  const totalTransferPrice =
+  // 양도가액 표시 — 지분 모드(자산 1건 + ratio < 1.0) 방어적 처리:
+  //   form.contractTotalPrice는 100% 기준값이므로, 자산이 지분이라면 × ratio 적용해서 본 자산의 지분분 표시.
+  //   F4-1 검증으로 본 케이스는 차단되지만, 단독 모드(ratio=1.0)는 무영향이므로 안전한 방어 코드로 유지.
+  const rawTotalPrice =
     transferPriceOverride ??
     Number(formData?.contractTotalPrice || primary?.actualSalePrice || 0) ??
     0;
-  const totalExpenses = Number(primary?.directExpenses || 0);
+  const ownNum = parseFloat(primary?.ownershipNumerator || "100");
+  const ownDen = parseFloat(primary?.ownershipDenominator || "100");
+  const ownRatio =
+    isFinite(ownNum) && isFinite(ownDen) && ownDen > 0 && ownNum > 0
+      ? Math.min(ownNum / ownDen, 1.0)
+      : 1.0;
+  const totalTransferPrice =
+    transferPriceOverride === undefined && ownRatio < 1.0
+      ? Math.floor(rawTotalPrice * ownRatio)
+      : rawTotalPrice;
+  const rawExpenses = Number(primary?.directExpenses || 0);
+  const totalExpenses =
+    transferPriceOverride === undefined && ownRatio < 1.0
+      ? Math.floor(rawExpenses * ownRatio)
+      : rawExpenses;
 
   const mu = result.mixedUseDetail;
   const sp = result.splitDetail;
@@ -407,14 +424,24 @@ export function buildRows(
       sp.building.directExpenses + sp.building.appraisalDeduction,
     );
   } else if (result.usedEstimatedAcquisition && result.estimatedBase !== undefined) {
-    setNum("acquisitionPrice", "total", result.estimatedBase > 0 ? result.estimatedBase : null);
+    // 환산취득가 모드: 자본적지출(있다면)을 취득가액(=환산취득가)에 합산, 필요경비는 개산공제 + 양도비
+    const capExp = result.capitalExpenditureForDisplay ?? 0;
+    setNum("acquisitionPrice", "total", result.estimatedBase + capExp > 0 ? result.estimatedBase + capExp : null);
     const deduction = result.estimatedDeduction ?? 0;
-    const totalNecessaryExpenses = deduction + totalExpenses;
+    const transferOnlyExpense = Math.max(0, totalExpenses - capExp);
+    const totalNecessaryExpenses = deduction + transferOnlyExpense;
     setNum("expenses", "total", totalNecessaryExpenses > 0 ? totalNecessaryExpenses : null);
   } else {
-    const totalAcqPrice = totalTransferPrice - result.transferGain - totalExpenses;
-    setNum("acquisitionPrice", "total", totalAcqPrice > 0 ? totalAcqPrice : null);
-    setNum("expenses", "total", totalExpenses || null);
+    // 실가 모드: 자본적지출은 취득가액에 합산 (§97① 가목, 신고서 양식 표시 관행)
+    // 엔진 result.expenses는 capitalExpenditure + transferExpense 합산값. split 입력 케이스에서는 form의 legacy directExpenses 대신 사용.
+    const capExp = result.capitalExpenditureForDisplay ?? 0;
+    const engineExpenses = result.expenses ?? 0;
+    const totalEngineExpenses = engineExpenses > 0 ? engineExpenses : totalExpenses;
+    const engineAcqPrice = totalTransferPrice - result.transferGain - totalEngineExpenses;
+    const displayAcqPrice = engineAcqPrice + capExp;
+    const displayExpenses = Math.max(0, totalEngineExpenses - capExp);
+    setNum("acquisitionPrice", "total", displayAcqPrice > 0 ? displayAcqPrice : null);
+    setNum("expenses", "total", displayExpenses || null);
   }
 
   // §161 적용 분기 (장기임대주택 거주주택 비과세 특례) — 산식 순서:

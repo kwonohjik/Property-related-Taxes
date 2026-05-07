@@ -15,6 +15,72 @@ export function toEngineAssetKind(kind: AssetForm["assetKind"]): "housing" | "la
 export const isHousingLike = (kind: AssetForm["assetKind"]) =>
   kind === "housing" || kind === "right_to_move_in" || kind === "presale_right";
 
+/**
+ * 분자·분모(number)에서 지분 모드 여부 판정. 단일 진실 공급원.
+ * 분자 < 분모이고 둘 다 양수면 true (지분 모드). 100/100, 50/50 등 분자=분모는 false (단독).
+ * NaN·0·음수 등 비정상 입력은 false (안전 fallback).
+ */
+export function isFractionalRatio(numerator: number, denominator: number): boolean {
+  if (!isFinite(numerator) || !isFinite(denominator)) return false;
+  if (denominator <= 0 || numerator <= 0) return false;
+  return numerator < denominator;
+}
+
+/**
+ * 분자·분모(string)에서 지분 모드 여부 판정. UI 폼 필드 전용 어댑터.
+ */
+export function isFractionalRatioStr(numerator: string, denominator: string): boolean {
+  return isFractionalRatio(parseFloat(numerator), parseFloat(denominator));
+}
+
+/**
+ * 자산의 공유 지분 비율을 [0..1] 실수로 계산.
+ * 미설정/단독 소유 시 1.0. 분모 ≤ 0 또는 NaN 시 1.0 (안전 fallback).
+ */
+export function getOwnershipRatio(asset: AssetForm): number {
+  const n = parseFloat(asset.ownershipNumerator || "100");
+  const d = parseFloat(asset.ownershipDenominator || "100");
+  if (!isFinite(n) || !isFinite(d) || d <= 0 || n <= 0) return 1.0;
+  return Math.min(n / d, 1.0);
+}
+
+/** 지분 모드 여부 (자산 단위 어댑터). isFractionalRatio 단일 진실 공급원에 위임. */
+export function isFractionalOwnership(asset: AssetForm): boolean {
+  return isFractionalRatioStr(
+    asset.ownershipNumerator || "100",
+    asset.ownershipDenominator || "100",
+  );
+}
+
+/** 100% 기준 금액에 지분 비율을 적용 (정수 floor). */
+export function applyRatio(amount: number, ratio: number): number {
+  return Math.floor(amount * ratio);
+}
+
+/**
+ * 자산별 effective transferExpense 계산 (B3 폼-수준 안분 로직).
+ * 우선순위:
+ *   1. 자산-수준 transferExpense 직접 입력 (>0): 지분 모드 시 × ratio, 단독 모드는 그대로
+ *   2. 폼-수준 totalTransferExpense × ratio (지분 모드 + 자산-수준 미입력)
+ *   3. 폼-수준 totalTransferExpense 그대로 (단독 모드 — 일반적으로 미사용)
+ *   4. 0
+ */
+export function effectiveTransferExpenseFor(
+  asset: AssetForm,
+  ratio: number,
+  fractional: boolean,
+  totalTransferExpense?: number,
+): number {
+  const direct = parseAmount(asset.transferExpense);
+  if (direct > 0) {
+    return fractional ? applyRatio(direct, ratio) : direct;
+  }
+  if (fractional && totalTransferExpense && totalTransferExpense > 0) {
+    return applyRatio(totalTransferExpense, ratio);
+  }
+  return 0;
+}
+
 /** AssetReductionForm[] → 엔진 reductions payload 변환 */
 export function toEngineReductions(
   formReductions: AssetReductionForm[],
@@ -122,16 +188,29 @@ export function toEngineReductions(
   });
 }
 
-/** 자산 1건 → 번들 companionAssets 배열 항목 변환 */
+/**
+ * 자산 1건 → 번들 companionAssets 배열 항목 변환.
+ *
+ * 지분 모드(ownershipRatio < 1.0): 사용자 입력값은 100% 기준이므로 × ratio 자동 적용.
+ * 영향 필드: fixedSalePrice·fixedAcquisitionPrice·directExpenses·capitalExpenditure·transferExpense·publishedValueAtInheritance.
+ *
+ * @param totalTransferExpense 폼-수준 총 양도비 (B3) — 자산-수준 transferExpense가 0이면 ratio 안분으로 자동 사용.
+ */
 export function buildAssetPayload(
   asset: AssetForm,
   bundledSaleMode: "actual" | "apportioned",
   transferDate: string,
+  totalContractPrice?: number,
+  totalTransferExpense?: number,
 ) {
   const reductions = toEngineReductions(asset.reductions ?? [], asset.acquisitionCause);
 
   // 감환지: acquisitionArea에 의제취득면적이 UI에서 이미 계산됨
   const effectiveLandArea = asset.acquisitionArea ? parseFloat(asset.acquisitionArea) : undefined;
+
+  // 공유 지분 비율 — 단독 소유는 1.0, 지분 모드는 < 1.0
+  const ratio = getOwnershipRatio(asset);
+  const fractional = ratio < 1.0;
 
   const inheritanceValuation =
     asset.acquisitionCause === "inheritance" && asset.inheritanceValuationMode === "auto"
@@ -139,16 +218,32 @@ export function buildAssetPayload(
           inheritanceDate: asset.inheritanceDate || asset.acquisitionDate,
           assetKind: asset.inheritanceAssetKind,
           landAreaM2: effectiveLandArea,
-          publishedValueAtInheritance: parseAmount(asset.publishedValueAtInheritance),
+          // 지분 모드: 100% 기준 입력값(공동주택가격 등)에 × ratio 적용
+          publishedValueAtInheritance: fractional
+            ? applyRatio(parseAmount(asset.publishedValueAtInheritance), ratio)
+            : parseAmount(asset.publishedValueAtInheritance),
         }
       : undefined;
 
-  const fixedAcquisitionPrice =
+  const fixedAcqRaw =
     (asset.acquisitionCause === "purchase" && !asset.useEstimatedAcquisition && asset.fixedAcquisitionPrice) ||
     (asset.acquisitionCause === "gift" && asset.fixedAcquisitionPrice) ||
     (asset.acquisitionCause === "inheritance" && asset.inheritanceValuationMode === "manual" && asset.fixedAcquisitionPrice)
       ? parseAmount(asset.fixedAcquisitionPrice)
       : undefined;
+  const fixedAcquisitionPrice = fixedAcqRaw !== undefined && fractional
+    ? applyRatio(fixedAcqRaw, ratio)
+    : fixedAcqRaw;
+
+  // 양도가액 결정: 지분 모드는 contractTotalPrice × ratio (사용자 actualSalePrice 무시).
+  // 단독은 기존 동작 — actualSalePrice 입력값 사용.
+  const fixedSalePriceRaw =
+    bundledSaleMode === "actual" && asset.actualSalePrice
+      ? parseAmount(asset.actualSalePrice)
+      : undefined;
+  const fixedSalePrice = fractional && totalContractPrice && totalContractPrice > 0
+    ? applyRatio(totalContractPrice, ratio)
+    : fixedSalePriceRaw;
 
   return {
     assetId: asset.assetId,
@@ -162,15 +257,28 @@ export function buildAssetPayload(
       asset.acquisitionCause === "purchase" && asset.useEstimatedAcquisition && asset.standardPriceAtAcq
         ? parseAmount(asset.standardPriceAtAcq)
         : undefined,
-    directExpenses: parseAmount(asset.directExpenses),
+    directExpenses: fractional
+      ? applyRatio(parseAmount(asset.directExpenses), ratio)
+      : parseAmount(asset.directExpenses),
+    // §97② 단서 swap 분리 입력 — 자산-수준 자본적 지출·양도비.
+    // 지분 모드: 100% 기준 입력값에 × ratio 자동 적용.
+    // 양도비는 자산-수준 직접 입력 우선, 0이면 폼-수준 totalTransferExpense × ratio fallback (B3).
+    capitalExpenditure: (() => {
+      const directCapex = parseAmount(asset.capitalExpenditure);
+      const directExp = parseAmount(asset.transferExpense);
+      const effExpense = effectiveTransferExpenseFor(asset, ratio, fractional, totalTransferExpense);
+      // capex/transferExpense 또는 effExpense 중 하나라도 있으면 swap 분리 활성
+      if (!directCapex && !directExp && !effExpense) return undefined;
+      return fractional ? applyRatio(directCapex, ratio) : directCapex;
+    })(),
+    transferExpense: effectiveTransferExpenseFor(asset, ratio, fractional, totalTransferExpense) || undefined,
     reductions,
     inheritanceValuation,
     fixedAcquisitionPrice,
     isOneHousehold: asset.isOneHousehold,
-    fixedSalePrice:
-      bundledSaleMode === "actual" && asset.actualSalePrice
-        ? parseAmount(asset.actualSalePrice)
-        : undefined,
+    fixedSalePrice,
+    /** 12억 안분 분모용 총 물건 양도가액 — 지분 모드 전용 (단독 소유는 미설정) */
+    totalPropertyTransferPrice: fractional ? totalContractPrice : undefined,
     acquisitionCause: asset.acquisitionCause,
     useEstimatedAcquisition:
       asset.acquisitionCause === "purchase" ? asset.useEstimatedAcquisition : undefined,

@@ -102,7 +102,12 @@ export function Step1({
 
         {/* 일괄양도 여부 */}
         <div className="mb-3">
-          <p className="text-sm font-medium mb-2">함께 양도한 다른 자산이 있나요?</p>
+          <p className="text-sm font-medium mb-1">
+            함께 양도한 다른 자산 또는 같은 물건의 다른 지분이 있나요?
+          </p>
+          <p className="text-xs text-muted-foreground mb-2">
+            동일 아파트를 여러 번에 걸쳐 지분 취득한 경우(예: 60% 상속 + 40% 매매)에도 <strong>&quot;예&quot;</strong>를 선택하고 각 지분을 별도 자산으로 추가하세요.
+          </p>
           <div className="grid grid-cols-2 gap-2 max-w-xs">
             {([false, true] as const).map((val) => (
               <button
@@ -122,7 +127,7 @@ export function Step1({
           </div>
         </div>
 
-        {/* 일괄양도 모드: 총 양도가액 + 안분 방식 */}
+        {/* 일괄양도 모드: 총 양도가액 + 총 양도비 + 안분 방식 */}
         {hasBundledAssets && (
           <div className="space-y-3 mb-3">
             <FieldCard
@@ -139,6 +144,27 @@ export function Step1({
                 placeholder="실제 매매계약서상 거래금액"
               />
             </FieldCard>
+            <FieldCard
+              label="총 양도비 (선택)"
+              unit="원"
+              hint={
+                <>
+                  양도 시 1회 발생하는 부대비용 (부동산 중개수수료·인지대 등). 지분 모드 시 시스템이
+                  자산별 지분율로 <strong>자동 안분</strong>합니다. <strong>이 값을 입력하면 자산 카드
+                  내 &quot;양도비&quot; 입력란은 자동 비활성화</strong>되며 안분된 금액이 표시됩니다. 자산별로
+                  다른 양도비가 있는 예외 상황에서만 자산 카드 양도비 필드를 직접 입력하세요 (그 경우
+                  자산 입력이 우선).
+                </>
+              }
+            >
+              <CurrencyInput
+                label=""
+                hideUnit
+                value={form.totalTransferExpense}
+                onChange={(v) => onChange({ totalTransferExpense: v })}
+                placeholder="중개수수료 등 양도 부대비용 (전체 1건)"
+              />
+            </FieldCard>
             <BundledSaleModeToggle
               value={form.bundledSaleMode}
               onChange={(mode) => onChange({ bundledSaleMode: mode })}
@@ -153,6 +179,8 @@ export function Step1({
           onChange={updateAssets}
           singleMode={!hasBundledAssets}
           transferDate={form.transferDate}
+          contractTotalPrice={form.contractTotalPrice}
+          totalTransferExpense={form.totalTransferExpense}
         />
 
         {hasBundledAssets && (

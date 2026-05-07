@@ -110,9 +110,19 @@ export async function POST(request: NextRequest) {
   if (!parsed.success) {
     const fieldErrors: Record<string, string[]> = {};
     for (const issue of parsed.error.issues) {
-      const key = issue.path.join(".");
+      // path가 빈 배열인 경우(superRefine top-level issue 등) "_root" 키로 변환 — 빈 문자열 키는 console에서 `{}`로 표시되어 디버깅 어려움
+      const key = issue.path.length > 0 ? issue.path.join(".") : "_root";
       fieldErrors[key] = [...(fieldErrors[key] ?? []), issue.message];
     }
+    // 서버 측 전체 issue 로그 — 클라이언트 콘솔 외에 서버 로그도 남김 (Vercel 로그 추적용)
+    console.error("[transfer-tax route] zod validation failed", {
+      issueCount: parsed.error.issues.length,
+      issues: parsed.error.issues.map((i) => ({
+        path: i.path,
+        message: i.message,
+        code: i.code,
+      })),
+    });
     return NextResponse.json(
       {
         error: {
@@ -135,11 +145,16 @@ export async function POST(request: NextRequest) {
   const engineInput: TransferTaxInput = {
     propertyType: data.propertyType,
     transferPrice: data.transferPrice,
+    /** 지분 모드: 12억 안분 분모용 총 물건 양도가액 (단독 소유는 undefined) */
+    totalPropertyTransferPrice: data.totalPropertyTransferPrice,
     transferDate,
     acquisitionPrice: data.acquisitionPrice,
     acquisitionDate,
     assetContractDate,
     expenses: data.expenses,
+    /** §97② 단서 swap 분리 입력 — 미명시 시 undefined 유지 (swap 비활성, legacy expenses 사용) */
+    capitalExpenditure: data.capitalExpenditure,
+    transferExpense: data.transferExpense,
     useEstimatedAcquisition: data.useEstimatedAcquisition,
     standardPriceAtAcquisition: data.standardPriceAtAcquisition,
     standardPriceAtTransfer: data.standardPriceAtTransfer,
@@ -391,12 +406,23 @@ export async function POST(request: NextRequest) {
     //   - "apportioned": §166⑥ 단서. standardPriceAtTransferForApportion 비율 안분.
     const companions = data.companionAssets ?? [];
     const isActualMode = data.bundledSaleMode === "actual";
+    // 지분 모드 식별: primary 또는 모든 companion이 totalPropertyTransferPrice를 가지면 ratio×total로 자동 안분.
+    // 별도 안분 키(actual 가액 또는 양도시 기준시가)가 불필요하므로 bundled flow 진입 허용.
+    const primaryIsFractional = data.totalPropertyTransferPrice !== undefined;
+    const allCompanionsFractional =
+      companions.length > 0 && companions.every((c) => c.totalPropertyTransferPrice !== undefined);
+    const isFractionalBundle = primaryIsFractional || allCompanionsFractional;
     const bundledOk =
       companions.length > 0 &&
       data.totalSalePrice !== undefined &&
-      (isActualMode
-        ? data.primaryActualSalePrice !== undefined
-        : data.standardPriceAtTransferForApportion !== undefined);
+      (
+        // 지분 모드: ratio×total 자동 안분 → 안분 키 불필요
+        isFractionalBundle ||
+        // actual 모드: primary 명시 가액 필요
+        (isActualMode && data.primaryActualSalePrice !== undefined) ||
+        // apportioned 모드: 안분 키 (양도시 기준시가) 필요
+        (!isActualMode && data.standardPriceAtTransferForApportion !== undefined)
+      );
 
     if (bundledOk) {
       // (1) 주 자산 상속 보충적평가액 산정 (선택)
@@ -517,6 +543,7 @@ export async function POST(request: NextRequest) {
       const items: TransferTaxItemInput[] = apportionment.apportioned.map((a, idx) => {
         if (a.assetId === "primary") {
           // 주 자산: engineInput을 복제 + 안분 결과로 양도·취득·필요경비 덮어쓰기
+          // 지분 모드: data.totalPropertyTransferPrice는 engineInput에서 이미 상속됨 (...engineInput).
           return {
             ...engineInput,
             transferPrice: a.allocatedSalePrice,
@@ -551,12 +578,18 @@ export async function POST(request: NextRequest) {
                 ? "building"
                 : "land",
           transferPrice: a.allocatedSalePrice,
+          /** 지분 모드: 12억 안분 분모용 총 물건 양도가액 (자산별 ratio < 1.0 시) */
+          totalPropertyTransferPrice: c.totalPropertyTransferPrice,
           transferDate,
           acquisitionPrice: companionAcqPrice,
           acquisitionDate: companionAcqDate,
           // Round 9 (2026-05-06): 자산-수준 매매계약일 string → Date 변환
           assetContractDate: c.assetContractDate ? new Date(c.assetContractDate) : undefined,
           expenses: a.allocatedExpenses,
+          // §97② 단서 swap 분리 입력 — companion 자산-수준 자본적 지출·양도비
+          // (기존에 누락되어 자산 2의 capex/transferExpense가 엔진에 도달하지 못함 — 2026-05-07 수정)
+          capitalExpenditure: c.capitalExpenditure,
+          transferExpense: c.transferExpense,
           useEstimatedAcquisition:
             c.acquisitionCause === "purchase" && (c.useEstimatedAcquisition ?? false),
           standardPriceAtAcquisition: c.standardPriceAtAcquisition,
@@ -669,14 +702,25 @@ export async function POST(request: NextRequest) {
     const result = calculateTransferTax(engineInput, rates);
     return NextResponse.json({ data: { mode: "single" as const, result } }, { status: 200 });
   } catch (err) {
+    // 서버 콘솔에 풀 스택 출력 — dev 터미널에서 즉시 원인 식별
+    console.error("[/api/calc/transfer] engine error:", err);
     if (err instanceof TaxCalculationError) {
       return NextResponse.json(
         { error: { code: err.code, message: err.message } },
         { status: 500 },
       );
     }
+    const errMsg = err instanceof Error ? err.message : String(err);
+    const errStack = err instanceof Error ? err.stack : undefined;
     return NextResponse.json(
-      { error: { code: "INTERNAL_ERROR", message: "계산 중 오류가 발생했습니다" } },
+      {
+        error: {
+          code: "INTERNAL_ERROR",
+          message: errMsg || "계산 중 오류가 발생했습니다",
+          // 디버깅용 — 운영 환경에서는 제거 권장. 현재는 사례 27 진단을 위해 노출
+          stack: errStack,
+        },
+      },
       { status: 500 },
     );
   }

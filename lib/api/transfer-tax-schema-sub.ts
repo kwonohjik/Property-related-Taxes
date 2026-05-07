@@ -335,6 +335,10 @@ export const companionAssetSchema = z.object({
   standardPriceAtAcquisition: z.number().int().positive().optional(),
   /** 자산 직접 귀속 필요경비 (원, 선택) */
   directExpenses: z.number().int().nonnegative().optional(),
+  /** 자본적 지출액 (소득세법 §97① 가목) — §97② 단서 swap 비교에 사용. 지분 모드는 × ratio 적용된 값 */
+  capitalExpenditure: z.number().int().nonnegative().optional(),
+  /** 양도비 (소득세법 §97① 나목) — §97② 단서 swap 비교에 사용. 지분 모드는 × ratio 적용된 값 */
+  transferExpense: z.number().int().nonnegative().optional(),
   /** 상속·증여·매매(actual) 등 취득가액이 자산별로 확정된 경우 (선택) */
   fixedAcquisitionPrice: z.number().int().nonnegative().optional(),
   /** 상속 보충적평가액 산정용 입력 (선택) — 지정 시 fixedAcquisitionPrice로 주입됨 */
@@ -357,6 +361,12 @@ export const companionAssetSchema = z.object({
   fixedSalePrice: z.number().int().positive().optional(),
   /** 동반자산 취득 원인 — 기본 "inheritance" (기존 동작 호환) */
   acquisitionCause: z.enum(["purchase", "inheritance", "gift", "carryover_gift"]).default("inheritance"),
+  /**
+   * 12억 안분 분모용 총 물건 양도가액 — 지분 모드 전용 (단독 소유는 미설정).
+   * 동일 물건을 다회 분할 취득(지분 단계취득)한 자산에서 본 자산이 보유한 지분의
+   * 분모로 총 물건 양도가액을 전달. fixedSalePrice는 이미 × ratio 적용됨.
+   */
+  totalPropertyTransferPrice: z.number().int().positive().optional(),
   /** 매매 시 환산취득가 사용 여부 */
   useEstimatedAcquisition: z.boolean().optional(),
   /** 본인 취득일 (YYYY-MM-DD) — 보유기간 산정용 */

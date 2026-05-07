@@ -470,8 +470,26 @@ export function validateStep(step: number, form: TransferFormData): string | nul
 
       if (!a.assetKind) return `${label}: 자산 유형을 선택하세요.`;
 
-      // 다자산 양도가액
-      if (form.assets.length > 1) {
+      // 공유 지분율 검증 (분자 ≤ 분모, 분모 > 0)
+      const ownN = parseFloat(a.ownershipNumerator || "100");
+      const ownD = parseFloat(a.ownershipDenominator || "100");
+      if (!isFinite(ownN) || !isFinite(ownD)) return `${label}: 지분율 분자/분모는 숫자여야 합니다.`;
+      if (ownD <= 0) return `${label}: 지분율 분모는 0보다 커야 합니다.`;
+      if (ownN <= 0) return `${label}: 지분율 분자는 0보다 커야 합니다.`;
+      if (ownN > ownD) return `${label}: 지분율 분자는 분모를 초과할 수 없습니다.`;
+      if (ownD > 1000) return `${label}: 지분율 분모는 1000 이하여야 합니다.`;
+
+      // 단건 + 지분 모드 차단 — 합산 신고 없이 ratio < 1.0 자산을 단독 계산 시 잘못된 결과
+      // (사례 27 같은 동일 물건 다회 분할 취득은 모든 지분을 별도 자산으로 추가해야 정확)
+      if (form.assets.length === 1 && ownN < ownD) {
+        return `${label}: 지분 모드 자산(${ownN}/${ownD})은 단독으로 계산할 수 없습니다. 같은 물건의 다른 지분도 별도 자산으로 추가하거나, 단독 소유라면 지분율을 100/100으로 입력하세요.`;
+      }
+
+      // 다자산 양도가액 — 지분 모드(ratio < 1.0) 자산은 양도가액이 총양도가 × ratio로
+      // 자동 결정되므로 actualSalePrice·standardPriceAtTransfer 모두 검증 면제.
+      // 동일 물건 지분 단계취득 케이스(사례 27)에서 안분 키 입력 강요 차단.
+      const isFractionalAsset = ownN < ownD;
+      if (form.assets.length > 1 && !isFractionalAsset) {
         if (form.bundledSaleMode === "actual") {
           if (!a.actualSalePrice || parseAmount(a.actualSalePrice) <= 0)
             return `${label}: 계약서상 양도가액을 입력하세요.`;
@@ -510,8 +528,14 @@ export function validateStep(step: number, form: TransferFormData): string | nul
         return `${label}: 증여자 취득일은 증여일보다 이전이어야 합니다.`;
     }
 
-    // actual 모드 합계 검증
-    if (form.assets.length > 1 && form.bundledSaleMode === "actual") {
+    // actual 모드 합계 검증 — 지분 모드 자산이 하나라도 있으면 ratio 자동 적용으로 합계 검증 생략.
+    // 동일 물건 지분 단계취득은 ratio 합 = 100% 가정으로 시스템이 자동 분배.
+    const anyFractional = form.assets.some((a) => {
+      const n = parseFloat(a.ownershipNumerator || "100");
+      const d = parseFloat(a.ownershipDenominator || "100");
+      return isFinite(n) && isFinite(d) && d > 0 && n > 0 && n < d;
+    });
+    if (form.assets.length > 1 && form.bundledSaleMode === "actual" && !anyFractional) {
       const sumActual = form.assets.reduce(
         (s, a) => s + parseAmount(a.actualSalePrice),
         0,

@@ -15,6 +15,7 @@ import { CompanionAcqGiftBlock } from "./CompanionAcqGiftBlock";
 import { CarryoverGiftBlock } from "./CarryoverGiftBlock";
 import { InheritedAcquisitionDeemedSection } from "./InheritedAcquisitionDeemedSection";
 import { NblSectionContainer } from "./nbl/NblSectionContainer";
+import { OwnershipRatioInput, isFractionalMode } from "./OwnershipRatioInput";
 import { MixedUseToggleRow, MixedUseExpandedPanel } from "./MixedUseSection";
 import { RentalHousingExceptionSection } from "./RentalHousingExceptionSection";
 import { RENTAL_HOUSING_EXCEPTION_DEFAULTS } from "@/lib/stores/calc-wizard-asset-factory";
@@ -55,6 +56,10 @@ interface Props {
   transferDate?: string;
   /** 증환지 증가분 등 자산 자동 추가 콜백 */
   onAddAsset?: (patch: Partial<AssetForm>) => void;
+  /** 폼-수준 총 양도가액 — 지분 모드 시 ratio×total 자동 계산용 */
+  contractTotalPrice?: string;
+  /** 폼-수준 총 양도비 — 자산별 자동 안분 표시용 */
+  totalTransferExpense?: string;
 }
 
 export function CompanionAssetCard({
@@ -66,6 +71,8 @@ export function CompanionAssetCard({
   singleMode,
   transferDate,
   onAddAsset,
+  contractTotalPrice,
+  totalTransferExpense,
 }: Props) {
   const isMultiBundled = !singleMode && bundledSaleMode !== undefined;
   const isPrimary = asset.isPrimaryForHouseholdFlags;
@@ -315,6 +322,46 @@ export function CompanionAssetCard({
         </div>
       )}
 
+      {/* 공유 지분율 — 단독 100/100 기본, 지분 단계취득 자산은 명시 입력 */}
+      <OwnershipRatioInput
+        numerator={asset.ownershipNumerator}
+        denominator={asset.ownershipDenominator}
+        onChange={(patch) =>
+          onChange({
+            ...(patch.numerator !== undefined ? { ownershipNumerator: patch.numerator } : {}),
+            ...(patch.denominator !== undefined ? { ownershipDenominator: patch.denominator } : {}),
+          })
+        }
+      />
+
+      {/* 지분 모드 활성 시 100% 기준 입력 안내 (단독 소유는 미표시) */}
+      {isFractionalMode(asset.ownershipNumerator, asset.ownershipDenominator) && (
+        <div className="rounded-lg border-2 border-amber-300 bg-amber-50/70 px-4 py-3 text-sm">
+          <div className="flex items-start gap-2">
+            <span aria-hidden className="text-amber-600 font-bold text-base leading-none mt-0.5">
+              ⚠
+            </span>
+            <div className="space-y-1.5 flex-1">
+              <p className="font-semibold text-amber-900">
+                지분 모드 — 모든 금액을 <span className="underline">100% 기준</span>으로 입력하세요
+              </p>
+              <ul className="text-xs text-amber-800 space-y-0.5 leading-relaxed list-disc list-inside">
+                <li>
+                  <strong>양도가액·취득가액·필요경비</strong>는 물건 전체(100%) 기준으로 입력합니다.
+                  시스템이 지분율(
+                  {asset.ownershipNumerator}/{asset.ownershipDenominator})을 자동으로 적용합니다.
+                </li>
+                <li>
+                  예: 60% 지분의 실제 매매가 600,000,000원 → 100% 기준{" "}
+                  <strong>1,000,000,000원</strong>으로 입력 (600M ÷ 0.6).
+                </li>
+                <li>상속 보충적평가는 공동주택가격(100%)을 그대로 입력하면 됩니다.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 양도가액 */}
       <CompanionSaleModeBlock
         bundledSaleMode={singleMode ? "actual" : bundledSaleMode}
@@ -328,6 +375,9 @@ export function CompanionAssetCard({
         transferDate={transferDate}
         transferArea={asset.assetKind === "land" ? asset.transferArea : undefined}
         onTransferAreaChange={asset.assetKind === "land" ? (v) => onChange({ transferArea: v }) : undefined}
+        ownershipNumerator={asset.ownershipNumerator}
+        ownershipDenominator={asset.ownershipDenominator}
+        contractTotalPrice={contractTotalPrice}
         standardPricePerSqmAtTransfer={asset.standardPricePerSqmAtTransfer}
         onStandardPricePerSqmAtTransferChange={(v) => onChange({ standardPricePerSqmAtTransfer: v })}
       />
@@ -561,12 +611,38 @@ export function CompanionAssetCard({
           label="자본적 지출액 (원) — §97① 가목"
           value={asset.capitalExpenditure}
           onChange={(v) => onChange({ capitalExpenditure: v })}
+          hint={
+            isFractionalMode(asset.ownershipNumerator, asset.ownershipDenominator)
+              ? "자산 보유 중 발생한 인테리어·증축 등. 100% 기준 입력 — 시스템이 지분율 자동 적용"
+              : "자산 보유 중 발생한 인테리어·증축 등 자본적 지출"
+          }
         />
-        <CurrencyInput
-          label="양도비 (원) — §97① 나목"
-          value={asset.transferExpense}
-          onChange={(v) => onChange({ transferExpense: v })}
-        />
+        {(() => {
+          const formTotal = parseAmount(totalTransferExpense || "0");
+          const num = parseFloat(asset.ownershipNumerator || "100");
+          const den = parseFloat(asset.ownershipDenominator || "100");
+          const fractional = isFractionalMode(asset.ownershipNumerator, asset.ownershipDenominator);
+          const ratio = isFinite(num) && isFinite(den) && den > 0 ? Math.min(num / den, 1.0) : 1.0;
+          const allocated = formTotal > 0 ? Math.floor(formTotal * ratio) : 0;
+          const useFormLevel = formTotal > 0;
+          return (
+            <CurrencyInput
+              label="양도비 (원) — §97① 나목"
+              value={useFormLevel ? String(allocated) : asset.transferExpense}
+              onChange={(v) => onChange({ transferExpense: v })}
+              disabled={useFormLevel}
+              hint={
+                useFormLevel
+                  ? fractional
+                    ? `자동 안분 ${allocated.toLocaleString()} = 총 양도비 ${formTotal.toLocaleString()} × 지분 ${num}/${den}. 폼 상단 "총 양도비"를 비우면 직접 입력 가능`
+                    : `자동 적용 ${allocated.toLocaleString()} (폼 상단 "총 양도비"). 비우면 직접 입력 가능`
+                  : fractional
+                    ? "양도 시 1회 발생 (중개수수료·인지대 등). 지분 모드는 폼 상단 \"총 양도비\"에서 일괄 입력 권장 (자동 안분)"
+                    : "양도 시 발생한 중개수수료·인지대 등"
+              }
+            />
+          );
+        })()}
         <p className="text-[11px] text-muted-foreground">
           환산취득가/감정가액 모드에서 (자본+양도비) &gt; (환산+개산공제) 시 §97② 단서에 따라 자본+양도비를 필요경비로 적용합니다.
         </p>

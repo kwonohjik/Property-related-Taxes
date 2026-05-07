@@ -396,6 +396,8 @@ export function calculateTransferTaxAggregate(
       transferPrice: r.singleInput.transferPrice,
       acquisitionPrice: effectiveAcquisitionPrice,
       necessaryExpense: effectiveNecessaryExpense,
+      // 신고서 양식: 자본적지출은 취득가액에 합산, 필요경비는 양도비만
+      capitalExpenditureForDisplay: r.singleInput.capitalExpenditure ?? 0,
       determinedTax: r.result.determinedTax,
       transferGain: r.result.transferGain,
       longTermHoldingDeduction: r.lthd,

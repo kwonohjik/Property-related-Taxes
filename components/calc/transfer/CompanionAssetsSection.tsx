@@ -14,9 +14,13 @@ interface Props {
   singleMode?: boolean;
   /** 양도일 (공시가격 기준연도 자동 계산용) */
   transferDate?: string;
+  /** 폼-수준 총 양도가액 — 지분 모드 자동 계산용 */
+  contractTotalPrice?: string;
+  /** 폼-수준 총 양도비 — 자산별 자동 안분 표시용 */
+  totalTransferExpense?: string;
 }
 
-export function CompanionAssetsSection({ assets, bundledSaleMode, onChange, singleMode, transferDate }: Props) {
+export function CompanionAssetsSection({ assets, bundledSaleMode, onChange, singleMode, transferDate, contractTotalPrice, totalTransferExpense }: Props) {
   // 연속된 onChange 호출에서 stale closure를 피하기 위해
   // 최신 assets를 ref로 동기 추적 (렌더링 중 동기화)
   /* eslint-disable react-hooks/refs -- props→ref 동기 sync. useEffect로 옮기면 stale closure 발생 */
@@ -58,6 +62,8 @@ export function CompanionAssetsSection({ assets, bundledSaleMode, onChange, sing
           onRemove={assets.length > 1 ? () => removeAsset(idx) : undefined}
           singleMode={singleMode && assets.length === 1}
           transferDate={transferDate}
+          contractTotalPrice={contractTotalPrice}
+          totalTransferExpense={totalTransferExpense}
           onAddAsset={(patch) => addAsset(patch)}
         />
       ))}

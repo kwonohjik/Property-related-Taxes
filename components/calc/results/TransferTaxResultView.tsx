@@ -242,7 +242,8 @@ export function TransferTaxResultView({
                     양도차익 {formatKRW(pr.transferGain)}
                   </span>
                 </summary>
-                <div className="divide-y divide-border text-sm">
+                <table className="w-full text-sm border-collapse [&_tr]:border-b [&_tr]:border-border [&_tr:last-child]:border-0">
+                  <tbody>
                   <Row label="안분 양도가액" value={formatKRW(pr.allocatedTransferPrice)} sub />
                   <Row label="취득가액" value={formatKRW(pr.acquisitionPrice)} sub />
                   {pr.estimatedDeduction > 0 && (
@@ -258,7 +259,8 @@ export function TransferTaxResultView({
                     sub
                   />
                   <Row label="양도소득금액" value={formatKRW(pr.transferIncome)} highlight />
-                </div>
+                  </tbody>
+                </table>
               </details>
             ))}
           </div>
@@ -294,6 +296,7 @@ export function TransferTaxResultView({
         {!result.isExempt && (
           <div className="rounded-lg border border-border overflow-hidden">
             <table className="w-auto text-sm border-collapse [&_tr]:border-b [&_tr]:border-border [&_tr:last-child]:border-0">
+              <tbody>
               <Row label="양도차익" value={formatKRW(result.transferGain)} />
               {/* §161 적용 시: 12억 초과분 안분 행 숨김 (양도차익 단계에서 분리하지 않음) */}
               {!result.rentalHousingExceptionDetail?.applied && result.taxableGain !== result.transferGain && (
@@ -359,6 +362,7 @@ export function TransferTaxResultView({
                 const d = result.new993Detail;
                 if (!d.isEligible) {
                   return (
+                    <tr><td colSpan={2} className="p-0">
                     <div className="mx-2 my-2 rounded-md border border-dashed border-amber-300 bg-amber-50 dark:bg-amber-950/30 px-3 py-2 text-xs text-amber-900 dark:text-amber-200 space-y-1">
                       <p className="font-medium">조특법 §99의3 신축주택 과세특례 — 적용 불가</p>
                       <ul className="list-disc list-inside space-y-0.5">
@@ -367,9 +371,11 @@ export function TransferTaxResultView({
                         ))}
                       </ul>
                     </div>
+                    </td></tr>
                   );
                 }
                 return (
+                  <tr><td colSpan={2} className="p-0">
                   <div className="mx-2 my-2 rounded-md border border-dashed border-primary/30 bg-primary/5 px-3 py-2 text-xs space-y-1.5">
                     <p className="font-medium text-primary">조특법 §99의3 신축주택 과세특례 (양도소득금액 차감 방식)</p>
                     <p className="text-muted-foreground">
@@ -391,12 +397,14 @@ export function TransferTaxResultView({
                       <p className="font-medium">농어촌특별세 (20%) = {formatKRW(d.ruralSurtax)}</p>
                     </div>
                   </div>
+                  </td></tr>
                 );
               })()}
               {result.publicExpropriationDetail?.isEligible && (() => {
                 const d = result.publicExpropriationDetail;
                 const bd = d.breakdown;
                 return (
+                  <tr><td colSpan={2} className="p-0">
                   <div className="mx-2 my-2 rounded-md border border-dashed border-primary/30 bg-primary/5 px-3 py-2 text-xs space-y-1.5">
                     <p className="font-medium text-primary">공익사업 수용 감면 상세 (조특법 §77)</p>
                     <div className="space-y-0.5">
@@ -439,6 +447,7 @@ export function TransferTaxResultView({
                       <p className="text-amber-700">※ 조특법 부칙 §53 종전 감면율 적용 (2015-12-31 이전 고시 + 2017-12-31 이전 양도)</p>
                     )}
                   </div>
+                  </td></tr>
                 );
               })()}
               <Row
@@ -475,6 +484,7 @@ export function TransferTaxResultView({
                 );
               })()}
               <Row label="지방소득세 (10%)" value={formatKRW(result.localIncomeTax)} />
+              </tbody>
             </table>
           </div>
         )}

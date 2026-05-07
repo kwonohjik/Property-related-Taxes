@@ -13,7 +13,7 @@ import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import type { BundledApportionmentResult } from "@/lib/tax-engine/bundled-sale-apportionment";
 import type { AggregateTransferResult } from "@/lib/tax-engine/transfer-tax-aggregate";
 import type { MixedUseGainBreakdown } from "@/lib/tax-engine/types/transfer-mixed-use.types";
-import { toEngineAssetKind, isHousingLike, toEngineReductions, buildAssetPayload } from "./transfer-tax-api-helpers";
+import { toEngineAssetKind, isHousingLike, toEngineReductions, buildAssetPayload, getOwnershipRatio, applyRatio } from "./transfer-tax-api-helpers";
 import { buildCarryoverPayload } from "./transfer-tax-api-carryover";
 
 // ─── ④ 장기임대주택 거주주택 비과세 특례 API 변환 헬퍼 (소령 §155⑳) ───
@@ -274,14 +274,37 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
         : undefined,
   } : undefined;
 
+  // 공유 지분 — primary 자산의 지분 모드 처리 (다자산 일괄양도는 buildAssetPayload에서 별도 처리)
+  const primaryRatio = getOwnershipRatio(primary);
+  const primaryFractional = primaryRatio < 1.0;
+  const totalContractPrice = parseAmount(form.contractTotalPrice);
+  // 폼-수준 총 양도비 (B3) — 지분 모드 자동 안분의 분자 sourcing.
+  // primary.transferExpense가 직접 입력되면 그것이 우선, 미입력시 form.totalTransferExpense × ratio 사용.
+  const formTotalTransferExpense = parseAmount(form.totalTransferExpense || "0");
+  const primaryTransferExpenseDirect = parseAmount(primary.transferExpense);
+  const primaryEffectiveTransferExpense =
+    primaryTransferExpenseDirect > 0
+      ? primaryFractional
+        ? applyRatio(primaryTransferExpenseDirect, primaryRatio)
+        : primaryTransferExpenseDirect
+      : primaryFractional && formTotalTransferExpense > 0
+        ? applyRatio(formTotalTransferExpense, primaryRatio)
+        : formTotalTransferExpense; // 단독 모드: form-level이 있으면 사용, 없으면 0
+
   const body = {
     propertyType: isMixed ? ("mixed-use-house" as const) : primary.assetKind,
-    transferPrice: parseAmount(form.contractTotalPrice),
+    transferPrice: primaryFractional
+      ? applyRatio(totalContractPrice, primaryRatio)
+      : totalContractPrice,
+    /** 12억 안분 분모용 총 물건 양도가액 — primary 지분 모드 전용 */
+    totalPropertyTransferPrice: primaryFractional ? totalContractPrice : undefined,
     transferDate: form.transferDate,
     acquisitionPrice:
       hasPre1990 || isEstimated || isAppraisal || parcelModeActive
         ? 0
-        : parseAmount(primary.fixedAcquisitionPrice),
+        : primaryFractional
+          ? applyRatio(parseAmount(primary.fixedAcquisitionPrice), primaryRatio)
+          : parseAmount(primary.fixedAcquisitionPrice),
     acquisitionDate: parcelModeActive
       ? firstParcelAcqDate
       : primary.acquisitionCause === "carryover_gift"
@@ -292,18 +315,24 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     expenses:
       hasPre1990 || isEstimated || isAppraisal || parcelModeActive
         ? 0
-        : parseAmount(primary.directExpenses),
+        : primaryFractional
+          ? applyRatio(parseAmount(primary.directExpenses), primaryRatio)
+          : parseAmount(primary.directExpenses),
     // §97② 단서 swap 분리 입력 — 두 필드가 명시되면 엔진이 swap 비교 수행.
     // 둘 다 0이면 undefined로 보내 swapEligible=false (legacy 동작 유지).
+    // 지분 모드: 자본적지출은 100% 기준 입력 → × ratio 자동 적용 (자산별 자체 지출이므로 자산 카드에서 입력)
+    // 양도비는 폼-수준 totalTransferExpense에서 자산별 안분 (B3) — primary.transferExpense는 fallback
     capitalExpenditure:
       parcelModeActive ? undefined :
       (parseAmount(primary.capitalExpenditure) || parseAmount(primary.transferExpense))
-        ? parseAmount(primary.capitalExpenditure)
+        ? primaryFractional
+          ? applyRatio(parseAmount(primary.capitalExpenditure), primaryRatio)
+          : parseAmount(primary.capitalExpenditure)
         : undefined,
     transferExpense:
       parcelModeActive ? undefined :
-      (parseAmount(primary.capitalExpenditure) || parseAmount(primary.transferExpense))
-        ? parseAmount(primary.transferExpense)
+      (parseAmount(primary.capitalExpenditure) || primaryEffectiveTransferExpense)
+        ? primaryEffectiveTransferExpense || undefined
         : undefined,
     // 검용주택은 calcMixedUseTransferTax 별도 엔진에서 처리 → 일반 환산 검증 우회 위해 false 송신
     useEstimatedAcquisition: hasPre1990 || parcelModeActive || isMixed ? false
@@ -529,18 +558,30 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
             primary.inheritanceValuationMode === "auto"
               ? {
                   inheritanceDate: primary.acquisitionDate,
-                  assetKind: toEngineAssetKind(primary.assetKind),
+                  // 보충적평가 자산 구분 — inheritanceAssetKind ("land" | "house_individual" | "house_apart")
+                  // assetKind("housing")가 아닌 자산-수준 inheritanceAssetKind를 사용해야 schema enum 일치
+                  assetKind: primary.inheritanceAssetKind,
                   landAreaM2: primary.acquisitionArea ? parseFloat(primary.acquisitionArea) : undefined,
-                  publishedValueAtInheritance: parseAmount(primary.publishedValueAtInheritance),
+                  // 지분 모드: 100% 기준 입력값(공동주택가격 등)에 × ratio 적용
+                  publishedValueAtInheritance: primaryFractional
+                    ? applyRatio(parseAmount(primary.publishedValueAtInheritance), primaryRatio)
+                    : parseAmount(primary.publishedValueAtInheritance),
                 }
               : undefined,
           companionAssets: form.assets
             .slice(1)
-            .map((a) => buildAssetPayload(a, form.bundledSaleMode, form.transferDate)),
+            .map((a) => buildAssetPayload(a, form.bundledSaleMode, form.transferDate, totalContractPrice, formTotalTransferExpense || undefined)),
           bundledSaleMode: form.bundledSaleMode,
+          // primary 양도가액 (actual 모드 전용).
+          // 지분 모드는 contractTotalPrice × ratio 자동 입력 (companion buildAssetPayload와 일관)
+          // — 사용자 입력란이 비어 있어도 시스템이 자동 결정하므로 zod 검증 통과.
           primaryActualSalePrice:
-            form.bundledSaleMode === "actual" && primary.actualSalePrice
-              ? parseAmount(primary.actualSalePrice)
+            form.bundledSaleMode === "actual"
+              ? primary.actualSalePrice
+                ? parseAmount(primary.actualSalePrice)
+                : primaryFractional
+                  ? applyRatio(totalContractPrice, primaryRatio)
+                  : undefined
               : undefined,
         }
       : {}),
@@ -584,8 +625,13 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
           }
 
           // case B post-deemed
-          const reportedValue = parseAmount(primary.publishedValueAtInheritance);
-          if (reportedValue <= 0) return {};
+          const reportedRaw = parseAmount(primary.publishedValueAtInheritance);
+          if (reportedRaw <= 0) return {};
+          // 지분 모드: 100% 기준 입력값에 × ratio 적용 (primaryInheritanceValuation과 일관)
+          // 미적용 시 100% 송신으로 엔진에서 안분 잔여가 필요경비로 잘못 적재됨 (사례 27)
+          const reportedValue = primaryFractional
+            ? applyRatio(reportedRaw, primaryRatio)
+            : reportedRaw;
           return {
             inheritedAcquisition: {
               mode: "post-deemed" as const,
@@ -719,13 +765,14 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
       | Record<string, string[]>
       | undefined;
     if (fieldErrors && Object.keys(fieldErrors).length > 0) {
-      // 정확한 실패 필드 파악을 위해 콘솔에 전체 출력
-      console.error("[transfer-tax API] fieldErrors:", fieldErrors);
-      // 사용자 친화적 한국어 다중행 메시지로 변환 (모든 fieldErrors 포함)
+      const { logFieldErrorsResponse } = await import("./transfer-tax-api-error-log");
+      logFieldErrorsResponse(fieldErrors, json, body);
       const { formatFieldErrors } = await import("./transfer-tax-error-format");
       throw new Error(formatFieldErrors(fieldErrors, msg));
     }
-    throw new Error(msg);
+    const { logNoFieldErrorsResponse } = await import("./transfer-tax-api-error-log");
+    const detailedMsg = logNoFieldErrorsResponse(json, res, body) ?? msg;
+    throw new Error(detailedMsg);
   }
   return json.data as TransferAPIResult;
 }

@@ -10,6 +10,12 @@ import { cn } from "@/lib/utils";
 interface Props {
   apportionment: BundledApportionmentResult;
   aggregated: AggregateTransferResult;
+  /**
+   * propertyId → 지분율(분자/분모) 매핑 (선택).
+   * 지분 단계취득 자산의 결과 카드에 "지분 X%" 라벨 표시용.
+   * 단독 소유(100/100)는 미포함 또는 포함되어도 PropertyCard에서 미표시.
+   */
+  ownershipMap?: Map<string, { numerator: number; denominator: number }>;
   onBack?: () => void;
   onReset?: () => void;
 }
@@ -43,13 +49,186 @@ function Divider() {
   );
 }
 
+// ─── 합산 신고서 양식 표 ──────────────────────────────────────
+// 단건 결과 화면(TransferTaxResultView)의 FilingFormTable에 대응하는 합산 모드 신고서.
+// 자산별 컬럼 + 합계 컬럼으로 양도소득세 신고서 핵심 항목을 표시.
+
+function FilingFormTableAggregate({
+  properties,
+  aggregated,
+  ownershipMap,
+}: {
+  properties: PerPropertyBreakdown[];
+  aggregated: AggregateTransferResult;
+  ownershipMap?: Map<string, { numerator: number; denominator: number }>;
+}) {
+  // 자산별 양도가액·취득가액·필요경비는 PerPropertyBreakdown에 노출됨.
+  // 신고서 양식: 자본적지출(§97① 가목)은 취득가액에 합산, 필요경비는 양도비(§97① 나목)만 표시
+  // (양도소득세 신고서 양식 표시 관행에 따라 — 엔진 양도차익 계산은 동일).
+  const displayAcqPrice = (p: PerPropertyBreakdown) => p.acquisitionPrice + p.capitalExpenditureForDisplay;
+  const displayNecessaryExpense = (p: PerPropertyBreakdown) =>
+    Math.max(0, p.necessaryExpense - p.capitalExpenditureForDisplay);
+  const sumTransferPrice = properties.reduce((s, p) => s + p.transferPrice, 0);
+  const sumAcquisitionPrice = properties.reduce((s, p) => s + displayAcqPrice(p), 0);
+  const sumNecessaryExpense = properties.reduce((s, p) => s + displayNecessaryExpense(p), 0);
+  const sumTransferGain = properties.reduce((s, p) => s + p.transferGain, 0);
+  const sumLongTermDeduction = properties.reduce((s, p) => s + p.longTermHoldingDeduction, 0);
+
+  function ratioBadge(propertyId: string) {
+    const own = ownershipMap?.get(propertyId);
+    if (!own || own.numerator >= own.denominator || own.denominator <= 0) return null;
+    const pct = ((own.numerator / own.denominator) * 100).toFixed(2).replace(/\.?0+$/, "");
+    return (
+      <span className="ml-1 text-[10px] font-semibold text-amber-700">
+        지분 {pct}%
+      </span>
+    );
+  }
+
+  return (
+    <div className="rounded-lg border bg-card p-4 shadow-sm">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="font-semibold text-base">신고서 양식</h3>
+        <span className="text-xs text-muted-foreground">
+          양도소득세 신고서 항목별 자산-합산 계산 내역
+        </span>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b text-xs text-muted-foreground">
+              <th className="py-1.5 pr-2 text-left font-medium">항목</th>
+              {properties.map((p) => (
+                <th key={p.propertyId} className="py-1.5 px-2 text-right font-medium">
+                  {p.propertyLabel}
+                  {ratioBadge(p.propertyId)}
+                </th>
+              ))}
+              <th className="py-1.5 pl-2 text-right font-medium">합계</th>
+            </tr>
+          </thead>
+          <tbody>
+            <FilingRow label="양도가액" perAsset={properties.map((p) => p.transferPrice)} total={sumTransferPrice} />
+            <FilingRow label="취득가액 (자본적지출 포함)" perAsset={properties.map(displayAcqPrice)} total={sumAcquisitionPrice} />
+            <FilingRow label="필요경비 (양도비)" perAsset={properties.map(displayNecessaryExpense)} total={sumNecessaryExpense} muted />
+            <FilingRow label="양도차익" perAsset={properties.map((p) => p.transferGain)} total={sumTransferGain} bold />
+            <FilingRow
+              label="장기보유특별공제"
+              perAsset={properties.map((p) => -p.longTermHoldingDeduction)}
+              total={-sumLongTermDeduction}
+              muted
+              negativePrefix="△"
+            />
+            <FilingRow label="양도소득금액" perAsset={properties.map((p) => p.income)} total={aggregated.totalIncomeAfterOffset} bold />
+            <SeparatorRow span={properties.length + 2} />
+            <FilingRow label="기본공제" perAsset={properties.map(() => null)} total={-aggregated.basicDeduction} muted negativePrefix="△" />
+            <FilingRow label="과세표준" perAsset={properties.map(() => null)} total={aggregated.taxBase} bold highlight />
+            <FilingRow label="산출세액" perAsset={properties.map((p) => p.refCalculatedTax)} total={aggregated.calculatedTax} bold />
+            {aggregated.reductionAmount > 0 && (
+              <FilingRow
+                label="감면세액"
+                perAsset={properties.map((p) => -p.reductionAggregated)}
+                total={-aggregated.reductionAmount}
+                muted
+                negativePrefix="△"
+              />
+            )}
+            <FilingRow label="결정세액" perAsset={properties.map((p) => p.refDeterminedTax)} total={aggregated.determinedTax} bold highlight />
+            {aggregated.penaltyTax > 0 && (
+              <FilingRow label="가산세" perAsset={properties.map((p) => p.penaltyTax + p.filingDelayedPenaltyTax)} total={aggregated.penaltyTax} muted />
+            )}
+            <SeparatorRow span={properties.length + 2} />
+            <FilingRow label="지방소득세" perAsset={properties.map(() => null)} total={aggregated.localIncomeTax} muted />
+            <FilingRow label="총 납부세액" perAsset={properties.map(() => null)} total={aggregated.totalTax} bold highlight />
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function FilingRow({
+  label,
+  perAsset,
+  total,
+  bold,
+  highlight,
+  muted,
+  negativePrefix,
+}: {
+  label: string;
+  perAsset: (number | null)[];
+  total: number;
+  bold?: boolean;
+  highlight?: boolean;
+  muted?: boolean;
+  negativePrefix?: string;
+}) {
+  function fmt(n: number | null): string {
+    if (n === null) return "—";
+    if (n === 0) return "0";
+    if (negativePrefix && n < 0) return `${negativePrefix}${formatKRW(Math.abs(n))}`;
+    return formatKRW(n);
+  }
+  return (
+    <tr
+      className={cn(
+        "border-b last:border-0",
+        highlight && "bg-amber-50/40",
+        muted && "text-muted-foreground",
+      )}
+    >
+      <td className={cn("py-1.5 pr-2", bold && "font-semibold")}>{label}</td>
+      {perAsset.map((v, i) => (
+        <td key={i} className={cn("py-1.5 px-2 text-right font-mono", bold && "font-semibold")}>
+          {fmt(v)}
+        </td>
+      ))}
+      <td className={cn("py-1.5 pl-2 text-right font-mono", bold && "font-semibold")}>
+        {fmt(total)}
+      </td>
+    </tr>
+  );
+}
+
+function SeparatorRow({ span }: { span: number }) {
+  return (
+    <tr aria-hidden>
+      <td colSpan={span} className="pt-1">
+        <div className="border-t border-border/50" />
+      </td>
+    </tr>
+  );
+}
+
 // ─── 자산별 카드 ──────────────────────────────────────────────
 
-function PropertyCard({ breakdown }: { breakdown: PerPropertyBreakdown }) {
+function PropertyCard({
+  breakdown,
+  ownership,
+}: {
+  breakdown: PerPropertyBreakdown;
+  ownership?: { numerator: number; denominator: number };
+}) {
+  // 지분 모드(분자 < 분모) 시 "지분 X%" 라벨 표시. 단독 소유(분자 === 분모)는 미표시.
+  const isFractional =
+    ownership !== undefined &&
+    ownership.denominator > 0 &&
+    ownership.numerator > 0 &&
+    ownership.numerator < ownership.denominator;
+  const ratioPct = isFractional
+    ? ((ownership.numerator / ownership.denominator) * 100).toFixed(2).replace(/\.?0+$/, "")
+    : null;
+
   return (
     <div className="border rounded-md p-3 space-y-1">
-      <div className="flex items-center gap-2 mb-2">
+      <div className="flex items-center gap-2 mb-2 flex-wrap">
         <span className="font-medium text-sm">{breakdown.propertyLabel}</span>
+        {isFractional && (
+          <span className="text-xs px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 font-semibold">
+            지분 {ratioPct}% ({ownership.numerator}/{ownership.denominator})
+          </span>
+        )}
         {breakdown.isExempt && (
           <span className="text-xs px-1.5 py-0.5 rounded bg-green-100 text-green-800">비과세</span>
         )}
@@ -219,7 +398,7 @@ function AggregatedTaxSummary({ aggregated }: { aggregated: AggregateTransferRes
 
 // ─── 메인 컴포넌트 ────────────────────────────────────────────
 
-export function BundledAllocationCard({ apportionment, aggregated, onBack, onReset }: Props) {
+export function BundledAllocationCard({ apportionment, aggregated, ownershipMap, onBack, onReset }: Props) {
   return (
     <div className="space-y-6">
       {/* 안분 결과 */}
@@ -268,11 +447,22 @@ export function BundledAllocationCard({ apportionment, aggregated, onBack, onRes
         </table>
       </div>
 
-      {/* 자산별 세액 */}
+      {/* 합산 신고서 양식 — 자산별 컬럼 + 합계 */}
+      <FilingFormTableAggregate
+        properties={aggregated.properties}
+        aggregated={aggregated}
+        ownershipMap={ownershipMap}
+      />
+
+      {/* 자산별 세액 (요약 카드) */}
       <div className="space-y-3">
         <h3 className="font-semibold text-base">자산별 계산 결과</h3>
         {aggregated.properties.map((p) => (
-          <PropertyCard key={p.propertyId} breakdown={p} />
+          <PropertyCard
+            key={p.propertyId}
+            breakdown={p}
+            ownership={ownershipMap?.get(p.propertyId)}
+          />
         ))}
       </div>
 

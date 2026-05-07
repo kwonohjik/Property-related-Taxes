@@ -63,8 +63,13 @@ export interface PerPropertyBreakdown {
   transferPrice: number;
   /** 취득가액 (환산취득가 사용 시 환산 후 값) */
   acquisitionPrice: number;
-  /** 필요경비 */
+  /** 필요경비 (엔진 산식 = 자본적지출 + 양도비). 신고서 양식 표시 시 자본적지출은 취득가액으로 분류 */
   necessaryExpense: number;
+  /**
+   * 자본적 지출 (소득세법 §97① 가목) — 신고서 양식상 취득가액에 합산되어 표시.
+   * `necessaryExpense - capitalExpenditureForDisplay = 양도비(§97① 나목)`로 도출 가능.
+   */
+  capitalExpenditureForDisplay: number;
   /** 건별 결정세액 (단건 엔진 결과) */
   determinedTax: number;
   /** 양도차익 (skipLossFloor=true → 음수 가능) */

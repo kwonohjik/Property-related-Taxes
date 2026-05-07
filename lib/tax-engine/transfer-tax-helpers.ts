@@ -225,7 +225,9 @@ export function checkExemption(
   }
 
   // E-1: 전액 비과세 (양도가 12억 이하)
-  if (input.transferPrice <= rule.maxExemptPrice) {
+  // 지분 모드: totalPropertyTransferPrice(총 물건가)로 12억 판정 — 지분 양도가액으로 판정 시 잘못된 전액비과세 발생.
+  const exemptionPriceCheck = input.totalPropertyTransferPrice ?? input.transferPrice;
+  if (exemptionPriceCheck <= rule.maxExemptPrice) {
     return { isExempt: true, isPartialExempt: false, exemptReason: "1세대1주택 비과세" };
   }
 
@@ -383,10 +385,27 @@ export function calcTransferGain(input: TransferTaxInput): TransferGainResult {
 // H-4: calcOneHouseProration — 12억 초과분 안분
 // ============================================================
 
-export function calcOneHouseProration(gain: number, transferPrice: number): number {
+/**
+ * 1세대1주택 12억 초과분 과세 양도차익 안분.
+ *
+ * @param gain 전체 양도차익 (지분 모드 시 이 자산 지분에 해당하는 양도차익)
+ * @param transferPrice 양도가액 (지분 모드 시 이 자산 지분에 해당하는 양도가액)
+ * @param totalPropertyTransferPrice 총 물건 양도가액 (지분 모드 전용 — 12억 안분 분모로 사용).
+ *   미설정 시 transferPrice를 분모로 사용 (단독 소유 호환).
+ *
+ * 산식: 과세 양도차익 = floor(gain × (분모 - 12억) / 분모)
+ *   - 단독: 분모 = transferPrice
+ *   - 지분: 분모 = totalPropertyTransferPrice (총 물건가)
+ */
+export function calcOneHouseProration(
+  gain: number,
+  transferPrice: number,
+  totalPropertyTransferPrice?: number,
+): number {
   const threshold = 1_200_000_000;
-  if (transferPrice <= threshold) return gain;
-  return calculateProration(gain, transferPrice - threshold, transferPrice);
+  const denominator = totalPropertyTransferPrice ?? transferPrice;
+  if (denominator <= threshold) return gain;
+  return calculateProration(gain, denominator - threshold, denominator);
 }
 
 // ============================================================

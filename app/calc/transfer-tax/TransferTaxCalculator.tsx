@@ -471,6 +471,18 @@ export default function TransferTaxCalculator({
           <BundledAllocationCard
             apportionment={(result as import("@/lib/calc/transfer-tax-api").BundledTransferResult).apportionment}
             aggregated={(result as import("@/lib/calc/transfer-tax-api").BundledTransferResult).aggregated}
+            ownershipMap={
+              // 지분 단계취득 자산의 결과 카드에 "지분 X%" 라벨 표시용 propertyId → ratio 매핑.
+              // assets[0] propertyId는 route.ts에서 "primary"로 고정. assets[i>0]은 assetId 그대로.
+              new Map(
+                formData.assets.map((a, idx) => {
+                  const propertyId = idx === 0 ? "primary" : a.assetId;
+                  const numerator = parseFloat(a.ownershipNumerator || "100");
+                  const denominator = parseFloat(a.ownershipDenominator || "100");
+                  return [propertyId, { numerator, denominator }] as const;
+                }),
+              )
+            }
             onBack={() => {
               setStep(STEPS.length - 1);
               setError(null);

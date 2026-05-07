@@ -35,7 +35,6 @@ import {
   runInheritedAcquisitionStep,
   type InheritedAcquisitionStepResult,
 } from "./inheritance-acquisition-helpers";
-
 // 공개 타입 — ./types/transfer.types 참조
 import type {
   TransferTaxInput,
@@ -63,7 +62,6 @@ import {
 } from "./transfer-tax-helpers";
 import { calculateBuildingPenalty, calcTax, calcReductions, handleMultiParcelBranch, type MultiParcelBranchContext } from "./transfer-tax-rate-calc";
 import { calcCarryoverScenarios } from "./transfer-tax-carryover";
-
 // 하위 호환 재수출
 export { parseRatesFromMap } from "./transfer-tax-helpers";
 export { calcTax } from "./transfer-tax-rate-calc";
@@ -413,12 +411,15 @@ export function calculateTransferTax(
   }
 
   // STEP 3: 과세 양도차익 (12억 초과분 안분 — 부분과세인 경우)
+  // 지분 모드는 totalPropertyTransferPrice가 분모(총 물건가). 단독 모드는 input.transferPrice fallback.
   let taxableGain: number;
   if (exemptionResult.isPartialExempt) {
-    taxableGain = calcOneHouseProration(transferGain, input.transferPrice);
+    taxableGain = calcOneHouseProration(transferGain, input.transferPrice, input.totalPropertyTransferPrice);
+    const denom = input.totalPropertyTransferPrice ?? input.transferPrice;
+    const isFractional = input.totalPropertyTransferPrice !== undefined && input.totalPropertyTransferPrice !== input.transferPrice;
     steps.push({
       label: "과세 양도차익 (12억 초과분)",
-      formula: `${transferGain.toLocaleString()} × (양도가 ${input.transferPrice.toLocaleString()} - 12억) / 양도가`,
+      formula: `${transferGain.toLocaleString()} × (${isFractional ? "총양도가" : "양도가"} ${denom.toLocaleString()} - 12억) / ${isFractional ? "총양도가" : "양도가"}`,
       amount: taxableGain,
       legalBasis: TRANSFER.ONE_HOUSE_EXEMPT,
     });
@@ -749,8 +750,10 @@ export function calculateTransferTax(
     usedEstimatedAcquisition: usedEstimated,
     estimatedBase: usedEstimated ? estimatedBase : undefined,
     estimatedDeduction: usedEstimated ? estimatedDeduction : undefined,
+    expenses: appliedExpenses,
     swapApplied,
     swapComparison,
+    capitalExpenditureForDisplay: rawInput.capitalExpenditure ?? 0,
     longTermHoldingDeduction,
     longTermHoldingRate,
     basicDeduction,

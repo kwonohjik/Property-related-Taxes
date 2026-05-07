@@ -73,6 +73,11 @@ const propertyBaseShape = {
   transferPrice: z.number().int().positive(),
   transferDate: z.string().date(),
   acquisitionPrice: z.number().int().nonnegative(),
+  /**
+   * 12억 안분 분모용 총 물건 양도가액 — 지분 모드 전용 (단독 소유는 미설정).
+   * primary 자산이 동일 물건의 한 지분 단계취득인 경우. transferPrice는 이미 × ratio 적용됨.
+   */
+  totalPropertyTransferPrice: z.number().int().positive().optional(),
   acquisitionDate: z.string().date(),
   // Round 9 (2026-05-06): 자산-수준 매매계약일 (§99·§99의3·§98 시리즈·§97의2·§97의5·§99의2 시한 판정용)
   assetContractDate: z.string().date().optional(),
@@ -80,6 +85,10 @@ const propertyBaseShape = {
   decedentAcquisitionDate: z.string().date().optional(),
   donorAcquisitionDate: z.string().date().optional(),
   expenses: z.number().int().nonnegative(),
+  /** §97① 가목 자본적 지출 — §97② 단서 swap 분리 입력용 (선택). 미명시 시 swap 비활성, expenses fallback */
+  capitalExpenditure: z.number().int().nonnegative().optional(),
+  /** §97① 나목 양도비 — §97② 단서 swap 분리 입력용 (선택) */
+  transferExpense: z.number().int().nonnegative().optional(),
   useEstimatedAcquisition: z.boolean(),
   standardPriceAtAcquisition: z.number().int().positive().optional(),
   standardPriceAtTransfer: z.number().int().positive().optional(),
@@ -252,18 +261,26 @@ export const propertySchema = z
       }
 
       // ── 양도가액 모드 단일 결정 검증 (계약서 단위) ──
+      // 지분 모드(totalPropertyTransferPrice 설정) 자산은 양도가액이 자동 계산되므로 검증 면제.
+      const primaryIsFractional = data.totalPropertyTransferPrice !== undefined;
+      const anyFractional =
+        primaryIsFractional ||
+        companions.some((c) => c.totalPropertyTransferPrice !== undefined);
+
       if (data.bundledSaleMode === "actual") {
-        // 주 자산 actual 가액 필수
-        if (!data.primaryActualSalePrice || data.primaryActualSalePrice <= 0) {
+        // 주 자산 actual 가액 필수 (단, 지분 모드면 자동 계산되므로 면제)
+        if (!primaryIsFractional && (!data.primaryActualSalePrice || data.primaryActualSalePrice <= 0)) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
             path: ["primaryActualSalePrice"],
             message: "actual 모드: 주 자산의 계약서상 양도가액 필수",
           });
         }
-        // 모든 컴패니언이 fixedSalePrice 가져야 함
+        // 컴패니언도 자산별 지분 모드면 면제
         for (let i = 0; i < companions.length; i++) {
-          if (!companions[i].fixedSalePrice || companions[i].fixedSalePrice! <= 0) {
+          const c = companions[i];
+          const isFractionalCompanion = c.totalPropertyTransferPrice !== undefined;
+          if (!isFractionalCompanion && (!c.fixedSalePrice || c.fixedSalePrice! <= 0)) {
             ctx.addIssue({
               code: z.ZodIssueCode.custom,
               path: ["companionAssets", i, "fixedSalePrice"],
@@ -271,8 +288,8 @@ export const propertySchema = z
             });
           }
         }
-        // 합계 = totalSalePrice 검증
-        if (data.totalSalePrice && data.primaryActualSalePrice) {
+        // 합계 = totalSalePrice 검증 — 지분 모드 자산이 하나라도 있으면 ratio 합산 검증으로 대체되므로 생략
+        if (!anyFractional && data.totalSalePrice && data.primaryActualSalePrice) {
           const sumFixed =
             data.primaryActualSalePrice +
             companions.reduce((s, c) => s + (c.fixedSalePrice ?? 0), 0);
@@ -286,9 +303,11 @@ export const propertySchema = z
         }
       } else {
         // apportioned: 주 자산 양도시점 기준시가 필수 (안분 키)
+        // 단, primary가 지분 모드(totalPropertyTransferPrice 설정됨)이면 ratio×total로 자동 결정 → 면제
         if (
-          data.standardPriceAtTransferForApportion === undefined ||
-          data.standardPriceAtTransferForApportion <= 0
+          !primaryIsFractional &&
+          (data.standardPriceAtTransferForApportion === undefined ||
+            data.standardPriceAtTransferForApportion <= 0)
         ) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
@@ -296,9 +315,11 @@ export const propertySchema = z
             message: "apportioned 모드: 주 자산의 양도시점 기준시가 필수",
           });
         }
-        // 모든 컴패니언이 standardPriceAtTransfer 가져야 함
+        // 컴패니언도 지분 모드(totalPropertyTransferPrice 설정됨)면 standardPriceAtTransfer 면제
         for (let i = 0; i < companions.length; i++) {
-          if (!companions[i].standardPriceAtTransfer || companions[i].standardPriceAtTransfer! <= 0) {
+          const c = companions[i];
+          const isFractionalCompanion = c.totalPropertyTransferPrice !== undefined;
+          if (!isFractionalCompanion && (!c.standardPriceAtTransfer || c.standardPriceAtTransfer! <= 0)) {
             ctx.addIssue({
               code: z.ZodIssueCode.custom,
               path: ["companionAssets", i, "standardPriceAtTransfer"],

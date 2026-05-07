@@ -72,6 +72,8 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     isOneHousehold: false,
     ...RESIDENCE_DEFAULTS,
     actualSalePrice: "",
+    ownershipNumerator: "100",
+    ownershipDenominator: "100",
     acquisitionCause: "purchase",
     carryover: { ...CARRYOVER_DEFAULTS },
     acquisitionDate: "",
@@ -250,6 +252,9 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (!a.buildingDirectExpenses) a.buildingDirectExpenses = "";
   if (a.capitalExpenditure === undefined) a.capitalExpenditure = "0";
   if (a.transferExpense === undefined) a.transferExpense = "0";
+  // 공유 지분율 — 단독 소유 100/100 fallback (지분 단계취득 자산은 명시 입력)
+  if (!a.ownershipNumerator || a.ownershipNumerator === "") a.ownershipNumerator = "100";
+  if (!a.ownershipDenominator || a.ownershipDenominator === "") a.ownershipDenominator = "100";
   if (!a.landStandardPriceAtTransfer) a.landStandardPriceAtTransfer = "";
   if (!a.buildingStandardPriceAtTransfer) a.buildingStandardPriceAtTransfer = "";
   if (a.usePreHousingDisclosure === undefined) a.usePreHousingDisclosure = false;

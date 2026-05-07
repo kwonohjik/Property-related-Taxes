@@ -260,6 +260,17 @@ export interface AssetForm {
   residencePeriodMonthsAsset: string;
   /** actual 모드 시 이 자산의 계약서상 양도가액 */
   actualSalePrice: string;
+  /**
+   * 공유 지분율 분자 (기본 100). 같은 물건을 다회 분할 취득(지분 단계취득)한 자산에서
+   * 본 자산이 보유한 지분의 분자. 미설정 시 100 (단독 소유).
+   * UI 입력은 100% 기준값(양도가·취득가·필요경비 등 모든 금액). API 변환 시 × ratio 자동 적용.
+   * 양도코리아 사례 27 (아파트 2회 지분취득) 패턴.
+   */
+  ownershipNumerator: string;
+  /**
+   * 공유 지분율 분모 (기본 100). 100/100 = 단독 소유.
+   */
+  ownershipDenominator: string;
   /** 취득 원인 — purchase=매매, inheritance=상속, gift=증여, carryover_gift=이월과세(증여) */
   acquisitionCause: "purchase" | "inheritance" | "gift" | "carryover_gift";
   /** 이월과세(증여) 서브객체 — acquisitionCause === "carryover_gift" 시만 사용 (§97조의2) */

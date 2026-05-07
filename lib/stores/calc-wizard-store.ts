@@ -43,6 +43,13 @@ export interface TransferFormData {
   /** 계약서 단위 총 양도가액 (모든 자산 합계) */
   contractTotalPrice: string;
   /**
+   * 폼-수준 총 양도비 (지분 모드 자동 안분용, 선택).
+   * 양도 시 1회 발생하는 부대비용(중개수수료·인지대 등)을 한 번만 입력.
+   * 지분 모드에서 시스템이 자산별 ratio 비율로 자동 안분 (assets[i].transferExpense 우선 — 자산별 직접 입력이 있으면 우선).
+   * 단독 소유는 자산-수준 transferExpense 그대로 사용.
+   */
+  totalTransferExpense: string;
+  /**
    * 일괄양도 양도가액 결정 모드 (계약서 단위 단일 결정).
    * - "actual": 계약서에 자산별 가액이 구분 기재된 경우 (§166⑥ 본문)
    * - "apportioned": 구분 불분명 → 기준시가 비율 안분 (§166⑥ 단서)
@@ -109,6 +116,7 @@ export interface TransferFormData {
 const defaultFormData: TransferFormData = {
   assets: [makeDefaultAsset(1)],
   contractTotalPrice: "",
+  totalTransferExpense: "",
   bundledSaleMode: "apportioned",
   transferDate: "",
   filingDate: "",
@@ -271,24 +279,39 @@ export function computeTransferSummary(
   formData: TransferFormData,
   result: import("@/lib/calc/transfer-tax-api").TransferAPIResult | null
 ): TransferSummary {
-  const totalSalePrice = formData.assets.reduce(
-    (acc, a) => acc + parseRaw(a.actualSalePrice),
-    0
-  );
-  const totalAcqPrice = formData.assets.reduce(
-    (acc, a) => acc + parseRaw(a.fixedAcquisitionPrice),
-    0
-  );
-  const totalNecessaryExpense = formData.assets.reduce(
-    (acc, a) => {
-      // 두 분리 필드(capitalExpenditure + transferExpense) 우선, 미입력 시 legacy directExpenses
-      const capExp = parseRaw(a.capitalExpenditure);
-      const trExp = parseRaw(a.transferExpense);
-      const splitTotal = capExp + trExp;
-      return acc + (splitTotal > 0 ? splitTotal : parseRaw(a.directExpenses));
-    },
-    0
-  );
+  // 자산이 모두 동일 물건의 지분 단계취득(ratio<1.0 자산 1개 이상)인 경우,
+  // actualSalePrice는 UI에서 비활성(자동 계산 카드)이라 빈 문자열. 이때 양도가액 합계는
+  // contractTotalPrice 그대로 사용 (이미 100% 기준 = 모든 지분의 합).
+  const hasAnyFractional = formData.assets.some((a) => {
+    const n = parseFloat(a.ownershipNumerator || "100");
+    const d = parseFloat(a.ownershipDenominator || "100");
+    return isFinite(n) && isFinite(d) && d > 0 && n > 0 && n < d;
+  });
+  const totalSalePrice = hasAnyFractional
+    ? parseRaw(formData.contractTotalPrice)
+    : formData.assets.reduce(
+        (acc, a) => acc + parseRaw(a.actualSalePrice),
+        0
+      );
+  // 취득가액 합계: 지분 모드 자산은 100% 기준 입력 × ratio 적용으로 합산
+  const totalAcqPrice = formData.assets.reduce((acc, a) => {
+    const raw = parseRaw(a.fixedAcquisitionPrice);
+    const n = parseFloat(a.ownershipNumerator || "100");
+    const d = parseFloat(a.ownershipDenominator || "100");
+    const fractional = isFinite(n) && isFinite(d) && d > 0 && n > 0 && n < d;
+    return acc + (fractional ? Math.floor(raw * (n / d)) : raw);
+  }, 0);
+  // 필요경비 합계: 지분 모드 자산은 capex/transferExpense × ratio
+  const totalNecessaryExpense = formData.assets.reduce((acc, a) => {
+    const capExp = parseRaw(a.capitalExpenditure);
+    const trExp = parseRaw(a.transferExpense);
+    const splitTotal = capExp + trExp;
+    const baseExp = splitTotal > 0 ? splitTotal : parseRaw(a.directExpenses);
+    const n = parseFloat(a.ownershipNumerator || "100");
+    const d = parseFloat(a.ownershipDenominator || "100");
+    const fractional = isFinite(n) && isFinite(d) && d > 0 && n > 0 && n < d;
+    return acc + (fractional ? Math.floor(baseExp * (n / d)) : baseExp);
+  }, 0);
   const estimatedTax =
     result?.mode === "single"
       ? (result.result.totalTax ?? null)
