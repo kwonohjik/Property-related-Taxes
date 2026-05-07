@@ -30,6 +30,11 @@ export interface AggregateMeta {
   aggregated: AggregateTransferResult;
   /** propertyId → 지분율 매핑 (헤더 "지분 X%" 배지) */
   ownershipMap?: Map<string, { numerator: number; denominator: number }>;
+  /**
+   * propertyId → 토지 성격 매핑 (헤더 "자산 N (부수토지)" / "(독립 나대지)" suffix용).
+   * 사례 28 landNature 명시 입력 정책에 따라 토지 자산은 성격을 명시.
+   */
+  landNatureMap?: Map<string, "appurtenant" | "standalone">;
 }
 
 export interface FilingFormTableProps {
@@ -106,12 +111,20 @@ export function deriveColumns(
     const aggCols: Column[] = [{ key: "total", label: "합계" }];
     for (const p of aggregate.properties) {
       const own = aggregate.ownershipMap?.get(p.propertyId);
+      const nature = aggregate.landNatureMap?.get(p.propertyId);
       let label = p.propertyLabel;
+      // 지분 배지
       if (own && own.numerator > 0 && own.denominator > 0 && own.numerator < own.denominator) {
         const pct = ((own.numerator / own.denominator) * 100)
           .toFixed(2)
           .replace(/\.?0+$/, "");
-        label = `${p.propertyLabel} (지분 ${pct}%)`;
+        label = `${label} (지분 ${pct}%)`;
+      }
+      // 토지 성격 suffix — 부수토지/독립 나대지 (사례 28 landNature 명시 입력 정책)
+      if (nature === "appurtenant") {
+        label = `${label} (부수토지)`;
+      } else if (nature === "standalone") {
+        label = `${label} (독립 나대지)`;
       }
       aggCols.push({ key: p.propertyId, label });
     }

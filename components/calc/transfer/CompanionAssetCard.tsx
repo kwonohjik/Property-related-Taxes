@@ -9,26 +9,20 @@ import { cn } from "@/lib/utils";
 import { AddressSearch, type AddressValue } from "@/components/ui/address-search";
 import { ParcelListInput } from "@/components/calc/inputs/ParcelListInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
-import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { CompanionSaleModeBlock, type BundledSaleMode } from "./CompanionSaleModeBlock";
-import { CompanionAcqPurchaseBlock } from "./CompanionAcqPurchaseBlock";
-import { CompanionAcqNewConstructionBlock } from "./CompanionAcqNewConstructionBlock";
-import { computeEarliestDate } from "./NewConstructionDateBlock";
-import { CompanionAcqInheritanceBlock } from "./CompanionAcqInheritanceBlock";
-import { CompanionAcqGiftBlock } from "./CompanionAcqGiftBlock";
-import { CarryoverGiftBlock } from "./CarryoverGiftBlock";
-import { InheritedAcquisitionDeemedSection } from "./InheritedAcquisitionDeemedSection";
 import { NblSectionContainer } from "./nbl/NblSectionContainer";
 import { OwnershipRatioInput, isFractionalMode } from "./OwnershipRatioInput";
 import { MixedUseToggleRow, MixedUseExpandedPanel } from "./MixedUseSection";
 import { RentalHousingExceptionSection } from "./RentalHousingExceptionSection";
 import { RENTAL_HOUSING_EXCEPTION_DEFAULTS } from "@/lib/stores/calc-wizard-asset-factory";
-import { NewConstructionDateBlock } from "./NewConstructionDateBlock";
 import {
   useUnifiedRateBadge,
   CompanionLandRateOverrideToggle,
   NewConstructionPrimarySection,
 } from "./CompanionAssetCardNewConstruction";
+import { CompanionLandNatureBlock } from "./CompanionLandNatureBlock";
+import { CompanionAcquisitionCauseSection } from "./CompanionAcquisitionCauseSection";
+import { CommercialBuildingBlock } from "./CommercialBuildingBlock";
 
 const ASSET_KIND_LABELS: Record<string, string> = {
   housing: "주택",
@@ -36,6 +30,7 @@ const ASSET_KIND_LABELS: Record<string, string> = {
   building: "건물(토지 외)",
   right_to_move_in: "입주권",
   presale_right: "분양권",
+  commercial_building: "상업용건물·오피스텔",
 };
 
 const ASSET_KIND_OPTIONS = [
@@ -44,14 +39,7 @@ const ASSET_KIND_OPTIONS = [
   { value: "building", label: "건물(토지 외)" },
   { value: "right_to_move_in", label: "입주권" },
   { value: "presale_right", label: "분양권" },
-] as const;
-
-const ACQUISITION_CAUSE_OPTIONS = [
-  { value: "purchase", label: "매매" },
-  { value: "inheritance", label: "상속" },
-  { value: "gift", label: "증여" },
-  { value: "carryover_gift", label: "이월과세(증여)" },
-  { value: "newConstruction", label: "신축(자가건축)" },
+  { value: "commercial_building", label: "상업용건물·오피스텔", description: "기준시가 공시된 것" },
 ] as const;
 
 interface Props {
@@ -161,6 +149,11 @@ export function CompanionAssetCard({
             </button>
           ))}
         </div>
+        {asset.assetKind === "commercial_building" && (
+          <p className="text-xs text-muted-foreground mt-1">
+            ※ 기준시가 공시된 것 — 국세청이 호별 ㎡당 기준시가를 고시한 상업용건물·오피스텔(수도권·5대 광역시 3,000㎡ 이상 또는 100호 이상 구분소유 건물 / 구분소유된 오피스텔)에 한합니다.
+          </p>
+        )}
       </div>
 
       {/* 검용주택 분리계산 토글 — 자산 종류가 주택일 때 상단에 노출.
@@ -352,6 +345,15 @@ export function CompanionAssetCard({
         </div>
       )}
 
+      {/* 토지 성격 — 부수토지 vs 독립 나대지 (사례 28 landNature 명시 입력 정책)
+          assetKind === "land" 인 모든 자산에 표시. 면적 입력 직후, 지분율 입력 직전. */}
+      {asset.assetKind === "land" && (
+        <CompanionLandNatureBlock
+          landNature={asset.landNature}
+          onChange={onChange}
+        />
+      )}
+
       {/* 공유 지분율 — 단독 100/100 기본, 지분 단계취득 자산은 명시 입력 */}
       <OwnershipRatioInput
         numerator={asset.ownershipNumerator}
@@ -395,7 +397,7 @@ export function CompanionAssetCard({
       {/* 양도가액 */}
       <CompanionSaleModeBlock
         bundledSaleMode={singleMode ? "actual" : bundledSaleMode}
-        assetKind={asset.assetKind}
+        assetKind={asset.assetKind === "commercial_building" ? "building" : asset.assetKind}
         actualSalePrice={asset.actualSalePrice}
         onActualSalePriceChange={(v) => onChange({ actualSalePrice: v })}
         standardPriceAtTransfer={asset.standardPriceAtTransfer}
@@ -412,216 +414,13 @@ export function CompanionAssetCard({
         onStandardPricePerSqmAtTransferChange={(v) => onChange({ standardPricePerSqmAtTransfer: v })}
       />
 
-      {/* 취득 원인 */}
-      <div className="space-y-2">
-        <label className="block text-sm font-medium">취득 원인</label>
-        <div className="grid grid-cols-4 gap-2">
-          {ACQUISITION_CAUSE_OPTIONS.map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => onChange({ acquisitionCause: opt.value })}
-              className={cn(
-                "rounded-md border-2 p-2 text-center transition-all",
-                asset.acquisitionCause === opt.value
-                  ? "border-primary bg-primary/5 text-primary"
-                  : "border-border hover:border-muted-foreground/50 hover:bg-muted/40",
-              )}
-            >
-              <div className="text-sm font-semibold">{opt.label}</div>
-            </button>
-          ))}
-        </div>
-
-        {/* 신축(자가건축) — 사용승인일 4-시점 입력 블록 (영 §162①4호, G-5)
-            4시점 중 하나가 변경될 때마다 가장 이른 날을 acquisitionDate로 자동 동기화
-            (cross-field 동기화는 onChange 패턴 — useEffect 금지 정책 준수) */}
-        {isNewConstruction && (
-          <NewConstructionDateBlock
-            occupancyApprovalDate={asset.occupancyApprovalDate ?? ""}
-            onOccupancyApprovalDateChange={(v) =>
-              onChange({
-                occupancyApprovalDate: v,
-                acquisitionDate:
-                  computeEarliestDate(v, asset.approvalCertificateDate ?? "", asset.temporaryApprovalDate ?? "", asset.actualUseDate ?? "") ?? "",
-              })
-            }
-            approvalCertificateDate={asset.approvalCertificateDate ?? ""}
-            onApprovalCertificateDateChange={(v) =>
-              onChange({
-                approvalCertificateDate: v,
-                acquisitionDate:
-                  computeEarliestDate(asset.occupancyApprovalDate ?? "", v, asset.temporaryApprovalDate ?? "", asset.actualUseDate ?? "") ?? "",
-              })
-            }
-            temporaryApprovalDate={asset.temporaryApprovalDate ?? ""}
-            onTemporaryApprovalDateChange={(v) =>
-              onChange({
-                temporaryApprovalDate: v,
-                acquisitionDate:
-                  computeEarliestDate(asset.occupancyApprovalDate ?? "", asset.approvalCertificateDate ?? "", v, asset.actualUseDate ?? "") ?? "",
-              })
-            }
-            actualUseDate={asset.actualUseDate ?? ""}
-            onActualUseDateChange={(v) =>
-              onChange({
-                actualUseDate: v,
-                acquisitionDate:
-                  computeEarliestDate(asset.occupancyApprovalDate ?? "", asset.approvalCertificateDate ?? "", asset.temporaryApprovalDate ?? "", v) ?? "",
-              })
-            }
-          />
-        )}
-
-        {/* 신축(자가건축) — 신축비용(취득가액) 입력 블록 */}
-        {isNewConstruction && (
-          <CompanionAcqNewConstructionBlock
-            fixedAcquisitionPrice={asset.fixedAcquisitionPrice}
-            onFixedAcquisitionPriceChange={(v) => onChange({ fixedAcquisitionPrice: v })}
-          />
-        )}
-
-        {asset.acquisitionCause === "purchase" && (
-          <CompanionAcqPurchaseBlock
-            acquisitionDate={asset.acquisitionDate}
-            onAcquisitionDateChange={(v) => onChange({ acquisitionDate: v })}
-            useEstimatedAcquisition={asset.useEstimatedAcquisition}
-            onUseEstimatedChange={(v) => onChange({ useEstimatedAcquisition: v })}
-            isAppraisalAcquisition={asset.isAppraisalAcquisition}
-            onIsAppraisalAcquisitionChange={(v) => onChange({ isAppraisalAcquisition: v })}
-            fixedAcquisitionPrice={asset.fixedAcquisitionPrice}
-            onFixedAcquisitionPriceChange={(v) => onChange({ fixedAcquisitionPrice: v })}
-            standardPriceAtAcq={asset.standardPriceAtAcq}
-            onStandardPriceAtAcqChange={(v) => onChange({ standardPriceAtAcq: v })}
-            standardPriceAtTransfer={asset.standardPriceAtTransfer}
-            onStandardPriceAtTransferChange={(v) => onChange({ standardPriceAtTransfer: v })}
-            transferDate={transferDate}
-            jibun={asset.addressJibun || undefined}
-            assetKind={asset.assetKind}
-            acquisitionArea={asset.acquisitionArea || undefined}
-            transferArea={asset.transferArea || undefined}
-            standardPricePerSqmAtAcq={asset.standardPricePerSqmAtAcq}
-            onStandardPricePerSqmAtAcqChange={(v) => onChange({ standardPricePerSqmAtAcq: v })}
-            standardPricePerSqmAtTransfer={asset.standardPricePerSqmAtTransfer}
-            onStandardPricePerSqmAtTransferChange={(v) => onChange({ standardPricePerSqmAtTransfer: v })}
-            pre1990Form={{
-              pre1990Enabled: asset.pre1990Enabled,
-              pre1990PricePerSqm_1990: asset.pre1990PricePerSqm_1990,
-              pre1990PricePerSqm_atTransfer: asset.pre1990PricePerSqm_atTransfer,
-              pre1990Grade_current: asset.pre1990Grade_current,
-              pre1990Grade_prev: asset.pre1990Grade_prev,
-              pre1990Grade_atAcq: asset.pre1990Grade_atAcq,
-              pre1990GradeMode: asset.pre1990GradeMode,
-            }}
-            onPre1990Change={(patch) => onChange(patch)}
-            isSelfBuilt={asset.isSelfBuilt}
-            onIsSelfBuiltChange={(v) => onChange({ isSelfBuilt: v })}
-            buildingType={asset.buildingType}
-            onBuildingTypeChange={(v) => onChange({ buildingType: v })}
-            constructionDate={asset.constructionDate}
-            onConstructionDateChange={(v) => onChange({ constructionDate: v })}
-            extensionFloorArea={asset.extensionFloorArea}
-            onExtensionFloorAreaChange={(v) => onChange({ extensionFloorArea: v })}
-            selfOwns={asset.selfOwns ?? "both"}
-            onSelfOwnsChange={(v) => {
-              onChange({
-                selfOwns: v,
-                hasSeperateLandAcquisitionDate: v !== "both" ? true : asset.hasSeperateLandAcquisitionDate,
-              });
-            }}
-            hasSeperateLandAcquisitionDate={asset.hasSeperateLandAcquisitionDate}
-            onHasSeperateLandAcquisitionDateChange={(v) =>
-              onChange({ hasSeperateLandAcquisitionDate: v })
-            }
-            landAcquisitionDate={asset.landAcquisitionDate}
-            onLandAcquisitionDateChange={(v) => onChange({ landAcquisitionDate: v })}
-            landSplitMode={asset.landSplitMode}
-            onLandSplitModeChange={(v) => onChange({ landSplitMode: v })}
-            landTransferPrice={asset.landTransferPrice}
-            onLandTransferPriceChange={(v) => onChange({ landTransferPrice: v })}
-            buildingTransferPrice={asset.buildingTransferPrice}
-            onBuildingTransferPriceChange={(v) => onChange({ buildingTransferPrice: v })}
-            landAcquisitionPrice={asset.landAcquisitionPrice}
-            onLandAcquisitionPriceChange={(v) => onChange({ landAcquisitionPrice: v })}
-            buildingAcquisitionPrice={asset.buildingAcquisitionPrice}
-            onBuildingAcquisitionPriceChange={(v) => onChange({ buildingAcquisitionPrice: v })}
-            landDirectExpenses={asset.landDirectExpenses}
-            onLandDirectExpensesChange={(v) => onChange({ landDirectExpenses: v })}
-            buildingDirectExpenses={asset.buildingDirectExpenses}
-            onBuildingDirectExpensesChange={(v) => onChange({ buildingDirectExpenses: v })}
-            landStandardPriceAtTransfer={asset.landStandardPriceAtTransfer}
-            onLandStandardPriceAtTransferChange={(v) =>
-              onChange({ landStandardPriceAtTransfer: v })
-            }
-            buildingStandardPriceAtTransfer={asset.buildingStandardPriceAtTransfer}
-            onBuildingStandardPriceAtTransferChange={(v) =>
-              onChange({ buildingStandardPriceAtTransfer: v })
-            }
-            asset={asset}
-            onAssetChange={onChange}
-          />
-        )}
-
-        {asset.acquisitionCause === "inheritance" && (
-          <CompanionAcqInheritanceBlock
-            assetId={asset.assetId}
-            acquisitionDate={asset.acquisitionDate}
-            onAcquisitionDateChange={(v) => onChange({
-              acquisitionDate: v,
-              // 의제 특례 섹션의 inheritanceStartDate와 자동 동기화
-              // (한 번 입력으로 두 섹션의 상속개시일이 일치하도록)
-              inheritanceStartDate: v,
-              // auto 모드일 때 보충적평가용 inheritanceDate를 하나의 patch로 동기화
-              // (두 번 연속 onChange를 호출하면 stale 클로저로 두 번째가 첫 번째를 덮어씀)
-              ...(asset.inheritanceValuationMode === "auto" ? { inheritanceDate: v } : {}),
-            })}
-            decedentAcquisitionDate={asset.decedentAcquisitionDate}
-            onDecedentAcquisitionDateChange={(v) => onChange({ decedentAcquisitionDate: v })}
-            valuationMode={asset.inheritanceValuationMode}
-            onValuationModeChange={(mode) => onChange({ inheritanceValuationMode: mode })}
-            inheritanceAssetKind={asset.inheritanceAssetKind}
-            onInheritanceAssetKindChange={(v) => onChange({ inheritanceAssetKind: v })}
-            inheritanceDate={asset.inheritanceDate}
-            onInheritanceDateChange={(v) => onChange({ inheritanceDate: v })}
-            landAreaM2={asset.acquisitionArea}
-            publishedValueAtInheritance={asset.publishedValueAtInheritance}
-            onPublishedValueAtInheritanceChange={(v) =>
-              onChange({ publishedValueAtInheritance: v })
-            }
-            fixedAcquisitionPrice={asset.fixedAcquisitionPrice}
-            onFixedAcquisitionPriceChange={(v) => onChange({ fixedAcquisitionPrice: v })}
-            jibun={asset.addressJibun || undefined}
-          />
-        )}
-
-        {/* 상속 취득가액 의제 특례 — 기존 보충적평가 블록 아래에 추가 */}
-        {asset.acquisitionCause === "inheritance" && (
-          <InheritedAcquisitionDeemedSection
-            asset={asset}
-            onChange={onChange}
-            transferDate={transferDate}
-          />
-        )}
-
-        {asset.acquisitionCause === "gift" && (
-          <CompanionAcqGiftBlock
-            acquisitionDate={asset.acquisitionDate}
-            onAcquisitionDateChange={(v) => onChange({ acquisitionDate: v })}
-            donorAcquisitionDate={asset.donorAcquisitionDate}
-            onDonorAcquisitionDateChange={(v) => onChange({ donorAcquisitionDate: v })}
-            fixedAcquisitionPrice={asset.fixedAcquisitionPrice}
-            onFixedAcquisitionPriceChange={(v) => onChange({ fixedAcquisitionPrice: v })}
-          />
-        )}
-
-        {asset.acquisitionCause === "carryover_gift" && (
-          <CarryoverGiftBlock
-            asset={asset}
-            transferDate={transferDate ?? ""}
-            onChange={onChange}
-          />
-        )}
-      </div>
+      {/* 취득 원인 + 원인별 세부 입력 (별도 파일로 분리 — 800줄 정책) */}
+      <CompanionAcquisitionCauseSection
+        asset={asset}
+        onChange={onChange}
+        transferDate={transferDate}
+        isNewConstruction={isNewConstruction}
+      />
 
       {/* 신축주택 — 부수토지 한도 산정 섹션 (영 §154⑦)
           주 자산이 신축(자가건축)인 경우 건물 정착면적 + 도시지역 여부 입력.
@@ -696,6 +495,15 @@ export function CompanionAssetCard({
           transferDate={transferDate}
           useEstimatedAcquisition={asset.useEstimatedAcquisition}
           jibun={asset.addressJibun || undefined}
+        />
+      )}
+
+      {/* 상업용건물·오피스텔 환산취득가 입력 (assetKind === "commercial_building" 시만 표시) */}
+      {asset.assetKind === "commercial_building" && (
+        <CommercialBuildingBlock
+          asset={asset}
+          onChange={onChange}
+          transferDate={transferDate}
         />
       )}
 

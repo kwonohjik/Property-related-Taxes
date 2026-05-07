@@ -111,7 +111,8 @@ function makeLandInput(overrides?: Partial<TransferTaxInput>): TransferTaxInput 
     isOneHousehold: false,
     annualBasicDeductionUsed: 0,
     acquisitionArea: LAND_AREA,
-    // 부수토지 일체과세 자동 분기를 위한 primary 컨텍스트
+    landNature: "appurtenant_to_housing",  // ← 명시적 부수토지 선언 (landNature 정책)
+    // 부수토지 일체과세 primaryContext — landNature 선언 후 면적 한도 + 보유기간 결정에 사용
     primaryContextForCompanionRate: {
       propertyType: "housing",
       holdingMonths: 6,   // 2022.8.29 ~ 2023.3.6 ≈ 6개월 (1년 미만)
@@ -228,11 +229,12 @@ describe("사례 28 Group A — 안분 + 합산 (PDF 원단위 anchor)", () => {
 // ============================================================
 
 describe("사례 28 Group B — 수동 오버라이드", () => {
-  it("T-13 manualHoldingPeriodOverride='shortTerm60' → 토지 세율 0.40", () => {
+  it("T-13 manualHoldingPeriodOverride='shortTerm60' → 토지 세율 0.60", () => {
     const input = makeLandInput({ manualHoldingPeriodOverride: "shortTerm60" });
     const result = calculateTransferTax(input, makeMockRates());
-    // "shortTerm60" → 엔진에서 0.40 반환 (1~2년 토지 세율 강제)
-    expect(result.appliedRate).toBe(0.40);
+    // "shortTerm60" → 1년~2년 주택 세율 60% 강제 (enum명 유지, 세율 변경: 40%→60%)
+    // 플랜: "shortTerm60"은 1~2년 주택 세율(60%) 강제 — appurtenant-land-rate.ts 주석 참조
+    expect(result.appliedRate).toBe(0.60);
   });
 
   it("T-14 manualHoldingPeriodOverride='progressive' → 토지 누진세율 < 0.60", () => {
@@ -243,9 +245,9 @@ describe("사례 28 Group B — 수동 오버라이드", () => {
     expect(result.appliedRate).toBeGreaterThan(0);
   });
 
-  it("T-15 자동 분기 시 appliedReason에 '주택·부수토지 일체과세' 포함", () => {
+  it("T-15 landNature=appurtenant 자동 분기 시 appliedReason에 '주택·부수토지 일체과세' 포함", () => {
     const resolution = resolveCompanionLandRate(
-      { assetKind: "land", area: LAND_AREA },
+      { assetKind: "land", area: LAND_AREA, landNature: "appurtenant_to_housing" },
       {
         propertyType: "housing",
         holdingMonths: 6,
@@ -263,23 +265,26 @@ describe("사례 28 Group B — 수동 오버라이드", () => {
 // ============================================================
 
 describe("사례 28 Group C — 경계·면적 한도", () => {
-  it("T-16 건물 보유 12개월 정확히 → 자동 분기 미적용 (applied=false)", () => {
-    // 12개월 = 1년 이상 → isPrimaryShortTerm=false → 자동 분기 OFF
+  it("T-16 부수토지=Yes + 주택 보유 12개월 정확히 → 60% 적용 (1년~2년 구간)", () => {
+    // landNature 명시 정책: 12개월 = 1년 이상 2년 미만 → housingRateForHoldingPeriod = 0.60
+    // (이전 동작: isPrimaryShortTerm < 12 조건으로 applied=false였으나 법령 무관 조건이었음)
     const resolution = resolveCompanionLandRate(
-      { assetKind: "land", area: LAND_AREA },
+      { assetKind: "land", area: LAND_AREA, landNature: "appurtenant_to_housing" },
       {
         propertyType: "housing",
-        holdingMonths: 12, // 정확히 12개월 → 1년 미만 아님
+        holdingMonths: 12, // 정확히 12개월 → 60% 구간
         buildingFootprintArea: BUILDING_FOOTPRINT,
         isUrbanArea: true,
       },
     );
-    expect(resolution.applied).toBe(false);
+    expect(resolution.applied).toBe(true);
+    expect(resolution.unifiedRate).toBe(0.60);
   });
 
   it("T-17 primary가 'land'(비주택) → 자동 분기 미적용 (applied=false)", () => {
+    // landNature 있어도 isPrimaryHousing=false → applied=false
     const resolution = resolveCompanionLandRate(
-      { assetKind: "land", area: LAND_AREA },
+      { assetKind: "land", area: LAND_AREA, landNature: "appurtenant_to_housing" },
       {
         propertyType: "land", // housing 아님
         holdingMonths: 6,
@@ -293,7 +298,7 @@ describe("사례 28 Group C — 경계·면적 한도", () => {
   it("T-18 토지 면적 > 정착면적 × 5(도시지역) → 초과분 excessRate=0.40 반환", () => {
     const oversizeArea = BUILDING_FOOTPRINT * 5 + 100; // 715.6㎡ > 615.6㎡
     const resolution = resolveCompanionLandRate(
-      { assetKind: "land", area: oversizeArea },
+      { assetKind: "land", area: oversizeArea, landNature: "appurtenant_to_housing" },
       {
         propertyType: "housing",
         holdingMonths: 6,
@@ -310,7 +315,7 @@ describe("사례 28 Group C — 경계·면적 한도", () => {
 
   it("T-19 도시지역 외(isUrbanArea=false) → 한도 = 정착면적 × 10", () => {
     const resolution = resolveCompanionLandRate(
-      { assetKind: "land", area: LAND_AREA },
+      { assetKind: "land", area: LAND_AREA, landNature: "appurtenant_to_housing" },
       {
         propertyType: "housing",
         holdingMonths: 6,
@@ -409,7 +414,7 @@ function makeAppurtenantInput(overrides?: Partial<TransferTaxInput>): TransferTa
     isOneHousehold: false,
     annualBasicDeductionUsed: 0,
     acquisitionArea: EXCESS_LIMIT_AREA,
-    // 부수토지 → 70% 자동 분기를 위해 primaryCtx 주입
+    landNature: "appurtenant_to_housing",  // ← 명시적 부수토지 선언
     primaryContextForCompanionRate: {
       propertyType: "housing",
       holdingMonths: 6, // 건물 보유 6개월
@@ -509,7 +514,7 @@ describe("사례 28 Group E — 한도 초과 companion split (G-2, 영 §154⑦
 
   it("T-24 도시지역 외(isUrbanArea=false) → 한도 = 100㎡ × 10 = 1000㎡, 700㎡ 전량 부수토지 인정 (초과 없음)", () => {
     const resolution = resolveCompanionLandRate(
-      { assetKind: "land", area: EXCESS_LAND_AREA }, // 700㎡
+      { assetKind: "land", area: EXCESS_LAND_AREA, landNature: "appurtenant_to_housing" }, // 700㎡
       {
         propertyType: "housing",
         holdingMonths: 6,
@@ -529,9 +534,9 @@ describe("사례 28 Group E — 한도 초과 companion split (G-2, 영 §154⑦
 // ============================================================
 
 describe("resolveCompanionLandRate 단위 테스트", () => {
-  it("사례 28 본 케이스 — 전량 부수토지 인정 (excessArea=0)", () => {
+  it("사례 28 본 케이스 — landNature 명시 + 전량 부수토지 인정 (excessArea=0)", () => {
     const resolution = resolveCompanionLandRate(
-      { assetKind: "land", area: LAND_AREA },
+      { assetKind: "land", area: LAND_AREA, landNature: "appurtenant_to_housing" },
       {
         propertyType: "housing",
         holdingMonths: 6,
@@ -545,10 +550,32 @@ describe("resolveCompanionLandRate 단위 테스트", () => {
     expect(resolution.limitArea).toBeCloseTo(LIMIT_AREA, 1);
   });
 
-  it("manualHoldingPeriodOverride='shortTermHousing70' → applied=true, manualRate=0.70", () => {
+  it("landNature 미선언 (undefined) → applied=false (자동 분기 없음)", () => {
+    // landNature 명시 정책: undefined이면 일체과세 분기 진입 안 함
+    const resolution = resolveCompanionLandRate(
+      { assetKind: "land", area: LAND_AREA }, // landNature 없음
+      {
+        propertyType: "housing",
+        holdingMonths: 6,
+        buildingFootprintArea: BUILDING_FOOTPRINT,
+        isUrbanArea: true,
+      },
+    );
+    expect(resolution.applied).toBe(false);
+  });
+
+  it("landNature='non_appurtenant' → applied=false (독립 나대지)", () => {
+    const resolution = resolveCompanionLandRate(
+      { assetKind: "land", area: LAND_AREA, landNature: "non_appurtenant" },
+      { propertyType: "housing", holdingMonths: 6 },
+    );
+    expect(resolution.applied).toBe(false);
+  });
+
+  it("manualHoldingPeriodOverride='shortTermHousing70' → applied=true, manualRate=0.70 (수동 우선)", () => {
     const resolution = resolveCompanionLandRate(
       { assetKind: "land", manualHoldingPeriodOverride: "shortTermHousing70" },
-      { propertyType: "housing", holdingMonths: 20 }, // 자동 분기 조건 미충족해도 수동 우선
+      { propertyType: "housing", holdingMonths: 20 }, // landNature 없어도 수동 오버라이드 우선
     );
     expect(resolution.applied).toBe(true);
     expect(resolution.manualRate).toBe(0.70);
@@ -576,11 +603,10 @@ describe("resolveCompanionLandRate 단위 테스트", () => {
     expect(resolution.applied).toBe(false);
   });
 
-  it("buildingFootprintArea 없어도 자동 분기 활성 → 전량 부수토지 fallback (사용자 의도 유추)", () => {
-    // 정착면적 미입력 시 한도 검증 생략, 일괄양도된 토지+주택 조합이면 부수토지로 자동 판정.
-    // 사용자가 폼-수준 라디오를 선택할 필요 없이 자동으로 70% 적용.
+  it("buildingFootprintArea 없어도 landNature 선언 시 자동 분기 활성 → 전량 부수토지 fallback", () => {
+    // 정착면적 미입력 시 한도 검증 생략, landNature 선언만으로 부수토지 분기 활성.
     const resolution = resolveCompanionLandRate(
-      { assetKind: "land", area: LAND_AREA },
+      { assetKind: "land", area: LAND_AREA, landNature: "appurtenant_to_housing" },
       {
         propertyType: "housing",
         holdingMonths: 6,
@@ -590,5 +616,102 @@ describe("resolveCompanionLandRate 단위 테스트", () => {
     expect(resolution.applied).toBe(true);
     expect(resolution.unifiedRate).toBe(0.7);
     expect(resolution.excessArea).toBe(0);
+  });
+});
+
+// ============================================================
+// Group F (T-33~T-37) — landNature 명시 입력 정책 신규 anchor
+// ============================================================
+
+describe("사례 28 Group F — landNature 명시 입력 정책 신규 anchor", () => {
+  it("T-33 부수토지=Yes + 주택 2년 이상 보유 → 토지에 누진세율 + LTHD 주택 기준 표1", () => {
+    // 주택 30개월 보유 → housingRateForHoldingPeriod = "progressive"
+    // LTHD: 표1 기준 30개월 = 2년 → 2 × 2% = 4%
+    const landInput = makeLandInput({
+      acquisitionDate: new Date("2021-01-01"),
+      primaryContextForCompanionRate: {
+        propertyType: "housing",
+        holdingMonths: 30,  // 2년 6개월 → 누진세율
+        buildingFootprintArea: BUILDING_FOOTPRINT,
+        isUrbanArea: true,
+      },
+      residencePeriodMonths: 0,
+      isOneHousehold: false,
+    });
+    const result = calculateTransferTax(landInput, makeMockRates());
+    // 누진세율 적용 (0.70 아님)
+    expect(result.appliedRate).toBeLessThan(0.70);
+    expect(result.appliedRate).toBeGreaterThan(0);
+    // LTHD > 0 (주택 보유기간 기준 적용)
+    expect(result.longTermHoldingDeduction).toBeGreaterThan(0);
+    expect(result.longTermHoldingRate).toBeGreaterThan(0);
+  });
+
+  it("T-34 부수토지=Yes + 주택 1~2년 보유 → 토지에 60% 단일세율", () => {
+    // 주택 18개월 보유 → housingRateForHoldingPeriod = 0.60
+    const landInput = makeLandInput({
+      primaryContextForCompanionRate: {
+        propertyType: "housing",
+        holdingMonths: 18,  // 1.5년 → 60%
+        buildingFootprintArea: BUILDING_FOOTPRINT,
+        isUrbanArea: true,
+      },
+    });
+    const result = calculateTransferTax(landInput, makeMockRates());
+    expect(result.appliedRate).toBe(0.60);
+    // 단기(1~2년) → LTHD 배제
+    expect(result.longTermHoldingDeduction).toBe(0);
+  });
+
+  it("T-35 부수토지=No (독립 나대지) + 주택 단기 → 토지 본래 세율(40%) 적용", () => {
+    // landNature='non_appurtenant' → 일체과세 분기 미진입
+    // 토지 보유기간: 2022.1.8 ~ 2023.3.6 ≈ 14개월 → §104①3호 40%
+    const landInput = makeLandInput({
+      landNature: "non_appurtenant",  // 독립 나대지 선언
+      primaryContextForCompanionRate: {
+        propertyType: "housing",
+        holdingMonths: 6,  // 주택 단기보유이지만 토지는 독립 나대지
+        buildingFootprintArea: BUILDING_FOOTPRINT,
+        isUrbanArea: true,
+      },
+    });
+    const result = calculateTransferTax(landInput, makeMockRates());
+    // 토지 본래 보유기간 14개월 → 40%
+    expect(result.appliedRate).toBe(0.40);
+    expect(result.longTermHoldingDeduction).toBe(0);
+  });
+
+  it("T-36 landNature 미입력 (undefined) → 토지 본래 보유기간 세율 적용 (일체과세 분기 없음)", () => {
+    // landNature 없음 → 일체과세 비활성 → 토지 14개월 보유 → 40%
+    const landInput = makeLandInput({
+      landNature: undefined,
+      primaryContextForCompanionRate: {
+        propertyType: "housing",
+        holdingMonths: 6,
+        buildingFootprintArea: BUILDING_FOOTPRINT,
+        isUrbanArea: true,
+      },
+    });
+    const result = calculateTransferTax(landInput, makeMockRates());
+    expect(result.appliedRate).toBe(0.40);  // 토지 본래 세율
+  });
+
+  it("T-37 부수토지=Yes + 주택 2년 이상 + 한도 초과 → manualProgressive=true", () => {
+    // landNature=appurtenant + holdingMonths=30 → housingRateForHoldingPeriod = "progressive"
+    // + 면적 초과(oversizeArea > 한도) → manualProgressive=true + excessRate=0.40
+    const oversizeArea = BUILDING_FOOTPRINT * 5 + 100;
+    const resolution = resolveCompanionLandRate(
+      { assetKind: "land", area: oversizeArea, landNature: "appurtenant_to_housing" },
+      {
+        propertyType: "housing",
+        holdingMonths: 30,  // 2년 이상 → 누진세율
+        buildingFootprintArea: BUILDING_FOOTPRINT,
+        isUrbanArea: true,
+      },
+    );
+    expect(resolution.applied).toBe(true);
+    expect(resolution.manualProgressive).toBe(true);
+    expect(resolution.excessRate).toBe(0.40);
+    expect(resolution.excessArea).toBeCloseTo(100, 1);
   });
 });

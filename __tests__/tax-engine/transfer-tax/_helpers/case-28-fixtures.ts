@@ -94,6 +94,7 @@ export function makeLandInput(overrides?: Partial<TransferTaxInput>): TransferTa
     isOneHousehold: false,
     annualBasicDeductionUsed: 0,
     acquisitionArea: LAND_AREA,
+    landNature: "appurtenant_to_housing",  // ← 명시적 부수토지 선언 (landNature 정책)
     primaryContextForCompanionRate: {
       propertyType: "housing",
       holdingMonths: 6,
@@ -124,6 +125,7 @@ export function makeAppurtenantInput(overrides?: Partial<TransferTaxInput>): Tra
     isOneHousehold: false,
     annualBasicDeductionUsed: 0,
     acquisitionArea: EXCESS_LIMIT_AREA,
+    landNature: "appurtenant_to_housing",  // ← 명시적 부수토지 선언
     primaryContextForCompanionRate: {
       propertyType: "housing",
       holdingMonths: 6,

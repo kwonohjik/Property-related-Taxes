@@ -24,7 +24,6 @@ import { calculateEstimatedAcquisitionPrice, calculateHoldingPeriod } from "@/li
 import { calcMixedUseTransferTax } from "@/lib/tax-engine/transfer-tax-mixed-use";
 import {
   resolveHousingContextFromCompanion,
-  resolveUserModeOverride,
   buildCompanionEngineInputs,
 } from "./bundled-split-helpers";
 import { TaxCalculationError, TaxErrorCode } from "@/lib/tax-engine/tax-errors";
@@ -388,6 +387,10 @@ export async function POST(request: NextRequest) {
     buildingFootprintArea: data.buildingFootprintArea,
     isUrbanArea: data.isUrbanArea,
     appurtenantLandZone: data.appurtenantLandZone,
+    // ⑭ 상업용건물·오피스텔 환산취득가 서브객체 (TypeScript 미감지 영역 — 명시 매핑 필수)
+    // Date 변환 불필요 — 날짜 필드 없음. Zod 검증 통과 후 그대로 엔진 input에 전달.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ...(data.commercialBuildingValuation ? { commercialBuildingValuation: data.commercialBuildingValuation as any } : {}),
   };
 
   // 단계 4: 세율 로드
@@ -581,9 +584,8 @@ export async function POST(request: NextRequest) {
             }
           : housingCtxFromCompanion;
 
-      const userModeOverride = resolveUserModeOverride(data.appurtenantLandRateMode);
-
-      // 사례 28 — primary가 land이고 housingCtx/userMode가 있으면 primary 자체에도 주입 (양방향 자동 분기)
+      // 사례 28 — primary가 land이고 housingCtxFromCompanion이 있으면 primaryCtx 주입 (양방향 자동 분기)
+      // landNature는 개별 자산에 명시 입력되므로 폼-수준 userModeOverride 불필요.
       if (engineInput.propertyType === "land") {
         if (housingCtxFromCompanion && !engineInput.primaryContextForCompanionRate) {
           engineInput.primaryContextForCompanionRate = {
@@ -594,9 +596,6 @@ export async function POST(request: NextRequest) {
             appurtenantLandZone: housingCtxFromCompanion.appurtenantLandZone,
             bundledSaleMode: housingCtxFromCompanion.bundledSaleMode,
           };
-        }
-        if (userModeOverride && !engineInput.manualHoldingPeriodOverride) {
-          engineInput.manualHoldingPeriodOverride = userModeOverride;
         }
       }
 
@@ -617,7 +616,6 @@ export async function POST(request: NextRequest) {
         const c = companions[idx - 1];
         return buildCompanionEngineInputs(c, a, {
           primaryCtxForSplit,
-          userModeOverride,
           primaryAcquisitionDate: acquisitionDate,
           transferDate,
           primaryAcquisitionCause: data.acquisitionCause,

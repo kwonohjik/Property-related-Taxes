@@ -39,6 +39,13 @@ export interface CompanionLandRateInput {
   area?: number;
   /** 사용자 수동 세율 오버라이드 */
   manualHoldingPeriodOverride?: "shortTermHousing70" | "shortTerm60" | "progressive";
+  /**
+   * 토지 성질 명시 입력 (사용자가 자산 카드에서 선언).
+   * - "appurtenant_to_housing": 주택 부수토지 (§89①3호·영§154⑦ 일체과세 대상)
+   * - "non_appurtenant": 독립 나대지 (일체과세 대상 아님)
+   * - undefined: 미선언 → 자동 분기 진입 안 함
+   */
+  landNature?: "appurtenant_to_housing" | "non_appurtenant";
 }
 
 /**
@@ -122,13 +129,36 @@ export interface CompanionLandRateResolution {
 // ─── 함수 ──────────────────────────────────────────────────────
 
 /**
+ * primary 주택 보유기간(월)에 따라 부수토지 일체과세 적용 세율을 반환한다.
+ *
+ * [포괄적 일체과세 원칙]
+ *   부수토지=Yes 선언 시 주택과 동일한 보유기간 기준 세율 적용 (§104①).
+ *   - 1년 미만: 70% (§104①3호 단서, 주택 단기)
+ *   - 1년~2년: 60% (§104①3호 본문, 주택 1~2년)
+ *   - 2년 이상: 누진세율 (일반 세율, "progressive" 신호)
+ *
+ * 반환값:
+ *   number: 단일세율 (0.70 또는 0.60)
+ *   "progressive": 누진세율 적용 신호 — 호출부에서 `manualProgressive=true`로 처리
+ */
+export function housingRateForHoldingPeriod(holdingMonths: number): number | "progressive" {
+  if (holdingMonths < 12) return 0.70;  // 1년 미만 → 70%
+  if (holdingMonths < 24) return 0.60;  // 1년~2년 → 60%
+  return "progressive";                  // 2년 이상 → 누진세율
+}
+
+/**
  * companion 토지에 적용할 세율을 결정한다.
  *
  * 호출 순서:
  *   1. 수동 오버라이드(manualHoldingPeriodOverride) 우선.
- *   2. 자동 분기 조건 모두 충족 시 주택 단기보유 70% 적용.
- *   3. 한도 초과분이 있으면 excessRate(40%) 함께 반환.
+ *   2. landNature === "appurtenant_to_housing" 선언 시 주택 보유기간 기준 세율 동적 적용.
+ *   3. 면적 한도 검증 (영 §154⑦).
  *   4. 조건 미충족 시 applied=false → 호출부가 기존 경로(본래 보유기간 기준) 진행.
+ *
+ * [설계 변경 — 자동 분기 단순화]
+ *   Before: primary 보유 1년 미만 + 일괄양도 조건 휴리스틱 (법령상 무관)
+ *   After:  landNature 명시 입력 단독 판정 (부수토지 판정 = 사실 판단, 법령 근거 §154⑦)
  */
 export function resolveCompanionLandRate(
   companion: CompanionLandRateInput,
@@ -142,96 +172,112 @@ export function resolveCompanionLandRate(
       return { applied: true, manualRate: 0.70 };
     }
     if (override === "shortTerm60") {
-      // 계획서 enum명 "shortTerm60"은 1~2년 토지 세율(40%) 강제를 의미
-      // (UI 라벨 "40%"와 enum명이 분리된 설계 — 엔진에서는 0.40 반환)
-      return { applied: true, manualRate: 0.40 };
+      // 계획서 enum명 "shortTerm60"은 1~2년 주택 세율(60%) 강제를 의미
+      return { applied: true, manualRate: 0.60 };
     }
     if (override === "progressive") {
       return { applied: true, manualProgressive: true };
     }
   }
 
-  // ── 자동 분기 조건 확인 ──
+  // ── landNature 명시 입력 확인 ──
+  // "non_appurtenant" 또는 undefined이면 일체과세 대상 아님 → applied=false
+  if (companion.landNature !== "appurtenant_to_housing") {
+    return { applied: false };
+  }
+
+  // ── primary가 주택 계열인지 확인 ──
   const isPrimaryHousing =
     primary.propertyType === "housing" ||
     primary.propertyType === "right_to_move_in" ||
     primary.propertyType === "presale_right";
 
-  const isCompanionLand = companion.assetKind === "land";
+  if (!isPrimaryHousing) {
+    return { applied: false };
+  }
 
-  // bundledSaleMode가 없어도 companion이 있으면 일괄양도로 간주 (하위 호환)
-  const isBundled = true;
-  void primary.bundledSaleMode; // 현재는 isBundled=true 고정, 향후 strict 모드 전환 시 제거
+  const appliedReason =
+    "주택·부수토지 일체과세(§89①3호·영§154⑦, 기재부 재산-53/재산-1354)";
 
-  // 영 §162①4호 기준 취득일로부터 1년 미만 보유 여부 (엄밀: < 12개월)
-  const isPrimaryShortTerm = primary.holdingMonths < 12;
-
+  // ── 면적 한도 검증 (영 §154⑦) ──
   const hasFootprintArea =
     primary.buildingFootprintArea !== undefined && primary.buildingFootprintArea > 0;
 
-  // 자동 분기 조건 (영 §154⑦):
-  //   primary=주택 + companion=토지 + 일괄양도 + 주택 보유 1년 미만.
-  //   buildingFootprintArea는 한도 검증을 위해 권장되지만, 미입력 시 전량 부수토지로 가정한다
-  //   (사용자 의도 유추 — 토지+주택 일괄양도 시 부수토지가 통상적이므로).
-  if (
-    isPrimaryHousing &&
-    isCompanionLand &&
-    isBundled &&
-    isPrimaryShortTerm
-  ) {
-    const appliedReason =
-      "주택·부수토지 일체과세(§89①3호·영§154⑦, 기재부 재산-53/재산-1354)";
+  // 주택 보유기간 기준 세율 결정 (포괄적 일체과세)
+  const rateDecision = housingRateForHoldingPeriod(primary.holdingMonths);
 
-    if (hasFootprintArea) {
-      // 영 §154⑦ 부수토지 한도 계산 (정착면적 입력된 경우)
-      // 우선순위: appurtenantLandZone(3/5/10배) > isUrbanArea(deprecated, 5/10배 fallback)
-      const zone: AppurtenantLandZone | undefined =
-        primary.appurtenantLandZone ??
-        (primary.isUrbanArea === undefined
-          ? undefined
-          : primary.isUrbanArea
-            ? "non_metropolitan_or_green"
-            : "non_urban");
-      const multiplier = appurtenantLandMultiplier(zone);
-      const limitArea = primary.buildingFootprintArea! * multiplier;
-      const companionArea = companion.area ?? 0;
-      const excessArea = companionArea > 0 ? Math.max(0, companionArea - limitArea) : 0;
+  if (hasFootprintArea) {
+    // 영 §154⑦ 부수토지 한도 계산 (정착면적 입력된 경우)
+    // 우선순위: appurtenantLandZone(3/5/10배) > isUrbanArea(deprecated, 5/10배 fallback)
+    const zone: AppurtenantLandZone | undefined =
+      primary.appurtenantLandZone ??
+      (primary.isUrbanArea === undefined
+        ? undefined
+        : primary.isUrbanArea
+          ? "non_metropolitan_or_green"
+          : "non_urban");
+    const multiplier = appurtenantLandMultiplier(zone);
+    const limitArea = primary.buildingFootprintArea! * multiplier;
+    const companionArea = companion.area ?? 0;
+    const excessArea = companionArea > 0 ? Math.max(0, companionArea - limitArea) : 0;
 
-      if (excessArea > 0) {
-        // 한도 초과분 분리:
-        //   한도 내 → 주택 단기 70% (§89①3호·영§154⑦)
-        //   한도 초과 → 토지 본래 보유기간 기준 §104①3호 세율
+    if (excessArea > 0) {
+      // 한도 초과분 분리:
+      //   한도 내 → 주택 보유기간 기준 세율 (포괄적 일체과세)
+      //   한도 초과 → 토지 본래 보유기간 기준 §104①3호 세율 (applied=false에서 처리)
+      if (rateDecision === "progressive") {
         return {
           applied: true,
-          unifiedRate: 0.70,
+          manualProgressive: true,
           excessRate: 0.40,
           limitArea,
           excessArea,
           appliedReason,
         };
       }
-
-      // 전량 부수토지 인정 → 주택 단기 70% 전체 적용
       return {
         applied: true,
-        unifiedRate: 0.70,
+        unifiedRate: rateDecision,
+        excessRate: 0.40,
+        limitArea,
+        excessArea,
+        appliedReason,
+      };
+    }
+
+    // 전량 부수토지 인정 → 주택 보유기간 기준 세율 전체 적용
+    if (rateDecision === "progressive") {
+      return {
+        applied: true,
+        manualProgressive: true,
         limitArea,
         excessArea: 0,
         appliedReason,
       };
     }
-
-    // 정착면적 미입력 시 fallback — 한도 검증 생략, 전량 부수토지로 가정
-    // 사용자가 자산을 토지 + 주택 일괄로 등록한 자체가 "부수토지" 의도로 해석.
-    // (한도 초과 케이스는 사용자가 정착면적·도시지역 입력 시 정확히 판정됨)
     return {
       applied: true,
-      unifiedRate: 0.70,
+      unifiedRate: rateDecision,
+      limitArea,
+      excessArea: 0,
+      appliedReason,
+    };
+  }
+
+  // 정착면적 미입력 시 fallback — 한도 검증 생략, 전량 부수토지로 가정
+  // (한도 초과 케이스는 사용자가 정착면적·도시지역 입력 시 정확히 판정됨)
+  if (rateDecision === "progressive") {
+    return {
+      applied: true,
+      manualProgressive: true,
       excessArea: 0,
       appliedReason: appliedReason + " (정착면적 미입력 — 전량 부수토지로 가정)",
     };
   }
-
-  // 자동 분기 미해당 → companion 본래 보유기간 기준 세율 적용 (호출부 처리)
-  return { applied: false };
+  return {
+    applied: true,
+    unifiedRate: rateDecision,
+    excessArea: 0,
+    appliedReason: appliedReason + " (정착면적 미입력 — 전량 부수토지로 가정)",
+  };
 }

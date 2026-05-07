@@ -77,24 +77,8 @@ export function resolveHousingContextFromCompanion(
   };
 }
 
-/**
- * 폼-수준 사용자 명시 일체과세 모드 → companion manualHoldingPeriodOverride enum 매핑.
- * "auto" 또는 undefined는 엔진 자동 분기 사용 (override 없음).
- */
-export function resolveUserModeOverride(
-  mode: "auto" | "unified_short_term_housing" | "individual" | "progressive" | undefined,
-): "shortTermHousing70" | "shortTerm60" | "progressive" | undefined {
-  switch (mode) {
-    case "unified_short_term_housing":
-      return "shortTermHousing70";
-    case "individual":
-      return "shortTerm60";
-    case "progressive":
-      return "progressive";
-    default:
-      return undefined;
-  }
-}
+// resolveUserModeOverride 제거됨 (2026-05-07): 자산별 landNature 명시 입력으로 대체.
+// 폼-수준 appurtenantLandRateMode → companion manualHoldingPeriodOverride 매핑 불필요.
 
 // ─── companion engineInput 빌드 + split 분기 통합 헬퍼 ────────────
 // route.ts의 인라인 60줄을 헬퍼로 추출 (800줄 정책 준수).
@@ -124,6 +108,13 @@ interface CompanionRawAsset {
     [key: string]: unknown;
   }>;
   manualHoldingPeriodOverride?: "shortTermHousing70" | "shortTerm60" | "progressive";
+  /**
+   * 토지 성질 명시 입력 (assetKind === "land" 전용).
+   * Zod companion schema의 landNature enum에서 도출됨.
+   * - "appurtenant_to_housing": 주택 부수토지 (§89①3호·영§154⑦ 일체과세 대상)
+   * - "non_appurtenant": 독립 나대지
+   */
+  landNature?: "appurtenant_to_housing" | "non_appurtenant";
   areaM2?: number;
   totalPropertyTransferPrice?: number;
 }
@@ -147,7 +138,7 @@ interface CompanionBuildContext {
       | "non_urban";
     bundledSaleMode?: "actual" | "apportioned";
   };
-  userModeOverride?: "shortTermHousing70" | "shortTerm60" | "progressive";
+  // userModeOverride 제거됨 (2026-05-07): 자산별 landNature 기반으로 대체
   primaryAcquisitionDate: Date;
   transferDate: Date;
   primaryAcquisitionCause: TransferTaxItemInput["acquisitionCause"];
@@ -186,10 +177,8 @@ export function buildCompanionEngineInputs(
     c.acquisitionCause === "gift" && c.donorAcquisitionDate
       ? new Date(c.donorAcquisitionDate)
       : undefined;
-  // 사용자 폼-수준 모드는 land 자산에만 적용. companion 자체 override 우선.
-  const effectiveOverride =
-    c.manualHoldingPeriodOverride ??
-    (c.assetKind === "land" ? ctx.userModeOverride : undefined);
+  // companion 자체 수동 override 사용 (폼-수준 userModeOverride 제거됨).
+  const effectiveOverride = c.manualHoldingPeriodOverride;
 
   const propertyType: TransferTaxItemInput["propertyType"] =
     c.assetKind === "housing" ? "housing" : c.assetKind === "building" ? "building" : "land";
@@ -223,6 +212,7 @@ export function buildCompanionEngineInputs(
     propertyId: c.assetId,
     propertyLabel: c.assetLabel ?? "",
     manualHoldingPeriodOverride: effectiveOverride,
+    landNature: c.landNature,
     primaryContextForCompanionRate: ctx.primaryCtxForSplit,
     acquisitionArea: c.areaM2,
   };
@@ -236,6 +226,7 @@ export function buildCompanionEngineInputs(
         assetKind: c.assetKind,
         areaM2: c.areaM2,
         manualHoldingPeriodOverride: effectiveOverride,
+        landNature: c.landNature,
       },
       {
         acquisitionCause: ctx.primaryAcquisitionCause,
@@ -264,6 +255,8 @@ export interface CompanionSplitContext {
   assetKind: "housing" | "land" | "building";
   areaM2?: number;
   manualHoldingPeriodOverride?: "shortTermHousing70" | "shortTerm60" | "progressive";
+  /** 토지 성질 명시 입력 — "appurtenant_to_housing"일 때만 split 진입 */
+  landNature?: "appurtenant_to_housing" | "non_appurtenant";
 }
 
 /** split 판정에 필요한 primary 컨텍스트 */
@@ -306,9 +299,14 @@ export function resolveCompanionSplit(
   companion: CompanionSplitContext,
   primary: PrimarySplitContext,
 ): CompanionSplitResult {
+  // split 진입 조건:
+  //   1. companion이 토지이고 landNature === "appurtenant_to_housing" (명시적 부수토지 선언)
+  //   2. 면적 확인 가능 (areaM2 > 0)
+  //   3. 수동 오버라이드 없음 (manualHoldingPeriodOverride === undefined)
+  // 이전 조건 "acquisitionCause === newConstruction"은 landNature 명시 입력으로 대체됨.
   if (
-    primary.acquisitionCause !== "newConstruction" ||
     companion.assetKind !== "land" ||
+    companion.landNature !== "appurtenant_to_housing" ||
     !companion.areaM2 ||
     companion.areaM2 <= 0 ||
     companion.manualHoldingPeriodOverride !== undefined

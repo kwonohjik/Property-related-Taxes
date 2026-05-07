@@ -10,6 +10,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 진행 중: 양도세 감면 23개 조문 확장 — `lib/tax-engine/transfer-reductions/` Phase 1 골격 완료 (§99의3 우선 구현 중). 계획서: `docs/00-pm/transfer-reduction-expansion.plan.md`.
 
+최근 완료(2026-05-08): 상업용건물·오피스텔 환산취득가 사례 29. 신규 `propertyType: "commercial_building"` + `lib/tax-engine/commercial-building-valuation.ts` 모듈 (시행령 §164⑧ 호별고시 전 역환산). 양도연도 §55·§103조의3 정확 세율 적용 (외부 자료 산출값 추종 금지). anchor 37개 통과.
+
 ## ⚠️ Next.js 16 주의사항
 
 **This is NOT the Next.js you know** — API·컨벤션·파일 구조가 학습 데이터와 다를 수 있다.
@@ -61,6 +63,8 @@ Layer 2: Pure Engine (lib/tax-engine/*.ts)
   → DB 직접 호출 없음, 순수 함수 — 테스트 시 DB mock 불필요
   → 단방향 의존만 허용: comprehensive → property (역방향 금지)
   → 감면 라우터: lib/tax-engine/transfer-reductions/ (23개 조문 메타데이터·시한검증·개별 구현 모듈)
+  → 양도세 4-파일 분할 (2026-05-08): transfer-tax.ts(681) + transfer-tax-helpers.ts(787) + transfer-tax-rate-calc.ts(724) + transfer-tax-finalize.ts(211, STEP 7.5~12 통합)
+  → 사례 29 환산: lib/tax-engine/commercial-building-valuation.ts (호별고시 전 역환산, propertyType "commercial_building")
 ```
 
 세부 파일 조직·의존 규칙·정수 연산은 [lib/tax-engine/CLAUDE.md](lib/tax-engine/CLAUDE.md) 참조.

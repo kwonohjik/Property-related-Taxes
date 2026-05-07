@@ -9,7 +9,7 @@ import { useState } from "react";
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import { cn } from "@/lib/utils";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
-import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
+import { formatKRW, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
 import { LoginPromptBanner } from "@/components/calc/shared/LoginPromptBanner";
 import { NonBusinessLandResultCard } from "@/components/calc/NonBusinessLandResultCard";
@@ -19,6 +19,7 @@ import { CarryoverComparisonCard } from "@/components/calc/results/transfer/Carr
 import { CarryoverScenarioBFilingCard } from "@/components/calc/results/transfer/CarryoverScenarioBFilingCard";
 import { PreHousingDisclosureDetailSection } from "@/components/calc/results/transfer/PreHousingDisclosureDetailSection";
 import { RentalHousingExceptionDetailCard } from "@/components/calc/results/transfer/RentalHousingExceptionDetailCard";
+import { CommercialBuildingValuationDetailCard } from "@/components/calc/results/CommercialBuildingValuationDetailCard";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
@@ -693,6 +694,28 @@ export function TransferTaxResultView({
 
       {/* 면책 고지 */}
       <DisclaimerBanner />
+
+      {/* ⑦ 상업용건물·오피스텔 환산취득가 산정 근거 상세 (소령 §164⑧, §176조의2②2호) */}
+      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+      {(result as any).commercialBuildingValuationDetail && (
+        <CommercialBuildingValuationDetailCard
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          detail={(result as any).commercialBuildingValuationDetail}
+          transferPrice={formData ? (parseAmount(formData.contractTotalPrice) || 0) : 0}
+          acquisitionGain={result.transferGain ?? undefined}
+          longTermDeduction={result.longTermHoldingDeduction ?? undefined}
+          taxableIncome={
+            typeof (result as unknown as Record<string, unknown>).taxableIncome === "number"
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              ? (result as any).taxableIncome
+              : undefined
+          }
+          taxBase={result.taxBase ?? undefined}
+          taxAmount={result.calculatedTax ?? undefined}
+          localTax={result.localIncomeTax ?? undefined}
+          totalTax={result.totalTax ?? undefined}
+        />
+      )}
 
       {/* ⑦ 장기임대주택 보유자 거주주택 비과세 특례 상세 (소령 §155⑳) — applied=false 시 미적용 사유도 표시 */}
       {result.rentalHousingExceptionDetail && (

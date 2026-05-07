@@ -8,6 +8,7 @@
  */
 
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import type { TransferFormData, AssetForm } from "@/lib/stores/calc-wizard-store";
 
 // ─── 장기임대주택 거주주택 비과세 특례 검증 (⑧, 소령 §155⑳) ──────
@@ -147,6 +148,55 @@ function validateParcelMode(primary: AssetForm): string | null {
 
 /** 자산 카드 1건의 취득 정보 검증 (취득가·환산·1990·신축) */
 function validateAssetAcquisition(asset: AssetForm, label: string): string | null {
+  // ── 상업용건물·오피스텔 환산취득가 전용 검증 (⑧, 소령 §164⑧, §176조의2②2호) ──
+  // ⑧ 동기화 원칙: API buildCommercialBuildingValuation 의 undefined 반환 조건과 동일하게 차단.
+  if (asset.assetKind === "commercial_building" && asset.useEstimatedAcquisition) {
+    // cbEra 선택 필수
+    if (!asset.cbEra) {
+      return `${label}: 상업용건물·오피스텔 — 호별고시 취득 시점을 선택하세요.`;
+    }
+    // 면적 3종 필수
+    if (!parseDecimal(asset.cbExclusiveArea))
+      return `${label}: 전용면적을 입력하세요.`;
+    if (!parseDecimal(asset.cbSharedArea))
+      return `${label}: 공유면적을 입력하세요.`;
+    if (!parseDecimal(asset.cbLandArea))
+      return `${label}: 대지면적을 입력하세요.`;
+    // 호별고시가 공통 필수
+    if (!parseAmount(asset.cbUnitPriceAtTransfer))
+      return `${label}: 양도시 ㎡당 호별고시가를 입력하세요.`;
+    if (!parseAmount(asset.cbUnitPriceAtFirstOrAcq))
+      return `${label}: ${asset.cbEra === "pre_disclosure" ? "최초고시(2005)" : "취득시"} ㎡당 호별고시가를 입력하세요.`;
+    // 양도시 개별공시지가 공통 필수
+    if (!parseAmount(asset.cbLandPricePerSqmAtTransfer))
+      return `${label}: 양도시 개별공시지가(원/㎡)를 입력하세요.`;
+
+    if (asset.cbEra === "pre_disclosure") {
+      // 건물 기준시가 3시점 필수 (총액, 원 — 외부에서 ㎡당 단가 × 연면적 보정계수 반영)
+      if (!parseAmount(asset.cbBuildingStdPriceAtAcq))
+        return `${label}: 취득시 건물 기준시가(총액)를 입력하세요.`;
+      if (!parseAmount(asset.cbBuildingStdPriceAtFirst))
+        return `${label}: 최초고시시(2005) 건물 기준시가(총액)를 입력하세요.`;
+      if (!parseAmount(asset.cbBuildingStdPriceAtTransfer))
+        return `${label}: 양도시 건물 기준시가(총액)를 입력하세요.`;
+      // 개별공시지가 3시점 필수
+      if (!parseAmount(asset.cbLandPricePerSqmAtAcq))
+        return `${label}: 취득시 개별공시지가(원/㎡)를 입력하세요.`;
+      if (!parseAmount(asset.cbLandPricePerSqmAtFirst))
+        return `${label}: 최초고시시(2005) 개별공시지가(원/㎡)를 입력하세요.`;
+    }
+
+    if (asset.cbEra === "post_disclosure") {
+      // post_disclosure: 취득시 개별공시지가 필수
+      if (!parseAmount(asset.cbLandPricePerSqmAtAcq))
+        return `${label}: 취득시 개별공시지가(원/㎡)를 입력하세요.`;
+    }
+
+    // 상업용건물 환산취득가 검증 완료 — 일반 취득 검증 스킵
+    if (!asset.acquisitionDate) return `${label}: 취득일을 입력하세요.`;
+    return null;
+  }
+
   // ── 이월과세(증여) 전용 검증 — carryover_gift 시 일반 취득 검증 스킵 ──
   if (asset.acquisitionCause === "carryover_gift") {
     const c = asset.carryover;
@@ -501,6 +551,21 @@ export function validateStep(step: number, form: TransferFormData): string | nul
       const label = form.assets.length === 1 ? "자산" : `자산 ${i + 1}`;
 
       if (!a.assetKind) return `${label}: 자산 유형을 선택하세요.`;
+
+      // ⑧ landNature 필수 차단 — 토지 자산이 포함된 일괄양도 시 명시 선택 강제
+      // 자동 안분 fallback 금지 원칙 준수 (부수토지/독립 나대지에 따라 세율 분기가 달라짐)
+      if (a.assetKind === "land") {
+        const hasHousingInBundle = form.assets.some(
+          (other) =>
+            other.assetId !== a.assetId &&
+            (other.assetKind === "housing" ||
+              other.assetKind === "right_to_move_in" ||
+              other.assetKind === "presale_right"),
+        );
+        if (hasHousingInBundle && !a.landNature) {
+          return `${label}: 토지 성격(부수토지 / 독립 나대지)을 선택하세요. 주택·입주권과 함께 일괄양도하는 토지는 성격에 따라 세율이 달라집니다.`;
+        }
+      }
 
       // 공유 지분율 검증 (분자 ≤ 분모, 분모 > 0)
       const ownN = parseFloat(a.ownershipNumerator || "100");

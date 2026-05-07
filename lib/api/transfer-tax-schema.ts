@@ -28,6 +28,50 @@ import {
   addPropertyRefines,
 } from "./transfer-tax-schema-sub";
 
+// ─── ⑫ 상업용건물·오피스텔 환산취득가 Zod 스키마 (소령 §164⑧, §176조의2②2호) ──────
+
+/**
+ * ⑫ 상업용건물·오피스텔 환산취득가 서브객체 Zod 스키마.
+ * 미정의 시 침묵 stripping 방지. era 무관 필수 필드는 addPropertyRefines(⑩)에서 검증.
+ *
+ * 필드 설계 주의:
+ *  - landPricePerSqmAtAcq는 base에 optional — era 무관 공통 필수는 refine에서 강제
+ *  - landPricePerSqmAtTransfer는 항상 필수 (공통)
+ *  - pre_disclosure 전용 필드는 모두 optional (era 조건 분기는 refine에서)
+ */
+export const commercialBuildingValuationSchema = z.object({
+  /** 호별고시 전 취득 여부 (true: ~2004.12, false: 2005.1~) */
+  isPreDisclosure: z.boolean(),
+  /** 전용면적 (㎡) */
+  exclusiveArea: z.number().positive(),
+  /** 공유면적 (㎡) — 연면적 = exclusiveArea + commonArea */
+  commonArea: z.number().nonnegative(),
+  /** 대지면적 (㎡) */
+  landArea: z.number().positive(),
+  /** 양도시 ㎡당 호별고시가 (원/㎡) */
+  unitPriceAtTransfer: z.number().int().positive(),
+  /**
+   * 최초고시(2005) ㎡당 호별고시가 (원/㎡).
+   * isPreDisclosure === true 일 때 의미 있음.
+   */
+  unitPriceAtFirstDisclosure: z.number().int().positive().optional(),
+  /**
+   * 취득시 ㎡당 호별고시가 (원/㎡).
+   * isPreDisclosure === false (post_disclosure) 일 때 사용.
+   */
+  unitPriceAtAcquisition: z.number().int().positive().optional(),
+  /** 양도시 개별공시지가 (원/㎡) — pre/post 공통 필수 (refine에서 강제) */
+  landPriceAtTransfer: z.number().int().positive(),
+  /** 취득시 개별공시지가 (원/㎡) — era 무관 필수 (refine에서 강제). base는 optional */
+  landPriceAtAcquisition: z.number().int().positive().optional(),
+  // ── pre_disclosure 전용 (era === true 시 필수 — refine 강제) ──
+  buildingStdPriceAtAcquisition: z.number().int().positive().optional(),
+  buildingStdPriceAtFirstDisclosure: z.number().int().positive().optional(),
+  buildingStdPriceAtTransfer: z.number().int().positive().optional(),
+  /** 최초고시시(2005) 개별공시지가 (원/㎡) — pre_disclosure 시 필수 */
+  landPriceAtFirstDisclosure: z.number().int().positive().optional(),
+});
+
 // ─── ⑨ 장기임대주택 거주주택 비과세 특례 Zod enum (소령 §155⑳) ──────
 
 /** 시나리오: A=거주주택 양도, B=임대주택→거주주택 전환 후 양도(PHRP) */
@@ -69,7 +113,7 @@ export const rentalHousingExceptionSchema = z.object({
 // ─── 단건 기본 필드 객체 (단건·다건 공유) ───────────────────────
 
 const propertyBaseShape = {
-  propertyType: z.enum(["housing", "land", "building", "right_to_move_in", "presale_right", "mixed-use-house"]),
+  propertyType: z.enum(["housing", "land", "building", "right_to_move_in", "presale_right", "mixed-use-house", "commercial_building"]),
   transferPrice: z.number().int().positive(),
   transferDate: z.string().date(),
   acquisitionPrice: z.number().int().nonnegative(),
@@ -189,20 +233,20 @@ const propertyBaseShape = {
   appurtenantLandZone: z
     .enum(["metropolitan_residential", "non_metropolitan_or_green", "non_urban"])
     .optional(),
+  /**
+   * ⑨⑫ 토지 성질 명시 입력 (propertyType === "land" 자산).
+   * 사용자가 자산 카드에서 선언. 부수토지 판정은 사실 관계 기반.
+   * - "appurtenant_to_housing": 주택 부수토지 (§89①3호·영§154⑦ 일체과세 대상)
+   * - "non_appurtenant": 독립 나대지 (토지 본래 세율 적용)
+   */
+  landNature: z
+    .enum(["appurtenant_to_housing", "non_appurtenant"])
+    .optional(),
 
   // ─── 일괄양도 안분 (소득세법 시행령 §166 ⑥) ────────────────
   /** 함께 양도된 자산들 (2개 이상 일괄 양도 시). 없거나 빈 배열이면 단건으로 처리. */
   companionAssets: z.array(companionAssetSchema).max(10).optional(),
-  /**
-   * ⑨ 사례 28 — 부수토지 일체과세 적용 모드 (사용자 명시적 선택).
-   * - "auto": 자동 분기. 엔진이 §89·영§154⑦/§104①후단 조건 검증 후 자동 적용 (기본값).
-   * - "unified_short_term_housing": 모든 land 자산에 70% 강제 (사용자가 일체과세 명시 적용).
-   * - "individual": 자동 분기 무시. 각 자산 본래 보유기간 세율 적용.
-   * - "progressive": 모든 land 자산에 누진세율 강제.
-   */
-  appurtenantLandRateMode: z
-    .enum(["auto", "unified_short_term_housing", "individual", "progressive"])
-    .optional(),
+  // appurtenantLandRateMode 제거됨 (2026-05-07): 자산별 landNature 명시 입력으로 대체.
   /** 매매계약 상 총 양도가액 (일괄양도 시 필수). 없으면 transferPrice가 총액으로 간주. */
   totalSalePrice: z.number().int().positive().optional(),
   /** 안분 방식 (v1은 standard_price_transfer만 지원) */
@@ -253,6 +297,11 @@ const propertyBaseShape = {
   // buildingFootprintArea / isUrbanArea 는 위 사례 28 블록(신축주택·부수토지)에 선언됨 — 중복 금지
   /** ⑫ 장기임대주택 거주주택 비과세 특례 (소령 §155⑳) — 미정의 시 침묵 stripping 방지 */
   rentalHousingException: rentalHousingExceptionSchema.optional(),
+  /**
+   * ⑫ 상업용건물·오피스텔 환산취득가 계산 입력 (소령 §164⑧, §176조의2②2호).
+   * propertyType === "building" + 환산 모드 시 제공. 미정의 시 침묵 stripping 방지를 위해 명시 필수.
+   */
+  commercialBuildingValuation: commercialBuildingValuationSchema.optional(),
 };
 
 // ─── 단건 스키마 (기존 inputSchema와 동일) ─────────────────────

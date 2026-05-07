@@ -4,10 +4,121 @@
  */
 
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import type { AssetForm, AssetReductionForm } from "@/lib/stores/calc-wizard-store";
 import { buildCarryoverPayload } from "./transfer-tax-api-carryover";
 
-export function toEngineAssetKind(kind: AssetForm["assetKind"]): "housing" | "land" | "building" {
+// ─── ④ 상업용건물·오피스텔 환산취득가 API 변환 헬퍼 (소령 §164⑧, §176조의2②2호) ───
+
+/**
+ * AssetForm cb* 필드 → commercialBuildingValuation 서브객체 변환.
+ * 필수 필드 미입력 시 undefined 반환 — validate에서 먼저 차단되므로 silent 처리.
+ * ⑧ 주의: validate와 동일 조건으로 undefined 반환. UI 통과 → 여기서 undefined → 엔진 미도달 방지.
+ */
+export function buildCommercialBuildingValuation(
+  asset: AssetForm,
+): object | undefined {
+  if (asset.assetKind !== "commercial_building" || !asset.useEstimatedAcquisition) {
+    return undefined;
+  }
+  if (!asset.cbEra) return undefined;
+
+  const exclusiveArea = parseDecimal(asset.cbExclusiveArea);
+  const sharedArea = parseDecimal(asset.cbSharedArea);
+  const landArea = parseDecimal(asset.cbLandArea);
+  const unitPriceAtTransfer = parseAmount(asset.cbUnitPriceAtTransfer);
+  const unitPriceAtFirstOrAcq = parseAmount(asset.cbUnitPriceAtFirstOrAcq);
+  const landPriceAtTransfer = parseAmount(asset.cbLandPricePerSqmAtTransfer);
+
+  // 공통 필수 필드 검증 — 0이면 undefined 반환 (validate에서 먼저 차단)
+  if (!exclusiveArea || !sharedArea || !landArea
+      || !unitPriceAtTransfer || !unitPriceAtFirstOrAcq || !landPriceAtTransfer) {
+    return undefined;
+  }
+
+  // isPreDisclosure — cbEra가 "pre_disclosure" 이면 true
+  const isPreDisclosure = asset.cbEra === "pre_disclosure";
+
+  const base = {
+    isPreDisclosure,
+    exclusiveArea,
+    commonArea: sharedArea,
+    landArea,
+    unitPriceAtTransfer,
+    // pre_disclosure: unitPriceAtFirstOrAcq = 최초고시(2005) ㎡당 호별고시가
+    // post_disclosure: unitPriceAtFirstOrAcq = 취득시 ㎡당 호별고시가
+    ...(isPreDisclosure
+      ? { unitPriceAtFirstDisclosure: unitPriceAtFirstOrAcq }
+      : { unitPriceAtAcquisition: unitPriceAtFirstOrAcq }),
+    landPriceAtTransfer,
+  };
+
+  if (isPreDisclosure) {
+    const buildingAtAcq = parseAmount(asset.cbBuildingStdPriceAtAcq);
+    const buildingAtFirst = parseAmount(asset.cbBuildingStdPriceAtFirst);
+    const buildingAtTransfer = parseAmount(asset.cbBuildingStdPriceAtTransfer);
+    const landAtAcq = parseAmount(asset.cbLandPricePerSqmAtAcq);
+    const landAtFirst = parseAmount(asset.cbLandPricePerSqmAtFirst);
+    if (!buildingAtAcq || !buildingAtFirst || !buildingAtTransfer
+        || !landAtAcq || !landAtFirst) {
+      return undefined;
+    }
+    return {
+      ...base,
+      buildingStdPriceAtAcquisition: buildingAtAcq,
+      buildingStdPriceAtFirstDisclosure: buildingAtFirst,
+      buildingStdPriceAtTransfer: buildingAtTransfer,
+      landPriceAtAcquisition: landAtAcq,
+      landPriceAtFirstDisclosure: landAtFirst,
+    };
+  }
+
+  // post_disclosure: 취득시 개별공시지가 필수
+  const landAtAcq = parseAmount(asset.cbLandPricePerSqmAtAcq);
+  if (!landAtAcq) return undefined;
+  return { ...base, landPriceAtAcquisition: landAtAcq };
+}
+
+// ─── ④ 장기임대주택 거주주택 비과세 특례 API 변환 헬퍼 (소령 §155⑳) ───
+
+/**
+ * AssetForm.rentalHousingException → API payload 변환.
+ * applyException=false 또는 rentalUnits 미입력 시 undefined 반환 (⑬ body 미포함).
+ * 자동 안분 fallback 금지 — 미입력은 validate에서 차단.
+ */
+export function toRentalHousingExceptionApi(asset: AssetForm): object | undefined {
+  const rh = asset.rentalHousingException;
+  if (!rh?.applyException) return undefined;
+  if (!rh.rentalUnits || rh.rentalUnits.length === 0) return undefined;
+
+  return {
+    applyException: true,
+    scenario: rh.scenario,
+    rentalUnits: rh.rentalUnits.map((u) => ({
+      registrationDate: u.registrationDate
+        ? (u.registrationDate.includes('T') ? u.registrationDate : `${u.registrationDate}T00:00:00.000Z`)
+        : undefined,
+      rentalType: u.rentalType,
+      rentalAcquisitionType: u.rentalAcquisitionType,
+      isApartment: u.isApartment,
+      region: u.region,
+      standardPriceAtRentalStart: parseAmount(u.standardPriceAtRentalStart) || 0,
+      rentalMonths: parseFloat(u.rentalMonths) || 0,
+      rentalAutoTermination: u.rentalAutoTermination,
+      requirementsConfirmed: u.requirementsConfirmed,
+    })),
+    priorResidenceTransferDate: rh.priorResidenceTransferDate
+      ? (rh.priorResidenceTransferDate.includes('T')
+        ? rh.priorResidenceTransferDate
+        : `${rh.priorResidenceTransferDate}T00:00:00.000Z`)
+      : undefined,
+    standardPriceAtAcquisitionForPhrp: parseAmount(rh.standardPriceAtAcquisitionForPhrp ?? "") || undefined,
+    standardPriceAtPriorTransfer: parseAmount(rh.standardPriceAtPriorTransfer ?? "") || undefined,
+    standardPriceAtTransferForPhrp: parseAmount(rh.standardPriceAtTransferForPhrp ?? "") || undefined,
+  };
+}
+
+export function toEngineAssetKind(kind: AssetForm["assetKind"]): "housing" | "land" | "building" | "commercial_building" {
   if (kind === "right_to_move_in" || kind === "presale_right") return "housing";
   return kind;
 }
@@ -325,6 +436,16 @@ export function buildAssetPayload(
     // ⑬ 사례 28 — companion 토지 세율 수동 오버라이드 (부수토지 일체과세 §89·영§154⑦)
     // undefined이면 엔진 자동 분기. 빈 문자열·null은 undefined로 정규화.
     manualHoldingPeriodOverride: asset.manualHoldingPeriodOverride ?? undefined,
+    // ⑬ 토지 성질 명시 입력 (landNature) — 폼 enum → 엔진 enum 변환
+    // 폼: "appurtenant"/"standalone" → 엔진: "appurtenant_to_housing"/"non_appurtenant"
+    ...(asset.assetKind === "land" && asset.landNature !== undefined
+      ? {
+          landNature:
+            asset.landNature === "appurtenant"
+              ? ("appurtenant_to_housing" as const)
+              : ("non_appurtenant" as const),
+        }
+      : {}),
     // ⑬ 사례 28 — companion 신축주택 정착면적·도시지역·4시점 (자동 분기용)
     // primary가 land이고 companion이 housing인 케이스에서 부수토지 한도 산정.
     ...(asset.acquisitionCause === "newConstruction"

@@ -24,9 +24,6 @@ import {
   judgeNonBusinessLand,
 } from "./non-business-land";
 import {
-  calculateTransferTaxPenalty,
-} from "./transfer-tax-penalty";
-import {
   type Pre1990LandValuationResult,
   calculatePre1990LandValuation,
 } from "./pre-1990-land-valuation";
@@ -59,13 +56,15 @@ import {
   calcOneHouseProration,
   calcLongTermHoldingDeduction,
   calcBasicDeduction,
+  runCommercialBuildingStep,
+  buildMultiHouseSurchargeDetail,
+  type CommercialBuildingStepResult,
 } from "./transfer-tax-helpers";
-import { calculateBuildingPenalty, calcTax, calcReductions, handleMultiParcelBranch, type MultiParcelBranchContext } from "./transfer-tax-rate-calc";
+import { calculateBuildingPenalty, calcTax, handleMultiParcelBranch, type MultiParcelBranchContext } from "./transfer-tax-rate-calc";
+import { finalizeTransferTax } from "./transfer-tax-finalize";
 import { calcCarryoverScenarios } from "./transfer-tax-carryover";
-// 하위 호환 재수출
-export { parseRatesFromMap } from "./transfer-tax-helpers";
-export { calcTax } from "./transfer-tax-rate-calc";
-
+export { parseRatesFromMap } from "./transfer-tax-helpers"; // 하위 호환 재수출
+export { calcTax } from "./transfer-tax-rate-calc";         // 하위 호환 재수출
 // ============================================================
 // 메인 함수: calculateTransferTax
 // ============================================================
@@ -227,6 +226,23 @@ export function calculateTransferTax(
       pre1990LandValuationDetail: pre1990LandResult,
       carryoverTaxationDetail: carryoverDetail,
     };
+  }
+
+  // STEP 0.35: 상업용건물·오피스텔 환산취득가 (소령 §164⑧ + §176조의2②2호)
+  // 성공 시 effectiveInput을 실가 경로로 교체 (useEstimatedAcquisition=false, acquisitionPrice=환산가, expenses=개산공제)
+  let cbStep: CommercialBuildingStepResult | undefined;
+  if (effectiveInput.propertyType === "commercial_building" && effectiveInput.useEstimatedAcquisition) {
+    cbStep = runCommercialBuildingStep(effectiveInput);
+    if (cbStep) {
+      effectiveInput = {
+        ...effectiveInput,
+        useEstimatedAcquisition: false,
+        acquisitionPrice: cbStep.acquisitionPrice,
+        expenses: cbStep.lumpSumDeduction,
+        capitalExpenditure: undefined,
+        transferExpense: undefined,
+      };
+    }
   }
 
   // STEP 1.5: 다필지 분리 계산 (환지·합병 등)
@@ -580,32 +596,25 @@ export function calculateTransferTax(
     legalBasis: taxResult.surchargeRate ? TRANSFER.SURCHARGE : TRANSFER.TAX_RATE,
   });
 
-  // STEP 7.5 (Phase 2, 2026-05-06): §99의3 농어촌특별세 = 감면세액 × 20%
-  // 감면세액 = (감면 전 양도소득금액 적용 산출세액) - (감면 후 산출세액 = taxResult.calculatedTax)
-  let new993FinalResult: New993Result | undefined = new993PreliminaryResult;
-  let ruralSurtax993 = 0;
-  if (new993PreliminaryResult?.isEligible) {
-    const taxBaseBefore993 = Math.max(0, transferIncomeBefore993 - basicDeduction);
-    const taxResultBefore993 = calcTax(taxBaseBefore993, parsedRates, taxRateInput, multiHouseSurchargeResult);
-    const taxReduction993 = Math.max(0, taxResultBefore993.calculatedTax - taxResult.calculatedTax);
-    ruralSurtax993 = applyRate(taxReduction993, 0.2);
-    new993FinalResult = {
-      ...new993PreliminaryResult,
-      taxReductionForRuralSurtax: taxReduction993,
-      ruralSurtax: ruralSurtax993,
-    };
-    if (taxReduction993 > 0) {
-      steps.push({
-        label: "§99의3 농어촌특별세 (감면세액 × 20%)",
-        formula: `(감면 전 산출세액 ${taxResultBefore993.calculatedTax.toLocaleString()} − 감면 후 산출세액 ${taxResult.calculatedTax.toLocaleString()}) × 20% = ${ruralSurtax993.toLocaleString()}`,
-        amount: ruralSurtax993,
-        legalBasis: "농특세법 §3·§5",
-      });
-    }
-  }
-
-  // STEP 8: 감면세액
+  // STEP 7.5 ~ 11/12: 산출세액 이후 단계 통합 (transfer-tax-finalize.ts)
+  const finalize = finalizeTransferTax({
+    input,
+    effectiveInput,
+    steps,
+    taxResult,
+    taxRateInput,
+    parsedRates,
+    multiHouseSurchargeResult,
+    taxableGain,
+    longTermHoldingDeduction,
+    basicDeduction,
+    taxBase,
+    estimatedBase,
+    transferIncomeBefore993,
+    new993PreliminaryResult,
+  });
   const {
+    new993FinalResult,
     reductionAmount,
     reductionType,
     reductionTypeApplied,
@@ -614,133 +623,12 @@ export function calculateTransferTax(
     newHousingReductionDetail,
     publicExpropriationDetail,
     selfFarmingReductionDetail,
-  } = calcReductions(
-    taxResult.calculatedTax,
-    input.reductions,
-    parsedRates.selfFarmingRules,
-    input.rentalReductionDetails,
-    parsedRates.longTermRentalRules,
-    input.newHousingDetails,
-    parsedRates.newHousingMatrix,
-    input.transferDate,
-    // 양도소득금액 = 과세양도차익 − 장기보유특별공제 (§77 감면 소득 안분 기준)
-    Math.max(0, taxableGain - longTermHoldingDeduction),
-    basicDeduction,
-    taxBase,
-    input.acquisitionDate,
-    input.standardPriceAtAcquisition,
-    input.standardPriceAtTransfer,
-  );
-  // 감면 유형별 법령 조문 매핑
-  const reductionLawMap: Record<string, string> = {
-    "자경농지":                TRANSFER.REDUCTION_SELF_FARMING,
-    "자경농지(§69·상속인 경작기간 합산 §66⑪)": `${TRANSFER.REDUCTION_SELF_FARMING} + ${TRANSFER.REDUCTION_SELF_FARMING_INHERITED}`,
-    "자경농지(§69·편입일 부분감면 §66⑤⑥)":  `${TRANSFER.REDUCTION_SELF_FARMING} + ${TRANSFER.REDUCTION_SELF_FARMING_INCORP}`,
-    "장기임대주택":            TRANSFER.REDUCTION_LONG_RENTAL,
-    "신축주택":                TRANSFER.REDUCTION_NEW_HOUSING,
-    "미분양주택":              TRANSFER.REDUCTION_UNSOLD_HOUSING,
-    "공익사업용 토지 수용(§77)": publicExpropriationDetail?.useLegacyRates
-      ? `${TRANSFER.REDUCTION_PUBLIC_EXPROPRIATION} + ${TRANSFER.REDUCTION_PUBLIC_EXPROPRIATION_TRANSITIONAL}`
-      : TRANSFER.REDUCTION_PUBLIC_EXPROPRIATION,
-  };
-  steps.push({
-    label: "감면세액",
-    formula: reductionType ? `${reductionType} 감면 ${reductionAmount.toLocaleString()}` : "감면 없음",
-    amount: reductionAmount,
-    legalBasis: reductionType ? reductionLawMap[reductionType] : undefined,
-  });
-
-  // STEP 9: 결정세액 = 산출세액 - 감면 (원 미만 절사)
-  const determinedTax = truncateToWon(Math.max(0, taxResult.calculatedTax - reductionAmount));
-  steps.push({
-    label: "결정세액",
-    formula: `산출세액 ${taxResult.calculatedTax.toLocaleString()} - 감면 ${reductionAmount.toLocaleString()} (원 미만 절사)`,
-    amount: determinedTax,
-    legalBasis: TRANSFER.FINAL_TAX,
-  });
-
-  // STEP 10.5: §114조의2 신축·증축 가산세 (step은 STEP 12에서 통합 emit)
-  const penaltyBase = input.acquisitionMethod === "appraisal"
-    ? (input.appraisalValue ?? 0)
-    : (input.useEstimatedAcquisition ? (estimatedBase ?? 0) : 0);
-  const penaltyResult = calculateBuildingPenalty(effectiveInput, penaltyBase);
-  const penaltyTax = penaltyResult?.penalty ?? 0;
-
-  // 총결정세액 = 결정세액 + §114조의2 가산세
-  const determinedTaxWithPenalty = determinedTax + penaltyTax;
-
-  // STEP 10: 지방소득세 (총결정세액 × 10%, 원 미만 절사 — 지방세법 §103의3)
-  const localIncomeTax = applyRate(determinedTaxWithPenalty, 0.1);
-  steps.push({
-    label: "지방소득세",
-    formula: `${determinedTaxWithPenalty.toLocaleString()} × 10%`,
-    amount: localIncomeTax,
-    legalBasis: TRANSFER.LOCAL_INCOME_TAX,
-  });
-
-  // STEP 12: 신고불성실·납부지연 가산세 (선택 입력 시) — totalTax 합산 전에 계산
-  const penaltyDetail =
-    input.filingPenaltyDetails || input.delayedPaymentDetails
-      ? calculateTransferTaxPenalty({
-          filing: input.filingPenaltyDetails,
-          delayedPayment: input.delayedPaymentDetails,
-        })
-      : undefined;
-  const filingDelayedPenalty = penaltyDetail?.totalPenalty ?? 0;
-  const totalAllPenalty = penaltyTax + filingDelayedPenalty;
-
-  // 가산세 통합 step: §114조의2 + 신고불성실 + 납부지연 합산 표시
-  if (totalAllPenalty > 0) {
-    steps.push({
-      label: "가산세 합계",
-      formula: `환산가액적용가산세 + 신고불성실가산세 + 납부지연가산세`,
-      amount: totalAllPenalty,
-      legalBasis: TRANSFER.BUILDING_PENALTY,
-    });
-    if (penaltyTax > 0) {
-      steps.push({
-        label: "환산가액적용가산세 (§114조의2)",
-        formula: `${penaltyBase.toLocaleString()} × 5% (${penaltyResult!.note})`,
-        amount: penaltyTax,
-        legalBasis: TRANSFER.BUILDING_PENALTY,
-        sub: true,
-      });
-    }
-    if (penaltyDetail?.filingPenalty && penaltyDetail.filingPenalty.filingPenalty > 0) {
-      steps.push({
-        label: `신고불성실가산세 (${(penaltyDetail.filingPenalty.penaltyRate * 100).toFixed(0)}%)`,
-        formula: `납부세액 ${penaltyDetail.filingPenalty.penaltyBase.toLocaleString()} × ${(penaltyDetail.filingPenalty.penaltyRate * 100).toFixed(0)}%`,
-        amount: penaltyDetail.filingPenalty.filingPenalty,
-        legalBasis: penaltyDetail.filingPenalty.legalBasis,
-        sub: true,
-      });
-    }
-    if (penaltyDetail?.delayedPaymentPenalty && penaltyDetail.delayedPaymentPenalty.delayedPaymentPenalty > 0) {
-      const d = penaltyDetail.delayedPaymentPenalty;
-      steps.push({
-        label: `납부지연가산세 (${d.elapsedDays}일 × ${(d.dailyRate * 100).toFixed(3)}%)`,
-        formula: `미납세액 ${d.unpaidTax.toLocaleString()} × ${d.elapsedDays}일 × ${(d.dailyRate * 100).toFixed(3)}%`,
-        amount: d.delayedPaymentPenalty,
-        legalBasis: "국세기본법 §47의4",
-        sub: true,
-      });
-    }
-    steps.push({
-      label: "총결정세액",
-      formula: `결정세액 ${determinedTax.toLocaleString()} + 가산세 합계 ${totalAllPenalty.toLocaleString()}`,
-      amount: determinedTax + totalAllPenalty,
-      legalBasis: TRANSFER.FINAL_TAX,
-    });
-  }
-
-  // STEP 11: 총 납부세액 = 총결정세액 + 지방소득세 + 신고불성실/납부지연가산세 + §99의3 농특세
-  const totalTax = determinedTaxWithPenalty + localIncomeTax + filingDelayedPenalty + ruralSurtax993;
-  steps.push({
-    label: "총 납부세액",
-    formula: `${totalAllPenalty > 0 ? "총결정세액" : "결정세액"} ${(determinedTax + totalAllPenalty).toLocaleString()} + 지방소득세 ${localIncomeTax.toLocaleString()}${ruralSurtax993 > 0 ? ` + 농특세 ${ruralSurtax993.toLocaleString()}` : ""}`,
-    amount: totalTax,
-    legalBasis: `${TRANSFER.FINAL_TAX} + ${TRANSFER.LOCAL_INCOME_TAX}`,
-  });
+    determinedTax,
+    penaltyTax,
+    localIncomeTax,
+    penaltyDetail,
+    totalTax,
+  } = finalize;
 
   return {
     isExempt: false,
@@ -774,16 +662,7 @@ export function calculateTransferTax(
     localIncomeTax,
     totalTax,
     steps,
-    multiHouseSurchargeDetail: multiHouseSurchargeResult
-      ? {
-          effectiveHouseCount: multiHouseSurchargeResult.effectiveHouseCount,
-          rawHouseCount: multiHouseSurchargeResult.rawHouseCount,
-          excludedHouses: multiHouseSurchargeResult.excludedHouses,
-          exclusionReasons: multiHouseSurchargeResult.exclusionReasons,
-          isRegulatedAtTransfer: multiHouseSurchargeResult.isRegulatedAtTransfer,
-          warnings: multiHouseSurchargeResult.warnings,
-        }
-      : undefined,
+    multiHouseSurchargeDetail: multiHouseSurchargeResult ? buildMultiHouseSurchargeDetail(multiHouseSurchargeResult) : undefined,
     nonBusinessLandJudgmentDetail: nonBusinessLandJudgment,
     rentalReductionDetail,
     newHousingReductionDetail,
@@ -797,5 +676,6 @@ export function calculateTransferTax(
     inheritedHouseValuationDetail: inheritedAcquisitionStep?.houseValuationResult,
     carryoverTaxationDetail: carryoverDetail,
     new993Detail: new993FinalResult,
+    commercialBuildingValuationDetail: cbStep?.detail,
   };
 }

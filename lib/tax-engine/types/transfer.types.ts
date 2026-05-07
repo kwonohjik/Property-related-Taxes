@@ -49,9 +49,21 @@ import type { CarryoverTaxationInput, CarryoverTaxationDetail } from "./transfer
 // 외부 소비자 편의를 위해 재수출.
 export type { CarryoverTaxationInput, CarryoverTaxationDetail } from "./transfer-carryover.types";
 
+// ============================================================
+// 상업용건물·오피스텔 환산취득가 타입 — 800줄 정책으로 별도 파일 분리
+// ============================================================
+import type {
+  CommercialBuildingValuationInput,
+  CommercialBuildingValuationResult,
+} from "./commercial-building.types";
+export type {
+  CommercialBuildingValuationInput,
+  CommercialBuildingValuationResult,
+} from "./commercial-building.types";
+
 export interface TransferTaxInput {
   /** 물건 종류 */
-  propertyType: "housing" | "land" | "building" | "right_to_move_in" | "presale_right" | "mixed-use-house";
+  propertyType: "housing" | "land" | "building" | "right_to_move_in" | "presale_right" | "mixed-use-house" | "commercial_building";
   /** 양도가액 (원, 정수) */
   transferPrice: number;
   /**
@@ -359,15 +371,27 @@ export interface TransferTaxInput {
   // ── 부수토지 일체과세 — companion 전용 필드 (사례 28, 영 §154⑦) ──
   /**
    * companion 토지 세율 수동 오버라이드 (부수토지 일체과세 자동 분기 무시).
-   * 미지정(undefined) 시 엔진이 buildingFootprintArea + holdingMonths로 자동 판단.
+   * 미지정(undefined) 시 landNature 명시 입력 기반으로 자동 판단.
    *
    * - "shortTermHousing70": 주택 단기보유 70% 강제 (§104①3호 단서)
-   * - "shortTerm60":        1년~2년 토지 세율 40% 강제 (§104①3호) — enum명 유지
+   * - "shortTerm60":        1년~2년 주택 세율 60% 강제 (§104①3호)
    * - "progressive":        일반 누진세율 강제
    *
    * 법령 근거: §89①3호 / 영 §154⑦ / §104①후단
    */
   manualHoldingPeriodOverride?: "shortTermHousing70" | "shortTerm60" | "progressive";
+
+  /**
+   * 토지 성질 명시 입력 (propertyType === "land" 자산에서만 사용).
+   * 사용자가 자산 카드에서 선언.
+   * - "appurtenant_to_housing": 주택 부수토지 — §89①3호·영§154⑦ 일체과세 대상
+   * - "non_appurtenant": 독립 나대지 — 일체과세 대상 아님, 토지 본래 세율 적용
+   * - undefined: 미선언 (단독 자산 양도 시 생략 가능)
+   *
+   * 부수토지 판정은 면적 한도(영 §154⑦: 도시지역 3~5배 / 도시지역 외 10배)와 무관하게
+   * 사용자가 사실 관계에 근거하여 선언하는 값. 면적 초과분은 엔진이 자동으로 분리.
+   */
+  landNature?: "appurtenant_to_housing" | "non_appurtenant";
 
   /**
    * 이 자산을 companion으로 취급하는 primary 자산의 컨텍스트 (부수토지 일체과세용).
@@ -388,6 +412,13 @@ export interface TransferTaxInput {
     /** 일괄양도 모드 */
     bundledSaleMode?: "actual" | "apportioned";
   };
+
+  /**
+   * 상업용건물·오피스텔 환산취득가 계산 입력 (선택).
+   * propertyType === "commercial_building" + useEstimatedAcquisition === true 일 때 필수.
+   * 소득세법 시행령 §164⑧·§176조의2②2호.
+   */
+  commercialBuildingValuation?: CommercialBuildingValuationInput;
 }
 
 export type TransferReduction =
@@ -611,6 +642,12 @@ export interface TransferTaxResult {
    * 예: "부수토지 일체과세(§89①3호·영§154⑦): 70%"
    */
   shortTermNote?: string;
+  /**
+   * 상업용건물·오피스텔 환산취득가 산정 상세 결과.
+   * commercialBuildingValuation 제공 + 환산 모드 시만 포함.
+   * 결과 카드 산식 표시·신고서 토지/건물 분리 표 재현에 사용.
+   */
+  commercialBuildingValuationDetail?: CommercialBuildingValuationResult;
 }
 
 // ============================================================

@@ -13,49 +13,9 @@ import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import type { BundledApportionmentResult } from "@/lib/tax-engine/bundled-sale-apportionment";
 import type { AggregateTransferResult } from "@/lib/tax-engine/transfer-tax-aggregate";
 import type { MixedUseGainBreakdown } from "@/lib/tax-engine/types/transfer-mixed-use.types";
-import { toEngineAssetKind, isHousingLike, toEngineReductions, buildAssetPayload, getOwnershipRatio, applyRatio } from "./transfer-tax-api-helpers";
+import { toEngineAssetKind, isHousingLike, toEngineReductions, buildAssetPayload, getOwnershipRatio, applyRatio, toRentalHousingExceptionApi, buildCommercialBuildingValuation } from "./transfer-tax-api-helpers";
 import { buildCarryoverPayload } from "./transfer-tax-api-carryover";
 
-// ─── ④ 장기임대주택 거주주택 비과세 특례 API 변환 헬퍼 (소령 §155⑳) ───
-
-/**
- * AssetForm.rentalHousingException → API payload 변환.
- * applyException=false 또는 rentalUnits 미입력 시 undefined 반환 (⑬ body 미포함).
- * 자동 안분 fallback 금지 — 미입력은 validate에서 차단.
- */
-function toRentalHousingExceptionApi(asset: AssetForm): object | undefined {
-  const rh = asset.rentalHousingException;
-  if (!rh?.applyException) return undefined;
-  if (!rh.rentalUnits || rh.rentalUnits.length === 0) return undefined;
-
-  return {
-    applyException: true,
-    scenario: rh.scenario,
-    rentalUnits: rh.rentalUnits.map((u) => ({
-      // ISO datetime string (날짜만 입력된 경우 T00:00:00Z로 변환)
-      registrationDate: u.registrationDate
-        ? (u.registrationDate.includes('T') ? u.registrationDate : `${u.registrationDate}T00:00:00.000Z`)
-        : undefined,
-      rentalType: u.rentalType,
-      rentalAcquisitionType: u.rentalAcquisitionType,
-      isApartment: u.isApartment,
-      region: u.region,
-      standardPriceAtRentalStart: parseAmount(u.standardPriceAtRentalStart) || 0,
-      rentalMonths: parseFloat(u.rentalMonths) || 0,
-      rentalAutoTermination: u.rentalAutoTermination,
-      requirementsConfirmed: u.requirementsConfirmed,
-    })),
-    // B 시나리오 전용 필드 — priorResidenceTransferDate는 datetime string으로 변환
-    priorResidenceTransferDate: rh.priorResidenceTransferDate
-      ? (rh.priorResidenceTransferDate.includes('T')
-        ? rh.priorResidenceTransferDate
-        : `${rh.priorResidenceTransferDate}T00:00:00.000Z`)
-      : undefined,
-    standardPriceAtAcquisitionForPhrp: parseAmount(rh.standardPriceAtAcquisitionForPhrp ?? "") || undefined,
-    standardPriceAtPriorTransfer: parseAmount(rh.standardPriceAtPriorTransfer ?? "") || undefined,
-    standardPriceAtTransferForPhrp: parseAmount(rh.standardPriceAtTransferForPhrp ?? "") || undefined,
-  };
-}
 // 하위 호환 재수출 — 기존 import 경로 유지
 export { toEngineReductions } from "./transfer-tax-api-helpers";
 
@@ -149,6 +109,12 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
   const firstParcelAcqDate = parcelModeActive
     ? (primary.parcels[0]?.acquisitionDate || form.transferDate)
     : primary.acquisitionDate;
+
+  // ⑬ 상업용건물·오피스텔 환산취득가 서브객체 빌드 (TypeScript 미감지 영역 — grep 자가 점검 완료)
+  const isCommercialBuilding = primary.assetKind === "commercial_building";
+  const cbValuation = isCommercialBuilding && primary.useEstimatedAcquisition
+    ? buildCommercialBuildingValuation(primary)
+    : undefined;
 
   // 검용주택 분리계산 payload 빌드
   const isMixed = primary.assetKind === "housing" && primary.isMixedUseHouse;
@@ -292,7 +258,11 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
         : formTotalTransferExpense; // 단독 모드: form-level이 있으면 사용, 없으면 0
 
   const body = {
-    propertyType: isMixed ? ("mixed-use-house" as const) : primary.assetKind,
+    // commercial_building은 그대로 송신 — 엔진 STEP 0.35 진입 조건 충족
+    // 추가로 commercialBuildingValuation 서브객체로 환산취득가 데이터 전달
+    propertyType: isMixed
+      ? ("mixed-use-house" as const)
+      : (primary.assetKind as "housing" | "land" | "building" | "right_to_move_in" | "presale_right" | "commercial_building"),
     transferPrice: primaryFractional
       ? applyRatio(totalContractPrice, primaryRatio)
       : totalContractPrice,
@@ -335,7 +305,9 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
         ? primaryEffectiveTransferExpense || undefined
         : undefined,
     // 검용주택은 calcMixedUseTransferTax 별도 엔진에서 처리 → 일반 환산 검증 우회 위해 false 송신
+    // 상업용건물 환산 모드는 STEP 0.35 진입 조건이 useEstimatedAcquisition === true 이므로 true 송신
     useEstimatedAcquisition: hasPre1990 || parcelModeActive || isMixed ? false
+      : isCommercialBuilding ? primary.useEstimatedAcquisition
       : isCarryoverGeneral ? true
       : isEstimated,
     standardPriceAtAcquisition: hasPre1990 || usesPhd
@@ -545,10 +517,23 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
           },
         }
       : {}),
+    // ── landNature (토지 자산 성격 — 부수토지 vs 독립 나대지) ──
+    // 폼 enum("appurtenant"/"standalone") → 엔진 enum("appurtenant_to_housing"/"non_appurtenant") 변환.
+    // undefined이면 엔진에 전달하지 않음.
+    ...(primary.assetKind === "land" && primary.landNature !== undefined
+      ? {
+          landNature:
+            primary.landNature === "appurtenant"
+              ? ("appurtenant_to_housing" as const)
+              : ("non_appurtenant" as const),
+        }
+      : {}),
+    // ⑬ 상업용건물·오피스텔 환산취득가 서브객체 (TypeScript 미감지 — 명시 spread 필수)
+    // cbValuation === undefined 이면 키 자체를 포함하지 않음 (Zod optional 통과)
+    ...(cbValuation !== undefined ? { commercialBuildingValuation: cbValuation } : {}),
     // ── 일괄양도 (assets 2건 이상) ──
     ...(form.assets.length > 1
       ? {
-          appurtenantLandRateMode: form.appurtenantLandRateMode !== "auto" ? form.appurtenantLandRateMode : undefined,
           totalSalePrice: parseAmount(form.contractTotalPrice),
           standardPriceAtTransferForApportion:
             parseAmount(primary.standardPriceAtTransfer) > 0

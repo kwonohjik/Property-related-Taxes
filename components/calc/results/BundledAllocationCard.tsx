@@ -330,15 +330,31 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
       </div>
 
       {/* 합산 신고서 양식 — 단건과 동일한 32행, 합계 + 자산별 컬럼 */}
-      <FilingFormTable
-        result={aggregateToFilingResult(aggregated)}
-        formData={formData}
-        aggregate={{
-          properties: aggregated.properties,
-          aggregated,
-          ownershipMap,
-        }}
-      />
+      {(() => {
+        // landNatureMap: propertyId → "appurtenant" | "standalone" (토지 자산 성격 라벨 suffix용)
+        const landNatureMap = new Map<string, "appurtenant" | "standalone">();
+        for (const p of aggregated.properties) {
+          const asset =
+            p.propertyId === "primary"
+              ? formData.assets[0]
+              : formData.assets.find((a) => a.assetId === p.propertyId);
+          if (asset?.assetKind === "land" && asset.landNature) {
+            landNatureMap.set(p.propertyId, asset.landNature);
+          }
+        }
+        return (
+          <FilingFormTable
+            result={aggregateToFilingResult(aggregated)}
+            formData={formData}
+            aggregate={{
+              properties: aggregated.properties,
+              aggregated,
+              ownershipMap,
+              landNatureMap: landNatureMap.size > 0 ? landNatureMap : undefined,
+            }}
+          />
+        );
+      })()}
 
       {/* 자산별 세액 (요약 카드) */}
       <div className="space-y-3">

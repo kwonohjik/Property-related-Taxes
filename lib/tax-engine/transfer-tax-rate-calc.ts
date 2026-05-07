@@ -132,14 +132,16 @@ export function calcTax(
     };
   }
 
-  // T-1.5: 부수토지 일체과세 세율 분기 (신축주택 케이스, 영 §154⑦)
-  // companion 토지 자산에 manualHoldingPeriodOverride 또는 primaryContextForCompanionRate가 있으면
+  // T-1.5: 부수토지 일체과세 세율 분기 (영 §154⑦, landNature 명시 입력 기반)
+  // companion 토지 자산에 manualHoldingPeriodOverride 또는 landNature/primaryContext가 있으면
   // resolveCompanionLandRate로 세율을 결정하고 조기 반환.
   // [법령 근거] §89①3호·영§154⑦ — 주택과 일체과세. §104①후단 — 큰 산출세액 세율.
   //            기재부 재산-53(2015.1.15) / 재산-1354(2022.10.27)
   if (
     input.propertyType === "land" &&
-    (input.manualHoldingPeriodOverride !== undefined || input.primaryContextForCompanionRate !== undefined)
+    (input.manualHoldingPeriodOverride !== undefined ||
+      input.landNature === "appurtenant_to_housing" ||
+      input.primaryContextForCompanionRate !== undefined)
   ) {
     const ctx = input.primaryContextForCompanionRate;
     const companionArea =
@@ -152,6 +154,7 @@ export function calcTax(
         assetKind: "land",
         area: companionArea,
         manualHoldingPeriodOverride: input.manualHoldingPeriodOverride,
+        landNature: input.landNature,
       },
       ctx
         ? {
@@ -159,19 +162,20 @@ export function calcTax(
             holdingMonths: ctx.holdingMonths,
             buildingFootprintArea: ctx.buildingFootprintArea,
             isUrbanArea: ctx.isUrbanArea,
+            appurtenantLandZone: ctx.appurtenantLandZone,
             bundledSaleMode: ctx.bundledSaleMode,
           }
         : {
             // manualHoldingPeriodOverride만 있고 primaryContext 없는 경우:
             // 조건 판정 없이 수동 오버라이드만 적용 (자동 분기 조건 충족 의미 없음)
             propertyType: "land",
-            holdingMonths: 999, // 자동 분기 조건(< 12) 미충족 → 수동 오버라이드만 동작
+            holdingMonths: 999, // landNature 체크 전에 applied=false → 수동 오버라이드만 동작
           },
     );
 
     if (resolution.applied) {
       if (resolution.manualProgressive) {
-        // 수동 누진세율 강제
+        // 누진세율 강제 (수동 또는 주택 2년 이상 보유 포괄적 일체과세)
         const progressiveTax = calculateProgressiveTax(taxBase, brackets);
         const bracket = brackets.find((b) => taxBase <= (b.max ?? Infinity));
         const baseRate = bracket?.rate ?? brackets[brackets.length - 1].rate;
@@ -180,24 +184,28 @@ export function calcTax(
           appliedRate: baseRate,
           progressiveDeduction: bracket?.deduction ?? 0,
           surchargeSuspended: false,
-          shortTermNote: "수동 지정: 누진세율",
+          shortTermNote: resolution.appliedReason
+            ? `부수토지 일체과세(§89①3호·영§154⑦): 누진세율`
+            : "수동 지정: 누진세율",
         };
       }
       if (resolution.manualRate !== undefined) {
-        // 수동 단일세율 강제
+        // 단일세율 강제 (수동 또는 주택 단기보유 70%/60%)
+        const isManualOverride = input.manualHoldingPeriodOverride !== undefined;
         return {
           calculatedTax: applyRate(taxBase, resolution.manualRate),
           appliedRate: resolution.manualRate,
           progressiveDeduction: 0,
           surchargeSuspended: false,
-          shortTermNote: `수동 지정: ${Math.round(resolution.manualRate * 100)}%`,
+          shortTermNote: isManualOverride
+            ? `수동 지정: ${Math.round(resolution.manualRate * 100)}%`
+            : `부수토지 일체과세(§89①3호·영§154⑦): ${Math.round(resolution.manualRate * 100)}%`,
         };
       }
       if (resolution.unifiedRate !== undefined) {
-        // 자동 분기: 부수토지 일체과세 70%
-        // 한도 초과분(excessArea > 0)이 있어도 단건 엔진에서는 전체 taxBase에 70% 적용.
-        // 초과분 분리는 aggregate/route 레이어에서 companion을 별도 자산으로 분리하여 처리해야 하나,
-        // 사례 28(전량 한도 내)에서는 이 경로로 충분. 초과분 분리는 T-18·T-19 테스트에서 별도 처리.
+        // 자동 분기: 부수토지 일체과세 (70% 또는 60%)
+        // 한도 초과분(excessArea > 0)이 있어도 단건 엔진에서는 전체 taxBase에 단일세율 적용.
+        // 초과분 분리는 aggregate/route 레이어에서 companion을 별도 자산으로 분리하여 처리.
         return {
           calculatedTax: applyRate(taxBase, resolution.unifiedRate),
           appliedRate: resolution.unifiedRate,

@@ -43,6 +43,8 @@ export function buildAggregateRows(
   //   assets[0] → "primary", assets[i>0] → assetId 그대로
   //   G-2 한도 초과 split: "{assetId}__appurtenant" / "{assetId}__excess" suffix 제거 후 재조회
   function findAssetByPropertyId(pid: string): AssetForm | undefined {
+    // NOTE: 이 함수 결과로 반환된 AssetForm의 landNature로
+    // 컬럼 라벨 suffix "(부수토지)" / "(독립 나대지)"를 표시할 수 있음 — buildAggregateRows 호출부에서 사용.
     if (!formData) return undefined;
     if (pid === "primary") return formData.assets[0];
     const direct = formData.assets.find((a) => a.assetId === pid);

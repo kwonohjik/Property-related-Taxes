@@ -381,11 +381,11 @@ export const companionAssetSchema = z.object({
   /** 증여 시 증여자 취득일 */
   donorAcquisitionDate: z.string().date().optional(),
   /**
-   * ⑩⑫ 사용자 수동 세율 오버라이드 — 부수토지 일체과세 자동 분기 무시 (신축주택 케이스).
-   * 미지정(undefined) 시 엔진 자동 분기 적용.
+   * ⑩⑫ 사용자 수동 세율 오버라이드 — 부수토지 일체과세 자동 분기 무시.
+   * 미지정(undefined) 시 landNature 기반 자동 분기.
    *
    * - "shortTermHousing70": 주택 단기보유 70% 강제
-   * - "shortTerm60":        1년~2년 토지 세율 (계획서 enum명 유지, UI 라벨은 별도)
+   * - "shortTerm60":        1년~2년 주택 세율 60% 강제
    * - "progressive":        일반 누진세율 강제
    *
    * 법령 근거: 소득세법 §89①3호 / 시행령 §154⑦ / §104①후단
@@ -393,6 +393,15 @@ export const companionAssetSchema = z.object({
    */
   manualHoldingPeriodOverride: z
     .enum(["shortTermHousing70", "shortTerm60", "progressive"])
+    .optional(),
+  /**
+   * ⑩⑫ 토지 성질 명시 입력 (assetKind === "land" companion 자산).
+   * 사용자가 자산 카드에서 선언.
+   * - "appurtenant_to_housing": 주택 부수토지 (§89①3호·영§154⑦ 일체과세 대상)
+   * - "non_appurtenant": 독립 나대지 (토지 본래 세율 적용)
+   */
+  landNature: z
+    .enum(["appurtenant_to_housing", "non_appurtenant"])
     .optional(),
   /**
    * ⑫ G-2 companion 토지 면적 (㎡) — 부수토지 한도 초과 split 판정용 (영 §154⑦).
@@ -419,119 +428,9 @@ export const companionAssetSchema = z.object({
   actualUseDate: z.string().date().optional(),
 });
 
-// ─── superRefine 공통 검증 ──────────────────────────────────────
-
-export function addPropertyRefines(
-  data: {
-    propertyType?: string;
-    useEstimatedAcquisition: boolean;
-    standardPriceAtAcquisition?: number;
-    standardPriceAtTransfer?: number;
-    acquisitionDate: string;
-    transferDate: string;
-    acquisitionCause?: "purchase" | "inheritance" | "gift" | "carryover_gift" | "newConstruction";
-    decedentAcquisitionDate?: string;
-    donorAcquisitionDate?: string;
-    annualBasicDeductionUsed?: number;
-    acquisitionMethod?: "actual" | "estimated" | "appraisal";
-    appraisalValue?: number;
-    isSelfBuilt?: boolean;
-    buildingType?: "new" | "extension";
-    extensionFloorArea?: number;
-    constructionDate?: string;
-    /** §164⑤ PHD 입력 — 제공 시 standardPriceAt* 필수 검증 우회 */
-    preHousingDisclosure?: unknown;
-    /** 검용주택 PHD — mixedUse.preHousingDisclosure 위치 */
-    mixedUse?: { preHousingDisclosure?: unknown };
-  },
-  ctx: z.RefinementCtx,
-) {
-  // §164⑤ PHD 경로: 3-시점 입력으로 기준시가 자동 도출되므로 standardPriceAt* 불요
-  // 검용주택 모드는 calcMixedUseTransferTax 별도 엔진에서 처리 → 일반 환산 검증 우회
-  const hasPhd =
-    (data.preHousingDisclosure !== undefined && data.preHousingDisclosure !== null) ||
-    (data.mixedUse?.preHousingDisclosure !== undefined && data.mixedUse?.preHousingDisclosure !== null);
-  const isMixedUseHouse = data.propertyType === "mixed-use-house";
-  if (!isMixedUseHouse && data.useEstimatedAcquisition && !data.standardPriceAtAcquisition && !hasPhd) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["standardPriceAtAcquisition"],
-      message: "환산취득가 사용 시 취득시 기준시가 필수",
-    });
-  }
-  if (!isMixedUseHouse && data.useEstimatedAcquisition && !data.standardPriceAtTransfer && !hasPhd) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["standardPriceAtTransfer"],
-      message: "환산취득가 사용 시 양도시 기준시가 필수",
-    });
-  }
-  if (data.acquisitionDate >= data.transferDate) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["acquisitionDate"],
-      message: "취득일은 양도일보다 이전이어야 합니다",
-    });
-  }
-  if (data.acquisitionCause === "inheritance") {
-    if (!data.decedentAcquisitionDate) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["decedentAcquisitionDate"],
-        message: "상속의 경우 피상속인 취득일이 필수입니다",
-      });
-    } else if (data.decedentAcquisitionDate >= data.acquisitionDate) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["decedentAcquisitionDate"],
-        message: "피상속인 취득일은 상속개시일보다 이전이어야 합니다",
-      });
-    }
-  }
-  if (data.acquisitionCause === "gift") {
-    if (!data.donorAcquisitionDate) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["donorAcquisitionDate"],
-        message: "증여의 경우 증여자 취득일이 필수입니다",
-      });
-    } else if (data.donorAcquisitionDate >= data.acquisitionDate) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["donorAcquisitionDate"],
-        message: "증여자 취득일은 증여일보다 이전이어야 합니다",
-      });
-    }
-  }
-  if (data.annualBasicDeductionUsed !== undefined && data.annualBasicDeductionUsed > 2_500_000) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["annualBasicDeductionUsed"],
-      message: "연간 기본공제 한도(2,500,000)를 초과할 수 없습니다",
-    });
-  }
-  if (data.acquisitionMethod === "appraisal" && !data.appraisalValue) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["appraisalValue"],
-      message: "감정가액 방식 선택 시 감정가액을 입력하세요",
-    });
-  }
-  if (data.isSelfBuilt && data.buildingType === "extension" && !data.extensionFloorArea) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["extensionFloorArea"],
-      message: "증축 시 바닥면적을 입력하세요",
-    });
-  }
-  if (data.isSelfBuilt && !data.constructionDate) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["constructionDate"],
-      message: "신축·증축일을 입력하세요",
-    });
-  }
-}
+// ─── superRefine 공통 검증 — 별도 파일로 분리 (800줄 정책) ──────
+// 실체: ./transfer-tax-schema-refines.ts
+export { addPropertyRefines } from "./transfer-tax-schema-refines";
 
 // ─── 다필지 스키마 ────────────────────────────────────────────
 
@@ -752,48 +651,6 @@ export const inheritanceHouseValuationSchema = z
   });
 
 
-// ─── 검용주택 분리계산 Zod 스키마 ─────────────────────────────────
-
-const mixedUseStandardPriceSchema = z.object({
-  housingPrice: z.number().int().nonnegative(),
-  commercialBuildingPrice: z.number().int().nonnegative(),
-  landPricePerSqm: z.number().int().nonnegative(),
-});
-
-export const mixedUseAssetSchema = z.object({
-  isMixedUseHouse: z.literal(true),
-  residentialFloorArea: z.number().positive(),
-  nonResidentialFloorArea: z.number().positive(),
-  buildingFootprintArea: z.number().positive(),
-  totalLandArea: z.number().positive(),
-  landAcquisitionDate: z.string().date(),
-  buildingAcquisitionDate: z.string().date(),
-  transferStandardPrice: mixedUseStandardPriceSchema,
-  acquisitionStandardPrice: mixedUseStandardPriceSchema.extend({
-    housingPrice: z.number().int().nonnegative().optional(),
-  }),
-  usePreHousingDisclosure: z.boolean().optional(),
-  /** PHD 3-시점 환산 입력 (검용주택 모드 전용). landArea는 엔진이 주택부수토지로 자동 주입. */
-  preHousingDisclosure: preHousingDisclosureSchema.omit({ landArea: true }).optional(),
-  residencePeriodYears: z.number().nonnegative(),
-  isMetropolitanArea: z.boolean().optional(),
-  zoneType: z.enum([
-    "residential", "exclusive_residential", "general_residential", "semi_residential",
-    "commercial", "industrial", "green", "management",
-    "agriculture_forest", "natural_env", "unplanned", "undesignated",
-  ]).optional(),
-  /** 🚨 Critical (이슈 8-A): 1세대 1주택 비과세 요건 충족 여부. 다주택자는 false → 12억 비과세 미적용 */
-  isOneHouseExempt: z.boolean().optional(),
-  /** 보유 중 일부 용도변경 (시행령 §166⑥ + 집행기준 99-164-10) */
-  partialUsageChange: z.object({
-    direction: z.enum(["house_to_commercial", "commercial_to_house"]),
-    acqResidentialArea: z.number().nonnegative().optional(),
-    acqCommercialArea: z.number().nonnegative().optional(),
-    usageChangeDate: z.string().optional(),
-  }).optional(),
-}).superRefine((v, ctx) => {
-  const total = v.residentialFloorArea + v.nonResidentialFloorArea;
-  if (total <= 0) {
-    ctx.addIssue({ code: "custom", message: "주택+상가 연면적 합계는 0보다 커야 합니다", path: ["residentialFloorArea"] });
-  }
-});
+// ─── 검용주택 분리계산 Zod 스키마 — 별도 파일로 분리 (800줄 정책) ──────
+// 실체: ./transfer-tax-schema-mixed-use.ts
+export { mixedUseAssetSchema } from "./transfer-tax-schema-mixed-use";

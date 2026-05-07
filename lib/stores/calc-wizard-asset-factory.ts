@@ -88,6 +88,8 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     appurtenantLandZone: undefined,
     // companion 토지 세율 수동 오버라이드 — 사례 28
     manualHoldingPeriodOverride: undefined,
+    // 토지 자산 성격 — 부수토지 vs 독립 나대지 (사례 28 landNature 명시 입력 정책)
+    landNature: undefined,
     decedentAcquisitionDate: "",
     donorAcquisitionDate: "",
     useEstimatedAcquisition: false,
@@ -222,6 +224,19 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     supplementaryBuildingValue: "",
     ...MIXED_USE_DEFAULTS,
     rentalHousingException: { ...RENTAL_HOUSING_EXCEPTION_DEFAULTS },
+    // ── 상업용건물·오피스텔 환산취득가 cb* 필드 (사례 29, 소득세법 시행령 §164⑧) ──
+    cbEra: "",
+    cbExclusiveArea: "",
+    cbSharedArea: "",
+    cbLandArea: "",
+    cbUnitPriceAtTransfer: "",
+    cbUnitPriceAtFirstOrAcq: "",
+    cbBuildingStdPriceAtAcq: "",
+    cbBuildingStdPriceAtFirst: "",
+    cbBuildingStdPriceAtTransfer: "",
+    cbLandPricePerSqmAtAcq: "",
+    cbLandPricePerSqmAtFirst: "",
+    cbLandPricePerSqmAtTransfer: "",
   };
 }
 
@@ -328,11 +343,33 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (a.manualHoldingPeriodOverride === undefined || a.manualHoldingPeriodOverride === "") {
     a.manualHoldingPeriodOverride = undefined; // 빈 문자열 → undefined 변환
   }
+  // ③ landNature 마이그레이션 — 신규 필드 (사례 28 landNature 명시 입력 정책)
+  if (a.landNature === undefined || !(["appurtenant", "standalone"].includes(a.landNature as string))) {
+    a.landNature = undefined;
+  }
   // acquisitionCause "newConstruction" 추가 — 알 수 없는 값이면 "purchase" fallback
   const validCauses = ["purchase", "inheritance", "gift", "carryover_gift", "newConstruction"];
   if (!a.acquisitionCause || !validCauses.includes(a.acquisitionCause as string)) {
     a.acquisitionCause = "purchase";
   }
+  // assetKind "commercial_building" 추가 — 알 수 없는 값이면 "building" fallback (③ normalize)
+  const validKinds = ["housing", "land", "building", "right_to_move_in", "presale_right", "commercial_building"];
+  if (!a.assetKind || !validKinds.includes(a.assetKind as string)) {
+    a.assetKind = "building";
+  }
+  // ③ 상업용건물·오피스텔 cb* 필드 마이그레이션 (sessionStorage 호환 — 신규 필드 누락 보호)
+  if (a.cbEra === undefined) a.cbEra = "";
+  if (a.cbExclusiveArea === undefined) a.cbExclusiveArea = "";
+  if (a.cbSharedArea === undefined) a.cbSharedArea = "";
+  if (a.cbLandArea === undefined) a.cbLandArea = "";
+  if (a.cbUnitPriceAtTransfer === undefined) a.cbUnitPriceAtTransfer = "";
+  if (a.cbUnitPriceAtFirstOrAcq === undefined) a.cbUnitPriceAtFirstOrAcq = "";
+  if (a.cbBuildingStdPriceAtAcq === undefined) a.cbBuildingStdPriceAtAcq = "";
+  if (a.cbBuildingStdPriceAtFirst === undefined) a.cbBuildingStdPriceAtFirst = "";
+  if (a.cbBuildingStdPriceAtTransfer === undefined) a.cbBuildingStdPriceAtTransfer = "";
+  if (a.cbLandPricePerSqmAtAcq === undefined) a.cbLandPricePerSqmAtAcq = "";
+  if (a.cbLandPricePerSqmAtFirst === undefined) a.cbLandPricePerSqmAtFirst = "";
+  if (a.cbLandPricePerSqmAtTransfer === undefined) a.cbLandPricePerSqmAtTransfer = "";
 
   // ③ 장기임대주택 거주주택 비과세 특례 마이그레이션 (sessionStorage 호환)
   if (!a.rentalHousingException || typeof a.rentalHousingException !== "object") {

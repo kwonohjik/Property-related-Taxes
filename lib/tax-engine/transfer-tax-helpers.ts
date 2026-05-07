@@ -20,6 +20,7 @@ import {
   calculateProration,
 } from "./tax-utils";
 import { TaxRateNotFoundError } from "./tax-errors";
+import { TRANSFER } from "./legal-codes";
 import {
   parseDeductionRules,
   parseProgressiveRate,
@@ -43,8 +44,24 @@ import { getLongTermDeductionOverride } from "./rental-housing-reduction";
 import { getRate } from "@/lib/db/tax-rates";
 import type { TaxBracket } from "./types";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
-import type { TransferTaxInput, SplitGainResult } from "./types/transfer.types";
+import type {
+  TransferTaxInput,
+  SplitGainResult,
+  TransferTaxResult,
+  CalculationStep,
+} from "./types/transfer.types";
+import type {
+  MultiHouseSurchargeResult,
+} from "./multi-house-surcharge";
 import { calcSplitGain } from "./transfer-tax-split-gain";
+import {
+  calculateCommercialBuildingValuation,
+  type CommercialBuildingValuationResult,
+} from "./commercial-building-valuation";
+import {
+  calculateTransferTaxPenalty,
+  type TransferTaxPenaltyResult,
+} from "./transfer-tax-penalty";
 
 // ============================================================
 // 내부 파싱 결과 타입 — transfer-tax-rate-calc.ts 에서도 import
@@ -445,6 +462,47 @@ export function calcLongTermHoldingDeduction(
     return { deduction: 0, rate: 0, holdingPeriod: { years: 0, months: 0 } };
   }
 
+  // L-1b: 부수토지 일체과세 (landNature === "appurtenant_to_housing")
+  // — 포괄적 일체과세 원칙: primary 주택의 보유기간·거주기간 기준 표 1/2 적용
+  // — 단기보유(1년 미만 → 70%, 1~2년 → 60%) 시에는 LTHD 배제 (세율에서 이미 처리됨)
+  // — 2년 이상 보유 시 주택 기준 LTHD 적용 (primaryContextForCompanionRate에서 holdingMonths 사용)
+  if (
+    input.propertyType === "land" &&
+    input.landNature === "appurtenant_to_housing" &&
+    input.primaryContextForCompanionRate
+  ) {
+    const ctx = input.primaryContextForCompanionRate;
+    // primary 주택 보유기간 기준
+    const primaryHoldingYears = Math.floor(ctx.holdingMonths / 12);
+    // 2년 미만이면 단기세율 적용 → LTHD 배제
+    if (ctx.holdingMonths < 24) {
+      const holding = calculateHoldingPeriod(input.acquisitionDate, input.transferDate);
+      return { deduction: 0, rate: 0, holdingPeriod: { years: holding.years, months: holding.months } };
+    }
+    // 2년 이상: primary 주택 기준 LTHD 계산
+    // 부수토지는 1세대1주택 여부·거주기간을 주택과 공유
+    const isOneHouseSingleForCompanion =
+      input.isOneHousehold && input.householdHousingCount === 1;
+    const residenceYears = Math.floor(input.residencePeriodMonths / 12);
+    let companionRate: number;
+    if (isOneHouseSingleForCompanion && residenceYears >= 2) {
+      // 표 2 (1세대1주택, §95② 별표): 보유분 4% + 거주분 4%, 각 40% 캡
+      const holdingPart = Math.min(primaryHoldingYears * 0.04, 0.40);
+      const residencePart = Math.min(residenceYears * 0.04, 0.40);
+      companionRate = holdingPart + residencePart;
+    } else {
+      // 표 1 (일반): 보유 × 2%, 최대 30%
+      companionRate = Math.min(primaryHoldingYears * 0.02, 0.30);
+    }
+    const deduction = companionRate > 0 ? applyRate(taxableGain, companionRate) : 0;
+    const holding = calculateHoldingPeriod(input.acquisitionDate, input.transferDate);
+    return {
+      deduction,
+      rate: companionRate,
+      holdingPeriod: { years: holding.years, months: holding.months },
+    };
+  }
+
   // L-1c: 장기임대주택 특례율 우선 적용
   if (input.rentalReductionDetails && longTermRentalRules) {
     const override = getLongTermDeductionOverride(
@@ -556,4 +614,174 @@ export function calcBasicDeduction(
   if (afterLTH <= 0) return 0;
 
   return Math.min(remaining, afterLTH);
+}
+
+// ============================================================
+// H-0.35: 상업용건물·오피스텔 환산취득가 사전 처리
+// ============================================================
+
+export interface CommercialBuildingStepResult {
+  /** 엔진 input 덮어쓰기용 업데이트된 acquisitionPrice·expenses */
+  acquisitionPrice: number;
+  /** 개산공제액 (§163⑥ 취득당시기준시가 × 3%) */
+  lumpSumDeduction: number;
+  /** 상세 결과 (결과 카드 산식 표시용) */
+  detail: CommercialBuildingValuationResult;
+}
+
+/**
+ * 감면 유형별 법령 조문 매핑 (감면세액 step legalBasis용).
+ * transfer-tax.ts의 인라인 상수를 분리하여 800줄 정책 준수.
+ */
+export function getReductionLegalBasis(
+  reductionType: string | undefined,
+  useLegacyRates: boolean | undefined,
+): string | undefined {
+  if (!reductionType) return undefined;
+  const map: Record<string, string> = {
+    "자경농지":                TRANSFER.REDUCTION_SELF_FARMING,
+    "자경농지(§69·상속인 경작기간 합산 §66⑪)": `${TRANSFER.REDUCTION_SELF_FARMING} + ${TRANSFER.REDUCTION_SELF_FARMING_INHERITED}`,
+    "자경농지(§69·편입일 부분감면 §66⑤⑥)":  `${TRANSFER.REDUCTION_SELF_FARMING} + ${TRANSFER.REDUCTION_SELF_FARMING_INCORP}`,
+    "장기임대주택":            TRANSFER.REDUCTION_LONG_RENTAL,
+    "신축주택":                TRANSFER.REDUCTION_NEW_HOUSING,
+    "미분양주택":              TRANSFER.REDUCTION_UNSOLD_HOUSING,
+    "공익사업용 토지 수용(§77)": useLegacyRates
+      ? `${TRANSFER.REDUCTION_PUBLIC_EXPROPRIATION} + ${TRANSFER.REDUCTION_PUBLIC_EXPROPRIATION_TRANSITIONAL}`
+      : TRANSFER.REDUCTION_PUBLIC_EXPROPRIATION,
+  };
+  return map[reductionType];
+}
+
+/**
+ * 다주택 중과세 상세 판정 결과를 TransferTaxResult 형태로 변환.
+ * transfer-tax.ts의 return 객체 인라인 블록을 분리하여 800줄 정책 준수.
+ */
+export function buildMultiHouseSurchargeDetail(
+  result: MultiHouseSurchargeResult,
+): NonNullable<TransferTaxResult["multiHouseSurchargeDetail"]> {
+  return {
+    effectiveHouseCount: result.effectiveHouseCount,
+    rawHouseCount: result.rawHouseCount,
+    excludedHouses: result.excludedHouses,
+    exclusionReasons: result.exclusionReasons,
+    isRegulatedAtTransfer: result.isRegulatedAtTransfer,
+    warnings: result.warnings,
+  };
+}
+
+/**
+ * STEP 0.35: 상업용건물·오피스텔 환산취득가 처리 (소령 §164⑧ + §176조의2②2호)
+ *
+ * propertyType === "commercial_building" + useEstimatedAcquisition === true +
+ * commercialBuildingValuation 제공 시 환산취득가·개산공제를 계산하여
+ * 파이프라인 input에 주입할 값을 반환.
+ *
+ * 단방향 의존: transfer-tax.ts → 이 함수 → commercial-building-valuation.ts
+ *
+ * @returns CommercialBuildingStepResult | undefined (분기 해당 없음 시 undefined)
+ */
+export function runCommercialBuildingStep(
+  input: TransferTaxInput,
+): CommercialBuildingStepResult | undefined {
+  if (
+    input.propertyType !== "commercial_building" ||
+    !input.useEstimatedAcquisition ||
+    !input.commercialBuildingValuation
+  ) {
+    return undefined;
+  }
+
+  const detail = calculateCommercialBuildingValuation(
+    input.commercialBuildingValuation,
+    input.transferPrice,
+  );
+
+  return {
+    acquisitionPrice: detail.estimatedAcquisitionTotal,
+    lumpSumDeduction: detail.estimatedDeductionTotal,
+    detail,
+  };
+}
+
+// ============================================================
+// H-12: emitPenaltySteps — STEP 12 신고불성실·납부지연 가산세 + 합산 step 푸시
+// ============================================================
+
+export interface PenaltyEmissionResult {
+  penaltyDetail?: TransferTaxPenaltyResult;
+  filingDelayedPenalty: number;
+  totalAllPenalty: number;
+}
+
+/**
+ * STEP 12: 신고불성실·납부지연 가산세 계산 + 가산세 합산 step 5종 푸시.
+ *
+ * - 입력에 filingPenaltyDetails 또는 delayedPaymentDetails가 있으면 calculateTransferTaxPenalty 호출.
+ * - 환산가액적용가산세(§114조의2 penaltyTax)와 합산하여 totalAllPenalty 반환.
+ * - 가산세가 0보다 크면 steps에 4~5건의 항목 push (가산세 합계 / §114조의2 / 신고불성실 / 납부지연 / 총결정세액).
+ *
+ * 부수효과: steps 배열에 push (호출측 배열을 그대로 변경).
+ */
+export function emitPenaltySteps(
+  input: TransferTaxInput,
+  steps: CalculationStep[],
+  determinedTax: number,
+  penaltyTax: number,
+  penaltyBase: number,
+  penaltyNote: string | undefined,
+): PenaltyEmissionResult {
+  const penaltyDetail =
+    input.filingPenaltyDetails || input.delayedPaymentDetails
+      ? calculateTransferTaxPenalty({
+          filing: input.filingPenaltyDetails,
+          delayedPayment: input.delayedPaymentDetails,
+        })
+      : undefined;
+  const filingDelayedPenalty = penaltyDetail?.totalPenalty ?? 0;
+  const totalAllPenalty = penaltyTax + filingDelayedPenalty;
+
+  if (totalAllPenalty > 0) {
+    steps.push({
+      label: "가산세 합계",
+      formula: `환산가액적용가산세 + 신고불성실가산세 + 납부지연가산세`,
+      amount: totalAllPenalty,
+      legalBasis: TRANSFER.BUILDING_PENALTY,
+    });
+    if (penaltyTax > 0) {
+      steps.push({
+        label: "환산가액적용가산세 (§114조의2)",
+        formula: `${penaltyBase.toLocaleString()} × 5% (${penaltyNote ?? ""})`,
+        amount: penaltyTax,
+        legalBasis: TRANSFER.BUILDING_PENALTY,
+        sub: true,
+      });
+    }
+    if (penaltyDetail?.filingPenalty && penaltyDetail.filingPenalty.filingPenalty > 0) {
+      steps.push({
+        label: `신고불성실가산세 (${(penaltyDetail.filingPenalty.penaltyRate * 100).toFixed(0)}%)`,
+        formula: `납부세액 ${penaltyDetail.filingPenalty.penaltyBase.toLocaleString()} × ${(penaltyDetail.filingPenalty.penaltyRate * 100).toFixed(0)}%`,
+        amount: penaltyDetail.filingPenalty.filingPenalty,
+        legalBasis: penaltyDetail.filingPenalty.legalBasis,
+        sub: true,
+      });
+    }
+    if (penaltyDetail?.delayedPaymentPenalty && penaltyDetail.delayedPaymentPenalty.delayedPaymentPenalty > 0) {
+      const d = penaltyDetail.delayedPaymentPenalty;
+      steps.push({
+        label: `납부지연가산세 (${d.elapsedDays}일 × ${(d.dailyRate * 100).toFixed(3)}%)`,
+        formula: `미납세액 ${d.unpaidTax.toLocaleString()} × ${d.elapsedDays}일 × ${(d.dailyRate * 100).toFixed(3)}%`,
+        amount: d.delayedPaymentPenalty,
+        legalBasis: "국세기본법 §47의4",
+        sub: true,
+      });
+    }
+    steps.push({
+      label: "총결정세액",
+      formula: `결정세액 ${determinedTax.toLocaleString()} + 가산세 합계 ${totalAllPenalty.toLocaleString()}`,
+      amount: determinedTax + totalAllPenalty,
+      legalBasis: TRANSFER.FINAL_TAX,
+    });
+  }
+
+  return { penaltyDetail, filingDelayedPenalty, totalAllPenalty };
 }

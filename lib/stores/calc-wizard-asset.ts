@@ -171,8 +171,11 @@ export interface PriorReductionUsageItem {
 export interface AssetForm {
   assetId: string;
   assetLabel: string;
-  /** 자산 종류 — 5종 (API 전달 시 right_to_move_in/presale_right → housing 으로 변환) */
-  assetKind: "housing" | "land" | "building" | "right_to_move_in" | "presale_right";
+  /**
+   * 자산 종류 — 6종 (API 전달 시 right_to_move_in/presale_right → housing 으로 변환,
+   * commercial_building → "building" + commercialBuildingValuation 서브객체로 분리 전달)
+   */
+  assetKind: "housing" | "land" | "building" | "right_to_move_in" | "presale_right" | "commercial_building";
   /** 입주권 승계조합원 여부 (assetKind === "right_to_move_in" 일 때만 의미) */
   isSuccessorRightToMoveIn: boolean;
   /** 세대 Step(Step3/4)의 1세대1주택 비과세·다주택 중과 판정 기준 대표 자산 여부 */
@@ -325,6 +328,18 @@ export interface AssetForm {
    * "progressive":        누진세율 강제 (기본세율)
    */
   manualHoldingPeriodOverride: "shortTermHousing70" | "shortTerm60" | "progressive" | undefined;
+
+  // ── 토지 자산 성격 (사례 28 — landNature 명시 입력 정책) ──
+  /**
+   * 토지 자산의 성격 (assetKind === "land" 전용).
+   * - "appurtenant": 부수토지 — 주택·건물에 딸린 토지 (§89①3가 비과세 대상)
+   * - "standalone":  독립 나대지 — 주택·건물과 무관한 순수 토지
+   * undefined: 미선택 (일괄양도 land+housing 조합 시 validate에서 차단)
+   *
+   * 이 필드는 엔진이 appurtenantLandRateMode(폼-수준) 대신 자산-수준에서 일체과세 판단을 위해 사용.
+   * 단독 토지 양도 시에는 엔진에 전달되지만 "standalone"이면 일체과세 분기를 타지 않음.
+   */
+  landNature: "appurtenant" | "standalone" | undefined;
   /** 이월과세(증여) 서브객체 — acquisitionCause === "carryover_gift" 시만 사용 (§97조의2) */
   carryover?: CarryoverTaxationForm;
   /** 본인 취득일 (YYYY-MM-DD) */
@@ -628,6 +643,65 @@ export interface AssetForm {
     /** B 시나리오: 현 양도 당시 기준시가 P_transfer (원, 문자열) */
     standardPriceAtTransferForPhrp?: string;
   };
+
+  // ── 상업용건물·오피스텔 환산취득가 (사례 29, 소득세법 시행령 §164⑧, §176조의2②2호) ──
+  /**
+   * 상업용건물·오피스텔 호별고시 시점 분기.
+   * - "pre_disclosure": 호별고시 전 취득(~2004.12) → 건물기준시가 3시점 + 역환산 필요
+   * - "post_disclosure": 호별고시 후 취득(2005.1~) → 호별고시가만으로 환산 가능
+   * commercial_building + useEstimatedAcquisition=true 시만 의미 있음.
+   */
+  cbEra: "pre_disclosure" | "post_disclosure" | "";
+  /** 전용면적 (㎡) */
+  cbExclusiveArea: string;
+  /** 공유면적 (㎡) */
+  cbSharedArea: string;
+  /** 대지면적 (㎡) */
+  cbLandArea: string;
+  /**
+   * 호별 ㎡당 고시가 — 양도시 (원/㎡).
+   * 국세청 기준시가 조회 시 "㎡당 가액" 입력.
+   * 호별고시 전/후 취득 공통 사용.
+   */
+  cbUnitPriceAtTransfer: string;
+  /**
+   * 호별 ㎡당 고시가 — 최초고시(2005) 또는 취득시 (원/㎡).
+   * cbEra === "pre_disclosure": 최초고시(2005) 시점 가액.
+   * cbEra === "post_disclosure": 취득시 호별고시가.
+   */
+  cbUnitPriceAtFirstOrAcq: string;
+  /**
+   * 건물 기준시가 — 취득시 (원, 총액). cbEra === "pre_disclosure" 시만 필수.
+   * 소득세법 시행령 §164①: 국세청 고시 건물기준시가.
+   * 사용자(외부)에서 ㎡당 단가 × 연면적(전유+공용 보정계수 반영)을 미리 곱한 총액 입력.
+   */
+  cbBuildingStdPriceAtAcq: string;
+  /**
+   * 건물 기준시가 — 최초고시시(2005) (원, 총액). cbEra === "pre_disclosure" 시만 필수.
+   */
+  cbBuildingStdPriceAtFirst: string;
+  /**
+   * 건물 기준시가 — 양도시 (원, 총액).
+   * cbEra === "pre_disclosure": 필수 (역환산 분모의 건물 성분).
+   * cbEra === "post_disclosure": 불필요 (호별고시가가 건물+토지 통합).
+   */
+  cbBuildingStdPriceAtTransfer: string;
+  /**
+   * 개별공시지가 — 취득시 (원/㎡). LandPriceLookupField로 입력.
+   * cbEra === "pre_disclosure": 필수. 취득시 ㎡당기준시가합의 토지 성분.
+   * cbEra === "post_disclosure": 취득시 기준시가 산정용.
+   */
+  cbLandPricePerSqmAtAcq: string;
+  /**
+   * 개별공시지가 — 최초고시시(2005) (원/㎡). LandPriceLookupField로 입력.
+   * cbEra === "pre_disclosure" 시만 필수.
+   */
+  cbLandPricePerSqmAtFirst: string;
+  /**
+   * 개별공시지가 — 양도시 (원/㎡). LandPriceLookupField로 입력.
+   * cbEra === "pre_disclosure" / "post_disclosure" 공통 필수.
+   */
+  cbLandPricePerSqmAtTransfer: string;
 
   // ── 검용주택 분리계산 (sodt §160①단서, 2022.1.1 이후) ──
   /** 검용주택 여부 토글 */

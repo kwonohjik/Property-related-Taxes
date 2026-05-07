@@ -100,14 +100,9 @@ export interface TransferFormData {
    */
   priorReductionUsage: PriorReductionUsageItem[];
 
-  /**
-   * 폼-수준 부수토지 일체과세 세율 결정 모드 (일괄양도 + land+housing 조합 시 활성화).
-   * - "auto": 엔진이 §89·영§154⑦ 조건 검증 후 자동 적용 (기본값)
-   * - "unified_short_term_housing": 모든 토지 자산에 70% 강제 (사례 28 PDF 정답 방식)
-   * - "individual": 일체과세 무시, 각 자산 본래 보유기간 세율 적용
-   * - "progressive": 모든 토지 자산에 누진세율 강제 (예외적 케이스)
-   */
-  appurtenantLandRateMode: "auto" | "unified_short_term_housing" | "individual" | "progressive";
+  // appurtenantLandRateMode 필드 제거 (사례 28 landNature 명시 입력 정책으로 대체, 2026-05-07)
+  // 자산-수준 landNature("appurtenant"|"standalone")가 폼-수준 모드 결정을 대체.
+  // 엔진이 자산-수준 landNature를 읽어 자동 분기 — 사용자 수동 모드 선택 불필요.
 
   // ── Step 5 (가산세) ──
   enablePenalty: boolean;
@@ -157,7 +152,6 @@ const defaultFormData: TransferFormData = {
   sellingHouseRegion: "capital",
   annualBasicDeductionUsed: "0",
   priorReductionUsage: [],
-  appurtenantLandRateMode: "auto",
   enablePenalty: false,
   filingType: "correct",
   penaltyReason: "normal",
