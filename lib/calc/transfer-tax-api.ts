@@ -548,6 +548,7 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     // ── 일괄양도 (assets 2건 이상) ──
     ...(form.assets.length > 1
       ? {
+          appurtenantLandRateMode: form.appurtenantLandRateMode !== "auto" ? form.appurtenantLandRateMode : undefined,
           totalSalePrice: parseAmount(form.contractTotalPrice),
           standardPriceAtTransferForApportion:
             parseAmount(primary.standardPriceAtTransfer) > 0
@@ -750,6 +751,26 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
       const rhPayload = toRentalHousingExceptionApi(primary);
       return rhPayload ? { rentalHousingException: rhPayload } : {};
     })()),
+    // ④⑬ 사례 28 + G-5 — 신축(자가건축) 취득일 4-시점 + 부수토지 한도 산정 (영 §162①4호, 영 §154⑦)
+    // acquisitionCause === "newConstruction" 시 4-시점 날짜 전송.
+    // buildingFootprintArea / isUrbanArea는 신축 여부와 무관하게 값이 있으면 전송.
+    ...(primary.acquisitionCause === "newConstruction"
+      ? {
+          occupancyApprovalDate: primary.occupancyApprovalDate || undefined,
+          approvalCertificateDate: primary.approvalCertificateDate || undefined,
+          temporaryApprovalDate: primary.temporaryApprovalDate || undefined,
+          actualUseDate: primary.actualUseDate || undefined,
+        }
+      : {}),
+    ...(parseFloat(primary.buildingFootprintArea) > 0
+      ? { buildingFootprintArea: parseFloat(primary.buildingFootprintArea) }
+      : {}),
+    ...(primary.isUrbanArea !== undefined
+      ? { isUrbanArea: primary.isUrbanArea }
+      : {}),
+    ...(primary.appurtenantLandZone !== undefined
+      ? { appurtenantLandZone: primary.appurtenantLandZone }
+      : {}),
   };
 
   const res = await fetch("/api/calc/transfer", {

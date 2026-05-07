@@ -764,6 +764,7 @@ export function calculateTransferTax(
     surchargeType: taxResult.surchargeType,
     surchargeRate: taxResult.surchargeRate,
     isSurchargeSuspended: taxResult.surchargeSuspended,
+    shortTermNote: taxResult.shortTermNote,
     reductionAmount,
     reductionType,
     reductionTypeApplied,

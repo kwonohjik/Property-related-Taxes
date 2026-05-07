@@ -12,6 +12,45 @@ import { SectionHeader } from "@/components/calc/shared/SectionHeader";
 import { CompanionAssetsSection } from "@/components/calc/transfer/CompanionAssetsSection";
 import { BundledSaleModeToggle } from "@/components/calc/transfer/CompanionSaleModeBlock";
 import { getFilingDeadline, isFilingOverdue } from "@/lib/calc/filing-deadline";
+import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import type { RadioCardOption } from "@/components/calc/inputs/RadioCardGroup";
+
+/** 부수토지 일체과세 세율 결정 방식 옵션 */
+const APPURTENANT_LAND_RATE_OPTIONS: RadioCardOption<TransferFormData["appurtenantLandRateMode"]>[] = [
+  {
+    value: "auto",
+    label: "자동 (법령 우선 판단)",
+    description:
+      "엔진이 §89·영§154⑦ 조건(보유기간·1세대1주택 요건)을 검증하여 부수토지 일체과세를 자동 판단합니다. 잘 모르겠으면 이 옵션을 그대로 두세요.",
+  },
+  {
+    value: "unified_short_term_housing",
+    label: "토지·주택 일괄 70% 적용",
+    description:
+      "부수토지 일체과세 명시 적용. 주택과 토지를 동일 세율(70%, 보유 1년 미만 단기)로 과세합니다. 사례 28처럼 계약서에 일체로 양도한 경우에 사용하세요.",
+  },
+  {
+    value: "individual",
+    label: "자산별 본래 세율",
+    description:
+      "일체과세 미적용. 토지는 본래 보유기간 기준 §104① 세율로 독립 과세합니다. 자산별 보유기간이 명확히 다를 때 사용하세요.",
+  },
+  {
+    value: "progressive",
+    label: "누진세율 강제",
+    description:
+      "단기보유 특례 세율 무시. 토지에 소득세법 §55 일반 누진세율을 강제 적용합니다. 예외적 케이스에서만 사용하세요.",
+  },
+];
+
+/**
+ * 일괄양도 assets 배열에서 land + housing 조합이 있는지 확인.
+ * 부수토지 일체과세 모드 위젯 표시 조건.
+ */
+function hasLandAndHousingCombination(assets: AssetForm[]): boolean {
+  const kinds = new Set(assets.map((a) => a.assetKind));
+  return kinds.has("land") && (kinds.has("housing") || kinds.has("right_to_move_in") || kinds.has("presale_right"));
+}
 
 // ============================================================
 // Step 1: 자산 목록
@@ -187,6 +226,26 @@ export function Step1({
           <p className="mt-2 text-xs text-muted-foreground px-1">
             ※ 소득세법 시행령 §166⑥: 구분 기재된 경우 계약서 가액 기준, 불분명한 경우 기준시가 비율 안분
           </p>
+        )}
+
+        {/* 부수토지 일체과세 세율 결정 방식 — 일괄양도 + land + housing 조합 시만 표시 */}
+        {hasBundledAssets && hasLandAndHousingCombination(form.assets) && (
+          <div className="mt-4 rounded-lg border border-amber-200/70 bg-amber-50/70 p-3 space-y-2">
+            <div className="space-y-0.5">
+              <p className="text-sm font-semibold text-amber-900">토지 세율 결정 방식</p>
+              <p className="text-xs text-muted-foreground">
+                주택과 토지(부수토지)를 함께 양도할 때 토지 세율 결정 방식. 잘 모르겠으면 &apos;자동&apos;을 그대로 두세요.
+              </p>
+            </div>
+            <RadioCardGroup
+              name="appurtenantLandRateMode"
+              options={APPURTENANT_LAND_RATE_OPTIONS}
+              value={form.appurtenantLandRateMode ?? "auto"}
+              onChange={(v) => onChange({ appurtenantLandRateMode: v })}
+              tone="amber"
+              layout="stack"
+            />
+          </div>
         )}
       </section>
     </div>

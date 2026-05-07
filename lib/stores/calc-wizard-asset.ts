@@ -271,8 +271,60 @@ export interface AssetForm {
    * 공유 지분율 분모 (기본 100). 100/100 = 단독 소유.
    */
   ownershipDenominator: string;
-  /** 취득 원인 — purchase=매매, inheritance=상속, gift=증여, carryover_gift=이월과세(증여) */
-  acquisitionCause: "purchase" | "inheritance" | "gift" | "carryover_gift";
+  /** 취득 원인 — purchase=매매, inheritance=상속, gift=증여, carryover_gift=이월과세(증여), newConstruction=신축(자가건축) */
+  acquisitionCause: "purchase" | "inheritance" | "gift" | "carryover_gift" | "newConstruction";
+
+  // ── 신축(자가건축) 취득일 4-시점 (영 §162①4호) ──
+  /**
+   * 사용승인일 (YYYY-MM-DD) — 영 §162①4호 취득일 기준.
+   * 신축주택의 취득일은 사용승인일·사용검사필증 교부일·임시사용승인일·사실상 사용일 중 가장 이른 날.
+   * acquisitionCause === "newConstruction" 시 필수 (또는 4시점 중 최소 1개).
+   */
+  occupancyApprovalDate: string;
+  /**
+   * 사용검사필증 교부일 (YYYY-MM-DD) — 도시계획법·건축법 용어 차이로 별도 입력.
+   * 영 §162①4호: 실무상 사용승인일과 동일하거나 별도 시점일 수 있음. 입력 시 4시점 비교에 포함.
+   */
+  approvalCertificateDate: string;
+  /**
+   * 임시사용승인일 (YYYY-MM-DD) — 사용승인일보다 이른 경우에만 입력.
+   * 영 §162①4호: 임시사용승인일이 사용승인일보다 이르면 임시사용승인일을 취득일로 봄.
+   */
+  temporaryApprovalDate: string;
+  /**
+   * 사실상 사용일 (YYYY-MM-DD) — 사용승인 전 실제 입주·사용한 경우.
+   * 영 §162①4호: 사실상 사용일이 가장 이른 날이면 이 날을 취득일로 봄.
+   */
+  actualUseDate: string;
+
+  // ── 부수토지 한도 산정 (영 §154⑦, 2022년 개정 후 3단계) ──
+  /**
+   * @deprecated isUrbanArea 단일 boolean은 영 §154⑦ 3단계(3/5/10배) 표현 못함.
+   * 신규 입력은 appurtenantLandZone 사용. 하위호환 위해 유지.
+   */
+  isUrbanArea: boolean | undefined;
+  /**
+   * 부수토지 인정 한도 zone (영 §154⑦):
+   * - "metropolitan_residential": 수도권 도시지역 + 주거·상업·공업 → 3배
+   * - "non_metropolitan_or_green": 수도권 녹지 또는 수도권 외 도시지역 → 5배
+   * - "non_urban": 도시지역 외 → 10배
+   * undefined: 미선택 (자동 분기 시 가장 보수적 3배 적용)
+   */
+  appurtenantLandZone:
+    | "metropolitan_residential"
+    | "non_metropolitan_or_green"
+    | "non_urban"
+    | undefined;
+
+  // ── companion 토지 세율 수동 오버라이드 ──
+  /**
+   * 부수토지 세율 수동 오버라이드.
+   * undefined: 자동 분기 (엔진이 조건 판단)
+   * "shortTermHousing70": 70% 강제 (주택 단기 세율)
+   * "shortTerm60":        60% 강제 (1~2년 단기 세율)
+   * "progressive":        누진세율 강제 (기본세율)
+   */
+  manualHoldingPeriodOverride: "shortTermHousing70" | "shortTerm60" | "progressive" | undefined;
   /** 이월과세(증여) 서브객체 — acquisitionCause === "carryover_gift" 시만 사용 (§97조의2) */
   carryover?: CarryoverTaxationForm;
   /** 본인 취득일 (YYYY-MM-DD) */

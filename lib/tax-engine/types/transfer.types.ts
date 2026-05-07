@@ -126,7 +126,12 @@ export interface TransferTaxInput {
    * "carryover_gift" = 소득세법 §97조의2 이월과세 대상 증여 (배우자·직계존비속).
    * 기존 "gift"는 이월과세 미적용 단순 증여 취득 — 하위 호환 유지.
    */
-  acquisitionCause?: "purchase" | "inheritance" | "gift" | "carryover_gift";
+  /**
+   * 취득 원인. "newConstruction" = 자가건축 주택 (소득세법 시행령 §162①4호).
+   * 신축 케이스에서 사용승인일 등 영 §162①4호 기준 취득일 안내 + 부수토지 일체과세 UI 트리거.
+   * 엔진 분기는 buildingFootprintArea + holdingMonths 조건으로 판정 (acquisitionCause 단독 판정 금지).
+   */
+  acquisitionCause?: "purchase" | "inheritance" | "gift" | "carryover_gift" | "newConstruction";
   /**
    * 상속 시 피상속인 취득일 — 단기보유 단일세율 판정 보유기간 통산용.
    * 소득세법 §95④: 상속받은 자산은 피상속인이 그 자산을 취득한 날을 자산의 취득일로 본다.
@@ -325,11 +330,64 @@ export interface TransferTaxInput {
    */
   selfOwns?: "both" | "building_only" | "land_only";
   /**
+   * 건물 정착면적 (㎡) — 부수토지 한도 산정용 (소득세법 시행령 §154⑦).
+   * 나대지 취득 후 주택 신축·일괄양도 케이스에서 companion 토지의 부수토지 인정 한도를
+   * 계산할 때 사용. undefined이면 부수토지 일체과세 자동 분기 비활성화.
+   * 검용주택(`isMixedUseHouse=true`)에서도 동일 필드를 재사용한다.
+   */
+  buildingFootprintArea?: number;
+  /**
+   * @deprecated 영 §154⑦의 3단계(3/5/10배)를 boolean으로 표현 못함.
+   * 신규 코드는 appurtenantLandZone 사용.
+   */
+  isUrbanArea?: boolean;
+  /**
+   * 부수토지 인정 한도 zone (영 §154⑦).
+   * - "metropolitan_residential": 수도권 도시지역 + 주거·상업·공업 → 3배
+   * - "non_metropolitan_or_green": 수도권 녹지 또는 수도권 외 도시지역 → 5배
+   * - "non_urban": 도시지역 외 → 10배
+   * buildingFootprintArea가 있을 때만 유효.
+   */
+  appurtenantLandZone?: "metropolitan_residential" | "non_metropolitan_or_green" | "non_urban";
+  /**
    * 장기임대주택 보유자 거주주택 비과세 특례 입력 (소령 §155⑳).
    * applyException=true 시 임대주택을 주택수에서 제외하여 1세대1주택 비과세 적용.
    * 시나리오 B(PHRP)는 §161① 기준시가 안분으로 직전거주주택 양도일 이후분만 비과세.
    */
   rentalHousingException?: import("../transfer-tax/rental-housing-exception/types").RentalHousingExceptionInput;
+
+  // ── 부수토지 일체과세 — companion 전용 필드 (사례 28, 영 §154⑦) ──
+  /**
+   * companion 토지 세율 수동 오버라이드 (부수토지 일체과세 자동 분기 무시).
+   * 미지정(undefined) 시 엔진이 buildingFootprintArea + holdingMonths로 자동 판단.
+   *
+   * - "shortTermHousing70": 주택 단기보유 70% 강제 (§104①3호 단서)
+   * - "shortTerm60":        1년~2년 토지 세율 40% 강제 (§104①3호) — enum명 유지
+   * - "progressive":        일반 누진세율 강제
+   *
+   * 법령 근거: §89①3호 / 영 §154⑦ / §104①후단
+   */
+  manualHoldingPeriodOverride?: "shortTermHousing70" | "shortTerm60" | "progressive";
+
+  /**
+   * 이 자산을 companion으로 취급하는 primary 자산의 컨텍스트 (부수토지 일체과세용).
+   * aggregate 엔진에서 companionEngine 조립 시 route.ts가 주입.
+   * 미제공 시 부수토지 일체과세 자동 분기 비활성화.
+   */
+  primaryContextForCompanionRate?: {
+    /** primary 자산 종류 */
+    propertyType: TransferTaxInput["propertyType"];
+    /** primary 보유기간 (월, 취득일~양도일 사전 계산) */
+    holdingMonths: number;
+    /** primary 건물 정착면적 (㎡) */
+    buildingFootprintArea?: number;
+    /** @deprecated isUrbanArea 단일 boolean. appurtenantLandZone 사용 권장 */
+    isUrbanArea?: boolean;
+    /** 부수토지 인정 한도 zone (영 §154⑦) */
+    appurtenantLandZone?: "metropolitan_residential" | "non_metropolitan_or_green" | "non_urban";
+    /** 일괄양도 모드 */
+    bundledSaleMode?: "actual" | "apportioned";
+  };
 }
 
 export type TransferReduction =
@@ -547,6 +605,12 @@ export interface TransferTaxResult {
   rentalHousingExceptionDetail?: import("../transfer-tax/rental-housing-exception/types").RentalHousingExceptionResult;
   /** Phase 2: 조특법 §99의3 신축주택 과세특례 상세. type==="new_99_3" 시. UI 5년 안분·부호·농특세 산식. */
   new993Detail?: import("../transfer-reductions/new-99-3").New993Result;
+  /**
+   * 세율 적용 주석 — 부수토지 일체과세(§89①3호·영§154⑦) 등 특수 세율 분기 시 한국어 주석.
+   * 신고서 양식 표의 세율 행 아래에 표시. 일반 누진세율 케이스는 undefined.
+   * 예: "부수토지 일체과세(§89①3호·영§154⑦): 70%"
+   */
+  shortTermNote?: string;
 }
 
 // ============================================================

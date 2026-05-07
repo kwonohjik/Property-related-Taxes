@@ -13,9 +13,24 @@ import type {
   MixedUseCommercialPart,
 } from "@/lib/tax-engine/types/transfer-mixed-use.types";
 import type { SplitPartResult } from "@/lib/tax-engine/types/transfer.types";
+import type {
+  AggregateTransferResult,
+  PerPropertyBreakdown,
+} from "@/lib/tax-engine/types/transfer-aggregate.types";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 
 // ── Props ──────────────────────────────────────────────────────
+
+/**
+ * 다자산 합산(aggregate) 모드 메타 — 사례 27 등 묶음매매·합산신고에서 사용.
+ * 자산별 컬럼 + 합계 컬럼으로 단건과 동일한 32행 신고서 양식 표 렌더.
+ */
+export interface AggregateMeta {
+  properties: PerPropertyBreakdown[];
+  aggregated: AggregateTransferResult;
+  /** propertyId → 지분율 매핑 (헤더 "지분 X%" 배지) */
+  ownershipMap?: Map<string, { numerator: number; denominator: number }>;
+}
 
 export interface FilingFormTableProps {
   result: TransferTaxResult;
@@ -25,6 +40,11 @@ export interface FilingFormTableProps {
   asset?: AssetForm;
   /** 단건 모드 자산 가액 (formData.contractTotalPrice 우선) */
   transferPriceOverride?: number;
+  /**
+   * 다자산 합산 모드 — 본 prop이 존재하면 단건/분리 detail보다 우선해
+   * `aggregate` 모드 컬럼(합계 + 자산별)으로 32행 표 렌더.
+   */
+  aggregate?: AggregateMeta;
   /** 헤더 우측 출력 버튼 핸들러 */
   onPrint?: () => void;
   /**
@@ -65,14 +85,39 @@ export interface RowDef {
   highlight?: boolean;
   /** 구분선 (섹션 구분) */
   separatorAfter?: boolean;
+  /**
+   * 열별 주석 — 특수 세율 분기(부수토지 일체과세 등) 시 세율 근거를 산출세액 행 셀 아래에 표시.
+   * 예: { "primary": "주택·부수토지 일체과세 / §89·영§154⑦ / 재산-53/1354" }
+   */
+  notes?: Record<ColumnKey, string>;
 }
 
 // ── 분할 모드 판정 ─────────────────────────────────────────────
 
-export function deriveColumns(result: TransferTaxResult): {
+export function deriveColumns(
+  result: TransferTaxResult,
+  aggregate?: AggregateMeta,
+): {
   columns: Column[];
-  mode: "fourpart" | "mixed-2col" | "split-2col" | "single";
+  mode: "fourpart" | "mixed-2col" | "split-2col" | "single" | "aggregate";
 } {
+  // 다자산 합산 모드 우선 — 사례 27 등 묶음·합산 신고
+  if (aggregate && aggregate.properties.length > 0) {
+    const aggCols: Column[] = [{ key: "total", label: "합계" }];
+    for (const p of aggregate.properties) {
+      const own = aggregate.ownershipMap?.get(p.propertyId);
+      let label = p.propertyLabel;
+      if (own && own.numerator > 0 && own.denominator > 0 && own.numerator < own.denominator) {
+        const pct = ((own.numerator / own.denominator) * 100)
+          .toFixed(2)
+          .replace(/\.?0+$/, "");
+        label = `${p.propertyLabel} (지분 ${pct}%)`;
+      }
+      aggCols.push({ key: p.propertyId, label });
+    }
+    return { mode: "aggregate", columns: aggCols };
+  }
+
   const mu = result.mixedUseDetail;
   const sp = result.splitDetail;
 
@@ -116,7 +161,7 @@ export function deriveColumns(result: TransferTaxResult): {
 
 // ── 날짜·기간 포맷 헬퍼 ────────────────────────────────────────
 
-function holdingMonthsFromDates(acq?: string, transfer?: string): number {
+export function holdingMonthsFromDates(acq?: string, transfer?: string): number {
   if (!acq || !transfer) return 0;
   const a = new Date(acq);
   const t = new Date(transfer);
@@ -126,19 +171,19 @@ function holdingMonthsFromDates(acq?: string, transfer?: string): number {
   return Math.max(0, m);
 }
 
-function fmtDate(s?: string): string {
+export function fmtDate(s?: string): string {
   if (!s) return "-";
   return s;
 }
 
-function fmtPeriod(months?: number): string {
+export function fmtPeriod(months?: number): string {
   if (!months || months <= 0) return "-";
   const y = Math.floor(months / 12);
   const m = months % 12;
   return `${y}년 ${m}월`;
 }
 
-function holdingPeriodFromDates(acq?: string, transfer?: string): string {
+export function holdingPeriodFromDates(acq?: string, transfer?: string): string {
   if (!acq || !transfer) return "-";
   const a = new Date(acq);
   const t = new Date(transfer);
@@ -156,7 +201,7 @@ function holdingPeriodFromDates(acq?: string, transfer?: string): string {
  * 장기보유특별공제 보유/거주 분할 계산.
  * 소득세법 §95② 별표 — 보유기간분 공제율 : 거주기간분 공제율 비율로 안분.
  */
-function splitLtDeduction(
+export function splitLtDeduction(
   totalAmount: number,
   holdingMonths: number,
   residenceMonths: number,
@@ -283,15 +328,23 @@ export function splitTwoColFinancials(
 
 // ── 행 정의 생성 ───────────────────────────────────────────────
 
+import { buildAggregateRows } from "./FilingFormTableAggregateHelpers";
+
 export function buildRows(
   result: TransferTaxResult,
-  mode: "fourpart" | "mixed-2col" | "split-2col" | "single",
+  mode: "fourpart" | "mixed-2col" | "split-2col" | "single" | "aggregate",
   formData?: TransferFormData,
   asset?: AssetForm,
   transferPriceOverride?: number,
   acquisitionDateLabel?: string,
   acquisitionDateOverride?: string,
+  aggregate?: AggregateMeta,
 ): RowDef[] {
+  // 다자산 합산 모드 — 별도 빌더 위임. 합계 열은 aggregated, 자산 열은 properties[]로 채움.
+  if (mode === "aggregate" && aggregate) {
+    return buildAggregateRows(result, aggregate, formData, acquisitionDateLabel);
+  }
+
   const primary = asset ?? formData?.assets[0];
   const transferDate = formData?.transferDate ?? "";
   const acquisitionDate =
@@ -546,6 +599,10 @@ export function buildRows(
   setNum("localReduction", "total", 0);
   setNum("localDeterminedTax", "total", result.localIncomeTax);
 
+  // 단건 — shortTermNote 산출세액 행 주석 (부수토지 일체과세 등 특수 세율)
+  const singleTaxNotes: Record<ColumnKey, string> | undefined =
+    result.shortTermNote ? { total: result.shortTermNote } : undefined;
+
   const acqDateRowLabel = acquisitionDateLabel
     ? `취득일자 ${acquisitionDateLabel}`
     : "취득일자";
@@ -573,7 +630,7 @@ export function buildRows(
     ["priorIncomeAmount", "기신고 양도소득금액"],
     ["basicDeduction", "기본공제", { separatorAfter: true }],
     ["taxBase", "과세표준", { highlight: true }],
-    ["calculatedTax", "산출세액"],
+    ["calculatedTax", "산출세액", singleTaxNotes ? { notes: singleTaxNotes } : undefined],
     ["reductionTax", "감면세액"],
     ["determinedTax", "결정세액", { highlight: true }],
     ["penaltyTax", "가산세액"],

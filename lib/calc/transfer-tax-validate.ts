@@ -319,6 +319,38 @@ function validateAssetAcquisition(asset: AssetForm, label: string): string | nul
     return null;
   }
 
+  // ── 신축(자가건축) 케이스 전용 검증 (사례 28, 영 §162①4호) ──
+  if (asset.acquisitionCause === "newConstruction") {
+    // 4시점 중 최소 1개 필수 (영 §162①4호 취득일 기준)
+    // G-5: 사용검사필증 교부일(approvalCertificateDate) 추가로 4시점 중 하나면 충족
+    const hasAnyDate =
+      !!asset.occupancyApprovalDate ||
+      !!asset.approvalCertificateDate ||
+      !!asset.temporaryApprovalDate ||
+      !!asset.actualUseDate;
+    if (!hasAnyDate) {
+      return `${label}: 신축 주택의 사용승인일을 입력하세요. (소득세법 시행령 §162①4호 — 사용승인일·사용검사필증 교부일·임시사용승인일·사실상 사용일 중 하나 이상 필수)`;
+    }
+    // 취득가액(신축비용) 필수
+    if (!asset.fixedAcquisitionPrice || parseAmount(asset.fixedAcquisitionPrice) <= 0) {
+      return `${label}: 신축 비용(취득가액)을 입력하세요.`;
+    }
+    // acquisitionDate는 4시점 중 가장 이른 날이 자동으로 폼에 동기화되므로 별도 검증 불필요.
+    // (CompanionAssetCard 신축 분기에서 4시점 onChange 시점에 acquisitionDate를 자동 patch)
+    // manualHoldingPeriodOverride 유효값 검증 (undefined이면 자동 분기 — 허용)
+    const validOverrides = ["shortTermHousing70", "shortTerm60", "progressive"];
+    if (
+      asset.manualHoldingPeriodOverride !== undefined &&
+      !validOverrides.includes(asset.manualHoldingPeriodOverride)
+    ) {
+      return `${label}: 토지 세율 수동 지정 값이 유효하지 않습니다.`;
+    }
+    // 신축 + companion 토지가 있고 1년 미만 보유 예상 시 건물 정착면적 필수 (부수토지 한도 산정)
+    // 여기서는 보유기간 계산이 어렵고 면적은 있으면 더 좋으므로 강제 차단 대신 경고 수준만 유지.
+    // 실제 엔진 분기에서 buildingFootprintArea가 없으면 자동 분기가 비활성됨.
+    return null;
+  }
+
   if (!asset.acquisitionDate) return `${label}: 취득일을 입력하세요.`;
 
   const isAppraisal = asset.isAppraisalAcquisition === true;

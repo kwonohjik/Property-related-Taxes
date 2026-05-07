@@ -21,6 +21,7 @@ export function FilingFormTable({
   formData,
   asset,
   transferPriceOverride,
+  aggregate,
   onPrint,
   acquisitionDateLabel,
   acquisitionDateOverride,
@@ -28,8 +29,17 @@ export function FilingFormTable({
   subtitle = "양도소득세 신고서 항목별 자산-분할 계산 내역",
   adopted,
 }: FilingFormTableProps) {
-  const { columns, mode } = deriveColumns(result);
-  const rows = buildRows(result, mode, formData, asset, transferPriceOverride, acquisitionDateLabel, acquisitionDateOverride);
+  const { columns, mode } = deriveColumns(result, aggregate);
+  const rows = buildRows(
+    result,
+    mode,
+    formData,
+    asset,
+    transferPriceOverride,
+    acquisitionDateLabel,
+    acquisitionDateOverride,
+    aggregate,
+  );
 
   return (
     <div
@@ -135,17 +145,26 @@ export function FilingFormTable({
                   >
                     {row.label}
                   </td>
-                  {columns.map((c) => (
-                    <td
-                      key={c.key}
-                      className={cn(
-                        "px-3 py-1.5 text-right border-r border-slate-200 font-mono whitespace-nowrap",
-                        c.key === "total" && "bg-slate-50/60 dark:bg-slate-800/40",
-                      )}
-                    >
-                      {fmtCell(row.values[c.key])}
-                    </td>
-                  ))}
+                  {columns.map((c) => {
+                    const note = row.notes?.[c.key];
+                    return (
+                      <td
+                        key={c.key}
+                        className={cn(
+                          "px-3 py-1.5 text-right border-r border-slate-200 font-mono whitespace-nowrap",
+                          c.key === "total" && "bg-slate-50/60 dark:bg-slate-800/40",
+                          note && "align-top",
+                        )}
+                      >
+                        {fmtCell(row.values[c.key])}
+                        {note && (
+                          <div className="text-[10px] font-sans font-normal text-slate-500 leading-tight mt-0.5 whitespace-normal text-right">
+                            {note}
+                          </div>
+                        )}
+                      </td>
+                    );
+                  })}
                 </tr>
               ))}
             </tbody>

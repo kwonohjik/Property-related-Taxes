@@ -20,8 +20,13 @@ import {
   type BundledAssetInput,
 } from "@/lib/tax-engine/bundled-sale-apportionment";
 import { calculateInheritanceAcquisitionPrice } from "@/lib/tax-engine/inheritance-acquisition-price";
-import { calculateEstimatedAcquisitionPrice } from "@/lib/tax-engine/tax-utils";
+import { calculateEstimatedAcquisitionPrice, calculateHoldingPeriod } from "@/lib/tax-engine/tax-utils";
 import { calcMixedUseTransferTax } from "@/lib/tax-engine/transfer-tax-mixed-use";
+import {
+  resolveHousingContextFromCompanion,
+  resolveUserModeOverride,
+  buildCompanionEngineInputs,
+} from "./bundled-split-helpers";
 import { TaxCalculationError, TaxErrorCode } from "@/lib/tax-engine/tax-errors";
 import { checkRateLimit, getClientIp } from "@/lib/api/rate-limit";
 import {
@@ -377,6 +382,12 @@ export async function POST(request: NextRequest) {
           standardPriceAtTransfer: data.rentalHousingException.standardPriceAtTransferForPhrp,
         }
       : undefined,
+    // ⑭ 사례 28 — 부수토지 한도 산정 (영 §154⑦)
+    // occupancyApprovalDate / temporaryApprovalDate / actualUseDate 는 UI 레이어에서
+    // 가장 이른 날을 acquisitionDate로 변환하므로 engineInput에는 전달 불필요.
+    buildingFootprintArea: data.buildingFootprintArea,
+    isUrbanArea: data.isUrbanArea,
+    appurtenantLandZone: data.appurtenantLandZone,
   };
 
   // 단계 4: 세율 로드
@@ -540,86 +551,88 @@ export async function POST(request: NextRequest) {
       });
 
       // (5) TransferTaxItemInput[] 조립 — 주 자산은 engineInput 파생, 컴패니언은 기본값 + override
-      const items: TransferTaxItemInput[] = apportionment.apportioned.map((a, idx) => {
+      // G-2: companion이 한도 초과 split 대상이면 flatMap으로 두 자산([appurtenant, excess])을 생성.
+      //      split 조건: newConstruction + land + areaM2 있음 + excessArea > 0 + 수동 오버라이드 없음
+      const primaryHp = calculateHoldingPeriod(acquisitionDate, transferDate);
+
+      // 사례 28 자동 분기 양방향 확장 + 폼-수준 사용자 모드 (헬퍼)
+      const housingCtxFromCompanion =
+        engineInput.propertyType !== "housing"
+          ? resolveHousingContextFromCompanion(
+              companions,
+              transferDate,
+              data.buildingFootprintArea,
+              data.isUrbanArea,
+              data.bundledSaleMode,
+              data.appurtenantLandZone,
+            )
+          : undefined;
+
+      const primaryCtxForSplit =
+        engineInput.buildingFootprintArea !== undefined ||
+        engineInput.manualHoldingPeriodOverride !== undefined
+          ? {
+              propertyType: engineInput.propertyType,
+              holdingMonths: primaryHp.years * 12 + primaryHp.months,
+              buildingFootprintArea: engineInput.buildingFootprintArea,
+              isUrbanArea: engineInput.isUrbanArea,
+              appurtenantLandZone: engineInput.appurtenantLandZone,
+              bundledSaleMode: data.bundledSaleMode,
+            }
+          : housingCtxFromCompanion;
+
+      const userModeOverride = resolveUserModeOverride(data.appurtenantLandRateMode);
+
+      // 사례 28 — primary가 land이고 housingCtx/userMode가 있으면 primary 자체에도 주입 (양방향 자동 분기)
+      if (engineInput.propertyType === "land") {
+        if (housingCtxFromCompanion && !engineInput.primaryContextForCompanionRate) {
+          engineInput.primaryContextForCompanionRate = {
+            propertyType: housingCtxFromCompanion.propertyType,
+            holdingMonths: housingCtxFromCompanion.holdingMonths,
+            buildingFootprintArea: housingCtxFromCompanion.buildingFootprintArea,
+            isUrbanArea: housingCtxFromCompanion.isUrbanArea,
+            appurtenantLandZone: housingCtxFromCompanion.appurtenantLandZone,
+            bundledSaleMode: housingCtxFromCompanion.bundledSaleMode,
+          };
+        }
+        if (userModeOverride && !engineInput.manualHoldingPeriodOverride) {
+          engineInput.manualHoldingPeriodOverride = userModeOverride;
+        }
+      }
+
+      const items: TransferTaxItemInput[] = apportionment.apportioned.flatMap((a, idx) => {
         if (a.assetId === "primary") {
           // 주 자산: engineInput을 복제 + 안분 결과로 양도·취득·필요경비 덮어쓰기
           // 지분 모드: data.totalPropertyTransferPrice는 engineInput에서 이미 상속됨 (...engineInput).
-          return {
+          return [{
             ...engineInput,
             transferPrice: a.allocatedSalePrice,
             acquisitionPrice: a.allocatedAcquisitionPrice,
             expenses: a.allocatedExpenses,
             propertyId: "primary",
             propertyLabel: a.assetLabel,
-          } satisfies TransferTaxItemInput;
+          } satisfies TransferTaxItemInput];
         }
-        // 컴패니언 자산: propertyType·기본 플래그는 companion에서, 공통은 주 자산에서 상속
-        const c = companions[idx - 1]; // primary가 첫 번째
-        const companionAcqPrice =
-          adjustedAcq.get(c.assetId)?.price ?? a.allocatedAcquisitionPrice;
-        // 자산별 취득일: 상속/증여는 acquisitionDate(상속개시일/증여일), 매매는 acquisitionDate
-        // 없으면 주 자산 날짜로 fallback
-        const companionAcqDate = c.acquisitionDate
-          ? new Date(c.acquisitionDate)
-          : acquisitionDate;
-        const companionDecedent =
-          c.acquisitionCause === "inheritance" && c.decedentAcquisitionDate
-            ? new Date(c.decedentAcquisitionDate)
-            : undefined;
-        const companionDonor =
-          c.acquisitionCause === "gift" && c.donorAcquisitionDate
-            ? new Date(c.donorAcquisitionDate)
-            : undefined;
-        const companionEngine: TransferTaxItemInput = {
-          propertyType:
-            c.assetKind === "housing"
-              ? "housing"
-              : c.assetKind === "building"
-                ? "building"
-                : "land",
-          transferPrice: a.allocatedSalePrice,
-          /** 지분 모드: 12억 안분 분모용 총 물건 양도가액 (자산별 ratio < 1.0 시) */
-          totalPropertyTransferPrice: c.totalPropertyTransferPrice,
+        // 컴패니언 자산 빌드 + 한도 초과 split — bundled-split-helpers.ts로 추출
+        const c = companions[idx - 1];
+        return buildCompanionEngineInputs(c, a, {
+          primaryCtxForSplit,
+          userModeOverride,
+          primaryAcquisitionDate: acquisitionDate,
           transferDate,
-          acquisitionPrice: companionAcqPrice,
-          acquisitionDate: companionAcqDate,
-          // Round 9 (2026-05-06): 자산-수준 매매계약일 string → Date 변환
-          assetContractDate: c.assetContractDate ? new Date(c.assetContractDate) : undefined,
-          expenses: a.allocatedExpenses,
-          // §97② 단서 swap 분리 입력 — companion 자산-수준 자본적 지출·양도비
-          // (기존에 누락되어 자산 2의 capex/transferExpense가 엔진에 도달하지 못함 — 2026-05-07 수정)
-          capitalExpenditure: c.capitalExpenditure,
-          transferExpense: c.transferExpense,
-          useEstimatedAcquisition:
-            c.acquisitionCause === "purchase" && (c.useEstimatedAcquisition ?? false),
-          standardPriceAtAcquisition: c.standardPriceAtAcquisition,
-          standardPriceAtTransfer: c.standardPriceAtTransfer,
-          householdHousingCount: engineInput.householdHousingCount,
-          residencePeriodMonths: c.residencePeriodMonths ?? 0,
-          isRegulatedArea: engineInput.isRegulatedArea,
-          wasRegulatedAtAcquisition: engineInput.wasRegulatedAtAcquisition,
-          isUnregistered: c.isUnregistered ?? false,
-          isNonBusinessLand: c.isNonBusinessLand ?? false,
-          isOneHousehold: c.isOneHousehold ?? false,
-          acquisitionCause: c.acquisitionCause,
-          decedentAcquisitionDate: companionDecedent,
-          donorAcquisitionDate: companionDonor,
-          reductions: c.reductions.map((r): TransferReduction => {
-            if (r.type === "public_expropriation") {
-              return { ...r, businessApprovalDate: new Date(r.businessApprovalDate) };
-            }
-            if (r.type === "self_farming") {
-              return {
-                ...r,
-                incorporationDate: r.incorporationDate ? new Date(r.incorporationDate) : undefined,
-              };
-            }
-            return r;
-          }),
-          propertyId: c.assetId,
-          propertyLabel: c.assetLabel,
-        };
-        return companionEngine;
+          primaryAcquisitionCause: data.acquisitionCause,
+          primaryEngineInput: {
+            householdHousingCount: engineInput.householdHousingCount,
+            isRegulatedArea: engineInput.isRegulatedArea,
+            wasRegulatedAtAcquisition: engineInput.wasRegulatedAtAcquisition,
+            propertyType: engineInput.propertyType,
+            buildingFootprintArea: engineInput.buildingFootprintArea,
+            isUrbanArea: engineInput.isUrbanArea,
+            appurtenantLandZone: engineInput.appurtenantLandZone,
+          },
+          bundledSaleMode: data.bundledSaleMode,
+          adjustedAcqPrice: adjustedAcq.get(c.assetId)?.price,
+        });
       });
 
       // (6) 다건 엔진 호출

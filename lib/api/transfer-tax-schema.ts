@@ -81,7 +81,11 @@ const propertyBaseShape = {
   acquisitionDate: z.string().date(),
   // Round 9 (2026-05-06): 자산-수준 매매계약일 (§99·§99의3·§98 시리즈·§97의2·§97의5·§99의2 시한 판정용)
   assetContractDate: z.string().date().optional(),
-  acquisitionCause: z.enum(["purchase", "inheritance", "gift", "carryover_gift"]).optional(),
+  /**
+   * 취득 원인. "newConstruction" = 자가건축 주택 (영 §162①4호 — 사용승인일 등 기준 취득일).
+   * UI에서 사용승인일 helper-text 노출 트리거로도 사용.
+   */
+  acquisitionCause: z.enum(["purchase", "inheritance", "gift", "carryover_gift", "newConstruction"]).optional(),
   decedentAcquisitionDate: z.string().date().optional(),
   donorAcquisitionDate: z.string().date().optional(),
   expenses: z.number().int().nonnegative(),
@@ -144,9 +148,61 @@ const propertyBaseShape = {
   /** 취득 면적 (㎡) — 토지 기준시가 = standardPricePerSqmAtAcquisition × acquisitionArea */
   acquisitionArea: z.number().positive().optional(),
 
+  // ─── 사례 28 — 신축주택 취득일 3-시점 + 부수토지 한도 산정 (영 §162①4호, 영 §154⑦) ────────────────
+  /**
+   * 사용승인일 (YYYY-MM-DD) — 영 §162①4호 자가건축 주택 취득일 기준.
+   * acquisitionCause === "newConstruction" 시 사용.
+   * ⑫ TypeScript 미감지 — 미정의 시 침묵 stripping 발생하므로 명시적 선언 필수.
+   */
+  occupancyApprovalDate: z.string().date().optional(),
+  /**
+   * 사용검사필증 교부일 (YYYY-MM-DD) — 도시계획법·건축법 용어 차이로 별도 입력 (영 §162①4호).
+   * 사용승인일과 동일하면 미입력. 별도 시점인 경우만 입력. G-5 추가.
+   * ⑫ TypeScript 미감지 — 미정의 시 침묵 stripping 발생하므로 명시적 선언 필수.
+   */
+  approvalCertificateDate: z.string().date().optional(),
+  /**
+   * 임시사용승인일 (YYYY-MM-DD) — 사용승인일보다 이른 경우에만 입력 (영 §162①4호).
+   */
+  temporaryApprovalDate: z.string().date().optional(),
+  /**
+   * 사실상 사용일 (YYYY-MM-DD) — 사용승인 전 실제 입주·사용일 (영 §162①4호).
+   */
+  actualUseDate: z.string().date().optional(),
+  /**
+   * 건물 정착면적 (㎡) — 부수토지 인정 한도 산정용 (영 §154⑦).
+   * 도시지역: × 5배, 도시지역 외: × 10배.
+   * ⑫ TypeScript 미감지 — 미정의 시 침묵 stripping 발생하므로 명시적 선언 필수.
+   */
+  buildingFootprintArea: z.number().positive().optional(),
+  /**
+   * 도시지역 여부 — 부수토지 배율 결정 (영 §154⑦).
+   * true: 도시지역(5배 한도), false: 도시지역 외(10배 한도).
+   */
+  isUrbanArea: z.boolean().optional(),
+  /**
+   * ⑨⑫ 사례 28 — 부수토지 인정 한도 zone (영 §154⑦, 2022년 개정 후)
+   * - "metropolitan_residential": 수도권 도시지역 주거·상업·공업 → 3배
+   * - "non_metropolitan_or_green": 수도권 녹지 또는 수도권 외 도시지역 → 5배
+   * - "non_urban": 도시지역 외 → 10배
+   */
+  appurtenantLandZone: z
+    .enum(["metropolitan_residential", "non_metropolitan_or_green", "non_urban"])
+    .optional(),
+
   // ─── 일괄양도 안분 (소득세법 시행령 §166 ⑥) ────────────────
   /** 함께 양도된 자산들 (2개 이상 일괄 양도 시). 없거나 빈 배열이면 단건으로 처리. */
   companionAssets: z.array(companionAssetSchema).max(10).optional(),
+  /**
+   * ⑨ 사례 28 — 부수토지 일체과세 적용 모드 (사용자 명시적 선택).
+   * - "auto": 자동 분기. 엔진이 §89·영§154⑦/§104①후단 조건 검증 후 자동 적용 (기본값).
+   * - "unified_short_term_housing": 모든 land 자산에 70% 강제 (사용자가 일체과세 명시 적용).
+   * - "individual": 자동 분기 무시. 각 자산 본래 보유기간 세율 적용.
+   * - "progressive": 모든 land 자산에 누진세율 강제.
+   */
+  appurtenantLandRateMode: z
+    .enum(["auto", "unified_short_term_housing", "individual", "progressive"])
+    .optional(),
   /** 매매계약 상 총 양도가액 (일괄양도 시 필수). 없으면 transferPrice가 총액으로 간주. */
   totalSalePrice: z.number().int().positive().optional(),
   /** 안분 방식 (v1은 standard_price_transfer만 지원) */
@@ -194,6 +250,7 @@ const propertyBaseShape = {
    * "building_only"/"land_only" 사용 시 landAcquisitionDate 필수.
    */
   selfOwns: z.enum(["both", "building_only", "land_only"]).optional(),
+  // buildingFootprintArea / isUrbanArea 는 위 사례 28 블록(신축주택·부수토지)에 선언됨 — 중복 금지
   /** ⑫ 장기임대주택 거주주택 비과세 특례 (소령 §155⑳) — 미정의 시 침묵 stripping 방지 */
   rentalHousingException: rentalHousingExceptionSchema.optional(),
 };

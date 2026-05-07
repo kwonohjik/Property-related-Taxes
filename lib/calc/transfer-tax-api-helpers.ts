@@ -228,8 +228,25 @@ export function buildAssetPayload(
   const fixedAcqRaw =
     (asset.acquisitionCause === "purchase" && !asset.useEstimatedAcquisition && asset.fixedAcquisitionPrice) ||
     (asset.acquisitionCause === "gift" && asset.fixedAcquisitionPrice) ||
-    (asset.acquisitionCause === "inheritance" && asset.inheritanceValuationMode === "manual" && asset.fixedAcquisitionPrice)
+    (asset.acquisitionCause === "inheritance" && asset.inheritanceValuationMode === "manual" && asset.fixedAcquisitionPrice) ||
+    // 사례 28 — 신축(자가건축): fixedAcquisitionPrice = 신축비용(취득가액)
+    (asset.acquisitionCause === "newConstruction" && asset.fixedAcquisitionPrice)
       ? parseAmount(asset.fixedAcquisitionPrice)
+      : undefined;
+
+  // 사례 28 — 신축(자가건축): 4시점 중 가장 빠른 날을 acquisitionDate로 자동 도출 (영 §162①4호).
+  // UI 측 onChange 자동 동기화의 fallback (페이지 reload 후 마운트 시 이미 입력된 데이터에 대비).
+  const newConstructionAcqDate =
+    asset.acquisitionCause === "newConstruction"
+      ? (() => {
+          const dates = [
+            asset.occupancyApprovalDate,
+            asset.approvalCertificateDate,
+            asset.temporaryApprovalDate,
+            asset.actualUseDate,
+          ].filter((d): d is string => !!d && d.length === 10);
+          return dates.length > 0 ? dates.sort()[0] : undefined;
+        })()
       : undefined;
   const fixedAcquisitionPrice = fixedAcqRaw !== undefined && fractional
     ? applyRatio(fixedAcqRaw, ratio)
@@ -282,7 +299,7 @@ export function buildAssetPayload(
     acquisitionCause: asset.acquisitionCause,
     useEstimatedAcquisition:
       asset.acquisitionCause === "purchase" ? asset.useEstimatedAcquisition : undefined,
-    acquisitionDate: asset.acquisitionDate || undefined,
+    acquisitionDate: asset.acquisitionDate || newConstructionAcqDate || undefined,
     // Round 9 (2026-05-06): 자산-수준 매매계약일 (§99의3 등 13개 매매계약일 기준 조문)
     assetContractDate: asset.assetContractDate || undefined,
     decedentAcquisitionDate:
@@ -305,5 +322,23 @@ export function buildAssetPayload(
         ...cp.topLevelOverrides,
       };
     })(),
+    // ⑬ 사례 28 — companion 토지 세율 수동 오버라이드 (부수토지 일체과세 §89·영§154⑦)
+    // undefined이면 엔진 자동 분기. 빈 문자열·null은 undefined로 정규화.
+    manualHoldingPeriodOverride: asset.manualHoldingPeriodOverride ?? undefined,
+    // ⑬ 사례 28 — companion 신축주택 정착면적·도시지역·4시점 (자동 분기용)
+    // primary가 land이고 companion이 housing인 케이스에서 부수토지 한도 산정.
+    ...(asset.acquisitionCause === "newConstruction"
+      ? {
+          buildingFootprintArea: asset.buildingFootprintArea
+            ? parseFloat(asset.buildingFootprintArea)
+            : undefined,
+          isUrbanArea: asset.isUrbanArea,
+          appurtenantLandZone: asset.appurtenantLandZone,
+          occupancyApprovalDate: asset.occupancyApprovalDate || undefined,
+          approvalCertificateDate: asset.approvalCertificateDate || undefined,
+          temporaryApprovalDate: asset.temporaryApprovalDate || undefined,
+          actualUseDate: asset.actualUseDate || undefined,
+        }
+      : {}),
   };
 }

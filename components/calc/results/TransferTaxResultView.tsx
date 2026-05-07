@@ -354,6 +354,15 @@ export function TransferTaxResultView({
                 label={`산출세액 (${formatRate(result.appliedRate)}${result.surchargeRate ? ` + 중과 ${formatRate(result.surchargeRate)}` : ""})`}
                 value={formatKRW(result.calculatedTax)}
               />
+              {result.shortTermNote && (
+                <tr>
+                  <td colSpan={2} className="pb-1 pt-0">
+                    <div className="mx-4 rounded-sm bg-slate-50 dark:bg-slate-800/50 px-2 py-1 text-[11px] text-slate-500 dark:text-slate-400">
+                      {result.shortTermNote}
+                    </div>
+                  </td>
+                </tr>
+              )}
               {result.reductionAmount > 0 && (
                 <Row label={`감면 (${result.reductionType ?? ""})`} value={`- ${formatKRW(result.reductionAmount)}`} />
               )}

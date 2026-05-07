@@ -422,6 +422,7 @@ export function calculateTransferTaxAggregate(
       filingDelayedPenaltyTax: r.result.isExempt ? 0 : r.result.penaltyDetail?.totalPenalty ?? 0,
       penaltyDetail: r.result.penaltyDetail,
       steps: r.result.steps,
+      shortTermNote: r.result.shortTermNote,
     };
   });
 

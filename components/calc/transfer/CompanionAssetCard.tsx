@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import type { AssetForm, ParcelFormItem } from "@/lib/stores/calc-wizard-store";
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
@@ -8,8 +9,11 @@ import { cn } from "@/lib/utils";
 import { AddressSearch, type AddressValue } from "@/components/ui/address-search";
 import { ParcelListInput } from "@/components/calc/inputs/ParcelListInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { CompanionSaleModeBlock, type BundledSaleMode } from "./CompanionSaleModeBlock";
 import { CompanionAcqPurchaseBlock } from "./CompanionAcqPurchaseBlock";
+import { CompanionAcqNewConstructionBlock } from "./CompanionAcqNewConstructionBlock";
+import { computeEarliestDate } from "./NewConstructionDateBlock";
 import { CompanionAcqInheritanceBlock } from "./CompanionAcqInheritanceBlock";
 import { CompanionAcqGiftBlock } from "./CompanionAcqGiftBlock";
 import { CarryoverGiftBlock } from "./CarryoverGiftBlock";
@@ -19,6 +23,12 @@ import { OwnershipRatioInput, isFractionalMode } from "./OwnershipRatioInput";
 import { MixedUseToggleRow, MixedUseExpandedPanel } from "./MixedUseSection";
 import { RentalHousingExceptionSection } from "./RentalHousingExceptionSection";
 import { RENTAL_HOUSING_EXCEPTION_DEFAULTS } from "@/lib/stores/calc-wizard-asset-factory";
+import { NewConstructionDateBlock } from "./NewConstructionDateBlock";
+import {
+  useUnifiedRateBadge,
+  CompanionLandRateOverrideToggle,
+  NewConstructionPrimarySection,
+} from "./CompanionAssetCardNewConstruction";
 
 const ASSET_KIND_LABELS: Record<string, string> = {
   housing: "주택",
@@ -41,6 +51,7 @@ const ACQUISITION_CAUSE_OPTIONS = [
   { value: "inheritance", label: "상속" },
   { value: "gift", label: "증여" },
   { value: "carryover_gift", label: "이월과세(증여)" },
+  { value: "newConstruction", label: "신축(자가건축)" },
 ] as const;
 
 interface Props {
@@ -60,6 +71,12 @@ interface Props {
   contractTotalPrice?: string;
   /** 폼-수준 총 양도비 — 자산별 자동 안분 표시용 */
   totalTransferExpense?: string;
+  /**
+   * 사례 28 — 주된 자산 정보 (부수토지 일체과세 자동 분기 배지 표시용).
+   * companion 토지 카드에서 primary의 신축 여부·건물 정착면적·도시지역 여부를 읽어
+   * 일체과세 조건 충족 여부를 판정. useEffect → store 미러링 금지 — useMemo로 처리.
+   */
+  primaryAsset?: AssetForm;
 }
 
 export function CompanionAssetCard({
@@ -73,10 +90,17 @@ export function CompanionAssetCard({
   onAddAsset,
   contractTotalPrice,
   totalTransferExpense,
+  primaryAsset,
 }: Props) {
   const isMultiBundled = !singleMode && bundledSaleMode !== undefined;
   const isPrimary = asset.isPrimaryForHouseholdFlags;
   const kindLabel = ASSET_KIND_LABELS[asset.assetKind] ?? asset.assetKind;
+
+  // ── 신축주택 케이스 판정 (사례 28) ──
+  const isNewConstruction = asset.acquisitionCause === "newConstruction";
+
+  // ── 부수토지 일체과세 자동 분기 배지 판정 (별도 훅 — useEffect 금지) ──
+  const showUnifiedBadge = useUnifiedRateBadge(asset, primaryAsset, transferDate);
 
   return (
     <div className={cn(
@@ -84,7 +108,7 @@ export function CompanionAssetCard({
       isPrimary ? "bg-background border-primary/30" : "bg-muted/30",
     )}>
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <span className="font-medium text-sm">
             자산 {index + 1} — {kindLabel}
           </span>
@@ -96,6 +120,12 @@ export function CompanionAssetCard({
           {bundledSaleMode === "actual" && (
             <span className="inline-flex rounded bg-amber-100 px-2 py-0.5 text-[10px] text-amber-700">
               계약서 가액
+            </span>
+          )}
+          {/* 부수토지 일체과세 자동 적용 배지 (companion 토지 카드) */}
+          {showUnifiedBadge && (
+            <span className="inline-flex rounded bg-amber-100 border border-amber-300 px-2 py-0.5 text-[10px] text-amber-800">
+              주택·부수토지 일체과세 자동 적용 중 (§89·영 §154⑦, 재산-53·재산-1354)
             </span>
           )}
         </div>
@@ -403,6 +433,54 @@ export function CompanionAssetCard({
           ))}
         </div>
 
+        {/* 신축(자가건축) — 사용승인일 4-시점 입력 블록 (영 §162①4호, G-5)
+            4시점 중 하나가 변경될 때마다 가장 이른 날을 acquisitionDate로 자동 동기화
+            (cross-field 동기화는 onChange 패턴 — useEffect 금지 정책 준수) */}
+        {isNewConstruction && (
+          <NewConstructionDateBlock
+            occupancyApprovalDate={asset.occupancyApprovalDate ?? ""}
+            onOccupancyApprovalDateChange={(v) =>
+              onChange({
+                occupancyApprovalDate: v,
+                acquisitionDate:
+                  computeEarliestDate(v, asset.approvalCertificateDate ?? "", asset.temporaryApprovalDate ?? "", asset.actualUseDate ?? "") ?? "",
+              })
+            }
+            approvalCertificateDate={asset.approvalCertificateDate ?? ""}
+            onApprovalCertificateDateChange={(v) =>
+              onChange({
+                approvalCertificateDate: v,
+                acquisitionDate:
+                  computeEarliestDate(asset.occupancyApprovalDate ?? "", v, asset.temporaryApprovalDate ?? "", asset.actualUseDate ?? "") ?? "",
+              })
+            }
+            temporaryApprovalDate={asset.temporaryApprovalDate ?? ""}
+            onTemporaryApprovalDateChange={(v) =>
+              onChange({
+                temporaryApprovalDate: v,
+                acquisitionDate:
+                  computeEarliestDate(asset.occupancyApprovalDate ?? "", asset.approvalCertificateDate ?? "", v, asset.actualUseDate ?? "") ?? "",
+              })
+            }
+            actualUseDate={asset.actualUseDate ?? ""}
+            onActualUseDateChange={(v) =>
+              onChange({
+                actualUseDate: v,
+                acquisitionDate:
+                  computeEarliestDate(asset.occupancyApprovalDate ?? "", asset.approvalCertificateDate ?? "", asset.temporaryApprovalDate ?? "", v) ?? "",
+              })
+            }
+          />
+        )}
+
+        {/* 신축(자가건축) — 신축비용(취득가액) 입력 블록 */}
+        {isNewConstruction && (
+          <CompanionAcqNewConstructionBlock
+            fixedAcquisitionPrice={asset.fixedAcquisitionPrice}
+            onFixedAcquisitionPriceChange={(v) => onChange({ fixedAcquisitionPrice: v })}
+          />
+        )}
+
         {asset.acquisitionCause === "purchase" && (
           <CompanionAcqPurchaseBlock
             acquisitionDate={asset.acquisitionDate}
@@ -544,6 +622,26 @@ export function CompanionAssetCard({
           />
         )}
       </div>
+
+      {/* 신축주택 — 부수토지 한도 산정 섹션 (영 §154⑦)
+          주 자산이 신축(자가건축)인 경우 건물 정착면적 + 도시지역 여부 입력.
+          companion 토지 면적 정보는 자산 자신의 acquisitionArea에서 읽음. */}
+      {isNewConstruction && asset.assetKind === "housing" && (
+        <NewConstructionPrimarySection
+          asset={asset}
+          onChange={onChange}
+        />
+      )}
+
+      {/* companion 토지 — 수동 세율 오버라이드 토글 (부수토지 일체과세 §89·영§154⑦)
+          자동 분기 배지가 표시된 케이스(신축 + 1년 미만 + 부수토지 인정)에서만 노출.
+          또는 일반적으로 토지 companion이면 항상 노출하되 자동 분기 없을 때는 설명 다름. */}
+      {asset.assetKind === "land" && !isPrimary && (
+        <CompanionLandRateOverrideToggle
+          asset={asset}
+          onChange={onChange}
+        />
+      )}
 
       {/* 다필지 토글 (토지 전용) */}
       {asset.assetKind === "land" && (

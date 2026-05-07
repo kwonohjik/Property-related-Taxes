@@ -65,6 +65,7 @@ export function CompanionAssetsSection({ assets, bundledSaleMode, onChange, sing
           contractTotalPrice={contractTotalPrice}
           totalTransferExpense={totalTransferExpense}
           onAddAsset={(patch) => addAsset(patch)}
+          primaryAsset={idx > 0 ? assets[0] : undefined}
         />
       ))}
 

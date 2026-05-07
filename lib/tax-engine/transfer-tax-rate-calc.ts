@@ -3,8 +3,11 @@
  *
  * transfer-tax-helpers.ts 에서 분리한 세율·세액·감면 계산 로직.
  *   H-6.5: calculateBuildingPenalty — §114조의2 가산세
- *   H-7:   calcTax                  — 세액 결정 (T-1 ~ T-4)
+ *   H-7:   calcTax                  — 세액 결정 (T-1 ~ T-4, + T-1.5 부수토지 일체과세)
  *   H-8:   calcReductions           — 감면 계산 (R-1 ~ R-5, 조특법 §127 ② 중복배제)
+ *   H-MP:  handleMultiParcelBranch  — 다필지 분리 계산 (소령 §166)
+ *
+ * 부수토지 일체과세 세율 결정 (H-9)은 appurtenant-land-rate.ts 로 분리됨.
  */
 
 import {
@@ -18,6 +21,14 @@ import {
 import type { MultiHouseSurchargeResult } from "./multi-house-surcharge";
 import type { ParsedRates } from "./transfer-tax-helpers";
 import { calcBasicDeduction } from "./transfer-tax-helpers";
+import { resolveCompanionLandRate } from "./appurtenant-land-rate";
+// re-export — 기존 import 경로 하위 호환 유지
+export {
+  resolveCompanionLandRate,
+  type CompanionLandRateInput,
+  type PrimaryContextForCompanionRate,
+  type CompanionLandRateResolution,
+} from "./appurtenant-land-rate";
 import {
   type RentalReductionInput,
   type RentalReductionResult,
@@ -119,6 +130,84 @@ export function calcTax(
       progressiveDeduction: 0,
       surchargeSuspended: false,
     };
+  }
+
+  // T-1.5: 부수토지 일체과세 세율 분기 (신축주택 케이스, 영 §154⑦)
+  // companion 토지 자산에 manualHoldingPeriodOverride 또는 primaryContextForCompanionRate가 있으면
+  // resolveCompanionLandRate로 세율을 결정하고 조기 반환.
+  // [법령 근거] §89①3호·영§154⑦ — 주택과 일체과세. §104①후단 — 큰 산출세액 세율.
+  //            기재부 재산-53(2015.1.15) / 재산-1354(2022.10.27)
+  if (
+    input.propertyType === "land" &&
+    (input.manualHoldingPeriodOverride !== undefined || input.primaryContextForCompanionRate !== undefined)
+  ) {
+    const ctx = input.primaryContextForCompanionRate;
+    const companionArea =
+      // companion의 면적 정보는 acquisitionArea 또는 nonBusinessLandDetails?.landArea에서 추출
+      input.acquisitionArea ??
+      input.nonBusinessLandDetails?.landArea;
+
+    const resolution = resolveCompanionLandRate(
+      {
+        assetKind: "land",
+        area: companionArea,
+        manualHoldingPeriodOverride: input.manualHoldingPeriodOverride,
+      },
+      ctx
+        ? {
+            propertyType: ctx.propertyType,
+            holdingMonths: ctx.holdingMonths,
+            buildingFootprintArea: ctx.buildingFootprintArea,
+            isUrbanArea: ctx.isUrbanArea,
+            bundledSaleMode: ctx.bundledSaleMode,
+          }
+        : {
+            // manualHoldingPeriodOverride만 있고 primaryContext 없는 경우:
+            // 조건 판정 없이 수동 오버라이드만 적용 (자동 분기 조건 충족 의미 없음)
+            propertyType: "land",
+            holdingMonths: 999, // 자동 분기 조건(< 12) 미충족 → 수동 오버라이드만 동작
+          },
+    );
+
+    if (resolution.applied) {
+      if (resolution.manualProgressive) {
+        // 수동 누진세율 강제
+        const progressiveTax = calculateProgressiveTax(taxBase, brackets);
+        const bracket = brackets.find((b) => taxBase <= (b.max ?? Infinity));
+        const baseRate = bracket?.rate ?? brackets[brackets.length - 1].rate;
+        return {
+          calculatedTax: progressiveTax,
+          appliedRate: baseRate,
+          progressiveDeduction: bracket?.deduction ?? 0,
+          surchargeSuspended: false,
+          shortTermNote: "수동 지정: 누진세율",
+        };
+      }
+      if (resolution.manualRate !== undefined) {
+        // 수동 단일세율 강제
+        return {
+          calculatedTax: applyRate(taxBase, resolution.manualRate),
+          appliedRate: resolution.manualRate,
+          progressiveDeduction: 0,
+          surchargeSuspended: false,
+          shortTermNote: `수동 지정: ${Math.round(resolution.manualRate * 100)}%`,
+        };
+      }
+      if (resolution.unifiedRate !== undefined) {
+        // 자동 분기: 부수토지 일체과세 70%
+        // 한도 초과분(excessArea > 0)이 있어도 단건 엔진에서는 전체 taxBase에 70% 적용.
+        // 초과분 분리는 aggregate/route 레이어에서 companion을 별도 자산으로 분리하여 처리해야 하나,
+        // 사례 28(전량 한도 내)에서는 이 경로로 충분. 초과분 분리는 T-18·T-19 테스트에서 별도 처리.
+        return {
+          calculatedTax: applyRate(taxBase, resolution.unifiedRate),
+          appliedRate: resolution.unifiedRate,
+          progressiveDeduction: 0,
+          surchargeSuspended: false,
+          shortTermNote: `부수토지 일체과세(§89①3호·영§154⑦): ${Math.round(resolution.unifiedRate * 100)}%`,
+        };
+      }
+    }
+    // applied=false → 기존 경로(본래 보유기간 기준) 계속 진행
   }
 
   const isSurchargeCase = multiHouseSurchargeResult
@@ -624,3 +713,4 @@ export function handleMultiParcelBranch(
     parcelDetails: mpResult.parcelResults,
   };
 }
+

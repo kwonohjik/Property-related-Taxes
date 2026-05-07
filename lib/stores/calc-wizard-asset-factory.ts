@@ -78,6 +78,16 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     carryover: { ...CARRYOVER_DEFAULTS },
     acquisitionDate: "",
     assetContractDate: "", // Round 9 (2026-05-06): 매매계약일 (감면 시한 판정용)
+    // 신축(자가건축) 취득일 4-시점 (영 §162①4호) — 사례 28 + G-5
+    occupancyApprovalDate: "",
+    approvalCertificateDate: "",
+    temporaryApprovalDate: "",
+    actualUseDate: "",
+    // 부수토지 한도 산정 (영 §154⑦) — 사례 28
+    isUrbanArea: undefined,
+    appurtenantLandZone: undefined,
+    // companion 토지 세율 수동 오버라이드 — 사례 28
+    manualHoldingPeriodOverride: undefined,
     decedentAcquisitionDate: "",
     donorAcquisitionDate: "",
     useEstimatedAcquisition: false,
@@ -308,6 +318,22 @@ export function migrateAsset(raw: unknown): AssetForm {
   migrateMixedUseFields(a);
   // 거주 정보 (자산-수준)
   migrateResidenceFields(a);
+  // ③ 신축(자가건축) 취득일 4-시점 + 부수토지 필드 마이그레이션 (사례 28, 2026-05-07; G-5 4번째 시점)
+  if (a.occupancyApprovalDate === undefined) a.occupancyApprovalDate = "";
+  if (a.approvalCertificateDate === undefined) a.approvalCertificateDate = ""; // G-5: 사용검사필증 교부일
+  if (a.temporaryApprovalDate === undefined) a.temporaryApprovalDate = "";
+  if (a.actualUseDate === undefined) a.actualUseDate = "";
+  if (a.isUrbanArea === undefined) a.isUrbanArea = undefined; // undefined 보존 (자동 분기 비활성 상태)
+  if (a.appurtenantLandZone === undefined) a.appurtenantLandZone = undefined;
+  if (a.manualHoldingPeriodOverride === undefined || a.manualHoldingPeriodOverride === "") {
+    a.manualHoldingPeriodOverride = undefined; // 빈 문자열 → undefined 변환
+  }
+  // acquisitionCause "newConstruction" 추가 — 알 수 없는 값이면 "purchase" fallback
+  const validCauses = ["purchase", "inheritance", "gift", "carryover_gift", "newConstruction"];
+  if (!a.acquisitionCause || !validCauses.includes(a.acquisitionCause as string)) {
+    a.acquisitionCause = "purchase";
+  }
+
   // ③ 장기임대주택 거주주택 비과세 특례 마이그레이션 (sessionStorage 호환)
   if (!a.rentalHousingException || typeof a.rentalHousingException !== "object") {
     a.rentalHousingException = { ...RENTAL_HOUSING_EXCEPTION_DEFAULTS };

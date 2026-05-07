@@ -359,8 +359,11 @@ export const companionAssetSchema = z.object({
    * §166⑥ 본문 — 지정 시 안분 대상 제외, 그대로 allocatedSalePrice로 사용.
    */
   fixedSalePrice: z.number().int().positive().optional(),
-  /** 동반자산 취득 원인 — 기본 "inheritance" (기존 동작 호환) */
-  acquisitionCause: z.enum(["purchase", "inheritance", "gift", "carryover_gift"]).default("inheritance"),
+  /** 동반자산 취득 원인 — 기본 "inheritance" (기존 동작 호환).
+   *  "newConstruction"은 사례 28(나대지 + 신축주택 일괄양도) 신축자가건축 케이스. */
+  acquisitionCause: z
+    .enum(["purchase", "inheritance", "gift", "carryover_gift", "newConstruction"])
+    .default("inheritance"),
   /**
    * 12억 안분 분모용 총 물건 양도가액 — 지분 모드 전용 (단독 소유는 미설정).
    * 동일 물건을 다회 분할 취득(지분 단계취득)한 자산에서 본 자산이 보유한 지분의
@@ -377,6 +380,43 @@ export const companionAssetSchema = z.object({
   decedentAcquisitionDate: z.string().date().optional(),
   /** 증여 시 증여자 취득일 */
   donorAcquisitionDate: z.string().date().optional(),
+  /**
+   * ⑩⑫ 사용자 수동 세율 오버라이드 — 부수토지 일체과세 자동 분기 무시 (신축주택 케이스).
+   * 미지정(undefined) 시 엔진 자동 분기 적용.
+   *
+   * - "shortTermHousing70": 주택 단기보유 70% 강제
+   * - "shortTerm60":        1년~2년 토지 세율 (계획서 enum명 유지, UI 라벨은 별도)
+   * - "progressive":        일반 누진세율 강제
+   *
+   * 법령 근거: 소득세법 §89①3호 / 시행령 §154⑦ / §104①후단
+   * (기재부 재산-53(2015.1.15), 재산-1354(2022.10.27))
+   */
+  manualHoldingPeriodOverride: z
+    .enum(["shortTermHousing70", "shortTerm60", "progressive"])
+    .optional(),
+  /**
+   * ⑫ G-2 companion 토지 면적 (㎡) — 부수토지 한도 초과 split 판정용 (영 §154⑦).
+   * 신축주택 케이스에서 한도 내/초과분을 분리하기 위해 전달.
+   * 미입력 시 split 판정 불가 → 전량 부수토지로 취급.
+   */
+  areaM2: z.number().positive().optional(),
+  /**
+   * ⑫ 사례 28 — companion 자산이 신축주택일 때 정착면적(㎡).
+   * 사용자가 주택을 companion(자산 2)으로 입력한 경우 부수토지 자동 분기를 위해 필수.
+   * primary가 land이고 companion 중 housing이 있으면 housingCtxFromCompanion 빌드 시 사용.
+   */
+  buildingFootprintArea: z.number().positive().optional(),
+  /** @deprecated 사례 28 — companion 자산이 신축주택일 때 도시지역 여부 (영 §154⑦) */
+  isUrbanArea: z.boolean().optional(),
+  /** 사례 28 — companion 자산이 신축주택일 때 부수토지 한도 zone (영 §154⑦ 3/5/10배 분기) */
+  appurtenantLandZone: z
+    .enum(["metropolitan_residential", "non_metropolitan_or_green", "non_urban"])
+    .optional(),
+  /** 사례 28 — companion 신축주택 4시점 (가장 빠른 날 → acquisitionDate 자동 도출) */
+  occupancyApprovalDate: z.string().date().optional(),
+  approvalCertificateDate: z.string().date().optional(),
+  temporaryApprovalDate: z.string().date().optional(),
+  actualUseDate: z.string().date().optional(),
 });
 
 // ─── superRefine 공통 검증 ──────────────────────────────────────
@@ -389,7 +429,7 @@ export function addPropertyRefines(
     standardPriceAtTransfer?: number;
     acquisitionDate: string;
     transferDate: string;
-    acquisitionCause?: "purchase" | "inheritance" | "gift" | "carryover_gift";
+    acquisitionCause?: "purchase" | "inheritance" | "gift" | "carryover_gift" | "newConstruction";
     decedentAcquisitionDate?: string;
     donorAcquisitionDate?: string;
     annualBasicDeductionUsed?: number;

@@ -138,6 +138,12 @@ export interface PerPropertyBreakdown {
   penaltyDetail?: TransferTaxPenaltyResult;
   /** 건별 세부 계산 steps (단건 엔진에서 생성) */
   steps: CalculationStep[];
+  /**
+   * 세율 적용 주석 — 부수토지 일체과세(§89①3호·영§154⑦) 등 특수 세율 분기 시 한국어 주석.
+   * 신고서 양식 표의 세율 행 아래에 자산별로 다르게 표시 (한도 내·한도 초과 케이스).
+   * 일반 누진세율 케이스는 undefined.
+   */
+  shortTermNote?: string;
 }
 
 /** 감면 유형별 합산 재계산 내역 (UI 표시용) */
