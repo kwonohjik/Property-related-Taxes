@@ -39,6 +39,37 @@ import {
  *  - landPricePerSqmAtTransfer는 항상 필수 (공통)
  *  - pre_disclosure 전용 필드는 모두 optional (era 조건 분기는 refine에서)
  */
+/**
+ * ⑨⑫ 일반건물(토지+건물 일괄) 환산취득가 계산 입력 스키마
+ *
+ * totalTransferPrice / transferDate / acquisitionDate 3개 필드는 최상위 필드에서 받아
+ * route handler가 서브객체에 주입한다 (Zod 스키마 단순 유지, 침묵 stripping 방지).
+ *
+ * propertyType === "general_building" 시 필수.
+ */
+export const generalBuildingValuationSchema = z.object({
+  /** 토지 부수면적 (㎡) */
+  landArea: z.number().positive(),
+  /** 건물 연면적 (㎡) */
+  buildingArea: z.number().positive(),
+  /** 건물 층수 — 비사업용토지 판정 바닥면적 추정용 */
+  buildingFloors: z.number().int().positive(),
+  /** 양도시 개별공시지가 (원/㎡) */
+  transferLandPricePerSqm: z.number().int().positive(),
+  /** 양도시 건물기준시가 총액 (원) */
+  transferBuildingStdPrice: z.number().int().positive(),
+  /** 취득시 개별공시지가 (원/㎡) */
+  acquisitionLandPricePerSqm: z.number().int().positive(),
+  /** 취득시 건물기준시가 총액 (원) */
+  acquisitionBuildingStdPrice: z.number().int().positive(),
+  /** 개산공제율 (기본 0.03 — ESTIMATED_DEDUCTION_RATE_LAND_BUILDING) */
+  estimatedDeductionRate: z.number().positive().max(1).optional(),
+  /** 비사업용토지 판정 배율 (기본 3 — 도시지역 주거·상업·공업) */
+  floorAreaMultiplier: z.number().positive().optional(),
+});
+
+export type GeneralBuildingValuationSchemaInput = z.infer<typeof generalBuildingValuationSchema>;
+
 export const commercialBuildingValuationSchema = z.object({
   /** 호별고시 전 취득 여부 (true: ~2004.12, false: 2005.1~) */
   isPreDisclosure: z.boolean(),
@@ -113,7 +144,7 @@ export const rentalHousingExceptionSchema = z.object({
 // ─── 단건 기본 필드 객체 (단건·다건 공유) ───────────────────────
 
 const propertyBaseShape = {
-  propertyType: z.enum(["housing", "land", "building", "right_to_move_in", "presale_right", "mixed-use-house", "commercial_building"]),
+  propertyType: z.enum(["housing", "land", "building", "right_to_move_in", "presale_right", "mixed-use-house", "commercial_building", "general_building"]),
   transferPrice: z.number().int().positive(),
   transferDate: z.string().date(),
   acquisitionPrice: z.number().int().nonnegative(),
@@ -302,6 +333,11 @@ const propertyBaseShape = {
    * propertyType === "building" + 환산 모드 시 제공. 미정의 시 침묵 stripping 방지를 위해 명시 필수.
    */
   commercialBuildingValuation: commercialBuildingValuationSchema.optional(),
+  /**
+   * ⑫ 일반건물(토지+건물 일괄) 환산취득가 계산 입력 (소령 §176의2④, §163⑥).
+   * propertyType === "general_building" + 환산 모드 시 제공. 미정의 시 침묵 stripping 방지를 위해 명시 필수.
+   */
+  generalBuildingValuation: generalBuildingValuationSchema.optional(),
 };
 
 // ─── 단건 스키마 (기존 inputSchema와 동일) ─────────────────────

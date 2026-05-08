@@ -20,6 +20,7 @@ import { CarryoverScenarioBFilingCard } from "@/components/calc/results/transfer
 import { PreHousingDisclosureDetailSection } from "@/components/calc/results/transfer/PreHousingDisclosureDetailSection";
 import { RentalHousingExceptionDetailCard } from "@/components/calc/results/transfer/RentalHousingExceptionDetailCard";
 import { CommercialBuildingValuationDetailCard } from "@/components/calc/results/CommercialBuildingValuationDetailCard";
+import { GeneralBuildingValuationDetailCard } from "@/components/calc/results/GeneralBuildingValuationDetailCard";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
@@ -714,6 +715,20 @@ export function TransferTaxResultView({
           taxAmount={result.calculatedTax ?? undefined}
           localTax={result.localIncomeTax ?? undefined}
           totalTax={result.totalTax ?? undefined}
+        />
+      )}
+
+      {/* ⑦ 일반건물(토지+건물 일괄) 환산취득가 산정 근거 상세 (소령 §176의2④, §163⑥, §102②) */}
+      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+      {(result as any).generalBuildingValuationDetail && (
+        <GeneralBuildingValuationDetailCard
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          detail={(result as any).generalBuildingValuationDetail}
+          totalTransferPrice={formData ? (parseAmount(formData.contractTotalPrice) || 0) : 0}
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          holdingYears={(result as any).holdingYears ?? undefined}
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          holdingMonths={(result as any).holdingMonths ?? undefined}
         />
       )}
 

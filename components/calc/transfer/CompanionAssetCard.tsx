@@ -23,6 +23,7 @@ import {
 import { CompanionLandNatureBlock } from "./CompanionLandNatureBlock";
 import { CompanionAcquisitionCauseSection } from "./CompanionAcquisitionCauseSection";
 import { CommercialBuildingBlock } from "./CommercialBuildingBlock";
+import { GeneralBuildingBlock } from "./GeneralBuildingBlock";
 
 const ASSET_KIND_LABELS: Record<string, string> = {
   housing: "주택",
@@ -31,6 +32,7 @@ const ASSET_KIND_LABELS: Record<string, string> = {
   right_to_move_in: "입주권",
   presale_right: "분양권",
   commercial_building: "상업용건물·오피스텔",
+  general_building: "일반건물(토지+건물 일괄)",
 };
 
 const ASSET_KIND_OPTIONS = [
@@ -40,6 +42,7 @@ const ASSET_KIND_OPTIONS = [
   { value: "right_to_move_in", label: "입주권" },
   { value: "presale_right", label: "분양권" },
   { value: "commercial_building", label: "상업용건물·오피스텔", description: "기준시가 공시된 것" },
+  { value: "general_building", label: "일반건물(토지+건물 일괄)", description: "취득가액 확인 불가 시 환산취득가 적용" },
 ] as const;
 
 interface Props {
@@ -152,6 +155,11 @@ export function CompanionAssetCard({
         {asset.assetKind === "commercial_building" && (
           <p className="text-xs text-muted-foreground mt-1">
             ※ 기준시가 공시된 것 — 국세청이 호별 ㎡당 기준시가를 고시한 상업용건물·오피스텔(수도권·5대 광역시 3,000㎡ 이상 또는 100호 이상 구분소유 건물 / 구분소유된 오피스텔)에 한합니다.
+          </p>
+        )}
+        {asset.assetKind === "general_building" && (
+          <p className="text-xs text-muted-foreground mt-1">
+            ※ 토지와 건물을 일괄 양도하는 일반건물 — 근린생활시설·단독건물 등. 취득가액 확인 불가 시 하단 환산취득가 섹션에서 양도·취득 시점 기준시가를 입력하세요.
           </p>
         )}
       </div>
@@ -397,7 +405,7 @@ export function CompanionAssetCard({
       {/* 양도가액 */}
       <CompanionSaleModeBlock
         bundledSaleMode={singleMode ? "actual" : bundledSaleMode}
-        assetKind={asset.assetKind === "commercial_building" ? "building" : asset.assetKind}
+        assetKind={(asset.assetKind === "commercial_building" || asset.assetKind === "general_building") ? "building" : asset.assetKind}
         actualSalePrice={asset.actualSalePrice}
         onActualSalePriceChange={(v) => onChange({ actualSalePrice: v })}
         standardPriceAtTransfer={asset.standardPriceAtTransfer}
@@ -501,6 +509,15 @@ export function CompanionAssetCard({
       {/* 상업용건물·오피스텔 환산취득가 입력 (assetKind === "commercial_building" 시만 표시) */}
       {asset.assetKind === "commercial_building" && (
         <CommercialBuildingBlock
+          asset={asset}
+          onChange={onChange}
+          transferDate={transferDate}
+        />
+      )}
+
+      {/* 일반건물(토지+건물 일괄) 환산취득가 입력 (assetKind === "general_building" 시만 표시) */}
+      {asset.assetKind === "general_building" && (
+        <GeneralBuildingBlock
           asset={asset}
           onChange={onChange}
           transferDate={transferDate}

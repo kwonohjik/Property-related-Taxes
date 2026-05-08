@@ -10,7 +10,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 진행 중: 양도세 감면 23개 조문 확장 — `lib/tax-engine/transfer-reductions/` Phase 1 골격 완료 (§99의3 우선 구현 중). 계획서: `docs/00-pm/transfer-reduction-expansion.plan.md`.
 
-최근 완료(2026-05-08): 상업용건물·오피스텔 환산취득가 사례 29. 신규 `propertyType: "commercial_building"` + `lib/tax-engine/commercial-building-valuation.ts` 모듈 (시행령 §164⑧ 호별고시 전 역환산). 양도연도 §55·§103조의3 정확 세율 적용 (외부 자료 산출값 추종 금지). anchor 37개 통과.
+최근 완료(2026-05-08): 상업용건물·오피스텔 환산취득가 사례 29 + **일반건물 일괄 환산취득가 사례 31**. 신규 `propertyType: "general_building"` + `lib/tax-engine/general-building-valuation.ts` 모듈(382줄, 시행령 §166⑥ 양도가 안분 + §176의2④ 자산별 환산 + §163⑥ 자산별 개산공제 + §102② 1차 통산 위임). 양도시 건물기준시가 잠금값 20,629,440(BigInt 손계산 함정 주의). anchor 38개 toBe 정확 통과(2,233/2,233 회귀 보존).
 
 ## ⚠️ Next.js 16 주의사항
 

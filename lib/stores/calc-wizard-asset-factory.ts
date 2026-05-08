@@ -237,6 +237,15 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     cbLandPricePerSqmAtAcq: "",
     cbLandPricePerSqmAtFirst: "",
     cbLandPricePerSqmAtTransfer: "",
+    // ── 일반건물(토지+건물 일괄) 환산취득가 gb* 필드 (사례 31, 소득세법 시행령 §176의2④, §163⑥) ──
+    gbUseEstimatedAcquisition: false,
+    gbTransferLandPricePerSqm: "",
+    gbTransferBuildingValue: "",
+    gbAcqLandPricePerSqm: "",
+    gbAcqBuildingValue: "",
+    gbLandArea: "",
+    gbBuildingArea: "",
+    gbBuildingFloors: "",
   };
 }
 
@@ -352,8 +361,8 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (!a.acquisitionCause || !validCauses.includes(a.acquisitionCause as string)) {
     a.acquisitionCause = "purchase";
   }
-  // assetKind "commercial_building" 추가 — 알 수 없는 값이면 "building" fallback (③ normalize)
-  const validKinds = ["housing", "land", "building", "right_to_move_in", "presale_right", "commercial_building"];
+  // assetKind "commercial_building"/"general_building" 추가 — 알 수 없는 값이면 "building" fallback (③ normalize)
+  const validKinds = ["housing", "land", "building", "right_to_move_in", "presale_right", "commercial_building", "general_building"];
   if (!a.assetKind || !validKinds.includes(a.assetKind as string)) {
     a.assetKind = "building";
   }
@@ -370,6 +379,15 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (a.cbLandPricePerSqmAtAcq === undefined) a.cbLandPricePerSqmAtAcq = "";
   if (a.cbLandPricePerSqmAtFirst === undefined) a.cbLandPricePerSqmAtFirst = "";
   if (a.cbLandPricePerSqmAtTransfer === undefined) a.cbLandPricePerSqmAtTransfer = "";
+  // ③ 일반건물 gb* 필드 마이그레이션 (sessionStorage 호환 — 신규 필드 누락 보호, 사례 31)
+  if (a.gbUseEstimatedAcquisition === undefined) a.gbUseEstimatedAcquisition = false;
+  if (a.gbTransferLandPricePerSqm === undefined) a.gbTransferLandPricePerSqm = "";
+  if (a.gbTransferBuildingValue === undefined) a.gbTransferBuildingValue = "";
+  if (a.gbAcqLandPricePerSqm === undefined) a.gbAcqLandPricePerSqm = "";
+  if (a.gbAcqBuildingValue === undefined) a.gbAcqBuildingValue = "";
+  if (a.gbLandArea === undefined) a.gbLandArea = "";
+  if (a.gbBuildingArea === undefined) a.gbBuildingArea = "";
+  if (a.gbBuildingFloors === undefined) a.gbBuildingFloors = "";
 
   // ③ 장기임대주택 거주주택 비과세 특례 마이그레이션 (sessionStorage 호환)
   if (!a.rentalHousingException || typeof a.rentalHousingException !== "object") {

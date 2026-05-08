@@ -391,6 +391,16 @@ export async function POST(request: NextRequest) {
     // Date 변환 불필요 — 날짜 필드 없음. Zod 검증 통과 후 그대로 엔진 input에 전달.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ...(data.commercialBuildingValuation ? { commercialBuildingValuation: data.commercialBuildingValuation as any } : {}),
+    // ⑭ 일반건물(토지+건물 일괄) 환산취득가 서브객체 (TypeScript 미감지 영역 — 명시 매핑 필수)
+    // totalTransferPrice/transferDate/acquisitionDate는 route handler에서 최상위 필드 주입 패턴 적용.
+    ...(data.generalBuildingValuation ? {
+      generalBuildingValuation: {
+        ...data.generalBuildingValuation,
+        totalTransferPrice: data.transferPrice,               // 최상위 양도가액 주입
+        transferDate,                                          // 이미 Date 변환됨
+        acquisitionDate,                                       // 이미 Date 변환됨
+      },
+    } : {}),
   };
 
   // 단계 4: 세율 로드

@@ -63,7 +63,7 @@ export type {
 
 export interface TransferTaxInput {
   /** 물건 종류 */
-  propertyType: "housing" | "land" | "building" | "right_to_move_in" | "presale_right" | "mixed-use-house" | "commercial_building";
+  propertyType: "housing" | "land" | "building" | "right_to_move_in" | "presale_right" | "mixed-use-house" | "commercial_building" | "general_building_unit" | "general_building";
   /** 양도가액 (원, 정수) */
   transferPrice: number;
   /**
@@ -648,6 +648,12 @@ export interface TransferTaxResult {
    * 결과 카드 산식 표시·신고서 토지/건물 분리 표 재현에 사용.
    */
   commercialBuildingValuationDetail?: CommercialBuildingValuationResult;
+  /**
+   * 일반건물(토지+건물 일괄) 환산취득가 산정 상세 결과.
+   * propertyType === "general_building" aggregate 경로에서만 포함.
+   * 결과 카드 산식 표시·신고서 토지/건물 분리 표 재현에 사용.
+   */
+  generalBuildingValuationDetail?: import("../general-building-valuation").GeneralBuildingOutput;
 }
 
 // ============================================================

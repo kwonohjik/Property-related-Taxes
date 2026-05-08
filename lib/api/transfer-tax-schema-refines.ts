@@ -33,6 +33,8 @@ export function addPropertyRefines(
     mixedUse?: { preHousingDisclosure?: unknown };
     /** ⑩ 상업용건물·오피스텔 환산취득가 서브객체 — era별 필수 필드 검증 */
     commercialBuildingValuation?: Record<string, unknown> | null;
+    /** ⑩ 일반건물(토지+건물 일괄) 환산취득가 서브객체 — base 스키마 positive() 제약으로 충분 */
+    generalBuildingValuation?: Record<string, unknown> | null;
   },
   ctx: z.RefinementCtx,
 ) {
@@ -42,16 +44,18 @@ export function addPropertyRefines(
     (data.preHousingDisclosure !== undefined && data.preHousingDisclosure !== null) ||
     (data.mixedUse?.preHousingDisclosure !== undefined && data.mixedUse?.preHousingDisclosure !== null);
   const isMixedUseHouse = data.propertyType === "mixed-use-house";
-  // 상업용건물 환산 모드는 commercialBuildingValuation 서브객체로 처리 → 표준 기준시가 검증 우회
+  // 상업용건물/일반건물 환산 모드는 서브객체로 처리 → 표준 기준시가 검증 우회
   const isCommercialBuildingEstimated = !!data.commercialBuildingValuation;
-  if (!isMixedUseHouse && !isCommercialBuildingEstimated && data.useEstimatedAcquisition && !data.standardPriceAtAcquisition && !hasPhd) {
+  const isGeneralBuildingEstimated = !!data.generalBuildingValuation;
+  const isSubObjectEstimated = isCommercialBuildingEstimated || isGeneralBuildingEstimated;
+  if (!isMixedUseHouse && !isSubObjectEstimated && data.useEstimatedAcquisition && !data.standardPriceAtAcquisition && !hasPhd) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["standardPriceAtAcquisition"],
       message: "환산취득가 사용 시 취득시 기준시가 필수",
     });
   }
-  if (!isMixedUseHouse && !isCommercialBuildingEstimated && data.useEstimatedAcquisition && !data.standardPriceAtTransfer && !hasPhd) {
+  if (!isMixedUseHouse && !isSubObjectEstimated && data.useEstimatedAcquisition && !data.standardPriceAtTransfer && !hasPhd) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["standardPriceAtTransfer"],
@@ -182,5 +186,12 @@ export function addPropertyRefines(
         });
       }
     }
+  }
+  // ⑩ 일반건물(토지+건물 일괄) 환산취득가 교차 검증 (base 스키마 positive() 제약으로 충분)
+  if (data.generalBuildingValuation) {
+    const gbv = data.generalBuildingValuation;
+    // 모든 필드는 base 스키마에서 positive()로 정의됨.
+    // 추가 교차 검증: 현재는 base 스키마 충분. 향후 교차 검증 필요 시 여기에 추가.
+    void gbv; // 타입 참조 유지
   }
 }

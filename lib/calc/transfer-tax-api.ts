@@ -13,7 +13,7 @@ import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import type { BundledApportionmentResult } from "@/lib/tax-engine/bundled-sale-apportionment";
 import type { AggregateTransferResult } from "@/lib/tax-engine/transfer-tax-aggregate";
 import type { MixedUseGainBreakdown } from "@/lib/tax-engine/types/transfer-mixed-use.types";
-import { toEngineAssetKind, isHousingLike, toEngineReductions, buildAssetPayload, getOwnershipRatio, applyRatio, toRentalHousingExceptionApi, buildCommercialBuildingValuation } from "./transfer-tax-api-helpers";
+import { toEngineAssetKind, isHousingLike, toEngineReductions, buildAssetPayload, getOwnershipRatio, applyRatio, toRentalHousingExceptionApi, buildCommercialBuildingValuation, buildGeneralBuildingValuation } from "./transfer-tax-api-helpers";
 import { buildCarryoverPayload } from "./transfer-tax-api-carryover";
 
 // 하위 호환 재수출 — 기존 import 경로 유지
@@ -114,6 +114,12 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
   const isCommercialBuilding = primary.assetKind === "commercial_building";
   const cbValuation = isCommercialBuilding && primary.useEstimatedAcquisition
     ? buildCommercialBuildingValuation(primary)
+    : undefined;
+
+  // ⑬ 일반건물(토지+건물 일괄) 환산취득가 서브객체 빌드 (TypeScript 미감지 영역 — grep 자가 점검 완료)
+  const isGeneralBuilding = primary.assetKind === "general_building";
+  const gbValuation = isGeneralBuilding
+    ? buildGeneralBuildingValuation(primary)
     : undefined;
 
   // 검용주택 분리계산 payload 빌드
@@ -258,11 +264,11 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
         : formTotalTransferExpense; // 단독 모드: form-level이 있으면 사용, 없으면 0
 
   const body = {
-    // commercial_building은 그대로 송신 — 엔진 STEP 0.35 진입 조건 충족
-    // 추가로 commercialBuildingValuation 서브객체로 환산취득가 데이터 전달
+    // commercial_building/general_building은 그대로 송신 — 엔진 진입 조건 충족
+    // 추가로 서브객체(commercialBuildingValuation/generalBuildingValuation)로 환산취득가 데이터 전달
     propertyType: isMixed
       ? ("mixed-use-house" as const)
-      : (primary.assetKind as "housing" | "land" | "building" | "right_to_move_in" | "presale_right" | "commercial_building"),
+      : (primary.assetKind as "housing" | "land" | "building" | "right_to_move_in" | "presale_right" | "commercial_building" | "general_building"),
     transferPrice: primaryFractional
       ? applyRatio(totalContractPrice, primaryRatio)
       : totalContractPrice,
@@ -306,8 +312,10 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
         : undefined,
     // 검용주택은 calcMixedUseTransferTax 별도 엔진에서 처리 → 일반 환산 검증 우회 위해 false 송신
     // 상업용건물 환산 모드는 STEP 0.35 진입 조건이 useEstimatedAcquisition === true 이므로 true 송신
+    // 일반건물 환산 모드는 gbUseEstimatedAcquisition 플래그 사용
     useEstimatedAcquisition: hasPre1990 || parcelModeActive || isMixed ? false
       : isCommercialBuilding ? primary.useEstimatedAcquisition
+      : isGeneralBuilding ? primary.gbUseEstimatedAcquisition
       : isCarryoverGeneral ? true
       : isEstimated,
     standardPriceAtAcquisition: hasPre1990 || usesPhd
@@ -531,6 +539,8 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     // ⑬ 상업용건물·오피스텔 환산취득가 서브객체 (TypeScript 미감지 — 명시 spread 필수)
     // cbValuation === undefined 이면 키 자체를 포함하지 않음 (Zod optional 통과)
     ...(cbValuation !== undefined ? { commercialBuildingValuation: cbValuation } : {}),
+    // ⑬ 일반건물 환산취득가 body spread (TypeScript 미감지 영역 — 누락 시 서브객체 미도달)
+    ...(gbValuation !== undefined ? { generalBuildingValuation: gbValuation } : {}),
     // ── 일괄양도 (assets 2건 이상) ──
     ...(form.assets.length > 1
       ? {

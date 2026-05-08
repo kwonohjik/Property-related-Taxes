@@ -175,7 +175,7 @@ export interface AssetForm {
    * 자산 종류 — 6종 (API 전달 시 right_to_move_in/presale_right → housing 으로 변환,
    * commercial_building → "building" + commercialBuildingValuation 서브객체로 분리 전달)
    */
-  assetKind: "housing" | "land" | "building" | "right_to_move_in" | "presale_right" | "commercial_building";
+  assetKind: "housing" | "land" | "building" | "right_to_move_in" | "presale_right" | "commercial_building" | "general_building";
   /** 입주권 승계조합원 여부 (assetKind === "right_to_move_in" 일 때만 의미) */
   isSuccessorRightToMoveIn: boolean;
   /** 세대 Step(Step3/4)의 1세대1주택 비과세·다주택 중과 판정 기준 대표 자산 여부 */
@@ -702,6 +702,58 @@ export interface AssetForm {
    * cbEra === "pre_disclosure" / "post_disclosure" 공통 필수.
    */
   cbLandPricePerSqmAtTransfer: string;
+
+  // ── 일반건물(토지+건물 일괄) 환산취득가 (사례 31, 소득세법 시행령 §176의2④, §163⑥) ──
+  /**
+   * 일반건물 환산취득가 사용 여부.
+   * assetKind === "general_building" + true 시 GeneralBuildingBlock 노출.
+   */
+  gbUseEstimatedAcquisition: boolean;
+  /**
+   * 양도시 토지 공시지가 (원/㎡).
+   * LandPriceLookupField로 입력. 양도일 전년 기준연도 기준시가.
+   * 안분 분모의 토지 기준시가 산정: gbTransferLandPricePerSqm × gbLandArea.
+   */
+  gbTransferLandPricePerSqm: string;
+  /**
+   * 양도시 건물기준시가 총액 (원).
+   * 국세청 기준시가 조회 — 건물 전체 기준시가 합계액.
+   * 안분 분모의 건물 기준시가 = 이 값 그대로.
+   * 사례 31: 20,627,816 (BigInt 정밀 산출값)
+   */
+  gbTransferBuildingValue: string;
+  /**
+   * 취득시 토지 공시지가 (원/㎡).
+   * LandPriceLookupField로 입력. 취득일 전년 기준연도 기준시가.
+   * 환산 비율 분자 토지 성분: gbAcqLandPricePerSqm × gbLandArea.
+   * 사례 31: 2,800,000 (1998년)
+   */
+  gbAcqLandPricePerSqm: string;
+  /**
+   * 취득시 건물기준시가 총액 (원).
+   * 국세청 기준시가 조회 — 취득시점 건물 기준시가 합계액.
+   * 환산 비율 분자 건물 성분 + 개산공제 기준액.
+   * 사례 31: 28,144,700 (역산: 844,341 ÷ 0.03)
+   */
+  gbAcqBuildingValue: string;
+  /**
+   * 토지 부수면적 (㎡).
+   * 안분·환산·개산공제·NBL 판정에 사용.
+   * 사례 31: 85
+   */
+  gbLandArea: string;
+  /**
+   * 건물 연면적 (㎡).
+   * NBL 바닥면적 자동 추정(연면적 ÷ 층수)에 사용.
+   * 사례 31: 180.96
+   */
+  gbBuildingArea: string;
+  /**
+   * 건물 층수 (정수).
+   * NBL 바닥면적 자동 추정: buildingFootprintArea = gbBuildingArea / gbBuildingFloors.
+   * 사례 31: 2
+   */
+  gbBuildingFloors: string;
 
   // ── 검용주택 분리계산 (sodt §160①단서, 2022.1.1 이후) ──
   /** 검용주택 여부 토글 */

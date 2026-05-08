@@ -118,9 +118,56 @@ export function toRentalHousingExceptionApi(asset: AssetForm): object | undefine
   };
 }
 
-export function toEngineAssetKind(kind: AssetForm["assetKind"]): "housing" | "land" | "building" | "commercial_building" {
+export function toEngineAssetKind(
+  kind: AssetForm["assetKind"]
+): "housing" | "land" | "building" | "commercial_building" | "general_building" {
   if (kind === "right_to_move_in" || kind === "presale_right") return "housing";
   return kind;
+}
+
+// ─── ④ 일반건물(토지+건물 일괄) 환산취득가 API 변환 헬퍼 (소령 §176의2④, §163⑥) ───
+
+/**
+ * AssetForm gb* 필드 → generalBuildingValuation 서브객체 변환.
+ * 필수 필드 미입력 시 undefined 반환 — validate에서 이미 차단되므로 API 단계 방어용.
+ * ⑧ 동기화: validate의 undefined 반환 조건과 동일하게 차단.
+ * 자동 안분 fallback 금지 — 미입력은 validate에서 명확한 오류로 차단.
+ */
+export function buildGeneralBuildingValuation(
+  asset: AssetForm,
+): object | undefined {
+  if (asset.assetKind !== "general_building" || !asset.gbUseEstimatedAcquisition) {
+    return undefined;
+  }
+
+  const transferLandPricePerSqm = parseAmount(asset.gbTransferLandPricePerSqm);
+  const transferBuildingValue = parseAmount(asset.gbTransferBuildingValue);
+  const acqLandPricePerSqm = parseAmount(asset.gbAcqLandPricePerSqm);
+  const acqBuildingValue = parseAmount(asset.gbAcqBuildingValue);
+  const landArea = parseDecimal(asset.gbLandArea);
+  const buildingArea = parseDecimal(asset.gbBuildingArea);
+  const buildingFloors = parseInt(asset.gbBuildingFloors || "0", 10);
+
+  if (
+    !transferLandPricePerSqm ||
+    !transferBuildingValue ||
+    !acqLandPricePerSqm ||
+    !acqBuildingValue ||
+    !landArea ||
+    !buildingArea ||
+    !buildingFloors
+  ) return undefined;
+
+  return {
+    transferLandPricePerSqm,
+    transferBuildingValue,
+    acquisitionLandPricePerSqm: acqLandPricePerSqm,
+    acquisitionBuildingValue: acqBuildingValue,
+    landArea,
+    buildingArea,
+    buildingFloors,
+    estimatedDeductionRate: 0.03, // 시행령 §163⑥ 등기 자산 3% 고정
+  };
 }
 
 export const isHousingLike = (kind: AssetForm["assetKind"]) =>
