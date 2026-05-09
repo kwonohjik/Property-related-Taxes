@@ -48,11 +48,11 @@ import {
  * propertyType === "general_building" 시 필수.
  */
 export const generalBuildingValuationSchema = z.object({
-  /** 토지 부수면적 (㎡) */
+  /** 토지 부수면적 (㎡). 양도시 기준시가와 함께 안분 분모 계산. */
   landArea: z.number().positive(),
-  /** 건물 연면적 (㎡) */
-  buildingArea: z.number().positive(),
-  /** 건물 수평투영면적 (㎡) — 비사업용토지 판정 기준 (건축물대장 건축면적 또는 1층 바닥면적) */
+  /** 건물 연면적 (㎡). 환산취득가 모드만 필수. */
+  buildingArea: z.number().positive().optional(),
+  /** 건물 수평투영면적 (㎡) — 비사업용토지 판정 기준 (§168의12) */
   buildingFootprintArea: z.number().positive(),
   /** 용도지역 (§168의12 배율 결정). validate에서 필수 보장. */
   zoneType: z.string().optional(),
@@ -60,18 +60,18 @@ export const generalBuildingValuationSchema = z.object({
   isMetropolitan: z.boolean().optional(),
   /** 무허가건축물 여부. true 시 전체 비사업용 (§168의11①1호) */
   isUnregistered: z.boolean().optional(),
-  /** 양도시 개별공시지가 (원/㎡) */
+  /** 양도시 개별공시지가 (원/㎡). 환산 분모 + §166⑥ 안분 비율. 모드 무관 필수. */
   transferLandPricePerSqm: z.number().int().positive(),
-  /** 양도시 건물기준시가 총액 (원) */
+  /** 양도시 건물기준시가 총액 (원). 환산 분모 + §166⑥ 안분 비율. 모드 무관 필수. */
   transferBuildingStdPrice: z.number().int().positive(),
-  /** 취득시 개별공시지가 (원/㎡) */
-  acquisitionLandPricePerSqm: z.number().int().positive(),
-  /** 취득시 건물기준시가 총액 (원) */
-  acquisitionBuildingStdPrice: z.number().int().positive(),
+  /** 취득시 개별공시지가 (원/㎡). 환산취득가 모드만 필수. */
+  acquisitionLandPricePerSqm: z.number().int().positive().optional(),
+  /** 취득시 건물기준시가 총액 (원). 환산취득가 모드만 필수. */
+  acquisitionBuildingStdPrice: z.number().int().positive().optional(),
   /** 개산공제율 (기본 0.03 — ESTIMATED_DEDUCTION_RATE_LAND_BUILDING) */
   estimatedDeductionRate: z.number().positive().max(1).optional(),
-  /** 비사업용토지 판정 배율 (기본 3 — 도시지역 주거·상업·공업) */
-  floorAreaMultiplier: z.number().positive().optional(),
+  /** 실거래가/감정가 모드 플래그. true 시 route helper가 실거래가 안분 경로 사용. */
+  actualPriceMode: z.boolean().optional(),
 });
 
 export type GeneralBuildingValuationSchemaInput = z.infer<typeof generalBuildingValuationSchema>;

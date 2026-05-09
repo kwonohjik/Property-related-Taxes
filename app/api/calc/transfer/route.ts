@@ -22,10 +22,7 @@ import {
 import { calculateInheritanceAcquisitionPrice } from "@/lib/tax-engine/inheritance-acquisition-price";
 import { calculateEstimatedAcquisitionPrice, calculateHoldingPeriod } from "@/lib/tax-engine/tax-utils";
 import { calcMixedUseTransferTax } from "@/lib/tax-engine/transfer-tax-mixed-use";
-import {
-  calculateGeneralBuildingTransfer,
-  type GeneralBuildingValuationPayload,
-} from "./general-building-route-helper";
+import { dispatchGeneralBuilding } from "./general-building-route-helper";
 import {
   resolveHousingContextFromCompanion,
   buildCompanionEngineInputs,
@@ -707,34 +704,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ─── 5-a-3. 일반건물(토지+건물 일괄) 환산취득가 경로 ─────────
-    // 시행령 §166⑥(양도가 안분) + §176의2④(자산별 환산) + §163⑥(자산별 개산공제) + §102②(1차 통산)
-    // 단건 입력이지만 엔진 내부에서 토지·건물 2자산으로 분해 후 aggregate (helper에 위임).
-    // Zod 스키마(generalBuildingValuationSchema)는 면적·기준시가만 검증 → 라우트가 양도가액·날짜 주입.
-    if (
-      data.propertyType === "general_building" &&
-      data.generalBuildingValuation
-    ) {
-      const gbvPayload: GeneralBuildingValuationPayload = {
-        ...(data.generalBuildingValuation as unknown as Omit<
-          GeneralBuildingValuationPayload,
-          "totalTransferPrice" | "transferDate" | "acquisitionDate"
-        >),
-        totalTransferPrice: data.transferPrice,
-        transferDate,
-        acquisitionDate,
-      };
-      const { apportionment, aggregated } = calculateGeneralBuildingTransfer(
-        gbvPayload,
-        transferDate.getFullYear(),
-        data.annualBasicDeductionUsed,
-        data.priorReductionUsage ?? [],
-        rates,
+    // ─── 5-a-3. 일반건물(토지+건물 일괄) — actualPriceMode 플래그로 내부 분기 ───
+    if (data.propertyType === "general_building" && data.generalBuildingValuation) {
+      const { apportionment, aggregated } = dispatchGeneralBuilding(
+        data.generalBuildingValuation as Record<string, unknown>,
+        data.transferPrice, transferDate, acquisitionDate,
+        engineInput.acquisitionPrice ?? 0, engineInput.expenses ?? 0,
+        transferDate.getFullYear(), data.annualBasicDeductionUsed,
+        data.priorReductionUsage ?? [], rates,
       );
-      return NextResponse.json(
-        { data: { mode: "bundled" as const, apportionment, aggregated } },
-        { status: 200 },
-      );
+      return NextResponse.json({ data: { mode: "bundled" as const, apportionment, aggregated } }, { status: 200 });
     }
 
     // ─── 5-b. 기존 단건 경로 ───────────────────────────────────

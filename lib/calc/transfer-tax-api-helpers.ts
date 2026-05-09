@@ -125,54 +125,68 @@ export function toEngineAssetKind(
   return kind;
 }
 
-// ─── ④ 일반건물(토지+건물 일괄) 환산취득가 API 변환 헬퍼 (소령 §176의2④, §163⑥) ───
+// ─── ④ 일반건물(토지+건물 일괄) API 변환 헬퍼 (소령 §176의2④, §163⑥, §166⑥) ───
 
 /**
  * AssetForm gb* 필드 → generalBuildingValuation 서브객체 변환.
- * 필수 필드 미입력 시 undefined 반환 — validate에서 이미 차단되므로 API 단계 방어용.
- * ⑧ 동기화: validate의 undefined 반환 조건과 동일하게 차단.
+ *
+ * 환산취득가 모드: 취득시 기준시가 포함 — 엔진이 환산·개산공제 계산.
+ * 실거래가/감정가 모드: 양도시 기준시가만 — route helper가 §166⑥ 비율로 실거래가 안분 + NBL 판정.
+ *   → actualPriceMode: true 플래그로 route helper 분기.
+ *
  * 자동 안분 fallback 금지 — 미입력은 validate에서 명확한 오류로 차단.
  */
 export function buildGeneralBuildingValuation(
   asset: AssetForm,
 ): object | undefined {
-  if (asset.assetKind !== "general_building" || !asset.useEstimatedAcquisition) {
-    return undefined;
-  }
+  if (asset.assetKind !== "general_building") return undefined;
 
-  // Zod 스키마(generalBuildingValuationSchema) 및 엔진 GeneralBuildingInput 키명과 일치 필수.
-  // 키명이 다르면 Zod가 undefined로 stripping → "expected number, received undefined" 오류.
   const transferLandPricePerSqm = parseAmount(asset.gbTransferLandPricePerSqm);
   const transferBuildingStdPrice = parseAmount(asset.gbTransferBuildingValue);
-  const acquisitionLandPricePerSqm = parseAmount(asset.gbAcqLandPricePerSqm);
-  const acquisitionBuildingStdPrice = parseAmount(asset.gbAcqBuildingValue);
   const landArea = parseDecimal(asset.gbLandArea);
-  const buildingArea = parseDecimal(asset.gbBuildingArea);
   const buildingFootprintArea = parseDecimal(asset.gbBuildingFootprintArea);
 
+  // 양도시 기준시가·면적은 모드 무관 필수 (validate에서 사전 차단)
   if (
     !transferLandPricePerSqm ||
     !transferBuildingStdPrice ||
-    !acquisitionLandPricePerSqm ||
-    !acquisitionBuildingStdPrice ||
     !landArea ||
-    !buildingArea ||
     !buildingFootprintArea
   ) return undefined;
 
-  return {
-    transferLandPricePerSqm,
-    transferBuildingStdPrice,
-    acquisitionLandPricePerSqm,
-    acquisitionBuildingStdPrice,
-    landArea,
-    buildingArea,
-    buildingFootprintArea,
-    estimatedDeductionRate: 0.03, // 시행령 §163⑥ 등기 자산 3% 고정
-    // NBL 판정 필드 (2026-05-10)
+  const nblFields = {
     zoneType: asset.gbZoneType || undefined,
     isMetropolitan: asset.gbIsMetropolitan,
     isUnregistered: asset.gbIsUnregistered,
+  };
+
+  if (asset.useEstimatedAcquisition) {
+    // 환산취득가 모드 — 취득시 기준시가 포함
+    const acquisitionLandPricePerSqm = parseAmount(asset.gbAcqLandPricePerSqm);
+    const acquisitionBuildingStdPrice = parseAmount(asset.gbAcqBuildingValue);
+    const buildingArea = parseDecimal(asset.gbBuildingArea);
+    if (!acquisitionLandPricePerSqm || !acquisitionBuildingStdPrice || !buildingArea) return undefined;
+    return {
+      transferLandPricePerSqm,
+      transferBuildingStdPrice,
+      acquisitionLandPricePerSqm,
+      acquisitionBuildingStdPrice,
+      landArea,
+      buildingArea,
+      buildingFootprintArea,
+      estimatedDeductionRate: 0.03, // §163⑥ 등기 자산 3% 고정
+      ...nblFields,
+    };
+  }
+
+  // 실거래가/감정가 모드 — 양도시 기준시가만 (route helper에서 §166⑥ 비율 안분)
+  return {
+    transferLandPricePerSqm,
+    transferBuildingStdPrice,
+    landArea,
+    buildingFootprintArea,
+    actualPriceMode: true,
+    ...nblFields,
   };
 }
 

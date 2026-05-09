@@ -112,29 +112,32 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
           </FieldCard>
         </div>
 
-        {/* ② 양도시 기준시가 (emerald) — 환산취득가 모드만 */}
-        {isEstimated && (
-          <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-3 space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-[10px] font-bold text-emerald-800 select-none">②</span>
-              <p className="text-xs font-semibold text-emerald-700">양도시 기준시가 (안분 분모)</p>
-            </div>
-
-            <LandPriceLookupField
-              label="양도시 토지 공시지가"
-              pricePerSqm={asset.gbTransferLandPricePerSqm}
-              onPricePerSqmChange={(v) => onChange({ gbTransferLandPricePerSqm: v })}
-              area={parseDecimal(asset.gbLandArea) || undefined}
-              referenceDate={transferDate}
-              jibun={asset.addressJibun}
-              hint="양도일 전년도 기준 개별공시지가 (원/㎡). Vworld 또는 토지이음에서 조회."
-            />
-
-            <FieldCard label="양도시 건물기준시가" unit="원" hint="국세청 홈택스 → 기준시가 조회 → 건물분 기준시가 총액 (원)">
-              <CurrencyInput label="양도시 건물기준시가" hideUnit value={asset.gbTransferBuildingValue} onChange={(v) => onChange({ gbTransferBuildingValue: v })} />
-            </FieldCard>
+        {/* ② 양도시 기준시가 (emerald) — 항상 표시 (§166⑥ 토지·건물 안분 비율 결정) */}
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-3 space-y-2">
+          <div className="flex items-center gap-2">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-[10px] font-bold text-emerald-800 select-none">②</span>
+            <p className="text-xs font-semibold text-emerald-700">양도시 기준시가 (토지·건물 안분 비율)</p>
           </div>
-        )}
+          <p className="text-[11px] text-emerald-600">
+            {isEstimated
+              ? "환산취득가 분모 + 양도가액 안분 기준. 취득 기준시가는 아래 ③ 섹션에서 별도 입력."
+              : "실거래가 합계를 토지·건물로 안분하는 기준시가 (§166⑥). 취득가액도 같은 비율로 안분됩니다."}
+          </p>
+
+          <LandPriceLookupField
+            label="양도시 토지 공시지가"
+            pricePerSqm={asset.gbTransferLandPricePerSqm}
+            onPricePerSqmChange={(v) => onChange({ gbTransferLandPricePerSqm: v })}
+            area={parseDecimal(asset.gbLandArea) || undefined}
+            referenceDate={transferDate}
+            jibun={asset.addressJibun}
+            hint="양도일 전년도 기준 개별공시지가 (원/㎡). Vworld 또는 토지이음에서 조회."
+          />
+
+          <FieldCard label="양도시 건물기준시가" unit="원" hint="국세청 홈택스 → 기준시가 조회 → 건물분 기준시가 총액 (원)">
+            <CurrencyInput label="양도시 건물기준시가" hideUnit value={asset.gbTransferBuildingValue} onChange={(v) => onChange({ gbTransferBuildingValue: v })} />
+          </FieldCard>
+        </div>
 
         {/* ③ 취득시 기준시가 (amber) — 환산취득가 모드만 */}
         {isEstimated && (
