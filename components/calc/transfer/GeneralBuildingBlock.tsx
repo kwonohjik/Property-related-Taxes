@@ -3,30 +3,27 @@
 /**
  * GeneralBuildingBlock — 일반건물(토지+건물 일괄) 환산취득가 입력 섹션
  *
- * assetKind === "general_building" 진입 시 렌더.
+ * 진입 조건: assetKind === "general_building" + useEstimatedAcquisition === true
+ * (라디오 "환산취득가" 선택 시 상위 CompanionAssetCard에서 마운트)
  * 소득세법 시행령 §176의2④ (환산취득가액) + §163⑥ (개산공제 3%).
  *
- * 구조:
- *  ToggleCard (violet) — 환산취득가 사용 여부
+ * 구조 (외곽 ToggleCard 제거 후 — 2026-05-09 라디오 단일 source-of-truth 통일):
  *  └── ① 면적·층수 섹션 (sky)
  *  └── ② 양도시 기준시가 섹션 (emerald) — 안분 분모
  *  └── ③ 취득시 기준시가 섹션 (amber) — 환산 비율 분자 + 개산공제 기준
  *
  * 정책 준수:
  *  - placeholder 숫자 예시 금지 — hint prop에 한국어 설명만
- *  - ToggleCard tone="violet" (amber는 사례 29 CB 우선 점유)
  *  - useEffect → store 미러링 금지 (onChange 직접 처리)
  *  - 자동 안분 fallback 금지 (미입력은 validate에서 차단)
  *  - SelectOnFocusProvider 자동 적용 — 개별 onFocus 추가 불필요
  */
 
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
-import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
-import { useMemo } from "react";
 
 interface Props {
   asset: AssetForm;
@@ -36,30 +33,22 @@ interface Props {
 }
 
 export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
-  // 바닥면적 추정 (연면적 ÷ 층수) — 비사업용토지 판정용 참고값
-  const estimatedFloorArea = useMemo(() => {
-    const area = parseDecimal(asset.gbBuildingArea);
-    const floors = parseInt(asset.gbBuildingFloors || "0", 10);
-    if (area > 0 && floors > 0) return (area / floors).toFixed(2);
-    return null;
-  }, [asset.gbBuildingArea, asset.gbBuildingFloors]);
-
   return (
-    <ToggleCard
-      title="환산취득가 방식으로 취득가액 계산"
-      description="실거래가 확인이 불가한 경우 양도·취득 시점 기준시가 비율로 환산 (소득세법 시행령 §176의2④)"
-      tone="violet"
-      checked={asset.gbUseEstimatedAcquisition}
-      onCheckedChange={(v) => onChange({ gbUseEstimatedAcquisition: v })}
-    >
+    <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-3">
+      <div className="space-y-1">
+        <p className="text-sm font-semibold text-violet-900">일반건물 환산취득가 (토지·건물 분리 산정)</p>
+        <p className="text-xs text-violet-700">
+          실거래가 확인이 불가한 경우 양도·취득 시점 기준시가 비율로 환산 (소득세법 시행령 §176의2④)
+        </p>
+      </div>
       <div className="space-y-3">
-        {/* ① 면적·층수 섹션 (sky) */}
+        {/* ① 면적·규모 섹션 (sky) */}
         <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2">
           <div className="flex items-center gap-2">
             <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-[10px] font-bold text-sky-800 select-none">
               ①
             </span>
-            <p className="text-xs font-semibold text-sky-700">면적·층수</p>
+            <p className="text-xs font-semibold text-sky-700">면적·규모</p>
           </div>
 
           <FieldCard
@@ -85,29 +74,15 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
           </FieldCard>
 
           <FieldCard
-            label="건물 층수"
-            unit="층"
-            hint="건물 총 층수. 비사업용 토지 판정 시 바닥면적(연면적÷층수)으로 자동 추정"
+            label="건물 수평투영면적"
+            unit="㎡"
+            hint="건축물대장 '건축면적' 또는 1층 바닥면적. 비사업용토지 판정 기준 (소득세법 시행령 §168의8) — 부수토지 한도 = 수평투영면적 × 용도지역 배율(도시지역 3배)"
           >
-            <input
-              type="text"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              value={asset.gbBuildingFloors}
-              onChange={(e) => {
-                const v = e.target.value.replace(/[^0-9]/g, "");
-                onChange({ gbBuildingFloors: v });
-              }}
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-right tabular-nums"
+            <DecimalInput
+              value={asset.gbBuildingFootprintArea}
+              onChange={(v) => onChange({ gbBuildingFootprintArea: v })}
             />
           </FieldCard>
-
-          {estimatedFloorArea && (
-            <div className="rounded bg-sky-100/60 border border-sky-200 px-3 py-1.5 text-xs text-sky-700">
-              바닥면적 추정 (연면적 ÷ 층수): <span className="font-semibold tabular-nums">{estimatedFloorArea} ㎡</span>
-              <span className="text-[10px] ml-1 text-sky-500">(비사업용토지 판정용 — 균등층 가정)</span>
-            </div>
-          )}
         </div>
 
         {/* ② 양도시 기준시가 섹션 (emerald) */}
@@ -184,6 +159,6 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
           <p className="text-violet-500 text-[10px] mt-1">토지·건물 각각 계산됩니다. 등기 자산 3%, 미등기 자산 0.3%.</p>
         </div>
       </div>
-    </ToggleCard>
+    </div>
   );
 }

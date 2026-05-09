@@ -49,8 +49,8 @@ export type GeneralBuildingInput = {
   landArea: number;
   /** 건물 연면적 (㎡) */
   buildingArea: number;
-  /** 건물 층수 — 비사업용토지 판정 바닥면적 추정용 */
-  buildingFloors: number;
+  /** 건물 수평투영면적 (㎡) — 비사업용토지 판정 기준 (건축물대장 건축면적 또는 1층 바닥면적) */
+  buildingFootprintArea: number;
 
   // 양도시점 기준시가 (안분 분모)
   /** 양도시 개별공시지가 (원/㎡) */
@@ -137,9 +137,9 @@ export type GeneralBuildingOutput = {
   estimatedDeduction: GeneralBuildingEstimatedDeduction;
 
   // 비사업용토지 판정
-  /** 연면적 ÷ 층수 추정 바닥면적 (㎡) */
-  estimatedFloorArea: number;
-  /** 인정 한도 = 바닥면적 × 배율 (㎡) */
+  /** 건물 수평투영면적 (㎡) — 사용자 직접 입력 */
+  buildingFootprintArea: number;
+  /** 인정 한도 = 수평투영면적 × 배율 (㎡) */
   allowedLandArea: number;
   /** true = 사업용 (배율 내, 중과 미발동) */
   isWithinNblRatio: boolean;
@@ -293,18 +293,16 @@ export function buildGeneralBuildingAssetCards(
   const estimatedDeduction = calculateEstimatedDeduction(input, rate);
 
   /**
-   * 비사업용토지 판정 (MVP — 연면적÷층수 추정)
+   * 비사업용토지 판정 (사용자 직접 입력 수평투영면적 기준)
    *
-   * ⚠️ 사각지대: 실제 1층 바닥면적이 더 작은 케이스(필로티·점포+주거)에서
-   *    한도 미달임에도 사업용 판정될 수 있음.
-   *    정밀 판정 필요 시 judgeNonBusinessLand() 연동으로 전환.
+   * 2026-05-09 변경: 연면적÷층수 추정값 폐지 → 사용자가 건축물대장 건축면적
+   * (=수평투영면적, 1층 바닥면적)을 직접 입력. 균등층 가정 오차 제거.
    *
-   * 사례 31은 부수토지 85㎡로 어떤 추정값에서도 사업용 → MVP 충분.
+   * 법령 참조: NBL.BUILDING_SITE (시행령 §168의8)
+   *   부수토지 한도 = 건물 수평투영면적 × 용도지역별 배율 (도시지역 주거·상업·공업 = 3)
    */
-  // 법령 참조: NBL.BUILDING_SITE (시행령 §168의8)
   const multiplier = input.floorAreaMultiplier ?? 3;
-  const estimatedFloorArea = input.buildingArea / input.buildingFloors;
-  const allowedLandArea = estimatedFloorArea * multiplier;
+  const allowedLandArea = input.buildingFootprintArea * multiplier;
   const isWithinNblRatio = input.landArea <= allowedLandArea;
 
   // Step 5: 자산 카드 2장 생성 (aggregate 엔진 위임용)
@@ -343,7 +341,7 @@ export function buildGeneralBuildingAssetCards(
     allocation,
     acquisition,
     estimatedDeduction,
-    estimatedFloorArea,
+    buildingFootprintArea: input.buildingFootprintArea,
     allowedLandArea,
     isWithinNblRatio,
     assetCards,

@@ -46,7 +46,7 @@ const CASE_31_GB_INPUT: GeneralBuildingInput = {
   acquisitionDate: ACQUISITION_DATE,
   landArea: 85,
   buildingArea: 180.96,
-  buildingFloors: 2,
+  buildingFootprintArea: 90.48,
   transferLandPricePerSqm: 10_830_000,
   transferBuildingStdPrice: 20_629_440, // BigInt 검산 — anchor 904,725,192 만족
   acquisitionLandPricePerSqm: 2_800_000,

@@ -37,7 +37,7 @@ const TRANSFER_DATE            = new Date("2023-02-19");
 const ACQUISITION_DATE         = new Date("1999-05-24");
 const LAND_AREA                = 85;          // ㎡
 const BUILDING_AREA            = 180.96;      // ㎡ (연면적)
-const BUILDING_FLOORS          = 2;
+const BUILDING_FOOTPRINT_AREA  = 90.48; // 종전 연면적 ÷ 층수 균등층 가정값
 const TRANSFER_LAND_PRICE_PER_SQM   = 10_830_000;  // 원/㎡
 const TRANSFER_BUILDING_STD_PRICE   = 20_627_816;  // 원 (총액, 잠금)
 const ACQUISITION_LAND_PRICE_PER_SQM = 2_800_000;  // 원/㎡
@@ -73,7 +73,7 @@ function makeInput(overrides?: Partial<GeneralBuildingInput>): GeneralBuildingIn
     acquisitionDate: ACQUISITION_DATE,
     landArea: LAND_AREA,
     buildingArea: BUILDING_AREA,
-    buildingFloors: BUILDING_FLOORS,
+    buildingFootprintArea: BUILDING_FOOTPRINT_AREA,
     transferLandPricePerSqm: TRANSFER_LAND_PRICE_PER_SQM,
     transferBuildingStdPrice: TRANSFER_BUILDING_STD_PRICE,
     acquisitionLandPricePerSqm: ACQUISITION_LAND_PRICE_PER_SQM,

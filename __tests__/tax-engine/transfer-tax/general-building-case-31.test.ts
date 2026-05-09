@@ -52,7 +52,8 @@ const ACQUISITION_DATE = new Date("1999-05-24");
 const TOTAL_TRANSFER_PRICE = 925_000_000;
 const LAND_AREA = 85;
 const BUILDING_AREA = 180.96;
-const BUILDING_FLOORS = 2;
+// 수평투영면적 (사용자 직접 입력) — 종전 연면적 180.96 ÷ 층수 2 균등층 가정값과 동일
+const BUILDING_FOOTPRINT_AREA = 90.48;
 
 // 양도시점 기준시가
 const TRANSFER_LAND_PRICE_PER_SQM = 10_830_000; // 2022년
@@ -68,7 +69,7 @@ const CASE_31_INPUT: GeneralBuildingInput = {
   acquisitionDate: ACQUISITION_DATE,
   landArea: LAND_AREA,
   buildingArea: BUILDING_AREA,
-  buildingFloors: BUILDING_FLOORS,
+  buildingFootprintArea: BUILDING_FOOTPRINT_AREA,
   transferLandPricePerSqm: TRANSFER_LAND_PRICE_PER_SQM,
   transferBuildingStdPrice: TRANSFER_BUILDING_STD_PRICE,
   acquisitionLandPricePerSqm: ACQUISITION_LAND_PRICE_PER_SQM,
@@ -159,8 +160,8 @@ describe("사례 31: 자산별 양도차익 (§94① · 장특 전)", () => {
 describe("사례 31: 비사업용토지 판정 — 사업용", () => {
   const out = buildGeneralBuildingAssetCards(CASE_31_INPUT);
 
-  it("바닥면적 추정 = 180.96 ÷ 2 = 90.48㎡", () => {
-    expect(out.estimatedFloorArea).toBeCloseTo(90.48, 2);
+  it("수평투영면적 = 사용자 직접 입력 90.48㎡", () => {
+    expect(out.buildingFootprintArea).toBeCloseTo(90.48, 2);
   });
 
   it("인정한도 = 90.48 × 3 = 271.44㎡", () => {

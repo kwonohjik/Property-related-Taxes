@@ -515,8 +515,8 @@ export function CompanionAssetCard({
         />
       )}
 
-      {/* 일반건물(토지+건물 일괄) 환산취득가 입력 (assetKind === "general_building" 시만 표시) */}
-      {asset.assetKind === "general_building" && (
+      {/* 일반건물(토지+건물 일괄) 환산취득가 입력 — 라디오 "환산취득가" 선택 시만 마운트 (2026-05-09) */}
+      {asset.assetKind === "general_building" && asset.useEstimatedAcquisition && (
         <GeneralBuildingBlock
           asset={asset}
           onChange={onChange}

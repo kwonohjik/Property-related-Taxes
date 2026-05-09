@@ -42,11 +42,19 @@ export function buildAggregateRows(
   // propertyId → AssetForm 매핑 (TransferTaxCalculator의 ownershipMap 패턴과 동일):
   //   assets[0] → "primary", assets[i>0] → assetId 그대로
   //   G-2 한도 초과 split: "{assetId}__appurtenant" / "{assetId}__excess" suffix 제거 후 재조회
+  //   GB(일반건물 토지+건물 일괄): 단일 자산이 엔진 내부에서 "land"/"building" 2장으로 분해됨 → assets[0]로 fallback
   function findAssetByPropertyId(pid: string): AssetForm | undefined {
     // NOTE: 이 함수 결과로 반환된 AssetForm의 landNature로
     // 컬럼 라벨 suffix "(부수토지)" / "(독립 나대지)"를 표시할 수 있음 — buildAggregateRows 호출부에서 사용.
     if (!formData) return undefined;
     if (pid === "primary") return formData.assets[0];
+    // 일반건물(토지+건물 일괄) — 토지·건물 분해된 카드는 모두 assets[0]에서 취득일·필요경비 메타 가져옴
+    if (
+      formData.assets[0]?.assetKind === "general_building" &&
+      (pid === "land" || pid === "building")
+    ) {
+      return formData.assets[0];
+    }
     const direct = formData.assets.find((a) => a.assetId === pid);
     if (direct) return direct;
     // split suffix 제거 fallback — 부수토지 한도 초과 분리 시 원본 assetId로 재조회

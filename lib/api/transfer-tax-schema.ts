@@ -52,8 +52,8 @@ export const generalBuildingValuationSchema = z.object({
   landArea: z.number().positive(),
   /** 건물 연면적 (㎡) */
   buildingArea: z.number().positive(),
-  /** 건물 층수 — 비사업용토지 판정 바닥면적 추정용 */
-  buildingFloors: z.number().int().positive(),
+  /** 건물 수평투영면적 (㎡) — 비사업용토지 판정 기준 (건축물대장 건축면적 또는 1층 바닥면적) */
+  buildingFootprintArea: z.number().positive(),
   /** 양도시 개별공시지가 (원/㎡) */
   transferLandPricePerSqm: z.number().int().positive(),
   /** 양도시 건물기준시가 총액 (원) */

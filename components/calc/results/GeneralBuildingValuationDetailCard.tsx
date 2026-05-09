@@ -342,13 +342,12 @@ export function GeneralBuildingValuationDetailCard({
       {/* NBL 판정 결과 */}
       <div className="rounded bg-sky-50/60 border border-sky-200 px-3 py-2 text-xs text-sky-800 space-y-1">
         <p className="font-semibold">비사업용토지 판정 (시행령 §168의8)</p>
-        <p>바닥면적 추정 = 연면적 ÷ 층수 = <span className="tabular-nums font-medium">{detail.estimatedFloorArea.toFixed(2)} ㎡</span> (균등층 가정)</p>
-        <p>인정 한도 = 바닥면적 {detail.estimatedFloorArea.toFixed(2)}㎡ × 3배 = <span className="tabular-nums font-medium">{detail.allowedLandArea.toFixed(2)} ㎡</span></p>
+        <p>건물 수평투영면적 = <span className="tabular-nums font-medium">{detail.buildingFootprintArea.toFixed(2)} ㎡</span> (사용자 입력 — 건축물대장 건축면적)</p>
+        <p>인정 한도 = 수평투영면적 {detail.buildingFootprintArea.toFixed(2)}㎡ × 3배 = <span className="tabular-nums font-medium">{detail.allowedLandArea.toFixed(2)} ㎡</span></p>
         <p>판정: {detail.isWithinNblRatio
           ? <span className="text-emerald-700 font-semibold">사업용 (배율 내 — 중과 미발동)</span>
           : <span className="text-rose-700 font-semibold">비사업용 (배율 초과 — 중과 발동)</span>
         }</p>
-        <p className="text-[10px] text-sky-500 mt-1">⚠️ 균등층 가정 — 실제 1층 바닥면적이 더 작은 케이스(필로티·점포+주거)에서 과대평가 가능.</p>
       </div>
     </div>
   );

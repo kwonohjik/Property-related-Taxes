@@ -200,15 +200,14 @@ function validateAssetAcquisition(asset: AssetForm, label: string): string | nul
   // ── 일반건물(토지+건물 일괄) 환산취득가 전용 검증 (⑧, 소령 §176의2④, §163⑥) ──
   // ⑧ 동기화 원칙: API buildGeneralBuildingValuation 의 undefined 반환 조건과 동일하게 차단.
   // 자동 안분 fallback 금지 — 미입력은 이 검증에서 명확한 오류로 차단.
-  if (asset.assetKind === "general_building" && asset.gbUseEstimatedAcquisition) {
-    // 면적·층수 필수
+  if (asset.assetKind === "general_building" && asset.useEstimatedAcquisition) {
+    // 면적 필수 (수평투영면적 = 비사업용토지 판정 기준, 2026-05-09 층수 자동 추정 폐지)
     if (!parseDecimal(asset.gbLandArea))
       return `${label}: 토지면적을 입력하세요.`;
     if (!parseDecimal(asset.gbBuildingArea))
       return `${label}: 건물 연면적을 입력하세요.`;
-    const floors = parseInt(asset.gbBuildingFloors || "0", 10);
-    if (!floors || floors < 1)
-      return `${label}: 건물 층수를 입력하세요.`;
+    if (!parseDecimal(asset.gbBuildingFootprintArea))
+      return `${label}: 건물 수평투영면적을 입력하세요.`;
 
     // 양도시 기준시가 필수
     if (!parseAmount(asset.gbTransferLandPricePerSqm))

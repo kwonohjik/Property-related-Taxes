@@ -311,11 +311,10 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
         ? primaryEffectiveTransferExpense || undefined
         : undefined,
     // 검용주택은 calcMixedUseTransferTax 별도 엔진에서 처리 → 일반 환산 검증 우회 위해 false 송신
-    // 상업용건물 환산 모드는 STEP 0.35 진입 조건이 useEstimatedAcquisition === true 이므로 true 송신
-    // 일반건물 환산 모드는 gbUseEstimatedAcquisition 플래그 사용
+    // 상업용건물·일반건물 환산 모드는 STEP 0.35 진입 조건이 useEstimatedAcquisition === true 이므로 true 송신
     useEstimatedAcquisition: hasPre1990 || parcelModeActive || isMixed ? false
       : isCommercialBuilding ? primary.useEstimatedAcquisition
-      : isGeneralBuilding ? primary.gbUseEstimatedAcquisition
+      : isGeneralBuilding ? primary.useEstimatedAcquisition
       : isCarryoverGeneral ? true
       : isEstimated,
     standardPriceAtAcquisition: hasPre1990 || usesPhd

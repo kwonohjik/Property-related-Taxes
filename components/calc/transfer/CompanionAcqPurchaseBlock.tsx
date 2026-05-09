@@ -215,6 +215,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
   // 상업용건물·오피스텔 모드: 환산은 CommercialBuildingBlock(시행령 §164⑧)에서 처리하므로
   // 일반 자산용 환산 입력(취득시/양도시 기준시가)을 숨긴다.
   const isCommercialBuilding = props.assetKind === "commercial_building";
+  const isGeneralBuilding = props.assetKind === "general_building";
 
   // 8-B-4: 의제취득 (1985.1.1) 판정 — 1985.1.1 정확히 일치 또는 그 이전 입력
   const isDeemedAcquisitionDate = !!(
@@ -529,6 +530,12 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
         // 호별 ㎡당 고시가 + 건물 ㎡당 기준시가 + 개별공시지가로 산정 (CommercialBuildingBlock).
         <p className="text-xs text-muted-foreground italic">
           취득시/양도시 기준시가는 아래 상업용건물·오피스텔 환산 영역에서 입력합니다 (호별 고시가·건물 기준시가·개별공시지가).
+        </p>
+      ) : isGeneralBuilding ? (
+        // 일반건물(토지+건물 일괄): 환산은 시행령 §176의2④·§163⑥에 따라
+        // 토지(㎡당 공시지가 × 토지면적) + 건물(기준시가 총액)로 자산별 분리 산정 (GeneralBuildingBlock).
+        <p className="text-xs text-muted-foreground italic">
+          취득시/양도시 기준시가는 아래 일반건물 환산 영역에서 입력합니다 (토지·건물 분리 — 토지 ㎡당 공시지가·건물 기준시가 총액).
         </p>
       ) : props.asset?.usePreHousingDisclosure ? (
         // §164⑤ PHD 모드: 위쪽 PreHousingDisclosureSection의 3-시점 입력으로 자동 도출.

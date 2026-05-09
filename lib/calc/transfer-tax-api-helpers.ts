@@ -136,36 +136,38 @@ export function toEngineAssetKind(
 export function buildGeneralBuildingValuation(
   asset: AssetForm,
 ): object | undefined {
-  if (asset.assetKind !== "general_building" || !asset.gbUseEstimatedAcquisition) {
+  if (asset.assetKind !== "general_building" || !asset.useEstimatedAcquisition) {
     return undefined;
   }
 
+  // Zod 스키마(generalBuildingValuationSchema) 및 엔진 GeneralBuildingInput 키명과 일치 필수.
+  // 키명이 다르면 Zod가 undefined로 stripping → "expected number, received undefined" 오류.
   const transferLandPricePerSqm = parseAmount(asset.gbTransferLandPricePerSqm);
-  const transferBuildingValue = parseAmount(asset.gbTransferBuildingValue);
-  const acqLandPricePerSqm = parseAmount(asset.gbAcqLandPricePerSqm);
-  const acqBuildingValue = parseAmount(asset.gbAcqBuildingValue);
+  const transferBuildingStdPrice = parseAmount(asset.gbTransferBuildingValue);
+  const acquisitionLandPricePerSqm = parseAmount(asset.gbAcqLandPricePerSqm);
+  const acquisitionBuildingStdPrice = parseAmount(asset.gbAcqBuildingValue);
   const landArea = parseDecimal(asset.gbLandArea);
   const buildingArea = parseDecimal(asset.gbBuildingArea);
-  const buildingFloors = parseInt(asset.gbBuildingFloors || "0", 10);
+  const buildingFootprintArea = parseDecimal(asset.gbBuildingFootprintArea);
 
   if (
     !transferLandPricePerSqm ||
-    !transferBuildingValue ||
-    !acqLandPricePerSqm ||
-    !acqBuildingValue ||
+    !transferBuildingStdPrice ||
+    !acquisitionLandPricePerSqm ||
+    !acquisitionBuildingStdPrice ||
     !landArea ||
     !buildingArea ||
-    !buildingFloors
+    !buildingFootprintArea
   ) return undefined;
 
   return {
     transferLandPricePerSqm,
-    transferBuildingValue,
-    acquisitionLandPricePerSqm: acqLandPricePerSqm,
-    acquisitionBuildingValue: acqBuildingValue,
+    transferBuildingStdPrice,
+    acquisitionLandPricePerSqm,
+    acquisitionBuildingStdPrice,
     landArea,
     buildingArea,
-    buildingFloors,
+    buildingFootprintArea,
     estimatedDeductionRate: 0.03, // 시행령 §163⑥ 등기 자산 3% 고정
   };
 }

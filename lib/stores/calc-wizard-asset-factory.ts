@@ -238,14 +238,14 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     cbLandPricePerSqmAtFirst: "",
     cbLandPricePerSqmAtTransfer: "",
     // ── 일반건물(토지+건물 일괄) 환산취득가 gb* 필드 (사례 31, 소득세법 시행령 §176의2④, §163⑥) ──
-    gbUseEstimatedAcquisition: false,
+    // 환산 ON/OFF는 useEstimatedAcquisition 라디오로 통일 (2026-05-09)
     gbTransferLandPricePerSqm: "",
     gbTransferBuildingValue: "",
     gbAcqLandPricePerSqm: "",
     gbAcqBuildingValue: "",
     gbLandArea: "",
     gbBuildingArea: "",
-    gbBuildingFloors: "",
+    gbBuildingFootprintArea: "",
   };
 }
 
@@ -380,14 +380,30 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (a.cbLandPricePerSqmAtFirst === undefined) a.cbLandPricePerSqmAtFirst = "";
   if (a.cbLandPricePerSqmAtTransfer === undefined) a.cbLandPricePerSqmAtTransfer = "";
   // ③ 일반건물 gb* 필드 마이그레이션 (sessionStorage 호환 — 신규 필드 누락 보호, 사례 31)
-  if (a.gbUseEstimatedAcquisition === undefined) a.gbUseEstimatedAcquisition = false;
+  // legacy: gbUseEstimatedAcquisition === true → useEstimatedAcquisition 흡수 후 키 제거 (2026-05-09)
+  const legacyGbFlag = (a as Record<string, unknown>).gbUseEstimatedAcquisition;
+  if (legacyGbFlag === true && a.assetKind === "general_building") {
+    a.useEstimatedAcquisition = true;
+  }
+  delete (a as Record<string, unknown>).gbUseEstimatedAcquisition;
   if (a.gbTransferLandPricePerSqm === undefined) a.gbTransferLandPricePerSqm = "";
   if (a.gbTransferBuildingValue === undefined) a.gbTransferBuildingValue = "";
   if (a.gbAcqLandPricePerSqm === undefined) a.gbAcqLandPricePerSqm = "";
   if (a.gbAcqBuildingValue === undefined) a.gbAcqBuildingValue = "";
   if (a.gbLandArea === undefined) a.gbLandArea = "";
   if (a.gbBuildingArea === undefined) a.gbBuildingArea = "";
-  if (a.gbBuildingFloors === undefined) a.gbBuildingFloors = "";
+  // legacy: gbBuildingFloors → gbBuildingFootprintArea 흡수 (균등층 가정 변환, 2026-05-09)
+  const legacyFloorsRaw = (a as Record<string, unknown>).gbBuildingFloors;
+  const legacyFloors = typeof legacyFloorsRaw === "string" ? parseInt(legacyFloorsRaw, 10) : 0;
+  const legacyArea = typeof a.gbBuildingArea === "string" ? parseFloat(a.gbBuildingArea) : 0;
+  if (a.gbBuildingFootprintArea === undefined || a.gbBuildingFootprintArea === "") {
+    if (legacyFloors > 0 && legacyArea > 0) {
+      a.gbBuildingFootprintArea = String(parseFloat((legacyArea / legacyFloors).toFixed(2)));
+    } else {
+      a.gbBuildingFootprintArea = "";
+    }
+  }
+  delete (a as Record<string, unknown>).gbBuildingFloors;
 
   // ③ 장기임대주택 거주주택 비과세 특례 마이그레이션 (sessionStorage 호환)
   if (!a.rentalHousingException || typeof a.rentalHousingException !== "object") {

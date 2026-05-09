@@ -704,11 +704,8 @@ export interface AssetForm {
   cbLandPricePerSqmAtTransfer: string;
 
   // ── 일반건물(토지+건물 일괄) 환산취득가 (사례 31, 소득세법 시행령 §176의2④, §163⑥) ──
-  /**
-   * 일반건물 환산취득가 사용 여부.
-   * assetKind === "general_building" + true 시 GeneralBuildingBlock 노출.
-   */
-  gbUseEstimatedAcquisition: boolean;
+  // 환산취득가 ON/OFF는 상위 useEstimatedAcquisition 라디오로 통일 (CB와 동일 패턴, 2026-05-09).
+  // 자산종류 = general_building + useEstimatedAcquisition === true 시 GeneralBuildingBlock 노출.
   /**
    * 양도시 토지 공시지가 (원/㎡).
    * LandPriceLookupField로 입력. 양도일 전년 기준연도 기준시가.
@@ -744,16 +741,16 @@ export interface AssetForm {
   gbLandArea: string;
   /**
    * 건물 연면적 (㎡).
-   * NBL 바닥면적 자동 추정(연면적 ÷ 층수)에 사용.
+   * 자산 식별·표시용 (개산공제·환산비율 산식과 무관).
    * 사례 31: 180.96
    */
   gbBuildingArea: string;
   /**
-   * 건물 층수 (정수).
-   * NBL 바닥면적 자동 추정: buildingFootprintArea = gbBuildingArea / gbBuildingFloors.
-   * 사례 31: 2
+   * 건물 수평투영면적 (㎡).
+   * 건축물대장 '건축면적' 또는 1층 바닥면적. 비사업용토지 판정 기준 (소득세법 시행령 §168의8).
+   * 사례 31: 90.48 (= 종전 연면적 180.96 ÷ 층수 2 균등층 가정값)
    */
-  gbBuildingFloors: string;
+  gbBuildingFootprintArea: string;
 
   // ── 검용주택 분리계산 (sodt §160①단서, 2022.1.1 이후) ──
   /** 검용주택 여부 토글 */

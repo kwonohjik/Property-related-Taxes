@@ -69,6 +69,22 @@ const FIELD_LABEL: Record<string, string> = {
   "mixedUse.nonResidentialFloorArea": "비주거용 면적",
   "mixedUse.totalLandArea": "총 토지면적",
   "mixedUse.preHousingDisclosure.firstDisclosureDate": "검용주택 최초 고시일",
+
+  // 일반건물(토지+건물 일괄) 환산취득가 §176의2④
+  "generalBuildingValuation.landArea": "토지 부수면적",
+  "generalBuildingValuation.buildingArea": "건물 연면적",
+  "generalBuildingValuation.buildingFootprintArea": "건물 수평투영면적",
+  "generalBuildingValuation.transferLandPricePerSqm": "양도시 토지 ㎡당 공시지가",
+  "generalBuildingValuation.transferBuildingStdPrice": "양도시 건물기준시가 총액",
+  "generalBuildingValuation.acquisitionLandPricePerSqm": "취득시 토지 ㎡당 공시지가",
+  "generalBuildingValuation.acquisitionBuildingStdPrice": "취득시 건물기준시가 총액",
+
+  // 상업용건물·오피스텔 환산취득가 §164⑧
+  "commercialBuildingValuation.preDisclosure": "호별고시 전 취득 여부",
+  "commercialBuildingValuation.firstDisclosureDate": "호별고시 시작일",
+  "commercialBuildingValuation.unitArea": "전용면적",
+  "commercialBuildingValuation.unitPriceAtTransfer": "양도시 호별 ㎡당 고시가",
+  "commercialBuildingValuation.unitPriceAtFirstOrAcq": "취득(또는 최초고시) 시점 호별 ㎡당 고시가",
 };
 
 /** Zod 영문 메시지 → 한국어 변환 패턴 */
@@ -76,12 +92,20 @@ const MESSAGE_PATTERNS: { test: RegExp; replace: string | ((m: RegExpMatchArray)
   { test: /^Invalid ISO date$/i, replace: "유효한 날짜 형식이 아닙니다 (YYYY-MM-DD, 존재하는 날만 허용)" },
   { test: /^Invalid date$/i, replace: "유효한 날짜가 아닙니다" },
   { test: /^Required$/i, replace: "필수 입력입니다" },
+  // Zod v4 메시지: "Invalid input: expected X, received Y"
+  { test: /^Invalid input:\s*expected\s+(\w+),\s*received\s+undefined$/i, replace: "필수 입력 항목입니다" },
+  { test: /^Invalid input:\s*expected\s+(\w+),\s*received\s+nan$/i, replace: "숫자를 입력하세요" },
+  { test: /^Invalid input:\s*expected\s+(\w+),\s*received\s+(\w+)$/i, replace: (m) => `예상 자료형 ${m[1]}, 입력값 ${m[2]}` },
+  // Zod v3 메시지
+  { test: /^Expected (\w+), received undefined$/i, replace: "필수 입력 항목입니다" },
+  { test: /^Expected (\w+), received nan$/i, replace: "숫자를 입력하세요" },
   { test: /^Expected (\w+), received (\w+)$/i, replace: (m) => `예상 자료형 ${m[1]}, 입력값 ${m[2]}` },
   { test: /^Number must be greater than 0$/i, replace: "0보다 큰 수를 입력하세요" },
   { test: /^Number must be greater than or equal to 0$/i, replace: "0 이상의 수를 입력하세요" },
   { test: /^Number must be a (positive|non-negative) (integer|number)$/i, replace: "양의 숫자를 입력하세요" },
-  { test: /^Expected number, received nan$/i, replace: "숫자를 입력하세요" },
   { test: /^String must contain at least 1 character/i, replace: "값을 입력하세요" },
+  { test: /^Too small/i, replace: "값이 너무 작습니다 (양수를 입력하세요)" },
+  { test: /^Too big/i, replace: "값이 너무 큽니다" },
   { test: /^Invalid input$/i, replace: "입력값이 유효하지 않습니다" },
 ];
 
