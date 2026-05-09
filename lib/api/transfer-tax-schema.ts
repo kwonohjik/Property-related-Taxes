@@ -54,6 +54,12 @@ export const generalBuildingValuationSchema = z.object({
   buildingArea: z.number().positive(),
   /** 건물 수평투영면적 (㎡) — 비사업용토지 판정 기준 (건축물대장 건축면적 또는 1층 바닥면적) */
   buildingFootprintArea: z.number().positive(),
+  /** 용도지역 (§168의12 배율 결정). validate에서 필수 보장. */
+  zoneType: z.string().optional(),
+  /** 수도권 소재 여부 */
+  isMetropolitan: z.boolean().optional(),
+  /** 무허가건축물 여부. true 시 전체 비사업용 (§168의11①1호) */
+  isUnregistered: z.boolean().optional(),
   /** 양도시 개별공시지가 (원/㎡) */
   transferLandPricePerSqm: z.number().int().positive(),
   /** 양도시 건물기준시가 총액 (원) */

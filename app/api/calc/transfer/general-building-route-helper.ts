@@ -106,20 +106,25 @@ export function calculateGeneralBuildingTransfer(
   const totalStandardAtTransfer =
     gbv.transferLandPricePerSqm * gbv.landArea + gbv.transferBuildingStdPrice;
 
+  // 토지 기준시가 합계 (안분 분모 — land_business + land_nbl 합산)
+  const landStdAtTransfer = gbv.transferLandPricePerSqm * gbv.landArea;
+  const landStdAtAcq = gbv.acquisitionLandPricePerSqm * gbv.landArea;
+
   const apportionment: BundledLikeApportionmentResult = {
     apportioned: gbOut.assetCards.map((card) => {
-      const stdAtTransfer =
-        card.propertyType === "land"
-          ? gbv.transferLandPricePerSqm * gbv.landArea
-          : gbv.transferBuildingStdPrice;
-      const stdAtAcq =
-        card.propertyType === "land"
-          ? gbv.acquisitionLandPricePerSqm * gbv.landArea
-          : gbv.acquisitionBuildingStdPrice;
+      const isLandCard = card.propertyType === "land";
+      // land_business + land_nbl 분할 시 각 카드 비율로 기준시가 안분
+      const landRatio = gbOut.nonBusinessRatio > 0 && isLandCard
+        ? (card.propertyId === "land_business"
+          ? (1 - gbOut.nonBusinessRatio)
+          : gbOut.nonBusinessRatio)
+        : 1;
+      const stdAtTransfer = isLandCard ? landStdAtTransfer * landRatio : gbv.transferBuildingStdPrice;
+      const stdAtAcq = isLandCard ? landStdAtAcq * landRatio : gbv.acquisitionBuildingStdPrice;
       return {
         assetId: card.propertyId,
         assetLabel: card.propertyLabel,
-        assetKind: card.propertyType === "land" ? "land" : "building",
+        assetKind: isLandCard ? "land" : "building",
         allocatedSalePrice: card.transferPrice,
         allocatedAcquisitionPrice: card.acquisitionPrice,
         allocatedExpenses: card.expenses,

@@ -246,6 +246,10 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     gbLandArea: "",
     gbBuildingArea: "",
     gbBuildingFootprintArea: "",
+    // ── 일반건물 비사업용토지 판정 (§104의3·§168의12, 2026-05-10) ──
+    gbZoneType: "",
+    gbIsMetropolitan: false,
+    gbIsUnregistered: false,
   };
 }
 
@@ -404,6 +408,10 @@ export function migrateAsset(raw: unknown): AssetForm {
     }
   }
   delete (a as Record<string, unknown>).gbBuildingFloors;
+  // 일반건물 NBL 판정 필드 (2026-05-10)
+  if (a.gbZoneType === undefined) a.gbZoneType = "";
+  if (a.gbIsMetropolitan === undefined) a.gbIsMetropolitan = false;
+  if (a.gbIsUnregistered === undefined) a.gbIsUnregistered = false;
 
   // ③ 장기임대주택 거주주택 비과세 특례 마이그레이션 (sessionStorage 호환)
   if (!a.rentalHousingException || typeof a.rentalHousingException !== "object") {

@@ -87,3 +87,21 @@ export function getHousingMultiplier(
   // 수도권 밖
   return { multiplier: 5, detail: "수도권 밖 도시 5배" };
 }
+
+/**
+ * §168의9(주택부수토지)·§168의12(건축물부수토지) 공용 배율 함수.
+ *
+ * 두 조문의 배율표는 현재 동일하지만 추후 시행령 개정 시 분기될 가능성에 대비해
+ * kind 파라미터로 호출 의도를 명시한다. 현재는 kind 무관 동일 산식 적용.
+ *
+ * @param kind  "housing" = §168의9 주택부수토지 / "general_building" = §168의12 건축물부수토지
+ */
+export function getLandFootprintMultiplier(
+  zoneType: ZoneType,
+  isMetropolitan: boolean,
+  kind: "housing" | "general_building" = "housing",
+): { multiplier: number; detail: string; kind: typeof kind } {
+  // 현재 두 조문 배율표 동일 — kind만 메타로 보존
+  const result = getHousingMultiplier(zoneType, isMetropolitan);
+  return { ...result, kind };
+}

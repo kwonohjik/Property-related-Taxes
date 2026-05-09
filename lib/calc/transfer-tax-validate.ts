@@ -197,39 +197,44 @@ function validateAssetAcquisition(asset: AssetForm, label: string): string | nul
     return null;
   }
 
-  // ── 일반건물(토지+건물 일괄) 환산취득가 전용 검증 (⑧, 소령 §176의2④, §163⑥) ──
-  // ⑧ 동기화 원칙: API buildGeneralBuildingValuation 의 undefined 반환 조건과 동일하게 차단.
-  // 자동 안분 fallback 금지 — 미입력은 이 검증에서 명확한 오류로 차단.
-  if (asset.assetKind === "general_building" && asset.useEstimatedAcquisition) {
-    // 면적 필수 (수평투영면적 = 비사업용토지 판정 기준, 2026-05-09 층수 자동 추정 폐지)
+  // ── 일반건물(토지+건물 일괄) 전용 검증 (⑧, §176의2④·§104의3) ──
+  // 면적·용도지역은 취득방법 무관 필수 (NBL 판정 공통). 기준시가는 환산 모드만.
+  if (asset.assetKind === "general_building") {
+    // 면적 — 모드 무관 필수
     if (!parseDecimal(asset.gbLandArea))
       return `${label}: 토지면적을 입력하세요.`;
-    if (!parseDecimal(asset.gbBuildingArea))
-      return `${label}: 건물 연면적을 입력하세요.`;
     if (!parseDecimal(asset.gbBuildingFootprintArea))
       return `${label}: 건물 수평투영면적을 입력하세요.`;
 
-    // 양도시 기준시가 필수
-    if (!parseAmount(asset.gbTransferLandPricePerSqm))
-      return `${label}: 양도시 토지 공시지가를 입력하세요.`;
-    if (!parseAmount(asset.gbTransferBuildingValue))
-      return `${label}: 양도시 건물기준시가 총액을 입력하세요.`;
+    // 용도지역 — 필수 (fallback 없음 — 미입력 시 계산 차단)
+    if (!asset.gbZoneType)
+      return `${label}: 용도지역을 선택하세요. 비사업용토지 판정 배율 결정에 필수입니다.`;
 
-    // 취득시 기준시가 필수
-    if (!parseAmount(asset.gbAcqLandPricePerSqm))
-      return `${label}: 취득시 토지 공시지가를 입력하세요.`;
-    if (!parseAmount(asset.gbAcqBuildingValue))
-      return `${label}: 취득시 건물기준시가 총액을 입력하세요.`;
+    if (asset.useEstimatedAcquisition) {
+      // 환산취득가 모드 추가 검증
+      if (!parseDecimal(asset.gbBuildingArea))
+        return `${label}: 건물 연면적을 입력하세요.`;
 
-    // 교차 검증: 기준시가가 0이면 0으로 나누기 발생 → 차단
-    // validation에서의 곱셈은 0 분모 판정 한정.
-    // 정밀 계산(anchor 일치)은 엔진이 BigInt(safeMultiplyThenDivide)로 재수행 — UI 부동소수 오차는 영향 없음.
-    const transferLandStd = parseAmount(asset.gbTransferLandPricePerSqm) * parseDecimal(asset.gbLandArea);
-    const transferBuildingStd = parseAmount(asset.gbTransferBuildingValue);
-    if (transferLandStd + transferBuildingStd <= 0)
-      return `${label}: 양도시 기준시가 합계가 0이면 안분이 불가합니다.`;
+      // 양도시 기준시가 필수
+      if (!parseAmount(asset.gbTransferLandPricePerSqm))
+        return `${label}: 양도시 토지 공시지가를 입력하세요.`;
+      if (!parseAmount(asset.gbTransferBuildingValue))
+        return `${label}: 양도시 건물기준시가 총액을 입력하세요.`;
 
-    // 일반건물 환산취득가 검증 완료 — 일반 취득 검증 스킵
+      // 취득시 기준시가 필수
+      if (!parseAmount(asset.gbAcqLandPricePerSqm))
+        return `${label}: 취득시 토지 공시지가를 입력하세요.`;
+      if (!parseAmount(asset.gbAcqBuildingValue))
+        return `${label}: 취득시 건물기준시가 총액을 입력하세요.`;
+
+      // 교차 검증: 0 분모 차단
+      const transferLandStd = parseAmount(asset.gbTransferLandPricePerSqm) * parseDecimal(asset.gbLandArea);
+      const transferBuildingStd = parseAmount(asset.gbTransferBuildingValue);
+      if (transferLandStd + transferBuildingStd <= 0)
+        return `${label}: 양도시 기준시가 합계가 0이면 안분이 불가합니다.`;
+    }
+
+    // 공통 취득일 검증
     if (!asset.acquisitionDate) return `${label}: 취득일을 입력하세요.`;
     return null;
   }

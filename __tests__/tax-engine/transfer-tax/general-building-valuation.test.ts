@@ -79,6 +79,8 @@ function makeInput(overrides?: Partial<GeneralBuildingInput>): GeneralBuildingIn
     acquisitionLandPricePerSqm: ACQUISITION_LAND_PRICE_PER_SQM,
     acquisitionBuildingStdPrice: ACQUISITION_BUILDING_STD_PRICE,
     estimatedDeductionRate: ESTIMATED_DEDUCTION_RATE,
+    zoneType: "commercial",
+    isMetropolitan: true,
     ...overrides,
   };
 }

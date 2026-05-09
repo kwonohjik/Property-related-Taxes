@@ -17,6 +17,9 @@
 
 import { safeMultiplyThenDivide } from "./tax-utils";
 import { TRANSFER } from "./legal-codes";
+import { getLandFootprintMultiplier } from "./non-business-land/urban-area";
+import type { ZoneType } from "./non-business-land/types";
+import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 
 // ============================================================
 // 개산공제율 상수 (시행령 §163 ⑥)
@@ -67,8 +70,18 @@ export type GeneralBuildingInput = {
   // 선택적
   /** 개산공제율 (기본 0.03 — ESTIMATED_DEDUCTION_RATE_LAND_BUILDING) */
   estimatedDeductionRate?: number;
-  /** 비사업용토지 판정 배율 (기본 3 — 도시지역 주거·상업·공업) */
-  floorAreaMultiplier?: number;
+  /**
+   * 용도지역 (§168의12 배율 결정). ZoneType 값.
+   * 미입력 시 엔진이 TaxCalculationError 발생. validate 단계에서 사전 차단.
+   */
+  zoneType?: string;
+  /** 수도권 소재 여부. 배율 3배 vs 5배 분기에 사용. */
+  isMetropolitan?: boolean;
+  /**
+   * 무허가(미등재) 건축물 여부.
+   * true 시 배율 계산 없이 토지 전체 비사업용 (§168의11①1호 단서).
+   */
+  isUnregistered?: boolean;
 };
 
 /** 양도가 안분 결과 */
@@ -139,10 +152,18 @@ export type GeneralBuildingOutput = {
   // 비사업용토지 판정
   /** 건물 수평투영면적 (㎡) — 사용자 직접 입력 */
   buildingFootprintArea: number;
+  /** 적용 배율 (3/5/10배) */
+  appliedMultiplier: number;
+  /** 배율 산출 근거 ("수도권 주·상·공 3배" 등) */
+  multiplierDetail: string;
   /** 인정 한도 = 수평투영면적 × 배율 (㎡) */
   allowedLandArea: number;
   /** true = 사업용 (배율 내, 중과 미발동) */
   isWithinNblRatio: boolean;
+  /** 비사업용 초과 면적 (㎡). 사업용이면 0. */
+  nonBusinessArea: number;
+  /** 비사업용 초과 비율 (0~1). 토지 카드 분할 기준. */
+  nonBusinessRatio: number;
 
   // aggregate 엔진에 넘길 자산 카드 2장
   assetCards: AssetCardForAggregate[];
@@ -293,21 +314,91 @@ export function buildGeneralBuildingAssetCards(
   const estimatedDeduction = calculateEstimatedDeduction(input, rate);
 
   /**
-   * 비사업용토지 판정 (사용자 직접 입력 수평투영면적 기준)
+   * 비사업용토지 판정 (§104의3·§168의12)
    *
-   * 2026-05-09 변경: 연면적÷층수 추정값 폐지 → 사용자가 건축물대장 건축면적
-   * (=수평투영면적, 1층 바닥면적)을 직접 입력. 균등층 가정 오차 제거.
-   *
-   * 법령 참조: NBL.BUILDING_SITE (시행령 §168의8)
-   *   부수토지 한도 = 건물 수평투영면적 × 용도지역별 배율 (도시지역 주거·상업·공업 = 3)
+   * 2026-05-09: 사용자 직접 입력 수평투영면적 기준. 균등층 가정 폐지.
+   * 2026-05-10: getLandFootprintMultiplier()로 용도지역·수도권 배율 정밀 계산.
+   *   초과분 면적(nonBusinessArea)·비율(nonBusinessRatio) 계산 → 토지 카드 분할 중과.
    */
-  const multiplier = input.floorAreaMultiplier ?? 3;
-  const allowedLandArea = input.buildingFootprintArea * multiplier;
-  const isWithinNblRatio = input.landArea <= allowedLandArea;
 
-  // Step 5: 자산 카드 2장 생성 (aggregate 엔진 위임용)
-  const assetCards: AssetCardForAggregate[] = [
-    {
+  // 무허가건축물: 배율 무관 토지 전체 비사업용 (§168의11①1호 단서)
+  let appliedMultiplier: number;
+  let multiplierDetail: string;
+  let allowedLandArea: number;
+  let isWithinNblRatio: boolean;
+
+  if (input.isUnregistered) {
+    appliedMultiplier = 0;
+    multiplierDetail = "무허가건축물 — 전체 비사업용";
+    allowedLandArea = 0;
+    isWithinNblRatio = false;
+  } else {
+    // 용도지역 미입력 시 엔진 예외 (validate에서 사전 차단해야 함)
+    if (!input.zoneType) {
+      throw new TaxCalculationError(
+        TaxErrorCode.INVALID_INPUT,
+        "일반건물 비사업용토지 판정: zoneType(용도지역)이 입력되지 않았습니다. 계산 전 용도지역을 선택하세요.",
+      );
+    }
+    const { multiplier, detail } = getLandFootprintMultiplier(
+      input.zoneType as ZoneType,
+      input.isMetropolitan ?? false,
+      "general_building",
+    );
+    appliedMultiplier = multiplier;
+    multiplierDetail = detail;
+    allowedLandArea = input.buildingFootprintArea * multiplier;
+    isWithinNblRatio = input.landArea <= allowedLandArea;
+  }
+
+  // 초과분 비율 (§104의3 — 초과분만 중과)
+  const nonBusinessArea = Math.max(0, input.landArea - allowedLandArea);
+  const nonBusinessRatio = input.landArea > 0
+    ? Math.round((nonBusinessArea / input.landArea) * 10000) / 10000
+    : 0;
+  const businessRatio = 1 - nonBusinessRatio;
+
+  // Step 5: 자산 카드 생성 (aggregate 엔진 위임용)
+  // 초과분이 있으면 토지를 사업용·비사업용 2장으로 분할 (§104의3 초과분만 중과)
+  const assetCards: AssetCardForAggregate[] = [];
+
+  if (!isWithinNblRatio && nonBusinessRatio > 0) {
+    // 토지 카드 1: 사업용 (허용면적 비율)
+    const landBusinessTransfer = Math.floor(allocation.land * businessRatio);
+    const landBusinessAcq = Math.floor(acquisition.land * businessRatio);
+    const landBusinessExp = Math.floor(estimatedDeduction.land * businessRatio);
+    assetCards.push({
+      propertyId: "land_business",
+      propertyLabel: "토지-사업용(1001)",
+      propertyType: "land",
+      transferPrice: landBusinessTransfer,
+      acquisitionPrice: landBusinessAcq,
+      expenses: landBusinessExp,
+      usedEstimatedAcquisition: true,
+      estimatedBase: landBusinessAcq,
+      estimatedDeduction: landBusinessExp,
+      acquisitionDate: input.acquisitionDate,
+      transferDate: input.transferDate,
+      isNonBusinessLand: false,
+    });
+    // 토지 카드 2: 비사업용 초과분 (원단위 잔여 흡수)
+    assetCards.push({
+      propertyId: "land_nbl",
+      propertyLabel: "토지-비사업용초과분(1002)",
+      propertyType: "land",
+      transferPrice: allocation.land - landBusinessTransfer,
+      acquisitionPrice: acquisition.land - landBusinessAcq,
+      expenses: estimatedDeduction.land - landBusinessExp,
+      usedEstimatedAcquisition: true,
+      estimatedBase: acquisition.land - landBusinessAcq,
+      estimatedDeduction: estimatedDeduction.land - landBusinessExp,
+      acquisitionDate: input.acquisitionDate,
+      transferDate: input.transferDate,
+      isNonBusinessLand: true,
+    });
+  } else {
+    // 전체 사업용 (1장)
+    assetCards.push({
       propertyId: "land",
       propertyLabel: "토지(1001)",
       propertyType: "land",
@@ -319,31 +410,37 @@ export function buildGeneralBuildingAssetCards(
       estimatedDeduction: estimatedDeduction.land,
       acquisitionDate: input.acquisitionDate,
       transferDate: input.transferDate,
-      isNonBusinessLand: !isWithinNblRatio,
-    },
-    {
-      propertyId: "building",
-      propertyLabel: "건물(3001)",
-      propertyType: "general_building_unit",
-      transferPrice: allocation.building,
-      acquisitionPrice: acquisition.building,
-      expenses: estimatedDeduction.building,
-      usedEstimatedAcquisition: true,
-      estimatedBase: acquisition.building,
-      estimatedDeduction: estimatedDeduction.building,
-      acquisitionDate: input.acquisitionDate,
-      transferDate: input.transferDate,
-      isNonBusinessLand: false, // 건물 자체는 비사업용토지 판정 해당 없음
-    },
-  ];
+      isNonBusinessLand: false,
+    });
+  }
+
+  // 건물 카드
+  assetCards.push({
+    propertyId: "building",
+    propertyLabel: "건물(3001)",
+    propertyType: "general_building_unit",
+    transferPrice: allocation.building,
+    acquisitionPrice: acquisition.building,
+    expenses: estimatedDeduction.building,
+    usedEstimatedAcquisition: true,
+    estimatedBase: acquisition.building,
+    estimatedDeduction: estimatedDeduction.building,
+    acquisitionDate: input.acquisitionDate,
+    transferDate: input.transferDate,
+    isNonBusinessLand: false,
+  });
 
   return {
     allocation,
     acquisition,
     estimatedDeduction,
     buildingFootprintArea: input.buildingFootprintArea,
+    appliedMultiplier,
+    multiplierDetail,
     allowedLandArea,
     isWithinNblRatio,
+    nonBusinessArea,
+    nonBusinessRatio,
     assetCards,
   };
 }

@@ -169,6 +169,10 @@ export function buildGeneralBuildingValuation(
     buildingArea,
     buildingFootprintArea,
     estimatedDeductionRate: 0.03, // 시행령 §163⑥ 등기 자산 3% 고정
+    // NBL 판정 필드 (2026-05-10)
+    zoneType: asset.gbZoneType || undefined,
+    isMetropolitan: asset.gbIsMetropolitan,
+    isUnregistered: asset.gbIsUnregistered,
   };
 }
 

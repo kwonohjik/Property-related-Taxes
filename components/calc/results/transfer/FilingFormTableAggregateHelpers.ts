@@ -51,7 +51,7 @@ export function buildAggregateRows(
     // 일반건물(토지+건물 일괄) — 토지·건물 분해된 카드는 모두 assets[0]에서 취득일·필요경비 메타 가져옴
     if (
       formData.assets[0]?.assetKind === "general_building" &&
-      (pid === "land" || pid === "building")
+      (pid === "land" || pid === "land_business" || pid === "land_nbl" || pid === "building")
     ) {
       return formData.assets[0];
     }

@@ -51,6 +51,8 @@ const CASE_31_GB_INPUT: GeneralBuildingInput = {
   transferBuildingStdPrice: 20_629_440, // BigInt 검산 — anchor 904,725,192 만족
   acquisitionLandPricePerSqm: 2_800_000,
   acquisitionBuildingStdPrice: 28_144_700,
+  zoneType: "commercial",
+  isMetropolitan: true,
 };
 
 const mockRates = makeMockRates();

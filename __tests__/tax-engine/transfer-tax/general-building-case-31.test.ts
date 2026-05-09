@@ -74,6 +74,9 @@ const CASE_31_INPUT: GeneralBuildingInput = {
   transferBuildingStdPrice: TRANSFER_BUILDING_STD_PRICE,
   acquisitionLandPricePerSqm: ACQUISITION_LAND_PRICE_PER_SQM,
   acquisitionBuildingStdPrice: ACQUISITION_BUILDING_STD_PRICE,
+  // 사례 31 — 도심 상업지역 + 수도권 → 3배 배율 → 허용 271.44㎡ > 85㎡ → 전체 사업용
+  zoneType: "commercial",
+  isMetropolitan: true,
 };
 
 // ============================================================
@@ -164,8 +167,19 @@ describe("사례 31: 비사업용토지 판정 — 사업용", () => {
     expect(out.buildingFootprintArea).toBeCloseTo(90.48, 2);
   });
 
+  it("배율 = 수도권 상업지역 3배", () => {
+    expect(out.appliedMultiplier).toBe(3);
+    expect(out.multiplierDetail).toBe("수도권 주·상·공 3배");
+  });
+
   it("인정한도 = 90.48 × 3 = 271.44㎡", () => {
     expect(out.allowedLandArea).toBeCloseTo(271.44, 2);
+  });
+
+  it("초과분 없음 (전체 사업용) — nonBusinessRatio = 0", () => {
+    expect(out.nonBusinessRatio).toBe(0);
+    expect(out.nonBusinessArea).toBe(0);
+    expect(out.isWithinNblRatio).toBe(true);
   });
 
   it("case31_nbl_within_ratio — 부수토지 85㎡ ≤ 271.44㎡ → 사업용 true", () => {
