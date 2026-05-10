@@ -197,7 +197,7 @@ function validateAssetAcquisition(asset: AssetForm, label: string): string | nul
     return null;
   }
 
-  // ── 일반건물(토지+건물 일괄) 전용 검증 (⑧, §176의2④·§104의3·§166⑥) ──
+  // ── 일반건물(토지+건물 일괄) 전용 검증 (⑧, §176의2②·§104의3·§166⑥) ──
   // 면적·용도지역·양도시 기준시가는 취득방법 무관 필수.
   // 양도시 기준시가: 환산취득가 = 분모, 실거래가 = §166⑥ 토지·건물 안분 비율.
   if (asset.assetKind === "general_building") {
@@ -231,6 +231,20 @@ function validateAssetAcquisition(asset: AssetForm, label: string): string | nul
         return `${label}: 취득시 토지 공시지가를 입력하세요.`;
       if (!parseAmount(asset.gbAcqBuildingValue))
         return `${label}: 취득시 건물기준시가 총액을 입력하세요.`;
+
+      // §114조의2 신축 정보 검증 (gbIsSelfBuilt=true 시 건물 취득일 필수)
+      if (asset.gbIsSelfBuilt === true) {
+        if (!asset.gbBuildingAcquisitionDate) {
+          return `${label}: 자가건축(신축취득)을 선택했습니다. 건물 취득일(영 §162①4호 빠른 날 — 사용승인서 교부일·사실상 사용일·임시사용승인일 중)을 입력하세요.`;
+        }
+        // 건물 취득일은 토지 취득일 이후여야 함
+        if (
+          asset.acquisitionDate &&
+          asset.gbBuildingAcquisitionDate < asset.acquisitionDate
+        ) {
+          return `${label}: 건물 취득일은 토지 취득일(${asset.acquisitionDate}) 이후여야 합니다.`;
+        }
+      }
     }
 
     // 공통 취득일 검증

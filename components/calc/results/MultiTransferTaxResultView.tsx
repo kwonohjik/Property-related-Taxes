@@ -45,6 +45,7 @@ function breakdownToFilingResult(b: PerPropertyBreakdown): TransferTaxResult {
     reducibleIncome: b.reducibleIncome,
     determinedTax,
     penaltyTax: totalPenalty,
+    penaltyBase: b.penaltyBase ?? 0,
     localIncomeTax,
     totalTax: determinedTax + totalPenalty + localIncomeTax,
     steps: b.steps,

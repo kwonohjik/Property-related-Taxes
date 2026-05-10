@@ -2,7 +2,7 @@
  * 일반건물(토지+건물 일괄) 라우트 헬퍼.
  *
  * 두 경로 지원:
- * A. 환산취득가 모드: §166⑥(양도가 안분) + §176의2④(환산) + §163⑥(개산공제) + §102②(1차 통산)
+ * A. 환산취득가 모드: §166⑥(양도가 안분) + §176의2②(환산) + §163⑥(개산공제) + §102②(1차 통산)
  * B. 실거래가/감정가 모드: §166⑥(비율 안분) + 실거래 취득가액 비율 분할 + NBL 중과
  *
  * route.ts 800줄 분할 정책에 따라 추출.
@@ -73,28 +73,40 @@ function buildProperties(
   cards: AssetCardForAggregate[],
   nonBusinessRatio: number,
 ): TransferTaxItemInput[] {
-  return cards.map((card) => ({
-    propertyId: card.propertyId,
-    propertyLabel: card.propertyLabel,
-    propertyType: card.propertyType,
-    transferPrice: card.transferPrice,
-    acquisitionPrice: card.acquisitionPrice,
-    expenses: card.expenses,
-    transferDate: card.transferDate,
-    acquisitionDate: card.acquisitionDate,
-    useEstimatedAcquisition: false,
-    usedEstimatedAcquisition: card.usedEstimatedAcquisition,
-    estimatedBase: card.estimatedBase,
-    estimatedDeduction: card.estimatedDeduction,
-    isNonBusinessLand: card.isNonBusinessLand,
-    isOneHousehold: false,
-    householdHousingCount: 0,
-    residencePeriodMonths: 0,
-    isRegulatedArea: false,
-    wasRegulatedAtAcquisition: false,
-    isUnregistered: false,
-    reductions: [],
-  } as unknown as TransferTaxItemInput));
+  return cards.map((card) => {
+    const isBuilding = card.propertyType === "general_building_unit";
+    return {
+      propertyId: card.propertyId,
+      propertyLabel: card.propertyLabel,
+      propertyType: card.propertyType,
+      transferPrice: card.transferPrice,
+      acquisitionPrice: card.acquisitionPrice,
+      expenses: card.expenses,
+      transferDate: card.transferDate,
+      acquisitionDate: card.acquisitionDate,
+      // useEstimatedAcquisition=false: aggregate 경로에서는 이미 취득가 계산 완료.
+      // 가산세 penaltyBase는 usedEstimatedAcquisition=true + estimatedBase 조합으로 전달.
+      // (finalize.ts STEP 10.5에서 isEstimatedMode = useEstimatedAcquisition || usedEstimatedAcquisition)
+      useEstimatedAcquisition: false,
+      usedEstimatedAcquisition: card.usedEstimatedAcquisition,
+      estimatedBase: card.estimatedBase,
+      estimatedDeduction: card.estimatedDeduction,
+      isNonBusinessLand: card.isNonBusinessLand,
+      isOneHousehold: false,
+      householdHousingCount: 0,
+      residencePeriodMonths: 0,
+      isRegulatedArea: false,
+      wasRegulatedAtAcquisition: false,
+      isUnregistered: false,
+      reductions: [],
+      // 건물 카드만 §114조의2 가산세 발동 정보 패스스루
+      // 토지 카드는 소득세법 §114조의2 ① 적용 대상 아님
+      acquisitionMethod: isBuilding && card.usedEstimatedAcquisition ? "estimated" : "actual",
+      isSelfBuilt: isBuilding ? (card.isSelfBuilt ?? false) : false,
+      // buildingAcquisitionDate → 엔진 input의 constructionDate로 단일 원천 매핑
+      constructionDate: isBuilding ? card.buildingAcquisitionDate : undefined,
+    } as unknown as TransferTaxItemInput;
+  });
 }
 
 function buildApportionment(
@@ -219,7 +231,7 @@ export function calculateGeneralBuildingTransfer(
     landStdAtTransfer, landStdAtAcq,
     gbv.transferBuildingStdPrice, gbv.acquisitionBuildingStdPrice,
     true,
-    "소득세법 시행령 §166⑥ · §176의2④ · §163⑥",
+    "소득세법 시행령 §166⑥ · §176의2② · §163⑥",
   );
 
   return { apportionment, aggregated };

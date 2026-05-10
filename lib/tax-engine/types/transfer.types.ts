@@ -206,6 +206,19 @@ export interface TransferTaxInput {
   /** 증축 바닥면적 합계 (㎡) */
   extensionFloorArea?: number;
   /**
+   * 환산취득가 이미 계산 여부 (aggregate 경로 전용).
+   * aggregate 엔진이 buildProperties()를 통해 이미 계산된 환산취득가를 전달할 때 true.
+   * finalize.ts STEP 10.5: penaltyBase 결정 시 useEstimatedAcquisition fallback으로 사용.
+   * 단건 경로에서는 useEstimatedAcquisition이 같은 역할을 함.
+   */
+  usedEstimatedAcquisition?: boolean;
+  /**
+   * 환산취득가 base 금액 (aggregate 경로 전용).
+   * buildProperties()를 통해 card.estimatedBase가 전달됨.
+   * finalize.ts STEP 10.5: usedEstimatedAcquisition=true 시 penaltyBase로 사용.
+   */
+  estimatedBase?: number;
+  /**
    * 장기임대주택 감면 상세 정보 (선택)
    * 제공 시 calculateRentalReduction()으로 정밀 감면 판정.
    * 미제공 시 reductions[] 배열의 long_term_rental 항목으로 단순 처리 (하위 호환).
@@ -550,6 +563,12 @@ export interface TransferTaxResult {
   determinedTax: number;
   /** §114조의2 신축·증축 가산세 (환산취득가액 or 감정가액 × 5%) */
   penaltyTax: number;
+  /**
+   * §114조의2 가산세 산정 기준액 (= 가산세 ÷ 0.05).
+   * 환산취득가액 모드: 건물 환산취득가액. 감정가액 모드: 감정가액(2020.1.1 이후).
+   * 결과 카드 산식 표시용 ("건물 환산취득가 X × 5%"). 가산세 미발동 시 0.
+   */
+  penaltyBase: number;
   /** 지방소득세 ((결정세액 + 가산세) × 10%) */
   localIncomeTax: number;
   /** 총 납부세액 */

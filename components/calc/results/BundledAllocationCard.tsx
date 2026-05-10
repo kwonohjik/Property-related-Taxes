@@ -47,6 +47,7 @@ function aggregateToFilingResult(a: AggregateTransferResult): TransferTaxResult 
     reductionAmount: a.reductionAmount,
     determinedTax: a.determinedTax,
     penaltyTax: a.penaltyTax,
+    penaltyBase: 0, // 어댑터: 합계 카드 표시용으로 자산별 penaltyBase는 BundledAllocationCard에서 별도 합산
     localIncomeTax: a.localIncomeTax,
     totalTax: a.totalTax,
     steps: a.steps,
@@ -247,9 +248,20 @@ function AggregatedTaxSummary({ aggregated }: { aggregated: AggregateTransferRes
           {totalPenalty > 0 && (
             <>
               <Row label="가산세" value={`+ ${formatKRW(totalPenalty)}`} />
-              {buildingPenaltySum > 0 && (
-                <Row label="· 환산가액가산세 (§114조의2)" value={formatKRW(buildingPenaltySum)} sub />
-              )}
+              {buildingPenaltySum > 0 && (() => {
+                // penaltyBase: PerPropertyBreakdown 정식 필드 (사례 32 후속 PR로 승격, 캐스트 제거)
+                const penaltyBaseSum = aggregated.properties.reduce(
+                  (s, p) => s + (p.penaltyBase ?? 0),
+                  0,
+                );
+                return (
+                  <Row
+                    label={`· 환산취득가액 가산세 (소득세법 §114조의2 ①)${penaltyBaseSum > 0 ? ` = 건물 환산취득가 ${formatKRW(penaltyBaseSum)} × 5%` : ""}`}
+                    value={formatKRW(buildingPenaltySum)}
+                    sub
+                  />
+                );
+              })()}
               {filingDelayedSum > 0 && (
                 <Row label="· 신고불성실·납부지연 가산세" value={formatKRW(filingDelayedSum)} sub />
               )}

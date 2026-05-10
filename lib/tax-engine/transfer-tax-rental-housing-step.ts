@@ -121,6 +121,7 @@ export function applyRentalHousingExceptionStep(
     reductionAmount: 0,
     determinedTax: taxResult.calculatedTax,
     penaltyTax: 0,
+    penaltyBase: 0, // §155⑳ 임대주택 거주주택 비과세 경로: §114조의2 가산세 미적용
     localIncomeTax,
     totalTax: taxResult.calculatedTax + localIncomeTax,
     steps,

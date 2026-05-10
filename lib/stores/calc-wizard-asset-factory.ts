@@ -237,7 +237,7 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     cbLandPricePerSqmAtAcq: "",
     cbLandPricePerSqmAtFirst: "",
     cbLandPricePerSqmAtTransfer: "",
-    // ── 일반건물(토지+건물 일괄) 환산취득가 gb* 필드 (사례 31, 소득세법 시행령 §176의2④, §163⑥) ──
+    // ── 일반건물(토지+건물 일괄) 환산취득가 gb* 필드 (사례 31, 소득세법 시행령 §176의2②, §163⑥) ──
     // 환산 ON/OFF는 useEstimatedAcquisition 라디오로 통일 (2026-05-09)
     gbTransferLandPricePerSqm: "",
     gbTransferBuildingValue: "",
@@ -250,6 +250,9 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     gbZoneType: "",
     gbIsMetropolitan: false,
     gbIsUnregistered: false,
+    // ── 일반건물 신축 정보 (사례 32, 소득세법 §114조의2) ──
+    gbIsSelfBuilt: false,
+    gbBuildingAcquisitionDate: "",
   };
 }
 
@@ -412,6 +415,9 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (a.gbZoneType === undefined) a.gbZoneType = "";
   if (a.gbIsMetropolitan === undefined) a.gbIsMetropolitan = false;
   if (a.gbIsUnregistered === undefined) a.gbIsUnregistered = false;
+  // 일반건물 신축 정보 (사례 32, §114조의2)
+  if (a.gbIsSelfBuilt === undefined) a.gbIsSelfBuilt = false;
+  if (a.gbBuildingAcquisitionDate === undefined) a.gbBuildingAcquisitionDate = "";
 
   // ③ 장기임대주택 거주주택 비과세 특례 마이그레이션 (sessionStorage 호환)
   if (!a.rentalHousingException || typeof a.rentalHousingException !== "object") {

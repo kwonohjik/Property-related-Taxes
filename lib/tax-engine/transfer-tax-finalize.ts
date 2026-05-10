@@ -152,9 +152,15 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
   });
 
   // ── STEP 10.5: §114조의2 신축·증축 가산세 (step은 STEP 12에서 통합 emit) ──
+  // penaltyBase: 환산취득가 모드 = estimatedBase 사용
+  //   - useEstimatedAcquisition: true  → 단건 엔진 calcTransferGain() 결과 estimatedBase (FinalizeArgs)
+  //   - usedEstimatedAcquisition: true → aggregate 경로(일반건물 등) — calcTransferGain 미경유.
+  //     이때 estimatedBase(args)=0이므로 input.estimatedBase(카드에서 전달된 값)를 fallback.
+  const isEstimatedMode = input.useEstimatedAcquisition || input.usedEstimatedAcquisition;
+  const effectiveEstimatedBase = estimatedBase || (input.usedEstimatedAcquisition ? (input.estimatedBase ?? 0) : 0);
   const penaltyBase = input.acquisitionMethod === "appraisal"
     ? (input.appraisalValue ?? 0)
-    : (input.useEstimatedAcquisition ? (estimatedBase ?? 0) : 0);
+    : (isEstimatedMode ? effectiveEstimatedBase : 0);
   const penaltyResult = calculateBuildingPenalty(effectiveInput, penaltyBase);
   const penaltyTax = penaltyResult?.penalty ?? 0;
   const determinedTaxWithPenalty = determinedTax + penaltyTax;

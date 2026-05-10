@@ -42,6 +42,7 @@ function mixedUseToFilingResult(b: MixedUseGainBreakdown): TransferTaxResult {
     isSurchargeSuspended: false,
     reductionAmount: 0,
     determinedTax: t.transferTax,
+    penaltyBase: 0, // 검용주택 어댑터: 가산세 미적용 경로 (MixedUseGainBreakdown에 penaltyBase 없음)
     penaltyTax: 0,
     localIncomeTax: localTax,
     totalTax: t.totalPayable,

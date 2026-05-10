@@ -703,45 +703,21 @@ export interface AssetForm {
    */
   cbLandPricePerSqmAtTransfer: string;
 
-  // ── 일반건물(토지+건물 일괄) 환산취득가 (사례 31, 소득세법 시행령 §176의2④, §163⑥) ──
-  // 환산취득가 ON/OFF는 상위 useEstimatedAcquisition 라디오로 통일 (CB와 동일 패턴, 2026-05-09).
-  // 자산종류 = general_building + useEstimatedAcquisition === true 시 GeneralBuildingBlock 노출.
-  /**
-   * 양도시 토지 공시지가 (원/㎡).
-   * LandPriceLookupField로 입력. 양도일 전년 기준연도 기준시가.
-   * 안분 분모의 토지 기준시가 산정: gbTransferLandPricePerSqm × gbLandArea.
-   */
+  // ── 일반건물(토지+건물 일괄) 환산취득가 (사례 31, 영 §176의2②, §163⑥) ──
+  // useEstimatedAcquisition=true + assetKind="general_building" 시 GeneralBuildingBlock 노출.
+  /** 양도시 토지 공시지가 (원/㎡). LandPriceLookupField. 안분 분모: ×gbLandArea. */
   gbTransferLandPricePerSqm: string;
-  /**
-   * 양도시 건물기준시가 총액 (원).
-   * 국세청 기준시가 조회 — 건물 전체 기준시가 합계액.
-   * 안분 분모의 건물 기준시가 = 이 값 그대로.
-   * 사례 31: 20,627,816 (BigInt 정밀 산출값)
-   */
+  /** 양도시 건물기준시가 총액 (원). 국세청 기준시가 조회. */
   gbTransferBuildingValue: string;
-  /**
-   * 취득시 토지 공시지가 (원/㎡).
-   * LandPriceLookupField로 입력. 취득일 전년 기준연도 기준시가.
-   * 환산 비율 분자 토지 성분: gbAcqLandPricePerSqm × gbLandArea.
-   * 사례 31: 2,800,000 (1998년)
-   */
+  /** 취득시 토지 공시지가 (원/㎡). LandPriceLookupField. 환산 분자: ×gbLandArea. */
   gbAcqLandPricePerSqm: string;
-  /**
-   * 취득시 건물기준시가 총액 (원).
-   * 국세청 기준시가 조회 — 취득시점 건물 기준시가 합계액.
-   * 환산 비율 분자 건물 성분 + 개산공제 기준액.
-   * 사례 31: 28,144,700 (역산: 844,341 ÷ 0.03)
-   */
+  /** 취득시 건물기준시가 총액 (원). 환산 분자 + 개산공제 기준액. */
   gbAcqBuildingValue: string;
-  /**
-   * 토지 부수면적 (㎡).
-   * 안분·환산·개산공제·NBL 판정에 사용.
-   * 사례 31: 85
-   */
+  /** 토지 부수면적 (㎡). 안분·환산·개산공제·NBL 판정 공통 사용. */
   gbLandArea: string;
-  /** 건물 연면적(㎡). 자산 식별·표시용 (환산비율·개산공제 산식과 무관). */
+  /** 건물 연면적(㎡). 자산 식별·표시용. */
   gbBuildingArea: string;
-  /** 건물 수평투영면적(㎡). 건축물대장 건축면적 또는 1층 바닥면적. §168의12 NBL 배율 기준. */
+  /** 건물 수평투영면적(㎡). 건축물대장 건축면적. §168의12 NBL 배율 기준. */
   gbBuildingFootprintArea: string;
 
   // ── 일반건물 비사업용토지 판정 (§104의3·§168의12) ──
@@ -751,6 +727,20 @@ export interface AssetForm {
   gbIsMetropolitan: boolean;
   /** 무허가건축물 여부. true 시 전체 비사업용 의제 (§168의11①1호). */
   gbIsUnregistered: boolean;
+
+  // ── 일반건물 신축 정보 (사례 32, 소득세법 §114조의2) ──
+  /**
+   * 자가건축(신축취득) 여부. true 시 건물 취득일부터 5년 이내 양도 시
+   * 건물 환산취득가액 × 5%를 결정세액에 가산 (소득세법 §114조의2 ①).
+   */
+  gbIsSelfBuilt: boolean;
+  /**
+   * 건물 취득일 (YYYY-MM-DD). 소득세법 시행령 §162① 4호 기준:
+   * 사용승인서 교부일·사실상 사용일·임시사용승인일 중 빠른 날.
+   * gbIsSelfBuilt=true 시 필수. 미입력 시 validation에서 차단.
+   * 사례 31 호환: gbIsSelfBuilt=false/undefined 시 acquisitionDate(토지) fallback.
+   */
+  gbBuildingAcquisitionDate: string;
 
   // ── 검용주택 분리계산 (sodt §160①단서, 2022.1.1 이후) ──
   /** 검용주택 여부 토글 */

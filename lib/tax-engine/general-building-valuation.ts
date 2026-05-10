@@ -7,7 +7,7 @@
  *
  * 법령 근거:
  *   소득세법 시행령 §166 ⑥ — 토지·건물 등 여러 자산 일괄 양도 시 기준시가 비율 안분
- *   소득세법 시행령 §176조의2 ④ — 환산취득가액 (취득시/양도시 기준시가 비율)
+ *   소득세법 시행령 §176조의2 ② — 환산취득가액 (취득시/양도시 기준시가 비율)
  *   소득세법 §97 ② 2호 + 시행령 §163 ⑥ — 개산공제율 (등기 자산 3%, 미등기 0.3%)
  *   소득세법 §104조의3 + 시행령 §168의8 — 비사업용토지 판정 (건물 부수토지 배율)
  *
@@ -66,6 +66,20 @@ export type GeneralBuildingInput = {
   acquisitionLandPricePerSqm: number;
   /** 취득시 건물기준시가 총액 (원) */
   acquisitionBuildingStdPrice: number;
+
+  // 신축 취득 (사례 32 — §114조의2 가산세)
+  /**
+   * 건물 취득일 — 소득세법 시행령 §162① 4호 기준 빠른 날
+   * (사용승인서 교부일·사실상 사용일·임시사용승인일 중).
+   * 미입력 시 acquisitionDate(토지 취득일) fallback ← 사례 31 호환.
+   * isSelfBuilt=true 시 validation에서 필수 강제.
+   */
+  buildingAcquisitionDate?: Date;
+  /**
+   * 신축취득 여부. true 시 건물 카드에 소득세법 §114조의2 ① 5% 가산세 발동 정보 노출.
+   * 라우트 헬퍼 buildProperties()가 건물 카드만 isSelfBuilt: true로 패스스루.
+   */
+  isSelfBuilt?: boolean;
 
   // 선택적
   /** 개산공제율 (기본 0.03 — ESTIMATED_DEDUCTION_RATE_LAND_BUILDING) */
@@ -137,6 +151,18 @@ export type AssetCardForAggregate = {
   transferDate: Date;
   /** 비사업용토지 여부 */
   isNonBusinessLand: boolean;
+  /**
+   * 건물 카드만 set. 라우트가 TransferTaxItemInput 매핑 시 isSelfBuilt 패스스루용.
+   * 소득세법 §114조의2 ① 가산세 발동 여부 판단에 사용.
+   */
+  isSelfBuilt?: boolean;
+  /**
+   * 건물 카드만 set. 영 §162①4호 빠른 날
+   * (사용승인서 교부일·사실상 사용일·임시사용승인일 중).
+   * 환산취득가액 가산세(소득세법 §114조의2 ①)의 5년 기산점이자
+   * 건물 LTHD 보유기간 기산점.
+   */
+  buildingAcquisitionDate?: Date;
 };
 
 /** 일반건물(토지+건물 일괄) 환산취득가 계산 출력 */
@@ -206,7 +232,7 @@ function allocateBundledTransferPrice(
 }
 
 /**
- * Step 2: 환산취득가 (소득세법 시행령 §176조의2 ④)
+ * Step 2: 환산취득가 (소득세법 시행령 §176조의2 ②)
  *
  * 자산별로 취득시/양도시 기준시가 비율을 이용해 환산취득가를 산정한다.
  *
@@ -280,7 +306,7 @@ function calculateEstimatedDeduction(
  *
  * 5단 파이프라인:
  *   1. 양도가 안분 (§166⑥ 기준시가 비율)
- *   2. 환산취득가 (§176의2④)
+ *   2. 환산취득가 (§176의2②)
  *   3. 개산공제 (§163⑥ 3%)
  *   4. 비사업용토지 판정 (배율 내 여부)
  *   5. 자산 카드 2장 (토지·건물) 생성 → aggregate 엔진에 위임
@@ -290,7 +316,7 @@ function calculateEstimatedDeduction(
  *
  * 법령 근거:
  *   TRANSFER.GENERAL_BUILDING_APPORTIONMENT — §166⑥
- *   TRANSFER.GENERAL_BUILDING_ESTIMATED_ACQ — §176의2④
+ *   TRANSFER.GENERAL_BUILDING_ESTIMATED_ACQ — §176의2②
  *   TRANSFER.GENERAL_BUILDING_LUMP_DEDUCTION — §97②2호 + §163⑥
  *   NBL.BUILDING_SITE — §168의8 (건물 부수토지 배율)
  */
@@ -305,7 +331,7 @@ export function buildGeneralBuildingAssetCards(
   // 법령 참조: TRANSFER.GENERAL_BUILDING_APPORTIONMENT
   const allocation = allocateBundledTransferPrice(input);
 
-  // Step 2: 환산취득가 (§176의2④)
+  // Step 2: 환산취득가 (§176의2②)
   // 법령 참조: TRANSFER.GENERAL_BUILDING_ESTIMATED_ACQ
   const acquisition = calculateConvertedAcquisition(input, allocation);
 
@@ -415,6 +441,9 @@ export function buildGeneralBuildingAssetCards(
   }
 
   // 건물 카드
+  // 건물 취득일: buildingAcquisitionDate 우선 (사례 32 — 영 §162①4호 빠른 날),
+  //             미입력 시 acquisitionDate fallback (사례 31 호환).
+  const buildingAcqDate = input.buildingAcquisitionDate ?? input.acquisitionDate;
   assetCards.push({
     propertyId: "building",
     propertyLabel: "건물(3001)",
@@ -425,9 +454,11 @@ export function buildGeneralBuildingAssetCards(
     usedEstimatedAcquisition: true,
     estimatedBase: acquisition.building,
     estimatedDeduction: estimatedDeduction.building,
-    acquisitionDate: input.acquisitionDate,
+    acquisitionDate: buildingAcqDate,
     transferDate: input.transferDate,
     isNonBusinessLand: false,
+    isSelfBuilt: input.isSelfBuilt ?? false,
+    buildingAcquisitionDate: buildingAcqDate,
   });
 
   return {

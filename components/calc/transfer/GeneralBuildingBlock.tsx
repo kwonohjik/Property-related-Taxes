@@ -25,6 +25,7 @@ import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInpu
 import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { DateInput } from "@/components/ui/date-input";
 
 // §168의12 배율표 기준 용도지역 선택지
 // (수도권/비수도권 배율 차이는 gbIsMetropolitan 토글로 반영)
@@ -61,6 +62,16 @@ interface Props {
   transferDate?: string;
 }
 
+/** 양도일 − 건물취득일 < 5년 여부 판정 (소득세법 §114조의2 ① "5년 이내") */
+function isWithin5Years(buildingAcqDate: string, transferDateStr: string): boolean {
+  if (!buildingAcqDate || !transferDateStr) return false;
+  const acq = new Date(buildingAcqDate).getTime();
+  const trans = new Date(transferDateStr).getTime();
+  if (isNaN(acq) || isNaN(trans)) return false;
+  const msPerYear = 365.25 * 24 * 60 * 60 * 1000;
+  return (trans - acq) / msPerYear < 5;
+}
+
 export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
   const isEstimated = asset.useEstimatedAcquisition;
 
@@ -69,6 +80,12 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
     if (!asset.gbZoneType) return null;
     return getMultiplierLabel(asset.gbZoneType, asset.gbIsMetropolitan);
   }, [asset.gbZoneType, asset.gbIsMetropolitan]);
+
+  // §114조의2 가산세 5년 이내 여부 (useMemo — useEffect 미러링 금지 정책)
+  const showPenaltyBadge = useMemo(() => {
+    if (!asset.gbIsSelfBuilt || !asset.gbBuildingAcquisitionDate || !transferDate) return false;
+    return isWithin5Years(asset.gbBuildingAcquisitionDate, transferDate);
+  }, [asset.gbIsSelfBuilt, asset.gbBuildingAcquisitionDate, transferDate]);
 
   // 인정 한도 미리 계산 (토지·수평투영면적 + 배율)
   const footprint = parseDecimal(asset.gbBuildingFootprintArea);
@@ -81,7 +98,7 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
       <div className="space-y-1">
         <p className="text-sm font-semibold text-violet-900">일반건물 (토지·건물 분리 산정)</p>
         <p className="text-xs text-violet-700">
-          소득세법 시행령 §176의2④ (환산취득가) · §104의3 (비사업용토지 판정)
+          소득세법 시행령 §176의2② (환산취득가) · §104의3 (비사업용토지 판정)
         </p>
       </div>
       <div className="space-y-3">
@@ -166,6 +183,53 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
               <p>토지: 취득시 공시지가 × 토지면적 × 3%</p>
               <p>건물: 취득시 건물기준시가 총액 × 3%</p>
             </div>
+          </div>
+        )}
+
+        {/* ⑤ 신축 정보 (amber) — 환산취득가 모드만. 소득세법 §114조의2 ① 가산세 발동 여부. */}
+        {isEstimated && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-[10px] font-bold text-amber-800 select-none">⑤</span>
+              <p className="text-xs font-semibold text-amber-700">신축 정보</p>
+              <span className="text-[10px] text-amber-500">(소득세법 §114조의2)</span>
+            </div>
+
+            {/* 자가건축 여부 토글 */}
+            <ToggleCard
+              tone="amber"
+              variant="chip"
+              title="자가건축(신축취득)"
+              description="건물을 직접 신축하여 취득한 경우 ON. 건물 취득일부터 5년 이내 양도 시 환산취득가액 가산세(소득세법 §114조의2 ①) 적용."
+              checked={asset.gbIsSelfBuilt ?? false}
+              onCheckedChange={(checked) => {
+                onChange({
+                  gbIsSelfBuilt: checked,
+                  // 정책: useEffect 미러링 금지 — onChange에서 직접 클리어 (feedback_useeffect_store_mirror_forbidden.md)
+                  ...(!checked ? { gbBuildingAcquisitionDate: "" } : {}),
+                });
+              }}
+            />
+
+            {/* 건물 취득일 (gbIsSelfBuilt=true 시만 표시) */}
+            {asset.gbIsSelfBuilt && (
+              <FieldCard
+                label="건물 취득일"
+                hint="사용승인서 교부일·사실상 사용일·임시사용승인일 중 빠른 날 (소득세법 시행령 §162① 4호)"
+              >
+                <DateInput
+                  value={asset.gbBuildingAcquisitionDate ?? ""}
+                  onChange={(value) => onChange({ gbBuildingAcquisitionDate: value })}
+                />
+              </FieldCard>
+            )}
+
+            {/* §114조의2 가산세 적용 안내 배지 (5년 이내 시 자동 표시) */}
+            {showPenaltyBadge && (
+              <div className="rounded bg-amber-100/80 border border-amber-300 px-3 py-2 text-xs text-amber-800 font-semibold">
+                환산취득가액 가산세 적용 — 건물 환산취득가액의 5% (소득세법 §114조의2 ①)
+              </div>
+            )}
           </div>
         )}
 

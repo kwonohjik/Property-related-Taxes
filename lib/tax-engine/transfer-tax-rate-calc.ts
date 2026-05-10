@@ -10,6 +10,7 @@
  * 부수토지 일체과세 세율 결정 (H-9)은 appurtenant-land-rate.ts 로 분리됨.
  */
 
+import { addYears } from "date-fns";
 import {
   applyRate,
   calculateProgressiveTax,
@@ -86,9 +87,12 @@ export function calculateBuildingPenalty(
   }
 
   if (!input.constructionDate) return null;
-  const msPerYear = 365.25 * 24 * 60 * 60 * 1000;
-  const yearsHeld = (transferDate.getTime() - input.constructionDate.getTime()) / msPerYear;
-  if (yearsHeld >= 5) return null;
+  // §114조의2 ① "취득일부터 5년 이내" — "이내"는 당일 포함 해석.
+  // 정확한 날짜 비교(addYears 5)로 윤년·30일/31일 월말 경계 안전 처리.
+  // 예: 취득 2018-03-31 → 5년 시점 2023-03-31. 양도일이 ≤ 2023-03-31이면 발동, > 이면 미적용.
+  // 기존 365.25 분모 방식은 윤년에서 부정확(예: 2020-02-29 + 5년 = 2025-02-28인데 1826일 / 365.25 = 4.9986).
+  const fifthAnniversary = addYears(input.constructionDate, 5);
+  if (transferDate.getTime() > fifthAnniversary.getTime()) return null;
 
   const penalty = applyRate(acquisitionPriceForPenalty, 0.05);
   const typeLabel = input.buildingType === "extension" ? "증축" : "신축";
@@ -694,6 +698,7 @@ export function handleMultiParcelBranch(
     transferGain: mpTaxableGain,
     taxableGain: mpTaxableGain,
     usedEstimatedAcquisition: false,
+    penaltyBase: 0, // 다필지 분기: 가산세는 §114조의2 건물 한정으로 토지 다필지 경로에 미적용
     longTermHoldingDeduction: mpLtd,
     longTermHoldingRate: mpTaxableGain > 0 ? mpLtd / mpTaxableGain : 0,
     basicDeduction: mpBasicDeduction,

@@ -532,7 +532,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
           취득시/양도시 기준시가는 아래 상업용건물·오피스텔 환산 영역에서 입력합니다 (호별 고시가·건물 기준시가·개별공시지가).
         </p>
       ) : isGeneralBuilding ? (
-        // 일반건물(토지+건물 일괄): 환산은 시행령 §176의2④·§163⑥에 따라
+        // 일반건물(토지+건물 일괄): 환산은 시행령 §176의2②·§163⑥에 따라
         // 토지(㎡당 공시지가 × 토지면적) + 건물(기준시가 총액)로 자산별 분리 산정 (GeneralBuildingBlock).
         <p className="text-xs text-muted-foreground italic">
           취득시/양도시 기준시가는 아래 일반건물 환산 영역에서 입력합니다 (토지·건물 분리 — 토지 ㎡당 공시지가·건물 기준시가 총액).

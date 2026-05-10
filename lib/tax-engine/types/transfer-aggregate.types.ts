@@ -132,6 +132,12 @@ export interface PerPropertyBreakdown {
   reductionAllocationRatio: number;
   /** §114조의2 건별 환산가액적용가산세 */
   penaltyTax: number;
+  /**
+   * §114조의2 건별 가산세 산정 기준액 (= 가산세 ÷ 0.05).
+   * 환산취득가액 모드 = 건물 환산취득가액, 감정가액 모드 = 감정가액. 가산세 미발동 시 0.
+   * BundledAllocationCard 등 결과 카드의 "건물 환산취득가 X × 5%" 산식 표시용.
+   */
+  penaltyBase: number;
   /** 건별 신고불성실·납부지연 가산세 합계 */
   filingDelayedPenaltyTax: number;
   /** 건별 신고불성실·납부지연 가산세 상세 (입력 시) */

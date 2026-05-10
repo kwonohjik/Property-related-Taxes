@@ -28,6 +28,7 @@ import {
   buildCompanionEngineInputs,
 } from "./bundled-split-helpers";
 import { TaxCalculationError, TaxErrorCode } from "@/lib/tax-engine/tax-errors";
+import { toDate, toOptionalDate } from "@/lib/api/date-coerce";
 import { checkRateLimit, getClientIp } from "@/lib/api/rate-limit";
 import {
   propertySchema as inputSchema,
@@ -140,12 +141,12 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // 단계 3: string → Date 변환
+  // 단계 3: string → Date 변환 (`lib/api/date-coerce.ts` 헬퍼 — invalid 시 명확한 에러 메시지)
   const data = parsed.data;
-  const transferDate = new Date(data.transferDate);
-  const acquisitionDate = new Date(data.acquisitionDate);
+  const transferDate = toDate(data.transferDate, "transferDate");
+  const acquisitionDate = toDate(data.acquisitionDate, "acquisitionDate");
   // Round 9 (2026-05-06): 자산-수준 매매계약일 string → Date 변환
-  const assetContractDate = data.assetContractDate ? new Date(data.assetContractDate) : undefined;
+  const assetContractDate = toOptionalDate(data.assetContractDate);
 
   const engineInput: TransferTaxInput = {
     propertyType: data.propertyType,
@@ -171,12 +172,8 @@ export async function POST(request: NextRequest) {
     isNonBusinessLand: data.isNonBusinessLand,
     isSuccessorRightToMoveIn: data.isSuccessorRightToMoveIn,
     acquisitionCause: data.acquisitionCause,
-    decedentAcquisitionDate: data.decedentAcquisitionDate
-      ? new Date(data.decedentAcquisitionDate)
-      : undefined,
-    donorAcquisitionDate: data.donorAcquisitionDate
-      ? new Date(data.donorAcquisitionDate)
-      : undefined,
+    decedentAcquisitionDate: toOptionalDate(data.decedentAcquisitionDate),
+    donorAcquisitionDate: toOptionalDate(data.donorAcquisitionDate),
     carryoverTaxation: data.carryoverTaxation
       ? {
           giftRegistryDate: new Date(data.carryoverTaxation.giftRegistryDate),
@@ -286,10 +283,10 @@ export async function POST(request: NextRequest) {
     appraisalValue: data.appraisalValue,
     isSelfBuilt: data.isSelfBuilt,
     buildingType: data.buildingType,
-    constructionDate: data.constructionDate ? new Date(data.constructionDate) : undefined,
+    constructionDate: toOptionalDate(data.constructionDate),
     extensionFloorArea: data.extensionFloorArea,
     // 토지/건물 취득일 분리 (선택)
-    landAcquisitionDate: data.landAcquisitionDate ? new Date(data.landAcquisitionDate) : undefined,
+    landAcquisitionDate: toOptionalDate(data.landAcquisitionDate),
     landSplitMode: data.landSplitMode,
     landTransferPrice: data.landTransferPrice,
     buildingTransferPrice: data.buildingTransferPrice,
@@ -394,14 +391,20 @@ export async function POST(request: NextRequest) {
     ...(data.commercialBuildingValuation ? { commercialBuildingValuation: data.commercialBuildingValuation as any } : {}),
     // ⑭ 일반건물(토지+건물 일괄) 환산취득가 서브객체 (TypeScript 미감지 영역 — 명시 매핑 필수)
     // totalTransferPrice/transferDate/acquisitionDate는 route handler에서 최상위 필드 주입 패턴 적용.
-    ...(data.generalBuildingValuation ? {
-      generalBuildingValuation: {
-        ...data.generalBuildingValuation,
-        totalTransferPrice: data.transferPrice,               // 최상위 양도가액 주입
-        transferDate,                                          // 이미 Date 변환됨
-        acquisitionDate,                                       // 이미 Date 변환됨
-      },
-    } : {}),
+    // buildingAcquisitionDate: YYYY-MM-DD 문자열 → Date 변환 포함 (⑭ date-coerce 필수)
+    ...(data.generalBuildingValuation ? (() => {
+      const buildingAcq = toOptionalDate(data.generalBuildingValuation.buildingAcquisitionDate);
+      return {
+        generalBuildingValuation: {
+          ...data.generalBuildingValuation,
+          totalTransferPrice: data.transferPrice,               // 최상위 양도가액 주입
+          transferDate,                                          // 이미 Date 변환됨
+          acquisitionDate,                                       // 이미 Date 변환됨
+          // ⑭ 건물 취득일 string → Date 변환 (소득세법 §114조의2 ① 5년 기산점)
+          ...(buildingAcq ? { buildingAcquisitionDate: buildingAcq } : {}),
+        },
+      };
+    })() : {}),
   };
 
   // 단계 4: 세율 로드

@@ -72,6 +72,17 @@ export const generalBuildingValuationSchema = z.object({
   estimatedDeductionRate: z.number().positive().max(1).optional(),
   /** 실거래가/감정가 모드 플래그. true 시 route helper가 실거래가 안분 경로 사용. */
   actualPriceMode: z.boolean().optional(),
+  /**
+   * 건물 취득일 — 소득세법 시행령 §162①4호 빠른 날
+   * (사용승인서 교부일·사실상 사용일·임시사용승인일 중).
+   * isSelfBuilt=true 시 5년 이내 양도 여부 판단에 사용.
+   */
+  buildingAcquisitionDate: z.string().date().optional(),
+  /**
+   * 신축취득 여부. true 시 건물 환산취득가액에 대해
+   * 소득세법 §114조의2 ① 5% 가산세 발동 여부를 판정.
+   */
+  isSelfBuilt: z.boolean().optional(),
 });
 
 export type GeneralBuildingValuationSchemaInput = z.infer<typeof generalBuildingValuationSchema>;
@@ -340,7 +351,7 @@ const propertyBaseShape = {
    */
   commercialBuildingValuation: commercialBuildingValuationSchema.optional(),
   /**
-   * ⑫ 일반건물(토지+건물 일괄) 환산취득가 계산 입력 (소령 §176의2④, §163⑥).
+   * ⑫ 일반건물(토지+건물 일괄) 환산취득가 계산 입력 (소령 §176의2②, §163⑥).
    * propertyType === "general_building" + 환산 모드 시 제공. 미정의 시 침묵 stripping 방지를 위해 명시 필수.
    */
   generalBuildingValuation: generalBuildingValuationSchema.optional(),

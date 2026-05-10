@@ -70,7 +70,7 @@ const FIELD_LABEL: Record<string, string> = {
   "mixedUse.totalLandArea": "총 토지면적",
   "mixedUse.preHousingDisclosure.firstDisclosureDate": "검용주택 최초 고시일",
 
-  // 일반건물(토지+건물 일괄) 환산취득가 §176의2④
+  // 일반건물(토지+건물 일괄) 환산취득가 §176의2②
   "generalBuildingValuation.landArea": "토지 부수면적",
   "generalBuildingValuation.buildingArea": "건물 연면적",
   "generalBuildingValuation.buildingFootprintArea": "건물 수평투영면적",

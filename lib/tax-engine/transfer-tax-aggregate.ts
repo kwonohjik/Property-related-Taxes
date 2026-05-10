@@ -419,6 +419,7 @@ export function calculateTransferTaxAggregate(
       reductionAggregated,
       reductionAllocationRatio,
       penaltyTax: r.result.isExempt ? 0 : r.result.penaltyTax ?? 0,
+      penaltyBase: r.result.isExempt ? 0 : r.result.penaltyBase ?? 0,
       filingDelayedPenaltyTax: r.result.isExempt ? 0 : r.result.penaltyDetail?.totalPenalty ?? 0,
       penaltyDetail: r.result.penaltyDetail,
       steps: r.result.steps,

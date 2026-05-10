@@ -147,7 +147,7 @@ export function GeneralBuildingValuationDetailCard({
       <h3 className="text-sm font-bold text-violet-900">
         일반건물(토지+건물 일괄) 환산취득가 산정 근거
         <span className="ml-2 text-[10px] font-normal text-violet-500">
-          (소득세법 시행령 §176의2④ · §163⑥ · §102②)
+          (소득세법 시행령 §176의2② · §163⑥ · §102②)
         </span>
       </h3>
 
@@ -186,7 +186,7 @@ export function GeneralBuildingValuationDetailCard({
 
       {/* ② 환산취득가 */}
       <div className="space-y-2">
-        <SectionTitle number="②" text="환산취득가 (시행령 §176의2④)" tone="amber" />
+        <SectionTitle number="②" text="환산취득가 (시행령 §176의2②)" tone="amber" />
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>

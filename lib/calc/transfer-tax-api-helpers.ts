@@ -125,7 +125,7 @@ export function toEngineAssetKind(
   return kind;
 }
 
-// ─── ④ 일반건물(토지+건물 일괄) API 변환 헬퍼 (소령 §176의2④, §163⑥, §166⑥) ───
+// ─── ④ 일반건물(토지+건물 일괄) API 변환 헬퍼 (소령 §176의2②, §163⑥, §166⑥) ───
 
 /**
  * AssetForm gb* 필드 → generalBuildingValuation 서브객체 변환.
@@ -175,6 +175,8 @@ export function buildGeneralBuildingValuation(
       buildingArea,
       buildingFootprintArea,
       estimatedDeductionRate: 0.03, // §163⑥ 등기 자산 3% 고정
+      buildingAcquisitionDate: asset.gbBuildingAcquisitionDate || undefined,
+      isSelfBuilt: asset.gbIsSelfBuilt ?? false,
       ...nblFields,
     };
   }

@@ -718,7 +718,7 @@ export function TransferTaxResultView({
         />
       )}
 
-      {/* ⑦ 일반건물(토지+건물 일괄) 환산취득가 산정 근거 상세 (소령 §176의2④, §163⑥, §102②) */}
+      {/* ⑦ 일반건물(토지+건물 일괄) 환산취득가 산정 근거 상세 (소령 §176의2②, §163⑥, §102②) */}
       {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
       {(result as any).generalBuildingValuationDetail && (
         <GeneralBuildingValuationDetailCard
