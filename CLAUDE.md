@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 구현 현황은 [`docs/00-pm/korean-tax-calc.roadmap.md`](docs/00-pm/korean-tax-calc.roadmap.md) 참조. 양도세만 엔진·UI·API·테스트 완전 구현됨. 취득세 이하 세목은 엔진 완료, UI 구현 대기.
 
-진행 중: 양도세 감면 23개 조문 확장 — `lib/tax-engine/transfer-reductions/` Phase 1 골격 완료 (§99의3 우선 구현 중). 계획서: `docs/00-pm/transfer-reduction-expansion.plan.md`.
+진행 중: 양도세 감면 23개 조문 확장 — `lib/tax-engine/transfer-reductions/` Phase 1 골격 완료, §99의3 완전 구현 완료. 계획서: `docs/00-pm/transfer-reduction-expansion.plan.md`.
 
 최근 완료(2026-05-08): 상업용건물·오피스텔 환산취득가 사례 29 + **일반건물 일괄 환산취득가 사례 31**. 신규 `propertyType: "general_building"` + `lib/tax-engine/general-building-valuation.ts` 모듈(382줄, 시행령 §166⑥ 양도가 안분 + §176의2④ 자산별 환산 + §163⑥ 자산별 개산공제 + §102② 1차 통산 위임). 양도시 건물기준시가 잠금값 20,629,440(BigInt 손계산 함정 주의). anchor 38개 toBe 정확 통과(2,233/2,233 회귀 보존).
 
@@ -27,7 +27,8 @@ npm run build                 # 프로덕션 빌드
 npm run typecheck             # tsc --noEmit
 npm run lint                  # ESLint
 npm run check:pre-pr          # typecheck + lint + test 일괄 (PR 전 수동 게이트)
-npm test                      # vitest 전체
+npm test                      # vitest 전체 (1회)
+npm run test:watch            # vitest 감시 모드 (개발 중)
 npx vitest run <path>         # 단일 파일/디렉터리
 npx vitest run -t "T-01"      # 이름 패턴
 npx shadcn@latest add <name>  # shadcn/ui 컴포넌트 추가
@@ -65,6 +66,13 @@ Layer 2: Pure Engine (lib/tax-engine/*.ts)
   → 감면 라우터: lib/tax-engine/transfer-reductions/ (23개 조문 메타데이터·시한검증·개별 구현 모듈)
   → 양도세 4-파일 분할 (2026-05-08): transfer-tax.ts(681) + transfer-tax-helpers.ts(787) + transfer-tax-rate-calc.ts(724) + transfer-tax-finalize.ts(211, STEP 7.5~12 통합)
   → 사례 29 환산: lib/tax-engine/commercial-building-valuation.ts (호별고시 전 역환산, propertyType "commercial_building")
+  → 사례 31 환산: lib/tax-engine/general-building-valuation.ts (§166⑥ 양도가 안분, propertyType "general_building")
+
+lib/calc/ — 클라이언트↔API 변환 레이어 (14개 동기화 지점 ④⑧ 담당)
+  → transfer-tax-api.ts / transfer-tax-api-helpers.ts / transfer-tax-api-carryover.ts (이월과세 전용)
+  → multi-transfer-tax-api.ts / multi-transfer-tax-validate.ts (다건 양도 전용)
+  → transfer-tax-validate.ts / transfer-tax-error-format.ts
+  → acquisition-tax-api.ts (취득세 API 변환)
 ```
 
 세부 파일 조직·의존 규칙·정수 연산은 [lib/tax-engine/CLAUDE.md](lib/tax-engine/CLAUDE.md) 참조.
