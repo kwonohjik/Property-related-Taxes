@@ -8,6 +8,7 @@
  * route.ts 800줄 분할 정책에 따라 추출.
  */
 
+import { toOptionalDate } from "@/lib/api/date-coerce";
 import {
   calculateTransferTaxAggregate,
   type TransferTaxItemInput,
@@ -169,17 +170,25 @@ export function dispatchGeneralBuilding(
   priorReductionUsage: unknown[],
   rates: TaxRatesMap,
 ): GeneralBuildingRouteResult {
-  if (gbRaw.actualPriceMode === true) {
+  // buildingAcquisitionDate: Zod는 z.string().date()로만 검증 — Date 객체로 변환 안 됨.
+  // 미변환 시 string이 buildGeneralBuildingAssetCards()의 acquisitionDate에 도달 →
+  // monthsBetween(from, to)에서 from.getFullYear() TypeError 발생.
+  const buildingAcqDate = toOptionalDate(gbRaw.buildingAcquisitionDate);
+  const coercedGbRaw = buildingAcqDate
+    ? { ...gbRaw, buildingAcquisitionDate: buildingAcqDate }
+    : gbRaw;
+
+  if (coercedGbRaw.actualPriceMode === true) {
     return calculateGeneralBuildingActualTransfer(
       {
         totalTransferPrice, transferDate, acquisitionDate,
-        landArea: gbRaw.landArea as number,
-        buildingFootprintArea: gbRaw.buildingFootprintArea as number,
-        transferLandPricePerSqm: gbRaw.transferLandPricePerSqm as number,
-        transferBuildingStdPrice: gbRaw.transferBuildingStdPrice as number,
-        zoneType: gbRaw.zoneType as string | undefined,
-        isMetropolitan: gbRaw.isMetropolitan as boolean | undefined,
-        isUnregistered: gbRaw.isUnregistered as boolean | undefined,
+        landArea: coercedGbRaw.landArea as number,
+        buildingFootprintArea: coercedGbRaw.buildingFootprintArea as number,
+        transferLandPricePerSqm: coercedGbRaw.transferLandPricePerSqm as number,
+        transferBuildingStdPrice: coercedGbRaw.transferBuildingStdPrice as number,
+        zoneType: coercedGbRaw.zoneType as string | undefined,
+        isMetropolitan: coercedGbRaw.isMetropolitan as boolean | undefined,
+        isUnregistered: coercedGbRaw.isUnregistered as boolean | undefined,
         actualAcquisitionPrice,
         actualExpenses,
       },
@@ -188,7 +197,7 @@ export function dispatchGeneralBuilding(
   }
   return calculateGeneralBuildingTransfer(
     {
-      ...(gbRaw as unknown as Omit<GeneralBuildingValuationPayload, "totalTransferPrice" | "transferDate" | "acquisitionDate">),
+      ...(coercedGbRaw as unknown as Omit<GeneralBuildingValuationPayload, "totalTransferPrice" | "transferDate" | "acquisitionDate">),
       totalTransferPrice, transferDate, acquisitionDate,
     },
     taxYear, annualBasicDeductionUsed, priorReductionUsage, rates,
