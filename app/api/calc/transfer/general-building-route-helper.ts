@@ -213,6 +213,9 @@ export function dispatchGeneralBuilding(
   // #4-a: 토지 상속·증여 보조 필드 Date 변환
   const decedentAcqDate = toOptionalDate(gbRaw.decedentAcquisitionDate);
   const donorAcqDate = toOptionalDate(gbRaw.donorAcquisitionDate);
+  // 다른 피상속인/증여자 분리: 건물 전용 보조 필드 Date 변환
+  const buildingDecedentAcqDate = toOptionalDate(gbRaw.buildingDecedentAcquisitionDate);
+  const buildingDonorAcqDate = toOptionalDate(gbRaw.buildingDonorAcquisitionDate);
 
   // #7-b: 토지 이월과세 carryoverTaxation 객체 내부 Date 변환
   const landCt = gbRaw.landCarryoverTaxation as Record<string, unknown> | undefined;
@@ -231,6 +234,8 @@ export function dispatchGeneralBuilding(
     buildingAcquisitionCause: buildingAcqCause,
     ...(decedentAcqDate ? { decedentAcquisitionDate: decedentAcqDate } : {}),
     ...(donorAcqDate ? { donorAcquisitionDate: donorAcqDate } : {}),
+    ...(buildingDecedentAcqDate ? { buildingDecedentAcquisitionDate: buildingDecedentAcqDate } : {}),
+    ...(buildingDonorAcqDate ? { buildingDonorAcquisitionDate: buildingDonorAcqDate } : {}),
     ...(coercedLandCt ? { landCarryoverTaxation: coercedLandCt } : {}),
   };
 

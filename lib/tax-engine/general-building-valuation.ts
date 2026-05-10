@@ -115,6 +115,18 @@ export type GeneralBuildingInput = {
    * 단건 엔진의 비교과세(이월 시나리오 vs 통상 max) 로직이 토지 카드에 적용됨.
    */
   landCarryoverTaxation?: CarryoverTaxationInput;
+  /**
+   * 다른 피상속인 케이스 — 건물 전용 피상속인 취득일.
+   * 미입력 시 `decedentAcquisitionDate` fallback (#6 같은 피상속인 호환).
+   * `buildingAcquisitionCause === "inheritance"` 시 단기보유 기산점(영 §95④).
+   */
+  buildingDecedentAcquisitionDate?: Date;
+  /**
+   * 다른 증여자 케이스 — 건물 전용 증여자 취득일.
+   * 미입력 시 `donorAcquisitionDate` fallback (#7-a 같은 증여자 호환).
+   * `buildingAcquisitionCause === "gift"` 시 단기보유 기산점(영 §95④).
+   */
+  buildingDonorAcquisitionDate?: Date;
 
   // 선택적
   /** 개산공제율 (기본 0.03 — ESTIMATED_DEDUCTION_RATE_LAND_BUILDING) */
@@ -543,13 +555,22 @@ export function buildGeneralBuildingAssetCards(
     isSelfBuilt: isSelfBuiltForCard,
     buildingAcquisitionDate: buildingAcqDate,
     buildingAcquisitionCause: input.buildingAcquisitionCause,  // 건물 취득원인 패스스루
-    // #6: 건물 inheritance/gift 시 보조 필드 패스 (자산-수준 단일 — 같은 피상속인/증여자 가정).
-    // 다른 피상속인 케이스(buildingDecedent/landDecedent 분리)는 후속 PR.
-    ...(input.buildingAcquisitionCause === "inheritance" && input.decedentAcquisitionDate
-      ? { decedentAcquisitionDate: input.decedentAcquisitionDate }
+    // #6: 건물 inheritance/gift 시 보조 필드 패스.
+    // 우선순위: 건물 전용 분리 필드(buildingDecedent/buildingDonor) 우선,
+    //          미입력 시 자산-수준 단일 필드(decedent/donor) fallback (#6 호환).
+    ...(input.buildingAcquisitionCause === "inheritance"
+      ? (() => {
+          const buildingDecedent =
+            input.buildingDecedentAcquisitionDate ?? input.decedentAcquisitionDate;
+          return buildingDecedent ? { decedentAcquisitionDate: buildingDecedent } : {};
+        })()
       : {}),
-    ...(input.buildingAcquisitionCause === "gift" && input.donorAcquisitionDate
-      ? { donorAcquisitionDate: input.donorAcquisitionDate }
+    ...(input.buildingAcquisitionCause === "gift"
+      ? (() => {
+          const buildingDonor =
+            input.buildingDonorAcquisitionDate ?? input.donorAcquisitionDate;
+          return buildingDonor ? { donorAcquisitionDate: buildingDonor } : {};
+        })()
       : {}),
   });
 

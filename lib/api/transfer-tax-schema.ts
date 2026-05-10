@@ -105,6 +105,16 @@ export const generalBuildingValuationSchema = z.object({
   /** #4-a: 토지 증여 시 증여자 취득일 (영 §95④). */
   donorAcquisitionDate: z.string().date().optional(),
   /**
+   * 다른 피상속인 분리: 건물 전용 피상속인 취득일.
+   * 미입력 시 `decedentAcquisitionDate` fallback (#6 호환).
+   */
+  buildingDecedentAcquisitionDate: z.string().date().optional(),
+  /**
+   * 다른 증여자 분리: 건물 전용 증여자 취득일.
+   * 미입력 시 `donorAcquisitionDate` fallback (#7-a 호환).
+   */
+  buildingDonorAcquisitionDate: z.string().date().optional(),
+  /**
    * #7-b: 토지 배우자등 이월과세 (§97조의2) — landAcquisitionCause === "carryover_gift" 시 필수.
    * 단건 엔진의 비교과세(이월 vs 통상 max) 로직이 토지 카드에 적용됨.
    */
