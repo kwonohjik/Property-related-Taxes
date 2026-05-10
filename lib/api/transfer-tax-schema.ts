@@ -104,6 +104,28 @@ export const generalBuildingValuationSchema = z.object({
   decedentAcquisitionDate: z.string().date().optional(),
   /** #4-a: 토지 증여 시 증여자 취득일 (영 §95④). */
   donorAcquisitionDate: z.string().date().optional(),
+  /**
+   * #7-b: 토지 배우자등 이월과세 (§97조의2) — landAcquisitionCause === "carryover_gift" 시 필수.
+   * 단건 엔진의 비교과세(이월 vs 통상 max) 로직이 토지 카드에 적용됨.
+   */
+  landCarryoverTaxation: z
+    .object({
+      giftRegistryDate: z.string().date(),
+      donorAcquisitionDate: z.string().date(),
+      donorAcquisitionPrice: z.number().int().nonnegative().optional(),
+      useEstimatedAcquisition: z.boolean(),
+      giftTaxAmount: z.number().int().nonnegative(),
+      donorCapitalExpenditure: z.number().int().nonnegative().optional(),
+      giftDateValuation: z.number().int().nonnegative(),
+      exclusionDeclared: z
+        .object({
+          expropriationWithin2Years: z.boolean().optional(),
+          oneHouseExemptionApplies: z.boolean().optional(),
+          isFamilyBusinessInheritedAsset: z.boolean().optional(),
+        })
+        .optional(),
+    })
+    .optional(),
 });
 
 export type GeneralBuildingValuationSchemaInput = z.infer<typeof generalBuildingValuationSchema>;

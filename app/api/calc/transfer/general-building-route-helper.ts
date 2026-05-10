@@ -128,6 +128,10 @@ function buildProperties(
               ...(card.donorAcquisitionDate
                 ? { donorAcquisitionDate: card.donorAcquisitionDate }
                 : {}),
+              // #7-b: 토지 이월과세 — 단건 엔진 비교과세(이월 vs 통상 max) 트리거
+              ...(card.carryoverTaxation
+                ? { carryoverTaxation: card.carryoverTaxation }
+                : {}),
             }
           : {}),
     } as unknown as TransferTaxItemInput;
@@ -210,6 +214,16 @@ export function dispatchGeneralBuilding(
   const decedentAcqDate = toOptionalDate(gbRaw.decedentAcquisitionDate);
   const donorAcqDate = toOptionalDate(gbRaw.donorAcquisitionDate);
 
+  // #7-b: 토지 이월과세 carryoverTaxation 객체 내부 Date 변환
+  const landCt = gbRaw.landCarryoverTaxation as Record<string, unknown> | undefined;
+  const coercedLandCt = landCt
+    ? {
+        ...landCt,
+        giftRegistryDate: toOptionalDate(landCt.giftRegistryDate),
+        donorAcquisitionDate: toOptionalDate(landCt.donorAcquisitionDate),
+      }
+    : undefined;
+
   const coercedGbRaw: Record<string, unknown> = {
     ...gbRaw,
     ...(buildingAcqDate ? { buildingAcquisitionDate: buildingAcqDate } : {}),
@@ -217,6 +231,7 @@ export function dispatchGeneralBuilding(
     buildingAcquisitionCause: buildingAcqCause,
     ...(decedentAcqDate ? { decedentAcquisitionDate: decedentAcqDate } : {}),
     ...(donorAcqDate ? { donorAcquisitionDate: donorAcqDate } : {}),
+    ...(coercedLandCt ? { landCarryoverTaxation: coercedLandCt } : {}),
   };
 
   if (coercedGbRaw.actualPriceMode === true) {

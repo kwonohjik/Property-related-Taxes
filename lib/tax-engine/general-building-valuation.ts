@@ -20,6 +20,7 @@ import { TRANSFER } from "./legal-codes";
 import { getLandFootprintMultiplier } from "./non-business-land/urban-area";
 import type { ZoneType } from "./non-business-land/types";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
+import type { CarryoverTaxationInput } from "./types/transfer-carryover.types";
 
 // ============================================================
 // 개산공제율 상수 (시행령 §163 ⑥)
@@ -109,6 +110,11 @@ export type GeneralBuildingInput = {
   decedentAcquisitionDate?: Date;
   /** 토지 증여 시 증여자 취득일 (영 §95④). */
   donorAcquisitionDate?: Date;
+  /**
+   * #7-b: 토지 배우자등 이월과세 (§97조의2) — landAcquisitionCause === "carryover_gift" 시 필수.
+   * 단건 엔진의 비교과세(이월 시나리오 vs 통상 max) 로직이 토지 카드에 적용됨.
+   */
+  landCarryoverTaxation?: CarryoverTaxationInput;
 
   // 선택적
   /** 개산공제율 (기본 0.03 — ESTIMATED_DEDUCTION_RATE_LAND_BUILDING) */
@@ -218,6 +224,12 @@ export type AssetCardForAggregate = {
   decedentAcquisitionDate?: Date;
   /** 토지 증여 시 증여자 취득일 (영 §95④ 단기보유 기산점). */
   donorAcquisitionDate?: Date;
+  /**
+   * #7-b: 토지 배우자등 이월과세 (§97조의2) — 토지 카드에만 set.
+   * 라우트가 TransferTaxItemInput.carryoverTaxation로 전달 →
+   * aggregate가 단건 엔진 호출 시 자동 비교과세 수행.
+   */
+  carryoverTaxation?: CarryoverTaxationInput;
 };
 
 /** 일반건물(토지+건물 일괄) 환산취득가 계산 출력 */
@@ -464,6 +476,7 @@ export function buildGeneralBuildingAssetCards(
       landAcquisitionCause: input.landAcquisitionCause,
       decedentAcquisitionDate: input.decedentAcquisitionDate,
       donorAcquisitionDate: input.donorAcquisitionDate,
+      carryoverTaxation: input.landCarryoverTaxation,
     });
     // 토지 카드 2: 비사업용 초과분 (원단위 잔여 흡수)
     assetCards.push({
@@ -482,6 +495,7 @@ export function buildGeneralBuildingAssetCards(
       landAcquisitionCause: input.landAcquisitionCause,
       decedentAcquisitionDate: input.decedentAcquisitionDate,
       donorAcquisitionDate: input.donorAcquisitionDate,
+      carryoverTaxation: input.landCarryoverTaxation,
     });
   } else {
     // 전체 사업용 (1장)
@@ -501,6 +515,7 @@ export function buildGeneralBuildingAssetCards(
       landAcquisitionCause: input.landAcquisitionCause,
       decedentAcquisitionDate: input.decedentAcquisitionDate,
       donorAcquisitionDate: input.donorAcquisitionDate,
+      carryoverTaxation: input.landCarryoverTaxation,
     });
   }
 

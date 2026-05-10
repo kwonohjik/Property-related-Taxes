@@ -10,7 +10,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 진행 중: 양도세 감면 23개 조문 확장 — `lib/tax-engine/transfer-reductions/` Phase 1 골격 완료, §99의3 완전 구현 완료. 계획서: `docs/00-pm/transfer-reduction-expansion.plan.md`.
 
-최근 완료(2026-05-11): **일반건물 #7-a 토지 증여 + 건물 신축 회귀 보호 anchor**. #4-a 동일 패턴의 gift 분기. donor 보조 필드 패스 인프라는 #4-a에서 이미 구축 — **엔진 변경 없이 anchor 18개만 추가**. 토지 LTHD 기산점이 증여일로 매매와 동일하므로 사례 32 결과(가산세 13,300,202·양도소득금액 283,833,151) 그대로 보존. 전체 2,564/2,564 통과. 남은 후속 PR: #7-b 토지 증여이월과세 + 건물 신축(§97의2 + §114조의2 cross-cutting).
+최근 완료(2026-05-11): **일반건물 #7-b 토지 증여이월과세 + 건물 신축 cross-cutting 완료** — 분리 PR design.md "후속 PR" 표 4건(#4-a·#6·#7-a·#7-b) **모두 완료**. §97의2 + §114조의2 cross-cutting. `landCarryoverTaxation` 파이프라인 신규(엔진 input/AssetCardForAggregate/buildProperties/dispatch Date 변환/Zod 스키마). aggregate가 단건 엔진 호출 시 `carryoverTaxation`이 spread 전달되어 비교과세(C-01 모듈) 자동 작동. 사례 32 변형(토지 carryover_gift + 건물 newConstruction) anchor 16개. 가산세 13,300,202 cross-cutting 보존 + carryover 결과 양수 회귀 가드. 전체 2,580/2,580 통과.
+
+이전 완료(2026-05-11): **일반건물 #7-a 토지 증여 + 건물 신축 회귀 보호 anchor**. #4-a 동일 패턴의 gift 분기. donor 보조 필드 패스 인프라는 #4-a에서 이미 구축 — **엔진 변경 없이 anchor 18개만 추가**. 토지 LTHD 기산점이 증여일로 매매와 동일하므로 사례 32 결과(가산세 13,300,202·양도소득금액 283,833,151) 그대로 보존. 전체 2,564/2,564 통과. 남은 후속 PR: #7-b 토지 증여이월과세 + 건물 신축(§97의2 + §114조의2 cross-cutting).
 
 이전 완료(2026-05-11): **일반건물 #6 토지·건물 모두 상속 회귀 보호 anchor**. #4-a 후속. `buildGeneralBuildingAssetCards`/`buildProperties`에서 건물 카드에도 `buildingAcquisitionCause === "inheritance"|"gift"` 시 `decedent/donorAcquisitionDate` 패스(같은 피상속인 가정, 자산-수준 단일 필드). 사례 32 입력에서 토지·건물 모두 inheritance + 건물 acquisitionDate=상속개시일로 변경 시 건물 LTHD 4년 8%(2,337,058) → 14년 28%(8,179,704), 가산세 13,300,202 → 0. anchor 17개. 전체 2,546/2,546 통과. 비스코프: 다른 피상속인 케이스(buildingDecedent/landDecedent 분리)·#7-a/b 후속 PR.
 
