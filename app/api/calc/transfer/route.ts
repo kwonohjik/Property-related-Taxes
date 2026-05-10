@@ -394,6 +394,9 @@ export async function POST(request: NextRequest) {
     // buildingAcquisitionDate: YYYY-MM-DD 문자열 → Date 변환 포함 (⑭ date-coerce 필수)
     ...(data.generalBuildingValuation ? (() => {
       const buildingAcq = toOptionalDate(data.generalBuildingValuation.buildingAcquisitionDate);
+      // #4-a: 토지 상속·증여 보조 필드 Date 변환
+      const decedentAcq = toOptionalDate(data.generalBuildingValuation.decedentAcquisitionDate);
+      const donorAcq = toOptionalDate(data.generalBuildingValuation.donorAcquisitionDate);
       return {
         generalBuildingValuation: {
           ...data.generalBuildingValuation,
@@ -402,6 +405,8 @@ export async function POST(request: NextRequest) {
           acquisitionDate,                                       // 이미 Date 변환됨
           // ⑭ 건물 취득일 string → Date 변환 (소득세법 §114조의2 ① 5년 기산점)
           ...(buildingAcq ? { buildingAcquisitionDate: buildingAcq } : {}),
+          ...(decedentAcq ? { decedentAcquisitionDate: decedentAcq } : {}),
+          ...(donorAcq ? { donorAcquisitionDate: donorAcq } : {}),
         },
       };
     })() : {}),

@@ -94,6 +94,22 @@ export type GeneralBuildingInput = {
     | "carryover_gift"
     | "newConstruction";
 
+  /**
+   * 토지 취득원인 (#4-a 후속 PR).
+   * 미입력 시 default "purchase" — 사례 31·32 회귀 호환.
+   * "inheritance"·"gift"·"carryover_gift" 시 토지 카드의 단기보유 기산점이
+   * decedent/donorAcquisitionDate로 변경됨 (영 §95④).
+   */
+  landAcquisitionCause?:
+    | "purchase"
+    | "inheritance"
+    | "gift"
+    | "carryover_gift";
+  /** 토지 상속 시 피상속인 취득일 (영 §95④). */
+  decedentAcquisitionDate?: Date;
+  /** 토지 증여 시 증여자 취득일 (영 §95④). */
+  donorAcquisitionDate?: Date;
+
   // 선택적
   /** 개산공제율 (기본 0.03 — ESTIMATED_DEDUCTION_RATE_LAND_BUILDING) */
   estimatedDeductionRate?: number;
@@ -187,6 +203,21 @@ export type AssetCardForAggregate = {
     | "gift"
     | "carryover_gift"
     | "newConstruction";
+  /**
+   * 토지 카드에만 set (#4-a 후속 PR). 건물 카드는 undefined.
+   * 라우트가 TransferTaxItemInput 매핑 시 acquisitionCause로 전달.
+   * "inheritance"·"gift" 시 단건/aggregate 엔진의 단기보유 판정 기산점이
+   * decedent/donorAcquisitionDate로 변경됨 (영 §95④).
+   */
+  landAcquisitionCause?:
+    | "purchase"
+    | "inheritance"
+    | "gift"
+    | "carryover_gift";
+  /** 토지 상속 시 피상속인 취득일 (영 §95④ 단기보유 기산점). */
+  decedentAcquisitionDate?: Date;
+  /** 토지 증여 시 증여자 취득일 (영 §95④ 단기보유 기산점). */
+  donorAcquisitionDate?: Date;
 };
 
 /** 일반건물(토지+건물 일괄) 환산취득가 계산 출력 */
@@ -430,6 +461,9 @@ export function buildGeneralBuildingAssetCards(
       acquisitionDate: input.acquisitionDate,
       transferDate: input.transferDate,
       isNonBusinessLand: false,
+      landAcquisitionCause: input.landAcquisitionCause,
+      decedentAcquisitionDate: input.decedentAcquisitionDate,
+      donorAcquisitionDate: input.donorAcquisitionDate,
     });
     // 토지 카드 2: 비사업용 초과분 (원단위 잔여 흡수)
     assetCards.push({
@@ -445,6 +479,9 @@ export function buildGeneralBuildingAssetCards(
       acquisitionDate: input.acquisitionDate,
       transferDate: input.transferDate,
       isNonBusinessLand: true,
+      landAcquisitionCause: input.landAcquisitionCause,
+      decedentAcquisitionDate: input.decedentAcquisitionDate,
+      donorAcquisitionDate: input.donorAcquisitionDate,
     });
   } else {
     // 전체 사업용 (1장)
@@ -461,6 +498,9 @@ export function buildGeneralBuildingAssetCards(
       acquisitionDate: input.acquisitionDate,
       transferDate: input.transferDate,
       isNonBusinessLand: false,
+      landAcquisitionCause: input.landAcquisitionCause,
+      decedentAcquisitionDate: input.decedentAcquisitionDate,
+      donorAcquisitionDate: input.donorAcquisitionDate,
     });
   }
 

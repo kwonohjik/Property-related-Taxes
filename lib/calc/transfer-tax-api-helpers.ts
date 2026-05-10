@@ -180,6 +180,17 @@ export function buildGeneralBuildingValuation(
       isSelfBuilt: asset.gbBuildingAcquisitionCause === "newConstruction",
       // buildingAcquisitionCause: 엔진 input 필드 (⑭ route handler 매핑 준비)
       buildingAcquisitionCause: asset.gbBuildingAcquisitionCause ?? "purchase",
+      // #4-a: 토지 취득원인 + 상속·증여 보조 필드
+      // 토지의 acquisitionCause(자산-수준) → landAcquisitionCause(payload)로 전달
+      ...(asset.acquisitionCause && asset.acquisitionCause !== "newConstruction"
+        ? { landAcquisitionCause: asset.acquisitionCause }
+        : {}),
+      ...(asset.decedentAcquisitionDate
+        ? { decedentAcquisitionDate: asset.decedentAcquisitionDate }
+        : {}),
+      ...(asset.donorAcquisitionDate
+        ? { donorAcquisitionDate: asset.donorAcquisitionDate }
+        : {}),
       ...nblFields,
     };
   }

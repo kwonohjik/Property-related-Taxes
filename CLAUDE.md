@@ -10,7 +10,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 진행 중: 양도세 감면 23개 조문 확장 — `lib/tax-engine/transfer-reductions/` Phase 1 골격 완료, §99의3 완전 구현 완료. 계획서: `docs/00-pm/transfer-reduction-expansion.plan.md`.
 
-최근 완료(2026-05-10): **일반건물 토지·건물 취득원인 분리 UX PR**. 사례 32 후속. `gbIsSelfBuilt` boolean 폐지 → 토지·건물 각각 독립 `acquisitionCause` enum (양도코리아 정렬, 토지=매매/상속/증여/이월과세, 건물=매매/상속/증여/신축). "신축 정보" 토글 완전 제거(자가신축은 건물 라디오 옵션). A안(normalize에서 legacy 자동 폐기). anchor +13(2,499→**2,512** 통과). Playwright 자동 검증 10/10 PASS, 콘솔 에러 0. **다음 PR 작성자 신호**: `transfer-tax-validate.ts` 776줄 — +25줄 시 도메인 분할 선행 권장.
+최근 완료(2026-05-10): **일반건물 #4-a 토지 상속 + 건물 신축 회귀 보호 anchor**. 분리 PR design.md "후속 PR" 표의 #4-a. `AssetCardForAggregate`/`buildProperties`에 토지 inheritance 보조 필드(`landAcquisitionCause`/`decedentAcquisitionDate`/`donorAcquisitionDate`) 매핑 추가. 사례 32 변형(토지 acqCause만 inheritance) anchor 17개로 사례 32와 동일 결과(가산세 13,300,202·양도소득금액 283,833,151) 보존을 회귀 가드. 전체 2,529/2,529 통과. 비스코프: #6(토지·건물 모두 상속)·#7-a/b(증여) 후속 PR.
+
+이전 완료(2026-05-10): **일반건물 토지·건물 취득원인 분리 UX PR**. 사례 32 후속. `gbIsSelfBuilt` boolean 폐지 → 토지·건물 각각 독립 `acquisitionCause` enum (양도코리아 정렬, 토지=매매/상속/증여/이월과세, 건물=매매/상속/증여/신축). "신축 정보" 토글 완전 제거(자가신축은 건물 라디오 옵션). A안(normalize에서 legacy 자동 폐기). anchor +13(2,499→**2,512** 통과). Playwright 자동 검증 10/10 PASS, 콘솔 에러 0. **다음 PR 작성자 신호**: `transfer-tax-validate.ts` 776줄 — +25줄 시 도메인 분할 선행 권장.
 
 이전 완료(2026-05-10): **신축 건물 단기양도 §114조의2 5% 가산세 사례 32**. 일반건물 환산취득가 위에 토지·건물 취득일 분리(2008/2018) + `gbIsSelfBuilt`/`gbBuildingAcquisitionDate` 2필드 추가로 §114조의2 ① 5% 가산세(13,300,202) 발동. KoreanLaw MCP로 모법 정확 인용 검증(§97②·§114⑦·§176의2⑤ 표기 금지). anchor 28개 + 사례 31 회귀 51개 + 전체 2,497개 통과. 후속 PR 4건 모두 완료(§176의2 ②정정·toOptionalDate·penaltyBase 승격·addYears 정확비교).
 

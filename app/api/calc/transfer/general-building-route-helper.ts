@@ -107,11 +107,21 @@ function buildProperties(
       // buildingAcquisitionDate → 엔진 input의 constructionDate로 단일 원천 매핑
       constructionDate: isBuilding ? card.buildingAcquisitionDate : undefined,
       // 건물 카드: buildingAcquisitionCause → acquisitionCause 로 전달
-      // 토지 카드: 기존 토지 acquisitionCause 유지 (상위 gbRaw.acquisitionCause)
-      // (단건 엔진이 LTHD·상속·증여 분기에 사용)
+      // 토지 카드: landAcquisitionCause + decedent/donorAcquisitionDate (#4-a)
+      // 단건/aggregate 엔진의 단기보유 기산점 분기(영 §95④)에 사용.
       ...(isBuilding && card.buildingAcquisitionCause
         ? { acquisitionCause: card.buildingAcquisitionCause }
-        : {}),
+        : !isBuilding && card.landAcquisitionCause
+          ? {
+              acquisitionCause: card.landAcquisitionCause,
+              ...(card.decedentAcquisitionDate
+                ? { decedentAcquisitionDate: card.decedentAcquisitionDate }
+                : {}),
+              ...(card.donorAcquisitionDate
+                ? { donorAcquisitionDate: card.donorAcquisitionDate }
+                : {}),
+            }
+          : {}),
     } as unknown as TransferTaxItemInput;
   });
 }
@@ -188,11 +198,17 @@ export function dispatchGeneralBuilding(
   // isSelfBuilt = buildingAcquisitionCause 에서 도출 (단일 진실 원천).
   const isSelfBuilt = buildingAcqCause === "newConstruction";
 
+  // #4-a: 토지 상속·증여 보조 필드 Date 변환
+  const decedentAcqDate = toOptionalDate(gbRaw.decedentAcquisitionDate);
+  const donorAcqDate = toOptionalDate(gbRaw.donorAcquisitionDate);
+
   const coercedGbRaw: Record<string, unknown> = {
     ...gbRaw,
     ...(buildingAcqDate ? { buildingAcquisitionDate: buildingAcqDate } : {}),
     isSelfBuilt,                         // boolean 도출 (gbRaw의 isSelfBuilt 덮어씀)
     buildingAcquisitionCause: buildingAcqCause,
+    ...(decedentAcqDate ? { decedentAcquisitionDate: decedentAcqDate } : {}),
+    ...(donorAcqDate ? { donorAcquisitionDate: donorAcqDate } : {}),
   };
 
   if (coercedGbRaw.actualPriceMode === true) {
