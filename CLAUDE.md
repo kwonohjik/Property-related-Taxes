@@ -10,7 +10,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 진행 중: 양도세 감면 23개 조문 확장 — `lib/tax-engine/transfer-reductions/` Phase 1 골격 완료, §99의3 완전 구현 완료. 계획서: `docs/00-pm/transfer-reduction-expansion.plan.md`.
 
-최근 완료(2026-05-10): **일반건물 #4-a 토지 상속 + 건물 신축 회귀 보호 anchor**. 분리 PR design.md "후속 PR" 표의 #4-a. `AssetCardForAggregate`/`buildProperties`에 토지 inheritance 보조 필드(`landAcquisitionCause`/`decedentAcquisitionDate`/`donorAcquisitionDate`) 매핑 추가. 사례 32 변형(토지 acqCause만 inheritance) anchor 17개로 사례 32와 동일 결과(가산세 13,300,202·양도소득금액 283,833,151) 보존을 회귀 가드. 전체 2,529/2,529 통과. 비스코프: #6(토지·건물 모두 상속)·#7-a/b(증여) 후속 PR.
+최근 완료(2026-05-11): **일반건물 #6 토지·건물 모두 상속 회귀 보호 anchor**. #4-a 후속. `buildGeneralBuildingAssetCards`/`buildProperties`에서 건물 카드에도 `buildingAcquisitionCause === "inheritance"|"gift"` 시 `decedent/donorAcquisitionDate` 패스(같은 피상속인 가정, 자산-수준 단일 필드). 사례 32 입력에서 토지·건물 모두 inheritance + 건물 acquisitionDate=상속개시일로 변경 시 건물 LTHD 4년 8%(2,337,058) → 14년 28%(8,179,704), 가산세 13,300,202 → 0. anchor 17개. 전체 2,546/2,546 통과. 비스코프: 다른 피상속인 케이스(buildingDecedent/landDecedent 분리)·#7-a/b 후속 PR.
+
+이전 완료(2026-05-10): **일반건물 #4-a 토지 상속 + 건물 신축 회귀 보호 anchor**. 분리 PR design.md "후속 PR" 표의 #4-a. `AssetCardForAggregate`/`buildProperties`에 토지 inheritance 보조 필드(`landAcquisitionCause`/`decedentAcquisitionDate`/`donorAcquisitionDate`) 매핑 추가. 사례 32 변형(토지 acqCause만 inheritance) anchor 17개로 사례 32와 동일 결과(가산세 13,300,202·양도소득금액 283,833,151) 보존을 회귀 가드. 전체 2,529/2,529 통과. 비스코프: #6(토지·건물 모두 상속)·#7-a/b(증여) 후속 PR.
 
 이전 완료(2026-05-10): **일반건물 토지·건물 취득원인 분리 UX PR**. 사례 32 후속. `gbIsSelfBuilt` boolean 폐지 → 토지·건물 각각 독립 `acquisitionCause` enum (양도코리아 정렬, 토지=매매/상속/증여/이월과세, 건물=매매/상속/증여/신축). "신축 정보" 토글 완전 제거(자가신축은 건물 라디오 옵션). A안(normalize에서 legacy 자동 폐기). anchor +13(2,499→**2,512** 통과). Playwright 자동 검증 10/10 PASS, 콘솔 에러 0. **다음 PR 작성자 신호**: `transfer-tax-validate.ts` 776줄 — +25줄 시 도메인 분할 선행 권장.
 

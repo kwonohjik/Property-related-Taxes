@@ -106,11 +106,19 @@ function buildProperties(
       isSelfBuilt: isBuilding ? (card.isSelfBuilt ?? false) : false,
       // buildingAcquisitionDate → 엔진 input의 constructionDate로 단일 원천 매핑
       constructionDate: isBuilding ? card.buildingAcquisitionDate : undefined,
-      // 건물 카드: buildingAcquisitionCause → acquisitionCause 로 전달
+      // 건물 카드: buildingAcquisitionCause → acquisitionCause + decedent/donor (#6)
       // 토지 카드: landAcquisitionCause + decedent/donorAcquisitionDate (#4-a)
       // 단건/aggregate 엔진의 단기보유 기산점 분기(영 §95④)에 사용.
       ...(isBuilding && card.buildingAcquisitionCause
-        ? { acquisitionCause: card.buildingAcquisitionCause }
+        ? {
+            acquisitionCause: card.buildingAcquisitionCause,
+            ...(card.decedentAcquisitionDate
+              ? { decedentAcquisitionDate: card.decedentAcquisitionDate }
+              : {}),
+            ...(card.donorAcquisitionDate
+              ? { donorAcquisitionDate: card.donorAcquisitionDate }
+              : {}),
+          }
         : !isBuilding && card.landAcquisitionCause
           ? {
               acquisitionCause: card.landAcquisitionCause,

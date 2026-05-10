@@ -528,6 +528,14 @@ export function buildGeneralBuildingAssetCards(
     isSelfBuilt: isSelfBuiltForCard,
     buildingAcquisitionDate: buildingAcqDate,
     buildingAcquisitionCause: input.buildingAcquisitionCause,  // 건물 취득원인 패스스루
+    // #6: 건물 inheritance/gift 시 보조 필드 패스 (자산-수준 단일 — 같은 피상속인/증여자 가정).
+    // 다른 피상속인 케이스(buildingDecedent/landDecedent 분리)는 후속 PR.
+    ...(input.buildingAcquisitionCause === "inheritance" && input.decedentAcquisitionDate
+      ? { decedentAcquisitionDate: input.decedentAcquisitionDate }
+      : {}),
+    ...(input.buildingAcquisitionCause === "gift" && input.donorAcquisitionDate
+      ? { donorAcquisitionDate: input.donorAcquisitionDate }
+      : {}),
   });
 
   return {
