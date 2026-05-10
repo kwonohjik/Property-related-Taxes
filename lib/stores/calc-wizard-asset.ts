@@ -728,17 +728,29 @@ export interface AssetForm {
   /** 무허가건축물 여부. true 시 전체 비사업용 의제 (§168의11①1호). */
   gbIsUnregistered: boolean;
 
-  // ── 일반건물 신축 정보 (사례 32, 소득세법 §114조의2) ──
   /**
-   * 자가건축(신축취득) 여부. true 시 건물 취득일부터 5년 이내 양도 시
-   * 건물 환산취득가액 × 5%를 결정세액에 가산 (소득세법 §114조의2 ①).
+   * 토지 취득원인 (일반건물 전용).
+   * general_building 자산에서 토지 카드의 취득원인. acquisitionCause 필드가 토지 취득원인을 담당.
+   * 별도 필드를 두지 않고 acquisitionCause를 토지 취득원인으로 사용.
+   * 빈 optional 타입 — UI에서 general_building 시 토지 카드로 표시.
+   * @deprecated UI alias — 실제 저장은 acquisitionCause 필드에 (하위 호환 주석)
    */
-  gbIsSelfBuilt: boolean;
+  // gbLandAcquisitionCause: never (acquisitionCause 재사용)
+
+  /**
+   * 건물 취득원인 (일반건물 전용, 사례 32 이후).
+   * - "purchase": 매매
+   * - "inheritance": 상속
+   * - "gift": 증여
+   * - "newConstruction": 신축(자가건축) — §114조의2 가산세 판정 기준
+   * undefined: 미선택 (⑧ validate에서 차단)
+   */
+  gbBuildingAcquisitionCause?: "purchase" | "inheritance" | "gift" | "newConstruction";
   /**
    * 건물 취득일 (YYYY-MM-DD). 소득세법 시행령 §162① 4호 기준:
    * 사용승인서 교부일·사실상 사용일·임시사용승인일 중 빠른 날.
-   * gbIsSelfBuilt=true 시 필수. 미입력 시 validation에서 차단.
-   * 사례 31 호환: gbIsSelfBuilt=false/undefined 시 acquisitionDate(토지) fallback.
+   * gbBuildingAcquisitionCause === "newConstruction" 시 필수. 미입력 시 validation에서 차단.
+   * 사례 31 호환(매매 등): gbBuildingAcquisitionCause !== "newConstruction" 시 취득일 = acquisitionDate 동일 가정.
    */
   gbBuildingAcquisitionDate: string;
 

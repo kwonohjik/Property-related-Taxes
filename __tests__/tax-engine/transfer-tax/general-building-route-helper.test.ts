@@ -26,6 +26,9 @@ const BASE_INPUT = {
   acquisitionBuildingStdPrice: 28_144_700,
   zoneType: "commercial",
   isMetropolitan: true,
+  // 사례 31 마이그레이션: 토지·건물 동시 매매
+  buildingAcquisitionCause: "purchase" as const,
+  buildingAcquisitionDate: new Date("1999-05-24"),
 };
 
 // ============================================================

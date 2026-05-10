@@ -77,6 +77,9 @@ const CASE_31_INPUT: GeneralBuildingInput = {
   // 사례 31 — 도심 상업지역 + 수도권 → 3배 배율 → 허용 271.44㎡ > 85㎡ → 전체 사업용
   zoneType: "commercial",
   isMetropolitan: true,
+  // 사례 31 마이그레이션: 토지·건물 동시 매매 (취득일 동일)
+  buildingAcquisitionCause: "purchase",
+  buildingAcquisitionDate: ACQUISITION_DATE, // 토지와 동일
 };
 
 // ============================================================

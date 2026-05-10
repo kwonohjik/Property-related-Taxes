@@ -232,10 +232,18 @@ function validateAssetAcquisition(asset: AssetForm, label: string): string | nul
       if (!parseAmount(asset.gbAcqBuildingValue))
         return `${label}: 취득시 건물기준시가 총액을 입력하세요.`;
 
-      // §114조의2 신축 정보 검증 (gbIsSelfBuilt=true 시 건물 취득일 필수)
-      if (asset.gbIsSelfBuilt === true) {
+      // (a) 건물 취득원인 미선택 차단
+      const validBuildingCauses = ["purchase", "inheritance", "gift", "newConstruction"];
+      if (
+        !asset.gbBuildingAcquisitionCause ||
+        !validBuildingCauses.includes(asset.gbBuildingAcquisitionCause)
+      ) {
+        return `${label}: 건물 취득원인을 선택하세요 (매매·상속·증여·신축(자가건축) 중).`;
+      }
+      // (b) 신축(자가건축) + 건물 취득일 미입력 차단
+      if (asset.gbBuildingAcquisitionCause === "newConstruction") {
         if (!asset.gbBuildingAcquisitionDate) {
-          return `${label}: 자가건축(신축취득)을 선택했습니다. 건물 취득일(영 §162①4호 빠른 날 — 사용승인서 교부일·사실상 사용일·임시사용승인일 중)을 입력하세요.`;
+          return `${label}: 신축(자가건축) 취득원인을 선택했습니다. 건물 취득일(영 §162①4호 빠른 날 — 사용승인서 교부일·사실상 사용일·임시사용승인일 중)을 입력하세요.`;
         }
         // 건물 취득일은 토지 취득일 이후여야 함
         if (

@@ -81,6 +81,8 @@ function makeInput(overrides?: Partial<GeneralBuildingInput>): GeneralBuildingIn
     estimatedDeductionRate: ESTIMATED_DEDUCTION_RATE,
     zoneType: "commercial",
     isMetropolitan: true,
+    // 마이그레이션: buildingAcquisitionCause required (2026-05-10)
+    buildingAcquisitionCause: "purchase" as const,
     ...overrides,
   };
 }

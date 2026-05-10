@@ -15,6 +15,7 @@ import { CompanionAcqGiftBlock } from "./CompanionAcqGiftBlock";
 import { CarryoverGiftBlock } from "./CarryoverGiftBlock";
 import { InheritedAcquisitionDeemedSection } from "./InheritedAcquisitionDeemedSection";
 import { NewConstructionDateBlock } from "./NewConstructionDateBlock";
+import { GeneralBuildingAcquisitionCards } from "./GeneralBuildingAcquisitionCards";
 
 const ACQUISITION_CAUSE_OPTIONS = [
   { value: "purchase", label: "매매" },
@@ -37,6 +38,17 @@ export function CompanionAcquisitionCauseSection({
   transferDate,
   isNewConstruction,
 }: Props) {
+  // 일반건물(토지+건물 일괄) — 토지/건물 2카드로 분리 표시
+  if (asset.assetKind === "general_building") {
+    return (
+      <GeneralBuildingAcquisitionCards
+        asset={asset}
+        onChange={onChange}
+        transferDate={transferDate}
+      />
+    );
+  }
+
   return (
     <div className="space-y-2">
       <label className="block text-sm font-medium">취득 원인</label>

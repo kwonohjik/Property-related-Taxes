@@ -250,8 +250,8 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     gbZoneType: "",
     gbIsMetropolitan: false,
     gbIsUnregistered: false,
-    // ── 일반건물 신축 정보 (사례 32, 소득세법 §114조의2) ──
-    gbIsSelfBuilt: false,
+    // ── 일반건물 건물 취득원인 + 건물 취득일 (사례 32 이후 PR) ──
+    gbBuildingAcquisitionCause: undefined,
     gbBuildingAcquisitionDate: "",
   };
 }
@@ -415,8 +415,31 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (a.gbZoneType === undefined) a.gbZoneType = "";
   if (a.gbIsMetropolitan === undefined) a.gbIsMetropolitan = false;
   if (a.gbIsUnregistered === undefined) a.gbIsUnregistered = false;
-  // 일반건물 신축 정보 (사례 32, §114조의2)
-  if (a.gbIsSelfBuilt === undefined) a.gbIsSelfBuilt = false;
+  // ── 일반건물 건물 취득원인 마이그레이션 (M-1·M-2, 사례 32 이후 PR) ──
+  // M-1: legacy gbIsSelfBuilt=true → gbBuildingAcquisitionCause="newConstruction" 자동 변환 후 삭제
+  if ((a as Record<string, unknown>).gbIsSelfBuilt === true) {
+    if (a.gbBuildingAcquisitionCause === undefined) {
+      a.gbBuildingAcquisitionCause = "newConstruction";
+    }
+  }
+  delete (a as Record<string, unknown>).gbIsSelfBuilt;
+  // M-2: general_building + gbBuildingAcquisitionCause 미입력 시 acquisitionCause 값 복사
+  // (사례 31 호환 데이터: 단일 취득원인이었던 경우 건물도 같은 원인으로 추정)
+  const validBuildingCauses = ["purchase", "inheritance", "gift", "newConstruction"];
+  if (
+    a.assetKind === "general_building" &&
+    (!a.gbBuildingAcquisitionCause ||
+      !validBuildingCauses.includes(a.gbBuildingAcquisitionCause as string))
+  ) {
+    // acquisitionCause 중 건물 카드에 허용된 원인이면 그대로 사용
+    const ac = a.acquisitionCause as string;
+    // "carryover_gift"는 건물 카드 미지원 → "purchase" fallback
+    if (validBuildingCauses.includes(ac)) {
+      a.gbBuildingAcquisitionCause = ac;
+    } else {
+      a.gbBuildingAcquisitionCause = "purchase";
+    }
+  }
   if (a.gbBuildingAcquisitionDate === undefined) a.gbBuildingAcquisitionDate = "";
 
   // ③ 장기임대주택 거주주택 비과세 특례 마이그레이션 (sessionStorage 호환)

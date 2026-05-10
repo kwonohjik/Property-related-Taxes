@@ -67,19 +67,32 @@ export type GeneralBuildingInput = {
   /** 취득시 건물기준시가 총액 (원) */
   acquisitionBuildingStdPrice: number;
 
-  // 신축 취득 (사례 32 — §114조의2 가산세)
+  // 신축 취득 / 건물 별도 취득 (사례 32 — §114조의2 가산세)
   /**
    * 건물 취득일 — 소득세법 시행령 §162① 4호 기준 빠른 날
    * (사용승인서 교부일·사실상 사용일·임시사용승인일 중).
    * 미입력 시 acquisitionDate(토지 취득일) fallback ← 사례 31 호환.
-   * isSelfBuilt=true 시 validation에서 필수 강제.
+   * buildingAcquisitionCause === "newConstruction" 시 validation에서 필수 강제.
    */
   buildingAcquisitionDate?: Date;
   /**
-   * 신축취득 여부. true 시 건물 카드에 소득세법 §114조의2 ① 5% 가산세 발동 정보 노출.
-   * 라우트 헬퍼 buildProperties()가 건물 카드만 isSelfBuilt: true로 패스스루.
+   * 신축취득 여부. 라우트 헬퍼에서 `buildingAcquisitionCause === "newConstruction"` 으로 도출.
+   * 엔진 input에는 boolean으로 normalize 후 전달 (단일 진실 원천 유지).
    */
   isSelfBuilt?: boolean;
+  /**
+   * 건물 취득원인. 토지의 acquisitionCause와 별개.
+   * "newConstruction"일 때 isSelfBuilt=true로 도출.
+   *
+   * **required** — 라우트 헬퍼 진입 전 3중 차단 (Zod·normalizeAsset M-2·validate)으로
+   * 항상 정의됨 보장. 엔진 단위 테스트에서도 명시 입력 필수 (silent fallback 없음).
+   */
+  buildingAcquisitionCause:
+    | "purchase"
+    | "inheritance"
+    | "gift"
+    | "carryover_gift"
+    | "newConstruction";
 
   // 선택적
   /** 개산공제율 (기본 0.03 — ESTIMATED_DEDUCTION_RATE_LAND_BUILDING) */
@@ -163,6 +176,17 @@ export type AssetCardForAggregate = {
    * 건물 LTHD 보유기간 기산점.
    */
   buildingAcquisitionDate?: Date;
+  /**
+   * 건물 카드에만 set. 토지 카드는 undefined.
+   * `propertyType === "general_building_unit"` 카드에만 의미 있음.
+   * 라우트가 TransferTaxItemInput 매핑 시 acquisitionCause로 전달.
+   */
+  buildingAcquisitionCause?:
+    | "purchase"
+    | "inheritance"
+    | "gift"
+    | "carryover_gift"
+    | "newConstruction";
 };
 
 /** 일반건물(토지+건물 일괄) 환산취득가 계산 출력 */
@@ -441,8 +465,12 @@ export function buildGeneralBuildingAssetCards(
   }
 
   // 건물 카드
+  // isSelfBuilt: buildingAcquisitionCause에서 도출 (단일 진실 원천 — 라우트 헬퍼도 동일 로직 적용).
+  // input.isSelfBuilt가 명시되어 있더라도 buildingAcquisitionCause 우선 (두 진실 원천 방지).
+  const isSelfBuiltForCard = input.buildingAcquisitionCause === "newConstruction";
   // 건물 취득일: buildingAcquisitionDate 우선 (사례 32 — 영 §162①4호 빠른 날),
-  //             미입력 시 acquisitionDate fallback (사례 31 호환).
+  //             미입력 시 acquisitionDate fallback (사례 31 호환 — purchase·inheritance·gift 경로).
+  // isSelfBuilt=true 경로(newConstruction)는 validate⑧이 buildingAcquisitionDate 미입력을 차단하므로 fallback 발동 불가.
   const buildingAcqDate = input.buildingAcquisitionDate ?? input.acquisitionDate;
   assetCards.push({
     propertyId: "building",
@@ -457,8 +485,9 @@ export function buildGeneralBuildingAssetCards(
     acquisitionDate: buildingAcqDate,
     transferDate: input.transferDate,
     isNonBusinessLand: false,
-    isSelfBuilt: input.isSelfBuilt ?? false,
+    isSelfBuilt: isSelfBuiltForCard,
     buildingAcquisitionDate: buildingAcqDate,
+    buildingAcquisitionCause: input.buildingAcquisitionCause,  // 건물 취득원인 패스스루
   });
 
   return {

@@ -10,7 +10,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 진행 중: 양도세 감면 23개 조문 확장 — `lib/tax-engine/transfer-reductions/` Phase 1 골격 완료, §99의3 완전 구현 완료. 계획서: `docs/00-pm/transfer-reduction-expansion.plan.md`.
 
-최근 완료(2026-05-10): **신축 건물 단기양도 §114조의2 5% 가산세 사례 32**. 일반건물 환산취득가 위에 토지·건물 취득일 분리(2008/2018) + `gbIsSelfBuilt`/`gbBuildingAcquisitionDate` 2필드 추가로 §114조의2 ① 5% 가산세(13,300,202) 발동. KoreanLaw MCP로 모법 정확 인용 검증(§97②·§114⑦·§176의2⑤ 표기 금지). anchor 28개 + 사례 31 회귀 51개 + 전체 2,497개 통과. 5년 경계 정각(2018-03-31→2023-03-31)은 365.25 분모로 4.9986 < 5 발동 — 법해석 별도 PR.
+최근 완료(2026-05-10): **일반건물 토지·건물 취득원인 분리 UX PR**. 사례 32 후속. `gbIsSelfBuilt` boolean 폐지 → 토지·건물 각각 독립 `acquisitionCause` enum (양도코리아 정렬, 토지=매매/상속/증여/이월과세, 건물=매매/상속/증여/신축). "신축 정보" 토글 완전 제거(자가신축은 건물 라디오 옵션). A안(normalize에서 legacy 자동 폐기). anchor +13(2,499→**2,512** 통과). Playwright 자동 검증 10/10 PASS, 콘솔 에러 0. **다음 PR 작성자 신호**: `transfer-tax-validate.ts` 776줄 — +25줄 시 도메인 분할 선행 권장.
+
+이전 완료(2026-05-10): **신축 건물 단기양도 §114조의2 5% 가산세 사례 32**. 일반건물 환산취득가 위에 토지·건물 취득일 분리(2008/2018) + `gbIsSelfBuilt`/`gbBuildingAcquisitionDate` 2필드 추가로 §114조의2 ① 5% 가산세(13,300,202) 발동. KoreanLaw MCP로 모법 정확 인용 검증(§97②·§114⑦·§176의2⑤ 표기 금지). anchor 28개 + 사례 31 회귀 51개 + 전체 2,497개 통과. 후속 PR 4건 모두 완료(§176의2 ②정정·toOptionalDate·penaltyBase 승격·addYears 정확비교).
 
 이전 완료(2026-05-08): 상업용건물·오피스텔 환산취득가 사례 29 + **일반건물 일괄 환산취득가 사례 31**. 신규 `propertyType: "general_building"` + `lib/tax-engine/general-building-valuation.ts` 모듈(382줄, 시행령 §166⑥ 양도가 안분 + §176의2④ 자산별 환산 + §163⑥ 자산별 개산공제 + §102② 1차 통산 위임). 양도시 건물기준시가 잠금값 20,629,440(BigInt 손계산 함정 주의). anchor 38개 toBe 정확 통과(2,233/2,233 회귀 보존).
 

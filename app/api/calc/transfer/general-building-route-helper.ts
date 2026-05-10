@@ -106,6 +106,12 @@ function buildProperties(
       isSelfBuilt: isBuilding ? (card.isSelfBuilt ?? false) : false,
       // buildingAcquisitionDate → 엔진 input의 constructionDate로 단일 원천 매핑
       constructionDate: isBuilding ? card.buildingAcquisitionDate : undefined,
+      // 건물 카드: buildingAcquisitionCause → acquisitionCause 로 전달
+      // 토지 카드: 기존 토지 acquisitionCause 유지 (상위 gbRaw.acquisitionCause)
+      // (단건 엔진이 LTHD·상속·증여 분기에 사용)
+      ...(isBuilding && card.buildingAcquisitionCause
+        ? { acquisitionCause: card.buildingAcquisitionCause }
+        : {}),
     } as unknown as TransferTaxItemInput;
   });
 }
@@ -174,9 +180,20 @@ export function dispatchGeneralBuilding(
   // 미변환 시 string이 buildGeneralBuildingAssetCards()의 acquisitionDate에 도달 →
   // monthsBetween(from, to)에서 from.getFullYear() TypeError 발생.
   const buildingAcqDate = toOptionalDate(gbRaw.buildingAcquisitionDate);
-  const coercedGbRaw = buildingAcqDate
-    ? { ...gbRaw, buildingAcquisitionDate: buildingAcqDate }
-    : gbRaw;
+
+  // buildingAcquisitionCause: Zod 필수 강제 + normalizeAsset M-2 보완으로 항상 정의됨 보장.
+  // silent fallback 제거 (정책 #1 — 자동 안분 fallback 금지).
+  const buildingAcqCause = gbRaw.buildingAcquisitionCause as
+    | "purchase" | "inheritance" | "gift" | "carryover_gift" | "newConstruction";
+  // isSelfBuilt = buildingAcquisitionCause 에서 도출 (단일 진실 원천).
+  const isSelfBuilt = buildingAcqCause === "newConstruction";
+
+  const coercedGbRaw: Record<string, unknown> = {
+    ...gbRaw,
+    ...(buildingAcqDate ? { buildingAcquisitionDate: buildingAcqDate } : {}),
+    isSelfBuilt,                         // boolean 도출 (gbRaw의 isSelfBuilt 덮어씀)
+    buildingAcquisitionCause: buildingAcqCause,
+  };
 
   if (coercedGbRaw.actualPriceMode === true) {
     return calculateGeneralBuildingActualTransfer(
@@ -209,6 +226,9 @@ export function dispatchGeneralBuilding(
 /**
  * 환산취득가 모드 — 토지·건물 2자산 aggregate.
  * @param gbv  Zod 검증·Date 변환 완료 payload
+ *
+ * buildingAcquisitionCause === "newConstruction" 시 isSelfBuilt=true 도출
+ * (dispatchGeneralBuilding과 동일 로직 — 단위 테스트 직접 호출 경로 보호).
  */
 export function calculateGeneralBuildingTransfer(
   gbv: GeneralBuildingValuationPayload,
@@ -217,7 +237,13 @@ export function calculateGeneralBuildingTransfer(
   priorReductionUsage: unknown[],
   rates: TaxRatesMap,
 ): GeneralBuildingRouteResult {
-  const gbOut = buildGeneralBuildingAssetCards(gbv);
+  // buildingAcquisitionCause에서 isSelfBuilt 도출 (단일 진실 원천).
+  // gbv.isSelfBuilt가 명시된 경우에도 buildingAcquisitionCause 우선 (deprecated 패턴 방어).
+  const normalizedGbv: GeneralBuildingValuationPayload = {
+    ...gbv,
+    isSelfBuilt: gbv.buildingAcquisitionCause === "newConstruction",
+  };
+  const gbOut = buildGeneralBuildingAssetCards(normalizedGbv);
   const properties = buildProperties(gbOut.assetCards, gbOut.nonBusinessRatio);
 
   const aggregated = calculateTransferTaxAggregate(

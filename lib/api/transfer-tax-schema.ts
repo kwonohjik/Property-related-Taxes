@@ -75,14 +75,22 @@ export const generalBuildingValuationSchema = z.object({
   /**
    * 건물 취득일 — 소득세법 시행령 §162①4호 빠른 날
    * (사용승인서 교부일·사실상 사용일·임시사용승인일 중).
-   * isSelfBuilt=true 시 5년 이내 양도 여부 판단에 사용.
+   * buildingAcquisitionCause === "newConstruction" 시 5년 이내 양도 여부 판단에 사용.
+   * validate⑧에서 newConstruction 시 필수 강제.
    */
   buildingAcquisitionDate: z.string().date().optional(),
   /**
-   * 신축취득 여부. true 시 건물 환산취득가액에 대해
-   * 소득세법 §114조의2 ① 5% 가산세 발동 여부를 판정.
+   * ⑫ 건물 취득원인 (required — .optional() 없음).
+   * "newConstruction"일 때 라우트 헬퍼에서 isSelfBuilt=true 도출 → §114조의2 ① 가산세 판정.
+   * 3중 차단: Zod(필수) + normalizeAsset M-2 + validate⑧.
    */
-  isSelfBuilt: z.boolean().optional(),
+  buildingAcquisitionCause: z.enum([
+    "purchase",
+    "inheritance",
+    "gift",
+    "carryover_gift",
+    "newConstruction",
+  ]),
 });
 
 export type GeneralBuildingValuationSchemaInput = z.infer<typeof generalBuildingValuationSchema>;

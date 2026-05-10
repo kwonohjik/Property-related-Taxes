@@ -17,7 +17,8 @@
  *     → INT(228,146,480 × 0.03) = 6,844,394 ✓
  *
  * anchor 총 21개 (toBe() 정확 매칭):
- *   본 사례 17개 + 5년 경계 가드 3개 + isSelfBuilt=false 가드 1개
+ *   본 사례 17개 + 5년 경계 가드 3개 + buildingAcquisitionCause=purchase 가드 1개
+ *   (마이그레이션: isSelfBuilt → buildingAcquisitionCause 분리, 2026-05-10)
  *
  * 정책 적용:
  *   feedback_estimated_deduction_separation.md — usedEstimatedAcquisition anchor (#16, #17)
@@ -59,8 +60,8 @@ const CASE_32_BASE_INPUT = {
   totalTransferPrice: TOTAL_TRANSFER_PRICE,
   transferDate: TRANSFER_DATE,
   acquisitionDate: LAND_ACQUISITION_DATE,
-  buildingAcquisitionDate: BUILDING_ACQUISITION_DATE, // ★ 건물별 취득일
-  isSelfBuilt: true, // ★ 신축취득
+  buildingAcquisitionDate: BUILDING_ACQUISITION_DATE, // ★ 건물 취득일 (영 §162①4호 빠른 날)
+  buildingAcquisitionCause: "newConstruction" as const, // ★ 신축취득 (isSelfBuilt 라우트 헬퍼에서 도출)
   landArea: LAND_AREA,
   buildingArea: BUILDING_AREA,
   buildingFootprintArea: BUILDING_FOOTPRINT_AREA,
@@ -339,13 +340,13 @@ describe("사례 32: §114조의2 5년 경계 가드", () => {
 });
 
 // ============================================================
-// isSelfBuilt = false 가드 (일반 매입 건물 — 가산세 미적용)
+// buildingAcquisitionCause = "purchase" 가드 (일반 매입 건물 — 가산세 미적용)
 // ============================================================
 
-describe("사례 32: isSelfBuilt = false → 가산세 0", () => {
-  it("anchor #21 — gbIsSelfBuilt: false 시 penaltyTax = 0", () => {
+describe("사례 32: buildingAcquisitionCause=purchase → 가산세 0", () => {
+  it("anchor #21 — buildingAcquisitionCause: purchase 시 penaltyTax = 0", () => {
     const result21 = calculateGeneralBuildingTransfer(
-      { ...CASE_32_BASE_INPUT, isSelfBuilt: false },
+      { ...CASE_32_BASE_INPUT, buildingAcquisitionCause: "purchase" },
       2023, 0, [], makeMockRates(),
     );
     const buildingBreakdown = result21.aggregated.properties.find((p) => p.propertyId === "building");
@@ -358,11 +359,11 @@ describe("사례 32: isSelfBuilt = false → 가산세 0", () => {
 // ============================================================
 
 describe("사례 32: 사례 31 호환 — buildingAcquisitionDate 미입력 fallback", () => {
-  it("buildingAcquisitionDate 미입력 시 토지 취득일로 fallback (isSelfBuilt=false)", () => {
+  it("buildingAcquisitionDate 미입력 시 토지 취득일로 fallback (purchase 경로)", () => {
     const out = buildGeneralBuildingAssetCards({
       ...CASE_32_BASE_INPUT,
       buildingAcquisitionDate: undefined,
-      isSelfBuilt: false,
+      buildingAcquisitionCause: "purchase",  // newConstruction 아닌 경로 — fallback 허용
     });
     const buildingCard = out.assetCards.find((c) => c.propertyType === "general_building_unit");
     // fallback = acquisitionDate (토지 취득일)

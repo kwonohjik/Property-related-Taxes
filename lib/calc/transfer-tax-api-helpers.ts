@@ -176,7 +176,10 @@ export function buildGeneralBuildingValuation(
       buildingFootprintArea,
       estimatedDeductionRate: 0.03, // §163⑥ 등기 자산 3% 고정
       buildingAcquisitionDate: asset.gbBuildingAcquisitionDate || undefined,
-      isSelfBuilt: asset.gbIsSelfBuilt ?? false,
+      // isSelfBuilt: gbBuildingAcquisitionCause에서 도출 (A안: gbIsSelfBuilt 필드 폐지)
+      isSelfBuilt: asset.gbBuildingAcquisitionCause === "newConstruction",
+      // buildingAcquisitionCause: 엔진 input 필드 (⑭ route handler 매핑 준비)
+      buildingAcquisitionCause: asset.gbBuildingAcquisitionCause ?? "purchase",
       ...nblFields,
     };
   }
