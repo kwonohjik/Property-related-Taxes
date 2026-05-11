@@ -157,52 +157,62 @@ function EngineStepsSubToggle({ steps }: { steps: import("@/lib/tax-engine/trans
   if (!steps || steps.length === 0) return null;
 
   return (
-    <section className="rounded-lg border border-slate-300 bg-slate-50/40 dark:bg-slate-800/30">
+    <section className="rounded-lg border border-slate-300 bg-slate-50/40 dark:bg-slate-800/30 print:break-inside-auto">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+        className="print:hidden w-full flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
         aria-expanded={open}
       >
         <span>▼ 전체 엔진 계산 과정 보기 ({steps.length}개 step)</span>
         <span className="text-muted-foreground">{open ? "▲" : "▼"}</span>
       </button>
-      {open && (
-        <div className="rounded-b-lg divide-y divide-slate-100 dark:divide-slate-800 text-sm">
-          {steps.map((step, i) => (
-            <div
-              key={i}
-              className={cn(
-                "py-2.5 flex justify-between gap-4",
-                step.sub ? "pl-8 pr-4 bg-slate-100/50 dark:bg-slate-800/40" : "px-4",
-              )}
-            >
-              <div className="min-w-0">
-                <p
-                  className={cn(
-                    "font-medium",
-                    step.sub && "text-muted-foreground text-xs",
-                  )}
-                >
-                  {step.label}
-                </p>
-                <p className="text-xs text-muted-foreground mt-0.5">{step.formula}</p>
-                {step.legalBasis && !step.sub && (
-                  <LawArticleModal legalBasis={step.legalBasis} />
-                )}
-              </div>
+      {/* PDF 인쇄: 항상 표시 (헤더 텍스트도 화면 전용 → 인쇄용 별도 헤더 노출) */}
+      <div className="hidden print:block px-3 py-2 text-sm font-semibold text-slate-700 border-b border-slate-200">
+        전체 엔진 계산 과정 ({steps.length}개 step)
+      </div>
+      <div
+        className={cn(
+          "rounded-b-lg divide-y divide-slate-100 dark:divide-slate-800 text-sm",
+          // 화면: open 상태일 때만. 인쇄: 항상 표시.
+          open ? "block" : "hidden print:block",
+        )}
+      >
+        {steps.map((step, i) => (
+          <div
+            key={i}
+            className={cn(
+              "py-2.5 flex justify-between gap-4 print:break-inside-avoid",
+              step.sub ? "pl-8 pr-4 bg-slate-100/50 dark:bg-slate-800/40" : "px-4",
+            )}
+          >
+            <div className="min-w-0">
               <p
                 className={cn(
-                  "font-mono shrink-0",
-                  step.sub ? "text-xs text-muted-foreground" : "font-medium",
+                  "font-medium",
+                  step.sub && "text-muted-foreground text-xs",
                 )}
               >
-                {formatKRW(step.amount)}
+                {step.label}
               </p>
+              <p className="text-xs text-muted-foreground mt-0.5 break-words leading-relaxed">
+                {step.formula}
+              </p>
+              {step.legalBasis && !step.sub && (
+                <LawArticleModal legalBasis={step.legalBasis} />
+              )}
             </div>
-          ))}
-        </div>
-      )}
+            <p
+              className={cn(
+                "font-mono shrink-0 tabular-nums",
+                step.sub ? "text-xs text-muted-foreground" : "font-medium",
+              )}
+            >
+              {formatKRW(step.amount)}
+            </p>
+          </div>
+        ))}
+      </div>
     </section>
   );
 }
@@ -215,6 +225,8 @@ function GroupSection({ group, items }: { group: GroupDef; items: StatementItem[
     <section
       className={cn(
         "rounded-lg border p-3 space-y-2",
+        // PDF 인쇄: 그룹 자체가 페이지 사이에 잘리지 않도록 회피.
+        "print:break-inside-avoid",
         tone.border,
         tone.bg,
       )}
@@ -253,7 +265,8 @@ function ItemRow({ item }: { item: StatementItem }) {
         : String(item.value);
 
   return (
-    <div className="px-3 py-2.5">
+    // PDF 인쇄: 항목 행이 페이지 사이에 잘리지 않도록 회피.
+    <div className="px-3 py-2.5 print:break-inside-avoid">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
@@ -270,12 +283,14 @@ function ItemRow({ item }: { item: StatementItem }) {
             <p className="font-medium text-sm">{item.label}</p>
           </div>
           {item.formula && (
-            <p className="text-xs text-muted-foreground mt-0.5 ml-6 leading-relaxed">
+            // 긴 산식(자산별 안분 등) 줄바꿈 처리: break-words로 단어 단위 줄바꿈,
+            // PDF 인쇄에서도 가로 잘림 방지.
+            <p className="text-xs text-muted-foreground mt-0.5 ml-6 leading-relaxed break-words">
               {item.formula}
             </p>
           )}
           {item.note && (
-            <p className="text-[11px] text-amber-700 mt-0.5 ml-6 italic">
+            <p className="text-[11px] text-amber-700 mt-0.5 ml-6 italic break-words">
               ※ {item.note}
             </p>
           )}
@@ -285,14 +300,20 @@ function ItemRow({ item }: { item: StatementItem }) {
             </div>
           )}
         </div>
-        <p className="font-mono text-sm shrink-0 font-medium text-right">
+        <p className="font-mono text-sm shrink-0 font-medium text-right tabular-nums">
           {valueDisplay}
         </p>
       </div>
 
-      {/* 자산별 펼침 (disclosure) */}
-      {open && hasPerAsset && (
-        <div className="mt-2 ml-6 rounded border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/40 divide-y divide-slate-100 dark:divide-slate-700">
+      {/* 자산별 펼침 (disclosure) — PDF 인쇄 시 자동 노출(open 무관) */}
+      {hasPerAsset && (
+        <div
+          className={cn(
+            "mt-2 ml-6 rounded border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/40 divide-y divide-slate-100 dark:divide-slate-700",
+            // 화면: open 상태일 때만 표시. 인쇄: 항상 표시(검증 가능성 우선).
+            open ? "block" : "hidden print:block",
+          )}
+        >
           {item.perAsset!.map((row, i) => (
             <PerAssetRow key={i} row={row} />
           ))}
@@ -306,18 +327,20 @@ function PerAssetRow({ row }: { row: PerAssetValue }) {
   const isNumber = typeof row.value === "number";
   const valueDisplay = isNumber ? formatKRW(row.value as number) : String(row.value);
   return (
-    <div className="px-3 py-1.5 flex items-center justify-between text-xs">
+    // PDF 인쇄: 자산 행이 페이지 사이에 잘리지 않도록 회피.
+    <div className="px-3 py-1.5 flex items-start justify-between text-xs print:break-inside-avoid">
       <div className="min-w-0 flex-1">
         <p className="font-medium text-slate-700 dark:text-slate-300">
           ├─ {row.label}
         </p>
         {row.formula && (
-          <p className="text-[10px] text-muted-foreground mt-0.5 ml-3">
+          // 자산별 산식(예: "330,000,000 × 339,492,000 / (...)") 줄바꿈 처리.
+          <p className="text-[10px] text-muted-foreground mt-0.5 ml-3 break-words leading-relaxed">
             {row.formula}
           </p>
         )}
       </div>
-      <p className="font-mono shrink-0 text-slate-700 dark:text-slate-300">
+      <p className="font-mono shrink-0 text-slate-700 dark:text-slate-300 tabular-nums">
         {valueDisplay}
       </p>
     </div>

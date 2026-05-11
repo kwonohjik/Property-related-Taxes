@@ -274,7 +274,7 @@ describe("DetailedCalculationStatementCard — 다건 모드 (사례 33 일괄+�
     expect(toggles.length).toBeGreaterThan(5);
   });
 
-  it("T-06: 양도가액 행의 토글 클릭 시 자산별 행(토지·건물·증축건물) 표시", () => {
+  it("T-06: 자산별 펼침 DOM이 모든 perAsset 항목에 마운트됨 (PDF 인쇄 시 자동 노출 정책)", () => {
     const { result, formData, asset, aggregate } = setup();
 
     render(
@@ -286,19 +286,18 @@ describe("DetailedCalculationStatementCard — 다건 모드 (사례 33 일괄+�
       />,
     );
 
-    // 클릭 전: 자산별 라벨 미표시
-    expect(screen.queryByText(/├─ 토지\(1001\)/)).not.toBeInTheDocument();
-
-    // 모든 자산별 펼침 토글 클릭
-    const toggles = screen.getAllByLabelText(/자산별 펼치기/);
-    for (const t of toggles) {
-      fireEvent.click(t);
-    }
-
-    // 클릭 후: 자산별 라벨 노출
+    // PDF 인쇄 시 자동 노출 정책으로 자산별 DOM은 항상 마운트됨 (hidden 클래스로 화면 숨김).
+    // 화면에서는 ▶ 토글 클릭으로 hidden 해제. PDF에서는 hidden 무시되어 자동 표시.
     expect(screen.getAllByText(/├─ 토지\(1001\)/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/├─ 건물\(3001\)/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/├─ 증축건물\(3002\)/).length).toBeGreaterThan(0);
+
+    // 토글 클릭 → 화면에도 표시 (hidden 클래스 제거 검증은 별도 visual test)
+    const toggles = screen.getAllByLabelText(/자산별 펼치기/);
+    expect(toggles.length).toBeGreaterThan(0);
+    fireEvent.click(toggles[0]);
+    // 클릭 후 aria-label이 "자산별 닫기"로 전환
+    expect(screen.getAllByLabelText(/자산별 닫기/).length).toBeGreaterThan(0);
   });
 
   // T-07: 자산별 취득일자 검증 — 일자·기간 그룹 제거(2026-05-12)로 본 테스트는 폐기.
