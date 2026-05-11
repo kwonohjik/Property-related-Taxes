@@ -49,6 +49,12 @@ export function validateGeneralBuildingAsset(
   if (transferLandStd + transferBuildingStd <= 0)
     return `${label}: 양도시 기준시가 합계가 0이면 안분이 불가합니다.`;
 
+  // ⑧ 정합성 가드: gbHasExtension=true 시 useEstimatedAcquisition=true 강제
+  // (4번째 라디오 "쌍방+일방" 선택 시 자동 설정되지만 직접 조작한 경우를 차단)
+  if (asset.gbHasExtension && !asset.useEstimatedAcquisition) {
+    return `${label}: 증축 있음(gbHasExtension)은 환산취득가 모드에서만 사용할 수 있습니다. 취득가액 산정 방식을 '환산취득가' 또는 '쌍방+일방 (증축 있음)'으로 선택하세요.`;
+  }
+
   if (asset.useEstimatedAcquisition) {
     // 환산취득가 모드 추가 검증
     if (!parseDecimal(asset.gbBuildingArea))

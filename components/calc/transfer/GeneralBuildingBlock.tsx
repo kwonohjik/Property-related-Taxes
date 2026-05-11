@@ -21,7 +21,7 @@
 import { useMemo } from "react";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
-import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
+import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
@@ -78,6 +78,69 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
   const multiplierNum = multiplierLabel?.startsWith("3") ? 3 : multiplierLabel?.startsWith("5") ? 5 : 10;
   const allowedArea = footprint > 0 && asset.gbZoneType ? footprint * multiplierNum : null;
 
+  /**
+   * 사례 33 "쌍방+일방 (증축 있음)" 안분 미리보기 — useMemo 순수 계산.
+   * 5필드 모두 입력 시에만 결과 표시 (불완전 입력은 null 반환).
+   * useEffect → store 미러링 금지 정책 준수.
+   */
+  const allocationPreview = useMemo(() => {
+    if (!asset.gbHasExtension) return null;
+
+    const landAreaVal = parseDecimal(asset.gbLandArea);
+    const transferLandPerSqm = parseAmount(asset.gbTransferLandPricePerSqm ?? "");
+    const transferBuildingStd = parseAmount(asset.gbTransferBuildingValue ?? "");
+    const transferExtStd = parseAmount(asset.gbTransferExtensionBuildingStdPrice ?? "");
+    const acqExtStd = parseAmount(asset.gbAcquisitionExtensionBuildingStdPrice ?? "");
+    const totalTransfer = parseAmount(asset.actualSalePrice ?? "");
+    const bundledAcq = parseAmount(asset.fixedAcquisitionPrice ?? "");
+    const acqLandPerSqm = parseAmount(asset.gbAcqLandPricePerSqm ?? "");
+    const acqBuildingStd = parseAmount(asset.gbAcqBuildingValue ?? "");
+
+    if (
+      !landAreaVal || !transferLandPerSqm || !transferBuildingStd ||
+      !transferExtStd || !acqExtStd || !totalTransfer || !bundledAcq ||
+      !acqLandPerSqm || !acqBuildingStd
+    ) return null;
+
+    // 양도시 기준시가 합계 (§166⑥ 안분 분모)
+    const landStdTotal = Math.floor(transferLandPerSqm * landAreaVal);
+    const denom = landStdTotal + transferBuildingStd + transferExtStd;
+    if (denom <= 0) return null;
+
+    // 양도가액 안분 (토지·건물1·건물2)
+    const landTransfer = Math.floor((totalTransfer * landStdTotal) / denom);
+    const b1Transfer = Math.floor((totalTransfer * transferBuildingStd) / denom);
+    const b2Transfer = totalTransfer - landTransfer - b1Transfer;
+
+    // 일괄 취득가액 안분 (취득시 기준시가 비율 — 토지·건물1)
+    const acqLandStd = Math.floor(acqLandPerSqm * landAreaVal);
+    const denomAcq = acqLandStd + acqBuildingStd;
+    if (denomAcq <= 0) return null;
+    const landAcq = Math.floor((bundledAcq * acqLandStd) / denomAcq);
+    const b1Acq = bundledAcq - landAcq;
+
+    // 건물2 환산취득가 (§176의2②)
+    const b2Estimated = transferExtStd > 0 ? Math.floor((b2Transfer * acqExtStd) / transferExtStd) : 0;
+
+    return { landTransfer, b1Transfer, b2Transfer, landAcq, b1Acq, b2Estimated };
+  }, [
+    asset.gbHasExtension,
+    asset.gbLandArea,
+    asset.gbTransferLandPricePerSqm,
+    asset.gbTransferBuildingValue,
+    asset.gbTransferExtensionBuildingStdPrice,
+    asset.gbAcquisitionExtensionBuildingStdPrice,
+    asset.actualSalePrice,
+    asset.fixedAcquisitionPrice,
+    asset.gbAcqLandPricePerSqm,
+    asset.gbAcqBuildingValue,
+  ]);
+
+  /** 한국어 콤마 포맷 헬퍼 */
+  function fmt(n: number): string {
+    return n.toLocaleString("ko-KR");
+  }
+
   return (
     <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-3">
       <div className="space-y-1">
@@ -87,6 +150,16 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
         </p>
       </div>
       <div className="space-y-3">
+
+        {/* 시나리오 가이드 — 일반건물 취득 유형 3가지 안내 */}
+        <div className="rounded-lg border border-blue-200 bg-blue-50/40 p-3 text-xs space-y-1.5">
+          <p className="font-semibold text-blue-800">일반건물 — 취득 시나리오 가이드</p>
+          <ul className="text-blue-700 space-y-0.5">
+            <li>• <b>실거래가</b>: 토지·건물 일괄 취득가 입증 가능</li>
+            <li>• <b>환산취득가</b>: 토지+건물 전체 입증 불가, 모두 환산 (사례 31)</li>
+            <li>• <b>쌍방+일방 (증축 있음)</b>: 원취득은 실가, 증축분만 환산 (사례 33)</li>
+          </ul>
+        </div>
 
         {/* ① 면적·규모 (sky) — 항상 표시 */}
         <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2">
@@ -177,7 +250,7 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
             tone="amber"
             variant="card"
             title="증축 있음"
-            description="원건물 취득 후 별도 증축한 부분이 있는 경우. 증축분(건물2)은 취득가 불명으로 환산취득가를 적용합니다."
+            description="사례 33: 양도코리아 '쌍방+일방' 케이스 — 원취득은 실가, 증축분(건물2)은 입증 불가로 환산취득가 적용. 라디오에서 '쌍방+일방 (증축 있음)' 선택 시 자동 활성화."
             checked={asset.gbHasExtension}
             onCheckedChange={(v) => onChange({ gbHasExtension: v })}
           >
@@ -252,6 +325,17 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
               <p className="mt-0.5 font-semibold">개산공제 (§163⑥)</p>
               <p>취득시 건물기준시가 총액 × 3%</p>
             </div>
+
+            {/* 자동 안분 미리보기 — 5필드 모두 입력 시에만 표시 (참고용) */}
+            {allocationPreview && (
+              <div className="rounded bg-amber-100/60 border border-amber-200 px-3 py-2 text-xs text-amber-800 space-y-1">
+                <p className="font-semibold">자동 안분 미리보기 (참고용)</p>
+                <p>양도가액 안분 → 토지: {fmt(allocationPreview.landTransfer)} / 건물1: {fmt(allocationPreview.b1Transfer)} / 건물2: {fmt(allocationPreview.b2Transfer)}</p>
+                <p>일괄 취득가 안분 → 토지: {fmt(allocationPreview.landAcq)} / 건물1: {fmt(allocationPreview.b1Acq)}</p>
+                <p>건물2 환산취득가: {fmt(allocationPreview.b2Estimated)}</p>
+                <p className="text-[10px] text-amber-700">엔진 실제 계산값은 결과 단계에서 확인됩니다.</p>
+              </div>
+            )}
           </ToggleCard>
         )}
 

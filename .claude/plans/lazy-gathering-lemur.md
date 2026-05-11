@@ -1,227 +1,207 @@
-# 사례 33 — 증축 건물의 취득 실거래가 환산 (수정 계획서)
+# 사례 33 UX 개선 — acquisitionMethod 라디오 4번째 옵션 "쌍방+일방"
 
 ## Context
 
 **왜 이 변경이 필요한가**
-- 양도세 사례 33은 동일 부동산 위에 **2003년 원취득 건물(쌍방실가)** + **2007년 증축분(일방실가=환산)** 이 공존하는 케이스다.
-- 사례 31(`propertyType="general_building"`)은 건물 1동 일괄 모델이라 증축분을 별도 환산 자산으로 분리하지 못한다.
-- 양도코리아 정답: 산출세액 **6,480,952** / 지방세 **648,095** — 3개 소득 라인(토지·건물1·건물2)을 자동 생성하고 영 §102② 결손 통산으로 도달.
+- 사례 33(원취득 실가 + 증축분 환산) 구현은 완료(커밋 `3d2927b`·`ed9311b`), 산출세액 6,480,952 / 지방세 648,095 양도코리아 PDF 1원 단위 일치. 그러나 **UI에서 사용자가 사례 33 진입 경로를 발견·이해하기 어려움**.
+- 사용자 화면 캡처에서 확인된 혼란 4건:
+  1. acquisitionMethod 라디오 3옵션(실거래가/환산취득가/감정가액) 중 무엇을 골라야 사례 33이 되는지 불명. "원취득은 실가인데 왜 환산을 골라야?" 직관 어긋남
+  2. "증축 있음" 토글이 환산 모드 내부에 숨어 있어 발견 어려움
+  3. "토지 취득 → 취득가액(원)" 라벨이 실제로는 일괄 200,000,000을 받음 (사용자는 토지 안분값 164,880,819 입력 시도 가능)
+  4. 필요경비 8,000,000을 "양도비(원)" 필드에 받는 구조 — 직관 어긋남
+- 양도코리아 PDF 패턴(이미지 ②, ③)은 **계산유형 라디오에 "쌍방+일방"을 명시적으로 노출**하여 사용자가 처음부터 사례 33임을 선택. 동일 패턴 도입.
 
-**검토 라운드(2026-05-11)에서 정정된 산식 5건**
-1. 일괄 취득가 안분은 **양도시** 기준시가 비율(소령 §166⑥) — "취득시 비율"은 오류였음
-2. 환산 산식의 `transfer` 인자는 **자산별 안분된 양도가**(건물2 몫) — 총 양도가 아님
-3. 안분 분모 3항은 모두 **원 총액** 단위로 통일 (UI에서 ㎡당 단가 받으면 침묵 버그)
-4. 영 §102② 결손 통산은 **양도소득금액(income) 기준** pro-rata — gain 기준 아님 (`transfer-tax-aggregate-helpers.ts:137-150` 확인)
-5. §114조의2 5% 가산세는 비스코프이지만, **가산세=0 명시 anchor** 1개를 회귀에 박아 5년 이내 케이스 침묵 버그 차단
+**의도된 결과**: 14지점 백엔드 동기화 0건 + UI 발견성·라벨 명확성·자동 안분 미리보기로 사용자 혼란 제거. 코드 위험 최소.
 
-**의도된 결과**: 사례 31 회귀 0건 + 사례 33 anchor 24개 100% 통과 + 사례 34/35(증축 후속) 확장 안전.
-
-## 1. 사례 정답표 (anchor 기준)
-
-| 라인 | 양도가 | 취득가 | 필요경비 | 양도차익 | LTHD | 양도소득금액 (income) | 통산 후 |
-|---|---:|---:|---:|---:|---:|---:|---:|
-| 토지 (1001) | 275,736,648 | 164,880,819 (실가 안분) | 6,595,233 | 104,260,596 | 31,278,178 | 72,982,418 | 48,791,668 |
-| 건물1 (3001) | 9,996,854 | 35,119,181 (실가 안분) | 1,404,767 | -26,527,094 | 0 | -26,527,094 | 0 |
-| 건물2 (3002) | 44,266,498 | 32,978,880 (환산) | 1,218,126 (개산공제) | 10,069,492 | 3,020,847 | 7,048,645 | 4,712,301 |
-| **합계** | 330,000,000 | 232,978,880 | 9,218,126 | 87,802,994 | 34,299,025 | **53,503,969** | **53,503,969** |
-
-**검산 (영 §102② income 기준)**:
-- 흡수 풀: min(80,031,063 양수합, 26,527,094 손실절대값) = 26,527,094
-- 토지 안분 비율 72,982,418/80,031,063 = 91.193% → 흡수 24,190,750
-- 건물2 안분 비율 7,048,645/80,031,063 = 8.807% → 흡수 2,336,344
-- 토지 통산 후 72,982,418 − 24,190,750 = **48,791,668** ✓
-- 건물2 통산 후 7,048,645 − 2,336,344 = **4,712,301** ✓
-
-**세액**: 53,503,969 − 기본공제 2,500,000 = 51,003,969 × 24% − 누진공제 5,760,000 (2023년 §55 누진세율표) = **6,480,952** / 지방세 10% = **648,095**.
-
-## 2. 엔진 변경 — `lib/tax-engine/general-building-valuation.ts`
-
-### 2.1 입력 타입 확장 (`GeneralBuildingInput`)
-
-기존 입력에 **`extensionInfo?` optional 서브객체** 추가. 미입력 시 사례 31 동작 100% 보존.
-
-```ts
-extensionInfo?: {
-  /** 증축일 (=건물2 취득일, 영 §162①4호) */
-  extensionDate: Date;
-  /** 증축 연면적 (㎡) — 정보용 (현 시점 안분식에 미사용, 위치지수 산정 확장 대비) */
-  extensionArea: number;
-  /** 양도시 건물2 기준시가 총액 (원) — UI에서 단가 곱한 총액 받음 */
-  transferExtensionBuildingStdPrice: number;
-  /** 취득시(증축시) 건물2 기준시가 총액 (원) — 환산 분자 */
-  acquisitionExtensionBuildingStdPrice: number;
-  /** 건물2 취득원인 — default "newConstruction"(자가증축). "purchase"는 매수 증축. */
-  extensionAcquisitionCause: "purchase" | "newConstruction";
-};
-```
-
-### 2.2 산식 (정정 반영)
-
-**Step 1 — 양도가 3-way 안분 (양도시 기준시가 비율, 소령 §166⑥)**
+## 핵심 설계 결정 — 4번째 옵션은 **시각 표시 전용**
 
 ```
-landStdTotal      = transferLandPricePerSqm × landArea           // 원
-buildingStdTotal  = transferBuildingStdPrice                     // 원 (건물1)
-extStdTotal       = transferExtensionBuildingStdPrice            // 원 (건물2)
-denom             = landStdTotal + buildingStdTotal + extStdTotal // 원
-// ※ 3항 모두 원 단위 — UI/validate에서 단위 검증 필수
+[기존] useEstimatedAcquisition(boolean) + isAppraisalAcquisition(boolean) + gbHasExtension(boolean)
+       → 라디오 3옵션 매핑
 
-landTransferPrice         = floor(totalTransferPrice × landStdTotal     / denom) = 275,736,648
-building1TransferPrice    = floor(totalTransferPrice × buildingStdTotal / denom) =   9,996,854
-building2TransferPrice    = floor(totalTransferPrice × extStdTotal      / denom) =  44,266,498
+[정정] 동일 3 boolean 유지. 라디오만 "4옵션 표시"로 확장:
+  - "실거래가"           → useEst=false, isAppr=false
+  - "환산취득가"          → useEst=true,  isAppr=false, gbHasExt=false
+  - "감정가액"            → useEst=false, isAppr=true
+  - "쌍방+일방 (증축)"  ★ → useEst=true,  isAppr=false, gbHasExt=true  ← 신규
 ```
 
-**Step 2 — 일괄 취득가 안분 (토지+건물1만, 양도시 비율 §166⑥)**
+→ **API 변환·Zod·Route·Validate·엔진 모두 변경 없음**. `acquisitionMethod`는 여전히 "actual" | "estimated" | "appraisal" 3종 유지. 사례 33은 기존대로 `estimated + extensionInfo` 조합으로 백엔드 인식.
 
+## 변경 5건
+
+### #1 라디오 4번째 옵션 추가 — `CompanionAcqPurchaseBlock.tsx:421-478`
+
+기존 3 옵션(라인 421~478) 다음에 4번째 추가:
+```tsx
+<button
+  type="button"
+  onClick={() => {
+    props.onUseEstimatedChange(true);
+    props.onIsAppraisalAcquisitionChange(false);
+    onChange({ gbHasExtension: true });  // 일반건물 자산일 때만
+  }}
+  aria-pressed={isMixedExtension}
+  className={mixedExtensionStyle}  // tone="fuchsia" 또는 amber
+>
+  <div className="text-sm font-semibold">쌍방+일방 (증축 있음)</div>
+  <div className="text-[11px]">원취득 실가 + 증축분 환산취득가</div>
+</button>
 ```
-// 200,000,000은 토지+건물1 일괄. 건물2는 별도 증축이므로 분배 대상 아님.
-landBuildingDenom = landStdTotal + buildingStdTotal     // 양도시 비율 그대로
-landAcq           = floor(200,000,000 × landStdTotal     / landBuildingDenom) = 164,880,819
-building1Acq      = floor(200,000,000 × buildingStdTotal / landBuildingDenom) =  35,119,181
-landExp           = floor(  8,000,000 × landStdTotal     / landBuildingDenom) =   6,595,233
-building1Exp      = floor(  8,000,000 × buildingStdTotal / landBuildingDenom) =   1,404,767
+
+- `isMixedExtension` 파생: `useEstimatedAcquisition && !isAppraisalAcquisition && gbHasExtension`
+- **`assetKind === "general_building"` 일 때만 4번째 옵션 표시** (그 외 자산은 기존 3 옵션 유지)
+- 4번째 선택 시 라디오 3종 옵션은 ring/border 약화 (시각적 배제)
+
+### #2 일괄 취득가·필요경비 라벨 동적 변경 — `CompanionAcqPurchaseBlock.tsx:503-506`
+
+기존:
+```tsx
+label={props.isAppraisalAcquisition ? "감정가액 (원)" : "취득가액 (원)"}
 ```
 
-**Step 3 — 건물2 환산취득가 (소령 §176의2②)**
-
+정정:
+```tsx
+label={
+  props.isMixedExtension ? "토지·건물 일괄 취득가액 (원)" :
+  props.isAppraisalAcquisition ? "감정가액 (원)" :
+  "취득가액 (원)"
+}
+hint={
+  props.isMixedExtension
+    ? "엔진이 양도시 비율로 토지/건물1로 자동 안분합니다. 200,000,000 그대로 입력하세요."
+    : undefined
+}
 ```
-// 첫 인자는 건물2 안분 양도가 (총 양도가 아님)
-building2Acq = floor(
-  building2TransferPrice × acquisitionExtensionBuildingStdPrice / transferExtensionBuildingStdPrice
-)
-            = floor(44,266,498 × ratio) = 32,978,880   // ratio ≈ 0.7451
 
-building2EstDeduction = floor(building2Acq × 0.03) = 989,366
-// ⚠ anchor 1,218,126과 불일치 → 검증 필요 (아래 §6.3 미해결 항목)
+양도비 필드(`transferExpense`)도 동일 패턴:
+```tsx
+hint={
+  props.isMixedExtension
+    ? "토지·건물 일괄 필요경비. 엔진이 양도시 비율로 자동 안분합니다."
+    : "양도 시 발생한 중개수수료·인지대 등"
+}
 ```
 
-**Step 4 — 3장의 `AssetCardForAggregate` 출력**
+### #3 GeneralBuildingBlock 상단 사례 시나리오 안내 카드 신규 — `GeneralBuildingBlock.tsx:83 근처`
 
-| 카드 | propertyType | acquisitionPrice | expenses | usedEstimatedAcquisition | buildingAcquisitionDate | isSelfBuilt |
-|---|---|---:|---:|---|---|---|
-| 토지 | "land" | 164,880,819 | 6,595,233 | false | — | — |
-| 건물1 | "general_building_unit" | 35,119,181 | 1,404,767 | false | acquisitionDate (2003-03-17) | false |
-| 건물2 | "general_building_unit" | 32,978,880 | 1,218,126 (=환산×3% 또는 추가 자본지출 별도) | true | **extensionDate (2007-07-24)** | extensionAcquisitionCause==="newConstruction" |
+새 컴포넌트 `GeneralBuildingScenarioGuide.tsx` 또는 inline:
+```tsx
+<div className="rounded-lg border border-blue-200 bg-blue-50/40 p-3 text-xs space-y-1">
+  <p className="font-semibold text-blue-800">📘 일반건물 — 취득 시나리오 가이드</p>
+  <ul className="text-blue-700 space-y-0.5">
+    <li>• <b>실거래가</b>: 토지·건물 일괄 취득가 입증 가능 (사례 31)</li>
+    <li>• <b>환산취득가</b>: 토지+건물 전체 입증 불가, 모두 환산</li>
+    <li>• <b>쌍방+일방 (증축 있음)</b>: 원취득은 실가 + 후속 증축분만 환산 (사례 33)</li>
+  </ul>
+</div>
+```
 
-**Step 5 — 결손 통산은 aggregate 엔진에 위임 (변경 없음)**
+### #4 증축 ToggleCard 위치 승격 — `GeneralBuildingBlock.tsx:174`
 
-`transfer-tax-aggregate-helpers.ts:137-150`의 income 기준 pro-rata가 3장 카드를 받아 자동 처리.
+기존: ③ 취득시 기준시가 섹션 다음, 환산 모드 내부에만 표시
+정정:
+- 토글 자체는 동일 위치 유지 (조건 `isEstimated`도 유지)
+- **4번째 라디오 옵션 선택 시 자동 `gbHasExtension: true` 설정** → 토글이 자동 ON 상태로 펼쳐짐
+- description 텍스트 강화: "사례 33: 양도코리아 '쌍방+일방' 케이스 — 원취득은 실가, 증축분은 환산"
+- tone "amber" 유지 (현재 `fuchsia` 표기는 디자인 문서 잔재 — 코드는 amber)
 
-### 2.3 §114조의2 5% 가산세 (사례 33 활성)
+### #5 안분 결과 미리보기 카드 신규 — `GeneralBuildingBlock.tsx` 증축 토글 펼침 마지막에 추가
 
-- 사례 33: 증축일 2007-07-24 + 5년 = 2012-07-24 < 양도일 2023-02-19 → **가산세 = null (발동 안 함)**
-- 인프라(`calculateBuildingPenalty()`)는 `isSelfBuilt + buildingAcquisitionDate` 이미 받음 — **추가 구현 0, anchor만 추가**
-- **5.4 회귀 anchor 1개 추가**: `extensionAcquisitionCause === "newConstruction"` 시에도 가산세 0 명시
-- 후속 PR: 2007 증축 → 2012 이내 양도 시뮬레이션 (5년 경계 anchor)
+```tsx
+{asset.gbHasExtension && allInputsReady && (
+  <div className="rounded bg-amber-100/60 border border-amber-200 px-3 py-2 text-xs text-amber-800 space-y-1">
+    <p className="font-semibold">자동 안분 미리보기 (엔진 결과 추정)</p>
+    <p>토지 양도가: {format(landTransferEst)} / 건물1: {format(b1TransferEst)} / 건물2: {format(b2TransferEst)}</p>
+    <p>토지 취득가: {format(landAcqEst)} / 건물1: {format(b1AcqEst)} / 건물2 환산: {format(b2EstimatedEst)}</p>
+    <p className="text-[10px] text-amber-700">엔진 실제 계산값은 결과 단계에서 확인하세요.</p>
+  </div>
+)}
+```
 
-## 3. UI 변경 — 14개 동기화 지점
+순수 함수로 미리보기 계산 (`useMemo` — store 미러링 금지). 산식은 엔진 `general-building-extension.ts`와 동일.
 
-| # | 위치 | 작업 |
-|---|---|---|
-| ① 타입 | `lib/stores/calc-wizard-store.ts` AssetForm | `gbHasExtension`(boolean) + 5필드 (`gbExtensionDate`/`gbExtensionArea`/`gbTransferExtensionBuildingStdPrice`/`gbAcquisitionExtensionBuildingStdPrice`/`gbExtensionAcquisitionCause`) |
-| ② initial | 동일 store | `gbHasExtension: false`, 나머지 ""/undefined |
-| ③ normalize | `normalizeAssetForm` | gbHasExtension=false 시 5필드 전부 폐기 (legacy 자동 정리) |
-| ④ API 변환 | `lib/calc/transfer-tax-api-helpers.ts` | gbHasExtension=true 시 `extensionInfo` 객체 빌드 후 `GeneralBuildingInput` spread |
-| ⑤ UI 위젯 | `components/calc/transfer/AssetForm` 일반건물 섹션 | ToggleCard "증축 있음" 펼침: DateInput + DecimalInput(면적) + **CurrencyInput 2개(총액·원 단위 명시 hint)** + RadioCardGroup(매매/자가증축) |
-| ⑥ 사이드바 | — | 영향 없음 |
-| ⑦ 결과 카드 | `BundledAllocationCard` | `cards.length === 3` 분기 — 4열(토지/건물1/건물2/합계) 안분표 |
-| ⑧ validation | `lib/calc/transfer-tax-validate.ts` | gbHasExtension=true 시: 5필드 필수 + 증축일 ∈ (토지취득일, 양도일) + 면적 > 0 + 2기준시가 > 0 + **"기준시가는 ㎡당 단가가 아닌 총액(원)" 메시지** |
-| ⑨ Zod enum (main) | `lib/api/transfer-tax-schema.ts` | `extensionAcquisitionCause` z.enum 정의 |
-| ⑩ Zod enum (sub) | `lib/api/transfer-tax-schema-sub.ts` | 동일 enum re-export + `addPropertyRefines` 헬퍼 타입 |
-| ⑪ acquisitionDate fallback | route handler | 건물2 카드는 extensionDate 사용 (단일 진실) |
-| ⑫ **Zod 객체 정의** | `transfer-tax-schema-sub.ts` | `extensionInfo` z.object 신규 정의 — **누락 시 침묵 stripping** |
-| ⑬ **callTransferTaxAPI body spread** | `lib/calc/transfer-tax-api.ts` | `extensionInfo` 메인 body 통합 |
-| ⑭ **Route handler 엔진 매핑** | `app/api/calc/transfer/general-building-route-helper.ts` | `toOptionalDate(body.extensionInfo?.extensionDate)` + `extensionInfo` 객체 엔진 input 매핑 |
-
-**UI 표시 순서 (계산 로직 순서 = §3.1 기본 모드 표시)**: 토지 → 건물1 → **[증축 토글]** → 건물2 5필드 → 일괄 취득가·필요경비.
-
-## 4. 변경 대상 파일
+## 변경 대상 파일
 
 | 파일 | 변경 | 예상 +줄 |
 |---|---|---:|
-| `lib/tax-engine/general-building-valuation.ts` (621줄) | 입력 타입 + Step1·3 안분 + 카드 3장 분기 | +120 |
-| `lib/tax-engine/types/transfer.types.ts` | 해당 사항 없음 (aggregate가 카드 받음) | 0 |
-| `lib/stores/calc-wizard-store.ts` | 6필드 추가 | +20 |
-| `components/calc/transfer/AssetForm.tsx` | 증축 토글 카드 | +80 |
-| `components/calc/transfer/BundledAllocationCard.tsx` | 3-way 분기 | +40 |
-| `lib/calc/transfer-tax-api-helpers.ts` | extensionInfo 빌드 | +25 |
-| `lib/calc/transfer-tax-api.ts` | body spread | +5 |
-| `lib/calc/transfer-tax-validate.ts` (776줄) | 5필드 validate + 단위 메시지 | +35 (분할 신호 점검) |
-| `lib/api/transfer-tax-schema.ts` | enum + extensionInfo z.object | +25 |
-| `lib/api/transfer-tax-schema-sub.ts` | enum re-export | +10 |
-| `app/api/calc/transfer/general-building-route-helper.ts` | 엔진 매핑 + Date 변환 | +15 |
-| `__tests__/tax-engine/transfer-tax/general-building-extension-case-33.test.ts` | anchor 24+1 | 신규 |
+| `components/calc/transfer/CompanionAcqPurchaseBlock.tsx` | 라디오 4번째 옵션 + 라벨 동적 + 파생 props 추가 | +35 |
+| `components/calc/transfer/GeneralBuildingBlock.tsx` | 시나리오 가이드 + 안분 미리보기 카드 + description 강화 | +45 |
+| `components/calc/transfer/CompanionAssetCard.tsx` | `isMixedExtension` prop 전파 (라디오 4번째 옵션 표시 조건) | +5 |
+| `lib/calc/transfer-tax-validate.ts` 또는 `validate-gb.ts` | `gbHasExtension=true` 시 acquisitionMethod 일관성 검증 (`useEst=true && !isAppr` 강제) — 정합성 가드 | +5 |
+| (선택) 별도 컴포넌트 분리 | `GeneralBuildingScenarioGuide.tsx` 또는 inline 유지 | +20 (분리 시) |
 
-**800줄 신호**: `transfer-tax-validate.ts` 776줄 → +35줄이면 811줄 → **도메인 분할 선행** (메모리 `feedback_validate_split_signal.md`).
+**파일 크기 정책**: 
+- `CompanionAcqPurchaseBlock.tsx` 현재 줄수 wc -l 사전 측정 필수 (예상 +35줄로 800 초과 시 분할)
+- `GeneralBuildingBlock.tsx` 332줄 → +45줄 = 377줄 (마진 충분)
 
-## 5. 재사용 대상 (신규 작성 금지)
+## 재사용 (신규 작성 금지)
 
-- `safeMultiplyThenDivide()` (`tax-utils.ts`) — overflow 안전 안분
-- `calculateConvertedAcquisition()` 내부 산식 (`general-building-valuation.ts:313-350`) — 호출 인자만 `building2TransferPrice`로 변경하여 재호출
-- `calculateBuildingPenalty()` (`transfer-tax-rate-calc.ts:68-104`) — §114조의2 가산세 (사례 32 인프라 그대로)
-- `transfer-tax-aggregate-helpers.ts:137-150` income-기준 pro-rata — 변경 없음
-- `toOptionalDate()` (`lib/api/date-coerce.ts`)
-- UI: `ToggleCard` · `DateInput` · `CurrencyInput` · `DecimalInput` · `RadioCardGroup` · `FieldCard hint` (단위 명시 — placeholder 숫자 예시 금지)
+- `RadioCardGroup` 패턴 — 4번째 옵션도 동일 컴포넌트 사용 (이미 `CompanionAcqPurchaseBlock.tsx`는 button 기반이라 패턴 분석 후 적용)
+- `safeMultiplyThenDivide()` — 안분 미리보기 계산 (lib/tax-engine/tax-utils.ts)
+- amber 색상 카드 패턴 — `GeneralBuildingBlock.tsx:307-318` 비사업용토지 미리보기 카드 재사용
+- 사례 28 안분 결과 표시 패턴 — 그 외 없으면 이번 PR이 첫 도입
 
-## 6. anchor 테스트 (25개, `toBe()` 원단위)
+## 14지점 동기화 평가
 
-### 6.1 안분·환산 (8)
-- 토지 양도가 275,736,648 / 건물1 양도가 9,996,854 / 건물2 양도가 44,266,498 / 합 330,000,000
-- 토지 실가 164,880,819 / 건물1 실가 35,119,181 / 합 200,000,000
-- 건물2 환산 32,978,880
+| # | 영향 |
+|---|---|
+| ① 폼 타입 | **변경 없음** (기존 3 boolean 그대로) |
+| ② initial value | **변경 없음** |
+| ③ normalize | **변경 없음** |
+| ④ API 변환 | **변경 없음** (`acquisitionMethod`는 여전히 actual/estimated/appraisal) |
+| ⑤ UI 위젯 | ★ 라디오 4번째 옵션 + 라벨 동적 + 가이드 카드 + 미리보기 카드 (본 PR 본체) |
+| ⑥ 사이드바 | 영향 없음 (안분 미리보기는 자산 카드 내부) |
+| ⑦ 결과 카드 | **변경 없음** (기존 GeneralBuilding3WayTable 그대로) |
+| ⑧ validate | 정합성 가드 1건 추가 (가벼움) |
+| ⑨~⑭ Zod·route·엔진 | **변경 없음** |
 
-### 6.2 양도차익·LTHD·income (9)
-- 토지 차익 104,260,596 / LTHD 31,278,178 / income 72,982,418
-- 건물1 차익 -26,527,094 / LTHD 0 / income -26,527,094
-- 건물2 차익 10,069,492 / LTHD 3,020,847 / income 7,048,645
+→ **14지점 중 실질 변경은 ⑤·⑧ 2개. 백엔드·엔진·anchor 영향 0**.
 
-### 6.3 통산·세액 (7)
-- 토지 통산후 48,791,668 / 건물2 통산후 4,712,301 / 건물1 0
-- 흡수 합 검증 anchor: 24,190,750 + 2,336,344 = 26,527,094
-- 통산후 합 53,503,969 / 과세표준 51,003,969 / 산출세액 6,480,952 / 지방세 648,095
-
-### 6.4 회귀 + 가산세 0 (1)
-- `extensionAcquisitionCause: "newConstruction"` + 양도일 > 증축일+5년 → **penalty = 0** anchor (5년 초과 침묵 가드)
-- 사례 31 모든 anchor 그대로 통과 (별도 회귀 파일 변경 없음)
-
-### ⚠️ 미해결 항목 — 건물2 개산공제
-- 사례 33 정답표: 건물2 개산공제 **1,218,126**
-- 단순 산식 검증: 32,978,880 × 3% = **989,366**
-- 차이: 228,760 — 양도코리아의 개산공제 산정 기준 별도 조사 필요 (양도시 기준시가 × 3% 가능성? `lib/tax-engine/transfer-tax-helpers.ts`의 `calcEstimatedDeductionForGB()` 비교)
-- **Phase 1.1 작업 첫 단계로 양도코리아 화면 캡처 + 사례 31 동일 모듈 산식 grep 필수**
-
-## 7. 검증 방법 (E2E)
+## 검증 방법 (E2E)
 
 ```bash
-# 1. 단위 테스트 (anchor 25개 + 사례 31 회귀)
-npx vitest run __tests__/tax-engine/transfer-tax/general-building-extension-case-33.test.ts
-npx vitest run __tests__/tax-engine/transfer-tax/general-building-case-31.test.ts
-npx vitest run __tests__/tax-engine/transfer-tax/   # 전체 회귀
-
-# 2. 타입·린트
+# 1. 타입·린트
 npm run typecheck
 npm run lint
 
-# 3. 브라우저 수동 (필수)
-npm run dev
-# /calc/transfer 진입 → 자산 추가 → 일반건물 선택
-# → 토지·건물1 기준값 입력 → "증축 있음" 토글 ON
-# → 증축일 2007-07-24 / 면적 83.72 / 양도시·취득시 건물2 기준시가 총액 입력
-# → 일괄 취득가 200,000,000 / 필요경비 8,000,000 입력
-# → 계산 결과: 산출세액 6,480,952 / 지방세 648,095 확인
-# → Network 탭에서 request body에 `extensionInfo` 포함 확인 (⑫⑬⑭ 검증)
-# → 단가(원/㎡)로 잘못 입력 → validate 메시지 "총액(원) 단위" 확인
+# 2. 회귀 (anchor 변동 없음 — 백엔드 무변경)
+npx vitest run __tests__/tax-engine/transfer-tax/general-building-extension-case-33.test.ts
+npx vitest run __tests__/tax-engine/transfer-tax/general-building-case-31.test.ts
+npx vitest run __tests__/tax-engine/transfer-tax/general-building-case-32.test.ts
 
-# 4. 사용자 자가 점검 (작업 완료 보고 전)
-# - [ ] 14개 동기화 지점 grep (특히 ⑫⑬⑭ TypeScript 미감지)
-# - [ ] anchor 25개 toBe 정확 통과
-# - [ ] §114조의2 가산세 0 anchor 통과 (5년 초과 케이스)
-# - [ ] 사례 31 회귀 anchor 38개 0건 실패
+# 3. 브라우저 수동 (UX 변경의 본 검증)
+npm run dev
+# /calc/transfer 진입 → 자산종류 "일반건물(토지+건물 일괄)" 선택
+# ※ 라디오 4번째 옵션 "쌍방+일방 (증축 있음)" 표시 확인
+# ※ 4번째 옵션 클릭 → useEstimatedAcquisition=true + gbHasExtension=true 자동 설정 확인
+# ※ "취득가액(원)" 라벨이 "토지·건물 일괄 취득가액 (원)"으로 변경 확인
+# ※ "양도비(원)" 필드 hint에 "토지·건물 일괄 필요경비 자동 안분" 표시 확인
+# ※ 증축 5필드 입력 시 안분 미리보기 카드에 실시간 토지/건물1/건물2 값 표시 확인
+# ※ 사례 33 입력값 전체로 산출세액 6,480,952 결과 동일 확인 (회귀 보장)
+
+# 4. Playwright 자동 (기존 tests/playwright/case-33-extension.mjs 재실행)
+node tests/playwright/case-33-extension.mjs
+# 셀렉터를 4번째 라디오 옵션으로 변경 후 G-07·G-09·G-10·G-11 통과 확인
 ```
 
-## 8. 비스코프 (후속 PR 후보)
+## 후속 PR 후보 (비스코프)
 
-- 증축 2회 이상 (건물2·건물3 다중)
-- 2007 증축 → 2012 이내 양도 시뮬레이션 (§114조의2 5% 가산세 active 케이스)
-- 증축 + 토지 상속·증여 cross-cutting (#4-a~#7-b 결합)
-- 건물1만 양도 / 건물2만 양도 (부분 양도)
+1. **acquisitionMethod 전체 RadioCardGroup 리팩터** — 현 button 기반 → `RadioCardGroup` 컴포넌트로 통일 (다른 자산도 영향 — 별도 작업)
+2. **사례 31·32 시나리오도 라디오에 명시** — 현재 "환산취득가" 라벨만 — "사례 31 (전체 환산)"·"사례 32 (신축 5년 이내)" 등으로 세분화 (큰 변경, 별도 검토)
+3. **양도비 필드 분리** — 일괄 필요경비 전용 필드 `bundledExpenses` 신설 + 양도비와 명확 분리 (현재 양도비 필드 이중 용도 — 14지점 영향)
+4. **결과 화면 양도코리아 양식 매칭** — `BundledAllocationCard`에 양도코리아 PDF 표 구조 그대로 매핑
+
+## DoD 자가 점검
+
+- [ ] 라디오 4번째 옵션 표시 — `assetKind === "general_building"` 일 때만
+- [ ] 4번째 옵션 클릭 시 3 boolean 자동 설정 (useEst=true·isAppr=false·gbHasExt=true)
+- [ ] 다른 라디오 옵션 클릭 시 gbHasExtension=false 자동 reset (정합성 유지)
+- [ ] 일괄 취득가·양도비 라벨·hint 동적 변경 확인
+- [ ] 시나리오 가이드 카드 표시 (일반건물 자산 진입 시)
+- [ ] 안분 미리보기 카드 — 5필드 모두 입력 시에만 표시 (불완전 입력 차단)
+- [ ] `typecheck` 0건
+- [ ] 사례 31·32·33 회귀 0건 (백엔드 무변경 → anchor 그대로 통과)
+- [ ] 브라우저 수동 — 4번째 옵션 진입 → 사례 33 계산 → 6,480,952 표시
+- [ ] Playwright 스크립트 — 4번째 옵션 selector로 G-07·G-09·G-10·G-11 자동 통과
+- [ ] `ui-engine-sync-checker` — 14지점 누락 0 (실질 변경 ⑤·⑧만)
