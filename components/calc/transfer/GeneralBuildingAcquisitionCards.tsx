@@ -104,6 +104,10 @@ export function GeneralBuildingAcquisitionCards({ asset, onChange, transferDate 
             onIsAppraisalAcquisitionChange={(v) => onChange({ isAppraisalAcquisition: v })}
             gbHasExtension={asset.gbHasExtension}
             onGbHasExtensionChange={(v) => onChange({ gbHasExtension: v })}
+            gbExtensionAcquisitionMode={asset.gbExtensionAcquisitionMode}
+            onGbExtensionAcquisitionModeChange={(v) =>
+              onChange({ gbExtensionAcquisitionMode: v as AssetForm["gbExtensionAcquisitionMode"] })
+            }
             fixedAcquisitionPrice={asset.fixedAcquisitionPrice}
             onFixedAcquisitionPriceChange={(v) => onChange({ fixedAcquisitionPrice: v })}
             standardPriceAtAcq={asset.standardPriceAtAcq}

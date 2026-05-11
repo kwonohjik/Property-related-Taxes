@@ -62,6 +62,12 @@ interface BlockProps {
    */
   gbHasExtension?: boolean;
   onGbHasExtensionChange?: (v: boolean) => void;
+  /**
+   * 증축분 취득방식 — "actual" | "estimated" | "" (미선택).
+   * assetKind === "general_building" + gbHasExtension === true 시만 사용.
+   */
+  gbExtensionAcquisitionMode?: string;
+  onGbExtensionAcquisitionModeChange?: (v: string) => void;
   fixedAcquisitionPrice: string;
   onFixedAcquisitionPriceChange: (v: string) => void;
   /** 환산취득가 분자: 취득시 기준시가 총액 (원) */
@@ -145,14 +151,16 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
 
   /**
    * "쌍방+일방 (증축 있음)" 4번째 라디오 파생 상태.
-   * useEstimatedAcquisition=true + isAppraisalAcquisition≠true + gbHasExtension=true
+   * 원건물 실가(useEstimatedAcquisition=false) + isAppraisalAcquisition≠true
+   * + gbHasExtension=true + gbExtensionAcquisitionMode="estimated"
    * + assetKind="general_building" 일 때 활성화.
    */
   const isMixedExtension =
     props.assetKind === "general_building" &&
-    props.useEstimatedAcquisition === true &&
+    props.useEstimatedAcquisition === false &&  // ★ 원건물 실가
     props.isAppraisalAcquisition !== true &&
-    props.gbHasExtension === true;
+    props.gbHasExtension === true &&
+    props.gbExtensionAcquisitionMode === "estimated";
 
   const acqPricePerSqm = props.standardPricePerSqmAtAcq ?? internalPricePerSqmAtAcq;
   const onAcqPricePerSqmChange = props.onStandardPricePerSqmAtAcqChange ?? setInternalPricePerSqmAtAcq;
@@ -454,7 +462,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
             }}
             className={cn(
               "rounded-md border-2 p-2 text-left transition-all",
-              !props.useEstimatedAcquisition && !props.isAppraisalAcquisition
+              !props.useEstimatedAcquisition && !props.isAppraisalAcquisition && !isMixedExtension
                 ? "border-primary bg-primary/5 text-primary"
                 : "border-border hover:border-muted-foreground/50 hover:bg-muted/40",
               isMixedExtension && "opacity-60",
@@ -514,9 +522,10 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
             <button
               type="button"
               onClick={() => {
-                props.onUseEstimatedChange(true);
+                props.onUseEstimatedChange(false);                        // ★ 원건물 실가
                 props.onIsAppraisalAcquisitionChange?.(false);
                 props.onGbHasExtensionChange?.(true);
+                props.onGbExtensionAcquisitionModeChange?.("estimated");  // 증축 환산
               }}
               aria-pressed={isMixedExtension}
               className={cn(

@@ -139,23 +139,50 @@ export type GeneralBuildingInput = {
     extensionDate: Date;
     /** 증축 연면적 (㎡) — 정보용 (위치지수 산정 확장 대비, 산식 미사용, 선택) */
     extensionArea?: number;
-    /** 양도시 건물2 기준시가 총액 (원) — UI에서 단가 곱한 총액 받음. ㎡당 단가 아님. */
-    transferExtensionBuildingStdPrice: number;
-    /** 취득시(증축시) 건물2 기준시가 총액 (원) — 환산 분자. */
-    acquisitionExtensionBuildingStdPrice: number;
+    /**
+     * 양도시 건물2 기준시가 총액 (원) — UI에서 단가 곱한 총액 받음. ㎡당 단가 아님.
+     * acquisitionMode === "estimated" 시 필수. 실가 모드 시 미입력 허용.
+     */
+    transferExtensionBuildingStdPrice?: number;
+    /**
+     * 취득시(증축시) 건물2 기준시가 총액 (원) — 환산 분자.
+     * acquisitionMode === "estimated" 시 필수. 실가 모드 시 미입력 허용.
+     */
+    acquisitionExtensionBuildingStdPrice?: number;
     /** 건물2 취득원인 — "newConstruction"(자가증축, default) | "purchase"(매수 증축) */
     extensionAcquisitionCause: "purchase" | "newConstruction";
     /**
      * 토지+건물1 일괄 실거래 취득가액 (원).
-     * 증축 경로에서만 사용. 2-way 안분의 분자.
-     * (사례 31·32 환산 경로는 acquisitionLandPricePerSqm·acquisitionBuildingStdPrice 사용)
+     * 원건물이 실가 모드(acquisitionMethod === "actual") 시 필수. 환산 모드 시 미입력 허용.
+     * 2-way 안분의 분자.
      */
-    actualBundledAcquisitionPrice: number;
+    actualBundledAcquisitionPrice?: number;
     /**
      * 토지+건물1 일괄 실거래 필요경비 (원).
-     * 증축 경로에서만 사용. 2-way 안분의 분자.
+     * 원건물이 실가 모드(acquisitionMethod === "actual") 시 필수. 환산 모드 시 미입력 허용.
+     * 2-way 안분의 분자.
      */
-    actualBundledExpenses: number;
+    actualBundledExpenses?: number;
+    /**
+     * 증축분 취득 방식 (필수).
+     * - "estimated": 환산취득가 (소령 §176조의2②) — transferExtensionBuildingStdPrice + acquisitionExtensionBuildingStdPrice 필수
+     * - "actual":    실거래가 별도 입력 — actualAcquisitionPrice 필수
+     *
+     * default: "estimated" (사례 33 기존 anchor 호환성 보존).
+     * 엔진에서 undefined 시 "estimated" 로 처리.
+     */
+    acquisitionMode?: "actual" | "estimated";
+    /**
+     * 증축 실거래 취득가액 (원).
+     * acquisitionMode === "actual" 시 필수. 환산 모드 시 미사용.
+     */
+    actualAcquisitionPrice?: number;
+    /**
+     * 증축 시 발생한 실제 필요경비 (원).
+     * acquisitionMode === "actual" 시에만 유효. 환산 모드 시 미사용.
+     * 미입력 시 0 처리.
+     */
+    actualExpenses?: number;
   };
 
   // 선택적

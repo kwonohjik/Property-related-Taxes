@@ -144,23 +144,53 @@ function buildExtensionInfo(
 
   const extensionDate = asset.gbExtensionDate || undefined;
   const extensionArea = parseDecimal(asset.gbExtensionArea); // 선택 필드 — 0이면 미전달
-  const transferExtStdPrice = parseAmount(asset.gbTransferExtensionBuildingStdPrice);
-  const acqExtStdPrice = parseAmount(asset.gbAcquisitionExtensionBuildingStdPrice);
   const extensionCause = asset.gbExtensionAcquisitionCause;
 
-  // gbHasExtension=true일 때 필수 4필드 누락 → validate 우회 — fail-fast throw
-  if (!extensionDate || !transferExtStdPrice || !acqExtStdPrice || !extensionCause) {
+  // 취득방식 결정: 빈 문자열은 "estimated" fallback (validate에서 이미 검증됨)
+  const mode: "actual" | "estimated" =
+    asset.gbExtensionAcquisitionMode === "actual" ? "actual" : "estimated";
+
+  // gbHasExtension=true + 공통 필수 필드 누락 → validate 우회 — fail-fast throw
+  if (!extensionDate || !extensionCause) {
     throw new Error(
       `[buildExtensionInfo] gbHasExtension=true이지만 필드 누락 — validate 단계에서 차단되어야 함 (asset.assetId=${asset.assetId})`
     );
   }
 
-  return {
-    extensionDate,                                    // string — route handler에서 toOptionalDate 변환 (⑭)
-    ...(extensionArea ? { extensionArea } : {}),      // 선택 필드: 미입력 시 미전달
-    transferExtensionBuildingStdPrice: transferExtStdPrice,
-    acquisitionExtensionBuildingStdPrice: acqExtStdPrice,
+  // 공통 base 필드
+  const base = {
+    extensionDate,                               // string — route handler에서 toOptionalDate 변환 (⑭)
+    ...(extensionArea ? { extensionArea } : {}), // 선택 필드: 미입력 시 미전달
     extensionAcquisitionCause: extensionCause,
+    acquisitionMode: mode,
+  };
+
+  if (mode === "estimated") {
+    const transferExtStdPrice = parseAmount(asset.gbTransferExtensionBuildingStdPrice);
+    const acqExtStdPrice = parseAmount(asset.gbAcquisitionExtensionBuildingStdPrice);
+    if (!transferExtStdPrice || !acqExtStdPrice) {
+      throw new Error(
+        `[buildExtensionInfo] 환산 모드 stdPrice 누락 — validate 단계에서 차단되어야 함 (asset.assetId=${asset.assetId})`
+      );
+    }
+    return {
+      ...base,
+      transferExtensionBuildingStdPrice: transferExtStdPrice,
+      acquisitionExtensionBuildingStdPrice: acqExtStdPrice,
+    };
+  }
+
+  // mode === "actual"
+  const actualAcq = parseAmount(asset.gbExtensionActualAcquisitionPrice);
+  if (!actualAcq) {
+    throw new Error(
+      `[buildExtensionInfo] 실가 모드 actualAcquisitionPrice 누락 — validate 단계에서 차단되어야 함 (asset.assetId=${asset.assetId})`
+    );
+  }
+  return {
+    ...base,
+    actualAcquisitionPrice: actualAcq,
+    actualExpenses: parseAmount(asset.gbExtensionActualExpenses) || 0,
   };
 }
 

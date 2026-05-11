@@ -260,6 +260,9 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     gbTransferExtensionBuildingStdPrice: "",
     gbAcquisitionExtensionBuildingStdPrice: "",
     gbExtensionAcquisitionCause: "newConstruction",
+    gbExtensionAcquisitionMode: "estimated",   // 사례 33 호환 default
+    gbExtensionActualAcquisitionPrice: "",
+    gbExtensionActualExpenses: "",
   };
 }
 
@@ -457,7 +460,11 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (a.gbTransferExtensionBuildingStdPrice === undefined) a.gbTransferExtensionBuildingStdPrice = "";
   if (a.gbAcquisitionExtensionBuildingStdPrice === undefined) a.gbAcquisitionExtensionBuildingStdPrice = "";
   if (a.gbExtensionAcquisitionCause === undefined) a.gbExtensionAcquisitionCause = "newConstruction";
-  // gbHasExtension=false 인 legacy 데이터에 나머지 5필드가 잘못 저장된 경우 정리
+  // ③ 사례 33 확장: gbExtensionAcquisitionMode + 실가 2필드 마이그레이션
+  if (a.gbExtensionAcquisitionMode === undefined) a.gbExtensionAcquisitionMode = "estimated";
+  if (a.gbExtensionActualAcquisitionPrice === undefined) a.gbExtensionActualAcquisitionPrice = "";
+  if (a.gbExtensionActualExpenses === undefined) a.gbExtensionActualExpenses = "";
+  // gbHasExtension=false 인 legacy 데이터에 나머지 필드가 잘못 저장된 경우 정리
   // (신규 데이터에서는 발생하지 않으나 구형 마이그레이션 방어)
   if (a.gbHasExtension === false) {
     a.gbExtensionDate = "";
@@ -465,6 +472,14 @@ export function migrateAsset(raw: unknown): AssetForm {
     a.gbTransferExtensionBuildingStdPrice = "";
     a.gbAcquisitionExtensionBuildingStdPrice = "";
     a.gbExtensionAcquisitionCause = "newConstruction";
+    a.gbExtensionAcquisitionMode = "estimated";
+    a.gbExtensionActualAcquisitionPrice = "";
+    a.gbExtensionActualExpenses = "";
+  }
+  // gbExtensionAcquisitionMode === "estimated" 시 실가 2필드 reset (정합성)
+  if (a.gbExtensionAcquisitionMode === "estimated") {
+    a.gbExtensionActualAcquisitionPrice = "";
+    a.gbExtensionActualExpenses = "";
   }
 
   // ③ 장기임대주택 거주주택 비과세 특례 마이그레이션 (sessionStorage 호환)

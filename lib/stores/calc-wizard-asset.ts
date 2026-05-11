@@ -666,6 +666,28 @@ export interface AssetForm {
    */
   gbExtensionAcquisitionCause: "purchase" | "newConstruction";
 
+  /**
+   * 증축분 취득방식.
+   * "estimated": 환산취득가 (default) — 증축시·양도시 건물기준시가 비율로 산정.
+   * "actual": 실거래가 — gbExtensionActualAcquisitionPrice 직접 입력.
+   * 빈 문자열: 미선택 (normalize에서 "estimated" fallback).
+   */
+  gbExtensionAcquisitionMode: "" | "actual" | "estimated";
+
+  /**
+   * 증축 실거래가 (원).
+   * gbExtensionAcquisitionMode === "actual" 시 필수.
+   * validate에서 차단.
+   */
+  gbExtensionActualAcquisitionPrice: string;
+
+  /**
+   * 증축 시 발생한 실제 필요경비 (원).
+   * gbExtensionAcquisitionMode === "actual" 시 입력 가능.
+   * 미입력 시 0원 처리.
+   */
+  gbExtensionActualExpenses: string;
+
   // ── 검용주택 분리계산 (sodt §160①단서, 2022.1.1 이후) ──
   /** 검용주택 여부 토글 */
   isMixedUseHouse: boolean;

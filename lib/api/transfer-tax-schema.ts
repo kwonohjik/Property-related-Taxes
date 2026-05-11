@@ -125,12 +125,54 @@ export const generalBuildingValuationSchema = z.object({
       extensionDate: z.coerce.date(),
       /** 증축 연면적 (㎡) — 선택. 산식 미사용, 정보용. */
       extensionArea: z.number().nonnegative().optional(),
-      /** 양도시 건물2 기준시가 총액 (원) — ㎡당 단가 아닌 총액. */
-      transferExtensionBuildingStdPrice: z.number().int().positive(),
-      /** 취득시(증축시) 건물2 기준시가 총액 (원) — 환산 분자. */
-      acquisitionExtensionBuildingStdPrice: z.number().int().positive(),
+      /**
+       * 증축분 취득가액 산정 방식.
+       * "estimated": 환산취득가 — transferExtensionBuildingStdPrice + acquisitionExtensionBuildingStdPrice 필수.
+       * "actual":    실거래가 — actualAcquisitionPrice 필수.
+       * default "estimated" (사례 33 호환).
+       */
+      acquisitionMode: z.enum(["actual", "estimated"]).default("estimated"),
+      /** 양도시 건물2 기준시가 총액 (원) — ㎡당 단가 아닌 총액. 환산 모드 필수. */
+      transferExtensionBuildingStdPrice: z.number().int().positive().optional(),
+      /** 취득시(증축시) 건물2 기준시가 총액 (원) — 환산 분자. 환산 모드 필수. */
+      acquisitionExtensionBuildingStdPrice: z.number().int().positive().optional(),
       /** 건물2 취득원인: "purchase"(매수) | "newConstruction"(자가증축, default) */
       extensionAcquisitionCause: z.enum(["purchase", "newConstruction"]),
+      /**
+       * 증축 실거래가 (원). 실가 모드(acquisitionMode === "actual") 시 필수.
+       * superRefine에서 조건부 강제.
+       */
+      actualAcquisitionPrice: z.number().int().positive().optional(),
+      /**
+       * 증축 필요경비 (원). 실가 모드 시 입력 가능. 0 허용(미입력 = 0으로 처리).
+       */
+      actualExpenses: z.number().int().nonnegative().optional(),
+    })
+    .superRefine((ext, ctx) => {
+      if (ext.acquisitionMode === "estimated") {
+        if (!ext.transferExtensionBuildingStdPrice) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["transferExtensionBuildingStdPrice"],
+            message: "환산취득가 모드: 양도시 건물2 기준시가 총액(원)을 입력하세요.",
+          });
+        }
+        if (!ext.acquisitionExtensionBuildingStdPrice) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["acquisitionExtensionBuildingStdPrice"],
+            message: "환산취득가 모드: 취득시(증축시) 건물2 기준시가 총액(원)을 입력하세요.",
+          });
+        }
+      } else if (ext.acquisitionMode === "actual") {
+        if (!ext.actualAcquisitionPrice) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["actualAcquisitionPrice"],
+            message: "실거래가 모드: 증축 실거래가(원)를 입력하세요.",
+          });
+        }
+      }
     })
     .optional(),
   /**

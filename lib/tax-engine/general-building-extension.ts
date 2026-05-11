@@ -3,15 +3,24 @@
  *
  * Layer 2 (Pure Engine): DB 직접 호출 없음. 순수 함수.
  *
- * 원취득(토지+건물1 실가 일괄 안분) + 증축분(건물2 환산취득가) 혼재 케이스.
+ * 원취득(토지+건물1) + 증축분(건물2) 혼재 케이스 — 4가지 조합 지원:
+ *   조합 A: 원건물 실가 안분 + 건물2 환산취득가 (사례 33 기존 동작)
+ *   조합 B: 원건물 실가 안분 + 건물2 실가 직접 입력
+ *   조합 C: 원건물 환산취득가 (사례 31 산식) + 건물2 환산취득가
+ *   조합 D: 원건물 환산취득가 + 건물2 실가 직접 입력
+ *
  * buildGeneralBuildingAssetCards() 의 extensionInfo 분기 전용.
  * 직접 호출 금지 — general-building-valuation.ts 오케스트레이터에서만 진입.
  *
  * 법령 근거:
  *   소득세법 시행령 §166 ⑥ — 기준시가 비율 3-way 안분 (토지/건물1/건물2)
- *   소득세법 시행령 §176조의2 ② — 건물2 환산취득가
- *   소득세법 §97 ② 2호 + 시행령 §163 ⑥ — 건물2 개산공제 (취득시 기준시가 × 3%)
+ *   소득세법 시행령 §176조의2 ② — 원건물·건물2 환산취득가
+ *   소득세법 §97 ② 2호 + 시행령 §163 ⑥ — 개산공제 (취득시 기준시가 × 3%)
  *   소득세법 §114조의2 ① — 건물2 가산세 (extensionAcquisitionCause + extensionDate)
+ *
+ * 원건물 모드 판별 (옵션 B — 필드 유무):
+ *   ext.actualBundledAcquisitionPrice !== undefined → 실가 모드
+ *   ext.actualBundledAcquisitionPrice === undefined → 환산 모드 (§176의2②)
  */
 
 import { safeMultiplyThenDivide } from "./tax-utils";
@@ -55,7 +64,9 @@ export function buildGeneralBuildingAssetCardsWithExtension(
     input.transferLandPricePerSqm * input.landArea,
   );
   const buildingStdTotal = input.transferBuildingStdPrice; // 건물1 총액
-  const extStdTotal = ext.transferExtensionBuildingStdPrice; // 건물2 총액
+  // NOTE: #16에서 acquisitionMode 분기 추가 예정. 현재는 "estimated" 경로만 지원.
+  // optional로 완화된 필드는 0 fallback — denom3===0 검증에서 차단됨.
+  const extStdTotal = ext.transferExtensionBuildingStdPrice ?? 0; // 건물2 총액
   const denom3 = landStdTotal + buildingStdTotal + extStdTotal;
 
   if (denom3 === 0) {
@@ -76,12 +87,13 @@ export function buildGeneralBuildingAssetCardsWithExtension(
   const building2TransferPrice =
     input.totalTransferPrice - landTransferPrice - building1TransferPrice;
 
-  // ── Step 2: 일괄 취득가 2-way 안분 (토지+건물1만, §166⑥ 취득시 비율) ──
-  // 건물2는 별도 환산 → 분배 대상 아님. 분모 = 취득시 토지 + 건물1 기준시가.
-  // §166⑥은 "취득가액을 안분할 때도 기준시가 비율"을 사용하며,
-  // 취득가액(일괄실가) 안분의 분모는 취득시 기준시가로 계산하는 것이 법령 취지에 부합.
-  // QA 2026-05-11 버그 수정: 양도시 비율 → 취득시 비율로 정정
-  // (양도시 비율 사용 시 정답표 T-05=164,880,819와 수학적으로 동시 만족 불가)
+  // ── Step 2: 토지+건물1 취득가·필요경비 결정 (원건물 모드 분기) ───────
+  //
+  // 원건물 모드 판별 (옵션 B):
+  //   actualBundledAcquisitionPrice !== undefined → "actual" (실가 2-way 안분)
+  //   actualBundledAcquisitionPrice === undefined → "estimated" (사례 31 환산 산식)
+  //
+  // 공통: 취득시 기준시가 (환산 분자 + 안분 비율 분모 공유)
   const acqLandStdTotal = Math.floor(
     input.acquisitionLandPricePerSqm * input.landArea,
   );
@@ -95,34 +107,92 @@ export function buildGeneralBuildingAssetCardsWithExtension(
     );
   }
 
-  // 실가 안분 → usedEstimatedAcquisition=false (토지·건물1 카드)
-  const bundledAcq = ext.actualBundledAcquisitionPrice;
-  const bundledExp = ext.actualBundledExpenses;
+  // 원건물 실가 모드 여부 (옵션 B)
+  const isOriginActual = ext.actualBundledAcquisitionPrice !== undefined;
 
-  const landAcq = Math.floor(
-    safeMultiplyThenDivide(bundledAcq, acqLandStdTotal, denom2),
-  );
-  const building1Acq = bundledAcq - landAcq; // 잔액 보정
+  let landAcq: number;
+  let building1Acq: number;
+  let landExp: number;
+  let building1Exp: number;
+  /** 토지·건물1 카드의 usedEstimatedAcquisition 플래그 */
+  let originUsedEstimated: boolean;
 
-  const landExp = Math.floor(
-    safeMultiplyThenDivide(bundledExp, acqLandStdTotal, denom2),
-  );
-  const building1Exp = bundledExp - landExp; // 잔액 보정
+  if (isOriginActual) {
+    // ── 조합 A / B: 원건물 실가 2-way 안분 (§166⑥ 취득시 비율) ─────────
+    // §166⑥은 "취득가액을 안분할 때도 기준시가 비율"을 사용.
+    // 취득시 기준시가 비율로 일괄실가를 토지·건물1에 배분.
+    // QA 2026-05-11 버그 수정: 양도시 비율 → 취득시 비율로 정정
+    // (양도시 비율 사용 시 정답표 T-05=164,880,819와 수학적으로 동시 만족 불가)
+    const bundledAcq = ext.actualBundledAcquisitionPrice!;
+    const bundledExp = ext.actualBundledExpenses ?? 0;
 
-  // ── Step 3: 건물2 환산취득가 + 개산공제 (§176의2② + §163⑥) ──────────
-  // 환산 분자: 건물2 안분 양도가 (총 양도가 아님 — 설계 검토 정정 #2)
-  const building2Acq = Math.floor(
-    safeMultiplyThenDivide(
-      building2TransferPrice,
-      ext.acquisitionExtensionBuildingStdPrice,
-      ext.transferExtensionBuildingStdPrice,
-    ),
-  );
-  // 개산공제: 취득시 건물2 기준시가 × 3% (§163⑥ — 취득시 기준시가 기준)
-  // ★ 환산취득가(building2Acq) × 3% 아님 (설계 §5 확정)
-  const building2EstDeduction = Math.floor(
-    ext.acquisitionExtensionBuildingStdPrice * rate,
-  );
+    landAcq = Math.floor(
+      safeMultiplyThenDivide(bundledAcq, acqLandStdTotal, denom2),
+    );
+    building1Acq = bundledAcq - landAcq; // 잔액 보정
+
+    landExp = Math.floor(
+      safeMultiplyThenDivide(bundledExp, acqLandStdTotal, denom2),
+    );
+    building1Exp = bundledExp - landExp; // 잔액 보정
+
+    originUsedEstimated = false;
+  } else {
+    // ── 조합 C / D: 원건물 환산취득가 (사례 31 §176의2② 산식 재사용) ───
+    //
+    // 토지 환산취득가: INT(토지 안분 양도가 × 취득시 공시지가 총액 / 양도시 공시지가 총액)
+    // 건물1 환산취득가: INT(건물1 안분 양도가 × 취득시 건물기준시가 / 양도시 건물기준시가)
+    // ⚠️ BigInt: 분자 ≈ 수억 × 수억 > MAX_SAFE_INTEGER — safeMultiplyThenDivide 사용
+    landAcq = Math.floor(
+      safeMultiplyThenDivide(landTransferPrice, acqLandStdTotal, landStdTotal),
+    );
+    building1Acq = Math.floor(
+      safeMultiplyThenDivide(
+        building1TransferPrice,
+        acqBuilding1StdTotal,
+        buildingStdTotal,
+      ),
+    );
+
+    // 개산공제: 취득시 기준시가 × 3% (§163⑥ — 환산 모드에서는 필요경비 = 개산공제만)
+    landExp = Math.floor(acqLandStdTotal * rate);
+    building1Exp = Math.floor(acqBuilding1StdTotal * rate);
+
+    originUsedEstimated = true;
+  }
+
+  // ── Step 3: 건물2 취득가·필요경비 결정 (건물2 모드 분기) ─────────────
+  //
+  // ext.acquisitionMode (default: "estimated"):
+  //   "estimated" → 환산취득가 (§176의2②) + 개산공제 (§163⑥)
+  //   "actual"    → 실가 직접 입력 + 필요경비 직접 입력 + 개산공제 없음
+  const extensionMode = ext.acquisitionMode ?? "estimated";
+
+  let building2Acq: number;
+  let building2EstDeduction: number;
+  let extensionUsedEstimated: boolean;
+
+  if (extensionMode === "estimated") {
+    // 환산 분자: 건물2 안분 양도가 (총 양도가 아님 — 설계 검토 정정 #2)
+    const acqExtStd = ext.acquisitionExtensionBuildingStdPrice ?? 0;
+    const transExtStd = ext.transferExtensionBuildingStdPrice ?? 0;
+    building2Acq = Math.floor(
+      safeMultiplyThenDivide(
+        building2TransferPrice,
+        acqExtStd,
+        transExtStd,
+      ),
+    );
+    // 개산공제: 취득시 건물2 기준시가 × 3% (§163⑥ — 취득시 기준시가 기준)
+    // ★ 환산취득가(building2Acq) × 3% 아님 (설계 §5 확정)
+    building2EstDeduction = Math.floor(acqExtStd * rate);
+    extensionUsedEstimated = true;
+  } else {
+    // 실가 직접 입력 — 개산공제 없음 (실가 취득비용은 별도 필요경비로 처리)
+    building2Acq = ext.actualAcquisitionPrice ?? 0;
+    building2EstDeduction = ext.actualExpenses ?? 0;
+    extensionUsedEstimated = false;
+  }
 
   // ── 비사업용토지 판정 (공통, §104의3·§168의12) ───────────────────────
   let appliedMultiplier: number;
@@ -161,6 +231,8 @@ export function buildGeneralBuildingAssetCardsWithExtension(
   const businessRatio = 1 - nonBusinessRatio;
 
   // ── Step 4: 자산 카드 3장 생성 ────────────────────────────────────────
+  // originUsedEstimated: 토지·건물1 카드에 적용 (원건물 모드에 따라 결정됨)
+  // extensionUsedEstimated: 건물2 카드에 적용 (건물2 모드에 따라 결정됨)
   const assetCards: AssetCardForAggregate[] = [];
 
   // 토지 카드 (비사업용 분할 포함)
@@ -175,9 +247,9 @@ export function buildGeneralBuildingAssetCardsWithExtension(
       transferPrice: landBusinessTransfer,
       acquisitionPrice: landBusinessAcq,
       expenses: landBusinessExp,
-      usedEstimatedAcquisition: false,
-      estimatedBase: 0,
-      estimatedDeduction: 0,
+      usedEstimatedAcquisition: originUsedEstimated,
+      estimatedBase: originUsedEstimated ? landBusinessAcq : 0,
+      estimatedDeduction: originUsedEstimated ? landBusinessExp : 0,
       acquisitionDate: input.acquisitionDate,
       transferDate: input.transferDate,
       isNonBusinessLand: false,
@@ -193,9 +265,9 @@ export function buildGeneralBuildingAssetCardsWithExtension(
       transferPrice: landTransferPrice - landBusinessTransfer,
       acquisitionPrice: landAcq - landBusinessAcq,
       expenses: landExp - landBusinessExp,
-      usedEstimatedAcquisition: false,
-      estimatedBase: 0,
-      estimatedDeduction: 0,
+      usedEstimatedAcquisition: originUsedEstimated,
+      estimatedBase: originUsedEstimated ? landAcq - landBusinessAcq : 0,
+      estimatedDeduction: originUsedEstimated ? landExp - landBusinessExp : 0,
       acquisitionDate: input.acquisitionDate,
       transferDate: input.transferDate,
       isNonBusinessLand: true,
@@ -212,9 +284,9 @@ export function buildGeneralBuildingAssetCardsWithExtension(
       transferPrice: landTransferPrice,
       acquisitionPrice: landAcq,
       expenses: landExp,
-      usedEstimatedAcquisition: false,
-      estimatedBase: 0,
-      estimatedDeduction: 0,
+      usedEstimatedAcquisition: originUsedEstimated,
+      estimatedBase: originUsedEstimated ? landAcq : 0,
+      estimatedDeduction: originUsedEstimated ? landExp : 0,
       acquisitionDate: input.acquisitionDate,
       transferDate: input.transferDate,
       isNonBusinessLand: false,
@@ -225,7 +297,7 @@ export function buildGeneralBuildingAssetCardsWithExtension(
     });
   }
 
-  // 건물1 카드 — 실가 안분, usedEstimatedAcquisition=false
+  // 건물1 카드 — 원건물 모드에 따라 usedEstimatedAcquisition 분기
   // buildingAcquisitionCause는 건물1 원취득 기준 (건물2는 extensionAcquisitionCause 별도).
   const building1AcqDate =
     input.buildingAcquisitionDate ?? input.acquisitionDate;
@@ -238,9 +310,9 @@ export function buildGeneralBuildingAssetCardsWithExtension(
     transferPrice: building1TransferPrice,
     acquisitionPrice: building1Acq,
     expenses: building1Exp,
-    usedEstimatedAcquisition: false,
-    estimatedBase: 0,
-    estimatedDeduction: 0,
+    usedEstimatedAcquisition: originUsedEstimated,
+    estimatedBase: originUsedEstimated ? building1Acq : 0,
+    estimatedDeduction: originUsedEstimated ? building1Exp : 0,
     acquisitionDate: building1AcqDate,
     transferDate: input.transferDate,
     isNonBusinessLand: false,
@@ -265,7 +337,7 @@ export function buildGeneralBuildingAssetCardsWithExtension(
       : {}),
   });
 
-  // 건물2 카드 — 환산취득가, usedEstimatedAcquisition=true
+  // 건물2 카드 — 건물2 모드에 따라 usedEstimatedAcquisition 분기
   // acquisitionDate = extensionDate (건물2 LTHD 기산점 = 증축일)
   // isSelfBuilt: extensionAcquisitionCause==="newConstruction" → §114조의2 가산세 발동 가능
   const building2IsSelfBuilt = ext.extensionAcquisitionCause === "newConstruction";
@@ -276,9 +348,9 @@ export function buildGeneralBuildingAssetCardsWithExtension(
     transferPrice: building2TransferPrice,
     acquisitionPrice: building2Acq,
     expenses: building2EstDeduction,
-    usedEstimatedAcquisition: true,
-    estimatedBase: building2Acq,
-    estimatedDeduction: building2EstDeduction,
+    usedEstimatedAcquisition: extensionUsedEstimated,
+    estimatedBase: extensionUsedEstimated ? building2Acq : 0,
+    estimatedDeduction: extensionUsedEstimated ? building2EstDeduction : 0,
     acquisitionDate: ext.extensionDate,
     transferDate: input.transferDate,
     isNonBusinessLand: false,

@@ -49,11 +49,9 @@ export function validateGeneralBuildingAsset(
   if (transferLandStd + transferBuildingStd <= 0)
     return `${label}: 양도시 기준시가 합계가 0이면 안분이 불가합니다.`;
 
-  // ⑧ 정합성 가드: gbHasExtension=true 시 useEstimatedAcquisition=true 강제
-  // (4번째 라디오 "쌍방+일방" 선택 시 자동 설정되지만 직접 조작한 경우를 차단)
-  if (asset.gbHasExtension && !asset.useEstimatedAcquisition) {
-    return `${label}: 증축 있음(gbHasExtension)은 환산취득가 모드에서만 사용할 수 있습니다. 취득가액 산정 방식을 '환산취득가' 또는 '쌍방+일방 (증축 있음)'으로 선택하세요.`;
-  }
+  // ⑧ 정합성 가드(삭제): 4가지 조합 모두 허용 — useEstimatedAcquisition 강제 조건 제거.
+  // 기존 코드: gbHasExtension && !useEstimatedAcquisition 차단 → 사례 33 실가+증축 조합 불가 버그.
+  // 4번째 라디오 onClick이 useEst=false 설정하므로 이 가드가 있으면 실가+증축 차단됨.
 
   if (asset.useEstimatedAcquisition) {
     // 환산취득가 모드 추가 검증
@@ -97,24 +95,33 @@ export function validateGeneralBuildingAsset(
 
   // ⑧ 사례 33: 증축(gbHasExtension=true) 추가 검증
   if (asset.gbHasExtension) {
-    // 증축일 필수
+    // 공통 필수: 증축일
     if (!asset.gbExtensionDate)
       return `${label}: 증축일을 입력하세요.`;
 
-    // 양도시 건물2 기준시가 총액 필수
-    if (!parseAmount(asset.gbTransferExtensionBuildingStdPrice))
-      return `${label}: 양도시 건물2 기준시가 총액(원)을 입력하세요. ㎡당 단가가 아닌 총액(원)입니다.`;
-
-    // 취득시(증축시) 건물2 기준시가 총액 필수
-    if (!parseAmount(asset.gbAcquisitionExtensionBuildingStdPrice))
-      return `${label}: 취득시(증축시) 건물2 기준시가 총액(원)을 입력하세요. ㎡당 단가가 아닌 총액(원)입니다.`;
-
-    // 증축 취득원인 필수
+    // 공통 필수: 증축 취득원인
     if (
       !asset.gbExtensionAcquisitionCause ||
       !["purchase", "newConstruction"].includes(asset.gbExtensionAcquisitionCause)
     )
       return `${label}: 증축 취득원인을 선택하세요 (매매·자가증축 중).`;
+
+    // 모드별 필수 필드 분기
+    const extMode = asset.gbExtensionAcquisitionMode || "estimated";
+    if (extMode === "estimated") {
+      // 환산취득가 모드: 건물2 기준시가 2종 필수
+      if (!parseAmount(asset.gbTransferExtensionBuildingStdPrice))
+        return `${label}: 양도시 건물2 기준시가 총액(원)을 입력하세요. ㎡당 단가가 아닌 총액(원)입니다.`;
+      if (!parseAmount(asset.gbAcquisitionExtensionBuildingStdPrice))
+        return `${label}: 취득시(증축시) 건물2 기준시가 총액(원)을 입력하세요. ㎡당 단가가 아닌 총액(원)입니다.`;
+    } else if (extMode === "actual") {
+      // 실거래가 모드: 증축 실거래가 필수 (필요경비는 0 허용)
+      if (!parseAmount(asset.gbExtensionActualAcquisitionPrice))
+        return `${label}: 증축 실거래가(원)를 입력하세요.`;
+    } else {
+      // 미선택 또는 알 수 없는 모드
+      return `${label}: 증축분 취득방식(환산취득가/실거래가)을 선택하세요.`;
+    }
 
     // 증축일 범위: max(토지취득일, 건물1취득일) 이후
     const landAcqDate = asset.acquisitionDate;
