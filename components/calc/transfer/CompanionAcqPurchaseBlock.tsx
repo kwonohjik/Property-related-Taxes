@@ -58,7 +58,7 @@ interface BlockProps {
    * 일반건물 증축 여부 — "쌍방+일방 (증축 있음)" 4번째 라디오 옵션 전용.
    * assetKind === "general_building" 시만 사용. 이 값이 true이면
    * useEstimatedAcquisition=true·isAppraisalAcquisition=false 와 함께
-   * "원취득 실가 + 증축분 환산" 모드(사례 33)를 표시한다.
+   * "원취득 실가 + 증축분 환산" 모드를 표시한다.
    */
   gbHasExtension?: boolean;
   onGbHasExtensionChange?: (v: boolean) => void;
@@ -509,7 +509,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
               </div>
             </button>
           )}
-          {/* 일반건물 전용: 4번째 옵션 "쌍방+일방 (증축 있음)" — 사례 33 */}
+          {/* 일반건물 전용: 4번째 옵션 "쌍방+일방 (증축 있음)" */}
           {props.assetKind === "general_building" && (
             <button
               type="button"
@@ -528,7 +528,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
             >
               <div className="text-sm font-semibold text-amber-900">쌍방+일방 (증축 있음)</div>
               <div className="text-[11px] text-amber-700 leading-tight">
-                원취득 실가 + 증축분 환산취득가 (사례 33)
+                원취득 실가 + 증축분 환산취득가
               </div>
             </button>
           )}

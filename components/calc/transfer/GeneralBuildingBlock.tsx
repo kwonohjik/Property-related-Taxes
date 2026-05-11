@@ -79,7 +79,7 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
   const allowedArea = footprint > 0 && asset.gbZoneType ? footprint * multiplierNum : null;
 
   /**
-   * 사례 33 "쌍방+일방 (증축 있음)" 안분 미리보기 — useMemo 순수 계산.
+   * "쌍방+일방 (증축 있음)" 안분 미리보기 — useMemo 순수 계산.
    * 5필드 모두 입력 시에만 결과 표시 (불완전 입력은 null 반환).
    * useEffect → store 미러링 금지 정책 준수.
    */
@@ -156,8 +156,8 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
           <p className="font-semibold text-blue-800">일반건물 — 취득 시나리오 가이드</p>
           <ul className="text-blue-700 space-y-0.5">
             <li>• <b>실거래가</b>: 토지·건물 일괄 취득가 입증 가능</li>
-            <li>• <b>환산취득가</b>: 토지+건물 전체 입증 불가, 모두 환산 (사례 31)</li>
-            <li>• <b>쌍방+일방 (증축 있음)</b>: 원취득은 실가, 증축분만 환산 (사례 33)</li>
+            <li>• <b>환산취득가</b>: 토지+건물 전체 입증 불가, 모두 환산</li>
+            <li>• <b>쌍방+일방 (증축 있음)</b>: 원취득은 실가, 증축분만 환산</li>
           </ul>
         </div>
 
@@ -250,7 +250,7 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
             tone="amber"
             variant="card"
             title="증축 있음"
-            description="사례 33: 양도코리아 '쌍방+일방' 케이스 — 원취득은 실가, 증축분(건물2)은 입증 불가로 환산취득가 적용. 라디오에서 '쌍방+일방 (증축 있음)' 선택 시 자동 활성화."
+            description="양도코리아 '쌍방+일방' 케이스 — 원취득은 실가, 증축분(건물2)은 입증 불가로 환산취득가 적용. 라디오에서 '쌍방+일방 (증축 있음)' 선택 시 자동 활성화."
             checked={asset.gbHasExtension}
             onCheckedChange={(v) => onChange({ gbHasExtension: v })}
           >
