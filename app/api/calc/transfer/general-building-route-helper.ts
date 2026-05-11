@@ -266,11 +266,27 @@ export function dispatchGeneralBuilding(
       taxYear, annualBasicDeductionUsed, priorReductionUsage, rates,
     );
   }
+  // ⑭ 사례 33: 증축 경로에서 actualBundledAcquisitionPrice/Expenses 주입
+  // extensionInfo.actualBundledAcquisitionPrice: 토지+건물1 일괄 취득가 (route handler actualAcquisitionPrice)
+  // extensionInfo.actualBundledExpenses: 토지+건물1 일괄 필요경비 (route handler actualExpenses)
+  // GeneralBuildingInput.extensionInfo 타입에 필수 필드 — 미주입 시 landAcq/landExp가 NaN.
+  // unknown 경유 캐스팅: coercedExtInfo 합성 타입이 GeneralBuildingInput["extensionInfo"] 서브타입과 충돌.
+  const gbPayload: GeneralBuildingValuationPayload = {
+    ...(coercedGbRaw as unknown as GeneralBuildingValuationPayload),
+    totalTransferPrice,
+    transferDate,
+    acquisitionDate,
+    ...(coercedExtInfo ? {
+      extensionInfo: {
+        ...(coercedExtInfo as unknown as NonNullable<GeneralBuildingInput["extensionInfo"]>),
+        actualBundledAcquisitionPrice: actualAcquisitionPrice,
+        actualBundledExpenses: actualExpenses,
+      },
+    } : {}),
+  };
+
   return calculateGeneralBuildingTransfer(
-    {
-      ...(coercedGbRaw as unknown as Omit<GeneralBuildingValuationPayload, "totalTransferPrice" | "transferDate" | "acquisitionDate">),
-      totalTransferPrice, transferDate, acquisitionDate,
-    },
+    gbPayload,
     taxYear, annualBasicDeductionUsed, priorReductionUsage, rates,
   );
 }

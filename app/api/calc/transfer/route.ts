@@ -714,10 +714,16 @@ export async function POST(request: NextRequest) {
 
     // ─── 5-a-3. 일반건물(토지+건물 일괄) — actualPriceMode 플래그로 내부 분기 ───
     if (data.propertyType === "general_building" && data.generalBuildingValuation) {
+      const gbv = data.generalBuildingValuation as Record<string, unknown>;
+      // 증축 케이스(bundledAcquisitionPrice 포함 시): 환산취득가 모드에서 acquisitionPrice=0이므로
+      // generalBuildingValuation.bundledAcquisitionPrice를 실제 취득가·필요경비로 사용.
+      // 비증축(사례 31·32): 환산취득가는 기준시가 비율로 엔진이 직접 계산하므로 0이어도 무방.
+      const bundledAcq = (gbv.bundledAcquisitionPrice as number | undefined) ?? engineInput.acquisitionPrice ?? 0;
+      const bundledExp = (gbv.bundledExpenses as number | undefined) ?? engineInput.expenses ?? 0;
       const { apportionment, aggregated } = dispatchGeneralBuilding(
-        data.generalBuildingValuation as Record<string, unknown>,
+        gbv,
         data.transferPrice, transferDate, acquisitionDate,
-        engineInput.acquisitionPrice ?? 0, engineInput.expenses ?? 0,
+        bundledAcq, bundledExp,
         transferDate.getFullYear(), data.annualBasicDeductionUsed,
         data.priorReductionUsage ?? [], rates,
       );

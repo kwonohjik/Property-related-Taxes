@@ -155,6 +155,17 @@ export const generalBuildingValuationSchema = z.object({
         .optional(),
     })
     .optional(),
+  /**
+   * ⑫ 사례 33 증축: 토지+건물1 일괄 취득가액 (원).
+   * 환산취득가 모드에서 body.acquisitionPrice=0이므로 여기서 명시 전달.
+   * route handler에서 extensionInfo.actualBundledAcquisitionPrice로 주입.
+   * gbHasExtension=true(extensionInfo 포함) 시만 의미 있음.
+   */
+  bundledAcquisitionPrice: z.number().int().nonnegative().optional(),
+  /**
+   * ⑫ 사례 33 증축: 토지+건물1 일괄 필요경비 (원).
+   */
+  bundledExpenses: z.number().int().nonnegative().optional(),
 });
 
 export type GeneralBuildingValuationSchemaInput = z.infer<typeof generalBuildingValuationSchema>;

@@ -232,6 +232,16 @@ export function buildGeneralBuildingValuation(
         : {}),
       // 사례 33: 증축 extensionInfo 서브객체 (gbHasExtension=false 시 undefined → 미포함)
       extensionInfo: buildExtensionInfo(asset),
+      // 사례 33 증축 경로에서만 사용: 토지+건물1 일괄 취득가·필요경비 (extensionInfo.actualBundled* 주입용).
+      // 환산취득가 모드에서 body.acquisitionPrice=0이므로 여기서 명시 전달. route helper ⑭에서 주입.
+      ...(asset.gbHasExtension
+        ? {
+            bundledAcquisitionPrice: parseAmount(asset.fixedAcquisitionPrice),
+            // transferExpense: "양도비 (원) — §97① 나목" UI 필드 → directExpenses는 legacy.
+            // 환산취득가 모드 증축에서 필요경비는 양도비(transferExpense)로 입력됨.
+            bundledExpenses: parseAmount(asset.transferExpense) || parseAmount(asset.directExpenses),
+          }
+        : {}),
       ...nblFields,
     };
   }
