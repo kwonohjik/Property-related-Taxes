@@ -507,12 +507,18 @@ export function buildStatementItems(
       })
     : undefined;
 
+  // 보유분/거주분 — 엔진이 정식 emit한 sub-step의 산식 우선 (정확한 안분율·금액 노출).
+  // sub-step 미발생 케이스(표1·차손 자산 등)는 splitLtDeduction 가공값 fallback.
+  const lthHoldingStep = findStepByLabel(result.steps, "보유 기간분 장특");
+  const lthResidenceStep = findStepByLabel(result.steps, "거주 기간분 장특");
+
   items.set("ltHoldingPart", {
     label: " 보유 기간분 장특",
-    value: lthSplit.holdingAmount,
+    value: lthHoldingStep?.amount ?? lthSplit.holdingAmount,
     formula:
+      lthHoldingStep?.formula ??
       "총 장특공제 × (보유연수 × 4% ÷ (보유연수 × 4% + 거주연수 × 4%)) — §95② 별표 표2 비율 안분",
-    legalBasis: "소득세법 §95② 별표 표2",
+    legalBasis: lthHoldingStep?.legalBasis ?? "소득세법 §95② 별표 표2",
     note: useTable2
       ? "1세대1주택 고가주택 표2 적용 (거주 ≥ 24개월)"
       : "표1 적용 — 거주분 0 (거주 미충족 또는 일반 자산)",
@@ -520,10 +526,11 @@ export function buildStatementItems(
   });
   items.set("ltResidencePart", {
     label: " 거주 기간분 장특",
-    value: lthSplit.residenceAmount,
+    value: lthResidenceStep?.amount ?? lthSplit.residenceAmount,
     formula:
+      lthResidenceStep?.formula ??
       "총 장특공제 − 보유 기간분 = 거주 기간분 (잔액 보정, §95② 별표 표2)",
-    legalBasis: "소득세법 §95② 별표 표2",
+    legalBasis: lthResidenceStep?.legalBasis ?? "소득세법 §95② 별표 표2",
     perAsset: ltResidencePerAsset,
   });
 
@@ -551,11 +558,15 @@ export function buildStatementItems(
       : undefined,
   });
 
+  // 비과세 양도소득금액 — 엔진이 emit한 §161① step의 산식·법령 우선 사용 (정확한 변수값).
+  const nontaxStep = findStepByLabel(result.steps, "비과세 양도소득금액");
   items.set("nontaxableIncome", {
     label: "비과세 양도소득금액 (소령 §161①)",
     value: result.nontaxableGainAmount ?? 0,
-    formula: "§95① 양도소득금액 − 과세대상 양도소득금액 — §155⑳ + §161 안분 비과세 부분",
-    legalBasis: "소득세법 시행령 §161·§155⑳",
+    formula:
+      nontaxStep?.formula ??
+      "§95① 양도소득금액 − 과세대상 양도소득금액 — §155⑳ + §161 안분 비과세 부분",
+    legalBasis: nontaxStep?.legalBasis ?? "소득세법 시행령 §161·§155⑳",
     note: "장기임대주택 거주주택 비과세 특례 시만 표시",
   });
 

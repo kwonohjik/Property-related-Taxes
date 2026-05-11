@@ -137,8 +137,75 @@ export function DetailedCalculationStatementCard({
               .filter((it): it is StatementItem => !!it)}
           />
         ))}
+
+        {/* 전체 엔진 계산 과정 — 서브 토글 (이전 'TransferTaxResultView 계산 과정 상세 보기' 통합) */}
+        <EngineStepsSubToggle steps={result.steps} />
       </div>
     </div>
+  );
+}
+
+// ── 엔진 step 서브 토글 ───────────────────────────────────────────────
+
+/**
+ * 명세서 카드 마지막에 마운트되는 "전체 엔진 계산 과정" 토글.
+ * result.steps[]를 시간순으로 그대로 노출 — 명세서 32항목 외 중간 step (환산취득가 산정·NBL 판정·비교과세 등) 검증용.
+ *
+ * 이전: TransferTaxResultView·BundledAllocationCard·MultiTransferTaxResultView·MixedUseResultCard에 별도 토글
+ * 통합: 명세서 카드 단일 위치로 정보 집중 (사용자 결정 2026-05-12)
+ */
+function EngineStepsSubToggle({ steps }: { steps: import("@/lib/tax-engine/transfer-tax").CalculationStep[] }) {
+  const [open, setOpen] = useState(false);
+  if (!steps || steps.length === 0) return null;
+
+  return (
+    <section className="rounded-lg border border-slate-300 bg-slate-50/40 dark:bg-slate-800/30">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+        aria-expanded={open}
+      >
+        <span>▼ 전체 엔진 계산 과정 보기 ({steps.length}개 step)</span>
+        <span className="text-muted-foreground">{open ? "▲" : "▼"}</span>
+      </button>
+      {open && (
+        <div className="rounded-b-lg divide-y divide-slate-100 dark:divide-slate-800 text-sm">
+          {steps.map((step, i) => (
+            <div
+              key={i}
+              className={cn(
+                "py-2.5 flex justify-between gap-4",
+                step.sub ? "pl-8 pr-4 bg-slate-100/50 dark:bg-slate-800/40" : "px-4",
+              )}
+            >
+              <div className="min-w-0">
+                <p
+                  className={cn(
+                    "font-medium",
+                    step.sub && "text-muted-foreground text-xs",
+                  )}
+                >
+                  {step.label}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">{step.formula}</p>
+                {step.legalBasis && !step.sub && (
+                  <LawArticleModal legalBasis={step.legalBasis} />
+                )}
+              </div>
+              <p
+                className={cn(
+                  "font-mono shrink-0",
+                  step.sub ? "text-xs text-muted-foreground" : "font-medium",
+                )}
+              >
+                {formatKRW(step.amount)}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
 

@@ -5,10 +5,10 @@
  * ResultView + Row 헬퍼 컴포넌트
  */
 
-import { useState } from "react";
+// useState는 EngineStepsSubToggle로 이전되어 제거 (2026-05-12)
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import { cn } from "@/lib/utils";
-import { LawArticleModal } from "@/components/ui/law-article-modal";
+// LawArticleModal은 EngineStepsSubToggle로 이전되어 제거 (2026-05-12)
 import { formatKRW, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
 import { LoginPromptBanner } from "@/components/calc/shared/LoginPromptBanner";
@@ -55,7 +55,7 @@ export function TransferTaxResultView({
   asset,
   transferPriceOverride,
 }: Props) {
-  const [showSteps, setShowSteps] = useState(false);
+  // showSteps 상태는 명세서 카드의 EngineStepsSubToggle로 통합되어 제거 (2026-05-12)
 
   // asset prop 미전달 시 formData.assets[0] 자동 fallback
   // (호출부에서 asset 안 넘기는 경우 carryover 정보 표시 위해 필수)
@@ -621,49 +621,7 @@ export function TransferTaxResultView({
         );
       })()}
 
-      {/* 계산 과정 토글 */}
-      <div data-print-section="steps" className="space-y-0">
-        <div className="w-full flex items-center justify-between rounded-lg border border-border px-4 py-3 text-sm font-medium">
-          <button
-            type="button"
-            onClick={() => setShowSteps((v) => !v)}
-            className="flex-1 flex items-center justify-between hover:opacity-70 transition-opacity"
-          >
-            <span>계산 과정 상세 보기</span>
-            <span className="text-muted-foreground">{showSteps ? "▲" : "▼"}</span>
-          </button>
-          {showSteps && (
-            <button
-              type="button"
-              onClick={() => printScoped("steps")}
-              className="print:hidden ml-3 shrink-0 rounded-md border border-border px-2.5 py-1 text-xs font-medium hover:bg-muted transition-colors"
-            >
-              🖨️ PDF
-            </button>
-          )}
-        </div>
-        {showSteps && (
-          <div className="rounded-lg border border-border divide-y divide-border text-sm">
-            {result.steps.map((step, i) => (
-              <div key={i} className={cn(
-                "py-2.5 flex justify-between gap-4",
-                step.sub ? "pl-8 pr-4 bg-muted/30" : "px-4",
-              )}>
-                <div className="min-w-0">
-                  <p className={cn("font-medium", step.sub && "text-muted-foreground text-xs")}>{step.label}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{step.formula}</p>
-                  {step.legalBasis && !step.sub && (
-                    <LawArticleModal legalBasis={step.legalBasis} />
-                  )}
-                </div>
-                <p className={cn("font-mono shrink-0", step.sub ? "text-xs text-muted-foreground" : "font-medium")}>
-                  {formatKRW(step.amount)}
-                </p>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      {/* 계산 과정 토글은 명세서 카드 내 'EngineStepsSubToggle'로 통합됨 (2026-05-12) */}
 
       {/* 면책 고지 */}
       <DisclaimerBanner />

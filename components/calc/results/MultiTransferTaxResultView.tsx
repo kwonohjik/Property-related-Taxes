@@ -635,7 +635,7 @@ export function MultiTransferTaxResultView({
   priorPaidTax,
   priorPaidLocalTax,
 }: MultiTransferTaxResultViewProps) {
-  const [showSteps, setShowSteps] = useState(false);
+  // showSteps는 명세서 카드의 EngineStepsSubToggle로 통합됨 (2026-05-12)
   const [isPdfLoading, setIsPdfLoading] = useState(false);
 
   async function handlePdfDownload() {
@@ -738,42 +738,7 @@ export function MultiTransferTaxResultView({
         ))}
       </div>
 
-      {/* 합산 계산 과정 토글 */}
-      <Card>
-        <div
-          className="flex items-center justify-between p-4 cursor-pointer"
-          onClick={() => setShowSteps((s) => !s)}
-        >
-          <span className="text-sm font-medium">합산 계산 과정 보기</span>
-          {showSteps ? (
-            <ChevronUp className="h-4 w-4 text-muted-foreground" />
-          ) : (
-            <ChevronDown className="h-4 w-4 text-muted-foreground" />
-          )}
-        </div>
-        {showSteps && (
-          <CardContent className="pt-0 border-t">
-            <div className="divide-y divide-border/50 text-sm">
-              {result.steps.map((s, i) => (
-                <div key={i} className="flex items-start justify-between gap-4 py-2.5">
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium">{s.label}</p>
-                    {s.formula && (
-                      <p className="text-xs text-muted-foreground/70 mt-0.5 break-words">{s.formula}</p>
-                    )}
-                    {s.legalBasis && (
-                      <p className="text-[10px] text-muted-foreground/50 mt-0.5">{s.legalBasis}</p>
-                    )}
-                  </div>
-                  <span className={cn("tabular-nums shrink-0 font-medium", s.amount < 0 ? "text-red-600" : "")}>
-                    {formatKRW(s.amount)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        )}
-      </Card>
+      {/* 합산 계산 과정 토글은 명세서 카드 내 'EngineStepsSubToggle'로 통합됨 (2026-05-12) */}
 
       {/* 이력 안내 */}
       {!isLoggedIn && (

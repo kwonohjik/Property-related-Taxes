@@ -78,38 +78,44 @@ function isBundledActualCase(asset: AssetForm | undefined): boolean {
  * 양도가액 자산별 산식.
  *  - 사례 31: totalTransfer × landStd / (landStd + buildingStd)
  *  - 사례 33: totalTransfer × landStd / (landStd + buildingStd + extensionStd)
+ *  - 그 외(사례 27·28·일반 다건): 자산별 직접 입력값 fallback
  */
 export function buildGbTransferFormula(
   p: PerPropertyBreakdown,
   gb: GeneralBuildingOutput | undefined,
   totalTransferPrice: number,
 ): string | undefined {
-  if (!gb || !gb.landStdTotal || !gb.buildingStdTotal) return undefined;
+  // 일반건물(사례 31·33) 분기 — gbDetail 존재 시 §166⑥ 안분 산식
+  if (gb && gb.landStdTotal && gb.buildingStdTotal) {
+    const landStd = gb.landStdTotal;
+    const buildingStd = gb.buildingStdTotal;
+    const extStd = gb.extensionStdTotal ?? 0;
+    const denomParts =
+      isExtensionCase(gb) && extStd > 0
+        ? [landStd, buildingStd, extStd]
+        : [landStd, buildingStd];
 
-  const landStd = gb.landStdTotal;
-  const buildingStd = gb.buildingStdTotal;
-  const extStd = gb.extensionStdTotal ?? 0;
-  const denomParts =
-    isExtensionCase(gb) && extStd > 0
-      ? [landStd, buildingStd, extStd]
-      : [landStd, buildingStd];
+    if (p.propertyId === "land" || p.propertyId === "land_business" || p.propertyId === "land_nbl") {
+      return buildAllocationFormula(totalTransferPrice, landStd, denomParts, p.transferPrice);
+    }
+    if (p.propertyId === "building" || p.propertyId === "building1") {
+      return buildAllocationFormula(totalTransferPrice, buildingStd, denomParts, p.transferPrice);
+    }
+    if (p.propertyId === "building2") {
+      // 잔액 보정으로 산정됨 (사례 33)
+      const land = denomParts.length >= 1 ? Math.floor((totalTransferPrice * landStd) / (landStd + buildingStd + extStd)) : 0;
+      const b1 = Math.floor((totalTransferPrice * buildingStd) / (landStd + buildingStd + extStd));
+      return buildResidualFormula(totalTransferPrice, [
+        { label: "토지", value: land },
+        { label: "건물(3001)", value: b1 },
+      ], p.transferPrice);
+    }
+  }
 
-  if (p.propertyId === "land" || p.propertyId === "land_business" || p.propertyId === "land_nbl") {
-    return buildAllocationFormula(totalTransferPrice, landStd, denomParts, p.transferPrice);
-  }
-  if (p.propertyId === "building" || p.propertyId === "building1") {
-    return buildAllocationFormula(totalTransferPrice, buildingStd, denomParts, p.transferPrice);
-  }
-  if (p.propertyId === "building2") {
-    // 잔액 보정으로 산정됨 (사례 33)
-    const land = denomParts.length >= 1 ? Math.floor((totalTransferPrice * landStd) / (landStd + buildingStd + extStd)) : 0;
-    const b1 = Math.floor((totalTransferPrice * buildingStd) / (landStd + buildingStd + extStd));
-    return buildResidualFormula(totalTransferPrice, [
-      { label: "토지", value: land },
-      { label: "건물(3001)", value: b1 },
-    ], p.transferPrice);
-  }
-  return undefined;
+  // 일반 다건(사례 27 분할취득·사례 28 일괄양도 등) fallback —
+  // 자산별 양도가액은 사용자 입력 또는 엔진 안분 결과를 그대로 사용.
+  // 안분 산식이 케이스별로 다양해 단순 입력값 표기로 통일 (검증 가능성 우선).
+  return `자산별 입력 또는 엔진 산정 양도가액 = ${fmt(p.transferPrice)}`;
 }
 
 // ── 취득가액 산식 ─────────────────────────────────────────────────
@@ -127,7 +133,13 @@ export function buildGbAcquisitionFormula(
   gb: GeneralBuildingOutput | undefined,
   asset: AssetForm | undefined,
 ): string | undefined {
-  if (!gb) return undefined;
+  // gbDetail 없는 일반 다건(사례 27·28 등) fallback — 자본적지출 합산 산식 표기
+  if (!gb) {
+    if (p.capitalExpenditureForDisplay > 0) {
+      return `취득가액 ${fmt(p.acquisitionPrice)} + 자본적지출 ${fmt(p.capitalExpenditureForDisplay)} = ${fmt(p.acquisitionPrice + p.capitalExpenditureForDisplay)} (신고서 양식: 자본적지출 §97① 가목 합산 표시)`;
+    }
+    return `자산별 취득가액 = ${fmt(p.acquisitionPrice)}`;
+  }
 
   // 자본적지출은 신고서 양식 표시 관행에 따라 취득가액에 합산되어 표시됨.
   // 산식은 안분 결과만 표기하고 자본적지출은 별도 메모 처리 (단순화).
@@ -201,9 +213,15 @@ export function buildGbExpenseFormula(
   p: PerPropertyBreakdown,
   gb: GeneralBuildingOutput | undefined,
 ): string | undefined {
-  if (!gb) return undefined;
-
   const displayExp = Math.max(0, p.necessaryExpense - p.capitalExpenditureForDisplay);
+
+  // gbDetail 없는 일반 다건(사례 27·28 등) fallback — 양도비만 표기
+  if (!gb) {
+    if (p.capitalExpenditureForDisplay > 0) {
+      return `필요경비 ${fmt(p.necessaryExpense)} − 자본적지출 ${fmt(p.capitalExpenditureForDisplay)}(취득가액 흡수) = 양도비 ${fmt(displayExp)}`;
+    }
+    return `자산별 양도비 합계 = ${fmt(displayExp)} (§97① 나목)`;
+  }
 
   if (p.propertyId === "land" || p.propertyId === "land_business" || p.propertyId === "land_nbl") {
     if (!gb.acqLandStdTotal) return undefined;

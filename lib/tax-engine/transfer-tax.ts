@@ -377,6 +377,16 @@ export function calculateTransferTax(
       // = §95① 양도소득금액 − 과세대상 양도소득금액
       // FilingFormTable의 "비과세 양도소득금액" 행에 표시 (양도차익 단계 비과세 분리 X)
       const nontaxableGainAmount = Math.max(0, rhe.formulaTrace.gain95Table1 - rhe.taxableGain);
+      // 명세서 카드 "비과세 양도소득금액 (소령 §161①)" 행에서 step.formula 자동 매핑.
+      // 정식 step emit으로 사용자가 §161① 안분 산식·근거 검증 가능 (이전: result 필드만 표시).
+      if (nontaxableGainAmount > 0) {
+        steps.push({
+          label: "비과세 양도소득금액 (소령 §161①)",
+          formula: `§95① 양도소득금액 ${rhe.formulaTrace.gain95Table1.toLocaleString()} − 과세대상 양도소득금액 ${rhe.taxableGain.toLocaleString()} = ${nontaxableGainAmount.toLocaleString()}`,
+          amount: nontaxableGainAmount,
+          legalBasis: TRANSFER_RENTAL_HOUSING.PIT_RD_155_20,
+        });
+      }
       return {
         isExempt: rhe.taxableGain === 0,
         exemptReason: rhe.taxableGain === 0 ? "장기임대주택 보유자 거주주택 비과세 (§155⑳)" : undefined,
@@ -495,6 +505,33 @@ export function calculateTransferTax(
     amount: longTermHoldingDeduction,
     legalBasis: TRANSFER.LONG_TERM_DEDUCTION,
   });
+
+  // STEP 4.1·4.2: 1세대1주택 특례(표2) 적용 시 보유분/거주분 sub-step 정식 emit.
+  // 명세서 카드의 "보유 기간분 장특"·"거주 기간분 장특" 행에 step.formula 자동 매핑 (정확한 안분율 노출).
+  // 비특례 케이스는 sub-step 미발생 (보유분 일률 표1 적용 — UI는 표1 안내 노출).
+  if (isOneHouseSpecial && longTermHoldingDeduction > 0) {
+    const hPart = Math.min(holdingPeriod.years * 4, 40);
+    const rPart = Math.min(residenceYearsForStep * 4, 40);
+    const totalRate = hPart + rPart;
+    if (totalRate > 0) {
+      const holdingAmt = Math.floor((longTermHoldingDeduction * hPart) / totalRate);
+      const residenceAmt = longTermHoldingDeduction - holdingAmt;
+      steps.push({
+        label: "보유 기간분 장특",
+        formula: `${longTermHoldingDeduction.toLocaleString()} × ${hPart}% / ${totalRate}% = ${holdingAmt.toLocaleString()} (보유 ${holdingPeriod.years}년 × 4%, 40% 한도)`,
+        amount: holdingAmt,
+        legalBasis: TRANSFER.LONG_TERM_DEDUCTION,
+        sub: true,
+      });
+      steps.push({
+        label: "거주 기간분 장특",
+        formula: `${longTermHoldingDeduction.toLocaleString()} × ${rPart}% / ${totalRate}% = ${residenceAmt.toLocaleString()} (거주 ${residenceYearsForStep}년 × 4%, 40% 한도, 잔액 보정)`,
+        amount: residenceAmt,
+        legalBasis: TRANSFER.LONG_TERM_DEDUCTION,
+        sub: true,
+      });
+    }
+  }
 
   // STEP 4.5: 양도소득금액 = 양도차익 − 장기보유특별공제 (소득세법 §95 ①)
   const transferIncomeBefore993 = Math.max(0, taxableGain - longTermHoldingDeduction);
