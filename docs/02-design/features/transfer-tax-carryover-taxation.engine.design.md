@@ -33,7 +33,7 @@
 
 | # | 시나리오 | 법령 근거 | anchor 출처 | 테스트 파일 | 상태 |
 |---|---------|----------|-------------|-----------|------|
-| C-01 | **PDF 사례 24** — 배우자 이월과세 + APD 환산, 5년 룰 이전 증여, A 64,684,518 > B 64,062,800 → A 채택 | §97조의2 ①·② 3호, §164⑤ | 양도코리아 캡처 (환산취득가 356,171,284 / A 64,684,518 / B 64,062,800) | `__tests__/tax-engine/transfer-tax/carryover-pdf-case24.test.ts` | ☐ TODO |
+| C-01 | **PDF 사례 24** — 배우자 이월과세 + APD 환산, 5년 룰 이전 증여, A 64,684,518 > B 64,062,800 → A 채택 | §97조의2 ①·② 3호, §164⑤ | 예제 캡처 (환산취득가 356,171,284 / A 64,684,518 / B 64,062,800) | `__tests__/tax-engine/transfer-tax/carryover-pdf-case24.test.ts` | ☐ TODO |
 | C-02 | 2023.1.1 이후 증여 + 7년차 양도 → 10년 룰 적용 | 부칙(2022.12.31.) + §97조의2 ① | 직접 구성 | `__tests__/tax-engine/transfer-tax/carryover-period-10yr.test.ts` | ☐ TODO |
 | C-03 | 2018.6.19 증여 + 2024.7.1 양도 (5년 1일 경과) → 기간 초과, 이월과세 미적용 | §97조의2 ③ (등기부 소유기간) | 직접 구성 (경계 anchor) | `__tests__/tax-engine/transfer-tax/carryover-period-boundary.test.ts` | ☐ TODO |
 | C-04 | 2023.6.1 증여 + 2033.7.1 양도 (10년 1일 경과) → 기간 초과, 이월과세 미적용 | §97조의2 ③, 부칙 | 직접 구성 (경계 anchor) | `__tests__/tax-engine/transfer-tax/carryover-period-boundary.test.ts` | ☐ TODO |
@@ -195,7 +195,7 @@ carryoverTaxationDetail?: {
 ```
 
 > **설계 결정**: 비교과세 비교 대상은 §97조의2 ② 3호 법문 그대로 **"양도소득 결정세액"** (산출세액 - 세액공제·감면).
-> 지방소득세·신고불성실가산세는 비교에 포함하지 않는다. 양도코리아 64,684,518 / 64,062,800 비교값이 이를 확인.
+> 지방소득세·신고불성실가산세는 비교에 포함하지 않는다. 예제 64,684,518 / 64,062,800 비교값이 이를 확인.
 
 ---
 
@@ -520,7 +520,7 @@ if (ct.useEstimatedAcquisition) {
 }
 ```
 
-> **C-01 anchor 주의**: 양도코리아 사례 24는 APD 환산을 사용한다. `calcApartmentPreDisclosureGain()` 재사용 시 입력 구조가 `rawInput.apartmentPreDisclosure`에 있어야 한다. 기존 환산 모듈과의 입력 경로 통일성을 Design 단계에서 확정한다.
+> **C-01 anchor 주의**: 예제 사례 24는 APD 환산을 사용한다. `calcApartmentPreDisclosureGain()` 재사용 시 입력 구조가 `rawInput.apartmentPreDisclosure`에 있어야 한다. 기존 환산 모듈과의 입력 경로 통일성을 Design 단계에서 확정한다.
 
 ### 8.3 기준시가 직접 입력 경로 (환산 모듈 없을 때)
 
@@ -645,7 +645,7 @@ Scenario A에서 `inputA.acquisitionDate = ct.donorAcquisitionDate`로 교체하
 
 ```
 __tests__/tax-engine/transfer-tax/
-  carryover-pdf-case24.test.ts       ← C-01 (양도코리아 캡처 anchor)
+  carryover-pdf-case24.test.ts       ← C-01 (예제 캡처 anchor)
   carryover-period-10yr.test.ts      ← C-02
   carryover-period-boundary.test.ts  ← C-03, C-04 (경계값)
   carryover-comparison-exclusion.test.ts  ← C-05 (A < B)
@@ -664,7 +664,7 @@ __tests__/tax-engine/transfer-tax/
 
 총 17개 시나리오 × 파일 (일부 통합 파일).
 
-### 11.2 C-01 anchor 정확값 (양도코리아 캡처)
+### 11.2 C-01 anchor 정확값 (예제 캡처)
 
 ```ts
 // C-01: PDF 사례 24 — 배우자 이월과세 + APD 환산
@@ -682,7 +682,7 @@ expect(result.carryoverTaxationDetail?.adoptedScenario).toBe("A");  // A > B
 expect(result.determinedTax).toBe(64_684_518);                       // 최종 결정세액
 ```
 
-> **불일치 시 처리**: 우리 엔진과 양도코리아의 정수 연산 방식 차이(개산공제 적용 순서, LTHD 계산법 등)가 있을 경우, Design 단계에서 차이 원인을 명시하고 우리 엔진의 법령 준거 계산값을 anchor로 확정한 후 Do 진입.
+> **불일치 시 처리**: 우리 엔진과 예제의 정수 연산 방식 차이(개산공제 적용 순서, LTHD 계산법 등)가 있을 경우, Design 단계에서 차이 원인을 명시하고 우리 엔진의 법령 준거 계산값을 anchor로 확정한 후 Do 진입.
 
 ### 11.3 C-13·C-13b 시행시기 경계 anchor
 
@@ -699,7 +699,7 @@ expect(scenarioA.effectiveCapex).toBe(80_000_000);            // 수증자 8천�
 
 ### 11.4 PDF 예시값 원단위 anchor 원칙
 
-`feedback_pdf_example_test_anchoring.md` 정책에 따라, 교재·집행기준·양도코리아 예제 수치는 모두 **원단위 `toBe()`**로 고정. `toBeCloseTo()` 사용 금지.
+`feedback_pdf_example_test_anchoring.md` 정책에 따라, 교재·집행기준·예제 예제 수치는 모두 **원단위 `toBe()`**로 고정. `toBeCloseTo()` 사용 금지.
 
 ---
 

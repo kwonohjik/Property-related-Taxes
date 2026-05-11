@@ -7,8 +7,8 @@
  * 섹션 구조:
  *  ① 면적·규모 (sky)         — 항상 표시
  *  ② 양도시 기준시가 (emerald) — 항상 표시 (§166⑥ 토지·건물 안분 비율)
- *  ③ 취득시 기준시가 (amber)   — 환산취득가 모드만
- *  ⑤ 증축 정보 (amber)          — 환산취득가 모드 + gbHasExtension ON 시 (선택); 증축분 취득방식 서브 라디오로 4가지 조합 지원
+ *  ③ 취득시 기준시가 (amber)   — 환산취득가 모드 OR "토지·건물 일괄 (증축분 별도)" 모드 (일괄 취득가 안분에 필요)
+ *  ⑤ 증축 정보 (amber)          — 환산취득가 모드 OR gbHasExtension ON 시 (선택); 증축분 취득방식 서브 라디오로 4가지 조합 지원
  *  ④ 비사업용토지 판정 (rose)  — 항상 표시 (§104의3·§168의12)
  *
  * 정책 준수:
@@ -178,7 +178,7 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
           <ul className="text-blue-700 space-y-0.5">
             <li>• <b>실거래가</b>: 토지·건물 일괄 취득가 입증 가능</li>
             <li>• <b>환산취득가</b>: 토지+건물 전체 입증 불가, 모두 환산</li>
-            <li>• <b>쌍방+일방 (증축 있음)</b>: 원취득은 실가, 증축분만 환산</li>
+            <li>• <b>토지·건물 일괄 (증축분 별도)</b>: 토지·원건물은 실거래가 일괄, 증축분만 환산</li>
             <li className="text-blue-600 mt-1">
               • 그 외 4가지 조합 (쌍방+쌍방·일방+쌍방·일방+일방): 위 라디오 1/2 선택 후 증축 토글 ON → 서브 라디오로 증축분 취득방식 선택
             </li>
@@ -238,8 +238,8 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
           </FieldCard>
         </div>
 
-        {/* ③ 취득시 기준시가 (amber) — 환산취득가 모드만 */}
-        {isEstimated && (
+        {/* ③ 취득시 기준시가 (amber) — 환산취득가 모드 OR "토지·건물 일괄 (증축분 별도)" 모드 (일괄 취득가 안분 필요) */}
+        {(isEstimated || asset.gbHasExtension) && (
           <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-2">
             <div className="flex items-center gap-2">
               <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-[10px] font-bold text-amber-800 select-none">③</span>
@@ -268,13 +268,13 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
           </div>
         )}
 
-        {/* ⑤ 증축 정보 (amber) — 환산취득가 모드에서 선택적 */}
-        {isEstimated && (
+        {/* ⑤ 증축 정보 (amber) — 환산취득가 모드 OR "토지·건물 일괄 (증축분 별도)" 모드에서 표시 */}
+        {(isEstimated || asset.gbHasExtension) && (
           <ToggleCard
             tone="amber"
             variant="card"
             title="증축 있음"
-            description="양도코리아 '쌍방+일방' 케이스 — 원취득은 실가, 증축분(건물2)은 입증 불가로 환산취득가 적용. 라디오에서 '쌍방+일방 (증축 있음)' 선택 시 자동 활성화."
+            description="예제 '쌍방+일방' 케이스 — 원취득은 실가, 증축분(건물2)은 입증 불가로 환산취득가 적용. 토지 취득방식 라디오에서 '토지·건물 일괄 (증축분 별도)' 선택 시 자동 활성화."
             checked={asset.gbHasExtension}
             onCheckedChange={(v) => onChange({ gbHasExtension: v })}
           >

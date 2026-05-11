@@ -1,7 +1,7 @@
 /**
  * 공동주택(아파트) 최초고시 전 취득 — PHD 3-시점 환산취득가 단위 테스트
  *
- * 사례 23 anchor: 양도코리아 검증값 기준
+ * 사례 23 anchor: 예제 검증값 기준
  *   - 환산취득가액: 244,991,717
  *   - 개산공제:     8,491,190
  *
@@ -52,17 +52,17 @@ describe("T-A23-1: 기준시가 합계 산출 — 공동주택 (§164⑦)", () =
 // ──────────────────────────────────────────────────────────────
 
 describe("T-A23-2: 추정 취득시 공동주택가격 P_A_est (§164⑤·⑦)", () => {
-  it("T-A23-2-1 P_A_est = floor(P_F × Sum_A / Sum_F) = 283,039,674 (양도코리아 역산)", () => {
+  it("T-A23-2-1 P_A_est = floor(P_F × Sum_A / Sum_F) = 283,039,674 (예제 역산)", () => {
     const result = calcPreHousingDisclosureGain(A23_TRANSFER_PRICE, A23_PHD_INPUT);
     expect(result.estimatedHousingPriceAtAcquisition).toBe(A23_P_A_EST);
   });
 });
 
 // ──────────────────────────────────────────────────────────────
-// T-A23-3: 환산취득가액 (양도코리아 검증값 anchor)
+// T-A23-3: 환산취득가액 (예제 검증값 anchor)
 // ──────────────────────────────────────────────────────────────
 
-describe("T-A23-3: 환산취득가액 — 양도코리아 anchor", () => {
+describe("T-A23-3: 환산취득가액 — 예제 anchor", () => {
   it("T-A23-3-1 환산취득가액 = floor(양도가액 × P_A_est / P_T) = 244,991,717", () => {
     const result = calcPreHousingDisclosureGain(A23_TRANSFER_PRICE, A23_PHD_INPUT);
     expect(result.totalEstimatedAcquisitionPrice).toBe(A23_TOTAL_EST_ACQ);
@@ -75,10 +75,10 @@ describe("T-A23-3: 환산취득가액 — 양도코리아 anchor", () => {
 });
 
 // ──────────────────────────────────────────────────────────────
-// T-A23-4: 개산공제 (양도코리아 검증값 anchor)
+// T-A23-4: 개산공제 (예제 검증값 anchor)
 // ──────────────────────────────────────────────────────────────
 
-describe("T-A23-4: 개산공제 (§163⑥) — 양도코리아 anchor", () => {
+describe("T-A23-4: 개산공제 (§163⑥) — 예제 anchor", () => {
   it("T-A23-4-1 개산공제 = floor(P_A_est × 3%) = 8,491,190", () => {
     // 토지/건물 분리 없는 단일 주택 경우 개산공제 = floor(P_A_est × 3%)
     // 283,039,674 × 0.03 = 8,491,190.22 → floor = 8,491,190

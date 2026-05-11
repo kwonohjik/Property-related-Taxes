@@ -138,7 +138,7 @@ export interface AssetForm {
    * 공유 지분율 분자 (기본 100). 같은 물건을 다회 분할 취득(지분 단계취득)한 자산에서
    * 본 자산이 보유한 지분의 분자. 미설정 시 100 (단독 소유).
    * UI 입력은 100% 기준값(양도가·취득가·필요경비 등 모든 금액). API 변환 시 × ratio 자동 적용.
-   * 양도코리아 사례 27 (아파트 2회 지분취득) 패턴.
+   * 예제 사례 27 (아파트 2회 지분취득) 패턴.
    */
   ownershipNumerator: string;
   /**
@@ -624,6 +624,15 @@ export interface AssetForm {
    * 사례 31 호환(매매 등): gbBuildingAcquisitionCause !== "newConstruction" 시 취득일 = acquisitionDate 동일 가정.
    */
   gbBuildingAcquisitionDate: string;
+
+  /**
+   * 토지·건물(원건물) 일괄 취득 시 발생한 필요경비 (원).
+   * 사례 33 일괄 모드 전용 — `useEstimatedAcquisition === false && gbHasExtension === true`일 때 의미 가짐.
+   * 중개수수료·취득세·인지대 등 §97① 가목 부대비용. 미입력 시 0원 처리.
+   * 엔진은 토지·건물1 안분(취득시 기준시가 비율)에 사용 — `actualBundledExpenses`로 매핑.
+   * 이 필드 신설 전(legacy)에는 `transferExpense`(양도비) 필드가 임시 매핑되었으나 의미 충돌로 분리.
+   */
+  gbBundledAcquisitionExpenses: string;
 
   // ── 사례 33: 증축 건물 환산취득가 (소득세법 시행령 §176의2②, §166⑥) ──
   /**

@@ -8,7 +8,7 @@
  *
  * 사용자 입력은 100% 기준 모든 금액(양도가·취득가·필요경비). API 변환 시 × ratio 자동 적용.
  *
- * 참고: 양도코리아 사례 27 (아파트 2회 지분취득) 패턴.
+ * 참고: 예제 사례 27 (아파트 2회 지분취득) 패턴.
  */
 
 import { FieldCard } from "@/components/calc/inputs/FieldCard";

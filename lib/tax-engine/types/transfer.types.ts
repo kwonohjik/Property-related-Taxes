@@ -76,7 +76,7 @@ export interface TransferTaxInput {
    * 그러나 1세대1주택 12억 초과 안분 산식의 분모는 **물건 전체** 양도가액(예: 1,700,000,000)이어야 하므로,
    * 지분 모드일 때 별도로 총 물건가를 전달받는다.
    *
-   * 참고: 양도코리아 사례 27 (아파트 2번 지분취득) anchor.
+   * 참고: 예제 사례 27 (아파트 2번 지분취득) anchor.
    */
   totalPropertyTransferPrice?: number;
   /** 양도일 */

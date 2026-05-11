@@ -24,7 +24,7 @@
 - 12억 초과 고가주택 비과세는 **주택부분에만** 적용, 상가부분은 일반건물 양도세 전액 과세, 주택부수토지 배율초과 면적은 **비사업용토지 +10%p 중과**
 - 사례14는 1992 토지 + 1997 건물 신축 + 취득가액 미확인 → **환산취득가액**까지 결합된 복잡 시나리오
 
-**최종 목표**: 사례14 입력값으로 양도코리아 23번 메뉴와 동일한 세액 산출 + 학습·검증 가능한 3분할 결과 뷰
+**최종 목표**: 사례14 입력값으로 예제 23번 메뉴와 동일한 세액 산출 + 학습·검증 가능한 3분할 결과 뷰
 
 ---
 
@@ -268,7 +268,7 @@ export function calcMixedUseTransferTax(
 **신규 파일**: `__tests__/tax-engine/transfer-tax/mixed-use-house.test.ts`
 
 **필수 시나리오**:
-1. **사례14 anchor 테스트** — 이미지5의 양도가액·기준시가·면적 입력 시 양도코리아 출력값과 원단위 일치 (학습용 PDF 예시 anchoring 정책 — feedback_pdf_example_test_anchoring)
+1. **사례14 anchor 테스트** — 이미지5의 양도가액·기준시가·면적 입력 시 예제 출력값과 원단위 일치 (학습용 PDF 예시 anchoring 정책 — feedback_pdf_example_test_anchoring)
 2. **부수토지 배율초과 = 0 (음수)** — 사례14처럼 초과 없을 때 비사업용 부분 미생성 확인
 3. **부수토지 배율초과 > 0** — 일반 케이스, 비사업용 분리 + 10%p 가산 검증
 4. **12억 미만 주택부분** — 전액 비과세 처리 (주택부분 양도소득금액 0원)
@@ -295,7 +295,7 @@ export function calcMixedUseTransferTax(
 | 7 | UI — `MixedUseSection` 입력 컴포넌트 | `components/calc/transfer/` 신규 | 1, 5 |
 | 8 | UI — 자산 타입 선택 추가 | `AssetForm.tsx` 수정 | 7 |
 | 9 | UI — 결과 뷰 3분할 카드 | `MixedUseResultCard.tsx` 신규 | 7 |
-| 10 | E2E 검증 (브라우저) | `npm run dev` + 사례14 입력 → 양도코리아 결과와 비교 | 1~9 |
+| 10 | E2E 검증 (브라우저) | `npm run dev` + 사례14 입력 → 예제 결과와 비교 | 1~9 |
 | 11 | 800줄 정책 검사 + 분할 (필요 시) | — | 모든 신규 파일 |
 
 ---

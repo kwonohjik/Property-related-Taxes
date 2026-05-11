@@ -15,6 +15,8 @@ import type {
 import type { PropertyItem } from "@/lib/stores/multi-transfer-tax-store";
 import { MultiTransferTaxSummaryCard } from "./MultiTransferTaxSummaryCard";
 import { FilingFormTable } from "@/components/calc/results/transfer/FilingFormTable";
+import { DetailedCalculationStatementCard } from "@/components/calc/results/transfer/DetailedCalculationStatementCard";
+import { aggregateToFilingResult } from "@/components/calc/results/BundledAllocationCard";
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 
 /**
@@ -52,7 +54,7 @@ function breakdownToFilingResult(b: PerPropertyBreakdown): TransferTaxResult {
   };
 }
 
-function printScoped(scope: "form-table" | "full") {
+function printScoped(scope: "form-table" | "full" | "detailed-statement") {
   if (typeof document === "undefined") return;
   document.body.dataset.printScope = scope;
   const cleanup = () => {
@@ -694,6 +696,26 @@ export function MultiTransferTaxResultView({
         priorPaidTax={priorPaidTax}
         priorPaidLocalTax={priorPaidLocalTax}
       />
+
+      {/* ── 계산결과 상세명세서 (다건 합산) ── */}
+      {/* 신고서 양식 32 항목별 산식·변수값·법령 노출 (자산별 펼침 포함) */}
+      {(() => {
+        const adapted = aggregateToFilingResult(result);
+        const aggregateMeta = {
+          properties: result.properties,
+          aggregated: result,
+        };
+        const firstProperty = properties[0];
+        return (
+          <DetailedCalculationStatementCard
+            result={adapted}
+            formData={firstProperty?.form}
+            asset={firstProperty?.form?.assets[0]}
+            aggregate={aggregateMeta}
+            onPrint={() => printScoped("detailed-statement")}
+          />
+        );
+      })()}
 
       {/* 감면세액 합산 재계산 내역 (자경·공익수용 등) */}
       <ReductionRecalculationSection result={result} properties={properties} />

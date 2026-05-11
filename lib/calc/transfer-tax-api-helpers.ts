@@ -229,11 +229,14 @@ export function buildGeneralBuildingValuation(
     isUnregistered: asset.gbIsUnregistered,
   };
 
-  if (asset.useEstimatedAcquisition) {
-    // 환산취득가 모드 — 취득시 기준시가 포함
+  // 풀세트 payload 필요 케이스 = 환산취득가 모드 OR 사례 33 일괄 모드 (실가+증축)
+  // 두 경우 모두 취득시 기준시가·extensionInfo·buildingAcquisitionCause 필요.
+  // 사례 33 일괄 모드는 extensionInfo.actualBundledAcquisitionPrice가 정의되어 엔진이 실가 분기.
+  if (asset.useEstimatedAcquisition || asset.gbHasExtension) {
+    // 취득시 기준시가 포함 (양 모드 공통 필요)
     const acquisitionLandPricePerSqm = parseAmount(asset.gbAcqLandPricePerSqm);
     const acquisitionBuildingStdPrice = parseAmount(asset.gbAcqBuildingValue);
-    const buildingArea = parseDecimal(asset.gbBuildingArea);
+    const buildingArea = parseDecimal(asset.gbBuildingArea) || parseDecimal(asset.gbBuildingFootprintArea);
     if (!acquisitionLandPricePerSqm || !acquisitionBuildingStdPrice || !buildingArea) return undefined;
     return {
       transferLandPricePerSqm,
@@ -267,9 +270,12 @@ export function buildGeneralBuildingValuation(
       ...(asset.gbHasExtension
         ? {
             bundledAcquisitionPrice: parseAmount(asset.fixedAcquisitionPrice),
-            // transferExpense: "양도비 (원) — §97① 나목" UI 필드 → directExpenses는 legacy.
-            // 환산취득가 모드 증축에서 필요경비는 양도비(transferExpense)로 입력됨.
-            bundledExpenses: parseAmount(asset.transferExpense) || parseAmount(asset.directExpenses),
+            // 일괄 취득 시 필요경비 — 전용 필드(gbBundledAcquisitionExpenses) 우선.
+            // legacy fallback: 미입력 시 transferExpense·directExpenses (이전 임시 매핑 호환).
+            bundledExpenses:
+              parseAmount(asset.gbBundledAcquisitionExpenses) ||
+              parseAmount(asset.transferExpense) ||
+              parseAmount(asset.directExpenses),
           }
         : {}),
       ...nblFields,

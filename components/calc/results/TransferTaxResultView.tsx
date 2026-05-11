@@ -15,6 +15,8 @@ import { LoginPromptBanner } from "@/components/calc/shared/LoginPromptBanner";
 import { NonBusinessLandResultCard } from "@/components/calc/NonBusinessLandResultCard";
 import { MultiHouseSurchargeDetailCard } from "@/components/calc/MultiHouseSurchargeDetailCard";
 import { FilingFormTable } from "@/components/calc/results/transfer/FilingFormTable";
+import { DetailedCalculationStatementCard } from "@/components/calc/results/transfer/DetailedCalculationStatementCard";
+import { printScoped, formatRate, Row } from "@/components/calc/results/transfer/TransferTaxResultViewHelpers";
 import { CarryoverComparisonCard } from "@/components/calc/results/transfer/CarryoverComparisonCard";
 import { CarryoverScenarioBFilingCard } from "@/components/calc/results/transfer/CarryoverScenarioBFilingCard";
 import { PreHousingDisclosureDetailSection } from "@/components/calc/results/transfer/PreHousingDisclosureDetailSection";
@@ -23,59 +25,6 @@ import { CommercialBuildingValuationDetailCard } from "@/components/calc/results
 import { GeneralBuildingValuationDetailCard } from "@/components/calc/results/GeneralBuildingValuationDetailCard";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
-
-// ── 유틸 ──────────────────────────────────────────────────────
-
-/**
- * 분리 인쇄 트리거.
- */
-function printScoped(scope: "form-table" | "full" | "calculation" | "phd" | "split-detail" | "steps") {
-  if (typeof document === "undefined") return;
-  document.body.dataset.printScope = scope;
-  const cleanup = () => {
-    delete document.body.dataset.printScope;
-    window.removeEventListener("afterprint", cleanup);
-  };
-  window.addEventListener("afterprint", cleanup);
-  setTimeout(() => window.print(), 0);
-}
-
-function formatRate(rate: number): string {
-  return `${(rate * 100).toFixed(0)}%`;
-}
-
-// ── Row 헬퍼 ──────────────────────────────────────────────────
-
-function Row({
-  label,
-  value,
-  sub = false,
-  highlight = false,
-}: {
-  label: string;
-  value: string;
-  sub?: boolean;
-  highlight?: boolean;
-}) {
-  return (
-    <tr className={cn(highlight && "bg-muted/50 font-semibold")}>
-      <td className={cn(
-        "px-4 py-2.5 whitespace-nowrap",
-        sub && "pl-7 text-xs text-muted-foreground",
-        highlight && "bg-muted/50",
-      )}>
-        {label}
-      </td>
-      <td className={cn(
-        "px-4 py-2.5 text-right font-mono whitespace-nowrap",
-        sub && "text-xs text-muted-foreground",
-        highlight && "bg-muted/50",
-      )}>
-        {value}
-      </td>
-    </tr>
-  );
-}
 
 // ── Props ──────────────────────────────────────────────────────
 
@@ -178,6 +127,29 @@ export function TransferTaxResultView({
           onPrint={() => printScoped("form-table")}
         />
       )}
+
+      {/* ── 계산결과 상세명세서 ── */}
+      {/* 신고서 양식 32 항목별 산식·변수값·법령 노출 (사용자 검증용)
+          이월과세 모드: 채택된 시나리오 기준 명세서만 표시 (result 자체가 채택값) */}
+      <DetailedCalculationStatementCard
+        result={result}
+        formData={formData}
+        asset={resolvedAsset}
+        transferPriceOverride={transferPriceOverride}
+        acquisitionDateLabel={
+          isCarryoverMode
+            ? adoptedA
+              ? "(이월과세 적용 — 증여자 취득일 기산)"
+              : "(이월과세 미적용 — 등기접수일 기산)"
+            : undefined
+        }
+        acquisitionDateOverride={
+          isCarryoverMode && adoptedA
+            ? resolvedAsset?.carryover?.donorAcquisitionDate
+            : undefined
+        }
+        onPrint={() => printScoped("detailed-statement")}
+      />
 
       {/* ── 핵심 결과 카드 + 계산 내역 ── */}
       <div data-print-section="calculation" className="space-y-5">

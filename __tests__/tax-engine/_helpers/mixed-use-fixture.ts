@@ -22,7 +22,7 @@
  * - 1991.1.1 개별공시지가: 2,380,000원/㎡ (토지 취득일 1992.1.1의 직전 고시)
  *
  * 상가건물 기준시가 (취득시·양도시): 이미지에서 미확인 → 테스트에서 임의값 사용
- * (실제 anchor 테스트 시 양도코리아 출력값과 비교하여 채워야 함)
+ * (실제 anchor 테스트 시 예제 출력값과 비교하여 채워야 함)
  */
 
 import type { MixedUseAssetInput } from "@/lib/tax-engine/types/transfer-mixed-use.types";

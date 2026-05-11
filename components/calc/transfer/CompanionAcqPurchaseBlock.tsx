@@ -535,9 +535,9 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
                   : "border-amber-200 bg-amber-50/40 hover:border-amber-300",
               )}
             >
-              <div className="text-sm font-semibold text-amber-900">쌍방+일방 (증축 있음)</div>
+              <div className="text-sm font-semibold text-amber-900">토지·건물 일괄 (증축분 별도)</div>
               <div className="text-[11px] text-amber-700 leading-tight">
-                원취득 실가 + 증축분 환산취득가
+                토지·원건물 실거래가 + 증축분 환산취득가
               </div>
             </button>
           )}
@@ -586,6 +586,16 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
                   : undefined
             }
           />
+          {/* 사례 33 일괄 모드: 토지+건물1 일괄 취득 시 필요경비 (중개수수료·취득세·인지대 등 §97① 가목)
+              엔진은 취득시 기준시가 비율로 토지·건물1에 자동 안분. */}
+          {isMixedExtension && props.asset && props.onAssetChange && (
+            <CurrencyInput
+              label="토지·건물 일괄 취득 시 필요경비 (원)"
+              value={props.asset.gbBundledAcquisitionExpenses ?? ""}
+              onChange={(v) => props.onAssetChange!({ gbBundledAcquisitionExpenses: v })}
+              hint="일괄 취득 당시 발생한 중개수수료·취득세·인지대 등 부대비용. 엔진이 취득시 기준시가 비율로 토지·건물1에 자동 안분합니다. 없으면 비워두세요."
+            />
+          )}
           {props.isAppraisalAcquisition && (
             <CurrencyInput
               label="취득시 기준시가 (원) — 개산공제 base"

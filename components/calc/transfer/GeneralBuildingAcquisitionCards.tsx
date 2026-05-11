@@ -34,7 +34,7 @@ const LAND_CAUSE_OPTIONS = [
   { value: "carryover_gift", label: "이월과세(증여)" },
 ] as const;
 
-// ── 건물 취득원인 옵션 (신축 포함 4종, 양도코리아 정렬) ──
+// ── 건물 취득원인 옵션 (신축 포함 4종, 예제 정렬) ──
 const BUILDING_CAUSE_OPTIONS = [
   { value: "purchase",         label: "매매" },
   { value: "inheritance",      label: "상속" },

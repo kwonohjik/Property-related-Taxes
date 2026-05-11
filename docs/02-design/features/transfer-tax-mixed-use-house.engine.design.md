@@ -495,12 +495,12 @@ const assetSchema = z.discriminatedUnion("assetType", [
 
 ```ts
 describe("사례14 — 1세대 1주택 + 상가 검용주택 분리계산", () => {
-  it("anchor: 양도코리아 23번 메뉴 출력값과 원단위 일치", () => {
+  it("anchor: 예제 23번 메뉴 출력값과 원단위 일치", () => {
     const input = mixedUseFixture.case14();
     const result = calcMixedUseTransferTax(input.transferInput, input.asset, MOCK_RATES);
 
     // 양도가액 안분
-    expect(result.apportionment.housingTransferPrice).toBe(/* 양도코리아 정확값 */);
+    expect(result.apportionment.housingTransferPrice).toBe(/* 예제 정확값 */);
     expect(result.apportionment.commercialTransferPrice).toBe(/* ... */);
 
     // 주택부분 (12억 초과 안분)
@@ -526,7 +526,7 @@ describe("사례14 — 1세대 1주택 + 상가 검용주택 분리계산", () =
 
 | # | 시나리오 | 입력 변경 | 검증 포인트 |
 |---|---|---|---|
-| 1 | 사례14 anchor | 픽스처 그대로 | 양도코리아 출력 원단위 일치 |
+| 1 | 사례14 anchor | 픽스처 그대로 | 예제 출력 원단위 일치 |
 | 2 | 부수토지 배율초과 = 0 | 사례14 그대로 | `nonBusinessLandPart === null` |
 | 3 | 부수토지 배율초과 > 0 | 토지 면적 1,000㎡ | `excessArea > 0`, +10%p 가산 |
 | 4 | 12억 미만 주택부분 | 양도가액 5억 | `isExempt === true`, 양도소득금액 0 |

@@ -253,6 +253,7 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     // ── 일반건물 건물 취득원인 + 건물 취득일 (사례 32 이후 PR) ──
     gbBuildingAcquisitionCause: undefined,
     gbBuildingAcquisitionDate: "",
+    gbBundledAcquisitionExpenses: "",
     // ── 사례 33: 증축 건물 환산취득가 (소득세법 시행령 §176의2②, §166⑥) ──
     gbHasExtension: false,
     gbExtensionDate: "",
@@ -451,6 +452,8 @@ export function migrateAsset(raw: unknown): AssetForm {
     }
   }
   if (a.gbBuildingAcquisitionDate === undefined) a.gbBuildingAcquisitionDate = "";
+  // ③ 사례 33 일괄 모드: 토지·건물 일괄 취득 시 필요경비 (신규 필드 — bundledExpenses 분리, 2026-05-11)
+  if (a.gbBundledAcquisitionExpenses === undefined) a.gbBundledAcquisitionExpenses = "";
   // ③ 사례 33: 증축 필드 마이그레이션 (sessionStorage 호환 — 신규 필드 누락 보호)
   // normalize 책임: 저장→로드 시 누락 필드 초기화.
   // onChange 책임(별도): 토글 OFF 시 폼 상태 유지 (재토글 ON 복원). normalize 아님.

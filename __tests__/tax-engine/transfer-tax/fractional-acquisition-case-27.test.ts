@@ -1,5 +1,5 @@
 /**
- * 양도세 — 동일 아파트 2회 지분 취득 사례 (양도코리아 사례 27) anchor 테스트
+ * 양도세 — 동일 아파트 2회 지분 취득 사례 (예제 사례 27) anchor 테스트
  *
  * 케이스 개요:
  *   - 다른 주택 미보유 갑氏가 동일 아파트(서울 양천구 목동)를 2회 분할 취득
@@ -129,7 +129,7 @@ describe("사례 27 단건 anchor — 2차 40% 매매 지분", () => {
 // Aggregate 엔진 anchor — 합산 신고
 // ============================================================
 
-describe("사례 27 합산 anchor — 양도코리아 PDF 100% 일치 목표", () => {
+describe("사례 27 합산 anchor — 예제 PDF 100% 일치 목표", () => {
   function makeAggregateInput(): AggregateTransferInput {
     return {
       taxYear: 2023,

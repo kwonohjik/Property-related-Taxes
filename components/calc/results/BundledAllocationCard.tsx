@@ -8,6 +8,7 @@ import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { FilingFormTable } from "@/components/calc/results/transfer/FilingFormTable";
+import { DetailedCalculationStatementCard } from "@/components/calc/results/transfer/DetailedCalculationStatementCard";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -29,8 +30,10 @@ interface Props {
  * AggregateTransferResult → TransferTaxResult 어댑팅 (FilingFormTable 호환).
  * `aggregate` prop과 함께 호출하므로 result는 합계 보조용. `aggregate` 모드가 우선 적용되어
  * mixed-use/split 분기는 발동하지 않음.
+ *
+ * MultiTransferTaxResultView·BundledAllocationCard·DetailedCalculationStatementCard에서 공유.
  */
-function aggregateToFilingResult(a: AggregateTransferResult): TransferTaxResult {
+export function aggregateToFilingResult(a: AggregateTransferResult): TransferTaxResult {
   return {
     isExempt: false,
     transferGain: a.totalTransferGain,
@@ -525,17 +528,28 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
             landNatureMap.set(p.propertyId, asset.landNature);
           }
         }
+        const aggregateMeta = {
+          properties: aggregated.properties,
+          aggregated,
+          ownershipMap,
+          landNatureMap: landNatureMap.size > 0 ? landNatureMap : undefined,
+        };
+        const adaptedResult = aggregateToFilingResult(aggregated);
         return (
-          <FilingFormTable
-            result={aggregateToFilingResult(aggregated)}
-            formData={formData}
-            aggregate={{
-              properties: aggregated.properties,
-              aggregated,
-              ownershipMap,
-              landNatureMap: landNatureMap.size > 0 ? landNatureMap : undefined,
-            }}
-          />
+          <>
+            <FilingFormTable
+              result={adaptedResult}
+              formData={formData}
+              aggregate={aggregateMeta}
+            />
+            {/* ── 계산결과 상세명세서 (다건 모드) ── */}
+            <DetailedCalculationStatementCard
+              result={adaptedResult}
+              formData={formData}
+              asset={formData.assets[0]}
+              aggregate={aggregateMeta}
+            />
+          </>
         );
       })()}
 

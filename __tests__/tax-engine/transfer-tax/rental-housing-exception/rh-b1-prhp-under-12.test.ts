@@ -1,7 +1,7 @@
 /**
  * 장기임대주택 보유자의 거주주택 양도 — RH-B1 anchor 테스트
  *
- * 사례문제: 양도코리아 2023, 사례 25 (PDF#1)
+ * 사례문제: 예제 2023, 사례 25 (PDF#1)
  *
  * 시나리오: 임대주택을 거주주택으로 전환 후 양도 (PHRP, §161① 안분)
  * 양도가액 8억 (12억 미만) → §161① 단일 산식 + §161④ 표1 적용
@@ -32,7 +32,7 @@ import {
   type RentalHousingExceptionInput,
 } from "@/lib/tax-engine/transfer-tax/rental-housing-exception";
 
-describe("RH-B1 — 사례문제 PDF#1 (양도코리아 2023, 사례 25)", () => {
+describe("RH-B1 — 사례문제 PDF#1 (예제 2023, 사례 25)", () => {
   // 사례 입력값
   const S = 800_000_000; // 양도가액 8억
   const gain = 311_000_000; // 양도차익 (8억 - 환산취득가 4.8억 - 필요경비 9백만 = 3.11억)

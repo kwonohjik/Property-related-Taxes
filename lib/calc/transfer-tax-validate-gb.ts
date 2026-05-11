@@ -53,9 +53,11 @@ export function validateGeneralBuildingAsset(
   // 기존 코드: gbHasExtension && !useEstimatedAcquisition 차단 → 사례 33 실가+증축 조합 불가 버그.
   // 4번째 라디오 onClick이 useEst=false 설정하므로 이 가드가 있으면 실가+증축 차단됨.
 
-  if (asset.useEstimatedAcquisition) {
-    // 환산취득가 모드 추가 검증
-    if (!parseDecimal(asset.gbBuildingArea))
+  // 환산취득가 모드 OR 사례 33 일괄 모드(실가+증축) 공통: 취득시 기준시가·건물 취득원인 검증.
+  // 두 모드 모두 풀세트 payload(취득시 기준시가 + buildingAcquisitionCause)가 필요.
+  if (asset.useEstimatedAcquisition || asset.gbHasExtension) {
+    // 건물 연면적 — 환산 모드에서만 필수 (사례 33 일괄에서는 buildingFootprintArea로 대체 가능)
+    if (asset.useEstimatedAcquisition && !parseDecimal(asset.gbBuildingArea))
       return `${label}: 건물 연면적을 입력하세요.`;
     if (!parseAmount(asset.gbAcqLandPricePerSqm))
       return `${label}: 취득시 토지 공시지가를 입력하세요.`;
@@ -95,6 +97,10 @@ export function validateGeneralBuildingAsset(
 
   // ⑧ 사례 33: 증축(gbHasExtension=true) 추가 검증
   if (asset.gbHasExtension) {
+    // 사례 33 일괄 모드(실가+증축): 일괄 취득가 필수
+    if (!asset.useEstimatedAcquisition && !parseAmount(asset.fixedAcquisitionPrice))
+      return `${label}: 토지·건물 일괄 취득가액을 입력하세요. (사례 33: 토지·원건물 일괄 실거래가)`;
+
     // 공통 필수: 증축일
     if (!asset.gbExtensionDate)
       return `${label}: 증축일을 입력하세요.`;

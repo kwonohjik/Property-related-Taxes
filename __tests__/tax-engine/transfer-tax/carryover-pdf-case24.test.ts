@@ -1,7 +1,7 @@
 /**
- * C-01: 배우자 이월과세 + 기준시가 직접 환산 — 양도코리아 사례 24 anchor
+ * C-01: 배우자 이월과세 + 기준시가 직접 환산 — 예제 사례 24 anchor
  *
- * 출처: 양도코리아 PDF 사례 24 (검증 2026-05-04)
+ * 출처: 예제 PDF 사례 24 (검증 2026-05-04)
  * 법령: 소득세법 §97조의2, §97① 1호 나목, 시행령 §163⑥
  *
  * 사례 개요:
@@ -18,12 +18,12 @@
  *   - wasRegulatedAtAcquisition: false (2006년 취득, 조정대상지역 지정 이전)
  *
  * M-5 임계값 적용 결과:
- *   Scenario A: 우리 엔진 64,684,518 = 양도코리아 64,684,518 → 완전 일치
- *   Scenario B: 우리 엔진 64,062,800 = 양도코리아 64,062,800 → 완전 일치
+ *   Scenario A: 우리 엔진 64,684,518 = 예제 64,684,518 → 완전 일치
+ *   Scenario B: 우리 엔진 64,062,800 = 예제 64,062,800 → 완전 일치
  *
  * 계산 방식:
  *   우리 엔진 양도세는 과세표준 천원 미만 절사를 별도 적용하지 않음.
- *   산출세액 = floor(과세표준 × 세율) - 누진공제로 계산하며 양도코리아와 동일.
+ *   산출세액 = floor(과세표준 × 세율) - 누진공제로 계산하며 예제와 동일.
  */
 
 import { describe, it, expect } from "vitest";
@@ -57,25 +57,25 @@ const C01_GIFT_TAX_AMOUNT = 10_000_000;
 const C01_GIFT_DATE_VALUATION = 457_000_000;
 
 // ──────────────────────────────────────────────────────────────
-// 양도코리아 검증값 (PDF 정확값)
+// 예제 검증값 (PDF 정확값)
 // ──────────────────────────────────────────────────────────────
 
 // Scenario A: 이월과세 적용 (증여자 취득일 기산, 환산취득가)
-const YANGDO_KOREA_A_EST_ACQ = 356_171_284;      // 700M × 404M / 794M
-const YANGDO_KOREA_A_DEDUCTION = 12_120_000;     // 404M × 3%
-const YANGDO_KOREA_A_GIFT_TAX_EXPENSE = 10_000_000;
-const YANGDO_KOREA_A_TRANSFER_GAIN = 321_708_716; // 700M - 356,171,284 - 12,120,000 - 10,000,000
-const YANGDO_KOREA_A_LTHD = 96_512_614;          // 321,708,716 × 30% (16년 이상 → max 30%)
-const YANGDO_KOREA_A_TAXABLE_INCOME = 225_196_102;
-const YANGDO_KOREA_A_DETERMINED_TAX = 64_684_518; // 양도코리아 값 (천원 미절사 방식)
+const EXAMPLE_A_EST_ACQ = 356_171_284;      // 700M × 404M / 794M
+const EXAMPLE_A_DEDUCTION = 12_120_000;     // 404M × 3%
+const EXAMPLE_A_GIFT_TAX_EXPENSE = 10_000_000;
+const EXAMPLE_A_TRANSFER_GAIN = 321_708_716; // 700M - 356,171,284 - 12,120,000 - 10,000,000
+const EXAMPLE_A_LTHD = 96_512_614;          // 321,708,716 × 30% (16년 이상 → max 30%)
+const EXAMPLE_A_TAXABLE_INCOME = 225_196_102;
+const EXAMPLE_A_DETERMINED_TAX = 64_684_518; // 예제 값 (천원 미절사 방식)
 
 // Scenario B: 이월과세 미적용 (증여 등기일 기산, 실가)
-const YANGDO_KOREA_B_TRANSFER_GAIN = 243_000_000; // 700M - 457M
-const YANGDO_KOREA_B_LTHD = 19_440_000;           // 243M × 8% (4년 → 8%)
-const YANGDO_KOREA_B_TAXABLE_INCOME = 223_560_000;
-const YANGDO_KOREA_B_DETERMINED_TAX = 64_062_800;
+const EXAMPLE_B_TRANSFER_GAIN = 243_000_000; // 700M - 457M
+const EXAMPLE_B_LTHD = 19_440_000;           // 243M × 8% (4년 → 8%)
+const EXAMPLE_B_TAXABLE_INCOME = 223_560_000;
+const EXAMPLE_B_DETERMINED_TAX = 64_062_800;
 
-// 우리 엔진 anchor값 (양도코리아와 완전 일치)
+// 우리 엔진 anchor값 (예제와 완전 일치)
 const ENGINE_A_DETERMINED_TAX = 64_684_518; // 222,696,102 × 38% - 19,940,000 (과세표준 절사 미적용)
 const ENGINE_B_DETERMINED_TAX = 64_062_800; // Scenario B는 완전 일치
 
@@ -118,7 +118,7 @@ function makeC01Input(): TransferTaxInput {
 // C-01 테스트 스위트
 // ──────────────────────────────────────────────────────────────
 
-describe("C-01: 배우자 이월과세 + 기준시가 직접 환산 (양도코리아 사례 24 anchor)", () => {
+describe("C-01: 배우자 이월과세 + 기준시가 직접 환산 (예제 사례 24 anchor)", () => {
 
   it("C-01-1: carryoverTaxationDetail 이 결과에 포함되어야 한다", () => {
     const result = calculateTransferTax(makeC01Input(), MOCK_RATES);
@@ -135,14 +135,14 @@ describe("C-01: 배우자 이월과세 + 기준시가 직접 환산 (양도코�
     expect(result.carryoverTaxationDetail?.applicablePeriodYears).toBe(5);
   });
 
-  it("C-01-4: Scenario A 환산취득가액 — 양도코리아 일치 (356,171,284)", () => {
+  it("C-01-4: Scenario A 환산취득가액 — 예제 일치 (356,171,284)", () => {
     /**
      * 환산공식: 700,000,000 × (404,000,000 / 794,000,000) = 356,171,284
      * Math.floor(700M × 404M / 794M) = 356,171,284
      */
     const result = calculateTransferTax(makeC01Input(), MOCK_RATES);
     const acqPrice = result.carryoverTaxationDetail?.scenarioA.acquisitionPrice ?? 0;
-    expect(acqPrice).toBe(YANGDO_KOREA_A_EST_ACQ);
+    expect(acqPrice).toBe(EXAMPLE_A_EST_ACQ);
   });
 
   it("C-01-5: Scenario A 증여세 상당액 차감 = 10,000,000", () => {
@@ -152,7 +152,7 @@ describe("C-01: 배우자 이월과세 + 기준시가 직접 환산 (양도코�
      */
     const result = calculateTransferTax(makeC01Input(), MOCK_RATES);
     const detail = result.carryoverTaxationDetail?.scenarioA;
-    expect(detail?.giftTaxAddedToExpense).toBe(YANGDO_KOREA_A_GIFT_TAX_EXPENSE);
+    expect(detail?.giftTaxAddedToExpense).toBe(EXAMPLE_A_GIFT_TAX_EXPENSE);
     expect(detail?.giftTaxLimitApplied).toBe(false);
   });
 
@@ -166,41 +166,41 @@ describe("C-01: 배우자 이월과세 + 기준시가 직접 환산 (양도코�
     const result = calculateTransferTax(makeC01Input(), MOCK_RATES);
     const detail = result.carryoverTaxationDetail?.scenarioA;
     // 양도차익이 321,708,716인지 확인 (개산공제 12,120,000이 정확히 차감됐음을 간접 검증)
-    expect(detail?.transferGain).toBe(YANGDO_KOREA_A_TRANSFER_GAIN);
+    expect(detail?.transferGain).toBe(EXAMPLE_A_TRANSFER_GAIN);
   });
 
-  it("C-01-7: Scenario A 양도차익 = 321,708,716 (양도코리아 일치)", () => {
+  it("C-01-7: Scenario A 양도차익 = 321,708,716 (예제 일치)", () => {
     /**
      * 700,000,000 - 356,171,284 - 12,120,000 - 10,000,000 = 321,708,716
      */
     const result = calculateTransferTax(makeC01Input(), MOCK_RATES);
-    expect(result.carryoverTaxationDetail?.scenarioA.transferGain).toBe(YANGDO_KOREA_A_TRANSFER_GAIN);
+    expect(result.carryoverTaxationDetail?.scenarioA.transferGain).toBe(EXAMPLE_A_TRANSFER_GAIN);
   });
 
-  it("C-01-8: Scenario A 결정세액 = 64,684,518 (양도코리아 완전 일치)", () => {
+  it("C-01-8: Scenario A 결정세액 = 64,684,518 (예제 완전 일치)", () => {
     /**
      * 양도소득금액: 321,708,716 × (1 - 0.30) = 225,196,102 (LTHD 30%)
      * 과세표준: 225,196,102 - 2,500,000 = 222,696,102
      * 산출세액: floor(222,696,102 × 0.38) - 19,940,000 = 84,624,518 - 19,940,000 = 64,684,518
      *
-     * 우리 엔진과 양도코리아 모두 동일. M-5: 완전 일치.
+     * 우리 엔진과 예제 모두 동일. M-5: 완전 일치.
      */
     const result = calculateTransferTax(makeC01Input(), MOCK_RATES);
     const detA = result.carryoverTaxationDetail?.scenarioA.determinedTax ?? 0;
     expect(detA).toBe(ENGINE_A_DETERMINED_TAX);
-    // 양도코리아 값과의 차이가 100원 이하 확인 (M-5 anchor 채택 요건)
-    expect(Math.abs(detA - YANGDO_KOREA_A_DETERMINED_TAX)).toBeLessThanOrEqual(100);
+    // 예제 값과의 차이가 100원 이하 확인 (M-5 anchor 채택 요건)
+    expect(Math.abs(detA - EXAMPLE_A_DETERMINED_TAX)).toBeLessThanOrEqual(100);
   });
 
-  it("C-01-9: Scenario B 양도차익 = 243,000,000 (양도코리아 일치)", () => {
+  it("C-01-9: Scenario B 양도차익 = 243,000,000 (예제 일치)", () => {
     /**
      * 700,000,000 - 457,000,000 = 243,000,000
      */
     const result = calculateTransferTax(makeC01Input(), MOCK_RATES);
-    expect(result.carryoverTaxationDetail?.scenarioB.transferGain).toBe(YANGDO_KOREA_B_TRANSFER_GAIN);
+    expect(result.carryoverTaxationDetail?.scenarioB.transferGain).toBe(EXAMPLE_B_TRANSFER_GAIN);
   });
 
-  it("C-01-10: Scenario B 결정세액 = 64,062,800 (양도코리아 완전 일치)", () => {
+  it("C-01-10: Scenario B 결정세액 = 64,062,800 (예제 완전 일치)", () => {
     /**
      * 양도소득금액: 243,000,000 × (1 - 0.08) = 223,560,000 (LTHD 8%, 4년 × 2%)
      * 과세표준: 223,560,000 - 2,500,000 = 221,060,000 (천원 절사 적용 없음 — 이미 1000의 배수)
@@ -262,7 +262,7 @@ describe("C-01: 배우자 이월과세 + 기준시가 직접 환산 (양도코�
     const result = calculateTransferTax(makeC01Input(), MOCK_RATES);
     const detail = result.carryoverTaxationDetail?.scenarioA;
     // transferGain과 결정세액 기반으로 LTHD를 간접 검증
-    expect(detail?.transferGain).toBe(YANGDO_KOREA_A_TRANSFER_GAIN);
+    expect(detail?.transferGain).toBe(EXAMPLE_A_TRANSFER_GAIN);
     expect(detail?.determinedTax).toBe(ENGINE_A_DETERMINED_TAX);
   });
 
@@ -273,19 +273,19 @@ describe("C-01: 배우자 이월과세 + 기준시가 직접 환산 (양도코�
      * 양도소득금액 = 243,000,000 - 19,440,000 = 223,560,000
      */
     const result = calculateTransferTax(makeC01Input(), MOCK_RATES);
-    expect(result.carryoverTaxationDetail?.scenarioB.transferGain).toBe(YANGDO_KOREA_B_TRANSFER_GAIN);
+    expect(result.carryoverTaxationDetail?.scenarioB.transferGain).toBe(EXAMPLE_B_TRANSFER_GAIN);
     expect(result.carryoverTaxationDetail?.scenarioB.determinedTax).toBe(ENGINE_B_DETERMINED_TAX);
   });
 
-  it("C-01-16: Scenario A/B 양도코리아 정확값과의 차이 M-5 임계값 검증", () => {
+  it("C-01-16: Scenario A/B 예제 정확값과의 차이 M-5 임계값 검증", () => {
     const result = calculateTransferTax(makeC01Input(), MOCK_RATES);
     const detA = result.carryoverTaxationDetail?.scenarioA.determinedTax ?? 0;
     const detB = result.carryoverTaxationDetail?.scenarioB.determinedTax ?? 0;
 
     // Scenario A: ≤100원 차이 → anchor 채택
-    expect(Math.abs(detA - YANGDO_KOREA_A_DETERMINED_TAX)).toBeLessThanOrEqual(100);
+    expect(Math.abs(detA - EXAMPLE_A_DETERMINED_TAX)).toBeLessThanOrEqual(100);
 
     // Scenario B: 완전 일치
-    expect(detB).toBe(YANGDO_KOREA_B_DETERMINED_TAX);
+    expect(detB).toBe(EXAMPLE_B_DETERMINED_TAX);
   });
 });

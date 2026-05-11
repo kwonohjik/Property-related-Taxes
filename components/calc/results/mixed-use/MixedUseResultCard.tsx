@@ -10,6 +10,7 @@
 import type { MixedUseGainBreakdown } from "@/lib/tax-engine/types/transfer-mixed-use.types";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { FilingFormTable } from "@/components/calc/results/transfer/FilingFormTable";
+import { DetailedCalculationStatementCard } from "@/components/calc/results/transfer/DetailedCalculationStatementCard";
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 
 function printScoped(scope: "form-table" | "full") {
@@ -416,6 +417,13 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
       <FilingFormTable
         result={mixedUseToFilingResult(breakdown)}
         formData={formData}
+      />
+      {/* ── 계산결과 상세명세서 (검용주택 모드) ── */}
+      {/* 신고서 양식 32 항목별 산식·변수값·법령 노출 — mixedUseDetail은 단건 모드로 처리 */}
+      <DetailedCalculationStatementCard
+        result={mixedUseToFilingResult(breakdown)}
+        formData={formData}
+        asset={formData?.assets[0]}
       />
     </div>
   );

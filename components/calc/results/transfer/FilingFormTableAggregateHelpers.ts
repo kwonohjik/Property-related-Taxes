@@ -18,6 +18,7 @@ import {
   holdingPeriodFromDates,
   fmtDate,
   fmtPeriod,
+  getAcqDateForCard,
 } from "./FilingFormTableHelpers";
 
 export function buildAggregateRows(
@@ -42,7 +43,9 @@ export function buildAggregateRows(
   // propertyId → AssetForm 매핑 (TransferTaxCalculator의 ownershipMap 패턴과 동일):
   //   assets[0] → "primary", assets[i>0] → assetId 그대로
   //   G-2 한도 초과 split: "{assetId}__appurtenant" / "{assetId}__excess" suffix 제거 후 재조회
-  //   GB(일반건물 토지+건물 일괄): 단일 자산이 엔진 내부에서 "land"/"building" 2장으로 분해됨 → assets[0]로 fallback
+  //   GB(일반건물 토지+건물 일괄): 단일 자산이 엔진 내부에서 "land"/"building"/"building1"/"building2" 카드로 분해됨 → assets[0]로 fallback
+  //     - "building" (사례 31 비증축 경로) / "building1" (사례 33 증축 경로 원건물)
+  //     - "building2" (사례 33 증축 경로 증축분 — acqDate는 증축일)
   function findAssetByPropertyId(pid: string): AssetForm | undefined {
     // NOTE: 이 함수 결과로 반환된 AssetForm의 landNature로
     // 컬럼 라벨 suffix "(부수토지)" / "(독립 나대지)"를 표시할 수 있음 — buildAggregateRows 호출부에서 사용.
@@ -51,7 +54,8 @@ export function buildAggregateRows(
     // 일반건물(토지+건물 일괄) — 토지·건물 분해된 카드는 모두 assets[0]에서 취득일·필요경비 메타 가져옴
     if (
       formData.assets[0]?.assetKind === "general_building" &&
-      (pid === "land" || pid === "land_business" || pid === "land_nbl" || pid === "building")
+      (pid === "land" || pid === "land_business" || pid === "land_nbl" ||
+       pid === "building" || pid === "building1" || pid === "building2")
     ) {
       return formData.assets[0];
     }
@@ -62,6 +66,8 @@ export function buildAggregateRows(
     if (basePid !== pid) return formData.assets.find((a) => a.assetId === basePid);
     return undefined;
   }
+
+  // (getAcqDateForCard는 FilingFormTableHelpers.ts로 이전 — DRY 정리, DetailedStatementHelpers와 공유)
 
   // 합계 열 — 머리 정보 (자산별이라 합계는 양도일자만 채움)
   setStr("transferDate", "total", fmtDate(transferDate));
@@ -86,7 +92,9 @@ export function buildAggregateRows(
   for (const p of properties) {
     const col = p.propertyId;
     const a = findAssetByPropertyId(col);
-    const acqDate = a?.acquisitionDate ?? "";
+    // GB 카드별 정확한 취득일(원건물=건물취득일·증축건물=증축일·토지=토지취득일).
+    // 일반 자산은 asset.acquisitionDate 그대로.
+    const acqDate = getAcqDateForCard(a, col);
 
     // 머리 정보
     setStr("transferDate", col, fmtDate(transferDate));

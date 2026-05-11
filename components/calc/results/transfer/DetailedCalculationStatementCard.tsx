@@ -1,0 +1,260 @@
+"use client";
+
+/**
+ * 계산결과 상세명세서 카드
+ *
+ * 신고서 양식 표(FilingFormTable)의 32 항목 각각이 어떻게 계산되었는지를
+ * 산식·실제 변수값·법령 근거와 함께 노출. 사용자가 로직과 계산 과정을
+ * 1:1로 검증할 수 있게 하는 것이 목표.
+ *
+ * - 단건 모드: 합계만 표시
+ * - 다건 모드: 합계 + 자산별 disclosure 펼침 (토지·건물·증축건물 등)
+ * - 엔진 변경 0 — 기존 result.steps[]·result 필드 재가공
+ */
+
+import { useState } from "react";
+import { cn } from "@/lib/utils";
+import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
+import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
+import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
+import type { AggregateMeta } from "./FilingFormTableHelpers";
+import {
+  STATEMENT_GROUPS,
+  buildStatementItems,
+  type StatementItem,
+  type GroupDef,
+  type PerAssetValue,
+} from "./DetailedStatementHelpers";
+
+// ── tone → Tailwind 매핑 ─────────────────────────────────────────
+
+const TONE_CLASSES: Record<GroupDef["tone"], { border: string; bg: string; text: string; badge: string }> = {
+  sky:     { border: "border-sky-200",     bg: "bg-sky-50/40",     text: "text-sky-800",     badge: "bg-sky-200 text-sky-800" },
+  emerald: { border: "border-emerald-200", bg: "bg-emerald-50/40", text: "text-emerald-800", badge: "bg-emerald-200 text-emerald-800" },
+  amber:   { border: "border-amber-200",   bg: "bg-amber-50/40",   text: "text-amber-800",   badge: "bg-amber-200 text-amber-800" },
+  violet:  { border: "border-violet-200",  bg: "bg-violet-50/40",  text: "text-violet-800",  badge: "bg-violet-200 text-violet-800" },
+  rose:    { border: "border-rose-200",    bg: "bg-rose-50/40",    text: "text-rose-800",    badge: "bg-rose-200 text-rose-800" },
+  slate:   { border: "border-slate-200",   bg: "bg-slate-50/40",   text: "text-slate-800",   badge: "bg-slate-200 text-slate-800" },
+};
+
+// ── Props ──────────────────────────────────────────────────────────
+
+interface Props {
+  result: TransferTaxResult;
+  formData?: TransferFormData;
+  asset?: AssetForm;
+  transferPriceOverride?: number;
+  aggregate?: AggregateMeta;
+  onPrint?: () => void;
+  /** 취득일자 행 라벨 보조 (예: "(이월과세 적용 — 증여자 취득일 기산)") */
+  acquisitionDateLabel?: string;
+  /** 취득일자 표시값 override — carryover Scenario A에서 증여자 취득일 우선 표시 */
+  acquisitionDateOverride?: string;
+}
+
+// ── 메인 ───────────────────────────────────────────────────────────
+
+export function DetailedCalculationStatementCard({
+  result,
+  formData,
+  asset,
+  transferPriceOverride,
+  aggregate,
+  onPrint,
+  acquisitionDateLabel,
+  acquisitionDateOverride,
+}: Props) {
+  const items = buildStatementItems(
+    result,
+    formData,
+    asset,
+    aggregate,
+    transferPriceOverride,
+    acquisitionDateLabel,
+    acquisitionDateOverride,
+  );
+
+  return (
+    <div
+      data-print-section="detailed-statement"
+      className="rounded-xl border-2 border-slate-300 bg-white dark:bg-slate-900 overflow-hidden"
+    >
+      {/* 헤더 */}
+      <div className="px-4 py-3 border-b border-slate-300 bg-slate-100 dark:bg-slate-800">
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">
+              📋 계산결과 상세명세서
+            </h3>
+            <p className="text-[11px] text-slate-500 mt-0.5">
+              신고서 양식 32 항목별 산식·변수값·법령 근거. 다건 모드는 자산별 펼침으로 검증.
+            </p>
+          </div>
+          {onPrint && (
+            <button
+              type="button"
+              onClick={onPrint}
+              className="print:hidden shrink-0 rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium hover:bg-slate-200 transition-colors text-slate-700 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+            >
+              🖨️ PDF
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* 비과세 모드 안내 배지 — 32항목 값이 모두 0/N/A이지만 계산 산식·법령은 그대로 노출 */}
+      {result.isExempt && (
+        <div className="mx-4 mt-4 rounded-lg border-2 border-emerald-300 bg-emerald-50 dark:bg-emerald-950/30 p-3">
+          <div className="flex items-start gap-2">
+            <span className="text-xl">🎉</span>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-emerald-700 dark:text-emerald-400">
+                전액 비과세 — 납부세액 0
+              </p>
+              {result.exemptReason && (
+                <p className="text-xs text-emerald-700/80 dark:text-emerald-400/80 mt-0.5">
+                  사유: {result.exemptReason}
+                </p>
+              )}
+              <p className="text-[11px] text-emerald-700/70 mt-1">
+                아래 32 항목은 산식·법령 근거 검증용으로 표시됩니다 (대부분 0원).
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 그룹 섹션 */}
+      <div className="p-4 space-y-3">
+        {STATEMENT_GROUPS.map((group) => (
+          <GroupSection
+            key={group.id}
+            group={group}
+            items={group.itemKeys
+              .map((key) => items.get(key))
+              .filter((it): it is StatementItem => !!it)}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── 그룹 섹션 ──────────────────────────────────────────────────────
+
+function GroupSection({ group, items }: { group: GroupDef; items: StatementItem[] }) {
+  const tone = TONE_CLASSES[group.tone];
+  return (
+    <section
+      className={cn(
+        "rounded-lg border p-3 space-y-2",
+        tone.border,
+        tone.bg,
+      )}
+    >
+      <div className="flex items-center gap-2 mb-1">
+        <span
+          className={cn(
+            "flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold select-none",
+            tone.badge,
+          )}
+        >
+          §
+        </span>
+        <h4 className={cn("text-sm font-semibold", tone.text)}>{group.title}</h4>
+      </div>
+      <div className="rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 divide-y divide-slate-100 dark:divide-slate-800">
+        {items.map((item, i) => (
+          <ItemRow key={i} item={item} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+// ── 항목 행 ────────────────────────────────────────────────────────
+
+function ItemRow({ item }: { item: StatementItem }) {
+  const [open, setOpen] = useState(false);
+  const hasPerAsset = !!item.perAsset && item.perAsset.length > 0;
+  const isNumber = typeof item.value === "number";
+  const valueDisplay =
+    item.value === null || item.value === ""
+      ? "-"
+      : isNumber
+        ? formatKRW(item.value as number)
+        : String(item.value);
+
+  return (
+    <div className="px-3 py-2.5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            {hasPerAsset && (
+              <button
+                type="button"
+                onClick={() => setOpen((v) => !v)}
+                className="print:hidden inline-flex h-4 w-4 items-center justify-center rounded text-[10px] text-muted-foreground hover:text-foreground"
+                aria-label={open ? "자산별 닫기" : "자산별 펼치기"}
+              >
+                {open ? "▼" : "▶"}
+              </button>
+            )}
+            <p className="font-medium text-sm">{item.label}</p>
+          </div>
+          {item.formula && (
+            <p className="text-xs text-muted-foreground mt-0.5 ml-6 leading-relaxed">
+              {item.formula}
+            </p>
+          )}
+          {item.note && (
+            <p className="text-[11px] text-amber-700 mt-0.5 ml-6 italic">
+              ※ {item.note}
+            </p>
+          )}
+          {item.legalBasis && (
+            <div className="ml-6 mt-0.5">
+              <LawArticleModal legalBasis={item.legalBasis} />
+            </div>
+          )}
+        </div>
+        <p className="font-mono text-sm shrink-0 font-medium text-right">
+          {valueDisplay}
+        </p>
+      </div>
+
+      {/* 자산별 펼침 (disclosure) */}
+      {open && hasPerAsset && (
+        <div className="mt-2 ml-6 rounded border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/40 divide-y divide-slate-100 dark:divide-slate-700">
+          {item.perAsset!.map((row, i) => (
+            <PerAssetRow key={i} row={row} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PerAssetRow({ row }: { row: PerAssetValue }) {
+  const isNumber = typeof row.value === "number";
+  const valueDisplay = isNumber ? formatKRW(row.value as number) : String(row.value);
+  return (
+    <div className="px-3 py-1.5 flex items-center justify-between text-xs">
+      <div className="min-w-0 flex-1">
+        <p className="font-medium text-slate-700 dark:text-slate-300">
+          ├─ {row.label}
+        </p>
+        {row.formula && (
+          <p className="text-[10px] text-muted-foreground mt-0.5 ml-3">
+            {row.formula}
+          </p>
+        )}
+      </div>
+      <p className="font-mono shrink-0 text-slate-700 dark:text-slate-300">
+        {valueDisplay}
+      </p>
+    </div>
+  );
+}

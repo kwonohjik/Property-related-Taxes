@@ -1,6 +1,6 @@
 # §99의3 신축주택 감면 — Anchor 사례 #1 (2023 양도)
 
-> **출처**: 사용자 제공 양도소득세 교재 사례 26 (양도코리아 프로그램 재현)
+> **출처**: 사용자 제공 양도소득세 교재 사례 26 (예제 프로그램 재현)
 > **수집일**: 2026-05-06
 > **사용처**: Phase 2 §99의3 완전 구현 시 anchor 테스트 (`__tests__/tax-engine/transfer-tax/reduction-99-3.test.ts`)
 > **anchor 정책**: 메모리 `feedback_pdf_example_test_anchoring.md` — 원단위 `toBe()` 고정
