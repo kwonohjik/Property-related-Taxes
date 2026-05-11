@@ -126,17 +126,15 @@ export function DetailedCalculationStatementCard({
         </div>
       )}
 
-      {/* 그룹 섹션 */}
+      {/* 그룹 섹션 — 빈 그룹은 자동 미렌더 (단건 모드 다건 합산 그룹 등) */}
       <div className="p-4 space-y-3">
-        {STATEMENT_GROUPS.map((group) => (
-          <GroupSection
-            key={group.id}
-            group={group}
-            items={group.itemKeys
-              .map((key) => items.get(key))
-              .filter((it): it is StatementItem => !!it)}
-          />
-        ))}
+        {STATEMENT_GROUPS.map((group) => {
+          const groupItems = group.itemKeys
+            .map((key) => items.get(key))
+            .filter((it): it is StatementItem => !!it);
+          if (groupItems.length === 0) return null;
+          return <GroupSection key={group.id} group={group} items={groupItems} />;
+        })}
 
         {/* 전체 엔진 계산 과정 — 서브 토글 (이전 'TransferTaxResultView 계산 과정 상세 보기' 통합) */}
         <EngineStepsSubToggle steps={result.steps} />

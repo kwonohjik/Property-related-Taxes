@@ -33,6 +33,7 @@ import {
   buildCalculatedTaxFormula,
   buildDeterminedTaxFormula,
   buildPenaltyFormula,
+  setAggregateProcedureItems,
 } from "./DetailedStatementFormulaBuilders";
 
 // ── 자산별 분해 ──────────────────────────────────────────────────
@@ -111,9 +112,17 @@ export const STATEMENT_GROUPS: GroupDef[] = [
       "basicDeduction",
     ],
   },
+  // 다건 합산 절차 — 다건 모드에서만 활성 항목이 있음 (단건 모드는 빈 그룹으로 자동 미렌더).
+  // §102② 차손통산·§103 기본공제 배분·§104의2 비교과세 등 다건 전용 합산 step 노출.
+  {
+    id: "aggregate",
+    title: "4단계 — 다건 합산 절차 (§102②·§103·§104의2)",
+    tone: "violet",
+    itemKeys: ["lossOffset", "basicDeductionAggregate", "comparedTaxation"],
+  },
   {
     id: "tax",
-    title: "4단계 — 세액 산정",
+    title: "5단계 — 세액 산정",
     tone: "rose",
     itemKeys: [
       "taxBase",
@@ -124,13 +133,13 @@ export const STATEMENT_GROUPS: GroupDef[] = [
   },
   {
     id: "penalty",
-    title: "5단계 — 가산세·총결정세액",
+    title: "6단계 — 가산세·총결정세액",
     tone: "slate",
     itemKeys: ["penaltyTax", "totalDeterminedTax"],
   },
   {
     id: "local",
-    title: "6단계 — 부가세·지방세",
+    title: "7단계 — 부가세·지방세",
     tone: "sky",
     itemKeys: [
       "ruralSurtax",
@@ -617,6 +626,14 @@ export function buildStatementItems(
     legalBasis: basicStep?.legalBasis ?? "소득세법 §103",
     summaryOnly: true,
   });
+
+  // ── 4단계: 다건 합산 절차 (다건 모드 전용) ─────────────────────────
+  // 단건 모드에서는 result.steps에 해당 step이 없으므로 Map.set 자체를 건너뜀
+  // → STATEMENT_GROUPS의 'aggregate' 그룹이 빈 itemKeys로 자동 미렌더.
+  // 빌더는 sibling 모듈로 분리 (800줄 정책 준수).
+  if (isAggregate) {
+    setAggregateProcedureItems(items, result);
+  }
 
   // ── 5단계: 세액 산정 ────────────────────────────────────────
   const taxBaseStep = findStepByLabel(result.steps, "과세표준");

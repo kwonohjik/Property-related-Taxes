@@ -305,3 +305,67 @@ export function buildPenaltyFormula(p: PerPropertyBreakdown): string {
   if (parts.length === 0) return "가산세 없음";
   return `${parts.join(" + ")} = ${fmt(p.penaltyTax + p.filingDelayedPenaltyTax)}`;
 }
+
+// ── 다건 합산 절차 항목 빌더 (다건 모드 전용) ─────────────────────────
+
+import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
+import type { StatementItem } from "./DetailedStatementHelpers";
+import { findStepByLabel } from "./DetailedStatementHelpers";
+
+/**
+ * 다건 합산 절차 3개 항목(차손통산·기본공제 배분·비교과세)을 Map에 추가.
+ *
+ * 단건 모드에서는 result.steps에 해당 step이 없으므로 Map.set 자체를 건너뜀
+ * → STATEMENT_GROUPS의 'aggregate' 그룹이 빈 itemKeys로 자동 미렌더.
+ *
+ * 데이터 출처: aggregate.aggregated.steps[] (transfer-tax-aggregate.ts:148/173/216)
+ *  - "양도차손 통산 (§102② · 시행령 §167의2)"
+ *  - "기본공제"
+ *  - "비교과세 (§104의2)"
+ */
+export function setAggregateProcedureItems(
+  items: Map<string, StatementItem>,
+  result: TransferTaxResult,
+): void {
+  const lossOffsetStep = findStepByLabel(result.steps, "양도차손 통산");
+  if (lossOffsetStep) {
+    items.set("lossOffset", {
+      label: "양도차손 통산",
+      value: lossOffsetStep.amount,
+      formula:
+        lossOffsetStep.formula ??
+        "그룹 내 통산 + 타군 pro-rata 안분 (잔여 차손 소멸, 이월 불인정)",
+      legalBasis: lossOffsetStep.legalBasis ?? "소득세법 §102② · 시행령 §167의2",
+      note: "다건 양도 시 자산별 차손을 다른 자산의 차익과 통산. 잔여 차손은 이월 불인정.",
+      summaryOnly: true,
+    });
+  }
+
+  const basicAggregateStep = findStepByLabel(result.steps, "기본공제");
+  if (basicAggregateStep) {
+    items.set("basicDeductionAggregate", {
+      label: "기본공제 배분 (다건)",
+      value: basicAggregateStep.amount,
+      formula:
+        basicAggregateStep.formula ??
+        "연 250만원 한도 자산별 배분 (MAX_BENEFIT 정책 — 세부담 최소 자산 우선)",
+      legalBasis: basicAggregateStep.legalBasis ?? "소득세법 §103",
+      note: "유자격 자산(미등기·exempt 제외) 간 한도 배분. 단일 자산은 전액 배정.",
+      summaryOnly: true,
+    });
+  }
+
+  const comparedStep = findStepByLabel(result.steps, "비교과세");
+  if (comparedStep) {
+    items.set("comparedTaxation", {
+      label: "비교과세 (§104의2)",
+      value: comparedStep.amount,
+      formula:
+        comparedStep.formula ??
+        "MAX(세율군별 합산세액, 전체누진세액) — 중과·단기 세율군 존재 시만",
+      legalBasis: comparedStep.legalBasis ?? "소득세법 §104의2",
+      note: "다주택 중과·비사업용토지·단기보유 자산 포함 시 자동 활성화. 두 방법 중 큰 세액 적용.",
+      summaryOnly: true,
+    });
+  }
+}

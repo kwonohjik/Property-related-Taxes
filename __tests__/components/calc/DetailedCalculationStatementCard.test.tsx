@@ -125,13 +125,15 @@ describe("DetailedCalculationStatementCard — 단건 모드", () => {
     );
 
     expect(screen.getByText("📋 계산결과 상세명세서")).toBeInTheDocument();
-    // 일자·기간 그룹은 사용자 요청으로 제거됨 (2026-05-12) — 1~6단계만 표시
+    // 일자·기간 그룹 제거 (2026-05-12) + 4단계 다건 합산 그룹은 단건 모드에서 빈 itemKeys로 미렌더.
     expect(screen.getByText(/1단계 — 양도차익 산정/)).toBeInTheDocument();
     expect(screen.getByText(/2단계 — 장기보유특별공제/)).toBeInTheDocument();
     expect(screen.getByText(/3단계 — 양도소득금액·기본공제/)).toBeInTheDocument();
-    expect(screen.getByText(/4단계 — 세액 산정/)).toBeInTheDocument();
-    expect(screen.getByText(/5단계 — 가산세·총결정세액/)).toBeInTheDocument();
-    expect(screen.getByText(/6단계 — 부가세·지방세/)).toBeInTheDocument();
+    // 4단계 다건 합산 — 단건 모드에서는 미렌더 (회귀 가드: 헤더 부재 검증)
+    expect(screen.queryByText(/4단계 — 다건 합산 절차/)).not.toBeInTheDocument();
+    expect(screen.getByText(/5단계 — 세액 산정/)).toBeInTheDocument();
+    expect(screen.getByText(/6단계 — 가산세·총결정세액/)).toBeInTheDocument();
+    expect(screen.getByText(/7단계 — 부가세·지방세/)).toBeInTheDocument();
   });
 
   it("T-02: 32개 항목 라벨 모두 렌더 (그룹별 enumerate)", () => {
@@ -161,17 +163,17 @@ describe("DetailedCalculationStatementCard — 단건 모드", () => {
     expect(screen.getAllByText(/보유 기간분 장특/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/거주 기간분 장특/).length).toBeGreaterThan(0);
 
-    // 4단계 — 세액 산정 (4개)
+    // 5단계 — 세액 산정 (4개) — 4단계는 다건 합산(단건 모드 빈 그룹)이므로 5단계로 이동
     expect(screen.getAllByText("과세표준").length).toBeGreaterThan(0);
     expect(screen.getAllByText("산출세액").length).toBeGreaterThan(0);
     expect(screen.getAllByText("감면세액").length).toBeGreaterThan(0);
     expect(screen.getAllByText("결정세액").length).toBeGreaterThan(0);
 
-    // 5단계 — 가산세
+    // 6단계 — 가산세
     expect(screen.getAllByText("가산세액").length).toBeGreaterThan(0);
     expect(screen.getAllByText("총결정세액").length).toBeGreaterThan(0);
 
-    // 6단계 — 부가세
+    // 7단계 — 부가세
     expect(screen.getAllByText("농어촌특별세").length).toBeGreaterThan(0);
     expect(screen.getAllByText("지방소득세 산출세액").length).toBeGreaterThan(0);
     expect(screen.getAllByText("지방세 결정세액").length).toBeGreaterThan(0);
