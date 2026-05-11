@@ -125,13 +125,13 @@ describe("DetailedCalculationStatementCard — 단건 모드", () => {
     );
 
     expect(screen.getByText("📋 계산결과 상세명세서")).toBeInTheDocument();
-    expect(screen.getByText(/1단계 — 일자·기간/)).toBeInTheDocument();
-    expect(screen.getByText(/2단계 — 양도차익 산정/)).toBeInTheDocument();
-    expect(screen.getByText(/3단계 — 장기보유특별공제/)).toBeInTheDocument();
-    expect(screen.getByText(/4단계 — 양도소득금액·기본공제/)).toBeInTheDocument();
-    expect(screen.getByText(/5단계 — 세액 산정/)).toBeInTheDocument();
-    expect(screen.getByText(/6단계 — 가산세·총결정세액/)).toBeInTheDocument();
-    expect(screen.getByText(/7단계 — 부가세·지방세/)).toBeInTheDocument();
+    // 일자·기간 그룹은 사용자 요청으로 제거됨 (2026-05-12) — 1~6단계만 표시
+    expect(screen.getByText(/1단계 — 양도차익 산정/)).toBeInTheDocument();
+    expect(screen.getByText(/2단계 — 장기보유특별공제/)).toBeInTheDocument();
+    expect(screen.getByText(/3단계 — 양도소득금액·기본공제/)).toBeInTheDocument();
+    expect(screen.getByText(/4단계 — 세액 산정/)).toBeInTheDocument();
+    expect(screen.getByText(/5단계 — 가산세·총결정세액/)).toBeInTheDocument();
+    expect(screen.getByText(/6단계 — 부가세·지방세/)).toBeInTheDocument();
   });
 
   it("T-02: 32개 항목 라벨 모두 렌더 (그룹별 enumerate)", () => {
@@ -148,15 +148,7 @@ describe("DetailedCalculationStatementCard — 단건 모드", () => {
       />,
     );
 
-    // 1단계 — 일자·기간 (6개)
-    expect(screen.getAllByText("양도일자").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("취득일자").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("보유기간").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("퇴거일").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("입주일").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("거주기간").length).toBeGreaterThan(0);
-
-    // 2단계 — 양도차익 산정 (6개)
+    // 1단계 — 양도차익 산정 (6개)
     expect(screen.getAllByText("양도가액").length).toBeGreaterThan(0);
     expect(screen.getAllByText("취득가액").length).toBeGreaterThan(0);
     expect(screen.getAllByText("필요경비").length).toBeGreaterThan(0);
@@ -164,22 +156,22 @@ describe("DetailedCalculationStatementCard — 단건 모드", () => {
     expect(screen.getAllByText("비과세 양도차익").length).toBeGreaterThan(0);
     expect(screen.getAllByText("과세대상 양도차익").length).toBeGreaterThan(0);
 
-    // 3단계 — 장기보유공제 (3개)
+    // 2단계 — 장기보유공제 (3개)
     expect(screen.getAllByText("장기보유특별공제").length).toBeGreaterThan(0);
     expect(screen.getAllByText(/보유 기간분 장특/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/거주 기간분 장특/).length).toBeGreaterThan(0);
 
-    // 5단계 — 세액 산정 (4개)
+    // 4단계 — 세액 산정 (4개)
     expect(screen.getAllByText("과세표준").length).toBeGreaterThan(0);
     expect(screen.getAllByText("산출세액").length).toBeGreaterThan(0);
     expect(screen.getAllByText("감면세액").length).toBeGreaterThan(0);
     expect(screen.getAllByText("결정세액").length).toBeGreaterThan(0);
 
-    // 6단계 — 가산세
+    // 5단계 — 가산세
     expect(screen.getAllByText("가산세액").length).toBeGreaterThan(0);
     expect(screen.getAllByText("총결정세액").length).toBeGreaterThan(0);
 
-    // 7단계 — 부가세
+    // 6단계 — 부가세
     expect(screen.getAllByText("농어촌특별세").length).toBeGreaterThan(0);
     expect(screen.getAllByText("지방소득세 산출세액").length).toBeGreaterThan(0);
     expect(screen.getAllByText("지방세 결정세액").length).toBeGreaterThan(0);
@@ -307,27 +299,8 @@ describe("DetailedCalculationStatementCard — 다건 모드 (사례 33 일괄+�
     expect(screen.getAllByText(/├─ 증축건물\(3002\)/).length).toBeGreaterThan(0);
   });
 
-  it("T-07: 자산별 취득일자가 propertyId별로 다르게 표시 (토지=토지취득일·증축건물=증축일)", () => {
-    const { result, formData, asset, aggregate } = setup();
-
-    render(
-      <DetailedCalculationStatementCard
-        result={result}
-        formData={formData}
-        asset={asset}
-        aggregate={aggregate}
-      />,
-    );
-
-    const toggles = screen.getAllByLabelText(/자산별 펼치기/);
-    for (const t of toggles) {
-      fireEvent.click(t);
-    }
-
-    // 토지·건물1 = 2003-03-17, 증축건물 = 2007-07-24가 각각 표시되어야 함
-    expect(screen.getAllByText(/2003-03-17/).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/2007-07-24/).length).toBeGreaterThan(0);
-  });
+  // T-07: 자산별 취득일자 검증 — 일자·기간 그룹 제거(2026-05-12)로 본 테스트는 폐기.
+  // 취득일자·보유기간은 신고서 양식 표 헤더에서 자산별로 이미 표시됨.
 
   it("T-08: summaryOnly 항목(과세표준·기본공제·지방세)은 펼침 토글이 없음", () => {
     const { result, formData, asset, aggregate } = setup();
@@ -349,5 +322,74 @@ describe("DetailedCalculationStatementCard — 다건 모드 (사례 33 일괄+�
     const toggles = screen.getAllByLabelText(/자산별 펼치기|자산별 닫기/);
     // perAsset 정의 항목 ≥ 1 (양도가액 등) → 토글 존재. 정확한 수는 카드 구조에 따라 변동 가능.
     expect(toggles.length).toBeGreaterThan(0);
+  });
+
+  it("T-09: 사례 33 양도가액 자산별 산식이 사용자 지정 형식으로 표시됨 (분모 풀어쓰기)", () => {
+    // 사용자 예시: 토지 양도가액 = 330,000,000 × 339,492,000 / (339,492,000+12,308,310+54,501,720) = 275,736,648
+    const properties: PerPropertyBreakdown[] = [
+      makeProperty("land", "토지(1001)", { transferPrice: 275_736_648 }),
+      makeProperty("building1", "건물(3001)", { transferPrice: 9_996_854 }),
+      makeProperty("building2", "증축건물(3002)", { transferPrice: 44_266_498 }),
+    ];
+    const asset = makeMinimalAsset({
+      assetKind: "general_building",
+      acquisitionDate: "2003-03-17",
+      gbBuildingAcquisitionDate: "2003-03-17",
+      gbExtensionDate: "2007-07-24",
+      gbHasExtension: true,
+      useEstimatedAcquisition: false,
+    } as Partial<AssetForm>);
+    const formData = makeMinimalFormData(asset);
+    // generalBuildingValuationDetail 모킹 — 분모/분자 변수만 채움
+    const result = makeMinimalResult({
+      generalBuildingValuationDetail: {
+        landStdTotal: 339_492_000,
+        buildingStdTotal: 12_308_310,
+        extensionStdTotal: 54_501_720,
+        acqLandStdTotal: 79_800_000,
+        acqBuilding1StdTotal: 16_997_190,
+        acqExtensionStdTotal: 40_604_200,
+        // 필수 필드 — minimal stub
+        allocation: { land: 275_736_648, building: 9_996_854 },
+        acquisition: { land: 0, building: 0 },
+        estimatedDeduction: { land: 0, building: 0 },
+        buildingFootprintArea: 57,
+        appliedMultiplier: 5,
+        multiplierDetail: "",
+        allowedLandArea: 285,
+        isWithinNblRatio: true,
+        nonBusinessArea: 0,
+        nonBusinessRatio: 0,
+        assetCards: [],
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any,
+    });
+    const aggregate: AggregateMeta = { properties, aggregated: { properties } as never };
+
+    render(
+      <DetailedCalculationStatementCard
+        result={result}
+        formData={formData}
+        asset={asset}
+        aggregate={aggregate}
+        transferPriceOverride={330_000_000}
+      />,
+    );
+
+    // 양도가액 행의 자산별 펼침 토글 클릭
+    const toggles = screen.getAllByLabelText(/자산별 펼치기/);
+    for (const t of toggles) {
+      fireEvent.click(t);
+    }
+
+    // 사용자 지정 형식의 산식이 화면에 표시됨
+    // 토지: 330,000,000 × 339,492,000 / (339,492,000+12,308,310+54,501,720) = 275,736,648
+    expect(
+      screen.getAllByText(/330,000,000 × 339,492,000 \/ \(339,492,000\+12,308,310\+54,501,720\)/).length,
+    ).toBeGreaterThan(0);
+    // 건물(3001): 분자가 12,308,310
+    expect(
+      screen.getAllByText(/330,000,000 × 12,308,310 \/ \(339,492,000\+12,308,310\+54,501,720\)/).length,
+    ).toBeGreaterThan(0);
   });
 });

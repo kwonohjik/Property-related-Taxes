@@ -22,6 +22,18 @@ import {
   splitLtDeduction,
   getAcqDateForCard,
 } from "./FilingFormTableHelpers";
+import {
+  buildGbTransferFormula,
+  buildGbAcquisitionFormula,
+  buildGbExpenseFormula,
+  buildSubGainFormula,
+  buildTaxableGainFormula,
+  buildLthFormula,
+  buildIncomeFormula,
+  buildCalculatedTaxFormula,
+  buildDeterminedTaxFormula,
+  buildPenaltyFormula,
+} from "./DetailedStatementFormulaBuilders";
 
 // ── 자산별 분해 ──────────────────────────────────────────────────
 
@@ -66,22 +78,10 @@ export interface GroupDef {
 // ── 그룹 정의 ────────────────────────────────────────────────────
 
 export const STATEMENT_GROUPS: GroupDef[] = [
-  {
-    id: "dates",
-    title: "1단계 — 일자·기간",
-    tone: "sky",
-    itemKeys: [
-      "transferDate",
-      "acquisitionDate",
-      "holdingPeriod",
-      "moveOut",
-      "moveIn",
-      "residencePeriod",
-    ],
-  },
+  // 일자·기간 그룹은 신고서 양식 표 헤더에 이미 표시되므로 명세서에서는 생략 (사용자 요청 2026-05-12).
   {
     id: "gain",
-    title: "2단계 — 양도차익 산정",
+    title: "1단계 — 양도차익 산정",
     tone: "emerald",
     itemKeys: [
       "transferPrice",
@@ -94,13 +94,13 @@ export const STATEMENT_GROUPS: GroupDef[] = [
   },
   {
     id: "ltDeduction",
-    title: "3단계 — 장기보유특별공제 (§95②)",
+    title: "2단계 — 장기보유특별공제 (§95②)",
     tone: "amber",
     itemKeys: ["ltDeduction", "ltHoldingPart", "ltResidencePart"],
   },
   {
     id: "income",
-    title: "4단계 — 양도소득금액·기본공제",
+    title: "3단계 — 양도소득금액·기본공제",
     tone: "violet",
     itemKeys: [
       "incomeAmount",
@@ -113,7 +113,7 @@ export const STATEMENT_GROUPS: GroupDef[] = [
   },
   {
     id: "tax",
-    title: "5단계 — 세액 산정",
+    title: "4단계 — 세액 산정",
     tone: "rose",
     itemKeys: [
       "taxBase",
@@ -124,13 +124,13 @@ export const STATEMENT_GROUPS: GroupDef[] = [
   },
   {
     id: "penalty",
-    title: "6단계 — 가산세·총결정세액",
+    title: "5단계 — 가산세·총결정세액",
     tone: "slate",
     itemKeys: ["penaltyTax", "totalDeterminedTax"],
   },
   {
     id: "local",
-    title: "7단계 — 부가세·지방세",
+    title: "6단계 — 부가세·지방세",
     tone: "sky",
     itemKeys: [
       "ruralSurtax",
@@ -175,6 +175,24 @@ function buildPerAssetSimple(
   }));
 }
 
+/**
+ * 자산별 PerAssetValue[] 생성 — formula 빌더 포함.
+ *
+ * 산식이 있는 항목(양도가액·취득가액·필요경비 등)에서 사용.
+ * formulaBuilder가 undefined를 반환하면 formula 미설정 (라벨+값만 표시).
+ */
+function buildPerAssetWithFormula(
+  properties: PerPropertyBreakdown[],
+  picker: (p: PerPropertyBreakdown) => number | string,
+  formulaBuilder: (p: PerPropertyBreakdown) => string | undefined,
+): PerAssetValue[] {
+  return properties.map((p) => ({
+    label: p.propertyLabel,
+    value: picker(p),
+    formula: formulaBuilder(p),
+  }));
+}
+
 // ── 32 항목 빌더 ──────────────────────────────────────────────────
 
 /**
@@ -197,6 +215,9 @@ export function buildStatementItems(
   const primary = asset ?? formData?.assets[0];
   const isAggregate = !!aggregate && aggregate.properties.length > 0;
   const properties = aggregate?.properties ?? [];
+  // 일반건물 일괄 모드(사례 31·33) — 자산별 산식 빌더에 전달할 분모/분자 변수.
+  // 비-일반건물 모드에서는 undefined → formulaBuilder가 undefined 반환 → 산식 미표시.
+  const gbDetail = result.generalBuildingValuationDetail;
 
   // 양도가액 우선순위: override > result.steps의 amount > 0
   const totalTransferPrice =
@@ -301,7 +322,11 @@ export function buildStatementItems(
       : "사용자 입력 (실제 매매계약서상 거래금액)",
     legalBasis: "소득세법 시행령 §166",
     perAsset: isAggregate
-      ? buildPerAssetSimple(properties, (p) => p.transferPrice)
+      ? buildPerAssetWithFormula(
+          properties,
+          (p) => p.transferPrice,
+          (p) => buildGbTransferFormula(p, gbDetail, totalTransferPrice || sumPropTransfer),
+        )
       : undefined,
   });
 
@@ -328,9 +353,10 @@ export function buildStatementItems(
       ? `환산취득가 ${result.estimatedBase.toLocaleString()} + 자본적지출 ${(result.capitalExpenditureForDisplay ?? 0).toLocaleString()}`
       : undefined,
     perAsset: isAggregate
-      ? buildPerAssetSimple(
+      ? buildPerAssetWithFormula(
           properties,
           (p) => p.acquisitionPrice + p.capitalExpenditureForDisplay,
+          (p) => buildGbAcquisitionFormula(p, gbDetail, primary),
         )
       : undefined,
   });
@@ -355,8 +381,10 @@ export function buildStatementItems(
       : "양도비 합계 (중개수수료·법무사 비용 등) — §97① 나목",
     legalBasis: "소득세법 §97 / 시행령 §163⑥",
     perAsset: isAggregate
-      ? buildPerAssetSimple(properties, (p) =>
-          Math.max(0, p.necessaryExpense - p.capitalExpenditureForDisplay),
+      ? buildPerAssetWithFormula(
+          properties,
+          (p) => Math.max(0, p.necessaryExpense - p.capitalExpenditureForDisplay),
+          (p) => buildGbExpenseFormula(p, gbDetail),
         )
       : undefined,
   });
@@ -370,7 +398,7 @@ export function buildStatementItems(
     formula: gainStep?.formula ?? "양도가액 − 취득가액 − 필요경비",
     legalBasis: gainStep?.legalBasis ?? "소득세법 §95①",
     perAsset: isAggregate
-      ? buildPerAssetSimple(properties, (p) => p.transferGain)
+      ? buildPerAssetWithFormula(properties, (p) => p.transferGain, buildSubGainFormula)
       : undefined,
   });
 
@@ -426,6 +454,7 @@ export function buildStatementItems(
                   Math.max(0, p.income) + p.longTermHoldingDeduction,
                 )
               : p.transferGain,
+          formula: buildTaxableGainFormula(p),
         }))
       : undefined,
   });
@@ -442,7 +471,11 @@ export function buildStatementItems(
       `과세대상 양도차익 × ${(result.longTermHoldingRate * 100).toFixed(0)}% (보유 + 거주)`,
     legalBasis: lthStep?.legalBasis ?? "소득세법 §95②·별표 표1·표2",
     perAsset: isAggregate
-      ? buildPerAssetSimple(properties, (p) => p.longTermHoldingDeduction)
+      ? buildPerAssetWithFormula(
+          properties,
+          (p) => p.longTermHoldingDeduction,
+          buildLthFormula,
+        )
       : undefined,
   });
 
@@ -510,7 +543,11 @@ export function buildStatementItems(
       ? "다건 모드: §102② 차손통산(같은 그룹 우선·타군 안분) 후의 자산별 합계"
       : undefined,
     perAsset: isAggregate
-      ? buildPerAssetSimple(properties, (p) => p.incomeAfterOffset)
+      ? buildPerAssetWithFormula(
+          properties,
+          (p) => p.incomeAfterOffset,
+          buildIncomeFormula,
+        )
       : undefined,
   });
 
@@ -531,7 +568,11 @@ export function buildStatementItems(
       "감면 적용 대상 양도소득금액 (자경농지·신축주택 등 조세특례제한법 §69·§77·§99의3 등)",
     legalBasis: "조세특례제한법 §127·시행령 §66",
     perAsset: isAggregate
-      ? buildPerAssetSimple(properties, (p) => p.reducibleIncome ?? 0)
+      ? buildPerAssetWithFormula(
+          properties,
+          (p) => p.reducibleIncome ?? 0,
+          (p) => (p.reducibleIncome ?? 0) > 0 ? `감면 대상 양도소득금액 = ${(p.reducibleIncome ?? 0).toLocaleString()}` : "감면 대상 없음",
+        )
       : undefined,
   });
 
@@ -586,7 +627,11 @@ export function buildStatementItems(
     legalBasis: calcStep?.legalBasis ?? "소득세법 §104·§55",
     note: result.shortTermNote,
     perAsset: isAggregate
-      ? buildPerAssetSimple(properties, (p) => p.refCalculatedTax)
+      ? buildPerAssetWithFormula(
+          properties,
+          (p) => p.refCalculatedTax,
+          buildCalculatedTaxFormula,
+        )
       : undefined,
   });
 
@@ -599,7 +644,13 @@ export function buildStatementItems(
       "감면 적용 양도소득금액 비율 × 산출세액 (조특법 §127② 중복배제)",
     legalBasis: reductionStep?.legalBasis ?? "조세특례제한법 §127",
     perAsset: isAggregate
-      ? buildPerAssetSimple(properties, (p) => p.reductionAggregated)
+      ? buildPerAssetWithFormula(
+          properties,
+          (p) => p.reductionAggregated,
+          (p) => p.reductionAggregated > 0
+            ? `합산 재계산 후 ${p.reductionType ?? "감면"} 배분 = ${p.reductionAggregated.toLocaleString()}`
+            : "감면 없음",
+        )
       : undefined,
   });
 
@@ -610,7 +661,11 @@ export function buildStatementItems(
     formula: determinedStep?.formula ?? "산출세액 − 감면세액 (원 미만 절사)",
     legalBasis: determinedStep?.legalBasis ?? "소득세법 §116",
     perAsset: isAggregate
-      ? buildPerAssetSimple(properties, (p) => p.refDeterminedTax)
+      ? buildPerAssetWithFormula(
+          properties,
+          (p) => p.refDeterminedTax,
+          buildDeterminedTaxFormula,
+        )
       : undefined,
   });
 
@@ -635,9 +690,10 @@ export function buildStatementItems(
       penaltyParts.length > 0 ? penaltyParts.join(" + ") : "가산세 없음",
     legalBasis: "소득세법 §114조의2 / 국세기본법 §47·§48",
     perAsset: isAggregate
-      ? buildPerAssetSimple(
+      ? buildPerAssetWithFormula(
           properties,
           (p) => p.penaltyTax + p.filingDelayedPenaltyTax,
+          buildPenaltyFormula,
         )
       : undefined,
   });

@@ -326,6 +326,9 @@ export function calculateGeneralBuildingTransfer(
     },
     rates,
   );
+  // UI 자산별 산식 인라인 표시용 — gbOut의 분모/분자 변수를 결과에 노출.
+  // 사례 31(2-way)·33(3-way) 모두 generalBuildingValuationDetail 통해 UI 가공.
+  aggregated.generalBuildingValuationDetail = gbOut;
 
   const landStdAtTransfer = gbv.transferLandPricePerSqm * gbv.landArea;
   const landStdAtAcq = gbv.acquisitionLandPricePerSqm * gbv.landArea;

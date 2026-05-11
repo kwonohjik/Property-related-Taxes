@@ -339,6 +339,21 @@ export type GeneralBuildingOutput = {
 
   // aggregate 엔진에 넘길 자산 카드 2장
   assetCards: AssetCardForAggregate[];
+
+  // ── 산식 분모/분자 변수 (UI 자산별 산식 인라인 표시용 — optional) ──
+  // §166⑥ 양도가 안분 분모: 토지 기준시가 + 건물 기준시가 (+ 증축건물 기준시가, 사례 33)
+  /** 양도시 토지 기준시가 총액 (원) = transferLandPricePerSqm × landArea */
+  landStdTotal?: number;
+  /** 양도시 원건물 기준시가 총액 (원) — sample DB 입력값 그대로 */
+  buildingStdTotal?: number;
+  /** 양도시 증축건물 기준시가 총액 (원) — 사례 33만 채움 */
+  extensionStdTotal?: number;
+  /** 취득시 토지 기준시가 총액 (원) — 환산/일괄 안분 분모 */
+  acqLandStdTotal?: number;
+  /** 취득시 원건물 기준시가 총액 (원) */
+  acqBuilding1StdTotal?: number;
+  /** 취득시 증축건물 기준시가 총액 (원) — 사례 33 환산 모드만 채움 */
+  acqExtensionStdTotal?: number;
 };
 
 // ============================================================
@@ -648,6 +663,14 @@ export function buildGeneralBuildingAssetCards(
       : {}),
   });
 
+  // 산식 분모/분자 변수 (UI 자산별 산식 인라인 표시용 — 사례 31 경로)
+  const landStdTotalForFormula = Math.floor(
+    input.transferLandPricePerSqm * input.landArea,
+  );
+  const acqLandStdTotalForFormula = Math.floor(
+    input.acquisitionLandPricePerSqm * input.landArea,
+  );
+
   return {
     allocation,
     acquisition,
@@ -660,6 +683,11 @@ export function buildGeneralBuildingAssetCards(
     nonBusinessArea,
     nonBusinessRatio,
     assetCards,
+    // ── 산식 변수 (사례 31 — 2-way 안분, extensionStdTotal·acqExtensionStdTotal 미사용)
+    landStdTotal: landStdTotalForFormula,
+    buildingStdTotal: input.transferBuildingStdPrice,
+    acqLandStdTotal: acqLandStdTotalForFormula,
+    acqBuilding1StdTotal: input.acquisitionBuildingStdPrice,
   };
 }
 

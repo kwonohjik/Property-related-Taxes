@@ -374,5 +374,12 @@ export function buildGeneralBuildingAssetCardsWithExtension(
     nonBusinessArea,
     nonBusinessRatio,
     assetCards,
+    // ── 산식 변수 (사례 33 — 3-way 양도가 안분 + 2-way 취득가 안분/환산)
+    landStdTotal,
+    buildingStdTotal,
+    extensionStdTotal: extStdTotal,
+    acqLandStdTotal,
+    acqBuilding1StdTotal,
+    acqExtensionStdTotal: ext.acquisitionExtensionBuildingStdPrice ?? undefined,
   };
 }

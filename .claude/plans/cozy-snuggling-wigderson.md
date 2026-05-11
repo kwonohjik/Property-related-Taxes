@@ -109,3 +109,109 @@ UX 결정 (사용자 확정):
 - 비과세 양도소득금액(§161①) 정식 step emit
 - 다건 차손통산·기본공제 배분 step emit (현재는 aggregated.steps 가공)
 - "계산 과정 상세 보기" 기존 토글 폐지 또는 명세서 카드와 통합 검토 (현재는 양립)
+
+---
+
+# 추가 PR — 자산별 펼침 행에 산식·변수값 인라인 표시
+
+## Context
+
+명세서 카드의 자산별 펼침이 현재 라벨+금액만 보여줘 사용자가 "왜 토지 양도가액이 275,736,648인지" 검증할 수 없음. 이미지 #11 사용자 지적:
+
+> 토지 양도가액 = `330,000,000 × 339,492,000 / (339,492,000+12,308,310+54,501,720) = 275,736,648`
+
+이 산식·변수 인라인 표시로 사용자 검증 가능성 강화.
+
+UX 결정 (사용자 확정):
+- **범위**: 2~5단계 자산별 펼침 가능 항목 전부 (≈14개)
+- **케이스**: 사례 31(환산취득가) + 사례 33(일괄+증축) 동시 구현 일반건물 일괄 모드 우선
+- **데이터 경로**: 엔진 결과(`GeneralBuildingOutput`)에 안분 분모 변수 추가 (단일 진실 원천)
+
+## 신규 파일 / 수정 파일
+
+### `lib/tax-engine/general-building-valuation.ts` 수정
+- `GeneralBuildingOutput` 타입에 산식 분모/분자 변수 6개 optional 필드 추가:
+  - `landStdTotal`·`buildingStdTotal`·`extensionStdTotal` (양도시 — §166⑥ 양도가 안분 분모 구성)
+  - `acqLandStdTotal`·`acqBuilding1StdTotal`·`acqExtensionStdTotal` (취득시 — 사례 33 일괄·환산 분모 구성)
+- `buildGeneralBuildingAssetCards()` 반환값에 위 6개 필드 채워서 emit
+- `general-building-extension.ts`도 동일 6개 필드 채움 (사례 33 경로)
+
+### `components/calc/results/transfer/DetailedStatementHelpers.ts` 수정
+- `buildPerAssetSimple` 확장 → `buildPerAssetWithFormula(properties, picker, formulaBuilder?)`:
+  ```ts
+  function buildPerAssetWithFormula(
+    properties: PerPropertyBreakdown[],
+    picker: (p: PerPropertyBreakdown, i: number) => number | string,
+    formulaBuilder?: (p: PerPropertyBreakdown, i: number) => string | undefined,
+  ): PerAssetValue[]
+  ```
+- 신규 헬퍼 — `buildAllocationFormula(totalValue, numerator, denomParts, resultValue)`:
+  사용자 지정 형식: `"330,000,000 × 339,492,000 / (339,492,000+12,308,310+54,501,720) = 275,736,648"`
+- 신규 모듈 분리 권장 (800줄 정책): `DetailedStatementFormulaBuilders.ts`로 사례 31·33별 산식 빌더 분리:
+  - `buildGbTransferFormula(p, gbDetail, totalTransfer)` — 양도가액 §166⑥ 안분
+  - `buildGbAcquisitionFormula(p, gbDetail, asset)` — 취득가액 (사례 31 환산 vs 사례 33 일괄 분기)
+  - `buildGbExpenseFormula(p, gbDetail)` — 필요경비(개산공제) §163⑥
+  - `buildSubGainFormula(p)` — 양도차익 = 양도가액 − 취득가액 − 필요경비 (자산별 단순 산식)
+  - `buildLthFormula(p)` — 장기보유공제 (자산별 보유연수 × 표 비율)
+  - `buildIncomeFormula(p)` — 양도소득금액 = 과세대상양도차익 − 장특공제
+
+### `buildStatementItems` — perAsset 호출 14곳에 formulaBuilder 인자 전달
+
+| # | itemKey | formulaBuilder |
+|---|---|---|
+| 1 | acquisitionDate | (없음 — 단순 날짜) |
+| 2 | holdingPeriod | (없음 — 양도일 − 취득일) |
+| 3 | transferPrice | `buildGbTransferFormula` |
+| 4 | acquisitionPrice | `buildGbAcquisitionFormula` |
+| 5 | expenses | `buildGbExpenseFormula` |
+| 6 | transferGain | `buildSubGainFormula` |
+| 7 | taxableGain | `(p) => 'min(양도차익, max(0, income) + LTH)'` |
+| 8 | ltDeduction | `buildLthFormula` |
+| 9 | ltHoldingPart | `(p) => '총장특 × 보유분비율'` |
+| 10 | ltResidencePart | `(p) => '총장특 − 보유분'` |
+| 11 | incomeAmount | `buildIncomeFormula` |
+| 12 | reductionTargetIncome | `(p) => '감면대상 양도소득금액'` |
+| 13 | calculatedTax | `(p) => 'taxBaseShare × (rate+surcharge) − progressiveDed'` |
+| 14 | reductionTax·determinedTax·penaltyTax | 단순 표현 |
+
+## 사례 31 vs 33 산식 분기
+
+**사례 31 (환산취득가, 증축 없음)**:
+- 양도가액 토지: `totalTransfer × landStd / (landStd + buildingStd)` (2-way)
+- 취득가액 토지: `landTransfer × acqLandStd / landStd` (§176의2②)
+- 개산공제 토지: `acqLandStd × 3%` (§163⑥)
+
+**사례 33 (일괄, 증축 있음)**:
+- 양도가액 토지: `totalTransfer × landStd / (landStd + buildingStd + extensionStd)` (3-way)
+- 취득가액 토지: `bundledAcq × acqLandStd / (acqLandStd + acqBuilding1Std)` (취득시 비율 안분)
+- 취득가액 증축건물: `b2Transfer × acqExtensionStd / extensionStd` (§176의2②)
+- 개산공제: 동일 §163⑥ 패턴
+
+**구분 신호**: `gbDetail.extensionStdTotal !== undefined && extensionStdTotal > 0` → 사례 33
+
+## Definition of Done
+
+- 사례 31·33 일반건물 양도세 결과 페이지에서 자산별 펼침 시 항목별 산식·변수값 표시
+- 사용자 예시 형식 정확 재현: `"X × A/(A+B+C) = 결과"` (분모 풀어쓰기, `=` 후 결과값)
+- 14개 항목 모두 산식 적용 (산식 의미 없는 일자·기간은 제외)
+- 사례 27·28·검용주택 등 다른 다건 케이스는 본 PR 범위 외 (formulaBuilder 미전달 시 기존 동작 — formula undefined → 산식 미표시)
+- 800줄 정책 — `DetailedStatementFormulaBuilders.ts` 신규 모듈로 분리
+
+## 검증
+
+1. **typecheck**: `npx tsc --noEmit` 0건
+2. **단위 테스트** (기존 8건 확장 + 신규):
+   - 사례 33 fixture에서 토지 양도가액 행 펼침 시 정확한 산식 문자열 검증
+     (예: 표시된 텍스트에 `330,000,000 × 339,492,000 / (339,492,000+12,308,310+54,501,720) = 275,736,648` 포함)
+   - 사례 31 fixture에서 2-way 안분 산식 확인
+   - 산식 미적용 케이스(사례 27 등)는 formula undefined 검증
+3. **회귀**: 양도세 전체 (`npx vitest run __tests__/tax-engine/transfer-tax/`) — 엔진 타입 확장이라 기존 anchor 영향 없어야 함 (필드 optional 추가)
+4. **브라우저 수동 확인**:
+   - 사례 33 입력 → 결과 페이지 명세서 카드 → 양도가액 행 펼침 → 토지(1001)/건물(3001)/증축건물(3002) 산식 표시 확인
+   - 사용자 예시값과 텍스트 1:1 일치 검증
+
+## 비포함 (후속)
+
+- 사례 27(2회 분할취득)·28(나대지+신축 일괄양도)·검용주택의 자산별 산식 (별도 PR)
+- 합계 행 자체의 산식 보강 (현재 grouping 산식만 표시)
+- 산식 텍스트 i18n / PDF 인쇄 시 줄바꿈 최적화

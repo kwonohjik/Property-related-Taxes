@@ -264,4 +264,11 @@ export interface AggregateTransferResult {
 
   steps: CalculationStep[];
   warnings: string[];
+
+  /**
+   * 일반건물(토지+건물 일괄) 환산 산정 상세 (사례 31·33 일괄 모드만 채워짐).
+   * UI 자산별 산식 인라인 표시(`DetailedCalculationStatementCard`)에서 분모/분자 변수로 사용.
+   * `landStdTotal`·`buildingStdTotal`·`extensionStdTotal`·`acqLandStdTotal` 등 §166⑥·§176의2② 안분 변수 포함.
+   */
+  generalBuildingValuationDetail?: import("../general-building-valuation").GeneralBuildingOutput;
 }

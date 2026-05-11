@@ -54,6 +54,8 @@ export function aggregateToFilingResult(a: AggregateTransferResult): TransferTax
     localIncomeTax: a.localIncomeTax,
     totalTax: a.totalTax,
     steps: a.steps,
+    // UI 자산별 산식 인라인 표시용 — 사례 31·33 일반건물 일괄 모드만 채워짐.
+    generalBuildingValuationDetail: a.generalBuildingValuationDetail,
   };
 }
 

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { calculationRepository } from "@/lib/storage/calculation-repository";
 import { clientRepository } from "@/lib/storage/client-repository";
 import { useUserProfile } from "@/lib/storage/use-user-profile";
+import { useProfessionalStore } from "@/lib/stores/professional-store";
 import type { CalculationRecord, LocalTaxType, Client } from "@/lib/storage/types";
 import { HistoryDetailDrawer } from "@/components/history/HistoryDetailDrawer";
 
@@ -185,6 +186,13 @@ export function HistoryClient() {
     const route = TAX_TYPE_ROUTES[record.taxType];
     if (!route) return;
     sessionStorage.setItem("editingCalculationId", record.id);
+    // 세무사 모드 — 이력에 기록된 의뢰인을 자동 활성화하여 ProfessionalClientGate 우회.
+    // record.clientId가 null(미지정)이면 게이트가 다시 의뢰인 선택을 강제하지 않도록
+    // null도 그대로 set (게이트가 activeClientId === null 시 게이트 표시 → 정합성 위해
+    // 미지정 이력은 일단 'manualPassed' 의도된 진입으로 간주하기 어려움 → 미지정 이력은 그대로 게이트 노출).
+    if (record.clientId) {
+      useProfessionalStore.getState().setActiveClientId(record.clientId);
+    }
     if (record.taxType === "transfer") {
       import("@/lib/stores/calc-wizard-store").then(({ useCalcWizardStore }) => {
         const { updateFormData, setStep } = useCalcWizardStore.getState();
