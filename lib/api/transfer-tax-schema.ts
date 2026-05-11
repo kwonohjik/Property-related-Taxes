@@ -115,6 +115,25 @@ export const generalBuildingValuationSchema = z.object({
    */
   buildingDonorAcquisitionDate: z.string().date().optional(),
   /**
+   * ⑨⑫ 사례 33: 증축 정보 서브객체 (§114조의2 + §166⑥ 증축 안분).
+   * gbHasExtension=true 시 필수. 미입력 시 기존 단일 건물 동작 보존 (사례 31·32 회귀 위험 0).
+   * 침묵 stripping 방지를 위해 명시 선언 필수.
+   */
+  extensionInfo: z
+    .object({
+      /** 증축일 (=건물2 취득일, 영 §162①4호 빠른 날) */
+      extensionDate: z.coerce.date(),
+      /** 증축 연면적 (㎡) — 선택. 산식 미사용, 정보용. */
+      extensionArea: z.number().nonnegative().optional(),
+      /** 양도시 건물2 기준시가 총액 (원) — ㎡당 단가 아닌 총액. */
+      transferExtensionBuildingStdPrice: z.number().int().positive(),
+      /** 취득시(증축시) 건물2 기준시가 총액 (원) — 환산 분자. */
+      acquisitionExtensionBuildingStdPrice: z.number().int().positive(),
+      /** 건물2 취득원인: "purchase"(매수) | "newConstruction"(자가증축, default) */
+      extensionAcquisitionCause: z.enum(["purchase", "newConstruction"]),
+    })
+    .optional(),
+  /**
    * #7-b: 토지 배우자등 이월과세 (§97조의2) — landAcquisitionCause === "carryover_gift" 시 필수.
    * 단건 엔진의 비교과세(이월 vs 통상 max) 로직이 토지 카드에 적용됨.
    */

@@ -253,6 +253,13 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     // ── 일반건물 건물 취득원인 + 건물 취득일 (사례 32 이후 PR) ──
     gbBuildingAcquisitionCause: undefined,
     gbBuildingAcquisitionDate: "",
+    // ── 사례 33: 증축 건물 환산취득가 (소득세법 시행령 §176의2②, §166⑥) ──
+    gbHasExtension: false,
+    gbExtensionDate: "",
+    gbExtensionArea: "",
+    gbTransferExtensionBuildingStdPrice: "",
+    gbAcquisitionExtensionBuildingStdPrice: "",
+    gbExtensionAcquisitionCause: "newConstruction",
   };
 }
 
@@ -441,6 +448,24 @@ export function migrateAsset(raw: unknown): AssetForm {
     }
   }
   if (a.gbBuildingAcquisitionDate === undefined) a.gbBuildingAcquisitionDate = "";
+  // ③ 사례 33: 증축 필드 마이그레이션 (sessionStorage 호환 — 신규 필드 누락 보호)
+  // normalize 책임: 저장→로드 시 누락 필드 초기화.
+  // onChange 책임(별도): 토글 OFF 시 폼 상태 유지 (재토글 ON 복원). normalize 아님.
+  if (a.gbHasExtension === undefined) a.gbHasExtension = false;
+  if (a.gbExtensionDate === undefined) a.gbExtensionDate = "";
+  if (a.gbExtensionArea === undefined) a.gbExtensionArea = "";
+  if (a.gbTransferExtensionBuildingStdPrice === undefined) a.gbTransferExtensionBuildingStdPrice = "";
+  if (a.gbAcquisitionExtensionBuildingStdPrice === undefined) a.gbAcquisitionExtensionBuildingStdPrice = "";
+  if (a.gbExtensionAcquisitionCause === undefined) a.gbExtensionAcquisitionCause = "newConstruction";
+  // gbHasExtension=false 인 legacy 데이터에 나머지 5필드가 잘못 저장된 경우 정리
+  // (신규 데이터에서는 발생하지 않으나 구형 마이그레이션 방어)
+  if (a.gbHasExtension === false) {
+    a.gbExtensionDate = "";
+    a.gbExtensionArea = "";
+    a.gbTransferExtensionBuildingStdPrice = "";
+    a.gbAcquisitionExtensionBuildingStdPrice = "";
+    a.gbExtensionAcquisitionCause = "newConstruction";
+  }
 
   // ③ 장기임대주택 거주주택 비과세 특례 마이그레이션 (sessionStorage 호환)
   if (!a.rentalHousingException || typeof a.rentalHousingException !== "object") {

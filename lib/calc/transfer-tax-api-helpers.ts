@@ -125,6 +125,45 @@ export function toEngineAssetKind(
   return kind;
 }
 
+// ─── ④ 사례 33: 증축 extensionInfo 서브객체 변환 헬퍼 ───
+
+/**
+ * AssetForm gbExtension* 필드 → extensionInfo 서브객체 변환.
+ * gbHasExtension=false 시 undefined 반환.
+ * gbHasExtension=true 시 필수 필드 누락은 validate 단계에서 이미 차단됨.
+ * → 이 함수에서 undefined 폴백 대신 fail-fast throw (silent 회귀 차단).
+ *
+ * defensive 아닌 fail-fast — 이 throw에 도달하면 validate 우회 버그.
+ * 사례 31 동작으로 silent 회귀하는 경로를 조기에 발각.
+ * (자동 안분 fallback 금지 정책 — feedback_no_silent_apportion_fallback.md)
+ */
+function buildExtensionInfo(
+  asset: AssetForm,
+): object | undefined {
+  if (!asset.gbHasExtension) return undefined;
+
+  const extensionDate = asset.gbExtensionDate || undefined;
+  const extensionArea = parseDecimal(asset.gbExtensionArea); // 선택 필드 — 0이면 미전달
+  const transferExtStdPrice = parseAmount(asset.gbTransferExtensionBuildingStdPrice);
+  const acqExtStdPrice = parseAmount(asset.gbAcquisitionExtensionBuildingStdPrice);
+  const extensionCause = asset.gbExtensionAcquisitionCause;
+
+  // gbHasExtension=true일 때 필수 4필드 누락 → validate 우회 — fail-fast throw
+  if (!extensionDate || !transferExtStdPrice || !acqExtStdPrice || !extensionCause) {
+    throw new Error(
+      `[buildExtensionInfo] gbHasExtension=true이지만 필드 누락 — validate 단계에서 차단되어야 함 (asset.assetId=${asset.assetId})`
+    );
+  }
+
+  return {
+    extensionDate,                                    // string — route handler에서 toOptionalDate 변환 (⑭)
+    ...(extensionArea ? { extensionArea } : {}),      // 선택 필드: 미입력 시 미전달
+    transferExtensionBuildingStdPrice: transferExtStdPrice,
+    acquisitionExtensionBuildingStdPrice: acqExtStdPrice,
+    extensionAcquisitionCause: extensionCause,
+  };
+}
+
 // ─── ④ 일반건물(토지+건물 일괄) API 변환 헬퍼 (소령 §176의2②, §163⑥, §166⑥) ───
 
 /**
@@ -191,6 +230,8 @@ export function buildGeneralBuildingValuation(
       ...(asset.donorAcquisitionDate
         ? { donorAcquisitionDate: asset.donorAcquisitionDate }
         : {}),
+      // 사례 33: 증축 extensionInfo 서브객체 (gbHasExtension=false 시 undefined → 미포함)
+      extensionInfo: buildExtensionInfo(asset),
       ...nblFields,
     };
   }

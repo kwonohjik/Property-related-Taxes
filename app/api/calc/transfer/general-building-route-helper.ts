@@ -227,6 +227,15 @@ export function dispatchGeneralBuilding(
       }
     : undefined;
 
+  // ⑭ 사례 33: extensionInfo 내부 extensionDate Date 변환
+  const extInfo = gbRaw.extensionInfo as Record<string, unknown> | undefined;
+  const coercedExtInfo = extInfo
+    ? {
+        ...extInfo,
+        extensionDate: toOptionalDate(extInfo.extensionDate),
+      }
+    : undefined;
+
   const coercedGbRaw: Record<string, unknown> = {
     ...gbRaw,
     ...(buildingAcqDate ? { buildingAcquisitionDate: buildingAcqDate } : {}),
@@ -237,6 +246,7 @@ export function dispatchGeneralBuilding(
     ...(buildingDecedentAcqDate ? { buildingDecedentAcquisitionDate: buildingDecedentAcqDate } : {}),
     ...(buildingDonorAcqDate ? { buildingDonorAcquisitionDate: buildingDonorAcqDate } : {}),
     ...(coercedLandCt ? { landCarryoverTaxation: coercedLandCt } : {}),
+    ...(coercedExtInfo ? { extensionInfo: coercedExtInfo } : {}),
   };
 
   if (coercedGbRaw.actualPriceMode === true) {

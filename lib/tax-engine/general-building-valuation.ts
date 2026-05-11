@@ -21,6 +21,7 @@ import { getLandFootprintMultiplier } from "./non-business-land/urban-area";
 import type { ZoneType } from "./non-business-land/types";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import type { CarryoverTaxationInput } from "./types/transfer-carryover.types";
+import { buildGeneralBuildingAssetCardsWithExtension } from "./general-building-extension";
 
 // ============================================================
 // 개산공제율 상수 (시행령 §163 ⑥)
@@ -128,6 +129,35 @@ export type GeneralBuildingInput = {
    */
   buildingDonorAcquisitionDate?: Date;
 
+  /**
+   * 증축 정보 (사례 33 — §114조의2 + §166⑥ 증축 안분).
+   * 미입력 시 기존 단일 건물 동작 100% 보존 (사례 31·32 회귀 위험 0).
+   * extensionDate = 건물2 취득일 (영 §162①4호 빠른 날).
+   */
+  extensionInfo?: {
+    /** 증축일 (=건물2 취득일, 영 §162①4호 빠른 날) */
+    extensionDate: Date;
+    /** 증축 연면적 (㎡) — 정보용 (위치지수 산정 확장 대비, 산식 미사용, 선택) */
+    extensionArea?: number;
+    /** 양도시 건물2 기준시가 총액 (원) — UI에서 단가 곱한 총액 받음. ㎡당 단가 아님. */
+    transferExtensionBuildingStdPrice: number;
+    /** 취득시(증축시) 건물2 기준시가 총액 (원) — 환산 분자. */
+    acquisitionExtensionBuildingStdPrice: number;
+    /** 건물2 취득원인 — "newConstruction"(자가증축, default) | "purchase"(매수 증축) */
+    extensionAcquisitionCause: "purchase" | "newConstruction";
+    /**
+     * 토지+건물1 일괄 실거래 취득가액 (원).
+     * 증축 경로에서만 사용. 2-way 안분의 분자.
+     * (사례 31·32 환산 경로는 acquisitionLandPricePerSqm·acquisitionBuildingStdPrice 사용)
+     */
+    actualBundledAcquisitionPrice: number;
+    /**
+     * 토지+건물1 일괄 실거래 필요경비 (원).
+     * 증축 경로에서만 사용. 2-way 안분의 분자.
+     */
+    actualBundledExpenses: number;
+  };
+
   // 선택적
   /** 개산공제율 (기본 0.03 — ESTIMATED_DEDUCTION_RATE_LAND_BUILDING) */
   estimatedDeductionRate?: number;
@@ -186,11 +216,16 @@ export type AssetCardForAggregate = {
   acquisitionPrice: number;
   /** 개산공제 (원) */
   expenses: number;
-  /** 환산취득가 사용 여부 (항상 true) */
-  usedEstimatedAcquisition: true;
-  /** 환산취득가액 (=acquisitionPrice) */
+  /**
+   * 환산취득가 사용 여부.
+   * - 토지·건물1(실가 안분): false
+   * - 건물2(환산취득가): true
+   * - 사례 31·32(전체 환산): true
+   */
+  usedEstimatedAcquisition: boolean;
+  /** 환산취득가액 (환산 미사용 시 0) */
   estimatedBase: number;
-  /** 개산공제액 */
+  /** 개산공제액 (환산 미사용 시 0) */
   estimatedDeduction: number;
   /** 취득일 */
   acquisitionDate: Date;
@@ -242,6 +277,11 @@ export type AssetCardForAggregate = {
    * aggregate가 단건 엔진 호출 시 자동 비교과세 수행.
    */
   carryoverTaxation?: CarryoverTaxationInput;
+  /**
+   * 증축 건물 카드 여부 (사례 33 — building2 카드에만 true).
+   * 결과 카드 배지 표시용. 산식에는 미사용.
+   */
+  isExtensionBuilding?: boolean;
 };
 
 /** 일반건물(토지+건물 일괄) 환산취득가 계산 출력 */
@@ -402,6 +442,13 @@ function calculateEstimatedDeduction(
 export function buildGeneralBuildingAssetCards(
   input: GeneralBuildingInput,
 ): GeneralBuildingOutput {
+  // ── 증축 분기 (사례 33 — extensionInfo 활성 시 3-way 안분) ──────────
+  if (input.extensionInfo) {
+    return buildGeneralBuildingAssetCardsWithExtension(input, input.extensionInfo);
+  }
+
+  // ── 기존 2-way 분기 (사례 31·32 — extensionInfo 미입력 시) ──────────
+
   // 개산공제율 결정 (기본 3%)
   const rate =
     input.estimatedDeductionRate ?? ESTIMATED_DEDUCTION_RATE_LAND_BUILDING;
@@ -588,6 +635,7 @@ export function buildGeneralBuildingAssetCards(
     assetCards,
   };
 }
+
 
 // ============================================================
 // 내부 계산값 노출 (단위 테스트 직접 접근용)

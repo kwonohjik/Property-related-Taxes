@@ -5,9 +5,10 @@
  *
  * 진입 조건: assetKind === "general_building" (취득방법 무관 항상 마운트)
  * 섹션 구조:
- *  ① 면적·규모 (sky)     — 항상 표시
- *  ② 양도시 기준시가 (emerald) — 환산취득가 모드만
+ *  ① 면적·규모 (sky)         — 항상 표시
+ *  ② 양도시 기준시가 (emerald) — 항상 표시 (§166⑥ 토지·건물 안분 비율)
  *  ③ 취득시 기준시가 (amber)   — 환산취득가 모드만
+ *  ⑤ 증축 정보 (fuchsia)      — 환산취득가 모드 + gbHasExtension ON 시 (선택)
  *  ④ 비사업용토지 판정 (rose)  — 항상 표시 (§104의3·§168의12)
  *
  * 정책 준수:
@@ -168,6 +169,90 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
               <p>건물: 취득시 건물기준시가 총액 × 3%</p>
             </div>
           </div>
+        )}
+
+        {/* ⑤ 증축 정보 (amber) — 환산취득가 모드에서 선택적 */}
+        {isEstimated && (
+          <ToggleCard
+            tone="amber"
+            variant="card"
+            title="증축 있음"
+            description="원건물 취득 후 별도 증축한 부분이 있는 경우. 증축분(건물2)은 취득가 불명으로 환산취득가를 적용합니다."
+            checked={asset.gbHasExtension}
+            onCheckedChange={(v) => onChange({ gbHasExtension: v })}
+          >
+            {/* 증축일 */}
+            <FieldCard
+              label="증축일"
+              hint="건축물대장 사용승인일 또는 실제 사용일 (영 §162①4호)"
+            >
+              <DateInput
+                value={asset.gbExtensionDate}
+                onChange={(v) => onChange({ gbExtensionDate: v })}
+              />
+            </FieldCard>
+
+            {/* 증축 면적 */}
+            <FieldCard
+              label="증축 연면적"
+              unit="㎡"
+              hint="증축된 부분의 연면적 (㎡). 모르는 경우 비워두세요."
+            >
+              <DecimalInput
+                value={asset.gbExtensionArea}
+                onChange={(v) => onChange({ gbExtensionArea: v })}
+              />
+            </FieldCard>
+
+            {/* 양도시 건물2 기준시가 */}
+            <FieldCard
+              label="양도시 건물2 기준시가 총액"
+              unit="원"
+              hint="국세청 홈택스 → 기준시가 조회 → 증축 건물분 기준시가 총액 (원). ㎡당 단가가 아닌 총액(원)."
+            >
+              <CurrencyInput
+                label="양도시 건물2 기준시가 총액"
+                hideUnit
+                value={asset.gbTransferExtensionBuildingStdPrice}
+                onChange={(v) => onChange({ gbTransferExtensionBuildingStdPrice: v })}
+              />
+            </FieldCard>
+
+            {/* 취득시(증축시) 건물2 기준시가 */}
+            <FieldCard
+              label="취득시(증축시) 건물2 기준시가 총액"
+              unit="원"
+              hint="증축 완료 시점 건물2 기준시가 총액 (원). 환산취득가 분자. ㎡당 단가가 아닌 총액(원)."
+            >
+              <CurrencyInput
+                label="취득시(증축시) 건물2 기준시가 총액"
+                hideUnit
+                value={asset.gbAcquisitionExtensionBuildingStdPrice}
+                onChange={(v) => onChange({ gbAcquisitionExtensionBuildingStdPrice: v })}
+              />
+            </FieldCard>
+
+            {/* 증축 취득원인 */}
+            <FieldCard label="증축 취득원인" hint="자가증축(신축자가건축)이 기본입니다. 타인에게 매수한 경우 매매 선택.">
+              <RadioCardGroup
+                name="gbExtensionAcquisitionCause"
+                layout="inline"
+                value={asset.gbExtensionAcquisitionCause ?? "newConstruction"}
+                onChange={(v) => onChange({ gbExtensionAcquisitionCause: v as "purchase" | "newConstruction" })}
+                options={[
+                  { value: "newConstruction", label: "자가증축" },
+                  { value: "purchase",        label: "매매" },
+                ]}
+              />
+            </FieldCard>
+
+            <div className="rounded bg-fuchsia-50/60 border border-fuchsia-200 px-3 py-2 text-xs text-fuchsia-700 space-y-0.5">
+              <p className="font-semibold">환산취득가 (§176의2②)</p>
+              <p>건물2 양도가 × (취득시 건물기준시가 ÷ 양도시 건물기준시가)</p>
+              <p className="mt-0.5 font-semibold">개산공제 (§163⑥)</p>
+              <p>취득시 건물기준시가 총액 × 3%</p>
+            </div>
+          </ToggleCard>
         )}
 
         {/* ④ 비사업용토지 판정 (rose) — 항상 표시 */}
