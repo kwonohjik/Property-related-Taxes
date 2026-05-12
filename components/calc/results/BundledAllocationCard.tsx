@@ -9,6 +9,7 @@ import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { FilingFormTable } from "@/components/calc/results/transfer/FilingFormTable";
 import { DetailedCalculationStatementCard } from "@/components/calc/results/transfer/DetailedCalculationStatementCard";
+import { BurdenedGiftDetailCard } from "@/components/calc/results/transfer/BurdenedGiftDetailCard";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -22,6 +23,8 @@ interface Props {
   ownershipMap?: Map<string, { numerator: number; denominator: number }>;
   /** 마법사 폼 데이터 — 신고서 양식 표 자산별 머리 정보(취득일/거주기간 등) 표시용 */
   formData: TransferFormData;
+  /** 부담부증여 §159 산정 명세 (일반건물 + 부담부증여 모드에서만 — 증여세 통합 결과 포함). */
+  transferBurdenedGiftBreakdown?: import("@/lib/tax-engine/types/transfer-burdened-gift.types").TransferBurdenedGiftBreakdown;
   onBack?: () => void;
   onReset?: () => void;
 }
@@ -468,9 +471,17 @@ function AggregatedTaxSummary({ aggregated }: { aggregated: AggregateTransferRes
 
 // ─── 메인 컴포넌트 ────────────────────────────────────────────
 
-export function BundledAllocationCard({ apportionment, aggregated, ownershipMap, formData, onBack, onReset }: Props) {
+export function BundledAllocationCard({ apportionment, aggregated, ownershipMap, formData, transferBurdenedGiftBreakdown, onBack, onReset }: Props) {
   return (
     <div className="space-y-6">
+      {/* 부담부증여 §159·증여세 통합 명세 (일반건물 부담부증여 모드 전용) */}
+      {transferBurdenedGiftBreakdown && (
+        <BurdenedGiftDetailCard
+          breakdown={transferBurdenedGiftBreakdown}
+          propertyType="general_building"
+        />
+      )}
+
       {/* 안분 결과 */}
       <div className="rounded-lg border bg-card p-4 shadow-sm">
         <div className="flex items-center justify-between mb-3">
@@ -536,7 +547,11 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
           ownershipMap,
           landNatureMap: landNatureMap.size > 0 ? landNatureMap : undefined,
         };
-        const adaptedResult = aggregateToFilingResult(aggregated);
+        // 부담부증여 §159 배지·결과 카드 통합 — adapt 후 breakdown 추가 주입.
+        const adaptedResult = {
+          ...aggregateToFilingResult(aggregated),
+          transferBurdenedGiftBreakdown,
+        };
         return (
           <>
             <FilingFormTable

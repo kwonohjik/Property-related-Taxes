@@ -22,6 +22,7 @@ import {
 } from "./CompanionAssetCardNewConstruction";
 import { CompanionLandNatureBlock } from "./CompanionLandNatureBlock";
 import { CompanionAcquisitionCauseSection } from "./CompanionAcquisitionCauseSection";
+import { TransferModeBlock } from "./TransferModeBlock";
 import { CommercialBuildingBlock } from "./CommercialBuildingBlock";
 import { GeneralBuildingBlock } from "./GeneralBuildingBlock";
 
@@ -164,7 +165,7 @@ export function CompanionAssetCard({
         )}
       </div>
 
-      {/* 검용주택 분리계산 토글 — 자산 종류가 주택일 때 상단에 노출.
+      {/* 겸용주택 분리계산 토글 — 자산 종류가 주택일 때 상단에 노출.
          확장 패널은 자산 카드 하단(직접 귀속 필요경비 위)에 별도 배치. */}
       {asset.assetKind === "housing" && (
         <MixedUseToggleRow asset={asset} onChange={onChange} />
@@ -402,25 +403,64 @@ export function CompanionAssetCard({
         </div>
       )}
 
-      {/* 양도가액 */}
-      <CompanionSaleModeBlock
-        bundledSaleMode={singleMode ? "actual" : bundledSaleMode}
-        assetKind={(asset.assetKind === "commercial_building" || asset.assetKind === "general_building") ? "building" : asset.assetKind}
-        actualSalePrice={asset.actualSalePrice}
-        onActualSalePriceChange={(v) => onChange({ actualSalePrice: v })}
-        standardPriceAtTransfer={asset.standardPriceAtTransfer}
-        onStandardPriceAtTransferChange={(v) => onChange({ standardPriceAtTransfer: v })}
-        singleMode={singleMode}
-        jibun={asset.addressJibun || undefined}
-        transferDate={transferDate}
-        transferArea={asset.assetKind === "land" ? asset.transferArea : undefined}
-        onTransferAreaChange={asset.assetKind === "land" ? (v) => onChange({ transferArea: v }) : undefined}
-        ownershipNumerator={asset.ownershipNumerator}
-        ownershipDenominator={asset.ownershipDenominator}
-        contractTotalPrice={contractTotalPrice}
-        standardPricePerSqmAtTransfer={asset.standardPricePerSqmAtTransfer}
-        onStandardPricePerSqmAtTransferChange={(v) => onChange({ standardPricePerSqmAtTransfer: v })}
-      />
+      {/*
+       * 양도 정보 카드 — Phase 2 (2026-05-12)
+       * 부담부증여(소령 §159)는 "양도" 사건이므로 취득원인과 분리하여 별도 카드로 노출.
+       * housing·land·building·general_building 모두 지원.
+       *
+       * 위치(2026-05-12 후속): 양도가액 입력 위로 이동 — 사용자가 양도 형태를 먼저 결정한 뒤
+       * 그 결과에 따라 양도가액 입력란/자동 산정 안내가 분기되는 자연스러운 순방향 흐름 확보.
+       */}
+      <TransferModeBlock asset={asset} onChange={onChange} />
+
+      {/* 양도가액 — 부담부증여 시 엔진 자동 도출 (소령 §159) 안내 + 기준시가는 별도 유지 */}
+      {asset.transferType === "burdened_gift" && (
+        <div className="rounded-lg border border-fuchsia-300 bg-fuchsia-50/60 p-3 space-y-1.5">
+          <div className="flex items-center gap-2">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-fuchsia-200 text-[10px] font-bold text-fuchsia-800 select-none">
+              §159
+            </span>
+            <p className="text-sm font-semibold text-fuchsia-900">
+              양도가액은 자동 산정됩니다 (직접 입력 불필요)
+            </p>
+          </div>
+          <p className="text-xs text-fuchsia-800">
+            부담부증여(소득세법 시행령 §159)에서는 <b>양도가액 = 인수 채무액 × (자산별 평가가액 ÷ 증여가액)</b>으로
+            엔진이 자동 산정합니다. 채무액·평가액은 위 <b>양도 정보</b> 카드(인수 채무 + 임대 평가 보조)에서 입력하세요.
+          </p>
+          <p className="text-[11px] text-fuchsia-700">
+            ※ 아래 <b>양도시 기준시가</b> 입력은 §159 분모(증여가액 C)의 보충적 평가 산정에 사용됩니다 (기준시가 모드).
+          </p>
+        </div>
+      )}
+      {/*
+        부담부증여 모드에서도 standardPriceAtTransfer는 §159 분모(C)의 보충적 평가 산정 입력으로 필요.
+        general_building은 GeneralBuildingBlock의 gb* 필드, 시가 모드는 bgMarketValueAtTransfer 사용.
+        따라서 housing/land/building/commercial_building + 기준시가 모드일 때만 표시.
+      */}
+      {!(asset.transferType === "burdened_gift" && asset.assetKind === "general_building") &&
+       !(asset.transferType === "burdened_gift" && asset.bgValuationMode === "sangjeungbeop_market") && (
+        <CompanionSaleModeBlock
+          bundledSaleMode={
+            asset.transferType === "burdened_gift" ? "apportioned" : (singleMode ? "actual" : bundledSaleMode)
+          }
+          assetKind={(asset.assetKind === "commercial_building" || asset.assetKind === "general_building") ? "building" : asset.assetKind}
+          actualSalePrice={asset.actualSalePrice}
+          onActualSalePriceChange={(v) => onChange({ actualSalePrice: v })}
+          standardPriceAtTransfer={asset.standardPriceAtTransfer}
+          onStandardPriceAtTransferChange={(v) => onChange({ standardPriceAtTransfer: v })}
+          singleMode={singleMode}
+          jibun={asset.addressJibun || undefined}
+          transferDate={transferDate}
+          transferArea={asset.assetKind === "land" ? asset.transferArea : undefined}
+          onTransferAreaChange={asset.assetKind === "land" ? (v) => onChange({ transferArea: v }) : undefined}
+          ownershipNumerator={asset.ownershipNumerator}
+          ownershipDenominator={asset.ownershipDenominator}
+          contractTotalPrice={contractTotalPrice}
+          standardPricePerSqmAtTransfer={asset.standardPricePerSqmAtTransfer}
+          onStandardPricePerSqmAtTransferChange={(v) => onChange({ standardPricePerSqmAtTransfer: v })}
+        />
+      )}
 
       {/* 취득 원인 + 원인별 세부 입력 (별도 파일로 분리 — 800줄 정책) */}
       <CompanionAcquisitionCauseSection
@@ -494,7 +534,7 @@ export function CompanionAssetCard({
         </ToggleCard>
       )}
 
-      {/* 검용주택 확장 패널 — 체크박스 ON 시 직접 귀속 필요경비 위에 노출.
+      {/* 겸용주택 확장 패널 — 체크박스 ON 시 직접 귀속 필요경비 위에 노출.
          transferDate는 폼-전역 양도일을 사용 (PHD 양도시 시점 기준연도용). */}
       {asset.assetKind === "housing" && (
         <MixedUseExpandedPanel

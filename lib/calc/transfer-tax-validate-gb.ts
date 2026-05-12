@@ -25,9 +25,13 @@ export function validateGeneralBuildingAsset(
   label: string,
   formTransferDate?: string,
 ): string | null {
-  // ⑧ 부담부증여 (소령 §159) — 가장 먼저 분기. acquisitionCause === "burdened_gift" 시
+  // ⑧ 부담부증여 (소령 §159) — Phase 2 (2026-05-12): transferType === "burdened_gift" 분기.
+  // 호환성: 레거시 acquisitionCause === "burdened_gift" OR 조건 fallback.
   // bg* 필드 + 양도시·취득시 자산별 기준시가(gb*)가 필수.
-  if (asset.acquisitionCause === "burdened_gift") {
+  const isBurdenedGiftGB =
+    asset.transferType === "burdened_gift" ||
+    asset.acquisitionCause === "burdened_gift";
+  if (isBurdenedGiftGB) {
     if (!asset.bgValuationMode)
       return `${label}: 부담부증여 평가 모드를 선택하세요 (상증법 기준시가/시가).`;
     const deposit = parseAmount(asset.bgLendingDepositTotal) || 0;

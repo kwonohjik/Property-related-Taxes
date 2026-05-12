@@ -345,7 +345,34 @@ export default function TransferTaxCalculator({
     ...(transferSummary.totalSalePrice > 0
       ? [{ label: "양도가액 합계", value: transferSummary.totalSalePrice }]
       : []),
-    // 검용주택 미리보기: 주택비율·부수토지·안분 양도가액 (입력만으로 산출 가능)
+    // Phase 2 (2026-05-12): 부담부증여 사이드바 메타 — silent fallback 금지 원칙 ⑥
+    ...(transferSummary.burdenedGift
+      ? [
+          {
+            label: transferSummary.burdenedGift.hasOvershoot
+              ? "⚠️ 부담부증여 양도가액 (인수 채무)"
+              : "부담부증여 양도가액 (인수 채무, §159)",
+            value: transferSummary.burdenedGift.assumedDebt,
+            highlight: transferSummary.burdenedGift.hasOvershoot,
+          },
+          {
+            label: "채무비율 (B/C)",
+            value: `${(transferSummary.burdenedGift.debtRatio * 100).toFixed(2)}%${
+              transferSummary.burdenedGift.hasOvershoot ? " — 1 초과! 상증법 §47③ 검토" : ""
+            }`,
+          },
+          // Phase 3: 증여세 결정세액 (result 도착 후만 노출)
+          ...(transferSummary.burdenedGift.giftFinalTax
+            ? [
+                {
+                  label: "증여세 결정세액 (수증자 부담, 상증법 §53·§56·§69)",
+                  value: transferSummary.burdenedGift.giftFinalTax,
+                },
+              ]
+            : []),
+        ]
+      : []),
+    // 겸용주택 미리보기: 주택비율·부수토지·안분 양도가액 (입력만으로 산출 가능)
     ...(transferSummary.mixedUse && transferSummary.mixedUse.housingRatio > 0
       ? [
           {
@@ -471,6 +498,9 @@ export default function TransferTaxCalculator({
           <BundledAllocationCard
             apportionment={(result as import("@/lib/calc/transfer-tax-api").BundledTransferResult).apportionment}
             aggregated={(result as import("@/lib/calc/transfer-tax-api").BundledTransferResult).aggregated}
+            transferBurdenedGiftBreakdown={
+              (result as import("@/lib/calc/transfer-tax-api").BundledTransferResult).transferBurdenedGiftBreakdown
+            }
             formData={formData}
             ownershipMap={
               // 지분 단계취득 자산의 결과 카드에 "지분 X%" 라벨 표시용 propertyId → ratio 매핑.

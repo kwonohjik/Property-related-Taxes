@@ -10,7 +10,7 @@
  *  - "chip": 라벨 옆 인라인 칩. children 없음.
  *
  * tone (활성 색조):
- *  - "amber"   취득·분리계산 모드 (검용주택, 신축, PHD, 토지/건물 분리)
+ *  - "amber"   취득·분리계산 모드 (겸용주택, 신축, PHD, 토지/건물 분리)
  *  - "rose"    지역·지정 정보   (수도권, 조정대상지역)
  *  - "violet"  거주·자격 정보
  *  - "emerald" 양도시점 정보
@@ -118,7 +118,7 @@ const TONES: Record<ToggleCardTone, ToneClasses> = {
 export interface ToggleCardProps {
   checked: boolean;
   onCheckedChange: (v: boolean) => void;
-  /** 굵은 라벨 (예: "검용주택 분리계산") */
+  /** 굵은 라벨 (예: "겸용주택 분리계산") */
   title: string;
   /** 한 줄 보조 설명 (예: "주택+상가 복합건물, §160①단서") */
   description?: ReactNode;

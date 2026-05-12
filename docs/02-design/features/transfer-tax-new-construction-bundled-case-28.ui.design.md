@@ -59,7 +59,7 @@
 | `buildingFootprintArea` | `string` | 건물 정착면적(㎡) — 부수토지 한도 산정 | `""` |
 | `isUrbanArea` | `boolean` | 도시지역 여부 — 5배/10배 분기 | `true` |
 
-> **주의**: `buildingFootprintArea`는 검용주택 `AssetForm`에 이미 존재(line 588). 신축주택 케이스에서 동일 필드를 재사용. normalize fallback은 검용주택 케이스와 동일 방식으로 처리.
+> **주의**: `buildingFootprintArea`는 겸용주택 `AssetForm`에 이미 존재(line 588). 신축주택 케이스에서 동일 필드를 재사용. normalize fallback은 겸용주택 케이스와 동일 방식으로 처리.
 >
 > `acquisitionCause`에 `"newConstruction"` 추가 시 기존 `"purchase"` | `"inheritance"` | `"gift"` | `"carryover_gift"` enum에 새 값 추가. Zod 스키마(⑨), AssetForm 타입(①), validate(⑧) 모두 동기화 필요.
 
@@ -143,7 +143,7 @@
   "동반 토지 면적 {companion.area}㎡ → {한도 내 / 한도 초과 X.XX㎡} 판정"
 ```
 
-> `buildingFootprintArea` 필드는 검용주택에서 이미 사용 중(line 588). 신축 케이스에서 **동일 필드 재사용** — 별도 필드 신설 금지. 렌더 조건만 확장.
+> `buildingFootprintArea` 필드는 겸용주택에서 이미 사용 중(line 588). 신축 케이스에서 **동일 필드 재사용** — 별도 필드 신설 금지. 렌더 조건만 확장.
 
 ### 3.6 일체과세 자동 적용 배지 (주택 자산 카드 상단)
 
@@ -386,7 +386,7 @@ const buddoLimit = useMemo(() => {
 - [ ] Zustand selector 무한 루프 방지 패턴 명시됨
 - [ ] 공통 UI 규칙 7개 항목 준수 확인됨
 - [ ] 브라우저 수동 확인 9단계 시나리오 명시됨
-- [ ] `buildingFootprintArea` 중복 정의 방지 — 검용주택 기존 필드 재사용 확인
+- [ ] `buildingFootprintArea` 중복 정의 방지 — 겸용주택 기존 필드 재사용 확인
 - [ ] 수정/신규 파일 목록 완비
 
 ---

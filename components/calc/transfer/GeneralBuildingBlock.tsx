@@ -162,6 +162,8 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
     return n.toLocaleString("ko-KR");
   }
 
+  const isBurdenedGift = asset.transferType === "burdened_gift";
+
   return (
     <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-3">
       <div className="space-y-1">
@@ -172,18 +174,34 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
       </div>
       <div className="space-y-3">
 
-        {/* 시나리오 가이드 — 일반건물 취득 유형 4가지 조합 안내 */}
-        <div className="rounded-lg border border-blue-200 bg-blue-50/40 p-3 text-xs space-y-1.5">
-          <p className="font-semibold text-blue-800">일반건물 — 취득 시나리오 가이드</p>
-          <ul className="text-blue-700 space-y-0.5">
-            <li>• <b>실거래가</b>: 토지·건물 일괄 취득가 입증 가능</li>
-            <li>• <b>환산취득가</b>: 토지+건물 전체 입증 불가, 모두 환산</li>
-            <li>• <b>토지·건물 일괄 (증축분 별도)</b>: 토지·원건물은 실거래가 일괄, 증축분만 환산</li>
-            <li className="text-blue-600 mt-1">
-              • 그 외 4가지 조합 (쌍방+쌍방·일방+쌍방·일방+일방): 위 라디오 1/2 선택 후 증축 토글 ON → 서브 라디오로 증축분 취득방식 선택
-            </li>
-          </ul>
-        </div>
+        {/* 부담부증여 모드 안내 — §159 자동 산정으로 취득가액 산정 방식 라디오/실거래가/증축 토글 모두 숨김 */}
+        {isBurdenedGift && (
+          <div className="rounded-lg border border-fuchsia-300 bg-fuchsia-50/60 p-3 text-xs space-y-1.5">
+            <p className="font-semibold text-fuchsia-900">
+              부담부증여 §159 자동 산정 — 취득가액 산정 방식 선택 불필요
+            </p>
+            <p className="text-fuchsia-800">
+              부담부증여(소득세법 시행령 §159)는 양도가/취득가 모두 <b>채무비율 × 자산별 기준시가</b>로
+              엔진이 자동 산정합니다. 실거래가/환산취득가/증축 모드 선택·일괄 취득가 입력이 모두 무의미하므로
+              아래에는 §159 산식에 필요한 정보(면적·양도시·취득시 기준시가)만 표시됩니다.
+            </p>
+          </div>
+        )}
+
+        {/* 시나리오 가이드 — 일반 양도에서만 표시 (부담부증여 시 §159 강제로 의미 없음) */}
+        {!isBurdenedGift && (
+          <div className="rounded-lg border border-blue-200 bg-blue-50/40 p-3 text-xs space-y-1.5">
+            <p className="font-semibold text-blue-800">일반건물 — 취득 시나리오 가이드</p>
+            <ul className="text-blue-700 space-y-0.5">
+              <li>• <b>실거래가</b>: 토지·건물 일괄 취득가 입증 가능</li>
+              <li>• <b>환산취득가</b>: 토지+건물 전체 입증 불가, 모두 환산</li>
+              <li>• <b>토지·건물 일괄 (증축분 별도)</b>: 토지·원건물은 실거래가 일괄, 증축분만 환산</li>
+              <li className="text-blue-600 mt-1">
+                • 그 외 4가지 조합 (쌍방+쌍방·일방+쌍방·일방+일방): 위 라디오 1/2 선택 후 증축 토글 ON → 서브 라디오로 증축분 취득방식 선택
+              </li>
+            </ul>
+          </div>
+        )}
 
         {/* ① 면적·규모 (sky) — 항상 표시 */}
         <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2">
@@ -238,8 +256,8 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
           </FieldCard>
         </div>
 
-        {/* ③ 취득시 기준시가 (amber) — 환산취득가 모드 OR "토지·건물 일괄 (증축분 별도)" 모드 (일괄 취득가 안분 필요) */}
-        {(isEstimated || asset.gbHasExtension) && (
+        {/* ③ 취득시 기준시가 (amber) — 환산취득가 / 일괄(증축) / 부담부증여(§159①1호 환산) 모드 */}
+        {(isEstimated || asset.gbHasExtension || asset.transferType === "burdened_gift") && (
           <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-2">
             <div className="flex items-center gap-2">
               <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-[10px] font-bold text-amber-800 select-none">③</span>
@@ -265,11 +283,24 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
               <p>토지: 취득시 공시지가 × 토지면적 × 3%</p>
               <p>건물: 취득시 건물기준시가 총액 × 3%</p>
             </div>
+
+            {/* 부담부증여 §159①1호 단서 안내 — 사용자 입력 실거래가 무시 */}
+            {asset.transferType === "burdened_gift" && (
+              <div className="rounded bg-fuchsia-50/60 border border-fuchsia-200 px-3 py-2 text-xs text-fuchsia-800 space-y-0.5">
+                <p className="font-semibold">부담부증여 §159①1호 단서</p>
+                <p>
+                  양도가액이 채무액(=기준시가 모드와 동치)으로 의제되므로
+                  취득가액도 <b>취득시 기준시가 × 채무비율</b>로 환산됩니다.
+                  취득 정보의 <b>실거래가 입력값은 §159 환산 산식에서 무시</b>됩니다.
+                </p>
+              </div>
+            )}
           </div>
         )}
 
-        {/* ⑤ 증축 정보 (amber) — 환산취득가 모드 OR "토지·건물 일괄 (증축분 별도)" 모드에서 표시 */}
-        {(isEstimated || asset.gbHasExtension) && (
+        {/* ⑤ 증축 정보 (amber) — 환산취득가 모드 OR "토지·건물 일괄(증축분 별도)" 모드에서 표시.
+            부담부증여 모드에서는 §159 자동 산정 — 증축 cross-cutting 비스코프이므로 숨김. */}
+        {!isBurdenedGift && (isEstimated || asset.gbHasExtension) && (
           <ToggleCard
             tone="amber"
             variant="card"

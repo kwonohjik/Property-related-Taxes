@@ -190,7 +190,7 @@ export interface TransferSummary {
   totalNecessaryExpense: number;
   netTransferIncome: number;
   estimatedTax: number | null;
-  /** 검용주택 모드 시 입력값으로 즉시 계산되는 미리보기 메타 */
+  /** 겸용주택 모드 시 입력값으로 즉시 계산되는 미리보기 메타 */
   mixedUse?: {
     /** 주택연면적 비율 (0~1) */
     housingRatio: number;
@@ -202,6 +202,21 @@ export interface TransferSummary {
     housingTransferPrice: number | null;
     /** 상가부분 양도가액 (안분 후) — 기준시가 모두 입력된 경우만 */
     commercialTransferPrice: number | null;
+  };
+  /**
+   * 부담부증여 메타 — Phase 2 (2026-05-12)
+   * 사이드바에 명시 라벨로 노출 (silent fallback 금지 원칙 ⑥).
+   * B/C > 1 시 hasOvershoot=true 경고 배지.
+   */
+  burdenedGift?: {
+    /** 인수 채무액 (= §159 양도가액) */
+    assumedDebt: number;
+    /** 채무비율 B/C */
+    debtRatio: number;
+    /** B/C > 1 (초과부담부) — 사이드바 경고 배지 + 다음 버튼 차단 */
+    hasOvershoot: boolean;
+    /** Phase 3: 증여세 결정세액 (수증자 자진납부세액) — result 도착 후 노출 */
+    giftFinalTax?: number;
   };
 }
 
@@ -323,7 +338,7 @@ export function computeTransferSummary(
         ? (result.result.total.totalPayable ?? null)
         : null;
 
-  // 검용주택 모드 — 입력값만으로 산출 가능한 메타
+  // 겸용주택 모드 — 입력값만으로 산출 가능한 메타
   const primary = formData.assets[0];
   let mixedUse: TransferSummary["mixedUse"];
   if (primary?.assetKind === "housing" && primary.isMixedUseHouse) {
@@ -362,6 +377,49 @@ export function computeTransferSummary(
     };
   }
 
+  // ── 부담부증여 메타 (Phase 2, 2026-05-12) ──
+  // 사이드바 ⑥ 동기화: silent fallback 금지 원칙 — 채무액 직접 계산 + 명시 라벨.
+  // B/C > 1 검출 시 hasOvershoot=true (사이드바 amber 배지 + 다음 버튼 차단 신호).
+  let burdenedGift: TransferSummary["burdenedGift"];
+  const isBurdenedGiftMeta = primary?.transferType === "burdened_gift";
+  if (isBurdenedGiftMeta) {
+    const lending = parseRaw(primary!.bgLendingDepositTotal);
+    const mortgage = parseRaw(primary!.bgMortgageDebtAmount);
+    const assumedDebt = lending + mortgage;
+    // 증여가액 C (Max 평가) 추정 — UI 사전 검출용 간이 계산.
+    // 시가 모드 시 marketValueAtTransfer 직접 사용. 기준시가 모드는 단순 보수적 계산.
+    let approxValuation = 0;
+    if (primary!.bgValuationMode === "sangjeungbeop_market") {
+      approxValuation = parseRaw(primary!.bgMarketValueAtTransfer);
+    } else {
+      // 보충적 평가 추정: standardPriceAtTransfer (housing·building·land 단일) + bgMortgageSet/임대 보조
+      const standard = parseRaw(primary!.standardPriceAtTransfer);
+      const annualRent = parseRaw(primary!.bgAnnualRentTotal);
+      const mortgageSet = primary!.bgMortgageSetAmount
+        ? parseRaw(primary!.bgMortgageSetAmount)
+        : mortgage;
+      const rentalCap = annualRent > 0 ? Math.floor(annualRent / 0.12) : 0;
+      const rentalVal = lending + rentalCap;
+      const mortgageVal = lending + mortgageSet;
+      approxValuation = Math.max(standard, mortgageVal, rentalVal);
+    }
+    const debtRatio = approxValuation > 0 ? assumedDebt / approxValuation : 0;
+    // Phase 3: result에서 증여세 결정세액 추출 (도착 후만 노출).
+    // single 모드(housing/land/building/commercial) + bundled 모드(일반건물) 양쪽 지원.
+    const giftFinalTax =
+      result?.mode === "single"
+        ? result.result.transferBurdenedGiftBreakdown?.giftTax?.finalTax
+        : result?.mode === "bundled"
+          ? result.transferBurdenedGiftBreakdown?.giftTax?.finalTax
+          : undefined;
+    burdenedGift = {
+      assumedDebt,
+      debtRatio,
+      hasOvershoot: approxValuation > 0 && assumedDebt > approxValuation,
+      giftFinalTax: giftFinalTax && giftFinalTax > 0 ? giftFinalTax : undefined,
+    };
+  }
+
   return {
     totalSalePrice,
     totalAcqPrice,
@@ -369,5 +427,6 @@ export function computeTransferSummary(
     netTransferIncome: totalSalePrice - totalAcqPrice - totalNecessaryExpense,
     estimatedTax,
     mixedUse,
+    burdenedGift,
   };
 }

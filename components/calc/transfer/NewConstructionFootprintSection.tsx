@@ -12,7 +12,7 @@
  *
  * 렌더 조건:
  *   - acquisitionCause === "newConstruction" 이거나
- *   - isMixedUseHouse === true (검용주택 PHD 재사용 컨텍스트)
+ *   - isMixedUseHouse === true (겸용주택 PHD 재사용 컨텍스트)
  * 단, 이 컴포넌트는 신축주택 케이스 전용으로 호출 측에서 조건 제어.
  *
  * tone: sky (면적·규모 섹션)

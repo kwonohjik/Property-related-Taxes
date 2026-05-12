@@ -22,18 +22,20 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { DateInput } from "@/components/ui/date-input";
 import { CompanionAcqInheritanceBlock } from "./CompanionAcqInheritanceBlock";
 import { CompanionAcqGiftBlock } from "./CompanionAcqGiftBlock";
-import { BurdenedGiftBlock } from "./BurdenedGiftBlock";
+// BurdenedGiftBlock import 제거 — Phase 2 (2026-05-12): TransferModeBlock에서 사용
 import { CarryoverGiftBlock } from "./CarryoverGiftBlock";
 import { InheritedAcquisitionDeemedSection } from "./InheritedAcquisitionDeemedSection";
 import { CompanionAcqPurchaseBlock } from "./CompanionAcqPurchaseBlock";
 
-// ── 토지 취득원인 옵션 (이월과세·부담부증여 포함 5종) ──
+// ── 토지 취득원인 옵션 (이월과세 포함 4종) ──
+// Phase 2 (2026-05-12): 부담부증여는 "양도" 사건이므로 취득원인에서 분리.
+// 별도 TransferModeBlock(양도 정보 카드)에서 transferType 라디오로 선택.
+// 취득원인은 증여자의 당초 취득 정보(매매·상속·증여·이월과세)를 받음.
 const LAND_CAUSE_OPTIONS = [
   { value: "purchase",       label: "매매" },
   { value: "inheritance",    label: "상속" },
   { value: "gift",           label: "증여" },
   { value: "carryover_gift", label: "이월과세(증여)" },
-  { value: "burdened_gift",  label: "부담부증여" },
 ] as const;
 
 // ── 건물 취득원인 옵션 (신축 포함 4종, 예제 정렬) ──
@@ -249,10 +251,10 @@ export function GeneralBuildingAcquisitionCards({ asset, onChange, transferDate 
           />
         )}
 
-        {/* 부담부증여 (소령 §159): BurdenedGiftBlock */}
-        {asset.acquisitionCause === "burdened_gift" && (
-          <BurdenedGiftBlock asset={asset} onChange={onChange} />
-        )}
+        {/*
+         * Phase 2 (2026-05-12): 부담부증여 BurdenedGiftBlock은 TransferModeBlock(양도 정보 카드)로 이동.
+         * 취득 정보 카드에서는 증여자의 당초 취득 정보(매매·상속·증여·이월과세)만 받음.
+         */}
       </div>
 
       {/* ── 🏗 건물 취득 카드 (amber) ── */}

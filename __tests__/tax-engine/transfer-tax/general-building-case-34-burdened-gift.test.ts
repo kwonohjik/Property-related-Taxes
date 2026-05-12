@@ -300,13 +300,71 @@ describe("Max 분기 — 임대평가 채택 (합성)", () => {
 });
 
 // ============================================================
-// 가드 — propertyType !== "general_building" throw
+// 가드 — Phase 2 (2026-05-12): propertyType 확장 + 미지원 차단
 // ============================================================
 
-describe("가드 — Phase 1은 general_building 전용", () => {
-  it("propertyType === 'housing' 일 때 throw", () => {
-    const input = makeCase34Input({ propertyType: "housing" });
-    expect(() => calculateTransferTax(input, rates)).toThrow(/general_building/);
+describe("가드 — Phase 2 propertyType 확장", () => {
+  it("propertyType === 'housing' + 1세대1주택 비충족 → throw 없음 (Phase 2 지원)", () => {
+    // 사례 34 input을 housing으로 변경하되 isOneHousehold=false (다주택 또는 비1세대1주택)
+    // 케이스 4: 부담부증여 + 주택 (다주택 일반)
+    const input: TransferTaxInput = {
+      ...makeCase34Input({ propertyType: "housing" }),
+      isOneHousehold: false,
+    };
+    expect(() => calculateTransferTax(input, rates)).not.toThrow();
+  });
+
+  it("propertyType === 'commercial_building' 회귀 (F-3, 2026-05-12): Phase 2 비스코프 해제 → throw 없음", () => {
+    // F-3 (2026-05-12): commercial_building 부담부증여 지원 추가. 본 테스트는 회귀로 변경.
+    // 산출세액 anchor는 burdened-gift-commercial.test.ts.
+    const input = makeCase34Input({ propertyType: "commercial_building" });
+    expect(() => calculateTransferTax(input, rates)).not.toThrow();
+  });
+
+  it("propertyType === 'presale_right' (분양권) → 미지원 throw (F-3 경계 검증)", () => {
+    // F-3에서 commercial_building까지 확장. 분양권·입주권 등은 여전히 미지원.
+    const input = makeCase34Input({ propertyType: "presale_right" });
+    expect(() => calculateTransferTax(input, rates)).toThrow(/주택·토지·건물·일반건물·상업용건물|미지원/);
+  });
+
+  it("케이스 5-a 회귀 (F-1, 2026-05-12): 1세대1주택 + 12억 초과 부담부증여 → 해석 B 적용으로 정상 진행", () => {
+    // D-0-2 해석 B 적용 — burdenedGiftDenominator = giftValuation C로 12억 안분.
+    // 가드 throw 제거됨 (assertBurdenedGiftEligible). 산출세액 anchor는 burdened-gift-housing.test.ts.
+    const input: TransferTaxInput = {
+      ...makeCase34Input({ propertyType: "housing" }),
+      isOneHousehold: true,
+    };
+    expect(() => calculateTransferTax(input, rates)).not.toThrow();
+  });
+});
+
+// ============================================================
+// 케이스 11 — 초과부담부 (B/C > 1) fail-fast
+// ============================================================
+
+describe("케이스 11 — 초과부담부 검출 (B/C > 1)", () => {
+  it("채무액(B) > 증여가액(C) 시 EXCESS_BURDENED_GIFT throw", () => {
+    // §159 산식 구조상 mortgageSet 자동 fallback (= mortgageDebt) 시 mortgageVal ≥ assumedDebt가 항상 성립.
+    // 따라서 overshoot 검출 가능 조건: 명시 mortgageSetAmount < mortgageDebtAmount + supplementary·rental 도 작음.
+    // 실무 시나리오: (근)저당 설정액(100M) < 실제 차입금 잔액(1B), 평가 모드는 시가로 작게 설정.
+    const input = makeCase34Input({
+      burdenedGiftInfo: {
+        valuationMode: "sangjeungbeop_market",
+        lendingDepositTotal: 0,
+        mortgageDebtAmount: 1_000_000_000, // B
+        annualRentTotal: 0,
+        mortgageSetAmount: 100_000_000, // mortgageSet < mortgageDebt
+        marketValueAtTransfer: 100_000_000, // C 매우 작음
+        marketValueAtAcquisition: 100_000_000,
+        landStdPriceAtTransfer: 0,
+        buildingStdPriceAtTransfer: 0,
+        landStdPriceAtAcquisition: 0,
+        buildingStdPriceAtAcquisition: 0,
+      },
+    });
+    // 검산: assumedDebt = 1B / mortgageVal = 0+100M = 100M / rentalVal = 0 / supplementary(market) = 100M
+    //       giftValuation = max = 100M, B/C = 10.0 > 1 → throw
+    expect(() => calculateTransferTax(input, rates)).toThrow(/EXCESS_BURDENED_GIFT/);
   });
 });
 

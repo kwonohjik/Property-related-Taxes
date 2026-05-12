@@ -1,10 +1,10 @@
 "use client";
 
 /**
- * 검용주택 — 보유 중 일부 용도변경 입력 섹션
+ * 겸용주택 — 보유 중 일부 용도변경 입력 섹션
  *
  * 시행령 §166⑥ + 양도소득세 집행기준 99-164-10 (재산-1384, 2009.7.8.).
- * 양도시 검용이지만 취득시 단일 용도였던 경우 입력 UI.
+ * 양도시 겸용이지만 취득시 단일 용도였던 경우 입력 UI.
  *
  * 마운트 조건: asset.isMixedUseHouse === true && asset.hasPartialUsageChange === true.
  * MixedUseExpandedPanel에서 ① MixedUseAreaInputs 직후 "1-A" 섹션으로 노출.

@@ -23,11 +23,11 @@ export interface PreHousingDisclosureInput {
   firstDisclosureDate: Date;
   /** 최초 고시 개별주택가격 P_F (원) */
   firstDisclosureHousingPrice: number;
-  /** 토지 면적 (㎡) — 시점별 분리 미사용 시(검용주택 단일면적·일반 PHD) 3시점 모두 이 값 사용 */
+  /** 토지 면적 (㎡) — 시점별 분리 미사용 시(겸용주택 단일면적·일반 PHD) 3시점 모두 이 값 사용 */
   landArea: number;
 
   /**
-   * 시점별 토지면적 override (선택). 검용주택 + 보유 중 일부 용도변경 케이스에서만 사용.
+   * 시점별 토지면적 override (선택). 겸용주택 + 보유 중 일부 용도변경 케이스에서만 사용.
    * 미제공 시 `landArea` 단일값을 3시점 모두에 적용 (backward compat).
    * 제공 시 해당 시점의 토지기준시가 산출에 우선 적용.
    */
@@ -53,7 +53,7 @@ export interface PreHousingDisclosureInput {
   buildingStdPriceAtTransfer: number;
 
   /**
-   * Case A 4부분 안분 모드 (검용주택 + 보유 중 일부 용도변경 + 최초공시일 < 용도변경일).
+   * Case A 4부분 안분 모드 (겸용주택 + 보유 중 일부 용도변경 + 최초공시일 < 용도변경일).
    * 취득시·최초공시 시점에 건물 전체가 주택이었지만 양도시 일부가 상가로 변경된 경우.
    *
    * 아래 commercial 4필드 + housingLandArea*·commercialLandArea* 모두 충족 시에만 4부분 안분 활성화.
@@ -138,7 +138,7 @@ export interface PreHousingDisclosureResult {
     totalTransferPrice: number;
     /** 토지 면적 (㎡) — 단일면적 모드에서 3시점에 모두 적용된 값 */
     landArea: number;
-    /** 시점별 면적 (검용주택+용도변경 케이스). 단일면적 모드면 모두 landArea와 동일 */
+    /** 시점별 면적 (겸용주택+용도변경 케이스). 단일면적 모드면 모두 landArea와 동일 */
     landAreaAtAcquisition: number;
     landAreaAtFirstDisclosure: number;
     landAreaAtTransfer: number;
@@ -161,7 +161,7 @@ export interface PreHousingDisclosureResult {
   };
 
   /**
-   * Case A 4부분 안분 결과 (검용주택 + 보유 중 일부 용도변경(주택→상가) + 최초공시일 < 용도변경일).
+   * Case A 4부분 안분 결과 (겸용주택 + 보유 중 일부 용도변경(주택→상가) + 최초공시일 < 용도변경일).
    * 입력에 commercialBuildingStdPriceAt* + housing/commercialLandArea + totalTransferPriceForFourPart 모두 충족 시 산출.
    * 미사용 시 undefined.
    *

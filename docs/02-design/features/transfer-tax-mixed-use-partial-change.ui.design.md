@@ -1,4 +1,4 @@
-# Design: 검용주택 — 보유 중 일부 용도변경 (UI Components·Result Card)
+# Design: 겸용주택 — 보유 중 일부 용도변경 (UI Components·Result Card)
 
 **Main Doc**: `transfer-tax-mixed-use-partial-change.design.md`
 **작성일**: 2026-04-30
@@ -10,9 +10,9 @@
 
 ```
 [자산 카드 — assetKind === "housing"]
-  └─ [검용주택 분리계산 토글] ── ON ──┐
+  └─ [겸용주택 분리계산 토글] ── ON ──┐
                                   │
-  └─ [보유 중 일부 용도변경 토글] ────┴── disabled (검용주택 OFF 시)
+  └─ [보유 중 일부 용도변경 토글] ────┴── disabled (겸용주택 OFF 시)
                                   │
                                   └── ON ──┐
                                             │
@@ -55,10 +55,10 @@
 export function MixedUseToggleRow({ asset, onChange }: Pick<Props, "asset" | "onChange">) {
   return (
     <div className="mt-4 border-t pt-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
-      {/* 좌측: 기존 검용주택 토글 — 변경 없음 */}
+      {/* 좌측: 기존 겸용주택 토글 — 변경 없음 */}
       <ToggleCard
         tone="amber"
-        title="검용주택 분리계산"
+        title="겸용주택 분리계산"
         description="주택+상가 복합건물 (§160①단서)"
         checked={!!asset.isMixedUseHouse}
         onCheckedChange={(checked) => {
@@ -76,7 +76,7 @@ export function MixedUseToggleRow({ asset, onChange }: Pick<Props, "asset" | "on
         description="취득시 자산 구성이 양도시와 다른 경우 (§166⑥ + 집행기준 99-164-10)"
         checked={!!asset.hasPartialUsageChange}
         disabled={!asset.isMixedUseHouse}
-        disabledReason="검용주택 분리계산 활성화 시 사용 가능"
+        disabledReason="겸용주택 분리계산 활성화 시 사용 가능"
         onCheckedChange={(checked) => {
           onChange({
             hasPartialUsageChange: checked,
@@ -94,7 +94,7 @@ export function MixedUseToggleRow({ asset, onChange }: Pick<Props, "asset" | "on
 **디자인 결정**:
 - tone amber 통일 (취득·분리계산 모드)
 - 모바일(`<sm`)에서는 stack, 데스크톱에서는 2-column
-- `disabled={!asset.isMixedUseHouse}` — 검용주택 토글 OFF 시 비활성. `disabledReason` 으로 사유 안내 (ToggleCard 내장 hover 표시)
+- `disabled={!asset.isMixedUseHouse}` — 겸용주택 토글 OFF 시 비활성. `disabledReason` 으로 사유 안내 (ToggleCard 내장 hover 표시)
 - 기본 direction은 `house_to_commercial` (PDF 갑氏 케이스가 더 흔한 시나리오)
 
 ---
@@ -504,9 +504,9 @@ const APPORTION_CAPTIONS = {
 ```tsx
 const PARTIAL_USAGE_CHANGE_REASONS = {
   house_to_commercial:
-    "양도시점에는 검용주택이나 취득시점에는 전체 주택이었으므로 시행령 §166⑥ 및 양도소득세 집행기준 99-164-10에 따라 환산취득가 산정 시 취득시 개별주택공시가격을 양도시 면적비율로 안분",
+    "양도시점에는 겸용주택이나 취득시점에는 전체 주택이었으므로 시행령 §166⑥ 및 양도소득세 집행기준 99-164-10에 따라 환산취득가 산정 시 취득시 개별주택공시가격을 양도시 면적비율로 안분",
   commercial_to_house:
-    "양도시점에는 검용주택이나 취득시점에는 전체 상가였으므로 시행령 §166⑥에 따라 환산취득가 산정 시 취득시 상가 기준시가(건물+토지)를 양도시 면적비율로 안분 — 직접 사례 제한적, 보수 검토 필요",
+    "양도시점에는 겸용주택이나 취득시점에는 전체 상가였으므로 시행령 §166⑥에 따라 환산취득가 산정 시 취득시 상가 기준시가(건물+토지)를 양도시 면적비율로 안분 — 직접 사례 제한적, 보수 검토 필요",
 } as const;
 ```
 
@@ -534,8 +534,8 @@ const PARTIAL_USAGE_CHANGE_REASONS = {
 
 | 상태 | 토글 위치 | UI 표시 |
 |---|---|---|
-| 검용주택 OFF | 좌측 토글 OFF | 우측 토글 disabled (회색 + reason hover) |
-| 검용주택 ON, 용도변경 OFF | 좌측 ON, 우측 OFF | MixedUseExpandedPanel 노출 (기존), PartialUsageChangeInputs 미노출 |
+| 겸용주택 OFF | 좌측 토글 OFF | 우측 토글 disabled (회색 + reason hover) |
+| 겸용주택 ON, 용도변경 OFF | 좌측 ON, 우측 OFF | MixedUseExpandedPanel 노출 (기존), PartialUsageChangeInputs 미노출 |
 | 둘 다 ON, direction 미선택 | 좌측 ON, 우측 ON | PartialUsageChangeInputs 노출, 디폴트 direction 적용. API 매핑에서 명시적 throw |
 | house_to_commercial 선택 | 우측 ON, Select = "취득시 전체 주택" | 취득시 카드의 상가건물·공시지가 hidden + 안내 박스 |
 | commercial_to_house 선택 | 우측 ON, Select = "취득시 전체 상가" | 취득시 카드의 개별주택공시가격 hidden, PHD 경고 + 안내 박스. 결과 카드에 보수 검토 배지 |
@@ -558,11 +558,11 @@ const PARTIAL_USAGE_CHANGE_REASONS = {
 
 ### 10-A. 🚨 Critical — 1세대 1주택 비과세 적용 표시 (다주택자)
 
-**문제**: 검용주택 모듈은 주택분 12억 이하면 자동 비과세. 갑氏(2주택자)는 비과세 미적용이지만 사용자가 어디서 "다주택자" 선택하는지 불명확.
+**문제**: 겸용주택 모듈은 주택분 12억 이하면 자동 비과세. 갑氏(2주택자)는 비과세 미적용이지만 사용자가 어디서 "다주택자" 선택하는지 불명확.
 
 **해결**:
 1. **자산 카드의 기존 `isOneHousehold` 토글 활용** — `AssetForm.isOneHousehold: boolean`(L235)이 이미 존재. 양도세 마법사 자산 카드 어딘가에 토글이 있어야 함.
-2. **검용주택 확장 패널 상단에 1세대1주택 충족 여부 안내 박스 추가**:
+2. **겸용주택 확장 패널 상단에 1세대1주택 충족 여부 안내 박스 추가**:
    ```tsx
    {asset.isMixedUseHouse && (
      <div className={`rounded-md px-3 py-2 text-xs border ${
@@ -681,7 +681,7 @@ const PARTIAL_USAGE_CHANGE_REASONS = {
 
 #### 10-B-5. 토지·건물 취득일 동일 입력 안내
 
-검용주택 + 의제취득 조합 시 "토지·건물 취득일 다름" 토글이 OFF여야 함을 안내. `CompanionAcqPurchaseBlock.tsx`에 조건 안내 추가:
+겸용주택 + 의제취득 조합 시 "토지·건물 취득일 다름" 토글이 OFF여야 함을 안내. `CompanionAcqPurchaseBlock.tsx`에 조건 안내 추가:
 
 ```tsx
 {isDeemedAcq && asset.hasSeperateLandAcquisitionDate && (
@@ -717,7 +717,7 @@ const PARTIAL_USAGE_CHANGE_REASONS = {
 | 양도가액 1,300,000,000 | Step1 폼-전역 양도가액 | `contractTotalPrice` |
 | 1세대 1주택 비과세 미적용 (2주택자) | 자산 카드 — 1세대 1주택 토글 | `asset.isOneHousehold = false` ⚠ Critical |
 | 의제취득일 1985.1.1 | 자산 카드 — 취득일 (의제취득 안내) | `asset.acquisitionDate = "1985-01-01"` |
-| 검용주택 활성화 | 자산 카드 토글 | `asset.isMixedUseHouse = true` |
+| 겸용주택 활성화 | 자산 카드 토글 | `asset.isMixedUseHouse = true` |
 | 보유 중 일부 용도변경 활성화 | 자산 카드 토글 (신규) | `asset.hasPartialUsageChange = true` |
 | 방향 = 취득시 전체 주택 | PartialUsageChangeInputs Select | `asset.partialChangeDirection = "house_to_commercial"` |
 | 양도시 주택 37.79㎡ | MixedUseAreaInputs | `asset.residentialFloorArea = "37.79"` |
@@ -742,7 +742,7 @@ const PARTIAL_USAGE_CHANGE_REASONS = {
 
 ### 11-A. 본 PR 핵심 (보유 중 일부 용도변경)
 - [ ] `MixedUseToggleRow` grid-cols-2 — 모바일 stack, 데스크톱 2열
-- [ ] 새 토글 disabled 가드 — 검용주택 OFF 시 회색 + reason hover
+- [ ] 새 토글 disabled 가드 — 겸용주택 OFF 시 회색 + reason hover
 - [ ] `PartialUsageChangeInputs` 신규 — Select 라벨 명확 (양도시점 혼동 방지)
 - [ ] 자동 면적 표시 + "수정됨" 라벨 동적 갱신
 - [ ] 증축/멸실 안내 박스 항상 노출
@@ -755,7 +755,7 @@ const PARTIAL_USAGE_CHANGE_REASONS = {
 - [ ] 800줄 정책 — `PartialUsageChangeInputs.tsx` ≤ 200줄, 기타 수정 파일 800줄 이하 유지
 
 ### 11-B. 누락 보강 (10절)
-- [ ] **Critical** — 1세대 1주택 비과세 안내 박스 (10-A): 검용주택 패널 상단에 emerald/amber 박스
+- [ ] **Critical** — 1세대 1주택 비과세 안내 박스 (10-A): 겸용주택 패널 상단에 emerald/amber 박스
 - [ ] **Critical** — 결과 카드에 "1세대 1주택 비과세 적용 여부" 라벨 표시
 - [ ] 양도시 상가건물 기준시가 hint 보강 — "국세청 홈택스" 안내 (10-B-1)
 - [ ] PHD 1985 의제취득 — 1990년 공시지가 사용 안내 박스 (10-B-2)
@@ -766,6 +766,6 @@ const PARTIAL_USAGE_CHANGE_REASONS = {
 - [ ] PDF 갑氏 입력 흐름 매핑표를 마법사 도움말 또는 결과 화면에 노출 (10-C)
 
 ### 11-C. 회귀
-- [ ] 기존 검용주택 사례14 (1세대1주택, 12억 비과세) 결과 동일
+- [ ] 기존 겸용주택 사례14 (1세대1주택, 12억 비과세) 결과 동일
 - [ ] `isOneHousehold = true` (기존 디폴트) 시 기존 동작 유지
 - [ ] sessionStorage·DB 영속화 호환 — 기존 이력 로드 시 토글 OFF 기본값

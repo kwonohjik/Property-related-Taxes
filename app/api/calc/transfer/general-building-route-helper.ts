@@ -23,6 +23,8 @@ import type { ZoneType } from "@/lib/tax-engine/non-business-land/types";
 import { TaxCalculationError, TaxErrorCode } from "@/lib/tax-engine/tax-errors";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import type { AssetCardForAggregate } from "@/lib/tax-engine/general-building-valuation";
+import { buildBurdenedGiftBreakdown } from "@/lib/tax-engine/burdened-gift-apportionment";
+import type { BurdenedGiftInfo } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
 
 /** 라우트가 받는 환산취득가 payload (Zod 통과 후 + Date 변환 포함). */
 export type GeneralBuildingValuationPayload = GeneralBuildingInput;
@@ -41,6 +43,16 @@ export interface GeneralBuildingActualPricePayload {
   isUnregistered?: boolean;
   actualAcquisitionPrice: number;
   actualExpenses: number;
+  /** 부담부증여 §159①1호 산식용 — 취득시 토지 ㎡당 기준시가. 부담부증여 모드 시 필수. */
+  acquisitionLandPricePerSqm?: number;
+  /** 부담부증여 §159①1호 산식용 — 취득시 건물 기준시가 총액. 부담부증여 모드 시 필수. */
+  acquisitionBuildingStdPrice?: number;
+  /**
+   * 부담부증여 정보 (소령 §159).
+   * 제공 시 §159①1호 단서에 따라 사용자 입력 actualAcquisitionPrice를 무시하고
+   * 취득시 기준시가 × 채무비율로 환산.
+   */
+  burdenedGiftInfo?: BurdenedGiftInfo;
 }
 
 interface BundledLikeApportionmentResult {
@@ -66,6 +78,8 @@ interface BundledLikeApportionmentResult {
 export interface GeneralBuildingRouteResult {
   apportionment: BundledLikeApportionmentResult;
   aggregated: AggregateTransferResult;
+  /** 부담부증여 §159 산정 명세 (부담부증여 모드에서만 채워짐 — 증여세 통합 결과 포함). */
+  transferBurdenedGiftBreakdown?: import("@/lib/tax-engine/types/transfer-burdened-gift.types").TransferBurdenedGiftBreakdown;
 }
 
 // ── 공통 헬퍼 ──────────────────────────────────────────────────────────
@@ -197,6 +211,8 @@ export function dispatchGeneralBuilding(
   annualBasicDeductionUsed: number | undefined,
   priorReductionUsage: unknown[],
   rates: TaxRatesMap,
+  /** 부담부증여 §159 정보 (옵션) — actualPriceMode 분기에서만 사용. */
+  burdenedGiftInfo?: BurdenedGiftInfo,
 ): GeneralBuildingRouteResult {
   // buildingAcquisitionDate: Zod는 z.string().date()로만 검증 — Date 객체로 변환 안 됨.
   // 미변환 시 string이 buildGeneralBuildingAssetCards()의 acquisitionDate에 도달 →
@@ -262,6 +278,10 @@ export function dispatchGeneralBuilding(
         isUnregistered: coercedGbRaw.isUnregistered as boolean | undefined,
         actualAcquisitionPrice,
         actualExpenses,
+        // 부담부증여 §159①1호 — 취득시 기준시가 + 채무 정보 전달
+        acquisitionLandPricePerSqm: coercedGbRaw.acquisitionLandPricePerSqm as number | undefined,
+        acquisitionBuildingStdPrice: coercedGbRaw.acquisitionBuildingStdPrice as number | undefined,
+        burdenedGiftInfo,
       },
       taxYear, annualBasicDeductionUsed, priorReductionUsage, rates,
     );
@@ -366,6 +386,8 @@ export function calculateGeneralBuildingActualTransfer(
     transferLandPricePerSqm, transferBuildingStdPrice,
     zoneType, isMetropolitan = false, isUnregistered = false,
     actualAcquisitionPrice, actualExpenses,
+    acquisitionLandPricePerSqm, acquisitionBuildingStdPrice,
+    burdenedGiftInfo,
   } = payload;
 
   // §166⑥ 안분 비율
@@ -376,12 +398,50 @@ export function calculateGeneralBuildingActualTransfer(
 
   const landRatioNum = landStdAtTransfer / totalStd; // 연속 부동소수 계산용
 
-  const landTransfer = Math.floor(totalTransferPrice * landRatioNum);
-  const buildingTransfer = totalTransferPrice - landTransfer;
-  const landAcq = Math.floor(actualAcquisitionPrice * landRatioNum);
-  const buildingAcq = actualAcquisitionPrice - landAcq;
-  const landExp = Math.floor(actualExpenses * landRatioNum);
-  const buildingExp = actualExpenses - landExp;
+  // 부담부증여 §159①1호 분기 — 사용자 입력 actualAcquisitionPrice 무시,
+  // 자산별 양도가/취득가/개산공제를 채무비율로 환산.
+  // §159①1호 단서: "양도가액을 §99 기준시가로 산정한 경우 취득가액도 §99 기준시가로 산정".
+  // 부담부증여는 채무액 자체가 양도가액이므로 기준시가 모드와 동치.
+  let landTransfer: number;
+  let buildingTransfer: number;
+  let landAcq: number;
+  let buildingAcq: number;
+  let landExp: number;
+  let buildingExp: number;
+  let transferBurdenedGiftBreakdown:
+    | import("@/lib/tax-engine/types/transfer-burdened-gift.types").TransferBurdenedGiftBreakdown
+    | undefined;
+
+  if (burdenedGiftInfo) {
+    if (!acquisitionLandPricePerSqm || !acquisitionBuildingStdPrice) {
+      throw new TaxCalculationError(
+        TaxErrorCode.INVALID_INPUT,
+        "일반건물 부담부증여(§159①1호): 취득시 토지·건물 기준시가가 필요합니다.",
+      );
+    }
+    const breakdown = buildBurdenedGiftBreakdown({
+      landStdPriceAtTransfer: landStdAtTransfer,
+      buildingStdPriceAtTransfer: transferBuildingStdPrice,
+      landStdPriceAtAcquisition: acquisitionLandPricePerSqm * landArea,
+      buildingStdPriceAtAcquisition: acquisitionBuildingStdPrice,
+      info: burdenedGiftInfo,
+      giftDate: transferDate, // 증여일 = 양도일 (의제)
+    });
+    landTransfer = breakdown.perAsset.land.transferPrice;
+    buildingTransfer = breakdown.perAsset.building.transferPrice;
+    landAcq = breakdown.perAsset.land.acquisitionPrice;
+    buildingAcq = breakdown.perAsset.building.acquisitionPrice;
+    landExp = breakdown.perAsset.land.estimatedDeduction; // §163⑥ 개산공제 (3%)
+    buildingExp = breakdown.perAsset.building.estimatedDeduction;
+    transferBurdenedGiftBreakdown = breakdown; // 증여세 통합 결과 포함 — UI 노출용
+  } else {
+    landTransfer = Math.floor(totalTransferPrice * landRatioNum);
+    buildingTransfer = totalTransferPrice - landTransfer;
+    landAcq = Math.floor(actualAcquisitionPrice * landRatioNum);
+    buildingAcq = actualAcquisitionPrice - landAcq;
+    landExp = Math.floor(actualExpenses * landRatioNum);
+    buildingExp = actualExpenses - landExp;
+  }
 
   // NBL 판정
   let nonBusinessArea = 0;
@@ -462,5 +522,5 @@ export function calculateGeneralBuildingActualTransfer(
     "소득세법 시행령 §166⑥ · §104의3",
   );
 
-  return { apportionment, aggregated };
+  return { apportionment, aggregated, transferBurdenedGiftBreakdown };
 }

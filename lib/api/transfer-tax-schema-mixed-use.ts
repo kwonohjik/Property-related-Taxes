@@ -1,11 +1,11 @@
 /**
- * 검용주택(혼합용도주택) 분리계산 Zod 스키마
+ * 겸용주택(혼합용도주택) 분리계산 Zod 스키마
  * transfer-tax-schema-sub.ts 800줄 정책에 따라 분리 (2026-05-08).
  */
 
 import { z } from "zod";
 // preHousingDisclosureSchema를 직접 참조하면 순환 참조 발생 — 필요 필드만 인라인으로 정의
-// 검용주택 PHD는 landArea를 omit하므로 최소 필드만 포함한 별도 정의 사용.
+// 겸용주택 PHD는 landArea를 omit하므로 최소 필드만 포함한 별도 정의 사용.
 
 const phdForMixedUseSchema = z.object({
   firstDisclosureDate: z.string().date(),
@@ -26,7 +26,7 @@ const phdForMixedUseSchema = z.object({
   totalTransferPriceForFourPart: z.number().int().nonnegative().optional(),
 });
 
-// ─── 검용주택 분리계산 Zod 스키마 ─────────────────────────────────
+// ─── 겸용주택 분리계산 Zod 스키마 ─────────────────────────────────
 
 const mixedUseStandardPriceSchema = z.object({
   housingPrice: z.number().int().nonnegative(),
@@ -47,7 +47,7 @@ export const mixedUseAssetSchema = z.object({
     housingPrice: z.number().int().nonnegative().optional(),
   }),
   usePreHousingDisclosure: z.boolean().optional(),
-  /** PHD 3-시점 환산 입력 (검용주택 모드 전용). landArea는 엔진이 주택부수토지로 자동 주입. */
+  /** PHD 3-시점 환산 입력 (겸용주택 모드 전용). landArea는 엔진이 주택부수토지로 자동 주입. */
   preHousingDisclosure: phdForMixedUseSchema.optional(),
   residencePeriodYears: z.number().nonnegative(),
   isMetropolitanArea: z.boolean().optional(),

@@ -29,6 +29,8 @@ export type BundledTransferResult = {
   mode: "bundled";
   apportionment: BundledApportionmentResult;
   aggregated: AggregateTransferResult;
+  /** 부담부증여 §159·증여세 통합 명세 (일반건물 + 부담부증여 모드에서만 포함). */
+  transferBurdenedGiftBreakdown?: import("@/lib/tax-engine/types/transfer-burdened-gift.types").TransferBurdenedGiftBreakdown;
 };
 export type MixedUseTransferResult = { mode: "mixed-use"; result: MixedUseGainBreakdown };
 export type TransferAPIResult = SingleTransferResult | BundledTransferResult | MixedUseTransferResult;
@@ -127,10 +129,15 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     ? buildGeneralBuildingValuation(primary)
     : undefined;
 
-  // ⑬ 부담부증여 (소령 §159) — sibling 격리
-  const bgInfo = primary.acquisitionCause === "burdened_gift" && isGeneralBuilding ? buildBurdenedGiftInfo(primary) : undefined;
+  // ⑬ 부담부증여 (소령 §159) — Phase 2 (2026-05-12): transferType 분기 + 모든 propertyType 지원
+  // 호환성: 레거시 acquisitionCause === "burdened_gift"는 normalize에서 transferType로 이전되나
+  //         혹시 누락된 경우 OR 조건으로 fallback.
+  const isBurdenedGift =
+    primary.transferType === "burdened_gift" ||
+    primary.acquisitionCause === "burdened_gift";
+  const bgInfo = isBurdenedGift ? buildBurdenedGiftInfo(primary) : undefined;
 
-  // 검용주택 분리계산 payload 빌드
+  // 겸용주택 분리계산 payload 빌드
   const isMixed = primary.assetKind === "housing" && primary.isMixedUseHouse;
 
   // 🚨 이슈 8: silent skip 방지 — 토글 ON & direction 미선택 시 명시적 throw
@@ -176,7 +183,7 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     // PHD 페이로드는 모든 필수 필드(.positive() 제약)가 채워졌을 때만 전송.
     // 누락 시 schema의 z.number().int().positive() 검증에서 0으로 실패하기 때문.
     preHousingDisclosure: (() => {
-      // 검용주택 PHD: phdLandPricePerSqm* 미설정 시 섹션 2의 mixed 값으로 fallback
+      // 겸용주택 PHD: phdLandPricePerSqm* 미설정 시 섹션 2의 mixed 값으로 fallback
       const landSqmAtAcq =
         parseAmount(primary.phdLandPricePerSqmAtAcq) ||
         parseAmount(primary.mixedAcqLandPricePerSqm);
@@ -212,7 +219,7 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
               : {}),
             // Case A 4부분 안분 — 취득시·최초공시 상가건물 기준시가 + 총양도가액 함께 충족 시 활성화.
             // 취득시 상가건물은 메인 mixedAcqCommercialBuildingPrice fallback 인식 (UI 통합 후 단일 필드).
-            // 최초공시 상가건물은 PHD-only 필드 (일반 검용주택 흐름에 없음).
+            // 최초공시 상가건물은 PHD-only 필드 (일반 겸용주택 흐름에 없음).
             ...((parseAmount(primary.phdCommercialBuildingStdPriceAtAcq) ||
                  parseAmount(primary.mixedAcqCommercialBuildingPrice)) > 0 &&
                 parseAmount(primary.phdCommercialBuildingStdPriceAtFirst) > 0
@@ -271,15 +278,25 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
         ? applyRatio(formTotalTransferExpense, primaryRatio)
         : formTotalTransferExpense; // 단독 모드: form-level이 있으면 사용, 없으면 0
 
+  // 부담부증여 (소령 §159) — 양도가액은 엔진 STEP 0.48에서 채무 안분 후 자동 override.
+  // 단, Zod schema는 transferPrice >0 요구이므로 채무 합계를 placeholder로 전달 (엔진에서 다시 계산).
+  const isBurdenedGiftPrimary = primary.transferType === "burdened_gift";
+  const burdenedGiftPlaceholderTransferPrice = isBurdenedGiftPrimary
+    ? (parseAmount(primary.bgLendingDepositTotal) || 0) +
+      (parseAmount(primary.bgMortgageDebtAmount) || 0)
+    : 0;
+
   const body = {
     // commercial_building/general_building은 그대로 송신 — 엔진 진입 조건 충족
     // 추가로 서브객체(commercialBuildingValuation/generalBuildingValuation)로 환산취득가 데이터 전달
     propertyType: isMixed
       ? ("mixed-use-house" as const)
       : (primary.assetKind as "housing" | "land" | "building" | "right_to_move_in" | "presale_right" | "commercial_building" | "general_building"),
-    transferPrice: primaryFractional
-      ? applyRatio(totalContractPrice, primaryRatio)
-      : totalContractPrice,
+    transferPrice: isBurdenedGiftPrimary
+      ? burdenedGiftPlaceholderTransferPrice
+      : primaryFractional
+        ? applyRatio(totalContractPrice, primaryRatio)
+        : totalContractPrice,
     /** 12억 안분 분모용 총 물건 양도가액 — primary 지분 모드 전용 */
     totalPropertyTransferPrice: primaryFractional ? totalContractPrice : undefined,
     transferDate: form.transferDate,
@@ -318,7 +335,7 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
       (parseAmount(primary.capitalExpenditure) || primaryEffectiveTransferExpense)
         ? primaryEffectiveTransferExpense || undefined
         : undefined,
-    // 검용주택은 calcMixedUseTransferTax 별도 엔진에서 처리 → 일반 환산 검증 우회 위해 false 송신
+    // 겸용주택은 calcMixedUseTransferTax 별도 엔진에서 처리 → 일반 환산 검증 우회 위해 false 송신
     // 상업용건물·일반건물 환산 모드는 STEP 0.35 진입 조건이 useEstimatedAcquisition === true 이므로 true 송신
     useEstimatedAcquisition: hasPre1990 || parcelModeActive || isMixed ? false
       : isCommercialBuilding ? primary.useEstimatedAcquisition
@@ -395,6 +412,10 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
         ? primary.isSuccessorRightToMoveIn
         : undefined,
     acquisitionCause: primary.acquisitionCause,
+    // ⑬ Phase 2 (2026-05-12): transferType 패스스루 — TypeScript 미감지 영역 (ui-engine-sync-checker 발견)
+    // 부담부증여 분기 활성화에 필수. body에 미포함 시 Zod parse → undefined → 엔진 isBurdenedGiftEngine=false
+    // → §159 분기 비활성 → 일반 양도로 잘못 계산됨.
+    transferType: primary.transferType || undefined,
     decedentAcquisitionDate:
       primary.acquisitionCause === "inheritance" && primary.decedentAcquisitionDate
         ? primary.decedentAcquisitionDate
@@ -511,7 +532,7 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
         }
       : {}),
     // ── 개별주택가격 미공시 취득 환산 §164⑤ (일반 자산 전용) ──
-    // 검용주택은 mixedUse.preHousingDisclosure에서 별도 전송하므로 여기 송신 금지.
+    // 겸용주택은 mixedUse.preHousingDisclosure에서 별도 전송하므로 여기 송신 금지.
     // hasSeperateLandAcquisitionDate 무관 — 취득일 동일(공동주택 사례 23 등)도 PHD 전송.
     ...(!isMixed &&
     primary.usePreHousingDisclosure &&
@@ -625,7 +646,7 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
           };
         })()
       : {}),
-    // 검용주택 분리계산 입력
+    // 겸용주택 분리계산 입력
     ...(mixedUsePayload ? { mixedUse: mixedUsePayload } : {}),
     // 배우자등 이월과세 (§97조의2)
     ...(primary.acquisitionCause === "carryover_gift" && primary.carryover

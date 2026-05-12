@@ -1,4 +1,4 @@
-# Design: 검용주택 — 보유 중 일부 용도변경 (Engine·API·Test)
+# Design: 겸용주택 — 보유 중 일부 용도변경 (Engine·API·Test)
 
 **Main Doc**: `transfer-tax-mixed-use-partial-change.design.md`
 **작성일**: 2026-04-30
@@ -26,9 +26,9 @@
 
 ```ts
 export interface MixedUseAssetInput {
-  // ... 기존 13필드 (검용주택 본체)
+  // ... 기존 13필드 (겸용주택 본체)
 
-  /** 보유 중 일부 용도변경 옵션 — 양도시 검용이지만 취득시 단일 용도였던 경우 */
+  /** 보유 중 일부 용도변경 옵션 — 양도시 겸용이지만 취득시 단일 용도였던 경우 */
   partialUsageChange?: {
     /** house_to_commercial: 취득시 전체 주택 → 양도시 일부 상가화 (PDF 갑氏)
      *  commercial_to_house: 취득시 전체 상가 → 양도시 일부 주택화 (미러) */
@@ -162,7 +162,7 @@ if (userBuildingStd <= 0 || userLandPerSqm <= 0) {
       "취득 당시 동일 건물의 국세청 고시 기준시가를 직접 조회·입력해야 합니다.",
     );
   }
-  throw new Error("검용주택: 취득시 상가건물 기준시가와 개별공시지가를 모두 입력하세요.");
+  throw new Error("겸용주택: 취득시 상가건물 기준시가와 개별공시지가를 모두 입력하세요.");
 }
 
 // house_to_commercial은 acqDerived.commercialLandArea = 0이므로 양도시 면적 사용
@@ -278,7 +278,7 @@ const commercialGainSplit = calcCommercialGainSplit(
 );
 ```
 
-**Backward compat**: `partialUsageChange === undefined`이면 `acqDerived === derived`이고 두 헬퍼 모두 기존 `else` 분기로 동작 → 기존 검용주택 회귀 0건.
+**Backward compat**: `partialUsageChange === undefined`이면 `acqDerived === derived`이고 두 헬퍼 모두 기존 `else` 분기로 동작 → 기존 겸용주택 회귀 0건.
 
 ---
 
@@ -325,7 +325,7 @@ const mixedUsePayload: MixedUseAssetInput = {
 
 ### 3-C. 검증
 
-**파일**: `lib/calc/transfer-tax-validate.ts` (L63~87 검용주택 분기)
+**파일**: `lib/calc/transfer-tax-validate.ts` (L63~87 겸용주택 분기)
 
 ```ts
 if (asset.isMixedUseHouse === true) {
@@ -369,7 +369,7 @@ if (asset.isMixedUseHouse === true) {
 | 6 | 부동소수점 누적 오차 | house_to_commercial | OFF | 80.23·134.8·63.5㎡ | 토지+건물 합계 = 양도가액 정확 일치 |
 | 7 | 토지 환산취득가 0 회귀 방지 | house_to_commercial | OFF | 자동 | acqLandRatio fallback 검증 (acqLandStd > 0) |
 | 8 | PHD 결합 (1985 의제취득) | house_to_commercial | ON | 자동 | phdAcqHousingPrice가 면적비율 안분 기준값으로 사용됨 |
-| 9 | 회귀: 토글 OFF | — (undefined) | — | — | 기존 검용주택 anchor 동일 결과 |
+| 9 | 회귀: 토글 OFF | — (undefined) | — | — | 기존 겸용주택 anchor 동일 결과 |
 | 10 | 회귀: mixed-use-house.test.ts 전체 | — | — | — | npm test 1,714+ 그린 |
 
 ### 4-C. 픽스처
@@ -427,7 +427,7 @@ export function partialUsageChangeFixture(
 
 | 케이스 | 처리 |
 |---|---|
-| `partialUsageChange === undefined` | 기존 검용주택 분기 (backward compat) |
+| `partialUsageChange === undefined` | 기존 겸용주택 분기 (backward compat) |
 | `direction === ""` (토글 ON, 미선택) | API 매핑에서 명시적 throw |
 | 취득시 면적 미입력 | 양도시 합계로 자동 도출 |
 | 취득시 면적 음수 | Zod `nonnegative()` + 검증 함수 reject |
@@ -440,7 +440,7 @@ export function partialUsageChangeFixture(
 | 토지/건물 비율 분모 0 | 양도시 토지/건물 비율 fallback (0.5 임의값 회피) |
 | 분필·합필·도로편입 (취득시 토지면적 ≠ 양도시) | Phase 2에서 `partialChangeAcqLandArea` 추가. 1차 PR은 가정 + 결과 카드 안내 |
 | 2회 이상 용도변경 | 본 분기 범위 외. 사용자가 최초·최종 시점만 선택 |
-| 검용주택 토글 OFF & partial 토글 ON | UI에서 disabled 가드. API에서 무시 |
+| 겸용주택 토글 OFF & partial 토글 ON | UI에서 disabled 가드. API에서 무시 |
 
 ---
 
@@ -461,7 +461,7 @@ PDF 본문의 모든 데이터를 엔진 입력에 매핑해 누락 검증.
 | 최초공시 2005.1.1 개별주택가격 150,000,000 | `phdFirstDisclosureHousingPrice` | ✓ PHD |
 | 1990 공시지가 840,000원/㎡ | `phdLandPricePerSqmAtAcq` (취득시) | ⚠ 안내 부족 |
 | 1층 단독주택 사용승인 1974.2.7 | (계산 미사용 — 메모용) | ⚠ 혼동 가능 |
-| 갑氏 = 2주택자 (B주택 보유) | **검용주택 엔진에 미전달 — Critical 누락** | 🚨 누락 |
+| 갑氏 = 2주택자 (B주택 보유) | **겸용주택 엔진에 미전달 — Critical 누락** | 🚨 누락 |
 | 임대등록 안함 (다주택 중과 판단) | 폼-전역 다른 필드 | △ 본 PR 외 |
 | 양도시 상가건물 기준시가 | `transferStandardPrice.commercialBuildingPrice` | ⚠ PDF 미명시 — 조회 안내 필요 |
 | 양도시 상가건물 기준시가 (취득시) | `acquisitionStandardPrice.commercialBuildingPrice` | ⚠ 1985 시점 — 추정 필요 |
@@ -482,7 +482,7 @@ const isExempt = apportionment.housingTransferPrice <= HIGH_VALUE_THRESHOLD;
 
 → 주택분 양도가액이 12억 이하면 **무조건 비과세** 처리. 다주택자(PDF 갑氏 같은 케이스)에게 잘못된 결과.
 
-**확인 사항**: 양도세 시스템에 `AssetForm.isOneHousehold: boolean`(L235) 필드는 이미 존재하나, **검용주택 엔진(`MixedUseAssetInput`) 인자에 미포함**.
+**확인 사항**: 양도세 시스템에 `AssetForm.isOneHousehold: boolean`(L235) 필드는 이미 존재하나, **겸용주택 엔진(`MixedUseAssetInput`) 인자에 미포함**.
 
 **해결 방안** (본 PR에 포함 필수 — PDF anchor 통과 조건):
 
@@ -519,7 +519,7 @@ const isExempt = apportionment.housingTransferPrice <= HIGH_VALUE_THRESHOLD;
 
 | # | 항목 | 영향 | 처리 |
 |---|---|---|---|
-| 8-B-1 | 양도시 상가건물 기준시가 안내 | 사용자가 PDF에 없는 값을 어디서 가져오는지 모름 | UI hint에 "국세청 홈택스 > 기준시가 조회" 명시 (이미 PHD 섹션엔 있음 — 검용주택 표준 카드에도 추가) |
+| 8-B-1 | 양도시 상가건물 기준시가 안내 | 사용자가 PDF에 없는 값을 어디서 가져오는지 모름 | UI hint에 "국세청 홈택스 > 기준시가 조회" 명시 (이미 PHD 섹션엔 있음 — 겸용주택 표준 카드에도 추가) |
 | 8-B-2 | 1985 의제취득 + 1990 공시지가 사용 안내 | PHD `phdLandPricePerSqmAtAcq` 입력 시점이 1990인지 1985인지 모호 | UI 안내: "취득시점이 1990 이전이면 1990년 공시지가 사용 권장 (의제취득 처리)" |
 | 8-B-3 | 산정면적 vs 전체면적 라벨 명확화 | "주택 연면적" 라벨이 산정면적인지 전체면적인지 모호 | 라벨 변경: "주택 연면적 (산정면적, ㎡)" + hint "개별주택가격확인서 산정면적" |
 | 8-B-4 | 의제취득일 옵션 | 1985.1.1.이 의제취득일임을 사용자가 알아야 함 | DateInput hint에 "1985.1.1 이전 취득은 모두 1985.1.1로 입력 (의제취득, §98)" |
@@ -531,9 +531,9 @@ const isExempt = apportionment.housingTransferPrice <= HIGH_VALUE_THRESHOLD;
 | # | 항목 | 처리 |
 |---|---|---|
 | 8-C-1 | 사용승인일 vs 취득일 구분 | 별도 필드 불요. 사용자 안내로 충분 |
-| 8-C-2 | 임대등록 여부 | 다주택 중과세 모듈에서 처리. 검용주택 분기에서는 미사용 |
+| 8-C-2 | 임대등록 여부 | 다주택 중과세 모듈에서 처리. 겸용주택 분기에서는 미사용 |
 | 8-C-3 | 2주택자 정보(B주택)의 입력 경로 | 양도세 폼-전역 `isOneHousehold=false` 입력으로 충분 (8-A에서 활용) |
-| 8-C-4 | 1990 이전 토지등급가액 결합 | 검용주택은 토지자산이 아니므로 `pre-1990-land-valuation.ts` 미적용. PHD 3-시점으로 처리 |
+| 8-C-4 | 1990 이전 토지등급가액 결합 | 겸용주택은 토지자산이 아니므로 `pre-1990-land-valuation.ts` 미적용. PHD 3-시점으로 처리 |
 
 ---
 

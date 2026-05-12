@@ -1,4 +1,4 @@
-# Design: 검용주택 — 보유 중 일부 용도변경 분리계산 (Main)
+# Design: 겸용주택 — 보유 중 일부 용도변경 분리계산 (Main)
 
 **Plan**: `.claude/plans/image-1-reflective-engelbart.md`
 **작성일**: 2026-04-30
@@ -10,14 +10,14 @@
 - `transfer-tax-mixed-use-partial-change.ui.design.md` — UI 컴포넌트·결과 카드
 
 **기반 모듈 (재사용)**:
-- `transfer-tax-mixed-use-house.design.md` (검용주택 분리계산 본체)
-- 본 문서는 검용주택 모듈에 **"보유 중 일부 용도변경" 토글 분기**를 추가하는 확장 설계
+- `transfer-tax-mixed-use-house.design.md` (겸용주택 분리계산 본체)
+- 본 문서는 겸용주택 모듈에 **"보유 중 일부 용도변경" 토글 분기**를 추가하는 확장 설계
 
 ---
 
 ## 0. 요약
 
-소득세법 시행령 §166⑥ 및 양도소득세 집행기준 99-164-10에 따라, **양도시점에는 검용주택**(주택+상가 혼재)이지만 **취득시점에는 전체가 단독주택(또는 전체가 상가)**이었던 사례를 처리하기 위한 신규 분기. 양도가액은 양도시점 비율로(주택=개별주택공시가격, 상가=건물기준시가+공시지가), 취득가액은 **취득시 개별주택공시가격(또는 상가 기준시가)을 양도시 면적비율로** 안분한다.
+소득세법 시행령 §166⑥ 및 양도소득세 집행기준 99-164-10에 따라, **양도시점에는 겸용주택**(주택+상가 혼재)이지만 **취득시점에는 전체가 단독주택(또는 전체가 상가)**이었던 사례를 처리하기 위한 신규 분기. 양도가액은 양도시점 비율로(주택=개별주택공시가격, 상가=건물기준시가+공시지가), 취득가액은 **취득시 개별주택공시가격(또는 상가 기준시가)을 양도시 면적비율로** 안분한다.
 
 기존 `transfer-tax-mixed-use.ts`(581줄, 시행령 §166⑥의 양도시 비율 ≠ 취득시 비율 분기 이미 보유) 엔진을 **그대로 재사용**하고, `calcCommercialGainSplit` / `calcHousingGainSplit` 두 헬퍼에 **direction 분기 + PHD 결합**만 additive하게 추가한다.
 
@@ -85,14 +85,14 @@ docs/02-design/features/
 | 엔진 신설 여부 | **신설 금지** — 기존 `transfer-tax-mixed-use-helpers.ts`에 분기만 추가 | additive only |
 | 양방향 enum | `partialChangeDirection: "house_to_commercial" \| "commercial_to_house"` | 향후 enum 확장 가능 구조 |
 | 취득시 면적 입력 | 양도시 (주택+상가) 합계로 **자동 계산**, 사용자가 수정 가능한 `DecimalInput` 노출 | 단순 케이스 디폴트 + 증축/멸실 경고 |
-| 토글 위치 | "검용주택 분리계산" 토글의 **오른쪽** (grid-cols-2) | tone amber 통일 |
-| 토글 가드 | `disabled={!asset.isMixedUseHouse}` + `disabledReason` | 검용주택 활성화 후 사용 가능 |
+| 토글 위치 | "겸용주택 분리계산" 토글의 **오른쪽** (grid-cols-2) | tone amber 통일 |
+| 토글 가드 | `disabled={!asset.isMixedUseHouse}` + `disabledReason` | 겸용주택 활성화 후 사용 가능 |
 | 취득가액 안분 산식 | **취득시 개별주택공시가격 × 양도시 면적비율** (집행기준 99-164-10) | 양도시 가격을 끌어 쓰는 것 아님 |
 | 토지/건물 내부 분리 | 양도시 비율 fallback (취득시점 분리값 없음) | `acqLandStd=0` 버그 방지 |
 | PHD 결합 | `usePreHousingDisclosure=true` 시 PHD가 역산한 `phdAcqHousingPrice`를 면적비율 안분 기준으로 사용 | PDF 갑氏(1985 의제취득) anchor 통과 핵심 |
 | PHD 강제 변경 | **금지** — 사용자 직전 상태 보존 | 1990 이전 의제취득 케이스 대응 |
 | commercial_to_house 처리 | 엔진 구현 + 결과 카드 "법령 적용에 보수 검토 필요" 배지 | PDF 직접 사례 부재 (사용자 양방향 요구사항 충족) |
-| Silent skip 방지 | API 매핑에서 `hasPartialUsageChange===true && !partialChangeDirection` 시 명시적 throw | 일반 검용주택으로 잘못 계산 방지 |
+| Silent skip 방지 | API 매핑에서 `hasPartialUsageChange===true && !partialChangeDirection` 시 명시적 throw | 일반 겸용주택으로 잘못 계산 방지 |
 | 결과 카드 캡션 | direction별 사전 정의 템플릿 분리 | 학습·검증성 향상 |
 | 면적 자동값 한계 | 단순 용도변경 케이스에만 정확. 증축·멸실 시 사용자 수정 권고 | amber 안내 박스 항상 노출 |
 | **🚨 다주택자 1세대1주택 비과세 미적용** (UI 누락 검토 추가) | `MixedUseAssetInput.isOneHouseExempt` 신규 필드 + `buildHousingPart` 분기 | PDF 갑氏(2주택자) anchor 통과 필수 — 본 PR 포함 |
@@ -107,7 +107,7 @@ docs/02-design/features/
 - 기존 `isMixedUseHouse=true` 자산은 영향 없음 (`hasPartialUsageChange === false` 디폴트)
 - 신규 5필드는 `migrateLegacyForm`에서 `?? false` / `?? ""` 가드로 backward compat
 - **영속화 경로 전수조사 (이슈 21 반영)**: `actions/calculations.ts` saveCalculation/loadCalculation, DB JSON 컬럼, API 응답 변환 등 모든 진입점에 가드 적용
-- API: `partialUsageChange === undefined` 시 기존 검용주택 분기 그대로 동작
+- API: `partialUsageChange === undefined` 시 기존 겸용주택 분기 그대로 동작
 - 기존 `__tests__/tax-engine/transfer-tax/mixed-use-house.test.ts` 모두 통과 유지 (회귀 검증)
 
 ---
@@ -160,7 +160,7 @@ docs/02-design/features/
 - [ ] 800줄 정책 — 신규/수정 파일 모두 ≤ 800줄
 - [ ] E2E: PDF 갑氏 입력 → 손계산 anchor 원단위 일치 (다주택자 분기 적용 후)
 - [ ] 역방향 (commercial_to_house) 미러 케이스 → 결과 카드에 "법령 적용에 보수 검토 필요" 배지 노출
-- [ ] 토글 OFF backward compat — 기존 검용주택 시나리오 동일 결과 산출
+- [ ] 토글 OFF backward compat — 기존 겸용주택 시나리오 동일 결과 산출
 - [ ] PHD 결합 케이스 — `house_to_commercial` + `usePreHousingDisclosure=true` 정상 작동
 - [ ] 결과 카드 산식 캡션이 direction별로 정확히 분리됨
 - [ ] 영속화 가드 — 기존 이력 1건 로드 시 토글 OFF 보장
@@ -168,7 +168,7 @@ docs/02-design/features/
 
 ### 6-B. UI 누락 보강 (Engine 8절·UI 10절 — 별도 검증)
 - [ ] **Critical** — 다주택자 케이스에서 `isOneHouseExempt = false`로 12억 비과세 미적용 + 표1 장기보유공제 적용
-- [ ] **Critical** — 검용주택 패널 상단에 1세대 1주택 비과세 적용 여부 안내 박스 노출
+- [ ] **Critical** — 겸용주택 패널 상단에 1세대 1주택 비과세 적용 여부 안내 박스 노출
 - [ ] PHD 1985 의제취득 케이스 — 1990년 공시지가 사용 안내 박스 노출
 - [ ] 산정면적·전체면적·정착면적 라벨 명확 (PDF 갑氏 입력 시 헷갈리지 않음)
 - [ ] 의제취득(§98) 안내 배지 — 자산 카드 취득일 ≤ 1985-01-01 시 자동 표시
@@ -201,4 +201,4 @@ docs/02-design/features/
 
 | 일자 | 변경 | 사유 |
 |---|---|---|
-| 2026-04-30 v1 | 초안 — Plan(image-1-reflective-engelbart.md) 승인 후 작성 | 검용주택 모듈 확장 분기 |
+| 2026-04-30 v1 | 초안 — Plan(image-1-reflective-engelbart.md) 승인 후 작성 | 겸용주택 모듈 확장 분기 |

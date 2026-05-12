@@ -2,7 +2,7 @@
 
 ## Context
 
-검용주택 `partialUsageChange.direction === "house_to_commercial"` (취득시 전체 주택 → 양도시 일부 상가화) 케이스에서 현재는 **취득시 상가부분 기준시가를 엔진이 자동 안분**한다.
+겸용주택 `partialUsageChange.direction === "house_to_commercial"` (취득시 전체 주택 → 양도시 일부 상가화) 케이스에서 현재는 **취득시 상가부분 기준시가를 엔진이 자동 안분**한다.
 
 **현재 로직** (`transfer-tax-mixed-use-helpers.ts:433-468`):
 - 취득시 개별주택공시가격(`mixedAcqHousingPrice` 또는 PHD 역산값)을 양도시 면적비율(`commRatio = 상가/(주택+상가)`)로 자동 안분
@@ -131,7 +131,7 @@ if (asset.partialUsageChange?.direction === "house_to_commercial") {
   const hasUserInput = userBuildingStd > 0 && userLandPerSqm > 0;
 
   if (hasUserInput) {
-    // 직접 입력 경로 — 일반 검용주택 분기와 동일
+    // 직접 입력 경로 — 일반 겸용주택 분기와 동일
     acqLandStd = userLandStd;
     acqBuildingStd = userBuildingStd;
   } else {
@@ -156,7 +156,7 @@ if (asset.partialUsageChange?.direction === "house_to_commercial") {
     acqBuildingStd = acqCommercialTotal - acqLandStd;
   }
 } else {
-  // 일반 검용주택 + commercial_to_house — 기존 그대로
+  // 일반 겸용주택 + commercial_to_house — 기존 그대로
   acqLandStd = asset.acquisitionStandardPrice.landPricePerSqm * effectiveAcqDerived.commercialLandArea;
   acqBuildingStd = asset.acquisitionStandardPrice.commercialBuildingPrice;
 }
@@ -201,7 +201,7 @@ if (asset.partialUsageChange?.direction === "house_to_commercial") {
 2. **회귀 테스트**: `npx vitest run __tests__/tax-engine/transfer-tax/mixed-use-partial-usage-change.test.ts` — 기존 anchor 통과 + 신규 SC-1B 통과
 3. **전체 회귀**: `npm test` (1,714 케이스 + 신규 케이스)
 4. **브라우저 수동 확인**:
-   - `npm run dev` 실행 → 양도세 마법사 → 검용주택 자산 추가
+   - `npm run dev` 실행 → 양도세 마법사 → 겸용주택 자산 추가
    - "보유 중 일부 용도변경" 토글 ON → "취득시 전체 주택" 선택
    - `취득시 상가건물 기준시가` + `취득시 개별공시지가` 입력 필드가 노출되는지 확인
    - 값 입력 시 결과 카드 ③ 상가부분 산식의 `취득시 상가부분 기준시가` 가 입력값×면적+건물가로 계산되는지

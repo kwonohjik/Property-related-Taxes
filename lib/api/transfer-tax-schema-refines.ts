@@ -29,7 +29,7 @@ export function addPropertyRefines(
     constructionDate?: string;
     /** §164⑤ PHD 입력 — 제공 시 standardPriceAt* 필수 검증 우회 */
     preHousingDisclosure?: unknown;
-    /** 검용주택 PHD — mixedUse.preHousingDisclosure 위치 */
+    /** 겸용주택 PHD — mixedUse.preHousingDisclosure 위치 */
     mixedUse?: { preHousingDisclosure?: unknown };
     /** ⑩ 상업용건물·오피스텔 환산취득가 서브객체 — era별 필수 필드 검증 */
     commercialBuildingValuation?: Record<string, unknown> | null;
@@ -39,7 +39,7 @@ export function addPropertyRefines(
   ctx: z.RefinementCtx,
 ) {
   // §164⑤ PHD 경로: 3-시점 입력으로 기준시가 자동 도출되므로 standardPriceAt* 불요
-  // 검용주택 모드는 calcMixedUseTransferTax 별도 엔진에서 처리 → 일반 환산 검증 우회
+  // 겸용주택 모드는 calcMixedUseTransferTax 별도 엔진에서 처리 → 일반 환산 검증 우회
   const hasPhd =
     (data.preHousingDisclosure !== undefined && data.preHousingDisclosure !== null) ||
     (data.mixedUse?.preHousingDisclosure !== undefined && data.mixedUse?.preHousingDisclosure !== null);

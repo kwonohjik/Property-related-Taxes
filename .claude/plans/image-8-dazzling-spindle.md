@@ -1,8 +1,8 @@
-# 검용주택 PHD validation — house_to_commercial fallback 인식 (이미지 18 버그)
+# 겸용주택 PHD validation — house_to_commercial fallback 인식 (이미지 18 버그)
 
 ## Context
 
-검용주택 + 보유 중 일부 용도변경(주택→상가) 시나리오에서 사용자가 PHD ① 패널에 전체 건물 기준시가와 공시지가를 입력했는데도, 화면 하단에 "취득시 개별공시지가(상가)를 입력하세요" 오류가 표시되는 버그.
+겸용주택 + 보유 중 일부 용도변경(주택→상가) 시나리오에서 사용자가 PHD ① 패널에 전체 건물 기준시가와 공시지가를 입력했는데도, 화면 하단에 "취득시 개별공시지가(상가)를 입력하세요" 오류가 표시되는 버그.
 
 UI/API는 모두 fallback이 적용되어 정상 동작:
 - API 레이어: `mixedAcqLandPricePerSqm`이 0이면 `phdLandPricePerSqmAtAcq`로 fallback

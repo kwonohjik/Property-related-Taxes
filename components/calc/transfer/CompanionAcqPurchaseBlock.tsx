@@ -235,7 +235,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
   const isSplit = isSplitable && !!props.hasSeperateLandAcquisitionDate;
   const acqDateLabel = isSplit ? "건물 취득일 (사용승인일·매매 등기접수일)" : "취득일";
 
-  // 검용주택 모드: 기준시가 입력은 MixedUseStandardPriceInputs에서 받으므로
+  // 겸용주택 모드: 기준시가 입력은 MixedUseStandardPriceInputs에서 받으므로
   // 일반 자산용 환산 입력(취득시/양도시 기준시가, PHD 토글)을 숨긴다.
   const isMixedUse = !!props.asset?.isMixedUseHouse;
 
@@ -444,6 +444,26 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
         </div>
       )}
 
+      {/* 부담부증여 모드 — 취득가액 산정 방식·실거래가 입력 숨김 (§159 자동 산정).
+          폼 상태(useEstimatedAcquisition·fixedAcquisitionPrice 등)는 보존하여
+          양도 형태를 "일반 양도"로 되돌리면 입력값 복원 가능. */}
+      {props.asset?.transferType === "burdened_gift" && (
+        <div className="rounded-lg border border-fuchsia-300 bg-fuchsia-50/60 p-3 space-y-1.5">
+          <p className="text-sm font-semibold text-fuchsia-900">
+            취득가액 — 부담부증여 §159 자동 산정
+          </p>
+          <p className="text-xs text-fuchsia-800">
+            부담부증여(소득세법 시행령 §159)는 양도가/취득가를 모두 <b>채무비율 × 자산별 기준시가</b>로
+            엔진이 자동 산정합니다. 따라서 취득가액 산정 방식 선택 및 실거래가 입력은 표시하지 않습니다.
+          </p>
+          <p className="text-[11px] text-fuchsia-700">
+            ※ 산식에 필요한 <b>취득시 기준시가</b>는 위 &lsquo;양도 정보 — 인수 채무&rsquo; 카드 및 토지 면적·공시지가
+            입력에서 자동 도출됩니다. 보유기간·기산점 산정에 필요한 <b>취득일·취득원인</b>은 위 라디오에서 그대로 입력하세요.
+          </p>
+        </div>
+      )}
+      {props.asset?.transferType !== "burdened_gift" && (
+      <>
       <div className="space-y-2">
         <label className="block text-sm font-medium">취득가액 산정 방식</label>
         <div className={cn(
@@ -546,7 +566,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
 
       {/* 개별주택가격 미공시 취득 토글 — 환산취득가 + housing 자산(또는 토지·건물 분리 모드)
          자동 트리거 조건(housing || isMixedUse)과 일치시켜 모순 방지.
-         검용주택 모드에서는 MixedUseStandardPriceInputs 내부의 PHD 토글을 사용하므로 여기서는 숨긴다. */}
+         겸용주택 모드에서는 MixedUseStandardPriceInputs 내부의 PHD 토글을 사용하므로 여기서는 숨긴다. */}
       {!isMixedUse && (props.assetKind === "housing" || isSplit) && props.useEstimatedAcquisition && props.asset && props.onAssetChange && (
         <ToggleCard
           tone="amber"
@@ -606,9 +626,9 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
           )}
         </>
       ) : isMixedUse ? (
-        // 검용주택 모드: 양도시·취득시 기준시가는 위 "검용주택 분리계산" 영역에서 입력.
+        // 겸용주택 모드: 양도시·취득시 기준시가는 위 "겸용주택 분리계산" 영역에서 입력.
         <p className="text-xs text-muted-foreground italic">
-          취득시/양도시 기준시가는 위 검용주택 분리계산 영역에서 입력합니다 (개별주택가격·상가건물·공시지가).
+          취득시/양도시 기준시가는 위 겸용주택 분리계산 영역에서 입력합니다 (개별주택가격·상가건물·공시지가).
         </p>
       ) : isCommercialBuilding ? (
         // 상업용건물·오피스텔: 환산은 시행령 §164⑧·§176조의2②2호에 따라
@@ -686,6 +706,8 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
             />
           </div>
         </>
+      )}
+      </>
       )}
 
       {/* 신축·증축 특례 (자산 카드 마지막 부분, 매매 + housing/building 자산만) */}

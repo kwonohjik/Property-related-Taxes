@@ -82,6 +82,20 @@ export interface BurdenedGiftInfo {
   /** 수증자 미성년 여부 (세대생략 20억 초과 40% 판정). 기본 false. */
   isMinorDonee?: boolean;
 
+  /**
+   * Phase 3 후속 (2026-05-12) — 10년 이내 사전증여 내역 (상증법 §47 ② 합산).
+   * 동일 증여자가 동일 수증자에게 10년 이내 한 증여재산가액을 합산하여 누진세율 적용.
+   * 각 항목: 증여일·증여가액·당시 납부세액. 미입력 시 빈 배열로 처리(합산 0).
+   */
+  priorGiftsWithin10Years?: Array<{
+    /** 증여일 (ISO YYYY-MM-DD) */
+    giftDate: string;
+    /** 당시 증여재산가액 */
+    giftAmount: number;
+    /** 당시 납부한 증여세액 (§58 기납부세액공제) */
+    giftTaxPaid: number;
+  }>;
+
   // === 자산별 기준시가 — 보충적평가·취득가액 안분 (소령 §159 ① 1호) ===
   /**
    * 양도시 토지 기준시가 (개별공시지가 × 면적). 보충적평가 산정 분자.
@@ -97,6 +111,17 @@ export interface BurdenedGiftInfo {
   landStdPriceAtAcquisition: number;
   /** 취득시 건물 기준시가 합계. */
   buildingStdPriceAtAcquisition: number;
+
+  /**
+   * 증여재산 평가용 양도시 건물 기준시가 (상증법 §61 — 층별 가감율 적용).
+   * 양도세 보충적평가는 `buildingStdPriceAtTransfer` (양도세 §99 기준시가),
+   * 증여세 보충적평가는 본 필드 (층별 가감율 반영) — 토지는 동일 값 사용.
+   * 미입력 시 `buildingStdPriceAtTransfer`로 fallback (양도세=증여세 가정).
+   *
+   * 산식에서 채무비율 분모 C = `landStdPriceAtTransfer + giftBuildingStdPriceAtTransfer`.
+   * Excel C37 = D37(=D31) + E37(층별 합계)에 대응.
+   */
+  giftBuildingStdPriceAtTransfer?: number;
 }
 
 /**
@@ -132,9 +157,23 @@ export interface TransferBurdenedGiftBreakdown {
 
   /**
    * 채무비율 = B / C = 인수채무 / 증여가액 (소령 §159).
+   * 분모 C = giftValuation.max (= 증여재산 평가액, 층별 가감율 적용 건물기준시가 사용).
    * 사례 34: 4,120,000,000 / 8,578,295,360 ≈ 0.480278051...
    */
   debtRatio: number;
+
+  /**
+   * 증여재산 평가 (취득가액 안분 분모용 — 상증법 §60~§66).
+   * supplementary = landStdPriceAtTransfer + giftBuildingStdPriceAtTransfer (층별 가감율 적용).
+   * 양도세 분모(`sangjeungbeopValuation`)와 분리 — 건물 기준시가 산정 방식 차이 반영.
+   */
+  giftValuation: {
+    supplementary: number;
+    mortgage: number;
+    rental: number;
+    selectedMode: "supplementary" | "mortgage" | "rental";
+    max: number;
+  };
 
   /**
    * 무상이전분 = C − B.
@@ -179,6 +218,8 @@ export interface TransferBurdenedGiftBreakdown {
     land: {
       /** 양도시 자산 평가가액 (분배 전 — 토지 기준시가 또는 시가). */
       sangjeungbeopValue: number;
+      /** 취득시 자산 기준시가 (산식 빌더에서 §159①1호 분자로 표시용 — 부동소수 역산 회피). */
+      stdPriceAtAcquisition: number;
       /** 자산별 양도가액 = sangjeungbeopValue × debtRatio (소령 §159 ① 2호). */
       transferPrice: number;
       /** 자산별 취득가액 = 취득시 자산 기준시가 × debtRatio (소령 §159 ① 1호, 기준시가 모드). */
@@ -188,6 +229,7 @@ export interface TransferBurdenedGiftBreakdown {
     };
     building: {
       sangjeungbeopValue: number;
+      stdPriceAtAcquisition: number;
       transferPrice: number;
       acquisitionPrice: number;
       estimatedDeduction: number;

@@ -2,7 +2,7 @@ import type { ZoneType } from "../non-business-land/types";
 import type { PreHousingDisclosureInput, PreHousingDisclosureResult } from "./transfer.types";
 
 /**
- * 검용주택(1세대 1주택 + 상가) 양도소득세 분리계산 타입
+ * 겸용주택(1세대 1주택 + 상가) 양도소득세 분리계산 타입
  *
  * 소득세법 시행령 §160 ① 단서 — 2022.1.1 이후 양도분부터 주택연면적 ≥ 상가연면적이라도 강제 분리.
  * 설계 문서: docs/02-design/features/transfer-tax-mixed-use-house.engine.design.md
@@ -28,11 +28,11 @@ export interface MixedUseStandardPrice {
 }
 
 /**
- * 검용주택 자산-수준 입력.
+ * 겸용주택 자산-수준 입력.
  * AssetForm.assetType === "mixed-use-house" 일 때 활성화.
  */
 export interface MixedUseAssetInput {
-  /** 검용주택 분리계산 플래그 */
+  /** 겸용주택 분리계산 플래그 */
   isMixedUseHouse: true;
 
   // ── 면적 (㎡, 건축물대장) ──
@@ -80,12 +80,12 @@ export interface MixedUseAssetInput {
    * - false: 다주택자·2년 미거주 등으로 1세대 1주택 비과세 미적용 → 12억 안분 X, 표1 적용
    *
    * AssetForm.isOneHousehold(L235) 값을 그대로 전달.
-   * 미주입 시 true (기존 검용주택 사례14 등 backward compat).
+   * 미주입 시 true (기존 겸용주택 사례14 등 backward compat).
    */
   isOneHouseExempt?: boolean;
 
   /**
-   * 보유 중 일부 용도변경 옵션 — 양도시 검용이지만 취득시 단일 용도였던 경우.
+   * 보유 중 일부 용도변경 옵션 — 양도시 겸용이지만 취득시 단일 용도였던 경우.
    *
    * - house_to_commercial: 취득시 전체 주택 → 양도시 일부 상가화 (PDF 갑氏)
    * - commercial_to_house: 취득시 전체 상가 → 양도시 일부 주택화 (미러)
@@ -225,7 +225,7 @@ export interface MixedUseCommercialPart {
    * 취득시 상가부분 기준시가 산출 근거 — 결과 카드 산식 분기 표시용.
    *
    * - "user_input": 사용자가 취득시 상가건물 기준시가 + 개별공시지가를 직접 입력
-   *                 (일반 검용주택, commercial_to_house, house_to_commercial 모든 경로 동일)
+   *                 (일반 겸용주택, commercial_to_house, house_to_commercial 모든 경로 동일)
    *
    * 참고: 과거에 존재하던 "fallback_apportion"(개별주택공시가격 면적비율 자동 안분) 분기는
    * 세법상 부정확하여 2026-05-01 제거됨. 모든 경로에서 직접 입력만 허용.
@@ -313,7 +313,7 @@ export interface MixedUseCalculationRoute {
   partialUsageChangeReason?: string;
 }
 
-/** 검용주택 분리계산 최종 결과 */
+/** 겸용주택 분리계산 최종 결과 */
 export interface MixedUseGainBreakdown {
   /**
    * - "post-2022": 2022.1.1 이후 양도분, 강제 분리계산 완료
@@ -356,8 +356,8 @@ export interface MixedUseGainBreakdown {
      *   최초공시 시점에 건물 전체가 주택이었으므로 P_F 가 "전체 건물(미래 상가 부분 포함)"의
      *   가격을 의미. Sum_A·Sum_F 분모/분자에 전체 토지면적·전체 건물 기준시가 사용.
      * - "case_b_housing_only": firstDisclosureDate ≥ usageChangeDate.
-     *   최초공시 시점에 이미 검용 상태. P_F 가 주택분만의 가격이므로 Sum_A·Sum_F 도 주택분만.
-     * - undefined: PHD 미사용 또는 일반 검용주택 (분기 의미 없음).
+     *   최초공시 시점에 이미 겸용 상태. P_F 가 주택분만의 가격이므로 Sum_A·Sum_F 도 주택분만.
+     * - undefined: PHD 미사용 또는 일반 겸용주택 (분기 의미 없음).
      */
     phdScopeBranch?: "case_a_whole_building" | "case_b_housing_only";
   };

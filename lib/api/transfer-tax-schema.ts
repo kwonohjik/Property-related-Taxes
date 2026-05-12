@@ -98,8 +98,17 @@ const propertyBaseShape = {
   /**
    * 취득 원인. "newConstruction" = 자가건축 주택 (영 §162①4호 — 사용승인일 등 기준 취득일).
    * UI에서 사용승인일 helper-text 노출 트리거로도 사용.
+   * @deprecated `"burdened_gift"`는 Phase 2(2026-05-12) 이후 deprecation — `transferType: "burdened_gift"` 사용 권장.
+   * 레거시 데이터 호환 위해 enum에 유지. 신규 코드는 transferType 분기 사용.
    */
   acquisitionCause: z.enum(["purchase", "inheritance", "gift", "carryover_gift", "newConstruction", "burdened_gift"]).optional(),
+  /**
+   * 양도 형태 (양도자 관점) — Phase 2(2026-05-12) 신규.
+   * "regular": 일반 양도 (매매·교환 등)
+   * "burdened_gift": 부담부증여 (소령 §159 — 채무 인수분을 유상 양도로 의제)
+   * 부담부증여는 취득 사건이 아니라 양도 사건이므로 acquisitionCause와 별도 차원.
+   */
+  transferType: z.enum(["regular", "burdened_gift"]).optional(),
   decedentAcquisitionDate: z.string().date().optional(),
   donorAcquisitionDate: z.string().date().optional(),
   expenses: z.number().int().nonnegative(),
@@ -254,7 +263,7 @@ const propertyBaseShape = {
   inheritedAcquisition: inheritedAcquisitionSchema.optional(),
   /** 상속 주택 환산취득가 보조 입력 — 주택 + 상속개시일 < 2005-04-30 시 3-시점 합계 기준시가 자동 산출 */
   inheritedHouseValuation: inheritanceHouseValuationSchema.optional(),
-  /** 검용주택(1세대 1주택 + 상가) 분리계산 입력 — propertyType === "mixed-use-house" 시 필수 */
+  /** 겸용주택(1세대 1주택 + 상가) 분리계산 입력 — propertyType === "mixed-use-house" 시 필수 */
   mixedUse: mixedUseAssetSchema.optional(),
   /**
    * 토지·건물의 소유자가 다른 경우 본인 소유 부분 지정 (소령 §166⑥, §168②).

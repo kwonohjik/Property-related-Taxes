@@ -227,6 +227,11 @@ export function buildStatementItems(
   // 일반건물 일괄 모드(사례 31·33) — 자산별 산식 빌더에 전달할 분모/분자 변수.
   // 비-일반건물 모드에서는 undefined → formulaBuilder가 undefined 반환 → 산식 미표시.
   const gbDetail = result.generalBuildingValuationDetail;
+  // 부담부증여 모드 — 자산별 §159 산식 빌더에 전달할 분모/분자 변수 (perAsset.{land,building}).
+  // 비-부담부증여 모드에서는 undefined → 빌더가 일반건물·기본 분기로 진행.
+  const burdenedGift = (result as unknown as {
+    transferBurdenedGiftBreakdown?: import("@/lib/tax-engine/types/transfer-burdened-gift.types").TransferBurdenedGiftBreakdown;
+  }).transferBurdenedGiftBreakdown;
 
   // 양도가액 우선순위: override > result.steps의 amount > 0
   const totalTransferPrice =
@@ -326,15 +331,19 @@ export function buildStatementItems(
   items.set("transferPrice", {
     label: "양도가액",
     value: isAggregate ? sumPropTransfer : totalTransferPrice,
-    formula: isAggregate
-      ? "자산별 양도가액 합계 — §166⑥ 안분(토지·건물·증축건물 기준시가 비율) 후"
-      : "사용자 입력 (실제 매매계약서상 거래금액)",
-    legalBasis: "소득세법 시행령 §166",
+    formula: burdenedGift
+      ? `양도가액 = 인수 채무액 (보증금 ${burdenedGift.assumedDebtAmount.toLocaleString()}원 합계) = ${burdenedGift.assumedDebtAmount.toLocaleString()}원 (소령 §159 — 채무 인수분이 양도가액으로 의제, 자산별 §166⑥ 비율 안분)`
+      : isAggregate
+        ? "자산별 양도가액 합계 — §166⑥ 안분(토지·건물·증축건물 기준시가 비율) 후"
+        : "사용자 입력 (실제 매매계약서상 거래금액)",
+    legalBasis: burdenedGift
+      ? "소득세법 시행령 §159·§166"
+      : "소득세법 시행령 §166",
     perAsset: isAggregate
       ? buildPerAssetWithFormula(
           properties,
           (p) => p.transferPrice,
-          (p) => buildGbTransferFormula(p, gbDetail, totalTransferPrice || sumPropTransfer),
+          (p) => buildGbTransferFormula(p, gbDetail, totalTransferPrice || sumPropTransfer, burdenedGift),
         )
       : undefined,
   });
@@ -365,7 +374,7 @@ export function buildStatementItems(
       ? buildPerAssetWithFormula(
           properties,
           (p) => p.acquisitionPrice + p.capitalExpenditureForDisplay,
-          (p) => buildGbAcquisitionFormula(p, gbDetail, primary),
+          (p) => buildGbAcquisitionFormula(p, gbDetail, primary, burdenedGift),
         )
       : undefined,
   });
@@ -393,7 +402,7 @@ export function buildStatementItems(
       ? buildPerAssetWithFormula(
           properties,
           (p) => Math.max(0, p.necessaryExpense - p.capitalExpenditureForDisplay),
-          (p) => buildGbExpenseFormula(p, gbDetail),
+          (p) => buildGbExpenseFormula(p, gbDetail, burdenedGift),
         )
       : undefined,
   });

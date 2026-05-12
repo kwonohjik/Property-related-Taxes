@@ -1,10 +1,10 @@
-# 검용주택 + PHD 모드 "입력값이 올바르지 않습니다" 오류 — 정밀 분석 + 수정 계획
+# 겸용주택 + PHD 모드 "입력값이 올바르지 않습니다" 오류 — 정밀 분석 + 수정 계획
 
 ## Context
 
-이미지 11·12와 같이 검용주택(`isMixedUseHouse=true`) + 환산취득가 + PHD(§164⑤) + 토지/건물 분리 + 4-way 결합 모드에서 모든 필드를 올바르게 입력했음에도 "다음" 버튼 클릭 시 이미지 13처럼 **"입력값이 올바르지 않습니다 / 다시 계산하기"** 오류가 발생.
+이미지 11·12와 같이 겸용주택(`isMixedUseHouse=true`) + 환산취득가 + PHD(§164⑤) + 토지/건물 분리 + 4-way 결합 모드에서 모든 필드를 올바르게 입력했음에도 "다음" 버튼 클릭 시 이미지 13처럼 **"입력값이 올바르지 않습니다 / 다시 계산하기"** 오류가 발생.
 
-이전 수정(`useEstimatedAcquisition: false` 송신, `addPropertyRefines` 검용주택 분기, `validateAssetAcquisition` 검용주택 전용 분기)으로 일부 검증은 통과했지만 여전히 schema 검증 실패가 남아있다.
+이전 수정(`useEstimatedAcquisition: false` 송신, `addPropertyRefines` 겸용주택 분기, `validateAssetAcquisition` 겸용주택 전용 분기)으로 일부 검증은 통과했지만 여전히 schema 검증 실패가 남아있다.
 
 **근본 문제**: `callTransferAPI`가 `error.fieldErrors`를 throw 메시지에 포함시키지 않아 어느 필드에서 검증 실패가 발생했는지 사용자도, 콘솔에서도 알 수 없다. 원인을 추측만 할 수 있는 상황.
 
@@ -41,7 +41,7 @@ residencePeriodYears: parseAmount(primary.mixedUseResidencePeriodYears) || 0, //
 ```ts
 housingPrice: parseAmount(primary.mixedAcqHousingPrice) || undefined,
 ```
-검용주택 PHD에서는 사용자가 미공시이므로 빈 칸. `parseAmount("") = 0`, `0 || undefined = undefined`. schema는 `.optional()`이라 통과. OK.
+겸용주택 PHD에서는 사용자가 미공시이므로 빈 칸. `parseAmount("") = 0`, `0 || undefined = undefined`. schema는 `.optional()`이라 통과. OK.
 
 #### 3. **PHD 토지면적 자동 mirror 안 된 경우** ⚠
 `MixedUsePreHousingDisclosureSection`에서 `mixedTransferHousingPrice → phdTransferHousingPrice`는 useEffect로 mirror하지만, **사용자가 PHD 토글을 늦게 켰거나 mixed 값을 PHD 토글 후 변경했을 때** mirror 안 됐을 가능성. 또는 `phdLandPricePerSqmAtAcq` 등이 1991년에 자동 추천되었는데 사용자가 조회만 하고 입력 안 한 경우 0.
@@ -129,13 +129,13 @@ preHousingDisclosure:
     : undefined,
 ```
 
-또한 `validateAssetAcquisition`(이미 추가된 검용주택 분기, `lib/calc/transfer-tax-validate.ts`)에서 PHD 토글 ON 시 누락 필드 사전 검증해 사용자에게 정확한 메시지 표시.
+또한 `validateAssetAcquisition`(이미 추가된 겸용주택 분기, `lib/calc/transfer-tax-validate.ts`)에서 PHD 토글 ON 시 누락 필드 사전 검증해 사용자에게 정확한 메시지 표시.
 
 #### C-2) `acquisitionStandardPrice` 필드 누락
-검용주택 PHD에서 `mixedAcqCommercialBuildingPrice`나 `mixedAcqLandPricePerSqm`가 입력 안 됐으면 0 송신. `.nonnegative()`라 통과하지만, **PHD 모드에서는 이 두 값이 사실상 PHD 페이로드의 `landPricePerSqmAtAcquisition`/`buildingStdPriceAtAcquisition`로 대체** — UI에서 PHD ON 시 일반 취득시 공시지가 입력 영역을 readonly나 숨김 처리 필요(별도 후속 작업, 본 plan 범위 외).
+겸용주택 PHD에서 `mixedAcqCommercialBuildingPrice`나 `mixedAcqLandPricePerSqm`가 입력 안 됐으면 0 송신. `.nonnegative()`라 통과하지만, **PHD 모드에서는 이 두 값이 사실상 PHD 페이로드의 `landPricePerSqmAtAcquisition`/`buildingStdPriceAtAcquisition`로 대체** — UI에서 PHD ON 시 일반 취득시 공시지가 입력 영역을 readonly나 숨김 처리 필요(별도 후속 작업, 본 plan 범위 외).
 
 #### C-3) `propertyType: "mixed-use-house"` 경로의 schema 추가 검증
-`propertySchema.superRefine`에서 일괄양도 검증은 companions=빈배열이라 skip. 다른 검증은 검용주택과 무관.
+`propertySchema.superRefine`에서 일괄양도 검증은 companions=빈배열이라 skip. 다른 검증은 겸용주택과 무관.
 
 만약 fieldErrors가 `mixedUse.*` 외 다른 필드(예: `acquisitionPrice`, `expenses`, `transferPrice`)에서 나오면 그 시점에 추가 수정.
 
@@ -146,7 +146,7 @@ preHousingDisclosure:
 | 파일 | 변경 |
 |---|---|
 | `lib/calc/transfer-tax-api.ts` | Phase A: throw 메시지에 fieldErrors 첫 항목 포함 / Phase B: 면적 5필드 parseAmount→parseFloat / Phase C-1: PHD 페이로드 빌드 조건 강화 |
-| `lib/calc/transfer-tax-validate.ts` | (필요 시 C-1 후속) 검용주택 PHD 토글 ON 시 phdLandPricePerSqmAt* 누락 사전 검증 메시지 추가 |
+| `lib/calc/transfer-tax-validate.ts` | (필요 시 C-1 후속) 겸용주택 PHD 토글 ON 시 phdLandPricePerSqmAt* 누락 사전 검증 메시지 추가 |
 
 ---
 

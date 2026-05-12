@@ -1,10 +1,10 @@
 "use client";
 
 /**
- * 검용주택 + 개별주택가격 미공시 (§164⑤) 3-시점 환산 패널
+ * 겸용주택 + 개별주택가격 미공시 (§164⑤) 3-시점 환산 패널
  *
  * 일반 자산용 PreHousingDisclosureSection과 동일한 PHD 알고리즘을 사용하지만:
- *  - 토지 면적은 검용주택의 "주택부수토지" 면적으로 자동 계산되어 readonly 표시
+ *  - 토지 면적은 겸용주택의 "주택부수토지" 면적으로 자동 계산되어 readonly 표시
  *  - 양도시 개별주택가격은 mixedTransferHousingPrice를 자동 mirror
  *
  * 법령 근거: 소득세법 시행령 §164 ⑤
@@ -43,7 +43,7 @@ export function MixedUsePreHousingDisclosureSection({
   transferDate,
   onChange,
 }: Props) {
-  // 주택부수토지 면적 자동 계산 (검용주택) — 사용자 미입력 시 기본값
+  // 주택부수토지 면적 자동 계산 (겸용주택) — 사용자 미입력 시 기본값
   const residential = parseDecimal(asset.residentialFloorArea);
   const commercial = parseDecimal(asset.nonResidentialFloorArea);
   const totalLand = parseDecimal(asset.mixedUseTotalLandArea);
@@ -63,7 +63,7 @@ export function MixedUsePreHousingDisclosureSection({
 
   // PHD §164⑤ Case A 식별 — 최초공시일 < 용도변경일 (전체 건물이 주택이었던 시점)
   // Case A: 취득시·최초공시 시점 입력란은 "전체 건물 기준시가" 의미 (주택+상가 합계 = 그 시점엔 모두 주택)
-  // Case B: 모든 시점이 검용 상태 → "주택분만" 의미 (현재 로직)
+  // Case B: 모든 시점이 겸용 상태 → "주택분만" 의미 (현재 로직)
   const isCaseA = useMemo(() => {
     if (!hasUsageChange) return false;
     if (!asset.phdFirstDisclosureDate || !asset.partialChangeDate) return false;
@@ -147,7 +147,7 @@ export function MixedUsePreHousingDisclosureSection({
         <div>
           <p className="text-sm font-semibold">개별주택가격 미공시 취득 (3-시점 환산)</p>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            검용주택의 주택부분 취득시 개별주택가격을 최초 공시일 기준으로 역산합니다.
+            겸용주택의 주택부분 취득시 개별주택가격을 최초 공시일 기준으로 역산합니다.
             토지면적은 주택부수토지(자동 계산)를 사용합니다.
             {isPre1990 && " 1990.8.30. 이전 취득 토지는 토지등급가액 환산 결과를 자동 적용합니다."}
             {hasUsageChange && !isCaseA && " 보유 중 일부 용도변경 입력이 있어 취득시·양도시 주택부수토지 면적이 시점별로 자동 분리되어 취득시 개별주택가격 역산에 적용됩니다 (최초공시일 면적은 용도변경일 기준 자동 판정)."}
@@ -334,7 +334,7 @@ export function MixedUsePreHousingDisclosureSection({
           onBuildingStdPriceAtTransferChange={(v) =>
             onChange({ phdBuildingStdPriceAtTransfer: v })
           }
-          // 검용주택 — 토지는 같은 지번이므로 섹션 2의 공시지가를 자동 미러링 (read-only 표시)
+          // 겸용주택 — 토지는 같은 지번이므로 섹션 2의 공시지가를 자동 미러링 (read-only 표시)
           landAutoSyncAtAcq={{
             label: "위 취득시 기준시가 섹션의 개별공시지가를 자동 사용",
           }}

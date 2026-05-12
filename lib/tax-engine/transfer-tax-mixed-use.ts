@@ -1,5 +1,5 @@
 /**
- * 검용주택(1세대 1주택 + 상가) 양도소득세 분리계산 오케스트레이터
+ * 겸용주택(1세대 1주택 + 상가) 양도소득세 분리계산 오케스트레이터
  *
  * 소득세법 시행령 §160 ① 단서 — 2022.1.1 이후 양도분:
  *   주택연면적 ≥ 상가연면적이라도 주택부분/상가부분/비사업용토지 강제 분리.
@@ -46,11 +46,11 @@ const MIXED_USE_EFFECTIVE_DATE = new Date("2022-01-01");
 // ──────────────────────────────────────────
 
 /**
- * 검용주택 분리계산 메인 함수.
+ * 겸용주택 분리계산 메인 함수.
  *
  * @param transferPrice - 총 양도가액 (원)
  * @param transferDate  - 양도일
- * @param asset         - 검용주택 자산 입력
+ * @param asset         - 겸용주택 자산 입력
  * @param rates         - Supabase에서 preload된 세율 맵
  */
 export function calcMixedUseTransferTax(
@@ -62,7 +62,7 @@ export function calcMixedUseTransferTax(
   // STEP 1: 2022.1.1 이전 양도일 거부
   if (transferDate < MIXED_USE_EFFECTIVE_DATE) {
     return buildRejectionResult(
-      "2022.1.1 이전 양도분은 검용주택 분리계산 범위 외입니다. 단일 자산 모드로 재계산하세요.",
+      "2022.1.1 이전 양도분은 겸용주택 분리계산 범위 외입니다. 단일 자산 모드로 재계산하세요.",
     );
   }
 
@@ -294,13 +294,13 @@ function buildPartialUsageChangeReason(
 ): string {
   if (direction === "house_to_commercial") {
     return (
-      "양도시점에는 검용주택이나 취득시점에는 전체 주택이었으므로 시행령 §166⑥에 따라, " +
+      "양도시점에는 겸용주택이나 취득시점에는 전체 주택이었으므로 시행령 §166⑥에 따라, " +
       "사용자가 입력한 취득시 상가건물 기준시가와 개별공시지가(상가)로 취득시 상가부분 기준시가를 직접 산정"
     );
   }
   // commercial_to_house — 미러 (현재는 단일 메시지)
   return (
-    "양도시점에는 검용주택이나 취득시점에는 전체 상가였으므로 시행령 §166⑥에 따라 " +
+    "양도시점에는 겸용주택이나 취득시점에는 전체 상가였으므로 시행령 §166⑥에 따라 " +
     "환산취득가 산정 시 취득시 상가 기준시가(건물+토지)를 양도시 면적비율로 안분 — 직접 사례 제한적, 보수 검토 필요"
   );
 }
@@ -313,7 +313,7 @@ function collectWarnings(asset: MixedUseAssetInput): string[] {
   const warnings: string[] = [];
   if (asset.usePreHousingDisclosure) {
     warnings.push(
-      "검용주택의 PHD 3-시점 환산 적합성은 사례별 검토가 필요합니다. 이미지5 사례는 단순 §97 환산 사용.",
+      "겸용주택의 PHD 3-시점 환산 적합성은 사례별 검토가 필요합니다. 이미지5 사례는 단순 §97 환산 사용.",
     );
   }
   if (asset.isMetropolitanArea === undefined) {

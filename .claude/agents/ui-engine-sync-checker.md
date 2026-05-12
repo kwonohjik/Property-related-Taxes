@@ -187,7 +187,7 @@ grep -rn "phdResidentialLandArea" components/calc/results/              # ⑦
 
 ### High — 사용자 입력 불가
 - `landAreaAtAcquisition` (PreHousingDisclosureInput) → AssetForm 미반영
-  - 영향: 검용주택 PHD + 용도변경 시 시점별 면적 분리가 사용자 입력으로 도달하지 못함
+  - 영향: 겸용주택 PHD + 용도변경 시 시점별 면적 분리가 사용자 입력으로 도달하지 못함
   - 권장 조치: transfer-tax-ui-senior 에게 AssetForm·API 변환·UI 위젯 추가 지시
 
 ### Medium — 결과 검증 불가

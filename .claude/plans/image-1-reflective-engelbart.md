@@ -1,12 +1,12 @@
-# 검용주택 — 보유 중 일부 용도변경 (House⇄Commercial) 기능 구현
+# 겸용주택 — 보유 중 일부 용도변경 (House⇄Commercial) 기능 구현
 
 ## Context
 
-**왜 필요한가**: 양도 시점에는 검용주택(주택+상가 혼재)이지만 **취득 시점에는 전체가 단독주택(또는 전체가 상가)**이었던 사례를 처리하지 못함. 예제 PDF(갑氏 사례, 2026-04-30 수령): 1985.1.1 의제취득한 단독주택을 2011.8.5에 일부면적(80.23㎡)을 근린생활시설로 용도변경 → 2023.2.16에 13억원 양도. 양도세 계산 시 양도가액 안분(양도시 비율)과 취득가액 안분(취득시 전체 주택 → 양도시 면적비율)이 달라 시행령 §166⑥의 "양도가액 비율 ≠ 취득가액 비율" 분기를 명시적으로 사용해야 함.
+**왜 필요한가**: 양도 시점에는 겸용주택(주택+상가 혼재)이지만 **취득 시점에는 전체가 단독주택(또는 전체가 상가)**이었던 사례를 처리하지 못함. 예제 PDF(갑氏 사례, 2026-04-30 수령): 1985.1.1 의제취득한 단독주택을 2011.8.5에 일부면적(80.23㎡)을 근린생활시설로 용도변경 → 2023.2.16에 13억원 양도. 양도세 계산 시 양도가액 안분(양도시 비율)과 취득가액 안분(취득시 전체 주택 → 양도시 면적비율)이 달라 시행령 §166⑥의 "양도가액 비율 ≠ 취득가액 비율" 분기를 명시적으로 사용해야 함.
 
-**기존 자산을 그대로 쓸 수 없는 이유**: 기존 검용주택 입력은 "취득시 상가건물 기준시가"·"취득시 상가공시지가"를 모두 받지만, 용도변경 케이스에서는 그 값들이 **취득시점에 존재하지 않음**(0원). 단순히 0을 넣으면 환산취득가가 어긋남 — 취득시 상가부분 환산취득가는 양도시 면적비율로 주택공시가격을 안분해 산정해야 함.
+**기존 자산을 그대로 쓸 수 없는 이유**: 기존 겸용주택 입력은 "취득시 상가건물 기준시가"·"취득시 상가공시지가"를 모두 받지만, 용도변경 케이스에서는 그 값들이 **취득시점에 존재하지 않음**(0원). 단순히 0을 넣으면 환산취득가가 어긋남 — 취득시 상가부분 환산취득가는 양도시 면적비율로 주택공시가격을 안분해 산정해야 함.
 
-**의도된 결과**: "보유 중 일부 용도변경" 토글로 양/음방향 케이스 모두 정확히 계산 + 기존 검용주택(취득·양도 모두 검용) 동작 100% 보존(additive 변경).
+**의도된 결과**: "보유 중 일부 용도변경" 토글로 양/음방향 케이스 모두 정확히 계산 + 기존 겸용주택(취득·양도 모두 겸용) 동작 100% 보존(additive 변경).
 
 ---
 
@@ -26,7 +26,7 @@
 
 ## A. 데이터 모델
 
-**파일**: `lib/stores/calc-wizard-asset.ts` (L487~514 검용주택 블록 말미)
+**파일**: `lib/stores/calc-wizard-asset.ts` (L487~514 겸용주택 블록 말미)
 
 ```typescript
 hasPartialUsageChange: boolean;
@@ -117,7 +117,7 @@ if (asset.partialUsageChange?.direction === "house_to_commercial") {
   acqLandStd = Math.floor(acqCommercialTotal * transferLandRatio);
   acqBuildingStd = acqCommercialTotal - acqLandStd;
 }
-// else: 기존 L292~295 (일반 검용주택)
+// else: 기존 L292~295 (일반 겸용주택)
 ```
 
 **산식 근거 (집행기준 99-164-10)**:
@@ -194,7 +194,7 @@ const commercialGainSplit = calcCommercialGainSplit(
   description="취득시 자산 구성이 양도시와 다른 경우 (시행령 §166⑥ + 집행기준 99-164-10)"
   checked={!!asset.hasPartialUsageChange}
   disabled={!asset.isMixedUseHouse}
-  disabledReason="검용주택 분리계산 활성화 시 사용 가능"
+  disabledReason="겸용주택 분리계산 활성화 시 사용 가능"
   onCheckedChange={(c) => onChange({ hasPartialUsageChange: c,
     ...(c && !asset.partialChangeDirection ? { partialChangeDirection: "house_to_commercial" } : {}) })}
 />
@@ -204,8 +204,8 @@ const commercialGainSplit = calcCommercialGainSplit(
 
 - amber 카드 + 섹션 번호 패턴(`bg-amber-50/40 border-amber-200`).
 - **방향 Select** (Recommended): `Select` 컴포넌트로 "취득시 자산 구성" → 옵션 라벨(양도시점과 혼동 방지):
-  - `house_to_commercial` → **"취득시 전체 주택"** (양도시 검용 = 일부 상가화)
-  - `commercial_to_house` → **"취득시 전체 상가"** (양도시 검용 = 일부 주택화)
+  - `house_to_commercial` → **"취득시 전체 주택"** (양도시 겸용 = 일부 상가화)
+  - `commercial_to_house` → **"취득시 전체 상가"** (양도시 겸용 = 일부 주택화)
   - 명시적 한국어 라벨(SelectValue 단독 사용 금지 — `feedback_select_component.md`).
 - **자동 도출 표시 박스**: 양도시 합계 → 자동 면적값 표시.
 - **"수정하기" ToggleCard** (variant="chip", tone="amber", size="sm") → ON 시 두 `DecimalInput` (`partialChangeAcqResidentialArea`, `partialChangeAcqCommercialArea`) 노출.
@@ -240,7 +240,7 @@ const commercialGainSplit = calcCommercialGainSplit(
 
 `mixedUsePayload`에 추가:
 ```typescript
-// 명시적 throw — silent skip 금지 (토글 ON & direction "" 상태로 제출 시 일반 검용주택으로
+// 명시적 throw — silent skip 금지 (토글 ON & direction "" 상태로 제출 시 일반 겸용주택으로
 // 잘못 계산되는 것 방지)
 if (primary.hasPartialUsageChange && !primary.partialChangeDirection) {
   throw new Error("보유 중 일부 용도변경: 취득시 자산 구성을 선택하세요.");
@@ -266,7 +266,7 @@ partialUsageChange: z.object({
 
 ### D3. 검증 (`lib/calc/transfer-tax-validate.ts` L63~87) — **이슈 5 반영**
 
-검용주택 분기 안에:
+겸용주택 분기 안에:
 - `hasPartialUsageChange && !partialChangeDirection` → "취득시 자산 구성을 선택하세요."
 - 사용자 수정 면적 음수·NaN 검증.
 - **PHD 강제 변경 금지** — `direction === "commercial_to_house"` & `usePreHousingDisclosure === true` 시 경고만 추가, false로 변경하지 않음 (사용자 직전 상태 보존).
@@ -290,9 +290,9 @@ partialUsageChange: z.object({
   ```typescript
   const PARTIAL_USAGE_CHANGE_REASONS = {
     house_to_commercial:
-      "양도시점에는 검용주택이나 취득시점에는 전체 주택이었으므로 시행령 §166⑥ 및 양도소득세 집행기준 99-164-10에 따라 환산취득가 산정 시 취득시 개별주택공시가격을 양도시 면적비율로 안분",
+      "양도시점에는 겸용주택이나 취득시점에는 전체 주택이었으므로 시행령 §166⑥ 및 양도소득세 집행기준 99-164-10에 따라 환산취득가 산정 시 취득시 개별주택공시가격을 양도시 면적비율로 안분",
     commercial_to_house:
-      "양도시점에는 검용주택이나 취득시점에는 전체 상가였으므로 시행령 §166⑥에 따라 환산취득가 산정 시 취득시 상가 기준시가(건물+토지)를 양도시 면적비율로 안분 — 직접 사례 제한적, 보수 검토 필요",
+      "양도시점에는 겸용주택이나 취득시점에는 전체 상가였으므로 시행령 §166⑥에 따라 환산취득가 산정 시 취득시 상가 기준시가(건물+토지)를 양도시 면적비율로 안분 — 직접 사례 제한적, 보수 검토 필요",
   } as const;
   ```
 - `direction === "commercial_to_house"` 시 결과 카드 상단에 **"법령 적용에 보수 검토 필요"** 노란색 배지 표시 — PDF 직접 사례 부재 안내.
@@ -329,7 +329,7 @@ partialUsageChange: z.object({
 
 ### 역사적 토지등급가액
 
-1985년 의제취득의 1990 환산 로직(`pre-1990-land-valuation.ts`)은 토지 자산(`assetKind === "land"`) 전용. 검용주택은 housing이므로 별도 적용 안 됨 — 단, 환산취득가 산정의 취득시 기준시가는 사용자가 직접 입력(=PDF 예제처럼 토지등급가액 + 건물 환산 기준).
+1985년 의제취득의 1990 환산 로직(`pre-1990-land-valuation.ts`)은 토지 자산(`assetKind === "land"`) 전용. 겸용주택은 housing이므로 별도 적용 안 됨 — 단, 환산취득가 산정의 취득시 기준시가는 사용자가 직접 입력(=PDF 예제처럼 토지등급가액 + 건물 환산 기준).
 
 ### commercial_to_house 방향 처리 — **이슈 3 부분 수용**
 
@@ -426,9 +426,9 @@ partialUsageChange: z.object({
 
 ## Verification (E2E)
 
-- **PDF 갑氏 케이스**: 마법사에서 검용주택 ON → 보유 중 일부 용도변경 ON → 방향 "전체 주택" → 면적·기준시가·취득가 입력 → 결과의 총 납부세액이 PDF 명시값과 원단위 일치.
+- **PDF 갑氏 케이스**: 마법사에서 겸용주택 ON → 보유 중 일부 용도변경 ON → 방향 "전체 주택" → 면적·기준시가·취득가 입력 → 결과의 총 납부세액이 PDF 명시값과 원단위 일치.
 - **역방향 케이스**: direction을 "전체 상가"로 토글 → 동일 입력 mirror → 결과의 합산 양도소득금액이 대칭되는지 확인.
-- **회귀**: 기존 검용주택 시나리오 (사례14 등) 토글 OFF로 동일 결과 산출.
+- **회귀**: 기존 겸용주택 시나리오 (사례14 등) 토글 OFF로 동일 결과 산출.
 - **법령 근거 확인**: 결과 카드의 "취득시점 자산 구성" 섹션에 시행령 §166⑥ + 양도소득세 집행기준 99-164-10 표기 확인.
 
 ---

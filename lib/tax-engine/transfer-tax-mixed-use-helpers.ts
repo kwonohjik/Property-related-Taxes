@@ -1,5 +1,5 @@
 /**
- * 검용주택 분리계산 헬퍼 (순수 함수)
+ * 겸용주택 분리계산 헬퍼 (순수 함수)
  *
  * transfer-tax-mixed-use.ts에서 사용하는 내부 헬퍼.
  * 소득세법 시행령 §160 ① 단서 / §164 / §168의12 / §95 ②
@@ -166,7 +166,7 @@ export interface HousingEstimatedAcqResult {
    * - "case_a_whole_building": firstDisclosureDate < usageChangeDate.
    *   최초공시 시점에 아직 용도변경 전(전체 주택). Sum_A·Sum_F 에 전체 토지면적·전체 건물 사용.
    * - "case_b_housing_only": firstDisclosureDate ≥ usageChangeDate.
-   *   최초공시 시점에 이미 검용. 주택분만 사용.
+   *   최초공시 시점에 이미 겸용. 주택분만 사용.
    * - undefined: 일반 PHD (partialUsageChange 미사용).
    */
   phdScopeBranch?: "case_a_whole_building" | "case_b_housing_only";
@@ -178,7 +178,7 @@ export function calcHousingEstimatedAcq(
   derived: MixedUseDerivedAreas,
   acqDerived?: MixedUseDerivedAreas,
 ): HousingEstimatedAcqResult {
-  // §164⑤ PHD 분기 — 검용주택의 주택부수토지 면적을 토지면적으로 사용
+  // §164⑤ PHD 분기 — 겸용주택의 주택부수토지 면적을 토지면적으로 사용
   if (asset.usePreHousingDisclosure && asset.preHousingDisclosure) {
     // 사용자가 면적을 직접 지정한 경우(최초 공시 당시 전체 주택 등) 우선 사용
     const effectiveLandArea =
@@ -192,8 +192,8 @@ export function calcHousingEstimatedAcq(
     //   → Sum_A·Sum_F 에 전체 토지면적·전체 건물 기준시가 사용
     //   → landAreaAtAcquisition = landAreaAtFirstDisclosure = totalLandArea
     // Case B: firstDisclosureDate ≥ usageChangeDate
-    //   최초공시 시점에 이미 검용. P_F = 주택분만의 가격.
-    //   → Sum_A·Sum_F 에 주택분만 사용 (시점별 검용 면적)
+    //   최초공시 시점에 이미 겸용. P_F = 주택분만의 가격.
+    //   → Sum_A·Sum_F 에 주택분만 사용 (시점별 겸용 면적)
     //   → landAreaAtAcquisition·AtFirstDisclosure 는 시점별 주택부수토지
     let landAreaAtAcquisition: number | undefined;
     let landAreaAtFirstDisclosure: number | undefined;
@@ -400,7 +400,7 @@ export function calcHousingGainSplit(
     acqLandStd = Math.floor(acqHousingTotal * transferLandRatioForFallback);
     acqBuildingStd = acqHousingTotal - acqLandStd;
   } else {
-    // 기존 일반 검용주택 분기
+    // 기존 일반 겸용주택 분기
     acqLandStd =
       asset.acquisitionStandardPrice.landPricePerSqm * effectiveAcqDerived.residentialLandArea;
     const acqHousingTotal = asset.acquisitionStandardPrice.housingPrice ?? 0;
@@ -515,7 +515,7 @@ export function calcCommercialGainSplit(
       );
     }
     throw new Error(
-      "검용주택: 취득시 상가건물 기준시가와 개별공시지가를 모두 입력하세요.",
+      "겸용주택: 취득시 상가건물 기준시가와 개별공시지가를 모두 입력하세요.",
     );
   }
 
@@ -657,7 +657,7 @@ export function buildHousingPart(
   gainSplit: HousingGainSplit,
   excessResult: ExcessLandResult,
   residenceYears: number,
-  isOneHouseExempt: boolean = true,  // 미주입 시 true (기존 검용주택 사례14 등 backward compat)
+  isOneHouseExempt: boolean = true,  // 미주입 시 true (기존 겸용주택 사례14 등 backward compat)
 ): MixedUseHousingPart {
   const housingAcq = housingAcqResult.estimatedAcq;
   const HIGH_VALUE_THRESHOLD = 1_200_000_000;

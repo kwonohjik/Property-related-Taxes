@@ -2,7 +2,7 @@
  * AssetForm 관련 타입·팩토리·마이그레이션
  * calc-wizard-store.ts 800줄 정책에 따라 분리.
  *
- * 검용주택 + 보유 중 일부 용도변경 관련 필드 디폴트·마이그레이션은
+ * 겸용주택 + 보유 중 일부 용도변경 관련 필드 디폴트·마이그레이션은
  * `calc-wizard-asset-mixed-use.ts`로 별도 분리(800줄 정책 준수, 2026-04-30).
  * NBL 관련 서브 타입(NblBusinessUsePeriod 등 4종)은
  * `calc-wizard-asset-nbl.ts`로 별도 분리(2026-05-11).
@@ -39,7 +39,10 @@ export { makeDefaultAsset, makeDefaultCompanionAsset, migrateAsset } from "./cal
  * 주된 자산과 동반 자산을 구분하지 않고 동일한 구조로 관리.
  * assets[0]이 대표 자산 (isPrimaryForHouseholdFlags = true).
  */
-export interface AssetForm {
+import type { BurdenedGiftFormSlice } from "./calc-wizard-asset-bg";
+export type { BurdenedGiftFormSlice } from "./calc-wizard-asset-bg";
+
+export interface AssetForm extends BurdenedGiftFormSlice {
   assetId: string;
   assetLabel: string;
   /**
@@ -145,8 +148,22 @@ export interface AssetForm {
    * 공유 지분율 분모 (기본 100). 100/100 = 단독 소유.
    */
   ownershipDenominator: string;
-  /** 취득 원인 — purchase=매매, inheritance=상속, gift=증여, carryover_gift=이월과세(증여), newConstruction=신축(자가건축) */
+  /** 취득 원인 — purchase=매매, inheritance=상속, gift=증여, carryover_gift=이월과세(증여), newConstruction=신축(자가건축)
+   * @deprecated `"burdened_gift"`는 D-1(2026-05-12) 이후 deprecation. 양도 시점의 거래 형태이지 취득 사건이 아님.
+   * 신규 데이터는 `transferType: "burdened_gift"` 사용. 레거시 데이터는 normalize에서 자동 변환.
+   */
   acquisitionCause: "purchase" | "inheritance" | "gift" | "carryover_gift" | "newConstruction" | "burdened_gift";
+
+  /**
+   * 양도 형태 (양도자 관점) — Phase 2(2026-05-12) 신규.
+   * "regular": 일반 양도 (매매·교환 등)
+   * "burdened_gift": 부담부증여 (소령 §159) — 채무 인수분을 유상 양도로 의제
+   * "": 미선택 (UI 기본값 "regular"로 자동 보정)
+   *
+   * 부담부증여는 "취득" 사건이 아니라 "양도" 사건이므로 acquisitionCause와 별도 차원의 필드.
+   * 부담부증여 ON 시 acquisitionCause는 증여자 당초 취득 정보(매매·상속·증여·신축)를 받음.
+   */
+  transferType: "" | "regular" | "burdened_gift";
 
   // ── 신축(자가건축) 취득일 4-시점 (영 §162①4호) ──
   /**
@@ -305,7 +322,7 @@ export interface AssetForm {
   /** 양도시 건물 기준시가 (원) */
   phdBuildingStdPriceAtTransfer: string;
   /**
-   * 검용주택 PHD 주택부수토지 면적 수동 지정 (㎡).
+   * 겸용주택 PHD 주택부수토지 면적 수동 지정 (㎡).
    * 비어 있으면 엔진이 양도시 주택연면적 비율로 자동 계산.
    * 최초 공시 당시 전체가 주택이었던 경우 전체 토지 면적으로 수정.
    */
@@ -697,8 +714,8 @@ export interface AssetForm {
    */
   gbExtensionActualExpenses: string;
 
-  // ── 검용주택 분리계산 (sodt §160①단서, 2022.1.1 이후) ──
-  /** 검용주택 여부 토글 */
+  // ── 겸용주택 분리계산 (sodt §160①단서, 2022.1.1 이후) ──
+  /** 겸용주택 여부 토글 */
   isMixedUseHouse: boolean;
   /** 주택 연면적 (㎡) */
   residentialFloorArea: string;
@@ -706,7 +723,7 @@ export interface AssetForm {
   nonResidentialFloorArea: string;
   /** 건물 정착면적 = 1층 면적 (㎡) */
   buildingFootprintArea: string;
-  /** 전체 토지 면적 (㎡) — 검용주택용 */
+  /** 전체 토지 면적 (㎡) — 겸용주택용 */
   mixedUseTotalLandArea: string;
   /** 거주기간 (년) — 장기보유공제 표2 판정 */
   mixedUseResidencePeriodYears: string;
@@ -726,7 +743,7 @@ export interface AssetForm {
   mixedIsMetropolitanArea: boolean;
 
   // ── 보유 중 일부 용도변경 (시행령 §166⑥ + 집행기준 99-164-10) ──
-  /** 보유 중 일부 용도변경 토글 — 양도시 검용이지만 취득시 단일 용도였던 경우 */
+  /** 보유 중 일부 용도변경 토글 — 양도시 겸용이지만 취득시 단일 용도였던 경우 */
   hasPartialUsageChange: boolean;
   /** 용도변경 방향 — 빈 문자열은 미선택 상태 */
   partialChangeDirection: "" | "house_to_commercial" | "commercial_to_house";
@@ -737,26 +754,8 @@ export interface AssetForm {
   /** 용도변경일 (YYYY-MM-DD, 메모용 — 계산 미사용) */
   partialChangeDate: string;
 
-  // ── 부담부증여 (소령 §159, Phase 1: general_building 전용) ──
-  /**
-   * 부담부증여 평가 모드.
-   * "sangjeungbeop_standard": 상증법 기준시가 (사례 34, 가장 일반적)
-   * "sangjeungbeop_market": 상증법 시가 (매매사례·감정·보상·경매·공매가)
-   * "": 미선택 (acquisitionCause !== "burdened_gift" 시 무시)
-   */
-  bgValuationMode: "" | "sangjeungbeop_standard" | "sangjeungbeop_market";
-  /** 임대보증금 총액 (채무로 인수). 원, string. */
-  bgLendingDepositTotal: string;
-  /** 담보차입금 (채무로 인수, 실제 채무잔액). 원, string. */
-  bgMortgageDebtAmount: string;
-  /** 연간 임대료 (환산평가용 — 채무 아님). 원, string. */
-  bgAnnualRentTotal: string;
-  /** (근)저당 설정액 (선택). 미입력 시 bgMortgageDebtAmount fallback. */
-  bgMortgageSetAmount: string;
-  /** 시가 모드 양도시 평가액 (총액). sangjeungbeop_market 시 필수. */
-  bgMarketValueAtTransfer: string;
-  /** 시가 모드 취득시 평가액 (총액). sangjeungbeop_market 시 필수. */
-  bgMarketValueAtAcquisition: string;
+  // ── 부담부증여 (소령 §159 + 증여세 통합 §53·§56·§57·§69 + §47② 사전증여 합산) ──
+  // bg* 필드 일체는 BurdenedGiftFormSlice로 분리 (calc-wizard-asset-bg.ts).
 }
 
 /** 하위 호환 별칭 — 기존 코드에서 CompanionAssetForm을 참조하는 곳에 사용 */

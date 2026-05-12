@@ -11,6 +11,7 @@ import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import type { TransferFormData, AssetForm } from "@/lib/stores/calc-wizard-store";
 import { validateGeneralBuildingAsset } from "./transfer-tax-validate-gb";
+import { validateBurdenedGiftAsset } from "./transfer-tax-validate-bg";
 
 // ─── 장기임대주택 거주주택 비과세 특례 검증 (⑧, 소령 §155⑳) ──────
 
@@ -149,6 +150,10 @@ function validateParcelMode(primary: AssetForm): string | null {
 
 /** 자산 카드 1건의 취득 정보 검증 (취득가·환산·1990·신축) */
 function validateAssetAcquisition(asset: AssetForm, label: string, formTransferDate?: string): string | null {
+  // ── 부담부증여 (소령 §159 + 증여세 통합 §53·§47②) — 별도 모듈로 분리 (800줄 정책, 2026-05-12) ──
+  const bgError = validateBurdenedGiftAsset(asset, label);
+  if (bgError) return bgError;
+
   // ── 상업용건물·오피스텔 환산취득가 전용 검증 (⑧, 소령 §164⑧, §176조의2②2호) ──
   // ⑧ 동기화 원칙: API buildCommercialBuildingValuation 의 undefined 반환 조건과 동일하게 차단.
   if (asset.assetKind === "commercial_building" && asset.useEstimatedAcquisition) {
@@ -269,7 +274,7 @@ function validateAssetAcquisition(asset: AssetForm, label: string, formTransferD
     return null;
   }
 
-  // 검용주택 분리계산은 calcMixedUseTransferTax 엔진이 별도 처리 — 전용 검증 후 return
+  // 겸용주택 분리계산은 calcMixedUseTransferTax 엔진이 별도 처리 — 전용 검증 후 return
   if (asset.isMixedUseHouse === true) {
     if (!asset.acquisitionDate) return `${label}: 건물 취득일을 입력하세요.`;
     // 토지·건물 취득일 다름 토글 ON일 때만 토지 취득일 필수. OFF면 acquisitionDate로 폴백.
@@ -460,7 +465,7 @@ function validateAssetAcquisition(asset: AssetForm, label: string, formTransferD
   // 4) 환산취득가 — 기준시가
   // 주의: usePreHousingDisclosure === true 경로에서는 §164⑤ 3-시점 입력으로 자동 도출되므로
   //   standardPriceAtAcq / standardPriceAtTransfer 직접 입력 불요.
-  // 검용주택 PHD는 위 isMixedUseHouse 분기에서 이미 return되어 이 줄에 도달하지 않음.
+  // 겸용주택 PHD는 위 isMixedUseHouse 분기에서 이미 return되어 이 줄에 도달하지 않음.
   // hasSeperateLandAcquisitionDate 무관 — 취득일 동일(사례 23 공동주택 등)해도 PHD 경로는 표준시가 직접 입력 불요.
   const usesPhd = asset.usePreHousingDisclosure === true;
 
@@ -490,7 +495,7 @@ function validateAssetAcquisition(asset: AssetForm, label: string, formTransferD
     }
     if (!asset.phdFirstDisclosureHousingPrice || parseAmount(asset.phdFirstDisclosureHousingPrice) <= 0)
       return `${label}: 최초 고시 개별주택가격을 입력하세요.`;
-    // 일반 자산: acquisitionArea 직접 입력 필요 (검용주택은 면적 자동 계산이므로 제외)
+    // 일반 자산: acquisitionArea 직접 입력 필요 (겸용주택은 면적 자동 계산이므로 제외)
     if (!asset.acquisitionArea || parseFloat(asset.acquisitionArea) <= 0)
       return `${label}: 토지 면적(㎡)을 입력하세요. (자산 기본 정보)`;
     if (!asset.phdLandPricePerSqmAtAcq || parseAmount(asset.phdLandPricePerSqmAtAcq) <= 0)
@@ -520,9 +525,13 @@ function validateAssetAcquisition(asset: AssetForm, label: string, formTransferD
       if (!asset.donorAcquisitionDate)
         return `${label}: 증여자 취득일을 입력하세요.`;
     } else if (asset.acquisitionCause === "burdened_gift") {
-      // ⑧ 부담부증여 (소령 §159) — Phase 1: general_building 전용 (별도 검증 분기에서 도달)
-      // 일반(housing/land/building/...) 자산에서 burdened_gift 선택 시 차단.
-      return `${label}: 부담부증여는 일반건물 자산에서만 지원됩니다 (Phase 1).`;
+      // ⑧ 부담부증여 (소령 §159) — Phase 2 (2026-05-12): 메뉴 재설계로 acquisitionCause==="burdened_gift" 폐지.
+      // 레거시 데이터는 normalize에서 transferType="burdened_gift" + acquisitionCause="gift" 로 자동 이전.
+      // 본 분기에 도달했다면 normalize 미실행 또는 직접 입력된 비정상 상태 — gift 분기로 fallback.
+      if (!asset.fixedAcquisitionPrice || parseAmount(asset.fixedAcquisitionPrice) <= 0)
+        return `${label}: 증여 신고가액을 입력하세요.`;
+      if (!asset.donorAcquisitionDate)
+        return `${label}: 증여자 취득일을 입력하세요.`;
     } else if (asset.acquisitionCause === "inheritance") {
       if (!asset.decedentAcquisitionDate)
         return `${label}: 피상속인 취득일을 입력하세요.`;
@@ -553,8 +562,12 @@ export function validateStep(step: number, form: TransferFormData): string | nul
   if (step === 0) {
     if (!form.assets || form.assets.length === 0) return "자산을 최소 1건 입력하세요.";
     if (!form.transferDate) return "양도일을 선택하세요.";
-    if (!form.contractTotalPrice || parseAmount(form.contractTotalPrice) <= 0)
-      return "총 양도가액을 입력하세요.";
+    // 부담부증여(소령 §159) 모드는 양도가액 = 인수채무액으로 엔진 자동 산정이므로 contractTotalPrice 검증 면제.
+    const allBurdenedGift = form.assets.every((a) => a.transferType === "burdened_gift");
+    if (!allBurdenedGift) {
+      if (!form.contractTotalPrice || parseAmount(form.contractTotalPrice) <= 0)
+        return "총 양도가액을 입력하세요.";
+    }
 
     for (let i = 0; i < form.assets.length; i++) {
       const a = form.assets[i];

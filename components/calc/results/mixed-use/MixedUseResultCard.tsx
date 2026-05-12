@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * 검용주택 분리계산 결과 카드 (4-카드 + 합산)
+ * 겸용주택 분리계산 결과 카드 (4-카드 + 합산)
  *
  * 학습·검증 목적: 양도가액 안분 → 주택부분 → 상가부분 → 비사업용토지 → 합산세액
  * 각 항목 하단에 계산 과정(산식)을 한국어로 표기.
@@ -43,7 +43,7 @@ function mixedUseToFilingResult(b: MixedUseGainBreakdown): TransferTaxResult {
     isSurchargeSuspended: false,
     reductionAmount: 0,
     determinedTax: t.transferTax,
-    penaltyBase: 0, // 검용주택 어댑터: 가산세 미적용 경로 (MixedUseGainBreakdown에 penaltyBase 없음)
+    penaltyBase: 0, // 겸용주택 어댑터: 가산세 미적용 경로 (MixedUseGainBreakdown에 penaltyBase 없음)
     penaltyTax: 0,
     localIncomeTax: localTax,
     totalTax: t.totalPayable,
@@ -79,7 +79,7 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
   if (breakdown.splitMode === "pre-2022-rejected") {
     return (
       <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-        <p className="font-semibold mb-1">검용주택 분리계산 불가</p>
+        <p className="font-semibold mb-1">겸용주택 분리계산 불가</p>
         {breakdown.warnings.map((w, i) => (
           <p key={i}>{w}</p>
         ))}
@@ -418,7 +418,7 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
         result={mixedUseToFilingResult(breakdown)}
         formData={formData}
       />
-      {/* ── 계산결과 상세명세서 (검용주택 모드) ── */}
+      {/* ── 계산결과 상세명세서 (겸용주택 모드) ── */}
       {/* 신고서 양식 32 항목별 산식·변수값·법령 노출 — mixedUseDetail은 단건 모드로 처리 */}
       <DetailedCalculationStatementCard
         result={mixedUseToFilingResult(breakdown)}

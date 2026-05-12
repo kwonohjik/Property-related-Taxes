@@ -1,5 +1,5 @@
 /**
- * 검용주택(1세대 1주택 + 상가) 분리계산 테스트
+ * 겸용주택(1세대 1주택 + 상가) 분리계산 테스트
  *
  * 소득세법 시행령 §160 ① 단서 — 2022.1.1 이후 양도분 강제 분리.
  * 설계: docs/02-design/features/transfer-tax-mixed-use-house.engine.design.md
@@ -28,7 +28,7 @@ const mockRates = makeMockRates();
 // SC-1: 사례14 기본 검증 (양도가액 안분 + 분리 취득일)
 // ──────────────────────────────────────────────────────────────
 
-describe("SC-1: 사례14 검용주택 기본 분리계산 (2022.02.16 양도)", () => {
+describe("SC-1: 사례14 겸용주택 기본 분리계산 (2022.02.16 양도)", () => {
   const asset = mixedUseCase14();
   const result = calcMixedUseTransferTax(
     CASE14_TRANSFER_PRICE,
@@ -256,7 +256,7 @@ describe("SC-6: 분리 취득일 — 토지 1992.1.1 + 건물 1997.9.12", () => 
 // SC-7: PHD 토글 ON — 경고 포함
 // ──────────────────────────────────────────────────────────────
 
-describe("SC-7: PHD 토글 ON — 검용주택 적합성 경고", () => {
+describe("SC-7: PHD 토글 ON — 겸용주택 적합성 경고", () => {
   const asset: ReturnType<typeof mixedUseCase14> = {
     ...mixedUseCase14(),
     usePreHousingDisclosure: true,

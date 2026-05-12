@@ -1,5 +1,5 @@
 /**
- * 검용주택 분리계산 테스트 픽스처 (사례14 기반)
+ * 겸용주택 분리계산 테스트 픽스처 (사례14 기반)
  *
  * 이미지5 사례14 데이터:
  * - 서울 서대문구 대현동, 토지 168.3㎡
@@ -151,7 +151,7 @@ export const GAP_LAND_PRICE_PER_SQM_AT_ACQ = 840_000;  // 1990년 공시지가 (
 // 1985 의제취득 시점 추정 상가건물 기준시가 (PDF 미명시 — 사용자 직접 조회·입력 가정)
 export const GAP_COMMERCIAL_BUILDING_AT_ACQ = 10_000_000;
 
-// 거주기간 (PDF 미명시 — 갑氏는 A검용주택 임대등록 안함, 직접 거주 추정 안 함)
+// 거주기간 (PDF 미명시 — 갑氏는 A겸용주택 임대등록 안함, 직접 거주 추정 안 함)
 export const GAP_RESIDENCE_PERIOD_YEARS = 0;
 
 // 용도변경일 — 2011.8.5 (PDF 본문)
@@ -216,7 +216,7 @@ export function mixedUsePdfGap(
       buildingStdPriceAtFirstDisclosure: GAP_BUILDING_STD_AT_FIRST_WHOLE,
       // 양도시(2023)는 주택분만 — "주택분 건물기준시가" 입력
       buildingStdPriceAtTransfer: GAP_BUILDING_STD_AT_TRANSFER_HOUSING,
-      // landArea는 검용주택 엔진이 주택부수토지로 자동 주입 (Omit<PreHousingDisclosureInput, "landArea">)
+      // landArea는 겸용주택 엔진이 주택부수토지로 자동 주입 (Omit<PreHousingDisclosureInput, "landArea">)
     },
     residencePeriodYears: GAP_RESIDENCE_PERIOD_YEARS,
     isMetropolitanArea: false,  // 가평군 = 비수도권

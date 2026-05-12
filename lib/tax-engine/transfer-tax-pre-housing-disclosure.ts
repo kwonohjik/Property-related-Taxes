@@ -49,7 +49,7 @@ export function calcPreHousingDisclosureGain(
     transferHousingPrice,
     landPricePerSqmAtTransfer,
     buildingStdPriceAtTransfer,
-    // Case A 4부분 안분 (검용주택 + 일부 용도변경(주택→상가) + 최초공시 < 용도변경)
+    // Case A 4부분 안분 (겸용주택 + 일부 용도변경(주택→상가) + 최초공시 < 용도변경)
     commercialBuildingStdPriceAtAcq,
     commercialBuildingStdPriceAtFirstDisclosure,
     commercialBuildingStdPriceAtTransfer,

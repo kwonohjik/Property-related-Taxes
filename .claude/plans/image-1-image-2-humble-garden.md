@@ -1,6 +1,6 @@
 # 후속 작업: 양도시 PHD 검증 fallback + ③ 양도시 4부분 splitMode 확장
 
-**적용 범위 (절대 한정)**: 검용주택 + PHD(`usePreHousingDisclosure === true`) + Case A(`house_to_commercial` AND `firstDisclosureDate < usageChangeDate`). 다른 케이스는 일절 수정하지 않음.
+**적용 범위 (절대 한정)**: 겸용주택 + PHD(`usePreHousingDisclosure === true`) + Case A(`house_to_commercial` AND `firstDisclosureDate < usageChangeDate`). 다른 케이스는 일절 수정하지 않음.
 
 ## Context
 
@@ -41,7 +41,7 @@ transferHousingPrice:
 **문제점/주의사항**:
 1. **데이터 중복**: 양도시 상가건물 기준시가는 이미 메인 양도시 섹션의 `mixedTransferCommercialBuildingPrice` 필드에 입력됨. ③에서 추가로 노출하면 같은 필드를 두 곳에서 표시·편집 → 사용자 혼란 가능.
    - 해결: **별도 폼 필드 신설 금지**. 기존 `mixedTransferCommercialBuildingPrice`를 직접 read/write 양방향. 같은 필드를 두 곳에서 편집 가능 → 자동 동기화 (mirror 정책 위반 없음, useEffect 미사용).
-2. **PHD 비활성 케이스**: 일반 검용주택·Case B 등에서는 ③도 주택분만 표시 — 기존 동작 유지. splitMode prop이 false이면 변경 없음.
+2. **PHD 비활성 케이스**: 일반 겸용주택·Case B 등에서는 ③도 주택분만 표시 — 기존 동작 유지. splitMode prop이 false이면 변경 없음.
 
 ## 수정 범위
 
@@ -104,7 +104,7 @@ onCommercialBuildingStdPriceAtTransferChange={(v) =>
 1. **타입 체크**: `npx tsc --noEmit` — 0 오류
 2. **회귀 테스트**: `npx vitest run __tests__/tax-engine/transfer-tax/` — 325 테스트 통과
 3. **수동 확인**: 엑셀 사례(주택일부 용도변경.xlsx) 입력 → 검증 오류 없음, 산출세액 ≈ 320,192,214원 확인
-4. **다른 케이스 회귀**: PHD 비활성 검용주택, commercial_to_house, Case B 케이스에서 ③ 양도시 UI 변경 없음 확인
+4. **다른 케이스 회귀**: PHD 비활성 겸용주택, commercial_to_house, Case B 케이스에서 ③ 양도시 UI 변경 없음 확인
 
 ## 핵심 파일
 

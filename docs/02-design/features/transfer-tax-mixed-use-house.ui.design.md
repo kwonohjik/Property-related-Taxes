@@ -1,4 +1,4 @@
-# Design: 검용주택 양도소득세 — UI 컴포넌트·결과 뷰 (분할)
+# Design: 겸용주택 양도소득세 — UI 컴포넌트·결과 뷰 (분할)
 
 **Main Doc**: `transfer-tax-mixed-use-house.design.md`
 **Engine Doc**: `transfer-tax-mixed-use-house.engine.design.md`
@@ -17,7 +17,7 @@ const ASSET_TYPE_OPTIONS = [
   { value: "house", label: "주택" },
   { value: "commercial", label: "상가·일반건물" },
   { value: "land", label: "토지" },
-  { value: "mixed-use-house", label: "검용주택 (주택+상가)" }, // 신규
+  { value: "mixed-use-house", label: "겸용주택 (주택+상가)" }, // 신규
 ];
 ```
 
@@ -37,9 +37,9 @@ export function MixedUseSection({ asset, onChange, errors }: MixedUseSectionProp
   if (asset.assetType !== "mixed-use-house") return null;
 
   return (
-    <SectionHeader title="검용주택 분리계산">
+    <SectionHeader title="겸용주택 분리계산">
       <FieldCard
-        label="검용주택 여부"
+        label="겸용주택 여부"
         helper="2022.1.1 이후 양도분: 주택 연면적 ≥ 상가 연면적이라도 분리계산"
         trailing={<LawArticleModal article={TRANSFER.MIXED_USE_RULE} />}
       >
@@ -145,7 +145,7 @@ export function DateInputs({ asset, onChange }: Props) {
         />
         {asset.usePreHousingDisclosure && (
           <Notice variant="warning">
-            검용주택의 PHD 적용 적합성은 사례별 검토가 필요합니다. 이미지5 사례는 단순 §97 환산 사용.
+            겸용주택의 PHD 적용 적합성은 사례별 검토가 필요합니다. 이미지5 사례는 단순 §97 환산 사용.
           </Notice>
         )}
       </FieldCard>
@@ -275,7 +275,7 @@ export function ResidencyInput({ asset, onChange }: Props) {
 ## 2. WizardSidebar 파생값 표시
 
 ```tsx
-// 검용주택 자산 활성 시 사이드바에 미리 표시 (엔진 호출 전이라도 산출 가능한 항목)
+// 겸용주택 자산 활성 시 사이드바에 미리 표시 (엔진 호출 전이라도 산출 가능한 항목)
 <WizardSidebar>
   <SidebarItem label="주택연면적 비율" value={`${(housingRatio * 100).toFixed(2)}%`} />
   <SidebarItem label="주택부수토지 면적" value={`${residentialLandArea.toFixed(2)} ㎡`} />
@@ -445,7 +445,7 @@ export function MixedUseResultCard({ breakdown }: { breakdown: MixedUseGainBreak
 
 - [ ] 모든 입력 필드 `onFocus={(e) => e.target.select()}` 적용 (CurrencyInput·NumberInput·DateInput 내장)
 - [ ] PHD 토글 변경 시 의존 필드(`mixedAcqHousingPrice`) disabled 동기화
-- [ ] 자산 타입을 `mixed-use-house` 외로 변경 시 검용주택 필드 자동 클리어 (사용자 확인 모달)
+- [ ] 자산 타입을 `mixed-use-house` 외로 변경 시 겸용주택 필드 자동 클리어 (사용자 확인 모달)
 - [ ] WizardSidebar는 0원 항목 제외 (CLAUDE.md 원칙)
 - [ ] 결과 카드 4개는 내비게이션 가능 (anchor 링크 또는 sticky tab)
 - [ ] 모바일: 4-카드는 세로 스택, 합산 카드는 sticky bottom

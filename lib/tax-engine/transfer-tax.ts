@@ -63,7 +63,7 @@ import {
 import { calculateBuildingPenalty, calcTax, handleMultiParcelBranch, type MultiParcelBranchContext } from "./transfer-tax-rate-calc";
 import { finalizeTransferTax } from "./transfer-tax-finalize";
 import { calcCarryoverScenarios } from "./transfer-tax-carryover";
-import { buildBurdenedGiftBreakdown } from "./burdened-gift-apportionment";
+import { buildBurdenedGiftBreakdown, assertBurdenedGiftEligible, detectBurdenedGiftMultiHouseWarning } from "./burdened-gift-apportionment";
 import { BURDENED_GIFT_TRANSFER } from "./legal-codes/burdened-gift";
 import type { TransferBurdenedGiftBreakdown } from "./types/transfer-burdened-gift.types";
 export { parseRatesFromMap } from "./transfer-tax-helpers"; // 하위 호환 재수출
@@ -77,6 +77,7 @@ export function calculateTransferTax(
   rates: TaxRatesMap,
 ): TransferTaxResult {
   const steps: CalculationStep[] = [];
+  const warnings: string[] = []; // F-2: 케이스 12 등 비차단 안내
 
   // STEP 0: 세율 파싱
   const parsedRates = parseRatesFromMap(rates);
@@ -152,17 +153,18 @@ export function calculateTransferTax(
     }
   }
 
-  // STEP 0.48: 부담부증여 분기 — 양도가액 = 채무액, 자산별 안분 (소령 §159).
-  // 양도자 = 증여자 본인이므로 §97의2(이월과세) 미적용 — carryoverTaxation은 항상 null 유지.
-  // Phase 1 가드: propertyType === "general_building" 한정.
+  // STEP 0.48 부담부증여 §159 (Phase 2/F-1/F-2): transferType OR legacy + propertyType 4종 + overshoot + 5-a 해석 B + 12 안내.
   let transferBurdenedGiftBreakdown: TransferBurdenedGiftBreakdown | undefined;
-  if (rawInput.acquisitionCause === "burdened_gift" && rawInput.burdenedGiftInfo) {
-    if (workingInput.propertyType !== "general_building") {
-      throw new Error(
-        "[burdened_gift] Phase 1은 propertyType === 'general_building' 만 지원합니다. " +
-        "1세대1주택 부담부증여는 Phase 3에서 §95② 표2 분기 도입.",
-      );
-    }
+  const isBurdenedGiftEngine =
+    rawInput.transferType === "burdened_gift" ||
+    rawInput.acquisitionCause === "burdened_gift";
+  if (isBurdenedGiftEngine && rawInput.burdenedGiftInfo) {
+    // Phase 2 게이트 — propertyType 허용 범위·overshoot fail-fast·고가주택 후속 PR 차단
+    assertBurdenedGiftEligible({
+      propertyType: workingInput.propertyType,
+      isOneHousehold: workingInput.isOneHousehold,
+      info: rawInput.burdenedGiftInfo,
+    });
     transferBurdenedGiftBreakdown = buildBurdenedGiftBreakdown({
       landStdPriceAtTransfer: rawInput.burdenedGiftInfo.landStdPriceAtTransfer,
       buildingStdPriceAtTransfer: rawInput.burdenedGiftInfo.buildingStdPriceAtTransfer,
@@ -176,8 +178,8 @@ export function calculateTransferTax(
     const totalTransferPrice = land.transferPrice + building.transferPrice;
     const totalAcquisitionPrice = land.acquisitionPrice + building.acquisitionPrice;
     const totalEstimatedDeduction = land.estimatedDeduction + building.estimatedDeduction;
-    // override: 부담부증여 산정값으로 본 계산 진행.
-    // §114⑦ 환산취득가 경로(useEstimatedAcquisition)와 분리 — 별도 조문(§159) 적용.
+    // override: §159 산정값으로 본 계산 진행 (§114⑦ 환산경로와 분리).
+    // F-1: burdenedGiftDenominator = giftValuation C — 12억 안분 해석 B 분모.
     workingInput = {
       ...workingInput,
       transferPrice: totalTransferPrice,
@@ -186,6 +188,7 @@ export function calculateTransferTax(
       capitalExpenditure: undefined,
       transferExpense: undefined,
       useEstimatedAcquisition: false,
+      burdenedGiftDenominator: transferBurdenedGiftBreakdown.sangjeungbeopValuation.max,
     };
     steps.push({
       label: "부담부증여 양도차익 산정 (소령 §159)",
@@ -196,8 +199,13 @@ export function calculateTransferTax(
       amount: totalTransferPrice,
       legalBasis: BURDENED_GIFT_TRANSFER.VALUATION_159,
     });
-    // 양도자 = 증여자 본인. §97의2 이월과세 미적용 보장.
-    // (carryoverTaxation 입력은 burdened_gift acquisitionCause와 동시 설정될 수 없음 — validate 차단.)
+    // F-2: 케이스 12 다주택 중과 비스코프 안내 (양도자 = 증여자 → §97의2 미적용).
+    const multiHouseWarning = detectBurdenedGiftMultiHouseWarning({
+      propertyType: workingInput.propertyType,
+      isRegulatedArea: workingInput.isRegulatedArea,
+      householdHousingCount: workingInput.householdHousingCount,
+    });
+    if (multiHouseWarning) warnings.push(multiHouseWarning);
   }
 
   // STEP 0.5: 다주택 중과세 판정 (houses[] 제공 + 주택 수 산정 규칙 로드 완료 시)
@@ -257,6 +265,7 @@ export function calculateTransferTax(
     return {
       isExempt: true,
       exemptReason: exemptionResult.exemptReason,
+      warnings: warnings.length > 0 ? warnings : undefined,
       transferGain: 0,
       taxableGain: 0,
       usedEstimatedAcquisition: effectiveInput.useEstimatedAcquisition,
@@ -373,6 +382,7 @@ export function calculateTransferTax(
     return {
       isExempt: false,
       exemptReason: exemptionResult.exemptReason,
+      warnings: warnings.length > 0 ? warnings : undefined,
       transferGain: transferGain,
       taxableGain: transferGain,
       usedEstimatedAcquisition: usedEstimated,
@@ -491,15 +501,29 @@ export function calculateTransferTax(
   }
 
   // STEP 3: 과세 양도차익 (12억 초과분 안분 — 부분과세인 경우)
-  // 지분 모드는 totalPropertyTransferPrice가 분모(총 물건가). 단독 모드는 input.transferPrice fallback.
+  // 우선순위: burdenedGiftDenominator (부담부증여 — 해석 B) > totalPropertyTransferPrice (지분) > transferPrice (단독)
+  // F-1 (2026-05-12): effectiveInput 사용 — STEP 0.48 burdenedGiftDenominator 오버라이드 반영.
   let taxableGain: number;
   if (exemptionResult.isPartialExempt) {
-    taxableGain = calcOneHouseProration(transferGain, input.transferPrice, input.totalPropertyTransferPrice);
-    const denom = input.totalPropertyTransferPrice ?? input.transferPrice;
-    const isFractional = input.totalPropertyTransferPrice !== undefined && input.totalPropertyTransferPrice !== input.transferPrice;
+    taxableGain = calcOneHouseProration(
+      transferGain,
+      effectiveInput.transferPrice,
+      effectiveInput.totalPropertyTransferPrice,
+      effectiveInput.burdenedGiftDenominator,
+    );
+    const denom =
+      effectiveInput.burdenedGiftDenominator ??
+      effectiveInput.totalPropertyTransferPrice ??
+      effectiveInput.transferPrice;
+    const isBurdened = effectiveInput.burdenedGiftDenominator !== undefined;
+    const isFractional =
+      !isBurdened &&
+      effectiveInput.totalPropertyTransferPrice !== undefined &&
+      effectiveInput.totalPropertyTransferPrice !== effectiveInput.transferPrice;
+    const denomLabel = isBurdened ? "증여가액 C" : isFractional ? "총양도가" : "양도가";
     steps.push({
       label: "과세 양도차익 (12억 초과분)",
-      formula: `${transferGain.toLocaleString()} × (${isFractional ? "총양도가" : "양도가"} ${denom.toLocaleString()} - 12억) / ${isFractional ? "총양도가" : "양도가"}`,
+      formula: `${transferGain.toLocaleString()} × (${denomLabel} ${denom.toLocaleString()} - 12억) / ${denomLabel}`,
       amount: taxableGain,
       legalBasis: TRANSFER.ONE_HOUSE_EXEMPT,
     });
@@ -725,6 +749,7 @@ export function calculateTransferTax(
   return {
     isExempt: false,
     exemptReason: exemptionResult.exemptReason,
+    warnings: warnings.length > 0 ? warnings : undefined,
     transferGain,
     taxableGain,
     usedEstimatedAcquisition: usedEstimated,

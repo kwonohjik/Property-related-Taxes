@@ -1,4 +1,4 @@
-# Design: 검용주택 양도소득세 — Engine·API·Test (분할)
+# Design: 겸용주택 양도소득세 — Engine·API·Test (분할)
 
 **Main Doc**: `transfer-tax-mixed-use-house.design.md`
 **작성일**: 2026-04-29
@@ -370,7 +370,7 @@ const longTermDeductionAmount = applyRate(taxableLandGain, 표율) + applyRate(b
 | 상가부분 건물차익 | `buildingAcquisitionDate` | `transferDate` | `calcCommercialGainSplit.buildingHoldingYears` |
 | 비사업용토지 (이전분) | `landAcquisitionDate` (= 주택 토지와 동일) | `transferDate` | 표1, `housingGainSplit.landHoldingYears` 재사용 |
 
-**근거**: 소득세법 시행령 §166⑥ — 토지·건물 분리 취득 시 각자의 보유기간으로 양도소득세 계산. 검용주택의 비사업용 이전분은 원래 주택부수토지에서 분리된 것이므로 토지 보유기간을 그대로 적용.
+**근거**: 소득세법 시행령 §166⑥ — 토지·건물 분리 취득 시 각자의 보유기간으로 양도소득세 계산. 겸용주택의 비사업용 이전분은 원래 주택부수토지에서 분리된 것이므로 토지 보유기간을 그대로 적용.
 
 ### 2-G. ★ calcSplitGain 미재사용 결정 (v2 변경)
 
@@ -386,7 +386,7 @@ if (!input.landAcquisitionDate) return null;
 if (input.propertyType !== "housing" && input.propertyType !== "building") return null;
 ```
 
-검용주택은 `propertyType === "mixed-use-house"`이므로 두 번째 가드에서 `null` 반환. 또한 `calcSplitGain`은 `TransferTaxInput` 전체를 받아 내부에서 토지/건물 비율을 추출하므로, 검용주택 입력 구조(주택/상가 분리)와 매핑이 복잡.
+겸용주택은 `propertyType === "mixed-use-house"`이므로 두 번째 가드에서 `null` 반환. 또한 `calcSplitGain`은 `TransferTaxInput` 전체를 받아 내부에서 토지/건물 비율을 추출하므로, 겸용주택 입력 구조(주택/상가 분리)와 매핑이 복잡.
 
 #### 신규 함수
 
@@ -399,7 +399,7 @@ if (input.propertyType !== "housing" && input.propertyType !== "building") retur
 
 #### 어댑터 스펙
 
-| 검용주택 입력 | calcSplitGain 등가 입력 (개념적) |
+| 겸용주택 입력 | calcSplitGain 등가 입력 (개념적) |
 |---|---|
 | `housingPart.transferPrice` | `transferPrice` |
 | `housingAcq` (§97 환산) | `acquisitionPrice` (환산취득가) |
@@ -436,13 +436,13 @@ function rejectPre2022(asset, input): MixedUseGainBreakdown {
 export function calculateTransferTax(input: TransferTaxInput, ...): TransferTaxResult {
   // ... 기존 STEP 0.1 ~ 0.6 ...
 
-  // STEP 0.7: 검용주택 분기
+  // STEP 0.7: 겸용주택 분기
   for (const asset of input.assets) {
     if (asset.assetType === "mixed-use-house" && asset.mixedUse?.isMixedUseHouse) {
       const breakdown = calcMixedUseTransferTax(input, asset.mixedUse, rates);
       result.assetResults.push(toMixedUseAssetResult(breakdown));
       result.steps.push(...breakdown.steps);
-      continue; // 검용주택은 자체 분리계산 → STEP 1~ 스킵
+      continue; // 겸용주택은 자체 분리계산 → STEP 1~ 스킵
     }
     // 기존 단일 자산 처리
   }
@@ -494,7 +494,7 @@ const assetSchema = z.discriminatedUnion("assetType", [
 ### 5-A. Anchor 테스트 (사례14 정확값)
 
 ```ts
-describe("사례14 — 1세대 1주택 + 상가 검용주택 분리계산", () => {
+describe("사례14 — 1세대 1주택 + 상가 겸용주택 분리계산", () => {
   it("anchor: 예제 23번 메뉴 출력값과 원단위 일치", () => {
     const input = mixedUseFixture.case14();
     const result = calcMixedUseTransferTax(input.transferInput, input.asset, MOCK_RATES);
@@ -538,7 +538,7 @@ describe("사례14 — 1세대 1주택 + 상가 검용주택 분리계산", () =
 
 ### 5-C. 회귀 테스트
 
-- 단독주택·상가·토지 단일 자산 케이스: 검용주택 분기 추가 후에도 동일 세액
+- 단독주택·상가·토지 단일 자산 케이스: 겸용주택 분기 추가 후에도 동일 세액
 - 기존 1,484개 모두 통과 → 1,493+ 로 확장, 회귀 0건
 
 ---
@@ -585,7 +585,7 @@ function migrateLegacyMixedUse(asset: LegacyAsset): AssetForm {
     residentialFloorArea: "",
     nonResidentialFloorArea: "",
     buildingFootprintArea: "",
-    // ... 모든 검용주택 필드 빈 값 초기화
+    // ... 모든 겸용주택 필드 빈 값 초기화
   };
 }
 ```

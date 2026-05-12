@@ -1,4 +1,4 @@
-# 사례14 — 검용주택(1세대 1주택 + 상가) 양도소득세 계산기 구현 계획
+# 사례14 — 겸용주택(1세대 1주택 + 상가) 양도소득세 계산기 구현 계획
 
 ## 개정 이력
 
@@ -16,10 +16,10 @@
 
 ## Context
 
-이미지5의 **사례14**(1세대 1주택 + 상가 검용주택, 22.1.1 이후 양도분 분리계산)를 우리 양도소득세 계산기로 풀어내기 위한 신규 기능 추가 계획.
+이미지5의 **사례14**(1세대 1주택 + 상가 겸용주택, 22.1.1 이후 양도분 분리계산)를 우리 양도소득세 계산기로 풀어내기 위한 신규 기능 추가 계획.
 
 **왜 필요한가**
-- 양도소득세 엔진은 단독주택·상가·토지 단일 자산 케이스는 모두 지원하지만, **검용주택(주택+비주택 복합건물)** 의 양도세 분리계산은 미구현
+- 양도소득세 엔진은 단독주택·상가·토지 단일 자산 케이스는 모두 지원하지만, **겸용주택(주택+비주택 복합건물)** 의 양도세 분리계산은 미구현
 - 22.1.1 이후 양도분부터 소득세법 시행령 §160 ① 단서가 적용되어 **주택연면적 ≥ 상가연면적이라도 강제 분리** 계산하도록 변경됨
 - 12억 초과 고가주택 비과세는 **주택부분에만** 적용, 상가부분은 일반건물 양도세 전액 과세, 주택부수토지 배율초과 면적은 **비사업용토지 +10%p 중과**
 - 사례14는 1992 토지 + 1997 건물 신축 + 취득가액 미확인 → **환산취득가액**까지 결합된 복잡 시나리오
@@ -48,14 +48,14 @@
 | 기능 | 파일경로:라인 | 활용 |
 |---|---|---|
 | 12억 초과 비과세 안분 | `lib/tax-engine/transfer-tax-helpers.ts:314-318` (`calcOneHouseProration`) | 주택부분 양도차익에 그대로 적용 |
-| ~~토지/건물 분리 양도차익~~ (v2 변경) | ~~`calcSplitGain`~~ → 신규 `calcHousingGainSplit`/`calcCommercialGainSplit` | `calcSplitGain`은 `propertyType !== "housing"/"building"` 가드로 검용주택 거부 → 동일 산술 패턴(개산공제 §163⑥, 보유연수 분리)을 따르되 `MixedUseAssetInput` + `MixedUseDerivedAreas`를 직접 받는 신규 함수로 작성 (transfer-tax-mixed-use-helpers.ts:113~232) |
+| ~~토지/건물 분리 양도차익~~ (v2 변경) | ~~`calcSplitGain`~~ → 신규 `calcHousingGainSplit`/`calcCommercialGainSplit` | `calcSplitGain`은 `propertyType !== "housing"/"building"` 가드로 겸용주택 거부 → 동일 산술 패턴(개산공제 §163⑥, 보유연수 분리)을 따르되 `MixedUseAssetInput` + `MixedUseDerivedAreas`를 직접 받는 신규 함수로 작성 (transfer-tax-mixed-use-helpers.ts:113~232) |
 | 환산취득가액 | `lib/tax-engine/transfer-tax-helpers.ts:38-52` (`calculateEstimatedAcquisitionPrice`) | 주택·상가 각 양도가액 안분분으로 §97 환산 호출 |
 | PHD 3-시점 알고리즘 | `lib/tax-engine/transfer-tax-pre-housing-disclosure.ts:35-80` | 1997 신축 건물 기준시가 미공시 시 토글로 활용 |
-| 부수토지 배율 판정 | `lib/tax-engine/non-business-land/housing-land.ts:111-118` + `urban-area.ts:72-89` (`getHousingMultiplier`) | 주택 정착면적 × 3·5·10배 적용. 검용주택용은 정착면적 자동 안분 후 호출 |
+| 부수토지 배율 판정 | `lib/tax-engine/non-business-land/housing-land.ts:111-118` + `urban-area.ts:72-89` (`getHousingMultiplier`) | 주택 정착면적 × 3·5·10배 적용. 겸용주택용은 정착면적 자동 안분 후 호출 |
 | 비사업용토지 +10%p 중과 | `lib/tax-engine/non-business-land/engine.ts:293-298` | 배율초과 면적의 양도차익에 적용 (장기보유공제 표1 + 기본세율+10%p) |
 | 장기보유공제 표1·표2 | `lib/tax-engine/transfer-tax-helpers.ts:382-406` | 부분별 안분 후 각각 적용 |
 | Vworld 공시지가 조회 | `app/api/address/standard-price/route.ts` | 양도시 토지 기준시가 자동조회 (1992·1997 시점은 수동 입력) |
-| 자산-수준 필드 패턴 | `components/calc/transfer/AssetForm.tsx` | 검용주택 신규 필드(주택연면적·상가연면적·1층면적 등) 자산-수준에 추가 |
+| 자산-수준 필드 패턴 | `components/calc/transfer/AssetForm.tsx` | 겸용주택 신규 필드(주택연면적·상가연면적·1층면적 등) 자산-수준에 추가 |
 
 ---
 
@@ -66,8 +66,8 @@
 **파일**: `lib/tax-engine/transfer-tax-types.ts` (또는 자산 타입 정의 위치)
 
 ```typescript
-// 검용주택 자산 수준 필드 (모두 optional, isMixedUseHouse=true일 때만 필수)
-isMixedUseHouse?: boolean              // 검용주택 토글 (양도일 ≥ 2022.1.1 시 분리계산 강제)
+// 겸용주택 자산 수준 필드 (모두 optional, isMixedUseHouse=true일 때만 필수)
+isMixedUseHouse?: boolean              // 겸용주택 토글 (양도일 ≥ 2022.1.1 시 분리계산 강제)
 residentialFloorArea?: number          // 주택 연면적 (㎡, 건축물대장)
 nonResidentialFloorArea?: number       // 비주택(상가) 연면적 (㎡)
 buildingFootprintArea?: number         // 건물 정착면적 = 1층 면적 (㎡)
@@ -98,11 +98,11 @@ residencePeriodYears?: number
 
 ---
 
-### 2. 엔진 — 검용주택 분리계산 모듈 신규
+### 2. 엔진 — 겸용주택 분리계산 모듈 신규
 
 **신규 파일**: `lib/tax-engine/transfer-tax-mixed-use.ts` (≤ 800줄, 800줄 정책 준수)
 
-**책임**: 검용주택 입력을 받아 주택부분·상가부분·비사업용토지부분 양도소득금액을 산출하는 순수 함수
+**책임**: 겸용주택 입력을 받아 주택부분·상가부분·비사업용토지부분 양도소득금액을 산출하는 순수 함수
 
 **핵심 함수 시그니처**:
 ```typescript
@@ -144,7 +144,7 @@ export function calcMixedUseTransferTax(
 
 **PHD 통합 (선택 옵션)**:
 - 사용자가 `usePreHousingDisclosure: true` 토글 시 STEP 3에서 `calcViaPHD()` 분기
-- 검용주택 PHD 적용 적합성에 대한 안내 메시지 표시 (`이미지5는 단순 §97 환산 사용`)
+- 겸용주택 PHD 적용 적합성에 대한 안내 메시지 표시 (`이미지5는 단순 §97 환산 사용`)
 
 **Orchestrator 연결**:
 - `app/api/calc/transfer-tax/route.ts`에서 자산 중 `isMixedUseHouse: true` 발견 시 `calcMixedUseTransferTax()`로 분기
@@ -155,13 +155,13 @@ export function calcMixedUseTransferTax(
 ### 3. UI — 입력 마법사 확장
 
 **수정 파일**:
-- `components/calc/transfer/AssetForm.tsx` — 자산 타입 선택에 "검용주택(주택+상가)" 옵션 추가
-- `components/calc/transfer/MixedUseSection.tsx` (신규) — 검용주택 전용 입력 섹션
+- `components/calc/transfer/AssetForm.tsx` — 자산 타입 선택에 "겸용주택(주택+상가)" 옵션 추가
+- `components/calc/transfer/MixedUseSection.tsx` (신규) — 겸용주택 전용 입력 섹션
 
 **MixedUseSection 입력 필드** (UI 표시 순서 = 엔진 계산 순서 원칙 준수):
 
 ```
-[FieldCard] 검용주택 여부 토글  (자산 타입 = 검용주택일 때 활성)
+[FieldCard] 겸용주택 여부 토글  (자산 타입 = 겸용주택일 때 활성)
   └─ 안내: "2022.1.1 이후 양도분은 주택연면적 ≥ 상가연면적이라도 분리계산"
 
 ── 면적 정보 (정착면적 자동 안분용)
@@ -173,7 +173,7 @@ export function calcMixedUseTransferTax(
 [FieldCard] 전체 토지 면적 (㎡)
 [FieldCard] 토지 취득일 (≠ 건물 취득일 토글 → 1992.1.1)
 [FieldCard] 건물 취득일 / 신축일 (1997.9.12)
-[FieldCard] (옵션) PHD 3-시점 환산 토글  ← 검용주택 적합성 경고 라벨
+[FieldCard] (옵션) PHD 3-시점 환산 토글  ← 겸용주택 적합성 경고 라벨
 
 ── 시점별 기준시가
 [FieldCard] 양도시 개별주택공시가격       [Vworld 조회]  ← 주택건물+주택부수토지 일괄
@@ -307,10 +307,10 @@ export function calcMixedUseTransferTax(
 3. **타입체크**: `npm run lint`
 4. **E2E 사례14 입력**:
    - `npm run dev` 후 `/calc/transfer-tax` 접속
-   - 자산 타입 = 검용주택, 양도일 = 2022.02.16, 토지 168.3㎡, 주택 91.78㎡, 상가 ~277.6㎡, 1층 100㎡, 토지 취득 1992.1.1, 건물 신축 1997.9.12
+   - 자산 타입 = 겸용주택, 양도일 = 2022.02.16, 토지 168.3㎡, 주택 91.78㎡, 상가 ~277.6㎡, 1층 100㎡, 토지 취득 1992.1.1, 건물 신축 1997.9.12
    - 양도시·취득시 기준시가 입력 → 결과 카드 4개 + 합산 세액 확인
 5. **법조문 링크 검증**: 결과 뷰의 `§89①3` `§95②` `§104의3` `§160` `§163` `§166` `§168의12` 모두 정상 모달 표시
-6. **회귀**: 단독주택·상가·토지 단일 자산 케이스가 검용주택 분기 추가 후에도 동일 세액 산출
+6. **회귀**: 단독주택·상가·토지 단일 자산 케이스가 겸용주택 분기 추가 후에도 동일 세액 산출
 
 ---
 
@@ -318,10 +318,10 @@ export function calcMixedUseTransferTax(
 
 | 항목 | 처리 방안 |
 |---|---|
-| 검용주택 PHD 적합성 | 토글로 옵션 제공 + UI에 "이미지5 사례는 단순 §97 환산 사용" 안내 노출 |
+| 겸용주택 PHD 적합성 | 토글로 옵션 제공 + UI에 "이미지5 사례는 단순 §97 환산 사용" 안내 노출 |
 | 22.1.1 이전 양도분 | 본 계획 범위 외 (향후 `mixed-use-pre2022.ts` 분리). 입력 시 경고 노출 |
 | ~~양도시 "건물기준시가"의 정의~~ | **해결됨** — 상가부분 기준시가 = (개별공시지가 × 상가부수토지 면적) + 상가건물 기준시가. 양도시·취득시 동일 패턴 |
-| ~~기존 `calcSplitGain` 의 검용주택 호환성~~ (v2 해결) | `calcSplitGain` 첫 가드(`propertyType !== "housing"/"building"`)로 검용주택은 `null` 반환 → 우회 불가. 동일 산술 패턴을 따르되 `MixedUseAssetInput`을 직접 받는 신규 함수 `calcHousingGainSplit`/`calcCommercialGainSplit` 작성 |
+| ~~기존 `calcSplitGain` 의 겸용주택 호환성~~ (v2 해결) | `calcSplitGain` 첫 가드(`propertyType !== "housing"/"building"`)로 겸용주택은 `null` 반환 → 우회 불가. 동일 산술 패턴을 따르되 `MixedUseAssetInput`을 직접 받는 신규 함수 `calcHousingGainSplit`/`calcCommercialGainSplit` 작성 |
 | 800줄 정책 | `transfer-tax-mixed-use.ts` 가 800줄 초과 우려 시 `mixed-use-helpers.ts` / `mixed-use-types.ts` / `mixed-use-result.ts` 로 분할 |
 
 ---
@@ -335,11 +335,11 @@ export function calcMixedUseTransferTax(
 - `__tests__/tax-engine/transfer-tax/mixed-use-house.test.ts`
 
 **수정 파일**:
-- `lib/tax-engine/transfer-tax-types.ts` — 검용주택 자산 필드 추가
+- `lib/tax-engine/transfer-tax-types.ts` — 겸용주택 자산 필드 추가
 - `app/api/calc/transfer-tax/route.ts` — Orchestrator 분기
 - `components/calc/transfer/AssetForm.tsx` — 자산 타입 옵션 추가
 - `app/calc/transfer-tax/steps/Step*.tsx` — `MixedUseSection` 통합 (Step 결정은 구현 시)
-- `lib/tax-engine/legal-codes/transfer.ts` — 검용주택 관련 법조문 상수 보강 (§160 단서 등)
+- `lib/tax-engine/legal-codes/transfer.ts` — 겸용주택 관련 법조문 상수 보강 (§160 단서 등)
 
 **무수정 (재사용만)**:
 - `transfer-tax-helpers.ts` (calcOneHouseProration, calculateEstimatedAcquisitionPrice 등)

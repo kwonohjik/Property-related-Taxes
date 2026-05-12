@@ -2,6 +2,7 @@ import { redirect, notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCalculation } from "@/actions/calculations";
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
+import { HomeLink } from "@/components/ui/home-link";
 import { ResultDetailClient } from "./ResultDetailClient";
 
 interface ResultPageProps {
@@ -54,6 +55,9 @@ export default async function ResultPage({ params }: ResultPageProps) {
 
   return (
     <div className="mx-auto max-w-lg px-4 py-8">
+      <div className="mb-3">
+        <HomeLink />
+      </div>
       <div className="mb-6">
         <p className="text-xs text-muted-foreground mb-1">
           {taxLabel} · {createdAt}
@@ -67,6 +71,9 @@ export default async function ResultPage({ params }: ResultPageProps) {
         result={record.result_data as unknown as TransferTaxResult}
         inputData={record.input_data}
       />
+      <div className="mt-8 pt-6 border-t border-border">
+        <HomeLink />
+      </div>
     </div>
   );
 }

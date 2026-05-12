@@ -92,6 +92,18 @@ export interface TransferTaxInput {
    * 참고: 예제 사례 27 (아파트 2번 지분취득) anchor.
    */
   totalPropertyTransferPrice?: number;
+  /**
+   * 부담부증여 12억 안분·고가주택 판정 분모 — F-1 (2026-05-12).
+   * D-0-2 채택안 해석 B: 부담부증여 + 1세대1주택 + 12억 초과 시
+   * 비교·안분 분모 = 증여가액(giftValuation C). 채무 양도가가 아닌 **전체 평가액 C** 사용.
+   *
+   * 근거: 국세청 해석례 5건 (ntstDcmId=010000000000028078 등) — "전체 주택가액이 12억원 초과 시 고가주택으로 본다".
+   * 산식: 과세 양도차익_burdened = (transferGain in 채무양도 단위) × (C − 12억) / C
+   *
+   * 일반 양도(transferType !== "burdened_gift") 시 미설정 — totalPropertyTransferPrice/transferPrice fallback.
+   * checkOneHouseExemption()·calcOneHouseProration()에서 우선순위 1번 분모로 사용.
+   */
+  burdenedGiftDenominator?: number;
   /** 양도일 */
   transferDate: Date;
   /** 취득가액 (0이면 환산취득가 사용) */
@@ -155,8 +167,17 @@ export interface TransferTaxInput {
    * 취득 원인. "newConstruction" = 자가건축 주택 (소득세법 시행령 §162①4호).
    * 신축 케이스에서 사용승인일 등 영 §162①4호 기준 취득일 안내 + 부수토지 일체과세 UI 트리거.
    * 엔진 분기는 buildingFootprintArea + holdingMonths 조건으로 판정 (acquisitionCause 단독 판정 금지).
+   * @deprecated `"burdened_gift"`는 Phase 2(2026-05-12) 이후 deprecation — `transferType: "burdened_gift"` 사용 권장.
    */
   acquisitionCause?: "purchase" | "inheritance" | "gift" | "carryover_gift" | "newConstruction" | "burdened_gift";
+
+  /**
+   * 양도 형태 (양도자 관점) — Phase 2(2026-05-12) 신규.
+   * "regular": 일반 양도 (매매·교환 등). 미지정 시 기본값.
+   * "burdened_gift": 부담부증여 (소령 §159 — 채무 인수분을 유상 양도로 의제). burdenedGiftInfo 필수.
+   * 부담부증여는 취득 사건이 아니라 양도 사건이므로 acquisitionCause와 별도 차원.
+   */
+  transferType?: "regular" | "burdened_gift";
   /**
    * 상속 시 피상속인 취득일 — 단기보유 단일세율 판정 보유기간 통산용.
    * 소득세법 §95④: 상속받은 자산은 피상속인이 그 자산을 취득한 날을 자산의 취득일로 본다.
@@ -300,7 +321,7 @@ export interface TransferTaxInput {
   inheritedHouseValuation?: InheritanceHouseValuationInput;
 
   /**
-   * 검용주택(1세대 1주택 + 상가) 분리계산 입력.
+   * 겸용주택(1세대 1주택 + 상가) 분리계산 입력.
    * propertyType === "mixed-use-house" 일 때 필수.
    * 소득세법 시행령 §160 ① 단서 — 2022.1.1 이후 양도분 강제 분리.
    */
@@ -386,7 +407,7 @@ export interface TransferTaxInput {
    * 건물 정착면적 (㎡) — 부수토지 한도 산정용 (소득세법 시행령 §154⑦).
    * 나대지 취득 후 주택 신축·일괄양도 케이스에서 companion 토지의 부수토지 인정 한도를
    * 계산할 때 사용. undefined이면 부수토지 일체과세 자동 분기 비활성화.
-   * 검용주택(`isMixedUseHouse=true`)에서도 동일 필드를 재사용한다.
+   * 겸용주택(`isMixedUseHouse=true`)에서도 동일 필드를 재사용한다.
    */
   buildingFootprintArea?: number;
   /**
@@ -519,6 +540,13 @@ export interface TransferTaxResult {
   isExempt: boolean;
   /** 비과세 사유 */
   exemptReason?: string;
+  /**
+   * 정보성 경고 메시지 — F-2 (2026-05-12).
+   * 비스코프 케이스 안내·계산 가정·실무 주의사항 등을 결과 카드·사이드바에 amber 배지로 노출.
+   * 미설정 시 undefined (현재 케이스 12 다주택 중과 + 부담부증여에서만 채워짐).
+   * 차단(throw)이 아닌 정보 전달용.
+   */
+  warnings?: string[];
   /** 양도차익 */
   transferGain: number;
   /** 과세 양도차익 (12억 초과분 안분 후) */
@@ -673,7 +701,7 @@ export interface TransferTaxResult {
    * UI에서 3-시점 합계 기준시가·추정 주택가격·1990 등급가액 환산 산식 표시용.
    */
   inheritedHouseValuationDetail?: InheritanceHouseValuationResult;
-  /** 검용주택 분리계산 (propertyType === "mixed-use-house"). UI 4-카드. */
+  /** 겸용주택 분리계산 (propertyType === "mixed-use-house"). UI 4-카드. */
   mixedUseDetail?: MixedUseGainBreakdown;
   /** 배우자등 이월과세 상세 (carryoverTaxation 제공 시). UI 비교 카드. */
   carryoverTaxationDetail?: CarryoverTaxationDetail;

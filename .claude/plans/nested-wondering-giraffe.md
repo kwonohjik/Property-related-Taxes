@@ -1,4 +1,4 @@
-# PHD §164⑤ 환산 산식 — 검용주택 + 부분 용도변경 케이스 분기 적용
+# PHD §164⑤ 환산 산식 — 겸용주택 + 부분 용도변경 케이스 분기 적용
 
 ## Context
 
@@ -18,8 +18,8 @@ P_A_est = P_F × (취득시 전체 토지 기준시가 + 취득시 전체 건물
 
 **분기 조건**:
 - **Case A**: `firstDisclosureDate < usageChangeDate` → 위의 새 산식 적용 (최초공시 시점에 건물 전체가 주택)
-- **Case B**: `firstDisclosureDate ≥ usageChangeDate` → 현재 산식 유지 (최초공시 시점에 이미 검용)
-- **partialUsageChange 미사용** (일반 검용주택) → 현재 산식 유지
+- **Case B**: `firstDisclosureDate ≥ usageChangeDate` → 현재 산식 유지 (최초공시 시점에 이미 겸용)
+- **partialUsageChange 미사용** (일반 겸용주택) → 현재 산식 유지
 
 **의도 결과**: `usePreHousingDisclosure` + `partialUsageChange.usageChangeDate` 조합에서 시점별 면적·기준시가 의미를 정확히 반영. 결과 카드에 분기 배지 노출. 시점별 면적은 자동 계산하되 사용자 수정 가능.
 
@@ -44,7 +44,7 @@ P_A_est = P_F × (취득시 전체 토지 기준시가 + 취득시 전체 건물
 | 파일 | 변경 |
 |---|---|
 | `lib/tax-engine/types/transfer.types.ts` | `PreHousingDisclosureInput` 에 시점별 **건물 기준시가 모드** 필드 추가:<br/>`buildingScopeAtAcquisition: "whole" \| "housing_only"` (default `"housing_only"`)<br/>`buildingScopeAtFirstDisclosure: "whole" \| "housing_only"` (default `"housing_only"`)<br/>`buildingScopeAtTransfer: "whole" \| "housing_only"` (default `"housing_only"`)<br/>의미: 해당 시점의 `buildingStdPrice*` 입력값이 "전체 건물(주택+상가 합계)"인지 "주택분만"인지. Case A 진입 시 acq·first = `"whole"`, transfer = `"housing_only"`. `PreHousingDisclosureResult.inputs` 에 동일 echo 필드 추가. |
-| `lib/tax-engine/transfer-tax-pre-housing-disclosure.ts` | `Sum_A`·`Sum_F`·`Sum_T` 산식의 의미는 동일하지만, 입력 면적·기준시가 의미가 호출자 책임으로 옮겨감 (mode 필드는 결과 메타데이터 echo 용도이며 산식 자체는 그대로 — 면적·건물값을 "전체"로 주입하면 자연스럽게 정확한 산식이 됨). docstring 갱신: "검용주택 + Case A 진입 시 호출자가 acq·first 시점에 전체 토지면적·전체 건물 기준시가를 주입해야 함" 명시. `landHousingAtAcquisition` 등 안분값 산식 의미 재검토 → Case A 에서 P_A_est 자체가 "취득시점 전체 합계 대 최초공시 전체 합계 비율" 이므로, 안분 시 분모가 Sum_A 이면 그대로 자연스럽게 동작 (P_A_est 와 Sum_A 가 같은 영역을 가리킴). |
+| `lib/tax-engine/transfer-tax-pre-housing-disclosure.ts` | `Sum_A`·`Sum_F`·`Sum_T` 산식의 의미는 동일하지만, 입력 면적·기준시가 의미가 호출자 책임으로 옮겨감 (mode 필드는 결과 메타데이터 echo 용도이며 산식 자체는 그대로 — 면적·건물값을 "전체"로 주입하면 자연스럽게 정확한 산식이 됨). docstring 갱신: "겸용주택 + Case A 진입 시 호출자가 acq·first 시점에 전체 토지면적·전체 건물 기준시가를 주입해야 함" 명시. `landHousingAtAcquisition` 등 안분값 산식 의미 재검토 → Case A 에서 P_A_est 자체가 "취득시점 전체 합계 대 최초공시 전체 합계 비율" 이므로, 안분 시 분모가 Sum_A 이면 그대로 자연스럽게 동작 (P_A_est 와 Sum_A 가 같은 영역을 가리킴). |
 | `lib/tax-engine/transfer-tax-mixed-use-helpers.ts` | `calcHousingEstimatedAcq` 내 `usageChangeDate`·`firstDisclosureDate` 비교 분기(L184~193) 강화: <br/>① Case A 식별 (`firstDisclosureDate < usageChangeDate`) <br/>② Case A 시 `landAreaAtAcquisition = landAreaAtFirstDisclosure = totalLandArea` (현재 `acqDerived.residentialLandArea` 잘못 사용) <br/>③ Case A 시 `buildingStdPriceAtAcquisition`/`AtFirstDisclosure` 는 사용자 입력값(폼이 "전체 건물 기준시가" 의미로 받음)을 그대로 전달 — 폼 변환 책임은 API 레이어 <br/>④ `landAreaAtTransfer` = `derived.residentialLandArea` (양도시 주택부수토지) 그대로 <br/>⑤ Case A·B 식별 결과를 `phdResult` 메타에 추가해 결과 카드가 배지 표시 가능 |
 | `lib/tax-engine/types/transfer-mixed-use.types.ts` | `MixedUseGainBreakdown.partialUsageChange` 메타에 `phdScopeBranch?: "case_a_whole_building" \| "case_b_housing_only"` 추가 — 결과 카드 배지용 |
 
@@ -52,7 +52,7 @@ P_A_est = P_F × (취득시 전체 토지 기준시가 + 취득시 전체 건물
 
 | 파일 | 변경 |
 |---|---|
-| `lib/calc/transfer-tax-validate.ts` | 검용주택 + `usePreHousingDisclosure === true` + `hasPartialUsageChange === true` 시 `partialChangeUsageChangeDate` 필수 검증 추가. 한국어 메시지: "보유 중 일부 용도변경 + 개별주택가격 미공시 환산 동시 사용 시 용도변경일이 필수입니다." |
+| `lib/calc/transfer-tax-validate.ts` | 겸용주택 + `usePreHousingDisclosure === true` + `hasPartialUsageChange === true` 시 `partialChangeUsageChangeDate` 필수 검증 추가. 한국어 메시지: "보유 중 일부 용도변경 + 개별주택가격 미공시 환산 동시 사용 시 용도변경일이 필수입니다." |
 
 ### API 변환
 
@@ -107,7 +107,7 @@ if (asset.usePreHousingDisclosure && asset.preHousingDisclosure) {
     landAreaAtFirstDisclosure = asset.totalLandArea;
     landAreaAtTransfer = derived.residentialLandArea;
   } else if (usageChangeDate && acqDerived) {
-    // Case B: 용도변경이 최초공시 이전 — 시점별 검용 면적
+    // Case B: 용도변경이 최초공시 이전 — 시점별 겸용 면적
     landAreaAtAcquisition = acqDerived.residentialLandArea;
     landAreaAtTransfer = derived.residentialLandArea;
     landAreaAtFirstDisclosure = derived.residentialLandArea;
@@ -160,13 +160,13 @@ if (asset.usePreHousingDisclosure && asset.preHousingDisclosure) {
 | Case A — PDF 갑氏 (1985 → 2005 → 2011 → 2023) | P_A_est, 환산취득가, 양도차익, 세액 모두 새 anchor 값과 일치 |
 | Case B — usageChangeDate < firstDisclosureDate | 현재 산식 결과와 동일 (회귀 0건) |
 | 일반 PHD (partialUsageChange 미사용) | 현재 산식 결과와 동일 (회귀 0건) |
-| 일반 검용주택 (PHD 미사용) | 영향 없음 |
+| 일반 겸용주택 (PHD 미사용) | 영향 없음 |
 | usageChangeDate 미입력 + PHD ON + partial ON | 검증 단계에서 한국어 오류 반환 |
 | 시점별 면적 사용자 수정 | override 값이 자동값보다 우선 |
 
 ### 수동 확인 (브라우저)
 
-1. `/calc/transfer-tax` → 검용주택 ON → PHD ON → 보유 중 일부 용도변경 ON → 주택→상가 → 용도변경일 2011-08-05 → 최초고시일 2005-04-30
+1. `/calc/transfer-tax` → 겸용주택 ON → PHD ON → 보유 중 일부 용도변경 ON → 주택→상가 → 용도변경일 2011-08-05 → 최초고시일 2005-04-30
 2. 폼 상단에 "최초공시일 < 용도변경일 — 전체 건물 기준시가 입력 안내" 박스 노출 확인
 3. acq·first 시점 라벨이 "전체 건물 기준시가" 로 변경됨 확인
 4. 시점별 토지면적 자동값 표시 (acq/first = 198.3㎡, transfer = 63.5㎡) 확인
@@ -178,7 +178,7 @@ if (asset.usePreHousingDisclosure && asset.preHousingDisclosure) {
 ## 영향 받지 않는 영역
 
 - `commercial_to_house` 미러 분기 (별도 코드 경로, 향후 별도 검토)
-- 일반 검용주택 (PHD 미사용)
+- 일반 겸용주택 (PHD 미사용)
 - 일반 PHD (partialUsageChange 미사용)
 - 다른 세목·다른 자산 종류
 - `commercialBuildingPrice`·`landPricePerSqm` 직접 입력 필수 정책 (직전 PR 에서 확정)

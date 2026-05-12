@@ -251,7 +251,8 @@ export function buildGeneralBuildingValuation(
       // isSelfBuilt: gbBuildingAcquisitionCause에서 도출 (A안: gbIsSelfBuilt 필드 폐지)
       isSelfBuilt: asset.gbBuildingAcquisitionCause === "newConstruction",
       // buildingAcquisitionCause: 엔진 input 필드 (⑭ route handler 매핑 준비)
-      buildingAcquisitionCause: asset.gbBuildingAcquisitionCause ?? "purchase",
+      // 빈 문자열("")도 fallback해야 함 — ?? 는 nullish만 처리하므로 || 사용.
+      buildingAcquisitionCause: asset.gbBuildingAcquisitionCause || "purchase",
       // #4-a: 토지 취득원인 + 상속·증여 보조 필드
       // 토지의 acquisitionCause(자산-수준) → landAcquisitionCause(payload)로 전달
       ...(asset.acquisitionCause && asset.acquisitionCause !== "newConstruction"
@@ -283,12 +284,21 @@ export function buildGeneralBuildingValuation(
   }
 
   // 실거래가/감정가 모드 — 양도시 기준시가만 (route helper에서 §166⑥ 비율 안분)
+  // buildingAcquisitionCause는 Zod schema에서 required이므로 minimal payload에도 포함.
+  // (§114조의2 신축 5년 이내 가산세 판정에 사용 — 실거래가 모드에서도 의미 있음)
+  // 부담부증여 §159①1호 산식용 — 취득시 기준시가 (입력 있을 때만 전달, optional).
+  const acquisitionLandPricePerSqm = parseAmount(asset.gbAcqLandPricePerSqm);
+  const acquisitionBuildingStdPrice = parseAmount(asset.gbAcqBuildingValue);
   return {
     transferLandPricePerSqm,
     transferBuildingStdPrice,
     landArea,
     buildingFootprintArea,
     actualPriceMode: true,
+    buildingAcquisitionCause: asset.gbBuildingAcquisitionCause || "purchase",
+    isSelfBuilt: asset.gbBuildingAcquisitionCause === "newConstruction",
+    ...(acquisitionLandPricePerSqm ? { acquisitionLandPricePerSqm } : {}),
+    ...(acquisitionBuildingStdPrice ? { acquisitionBuildingStdPrice } : {}),
     ...nblFields,
   };
 }

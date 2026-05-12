@@ -192,15 +192,25 @@ export function buildBurdenedGiftBreakdown(params: {
     info,
   } = params;
 
-  // STEP 1: 상증법 Max 평가
+  // STEP 1a: 양도세 보충적평가 (양도시 §99 기준시가) — 자산별 양도가액 안분 분모용
   const sangjeungbeopValuation = computeSangjeungbeopValuation(
     landStdPriceAtTransfer,
     buildingStdPriceAtTransfer,
     info,
   );
 
-  // STEP 2: 채무비율
-  const { assumedDebtAmount, debtRatio } = computeDebtRatio(info, sangjeungbeopValuation.max);
+  // STEP 1b: 증여세 보충적평가 (양도시 §61 기준시가 — 층별 가감율 적용) — 취득가액 안분 분모용
+  // 토지는 동일, 건물만 giftBuildingStdPriceAtTransfer (미입력 시 양도세값 fallback).
+  const giftBuildingStd =
+    info.giftBuildingStdPriceAtTransfer ?? buildingStdPriceAtTransfer;
+  const giftValuation = computeSangjeungbeopValuation(
+    landStdPriceAtTransfer,
+    giftBuildingStd,
+    info,
+  );
+
+  // STEP 2: 채무비율 — 분모는 증여재산 평가액(giftValuation.max). Excel 정합.
+  const { assumedDebtAmount, debtRatio } = computeDebtRatio(info, giftValuation.max);
 
   // STEP 3: 자산별 양도가액 안분 (시가 모드일 때 자산별 시가 분리값이 없으면 기준시가 비율로 안분)
   //   - 기준시가 모드: 자산별 기준시가 × 채무비율
@@ -233,6 +243,7 @@ export function buildBurdenedGiftBreakdown(params: {
   );
 
   // STEP 4: 자산별 취득가액 안분 (소령 §159 ① 1호 A 괄호 — 기준시가 모드에서는 취득가도 기준시가)
+  //   분모는 증여재산 평가액(giftValuation.max) — 양도세 분모와 분리 (Excel 정합).
   //   시가 모드에서는 marketValueAtAcquisition 전체를 자산 비율로 분배 후 채무비율 적용.
   let landAcquisitionPrice: number;
   let buildingAcquisitionPrice: number;
@@ -240,12 +251,12 @@ export function buildBurdenedGiftBreakdown(params: {
     landAcquisitionPrice = apportionAcquisitionPrice(
       landStdPriceAtAcquisition,
       assumedDebtAmount,
-      sangjeungbeopValuation.max,
+      giftValuation.max,
     );
     buildingAcquisitionPrice = apportionAcquisitionPrice(
       buildingStdPriceAtAcquisition,
       assumedDebtAmount,
-      sangjeungbeopValuation.max,
+      giftValuation.max,
     );
   } else {
     const totalAcqStd = landStdPriceAtAcquisition + buildingStdPriceAtAcquisition;
@@ -255,16 +266,16 @@ export function buildBurdenedGiftBreakdown(params: {
         ? 0
         : safeMultiplyThenDivide(marketAcqTotal, landStdPriceAtAcquisition, totalAcqStd);
     const buildingAcqMarket = marketAcqTotal - landAcqMarket;
-    landAcquisitionPrice = apportionTransferPrice(landAcqMarket, assumedDebtAmount, sangjeungbeopValuation.max);
-    buildingAcquisitionPrice = apportionTransferPrice(buildingAcqMarket, assumedDebtAmount, sangjeungbeopValuation.max);
+    landAcquisitionPrice = apportionTransferPrice(landAcqMarket, assumedDebtAmount, giftValuation.max);
+    buildingAcquisitionPrice = apportionTransferPrice(buildingAcqMarket, assumedDebtAmount, giftValuation.max);
   }
 
   // STEP 5: 자산별 개산공제 (안분된 취득가액 × 3%)
   const landEstimatedDeduction = computeEstimatedDeduction(landAcquisitionPrice);
   const buildingEstimatedDeduction = computeEstimatedDeduction(buildingAcquisitionPrice);
 
-  // STEP 6: 무상이전분
-  const gratuitousPortion = sangjeungbeopValuation.max - assumedDebtAmount;
+  // STEP 6: 무상이전분 — 증여재산 평가액(giftValuation.max) − 채무액 (상증법 §47③)
+  const gratuitousPortion = giftValuation.max - assumedDebtAmount;
 
   // STEP 7: Phase 2 — 증여세 계산 (calcGiftTax 호출)
   // 증여세 = 무상이전분에 대해 수증자가 납부. 양도자(증여자)와 별도 납세의무자.
@@ -284,7 +295,13 @@ export function buildBurdenedGiftBreakdown(params: {
           marketValue: gratuitousPortion,
         },
       ],
-      priorGiftsWithin10Years: [],
+      // Phase 3 후속: 10년 이내 사전증여 합산 (상증법 §47②·§58)
+      priorGiftsWithin10Years: (info.priorGiftsWithin10Years ?? []).map((p) => ({
+        giftDate: p.giftDate,
+        isHeir: false, // 증여세 §47 합산에서는 isHeir 무관 (상속세 §13 전용 필드)
+        giftAmount: p.giftAmount,
+        giftTaxPaid: p.giftTaxPaid,
+      })),
       isGenerationSkip: info.isGenerationSkip ?? false,
       isMinorDonee: info.isMinorDonee ?? false,
       deductionInput: {
@@ -308,6 +325,7 @@ export function buildBurdenedGiftBreakdown(params: {
   return {
     assumedDebtAmount,
     sangjeungbeopValuation,
+    giftValuation,
     debtRatio,
     gratuitousPortion,
     taxpayer: "donor",
@@ -315,16 +333,125 @@ export function buildBurdenedGiftBreakdown(params: {
     perAsset: {
       land: {
         sangjeungbeopValue: landSangjeungbeopValue,
+        stdPriceAtAcquisition: landStdPriceAtAcquisition,
         transferPrice: landTransferPrice,
         acquisitionPrice: landAcquisitionPrice,
         estimatedDeduction: landEstimatedDeduction,
       },
       building: {
         sangjeungbeopValue: buildingSangjeungbeopValue,
+        stdPriceAtAcquisition: buildingStdPriceAtAcquisition,
         transferPrice: buildingTransferPrice,
         acquisitionPrice: buildingAcquisitionPrice,
         estimatedDeduction: buildingEstimatedDeduction,
       },
     },
   };
+}
+
+// ============================================================
+// Phase 2 (2026-05-12) — propertyType 지원 범위·overshoot·고가주택 게이트
+// ============================================================
+
+const HIGH_PRICE_THRESHOLD_KRW = 1_200_000_000;
+
+/**
+ * 부담부증여 진입 게이트 — Phase 2.
+ *
+ * 책임:
+ *   (1) propertyType 지원 범위 검증 (housing·land·building·general_building만)
+ *   (2) 초과부담부(B/C > 1) fail-fast — 상증법 §47③ 정의 위반 (silent 분모 보정 금지)
+ *   (3) 1세대1주택 + 12억 초과 부담부증여(케이스 5-a) 차단 — 후속 PR 예정
+ *      (D-0-2 채택안 해석 B: 12억 비교·안분 분모 = giftValuation C. 현재 엔진은
+ *       transferPrice = C × B/C 기반이라 다운스트림 12억 안분 결과 오류 발생)
+ *
+ * @throws Error 검증 실패 시 명시 메시지로 throw — 다음 액션 힌트 포함.
+ */
+export function assertBurdenedGiftEligible(args: {
+  propertyType: string;
+  isOneHousehold?: boolean;
+  info: BurdenedGiftInfo;
+}): void {
+  const { propertyType, isOneHousehold, info } = args;
+
+  // F-3 (2026-05-12): commercial_building 확장. general_building_unit은 엔진 내부 타입.
+  const SUPPORTED: string[] = ["housing", "land", "building", "general_building", "commercial_building"];
+  if (!SUPPORTED.includes(propertyType)) {
+    throw new Error(
+      `[burdened_gift] propertyType "${propertyType}"는 부담부증여 미지원입니다. ` +
+      "주택·토지·건물·일반건물·상업용건물·오피스텔에서만 지원합니다 (입주권·분양권 등은 별도 PR).",
+    );
+  }
+
+  // 초과부담부 검사 — giftValuation = Max(supplementary, mortgage, rental) 직접 산정
+  const lending = info.lendingDepositTotal;
+  const mortgageDebt = info.mortgageDebtAmount;
+  const assumedDebt = lending + mortgageDebt;
+  const mortgageSet = info.mortgageSetAmount ?? mortgageDebt;
+  const rentalCap =
+    info.annualRentTotal > 0
+      ? Math.floor(info.annualRentTotal / ANNUAL_RENT_CAPITALIZATION_RATE_AFTER_2009_04_23)
+      : 0;
+  // 증여재산 평가용 건물 기준시가 (층별 가감율 적용 — 미입력 시 양도세 기준시가 fallback)
+  const giftBuildingStd =
+    info.giftBuildingStdPriceAtTransfer ?? info.buildingStdPriceAtTransfer;
+  const supplementary =
+    info.valuationMode === "sangjeungbeop_market"
+      ? info.marketValueAtTransfer ?? 0
+      : info.landStdPriceAtTransfer + giftBuildingStd;
+  const mortgageVal = lending + mortgageSet;
+  const rentalVal = lending + rentalCap;
+  const giftValuation = Math.max(supplementary, mortgageVal, rentalVal);
+
+  if (giftValuation > 0 && assumedDebt > giftValuation) {
+    throw new Error(
+      "[EXCESS_BURDENED_GIFT] 채무액(B=" +
+        assumedDebt.toLocaleString() +
+        "원)이 증여가액(C=" +
+        giftValuation.toLocaleString() +
+        "원)을 초과합니다. " +
+        "부담부증여로 성립하지 않습니다 (상속세및증여세법 §47③). " +
+        "다음 중 하나로 재입력하세요: ① 양도 형태 = '일반 양도' + 취득원인 = '매매' (사실상 매매 의제). " +
+        "② 평가액(C) 입력값 재확인 (시가 모드/임대평가 누락 등). " +
+        "③ 채무액(B) 입력값 재확인 (보증금·차입금 중복 합산 여부).",
+    );
+  }
+
+  // F-1 (2026-05-12): 케이스 5-a (1세대1주택 + 12억 초과) 차단 해제.
+  //   해결: burdenedGiftDenominator = giftValuation C 매개변수 추가로
+  //   checkOneHouseExemption()·calcOneHouseProration()이 해석 B 산식으로 분기.
+  //   - 12억 비교 분모 = C (giftValuation)
+  //   - 안분 산식: gain_burdened × (C − 12억) / C
+  //   근거: D-0-2 국세청 해석례 5건 (ntstDcmId=010000000000028078·010000000000027439·
+  //                                  010000000000038712·010000000000136005·010000000000042478)
+  // suppress: HIGH_PRICE_THRESHOLD_KRW·isOneHousehold·propertyType 변수는 정보성 변수로 보존
+  //   (후속 PR에서 다른 가드 케이스 추가 시 재사용).
+  void HIGH_PRICE_THRESHOLD_KRW;
+  void isOneHousehold;
+}
+
+/**
+ * F-2 (2026-05-12): 케이스 12 다주택 중과 비스코프 감지.
+ *
+ * 부담부증여 + 주택 + 조정대상지역 + 자산 수 ≥ 2 시 정보성 경고 메시지 반환.
+ * 정식 지원은 §167의3 한시 유예 종료 시점 확정 후 별도 PR.
+ *
+ * @returns 경고 메시지 (감지 시) | null (해당 없음)
+ */
+export function detectBurdenedGiftMultiHouseWarning(args: {
+  propertyType: string;
+  isRegulatedArea?: boolean;
+  householdHousingCount?: number;
+}): string | null {
+  if (
+    args.propertyType === "housing" &&
+    args.isRegulatedArea === true &&
+    (args.householdHousingCount ?? 1) >= 2
+  ) {
+    return (
+      "다주택 중과(소득세법 시행령 §167의3) 분기는 Phase 2 비스코프입니다. " +
+      "결과는 한시 유예 기준으로 산정되었습니다 — 중과 유예 해제 시점 확정 후 별도 PR로 정식 지원 예정."
+    );
+  }
+  return null;
 }

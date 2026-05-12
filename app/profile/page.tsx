@@ -1,3 +1,4 @@
+import { HomeLink } from "@/components/ui/home-link";
 import { ProfileClient } from "./ProfileClient";
 
 export const metadata = {
@@ -7,6 +8,9 @@ export const metadata = {
 export default function ProfilePage() {
   return (
     <div className="mx-auto max-w-md px-4 py-8">
+      <div className="mb-3">
+        <HomeLink />
+      </div>
       <div className="mb-6">
         <p className="text-xs text-muted-foreground mb-1">한국 부동산 세금 계산기</p>
         <h1 className="text-2xl font-bold">프로필 설정</h1>
@@ -15,6 +19,9 @@ export default function ProfilePage() {
         </p>
       </div>
       <ProfileClient />
+      <div className="mt-8 pt-6 border-t border-border">
+        <HomeLink />
+      </div>
     </div>
   );
 }

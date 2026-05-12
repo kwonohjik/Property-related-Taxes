@@ -28,20 +28,45 @@ const RELATION_LABEL: Record<string, string> = {
 
 interface Props {
   breakdown: TransferBurdenedGiftBreakdown;
+  /** Phase 2: propertyType 라벨 + cross-cutting 안내용 */
+  propertyType?: "housing" | "land" | "building" | "general_building" | string;
+  /** Phase 2: 엔진 result.warnings — 다주택 중과 비스코프 등 정보성 경고 */
+  warnings?: string[];
 }
 
-export function BurdenedGiftDetailCard({ breakdown: bg }: Props) {
+const PROPERTY_TYPE_LABEL: Record<string, string> = {
+  housing: "주택",
+  land: "토지·농지",
+  building: "건물(토지 외)",
+  general_building: "일반건물(토지+건물 일괄)",
+  commercial_building: "상업용건물·오피스텔",
+};
+
+export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings }: Props) {
   const fmt = (n: number) => n.toLocaleString("ko-KR");
   const rowSelected = (mode: string) =>
     bg.sangjeungbeopValuation.selectedMode === mode
       ? "font-semibold bg-fuchsia-100/70"
       : "";
+  const ptLabel = propertyType ? PROPERTY_TYPE_LABEL[propertyType] : undefined;
 
   return (
     <div className="rounded-lg border border-fuchsia-200 bg-fuchsia-50/40 p-4 space-y-2 print:break-inside-avoid">
-      <div className="flex items-center justify-between">
+      {/* Phase 2: warnings[] 상단 amber/rose 배너 — 8개 동기화 지점 ⑦ */}
+      {warnings && warnings.length > 0 && (
+        <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900 space-y-1">
+          <p className="font-semibold">⚠️ 안내</p>
+          {warnings.map((w, idx) => (
+            <p key={idx}>{w}</p>
+          ))}
+        </div>
+      )}
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <p className="text-sm font-semibold text-fuchsia-900">
           부담부증여 평가 명세 (소득세법 시행령 §159)
+          {ptLabel && (
+            <span className="ml-2 text-xs font-normal text-fuchsia-700">— {ptLabel}</span>
+          )}
         </p>
         <span className="text-xs text-fuchsia-700 px-2 py-0.5 rounded-full bg-fuchsia-100 border border-fuchsia-300">
           양도세 납세의무자: 증여자
@@ -49,8 +74,13 @@ export function BurdenedGiftDetailCard({ breakdown: bg }: Props) {
       </div>
       <table className="w-full text-xs border-collapse">
         <tbody>
+          <tr>
+            <td colSpan={2} className="py-1 pr-2 text-[11px] font-semibold text-fuchsia-700">
+              양도세 보충적평가 (자산별 양도가액 안분 분모)
+            </td>
+          </tr>
           <tr className={rowSelected("supplementary")}>
-            <td className="py-1 pr-2">① 보충적평가</td>
+            <td className="py-1 pr-2">① 보충적평가 (양도세 §99)</td>
             <td className="text-right font-mono">{fmt(bg.sangjeungbeopValuation.supplementary)}원</td>
           </tr>
           <tr className={rowSelected("mortgage")}>
@@ -62,15 +92,32 @@ export function BurdenedGiftDetailCard({ breakdown: bg }: Props) {
             <td className="text-right font-mono">{fmt(bg.sangjeungbeopValuation.rental)}원</td>
           </tr>
           <tr className="border-t border-fuchsia-300 font-semibold">
-            <td className="py-1 pr-2">Max 채택: {SELECTED_LABEL[bg.sangjeungbeopValuation.selectedMode]}</td>
+            <td className="py-1 pr-2">Max 채택 (양도세): {SELECTED_LABEL[bg.sangjeungbeopValuation.selectedMode]}</td>
             <td className="text-right font-mono">{fmt(bg.sangjeungbeopValuation.max)}원</td>
           </tr>
+          {bg.giftValuation && bg.giftValuation.max !== bg.sangjeungbeopValuation.max && (
+            <>
+              <tr>
+                <td colSpan={2} className="py-1 pr-2 pt-2 text-[11px] font-semibold text-fuchsia-700">
+                  증여재산 평가 (취득가액 안분·채무비율 분모 — 상증법 §61 층별 가감율 적용)
+                </td>
+              </tr>
+              <tr>
+                <td className="py-1 pr-2">증여세 보충적평가 (§61)</td>
+                <td className="text-right font-mono">{fmt(bg.giftValuation.supplementary)}원</td>
+              </tr>
+              <tr className="border-t border-fuchsia-300 font-semibold">
+                <td className="py-1 pr-2">Max 채택 (증여세): {SELECTED_LABEL[bg.giftValuation.selectedMode]}</td>
+                <td className="text-right font-mono">{fmt(bg.giftValuation.max)}원</td>
+              </tr>
+            </>
+          )}
           <tr>
             <td className="py-1 pr-2">인수 채무액 (= 양도가액)</td>
             <td className="text-right font-mono">{fmt(bg.assumedDebtAmount)}원</td>
           </tr>
           <tr>
-            <td className="py-1 pr-2">채무비율 = 채무액 ÷ 증여가액</td>
+            <td className="py-1 pr-2">채무비율 = 채무액 ÷ 증여재산 평가액</td>
             <td className="text-right font-mono">{(bg.debtRatio * 100).toFixed(4)}%</td>
           </tr>
           <tr>

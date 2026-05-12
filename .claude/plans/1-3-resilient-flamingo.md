@@ -2,7 +2,7 @@
 
 ## Context
 
-**문제**: 양도세 마법사 Step4 "세대·주택 현황" 카드(이미지15)에서 사용자가 "1세대 해당" + "1채"를 선택해도 다음 액션(=거주기간 입력)이 화면 어디에도 명시되지 않음. 거주기간 입력 카드(이미지16: 검용주택의 `MixedUseResidencyInput`, 또는 일반 주택의 `ResidencePeriodSection`)에 도달했을 때도 "왜 이걸 입력해야 하는지" 법적 효과 연결고리가 없음.
+**문제**: 양도세 마법사 Step4 "세대·주택 현황" 카드(이미지15)에서 사용자가 "1세대 해당" + "1채"를 선택해도 다음 액션(=거주기간 입력)이 화면 어디에도 명시되지 않음. 거주기간 입력 카드(이미지16: 겸용주택의 `MixedUseResidencyInput`, 또는 일반 주택의 `ResidencePeriodSection`)에 도달했을 때도 "왜 이걸 입력해야 하는지" 법적 효과 연결고리가 없음.
 
 **원하는 결과**: 사용자가 1세대1주택자임을 표시하는 순간 거주기간 입력의 법적 효과(1세대1주택 비과세 / 12억 초과 고가주택 과세 / 장기보유공제 표2 최대 80%)를 즉시 인지하고, 거주기간 입력 카드에서 "아까 그것 때문이구나"라는 회수가 일어나도록 함.
 
@@ -14,7 +14,7 @@
 | 이미지15: 1세대 체크박스 + 주택수 버튼 | `app/calc/transfer-tax/steps/Step4.tsx` | line 152–187 |
 | 일반 주택용 거주 입력 (Step4 내 인라인) | `app/calc/transfer-tax/steps/Step4.tsx` | line 191–201 (`<ResidencePeriodSection ...>`) |
 | 일반 주택용 컴포넌트 본체 | `components/calc/transfer/ResidencePeriodSection.tsx` | (untracked) |
-| 이미지16: 검용주택 ④ 거주 정보 (Step1 자산 카드 내부) | `components/calc/transfer/mixed-use/MixedUseResidencyInput.tsx` | line 19–56 |
+| 이미지16: 겸용주택 ④ 거주 정보 (Step1 자산 카드 내부) | `components/calc/transfer/mixed-use/MixedUseResidencyInput.tsx` | line 19–56 |
 
 ## 변경 사항
 
@@ -31,7 +31,7 @@
 
 **아이콘**: lucide `Info` 아이콘 14px, violet-700.
 
-**검용주택 분기**: `primaryKind !== "housing"` (예: mixed-use) 인 경우 동일 배너의 마지막 문장만 다음으로 교체 — "거주기간은 자산 카드의 ④ 거주 정보에서 입력합니다." (사용자가 step1으로 돌아가야 함을 안내).
+**겸용주택 분기**: `primaryKind !== "housing"` (예: mixed-use) 인 경우 동일 배너의 마지막 문장만 다음으로 교체 — "거주기간은 자산 카드의 ④ 거주 정보에서 입력합니다." (사용자가 step1으로 돌아가야 함을 안내).
 
 ### ② 의존성 배지 — 거주기간 입력 카드 양쪽
 
@@ -90,5 +90,5 @@ line 27 `<p className="text-xs font-semibold text-violet-700">거주 정보</p>`
 2. 브라우저 수동 확인:
    - 양도세 마법사 → housing 자산 1건 → Step4 진입 → "1세대 해당" 체크 + "1채" 클릭 → violet 배너 노출 확인. "2채" 또는 "3+채" 전환 시 배너 사라짐 확인.
    - housing 자산일 때 ResidencePeriodSection 위에 "거주기간은 ... 판정에 사용됩니다" 한 줄 노출 확인.
-   - 검용주택(mixed-use) 자산 1건 → Step1 자산 카드 → ④ 거주 정보 헤더가 "거주 기간 입력"으로 표시되고 우측에 violet pill 배지 노출 확인. Step4에서는 배너 마지막 문장이 "자산 카드의 ④ 거주 정보에서 입력" 안내로 변경됨 확인.
+   - 겸용주택(mixed-use) 자산 1건 → Step1 자산 카드 → ④ 거주 정보 헤더가 "거주 기간 입력"으로 표시되고 우측에 violet pill 배지 노출 확인. Step4에서는 배너 마지막 문장이 "자산 카드의 ④ 거주 정보에서 입력" 안내로 변경됨 확인.
 3. `npm test` 회귀 — UI 표시 변경만이므로 엔진/통합 테스트 영향 없음 (smoke 통과 기대).

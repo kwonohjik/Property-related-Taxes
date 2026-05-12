@@ -242,8 +242,12 @@ export function checkExemption(
   }
 
   // E-1: 전액 비과세 (양도가 12억 이하)
-  // 지분 모드: totalPropertyTransferPrice(총 물건가)로 12억 판정 — 지분 양도가액으로 판정 시 잘못된 전액비과세 발생.
-  const exemptionPriceCheck = input.totalPropertyTransferPrice ?? input.transferPrice;
+  // 우선순위:
+  //   1) burdenedGiftDenominator (부담부증여 — D-0-2 해석 B: 분모 = giftValuation C)
+  //   2) totalPropertyTransferPrice (지분 모드 — 총 물건가)
+  //   3) transferPrice (단독 모드 fallback)
+  const exemptionPriceCheck =
+    input.burdenedGiftDenominator ?? input.totalPropertyTransferPrice ?? input.transferPrice;
   if (exemptionPriceCheck <= rule.maxExemptPrice) {
     return { isExempt: true, isPartialExempt: false, exemptReason: "1세대1주택 비과세" };
   }
@@ -405,22 +409,29 @@ export function calcTransferGain(input: TransferTaxInput): TransferGainResult {
 /**
  * 1세대1주택 12억 초과분 과세 양도차익 안분.
  *
- * @param gain 전체 양도차익 (지분 모드 시 이 자산 지분에 해당하는 양도차익)
- * @param transferPrice 양도가액 (지분 모드 시 이 자산 지분에 해당하는 양도가액)
- * @param totalPropertyTransferPrice 총 물건 양도가액 (지분 모드 전용 — 12억 안분 분모로 사용).
- *   미설정 시 transferPrice를 분모로 사용 (단독 소유 호환).
+ * @param gain 전체 양도차익 (지분 모드 시 이 자산 지분 / 부담부증여 시 채무 양도 단위 ×B/C 적용 후)
+ * @param transferPrice 양도가액 (지분 모드 시 이 자산 지분 / 부담부증여 시 채무 양도가)
+ * @param totalPropertyTransferPrice 총 물건 양도가액 (지분 모드 — 12억 안분 분모)
+ * @param burdenedGiftDenominator 부담부증여 12억 안분 분모 — F-1 (2026-05-12).
+ *   D-0-2 해석 B: 분모 = 증여가액 C (= max(보충적·담보·임대) 평가값).
+ *   국세청 해석례 5건 (ntstDcmId=010000000000028078 등) 인용.
  *
  * 산식: 과세 양도차익 = floor(gain × (분모 - 12억) / 분모)
- *   - 단독: 분모 = transferPrice
+ *   - 부담부증여: 분모 = burdenedGiftDenominator (giftValuation C). gain은 ×B/C 적용 후 채무 양도 단위.
+ *     결과 = gain_burdened × (C-12억)/C = (C-A-est)×B/C × (C-12억)/C
  *   - 지분: 분모 = totalPropertyTransferPrice (총 물건가)
+ *   - 단독: 분모 = transferPrice
+ *
+ * 우선순위: burdenedGiftDenominator > totalPropertyTransferPrice > transferPrice
  */
 export function calcOneHouseProration(
   gain: number,
   transferPrice: number,
   totalPropertyTransferPrice?: number,
+  burdenedGiftDenominator?: number,
 ): number {
   const threshold = 1_200_000_000;
-  const denominator = totalPropertyTransferPrice ?? transferPrice;
+  const denominator = burdenedGiftDenominator ?? totalPropertyTransferPrice ?? transferPrice;
   if (denominator <= threshold) return gain;
   return calculateProration(gain, denominator - threshold, denominator);
 }

@@ -1,8 +1,8 @@
 /**
- * 검용주택 — 보유 중 일부 용도변경 분리계산 테스트
+ * 겸용주택 — 보유 중 일부 용도변경 분리계산 테스트
  *
  * 시행령 §166⑥ + 양도소득세 집행기준 99-164-10 (재산-1384, 2009.7.8.).
- * 양도시 검용이지만 취득시 단일 용도였던 경우의 환산취득가 안분.
+ * 양도시 겸용이지만 취득시 단일 용도였던 경우의 환산취득가 안분.
  *
  * 설계: docs/02-design/features/transfer-tax-mixed-use-partial-change.engine.design.md
  */
@@ -276,11 +276,11 @@ describe("SC-1B: house_to_commercial — 직접 입력 경로", () => {
     ).toThrow(/취득시 상가건물 기준시가/);
   });
 
-  it("direction 미지정(일반 검용주택) — 입력값 그대로 사용 (acqStandardSource = 'user_input')", () => {
+  it("direction 미지정(일반 겸용주택) — 입력값 그대로 사용 (acqStandardSource = 'user_input')", () => {
     const baseAsset = mixedUsePdfGap({
       partialUsageChange: undefined,
       acquisitionStandardPrice: {
-        housingPrice: 200_000_000,           // 일반 검용주택 — 주택공시가격 필수
+        housingPrice: 200_000_000,           // 일반 겸용주택 — 주택공시가격 필수
         commercialBuildingPrice: ACQ_COMM_BUILDING,
         landPricePerSqm: ACQ_LAND_PRICE_PER_SQM,
       },
@@ -458,10 +458,10 @@ describe("SC-4: PHD 결합 — house_to_commercial + usePreHousingDisclosure=tru
 });
 
 // ──────────────────────────────────────────────────────────────
-// SC-5: 회귀 — 토글 OFF (partialUsageChange undefined) → 기존 검용주택과 동일 결과
+// SC-5: 회귀 — 토글 OFF (partialUsageChange undefined) → 기존 겸용주택과 동일 결과
 // ──────────────────────────────────────────────────────────────
 
-describe("SC-5: 회귀 — 기존 검용주택 사례14 (partialUsageChange 미적용)", () => {
+describe("SC-5: 회귀 — 기존 겸용주택 사례14 (partialUsageChange 미적용)", () => {
   it("partialUsageChange = undefined → 사례14 결과 변동 없음", () => {
     const asset = mixedUseCase14();
     const result = calcMixedUseTransferTax(

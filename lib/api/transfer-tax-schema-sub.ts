@@ -564,7 +564,7 @@ export const preHousingDisclosureSchema = z.object({
   /** 양도시 건물 기준시가 (원) */
   buildingStdPriceAtTransfer: z.number().int().nonnegative(),
 
-  // Case A 4부분 안분 전용 (검용주택 + house_to_commercial + firstDisclosure < usageChange)
+  // Case A 4부분 안분 전용 (겸용주택 + house_to_commercial + firstDisclosure < usageChange)
   // 모두 충족 시 PHD 엔진이 4부분 안분 모드로 분기.
   /** 취득시 상가건물 기준시가 (원) */
   commercialBuildingStdPriceAtAcq: z.number().int().nonnegative().optional(),
@@ -651,6 +651,6 @@ export const inheritanceHouseValuationSchema = z
   });
 
 
-// ─── 검용주택 분리계산 Zod 스키마 — 별도 파일로 분리 (800줄 정책) ──────
+// ─── 겸용주택 분리계산 Zod 스키마 — 별도 파일로 분리 (800줄 정책) ──────
 // 실체: ./transfer-tax-schema-mixed-use.ts
 export { mixedUseAssetSchema } from "./transfer-tax-schema-mixed-use";

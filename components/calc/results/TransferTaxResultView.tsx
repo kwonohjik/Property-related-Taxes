@@ -650,8 +650,13 @@ export function TransferTaxResultView({
       )}
 
       {/* ⑦ 부담부증여 상증법 평가 명세 + Phase 2 증여세 (sibling 카드) */}
+      {/* F-2 (2026-05-12): result.warnings 직접 연결 (케이스 12 다주택 중과 안내 등) */}
       {result.transferBurdenedGiftBreakdown && (
-        <BurdenedGiftDetailCard breakdown={result.transferBurdenedGiftBreakdown} />
+        <BurdenedGiftDetailCard
+          breakdown={result.transferBurdenedGiftBreakdown}
+          propertyType={asset?.assetKind ?? formData?.assets?.[0]?.assetKind}
+          warnings={result.warnings}
+        />
       )}
 
       {/* ⑦ 일반건물(토지+건물 일괄) 환산취득가 산정 근거 상세 (소령 §176의2②, §163⑥, §102②) */}

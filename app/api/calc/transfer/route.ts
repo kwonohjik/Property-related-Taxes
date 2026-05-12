@@ -394,6 +394,9 @@ export async function POST(request: NextRequest) {
     // buildingAcquisitionDate: YYYY-MM-DD 문자열 → Date 변환 포함 (⑭ date-coerce 필수)
     // ⑭ 부담부증여 (소령 §159) — Date 변환 없음, 그대로 spread
     ...(data.burdenedGiftInfo ? { burdenedGiftInfo: data.burdenedGiftInfo } : {}),
+    // ⑭ Phase 2 (2026-05-12): transferType 패스스루 — 양도 형태 (양도자 관점)
+    // "burdened_gift" 시 엔진 §159 분기 활성. 미지정 시 "regular" 자동 보정.
+    ...(data.transferType !== undefined ? { transferType: data.transferType } : {}),
     ...(data.generalBuildingValuation ? (() => {
       const buildingAcq = toOptionalDate(data.generalBuildingValuation.buildingAcquisitionDate);
       // #4-a: 토지 상속·증여 보조 필드 Date 변환
@@ -677,7 +680,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ─── 5-a-2. 검용주택 분리계산 경로 (sodt §160①단서, 2022.1.1 이후) ───
+    // ─── 5-a-2. 겸용주택 분리계산 경로 (sodt §160①단서, 2022.1.1 이후) ───
     if (data.propertyType === "mixed-use-house" && data.mixedUse) {
       const phdInput = data.mixedUse.preHousingDisclosure
         ? {
@@ -722,14 +725,32 @@ export async function POST(request: NextRequest) {
       // 비증축(사례 31·32): 환산취득가는 기준시가 비율로 엔진이 직접 계산하므로 0이어도 무방.
       const bundledAcq = (gbv.bundledAcquisitionPrice as number | undefined) ?? engineInput.acquisitionPrice ?? 0;
       const bundledExp = (gbv.bundledExpenses as number | undefined) ?? engineInput.expenses ?? 0;
-      const { apportionment, aggregated } = dispatchGeneralBuilding(
+      // 부담부증여 §159 — actualPriceMode 분기에서 §159①1호 환산 적용용 정보 전달.
+      // BurdenedGiftInfo 타입은 string Date 허용이지만, 엔진 buildBurdenedGiftBreakdown은 필드 그대로 사용.
+      const burdenedGiftInfoForGb =
+        data.transferType === "burdened_gift" && data.burdenedGiftInfo
+          ? data.burdenedGiftInfo
+          : undefined;
+      const { apportionment, aggregated, transferBurdenedGiftBreakdown } = dispatchGeneralBuilding(
         gbv,
         data.transferPrice, transferDate, acquisitionDate,
         bundledAcq, bundledExp,
         transferDate.getFullYear(), data.annualBasicDeductionUsed,
         data.priorReductionUsage ?? [], rates,
+        burdenedGiftInfoForGb,
       );
-      return NextResponse.json({ data: { mode: "bundled" as const, apportionment, aggregated } }, { status: 200 });
+      return NextResponse.json(
+        {
+          data: {
+            mode: "bundled" as const,
+            apportionment,
+            aggregated,
+            // 부담부증여 §159·증여세 통합 명세 (부담부증여 모드에서만 포함, 사이드바·결과 카드 표시용)
+            ...(transferBurdenedGiftBreakdown ? { transferBurdenedGiftBreakdown } : {}),
+          },
+        },
+        { status: 200 },
+      );
     }
 
     // ─── 5-b. 기존 단건 경로 ───────────────────────────────────

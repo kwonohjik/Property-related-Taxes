@@ -64,11 +64,11 @@ const FIELD_LABEL: Record<string, string> = {
   "pre1990Land.acquisitionDate": "1990 토지 취득일",
   "pre1990Land.gradeAtAcquisition": "1990 취득시 토지등급",
 
-  // 검용주택
+  // 겸용주택
   "mixedUse.residentialFloorArea": "주거용 면적",
   "mixedUse.nonResidentialFloorArea": "비주거용 면적",
   "mixedUse.totalLandArea": "총 토지면적",
-  "mixedUse.preHousingDisclosure.firstDisclosureDate": "검용주택 최초 고시일",
+  "mixedUse.preHousingDisclosure.firstDisclosureDate": "겸용주택 최초 고시일",
 
   // 일반건물(토지+건물 일괄) 환산취득가 §176의2②
   "generalBuildingValuation.landArea": "토지 부수면적",

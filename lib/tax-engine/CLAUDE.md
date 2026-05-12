@@ -106,7 +106,7 @@ const reductionAmount = Math.min(best.amount, calculatedTax);
 
 서브엔진은 상위 엔진 import 금지 (순환 금지).
 
-## 검용주택 PHD 4부분 안분 (Case A)
+## 겸용주택 PHD 4부분 안분 (Case A)
 
 `partialUsageChange.direction === "house_to_commercial"` AND `firstDisclosureDate < usageChangeDate` 조합에서만 활성화. 취득시·최초공시 시점에 건물 전체가 주택이었던 케이스.
 

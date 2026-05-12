@@ -264,7 +264,8 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     gbExtensionAcquisitionMode: "estimated",   // 사례 33 호환 default
     gbExtensionActualAcquisitionPrice: "",
     gbExtensionActualExpenses: "",
-    // ── 부담부증여 (소령 §159, Phase 1: general_building 전용) ──
+    // ── 부담부증여 (소령 §159, Phase 2: 모든 propertyType 지원) ──
+    transferType: "regular",
     bgValuationMode: "",
     bgLendingDepositTotal: "",
     bgMortgageDebtAmount: "",
@@ -272,6 +273,13 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     bgMortgageSetAmount: "",
     bgMarketValueAtTransfer: "",
     bgMarketValueAtAcquisition: "",
+    bgGiftBuildingStdPriceAtTransfer: "",
+    // Phase 3: 증여세 통합 입력
+    bgDonorRelation: "",
+    bgIsMinorDonee: false,
+    bgIsGenerationSkip: false,
+    bgIsFiledOnTime: true,
+    bgPriorGifts: [],
   };
 }
 
@@ -364,7 +372,7 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (a.useStandardPriceAtTransferOverride === undefined) a.useStandardPriceAtTransferOverride = false;
   // 이월과세(증여) carryover 서브객체 마이그레이션
   migrateCarryoverFields(a);
-  // 검용주택 분리계산 + 보유 중 일부 용도변경 필드 (별도 모듈)
+  // 겸용주택 분리계산 + 보유 중 일부 용도변경 필드 (별도 모듈)
   migrateMixedUseFields(a);
   // 거주 정보 (자산-수준)
   migrateResidenceFields(a);
@@ -506,5 +514,25 @@ export function migrateAsset(raw: unknown): AssetForm {
     if (rhe.standardPriceAtPriorTransfer === undefined) rhe.standardPriceAtPriorTransfer = undefined;
     if (rhe.standardPriceAtTransferForPhrp === undefined) rhe.standardPriceAtTransferForPhrp = undefined;
   }
+  // ── 부담부증여 transferType 마이그레이션 (Phase 2, 2026-05-12) ──
+  // legacy: acquisitionCause === "burdened_gift" → transferType === "burdened_gift" 로 이전.
+  // 의미: "취득원인" 라디오에 끼워둔 burdened_gift는 양도 시점의 거래 형태로 이동.
+  // 당초 취득은 "증여"로 추정(보수적 fallback) — 사용자가 매매·상속 등 정확한 원인으로 재입력 가능.
+  if (a.transferType === undefined || a.transferType === null) {
+    if (a.acquisitionCause === "burdened_gift") {
+      a.transferType = "burdened_gift";
+      a.acquisitionCause = "gift"; // 보수적 fallback (사용자 재입력 권장)
+    } else {
+      a.transferType = "regular";
+    }
+  }
+  // ── Phase 3 (2026-05-12) — 증여세 통합 + 사전증여 5필드 fallback ──
+  // 이전 세션 sessionStorage rehydrate 시 신규 필드가 undefined여서 콘솔 에러 또는 빈 폼 렌더 위험.
+  if (a.bgDonorRelation === undefined) a.bgDonorRelation = "";
+  if (a.bgIsMinorDonee === undefined) a.bgIsMinorDonee = false;
+  if (a.bgIsGenerationSkip === undefined) a.bgIsGenerationSkip = false;
+  if (a.bgIsFiledOnTime === undefined) a.bgIsFiledOnTime = true;
+  if (!Array.isArray(a.bgPriorGifts)) a.bgPriorGifts = [];
+  if (a.bgGiftBuildingStdPriceAtTransfer === undefined) a.bgGiftBuildingStdPriceAtTransfer = "";
   return a as unknown as AssetForm;
 }

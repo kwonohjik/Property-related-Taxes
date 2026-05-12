@@ -64,14 +64,14 @@ export interface ThreePointStandardPriceInputProps {
   /** 토지 면적 (㎡) — 토지기준시가 = 공시지가 × 면적 */
   landArea?: string;
   /**
-   * 입력값의 대상 명시 — 라벨에 prefix 적용. 검용주택 PHD 등 주택분과 상가분이
+   * 입력값의 대상 명시 — 라벨에 prefix 적용. 겸용주택 PHD 등 주택분과 상가분이
    * 같은 화면에 노출되는 컨텍스트에서 어느 쪽 입력인지 구별 표시용.
    * 예: "주택" → "주택부수토지 공시지가", "주택 건물기준시가".
    * 미주입 시 기존 라벨 유지 (단일 자산 PHD 등 backward compat).
    */
   targetLabel?: string;
   /**
-   * 검용주택 + 보유 중 일부 용도변경에서 최초공시일 < 용도변경일 인 경우(Case A) 전용.
+   * 겸용주택 + 보유 중 일부 용도변경에서 최초공시일 < 용도변경일 인 경우(Case A) 전용.
    * true 일 때 ① 취득시 · ② 최초공시일 시점에 토지·건물 기준시가를
    * "주택분 / 상가분" 두 컬럼으로 분리 입력·표시한다 (양도시 면적 기준 분리).
    * ③ 양도시는 그대로 주택분만 표시.
@@ -104,12 +104,12 @@ export interface ThreePointStandardPriceInputProps {
   onCommercialBuildingStdPriceAtTransferChange?: (v: string) => void;
   /**
    * ① 취득시 토지 공시지가/연도가 외부 섹션에서 자동 동기화되는 경우 read-only 표시 + 안내.
-   * 검용주택 PHD에서 섹션 2의 `mixedAcqLandPricePerSqm`을 미러링할 때 사용.
+   * 겸용주택 PHD에서 섹션 2의 `mixedAcqLandPricePerSqm`을 미러링할 때 사용.
    */
   landAutoSyncAtAcq?: { label: string };
   /**
    * ③ 양도시 토지 공시지가/연도가 외부 섹션에서 자동 동기화되는 경우 read-only 표시 + 안내.
-   * 검용주택 PHD에서 섹션 2의 `mixedTransferLandPricePerSqm`을 미러링할 때 사용.
+   * 겸용주택 PHD에서 섹션 2의 `mixedTransferLandPricePerSqm`을 미러링할 때 사용.
    */
   landAutoSyncAtTransfer?: { label: string };
   /**
@@ -562,7 +562,7 @@ export function ThreePointStandardPriceInput(props: ThreePointStandardPriceInput
   const firstLabel = splitMode
     ? "② 최초공시일 기준시가 (양도시 면적 기준 분리)"
     : `② 최초공시일 ${targetSuffix}기준시가`;
-  // 양도시는 Case A 여부와 무관하게 항상 검용 상태 (주택분만)
+  // 양도시는 Case A 여부와 무관하게 항상 겸용 상태 (주택분만)
   const transferLabel = `③ 양도시 ${targetSuffix}기준시가`;
 
   return (

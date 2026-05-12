@@ -18,6 +18,21 @@
 import type { GeneralBuildingOutput } from "@/lib/tax-engine/general-building-valuation";
 import type { PerPropertyBreakdown } from "@/lib/tax-engine/types/transfer-aggregate.types";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import type { TransferBurdenedGiftBreakdown } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
+
+/** propertyId가 토지에 해당하는지 — 일반건물(land/land_business/land_nbl) + 토지 자산 */
+function isLandProp(propertyId: string): boolean {
+  return (
+    propertyId === "land" ||
+    propertyId === "land_business" ||
+    propertyId === "land_nbl"
+  );
+}
+
+/** propertyId가 건물에 해당하는지 — 부담부증여 일반건물 단건/일괄 모드 */
+function isBuildingProp(propertyId: string): boolean {
+  return propertyId === "building" || propertyId === "building1";
+}
 
 // ── 포맷 헬퍼 ────────────────────────────────────────────────────
 
@@ -84,7 +99,23 @@ export function buildGbTransferFormula(
   p: PerPropertyBreakdown,
   gb: GeneralBuildingOutput | undefined,
   totalTransferPrice: number,
+  burdenedGift?: TransferBurdenedGiftBreakdown,
 ): string | undefined {
+  // 부담부증여 §159①2호 분기 (우선 적용) — 자산별 양도가액 = 자산기준시가 × 채무액 / 양도시 보충적평가
+  if (burdenedGift) {
+    const asset = isLandProp(p.propertyId)
+      ? burdenedGift.perAsset.land
+      : isBuildingProp(p.propertyId)
+        ? burdenedGift.perAsset.building
+        : undefined;
+    if (asset) {
+      const debt = burdenedGift.assumedDebtAmount;
+      const max = burdenedGift.sangjeungbeopValuation.max;
+      // 양도가액 = 자산별 양도시 기준시가 × 채무액 / 양도시 보충적평가 (소령 §159①2호)
+      return `양도가액 = 자산기준시가 × 채무액 / 양도시 보충적평가 (소령 §159①2호)\n        = ${fmt(asset.sangjeungbeopValue)} × ${fmt(debt)} / ${fmt(max)}\n        = ${fmt(p.transferPrice)}`;
+    }
+  }
+
   // 일반건물(사례 31·33) 분기 — gbDetail 존재 시 §166⑥ 안분 산식
   if (gb && gb.landStdTotal && gb.buildingStdTotal) {
     const landStd = gb.landStdTotal;
@@ -132,7 +163,22 @@ export function buildGbAcquisitionFormula(
   p: PerPropertyBreakdown,
   gb: GeneralBuildingOutput | undefined,
   asset: AssetForm | undefined,
+  burdenedGift?: TransferBurdenedGiftBreakdown,
 ): string | undefined {
+  // 부담부증여 §159①1호 분기 (우선 적용) — 자산별 취득가액 = 취득시 자산기준시가 × 채무액 / 증여재산 평가액
+  if (burdenedGift) {
+    const bgAsset = isLandProp(p.propertyId)
+      ? burdenedGift.perAsset.land
+      : isBuildingProp(p.propertyId)
+        ? burdenedGift.perAsset.building
+        : undefined;
+    if (bgAsset) {
+      const debt = burdenedGift.assumedDebtAmount;
+      const giftMax = burdenedGift.giftValuation.max;
+      return `취득가액 = 취득시 자산기준시가 × 채무액 / 증여재산 평가액 (소령 §159①1호 단서 — 기준시가 모드 환산)\n        = ${fmt(bgAsset.stdPriceAtAcquisition)} × ${fmt(debt)} / ${fmt(giftMax)}\n        = ${fmt(p.acquisitionPrice)}`;
+    }
+  }
+
   // gbDetail 없는 일반 다건(사례 27·28 등) fallback — 자본적지출 합산 산식 표기
   if (!gb) {
     if (p.capitalExpenditureForDisplay > 0) {
@@ -212,7 +258,20 @@ export function buildGbAcquisitionFormula(
 export function buildGbExpenseFormula(
   p: PerPropertyBreakdown,
   gb: GeneralBuildingOutput | undefined,
+  burdenedGift?: TransferBurdenedGiftBreakdown,
 ): string | undefined {
+  // 부담부증여 §163⑥ 분기 — 자산별 개산공제 = 안분 취득가액 × 3%
+  if (burdenedGift) {
+    const bgAsset = isLandProp(p.propertyId)
+      ? burdenedGift.perAsset.land
+      : isBuildingProp(p.propertyId)
+        ? burdenedGift.perAsset.building
+        : undefined;
+    if (bgAsset) {
+      return `필요경비 = 안분 취득가액 × 3% (개산공제, 소령 §163⑥)\n        = ${fmt(bgAsset.acquisitionPrice)} × 0.03\n        = ${fmt(bgAsset.estimatedDeduction)}`;
+    }
+  }
+
   const displayExp = Math.max(0, p.necessaryExpense - p.capitalExpenditureForDisplay);
 
   // gbDetail 없는 일반 다건(사례 27·28 등) fallback — 양도비만 표기

@@ -1,5 +1,5 @@
 /**
- * 검용주택 PHD Case A 4부분 안분 결과 → mixed-use Gain Split 어댑터.
+ * 겸용주택 PHD Case A 4부분 안분 결과 → mixed-use Gain Split 어댑터.
  *
  * 적용 범위 (절대 한정):
  *   - usePreHousingDisclosure === true

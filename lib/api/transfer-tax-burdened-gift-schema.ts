@@ -30,6 +30,38 @@ export const burdenedGiftInfoSchema = z.object({
   landStdPriceAtAcquisition: z.number().int().nonnegative(),
   /** 취득시 건물 기준시가. */
   buildingStdPriceAtAcquisition: z.number().int().nonnegative(),
+  /**
+   * 증여재산 평가용 양도시 건물 기준시가 (상증법 §61 — 층별 가감율 적용).
+   * 미입력 시 양도세용 buildingStdPriceAtTransfer fallback.
+   */
+  giftBuildingStdPriceAtTransfer: z.number().int().nonnegative().optional(),
+  // Phase 3 (2026-05-12): 증여세 통합 입력
+  /** 증여자-수증자 관계 (상증법 §53 증여재산공제). */
+  donorRelation: z
+    .enum([
+      "spouse",
+      "lineal_ascendant_adult",
+      "lineal_ascendant_minor",
+      "lineal_descendant",
+      "other_relative",
+    ])
+    .optional(),
+  /** 수증자 미성년 여부 (세대생략 20억 초과 40% 판정). */
+  isMinorDonee: z.boolean().optional(),
+  /** 세대생략 증여 여부 (§57). */
+  isGenerationSkip: z.boolean().optional(),
+  /** 법정신고기한 내 신고 여부 (§69 신고세액공제 3%). */
+  isFiledOnTime: z.boolean().optional(),
+  /** 10년 이내 사전증여 내역 (상증법 §47②·§58). 동일 증여자→동일 수증자. */
+  priorGiftsWithin10Years: z
+    .array(
+      z.object({
+        giftDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        giftAmount: z.number().int().nonnegative(),
+        giftTaxPaid: z.number().int().nonnegative(),
+      }),
+    )
+    .optional(),
 });
 
 export type BurdenedGiftInfoSchema = z.infer<typeof burdenedGiftInfoSchema>;
