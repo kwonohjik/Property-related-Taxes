@@ -19,3 +19,4 @@ export * from "./legal-codes/property";
 export * from "./legal-codes/comprehensive";
 export * from "./legal-codes/inheritance-gift";
 export * from "./legal-codes/common";
+export * from "./legal-codes/burdened-gift";

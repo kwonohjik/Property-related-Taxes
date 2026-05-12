@@ -519,6 +519,10 @@ function validateAssetAcquisition(asset: AssetForm, label: string, formTransferD
         return `${label}: 증여 신고가액을 입력하세요.`;
       if (!asset.donorAcquisitionDate)
         return `${label}: 증여자 취득일을 입력하세요.`;
+    } else if (asset.acquisitionCause === "burdened_gift") {
+      // ⑧ 부담부증여 (소령 §159) — Phase 1: general_building 전용 (별도 검증 분기에서 도달)
+      // 일반(housing/land/building/...) 자산에서 burdened_gift 선택 시 차단.
+      return `${label}: 부담부증여는 일반건물 자산에서만 지원됩니다 (Phase 1).`;
     } else if (asset.acquisitionCause === "inheritance") {
       if (!asset.decedentAcquisitionDate)
         return `${label}: 피상속인 취득일을 입력하세요.`;

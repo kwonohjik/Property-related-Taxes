@@ -15,6 +15,11 @@ import type { AggregateTransferResult } from "@/lib/tax-engine/transfer-tax-aggr
 import type { MixedUseGainBreakdown } from "@/lib/tax-engine/types/transfer-mixed-use.types";
 import { toEngineAssetKind, isHousingLike, toEngineReductions, buildAssetPayload, getOwnershipRatio, applyRatio, toRentalHousingExceptionApi, buildCommercialBuildingValuation, buildGeneralBuildingValuation } from "./transfer-tax-api-helpers";
 import { buildCarryoverPayload } from "./transfer-tax-api-carryover";
+import { buildBurdenedGiftInfo } from "./transfer-tax-api-burdened-gift";
+import {
+  buildInheritedAcquisitionPayload,
+  buildInheritedHouseValuationPayload,
+} from "./transfer-tax-api-inheritance";
 
 // 하위 호환 재수출 — 기존 import 경로 유지
 export { toEngineReductions } from "./transfer-tax-api-helpers";
@@ -121,6 +126,9 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
   const gbValuation = isGeneralBuilding
     ? buildGeneralBuildingValuation(primary)
     : undefined;
+
+  // ⑬ 부담부증여 (소령 §159) — sibling 격리
+  const bgInfo = primary.acquisitionCause === "burdened_gift" && isGeneralBuilding ? buildBurdenedGiftInfo(primary) : undefined;
 
   // 검용주택 분리계산 payload 빌드
   const isMixed = primary.assetKind === "housing" && primary.isMixedUseHouse;
@@ -540,6 +548,8 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     ...(cbValuation !== undefined ? { commercialBuildingValuation: cbValuation } : {}),
     // ⑬ 일반건물 환산취득가 body spread (TypeScript 미감지 영역 — 누락 시 서브객체 미도달)
     ...(gbValuation !== undefined ? { generalBuildingValuation: gbValuation } : {}),
+    // ⑬ 부담부증여 body spread (TypeScript 미감지 영역 — 누락 시 침묵 stripping)
+    ...(bgInfo !== undefined ? { burdenedGiftInfo: bgInfo } : {}),
     // ── 일괄양도 (assets 2건 이상) ──
     ...(form.assets.length > 1
       ? {
@@ -580,126 +590,10 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
               : undefined,
         }
       : {}),
-    // ── 상속 취득가액 의제 (소령 §176조의2 ④ pre-deemed / §163 ⑨ post-deemed) ──
-    // 자동(보충적평가) 모드 + 토지/주택 자산 → STEP 0.45 트리거.
-    // case A(상속개시일 < 1985-01-01): 환산 vs 실가×CPI max 선택 → 채택에 따라 개산공제/실가경비 자동 분기.
-    // case B(상속개시일 ≥ 1985-01-01): 상속세 신고가액(=공시가격) 적용.
-    // standardPriceAtDeemedDate / standardPriceAtTransfer 미전송 시 엔진이
-    // inheritedHouseValuation/pre1990Land 결과로 자동 주입 (helpers.ts 92-108).
-    ...((primary.acquisitionCause === "inheritance" &&
-        primary.inheritanceValuationMode === "auto" &&
-        (primary.inheritanceAssetKind === "land" ||
-         primary.inheritanceAssetKind === "house_individual" ||
-         primary.inheritanceAssetKind === "house_apart"))
-      ? (() => {
-          const inheritanceStartDate = primary.inheritanceStartDate || primary.acquisitionDate || "";
-          if (!inheritanceStartDate) return {};
-          const isPreDeemed = inheritanceStartDate < "1985-01-01";
-
-          if (isPreDeemed) {
-            const stdAtDeemed = parseAmount(primary.standardPriceAtAcq);
-            const stdAtTransfer = parseAmount(primary.standardPriceAtTransfer);
-            const hasDecPrice = !!primary.hasDecedentActualPrice;
-            const decPrice = parseAmount(primary.decedentAcquisitionPrice);
-            const decPriceValid = hasDecPrice && decPrice > 0 && !!primary.decedentAcquisitionDate;
-
-            return {
-              inheritedAcquisition: {
-                mode: "pre-deemed" as const,
-                inheritanceStartDate,
-                assetKind: primary.inheritanceAssetKind,
-                ...(stdAtDeemed > 0 && { standardPriceAtDeemedDate: stdAtDeemed }),
-                ...(stdAtTransfer > 0 && { standardPriceAtTransfer: stdAtTransfer }),
-                hasDecedentActualPrice: decPriceValid,
-                ...(decPriceValid && {
-                  decedentAcquisitionDate: primary.decedentAcquisitionDate,
-                  decedentActualPrice: decPrice,
-                }),
-              },
-            };
-          }
-
-          // case B post-deemed
-          const reportedRaw = parseAmount(primary.publishedValueAtInheritance);
-          if (reportedRaw <= 0) return {};
-          // 지분 모드: 100% 기준 입력값에 × ratio 적용 (primaryInheritanceValuation과 일관)
-          // 미적용 시 100% 송신으로 엔진에서 안분 잔여가 필요경비로 잘못 적재됨 (사례 27)
-          const reportedValue = primaryFractional
-            ? applyRatio(reportedRaw, primaryRatio)
-            : reportedRaw;
-          return {
-            inheritedAcquisition: {
-              mode: "post-deemed" as const,
-              inheritanceStartDate,
-              assetKind: primary.inheritanceAssetKind,
-              reportedValue,
-              reportedMethod: "supplementary" as const,
-              useSupplementaryHelper: true,
-              ...(primary.acquisitionArea && parseFloat(primary.acquisitionArea) > 0 && {
-                landAreaM2: parseFloat(primary.acquisitionArea),
-              }),
-              publishedValueAtInheritance: reportedValue,
-            },
-          };
-        })()
-      : {}),
-    // ── 상속 주택 환산취득가 보조 입력 (주택 + 상속개시일 < 2005-04-30) ──
-    // inhHouseValEnabled는 dead flag — UI 토글이 없어 항상 false였음.
-    // 필수 필드가 모두 입력되었다면 사용자가 환산 보조 사용 의사를 표명한 것으로 간주.
-    ...((primary.inheritanceAssetKind === "house_individual" || primary.inheritanceAssetKind === "house_apart") &&
-    primary.acquisitionCause === "inheritance" &&
-    parseFloat(primary.inhHouseValLandArea) > 0 &&
-    parseAmount(primary.inhHouseValLandPricePerSqmAtTransfer) > 0 &&
-    parseAmount(primary.inhHouseValLandPricePerSqmAtFirst) > 0 &&
-    parseAmount(primary.inhHouseValHousePriceAtFirst) > 0
-      ? (() => {
-          const inheritanceDate = primary.inheritanceStartDate || primary.acquisitionDate || "";
-          const isBefore1990 = !!inheritanceDate && inheritanceDate < "1990-08-30";
-          const buildGrade = (raw: string) => {
-            const n = Number(raw.replace(/,/g, ""));
-            if (!Number.isFinite(n) || n <= 0) return undefined;
-            return primary.pre1990GradeMode === "number" ? Math.trunc(n) : { gradeValue: n };
-          };
-
-          const pre1990Payload = isBefore1990
-            ? (() => {
-                const gCur = buildGrade(primary.pre1990Grade_current ?? "");
-                const gPrev = buildGrade(primary.pre1990Grade_prev ?? "");
-                const gAcq = buildGrade(primary.pre1990Grade_atAcq ?? "");
-                const p1990 = parseAmount(primary.pre1990PricePerSqm_1990 ?? "");
-                if (!gCur || !gPrev || !gAcq || p1990 <= 0) return undefined;
-                return { grade_1990_0830: gCur, gradePrev_1990_0830: gPrev, gradeAtAcquisition: gAcq, pricePerSqm_1990: p1990 };
-              })()
-            : undefined;
-
-          const landPriceAtInheritance = parseAmount(primary.inhHouseValLandPricePerSqmAtInheritance);
-
-          // 1990 이전이면 pre1990 필요, 이후이면 landPriceAtInheritance 필요
-          if (isBefore1990 && !pre1990Payload && !landPriceAtInheritance) return {};
-          if (!isBefore1990 && !landPriceAtInheritance) return {};
-
-          return {
-            inheritedHouseValuation: {
-              inheritanceDate,
-              transferDate: form.transferDate,
-              landArea: parseFloat(primary.inhHouseValLandArea),
-              landPricePerSqmAtTransfer: parseAmount(primary.inhHouseValLandPricePerSqmAtTransfer),
-              landPricePerSqmAtFirstDisclosure: parseAmount(primary.inhHouseValLandPricePerSqmAtFirst),
-              landPricePerSqmAtInheritance: landPriceAtInheritance || undefined,
-              housePriceAtTransfer: parseAmount(primary.inhHouseValHousePriceAtTransfer) || 0,
-              housePriceAtFirstDisclosure: parseAmount(primary.inhHouseValHousePriceAtFirst),
-              buildingStdPriceAtTransfer: parseAmount(primary.inhHouseValBuildingStdPriceAtTransfer) || undefined,
-              buildingStdPriceAtFirstDisclosure: parseAmount(primary.inhHouseValBuildingStdPriceAtFirst) || undefined,
-              buildingStdPriceAtInheritance: parseAmount(primary.inhHouseValBuildingStdPriceAtInheritance) || undefined,
-              housePriceAtInheritanceOverride: primary.inhHouseValUseHousePriceOverride
-                ? (parseAmount(primary.inhHouseValHousePriceAtInheritanceOverride) || undefined)
-                : undefined,
-              firstDisclosureDate: primary.inhHouseValFirstDisclosureDate || "2005-04-30",
-              pre1990: pre1990Payload,
-            },
-          };
-        })()
-      : {}),
+    // ── 상속 취득가액 의제 (소령 §176조의2 ④ pre-deemed / §163 ⑨ post-deemed) — sibling 격리 ──
+    ...buildInheritedAcquisitionPayload(primary, primaryRatio, primaryFractional),
+    // ── 상속 주택 환산취득가 보조 입력 (3-시점, < 2005-04-30) — sibling 격리 ──
+    ...buildInheritedHouseValuationPayload(primary, form.transferDate),
     // ── 1990.8.30. 이전 취득 토지 기준시가 환산 (자산-수준 필드 사용) ──
     ...(hasPre1990
       ? (() => {

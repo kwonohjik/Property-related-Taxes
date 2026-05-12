@@ -23,6 +23,7 @@ import { PreHousingDisclosureDetailSection } from "@/components/calc/results/tra
 import { RentalHousingExceptionDetailCard } from "@/components/calc/results/transfer/RentalHousingExceptionDetailCard";
 import { CommercialBuildingValuationDetailCard } from "@/components/calc/results/CommercialBuildingValuationDetailCard";
 import { GeneralBuildingValuationDetailCard } from "@/components/calc/results/GeneralBuildingValuationDetailCard";
+import { BurdenedGiftDetailCard } from "@/components/calc/results/transfer/BurdenedGiftDetailCard";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
@@ -646,6 +647,11 @@ export function TransferTaxResultView({
           localTax={result.localIncomeTax ?? undefined}
           totalTax={result.totalTax ?? undefined}
         />
+      )}
+
+      {/* ⑦ 부담부증여 상증법 평가 명세 + Phase 2 증여세 (sibling 카드) */}
+      {result.transferBurdenedGiftBreakdown && (
+        <BurdenedGiftDetailCard breakdown={result.transferBurdenedGiftBreakdown} />
       )}
 
       {/* ⑦ 일반건물(토지+건물 일괄) 환산취득가 산정 근거 상세 (소령 §176의2②, §163⑥, §102②) */}

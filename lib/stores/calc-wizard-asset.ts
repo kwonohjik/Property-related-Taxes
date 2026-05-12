@@ -146,7 +146,7 @@ export interface AssetForm {
    */
   ownershipDenominator: string;
   /** 취득 원인 — purchase=매매, inheritance=상속, gift=증여, carryover_gift=이월과세(증여), newConstruction=신축(자가건축) */
-  acquisitionCause: "purchase" | "inheritance" | "gift" | "carryover_gift" | "newConstruction";
+  acquisitionCause: "purchase" | "inheritance" | "gift" | "carryover_gift" | "newConstruction" | "burdened_gift";
 
   // ── 신축(자가건축) 취득일 4-시점 (영 §162①4호) ──
   /**
@@ -736,6 +736,27 @@ export interface AssetForm {
   partialChangeAcqCommercialArea: string;
   /** 용도변경일 (YYYY-MM-DD, 메모용 — 계산 미사용) */
   partialChangeDate: string;
+
+  // ── 부담부증여 (소령 §159, Phase 1: general_building 전용) ──
+  /**
+   * 부담부증여 평가 모드.
+   * "sangjeungbeop_standard": 상증법 기준시가 (사례 34, 가장 일반적)
+   * "sangjeungbeop_market": 상증법 시가 (매매사례·감정·보상·경매·공매가)
+   * "": 미선택 (acquisitionCause !== "burdened_gift" 시 무시)
+   */
+  bgValuationMode: "" | "sangjeungbeop_standard" | "sangjeungbeop_market";
+  /** 임대보증금 총액 (채무로 인수). 원, string. */
+  bgLendingDepositTotal: string;
+  /** 담보차입금 (채무로 인수, 실제 채무잔액). 원, string. */
+  bgMortgageDebtAmount: string;
+  /** 연간 임대료 (환산평가용 — 채무 아님). 원, string. */
+  bgAnnualRentTotal: string;
+  /** (근)저당 설정액 (선택). 미입력 시 bgMortgageDebtAmount fallback. */
+  bgMortgageSetAmount: string;
+  /** 시가 모드 양도시 평가액 (총액). sangjeungbeop_market 시 필수. */
+  bgMarketValueAtTransfer: string;
+  /** 시가 모드 취득시 평가액 (총액). sangjeungbeop_market 시 필수. */
+  bgMarketValueAtAcquisition: string;
 }
 
 /** 하위 호환 별칭 — 기존 코드에서 CompanionAssetForm을 참조하는 곳에 사용 */

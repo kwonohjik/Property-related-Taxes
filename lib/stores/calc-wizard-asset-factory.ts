@@ -264,6 +264,14 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     gbExtensionAcquisitionMode: "estimated",   // 사례 33 호환 default
     gbExtensionActualAcquisitionPrice: "",
     gbExtensionActualExpenses: "",
+    // ── 부담부증여 (소령 §159, Phase 1: general_building 전용) ──
+    bgValuationMode: "",
+    bgLendingDepositTotal: "",
+    bgMortgageDebtAmount: "",
+    bgAnnualRentTotal: "",
+    bgMortgageSetAmount: "",
+    bgMarketValueAtTransfer: "",
+    bgMarketValueAtAcquisition: "",
   };
 }
 

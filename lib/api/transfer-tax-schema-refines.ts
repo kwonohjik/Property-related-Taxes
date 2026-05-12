@@ -17,7 +17,7 @@ export function addPropertyRefines(
     standardPriceAtTransfer?: number;
     acquisitionDate: string;
     transferDate: string;
-    acquisitionCause?: "purchase" | "inheritance" | "gift" | "carryover_gift" | "newConstruction";
+    acquisitionCause?: "purchase" | "inheritance" | "gift" | "carryover_gift" | "newConstruction" | "burdened_gift";
     decedentAcquisitionDate?: string;
     donorAcquisitionDate?: string;
     annualBasicDeductionUsed?: number;

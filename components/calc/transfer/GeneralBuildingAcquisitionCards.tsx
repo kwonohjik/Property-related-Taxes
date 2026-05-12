@@ -22,16 +22,18 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { DateInput } from "@/components/ui/date-input";
 import { CompanionAcqInheritanceBlock } from "./CompanionAcqInheritanceBlock";
 import { CompanionAcqGiftBlock } from "./CompanionAcqGiftBlock";
+import { BurdenedGiftBlock } from "./BurdenedGiftBlock";
 import { CarryoverGiftBlock } from "./CarryoverGiftBlock";
 import { InheritedAcquisitionDeemedSection } from "./InheritedAcquisitionDeemedSection";
 import { CompanionAcqPurchaseBlock } from "./CompanionAcqPurchaseBlock";
 
-// ── 토지 취득원인 옵션 (이월과세 포함 4종) ──
+// ── 토지 취득원인 옵션 (이월과세·부담부증여 포함 5종) ──
 const LAND_CAUSE_OPTIONS = [
   { value: "purchase",       label: "매매" },
   { value: "inheritance",    label: "상속" },
   { value: "gift",           label: "증여" },
   { value: "carryover_gift", label: "이월과세(증여)" },
+  { value: "burdened_gift",  label: "부담부증여" },
 ] as const;
 
 // ── 건물 취득원인 옵션 (신축 포함 4종, 예제 정렬) ──
@@ -245,6 +247,11 @@ export function GeneralBuildingAcquisitionCards({ asset, onChange, transferDate 
             transferDate={transferDate ?? ""}
             onChange={onChange}
           />
+        )}
+
+        {/* 부담부증여 (소령 §159): BurdenedGiftBlock */}
+        {asset.acquisitionCause === "burdened_gift" && (
+          <BurdenedGiftBlock asset={asset} onChange={onChange} />
         )}
       </div>
 

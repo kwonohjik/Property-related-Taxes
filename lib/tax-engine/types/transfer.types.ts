@@ -50,6 +50,19 @@ import type { CarryoverTaxationInput, CarryoverTaxationDetail } from "./transfer
 export type { CarryoverTaxationInput, CarryoverTaxationDetail } from "./transfer-carryover.types";
 
 // ============================================================
+// 부담부증여 양도세 타입 — 800줄 정책으로 별도 파일 분리
+// ============================================================
+import type {
+  BurdenedGiftInfo,
+  TransferBurdenedGiftBreakdown,
+} from "./transfer-burdened-gift.types";
+export type {
+  BurdenedGiftInfo,
+  TransferBurdenedGiftBreakdown,
+  BurdenedGiftValuationMode,
+} from "./transfer-burdened-gift.types";
+
+// ============================================================
 // 상업용건물·오피스텔 환산취득가 타입 — 800줄 정책으로 별도 파일 분리
 // ============================================================
 import type {
@@ -143,7 +156,7 @@ export interface TransferTaxInput {
    * 신축 케이스에서 사용승인일 등 영 §162①4호 기준 취득일 안내 + 부수토지 일체과세 UI 트리거.
    * 엔진 분기는 buildingFootprintArea + holdingMonths 조건으로 판정 (acquisitionCause 단독 판정 금지).
    */
-  acquisitionCause?: "purchase" | "inheritance" | "gift" | "carryover_gift" | "newConstruction";
+  acquisitionCause?: "purchase" | "inheritance" | "gift" | "carryover_gift" | "newConstruction" | "burdened_gift";
   /**
    * 상속 시 피상속인 취득일 — 단기보유 단일세율 판정 보유기간 통산용.
    * 소득세법 §95④: 상속받은 자산은 피상속인이 그 자산을 취득한 날을 자산의 취득일로 본다.
@@ -299,6 +312,21 @@ export interface TransferTaxInput {
    * 기간 판정·비교과세 두 시나리오 계산·채택 시나리오 자동 결정을 엔진이 수행.
    */
   carryoverTaxation?: CarryoverTaxationInput;
+
+  /**
+   * 부담부증여 입력 (소득세법 시행령 §159).
+   * acquisitionCause === "burdened_gift" 일 때 필수.
+   *
+   * 본 필드 제공 시 엔진이 STEP 0에서:
+   *   1. 상증법 §60~§66 Max 평가 산정 (보충적·담보·임대)
+   *   2. 채무비율 = (lendingDepositTotal + mortgageDebtAmount) / max
+   *   3. 자산별 양도가액·취득가액 안분 (§159 ① 1호·2호)
+   *   4. transferPrice/acquisitionPrice/expenses override
+   *
+   * 양도자 = 증여자 본인이므로 §97의2(이월과세) 미적용.
+   * Phase 1 가드: propertyType === "general_building" 한정 (1세대1주택은 Phase 3).
+   */
+  burdenedGiftInfo?: BurdenedGiftInfo;
 
   // ── 토지/건물 취득일 분리 계산 (housing·building 공통) ──
   /**
@@ -673,6 +701,12 @@ export interface TransferTaxResult {
    * 결과 카드 산식 표시·신고서 토지/건물 분리 표 재현에 사용.
    */
   generalBuildingValuationDetail?: import("../general-building-valuation").GeneralBuildingOutput;
+  /**
+   * 부담부증여 양도세 명세 (burdenedGiftInfo 제공 시만 포함).
+   * 상증법 평가 Max + 채무비율 + 자산별 안분 결과 + Phase 2 증여세 연결용 export.
+   * 결과 카드 "상증법 평가 명세" 섹션 + "납세의무자: 증여자" 라벨 표시에 사용.
+   */
+  transferBurdenedGiftBreakdown?: TransferBurdenedGiftBreakdown;
 }
 
 // ============================================================

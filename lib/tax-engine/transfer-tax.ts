@@ -63,6 +63,9 @@ import {
 import { calculateBuildingPenalty, calcTax, handleMultiParcelBranch, type MultiParcelBranchContext } from "./transfer-tax-rate-calc";
 import { finalizeTransferTax } from "./transfer-tax-finalize";
 import { calcCarryoverScenarios } from "./transfer-tax-carryover";
+import { buildBurdenedGiftBreakdown } from "./burdened-gift-apportionment";
+import { BURDENED_GIFT_TRANSFER } from "./legal-codes/burdened-gift";
+import type { TransferBurdenedGiftBreakdown } from "./types/transfer-burdened-gift.types";
 export { parseRatesFromMap } from "./transfer-tax-helpers"; // 하위 호환 재수출
 export { calcTax } from "./transfer-tax-rate-calc";         // 하위 호환 재수출
 // ============================================================
@@ -147,6 +150,54 @@ export function calculateTransferTax(
         legalBasis: TRANSFER.CARRYOVER_TAXATION,
       });
     }
+  }
+
+  // STEP 0.48: 부담부증여 분기 — 양도가액 = 채무액, 자산별 안분 (소령 §159).
+  // 양도자 = 증여자 본인이므로 §97의2(이월과세) 미적용 — carryoverTaxation은 항상 null 유지.
+  // Phase 1 가드: propertyType === "general_building" 한정.
+  let transferBurdenedGiftBreakdown: TransferBurdenedGiftBreakdown | undefined;
+  if (rawInput.acquisitionCause === "burdened_gift" && rawInput.burdenedGiftInfo) {
+    if (workingInput.propertyType !== "general_building") {
+      throw new Error(
+        "[burdened_gift] Phase 1은 propertyType === 'general_building' 만 지원합니다. " +
+        "1세대1주택 부담부증여는 Phase 3에서 §95② 표2 분기 도입.",
+      );
+    }
+    transferBurdenedGiftBreakdown = buildBurdenedGiftBreakdown({
+      landStdPriceAtTransfer: rawInput.burdenedGiftInfo.landStdPriceAtTransfer,
+      buildingStdPriceAtTransfer: rawInput.burdenedGiftInfo.buildingStdPriceAtTransfer,
+      landStdPriceAtAcquisition: rawInput.burdenedGiftInfo.landStdPriceAtAcquisition,
+      buildingStdPriceAtAcquisition: rawInput.burdenedGiftInfo.buildingStdPriceAtAcquisition,
+      info: rawInput.burdenedGiftInfo,
+      giftDate: rawInput.transferDate, // Phase 2 — 증여일 = 양도일
+    });
+    const land = transferBurdenedGiftBreakdown.perAsset.land;
+    const building = transferBurdenedGiftBreakdown.perAsset.building;
+    const totalTransferPrice = land.transferPrice + building.transferPrice;
+    const totalAcquisitionPrice = land.acquisitionPrice + building.acquisitionPrice;
+    const totalEstimatedDeduction = land.estimatedDeduction + building.estimatedDeduction;
+    // override: 부담부증여 산정값으로 본 계산 진행.
+    // §114⑦ 환산취득가 경로(useEstimatedAcquisition)와 분리 — 별도 조문(§159) 적용.
+    workingInput = {
+      ...workingInput,
+      transferPrice: totalTransferPrice,
+      acquisitionPrice: totalAcquisitionPrice,
+      expenses: totalEstimatedDeduction,
+      capitalExpenditure: undefined,
+      transferExpense: undefined,
+      useEstimatedAcquisition: false,
+    };
+    steps.push({
+      label: "부담부증여 양도차익 산정 (소령 §159)",
+      formula:
+        `양도가 = 인수채무 ${transferBurdenedGiftBreakdown.assumedDebtAmount.toLocaleString()} ` +
+        `(${transferBurdenedGiftBreakdown.sangjeungbeopValuation.selectedMode} 평가 ${transferBurdenedGiftBreakdown.sangjeungbeopValuation.max.toLocaleString()} 중 ` +
+        `${(transferBurdenedGiftBreakdown.debtRatio * 100).toFixed(4)}% 안분)`,
+      amount: totalTransferPrice,
+      legalBasis: BURDENED_GIFT_TRANSFER.VALUATION_159,
+    });
+    // 양도자 = 증여자 본인. §97의2 이월과세 미적용 보장.
+    // (carryoverTaxation 입력은 burdened_gift acquisitionCause와 동시 설정될 수 없음 — validate 차단.)
   }
 
   // STEP 0.5: 다주택 중과세 판정 (houses[] 제공 + 주택 수 산정 규칙 로드 완료 시)
@@ -719,5 +770,6 @@ export function calculateTransferTax(
     carryoverTaxationDetail: carryoverDetail,
     new993Detail: new993FinalResult,
     commercialBuildingValuationDetail: cbStep?.detail,
+    transferBurdenedGiftBreakdown,
   };
 }

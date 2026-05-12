@@ -25,6 +25,34 @@ export function validateGeneralBuildingAsset(
   label: string,
   formTransferDate?: string,
 ): string | null {
+  // ⑧ 부담부증여 (소령 §159) — 가장 먼저 분기. acquisitionCause === "burdened_gift" 시
+  // bg* 필드 + 양도시·취득시 자산별 기준시가(gb*)가 필수.
+  if (asset.acquisitionCause === "burdened_gift") {
+    if (!asset.bgValuationMode)
+      return `${label}: 부담부증여 평가 모드를 선택하세요 (상증법 기준시가/시가).`;
+    const deposit = parseAmount(asset.bgLendingDepositTotal) || 0;
+    const mortgageDebt = parseAmount(asset.bgMortgageDebtAmount) || 0;
+    if (deposit + mortgageDebt <= 0)
+      return `${label}: 부담부증여 인수 채무액(임대보증금 + 담보차입금)을 입력하세요.`;
+    if (asset.bgValuationMode === "sangjeungbeop_market") {
+      if (!asset.bgMarketValueAtTransfer || parseAmount(asset.bgMarketValueAtTransfer) <= 0)
+        return `${label}: 시가 모드의 양도시 평가액을 입력하세요.`;
+      if (!asset.bgMarketValueAtAcquisition || parseAmount(asset.bgMarketValueAtAcquisition) <= 0)
+        return `${label}: 시가 모드의 취득시 평가액을 입력하세요.`;
+    }
+    if (!parseDecimal(asset.gbLandArea))
+      return `${label}: 토지면적을 입력하세요.`;
+    if (!parseAmount(asset.gbTransferLandPricePerSqm))
+      return `${label}: 양도시 토지 공시지가를 입력하세요.`;
+    if (!parseAmount(asset.gbAcqLandPricePerSqm))
+      return `${label}: 취득시 토지 공시지가를 입력하세요.`;
+    if (!parseAmount(asset.gbTransferBuildingValue))
+      return `${label}: 양도시 건물기준시가 총액을 입력하세요.`;
+    if (!parseAmount(asset.gbAcqBuildingValue))
+      return `${label}: 취득시 건물기준시가 총액을 입력하세요.`;
+    return null; // 부담부증여는 환산/신축 분기 미적용 — 여기서 종결
+  }
+
   // 면적 — 모드 무관 필수
   if (!parseDecimal(asset.gbLandArea))
     return `${label}: 토지면적을 입력하세요.`;

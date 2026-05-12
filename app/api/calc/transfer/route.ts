@@ -392,6 +392,8 @@ export async function POST(request: NextRequest) {
     // ⑭ 일반건물(토지+건물 일괄) 환산취득가 서브객체 (TypeScript 미감지 영역 — 명시 매핑 필수)
     // totalTransferPrice/transferDate/acquisitionDate는 route handler에서 최상위 필드 주입 패턴 적용.
     // buildingAcquisitionDate: YYYY-MM-DD 문자열 → Date 변환 포함 (⑭ date-coerce 필수)
+    // ⑭ 부담부증여 (소령 §159) — Date 변환 없음, 그대로 spread
+    ...(data.burdenedGiftInfo ? { burdenedGiftInfo: data.burdenedGiftInfo } : {}),
     ...(data.generalBuildingValuation ? (() => {
       const buildingAcq = toOptionalDate(data.generalBuildingValuation.buildingAcquisitionDate);
       // #4-a: 토지 상속·증여 보조 필드 Date 변환
