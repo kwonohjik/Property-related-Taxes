@@ -200,6 +200,13 @@ export type GeneralBuildingInput = {
    * true 시 배율 계산 없이 토지 전체 비사업용 (§168의11①1호 단서).
    */
   isUnregistered?: boolean;
+  // ── 사례 35: 주택→상가 용도변경 (사전법규재산 2022-684·881) ──
+  /** 주택→상가 단일 용도변경 토글. true 시 conversionDate·wasMultiHouseAtConversion 필수. */
+  houseToCommercialConversion?: boolean;
+  /** 용도변경일 — houseToCommercialConversion=true 시 필수. */
+  conversionDate?: Date;
+  /** 변경 당시 다주택자 여부. true → 자산 카드 LTHD 기산일 = conversionDate. */
+  wasMultiHouseAtConversion?: boolean;
 };
 
 /** 양도가 안분 결과 */
@@ -309,6 +316,13 @@ export type AssetCardForAggregate = {
    * 결과 카드 배지 표시용. 산식에는 미사용.
    */
   isExtensionBuilding?: boolean;
+  /**
+   * 사례 35: 주택→상가 용도변경 LTHD 분기 — 각 자산 카드에 동일 spread.
+   * `propertyType === "general_building"` 자산 전체 속성이므로 토지·건물 모든 카드에 전파.
+   */
+  houseToCommercialConversion?: boolean;
+  conversionDate?: Date;
+  wasMultiHouseAtConversion?: boolean;
 };
 
 /** 일반건물(토지+건물 일괄) 환산취득가 계산 출력 */
@@ -670,6 +684,15 @@ export function buildGeneralBuildingAssetCards(
   const acqLandStdTotalForFormula = Math.floor(
     input.acquisitionLandPricePerSqm * input.landArea,
   );
+
+  // 사례 35: 주택→상가 용도변경 3필드를 모든 자산 카드에 일괄 propagate
+  if (input.houseToCommercialConversion) {
+    for (const c of assetCards) {
+      c.houseToCommercialConversion = input.houseToCommercialConversion;
+      c.conversionDate = input.conversionDate;
+      c.wasMultiHouseAtConversion = input.wasMultiHouseAtConversion;
+    }
+  }
 
   return {
     allocation,

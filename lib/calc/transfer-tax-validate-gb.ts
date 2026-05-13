@@ -180,5 +180,21 @@ export function validateGeneralBuildingAsset(
     }
   }
 
+  // ── 사례 35: 주택→상가 용도변경 validation (사전법규재산 2022-684) ──
+  if (asset.gbHouseToCommercialConversion === true) {
+    if (!asset.gbConversionDate) {
+      return `${label}: 주택→상가 용도변경을 선택했습니다. 용도변경일을 입력하세요.`;
+    }
+    if (asset.acquisitionDate && asset.gbConversionDate < asset.acquisitionDate) {
+      return `${label}: 용도변경일은 취득일(${asset.acquisitionDate}) 이후여야 합니다.`;
+    }
+    if (formTransferDate && asset.gbConversionDate > formTransferDate) {
+      return `${label}: 용도변경일은 양도일(${formTransferDate}) 이전이어야 합니다.`;
+    }
+    if (typeof asset.gbWasMultiHouseAtConversion !== "boolean") {
+      return `${label}: 변경 당시 다주택자 여부를 선택하세요.`;
+    }
+  }
+
   return null;
 }

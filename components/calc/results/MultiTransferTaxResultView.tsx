@@ -36,6 +36,7 @@ function breakdownToFilingResult(b: PerPropertyBreakdown): TransferTaxResult {
     usedEstimatedAcquisition: false,
     longTermHoldingDeduction: b.longTermHoldingDeduction,
     longTermHoldingRate: 0,
+    lthdStartDate: new Date(0), // multi 결과 변환 mock: 표시용, 실값 미사용
     basicDeduction: b.allocatedBasicDeduction,
     taxBase: b.taxBaseShare,
     appliedRate: b.appliedRate,

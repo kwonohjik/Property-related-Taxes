@@ -226,6 +226,15 @@ export interface TransferTaxInput {
    */
   nonBusinessLandDetails?: NonBusinessLandInput;
 
+  // ── 사례 35: 주택 → 상가 용도변경 LTHD 기산일 분기 ──
+  // 근거: 사전법규재산 2022-684·881, 서울행법 2012구단26961 (다주택 용도변경 시 변경일 전 보유기간 LTHD 배제)
+  /** 주택 → 상가 단일 용도변경 여부. true 시 conversionDate·wasMultiHouseAtConversion 필수. */
+  houseToCommercialConversion?: boolean;
+  /** 용도변경일 (건축물대장 변경 완료일). houseToCommercialConversion=true 시 필수. */
+  conversionDate?: Date;
+  /** 용도변경 당시 다주택자(중과대상) 여부. true → LTHD 기산일 = conversionDate. false → acquisitionDate 유지. */
+  wasMultiHouseAtConversion?: boolean;
+
   // ── §114조의2 가산세 판정용 필드 ──
   /** 취득가 산정 방식 (actual: 실거래가, estimated: 환산취득가, appraisal: 감정가액) */
   acquisitionMethod?: "actual" | "estimated" | "appraisal";
@@ -577,6 +586,13 @@ export interface TransferTaxResult {
   longTermHoldingDeduction: number;
   /** 장기보유특별공제율 */
   longTermHoldingRate: number;
+  /**
+   * 장기보유특별공제 보유기간 실제 기산일 (사례 35).
+   * - 기본값: acquisitionDate (용도변경 미적용 시)
+   * - 다주택 용도변경 적용 시: conversionDate (사전법규재산 2022-684·881)
+   * UI ⑦ 결과 카드에서 `lthdStartDate !== acquisitionDate` 비교로 override 자가 판정.
+   */
+  lthdStartDate: Date;
   /**
    * 비과세 양도소득금액 — 소득세법 시행령 §161①·② 안분 결과 비과세 부분
    * 장기임대주택 거주주택 비과세 특례(§155⑳ + §161) 적용 시에만 채워짐

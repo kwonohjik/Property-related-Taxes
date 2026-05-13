@@ -215,3 +215,19 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
     totalTax,
   };
 }
+
+/**
+ * 장기보유특별공제 보유기간 기산일 결정 — 사례 35.
+ *
+ * 사전법규재산 2022-684·881 / 서울행법 2012구단26961:
+ *  - 다주택 상태에서 주택을 상가로 용도변경 후 양도 시 변경일 이전 기간은 LTHD 배제.
+ *  - 1주택 상태 용도변경은 당초 취득일 기산.
+ *
+ * 본 함수는 `acquisitionDate`를 교체하지 않으며, LTHD 보유기간 산정 시점만 이동시킨다.
+ * 취득가액·양도차익·필요경비 등 LTHD 외 모든 계산에는 영향 없음.
+ */
+export function resolveLTHDStartDate(input: TransferTaxInput): Date {
+  if (!input.houseToCommercialConversion) return input.acquisitionDate;
+  if (!input.wasMultiHouseAtConversion) return input.acquisitionDate;
+  return input.conversionDate ?? input.acquisitionDate;
+}

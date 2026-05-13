@@ -21,6 +21,7 @@ import {
 } from "./tax-utils";
 import { TaxRateNotFoundError } from "./tax-errors";
 import { TRANSFER } from "./legal-codes";
+import { resolveLTHDStartDate } from "./transfer-tax-finalize";
 import {
   parseDeductionRules,
   parseProgressiveRate,
@@ -592,8 +593,8 @@ export function calcLongTermHoldingDeduction(
     };
   }
 
-  // 단일 취득일 케이스 — 기존 로직
-  const holding = calculateHoldingPeriod(input.acquisitionDate, input.transferDate);
+  // 단일 취득일 — 사례 35: 다주택 용도변경 시 LTHD 기산일 = conversionDate (사전법규재산 2022-684)
+  const holding = calculateHoldingPeriod(resolveLTHDStartDate(input), input.transferDate);
   const holdingPeriod = { years: holding.years, months: holding.months };
 
   const rate = rateForYears(holding.years);

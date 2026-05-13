@@ -264,6 +264,10 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     gbExtensionAcquisitionMode: "estimated",   // 사례 33 호환 default
     gbExtensionActualAcquisitionPrice: "",
     gbExtensionActualExpenses: "",
+    // ── 사례 35: 주택→상가 용도변경 ──
+    gbHouseToCommercialConversion: false,
+    gbConversionDate: "",
+    gbWasMultiHouseAtConversion: null,
     // ── 부담부증여 (소령 §159, Phase 2: 모든 propertyType 지원) ──
     transferType: "regular",
     bgValuationMode: "",
@@ -483,6 +487,10 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (a.gbExtensionAcquisitionMode === undefined) a.gbExtensionAcquisitionMode = "estimated";
   if (a.gbExtensionActualAcquisitionPrice === undefined) a.gbExtensionActualAcquisitionPrice = "";
   if (a.gbExtensionActualExpenses === undefined) a.gbExtensionActualExpenses = "";
+  // ── 사례 35: 주택→상가 용도변경 normalize (강제 초기화 금지 — null=미선택 보존) ──
+  if (a.gbHouseToCommercialConversion === undefined) a.gbHouseToCommercialConversion = false;
+  if (a.gbConversionDate === undefined) a.gbConversionDate = "";
+  if (a.gbWasMultiHouseAtConversion === undefined) a.gbWasMultiHouseAtConversion = null;
   // gbHasExtension=false 인 legacy 데이터에 나머지 필드가 잘못 저장된 경우 정리
   // (신규 데이터에서는 발생하지 않으나 구형 마이그레이션 방어)
   if (a.gbHasExtension === false) {

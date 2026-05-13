@@ -61,7 +61,7 @@ import {
   type CommercialBuildingStepResult,
 } from "./transfer-tax-helpers";
 import { calculateBuildingPenalty, calcTax, handleMultiParcelBranch, type MultiParcelBranchContext } from "./transfer-tax-rate-calc";
-import { finalizeTransferTax } from "./transfer-tax-finalize";
+import { finalizeTransferTax, resolveLTHDStartDate } from "./transfer-tax-finalize";
 import { calcCarryoverScenarios } from "./transfer-tax-carryover";
 import { buildBurdenedGiftBreakdown, assertBurdenedGiftEligible, detectBurdenedGiftMultiHouseWarning } from "./burdened-gift-apportionment";
 import { BURDENED_GIFT_TRANSFER } from "./legal-codes/burdened-gift";
@@ -271,6 +271,7 @@ export function calculateTransferTax(
       usedEstimatedAcquisition: effectiveInput.useEstimatedAcquisition,
       longTermHoldingDeduction: 0,
       longTermHoldingRate: 0,
+      lthdStartDate: resolveLTHDStartDate(effectiveInput),
       basicDeduction: 0,
       taxBase: 0,
       appliedRate: 0,
@@ -312,10 +313,8 @@ export function calculateTransferTax(
     steps,
   );
   if (mpBranchResult) return mpBranchResult;
-
   // STEP 2: 양도차익 계산
   const { gain: rawGain, usedEstimated, estimatedBase, estimatedDeduction, expenses: appliedExpenses, splitDetail, swapApplied, swapComparison } = calcTransferGain(effectiveInput);
-
   // 소유자 분리: 본인 신고분 양도차익만 추출 (소령 §166⑥, §168②)
   // splitDetail이 있고 selfOwns !== "both" 이면 본인 소유 파트의 gain만 사용
   const selfOwns = effectiveInput.selfOwns ?? "both";
@@ -325,7 +324,6 @@ export function calculateTransferTax(
 
   // STEP 2a: 손실 → 0 (aggregate 엔진에서 skipLossFloor=true 시 음수 허용 — §102② 통산용)
   const transferGain = input.skipLossFloor ? ownerRawGain : Math.max(0, ownerRawGain);
-
   // 환산취득가 방식: 취득가와 필요경비(개산공제)를 분리 표시
   // 일반 방식: 취득가와 필요경비를 분리 표시
   let gainFormula: string;
@@ -387,6 +385,7 @@ export function calculateTransferTax(
       taxableGain: transferGain,
       usedEstimatedAcquisition: usedEstimated,
       longTermHoldingDeduction: 0,
+      lthdStartDate: resolveLTHDStartDate(effectiveInput),
       longTermHoldingRate: 0,
       basicDeduction: 0,
       taxBase: 0,
@@ -465,6 +464,7 @@ export function calculateTransferTax(
         longTermHoldingRate: transferGain > 0 && rhe.formulaTrace.gain95Table1 > 0
           ? (transferGain - rhe.formulaTrace.gain95Table1) / transferGain
           : 0,
+        lthdStartDate: resolveLTHDStartDate(effectiveInput),
         nontaxableGainAmount,
         basicDeduction: rhe.taxableGain > 0 ? 2_500_000 : 0,
         taxBase: rheTaxBase,
@@ -745,7 +745,6 @@ export function calculateTransferTax(
     penaltyDetail,
     totalTax,
   } = finalize;
-
   return {
     isExempt: false,
     exemptReason: exemptionResult.exemptReason,
@@ -761,6 +760,7 @@ export function calculateTransferTax(
     capitalExpenditureForDisplay: rawInput.capitalExpenditure ?? 0,
     longTermHoldingDeduction,
     longTermHoldingRate,
+    lthdStartDate: resolveLTHDStartDate(effectiveInput),
     basicDeduction,
     taxBase,
     appliedRate: taxResult.appliedRate,

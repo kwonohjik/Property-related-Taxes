@@ -280,6 +280,14 @@ export function buildGeneralBuildingValuation(
           }
         : {}),
       ...nblFields,
+      // 사례 35: 주택→상가 용도변경 (자산 공통 — 환산 모드도 동일 LTHD 분기)
+      ...(asset.gbHouseToCommercialConversion
+        ? {
+            houseToCommercialConversion: true,
+            conversionDate: asset.gbConversionDate || undefined,
+            wasMultiHouseAtConversion: asset.gbWasMultiHouseAtConversion ?? false,
+          }
+        : {}),
     };
   }
 
@@ -300,6 +308,14 @@ export function buildGeneralBuildingValuation(
     ...(acquisitionLandPricePerSqm ? { acquisitionLandPricePerSqm } : {}),
     ...(acquisitionBuildingStdPrice ? { acquisitionBuildingStdPrice } : {}),
     ...nblFields,
+    // 사례 35: 주택→상가 용도변경 — actual 모드도 동일 LTHD 분기
+    ...(asset.gbHouseToCommercialConversion
+      ? {
+          houseToCommercialConversion: true,
+          conversionDate: asset.gbConversionDate || undefined,
+          wasMultiHouseAtConversion: asset.gbWasMultiHouseAtConversion ?? false,
+        }
+      : {}),
   };
 }
 

@@ -714,6 +714,14 @@ export interface AssetForm extends BurdenedGiftFormSlice {
    */
   gbExtensionActualExpenses: string;
 
+  // ── 사례 35: 주택→상가 용도변경 (사전법규재산 2022-684) ──
+  /** 주택→상가 단일 용도변경 토글 (general_building 한정). */
+  gbHouseToCommercialConversion: boolean;
+  /** 용도변경일 (YYYY-MM-DD). gbHouseToCommercialConversion=true 시 필수. */
+  gbConversionDate: string;
+  /** 변경 당시 다주택자 여부. null=미선택(강제). true=다주택 → LTHD 기산일 이동. */
+  gbWasMultiHouseAtConversion: boolean | null;
+
   // ── 겸용주택 분리계산 (sodt §160①단서, 2022.1.1 이후) ──
   /** 겸용주택 여부 토글 */
   isMixedUseHouse: boolean;

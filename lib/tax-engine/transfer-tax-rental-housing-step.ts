@@ -112,6 +112,7 @@ export function applyRentalHousingExceptionStep(
     usedEstimatedAcquisition: usedEstimated,
     longTermHoldingDeduction: ltcDeduction,
     longTermHoldingRate: ltcRate,
+    lthdStartDate: effectiveInput.acquisitionDate, // 장기임대 거주주택 경로: 용도변경 분기 미적용
     basicDeduction,
     taxBase,
     appliedRate: taxResult.appliedRate,

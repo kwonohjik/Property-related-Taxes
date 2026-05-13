@@ -701,6 +701,7 @@ export function handleMultiParcelBranch(
     penaltyBase: 0, // 다필지 분기: 가산세는 §114조의2 건물 한정으로 토지 다필지 경로에 미적용
     longTermHoldingDeduction: mpLtd,
     longTermHoldingRate: mpTaxableGain > 0 ? mpLtd / mpTaxableGain : 0,
+    lthdStartDate: rawInput.acquisitionDate, // 다필지: 용도변경 분기 적용 안 됨, 당초 취득일
     basicDeduction: mpBasicDeduction,
     taxBase: mpTaxBase,
     appliedRate: mpTaxResult.appliedRate,

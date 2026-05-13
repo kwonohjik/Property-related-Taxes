@@ -281,6 +281,14 @@ export function TransferTaxResultView({
                 label={`장기보유특별공제 (${formatRate(result.longTermHoldingRate)})`}
                 value={result.longTermHoldingDeduction > 0 ? `- ${formatKRW(result.longTermHoldingDeduction)}` : "해당없음"}
               />
+              {/* 사례 35: 주택→상가 용도변경 — LTHD 기산일 노출 (사전법규재산 2022-684·881) */}
+              {result.lthdStartDate && (
+                <Row
+                  label="보유기간 기산일"
+                  value={new Date(result.lthdStartDate).toISOString().slice(0, 10)}
+                  sub
+                />
+              )}
               {/* 양도소득금액 — §161 적용 시 양도차익 − 장기보유공제 (§95①), 일반 시 과세대상 양도차익 − 장기보유공제 */}
               <Row
                 label="양도소득금액"

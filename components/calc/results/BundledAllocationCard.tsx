@@ -44,6 +44,8 @@ export function aggregateToFilingResult(a: AggregateTransferResult): TransferTax
     usedEstimatedAcquisition: false,
     longTermHoldingDeduction: a.totalLongTermHoldingDeduction,
     longTermHoldingRate: 0,
+    lthdStartDate: new Date(0), // aggregateToFilingResult mock: 단건 결과 합산 표시용, 실값 미사용
+
     basicDeduction: a.basicDeduction,
     taxBase: a.taxBase,
     appliedRate: 0,

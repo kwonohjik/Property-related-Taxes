@@ -13,7 +13,7 @@
 
 import { addYears, differenceInYears } from "date-fns";
 import { isSurchargeSuspended } from "./tax-utils";
-import { MULTI_HOUSE } from "./legal-codes";
+import { MULTI_HOUSE, SURCHARGE_EXCLUSION_WINDOW } from "./legal-codes";
 import type { SurchargeSpecialRulesData } from "./schemas/rate-table.schema";
 import { classifyPopulationDeclineArea } from "./data/population-decline-areas";
 import type {
@@ -610,7 +610,7 @@ export function determineSurchargeExclusion(
     if (input.sellingHouseId === previousHouseId) {
       const newHouse = input.houses.find((h) => h.id === newHouseId);
       if (newHouse) {
-        const relaxDate = new Date("2022-05-10");
+        const relaxDate = new Date(SURCHARGE_EXCLUSION_WINDOW.start);
         const deadlineYears = isRegulated && newHouse.acquisitionDate < relaxDate ? 1 : 3;
         const deadline = addYears(newHouse.acquisitionDate, deadlineYears);
         if (input.transferDate <= deadline) {

@@ -179,6 +179,37 @@ export const generalBuildingValuationSchema = z.object({
    * ⑫ 사례 33 증축: 토지+건물1 일괄 필요경비 (원).
    */
   bundledExpenses: z.number().int().nonnegative().optional(),
+  /**
+   * ⑫ 사례 35: 주택→상가 용도변경 토글.
+   * true 시 conversionDate·wasMultiHouseAtConversion 의미 있음. superRefine에서 필수 강제.
+   * 침묵 stripping 방지를 위해 명시 선언.
+   */
+  houseToCommercialConversion: z.boolean().optional(),
+  /** ⑫ 사례 35: 용도변경일 (YYYY-MM-DD). houseToCommercialConversion=true 시 필수. */
+  conversionDate: z.string().date().optional(),
+  /**
+   * ⑫ 사례 35: 변경 당시 다주택자 여부.
+   * houseToCommercialConversion=true 시 boolean 필수 (.superRefine). 그 외 undefined 가능.
+   * null은 UI 레이어에서만 사용 — API 도달 전 validate⑧에서 차단.
+   */
+  wasMultiHouseAtConversion: z.boolean().optional(),
+}).superRefine((val, ctx) => {
+  if (val.houseToCommercialConversion === true) {
+    if (!val.conversionDate) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["conversionDate"],
+        message: "주택→상가 용도변경 시 용도변경일을 입력하세요.",
+      });
+    }
+    if (typeof val.wasMultiHouseAtConversion !== "boolean") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["wasMultiHouseAtConversion"],
+        message: "변경 당시 다주택자 여부를 선택하세요.",
+      });
+    }
+  }
 });
 
 export type GeneralBuildingValuationSchemaInput = z.infer<typeof generalBuildingValuationSchema>;

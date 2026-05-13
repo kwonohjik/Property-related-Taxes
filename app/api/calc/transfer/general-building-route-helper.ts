@@ -53,6 +53,10 @@ export interface GeneralBuildingActualPricePayload {
    * 취득시 기준시가 × 채무비율로 환산.
    */
   burdenedGiftInfo?: BurdenedGiftInfo;
+  // ── 사례 35: 주택→상가 용도변경 (자산 공통 — actual 경로도 동일 분기) ──
+  houseToCommercialConversion?: boolean;
+  conversionDate?: Date;
+  wasMultiHouseAtConversion?: boolean;
 }
 
 interface BundledLikeApportionmentResult {
@@ -148,6 +152,14 @@ function buildProperties(
                 : {}),
             }
           : {}),
+      // 사례 35: 주택→상가 용도변경 — 자산 공통 속성, 단건 엔진 LTHD 기산일 분기
+      ...(card.houseToCommercialConversion
+        ? {
+            houseToCommercialConversion: true,
+            conversionDate: card.conversionDate,
+            wasMultiHouseAtConversion: card.wasMultiHouseAtConversion ?? false,
+          }
+        : {}),
     } as unknown as TransferTaxItemInput;
   });
 }
@@ -243,6 +255,9 @@ export function dispatchGeneralBuilding(
       }
     : undefined;
 
+  // ⑭ 사례 35: conversionDate Date 변환 (string → Date)
+  const conversionDateCoerced = toOptionalDate(gbRaw.conversionDate);
+
   // ⑭ 사례 33: extensionInfo 내부 extensionDate Date 변환
   const extInfo = gbRaw.extensionInfo as Record<string, unknown> | undefined;
   const coercedExtInfo = extInfo
@@ -263,6 +278,14 @@ export function dispatchGeneralBuilding(
     ...(buildingDonorAcqDate ? { buildingDonorAcquisitionDate: buildingDonorAcqDate } : {}),
     ...(coercedLandCt ? { landCarryoverTaxation: coercedLandCt } : {}),
     ...(coercedExtInfo ? { extensionInfo: coercedExtInfo } : {}),
+    // ⑭ 사례 35: 주택→상가 용도변경 필드 — Date 변환 후 GeneralBuildingInput에 주입
+    ...(gbRaw.houseToCommercialConversion
+      ? {
+          houseToCommercialConversion: true,
+          conversionDate: conversionDateCoerced,
+          wasMultiHouseAtConversion: gbRaw.wasMultiHouseAtConversion ?? false,
+        }
+      : {}),
   };
 
   if (coercedGbRaw.actualPriceMode === true) {
@@ -282,6 +305,10 @@ export function dispatchGeneralBuilding(
         acquisitionLandPricePerSqm: coercedGbRaw.acquisitionLandPricePerSqm as number | undefined,
         acquisitionBuildingStdPrice: coercedGbRaw.acquisitionBuildingStdPrice as number | undefined,
         burdenedGiftInfo,
+        // 사례 35: 주택→상가 용도변경
+        houseToCommercialConversion: coercedGbRaw.houseToCommercialConversion as boolean | undefined,
+        conversionDate: coercedGbRaw.conversionDate as Date | undefined,
+        wasMultiHouseAtConversion: coercedGbRaw.wasMultiHouseAtConversion as boolean | undefined,
       },
       taxYear, annualBasicDeductionUsed, priorReductionUsage, rates,
     );
@@ -388,6 +415,7 @@ export function calculateGeneralBuildingActualTransfer(
     actualAcquisitionPrice, actualExpenses,
     acquisitionLandPricePerSqm, acquisitionBuildingStdPrice,
     burdenedGiftInfo,
+    houseToCommercialConversion, conversionDate, wasMultiHouseAtConversion,
   } = payload;
 
   // §166⑥ 안분 비율
@@ -501,6 +529,15 @@ export function calculateGeneralBuildingActualTransfer(
     usedEstimatedAcquisition: false, estimatedBase: 0, estimatedDeduction: 0,
     acquisitionDate, transferDate, isNonBusinessLand: false,
   } as unknown as AssetCardForAggregate);
+
+  // 사례 35: 주택→상가 용도변경 — 모든 자산 카드에 일괄 propagate
+  if (houseToCommercialConversion) {
+    for (const c of cards) {
+      c.houseToCommercialConversion = true;
+      c.conversionDate = conversionDate;
+      c.wasMultiHouseAtConversion = wasMultiHouseAtConversion;
+    }
+  }
 
   const properties = buildProperties(cards, nonBusinessRatio);
   const aggregated = calculateTransferTaxAggregate(

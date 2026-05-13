@@ -162,6 +162,48 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
     return n.toLocaleString("ko-KR");
   }
 
+  /**
+   * 사례 35: 주택→상가 용도변경 미리보기 — 보유기간 기산일 + 표1 공제율 안내.
+   * useMemo 순수 — useEffect 미러링 금지 정책 준수.
+   */
+  const conversionPreview = useMemo(() => {
+    if (!asset.gbHouseToCommercialConversion) return null;
+    if (!asset.gbConversionDate || !transferDate) return null;
+    if (asset.gbWasMultiHouseAtConversion === null) return null; // 미선택 시 표시 보류
+    const startISO = asset.gbWasMultiHouseAtConversion
+      ? asset.gbConversionDate
+      : asset.acquisitionDate;
+    if (!startISO) return null;
+    const start = new Date(startISO);
+    const end = new Date(transferDate);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return null;
+    // 만 보유연수 (초일불산입 — 민법 §157, calculateHoldingPeriod 동일 로직)
+    const startPlusOne = new Date(start);
+    startPlusOne.setDate(startPlusOne.getDate() + 1);
+    let years = end.getFullYear() - startPlusOne.getFullYear();
+    const m = end.getMonth() - startPlusOne.getMonth();
+    if (m < 0 || (m === 0 && end.getDate() < startPlusOne.getDate())) years -= 1;
+    years = Math.max(0, years);
+    const isUnder3Years = years < 3;
+    const rate = isUnder3Years ? 0 : Math.min(years * 2, 30);
+    return {
+      isUnder3Years,
+      years,
+      label: asset.gbWasMultiHouseAtConversion
+        ? `보유기간 기산일 = 용도변경일 (${asset.gbConversionDate})`
+        : `보유기간 기산일 = 당초 취득일 (${asset.acquisitionDate})`,
+      notice: isUnder3Years
+        ? `보유기간 ${years}년 → 3년 미만 — 장기보유특별공제 0% (§95② 표1)`
+        : `보유기간 ${years}년 → §95② 표1 ${rate}% (연 2%, 최대 30%)`,
+    };
+  }, [
+    asset.gbHouseToCommercialConversion,
+    asset.gbConversionDate,
+    asset.gbWasMultiHouseAtConversion,
+    asset.acquisitionDate,
+    transferDate,
+  ]);
+
   const isBurdenedGift = asset.transferType === "burdened_gift";
 
   return (
@@ -544,6 +586,61 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
             </div>
           )}
         </div>
+
+        {/* ⑦ 주택→상가 용도변경 (fuchsia) — 사례 35 (사전법규재산 2022-684·881) */}
+        <ToggleCard
+          tone="rose"
+          variant="card"
+          title="주택 → 상가 용도변경"
+          description="주택 전체를 근린생활시설 등 비주택으로 용도변경한 경우 ON. 다주택 상태에서 용도변경 시 변경일 이전 보유기간이 장기보유특별공제에서 배제됩니다."
+          checked={asset.gbHouseToCommercialConversion}
+          onCheckedChange={(v) => onChange({ gbHouseToCommercialConversion: v })}
+        >
+          <FieldCard
+            label="용도변경일"
+            hint="건축물대장 용도변경 처리 완료일. 취득일 이후, 양도일 이전이어야 합니다."
+          >
+            <DateInput
+              value={asset.gbConversionDate}
+              onChange={(v) => onChange({ gbConversionDate: v })}
+            />
+          </FieldCard>
+
+          <FieldCard
+            label="변경 당시 다주택자(중과대상)였습니까?"
+            hint="'예' 선택 시 변경일 이전 보유기간은 장기보유특별공제에서 배제됩니다 (사전법규재산 2022-684·881 / 서울행법 2012구단26961)."
+          >
+            <RadioCardGroup
+              name="gbWasMultiHouseAtConversion"
+              layout="inline"
+              value={
+                asset.gbWasMultiHouseAtConversion === null
+                  ? ""
+                  : String(asset.gbWasMultiHouseAtConversion)
+              }
+              onChange={(v) => onChange({ gbWasMultiHouseAtConversion: v === "true" })}
+              options={[
+                { value: "true", label: "예 (다주택)", description: "변경일 이전 보유기간 LTHD 배제 — 기산일 = 용도변경일" },
+                { value: "false", label: "아니오 (1주택)", description: "당초 취득일 기산 — 변경일 무영향" },
+              ]}
+            />
+          </FieldCard>
+
+          {/* 미리보기 카드 — useMemo 순수 */}
+          {conversionPreview && (
+            <div
+              className={
+                "rounded border px-3 py-2 text-xs " +
+                (conversionPreview.isUnder3Years
+                  ? "bg-amber-50 border-amber-300 text-amber-800"
+                  : "bg-emerald-50 border-emerald-300 text-emerald-800")
+              }
+            >
+              <p className="font-semibold">{conversionPreview.label}</p>
+              <p className="mt-1">{conversionPreview.notice}</p>
+            </div>
+          )}
+        </ToggleCard>
 
       </div>
     </div>

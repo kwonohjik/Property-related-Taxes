@@ -35,6 +35,7 @@ function mixedUseToFilingResult(b: MixedUseGainBreakdown): TransferTaxResult {
     usedEstimatedAcquisition: true,
     longTermHoldingDeduction: b.housingPart.longTermDeductionAmount + b.commercialPart.longTermDeductionAmount,
     longTermHoldingRate: 0,
+    lthdStartDate: new Date(0), // mixed-use 합산 mock: 표시용
     basicDeduction: t.basicDeduction,
     taxBase: t.taxBase,
     appliedRate: t.appliedRate,
