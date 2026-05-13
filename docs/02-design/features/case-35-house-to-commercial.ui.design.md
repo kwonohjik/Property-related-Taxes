@@ -22,7 +22,7 @@
 | 3 | 건물 취득원인 **"매매"** 선택 | `gbBuildingAcquisitionCause: "purchase"` |
 | 4 | 취득일 2008-05-02 / 양도일 2023-02-19 / 양도가 800,000,000 / 취득가 400,000,000 입력 | 기존 자산-수준 필드 |
 | 5 | 양도시·취득시 기준시가 입력 (환산 불필요 — 실가 보유) | 기존 gb* 기준시가 필드 |
-| **6** | **★ "주택 → 상가 용도변경" ToggleCard ON** | `gbHouseToCommercialConversion: true`. 토글 ON 시 하위 필드 펼침. fuchsia tone 카드 ⑦ 표시. |
+| **6** | **★ "주택 → 상가 용도변경" ToggleCard ON** | `gbHouseToCommercialConversion: true`. 토글 ON 시 하위 필드 펼침. rose tone 카드 ⑦ 표시. |
 | **7** | **★ 용도변경일 입력**: 2020-08-07 [DateInput] | `gbConversionDate: "2020-08-07"`. 범위 검증: `acquisitionDate ≤ gbConversionDate ≤ transferDate`. |
 | **8** | **★ "변경 당시 다주택자(중과대상)였습니까?" 라디오**: "예" 선택 | `gbWasMultiHouseAtConversion: true`. 하위 안내 문구 표시: "변경일 이전 보유기간은 장특공제에서 배제됩니다." |
 | **9** | ★ 미리보기 카드 자동 표시: "변경일(2020.08.07) ~ 양도일(2023.02.19) = 약 2년 6개월 — **3년 미만: 장특공제 0%**" | useMemo 순수 계산 — useEffect 사용 금지 |
@@ -158,8 +158,8 @@ GeneralBuildingBlock
     ├── ④ 비사업용토지 판정 섹션 (rose 카드) [사례 31]
     ├── ⑤ 신축 정보 섹션 (amber 카드) [사례 32]
     ├── ⑥ 증축 섹션 (fuchsia 카드) [사례 33]
-    └── ⑦ 주택→상가 용도변경 섹션 (fuchsia 카드) ← ★ 사례 35 신규
-        ├── ToggleCard "주택→상가 용도변경" (tone="fuchsia")
+    └── ⑦ 주택→상가 용도변경 섹션 (rose 카드) ← ★ 사례 35 신규
+        ├── ToggleCard "주택→상가 용도변경" (tone="rose")
         └── [ON 시 펼침]
             ├── DateInput (용도변경일)
             ├── RadioCardGroup (변경 당시 다주택자 여부)
@@ -175,9 +175,9 @@ GeneralBuildingBlock
 | 컴포넌트 | `ToggleCard` |
 | label | "주택→상가 용도변경" |
 | description | "주택 전체를 근린생활시설 등 비주택으로 용도변경한 경우 ON. 다주택 상태에서 용도변경 시 변경일 이전 보유기간이 장특공제에서 배제됩니다." |
-| tone | **fuchsia** — 취득 후 발생하는 신분변경 이벤트. ⑥ 증축(fuchsia)과 동일 계열. |
+| tone | **rose** — 신분·자격 변경 이벤트 (조정대상지역·1세대1주택 등 rose 계열과 의미 정합). `ToggleCardTone` 타입(`amber`/`sky`/`emerald`/`violet`/`rose` 5종)에 `fuchsia` 미등록 — 컴포넌트 확장 없이 가장 가까운 의미인 `rose` 채택. 후속 PR로 `ToggleCardTone`에 `fuchsia` 추가 시 ⑥ 증축과 정합(취득 후 추가 이벤트 계열)으로 환원 검토. |
 | checked | `asset.gbHouseToCommercialConversion` |
-| OFF 상태 | `bg-fuchsia-50/70` 배경 유지 (tone 규칙 — 회색 배경 금지) |
+| OFF 상태 | `bg-rose-50/70` 배경 유지 (tone 규칙 — 회색 배경 금지) |
 | onChange | `updateAsset(assetId, { gbHouseToCommercialConversion: checked })` — `gbConversionDate`·`gbWasMultiHouseAtConversion`은 건드리지 않음 (재토글 복원 UX) |
 
 #### 5.3 DateInput "용도변경일" (`gbConversionDate`)
@@ -187,7 +187,7 @@ GeneralBuildingBlock
 | 컴포넌트 | `DateInput` (`type="date"` 금지) |
 | 라벨 | "용도변경일" |
 | hint | "건축물대장 용도변경 처리 완료일. 취득일 이후, 양도일 이전이어야 합니다." |
-| trailing | `LawArticleModal` trailing 배지: "사전법규재산 2022-684" |
+| trailing | **예규 예외 (디자인 환류 2026-05-13)**: 사전법규재산 2022-684·881은 **국세청 예규**이며 `LawArticleModal` + `/api/law/article` 의 검색 대상 법령(소득세법 등 조문 단위)이 **아니므로** 모달 trailing 배지 미적용. 대신 RadioCardGroup hint 텍스트 "예 선택 시 변경일 이전 보유기간 LTHD 배제 (사전법규재산 2022-684·881 / 서울행법 2012구단26961)" 로 근거를 명시. 결과 카드 ⑦ override 표시도 동일 텍스트 패턴 사용. 후속 PR로 예규 모달(`PrecedentArticleModal` 또는 외부 링크 fallback) 컴포넌트 도입 시 trailing 배지로 환원 검토. |
 | 활성화 조건 | `gbHouseToCommercialConversion === true` |
 | validate | `acquisitionDate ≤ gbConversionDate ≤ transferDate` (⑧ 참조) |
 | placeholder 숫자 예시 | 금지 — hint prop으로 형식 안내 |
@@ -251,7 +251,7 @@ const conversionPreview = useMemo(() => {
 단, `gbHouseToCommercialConversion=true && gbWasMultiHouseAtConversion=true` 시 사이드바에 메타 텍스트 표시 가능:
 
 ```
-자산명 옆 배지: "용도변경" (fuchsia, 소형)
+자산명 옆 배지: "용도변경" (rose, 소형)
 ```
 
 수치 합계 변경 없음 — 합계 계산 로직(`computeTransferSummary`) 수정 불필요.
@@ -525,13 +525,16 @@ grep -n "wasMultiHouseAtConversion" app/api/calc/transfer/general-building-route
 
 ## 5. 법령 링크
 
-**위치**: ⑦ 결과 카드 및 DateInput "용도변경일" FieldCard trailing 배지.
+**환류 결정 (2026-05-13)**: 사전법규재산·서울행법은 **국세청 예규·판례**로 `LawArticleModal` + `/api/law/article` 검색 대상이 아니므로 **모달 trailing 배지 미적용**. 한국어 텍스트로 hint·결과 행에 명시.
 
-| 위치 | 조문 | LawArticleModal 파라미터 |
+| 위치 | 조문 | 표시 방식 |
 |---|---|---|
-| DateInput trailing | 사전법규재산 2022-684 | `law: "사전법규재산"`, `article: "2022-684"` |
-| 결과 카드 보유기간 근거 | 사전법규재산 2022-684·2022-881 | 링크 2개 순서대로 |
-| 결과 카드 장특공제 | 소득세법 §95② | `law: "소득세법"`, `article: "제95조 제2항"` |
+| DateInput "용도변경일" | 사전법규재산 2022-684 | hint 텍스트 (LawArticleModal 미적용 — 예규 예외) |
+| RadioCardGroup hint | 사전법규재산 2022-684·881 / 서울행법 2012구단26961 | hint 텍스트 |
+| 결과 카드 ⑦ override 행 | 사전법규재산 2022-684 | 행 value 텍스트 "(변경 전 보유기간 배제 — 사전법규재산 2022-684)" |
+| 결과 카드 장특공제 | 소득세법 §95② | `LawArticleModal` 사용 가능 (조문 단위) — 본 PR 범위 밖, 후속 통일 PR에서 처리 |
+
+> **후속 PR 트리거**: 예규/판례 전용 모달(`PrecedentArticleModal`) 컴포넌트 또는 외부 링크 fallback 도입 시 trailing 배지로 환원 검토.
 
 ---
 
@@ -581,10 +584,10 @@ function resolveLTHDStartForHouseToCommercial(asset): Date {
 | ③ 취득시 기준시가 카드 | amber | 취득시점 |
 | ④ 비사업용토지 카드 | rose | 지역·용도 |
 | ⑤ 신축 정보 카드 | amber | 취득 정보 계열 (사례 32) |
-| ⑥ 증축 섹션 ToggleCard | fuchsia | 취득 후 추가 이벤트 — 증축 (사례 33) |
-| **⑦ 주택→상가 용도변경 ToggleCard** | **fuchsia** | 취득 후 신분변경 이벤트 — 용도변경 (사례 35) |
+| ⑥ 증축 섹션 ToggleCard | fuchsia | 취득 후 추가 이벤트 — 증축 (사례 33, 직접 클래스) |
+| **⑦ 주택→상가 용도변경 ToggleCard** | **rose** | 신분·자격 변경 이벤트 — 용도변경 (사례 35). `ToggleCardTone` 미지원 `fuchsia` 대신 rose 채택 |
 
-> ⑥ 증축과 ⑦ 용도변경 모두 fuchsia를 사용하는 이유: "취득 완료 후 발생하는 추가 이벤트" 의미 계열. 두 섹션은 동시에 활성화되지 않는 것이 일반적(증축 후 용도변경은 가능하나 별개 이벤트). 라벨 텍스트로 구분 명확.
+> **tone 결정 사유 (디자인 환류 2026-05-13)**: ⑥ 증축은 fuchsia 직접 클래스(`border-fuchsia-200`), ⑦ 용도변경은 `ToggleCardTone` 지원 범위 내 `rose` 사용. 두 섹션은 동시에 활성화되지 않는 것이 일반적이라 색상 차이로도 사용자 혼동 없음. 후속 PR로 `ToggleCardTone`에 `fuchsia` 추가 시 ⑥과 ⑦ 모두 동일 tone API로 통일 가능.
 
 ---
 
@@ -615,7 +618,7 @@ function resolveLTHDStartForHouseToCommercial(asset): Date {
 | 6 | `feedback_no_won_suffix.md` | 모든 숫자 뒤 "원" 생략. |
 | 7 | `feedback_api_zod_schema_sync.md` | 14지점 전수. 특히 ⑫⑬⑭ TypeScript 미감지 구간 grep 자가 점검 명시. |
 | 8 | `feedback_date_input.md` | `DateInput` 컴포넌트 사용. `type="date"` native input 금지. |
-| 9 | `feedback_toggle_card_visibility.md` | ToggleCard OFF 상태에도 `bg-fuchsia-50/70` 유지. 회색 배경 금지. |
+| 9 | `feedback_toggle_card_visibility.md` | ToggleCard OFF 상태에도 `bg-rose-50/70` tone 배경 유지. 회색 배경 금지. |
 
 ---
 
