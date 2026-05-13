@@ -289,6 +289,31 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     bgIsGenerationSkip: false,
     bgIsFiledOnTime: true,
     bgPriorGifts: [],
+    // ── 재개발/재건축 (시행령 §166) — 사례 44 ──
+    redevSubject: "",
+    redevApprovalLawBasis: "",
+    redevOriginalAssetType: "",
+    redevSettlementDirection: "",
+    redevApprovalDate: "",
+    redevSettlementSaleDate: "",
+    redevRightsValue: "",
+    redevSettlementAmount: "",
+    redevPreApprovalExpenses: "",
+    redevPostApprovalExpenses: "",
+    redevAcquisitionStdPrice: "",
+    redevManagementDisposalStdPrice: "",
+    redevFirstDisclosureDate: "",
+    redevFirstDisclosureHousingPrice: "",
+    redevFirstDisclosureStdPrice: "",
+    // PHD 패턴 신규 필드
+    redevLandArea: "",
+    redevLandPricePerSqmAtAcq: "",
+    redevBuildingStdPriceAtAcq: "",
+    redevLandPricePerSqmAtFirst: "",
+    redevBuildingStdPriceAtFirst: "",
+    redevManagementDisposalHousingPrice: "",
+    redevAcquisitionHousingPrice: "",
+    redevActualAcquisitionPrice: "",
   };
 }
 
@@ -404,11 +429,35 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (!a.acquisitionCause || !validCauses.includes(a.acquisitionCause as string)) {
     a.acquisitionCause = "purchase";
   }
-  // assetKind "commercial_building"/"general_building" 추가 — 알 수 없는 값이면 "building" fallback (③ normalize)
-  const validKinds = ["housing", "land", "building", "right_to_move_in", "presale_right", "commercial_building", "general_building"];
+  // assetKind "commercial_building"/"general_building"/"redevelopment_apt" 추가 — 알 수 없는 값이면 "building" fallback (③ normalize)
+  const validKinds = ["housing", "land", "building", "right_to_move_in", "presale_right", "commercial_building", "general_building", "redevelopment_apt"];
   if (!a.assetKind || !validKinds.includes(a.assetKind as string)) {
     a.assetKind = "building";
   }
+  // ③ 재개발/재건축 redev* 필드 마이그레이션 (sessionStorage 호환 — 신규 필드 누락 보호)
+  if (a.redevSubject === undefined) a.redevSubject = "";
+  if (a.redevApprovalLawBasis === undefined) a.redevApprovalLawBasis = "";
+  if (a.redevOriginalAssetType === undefined) a.redevOriginalAssetType = "";
+  if (a.redevSettlementDirection === undefined) a.redevSettlementDirection = "";
+  if (a.redevApprovalDate === undefined) a.redevApprovalDate = "";
+  if (a.redevSettlementSaleDate === undefined) a.redevSettlementSaleDate = "";
+  if (a.redevRightsValue === undefined) a.redevRightsValue = "";
+  if (a.redevSettlementAmount === undefined) a.redevSettlementAmount = "";
+  if (a.redevPreApprovalExpenses === undefined) a.redevPreApprovalExpenses = "";
+  if (a.redevPostApprovalExpenses === undefined) a.redevPostApprovalExpenses = "";
+  if (a.redevAcquisitionStdPrice === undefined) a.redevAcquisitionStdPrice = "";
+  if (a.redevManagementDisposalStdPrice === undefined) a.redevManagementDisposalStdPrice = "";
+  if (a.redevFirstDisclosureDate === undefined) a.redevFirstDisclosureDate = "";
+  if (a.redevFirstDisclosureHousingPrice === undefined) a.redevFirstDisclosureHousingPrice = "";
+  if (a.redevFirstDisclosureStdPrice === undefined) a.redevFirstDisclosureStdPrice = "";
+  if (a.redevLandArea === undefined) a.redevLandArea = "";
+  if (a.redevLandPricePerSqmAtAcq === undefined) a.redevLandPricePerSqmAtAcq = "";
+  if (a.redevBuildingStdPriceAtAcq === undefined) a.redevBuildingStdPriceAtAcq = "";
+  if (a.redevLandPricePerSqmAtFirst === undefined) a.redevLandPricePerSqmAtFirst = "";
+  if (a.redevBuildingStdPriceAtFirst === undefined) a.redevBuildingStdPriceAtFirst = "";
+  if (a.redevManagementDisposalHousingPrice === undefined) a.redevManagementDisposalHousingPrice = "";
+  if (a.redevAcquisitionHousingPrice === undefined) a.redevAcquisitionHousingPrice = "";
+  if (a.redevActualAcquisitionPrice === undefined) a.redevActualAcquisitionPrice = "";
   // ③ 상업용건물·오피스텔 cb* 필드 마이그레이션 (sessionStorage 호환 — 신규 필드 누락 보호)
   if (a.cbEra === undefined) a.cbEra = "";
   if (a.cbExclusiveArea === undefined) a.cbExclusiveArea = "";

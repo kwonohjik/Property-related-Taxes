@@ -1,0 +1,144 @@
+/**
+ * 재개발/재건축(redevelopment) 폼 슬라이스.
+ *
+ * calc-wizard-asset.ts 800줄 정책으로 분리.
+ * AssetForm은 이 slice를 extends하여 합성.
+ *
+ * 법령 근거: 소득세법 시행령 §166 (재개발/재건축 양도차익 산정 본문) + §164⑦ 단서 + §166⑤ LTHD 분기.
+ *
+ * 본 PR UI 는 사례 44 (APT-환산-납부-주택출자) 만 노출.
+ * 엔진은 사례 36~46 매트릭스 전체 지원.
+ */
+
+/** 재개발/재건축 입력 묶음 — AssetForm에 mix-in. */
+export interface RedevelopmentFormSlice {
+  // ── 분기 결정 ToggleCard·RadioCardGroup ──
+
+  /**
+   * 양도 대상.
+   * - "right": 입주권 양도 (사례 36~39)
+   * - "apt":   완공 APT 양도 (사례 40~46)
+   * - "":      미선택
+   * 본 PR UI 는 "apt" 만 노출 (입주권 후속 PR).
+   */
+  redevSubject: "" | "right" | "apt";
+
+  /**
+   * 인가 법령 근거 — §95② 본법 단서에 등재된 두 가지.
+   * - "urban_renovation_art_74": 도시정비법 §74 관리처분계획 인가 (재개발/재건축 본류)
+   * - "small_housing_art_29":    빈집소규모정비법 §29 사업시행계획 인가 (소규모정비)
+   * 본 PR UI 는 §74 만 노출. §29 슬롯은 후속 PR 마이그레이션 회피용 사전 도입.
+   */
+  redevApprovalLawBasis: "" | "urban_renovation_art_74" | "small_housing_art_29";
+
+  /**
+   * 출자 자산 — subject="apt" 시 필요.
+   * - "land":    토지출자 (사례 40~43)
+   * - "housing": 주택출자 (사례 44~46)
+   * subject="right" 시 무시.
+   * 본 PR UI 는 "housing" 만 노출.
+   */
+  redevOriginalAssetType: "" | "land" | "housing";
+
+  /** 청산금 방향. 본 PR UI 는 "pay" 만 노출. */
+  redevSettlementDirection: "" | "pay" | "receive";
+
+  // ── 일정·금액 (CurrencyInput / DateInput) ──
+
+  /** 관리처분/사업시행계획 인가일 (도정법 §74 또는 빈집소규모법 §29, YYYY-MM-DD) */
+  redevApprovalDate: string;
+
+  /**
+   * 청산금 수령 시 양도일 — 소유권이전 고시일 다음날.
+   * NTS 집행기준 + 소법 §95④ 보유기간 정의 조합 도출.
+   * redevSettlementDirection === "receive" 시 필수. YYYY-MM-DD.
+   */
+  redevSettlementSaleDate: string;
+
+  /**
+   * 권리가액 (원, 인가전 분 양도가액으로 의제).
+   * 시행령 §166④ 평가액 = 관리처분계획에 따라 정하여진 가격.
+   */
+  redevRightsValue: string;
+
+  /** 청산금 (원, 절댓값) */
+  redevSettlementAmount: string;
+
+  /** 인가전 분 필요경비 (원). 법 §97①2·3호 + 시행령 §163⑥. */
+  redevPreApprovalExpenses: string;
+
+  /** 인가후 분 필요경비 (원, 사례 44 = 0). §166①1호 인가후양도차익 산식 본문에 등장. */
+  redevPostApprovalExpenses: string;
+
+  // ── 환산 모드 입력 (useEstimatedAcquisition=true 시) ──
+
+  /**
+   * @deprecated 단일 합산 입력 — 옛 인터페이스. 신규 케이스에선 PHD 패턴 필드 사용.
+   * sessionStorage 호환을 위해 필드 자체는 유지하되 UI 노출 제거.
+   */
+  redevAcquisitionStdPrice: string;
+
+  /**
+   * @deprecated 단일 합산 입력 — 옛 인터페이스. 신규 케이스에선 redevManagementDisposalHousingPrice 사용.
+   */
+  redevManagementDisposalStdPrice: string;
+
+  /**
+   * @deprecated 단일 합산 입력 — 옛 인터페이스. 신규 케이스에선 PHD 패턴 Sum_F 산정으로 대체.
+   */
+  redevFirstDisclosureStdPrice: string;
+
+  /**
+   * 개별주택/공동주택가격 최초 공시일 (§164⑦ 본문 트리거, YYYY-MM-DD).
+   * acquisitionDate < redevFirstDisclosureDate 시 §164⑦ 본문 산식 발동.
+   */
+  redevFirstDisclosureDate: string;
+
+  /**
+   * §164⑦ 본문 산식 — A: 최초공시 주택가격 (원, 단일 라목값).
+   * 산식: 취득당시 라목값 = A × (Sum_A / Sum_F)
+   * 본문 발동 시 필수.
+   */
+  redevFirstDisclosureHousingPrice: string;
+
+  // ── PHD 패턴 (토지 ㎡당 단가 × 면적 + 건물 기준시가) ──
+  // §164⑦ 본문 발동 시 Sum_A·Sum_F 산정용. 본문 미발동 시 사용 안 함.
+
+  /** 토지면적 (㎡, 단일 면적; 시점별 동일 가정) */
+  redevLandArea: string;
+
+  /** 취득시 토지 ㎡당 단가 (원/㎡) — Vworld API 조회 + 면적 자동계산 */
+  redevLandPricePerSqmAtAcq: string;
+
+  /** 취득시 건물 기준시가 (원, 총액) — 수동 입력 */
+  redevBuildingStdPriceAtAcq: string;
+
+  /** 최초공시 당시 토지 ㎡당 단가 (원/㎡) — Vworld API 조회 + 면적 자동계산 */
+  redevLandPricePerSqmAtFirst: string;
+
+  /** 최초공시 당시 건물 기준시가 (원, 총액) — 수동 입력 */
+  redevBuildingStdPriceAtFirst: string;
+
+  /**
+   * D — 관리처분 인가일 개별주택공시가격 (원, 단일 라목값).
+   * 환산 모드 + 환산취득가 산정 시 필수 (§166③ 분모).
+   * 관리처분 인가일에는 라목값이 이미 공시되어 있으므로 단일 입력으로 충분.
+   */
+  redevManagementDisposalHousingPrice: string;
+
+  /**
+   * 본문 미발동 시 — 취득당시 개별주택공시가격 (원, 단일 라목값).
+   * 취득일 ≥ 최초공시일 또는 최초공시일 미입력 케이스 (사례 44 회귀 경로).
+   */
+  redevAcquisitionHousingPrice: string;
+
+  /**
+   * 실가 모드 인가전 분 종전 주택 취득가액 (실거래가, 원).
+   * useEstimatedAcquisition === false 시 §166①1호 인가전 분 차감 기준.
+   * 환산 모드 시 무시 (validate skip).
+   *
+   * 직전 PR(C안)에서 상단 일반 `fixedAcquisitionPrice` 입력 영역이 재개발 케이스에서 숨겨졌으므로
+   * §166 섹션 내부 별도 입력 위치로 분리. 사례 45/46 시나리오 브라우저 재현 보장.
+   */
+  redevActualAcquisitionPrice: string;
+}

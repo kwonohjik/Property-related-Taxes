@@ -104,7 +104,7 @@ export function deriveColumns(
   aggregate?: AggregateMeta,
 ): {
   columns: Column[];
-  mode: "fourpart" | "mixed-2col" | "split-2col" | "single" | "aggregate";
+  mode: "fourpart" | "mixed-2col" | "split-2col" | "single" | "aggregate" | "redev-3split";
 } {
   // 다자산 합산 모드 우선 — 사례 27 등 묶음·합산 신고
   if (aggregate && aggregate.properties.length > 0) {
@@ -129,6 +129,19 @@ export function deriveColumns(
       aggCols.push({ key: p.propertyId, label });
     }
     return { mode: "aggregate", columns: aggCols };
+  }
+
+  // 재개발/재건축 3분할 모드 — aggregate와 mutually exclusive
+  if (result.redevelopmentDetail) {
+    return {
+      mode: "redev-3split",
+      columns: [
+        { key: "total", label: "합계" },
+        { key: "preApproval", label: "① 인가전 분" },
+        { key: "postApprovalExistingHouse", label: "② 인가후 기존건물분" },
+        { key: "settlement", label: "③ 청산금 분" },
+      ],
+    };
   }
 
   const mu = result.mixedUseDetail;
@@ -369,7 +382,7 @@ import { buildAggregateRows } from "./FilingFormTableAggregateHelpers";
 
 export function buildRows(
   result: TransferTaxResult,
-  mode: "fourpart" | "mixed-2col" | "split-2col" | "single" | "aggregate",
+  mode: "fourpart" | "mixed-2col" | "split-2col" | "single" | "aggregate" | "redev-3split",
   formData?: TransferFormData,
   asset?: AssetForm,
   transferPriceOverride?: number,
@@ -449,7 +462,61 @@ export function buildRows(
   setStr("moveIn", "total", firstMoveIn ? fmtDate(firstMoveIn) : "-");
   setStr("residencePeriod", "total", fmtPeriod(residenceMonthsTotal));
 
-  if (mode === "fourpart" && mu) {
+  // ── 재개발/재건축 3분할 모드 (시행령 §166) ──
+  if (mode === "redev-3split" && result.redevelopmentDetail) {
+    const r = result.redevelopmentDetail;
+    const branches: Array<["preApproval" | "postApprovalExistingHouse" | "settlement", typeof r.preApproval]> = [
+      ["preApproval", r.preApproval],
+      ["postApprovalExistingHouse", r.postApprovalExistingHouse],
+      ["settlement", r.settlement],
+    ];
+
+    // 일자·기간 — 분할별 보유기간만 의미, 나머지는 합계 열만 표시
+    for (const [key, b] of branches) {
+      const years = Math.floor(b.holdingMonths / 12);
+      const months = b.holdingMonths % 12;
+      setStr("holdingPeriod", key, b.holdingMonths > 0 ? `${years}년 ${months}개월` : "-");
+      setStr("transferDate", key, "-");
+      setStr("acquisitionDate", key, "-");
+      setStr("moveOut", key, "-");
+      setStr("moveIn", key, "-");
+      setStr("residencePeriod", key, "-");
+    }
+
+    // 양도가액·취득가액 — 분할별 안분값
+    for (const [key, b] of branches) {
+      setNum("transferPrice", key, b.apportionedTransfer);
+      setNum("acquisitionPrice", key, b.apportionedAcquisition);
+    }
+
+    // 필요경비 — 인가전 분만 개산공제(§163⑥), 나머지 0
+    const lump = r.estimatedLumpDeduction ?? 0;
+    setNum("expenses", "preApproval", lump);
+    setNum("expenses", "postApprovalExistingHouse", 0);
+    setNum("expenses", "settlement", 0);
+
+    // 양도차익·과세대상 양도차익 — 분할별
+    for (const [key, b] of branches) {
+      setNum("transferGain", key, b.gain);
+      setNum("exemptGain", key, 0);
+      setNum("taxableGain", key, b.gain);
+    }
+
+    // 장기보유특별공제 — 분할별. 보유분/거주분은 재개발 미분리.
+    for (const [key, b] of branches) {
+      setNum("ltDeduction", key, b.lthd);
+      setNum("ltHoldingPart", key, null);
+      setNum("ltResidencePart", key, null);
+    }
+
+    // 양도소득금액·감면후 소득금액 — 분할별 (gain - lthd)
+    for (const [key, b] of branches) {
+      const income = Math.max(0, b.gain - b.lthd);
+      setNum("incomeAmount", key, income);
+      setNum("incomeAmountAfter", key, income);
+    }
+    // 합계 보존: 합계 열은 아래 공용 매핑에서 result.* 필드로 채워짐
+  } else if (mode === "fourpart" && mu) {
     const hp = mu.housingPart;
     const cp = mu.commercialPart;
     setStr("transferDate", "housingLand", fmtDate(transferDate));
@@ -496,7 +563,18 @@ export function buildRows(
   }
 
   setNum("transferPrice", "total", totalTransferPrice || null);
-  if (mode === "fourpart" && mu) {
+  if (mode === "redev-3split" && result.redevelopmentDetail) {
+    const r = result.redevelopmentDetail;
+    setNum(
+      "acquisitionPrice",
+      "total",
+      r.preApproval.apportionedAcquisition +
+        r.postApprovalExistingHouse.apportionedAcquisition +
+        r.settlement.apportionedAcquisition,
+    );
+    // 필요경비 합계 = 인가전 분 개산공제 (§163⑥)
+    setNum("expenses", "total", r.estimatedLumpDeduction ?? 0);
+  } else if (mode === "fourpart" && mu) {
     const hp = mu.housingPart;
     const cp = mu.commercialPart;
     setNum("acquisitionPrice", "total", hp.landAcqPrice + hp.buildingAcqPrice + cp.landAcqPrice + cp.buildingAcqPrice);

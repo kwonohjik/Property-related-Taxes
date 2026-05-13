@@ -60,18 +60,17 @@ import {
   buildMultiHouseSurchargeDetail,
   type CommercialBuildingStepResult,
 } from "./transfer-tax-helpers";
-import { calculateBuildingPenalty, calcTax, handleMultiParcelBranch, type MultiParcelBranchContext } from "./transfer-tax-rate-calc";
+import { calculateBuildingPenalty, calcTax, handleMultiParcelBranch } from "./transfer-tax-rate-calc";
 import { finalizeTransferTax, resolveLTHDStartDate } from "./transfer-tax-finalize";
+import { isRedevelopmentActive, calculateRedevelopmentTax } from "./transfer-tax-redevelopment";
 import { calcCarryoverScenarios } from "./transfer-tax-carryover";
 import { buildBurdenedGiftBreakdown, assertBurdenedGiftEligible, detectBurdenedGiftMultiHouseWarning } from "./burdened-gift-apportionment";
 import { BURDENED_GIFT_TRANSFER } from "./legal-codes/burdened-gift";
 import type { TransferBurdenedGiftBreakdown } from "./types/transfer-burdened-gift.types";
 export { parseRatesFromMap } from "./transfer-tax-helpers"; // 하위 호환 재수출
 export { calcTax } from "./transfer-tax-rate-calc";         // 하위 호환 재수출
-// ============================================================
-// 메인 함수: calculateTransferTax
-// ============================================================
 
+// 메인 함수: calculateTransferTax
 export function calculateTransferTax(
   rawInput: TransferTaxInput,
   rates: TaxRatesMap,
@@ -251,7 +250,8 @@ export function calculateTransferTax(
     }
   }
 
-  // STEP 1: 비과세 판단
+  // STEP 0.65: 재개발/재건축 분기 — 시행령 §166. STEP 1: 비과세 판단
+  if (isRedevelopmentActive(effectiveInput.propertyType, effectiveInput.redevelopment)) return calculateRedevelopmentTax(effectiveInput, parsedRates, steps);
   const exemptionResult = checkExemption(effectiveInput, parsedRates.oneHouseSpecialRules);
 
   // STEP 1a: 전액 비과세 시 조기 반환

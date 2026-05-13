@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
 import type { AssetForm, ParcelFormItem } from "@/lib/stores/calc-wizard-store";
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
@@ -25,6 +24,7 @@ import { CompanionAcquisitionCauseSection } from "./CompanionAcquisitionCauseSec
 import { TransferModeBlock } from "./TransferModeBlock";
 import { CommercialBuildingBlock } from "./CommercialBuildingBlock";
 import { GeneralBuildingBlock } from "./GeneralBuildingBlock";
+import { RedevelopmentBlock } from "./RedevelopmentBlock";
 
 const ASSET_KIND_LABELS: Record<string, string> = {
   housing: "주택",
@@ -34,6 +34,7 @@ const ASSET_KIND_LABELS: Record<string, string> = {
   presale_right: "분양권",
   commercial_building: "상업용건물·오피스텔",
   general_building: "일반건물(토지+건물 일괄)",
+  redevelopment_apt: "재개발/재건축 APT",
 };
 
 const ASSET_KIND_OPTIONS = [
@@ -44,6 +45,7 @@ const ASSET_KIND_OPTIONS = [
   { value: "presale_right", label: "분양권" },
   { value: "commercial_building", label: "상업용건물·오피스텔", description: "기준시가 공시된 것" },
   { value: "general_building", label: "일반건물(토지+건물 일괄)", description: "취득가액 확인 불가 시 환산취득가 적용" },
+  { value: "redevelopment_apt", label: "재개발/재건축 APT", description: "관리처분 인가일 분기로 3분할 양도차익 산정 (시행령 §166)" },
 ] as const;
 
 interface Props {
@@ -444,7 +446,7 @@ export function CompanionAssetCard({
           bundledSaleMode={
             asset.transferType === "burdened_gift" ? "apportioned" : (singleMode ? "actual" : bundledSaleMode)
           }
-          assetKind={(asset.assetKind === "commercial_building" || asset.assetKind === "general_building") ? "building" : asset.assetKind}
+          assetKind={(asset.assetKind === "commercial_building" || asset.assetKind === "general_building" || asset.assetKind === "redevelopment_apt") ? "building" : asset.assetKind}
           actualSalePrice={asset.actualSalePrice}
           onActualSalePriceChange={(v) => onChange({ actualSalePrice: v })}
           standardPriceAtTransfer={asset.standardPriceAtTransfer}
@@ -562,6 +564,11 @@ export function CompanionAssetCard({
           onChange={onChange}
           transferDate={transferDate}
         />
+      )}
+
+      {/* 재개발/재건축 (시행령 §166) — assetKind === "redevelopment_apt" 시만 표시 (사례 44) */}
+      {asset.assetKind === "redevelopment_apt" && (
+        <RedevelopmentBlock asset={asset} onChange={onChange} />
       )}
 
       {/* 필요경비 — 자본적지출 / 양도비 분리 입력 (소득세법 §97① 가목·나목)

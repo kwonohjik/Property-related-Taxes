@@ -10,8 +10,9 @@ export function formatWithCommas(value: string): string {
   return num.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
-/** 콤마 제거 후 정수 반환 */
-export function parseAmount(value: string): number {
+/** 콤마 제거 후 정수 반환. undefined/null 안전. */
+export function parseAmount(value: string | undefined | null): number {
+  if (value == null) return 0;
   return parseInt(value.replace(/,/g, "") || "0", 10);
 }
 

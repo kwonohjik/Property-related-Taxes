@@ -83,7 +83,7 @@ export const rentalHousingExceptionSchema = z.object({
 // ─── 단건 기본 필드 객체 (단건·다건 공유) ───────────────────────
 
 const propertyBaseShape = {
-  propertyType: z.enum(["housing", "land", "building", "right_to_move_in", "presale_right", "mixed-use-house", "commercial_building", "general_building"]),
+  propertyType: z.enum(["housing", "land", "building", "right_to_move_in", "presale_right", "mixed-use-house", "commercial_building", "general_building", "redevelopment_apt"]),
   transferPrice: z.number().int().positive(),
   transferDate: z.string().date(),
   acquisitionPrice: z.number().int().nonnegative(),
@@ -292,6 +292,53 @@ const propertyBaseShape = {
    * Phase 1 가드: propertyType === "general_building" 한정 (engine assert).
    */
   burdenedGiftInfo: burdenedGiftInfoSchema.optional(),
+  /**
+   * ⑫ 재개발/재건축 입력 (시행령 §166 본문).
+   * propertyType === "redevelopment_apt" 또는 "right_to_move_in" 시 제공.
+   * 미정의 시 침묵 stripping 방지를 위해 명시 필수.
+   */
+  redevelopment: z.object({
+    subject: z.enum(["right", "apt"]),
+    approvalLawBasis: z.enum(["urban_renovation_art_74", "small_housing_art_29"]),
+    approvalDate: z.string().date(),
+    rightsValue: z.number().int().nonnegative(),
+    settlementDirection: z.enum(["pay", "receive"]),
+    settlementAmount: z.number().int().nonnegative(),
+    settlementSaleDate: z.string().date().optional(),
+    preApprovalExpenses: z.number().int().nonnegative(),
+    postApprovalExpenses: z.number().int().nonnegative().optional(),
+    originalAssetType: z.enum(["land", "housing"]).optional(),
+    acquisitionStdPrice: z.number().int().nonnegative().optional(),
+    managementDisposalStdPrice: z.number().int().nonnegative().optional(),
+    firstDisclosureDate: z.string().date().optional(),
+    firstDisclosureHousingPrice: z.number().int().nonnegative().optional(),
+    firstDisclosureStdPrice: z.number().int().nonnegative().optional(),
+    // PHD 패턴 — Sum_A·Sum_F 산정용 (본문 발동 시 필수)
+    landArea: z.number().nonnegative().optional(),
+    landPricePerSqmAtAcq: z.number().int().nonnegative().optional(),
+    buildingStdPriceAtAcq: z.number().int().nonnegative().optional(),
+    landPricePerSqmAtFirst: z.number().int().nonnegative().optional(),
+    buildingStdPriceAtFirst: z.number().int().nonnegative().optional(),
+    // 단일 라목값
+    managementDisposalHousingPrice: z.number().int().nonnegative().optional(),
+    acquisitionHousingPrice: z.number().int().nonnegative().optional(),
+    acquisitionRounding: z.enum(["floor", "round"]).optional(),
+  })
+  .refine(
+    (v) => v.settlementDirection !== "receive" || v.settlementSaleDate != null,
+    { message: "청산금 수령 시 settlementSaleDate(소유권이전 고시일 다음날) 필수" },
+  )
+  .refine(
+    (v) => v.subject !== "apt" || v.originalAssetType != null,
+    { message: "subject='apt' (완공 APT 양도) 시 originalAssetType ('land' | 'housing') 필수" },
+  )
+  .refine(
+    (v) =>
+      (v.acquisitionStdPrice == null && v.managementDisposalStdPrice == null) ||
+      (v.acquisitionStdPrice != null && v.managementDisposalStdPrice != null),
+    { message: "환산 모드: 취득시 기준시가와 관리처분일 기준시가는 함께 입력해야 함" },
+  )
+  .optional(),
 };
 
 // ─── 단건 스키마 (기존 inputSchema와 동일) ─────────────────────

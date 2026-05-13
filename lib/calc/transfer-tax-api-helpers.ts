@@ -120,7 +120,7 @@ export function toRentalHousingExceptionApi(asset: AssetForm): object | undefine
 
 export function toEngineAssetKind(
   kind: AssetForm["assetKind"]
-): "housing" | "land" | "building" | "commercial_building" | "general_building" {
+): "housing" | "land" | "building" | "commercial_building" | "general_building" | "redevelopment_apt" {
   if (kind === "right_to_move_in" || kind === "presale_right") return "housing";
   return kind;
 }
@@ -666,5 +666,66 @@ export function buildAssetPayload(
           actualUseDate: asset.actualUseDate || undefined,
         }
       : {}),
+  };
+}
+
+// ─── 재개발/재건축 (시행령 §166) — RedevelopmentInfo 서브객체 변환 ───
+/**
+ * AssetForm redev* 14필드 → RedevelopmentInfo 서브객체 변환.
+ * assetKind === "redevelopment_apt" || "right_to_move_in" + redevSubject 입력 시 호출.
+ *
+ * 빈값/0 필드 자동 fallback:
+ * - postApprovalExpenses 미입력 → 0 (사례 44)
+ * - 환산 케이스 외 acquisitionStdPrice/managementDisposalStdPrice 미입력 → undefined
+ * - firstDisclosureDate/Price → undefined (단서 미발동)
+ */
+export function buildRedevelopmentPayload(asset: AssetForm) {
+  // UI display fallback과 동일(RedevelopmentBlock.tsx). 3중 패턴(UI/API/validate).
+  return {
+    subject: (asset.redevSubject || "apt") as "right" | "apt",
+    approvalLawBasis: (asset.redevApprovalLawBasis || "urban_renovation_art_74") as "urban_renovation_art_74" | "small_housing_art_29",
+    approvalDate: asset.redevApprovalDate,
+    rightsValue: parseAmount(asset.redevRightsValue),
+    settlementDirection: (asset.redevSettlementDirection || "pay") as "pay" | "receive",
+    settlementAmount: parseAmount(asset.redevSettlementAmount),
+    settlementSaleDate: asset.redevSettlementSaleDate || undefined,
+    preApprovalExpenses: parseAmount(asset.redevPreApprovalExpenses),
+    postApprovalExpenses: asset.redevPostApprovalExpenses
+      ? parseAmount(asset.redevPostApprovalExpenses)
+      : undefined,
+    originalAssetType: (asset.redevOriginalAssetType || "housing") as "land" | "housing" | undefined,
+    acquisitionStdPrice: asset.redevAcquisitionStdPrice
+      ? parseAmount(asset.redevAcquisitionStdPrice)
+      : undefined,
+    managementDisposalStdPrice: asset.redevManagementDisposalStdPrice
+      ? parseAmount(asset.redevManagementDisposalStdPrice)
+      : undefined,
+    firstDisclosureDate: asset.redevFirstDisclosureDate || undefined,
+    firstDisclosureHousingPrice: asset.redevFirstDisclosureHousingPrice
+      ? parseAmount(asset.redevFirstDisclosureHousingPrice)
+      : undefined,
+    // PHD 패턴 — Sum_A·Sum_F 산정용
+    landArea: asset.redevLandArea
+      ? parseFloat(asset.redevLandArea.replace(/,/g, ""))
+      : undefined,
+    landPricePerSqmAtAcq: asset.redevLandPricePerSqmAtAcq
+      ? parseAmount(asset.redevLandPricePerSqmAtAcq)
+      : undefined,
+    buildingStdPriceAtAcq: asset.redevBuildingStdPriceAtAcq
+      ? parseAmount(asset.redevBuildingStdPriceAtAcq)
+      : undefined,
+    landPricePerSqmAtFirst: asset.redevLandPricePerSqmAtFirst
+      ? parseAmount(asset.redevLandPricePerSqmAtFirst)
+      : undefined,
+    buildingStdPriceAtFirst: asset.redevBuildingStdPriceAtFirst
+      ? parseAmount(asset.redevBuildingStdPriceAtFirst)
+      : undefined,
+    // 단일 라목값
+    managementDisposalHousingPrice: asset.redevManagementDisposalHousingPrice
+      ? parseAmount(asset.redevManagementDisposalHousingPrice)
+      : undefined,
+    acquisitionHousingPrice: asset.redevAcquisitionHousingPrice
+      ? parseAmount(asset.redevAcquisitionHousingPrice)
+      : undefined,
   };
 }

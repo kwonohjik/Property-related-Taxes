@@ -134,7 +134,9 @@ export function CompanionAcquisitionCauseSection({
           jibun={asset.addressJibun || undefined}
           assetKind={asset.assetKind}
           acquisitionArea={asset.acquisitionArea || undefined}
+          onAcquisitionAreaChange={(v) => onChange({ acquisitionArea: v })}
           transferArea={asset.transferArea || undefined}
+          onTransferAreaChange={(v) => onChange({ transferArea: v })}
           standardPricePerSqmAtAcq={asset.standardPricePerSqmAtAcq}
           onStandardPricePerSqmAtAcqChange={(v) => onChange({ standardPricePerSqmAtAcq: v })}
           standardPricePerSqmAtTransfer={asset.standardPricePerSqmAtTransfer}

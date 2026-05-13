@@ -24,6 +24,7 @@ import { RentalHousingExceptionDetailCard } from "@/components/calc/results/tran
 import { CommercialBuildingValuationDetailCard } from "@/components/calc/results/CommercialBuildingValuationDetailCard";
 import { GeneralBuildingValuationDetailCard } from "@/components/calc/results/GeneralBuildingValuationDetailCard";
 import { BurdenedGiftDetailCard } from "@/components/calc/results/transfer/BurdenedGiftDetailCard";
+import { RedevelopmentDetailCard } from "@/components/calc/results/transfer/RedevelopmentDetailCard";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
@@ -688,6 +689,11 @@ export function TransferTaxResultView({
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           holdingMonths={(result as any).holdingMonths ?? undefined}
         />
+      )}
+
+      {/* 재개발/재건축 상세 (시행령 §166) — 사례 44 3분할 양도차익 + LTHD 3줄 */}
+      {result.redevelopmentDetail && (
+        <RedevelopmentDetailCard detail={result.redevelopmentDetail} />
       )}
 
       {/* ⑦ 장기임대주택 보유자 거주주택 비과세 특례 상세 (소령 §155⑳) — applied=false 시 미적용 사유도 표시 */}

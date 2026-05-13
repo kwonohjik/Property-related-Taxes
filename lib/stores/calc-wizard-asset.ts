@@ -41,15 +41,17 @@ export { makeDefaultAsset, makeDefaultCompanionAsset, migrateAsset } from "./cal
  */
 import type { BurdenedGiftFormSlice } from "./calc-wizard-asset-bg";
 export type { BurdenedGiftFormSlice } from "./calc-wizard-asset-bg";
+import type { RedevelopmentFormSlice } from "./calc-wizard-asset-redev";
+export type { RedevelopmentFormSlice } from "./calc-wizard-asset-redev";
 
-export interface AssetForm extends BurdenedGiftFormSlice {
+export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice {
   assetId: string;
   assetLabel: string;
   /**
    * 자산 종류 — 6종 (API 전달 시 right_to_move_in/presale_right → housing 으로 변환,
    * commercial_building → "building" + commercialBuildingValuation 서브객체로 분리 전달)
    */
-  assetKind: "housing" | "land" | "building" | "right_to_move_in" | "presale_right" | "commercial_building" | "general_building";
+  assetKind: "housing" | "land" | "building" | "right_to_move_in" | "presale_right" | "commercial_building" | "general_building" | "redevelopment_apt";
   /** 입주권 승계조합원 여부 (assetKind === "right_to_move_in" 일 때만 의미) */
   isSuccessorRightToMoveIn: boolean;
   /** 세대 Step(Step3/4)의 1세대1주택 비과세·다주택 중과 판정 기준 대표 자산 여부 */
@@ -774,6 +776,8 @@ export interface AssetForm extends BurdenedGiftFormSlice {
 
   // ── 부담부증여 (소령 §159 + 증여세 통합 §53·§56·§57·§69 + §47② 사전증여 합산) ──
   // bg* 필드 일체는 BurdenedGiftFormSlice로 분리 (calc-wizard-asset-bg.ts).
+
+  // ── 재개발/재건축 (시행령 §166) — RedevelopmentFormSlice로 분리 (calc-wizard-asset-redev.ts) ──
 }
 
 /** 하위 호환 별칭 — 기존 코드에서 CompanionAssetForm을 참조하는 곳에 사용 */

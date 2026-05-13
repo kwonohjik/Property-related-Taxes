@@ -35,6 +35,7 @@ import {
   buildPenaltyFormula,
   setAggregateProcedureItems,
 } from "./DetailedStatementFormulaBuilders";
+import { applyRedevelopmentOverrides } from "./DetailedStatementRedevelopmentBuilders";
 
 // ── 자산별 분해 ──────────────────────────────────────────────────
 
@@ -174,16 +175,6 @@ export function findStepByLabel(
  * 일반건물 일괄 모드는 단일 AssetForm이 토지/건물/증축건물 카드로 분해되므로
  * propertyId별로 별도 매핑이 필요. 그 외는 propertyId === assetId.
  */
-function buildPerAssetSimple(
-  properties: PerPropertyBreakdown[],
-  picker: (p: PerPropertyBreakdown) => number | string,
-): PerAssetValue[] {
-  return properties.map((p) => ({
-    label: p.propertyLabel,
-    value: picker(p),
-  }));
-}
-
 /**
  * 자산별 PerAssetValue[] 생성 — formula 빌더 포함.
  *
@@ -774,6 +765,13 @@ export function buildStatementItems(
     legalBasis: "지방세법 §103",
     summaryOnly: true,
   });
+
+  // ── 재개발 3분할 overrides (단건·환산 모드, isAggregate와 mutually exclusive) ──
+  // result.redevelopmentDetail 존재 시 1단계 양도차익 산정 그룹 항목에 perAsset[] 3분할 부착.
+  // 합계값은 기존 단건 합계 그대로 유지 → 32-항목 합계 anchor 회귀 0.
+  if (!isAggregate && result.redevelopmentDetail) {
+    applyRedevelopmentOverrides(items, result.redevelopmentDetail, totalTransferPrice);
+  }
 
   return items;
 }

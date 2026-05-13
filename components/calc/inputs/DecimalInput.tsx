@@ -50,7 +50,7 @@ export function DecimalInput({
         ref={inputRef}
         type="text"
         inputMode="decimal"
-        value={value}
+        value={value ?? ""}
         onChange={handleChange}
         placeholder={placeholder}
         disabled={disabled}
@@ -68,8 +68,9 @@ export function DecimalInput({
   );
 }
 
-/** 문자열 → 숫자 변환 (parseAmount의 소수점 버전) */
-export function parseDecimal(value: string): number {
+/** 문자열 → 숫자 변환 (parseAmount의 소수점 버전). undefined/null 안전. */
+export function parseDecimal(value: string | undefined | null): number {
+  if (value == null || value === "") return 0;
   const n = parseFloat(value.replace(/,/g, ""));
   return isNaN(n) ? 0 : n;
 }

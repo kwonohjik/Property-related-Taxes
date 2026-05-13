@@ -35,6 +35,8 @@ export function addPropertyRefines(
     commercialBuildingValuation?: Record<string, unknown> | null;
     /** ⑩ 일반건물(토지+건물 일괄) 환산취득가 서브객체 — base 스키마 positive() 제약으로 충분 */
     generalBuildingValuation?: Record<string, unknown> | null;
+    /** ⑩ 재개발/재건축 환산취득가 서브객체 (시행령 §166③) — base 스키마 nonnegative()로 충분 */
+    redevelopment?: Record<string, unknown> | null;
   },
   ctx: z.RefinementCtx,
 ) {
@@ -44,10 +46,11 @@ export function addPropertyRefines(
     (data.preHousingDisclosure !== undefined && data.preHousingDisclosure !== null) ||
     (data.mixedUse?.preHousingDisclosure !== undefined && data.mixedUse?.preHousingDisclosure !== null);
   const isMixedUseHouse = data.propertyType === "mixed-use-house";
-  // 상업용건물/일반건물 환산 모드는 서브객체로 처리 → 표준 기준시가 검증 우회
+  // 상업용건물/일반건물/재개발 환산 모드는 서브객체로 처리 → 표준 기준시가 검증 우회
   const isCommercialBuildingEstimated = !!data.commercialBuildingValuation;
   const isGeneralBuildingEstimated = !!data.generalBuildingValuation;
-  const isSubObjectEstimated = isCommercialBuildingEstimated || isGeneralBuildingEstimated;
+  const isRedevelopmentEstimated = !!data.redevelopment;
+  const isSubObjectEstimated = isCommercialBuildingEstimated || isGeneralBuildingEstimated || isRedevelopmentEstimated;
   if (!isMixedUseHouse && !isSubObjectEstimated && data.useEstimatedAcquisition && !data.standardPriceAtAcquisition && !hasPhd) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,

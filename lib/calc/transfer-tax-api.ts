@@ -7,13 +7,13 @@
  */
 
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
-import type { TransferFormData, AssetForm } from "@/lib/stores/calc-wizard-store";
+import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { sumResidenceMonths } from "@/lib/stores/calc-wizard-asset-residence";
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import type { BundledApportionmentResult } from "@/lib/tax-engine/bundled-sale-apportionment";
 import type { AggregateTransferResult } from "@/lib/tax-engine/transfer-tax-aggregate";
 import type { MixedUseGainBreakdown } from "@/lib/tax-engine/types/transfer-mixed-use.types";
-import { toEngineAssetKind, isHousingLike, toEngineReductions, buildAssetPayload, getOwnershipRatio, applyRatio, toRentalHousingExceptionApi, buildCommercialBuildingValuation, buildGeneralBuildingValuation } from "./transfer-tax-api-helpers";
+import { isHousingLike, toEngineReductions, buildAssetPayload, getOwnershipRatio, applyRatio, toRentalHousingExceptionApi, buildCommercialBuildingValuation, buildGeneralBuildingValuation, buildRedevelopmentPayload } from "./transfer-tax-api-helpers";
 import { buildCarryoverPayload } from "./transfer-tax-api-carryover";
 import { buildBurdenedGiftInfo } from "./transfer-tax-api-burdened-gift";
 import {
@@ -128,6 +128,13 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
   const gbValuation = isGeneralBuilding
     ? buildGeneralBuildingValuation(primary)
     : undefined;
+
+  // ⑬ 재개발/재건축 (시행령 §166) — assetKind "redevelopment_apt" 또는 "right_to_move_in" 시 빌드.
+  // redevSubject는 buildRedevelopmentPayload에서 UI display fallback("apt"/"right")과 동일하게 보정.
+  // assetKind 자체가 전용 분기이므로 추가 enum 입력은 요구하지 않는다(3중 패턴 정합).
+  const isRedevelopment =
+    primary.assetKind === "redevelopment_apt" || primary.assetKind === "right_to_move_in";
+  const redevPayload = isRedevelopment ? buildRedevelopmentPayload(primary) : undefined;
 
   // ⑬ 부담부증여 (소령 §159) — Phase 2 (2026-05-12): transferType 분기 + 모든 propertyType 지원
   // 호환성: 레거시 acquisitionCause === "burdened_gift"는 normalize에서 transferType로 이전되나
@@ -291,7 +298,7 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     // 추가로 서브객체(commercialBuildingValuation/generalBuildingValuation)로 환산취득가 데이터 전달
     propertyType: isMixed
       ? ("mixed-use-house" as const)
-      : (primary.assetKind as "housing" | "land" | "building" | "right_to_move_in" | "presale_right" | "commercial_building" | "general_building"),
+      : (primary.assetKind as "housing" | "land" | "building" | "right_to_move_in" | "presale_right" | "commercial_building" | "general_building" | "redevelopment_apt"),
     transferPrice: isBurdenedGiftPrimary
       ? burdenedGiftPlaceholderTransferPrice
       : primaryFractional
@@ -303,9 +310,13 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     acquisitionPrice:
       hasPre1990 || isEstimated || isAppraisal || parcelModeActive
         ? 0
-        : primaryFractional
-          ? applyRatio(parseAmount(primary.fixedAcquisitionPrice), primaryRatio)
-          : parseAmount(primary.fixedAcquisitionPrice),
+        : isRedevelopment
+          ? // 재개발 + 실가 모드 — §166 섹션 내부의 redevActualAcquisitionPrice 사용 (사례 45/46).
+            // 상단 일반 fixedAcquisitionPrice는 C안으로 숨겨졌으므로 별도 필드에서 도출.
+            parseAmount(primary.redevActualAcquisitionPrice)
+          : primaryFractional
+            ? applyRatio(parseAmount(primary.fixedAcquisitionPrice), primaryRatio)
+            : parseAmount(primary.fixedAcquisitionPrice),
     acquisitionDate: parcelModeActive
       ? firstParcelAcqDate
       : primary.acquisitionCause === "carryover_gift"
@@ -571,6 +582,8 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     ...(gbValuation !== undefined ? { generalBuildingValuation: gbValuation } : {}),
     // ⑬ 부담부증여 body spread (TypeScript 미감지 영역 — 누락 시 침묵 stripping)
     ...(bgInfo !== undefined ? { burdenedGiftInfo: bgInfo } : {}),
+    // ⑬ 재개발/재건축 spread (시행령 §166) — 누락 시 silent stripping
+    ...(redevPayload !== undefined ? { redevelopment: redevPayload } : {}),
     // ── 일괄양도 (assets 2건 이상) ──
     ...(form.assets.length > 1
       ? {

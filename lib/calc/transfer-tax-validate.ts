@@ -11,6 +11,7 @@ import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import type { TransferFormData, AssetForm } from "@/lib/stores/calc-wizard-store";
 import { validateGeneralBuildingAsset } from "./transfer-tax-validate-gb";
+import { validateRedevelopmentAsset } from "./transfer-tax-validate-redev";
 import { validateBurdenedGiftAsset } from "./transfer-tax-validate-bg";
 
 // ─── 장기임대주택 거주주택 비과세 특례 검증 (⑧, 소령 §155⑳) ──────
@@ -206,6 +207,15 @@ function validateAssetAcquisition(asset: AssetForm, label: string, formTransferD
   // ── 일반건물(토지+건물 일괄) 전용 검증 — transfer-tax-validate-gb.ts 위임 ──
   if (asset.assetKind === "general_building") {
     return validateGeneralBuildingAsset(asset, label, formTransferDate);
+  }
+
+  // ── 재개발/재건축 (시행령 §166) — assetKind="redevelopment_apt" 또는 redevSubject 입력 시 ──
+  if (asset.assetKind === "redevelopment_apt" || (asset.assetKind === "right_to_move_in" && asset.redevSubject)) {
+    const redevError = validateRedevelopmentAsset(asset, label);
+    if (redevError) return redevError;
+    // redevelopment 검증 통과 후 일반 취득 검증 스킵 (별도 분기 — 양도가액·취득가액은 redev 분기에서 처리)
+    if (!asset.acquisitionDate) return `${label}: 취득일을 입력하세요.`;
+    return null;
   }
 
   // ── 이월과세(증여) 전용 검증 — carryover_gift 시 일반 취득 검증 스킵 ──
@@ -514,7 +524,8 @@ function validateAssetAcquisition(asset: AssetForm, label: string, formTransferD
       return `${label}: 양도시 건물 기준시가를 입력하세요.`;
   }
 
-  // 5) 취득가액 — 실거래가·감정가액 모두 fixedAcquisitionPrice 입력 루틴
+  // 5) 취득가액 — 실거래가·감정가액 모두 fixedAcquisitionPrice 입력 루틴.
+  //    ※ 재개발/재건축(assetKind === "redevelopment_apt")은 위 §166 분기에서 이미 return 처리됨 (line 213).
   if (!isEstimated && !hasPre1990) {
     if (asset.acquisitionCause === "purchase") {
       if (!asset.fixedAcquisitionPrice || parseAmount(asset.fixedAcquisitionPrice) <= 0)

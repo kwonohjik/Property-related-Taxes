@@ -49,34 +49,17 @@ import type { CarryoverTaxationInput, CarryoverTaxationDetail } from "./transfer
 // 외부 소비자 편의를 위해 재수출.
 export type { CarryoverTaxationInput, CarryoverTaxationDetail } from "./transfer-carryover.types";
 
-// ============================================================
-// 부담부증여 양도세 타입 — 800줄 정책으로 별도 파일 분리
-// ============================================================
-import type {
-  BurdenedGiftInfo,
-  TransferBurdenedGiftBreakdown,
-} from "./transfer-burdened-gift.types";
-export type {
-  BurdenedGiftInfo,
-  TransferBurdenedGiftBreakdown,
-  BurdenedGiftValuationMode,
-} from "./transfer-burdened-gift.types";
-
-// ============================================================
-// 상업용건물·오피스텔 환산취득가 타입 — 800줄 정책으로 별도 파일 분리
-// ============================================================
-import type {
-  CommercialBuildingValuationInput,
-  CommercialBuildingValuationResult,
-} from "./commercial-building.types";
-export type {
-  CommercialBuildingValuationInput,
-  CommercialBuildingValuationResult,
-} from "./commercial-building.types";
+// ── 부담부증여 / 상업용건물 / 재개발 타입 (800줄 정책 — sibling 파일 분리) ──
+import type { BurdenedGiftInfo, TransferBurdenedGiftBreakdown } from "./transfer-burdened-gift.types";
+export type { BurdenedGiftInfo, TransferBurdenedGiftBreakdown, BurdenedGiftValuationMode } from "./transfer-burdened-gift.types";
+import type { CommercialBuildingValuationInput, CommercialBuildingValuationResult } from "./commercial-building.types";
+export type { CommercialBuildingValuationInput, CommercialBuildingValuationResult } from "./commercial-building.types";
+import type { RedevelopmentInfo, RedevelopmentResult } from "./transfer-redevelopment.types";
+export type { RedevelopmentInfo, RedevelopmentResult, RedevelopmentBranchDetail, RedevelopmentValuationMeta } from "./transfer-redevelopment.types";
 
 export interface TransferTaxInput {
   /** 물건 종류 */
-  propertyType: "housing" | "land" | "building" | "right_to_move_in" | "presale_right" | "mixed-use-house" | "commercial_building" | "general_building_unit" | "general_building";
+  propertyType: "housing" | "land" | "building" | "right_to_move_in" | "presale_right" | "mixed-use-house" | "commercial_building" | "general_building_unit" | "general_building" | "redevelopment_apt";
   /** 양도가액 (원, 정수) */
   transferPrice: number;
   /**
@@ -357,6 +340,20 @@ export interface TransferTaxInput {
    * Phase 1 가드: propertyType === "general_building" 한정 (1세대1주택은 Phase 3).
    */
   burdenedGiftInfo?: BurdenedGiftInfo;
+
+  /**
+   * 재개발/재건축 양도 정보 (시행령 §166 + §164⑦ 단서 + §166⑤ LTHD 분기).
+   *
+   * propertyType === "redevelopment_apt" 또는 "right_to_move_in" 시 제공 가능.
+   * 미제공 시 기존 분기(일반 housing/right_to_move_in)로 처리.
+   *
+   * 본 필드 제공 시 엔진은 redevelopment.ts orchestrator로 라우팅하여
+   * 인가전·인가후 기존건물분·청산금 분 3분할 양도차익을 산정한다.
+   *
+   * 사례 매트릭스 (양도코리아 xlsx 36~46):
+   * - 본 PR 핵심: 사례 44 (APT-환산-납부-주택출자, 산출 56,799,400)
+   */
+  redevelopment?: RedevelopmentInfo;
 
   // ── 토지/건물 취득일 분리 계산 (housing·building 공통) ──
   /**
@@ -721,6 +718,12 @@ export interface TransferTaxResult {
   mixedUseDetail?: MixedUseGainBreakdown;
   /** 배우자등 이월과세 상세 (carryoverTaxation 제공 시). UI 비교 카드. */
   carryoverTaxationDetail?: CarryoverTaxationDetail;
+  /**
+   * 재개발/재건축 양도 상세 (redevelopment 제공 시). UI 3분할 카드 + FilingFormTable 3열.
+   * 시행령 §166②1호 안분 결과 (preApproval / postApprovalExistingHouse / settlement).
+   * 환산 케이스는 valuationMeta 포함 (§164⑦ 단서 발동 여부).
+   */
+  redevelopmentDetail?: RedevelopmentResult;
   /** 이월과세 모드 신고서 표시용 취득일. A=증여자 취득일, B=등기접수일. FilingFormTable 보유기간 계산용. */
   displayAcquisitionDate?: string;
   /** 장기임대 거주주택 비과세 특례(§155⑳·§161). rentalHousingException 제공 시. */

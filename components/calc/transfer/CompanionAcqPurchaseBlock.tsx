@@ -84,8 +84,10 @@ interface BlockProps {
   assetKind?: string;
   /** 취득 당시 면적 (㎡) — 취득시 기준시가 자동계산, Pre1990 환산용 */
   acquisitionArea?: string;
+  onAcquisitionAreaChange?: (v: string) => void;
   /** 양도 당시 면적 (㎡) — 양도시 기준시가 자동계산용 */
   transferArea?: string;
+  onTransferAreaChange?: (v: string) => void;
   /** 1990 이전 취득 토지 환산 슬라이스 */
   pre1990Form?: Pre1990FormSlice;
   onPre1990Change?: (patch: Partial<Pre1990FormSlice>) => void;
@@ -462,7 +464,25 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
           </p>
         </div>
       )}
-      {props.asset?.transferType !== "burdened_gift" && (
+      {/* 재개발/재건축 APT 모드 — 상단의 일반 "취득가액 산정 방식"·"취득가액" 입력 영역 숨김.
+          §166②1호 인가후 분의 분양가(= 권리가액 ± 청산금)는 결정론적으로 도출되므로
+          사용자 직접 입력이 불필요. 인가전 분의 환산취득가/감정가액은 아래 §166 섹션 내부에서 처리. */}
+      {props.asset?.assetKind === "redevelopment_apt" && (
+        <div className="rounded-lg border border-violet-300 bg-violet-50/60 p-3 space-y-1.5">
+          <p className="text-sm font-semibold text-violet-900">
+            취득가액 — 재개발 §166②1호 자동 산정
+          </p>
+          <p className="text-xs text-violet-800">
+            재개발/재건축 양도에서 인가후 분의 분양가(= 권리가액 + 청산금 납부액 또는 권리가액 − 청산금 수령액)는
+            아래 <b>§166②1호 재개발 일정·금액</b> 섹션의 입력값에서 엔진이 자동 산정합니다.
+            따라서 상단 일반 &ldquo;취득가액 산정 방식·취득가액&rdquo; 입력은 표시하지 않습니다.
+          </p>
+          <p className="text-[11px] text-violet-700">
+            ※ 인가전 분의 <b>환산취득가</b>(시행령 §166③ + §164⑦ 본문)는 아래 §166 섹션 내 환산취득가 토글에서 입력합니다.
+          </p>
+        </div>
+      )}
+      {props.asset?.transferType !== "burdened_gift" && props.asset?.assetKind !== "redevelopment_apt" && (
       <>
       <div className="space-y-2">
         <label className="block text-sm font-medium">취득가액 산정 방식</label>
@@ -667,6 +687,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
               pricePerSqm={acqPricePerSqm}
               onPricePerSqmChange={handleAcqPricePerSqmChange}
               area={props.acquisitionArea}
+              onAreaChange={props.onAcquisitionAreaChange}
               jibun={props.jibun}
               referenceDate={props.acquisitionDate}
               hint="환산 분자 — 안분 후 양도가액에 (취득시/양도시) 비율 적용"
@@ -700,6 +721,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
               pricePerSqm={transferPricePerSqm}
               onPricePerSqmChange={onTransferPricePerSqmChange}
               area={props.transferArea}
+              onAreaChange={props.onTransferAreaChange}
               jibun={props.jibun}
               referenceDate={props.transferDate}
               hint="환산 분모 — 취득시/양도시 기준시가 비율의 분모"
