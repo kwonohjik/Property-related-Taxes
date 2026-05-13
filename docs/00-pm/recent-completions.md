@@ -5,6 +5,8 @@
 
 ## 2026-05-13
 
+- **사례 35 후속-1 — §99-164-10 환산주택가격 완료**. 양도소득세 집행기준 99-164-10 적용 — 주택으로 최초공시 후 상가로 용도변경한 경우 취득가액 불명 시 환산주택가격 = 최초공시주택가격 × (취득당시 합계 ÷ 최초공시 당시 합계) 산식으로 자산별 환산기준시가 override. `general-building-converted-housing.ts` sibling 파일 신규(58줄, 800줄 정책). 4 신규 필드(`hasFirstDisclosure` + 3 std price). `applyConvertedHousingPriceOverride()`가 `buildGeneralBuildingAssetCards` 진입 시 자동 분기 — 미사용 경로 회귀 0. UI: GeneralBuildingBlock §⑦ 내부 sub-ToggleCard + 환산주택가격 미리보기(useMemo 순수). anchor 6개(F1-1 단위 산식·F1-1b 정확값 110M·F1-2 자산별 안분·F1-4/4b 미사용 회귀·F1-5 0 방어). 전체 2,791 passed 회귀 0.
+
 - **사례 35 — 주택을 상가로 용도변경 완료**. 다주택 + 중과배제기간(2022-05-10 ~ 2024-05-09) 양도 시 LTHD 보유기간 기산일을 변경일로 이동(사전법규재산 2022-684·881, 서울행법 2012구단26961). 신규 필드 3개(`houseToCommercialConversion`/`conversionDate`/`wasMultiHouseAtConversion`) — AssetForm은 `gb*` 접두사. `resolveLTHDStartDate()` 순수 함수를 `transfer-tax-finalize.ts`에 배치(800줄 회피). `TransferTaxResult.lthdStartDate: Date` required 추가 (7 result emit 위치 + UI mock 3 동기화). `SURCHARGE_EXCLUSION_WINDOW` 상수 single source of truth(조특법 시행령 §167조의3, 대통령령 제32672호) — `multi-house-surcharge-helpers.ts:613` 치환. PDF anchor 4종(longTermHoldingDeduction=0 / taxBase=397,500,000 / calculatedTax=133,060,000 / localIncomeTax=13,306,000) + 회귀 anchor 35-2/35-3/35-5/35-7 + resolveLTHDStartDate 단위 3 → 15 passed/1 skipped. 양도세 전체 1015 passed 회귀 0. 14지점 동기화 완료. UI: GeneralBuildingBlock §⑦ 섹션(rose tone — fuchsia는 ToggleCardTone 미지원으로 대체) + 미리보기 카드(useMemo 순수). 후속: 환산취득가 §99-164-10 분기·중과 적용 케이스(35-6 skip)·세대원 자동 판정.
 
 ## 2026-05-12

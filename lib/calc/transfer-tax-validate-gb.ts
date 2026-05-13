@@ -196,5 +196,21 @@ export function validateGeneralBuildingAsset(
     }
   }
 
+  // ── 사례 35 후속-1: §99-164-10 환산주택가격 4필드 필수 ──
+  if (asset.gbHasFirstDisclosure === true) {
+    if (!asset.useEstimatedAcquisition) {
+      return `${label}: 환산주택가격 입력은 환산취득가 모드에서만 가능합니다.`;
+    }
+    if (!parseAmount(asset.gbFirstDisclosurePrice)) {
+      return `${label}: 최초공시주택가격을 입력하세요 (§99-164-10).`;
+    }
+    if (!parseAmount(asset.gbFirstDisclosureLandStdPrice)) {
+      return `${label}: 최초공시 당시 토지 기준시가를 입력하세요.`;
+    }
+    if (!parseAmount(asset.gbFirstDisclosureBuildingStdPrice)) {
+      return `${label}: 최초공시 당시 건물 기준시가를 입력하세요.`;
+    }
+  }
+
   return null;
 }

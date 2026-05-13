@@ -268,6 +268,11 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     gbHouseToCommercialConversion: false,
     gbConversionDate: "",
     gbWasMultiHouseAtConversion: null,
+    // ── 사례 35 후속-1: §99-164-10 환산주택가격 ──
+    gbHasFirstDisclosure: false,
+    gbFirstDisclosurePrice: "",
+    gbFirstDisclosureLandStdPrice: "",
+    gbFirstDisclosureBuildingStdPrice: "",
     // ── 부담부증여 (소령 §159, Phase 2: 모든 propertyType 지원) ──
     transferType: "regular",
     bgValuationMode: "",
@@ -491,6 +496,11 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (a.gbHouseToCommercialConversion === undefined) a.gbHouseToCommercialConversion = false;
   if (a.gbConversionDate === undefined) a.gbConversionDate = "";
   if (a.gbWasMultiHouseAtConversion === undefined) a.gbWasMultiHouseAtConversion = null;
+  // 사례 35 후속-1
+  if (a.gbHasFirstDisclosure === undefined) a.gbHasFirstDisclosure = false;
+  if (a.gbFirstDisclosurePrice === undefined) a.gbFirstDisclosurePrice = "";
+  if (a.gbFirstDisclosureLandStdPrice === undefined) a.gbFirstDisclosureLandStdPrice = "";
+  if (a.gbFirstDisclosureBuildingStdPrice === undefined) a.gbFirstDisclosureBuildingStdPrice = "";
   // gbHasExtension=false 인 legacy 데이터에 나머지 필드가 잘못 저장된 경우 정리
   // (신규 데이터에서는 발생하지 않으나 구형 마이그레이션 방어)
   if (a.gbHasExtension === false) {

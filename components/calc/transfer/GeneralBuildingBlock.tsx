@@ -204,6 +204,32 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
     transferDate,
   ]);
 
+  /** 사례 35 후속-1 §99-164-10 환산주택가격 미리보기 — useMemo 순수 */
+  const convertedHousingPreview = useMemo(() => {
+    if (!asset.gbHasFirstDisclosure) return null;
+    const firstDisc = parseAmount(asset.gbFirstDisclosurePrice);
+    const firstDiscLand = parseAmount(asset.gbFirstDisclosureLandStdPrice);
+    const firstDiscBld = parseAmount(asset.gbFirstDisclosureBuildingStdPrice);
+    const acqLandPerSqm = parseAmount(asset.gbAcqLandPricePerSqm ?? "");
+    const acqBld = parseAmount(asset.gbAcqBuildingValue ?? "");
+    const landArea = parseDecimal(asset.gbLandArea ?? "");
+    if (!firstDisc || !firstDiscLand || !firstDiscBld || !acqLandPerSqm || !acqBld || !landArea) return null;
+    const acqLand = Math.floor(acqLandPerSqm * landArea);
+    const acqTotal = acqLand + acqBld;
+    const firstDiscTotal = firstDiscLand + firstDiscBld;
+    if (firstDiscTotal <= 0 || acqTotal <= 0) return null;
+    const converted = Math.floor(firstDisc * acqTotal / firstDiscTotal);
+    return { converted, firstDisc, acqTotal, firstDiscTotal };
+  }, [
+    asset.gbHasFirstDisclosure,
+    asset.gbFirstDisclosurePrice,
+    asset.gbFirstDisclosureLandStdPrice,
+    asset.gbFirstDisclosureBuildingStdPrice,
+    asset.gbAcqLandPricePerSqm,
+    asset.gbAcqBuildingValue,
+    asset.gbLandArea,
+  ]);
+
   const isBurdenedGift = asset.transferType === "burdened_gift";
 
   return (
@@ -639,6 +665,52 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
               <p className="font-semibold">{conversionPreview.label}</p>
               <p className="mt-1">{conversionPreview.notice}</p>
             </div>
+          )}
+
+          {/* 사례 35 후속-1: §99-164-10 환산주택가격 (환산취득가 모드만) */}
+          {asset.useEstimatedAcquisition && (
+            <ToggleCard
+              tone="rose"
+              variant="card"
+              title="주택으로 최초공시 후 상가로 용도변경 (환산취득가)"
+              description="취득가액을 모르는 경우 §99-164-10 환산주택가격으로 취득당시 기준시가를 환산합니다."
+              checked={asset.gbHasFirstDisclosure}
+              onCheckedChange={(v) => onChange({ gbHasFirstDisclosure: v })}
+            >
+              <FieldCard label="최초공시주택가격" unit="원"
+                hint="주택가격이 최초로 고시된 시점의 개별주택가격 총액 (원)">
+                <CurrencyInput label="최초공시주택가격" hideUnit
+                  value={asset.gbFirstDisclosurePrice}
+                  onChange={(v) => onChange({ gbFirstDisclosurePrice: v })} />
+              </FieldCard>
+              <FieldCard label="최초공시 당시 토지 기준시가" unit="원"
+                hint="최초공시 시점 개별공시지가 × 면적 총액 (원)">
+                <CurrencyInput label="최초공시 당시 토지 기준시가" hideUnit
+                  value={asset.gbFirstDisclosureLandStdPrice}
+                  onChange={(v) => onChange({ gbFirstDisclosureLandStdPrice: v })} />
+              </FieldCard>
+              <FieldCard label="최초공시 당시 건물 기준시가" unit="원"
+                hint="최초공시 시점 건물 기준시가 총액 (원)">
+                <CurrencyInput label="최초공시 당시 건물 기준시가" hideUnit
+                  value={asset.gbFirstDisclosureBuildingStdPrice}
+                  onChange={(v) => onChange({ gbFirstDisclosureBuildingStdPrice: v })} />
+              </FieldCard>
+              {convertedHousingPreview && (
+                <div className="rounded border bg-rose-100/60 border-rose-300 px-3 py-2 text-xs text-rose-800">
+                  <p className="font-semibold">
+                    환산주택가격 = {convertedHousingPreview.converted.toLocaleString("ko-KR")} 원
+                  </p>
+                  <p className="mt-1">
+                    = {convertedHousingPreview.firstDisc.toLocaleString("ko-KR")}
+                    {" × "}
+                    {convertedHousingPreview.acqTotal.toLocaleString("ko-KR")}
+                    {" ÷ "}
+                    {convertedHousingPreview.firstDiscTotal.toLocaleString("ko-KR")}
+                  </p>
+                  <p className="mt-1 text-rose-600">근거: 양도소득세 집행기준 99-164-10</p>
+                </div>
+              )}
+            </ToggleCard>
           )}
         </ToggleCard>
 

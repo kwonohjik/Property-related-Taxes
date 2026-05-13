@@ -722,6 +722,16 @@ export interface AssetForm extends BurdenedGiftFormSlice {
   /** 변경 당시 다주택자 여부. null=미선택(강제). true=다주택 → LTHD 기산일 이동. */
   gbWasMultiHouseAtConversion: boolean | null;
 
+  // ── 사례 35 후속-1: §99-164-10 환산주택가격 (취득가액 불명 케이스) ──
+  /** "주택으로 최초공시 후 상가로 용도변경" 토글. 환산 모드에서만 의미. */
+  gbHasFirstDisclosure: boolean;
+  /** 최초공시주택가격 (원). gbHasFirstDisclosure=true 시 필수. */
+  gbFirstDisclosurePrice: string;
+  /** 최초공시 당시 토지 기준시가 총액 (원). */
+  gbFirstDisclosureLandStdPrice: string;
+  /** 최초공시 당시 건물 기준시가 총액 (원). */
+  gbFirstDisclosureBuildingStdPrice: string;
+
   // ── 겸용주택 분리계산 (sodt §160①단서, 2022.1.1 이후) ──
   /** 겸용주택 여부 토글 */
   isMixedUseHouse: boolean;

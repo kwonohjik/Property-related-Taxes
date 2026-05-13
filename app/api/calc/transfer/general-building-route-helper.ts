@@ -286,6 +286,15 @@ export function dispatchGeneralBuilding(
           wasMultiHouseAtConversion: gbRaw.wasMultiHouseAtConversion ?? false,
         }
       : {}),
+    // ⑭ 사례 35 후속-1: §99-164-10 환산주택가격 4필드 (number, Date 변환 불요)
+    ...(gbRaw.hasFirstDisclosure
+      ? {
+          hasFirstDisclosure: true,
+          firstDisclosurePrice: gbRaw.firstDisclosurePrice as number | undefined,
+          firstDisclosureLandStdPrice: gbRaw.firstDisclosureLandStdPrice as number | undefined,
+          firstDisclosureBuildingStdPrice: gbRaw.firstDisclosureBuildingStdPrice as number | undefined,
+        }
+      : {}),
   };
 
   if (coercedGbRaw.actualPriceMode === true) {

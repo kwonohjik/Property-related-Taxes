@@ -22,6 +22,7 @@ import type { ZoneType } from "./non-business-land/types";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import type { CarryoverTaxationInput } from "./types/transfer-carryover.types";
 import { buildGeneralBuildingAssetCardsWithExtension } from "./general-building-extension";
+import { applyConvertedHousingPriceOverride } from "./general-building-converted-housing";
 
 // ============================================================
 // 개산공제율 상수 (시행령 §163 ⑥)
@@ -207,6 +208,15 @@ export type GeneralBuildingInput = {
   conversionDate?: Date;
   /** 변경 당시 다주택자 여부. true → 자산 카드 LTHD 기산일 = conversionDate. */
   wasMultiHouseAtConversion?: boolean;
+  // ── 사례 35 후속-1: §99-164-10 환산주택가격 분기 ──
+  /** 주택으로 최초공시 후 상가로 용도변경 — 환산취득가 모드에서만 의미. */
+  hasFirstDisclosure?: boolean;
+  /** 최초공시주택가격 (원). hasFirstDisclosure=true 시 필수. */
+  firstDisclosurePrice?: number;
+  /** 최초공시 당시 토지 기준시가 총액 (원). hasFirstDisclosure=true 시 필수. */
+  firstDisclosureLandStdPrice?: number;
+  /** 최초공시 당시 건물 기준시가 총액 (원). hasFirstDisclosure=true 시 필수. */
+  firstDisclosureBuildingStdPrice?: number;
 };
 
 /** 양도가 안분 결과 */
@@ -496,8 +506,13 @@ function calculateEstimatedDeduction(
  *   NBL.BUILDING_SITE — §168의8 (건물 부수토지 배율)
  */
 export function buildGeneralBuildingAssetCards(
-  input: GeneralBuildingInput,
+  rawInput: GeneralBuildingInput,
 ): GeneralBuildingOutput {
+  // ── 사례 35 후속-1: §99-164-10 환산주택가격 분기 ──────────────────
+  // hasFirstDisclosure=true 시 acquisition*StdPrice를 환산주택가격 안분값으로 override.
+  // 이후 모든 다운스트림 로직(2-way·3-way·NBL 등)은 effective input 사용 → 변경 최소화.
+  const input = applyConvertedHousingPriceOverride(rawInput);
+
   // ── 증축 분기 (사례 33 — extensionInfo 활성 시 3-way 안분) ──────────
   if (input.extensionInfo) {
     return buildGeneralBuildingAssetCardsWithExtension(input, input.extensionInfo);

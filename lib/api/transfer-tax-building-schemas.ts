@@ -193,6 +193,11 @@ export const generalBuildingValuationSchema = z.object({
    * null은 UI 레이어에서만 사용 — API 도달 전 validate⑧에서 차단.
    */
   wasMultiHouseAtConversion: z.boolean().optional(),
+  // ── 사례 35 후속-1: §99-164-10 환산주택가격 4필드 ──
+  hasFirstDisclosure: z.boolean().optional(),
+  firstDisclosurePrice: z.number().int().nonnegative().optional(),
+  firstDisclosureLandStdPrice: z.number().int().nonnegative().optional(),
+  firstDisclosureBuildingStdPrice: z.number().int().nonnegative().optional(),
 }).superRefine((val, ctx) => {
   if (val.houseToCommercialConversion === true) {
     if (!val.conversionDate) {
@@ -208,6 +213,17 @@ export const generalBuildingValuationSchema = z.object({
         path: ["wasMultiHouseAtConversion"],
         message: "변경 당시 다주택자 여부를 선택하세요.",
       });
+    }
+  }
+  if (val.hasFirstDisclosure === true) {
+    if (!val.firstDisclosurePrice) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["firstDisclosurePrice"], message: "최초공시주택가격을 입력하세요." });
+    }
+    if (!val.firstDisclosureLandStdPrice) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["firstDisclosureLandStdPrice"], message: "최초공시 당시 토지 기준시가를 입력하세요." });
+    }
+    if (!val.firstDisclosureBuildingStdPrice) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["firstDisclosureBuildingStdPrice"], message: "최초공시 당시 건물 기준시가를 입력하세요." });
     }
   }
 });

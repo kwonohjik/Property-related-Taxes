@@ -288,6 +288,15 @@ export function buildGeneralBuildingValuation(
             wasMultiHouseAtConversion: asset.gbWasMultiHouseAtConversion ?? false,
           }
         : {}),
+      // 사례 35 후속-1: §99-164-10 환산주택가격 (환산 모드만, useEstimatedAcquisition=true 분기)
+      ...(asset.gbHasFirstDisclosure
+        ? {
+            hasFirstDisclosure: true,
+            firstDisclosurePrice: parseAmount(asset.gbFirstDisclosurePrice) || undefined,
+            firstDisclosureLandStdPrice: parseAmount(asset.gbFirstDisclosureLandStdPrice) || undefined,
+            firstDisclosureBuildingStdPrice: parseAmount(asset.gbFirstDisclosureBuildingStdPrice) || undefined,
+          }
+        : {}),
     };
   }
 
