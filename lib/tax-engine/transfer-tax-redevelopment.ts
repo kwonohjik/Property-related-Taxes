@@ -6,13 +6,16 @@
  *
  * 본 분기는 일반 housing/right_to_move_in 분기를 우회한다:
  * - STEP 2 (calcTransferGain) skip — redevelopment 3분할 결과 사용
- * - STEP 3 (12억 안분) — 향후 §95③·§160 통합 (현재 사례 44 1세대1주택 아님, skip)
+ * - STEP 3 (12억 안분) — §95③·시행령 §160 활성화 (사례 45 1세대1주택 + 12억 초과)
  * - STEP 4 (calcLongTermHoldingDeduction) skip — 분기별 LTHD 이미 산정
  * - STEP 5·6·7 통상 흐름 (기본공제·과세표준·산출세액)
  * - STEP 7.5·9·10 농특세·지방소득세·세액합계 (transfer-tax-finalize.ts 재사용)
  *
- * 사례 44 anchor:
+ * 사례 44 anchor (1세대1주택 X — STEP 3 미발동):
  *   산출세액 56,799,400 / 지방소득세 5,679,940 / 세액합계 62,479,340
+ *
+ * 사례 45 anchor (1세대1주택 + 양도가 15억 + 12억 초과):
+ *   산출세액 11,311,376 / 지방소득세 1,131,137 / 세액합계 12,442,514
  */
 
 import { runRedevelopment, isRedevelopmentActive } from "./redevelopment";
@@ -46,25 +49,48 @@ export { isRedevelopmentActive };
  * @param parsedRates 세율 데이터
  * @param baseSteps STEP 0 ~ STEP 0.6 까지 누적된 steps (현재 사용처에서 빈 배열 또는 누적 배열 전달)
  */
+const HIGH_VALUE_THRESHOLD = 1_200_000_000;
+
 export function calculateRedevelopmentTax(
   input: TransferTaxInput,
   parsedRates: ParsedRates,
   baseSteps: CalculationStep[],
 ): TransferTaxResult {
   const steps: CalculationStep[] = [...baseSteps];
+  const isOneHouseSingle = input.isOneHousehold === true && input.householdHousingCount === 1;
 
   // ─ Step A: redevelopment orchestrator 호출 ─
-  const redev: RedevelopmentResult = runRedevelopment({
+  const redevRaw: RedevelopmentResult = runRedevelopment({
     redevelopment: input.redevelopment!,
     acquisitionDate: input.acquisitionDate,
     transferDate: input.transferDate,
     transferPrice: input.transferPrice,
     actualAcquisitionPrice: input.useEstimatedAcquisition ? undefined : input.acquisitionPrice,
     useEstimatedAcquisition: input.useEstimatedAcquisition ?? false,
-    isOneHouseSingle: input.isOneHousehold === true && input.householdHousingCount === 1,
+    isOneHouseSingle,
     residencePeriodMonths: input.residencePeriodMonths,
+    priorHouseResidenceMonths: input.redevelopment!.priorHouseResidenceMonths,
+    newHouseResidenceMonths: input.redevelopment!.newHouseResidenceMonths,
     isSuccessorRightToMoveIn: input.isSuccessorRightToMoveIn,
   });
+
+  // ─ Step A.5: STEP 3 (12억 안분) — §95③·시행령 §160 ─
+  // 1세대1주택 + 양도가액 > 12억 시: 분기별 양도차익·LTHD 를 taxableRatio 비례 축소.
+  // 그 외: redevRaw.total 그대로 사용 (사례 44 회귀 0).
+  const isHighValue = isOneHouseSingle && input.transferPrice > HIGH_VALUE_THRESHOLD;
+  const redev: RedevelopmentResult = isHighValue
+    ? applyHighValueAllocation(redevRaw, input.transferPrice, input.redevelopment!)
+    : redevRaw;
+
+  if (isHighValue && redev.highValueAllocation) {
+    const ha = redev.highValueAllocation;
+    steps.push({
+      label: "1세대1주택 12억 초과 과세대상 양도차익 안분",
+      formula: `전체 양도차익 ${redevRaw.total.gain.toLocaleString()} × (양도가액 ${input.transferPrice.toLocaleString()} - 12억) / 양도가액 = ${ha.taxableGain.toLocaleString()} (비과세분 ${ha.nontaxableGain.toLocaleString()})`,
+      amount: ha.taxableGain,
+      legalBasis: REDEVELOPMENT.REDEV_HIGH_VALUE_ALLOCATION,
+    });
+  }
 
   // ─ Step B: 양도차익·LTHD steps emit (인가전 / 인가후 기존 / 청산금 3분할) ─
   emitRedevelopmentSteps(steps, redev, input.redevelopment!);
@@ -79,8 +105,10 @@ export function calculateRedevelopmentTax(
   });
 
   // ─ Step D: 기본공제 (STEP 5) ─
+  // calcBasicDeduction(taxableGain, lth) 시그니처: afterLTH = taxableGain - lth.
+  // redev.total.gain 을 첫 인자로 전달 (taxableIncome 은 이미 lthd 차감 후 — 이중 차감 방지).
   const basicDeduction = calcBasicDeduction(
-    transferIncome,
+    redev.total.gain,
     redev.total.lthd,
     input.annualBasicDeductionUsed,
     input.isUnregistered ?? false,
@@ -157,6 +185,95 @@ export function calculateRedevelopmentTax(
     steps,
     // 재개발 상세 부착
     redevelopmentDetail: redev,
+  };
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// 내부 헬퍼 — STEP 3 (12억 안분) §95③·시행령 §160
+// ──────────────────────────────────────────────────────────────────────────────
+
+/**
+ * 1세대1주택 + 양도가액 > 12억 시 분기별 양도차익·LTHD 를 과세대상으로 축소.
+ *
+ * 산식 (시행령 §160):
+ *   taxableRatio  = (transferPrice − 12억) / transferPrice
+ *   branchTaxableGain = floor(branchGain × taxableRatio)
+ *   branchTaxableLthd = floor(branchTaxableGain × branchRate)
+ *
+ * 분기별로 floor 적용 — 양도코리아 xlsx 결과 일치 (xlsx D17·E17·F17 각각 분기별 산정 후 합산).
+ *
+ * @param redevRaw runRedevelopment 결과 (분기별 gain·lthd 가 전체 양도차익 기준)
+ * @param transferPrice 양도가액 (양도가액 - 12억 비율 산정용)
+ * @param redevInfo 입력 redevelopment (lthdResidenceAttribution 부착용)
+ */
+function applyHighValueAllocation(
+  redevRaw: RedevelopmentResult,
+  transferPrice: number,
+  redevInfo: NonNullable<TransferTaxInput["redevelopment"]>,
+): RedevelopmentResult {
+  const taxableRatio = (transferPrice - HIGH_VALUE_THRESHOLD) / transferPrice;
+  const nontaxableThreshold = HIGH_VALUE_THRESHOLD;
+
+  // 분기별 과세대상 양도차익·LTHD 산정 (정수연산 — 분기별 floor)
+  const scaleBranch = (branch: RedevelopmentResult["preApproval"]) => {
+    if (branch.gain <= 0) {
+      return { ...branch };
+    }
+    const taxableGain = Math.floor(branch.gain * taxableRatio);
+    const taxableLthd = branch.lthdRate > 0 ? Math.floor(taxableGain * branch.lthdRate) : 0;
+    return {
+      ...branch,
+      gain: taxableGain,
+      lthd: taxableLthd,
+    };
+  };
+
+  const preApproval = scaleBranch(redevRaw.preApproval);
+  const postApprovalExistingHouse = scaleBranch(redevRaw.postApprovalExistingHouse);
+  const settlement = scaleBranch(redevRaw.settlement);
+
+  const totalGain = preApproval.gain + postApprovalExistingHouse.gain + settlement.gain;
+  const totalLthd = preApproval.lthd + postApprovalExistingHouse.lthd + settlement.lthd;
+  const taxableIncome = totalGain - totalLthd;
+
+  // 12억 안분 메타 (UI·결과카드 표시용)
+  const nontaxableGain = redevRaw.total.gain - Math.floor(redevRaw.total.gain * taxableRatio);
+  const taxableGainTotal = Math.floor(redevRaw.total.gain * taxableRatio);
+
+  // LTHD 거주월수 귀속 메타 (사전법령해석재산 2020-386 + §155⑰ 노출)
+  const prior = redevInfo.priorHouseResidenceMonths ?? 0;
+  const newMonths = redevInfo.newHouseResidenceMonths ?? 0;
+  const existingResidenceMonths =
+    redevInfo.priorHouseResidenceMonths !== undefined || redevInfo.newHouseResidenceMonths !== undefined
+      ? prior + newMonths
+      : 0;
+  const payResidenceMonths =
+    redevInfo.priorHouseResidenceMonths !== undefined || redevInfo.newHouseResidenceMonths !== undefined
+      ? newMonths
+      : 0;
+
+  return {
+    ...redevRaw,
+    preApproval,
+    postApprovalExistingHouse,
+    settlement,
+    total: {
+      gain: totalGain,
+      lthd: totalLthd,
+      taxableIncome,
+    },
+    highValueAllocation: {
+      nontaxableGain,
+      taxableGain: taxableGainTotal,
+      taxableRatio,
+      nontaxableThreshold,
+    },
+    lthdResidenceAttribution: {
+      existingResidenceMonths,
+      payResidenceMonths,
+      existingTable: preApproval.lthdRate > 0.30 ? "table2" : "table1",
+      payTable: settlement.lthdRate > 0.30 ? "table2" : "table1",
+    },
   };
 }
 

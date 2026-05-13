@@ -71,6 +71,11 @@ interface Props {
    * 일체과세 조건 충족 여부를 판정. useEffect → store 미러링 금지 — useMemo로 처리.
    */
   primaryAsset?: AssetForm;
+  /**
+   * 1세대1주택 + householdHousingCount === 1 충족 여부 (form-전역).
+   * 사례 45 — RedevelopmentBlock §⑤ 거주월수 분리 입력 카드 가시성 가드.
+   */
+  isOneHouseSingle?: boolean;
 }
 
 export function CompanionAssetCard({
@@ -85,6 +90,7 @@ export function CompanionAssetCard({
   contractTotalPrice,
   totalTransferExpense,
   primaryAsset,
+  isOneHouseSingle,
 }: Props) {
   const isMultiBundled = !singleMode && bundledSaleMode !== undefined;
   const isPrimary = asset.isPrimaryForHouseholdFlags;
@@ -568,7 +574,7 @@ export function CompanionAssetCard({
 
       {/* 재개발/재건축 (시행령 §166) — assetKind === "redevelopment_apt" 시만 표시 (사례 44) */}
       {asset.assetKind === "redevelopment_apt" && (
-        <RedevelopmentBlock asset={asset} onChange={onChange} />
+        <RedevelopmentBlock asset={asset} onChange={onChange} isOneHouseSingle={isOneHouseSingle} />
       )}
 
       {/* 필요경비 — 자본적지출 / 양도비 분리 입력 (소득세법 §97① 가목·나목)

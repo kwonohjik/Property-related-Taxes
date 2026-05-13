@@ -727,5 +727,13 @@ export function buildRedevelopmentPayload(asset: AssetForm) {
     acquisitionHousingPrice: asset.redevAcquisitionHousingPrice
       ? parseAmount(asset.redevAcquisitionHousingPrice)
       : undefined,
+    // 사례 45 — 거주월수 분리 입력 (§155⑰ 통산 + 해석례 2020-386)
+    // 빈문자열 → undefined (legacy fallback 의도 — 엔진에서 residencePeriodMonths 단일값 사용)
+    priorHouseResidenceMonths: asset.redevPriorHouseResidenceMonths
+      ? parseInt(asset.redevPriorHouseResidenceMonths.replace(/,/g, ""), 10)
+      : undefined,
+    newHouseResidenceMonths: asset.redevNewHouseResidenceMonths
+      ? parseInt(asset.redevNewHouseResidenceMonths.replace(/,/g, ""), 10)
+      : undefined,
   };
 }

@@ -27,7 +27,7 @@ const fmt = (n: number) => n.toLocaleString("ko-KR");
 const fmtPct = (r: number) => `${(r * 100).toFixed(1)}%`;
 
 export function RedevelopmentDetailCard({ detail }: Props) {
-  const { preApproval, postApprovalExistingHouse, settlement, total, salePriceTotal, valuationMeta, estimatedLumpDeduction } = detail;
+  const { preApproval, postApprovalExistingHouse, settlement, total, salePriceTotal, valuationMeta, estimatedLumpDeduction, highValueAllocation, lthdResidenceAttribution } = detail;
 
   return (
     <div className="rounded-lg border border-violet-200 bg-violet-50/30 p-4 space-y-3">
@@ -47,6 +47,58 @@ export function RedevelopmentDetailCard({ detail }: Props) {
       {valuationMeta && valuationMeta.method !== "actual" && (
         <div className="rounded-md bg-rose-50 border border-rose-200 p-2 text-[11px] text-rose-800">
           <span className="font-semibold">환산취득가 적용</span> · {valuationMeta.rationale}
+        </div>
+      )}
+
+      {/* 12억 안분 박스 (§95③·시행령 §160 — 사례 45) */}
+      {highValueAllocation && (
+        <div className="rounded-md bg-amber-50 border border-amber-200 p-3 text-[11px] text-amber-900 space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="rounded-full bg-amber-200 px-2 py-0.5 text-[10px] font-bold text-amber-800">1세대1주택 §95③·시행령 §160</span>
+            <span className="font-semibold">고가주택 12억 안분</span>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-1">
+            <Row label="비과세 기준" value={highValueAllocation.nontaxableThreshold} />
+            <Row label="과세대상 비율" value={Math.round(highValueAllocation.taxableRatio * 10000) / 100} />
+            <Row label="비과세 양도차익" value={highValueAllocation.nontaxableGain} highlight />
+            <Row label="과세대상 양도차익" value={highValueAllocation.taxableGain} highlight />
+          </div>
+        </div>
+      )}
+
+      {/* LTHD 거주월수 귀속 박스 (§155⑰ + 해석례 2020-386 — 사례 45) */}
+      {lthdResidenceAttribution && (
+        <div className="rounded-md bg-emerald-50 border border-emerald-200 p-3 text-[11px] text-emerald-900 space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="rounded-full bg-emerald-200 px-2 py-0.5 text-[10px] font-bold text-emerald-800">시행령 §155⑰ + 해석례 2020-386</span>
+            <span className="font-semibold">장기보유공제 거주월수 귀속 분리</span>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-1">
+            <Row
+              label="기존건물분 거주 (종전+신축 통산)"
+              value={lthdResidenceAttribution.existingResidenceMonths}
+            />
+            <Row
+              label="청산금분 거주 (신축만)"
+              value={lthdResidenceAttribution.payResidenceMonths}
+            />
+            <div className="text-[10px]">
+              <p className="text-emerald-700">기존건물분 적용 표</p>
+              <p className="font-semibold text-emerald-900">
+                {lthdResidenceAttribution.existingTable === "table2"
+                  ? "표2 (보유 + 거주)"
+                  : "표1 (보유만)"}
+              </p>
+            </div>
+            <div className="text-[10px]">
+              <p className="text-emerald-700">청산금분 적용 표</p>
+              <p className="font-semibold text-emerald-900">
+                {lthdResidenceAttribution.payTable === "table2"
+                  ? "표2 (보유 + 거주)"
+                  : "표1 (보유만)"}
+              </p>
+            </div>
+          </div>
         </div>
       )}
 

@@ -46,8 +46,23 @@ export interface RedevelopmentLthdInput {
   /** 1세대 1주택 여부 (표2 적용 분기) */
   isOneHouseSingle?: boolean;
 
-  /** 거주기간 개월 (표2 거주분 적용용) */
+  /**
+   * 거주기간 개월 (legacy 단일값 — 신규 두 필드가 모두 undefined 일 때 fallback).
+   * 신규 케이스에서는 priorHouseResidenceMonths + newHouseResidenceMonths 사용 권장.
+   */
   residencePeriodMonths?: number;
+
+  /**
+   * 종전주택 거주개월수 (시행령 §155⑰ 통산 산식의 prior 분량).
+   * 기존건물분(인가전+인가후 비청산) LTHD 표2 거주분 = prior + new (통산).
+   */
+  priorHouseResidenceMonths?: number;
+
+  /**
+   * 신축주택 거주개월수.
+   * 청산금납부분 LTHD 표2 진입 가드 — 사전법령해석재산 2020-386.
+   */
+  newHouseResidenceMonths?: number;
 }
 
 /** 분기별 LTHD 산정 결과 (3분기 각각) */
@@ -90,6 +105,17 @@ export function computeRedevelopmentLthd(
   const { redevelopment, acquisitionDate, transferDate, isSuccessorRightToMoveIn } = input;
   const { subject, approvalDate, settlementDirection, settlementSaleDate } = redevelopment;
 
+  // ─ 거주월수 귀속 분리 (사례 45 — 시행령 §155⑰ + 사전법령해석재산 2020-386) ─
+  // 신규 두 필드(prior/new)가 모두 undefined 시 legacy fallback:
+  //   기존건물분 = residencePeriodMonths 단일값
+  //   청산금분   = 0 (해석례 보수적 적용 — 신축거주 입력 없으면 표1 강등)
+  const hasSplitResidence =
+    input.priorHouseResidenceMonths !== undefined || input.newHouseResidenceMonths !== undefined;
+  const prior = input.priorHouseResidenceMonths ?? 0;
+  const newMonths = input.newHouseResidenceMonths ?? 0;
+  const existingResidenceMonths = hasSplitResidence ? prior + newMonths : input.residencePeriodMonths ?? 0;
+  const payResidenceMonths = hasSplitResidence ? newMonths : 0;
+
   // ─ subject="right" (입주권 양도) 분기 ─
   if (subject === "right") {
     return computeRightLthd({
@@ -97,7 +123,8 @@ export function computeRedevelopmentLthd(
       approvalDate,
       isSuccessorRightToMoveIn: isSuccessorRightToMoveIn ?? false,
       isOneHouseSingle: input.isOneHouseSingle ?? false,
-      residencePeriodMonths: input.residencePeriodMonths ?? 0,
+      // 입주권은 인가전 분만 LTHD → 기존건물분 거주월수만 의미 있음
+      residencePeriodMonths: existingResidenceMonths,
     });
   }
 
@@ -109,7 +136,8 @@ export function computeRedevelopmentLthd(
     settlementDirection,
     settlementSaleDate,
     isOneHouseSingle: input.isOneHouseSingle ?? false,
-    residencePeriodMonths: input.residencePeriodMonths ?? 0,
+    existingResidenceMonths,
+    payResidenceMonths,
   });
 }
 
@@ -173,7 +201,10 @@ function computeAptLthd(args: {
   settlementDirection: "pay" | "receive";
   settlementSaleDate?: Date;
   isOneHouseSingle: boolean;
-  residencePeriodMonths: number;
+  /** 기존건물분 거주월수 (= prior + new, §155⑰ 통산) */
+  existingResidenceMonths: number;
+  /** 청산금분 거주월수 (= new, 해석례 2020-386) */
+  payResidenceMonths: number;
 }): RedevelopmentLthdResult {
   const {
     acquisitionDate,
@@ -182,16 +213,19 @@ function computeAptLthd(args: {
     settlementDirection,
     settlementSaleDate,
     isOneHouseSingle,
-    residencePeriodMonths,
+    existingResidenceMonths,
+    payResidenceMonths,
   } = args;
 
-  const residenceYears = Math.floor(residencePeriodMonths / 12);
+  const existingResidenceYears = Math.floor(existingResidenceMonths / 12);
+  const payResidenceYears = Math.floor(payResidenceMonths / 12);
 
   // ─ §166⑤2호나목: 기존건물분 (preApproval + postApprovalExistingHouse) = 취득일 ~ 신축양도일 ─
   // 묶음 동일 보유기간 → 동일 LTHD율 (분배법칙으로 분기별 산출해도 합계 동일)
+  // 거주분 = §155⑰ 통산 (prior + new)
   const existingHolding = calculateHoldingPeriod(acquisitionDate, transferDate);
   const existingMonths = existingHolding.years * 12 + existingHolding.months;
-  const existingRate = computeLthdRate(existingHolding.years, isOneHouseSingle, residenceYears);
+  const existingRate = computeLthdRate(existingHolding.years, isOneHouseSingle, existingResidenceYears);
 
   const preApprovalBranch: RedevelopmentLthdBranch = {
     holdingMonths: existingMonths,
@@ -201,7 +235,7 @@ function computeAptLthd(args: {
   };
   const postApprovalBranch: RedevelopmentLthdBranch = { ...preApprovalBranch };
 
-  // ─ 청산금 분 보유기간 ─
+  // ─ 청산금 분 보유기간 + 거주월수 = new 만 (해석례 2020-386) ─
   let settlementBranch: RedevelopmentLthdBranch;
   if (settlementDirection === "pay") {
     // §166⑤2호가목: 인가일 ~ 신축양도일
@@ -210,19 +244,19 @@ function computeAptLthd(args: {
     settlementBranch = {
       holdingMonths: payMonths,
       holdingYears: payHolding.years,
-      rate: computeLthdRate(payHolding.years, isOneHouseSingle, residenceYears),
+      rate: computeLthdRate(payHolding.years, isOneHouseSingle, payResidenceYears),
       applicable: true,
     };
   } else {
     // 수령: §95④ + NTS 집행기준 — 취득일 ~ settlementSaleDate (소유권이전 고시일 다음날)
-    // settlementSaleDate 미입력 시 transferDate로 fallback (validation에서 차단되어야 함)
+    // 거주월수도 신축거주만 (해석례 동일 적용 — 수령 분기는 별도 해석례 없으나 보수적 적용)
     const endDate = settlementSaleDate ?? transferDate;
     const receiveHolding = calculateHoldingPeriod(acquisitionDate, endDate);
     const receiveMonths = receiveHolding.years * 12 + receiveHolding.months;
     settlementBranch = {
       holdingMonths: receiveMonths,
       holdingYears: receiveHolding.years,
-      rate: computeLthdRate(receiveHolding.years, isOneHouseSingle, residenceYears),
+      rate: computeLthdRate(receiveHolding.years, isOneHouseSingle, payResidenceYears),
       applicable: true,
     };
   }

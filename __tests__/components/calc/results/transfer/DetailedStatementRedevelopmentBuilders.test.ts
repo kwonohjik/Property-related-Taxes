@@ -323,3 +323,91 @@ describe("applyRedevelopmentOverrides — StatementItem 갱신", () => {
     expect(items.get("ltHoldingPart")!.note).toContain("재개발");
   });
 });
+
+// ──────────────────────────────────────────────────────────────────────────────
+// 사례 45 — 12억 안분 + 거주월수 귀속 분리 산식 anchor
+// ──────────────────────────────────────────────────────────────────────────────
+
+function case45Detail(): RedevelopmentResult {
+  return {
+    preApproval: {
+      apportionedTransfer: 650_000_000, // 권리가액 (의제)
+      apportionedAcquisition: 450_000_000, // 실가 모드
+      gain: 40_000_000, // 안분 후 과세대상 (200M × 0.2)
+      holdingMonths: 190, // 15년 10개월
+      lthd: 24_000_000, // floor(40M × 60%)
+      lthdRate: 0.6,
+    },
+    postApprovalExistingHouse: {
+      apportionedTransfer: 1_026_315_789, // floor(1500M × 650M/950M)
+      apportionedAcquisition: 650_000_000,
+      gain: 74_031_578, // 안분 후 과세대상
+      holdingMonths: 190,
+      lthd: 44_418_946,
+      lthdRate: 0.6,
+    },
+    settlement: {
+      apportionedTransfer: 473_684_211, // floor(1500M × 300M/950M)
+      apportionedAcquisition: 300_000_000,
+      gain: 34_168_421, // 안분 후 과세대상
+      holdingMonths: 111, // 9년 3개월
+      lthd: 6_150_315, // floor(34,168,421 × 18%)
+      lthdRate: 0.18,
+    },
+    total: {
+      gain: 148_199_999,
+      lthd: 74_569_261,
+      taxableIncome: 73_630_738,
+    },
+    salePriceTotal: 950_000_000,
+    highValueAllocation: {
+      nontaxableGain: 592_800_000,
+      taxableGain: 148_200_000,
+      taxableRatio: 0.2,
+      nontaxableThreshold: 1_200_000_000,
+    },
+    lthdResidenceAttribution: {
+      existingResidenceMonths: 66, // prior 66 + new 0
+      payResidenceMonths: 0,
+      existingTable: "table2",
+      payTable: "table1",
+    },
+  };
+}
+
+describe("사례 45 — buildRedevGainFormula 12억 안분 후 과세대상 표기", () => {
+  const detail = case45Detail();
+
+  it("preApproval — 양도차익 산식에 '12억 안분 후 과세대상' 안내 포함", () => {
+    const f = buildRedevGainFormula("preApproval", detail);
+    expect(f).toContain("12억 안분 후 과세대상");
+    expect(f).toContain("20%");
+  });
+
+  it("settlement — 양도차익 산식에 안분 안내 포함", () => {
+    const f = buildRedevGainFormula("settlement", detail);
+    expect(f).toContain("12억 안분 후 과세대상");
+  });
+});
+
+describe("사례 45 — buildRedevLthdFormula 거주월수 귀속 분리 안내", () => {
+  const detail = case45Detail();
+
+  it("preApproval — 기존건물분 거주월수 통산 (66월) + 표2 표기", () => {
+    const f = buildRedevLthdFormula("preApproval", detail);
+    expect(f).toContain("60%");
+    expect(f).toContain("66월");
+    expect(f).toContain("종전+신축 통산");
+    expect(f).toContain("표2");
+    expect(f).toContain("24,000,000");
+  });
+
+  it("settlement — 청산금분 거주월수 (0월) + 표1 강등 표기", () => {
+    const f = buildRedevLthdFormula("settlement", detail);
+    expect(f).toContain("18%");
+    expect(f).toContain("0월");
+    expect(f).toContain("신축만");
+    expect(f).toContain("표1");
+    expect(f).toContain("6,150,315");
+  });
+});

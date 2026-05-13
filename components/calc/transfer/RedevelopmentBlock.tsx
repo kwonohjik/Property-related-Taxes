@@ -34,6 +34,12 @@ import { useMemo } from "react";
 interface Props {
   asset: AssetForm;
   onChange: (patch: Partial<AssetForm>) => void;
+  /**
+   * 1세대1주택 + householdHousingCount === 1 충족 여부 (form-전역).
+   * 사례 45 §⑤ 거주월수 분리 입력 카드 가시성 가드.
+   * undefined 시 fallback: true (legacy 호환 — 신규 호출 사이트는 명시 전달 권장).
+   */
+  isOneHouseSingle?: boolean;
 }
 
 // ── ToggleCard 옵션 ──
@@ -58,7 +64,7 @@ const APPROVAL_LAW_OPTIONS = [
   { value: "small_housing_art_29" as const, label: "빈집소규모정비법 §29 (소규모정비)", description: "빈집 및 소규모주택 정비에 관한 특례법 §29 사업시행계획 인가 — 후속 PR" },
 ];
 
-export function RedevelopmentBlock({ asset, onChange }: Props) {
+export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle }: Props) {
   const isActive = asset.assetKind === "redevelopment_apt";
 
   // 분양가 미리보기 (useMemo 순수 계산 — useEffect 미러링 금지)
@@ -500,6 +506,125 @@ export function RedevelopmentBlock({ asset, onChange }: Props) {
           )}
         </div>
       </ToggleCard>
+
+      <ResidenceSplitSection asset={asset} onChange={onChange} isOneHouseSingle={isOneHouseSingle} />
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// §⑤ 거주월수 분리 (사례 45 — 1세대1주택 + 12억 초과)
+// 시행령 §155⑰ (거주기간 통산) + 사전법령해석재산 2020-386 (청산금분 신축거주만)
+// 가시성: 1세대1주택 + householdHousingCount === 1 일 때만 노출
+// ──────────────────────────────────────────────────────────────────────────────
+
+function ResidenceSplitSection({
+  asset,
+  onChange,
+  isOneHouseSingle,
+}: {
+  asset: AssetForm;
+  onChange: (patch: Partial<AssetForm>) => void;
+  isOneHouseSingle?: boolean;
+}) {
+  // 가시성 가드: 1세대1주택 + householdHousingCount === 1 일 때만 노출 (디자인 §⑤ 명세).
+  // undefined 는 legacy 호출 사이트 fallback (보수적으로 노출 유지).
+  const shouldHide = isOneHouseSingle === false;
+
+  // 사례 45 가이드 카드 4분기 useMemo (useEffect→store 미러링 금지)
+  const guidance = useMemo(() => {
+    // 자산-수준 양도가액 (actualSalePrice). 12억 초과 분기 판정용.
+    const tp = parseAmount(asset.actualSalePrice || "");
+    const prior = parseInt((asset.redevPriorHouseResidenceMonths || "0").replace(/,/g, ""), 10) || 0;
+    const newM = parseInt((asset.redevNewHouseResidenceMonths || "0").replace(/,/g, ""), 10) || 0;
+    const isHighValue = tp > 1_200_000_000;
+
+    if (!isHighValue) {
+      return {
+        tone: "emerald" as const,
+        title: "C-2 — 12억 이하 전액 비과세",
+        body: "양도가액이 12억원 이하이므로 전체 양도차익이 비과세 대상입니다 (1세대1주택 충족 시).",
+      };
+    }
+    const exceedsExisting = prior + newM >= 24;
+    const exceedsNew = newM >= 24;
+    if (exceedsExisting && exceedsNew) {
+      return {
+        tone: "sky" as const,
+        title: "C-3 — 12억 초과 + 분할 LTHD 모두 표2 적용",
+        body: "기존건물분과 청산금분 모두 표2(보유+거주) 적용. 거주월수 귀속은 분리되어 산정됩니다 (기존: 종전+신축 통산 / 청산금분: 신축만).",
+      };
+    }
+    if (exceedsExisting && !exceedsNew) {
+      return {
+        tone: "violet" as const,
+        title: "C-4 — 사전법령해석재산 2020-386 적용",
+        body: "기존건물분은 표2(보유+거주), 청산금납부분은 표1(보유만, 30% 캡)이 적용됩니다. 신축주택에서 2년 이상 거주하지 못한 경우 청산금분은 §95② 본문 표1 강등.",
+      };
+    }
+    return {
+      tone: "amber" as const,
+      title: "C-5 — 거주 2년 미충족 (두 분기 모두 표1)",
+      body: "종전+신축 통산 거주월수가 24개월 미만이면 표2(80% 캡) 진입 가드 미충족. 기존건물분·청산금분 모두 §95② 본문 표1(30% 캡) 적용.",
+    };
+  }, [asset.actualSalePrice, asset.redevPriorHouseResidenceMonths, asset.redevNewHouseResidenceMonths]);
+
+  if (shouldHide) return null;
+
+  return (
+    <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-3 space-y-2">
+      <div className="flex items-center gap-2">
+        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-[10px] font-bold text-emerald-800 select-none">
+          5
+        </span>
+        <p className="text-xs font-semibold text-emerald-700">
+          거주개월 분리 입력 (1세대1주택 + 12억 초과 시)
+        </p>
+      </div>
+      <p className="text-[11px] text-emerald-800 leading-relaxed">
+        시행령 §155⑰ — 재개발·재건축 거주기간은 종전주택과 신축주택을 통산합니다.
+        사전법령해석재산 2020-386 — 청산금납부분 LTHD 표2 진입은 신축주택 거주 2년 이상이 필요합니다.
+      </p>
+
+      <FieldCard
+        label="종전주택 거주개월"
+        hint="종전주택 취득일부터 관리처분 또는 그 이후 철거 전까지 실제 거주개월수 (§155⑰ 통산 산식 prior)"
+      >
+        <DecimalInput
+          value={asset.redevPriorHouseResidenceMonths}
+          onChange={(v) => onChange({ redevPriorHouseResidenceMonths: v })}
+          placeholder="종전주택 실거주 개월"
+          unit="개월"
+        />
+      </FieldCard>
+
+      <FieldCard
+        label="신축주택 거주개월"
+        hint="준공검사일(사용승인일)부터 양도일까지 신축아파트 실거주 개월수 (해석례 2020-386 — 청산금분 표2 진입 가드)"
+      >
+        <DecimalInput
+          value={asset.redevNewHouseResidenceMonths}
+          onChange={(v) => onChange({ redevNewHouseResidenceMonths: v })}
+          placeholder="신축아파트 실거주 개월"
+          unit="개월"
+        />
+      </FieldCard>
+
+      {/* 시나리오 가이드 카드 — useMemo 분기 */}
+      <div
+        className={`rounded-lg border p-3 text-xs leading-relaxed ${
+          guidance.tone === "emerald"
+            ? "border-emerald-300 bg-emerald-100/60 text-emerald-900"
+            : guidance.tone === "sky"
+              ? "border-sky-300 bg-sky-100/60 text-sky-900"
+              : guidance.tone === "violet"
+                ? "border-violet-300 bg-violet-100/60 text-violet-900"
+                : "border-amber-300 bg-amber-100/60 text-amber-900"
+        }`}
+      >
+        <p className="font-semibold mb-1">{guidance.title}</p>
+        <p>{guidance.body}</p>
+      </div>
     </div>
   );
 }

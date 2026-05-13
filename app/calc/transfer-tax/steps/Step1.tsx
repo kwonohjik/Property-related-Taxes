@@ -181,6 +181,7 @@ export function Step1({
           transferDate={form.transferDate}
           contractTotalPrice={form.contractTotalPrice}
           totalTransferExpense={form.totalTransferExpense}
+          isOneHouseSingle={form.isOneHousehold === true && form.householdHousingCount === "1"}
         />
 
         {hasBundledAssets && (

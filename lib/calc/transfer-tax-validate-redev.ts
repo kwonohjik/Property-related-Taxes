@@ -126,5 +126,24 @@ export function validateRedevelopmentAsset(asset: AssetForm, label: string): str
     return `${label}: A 또는 PHD 단가를 입력하셨다면 최초공시일도 입력하세요. (§164⑦ 본문 트리거)`;
   }
 
+  // ── 사례 45 — 거주월수 분리 검증 (§155⑰ + 해석례 2020-386) ──
+  // 가시성: UI 에서 1세대1주택 + householdHousingCount === 1 일 때만 노출.
+  // 빈문자열은 허용 (legacy fallback). 음수만 reject.
+  // 3중 패턴: UI hide ↔ API undefined ↔ validate undefined-허용 (모순 차단).
+  const priorRaw = (asset.redevPriorHouseResidenceMonths || "").trim();
+  const newRaw = (asset.redevNewHouseResidenceMonths || "").trim();
+  if (priorRaw) {
+    const v = parseInt(priorRaw.replace(/,/g, ""), 10);
+    if (!isFinite(v) || v < 0) {
+      return `${label}: 종전주택 거주개월수는 0 이상의 정수여야 합니다.`;
+    }
+  }
+  if (newRaw) {
+    const v = parseInt(newRaw.replace(/,/g, ""), 10);
+    if (!isFinite(v) || v < 0) {
+      return `${label}: 신축주택 거주개월수는 0 이상의 정수여야 합니다.`;
+    }
+  }
+
   return null;
 }

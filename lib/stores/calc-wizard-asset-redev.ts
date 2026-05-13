@@ -141,4 +141,24 @@ export interface RedevelopmentFormSlice {
    * §166 섹션 내부 별도 입력 위치로 분리. 사례 45/46 시나리오 브라우저 재현 보장.
    */
   redevActualAcquisitionPrice: string;
+
+  // ── 사례 45 — 거주월수 분리 입력 (1세대1주택 + 12억 초과 분기) ──
+  //
+  // 법령 근거: 시행령 §155⑰ (보유·거주 통산) + 사전법령해석재산 2020-386 (청산금분 거주 분리).
+  // 가시성: assetKind === "redevelopment_apt" + isOneHousehold + householdHousingCount === 1.
+  // 미입력 시 빈문자열. silent 0 채우기 금지.
+
+  /**
+   * 종전주택 거주개월수 (정수, 개월 단위).
+   * 종전주택 취득일~관리처분 또는 그 이후 철거 전까지 실제 거주개월수.
+   * 기존건물분 LTHD 표2 거주분 = prior + new (§155⑰ 통산).
+   */
+  redevPriorHouseResidenceMonths: string;
+
+  /**
+   * 신축주택 거주개월수 (정수, 개월 단위).
+   * 준공검사일~양도일 사이 신축아파트 실거주개월수.
+   * 청산금납부분 LTHD 표2 진입 가드 (해석례 2020-386).
+   */
+  redevNewHouseResidenceMonths: string;
 }

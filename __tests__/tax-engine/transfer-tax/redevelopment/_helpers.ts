@@ -92,25 +92,33 @@ export function case44RedevelopmentInfo(): RedevelopmentInfo {
  */
 export function case45Input(): RedevelopmentOrchestratorInput {
   return {
-    redevelopment: {
-      subject: "apt",
-      approvalLawBasis: "urban_renovation_art_74",
-      approvalDate: new Date("2013-10-23"),
-      rightsValue: 650_000_000,
-      settlementDirection: "pay",
-      settlementAmount: 300_000_000,
-      preApprovalExpenses: 0,
-      postApprovalExpenses: 9_000_000,
-      originalAssetType: "housing",
-      acquisitionRounding: "floor",
-    },
+    redevelopment: case45RedevelopmentInfo(),
     acquisitionDate: new Date("2007-04-09"),
     transferDate: new Date("2023-02-16"),
     transferPrice: 1_500_000_000,
     actualAcquisitionPrice: 450_000_000,
     useEstimatedAcquisition: false,
     isOneHouseSingle: true,
-    residencePeriodMonths: 66, // 5년 6월
+    residencePeriodMonths: 66, // legacy fallback (사용 안 됨 — prior/new 사용)
+    priorHouseResidenceMonths: 66, // 종전주택 5년 6월
+    newHouseResidenceMonths: 0,    // 신축주택 거주 X
+  };
+}
+
+export function case45RedevelopmentInfo(): RedevelopmentInfo {
+  return {
+    subject: "apt",
+    approvalLawBasis: "urban_renovation_art_74",
+    approvalDate: new Date("2013-10-23"),
+    rightsValue: 650_000_000,
+    settlementDirection: "pay",
+    settlementAmount: 300_000_000,
+    preApprovalExpenses: 0,
+    postApprovalExpenses: 9_000_000,
+    originalAssetType: "housing",
+    acquisitionRounding: "floor",
+    priorHouseResidenceMonths: 66,
+    newHouseResidenceMonths: 0,
   };
 }
 

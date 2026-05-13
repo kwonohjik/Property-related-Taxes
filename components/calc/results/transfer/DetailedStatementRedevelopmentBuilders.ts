@@ -105,7 +105,7 @@ export function buildRedevExpenseFormula(
   return "해당 분할에는 개산공제 미적용";
 }
 
-/** 양도차익 분할별 산식 */
+/** 양도차익 분할별 산식 (사례 45 — 12억 안분 시 과세대상 표기) */
 export function buildRedevGainFormula(
   branch: RedevBranch,
   redev: RedevelopmentResult,
@@ -113,14 +113,19 @@ export function buildRedevGainFormula(
   const detail = redev[branch];
   const t = detail.apportionedTransfer;
   const a = detail.apportionedAcquisition;
+  const hva = redev.highValueAllocation;
+  // 12억 안분 적용 시 detail.gain 은 과세대상(전체 × taxableRatio). 안내 라벨 추가.
+  const suffix = hva
+    ? ` (12억 안분 후 과세대상 — 전체 × ${(hva.taxableRatio * 100).toFixed(0)}%)`
+    : "";
   if (branch === "preApproval") {
     const lump = redev.estimatedLumpDeduction ?? 0;
-    return `${fmt(t)} − ${fmt(a)} − 개산공제 ${fmt(lump)} = ${fmt(detail.gain)}`;
+    return `${fmt(t)} − ${fmt(a)} − 개산공제 ${fmt(lump)} = ${fmt(detail.gain)}${suffix}`;
   }
-  return `${fmt(t)} − ${fmt(a)} = ${fmt(detail.gain)}`;
+  return `${fmt(t)} − ${fmt(a)} = ${fmt(detail.gain)}${suffix}`;
 }
 
-/** 장기보유공제 분할별 산식 */
+/** 장기보유공제 분할별 산식 (사례 45 — 거주월수 귀속 분리 시 안내) */
 export function buildRedevLthdFormula(
   branch: RedevBranch,
   redev: RedevelopmentResult,
@@ -132,7 +137,21 @@ export function buildRedevLthdFormula(
   const years = Math.floor(detail.holdingMonths / 12);
   const months = detail.holdingMonths % 12;
   const pct = (detail.lthdRate * 100).toFixed(0);
-  return `${fmt(detail.gain)} × ${pct}% (보유 ${years}년 ${months}개월) = ${fmt(detail.lthd)}`;
+
+  // 거주월수 귀속 메모 (사례 45 — §155⑰ + 해석례 2020-386)
+  const attr = redev.lthdResidenceAttribution;
+  let residenceMemo = "";
+  if (attr) {
+    if (branch === "settlement") {
+      const tableLabel = attr.payTable === "table2" ? "표2(보유+거주)" : "표1(보유만)";
+      residenceMemo = `, 청산금분 거주 ${attr.payResidenceMonths}월 (신축만) → ${tableLabel}`;
+    } else {
+      const tableLabel = attr.existingTable === "table2" ? "표2(보유+거주)" : "표1(보유만)";
+      residenceMemo = `, 기존건물분 거주 ${attr.existingResidenceMonths}월 (종전+신축 통산) → ${tableLabel}`;
+    }
+  }
+
+  return `${fmt(detail.gain)} × ${pct}% (보유 ${years}년 ${months}개월${residenceMemo}) = ${fmt(detail.lthd)}`;
 }
 
 /** 양도소득금액 분할별 산식 */

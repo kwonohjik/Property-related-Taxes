@@ -18,9 +18,14 @@ interface Props {
   contractTotalPrice?: string;
   /** 폼-수준 총 양도비 — 자산별 자동 안분 표시용 */
   totalTransferExpense?: string;
+  /**
+   * 1세대1주택 + householdHousingCount === 1 충족 여부 (form-전역).
+   * 사례 45 — RedevelopmentBlock §⑤ 거주월수 분리 입력 카드 가시성 가드.
+   */
+  isOneHouseSingle?: boolean;
 }
 
-export function CompanionAssetsSection({ assets, bundledSaleMode, onChange, singleMode, transferDate, contractTotalPrice, totalTransferExpense }: Props) {
+export function CompanionAssetsSection({ assets, bundledSaleMode, onChange, singleMode, transferDate, contractTotalPrice, totalTransferExpense, isOneHouseSingle }: Props) {
   // 연속된 onChange 호출에서 stale closure를 피하기 위해
   // 최신 assets를 ref로 동기 추적 (렌더링 중 동기화)
   /* eslint-disable react-hooks/refs -- props→ref 동기 sync. useEffect로 옮기면 stale closure 발생 */
@@ -66,6 +71,7 @@ export function CompanionAssetsSection({ assets, bundledSaleMode, onChange, sing
           totalTransferExpense={totalTransferExpense}
           onAddAsset={(patch) => addAsset(patch)}
           primaryAsset={idx > 0 ? assets[0] : undefined}
+          isOneHouseSingle={isOneHouseSingle}
         />
       ))}
 

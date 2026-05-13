@@ -52,8 +52,21 @@ export interface RedevelopmentOrchestratorInput extends RedevelopmentSplitInput 
   isSuccessorRightToMoveIn?: boolean;
   /** 1세대1주택 (LTHD 표2 + 12억 안분 분기) */
   isOneHouseSingle?: boolean;
-  /** 거주기간 개월 (LTHD 표2 거주분 적용용) */
+  /**
+   * 거주기간 개월 (legacy 단일값 — prior/new 두 필드가 모두 undefined 시 fallback).
+   * 신규 케이스에서는 priorHouseResidenceMonths + newHouseResidenceMonths 사용 권장.
+   */
   residencePeriodMonths?: number;
+  /**
+   * 종전주택 거주개월수 (시행령 §155⑰ 통산 prior 분량).
+   * 사례 45 — 기존건물분 LTHD 표2 거주분 = prior + new (통산).
+   */
+  priorHouseResidenceMonths?: number;
+  /**
+   * 신축주택 거주개월수.
+   * 사례 45 — 청산금납부분 LTHD 표2 진입 가드 (해석례 2020-386).
+   */
+  newHouseResidenceMonths?: number;
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -87,6 +100,8 @@ export function runRedevelopment(
     isSuccessorRightToMoveIn: input.isSuccessorRightToMoveIn,
     isOneHouseSingle: input.isOneHouseSingle,
     residencePeriodMonths: input.residencePeriodMonths,
+    priorHouseResidenceMonths: input.priorHouseResidenceMonths,
+    newHouseResidenceMonths: input.newHouseResidenceMonths,
   });
 
   // ─ Step 3: 분기별 LTHD 금액 적용 (묶음 동일 율 — §166⑤2호나목 분배법칙 산술) ─

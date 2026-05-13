@@ -149,6 +149,34 @@ export interface RedevelopmentInfo {
    * 본 엔진 기본값 "floor" (BigInt 정수 연산 일관성).
    */
   acquisitionRounding?: "floor" | "round";
+
+  // ─ 사례 45 (1세대1주택 + 12억 초과) 거주월수 분리 입력 ─
+  //
+  // 법령 근거:
+  // - 시행령 §155⑰: "재개발사업·재건축사업의 시행으로 ... 종전주택과 신축주택의 보유기간 및 거주기간 통산"
+  //   → 기존건물분(인가전+인가후 비청산) LTHD 표2 거주분 = prior + new (통산)
+  // - 사전법령해석재산 2020-386 (2020-11-23):
+  //   "재개발+청산금 납부+종전주택 거주 2년 충족+신축주택 거주 2년 미충족 시,
+  //    청산금납부분 양도차익은 §95② 본문 표1 적용"
+  //   → 청산금납부분 LTHD 표2 거주분 = new (신축거주만)
+  //
+  // 본 두 필드가 모두 undefined 일 때 legacy fallback:
+  //   기존건물분 = TransferTaxInput.residencePeriodMonths
+  //   청산금분   = 0 (보수적 — 신축거주 입력 없으면 표1 강등)
+
+  /**
+   * 종전주택 거주개월수.
+   * 종전주택 취득일~관리처분 또는 그 이후 철거 전까지의 실제 거주개월수.
+   * 시행령 §155⑰ 거주기간 통산 산식의 prior 분량.
+   */
+  priorHouseResidenceMonths?: number;
+
+  /**
+   * 신축주택 거주개월수.
+   * 준공검사일~양도일 사이 신축아파트 실거주개월수.
+   * 사전법령해석재산 2020-386 — 청산금납부분 LTHD 표2 진입 가드.
+   */
+  newHouseResidenceMonths?: number;
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -293,4 +321,35 @@ export interface RedevelopmentResult {
    * 인가전 양도차익에서 차감됨. 실가 모드 시 0 또는 undefined.
    */
   estimatedLumpDeduction?: number;
+
+  /**
+   * §95③·시행령 §160 12억 초과 안분 결과.
+   * 1세대1주택 + 양도가액 > 12억 시만 부착. 그 외 undefined.
+   */
+  highValueAllocation?: {
+    /** 비과세 양도차익 = totalGain × min(transferPrice, 12억) / transferPrice */
+    nontaxableGain: number;
+    /** 과세 양도차익 = totalGain × max(0, transferPrice − 12억) / transferPrice */
+    taxableGain: number;
+    /** 과세 비율 = (transferPrice − 12억) / transferPrice (float, 표시·로그용) */
+    taxableRatio: number;
+    /** 비과세 기준 (= 1,200,000,000 상수) */
+    nontaxableThreshold: number;
+  };
+
+  /**
+   * LTHD 분기별 거주월수 귀속 (디버그·결과카드 표시용).
+   * 사전법령해석재산 2020-386 + 시행령 §155⑰ 적용 결과 노출.
+   * 1세대1주택 redev 케이스에서만 부착.
+   */
+  lthdResidenceAttribution?: {
+    /** 기존건물분 거주월수 = prior + new (§155⑰ 통산) */
+    existingResidenceMonths: number;
+    /** 청산금분 거주월수 = new (해석례 2020-386) */
+    payResidenceMonths: number;
+    /** 기존건물분 적용 표 */
+    existingTable: "table1" | "table2";
+    /** 청산금분 적용 표 */
+    payTable: "table1" | "table2";
+  };
 }

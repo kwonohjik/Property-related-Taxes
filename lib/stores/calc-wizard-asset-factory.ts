@@ -314,6 +314,9 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     redevManagementDisposalHousingPrice: "",
     redevAcquisitionHousingPrice: "",
     redevActualAcquisitionPrice: "",
+    // 사례 45 — 거주월수 분리 입력
+    redevPriorHouseResidenceMonths: "",
+    redevNewHouseResidenceMonths: "",
   };
 }
 
@@ -458,6 +461,9 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (a.redevManagementDisposalHousingPrice === undefined) a.redevManagementDisposalHousingPrice = "";
   if (a.redevAcquisitionHousingPrice === undefined) a.redevAcquisitionHousingPrice = "";
   if (a.redevActualAcquisitionPrice === undefined) a.redevActualAcquisitionPrice = "";
+  // 사례 45 — 거주월수 분리 (§155⑰ + 해석례 2020-386)
+  if (a.redevPriorHouseResidenceMonths === undefined) a.redevPriorHouseResidenceMonths = "";
+  if (a.redevNewHouseResidenceMonths === undefined) a.redevNewHouseResidenceMonths = "";
   // ③ 상업용건물·오피스텔 cb* 필드 마이그레이션 (sessionStorage 호환 — 신규 필드 누락 보호)
   if (a.cbEra === undefined) a.cbEra = "";
   if (a.cbExclusiveArea === undefined) a.cbExclusiveArea = "";
