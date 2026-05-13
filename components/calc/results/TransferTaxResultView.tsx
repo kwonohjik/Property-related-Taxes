@@ -281,14 +281,23 @@ export function TransferTaxResultView({
                 label={`장기보유특별공제 (${formatRate(result.longTermHoldingRate)})`}
                 value={result.longTermHoldingDeduction > 0 ? `- ${formatKRW(result.longTermHoldingDeduction)}` : "해당없음"}
               />
-              {/* 사례 35: 주택→상가 용도변경 — LTHD 기산일 노출 (사전법규재산 2022-684·881) */}
-              {result.lthdStartDate && (
-                <Row
-                  label="보유기간 기산일"
-                  value={new Date(result.lthdStartDate).toISOString().slice(0, 10)}
-                  sub
-                />
-              )}
+              {/* 사례 35: 주택→상가 용도변경 LTHD 기산일 override 자가 판정.
+                  acquisitionDate !== lthdStartDate 인 경우에만 노출 (정상 케이스 노이즈 제거).
+                  근거: 사전법규재산 2022-684·881 / 서울행법 2012구단26961 — 다주택 상태에서
+                  주택을 상가로 용도변경 시 변경일 이전 보유기간을 장기보유특별공제에서 배제. */}
+              {(() => {
+                if (!result.lthdStartDate) return null;
+                const lthdISO = new Date(result.lthdStartDate).toISOString().slice(0, 10);
+                const acqISO = resolvedAsset?.acquisitionDate ?? "";
+                if (!acqISO || lthdISO === acqISO) return null;
+                return (
+                  <Row
+                    label="보유기간 기산일 (용도변경일)"
+                    value={`${lthdISO} (변경 전 보유기간 배제 — 사전법규재산 2022-684)`}
+                    sub
+                  />
+                );
+              })()}
               {/* 양도소득금액 — §161 적용 시 양도차익 − 장기보유공제 (§95①), 일반 시 과세대상 양도차익 − 장기보유공제 */}
               <Row
                 label="양도소득금액"

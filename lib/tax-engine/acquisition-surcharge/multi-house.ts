@@ -16,7 +16,7 @@
  * 코드 가독성 보강을 위해 결과 직접 매핑 + 산식 주석 병기.
  */
 
-import { ACQUISITION, ACQUISITION_CONST } from "../legal-codes";
+import { ACQUISITION, ACQUISITION_CONST, SURCHARGE_EXCLUSION_WINDOW } from "../legal-codes";
 
 // ============================================================
 // 상수 정의 (§13의2① 결과 매핑 — 가독성 + 디버깅 용이성)
@@ -308,8 +308,8 @@ export function getDisposalDeadlineYears(
   // 2023.2.28 ~ 현행: 모든 경우 3년 단일
   if (date >= new Date("2023-02-28")) return 3;
 
-  // 2022.5.10 ~ 2023.2.27: 조정+조정 2년, 그 외 3년
-  if (date >= new Date("2022-05-10")) return isAllRegulated ? 2 : 3;
+  // 2022.5.10 ~ 2023.2.27: 조정+조정 2년, 그 외 3년 (윈도우 시작일 — SURCHARGE_EXCLUSION_WINDOW 공유)
+  if (date >= new Date(SURCHARGE_EXCLUSION_WINDOW.start)) return isAllRegulated ? 2 : 3;
 
   // ~2022.5.9: 조정+조정 1년, 그 외 3년
   return isAllRegulated ? 1 : 3;
