@@ -26,6 +26,7 @@ import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInpu
 import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { PrecedentArticleModal } from "@/components/ui/precedent-article-modal";
 import { DateInput } from "@/components/ui/date-input";
 
 // §168의12 배율표 기준 용도지역 선택지
@@ -621,6 +622,16 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
           description="주택 전체를 근린생활시설 등 비주택으로 용도변경한 경우 ON. 다주택 상태에서 용도변경 시 변경일 이전 보유기간이 장기보유특별공제에서 배제됩니다."
           checked={asset.gbHouseToCommercialConversion}
           onCheckedChange={(v) => onChange({ gbHouseToCommercialConversion: v })}
+          trailing={
+            <PrecedentArticleModal
+              citation="사전법규재산 2022-684"
+              label="근거"
+              kind="ruling"
+              summary={
+                "조정대상지역 다주택자가 주택을 상가로 용도변경한 후 중과배제기간(2022-05-10 ~ 2024-05-09) 중 양도하는 경우,\n장기보유특별공제 보유기간 기산일은 용도변경일로 한다.\n변경일 이전 보유기간은 장기보유특별공제 대상에서 배제된다.\n\n관련: 사전법규재산 2022-881 (2022.12.28) — 동일 취지\n     서울행법 2012구단26961 (2013.04.24) — 다주택자 용도변경 LTHD 배제 판결"
+              }
+            />
+          }
         >
           <FieldCard
             label="용도변경일"
@@ -676,6 +687,16 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
               description="취득가액을 모르는 경우 §99-164-10 환산주택가격으로 취득당시 기준시가를 환산합니다."
               checked={asset.gbHasFirstDisclosure}
               onCheckedChange={(v) => onChange({ gbHasFirstDisclosure: v })}
+              trailing={
+                <PrecedentArticleModal
+                  citation="양도소득세 집행기준 99-164-10"
+                  label="집행기준"
+                  kind="interpretation"
+                  summary={
+                    "취득당시에는 주택으로 개별주택가격이 고시된 이후 상가건물로 용도를 변경하여 양도하는 경우,\n취득 시 기준시가는 환산주택가격을 자산별 기준시가로 안분하여 토지와 주택분 기준시가를 각각 산정하며,\n양도 시 기준시가는 일반건물과 토지에 대한 기준시가를 적용하여 계산한다.\n\n취득당시의 환산주택가격(기준시가) =\n  최초공시주택가격 × (토지 취득당시의 기준시가 + 건물 취득당시의 기준시가)\n               ÷ (주택가격 최초공시 당시의 토지기준시가와 건물기준시가의 합계액)"
+                  }
+                />
+              }
             >
               <FieldCard label="최초공시주택가격" unit="원"
                 hint="주택가격이 최초로 고시된 시점의 개별주택가격 총액 (원)">

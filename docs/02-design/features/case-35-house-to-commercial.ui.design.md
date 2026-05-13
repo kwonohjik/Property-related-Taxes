@@ -525,16 +525,19 @@ grep -n "wasMultiHouseAtConversion" app/api/calc/transfer/general-building-route
 
 ## 5. 법령 링크
 
-**환류 결정 (2026-05-13)**: 사전법규재산·서울행법은 **국세청 예규·판례**로 `LawArticleModal` + `/api/law/article` 검색 대상이 아니므로 **모달 trailing 배지 미적용**. 한국어 텍스트로 hint·결과 행에 명시.
+**환류 결정 (2026-05-13, 후속 PR #5 `PrecedentArticleModal` 도입 후)**: 예규·판례·집행기준 전용 `PrecedentArticleModal` 컴포넌트(`components/ui/precedent-article-modal.tsx`)로 trailing 배지 적용. 외부 검색 링크(국세법령정보시스템·법원 종합법률정보) 제공.
 
 | 위치 | 조문 | 표시 방식 |
 |---|---|---|
-| DateInput "용도변경일" | 사전법규재산 2022-684 | hint 텍스트 (LawArticleModal 미적용 — 예규 예외) |
-| RadioCardGroup hint | 사전법규재산 2022-684·881 / 서울행법 2012구단26961 | hint 텍스트 |
+| §⑦ ToggleCard trailing | 사전법규재산 2022-684 (+881·서울행법 인용) | `PrecedentArticleModal kind="ruling"` 배지 — 요약 + 외부 검색 링크 |
+| 후속-1 sub-ToggleCard trailing | 양도소득세 집행기준 99-164-10 | `PrecedentArticleModal kind="interpretation"` 배지 — 산식 본문 + 외부 검색 |
+| RadioCardGroup hint | 사전법규재산 2022-684·881 / 서울행법 2012구단26961 | hint 텍스트 (보조 안내) |
 | 결과 카드 ⑦ override 행 | 사전법규재산 2022-684 | 행 value 텍스트 "(변경 전 보유기간 배제 — 사전법규재산 2022-684)" |
 | 결과 카드 장특공제 | 소득세법 §95② | `LawArticleModal` 사용 가능 (조문 단위) — 본 PR 범위 밖, 후속 통일 PR에서 처리 |
 
-> **후속 PR 트리거**: 예규/판례 전용 모달(`PrecedentArticleModal`) 컴포넌트 또는 외부 링크 fallback 도입 시 trailing 배지로 환원 검토.
+> **PrecedentArticleModal vs LawArticleModal 구분**:
+> - `LawArticleModal` (`ui/law-article-modal.tsx`): 소득세법 등 법령 조문 — `/api/law/article` 실시간 조회
+> - `PrecedentArticleModal` (`ui/precedent-article-modal.tsx`): 예규·판례·집행기준 — 정적 summary + 외부 검색 링크 (`kind="ruling" | "court" | "interpretation"` 분기)
 
 ---
 
