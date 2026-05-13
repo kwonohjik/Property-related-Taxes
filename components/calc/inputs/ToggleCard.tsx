@@ -15,6 +15,7 @@
  *  - "violet"  거주·자격 정보
  *  - "emerald" 양도시점 정보
  *  - "sky"     면적·규모 정보
+ *  - "fuchsia" 취득 후 추가 이벤트 (증축·용도변경 등 사례 33·35 계열)
  *
  * 색상 가이드: components/calc/CLAUDE.md "다-섹션 입력 폼 — 색상 카드 + 섹션 번호 패턴" 준수.
  */
@@ -23,7 +24,7 @@ import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import type { ReactNode } from "react";
 
-export type ToggleCardTone = "amber" | "sky" | "emerald" | "violet" | "rose";
+export type ToggleCardTone = "amber" | "sky" | "emerald" | "violet" | "rose" | "fuchsia";
 
 interface ToneClasses {
   /** 컨테이너 ON 상태 (border + bg + ring) */
@@ -112,6 +113,19 @@ const TONES: Record<ToggleCardTone, ToneClasses> = {
     titleOn: "text-sky-900 dark:text-sky-200",
     descOn: "text-sky-700 dark:text-sky-400",
     expandBorder: "border-sky-200 dark:border-sky-800/60",
+  },
+  fuchsia: {
+    containerOn:
+      "border-fuchsia-300 bg-fuchsia-50/70 ring-1 ring-fuchsia-200/50 dark:border-fuchsia-700/60 dark:bg-fuchsia-950/30 dark:ring-fuchsia-800/30",
+    containerOff:
+      "border-fuchsia-200/70 bg-fuchsia-50/70 hover:border-fuchsia-300 dark:border-fuchsia-800/40 dark:bg-fuchsia-950/20",
+    chipOn:
+      "border-fuchsia-300 bg-fuchsia-100/70 text-fuchsia-900 dark:border-fuchsia-700/60 dark:bg-fuchsia-950/40 dark:text-fuchsia-200",
+    chipOff:
+      "border-fuchsia-200/70 bg-fuchsia-50/70 text-fuchsia-800/80 hover:border-fuchsia-300 dark:border-fuchsia-800/40 dark:bg-fuchsia-950/20 dark:text-fuchsia-300/80",
+    titleOn: "text-fuchsia-900 dark:text-fuchsia-200",
+    descOn: "text-fuchsia-700 dark:text-fuchsia-400",
+    expandBorder: "border-fuchsia-200 dark:border-fuchsia-800/60",
   },
 };
 

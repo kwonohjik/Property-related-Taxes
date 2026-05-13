@@ -615,7 +615,7 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
 
         {/* ⑦ 주택→상가 용도변경 (fuchsia) — 사례 35 (사전법규재산 2022-684·881) */}
         <ToggleCard
-          tone="rose"
+          tone="fuchsia"
           variant="card"
           title="주택 → 상가 용도변경"
           description="주택 전체를 근린생활시설 등 비주택으로 용도변경한 경우 ON. 다주택 상태에서 용도변경 시 변경일 이전 보유기간이 장기보유특별공제에서 배제됩니다."
@@ -670,7 +670,7 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
           {/* 사례 35 후속-1: §99-164-10 환산주택가격 (환산취득가 모드만) */}
           {asset.useEstimatedAcquisition && (
             <ToggleCard
-              tone="rose"
+              tone="fuchsia"
               variant="card"
               title="주택으로 최초공시 후 상가로 용도변경 (환산취득가)"
               description="취득가액을 모르는 경우 §99-164-10 환산주택가격으로 취득당시 기준시가를 환산합니다."

@@ -75,6 +75,15 @@ const TONES: Record<ToggleCardTone, RadioCardClasses> = {
       "has-[:checked]:text-sky-900 has-[:checked]:font-semibold dark:has-[:checked]:text-sky-200",
     accent: "accent-sky-600",
   },
+  fuchsia: {
+    itemOff:
+      "border-fuchsia-200/70 bg-fuchsia-50/70 hover:border-fuchsia-300 dark:border-fuchsia-800/40 dark:bg-fuchsia-950/20",
+    itemOn:
+      "has-[:checked]:border-fuchsia-300 has-[:checked]:bg-fuchsia-100/70 has-[:checked]:ring-1 has-[:checked]:ring-fuchsia-200/50 dark:has-[:checked]:border-fuchsia-700/60 dark:has-[:checked]:bg-fuchsia-950/40 dark:has-[:checked]:ring-fuchsia-800/30",
+    titleOn:
+      "has-[:checked]:text-fuchsia-900 has-[:checked]:font-semibold dark:has-[:checked]:text-fuchsia-200",
+    accent: "accent-fuchsia-600",
+  },
 };
 
 export interface RadioCardOption<T extends string> {
