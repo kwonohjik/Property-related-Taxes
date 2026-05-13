@@ -191,6 +191,32 @@ export function buildGbAcquisitionFormula(
   // 산식은 안분 결과만 표기하고 자본적지출은 별도 메모 처리 (단순화).
   const displayValue = p.acquisitionPrice + p.capitalExpenditureForDisplay;
 
+  // ── 실가 모드 분기 (사례 35 등 — 환산취득가 미사용, 일괄 실가 안분) ──
+  // bundledActualAcquisitionPrice가 채워져 있으면 실가 모드.
+  // §166⑥ 양도시 기준시가 비율로 일괄 취득가액 안분 → 토지·건물별 취득가.
+  if (
+    gb.bundledActualAcquisitionPrice !== undefined &&
+    !gb.extensionStdTotal &&
+    !gb.acqExtensionStdTotal &&
+    !asset?.useEstimatedAcquisition
+  ) {
+    const bundledAcq = gb.bundledActualAcquisitionPrice;
+    const landStd = gb.landStdTotal;
+    const buildingStd = gb.buildingStdTotal;
+    if (landStd && buildingStd) {
+      if (p.propertyId === "land" || p.propertyId === "land_business" || p.propertyId === "land_nbl") {
+        // 토지 취득가 = 일괄 실가 × 양도시 토지기준시가 / (토지+건물 기준시가)
+        return buildAllocationFormula(bundledAcq, landStd, [landStd, buildingStd], p.acquisitionPrice);
+      }
+      if (p.propertyId === "building" || p.propertyId === "building1") {
+        const landAcq = bundledAcq - p.acquisitionPrice;
+        return buildResidualFormula(bundledAcq, [
+          { label: "토지", value: landAcq },
+        ], p.acquisitionPrice);
+      }
+    }
+  }
+
   // ── 사례 33 일괄+증축 (원건물 실가) ──────────────────────────
   if (isExtensionCase(gb) && isBundledActualCase(asset)) {
     const acqLandStd = gb.acqLandStdTotal;
@@ -280,6 +306,31 @@ export function buildGbExpenseFormula(
       return `필요경비 ${fmt(p.necessaryExpense)} − 자본적지출 ${fmt(p.capitalExpenditureForDisplay)}(취득가액 흡수) = 양도비 ${fmt(displayExp)}`;
     }
     return `자산별 양도비 합계 = ${fmt(displayExp)} (§97① 나목)`;
+  }
+
+  // ── 실가 모드 분기 (사례 35 등) — §166⑥ 양도가 비율로 일괄 실가 양도비 안분 ──
+  const isActualBundledMode =
+    gb.bundledActualAcquisitionPrice !== undefined &&
+    !gb.extensionStdTotal &&
+    !gb.acqExtensionStdTotal;
+  if (isActualBundledMode) {
+    const totalExp = gb.bundledActualExpenses ?? 0;
+    if (totalExp <= 0 && displayExp <= 0) {
+      return `자산별 양도비 = 0 (입력 없음)`;
+    }
+    if (p.propertyId === "land" || p.propertyId === "land_business" || p.propertyId === "land_nbl") {
+      const landStd = gb.landStdTotal;
+      const buildingStd = gb.buildingStdTotal;
+      if (landStd && buildingStd) {
+        return buildAllocationFormula(totalExp, landStd, [landStd, buildingStd], displayExp);
+      }
+    }
+    if (p.propertyId === "building" || p.propertyId === "building1") {
+      return buildResidualFormula(totalExp, [
+        { label: "토지", value: totalExp - displayExp },
+      ], displayExp);
+    }
+    return `자산별 양도비 = ${fmt(displayExp)}`;
   }
 
   if (p.propertyId === "land" || p.propertyId === "land_business" || p.propertyId === "land_nbl") {

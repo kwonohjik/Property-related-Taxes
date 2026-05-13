@@ -22,7 +22,7 @@ import { getLandFootprintMultiplier } from "@/lib/tax-engine/non-business-land/u
 import type { ZoneType } from "@/lib/tax-engine/non-business-land/types";
 import { TaxCalculationError, TaxErrorCode } from "@/lib/tax-engine/tax-errors";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
-import type { AssetCardForAggregate } from "@/lib/tax-engine/general-building-valuation";
+import type { AssetCardForAggregate, GeneralBuildingOutput } from "@/lib/tax-engine/general-building-valuation";
 import { buildBurdenedGiftBreakdown } from "@/lib/tax-engine/burdened-gift-apportionment";
 import type { BurdenedGiftInfo } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
 
@@ -567,6 +567,22 @@ export function calculateGeneralBuildingActualTransfer(
     false,
     "소득세법 시행령 §166⑥ · §104의3",
   );
+
+  // UI 자산별 산식 인라인 표시용 — 실가 모드에서도 gbDetail 노출 (사례 35 등).
+  // landStdTotal·buildingStdTotal로 §166⑥ 안분 산식 빌더 활성화.
+  const acqLandStdTotalActual = acquisitionLandPricePerSqm
+    ? Math.floor(acquisitionLandPricePerSqm * landArea)
+    : undefined;
+  aggregated.generalBuildingValuationDetail = {
+    assetCards: cards,
+    nonBusinessRatio,
+    landStdTotal: landStdAtTransfer,
+    buildingStdTotal: transferBuildingStdPrice,
+    acqLandStdTotal: acqLandStdTotalActual,
+    acqBuilding1StdTotal: acquisitionBuildingStdPrice ?? undefined,
+    bundledActualAcquisitionPrice: actualAcquisitionPrice ?? undefined,
+    bundledActualExpenses: actualExpenses ?? undefined,
+  } as GeneralBuildingOutput;
 
   return { apportionment, aggregated, transferBurdenedGiftBreakdown };
 }

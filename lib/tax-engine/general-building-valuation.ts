@@ -378,6 +378,10 @@ export type GeneralBuildingOutput = {
   acqBuilding1StdTotal?: number;
   /** 취득시 증축건물 기준시가 총액 (원) — 사례 33 환산 모드만 채움 */
   acqExtensionStdTotal?: number;
+  /** 일괄 실가 취득가액 (원) — 실가 모드에서만 채움. UI 안분 산식 분자. */
+  bundledActualAcquisitionPrice?: number;
+  /** 일괄 실가 양도비(자본적지출+양도비) (원) — 실가 모드에서만 채움. */
+  bundledActualExpenses?: number;
 };
 
 // ============================================================
