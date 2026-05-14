@@ -335,6 +335,12 @@ export default function TransferTaxCalculator({
     ? formData.assets.find((a) => a.rentalHousingException?.applyException)?.rentalHousingException?.scenario
     : undefined;
 
+  // 사례 46 — receiveOnly 모드 라벨 분기 (단건만 — 다중 자산 receive 모드는 후속 PR)
+  const isReceiveOnlySingle =
+    formData.assets.length === 1 &&
+    formData.assets[0]?.assetKind === "redevelopment_apt" &&
+    formData.assets[0]?.redevReceiveOnlyMode === "yes";
+
   const sidebarSummary: WizardSidebarSummaryItem[] = [
     ...(rentalExceptionApplied
       ? [{
@@ -343,7 +349,10 @@ export default function TransferTaxCalculator({
         }]
       : []),
     ...(transferSummary.totalSalePrice > 0
-      ? [{ label: "양도가액 합계", value: transferSummary.totalSalePrice }]
+      ? [{
+          label: isReceiveOnlySingle ? "청산금 수령액 (§166①2호 가목)" : "양도가액 합계",
+          value: transferSummary.totalSalePrice,
+        }]
       : []),
     // Phase 2 (2026-05-12): 부담부증여 사이드바 메타 — silent fallback 금지 원칙 ⑥
     ...(transferSummary.burdenedGift

@@ -27,6 +27,8 @@ import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { DateInput } from "@/components/ui/date-input";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { PrecedentArticleModal } from "@/components/ui/precedent-article-modal";
 import { useMemo } from "react";
 import { RedevelopmentValuationSection } from "./RedevelopmentValuationSection";
 import { RedevelopmentResidenceSplitSection } from "./RedevelopmentResidenceSplitSection";
@@ -309,6 +311,15 @@ function ReceiveOnlyToggleCard({
           <span className="font-semibold">0으로 처리</span>됩니다 (§97①2·3호 슬롯은 법문상 존재하나
           본 PR 미매핑 — 별도 산정 시 직접 신고 권장).
         </p>
+        <div className="flex flex-wrap gap-2 pt-1">
+          <LawArticleModal legalBasis="소득세법 시행령 §166 ① 2호" label="시행령 §166①2호" />
+          <PrecedentArticleModal
+            citation="기획재정부 재산-439 (2014.06.09)"
+            label="재산-439 (LTHD 기간)"
+            kind="ruling"
+            summary="장기보유특별공제 계산시 취득일~관리처분계획인가일까지가 아닌 취득일부터 양도일까지의 기간에 대하여 공제한다."
+          />
+        </div>
       </div>
     </ToggleCard>
   );
@@ -392,6 +403,15 @@ function ExemptionAtApprovalCard({
         서면2016-법령해석재산-2705 (2017.02.13) — 청산금 수령분 1세대1주택 비과세 판정 시
         보유주택수는 양도일 기준이나 보유·거주요건은 관리처분계획인가일 기준으로 충족 여부를 판단합니다.
       </p>
+      <div className="flex flex-wrap gap-2">
+        <LawArticleModal legalBasis="소득세법 시행령 §154 ①" label="시행령 §154①" />
+        <PrecedentArticleModal
+          citation="서면2016-법령해석재산-2705 (2017.02.13)"
+          label="서면2016-2705 (판정 시점)"
+          kind="ruling"
+          summary="청산금 수령분의 1세대1주택 비과세 판정 시 보유주택수 여부는 양도일 현재 기준으로 판정하고, 보유 및 거주요건은 종전주택을 조합에 제공한 시점(관리처분계획인가일 현재)에 충족해야 한다."
+        />
+      </div>
 
       <div className="rounded-md border border-violet-200 bg-white/70 p-2 text-[11px] text-violet-900">
         {labelText}
