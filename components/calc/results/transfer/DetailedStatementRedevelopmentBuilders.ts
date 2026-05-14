@@ -159,6 +159,24 @@ export function buildRedevGainFormula(
   const t = detail.apportionedTransfer;
   const a = detail.apportionedAcquisition;
   const hva = redev.highValueAllocation;
+
+  // 사례 47 — settlement 비과세 차감 3단계 분해
+  // 안분 전(gainBeforeAllocation) → 안분 후(gainAfterAllocation) → 비과세 차감 → 0
+  if (
+    redev.settlementExemptionApplied === true &&
+    branch === "settlement" &&
+    detail.gainAfterAllocation !== undefined
+  ) {
+    const before = detail.gainBeforeAllocation ?? detail.gainAfterAllocation;
+    const after = detail.gainAfterAllocation;
+    return (
+      `${fmt(t)} − ${fmt(a)} = ${fmt(before)} (안분 전) ` +
+      `→ × (양도가 − 12억) / 양도가 = ${fmt(after)} (안분 후) ` +
+      `− 1세대1주택 비과세 차감 ${fmt(after)} = 0 ` +
+      `(인가일 평가액 ≤ 12억 — 서면2016-법령해석재산-2705)`
+    );
+  }
+
   // 12억 안분 적용 시 detail.gain 은 과세대상(전체 × taxableRatio). 안내 라벨 추가.
   const suffix = hva
     ? ` (12억 안분 후 과세대상 — 전체 × ${(hva.taxableRatio * 100).toFixed(0)}%)`
@@ -176,6 +194,24 @@ export function buildRedevLthdFormula(
   redev: RedevelopmentResult,
 ): string {
   const detail = redev[branch];
+
+  // 사례 47 — settlement 비과세 차감 시 LTHD 안내
+  if (
+    redev.settlementExemptionApplied === true &&
+    branch === "settlement" &&
+    detail.lthdAfterAllocation !== undefined
+  ) {
+    const after = detail.lthdAfterAllocation;
+    const pct = (detail.lthdRate * 100).toFixed(0);
+    const years = Math.floor(detail.holdingMonths / 12);
+    const months = detail.holdingMonths % 12;
+    return (
+      `안분 후 ${pct}% × ${fmt(detail.gainAfterAllocation ?? 0)} = ${fmt(after)} ` +
+      `(보유 ${years}년 ${months}개월, 표1 강등 — 거주월수 귀속 분리) ` +
+      `− 1세대1주택 비과세 차감 ${fmt(after)} = 0`
+    );
+  }
+
   if (!detail.gain || detail.gain <= 0) {
     return "LTHD 대상 양도차익 부존재";
   }
