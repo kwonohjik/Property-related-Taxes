@@ -273,6 +273,39 @@ function computeAptReceive(args: BranchArgs): RedevelopmentSplitResult {
   const { preApprovalGain, oldAcquisitionPrice, transferPrice, redevelopment, valuationMeta } =
     args;
 
+  // ─ 사례 46 분기: 청산금 수령분 단독 신고 (receiveOnlyMode) ─
+  // 법령 근거: 시행령 §166① 본문 + 제1항 제2호 가목 (§166②·§166①2호 나목 미적용)
+  // 인가전·인가후 양도차익 = 0 강제, settlement 분 단독 산정.
+  // splitReceive 호출 시 preApprovalGain=0 강제 → preApprovalGainAdjusted 자동 0.
+  if (redevelopment.receiveOnlyMode === true) {
+    const receive = splitReceive(
+      0,
+      oldAcquisitionPrice,
+      redevelopment.rightsValue,
+      redevelopment.settlementAmount,
+    );
+    return {
+      preApproval: {
+        apportionedTransfer: 0,
+        apportionedAcquisition: 0,
+        gain: 0,
+      },
+      postApprovalExistingHouse: {
+        apportionedTransfer: 0,
+        apportionedAcquisition: 0,
+        gain: 0,
+      },
+      settlement: {
+        apportionedTransfer: redevelopment.settlementAmount,
+        apportionedAcquisition: receive.apportionedAcquisition,
+        gain: receive.settlementGain,
+      },
+      salePriceTotal: Math.max(0, redevelopment.rightsValue - redevelopment.settlementAmount),
+      valuationMeta,
+      estimatedLumpDeduction: 0, // receiveOnly는 인가전 분 0이므로 개산공제도 0
+    };
+  }
+
   const salePriceTotal = computeSalePriceTotal(
     redevelopment.rightsValue,
     redevelopment.settlementAmount,

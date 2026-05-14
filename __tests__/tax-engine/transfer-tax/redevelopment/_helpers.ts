@@ -144,25 +144,32 @@ export function case45RedevelopmentInfo(): RedevelopmentInfo {
  */
 export function case46Input(): RedevelopmentOrchestratorInput {
   return {
-    redevelopment: {
-      subject: "apt",
-      approvalLawBasis: "urban_renovation_art_74",
-      approvalDate: new Date("2017-07-05"),
-      rightsValue: 1_500_000_000,
-      settlementDirection: "receive",
-      settlementAmount: 500_000_000,
-      settlementSaleDate: new Date("2023-02-16"), // 소유권이전 고시일 다음날 (사례 46 양도일과 동일 가정)
-      preApprovalExpenses: 0,
-      postApprovalExpenses: 0,
-      originalAssetType: "housing",
-      acquisitionRounding: "floor",
-    },
+    redevelopment: case46RedevelopmentInfo(),
     acquisitionDate: new Date("2016-05-06"),
-    transferDate: new Date("2023-02-16"),
-    transferPrice: 500_000_000, // 청산금 수령액 (사례 46 양도가액 = 수령액)
+    transferDate: new Date("2023-02-17"), // 소유권이전 고시일 익일 (NTS 집행기준)
+    transferPrice: 500_000_000, // 청산금 수령액 = 양도가액 (receiveOnly 미러)
     actualAcquisitionPrice: 400_000_000,
     useEstimatedAcquisition: false,
-    isOneHouseSingle: false, // 보유 2년 미충족 → 비과세 미달, 일반 과세
+    isOneHouseSingle: false, // exemptionEligibleAtApproval=false 일관 (legacy fallback 안전)
     residencePeriodMonths: 0,
+  };
+}
+
+export function case46RedevelopmentInfo(): RedevelopmentInfo {
+  return {
+    subject: "apt",
+    approvalLawBasis: "urban_renovation_art_74",
+    approvalDate: new Date("2017-07-05"),
+    rightsValue: 1_500_000_000,
+    settlementDirection: "receive",
+    settlementAmount: 500_000_000,
+    settlementSaleDate: new Date("2023-02-17"), // 소유권이전 고시일 익일
+    preApprovalExpenses: 0,
+    postApprovalExpenses: 0,
+    originalAssetType: "housing",
+    acquisitionRounding: "floor",
+    // 사례 46 신규 — 청산금 수령분 단독 신고 + 인가일 기준 보유 2년 미충족
+    receiveOnlyMode: true,
+    exemptionEligibleAtApproval: false,
   };
 }
