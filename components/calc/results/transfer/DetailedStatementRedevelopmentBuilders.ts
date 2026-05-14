@@ -30,14 +30,18 @@ const BRANCH_LABEL_PAY: Record<RedevBranch, BranchLabelDef> = {
   settlement: { prefix: "③ 청산금 납부분", legal: "§166②1호 · §166⑤2호가목" },
 };
 
+// 사례 46 — receiveOnly 모드 전용 라벨 (§166①2호 가목 단독, 인가전·인가후 0 강제).
+const BRANCH_LABEL_RECEIVE_ONLY: Record<RedevBranch, BranchLabelDef> = {
+  preApproval: { prefix: "① 인가전 분 (미신고)", legal: "receiveOnly — 0 강제" },
+  postApprovalExistingHouse: { prefix: "② 인가후 기존건물분 (미신고)", legal: "receiveOnly — 0 강제" },
+  settlement: { prefix: "③ 청산금 수령분 (단독 신고)", legal: "§166①2호 가목 · 재산-439 · 서면2016-2705" },
+};
+
 
 function getBranchLabels(redev: RedevelopmentResult): Record<RedevBranch, BranchLabelDef> {
-  // settlementDirection 정보는 RedevelopmentResult에 직접 없으나
-  // settlement.apportionedTransfer < settlement.apportionedAcquisition (수령 — 양도가액이 청산금만)
-  // 단순 휴리스틱: salePriceTotal 검사로 판단 어렵기 때문에 기본은 PAY 라벨,
-  // 외부에서 receive 신호가 들어오면 RECEIVE 라벨 사용 (현재는 PAY 기본).
-  // TODO: subject·direction을 RedevelopmentResult에 직접 노출하면 정확 분기 가능.
-  void redev;
+  // receiveOnlyMode = true (사례 46) — 청산금 수령분 단독 신고 라벨
+  if (redev.receiveOnlyMode === true) return BRANCH_LABEL_RECEIVE_ONLY;
+  // TODO (후속 PR): receive + 신축APT 동시 양도 케이스 라벨 (C-5)
   return BRANCH_LABEL_PAY;
 }
 
@@ -53,6 +57,14 @@ export function buildRedevTransferFormula(
   redev: RedevelopmentResult,
   totalTransferPrice: number,
 ): string {
+  // 사례 46 receiveOnly — 인가전·인가후 0 강제, settlement만 청산금 수령액 자체
+  if (redev.receiveOnlyMode === true) {
+    if (branch === "settlement") {
+      return `청산금 수령액 = ${fmt(redev.settlement.apportionedTransfer)} (§166①2호 가목 — 양도가액 의제)`;
+    }
+    return "0 (receiveOnly — 신고 대상 아님)";
+  }
+
   const sale = redev.salePriceTotal ?? 0;
   if (branch === "preApproval") {
     // 인가전 분 의제 양도가액 = 권리가액 (§166④)
@@ -60,7 +72,6 @@ export function buildRedevTransferFormula(
   }
   if (branch === "postApprovalExistingHouse") {
     // 안분 = floor(transferPrice × rightsValue / salePriceTotal)
-    // rightsValue를 역산: postApproval.apportionedAcquisition = rightsValue (납부) 또는 salePriceTotal (수령)
     const rights = redev.preApproval.apportionedTransfer; // 권리가액
     return `floor(${fmt(totalTransferPrice)} × ${fmt(rights)} / ${fmt(sale)}) = ${fmt(redev.postApprovalExistingHouse.apportionedTransfer)} (분양가 안분 — 권리가액 비율)`;
   }
@@ -74,6 +85,20 @@ export function buildRedevAcquisitionFormula(
   branch: RedevBranch,
   redev: RedevelopmentResult,
 ): string {
+  // 사례 46 receiveOnly — settlement 안분 취득가액 = 종전취득가 × (청산금/권리가액)
+  if (redev.receiveOnlyMode === true) {
+    if (branch === "settlement") {
+      // salePriceTotal = rights − settlement → rights = salePriceTotal + settlement
+      const settle = redev.settlement.apportionedTransfer;
+      const rights = (redev.salePriceTotal ?? 0) + settle;
+      const apportioned = redev.settlement.apportionedAcquisition;
+      // 종전 취득가액 = apportioned × rights / settle (역산)
+      const oldAcq = settle > 0 ? Math.round((apportioned * rights) / settle) : 0;
+      return `안분 취득가액 = floor(${fmt(oldAcq)} × ${fmt(settle)} / ${fmt(rights)}) = ${fmt(apportioned)} (§166①2호 가목 — 종전 취득가 × 청산금 / 권리가액)`;
+    }
+    return "0 (receiveOnly — 신고 대상 아님)";
+  }
+
   if (branch === "preApproval") {
     const meta = redev.valuationMeta;
     if (meta && meta.method !== "actual" && meta.denominator > 0) {
@@ -93,6 +118,14 @@ export function buildRedevExpenseFormula(
   branch: RedevBranch,
   redev: RedevelopmentResult,
 ): string {
+  // 사례 46 receiveOnly — settlement 분 별도 필요경비 미산정 (§97①2·3호 슬롯 본 PR 미매핑)
+  if (redev.receiveOnlyMode === true) {
+    if (branch === "settlement") {
+      return "0 (청산금 수령분 별도 필요경비 미산정 — §97①2·3호 슬롯 미매핑)";
+    }
+    return "0 (receiveOnly — 신고 대상 아님)";
+  }
+
   if (branch === "preApproval") {
     const lump = redev.estimatedLumpDeduction ?? 0;
     if (lump > 0 && redev.valuationMeta) {

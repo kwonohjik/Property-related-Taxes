@@ -231,6 +231,7 @@ export function runRedevelopment(
       taxableIncome,
     },
     salePriceTotal: split.salePriceTotal,
+    receiveOnlyMode: redevelopment.receiveOnlyMode === true ? true : undefined,
     valuationMeta: split.valuationMeta,
     estimatedLumpDeduction: split.estimatedLumpDeduction,
   };
