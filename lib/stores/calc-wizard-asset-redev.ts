@@ -176,4 +176,23 @@ export interface RedevelopmentFormSlice {
   redevNewResidenceStartDate: string;
   /** 신축주택 퇴거일 (YYYY-MM-DD) — 일반적으로 양도일 */
   redevNewResidenceEndDate: string;
+
+  // ── 사례 46 — 청산금 수령분 단독 신고 ──
+
+  /**
+   * 청산금 수령분 단독 신고 모드 (사례 46).
+   * "yes" 시 인가전·인가후 양도차익 0 강제, settlement 단독 산정 (§166①2호 가목).
+   * - "":   기본값 (legacy 사례 44·45 동일 분기 진입)
+   * - "yes": 단독 신고 모드 진입
+   * - "no":  명시적 OFF (사용자 의도 — UI 상에서 미러)
+   */
+  redevReceiveOnlyMode: "" | "yes" | "no";
+
+  /**
+   * 관리처분계획인가일 기준 1세대1주택 비과세 보유·거주 요건 충족 여부 (override).
+   * 서면2016-법령해석재산-2705 (2017.02.13) — 청산금 수령분 비과세 판정 시점.
+   * UI 자동 산정: monthsBetween(acquisitionDate, redevApprovalDate) ≥ 24 → "yes".
+   * 빈문자열 = 자동 산정값 사용. "yes"/"no" = 사용자 override.
+   */
+  redevExemptionEligibleAtApproval: "" | "yes" | "no";
 }

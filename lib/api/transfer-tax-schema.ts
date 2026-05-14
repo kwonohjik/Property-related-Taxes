@@ -331,10 +331,17 @@ const propertyBaseShape = {
     priorResidenceEndDate: z.string().date().optional(),
     newResidenceStartDate: z.string().date().optional(),
     newResidenceEndDate: z.string().date().optional(),
+    // 사례 46 — 청산금 수령분 단독 신고
+    receiveOnlyMode: z.boolean().optional(),
+    exemptionEligibleAtApproval: z.boolean().optional(),
   })
   .refine(
     (v) => v.settlementDirection !== "receive" || v.settlementSaleDate != null,
     { message: "청산금 수령 시 settlementSaleDate(소유권이전 고시일 다음날) 필수" },
+  )
+  .refine(
+    (v) => v.receiveOnlyMode !== true || v.settlementDirection === "receive",
+    { message: "receiveOnlyMode=true 인 경우 settlementDirection은 'receive' 이어야 함 (사례 46 정합성)" },
   )
   .refine(
     (v) => v.subject !== "apt" || v.originalAssetType != null,

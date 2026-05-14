@@ -746,5 +746,18 @@ export function buildRedevelopmentPayload(asset: AssetForm) {
     priorResidenceEndDate: asset.redevPriorResidenceEndDate || undefined,
     newResidenceStartDate: asset.redevNewResidenceStartDate || undefined,
     newResidenceEndDate: asset.redevNewResidenceEndDate || undefined,
+    // 사례 46 — 청산금 수령분 단독 신고 + 비과세 판정 시점 override
+    receiveOnlyMode:
+      asset.redevReceiveOnlyMode === "yes"
+        ? true
+        : asset.redevReceiveOnlyMode === "no"
+          ? false
+          : undefined,
+    exemptionEligibleAtApproval:
+      asset.redevExemptionEligibleAtApproval === "yes"
+        ? true
+        : asset.redevExemptionEligibleAtApproval === "no"
+          ? false
+          : undefined,
   };
 }
