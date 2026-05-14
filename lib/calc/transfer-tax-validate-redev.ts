@@ -37,12 +37,9 @@ export function validateRedevelopmentAsset(asset: AssetForm, label: string): str
   if (originalAssetType !== "housing") {
     return `${label}: 출자 자산은 본 PR에서 "주택 출자"만 지원합니다. (토지 출자는 후속 PR)`;
   }
-  // 사례 46 — 청산금 수령은 receiveOnlyMode=yes 일 때만 허용 (단독 신고 모드).
-  // receive + receiveOnlyMode !== "yes" (= 신축APT 양도 + 수령 동시 신고)는 후속 PR.
-  if (settlementDirection === "receive" && asset.redevReceiveOnlyMode !== "yes") {
-    return `${label}: 청산금 수령 모드는 "청산금 수령분 단독 신고" 토글(receiveOnly)을 ON 으로 활성화해야 합니다. (신축APT 양도 + 청산금 수령 동시 신고는 후속 PR)`;
-  }
-  // 사례 46 — receiveOnly=yes + direction !== "receive" 논리 모순 차단 (Zod refine과 동일).
+  // 사례 47 — 신축APT 양도 + 청산금 수령 동시 신고 지원 (receiveOnlyMode !== "yes" 허용).
+  // 엔진 applySettlementExemption() 가 동시신고 분기를 처리. (project_case_47_redev_apt_with_settlement_receive)
+  // receiveOnly=yes + direction !== "receive" 논리 모순 차단 (Zod refine과 동일).
   if (asset.redevReceiveOnlyMode === "yes" && settlementDirection !== "receive") {
     return `${label}: 청산금 수령분 단독 신고 모드는 청산금 방향이 "수령"이어야 합니다.`;
   }
