@@ -378,6 +378,25 @@ export interface RedevelopmentBranchDetail {
    * 1세대1주택 + 12억 초과 안분 적용 케이스에서만 부착.
    */
   nontaxableGain?: number;
+
+  /**
+   * 12억 안분 직후 분기별 양도차익 (사례 47 비과세 차감 trace 보존용).
+   * applyHighValueAllocation 결과 직후 값을 보존하여 settlement 마스킹 후에도
+   * DetailedStatement·FilingFormTable·RedevelopmentDetailCard 에서 3단계 분해
+   * 시각화 (안분 전 → 안분 후 → 비과세 차감)에 사용.
+   *
+   * 사례 47 (settlementExemptionApplied=true)에서만 부착. 그 외 undefined.
+   * settlement 분기: 마스킹 후 gain=0이 되어도 gainAfterAllocation 보존.
+   * preApproval/postApprovalExistingHouse 분기: 안분 결과 그대로 보존 (UI 대칭).
+   */
+  gainAfterAllocation?: number;
+
+  /**
+   * 12억 안분 직후 분기별 LTHD (사례 47 비과세 차감 trace 보존용).
+   * gainAfterAllocation 과 쌍. settlement 분기는 표1 강등 후 LTHD 21M.
+   * 사례 47 비과세 차감 시각화에 사용.
+   */
+  lthdAfterAllocation?: number;
 }
 
 /**
@@ -447,6 +466,39 @@ export interface RedevelopmentResult {
     /** 비과세 기준 (= 1,200,000,000 상수) */
     nontaxableThreshold: number;
   };
+
+  /**
+   * 사례 47 — 청산금 수령 동시신고 settlement 분기 비과세 차감 적용 여부.
+   *
+   * 트리거 (AND): settlementDirection === "receive" AND exemptionEligibleAtApproval === true
+   *   AND rightsValue ≤ 12억 AND receiveOnlyMode !== true AND isOneHouseSingle === true.
+   *
+   * true 시:
+   *   - settlement.gain → 0 (마스킹, totalGain 재계산용)
+   *   - settlement.lthd → 0 (마스킹, totalLthd 재계산용)
+   *   - settlement.gainAfterAllocation = 마스킹 전 안분 후 양도차익 (trace 보존)
+   *   - settlement.lthdAfterAllocation = 마스킹 전 안분 후 LTHD (trace 보존)
+   *   - exemptedGain = settlement.gainAfterAllocation (별도 메타)
+   *   - exemptedLthd = settlement.lthdAfterAllocation (별도 메타)
+   *
+   * 사례 46(receiveOnlyMode=true)·44/45(pay 모드)에서는 undefined.
+   * 근거: 서면2016-법령해석재산-2705 + PDF 사례수정 2 (2)-1번 주석.
+   */
+  settlementExemptionApplied?: boolean;
+
+  /**
+   * 사례 47 비과세로 차감된 양도차익 (= settlement.gainAfterAllocation).
+   * CalculationStep·DetailedStatement 3단계 분해 시각화·FilingFormTable 비과세 행에 사용.
+   * settlementExemptionApplied === true 시에만 부착.
+   */
+  exemptedGain?: number;
+
+  /**
+   * 사례 47 비과세로 차감된 LTHD (= settlement.lthdAfterAllocation).
+   * exemptedGain 와 쌍. settlement 분기는 표1 강등 후 LTHD 21M(사례수정 2 기준).
+   * settlementExemptionApplied === true 시에만 부착.
+   */
+  exemptedLthd?: number;
 
   /**
    * LTHD 분기별 거주월수 귀속 (디버그·결과카드 표시용).

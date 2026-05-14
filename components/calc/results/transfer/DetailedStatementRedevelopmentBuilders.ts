@@ -37,11 +37,23 @@ const BRANCH_LABEL_RECEIVE_ONLY: Record<RedevBranch, BranchLabelDef> = {
   settlement: { prefix: "③ 청산금 수령분 (단독 신고)", legal: "§166①2호 가목 · 재산-439 · 서면2016-2705" },
 };
 
+// 사례 47 — settlement 비과세 차감 모드 라벨 (신축APT 양도 + 청산금 수령 동시신고).
+// 인가전·인가후는 사례 44/45 동일 산식, settlement만 비과세 차감으로 0 마스킹.
+const BRANCH_LABEL_SETTLEMENT_EXEMPTED: Record<RedevBranch, BranchLabelDef> = {
+  preApproval: { prefix: "① 인가전 분", legal: "§166②2호 + §166①2호 가목 (수령 안분)" },
+  postApprovalExistingHouse: { prefix: "② 인가후 기존건물분", legal: "§166②2호 · §166⑤2호나목" },
+  settlement: {
+    prefix: "③ 청산금 수령분 (1세대1주택 비과세)",
+    legal: "PDF 사례수정 2 (2)-1번 · 서면2016-법령해석재산-2705",
+  },
+};
+
 
 function getBranchLabels(redev: RedevelopmentResult): Record<RedevBranch, BranchLabelDef> {
-  // receiveOnlyMode = true (사례 46) — 청산금 수령분 단독 신고 라벨
+  // 우선순위 1: receiveOnlyMode (사례 46)
   if (redev.receiveOnlyMode === true) return BRANCH_LABEL_RECEIVE_ONLY;
-  // TODO (후속 PR): receive + 신축APT 동시 양도 케이스 라벨 (C-5)
+  // 우선순위 2: settlementExemptionApplied (사례 47)
+  if (redev.settlementExemptionApplied === true) return BRANCH_LABEL_SETTLEMENT_EXEMPTED;
   return BRANCH_LABEL_PAY;
 }
 

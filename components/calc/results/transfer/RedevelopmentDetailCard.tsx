@@ -173,15 +173,41 @@ export function RedevelopmentDetailCard({ detail }: Props) {
 
         {/* 청산금 분 */}
         <div className="rounded-md bg-white border border-violet-200 p-3 space-y-1.5">
-          <p className="text-[11px] font-semibold text-violet-700">③ 청산금 분</p>
+          <p className="text-[11px] font-semibold text-violet-700">
+            ③ 청산금 분{detail.settlementExemptionApplied ? " (1세대1주택 비과세)" : ""}
+          </p>
           <p className="text-[10px] text-violet-600">§166②1호 안분 (청산금/분양가) · §166⑤2호가목 (인가일 기산)</p>
           <Row label="안분 양도가액" value={settlement.apportionedTransfer} />
           <Row label="안분 취득가액(=청산금)" value={settlement.apportionedAcquisition} />
-          <Row label="양도차익" value={settlement.gain} highlight />
-          <p className="pt-1 border-t border-violet-100 text-[10px] text-violet-600">
-            장기보유공제 ({Math.floor(settlement.holdingMonths / 12)}년 {settlement.holdingMonths % 12}개월, {fmtPct(settlement.lthdRate)})
-          </p>
-          <Row label="LTHD" value={settlement.lthd} />
+          {detail.settlementExemptionApplied ? (
+            // 사례 47 — 옵션 B 4행 분해 시각화 (안분 후 → LTHD → 비과세 차감 → 결과 0)
+            <>
+              <Row label="양도차익 (안분 후)" value={settlement.gainAfterAllocation ?? 0} />
+              <p className="pt-1 border-t border-violet-100 text-[10px] text-violet-600">
+                장기보유공제 ({Math.floor(settlement.holdingMonths / 12)}년 {settlement.holdingMonths % 12}개월, {fmtPct(settlement.lthdRate)})
+              </p>
+              <Row label="LTHD" value={settlement.lthdAfterAllocation ?? 0} />
+              <div className="pt-1 mt-1 border-t border-rose-200 rounded bg-rose-50/60 px-1.5 py-1">
+                <Row
+                  label="1세대1주택 비과세 차감"
+                  value={-((settlement.gainAfterAllocation ?? 0) - (settlement.lthdAfterAllocation ?? 0))}
+                />
+                <p className="text-[10px] text-rose-700 mt-0.5">
+                  PDF 사례수정 2 (2)-1번 · 서면2016-법령해석재산-2705 — 양도소득금액 합산 제외
+                </p>
+              </div>
+              <Row label="과세 양도소득금액" value={0} highlight />
+            </>
+          ) : (
+            // 사례 44/45/46 기존 패턴
+            <>
+              <Row label="양도차익" value={settlement.gain} highlight />
+              <p className="pt-1 border-t border-violet-100 text-[10px] text-violet-600">
+                장기보유공제 ({Math.floor(settlement.holdingMonths / 12)}년 {settlement.holdingMonths % 12}개월, {fmtPct(settlement.lthdRate)})
+              </p>
+              <Row label="LTHD" value={settlement.lthd} />
+            </>
+          )}
         </div>
       </div>
 

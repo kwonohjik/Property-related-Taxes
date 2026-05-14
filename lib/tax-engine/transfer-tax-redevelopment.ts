@@ -78,17 +78,38 @@ export function calculateRedevelopmentTax(
   // 1세대1주택 + 양도가액 > 12억 시: 분기별 양도차익·LTHD 를 taxableRatio 비례 축소.
   // 그 외: redevRaw.total 그대로 사용 (사례 44 회귀 0).
   const isHighValue = isOneHouseSingle && input.transferPrice > HIGH_VALUE_THRESHOLD;
-  const redev: RedevelopmentResult = isHighValue
+  const allocated: RedevelopmentResult = isHighValue
     ? applyHighValueAllocation(redevRaw, input.transferPrice, input.redevelopment!)
     : redevRaw;
 
-  if (isHighValue && redev.highValueAllocation) {
-    const ha = redev.highValueAllocation;
+  if (isHighValue && allocated.highValueAllocation) {
+    const ha = allocated.highValueAllocation;
     steps.push({
       label: "1세대1주택 12억 초과 과세대상 양도차익 안분",
       formula: `전체 양도차익 ${redevRaw.total.gain.toLocaleString()} × (양도가액 ${input.transferPrice.toLocaleString()} - 12억) / 양도가액 = ${ha.taxableGain.toLocaleString()} (비과세분 ${ha.nontaxableGain.toLocaleString()})`,
       amount: ha.taxableGain,
       legalBasis: REDEVELOPMENT.REDEV_HIGH_VALUE_ALLOCATION,
+    });
+  }
+
+  // ─ Step A.6: 사례 47 settlement 분기 1세대1주택 비과세 차감 ─
+  // 트리거: settlementDirection="receive" + exemptionEligibleAtApproval=true
+  //         + rightsValue ≤ 12억 + receiveOnlyMode !== true + isOneHouseSingle=true
+  // 근거: PDF 사례수정 2 (2)-1번 주석 + 서면2016-법령해석재산-2705
+  const redev: RedevelopmentResult = applySettlementExemption(
+    allocated,
+    input.redevelopment!,
+    isOneHouseSingle,
+  );
+
+  if (redev.settlementExemptionApplied) {
+    const exemptedGain = redev.exemptedGain ?? 0;
+    const exemptedLthd = redev.exemptedLthd ?? 0;
+    steps.push({
+      label: "청산금 수령분 1세대1주택 비과세 차감",
+      formula: `안분 후 양도차익 ${exemptedGain.toLocaleString()} + LTHD ${exemptedLthd.toLocaleString()} 합산 제외 (인가일 평가액 ${input.redevelopment!.rightsValue.toLocaleString()} ≤ 12억 + 1세대1주택 비과세 요건 충족 — 서면2016-법령해석재산-2705)`,
+      amount: -(exemptedGain - exemptedLthd),
+      legalBasis: REDEVELOPMENT.GAIN_BASE,
     });
   }
 
@@ -307,6 +328,95 @@ function applyHighValueAllocation(
           }
         : {}),
     },
+  };
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// 내부 헬퍼 — Step A.6 사례 47 settlement 비과세 차감
+// ──────────────────────────────────────────────────────────────────────────────
+
+/**
+ * 사례 47 (신축APT 양도 + 청산금 수령 동시신고) settlement 분기 비과세 차감.
+ *
+ * PDF 사례수정 2 (2)-1번 주석:
+ *   "청산금 수령액은 기존부동산이 비과세 요건을 갖추었고 관리처분계획인가일 현재
+ *    기존부동산 평가액이 12억원 이하이므로 고가주택에 해당하지 않아 비과세된다."
+ *
+ * 근거: 서면2016-법령해석재산-2705 (비과세 판정 시점 = 관리처분계획인가일)
+ *
+ * 트리거 (AND):
+ *   1. settlementDirection === "receive"
+ *   2. exemptionEligibleAtApproval === true (인가일 기준 1세대1주택 비과세 요건 충족)
+ *   3. rightsValue ≤ HIGH_VALUE_THRESHOLD (1,200,000,000)
+ *   4. receiveOnlyMode !== true (사례 46 단독신고는 별도 분기 — 본 함수 미적용)
+ *   5. isOneHouseSingle === true (LTHD 표2 진입 가드)
+ *
+ * 동작:
+ *   - 3분기 gainAfterAllocation·lthdAfterAllocation 모두 보존 (안분 후 trace)
+ *   - settlement.gain → 0 마스킹 (totalGain 재계산용)
+ *   - settlement.lthd → 0 마스킹 (totalLthd 재계산용)
+ *   - exemptedGain/exemptedLthd 메타 분리 저장
+ *   - settlementExemptionApplied = true 플래그
+ *
+ * 미적용 케이스에서는 redev 입력 그대로 반환 (회귀 안전).
+ */
+function applySettlementExemption(
+  redev: RedevelopmentResult,
+  redevInfo: NonNullable<TransferTaxInput["redevelopment"]>,
+  isOneHouseSingle: boolean,
+): RedevelopmentResult {
+  // 트리거 조건 검사
+  if (
+    redevInfo.settlementDirection !== "receive" ||
+    redevInfo.exemptionEligibleAtApproval !== true ||
+    redevInfo.rightsValue > HIGH_VALUE_THRESHOLD ||
+    redevInfo.receiveOnlyMode === true ||
+    !isOneHouseSingle
+  ) {
+    return redev;
+  }
+
+  const exemptedGain = redev.settlement.gain;
+  const exemptedLthd = redev.settlement.lthd;
+
+  // settlement 마스킹 + 3분기 안분 후 값 trace 보존
+  const newPreApproval = {
+    ...redev.preApproval,
+    gainAfterAllocation: redev.preApproval.gain,
+    lthdAfterAllocation: redev.preApproval.lthd,
+  };
+  const newPostApprovalExistingHouse = {
+    ...redev.postApprovalExistingHouse,
+    gainAfterAllocation: redev.postApprovalExistingHouse.gain,
+    lthdAfterAllocation: redev.postApprovalExistingHouse.lthd,
+  };
+  const newSettlement = {
+    ...redev.settlement,
+    gainAfterAllocation: redev.settlement.gain,
+    lthdAfterAllocation: redev.settlement.lthd,
+    gain: 0,
+    lthd: 0,
+  };
+
+  // total 재계산 (settlement 마스킹 반영)
+  const totalGain =
+    newPreApproval.gain + newPostApprovalExistingHouse.gain + newSettlement.gain;
+  const totalLthd =
+    newPreApproval.lthd + newPostApprovalExistingHouse.lthd + newSettlement.lthd;
+
+  return {
+    ...redev,
+    preApproval: newPreApproval,
+    postApprovalExistingHouse: newPostApprovalExistingHouse,
+    settlement: newSettlement,
+    total: {
+      gain: totalGain,
+      lthd: totalLthd,
+      taxableIncome: totalGain - totalLthd,
+    },
+    settlementExemptionApplied: true,
+    exemptedGain,
+    exemptedLthd,
   };
 }
 

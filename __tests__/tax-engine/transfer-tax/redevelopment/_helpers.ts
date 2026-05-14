@@ -173,3 +173,47 @@ export function case46RedevelopmentInfo(): RedevelopmentInfo {
     exemptionEligibleAtApproval: false,
   };
 }
+
+// ──────────────────────────────────────────────────────────────────────────────
+// 사례 47 — 신축APT 양도 + 청산금 수령 동시 신고 (PDF 사례수정 2)
+// ──────────────────────────────────────────────────────────────────────────────
+
+/**
+ * 사례 47: 2001-01-01 구주택 취득 → 2014-02-01 관리처분 인가 → 2022-03-01 신축APT 양도.
+ * 평가액 8억, 청산금 수령 2억, 신축APT 양도가 20억, 1세대1주택 + 거주=보유, 21년 보유.
+ *
+ * PDF 사례수정 2 anchor (이미지 24~25):
+ *   인가전 양도차익 = (8억 − 1억) × (8억 − 2억)/8억 = 525,000,000
+ *   인가후 양도차익 = 20억 − (8억 − 2억) = 1,400,000,000
+ *   청산금 분 양도차익 = 200M − (100M × 2/8) = 175,000,000 (안분 취득가 25M)
+ *   12억 초과분 (안분 후) = (525M + 1,400M) × 8/20 = 770,000,000 (settlement는 비과세 제외)
+ *   LTHD = 770M × 80% (보유 40% + 거주 40%) = 616,000,000
+ *   양도소득금액 = 154,000,000
+ *   과세표준 = 151,500,000 (− 기본공제 2.5M)
+ *   산출세액 = 38,170,000 (38% − 누진공제 19.4M)
+ *
+ * 비과세 차감 조건 (§3.4):
+ *   - settlementDirection = "receive"
+ *   - exemptionEligibleAtApproval = true (1세대1주택 비과세 요건 충족)
+ *   - rightsValue ≤ 12억 (8억 ≤ 12억)
+ *
+ * ★ Pre-Do anchor: 본 테스트는 비과세 차감 로직 구현 전에는 산출세액이 PDF 38.17M과 불일치 (현행 ≈ 44.4M).
+ */
+export function case47RedevelopmentInfo(): RedevelopmentInfo {
+  return {
+    subject: "apt",
+    approvalLawBasis: "urban_renovation_art_74",
+    approvalDate: new Date("2014-02-01"),
+    rightsValue: 800_000_000,
+    settlementDirection: "receive",
+    settlementAmount: 200_000_000,
+    settlementSaleDate: new Date("2022-03-01"), // 소유권이전 고시일 익일 = 양도일
+    preApprovalExpenses: 0,
+    postApprovalExpenses: 0,
+    originalAssetType: "housing",
+    acquisitionRounding: "floor",
+    // 사례 47 — 신축APT 양도 + 청산금 수령 동시 신고 (사례 46과 달리 receiveOnlyMode=false)
+    receiveOnlyMode: false,
+    exemptionEligibleAtApproval: true, // 1세대1주택 비과세 요건 충족 (보유 21년 + 거주 21년)
+  };
+}
