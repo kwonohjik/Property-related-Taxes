@@ -37,6 +37,18 @@ const BRANCH_LABEL_RECEIVE_ONLY: Record<RedevBranch, BranchLabelDef> = {
   settlement: { prefix: "③ 청산금 수령분 (단독 신고)", legal: "§166①2호 가목 · 재산-439 · 서면2016-2705" },
 };
 
+// 사례 48 — 승계조합원 신축APT 양도 (안분 우회 단순 차감).
+// 관리처분 후 입주권 승계 취득 → 신축APT 양도 시 §166 안분 산식 미적용.
+// 인가전·청산금은 0 fill, 인가후만 primary.
+const BRANCH_LABEL_SUCCESSOR_MEMBER: Record<RedevBranch, BranchLabelDef> = {
+  preApproval: { prefix: "① 인가전 분 (승계조합원 — 미적용)", legal: "§166 안분 우회" },
+  postApprovalExistingHouse: {
+    prefix: "② 승계조합원 신축APT (단순 차감)",
+    legal: "사전-2019-법령해석재산-0649 · 시행령 §162①4호",
+  },
+  settlement: { prefix: "③ 청산금 분 (승계조합원 — 미신고)", legal: "본 PR 미지원" },
+};
+
 // 사례 47 — settlement 비과세 차감 모드 라벨 (신축APT 양도 + 청산금 수령 동시신고).
 // 인가전·인가후는 사례 44/45 동일 산식, settlement만 비과세 차감으로 0 마스킹.
 const BRANCH_LABEL_SETTLEMENT_EXEMPTED: Record<RedevBranch, BranchLabelDef> = {
@@ -50,6 +62,8 @@ const BRANCH_LABEL_SETTLEMENT_EXEMPTED: Record<RedevBranch, BranchLabelDef> = {
 
 
 function getBranchLabels(redev: RedevelopmentResult): Record<RedevBranch, BranchLabelDef> {
+  // 우선순위 0: successorMemberApplied (사례 48 — 가장 먼저 평가)
+  if (redev.successorMemberApplied === true) return BRANCH_LABEL_SUCCESSOR_MEMBER;
   // 우선순위 1: receiveOnlyMode (사례 46)
   if (redev.receiveOnlyMode === true) return BRANCH_LABEL_RECEIVE_ONLY;
   // 우선순위 2: settlementExemptionApplied (사례 47)
@@ -113,7 +127,14 @@ export function buildRedevAcquisitionFormula(
 
   if (branch === "preApproval") {
     const meta = redev.valuationMeta;
-    if (meta && meta.method !== "actual" && meta.denominator > 0) {
+    if (
+      meta &&
+      meta.method !== "actual" &&
+      meta.method !== "successor_member_decree_162_1_4" &&
+      meta.numerator !== undefined &&
+      meta.denominator !== undefined &&
+      meta.denominator > 0
+    ) {
       const rights = redev.preApproval.apportionedTransfer;
       return `환산취득가 = floor(${fmt(rights)} × ${fmt(meta.numerator)} / ${fmt(meta.denominator)}) = ${fmt(redev.preApproval.apportionedAcquisition)} (§166③ — 권리가액 × P_A / D)`;
     }
@@ -140,7 +161,7 @@ export function buildRedevExpenseFormula(
 
   if (branch === "preApproval") {
     const lump = redev.estimatedLumpDeduction ?? 0;
-    if (lump > 0 && redev.valuationMeta) {
+    if (lump > 0 && redev.valuationMeta && redev.valuationMeta.numerator !== undefined) {
       const P_A = redev.valuationMeta.numerator;
       return `개산공제 = floor(${fmt(P_A)} × 3%) = ${fmt(lump)} (§163⑥ — 취득당시 라목값 × 3%)`;
     }

@@ -321,9 +321,12 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
       hasPre1990 || isEstimated || isAppraisal || parcelModeActive
         ? 0
         : isRedevelopment
-          ? // 재개발 + 실가 모드 — §166 섹션 내부의 redevActualAcquisitionPrice 사용 (사례 45/46).
-            // 상단 일반 fixedAcquisitionPrice는 C안으로 숨겨졌으므로 별도 필드에서 도출.
-            parseAmount(primary.redevActualAcquisitionPrice)
+          ? // 재개발 + 실가 모드 — 두 경로 분기:
+            //  · 사례 48 승계조합원: 자산 카드 fixedAcquisitionPrice 사용 (상속·증여·매매 통합 흐름)
+            //  · 그 외(사례 45/46 원조합원): §166 섹션 내부의 redevActualAcquisitionPrice 사용
+            primary.redevIsSuccessorMember === "yes"
+              ? parseAmount(primary.fixedAcquisitionPrice)
+              : parseAmount(primary.redevActualAcquisitionPrice)
           : primaryFractional
             ? applyRatio(parseAmount(primary.fixedAcquisitionPrice), primaryRatio)
             : parseAmount(primary.fixedAcquisitionPrice),

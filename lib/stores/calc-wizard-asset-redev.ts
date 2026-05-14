@@ -195,4 +195,28 @@ export interface RedevelopmentFormSlice {
    * 빈문자열 = 자동 산정값 사용. "yes"/"no" = 사용자 override.
    */
   redevExemptionEligibleAtApproval: "" | "yes" | "no";
+
+  // ── 사례 48 — 승계조합원 신축APT 양도 ──
+
+  /**
+   * 사례 48 — 승계조합원 모드.
+   * 관리처분 인가일 이후 입주권을 상속·증여·매매로 승계 취득한 경우 "yes".
+   *
+   * "yes" 시:
+   *  - §166 인가전·인가후 안분 우회 (preApprovalGain=0 강제)
+   *  - 양도차익 = transferPrice − rightsValue − postApprovalExpenses (단순 차감)
+   *  - LTHD/세율 보유기간 기산일 = redevCompletionDate (사전-2019-법령해석재산-0649)
+   *  - settlement·12억 안분·환산 모드는 본 PR 미지원 (validate 차단)
+   *
+   * "":   기본값 (원조합원 분기 — 사례 44~47 동일 진입)
+   * "no": 명시적 OFF (사용자 의도)
+   */
+  redevIsSuccessorMember: "" | "yes" | "no";
+
+  /**
+   * 사례 48 — 신축APT 사용검사필증 교부일(준공일).
+   * redevIsSuccessorMember === "yes" 시 LTHD/세율 보유기간 기산일.
+   * 시행령 §162①4호 "건축법 §22②에 따른 사용승인서 교부일".
+   */
+  redevCompletionDate: string;
 }

@@ -27,34 +27,75 @@ const fmt = (n: number) => n.toLocaleString("ko-KR");
 const fmtPct = (r: number) => `${(r * 100).toFixed(1)}%`;
 
 export function RedevelopmentDetailCard({ detail }: Props) {
-  const { preApproval, postApprovalExistingHouse, settlement, total, salePriceTotal, valuationMeta, estimatedLumpDeduction, highValueAllocation, lthdResidenceAttribution } = detail;
+  const { preApproval, postApprovalExistingHouse, settlement, total, salePriceTotal, valuationMeta, estimatedLumpDeduction, highValueAllocation, lthdResidenceAttribution, successorMemberApplied, successorMemberDetail } = detail;
 
   return (
     <div className="rounded-lg border border-violet-200 bg-violet-50/30 p-4 space-y-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="rounded-full bg-violet-200 px-2 py-0.5 text-[10px] font-bold text-violet-800">시행령 §166②1호</span>
-          <h3 className="text-sm font-semibold text-violet-900">재개발/재건축 양도차익 3분할</h3>
+          {successorMemberApplied ? (
+            <>
+              <span className="rounded-full bg-rose-200 px-2 py-0.5 text-[10px] font-bold text-rose-800">승계조합원</span>
+              <h3 className="text-sm font-semibold text-rose-900">재개발 신축APT 양도 (단순 차감 · 준공일 기산)</h3>
+            </>
+          ) : (
+            <>
+              <span className="rounded-full bg-violet-200 px-2 py-0.5 text-[10px] font-bold text-violet-800">시행령 §166②1호</span>
+              <h3 className="text-sm font-semibold text-violet-900">재개발/재건축 양도차익 3분할</h3>
+            </>
+          )}
         </div>
-        {salePriceTotal != null && (
+        {!successorMemberApplied && salePriceTotal != null && (
           <div className="text-xs text-violet-700">
             분양가 <span className="font-mono font-semibold">{fmt(salePriceTotal)}</span>
           </div>
         )}
       </div>
 
-      {/* 환산취득가 메타 (§164⑦ 단서 배지) */}
-      {valuationMeta && valuationMeta.method !== "actual" && (
+      {/* 사례 48 — 승계조합원 단순 차감 산식 (§166 안분 우회) */}
+      {successorMemberApplied && successorMemberDetail && (
+        <div className="rounded-md bg-rose-50 border border-rose-200 p-3 text-[12px] text-rose-900 space-y-2 leading-relaxed">
+          <div className="space-y-0.5">
+            <div className="font-semibold">보유기간 기산일 = 준공일 (사용검사필증 교부일)</div>
+            <div>
+              · 준공일: <span className="font-mono font-semibold">{new Date(successorMemberDetail.completionDate as unknown as string | Date).toISOString().slice(0, 10)}</span>
+            </div>
+            <div>
+              · 보유일수(개략): <span className="font-mono font-semibold">{successorMemberDetail.holdingDaysFromCompletion}일</span>
+            </div>
+            <div>· 적용 세율: <span className="font-semibold">{successorMemberDetail.rateLabel}</span></div>
+          </div>
+          <div className="space-y-0.5 pt-1 border-t border-rose-200">
+            <div className="font-semibold">단순 차감 산식 (§166 안분 우회)</div>
+            <div>
+              양도차익 = 양도가액 <span className="font-mono">{fmt(postApprovalExistingHouse.apportionedTransfer)}</span>{" "}
+              − 권리가액(상속·증여 평가액) <span className="font-mono">{fmt(postApprovalExistingHouse.apportionedAcquisition)}</span>{" "}
+              − 인가후 필요경비 <span className="font-mono">{fmt(postApprovalExistingHouse.expenses ?? 0)}</span>{" "}
+              = <span className="font-mono font-bold">{fmt(postApprovalExistingHouse.gain)}</span>
+            </div>
+          </div>
+          <div className="pt-1 text-[11px] text-rose-700">
+            ※ 근거: 사전-2019-법령해석재산-0649 (2020.02.11.) + 소득세법 시행령 §162①4호 (자가건설 의제 — 사용승인서 교부일)
+            <br />
+            ※ 단기세율 분기: 소득세법 §104①3호 (주택 1년 미만 70%) — 입주권 양도가 아닌 신축APT(주택) 양도이므로 주택 단기세율 본문 적용.
+          </div>
+        </div>
+      )}
+
+      {/* 환산취득가 메타 (§164⑦ 단서 배지) — 승계조합원 분기는 환산 미적용이라 자동 숨김 */}
+      {valuationMeta && valuationMeta.method !== "actual" && valuationMeta.method !== "successor_member_decree_162_1_4" && (
         <div className="rounded-md bg-rose-50 border border-rose-200 p-2 text-[11px] text-rose-800">
           <span className="font-semibold">환산취득가 적용</span> · {valuationMeta.rationale}
         </div>
       )}
 
-      {/* §166 의제구조 안내 (검산 식 모순 해명) */}
-      <div className="rounded-md bg-violet-100/60 border border-violet-200 p-2 text-[11px] text-violet-900 leading-relaxed">
-        <span className="font-semibold">시행령 §166②1호 의제구조</span> — 분기별 양도가·취득가는 의제 안분값으로,
-        합계 행의 단순 산식(양도가 − 취득가 − 필요경비) 검산은 본문 산식이 아닙니다. 양도차익은 인가전/인가후/청산금 3분기 의제 산식의 합으로 산출됩니다.
-      </div>
+      {/* §166 의제구조 안내 (검산 식 모순 해명) — 승계조합원 분기에서는 안분 미적용으로 안내 숨김 */}
+      {!successorMemberApplied && (
+        <div className="rounded-md bg-violet-100/60 border border-violet-200 p-2 text-[11px] text-violet-900 leading-relaxed">
+          <span className="font-semibold">시행령 §166②1호 의제구조</span> — 분기별 양도가·취득가는 의제 안분값으로,
+          합계 행의 단순 산식(양도가 − 취득가 − 필요경비) 검산은 본문 산식이 아닙니다. 양도차익은 인가전/인가후/청산금 3분기 의제 산식의 합으로 산출됩니다.
+        </div>
+      )}
 
       {/* 1세대1주택 + 12억 안분 박스 (§95③·시행령 §160 — 사례 45) */}
       {highValueAllocation ? (

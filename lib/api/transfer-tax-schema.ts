@@ -334,6 +334,10 @@ const propertyBaseShape = {
     // 사례 46 — 청산금 수령분 단독 신고
     receiveOnlyMode: z.boolean().optional(),
     exemptionEligibleAtApproval: z.boolean().optional(),
+    // 사례 48 — 승계조합원 신축APT 양도 (관리처분 후 입주권 승계 → 신축APT 양도).
+    // 사전-2019-법령해석재산-0649 + 시행령 §162①4호.
+    isSuccessorMember: z.boolean().optional(),
+    completionDate: z.string().date().optional(),
   })
   .refine(
     (v) => v.settlementDirection !== "receive" || v.settlementSaleDate != null,

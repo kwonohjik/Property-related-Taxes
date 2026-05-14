@@ -23,6 +23,7 @@ import type { MultiHouseSurchargeResult } from "./multi-house-surcharge";
 import type { ParsedRates } from "./transfer-tax-helpers";
 import { calcBasicDeduction } from "./transfer-tax-helpers";
 import { resolveCompanionLandRate } from "./appurtenant-land-rate";
+import { getEffectiveAcquisitionDate } from "./transfer-tax-finalize";
 // re-export — 기존 import 경로 하위 호환 유지
 export {
   resolveCompanionLandRate,
@@ -265,8 +266,15 @@ export function calcTax(
     ?? (input.householdHousingCount >= 3 ? "multi_house_3plus" : "multi_house_2");
 
   // T-2.5: 단기보유 특례세율 (소득세법 §104①2~3호, 7~8호)
-  const rateBasisAcquisitionDate =
-    input.acquisitionCause === "inheritance" && input.decedentAcquisitionDate
+  // 사례 48 — 승계조합원 신축APT 양도 시 기산일 = 준공일 (사전-2019-법령해석재산-0649).
+  const successorRateBasis = getEffectiveAcquisitionDate(input);
+  const isSuccessorRedev =
+    input.propertyType === "redevelopment_apt" &&
+    input.redevelopment?.isSuccessorMember === true &&
+    input.redevelopment?.completionDate !== undefined;
+  const rateBasisAcquisitionDate = isSuccessorRedev
+    ? successorRateBasis
+    : input.acquisitionCause === "inheritance" && input.decedentAcquisitionDate
       ? input.decedentAcquisitionDate
       : input.acquisitionCause === "gift" && input.donorAcquisitionDate
         ? input.donorAcquisitionDate
@@ -276,7 +284,8 @@ export function calcTax(
   const isHousingLikeProp =
     input.propertyType === "housing" ||
     input.propertyType === "right_to_move_in" ||
-    input.propertyType === "presale_right";
+    input.propertyType === "presale_right" ||
+    input.propertyType === "redevelopment_apt"; // 신축APT는 주택 — §104①2/3호 60%/70%
   const shortTermFlatRate =
     holdingMonthsTotal < 12 ? (isHousingLikeProp ? 0.70 : 0.50) :
     holdingMonthsTotal < 24 ? (isHousingLikeProp ? 0.60 : 0.40) :

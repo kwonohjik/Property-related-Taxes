@@ -143,35 +143,40 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle }: Props)
         />
       </div>
 
-      {/* ③ amber: 청산금 방향 */}
-      <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-[10px] font-bold text-amber-800 select-none">3</span>
-          <p className="text-xs font-semibold text-amber-700">청산금 방향</p>
+      {/* ②-a rose: 조합원 구분 (사례 48 — 승계조합원) */}
+      <SuccessorMemberSection asset={asset} onChange={onChange} />
+
+      {/* ③ amber: 청산금 방향 (승계조합원 모드 시 숨김 — 본 PR 미지원) */}
+      {asset.redevIsSuccessorMember !== "yes" && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-2">
+          <div className="flex items-center gap-2">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-[10px] font-bold text-amber-800 select-none">3</span>
+            <p className="text-xs font-semibold text-amber-700">청산금 방향</p>
+          </div>
+          <RadioCardGroup
+            name={`redevSettlement-${asset.assetId}`}
+            value={asset.redevSettlementDirection || "pay"}
+            onChange={(v) => onChange({ redevSettlementDirection: v as "" | "pay" | "receive" })}
+            options={SETTLEMENT_OPTIONS}
+            layout="inline"
+          />
         </div>
-        <RadioCardGroup
-          name={`redevSettlement-${asset.assetId}`}
-          value={asset.redevSettlementDirection || "pay"}
-          onChange={(v) => onChange({ redevSettlementDirection: v as "" | "pay" | "receive" })}
-          options={SETTLEMENT_OPTIONS}
-          layout="inline"
-        />
-      </div>
+      )}
 
       {/* ③-a rose: 청산금 수령분 단독 신고 토글 (사례 46 — receiveOnlyMode) */}
-      {asset.redevSettlementDirection === "receive" && (
+      {asset.redevIsSuccessorMember !== "yes" && asset.redevSettlementDirection === "receive" && (
         <ReceiveOnlyToggleCard asset={asset} onChange={onChange} />
       )}
 
       {/* ③-b sky: 분양가 read-only 미리보기 (입력 슬롯 부재) */}
-      {asset.redevSettlementDirection === "receive" && (
+      {asset.redevIsSuccessorMember !== "yes" && asset.redevSettlementDirection === "receive" && (
         <SalePriceTotalPreviewCard asset={asset} />
       )}
 
       {/* ③-c violet: 비과세 보유 요건 자동 산정
           - 사례 46 (receiveOnly=yes): LTHD 표1 강등 가드용 노출
           - 사례 47 (receiveOnly=no + receive direction): settlement 비과세 차감 자동 산정용 노출 */}
-      {asset.redevSettlementDirection === "receive" && isOneHouseSingle && (
+      {asset.redevIsSuccessorMember !== "yes" && asset.redevSettlementDirection === "receive" && isOneHouseSingle && (
         <ExemptionAtApprovalCard asset={asset} onChange={onChange} />
       )}
 
@@ -200,40 +205,87 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle }: Props)
           />
         </FieldCard>
 
-        <FieldCard label="권리가액" hint="관리처분계획에 따라 정하여진 가격 (시행령 §166④) — 인가전 분 양도가액 의제">
-          <CurrencyInput label=""
-            value={asset.redevRightsValue}
-            onChange={(v) => onChange({ redevRightsValue: v })}
-            hideUnit
-          />
-        </FieldCard>
+        {asset.redevIsSuccessorMember !== "yes" && (
+          <FieldCard label="권리가액" hint="관리처분계획에 따라 정하여진 가격 (시행령 §166④) — 인가전 분 양도가액 의제">
+            <CurrencyInput label=""
+              value={asset.redevRightsValue}
+              onChange={(v) => onChange({ redevRightsValue: v })}
+              hideUnit
+            />
+          </FieldCard>
+        )}
 
-        <FieldCard
-          label={asset.redevSettlementDirection === "receive" ? "청산금 수령액" : "청산금 납부액"}
-          hint={
-            asset.redevSettlementDirection === "receive"
-              ? "권리가액 > 분양가 시 차액 (수령 모드 — 시행령 §166①2호 가목)"
-              : "권리가액 < 분양가 시 차액 (납부 모드)"
-          }
-        >
-          <CurrencyInput label=""
-            value={asset.redevSettlementAmount}
-            onChange={(v) => onChange({ redevSettlementAmount: v })}
-            hideUnit
-          />
-        </FieldCard>
+        {/* 사례 48 — 승계조합원: 권리가액 필드 숨김 + 자산 카드 취득가액 read-only 미리보기 (P5).
+            취득가액 출처는 상단 자산 카드 (상속·증여·매매 등 취득원인별 통합 처리). */}
+        {asset.redevIsSuccessorMember === "yes" && (
+          <div className="rounded-md border border-sky-200 bg-sky-50 p-3 text-[11px] text-sky-900 space-y-1 leading-relaxed">
+            <div className="font-semibold">취득가액 — 자산 카드에서 입력</div>
+            <div>
+              승계조합원의 취득가액은 <span className="font-semibold">상단 자산 카드 &ldquo;취득가액&rdquo;</span> 입력값을 사용합니다.
+              상속·증여·매매 어느 취득원인이든 자산 카드의 취득원인 + 취득가액 입력 그대로 사용됩니다.
+            </div>
+            {parseAmount(asset.fixedAcquisitionPrice) > 0 && (
+              <div className="pt-1">
+                현재 사용 중인 취득가액:{" "}
+                <span className="font-mono font-semibold">
+                  {parseAmount(asset.fixedAcquisitionPrice).toLocaleString("ko-KR")}
+                </span>
+              </div>
+            )}
+            <div className="pt-1 text-[10px] text-sky-700">
+              ※ 시행령 §166④의 &ldquo;권리가액&rdquo;은 관리처분 인가일 기준 평가액이며 원조합원 전용 개념입니다.
+              승계조합원의 신축APT 취득가액은 시행령 §162①5호(상속·증여 시점 평가액) 또는 §97①(매매 실가)이 적용됩니다.
+            </div>
+          </div>
+        )}
 
-        {asset.redevSettlementDirection === "receive" && (
+        {asset.redevIsSuccessorMember !== "yes" && (
+          <FieldCard
+            label={asset.redevSettlementDirection === "receive" ? "청산금 수령액" : "청산금 납부액"}
+            hint={
+              asset.redevSettlementDirection === "receive"
+                ? "권리가액 > 분양가 시 차액 (수령 모드 — 시행령 §166①2호 가목)"
+                : "권리가액 < 분양가 시 차액 (납부 모드)"
+            }
+          >
+            <CurrencyInput label=""
+              value={asset.redevSettlementAmount}
+              onChange={(v) => onChange({ redevSettlementAmount: v })}
+              hideUnit
+            />
+          </FieldCard>
+        )}
+
+        {asset.redevIsSuccessorMember !== "yes" && asset.redevSettlementDirection === "receive" && (
           <SettlementAnnouncementDateField asset={asset} onChange={onChange} />
         )}
 
-        <FieldCard label="인가전 분 필요경비" hint="법 §97①2·3호 + 시행령 §163⑥ — 인가전 양도차익 산식의 필요경비">
-          <CurrencyInput label=""
-            value={asset.redevPreApprovalExpenses}
-            onChange={(v) => onChange({ redevPreApprovalExpenses: v })}
-            hideUnit
-          />
-        </FieldCard>
+        {asset.redevIsSuccessorMember !== "yes" && (
+          <FieldCard label="인가전 분 필요경비" hint="법 §97①2·3호 + 시행령 §163⑥ — 인가전 양도차익 산식의 필요경비">
+            <CurrencyInput label=""
+              value={asset.redevPreApprovalExpenses}
+              onChange={(v) => onChange({ redevPreApprovalExpenses: v })}
+              hideUnit
+            />
+          </FieldCard>
+        )}
+
+        {/* 사례 48 — 승계조합원 모드 전용: 추가분담금(인가후 필요경비) 입력 슬롯.
+            양도코리아 화면 "입주권필요경비" 라벨 매핑. redevPostApprovalExpenses 필드는
+            buildRedevelopmentPayload에서 postApprovalExpenses로 합산되어 단순 차감 산식의 필요경비로 사용. */}
+        {asset.redevIsSuccessorMember === "yes" && (
+          <FieldCard
+            label="인가후 필요경비 (추가분담금·등기비·중개수수료 등)"
+            hint="승계 이후 납부한 추가분담금 + 등기비·중개수수료 등 인가후 비용 (시행령 §166①1호 인가후 양도차익 산식의 필요경비)"
+          >
+            <CurrencyInput
+              label=""
+              value={asset.redevPostApprovalExpenses}
+              onChange={(v) => onChange({ redevPostApprovalExpenses: v })}
+              hideUnit
+            />
+          </FieldCard>
+        )}
 
         {/* 미리보기 카드 — useMemo 순수 계산 */}
         {preview && (
@@ -255,8 +307,9 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle }: Props)
 
       {/* ⑤ sky: 인가전 분 종전 주택 취득가 (실가 모드) — useEstimatedAcquisition OFF 시만 표시
           §166①1호 인가전 분 양도차익 산정의 차감 기준 (사례 45/46 실거래가).
-          환산 모드 ON 시 비표시 (아래 ⑥ rose 카드의 §164⑦/§166③ 환산으로 자동 도출). */}
-      {!asset.useEstimatedAcquisition && (
+          환산 모드 ON 시 비표시 (아래 ⑥ rose 카드의 §164⑦/§166③ 환산으로 자동 도출).
+          승계조합원 모드 시 비표시 — 종전주택 미소유 + §166 안분 우회 산식이라 입력 불요. */}
+      {!asset.useEstimatedAcquisition && asset.redevIsSuccessorMember !== "yes" && (
         <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2">
           <div className="flex items-center gap-2">
             <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-[10px] font-bold text-sky-800 select-none">5</span>
@@ -283,11 +336,15 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle }: Props)
       )}
 
 
-      {/* ⑥ rose: 환산취득가 (시행령 §166③ + §164⑦ PHD 패턴) — 분리 파일 */}
-      <RedevelopmentValuationSection asset={asset} onChange={onChange} />
+      {/* ⑥ rose: 환산취득가 (시행령 §166③ + §164⑦ PHD 패턴) — 승계조합원 모드 시 숨김 (본 PR 미지원) */}
+      {asset.redevIsSuccessorMember !== "yes" && (
+        <RedevelopmentValuationSection asset={asset} onChange={onChange} />
+      )}
 
-      {/* §⑤ 거주월수 분리 입력 (사례 45 — 1세대1주택 + 12억 초과) — 분리 파일 */}
-      <RedevelopmentResidenceSplitSection asset={asset} onChange={onChange} isOneHouseSingle={isOneHouseSingle} />
+      {/* §⑤ 거주월수 분리 입력 (사례 45 — 1세대1주택 + 12억 초과) — 승계조합원 모드 시 숨김 (본 PR 미지원) */}
+      {asset.redevIsSuccessorMember !== "yes" && (
+        <RedevelopmentResidenceSplitSection asset={asset} onChange={onChange} isOneHouseSingle={isOneHouseSingle} />
+      )}
     </div>
   );
 }
@@ -576,6 +633,150 @@ function SettlementExemptionGuideCard({
       <p className="mt-1">
         1세대1주택 비과세 요건 미충족 → 청산금 수령분도 정상 과세됩니다.
       </p>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 사례 48 — 승계조합원 신축APT 양도 (관리처분 후 입주권 승계 → 신축APT 양도)
+// 사전-2019-법령해석재산-0649 + 시행령 §162①4호
+// ─────────────────────────────────────────────────────────────────────────────
+
+function SuccessorMemberSection({
+  asset,
+  onChange,
+}: {
+  asset: AssetForm;
+  onChange: (patch: Partial<AssetForm>) => void;
+}) {
+  // 자동 추정 힌트 3-state (silent 분기 금지 — 안내만)
+  const autoSuggestionState = useMemo<"hidden" | "recommend" | "ambiguous">(() => {
+    if (asset.redevIsSuccessorMember === "yes") return "hidden"; // 이미 ON
+    if (!asset.acquisitionDate || !asset.redevApprovalDate) return "hidden";
+    const acq = new Date(asset.acquisitionDate).getTime();
+    const apv = new Date(asset.redevApprovalDate).getTime();
+    if (isNaN(acq) || isNaN(apv)) return "hidden";
+    if (acq > apv) return "recommend"; // 인가 후 취득 → 승계조합원 권장
+    if (acq === apv) return "ambiguous"; // 경계값 — 회색지대 경고
+    return "hidden";
+  }, [asset.acquisitionDate, asset.redevApprovalDate, asset.redevIsSuccessorMember]);
+
+  const isSuccessor = asset.redevIsSuccessorMember === "yes";
+
+  // successor 진입 시 동반 셋팅 (onChange 1회 — useEffect 미러링 금지)
+  const handleToggle = (v: "yes" | "no") => {
+    if (v === "yes") {
+      onChange({
+        redevIsSuccessorMember: "yes",
+        // 명시 셋팅 (display fallback 의존 차단)
+        redevSubject: asset.redevSubject || "apt",
+        // 본 PR 강제값 (validate에서 차단되는 분기를 사전 ON 차단)
+        redevSettlementDirection: "pay",
+        redevSettlementAmount: "0",
+        redevPreApprovalExpenses: "0",
+        redevReceiveOnlyMode: "no",
+        useEstimatedAcquisition: false,
+        // P6 — 권리가액(§166④) 필드는 승계 모드에서 의미 없음. store 잔재 제거.
+        // 엔진은 fixedAcquisitionPrice 자동 미러로 처리.
+        redevRightsValue: "",
+      });
+    } else {
+      onChange({ redevIsSuccessorMember: "no" });
+    }
+  };
+
+  return (
+    <div className="rounded-lg border border-rose-200 bg-rose-50/40 p-3 space-y-2">
+      <div className="flex items-center gap-2">
+        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-200 text-[10px] font-bold text-rose-800 select-none">
+          2a
+        </span>
+        <p className="text-xs font-semibold text-rose-700">조합원 구분</p>
+      </div>
+
+      <RadioCardGroup
+        name={`redevIsSuccessor-${asset.assetId}`}
+        value={(asset.redevIsSuccessorMember as "" | "yes" | "no") || "no"}
+        onChange={(v) => handleToggle(v as "yes" | "no")}
+        options={[
+          {
+            value: "no",
+            label: "원조합원",
+            description: "관리처분계획인가일 이전 종전부동산 취득자",
+          },
+          {
+            value: "yes",
+            label: "승계조합원",
+            description: "관리처분계획인가일 이후 입주권을 상속·증여·매매로 승계 취득",
+          },
+        ]}
+        layout="stack"
+      />
+
+      {/* 자동 추정 안내 — silent 적용 금지 */}
+      {autoSuggestionState === "recommend" && (
+        <div className="rounded-md border border-violet-200 bg-violet-50 p-2.5 text-[11px] text-violet-900">
+          ⓘ 관리처분 인가일이 취득일보다 이전입니다. 승계조합원 모드 사용을 권장합니다.
+        </div>
+      )}
+      {autoSuggestionState === "ambiguous" && (
+        <div className="rounded-md border border-amber-300 bg-amber-50 p-2.5 text-[11px] text-amber-900">
+          ⚠️ 취득일과 관리처분 인가일이 <span className="font-semibold">동일 날짜</span>입니다.
+          원조합원·승계조합원 해석이 갈리는 회색지대로, 사전답변례·NTS 해석을 확인 후 적절한 모드를 선택하세요.
+        </div>
+      )}
+
+      {isSuccessor && (
+        <div className="space-y-2 pt-1">
+          <FieldCard
+            label="준공일 (사용검사필증 교부일)"
+            hint="신축아파트 사용검사필증 교부일. 보유기간·세율의 기산일이 됩니다."
+            trailing={
+              <LawArticleModal
+                legalBasis="소득세법 시행령 §162 ① 4호"
+                label="시행령 §162①4호"
+              />
+            }
+          >
+            <DateInput
+              value={asset.redevCompletionDate}
+              onChange={(v) => onChange({ redevCompletionDate: v })}
+            />
+          </FieldCard>
+
+          <div className="rounded-md border border-sky-200 bg-sky-50 p-2.5 text-[11px] text-sky-900 space-y-1 leading-relaxed">
+            <div className="font-semibold">승계조합원 신축APT 양도 분기</div>
+            <ul className="list-disc pl-4 space-y-0.5">
+              <li>보유기간 = 양도일 − 준공일 (사전-2019-법령해석재산-0649)</li>
+              <li>장기보유특별공제·세율의 기산일 = 준공일</li>
+              <li>§166 인가전·인가후 안분 산식 미적용 (단순 차감)</li>
+              <li>1세대1주택 비과세는 준공일 기준 2년 보유 충족 시 적용</li>
+            </ul>
+            <div className="flex flex-wrap gap-2 pt-1">
+              <LawArticleModal
+                legalBasis="소득세법 시행령 §162 ① 4호"
+                label="시행령 §162①4호"
+              />
+              <PrecedentArticleModal
+                citation="사전-2019-법령해석재산-0649 (2020.02.11)"
+                label="사전-2019-법령해석재산-0649"
+                kind="ruling"
+                summary="관리처분계획인가일 이후 입주권을 승계 취득한 자의 신축아파트 취득시기는 아파트의 사용검사필증 교부일이며, 1세대1주택 비과세·LTHD·세율 적용에 있어 보유기간 기산일은 모두 준공일이다."
+              />
+            </div>
+          </div>
+
+          <div className="rounded-md border border-amber-200 bg-amber-50 p-2.5 text-[11px] text-amber-900">
+            <div className="font-semibold">본 PR 미지원 분기 (자동 차단)</div>
+            <ul className="list-disc pl-4 space-y-0.5 mt-1">
+              <li>승계조합원 + 청산금 분기 (납부·수령) — 후속 PR</li>
+              <li>승계조합원 + 12억 초과 안분 — 후속 PR</li>
+              <li>승계조합원 + 환산취득가 모드 — 후속 PR (상속·증여 평가액 직접 입력)</li>
+              <li>승계조합원 + 동일세대 상속 §154⑧ 통산 — 후속 PR</li>
+            </ul>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

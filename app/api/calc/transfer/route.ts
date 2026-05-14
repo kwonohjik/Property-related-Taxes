@@ -394,8 +394,8 @@ export async function POST(request: NextRequest) {
     // buildingAcquisitionDate: YYYY-MM-DD 문자열 → Date 변환 포함 (⑭ date-coerce 필수)
     // ⑭ 부담부증여 (소령 §159) — Date 변환 없음, 그대로 spread
     ...(data.burdenedGiftInfo ? { burdenedGiftInfo: data.burdenedGiftInfo } : {}),
-    // ⑭ 재개발/재건축 (시행령 §166) — Date 3개 변환 (approvalDate/settlementSaleDate/firstDisclosureDate)
-    ...(data.redevelopment ? { redevelopment: { ...data.redevelopment, approvalDate: new Date(data.redevelopment.approvalDate), settlementSaleDate: toOptionalDate(data.redevelopment.settlementSaleDate), firstDisclosureDate: toOptionalDate(data.redevelopment.firstDisclosureDate) } } : {}),
+    // ⑭ 재개발/재건축 (시행령 §166) — Date 4개 변환 (approvalDate/settlementSaleDate/firstDisclosureDate/completionDate)
+    ...(data.redevelopment ? { redevelopment: { ...data.redevelopment, approvalDate: new Date(data.redevelopment.approvalDate), settlementSaleDate: toOptionalDate(data.redevelopment.settlementSaleDate), firstDisclosureDate: toOptionalDate(data.redevelopment.firstDisclosureDate), completionDate: toOptionalDate(data.redevelopment.completionDate) } } : {}),
     // ⑭ Phase 2 (2026-05-12): transferType 패스스루 — 양도 형태 (양도자 관점)
     // "burdened_gift" 시 엔진 §159 분기 활성. 미지정 시 "regular" 자동 보정.
     ...(data.transferType !== undefined ? { transferType: data.transferType } : {}),

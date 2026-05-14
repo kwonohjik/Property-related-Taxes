@@ -21,6 +21,7 @@ import {
   type RedevelopmentSplitInput,
 } from "./redevelopment-split";
 import { computeRedevelopmentLthd, applyLthdToGain } from "./redevelopment-lthd";
+import { runSuccessorMember } from "./redevelopment-successor";
 import type {
   RedevelopmentInfo,
   RedevelopmentResult,
@@ -85,6 +86,24 @@ export interface RedevelopmentOrchestratorInput extends RedevelopmentSplitInput 
  * total.gain 과 total.lthd 에 적용 (분배법칙으로 분기별 분배는 UI 표시용).
  */
 export function runRedevelopment(
+  input: RedevelopmentOrchestratorInput,
+): RedevelopmentResult {
+  // 사례 48 — 승계조합원 분기 (관리처분 후 입주권 승계 → 신축APT 양도).
+  // §166 안분 우회 + 준공일 기산 LTHD/세율 (사전-2019-법령해석재산-0649).
+  if (input.redevelopment.isSuccessorMember === true) {
+    return runSuccessorMember(input);
+  }
+  return runOriginalMember(input);
+}
+
+/**
+ * 원조합원 분기 — 종전부동산 취득자 기준 §166 안분 산식.
+ *
+ * 본 함수는 사례 44~47의 기존 동작을 그대로 캡슐화한 것이며, runRedevelopment 의
+ * 본문이 분기 라우팅을 받기 위해 추출되었다 (사례 48 승계조합원 도입 동반 리팩토링).
+ * 함수명만 변경, 동작은 100% 동일 — 사례 44~47 회귀 anchor 보존.
+ */
+function runOriginalMember(
   input: RedevelopmentOrchestratorInput,
 ): RedevelopmentResult {
   const { redevelopment, acquisitionDate, transferDate } = input;
@@ -258,6 +277,23 @@ export interface RedevelopmentLthdEmitLine {
 }
 
 export function buildLthdEmitLines(result: RedevelopmentResult): RedevelopmentLthdEmitLine[] {
+  // 사례 48 — 승계조합원 분기: postApprovalExistingHouse 단일 line emit.
+  if (result.successorMemberApplied === true) {
+    return [
+      {
+        lineId: "postApprovalExistingHouse",
+        code: "LTHD",
+        gain: result.postApprovalExistingHouse.gain,
+        rate: result.postApprovalExistingHouse.lthdRate,
+        amount: result.postApprovalExistingHouse.lthd,
+        holdingMonths: result.postApprovalExistingHouse.holdingMonths,
+        applicable:
+          result.postApprovalExistingHouse.lthd > 0 ||
+          result.postApprovalExistingHouse.gain > 0,
+      },
+    ];
+  }
+
   return [
     {
       lineId: "preApproval",

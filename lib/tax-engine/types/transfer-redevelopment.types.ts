@@ -37,6 +37,31 @@ export interface RedevelopmentInfo {
   subject: "right" | "apt";
 
   /**
+   * 사례 48 — 승계조합원 여부.
+   * 관리처분 인가일 이후 입주권을 상속·증여·매매로 승계 취득한 경우 true.
+   *
+   * true 시 redevelopment.ts 의 runRedevelopment() 가 runSuccessorMember() 로 라우팅:
+   *  - §166 인가전·인가후 안분 산식 우회 (preApprovalGain=0 강제)
+   *  - 양도차익 = transferPrice − rightsValue − postApprovalExpenses (단순 차감)
+   *  - LTHD/세율 보유기간 기산일 = completionDate (resolveLTHDStartDate 분기)
+   *
+   * 근거: 사전-2019-법령해석재산-0649 (2020.02.11.) — 승계조합원 신축APT 취득시기 = 사용검사필증 교부일.
+   *      소득세법 시행령 §162①4호 (자가건설 의제 — 사용승인서 교부일).
+   */
+  isSuccessorMember?: boolean;
+
+  /**
+   * 사례 48 — 신축APT 사용검사필증 교부일(준공일).
+   * isSuccessorMember === true 시 LTHD/세율 보유기간 기산일.
+   *
+   * 시행령 §162①4호 본문 "건축법 §22②에 따른 사용승인서 교부일".
+   * 옛 용어 "사용검사필증 교부일"·"사용승인일" 동의.
+   *
+   * isSuccessorMember=false 시 무시.
+   */
+  completionDate?: Date;
+
+  /**
    * 인가일 법령 근거 식별자 — §95② 본법 단서에 등재된 두 가지를 분기.
    * - "urban_renovation_art_74": 도시정비법 §74 관리처분계획 인가 (재개발/재건축 본류)
    * - "small_housing_art_29":    빈집소규모정비법 §29 사업시행계획 인가 (소규모정비)
@@ -247,11 +272,18 @@ export interface RedevelopmentValuationMeta {
   method:
     | "actual"
     | "estimated_post_disclosure_decree_166_3"
-    | "estimated_pre_disclosure_decree_164_7";
-  /** §166③ 분자 — §164⑦ 발동 시 §164⑦ 본문 산식의 결과(취득당시 기준시가) */
-  numerator: number;
-  /** 관리처분 인가일 기준시가 — §166③ 분모 */
-  denominator: number;
+    | "estimated_pre_disclosure_decree_164_7"
+    | "successor_member_decree_162_1_4"; // 사례 48 — 승계조합원 (안분 미적용)
+  /**
+   * §166③ 분자 — §164⑦ 발동 시 §164⑦ 본문 산식의 결과(취득당시 기준시가).
+   * "successor_member_decree_162_1_4" 분기에서는 undefined (안분 미적용).
+   */
+  numerator: number | undefined;
+  /**
+   * 관리처분 인가일 기준시가 — §166③ 분모.
+   * "successor_member_decree_162_1_4" 분기에서는 undefined (안분 미적용).
+   */
+  denominator: number | undefined;
   /** 단서 적용 근거 */
   rationale: string;
   /**
@@ -445,6 +477,40 @@ export interface RedevelopmentResult {
 
   /** 환산취득가 산정 메타 (환산 케이스만) */
   valuationMeta?: RedevelopmentValuationMeta;
+
+  /**
+   * 사례 48 — 승계조합원 분기 활성 여부.
+   * DetailedStatementRedevelopmentBuilders.getBranchLabels() 분기·buildLthdEmitLines·
+   * RedevelopmentDetailCard 산식 분기 트리거.
+   *
+   * true 시:
+   *  - preApproval·settlement 분기는 0 fill (안분 우회)
+   *  - postApprovalExistingHouse 만 primary 값 (단순 차감)
+   *  - successorMemberDetail 부착
+   *
+   * 근거: 사전-2019-법령해석재산-0649 + 시행령 §162①4호.
+   */
+  successorMemberApplied?: boolean;
+
+  /**
+   * 사례 48 — 승계조합원 분기 상세 (UI 표시·anchor 검증용).
+   * successorMemberApplied === true 시에만 부착.
+   */
+  successorMemberDetail?: {
+    /** 분기 활성 (= successorMemberApplied) */
+    applied: boolean;
+    /** 사용검사필증 교부일 (= input.redevelopment.completionDate) */
+    completionDate: Date;
+    /** 보유일수 (준공일 ~ 양도일) */
+    holdingDaysFromCompletion: number;
+    /** 단기세율 적용 여부 (보유 < 24개월) */
+    shortTermRateApplied: boolean;
+    /** 결과 카드 표시용 세율 라벨 */
+    rateLabel:
+      | "1년 미만 70% (§104①3호 주택 본문)"
+      | "1년 이상 2년 미만 60% (§104①2호 주택)"
+      | "기본누진세율 (§55·§104①1호)";
+  };
 
   /**
    * §163⑥ 개산공제 — 환산 모드 시 취득당시 라목값 × 3% (원, 정수).

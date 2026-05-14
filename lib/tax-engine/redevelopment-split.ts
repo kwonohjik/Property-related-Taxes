@@ -158,7 +158,13 @@ export function computeRedevelopmentSplit(
   // 필요경비로 차감. P_A = valuationMeta.numerator (본문 발동 시 Step 1 결과, 미발동 시
   // acquisitionHousingPrice 단일값). 실가 모드는 0.
   let estimatedLumpDeduction = 0;
-  if (useEstimatedAcquisition && valuationMeta && valuationMeta.method !== "actual") {
+  if (
+    useEstimatedAcquisition &&
+    valuationMeta &&
+    valuationMeta.method !== "actual" &&
+    valuationMeta.method !== "successor_member_decree_162_1_4" &&
+    valuationMeta.numerator !== undefined
+  ) {
     estimatedLumpDeduction = Math.floor(valuationMeta.numerator * 0.03);
   }
 

@@ -325,6 +325,9 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     // 사례 46 — 청산금 수령분 단독 신고
     redevReceiveOnlyMode: "",
     redevExemptionEligibleAtApproval: "",
+    // 사례 48 — 승계조합원 신축APT 양도
+    redevIsSuccessorMember: "",
+    redevCompletionDate: "",
   };
 }
 
@@ -479,6 +482,9 @@ export function migrateAsset(raw: unknown): AssetForm {
   // 사례 46 — 청산금 수령분 단독 신고
   if (a.redevReceiveOnlyMode === undefined) a.redevReceiveOnlyMode = "";
   if (a.redevExemptionEligibleAtApproval === undefined) a.redevExemptionEligibleAtApproval = "";
+  // 사례 48 — 승계조합원 신축APT 양도
+  if (a.redevIsSuccessorMember === undefined) a.redevIsSuccessorMember = "";
+  if (a.redevCompletionDate === undefined) a.redevCompletionDate = "";
   // ③ 상업용건물·오피스텔 cb* 필드 마이그레이션 (sessionStorage 호환 — 신규 필드 누락 보호)
   if (a.cbEra === undefined) a.cbEra = "";
   if (a.cbExclusiveArea === undefined) a.cbExclusiveArea = "";

@@ -685,7 +685,11 @@ export function buildRedevelopmentPayload(asset: AssetForm) {
     subject: (asset.redevSubject || "apt") as "right" | "apt",
     approvalLawBasis: (asset.redevApprovalLawBasis || "urban_renovation_art_74") as "urban_renovation_art_74" | "small_housing_art_29",
     approvalDate: asset.redevApprovalDate,
-    rightsValue: parseAmount(asset.redevRightsValue),
+    // 사례 48 — 승계조합원 모드: redev 권리가액 필드 숨김 → 자산 카드 fixedAcquisitionPrice 자동 미러 (UI 무결성용).
+    // 엔진 runSuccessorMember는 input.actualAcquisitionPrice 우선 사용하므로 본 값은 fallback.
+    rightsValue: asset.redevIsSuccessorMember === "yes"
+      ? parseAmount(asset.fixedAcquisitionPrice)
+      : parseAmount(asset.redevRightsValue),
     settlementDirection: (asset.redevSettlementDirection || "pay") as "pay" | "receive",
     settlementAmount: parseAmount(asset.redevSettlementAmount),
     settlementSaleDate: asset.redevSettlementSaleDate || undefined,
@@ -759,5 +763,13 @@ export function buildRedevelopmentPayload(asset: AssetForm) {
         : asset.redevExemptionEligibleAtApproval === "no"
           ? false
           : undefined,
+    // 사례 48 — 승계조합원 신축APT 양도
+    isSuccessorMember:
+      asset.redevIsSuccessorMember === "yes"
+        ? true
+        : asset.redevIsSuccessorMember === "no"
+          ? false
+          : undefined,
+    completionDate: asset.redevCompletionDate || undefined,
   };
 }

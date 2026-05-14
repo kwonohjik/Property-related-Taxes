@@ -591,14 +591,11 @@ export function buildRows(
   setNum("transferPrice", "total", totalTransferPrice || null);
   if (mode === "redev-3split" && result.redevelopmentDetail) {
     const r = result.redevelopmentDetail;
-    // 취득가액 합계 = 실가 합 (종전주택 실가 + 청산금 납부액).
-    // 인가후 기존건물분의 의제 취득가(권리가액)는 종전주택 취득가의 §166②1호 의제 변형이므로
-    // 합계에서 중복 제외. 양도가액 합계가 실 양도가 1,500M인 것과 동일 정책.
-    setNum(
-      "acquisitionPrice",
-      "total",
-      r.preApproval.apportionedAcquisition + r.settlement.apportionedAcquisition,
-    );
+    // 원조합원: 종전주택 실가(preApproval) + 청산금 납부액(settlement). 인가후 의제 권리가액 중복 제외.
+    // 사례 48 승계조합원: §166 안분 우회 — postApprovalExistingHouse 단독 (preApproval·settlement=0 fill).
+    setNum("acquisitionPrice", "total", r.successorMemberApplied === true
+      ? r.postApprovalExistingHouse.apportionedAcquisition
+      : r.preApproval.apportionedAcquisition + r.settlement.apportionedAcquisition);
     // 필요경비 합계는 redev-3split 분기 합으로 이미 line 505에서 설정됨 — 덮어쓰기 금지.
   } else if (mode === "fourpart" && mu) {
     const hp = mu.housingPart;

@@ -48,13 +48,45 @@ export function validateRedevelopmentAsset(asset: AssetForm, label: string): str
   if (!asset.redevApprovalDate) {
     return `${label}: 관리처분/사업시행계획 인가일을 입력하세요.`;
   }
-  // 인가일 ≥ 취득일 (승계조합원 인가 후 취득은 본 PR 미지원)
-  if (asset.acquisitionDate && new Date(asset.redevApprovalDate) < new Date(asset.acquisitionDate)) {
-    return `${label}: 인가일은 취득일 이후여야 합니다. (승계조합원 인가 후 취득은 후속 지원 예정)`;
+  // 사례 48 — 승계조합원 모드 분기. 인가일 < 취득일 차단을 명시 토글로 우회.
+  const isSuccessor = asset.redevIsSuccessorMember === "yes";
+  if (!isSuccessor && asset.acquisitionDate && new Date(asset.redevApprovalDate) < new Date(asset.acquisitionDate)) {
+    return `${label}: 인가일은 취득일 이후여야 합니다. 관리처분 인가 후 입주권을 승계 취득한 경우 "승계조합원 모드"를 ON 하세요. (사전-2019-법령해석재산-0649)`;
+  }
+  if (isSuccessor) {
+    // 사례 48 — 승계조합원 신축APT 양도 — 본 PR 5건 가드.
+    if (!asset.redevCompletionDate) {
+      return `${label}: 승계조합원 모드 — 준공일(사용검사필증 교부일)을 입력하세요. (시행령 §162①4호)`;
+    }
+    const completionDate = new Date(asset.redevCompletionDate);
+    if (completionDate < new Date(asset.redevApprovalDate)) {
+      return `${label}: 준공일은 관리처분 인가일 이후여야 합니다.`;
+    }
+    // 양도일 ≥ 준공일 검증은 form-global transferDate 가 자산 단위 validate에 없어 route handler/엔진에서 보장.
+    if (asset.acquisitionDate && new Date(asset.acquisitionDate) < new Date(asset.redevApprovalDate)) {
+      return `${label}: 승계조합원 모드는 관리처분 인가일 이후 입주권 취득이어야 합니다. (인가 전 취득은 원조합원)`;
+    }
+    if (settlementDirection !== "pay" || parseAmount(asset.redevSettlementAmount) > 0) {
+      // 본 PR settlement 미지원 — pay 0원만 허용 (default 통과).
+      return `${label}: 승계조합원 모드에서 청산금 분기(납부·수령)는 본 PR에서 미지원입니다. (후속 PR)`;
+    }
+    if (asset.redevReceiveOnlyMode === "yes") {
+      return `${label}: 승계조합원 모드에서 청산금 수령 단독 신고는 본 PR에서 미지원입니다. (후속 PR)`;
+    }
+    if (asset.useEstimatedAcquisition) {
+      return `${label}: 승계조합원 모드에서 환산취득가 모드는 본 PR에서 미지원입니다. 상속·증여 평가액 또는 매매가를 직접 입력하세요. (후속 PR)`;
+    }
+    // P9 — 승계조합원은 정의상 상속·증여·매매 중 하나. 신축자가건축 등 비현실적 조합 차단.
+    const validCauses = ["purchase", "gift", "inheritance"];
+    if (asset.acquisitionCause && !validCauses.includes(asset.acquisitionCause)) {
+      return `${label}: 승계조합원은 취득원인이 매매·증여·상속 중 하나여야 합니다. (자산 카드 "취득원인" 확인)`;
+    }
   }
 
   // ── 금액 ──
-  if (parseAmount(asset.redevRightsValue) <= 0) {
+  // 사례 48 — 승계조합원 모드 시 권리가액 필드 자체가 UI에서 숨겨지므로 검증 제외.
+  // 취득가액은 자산 카드의 fixedAcquisitionPrice 또는 inheritance 자동 평가에서 도출 (자산 단계 validate가 보장).
+  if (!isSuccessor && parseAmount(asset.redevRightsValue) <= 0) {
     return `${label}: 권리가액을 입력하세요. (시행령 §166④ 평가액 — 관리처분 가격이 없는 경우는 후속 PR)`;
   }
   if (parseAmount(asset.redevSettlementAmount) < 0) {
@@ -71,7 +103,8 @@ export function validateRedevelopmentAsset(asset: AssetForm, label: string): str
 
   // ── 실가 모드 검증 — 인가전 분 종전 주택 취득가액(실거래가) 필수 ──
   // 환산 모드(useEstimatedAcquisition=true) 시 비활성. §166①1호 인가전 분 차감 기준.
-  if (!asset.useEstimatedAcquisition) {
+  // 사례 48 승계조합원 모드는 §166 안분 우회 — 인가전 분 자체가 미산정이므로 본 검증 비활성.
+  if (!asset.useEstimatedAcquisition && !isSuccessor) {
     if (parseAmount(asset.redevActualAcquisitionPrice) <= 0) {
       return `${label}: 실가 모드 — 인가전 분 종전 주택 취득가액(실거래가)을 입력하세요. 취득가액 확인 불가 시 환산취득가 토글을 ON으로 전환하세요. (§166①1호)`;
     }
