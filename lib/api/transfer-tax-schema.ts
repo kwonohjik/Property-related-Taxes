@@ -120,6 +120,9 @@ const propertyBaseShape = {
   standardPriceAtAcquisition: z.number().int().positive().optional(),
   standardPriceAtTransfer: z.number().int().positive().optional(),
   householdHousingCount: z.number().int().min(0),
+  // 사례 36 §89①4호 가목 1세대1입주권 비과세 — 세대 조합원입주권 보유 수 (양도일 현재).
+  // optional: right_to_move_in 이외 자산 유형에서는 미전달 → 엔진 fallback householdRightCount ?? 0.
+  householdRightCount: z.number().int().nonnegative().optional(),
   residencePeriodMonths: z.number().int().nonnegative(),
   isRegulatedArea: z.boolean(),
   wasRegulatedAtAcquisition: z.boolean(),
@@ -338,6 +341,11 @@ const propertyBaseShape = {
     // 사전-2019-법령해석재산-0649 + 시행령 §162①4호.
     isSuccessorMember: z.boolean().optional(),
     completionDate: z.string().date().optional(),
+    // 사례 36 — 1세대1입주권 비과세 C-1 안전장치 (a) 자동 검증용.
+    // 인가일 기준 종전주택 보유 월수. 24개월 미만 시 UI 경고 카드 노출 (차단 X — 자기선언 우선).
+    // 엔진 계산에는 직접 미사용 (비과세 판단은 exemptionEligibleAtApproval 기준).
+    // §89①4호 가목 → §89①3호 가목 보유 2년 요건 참조.
+    priorHouseHoldingMonths: z.number().int().nonnegative().optional(),
   })
   .refine(
     (v) => v.settlementDirection !== "receive" || v.settlementSaleDate != null,

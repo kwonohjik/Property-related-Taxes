@@ -79,6 +79,12 @@ export interface TransferFormData {
   // ── Step 3 (구 Step4): 보유 상황 (세대·납세자 단위) ──
   isOneHousehold: boolean;
   householdHousingCount: string;
+  /**
+   * 세대 보유 조합원입주권 수 (양도일 현재).
+   * §89①4호 가목 1세대1입주권 비과세 판단 — "1" 고정 (사례 36).
+   * right_to_move_in 자산 유형에서만 의미. 기본값 "0".
+   */
+  householdRightCount: string;
   residencePeriodMonths: string;
   isRegulatedArea: boolean;
   wasRegulatedAtAcquisition: boolean;
@@ -139,6 +145,7 @@ const defaultFormData: TransferFormData = {
   pre1990GradeMode: "number",
   isOneHousehold: true,
   householdHousingCount: "1",
+  householdRightCount: "0",
   residencePeriodMonths: "0",
   isRegulatedArea: false,
   wasRegulatedAtAcquisition: false,

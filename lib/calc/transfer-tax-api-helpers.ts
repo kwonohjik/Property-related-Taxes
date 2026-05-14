@@ -763,6 +763,12 @@ export function buildRedevelopmentPayload(asset: AssetForm) {
         : asset.redevExemptionEligibleAtApproval === "no"
           ? false
           : undefined,
+    // 사례 36 — 1세대1입주권 비과세 C-1 안전장치 (a) — 인가일 기준 종전주택 보유월수
+    // UI 경고 카드(b) 자동 검증용. 엔진 계산에는 미사용 (비과세 판단 = exemptionEligibleAtApproval).
+    priorHouseHoldingMonths:
+      asset.redevPriorHouseHoldingMonths
+        ? parseInt(asset.redevPriorHouseHoldingMonths.replace(/,/g, ""), 10) || undefined
+        : undefined,
     // 사례 48 — 승계조합원 신축APT 양도
     isSuccessorMember:
       asset.redevIsSuccessorMember === "yes"

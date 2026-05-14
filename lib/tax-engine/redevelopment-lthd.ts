@@ -181,7 +181,7 @@ function computeRightLthd(args: {
     return {
       preApproval: zeroBranch("§95② 단서 — 승계조합원(조합원으로부터 취득)은 LTHD 미적용"),
       postApprovalExistingHouse: zeroBranch("입주권 양도 시 인가후 기존주택분 양도차익은 LTHD 대상 부존재 (§95② 단서·§166⑤1호)"),
-      settlement: zeroBranch("입주권 양도 시 청산금은 LTHD 대상 자산 부존재 (§94① 범위 외)"),
+      settlement: zeroBranch("§94①2호 (조합원입주권 = 부동산을 취득할 수 있는 권리) + 시행령 §166①1호·2호 가목 산식 구조상 LTHD 대상 자산 부존재 (§95② 대상자산 토지·건물 범위 외)"),
     };
   }
 
@@ -205,7 +205,7 @@ function computeRightLthd(args: {
       applicable: true,
     },
     postApprovalExistingHouse: zeroBranch("입주권 양도 시 인가후 기존주택분 양도차익은 LTHD 대상 부존재 (§95② 단서·§166⑤1호)"),
-    settlement: zeroBranch("입주권 양도 시 청산금은 LTHD 대상 자산 부존재 (§94① 범위 외)"),
+    settlement: zeroBranch("§94①2호 (조합원입주권 = 부동산을 취득할 수 있는 권리) + 시행령 §166①1호·2호 가목 산식 구조상 LTHD 대상 자산 부존재 (§95② 대상자산 토지·건물 범위 외)"),
   };
 }
 

@@ -251,6 +251,17 @@ export interface RedevelopmentInfo {
    * 사례 46: 자동 판정 false (1년 2개월 < 2년).
    */
   exemptionEligibleAtApproval?: boolean;
+
+  /**
+   * 인가일 기준 종전주택 보유 월수 (C-1 안전장치 a — 자동 검증용).
+   *
+   * 사례 36 §89①4호 가목 1세대1입주권 비과세 카드에서 입력.
+   * 24개월 미만 시 UI 경고 카드(b) 노출 — 차단이 아닌 사용자 자기선언 우선.
+   * 엔진 계산에는 직접 사용되지 않음 (비과세 판단은 exemptionEligibleAtApproval 자기선언).
+   *
+   * 법령 근거: §89①4호 가목 → §89①3호 가목 요건 (보유 2년) → 시행령 §154
+   */
+  priorHouseHoldingMonths?: number;
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -565,6 +576,34 @@ export interface RedevelopmentResult {
    * settlementExemptionApplied === true 시에만 부착.
    */
   exemptedLthd?: number;
+
+  /**
+   * 사례 36 — §89①4호 가목 1세대1입주권 비과세 적용 여부.
+   *
+   * 트리거 (AND 4조건):
+   *   1. subject === "right"
+   *   2. exemptionEligibleAtApproval === true (인가일 기준 자기선언)
+   *   3. householdHousingCount === 0 AND householdRightCount === 1 (양도일 현재 1세대1입주권)
+   *   4. transferPrice ≤ 12억 (단서 미발동)
+   *
+   * true 시: 3분기 모두 gain=0·lthd=0 마스킹 → total.taxableIncome=0 → 산출세액 0.
+   * 12억 초과 시 미적용 — applyOneRightExemption 내부에서 안분 과세분만 남김.
+   *
+   * 법령 근거: 소득세법 §89①4호 가목 본문 + 시행령 §154 (1세대 범위)
+   * 국세청 해석례: "고가주택에 해당하는 조합원입주권 양도차익 산정방법" (2010.11.01, 2008.01.10 등 7건)
+   */
+  oneRightExemptionApplied?: boolean;
+
+  /**
+   * 사례 36 — §89①4호 가목 단서 12억 초과 안분 과세 적용 여부.
+   *
+   * subject="right" + 비과세 요건 충족 + transferPrice > 12억 시 true.
+   * applyOneRightExemption 내부에서 안분 후 비과세분을 마스킹하고 과세분만 남김.
+   * highValueAllocation (사례 45 apt 분기) 과 별개 — 두 플래그는 mutually exclusive.
+   *
+   * 법령 근거: §89①4호 가목 단서 + §95③ + 시행령 §160 (안분 산식)
+   */
+  oneRightHighValueApplied?: boolean;
 
   /**
    * LTHD 분기별 거주월수 귀속 (디버그·결과카드 표시용).

@@ -422,6 +422,9 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
         ? parseFloat(primary.acquisitionArea) || undefined
         : undefined,
     householdHousingCount: parseInt(form.householdHousingCount) || 0,
+    // 사례 36 §89①4호 가목 1세대1입주권 비과세 — 조합원입주권 수 (양도일 현재)
+    // right_to_move_in 자산 유형에서만 의미. 기본 "0" fallback.
+    householdRightCount: parseInt(form.householdRightCount ?? "0") || 0,
     // 거주기간 — interval 모드면 자산 구간 합산, direct 모드는 자산 또는 form-global fallback
     residencePeriodMonths:
       primary.residenceInputMode === "interval" && primary.residencePeriods.length > 0

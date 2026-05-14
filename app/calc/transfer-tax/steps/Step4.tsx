@@ -216,6 +216,46 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
             </div>
           </div>
 
+          {/* 세대 보유 입주권 수 — right_to_move_in 자산 유형에서만 노출 (§89①4호 가목 판정) */}
+          {primaryKind === "right_to_move_in" && (
+            <div className="space-y-1.5">
+              <label className="block text-sm font-medium">
+                세대 보유 조합원입주권 수 <span className="text-destructive">*</span>
+              </label>
+              <p className="text-xs text-muted-foreground -mt-0.5">
+                양도하는 입주권 자체도 포함하여 세대 전체 입주권 수를 입력하세요.
+                예: 양도 대상 입주권 1개 + 다른 입주권 없음 → 1개
+              </p>
+              <div className="flex gap-2">
+                {["0", "1", "2+"].map((v) => (
+                  <button
+                    key={v}
+                    type="button"
+                    onClick={() => onChange({ householdRightCount: v === "2+" ? "2" : v })}
+                    className={cn(
+                      "flex-1 rounded-md border py-2 text-sm font-medium transition-colors",
+                      (v === "2+" ? form.householdRightCount === "2" : form.householdRightCount === v)
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border hover:bg-muted",
+                    )}
+                  >
+                    {v === "2+" ? "2개 이상" : `${v}개`}
+                  </button>
+                ))}
+              </div>
+              {/* §89①4호 가목 본문 요건 안내 */}
+              {form.isOneHousehold && form.householdRightCount === "1" && form.householdHousingCount === "0" && (
+                <div className="rounded-lg border border-violet-200 bg-violet-50/40 px-3 py-2 text-xs text-violet-900">
+                  <p className="font-medium">1세대1입주권 비과세 요건 (양도일 현재)</p>
+                  <p className="mt-0.5 text-[11px] leading-relaxed text-violet-800">
+                    다른 주택 없음(0채) + 1입주권만(1개) 조건 충족.
+                    자산 카드의 §⑥ 비과세 토글 ON 및 인가일 기준 보유·거주요건도 함께 확인하세요.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* 1세대1주택 안내 배너 — 1세대 + 1채 선택 시 거주기간 입력 동기 부여 */}
           {form.isOneHousehold && form.householdHousingCount === "1" && (
             <div className="rounded-lg border border-violet-200 bg-violet-50/40 px-4 py-3 text-sm text-violet-900">

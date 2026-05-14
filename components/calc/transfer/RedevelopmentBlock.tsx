@@ -33,6 +33,8 @@ import { useMemo } from "react";
 import { addDays, subDays, isValid, parseISO, format } from "date-fns";
 import { RedevelopmentValuationSection } from "./RedevelopmentValuationSection";
 import { RedevelopmentResidenceSplitSection } from "./RedevelopmentResidenceSplitSection";
+import { RedevelopmentRightExemptionSection } from "./RedevelopmentRightExemptionSection";
+import { SettlementExemptionGuideCard } from "./SettlementExemptionGuideCard";
 
 interface Props {
   asset: AssetForm;
@@ -43,13 +45,20 @@ interface Props {
    * undefined 시 fallback: true (legacy 호환 — 신규 호출 사이트는 명시 전달 권장).
    */
   isOneHouseSingle?: boolean;
+  /**
+   * 폼-전역 wasRegulatedAtAcquisition — 조정대상지역 취득 여부.
+   * C-1 (a) 거주요건 경고 가드 (§89①3호 가목 단서) — subject="right" 시 전달.
+   */
+  wasRegulatedAtAcquisition?: boolean;
+  /** 양도가액 — 12억 초과 자동 안내용 (subject="right" §⑥ 카드) */
+  transferPrice?: string;
 }
 
 // ── ToggleCard 옵션 ──
 
 const SUBJECT_OPTIONS = [
-  { value: "apt" as const, label: "완공 APT 양도", description: "조합 신축주택 양도 (시행령 §166②) — 사례 44 본 PR UI 지원" },
-  { value: "right" as const, label: "입주권 양도", description: "관리처분 인가 후 조합원 입주권 양도 (시행령 §166① · §95② 단서) — 후속 PR" },
+  { value: "apt" as const, label: "완공 APT 양도", description: "조합 신축주택 양도 (시행령 §166②) — 사례 44" },
+  { value: "right" as const, label: "입주권 양도", description: "관리처분 인가 후 조합원 입주권 양도 (시행령 §166① · §95② 단서 + §89①4호 가목) — 사례 36" },
 ];
 
 const ORIGINAL_ASSET_OPTIONS = [
@@ -67,8 +76,10 @@ const APPROVAL_LAW_OPTIONS = [
   { value: "small_housing_art_29" as const, label: "빈집소규모정비법 §29 (소규모정비)", description: "빈집 및 소규모주택 정비에 관한 특례법 §29 사업시행계획 인가 — 후속 PR" },
 ];
 
-export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle }: Props) {
-  const isActive = asset.assetKind === "redevelopment_apt";
+export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, wasRegulatedAtAcquisition, transferPrice }: Props) {
+  // subject="right" (입주권 양도) 포함: assetKind="right_to_move_in" 시에도 활성화
+  const isActive = asset.assetKind === "redevelopment_apt" || asset.assetKind === "right_to_move_in";
+  const isRightSubject = asset.redevSubject === "right" || asset.assetKind === "right_to_move_in";
 
   // 분양가 미리보기 (useMemo 순수 계산 — useEffect 미러링 금지)
   const preview = useMemo(() => {
@@ -97,15 +108,27 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle }: Props)
 
   return (
     <div className="space-y-3">
-      {/* 0️⃣ 1세대1주택 + 12억 안분 적용 가이드 — 자산 카드 진입 시 항상 노출 */}
+      {/* §⑥ 1세대1입주권 비과세 카드 (사례 36 — subject="right" 전용) */}
+      {isRightSubject && (
+        <RedevelopmentRightExemptionSection
+          asset={asset}
+          onChange={onChange}
+          wasRegulatedAtAcquisition={wasRegulatedAtAcquisition}
+          transferPrice={transferPrice}
+        />
+      )}
+
+      {/* 0️⃣ 1세대1주택 + 12억 안분 적용 가이드 — subject="apt" 시만 노출 */}
+      {!isRightSubject && (
       <div className="rounded-md bg-amber-50 border border-amber-200 p-3 text-[11px] text-amber-900 leading-relaxed">
         <p className="font-semibold mb-0.5">⚠️ 1세대1주택 + 12억 초과 비과세 안분 적용 여부</p>
         <p>
           본 자산이 1세대1주택 + 12억 초과인 경우 §95③·시행령 §160 안분이 적용됩니다. 적용 여부는
-          <span className="font-semibold"> 다음 “보유 상황” 단계의 “세대·주택 현황”</span> 입력(1세대 여부 + 보유 주택 수 1채)에 따라 결정됩니다.
+          <span className="font-semibold"> 다음 &ldquo;보유 상황&rdquo; 단계의 &ldquo;세대·주택 현황&rdquo;</span> 입력(1세대 여부 + 보유 주택 수 1채)에 따라 결정됩니다.
           1세대1주택이 아니면 분기별 양도차익 전체가 과세대상입니다 (12억 안분 미적용).
         </p>
       </div>
+      )}
 
       {/* ① sky: 양도 대상 */}
       <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2">
@@ -115,11 +138,16 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle }: Props)
         </div>
         <RadioCardGroup
           name={`redevSubject-${asset.assetId}`}
-          value={asset.redevSubject || "apt"}
-          onChange={(v) => onChange({ redevSubject: v as "" | "right" | "apt" })}
+          value={asset.redevSubject || (asset.assetKind === "right_to_move_in" ? "right" : "apt")}
+          onChange={(v) => {
+            // assetKind가 right_to_move_in이면 right 고정 (변경 불가)
+            // assetKind가 redevelopment_apt이면 apt/right 선택 가능
+            onChange({ redevSubject: v as "" | "right" | "apt" });
+          }}
           options={SUBJECT_OPTIONS.map((o) => ({
             ...o,
-            disabled: o.value === "right",
+            // right_to_move_in 선택 시 "apt" 옵션 비활성
+            disabled: asset.assetKind === "right_to_move_in" && o.value === "apt",
           }))}
           layout="stack"
         />
@@ -580,62 +608,7 @@ function ExemptionAtApprovalCard({
   );
 }
 
-/**
- * 사례 47 settlement 비과세 차감 4분기 안내 카드.
- *
- * 트리거 4분기 (rightsValue × exemptionEligibleAtApproval):
- *  - ≤12억 + 충족   → rose tone "settlement 비과세 자동 적용"
- *  - ≤12억 + 미충족 → gray tone "비과세 요건 미충족 → settlement 과세"
- *  - >12억 + 충족   → amber tone "고가주택 → settlement 과세 (후속 PR C-F1)"
- *  - >12억 + 미충족 → gray tone "비과세 미충족 + 고가주택 → settlement 전부 과세"
- */
-function SettlementExemptionGuideCard({
-  asset,
-  effective,
-}: {
-  asset: AssetForm;
-  effective: "yes" | "no" | null;
-}) {
-  const rights = parseAmount(asset.redevRightsValue);
-  if (rights <= 0 || effective === null) return null;
-
-  const HIGH_VALUE = 1_200_000_000;
-  const isUnderHighValue = rights <= HIGH_VALUE;
-  const isEligible = effective === "yes";
-
-  // 4가지 조합 분기
-  if (isUnderHighValue && isEligible) {
-    return (
-      <div className="rounded-md border border-rose-300 bg-rose-100/70 p-2 text-[11px] text-rose-900 mt-2">
-        <p className="font-semibold">청산금 수령분 1세대1주택 비과세 자동 적용</p>
-        <p className="mt-1">
-          인가일 평가액 <span className="font-mono">{rights.toLocaleString()}</span> ≤ 12억 + 1세대1주택 비과세 요건 충족
-          → 청산금 수령분은 12억 안분 후 비과세로 차감되어 양도소득금액 합산에서 제외됩니다.
-        </p>
-        <p className="mt-1 text-rose-700">근거: PDF 사례수정 2 (2)-1번 + 서면2016-법령해석재산-2705</p>
-      </div>
-    );
-  }
-  if (!isUnderHighValue && isEligible) {
-    return (
-      <div className="rounded-md border border-amber-300 bg-amber-100/60 p-2 text-[11px] text-amber-900 mt-2">
-        <p className="font-semibold">고가주택 → 청산금 수령분 과세 적용 (후속 PR)</p>
-        <p className="mt-1">
-          인가일 평가액 <span className="font-mono">{rights.toLocaleString()}</span> {">"} 12억 → 청산금 수령분도 고가주택 안분 대상.
-          본 PR은 평가액 ≤ 12억 케이스만 지원합니다 (후속 PR C-F1 트래킹).
-        </p>
-      </div>
-    );
-  }
-  return (
-    <div className="rounded-md border border-slate-300 bg-slate-100/70 p-2 text-[11px] text-slate-700 mt-2">
-      <p className="font-semibold">청산금 수령분 비과세 미적용</p>
-      <p className="mt-1">
-        1세대1주택 비과세 요건 미충족 → 청산금 수령분도 정상 과세됩니다.
-      </p>
-    </div>
-  );
-}
+// SettlementExemptionGuideCard는 SettlementExemptionGuideCard.tsx로 분리됨 (800줄 정책)
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 사례 48 — 승계조합원 신축APT 양도 (관리처분 후 입주권 승계 → 신축APT 양도)

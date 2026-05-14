@@ -27,10 +27,26 @@ export function validateRedevelopmentAsset(asset: AssetForm, label: string): str
   const originalAssetType = asset.redevOriginalAssetType || "housing";
   const settlementDirection = asset.redevSettlementDirection || "pay";
 
-  // 본 PR 미지원 분기는 명시 입력만 차단(라디오에서 disabled로 선택 불가지만 안전망).
-  if (subject !== "apt") {
-    return `${label}: 양도 대상은 본 PR에서 "완공 APT 양도"만 지원합니다. (입주권 양도는 후속 PR)`;
+  // 지원 분기: subject="apt" (사례 44~48) + subject="right" (사례 36). 그 외 차단.
+  if (subject !== "apt" && subject !== "right") {
+    return `${label}: 양도 대상이 올바르지 않습니다. (지원: 완공 APT 양도 / 조합원입주권 양도)`;
   }
+
+  // ── subject="right" 전용 검증 (사례 36) ──
+  // 형식 가드 A: 객관적·입력 유효성 — 미충족 시 다음 단계 진입 차단.
+  if (subject === "right") {
+    // A-1: receive 분기 시 settlementAmount > 0 필수 (청산금 수령 없이 receive 선택 불가)
+    if (
+      asset.redevSettlementDirection === "receive" &&
+      parseAmount(asset.redevSettlementAmount) <= 0
+    ) {
+      return `${label}: 청산금 수령 방향인 경우 청산금 수령액을 입력하세요. (시행령 §166①2호 가목)`;
+    }
+    // A-2: 비과세 자기선언(exemptionEligibleAtApproval=true) 시 form-전역 보유 상황과 일관성 검증은
+    // UI 경고 카드(b)에서만 처리 (자기선언 우선 — validate 차단 X).
+    // → 별도 API/validate 동기화 불필요 (자기선언 필드 = UI 단독 경고).
+  }
+
   if (approvalLawBasis !== "urban_renovation_art_74") {
     return `${label}: 인가 법령 근거는 본 PR에서 "도정법 §74"만 지원합니다. (빈집소규모법 §29는 후속 PR)`;
   }

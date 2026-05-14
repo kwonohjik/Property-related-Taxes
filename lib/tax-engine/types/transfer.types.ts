@@ -118,6 +118,12 @@ export interface TransferTaxInput {
   standardPriceAtTransfer?: number;
   /** 세대 보유 주택 수 */
   householdHousingCount: number;
+  /**
+   * 세대 보유 조합원입주권 수 (양도일 현재).
+   * §89①4호 가목 1세대1입주권 비과세 판단 (다른 주택 없음 + 입주권 1개).
+   * 미제공 시 0으로 간주.
+   */
+  householdRightCount?: number;
   /** 거주기간 (월) */
   residencePeriodMonths: number;
   /** 양도일 기준 조정대상지역 여부 */

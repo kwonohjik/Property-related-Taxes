@@ -21,13 +21,22 @@ import type { RedevelopmentResult } from "@/lib/tax-engine/types/transfer-redeve
 
 interface Props {
   detail: RedevelopmentResult;
+  /**
+   * 양도 대상 subject — "right" 시 입주권 양도 분기 (사례 36).
+   * RedevelopmentResult에 echo 필드 없으므로 호출 사이트에서 직접 전달.
+   * 미전달 시 "apt" fallback (기존 사례 44~48 회귀 무관).
+   */
+  subject?: "apt" | "right";
 }
 
 const fmt = (n: number) => n.toLocaleString("ko-KR");
 const fmtPct = (r: number) => `${(r * 100).toFixed(1)}%`;
 
-export function RedevelopmentDetailCard({ detail }: Props) {
-  const { preApproval, postApprovalExistingHouse, settlement, total, salePriceTotal, valuationMeta, estimatedLumpDeduction, highValueAllocation, lthdResidenceAttribution, successorMemberApplied, successorMemberDetail } = detail;
+export function RedevelopmentDetailCard({ detail, subject = "apt" }: Props) {
+  const { preApproval, postApprovalExistingHouse, settlement, total, salePriceTotal, valuationMeta, estimatedLumpDeduction, highValueAllocation, lthdResidenceAttribution, successorMemberApplied, successorMemberDetail, oneRightExemptionApplied, oneRightHighValueApplied } = detail;
+
+  // subject="right": 입주권 양도 분기 (사례 36)
+  const isRightSubject = subject === "right";
 
   return (
     <div className="rounded-lg border border-violet-200 bg-violet-50/30 p-4 space-y-3">
@@ -38,6 +47,17 @@ export function RedevelopmentDetailCard({ detail }: Props) {
               <span className="rounded-full bg-rose-200 px-2 py-0.5 text-[10px] font-bold text-rose-800">승계조합원</span>
               <h3 className="text-sm font-semibold text-rose-900">재개발 신축APT 양도 (단순 차감 · 준공일 기산)</h3>
             </>
+          ) : isRightSubject ? (
+            <>
+              <span className="rounded-full bg-violet-200 px-2 py-0.5 text-[10px] font-bold text-violet-800">시행령 §166①</span>
+              <h3 className="text-sm font-semibold text-violet-900">조합원입주권 양도 (§95② 단서 + §166①)</h3>
+              {oneRightExemptionApplied && !oneRightHighValueApplied && (
+                <span className="rounded-full bg-violet-300 px-2 py-0.5 text-[10px] font-bold text-violet-900">1세대1입주권 비과세</span>
+              )}
+              {oneRightHighValueApplied && (
+                <span className="rounded-full bg-amber-200 px-2 py-0.5 text-[10px] font-bold text-amber-800">12억 초과 안분</span>
+              )}
+            </>
           ) : (
             <>
               <span className="rounded-full bg-violet-200 px-2 py-0.5 text-[10px] font-bold text-violet-800">시행령 §166②1호</span>
@@ -45,12 +65,59 @@ export function RedevelopmentDetailCard({ detail }: Props) {
             </>
           )}
         </div>
-        {!successorMemberApplied && salePriceTotal != null && (
+        {!successorMemberApplied && !isRightSubject && salePriceTotal != null && (
           <div className="text-xs text-violet-700">
             분양가 <span className="font-mono font-semibold">{fmt(salePriceTotal)}</span>
           </div>
         )}
       </div>
+
+      {/* 사례 36 — 1세대1입주권 비과세 배지 + 안내 */}
+      {isRightSubject && oneRightExemptionApplied && !oneRightHighValueApplied && (
+        <div className="rounded-md bg-violet-100/70 border border-violet-300 p-3 text-[11px] text-violet-900 space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="rounded-full bg-violet-300 px-2 py-0.5 text-[10px] font-bold text-violet-900">§89①4호 가목</span>
+            <span className="font-semibold">1세대1입주권 비과세 적용 — 산출세액 0</span>
+          </div>
+          <p>
+            양도일 현재 1세대1입주권(다른 주택 0채 + 입주권 1개) + 인가일 기준 §89①3호 가목 보유요건 충족.
+            3분기 양도차익 전체 비과세 차감 → 과세 양도소득금액 0.
+          </p>
+          <p className="text-[10px] text-violet-700">
+            ※ 본 결과는 사용자 자기선언(§⑥ 토글 ON) 기준입니다. 세무서 최종 판단과 다를 수 있습니다.
+          </p>
+        </div>
+      )}
+
+      {/* 사례 36 — 12억 초과 안분 배지 (oneRightHighValueApplied) */}
+      {isRightSubject && oneRightHighValueApplied && highValueAllocation && (
+        <div className="rounded-md bg-amber-50 border border-amber-200 p-3 text-[11px] text-amber-900 space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="rounded-full bg-amber-200 px-2 py-0.5 text-[10px] font-bold text-amber-800">§89①4호 가목 단서 + §95③</span>
+            <span className="font-semibold">1세대1입주권 12억 초과 안분 적용</span>
+          </div>
+          <p className="text-amber-800">
+            양도가액이 12억을 초과하여 초과 비율 분에 대해서만 과세됩니다. 각 분기 양도차익에 과세대상 비율을 곱한 값이 최종 과세 양도차익입니다.
+          </p>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-1">
+            <Row label="비과세 기준 (12억)" value={highValueAllocation.nontaxableThreshold} />
+            <Row label="과세대상 비율 (%)" value={Math.round(highValueAllocation.taxableRatio * 10000) / 100} />
+            <Row label="과세대상 양도차익 합 (안분 후)" value={highValueAllocation.taxableGain} highlight />
+          </div>
+          <p className="text-[10px] text-amber-700 mt-1">
+            산식: 각 분기 양도차익 × (양도가액 − 12억) ÷ 양도가액. 근거: §89①4호 가목 단서 + §95③ + 시행령 §160 준용.
+          </p>
+        </div>
+      )}
+
+      {/* subject="right" 시 §166 의제구조 안내 대신 §166① 구조 안내 */}
+      {isRightSubject && !successorMemberApplied && (
+        <div className="rounded-md bg-violet-100/60 border border-violet-200 p-2 text-[11px] text-violet-900 leading-relaxed">
+          <span className="font-semibold">§166① 입주권 양도 구조</span> — 인가전 양도차익에만 LTHD 적용 (§95② 단서).
+          인가후·청산금 분은 LTHD 대상 외 (§94①2호 + §166①1호 산식 구조).
+          인가후 기존건물분(=0) 행은 표시 생략.
+        </div>
+      )}
 
       {/* 사례 48 — 승계조합원 단순 차감 산식 (§166 안분 우회) */}
       {successorMemberApplied && successorMemberDetail && (
@@ -89,16 +156,16 @@ export function RedevelopmentDetailCard({ detail }: Props) {
         </div>
       )}
 
-      {/* §166 의제구조 안내 (검산 식 모순 해명) — 승계조합원 분기에서는 안분 미적용으로 안내 숨김 */}
-      {!successorMemberApplied && (
+      {/* §166②1호 의제구조 안내 — subject="apt" 전용, 승계조합원 분기·입주권 분기에서 숨김 */}
+      {!successorMemberApplied && !isRightSubject && (
         <div className="rounded-md bg-violet-100/60 border border-violet-200 p-2 text-[11px] text-violet-900 leading-relaxed">
           <span className="font-semibold">시행령 §166②1호 의제구조</span> — 분기별 양도가·취득가는 의제 안분값으로,
           합계 행의 단순 산식(양도가 − 취득가 − 필요경비) 검산은 본문 산식이 아닙니다. 양도차익은 인가전/인가후/청산금 3분기 의제 산식의 합으로 산출됩니다.
         </div>
       )}
 
-      {/* 1세대1주택 + 12억 안분 박스 (§95③·시행령 §160 — 사례 45) */}
-      {highValueAllocation ? (
+      {/* 1세대1주택 + 12억 안분 박스 (§95③·시행령 §160 — 사례 45, subject="apt" 전용) */}
+      {!isRightSubject && highValueAllocation && (
         <div className="rounded-md bg-amber-50 border border-amber-200 p-3 text-[11px] text-amber-900 space-y-1">
           <div className="flex items-center gap-2">
             <span className="rounded-full bg-amber-200 px-2 py-0.5 text-[10px] font-bold text-amber-800">1세대1주택 §95③·시행령 §160</span>
@@ -114,7 +181,8 @@ export function RedevelopmentDetailCard({ detail }: Props) {
             <Row label="과세대상 양도차익 (안분 후)" value={highValueAllocation.taxableGain} highlight />
           </div>
         </div>
-      ) : (
+      )}
+      {!isRightSubject && !highValueAllocation && !successorMemberApplied && (
         <div className="rounded-md bg-sky-50 border border-sky-200 p-3 text-[11px] text-sky-900 space-y-1">
           <div className="flex items-center gap-2">
             <span className="rounded-full bg-sky-200 px-2 py-0.5 text-[10px] font-bold text-sky-800">일반 과세</span>
@@ -122,7 +190,7 @@ export function RedevelopmentDetailCard({ detail }: Props) {
           </div>
           <p className="text-sky-800">
             보유 상황 단계에서 <span className="font-semibold">1세대1주택이 아니거나 1주택자가 아닌</span> 입력으로 처리되어, §95③ 비과세 안분 없이 분기별 양도차익 전체가 과세대상입니다.
-            <br />1세대1주택 + 12억 초과 비과세 안분을 적용하려면 “보유 상황” 단계에서 1세대 여부와 보유 주택 수를 확인하세요.
+            1세대1주택 + 12억 초과 비과세 안분을 적용하려면 &ldquo;보유 상황&rdquo; 단계에서 1세대 여부와 보유 주택 수를 확인하세요.
           </p>
         </div>
       )}
@@ -181,13 +249,17 @@ export function RedevelopmentDetailCard({ detail }: Props) {
         </div>
       )}
 
-      {/* 3분할 표 */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+      {/* 3분할 표 — subject="right" 시 ② 인가후 기존건물분 숨김 (gain=0, §95② 단서로 대상 외) */}
+      <div className={`grid grid-cols-1 gap-3 ${isRightSubject ? "md:grid-cols-2" : "md:grid-cols-3"}`}>
         {/* 인가전 분 */}
         <div className="rounded-md bg-white border border-violet-200 p-3 space-y-1.5">
           <p className="text-[11px] font-semibold text-violet-700">① 인가전 분</p>
-          <p className="text-[10px] text-violet-600">§166①1호 · §166⑤2호나목 (취득일 기산)</p>
-          <Row label="의제 양도가액(=권리가액)" value={preApproval.apportionedTransfer} />
+          <p className="text-[10px] text-violet-600">
+            {isRightSubject
+              ? "§166①1호 · §166⑤1호 (취득일 → 관리처분 인가일 기산)"
+              : "§166①1호 · §166⑤2호나목 (취득일 기산)"}
+          </p>
+          <Row label={isRightSubject ? "의제 양도가액(=권리가액)" : "의제 양도가액(=권리가액)"} value={preApproval.apportionedTransfer} />
           <Row label="취득가액" value={preApproval.apportionedAcquisition} />
           {estimatedLumpDeduction != null && estimatedLumpDeduction > 0 && (
             <Row label="개산공제 (취득당시 라목값 × 3%, §163⑥)" value={estimatedLumpDeduction} />
@@ -199,7 +271,8 @@ export function RedevelopmentDetailCard({ detail }: Props) {
           <Row label="LTHD" value={preApproval.lthd} />
         </div>
 
-        {/* 인가후 기존건물분 */}
+        {/* 인가후 기존건물분 — subject="apt" 시만 표시 */}
+        {!isRightSubject && (
         <div className="rounded-md bg-white border border-violet-200 p-3 space-y-1.5">
           <p className="text-[11px] font-semibold text-violet-700">② 인가후 기존건물분</p>
           <p className="text-[10px] text-violet-600">§166②1호 안분 (권리가액/분양가) · §166⑤2호나목</p>
@@ -211,13 +284,20 @@ export function RedevelopmentDetailCard({ detail }: Props) {
           </p>
           <Row label="LTHD" value={postApprovalExistingHouse.lthd} />
         </div>
+        )}
 
         {/* 청산금 분 */}
         <div className="rounded-md bg-white border border-violet-200 p-3 space-y-1.5">
           <p className="text-[11px] font-semibold text-violet-700">
-            ③ 청산금 분{detail.settlementExemptionApplied ? " (1세대1주택 비과세)" : ""}
+            {isRightSubject
+              ? "② 인가후·청산금 분 (§166①1호)"
+              : `③ 청산금 분${detail.settlementExemptionApplied ? " (1세대1주택 비과세)" : ""}`}
           </p>
-          <p className="text-[10px] text-violet-600">§166②1호 안분 (청산금/분양가) · §166⑤2호가목 (인가일 기산)</p>
+          <p className="text-[10px] text-violet-600">
+            {isRightSubject
+              ? "§166①1호 · §166⑤1호 (인가일 기산 — LTHD 대상 외)"
+              : "§166②1호 안분 (청산금/분양가) · §166⑤2호가목 (인가일 기산)"}
+          </p>
           <Row label="안분 양도가액" value={settlement.apportionedTransfer} />
           <Row label="안분 취득가액(=청산금)" value={settlement.apportionedAcquisition} />
           {detail.settlementExemptionApplied ? (

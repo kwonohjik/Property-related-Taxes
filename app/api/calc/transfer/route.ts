@@ -165,6 +165,9 @@ export async function POST(request: NextRequest) {
     standardPriceAtAcquisition: data.standardPriceAtAcquisition,
     standardPriceAtTransfer: data.standardPriceAtTransfer,
     householdHousingCount: data.householdHousingCount,
+    // ⑭ 사례 36 §89①4호 가목 1세대1입주권 비과세 — 조합원입주권 보유 수 (TypeScript 미감지 영역)
+    // optional: right_to_move_in 이외 자산 유형에서는 미전달 → 엔진 fallback (householdRightCount ?? 0)
+    householdRightCount: data.householdRightCount,
     residencePeriodMonths: data.residencePeriodMonths,
     isRegulatedArea: data.isRegulatedArea,
     wasRegulatedAtAcquisition: data.wasRegulatedAtAcquisition,

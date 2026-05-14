@@ -693,7 +693,14 @@ export function TransferTaxResultView({
 
       {/* 재개발/재건축 상세 (시행령 §166) — 사례 44 3분할 양도차익 + LTHD 3줄 */}
       {result.redevelopmentDetail && (
-        <RedevelopmentDetailCard detail={result.redevelopmentDetail} />
+        <RedevelopmentDetailCard
+          detail={result.redevelopmentDetail}
+          subject={
+            formData?.assets?.[0]?.assetKind === "right_to_move_in"
+              ? "right"
+              : (formData?.assets?.[0]?.redevSubject as "apt" | "right" | undefined) ?? "apt"
+          }
+        />
       )}
 
       {/* ⑦ 장기임대주택 보유자 거주주택 비과세 특례 상세 (소령 §155⑳) — applied=false 시 미적용 사유도 표시 */}

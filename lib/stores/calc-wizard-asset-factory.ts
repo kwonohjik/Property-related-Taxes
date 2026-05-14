@@ -325,6 +325,8 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     // 사례 46 — 청산금 수령분 단독 신고
     redevReceiveOnlyMode: "",
     redevExemptionEligibleAtApproval: "",
+    // 사례 36 — 1세대1입주권 비과세 C-1 안전장치
+    redevPriorHouseHoldingMonths: "",
     // 사례 48 — 승계조합원 신축APT 양도
     redevIsSuccessorMember: "",
     redevCompletionDate: "",
@@ -482,6 +484,8 @@ export function migrateAsset(raw: unknown): AssetForm {
   // 사례 46 — 청산금 수령분 단독 신고
   if (a.redevReceiveOnlyMode === undefined) a.redevReceiveOnlyMode = "";
   if (a.redevExemptionEligibleAtApproval === undefined) a.redevExemptionEligibleAtApproval = "";
+  // 사례 36 — 1세대1입주권 비과세 C-1 안전장치
+  if (a.redevPriorHouseHoldingMonths === undefined) a.redevPriorHouseHoldingMonths = "";
   // 사례 48 — 승계조합원 신축APT 양도
   if (a.redevIsSuccessorMember === undefined) a.redevIsSuccessorMember = "";
   if (a.redevCompletionDate === undefined) a.redevCompletionDate = "";

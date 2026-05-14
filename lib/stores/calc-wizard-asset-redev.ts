@@ -196,6 +196,17 @@ export interface RedevelopmentFormSlice {
    */
   redevExemptionEligibleAtApproval: "" | "yes" | "no";
 
+  // ── 사례 36 — 1세대1입주권 비과세 C-1 안전장치 ──
+
+  /**
+   * 인가일 기준 종전주택 보유 월수 (C-1 안전장치 a — 자동 검증용).
+   *
+   * 24개월 미만 시 UI 경고 카드(b) 노출 (차단 X — 자기선언 우선).
+   * 빈문자열 = 미입력 (UI 경고 미발동). 음수 불가.
+   * 법령 근거: §89①4호 가목 → §89①3호 가목 보유 2년 요건.
+   */
+  redevPriorHouseHoldingMonths: string;
+
   // ── 사례 48 — 승계조합원 신축APT 양도 ──
 
   /**

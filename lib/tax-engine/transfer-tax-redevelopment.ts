@@ -113,24 +113,55 @@ export function calculateRedevelopmentTax(
     });
   }
 
+  // ─ Step A.7: 사례 36 §89①4호 가목 1세대1입주권 비과세 게이트 ─
+  // 트리거: subject="right" + exemptionEligibleAtApproval=true + householdHousingCount=0
+  //         + householdRightCount=1 + isOneHousehold=true
+  // - 12억 이하: 전액 비과세 (3분기 gain/lthd 모두 0 → 산출세액 0)
+  // - 12억 초과: §89①4호 가목 단서 안분 (taxableRatio 적용 후 비과세분 마스킹)
+  // subject="right" 가드 — 사례 44~48 (apt) 경로 영향 0 (회귀 안전)
+  const redevAfterRight: RedevelopmentResult = applyOneRightExemption(
+    redev,
+    input.redevelopment!,
+    input,
+  );
+
+  if (redevAfterRight.oneRightExemptionApplied) {
+    steps.push({
+      label: "1세대1입주권 비과세",
+      formula: `§89①4호 가목 — 양도일 현재 입주권 1개 + 다른 주택 없음 + 인가일 기준 종전주택 비과세 요건 충족 + 양도가액 ${input.transferPrice.toLocaleString()} ≤ 12억 → 전액 비과세`,
+      amount: 0,
+      legalBasis: REDEVELOPMENT.GAIN_BASE,
+    });
+  }
+
+  if (redevAfterRight.oneRightHighValueApplied && redevAfterRight.highValueAllocation) {
+    const ha = redevAfterRight.highValueAllocation;
+    steps.push({
+      label: "1세대1입주권 12억 초과 과세대상 양도차익 안분",
+      formula: `§89①4호 가목 단서 + §95③ — 전체 양도차익 ${redev.total.gain.toLocaleString()} × (양도가액 ${input.transferPrice.toLocaleString()} - 12억) / 양도가액 = ${ha.taxableGain.toLocaleString()} (비과세분 ${ha.nontaxableGain.toLocaleString()})`,
+      amount: ha.taxableGain,
+      legalBasis: REDEVELOPMENT.REDEV_HIGH_VALUE_ALLOCATION,
+    });
+  }
+
   // ─ Step B: 양도차익·LTHD steps emit (인가전 / 인가후 기존 / 청산금 3분할) ─
-  emitRedevelopmentSteps(steps, redev, input.redevelopment!);
+  emitRedevelopmentSteps(steps, redevAfterRight, input.redevelopment!);
 
   // ─ Step C: 양도소득금액 ─
-  const transferIncome = redev.total.taxableIncome;
+  const transferIncome = redevAfterRight.total.taxableIncome;
   steps.push({
     label: "양도소득금액",
-    formula: `양도차익 ${redev.total.gain.toLocaleString()} - 장기보유공제 ${redev.total.lthd.toLocaleString()}`,
+    formula: `양도차익 ${redevAfterRight.total.gain.toLocaleString()} - 장기보유공제 ${redevAfterRight.total.lthd.toLocaleString()}`,
     amount: transferIncome,
     legalBasis: REDEVELOPMENT.GAIN_BASE,
   });
 
   // ─ Step D: 기본공제 (STEP 5) ─
   // calcBasicDeduction(taxableGain, lth) 시그니처: afterLTH = taxableGain - lth.
-  // redev.total.gain 을 첫 인자로 전달 (taxableIncome 은 이미 lthd 차감 후 — 이중 차감 방지).
+  // redevAfterRight.total.gain 을 첫 인자로 전달 (taxableIncome 은 이미 lthd 차감 후 — 이중 차감 방지).
   const basicDeduction = calcBasicDeduction(
-    redev.total.gain,
-    redev.total.lthd,
+    redevAfterRight.total.gain,
+    redevAfterRight.total.lthd,
     input.annualBasicDeductionUsed,
     input.isUnregistered ?? false,
     parsedRates.basicDeductionRules,
@@ -183,11 +214,11 @@ export function calculateRedevelopmentTax(
 
   // ─ Step I: TransferTaxResult 빌드 ─
   return {
-    isExempt: false,
-    transferGain: redev.total.gain,
-    taxableGain: redev.total.gain,
+    isExempt: redevAfterRight.oneRightExemptionApplied === true, // 전액 비과세 시 true
+    transferGain: redevAfterRight.total.gain,
+    taxableGain: redevAfterRight.total.gain,
     usedEstimatedAcquisition: input.useEstimatedAcquisition ?? false,
-    longTermHoldingDeduction: redev.total.lthd,
+    longTermHoldingDeduction: redevAfterRight.total.lthd,
     longTermHoldingRate: 0, // 분기별 율 (3종) — redevelopmentDetail.preApproval/postApproval/settlement.lthdRate 참조
     lthdStartDate: resolveLTHDStartDate(input),
     basicDeduction,
@@ -205,7 +236,7 @@ export function calculateRedevelopmentTax(
     totalTax,
     steps,
     // 재개발 상세 부착
-    redevelopmentDetail: redev,
+    redevelopmentDetail: redevAfterRight,
   };
 }
 
@@ -418,6 +449,134 @@ function applySettlementExemption(
     exemptedGain,
     exemptedLthd,
   };
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// 내부 헬퍼 — Step A.7 사례 36 1세대1입주권 비과세 (§89①4호 가목)
+// ──────────────────────────────────────────────────────────────────────────────
+
+/**
+ * 사례 36 — §89①4호 가목 1세대1입주권 비과세 게이트.
+ *
+ * 트리거 (AND 4조건):
+ *   1. subject === "right"  ◀── 사례 45/47 (apt) 경로 완전 격리
+ *   2. exemptionEligibleAtApproval === true  ◀── 기존 필드 재사용 (사례 47 도입)
+ *      (인가일 기준 종전주택 §89①3호 가목 요건 충족 — 사용자 자기선언)
+ *   3. householdHousingCount === 0 AND householdRightCount === 1
+ *      (양도일 현재 다른 주택 없음 + 1입주권만 — §89①4호 가목 본문)
+ *   4. isOneHousehold === true
+ *
+ * 동작:
+ *   - transferPrice ≤ 12억 → 3분기 모두 gain/lthd 0 마스킹 → 산출세액 0 (전액 비과세)
+ *     → oneRightExemptionApplied = true
+ *   - transferPrice > 12억 → §89①4호 가목 단서 + §95③ 안분
+ *     → taxableRatio × 각 분기 gain/lthd 보존, 비과세분 마스킹
+ *     → oneRightHighValueApplied = true
+ *
+ * 법령 근거:
+ *   - 소득세법 §89①4호 가목 본문: 1세대1입주권 비과세
+ *   - 소득세법 §89①4호 가목 단서: 12억 초과 시 안분과세
+ *   - 소득세법 §95③ + 시행령 §160: 안분 산식 (taxableRatio = (양도가 − 12억) / 양도가)
+ *   - 시행령 §154: 1세대 범위
+ *
+ * 국세청 해석례 근거 (분모 = transferPrice 단일 — 해석 A):
+ *   - "고가주택에 해당하는 조합원입주권 양도차익 산정방법" (국세청, 2010.11.01)
+ *   - "1세대1주택인 고가주택의 입주권을 양도하는 경우 양도차익 산정방법" (국세청, 2008.01.10)
+ *   (링크: https://taxlaw.nts.go.kr/qt/USEQTA002P.do?ntstDcmId=010000000000144597)
+ *
+ * 미적용 케이스에서는 redev 입력 그대로 반환 (회귀 안전).
+ * subject="right" 가드로 사례 44~48 (apt) 경로 영향 0.
+ */
+function applyOneRightExemption(
+  redev: RedevelopmentResult,
+  redevInfo: NonNullable<TransferTaxInput["redevelopment"]>,
+  input: TransferTaxInput,
+): RedevelopmentResult {
+  // 트리거 조건 1: subject 가드 — apt 경로 완전 격리
+  if (redevInfo.subject !== "right") {
+    return redev;
+  }
+
+  // 트리거 조건 2~4: 자기선언 + 세대 구성
+  if (
+    redevInfo.exemptionEligibleAtApproval !== true ||
+    input.isOneHousehold !== true ||
+    input.householdHousingCount !== 0 ||
+    input.householdRightCount !== 1
+  ) {
+    return redev;
+  }
+
+  if (input.transferPrice <= HIGH_VALUE_THRESHOLD) {
+    // ── 전액 비과세 (12억 이하) ──
+    // 3분기 모두 trace 보존 후 0 마스킹
+    const maskBranch = (branch: RedevelopmentResult["preApproval"]) => ({
+      ...branch,
+      gainAfterAllocation: branch.gain,
+      lthdAfterAllocation: branch.lthd,
+      gain: 0,
+      lthd: 0,
+    });
+    return {
+      ...redev,
+      preApproval: maskBranch(redev.preApproval),
+      postApprovalExistingHouse: maskBranch(redev.postApprovalExistingHouse),
+      settlement: maskBranch(redev.settlement),
+      total: { gain: 0, lthd: 0, taxableIncome: 0 },
+      oneRightExemptionApplied: true,
+    };
+  } else {
+    // ── 12억 초과 안분과세 (§89①4호 가목 단서 + §95③) ──
+    // apt 분기 applyHighValueAllocation 과 동일 taxableRatio 로직 적용
+    // 단, isOneHouseSingle 조건(householdHousingCount===1)과 별개로 right 전용 처리
+    const taxableRatio = (input.transferPrice - HIGH_VALUE_THRESHOLD) / input.transferPrice;
+
+    const scaleBranch = (branch: RedevelopmentResult["preApproval"]) => {
+      if (branch.gain <= 0) {
+        return { ...branch, gainBeforeAllocation: branch.gain, nontaxableGain: 0 };
+      }
+      const originalGain = branch.gain;
+      const taxableGain = Math.floor(originalGain * taxableRatio);
+      const nontaxableGain = originalGain - taxableGain;
+      // subject="right": postApprovalExistingHouse.gain=0, settlement LTHD=0 (§94①2호)
+      const taxableLthd = branch.lthdRate > 0 ? Math.floor(taxableGain * branch.lthdRate) : 0;
+      return {
+        ...branch,
+        gain: taxableGain,
+        lthd: taxableLthd,
+        gainBeforeAllocation: originalGain,
+        nontaxableGain,
+      };
+    };
+
+    const preApproval = scaleBranch(redev.preApproval);
+    const postApprovalExistingHouse = scaleBranch(redev.postApprovalExistingHouse);
+    const settlement = scaleBranch(redev.settlement);
+
+    const totalGain = preApproval.gain + postApprovalExistingHouse.gain + settlement.gain;
+    const totalLthd = preApproval.lthd + postApprovalExistingHouse.lthd + settlement.lthd;
+    const nontaxableGainTotal = redev.total.gain - Math.floor(redev.total.gain * taxableRatio);
+    const taxableGainTotal = Math.floor(redev.total.gain * taxableRatio);
+
+    return {
+      ...redev,
+      preApproval,
+      postApprovalExistingHouse,
+      settlement,
+      total: {
+        gain: totalGain,
+        lthd: totalLthd,
+        taxableIncome: totalGain - totalLthd,
+      },
+      oneRightHighValueApplied: true,
+      highValueAllocation: {
+        nontaxableGain: nontaxableGainTotal,
+        taxableGain: taxableGainTotal,
+        taxableRatio,
+        nontaxableThreshold: HIGH_VALUE_THRESHOLD,
+      },
+    };
+  }
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
