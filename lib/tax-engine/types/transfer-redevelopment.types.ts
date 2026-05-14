@@ -417,6 +417,13 @@ export interface RedevelopmentResult {
    */
   salePriceTotal?: number;
 
+  /**
+   * receiveOnly 모드 활성 여부 — DetailedStatementFormulaBuilders / FilingFormTable의
+   * 분기 산식·라벨 결정 신호. RedevelopmentInfo.receiveOnlyMode === true 시 true.
+   * 사례 46 — 청산금 수령분 단독 신고에서 settlement 단독 산식 라벨 적용.
+   */
+  receiveOnlyMode?: boolean;
+
   /** 환산취득가 산정 메타 (환산 케이스만) */
   valuationMeta?: RedevelopmentValuationMeta;
 

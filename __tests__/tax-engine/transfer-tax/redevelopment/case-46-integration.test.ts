@@ -52,6 +52,10 @@ describe("사례 46 통합 anchor — APT 1세대1주택자 청산금 수령분 
     expect(result.redevelopmentDetail).toBeDefined();
   });
 
+  it("receiveOnlyMode 플래그 결과 부착 — DetailedStatementFormulaBuilders 라벨 분기 신호", () => {
+    expect(result.redevelopmentDetail?.receiveOnlyMode).toBe(true);
+  });
+
   it("receiveOnly 모드 — 인가전·인가후 양도차익 0 강제", () => {
     expect(result.redevelopmentDetail?.preApproval.gain).toBe(0);
     expect(result.redevelopmentDetail?.postApprovalExistingHouse.gain).toBe(0);
