@@ -477,13 +477,13 @@ export function buildRows(
       const iso = typeof d === "string" ? d : d instanceof Date ? d.toISOString() : "";
       return iso ? fmtDate(iso.slice(0, 10)) : "-";
     };
-    const fmtMonths = (m?: number) =>
-      m !== undefined && m > 0 ? `${Math.floor(m / 12)}년 ${m % 12}개월` : "-";
+    const fmtMonths = (m?: number, d?: number) => m === undefined || m <= 0 ? "-" : `${Math.floor(m / 12)}년 ${m % 12}개월${d && d > 0 ? ` ${d}일` : ""}`;
     // 입주일/퇴거일 없고 개월수만 있으면 "(개월수만 입력됨)" 안내 (sessionStorage 잔존 케이스)
     for (const [key, b] of branches) {
       const hasMonths = (b.residenceMonths ?? 0) > 0;
       const ph = hasMonths ? "(개월수만 입력됨)" : "-";
-      setStr("holdingPeriod", key, fmtMonths(b.holdingMonths));
+      // 사례 46 — holdingDays 부착 시 settlement 분기에서 "6년 9개월 10일" 표시
+      setStr("holdingPeriod", key, fmtMonths(b.holdingMonths, b.holdingDays));
       setStr("acquisitionDate", key, fmtD(b.branchAcqDate));
       setStr("transferDate", key, fmtD(b.branchTransferDate));
       setStr("moveIn", key, b.residenceStartDate || ph);
