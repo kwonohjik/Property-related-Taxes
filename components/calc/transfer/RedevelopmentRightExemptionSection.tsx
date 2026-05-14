@@ -27,6 +27,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 
 interface Props {
   asset: AssetForm;
