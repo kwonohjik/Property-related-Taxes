@@ -26,10 +26,10 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
-import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
-import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
 import { DateInput } from "@/components/ui/date-input";
 import { useMemo } from "react";
+import { RedevelopmentValuationSection } from "./RedevelopmentValuationSection";
+import { RedevelopmentResidenceSplitSection } from "./RedevelopmentResidenceSplitSection";
 
 interface Props {
   asset: AssetForm;
@@ -55,8 +55,8 @@ const ORIGINAL_ASSET_OPTIONS = [
 ];
 
 const SETTLEMENT_OPTIONS = [
-  { value: "pay" as const, label: "청산금 납부", description: "권리가액 < 분양가 → 차액 납부 (사례 44 본 PR UI 지원)" },
-  { value: "receive" as const, label: "청산금 수령", description: "권리가액 > 분양가 → 차액 수령 (시행령 §166①2호 / ②2호) — 후속 PR" },
+  { value: "pay" as const, label: "청산금 납부", description: "권리가액 < 분양가 → 차액 납부 (사례 44·45)" },
+  { value: "receive" as const, label: "청산금 수령", description: "권리가액 > 분양가 → 차액 수령 (시행령 §166①2호 가목, 사례 46)" },
 ];
 
 const APPROVAL_LAW_OPTIONS = [
@@ -88,95 +88,7 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle }: Props)
     };
   }, [asset.redevRightsValue, asset.redevSettlementAmount, asset.redevSettlementDirection]);
 
-  // 환산취득가 미리보기 (useMemo) — PHD 패턴, 엔진 redevelopment-valuation.ts 와 동일 산식.
-  //   본문 발동: Sum_A = 단가×면적 + 건물, Sum_F = 단가×면적 + 건물
-  //              P_A = floor(A × Sum_A / Sum_F)
-  //              환산취득가 = floor(권리가액 × P_A / D)
-  //   본문 미발동: P_A = 사용자 단일 입력 (redevAcquisitionHousingPrice)
-  //               환산취득가 = floor(권리가액 × P_A / D)
-  const valuationPreview = useMemo(() => {
-    if (!asset.useEstimatedAcquisition) return null;
-    const rights = parseAmount(asset.redevRightsValue);
-    const D = parseAmount(asset.redevManagementDisposalHousingPrice);
-    if (rights <= 0 || D <= 0) return null;
-
-    // §164⑦ 본문 트리거 (취득일 < 최초공시일)
-    const provisionTriggered =
-      !!asset.acquisitionDate &&
-      !!asset.redevFirstDisclosureDate &&
-      new Date(asset.acquisitionDate) < new Date(asset.redevFirstDisclosureDate);
-
-    // PHD 패턴 필수입력
-    const A = parseAmount(asset.redevFirstDisclosureHousingPrice);
-    const area = parseDecimal(asset.redevLandArea);
-    const landAcq = parseAmount(asset.redevLandPricePerSqmAtAcq);
-    const bldAcq = parseAmount(asset.redevBuildingStdPriceAtAcq);
-    const landFirst = parseAmount(asset.redevLandPricePerSqmAtFirst);
-    const bldFirst = parseAmount(asset.redevBuildingStdPriceAtFirst);
-
-    const canApplyMain =
-      provisionTriggered &&
-      A > 0 && area > 0 && landAcq > 0 && landFirst > 0;
-
-    let P_A: number;
-    let sumAtAcq = 0;
-    let sumAtFirst = 0;
-    let step1Formula: string | null = null;
-
-    if (canApplyMain) {
-      sumAtAcq = Math.floor(landAcq * area) + bldAcq;
-      sumAtFirst = Math.floor(landFirst * area) + bldFirst;
-      if (sumAtFirst > 0) {
-        P_A = Number((BigInt(A) * BigInt(sumAtAcq)) / BigInt(sumAtFirst));
-        step1Formula = `floor(${A.toLocaleString()} × ${sumAtAcq.toLocaleString()} / ${sumAtFirst.toLocaleString()})`;
-      } else {
-        P_A = 0;
-      }
-    } else {
-      // 본문 미발동 — 단일 라목값 사용자 입력
-      P_A = parseAmount(asset.redevAcquisitionHousingPrice);
-    }
-
-    if (P_A <= 0) return null;
-
-    const converted = Number((BigInt(rights) * BigInt(P_A)) / BigInt(D));
-
-    // 본문 트리거 발동인데 필수입력 누락 → 경고
-    const missingFields = provisionTriggered && !canApplyMain;
-
-    return {
-      converted,
-      provisionTriggered,
-      canApplyMain,
-      missingFields,
-      A, area, landAcq, bldAcq, landFirst, bldFirst,
-      sumAtAcq, sumAtFirst,
-      P_A, D, rights,
-      step1Formula,
-      step2Formula: `floor(${rights.toLocaleString()} × ${P_A.toLocaleString()} / ${D.toLocaleString()})`,
-    };
-  }, [
-    asset.useEstimatedAcquisition,
-    asset.redevRightsValue,
-    asset.redevManagementDisposalHousingPrice,
-    asset.redevAcquisitionHousingPrice,
-    asset.redevFirstDisclosureHousingPrice,
-    asset.redevLandArea,
-    asset.redevLandPricePerSqmAtAcq,
-    asset.redevBuildingStdPriceAtAcq,
-    asset.redevLandPricePerSqmAtFirst,
-    asset.redevBuildingStdPriceAtFirst,
-    asset.acquisitionDate,
-    asset.redevFirstDisclosureDate,
-  ]);
-
-  // §164⑦ 본문 트리거 (취득일 < 최초공시일) — 입력 영역 분기용
-  const isPreDisclosureTriggered =
-    !!asset.acquisitionDate &&
-    !!asset.redevFirstDisclosureDate &&
-    new Date(asset.acquisitionDate) < new Date(asset.redevFirstDisclosureDate);
-
-  const landAreaNumber = parseDecimal(asset.redevLandArea) || undefined;
+  // (환산취득가 미리보기 + PHD 트리거 + landArea 변환은 RedevelopmentValuationSection으로 분리됨)
 
   if (!isActive) return null;
 
@@ -238,13 +150,25 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle }: Props)
           name={`redevSettlement-${asset.assetId}`}
           value={asset.redevSettlementDirection || "pay"}
           onChange={(v) => onChange({ redevSettlementDirection: v as "" | "pay" | "receive" })}
-          options={SETTLEMENT_OPTIONS.map((o) => ({
-            ...o,
-            disabled: o.value === "receive",
-          }))}
+          options={SETTLEMENT_OPTIONS}
           layout="inline"
         />
       </div>
+
+      {/* ③-a rose: 청산금 수령분 단독 신고 토글 (사례 46 — receiveOnlyMode) */}
+      {asset.redevSettlementDirection === "receive" && (
+        <ReceiveOnlyToggleCard asset={asset} onChange={onChange} />
+      )}
+
+      {/* ③-b sky: 분양가 read-only 미리보기 (입력 슬롯 부재) */}
+      {asset.redevSettlementDirection === "receive" && (
+        <SalePriceTotalPreviewCard asset={asset} />
+      )}
+
+      {/* ③-c violet: 비과세 보유 요건 자동 산정 (receiveOnly + 1세대1주택 시) */}
+      {asset.redevReceiveOnlyMode === "yes" && isOneHouseSingle && (
+        <ExemptionAtApprovalCard asset={asset} onChange={onChange} />
+      )}
 
       {/* ④ violet: 재개발 일정·금액 */}
       <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-2">
@@ -342,430 +266,170 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle }: Props)
         </div>
       )}
 
-      {/* ⑥ rose: 환산 기준시가 — useEstimatedAcquisition ON 시 */}
-      <ToggleCard
-        tone="rose"
-        checked={asset.useEstimatedAcquisition}
-        onCheckedChange={(v) => onChange({ useEstimatedAcquisition: v })}
-        title="환산취득가 사용"
-        description="취득가액 확인 불가 시 기준시가 비율로 환산 (시행령 §166③ + §176의2②2호)"
-      >
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-200 text-[10px] font-bold text-rose-800 select-none">5</span>
-            <p className="text-xs font-semibold text-rose-700">환산 기준시가</p>
-          </div>
 
-          {/* D — 관리처분 인가일 라목값 (단일, 필수) */}
-          <FieldCard
-            label="D. 관리처분 인가일 개별주택공시가격"
-            hint="§166③ 분모 — 양도 의제 시점의 §99①1호 라목 단일 라목값 (관리처분 인가일에는 라목값이 공시되어 있음)"
-          >
-            <CurrencyInput label=""
-              value={asset.redevManagementDisposalHousingPrice}
-              onChange={(v) => onChange({ redevManagementDisposalHousingPrice: v })}
-              hideUnit
-            />
-          </FieldCard>
+      {/* ⑥ rose: 환산취득가 (시행령 §166③ + §164⑦ PHD 패턴) — 분리 파일 */}
+      <RedevelopmentValuationSection asset={asset} onChange={onChange} />
 
-          {/* 최초공시일 — 본문 발동 트리거 */}
-          <FieldCard
-            label="최초공시일"
-            hint="개별주택가격/공동주택가격 최초 공시일 (단독 2005-04-30, 공동 2006-04-28). 취득일이 이보다 이전이면 §164⑦ 본문 산식 발동."
-          >
-            <DateInput
-              value={asset.redevFirstDisclosureDate}
-              onChange={(v) => onChange({ redevFirstDisclosureDate: v })}
-            />
-          </FieldCard>
-
-          {/* 본문 미발동 경로 — 취득일 ≥ 최초공시일 또는 최초공시일 미입력 */}
-          {!isPreDisclosureTriggered && (
-            <FieldCard
-              label="취득당시 개별주택공시가격"
-              hint="§166③ 분자 — 취득당시 §99①1호 라목 단일 라목값 (취득일 ≥ 최초공시일)"
-            >
-              <CurrencyInput label=""
-                value={asset.redevAcquisitionHousingPrice}
-                onChange={(v) => onChange({ redevAcquisitionHousingPrice: v })}
-                hideUnit
-              />
-            </FieldCard>
-          )}
-
-          {/* 본문 발동 경로 — PHD 패턴 (토지 API 조회 + 건물 수동 입력) */}
-          {isPreDisclosureTriggered && (
-            <div className="rounded-md border border-rose-200 bg-rose-50/60 p-3 space-y-3">
-              <p className="text-[11px] font-semibold text-rose-700">
-                §164⑦ 본문 발동 — PHD 패턴: 취득당시 라목값 P_A = floor(A × Sum_A / Sum_F)
-              </p>
-
-              <FieldCard
-                label="A. 최초공시 주택가격"
-                hint="국토교통부장관이 최초로 공시한 주택가격 (단일 라목값) — §164⑦ 본문 산식의 계수"
-              >
-                <CurrencyInput label=""
-                  value={asset.redevFirstDisclosureHousingPrice}
-                  onChange={(v) => onChange({ redevFirstDisclosureHousingPrice: v })}
-                  hideUnit
-                />
-              </FieldCard>
-
-              <FieldCard
-                label="토지면적 (㎡)"
-                hint="시점별 동일 가정 — 환지·합병으로 면적이 다른 케이스는 후속 PR"
-              >
-                <DecimalInput
-                  value={asset.redevLandArea}
-                  onChange={(v) => onChange({ redevLandArea: v })}
-                  unit="㎡"
-                />
-              </FieldCard>
-
-              {/* 취득시 (Sum_A) */}
-              <div className="rounded-md border border-rose-100 bg-white/70 p-2 space-y-2">
-                <p className="text-[11px] font-semibold text-rose-700">취득시 (Sum_A 산정)</p>
-                <LandPriceLookupField
-                  label="취득시 개별공시지가 (원/㎡)"
-                  hint="Vworld API 조회 — 기준연도 = 취득연도"
-                  pricePerSqm={asset.redevLandPricePerSqmAtAcq}
-                  onPricePerSqmChange={(v) => onChange({ redevLandPricePerSqmAtAcq: v })}
-                  area={landAreaNumber}
-                  referenceDate={asset.acquisitionDate}
-                  jibun={asset.addressJibun || undefined}
-                />
-                <FieldCard
-                  label="취득시 건물 기준시가"
-                  hint="국세청 건물 기준시가 (총액, 원) — 수동 입력"
-                >
-                  <CurrencyInput label=""
-                    value={asset.redevBuildingStdPriceAtAcq}
-                    onChange={(v) => onChange({ redevBuildingStdPriceAtAcq: v })}
-                    hideUnit
-                  />
-                </FieldCard>
-              </div>
-
-              {/* 최초공시 당시 (Sum_F) */}
-              <div className="rounded-md border border-rose-100 bg-white/70 p-2 space-y-2">
-                <p className="text-[11px] font-semibold text-rose-700">최초공시 당시 (Sum_F 산정)</p>
-                <LandPriceLookupField
-                  label="최초공시 당시 개별공시지가 (원/㎡)"
-                  hint="Vworld API 조회 — 기준연도 = 최초공시연도 (단독 2005, 공동 2006)"
-                  pricePerSqm={asset.redevLandPricePerSqmAtFirst}
-                  onPricePerSqmChange={(v) => onChange({ redevLandPricePerSqmAtFirst: v })}
-                  area={landAreaNumber}
-                  referenceDate={asset.redevFirstDisclosureDate}
-                  jibun={asset.addressJibun || undefined}
-                />
-                <FieldCard
-                  label="최초공시 당시 건물 기준시가"
-                  hint="국세청 건물 기준시가 (총액, 원) — 수동 입력"
-                >
-                  <CurrencyInput label=""
-                    value={asset.redevBuildingStdPriceAtFirst}
-                    onChange={(v) => onChange({ redevBuildingStdPriceAtFirst: v })}
-                    hideUnit
-                  />
-                </FieldCard>
-              </div>
-            </div>
-          )}
-
-          {/* 환산 미리보기 */}
-          {valuationPreview && (
-            <div className="mt-2 rounded-md bg-rose-100/60 border border-rose-200 p-2 text-xs space-y-1">
-              <p className="font-semibold text-rose-800">환산취득가 미리보기</p>
-              {valuationPreview.canApplyMain && valuationPreview.step1Formula && (
-                <>
-                  <p className="text-rose-700">
-                    Sum_A (취득시 합계) = 단가×면적 + 건물 ={" "}
-                    <span className="font-mono">{valuationPreview.sumAtAcq.toLocaleString()}</span>
-                  </p>
-                  <p className="text-rose-700">
-                    Sum_F (최초공시 당시 합계) = 단가×면적 + 건물 ={" "}
-                    <span className="font-mono">{valuationPreview.sumAtFirst.toLocaleString()}</span>
-                  </p>
-                  <p className="text-rose-700">
-                    Step 1 (§164⑦ 본문) — P_A = floor(A × Sum_A / Sum_F)
-                  </p>
-                  <p className="text-rose-700 font-mono">
-                    = {valuationPreview.step1Formula} = {valuationPreview.P_A.toLocaleString()}
-                  </p>
-                </>
-              )}
-              <p className="text-rose-700">
-                Step 2 (§166③) — 환산취득가 = floor(권리가액 × {valuationPreview.canApplyMain ? "P_A" : "취득당시 라목값"} / D)
-              </p>
-              <p className="text-rose-700 font-mono">
-                = {valuationPreview.step2Formula}
-              </p>
-              <p className="text-rose-700 font-mono">
-                = {valuationPreview.converted.toLocaleString()}
-              </p>
-              <p className="text-rose-700">
-                §164⑦ 본문:{" "}
-                <span className={valuationPreview.canApplyMain ? "font-semibold text-rose-900" : "text-rose-600"}>
-                  {valuationPreview.canApplyMain
-                    ? "발동 — PHD 패턴 2단계 산식 적용"
-                    : valuationPreview.provisionTriggered
-                      ? "트리거(취득일 < 최초공시일) 이나 PHD 필수입력 누락 → 본문 미적용"
-                      : "미발동 — 취득당시 라목값 단일 입력"}
-                </span>
-              </p>
-              {valuationPreview.missingFields && (
-                <p className="text-rose-800 font-semibold">
-                  ⚠ §164⑦ 본문 트리거 발동이지만 PHD 필수입력(A·면적·단가·건물) 중 일부 누락 — 위 영역을 모두 채워주세요.
-                </p>
-              )}
-            </div>
-          )}
-        </div>
-      </ToggleCard>
-
-      <ResidenceSplitSection asset={asset} onChange={onChange} isOneHouseSingle={isOneHouseSingle} />
+      {/* §⑤ 거주월수 분리 입력 (사례 45 — 1세대1주택 + 12억 초과) — 분리 파일 */}
+      <RedevelopmentResidenceSplitSection asset={asset} onChange={onChange} isOneHouseSingle={isOneHouseSingle} />
     </div>
   );
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// §⑤ 거주월수 분리 (사례 45 — 1세대1주택 + 12억 초과)
-// 시행령 §155⑰ (거주기간 통산) + 사전법령해석재산 2020-386 (청산금분 신축거주만)
-// 가시성: 1세대1주택 + householdHousingCount === 1 일 때만 노출
+// 사례 46 — 청산금 수령분 단독 신고 토글 + 분양가 미리보기 + 비과세 자동산정
 // ──────────────────────────────────────────────────────────────────────────────
 
-function ResidenceSplitSection({
+function ReceiveOnlyToggleCard({
   asset,
   onChange,
-  isOneHouseSingle,
 }: {
   asset: AssetForm;
   onChange: (patch: Partial<AssetForm>) => void;
-  isOneHouseSingle?: boolean;
 }) {
-  // 가시성 가드: 1세대1주택 + householdHousingCount === 1 일 때만 노출 (디자인 §⑤ 명세).
-  // undefined 는 legacy 호출 사이트 fallback (보수적으로 노출 유지).
-  const shouldHide = isOneHouseSingle === false;
-
-  // 사례 45 가이드 카드 4분기 useMemo (useEffect→store 미러링 금지)
-  const guidance = useMemo(() => {
-    // 자산-수준 양도가액 (actualSalePrice). 12억 초과 분기 판정용.
-    const tp = parseAmount(asset.actualSalePrice || "");
-    const prior = parseInt((asset.redevPriorHouseResidenceMonths || "0").replace(/,/g, ""), 10) || 0;
-    const newM = parseInt((asset.redevNewHouseResidenceMonths || "0").replace(/,/g, ""), 10) || 0;
-    const isHighValue = tp > 1_200_000_000;
-
-    if (!isHighValue) {
-      return {
-        tone: "emerald" as const,
-        title: "C-2 — 12억 이하 전액 비과세",
-        body: "양도가액이 12억원 이하이므로 전체 양도차익이 비과세 대상입니다 (1세대1주택 충족 시).",
-      };
-    }
-    const exceedsExisting = prior + newM >= 24;
-    const exceedsNew = newM >= 24;
-    if (exceedsExisting && exceedsNew) {
-      return {
-        tone: "sky" as const,
-        title: "C-3 — 12억 초과 + 분할 LTHD 모두 표2 적용",
-        body: "기존건물분과 청산금분 모두 표2(보유+거주) 적용. 거주월수 귀속은 분리되어 산정됩니다 (기존: 종전+신축 통산 / 청산금분: 신축만).",
-      };
-    }
-    if (exceedsExisting && !exceedsNew) {
-      return {
-        tone: "violet" as const,
-        title: "C-4 — 사전법령해석재산 2020-386 적용",
-        body: "기존건물분은 표2(보유+거주), 청산금납부분은 표1(보유만, 30% 캡)이 적용됩니다. 신축주택에서 2년 이상 거주하지 못한 경우 청산금분은 §95② 본문 표1 강등.",
-      };
-    }
-    return {
-      tone: "amber" as const,
-      title: "C-5 — 거주 2년 미충족 (두 분기 모두 표1)",
-      body: "종전+신축 통산 거주월수가 24개월 미만이면 표2(80% 캡) 진입 가드 미충족. 기존건물분·청산금분 모두 §95② 본문 표1(30% 캡) 적용.",
-    };
-  }, [asset.actualSalePrice, asset.redevPriorHouseResidenceMonths, asset.redevNewHouseResidenceMonths]);
-
-  if (shouldHide) return null;
-
   return (
-    <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-3 space-y-2">
-      <div className="flex items-center gap-2">
-        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-[10px] font-bold text-emerald-800 select-none">
-          6
-        </span>
-        <p className="text-xs font-semibold text-emerald-700">
-          거주개월 분리 입력 (1세대1주택 + 12억 초과 시)
+    <ToggleCard
+      tone="rose"
+      checked={asset.redevReceiveOnlyMode === "yes"}
+      onCheckedChange={(v) => onChange({ redevReceiveOnlyMode: v ? "yes" : "no" })}
+      title="청산금 수령분 단독 신고 (사례 46형)"
+      description="신축APT 양도 없이 청산금 수령분만 신고 — 시행령 §166① 본문 + 제1항 제2호 가목 단독 적용 (NTS 집행기준)"
+    >
+      <div className="space-y-2 text-[11px] text-rose-800 leading-relaxed">
+        <p>
+          본 모드 ON 시 인가전·인가후 양도차익은 신고 대상이 아니며,{" "}
+          <span className="font-semibold">청산금 수령액만 양도가액으로 의제</span>됩니다.
+          종전부동산 취득가액은 권리가액 대비 청산금 비율로 자동 안분됩니다.
+        </p>
+        <p>
+          ※ <span className="font-semibold">양도일</span>은 소유권이전 고시일의 익일로 입력하세요 (NTS 집행기준).
+        </p>
+        <p>
+          ※ 본 모드에서 자본적지출·양도비·인가후 필요경비 입력은{" "}
+          <span className="font-semibold">0으로 처리</span>됩니다 (§97①2·3호 슬롯은 법문상 존재하나
+          본 PR 미매핑 — 별도 산정 시 직접 신고 권장).
         </p>
       </div>
-      <p className="text-[11px] text-emerald-800 leading-relaxed">
-        시행령 §155⑰ — 재개발·재건축 거주기간은 종전주택과 신축주택을 통산합니다.
-        사전법령해석재산 2020-386 — 청산금납부분 LTHD 표2 진입은 신축주택 거주 2년 이상이 필요합니다.
+    </ToggleCard>
+  );
+}
+
+function SalePriceTotalPreviewCard({ asset }: { asset: AssetForm }) {
+  const preview = useMemo(() => {
+    const rights = parseAmount(asset.redevRightsValue);
+    const settle = parseAmount(asset.redevSettlementAmount);
+    if (rights <= 0 || settle <= 0) return null;
+    const salePriceTotal = Math.max(0, rights - settle);
+    return { rights, settle, salePriceTotal };
+  }, [asset.redevRightsValue, asset.redevSettlementAmount]);
+
+  if (!preview) return null;
+
+  return (
+    <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 text-xs space-y-1">
+      <p className="font-semibold text-sky-800">분양가액 (자동 도출, 입력 불요)</p>
+      <p className="text-sky-700 font-mono">
+        분양가액 = 권리가액 {preview.rights.toLocaleString()} − 청산금 수령액 {preview.settle.toLocaleString()}
       </p>
-
-      <ResidencePeriodGroup
-        label="종전주택 거주기간"
-        hint="종전주택 취득일~관리처분(또는 그 이후 철거) 사이의 실거주 입주일·퇴거일을 입력하면 개월수가 자동 산정됩니다 (§155⑰ 통산 산식 prior)."
-        startValue={asset.redevPriorResidenceStartDate}
-        endValue={asset.redevPriorResidenceEndDate}
-        monthsValue={asset.redevPriorHouseResidenceMonths}
-        onChangeStart={(v) =>
-          onChange(buildResidencePatch("prior", v, asset.redevPriorResidenceEndDate))
-        }
-        onChangeEnd={(v) =>
-          onChange(buildResidencePatch("prior", asset.redevPriorResidenceStartDate, v))
-        }
-      />
-
-      <ResidencePeriodGroup
-        label="신축주택 거주기간"
-        hint="준공검사일(사용승인일)~양도일 사이 신축아파트 실거주 입주일·퇴거일을 입력하면 개월수가 자동 산정됩니다 (해석례 2020-386 — 청산금분 표2 진입 가드)."
-        startValue={asset.redevNewResidenceStartDate}
-        endValue={asset.redevNewResidenceEndDate}
-        monthsValue={asset.redevNewHouseResidenceMonths}
-        onChangeStart={(v) =>
-          onChange(buildResidencePatch("new", v, asset.redevNewResidenceEndDate))
-        }
-        onChangeEnd={(v) =>
-          onChange(buildResidencePatch("new", asset.redevNewResidenceStartDate, v))
-        }
-      />
-
-      {/* 시나리오 가이드 카드 — useMemo 분기 */}
-      <div
-        className={`rounded-lg border p-3 text-xs leading-relaxed ${
-          guidance.tone === "emerald"
-            ? "border-emerald-300 bg-emerald-100/60 text-emerald-900"
-            : guidance.tone === "sky"
-              ? "border-sky-300 bg-sky-100/60 text-sky-900"
-              : guidance.tone === "violet"
-                ? "border-violet-300 bg-violet-100/60 text-violet-900"
-                : "border-amber-300 bg-amber-100/60 text-amber-900"
-        }`}
-      >
-        <p className="font-semibold mb-1">{guidance.title}</p>
-        <p>{guidance.body}</p>
-      </div>
+      <p className="text-sky-700 font-mono">= {preview.salePriceTotal.toLocaleString()}</p>
+      <p className="text-[11px] text-sky-600">
+        ※ 양도코리아 PDF의 &ldquo;분양가액&rdquo; 칸은 본 마법사에서 권리가액·청산금 입력으로 자동 도출되므로 별도 입력하지 않습니다.
+      </p>
     </div>
   );
 }
 
-// ──────────────────────────────────────────────────────────────────────────────
-// 거주기간(입주일·퇴거일) 자동 산정 그룹
-// ──────────────────────────────────────────────────────────────────────────────
-
-/**
- * YYYY-MM-DD 두 문자열에서 monthsBetween 계산.
- * `lib/tax-engine/transfer-tax-aggregate-helpers.ts:monthsBetween` 와 동일 산식(윤년·월경계 안전).
- * start > end 이면 undefined 반환 → store에 개월수 미기록.
- */
-function computeResidenceMonths(start: string, end: string): number | undefined {
-  if (!start || !end) return undefined;
-  const s = new Date(start);
-  const e = new Date(end);
-  if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) return undefined;
-  if (s.getTime() > e.getTime()) return undefined;
-  const y = e.getFullYear() - s.getFullYear();
-  const m = e.getMonth() - s.getMonth();
-  const d = e.getDate() - s.getDate();
-  return y * 12 + m - (d < 0 ? 1 : 0);
-}
-
-/**
- * 단일 onChange 패치 생성 — 4 Date 필드와 도출 개월수를 한 번에 store에 기록.
- * useEffect → store 미러링을 피하기 위한 핵심 함수 (`feedback_useeffect_store_mirror_forbidden` 정책).
- */
-function buildResidencePatch(
-  which: "prior" | "new",
-  start: string,
-  end: string,
-): Partial<AssetForm> {
-  const months = computeResidenceMonths(start, end);
-  const monthsStr = months !== undefined ? String(months) : "";
-  if (which === "prior") {
-    return {
-      redevPriorResidenceStartDate: start,
-      redevPriorResidenceEndDate: end,
-      redevPriorHouseResidenceMonths: monthsStr,
-    };
-  }
-  return {
-    redevNewResidenceStartDate: start,
-    redevNewResidenceEndDate: end,
-    redevNewHouseResidenceMonths: monthsStr,
-  };
-}
-
-function ResidencePeriodGroup({
-  label,
-  hint,
-  startValue,
-  endValue,
-  monthsValue,
-  onChangeStart,
-  onChangeEnd,
+function ExemptionAtApprovalCard({
+  asset,
+  onChange,
 }: {
-  label: string;
-  hint: string;
-  startValue: string;
-  endValue: string;
-  monthsValue: string;
-  onChangeStart: (v: string) => void;
-  onChangeEnd: (v: string) => void;
+  asset: AssetForm;
+  onChange: (patch: Partial<AssetForm>) => void;
 }) {
-  // 표시용 자동 산정 — store 미기록(buildResidencePatch가 이미 기록함).
-  const previewMonths = useMemo(
-    () => computeResidenceMonths(startValue, endValue),
-    [startValue, endValue],
-  );
+  // 자동 산정 — 취득일 ~ 관리처분계획인가일 ≥ 24개월
+  const auto = useMemo(() => {
+    if (!asset.acquisitionDate || !asset.redevApprovalDate) return null;
+    const acq = new Date(asset.acquisitionDate);
+    const app = new Date(asset.redevApprovalDate);
+    if (Number.isNaN(acq.getTime()) || Number.isNaN(app.getTime())) return null;
+    if (acq.getTime() > app.getTime()) return null;
+    const y = app.getFullYear() - acq.getFullYear();
+    const m = app.getMonth() - acq.getMonth();
+    const d = app.getDate() - acq.getDate();
+    const months = y * 12 + m - (d < 0 ? 1 : 0);
+    return { months, eligible: months >= 24 };
+  }, [asset.acquisitionDate, asset.redevApprovalDate]);
 
-  // start > end 검출 (UI 경고용 — validate에서도 동일 차단)
-  const hasError = useMemo(() => {
-    if (!startValue || !endValue) return false;
-    const s = new Date(startValue);
-    const e = new Date(endValue);
-    if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) return false;
-    return s.getTime() > e.getTime();
-  }, [startValue, endValue]);
+  // 사용자 override 우선, 빈문자열 시 자동
+  const effective: "yes" | "no" | null =
+    asset.redevExemptionEligibleAtApproval === "yes"
+      ? "yes"
+      : asset.redevExemptionEligibleAtApproval === "no"
+        ? "no"
+        : auto
+          ? auto.eligible
+            ? "yes"
+            : "no"
+          : null;
 
-  // 표시할 개월수: 자동 산정값이 우선, 없으면 store에 저장된 값(legacy 직접 입력 호환)
-  const displayMonths =
-    previewMonths !== undefined
-      ? previewMonths
-      : monthsValue
-        ? parseInt(monthsValue.replace(/,/g, ""), 10)
-        : undefined;
+  const labelText =
+    auto === null
+      ? "취득일 + 관리처분계획인가일을 모두 입력하면 자동 판정"
+      : `자동 판정: ${auto.eligible ? "충족" : "미충족"} (${Math.floor(auto.months / 12)}년 ${auto.months % 12}개월)`;
 
   return (
-    <div className="rounded-md border border-emerald-200 bg-white/60 p-3 space-y-2">
-      <div className="flex flex-col gap-0.5">
-        <p className="text-xs font-semibold text-emerald-900">{label}</p>
-        <p className="text-[11px] text-emerald-700">{hint}</p>
+    <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-2">
+      <div className="flex items-center gap-2">
+        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-[10px] font-bold text-violet-800 select-none">
+          ⓘ
+        </span>
+        <p className="text-xs font-semibold text-violet-700">
+          비과세 보유 요건 (관리처분계획인가일 기준 보유 2년)
+        </p>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-        <FieldCard label="입주일">
-          <DateInput value={startValue} onChange={onChangeStart} />
-        </FieldCard>
-        <FieldCard label="퇴거일">
-          <DateInput value={endValue} onChange={onChangeEnd} />
-        </FieldCard>
+
+      <p className="text-[11px] text-violet-800 leading-relaxed">
+        서면2016-법령해석재산-2705 (2017.02.13) — 청산금 수령분 1세대1주택 비과세 판정 시
+        보유주택수는 양도일 기준이나 보유·거주요건은 관리처분계획인가일 기준으로 충족 여부를 판단합니다.
+      </p>
+
+      <div className="rounded-md border border-violet-200 bg-white/70 p-2 text-[11px] text-violet-900">
+        {labelText}
       </div>
-      <div
-        className={`rounded-md border p-2 text-[11px] ${
-          hasError
-            ? "border-rose-300 bg-rose-50 text-rose-800"
-            : "border-emerald-200 bg-emerald-100/60 text-emerald-900"
-        }`}
-      >
-        {hasError ? (
-          <p>입주일이 퇴거일보다 이후입니다. 날짜를 확인하세요.</p>
-        ) : displayMonths !== undefined ? (
-          <p>
-            자동 산정 거주개월수: <span className="font-semibold font-mono">{displayMonths}</span> 개월
-          </p>
-        ) : (
-          <p className="text-emerald-700">입주일과 퇴거일을 모두 입력하면 거주개월수가 자동 산정됩니다.</p>
-        )}
-      </div>
+
+      <RadioCardGroup
+        name={`redevExemption-${asset.assetId}`}
+        value={asset.redevExemptionEligibleAtApproval || ""}
+        onChange={(v) =>
+          onChange({ redevExemptionEligibleAtApproval: v as "" | "yes" | "no" })
+        }
+        options={[
+          { value: "", label: "자동 판정", description: "취득일·관리처분일 기준 자동 산정값 사용" },
+          { value: "yes", label: "수동: 충족", description: "비과세 요건 충족 (override)" },
+          { value: "no", label: "수동: 미충족", description: "비과세 요건 미충족 (override) — LTHD 표1 강등" },
+        ]}
+        layout="inline"
+      />
+
+      {effective !== null && (
+        <div
+          className={`rounded-md border p-2 text-[11px] ${
+            effective === "yes"
+              ? "border-emerald-300 bg-emerald-100/60 text-emerald-900"
+              : "border-rose-300 bg-rose-100/60 text-rose-900"
+          }`}
+        >
+          {effective === "yes" ? (
+            <p>
+              <span className="font-semibold">비과세 해당</span> — LTHD 표2 적용 가능 (1세대1주택 + 12억 초과 시 안분 적용)
+            </p>
+          ) : (
+            <p>
+              <span className="font-semibold">비과세 미해당</span> — LTHD 표1 강제 (2년 보유요건 미충족, 12억 안분 비활성)
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }

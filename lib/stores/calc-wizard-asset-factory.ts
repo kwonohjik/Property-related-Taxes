@@ -322,6 +322,9 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     redevPriorResidenceEndDate: "",
     redevNewResidenceStartDate: "",
     redevNewResidenceEndDate: "",
+    // 사례 46 — 청산금 수령분 단독 신고
+    redevReceiveOnlyMode: "",
+    redevExemptionEligibleAtApproval: "",
   };
 }
 
@@ -473,6 +476,9 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (a.redevPriorResidenceEndDate === undefined) a.redevPriorResidenceEndDate = "";
   if (a.redevNewResidenceStartDate === undefined) a.redevNewResidenceStartDate = "";
   if (a.redevNewResidenceEndDate === undefined) a.redevNewResidenceEndDate = "";
+  // 사례 46 — 청산금 수령분 단독 신고
+  if (a.redevReceiveOnlyMode === undefined) a.redevReceiveOnlyMode = "";
+  if (a.redevExemptionEligibleAtApproval === undefined) a.redevExemptionEligibleAtApproval = "";
   // ③ 상업용건물·오피스텔 cb* 필드 마이그레이션 (sessionStorage 호환 — 신규 필드 누락 보호)
   if (a.cbEra === undefined) a.cbEra = "";
   if (a.cbExclusiveArea === undefined) a.cbExclusiveArea = "";

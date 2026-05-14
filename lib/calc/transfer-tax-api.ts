@@ -293,20 +293,30 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
       (parseAmount(primary.bgMortgageDebtAmount) || 0)
     : 0;
 
+  // 사례 46 — receiveOnly 모드: transferPrice = settlementAmount, transferDate = settlementSaleDate 자동 미러
+  // memory `mirror-pattern` 3중 패턴 (UI display + API + validate). 엔진은 receiveOnly 분기에서 transferPrice 무시 — 2중 안전망.
+  const isReceiveOnly = isRedevelopment && primary.redevReceiveOnlyMode === "yes";
+  const receiveOnlySettlementAmount = isReceiveOnly ? parseAmount(primary.redevSettlementAmount) : 0;
+  const receiveOnlyTransferDate = isReceiveOnly && primary.redevSettlementSaleDate
+    ? primary.redevSettlementSaleDate
+    : null;
+
   const body = {
     // commercial_building/general_building은 그대로 송신 — 엔진 진입 조건 충족
     // 추가로 서브객체(commercialBuildingValuation/generalBuildingValuation)로 환산취득가 데이터 전달
     propertyType: isMixed
       ? ("mixed-use-house" as const)
       : (primary.assetKind as "housing" | "land" | "building" | "right_to_move_in" | "presale_right" | "commercial_building" | "general_building" | "redevelopment_apt"),
-    transferPrice: isBurdenedGiftPrimary
-      ? burdenedGiftPlaceholderTransferPrice
-      : primaryFractional
-        ? applyRatio(totalContractPrice, primaryRatio)
-        : totalContractPrice,
+    transferPrice: isReceiveOnly && receiveOnlySettlementAmount > 0
+      ? receiveOnlySettlementAmount
+      : isBurdenedGiftPrimary
+        ? burdenedGiftPlaceholderTransferPrice
+        : primaryFractional
+          ? applyRatio(totalContractPrice, primaryRatio)
+          : totalContractPrice,
     /** 12억 안분 분모용 총 물건 양도가액 — primary 지분 모드 전용 */
     totalPropertyTransferPrice: primaryFractional ? totalContractPrice : undefined,
-    transferDate: form.transferDate,
+    transferDate: receiveOnlyTransferDate || form.transferDate,
     acquisitionPrice:
       hasPre1990 || isEstimated || isAppraisal || parcelModeActive
         ? 0
