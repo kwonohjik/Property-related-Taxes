@@ -30,6 +30,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { PrecedentArticleModal } from "@/components/ui/precedent-article-modal";
 import { useMemo } from "react";
+import { addDays, subDays, isValid, parseISO, format } from "date-fns";
 import { RedevelopmentValuationSection } from "./RedevelopmentValuationSection";
 import { RedevelopmentResidenceSplitSection } from "./RedevelopmentResidenceSplitSection";
 
@@ -205,13 +206,24 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle }: Props)
           />
         </FieldCard>
 
-        <FieldCard label="청산금 납부액" hint="권리가액 < 분양가 시 차액 (납부 모드)">
+        <FieldCard
+          label={asset.redevSettlementDirection === "receive" ? "청산금 수령액" : "청산금 납부액"}
+          hint={
+            asset.redevSettlementDirection === "receive"
+              ? "권리가액 > 분양가 시 차액 (수령 모드 — 시행령 §166①2호 가목)"
+              : "권리가액 < 분양가 시 차액 (납부 모드)"
+          }
+        >
           <CurrencyInput label=""
             value={asset.redevSettlementAmount}
             onChange={(v) => onChange({ redevSettlementAmount: v })}
             hideUnit
           />
         </FieldCard>
+
+        {asset.redevSettlementDirection === "receive" && (
+          <SettlementAnnouncementDateField asset={asset} onChange={onChange} />
+        )}
 
         <FieldCard label="인가전 분 필요경비" hint="법 §97①2·3호 + 시행령 §163⑥ — 인가전 양도차익 산식의 필요경비">
           <CurrencyInput label=""
@@ -279,6 +291,58 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle }: Props)
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
+// 청산금 수령 시 소유권이전 고시일 입력 → 양도일(고시일+1일) 자동 표시
+// 폼 저장은 양도일(redevSettlementSaleDate), 사용자 입력은 고시일 (UI 변환).
+// ──────────────────────────────────────────────────────────────────────────────
+
+function SettlementAnnouncementDateField({
+  asset,
+  onChange,
+}: {
+  asset: AssetForm;
+  onChange: (patch: Partial<AssetForm>) => void;
+}) {
+  // 폼에 저장된 redevSettlementSaleDate = 양도일. UI 표시는 -1일(고시일).
+  const announcementDate = useMemo(() => {
+    if (!asset.redevSettlementSaleDate) return "";
+    const d = parseISO(asset.redevSettlementSaleDate);
+    if (!isValid(d)) return "";
+    return format(subDays(d, 1), "yyyy-MM-dd");
+  }, [asset.redevSettlementSaleDate]);
+
+  const handleAnnouncementChange = (v: string) => {
+    if (!v) {
+      onChange({ redevSettlementSaleDate: "" });
+      return;
+    }
+    const d = parseISO(v);
+    if (!isValid(d)) {
+      onChange({ redevSettlementSaleDate: "" });
+      return;
+    }
+    onChange({ redevSettlementSaleDate: format(addDays(d, 1), "yyyy-MM-dd") });
+  };
+
+  return (
+    <FieldCard
+      label="소유권이전 고시일"
+      hint="도시정비법 §86 소유권이전 고시일. 양도일(NTS 집행기준 + 소법 §95④)은 다음날로 자동 산정됩니다."
+    >
+      <div className="space-y-2">
+        <DateInput value={announcementDate} onChange={handleAnnouncementChange} />
+        {asset.redevSettlementSaleDate && (
+          <div className="rounded-md bg-rose-100/60 border border-rose-200 px-3 py-2 text-[11px] text-rose-800">
+            <span className="font-semibold">자동 산정 양도일</span>:{" "}
+            <span className="font-mono font-semibold">{asset.redevSettlementSaleDate}</span>{" "}
+            <span className="text-rose-600">(고시일 + 1일)</span>
+          </div>
+        )}
+      </div>
+    </FieldCard>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
 // 사례 46 — 청산금 수령분 단독 신고 토글 + 분양가 미리보기 + 비과세 자동산정
 // ──────────────────────────────────────────────────────────────────────────────
 
@@ -294,7 +358,7 @@ function ReceiveOnlyToggleCard({
       tone="rose"
       checked={asset.redevReceiveOnlyMode === "yes"}
       onCheckedChange={(v) => onChange({ redevReceiveOnlyMode: v ? "yes" : "no" })}
-      title="청산금 수령분 단독 신고 (사례 46형)"
+      title="청산금 수령분 단독 신고"
       description="신축APT 양도 없이 청산금 수령분만 신고 — 시행령 §166① 본문 + 제1항 제2호 가목 단독 적용 (NTS 집행기준)"
     >
       <div className="space-y-2 text-[11px] text-rose-800 leading-relaxed">
