@@ -161,4 +161,19 @@ export interface RedevelopmentFormSlice {
    * 청산금납부분 LTHD 표2 진입 가드 (해석례 2020-386).
    */
   redevNewHouseResidenceMonths: string;
+
+  // ── 거주기간 자동산정 입력 (입주일·퇴거일, YYYY-MM-DD) ──
+  //
+  // 사용자가 거주개월수를 직접 계산하지 않고 입주일/퇴거일을 입력하면 UI 가 monthsBetween으로
+  // 자동 산정해 위 *ResidenceMonths 필드에 함께 기록한다.
+  // 4필드 모두 비어있으면 기존 *ResidenceMonths 직접 입력 경로(legacy fallback)를 사용한다.
+
+  /** 종전주택 입주일 (YYYY-MM-DD) */
+  redevPriorResidenceStartDate: string;
+  /** 종전주택 퇴거일 (YYYY-MM-DD) — 일반적으로 관리처분 인가일 또는 철거일 */
+  redevPriorResidenceEndDate: string;
+  /** 신축주택 입주일 (YYYY-MM-DD) — 일반적으로 준공검사일·입주가능일 */
+  redevNewResidenceStartDate: string;
+  /** 신축주택 퇴거일 (YYYY-MM-DD) — 일반적으로 양도일 */
+  redevNewResidenceEndDate: string;
 }

@@ -326,6 +326,11 @@ const propertyBaseShape = {
     // 사례 45 — 거주월수 분리 입력 (§155⑰ 통산 + 사전법령해석재산 2020-386)
     priorHouseResidenceMonths: z.number().int().nonnegative().optional(),
     newHouseResidenceMonths: z.number().int().nonnegative().optional(),
+    // 거주기간(입주일·퇴거일, YYYY-MM-DD) — 결과 카드/신고서 양식 표 산정 근거 표시용 pass-through
+    priorResidenceStartDate: z.string().date().optional(),
+    priorResidenceEndDate: z.string().date().optional(),
+    newResidenceStartDate: z.string().date().optional(),
+    newResidenceEndDate: z.string().date().optional(),
   })
   .refine(
     (v) => v.settlementDirection !== "receive" || v.settlementSaleDate != null,

@@ -105,39 +105,112 @@ export function runRedevelopment(
   });
 
   // ─ Step 3: 분기별 LTHD 금액 적용 (묶음 동일 율 — §166⑤2호나목 분배법칙 산술) ─
+  //
+  // 신고서 양식 표 표시용 메타(branchAcqDate·branchTransferDate·expenses·residence*·lthdHoldingPart·lthdResidencePart)
+  // 도 함께 부착. §166⑤ 호별 기산일 정의:
+  //   - subject="apt": 인가전·인가후 모두 취득일~신축양도일 (§166⑤2호나목 묶음 동일)
+  //                    청산금분 = 인가일~신축양도일 (납부, §166⑤2호가목) 또는 취득일~settlementSaleDate (수령)
+  //   - subject="right": 인가전 = 취득일~인가일 (§166⑤1호), 나머지 LTHD 대상 부존재
+  const subject = redevelopment.subject;
+  const isApt = subject === "apt";
+  const isRight = subject === "right";
+
+  // 신고서 표시용 거주기간 분배 — 인가전=prior, 인가후·청산금=new
+  const priorResStart = redevelopment.priorResidenceStartDate;
+  const priorResEnd = redevelopment.priorResidenceEndDate;
+  const newResStart = redevelopment.newResidenceStartDate;
+  const newResEnd = redevelopment.newResidenceEndDate;
+  const priorMonths = redevelopment.priorHouseResidenceMonths;
+  const newMonths = redevelopment.newHouseResidenceMonths;
+
+  // 분기별 LTHD 금액 분리 헬퍼 — total = holdingPart + residencePart (분배법칙 보존)
+  function splitLthdAmount(gainAmt: number, branch: typeof lthd.preApproval) {
+    if (!branch.applicable || gainAmt <= 0 || branch.rate <= 0) {
+      return { total: 0, holdingPart: 0, residencePart: 0 };
+    }
+    const total = applyLthdToGain(gainAmt, branch.rate);
+    const holdingPart = applyLthdToGain(gainAmt, branch.holdingRate);
+    const residencePart = total - holdingPart; // 잔여 = 거주분 (정수연산 보존)
+    return { total, holdingPart, residencePart };
+  }
+
+  const preApprovalLthdAmt = splitLthdAmount(split.preApproval.gain, lthd.preApproval);
+  const postApprovalLthdAmt = splitLthdAmount(split.postApprovalExistingHouse.gain, lthd.postApprovalExistingHouse);
+  const settlementLthdAmt = splitLthdAmount(split.settlement.gain, lthd.settlement);
+
   const preApprovalDetail: RedevelopmentBranchDetail = {
     apportionedTransfer: split.preApproval.apportionedTransfer,
     apportionedAcquisition: split.preApproval.apportionedAcquisition,
     gain: split.preApproval.gain,
     holdingMonths: lthd.preApproval.holdingMonths,
-    lthd: lthd.preApproval.applicable
-      ? applyLthdToGain(split.preApproval.gain, lthd.preApproval.rate)
-      : 0,
+    lthd: preApprovalLthdAmt.total,
     lthdRate: lthd.preApproval.applicable ? lthd.preApproval.rate : 0,
+    branchAcqDate: acquisitionDate,
+    branchTransferDate: isRight ? redevelopment.approvalDate : transferDate,
+    expenses: redevelopment.preApprovalExpenses + (split.estimatedLumpDeduction ?? 0),
+    residenceStartDate: priorResStart,
+    residenceEndDate: priorResEnd,
+    residenceMonths: priorMonths,
+    lthdHoldingPart: preApprovalLthdAmt.holdingPart,
+    lthdResidencePart: preApprovalLthdAmt.residencePart,
   };
+
+  // 인가후 기존건물분 거주기간 — §155⑰ 통산 (prior + new)
+  // 표시용 거주월수만 통산 적용. 입주일·퇴거일은 종전·신축 어느 한쪽도 단독 대표값이 아니므로 미부착.
+  const postApprovalResidenceMonths =
+    priorMonths !== undefined || newMonths !== undefined
+      ? (priorMonths ?? 0) + (newMonths ?? 0)
+      : undefined;
 
   const postApprovalDetail: RedevelopmentBranchDetail = {
     apportionedTransfer: split.postApprovalExistingHouse.apportionedTransfer,
     apportionedAcquisition: split.postApprovalExistingHouse.apportionedAcquisition,
     gain: split.postApprovalExistingHouse.gain,
     holdingMonths: lthd.postApprovalExistingHouse.holdingMonths,
-    lthd: lthd.postApprovalExistingHouse.applicable
-      ? applyLthdToGain(split.postApprovalExistingHouse.gain, lthd.postApprovalExistingHouse.rate)
-      : 0,
+    lthd: postApprovalLthdAmt.total,
     lthdRate: lthd.postApprovalExistingHouse.applicable
       ? lthd.postApprovalExistingHouse.rate
       : 0,
+    branchAcqDate: isApt ? acquisitionDate : undefined,
+    branchTransferDate: isApt ? transferDate : undefined,
+    expenses: isApt ? (redevelopment.postApprovalExpenses ?? 0) : 0,
+    // 인가후 분 입주일 = 종전주택 입주일 (없으면 신축주택 입주일 fallback)
+    // 인가후 분 퇴거일 = 신축주택 퇴거일 (없으면 종전주택 퇴거일 fallback)
+    // §155⑰ 통산 거주 — 가장 이른 입주~가장 늦은 퇴거 구간 표시.
+    residenceStartDate: isApt ? (priorResStart || newResStart) : undefined,
+    residenceEndDate: isApt ? (newResEnd || priorResEnd) : undefined,
+    residenceMonths: isApt ? postApprovalResidenceMonths : undefined,
+    lthdHoldingPart: postApprovalLthdAmt.holdingPart,
+    lthdResidencePart: postApprovalLthdAmt.residencePart,
   };
+
+  // 청산금분 기산일: 납부=인가일~양도일, 수령=취득일~settlementSaleDate
+  const settlementAcqDate = isApt
+    ? redevelopment.settlementDirection === "pay"
+      ? redevelopment.approvalDate
+      : acquisitionDate
+    : undefined;
+  const settlementTransferDate = isApt
+    ? redevelopment.settlementDirection === "pay"
+      ? transferDate
+      : (redevelopment.settlementSaleDate ?? transferDate)
+    : undefined;
 
   const settlementDetail: RedevelopmentBranchDetail = {
     apportionedTransfer: split.settlement.apportionedTransfer,
     apportionedAcquisition: split.settlement.apportionedAcquisition,
     gain: split.settlement.gain,
     holdingMonths: lthd.settlement.holdingMonths,
-    lthd: lthd.settlement.applicable
-      ? applyLthdToGain(split.settlement.gain, lthd.settlement.rate)
-      : 0,
+    lthd: settlementLthdAmt.total,
     lthdRate: lthd.settlement.applicable ? lthd.settlement.rate : 0,
+    branchAcqDate: settlementAcqDate,
+    branchTransferDate: settlementTransferDate,
+    expenses: 0, // 청산금분은 별도 필요경비 미산정 (의제양도차익 모형)
+    residenceStartDate: isApt ? newResStart : undefined,
+    residenceEndDate: isApt ? newResEnd : undefined,
+    residenceMonths: isApt ? newMonths : undefined,
+    lthdHoldingPart: settlementLthdAmt.holdingPart,
+    lthdResidencePart: settlementLthdAmt.residencePart,
   };
 
   // ─ Step 4: 합계 ─

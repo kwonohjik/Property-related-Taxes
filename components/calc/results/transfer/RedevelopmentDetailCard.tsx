@@ -50,19 +50,39 @@ export function RedevelopmentDetailCard({ detail }: Props) {
         </div>
       )}
 
-      {/* 12억 안분 박스 (§95③·시행령 §160 — 사례 45) */}
-      {highValueAllocation && (
+      {/* §166 의제구조 안내 (검산 식 모순 해명) */}
+      <div className="rounded-md bg-violet-100/60 border border-violet-200 p-2 text-[11px] text-violet-900 leading-relaxed">
+        <span className="font-semibold">시행령 §166②1호 의제구조</span> — 분기별 양도가·취득가는 의제 안분값으로,
+        합계 행의 단순 산식(양도가 − 취득가 − 필요경비) 검산은 본문 산식이 아닙니다. 양도차익은 인가전/인가후/청산금 3분기 의제 산식의 합으로 산출됩니다.
+      </div>
+
+      {/* 1세대1주택 + 12억 안분 박스 (§95③·시행령 §160 — 사례 45) */}
+      {highValueAllocation ? (
         <div className="rounded-md bg-amber-50 border border-amber-200 p-3 text-[11px] text-amber-900 space-y-1">
           <div className="flex items-center gap-2">
             <span className="rounded-full bg-amber-200 px-2 py-0.5 text-[10px] font-bold text-amber-800">1세대1주택 §95③·시행령 §160</span>
-            <span className="font-semibold">고가주택 12억 안분</span>
+            <span className="font-semibold">고가주택 12억 초과 안분 적용</span>
           </div>
+          <p className="text-amber-800">
+            보유 상황 단계에서 <span className="font-semibold">1세대 + 1주택</span>으로 입력되어, 양도가액이 12억을 초과하므로 §95③ 안분이 적용되었습니다.
+          </p>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-1">
             <Row label="비과세 기준" value={highValueAllocation.nontaxableThreshold} />
-            <Row label="과세대상 비율" value={Math.round(highValueAllocation.taxableRatio * 10000) / 100} />
-            <Row label="비과세 양도차익" value={highValueAllocation.nontaxableGain} highlight />
-            <Row label="과세대상 양도차익" value={highValueAllocation.taxableGain} highlight />
+            <Row label="과세대상 비율 (%)" value={Math.round(highValueAllocation.taxableRatio * 10000) / 100} />
+            <Row label="12억 안분 전 양도차익" value={highValueAllocation.nontaxableGain + highValueAllocation.taxableGain} />
+            <Row label="과세대상 양도차익 (안분 후)" value={highValueAllocation.taxableGain} highlight />
           </div>
+        </div>
+      ) : (
+        <div className="rounded-md bg-sky-50 border border-sky-200 p-3 text-[11px] text-sky-900 space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="rounded-full bg-sky-200 px-2 py-0.5 text-[10px] font-bold text-sky-800">일반 과세</span>
+            <span className="font-semibold">12억 안분 미적용 — 전체 과세</span>
+          </div>
+          <p className="text-sky-800">
+            보유 상황 단계에서 <span className="font-semibold">1세대1주택이 아니거나 1주택자가 아닌</span> 입력으로 처리되어, §95③ 비과세 안분 없이 분기별 양도차익 전체가 과세대상입니다.
+            <br />1세대1주택 + 12억 초과 비과세 안분을 적용하려면 “보유 상황” 단계에서 1세대 여부와 보유 주택 수를 확인하세요.
+          </p>
         </div>
       )}
 
@@ -99,6 +119,24 @@ export function RedevelopmentDetailCard({ detail }: Props) {
               </p>
             </div>
           </div>
+          {/* 거주기간 산정 근거 (입주일·퇴거일) — UI 자동산정 입력 시에만 부착 */}
+          {(lthdResidenceAttribution.priorPeriod || lthdResidenceAttribution.newPeriod) && (
+            <div className="mt-2 rounded border border-emerald-200 bg-white/60 p-2 text-[10px] space-y-0.5">
+              <p className="font-semibold text-emerald-800">거주기간 산정 근거</p>
+              {lthdResidenceAttribution.priorPeriod && (
+                <p className="text-emerald-900">
+                  종전주택: <span className="font-mono">{lthdResidenceAttribution.priorPeriod.start}</span> ~{" "}
+                  <span className="font-mono">{lthdResidenceAttribution.priorPeriod.end}</span>
+                </p>
+              )}
+              {lthdResidenceAttribution.newPeriod && (
+                <p className="text-emerald-900">
+                  신축주택: <span className="font-mono">{lthdResidenceAttribution.newPeriod.start}</span> ~{" "}
+                  <span className="font-mono">{lthdResidenceAttribution.newPeriod.end}</span>
+                </p>
+              )}
+            </div>
+          )}
         </div>
       )}
 

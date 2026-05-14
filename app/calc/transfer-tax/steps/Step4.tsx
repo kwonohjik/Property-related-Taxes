@@ -8,9 +8,14 @@ import { HousesListSection } from "./step4-sections/HousesListSection";
 import { MergeDateSection } from "./step4-sections/MergeDateSection";
 import { ResidencePeriodSection } from "@/components/calc/transfer/ResidencePeriodSection";
 
-// Step4 내부 공용 헬퍼 — 주택·입주권·분양권 계열 판정
+// Step4 내부 공용 헬퍼 — 주택·입주권·분양권·재개발APT 계열 판정
+// 재개발/재건축 완공 APT(시행령 §166②1호)는 신축주택 양도이므로 1세대1주택·12억 안분 등
+// 주택 전용 입력 섹션 가시성을 함께 적용해야 함.
 const isHousingLike = (pt: string) =>
-  pt === "housing" || pt === "right_to_move_in" || pt === "presale_right";
+  pt === "housing" ||
+  pt === "right_to_move_in" ||
+  pt === "presale_right" ||
+  pt === "redevelopment_apt";
 
 // ============================================================
 // Step 4: 보유 상황
@@ -279,8 +284,8 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
         </section>
       )}
 
-      {/* ② 일시적 2주택·합가 특례 — 비과세 특례 (먼저 검토) */}
-      {isHousingLike(primaryKind) && (
+      {/* ② 일시적 2주택·합가 특례 — 보유 주택수 ≥ 2 일 때만 의미 있음 (시행령 §155 일시적 2주택은 정의상 종전+신규 2채 보유 중) */}
+      {isHousingLike(primaryKind) && parseInt(form.householdHousingCount) >= 2 && (
         <section className="rounded-xl border border-emerald-200 bg-emerald-50/30 p-4 dark:border-emerald-900/50 dark:bg-emerald-950/20">
           <SectionHeader title="② 일시적 2주택·합가 특례" description="종전 주택 보유 중 신규 주택 취득 후 일정 기간 내 양도 시 비과세 특례" />
           <p className="-mt-2 mb-3 text-xs text-emerald-800 dark:text-emerald-300">

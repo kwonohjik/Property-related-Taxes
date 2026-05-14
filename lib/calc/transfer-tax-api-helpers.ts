@@ -690,9 +690,15 @@ export function buildRedevelopmentPayload(asset: AssetForm) {
     settlementAmount: parseAmount(asset.redevSettlementAmount),
     settlementSaleDate: asset.redevSettlementSaleDate || undefined,
     preApprovalExpenses: parseAmount(asset.redevPreApprovalExpenses),
-    postApprovalExpenses: asset.redevPostApprovalExpenses
-      ? parseAmount(asset.redevPostApprovalExpenses)
-      : undefined,
+    // 인가후 분 필요경비 = redev 전용 입력 + 자본적지출(§97① 가목) + 양도비(§97① 나목)
+    // 신축APT 양도 시점에 발생한 자본적지출·양도비는 인가후 분에 귀속.
+    postApprovalExpenses: (() => {
+      const redevPost = asset.redevPostApprovalExpenses ? parseAmount(asset.redevPostApprovalExpenses) : 0;
+      const capex = parseAmount(asset.capitalExpenditure);
+      const transferExp = parseAmount(asset.transferExpense);
+      const total = redevPost + capex + transferExp;
+      return total > 0 ? total : undefined;
+    })(),
     originalAssetType: (asset.redevOriginalAssetType || "housing") as "land" | "housing" | undefined,
     acquisitionStdPrice: asset.redevAcquisitionStdPrice
       ? parseAmount(asset.redevAcquisitionStdPrice)
@@ -735,5 +741,10 @@ export function buildRedevelopmentPayload(asset: AssetForm) {
     newHouseResidenceMonths: asset.redevNewHouseResidenceMonths
       ? parseInt(asset.redevNewHouseResidenceMonths.replace(/,/g, ""), 10)
       : undefined,
+    // 거주기간(입주일·퇴거일) — 결과 카드 산정 근거 표시용 pass-through
+    priorResidenceStartDate: asset.redevPriorResidenceStartDate || undefined,
+    priorResidenceEndDate: asset.redevPriorResidenceEndDate || undefined,
+    newResidenceStartDate: asset.redevNewResidenceStartDate || undefined,
+    newResidenceEndDate: asset.redevNewResidenceEndDate || undefined,
   };
 }

@@ -145,5 +145,37 @@ export function validateRedevelopmentAsset(asset: AssetForm, label: string): str
     }
   }
 
+  // 거주기간(입주일·퇴거일) 자동 산정 입력 검증 — silent 채우기 금지 정책 준수.
+  // 한쪽만 입력 시 차단. start > end 차단. 양쪽 모두 비어있으면 위 *ResidenceMonths 직접 입력 경로 허용.
+  const periodChecks: Array<{ start: string; end: string; name: string }> = [
+    {
+      start: asset.redevPriorResidenceStartDate || "",
+      end: asset.redevPriorResidenceEndDate || "",
+      name: "종전주택",
+    },
+    {
+      start: asset.redevNewResidenceStartDate || "",
+      end: asset.redevNewResidenceEndDate || "",
+      name: "신축주택",
+    },
+  ];
+  for (const { start, end, name } of periodChecks) {
+    const hasStart = !!start;
+    const hasEnd = !!end;
+    if (hasStart !== hasEnd) {
+      return `${label}: ${name} 거주기간은 입주일과 퇴거일을 모두 입력하거나 모두 비워두세요.`;
+    }
+    if (hasStart && hasEnd) {
+      const s = new Date(start);
+      const e = new Date(end);
+      if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) {
+        return `${label}: ${name} 거주기간 날짜 형식이 올바르지 않습니다.`;
+      }
+      if (s.getTime() > e.getTime()) {
+        return `${label}: ${name} 입주일이 퇴거일보다 이후일 수 없습니다.`;
+      }
+    }
+  }
+
   return null;
 }

@@ -317,6 +317,11 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     // 사례 45 — 거주월수 분리 입력
     redevPriorHouseResidenceMonths: "",
     redevNewHouseResidenceMonths: "",
+    // 거주기간 자동산정 입력 (입주일/퇴거일)
+    redevPriorResidenceStartDate: "",
+    redevPriorResidenceEndDate: "",
+    redevNewResidenceStartDate: "",
+    redevNewResidenceEndDate: "",
   };
 }
 
@@ -464,6 +469,10 @@ export function migrateAsset(raw: unknown): AssetForm {
   // 사례 45 — 거주월수 분리 (§155⑰ + 해석례 2020-386)
   if (a.redevPriorHouseResidenceMonths === undefined) a.redevPriorHouseResidenceMonths = "";
   if (a.redevNewHouseResidenceMonths === undefined) a.redevNewHouseResidenceMonths = "";
+  if (a.redevPriorResidenceStartDate === undefined) a.redevPriorResidenceStartDate = "";
+  if (a.redevPriorResidenceEndDate === undefined) a.redevPriorResidenceEndDate = "";
+  if (a.redevNewResidenceStartDate === undefined) a.redevNewResidenceStartDate = "";
+  if (a.redevNewResidenceEndDate === undefined) a.redevNewResidenceEndDate = "";
   // ③ 상업용건물·오피스텔 cb* 필드 마이그레이션 (sessionStorage 호환 — 신규 필드 누락 보호)
   if (a.cbEra === undefined) a.cbEra = "";
   if (a.cbExclusiveArea === undefined) a.cbExclusiveArea = "";

@@ -471,16 +471,24 @@ export function buildRows(
       ["settlement", r.settlement],
     ];
 
-    // 일자·기간 — 분할별 보유기간만 의미, 나머지는 합계 열만 표시
+    // 일자·기간 — 분기별 §166⑤ 호별 기산일·종료일 + 거주기간 메타 (JSON 직렬화 후 Date→string 안전 처리)
+    const fmtD = (d?: Date | string) => {
+      if (!d) return "-";
+      const iso = typeof d === "string" ? d : d instanceof Date ? d.toISOString() : "";
+      return iso ? fmtDate(iso.slice(0, 10)) : "-";
+    };
+    const fmtMonths = (m?: number) =>
+      m !== undefined && m > 0 ? `${Math.floor(m / 12)}년 ${m % 12}개월` : "-";
+    // 입주일/퇴거일 없고 개월수만 있으면 "(개월수만 입력됨)" 안내 (sessionStorage 잔존 케이스)
     for (const [key, b] of branches) {
-      const years = Math.floor(b.holdingMonths / 12);
-      const months = b.holdingMonths % 12;
-      setStr("holdingPeriod", key, b.holdingMonths > 0 ? `${years}년 ${months}개월` : "-");
-      setStr("transferDate", key, "-");
-      setStr("acquisitionDate", key, "-");
-      setStr("moveOut", key, "-");
-      setStr("moveIn", key, "-");
-      setStr("residencePeriod", key, "-");
+      const hasMonths = (b.residenceMonths ?? 0) > 0;
+      const ph = hasMonths ? "(개월수만 입력됨)" : "-";
+      setStr("holdingPeriod", key, fmtMonths(b.holdingMonths));
+      setStr("acquisitionDate", key, fmtD(b.branchAcqDate));
+      setStr("transferDate", key, fmtD(b.branchTransferDate));
+      setStr("moveIn", key, b.residenceStartDate || ph);
+      setStr("moveOut", key, b.residenceEndDate || ph);
+      setStr("residencePeriod", key, fmtMonths(b.residenceMonths));
     }
 
     // 양도가액·취득가액 — 분할별 안분값
@@ -489,25 +497,43 @@ export function buildRows(
       setNum("acquisitionPrice", key, b.apportionedAcquisition);
     }
 
-    // 필요경비 — 인가전 분만 개산공제(§163⑥), 나머지 0
-    const lump = r.estimatedLumpDeduction ?? 0;
-    setNum("expenses", "preApproval", lump);
-    setNum("expenses", "postApprovalExistingHouse", 0);
-    setNum("expenses", "settlement", 0);
-
-    // 양도차익·과세대상 양도차익 — 분할별
+    // 필요경비 — 분기별 입력값 (인가전: redevPreApprovalExpenses + 환산 모드 개산공제 / 인가후: redevPostApprovalExpenses / 청산금: 0)
+    let totalExpenses = 0;
     for (const [key, b] of branches) {
-      setNum("transferGain", key, b.gain);
-      setNum("exemptGain", key, 0);
-      setNum("taxableGain", key, b.gain);
+      const ex = b.expenses ?? 0;
+      setNum("expenses", key, ex);
+      totalExpenses += ex;
     }
+    setNum("expenses", "total", totalExpenses);
 
-    // 장기보유특별공제 — 분할별. 보유분/거주분은 재개발 미분리.
+    // 양도차익(안분 전)·비과세(12억 이하)·과세대상(안분 후 = branch.gain) — 분기별 + 합계
+    let tg = 0, eg = 0, xg = 0;
+    for (const [key, b] of branches) {
+      const tA = b.gainBeforeAllocation ?? b.gain;
+      const eA = b.nontaxableGain ?? 0;
+      setNum("transferGain", key, tA);
+      setNum("exemptGain", key, eA);
+      setNum("taxableGain", key, b.gain);
+      tg += tA; eg += eA; xg += b.gain;
+    }
+    setNum("transferGain", "total", tg);
+    setNum("exemptGain", "total", eg);
+    setNum("taxableGain", "total", xg);
+
+    // 장기보유특별공제 — 분기별 보유분/거주분 분리 (표2 적용 시 거주분 양수)
+    let totalHoldingPart = 0;
+    let totalResidencePart = 0;
     for (const [key, b] of branches) {
       setNum("ltDeduction", key, b.lthd);
-      setNum("ltHoldingPart", key, null);
-      setNum("ltResidencePart", key, null);
+      const hp = b.lthdHoldingPart ?? b.lthd;
+      const rp = b.lthdResidencePart ?? 0;
+      setNum("ltHoldingPart", key, hp);
+      setNum("ltResidencePart", key, rp);
+      totalHoldingPart += hp;
+      totalResidencePart += rp;
     }
+    setNum("ltHoldingPart", "total", totalHoldingPart);
+    setNum("ltResidencePart", "total", totalResidencePart);
 
     // 양도소득금액·감면후 소득금액 — 분할별 (gain - lthd)
     for (const [key, b] of branches) {
@@ -565,15 +591,15 @@ export function buildRows(
   setNum("transferPrice", "total", totalTransferPrice || null);
   if (mode === "redev-3split" && result.redevelopmentDetail) {
     const r = result.redevelopmentDetail;
+    // 취득가액 합계 = 실가 합 (종전주택 실가 + 청산금 납부액).
+    // 인가후 기존건물분의 의제 취득가(권리가액)는 종전주택 취득가의 §166②1호 의제 변형이므로
+    // 합계에서 중복 제외. 양도가액 합계가 실 양도가 1,500M인 것과 동일 정책.
     setNum(
       "acquisitionPrice",
       "total",
-      r.preApproval.apportionedAcquisition +
-        r.postApprovalExistingHouse.apportionedAcquisition +
-        r.settlement.apportionedAcquisition,
+      r.preApproval.apportionedAcquisition + r.settlement.apportionedAcquisition,
     );
-    // 필요경비 합계 = 인가전 분 개산공제 (§163⑥)
-    setNum("expenses", "total", r.estimatedLumpDeduction ?? 0);
+    // 필요경비 합계는 redev-3split 분기 합으로 이미 line 505에서 설정됨 — 덮어쓰기 금지.
   } else if (mode === "fourpart" && mu) {
     const hp = mu.housingPart;
     const cp = mu.commercialPart;
@@ -618,13 +644,11 @@ export function buildRows(
   // 과세대상 양도차익=전체 양도차익으로 표기.
   const isRH = result.rentalHousingExceptionDetail?.applied === true;
 
-  setNum("transferGain", "total", result.transferGain);
-  if (isRH) {
-    setNum("exemptGain", "total", 0);
-    setNum("taxableGain", "total", result.transferGain);
-  } else {
-    setNum("exemptGain", "total", Math.max(0, result.transferGain - result.taxableGain));
-    setNum("taxableGain", "total", result.taxableGain);
+  // redev-3split 모드는 line 512-519에서 분기 합으로 이미 설정됨 — 덮어쓰지 않음.
+  if (mode !== "redev-3split") {
+    setNum("transferGain", "total", result.transferGain);
+    setNum("exemptGain", "total", isRH ? 0 : Math.max(0, result.transferGain - result.taxableGain));
+    setNum("taxableGain", "total", isRH ? result.transferGain : result.taxableGain);
   }
   setNum("ltDeduction", "total", result.longTermHoldingDeduction);
 
@@ -673,6 +697,9 @@ export function buildRows(
     setNum("ltResidencePart", "land", landSplit.residenceAmount);
     setNum("ltHoldingPart", "building", buildSplit.holdingAmount);
     setNum("ltResidencePart", "building", buildSplit.residenceAmount);
+  } else if (mode === "redev-3split") {
+    // line 514-527에서 분기별 lthdHoldingPart/lthdResidencePart 합으로 이미 정확하게 설정됨.
+    // result.longTermHoldingDeduction 기반 재계산은 분기별 분리 정보를 잃으므로 덮어쓰지 않는다.
   } else {
     const split = splitLtDeduction(result.longTermHoldingDeduction, holdingMs, residenceMs, useTable2);
     setNum("ltHoldingPart", "total", split.holdingAmount);

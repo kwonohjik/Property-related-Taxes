@@ -182,6 +182,16 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle }: Props)
 
   return (
     <div className="space-y-3">
+      {/* 0️⃣ 1세대1주택 + 12억 안분 적용 가이드 — 자산 카드 진입 시 항상 노출 */}
+      <div className="rounded-md bg-amber-50 border border-amber-200 p-3 text-[11px] text-amber-900 leading-relaxed">
+        <p className="font-semibold mb-0.5">⚠️ 1세대1주택 + 12억 초과 비과세 안분 적용 여부</p>
+        <p>
+          본 자산이 1세대1주택 + 12억 초과인 경우 §95③·시행령 §160 안분이 적용됩니다. 적용 여부는
+          <span className="font-semibold"> 다음 “보유 상황” 단계의 “세대·주택 현황”</span> 입력(1세대 여부 + 보유 주택 수 1채)에 따라 결정됩니다.
+          1세대1주택이 아니면 분기별 양도차익 전체가 과세대상입니다 (12억 안분 미적용).
+        </p>
+      </div>
+
       {/* ① sky: 양도 대상 */}
       <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2">
         <div className="flex items-center gap-2">
@@ -312,9 +322,15 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle }: Props)
             <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-[10px] font-bold text-sky-800 select-none">5</span>
             <p className="text-xs font-semibold text-sky-700">인가전 분 종전 주택 취득가액 (실가 모드)</p>
           </div>
+          <div className="rounded-md bg-sky-100/60 border border-sky-200 p-2 text-[11px] text-sky-800 leading-relaxed">
+            <p>
+              <span className="font-semibold">안내</span> — 종전주택의 <span className="font-semibold">취득 실거래가액을 확인할 수 있으면</span> 아래에 입력하세요.
+              확인이 불가능하면 본 카드를 비워두고 <span className="font-semibold">아래 &ldquo;환산취득가 사용&rdquo; 토글을 ON</span>으로 전환하면 §166③ 기준시가 비율 환산으로 자동 도출됩니다.
+            </p>
+          </div>
           <FieldCard
             label="실거래가 취득가액"
-            hint="재개발 관리처분 인가 전 종전 주택의 실거래가 (§166①1호 인가전 분 차감 기준). 취득가액을 확인할 수 없으면 아래 환산취득가 토글을 ON으로 전환하세요."
+            hint="재개발 관리처분 인가 전 종전 주택의 실거래가 (§166①1호 인가전 분 차감 기준)."
           >
             <CurrencyInput
               label=""
@@ -575,7 +591,7 @@ function ResidenceSplitSection({
     <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-3 space-y-2">
       <div className="flex items-center gap-2">
         <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-[10px] font-bold text-emerald-800 select-none">
-          5
+          6
         </span>
         <p className="text-xs font-semibold text-emerald-700">
           거주개월 분리 입력 (1세대1주택 + 12억 초과 시)
@@ -586,29 +602,33 @@ function ResidenceSplitSection({
         사전법령해석재산 2020-386 — 청산금납부분 LTHD 표2 진입은 신축주택 거주 2년 이상이 필요합니다.
       </p>
 
-      <FieldCard
-        label="종전주택 거주개월"
-        hint="종전주택 취득일부터 관리처분 또는 그 이후 철거 전까지 실제 거주개월수 (§155⑰ 통산 산식 prior)"
-      >
-        <DecimalInput
-          value={asset.redevPriorHouseResidenceMonths}
-          onChange={(v) => onChange({ redevPriorHouseResidenceMonths: v })}
-          placeholder="종전주택 실거주 개월"
-          unit="개월"
-        />
-      </FieldCard>
+      <ResidencePeriodGroup
+        label="종전주택 거주기간"
+        hint="종전주택 취득일~관리처분(또는 그 이후 철거) 사이의 실거주 입주일·퇴거일을 입력하면 개월수가 자동 산정됩니다 (§155⑰ 통산 산식 prior)."
+        startValue={asset.redevPriorResidenceStartDate}
+        endValue={asset.redevPriorResidenceEndDate}
+        monthsValue={asset.redevPriorHouseResidenceMonths}
+        onChangeStart={(v) =>
+          onChange(buildResidencePatch("prior", v, asset.redevPriorResidenceEndDate))
+        }
+        onChangeEnd={(v) =>
+          onChange(buildResidencePatch("prior", asset.redevPriorResidenceStartDate, v))
+        }
+      />
 
-      <FieldCard
-        label="신축주택 거주개월"
-        hint="준공검사일(사용승인일)부터 양도일까지 신축아파트 실거주 개월수 (해석례 2020-386 — 청산금분 표2 진입 가드)"
-      >
-        <DecimalInput
-          value={asset.redevNewHouseResidenceMonths}
-          onChange={(v) => onChange({ redevNewHouseResidenceMonths: v })}
-          placeholder="신축아파트 실거주 개월"
-          unit="개월"
-        />
-      </FieldCard>
+      <ResidencePeriodGroup
+        label="신축주택 거주기간"
+        hint="준공검사일(사용승인일)~양도일 사이 신축아파트 실거주 입주일·퇴거일을 입력하면 개월수가 자동 산정됩니다 (해석례 2020-386 — 청산금분 표2 진입 가드)."
+        startValue={asset.redevNewResidenceStartDate}
+        endValue={asset.redevNewResidenceEndDate}
+        monthsValue={asset.redevNewHouseResidenceMonths}
+        onChangeStart={(v) =>
+          onChange(buildResidencePatch("new", v, asset.redevNewResidenceEndDate))
+        }
+        onChangeEnd={(v) =>
+          onChange(buildResidencePatch("new", asset.redevNewResidenceStartDate, v))
+        }
+      />
 
       {/* 시나리오 가이드 카드 — useMemo 분기 */}
       <div
@@ -624,6 +644,127 @@ function ResidenceSplitSection({
       >
         <p className="font-semibold mb-1">{guidance.title}</p>
         <p>{guidance.body}</p>
+      </div>
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// 거주기간(입주일·퇴거일) 자동 산정 그룹
+// ──────────────────────────────────────────────────────────────────────────────
+
+/**
+ * YYYY-MM-DD 두 문자열에서 monthsBetween 계산.
+ * `lib/tax-engine/transfer-tax-aggregate-helpers.ts:monthsBetween` 와 동일 산식(윤년·월경계 안전).
+ * start > end 이면 undefined 반환 → store에 개월수 미기록.
+ */
+function computeResidenceMonths(start: string, end: string): number | undefined {
+  if (!start || !end) return undefined;
+  const s = new Date(start);
+  const e = new Date(end);
+  if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) return undefined;
+  if (s.getTime() > e.getTime()) return undefined;
+  const y = e.getFullYear() - s.getFullYear();
+  const m = e.getMonth() - s.getMonth();
+  const d = e.getDate() - s.getDate();
+  return y * 12 + m - (d < 0 ? 1 : 0);
+}
+
+/**
+ * 단일 onChange 패치 생성 — 4 Date 필드와 도출 개월수를 한 번에 store에 기록.
+ * useEffect → store 미러링을 피하기 위한 핵심 함수 (`feedback_useeffect_store_mirror_forbidden` 정책).
+ */
+function buildResidencePatch(
+  which: "prior" | "new",
+  start: string,
+  end: string,
+): Partial<AssetForm> {
+  const months = computeResidenceMonths(start, end);
+  const monthsStr = months !== undefined ? String(months) : "";
+  if (which === "prior") {
+    return {
+      redevPriorResidenceStartDate: start,
+      redevPriorResidenceEndDate: end,
+      redevPriorHouseResidenceMonths: monthsStr,
+    };
+  }
+  return {
+    redevNewResidenceStartDate: start,
+    redevNewResidenceEndDate: end,
+    redevNewHouseResidenceMonths: monthsStr,
+  };
+}
+
+function ResidencePeriodGroup({
+  label,
+  hint,
+  startValue,
+  endValue,
+  monthsValue,
+  onChangeStart,
+  onChangeEnd,
+}: {
+  label: string;
+  hint: string;
+  startValue: string;
+  endValue: string;
+  monthsValue: string;
+  onChangeStart: (v: string) => void;
+  onChangeEnd: (v: string) => void;
+}) {
+  // 표시용 자동 산정 — store 미기록(buildResidencePatch가 이미 기록함).
+  const previewMonths = useMemo(
+    () => computeResidenceMonths(startValue, endValue),
+    [startValue, endValue],
+  );
+
+  // start > end 검출 (UI 경고용 — validate에서도 동일 차단)
+  const hasError = useMemo(() => {
+    if (!startValue || !endValue) return false;
+    const s = new Date(startValue);
+    const e = new Date(endValue);
+    if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) return false;
+    return s.getTime() > e.getTime();
+  }, [startValue, endValue]);
+
+  // 표시할 개월수: 자동 산정값이 우선, 없으면 store에 저장된 값(legacy 직접 입력 호환)
+  const displayMonths =
+    previewMonths !== undefined
+      ? previewMonths
+      : monthsValue
+        ? parseInt(monthsValue.replace(/,/g, ""), 10)
+        : undefined;
+
+  return (
+    <div className="rounded-md border border-emerald-200 bg-white/60 p-3 space-y-2">
+      <div className="flex flex-col gap-0.5">
+        <p className="text-xs font-semibold text-emerald-900">{label}</p>
+        <p className="text-[11px] text-emerald-700">{hint}</p>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+        <FieldCard label="입주일">
+          <DateInput value={startValue} onChange={onChangeStart} />
+        </FieldCard>
+        <FieldCard label="퇴거일">
+          <DateInput value={endValue} onChange={onChangeEnd} />
+        </FieldCard>
+      </div>
+      <div
+        className={`rounded-md border p-2 text-[11px] ${
+          hasError
+            ? "border-rose-300 bg-rose-50 text-rose-800"
+            : "border-emerald-200 bg-emerald-100/60 text-emerald-900"
+        }`}
+      >
+        {hasError ? (
+          <p>입주일이 퇴거일보다 이후입니다. 날짜를 확인하세요.</p>
+        ) : displayMonths !== undefined ? (
+          <p>
+            자동 산정 거주개월수: <span className="font-semibold font-mono">{displayMonths}</span> 개월
+          </p>
+        ) : (
+          <p className="text-emerald-700">입주일과 퇴거일을 모두 입력하면 거주개월수가 자동 산정됩니다.</p>
+        )}
       </div>
     </div>
   );

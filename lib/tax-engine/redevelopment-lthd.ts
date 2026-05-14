@@ -71,8 +71,12 @@ export interface RedevelopmentLthdBranch {
   holdingMonths: number;
   /** 보유기간 (years 정수 — 표 적용용) */
   holdingYears: number;
-  /** LTHD 율 (0~0.8) */
+  /** LTHD 율 (0~0.8) — holdingRate + residenceRate */
   rate: number;
+  /** LTHD 보유분 율 (표1: rate 전액, 표2: 0~0.40) */
+  holdingRate: number;
+  /** LTHD 거주분 율 (표1: 0, 표2: 0~0.40, 거주 2년+ 가드) */
+  residenceRate: number;
   /** LTHD 산정 가능 여부 (false 시 LTHD 대상 자체 부존재) */
   applicable: boolean;
   /** 비적용 사유 (UI 표시용) */
@@ -172,7 +176,7 @@ function computeRightLthd(args: {
   // 원조합원: 인가전 분만 LTHD (§166⑤1호 — 취득일 ~ 관리처분 인가일)
   const preApprovalHolding = calculateHoldingPeriod(acquisitionDate, approvalDate);
   const preApprovalMonths = preApprovalHolding.years * 12 + preApprovalHolding.months;
-  const preApprovalRate = computeLthdRate(
+  const preApprovalSplit = computeLthdRateSplit(
     preApprovalHolding.years,
     isOneHouseSingle,
     Math.floor(residencePeriodMonths / 12),
@@ -182,7 +186,9 @@ function computeRightLthd(args: {
     preApproval: {
       holdingMonths: preApprovalMonths,
       holdingYears: preApprovalHolding.years,
-      rate: preApprovalRate,
+      rate: preApprovalSplit.total,
+      holdingRate: preApprovalSplit.holding,
+      residenceRate: preApprovalSplit.residence,
       applicable: true,
     },
     postApprovalExistingHouse: zeroBranch("입주권 양도 시 인가후 기존주택분 양도차익은 LTHD 대상 부존재 (§95② 단서·§166⑤1호)"),
@@ -225,12 +231,14 @@ function computeAptLthd(args: {
   // 거주분 = §155⑰ 통산 (prior + new)
   const existingHolding = calculateHoldingPeriod(acquisitionDate, transferDate);
   const existingMonths = existingHolding.years * 12 + existingHolding.months;
-  const existingRate = computeLthdRate(existingHolding.years, isOneHouseSingle, existingResidenceYears);
+  const existingSplit = computeLthdRateSplit(existingHolding.years, isOneHouseSingle, existingResidenceYears);
 
   const preApprovalBranch: RedevelopmentLthdBranch = {
     holdingMonths: existingMonths,
     holdingYears: existingHolding.years,
-    rate: existingRate,
+    rate: existingSplit.total,
+    holdingRate: existingSplit.holding,
+    residenceRate: existingSplit.residence,
     applicable: true,
   };
   const postApprovalBranch: RedevelopmentLthdBranch = { ...preApprovalBranch };
@@ -241,10 +249,13 @@ function computeAptLthd(args: {
     // §166⑤2호가목: 인가일 ~ 신축양도일
     const payHolding = calculateHoldingPeriod(approvalDate, transferDate);
     const payMonths = payHolding.years * 12 + payHolding.months;
+    const paySplit = computeLthdRateSplit(payHolding.years, isOneHouseSingle, payResidenceYears);
     settlementBranch = {
       holdingMonths: payMonths,
       holdingYears: payHolding.years,
-      rate: computeLthdRate(payHolding.years, isOneHouseSingle, payResidenceYears),
+      rate: paySplit.total,
+      holdingRate: paySplit.holding,
+      residenceRate: paySplit.residence,
       applicable: true,
     };
   } else {
@@ -253,10 +264,13 @@ function computeAptLthd(args: {
     const endDate = settlementSaleDate ?? transferDate;
     const receiveHolding = calculateHoldingPeriod(acquisitionDate, endDate);
     const receiveMonths = receiveHolding.years * 12 + receiveHolding.months;
+    const receiveSplit = computeLthdRateSplit(receiveHolding.years, isOneHouseSingle, payResidenceYears);
     settlementBranch = {
       holdingMonths: receiveMonths,
       holdingYears: receiveHolding.years,
-      rate: computeLthdRate(receiveHolding.years, isOneHouseSingle, payResidenceYears),
+      rate: receiveSplit.total,
+      holdingRate: receiveSplit.holding,
+      residenceRate: receiveSplit.residence,
       applicable: true,
     };
   }
@@ -288,17 +302,29 @@ function computeLthdRate(
   isOneHouseSingle: boolean,
   residenceYears: number,
 ): number {
-  if (years < 3) return 0;
+  return computeLthdRateSplit(years, isOneHouseSingle, residenceYears).total;
+}
+
+/**
+ * 보유분/거주분 분리 율 산정 (신고서 양식 표시용).
+ * 표1: holding=rate(≤0.30), residence=0
+ * 표2: holding=min(years×0.04,0.40), residence=min(resYears×0.04,0.40) (거주 2년+ 가드)
+ */
+export function computeLthdRateSplit(
+  years: number,
+  isOneHouseSingle: boolean,
+  residenceYears: number,
+): { holding: number; residence: number; total: number } {
+  if (years < 3) return { holding: 0, residence: 0, total: 0 };
 
   if (isOneHouseSingle && residenceYears >= 2) {
-    // 표2: 보유분 4% + 거주분 4%, 각 40% 캡
-    const holdingPart = Math.min(years * 0.04, 0.40);
-    const residencePart = Math.min(residenceYears * 0.04, 0.40);
-    return holdingPart + residencePart;
+    const holding = Math.min(years * 0.04, 0.40);
+    const residence = Math.min(residenceYears * 0.04, 0.40);
+    return { holding, residence, total: holding + residence };
   }
 
-  // 표1: 보유 × 2%, 최대 30%
-  return Math.min(years * 0.02, 0.30);
+  const holding = Math.min(years * 0.02, 0.30);
+  return { holding, residence: 0, total: holding };
 }
 
 /** LTHD 대상 부존재 분기 (입주권 양도 인가후·청산금) */
@@ -307,6 +333,8 @@ function zeroBranch(reason: string): RedevelopmentLthdBranch {
     holdingMonths: 0,
     holdingYears: 0,
     rate: 0,
+    holdingRate: 0,
+    residenceRate: 0,
     applicable: false,
     reason,
   };

@@ -177,6 +177,19 @@ export interface RedevelopmentInfo {
    * 사전법령해석재산 2020-386 — 청산금납부분 LTHD 표2 진입 가드.
    */
   newHouseResidenceMonths?: number;
+
+  // ── 거주기간 자동 산정 입력 (UI에서 입력) — 결과 카드 산정 근거 표시용 ──
+  // 본 4 필드는 엔진 계산에는 사용되지 않으며 (계산은 priorHouseResidenceMonths·newHouseResidenceMonths 사용),
+  // 오직 결과 카드의 "입주일 ~ 퇴거일" 보조 라인 표시용으로 pass-through 된다.
+
+  /** 종전주택 입주일 (YYYY-MM-DD) */
+  priorResidenceStartDate?: string;
+  /** 종전주택 퇴거일 (YYYY-MM-DD) */
+  priorResidenceEndDate?: string;
+  /** 신축주택 입주일 (YYYY-MM-DD) */
+  newResidenceStartDate?: string;
+  /** 신축주택 퇴거일 (YYYY-MM-DD) */
+  newResidenceEndDate?: string;
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -274,6 +287,54 @@ export interface RedevelopmentBranchDetail {
 
   /** 적용 LTHD율 (0~0.8, 표1 또는 표2) */
   lthdRate: number;
+
+  // ── 신고서 양식 표시용 부착 필드 (재개발 3분할 표 렌더링) ──
+
+  /** 분기별 취득일자 (기산일) — §166⑤ 호별 정의에 따른 보유기간 시작일 */
+  branchAcqDate?: Date;
+  /** 분기별 양도일자 (의제일) — §166⑤ 호별 정의에 따른 보유기간 종료일 */
+  branchTransferDate?: Date;
+
+  /**
+   * 분기별 필요경비.
+   * - preApproval: redevPreApprovalExpenses (§166①1호 인가전 양도차익 산식 본문) + (환산 모드 시 개산공제)
+   * - postApprovalExistingHouse: redevPostApprovalExpenses (§166①1호 인가후 양도차익 산식 본문)
+   * - settlement: 0 (청산금분에는 별도 필요경비 미산정 — 의제양도차익 모형)
+   */
+  expenses?: number;
+
+  /**
+   * 분기별 거주기간 시작일 (YYYY-MM-DD, 신고서 양식 입주일 행 표시용).
+   * - preApproval: 종전주택 입주일
+   * - postApprovalExistingHouse / settlement: 신축주택 입주일
+   */
+  residenceStartDate?: string;
+  /** 분기별 거주기간 종료일 (YYYY-MM-DD, 퇴거일 행 표시용) */
+  residenceEndDate?: string;
+  /** 분기별 거주개월수 (자동산정 또는 직접입력값) — 거주기간 행 표시용 */
+  residenceMonths?: number;
+
+  /**
+   * LTHD 보유기간분 금액 (표2 적용 시 분리, 표1은 전액).
+   * §95② 단서 표2 = 보유분(최대 40%) + 거주분(최대 40%, 거주2년+ 가드).
+   */
+  lthdHoldingPart?: number;
+  /** LTHD 거주기간분 금액 (표2 활성 시만 양수, 표1은 0) */
+  lthdResidencePart?: number;
+
+  /**
+   * 12억 안분 전 양도차익 (분기별 원본 양도차익).
+   * 1세대1주택 + 12억 초과 안분 적용 케이스에서만 부착. 미적용 케이스에서는 undefined.
+   * 신고서 양식 표 "전체 양도차익" 행 표시용.
+   * 산식 검산: gainBeforeAllocation = nontaxableGain + gain (안분 후 과세대상)
+   */
+  gainBeforeAllocation?: number;
+  /**
+   * 12억 이하 부분에 해당하는 비과세 양도차익 (분기별).
+   * §95③·시행령 §160 — gainBeforeAllocation × (1 - taxableRatio).
+   * 1세대1주택 + 12억 초과 안분 적용 케이스에서만 부착.
+   */
+  nontaxableGain?: number;
 }
 
 /**
@@ -351,5 +412,9 @@ export interface RedevelopmentResult {
     existingTable: "table1" | "table2";
     /** 청산금분 적용 표 */
     payTable: "table1" | "table2";
+    /** 종전주택 거주기간(입주일·퇴거일, YYYY-MM-DD) — 결과 카드 산정 근거 표시용. UI 자동산정 입력 시 부착 */
+    priorPeriod?: { start: string; end: string };
+    /** 신축주택 거주기간(입주일·퇴거일, YYYY-MM-DD) — 결과 카드 산정 근거 표시용. UI 자동산정 입력 시 부착 */
+    newPeriod?: { start: string; end: string };
   };
 }

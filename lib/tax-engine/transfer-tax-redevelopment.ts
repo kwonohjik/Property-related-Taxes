@@ -217,14 +217,31 @@ function applyHighValueAllocation(
   // 분기별 과세대상 양도차익·LTHD 산정 (정수연산 — 분기별 floor)
   const scaleBranch = (branch: RedevelopmentResult["preApproval"]) => {
     if (branch.gain <= 0) {
-      return { ...branch };
+      return { ...branch, gainBeforeAllocation: branch.gain, nontaxableGain: 0 };
     }
-    const taxableGain = Math.floor(branch.gain * taxableRatio);
+    const originalGain = branch.gain;
+    const taxableGain = Math.floor(originalGain * taxableRatio);
+    const nontaxableGain = originalGain - taxableGain; // 정수연산 보존: 비과세 = 안분 전 - 과세대상
     const taxableLthd = branch.lthdRate > 0 ? Math.floor(taxableGain * branch.lthdRate) : 0;
+    // 12억 안분 후 보유분/거주분 비율은 lthdHoldingPart/lthd 비율로 보존
+    const hasSplit = branch.lthdHoldingPart !== undefined || branch.lthdResidencePart !== undefined;
+    let taxableHoldingPart: number | undefined;
+    let taxableResidencePart: number | undefined;
+    if (hasSplit && taxableLthd > 0) {
+      const holdingFraction = branch.lthd > 0 ? (branch.lthdHoldingPart ?? 0) / branch.lthd : 1;
+      taxableHoldingPart = Math.floor(taxableLthd * holdingFraction);
+      taxableResidencePart = taxableLthd - taxableHoldingPart;
+    } else if (hasSplit) {
+      taxableHoldingPart = 0;
+      taxableResidencePart = 0;
+    }
     return {
       ...branch,
       gain: taxableGain,
       lthd: taxableLthd,
+      gainBeforeAllocation: originalGain,
+      nontaxableGain,
+      ...(hasSplit ? { lthdHoldingPart: taxableHoldingPart, lthdResidencePart: taxableResidencePart } : {}),
     };
   };
 
@@ -273,6 +290,22 @@ function applyHighValueAllocation(
       payResidenceMonths,
       existingTable: preApproval.lthdRate > 0.30 ? "table2" : "table1",
       payTable: settlement.lthdRate > 0.30 ? "table2" : "table1",
+      ...(redevInfo.priorResidenceStartDate && redevInfo.priorResidenceEndDate
+        ? {
+            priorPeriod: {
+              start: redevInfo.priorResidenceStartDate,
+              end: redevInfo.priorResidenceEndDate,
+            },
+          }
+        : {}),
+      ...(redevInfo.newResidenceStartDate && redevInfo.newResidenceEndDate
+        ? {
+            newPeriod: {
+              start: redevInfo.newResidenceStartDate,
+              end: redevInfo.newResidenceEndDate,
+            },
+          }
+        : {}),
     },
   };
 }
