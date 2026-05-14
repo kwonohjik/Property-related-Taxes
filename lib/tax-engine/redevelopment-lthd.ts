@@ -69,6 +69,8 @@ export interface RedevelopmentLthdInput {
 export interface RedevelopmentLthdBranch {
   /** 보유기간 (months 단위) */
   holdingMonths: number;
+  /** 보유기간 잔여 일수 (X년 Y월 Z일 표시용 — 사례 46 신고서 양식 표 정합) */
+  holdingDays?: number;
   /** 보유기간 (years 정수 — 표 적용용) */
   holdingYears: number;
   /** LTHD 율 (0~0.8) — holdingRate + residenceRate */
@@ -109,6 +111,16 @@ export function computeRedevelopmentLthd(
   const { redevelopment, acquisitionDate, transferDate, isSuccessorRightToMoveIn } = input;
   const { subject, approvalDate, settlementDirection, settlementSaleDate } = redevelopment;
 
+  // ─ 사례 46 가드: exemptionEligibleAtApproval=false 시 표1 강등 ─
+  // 서면2016-법령해석재산-2705 (2017.02.13) — 청산금 수령분 1세대1주택 비과세 판정 시점:
+  // 보유·거주요건은 관리처분계획인가일 현재 기준. 인가일 기준 2년 미충족 시
+  // 1세대1주택 비과세 미해당 → LTHD 표2 진입 차단, 표1 강제.
+  // undefined 시 legacy isOneHouseSingle fallback (사례 44·45 회귀 안전).
+  const effectiveOneHouseSingle =
+    redevelopment.exemptionEligibleAtApproval === false
+      ? false
+      : (input.isOneHouseSingle ?? false);
+
   // ─ 거주월수 귀속 분리 (사례 45 — 시행령 §155⑰ + 사전법령해석재산 2020-386) ─
   // 신규 두 필드(prior/new)가 모두 undefined 시 legacy fallback:
   //   기존건물분 = residencePeriodMonths 단일값
@@ -126,7 +138,7 @@ export function computeRedevelopmentLthd(
       acquisitionDate,
       approvalDate,
       isSuccessorRightToMoveIn: isSuccessorRightToMoveIn ?? false,
-      isOneHouseSingle: input.isOneHouseSingle ?? false,
+      isOneHouseSingle: effectiveOneHouseSingle,
       // 입주권은 인가전 분만 LTHD → 기존건물분 거주월수만 의미 있음
       residencePeriodMonths: existingResidenceMonths,
     });
@@ -139,7 +151,7 @@ export function computeRedevelopmentLthd(
     transferDate,
     settlementDirection,
     settlementSaleDate,
-    isOneHouseSingle: input.isOneHouseSingle ?? false,
+    isOneHouseSingle: effectiveOneHouseSingle,
     existingResidenceMonths,
     payResidenceMonths,
   });
@@ -185,6 +197,7 @@ function computeRightLthd(args: {
   return {
     preApproval: {
       holdingMonths: preApprovalMonths,
+      holdingDays: preApprovalHolding.days,
       holdingYears: preApprovalHolding.years,
       rate: preApprovalSplit.total,
       holdingRate: preApprovalSplit.holding,
@@ -235,6 +248,7 @@ function computeAptLthd(args: {
 
   const preApprovalBranch: RedevelopmentLthdBranch = {
     holdingMonths: existingMonths,
+    holdingDays: existingHolding.days,
     holdingYears: existingHolding.years,
     rate: existingSplit.total,
     holdingRate: existingSplit.holding,
@@ -252,6 +266,7 @@ function computeAptLthd(args: {
     const paySplit = computeLthdRateSplit(payHolding.years, isOneHouseSingle, payResidenceYears);
     settlementBranch = {
       holdingMonths: payMonths,
+      holdingDays: payHolding.days,
       holdingYears: payHolding.years,
       rate: paySplit.total,
       holdingRate: paySplit.holding,
@@ -267,6 +282,7 @@ function computeAptLthd(args: {
     const receiveSplit = computeLthdRateSplit(receiveHolding.years, isOneHouseSingle, payResidenceYears);
     settlementBranch = {
       holdingMonths: receiveMonths,
+      holdingDays: receiveHolding.days,
       holdingYears: receiveHolding.years,
       rate: receiveSplit.total,
       holdingRate: receiveSplit.holding,

@@ -143,6 +143,7 @@ export function runRedevelopment(
     apportionedAcquisition: split.preApproval.apportionedAcquisition,
     gain: split.preApproval.gain,
     holdingMonths: lthd.preApproval.holdingMonths,
+    holdingDays: lthd.preApproval.holdingDays,
     lthd: preApprovalLthdAmt.total,
     lthdRate: lthd.preApproval.applicable ? lthd.preApproval.rate : 0,
     branchAcqDate: acquisitionDate,
@@ -167,6 +168,7 @@ export function runRedevelopment(
     apportionedAcquisition: split.postApprovalExistingHouse.apportionedAcquisition,
     gain: split.postApprovalExistingHouse.gain,
     holdingMonths: lthd.postApprovalExistingHouse.holdingMonths,
+    holdingDays: lthd.postApprovalExistingHouse.holdingDays,
     lthd: postApprovalLthdAmt.total,
     lthdRate: lthd.postApprovalExistingHouse.applicable
       ? lthd.postApprovalExistingHouse.rate
@@ -201,6 +203,7 @@ export function runRedevelopment(
     apportionedAcquisition: split.settlement.apportionedAcquisition,
     gain: split.settlement.gain,
     holdingMonths: lthd.settlement.holdingMonths,
+    holdingDays: lthd.settlement.holdingDays,
     lthd: settlementLthdAmt.total,
     lthdRate: lthd.settlement.applicable ? lthd.settlement.rate : 0,
     branchAcqDate: settlementAcqDate,

@@ -190,6 +190,42 @@ export interface RedevelopmentInfo {
   newResidenceStartDate?: string;
   /** 신축주택 퇴거일 (YYYY-MM-DD) */
   newResidenceEndDate?: string;
+
+  // ── 사례 46 — 청산금 수령분 단독 신고 모드 ──
+
+  /**
+   * 청산금 수령분 단독 신고 모드 (사례 46).
+   *
+   * true 시:
+   *   - 인가전 양도차익 (preApproval.gain) = 0 강제
+   *   - 인가후 기존주택분 (postApprovalExistingHouse.gain) = 0 강제
+   *   - settlement 분만 §166①2호 가목 산식으로 계산
+   *   - transferPrice 입력은 무시되고 settlementAmount 가 양도가액으로 의제됨
+   *
+   * 법령 근거:
+   *   시행령 §166① 본문 + 제1항 제2호 가목 (§166②·§166①2호 나목 미적용)
+   *   LTHD 보유기간 = 기획재정부 재산-439 (2014.06.09) 유권해석
+   * NTS 해석: "청산금 수령분 상당액 만큼 종전주택의 일부 양도로 본다."
+   */
+  receiveOnlyMode?: boolean;
+
+  /**
+   * 관리처분계획인가일 기준 1세대1주택 비과세 보유·거주 요건 충족 여부.
+   *
+   * 서면2016-법령해석재산-2705 (2017.02.13):
+   *   - 보유주택수: 양도일 현재 기준 (§154①)
+   *   - 보유·거주요건: 관리처분계획인가일 현재 기준 (해석례)
+   *
+   * false 시:
+   *   - LTHD 표1 강제 (표2 진입 차단)
+   *   - 12억 안분 비활성화 (전부 과세)
+   *
+   * UI 자동 산정: monthsBetween(acquisitionDate, approvalDate) ≥ 24 → true
+   * 사용자 override 허용. 미입력(undefined) 시 legacy `isOneHouseSingle` fallback.
+   *
+   * 사례 46: 자동 판정 false (1년 2개월 < 2년).
+   */
+  exemptionEligibleAtApproval?: boolean;
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -277,6 +313,13 @@ export interface RedevelopmentBranchDetail {
    * - settlement (right):       0 (LTHD 대상 자산 부존재)
    */
   holdingMonths: number;
+
+  /**
+   * 잔여 일수 (months 외 추가 — DATEDIF "d" 보완).
+   * 신고서 양식 표 "X년 Y월 Z일" 일관 표시용 (사례 46 = 6년 9월 11일).
+   * 기존 사례 44·45 anchor 영향 없음 (optional).
+   */
+  holdingDays?: number;
 
   /**
    * 분기별 LTHD 금액.
