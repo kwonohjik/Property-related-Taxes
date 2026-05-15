@@ -161,7 +161,7 @@ export function computeRedevelopmentLthd(
 // 입주권 양도 (§166⑤1호 + §95② 단서)
 // ──────────────────────────────────────────────────────────────────────────────
 
-function computeRightLthd(args: {
+export function computeRightLthd(args: {
   acquisitionDate: Date;
   approvalDate: Date;
   isSuccessorRightToMoveIn: boolean;

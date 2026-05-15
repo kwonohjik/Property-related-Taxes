@@ -207,6 +207,43 @@ export interface RedevelopmentFormSlice {
    */
   redevPriorHouseHoldingMonths: string;
 
+  // ── 사례 37 — 토지 출자 §166③ 환산 (subject="right" + originalAssetType="land") ──
+
+  /**
+   * @deprecated §166③ 분자 — 취득당시 토지 기준시가 (원, 총액).
+   * 구형 CurrencyInput 총액 직접 입력 인터페이스.
+   * 신규 입력 경로는 redevLandPricePerSqmAtAcq × redevLandArea 계산값 우선 사용.
+   * sessionStorage 호환을 위해 필드 자체는 유지 (legacy fallback).
+   */
+  redevLandStdPriceAtAcq: string;
+
+  /**
+   * @deprecated §166③ 분모 — 관리처분 직전 토지 기준시가 (원, 총액).
+   * 구형 CurrencyInput 총액 직접 입력 인터페이스.
+   * 신규 입력 경로는 redevLandPricePerSqmAtApproval × redevLandArea 계산값 우선 사용.
+   * sessionStorage 호환을 위해 필드 자체는 유지 (legacy fallback).
+   */
+  redevLandStdPriceAtApproval: string;
+
+  /**
+   * §166③ 분자 — 취득당시 토지 ㎡당 단가 (원/㎡).
+   * LandPriceLookupField 입력: Vworld API 조회 + 면적 자동 곱셈.
+   * redevOriginalAssetType === "land" + useEstimatedAcquisition=true 시 신규 입력 경로.
+   * redevLandArea × 이 값 = 취득당시 토지 기준시가 총액.
+   * 기존 housing 분기의 redevLandPricePerSqmAtAcq(PHD 패턴용)와 이름이 같으나
+   * land 분기에서는 §166③ 분자 산정에 사용.
+   */
+  // redevLandPricePerSqmAtAcq 는 기존 필드 재사용 (위 PHD 패턴 주석 참조)
+
+  /**
+   * §166③ 분모 — 관리처분 직전 토지 ㎡당 단가 (원/㎡).
+   * LandPriceLookupField 입력: Vworld API 조회 + 면적 자동 곱셈.
+   * redevOriginalAssetType === "land" + useEstimatedAcquisition=true 시 필수.
+   * referenceDate = redevApprovalDate (관리처분 인가일).
+   * §99①1호 공시기준일 시점 모호성(2007.1.1 vs 2006.1.1) 주의 — UI 안내 카드 포함.
+   */
+  redevLandPricePerSqmAtApproval: string;
+
   // ── 사례 48 — 승계조합원 신축APT 양도 ──
 
   /**

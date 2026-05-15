@@ -15,7 +15,7 @@
 
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import type { RedevelopmentBranchDetail } from "@/lib/tax-engine/types/transfer.types";
-import { fmtDate } from "./FilingFormTableHelpers";
+import { fmtDate, holdingPeriodFromDates } from "./FilingFormTableHelpers";
 
 // ── 내부 타입 ────────────────────────────────────────────────────
 
@@ -235,6 +235,118 @@ export function fillRedevRightReceiveBranchData(
   setNum("incomeAmountAfter", "preApproval", nakkokIncome);
   setNum("incomeAmount", "settlement", gamokIncome);
   setNum("incomeAmountAfter", "settlement", gamokIncome);
+}
+
+// ── right+land+pay 3열 모드 (사례 37) ────────────────────────────
+
+/**
+ * redev-right-land-pay 모드 — subject="right" + originalAssetType="land" + settlementDirection="pay".
+ *
+ * 토지 출자 §166③ 환산취득가 케이스 — landContribDetail echo 필드 소비.
+ * 신고서 양식 표 컬럼:
+ *   - "total": 합계
+ *   - "preApproval": ① 인가전 분 (취득일~인가일, §166⑤1호)
+ *   - "postApprovalExistingHouse": ② 인가후 분 (인가일~양도일, LTHD=0)
+ *
+ * 인가후 열(postApprovalExistingHouse) LTHD = 0 → §95② 별표2 [비고] 1호 rose 배지.
+ */
+export function fillRedevRightLandPayBranchData(
+  r: NonNullable<TransferTaxResult["redevelopmentDetail"]>,
+  setNum: SetNum,
+  setStr: SetStr,
+  setRoseNote?: SetRoseNote,
+): void {
+  const pre = r.preApproval;
+  // 엔진은 land+pay 분기의 인가후 분 데이터를 r.settlement에 부착 (사례 36 mirror).
+  // r.postApprovalExistingHouse는 0으로 zero-filled — 사용 금지.
+  const post = r.settlement;
+
+  // 일자·기간 — ① 인가전
+  // 보유기간 = 분기 표시 일자 차이 (취득일~인가일).
+  // LTHD 산정 보유기간(pre.holdingMonths = 만 7년 절사)과 다름 — 신고서 표시는 정확한 일자 차이.
+  // 사례 37: 2007-04-09 ~ 2014-10-23 = 7년 6월.
+  const toIsoSlice = (d?: Date): string | undefined =>
+    d ? new Date(d).toISOString().slice(0, 10) : undefined;
+  const preHoldingPeriod = holdingPeriodFromDates(
+    toIsoSlice(pre.branchAcqDate),
+    toIsoSlice(pre.branchTransferDate),
+  );
+  {
+    const hasMonths = (pre.residenceMonths ?? 0) > 0;
+    const ph = hasMonths ? "(개월수만 입력됨)" : "-";
+    setStr("holdingPeriod", "preApproval", preHoldingPeriod);
+    setStr("acquisitionDate", "preApproval", fmtD(pre.branchAcqDate));
+    setStr("transferDate", "preApproval", fmtD(pre.branchTransferDate));
+    setStr("moveIn", "preApproval", pre.residenceStartDate || ph);
+    setStr("moveOut", "preApproval", pre.residenceEndDate || ph);
+    setStr("residencePeriod", "preApproval", fmtMonths(pre.residenceMonths));
+  }
+
+  // 일자·기간 — ② 인가후 (LTHD 미적용 — 보유기간 표시 불필요)
+  setStr("holdingPeriod", "postApprovalExistingHouse", "-");
+  setStr("acquisitionDate", "postApprovalExistingHouse", fmtD(post.branchAcqDate));
+  setStr("transferDate", "postApprovalExistingHouse", fmtD(post.branchTransferDate));
+  setStr("moveIn", "postApprovalExistingHouse", "-");
+  setStr("moveOut", "postApprovalExistingHouse", "-");
+  setStr("residencePeriod", "postApprovalExistingHouse", "-");
+
+  // 양도가액·취득가액
+  setNum("transferPrice", "preApproval", pre.apportionedTransfer);
+  setNum("acquisitionPrice", "preApproval", pre.apportionedAcquisition);
+  setNum("transferPrice", "postApprovalExistingHouse", post.apportionedTransfer);
+  setNum("acquisitionPrice", "postApprovalExistingHouse", post.apportionedAcquisition);
+
+  // 필요경비 — 인가전 분 개산공제(§163⑥), 인가후 분 청산금 불입액 + 기타 부대비용
+  const preExp = pre.expenses ?? 0;
+  const postExp = post.expenses ?? 0;
+  setNum("expenses", "preApproval", preExp);
+  setNum("expenses", "postApprovalExistingHouse", postExp);
+  setNum("expenses", "total", preExp + postExp);
+
+  // 양도차익(안분 전)·비과세·과세대상
+  const preTg = pre.gainBeforeAllocation ?? pre.gain;
+  const postTg = post.gainBeforeAllocation ?? post.gain;
+  const preEg = pre.nontaxableGain ?? 0;
+  const postEg = post.nontaxableGain ?? 0;
+
+  setNum("transferGain", "preApproval", preTg);
+  setNum("exemptGain", "preApproval", preEg);
+  setNum("taxableGain", "preApproval", pre.gain);
+
+  setNum("transferGain", "postApprovalExistingHouse", postTg);
+  setNum("exemptGain", "postApprovalExistingHouse", postEg);
+  setNum("taxableGain", "postApprovalExistingHouse", post.gain);
+
+  setNum("transferGain", "total", preTg + postTg);
+  setNum("exemptGain", "total", preEg + postEg);
+  setNum("taxableGain", "total", pre.gain + post.gain);
+
+  // 장기보유특별공제
+  // ① 인가전: 정상 LTHD (§166⑤1호 — 취득일~인가일)
+  const preHp = pre.lthdHoldingPart ?? pre.lthd;
+  const preRp = pre.lthdResidencePart ?? 0;
+  setNum("ltDeduction", "preApproval", pre.lthd);
+  setNum("ltHoldingPart", "preApproval", preHp);
+  setNum("ltResidencePart", "preApproval", preRp);
+
+  // ② 인가후: LTHD = 0 (§95② 별표2 [비고] 1호 — 관리처분 인가 전 토지·건물분에 한정)
+  setNum("ltDeduction", "postApprovalExistingHouse", 0);
+  setNum("ltHoldingPart", "postApprovalExistingHouse", 0);
+  setNum("ltResidencePart", "postApprovalExistingHouse", 0);
+  setRoseNote?.("ltDeduction", "postApprovalExistingHouse",
+    "§95② 별표2 [비고] 1호 — 관리처분 인가 전 토지·건물분에 한정");
+
+  setNum("ltHoldingPart", "total", preHp);
+  setNum("ltResidencePart", "total", preRp);
+
+  // 양도소득금액·감면후 소득금액
+  const preIncome = Math.max(0, pre.gain - pre.lthd);
+  const postIncome = post.gain; // LTHD=0
+
+  setNum("incomeAmount", "preApproval", preIncome);
+  setNum("incomeAmountAfter", "preApproval", preIncome);
+  setNum("incomeAmount", "postApprovalExistingHouse", postIncome);
+  setNum("incomeAmountAfter", "postApprovalExistingHouse", postIncome);
 }
 
 // ── right+pay 3열 모드 ────────────────────────────────────────────

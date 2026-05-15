@@ -3,6 +3,10 @@
 > CLAUDE.md에서 분리된 최근 완료 작업 이력. 시간순(최신→과거).
 > 안정적인 규칙·아키텍처는 `CLAUDE.md` / 메모리(MEMORY.md) 참조.
 
+## 2026-05-14
+
+- **사례 36 — 조합원입주권 양도 4분기 통합 PR 완료**. subject="right" 입주권 자체 양도 분기 UI 게이트 해제 + 환산모드 + 청산금 수령 + §89①4호 가목 1세대1입주권 비과세 + 12억 초과 안분 통합 (사례 44~48 후속). 신규 헬퍼 `applyOneRightExemption()` — subject="right" 가드로 사례 47 `applySettlementExemption`과 격리. 트리거 4조건 AND(subject=right + exemptionEligibleAtApproval + housing=0 + right=1). ≤12억 전액 마스킹 / >12억 right 전용 ratio 분기(`oneRightHighValueApplied` 플래그 — 12억 안분 게이트 `isOneHouseSingle`(housing=1) 가정 환류). 신규 1필드만(`priorHouseHoldingMonths`) + 기존 재사용 2필드(`exemptionEligibleAtApproval` 사례 47 / `priorHouseResidenceMonths` 사례 45). `redevelopment-lthd.ts:208` zeroBranch 주석 정정 — §94①2호 + §166①1호·2호 가목 구조 근거. UI: `RedevelopmentRightExemptionSection.tsx` 신규(199줄) — §0-A 안내(sky) + §⑥ 비과세(violet) + **C-1 안전장치 3종**((a) 자동 검증 useMemo / (b) rose 경고 카드 §115 + 국기법 §47의2~5 가산세 리스크 / (c) 토글 ON 시 면책 문구). 800줄 정책: RedevelopmentBlock 755 / RightExemption 199. anchor 53건 100% 통과(CORE-36 11 + A1 3 + A2 9 + A4 5 + A5 17 + 회귀가드 2 + 보강 6). 외부 검토 Pre-Do B-1 국세청 해석례 3건 메타데이터 첨부([64158]·[299260]·[152604]) — 12억 안분 분모 transferPrice 단일 해석 A 일관 지지. PDCA 4차 누적 정정 19건 (1차 엔진 코드 검증 7 / 2차 외부 검토 B·C 3 / 3차 자가재검토 8 / 4차 저심도 보완 4) + 디자인 환류 1건. gap-detector matchRate 100%. 전체 3,001 passed / 177 files / 0 failed. 후속 PR: 36-A3 승계조합원+입주권(§95④ ↔ 사례 48 준공일 충돌) / 36-B1 빈집소규모정비법 §29 / 36-B2 일시적 1입주권+1주택(§89①4호 나목) / 36-B3 5년 이내 단기양도 세율. 커밋 `d4d35b5` + `ad64892`.
+
 ## 2026-05-13
 
 - **사례 35 후속-1 — §99-164-10 환산주택가격 완료**. 양도소득세 집행기준 99-164-10 적용 — 주택으로 최초공시 후 상가로 용도변경한 경우 취득가액 불명 시 환산주택가격 = 최초공시주택가격 × (취득당시 합계 ÷ 최초공시 당시 합계) 산식으로 자산별 환산기준시가 override. `general-building-converted-housing.ts` sibling 파일 신규(58줄, 800줄 정책). 4 신규 필드(`hasFirstDisclosure` + 3 std price). `applyConvertedHousingPriceOverride()`가 `buildGeneralBuildingAssetCards` 진입 시 자동 분기 — 미사용 경로 회귀 0. UI: GeneralBuildingBlock §⑦ 내부 sub-ToggleCard + 환산주택가격 미리보기(useMemo 순수). anchor 6개(F1-1 단위 산식·F1-1b 정확값 110M·F1-2 자산별 안분·F1-4/4b 미사용 회귀·F1-5 0 방어). 전체 2,791 passed 회귀 0.

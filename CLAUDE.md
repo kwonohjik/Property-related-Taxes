@@ -39,6 +39,8 @@ npm run verify:legal:refresh  # 캐시 무효화 후 재검증
 
 **자동 게이트**: husky pre-commit(lint-staged) + pre-push(typecheck + test) + GitHub Actions.
 
+**ESLint --fix 함정**: pre-commit lint-staged의 `eslint --fix`가 미사용 import 라인 정리 시 **같은 라인의 사용 중인 named export까지 함께 제거**할 수 있다 (예: `import { CurrencyInput, parseAmount }`에서 CurrencyInput만 미사용일 때 parseAmount도 제거 → TS2304). 회피: 신규 import는 한 라인에 한 named만 두거나, 별도 라인으로 분리. pre-push의 `tsc --noEmit`이 잡아주지만 별도 fix 커밋 1개가 추가됨.
+
 ## Tech Stack
 
 Next.js 16 (App Router, React 19, Turbopack) + TS strict / shadcn(BaseUI) + Tailwind v4 + zustand / Next Route Handlers + Server Actions (`actions/calculations.ts`) / Supabase (Auth + Postgres) / vitest + jsdom + RTL / Sentry (`tax_type`·`request_id` 태그).
@@ -117,6 +119,12 @@ lib/calc/ — 클라이언트↔API 변환 (14개 동기화 지점 ④⑧ 담당
 - 엔진: `transfer-tax-senior` / `acquisition-tax-senior` / `property-tax-senior` / `comprehensive-tax-senior` / `inheritance-gift-tax-senior` (+세목별 서브)
 - UI: `{transfer|acquisition|property|comprehensive|inheritance-gift}-tax-ui-senior`
 - QA: `tax-qa-lead` (6대 세목 병렬), `ui-engine-sync-checker` (read-only)
+
+**Plan 병렬 / Do 시퀀셜 위임 패턴** (사례 36 검증):
+1. Plan/Design — 엔진+UI 시니어 단일 메시지 동시 호출
+2. **Do — 시퀀셜**: 엔진 시니어가 ①②③④⑧⑨⑫⑭ 선처리(타입·헬퍼·anchor) → UI 시니어가 결과 받아 ⑤⑥⑦만 담당 → ④/⑬ 충돌 회피
+3. Check — `ui-engine-sync-checker` (14지점 read-only) → `bkit:gap-detector` (계획-구현 matchRate)
+4. UI 시니어 단독 작업 중 자주 중단되는 5가지(800줄·14지점·TS 연쇄·plan mode 상속·복잡 컴포넌트) → memory `feedback_pdca_session_efficiency` 6가지 사전 적용
 
 ### PDCA 5단계
 

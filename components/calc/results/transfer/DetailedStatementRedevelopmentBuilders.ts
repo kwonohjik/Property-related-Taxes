@@ -411,6 +411,176 @@ export function buildRedevPerAssetForIncome(
 // 진입 헬퍼 — DetailedStatementHelpers.ts buildStatementItems()에서 1줄 호출
 // ──────────────────────────────────────────────────────────────────────────────
 
+// ──────────────────────────────────────────────────────────────────────────────
+// 사례 37 — 토지 출자 §166③ 2분할 산식 빌더
+// ──────────────────────────────────────────────────────────────────────────────
+
+/**
+ * 토지 출자 §166③ 케이스 — 산식 오버라이드.
+ *
+ * originalAssetType="land" + subject="right" + settlementDirection="pay" 분기.
+ * landContribDetail echo 필드를 소비하여 산식·LTHD 라벨 부착.
+ *
+ * 산식 규칙:
+ *  - 인가전: 권리가액 − 환산취득가(§166③) − 개산공제(§163⑥) = 인가전 양도차익
+ *  - 인가후: 양도가액 − 권리가액 − 청산금 − 인가후 필요경비 = 인가후 양도차익
+ *  - LTHD: 인가전 14% (§166⑤1호) / 인가후 0 (§95② 별표2 [비고] 1호)
+ */
+export function applyLandContribOverrides(
+  items: Map<string, StatementItem>,
+  redev: RedevelopmentResult,
+  totalTransferPrice: number,
+): void {
+  const lcd = redev.landContribDetail;
+  if (!lcd) return; // landContribDetail 없으면 하우징 분기로 fall-through
+
+  const fmt = (n: number) => n.toLocaleString("ko-KR");
+  const pre = redev.preApproval;
+  const post = redev.postApprovalExistingHouse;
+
+  // 양도가액
+  const transferItem = items.get("transferPrice");
+  if (transferItem) {
+    transferItem.formula =
+      "토지 출자 §166① — 인가전(권리가액 의제) + 인가후(양도가액 − 권리가액 − 청산금)";
+    transferItem.legalBasis = "소득세법 시행령 §166①1호 · §166④";
+    transferItem.perAsset = [
+      {
+        label: "① 인가전 분 (§166①1호 · §166⑤1호 — 취득일~인가일 기산)",
+        value: pre.apportionedTransfer,
+        formula: `의제 양도가액 = 권리가액 = ${fmt(pre.apportionedTransfer)} (§166④)`,
+      },
+      {
+        label: "② 인가후 분 (LTHD 제외 — §95② 별표2 [비고] 1호)",
+        value: post.apportionedTransfer,
+        formula: `양도가액 ${fmt(totalTransferPrice)} − 권리가액 ${fmt(pre.apportionedTransfer)} − 청산금 ${fmt(redev.settlement.apportionedAcquisition)} = ${fmt(post.apportionedTransfer)}`,
+      },
+    ];
+  }
+
+  // 취득가액
+  const acqItem = items.get("acquisitionPrice");
+  if (acqItem) {
+    const sumAcq = pre.apportionedAcquisition + post.apportionedAcquisition;
+    acqItem.value = sumAcq;
+    acqItem.formula =
+      "토지 출자 §166③ 환산 — 인가전(환산취득가) + 인가후(권리가액 의제)";
+    acqItem.legalBasis = "소득세법 시행령 §166③";
+    acqItem.note = undefined;
+    acqItem.perAsset = [
+      {
+        label: "① 인가전 분 (§166③ — 권리가액 × 취득기준시가 / 관리처분 직전 기준시가)",
+        value: pre.apportionedAcquisition,
+        formula:
+          `환산취득가 = floor(${fmt(pre.apportionedTransfer)} × ${fmt(lcd.landStdPriceAtAcq)} / ${fmt(lcd.landStdPriceAtApproval)}) = ${fmt(lcd.convertedAcquisition)}`,
+      },
+      {
+        label: "② 인가후 분 (§166②1호 — 권리가액 의제)",
+        value: post.apportionedAcquisition,
+        formula: `의제 = 권리가액 = ${fmt(post.apportionedAcquisition)}`,
+      },
+    ];
+  }
+
+  // 필요경비
+  const expItem = items.get("expenses");
+  if (expItem) {
+    expItem.value = lcd.estimatedDeduction;
+    expItem.formula = "개산공제 (§163⑥) = 취득당시 토지 기준시가 × 3% — 인가전 분에만 적용";
+    expItem.legalBasis = "소득세법 시행령 §163⑥";
+    expItem.perAsset = [
+      {
+        label: "① 인가전 분 (§163⑥)",
+        value: lcd.estimatedDeduction,
+        formula: `floor(${fmt(lcd.landStdPriceAtAcq)} × 3%) = ${fmt(lcd.estimatedDeduction)}`,
+      },
+      {
+        label: "② 인가후 분",
+        value: 0,
+        formula: "해당 분할에는 개산공제 미적용",
+      },
+    ];
+  }
+
+  // 전체 양도차익
+  const gainItem = items.get("transferGain");
+  if (gainItem) {
+    gainItem.formula = "토지 출자 §166① 분할별 양도차익 합 = 인가전 + 인가후";
+    gainItem.legalBasis = "소득세법 시행령 §166①1호";
+    gainItem.perAsset = [
+      {
+        label: "① 인가전 분",
+        value: pre.gain,
+        formula: `권리가액 ${fmt(pre.apportionedTransfer)} − 환산취득가 ${fmt(lcd.convertedAcquisition)} − 개산공제 ${fmt(lcd.estimatedDeduction)} = ${fmt(pre.gain)}`,
+      },
+      {
+        label: "② 인가후 분",
+        value: post.gain,
+        formula: `${fmt(post.apportionedTransfer)} − ${fmt(post.apportionedAcquisition)} = ${fmt(post.gain)}`,
+      },
+    ];
+  }
+
+  // 과세대상 양도차익
+  const taxableItem = items.get("taxableGain");
+  if (taxableItem) {
+    taxableItem.perAsset = gainItem?.perAsset;
+  }
+
+  // 장기보유특별공제
+  const ltItem = items.get("ltDeduction");
+  if (ltItem) {
+    ltItem.formula = "§95② 단서 + §166⑤1호 — 인가전 분만 LTHD (취득일~인가일 기산). 인가후 LTHD=0 (별표2 [비고] 1호)";
+    ltItem.legalBasis = "소득세법 §95② 별표2 [비고] 1호 · 시행령 §166⑤1호";
+    const preYears = Math.floor(pre.holdingMonths / 12);
+    const preMons = pre.holdingMonths % 12;
+    const prePct = (pre.lthdRate * 100).toFixed(0);
+    ltItem.perAsset = [
+      {
+        label: `① 인가전 분 (§166⑤1호 — 취득일~인가일, ${prePct}%)`,
+        value: pre.lthd,
+        formula: `${fmt(pre.gain)} × ${prePct}% (보유 ${preYears}년 ${preMons}개월) = ${fmt(pre.lthd)}`,
+      },
+      {
+        label: "② 인가후 분 (LTHD=0 — §95② 별표2 [비고] 1호)",
+        value: 0,
+        formula: "LTHD 대상 양도차익 부존재 (별표2 [비고] 1호 — 관리처분 인가 전 토지·건물분에 한정)",
+      },
+    ];
+  }
+
+  // 보유/거주 분리 항목
+  const ltHoldItem = items.get("ltHoldingPart");
+  if (ltHoldItem) {
+    ltHoldItem.note = "토지 출자 §166⑤1호 — 인가전 분만 보유기간 LTHD (표1), 인가후 미적용";
+    ltHoldItem.perAsset = undefined;
+  }
+  const ltResItem = items.get("ltResidencePart");
+  if (ltResItem) {
+    ltResItem.note = "토지 출자 — 거주 분리 미적용";
+    ltResItem.perAsset = undefined;
+  }
+
+  // 양도소득금액
+  const incomeItem = items.get("incomeAmount");
+  if (incomeItem) {
+    incomeItem.formula = "토지 출자 §166 분할별 (양도차익 − LTHD) 합";
+    incomeItem.legalBasis = "소득세법 §95①";
+    incomeItem.perAsset = [
+      {
+        label: "① 인가전 분",
+        value: Math.max(0, pre.gain - pre.lthd),
+        formula: `${fmt(pre.gain)} − ${fmt(pre.lthd)} = ${fmt(Math.max(0, pre.gain - pre.lthd))}`,
+      },
+      {
+        label: "② 인가후 분",
+        value: Math.max(0, post.gain - post.lthd),
+        formula: `${fmt(post.gain)} − 0 = ${fmt(post.gain)}`,
+      },
+    ];
+  }
+}
+
 /**
  * 재개발 케이스 1단계 양도차익 산정 그룹의 항목에 3분할 perAsset[] 부착.
  *
@@ -425,6 +595,12 @@ export function applyRedevelopmentOverrides(
   subject?: "apt" | "right",
   settlementDirection?: "pay" | "receive",
 ): void {
+  // 사례 37 — 토지 출자 §166③ 분기: landContribDetail 존재 시 2분할 산식으로 오버라이드
+  if (redev.landContribDetail) {
+    applyLandContribOverrides(items, redev, totalTransferPrice);
+    return;
+  }
+
   const isRightSubject = subject === "right";
   const isRightReceive = isRightSubject && settlementDirection === "receive";
 

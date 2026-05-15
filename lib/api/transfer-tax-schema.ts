@@ -346,6 +346,10 @@ const propertyBaseShape = {
     // 엔진 계산에는 직접 미사용 (비과세 판단은 exemptionEligibleAtApproval 기준).
     // §89①4호 가목 → §89①3호 가목 보유 2년 요건 참조.
     priorHouseHoldingMonths: z.number().int().nonnegative().optional(),
+    // 사례 37 — 토지 출자 §166③ 환산 (subject="right" + originalAssetType="land")
+    // ★★★ 침묵 stripping 차단: Zod 객체 정의에 없으면 route handler에서 자동 제거됨.
+    landStdPriceAtAcq: z.number().int().nonnegative().optional(),
+    landStdPriceAtApproval: z.number().int().nonnegative().optional(),
   })
   .refine(
     (v) => v.settlementDirection !== "receive" || v.settlementSaleDate != null,

@@ -327,6 +327,10 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     redevExemptionEligibleAtApproval: "",
     // 사례 36 — 1세대1입주권 비과세 C-1 안전장치
     redevPriorHouseHoldingMonths: "",
+    // 사례 37 — 토지 출자 §166③ 환산 (subject="right" + originalAssetType="land")
+    redevLandStdPriceAtAcq: "",      // @deprecated — legacy 총액 직접 입력 (sessionStorage 호환용)
+    redevLandStdPriceAtApproval: "", // @deprecated — legacy 총액 직접 입력 (sessionStorage 호환용)
+    redevLandPricePerSqmAtApproval: "", // §166③ 분모 ㎡당 단가 (LandPriceLookupField 신규 입력 경로)
     // 사례 48 — 승계조합원 신축APT 양도
     redevIsSuccessorMember: "",
     redevCompletionDate: "",
@@ -486,6 +490,11 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (a.redevExemptionEligibleAtApproval === undefined) a.redevExemptionEligibleAtApproval = "";
   // 사례 36 — 1세대1입주권 비과세 C-1 안전장치
   if (a.redevPriorHouseHoldingMonths === undefined) a.redevPriorHouseHoldingMonths = "";
+  // 사례 37 — 토지 출자 §166③ 환산 (subject="right" + originalAssetType="land")
+  if (a.redevLandStdPriceAtAcq === undefined) a.redevLandStdPriceAtAcq = "";         // @deprecated legacy
+  if (a.redevLandStdPriceAtApproval === undefined) a.redevLandStdPriceAtApproval = ""; // @deprecated legacy
+  // 신규 LandPriceLookupField 입력 경로 — §166③ 분모 ㎡당 단가
+  if (a.redevLandPricePerSqmAtApproval === undefined) a.redevLandPricePerSqmAtApproval = "";
   // 사례 48 — 승계조합원 신축APT 양도
   if (a.redevIsSuccessorMember === undefined) a.redevIsSuccessorMember = "";
   if (a.redevCompletionDate === undefined) a.redevCompletionDate = "";

@@ -19,7 +19,7 @@ import type {
   AggregateTransferResult,
   PerPropertyBreakdown,
 } from "@/lib/tax-engine/types/transfer-aggregate.types";
-import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
+
 
 // ── Props ──────────────────────────────────────────────────────
 
@@ -124,7 +124,8 @@ export type ColumnMode =
   | "aggregate"
   | "redev-4split"
   | "redev-right-pay"
-  | "redev-right-receive";
+  | "redev-right-receive"
+  | "redev-right-land-pay";
 
 export function deriveColumns(
   result: TransferTaxResult,
@@ -162,6 +163,18 @@ export function deriveColumns(
 
   // 재개발/재건축 — aggregate와 mutually exclusive
   if (result.redevelopmentDetail) {
+    // 사례 37 — 토지 출자 §166③: landContribDetail 존재 시 3열 (합계/인가전/인가후)
+    // land 분기는 right+pay에서만 허용 (validate가 차단). 최우선 분기.
+    if (result.redevelopmentDetail.landContribDetail) {
+      return {
+        mode: "redev-right-land-pay",
+        columns: [
+          { key: "total", label: "합계" },
+          { key: "preApproval", label: "① 인가전 분 (취득일~인가일)" },
+          { key: "postApprovalExistingHouse", label: "② 인가후 분 (LTHD 제외)" },
+        ],
+      };
+    }
     // subject="right" + pay → 3열 (합계/인가전/인가후)
     // §95② 단서: 인가후(청산금납부분) LTHD 배제 — 별도 열로 명시
     if (redevSubject === "right" && redevSettlementDirection === "pay") {
@@ -440,7 +453,9 @@ export function splitTwoColFinancials(
 // ── 행 정의 생성 ───────────────────────────────────────────────
 
 import { buildAggregateRows } from "./FilingFormTableAggregateHelpers";
-import { fillRedev4SplitBranchData, fillRedevRightPayBranchData, fillRedevRightReceiveBranchData } from "./FilingFormTableRedevRows";
+import { fillRedev4SplitBranchData, fillRedevRightPayBranchData, fillRedevRightReceiveBranchData, fillRedevRightLandPayBranchData } from "./FilingFormTableRedevRows";
+import { buildRowsFromOrder } from "./FilingFormTableRowDefs";
+export { fmtCell } from "./FilingFormTableRowDefs";
 
 export function buildRows(
   result: TransferTaxResult,
@@ -530,8 +545,11 @@ export function buildRows(
   setStr("residencePeriod", "total", fmtPeriod(residenceMonthsTotal));
 
   // ── 재개발/재건축 분할 모드 (시행령 §166) — FilingFormTableRedevRows.ts 위임 ──
-  if ((mode === "redev-4split" || mode === "redev-right-pay" || mode === "redev-right-receive") && result.redevelopmentDetail) {
-    if (mode === "redev-right-pay") {
+  const isRedevMode = mode === "redev-4split" || mode === "redev-right-pay" || mode === "redev-right-receive" || mode === "redev-right-land-pay";
+  if (isRedevMode && result.redevelopmentDetail) {
+    if (mode === "redev-right-land-pay") {
+      fillRedevRightLandPayBranchData(result.redevelopmentDetail, setNum, setStr, setRoseNote);
+    } else if (mode === "redev-right-pay") {
       fillRedevRightPayBranchData(result.redevelopmentDetail, setNum, setStr, setRoseNote);
     } else if (mode === "redev-right-receive") {
       fillRedevRightReceiveBranchData(result.redevelopmentDetail, setNum, setStr, setRoseNote);
@@ -586,14 +604,24 @@ export function buildRows(
   }
 
   setNum("transferPrice", "total", totalTransferPrice || null);
-  if ((mode === "redev-4split" || mode === "redev-right-pay" || mode === "redev-right-receive") && result.redevelopmentDetail) {
+  if (isRedevMode && result.redevelopmentDetail) {
     const r = result.redevelopmentDetail;
-    // 원조합원: 종전주택 실가(preApproval) + 청산금 납부액(settlement). 인가후 의제 권리가액 중복 제외.
-    // 사례 48 승계조합원: §166 안분 우회 — postApprovalExistingHouse 단독 (preApproval·settlement=0 fill).
-    // redev-right-pay/receive: preApproval + settlement (postApprovalExistingHouse=0)
-    setNum("acquisitionPrice", "total", r.successorMemberApplied === true
-      ? r.postApprovalExistingHouse.apportionedAcquisition
-      : r.preApproval.apportionedAcquisition + r.settlement.apportionedAcquisition);
+    // ★ 재개발/재건축 합계 취득가액 — 역산 규칙 (memory: feedback_redev_filing_form_acquisition_inverse)
+    //   합계 취득가액 = 합계 양도가 − 합계 필요경비 − 합계 양도차익
+    //   자기일관성(양도가 = 취득가 + 필요경비 + 차익) 자동 보장.
+    //   전 분기 공통 적용 — redev-right-pay/receive/land-pay/4split/승계조합원.
+    //   사례 37 검산: 520M − 103M − 217M = 200M (환산취득가 = §166③ 결과).
+    const isSuccessor = r.successorMemberApplied === true;
+    const totalExpensesForInverse = isSuccessor
+      ? (r.postApprovalExistingHouse.expenses ?? 0)
+      : (r.preApproval.expenses ?? 0)
+        + (r.postApprovalExistingHouse.expenses ?? 0)
+        + (r.settlement.expenses ?? 0);
+    const totalGainForInverse = isSuccessor
+      ? r.postApprovalExistingHouse.gain
+      : r.preApproval.gain + r.postApprovalExistingHouse.gain + r.settlement.gain;
+    const inverseAcquisition = (totalTransferPrice || 0) - totalExpensesForInverse - totalGainForInverse;
+    setNum("acquisitionPrice", "total", inverseAcquisition);
     // 필요경비 합계는 redev 분기 합으로 이미 설정됨 — 덮어쓰기 금지.
   } else if (mode === "fourpart" && mu) {
     const hp = mu.housingPart;
@@ -639,8 +667,8 @@ export function buildRows(
   // 과세대상 양도차익=전체 양도차익으로 표기.
   const isRH = result.rentalHousingExceptionDetail?.applied === true;
 
-  // redev-4split·redev-right-pay·redev-right-receive 모드는 분기 합으로 이미 설정됨 — 덮어쓰지 않음.
-  if (mode !== "redev-4split" && mode !== "redev-right-pay" && mode !== "redev-right-receive") {
+  // redev 모드는 분기 합으로 이미 설정됨 — 덮어쓰지 않음.
+  if (!isRedevMode) {
     setNum("transferGain", "total", result.transferGain);
     setNum("exemptGain", "total", isRH ? 0 : Math.max(0, result.transferGain - result.taxableGain));
     setNum("taxableGain", "total", isRH ? result.transferGain : result.taxableGain);
@@ -692,7 +720,7 @@ export function buildRows(
     setNum("ltResidencePart", "land", landSplit.residenceAmount);
     setNum("ltHoldingPart", "building", buildSplit.holdingAmount);
     setNum("ltResidencePart", "building", buildSplit.residenceAmount);
-  } else if (mode === "redev-4split" || mode === "redev-right-pay" || mode === "redev-right-receive") {
+  } else if (isRedevMode) {
     // 분기별 lthdHoldingPart/lthdResidencePart 합으로 이미 정확하게 설정됨.
     // result.longTermHoldingDeduction 기반 재계산은 분기별 분리 정보를 잃으므로 덮어쓰지 않는다.
   } else {
@@ -743,54 +771,6 @@ export function buildRows(
   const acqDateRowLabel = acquisitionDateLabel
     ? `취득일자 ${acquisitionDateLabel}`
     : "취득일자";
-  const rowOrder: Array<[string, string, Partial<RowDef>?]> = [
-    ["transferDate", "양도일자"],
-    ["acquisitionDate", acqDateRowLabel],
-    ["holdingPeriod", "보유기간"],
-    ["moveOut", "퇴거일"],
-    ["moveIn", "입주일"],
-    ["residencePeriod", "거주기간", { separatorAfter: true }],
-    ["transferPrice", "양도가액"],
-    ["acquisitionPrice", "취득가액"],
-    ["expenses", "필요경비", { separatorAfter: true }],
-    ["transferGain", "전체 양도차익"],
-    ["exemptGain", "비과세 양도차익"],
-    ["taxableGain", "과세대상 양도차익", { separatorAfter: true }],
-    ["ltDeduction", "장기보유특별공제"],
-    ["ltHoldingPart", " 보유 기간분 장특", { indent: true }],
-    ["ltResidencePart", " 거주 기간분 장특", { indent: true, separatorAfter: true }],
-    ["incomeAmount", "양도소득금액"],
-    ["nontaxableIncome", "비과세 양도소득금액 (소령 §161①)", { indent: true }],
-    ["reductionTargetIncome", "세액감면대상금액"],
-    ["reductionTargetIncome2", "소득금액 감면대상"],
-    ["incomeAmountAfter", "감면후 소득금액"],
-    ["priorIncomeAmount", "기신고 양도소득금액"],
-    ["basicDeduction", "기본공제", { separatorAfter: true }],
-    ["taxBase", "과세표준", { highlight: true }],
-    ["calculatedTax", "산출세액", singleTaxNotes ? { notes: singleTaxNotes } : undefined],
-    ["reductionTax", "감면세액"],
-    ["determinedTax", "결정세액", { highlight: true }],
-    ["penaltyTax", "가산세액"],
-    ["totalDeterminedTax", "총결정세액", { highlight: true, separatorAfter: true }],
-    ["ruralSurtax", "농어촌특별세 (§99의3 등)"],
-    ["localCalculatedTax", "지방소득세 산출세액"],
-    ["localReduction", "지방세 감면세액"],
-    ["localDeterminedTax", "지방세 결정세액", { highlight: true }],
-  ];
 
-  return rowOrder.map(([key, label, opts]) => ({
-    label,
-    values: v[key] ?? {},
-    ...(opts ?? {}),
-    ...(roseNotesMap[key] ? { roseNotes: roseNotesMap[key] } : {}),
-  }));
-}
-
-// ── 셀 포맷 ───────────────────────────────────────────────────
-
-export function fmtCell(v: number | string | null | undefined): string {
-  if (v === null || v === undefined || v === "") return "-";
-  if (typeof v === "string") return v;
-  if (v === 0) return "0";
-  return formatKRW(v);
+  return buildRowsFromOrder(v, roseNotesMap, acqDateRowLabel, singleTaxNotes);
 }

@@ -165,7 +165,7 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, wasRegul
           onChange={(v) => onChange({ redevOriginalAssetType: v as "" | "land" | "housing" })}
           options={ORIGINAL_ASSET_OPTIONS.map((o) => ({
             ...o,
-            disabled: o.value === "land",
+            disabled: false, // 사례 37 토지 출자 활성화 (기존: o.value === "land" 차단)
           }))}
           layout="stack"
         />

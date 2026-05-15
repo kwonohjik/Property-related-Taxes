@@ -97,6 +97,60 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
     asset.redevFirstDisclosureDate,
   ]);
 
+  // ── 사례 37 — 토지 출자 §166③ 환산 미리보기 (land 분기) ──
+  const isLand = asset.redevOriginalAssetType === "land";
+
+  const landContribPreview = useMemo(() => {
+    if (!isLand || !asset.useEstimatedAcquisition) return null;
+    const rights = parseAmount(asset.redevRightsValue);
+    const landArea = parseDecimal(asset.redevLandArea) || 0;
+    const pricePerSqmAcq = parseAmount(asset.redevLandPricePerSqmAtAcq) || 0;
+    const pricePerSqmApproval = parseAmount(asset.redevLandPricePerSqmAtApproval) || 0;
+    // 단가×면적 계산 우선, fallback은 legacy 총액
+    const acq = (pricePerSqmAcq > 0 && landArea > 0)
+      ? Math.floor(pricePerSqmAcq * landArea)
+      : parseAmount(asset.redevLandStdPriceAtAcq);
+    const approval = (pricePerSqmApproval > 0 && landArea > 0)
+      ? Math.floor(pricePerSqmApproval * landArea)
+      : parseAmount(asset.redevLandStdPriceAtApproval);
+    const settlement = parseAmount(asset.redevSettlementAmount);
+    if (rights <= 0 || acq <= 0 || approval <= 0) return null;
+
+    // §166③ 환산취득가 = floor(권리가액 × landStdPriceAtAcq / landStdPriceAtApproval)
+    const convertedAcq = Number((BigInt(rights) * BigInt(acq)) / BigInt(approval));
+    // §163⑥ 개산공제 = floor(취득당시 토지 기준시가 × 3%)
+    const estDeduction = Math.floor(acq * 0.03);
+    // 인가전 양도차익
+    const preApprovalGain = rights - convertedAcq - estDeduction;
+    // 인가후 양도차익 = 양도가액 − 권리가액 − 청산금
+    const actualTransferPrice = parseAmount(asset.actualSalePrice);
+    const postApprovalGain = actualTransferPrice > 0
+      ? actualTransferPrice - rights - settlement
+      : null;
+
+    return {
+      convertedAcq,
+      estDeduction,
+      preApprovalGain,
+      postApprovalGain,
+      rights,
+      acq,
+      approval,
+      formula: `floor(${rights.toLocaleString()} × ${acq.toLocaleString()} / ${approval.toLocaleString()})`,
+    };
+  }, [
+    isLand,
+    asset.useEstimatedAcquisition,
+    asset.redevRightsValue,
+    asset.redevLandArea,
+    asset.redevLandPricePerSqmAtAcq,
+    asset.redevLandPricePerSqmAtApproval,
+    asset.redevLandStdPriceAtAcq,
+    asset.redevLandStdPriceAtApproval,
+    asset.redevSettlementAmount,
+    asset.actualSalePrice,
+  ]);
+
   const isPreDisclosureTriggered =
     !!asset.acquisitionDate &&
     !!asset.redevFirstDisclosureDate &&
@@ -113,6 +167,16 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
       description="취득가액 확인 불가 시 기준시가 비율로 환산 (시행령 §166③ + §176의2②2호)"
     >
       <div className="space-y-2">
+
+        {/* ── 사례 37: 토지 출자 분기 ── */}
+        {isLand ? (
+          <LandContribValuationContent
+            asset={asset}
+            onChange={onChange}
+            preview={landContribPreview}
+          />
+        ) : (
+          <>
         <div className="flex items-center gap-2">
           <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-200 text-[10px] font-bold text-rose-800 select-none">5</span>
           <p className="text-xs font-semibold text-rose-700">환산 기준시가</p>
@@ -257,7 +321,146 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
             )}
           </div>
         )}
+          </>
+        )}
       </div>
     </ToggleCard>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// 사례 37 — 토지 출자 §166③ 환산취득가 입력 서브 컴포넌트
+// ──────────────────────────────────────────────────────────────────────────────
+
+interface LandContribPreview {
+  convertedAcq: number;
+  estDeduction: number;
+  preApprovalGain: number;
+  postApprovalGain: number | null;
+  rights: number;
+  acq: number;
+  approval: number;
+  formula: string;
+}
+
+interface LandContribProps {
+  asset: AssetForm;
+  onChange: (patch: Partial<AssetForm>) => void;
+  preview: LandContribPreview | null;
+}
+
+/**
+ * 토지 출자 §166③ 환산취득가 입력 — 사례 37.
+ *
+ * 토지 기준시가 비율로 취득가액 환산:
+ *   환산취득가 = floor(권리가액 × 취득당시 토지기준시가 / 관리처분 직전 토지기준시가)
+ *
+ * housing 분기의 PHD 패턴(라목값)과 달리, 토지만 있으므로 건물 기준시가 불필요.
+ *
+ * 입력 패턴: LandPriceLookupField (원/㎡) × 면적 = 총액 (feedback_land_price_lookup_field 준수).
+ * housing 분기의 redevLandPricePerSqmAtAcq 필드를 §166③ 분자로 재사용.
+ * §166③ 분모는 신규 redevLandPricePerSqmAtApproval 필드.
+ * legacy 총액 필드(redevLandStdPriceAtAcq/redevLandStdPriceAtApproval)는 deprecated — sessionStorage 호환용 유지.
+ *
+ * 정책:
+ *  - useEffect → store 미러링 금지 (props.preview는 useMemo 순수 계산으로 부모에서 전달)
+ *  - §99①1호 시점 모호성 안내 카드 포함 (2007.1.1 vs 2006.1.1)
+ *  - LandPriceLookupField 재사용 — Vworld API 조회 활성화 (jibun prop)
+ */
+function LandContribValuationContent({ asset, onChange, preview }: LandContribProps) {
+  const fmt = (n: number) => n.toLocaleString("ko-KR");
+  const landAreaNumber = parseDecimal(asset.redevLandArea) || undefined;
+
+  return (
+    <div className="space-y-2">
+      {/* 안내 헤더 */}
+      <div className="rounded-md border border-amber-200 bg-amber-50/70 p-2 space-y-1">
+        <div className="flex items-center gap-2">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-[10px] font-bold text-amber-800 select-none">5</span>
+          <p className="text-xs font-semibold text-amber-700">토지 출자 — §166③ 비율 환산 (사례 37)</p>
+        </div>
+        <p className="text-[11px] text-amber-700">
+          환산취득가 = floor(권리가액 × <strong>취득당시 토지기준시가</strong> / <strong>관리처분 직전 토지기준시가</strong>)
+        </p>
+        <p className="text-[11px] text-amber-600">
+          기준시가 = 개별공시지가 (원/㎡) × 면적 (㎡) — Vworld 자동 조회 가능
+        </p>
+      </div>
+
+      {/* 토지면적 */}
+      <FieldCard
+        label="토지면적 (㎡)"
+        hint="§166③ 분자·분모 공통 면적. 취득·관리처분 시점 동일 가정."
+      >
+        <DecimalInput
+          value={asset.redevLandArea}
+          onChange={(v) => onChange({ redevLandArea: v })}
+          unit="㎡"
+        />
+      </FieldCard>
+
+      {/* 취득당시 토지 ㎡당 단가 — §166③ 분자 */}
+      <LandPriceLookupField
+        label="취득당시 토지 ㎡당 단가"
+        hint="§166③ 분자 — 취득일 기준 개별공시지가 (원/㎡). Vworld 조회 또는 국세청 기준시가 확인."
+        pricePerSqm={asset.redevLandPricePerSqmAtAcq}
+        onPricePerSqmChange={(v) => onChange({ redevLandPricePerSqmAtAcq: v })}
+        area={landAreaNumber}
+        referenceDate={asset.acquisitionDate}
+        jibun={asset.addressJibun || undefined}
+      />
+
+      {/* 관리처분 직전 토지 ㎡당 단가 — §166③ 분모 */}
+      <LandPriceLookupField
+        label="관리처분 직전 토지 ㎡당 단가"
+        hint="§166③ 분모 — 관리처분 인가일 직전 개별공시지가 (원/㎡). §99①1호 공시기준일 적용."
+        pricePerSqm={asset.redevLandPricePerSqmAtApproval}
+        onPricePerSqmChange={(v) => onChange({ redevLandPricePerSqmAtApproval: v })}
+        area={landAreaNumber}
+        referenceDate={asset.redevApprovalDate}
+        jibun={asset.addressJibun || undefined}
+      />
+
+      {/* §99①1호 시점 모호성 안내 */}
+      <div className="rounded-md border border-violet-200 bg-violet-50/70 p-2 text-[11px] text-violet-700 space-y-0.5">
+        <p className="font-semibold">§99①1호 시점 모호성 안내</p>
+        <p>관리처분 인가일 직전 공시기준일 해석이 실무상 분분합니다.</p>
+        <p>• 2007년 개정 전 취득 시 공시기준일 2006.1.1 기준값을 사용하는 견해가 있습니다.</p>
+        <p>• 2007년 개정 후에는 인가일 당해 공시지가(전년도 1.1 기준)가 일반적입니다.</p>
+        <p>담당 세무사 확인 후 해당 시점 연도의 Vworld 공시지가를 조회·입력하세요.</p>
+      </div>
+
+      {/* 환산취득가 미리보기 */}
+      {preview && (
+        <div className="mt-2 rounded-md bg-amber-100/60 border border-amber-200 p-2 text-xs space-y-1">
+          <p className="font-semibold text-amber-800">환산취득가 미리보기 (§166③)</p>
+          <p className="text-amber-700">
+            취득당시 토지기준시가 = {landAreaNumber ? `${fmt(landAreaNumber)} ㎡ × ` : ""}{fmt(parseAmount(asset.redevLandPricePerSqmAtAcq) || 0)} 원/㎡ = {fmt(preview.acq)}
+          </p>
+          <p className="text-amber-700">
+            관리처분 직전 토지기준시가 = {landAreaNumber ? `${fmt(landAreaNumber)} ㎡ × ` : ""}{fmt(parseAmount(asset.redevLandPricePerSqmAtApproval) || 0)} 원/㎡ = {fmt(preview.approval)}
+          </p>
+          <p className="text-amber-700">
+            환산취득가 = floor({fmt(preview.rights)} × {fmt(preview.acq)} / {fmt(preview.approval)})
+          </p>
+          <p className="text-amber-700 font-mono">= {preview.formula} = {fmt(preview.convertedAcq)}</p>
+          <p className="text-amber-700">
+            개산공제 (§163⑥) = floor({fmt(preview.acq)} × 3%) = {fmt(preview.estDeduction)}
+          </p>
+          <p className="text-amber-700">
+            인가전 양도차익 = 권리가액 {fmt(preview.rights)} − 환산취득가 {fmt(preview.convertedAcq)} − 개산공제 {fmt(preview.estDeduction)} ={" "}
+            <strong>{fmt(preview.preApprovalGain)}</strong>
+          </p>
+          {preview.postApprovalGain !== null && (
+            <p className="text-amber-700">
+              인가후 양도차익 = 양도가액 − 권리가액 − 청산금 = <strong>{fmt(preview.postApprovalGain)}</strong>
+            </p>
+          )}
+          <div className="mt-1 rounded border border-rose-200 bg-rose-50/70 p-1 text-[10px] text-rose-700">
+            인가후 분 LTHD = 0 — 소득세법 §95② 별표2 [비고] 1호
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

@@ -22,6 +22,9 @@ import {
 } from "./redevelopment-split";
 import { computeRedevelopmentLthd, applyLthdToGain } from "./redevelopment-lthd";
 import { runSuccessorMember } from "./redevelopment-successor";
+import {
+  calcRedevLandContribEstimated,
+} from "./redevelopment-land-contribution";
 import type {
   RedevelopmentInfo,
   RedevelopmentResult,
@@ -93,7 +96,165 @@ export function runRedevelopment(
   if (input.redevelopment.isSuccessorMember === true) {
     return runSuccessorMember(input);
   }
+
+  // 사례 37 — 토지 출자 입주권 + 환산취득가 분기.
+  // originalAssetType="land" + useEstimatedAcquisition=true 시 §166③ 공시지가 환산 산식 적용.
+  // (주택 출자 환산과 별개 공식 — managementDisposalHousingPrice 대신 landStdPriceAt* 사용)
+  if (
+    input.redevelopment.originalAssetType === "land" &&
+    input.useEstimatedAcquisition === true
+  ) {
+    return runLandContribEstimated(input);
+  }
+
   return runOriginalMember(input);
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// 사례 37 분기 — 토지 출자 입주권 + 환산취득가
+// ──────────────────────────────────────────────────────────────────────────────
+
+/**
+ * 토지 출자 입주권 환산취득가 분기 — §166③ 공시지가 비율 환산.
+ *
+ * calcRedevLandContribEstimated 결과를 RedevelopmentResult 형태로 변환.
+ * 3분할 구조 유지 (preApproval / postApproval / settlement):
+ *   - preApproval  : 인가전 분 (§166⑤1호 기산일 = 취득일, 종기 = 인가일)
+ *   - postApproval : gain=0, lthd=0 (§95② 별표2 [비고] 1호 — 토지 입주권 인가후 LTHD 미적용)
+ *   - settlement   : 인가후 분 (입주권 양도가 − 권리가액 − 청산금납부, LTHD 없음)
+ *
+ * 법령 근거:
+ *   §166③  : 환산취득가 = floor(권리가액 × 취득당시공시지가 / 인가당시공시지가)
+ *   §163⑥  : 개산공제 = floor(취득당시공시지가 × 3%)
+ *   §95②   : 별표2 [비고] 1호 — 인가전 분에만 LTHD 표1 적용
+ *   §166⑤1호: LTHD 보유기간 = 취득일 ~ 인가일
+ *
+ * landStdPriceAtAcq / landStdPriceAtApproval 미입력 시 —
+ *   validation에서 차단되어야 하므로 엔진에서 방어만 (TaxRateNotFoundError via calcRedevLandContribEstimated)
+ */
+function runLandContribEstimated(
+  input: RedevelopmentOrchestratorInput,
+): RedevelopmentResult {
+  const { redevelopment, acquisitionDate, transferDate, transferPrice } = input;
+
+  // landStdPriceAt* 미입력 방어 — validation에서 차단이 주 방어선이나 엔진 레벨도 방어
+  // calcRedevLandContribEstimated 내부에서 landStdPriceAtApproval <= 0 시 throw
+  const landResult = calcRedevLandContribEstimated({
+    acquisitionDate,
+    approvalDate: redevelopment.approvalDate,
+    rightsValue: redevelopment.rightsValue,
+    transferPrice,
+    settlementPaid: redevelopment.settlementAmount,    // pay 방향만 지원 (청산금 납부액)
+    landStdPriceAtAcq: redevelopment.landStdPriceAtAcq ?? 0,
+    landStdPriceAtApproval: redevelopment.landStdPriceAtApproval ?? 0,
+    postApprovalExpenses: redevelopment.postApprovalExpenses ?? 0,
+  });
+
+  // ─ RedevelopmentBranchDetail 로 변환 ─
+  // preApproval: 인가전 분 (LTHD 적용)
+  const preApprovalDetail: RedevelopmentBranchDetail = {
+    apportionedTransfer: redevelopment.rightsValue,             // 의제 양도가액 = 권리가액
+    apportionedAcquisition: landResult.convertedAcquisition,    // §166③ 환산취득가
+    gain: landResult.preApprovalGain,
+    holdingMonths: Math.floor(
+      // 취득일 ~ 인가일 보유월수 (§166⑤1호)
+      // computeRightLthd 내부 동일 로직 — lthdResult.preApproval.holdingMonths 재사용 불가(직접 접근)
+      // landResult.lthdHoldingYears × 12 는 연단위 절사 — 월단위 재산출 필요
+      // → redevelopment-lthd.ts computeRightLthd 결과에서 가져오는 것이 일치성 보장
+      // 단, import 순환 방지 위해 landResult.lthdHoldingYears × 12 사용 (표1 공제율 결정에 충분)
+      landResult.lthdHoldingYears * 12,
+    ),
+    holdingDays: undefined,
+    lthd: landResult.preApprovalLTHD,
+    lthdRate: landResult.lthdRate,
+    branchAcqDate: acquisitionDate,
+    branchTransferDate: redevelopment.approvalDate,             // §166⑤1호 종기 = 인가일
+    expenses: landResult.estimatedDeduction + (redevelopment.preApprovalExpenses ?? 0), // 개산공제 + 인가전필요경비
+    residenceStartDate: undefined,
+    residenceEndDate: undefined,
+    residenceMonths: undefined,
+    lthdHoldingPart: landResult.preApprovalLTHD,               // 표1 = 보유분만 (거주분 0)
+    lthdResidencePart: 0,
+  };
+
+  // postApprovalExistingHouse: 항상 0 (토지 입주권 — §95② 별표2 [비고] 1호)
+  const postApprovalDetail: RedevelopmentBranchDetail = {
+    apportionedTransfer: 0,
+    apportionedAcquisition: 0,
+    gain: 0,
+    holdingMonths: 0,
+    holdingDays: undefined,
+    lthd: 0,
+    lthdRate: 0,
+    branchAcqDate: undefined,
+    branchTransferDate: undefined,
+    expenses: 0,
+    residenceStartDate: undefined,
+    residenceEndDate: undefined,
+    residenceMonths: undefined,
+    lthdHoldingPart: 0,
+    lthdResidencePart: 0,
+  };
+
+  // settlement: 인가후 분 (§166①1호 인가후양도차익, LTHD 없음)
+  // 신고서 양식 표 표기:
+  //   - 양도가액 = transferPrice (520M, 실제 양도가 전체)
+  //   - 취득가액 = rightsValue (300M, 권리가액 = 의제 취득가)
+  //   - 필요경비 = settlementAmount + postApprovalExpenses (청산금 불입액 + 기타 부대비용)
+  //   - 양도차익 = transferPrice − rightsValue − (settlementAmount + postApprovalExpenses) = postApprovalGain
+  const settlementExpenses = redevelopment.settlementAmount + (redevelopment.postApprovalExpenses ?? 0);
+  const settlementDetail: RedevelopmentBranchDetail = {
+    apportionedTransfer: transferPrice,                              // 실제 양도가 (전체)
+    apportionedAcquisition: redevelopment.rightsValue,               // 권리가액 = 의제 취득가
+    gain: landResult.postApprovalGain,                               // 520M − 300M − 100M = 120M
+    holdingMonths: 0,                                                // LTHD 없음 — 월수 불필요
+    holdingDays: undefined,
+    lthd: 0,                                                         // postApprovalLTHD = 0
+    lthdRate: 0,
+    branchAcqDate: redevelopment.approvalDate,                       // 인가일~양도일
+    branchTransferDate: transferDate,
+    expenses: settlementExpenses,                                    // 청산금 불입액 + 기타 부대비용
+    residenceStartDate: undefined,
+    residenceEndDate: undefined,
+    residenceMonths: undefined,
+    lthdHoldingPart: 0,
+    lthdResidencePart: 0,
+  };
+
+  const totalGain = preApprovalDetail.gain + settlementDetail.gain;  // postApproval=0
+  const totalLthd = preApprovalDetail.lthd;                          // postApproval=0, settlement=0
+  const taxableIncome = Math.max(0, totalGain - totalLthd);
+
+  return {
+    preApproval: preApprovalDetail,
+    postApprovalExistingHouse: postApprovalDetail,
+    settlement: settlementDetail,
+    total: {
+      gain: totalGain,
+      lthd: totalLthd,
+      taxableIncome,
+    },
+    salePriceTotal: undefined, // 토지 입주권 — 분양가 개념 없음
+    receiveOnlyMode: undefined,
+    valuationMeta: {
+      method: "estimated_post_disclosure_decree_166_3",
+      numerator: redevelopment.landStdPriceAtAcq,
+      denominator: redevelopment.landStdPriceAtApproval,
+      rationale: `§166③ 토지 환산취득가 = 권리가액 ${redevelopment.rightsValue.toLocaleString()} × 취득시공시지가 ${(redevelopment.landStdPriceAtAcq ?? 0).toLocaleString()} / 인가시공시지가 ${(redevelopment.landStdPriceAtApproval ?? 0).toLocaleString()} = ${landResult.convertedAcquisition.toLocaleString()} / 개산공제 §163⑥ = ${landResult.estimatedDeduction.toLocaleString()}`,
+    },
+    estimatedLumpDeduction: landResult.estimatedDeduction,
+    // ── echo 필드 (UI 결과 카드 표시용) ──
+    landContribDetail: {
+      convertedAcquisition: landResult.convertedAcquisition,
+      estimatedDeduction: landResult.estimatedDeduction,
+      landStdPriceAtAcq: redevelopment.landStdPriceAtAcq ?? 0,
+      landStdPriceAtApproval: redevelopment.landStdPriceAtApproval ?? 0,
+      preApprovalLTHD: landResult.preApprovalLTHD,
+      postApprovalLTHD: 0,
+      lthdHoldingStartDate: landResult.lthdHoldingStartDate,
+      lthdHoldingEndDate: landResult.lthdHoldingEndDate,
+    },
+  };
 }
 
 /**

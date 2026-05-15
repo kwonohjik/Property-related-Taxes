@@ -113,9 +113,28 @@ export interface RedevelopmentInfo {
    * 출자 자산 종류 — subject="apt" 시 의미 있음.
    * - "land":    토지출자 (사례 40~43)
    * - "housing": 주택출자 (사례 44~46)
-   * subject="right" 시 무시.
+   * subject="right" 시에도 사례 37 토지 출자 입주권 분기에서 필수 (originalAssetType="land").
    */
   originalAssetType?: "land" | "housing";
+
+  // ─ 토지 출자 환산 케이스 (originalAssetType="land" + useEstimatedAcquisition=true 시 필수) ─
+  //
+  // 산식 (시행령 §166③ 토지분):
+  //   환산취득가 = floor(권리가액 × landStdPriceAtAcq / landStdPriceAtApproval)
+  //
+  // 주택 출자 환산(managementDisposalHousingPrice/acquisitionHousingPrice)과 별개 필드.
+
+  /**
+   * §166③ 분자 — 취득당시 토지 기준시가 (원, 총액).
+   * originalAssetType="land" + useEstimatedAcquisition=true 시 필수.
+   */
+  landStdPriceAtAcq?: number;
+
+  /**
+   * §166③ 분모 — 관리처분 직전 토지 기준시가 (원, 총액).
+   * originalAssetType="land" + useEstimatedAcquisition=true 시 필수.
+   */
+  landStdPriceAtApproval?: number;
 
   // ─ 환산 케이스 (useEstimatedAcquisition=true 시 입력) ─
   //
@@ -624,4 +643,100 @@ export interface RedevelopmentResult {
     /** 신축주택 거주기간(입주일·퇴거일, YYYY-MM-DD) — 결과 카드 산정 근거 표시용. UI 자동산정 입력 시 부착 */
     newPeriod?: { start: string; end: string };
   };
+
+  /**
+   * 사례 37 — 토지 출자 입주권 환산취득가 echo 필드 (UI 결과 카드 표시용).
+   *
+   * originalAssetType="land" + useEstimatedAcquisition=true 분기에서만 부착.
+   * 그 외(주택 출자·실가·승계조합원) 분기에서는 undefined.
+   *
+   * 법령 근거:
+   *   §166③  환산취득가, §163⑥ 개산공제, §166⑤1호 LTHD 보유기간
+   */
+  landContribDetail?: {
+    /** §166③ 환산취득가 (원) */
+    convertedAcquisition: number;
+    /** §163⑥ 개산공제 (원) = floor(취득당시공시지가 × 3%) */
+    estimatedDeduction: number;
+    /** 취득당시 토지 기준시가 (원, §166③ 분자) */
+    landStdPriceAtAcq: number;
+    /** 관리처분인가 당시 토지 기준시가 (원, §166③ 분모) */
+    landStdPriceAtApproval: number;
+    /** 인가전 분 LTHD (원) */
+    preApprovalLTHD: number;
+    /** 인가후 분 LTHD = 0 (§95② 별표2 [비고] 1호) */
+    postApprovalLTHD: number;
+    /** LTHD 보유기간 시작일 = 취득일 (§166⑤1호) */
+    lthdHoldingStartDate: Date;
+    /** LTHD 보유기간 종료일 = 인가일 (§166⑤1호) */
+    lthdHoldingEndDate: Date;
+  };
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// 사례 37 — 토지 출자 입주권 환산 결과 타입
+// ──────────────────────────────────────────────────────────────────────────────
+
+/**
+ * 토지 출자 입주권 환산취득가 산정 결과.
+ *
+ * `lib/tax-engine/redevelopment-land-contribution.ts` 의
+ * `calcRedevLandContribEstimated()` 반환값.
+ *
+ * 법령 근거:
+ * - 시행령 §166③ — 환산취득가 = floor(권리가액 × 취득당시 토지기준시가 / 관리처분 직전 토지기준시가)
+ * - 시행령 §163⑥ — 개산공제 = floor(취득당시 토지기준시가 × 3%)
+ * - 시행령 §166⑤ 1호 — LTHD 보유기간 = 취득일 ~ 관리처분 인가일
+ * - 본법 §95② + 별표2 [비고] 1호 — 인가전 분만 LTHD 적용, 인가후 0
+ */
+export interface RedevLandContribResult {
+  /** §166③ 환산취득가 (원, 정수) = floor(권리가액 × landStdPriceAtAcq / landStdPriceAtApproval) */
+  convertedAcquisition: number;
+
+  /** §163⑥ 개산공제 (원, 정수) = floor(landStdPriceAtAcq × 3%) */
+  estimatedDeduction: number;
+
+  /**
+   * 인가전 양도차익 (원, 정수).
+   * = 권리가액 − 환산취득가 − 개산공제
+   * (preApprovalExpenses 는 본 PR에서 강제 0 — 후속 PR에서 optional 추가)
+   */
+  preApprovalGain: number;
+
+  /**
+   * 인가후 양도차익 (원, 정수).
+   * = 양도가액 − 권리가액 − 청산금 불입액 (시행령 §166①1호 인가후 산식)
+   */
+  postApprovalGain: number;
+
+  /** 양도차익 합계 = preApprovalGain + postApprovalGain */
+  totalGain: number;
+
+  /**
+   * 인가전 분 LTHD (원, 정수).
+   * §95② + 별표2 [비고] 1호: 인가전 분만 표1 보유분 적용.
+   */
+  preApprovalLTHD: number;
+
+  /**
+   * 인가후 분 LTHD — 항상 0.
+   * 별표2 [비고] 1호: "관리처분 인가 전 토지·건물분에 한정"
+   * → 권리 양도이므로 인가후 분은 LTHD 배제.
+   */
+  postApprovalLTHD: number;
+
+  /** LTHD 합계 = preApprovalLTHD + postApprovalLTHD */
+  totalLTHD: number;
+
+  /** LTHD 보유기간 시작일 = 취득일 (시행령 §166⑤ 1호) */
+  lthdHoldingStartDate: Date;
+
+  /** LTHD 보유기간 종료일 = 관리처분 인가일 (시행령 §166⑤ 1호) */
+  lthdHoldingEndDate: Date;
+
+  /** 만 보유 연수 (년, 정수 — 표1 공제율 조회용) */
+  lthdHoldingYears: number;
+
+  /** 표1 공제율 (0~0.30) */
+  lthdRate: number;
 }
