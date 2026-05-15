@@ -377,3 +377,56 @@ describe("C39 — 조합원입주권 right+receive 단독주택 환산취득가 
     expect(case38Result.redevelopmentDetail?.total.gain).toBe(170_000_000);
   });
 });
+
+// ──────────────────────────────────────────────────────────────────────────────
+// C39 변형: 인가후 필요경비(양도비) 5,000,000 입력 시 settlement.expenses 반영 회귀 보호
+// 버그 수정 2026-05-15: runHousingContribReceiveEstimated settlementDetail.expenses 이미 정상 —
+// 동일 입력값으로 통합 경로(calculateTransferTax) 경유 시에도 settlement.expenses 정합 확인
+// ──────────────────────────────────────────────────────────────────────────────
+
+describe("C39-var — right+receive + 환산 + 양도비 5,000,000 (인가후 필요경비 반영 회귀 보호)", () => {
+  const redevWithExpenses: RedevelopmentInfo = {
+    ...case39RedevInfo(),
+    postApprovalExpenses: 5_000_000,
+  };
+  const inputWithExpenses: TransferTaxInput = baseTransferInput({
+    propertyType: "right_to_move_in",
+    transferPrice: 320_000_000,
+    transferDate: new Date("2023-03-02"),
+    acquisitionDate: new Date("2008-04-09"),
+    acquisitionPrice: undefined,
+    expenses: 0,
+    useEstimatedAcquisition: true,
+    isOneHousehold: false,
+    householdHousingCount: 2,
+    householdRightCount: 1,
+    residencePeriodMonths: 0,
+    redevelopment: redevWithExpenses,
+  });
+  const calcResult = calculateTransferTax(inputWithExpenses, mockRates);
+  const detail = calcResult.redevelopmentDetail!;
+
+  it("[C39-25] settlement.expenses = 5,000,000 (환산 경로 인가후 필요경비 반영)", () => {
+    expect(detail.settlement.expenses).toBe(5_000_000);
+  });
+
+  it("[C39-26] settlement.gain = 65,000,000 (320M − 250M − 5M)", () => {
+    // §166①2호 가목: 양도가액 − salePriceTotal − 인가후 필요경비
+    expect(detail.settlement.gain).toBe(65_000_000);
+  });
+
+  it("[C39-27] total.taxableIncome = 152,300,000 (87.3M + 65M)", () => {
+    // preApproval: 97M − 9.7M = 87.3M, settlement: 65M − 0 = 65M
+    // total.gain = 97M + 65M = 162M, total.lthd = 9.7M
+    // taxableIncome = 162M − 9.7M = 152,300,000
+    expect(detail.total.taxableIncome).toBe(152_300_000);
+  });
+
+  it("[C39-28] calculatedTax = 36,990,000 (mock §55 세율 — 8,800만~1.5억 구간 35%)", () => {
+    // 과세표준 = 152.3M − 2.5M = 149,800,000
+    // mock 세율표: min=88,000,001 ~ max=150,000,000 → 35% − 누진공제 15,440,000
+    // floor(149,800,000 × 0.35) − 15,440,000 = 52,430,000 − 15,440,000 = 36,990,000
+    // (주의: 실세율 1.5억~3억 구간은 38%이나 mock 세율표 경계값은 150,000,001부터 38% 진입)
+    expect(calcResult.calculatedTax).toBe(36_990_000);
+  });
+});

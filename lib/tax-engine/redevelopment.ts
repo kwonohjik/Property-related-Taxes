@@ -557,7 +557,7 @@ function runOriginalMember(
     lthdRate: lthd.settlement.applicable ? lthd.settlement.rate : 0,
     branchAcqDate: settlementAcqDate,
     branchTransferDate: settlementTransferDate,
-    expenses: 0, // 청산금분은 별도 필요경비 미산정 (의제양도차익 모형)
+    expenses: redevelopment.postApprovalExpenses ?? 0, // §166①2호 가목: 인가후 분 필요경비 (양도비·자본적지출)
     residenceStartDate: isApt ? newResStart : undefined,
     residenceEndDate: isApt ? newResEnd : undefined,
     residenceMonths: isApt ? newMonths : undefined,
