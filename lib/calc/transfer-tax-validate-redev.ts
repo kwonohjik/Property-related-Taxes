@@ -153,7 +153,11 @@ export function validateRedevelopmentAsset(asset: AssetForm, label: string): str
   }
 
   // ── 청산금 수령 시 settlementSaleDate 필수 ──
-  if (asset.redevSettlementDirection === "receive" && !asset.redevSettlementSaleDate) {
+  // subject="apt"(완공 APT 양도, 사례 46)에서만 적용. 소유권이전 고시일은 신축APT 등기 절차의 일부.
+  // subject="right"(입주권 양도, 사례 36 R-5)는 신축 완공 전 권리 양도 — 잔금일(saleDate)이 양도일이며 settlementSaleDate 불필요.
+  if (subject === "apt"
+      && asset.redevSettlementDirection === "receive"
+      && !asset.redevSettlementSaleDate) {
     return `${label}: 청산금 수령 시 소유권이전 고시일의 다음날을 입력하세요. (NTS 집행기준 + 소법 §95④)`;
   }
 
