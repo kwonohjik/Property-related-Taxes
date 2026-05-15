@@ -352,8 +352,10 @@ const propertyBaseShape = {
     landStdPriceAtApproval: z.number().int().nonnegative().optional(),
   })
   .refine(
-    (v) => v.settlementDirection !== "receive" || v.settlementSaleDate != null,
-    { message: "청산금 수령 시 settlementSaleDate(소유권이전 고시일 다음날) 필수" },
+    // subject="apt"(완공 APT 양도, 사례 46)에서만 settlementSaleDate 필수.
+    // subject="right"(입주권 양도, 사례 36 R-5)는 신축 완공 전 권리 양도 — 잔금일(saleDate)이 양도일이므로 불필요.
+    (v) => v.subject !== "apt" || v.settlementDirection !== "receive" || v.settlementSaleDate != null,
+    { message: "청산금 수령 + 완공 APT 양도(subject='apt') 시 settlementSaleDate(소유권이전 고시일 다음날) 필수" },
   )
   .refine(
     (v) => v.receiveOnlyMode !== true || v.settlementDirection === "receive",
