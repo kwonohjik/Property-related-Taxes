@@ -58,18 +58,18 @@ interface Props {
 // ── ToggleCard 옵션 ──
 
 const SUBJECT_OPTIONS = [
-  { value: "apt" as const, label: "완공 APT 양도", description: "조합 신축주택 양도 (시행령 §166②) — 사례 44" },
-  { value: "right" as const, label: "입주권 양도", description: "관리처분 인가 후 조합원 입주권 양도 (시행령 §166① · §95② 단서 + §89①4호 가목) — 사례 36" },
+  { value: "apt" as const, label: "완공 APT 양도", description: "조합 신축주택 양도 (시행령 §166②) — 사례 40·41·44~47" },
+  { value: "right" as const, label: "입주권 양도", description: "관리처분 인가 후 조합원 입주권 양도 (시행령 §166① · §95② 단서 + §89①4호 가목) — 사례 36~39" },
 ];
 
 const ORIGINAL_ASSET_OPTIONS = [
-  { value: "housing" as const, label: "주택 출자", description: "기존 주택을 조합에 출자 (사례 44~46) — 본 PR UI 지원" },
-  { value: "land" as const, label: "토지 출자", description: "기존 토지를 조합에 출자 (사례 40~43) — 후속 PR" },
+  { value: "housing" as const, label: "주택 출자", description: "기존 주택(공동주택·단독주택)을 조합에 출자 — 사례 41·44~47" },
+  { value: "land" as const, label: "토지 출자", description: "기존 토지를 조합에 출자 — 사례 37(입주권)·40(APT 양도)" },
 ];
 
 const SETTLEMENT_OPTIONS = [
-  { value: "pay" as const, label: "청산금 납부", description: "권리가액 < 분양가 → 차액 납부 (사례 44·45)" },
-  { value: "receive" as const, label: "청산금 수령", description: "권리가액 > 분양가 → 차액 수령 (시행령 §166①2호 가목, 사례 46)" },
+  { value: "pay" as const, label: "청산금 납부", description: "권리가액 < 분양가 → 차액 납부 (시행령 §166②1호, 사례 40·41·44·45)" },
+  { value: "receive" as const, label: "청산금 수령", description: "권리가액 > 분양가 → 차액 수령 (시행령 §166①2호 가목 / ②2호, 사례 38·39·46·47)" },
 ];
 
 const APPROVAL_LAW_OPTIONS = [

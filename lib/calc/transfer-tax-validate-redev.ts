@@ -53,38 +53,39 @@ export function validateRedevelopmentAsset(asset: AssetForm, label: string): str
     return `${label}: 인가 법령 근거는 본 PR에서 "도정법 §74"만 지원합니다. (빈집소규모법 §29는 후속 PR)`;
   }
 
-  // ── originalAssetType="land" 분기 (사례 37) — housing 전용 로직 skip ──
+  // ── originalAssetType="land" 분기 (사례 37·40) — housing 전용 로직 skip ──
   if (originalAssetType === "land") {
-    // land + apt 양도: 후속 PR (사례 40~43)
-    if (subject !== "right") {
-      return `${label}: 토지 출자 + 완공 APT 양도 조합은 후속 PR (사례 40~43) 지원 예정입니다.`;
+    // land + apt + receive: 후속 PR (사례 42·43)
+    if (subject === "apt" && settlementDirection === "receive") {
+      return `${label}: 토지 출자 + 완공 APT 양도 + 청산금 수령 조합은 후속 PR (사례 42·43) 지원 예정입니다.`;
     }
-    // land + 실가: 후속 PR (L-PAY-ACT)
-    if (!asset.useEstimatedAcquisition) {
-      return `${label}: 토지 출자 + 실가 모드는 후속 PR에서 지원됩니다. 취득가액 확인 불가 시 환산취득가 토글을 ON으로 전환하세요. (§166③)`;
+    // land + right + receive: 후속 PR
+    if (subject === "right" && settlementDirection !== "pay") {
+      return `${label}: 토지 출자 + 입주권 양도 + 청산금 수령 조합은 후속 PR에서 지원됩니다.`;
     }
-    // land + receive: 후속 PR
-    if (settlementDirection !== "pay") {
-      return `${label}: 토지 출자 + 청산금 수령 조합은 후속 PR에서 지원됩니다.`;
+    // land + right + 실가: 후속 PR (사례 37은 환산만 지원)
+    if (subject === "right" && !asset.useEstimatedAcquisition) {
+      return `${label}: 토지 출자 + 입주권 양도 + 실가 모드는 후속 PR에서 지원됩니다. 취득가액 확인 불가 시 환산취득가 토글을 ON으로 전환하세요. (§166③)`;
     }
-    // land + right + estimated + pay — §166③ 2필드 필수
-    // 3중 패턴(UI/API/validate): LandPriceLookupField(단가×면적) 우선 > legacy 총액 직접 입력 fallback.
-    // UI 통과 ↔ validate 차단 모순 방지 (feedback_validation_sync_8th_point.md).
-    const landArea = parseDecimal(asset.redevLandArea) || 0;
-    const pricePerSqmAcq = parseAmount(asset.redevLandPricePerSqmAtAcq) || 0;
-    const pricePerSqmApproval = parseAmount(asset.redevLandPricePerSqmAtApproval) || 0;
-    // 분자 검증: 단가×면적 OK OR legacy 총액 OK
-    const acqOk = (pricePerSqmAcq > 0 && landArea > 0) || parseAmount(asset.redevLandStdPriceAtAcq) > 0;
-    if (!acqOk) {
-      if (landArea <= 0) {
-        return `${label}: 토지면적(㎡)을 입력하세요. (§166③ 분자 산정 필수)`;
+
+    // 환산 모드일 때만 §166③ 분자·분모 검증 (사례 37 right+pay+환산)
+    // 사례 40 (apt+pay+실가)은 자산-수준 acquisitionPrice 사용 — 별도 §166③ 입력 불필요
+    if (asset.useEstimatedAcquisition) {
+      // §166③ 2필드 필수 — 3중 패턴(UI/API/validate): LandPriceLookupField(단가×면적) 우선 > legacy 총액 fallback.
+      const landArea = parseDecimal(asset.redevLandArea) || 0;
+      const pricePerSqmAcq = parseAmount(asset.redevLandPricePerSqmAtAcq) || 0;
+      const pricePerSqmApproval = parseAmount(asset.redevLandPricePerSqmAtApproval) || 0;
+      const acqOk = (pricePerSqmAcq > 0 && landArea > 0) || parseAmount(asset.redevLandStdPriceAtAcq) > 0;
+      if (!acqOk) {
+        if (landArea <= 0) {
+          return `${label}: 토지면적(㎡)을 입력하세요. (§166③ 분자 산정 필수)`;
+        }
+        return `${label}: 취득당시 토지 ㎡당 단가를 입력하세요. (§166③ 분자 — Vworld 조회 또는 직접 입력)`;
       }
-      return `${label}: 취득당시 토지 ㎡당 단가를 입력하세요. (§166③ 분자 — Vworld 조회 또는 직접 입력)`;
-    }
-    // 분모 검증: 단가×면적 OK OR legacy 총액 OK
-    const approvalOk = (pricePerSqmApproval > 0 && landArea > 0) || parseAmount(asset.redevLandStdPriceAtApproval) > 0;
-    if (!approvalOk) {
-      return `${label}: 관리처분 직전 토지 ㎡당 단가를 입력하세요. (§166③ 분모 — §99①1호 공시기준일 기준)`;
+      const approvalOk = (pricePerSqmApproval > 0 && landArea > 0) || parseAmount(asset.redevLandStdPriceAtApproval) > 0;
+      if (!approvalOk) {
+        return `${label}: 관리처분 직전 토지 ㎡당 단가를 입력하세요. (§166③ 분모 — §99①1호 공시기준일 기준)`;
+      }
     }
     // land 검증 통과 — housing 전용 로직(하우스 라목값, PHD, 거주월수 등) skip
     return null;
