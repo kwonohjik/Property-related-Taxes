@@ -28,8 +28,10 @@ export function FilingFormTable({
   title = "신고서 양식",
   subtitle = "양도소득세 신고서 항목별 자산-분할 계산 내역",
   adopted,
+  redevSubject,
+  redevSettlementDirection,
 }: FilingFormTableProps) {
-  const { columns, mode } = deriveColumns(result, aggregate);
+  const { columns, mode } = deriveColumns(result, aggregate, redevSubject, redevSettlementDirection);
   // 부담부증여 §159 산정 여부 — 신고서 표 헤더에 배지 표시
   const isBurdenedGift = Boolean(
     (result as unknown as { transferBurdenedGiftBreakdown?: unknown }).transferBurdenedGiftBreakdown,
@@ -159,16 +161,22 @@ export function FilingFormTable({
                   </td>
                   {columns.map((c) => {
                     const note = row.notes?.[c.key];
+                    const roseNote = row.roseNotes?.[c.key];
                     return (
                       <td
                         key={c.key}
                         className={cn(
                           "px-3 py-1.5 text-right border-r border-slate-200 font-mono whitespace-nowrap",
                           c.key === "total" && "bg-slate-50/60 dark:bg-slate-800/40",
-                          note && "align-top",
+                          (note || roseNote) && "align-top",
                         )}
                       >
                         {fmtCell(row.values[c.key])}
+                        {roseNote && (
+                          <div className="text-[10px] font-sans font-normal text-rose-600 leading-tight mt-0.5 whitespace-normal text-right">
+                            {roseNote}
+                          </div>
+                        )}
                         {note && (
                           <div className="text-[10px] font-sans font-normal text-slate-500 leading-tight mt-0.5 whitespace-normal text-right">
                             {note}

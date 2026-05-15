@@ -495,10 +495,28 @@ function PropertyBreakdownAccordion({
             </button>
           </div>
           <div className="mt-2">
-            <FilingFormTable
-              result={breakdownToFilingResult(breakdown)}
-              formData={property?.form}
-            />
+            {(() => {
+              // 다자산 자산별 카드: property.form.assets[0]에서 재개발 메타 도출
+              const filingResult = breakdownToFilingResult(breakdown);
+              const assetForm = property?.form?.assets?.[0];
+              const hasRedev = !!filingResult.redevelopmentDetail;
+              return (
+                <FilingFormTable
+                  result={filingResult}
+                  formData={property?.form}
+                  redevSubject={
+                    hasRedev
+                      ? ((assetForm?.redevSubject || (assetForm?.assetKind === "right_to_move_in" ? "right" : "apt")) as "right" | "apt")
+                      : undefined
+                  }
+                  redevSettlementDirection={
+                    hasRedev
+                      ? ((assetForm?.redevSettlementDirection || "pay") as "pay" | "receive")
+                      : undefined
+                  }
+                />
+              );
+            })()}
           </div>
         </CardContent>
       )}

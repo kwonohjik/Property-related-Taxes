@@ -554,12 +554,26 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
           ...aggregateToFilingResult(aggregated),
           transferBurdenedGiftBreakdown,
         };
+        // 일괄양도 합산 모드: aggregate prop이 deriveColumns에서 우선 적용되어 redev 분기 미진입.
+        // 재개발 입주권 자산이 포함된 경우를 위해 props는 전달하되 aggregate 모드에서 자동 무시.
+        const primaryAsset = formData.assets[0];
+        const hasRedev = !!adaptedResult.redevelopmentDetail;
         return (
           <>
             <FilingFormTable
               result={adaptedResult}
               formData={formData}
               aggregate={aggregateMeta}
+              redevSubject={
+                hasRedev
+                  ? ((primaryAsset?.redevSubject || (primaryAsset?.assetKind === "right_to_move_in" ? "right" : "apt")) as "right" | "apt")
+                  : undefined
+              }
+              redevSettlementDirection={
+                hasRedev
+                  ? ((primaryAsset?.redevSettlementDirection || "pay") as "pay" | "receive")
+                  : undefined
+              }
             />
             {/* ── 계산결과 상세명세서 (다건 모드) ── */}
             <DetailedCalculationStatementCard

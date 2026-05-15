@@ -301,12 +301,24 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     ? primary.redevSettlementSaleDate
     : null;
 
+  // 재개발/재건축 입주권 양도(subject="right") 시 엔진 routing 키를 right_to_move_in으로 remap.
+  //   - UI assetKind="redevelopment_apt"는 사업 분류(재개발/재건축 사업), redevSubject가 실제 양도 객체
+  //   - 엔진 isRedevelopmentActive(`lib/tax-engine/redevelopment.ts:340-348`)는 propertyType ↔ subject 1:1 매핑 요구
+  //     · redevelopment_apt → subject="apt" 필수
+  //     · right_to_move_in → subject="right" 필수
+  //   - 부정합 조합(redevelopment_apt + subject="right") 시 엔진이 일반 양도 분기로 routing되어
+  //     redevelopmentDetail 미생성 + LTHD 전체 양도차익 일괄 적용 회귀 발생
+  const isRedevelopmentRightTransfer =
+    primary.assetKind === "redevelopment_apt" && primary.redevSubject === "right";
+
   const body = {
     // commercial_building/general_building은 그대로 송신 — 엔진 진입 조건 충족
     // 추가로 서브객체(commercialBuildingValuation/generalBuildingValuation)로 환산취득가 데이터 전달
     propertyType: isMixed
       ? ("mixed-use-house" as const)
-      : (primary.assetKind as "housing" | "land" | "building" | "right_to_move_in" | "presale_right" | "commercial_building" | "general_building" | "redevelopment_apt"),
+      : isRedevelopmentRightTransfer
+        ? ("right_to_move_in" as const)
+        : (primary.assetKind as "housing" | "land" | "building" | "right_to_move_in" | "presale_right" | "commercial_building" | "general_building" | "redevelopment_apt"),
     transferPrice: isReceiveOnly && receiveOnlySettlementAmount > 0
       ? receiveOnlySettlementAmount
       : isBurdenedGiftPrimary

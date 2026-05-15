@@ -3,6 +3,8 @@
  *
  * Props 타입, RowDef/Column 타입, buildRows, 재무 열 채우기 함수를 포함.
  * FilingFormTable.tsx는 이 파일에서 import 후 JSX만 담당.
+ *
+ * 재개발 분기 행 생성은 FilingFormTableRedevRows.ts 에 분리.
  */
 
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
@@ -69,6 +71,16 @@ export interface FilingFormTableProps {
   subtitle?: string;
   /** 채택 여부 강조 스타일 */
   adopted?: boolean;
+  /**
+   * 재개발/재건축 양도 대상 — deriveColumns 컬럼 모드 결정용.
+   * "right" + redevSettlementDirection="pay" → 3열 모드 (redev-right-pay).
+   * 미제공 시 기본 4열 모드 (redev-4split).
+   */
+  redevSubject?: "right" | "apt";
+  /**
+   * 재개발 청산금 방향 — redev-right-pay 모드 활성화 조건.
+   */
+  redevSettlementDirection?: "pay" | "receive";
 }
 
 // ── 내부 타입 ──────────────────────────────────────────────────
@@ -95,16 +107,33 @@ export interface RowDef {
    * 예: { "primary": "주택·부수토지 일체과세 / §89·영§154⑦ / 재산-53/1354" }
    */
   notes?: Record<ColumnKey, string>;
+  /**
+   * 열별 rose 색상 주석 — §95② 단서 배제 등 법령 경고를 붉은 색으로 표시.
+   * 예: { "postApproval": "§95② 단서 배제" }
+   */
+  roseNotes?: Record<ColumnKey, string>;
 }
 
 // ── 분할 모드 판정 ─────────────────────────────────────────────
 
+export type ColumnMode =
+  | "fourpart"
+  | "mixed-2col"
+  | "split-2col"
+  | "single"
+  | "aggregate"
+  | "redev-4split"
+  | "redev-right-pay"
+  | "redev-right-receive";
+
 export function deriveColumns(
   result: TransferTaxResult,
   aggregate?: AggregateMeta,
+  redevSubject?: "right" | "apt",
+  redevSettlementDirection?: "pay" | "receive",
 ): {
   columns: Column[];
-  mode: "fourpart" | "mixed-2col" | "split-2col" | "single" | "aggregate" | "redev-3split";
+  mode: ColumnMode;
 } {
   // 다자산 합산 모드 우선 — 사례 27 등 묶음·합산 신고
   if (aggregate && aggregate.properties.length > 0) {
@@ -131,15 +160,47 @@ export function deriveColumns(
     return { mode: "aggregate", columns: aggCols };
   }
 
-  // 재개발/재건축 3분할 모드 — aggregate와 mutually exclusive
+  // 재개발/재건축 — aggregate와 mutually exclusive
   if (result.redevelopmentDetail) {
+    // subject="right" + pay → 3열 (합계/인가전/인가후)
+    // §95② 단서: 인가후(청산금납부분) LTHD 배제 — 별도 열로 명시
+    if (redevSubject === "right" && redevSettlementDirection === "pay") {
+      return {
+        mode: "redev-right-pay",
+        columns: [
+          { key: "total", label: "합계" },
+          { key: "preApproval", label: "① 인가전 분" },
+          { key: "postApproval", label: "② 인가후 분 (청산금 납부)" },
+        ],
+      };
+    }
+    // subject="right" + receive → 3열 (합계/입주권 분/청산금 분)
+    // §166①2호 나목(입주권 분)·가목(청산금 분) 분리 표시
+    // 가목(청산금 분) LTHD = 0 (§95② 단서·zeroBranch)
+    if (redevSubject === "right" && redevSettlementDirection === "receive") {
+      return {
+        mode: "redev-right-receive",
+        columns: [
+          { key: "total", label: "합계" },
+          { key: "preApproval", label: "① 입주권 분 (§166①2호 나목)" },
+          { key: "settlement", label: "② 청산금 분 (§166①2호 가목)" },
+        ],
+      };
+    }
+    // 그 외(apt): 4열
+    // apt + receive + settlementExemptionApplied=true → 청산금 열 라벨에 비과세 차감 명시
+    const settlementLabel =
+      redevSettlementDirection === "receive" &&
+      result.redevelopmentDetail?.settlementExemptionApplied === true
+        ? "③ 청산금 분 (§89①4호 비과세 차감 후)"
+        : "③ 청산금 분";
     return {
-      mode: "redev-3split",
+      mode: "redev-4split",
       columns: [
         { key: "total", label: "합계" },
         { key: "preApproval", label: "① 인가전 분" },
         { key: "postApprovalExistingHouse", label: "② 인가후 기존건물분" },
-        { key: "settlement", label: "③ 청산금 분" },
+        { key: "settlement", label: settlementLabel },
       ],
     };
   }
@@ -379,10 +440,11 @@ export function splitTwoColFinancials(
 // ── 행 정의 생성 ───────────────────────────────────────────────
 
 import { buildAggregateRows } from "./FilingFormTableAggregateHelpers";
+import { fillRedev4SplitBranchData, fillRedevRightPayBranchData, fillRedevRightReceiveBranchData } from "./FilingFormTableRedevRows";
 
 export function buildRows(
   result: TransferTaxResult,
-  mode: "fourpart" | "mixed-2col" | "split-2col" | "single" | "aggregate" | "redev-3split",
+  mode: ColumnMode,
   formData?: TransferFormData,
   asset?: AssetForm,
   transferPriceOverride?: number,
@@ -435,6 +497,7 @@ export function buildRows(
     : "";
 
   const v: Record<string, Record<ColumnKey, number | string | null>> = {};
+  const roseNotesMap: Record<string, Record<ColumnKey, string>> = {};
 
   function setNum(rowKey: string, col: ColumnKey, n: number | null) {
     if (!v[rowKey]) v[rowKey] = {};
@@ -443,6 +506,10 @@ export function buildRows(
   function setStr(rowKey: string, col: ColumnKey, s: string) {
     if (!v[rowKey]) v[rowKey] = {};
     v[rowKey][col] = s;
+  }
+  function setRoseNote(rowKey: string, col: ColumnKey, note: string) {
+    if (!roseNotesMap[rowKey]) roseNotesMap[rowKey] = {};
+    roseNotesMap[rowKey][col] = note;
   }
 
   setStr("transferDate", "total", fmtDate(transferDate));
@@ -462,86 +529,16 @@ export function buildRows(
   setStr("moveIn", "total", firstMoveIn ? fmtDate(firstMoveIn) : "-");
   setStr("residencePeriod", "total", fmtPeriod(residenceMonthsTotal));
 
-  // ── 재개발/재건축 3분할 모드 (시행령 §166) ──
-  if (mode === "redev-3split" && result.redevelopmentDetail) {
-    const r = result.redevelopmentDetail;
-    const branches: Array<["preApproval" | "postApprovalExistingHouse" | "settlement", typeof r.preApproval]> = [
-      ["preApproval", r.preApproval],
-      ["postApprovalExistingHouse", r.postApprovalExistingHouse],
-      ["settlement", r.settlement],
-    ];
-
-    // 일자·기간 — 분기별 §166⑤ 호별 기산일·종료일 + 거주기간 메타 (JSON 직렬화 후 Date→string 안전 처리)
-    const fmtD = (d?: Date | string) => {
-      if (!d) return "-";
-      const iso = typeof d === "string" ? d : d instanceof Date ? d.toISOString() : "";
-      return iso ? fmtDate(iso.slice(0, 10)) : "-";
-    };
-    const fmtMonths = (m?: number, d?: number) => m === undefined || m <= 0 ? "-" : `${Math.floor(m / 12)}년 ${m % 12}개월${d && d > 0 ? ` ${d}일` : ""}`;
-    // 입주일/퇴거일 없고 개월수만 있으면 "(개월수만 입력됨)" 안내 (sessionStorage 잔존 케이스)
-    for (const [key, b] of branches) {
-      const hasMonths = (b.residenceMonths ?? 0) > 0;
-      const ph = hasMonths ? "(개월수만 입력됨)" : "-";
-      // 사례 46 — holdingDays 부착 시 settlement 분기에서 "6년 9개월 10일" 표시
-      setStr("holdingPeriod", key, fmtMonths(b.holdingMonths, b.holdingDays));
-      setStr("acquisitionDate", key, fmtD(b.branchAcqDate));
-      setStr("transferDate", key, fmtD(b.branchTransferDate));
-      setStr("moveIn", key, b.residenceStartDate || ph);
-      setStr("moveOut", key, b.residenceEndDate || ph);
-      setStr("residencePeriod", key, fmtMonths(b.residenceMonths));
+  // ── 재개발/재건축 분할 모드 (시행령 §166) — FilingFormTableRedevRows.ts 위임 ──
+  if ((mode === "redev-4split" || mode === "redev-right-pay" || mode === "redev-right-receive") && result.redevelopmentDetail) {
+    if (mode === "redev-right-pay") {
+      fillRedevRightPayBranchData(result.redevelopmentDetail, setNum, setStr, setRoseNote);
+    } else if (mode === "redev-right-receive") {
+      fillRedevRightReceiveBranchData(result.redevelopmentDetail, setNum, setStr, setRoseNote);
+    } else {
+      fillRedev4SplitBranchData(result.redevelopmentDetail, setNum, setStr, setRoseNote);
     }
-
-    // 양도가액·취득가액 — 분할별 안분값
-    for (const [key, b] of branches) {
-      setNum("transferPrice", key, b.apportionedTransfer);
-      setNum("acquisitionPrice", key, b.apportionedAcquisition);
-    }
-
-    // 필요경비 — 분기별 입력값 (인가전: redevPreApprovalExpenses + 환산 모드 개산공제 / 인가후: redevPostApprovalExpenses / 청산금: 0)
-    let totalExpenses = 0;
-    for (const [key, b] of branches) {
-      const ex = b.expenses ?? 0;
-      setNum("expenses", key, ex);
-      totalExpenses += ex;
-    }
-    setNum("expenses", "total", totalExpenses);
-
-    // 양도차익(안분 전)·비과세(12억 이하)·과세대상(안분 후 = branch.gain) — 분기별 + 합계
-    let tg = 0, eg = 0, xg = 0;
-    for (const [key, b] of branches) {
-      const tA = b.gainBeforeAllocation ?? b.gain;
-      const eA = b.nontaxableGain ?? 0;
-      setNum("transferGain", key, tA);
-      setNum("exemptGain", key, eA);
-      setNum("taxableGain", key, b.gain);
-      tg += tA; eg += eA; xg += b.gain;
-    }
-    setNum("transferGain", "total", tg);
-    setNum("exemptGain", "total", eg);
-    setNum("taxableGain", "total", xg);
-
-    // 장기보유특별공제 — 분기별 보유분/거주분 분리 (표2 적용 시 거주분 양수)
-    let totalHoldingPart = 0;
-    let totalResidencePart = 0;
-    for (const [key, b] of branches) {
-      setNum("ltDeduction", key, b.lthd);
-      const hp = b.lthdHoldingPart ?? b.lthd;
-      const rp = b.lthdResidencePart ?? 0;
-      setNum("ltHoldingPart", key, hp);
-      setNum("ltResidencePart", key, rp);
-      totalHoldingPart += hp;
-      totalResidencePart += rp;
-    }
-    setNum("ltHoldingPart", "total", totalHoldingPart);
-    setNum("ltResidencePart", "total", totalResidencePart);
-
-    // 양도소득금액·감면후 소득금액 — 분할별 (gain - lthd)
-    for (const [key, b] of branches) {
-      const income = Math.max(0, b.gain - b.lthd);
-      setNum("incomeAmount", key, income);
-      setNum("incomeAmountAfter", key, income);
-    }
-    // 합계 보존: 합계 열은 아래 공용 매핑에서 result.* 필드로 채워짐
+    // 합계 열은 아래 공용 매핑에서 result.* 필드로 채워짐
   } else if (mode === "fourpart" && mu) {
     const hp = mu.housingPart;
     const cp = mu.commercialPart;
@@ -589,14 +586,15 @@ export function buildRows(
   }
 
   setNum("transferPrice", "total", totalTransferPrice || null);
-  if (mode === "redev-3split" && result.redevelopmentDetail) {
+  if ((mode === "redev-4split" || mode === "redev-right-pay" || mode === "redev-right-receive") && result.redevelopmentDetail) {
     const r = result.redevelopmentDetail;
     // 원조합원: 종전주택 실가(preApproval) + 청산금 납부액(settlement). 인가후 의제 권리가액 중복 제외.
     // 사례 48 승계조합원: §166 안분 우회 — postApprovalExistingHouse 단독 (preApproval·settlement=0 fill).
+    // redev-right-pay/receive: preApproval + settlement (postApprovalExistingHouse=0)
     setNum("acquisitionPrice", "total", r.successorMemberApplied === true
       ? r.postApprovalExistingHouse.apportionedAcquisition
       : r.preApproval.apportionedAcquisition + r.settlement.apportionedAcquisition);
-    // 필요경비 합계는 redev-3split 분기 합으로 이미 line 505에서 설정됨 — 덮어쓰기 금지.
+    // 필요경비 합계는 redev 분기 합으로 이미 설정됨 — 덮어쓰기 금지.
   } else if (mode === "fourpart" && mu) {
     const hp = mu.housingPart;
     const cp = mu.commercialPart;
@@ -641,8 +639,8 @@ export function buildRows(
   // 과세대상 양도차익=전체 양도차익으로 표기.
   const isRH = result.rentalHousingExceptionDetail?.applied === true;
 
-  // redev-3split 모드는 line 512-519에서 분기 합으로 이미 설정됨 — 덮어쓰지 않음.
-  if (mode !== "redev-3split") {
+  // redev-4split·redev-right-pay·redev-right-receive 모드는 분기 합으로 이미 설정됨 — 덮어쓰지 않음.
+  if (mode !== "redev-4split" && mode !== "redev-right-pay" && mode !== "redev-right-receive") {
     setNum("transferGain", "total", result.transferGain);
     setNum("exemptGain", "total", isRH ? 0 : Math.max(0, result.transferGain - result.taxableGain));
     setNum("taxableGain", "total", isRH ? result.transferGain : result.taxableGain);
@@ -694,8 +692,8 @@ export function buildRows(
     setNum("ltResidencePart", "land", landSplit.residenceAmount);
     setNum("ltHoldingPart", "building", buildSplit.holdingAmount);
     setNum("ltResidencePart", "building", buildSplit.residenceAmount);
-  } else if (mode === "redev-3split") {
-    // line 514-527에서 분기별 lthdHoldingPart/lthdResidencePart 합으로 이미 정확하게 설정됨.
+  } else if (mode === "redev-4split" || mode === "redev-right-pay" || mode === "redev-right-receive") {
+    // 분기별 lthdHoldingPart/lthdResidencePart 합으로 이미 정확하게 설정됨.
     // result.longTermHoldingDeduction 기반 재계산은 분기별 분리 정보를 잃으므로 덮어쓰지 않는다.
   } else {
     const split = splitLtDeduction(result.longTermHoldingDeduction, holdingMs, residenceMs, useTable2);
@@ -784,6 +782,7 @@ export function buildRows(
     label,
     values: v[key] ?? {},
     ...(opts ?? {}),
+    ...(roseNotesMap[key] ? { roseNotes: roseNotesMap[key] } : {}),
   }));
 }
 

@@ -108,6 +108,16 @@ export function TransferTaxResultView({
               subtitle={`보유기간 ${carryoverDetail.scenarioA.holdingPeriodYears}년 (증여자 취득일 기산) · 취득가액 ${formatKRW(carryoverDetail.scenarioA.acquisitionPrice)}`}
               adopted={adoptedA}
               onPrint={() => printScoped("form-table")}
+              redevSubject={
+                result.redevelopmentDetail
+                  ? ((resolvedAsset?.redevSubject || (resolvedAsset?.assetKind === "right_to_move_in" ? "right" : "apt")) as "right" | "apt")
+                  : undefined
+              }
+              redevSettlementDirection={
+                result.redevelopmentDetail
+                  ? ((resolvedAsset?.redevSettlementDirection || "pay") as "pay" | "receive")
+                  : undefined
+              }
             />
             <CarryoverScenarioBFilingCard
               scenarioB={carryoverDetail.scenarioB}
@@ -127,6 +137,16 @@ export function TransferTaxResultView({
           asset={asset}
           transferPriceOverride={transferPriceOverride}
           onPrint={() => printScoped("form-table")}
+          redevSubject={
+            result.redevelopmentDetail
+              ? ((resolvedAsset?.redevSubject || (resolvedAsset?.assetKind === "right_to_move_in" ? "right" : "apt")) as "right" | "apt")
+              : undefined
+          }
+          redevSettlementDirection={
+            result.redevelopmentDetail
+              ? ((resolvedAsset?.redevSettlementDirection || "pay") as "pay" | "receive")
+              : undefined
+          }
         />
       )}
 
@@ -699,6 +719,9 @@ export function TransferTaxResultView({
             formData?.assets?.[0]?.assetKind === "right_to_move_in"
               ? "right"
               : (formData?.assets?.[0]?.redevSubject as "apt" | "right" | undefined) ?? "apt"
+          }
+          settlementDirection={
+            (formData?.assets?.[0]?.redevSettlementDirection as "pay" | "receive" | undefined) ?? "pay"
           }
         />
       )}

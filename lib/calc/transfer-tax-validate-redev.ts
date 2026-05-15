@@ -18,11 +18,12 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 
 export function validateRedevelopmentAsset(asset: AssetForm, label: string): string | null {
   // ── 분기 결정 필드 ──
-  // UI display fallback과 동일(RedevelopmentBlock.tsx):
-  //   redevSubject || "apt", redevApprovalLawBasis || "urban_renovation_art_74",
-  //   redevOriginalAssetType || "housing", redevSettlementDirection || "pay"
-  // UI 통과 ↔ validate 차단 모순 방지(8지점 ⑧).
-  const subject = asset.redevSubject || "apt";
+  // UI display fallback과 동일(RedevelopmentBlock.tsx) + API 변환(buildRedevelopmentPayload).
+  // 3중 패턴 강제 (memory `mirror-pattern`, 8지점 ⑧):
+  //   redevSubject 미입력 시 assetKind="right_to_move_in" → "right", 그 외 → "apt"
+  // UI 통과 ↔ validate 차단 모순 방지.
+  const subjectDefault = asset.assetKind === "right_to_move_in" ? "right" : "apt";
+  const subject = asset.redevSubject || subjectDefault;
   const approvalLawBasis = asset.redevApprovalLawBasis || "urban_renovation_art_74";
   const originalAssetType = asset.redevOriginalAssetType || "housing";
   const settlementDirection = asset.redevSettlementDirection || "pay";

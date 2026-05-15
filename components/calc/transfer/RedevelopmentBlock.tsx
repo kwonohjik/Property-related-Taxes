@@ -642,7 +642,8 @@ function SuccessorMemberSection({
       onChange({
         redevIsSuccessorMember: "yes",
         // 명시 셋팅 (display fallback 의존 차단)
-        redevSubject: asset.redevSubject || "apt",
+        // 3중 패턴 동기화: right_to_move_in → "right", 그 외 → "apt" (buildRedevelopmentPayload 동일)
+        redevSubject: asset.redevSubject || (asset.assetKind === "right_to_move_in" ? "right" : "apt"),
         // 본 PR 강제값 (validate에서 차단되는 분기를 사전 ON 차단)
         redevSettlementDirection: "pay",
         redevSettlementAmount: "0",

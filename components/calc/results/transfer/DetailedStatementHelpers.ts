@@ -770,7 +770,17 @@ export function buildStatementItems(
   // result.redevelopmentDetail 존재 시 1단계 양도차익 산정 그룹 항목에 perAsset[] 3분할 부착.
   // 합계값은 기존 단건 합계 그대로 유지 → 32-항목 합계 anchor 회귀 0.
   if (!isAggregate && result.redevelopmentDetail) {
-    applyRedevelopmentOverrides(items, result.redevelopmentDetail, totalTransferPrice);
+    // subject 도출: assetKind="right_to_move_in" 또는 redevSubject="right" → "right"
+    const redevSubject: "apt" | "right" =
+      primary?.assetKind === "right_to_move_in" || primary?.redevSubject === "right"
+        ? "right"
+        : "apt";
+    // settlementDirection 도출 (R-5 right+receive 분기 라벨 분기용)
+    const redevSettlementDir: "pay" | "receive" | undefined =
+      primary?.redevSettlementDirection === "pay" || primary?.redevSettlementDirection === "receive"
+        ? primary.redevSettlementDirection
+        : undefined;
+    applyRedevelopmentOverrides(items, result.redevelopmentDetail, totalTransferPrice, redevSubject, redevSettlementDir);
   }
 
   return items;

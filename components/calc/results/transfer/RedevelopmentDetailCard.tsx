@@ -27,12 +27,17 @@ interface Props {
    * 미전달 시 "apt" fallback (기존 사례 44~48 회귀 무관).
    */
   subject?: "apt" | "right";
+  /**
+   * 청산금 방향 — "pay" 시 §95② 단서 안내 카드 노출 (subject="right" 시만 의미).
+   * "receive" 분기 전용 처리는 후속 PR. 미전달 시 "pay" fallback.
+   */
+  settlementDirection?: "pay" | "receive";
 }
 
 const fmt = (n: number) => n.toLocaleString("ko-KR");
 const fmtPct = (r: number) => `${(r * 100).toFixed(1)}%`;
 
-export function RedevelopmentDetailCard({ detail, subject = "apt" }: Props) {
+export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDirection = "pay" }: Props) {
   const { preApproval, postApprovalExistingHouse, settlement, total, salePriceTotal, valuationMeta, estimatedLumpDeduction, highValueAllocation, lthdResidenceAttribution, successorMemberApplied, successorMemberDetail, oneRightExemptionApplied, oneRightHighValueApplied } = detail;
 
   // subject="right": 입주권 양도 분기 (사례 36)
@@ -116,6 +121,47 @@ export function RedevelopmentDetailCard({ detail, subject = "apt" }: Props) {
           <span className="font-semibold">§166① 입주권 양도 구조</span> — 인가전 양도차익에만 LTHD 적용 (§95② 단서).
           인가후·청산금 분은 LTHD 대상 외 (§94①2호 + §166①1호 산식 구조).
           인가후 기존건물분(=0) 행은 표시 생략.
+        </div>
+      )}
+
+      {/* subject="right" + settlementDirection="pay" — §95② 단서 안내 카드 */}
+      {isRightSubject && !successorMemberApplied && settlementDirection === "pay" && (
+        <div className="rounded-md bg-rose-50 border border-rose-200 p-3 text-[11px] text-rose-900 space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="rounded-full bg-rose-200 px-2 py-0.5 text-[10px] font-bold text-rose-800">소득세법 §95② 단서</span>
+            <span className="font-semibold">인가후 양도차익 — 장기보유특별공제 적용 제외</span>
+          </div>
+          <p className="leading-relaxed">
+            관리처분계획 인가 후 양도차익(인가후 분 + 청산금 납부분)은 소득세법 §95② 단서에 따라
+            장기보유특별공제 대상에서 제외됩니다. 인가전 양도차익(권리가액 − 취득가액 − 인가전 필요경비)만
+            LTHD 적용 대상입니다.
+          </p>
+          <p className="text-[10px] text-rose-700">
+            근거: §94①2호 (조합원입주권은 기타자산) + §166①1호 (인가전·인가후 산식 분리) + §166⑤1호 (인가전분 보유기간 = 취득일~인가일).
+            인가후 분·청산금 납부분은 LTHD 기산 대상 자산에 해당하지 않아 공제율 0%.
+          </p>
+        </div>
+      )}
+
+      {/* subject="right" + settlementDirection="receive" — §166①2호 가목·나목 안내 카드 (R-5) */}
+      {isRightSubject && !successorMemberApplied && settlementDirection === "receive" && (
+        <div className="rounded-md bg-violet-50 border border-violet-200 p-3 text-[11px] text-violet-900 space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="rounded-full bg-violet-200 px-2 py-0.5 text-[10px] font-bold text-violet-800">시행령 §166①2호</span>
+            <span className="font-semibold">입주권 양도 + 청산금 수령 — 가목·나목 분기</span>
+          </div>
+          <p className="leading-relaxed">
+            <strong>가목 (청산금 수령분):</strong> 청산금 수령액 − 안분 취득가액(종전취득가 × 청산금 / 권리가액).
+            LTHD 대상 외 — §94①2호(조합원입주권 = 기타자산) + 집행기준 보수적 적용으로 zeroBranch 처리.
+          </p>
+          <p className="leading-relaxed">
+            <strong>나목 (인가전 분 — 축소):</strong> 인가전양도차익 × (권리가액 − 청산금) / 권리가액.
+            LTHD: §166⑤1호 (취득일~인가일 기산, 원조합원 한정).
+          </p>
+          <p className="text-[10px] text-violet-700">
+            청산금 분 LTHD zeroBranch 사유: §94①2호(입주권은 토지·건물 범위 외) + §166①2호 가목 산식 구조상 LTHD 산정 불가.
+            별도 법령해석 확보 전 보수적 적용 유지.
+          </p>
         </div>
       )}
 
@@ -289,18 +335,44 @@ export function RedevelopmentDetailCard({ detail, subject = "apt" }: Props) {
         {/* 청산금 분 */}
         <div className="rounded-md bg-white border border-violet-200 p-3 space-y-1.5">
           <p className="text-[11px] font-semibold text-violet-700">
-            {isRightSubject
+            {isRightSubject && settlementDirection === "receive"
+              ? "② 청산금 수령분 (§166①2호 가목)"
+              : isRightSubject
               ? "② 인가후·청산금 분 (§166①1호)"
               : `③ 청산금 분${detail.settlementExemptionApplied ? " (1세대1주택 비과세)" : ""}`}
           </p>
           <p className="text-[10px] text-violet-600">
-            {isRightSubject
+            {isRightSubject && settlementDirection === "receive"
+              ? "§166①2호 가목 · §94①2호 (청산금 분 — LTHD 대상 외)"
+              : isRightSubject
               ? "§166①1호 · §166⑤1호 (인가일 기산 — LTHD 대상 외)"
               : "§166②1호 안분 (청산금/분양가) · §166⑤2호가목 (인가일 기산)"}
           </p>
           <Row label="안분 양도가액" value={settlement.apportionedTransfer} />
-          <Row label="안분 취득가액(=청산금)" value={settlement.apportionedAcquisition} />
-          {detail.settlementExemptionApplied ? (
+          <Row
+            label={
+              isRightSubject && settlementDirection === "receive"
+                ? "안분 취득가액(=종전취득가 × 청산금 ÷ 권리가액)"
+                : "안분 취득가액(=청산금)"
+            }
+            value={settlement.apportionedAcquisition}
+          />
+          {isRightSubject && !detail.settlementExemptionApplied ? (
+            // 사례 36 입주권 양도 (subject="right") — §95② 단서 LTHD=0 명시
+            <>
+              <Row label="양도차익" value={settlement.gain} highlight />
+              <div className="pt-1 border-t border-rose-200 rounded bg-rose-50/60 px-1.5 py-1 space-y-0.5">
+                <div className="flex items-center gap-1.5">
+                  <span className="rounded-full bg-rose-200 px-1.5 py-0.5 text-[9px] font-bold text-rose-800">§95② 단서</span>
+                  <span className="text-[10px] text-rose-800 font-semibold">LTHD 대상 제외</span>
+                </div>
+                <p className="text-[10px] text-rose-700">
+                  인가후·청산금 분은 §95② 단서에 따라 장기보유특별공제 대상이 아닙니다.
+                </p>
+                <Row label="장기보유특별공제" value={0} />
+              </div>
+            </>
+          ) : detail.settlementExemptionApplied ? (
             // 사례 47 — 옵션 B 4행 분해 시각화 (안분 후 → LTHD → 비과세 차감 → 결과 0)
             <>
               <Row label="양도차익 (안분 후)" value={settlement.gainAfterAllocation ?? 0} />

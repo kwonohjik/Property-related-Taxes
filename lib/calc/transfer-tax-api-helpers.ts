@@ -681,8 +681,11 @@ export function buildAssetPayload(
  */
 export function buildRedevelopmentPayload(asset: AssetForm) {
   // UI display fallback과 동일(RedevelopmentBlock.tsx). 3중 패턴(UI/API/validate).
+  // assetKind="right_to_move_in" 시 redevSubject 미입력이면 "right" fallback
+  // (경로 A 버그 수정: assetKind="right_to_move_in" + redevSubject="" → "apt" 오변환 차단)
+  const subjectDefault = asset.assetKind === "right_to_move_in" ? "right" : "apt";
   return {
-    subject: (asset.redevSubject || "apt") as "right" | "apt",
+    subject: (asset.redevSubject || subjectDefault) as "right" | "apt",
     approvalLawBasis: (asset.redevApprovalLawBasis || "urban_renovation_art_74") as "urban_renovation_art_74" | "small_housing_art_29",
     approvalDate: asset.redevApprovalDate,
     // 사례 48 — 승계조합원 모드: redev 권리가액 필드 숨김 → 자산 카드 fixedAcquisitionPrice 자동 미러 (UI 무결성용).

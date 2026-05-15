@@ -415,10 +415,29 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
           🖨️ 전체 PDF / 인쇄
         </button>
       </div>
-      <FilingFormTable
-        result={mixedUseToFilingResult(breakdown)}
-        formData={formData}
-      />
+      {(() => {
+        // 겸용주택(propertyType="mixed-use-house")은 재개발과 배타적이므로
+        // redevelopmentDetail이 항상 undefined → redev props 비활성. 일관성 차원에서 전달.
+        const mixedFilingResult = mixedUseToFilingResult(breakdown);
+        const primaryAsset = formData?.assets?.[0];
+        const hasRedev = !!mixedFilingResult.redevelopmentDetail;
+        return (
+          <FilingFormTable
+            result={mixedFilingResult}
+            formData={formData}
+            redevSubject={
+              hasRedev
+                ? ((primaryAsset?.redevSubject || (primaryAsset?.assetKind === "right_to_move_in" ? "right" : "apt")) as "right" | "apt")
+                : undefined
+            }
+            redevSettlementDirection={
+              hasRedev
+                ? ((primaryAsset?.redevSettlementDirection || "pay") as "pay" | "receive")
+                : undefined
+            }
+          />
+        );
+      })()}
       {/* ── 계산결과 상세명세서 (겸용주택 모드) ── */}
       {/* 신고서 양식 32 항목별 산식·변수값·법령 노출 — mixedUseDetail은 단건 모드로 처리 */}
       <DetailedCalculationStatementCard

@@ -30,6 +30,15 @@ const BRANCH_LABEL_PAY: Record<RedevBranch, BranchLabelDef> = {
   settlement: { prefix: "③ 청산금 납부분", legal: "§166②1호 · §166⑤2호가목" },
 };
 
+// 사례 36 — subject="right" 입주권 양도 (납부 모드).
+// §166①1호 산식: 인가전·인가후+청산금 2분기. 인가후 기존건물분(=0) 행은 숨김 처리.
+// LTHD: 인가전 분만 적용 (§95② 단서). 인가후·청산금 분 LTHD=0 강제.
+const BRANCH_LABEL_RIGHT_PAY: Record<RedevBranch, BranchLabelDef> = {
+  preApproval: { prefix: "① 인가전 분", legal: "§166①1호 · §166⑤1호 (취득일~인가일 기산)" },
+  postApprovalExistingHouse: { prefix: "② 인가후 기존건물분 (LTHD 제외)", legal: "§166①1호 · §95② 단서 (인가후분 = 0 fill)" },
+  settlement: { prefix: "② 인가후·청산금 납부분 (LTHD 제외)", legal: "§166①1호 · §95② 단서 (LTHD 공제율 0%)" },
+};
+
 // 사례 46 — receiveOnly 모드 전용 라벨 (§166①2호 가목 단독, 인가전·인가후 0 강제).
 const BRANCH_LABEL_RECEIVE_ONLY: Record<RedevBranch, BranchLabelDef> = {
   preApproval: { prefix: "① 인가전 분 (미신고)", legal: "receiveOnly — 0 강제" },
@@ -60,14 +69,40 @@ const BRANCH_LABEL_SETTLEMENT_EXEMPTED: Record<RedevBranch, BranchLabelDef> = {
   },
 };
 
+// R-5 — subject="right" + settlementDirection="receive" (§166①2호 가목·나목).
+// 가목: 청산금 수령분 = 청산금 − 안분취득가 (§166①2호 가목)
+// 나목: 인가전 분(축소) = 인가전양도차익 × (평가액 − 청산금) / 평가액 (§166①2호 나목)
+// settlement LTHD = zeroBranch (§94①2호 + 집행기준 보수적 적용)
+const BRANCH_LABEL_RIGHT_RECEIVE_NAMOK: Record<RedevBranch, BranchLabelDef> = {
+  preApproval: {
+    prefix: "① 인가전 분 (나목 — 축소 후)",
+    legal: "§166①2호 나목 · §166⑤1호 (취득일~인가일 기산)",
+  },
+  postApprovalExistingHouse: {
+    prefix: "② 인가후 기존건물분 (LTHD 제외)",
+    legal: "§166①2호 · §95② 단서 (인가후분 = 0)",
+  },
+  settlement: {
+    prefix: "③ 청산금 수령분 (가목 — LTHD 제외)",
+    legal: "§166①2호 가목 · §94①2호 (권리 범위 — zeroBranch)",
+  },
+};
 
-function getBranchLabels(redev: RedevelopmentResult): Record<RedevBranch, BranchLabelDef> {
+function getBranchLabels(
+  redev: RedevelopmentResult,
+  subject?: "apt" | "right",
+  settlementDirection?: "pay" | "receive",
+): Record<RedevBranch, BranchLabelDef> {
   // 우선순위 0: successorMemberApplied (사례 48 — 가장 먼저 평가)
   if (redev.successorMemberApplied === true) return BRANCH_LABEL_SUCCESSOR_MEMBER;
   // 우선순위 1: receiveOnlyMode (사례 46)
   if (redev.receiveOnlyMode === true) return BRANCH_LABEL_RECEIVE_ONLY;
   // 우선순위 2: settlementExemptionApplied (사례 47)
   if (redev.settlementExemptionApplied === true) return BRANCH_LABEL_SETTLEMENT_EXEMPTED;
+  // 우선순위 3: subject="right" + settlementDirection="receive" — §166①2호 가목·나목 (R-5)
+  if (subject === "right" && settlementDirection === "receive") return BRANCH_LABEL_RIGHT_RECEIVE_NAMOK;
+  // 우선순위 4: subject="right" 입주권 납부 모드 (사례 36 — §166①1호 + §95② 단서)
+  if (subject === "right") return BRANCH_LABEL_RIGHT_PAY;
   return BRANCH_LABEL_PAY;
 }
 
@@ -276,8 +311,10 @@ function buildPerAsset(
   redev: RedevelopmentResult,
   pickValue: (branch: RedevBranch, redev: RedevelopmentResult) => number,
   pickFormula: (branch: RedevBranch, redev: RedevelopmentResult) => string,
+  subject?: "apt" | "right",
+  settlementDirection?: "pay" | "receive",
 ): PerAssetValue[] {
-  const labels = getBranchLabels(redev);
+  const labels = getBranchLabels(redev, subject, settlementDirection);
   return BRANCHES.map((branch) => ({
     label: `${labels[branch].prefix} (${labels[branch].legal})`,
     value: pickValue(branch, redev),
@@ -288,51 +325,85 @@ function buildPerAsset(
 export function buildRedevPerAssetForTransfer(
   redev: RedevelopmentResult,
   totalTransferPrice: number,
+  subject?: "apt" | "right",
+  settlementDirection?: "pay" | "receive",
 ): PerAssetValue[] {
   return buildPerAsset(
     redev,
     (b, r) => r[b].apportionedTransfer,
     (b, r) => buildRedevTransferFormula(b, r, totalTransferPrice),
+    subject,
+    settlementDirection,
   );
 }
 
-export function buildRedevPerAssetForAcquisition(redev: RedevelopmentResult): PerAssetValue[] {
+export function buildRedevPerAssetForAcquisition(
+  redev: RedevelopmentResult,
+  subject?: "apt" | "right",
+  settlementDirection?: "pay" | "receive",
+): PerAssetValue[] {
   return buildPerAsset(
     redev,
     (b, r) => r[b].apportionedAcquisition,
     (b, r) => buildRedevAcquisitionFormula(b, r),
+    subject,
+    settlementDirection,
   );
 }
 
-export function buildRedevPerAssetForExpense(redev: RedevelopmentResult): PerAssetValue[] {
+export function buildRedevPerAssetForExpense(
+  redev: RedevelopmentResult,
+  subject?: "apt" | "right",
+  settlementDirection?: "pay" | "receive",
+): PerAssetValue[] {
   return buildPerAsset(
     redev,
     (b, r) => (b === "preApproval" ? (r.estimatedLumpDeduction ?? 0) : 0),
     (b, r) => buildRedevExpenseFormula(b, r),
+    subject,
+    settlementDirection,
   );
 }
 
-export function buildRedevPerAssetForGain(redev: RedevelopmentResult): PerAssetValue[] {
+export function buildRedevPerAssetForGain(
+  redev: RedevelopmentResult,
+  subject?: "apt" | "right",
+  settlementDirection?: "pay" | "receive",
+): PerAssetValue[] {
   return buildPerAsset(
     redev,
     (b, r) => r[b].gain,
     (b, r) => buildRedevGainFormula(b, r),
+    subject,
+    settlementDirection,
   );
 }
 
-export function buildRedevPerAssetForLthd(redev: RedevelopmentResult): PerAssetValue[] {
+export function buildRedevPerAssetForLthd(
+  redev: RedevelopmentResult,
+  subject?: "apt" | "right",
+  settlementDirection?: "pay" | "receive",
+): PerAssetValue[] {
   return buildPerAsset(
     redev,
     (b, r) => r[b].lthd,
     (b, r) => buildRedevLthdFormula(b, r),
+    subject,
+    settlementDirection,
   );
 }
 
-export function buildRedevPerAssetForIncome(redev: RedevelopmentResult): PerAssetValue[] {
+export function buildRedevPerAssetForIncome(
+  redev: RedevelopmentResult,
+  subject?: "apt" | "right",
+  settlementDirection?: "pay" | "receive",
+): PerAssetValue[] {
   return buildPerAsset(
     redev,
     (b, r) => Math.max(0, r[b].gain - r[b].lthd),
     (b, r) => buildRedevIncomeFormula(b, r),
+    subject,
+    settlementDirection,
   );
 }
 
@@ -351,13 +422,25 @@ export function applyRedevelopmentOverrides(
   items: Map<string, StatementItem>,
   redev: RedevelopmentResult,
   totalTransferPrice: number,
+  subject?: "apt" | "right",
+  settlementDirection?: "pay" | "receive",
 ): void {
+  const isRightSubject = subject === "right";
+  const isRightReceive = isRightSubject && settlementDirection === "receive";
+
   // 양도가액 — 합계는 totalTransferPrice 유지
   const transferItem = items.get("transferPrice");
   if (transferItem) {
-    transferItem.formula = "재개발 §166 — 인가전(권리가액 의제) + 인가후(분양가 안분) + 청산금(분양가 안분)";
-    transferItem.legalBasis = "소득세법 시행령 §166①·②·④";
-    transferItem.perAsset = buildRedevPerAssetForTransfer(redev, totalTransferPrice);
+    if (isRightReceive) {
+      transferItem.formula = "입주권 양도 §166①2호 — 인가전(권리가액−청산금 의제) + 청산금 수령분(청산금 의제)";
+      transferItem.legalBasis = "소득세법 시행령 §166①2호 가목·나목 · §166④";
+    } else {
+      transferItem.formula = isRightSubject
+        ? "입주권 양도 §166① — 인가전(권리가액 의제) + 인가후·청산금(양도가액 − 권리가액 − 청산금 납부액)"
+        : "재개발 §166 — 인가전(권리가액 의제) + 인가후(분양가 안분) + 청산금(분양가 안분)";
+      transferItem.legalBasis = isRightSubject ? "소득세법 시행령 §166①·④" : "소득세법 시행령 §166①·②·④";
+    }
+    transferItem.perAsset = buildRedevPerAssetForTransfer(redev, totalTransferPrice, subject, settlementDirection);
   }
 
   // 취득가액
@@ -369,10 +452,17 @@ export function applyRedevelopmentOverrides(
       redev.postApprovalExistingHouse.apportionedAcquisition +
       redev.settlement.apportionedAcquisition;
     acqItem.value = sumAcq;
-    acqItem.formula = "재개발 §166 — 인가전(§166③ 환산 또는 실가) + 인가후(권리가액 의제) + 청산금(청산금 의제)";
-    acqItem.legalBasis = "소득세법 시행령 §166③ · §163";
+    if (isRightReceive) {
+      acqItem.formula = "입주권 §166①2호 — 인가전(실가 또는 환산 − 안분 취득가) + 청산금 분(종전취득가 × 청산금/권리가)";
+      acqItem.legalBasis = "소득세법 시행령 §166①2호 가목·나목 · §166③";
+    } else {
+      acqItem.formula = isRightSubject
+        ? "입주권 양도 §166① — 인가전(§166③ 환산 또는 실가) + 인가후·청산금(권리가액+청산금 의제)"
+        : "재개발 §166 — 인가전(§166③ 환산 또는 실가) + 인가후(권리가액 의제) + 청산금(청산금 의제)";
+      acqItem.legalBasis = isRightSubject ? "소득세법 시행령 §166①③ · §163" : "소득세법 시행령 §166③ · §163";
+    }
     acqItem.note = undefined;
-    acqItem.perAsset = buildRedevPerAssetForAcquisition(redev);
+    acqItem.perAsset = buildRedevPerAssetForAcquisition(redev, subject, settlementDirection);
   }
 
   // 필요경비 — 개산공제(§163⑥, 인가전만)
@@ -381,29 +471,45 @@ export function applyRedevelopmentOverrides(
     expItem.value = redev.estimatedLumpDeduction ?? 0;
     expItem.formula = "개산공제 (§163⑥) = 취득당시 라목값 × 3% — 인가전 분에만 적용";
     expItem.legalBasis = "소득세법 시행령 §163⑥";
-    expItem.perAsset = buildRedevPerAssetForExpense(redev);
+    expItem.perAsset = buildRedevPerAssetForExpense(redev, subject, settlementDirection);
   }
 
   // 전체 양도차익 — 합계는 기존 result.transferGain 유지
   const gainItem = items.get("transferGain");
   if (gainItem) {
-    gainItem.formula = "재개발 §166 분할별 양도차익 합 = 인가전 + 인가후 기존건물분 + 청산금 분";
-    gainItem.legalBasis = "소득세법 시행령 §166①·②";
-    gainItem.perAsset = buildRedevPerAssetForGain(redev);
+    if (isRightReceive) {
+      gainItem.formula = "입주권 §166①2호 분할별 양도차익 합 = 인가전(나목 축소) + 청산금(가목)";
+      gainItem.legalBasis = "소득세법 시행령 §166①2호 가목·나목";
+    } else {
+      gainItem.formula = isRightSubject
+        ? "입주권 §166①1호 분할별 양도차익 합 = 인가전 + 인가후·청산금"
+        : "재개발 §166 분할별 양도차익 합 = 인가전 + 인가후 기존건물분 + 청산금 분";
+      gainItem.legalBasis = isRightSubject ? "소득세법 시행령 §166①1호" : "소득세법 시행령 §166①·②";
+    }
+    gainItem.perAsset = buildRedevPerAssetForGain(redev, subject, settlementDirection);
   }
 
   // 과세대상 양도차익 — 합계 result.taxableGain 유지 (1세대1주택 12억 안분 등은 합계 단계에서 처리)
   const taxableItem = items.get("taxableGain");
   if (taxableItem) {
-    taxableItem.perAsset = buildRedevPerAssetForGain(redev);
+    taxableItem.perAsset = buildRedevPerAssetForGain(redev, subject, settlementDirection);
   }
 
   // 장기보유특별공제 — 분할별 lthdRate 상이
   const ltItem = items.get("ltDeduction");
   if (ltItem) {
-    ltItem.formula = "재개발 §166⑤ 분할별 보유기간·율 — 인가전·인가후 기존건물분(취득일 기산) + 청산금분(인가일 기산)";
-    ltItem.legalBasis = "소득세법 §95② · 시행령 §166⑤";
-    ltItem.perAsset = buildRedevPerAssetForLthd(redev);
+    if (isRightReceive) {
+      ltItem.formula = "§95② 단서 + §166⑤1호 — 인가전(나목) 분만 LTHD 적용. 청산금(가목) 분 LTHD=0 (§94①2호)";
+      ltItem.legalBasis = "소득세법 §95② 단서 · §94①2호 · 시행령 §166⑤1호 · §166①2호 가목";
+    } else {
+      ltItem.formula = isRightSubject
+        ? "§95② 단서 + §166⑤1호 — 인가전 분만 LTHD 적용 (취득일~인가일 기산). 인가후·청산금 분 LTHD=0"
+        : "재개발 §166⑤ 분할별 보유기간·율 — 인가전·인가후 기존건물분(취득일 기산) + 청산금분(인가일 기산)";
+      ltItem.legalBasis = isRightSubject
+        ? "소득세법 §95② 단서 · §94①2호 · 시행령 §166⑤1호"
+        : "소득세법 §95② · 시행령 §166⑤";
+    }
+    ltItem.perAsset = buildRedevPerAssetForLthd(redev, subject, settlementDirection);
   }
 
   // 보유분/거주분 — 재개발은 분할별 표1·표2 적용으로 보유/거주 분리 미적용
@@ -423,6 +529,6 @@ export function applyRedevelopmentOverrides(
   if (incomeItem) {
     incomeItem.formula = "재개발 §166 분할별 (양도차익 − LTHD) 합 (음수 시 0)";
     incomeItem.legalBasis = "소득세법 §95①";
-    incomeItem.perAsset = buildRedevPerAssetForIncome(redev);
+    incomeItem.perAsset = buildRedevPerAssetForIncome(redev, subject, settlementDirection);
   }
 }
