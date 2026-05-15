@@ -187,16 +187,17 @@ export function deriveColumns(
         ],
       };
     }
-    // subject="right" + receive → 3열 (합계/입주권 분/청산금 분)
-    // §166①2호 나목(입주권 분)·가목(청산금 분) 분리 표시
-    // 가목(청산금 분) LTHD = 0 (§95② 단서·zeroBranch)
+    // subject="right" + receive → 3열 (합계/인가전 분(나목)/인가후 분(가목))
+    // §166①2호 나목(인가전 분)·가목(인가후 분) 분리 표시
+    // 가목(인가후 분) LTHD = 0 (§95② 별표2 [비고] 1호·zeroBranch)
+    // ★ 사례 38·39 라벨 정합화: "입주권 분/청산금 분" → "인가전 분(나목)/인가후 분(가목)"
     if (redevSubject === "right" && redevSettlementDirection === "receive") {
       return {
         mode: "redev-right-receive",
         columns: [
           { key: "total", label: "합계" },
-          { key: "preApproval", label: "① 입주권 분 (§166①2호 나목)" },
-          { key: "settlement", label: "② 청산금 분 (§166①2호 가목)" },
+          { key: "preApproval", label: "① 인가전 분 (나목)" },
+          { key: "settlement", label: "② 인가후 분 (가목)" },
         ],
       };
     }

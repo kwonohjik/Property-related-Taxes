@@ -69,13 +69,14 @@ const BRANCH_LABEL_SETTLEMENT_EXEMPTED: Record<RedevBranch, BranchLabelDef> = {
   },
 };
 
-// R-5 — subject="right" + settlementDirection="receive" (§166①2호 가목·나목).
-// 가목: 청산금 수령분 = 청산금 − 안분취득가 (§166①2호 가목)
+// R-5/사례 38/39 — subject="right" + settlementDirection="receive" (§166①2호 가목·나목).
+// 가목: 인가후 분(양도가 − 안분취득가) = §166①2호 가목 — 사례 38·39 라벨 정합화
 // 나목: 인가전 분(축소) = 인가전양도차익 × (평가액 − 청산금) / 평가액 (§166①2호 나목)
-// settlement LTHD = zeroBranch (§94①2호 + 집행기준 보수적 적용)
+// settlement LTHD = zeroBranch (§94①2호 + §95② 별표2 [비고] 1호)
+// ★ 2026-05-15 사례 38·39: 라벨 "인가전 분(나목)" / "인가후 분(가목)"으로 정합화
 const BRANCH_LABEL_RIGHT_RECEIVE_NAMOK: Record<RedevBranch, BranchLabelDef> = {
   preApproval: {
-    prefix: "① 인가전 분 (나목 — 축소 후)",
+    prefix: "① 인가전 분 (§166①2호 나목)",
     legal: "§166①2호 나목 · §166⑤1호 (취득일~인가일 기산)",
   },
   postApprovalExistingHouse: {
@@ -83,8 +84,8 @@ const BRANCH_LABEL_RIGHT_RECEIVE_NAMOK: Record<RedevBranch, BranchLabelDef> = {
     legal: "§166①2호 · §95② 단서 (인가후분 = 0)",
   },
   settlement: {
-    prefix: "③ 청산금 수령분 (가목 — LTHD 제외)",
-    legal: "§166①2호 가목 · §94①2호 (권리 범위 — zeroBranch)",
+    prefix: "③ 인가후 분 (§166①2호 가목) — LTHD 미적용",
+    legal: "§166①2호 가목 · §95② 별표2 [비고] 1호 · §94①2호 (zeroBranch)",
   },
 };
 

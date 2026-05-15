@@ -331,6 +331,9 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     redevLandStdPriceAtAcq: "",      // @deprecated — legacy 총액 직접 입력 (sessionStorage 호환용)
     redevLandStdPriceAtApproval: "", // @deprecated — legacy 총액 직접 입력 (sessionStorage 호환용)
     redevLandPricePerSqmAtApproval: "", // §166③ 분모 ㎡당 단가 (LandPriceLookupField 신규 입력 경로)
+    // 사례 38/39 — 단독주택 출자 §164⑤ PHD 2-point 환산취득가
+    redevHousingStdPriceAtAcq: "",    // §164⑤ 분자 — 취득당시 개별주택가격
+    redevHousingStdPriceAtApproval: "", // §164⑤ 분모 — 인가당시 부근 개별주택가격
     // 사례 48 — 승계조합원 신축APT 양도
     redevIsSuccessorMember: "",
     redevCompletionDate: "",
@@ -495,6 +498,9 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (a.redevLandStdPriceAtApproval === undefined) a.redevLandStdPriceAtApproval = ""; // @deprecated legacy
   // 신규 LandPriceLookupField 입력 경로 — §166③ 분모 ㎡당 단가
   if (a.redevLandPricePerSqmAtApproval === undefined) a.redevLandPricePerSqmAtApproval = "";
+  // 사례 38/39 — 단독주택 출자 §164⑤ PHD 2-point 환산취득가
+  if (a.redevHousingStdPriceAtAcq === undefined) a.redevHousingStdPriceAtAcq = "";
+  if (a.redevHousingStdPriceAtApproval === undefined) a.redevHousingStdPriceAtApproval = "";
   // 사례 48 — 승계조합원 신축APT 양도
   if (a.redevIsSuccessorMember === undefined) a.redevIsSuccessorMember = "";
   if (a.redevCompletionDate === undefined) a.redevCompletionDate = "";

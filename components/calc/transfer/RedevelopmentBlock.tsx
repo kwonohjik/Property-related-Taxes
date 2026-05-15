@@ -35,6 +35,7 @@ import { RedevelopmentValuationSection } from "./RedevelopmentValuationSection";
 import { RedevelopmentResidenceSplitSection } from "./RedevelopmentResidenceSplitSection";
 import { RedevelopmentRightExemptionSection } from "./RedevelopmentRightExemptionSection";
 import { SettlementExemptionGuideCard } from "./SettlementExemptionGuideCard";
+import { HousingContribEstimatedSection } from "./HousingContribEstimatedSection";
 
 interface Props {
   asset: AssetForm;
@@ -370,8 +371,24 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, wasRegul
       )}
 
 
+      {/* ⑤-a fuchsia: 단독주택 출자 §164⑤ PHD 2-point 입력 카드
+          활성 조건: originalAssetType="housing" + subject="right" + direction="receive" + useEstimated=true
+          3중 패턴(UI/API/validate) 동기화 */}
+      {asset.redevOriginalAssetType === "housing" &&
+        (asset.redevSubject === "right" || asset.assetKind === "right_to_move_in") &&
+        asset.redevSettlementDirection === "receive" &&
+        asset.useEstimatedAcquisition === true &&
+        asset.redevIsSuccessorMember !== "yes" && (
+        <HousingContribEstimatedSection asset={asset} onChange={onChange} />
+      )}
+
       {/* ⑥ rose: 환산취득가 (시행령 §166③ + §164⑦ PHD 패턴) — 승계조합원 모드 시 숨김 (본 PR 미지원) */}
-      {asset.redevIsSuccessorMember !== "yes" && (
+      {/* 단독주택 출자 §164⑤ 분기(housing+right+receive+estimated)는 위 ⑤-a 카드 사용 → 일반 환산 카드 숨김 */}
+      {asset.redevIsSuccessorMember !== "yes" &&
+        !(asset.redevOriginalAssetType === "housing" &&
+          (asset.redevSubject === "right" || asset.assetKind === "right_to_move_in") &&
+          asset.redevSettlementDirection === "receive" &&
+          asset.useEstimatedAcquisition === true) && (
         <RedevelopmentValuationSection asset={asset} onChange={onChange} />
       )}
 

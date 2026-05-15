@@ -170,15 +170,36 @@ export function validateRedevelopmentAsset(asset: AssetForm, label: string): str
     }
   }
 
-  // ── 환산 모드 검증 — D(관리처분 라목값) 필수 ──
-  if (asset.useEstimatedAcquisition) {
+  // ── 환산 모드 검증 ──
+  // 사례 39 — 단독주택 출자 §164⑤ PHD 2-point: housing + right + receive + useEstimated 조합 시 전용 검증
+  // 3중 패턴(UI/API/validate) 동기화 (memory `feedback_validation_sync_8th_point`)
+  const isHousingRightReceiveEstimated =
+    originalAssetType === "housing" &&
+    subject === "right" &&
+    settlementDirection === "receive" &&
+    asset.useEstimatedAcquisition === true;
+
+  if (isHousingRightReceiveEstimated) {
+    // §164⑤ 분자·분모 모두 필수 (미입력 → 자동 안분 fallback 금지)
+    if (parseAmount(asset.redevHousingStdPriceAtAcq) <= 0) {
+      return `${label}: 단독주택 출자 환산취득가 — 취득당시 개별주택가격을 입력하세요. (§164⑤ 분자)`;
+    }
+    if (parseAmount(asset.redevHousingStdPriceAtApproval) <= 0) {
+      return `${label}: 단독주택 출자 환산취득가 — 인가당시 부근 개별주택가격을 입력하세요. (§164⑤ 분모)`;
+    }
+    // housing+right+receive+estimated 분기는 일반 D(managementDisposalHousingPrice) 검증 skip
+    // (§166③ 분모 구조가 다름 — §164⑤ PHD 산식 별도 적용)
+  } else if (asset.useEstimatedAcquisition) {
+    // 일반 환산 모드 — D(관리처분 라목값) 필수
     if (parseAmount(asset.redevManagementDisposalHousingPrice) <= 0) {
       return `${label}: 환산 모드 — D(관리처분 인가일 개별주택공시가격)를 입력하세요. (시행령 §166③ 분모)`;
     }
   }
 
   // ── §164⑦ 본문 발동 트리거 여부 ──
+  // housing+right+receive+estimated 분기는 §164⑤ PHD 2-point 별도 산식 → §164⑦ 검증 skip
   const isPreDisclosureTriggered =
+    !isHousingRightReceiveEstimated &&
     !!asset.useEstimatedAcquisition &&
     !!asset.redevFirstDisclosureDate &&
     !!asset.acquisitionDate &&
@@ -205,8 +226,8 @@ export function validateRedevelopmentAsset(asset: AssetForm, label: string): str
     if (parseAmount(asset.redevBuildingStdPriceAtFirst) < 0) {
       return `${label}: §164⑦ 본문 — 최초공시 당시 건물 기준시가 입력 필수입니다.`;
     }
-  } else if (asset.useEstimatedAcquisition) {
-    // 본문 미발동 — 취득당시 라목값 단일 필수
+  } else if (asset.useEstimatedAcquisition && !isHousingRightReceiveEstimated) {
+    // 본문 미발동 — 취득당시 라목값 단일 필수 (housing+right+receive+estimated 분기 제외)
     if (parseAmount(asset.redevAcquisitionHousingPrice) <= 0) {
       return `${label}: 환산 모드 — 취득당시 개별주택공시가격을 입력하세요. (취득일 ≥ 최초공시일 또는 최초공시일 미입력)`;
     }

@@ -197,4 +197,30 @@ export function addPropertyRefines(
     // 추가 교차 검증: 현재는 base 스키마 충분. 향후 교차 검증 필요 시 여기에 추가.
     void gbv; // 타입 참조 유지
   }
+  // ⑩ 사례 39 — 단독주택 출자 §164⑤ PHD 2-point 환산취득가 필수 검증
+  // 분기 활성 조건: originalAssetType="housing" + subject="right" + useEstimated=true
+  // 3중 패턴(UI/API/validate) 동기화 — UI 통과 ↔ validate 차단 모순 방지
+  if (data.redevelopment) {
+    const rd = data.redevelopment as Record<string, unknown>;
+    const isHousingEstimated =
+      rd.originalAssetType === "housing" &&
+      rd.subject === "right" &&
+      (data as Record<string, unknown>).useEstimatedAcquisition === true;
+    if (isHousingEstimated) {
+      if (!rd.housingStdPriceAtAcq || (rd.housingStdPriceAtAcq as number) <= 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["redevelopment", "housingStdPriceAtAcq"],
+          message: "단독주택 출자 환산취득가 — 취득당시 개별주택가격(§164⑤ 분자) 필수",
+        });
+      }
+      if (!rd.housingStdPriceAtApproval || (rd.housingStdPriceAtApproval as number) <= 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["redevelopment", "housingStdPriceAtApproval"],
+          message: "단독주택 출자 환산취득가 — 인가당시 부근 개별주택가격(§164⑤ 분모) 필수",
+        });
+      }
+    }
+  }
 }

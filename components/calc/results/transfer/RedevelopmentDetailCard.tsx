@@ -34,6 +34,10 @@ interface Props {
   settlementDirection?: "pay" | "receive";
 }
 
+// 신규 라벨 상수 (계획서 §3-4 (B) — DetailedStatement 라벨 동기화)
+export const BRANCH_LABEL_RIGHT_RECEIVE_PREAPPROVAL  = "인가전 분 (§166①2호 나목)";
+export const BRANCH_LABEL_RIGHT_RECEIVE_POSTAPPROVAL = "인가후 분 (§166①2호 가목)";
+
 const fmt = (n: number) => n.toLocaleString("ko-KR");
 const fmtPct = (r: number) => `${(r * 100).toFixed(1)}%`;
 
@@ -295,7 +299,80 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
         </div>
       )}
 
-      {/* 3분할 표 — subject="right" 시 ② 인가후 기존건물분 숨김 (gain=0, §95② 단서로 대상 외) */}
+      {/* 3분할 표 — subject="right" + receive 시 인가전/인가후 2-블록 분해 (사례 38·39) */}
+      {isRightSubject && settlementDirection === "receive" ? (
+        /* 사례 38·39 — 인가전 분(나목) / 인가후 분(가목) 2-블록 분리 표시 */
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+          {/* 블록 1: 인가전 분 (§166①2호 나목) */}
+          <div className="rounded-md bg-white border border-violet-200 p-3 space-y-1.5">
+            <p className="text-[11px] font-semibold text-violet-700">
+              {BRANCH_LABEL_RIGHT_RECEIVE_PREAPPROVAL}
+            </p>
+            <p className="text-[10px] text-violet-600">
+              §166①2호 나목 · §166⑤1호 (취득일 → 인가일 기산)
+              {detail.housingContribDetail ? " + §164⑤ PHD 환산취득가" : ""}
+            </p>
+            {/* 의제양도가액 */}
+            <Row label="의제양도가액 (권리가액 × 안분비율)" value={preApproval.apportionedTransfer} />
+            {/* 취득가액 — 실가 vs 환산 분기 */}
+            {detail.housingContribDetail ? (
+              /* 사례 39 — 환산취득가 + 개산공제 분리 표시 */
+              <>
+                <Row
+                  label={`− 환산취득가 (§164⑤: 권리가액 × ${detail.housingContribDetail.housingStdPriceAtAcq.toLocaleString("ko-KR")} / ${detail.housingContribDetail.housingStdPriceAtApproval.toLocaleString("ko-KR")})`}
+                  value={detail.housingContribDetail.convertedAcquisition}
+                />
+                <Row
+                  label={`− 개산공제 (§163⑥: 취득시 개별주택가격 ${detail.housingContribDetail.housingStdPriceAtAcq.toLocaleString("ko-KR")} × 3%)`}
+                  value={detail.housingContribDetail.estimatedDeduction}
+                />
+              </>
+            ) : (
+              /* 사례 38 — 실가 취득가액 */
+              <Row label="− 취득가액(실가) × 안분비율" value={preApproval.apportionedAcquisition} />
+            )}
+            <Row label="인가전 양도차익" value={preApproval.gain} highlight />
+            <p className="pt-1 border-t border-violet-100 text-[10px] text-violet-600">
+              장기보유공제 (표1 {fmtPct(preApproval.lthdRate)} · 만 {Math.floor(preApproval.holdingMonths / 12)}년 {preApproval.holdingMonths % 12}개월)
+            </p>
+            <Row label="LTHD (인가전 분)" value={preApproval.lthd} />
+            <div className="pt-1 border-t border-violet-100">
+              <Row label="인가전 양도소득금액" value={preApproval.gain - preApproval.lthd} highlight />
+            </div>
+          </div>
+
+          {/* 블록 2: 인가후 분 (§166①2호 가목) + §95² LTHD 미적용 */}
+          <div className="rounded-md bg-white border border-violet-200 p-3 space-y-1.5">
+            <p className="text-[11px] font-semibold text-violet-700">
+              {BRANCH_LABEL_RIGHT_RECEIVE_POSTAPPROVAL}
+            </p>
+            <p className="text-[10px] text-violet-600">
+              §166①2호 가목 · §94①2호 (LTHD 대상 외)
+            </p>
+            <Row label="양도가액 (실제 양도가)" value={settlement.apportionedTransfer} />
+            <Row label="− (평가액 − 수령청산금)" value={settlement.apportionedAcquisition} />
+            {/* 인가후 필요경비 — 0 이상일 때만 표시 */}
+            {(settlement.expenses ?? 0) > 0 && (
+              <Row label="− 인가후 필요경비" value={settlement.expenses ?? 0} />
+            )}
+            <Row label="인가후 양도차익" value={settlement.gain} highlight />
+            {/* §95² LTHD 미적용 안내 — rose 톤 */}
+            <div className="pt-1 border-t border-rose-200 rounded bg-rose-50/60 px-1.5 py-1 space-y-0.5">
+              <div className="flex items-center gap-1.5">
+                <span className="rounded-full bg-rose-200 px-1.5 py-0.5 text-[9px] font-bold text-rose-800">§95② 별표2 [비고] 1호</span>
+                <span className="text-[10px] text-rose-800 font-semibold">LTHD 적용 없음</span>
+              </div>
+              <p className="text-[10px] text-rose-700">
+                입주권은 §94①2호 기타자산 — 인가후 분은 부동산 외 자산으로 장기보유특별공제 적용 제외.
+              </p>
+            </div>
+            <div className="pt-1 border-t border-violet-100">
+              <Row label="인가후 양도소득금액" value={settlement.gain} highlight />
+            </div>
+          </div>
+        </div>
+      ) : (
+      /* 기존 3분할 표 — subject="apt" 또는 subject="right"+pay */
       <div className={`grid grid-cols-1 gap-3 ${isRightSubject ? "md:grid-cols-2" : "md:grid-cols-3"}`}>
         {/* 인가전 분 */}
         <div className="rounded-md bg-white border border-violet-200 p-3 space-y-1.5">
@@ -403,6 +480,7 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
           )}
         </div>
       </div>
+      )}
 
       {/* 합계 */}
       <div className="rounded-md bg-violet-100/60 border border-violet-300 p-3 grid grid-cols-3 gap-2 text-xs">

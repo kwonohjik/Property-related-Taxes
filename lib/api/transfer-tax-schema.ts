@@ -350,6 +350,10 @@ const propertyBaseShape = {
     // ★★★ 침묵 stripping 차단: Zod 객체 정의에 없으면 route handler에서 자동 제거됨.
     landStdPriceAtAcq: z.number().int().nonnegative().optional(),
     landStdPriceAtApproval: z.number().int().nonnegative().optional(),
+    // 사례 38/39 — 단독주택 출자 §164⑤ PHD 2-point 환산취득가
+    // ★★★ 침묵 stripping 차단: Zod 객체 정의에 없으면 route handler에서 자동 제거됨.
+    housingStdPriceAtAcq: z.number().int().nonnegative().optional(),
+    housingStdPriceAtApproval: z.number().int().nonnegative().optional(),
   })
   .refine(
     // subject="apt"(완공 APT 양도, 사례 46)에서만 settlementSaleDate 필수.
@@ -372,6 +376,8 @@ const propertyBaseShape = {
     { message: "환산 모드: 취득시 기준시가와 관리처분일 기준시가는 함께 입력해야 함" },
   )
   .optional(),
+  // ⑩ 사례 38/39 — 단독주택 출자 §164⑤ PHD 2-point 환산취득가 Zod refine은
+  // addPropertyRefines (transfer-tax-schema-refines.ts)에 추가됨 — route.ts superRefine 내부 호출
 };
 
 // ─── 단건 스키마 (기존 inputSchema와 동일) ─────────────────────

@@ -244,6 +244,21 @@ export interface RedevelopmentFormSlice {
    */
   redevLandPricePerSqmAtApproval: string;
 
+  // ── 사례 38/39 — 단독주택 출자 §164⑤ PHD 환산취득가 (subject="right" + originalAssetType="housing" + useEstimatedAcquisition=true 시) ──
+
+  /**
+   * §164⑤ 분자 — 취득당시 개별주택가격 (원, 총액).
+   * 환산취득가 = floor(권리가액 × housingStdPriceAtAcq / housingStdPriceAtApproval)
+   * originalAssetType="housing" + subject="right" + direction="receive" + useEstimated=true 시 필수.
+   */
+  redevHousingStdPriceAtAcq: string;
+
+  /**
+   * §164⑤ 분모 — 인가당시 부근 개별주택가격 (원, 총액).
+   * originalAssetType="housing" + subject="right" + direction="receive" + useEstimated=true 시 필수.
+   */
+  redevHousingStdPriceAtApproval: string;
+
   // ── 사례 48 — 승계조합원 신축APT 양도 ──
 
   /**

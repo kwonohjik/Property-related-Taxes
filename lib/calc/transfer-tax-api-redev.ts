@@ -141,6 +141,14 @@ export function buildRedevelopmentPayload(asset: AssetForm) {
       const legacyApproval = asset.redevLandStdPriceAtApproval ? parseAmount(asset.redevLandStdPriceAtApproval) : 0;
       return legacyApproval > 0 ? legacyApproval : undefined;
     })(),
+    // 사례 38/39 — 단독주택 출자 §164⑤ PHD 2-point 환산취득가
+    // 3중 패턴(UI/API/validate): 미입력 → undefined (엔진 분기 미발동)
+    housingStdPriceAtAcq: asset.redevHousingStdPriceAtAcq
+      ? parseAmount(asset.redevHousingStdPriceAtAcq)
+      : undefined,
+    housingStdPriceAtApproval: asset.redevHousingStdPriceAtApproval
+      ? parseAmount(asset.redevHousingStdPriceAtApproval)
+      : undefined,
     // 사례 48 — 승계조합원 신축APT 양도
     isSuccessorMember:
       asset.redevIsSuccessorMember === "yes"
