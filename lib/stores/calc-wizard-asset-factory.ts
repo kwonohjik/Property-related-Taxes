@@ -292,7 +292,7 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     // ── 재개발/재건축 (시행령 §166) — 사례 44 ──
     redevSubject: "",
     redevApprovalLawBasis: "",
-    redevOriginalAssetType: "",
+    redevOriginalAssetType: "housing",
     redevSettlementDirection: "",
     redevApprovalDate: "",
     redevSettlementSaleDate: "",
@@ -460,7 +460,7 @@ export function migrateAsset(raw: unknown): AssetForm {
   // ③ 재개발/재건축 redev* 필드 마이그레이션 (sessionStorage 호환 — 신규 필드 누락 보호)
   if (a.redevSubject === undefined) a.redevSubject = "";
   if (a.redevApprovalLawBasis === undefined) a.redevApprovalLawBasis = "";
-  if (a.redevOriginalAssetType === undefined) a.redevOriginalAssetType = "";
+  if (a.redevOriginalAssetType === undefined || a.redevOriginalAssetType === "") a.redevOriginalAssetType = "housing";
   if (a.redevSettlementDirection === undefined) a.redevSettlementDirection = "";
   if (a.redevApprovalDate === undefined) a.redevApprovalDate = "";
   if (a.redevSettlementSaleDate === undefined) a.redevSettlementSaleDate = "";

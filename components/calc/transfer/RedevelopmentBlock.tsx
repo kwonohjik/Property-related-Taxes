@@ -162,7 +162,7 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, wasRegul
         </div>
         <RadioCardGroup
           name={`redevOriginal-${asset.assetId}`}
-          value={asset.redevOriginalAssetType || "housing"}
+          value={asset.redevOriginalAssetType}
           onChange={(v) => onChange({ redevOriginalAssetType: v as "" | "land" | "housing" })}
           options={ORIGINAL_ASSET_OPTIONS.map((o) => ({
             ...o,
