@@ -23,6 +23,7 @@
  *   - postApprovalExpenses 미입력 시 0 처리.
  */
 
+import { safeMultiplyThenDivide } from "./tax-utils";
 import { computeRedevelopmentValuation } from "./redevelopment-valuation";
 import {
   computeSalePriceTotal,
@@ -215,6 +216,7 @@ export function computeRedevelopmentSplit(
   return computeRightReceive({
     preApprovalGain: preApprovalGainBeforeAdjust,
     oldAcquisitionPrice,
+    transferPrice,
     redevelopment,
     valuationMeta,
     estimatedLumpDeduction,
@@ -280,15 +282,19 @@ function computeAptReceive(args: BranchArgs): RedevelopmentSplitResult {
     args;
 
   // ─ 사례 46 분기: 청산금 수령분 단독 신고 (receiveOnlyMode) ─
-  // 법령 근거: 시행령 §166① 본문 + 제1항 제2호 가목 (§166②·§166①2호 나목 미적용)
+  // 법령 근거: 신축APT 완공 후 청산금 수령분만 별도 신고.
   // 인가전·인가후 양도차익 = 0 강제, settlement 분 단독 산정.
-  // splitReceive 호출 시 preApprovalGain=0 강제 → preApprovalGainAdjusted 자동 0.
+  // settlement.gain = 청산금 수령액 − 안분 취득가액 (APT 완공 후 청산금 비율 안분)
   if (redevelopment.receiveOnlyMode === true) {
-    const receive = splitReceive(
-      0,
+    const aptReceiveSettlementGain = calcAptReceiveSettlementGain(
       oldAcquisitionPrice,
       redevelopment.rightsValue,
       redevelopment.settlementAmount,
+    );
+    const aptReceiveApportionedAcq = safeMultiplyThenDivide(
+      oldAcquisitionPrice,
+      redevelopment.settlementAmount,
+      redevelopment.rightsValue,
     );
     return {
       preApproval: {
@@ -303,8 +309,8 @@ function computeAptReceive(args: BranchArgs): RedevelopmentSplitResult {
       },
       settlement: {
         apportionedTransfer: redevelopment.settlementAmount,
-        apportionedAcquisition: receive.apportionedAcquisition,
-        gain: receive.settlementGain,
+        apportionedAcquisition: aptReceiveApportionedAcq,
+        gain: aptReceiveSettlementGain,
       },
       salePriceTotal: Math.max(0, redevelopment.rightsValue - redevelopment.settlementAmount),
       valuationMeta,
@@ -318,23 +324,48 @@ function computeAptReceive(args: BranchArgs): RedevelopmentSplitResult {
     "receive",
   );
 
-  // §166①2호 준용: 청산금 수령분 + 인가전(축소)
-  const receive = splitReceive(
-    preApprovalGain,
+  // §166②2호 준용 (§166①2호 가목·나목):
+  // - 나목: 인가전 양도차익 축소 = preApprovalGain × (평가액 − 청산금) / 평가액
+  // - settlement: APT 완공 후 청산금 비율 안분 분 (§166②2호 준용 → APT 구조 유지)
+  //   = 청산금 수령액 − (취득가액 × 청산금 / 평가액)
+  const postApprovalExpenses = redevelopment.postApprovalExpenses ?? 0;
+
+  // 나목: 인가전 분 축소
+  const remainingRatio = redevelopment.rightsValue - redevelopment.settlementAmount;
+  const preApprovalGainAdjusted =
+    remainingRatio > 0
+      ? safeMultiplyThenDivide(preApprovalGain, remainingRatio, redevelopment.rightsValue)
+      : 0;
+
+  // 인가전 분 안분 취득가액 = 취득가액 × (평가액 − 청산금) / 평가액
+  const preApportionedAcquisition = safeMultiplyThenDivide(
+    oldAcquisitionPrice,
+    remainingRatio,
+    redevelopment.rightsValue,
+  );
+
+  // 인가후 기존주택분 (postApprovalExistingHouse):
+  // APT 완공 후 가목 전체: 양도가액 − 분양가(평가액-청산금) − 인가후 필요경비
+  const postApprovalGain = Math.max(0, transferPrice - salePriceTotal - postApprovalExpenses);
+
+  // settlement 분 (APT 청산금 비율 안분):
+  // = 청산금 수령액 − (취득가액 × 청산금 / 평가액)
+  const aptSettlementApportionedAcq = safeMultiplyThenDivide(
+    oldAcquisitionPrice,
+    redevelopment.settlementAmount,
+    redevelopment.rightsValue,
+  );
+  const aptSettlementGain = calcAptReceiveSettlementGain(
     oldAcquisitionPrice,
     redevelopment.rightsValue,
     redevelopment.settlementAmount,
   );
 
-  // 인가후 기존주택분: APT 완공 후 양도가액 − 분양가(평가액-청산금) − 인가후 필요경비
-  const postApprovalExpenses = redevelopment.postApprovalExpenses ?? 0;
-  const postApprovalGain = Math.max(0, transferPrice - salePriceTotal - postApprovalExpenses);
-
   return {
     preApproval: {
       apportionedTransfer: salePriceTotal, // 평가액 − 청산금
-      apportionedAcquisition: oldAcquisitionPrice - receive.apportionedAcquisition,
-      gain: receive.preApprovalGainAdjusted,
+      apportionedAcquisition: preApportionedAcquisition,
+      gain: preApprovalGainAdjusted,
     },
     postApprovalExistingHouse: {
       apportionedTransfer: transferPrice,
@@ -343,8 +374,8 @@ function computeAptReceive(args: BranchArgs): RedevelopmentSplitResult {
     },
     settlement: {
       apportionedTransfer: redevelopment.settlementAmount,
-      apportionedAcquisition: receive.apportionedAcquisition,
-      gain: receive.settlementGain,
+      apportionedAcquisition: aptSettlementApportionedAcq,
+      gain: aptSettlementGain,
     },
     salePriceTotal,
     valuationMeta,
@@ -388,15 +419,18 @@ function computeRightPay(args: BranchArgs): RedevelopmentSplitResult {
 
 /** 입주권 + 청산금 수령 (§166①2호) */
 function computeRightReceive(
-  args: Omit<BranchArgs, "transferPrice">,
+  args: BranchArgs,
 ): RedevelopmentSplitResult {
-  const { preApprovalGain, oldAcquisitionPrice, redevelopment, valuationMeta } = args;
+  const { preApprovalGain, oldAcquisitionPrice, transferPrice, redevelopment, valuationMeta } = args;
 
+  const postApprovalExpenses = redevelopment.postApprovalExpenses ?? 0;
   const receive = splitReceive(
     preApprovalGain,
     oldAcquisitionPrice,
     redevelopment.rightsValue,
     redevelopment.settlementAmount,
+    transferPrice,
+    postApprovalExpenses,
   );
 
   const salePriceTotal = computeSalePriceTotal(
@@ -407,18 +441,22 @@ function computeRightReceive(
 
   return {
     preApproval: {
+      // 의제양도가액 = 평가액 − 지급받은 청산금 (§166①2호 나목의 분모 기준 양도가)
       apportionedTransfer: salePriceTotal,
-      apportionedAcquisition: oldAcquisitionPrice - receive.apportionedAcquisition,
+      // 인가전 분 안분 취득가액 = 종전 취득가액 × (평가액 − 청산금) / 평가액
+      apportionedAcquisition: receive.apportionedAcquisition,
       gain: receive.preApprovalGainAdjusted,
     },
     postApprovalExistingHouse: {
+      // §95② 별표2 [비고] 1호 — 입주권은 §94①2호의2 자산, LTHD 미적용. 인가후 기존주택분 0.
       apportionedTransfer: 0,
       apportionedAcquisition: 0,
       gain: 0,
     },
     settlement: {
-      apportionedTransfer: redevelopment.settlementAmount,
-      apportionedAcquisition: receive.apportionedAcquisition,
+      // §166①2호 가목: 인가후 분 양도가액 = 실제 양도가액 / 취득가액 = 평가액 − 청산금
+      apportionedTransfer: transferPrice,
+      apportionedAcquisition: salePriceTotal,
       gain: receive.settlementGain,
     },
     salePriceTotal,
@@ -443,4 +481,22 @@ function safeRatio(value: number, numerator: number, denominator: number): numbe
     );
   }
   return Math.floor(product / denominator);
+}
+
+/**
+ * APT 청산금 수령 settlement 분 양도차익.
+ * §166②2호 준용 구조에서 APT 완공 후 청산금 수령 비율 안분분:
+ *   = 청산금 수령액 − (취득가액 × 청산금 / 평가액)
+ *
+ * 입주권 receive (§166①2호 가목: 양도가 − (평가액-청산금) − 비용)와 별개.
+ * 사례 46 (receiveOnlyMode) / 사례 47 (동시신고) 공용.
+ */
+function calcAptReceiveSettlementGain(
+  oldAcquisitionPrice: number,
+  rightsValue: number,
+  settlementAmount: number,
+): number {
+  if (rightsValue <= 0 || settlementAmount <= 0) return 0;
+  const apportionedAcq = safeMultiplyThenDivide(oldAcquisitionPrice, settlementAmount, rightsValue);
+  return Math.max(0, settlementAmount - apportionedAcq);
 }

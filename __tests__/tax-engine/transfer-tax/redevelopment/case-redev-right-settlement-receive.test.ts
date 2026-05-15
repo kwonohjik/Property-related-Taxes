@@ -1,20 +1,19 @@
 /**
  * R-5 anchor — 입주권(right) + 청산금 수령 (§166①2호)
  *
- * 법령 근거:
- *   - 시행령 §166①2호 가목 — 청산금 수령분 양도차익
- *       = 청산금 수령액 − (취득가액 × 청산금수령액 / 평가액)
- *   - 시행령 §166①2호 나목 — 인가전 양도차익(입주권 분)
- *       = (권리가액 − 취득가액) × (평가액 − 청산금수령액) / 평가액
- *       ※ 입주권 부분 양도차익은 나목 산식으로 축소됨
- *   - 시행령 §166⑤1호 — 인가전 LTHD 보유기간 = 취득일 ~ 관리처분 인가일
+ * ★ 2026-05-15 법령 원문 재확인 후 가목 산식 정정 (commit: 엔진 §166①2호 가목 산식 정정):
+ *   법제처 소득세법 시행령 §166①2호 가목 원문:
+ *     "[양도가액 − (기존건물과 그 부수토지의 평가액 − 지급받은 청산금) − 필요경비]"
+ *   이전 구현: settlement.gain = 청산금 수령액 − 안분취득가액  (법령 불일치 — 폐기)
+ *   정정 후:  settlement.gain = 양도가액 − (평가액 − 수령청산금) − 인가후 필요경비  (법령 원문 일치)
+ *
+ * 법령 근거 (law.go.kr 확인 2026-05-15):
+ *   - §166①2호 가목 — 인가후 분 양도차익:
+ *       양도가액 − (평가액 − 지급받은 청산금) − 인가후 필요경비
+ *   - §166①2호 나목 — 인가전 양도차익(나목 축소):
+ *       [(평가액 − 취득가액 − 필요경비)] × [(평가액 − 지급받은 청산금) ÷ 평가액]
+ *   - §166⑤1호 — 인가전 LTHD 보유기간 = 취득일 ~ 관리처분 인가일
  *   - §95② 단서 — 입주권 양도 시 인가전 분만 LTHD
- *   - §95② settlement 분 zeroBranch 사유:
- *       §94①2호 (조합원입주권 = 부동산을 취득할 수 있는 권리) + §166①2호 가목 산식 구조상
- *       청산금 분은 권리 이전에 따른 정산금으로, §95② 본문 "토지 또는 건물" 범위 외.
- *       집행기준상 입주권 양도 시 LTHD는 인가전 분(§166⑤1호)만 적용하는 것이 지배적 해석.
- *       → 현행 엔진: zeroBranch (보수적, 납세자 과세 안전 적용) — 별도 법령해석 확보 전 유지.
- *   - §55 (2024년 누진세율표 — 2023년과 동일 세율 구조)
  *
  * 입력:
  *   - propertyType: "right_to_move_in", redevSubject: "right"
@@ -22,22 +21,20 @@
  *   - 관리처분 인가일: 2020-08-20
  *   - 취득가액: 200,000,000
  *   - 권리가액: 500,000,000, 청산금 수령: 80,000,000
- *   - 양도가액(입주권): 600,000,000 (right+receive 엔진은 transferPrice 미사용)
- *   - settlementSaleDate: 2024-04-10
+ *   - 양도가액(입주권): 600,000,000
  *   - 인가전·인가후 필요경비: 0
  *   - 1세대1주택 미충족 (표1 적용)
- *   - 원조합원
  *
- * 계산 근거:
+ * 계산 근거 (정정 후 §166①2호 법령 원문 기준):
  *   [인가전 양도차익 raw] = 권리가 500M − 취득가 200M = 300,000,000
+ *   salePriceTotal = 평가액 − 청산금 = 500M − 80M = 420,000,000
  *
- *   [§166①2호 가목: 청산금 수령분 양도차익]
- *   안분 취득가 = floor(200M × 80M / 500M) = floor(16,000,000,000 / 500M) = 32,000,000
- *   settlement gain = 80M − 32M = 48,000,000
+ *   [§166①2호 가목: 인가후 분 양도차익]
+ *   settlement.gain = 양도가액 − (평가액 − 청산금) − 인가후 필요경비
+ *                   = 600M − 420M − 0 = 180,000,000
  *
  *   [§166①2호 나목: 인가전 분 축소]
- *   preApprovalGainAdjusted = floor(300M × (500M − 80M) / 500M)
- *                           = floor(300M × 420M / 500M)
+ *   preApprovalGainAdjusted = floor(300M × 420M / 500M)
  *                           = floor(126,000,000,000 / 500M)
  *                           = 252,000,000
  *
@@ -48,13 +45,13 @@
  *   settlement.lthd = 0 (zeroBranch — §94①2호 + 집행기준)
  *
  *   [합계]
- *   total_gain = 252M + 48M = 300,000,000
- *   양도소득금액 = 300M − 50.4M = 249,600,000
- *   과세표준 = 249.6M − 2.5M = 247,100,000
- *   2024년 §55: 150M~300M 구간 → 38% − 누진공제 19,940,000
- *   산출세액 = floor(247,100,000 × 0.38) − 19,940,000 = 93,898,000 − 19,940,000 = 73,958,000
- *   지방소득세 = floor(73,958,000 × 0.1) = 7,395,800
- *   총납부세액 = 81,353,800
+ *   total.gain = 252M + 180M = 432,000,000
+ *   taxableIncome = 432M − 50.4M = 381,600,000
+ *   과세표준 = 381.6M − 2.5M = 379,100,000
+ *   2024년 §55: 3억~5억 구간 → 40% − 누진공제 25,940,000
+ *   산출세액 = floor(379.1M × 0.40) − 25,940,000 = 151,640,000 − 25,940,000 = 125,700,000
+ *   지방소득세 = floor(125,700,000 × 0.1) = 12,570,000
+ *   총납부세액 = 138,270,000
  */
 
 import { describe, it, expect } from "vitest";
@@ -109,10 +106,10 @@ function baseInput(overrides?: Partial<TransferTaxInput>): TransferTaxInput {
 describe("R-5 — 입주권(right) + 청산금 수령 (§166①2호 가목·나목) — 분기별 정합 검증", () => {
   const result = calculateTransferTax(baseInput(), mockRates);
 
-  it("[R-5-1] 청산금 수령분 양도차익 (가목) = 48,000,000", () => {
-    // §166①2호 가목: 청산금수령액 − (취득가 × 청산금 / 권리가)
-    // = 80M − floor(200M × 80M / 500M) = 80M − 32M = 48,000,000
-    expect(result.redevelopmentDetail?.settlement.gain).toBe(48_000_000);
+  it("[R-5-1] 인가후 분 양도차익 (가목) = 180,000,000", () => {
+    // ★ §166①2호 가목 법령 원문: 양도가액 − (평가액 − 지급받은 청산금) − 인가후 필요경비
+    // = 600M − (500M − 80M) − 0 = 600M − 420M = 180,000,000
+    expect(result.redevelopmentDetail?.settlement.gain).toBe(180_000_000);
   });
 
   it("[R-5-2] 인가전 분 양도차익 (나목 축소 후) = 252,000,000", () => {
@@ -135,19 +132,19 @@ describe("R-5 — 입주권(right) + 청산금 수령 (§166①2호 가목·나�
     expect(result.redevelopmentDetail?.settlement.lthd).toBe(0);
   });
 
-  it("[R-5-5a] 양도소득금액 = 249,600,000 ((252M − 50.4M) + 48M)", () => {
-    // total_gain = 252M + 48M = 300M
-    // total_lthd = 50.4M + 0 = 50.4M
-    // 양도소득금액 = 300M − 50.4M = 249,600,000
-    expect(result.redevelopmentDetail?.total.taxableIncome).toBe(249_600_000);
+  it("[R-5-5a] 양도소득금액 = 381,600,000 ((252M − 50.4M) + 180M)", () => {
+    // total.gain = 252M + 180M = 432M
+    // total.lthd = 50.4M + 0 = 50.4M
+    // 양도소득금액 = 432M − 50.4M = 381,600,000
+    expect(result.redevelopmentDetail?.total.taxableIncome).toBe(381_600_000);
   });
 
-  it("[R-5-5b] ★ 산출세액 = 73,958,000 (2024년 §55 누진세율표 직접 적용)", () => {
-    // 과세표준 = 249.6M − 2.5M = 247,100,000
-    // 2024년 §55: 150M~300M 구간 → 38% − 누진공제 19,940,000
-    // floor(247,100,000 × 0.38) − 19,940,000 = 93,898,000 − 19,940,000 = 73,958,000
+  it("[R-5-5b] ★ 산출세액 = 125,700,000 (2024년 §55 누진세율표 직접 적용)", () => {
+    // 과세표준 = 381.6M − 2.5M = 379,100,000
+    // 2024년 §55: 3억~5억 구간 → 40% − 누진공제 25,940,000
+    // floor(379,100,000 × 0.40) − 25,940,000 = 151,640,000 − 25,940,000 = 125,700,000
     // (외부 PDF 산출값 추종 금지 — memory `transfer_year_tax_rate`)
-    expect(result.calculatedTax).toBe(73_958_000);
+    expect(result.calculatedTax).toBe(125_700_000);
   });
 });
 
@@ -169,7 +166,7 @@ describe("R-5-6 — settlementSaleDate 동작 확인 (right+receive 분기)", ()
     const result = calculateTransferTax(noSaleDateInput, mockRates);
     // settlement.lthd = 0 → settlementSaleDate 없어도 동일 결과
     expect(result.redevelopmentDetail?.settlement.lthd).toBe(0);
-    expect(result.calculatedTax).toBe(73_958_000);
+    expect(result.calculatedTax).toBe(125_700_000);
   });
 });
 
@@ -180,12 +177,13 @@ describe("R-5-6 — settlementSaleDate 동작 확인 (right+receive 분기)", ()
 describe("R-5 splitReceive 정합 — 안분 취득가 검증", () => {
   const result = calculateTransferTax(baseInput(), mockRates);
 
-  it("[R-5-acq] settlement.apportionedAcquisition = 32,000,000", () => {
-    // floor(200M × 80M / 500M) = floor(32,000,000) = 32,000,000
-    expect(result.redevelopmentDetail?.settlement.apportionedAcquisition).toBe(32_000_000);
+  it("[R-5-acq] settlement.apportionedAcquisition = 420,000,000 (salePriceTotal = 평가액 − 청산금)", () => {
+    // ★ 정정: 가목 구조에서 인가후 분 취득가액 = 평가액 − 청산금 (= 500M − 80M = 420M)
+    // 이전 값 32M은 잘못된 산식("수령액 − 안분취득가")에서 도출된 값
+    expect(result.redevelopmentDetail?.settlement.apportionedAcquisition).toBe(420_000_000);
   });
 
-  it("[R-5-total] total gain = 300,000,000 (preApproval 252M + settlement 48M)", () => {
-    expect(result.redevelopmentDetail?.total.gain).toBe(300_000_000);
+  it("[R-5-total] total gain = 432,000,000 (preApproval 252M + settlement 180M)", () => {
+    expect(result.redevelopmentDetail?.total.gain).toBe(432_000_000);
   });
 });

@@ -4,24 +4,29 @@
  * 36-A2-i: 실가 취득가 + receive
  * 36-A2-ii: 환산취득가 + receive
  *
- * 법령 근거:
- *   - 시행령 §166①2호 가목: 청산금 수령분 양도차익 = settlementAmount − 안분취득가
- *   - 시행령 §166①2호 나목: 인가전 양도차익 축소
- *     (preApprovalGain × (rightsValue − settlementAmount) / rightsValue)
- *   - 소득세법 §94①2호 + 시행령 §166①2호 가목 구조: 청산금 분 LTHD = 0
- *   - 소득세법 시행령 §166⑤1호: 인가전 보유기간 기산
+ * ★ 2026-05-15 법령 원문 재확인 후 가목 산식 정정:
+ *   §166①2호 가목 원문: "[양도가액 − (평가액 − 지급받은 청산금) − 필요경비]"
+ *   이전 구현: settlement.gain = settlementAmount − 안분취득가  (법령 불일치 — 폐기)
+ *   정정 후:  settlement.gain = 양도가액 − (평가액 − 청산금) − 인가후 필요경비
+ *
+ * 법령 근거 (law.go.kr 확인 2026-05-15):
+ *   - §166①2호 가목: 인가후 분 양도차익 = 양도가액 − (평가액 − 지급받은 청산금) − 필요경비
+ *   - §166①2호 나목: 인가전 양도차익 축소
+ *     (preApprovalGain × (평가액 − 청산금) / 평가액)
+ *   - §94①2호 + §166①2호 가목 구조: 인가후 분 LTHD = 0
+ *   - §166⑤1호: 인가전 보유기간 기산
  *
  * 가정값 (CORE-36 기반 + direction=receive):
  *   rightsValue = 300,000,000 / oldAcq = 100,000,000
  *   settlementAmount = 90,000,000 / transferPrice = 520,000,000
+ *   salePriceTotal = 300M − 90M = 210,000,000
  *
- * 산식 (`redevelopment-settlement.ts:136` splitReceive):
- *   salePriceTotal = rightsValue − settlementAmount = 210,000,000
- *   안분취득가 = floor(100M × 90M / 300M) = 30,000,000
- *   청산금 분 양도차익 = max(0, 90M − 30M) = 60,000,000
- *   인가전 축소 차익 = floor(200M × 210M / 300M) = 140,000,000
- *   인가전 LTHD = 140M × 30% = 42,000,000 (16년 표1 30% 캡)
- *   청산금 분 LTHD = 0 (§94①2호 + §166①2호 가목 구조)
+ * 정정 후 산식:
+ *   가목: settlement.gain = 520M − 210M − 0 = 310,000,000
+ *   나목: preApprovalGainAdjusted = floor(200M × 210M / 300M) = 140,000,000
+ *   인가전 LTHD = 140M × 30% = 42,000,000
+ *   인가후 분 LTHD = 0
+ *   양도소득금액 = (140M − 42M) + 310M = 408,000,000
  */
 
 import { describe, it, expect } from "vitest";
@@ -57,7 +62,7 @@ describe("36-A2-i — 입주권 양도(receive) 실가 일반과세", () => {
 
   const input: TransferTaxInput = baseTransferInput({
     propertyType: "right_to_move_in",
-    transferPrice: 520_000_000, // right+receive 시 내부적으로 salePriceTotal 사용 (transferPrice 무관)
+    transferPrice: 520_000_000, // §166①2호 가목에서 사용 (양도가액 − (평가액-청산금) − 비용)
     transferDate: new Date("2023-03-02"),
     acquisitionDate: new Date("2002-04-09"),
     acquisitionPrice: 100_000_000,
@@ -72,10 +77,11 @@ describe("36-A2-i — 입주권 양도(receive) 실가 일반과세", () => {
 
   const result = calculateTransferTax(input, mockRates);
 
-  it("[36-A2-i-01] 청산금 분 양도차익 = 60,000,000 (90M − 30M — §166①2호 가목)", () => {
-    // 안분취득가 = floor(100M × 90M / 300M) = 30,000,000
-    // 청산금 분 차익 = max(0, 90M − 30M) = 60,000,000
-    expect(result.redevelopmentDetail?.settlement.gain).toBe(60_000_000);
+  it("[36-A2-i-01] 인가후 분 양도차익 = 310,000,000 (§166①2호 가목)", () => {
+    // ★ 정정: §166①2호 가목 법령 원문 적용
+    // settlement.gain = 양도가액 − (평가액 − 청산금) − 인가후 필요경비
+    //                 = 520M − (300M − 90M) − 0 = 520M − 210M = 310,000,000
+    expect(result.redevelopmentDetail?.settlement.gain).toBe(310_000_000);
   });
 
   it("[36-A2-i-02] 인가전 축소 차익 = 140,000,000 (floor(200M × 210M / 300M) — §166①2호 나목)", () => {
@@ -96,9 +102,9 @@ describe("36-A2-i — 입주권 양도(receive) 실가 일반과세", () => {
     expect(result.redevelopmentDetail?.postApprovalExistingHouse.gain).toBe(0);
   });
 
-  it("[36-A2-i-06] 양도소득금액 = 158,000,000 ((140M−42M) + 60M)", () => {
-    // (140M − 42M) + (60M − 0) = 98M + 60M = 158M
-    expect(result.redevelopmentDetail?.total.taxableIncome).toBe(158_000_000);
+  it("[36-A2-i-06] 양도소득금액 = 408,000,000 ((140M−42M) + 310M)", () => {
+    // ★ 정정: (140M − 42M) + (310M − 0) = 98M + 310M = 408,000,000
+    expect(result.redevelopmentDetail?.total.taxableIncome).toBe(408_000_000);
   });
 });
 
@@ -109,13 +115,13 @@ describe("36-A2-i — 입주권 양도(receive) 실가 일반과세", () => {
 describe("36-A2-ii — 입주권 양도(receive) 환산취득가", () => {
   /**
    * 환산 모드: D=400M, P_A=120M → 환산취득가=90M, 개산공제=3.6M
-   * splitReceive에 전달하는 oldAcquisitionPrice = 환산취득가 90M
-   * preApprovalGain = rightsValue − 환산취득가 − 개산공제 = 300M − 90M − 3.6M = 206,400,000
+   * preApprovalGain = 300M − 90M − 3.6M = 206,400,000
    *
-   * 안분취득가 = floor(90M × 90M / 300M) = 27,000,000
-   * 청산금 분 차익 = max(0, 90M − 27M) = 63,000,000
-   * 인가전 축소 차익 = floor(206,400,000 × 210M / 300M) = 144,480,000
-   * 인가전 LTHD = floor(144,480,000 × 30%) = 43,344,000
+   * ★ 정정 후 산식 (§166①2호 가목 법령 원문):
+   *   salePriceTotal = 300M − 90M = 210,000,000
+   *   가목: settlement.gain = 520M − 210M − 0 = 310,000,000
+   *   나목: preApprovalGainAdjusted = floor(206.4M × 210M / 300M) = 144,480,000
+   *   인가전 LTHD = floor(144,480,000 × 30%) = 43,344,000
    */
   const redevInfoEstimatedReceive: RedevelopmentInfo = {
     subject: "right",
@@ -158,10 +164,11 @@ describe("36-A2-ii — 입주권 양도(receive) 환산취득가", () => {
     expect(result.redevelopmentDetail?.valuationMeta?.numerator).toBe(120_000_000);
   });
 
-  it("[36-A2-ii-02] 청산금 분 양도차익 = 63,000,000 (90M − floor(90M×90M/300M))", () => {
-    // 안분취득가 = floor(90M × 90M / 300M) = 27,000,000
-    // 청산금 분 차익 = 90M − 27M = 63,000,000
-    expect(result.redevelopmentDetail?.settlement.gain).toBe(63_000_000);
+  it("[36-A2-ii-02] 인가후 분 양도차익 = 310,000,000 (§166①2호 가목)", () => {
+    // ★ 정정: settlement.gain = 양도가액 − (평가액 − 청산금) − 인가후 필요경비
+    //                          = 520M − (300M − 90M) − 0 = 310,000,000
+    // (환산 모드에서도 양도가액 사용 — 가목 산식은 취득방법 무관)
+    expect(result.redevelopmentDetail?.settlement.gain).toBe(310_000_000);
   });
 
   it("[36-A2-ii-03] 인가전 축소 차익 = 144,480,000 (floor(206.4M × 210M / 300M))", () => {

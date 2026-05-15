@@ -107,37 +107,52 @@ export function splitAptPay(
 /** §166①2호 안분 결과 (청산금 수령) */
 export interface ReceiveSplit {
   /**
-   * 청산금 수령분 양도차익 (= 청산금 수령액 − 안분 취득가액).
-   * 안분 취득가액 = 종전 취득가액 × (settlementAmount / rightsValue)
+   * 인가후 양도차익 — §166①2호 가목:
+   *   양도가액 − (평가액 − 지급받은 청산금) − 인가후 필요경비
+   *
+   * law.go.kr §166①2호가목 원문 (2026-05-15 확인):
+   *   "[양도가액-(기존건물과 그 부수토지의 평가액-지급받은 청산금)-법 제97조제1항제2호 및 제3호에 따른 필요경비]"
    */
   settlementGain: number;
   /**
    * 인가전양도차익 안분 (수령 비율 차감) — §166①2호 나목:
-   *   인가전양도차익 × (평가액 − 지급받은 청산금) / 평가액
+   *   [(인가전양도차익)] × [(평가액 − 지급받은 청산금) ÷ 평가액]
+   *
+   * law.go.kr §166①2호나목 원문 (2026-05-15 확인):
+   *   "[(기존건물과 그 부수토지의 평가액-기존건물과 그 부수토지의 취득가액-필요경비)]
+   *    ×[(평가액-지급받은 청산금)÷평가액]"
    */
   preApprovalGainAdjusted: number;
-  /** 안분 종전 취득가액 (settlement.apportionedAcquisition 매핑) */
+  /**
+   * 인가전 분 안분 취득가액 = 종전 취득가액 × (평가액 − 청산금) / 평가액.
+   * UI 결과 카드 표시용. settlementGain 계산에는 미사용 (가목 산식에서 직접 산정).
+   */
   apportionedAcquisition: number;
 }
 
 /**
  * §166①2호 — 청산금 수령 안분.
  *
- * 청산금 수령분 양도차익은 청산금 수령액에서 안분 취득가액을 차감.
- * 안분 종전 취득가액 = 종전 취득가액 × (청산금 수령액 / 평가액)
+ * ★ 2026-05-15 법령 원문 재확인 후 가목 산식 정정:
+ *   - 이전 구현: settlementGain = 청산금 수령액 − 안분취득가액  (잘못됨)
+ *   - 정정 후:  settlementGain = 양도가액 − (평가액 − 수령청산금) − 인가후 필요경비  (가목)
  *
- * 인가전 양도차익은 (평가액 − 청산금) / 평가액 비율로 축소됨.
+ * 사례 38 검증: 양도가 320M, 평가액 300M, 수령 50M → 320M − 250M = 70M (PDF 일치)
  *
- * @param preApprovalGain 인가전 양도차익 (수령 비율 적용 전)
- * @param oldAcquisitionPrice 종전 부동산 취득가액 (실가 또는 환산)
+ * @param preApprovalGain 인가전 양도차익 (나목 축소 전)
+ * @param oldAcquisitionPrice 종전 부동산 취득가액 (실가 또는 환산) — 인가전 분 apportionedAcquisition 표시용
  * @param rightsValue 권리가액 (= 평가액)
  * @param settlementAmount 수령 청산금
+ * @param transferPrice 실제 양도가액 (가목 계산에 필요)
+ * @param postApprovalExpenses 인가후 필요경비 (가목 차감 항목, 기본 0)
  */
 export function splitReceive(
   preApprovalGain: number,
   oldAcquisitionPrice: number,
   rightsValue: number,
   settlementAmount: number,
+  transferPrice: number,
+  postApprovalExpenses: number = 0,
 ): ReceiveSplit {
   if (rightsValue <= 0 || settlementAmount <= 0) {
     return {
@@ -147,22 +162,24 @@ export function splitReceive(
     };
   }
 
-  // 안분 취득가액 = 종전 취득가액 × (settlementAmount / rightsValue)
-  const apportionedAcquisition = safeMultiplyThenDivide(
-    oldAcquisitionPrice,
-    settlementAmount,
-    rightsValue,
-  );
+  // ★ §166①2호 가목: 인가후 양도차익 = 양도가액 − (평가액 − 지급받은 청산금) − 인가후 필요경비
+  const salePriceTotal = Math.max(0, rightsValue - settlementAmount);
+  const settlementGain = Math.max(0, transferPrice - salePriceTotal - postApprovalExpenses);
 
-  // 청산금 수령분 양도차익 = 청산금 수령액 − 안분 취득가액
-  const settlementGain = Math.max(0, settlementAmount - apportionedAcquisition);
-
-  // 인가전 양도차익 축소: × (rightsValue − settlementAmount) / rightsValue
+  // §166①2호 나목: 인가전 양도차익 × (평가액 − 청산금) / 평가액
   const remainingRatio = rightsValue - settlementAmount;
   const preApprovalGainAdjusted =
     remainingRatio > 0
       ? safeMultiplyThenDivide(preApprovalGain, remainingRatio, rightsValue)
       : 0;
+
+  // 인가전 분 안분 취득가액: 표시 전용 — 가목 계산에는 불필요
+  // = 종전 취득가액 × (평가액 − 청산금) / 평가액
+  const apportionedAcquisition = safeMultiplyThenDivide(
+    oldAcquisitionPrice,
+    remainingRatio,
+    rightsValue,
+  );
 
   return {
     settlementGain,
