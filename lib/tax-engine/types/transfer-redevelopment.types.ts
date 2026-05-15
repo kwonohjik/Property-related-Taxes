@@ -117,12 +117,37 @@ export interface RedevelopmentInfo {
    */
   originalAssetType?: "land" | "housing";
 
+  // ─ 주택 출자 환산 케이스 (사례 39 — originalAssetType="housing" + subject="right" + useEstimatedAcquisition=true 시 필수) ─
+  //
+  // 산식 (§164⑤ PHD 2-point 비율 환산):
+  //   환산취득가 = floor(권리가액 × housingStdPriceAtAcq / housingStdPriceAtApproval)
+  //   개산공제   = floor(housingStdPriceAtAcq × 3%)  (§163⑥)
+  //
+  // ※ 토지 출자 환산(landStdPriceAt*)과 별개 필드.
+  // ※ 완공APT 환산(managementDisposalHousingPrice/acquisitionHousingPrice — §166③ 공시주택가격 비율)과도 별개.
+
+  /**
+   * §164⑤ PHD 분자 — 취득당시 개별주택가격 (원, 총액).
+   * originalAssetType="housing" + subject="right" + useEstimatedAcquisition=true 시 필수.
+   * 취득일 직전 최근 공시 기준 (예: 취득일 2008-04-09 → 2007-01-01 공시값).
+   */
+  housingStdPriceAtAcq?: number;
+
+  /**
+   * §164⑤ PHD 분모 — 인가당시 부근 개별주택가격 (원, 총액).
+   * originalAssetType="housing" + subject="right" + useEstimatedAcquisition=true 시 필수.
+   * 관리처분인가일 직전 최근 공시 기준 (예: 인가일 2013-10-23 → 2013-01-01 공시값).
+   *
+   * 법령 의제: §164⑤ "양도 당시 기준시가" = 재개발 맥락에서 의제양도일(인가일) 기준시가.
+   */
+  housingStdPriceAtApproval?: number;
+
   // ─ 토지 출자 환산 케이스 (originalAssetType="land" + useEstimatedAcquisition=true 시 필수) ─
   //
   // 산식 (시행령 §166③ 토지분):
   //   환산취득가 = floor(권리가액 × landStdPriceAtAcq / landStdPriceAtApproval)
   //
-  // 주택 출자 환산(managementDisposalHousingPrice/acquisitionHousingPrice)과 별개 필드.
+  // 주택 출자 환산(housingStdPriceAt*)과 별개 필드.
 
   /**
    * §166③ 분자 — 취득당시 토지 기준시가 (원, 총액).
@@ -642,6 +667,35 @@ export interface RedevelopmentResult {
     priorPeriod?: { start: string; end: string };
     /** 신축주택 거주기간(입주일·퇴거일, YYYY-MM-DD) — 결과 카드 산정 근거 표시용. UI 자동산정 입력 시 부착 */
     newPeriod?: { start: string; end: string };
+  };
+
+  /**
+   * 사례 39 — 주택 출자 입주권(right+receive) 환산취득가 echo 필드 (UI 결과 카드 표시용).
+   *
+   * originalAssetType="housing" + subject="right" + settlementDirection="receive" +
+   * useEstimatedAcquisition=true 분기에서만 부착.
+   * 그 외(토지 출자·실가·승계조합원) 분기에서는 undefined.
+   *
+   * 법령 근거:
+   *   §164⑤  PHD 환산취득가, §163⑥ 개산공제, §166⑤1호 LTHD 보유기간
+   */
+  housingContribDetail?: {
+    /** §164⑤ 환산취득가 (원) = floor(권리가액 × 취득당시PHD / 인가당시PHD) */
+    convertedAcquisition: number;
+    /** §163⑥ 개산공제 (원) = floor(취득당시PHD × 3%) */
+    estimatedDeduction: number;
+    /** 취득당시 개별주택가격 (원, §164⑤ 분자) */
+    housingStdPriceAtAcq: number;
+    /** 인가당시 부근 개별주택가격 (원, §164⑤ 분모) */
+    housingStdPriceAtApproval: number;
+    /** 인가전 분 LTHD (원) */
+    preApprovalLTHD: number;
+    /** 인가후 분 LTHD = 0 (§95② 별표2 [비고] 1호) */
+    postApprovalLTHD: number;
+    /** LTHD 보유기간 시작일 = 취득일 (§166⑤1호) */
+    lthdHoldingStartDate: Date;
+    /** LTHD 보유기간 종료일 = 인가일 (§166⑤1호) */
+    lthdHoldingEndDate: Date;
   };
 
   /**
