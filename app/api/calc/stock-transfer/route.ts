@@ -33,6 +33,11 @@ const STOCK_DATE_FIELDS = [
   "decedentAcquisitionDate",
   "donorAcquisitionDate",
   "preMergerAcquisitionDate",
+  // 분할 매수·분할 양도 (Plan v2.2) — coerceDates dot-notation 배열 표기
+  "acquisitionLots[].acquisitionDate",
+  "acquisitionLots[].decedentAcquisitionDate",
+  "acquisitionLots[].preMergerAcquisitionDate",
+  "transferLots[].transferDate",
 ] as const;
 
 export async function POST(req: NextRequest) {

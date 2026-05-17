@@ -29,6 +29,33 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
 
 // ============================================================
+// 분할 매수·분할 양도 lot 타입 (Plan v2.2)
+// ============================================================
+
+export interface AcquisitionLotForm {
+  id: string;                                  // UUID (UI key, specificMatchings 참조)
+  acquisitionDate: string;                     // "YYYY-MM-DD" (gift는 수증일)
+  shareCount: string;                          // 주
+  perShareAcquisitionPrice: string;            // 원 (상속/증여 lot도 §163⑨ 평가가액 직접 입력)
+  acquisitionCause: "purchase" | "inheritance" | "gift" | "merger_split";
+  decedentAcquisitionDate?: string;            // 상속 시 피상속인 취득일 (§104②1)
+  preMergerAcquisitionDate?: string;           // 합병·분할 시 종전 주식 취득일 (§104②3)
+}
+
+export interface TransferLotForm {
+  id: string;
+  transferDate: string;
+  shareCount: string;
+  perShareTransferPrice: string;
+}
+
+export interface SpecificMatchingForm {
+  transferLotId: string;
+  acquisitionLotId: string;
+  shareCount: string;
+}
+
+// ============================================================
 // 폼 상태 타입 (① 동기화 지점)
 // 모든 통화 필드는 문자열 (CurrencyInput 호환)
 // 모든 날짜 필드는 문자열 "YYYY-MM-DD" (DateInput 호환)
@@ -41,12 +68,19 @@ export interface StockTransferFormData {
 
   // ── 대주주 판정 (시행령 §157) 2-step ──
   isMajorShareholder: boolean;
-  selfShareRatio: string;       // 소수점 (예: "0.05" = 5%)
+  selfShareRatio: string;       // % 단위 (예: "3" = 3%) — MajorShareholderBlock에서 * 0.01 정규화
   selfMarketCap: string;        // 원 정수 문자열
   isLargestShareholderGroup: boolean;
-  combinedShareRatio: string;   // 소수점
+  combinedShareRatio: string;   // % 단위 (예: "3" = 3%)
   combinedMarketCap: string;    // 원 정수 문자열
   priorYearEndDate: string;     // "YYYY-MM-DD"
+
+  // ── 지분율 입력 모드 (UI 보조 — 엔진 미전달) ──
+  // direct: % 직접 입력 / shares: 보유 주식수 ÷ totalIssuedShares × 100 자동 산출
+  selfShareRatioMode: "direct" | "shares";
+  selfOwnedShares: string;          // 본인 단독 보유 주식수 (분자, shares 모드)
+  combinedShareRatioMode: "direct" | "shares";
+  combinedOwnedShares: string;      // 본인+특수관계인 합산 보유 주식수 (분자, shares 모드)
 
   // ── §94①4 기타자산 ──
   isQualifyingBlockShareholder: boolean;
@@ -121,6 +155,13 @@ export interface StockTransferFormData {
 
   // ── §103② 기본공제 그룹 ──
   realEstateGroupBasicDeductionUsed: string;  // 3중 패턴 default: "0"
+
+  // ── 분할 매수·분할 양도 (Plan v2.2) ──
+  lotsMode: "single" | "split";                          // 3중 패턴 default: "single"
+  costAllocationMethod: "specific" | "fifo" | "moving_avg"; // 3중 패턴 default: "fifo"
+  acquisitionLots: AcquisitionLotForm[];                 // 3중 패턴 default: []
+  transferLots: TransferLotForm[];                       // 3중 패턴 default: []
+  specificMatchings: SpecificMatchingForm[];             // 3중 패턴 default: []
 }
 
 // ============================================================
@@ -138,6 +179,11 @@ export function createInitialStockFormData(): StockTransferFormData {
     combinedShareRatio: "",
     combinedMarketCap: "",
     priorYearEndDate: "",
+
+    selfShareRatioMode: "direct",        // 3중 패턴 default
+    selfOwnedShares: "",
+    combinedShareRatioMode: "direct",    // 3중 패턴 default
+    combinedOwnedShares: "",
 
     isQualifyingBlockShareholder: false,
     isHeavyRealEstateForRate: false,
@@ -198,6 +244,12 @@ export function createInitialStockFormData(): StockTransferFormData {
     isInternationalTransaction: false,   // 3중 패턴 default
 
     realEstateGroupBasicDeductionUsed: "0",  // 3중 패턴 default
+
+    lotsMode: "single",                      // 3중 패턴 default
+    costAllocationMethod: "fifo",            // 3중 패턴 default
+    acquisitionLots: [],
+    transferLots: [],
+    specificMatchings: [],
   };
 }
 
@@ -243,6 +295,10 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
     combinedShareRatio: strField("combinedShareRatio"),
     combinedMarketCap: strField("combinedMarketCap"),
     priorYearEndDate: strField("priorYearEndDate"),
+    selfShareRatioMode: enumField("selfShareRatioMode", ["direct", "shares"], defaults.selfShareRatioMode),
+    selfOwnedShares: strField("selfOwnedShares"),
+    combinedShareRatioMode: enumField("combinedShareRatioMode", ["direct", "shares"], defaults.combinedShareRatioMode),
+    combinedOwnedShares: strField("combinedOwnedShares"),
     isQualifyingBlockShareholder: boolField("isQualifyingBlockShareholder", false),
     isHeavyRealEstateForRate: boolField("isHeavyRealEstateForRate", false),
     isHeavyRealEstateForValuation: boolField("isHeavyRealEstateForValuation", false),
@@ -289,7 +345,83 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
     isFraudulent: boolField("isFraudulent", defaults.isFraudulent),
     isInternationalTransaction: boolField("isInternationalTransaction", defaults.isInternationalTransaction),
     realEstateGroupBasicDeductionUsed: strField("realEstateGroupBasicDeductionUsed") || defaults.realEstateGroupBasicDeductionUsed,
+
+    // ── 분할 매수·분할 양도 (Plan v2.2) ──
+    lotsMode: enumField("lotsMode", ["single", "split"], defaults.lotsMode),
+    costAllocationMethod: enumField(
+      "costAllocationMethod",
+      ["specific", "fifo", "moving_avg"],
+      defaults.costAllocationMethod,
+    ),
+    acquisitionLots: normalizeAcquisitionLots(d.acquisitionLots),
+    transferLots: normalizeTransferLots(d.transferLots),
+    specificMatchings: normalizeSpecificMatchings(d.specificMatchings),
   };
+}
+
+// ============================================================
+// 분할 lot 배열 sanitizer (③ 동기화 지점)
+// ============================================================
+
+function normalizeAcquisitionLots(raw: unknown): AcquisitionLotForm[] {
+  if (!Array.isArray(raw)) return [];
+  const validCauses = ["purchase", "inheritance", "gift", "merger_split"] as const;
+  return raw
+    .map((r): AcquisitionLotForm | null => {
+      if (!r || typeof r !== "object") return null;
+      const o = r as Record<string, unknown>;
+      const idVal = typeof o.id === "string" ? o.id : null;
+      if (!idVal) return null;
+      const cause = typeof o.acquisitionCause === "string" && (validCauses as readonly string[]).includes(o.acquisitionCause)
+        ? (o.acquisitionCause as AcquisitionLotForm["acquisitionCause"])
+        : "purchase";
+      return {
+        id: idVal,
+        acquisitionDate: typeof o.acquisitionDate === "string" ? o.acquisitionDate : "",
+        shareCount: typeof o.shareCount === "string" ? o.shareCount : "",
+        perShareAcquisitionPrice: typeof o.perShareAcquisitionPrice === "string" ? o.perShareAcquisitionPrice : "",
+        acquisitionCause: cause,
+        decedentAcquisitionDate: typeof o.decedentAcquisitionDate === "string" ? o.decedentAcquisitionDate : undefined,
+        preMergerAcquisitionDate: typeof o.preMergerAcquisitionDate === "string" ? o.preMergerAcquisitionDate : undefined,
+      };
+    })
+    .filter((l): l is AcquisitionLotForm => l !== null);
+}
+
+function normalizeTransferLots(raw: unknown): TransferLotForm[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((r): TransferLotForm | null => {
+      if (!r || typeof r !== "object") return null;
+      const o = r as Record<string, unknown>;
+      const idVal = typeof o.id === "string" ? o.id : null;
+      if (!idVal) return null;
+      return {
+        id: idVal,
+        transferDate: typeof o.transferDate === "string" ? o.transferDate : "",
+        shareCount: typeof o.shareCount === "string" ? o.shareCount : "",
+        perShareTransferPrice: typeof o.perShareTransferPrice === "string" ? o.perShareTransferPrice : "",
+      };
+    })
+    .filter((l): l is TransferLotForm => l !== null);
+}
+
+function normalizeSpecificMatchings(raw: unknown): SpecificMatchingForm[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((r): SpecificMatchingForm | null => {
+      if (!r || typeof r !== "object") return null;
+      const o = r as Record<string, unknown>;
+      const tId = typeof o.transferLotId === "string" ? o.transferLotId : null;
+      const aId = typeof o.acquisitionLotId === "string" ? o.acquisitionLotId : null;
+      if (!tId || !aId) return null;
+      return {
+        transferLotId: tId,
+        acquisitionLotId: aId,
+        shareCount: typeof o.shareCount === "string" ? o.shareCount : "",
+      };
+    })
+    .filter((m): m is SpecificMatchingForm => m !== null);
 }
 
 // ============================================================

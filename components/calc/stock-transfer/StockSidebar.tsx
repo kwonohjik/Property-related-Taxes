@@ -33,22 +33,32 @@ export function StockSidebar({ currentStep, onStepClick }: StockSidebarProps) {
   // 사이드바 합계 — 입력값으로 계산 가능한 항목만 (useMemo — store 미러링 금지)
   const summary = useMemo((): WizardSidebarSummaryItem[] => {
     const items: WizardSidebarSummaryItem[] = [];
+    const isSplitMode = formData.lotsMode === "split";
 
-    // 양도가액 (입력 값 기반 계산)
-    const perShare = parseAmount(formData.perShareTransferPrice);
-    const count = parseInt(formData.shareCount || "0", 10);
-    const transferPrice = perShare > 0 && count > 0 ? perShare * count : null;
-
-    // 교환 양도가
-    const exchangeTotal =
-      parseAmount(formData.exchangePropertyValue) +
-      parseAmount(formData.exchangeDebtRelief) +
-      parseAmount(formData.exchangeCash);
-
-    const effectiveTransferPrice =
-      (formData.transferPriceMode || "actual") === "exchange"
-        ? exchangeTotal > 0 ? exchangeTotal : null
-        : transferPrice;
+    // 양도가액 (split: lot 합계 / single: 폼 단가 × 수량)
+    let effectiveTransferPrice: number | null = null;
+    if (isSplitMode) {
+      const lotSum = formData.transferLots.reduce(
+        (s, l) =>
+          s + parseAmount(l.perShareTransferPrice) * parseInt(l.shareCount || "0", 10),
+        0,
+      );
+      effectiveTransferPrice = lotSum > 0 ? lotSum : null;
+    } else {
+      const perShare = parseAmount(formData.perShareTransferPrice);
+      const count = parseInt(formData.shareCount || "0", 10);
+      const transferPrice = perShare > 0 && count > 0 ? perShare * count : null;
+      const exchangeTotal =
+        parseAmount(formData.exchangePropertyValue) +
+        parseAmount(formData.exchangeDebtRelief) +
+        parseAmount(formData.exchangeCash);
+      effectiveTransferPrice =
+        (formData.transferPriceMode || "actual") === "exchange"
+          ? exchangeTotal > 0
+            ? exchangeTotal
+            : null
+          : transferPrice;
+    }
 
     if (effectiveTransferPrice && effectiveTransferPrice > 0) {
       items.push({ label: "양도가액", value: effectiveTransferPrice });
@@ -79,8 +89,19 @@ export function StockSidebar({ currentStep, onStepClick }: StockSidebarProps) {
       }
     } else {
       // 결과 없음 — 실가 취득가 직접 계산
-      const perShareAcq = parseAmount(formData.perShareAcquisitionPrice);
-      const acqPrice = perShareAcq > 0 && count > 0 ? perShareAcq * count : null;
+      let acqPrice: number | null = null;
+      if (isSplitMode) {
+        const lotSum = formData.acquisitionLots.reduce(
+          (s, l) =>
+            s + parseAmount(l.perShareAcquisitionPrice) * parseInt(l.shareCount || "0", 10),
+          0,
+        );
+        acqPrice = lotSum > 0 ? lotSum : null;
+      } else {
+        const perShareAcq = parseAmount(formData.perShareAcquisitionPrice);
+        const count = parseInt(formData.shareCount || "0", 10);
+        acqPrice = perShareAcq > 0 && count > 0 ? perShareAcq * count : null;
+      }
       if (acqPrice && acqPrice > 0) {
         items.push({ label: "취득가액", value: acqPrice });
       }

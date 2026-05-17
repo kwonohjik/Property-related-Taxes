@@ -25,6 +25,7 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { DateInput } from "@/components/ui/date-input";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 import {
@@ -45,7 +46,29 @@ type MajorShareholderFormSlice = Pick<
   | "combinedMarketCap"
   | "priorYearEndDate"
   | "marketType"
+  | "selfShareRatioMode"
+  | "selfOwnedShares"
+  | "combinedShareRatioMode"
+  | "combinedOwnedShares"
+  | "totalIssuedShares"
 >;
+
+/**
+ * 주식수로부터 지분율(%) 산출.
+ * 분모(total) 0 이하 또는 owned 음수면 null — 자동 0 fallback 금지 정책(no_silent_apportion_fallback) 준수.
+ * 반환은 % 단위 문자열 (소수 4자리). selfShareRatio·combinedShareRatio가 % 단위로 사용되는 것과 일치.
+ */
+export function computeShareRatioFromShares(
+  ownedRaw: string,
+  totalRaw: string,
+): string | null {
+  // 빈문자(미입력) → null. parseDecimal("")는 0을 반환하므로 명시적 zero("0")와 구분.
+  if (!ownedRaw || !ownedRaw.trim() || !totalRaw || !totalRaw.trim()) return null;
+  const total = parseDecimal(totalRaw);
+  const owned = parseDecimal(ownedRaw);
+  if (!(total > 0) || !(owned >= 0)) return null;
+  return ((owned / total) * 100).toFixed(4);
+}
 
 interface MajorShareholderBlockProps {
   form: MajorShareholderFormSlice;
@@ -119,6 +142,42 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
     }
   };
 
+  /**
+   * shares 모드: 주식수 입력 시 비율(%) 산출 후 selfShareRatio/combinedShareRatio에 즉시 반영.
+   * 분모 0 또는 빈값이면 ratio 미변경 (자동 0 fallback 금지).
+   * useEffect 미러링 금지 — onChange 시점에 직접 patch에 담아 호출.
+   */
+  const handleSharesChange = (
+    scope: "self" | "combined",
+    patch: Partial<StockTransferFormData>,
+  ) => {
+    const next = { ...form, ...patch };
+    const ownedRaw = scope === "self" ? next.selfOwnedShares : next.combinedOwnedShares;
+    const computed = computeShareRatioFromShares(ownedRaw, next.totalIssuedShares);
+    const ratioPatch: Partial<StockTransferFormData> = { ...patch };
+    if (computed !== null) {
+      if (scope === "self") ratioPatch.selfShareRatio = computed;
+      else ratioPatch.combinedShareRatio = computed;
+    }
+    handleAutoSyncChange(ratioPatch);
+  };
+
+  // shares 모드 산출 미리보기 (useMemo — store 미러링 금지)
+  const selfRatioFromShares = useMemo(
+    () =>
+      form.selfShareRatioMode === "shares"
+        ? computeShareRatioFromShares(form.selfOwnedShares, form.totalIssuedShares)
+        : null,
+    [form.selfShareRatioMode, form.selfOwnedShares, form.totalIssuedShares],
+  );
+  const combinedRatioFromShares = useMemo(
+    () =>
+      form.combinedShareRatioMode === "shares"
+        ? computeShareRatioFromShares(form.combinedOwnedShares, form.totalIssuedShares)
+        : null,
+    [form.combinedShareRatioMode, form.combinedOwnedShares, form.totalIssuedShares],
+  );
+
   // 자동 판정 활성 여부 — ToggleCard 분기에 사용
   const isAutoJudgmentActive = threshold !== null;
 
@@ -189,13 +248,55 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
           </details>
         )}
 
-        {/* 본인 단독 지분율 */}
-        <FieldCard label="본인 단독 지분율" hint="% 단위 입력 (예: 1.5 = 1.5%, 3 = 3%)" unit="%">
-          <DecimalInput
-            value={form.selfShareRatio}
-            onChange={(v) => handleAutoSyncChange({ selfShareRatio: v })}
+        {/* 본인 단독 지분율 — 입력 방식 선택 */}
+        <div className="space-y-3">
+          <RadioCardGroup
+            name="selfShareRatioMode"
+            value={form.selfShareRatioMode}
+            options={[
+              { value: "direct", label: "지분율 직접 입력 (%)" },
+              { value: "shares", label: "주식수로 계산 (본인보유 ÷ 총발행)" },
+            ]}
+            layout="inline"
+            tone="violet"
+            onChange={(v) => onChange({ selfShareRatioMode: v })}
           />
-        </FieldCard>
+          {form.selfShareRatioMode === "direct" ? (
+            <FieldCard label="본인 단독 지분율" hint="% 단위 입력 (예: 1.5 = 1.5%, 3 = 3%)" unit="%">
+              <DecimalInput
+                value={form.selfShareRatio}
+                onChange={(v) => handleAutoSyncChange({ selfShareRatio: v })}
+              />
+            </FieldCard>
+          ) : (
+            <div className="space-y-3 rounded-lg border border-violet-200 bg-violet-50/40 p-3">
+              <FieldCard label="총 발행주식수" hint="해당 법인의 발행주식 총수 (주). 다른 단계에서도 함께 사용됩니다.">
+                <DecimalInput
+                  value={form.totalIssuedShares}
+                  onChange={(v) => handleSharesChange("self", { totalIssuedShares: v })}
+                />
+              </FieldCard>
+              <FieldCard label="본인 보유 주식수" hint="본인 단독 명의 보유 주식수 (주)">
+                <DecimalInput
+                  value={form.selfOwnedShares}
+                  onChange={(v) => handleSharesChange("self", { selfOwnedShares: v })}
+                />
+              </FieldCard>
+              {selfRatioFromShares !== null ? (
+                <div className="rounded-md bg-violet-100/60 px-3 py-2 text-sm text-violet-900">
+                  산출 지분율: <strong>{selfRatioFromShares}%</strong>
+                  <span className="ml-1 text-xs text-violet-700">
+                    ({form.selfOwnedShares} ÷ {form.totalIssuedShares} × 100)
+                  </span>
+                </div>
+              ) : (
+                <p className="text-xs text-violet-600">
+                  총 발행주식수와 본인 보유 주식수를 입력하면 지분율이 자동 산출됩니다.
+                </p>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* 본인 단독 시총 */}
         <CurrencyInput
@@ -214,12 +315,52 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
           tone="violet"
         >
           <div className="mt-3 space-y-3">
-            <FieldCard label="합산 지분율" hint="특수관계인 합산 (% 단위, 예: 3 = 3%)" unit="%">
-              <DecimalInput
-                value={form.combinedShareRatio}
-                onChange={(v) => handleAutoSyncChange({ combinedShareRatio: v })}
-              />
-            </FieldCard>
+            <RadioCardGroup
+              name="combinedShareRatioMode"
+              value={form.combinedShareRatioMode}
+              options={[
+                { value: "direct", label: "지분율 직접 입력 (%)" },
+                { value: "shares", label: "주식수로 계산 (합산보유 ÷ 총발행)" },
+              ]}
+              layout="inline"
+              tone="violet"
+              onChange={(v) => onChange({ combinedShareRatioMode: v })}
+            />
+            {form.combinedShareRatioMode === "direct" ? (
+              <FieldCard label="합산 지분율" hint="특수관계인 합산 (% 단위, 예: 3 = 3%)" unit="%">
+                <DecimalInput
+                  value={form.combinedShareRatio}
+                  onChange={(v) => handleAutoSyncChange({ combinedShareRatio: v })}
+                />
+              </FieldCard>
+            ) : (
+              <div className="space-y-3 rounded-lg border border-violet-200 bg-violet-50/40 p-3">
+                <FieldCard label="총 발행주식수" hint="해당 법인의 발행주식 총수 (주). 본인 단독 입력과 동일 값.">
+                  <DecimalInput
+                    value={form.totalIssuedShares}
+                    onChange={(v) => handleSharesChange("combined", { totalIssuedShares: v })}
+                  />
+                </FieldCard>
+                <FieldCard label="본인+특수관계인 합산 보유 주식수" hint="최대주주그룹 합산 보유 주식수 (주)">
+                  <DecimalInput
+                    value={form.combinedOwnedShares}
+                    onChange={(v) => handleSharesChange("combined", { combinedOwnedShares: v })}
+                  />
+                </FieldCard>
+                {combinedRatioFromShares !== null ? (
+                  <div className="rounded-md bg-violet-100/60 px-3 py-2 text-sm text-violet-900">
+                    산출 합산 지분율: <strong>{combinedRatioFromShares}%</strong>
+                    <span className="ml-1 text-xs text-violet-700">
+                      ({form.combinedOwnedShares} ÷ {form.totalIssuedShares} × 100)
+                    </span>
+                  </div>
+                ) : (
+                  <p className="text-xs text-violet-600">
+                    총 발행주식수와 합산 보유 주식수를 입력하면 지분율이 자동 산출됩니다.
+                  </p>
+                )}
+              </div>
+            )}
             <CurrencyInput
               label="합산 시가총액"
               hint="특수관계인 합산 (원)"

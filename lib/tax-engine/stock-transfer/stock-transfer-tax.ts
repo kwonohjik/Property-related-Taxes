@@ -20,7 +20,7 @@
  * 법령: 소득세법 2026.4.21. 시행
  */
 
-import type { StockTransferInput, StockTransferResult } from "./types/stock-transfer.types";
+import type { StockTransferInput, StockTransferResult, LotMatchingDetail } from "./types/stock-transfer.types";
 import { classifyStockTransfer } from "./stock-classification";
 import { calcHoldingPeriod, calcBasicDeduction, floorTaxBase, floorTen, applyDeemedAcquisitionDate, buildAppliedThreshold } from "./stock-transfer-helpers";
 import { calcPostListingConversion } from "./stock-valuation-post-listing";
@@ -33,6 +33,22 @@ import {
 import { applyStockTaxRate } from "./stock-transfer-rate-calc";
 import { finalizeStockTax } from "./stock-transfer-finalize";
 import { STOCK, STOCK_ESTIMATED_EXPENSE_RATE } from "@/lib/tax-engine/legal-codes/stock";
+import { allocateLots } from "./lot-allocation";
+import { calcSplitModeTax } from "./lot-allocation-tax";
+
+// ============================================================
+// split 모드 판정 헬퍼
+// ============================================================
+
+function isSplitMode(input: StockTransferInput): boolean {
+  return !!(
+    input.acquisitionLots &&
+    input.acquisitionLots.length > 0 &&
+    input.transferLots &&
+    input.transferLots.length > 0 &&
+    input.costAllocationMethod
+  );
+}
 
 // ============================================================
 // 메인 계산 함수
@@ -59,13 +75,40 @@ export function calculateStockTransferTax(input: StockTransferInput): StockTrans
   }
 
   // ──────────────────────────────────────────────────────────
+  // split 모드 사전 계산 (lot 매칭 — STEP 2/3/5/8 분기에서 사용)
+  // ──────────────────────────────────────────────────────────
+  let lotMatchingDetail: LotMatchingDetail | undefined;
+  if (isSplitMode(input)) {
+    const isMajorAndNonSME =
+      !input.isSmallMediumEnterprise &&
+      (classification.taxCategory === "listed_major" ||
+        classification.taxCategory === "unlisted_major");
+    lotMatchingDetail = allocateLots(
+      input.acquisitionLots!,
+      input.transferLots!,
+      input.costAllocationMethod!,
+      isMajorAndNonSME,
+      input.isSmallMediumEnterprise,
+      input.specificMatchings,
+    );
+    // appliedRules push
+    if (input.costAllocationMethod === "specific") appliedRules.push("로트개별법");
+    else if (input.costAllocationMethod === "fifo") appliedRules.push("로트선입선출");
+    else if (input.costAllocationMethod === "moving_avg") appliedRules.push("로트이동평균");
+    warnings.push(...lotMatchingDetail.warnings);
+  }
+
+  // ──────────────────────────────────────────────────────────
   // STEP 2: 양도가액 결정 (취득가액 환산 계산을 위해 먼저 산출)
   // ──────────────────────────────────────────────────────────
   let transferPrice = 0;
   let transferPriceBreakdown: StockTransferResult["transferPriceBreakdown"];
   const { shareCount } = input;
 
-  if (input.transferPriceMode === "actual") {
+  if (lotMatchingDetail) {
+    // split 모드 — lot 합계 사용
+    transferPrice = lotMatchingDetail.totalTransferPrice;
+  } else if (input.transferPriceMode === "actual") {
     transferPrice = (input.perShareTransferPrice ?? 0) * shareCount;
   } else {
     // exchange — 부동산 + 채무면제 + 현금
@@ -87,7 +130,17 @@ export function calculateStockTransferTax(input: StockTransferInput): StockTrans
 
   const { acquisitionMode } = input;
 
-  if (acquisitionMode === "actual") {
+  if (lotMatchingDetail) {
+    // split 모드 — lot 합계 취득가 사용 (actual만 허용 — Zod·validate에서 차단)
+    acquisitionPrice = lotMatchingDetail.totalAcquisitionPrice;
+    valuationDetail = {
+      method: "actual_acquisition",
+      netAssetFloorApplied: false,
+      finalPerShareValue:
+        lotMatchingDetail.weightedAvgPerShare ??
+        (lotMatchingDetail.matched[0]?.perShareBuyPrice ?? 0),
+    };
+  } else if (acquisitionMode === "actual") {
     // 실거래가
     acquisitionPrice = (input.perShareAcquisitionPrice ?? 0) * shareCount;
     valuationDetail = {
@@ -304,12 +357,35 @@ export function calculateStockTransferTax(input: StockTransferInput): StockTrans
     appliedRules.push("단기30%");
   }
 
-  const rateResult = applyStockTaxRate(
-    taxBase,
-    classification.taxCategory,
-    input.isSmallMediumEnterprise,
-    isShortTermHolding,
-  );
+  let rateResult: ReturnType<typeof applyStockTaxRate>;
+  let splitModeMixedRate = false;
+  if (lotMatchingDetail) {
+    // split 모드 — sub-lot별 안분 + 세율 적용 + 합산
+    const splitTax = calcSplitModeTax(
+      taxBase,
+      lotMatchingDetail,
+      classification.taxCategory,
+      input.isSmallMediumEnterprise,
+    );
+    splitModeMixedRate = splitTax.isMixedRate;
+    // appliedRate echo — 혼합 시 0 (UI에서 "혼합" 라벨), 단일 시 첫 sub-lot 세율 또는 비대주주 단일 세율
+    const firstNonZeroRate = lotMatchingDetail.matched.find((m) => m.appliedRate > 0)?.appliedRate ?? 0;
+    rateResult = {
+      appliedRate: splitTax.isMixedRate ? 0 : firstNonZeroRate,
+      calculatedTax: splitTax.calculatedTax,
+      progressiveDeduction: undefined,
+      appliedRuleRef: STOCK.SECTION_104_1_11_GA_2_PROGRESSIVE,
+      isShortTermRate: lotMatchingDetail.matched.some((m) => m.isShortTerm),
+    };
+    if (splitTax.mixedNote) warnings.push(splitTax.mixedNote);
+  } else {
+    rateResult = applyStockTaxRate(
+      taxBase,
+      classification.taxCategory,
+      input.isSmallMediumEnterprise,
+      isShortTermHolding,
+    );
+  }
 
   // ──────────────────────────────────────────────────────────
   // STEP 9: 산출세액 (10원 미만 절사 §47①)
@@ -373,6 +449,7 @@ export function calculateStockTransferTax(input: StockTransferInput): StockTrans
 
     warnings,
     appliedRules,
+    lotMatchingDetail,
   };
 }
 
@@ -384,6 +461,18 @@ function buildExemptResult(
   input: StockTransferInput,
   classification: ReturnType<typeof classifyStockTransfer>,
 ): StockTransferResult {
+  // 비과세 분기에서도 split 모드면 lotMatchingDetail 검산용 echo
+  let lotMatchingDetail: LotMatchingDetail | undefined;
+  if (isSplitMode(input)) {
+    lotMatchingDetail = allocateLots(
+      input.acquisitionLots!,
+      input.transferLots!,
+      input.costAllocationMethod!,
+      false, // 비과세 분기에서 단기 30% 게이트 무의미
+      input.isSmallMediumEnterprise,
+      input.specificMatchings,
+    );
+  }
   return {
     taxCategory: classification.taxCategory,
     appliedSection94: classification.appliedSection94,

@@ -172,6 +172,57 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
   // ── §103② 기본공제 그룹 ──
   body.realEstateGroupBasicDeductionUsed = parseIntOrZero(form.realEstateGroupBasicDeductionUsed);  // default: 0
 
+  // ── 분할 매수·분할 양도 (Plan v2.2) ──⑪⑫⑬
+  if (form.lotsMode === "split") {
+    body.costAllocationMethod = form.costAllocationMethod || "fifo";
+    body.acquisitionLots = form.acquisitionLots.map((lot) => {
+      const o: Record<string, unknown> = {
+        id: lot.id,
+        acquisitionDate: lot.acquisitionDate,
+        shareCount: parseIntOrUndef(lot.shareCount) ?? 0,
+        perShareAcquisitionPrice: parseIntOrUndef(lot.perShareAcquisitionPrice) ?? 0,
+        acquisitionCause: lot.acquisitionCause,
+      };
+      if (lot.acquisitionCause === "inheritance" && lot.decedentAcquisitionDate) {
+        o.decedentAcquisitionDate = lot.decedentAcquisitionDate;
+      }
+      if (lot.acquisitionCause === "merger_split" && lot.preMergerAcquisitionDate) {
+        o.preMergerAcquisitionDate = lot.preMergerAcquisitionDate;
+      }
+      return o;
+    });
+    body.transferLots = form.transferLots.map((lot) => ({
+      id: lot.id,
+      transferDate: lot.transferDate,
+      shareCount: parseIntOrUndef(lot.shareCount) ?? 0,
+      perShareTransferPrice: parseIntOrUndef(lot.perShareTransferPrice) ?? 0,
+    }));
+    if (form.costAllocationMethod === "specific") {
+      body.specificMatchings = form.specificMatchings.map((m) => ({
+        transferLotId: m.transferLotId,
+        acquisitionLotId: m.acquisitionLotId,
+        shareCount: parseIntOrUndef(m.shareCount) ?? 0,
+      }));
+    }
+
+    // ⑪ acquisitionDate FIFO fallback — 가장 오래된 매수 lot 일자를 단건 필드에도 채움
+    //   (legacy calcHoldingPeriod / STT 호환. 엔진은 split 모드에서 이 값을 무시하고 lot 사용)
+    const oldestLotDate = form.acquisitionLots
+      .map((l) => l.acquisitionDate)
+      .filter((d) => d && d.length > 0)
+      .sort()[0];
+    if (oldestLotDate && !body.acquisitionDate) {
+      body.acquisitionDate = oldestLotDate;
+    }
+    const oldestTrnDate = form.transferLots
+      .map((l) => l.transferDate)
+      .filter((d) => d && d.length > 0)
+      .sort()[0];
+    if (oldestTrnDate && !body.transferDate) {
+      body.transferDate = oldestTrnDate;
+    }
+  }
+
   return body;
 }
 

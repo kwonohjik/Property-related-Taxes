@@ -50,6 +50,37 @@ export const filingTypeSchema = z.enum(["preliminary", "final", "revised"]);
 
 export const expenseModeSchema = z.enum(["actual", "estimated"]);
 
+// 분할 매수·분할 양도 (Plan v2.2)
+export const lotsModeSchema = z.enum(["single", "split"]);
+export const costAllocationMethodSchema = z.enum(["specific", "fifo", "moving_avg"]);
+
+// ============================================================
+// 분할 lot z.object 정의 (⑫ TypeScript 미감지 — 명시 필수)
+// ============================================================
+
+export const acquisitionLotSchema = z.object({
+  id: z.string().optional(),
+  acquisitionDate: z.union([z.string(), z.date()]),
+  shareCount: z.number().int().positive(),
+  perShareAcquisitionPrice: z.number().int().positive(),
+  acquisitionCause: acquisitionCauseSchema,
+  decedentAcquisitionDate: z.union([z.string(), z.date()]).optional(),
+  preMergerAcquisitionDate: z.union([z.string(), z.date()]).optional(),
+});
+
+export const transferLotSchema = z.object({
+  id: z.string().optional(),
+  transferDate: z.union([z.string(), z.date()]),
+  shareCount: z.number().int().positive(),
+  perShareTransferPrice: z.number().int().positive(),
+});
+
+export const specificMatchingSchema = z.object({
+  transferLotId: z.string(),
+  acquisitionLotId: z.string(),
+  shareCount: z.number().int().positive(),
+});
+
 // ============================================================
 // ⑫ Zod 입력 객체 정의 (TypeScript 미감지 — 전수 점검 필수)
 // ============================================================
@@ -140,6 +171,12 @@ export const stockTransferInputSchema = z.object({
 
   // §103② 기본공제 그룹
   realEstateGroupBasicDeductionUsed: z.number().min(0),
+
+  // 분할 매수·분할 양도 (Plan v2.2 — optional, lotsMode='split' 시 필수)
+  acquisitionLots: z.array(acquisitionLotSchema).optional(),
+  transferLots: z.array(transferLotSchema).optional(),
+  costAllocationMethod: costAllocationMethodSchema.optional(),
+  specificMatchings: z.array(specificMatchingSchema).optional(),
 });
 
 export type StockTransferInputSchema = z.infer<typeof stockTransferInputSchema>;
@@ -185,6 +222,108 @@ export function addStockRefines(
           code: z.ZodIssueCode.custom,
           path: ["marketType"],
           message: "기타자산은 §94①4 다목(과점주주) 또는 라목(부동산과다보유법인) 중 하나 이상 해당해야 합니다",
+        });
+      }
+    }
+
+    // 분할 매수·분할 양도 호환성 게이트 (Plan v2.2)
+    const isSplit =
+      (data.acquisitionLots && data.acquisitionLots.length > 0) ||
+      (data.transferLots && data.transferLots.length > 0) ||
+      data.costAllocationMethod !== undefined;
+    if (isSplit) {
+      // 양쪽 lot 배열 모두 ≥ 1
+      if (!data.acquisitionLots || data.acquisitionLots.length === 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["acquisitionLots"],
+          message: "분할 모드: 매수 lot을 1행 이상 입력하세요",
+        });
+      }
+      if (!data.transferLots || data.transferLots.length === 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["transferLots"],
+          message: "분할 모드: 매도 lot을 1행 이상 입력하세요",
+        });
+      }
+      if (!data.costAllocationMethod) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["costAllocationMethod"],
+          message: "분할 모드: 산정방법(specific/fifo/moving_avg)을 선택하세요",
+        });
+      }
+      // 분할 모드는 실가 모드만 (acquisitionMode === "actual")
+      if (data.acquisitionMode !== "actual") {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["acquisitionMode"],
+          message: "분할 모드에서는 취득가 산정방법으로 실가(actual)만 지원합니다",
+        });
+      }
+      if (data.transferPriceMode === "exchange") {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["transferPriceMode"],
+          message: "분할 모드에서는 양도가액 모드로 교환을 지원하지 않습니다",
+        });
+      }
+      // cause별 보조 일자 필수
+      data.acquisitionLots?.forEach((lot, i) => {
+        if (lot.acquisitionCause === "inheritance" && !lot.decedentAcquisitionDate) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["acquisitionLots", i, "decedentAcquisitionDate"],
+            message: "상속 lot은 피상속인 취득일을 입력하세요 (§104②1)",
+          });
+        }
+        if (lot.acquisitionCause === "merger_split" && !lot.preMergerAcquisitionDate) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["acquisitionLots", i, "preMergerAcquisitionDate"],
+            message: "합병·분할 lot은 종전 주식 취득일을 입력하세요 (§104②3)",
+          });
+        }
+      });
+      // specific 매칭 무결성 — 매도 lot별 매칭 합 = 매도 수량
+      if (data.costAllocationMethod === "specific" && data.specificMatchings && data.transferLots) {
+        for (const trn of data.transferLots) {
+          const sum = data.specificMatchings
+            .filter((m) => m.transferLotId === trn.id)
+            .reduce((s, m) => s + m.shareCount, 0);
+          if (sum !== trn.shareCount) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ["specificMatchings"],
+              message: `매도 lot ${trn.id ?? "?"}의 매칭 합계(${sum})가 매도 수량(${trn.shareCount})과 다릅니다`,
+            });
+          }
+        }
+        // 매수 lot별 매칭 합 ≤ lot 수량
+        if (data.acquisitionLots) {
+          for (const acq of data.acquisitionLots) {
+            const sum = data.specificMatchings
+              .filter((m) => m.acquisitionLotId === acq.id)
+              .reduce((s, m) => s + m.shareCount, 0);
+            if (sum > acq.shareCount) {
+              ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: ["specificMatchings"],
+                message: `매수 lot ${acq.id ?? "?"}에 매칭된 합계(${sum})가 lot 수량(${acq.shareCount})을 초과합니다`,
+              });
+            }
+          }
+        }
+      }
+      // 매도 수량 합 ≤ 매수 수량 합
+      const totalTrn = data.transferLots?.reduce((s, l) => s + l.shareCount, 0) ?? 0;
+      const totalAcq = data.acquisitionLots?.reduce((s, l) => s + l.shareCount, 0) ?? 0;
+      if (totalTrn > totalAcq) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["transferLots"],
+          message: `총 매도 수량(${totalTrn})이 총 매수 수량(${totalAcq})을 초과합니다`,
         });
       }
     }

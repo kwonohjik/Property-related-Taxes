@@ -123,7 +123,94 @@ export type StockTransferInput = {
 
   /** §103② — §94② 발동 시 같은 해 부동산 그룹에서 이미 사용한 기본공제 */
   realEstateGroupBasicDeductionUsed: number;
+
+  // ── 분할 매수·분할 양도 (선택) — split 모드 활성 시 사용 ──
+  // 미입력 시 단건 모드로 호환 (acquisitionDate·shareCount·perShareAcquisitionPrice 단일 필드 사용)
+  /** 분할 매수 lot 배열 */
+  acquisitionLots?: AcquisitionLot[];
+  /** 분할 매도 lot 배열 */
+  transferLots?: TransferLot[];
+  /** 취득가 산정방법 — split 모드 필수 (specific=개별법, fifo=선입선출법, moving_avg=총평균법) */
+  costAllocationMethod?: "specific" | "fifo" | "moving_avg";
+  /** 개별법(specific) 모드 사용자 명시 매칭 */
+  specificMatchings?: SpecificMatching[];
 };
+
+// ============================================================
+// 분할 lot 타입 (소득세법 §104② lot별 §163⑨ 평가가액)
+// ============================================================
+
+export interface AcquisitionLot {
+  /** UI key 용 UUID — 엔진은 사용 안 함 (specificMatchings 참조용) */
+  id?: string;
+  /** lot 자체 취득일 (gift는 수증일) */
+  acquisitionDate: Date;
+  shareCount: number;
+  /** 1주당 단가 (원). 상속/증여 lot도 §163⑨ 평가가액을 직접 입력 */
+  perShareAcquisitionPrice: number;
+  /** lot별 취득원인 — §104② 보유기간 기산점 분기 */
+  acquisitionCause: "purchase" | "inheritance" | "gift" | "merger_split";
+  /** 상속 lot: 피상속인 취득일 (§104②1) */
+  decedentAcquisitionDate?: Date;
+  /** 합병·분할 lot: 종전 주식 취득일 (§104②3) */
+  preMergerAcquisitionDate?: Date;
+  // donorAcquisitionDate 제외 — 주식은 §97의2 미적용 (helpers.ts:54-58)
+}
+
+export interface TransferLot {
+  id?: string;
+  transferDate: Date;
+  shareCount: number;
+  perShareTransferPrice: number;
+}
+
+export interface SpecificMatching {
+  /** TransferLot.id 참조 */
+  transferLotId: string;
+  /** AcquisitionLot.id 참조 */
+  acquisitionLotId: string;
+  /** 이 매칭에서 차감하는 주식수 */
+  shareCount: number;
+}
+
+// ============================================================
+// 분할 lot 결과 타입 (lotMatchingDetail echo)
+// ============================================================
+
+export interface MatchedSubLot {
+  saleDate: Date;
+  saleShares: number;
+  perShareSalePrice: number;
+  /** §104② lot별 기산점 적용된 일자 (purchase=취득일, inheritance=피상속인취득일, gift=수증일, merger_split=종전주식취득일) */
+  acquisitionDate: Date;
+  buyShares: number;
+  perShareBuyPrice: number;
+  holdingDays: number;
+  /** < 365일 */
+  isShortTerm: boolean;
+  /** (saleP - buyP) × matchedShares (음수 가능 — 양도손실) */
+  perLotGain: number;
+  /** sub-lot별 적용 세율 (단기 0.30 / 누진 / 단일 등) */
+  appliedRate: number;
+  /** sub-lot별 산출세액 (절사 전, 비대주주 분기에서는 0 — 합산 단일 세율) */
+  subLotTax: number;
+}
+
+export interface LotMatchingDetail {
+  method: "specific" | "fifo" | "moving_avg";
+  matched: MatchedSubLot[];
+  totalTransferPrice: number;
+  totalAcquisitionPrice: number;
+  /** 음수 가능 (양도손실) */
+  totalGain: number;
+  /** 단기 sub-lot 차익 합 (대주주+비SME 게이트 충족 시만 의미 있음) */
+  shortTermGain: number;
+  /** 장기 sub-lot 차익 합 */
+  longTermGain: number;
+  /** moving_avg 가중평균 단가 (해당 모드만) */
+  weightedAvgPerShare?: number;
+  warnings: string[];
+}
 
 // ============================================================
 // Result
@@ -250,5 +337,15 @@ export type StockTransferResult = {
     | "장부분실액면가"
     | "기타자산우선§55누진"
     | "기본공제부동산그룹합산"
+    | "로트개별법"
+    | "로트선입선출"
+    | "로트이동평균"
   >;
+
+  /**
+   * 분할 매수·분할 양도 echo (split 모드 활성 시).
+   * single 모드는 undefined.
+   * 비과세 분기에서도 검산용으로 echo (산출세액 0이지만 lot별 차익은 표시).
+   */
+  lotMatchingDetail?: LotMatchingDetail;
 };

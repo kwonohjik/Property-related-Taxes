@@ -96,37 +96,153 @@ export function validateStep1(form: StockTransferFormData): StockValidationError
     }
   }
 
-  // 취득일 필수
-  if (isEmpty(form.acquisitionDate)) {
-    errors.push({ field: "acquisitionDate", message: "취득일을 입력하세요", severity: "error" });
-  }
+  // 분할 매수·분할 양도 모드 분기 (Plan v2.2) — 폼-전역 acquisitionDate/transferDate는 single 한정
+  const lotsMode = form.lotsMode || "single";
 
-  // 양도일 필수
-  if (isEmpty(form.transferDate)) {
-    errors.push({ field: "transferDate", message: "양도일을 입력하세요", severity: "error" });
-  }
-
-  // 양도일 < 취득일 — 음수 보유기간
-  if (!isEmpty(form.acquisitionDate) && !isEmpty(form.transferDate)) {
-    const acqDate = new Date(form.acquisitionDate);
-    const trnDate = new Date(form.transferDate);
-    if (trnDate < acqDate) {
-      errors.push({
-        field: "transferDate",
-        message: "양도일이 취득일보다 이전입니다. 일자를 확인하세요",
-        severity: "error",
-      });
+  if (lotsMode === "single") {
+    // 취득일 필수
+    if (isEmpty(form.acquisitionDate)) {
+      errors.push({ field: "acquisitionDate", message: "취득일을 입력하세요", severity: "error" });
+    }
+    // 양도일 필수
+    if (isEmpty(form.transferDate)) {
+      errors.push({ field: "transferDate", message: "양도일을 입력하세요", severity: "error" });
+    }
+    // 양도일 < 취득일 — 음수 보유기간
+    if (!isEmpty(form.acquisitionDate) && !isEmpty(form.transferDate)) {
+      const acqDate = new Date(form.acquisitionDate);
+      const trnDate = new Date(form.transferDate);
+      if (trnDate < acqDate) {
+        errors.push({
+          field: "transferDate",
+          message: "양도일이 취득일보다 이전입니다. 일자를 확인하세요",
+          severity: "error",
+        });
+      }
     }
   }
 
-  // 주식수 필수
-  if (isEmpty(form.shareCount) || parseI(form.shareCount) <= 0) {
-    errors.push({ field: "shareCount", message: "양도 주식수를 입력하세요", severity: "error" });
+  // 주식수 필수 검증 — single 모드 한정 (split 모드는 lot 배열로 대체)
+  if (lotsMode === "single") {
+    if (isEmpty(form.shareCount) || parseI(form.shareCount) <= 0) {
+      errors.push({ field: "shareCount", message: "양도 주식수를 입력하세요", severity: "error" });
+    }
+  } else {
+    // split 모드 검증
+    if (!form.acquisitionLots || form.acquisitionLots.length === 0) {
+      errors.push({ field: "acquisitionLots", message: "매수 lot을 1행 이상 입력하세요", severity: "error" });
+    }
+    if (!form.transferLots || form.transferLots.length === 0) {
+      errors.push({ field: "transferLots", message: "매도 lot을 1행 이상 입력하세요", severity: "error" });
+    }
+    // lot별 검증
+    (form.acquisitionLots || []).forEach((lot, i) => {
+      if (isEmpty(lot.acquisitionDate)) {
+        errors.push({ field: `acquisitionLots[${i}].acquisitionDate`, message: `매수 lot #${i + 1}의 취득일을 입력하세요`, severity: "error" });
+      }
+      if (parseI(lot.shareCount) <= 0) {
+        errors.push({ field: `acquisitionLots[${i}].shareCount`, message: `매수 lot #${i + 1}의 주식수는 0보다 커야 합니다`, severity: "error" });
+      }
+      if (parseI(lot.perShareAcquisitionPrice) <= 0) {
+        errors.push({ field: `acquisitionLots[${i}].perShareAcquisitionPrice`, message: `매수 lot #${i + 1}의 1주당 단가는 0보다 커야 합니다 (C-22)`, severity: "error" });
+      }
+      if (lot.acquisitionCause === "inheritance" && isEmpty(lot.decedentAcquisitionDate)) {
+        errors.push({ field: `acquisitionLots[${i}].decedentAcquisitionDate`, message: `매수 lot #${i + 1} (상속): 피상속인 취득일을 입력하세요 (§104②1)`, severity: "error" });
+      }
+      if (lot.acquisitionCause === "merger_split" && isEmpty(lot.preMergerAcquisitionDate)) {
+        errors.push({ field: `acquisitionLots[${i}].preMergerAcquisitionDate`, message: `매수 lot #${i + 1} (합병·분할): 종전 주식 취득일을 입력하세요 (§104②3)`, severity: "error" });
+      }
+    });
+    (form.transferLots || []).forEach((lot, i) => {
+      if (isEmpty(lot.transferDate)) {
+        errors.push({ field: `transferLots[${i}].transferDate`, message: `매도 lot #${i + 1}의 양도일을 입력하세요`, severity: "error" });
+      }
+      if (parseI(lot.shareCount) <= 0) {
+        errors.push({ field: `transferLots[${i}].shareCount`, message: `매도 lot #${i + 1}의 주식수는 0보다 커야 합니다`, severity: "error" });
+      }
+      if (parseI(lot.perShareTransferPrice) <= 0) {
+        errors.push({ field: `transferLots[${i}].perShareTransferPrice`, message: `매도 lot #${i + 1}의 1주당 단가는 0보다 커야 합니다 (C-23)`, severity: "error" });
+      }
+    });
+    // 매도 ≤ 매수
+    const totalAcq = (form.acquisitionLots || []).reduce((s, l) => s + parseI(l.shareCount), 0);
+    const totalTrn = (form.transferLots || []).reduce((s, l) => s + parseI(l.shareCount), 0);
+    if (totalTrn > totalAcq) {
+      errors.push({ field: "transferLots", message: `총 매도 수량(${totalTrn})이 총 매수 수량(${totalAcq})을 초과합니다`, severity: "error" });
+    }
+    // specific 매칭 검증
+    const costMethod = form.costAllocationMethod || "fifo";
+    if (costMethod === "specific") {
+      (form.transferLots || []).forEach((trn, i) => {
+        const matchedSum = (form.specificMatchings || [])
+          .filter((m) => m.transferLotId === trn.id)
+          .reduce((s, m) => s + parseI(m.shareCount), 0);
+        if (matchedSum !== parseI(trn.shareCount)) {
+          errors.push({
+            field: `specificMatchings`,
+            message: `매도 lot #${i + 1}의 매칭 합계(${matchedSum})가 매도 수량(${trn.shareCount})과 다릅니다 (C-20)`,
+            severity: "error",
+          });
+        }
+      });
+      (form.acquisitionLots || []).forEach((acq, i) => {
+        const matchedSum = (form.specificMatchings || [])
+          .filter((m) => m.acquisitionLotId === acq.id)
+          .reduce((s, m) => s + parseI(m.shareCount), 0);
+        if (matchedSum > parseI(acq.shareCount)) {
+          errors.push({
+            field: `specificMatchings`,
+            message: `매수 lot #${i + 1}에 매칭된 합계(${matchedSum})가 lot 수량(${acq.shareCount})을 초과합니다 (C-20b)`,
+            severity: "error",
+          });
+        }
+      });
+    }
   }
 
   // 발행주식총수 필수
   if (isEmpty(form.totalIssuedShares) || parseI(form.totalIssuedShares) <= 0) {
     errors.push({ field: "totalIssuedShares", message: "발행주식 총수를 입력하세요", severity: "error" });
+  }
+
+  // 지분율 입력 모드 — shares 모드 시 분자 필수 + 분자 ≤ 분모 (3중 패턴: mode || "direct")
+  const selfMode = form.selfShareRatioMode || "direct";
+  if (selfMode === "shares") {
+    if (isEmpty(form.selfOwnedShares) || parseI(form.selfOwnedShares) < 0) {
+      errors.push({
+        field: "selfOwnedShares",
+        message: "본인 보유 주식수를 입력하세요",
+        severity: "error",
+      });
+    } else if (
+      !isEmpty(form.totalIssuedShares) &&
+      parseI(form.selfOwnedShares) > parseI(form.totalIssuedShares)
+    ) {
+      errors.push({
+        field: "selfOwnedShares",
+        message: "본인 보유 주식수가 총 발행주식수를 초과합니다",
+        severity: "error",
+      });
+    }
+  }
+  const combinedMode = form.combinedShareRatioMode || "direct";
+  if (form.isLargestShareholderGroup && combinedMode === "shares") {
+    if (isEmpty(form.combinedOwnedShares) || parseI(form.combinedOwnedShares) < 0) {
+      errors.push({
+        field: "combinedOwnedShares",
+        message: "본인+특수관계인 합산 보유 주식수를 입력하세요",
+        severity: "error",
+      });
+    } else if (
+      !isEmpty(form.totalIssuedShares) &&
+      parseI(form.combinedOwnedShares) > parseI(form.totalIssuedShares)
+    ) {
+      errors.push({
+        field: "combinedOwnedShares",
+        message: "합산 보유 주식수가 총 발행주식수를 초과합니다",
+        severity: "error",
+      });
+    }
   }
 
   // 취득원인 보조 일자 검증 (3중 패턴: acquisitionCause || "purchase")
@@ -168,8 +284,29 @@ export function validateStep2(form: StockTransferFormData): StockValidationError
   // 3중 패턴 fallback
   const transferPriceMode = form.transferPriceMode || "actual";
   const acquisitionMode = form.acquisitionMode || "actual";
+  const lotsMode = form.lotsMode || "single";
 
-  // ── 양도가액 ──
+  // 분할 모드 호환성 (Plan v2.2 — UI 사전 차단 외 이중 검증)
+  if (lotsMode === "split") {
+    if (acquisitionMode !== "actual") {
+      errors.push({
+        field: "acquisitionMode",
+        message: "분할 모드에서는 취득가 산정방법으로 실가(actual)만 지원합니다 (C-8)",
+        severity: "error",
+      });
+    }
+    if (transferPriceMode === "exchange") {
+      errors.push({
+        field: "transferPriceMode",
+        message: "분할 모드에서는 양도가액 모드로 교환을 지원하지 않습니다",
+        severity: "error",
+      });
+    }
+    // perShareTransferPrice·perShareAcquisitionPrice 필수 검증은 lot 단위로 처리됨 (validateStep1)
+    return errors;
+  }
+
+  // ── 양도가액 (single 모드) ──
   if (transferPriceMode === "actual") {
     if (isEmpty(form.perShareTransferPrice) || parseI(form.perShareTransferPrice) <= 0) {
       errors.push({ field: "perShareTransferPrice", message: "1주당 양도가액을 입력하세요", severity: "error" });

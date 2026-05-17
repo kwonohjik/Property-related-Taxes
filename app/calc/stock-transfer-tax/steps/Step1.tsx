@@ -1,23 +1,35 @@
 "use client";
 
 /**
- * Step 1 — 자산·시장·대주주
+ * Step 1 — 자산·시장·대주주 (v2.2 동적 번호 + 분할 매수·분할 양도)
  *
  * 입력 순서 = 엔진 계산 로직 순서 (feedback_ui_order_follows_logic):
- *   시장 분류 → 회사 분류 → 대주주 판정 → 기타자산 → 취득원인 →
- *   양도일·취득일 → 주식수·발행주식총수
+ *   시장 분류 → 회사 분류 → 양도·취득 lot (또는 일자/주식수) → 취득원인(single only) → 대주주 → 기타자산(조건부)
+ *
+ * 동적 번호 재할당 (Plan v2.2 §8):
+ *   - visible sections useMemo로 산출 + idx + 1로 연속 번호
+ *   - split 모드 시 cause 섹션 자동 숨김 (lot별 cause 입력)
+ *   - 기타자산 조건부 표시
  */
 
+import { useMemo, type ReactNode } from "react";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { DateInput } from "@/components/ui/date-input";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
+import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { nanoid } from "nanoid";
 import { MarketTypeBlock } from "@/components/calc/stock-transfer/MarketTypeBlock";
 import { MajorShareholderBlock } from "@/components/calc/stock-transfer/MajorShareholderBlock";
 import { CompanyTypeBlock } from "@/components/calc/stock-transfer/CompanyTypeBlock";
 import { OtherAssetBlock } from "@/components/calc/stock-transfer/OtherAssetBlock";
 import { AcquisitionCauseBlock } from "@/components/calc/stock-transfer/AcquisitionCauseBlock";
+import { SplitLotsBlock } from "@/components/calc/stock-transfer/SplitLotsBlock";
 import { withAutoSyncMajor } from "@/components/calc/stock-transfer/major-sync";
-import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
+import type {
+  StockTransferFormData,
+  AcquisitionLotForm,
+  TransferLotForm,
+} from "@/lib/stores/calc-wizard-stock-store";
 
 interface Step1Props {
   form: StockTransferFormData;
@@ -36,81 +48,202 @@ function SectionTitle({ n, title }: { n: number; title: string }) {
 }
 
 export function Step1({ form, onChange }: Step1Props) {
-  // F-9 (2026-05-17): marketType 변경 시 isMajorShareholder도 자동 동기화
-  // (feedback_useeffect_store_mirror_forbidden — onChange 시점 wrapper)
   const syncedChange = withAutoSyncMajor(form, onChange);
 
-  return (
-    <div className="space-y-8">
-      {/* ① 시장 분류 */}
-      <section>
-        <SectionTitle n={1} title="시장 유형" />
+  // ── lotsMode 토글 마이그레이션 wrapper ──
+  const handleLotsModeToggle = (newMode: "single" | "split") => {
+    if (newMode === form.lotsMode) return;
+
+    if (newMode === "split") {
+      // single → split: 폼-전역 값을 첫 lot으로 마이그레이션 (데이터 보존)
+      const newAcqLot: AcquisitionLotForm | null = form.acquisitionDate
+        ? {
+            id: nanoid(),
+            acquisitionDate: form.acquisitionDate,
+            shareCount: form.shareCount,
+            perShareAcquisitionPrice: form.perShareAcquisitionPrice,
+            acquisitionCause: form.acquisitionCause || "purchase",
+            decedentAcquisitionDate: form.decedentAcquisitionDate || undefined,
+            preMergerAcquisitionDate: form.preMergerAcquisitionDate || undefined,
+          }
+        : null;
+      const newTrnLot: TransferLotForm | null = form.transferDate
+        ? {
+            id: nanoid(),
+            transferDate: form.transferDate,
+            shareCount: form.shareCount,
+            perShareTransferPrice: form.perShareTransferPrice,
+          }
+        : null;
+      onChange({
+        lotsMode: "split",
+        acquisitionLots: newAcqLot ? [newAcqLot] : [],
+        transferLots: newTrnLot ? [newTrnLot] : [],
+      });
+    } else {
+      // split → single: 사용자 확인 (UI 단순화 — confirm 사용)
+      if (form.acquisitionLots.length > 0 || form.transferLots.length > 0) {
+        const ok = confirm("분할 lot 데이터가 단일 모드로 전환됩니다. 첫 번째 lot만 유지됩니다. 계속하시겠습니까?");
+        if (!ok) return;
+      }
+      const firstAcq = form.acquisitionLots[0];
+      const firstTrn = form.transferLots[0];
+      onChange({
+        lotsMode: "single",
+        acquisitionDate: firstAcq?.acquisitionDate ?? "",
+        perShareAcquisitionPrice: firstAcq?.perShareAcquisitionPrice ?? "",
+        transferDate: firstTrn?.transferDate ?? "",
+        perShareTransferPrice: firstTrn?.perShareTransferPrice ?? "",
+        shareCount: firstTrn?.shareCount ?? firstAcq?.shareCount ?? "",
+        acquisitionCause: firstAcq?.acquisitionCause ?? "purchase",
+        decedentAcquisitionDate: firstAcq?.decedentAcquisitionDate ?? "",
+        preMergerAcquisitionDate: firstAcq?.preMergerAcquisitionDate ?? "",
+        acquisitionLots: [],
+        transferLots: [],
+        specificMatchings: [],
+      });
+    }
+  };
+
+  // ── 동적 번호 재할당 — visible sections useMemo ──
+  const sections = useMemo(() => {
+    const items: Array<{ key: string; title: string; render: () => ReactNode }> = [];
+
+    // 1. 시장 유형
+    items.push({
+      key: "market",
+      title: "시장 유형",
+      render: () => (
         <MarketTypeBlock
           marketType={form.marketType}
           onChange={(marketType) => syncedChange({ marketType })}
         />
-      </section>
+      ),
+    });
 
-      {/* ② 회사 분류 */}
-      <section>
-        <SectionTitle n={2} title="회사 규모 / K-OTC / 벤처기업" />
-        <CompanyTypeBlock form={form} onChange={onChange} />
-      </section>
+    // 2. 회사 분류
+    items.push({
+      key: "company",
+      title: "회사 규모 / K-OTC / 벤처기업",
+      render: () => <CompanyTypeBlock form={form} onChange={onChange} />,
+    });
 
-      {/* ③ 대주주 판정 */}
-      <section>
-        <SectionTitle n={3} title="대주주 판정 (시행령 §157)" />
-        <MajorShareholderBlock form={form} onChange={onChange} />
-      </section>
+    // 3. 양도·취득 일자·주식수 (single 또는 split)
+    items.push({
+      key: "dates",
+      title:
+        form.lotsMode === "split"
+          ? "양도·취득 lot (분할 모드)"
+          : "양도·취득 일자 및 주식수",
+      render: () => (
+        <div className="space-y-4">
+          {/* 모드 토글 */}
+          <RadioCardGroup
+            name="lotsMode"
+            value={form.lotsMode}
+            options={[
+              {
+                value: "single",
+                label: "단일 매수·단일 양도",
+                description: "한 번 매수 후 한 번에 양도",
+              },
+              {
+                value: "split",
+                label: "분할 매수·분할 양도",
+                description: "여러 lot으로 매수/매도. 산정방법 3종 선택",
+              },
+            ]}
+            layout="inline"
+            tone="violet"
+            onChange={(v) => handleLotsModeToggle(v)}
+          />
 
-      {/* ④ 기타자산 §94①4 */}
-      {(form.marketType === "other_asset" ||
-        form.isQualifyingBlockShareholder ||
-        form.isHeavyRealEstateForRate) && (
-        <section>
-          <SectionTitle n={4} title="기타자산 해당 여부 (§94①4)" />
-          <OtherAssetBlock form={form} onChange={onChange} />
-        </section>
-      )}
-
-      {/* ⑤ 취득원인 + 단기 기산점 */}
-      <section>
-        <SectionTitle n={5} title="취득원인 (단기 30% 기산점 §104②)" />
-        <AcquisitionCauseBlock form={form} onChange={onChange} />
-      </section>
-
-      {/* ⑥ 일자·수량 */}
-      <section>
-        <SectionTitle n={6} title="양도·취득 일자 및 주식수" />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FieldCard label="취득일" required hint="실제 취득일 (YYYY-MM-DD)">
-            <DateInput
-              value={form.acquisitionDate}
-              onChange={(v) => onChange({ acquisitionDate: v })}
-            />
-          </FieldCard>
-          <FieldCard label="양도일" required hint="실제 양도일 (YYYY-MM-DD)">
-            <DateInput
-              value={form.transferDate}
-              onChange={(v) => onChange({ transferDate: v })}
-            />
-          </FieldCard>
-          <FieldCard label="양도 주식수" required hint="이번 거래에서 양도하는 주식수 (주)">
-            <DecimalInput
-              value={form.shareCount}
-              onChange={(v) => onChange({ shareCount: v })}
-              placeholder="5000"
-            />
-          </FieldCard>
-          <FieldCard label="발행주식 총수" required hint="해당 법인의 발행주식 총수 (주)">
-            <DecimalInput
-              value={form.totalIssuedShares}
-              onChange={(v) => onChange({ totalIssuedShares: v })}
-              placeholder="100000"
-            />
-          </FieldCard>
+          {/* 분기 입력 */}
+          {form.lotsMode === "single" ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FieldCard label="취득일" required hint="실제 취득일 (YYYY-MM-DD)">
+                <DateInput
+                  value={form.acquisitionDate}
+                  onChange={(v) => onChange({ acquisitionDate: v })}
+                />
+              </FieldCard>
+              <FieldCard label="양도일" required hint="실제 양도일 (YYYY-MM-DD)">
+                <DateInput
+                  value={form.transferDate}
+                  onChange={(v) => onChange({ transferDate: v })}
+                />
+              </FieldCard>
+              <FieldCard label="양도 주식수" required hint="이번 거래에서 양도하는 주식수 (주)">
+                <DecimalInput
+                  value={form.shareCount}
+                  onChange={(v) => onChange({ shareCount: v })}
+                  placeholder="5000"
+                />
+              </FieldCard>
+              <FieldCard label="발행주식 총수" required hint="해당 법인의 발행주식 총수 (주)">
+                <DecimalInput
+                  value={form.totalIssuedShares}
+                  onChange={(v) => onChange({ totalIssuedShares: v })}
+                  placeholder="100000"
+                />
+              </FieldCard>
+            </div>
+          ) : (
+            <>
+              <SplitLotsBlock form={form} onChange={onChange} />
+              <FieldCard label="발행주식 총수" required hint="해당 법인의 발행주식 총수 (주)">
+                <DecimalInput
+                  value={form.totalIssuedShares}
+                  onChange={(v) => onChange({ totalIssuedShares: v })}
+                />
+              </FieldCard>
+            </>
+          )}
         </div>
-      </section>
+      ),
+    });
+
+    // 4. 취득원인 — single 모드 전용 (split은 lot별로 입력)
+    if (form.lotsMode === "single") {
+      items.push({
+        key: "cause",
+        title: "취득원인 (단기 30% 기산점 §104②)",
+        render: () => <AcquisitionCauseBlock form={form} onChange={onChange} />,
+      });
+    }
+
+    // 5. 대주주 판정
+    items.push({
+      key: "major",
+      title: "대주주 판정 (시행령 §157)",
+      render: () => <MajorShareholderBlock form={form} onChange={onChange} />,
+    });
+
+    // 6. 기타자산 §94①4 — 조건부
+    if (
+      form.marketType === "other_asset" ||
+      form.isQualifyingBlockShareholder ||
+      form.isHeavyRealEstateForRate
+    ) {
+      items.push({
+        key: "other",
+        title: "기타자산 해당 여부 (§94①4)",
+        render: () => <OtherAssetBlock form={form} onChange={onChange} />,
+      });
+    }
+
+    return items;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form, onChange]);
+
+  return (
+    <div className="space-y-8">
+      {sections.map((s, idx) => (
+        <section key={s.key}>
+          <SectionTitle n={idx + 1} title={s.title} />
+          {s.render()}
+        </section>
+      ))}
     </div>
   );
 }

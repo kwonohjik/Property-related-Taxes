@@ -20,6 +20,7 @@ import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/
 import { StockFilingFormTable } from "@/components/calc/stock-transfer/StockFilingFormTable";
 import { printScoped } from "@/components/calc/results/transfer/TransferTaxResultViewHelpers";
 import { MARKET_LABEL } from "@/components/calc/stock-transfer/market-label";
+import { LotMatchingDetailCard } from "@/components/calc/results/LotMatchingDetailCard";
 
 interface StockTransferTaxResultViewProps {
   result: StockTransferResult;
@@ -82,6 +83,9 @@ const RULE_BADGE: Record<string, string> = {
   "장부분실액면가": "bg-amber-100 text-amber-700 border-amber-200",
   "기타자산우선§55누진": "bg-sky-100 text-sky-700 border-sky-200",
   "기본공제부동산그룹합산": "bg-sky-100 text-sky-700 border-sky-200",
+  "로트개별법": "bg-violet-100 text-violet-700 border-violet-200",
+  "로트선입선출": "bg-violet-100 text-violet-700 border-violet-200",
+  "로트이동평균": "bg-violet-100 text-violet-700 border-violet-200",
 };
 
 function fmt(n: number): string {
@@ -217,7 +221,15 @@ export function StockTransferTaxResultView({ result, shareCount, isFraudulent, i
         {result.isShortTermHolding && (
           <span className="ml-2 px-1.5 py-0.5 rounded bg-rose-100 text-rose-600 text-xs">단기보유</span>
         )}
+        {result.lotMatchingDetail && (
+          <p className="text-xs text-slate-500 mt-1">
+            ※ 분할 매수 시 sub-lot별 보유기간 상세는 아래 로트별 매칭 카드 참조
+          </p>
+        )}
       </div>
+
+      {/* 분할 매수·분할 양도 매칭 상세 (split 모드만) */}
+      {result.lotMatchingDetail && <LotMatchingDetailCard detail={result.lotMatchingDetail} />}
 
       {/* 대주주 판정 카드 (상장 3시장만 — 비상장·기타자산 자동 미렌더) */}
       <MajorShareholderResultCard result={result} />
