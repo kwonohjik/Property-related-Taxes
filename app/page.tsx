@@ -15,6 +15,12 @@ const TAX_TYPES = [
     icon: "🏘️",
   },
   {
+    slug: "stock-transfer-tax",
+    title: "주식 양도소득세",
+    description: "상장·비상장 주식 양도차익 — 대주주 판정, 취득 후 상장 환산취득가 (§94①3·4)",
+    icon: "📈",
+  },
+  {
     slug: "inheritance-tax",
     title: "상속세",
     description: "피상속인의 재산을 상속받을 때 부과되는 세금",
