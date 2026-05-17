@@ -48,11 +48,12 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
     marketType: form.marketType || "unlisted",
 
     // ── 대주주 판정 ──
+    // 폼은 % 단위 (예: "3" = 3%), 엔진은 decimal (0.03). 0.01을 곱해 정규화.
     isMajorShareholder: form.isMajorShareholder,
-    selfShareRatio: parseFloatOrUndef(form.selfShareRatio) ?? 0,
+    selfShareRatio: (parseFloatOrUndef(form.selfShareRatio) ?? 0) * 0.01,
     selfMarketCap: parseIntOrZero(form.selfMarketCap),
     isLargestShareholderGroup: form.isLargestShareholderGroup,   // 3중 패턴
-    combinedShareRatio: parseFloatOrUndef(form.combinedShareRatio) ?? 0,
+    combinedShareRatio: (parseFloatOrUndef(form.combinedShareRatio) ?? 0) * 0.01,
     combinedMarketCap: parseIntOrZero(form.combinedMarketCap),
     priorYearEndDate: form.priorYearEndDate || new Date().toISOString().split("T")[0],
 

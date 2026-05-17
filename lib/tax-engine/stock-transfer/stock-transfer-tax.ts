@@ -22,7 +22,7 @@
 
 import type { StockTransferInput, StockTransferResult } from "./types/stock-transfer.types";
 import { classifyStockTransfer } from "./stock-classification";
-import { calcHoldingPeriod, calcBasicDeduction, floorTaxBase, floorTen, applyDeemedAcquisitionDate } from "./stock-transfer-helpers";
+import { calcHoldingPeriod, calcBasicDeduction, floorTaxBase, floorTen, applyDeemedAcquisitionDate, buildAppliedThreshold } from "./stock-transfer-helpers";
 import { calcPostListingConversion } from "./stock-valuation-post-listing";
 import { calcListedValuation } from "./stock-valuation-listed";
 import {
@@ -369,6 +369,8 @@ export function calculateStockTransferTax(input: StockTransferInput): StockTrans
 
     lthdStartDate: null,
 
+    appliedThreshold: buildAppliedThreshold(input, classification),
+
     warnings,
     appliedRules,
   };
@@ -425,6 +427,8 @@ function buildExemptResult(
     isShortTermHolding: false,
 
     lthdStartDate: null,
+
+    appliedThreshold: buildAppliedThreshold(input, classification),
 
     warnings: classification.warnings,
     appliedRules: classification.appliedRules,

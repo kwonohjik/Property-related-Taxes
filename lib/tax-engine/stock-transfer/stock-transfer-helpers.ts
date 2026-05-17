@@ -5,12 +5,14 @@
  */
 
 import { differenceInDays, differenceInMonths } from "date-fns";
-import type { StockTransferInput } from "./types/stock-transfer.types";
+import type { StockTransferInput, StockTransferResult } from "./types/stock-transfer.types";
+import type { ClassificationResult } from "./stock-classification";
 import {
   STOCK_BASIC_DEDUCTION,
   STOCK,
   STOCK_ELECTRONIC_FILING_CREDIT,
 } from "@/lib/tax-engine/legal-codes/stock";
+import { resolveThresholdFromDate } from "./stock-rate-tables";
 
 // ============================================================
 // 보유기간 계산 (§104②)
@@ -137,6 +139,42 @@ export function calcElectronicFilingCredit(
   if (!isElectronicFiling) return 0;
   // 공제액은 산출세액 한도
   return Math.min(STOCK_ELECTRONIC_FILING_CREDIT, calculatedTax);
+}
+
+// ============================================================
+// appliedThreshold 결과 필드 조립 (§157 임계 echo)
+// ============================================================
+
+/**
+ * §157/§167의8 대주주 판정 임계 echo 필드 조립
+ *
+ * - 상장 3시장(kospi/kosdaq/konex): §157 임계 echo
+ * - 비상장(unlisted): §167의8①2호 임계 echo (F-5 확장)
+ * - 기타자산(other_asset)은 undefined 반환 (§94①4 별도 트랙)
+ * - classification.appliedThreshold가 없으면 undefined 반환
+ * - 정상 경로(과세)·비과세 조기 반환 경로 모두 동일하게 사용
+ */
+export function buildAppliedThreshold(
+  input: StockTransferInput,
+  classification: ClassificationResult,
+): StockTransferResult["appliedThreshold"] {
+  // 기타자산은 §94①4 별도 트랙 → echo 없음
+  if (input.marketType === "other_asset") {
+    return undefined;
+  }
+  const t = classification.appliedThreshold;
+  if (!t) return undefined;
+
+  // marketType이 kospi/kosdaq/konex/unlisted임이 위의 guard로 보장됨
+  const marketType = input.marketType as "kospi" | "kosdaq" | "konex" | "unlisted";
+
+  return {
+    shareRatio: t.shareRatio,
+    marketCap: t.marketCap,
+    marketType,
+    priorYearEndDate: input.priorYearEndDate.toISOString().slice(0, 10),
+    fromDate: resolveThresholdFromDate(marketType, input.priorYearEndDate),
+  };
 }
 
 // ============================================================

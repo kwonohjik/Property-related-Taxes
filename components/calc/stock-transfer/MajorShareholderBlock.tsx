@@ -3,18 +3,21 @@
 /**
  * MajorShareholderBlock — 대주주 판정 (Step 1)
  *
- * 시행령 §157 2-step 판정:
+ * 상장 3시장(코스피·코스닥·코넥스) + 비상장 4시장 2-step 판정:
  *   1. 본인 단독 지분율 or 시총으로 임계 초과 여부
  *   2. 본인이 최대주주그룹 → 합산 지분율·시총 추가 입력
  *
- * 시기별 임계 (priorYearEndDate 기준):
- *   - 2024.1.1. 이후 → 코스피·코스닥·코넥스 모두 시총 50억 통일
- *   - 2020.4.1.~ 2023.12.31. → 10억
- *   - 2018.4.1.~ 2020.3.31. → 15억
- *   - ~2018.3.31. → 코스피 25억 / 코스닥·코넥스 20억
+ * 시기별·시장별 임계는 `lib/tax-engine/stock-transfer/stock-rate-tables.ts` 의
+ * `getMajorShareholderThreshold()` 단일 진실 사용. 동적 박스에서 현재 적용
+ * 임계(지분율·시총·시장명·fromDate)를 실시간 표시.
  *
- * 지분율 임계:
- *   코스피 1% / 코스닥·코넥스 2% / 비상장 4%
+ * F-8 자동 동기화 (2026-05-17):
+ *   자동 판정 지원 시장(kospi·kosdaq·konex·unlisted)에서는 각 입력 필드의
+ *   onChange 시점에 isMajorShareholder를 자동 산출하여 함께 갱신.
+ *   useEffect → store 미러링 금지(feedback_useeffect_store_mirror_forbidden).
+ *   기타자산(other_asset)은 §94①4 별도 트랙 — 사용자 직접 입력.
+ *
+ * 상장 3시장 근거: §157④ / 비상장 근거: §167의8①2호
  */
 
 import { useMemo } from "react";
@@ -24,59 +27,64 @@ import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInpu
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { DateInput } from "@/components/ui/date-input";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
+import {
+  getMajorShareholderThreshold,
+  resolveThresholdFromDate,
+} from "@/lib/tax-engine/stock-transfer/stock-rate-tables";
+import { MARKET_LABEL } from "@/components/calc/stock-transfer/market-label";
+import { MajorThresholdTimeline } from "@/components/calc/stock-transfer/MajorThresholdTimeline";
+import { computeAutoIsMajor } from "@/components/calc/stock-transfer/major-sync";
+
+type MajorShareholderFormSlice = Pick<
+  StockTransferFormData,
+  | "isMajorShareholder"
+  | "selfShareRatio"
+  | "selfMarketCap"
+  | "isLargestShareholderGroup"
+  | "combinedShareRatio"
+  | "combinedMarketCap"
+  | "priorYearEndDate"
+  | "marketType"
+>;
 
 interface MajorShareholderBlockProps {
-  form: Pick<
-    StockTransferFormData,
-    | "isMajorShareholder"
-    | "selfShareRatio"
-    | "selfMarketCap"
-    | "isLargestShareholderGroup"
-    | "combinedShareRatio"
-    | "combinedMarketCap"
-    | "priorYearEndDate"
-    | "marketType"
-  >;
+  form: MajorShareholderFormSlice;
   onChange: (patch: Partial<StockTransferFormData>) => void;
 }
 
-// 시기별 임계 산출
-function getMarketCapThreshold(priorYearEndDate: string, marketType: string): number {
-  if (!priorYearEndDate) return 5_000_000_000; // default 50억 (2024.1.1.~)
-  const date = new Date(priorYearEndDate);
-  const d20240101 = new Date("2024-01-01");
-  const d20200401 = new Date("2020-04-01");
-  const d20180401 = new Date("2018-04-01");
-
-  if (date >= d20240101) return 5_000_000_000;      // 50억 (전 시장 통일)
-  if (date >= d20200401) return 1_000_000_000;       // 10억
-  if (date >= d20180401) return 1_500_000_000;       // 15억
-  // 2018.3.31. 이전
-  if (marketType === "kospi") return 2_500_000_000;  // 25억
-  return 2_000_000_000;                               // 20억 (코스닥·코넥스)
-}
-
-function getShareRatioThreshold(marketType: string): number {
-  if (marketType === "kospi") return 0.01;   // 1%
-  if (marketType === "kosdaq" || marketType === "konex") return 0.02; // 2%
-  return 0.04;  // 비상장 4%
-}
-
 export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockProps) {
-  const marketCapThreshold = useMemo(
-    () => getMarketCapThreshold(form.priorYearEndDate, form.marketType),
-    [form.priorYearEndDate, form.marketType]
-  );
-  const shareRatioThreshold = useMemo(
-    () => getShareRatioThreshold(form.marketType),
-    [form.marketType]
-  );
+  // 엔진 함수로 시기별 임계 산출
+  // 상장(kospi/kosdaq/konex) + 비상장(unlisted) 모두 자동 판정 지원
+  // 기타자산(other_asset)은 §94①4 별도 트랙 — null 반환
+  const threshold = useMemo(() => {
+    if (!form.priorYearEndDate) return null;
+    if (
+      form.marketType !== "kospi" &&
+      form.marketType !== "kosdaq" &&
+      form.marketType !== "konex" &&
+      form.marketType !== "unlisted"
+    ) {
+      return null;
+    }
+    return getMajorShareholderThreshold(
+      form.marketType,
+      new Date(form.priorYearEndDate),
+    );
+  }, [form.marketType, form.priorYearEndDate]);
+
+  const shareRatioThreshold = threshold?.shareRatioThreshold ?? 0;
+  const marketCapThreshold = threshold?.marketCapThreshold ?? Infinity;
 
   // 판정 미리보기 (useMemo — store 미러링 금지)
+  // 폼 입력은 % 단위 (예: "3" = 3%). 비교 시 0.01을 곱해 decimal로 정규화.
   const judgment = useMemo(() => {
-    const selfRatio = parseDecimal(form.selfShareRatio);
+    // 기타자산은 자동 판정 미적용 — threshold null 가드 (fallback 0 false positive 차단)
+    if (!threshold) {
+      return { isMajor: false, selfMeetsRatio: false, selfMeetsCap: false, combMeetsRatio: false, combMeetsCap: false };
+    }
+    const selfRatio = parseDecimal(form.selfShareRatio) * 0.01;
     const selfCap = parseAmount(form.selfMarketCap);
-    const combRatio = form.isLargestShareholderGroup ? parseDecimal(form.combinedShareRatio) : 0;
+    const combRatio = form.isLargestShareholderGroup ? parseDecimal(form.combinedShareRatio) * 0.01 : 0;
     const combCap = form.isLargestShareholderGroup ? parseAmount(form.combinedMarketCap) : 0;
 
     const selfMeetsRatio = selfRatio >= shareRatioThreshold;
@@ -92,26 +100,45 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
     form.isLargestShareholderGroup,
     form.combinedShareRatio,
     form.combinedMarketCap,
+    threshold,
     shareRatioThreshold,
     marketCapThreshold,
   ]);
 
-  const thresholdDate = form.priorYearEndDate
-    ? new Date(form.priorYearEndDate) >= new Date("2024-01-01")
-      ? "2024.1.1. 이후 (50억)"
-      : new Date(form.priorYearEndDate) >= new Date("2020-04-01")
-        ? "2020.4.1.~2023 (10억)"
-        : new Date(form.priorYearEndDate) >= new Date("2018-04-01")
-          ? "2018.4.1.~2020 (15억)"
-          : "~2018.3.31. (코스피 25억 / 코스닥 20억)"
-    : "-";
+  /**
+   * onChange wrapper — 입력 patch에 자동 산출 결과를 함께 전달.
+   * 자동 산출 미지원(other_asset·priorYearEndDate 미입력) 시 patch만 전달.
+   * useEffect 미러링 금지(feedback_useeffect_store_mirror_forbidden) 준수.
+   */
+  const handleAutoSyncChange = (patch: Partial<StockTransferFormData>) => {
+    const autoIsMajor = computeAutoIsMajor(form, patch);
+    if (autoIsMajor === undefined) {
+      onChange(patch);
+    } else {
+      onChange({ ...patch, isMajorShareholder: autoIsMajor });
+    }
+  };
+
+  // 자동 판정 활성 여부 — ToggleCard 분기에 사용
+  const isAutoJudgmentActive = threshold !== null;
 
   return (
     <ToggleCard
       checked={form.isMajorShareholder}
-      onCheckedChange={(v) => onChange({ isMajorShareholder: v })}
-      title="대주주 여부 (시행령 §157)"
-      description="직전 사업연도 말 기준 — 단독 또는 특수관계인 합산 지분율·시총 임계 초과 시 대주주"
+      onCheckedChange={isAutoJudgmentActive
+        // 자동 판정 활성 시 — 사용자 클릭 무효화 (자동 산출이 source of truth)
+        ? () => {}
+        // 기타자산 — 사용자 직접 입력
+        : (v) => onChange({ isMajorShareholder: v })
+      }
+      title={isAutoJudgmentActive
+        ? "대주주 여부 — 자동 판정 (§157 / §167의8①2호)"
+        : "대주주 여부 (사용자 직접 선택)"
+      }
+      description={isAutoJudgmentActive
+        ? "아래 입력값 변경 시 자동으로 동기화됩니다. 임계 조건 충족 여부는 판정 결과 박스에서 확인하세요."
+        : "기타자산은 자동 판정 미적용 — §94①4 별도 트랙. 직접 선택하세요."
+      }
       tone="violet"
     >
       {/* 직전 사업연도 종료일 */}
@@ -119,30 +146,54 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
         <FieldCard label="직전 사업연도 종료일" required hint="통상 전년 12월 31일. 사업연도가 다른 경우 해당 연도 종료일.">
           <DateInput
             value={form.priorYearEndDate}
-            onChange={(v) => onChange({ priorYearEndDate: v })}
+            onChange={(v) => handleAutoSyncChange({ priorYearEndDate: v })}
           />
         </FieldCard>
 
-        {/* 시기별 임계 안내 카드 */}
-        <div className="rounded-lg border border-violet-200/60 bg-violet-50/60 px-4 py-3 text-sm">
-          <p className="font-medium text-violet-800 mb-1">시기별 시가총액 임계 (§157④ 2024.1.1. 개정)</p>
-          <div className="text-violet-700 space-y-0.5">
-            <p>· 2024.1.1. 이후 → 전 시장 <strong>50억</strong></p>
-            <p>· 2020.4.1.~2023 → 10억</p>
-            <p>· 2018.4.1.~2020.3.31. → 15억</p>
-            <p>· ~2018.3.31. → 코스피 25억 / 코스닥·코넥스 20억</p>
+        {/* 동적 임계 박스 — 직전 사업연도 종료일 + 시장 선택 후 자동 표시 */}
+        {threshold && form.priorYearEndDate && (
+          <div className="rounded-lg border border-violet-200 bg-violet-50/60 p-3 text-sm">
+            <p className="font-semibold text-violet-900 mb-1">
+              현재 적용 임계 ({form.marketType === "unlisted" ? "§167의8①2호" : "§157④"})
+            </p>
+            <p className="text-violet-800">
+              지분율 <strong>{(threshold.shareRatioThreshold * 100).toFixed(1)}%</strong> ·
+              시총 <strong>{(threshold.marketCapThreshold / 100_000_000).toFixed(0)}억</strong>
+            </p>
+            <p className="text-xs text-violet-600 mt-1">
+              {MARKET_LABEL[form.marketType as keyof typeof MARKET_LABEL]} ·{" "}
+              {resolveThresholdFromDate(
+                form.marketType as "kospi" | "kosdaq" | "konex" | "unlisted",
+                new Date(form.priorYearEndDate),
+              )}~ 적용
+            </p>
+            {form.marketType === "unlisted" && (
+              <p className="text-xs text-violet-600 mt-1">
+                ※ 벤처기업은 시총 임계 40억 (조특법 §16, 시행령 §167의8①2호 나목)
+              </p>
+            )}
           </div>
-          <p className="mt-2 text-violet-600 text-xs">
-            적용 시점: {thresholdDate} | 지분율 임계: 코스피 1% / 코스닥·코넥스 2% / 비상장 4%
-          </p>
-        </div>
+        )}
+
+        {/* 시기별 임계 이력 펼침 — 상장 3시장 + 비상장에만 표시 */}
+        {threshold && (
+          <details className="rounded-lg border border-slate-200 bg-slate-50/40 p-3">
+            <summary className="text-xs font-medium text-slate-700 cursor-pointer select-none">
+              시기별 임계 이력 보기
+            </summary>
+            <div className="mt-3">
+              <MajorThresholdTimeline
+                marketType={form.marketType as "kospi" | "kosdaq" | "konex" | "unlisted"}
+              />
+            </div>
+          </details>
+        )}
 
         {/* 본인 단독 지분율 */}
-        <FieldCard label="본인 단독 지분율" hint="소수점 입력 (예: 1.5% → 0.015)">
+        <FieldCard label="본인 단독 지분율" hint="% 단위 입력 (예: 1.5 = 1.5%, 3 = 3%)" unit="%">
           <DecimalInput
             value={form.selfShareRatio}
-            onChange={(v) => onChange({ selfShareRatio: v })}
-            placeholder="0.0150"
+            onChange={(v) => handleAutoSyncChange({ selfShareRatio: v })}
           />
         </FieldCard>
 
@@ -151,48 +202,54 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
           label="본인 단독 시가총액"
           hint="직전 사업연도 말 기준 (원)"
           value={form.selfMarketCap}
-          onChange={(v) => onChange({ selfMarketCap: v })}
+          onChange={(v) => handleAutoSyncChange({ selfMarketCap: v })}
         />
 
         {/* 최대주주그룹 합산 토글 */}
         <ToggleCard
           checked={form.isLargestShareholderGroup}
-          onCheckedChange={(v) => onChange({ isLargestShareholderGroup: v })}
+          onCheckedChange={(v) => handleAutoSyncChange({ isLargestShareholderGroup: v })}
           title="본인+특수관계인 합산 최대주주그룹 여부"
           description="§157① 단서 — 본인 단독 미달 시 특수관계인과 합산하여 최대주주그룹을 형성하는지"
           tone="violet"
         >
           <div className="mt-3 space-y-3">
-            <FieldCard label="합산 지분율" hint="특수관계인 합산 (소수점)">
+            <FieldCard label="합산 지분율" hint="특수관계인 합산 (% 단위, 예: 3 = 3%)" unit="%">
               <DecimalInput
                 value={form.combinedShareRatio}
-                onChange={(v) => onChange({ combinedShareRatio: v })}
-                placeholder="0.0300"
+                onChange={(v) => handleAutoSyncChange({ combinedShareRatio: v })}
               />
             </FieldCard>
             <CurrencyInput
               label="합산 시가총액"
               hint="특수관계인 합산 (원)"
               value={form.combinedMarketCap}
-              onChange={(v) => onChange({ combinedMarketCap: v })}
+              onChange={(v) => handleAutoSyncChange({ combinedMarketCap: v })}
             />
           </div>
         </ToggleCard>
 
-        {/* 판정 미리보기 */}
-        <div className={`rounded-lg border px-4 py-3 text-sm ${
-          judgment.isMajor
-            ? "border-violet-300 bg-violet-100/60 text-violet-900"
-            : "border-slate-200 bg-slate-50 text-slate-600"
-        }`}>
-          <p className="font-medium mb-1">
-            대주주 자동 판정: {judgment.isMajor ? "✓ 대주주 해당" : "✗ 대주주 미해당"}
-          </p>
-          <p className="text-xs">
-            시총 임계 {(marketCapThreshold / 100_000_000).toFixed(0)}억 / 지분율 임계{" "}
-            {(shareRatioThreshold * 100).toFixed(0)}% (§157)
-          </p>
-        </div>
+        {/* 판정 결과 박스 — 자동 판정 활성(상장 3시장 + 비상장) */}
+        {threshold ? (
+          <div className={`rounded-lg border px-4 py-3 text-sm ${
+            judgment.isMajor
+              ? "border-violet-300 bg-violet-100/60 text-violet-900"
+              : "border-slate-200 bg-slate-50 text-slate-600"
+          }`}>
+            <p className="font-medium mb-1">
+              대주주 자동 판정: {judgment.isMajor ? "✓ 대주주 해당" : "✗ 대주주 미해당"}
+            </p>
+            <p className="text-xs">
+              시총 임계 {(marketCapThreshold / 100_000_000).toFixed(0)}억 / 지분율 임계 {(shareRatioThreshold * 100).toFixed(1)}%
+              {" "}({form.marketType === "unlisted" ? "§167의8①2호" : "§157"})
+            </p>
+          </div>
+        ) : form.marketType === "other_asset" ? (
+          <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+            <p className="font-medium mb-1">자동 판정 미적용 (기타자산은 §94①4 별도 트랙)</p>
+            <p className="text-xs">상단의 &quot;대주주 여부&quot; 토글로 직접 선택하세요.</p>
+          </div>
+        ) : null}
       </div>
     </ToggleCard>
   );

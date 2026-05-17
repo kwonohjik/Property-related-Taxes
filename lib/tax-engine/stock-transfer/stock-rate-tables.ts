@@ -1,7 +1,8 @@
 /**
  * 주식 양도소득세 — 세율표 + 대주주 임계 시기별 매트릭스
  *
- * 법령: 소득세법 시행령 §157 (대주주 임계) / §104①11 (세율)
+ * 법령: 소득세법 시행령 §157 (상장 대주주 임계) / §167의8 (비상장 대주주 임계)
+ *       / §104①11 (세율)
  * 임계 변경 시 row 추가만으로 대응 가능한 구조.
  */
 
@@ -23,7 +24,7 @@ export interface MajorShareholderThreshold {
 }
 
 /** 코스피 대주주 임계 이력 (코넥스 공통 적용 없음 — 코스닥·코넥스 별도) */
-const KOSPI_MAJOR_THRESHOLDS: MajorShareholderThreshold[] = [
+export const KOSPI_MAJOR_THRESHOLDS: MajorShareholderThreshold[] = [
   // 2024.1.1.~ (현행) — 시행령 §157 개정
   { from: new Date("2024-01-01"), shareRatioThreshold: 0.01, marketCapThreshold: 5_000_000_000 },
   // 2020.4.1.~ 2023.12.31.
@@ -41,7 +42,7 @@ const KOSPI_MAJOR_THRESHOLDS: MajorShareholderThreshold[] = [
 ];
 
 /** 코스닥 대주주 임계 이력 */
-const KOSDAQ_MAJOR_THRESHOLDS: MajorShareholderThreshold[] = [
+export const KOSDAQ_MAJOR_THRESHOLDS: MajorShareholderThreshold[] = [
   // 2024.1.1.~ (현행)
   { from: new Date("2024-01-01"), shareRatioThreshold: 0.02, marketCapThreshold: 5_000_000_000 },
   // 2020.4.1.~
@@ -61,7 +62,7 @@ const KOSDAQ_MAJOR_THRESHOLDS: MajorShareholderThreshold[] = [
 ];
 
 /** 코넥스 대주주 임계 이력 (2020.4.1. 시장 개설 이후) */
-const KONEX_MAJOR_THRESHOLDS: MajorShareholderThreshold[] = [
+export const KONEX_MAJOR_THRESHOLDS: MajorShareholderThreshold[] = [
   // 2024.1.1.~ (현행) — §157 시총 50억 통일
   { from: new Date("2024-01-01"), shareRatioThreshold: 0.04, marketCapThreshold: STOCK_MAJOR_MARKET_CAP_2024 },
   // 2020.4.1.~
@@ -70,12 +71,50 @@ const KONEX_MAJOR_THRESHOLDS: MajorShareholderThreshold[] = [
   { from: new Date("2013-07-01"), shareRatioThreshold: 0.04, marketCapThreshold: 1_000_000_000 },
 ];
 
+// ============================================================
+// 비상장 대주주 임계 이력 (시기별 — §167의8①2호)
+// ============================================================
+
+/**
+ * 비상장(주권비상장법인) 대주주 임계 이력
+ *
+ * 법령: 소득세법 시행령 §167의8①2호
+ *   가목: 지분율 기준 (주주 1인 및 기타주주 합산)
+ *   나목: 시가총액 기준
+ *
+ * 검증 상태:
+ * - 현행(2024.1.1.~): §167의8①2호 가목 4% / 나목 10억 — KoreanLaw MCP 조문 직접 확인 (2026-05-17)
+ * - 2020.4.1.~ 2023.12.31.: 4% / 10억 — 현행과 동일 (연혁 API 미지원, 조문 연속성 추정)
+ * - 2018.4.1.~ 2020.3.31.: 4% / 15억 — §157 코스닥 개정 패턴 병행 참고 (법제처 연혁 미확인)
+ * - 2017.1.1.~ 2018.3.31.: 4% / 25억 — 동일 (법제처 연혁 미확인)
+ * - 2013.1.1.~ 2016.12.31.: 2% / 30억 — 동일 (법제처 연혁 미확인)
+ * - ~2012.12.31.: 2% / Infinity — fallback (법제처 연혁 미확인)
+ *
+ * ⚠️ 주의: §157(상장)의 2024.1.1.~ 50억 통일과 달리, §167의8(비상장)은 10억 유지.
+ * ⚠️ 2017.1.1.~2023.12.31. 임계는 법제처 연혁 API 미확인 — 실무 필요 시 재검증.
+ */
+export const UNLISTED_MAJOR_THRESHOLDS: MajorShareholderThreshold[] = [
+  // 2020.4.1.~ 현재 (현행 §167의8①2호 KoreanLaw MCP 직접 확인 — 2026-05-17 F-6)
+  // 가목: 지분율 4% / 나목: 시총 10억원 (벤처기업 40억원 — 단순화: 비벤처 기준 10억 적용)
+  { from: new Date("2020-04-01"), shareRatioThreshold: 0.04, marketCapThreshold: 1_000_000_000 },
+  // 2018.4.1.~ 2020.3.31. (시총 25억→15억 완화 — WebSearch 검증 2026-05-17 F-6)
+  { from: new Date("2018-04-01"), shareRatioThreshold: 0.04, marketCapThreshold: 1_500_000_000 },
+  // 2017.1.1.~ 2018.3.31. (시총 50억→25억 완화 — WebSearch 검증 2026-05-17 F-6)
+  { from: new Date("2017-01-01"), shareRatioThreshold: 0.04, marketCapThreshold: 2_500_000_000 },
+  // 2013.1.1.~ 2016.12.31. (시총 50억 추정·법제처 부칙 미확인)
+  // F-6 정정 (2026-05-17): 지분율 0.02 → 0.04 — 비상장은 §157 코스닥 2% 패턴 잘못 차용 정정
+  { from: new Date("2013-01-01"), shareRatioThreshold: 0.04, marketCapThreshold: 5_000_000_000 },
+  // ~2012.12.31. fallback (법제처 부칙 미확인)
+  // F-6 정정 (2026-05-17): 지분율 0.02 → 0.05 — §94①3 나목 일반 5% 보수적 fallback
+  { from: new Date("1900-01-01"), shareRatioThreshold: 0.05, marketCapThreshold: Infinity },
+];
+
 /**
  * 시장 타입 + 판정 기준일로 대주주 임계 조회
  * 시기별 가장 최근 적용 임계를 반환
  */
 export function getMajorShareholderThreshold(
-  marketType: "kospi" | "kosdaq" | "konex",
+  marketType: "kospi" | "kosdaq" | "konex" | "unlisted",
   priorYearEndDate: Date,
 ): MajorShareholderThreshold {
   let thresholds: MajorShareholderThreshold[];
@@ -83,8 +122,11 @@ export function getMajorShareholderThreshold(
     thresholds = KOSPI_MAJOR_THRESHOLDS;
   } else if (marketType === "kosdaq") {
     thresholds = KOSDAQ_MAJOR_THRESHOLDS;
-  } else {
+  } else if (marketType === "konex") {
     thresholds = KONEX_MAJOR_THRESHOLDS;
+  } else {
+    // unlisted — §167의8①2호
+    thresholds = UNLISTED_MAJOR_THRESHOLDS;
   }
 
   // 최신 from 순 정렬 후 priorYearEndDate >= from인 첫 번째
@@ -95,6 +137,24 @@ export function getMajorShareholderThreshold(
     return sorted[sorted.length - 1];
   }
   return match;
+}
+
+/**
+ * 시장 타입 + 직전 사업연도 종료일로 해당 임계의 적용 시작일(from)을 ISO 문자열로 반환
+ * buildAppliedThreshold 헬퍼에서 fromDate 산출에 사용
+ */
+export function resolveThresholdFromDate(
+  marketType: "kospi" | "kosdaq" | "konex" | "unlisted",
+  priorYearEndDate: Date,
+): string {
+  const table =
+    marketType === "kospi" ? KOSPI_MAJOR_THRESHOLDS :
+    marketType === "kosdaq" ? KOSDAQ_MAJOR_THRESHOLDS :
+    marketType === "konex" ? KONEX_MAJOR_THRESHOLDS :
+    UNLISTED_MAJOR_THRESHOLDS;
+  const sorted = [...table].sort((a, b) => b.from.getTime() - a.from.getTime());
+  const match = sorted.find((t) => priorYearEndDate >= t.from) ?? sorted[sorted.length - 1];
+  return match.from.toISOString().slice(0, 10);
 }
 
 // ============================================================

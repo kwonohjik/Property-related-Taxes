@@ -218,6 +218,23 @@ export type StockTransferResult = {
   // 부동산 엔진 호환
   lthdStartDate: null;
 
+  /**
+   * §157/§167의8 대주주 판정에 적용된 임계 echo
+   * - 상장 3시장(kospi/kosdaq/konex): §157 임계
+   * - 비상장(unlisted): §167의8①2호 임계 (F-5 확장)
+   * - 기타자산(other_asset)은 undefined (§94①4 별도 트랙)
+   * - buildExemptResult(비과세 조기 반환) 경로에도 동일하게 전파됨
+   */
+  appliedThreshold?: {
+    shareRatio: number;
+    marketCap: number;
+    marketType: "kospi" | "kosdaq" | "konex" | "unlisted";
+    /** 직전 사업연도 종료일 (ISO YYYY-MM-DD) */
+    priorYearEndDate: string;
+    /** 해당 임계 적용 시작일 (ISO YYYY-MM-DD) */
+    fromDate: string;
+  };
+
   // 디버그·경고
   warnings: string[];
   appliedRules: Array<

@@ -37,23 +37,31 @@ export interface ClassificationResult {
  * 대주주 판정 — 시기별 임계 자동 적용
  * OR 조건: 지분율 임계 OR 시총 임계 중 하나라도 충족 시 대주주
  * 판정 기준일 = priorYearEndDate (직전 사업연도 종료일)
+ *
+ * 적용 시장:
+ * - 상장 3시장(kospi/kosdaq/konex): 시행령 §157
+ * - 비상장(unlisted): 시행령 §167의8①2호
+ * - 기타자산(other_asset): §94①4 별도 트랙 → 폼 토글 패스스루
  */
 function judgeIsMajorShareholder(input: StockTransferInput): {
   isMajor: boolean;
   threshold: { shareRatio: number; marketCap: number };
+  /** 폼 토글(isMajorShareholder)과 자동 산출값이 다른 경우 불일치 경고 */
+  mismatchWarning?: string;
 } {
   const { marketType, priorYearEndDate } = input;
 
-  // 비상장·기타자산은 대주주 임계 무관 (전원 과세 또는 §94①4 기준)
-  if (marketType === "unlisted" || marketType === "other_asset") {
+  // 기타자산은 §94①4 별도 트랙 — 폼 토글 우선
+  if (marketType === "other_asset") {
     return {
       isMajor: input.isMajorShareholder,
       threshold: { shareRatio: 0, marketCap: 0 },
     };
   }
 
+  // 상장 3시장(§157) + 비상장(§167의8①2호) 모두 자동 산출
   const threshold = getMajorShareholderThreshold(
-    marketType as "kospi" | "kosdaq" | "konex",
+    marketType as "kospi" | "kosdaq" | "konex" | "unlisted",
     priorYearEndDate,
   );
 
@@ -68,13 +76,23 @@ function judgeIsMajorShareholder(input: StockTransferInput): {
 
   const byRatio = effectiveShareRatio >= threshold.shareRatioThreshold;
   const byCap = effectiveMarketCap >= threshold.marketCapThreshold;
+  const isMajor = byRatio || byCap;
+
+  // 폼 토글 vs 자동 산출 불일치 경고 (옵션 A: 자동 산출 우선)
+  let mismatchWarning: string | undefined;
+  if (input.isMajorShareholder !== isMajor) {
+    mismatchWarning =
+      `자동 판정과 폼 토글 입력값이 다릅니다 — 자동 산출 우선 적용 ` +
+      `(자동: ${isMajor ? "대주주" : "비대주주"}, 폼: ${input.isMajorShareholder ? "대주주" : "비대주주"})`;
+  }
 
   return {
-    isMajor: byRatio || byCap,
+    isMajor,
     threshold: {
       shareRatio: threshold.shareRatioThreshold,
       marketCap: threshold.marketCapThreshold,
     },
+    mismatchWarning,
   };
 }
 
@@ -244,7 +262,10 @@ export function classifyStockTransfer(input: StockTransferInput): Classification
   }
 
   // 대주주 판정
-  const { isMajor, threshold } = judgeIsMajorShareholder(input);
+  const { isMajor, threshold, mismatchWarning } = judgeIsMajorShareholder(input);
+  if (mismatchWarning) {
+    warnings.push(mismatchWarning);
+  }
 
   // §94① 분류
   const classResult = classifySection94(input, isMajor);

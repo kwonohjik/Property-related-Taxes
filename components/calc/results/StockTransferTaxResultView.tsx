@@ -19,6 +19,7 @@
 import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
 import { StockFilingFormTable } from "@/components/calc/stock-transfer/StockFilingFormTable";
 import { printScoped } from "@/components/calc/results/transfer/TransferTaxResultViewHelpers";
+import { MARKET_LABEL } from "@/components/calc/stock-transfer/market-label";
 
 interface StockTransferTaxResultViewProps {
   result: StockTransferResult;
@@ -129,6 +130,9 @@ export function StockTransferTaxResultView({ result, shareCount, isFraudulent, i
           </div>
         </div>
 
+        {/* 대주주 판정 카드 (상장 3시장만 — 비상장·기타자산 자동 미렌더) */}
+        <MajorShareholderResultCard result={result} />
+
         {/* 신고서 양식 표 (32행 고정 — 비과세 시에도 렌더) */}
         <StockFilingFormTable result={result} onPrint={() => printScoped("form-table")} />
 
@@ -215,6 +219,9 @@ export function StockTransferTaxResultView({ result, shareCount, isFraudulent, i
         )}
       </div>
 
+      {/* 대주주 판정 카드 (상장 3시장만 — 비상장·기타자산 자동 미렌더) */}
+      <MajorShareholderResultCard result={result} />
+
       {/* 신고서 양식 표 (32행 고정) */}
       <StockFilingFormTable result={result} onPrint={() => printScoped("form-table")} />
 
@@ -223,6 +230,61 @@ export function StockTransferTaxResultView({ result, shareCount, isFraudulent, i
 
       {/* 경고 */}
       <Warnings warnings={result.warnings} />
+    </div>
+  );
+}
+
+// ── 대주주 판정 카드 ──
+
+/**
+ * 대주주 판정 여부 — exact 비교 필수.
+ * substring 매칭 `includes("major")` 절대 금지:
+ * "listed_non_major_in_market"·"listed_otc_non_major"·"unlisted_non_major" 가 모두 "major" 포함.
+ */
+function isMajorTaxCategory(c: StockTransferResult["taxCategory"]): boolean {
+  return c === "listed_major" || c === "unlisted_major";
+}
+
+function MajorShareholderResultCard({
+  result,
+}: {
+  result: StockTransferResult;
+}) {
+  const t = result.appliedThreshold;
+  if (!t) return null; // 기타자산(other_asset) 자동 가드
+
+  // 비상장은 §167의8①2호, 상장은 §157④
+  const lawRef = t.marketType === "unlisted" ? "§167의8①2호" : "§157④";
+  const isUnlisted = t.marketType === "unlisted";
+
+  return (
+    <div className="rounded-lg border border-violet-200 bg-violet-50/60 p-4 space-y-2">
+      <h4 className="text-sm font-semibold text-violet-900">
+        대주주 판정 ({lawRef})
+      </h4>
+      <dl className="text-sm text-violet-800 space-y-1">
+        <div>· 시장: <strong>{MARKET_LABEL[t.marketType]}</strong></div>
+        <div>· 판정 기준일: {t.priorYearEndDate}</div>
+        <div>· 임계 적용 시작: {t.fromDate}</div>
+        <div>· 지분율 임계: <strong>{(t.shareRatio * 100).toFixed(1)}%</strong></div>
+        {t.marketCap < Infinity && (
+          <div>· 시총 임계: <strong>{t.marketCap.toLocaleString()}</strong></div>
+        )}
+        <div className="pt-1 font-medium">
+          판정:{" "}
+          <strong>{isMajorTaxCategory(result.taxCategory) ? "대주주 해당" : "비대주주"}</strong>
+        </div>
+        {/* 비상장 벤처기업 시총 임계 안내 */}
+        {isUnlisted && (
+          <div className="text-xs text-violet-600 mt-1">
+            ※ 벤처기업 주식의 시총 임계는 40억원 (§167의8①2나목 단서)
+          </div>
+        )}
+        {/* 상장 비과세 사유 표시 */}
+        {result.isExempt && !isUnlisted && (
+          <div className="text-xs text-violet-600 mt-1">→ 비과세 (§94①3 가목 단서)</div>
+        )}
+      </dl>
     </div>
   );
 }

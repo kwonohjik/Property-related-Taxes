@@ -16,6 +16,7 @@ import { MajorShareholderBlock } from "@/components/calc/stock-transfer/MajorSha
 import { CompanyTypeBlock } from "@/components/calc/stock-transfer/CompanyTypeBlock";
 import { OtherAssetBlock } from "@/components/calc/stock-transfer/OtherAssetBlock";
 import { AcquisitionCauseBlock } from "@/components/calc/stock-transfer/AcquisitionCauseBlock";
+import { withAutoSyncMajor } from "@/components/calc/stock-transfer/major-sync";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 
 interface Step1Props {
@@ -35,6 +36,10 @@ function SectionTitle({ n, title }: { n: number; title: string }) {
 }
 
 export function Step1({ form, onChange }: Step1Props) {
+  // F-9 (2026-05-17): marketType 변경 시 isMajorShareholder도 자동 동기화
+  // (feedback_useeffect_store_mirror_forbidden — onChange 시점 wrapper)
+  const syncedChange = withAutoSyncMajor(form, onChange);
+
   return (
     <div className="space-y-8">
       {/* ① 시장 분류 */}
@@ -42,7 +47,7 @@ export function Step1({ form, onChange }: Step1Props) {
         <SectionTitle n={1} title="시장 유형" />
         <MarketTypeBlock
           marketType={form.marketType}
-          onChange={(marketType) => onChange({ marketType })}
+          onChange={(marketType) => syncedChange({ marketType })}
         />
       </section>
 
