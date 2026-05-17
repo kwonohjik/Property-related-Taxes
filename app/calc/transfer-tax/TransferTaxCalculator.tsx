@@ -164,6 +164,16 @@ export default function TransferTaxCalculator({
 
   async function handleSubmit() {
     setError(null);
+    // 최종 제출 가드 — 모든 step을 재검증 (사용자가 자유 이동·필드 비우기 후 마지막 step에서 "계산하기" 시 우회 차단).
+    // step 0 (자산·취득 정보)이 가장 critical — redev settlementSaleDate, useEstimated PHD 등 entry 검증.
+    for (let s = 0; s < totalSteps; s++) {
+      const err = validateStep(s, formData);
+      if (err) {
+        setError(err);
+        setStep(s); // 검증 실패 step으로 자동 이동 (사용자가 어디서 누락됐는지 즉시 인지)
+        return;
+      }
+    }
     setIsLoading(true);
     try {
       const res = await callTransferTaxAPI(formData);

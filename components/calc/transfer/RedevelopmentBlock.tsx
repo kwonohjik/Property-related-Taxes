@@ -289,9 +289,15 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, wasRegul
           소유권이전 고시일은 신축APT 등기 절차의 일부 — subject="apt"(완공 APT 양도, 사례 46)에서만 적용.
           subject="right"(입주권 양도, 사례 36 R-5)는 신축 완공 전 권리 양도이므로 settlementSaleDate 불필요.
         */}
-        {asset.redevIsSuccessorMember !== "yes"
-          && asset.redevSettlementDirection === "receive"
-          && asset.redevSubject === "apt" && (
+        {/* 3중 패턴 fallback (memory `feedback_store_default_vs_ui_display_fallback`):
+            redevSubject 미입력(빈문자열) 시 assetKind="right_to_move_in" → "right", 그 외 → "apt".
+            buildRedevelopmentPayload·validateRedevelopmentAsset과 동일 fallback — UI 표시 누락 차단. */}
+        {(() => {
+          const subjectEff = asset.redevSubject || (asset.assetKind === "right_to_move_in" ? "right" : "apt");
+          return asset.redevIsSuccessorMember !== "yes"
+            && asset.redevSettlementDirection === "receive"
+            && subjectEff === "apt";
+        })() && (
           <SettlementAnnouncementDateField asset={asset} onChange={onChange} />
         )}
 

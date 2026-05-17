@@ -3,6 +3,8 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   // @react-pdf/renderer는 Node.js 전용 모듈 — 서버 외부 패키지로 처리
   serverExternalPackages: ["@react-pdf/renderer"],
+  // LAN IP / 다른 호스트에서 dev 서버 접속 시 HMR·webpack 리소스 차단 해제 (Next.js 16)
+  allowedDevOrigins: ["192.168.1.134"],
 };
 
 // NEXT_PUBLIC_SENTRY_DSN 설정 시에만 Sentry 래핑 (환경변수 미설정 시 원본 config 반환)

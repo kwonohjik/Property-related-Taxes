@@ -55,9 +55,12 @@ export function validateRedevelopmentAsset(asset: AssetForm, label: string): str
 
   // ── originalAssetType="land" 분기 (사례 37·40) — housing 전용 로직 skip ──
   if (originalAssetType === "land") {
-    // land + apt + receive: 후속 PR (사례 42·43)
-    if (subject === "apt" && settlementDirection === "receive") {
-      return `${label}: 토지 출자 + 완공 APT 양도 + 청산금 수령 조합은 후속 PR (사례 42·43) 지원 예정입니다.`;
+    // land + apt + receive + 환산: 후속 PR (사례 43)
+    // runLandContribEstimated()가 pay 방향만 가정 — receive 방향 §166②2호·§166①2호 가목 산식 분기 미구현.
+    // 실가 모드(사례 42)는 runOriginalMember 경로로 분기 — computeRedevelopmentSplit 가 originalAssetType 무관하게 §166①2호 정확 적용.
+    // ※ 사례 42 anchor toBe 검증은 보류(snapshot only) — 양도코리아 PDF와 교재 답 상이 (design.md:31 행 #7 HOLD 유지).
+    if (subject === "apt" && settlementDirection === "receive" && asset.useEstimatedAcquisition) {
+      return `${label}: 토지 출자 + 완공 APT 양도 + 청산금 수령 + 환산취득가 조합은 후속 PR (사례 43) 지원 예정입니다. 취득가액을 확인할 수 있으면 "환산취득가 사용" 토글을 OFF로 전환하세요.`;
     }
     // land + right + receive: 후속 PR
     if (subject === "right" && settlementDirection !== "pay") {
@@ -66,6 +69,23 @@ export function validateRedevelopmentAsset(asset: AssetForm, label: string): str
     // land + right + 실가: 후속 PR (사례 37은 환산만 지원)
     if (subject === "right" && !asset.useEstimatedAcquisition) {
       return `${label}: 토지 출자 + 입주권 양도 + 실가 모드는 후속 PR에서 지원됩니다. 취득가액 확인 불가 시 환산취득가 토글을 ON으로 전환하세요. (§166③)`;
+    }
+
+    // ── 청산금 수령 시 settlementSaleDate 필수 (subject="apt"만) ──
+    // 사례 42 land+apt+receive (실가) — runOriginalMember 경로에서 settlement 기산일에 사용.
+    // housing 분기와 동일 검증을 land 분기에도 적용 (line 159의 공통 가드는 land early return으로 도달 불가).
+    if (subject === "apt"
+        && asset.redevSettlementDirection === "receive"
+        && !asset.redevSettlementSaleDate) {
+      return `${label}: 청산금 수령 시 소유권이전 고시일의 다음날을 입력하세요. (NTS 집행기준 + 소법 §95④)`;
+    }
+
+    // 실가 모드 (사례 42 land+apt+receive 등) — 종전 자산 취득가액 필수.
+    // 환산 모드는 아래 §166③ 분자·분모 검증 경로.
+    if (!asset.useEstimatedAcquisition) {
+      if (parseAmount(asset.redevActualAcquisitionPrice) <= 0) {
+        return `${label}: 실가 모드 — 종전 자산 취득가액(실거래가)을 입력하세요. 취득가액 확인 불가 시 환산취득가 토글을 ON으로 전환하세요. (§166①1호)`;
+      }
     }
 
     // 환산 모드일 때만 §166③ 분자·분모 검증 (사례 37 right+pay+환산)

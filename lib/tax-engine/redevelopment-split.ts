@@ -349,17 +349,28 @@ function computeAptReceive(args: BranchArgs): RedevelopmentSplitResult {
   const postApprovalGain = Math.max(0, transferPrice - salePriceTotal - postApprovalExpenses);
 
   // settlement 분 (APT 청산금 비율 안분):
-  // = 청산금 수령액 − (취득가액 × 청산금 / 평가액)
-  const aptSettlementApportionedAcq = safeMultiplyThenDivide(
-    oldAcquisitionPrice,
-    redevelopment.settlementAmount,
-    redevelopment.rightsValue,
-  );
-  const aptSettlementGain = calcAptReceiveSettlementGain(
-    oldAcquisitionPrice,
-    redevelopment.rightsValue,
-    redevelopment.settlementAmount,
-  );
+  // ★ 사례 42 정정 (2026-05-17, project_case_42_apt_receive_land):
+  //   토지 출자 + 완공 APT 양도 + 청산금 수령(동시신고) 시 §166②2호 표준 해석은
+  //   §166①2호 가목·나목 2분기만 적용 — 청산금 자체는 인가시점에 받은 금액이라
+  //   별도 양도(처분) 사건이 없음. 청산금 효과는 분양가 = 권리가 − 수령으로
+  //   가목·나목 양쪽에 이미 반영됨.
+  //   주택 출자(사례 47 등)는 기존 책 산식(청산금 비율 안분) 유지 — receive 분기에서
+  //   1세대1주택 12억 안분 + 거주월수 귀속 분리 등 housing 전용 처리와 연동되므로 보존.
+  const isLandContribReceive = redevelopment.originalAssetType === "land";
+  const aptSettlementApportionedAcq = isLandContribReceive
+    ? 0
+    : safeMultiplyThenDivide(
+        oldAcquisitionPrice,
+        redevelopment.settlementAmount,
+        redevelopment.rightsValue,
+      );
+  const aptSettlementGain = isLandContribReceive
+    ? 0
+    : calcAptReceiveSettlementGain(
+        oldAcquisitionPrice,
+        redevelopment.rightsValue,
+        redevelopment.settlementAmount,
+      );
 
   return {
     preApproval: {
@@ -373,7 +384,8 @@ function computeAptReceive(args: BranchArgs): RedevelopmentSplitResult {
       gain: postApprovalGain,
     },
     settlement: {
-      apportionedTransfer: redevelopment.settlementAmount,
+      // ★ 사례 42 정정 — land 분기는 settlement 자체가 없음 (양도가·취득가·차익 모두 0)
+      apportionedTransfer: isLandContribReceive ? 0 : redevelopment.settlementAmount,
       apportionedAcquisition: aptSettlementApportionedAcq,
       gain: aptSettlementGain,
     },
