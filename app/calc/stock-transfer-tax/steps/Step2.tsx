@@ -314,11 +314,7 @@ export function Step2({ form, onChange }: Step2Props) {
                     {
                       value: "lots",
                       label: "일자별 다건",
-                      description:
-                        transferActualInputMode === "total"
-                          ? "양도가액 합계 모드에서는 지원하지 않습니다 (역산 잔돈 발생)"
-                          : "여러 시점 분할 매수 lot별 입력 (§97① 실지거래가액)",
-                      disabled: transferActualInputMode === "total",
+                      description: "여러 시점 분할 매수 lot별 입력 (§97① 실지거래가액)",
                     },
                   ]}
                 />
@@ -335,14 +331,26 @@ export function Step2({ form, onChange }: Step2Props) {
               )}
 
               {acquisitionActualInputMode === "lots" && (
-                <AcquisitionLotsMatrix
-                  lots={form.acquisitionLots}
-                  onChange={(lots) => onChange({ acquisitionLots: lots })}
-                  costAllocationMethod={form.costAllocationMethod}
-                  onCostMethodChange={(method) =>
-                    onChange({ costAllocationMethod: method })
-                  }
-                />
+                <>
+                  {transferActualInputMode === "total" && (
+                    <div className="rounded-lg border border-amber-200 bg-amber-50/60 px-4 py-3 text-xs text-amber-700">
+                      <p className="font-medium mb-1">⚠️ 양도가액 합계 + 취득 다건 조합 안내</p>
+                      <p>
+                        양도가액을 합계로 입력하고 취득가액을 다건으로 입력하면, 엔진은 양도 1주당 단가를{" "}
+                        <code className="bg-amber-100 px-1 rounded">round(합계 ÷ 양도 주식수)</code> 로 역산합니다.
+                        합계가 양도 주식수로 정확히 나누어 떨어지지 않으면 결과 양도가액에 ±(양도주식수−1)원 잔돈 오차가 발생할 수 있습니다.
+                      </p>
+                    </div>
+                  )}
+                  <AcquisitionLotsMatrix
+                    lots={form.acquisitionLots}
+                    onChange={(lots) => onChange({ acquisitionLots: lots })}
+                    costAllocationMethod={form.costAllocationMethod}
+                    onCostMethodChange={(method) =>
+                      onChange({ costAllocationMethod: method })
+                    }
+                  />
+                </>
               )}
             </div>
           )}

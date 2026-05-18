@@ -259,15 +259,9 @@ export function addStockRefines(
           message: "취득가액 다건 입력 모드: 매수 lot을 1행 이상 입력하세요",
         });
       }
-      // Refine 2 — total 양도가 조합 차단 (R-1: 잔돈 발생 회피)
-      if ((data.transferActualInputMode ?? "per_share") === "total") {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["acquisitionActualInputMode"],
-          message:
-            "양도가액 합계 모드와 취득 다건 입력 모드를 동시에 사용할 수 없습니다 (1주당 단가 모드를 사용하세요)",
-        });
-      }
+      // (Refine 2 폐기) total + lots 조합 차단 제거 — 2026-05-18 사용자 요청.
+      // API 변환에서 perShareTransferPrice를 Math.round(transferTotalPrice / shareCount)로 역산.
+      // UI 안내 카드(Step2)에서 잔돈 오차 가능 사전 고지.
       // Refine 3 — specific 차단 (UI disabled의 방어선)
       if (data.costAllocationMethod === "specific") {
         ctx.addIssue({
@@ -322,7 +316,12 @@ export function addStockRefines(
         });
       }
       // 분할 모드에서 total 직접 입력 차단 (UI disabled의 Zod 방어선)
-      if (data.transferActualInputMode === "total") {
+      // 단, lots-only 모드(acquisitionActualInputMode === "lots")는 허용 — 2026-05-18 제약 해제.
+      // lots-only는 API에서 합성 transferLot 1건만 생성 → 정확한 분할 양도 아님.
+      if (
+        data.transferActualInputMode === "total" &&
+        (data.acquisitionActualInputMode ?? "per_share") !== "lots"
+      ) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["transferActualInputMode"],

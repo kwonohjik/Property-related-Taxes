@@ -372,15 +372,8 @@ export function validateStep2(form: StockTransferFormData): StockValidationError
           });
         }
       }
-      // total + lots 조합 차단 (Zod refine의 validate 방어선)
-      const transferInputMode = form.transferActualInputMode || "per_share";
-      if (transferInputMode === "total") {
-        errors.push({
-          field: "acquisitionActualInputMode",
-          message: "양도가액 합계 모드와 취득 다건 입력 모드를 동시에 사용할 수 없습니다",
-          severity: "error",
-        });
-      }
+      // (total + lots 조합 차단 폐기) — 2026-05-18 사용자 요청.
+      // API 변환에서 perShareTransferPrice 역산 처리. UI 안내 카드로 잔돈 오차 사전 고지.
       // specific 차단
       if (form.costAllocationMethod === "specific") {
         errors.push({

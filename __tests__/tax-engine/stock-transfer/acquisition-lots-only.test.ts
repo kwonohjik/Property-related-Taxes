@@ -144,7 +144,7 @@ describe("LO: 취득가액 다건 입력 모드", () => {
   });
 
   // --------------------------------------------------------
-  it("LO-4: Zod refine — transferActualInputMode=total + acquisitionActualInputMode=lots 차단", () => {
+  it("LO-4 (재정의): Zod refine — total + lots 조합은 통과 (2026-05-18 제약 해제). 합성 transferLot은 API 책임.", () => {
     const schema = addStockRefines(stockTransferInputSchema);
     const parsed = schema.safeParse({
       ...baseInput(),
@@ -156,17 +156,51 @@ describe("LO: 취득가액 다건 입력 모드", () => {
         { id: "a", acquisitionDate: "2022-01-10", shareCount: 1200, perShareAcquisitionPrice: 10_000, acquisitionCause: "purchase" },
       ],
       transferLots: [
+        // API 변환이 Math.round(21_600_000 / 1200) = 18000 으로 합성
         { id: "__synth_single_transfer__", transferDate: "2025-07-01", shareCount: 1200, perShareTransferPrice: 18_000 },
       ],
       costAllocationMethod: "fifo",
     });
-    expect(parsed.success).toBe(false);
-    if (!parsed.success) {
-      const blocked = parsed.error.issues.some((i) =>
-        i.path.includes("acquisitionActualInputMode"),
-      );
-      expect(blocked).toBe(true);
-    }
+    expect(parsed.success).toBe(true);
+  });
+
+  // --------------------------------------------------------
+  it("LO-T-1: total + lots — 정확히 나누어 떨어지는 케이스 (21,600,000 ÷ 1200 = 18,000)", () => {
+    // API 변환 시뮬레이션: Math.round(21_600_000 / 1200) = 18_000
+    const acquisitionLots: AcquisitionLot[] = [
+      { id: "a", acquisitionDate: new Date("2022-01-10"), shareCount: 1000, perShareAcquisitionPrice: 10_000, acquisitionCause: "purchase" },
+      { id: "b", acquisitionDate: new Date("2023-05-20"), shareCount: 500,  perShareAcquisitionPrice: 12_000, acquisitionCause: "purchase" },
+    ];
+    const result = calculateStockTransferTax(
+      baseInput({
+        shareCount: 1200,
+        acquisitionLots,
+        transferLots: [synthTransferLot(1200, 18_000)], // 합성 단가
+        costAllocationMethod: "fifo",
+      }),
+    );
+    expect(result.transferPrice).toBe(21_600_000); // 정확 일치 (잔돈 없음)
+    expect(result.acquisitionPrice).toBe(12_400_000); // FIFO: 1000*10000 + 200*12000
+  });
+
+  it("LO-T-2: total + lots — 정확히 안 떨어지는 케이스 잔돈 ≤ shareCount-1원 (21,600,001 ÷ 1200 → round 18,000, 1원 손실)", () => {
+    // 21,600,001 / 1200 = 18000.0008... → round 18000
+    // transferPrice = 18000 × 1200 = 21,600,000 (사용자 입력 21,600,001 대비 1원 손실)
+    const acquisitionLots: AcquisitionLot[] = [
+      { id: "a", acquisitionDate: new Date("2022-01-10"), shareCount: 1200, perShareAcquisitionPrice: 10_000, acquisitionCause: "purchase" },
+    ];
+    const result = calculateStockTransferTax(
+      baseInput({
+        shareCount: 1200,
+        acquisitionLots,
+        transferLots: [synthTransferLot(1200, 18_000)], // round 결과
+        costAllocationMethod: "fifo",
+      }),
+    );
+    // 잔돈 손실 ≤ shareCount - 1 = 1199원 한계 내
+    const userIntent = 21_600_001;
+    const diff = Math.abs(result.transferPrice - userIntent);
+    expect(diff).toBeLessThan(1200);
   });
 
   // --------------------------------------------------------

@@ -146,12 +146,22 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
       });
       // 합성 transferLot — 폼 전역 단일 양도 정보로 1행 생성
       // ID prefix "__synth_single_transfer__" 로 사용자 입력 ID와 충돌 차단 (R-5)
+      // total 모드 호환: transferActualInputMode === "total" 시 합계 → 1주당 단가 역산 (round)
+      //   잔돈은 ±(shareCount-1)원 범위 (Math.round로 최소화). UI 안내 카드로 사전 고지.
+      const syntheticShareCount = parseIntOrUndef(form.shareCount) ?? 0;
+      const transferInputMode = form.transferActualInputMode || "per_share";
+      const syntheticPerShareTransferPrice =
+        transferInputMode === "total"
+          ? syntheticShareCount > 0
+            ? Math.round((parseIntOrUndef(form.transferTotalPrice) ?? 0) / syntheticShareCount)
+            : 0
+          : parseIntOrUndef(form.perShareTransferPrice) ?? 0;
       body.transferLots = [
         {
           id: "__synth_single_transfer__",
           transferDate: form.transferDate,
-          shareCount: parseIntOrUndef(form.shareCount) ?? 0,
-          perShareTransferPrice: parseIntOrUndef(form.perShareTransferPrice) ?? 0,
+          shareCount: syntheticShareCount,
+          perShareTransferPrice: syntheticPerShareTransferPrice,
         },
       ];
       // specificMatchings는 본 모드 미지원 (Zod refine + UI disabled 차단)
