@@ -74,7 +74,8 @@ export function Step4({ result, form, error, isLoading, onCalculate }: Step4Prop
             shareCount={shareCount}
             isFraudulent={form.isFraudulent}
             isInternationalTransaction={form.isInternationalTransaction}
-            transferActualInputMode={form.transferActualInputMode || "per_share"}
+            transferActualInputMode={form.transferActualInputMode || "total"}
+            unlistedValuationMode={form.unlistedValuationMode || "simple"}
             perShareTransferPrice={parseAmount(form.perShareTransferPrice)}
             securityName={form.securityName}
             securityCode={form.securityCode}

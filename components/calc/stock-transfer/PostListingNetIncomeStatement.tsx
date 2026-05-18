@@ -54,14 +54,20 @@ interface PostListingNetIncomeStatementProps {
   mode: "listing_only" | "full";
 }
 
-type Column = "Listing" | "Acq";
-const COL_LABEL: Record<Column, string> = { Listing: "상장연도 직전", Acq: "취득연도 직전" };
+// [unlisted-direct-calc] Column 타입 확장 — EUTransfer/EUAcq 비상장 §165④ 컬럼 추가
+export type Column = "Listing" | "Acq" | "EUTransfer" | "EUAcq";
+const COL_LABEL: Record<Column, string> = {
+  Listing: "상장연도 직전",
+  Acq: "취득연도 직전 (상장 §165⑤)",
+  EUTransfer: "양도연도 직전 (비상장 §165④)",
+  EUAcq: "취득연도 직전 (비상장 §165④)",
+};
 
 function getField(form: StockTransferFormData, key: keyof StockTransferFormData): string {
   return (form[key] as string) ?? "";
 }
 
-function YearColumn({
+export function YearColumn({
   form,
   onChange,
   col,

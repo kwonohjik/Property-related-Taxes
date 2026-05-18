@@ -110,10 +110,10 @@ export function Step1({ form, onChange }: Step1Props) {
   const sections = useMemo(() => {
     const items: Array<{ key: string; title: string; render: () => ReactNode }> = [];
 
-    // 0(1번). 종목 정보 (식별용 메타데이터)
+    // 0(1번). 기본 사항 (양도인 인적사항 + 종목 식별)
     items.push({
       key: "security",
-      title: "종목 정보",
+      title: "기본 사항",
       render: () => (
         <SecurityMetadataBlock
           securityName={form.securityName}
@@ -150,7 +150,7 @@ export function Step1({ form, onChange }: Step1Props) {
       key: "dates",
       title:
         form.lotsMode === "split"
-          ? "양도·취득 lot (분할 모드)"
+          ? "양도·취득 lot (분할 양도 모드)"
           : "양도·취득 일자 및 주식수",
       render: () => (
         <div className="space-y-4">
@@ -161,13 +161,13 @@ export function Step1({ form, onChange }: Step1Props) {
             options={[
               {
                 value: "single",
-                label: "단일 매수·단일 양도",
-                description: "한 번 매수 후 한 번에 양도",
+                label: "단일 양도",
+                description: "양도는 한 번에 (취득은 단건/분할 모두 가능)",
               },
               {
                 value: "split",
-                label: "분할 매수·분할 양도",
-                description: "여러 lot으로 매수/매도. 산정방법 3종 선택",
+                label: "분할 양도",
+                description: "여러 차례 나눠 매도. 산정방법 3종 선택",
               },
             ]}
             layout="inline"

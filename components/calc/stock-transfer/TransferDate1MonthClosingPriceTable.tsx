@@ -19,7 +19,7 @@
 import { useMemo } from "react";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { calcMonthlyClosingAverage } from "@/lib/tax-engine/stock-transfer/stock-valuation-post-listing";
-import { dayOfWeek, preTransferAutoFillDates } from "./PostListingClosingPriceTable";
+import { dayOfWeek, preTransferAutoFillDates, resolvePreTransferAnchor } from "./PostListingClosingPriceTable";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 
 interface TransferDate1MonthClosingPriceTableProps {
@@ -33,6 +33,8 @@ interface TransferDate1MonthClosingPriceTableProps {
 export function TransferDate1MonthClosingPriceTable({ form, onChange }: TransferDate1MonthClosingPriceTableProps) {
   // 양도일 기반 일자 자동 채움 (UTC + 윤년 처리)
   const displayDates = useMemo(() => preTransferAutoFillDates(form.transferDate), [form.transferDate]);
+  const anchor = useMemo(() => resolvePreTransferAnchor(form.transferDate), [form.transferDate]);
+  const anchorShifted = anchor !== "" && anchor !== form.transferDate;
   const total = displayDates.length;
   const leftCount = Math.ceil(total / 2);
 
@@ -108,6 +110,13 @@ export function TransferDate1MonthClosingPriceTable({ form, onChange }: Transfer
           양도일 직전 1개월 종가 (소령 §99①3 · §163⑨ 분모 — {displayDates[0]} ~ {displayDates[total - 1]} · 총 {total}일, 휴일·주말은 빈칸으로 두면 자동 제외)
         </p>
       </div>
+
+      {anchorShifted && (
+        <p className="text-[11px] text-amber-700/90 leading-relaxed">
+          양도일 <strong>{form.transferDate}</strong>이(가) 휴장일이므로 직전 거래일{" "}
+          <strong>{anchor}</strong>을(를) 기산점으로 1개월 범위를 산정했습니다.
+        </p>
+      )}
 
       {/* 2-col grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs" onKeyDown={handleGridKeyDown}>

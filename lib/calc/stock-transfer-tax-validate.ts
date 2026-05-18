@@ -313,7 +313,7 @@ export function validateStep2(form: StockTransferFormData): StockValidationError
 
   // ── 양도가액 (single 모드) ──
   if (transferPriceMode === "actual") {
-    const actualMode = form.transferActualInputMode || "per_share";  // 3중 패턴 default
+    const actualMode = form.transferActualInputMode || "total";  // 3중 패턴 default
     if (actualMode === "total") {
       if (isEmpty(form.transferTotalPrice) || parseI(form.transferTotalPrice) <= 0) {
         errors.push({ field: "transferTotalPrice", message: "양도가액 합계를 입력하세요", severity: "error" });
@@ -503,20 +503,72 @@ export function validateStep2(form: StockTransferFormData): StockValidationError
         }
       }
     } else {
-      // 비상장 보충적 평가
-      if (isEmpty(form.transferYearNetIncomePerShare)) {
-        errors.push({
-          field: "transferYearNetIncomePerShare",
-          message: "양도연도 1주당 순손익가치를 입력하세요 (소령 §165⑤)",
-          severity: "error",
-        });
-      }
-      if (isEmpty(form.transferYearNetAssetPerShare)) {
-        errors.push({
-          field: "transferYearNetAssetPerShare",
-          message: "양도연도 1주당 순자산가치를 입력하세요",
-          severity: "error",
-        });
+      // 비상장 보충적 평가 — [unlisted-direct-calc] simple / full 모드 분기
+      // [E-6 (4)] isNetAssetOnly 시 NI 행 필수 검증 skip
+      const niSkip = (form.netAssetOnlyReason ?? "") !== "";
+      const valuationMode = form.unlistedValuationMode || "simple";
+
+      if (valuationMode === "simple") {
+        if (!niSkip && isEmpty(form.transferYearNetIncomePerShare)) {
+          errors.push({
+            field: "transferYearNetIncomePerShare",
+            message: "양도연도 1주당 순손익가치를 입력하세요 (소령 §165④)",
+            severity: "error",
+          });
+        }
+        if (isEmpty(form.transferYearNetAssetPerShare)) {
+          errors.push({
+            field: "transferYearNetAssetPerShare",
+            message: "양도연도 1주당 순자산가치를 입력하세요",
+            severity: "error",
+          });
+        }
+        if (!niSkip && isEmpty(form.acquisitionYearNetIncomePerShare)) {
+          errors.push({
+            field: "acquisitionYearNetIncomePerShare",
+            message: "취득연도 1주당 순손익가치를 입력하세요",
+            severity: "error",
+          });
+        }
+        if (isEmpty(form.acquisitionYearNetAssetPerShare)) {
+          errors.push({
+            field: "acquisitionYearNetAssetPerShare",
+            message: "취득연도 1주당 순자산가치를 입력하세요",
+            severity: "error",
+          });
+        }
+      } else {
+        // full 모드 — [M-7] 양/취 양쪽 핵심 필드 모두 필수
+        if (!niSkip) {
+          if (isEmpty(form.niShareCountEUTransfer) || parseI(form.niShareCountEUTransfer) <= 0) {
+            errors.push({
+              field: "niShareCountEUTransfer",
+              message: "양도연도 NI 사업연도말 발행주식수 필수 (full 모드)",
+              severity: "error",
+            });
+          }
+          if (isEmpty(form.niShareCountEUAcq) || parseI(form.niShareCountEUAcq) <= 0) {
+            errors.push({
+              field: "niShareCountEUAcq",
+              message: "취득연도 NI 사업연도말 발행주식수 필수 (full 모드)",
+              severity: "error",
+            });
+          }
+        }
+        if (isEmpty(form.naShareCountEUTransfer) || parseI(form.naShareCountEUTransfer) <= 0) {
+          errors.push({
+            field: "naShareCountEUTransfer",
+            message: "양도연도 NA 사업연도말 발행주식수 필수 (full 모드)",
+            severity: "error",
+          });
+        }
+        if (isEmpty(form.naShareCountEUAcq) || parseI(form.naShareCountEUAcq) <= 0) {
+          errors.push({
+            field: "naShareCountEUAcq",
+            message: "취득연도 NA 사업연도말 발행주식수 필수 (full 모드)",
+            severity: "error",
+          });
+        }
       }
     }
   } else if (acquisitionMode === "face_value") {

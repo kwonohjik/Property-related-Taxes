@@ -41,20 +41,47 @@ export function fmtDate(d: Date): string {
 }
 
 /**
- * 양도일 직전 1개월 일자 배열 (UTC, 28~31일 가변).
- * 산식: [transferDate − 1 month, transferDate − 1 day] (양도일 미포함).
- * 예: 2024-06-01 → [2024-05-01, ..., 2024-05-31] (31일)
- *     2024-03-01 → [2024-02-01, ..., 2024-02-29] (윤년 29일)
+ * 양도일 기산 anchor — 양도일이 주말이면 직전 평일(금요일)까지 시프트.
+ * (거래소 휴장일 캘린더는 미반영 — 토·일만 보정)
+ *
+ * 예: 2023-02-26 (일) → 2023-02-24 (금)
+ *     2023-02-25 (토) → 2023-02-24 (금)
+ *     2023-02-24 (금) → 2023-02-24 (그대로)
+ */
+export function resolvePreTransferAnchor(transferDate: string): string {
+  if (!transferDate || !/^\d{4}-\d{2}-\d{2}$/.test(transferDate)) return "";
+  const [y, m, d] = transferDate.split("-").map(Number);
+  const anchor = new Date(Date.UTC(y, m - 1, d));
+  while (anchor.getUTCDay() === 0 || anchor.getUTCDay() === 6) {
+    anchor.setUTCDate(anchor.getUTCDate() - 1);
+  }
+  return fmtDate(anchor);
+}
+
+/**
+ * 양도일 직전 1개월 일자 배열 (UTC, 가변 일수).
+ *
+ * 기계적 산식 — 일수(30/31) 가정 없이 월·일만 조작:
+ *   anchor = resolvePreTransferAnchor(transferDate)
+ *   start  = (anchor.year, anchor.month − 1, anchor.day + 1)   ← JS overflow 자동 보정
+ *   end    = anchor                                            ← anchor 포함
+ *
+ * 예: anchor 2023-02-24 → [2023-01-25, 2023-02-24] (31일)
+ *     anchor 2024-03-01 → [2024-02-02, 2024-03-01] (28일)  ※ 윤년·평년 자동
+ *     anchor 2023-03-31 → [2023-03-01, 2023-03-31] (31일)  ※ 2-32 overflow → 3-01
  */
 export function preTransferAutoFillDates(transferDate: string): string[] {
-  if (!transferDate || !/^\d{4}-\d{2}-\d{2}$/.test(transferDate)) return [];
-  const [y, m, d] = transferDate.split("-").map(Number);
-  // [transferDate − 1mo, transferDate − 1day]
-  const endExclusive = new Date(Date.UTC(y, m - 1, d)); // transferDate 자체 (미포함)
-  endExclusive.setUTCDate(endExclusive.getUTCDate() - 1); // transferDate − 1day (포함)
-  const start = new Date(Date.UTC(y, m - 2, d)); // transferDate − 1 month (포함, JS overflow 자동 보정)
+  const anchorStr = resolvePreTransferAnchor(transferDate);
+  if (!anchorStr) return [];
+  const [y, m, d] = anchorStr.split("-").map(Number);
+  // end = anchor (포함)
+  const endInclusive = new Date(Date.UTC(y, m - 1, d));
+  // start = (월 − 1, 일 + 1) — 기계적 산식 (JS overflow 자동 보정)
+  const start = new Date(Date.UTC(y, m - 1, d));
+  start.setUTCMonth(start.getUTCMonth() - 1);
+  start.setUTCDate(start.getUTCDate() + 1);
   const out: string[] = [];
-  for (let cur = new Date(start); cur <= endExclusive; cur.setUTCDate(cur.getUTCDate() + 1)) {
+  for (let cur = new Date(start); cur <= endInclusive; cur.setUTCDate(cur.getUTCDate() + 1)) {
     out.push(fmtDate(cur));
   }
   return out;

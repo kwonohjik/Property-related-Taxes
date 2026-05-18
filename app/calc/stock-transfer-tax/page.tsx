@@ -1,4 +1,5 @@
 import StockTransferTaxCalculator from "./StockTransferTaxCalculator";
+import { ProfessionalClientGate } from "@/components/calc/ProfessionalClientGate";
 
 export const metadata = {
   title: "주식 양도소득세 계산기",
@@ -13,5 +14,9 @@ export const metadata = {
 };
 
 export default function StockTransferTaxPage() {
-  return <StockTransferTaxCalculator />;
+  return (
+    <ProfessionalClientGate>
+      <StockTransferTaxCalculator />
+    </ProfessionalClientGate>
+  );
 }

@@ -1,21 +1,23 @@
 "use client";
 
 /**
- * SecurityMetadataBlock — 종목 메타데이터 입력 (Step 1 섹션 1번 — ⑤ 동기화 지점)
+ * SecurityMetadataBlock — 기본 사항 입력 (Step 1 섹션 1번)
  *
- * 필드 4종:
- *   - securityName (필수): 종목명
- *   - securityCode (선택): 종목코드, marketType="unlisted" 시 hint 변경
- *   - brokerage (선택): 증권사
- *   - accountNumberMasked (선택): 계좌번호 마스킹
+ * 성명·생년월일 데이터 소스 (mode 분기):
+ *   - taxpayer 모드: useUserProfile() → userRepository.upsertProfile()
+ *   - professional 모드: activeClientId → clientRepository.get() → update()
+ *     (의뢰인 선택은 ProfessionalClientGate에서 강제됨)
  *
- * 3중 패턴 (feedback_store_default_vs_ui_display_fallback):
- *   factory default="" / normalize="" / UI 직접 사용 (|| fallback prop 없음)
- *
+ * 350ms 디바운스 후 IndexedDB persist.
  * SelectOnFocusProvider가 전역 등록 → onFocus 수동 추가 불필요.
  */
 
+import { useEffect, useRef, useState } from "react";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import { useUserProfile } from "@/lib/storage/use-user-profile";
+import { userRepository } from "@/lib/storage/user-repository";
+import { clientRepository } from "@/lib/storage/client-repository";
+import { useProfessionalStore } from "@/lib/stores/professional-store";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 
 interface SecurityMetadataBlockProps {
@@ -35,67 +37,127 @@ export function SecurityMetadataBlock({
   marketType,
   onChange,
 }: SecurityMetadataBlockProps) {
-  const isUnlisted = marketType === "unlisted";
-  const stockCodeHint = isUnlisted
-    ? "비상장 종목은 종목코드가 없어도 됩니다"
-    : "상장 6자리 숫자 (예: 005930). 고유 식별용, 계산에 영향 없음";
+  // 미사용 props는 형식적으로 유지 (Step1에서 주입 — 향후 식별용 메타 확장 대비)
+  void brokerage;
+  void accountNumberMasked;
+  void marketType;
+
+  const { profile, mode, loading } = useUserProfile();
+  const { activeClientId } = useProfessionalStore();
+  const isProfessional = mode === "professional";
+
+  const [displayName, setDisplayName] = useState("");
+  const [birthDate, setBirthDate] = useState("");
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // 초기 hydrate — mode별 데이터 소스 분기
+  useEffect(() => {
+    let cancelled = false;
+    async function hydrate() {
+      if (loading) return;
+      if (isProfessional) {
+        if (!activeClientId) {
+          if (!cancelled) {
+            setDisplayName("");
+            setBirthDate("");
+          }
+          return;
+        }
+        const client = await clientRepository.get(activeClientId);
+        if (cancelled) return;
+        setDisplayName(client?.name ?? "");
+        setBirthDate(client?.birthDate ?? "");
+      } else {
+        setDisplayName(profile?.displayName ?? "");
+        setBirthDate(profile?.birthDate ?? "");
+      }
+    }
+    hydrate();
+    return () => {
+      cancelled = true;
+    };
+  }, [loading, isProfessional, activeClientId, profile]);
+
+  const persist = (next: { name?: string; birthDate?: string | null }) => {
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      if (isProfessional) {
+        if (!activeClientId) return;
+        const patch: { name?: string; birthDate?: string | null } = {};
+        if (next.name !== undefined) patch.name = next.name;
+        if (next.birthDate !== undefined) patch.birthDate = next.birthDate;
+        clientRepository.update(activeClientId, patch).catch(() => {});
+      } else {
+        const patch: { displayName?: string; birthDate?: string | null } = {};
+        if (next.name !== undefined) patch.displayName = next.name;
+        if (next.birthDate !== undefined) patch.birthDate = next.birthDate;
+        userRepository.upsertProfile(patch).catch(() => {});
+      }
+    }, 350);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    };
+  }, []);
+
+  const inputClassName =
+    "w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
+
+  const nameLabel = isProfessional ? "성명 (의뢰인)" : "성명";
 
   return (
     <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-4 space-y-4">
-      {/* 종목명 (필수) */}
-      <FieldCard
-        label="종목명"
-        required
-        hint="예시 — EXAMPLE HOLDINGS, 예제 전자"
-      >
-        <input
-          type="text"
-          value={securityName}
-          onChange={(e) => onChange({ securityName: e.target.value })}
-          placeholder="종목명을 입력하세요"
-          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-        />
-      </FieldCard>
-
-      {/* 종목코드 (선택) */}
-      <FieldCard
-        label="종목코드 (선택)"
-        hint={stockCodeHint}
-      >
-        <input
-          type="text"
-          value={securityCode}
-          onChange={(e) => onChange({ securityCode: e.target.value })}
-          maxLength={12}
-          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-        />
-      </FieldCard>
-
+      {/* 성명 / 생년월일 — mode별 IndexedDB 직접 read/write */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* 증권사 (선택) */}
-        <FieldCard
-          label="증권사 (선택)"
-          hint="예시 — 예제증권, EXAMPLE 자산운용"
-        >
+        <FieldCard label={nameLabel}>
           <input
             type="text"
-            value={brokerage}
-            onChange={(e) => onChange({ brokerage: e.target.value })}
-            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            value={displayName}
+            onChange={(e) => {
+              const v = e.target.value;
+              setDisplayName(v);
+              persist({ name: v });
+            }}
+            className={inputClassName}
           />
         </FieldCard>
 
-        {/* 계좌번호 마스킹 (선택) */}
-        <FieldCard
-          label="계좌번호 (선택)"
-          hint="뒤 4자리만 입력하거나 전체 입력 (예: ****-1234)"
-        >
+        <FieldCard label="생년월일">
           <input
             type="text"
-            value={accountNumberMasked}
-            onChange={(e) => onChange({ accountNumberMasked: e.target.value })}
-            placeholder="****-1234"
-            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            value={birthDate}
+            onChange={(e) => {
+              const v = e.target.value;
+              setBirthDate(v);
+              persist({ birthDate: v || null });
+            }}
+            placeholder="YYYY-MM-DD"
+            className={inputClassName}
+          />
+        </FieldCard>
+      </div>
+
+      {/* 종목명 / 종목코드 — 한 행 좌·우 배치 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <FieldCard label="종목명" required>
+          <input
+            type="text"
+            value={securityName}
+            onChange={(e) => onChange({ securityName: e.target.value })}
+            placeholder="종목명을 입력하세요"
+            className={inputClassName}
+          />
+        </FieldCard>
+
+        <FieldCard label="종목코드 (선택)">
+          <input
+            type="text"
+            value={securityCode}
+            onChange={(e) => onChange({ securityCode: e.target.value })}
+            maxLength={12}
+            className={inputClassName}
           />
         </FieldCard>
       </div>

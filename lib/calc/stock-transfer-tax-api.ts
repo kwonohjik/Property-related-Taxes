@@ -12,6 +12,10 @@
 
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 import { adaptFlatToApiBody } from "@/lib/tax-engine/stock-transfer/post-listing-flat-adapter";
+import {
+  adaptUnlistedFlatToApiBody,
+  shouldSkipNetIncome,
+} from "@/lib/tax-engine/stock-transfer/unlisted-flat-adapter";
 import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
 
 // ============================================================
@@ -99,7 +103,7 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
   // ── 양도가액 ──
   body.transferPriceMode = transferPriceMode;         // 3중 패턴 default: "actual"
   if (transferPriceMode === "actual") {
-    const actualMode = form.transferActualInputMode || "per_share";  // 3중 패턴 default
+    const actualMode = form.transferActualInputMode || "total";  // 3중 패턴 default
     body.transferActualInputMode = actualMode;
     if (actualMode === "total") {
       const total = parseIntOrUndef(form.transferTotalPrice);
@@ -151,7 +155,7 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
       // total 모드 호환: transferActualInputMode === "total" 시 합계 → 1주당 단가 역산 (round)
       //   잔돈은 ±(shareCount-1)원 범위 (Math.round로 최소화). UI 안내 카드로 사전 고지.
       const syntheticShareCount = parseIntOrUndef(form.shareCount) ?? 0;
-      const transferInputMode = form.transferActualInputMode || "per_share";
+      const transferInputMode = form.transferActualInputMode || "total";
       const syntheticPerShareTransferPrice =
         transferInputMode === "total"
           ? syntheticShareCount > 0
@@ -216,6 +220,19 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
   // 취득 후 상장 + 거래정지 (3중 패턴)
   body.acquiredBeforeListing = form.acquiredBeforeListing;     // default: false
   body.tradingHaltAtTransfer = form.tradingHaltAtTransfer;     // default: false
+
+  // [unlisted-direct-calc] 비상장 §165④ full 모드 — adapter로 4 필드 자동 합성
+  // 활성 조건: marketType === "unlisted" (즉 !isListed) + estimated 모드 + unlistedValuationMode === "full"
+  // [E-6] isNetAssetOnly === true 시 NI 호출 skip + body NI 미설정 (엔진이 isNetAssetOnly 시 NI 값 무시)
+  if (form.marketType === "unlisted" && form.unlistedValuationMode === "full") {
+    const niSkip = shouldSkipNetIncome(form);
+    const reduced = adaptUnlistedFlatToApiBody(form, { niSkip });
+    if (!niSkip) body.transferYearNetIncomePerShare = reduced.transferNi;
+    body.transferYearNetAssetPerShare = reduced.transferNa;
+    if (!niSkip) body.acquisitionYearNetIncomePerShare = reduced.acqNi;
+    body.acquisitionYearNetAssetPerShare = reduced.acqNa;
+    // 74 신규 필드는 body 미포함 — Zod stripping/엔진 미도달 위험 0
+  }
 
   // Round 4 H-02 — full/listing_only 모드 시 adapter로 nested + 4 필드 자동 합성
   if (form.acquiredBeforeListing && (form.unlistedDetailMode === "listing_only" || form.unlistedDetailMode === "full")) {

@@ -38,7 +38,7 @@ function SectionTitle({ n, title }: { n: number; title: string }) {
 
 export function Step2({ form, onChange }: Step2Props) {
   const transferPriceMode = form.transferPriceMode || "actual";
-  const transferActualInputMode = form.transferActualInputMode || "per_share"; // 3중 패턴 default
+  const transferActualInputMode = form.transferActualInputMode || "total"; // 3중 패턴 default
   const acquisitionMode = form.acquisitionMode || "actual";
   const acquisitionActualInputMode = form.acquisitionActualInputMode || "per_share"; // 3중 패턴 default
   const isListed = ["kospi", "kosdaq", "konex"].includes(form.marketType);
@@ -73,7 +73,7 @@ export function Step2({ form, onChange }: Step2Props) {
     <div className="space-y-8">
       {isSplitMode && (
         <div className="rounded-lg border border-violet-300 bg-violet-50/60 p-4 text-sm text-violet-900">
-          <p className="font-semibold mb-1">🔀 분할 매수·분할 양도 모드 활성</p>
+          <p className="font-semibold mb-1">🔀 분할 양도 모드 활성</p>
           <p className="text-xs">
             양도가액·취득가액은 Step1의 lot 입력에서 자동 산출됩니다. 본 단계의 1주당 단가 입력은 비활성화됩니다.
             <br />취득가 산정방법은 <strong>실가(actual)</strong>만 지원되며, 환산·매매사례·감정·액면가·교환 모드는 사용할 수 없습니다.
@@ -118,17 +118,17 @@ export function Step2({ form, onChange }: Step2Props) {
                   layout="inline"
                   options={[
                     {
-                      value: "per_share",
-                      label: "1주당 단가",
-                      description: "1주당 양도가액 × 주식수",
-                    },
-                    {
                       value: "total",
                       label: "합계 직접 입력",
                       description: isSplitMode
                         ? "분할 모드에서는 lot별 단가만 지원됩니다 (Step1)"
                         : "양도가액 총액을 원 단위로 직접 입력 (§96① 실지거래가액)",
                       disabled: isSplitMode,
+                    },
+                    {
+                      value: "per_share",
+                      label: "1주당 단가",
+                      description: "1주당 양도가액 × 주식수",
                     },
                   ]}
                 />

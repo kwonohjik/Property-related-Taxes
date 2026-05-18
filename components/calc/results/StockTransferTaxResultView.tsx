@@ -50,6 +50,8 @@ interface StockTransferTaxResultViewProps {
   transferDate?: string;
   /** 계좌번호 마스킹 (신고서 헤더 표시용, 디자인 §4.2) */
   accountNumberMasked?: string;
+  /** [GAP-2] 비상장 §165④ 평가 모드 — full 시 결과 헤더에 행-수준 계산 배지 표시 */
+  unlistedValuationMode?: "simple" | "full";
 }
 
 /** PDF 다운로드 버튼 — 브라우저 인쇄 다이얼로그에서 "PDF로 저장" 선택 */
@@ -172,6 +174,7 @@ export function StockTransferTaxResultView({
   brokerage = "",
   transferDate = "",
   accountNumberMasked = "",
+  unlistedValuationMode = "simple",
 }: StockTransferTaxResultViewProps) {
   const categoryLabel = TAX_CATEGORY_LABEL[result.taxCategory] ?? result.taxCategory;
 
@@ -323,6 +326,12 @@ export function StockTransferTaxResultView({
         <span className="px-3 py-1 rounded-full border text-sm bg-slate-100 text-slate-600 border-slate-200">
           적용 조문: {result.appliedSection94}
         </span>
+        {/* [GAP-2] 비상장 §165④ full 모드 — 행-수준 계산 적용 배지 */}
+        {unlistedValuationMode === "full" && (
+          <span className="px-3 py-1 rounded-full border text-sm bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200">
+            행-수준 계산 적용 (상증령 §54·§55)
+          </span>
+        )}
       </div>
 
       {/* 8항목 결과 표 */}

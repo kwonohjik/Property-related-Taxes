@@ -48,7 +48,7 @@ export function StockSidebar({ currentStep, onStepClick, stockName }: StockSideb
     } else {
       // single 모드 — transferActualInputMode 분기 추가 (per_share / total)
       const priceMode = formData.transferPriceMode || "actual";
-      const actualMode = formData.transferActualInputMode || "per_share"; // 3중 패턴 default
+      const actualMode = formData.transferActualInputMode || "total"; // 3중 패턴 default
       let transferPrice: number | null = null;
       if (priceMode === "actual") {
         if (actualMode === "total") {

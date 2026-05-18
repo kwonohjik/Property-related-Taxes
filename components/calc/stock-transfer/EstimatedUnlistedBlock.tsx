@@ -17,6 +17,13 @@ import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
+import { EstimatedUnlistedNetIncomeStatement } from "./EstimatedUnlistedNetIncomeStatement";
+import { EstimatedUnlistedNetAssetStatement } from "./EstimatedUnlistedNetAssetStatement";
+import {
+  adaptUnlistedFlatToApiBody,
+  shouldSkipNetIncome,
+} from "@/lib/tax-engine/stock-transfer/unlisted-flat-adapter";
+import { UNLISTED_MESSAGES } from "@/lib/tax-engine/stock-transfer/unlisted-messages";
 
 interface EstimatedUnlistedBlockProps {
   form: StockTransferFormData;
@@ -51,15 +58,28 @@ export function EstimatedUnlistedBlock({ form, onChange }: EstimatedUnlistedBloc
   const netAssetOnlyReason = form.netAssetOnlyReason || "";
   const isNetAssetOnly = netAssetOnlyReason !== "";
   const isHeavyRE = form.isHeavyRealEstateForValuation;
+  // 3중 패턴 default — store factory와 일치 (default: "simple")
+  const mode = form.unlistedValuationMode || "simple";
+
+  // full 모드 — adapter가 계산한 4 값을 미리보기에 주입 (UI·adapter 단일 진실)
+  const fullReduced = useMemo(() => {
+    if (mode !== "full") return null;
+    return adaptUnlistedFlatToApiBody(form);
+  }, [mode, form]);
 
   // 가중치 안내
   const niWeight = isHeavyRE ? "2/5" : "3/5";
   const naWeight = isHeavyRE ? "3/5" : "2/5";
 
   // 양도기준시가 미리보기 (useMemo — useEffect→store 미러링 금지)
+  // [DM-1] full 모드에서도 동일 미리보기 노출 — adapter 결과를 NI/NA로 사용
   const transferStdPricePreview = useMemo(() => {
-    const ni = parseAmount(form.transferYearNetIncomePerShare);
-    const na = parseAmount(form.transferYearNetAssetPerShare);
+    const ni = mode === "full" && fullReduced
+      ? fullReduced.transferNi
+      : parseAmount(form.transferYearNetIncomePerShare);
+    const na = mode === "full" && fullReduced
+      ? fullReduced.transferNa
+      : parseAmount(form.transferYearNetAssetPerShare);
     if (ni <= 0 && na <= 0) return null;
 
     if (isNetAssetOnly) {
@@ -77,16 +97,22 @@ export function EstimatedUnlistedBlock({ form, onChange }: EstimatedUnlistedBloc
     }
     return { perShare: Math.floor(weighted), floor80Applied: false, method: "weighted_avg" as const };
   }, [
+    mode,
+    fullReduced,
     form.transferYearNetIncomePerShare,
     form.transferYearNetAssetPerShare,
     isNetAssetOnly,
     isHeavyRE,
   ]);
 
-  // 취득기준시가 미리보기
+  // 취득기준시가 미리보기 — full 모드에서도 동일
   const acquisitionStdPricePreview = useMemo(() => {
-    const ni = parseAmount(form.acquisitionYearNetIncomePerShare);
-    const na = parseAmount(form.acquisitionYearNetAssetPerShare);
+    const ni = mode === "full" && fullReduced
+      ? fullReduced.acqNi
+      : parseAmount(form.acquisitionYearNetIncomePerShare);
+    const na = mode === "full" && fullReduced
+      ? fullReduced.acqNa
+      : parseAmount(form.acquisitionYearNetAssetPerShare);
     if (ni <= 0 && na <= 0) return null;
 
     if (isNetAssetOnly) {
@@ -97,6 +123,8 @@ export function EstimatedUnlistedBlock({ form, onChange }: EstimatedUnlistedBloc
     const naW = isHeavyRE ? 3 : 2;
     return Math.floor((ni * niW + na * naW) / 5);
   }, [
+    mode,
+    fullReduced,
     form.acquisitionYearNetIncomePerShare,
     form.acquisitionYearNetAssetPerShare,
     isNetAssetOnly,
@@ -127,6 +155,35 @@ export function EstimatedUnlistedBlock({ form, onChange }: EstimatedUnlistedBloc
         </p>
       </div>
 
+      {/* [unlisted-direct-calc] 모드 토글 — simple(직접 입력) vs full(행-수준 계산) */}
+      <FieldCard
+        label="입력 방식"
+        hint="간이는 1주당 가액을 직접 입력, 행-수준 계산은 상증령 §54·§55 산식으로 자동 산출"
+      >
+        <RadioCardGroup
+          name="unlistedValuationMode"
+          value={mode}
+          onChange={(v) =>
+            onChange({ unlistedValuationMode: v as "simple" | "full" })
+          }
+          tone="fuchsia"
+          layout="inline"
+          options={[
+            {
+              value: "simple",
+              label: "직접 입력",
+              description: "1주당 순손익·순자산가치를 외부에서 산출하여 입력",
+            },
+            {
+              value: "full",
+              label: "행-수준 계산",
+              description: "24행 순손익 + 19행 순자산을 입력하여 자동 산출",
+            },
+          ]}
+        />
+        <p className="mt-2 text-xs text-fuchsia-700">ⓘ {UNLISTED_MESSAGES.TOGGLE_DATA_PERSIST}</p>
+      </FieldCard>
+
       {/* 순자산 단독 사유 선택 */}
       <FieldCard
         label="순자산 단독 평가 사유 (§165④3)"
@@ -146,7 +203,16 @@ export function EstimatedUnlistedBlock({ form, onChange }: EstimatedUnlistedBloc
         />
       </FieldCard>
 
-      {/* 양도일 직전 사업연도 입력 */}
+      {/* [unlisted-direct-calc] full 모드 — 행-수준 계산 컴포넌트 */}
+      {mode === "full" && (
+        <div className="space-y-4">
+          <EstimatedUnlistedNetIncomeStatement form={form} onChange={onChange} />
+          <EstimatedUnlistedNetAssetStatement form={form} onChange={onChange} />
+        </div>
+      )}
+
+      {/* simple 모드 — 양도일 직전 사업연도 입력 (현행 UI 유지) */}
+      {mode === "simple" && (
       <div>
         <p className="text-sm font-medium text-slate-700 mb-3">
           양도일 직전 사업연도 평가 (양도기준시가 산출용)
@@ -169,7 +235,11 @@ export function EstimatedUnlistedBlock({ form, onChange }: EstimatedUnlistedBloc
             onChange={(v) => onChange({ transferYearNetAssetPerShare: v })}
           />
         </div>
+      </div>
+      )}
 
+      {/* 양도기준시가 미리보기 — simple·full 양 모드 공통 노출 */}
+      <div>
         {/* 양도기준시가 미리보기 */}
         {transferStdPricePreview && (
           <div
@@ -192,7 +262,8 @@ export function EstimatedUnlistedBlock({ form, onChange }: EstimatedUnlistedBloc
         )}
       </div>
 
-      {/* 취득일 직전 사업연도 입력 */}
+      {/* 취득일 직전 사업연도 입력 — simple 모드에서만 직접 입력란 노출 */}
+      {mode === "simple" && (
       <div>
         <p className="text-sm font-medium text-slate-700 mb-3">
           취득일 직전 사업연도 평가 (취득기준시가 산출용)
@@ -215,18 +286,19 @@ export function EstimatedUnlistedBlock({ form, onChange }: EstimatedUnlistedBloc
             onChange={(v) => onChange({ acquisitionYearNetAssetPerShare: v })}
           />
         </div>
-
-        {/* 취득기준시가 미리보기 */}
-        {acquisitionStdPricePreview !== null && (
-          <div className="mt-2 rounded border border-sky-200 bg-sky-50/60 px-3 py-2 text-sm text-sky-700">
-            취득기준시가 (1주당): {acquisitionStdPricePreview.toLocaleString()}원
-            <span className="ml-2 text-xs">
-              (개산공제 기준 = {acquisitionStdPricePreview.toLocaleString()} ×{" "}
-              {parseInt(form.shareCount || "0", 10).toLocaleString()}주 × 1%)
-            </span>
-          </div>
-        )}
       </div>
+      )}
+
+      {/* 취득기준시가 미리보기 — simple·full 양 모드 공통 노출 */}
+      {acquisitionStdPricePreview !== null && (
+        <div className="mt-2 rounded border border-sky-200 bg-sky-50/60 px-3 py-2 text-sm text-sky-700">
+          취득기준시가 (1주당): {acquisitionStdPricePreview.toLocaleString()}원
+          <span className="ml-2 text-xs">
+            (개산공제 기준 = {acquisitionStdPricePreview.toLocaleString()} ×{" "}
+            {parseInt(form.shareCount || "0", 10).toLocaleString()}주 × 1%)
+          </span>
+        </div>
+      )}
     </div>
   );
 }
