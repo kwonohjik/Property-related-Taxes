@@ -8,7 +8,7 @@
  * 부동산 양도세 마법사와 완전히 분리된 독립 도메인.
  */
 
-import { useCallback, useMemo } from "react";
+import { useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { StepIndicator } from "@/components/calc/StepIndicator";
 import { StockSidebar } from "@/components/calc/stock-transfer/StockSidebar";
@@ -20,6 +20,9 @@ import { Step4 } from "./steps/Step4";
 import { useStockTransferStore } from "@/lib/stores/calc-wizard-stock-store";
 import { callStockTransferTaxAPI } from "@/lib/calc/stock-transfer-tax-api";
 import { validateStep1, validateStep2, validateStep3 } from "@/lib/calc/stock-transfer-tax-validate";
+import { useAutoSaveCalculation } from "@/lib/storage/use-auto-save-calculation";
+import { useProfessionalStore } from "@/lib/stores/professional-store";
+import { extractStockTransferDate } from "@/lib/storage/title-generator";
 import { ChevronLeft } from "lucide-react";
 
 const STEPS = ["자산·시장·대주주", "양도·취득가액", "필요경비·신고", "결과"] as const;
@@ -37,19 +40,17 @@ export default function StockTransferTaxCalculator() {
   const { setStep, updateFormData, setResult, setError, setLoading, reset } =
     useStockTransferStore();
 
-  // 현재 step validation 오류 수 (StepIndicator 배지)
-  const step1Errors = useMemo(
-    () => validateStep1(formData).filter((e) => e.severity === "error").length,
-    [formData]
-  );
-  const step2Errors = useMemo(
-    () => validateStep2(formData).filter((e) => e.severity === "error").length,
-    [formData]
-  );
-  const step3Errors = useMemo(
-    () => validateStep3(formData).filter((e) => e.severity === "error").length,
-    [formData]
-  );
+  const { activeClientId } = useProfessionalStore();
+
+  // 로컬 이력 자동 저장 — 결과 화면(step 3) 진입 + result 있을 때 1회
+  const isResult = currentStep === 3 && result !== null;
+  const { pendingEditId, saveAsUpdate, saveAsNew } = useAutoSaveCalculation({
+    taxType: "stock_transfer",
+    inputData: formData as unknown as Record<string, unknown>,
+    resultData: isResult ? (result as unknown as Record<string, unknown>) : null,
+    taxLawVersion: extractStockTransferDate(formData as unknown as Record<string, unknown>) ?? new Date().toISOString().split("T")[0],
+    clientId: activeClientId,
+  });
 
   // 다음 단계 진행 (validation 체크)
   const handleNext = useCallback(() => {
@@ -110,7 +111,14 @@ export default function StockTransferTaxCalculator() {
         {/* 헤더 */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">주식 양도소득세</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold tracking-tight">주식 양도소득세</h1>
+              {pendingEditId && (
+                <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full border border-amber-300">
+                  수정 중: {formData.securityName || "이전 계산"}
+                </span>
+              )}
+            </div>
             <p className="text-sm text-muted-foreground mt-1">
               소득세법 §94①3·4 · 2026.4.21. 시행
             </p>
@@ -151,13 +159,37 @@ export default function StockTransferTaxCalculator() {
               <Step3 form={formData} onChange={updateFormData} />
             )}
             {currentStep === 3 && (
-              <Step4
-                result={result}
-                form={formData}
-                error={error}
-                isLoading={isLoading}
-                onCalculate={handleCalculate}
-              />
+              <>
+                {/* 수정 모드 — 저장 방식 선택 UI (TransferTaxCalculator L449~467 패턴) */}
+                {pendingEditId && result && (
+                  <div className="mb-4 flex items-center gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm">
+                    <span className="flex-1 text-amber-800">
+                      이전 이력을 불러와 수정했습니다. 저장 방식을 선택하세요.
+                    </span>
+                    <button
+                      type="button"
+                      onClick={saveAsUpdate}
+                      className="shrink-0 rounded-md bg-amber-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-700 transition-colors"
+                    >
+                      기존 이력 덮어쓰기
+                    </button>
+                    <button
+                      type="button"
+                      onClick={saveAsNew}
+                      className="shrink-0 rounded-md border border-amber-400 px-3 py-1.5 text-xs font-medium text-amber-800 hover:bg-amber-100 transition-colors"
+                    >
+                      새 이력으로 저장
+                    </button>
+                  </div>
+                )}
+                <Step4
+                  result={result}
+                  form={formData}
+                  error={error}
+                  isLoading={isLoading}
+                  onCalculate={handleCalculate}
+                />
+              </>
             )}
 
             {/* 하단 네비게이션 */}
@@ -210,6 +242,7 @@ export default function StockTransferTaxCalculator() {
                 onStepClick={(i) => {
                   if (i < currentStep) setStep(i);
                 }}
+                stockName={formData.securityName || undefined}
               />
             </div>
           </div>

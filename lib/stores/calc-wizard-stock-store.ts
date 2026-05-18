@@ -64,6 +64,12 @@ export interface SpecificMatchingForm {
 // ============================================================
 
 export interface StockTransferFormData {
+  // ── 종목 메타데이터 (엔진 미전달 — 저장·이력·신고서 표시용) ──
+  securityName: string;           // 종목명 (필수 — 빈문자 = 검증 오류)
+  securityCode: string;           // 종목코드 (선택)
+  brokerage: string;              // 증권사 (선택)
+  accountNumberMasked: string;    // 계좌번호 마스킹 (선택)
+
   // ── 시장·회사 분류 ──
   marketType: "kospi" | "kosdaq" | "konex" | "unlisted" | "other_asset" | "";
 
@@ -245,6 +251,11 @@ export function createEmptyAcquisitionLot(): AcquisitionLotForm {
 
 export function createInitialStockFormData(): StockTransferFormData {
   return {
+    securityName: "",
+    securityCode: "",
+    brokerage: "",
+    accountNumberMasked: "",
+
     marketType: "",
     isMajorShareholder: false,
     selfShareRatio: "",
@@ -404,6 +415,11 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
   };
 
   return {
+    securityName: strField("securityName"),
+    securityCode: strField("securityCode"),
+    brokerage: strField("brokerage"),
+    accountNumberMasked: strField("accountNumberMasked"),
+
     marketType: enumField("marketType", ["kospi", "kosdaq", "konex", "unlisted", "other_asset", ""], ""),
     isMajorShareholder: boolField("isMajorShareholder", false),
     selfShareRatio: strField("selfShareRatio"),

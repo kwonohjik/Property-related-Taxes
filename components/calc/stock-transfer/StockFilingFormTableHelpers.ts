@@ -29,6 +29,17 @@ export interface StockFilingFormTableProps {
   subtitle?: string;
   /** 신고서 상단 표시할 종목명 (단건 전용) */
   stockName?: string;
+  // ── 신고서 헤더 확장 (디자인 §4.2) ──
+  /** 양도인 성명 (useUserProfile 또는 의뢰인 이름) */
+  taxpayerName?: string;
+  /** 종목코드 */
+  stockCode?: string;
+  /** 증권사명 */
+  brokerName?: string;
+  /** 계좌번호 마스킹 */
+  accountNumber?: string;
+  /** 과세연도 (transferDate에서 자동 추출) */
+  filingYear?: number;
 }
 
 // ── 내부 타입 ──────────────────────────────────────────────────
@@ -138,8 +149,9 @@ function rateLabel(result: StockTransferResult): string {
   return `${pct}% (§55 누진)`;
 }
 
-// ── 단건 값 채우기 ──────────────────────────────────────────────
+// ── 단건 값 채우기 (향후 다자산 통합 시 활용 예정) ──────────────────────────────────────────────
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function singleValues(
   key: string,
   singleResult: StockTransferResult,

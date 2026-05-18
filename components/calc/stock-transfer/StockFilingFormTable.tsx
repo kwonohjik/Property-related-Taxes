@@ -26,6 +26,11 @@ export function StockFilingFormTable({
   title = "주식 양도소득세 신고서",
   subtitle = "소득세법 §105·§110 기준 — 참고용 (실제 신고서식과 다를 수 있음)",
   stockName,
+  taxpayerName,
+  stockCode,
+  brokerName,
+  accountNumber,
+  filingYear,
 }: StockFilingFormTableProps) {
   const { columns } = deriveColumns(result, aggregate);
   const rows = buildRows(result, columns, aggregate);
@@ -72,6 +77,29 @@ export function StockFilingFormTable({
               )}
             </div>
             <p className="text-[11px] text-slate-500 mt-0.5">{subtitle}</p>
+            {/* 신고서 헤더 메타 정보 (§4.2 디자인) */}
+            {(taxpayerName || stockName || stockCode || brokerName || accountNumber || filingYear) && (
+              <div className="mt-2 grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-0.5 text-[11px] text-slate-600 border-t border-slate-200 pt-2">
+                {taxpayerName && (
+                  <div className="flex gap-1"><span className="text-slate-400">양도인:</span><span>{taxpayerName}</span></div>
+                )}
+                {(stockName || stockCode) && (
+                  <div className="flex gap-1">
+                    <span className="text-slate-400">종목:</span>
+                    <span>{stockName}{stockCode ? ` (${stockCode})` : ""}</span>
+                  </div>
+                )}
+                {filingYear && (
+                  <div className="flex gap-1"><span className="text-slate-400">과세연도:</span><span>{filingYear}년</span></div>
+                )}
+                {brokerName && (
+                  <div className="flex gap-1"><span className="text-slate-400">증권사:</span><span>{brokerName}</span></div>
+                )}
+                {accountNumber && (
+                  <div className="flex gap-1"><span className="text-slate-400">계좌번호:</span><span>{accountNumber}</span></div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* 표 */}

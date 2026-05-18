@@ -55,6 +55,11 @@ function isEmpty(s: string | undefined): boolean {
 export function validateStep1(form: StockTransferFormData): StockValidationError[] {
   const errors: StockValidationError[] = [];
 
+  // 종목명 필수 (저장·이력·신고서 표시용 메타데이터)
+  if (isEmpty(form.securityName)) {
+    errors.push({ field: "securityName", message: "종목명을 입력하세요", severity: "error" });
+  }
+
   // 시장 분류 필수
   if (!form.marketType) {
     errors.push({ field: "marketType", message: "시장 유형을 선택하세요", severity: "error" });

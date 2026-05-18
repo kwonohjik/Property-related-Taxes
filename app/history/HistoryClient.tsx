@@ -16,6 +16,7 @@ const TAX_TYPE_ROUTES: Partial<Record<LocalTaxType, string>> = {
   gift: "/calc/gift-tax",
   property: "/calc/property-tax",
   comprehensive_property: "/calc/comprehensive-tax",
+  stock_transfer: "/calc/stock-transfer-tax",
 };
 
 const TAX_TYPE_LABELS: Record<string, string> = {
@@ -26,11 +27,13 @@ const TAX_TYPE_LABELS: Record<string, string> = {
   acquisition: "취득세",
   property: "재산세",
   comprehensive_property: "종합부동산세",
+  stock_transfer: "주식 양도세",
 };
 
 const FILTER_OPTIONS: { label: string; value: LocalTaxType | "all" }[] = [
   { label: "전체", value: "all" },
   { label: "양도소득세", value: "transfer" },
+  { label: "주식 양도세", value: "stock_transfer" },
   { label: "취득세", value: "acquisition" },
   { label: "상속세", value: "inheritance" },
   { label: "증여세", value: "gift" },
@@ -111,6 +114,19 @@ function extractCardSummary(
   if (taxType === "comprehensive_property") {
     const raw = (inputData.assessmentYear ?? inputData.targetDate) as string | number | undefined;
     return { address: addr(inputData), dateLabel: year(raw, "과세연도") };
+  }
+  if (taxType === "stock_transfer") {
+    // securityName을 address 위치에, 대표 양도일을 dateLabel에 표시
+    const securityName = (inputData.securityName as string | undefined)?.trim() || null;
+    // 대표 양도일: transferLots 마지막 요소 → top-level transferDate
+    const lots = inputData.transferLots as Array<Record<string, unknown>> | undefined;
+    const rawDate = Array.isArray(lots) && lots.length > 0
+      ? (lots[lots.length - 1].transferDate as string | undefined)
+      : (inputData.transferDate as string | undefined);
+    return {
+      address: securityName,
+      dateLabel: fmt(rawDate, "양도일"),
+    };
   }
   return { address: null, dateLabel: null };
 }

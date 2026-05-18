@@ -7,6 +7,7 @@ const TAX_LABEL: Record<LocalTaxType, string> = {
   gift: "증여세",
   property: "재산세",
   comprehensive_property: "종합부동산세",
+  stock_transfer: "주식 양도세",
 };
 
 function formatDate(dateStr: string | undefined | null): string | null {
@@ -45,6 +46,29 @@ function extractTransferDate(input: Record<string, unknown>): string | null {
 }
 
 /**
+ * 주식 양도세 — 종목명 추출.
+ * securityName (StockTransferFormData 메타 필드) 사용.
+ */
+export function extractStockSecurityName(inputData: Record<string, unknown>): string | null {
+  const name = inputData.securityName as string | undefined;
+  return name?.trim() || null;
+}
+
+/**
+ * 주식 양도세 — 대표 양도일 추출.
+ * 규칙: transferLots 배열이 비어있지 않으면 마지막 요소의 transferDate,
+ *       아니면 top-level transferDate.
+ */
+export function extractStockTransferDate(inputData: Record<string, unknown>): string | null {
+  const lots = inputData.transferLots as Array<Record<string, unknown>> | undefined;
+  if (Array.isArray(lots) && lots.length > 0) {
+    const last = lots[lots.length - 1];
+    return formatDate(last.transferDate as string | undefined);
+  }
+  return formatDate(inputData.transferDate as string | undefined);
+}
+
+/**
  * 세목·입력값 기반 계산 이력 title 자동 생성.
  * 주소·날짜가 입력된 경우 포함하여 식별력을 높임.
  * 미입력 필드는 기본 레이블만 사용.
@@ -66,6 +90,14 @@ export function generateTitle(
 
   if (taxType === "acquisition") {
     if (address) return `${label} — ${address}`;
+  }
+
+  if (taxType === "stock_transfer") {
+    const securityName = extractStockSecurityName(inputData);
+    const date = extractStockTransferDate(inputData);
+    if (securityName && date) return `${label} — ${securityName} (양도 ${date})`;
+    if (securityName) return `${label} — ${securityName}`;
+    if (date) return `${label} — 양도 ${date}`;
   }
 
   // 기타 세목 + 주소·날짜 미입력: 저장 일시로 구분

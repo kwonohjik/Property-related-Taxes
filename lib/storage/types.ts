@@ -10,7 +10,8 @@ export type LocalTaxType =
   | "gift"
   | "acquisition"
   | "property"
-  | "comprehensive_property";
+  | "comprehensive_property"
+  | "stock_transfer";
 
 /** 프로필 모드: 일반 납세자 | 세무사·대리인 */
 export type UserMode = "taxpayer" | "professional";

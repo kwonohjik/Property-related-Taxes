@@ -34,6 +34,7 @@ const TAX_TYPE_LABELS: Record<string, string> = {
   acquisition: "취득세",
   property: "재산세",
   comprehensive_property: "종합부동산세",
+  stock_transfer: "주식 양도세",
 };
 
 const C = {
@@ -254,17 +255,30 @@ function extractSummary(record: HistoryRecord): string {
     const price = input_data?.totalPropertyValue ?? input_data?.propertyValue;
     if (typeof price === "number") return `재산가액 ${formatKRW(price)}`;
   }
-  // P3 G-09 — 주식 양도세: 환산취득가 활성 시 사례 정합 우선 표시
-  if (tax_type === "stock_transfer" || tax_type === "stock-transfer") {
-    const shareCount = input_data?.shareCount;
-    const perShare = input_data?.perShareTransferPrice;
-    const acquiredBefore = input_data?.acquiredBeforeListing;
-    if (acquiredBefore && typeof shareCount === "number" && typeof perShare === "number") {
-      return `주식 ${shareCount.toLocaleString()}주 × ${formatKRW(perShare)} (취득 후 상장 §165⑤)`;
-    }
-    if (typeof shareCount === "number" && typeof perShare === "number") {
-      return `주식 ${shareCount.toLocaleString()}주 × ${formatKRW(perShare)}`;
-    }
+  // 주식 양도세 — stock_transfer 단일 key로 통일 (stock-transfer 이중 체크 제거)
+  if (tax_type === "stock_transfer") {
+    const securityName = input_data?.securityName as string | undefined;
+    const lots = input_data?.transferLots as Array<Record<string, unknown>> | undefined;
+    // 대표 양도일: transferLots 마지막 요소 → top-level transferDate
+    const rawDate = Array.isArray(lots) && lots.length > 0
+      ? (lots[lots.length - 1].transferDate as string | undefined)
+      : (input_data?.transferDate as string | undefined);
+    const transferDate = rawDate
+      ? rawDate.replace(/-/g, ".")
+      : null;
+    const market = input_data?.marketType as string | undefined;
+    const marketLabel: Record<string, string> = {
+      kospi: "코스피",
+      kosdaq: "코스닥",
+      konex: "코넥스",
+      unlisted: "비상장",
+      other_asset: "기타자산",
+    };
+    const parts: string[] = [];
+    if (securityName?.trim()) parts.push(securityName.trim());
+    if (market && marketLabel[market]) parts.push(marketLabel[market]);
+    if (transferDate) parts.push(`양도 ${transferDate}`);
+    if (parts.length > 0) return parts.join(" / ");
   }
   return "-";
 }

@@ -24,6 +24,7 @@ import { CompanyTypeBlock } from "@/components/calc/stock-transfer/CompanyTypeBl
 import { OtherAssetBlock } from "@/components/calc/stock-transfer/OtherAssetBlock";
 import { AcquisitionInfoBlock } from "@/components/calc/stock-transfer/AcquisitionInfoBlock";
 import { SplitLotsBlock } from "@/components/calc/stock-transfer/SplitLotsBlock";
+import { SecurityMetadataBlock } from "@/components/calc/stock-transfer/SecurityMetadataBlock";
 import { withAutoSyncMajor } from "@/components/calc/stock-transfer/major-sync";
 import type {
   StockTransferFormData,
@@ -108,6 +109,22 @@ export function Step1({ form, onChange }: Step1Props) {
   // ── 동적 번호 재할당 — visible sections useMemo ──
   const sections = useMemo(() => {
     const items: Array<{ key: string; title: string; render: () => ReactNode }> = [];
+
+    // 0(1번). 종목 정보 (식별용 메타데이터)
+    items.push({
+      key: "security",
+      title: "종목 정보",
+      render: () => (
+        <SecurityMetadataBlock
+          securityName={form.securityName}
+          securityCode={form.securityCode}
+          brokerage={form.brokerage}
+          accountNumberMasked={form.accountNumberMasked}
+          marketType={form.marketType}
+          onChange={onChange}
+        />
+      ),
+    });
 
     // 1. 시장 유형
     items.push({

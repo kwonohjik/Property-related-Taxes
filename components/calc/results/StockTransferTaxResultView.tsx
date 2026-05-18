@@ -18,6 +18,8 @@
 
 import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
 import { StockFilingFormTable } from "@/components/calc/stock-transfer/StockFilingFormTable";
+import { StockTaxpayerHeaderCard } from "@/components/calc/stock-transfer/StockTaxpayerHeaderCard";
+import { StockTransferPenaltySection } from "@/components/calc/results/StockTransferPenaltySection";
 import { printScoped } from "@/components/calc/results/transfer/TransferTaxResultViewHelpers";
 import { MARKET_LABEL } from "@/components/calc/stock-transfer/market-label";
 import { LotMatchingDetailCard } from "@/components/calc/results/LotMatchingDetailCard";
@@ -34,10 +36,18 @@ interface StockTransferTaxResultViewProps {
   transferActualInputMode?: "per_share" | "total";
   /** 1주당 양도가액 (per_share 모드 산식 표시용, 원) */
   perShareTransferPrice?: number;
+  /** 종목명 (TaxpayerHeaderCard + 신고서 헤더 표시용) */
+  securityName?: string;
+  /** 종목코드 (TaxpayerHeaderCard 표시용) */
+  securityCode?: string;
+  /** 증권사 (TaxpayerHeaderCard 표시용) */
+  brokerage?: string;
+  /** 대표 양도일 (TaxpayerHeaderCard 표시용) */
+  transferDate?: string;
 }
 
 /** PDF 다운로드 버튼 — 브라우저 인쇄 다이얼로그에서 "PDF로 저장" 선택 */
-function PdfActions({ scope = "full" }: { scope?: "full" | "form-table" }) {
+function PdfActions() {
   return (
     <div className="print:hidden flex flex-wrap gap-2 justify-end">
       <button
@@ -151,6 +161,10 @@ export function StockTransferTaxResultView({
   isInternationalTransaction,
   transferActualInputMode = "per_share",
   perShareTransferPrice = 0,
+  securityName = "",
+  securityCode = "",
+  brokerage = "",
+  transferDate = "",
 }: StockTransferTaxResultViewProps) {
   const categoryLabel = TAX_CATEGORY_LABEL[result.taxCategory] ?? result.taxCategory;
 
@@ -167,6 +181,14 @@ export function StockTransferTaxResultView({
 
     return (
       <div data-print-section="full" className="space-y-6">
+        {/* 양도인 + 종목 헤더 카드 */}
+        <StockTaxpayerHeaderCard
+          securityName={securityName}
+          securityCode={securityCode}
+          brokerage={brokerage}
+          transferDate={transferDate}
+        />
+
         {/* PDF 다운로드 버튼 */}
         <PdfActions />
 
@@ -242,6 +264,14 @@ export function StockTransferTaxResultView({
 
   return (
     <div data-print-section="full" className="space-y-6">
+      {/* 양도인 + 종목 헤더 카드 */}
+      <StockTaxpayerHeaderCard
+        securityName={securityName}
+        securityCode={securityCode}
+        brokerage={brokerage}
+        transferDate={transferDate}
+      />
+
       {/* PDF 다운로드 버튼 */}
       <PdfActions />
 
@@ -297,15 +327,11 @@ export function StockTransferTaxResultView({
       )}
 
       {/* 가산세·공제 상세 + 분기 안내 */}
-      {(result.underReportPenalty > 0 ||
-        result.latePaymentPenalty > 0 ||
-        result.electronicFilingCredit > 0) && (
-        <PenaltyDetailCard
-          result={result}
-          isFraudulent={isFraudulent}
-          isInternationalTransaction={isInternationalTransaction}
-        />
-      )}
+      <StockTransferPenaltySection
+        result={result}
+        isFraudulent={isFraudulent}
+        isInternationalTransaction={isInternationalTransaction}
+      />
 
       {/* appliedRules 배지 */}
       <RuleBadges appliedRules={result.appliedRules} />
@@ -503,140 +529,6 @@ function ProgressiveTaxBreakdown({ result }: { result: StockTransferResult }) {
             <strong>{fmt(result.calculatedTax)}</strong>
           </p>
         )}
-      </div>
-    </div>
-  );
-}
-
-function PenaltyDetailCard({
-  result,
-  isFraudulent,
-  isInternationalTransaction,
-}: {
-  result: StockTransferResult;
-  isFraudulent?: boolean;
-  isInternationalTransaction?: boolean;
-}) {
-  // 발동된 분기 식별 (warnings에서 §47의2 추출)
-  const has47_2_1 = result.warnings.some((w) => w.includes("§47의2①1") || w.includes("§47의2 ①1"));
-  const isIntl = Boolean(isInternationalTransaction);
-  const underRate = isFraudulent && isIntl ? 60 : isFraudulent ? 40 : has47_2_1 ? 20 : 10;
-  const underBasis =
-    isFraudulent && isIntl
-      ? "§47의2②1 단서 — 국제거래 부정행위 60%"
-      : isFraudulent
-        ? "§47의2②1 — 부정행위 40%"
-        : has47_2_1
-          ? "§47의2①1 — 무신고 20%"
-          : "§47의2②2 — 일반 과소신고 10%";
-
-  return (
-    <div className="space-y-3">
-      {/* 가산세·공제 상세 표 */}
-      <div className="rounded-xl border border-rose-200 bg-rose-50/60 px-5 py-4 space-y-2">
-        <p className="font-semibold text-rose-800 text-sm">가산세·공제 상세</p>
-        <div className="divide-y divide-rose-100 text-sm">
-          {result.underReportPenalty > 0 && (
-            <div className="flex justify-between py-2">
-              <span className="text-rose-600">
-                {has47_2_1 ? "무신고" : "과소신고"} 가산세 ({underRate}%)
-              </span>
-              <span className="font-medium text-rose-900">{fmt(result.underReportPenalty)}</span>
-            </div>
-          )}
-          {result.latePaymentPenalty > 0 && (
-            <div className="flex justify-between py-2">
-              <span className="text-rose-600">납부불성실 가산세 (1일 22/100,000)</span>
-              <span className="font-medium text-rose-900">{fmt(result.latePaymentPenalty)}</span>
-            </div>
-          )}
-          {result.electronicFilingCredit > 0 && (
-            <div className="flex justify-between py-2">
-              <span className="text-emerald-600">전자신고 세액공제 (§52의2)</span>
-              <span className="font-medium text-emerald-700">−{fmt(result.electronicFilingCredit)}</span>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* 가산세 분기 안내 카드 */}
-      <div className="rounded-xl border border-rose-200 bg-rose-50/40 px-5 py-4 space-y-3">
-        <div className="flex items-start gap-2">
-          <span className="text-rose-700 text-base">ⓘ</span>
-          <div className="flex-1">
-            <p className="font-semibold text-rose-800 text-sm">가산세 분기 안내</p>
-            <p className="text-xs text-rose-700 mt-1">
-              현재 적용된 분기:{" "}
-              <strong className="text-rose-900">{underBasis}</strong>
-            </p>
-          </div>
-        </div>
-
-        {/* 가산세 분기 매트릭스 표 */}
-        <div className="rounded-lg border border-rose-100 bg-white overflow-hidden">
-          <table className="w-full text-xs">
-            <thead className="bg-rose-50 text-rose-700">
-              <tr>
-                <th className="text-left px-3 py-2 font-semibold border-b border-rose-100">구분</th>
-                <th className="text-center px-3 py-2 font-semibold border-b border-rose-100 w-20">세율</th>
-                <th className="text-left px-3 py-2 font-semibold border-b border-rose-100">법령</th>
-                <th className="text-left px-3 py-2 font-semibold border-b border-rose-100">발동 조건</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-rose-50">
-              <tr className={!isFraudulent && !has47_2_1 ? "bg-rose-100/40 font-semibold" : ""}>
-                <td className="px-3 py-2 text-slate-700">일반 과소신고</td>
-                <td className="px-3 py-2 text-center font-mono">10%</td>
-                <td className="px-3 py-2 text-slate-500">§47의2②2</td>
-                <td className="px-3 py-2 text-slate-600">신고는 했으나 산출세액 누락·과소</td>
-              </tr>
-              <tr className={has47_2_1 && !isFraudulent ? "bg-rose-100/40 font-semibold" : ""}>
-                <td className="px-3 py-2 text-slate-700">무신고</td>
-                <td className="px-3 py-2 text-center font-mono">20%</td>
-                <td className="px-3 py-2 text-slate-500">§47의2①1</td>
-                <td className="px-3 py-2 text-slate-600">법정 신고기한까지 신고서 미제출</td>
-              </tr>
-              <tr className={isFraudulent && !isIntl ? "bg-rose-100/40 font-semibold" : ""}>
-                <td className="px-3 py-2 text-slate-700">부정행위 과소</td>
-                <td className="px-3 py-2 text-center font-mono">40%</td>
-                <td className="px-3 py-2 text-slate-500">§47의2②1</td>
-                <td className="px-3 py-2 text-slate-600">부정행위(허위 증빙 등) 동반 과소신고</td>
-              </tr>
-              <tr className={isFraudulent && isIntl ? "bg-rose-100/40 font-semibold" : ""}>
-                <td className="px-3 py-2 text-slate-700">국제거래 부정</td>
-                <td className="px-3 py-2 text-center font-mono">60%</td>
-                <td className="px-3 py-2 text-slate-500">§47의2②1 단서</td>
-                <td className="px-3 py-2 text-slate-600">국제거래 + 부정행위 중복 가중</td>
-              </tr>
-              <tr>
-                <td className="px-3 py-2 text-slate-700">납부불성실</td>
-                <td className="px-3 py-2 text-center font-mono">1일 22/100,000</td>
-                <td className="px-3 py-2 text-slate-500">§47의4</td>
-                <td className="px-3 py-2 text-slate-600">납부기한 다음날부터 1일당 약 0.022%</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        {/* 신고기한 안내 */}
-        <div className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2.5 text-xs text-sky-800 space-y-1">
-          <p className="font-semibold">📅 주식 양도세 신고기한 (§105①2호)</p>
-          <p className="text-sky-700 leading-relaxed">
-            예정신고: <strong>양도일이 속한 반기 말일 + 2개월</strong> (상반기 양도→8.31 / 하반기 양도→다음해 2월 말)
-            <br />
-            확정신고: <strong>양도일 다음해 5.1 ~ 5.31</strong> (§110)
-            <br />
-            법정기한 도과 시 무신고(§47의2①1 20%) 또는 과소신고(§47의2②2 10%) 자동 발동
-          </p>
-        </div>
-
-        {/* 비발동 조건 안내 — 중립 표현 (memory feedback_tax_calculation_principle 준수) */}
-        <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-xs text-emerald-800">
-          <p>
-            <strong>가산세 비발동 조건</strong>: 법정 신고기한 내 신고서 제출 + 산출세액 정확 + 납부기한 내 완납.
-            전자신고 시 §52의2에 따라 △20,000원 세액공제.
-          </p>
-        </div>
       </div>
     </div>
   );

@@ -8,7 +8,6 @@
  */
 
 import { createClient } from "@/lib/supabase/server";
-import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 
 export type TaxType =
   | "transfer"
@@ -17,7 +16,8 @@ export type TaxType =
   | "gift"
   | "acquisition"
   | "property"
-  | "comprehensive_property";
+  | "comprehensive_property"
+  | "stock_transfer";
 
 export interface CalculationRecord {
   id: string;

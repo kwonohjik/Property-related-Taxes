@@ -16,16 +16,17 @@ import { useShallow } from "zustand/react/shallow";
 import { WizardSidebar, type WizardSidebarStep, type WizardSidebarSummaryItem } from "@/components/calc/shared/WizardSidebar";
 import { useStockTransferStore } from "@/lib/stores/calc-wizard-stock-store";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
-import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 
 interface StockSidebarProps {
   currentStep: number;
   onStepClick: (step: number) => void;
+  /** 입력된 종목명 — 있는 경우 사이드바 상단 배지로 표시 */
+  stockName?: string;
 }
 
 const STEP_LABELS = ["자산·시장·대주주", "양도·취득가액", "필요경비·신고", "결과"];
 
-export function StockSidebar({ currentStep, onStepClick }: StockSidebarProps) {
+export function StockSidebar({ currentStep, onStepClick, stockName }: StockSidebarProps) {
   // atomic selector (무한 루프 방지)
   const formData = useStockTransferStore(useShallow((s) => s.formData));
   const result = useStockTransferStore((s) => s.result);
@@ -157,10 +158,18 @@ export function StockSidebar({ currentStep, onStepClick }: StockSidebarProps) {
   }, [currentStep, onStepClick]);
 
   return (
-    <WizardSidebar
-      title="주식 양도소득세"
-      steps={steps}
-      summary={summary.length > 0 ? summary : undefined}
-    />
+    <div className="space-y-3">
+      {/* 종목명 배지 (입력된 경우만) */}
+      {stockName && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50/70 px-3 py-2 flex items-center gap-2">
+          <span className="text-xs font-semibold text-amber-800 truncate">{stockName}</span>
+        </div>
+      )}
+      <WizardSidebar
+        title="주식 양도소득세"
+        steps={steps}
+        summary={summary.length > 0 ? summary : undefined}
+      />
+    </div>
   );
 }

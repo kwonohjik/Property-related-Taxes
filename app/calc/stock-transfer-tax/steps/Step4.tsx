@@ -76,6 +76,10 @@ export function Step4({ result, form, error, isLoading, onCalculate }: Step4Prop
             isInternationalTransaction={form.isInternationalTransaction}
             transferActualInputMode={form.transferActualInputMode || "per_share"}
             perShareTransferPrice={parseAmount(form.perShareTransferPrice)}
+            securityName={form.securityName}
+            securityCode={form.securityCode}
+            brokerage={form.brokerage}
+            transferDate={form.transferDate}
           />
         </>
       )}
