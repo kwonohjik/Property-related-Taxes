@@ -14,7 +14,11 @@ import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInp
 import { PostListingValuationCard } from "@/components/calc/stock-transfer/PostListingValuationCard";
 import { EstimatedUnlistedBlock } from "@/components/calc/stock-transfer/EstimatedUnlistedBlock";
 import { FaceValueBlock } from "@/components/calc/stock-transfer/FaceValueBlock";
-import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
+import { AcquisitionLotsMatrix } from "@/components/calc/stock-transfer/AcquisitionLotsMatrix";
+import {
+  createEmptyAcquisitionLot,
+  type StockTransferFormData,
+} from "@/lib/stores/calc-wizard-stock-store";
 
 interface Step2Props {
   form: StockTransferFormData;
@@ -36,6 +40,7 @@ export function Step2({ form, onChange }: Step2Props) {
   const transferPriceMode = form.transferPriceMode || "actual";
   const transferActualInputMode = form.transferActualInputMode || "per_share"; // 3중 패턴 default
   const acquisitionMode = form.acquisitionMode || "actual";
+  const acquisitionActualInputMode = form.acquisitionActualInputMode || "per_share"; // 3중 패턴 default
   const isListed = ["kospi", "kosdaq", "konex"].includes(form.marketType);
   const isSplitMode = form.lotsMode === "split";
 
@@ -269,16 +274,77 @@ export function Step2({ form, onChange }: Step2Props) {
           </FieldCard>
 
           {/* 실가 취득가 */}
-          {acquisitionMode === "actual" && (
+          {acquisitionMode === "actual" && isSplitMode && (
             <CurrencyInput
               label="1주당 취득가액"
               required
-              disabled={isSplitMode}
-              hint={isSplitMode ? "분할 모드에서는 매수 lot에서 자동 산출됩니다 (Step1 참조)" : "실제 취득가액 (원)"}
+              disabled
+              hint="분할 모드에서는 매수 lot에서 자동 산출됩니다 (Step1 참조)"
               value={form.perShareAcquisitionPrice}
               onChange={(v) => onChange({ perShareAcquisitionPrice: v })}
-              placeholder="10,000"
             />
+          )}
+          {acquisitionMode === "actual" && !isSplitMode && (
+            <div className="space-y-3">
+              {/* 서브 입력 방식 (per_share / lots) */}
+              <FieldCard label="입력 방식">
+                <RadioCardGroup
+                  name="acquisitionActualInputMode"
+                  value={acquisitionActualInputMode}
+                  onChange={(v) => {
+                    const mode = v as "per_share" | "lots";
+                    if (mode === "lots" && form.acquisitionLots.length === 0) {
+                      // 자동 1행 추가 — useEffect 미러링 금지, onChange 내 cross-field
+                      onChange({
+                        acquisitionActualInputMode: mode,
+                        acquisitionLots: [createEmptyAcquisitionLot()],
+                      });
+                    } else {
+                      onChange({ acquisitionActualInputMode: mode });
+                    }
+                  }}
+                  tone="amber"
+                  layout="inline"
+                  options={[
+                    {
+                      value: "per_share",
+                      label: "1주당 단가",
+                      description: "1주당 취득가액 × 양도 주식수",
+                    },
+                    {
+                      value: "lots",
+                      label: "일자별 다건",
+                      description:
+                        transferActualInputMode === "total"
+                          ? "양도가액 합계 모드에서는 지원하지 않습니다 (역산 잔돈 발생)"
+                          : "여러 시점 분할 매수 lot별 입력 (§97① 실지거래가액)",
+                      disabled: transferActualInputMode === "total",
+                    },
+                  ]}
+                />
+              </FieldCard>
+
+              {acquisitionActualInputMode === "per_share" && (
+                <CurrencyInput
+                  label="1주당 취득가액"
+                  required
+                  hint="실제 취득가액 (원)"
+                  value={form.perShareAcquisitionPrice}
+                  onChange={(v) => onChange({ perShareAcquisitionPrice: v })}
+                />
+              )}
+
+              {acquisitionActualInputMode === "lots" && (
+                <AcquisitionLotsMatrix
+                  lots={form.acquisitionLots}
+                  onChange={(lots) => onChange({ acquisitionLots: lots })}
+                  costAllocationMethod={form.costAllocationMethod}
+                  onCostMethodChange={(method) =>
+                    onChange({ costAllocationMethod: method })
+                  }
+                />
+              )}
+            </div>
           )}
 
           {/* 환산 — 상장 */}

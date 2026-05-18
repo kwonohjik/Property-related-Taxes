@@ -109,9 +109,27 @@ export function StockSidebar({ currentStep, onStepClick }: StockSidebarProps) {
         );
         acqPrice = lotSum > 0 ? lotSum : null;
       } else {
-        const perShareAcq = parseAmount(formData.perShareAcquisitionPrice);
-        const count = parseInt(formData.shareCount || "0", 10);
-        acqPrice = perShareAcq > 0 && count > 0 ? perShareAcq * count : null;
+        // single 모드 — acquisitionActualInputMode 분기 (per_share / lots)
+        const acqInputMode = formData.acquisitionActualInputMode || "per_share"; // 3중 패턴 default
+        if (acqInputMode === "lots" && formData.acquisitionLots.length > 0) {
+          // 가중평균 단가 × 양도 주식수 (근사치 — FIFO는 차이 가능, 정확값은 result 우선)
+          const totalShares = formData.acquisitionLots.reduce(
+            (s, l) => s + parseInt(l.shareCount || "0", 10),
+            0,
+          );
+          const totalCost = formData.acquisitionLots.reduce(
+            (s, l) =>
+              s + parseAmount(l.perShareAcquisitionPrice) * parseInt(l.shareCount || "0", 10),
+            0,
+          );
+          const weightedAvg = totalShares > 0 ? Math.floor(totalCost / totalShares) : 0;
+          const transferCount = parseInt(formData.shareCount || "0", 10);
+          acqPrice = weightedAvg > 0 && transferCount > 0 ? weightedAvg * transferCount : null;
+        } else {
+          const perShareAcq = parseAmount(formData.perShareAcquisitionPrice);
+          const count = parseInt(formData.shareCount || "0", 10);
+          acqPrice = perShareAcq > 0 && count > 0 ? perShareAcq * count : null;
+        }
       }
       if (acqPrice && acqPrice > 0) {
         items.push({ label: "취득가액", value: acqPrice });

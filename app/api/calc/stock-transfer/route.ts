@@ -157,6 +157,13 @@ export async function POST(req: NextRequest) {
     isInternationalTransaction: coerced.isInternationalTransaction as boolean,
 
     realEstateGroupBasicDeductionUsed: coerced.realEstateGroupBasicDeductionUsed as number,
+
+    // ── split 모드 (분할 매수·분할 양도 + lots-only 모드 합성) ──
+    // ⑭ 동기화 지점 — TypeScript 미감지, grep 자가 점검 필수
+    acquisitionLots: coerced.acquisitionLots as StockTransferInput["acquisitionLots"],
+    transferLots: coerced.transferLots as StockTransferInput["transferLots"],
+    costAllocationMethod: coerced.costAllocationMethod as StockTransferInput["costAllocationMethod"],
+    specificMatchings: coerced.specificMatchings as StockTransferInput["specificMatchings"],
   };
 
   try {
@@ -230,6 +237,13 @@ function buildEngineInput(coerced: Record<string, unknown>): StockTransferInput 
     isFraudulent: coerced.isFraudulent as boolean,
     isInternationalTransaction: coerced.isInternationalTransaction as boolean,
     realEstateGroupBasicDeductionUsed: coerced.realEstateGroupBasicDeductionUsed as number,
+
+    // ── split 모드 (분할 매수·분할 양도 + lots-only 모드 합성) ──
+    // ⑭ 동기화 지점 — TypeScript 미감지
+    acquisitionLots: coerced.acquisitionLots as StockTransferInput["acquisitionLots"],
+    transferLots: coerced.transferLots as StockTransferInput["transferLots"],
+    costAllocationMethod: coerced.costAllocationMethod as StockTransferInput["costAllocationMethod"],
+    specificMatchings: coerced.specificMatchings as StockTransferInput["specificMatchings"],
   };
 }
 

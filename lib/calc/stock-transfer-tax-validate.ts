@@ -333,8 +333,67 @@ export function validateStep2(form: StockTransferFormData): StockValidationError
 
   // ── 취득가액 ──
   if (acquisitionMode === "actual") {
-    if (isEmpty(form.perShareAcquisitionPrice) || parseI(form.perShareAcquisitionPrice) < 0) {
-      errors.push({ field: "perShareAcquisitionPrice", message: "1주당 취득가액을 입력하세요", severity: "error" });
+    const acqInputMode = form.acquisitionActualInputMode || "per_share";  // 3중 패턴 default
+    if (acqInputMode === "lots") {
+      // ── lots-only 모드 검증 ──
+      if (!form.acquisitionLots || form.acquisitionLots.length === 0) {
+        errors.push({
+          field: "acquisitionLots",
+          message: "취득가액 다건 입력 모드: 매수 lot을 1행 이상 입력하세요",
+          severity: "error",
+        });
+      } else {
+        // lot별 필드 검증
+        form.acquisitionLots.forEach((lot, i) => {
+          if (isEmpty(lot.acquisitionDate)) {
+            errors.push({ field: `acquisitionLots[${i}].acquisitionDate`, message: `매수 lot #${i + 1}의 취득일을 입력하세요`, severity: "error" });
+          }
+          if (parseI(lot.shareCount) <= 0) {
+            errors.push({ field: `acquisitionLots[${i}].shareCount`, message: `매수 lot #${i + 1}의 주식수는 0보다 커야 합니다`, severity: "error" });
+          }
+          if (parseI(lot.perShareAcquisitionPrice) <= 0) {
+            errors.push({ field: `acquisitionLots[${i}].perShareAcquisitionPrice`, message: `매수 lot #${i + 1}의 1주당 단가는 0보다 커야 합니다`, severity: "error" });
+          }
+          if (lot.acquisitionCause === "inheritance" && isEmpty(lot.decedentAcquisitionDate)) {
+            errors.push({ field: `acquisitionLots[${i}].decedentAcquisitionDate`, message: `매수 lot #${i + 1} (상속): 피상속인 취득일을 입력하세요 (§104②1)`, severity: "error" });
+          }
+          if (lot.acquisitionCause === "merger_split" && isEmpty(lot.preMergerAcquisitionDate)) {
+            errors.push({ field: `acquisitionLots[${i}].preMergerAcquisitionDate`, message: `매수 lot #${i + 1} (합병·분할): 종전 주식 취득일을 입력하세요 (§104②3)`, severity: "error" });
+          }
+        });
+        // 양도 주식수 ≤ 매수 lot 합계
+        const totalAcqLots = form.acquisitionLots.reduce((s, l) => s + parseI(l.shareCount), 0);
+        const transferShareCount = parseI(form.shareCount);
+        if (transferShareCount > totalAcqLots) {
+          errors.push({
+            field: "acquisitionLots",
+            message: `양도 주식수(${transferShareCount})가 매수 lot 합계(${totalAcqLots})를 초과합니다. 매수 lot을 추가하거나 양도 주식수를 줄이세요.`,
+            severity: "error",
+          });
+        }
+      }
+      // total + lots 조합 차단 (Zod refine의 validate 방어선)
+      const transferInputMode = form.transferActualInputMode || "per_share";
+      if (transferInputMode === "total") {
+        errors.push({
+          field: "acquisitionActualInputMode",
+          message: "양도가액 합계 모드와 취득 다건 입력 모드를 동시에 사용할 수 없습니다",
+          severity: "error",
+        });
+      }
+      // specific 차단
+      if (form.costAllocationMethod === "specific") {
+        errors.push({
+          field: "costAllocationMethod",
+          message: "취득 다건 입력 모드에서는 개별법(specific)을 지원하지 않습니다",
+          severity: "error",
+        });
+      }
+    } else {
+      // per_share 모드 (기존 검증)
+      if (isEmpty(form.perShareAcquisitionPrice) || parseI(form.perShareAcquisitionPrice) < 0) {
+        errors.push({ field: "perShareAcquisitionPrice", message: "1주당 취득가액을 입력하세요", severity: "error" });
+      }
     }
   } else if (acquisitionMode === "estimated") {
     // 상장 환산 — 양도일 직전 1개월 평균 필수

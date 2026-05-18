@@ -28,11 +28,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type {
-  StockTransferFormData,
-  AcquisitionLotForm,
-  TransferLotForm,
-  SpecificMatchingForm,
+import {
+  createEmptyAcquisitionLot,
+  type StockTransferFormData,
+  type AcquisitionLotForm,
+  type TransferLotForm,
+  type SpecificMatchingForm,
 } from "@/lib/stores/calc-wizard-stock-store";
 
 type SplitFormSlice = Pick<
@@ -49,7 +50,7 @@ interface SplitLotsBlockProps {
   onChange: (patch: Partial<StockTransferFormData>) => void;
 }
 
-const ACQ_CAUSE_LABEL: Record<AcquisitionLotForm["acquisitionCause"], string> = {
+export const ACQ_CAUSE_LABEL: Record<AcquisitionLotForm["acquisitionCause"], string> = {
   purchase: "매매",
   inheritance: "상속",
   gift: "증여",
@@ -86,14 +87,7 @@ export function SplitLotsBlock({ form, onChange }: SplitLotsBlockProps) {
 
   // ── 매수 lot 추가/수정/삭제 ──
   const addAcquisitionLot = () => {
-    const newLot: AcquisitionLotForm = {
-      id: nanoid(),
-      acquisitionDate: "",
-      shareCount: "",
-      perShareAcquisitionPrice: "",
-      acquisitionCause: "purchase",
-    };
-    onChange({ acquisitionLots: [...form.acquisitionLots, newLot] });
+    onChange({ acquisitionLots: [...form.acquisitionLots, createEmptyAcquisitionLot()] });
   };
   const updateAcquisitionLot = (idx: number, patch: Partial<AcquisitionLotForm>) => {
     const next = form.acquisitionLots.map((l, i) => (i === idx ? { ...l, ...patch } : l));

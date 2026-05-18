@@ -119,8 +119,55 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
   // ── 취득가액 ──
   body.acquisitionMode = acquisitionMode;             // 3중 패턴 default: "actual"
   if (acquisitionMode === "actual") {
-    const perAcq = parseIntOrUndef(form.perShareAcquisitionPrice);
-    if (perAcq !== undefined) body.perShareAcquisitionPrice = perAcq;
+    const acqInputMode = form.acquisitionActualInputMode || "per_share";  // 3중 패턴 default
+    body.acquisitionActualInputMode = acqInputMode;   // ⑬ body spread 명시
+
+    if (acqInputMode === "lots" && form.lotsMode === "single") {
+      // ─────────────────────────────────────────────────────────────
+      // lots-only 모드: 취득 lot 배열 + 합성 transferLot 1건 자동 생성
+      // 엔진 변경 없음 — isSplitMode() 분기 그대로 사용
+      // ─────────────────────────────────────────────────────────────
+      body.costAllocationMethod = form.costAllocationMethod || "fifo";  // R-3 default
+      body.acquisitionLots = form.acquisitionLots.map((lot) => {
+        const o: Record<string, unknown> = {
+          id: lot.id,
+          acquisitionDate: lot.acquisitionDate,
+          shareCount: parseIntOrUndef(lot.shareCount) ?? 0,
+          perShareAcquisitionPrice: parseIntOrUndef(lot.perShareAcquisitionPrice) ?? 0,
+          acquisitionCause: lot.acquisitionCause,
+        };
+        if (lot.acquisitionCause === "inheritance" && lot.decedentAcquisitionDate) {
+          o.decedentAcquisitionDate = lot.decedentAcquisitionDate;
+        }
+        if (lot.acquisitionCause === "merger_split" && lot.preMergerAcquisitionDate) {
+          o.preMergerAcquisitionDate = lot.preMergerAcquisitionDate;
+        }
+        return o;
+      });
+      // 합성 transferLot — 폼 전역 단일 양도 정보로 1행 생성
+      // ID prefix "__synth_single_transfer__" 로 사용자 입력 ID와 충돌 차단 (R-5)
+      body.transferLots = [
+        {
+          id: "__synth_single_transfer__",
+          transferDate: form.transferDate,
+          shareCount: parseIntOrUndef(form.shareCount) ?? 0,
+          perShareTransferPrice: parseIntOrUndef(form.perShareTransferPrice) ?? 0,
+        },
+      ];
+      // specificMatchings는 본 모드 미지원 (Zod refine + UI disabled 차단)
+      // ⑪ acquisitionDate fallback — 가장 오래된 lot 일자 (legacy 호환)
+      const oldestLotDate = form.acquisitionLots
+        .map((l) => l.acquisitionDate)
+        .filter((d) => d && d.length > 0)
+        .sort()[0];
+      if (oldestLotDate && !body.acquisitionDate) {
+        body.acquisitionDate = oldestLotDate;
+      }
+    } else {
+      // per_share 모드 (기존)
+      const perAcq = parseIntOrUndef(form.perShareAcquisitionPrice);
+      if (perAcq !== undefined) body.perShareAcquisitionPrice = perAcq;
+    }
   } else if (acquisitionMode === "estimated") {
     // 환산 — 상장 (1개월 종가평균)
     const transferAvg = parseIntOrUndef(form.transferDatePriceAvg1Month);

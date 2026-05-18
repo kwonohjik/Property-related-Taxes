@@ -26,6 +26,7 @@
 
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
+import { nanoid } from "nanoid";
 import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
 
 // ============================================================
@@ -120,6 +121,7 @@ export interface StockTransferFormData {
 
   // ── 취득가액 ──
   acquisitionMode: "actual" | "sale_case" | "appraisal" | "estimated" | "face_value";  // 3중 패턴 default: "actual"
+  acquisitionActualInputMode: "per_share" | "lots";  // 3중 패턴 default: "per_share" — 실가 입력 방식 (lots-only 모드)
   perShareAcquisitionPrice: string;  // 실가 취득가
 
   // ── 환산 — 상장 (1개월 종가평균) ──
@@ -171,6 +173,20 @@ export interface StockTransferFormData {
 // 14필드 명시 default = 3중 패턴 source of truth
 // ============================================================
 
+/**
+ * 매수 lot 빈 row 팩토리 — SplitLotsBlock, AcquisitionLotsMatrix, Step2 자동 1행 추가에서 공유.
+ * R-12 (계획서) 해결.
+ */
+export function createEmptyAcquisitionLot(): AcquisitionLotForm {
+  return {
+    id: nanoid(),
+    acquisitionDate: "",
+    shareCount: "",
+    perShareAcquisitionPrice: "",
+    acquisitionCause: "purchase",
+  };
+}
+
 export function createInitialStockFormData(): StockTransferFormData {
   return {
     marketType: "",
@@ -218,6 +234,7 @@ export function createInitialStockFormData(): StockTransferFormData {
     exchangeCash: "",
 
     acquisitionMode: "actual",           // 3중 패턴 default
+    acquisitionActualInputMode: "per_share", // 3중 패턴 default
     perShareAcquisitionPrice: "",
 
     transferDatePriceAvg1Month: "",
@@ -328,6 +345,7 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
     exchangeDebtRelief: strField("exchangeDebtRelief"),
     exchangeCash: strField("exchangeCash"),
     acquisitionMode: enumField("acquisitionMode", ["actual", "sale_case", "appraisal", "estimated", "face_value"], defaults.acquisitionMode),
+    acquisitionActualInputMode: enumField("acquisitionActualInputMode", ["per_share", "lots"], defaults.acquisitionActualInputMode),
     perShareAcquisitionPrice: strField("perShareAcquisitionPrice"),
     transferDatePriceAvg1Month: strField("transferDatePriceAvg1Month"),
     listingDate: strField("listingDate"),

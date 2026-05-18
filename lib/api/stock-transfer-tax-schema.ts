@@ -34,6 +34,8 @@ export const transferPriceModeSchema = z.enum(["actual", "exchange"]);
 
 export const transferActualInputModeSchema = z.enum(["per_share", "total"]);
 
+export const acquisitionActualInputModeSchema = z.enum(["per_share", "lots"]);
+
 export const netAssetOnlyReasonSchema = z.enum([
   "liquidation_or_owner_death",
   "no_business_or_short_or_closed",
@@ -138,6 +140,7 @@ export const stockTransferInputSchema = z.object({
 
   // 취득가액
   acquisitionMode: acquisitionModeSchema,
+  acquisitionActualInputMode: acquisitionActualInputModeSchema.optional(),  // default "per_share" (lots-only 모드)
   perShareAcquisitionPrice: z.number().min(0).optional(),
 
   // 환산 — 상장
@@ -241,6 +244,38 @@ export function addStockRefines(
         path: ["transferTotalPrice"],
         message: "총액 직접 입력 시 양도가액 합계는 0보다 커야 합니다",
       });
+    }
+
+    // ── lots-only 모드 (취득 다건 입력 + 양도 단일) refine 3건 ──
+    // 기존 isSplit 게이트와 독립 작용 (API 합성 후 body는 isSplit도 통과)
+    const isLotsOnlyMode =
+      (data.acquisitionActualInputMode ?? "per_share") === "lots";
+    if (isLotsOnlyMode) {
+      // Refine 1 — acquisitionLots ≥ 1 강제
+      if (!data.acquisitionLots || data.acquisitionLots.length === 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["acquisitionLots"],
+          message: "취득가액 다건 입력 모드: 매수 lot을 1행 이상 입력하세요",
+        });
+      }
+      // Refine 2 — total 양도가 조합 차단 (R-1: 잔돈 발생 회피)
+      if ((data.transferActualInputMode ?? "per_share") === "total") {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["acquisitionActualInputMode"],
+          message:
+            "양도가액 합계 모드와 취득 다건 입력 모드를 동시에 사용할 수 없습니다 (1주당 단가 모드를 사용하세요)",
+        });
+      }
+      // Refine 3 — specific 차단 (UI disabled의 방어선)
+      if (data.costAllocationMethod === "specific") {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["costAllocationMethod"],
+          message: "취득 다건 입력 모드에서는 개별법(specific)을 지원하지 않습니다 (fifo 또는 moving_avg)",
+        });
+      }
     }
 
     // 분할 매수·분할 양도 호환성 게이트 (Plan v2.2)
