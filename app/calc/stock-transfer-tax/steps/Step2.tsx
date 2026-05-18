@@ -387,19 +387,7 @@ export function Step2({ form, onChange }: Step2Props) {
                 </div>
               )}
 
-              {/* 양도시 1개월 평균은 취득 후 상장 분기에서도 필요 — 위 영역이 비활성일 때 단독 노출 */}
-              {form.acquiredBeforeListing && (
-                <CurrencyInput
-                  label="양도일 직전 1개월 종가 평균"
-                  required
-                  hint="양도일 기준 직전 1개월 평균 종가 (원, §99①3)"
-                  value={form.transferDatePriceAvg1Month}
-                  onChange={(v) => onChange({ transferDatePriceAvg1Month: v })}
-                  placeholder="44,750"
-                />
-              )}
-
-              {/* 취득 후 상장 환산 (사례 48 핵심) */}
+              {/* 취득 후 상장 환산 (사례 48 핵심) — 내부에 transferDatePriceAvg1Month 입력 포함 */}
               <PostListingValuationCard form={form} onChange={onChange} />
             </div>
           )}
