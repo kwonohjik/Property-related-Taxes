@@ -399,47 +399,69 @@ export function validateStep2(form: StockTransferFormData): StockValidationError
           severity: "error",
         });
       }
-      // 취득 후 상장 ON 시 상장일 정보 + 취득연도 데이터 필수
+      // 취득 후 상장 ON 시 — 모드별 매트릭스 (Round 4 H-03·H-07)
       if (form.acquiredBeforeListing) {
+        const mode = form.unlistedDetailMode || "simple";
+
+        // 모드 공통 — 상장일 필수
         if (isEmpty(form.listingDate)) {
           errors.push({ field: "listingDate", message: "상장일을 입력하세요 (소령 §165⑤)", severity: "error" });
         }
-        if (isEmpty(form.listingDatePriceAvg1Month)) {
+
+        // Round 4 H-03 — tradingHalt × acquiredBeforeListing × mode≠simple 조합 차단
+        if (form.tradingHaltAtTransfer && mode !== "simple") {
           errors.push({
-            field: "listingDatePriceAvg1Month",
-            message: "상장일 직전 1개월 종가 평균을 입력하세요",
+            field: "tradingHaltAtTransfer",
+            message: "거래정지 + 취득 후 상장 상세 입력 조합은 후속 PR 예정입니다. simple 모드를 사용하거나 거래정지 토글을 해제하세요.",
             severity: "error",
           });
         }
-        // 취득연도 순손익가치·순자산가치 필수 (비상장 보충 평가)
-        if (isEmpty(form.acquisitionYearNetIncomePerShare)) {
-          errors.push({
-            field: "acquisitionYearNetIncomePerShare",
-            message: "취득연도 1주당 순손익가치를 입력하세요",
-            severity: "error",
-          });
-        }
-        if (isEmpty(form.acquisitionYearNetAssetPerShare)) {
-          errors.push({
-            field: "acquisitionYearNetAssetPerShare",
-            message: "취득연도 1주당 순자산가치를 입력하세요",
-            severity: "error",
-          });
-        }
-        // 상장연도 데이터도 필수
-        if (isEmpty(form.listingYearNetIncomePerShare)) {
-          errors.push({
-            field: "listingYearNetIncomePerShare",
-            message: "상장연도 1주당 순손익가치를 입력하세요",
-            severity: "error",
-          });
-        }
-        if (isEmpty(form.listingYearNetAssetPerShare)) {
-          errors.push({
-            field: "listingYearNetAssetPerShare",
-            message: "상장연도 1주당 순자산가치를 입력하세요",
-            severity: "error",
-          });
+
+        if (mode === "simple") {
+          // 4 결과값 직접 입력
+          if (isEmpty(form.listingDatePriceAvg1Month)) errors.push({ field: "listingDatePriceAvg1Month", message: "상장일 이후 1개월 종가평균을 입력하세요", severity: "error" });
+          if (isEmpty(form.listingYearNetIncomePerShare)) errors.push({ field: "listingYearNetIncomePerShare", message: "상장연도 1주당 순손익가치를 입력하세요", severity: "error" });
+          if (isEmpty(form.listingYearNetAssetPerShare)) errors.push({ field: "listingYearNetAssetPerShare", message: "상장연도 1주당 순자산가치를 입력하세요", severity: "error" });
+          if (isEmpty(form.acquisitionYearNetIncomePerShare)) errors.push({ field: "acquisitionYearNetIncomePerShare", message: "취득연도 1주당 순손익가치를 입력하세요", severity: "error" });
+          if (isEmpty(form.acquisitionYearNetAssetPerShare)) errors.push({ field: "acquisitionYearNetAssetPerShare", message: "취득연도 1주당 순자산가치를 입력하세요", severity: "error" });
+        } else {
+          // listing_only / full — 종가 표 + 상장 18필드 필수
+          const hasClosingData = form.listingPriceClosing.some((s) => !isEmpty(s));
+          if (!hasClosingData) {
+            errors.push({ field: "listingPriceClosing", message: "상장일 이후 1개월 종가를 1셀 이상 입력하세요", severity: "error" });
+          }
+          if (isEmpty(form.niShareCountListing)) {
+            errors.push({ field: "niShareCountListing", message: "상장연도 사업연도말 주식수를 입력하세요", severity: "error" });
+          }
+          if (isEmpty(form.naAssetTotalRow1Listing)) {
+            errors.push({ field: "naAssetTotalRow1Listing", message: "상장연도 자산총계를 입력하세요", severity: "error" });
+          }
+          if (isEmpty(form.naLiabTotalRow8Listing)) {
+            errors.push({ field: "naLiabTotalRow8Listing", message: "상장연도 부채총계를 입력하세요", severity: "error" });
+          }
+          if (isEmpty(form.naShareCountListing)) {
+            errors.push({ field: "naShareCountListing", message: "상장연도 순자산 주식수를 입력하세요", severity: "error" });
+          }
+
+          if (mode === "listing_only") {
+            // 취득연도는 직접 4 필드
+            if (isEmpty(form.acquisitionYearNetIncomePerShare)) errors.push({ field: "acquisitionYearNetIncomePerShare", message: "취득연도 1주당 순손익가치를 직접 입력하세요", severity: "error" });
+            if (isEmpty(form.acquisitionYearNetAssetPerShare)) errors.push({ field: "acquisitionYearNetAssetPerShare", message: "취득연도 1주당 순자산가치를 직접 입력하세요", severity: "error" });
+          } else {
+            // full — 취득연도 결산서 필수
+            if (isEmpty(form.niShareCountAcq)) {
+              errors.push({ field: "niShareCountAcq", message: "취득연도 사업연도말 주식수를 입력하세요", severity: "error" });
+            }
+            if (isEmpty(form.naAssetTotalRow1Acq)) {
+              errors.push({ field: "naAssetTotalRow1Acq", message: "취득연도 자산총계를 입력하세요", severity: "error" });
+            }
+            if (isEmpty(form.naLiabTotalRow8Acq)) {
+              errors.push({ field: "naLiabTotalRow8Acq", message: "취득연도 부채총계를 입력하세요", severity: "error" });
+            }
+            if (isEmpty(form.naShareCountAcq)) {
+              errors.push({ field: "naShareCountAcq", message: "취득연도 순자산 주식수를 입력하세요", severity: "error" });
+            }
+          }
         }
       }
     } else {

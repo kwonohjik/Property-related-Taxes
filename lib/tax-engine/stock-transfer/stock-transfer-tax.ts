@@ -24,6 +24,8 @@ import type { StockTransferInput, StockTransferResult, LotMatchingDetail } from 
 import { classifyStockTransfer } from "./stock-classification";
 import { calcHoldingPeriod, calcBasicDeduction, floorTaxBase, floorTen, applyDeemedAcquisitionDate, buildAppliedThreshold } from "./stock-transfer-helpers";
 import { calcPostListingConversion } from "./stock-valuation-post-listing";
+import type { PostListingValuationResult } from "./stock-valuation-post-listing";
+import { synthesizePostListingInput } from "./post-listing-flat-adapter";
 import { calcListedValuation } from "./stock-valuation-listed";
 import {
   calcUnlistedValuation,
@@ -130,6 +132,7 @@ export function calculateStockTransferTax(input: StockTransferInput): StockTrans
   let acquisitionPrice = 0;
   let usedEstimatedAcquisition = false;
   let estimatedBase: number | undefined;   // 개산공제 기준 = 취득기준시가 총액 (§163⑥4)
+  let postListingDetail: PostListingValuationResult | undefined;  // Round 4 C-04 echo
   let estimatedDeduction: number | undefined;
   let valuationDetail: StockTransferResult["valuationDetail"] | undefined;
 
@@ -192,10 +195,13 @@ export function calculateStockTransferTax(input: StockTransferInput): StockTrans
 
     if (input.acquiredBeforeListing) {
       // 취득 후 상장 — §165⑤ 단서 환산비율
-      const postListingResult = calcPostListingConversion(input);
+      // Round 4 — full/listing_only 모드 시 nested postListingDetail에서 4 필드 자동 합성
+      const synthesizedInput = synthesizePostListingInput(input);
+      const postListingResult = calcPostListingConversion(synthesizedInput);
       acquisitionPrice = postListingResult.totalAcquisitionPrice;
       // 취득 후 상장: estimatedBase = 취득기준시가 총액 = 1주당 취득기준시가 × 주식수
       estimatedBase = postListingResult.finalPerShareValue * shareCount;
+      postListingDetail = postListingResult;  // Round 4 C-04 echo
 
       valuationDetail = {
         method: "post_listing_conversion",
@@ -455,6 +461,9 @@ export function calculateStockTransferTax(input: StockTransferInput): StockTrans
     warnings,
     appliedRules,
     lotMatchingDetail,
+    // Round 4 C-02·C-04: 취득 후 상장 환산 echo (UI 결과 카드 게이트용)
+    acquiredBeforeListing: input.acquiredBeforeListing,
+    postListingDetail,
   };
 }
 
@@ -526,6 +535,8 @@ function buildExemptResult(
 
     warnings: classification.warnings,
     appliedRules: classification.appliedRules,
+    // Round 4 C-02: 비과세 분기에서도 echo (UI 결과 카드 게이트 일관성)
+    acquiredBeforeListing: input.acquiredBeforeListing,
   };
 }
 

@@ -254,6 +254,18 @@ function extractSummary(record: HistoryRecord): string {
     const price = input_data?.totalPropertyValue ?? input_data?.propertyValue;
     if (typeof price === "number") return `재산가액 ${formatKRW(price)}`;
   }
+  // P3 G-09 — 주식 양도세: 환산취득가 활성 시 사례 정합 우선 표시
+  if (tax_type === "stock_transfer" || tax_type === "stock-transfer") {
+    const shareCount = input_data?.shareCount;
+    const perShare = input_data?.perShareTransferPrice;
+    const acquiredBefore = input_data?.acquiredBeforeListing;
+    if (acquiredBefore && typeof shareCount === "number" && typeof perShare === "number") {
+      return `주식 ${shareCount.toLocaleString()}주 × ${formatKRW(perShare)} (취득 후 상장 §165⑤)`;
+    }
+    if (typeof shareCount === "number" && typeof perShare === "number") {
+      return `주식 ${shareCount.toLocaleString()}주 × ${formatKRW(perShare)}`;
+    }
+  }
   return "-";
 }
 

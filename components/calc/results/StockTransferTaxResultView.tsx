@@ -21,6 +21,7 @@ import { StockFilingFormTable } from "@/components/calc/stock-transfer/StockFili
 import { printScoped } from "@/components/calc/results/transfer/TransferTaxResultViewHelpers";
 import { MARKET_LABEL } from "@/components/calc/stock-transfer/market-label";
 import { LotMatchingDetailCard } from "@/components/calc/results/LotMatchingDetailCard";
+import { PostListingDetailCard } from "@/components/calc/results/PostListingDetailCard";
 
 interface StockTransferTaxResultViewProps {
   result: StockTransferResult;
@@ -303,6 +304,9 @@ export function StockTransferTaxResultView({
 
       {/* 분할 매수·분할 양도 매칭 상세 (split 모드만) */}
       {result.lotMatchingDetail && <LotMatchingDetailCard detail={result.lotMatchingDetail} />}
+
+      {/* 취득 후 상장 환산 상세 — Phase H ⑦ + P2 G-03 분리 */}
+      <PostListingDetailCard result={result} />
 
       {/* 대주주 판정 카드 (상장 3시장만 — 비상장·기타자산 자동 미렌더) */}
       <MajorShareholderResultCard result={result} />

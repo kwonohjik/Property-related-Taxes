@@ -166,6 +166,55 @@ export interface StockTransferFormData {
   acquisitionLots: AcquisitionLotForm[];                 // 3중 패턴 default: []
   transferLots: TransferLotForm[];                       // 3중 패턴 default: []
   specificMatchings: SpecificMatchingForm[];             // 3중 패턴 default: []
+
+  // ── 취득 후 상장 환산 PDF 사례 재현 (Phase D~G — 80 신규 필드) ──
+  // [[feedback_ui_input_path_enumeration]] — simple/listing_only/full 3 분기 enumerate
+  unlistedDetailMode: "simple" | "listing_only" | "full"; // 3중 패턴 default: "simple"
+  monthlyAccrualToggle: boolean;                          // §81④ — 3중 패턴 default: false
+
+  // 상장일 이후 1개월 종가 (4필드, 단일 array 32 슬롯)
+  listingPriceDates: string[];                            // YYYY-MM-DD × 32
+  listingPriceClosing: string[];                          // 원 (CurrencyInput parse 값 string) × 32
+  listingPriceBasisDate: string;                          // 평가기준일 (자동 = 상장일)
+  listingPriceHasIncrease: boolean;                       // 증자·합병 (default false)
+
+  // 순손익 — 상장연도 (18 필드, PDF 행 1~16 + 보조 2)
+  niAddRow1Listing: string; niAddRow2Listing: string; niAddRow3Listing: string; niAddRow4Listing: string;
+  niSubRow5Listing: string; niSubRow6Listing: string; niSubRow7Listing: string; niSubRow8Listing: string;
+  niSubRow9Listing: string; niSubRow10Listing: string; niSubRow11Listing: string; niSubRow12Listing: string;
+  niSubRow13Listing: string; niSubRow14Listing: string; niSubRow15Listing: string; niSubRow16Listing: string;
+  niShareCountListing: string;                            // 행 20: 사업연도말 주식수
+  niDiscountRateListing: string;                          // 행 23: 환원율 (% — default "10")
+
+  // 순손익 — 취득연도 (18 필드)
+  niAddRow1Acq: string; niAddRow2Acq: string; niAddRow3Acq: string; niAddRow4Acq: string;
+  niSubRow5Acq: string; niSubRow6Acq: string; niSubRow7Acq: string; niSubRow8Acq: string;
+  niSubRow9Acq: string; niSubRow10Acq: string; niSubRow11Acq: string; niSubRow12Acq: string;
+  niSubRow13Acq: string; niSubRow14Acq: string; niSubRow15Acq: string; niSubRow16Acq: string;
+  niShareCountAcq: string;
+  niDiscountRateAcq: string;
+
+  // 순자산 — 상장연도 (19 필드, PDF 행 1·2~5·6~7·8·9~14·15~17·19 + 보조 1)
+  naAssetTotalRow1Listing: string;
+  naAssetAddRow2Listing: string; naAssetAddRow3Listing: string; naAssetAddRow4Listing: string; naAssetAddRow5Listing: string;
+  naAssetSubRow6Listing: string; naAssetSubRow7Listing: string;
+  naLiabTotalRow8Listing: string;
+  naLiabAddRow9Listing: string; naLiabAddRow10Listing: string; naLiabAddRow11Listing: string;
+  naLiabAddRow12Listing: string; naLiabAddRow13Listing: string; naLiabAddRow14Listing: string;
+  naLiabSubRow15Listing: string; naLiabSubRow16Listing: string; naLiabSubRow17Listing: string;
+  naGoodwillRow19Listing: string;
+  naShareCountListing: string;
+
+  // 순자산 — 취득연도 (19 필드)
+  naAssetTotalRow1Acq: string;
+  naAssetAddRow2Acq: string; naAssetAddRow3Acq: string; naAssetAddRow4Acq: string; naAssetAddRow5Acq: string;
+  naAssetSubRow6Acq: string; naAssetSubRow7Acq: string;
+  naLiabTotalRow8Acq: string;
+  naLiabAddRow9Acq: string; naLiabAddRow10Acq: string; naLiabAddRow11Acq: string;
+  naLiabAddRow12Acq: string; naLiabAddRow13Acq: string; naLiabAddRow14Acq: string;
+  naLiabSubRow15Acq: string; naLiabSubRow16Acq: string; naLiabSubRow17Acq: string;
+  naGoodwillRow19Acq: string;
+  naShareCountAcq: string;
 }
 
 // ============================================================
@@ -271,6 +320,44 @@ export function createInitialStockFormData(): StockTransferFormData {
     acquisitionLots: [],
     transferLots: [],
     specificMatchings: [],
+
+    // ── 취득 후 상장 환산 PDF 사례 재현 (Phase D~G — 80 신규 필드) ──
+    unlistedDetailMode: "simple",            // 3중 패턴 default
+    monthlyAccrualToggle: false,             // 3중 패턴 default
+    listingPriceDates: [],
+    listingPriceClosing: [],
+    listingPriceBasisDate: "",
+    listingPriceHasIncrease: false,
+    niAddRow1Listing: "", niAddRow2Listing: "", niAddRow3Listing: "", niAddRow4Listing: "",
+    niSubRow5Listing: "", niSubRow6Listing: "", niSubRow7Listing: "", niSubRow8Listing: "",
+    niSubRow9Listing: "", niSubRow10Listing: "", niSubRow11Listing: "", niSubRow12Listing: "",
+    niSubRow13Listing: "", niSubRow14Listing: "", niSubRow15Listing: "", niSubRow16Listing: "",
+    niShareCountListing: "",
+    niDiscountRateListing: "10",             // 시행규칙 §81② → 상증령 §17 default 10%
+    niAddRow1Acq: "", niAddRow2Acq: "", niAddRow3Acq: "", niAddRow4Acq: "",
+    niSubRow5Acq: "", niSubRow6Acq: "", niSubRow7Acq: "", niSubRow8Acq: "",
+    niSubRow9Acq: "", niSubRow10Acq: "", niSubRow11Acq: "", niSubRow12Acq: "",
+    niSubRow13Acq: "", niSubRow14Acq: "", niSubRow15Acq: "", niSubRow16Acq: "",
+    niShareCountAcq: "",
+    niDiscountRateAcq: "10",
+    naAssetTotalRow1Listing: "",
+    naAssetAddRow2Listing: "", naAssetAddRow3Listing: "", naAssetAddRow4Listing: "", naAssetAddRow5Listing: "",
+    naAssetSubRow6Listing: "", naAssetSubRow7Listing: "",
+    naLiabTotalRow8Listing: "",
+    naLiabAddRow9Listing: "", naLiabAddRow10Listing: "", naLiabAddRow11Listing: "",
+    naLiabAddRow12Listing: "", naLiabAddRow13Listing: "", naLiabAddRow14Listing: "",
+    naLiabSubRow15Listing: "", naLiabSubRow16Listing: "", naLiabSubRow17Listing: "",
+    naGoodwillRow19Listing: "",
+    naShareCountListing: "",
+    naAssetTotalRow1Acq: "",
+    naAssetAddRow2Acq: "", naAssetAddRow3Acq: "", naAssetAddRow4Acq: "", naAssetAddRow5Acq: "",
+    naAssetSubRow6Acq: "", naAssetSubRow7Acq: "",
+    naLiabTotalRow8Acq: "",
+    naLiabAddRow9Acq: "", naLiabAddRow10Acq: "", naLiabAddRow11Acq: "",
+    naLiabAddRow12Acq: "", naLiabAddRow13Acq: "", naLiabAddRow14Acq: "",
+    naLiabSubRow15Acq: "", naLiabSubRow16Acq: "", naLiabSubRow17Acq: "",
+    naGoodwillRow19Acq: "",
+    naShareCountAcq: "",
   };
 }
 
@@ -380,6 +467,62 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
     acquisitionLots: normalizeAcquisitionLots(d.acquisitionLots),
     transferLots: normalizeTransferLots(d.transferLots),
     specificMatchings: normalizeSpecificMatchings(d.specificMatchings),
+
+    // ── 취득 후 상장 환산 PDF 사례 재현 (80 신규 필드 — Phase D~G) ──
+    unlistedDetailMode: enumField("unlistedDetailMode", ["simple", "listing_only", "full"], defaults.unlistedDetailMode),
+    monthlyAccrualToggle: boolField("monthlyAccrualToggle", defaults.monthlyAccrualToggle),
+    listingPriceDates: Array.isArray(d.listingPriceDates) ? (d.listingPriceDates as string[]) : [],
+    listingPriceClosing: Array.isArray(d.listingPriceClosing) ? (d.listingPriceClosing as string[]) : [],
+    listingPriceBasisDate: strField("listingPriceBasisDate"),
+    listingPriceHasIncrease: boolField("listingPriceHasIncrease", defaults.listingPriceHasIncrease),
+    // 순손익 — 상장연도 (18 필드)
+    niAddRow1Listing: strField("niAddRow1Listing"), niAddRow2Listing: strField("niAddRow2Listing"),
+    niAddRow3Listing: strField("niAddRow3Listing"), niAddRow4Listing: strField("niAddRow4Listing"),
+    niSubRow5Listing: strField("niSubRow5Listing"), niSubRow6Listing: strField("niSubRow6Listing"),
+    niSubRow7Listing: strField("niSubRow7Listing"), niSubRow8Listing: strField("niSubRow8Listing"),
+    niSubRow9Listing: strField("niSubRow9Listing"), niSubRow10Listing: strField("niSubRow10Listing"),
+    niSubRow11Listing: strField("niSubRow11Listing"), niSubRow12Listing: strField("niSubRow12Listing"),
+    niSubRow13Listing: strField("niSubRow13Listing"), niSubRow14Listing: strField("niSubRow14Listing"),
+    niSubRow15Listing: strField("niSubRow15Listing"), niSubRow16Listing: strField("niSubRow16Listing"),
+    niShareCountListing: strField("niShareCountListing"),
+    niDiscountRateListing: strField("niDiscountRateListing") || defaults.niDiscountRateListing,
+    // 순손익 — 취득연도 (18 필드)
+    niAddRow1Acq: strField("niAddRow1Acq"), niAddRow2Acq: strField("niAddRow2Acq"),
+    niAddRow3Acq: strField("niAddRow3Acq"), niAddRow4Acq: strField("niAddRow4Acq"),
+    niSubRow5Acq: strField("niSubRow5Acq"), niSubRow6Acq: strField("niSubRow6Acq"),
+    niSubRow7Acq: strField("niSubRow7Acq"), niSubRow8Acq: strField("niSubRow8Acq"),
+    niSubRow9Acq: strField("niSubRow9Acq"), niSubRow10Acq: strField("niSubRow10Acq"),
+    niSubRow11Acq: strField("niSubRow11Acq"), niSubRow12Acq: strField("niSubRow12Acq"),
+    niSubRow13Acq: strField("niSubRow13Acq"), niSubRow14Acq: strField("niSubRow14Acq"),
+    niSubRow15Acq: strField("niSubRow15Acq"), niSubRow16Acq: strField("niSubRow16Acq"),
+    niShareCountAcq: strField("niShareCountAcq"),
+    niDiscountRateAcq: strField("niDiscountRateAcq") || defaults.niDiscountRateAcq,
+    // 순자산 — 상장연도 (19 필드)
+    naAssetTotalRow1Listing: strField("naAssetTotalRow1Listing"),
+    naAssetAddRow2Listing: strField("naAssetAddRow2Listing"), naAssetAddRow3Listing: strField("naAssetAddRow3Listing"),
+    naAssetAddRow4Listing: strField("naAssetAddRow4Listing"), naAssetAddRow5Listing: strField("naAssetAddRow5Listing"),
+    naAssetSubRow6Listing: strField("naAssetSubRow6Listing"), naAssetSubRow7Listing: strField("naAssetSubRow7Listing"),
+    naLiabTotalRow8Listing: strField("naLiabTotalRow8Listing"),
+    naLiabAddRow9Listing: strField("naLiabAddRow9Listing"), naLiabAddRow10Listing: strField("naLiabAddRow10Listing"),
+    naLiabAddRow11Listing: strField("naLiabAddRow11Listing"), naLiabAddRow12Listing: strField("naLiabAddRow12Listing"),
+    naLiabAddRow13Listing: strField("naLiabAddRow13Listing"), naLiabAddRow14Listing: strField("naLiabAddRow14Listing"),
+    naLiabSubRow15Listing: strField("naLiabSubRow15Listing"), naLiabSubRow16Listing: strField("naLiabSubRow16Listing"),
+    naLiabSubRow17Listing: strField("naLiabSubRow17Listing"),
+    naGoodwillRow19Listing: strField("naGoodwillRow19Listing"),
+    naShareCountListing: strField("naShareCountListing"),
+    // 순자산 — 취득연도 (19 필드)
+    naAssetTotalRow1Acq: strField("naAssetTotalRow1Acq"),
+    naAssetAddRow2Acq: strField("naAssetAddRow2Acq"), naAssetAddRow3Acq: strField("naAssetAddRow3Acq"),
+    naAssetAddRow4Acq: strField("naAssetAddRow4Acq"), naAssetAddRow5Acq: strField("naAssetAddRow5Acq"),
+    naAssetSubRow6Acq: strField("naAssetSubRow6Acq"), naAssetSubRow7Acq: strField("naAssetSubRow7Acq"),
+    naLiabTotalRow8Acq: strField("naLiabTotalRow8Acq"),
+    naLiabAddRow9Acq: strField("naLiabAddRow9Acq"), naLiabAddRow10Acq: strField("naLiabAddRow10Acq"),
+    naLiabAddRow11Acq: strField("naLiabAddRow11Acq"), naLiabAddRow12Acq: strField("naLiabAddRow12Acq"),
+    naLiabAddRow13Acq: strField("naLiabAddRow13Acq"), naLiabAddRow14Acq: strField("naLiabAddRow14Acq"),
+    naLiabSubRow15Acq: strField("naLiabSubRow15Acq"), naLiabSubRow16Acq: strField("naLiabSubRow16Acq"),
+    naLiabSubRow17Acq: strField("naLiabSubRow17Acq"),
+    naGoodwillRow19Acq: strField("naGoodwillRow19Acq"),
+    naShareCountAcq: strField("naShareCountAcq"),
   };
 }
 

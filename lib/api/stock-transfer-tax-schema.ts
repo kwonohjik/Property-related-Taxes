@@ -58,6 +58,43 @@ export const expenseModeSchema = z.enum(["actual", "estimated"]);
 export const lotsModeSchema = z.enum(["single", "split"]);
 export const costAllocationMethodSchema = z.enum(["specific", "fifo", "moving_avg"]);
 
+// 취득 후 상장 환산 PDF 사례 재현 (Phase D~G — Round 4 H-04)
+export const unlistedDetailModeSchema = z.enum(["simple", "listing_only", "full"]);
+export const niYearSchema = z.object({
+  addA: z.array(z.number()).default([]),
+  subB: z.array(z.number()).default([]),
+  shareCount: z.number().default(0),
+  discountRate: z.number().default(0.10),
+});
+export const naYearSchema = z.object({
+  assetTotalRow1: z.number().default(0),
+  assetAdd: z.array(z.number()).default([]),
+  assetSub: z.array(z.number()).default([]),
+  liabTotalRow8: z.number().default(0),
+  liabAdd: z.array(z.number()).default([]),
+  liabSub: z.array(z.number()).default([]),
+  goodwillRow19: z.number().default(0),
+  shareCount: z.number().default(0),
+});
+export const postListingDetailSchema = z.object({
+  unlistedDetailMode: unlistedDetailModeSchema,
+  monthlyAccrualToggle: z.boolean().default(false),
+  closing: z.object({
+    dates: z.array(z.string()).default([]),
+    closes: z.array(z.number()).default([]),
+    basisDate: z.string().default(""),
+    hasIncrease: z.boolean().default(false),
+  }).optional(),
+  netIncome: z.object({
+    listing: niYearSchema,
+    acquisition: niYearSchema,
+  }).optional(),
+  netAsset: z.object({
+    listing: naYearSchema,
+    acquisition: naYearSchema,
+  }).optional(),
+});
+
 // ============================================================
 // 분할 lot z.object 정의 (⑫ TypeScript 미감지 — 명시 필수)
 // ============================================================
@@ -148,6 +185,8 @@ export const stockTransferInputSchema = z.object({
   listingDate: z.union([z.string(), z.date()]).optional(),
   listingDatePriceAvg1Month: z.number().min(0).optional(),
   acquiredBeforeListing: z.boolean(),
+  // Round 4 — nested PostListingDetailInput (full/listing_only 모드)
+  postListingDetail: postListingDetailSchema.optional(),
   tradingHaltAtTransfer: z.boolean(),
 
   // 환산 — 비상장 보충적 평가 (3시점)

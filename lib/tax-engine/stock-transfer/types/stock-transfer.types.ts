@@ -143,6 +143,108 @@ export type StockTransferInput = {
   costAllocationMethod?: "specific" | "fifo" | "moving_avg";
   /** 개별법(specific) 모드 사용자 명시 매칭 */
   specificMatchings?: SpecificMatching[];
+
+  /**
+   * 취득 후 상장 환산 상세 입력 (§165⑤ PDF 사례 48 완전 재현).
+   * unlistedDetailMode === "full" 또는 "listing_only" 시 사용.
+   * "simple" 모드는 기존 4 필드(listingYearNet*PerShare 등) 사용.
+   *
+   * Phase A KoreanLaw 검증 2026-05-18 — Round 4 C-02·C-03 반영.
+   */
+  postListingDetail?: PostListingDetailInput;
+};
+
+// ============================================================
+// 취득 후 상장 환산 상세 입력 (PDF 사례 48 3개 다이얼로그)
+// ============================================================
+
+/** PDF 사례 48 — 3개 다이얼로그 재현용 nested 입력 */
+export type PostListingDetailInput = {
+  /** 모드: simple = 기존 4 필드만, listing_only = 상장연도 상세, full = 80필드 모두 */
+  unlistedDetailMode: "simple" | "listing_only" | "full";
+
+  /** 상장일 이후 1개월 종가 (소령 §165⑤ — Phase A 결론) */
+  closing?: {
+    /** YYYY-MM-DD. 최대 32 슬롯, 가변 길이 */
+    dates: string[];
+    /** 원. 휴일·주말은 빈 문자열 또는 0 */
+    closes: number[];
+    /** 평가기준일 YYYY-MM-DD (자동 = 상장일 또는 상장일 + 1일) */
+    basisDate: string;
+    /** 증자·합병 여부 (default false, 환산주식수 후속 PR 신호) */
+    hasIncrease: boolean;
+  };
+
+  /** 순손익 계산서 — PDF 24행 (16 데이터행 × 2열 + 보조 4) */
+  netIncome?: {
+    listing: NIYear;
+    acquisition: NIYear;
+  };
+
+  /** 순자산가액 계산서 — PDF 20행 (18 데이터행 × 2열 + 보조 2) */
+  netAsset?: {
+    listing: NAYear;
+    acquisition: NAYear;
+  };
+
+  /** §81④ 월할 가산 수동 토글 (default false). 동일 사업연도 케이스. */
+  monthlyAccrualToggle: boolean;
+};
+
+/**
+ * 순손익 계산서 1열 (상장연도 또는 취득연도) — PDF 24행 정밀화.
+ *
+ * (A) 행 1~4: 가산항목 (소득금액·과오납 환급금 이자·수익배당금 입금불산입·기부금 한도초과)
+ * (B) 행 5~16: 차감항목 (벌금·손금불산입 공과금·업무무관 지출 등 12행)
+ * 행 17 = A − B = 순손익액
+ * 행 20 = 사업연도말 주식 또는 환산주식수
+ * 행 21 = 1주당 순손익액 (17÷20)
+ * 행 23 = 환원율 (default 10% — 시행규칙 §81② → 상증령 §17)
+ * 행 24 = 1주당 가액 (21÷23)
+ */
+export type NIYear = {
+  /** 행 1~4 (가산항목 4개) */
+  addA: number[];
+  /** 행 5~16 (차감항목 12개) */
+  subB: number[];
+  /** 행 20: 사업연도말 주식 또는 환산주식수 (주, 정수) */
+  shareCount: number;
+  /** 행 23: 환원율 (decimal — 0.10 = 10%) */
+  discountRate: number;
+};
+
+/**
+ * 순자산가액 계산서 1열 (상장연도 또는 취득연도) — PDF 20행 정밀화 (Round 4 C-01).
+ *
+ * 행 1 = 재무상태표상 자산가액 (자산총계)
+ * 행 2~5 = 자산 가산 4행 (평가차액·법인세 유보·유상증자·기타)
+ * 행 6·7 = 자산 차감 2행 (선급비용·증자일전잉여금)
+ * 행 가 = 자산총계 ((1+2+3+4+5)−(6+7))
+ * 행 8 = 재무상태표상 부채액
+ * 행 9~14 = 부채 가산 6행 (법인세·농특세·지방소득세·배당금·퇴직급여·기타)
+ * 행 15~17 = 부채 차감 3행 (제준비금·제충당금·외화환산대)
+ * 행 나 = 부채총계 ((8+9+...+14)−(15+16+17))
+ * 행 18 = 영업권포함전순자산가액 (가 − 나)
+ * 행 19 = 영업권
+ * 행 20 = 순자산가액 (18 + 19)
+ */
+export type NAYear = {
+  /** 행 1: 재무상태표상 자산가액 */
+  assetTotalRow1: number;
+  /** 행 2~5: 자산 가산 4개 */
+  assetAdd: number[];
+  /** 행 6·7: 자산 차감 2개 */
+  assetSub: number[];
+  /** 행 8: 재무상태표상 부채액 */
+  liabTotalRow8: number;
+  /** 행 9~14: 부채 가산 6개 */
+  liabAdd: number[];
+  /** 행 15~17: 부채 차감 3개 */
+  liabSub: number[];
+  /** 행 19: 영업권 (optional, default 0) */
+  goodwillRow19: number;
+  /** 사업연도말 발행주식총수 (보통 NIYear.shareCount와 동일, 분할·증자 시 분리) */
+  shareCount: number;
 };
 
 // ============================================================
@@ -357,4 +459,65 @@ export type StockTransferResult = {
    * 비과세 분기에서도 검산용으로 echo (산출세액 0이지만 lot별 차익은 표시).
    */
   lotMatchingDetail?: LotMatchingDetail;
+
+  /**
+   * Round 4 C-02 echo — 취득 후 상장 환산 활성 여부.
+   * UI 결과 카드 PostListingDetailCard 노출 게이트.
+   * Input.acquiredBeforeListing 그대로 echo.
+   */
+  acquiredBeforeListing: boolean;
+
+  /**
+   * Round 4 C-04 — 취득 후 상장 환산 상세 결과 (모드별 활성).
+   * unlistedDetailMode 별 채움 조건:
+   *   - "simple": detail = { mode, floor80NotApplied } 만
+   *   - "listing_only": closing + netIncome.listing + netAsset.listing 채움
+   *   - "full": 전체 채움
+   */
+  postListingDetail?: PostListingValuationResult;
+};
+
+// ============================================================
+// 취득 후 상장 환산 결과 (UI 결과 카드 PostListingDetailCard용)
+// ============================================================
+
+export type PostListingValuationResult = {
+  /** 상장연도 직전 사업연도 1주당 비상장 평가액 (가중평균) */
+  listingYearPerShareValue: number;
+  /** 취득연도 직전 사업연도 1주당 비상장 평가액 (가중평균) */
+  acquisitionYearPerShareValue: number;
+  /** 환산비율 = 취득연도 평가 / 상장연도 평가 */
+  conversionRatio: number;
+  /** 1주당 취득기준시가 = floor(상장일 1개월 종가평균 × 환산비율) */
+  finalPerShareValue: number;
+  /** 총 환산취득가 = 1주당 × 주식수 */
+  totalAcquisitionPrice: number;
+  /** 월할 가산 적용 여부 (시행규칙 §81④) */
+  monthlyAccrualApplied: boolean;
+  appliedRules: string[];
+  warnings: string[];
+
+  /** Round 4 H-04 — full/listing_only 모드의 상세 산출 echo */
+  detail?: {
+    /** 종가 1개월 평균 계산 결과 (full 모드 또는 listing_only 모드) */
+    closing?: {
+      tradingDays: number;
+      sum: number;
+      avg: number;
+    };
+    /** 순손익 계산서 산출 결과 (full = 양 연도, listing_only = 상장연도만) */
+    netIncome?: {
+      listing: { netIncomeAmount: number; perShareIncome: number; perShareValue: number };
+      acquisition?: { netIncomeAmount: number; perShareIncome: number; perShareValue: number };
+    };
+    /** 순자산 계산서 산출 결과 (full = 양 연도, listing_only = 상장연도만) */
+    netAsset?: {
+      listing: { netAssetAmount: number; perShareAsset: number };
+      acquisition?: { netAssetAmount: number; perShareAsset: number };
+    };
+    /** 사용된 모드 (디버깅·결과 카드 배지용) */
+    mode: "simple" | "listing_only" | "full";
+    /** 80% 하한 비적용 명시 — 환산비율 단계 (회귀 보호용 echo) */
+    floor80NotApplied: true;
+  };
 };

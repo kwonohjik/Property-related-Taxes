@@ -133,6 +133,7 @@ export async function POST(req: NextRequest) {
     listingDate: coerced.listingDate as Date | undefined,
     listingDatePriceAvg1Month: coerced.listingDatePriceAvg1Month as number | undefined,
     acquiredBeforeListing: coerced.acquiredBeforeListing as boolean,
+    postListingDetail: coerced.postListingDetail as import("@/lib/tax-engine/stock-transfer/types/stock-transfer.types").PostListingDetailInput | undefined,
     tradingHaltAtTransfer: coerced.tradingHaltAtTransfer as boolean,
 
     transferYearNetIncomePerShare: coerced.transferYearNetIncomePerShare as number | undefined,
@@ -219,6 +220,7 @@ function buildEngineInput(coerced: Record<string, unknown>): StockTransferInput 
     listingDate: coerced.listingDate as Date | undefined,
     listingDatePriceAvg1Month: coerced.listingDatePriceAvg1Month as number | undefined,
     acquiredBeforeListing: coerced.acquiredBeforeListing as boolean,
+    postListingDetail: coerced.postListingDetail as import("@/lib/tax-engine/stock-transfer/types/stock-transfer.types").PostListingDetailInput | undefined,
     tradingHaltAtTransfer: coerced.tradingHaltAtTransfer as boolean,
     transferYearNetIncomePerShare: coerced.transferYearNetIncomePerShare as number | undefined,
     transferYearNetAssetPerShare: coerced.transferYearNetAssetPerShare as number | undefined,

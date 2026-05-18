@@ -11,6 +11,7 @@
  */
 
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
+import { adaptFlatToApiBody } from "@/lib/tax-engine/stock-transfer/post-listing-flat-adapter";
 import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
 
 // ============================================================
@@ -210,6 +211,18 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
   // 취득 후 상장 + 거래정지 (3중 패턴)
   body.acquiredBeforeListing = form.acquiredBeforeListing;     // default: false
   body.tradingHaltAtTransfer = form.tradingHaltAtTransfer;     // default: false
+
+  // Round 4 H-02 — full/listing_only 모드 시 adapter로 nested + 4 필드 자동 합성
+  if (form.acquiredBeforeListing && (form.unlistedDetailMode === "listing_only" || form.unlistedDetailMode === "full")) {
+    const adapted = adaptFlatToApiBody(form, true);
+    body.postListingDetail = adapted.postListingDetail;
+    // 합성된 4 필드로 덮어쓰기 (UI 미리보기와 결과 일치 보장)
+    if (adapted.listingDatePriceAvg1Month) body.listingDatePriceAvg1Month = adapted.listingDatePriceAvg1Month;
+    if (adapted.listingYearNetIncomePerShare) body.listingYearNetIncomePerShare = adapted.listingYearNetIncomePerShare;
+    if (adapted.listingYearNetAssetPerShare) body.listingYearNetAssetPerShare = adapted.listingYearNetAssetPerShare;
+    if (adapted.acquisitionYearNetIncomePerShare) body.acquisitionYearNetIncomePerShare = adapted.acquisitionYearNetIncomePerShare;
+    if (adapted.acquisitionYearNetAssetPerShare) body.acquisitionYearNetAssetPerShare = adapted.acquisitionYearNetAssetPerShare;
+  }
 
   // ── 장부분실 ──
   body.bookLost = form.bookLost;                               // default: false

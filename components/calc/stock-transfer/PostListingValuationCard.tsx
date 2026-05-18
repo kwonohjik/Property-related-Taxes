@@ -1,227 +1,213 @@
 "use client";
 
 /**
- * PostListingValuationCard — 취득 후 상장 환산취득가 (Step 2)
+ * PostListingValuationCard — 취득 후 상장 환산취득가 (Step 2 — Phase G 재구성)
  *
- * 소령 §165⑤ 본문 — 취득 당시 비상장 주식이 양도 시점엔 상장된 경우:
- *   1주당 취득기준시가 = 상장일 직전 1주당 평가가액 × (취득일 직전 1주당 평가가액 / 상장일 직전 1주당 평가가액)
+ * 소령 §165⑤ 본문 (Phase A KoreanLaw 검증 2026-05-18):
+ *   1주당 취득기준시가 = 상장일 이후 1개월 종가평균 × (취득연도 평가 / 상장연도 평가)
  *
- * 비상장 보충적 평가 (3시점: 양도연도·상장연도·취득연도):
- *   1주당 평가 = 순손익가치×3/5 + 순자산가치×2/5 (일반)
- *              = 순손익가치×2/5 + 순자산가치×3/5 (부동산과다보유 가중치 반전)
+ * unlistedDetailMode 3 분기 (Round 1):
+ *   - "simple": 결과값 4개 직접 입력 (현행 호환)
+ *   - "listing_only": 상장연도 결산서 + 종가 화면. 취득연도는 직접 입력
+ *   - "full": PDF 3개 화면 모두 — 80필드 합성
  *
- * 소칙 §81④ — 취득일·상장일 평가액 동일 시 월할 가산
+ * 환원율 10% 위임: 소령 §165④1 가목 → 시행규칙 §81② → 상증법 시행규칙 §17
  *
- * 사례 48 본칙 anchor:
- *   상장일 직전 1주당 평가 = 61,570×3/5 + 5,352×2/5 = 39,083 (→ 8,001)
- *   취득일 직전 1주당 평가 = 44,520×3/5 + 4,348×2/5 = 28,451 (→ 5,824)
- *   취득가 = 5,824 × 5,000주 = 29,120,000
+ * 사례 EXAMPLE 본칙 anchor:
+ *   상장연도 39,082 / 취득연도 28,451 / 환산비율 0.728 → 1주당 5,824 → 총 29,120,000
  */
 
-import { useMemo } from "react";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
-import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DateInput } from "@/components/ui/date-input";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
+import { PostListingClosingPriceTable, autoFillDates, dayOfWeek } from "./PostListingClosingPriceTable";
+import { PostListingNetIncomeStatement } from "./PostListingNetIncomeStatement";
+import { PostListingNetAssetStatement } from "./PostListingNetAssetStatement";
+import { PostListingFormulaPreview } from "./PostListingFormulaPreview";
 
 interface PostListingValuationCardProps {
-  form: Pick<
-    StockTransferFormData,
-    | "acquiredBeforeListing"
-    | "tradingHaltAtTransfer"
-    | "listingDate"
-    | "listingDatePriceAvg1Month"
-    | "transferDatePriceAvg1Month"
-    | "listingYearNetIncomePerShare"
-    | "listingYearNetAssetPerShare"
-    | "acquisitionYearNetIncomePerShare"
-    | "acquisitionYearNetAssetPerShare"
-    | "shareCount"
-    | "isHeavyRealEstateForValuation"
-  >;
+  form: StockTransferFormData;
   onChange: (patch: Partial<StockTransferFormData>) => void;
 }
 
-function calcWeightedAvg(
-  netIncome: number,
-  netAsset: number,
-  isHeavyRE: boolean
-): number {
-  if (isHeavyRE) {
-    // 부동산과다보유 가중치 반전 (소령 §165⑤ 단서)
-    return Math.floor((netIncome * 2) / 5 + (netAsset * 3) / 5);
-  }
-  return Math.floor((netIncome * 3) / 5 + (netAsset * 2) / 5);
-}
-
 export function PostListingValuationCard({ form, onChange }: PostListingValuationCardProps) {
-  // 취득기준시가 계산 미리보기 (useMemo — store 미러링 금지)
-  const preview = useMemo(() => {
-    const listingAvg = parseAmount(form.listingDatePriceAvg1Month);
-    const listingNI = parseAmount(form.listingYearNetIncomePerShare);
-    const listingNA = parseAmount(form.listingYearNetAssetPerShare);
-    const acqNI = parseAmount(form.acquisitionYearNetIncomePerShare);
-    const acqNA = parseAmount(form.acquisitionYearNetAssetPerShare);
-    const shareCount = parseInt(form.shareCount || "0", 10);
+  const mode = form.unlistedDetailMode || "simple";
 
-    if (!listingAvg || !listingNI || !listingNA || !acqNI || !acqNA) return null;
-
-    const listingEval = calcWeightedAvg(listingNI, listingNA, form.isHeavyRealEstateForValuation);
-    const acqEval = calcWeightedAvg(acqNI, acqNA, form.isHeavyRealEstateForValuation);
-
-    if (!listingEval) return null;
-
-    // 환산비율 = 취득일 직전 평가 / 상장일 직전 평가
-    const ratio = acqEval / listingEval;
-    // 1주당 취득기준시가 = 상장일 직전 1개월 종가평균 × 환산비율
-    const perShareStdPrice = Math.floor(listingAvg * ratio);
-    const totalAcqPrice = perShareStdPrice * shareCount;
-
-    return {
-      listingEval,
-      acqEval,
-      ratio: ratio.toFixed(4),
-      perShareStdPrice,
-      totalAcqPrice,
-    };
-  }, [
-    form.listingDatePriceAvg1Month,
-    form.listingYearNetIncomePerShare,
-    form.listingYearNetAssetPerShare,
-    form.acquisitionYearNetIncomePerShare,
-    form.acquisitionYearNetAssetPerShare,
-    form.shareCount,
-    form.isHeavyRealEstateForValuation,
-  ]);
+  // Enter 키 → 다음 입력 셀로 포커스 이동 (카드 내 순회).
+  // 하위 컴포넌트(NetIncome/NetAsset/ClosingPriceTable)가 이미 자체 handler에서 preventDefault한 경우 패스.
+  const handleEnterNext = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key !== "Enter" || e.defaultPrevented) return;
+    const target = e.target as HTMLElement;
+    if (target.tagName !== "INPUT") return;
+    const inputs = Array.from(
+      e.currentTarget.querySelectorAll<HTMLInputElement>("input:not([disabled])")
+    );
+    const idx = inputs.indexOf(target as HTMLInputElement);
+    if (idx === -1) return;
+    e.preventDefault();
+    const next = inputs[idx + 1];
+    if (next) next.focus();
+  };
 
   return (
     <ToggleCard
       checked={form.acquiredBeforeListing}
       onCheckedChange={(v) => onChange({ acquiredBeforeListing: v })}
       title="취득 후 상장 — 환산취득가 (소령 §165⑤)"
-      description="취득 당시 비상장이었으나 양도 시점에 상장된 주식 — 상장일 직전 평가가액 기반 환산"
+      description="취득 당시 비상장이었으나 양도 시점에 상장된 주식 — 상장일 이후 1개월 종가평균 기반 환산"
       tone="amber"
     >
-      <div className="mt-4 space-y-4">
-        {/* violet 안내 카드 (§165⑤ 산식 설명) */}
+      <div className="mt-4 space-y-4" onKeyDown={handleEnterNext}>
+        {/* 환산 산식 안내 (violet) */}
         <div className="rounded-lg border border-violet-200 bg-violet-50/70 px-4 py-3 text-sm">
-          <p className="font-semibold text-violet-800 mb-2">환산 산식 (소령 §165⑤ 본문)</p>
+          <p className="font-semibold text-violet-800 mb-2">환산 산식 (소령 §165⑤ 본문 — Phase A 결론)</p>
           <div className="text-violet-700 space-y-1 text-xs font-mono">
-            <p>1주당 취득기준시가 = 상장일직전1개월종가평균 × (취득연도 평가가액 ÷ 상장연도 평가가액)</p>
-            <p>1주당 평가가액 = 순손익가치×3/5 + 순자산가치×2/5</p>
+            <p>1주당 취득기준시가 = 상장일 이후 1개월 종가평균 × (취득연도 평가 ÷ 상장연도 평가)</p>
+            <p>1주당 평가 = 순손익가치×3/5 + 순자산가치×2/5 {form.isHeavyRealEstateForValuation && "(부동산과다 시 2:3 반전)"}</p>
           </div>
         </div>
 
-        {/* 상장일 */}
-        <FieldCard label="상장일" required hint="최초 상장 기준일 (YYYY-MM-DD)">
+        {/* 상장일 (기존 — 종가 표 자동 채움 trigger) */}
+        <FieldCard label="상장일" required hint="최초 상장 기준일. 입력 시 종가 표 32셀 일자가 자동 채워집니다.">
           <DateInput
             value={form.listingDate}
-            onChange={(v) => onChange({ listingDate: v })}
+            onChange={(v) => {
+              const dates = autoFillDates(v);
+              const closes = (form.listingPriceClosing ?? []).slice(0, dates.length);
+              while (closes.length < dates.length) closes.push("");
+              // 주말 슬롯 잔재 제거 — 슬롯↔요일 재매핑 시 거래일 카운트 보호
+              for (let i = 0; i < dates.length; i++) {
+                const dow = dayOfWeek(dates[i]);
+                if (dow === 0 || dow === 6) closes[i] = "";
+              }
+              onChange({ listingDate: v, listingPriceDates: dates, listingPriceClosing: closes });
+            }}
           />
         </FieldCard>
 
-        {/* 상장일 직전 1개월 종가평균 (§99①3) */}
-        <CurrencyInput
-          label="상장일 직전 1개월 종가 평균"
-          required
-          hint="상장일 직전 1개월간의 평균 종가 (원, §99①3)"
-          value={form.listingDatePriceAvg1Month}
-          onChange={(v) => onChange({ listingDatePriceAvg1Month: v })}
-          placeholder="8,001"
-        />
+        {/* unlistedDetailMode RadioCardGroup */}
+        <FieldCard label="환산 입력 방식">
+          <RadioCardGroup
+            name="unlistedDetailMode"
+            value={mode}
+            onChange={(v) => onChange({ unlistedDetailMode: v as "simple" | "listing_only" | "full" })}
+            tone="amber"
+            layout="stack"
+            options={[
+              {
+                value: "simple",
+                label: "간이 (결과값 4개 직접 입력)",
+                description: "외부에서 보충적 평가를 마친 사용자용 — 현행 방식 (회귀 호환)",
+              },
+              {
+                value: "listing_only",
+                label: "부분 재현 (상장연도만 상세)",
+                description: "상장연도 결산서만 보유한 경우 — 취득연도는 결과값 직접 입력",
+              },
+              {
+                value: "full",
+                label: "완전 재현 (PDF 3개 화면)",
+                description: "PDF 사례 그대로 — 종가 표 + 순손익 + 순자산 결산서 원천 입력",
+              },
+            ]}
+          />
+        </FieldCard>
 
-        {/* 상장연도 비상장 보충적 평가 */}
-        <div className="rounded-lg border border-amber-200/60 bg-amber-50/50 px-4 py-3">
-          <p className="text-sm font-medium text-amber-800 mb-3">
-            상장연도 비상장 보충적 평가 (소령 §165⑤ 분모 기준)
-          </p>
-          <div className="space-y-3">
+        {/* simple 모드 — 기존 4 필드 그대로 */}
+        {mode === "simple" && (
+          <>
             <CurrencyInput
-              label="상장연도 1주당 순손익가치"
+              label="상장일 이후 1개월 종가평균"
               required
-              hint="직전 사업연도 기준 (원)"
-              value={form.listingYearNetIncomePerShare}
-              onChange={(v) => onChange({ listingYearNetIncomePerShare: v })}
-              placeholder="61,570"
+              hint="상장일부터 1개월간 거래일 종가의 평균값 (원, 소령 §165⑤)"
+              value={form.listingDatePriceAvg1Month}
+              onChange={(v) => onChange({ listingDatePriceAvg1Month: v })}
+              placeholder="상장일 이후 1개월 종가평균"
             />
-            <CurrencyInput
-              label="상장연도 1주당 순자산가치"
-              required
-              hint="직전 사업연도 기준 (원)"
-              value={form.listingYearNetAssetPerShare}
-              onChange={(v) => onChange({ listingYearNetAssetPerShare: v })}
-              placeholder="5,352"
-            />
-          </div>
-        </div>
-
-        {/* 취득연도 비상장 보충적 평가 */}
-        <div className="rounded-lg border border-amber-200/60 bg-amber-50/50 px-4 py-3">
-          <p className="text-sm font-medium text-amber-800 mb-3">
-            취득연도 비상장 보충적 평가 (소령 §165⑤ 분자 기준)
-          </p>
-          <div className="space-y-3">
-            <CurrencyInput
-              label="취득연도 1주당 순손익가치"
-              required
-              hint="직전 사업연도 기준 (원)"
-              value={form.acquisitionYearNetIncomePerShare}
-              onChange={(v) => onChange({ acquisitionYearNetIncomePerShare: v })}
-              placeholder="44,520"
-            />
-            <CurrencyInput
-              label="취득연도 1주당 순자산가치"
-              required
-              hint="직전 사업연도 기준 (원)"
-              value={form.acquisitionYearNetAssetPerShare}
-              onChange={(v) => onChange({ acquisitionYearNetAssetPerShare: v })}
-              placeholder="4,348"
-            />
-          </div>
-        </div>
-
-        {/* 환산 미리보기 (useMemo 결과) */}
-        {preview && (
-          <div className="rounded-lg border border-violet-300 bg-violet-50 px-4 py-3 text-sm">
-            <p className="font-semibold text-violet-800 mb-2">환산취득가 미리보기</p>
-            <div className="space-y-1 text-violet-700 text-xs">
-              <p>
-                상장연도 평가가액 = {form.listingYearNetIncomePerShare || "-"}×3/5 +{" "}
-                {form.listingYearNetAssetPerShare || "-"}×2/5 ={" "}
-                <strong>{preview.listingEval.toLocaleString()}</strong>
-              </p>
-              <p>
-                취득연도 평가가액 = {form.acquisitionYearNetIncomePerShare || "-"}×3/5 +{" "}
-                {form.acquisitionYearNetAssetPerShare || "-"}×2/5 ={" "}
-                <strong>{preview.acqEval.toLocaleString()}</strong>
-              </p>
-              <p>
-                환산비율 = {preview.acqEval.toLocaleString()} ÷ {preview.listingEval.toLocaleString()}{" "}
-                = <strong>{preview.ratio}</strong>
-              </p>
-              <p>
-                1주당 취득기준시가 = 종가평균 {parseAmount(form.listingDatePriceAvg1Month).toLocaleString()} ×{" "}
-                {preview.ratio} = <strong>{preview.perShareStdPrice.toLocaleString()}</strong>
-              </p>
-              {parseInt(form.shareCount || "0", 10) > 0 && (
-                <p className="text-violet-900 font-medium">
-                  취득가액 = {preview.perShareStdPrice.toLocaleString()} ×{" "}
-                  {parseInt(form.shareCount, 10).toLocaleString()}주 ={" "}
-                  <strong>{preview.totalAcqPrice.toLocaleString()}</strong>
-                </p>
-              )}
+            <div className="rounded-lg border border-amber-200/60 bg-amber-50/50 px-4 py-3">
+              <p className="text-sm font-medium text-amber-800 mb-3">상장연도 비상장 보충적 평가</p>
+              <div className="space-y-3">
+                <CurrencyInput label="상장연도 1주당 순손익가치" required
+                  hint="상장일 직전 사업연도 1주당 순손익가치 (원, §165④1 가목)"
+                  value={form.listingYearNetIncomePerShare}
+                  onChange={(v) => onChange({ listingYearNetIncomePerShare: v })}
+                  placeholder="상장연도 1주당 순손익가치" />
+                <CurrencyInput label="상장연도 1주당 순자산가치" required
+                  hint="상장일 직전 사업연도 1주당 순자산가치 (원, §165④1 나목)"
+                  value={form.listingYearNetAssetPerShare}
+                  onChange={(v) => onChange({ listingYearNetAssetPerShare: v })}
+                  placeholder="상장연도 1주당 순자산가치" />
+              </div>
             </div>
-          </div>
+            <div className="rounded-lg border border-amber-200/60 bg-amber-50/50 px-4 py-3">
+              <p className="text-sm font-medium text-amber-800 mb-3">취득연도 비상장 보충적 평가</p>
+              <div className="space-y-3">
+                <CurrencyInput label="취득연도 1주당 순손익가치" required
+                  hint="취득일 직전 사업연도 1주당 순손익가치 (원, §165④1 가목)"
+                  value={form.acquisitionYearNetIncomePerShare}
+                  onChange={(v) => onChange({ acquisitionYearNetIncomePerShare: v })}
+                  placeholder="취득연도 1주당 순손익가치" />
+                <CurrencyInput label="취득연도 1주당 순자산가치" required
+                  hint="취득일 직전 사업연도 1주당 순자산가치 (원, §165④1 나목)"
+                  value={form.acquisitionYearNetAssetPerShare}
+                  onChange={(v) => onChange({ acquisitionYearNetAssetPerShare: v })}
+                  placeholder="취득연도 1주당 순자산가치" />
+              </div>
+            </div>
+          </>
         )}
 
-        {/* 거래정지 토글 (§165③) */}
+        {/* listing_only / full — sub-components */}
+        {mode !== "simple" && (
+          <>
+            <PostListingClosingPriceTable form={form} onChange={onChange} />
+            <PostListingNetIncomeStatement form={form} onChange={onChange} mode={mode} />
+            <PostListingNetAssetStatement form={form} onChange={onChange} mode={mode} />
+
+            {/* listing_only — 취득연도 4 필드 직접 입력 */}
+            {mode === "listing_only" && (
+              <div className="rounded-lg border border-amber-200/60 bg-amber-50/50 px-4 py-3">
+                <p className="text-sm font-medium text-amber-800 mb-3">취득연도 1주당 가치 (직접 입력)</p>
+                <div className="space-y-3">
+                  <CurrencyInput label="취득연도 1주당 순손익가치" required
+                    value={form.acquisitionYearNetIncomePerShare}
+                    onChange={(v) => onChange({ acquisitionYearNetIncomePerShare: v })}
+                    placeholder="취득연도 1주당 순손익가치" />
+                  <CurrencyInput label="취득연도 1주당 순자산가치" required
+                    value={form.acquisitionYearNetAssetPerShare}
+                    onChange={(v) => onChange({ acquisitionYearNetAssetPerShare: v })}
+                    placeholder="취득연도 1주당 순자산가치" />
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* 환산 미리보기 — Preview 컴포넌트 (P2 G-02·G-05 분리) */}
+        <PostListingFormulaPreview form={form} />
+
+        {/* §81④ 월할 가산 토글 (Round 4 D-10 — full/listing_only에서만 노출) */}
+        {mode !== "simple" && (
+          <ToggleCard
+            checked={form.monthlyAccrualToggle}
+            onCheckedChange={(v) => onChange({ monthlyAccrualToggle: v })}
+            title="§81④ 월할 가산 (취득일·상장일 평가 동일 시)"
+            description="동일 사업연도 케이스 — 직전·전전 사업연도 기준시가 + 보유월수 가산"
+            tone="rose"
+          />
+        )}
+
+        {/* 거래정지 토글 (Round 4 C-06 — 후속 PR 예정) */}
         <ToggleCard
           checked={form.tradingHaltAtTransfer}
           onCheckedChange={(v) => onChange({ tradingHaltAtTransfer: v })}
           title="양도일 거래정지·관리종목 지정"
-          description="소령 §165③ — 거래정지 시 1개월 종가평균 대신 비상장 보충 평가 사용"
+          description="소령 §165③ — 거래정지 시 1개월 종가평균 대신 비상장 보충 평가 사용 (※ 후속 PR 예정)"
           tone="rose"
+          disabled
         />
       </div>
     </ToggleCard>
