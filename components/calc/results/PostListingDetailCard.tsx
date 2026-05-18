@@ -61,11 +61,18 @@ export function PostListingDetailCard({ result }: PostListingDetailCardProps) {
         </p>
         <p className="font-medium">
           1주당 취득기준시가 = 종가평균 × 환산비율 (절사) ={" "}
-          <strong>{post.finalPerShareValue.toLocaleString()}</strong>
+          <strong>{post.finalPerShareValue.toLocaleString()}</strong>{" "}
+          <span className="text-violet-600">(§163⑨ 분자)</span>
         </p>
         <p className="font-medium text-violet-900">
-          총 환산취득가 = 1주당 × 주식수 ={" "}
-          <strong>{post.totalAcquisitionPrice.toLocaleString()}</strong>
+          §163⑨ 환산취득가 = 양도가 × (1주당 취득기준 ÷ 1주당 양도기준)
+          <br />
+          = <strong>{result.transferPrice.toLocaleString()}</strong> × (
+          <strong>{post.finalPerShareValue.toLocaleString()}</strong> ÷{" "}
+          <strong>{(result.valuationDetail?.finalPerShareValue && result.transferPrice && result.acquisitionPrice
+            ? Math.round(result.transferPrice * post.finalPerShareValue / result.acquisitionPrice)
+            : 0).toLocaleString()}</strong>) ={" "}
+          <strong>{result.acquisitionPrice.toLocaleString()}</strong>
         </p>
       </div>
 

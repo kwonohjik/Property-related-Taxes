@@ -39,7 +39,7 @@ import { allocateLots } from "./lot-allocation";
 import { calcSplitModeTax } from "./lot-allocation-tax";
 import { computeInformationalAcquisition } from "./exempt-informational-acquisition";
 import { applyExemptZeroing } from "./apply-exempt-zeroing";
-import { apply163_9Conversion } from "./apply-163-9-conversion";
+import { apply163_9Conversion, resolveTransferStd } from "./apply-163-9-conversion";
 
 // ============================================================
 // split 모드 판정 헬퍼
@@ -207,11 +207,10 @@ export function calculateStockTransferTax(input: StockTransferInput): StockTrans
       // §163⑨: 환산취득가 = 양도가 × (취득시 기준시가 / 양도시 기준시가)
       const postListingResult = calcPostListingConversion(synthesizePostListingInput(input));
       const acqStdPerShare = postListingResult.finalPerShareValue;
-      // §163⑨ 환산 합성 — 양도가 × (취득시 기준시가 / 양도시 기준시가). transferStd 미입력 시 fallback.
-      acquisitionPrice = apply163_9Conversion(
-        transferPrice, acqStdPerShare, input.transferDatePriceAvg1Month ?? 0,
-        postListingResult.totalAcquisitionPrice,
-      );
+      // §163⑨ 환산 — transferStd 미입력 시 1주당 양도가를 자동 fallback (산식 항상 작동)
+      const { transferStd, usedFallback } = resolveTransferStd(transferPrice, shareCount, input.transferDatePriceAvg1Month);
+      if (usedFallback) warnings.push("양도일 직전 1개월 종가평균 미입력 — 1주당 양도가를 §163⑨ 환산 분모로 자동 사용");
+      acquisitionPrice = apply163_9Conversion(transferPrice, acqStdPerShare, transferStd, postListingResult.totalAcquisitionPrice);
       estimatedBase = acqStdPerShare * shareCount;       // §163⑥4 base
       postListingDetail = postListingResult;
       valuationDetail = { method: "post_listing_conversion", netAssetFloorApplied: false, finalPerShareValue: acqStdPerShare };

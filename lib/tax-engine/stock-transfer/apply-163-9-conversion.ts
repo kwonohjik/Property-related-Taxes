@@ -37,3 +37,26 @@ export function apply163_9Conversion(
   // safeMultiply: 양도가 5조+ 케이스 BigInt 안전망. 일반 범위에서는 일반 곱셈과 동일.
   return Math.floor(safeMultiply(transferPrice, acqStdPerShare) / transferStd);
 }
+
+/**
+ * 양도시 1주당 기준시가 해석 — transferDatePriceAvg1Month 우선,
+ * 미입력 시 1주당 양도가(transferPrice / shareCount)를 자동 fallback으로 사용한다.
+ *
+ * 사용자가 양도일 직전 1개월 평균을 미입력해도 §163⑨ 산식이 작동하도록 보장.
+ * (취득기준시가가 그대로 취득가로 표시되는 버그 차단)
+ *
+ * @returns { transferStd, usedFallback } — usedFallback이 true면 fallback 사용됨
+ */
+export function resolveTransferStd(
+  transferPrice: number,
+  shareCount: number,
+  transferDatePriceAvg1Month: number | undefined,
+): { transferStd: number; usedFallback: boolean } {
+  if (transferDatePriceAvg1Month && transferDatePriceAvg1Month > 0) {
+    return { transferStd: transferDatePriceAvg1Month, usedFallback: false };
+  }
+  if (shareCount > 0) {
+    return { transferStd: Math.floor(transferPrice / shareCount), usedFallback: true };
+  }
+  return { transferStd: 0, usedFallback: false };
+}
