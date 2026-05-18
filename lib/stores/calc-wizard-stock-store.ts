@@ -139,6 +139,15 @@ export interface StockTransferFormData {
   // ── 환산 — 상장 (1개월 종가평균) ──
   transferDatePriceAvg1Month: string;    // 양도일 직전 1개월 평균 (원) — §163⑨ 분모
   acquisitionDatePriceAvg1Month: string; // 취득일 직전 1개월 평균 (원) — §163⑨ 분자
+  /**
+   * 양도시 기준시가 입력 방식 — direct(단일 숫자 직접 입력) | daily(일자별 종가 입력).
+   * 3중 패턴 default: "direct" (기존 동작 보존).
+   */
+  transferStdInputMode: "direct" | "daily";
+  /** daily 모드 — 양도일 직전 1개월 일자 배열 (UTC, 28~31일 가변) */
+  transferPriceDates: string[];
+  /** daily 모드 — 거래일별 종가 입력 (주말·공휴일은 빈 문자) */
+  transferPriceClosing: string[];
   listingDate: string;                    // 상장일 "YYYY-MM-DD"
   listingDatePriceAvg1Month: string;     // 상장일 직전 1개월 평균 (원)
   acquiredBeforeListing: boolean;        // 3중 패턴 default: false
@@ -307,6 +316,9 @@ export function createInitialStockFormData(): StockTransferFormData {
 
     transferDatePriceAvg1Month: "",
     acquisitionDatePriceAvg1Month: "",
+    transferStdInputMode: "direct",  // 3중 패턴 default — 기존 동작 보존
+    transferPriceDates: [],
+    transferPriceClosing: [],
     listingDate: "",
     listingDatePriceAvg1Month: "",
     acquiredBeforeListing: false,        // 3중 패턴 default
@@ -463,6 +475,9 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
     perShareAcquisitionPrice: strField("perShareAcquisitionPrice"),
     transferDatePriceAvg1Month: strField("transferDatePriceAvg1Month"),
     acquisitionDatePriceAvg1Month: strField("acquisitionDatePriceAvg1Month"),
+    transferStdInputMode: enumField("transferStdInputMode", ["direct", "daily"], defaults.transferStdInputMode),
+    transferPriceDates: Array.isArray(d.transferPriceDates) ? (d.transferPriceDates as string[]) : [],
+    transferPriceClosing: Array.isArray(d.transferPriceClosing) ? (d.transferPriceClosing as string[]) : [],
     listingDate: strField("listingDate"),
     listingDatePriceAvg1Month: strField("listingDatePriceAvg1Month"),
     acquiredBeforeListing: boolField("acquiredBeforeListing", defaults.acquiredBeforeListing),

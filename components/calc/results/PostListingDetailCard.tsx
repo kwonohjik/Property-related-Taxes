@@ -72,6 +72,13 @@ export function PostListingDetailCard({ result }: PostListingDetailCardProps) {
           <strong>{(result.valuationDetail?.conversionTransferStd ?? 0).toLocaleString()}</strong>) ={" "}
           <strong>{result.acquisitionPrice.toLocaleString()}</strong>
         </p>
+        {result.valuationDetail?.transferDailyModeUsed && (
+          <p className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded px-2 py-1 mt-1">
+            ✓ 양도일 직전 1개월 종가 일자별 입력 모드 — 자동 산정 평균{" "}
+            <strong>{(result.valuationDetail?.transferDailyAverage ?? 0).toLocaleString()}</strong>
+            {" "}을 §163⑨ 환산 분모로 사용
+          </p>
+        )}
         {result.valuationDetail?.conversionUsedFallback && (
           <p className="text-[11px] text-rose-700 bg-rose-50 border border-rose-200 rounded px-2 py-1 mt-1">
             ⚠ 양도일 직전 1개월 종가평균 미입력 — 1주당 양도가({(result.valuationDetail?.conversionTransferStd ?? 0).toLocaleString()})를 §163⑨ 환산 분모로 자동 사용.

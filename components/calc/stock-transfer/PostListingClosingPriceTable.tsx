@@ -36,8 +36,28 @@ export function dayOfWeek(yyyy_mm_dd: string): number {
 }
 
 /** Date(UTC) → "YYYY-MM-DD" */
-function fmtDate(d: Date): string {
+export function fmtDate(d: Date): string {
   return d.toISOString().slice(0, 10);
+}
+
+/**
+ * 양도일 직전 1개월 일자 배열 (UTC, 28~31일 가변).
+ * 산식: [transferDate − 1 month, transferDate − 1 day] (양도일 미포함).
+ * 예: 2024-06-01 → [2024-05-01, ..., 2024-05-31] (31일)
+ *     2024-03-01 → [2024-02-01, ..., 2024-02-29] (윤년 29일)
+ */
+export function preTransferAutoFillDates(transferDate: string): string[] {
+  if (!transferDate || !/^\d{4}-\d{2}-\d{2}$/.test(transferDate)) return [];
+  const [y, m, d] = transferDate.split("-").map(Number);
+  // [transferDate − 1mo, transferDate − 1day]
+  const endExclusive = new Date(Date.UTC(y, m - 1, d)); // transferDate 자체 (미포함)
+  endExclusive.setUTCDate(endExclusive.getUTCDate() - 1); // transferDate − 1day (포함)
+  const start = new Date(Date.UTC(y, m - 2, d)); // transferDate − 1 month (포함, JS overflow 자동 보정)
+  const out: string[] = [];
+  for (let cur = new Date(start); cur <= endExclusive; cur.setUTCDate(cur.getUTCDate() + 1)) {
+    out.push(fmtDate(cur));
+  }
+  return out;
 }
 
 /**

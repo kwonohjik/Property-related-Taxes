@@ -397,12 +397,34 @@ export function validateStep2(form: StockTransferFormData): StockValidationError
     // 상장 환산 — 양도일 직전 1개월 평균 필수
     const isListed = ["kospi", "kosdaq", "konex"].includes(form.marketType);
     if (isListed) {
-      if (isEmpty(form.transferDatePriceAvg1Month)) {
-        errors.push({
-          field: "transferDatePriceAvg1Month",
-          message: "양도일 직전 1개월 종가 평균을 입력하세요 (§99①3)",
-          severity: "error",
-        });
+      const transferAvg = parseI(form.transferDatePriceAvg1Month);
+      const mode = form.transferStdInputMode || "direct";
+      if (mode === "direct") {
+        if (isEmpty(form.transferDatePriceAvg1Month) || transferAvg <= 0) {
+          errors.push({
+            field: "transferDatePriceAvg1Month",
+            message: "양도일 직전 1개월 종가 평균을 직접 입력하세요 (§163⑨ 환산 분모 — '일자별 입력' 모드 사용 가능)",
+            severity: "error",
+          });
+        }
+      } else {
+        // daily 모드 — 거래일 종가 1셀 이상 입력 필수
+        const hasAnyClose = form.transferPriceClosing?.some((s) => !isEmpty(s) && parseI(s) > 0);
+        if (!hasAnyClose) {
+          errors.push({
+            field: "transferPriceClosing",
+            message: "일자별 입력 모드: 양도일 직전 1개월 거래일 종가를 1셀 이상 입력하세요 (§163⑨ 환산 분모 자동 산정용)",
+            severity: "error",
+          });
+        }
+        // mirror 결과도 > 0 검증 (방어)
+        if (transferAvg <= 0) {
+          errors.push({
+            field: "transferDatePriceAvg1Month",
+            message: "일자별 입력에서 자동 평균 산정 실패 — 종가 값을 확인하세요",
+            severity: "error",
+          });
+        }
       }
       // 일반 상장 환산 — 취득시 1개월 기준시가 필수 (시행령 §163⑨ 환산비율 분자)
       // 취득 후 상장(§165⑤) 분기에서는 별도 필드 사용으로 본 검증 미적용

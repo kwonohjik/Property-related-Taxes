@@ -185,6 +185,8 @@ export const stockTransferInputSchema = z.object({
   // 환산 — 상장
   transferDatePriceAvg1Month: z.number().min(0).optional(),
   acquisitionDatePriceAvg1Month: z.number().min(0).optional(),
+  // §163⑨ 분모 입력 방식 (메타·산식 영향 없음 — UI mirror 패턴 식별용)
+  transferStdInputMode: z.enum(["direct", "daily"]).optional().default("direct"),
   listingDate: z.union([z.string(), z.date()]).optional(),
   listingDatePriceAvg1Month: z.number().min(0).optional(),
   acquiredBeforeListing: z.boolean(),

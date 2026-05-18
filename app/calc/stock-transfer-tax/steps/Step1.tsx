@@ -190,7 +190,19 @@ export function Step1({ form, onChange }: Step1Props) {
                   <FieldCard label="양도일" required hint="실제 양도일 (YYYY-MM-DD)">
                     <DateInput
                       value={form.transferDate}
-                      onChange={(v) => onChange({ transferDate: v })}
+                      onChange={(v) => {
+                        // 양도일 변경 시 daily 모드 종가표 잔재 자동 리셋 (인덱스 misalign 차단 — R-7·E-8)
+                        if (form.transferStdInputMode === "daily" && v !== form.transferDate) {
+                          onChange({
+                            transferDate: v,
+                            transferPriceDates: [],
+                            transferPriceClosing: [],
+                            transferDatePriceAvg1Month: "",
+                          });
+                        } else {
+                          onChange({ transferDate: v });
+                        }
+                      }}
                     />
                   </FieldCard>
                   <FieldCard label="양도 주식수" required hint="이번 거래에서 양도하는 주식수 (주)">

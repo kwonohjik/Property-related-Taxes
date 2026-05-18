@@ -20,10 +20,11 @@
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
-import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
+import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { DateInput } from "@/components/ui/date-input";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 import { PostListingClosingPriceTable, autoFillDates, dayOfWeek } from "./PostListingClosingPriceTable";
+import { TransferDate1MonthClosingPriceTable } from "./TransferDate1MonthClosingPriceTable";
 import { PostListingNetIncomeStatement } from "./PostListingNetIncomeStatement";
 import { PostListingNetAssetStatement } from "./PostListingNetAssetStatement";
 import { PostListingFormulaPreview } from "./PostListingFormulaPreview";
@@ -72,19 +73,60 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
         </div>
 
         {/* ★ §163⑨ 분모 — 양도일 직전 1개월 종가 평균 (강조) */}
-        <FieldCard
-          label="양도일 직전 1개월 종가 평균 (1주당, §163⑨ 분모)"
-          required
-          hint="환산취득가 산식의 분모. 미입력 시 §163⑨ 환산 미적용으로 1주당 취득기준시가가 그대로 취득가로 표시됩니다."
-        >
-          <CurrencyInput
-            label=""
-            hideUnit
-            value={form.transferDatePriceAvg1Month}
-            onChange={(v) => onChange({ transferDatePriceAvg1Month: v })}
-            placeholder="8,659"
+        {/* §163⑨ 분모 입력 — direct(단일 숫자) vs daily(일자별 평균) 모드 선택 */}
+        <FieldCard label="양도일 직전 1개월 종가 평균 (1주당, §163⑨ 분모) — 입력 방식">
+          <RadioCardGroup
+            name="transferStdInputMode"
+            value={form.transferStdInputMode || "direct"}
+            onChange={(v) => onChange({ transferStdInputMode: v as "direct" | "daily" })}
+            tone="amber"
+            layout="stack"
+            options={[
+              {
+                value: "direct",
+                label: "직접 입력 (1개월 평균 단일 숫자)",
+                description: "외부에서 평균 산정 후 입력 (현행 방식 · 회귀 호환)",
+              },
+              {
+                value: "daily",
+                label: "일자별 입력 (자동 평균 산정)",
+                description: "양도일 직전 1개월 거래일 종가 입력 → 자동 평균",
+              },
+            ]}
           />
         </FieldCard>
+
+        {/* direct 모드 — 기존 단일 숫자 입력 */}
+        {(form.transferStdInputMode || "direct") === "direct" && (
+          <FieldCard
+            label="양도일 직전 1개월 종가 평균 (1주당, §163⑨ 분모)"
+            required
+            hint="환산취득가 산식의 분모. 미입력 시 §163⑨ 환산 미적용으로 1주당 취득기준시가가 그대로 취득가로 표시됩니다."
+          >
+            <CurrencyInput
+              label=""
+              hideUnit
+              value={form.transferDatePriceAvg1Month}
+              onChange={(v) => onChange({ transferDatePriceAvg1Month: v })}
+              placeholder="8,659"
+            />
+          </FieldCard>
+        )}
+
+        {/* daily 모드 — 일자별 종가표 + 자동 평균 mirror */}
+        {form.transferStdInputMode === "daily" && (
+          <>
+            <TransferDate1MonthClosingPriceTable form={form} onChange={onChange} />
+            {form.transferDatePriceAvg1Month && parseAmount(form.transferDatePriceAvg1Month) > 0 && (
+              <div className="rounded-lg border border-emerald-300 bg-emerald-50/60 px-4 py-3 text-sm">
+                <p className="text-emerald-800">
+                  자동 산정 평균 = <strong>{parseAmount(form.transferDatePriceAvg1Month).toLocaleString()}</strong>
+                  {" "}원 → transferDatePriceAvg1Month에 자동 mirror됨 (§163⑨ 환산 분모로 사용)
+                </p>
+              </div>
+            )}
+          </>
+        )}
 
         {/* 상장일 (기존 — 종가 표 자동 채움 trigger) */}
         <FieldCard label="상장일" required hint="최초 상장 기준일. 입력 시 종가 표 32셀 일자가 자동 채워집니다.">

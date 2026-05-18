@@ -111,6 +111,15 @@ export type StockTransferInput = {
    * tradingHaltAtTransfer=false 경로에서만 사용. 신규 필드 — 기존 동작 보존을 위해 optional.
    */
   acquisitionDatePriceAvg1Month?: number;
+
+  /**
+   * 양도시 기준시가 입력 방식 (UI 메타 — 산식 영향 없음).
+   * "direct": 사용자가 1주당 평균을 단일 숫자로 직접 입력 (기존 동작).
+   * "daily": 양도일 직전 1개월 거래일별 종가를 일자별 입력 → UI mirror 패턴으로
+   *          transferDatePriceAvg1Month 자동 산정.
+   * @default "direct"
+   */
+  transferStdInputMode?: "direct" | "daily";
   listingDate?: Date;
   listingDatePriceAvg1Month?: number;
   /** 취득 후 상장 §165⑤ 단서 분기 */
@@ -410,6 +419,10 @@ export type StockTransferResult = {
     conversionTransferStd?: number;
     /** §163⑨ 환산 진단 — true면 transferDatePriceAvg1Month 미입력으로 1주당 양도가 fallback 사용 */
     conversionUsedFallback?: boolean;
+    /** daily 모드 사용 여부 (input.transferStdInputMode echo) */
+    transferDailyModeUsed?: boolean;
+    /** daily 모드 자동 산정 평균 (= input.transferDatePriceAvg1Month, UI mirror된 값) */
+    transferDailyAverage?: number;
   };
 
   // 기본공제 그룹

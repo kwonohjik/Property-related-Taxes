@@ -213,9 +213,11 @@ export function calculateStockTransferTax(input: StockTransferInput): StockTrans
       acquisitionPrice = apply163_9Conversion(transferPrice, acqStdPerShare, transferStd, postListingResult.totalAcquisitionPrice);
       estimatedBase = acqStdPerShare * shareCount;       // §163⑥4 base
       postListingDetail = postListingResult;
+      const dailyMode = input.transferStdInputMode === "daily";
       valuationDetail = {
         method: "post_listing_conversion", netAssetFloorApplied: false, finalPerShareValue: acqStdPerShare,
         conversionAcqStdPerShare: acqStdPerShare, conversionTransferStd: transferStd, conversionUsedFallback: usedFallback,
+        transferDailyModeUsed: dailyMode, transferDailyAverage: dailyMode ? (input.transferDatePriceAvg1Month ?? 0) : undefined,
       };
 
       for (const rule of postListingResult.appliedRules) {

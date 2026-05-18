@@ -132,6 +132,7 @@ export async function POST(req: NextRequest) {
 
     transferDatePriceAvg1Month: coerced.transferDatePriceAvg1Month as number | undefined,
     acquisitionDatePriceAvg1Month: coerced.acquisitionDatePriceAvg1Month as number | undefined,
+    transferStdInputMode: coerced.transferStdInputMode as "direct" | "daily" | undefined,
     listingDate: coerced.listingDate as Date | undefined,
     listingDatePriceAvg1Month: coerced.listingDatePriceAvg1Month as number | undefined,
     acquiredBeforeListing: coerced.acquiredBeforeListing as boolean,
@@ -220,6 +221,7 @@ function buildEngineInput(coerced: Record<string, unknown>): StockTransferInput 
     perShareAcquisitionPrice: coerced.perShareAcquisitionPrice as number | undefined,
     transferDatePriceAvg1Month: coerced.transferDatePriceAvg1Month as number | undefined,
     acquisitionDatePriceAvg1Month: coerced.acquisitionDatePriceAvg1Month as number | undefined,
+    transferStdInputMode: coerced.transferStdInputMode as "direct" | "daily" | undefined,
     listingDate: coerced.listingDate as Date | undefined,
     listingDatePriceAvg1Month: coerced.listingDatePriceAvg1Month as number | undefined,
     acquiredBeforeListing: coerced.acquiredBeforeListing as boolean,

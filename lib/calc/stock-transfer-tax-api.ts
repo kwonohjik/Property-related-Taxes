@@ -186,6 +186,8 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
     if (transferAvg !== undefined) body.transferDatePriceAvg1Month = transferAvg;
     const acquisitionAvg = parseIntOrUndef(form.acquisitionDatePriceAvg1Month);
     if (acquisitionAvg !== undefined) body.acquisitionDatePriceAvg1Month = acquisitionAvg;
+    // §163⑨ 분모 입력 방식 메타 (산식 영향 없음, UI mirror 패턴 식별용)
+    if (form.transferStdInputMode) body.transferStdInputMode = form.transferStdInputMode;
     if (form.listingDate) body.listingDate = form.listingDate;
     const listingAvg = parseIntOrUndef(form.listingDatePriceAvg1Month);
     if (listingAvg !== undefined) body.listingDatePriceAvg1Month = listingAvg;
