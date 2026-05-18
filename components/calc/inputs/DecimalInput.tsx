@@ -22,6 +22,16 @@ export interface DecimalInputProps {
   disabled?: boolean;
   unit?: string;
   className?: string;
+  /** 천단위 콤마 표시 (주식수·금액 등). 저장값은 콤마 없음. */
+  thousandSeparator?: boolean;
+}
+
+/** 소수점 유지하며 정수부에 천단위 콤마 적용. */
+function formatDecimalWithCommas(value: string): string {
+  if (!value) return "";
+  const [intPart, decPart] = value.split(".");
+  const intWithCommas = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  return decPart !== undefined ? `${intWithCommas}.${decPart}` : intWithCommas;
 }
 
 export function DecimalInput({
@@ -31,18 +41,24 @@ export function DecimalInput({
   disabled = false,
   unit,
   className,
+  thousandSeparator = false,
 }: DecimalInputProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const raw = e.target.value;
-    // 소수점 1개 + 숫자만 허용 (음수 제외)
+    // 콤마 제거 후 소수점 1개 + 숫자만 허용 (음수 제외)
     const cleaned = raw
+      .replace(/,/g, "")                // 콤마 제거 (천단위 구분자)
       .replace(/[^0-9.]/g, "")          // 숫자·소수점 외 제거
       .replace(/^\./, "")               // 선행 소수점 제거
       .replace(/(\..*)\./g, "$1");      // 소수점 중복 제거
     onChange(cleaned);
   }
+
+  const displayValue = thousandSeparator
+    ? formatDecimalWithCommas(value ?? "")
+    : (value ?? "");
 
   return (
     <div className={cn("relative", className)}>
@@ -50,7 +66,7 @@ export function DecimalInput({
         ref={inputRef}
         type="text"
         inputMode="decimal"
-        value={value ?? ""}
+        value={displayValue}
         onChange={handleChange}
         placeholder={placeholder}
         disabled={disabled}

@@ -178,30 +178,12 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
     [form.combinedShareRatioMode, form.combinedOwnedShares, form.totalIssuedShares],
   );
 
-  // 자동 판정 활성 여부 — ToggleCard 분기에 사용
+  // 자동 판정 활성 여부 — 자동 모드는 ToggleCard 대신 항상 펼침 카드 + 판정 배지로 렌더.
+  // (잠긴 토글이 닫혀 입력 자체에 접근 불가하던 닭-달걀 문제 차단)
   const isAutoJudgmentActive = threshold !== null;
 
-  return (
-    <ToggleCard
-      checked={form.isMajorShareholder}
-      onCheckedChange={isAutoJudgmentActive
-        // 자동 판정 활성 시 — 사용자 클릭 무효화 (자동 산출이 source of truth)
-        ? () => {}
-        // 기타자산 — 사용자 직접 입력
-        : (v) => onChange({ isMajorShareholder: v })
-      }
-      title={isAutoJudgmentActive
-        ? "대주주 여부 — 자동 판정 (§157 / §167의8①2호)"
-        : "대주주 여부 (사용자 직접 선택)"
-      }
-      description={isAutoJudgmentActive
-        ? "아래 입력값 변경 시 자동으로 동기화됩니다. 임계 조건 충족 여부는 판정 결과 박스에서 확인하세요."
-        : "기타자산은 자동 판정 미적용 — §94①4 별도 트랙. 직접 선택하세요."
-      }
-      tone="violet"
-    >
-      {/* 직전 사업연도 종료일 */}
-      <div className="mt-4 space-y-4">
+  const innerContent = (
+    <div className={isAutoJudgmentActive ? "space-y-4" : "mt-4 space-y-4"}>
         <FieldCard label="직전 사업연도 종료일" required hint="통상 전년 12월 31일. 사업연도가 다른 경우 해당 연도 종료일.">
           <DateInput
             value={form.priorYearEndDate}
@@ -274,12 +256,14 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
                 <DecimalInput
                   value={form.totalIssuedShares}
                   onChange={(v) => handleSharesChange("self", { totalIssuedShares: v })}
+                  thousandSeparator
                 />
               </FieldCard>
               <FieldCard label="본인 보유 주식수" hint="본인 단독 명의 보유 주식수 (주)">
                 <DecimalInput
                   value={form.selfOwnedShares}
                   onChange={(v) => handleSharesChange("self", { selfOwnedShares: v })}
+                  thousandSeparator
                 />
               </FieldCard>
               {selfRatioFromShares !== null ? (
@@ -339,12 +323,14 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
                   <DecimalInput
                     value={form.totalIssuedShares}
                     onChange={(v) => handleSharesChange("combined", { totalIssuedShares: v })}
+                    thousandSeparator
                   />
                 </FieldCard>
                 <FieldCard label="본인+특수관계인 합산 보유 주식수" hint="최대주주그룹 합산 보유 주식수 (주)">
                   <DecimalInput
                     value={form.combinedOwnedShares}
                     onChange={(v) => handleSharesChange("combined", { combinedOwnedShares: v })}
+                    thousandSeparator
                   />
                 </FieldCard>
                 {combinedRatioFromShares !== null ? (
@@ -392,6 +378,44 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
           </div>
         ) : null}
       </div>
+  );
+
+  if (isAutoJudgmentActive) {
+    // 자동 판정 모드: 펼침 강제 + 헤더에 읽기 전용 판정 배지
+    return (
+      <div className="rounded-lg border border-violet-200 bg-violet-50/70 p-4 space-y-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1">
+            <p className="font-semibold text-violet-900">
+              대주주 여부 — 자동 판정 (§157 / §167의8①2호)
+            </p>
+            <p className="text-xs text-violet-700 mt-0.5">
+              아래 입력값 변경 시 자동으로 동기화됩니다. 임계 조건 충족 여부는 판정 결과 박스에서 확인하세요.
+            </p>
+          </div>
+          <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold ${
+            judgment.isMajor
+              ? "bg-violet-600 text-white"
+              : "bg-slate-200 text-slate-700"
+          }`}>
+            {judgment.isMajor ? "✓ 대주주" : "✗ 비대주주"}
+          </span>
+        </div>
+        {innerContent}
+      </div>
+    );
+  }
+
+  // 기타자산(§94①4) 또는 marketType 미선택: 사용자 직접 선택 ToggleCard
+  return (
+    <ToggleCard
+      checked={form.isMajorShareholder}
+      onCheckedChange={(v) => onChange({ isMajorShareholder: v })}
+      title="대주주 여부 (사용자 직접 선택)"
+      description="기타자산은 자동 판정 미적용 — §94①4 별도 트랙. 직접 선택하세요."
+      tone="violet"
+    >
+      {innerContent}
     </ToggleCard>
   );
 }

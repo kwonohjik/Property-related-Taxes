@@ -231,6 +231,7 @@ export function SplitLotsBlock({ form, onChange }: SplitLotsBlockProps) {
                   <DecimalInput
                     value={lot.shareCount}
                     onChange={(v) => updateAcquisitionLot(idx, { shareCount: v })}
+                    thousandSeparator
                   />
                 </FieldCard>
                 <CurrencyInput
@@ -311,6 +312,7 @@ export function SplitLotsBlock({ form, onChange }: SplitLotsBlockProps) {
                   <DecimalInput
                     value={lot.shareCount}
                     onChange={(v) => updateTransferLot(idx, { shareCount: v })}
+                    thousandSeparator
                   />
                 </FieldCard>
                 <CurrencyInput
@@ -412,6 +414,7 @@ export function SplitLotsBlock({ form, onChange }: SplitLotsBlockProps) {
                   <DecimalInput
                     value={m.shareCount}
                     onChange={(v) => updateMatching(idx, { shareCount: v })}
+                    thousandSeparator
                   />
                 </FieldCard>
                 <Button

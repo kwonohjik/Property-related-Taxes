@@ -180,6 +180,7 @@ export function Step1({ form, onChange }: Step1Props) {
                     <DecimalInput
                       value={form.shareCount}
                       onChange={(v) => onChange({ shareCount: v })}
+                      thousandSeparator
                     />
                   </FieldCard>
                 </div>
@@ -190,6 +191,7 @@ export function Step1({ form, onChange }: Step1Props) {
                 <DecimalInput
                   value={form.totalIssuedShares}
                   onChange={(v) => onChange({ totalIssuedShares: v })}
+                  thousandSeparator
                 />
               </FieldCard>
             </div>
@@ -200,6 +202,7 @@ export function Step1({ form, onChange }: Step1Props) {
                 <DecimalInput
                   value={form.totalIssuedShares}
                   onChange={(v) => onChange({ totalIssuedShares: v })}
+                  thousandSeparator
                 />
               </FieldCard>
             </>
