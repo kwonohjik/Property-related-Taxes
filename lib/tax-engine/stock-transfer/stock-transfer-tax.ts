@@ -39,6 +39,7 @@ import { allocateLots } from "./lot-allocation";
 import { calcSplitModeTax } from "./lot-allocation-tax";
 import { computeInformationalAcquisition } from "./exempt-informational-acquisition";
 import { applyExemptZeroing } from "./apply-exempt-zeroing";
+import { apply163_9Conversion } from "./apply-163-9-conversion";
 
 // ============================================================
 // split 모드 판정 헬퍼
@@ -201,20 +202,19 @@ export function calculateStockTransferTax(input: StockTransferInput): StockTrans
     usedEstimatedAcquisition = true;
 
     if (input.acquiredBeforeListing) {
-      // 취득 후 상장 — §165⑤ 단서 환산비율
-      // Round 4 — full/listing_only 모드 시 nested postListingDetail에서 4 필드 자동 합성
-      const synthesizedInput = synthesizePostListingInput(input);
-      const postListingResult = calcPostListingConversion(synthesizedInput);
-      acquisitionPrice = postListingResult.totalAcquisitionPrice;
-      // 취득 후 상장: estimatedBase = 취득기준시가 총액 = 1주당 취득기준시가 × 주식수
-      estimatedBase = postListingResult.finalPerShareValue * shareCount;
-      postListingDetail = postListingResult;  // Round 4 C-04 echo
-
-      valuationDetail = {
-        method: "post_listing_conversion",
-        netAssetFloorApplied: false,
-        finalPerShareValue: postListingResult.finalPerShareValue,
-      };
+      // 취득 후 상장 — §165⑤ 본문 (1주당 취득기준시가) + §163⑨ 환산
+      // §165⑤: 1주당 취득기준시가 = 상장일 이후 1개월 종가평균 × (취득연도/상장연도 가중평균)
+      // §163⑨: 환산취득가 = 양도가 × (취득시 기준시가 / 양도시 기준시가)
+      const postListingResult = calcPostListingConversion(synthesizePostListingInput(input));
+      const acqStdPerShare = postListingResult.finalPerShareValue;
+      // §163⑨ 환산 합성 — 양도가 × (취득시 기준시가 / 양도시 기준시가). transferStd 미입력 시 fallback.
+      acquisitionPrice = apply163_9Conversion(
+        transferPrice, acqStdPerShare, input.transferDatePriceAvg1Month ?? 0,
+        postListingResult.totalAcquisitionPrice,
+      );
+      estimatedBase = acqStdPerShare * shareCount;       // §163⑥4 base
+      postListingDetail = postListingResult;
+      valuationDetail = { method: "post_listing_conversion", netAssetFloorApplied: false, finalPerShareValue: acqStdPerShare };
 
       for (const rule of postListingResult.appliedRules) {
         if (!warnings.includes(rule)) warnings.push(rule);

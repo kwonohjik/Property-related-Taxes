@@ -177,7 +177,8 @@ describe("PL-LISTING-ONLY — listing_only 모드 adapter 분기", () => {
       },
     });
     // synthesizePostListingInput이 listing_only 분기로 상장 측만 덮어쓰기 → 취득연도는 baseInput 그대로(44_520/4_348)
-    expect(fullModeResult.acquisitionPrice).toBe(29_120_000);
+    // §163⑨ 환산 적용: 44,750,000 × 5,824 / 8,659 = 30,098,625
+    expect(fullModeResult.acquisitionPrice).toBe(30_098_625);
     expect(fullModeResult.postListingDetail?.detail?.mode).toBe("listing_only");
   });
 

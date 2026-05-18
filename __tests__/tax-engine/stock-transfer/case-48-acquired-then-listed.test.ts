@@ -93,37 +93,41 @@ describe("사례 48 — 취득 후 상장 환산취득가 (코스닥 대주주 �
     expect(result.transferPrice).toBe(44_750_000);
   });
 
-  it("L48-2 본칙: 1주당 취득기준시가 = 5,824 / 취득가액 = 29,120,000", () => {
+  it("L48-2 본칙 (§163⑨ 환산): 1주당 취득기준시가=5,824 / 환산취득가=30,098,625", () => {
+    // §163⑨ 환산취득가 = 양도가 × (취득기준 / 양도기준)
+    //   = 44,750,000 × 5,824 / 8,659 = 30,098,625
     const result = calculateStockTransferTax(case48Input());
     expect(result.valuationDetail?.finalPerShareValue).toBe(5_824);
-    expect(result.acquisitionPrice).toBe(29_120_000);
+    expect(result.acquisitionPrice).toBe(30_098_625);
   });
 
-  it("L48-3 본칙: 개산공제 필요경비 = 291,200 (취득기준시가 × 1%)", () => {
+  it("L48-3 본칙: 개산공제 필요경비 = 291,200 (취득기준시가 총액 × 1%, §163⑥4)", () => {
+    // estimatedBase = 5,824 × 5,000 = 29,120,000 → ×1% = 291,200
     const result = calculateStockTransferTax(case48Input());
     expect(result.estimatedDeduction).toBe(291_200);
     expect(result.expenses).toBe(291_200);
   });
 
-  it("L48-4 본칙: 양도소득금액 = 15,338,800", () => {
+  it("L48-4 본칙: 양도소득금액 = 14,360,175 (44,750,000 − 30,098,625 − 291,200)", () => {
     const result = calculateStockTransferTax(case48Input());
-    expect(result.transferIncome).toBe(15_338_800);
+    expect(result.transferIncome).toBe(14_360_175);
   });
 
-  it("L48-5 본칙: 과세표준 = 12,838,800 (15,338,800 − 2,500,000)", () => {
+  it("L48-5 본칙: 과세표준 = 11,860,175 (14,360,175 − 2,500,000)", () => {
     const result = calculateStockTransferTax(case48Input());
     expect(result.basicDeduction).toBe(2_500_000);
-    expect(result.taxBase).toBe(12_838_800);
+    expect(result.taxBase).toBe(11_860_175);
   });
 
-  it("L48-6 본칙: 산출세액 = 2,567,760 (taxBase × 20%, 누진 3억 이하)", () => {
+  it("L48-6 본칙: 산출세액 = 2,372,030 (taxBase × 20% → 10원 절사)", () => {
+    // floor(11,860,175 × 0.2) = 2,372,035 → floor10 = 2,372,030
     const result = calculateStockTransferTax(case48Input());
-    expect(result.calculatedTax).toBe(2_567_760);
+    expect(result.calculatedTax).toBe(2_372_030);
   });
 
-  it("L48-7 본칙: 지방소득세 = 256,770 (산출세액 × 10%, 10원 미만 절사)", () => {
+  it("L48-7 본칙: 지방소득세 = 237,200 (산출세액 × 10%, 10원 미만 절사)", () => {
     const result = calculateStockTransferTax(case48Input());
-    expect(result.localIncomeTax).toBe(256_770);
+    expect(result.localIncomeTax).toBe(237_200);
   });
 
   it("L48-8 분류: taxCategory = listed_major + appliedSection94 = ①3가1)", () => {

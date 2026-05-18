@@ -71,12 +71,12 @@ function baseFullInput(): StockTransferInput {
 }
 
 describe("PL-FULL — 사례 EXAMPLE_POST_LISTING full mode 통합", () => {
-  it("PL-FULL-1 — full mode: 80필드 → 환산취득가 29,120,000 + 산출세액 2,667,760", () => {
+  it("PL-FULL-1 — full mode: 80필드 → §163⑨ 환산취득가 30,098,625 + 산출세액 2,372,030", () => {
     const result = calculateStockTransferTax(baseFullInput());
-    // 환산취득가는 simple 모드 사례 48과 동일해야 함
-    expect(result.acquisitionPrice).toBe(29_120_000);
-    expect(result.estimatedBase).toBe(29_120_000);
-    expect(result.calculatedTax).toBe(2_567_760);
+    // §163⑨ 환산: 44,750,000 × 5,824 / 8,659 = 30,098,625 (simple 모드 사례 48 동일)
+    expect(result.acquisitionPrice).toBe(30_098_625);
+    expect(result.estimatedBase).toBe(29_120_000); // §163⑥4 base 그대로 (5,824 × 5,000)
+    expect(result.calculatedTax).toBe(2_372_030);
   });
 
   it("PL-FULL-2 — postListingDetail echo (acquiredBeforeListing + detail.mode)", () => {
@@ -264,8 +264,8 @@ describe("PL-LEGACY — 회귀 보호 (사례 48 simple mode 호환)", () => {
       acquisitionYearNetIncomePerShare: 44_520,
       acquisitionYearNetAssetPerShare: 4_348,
     });
-    expect(result.acquisitionPrice).toBe(29_120_000);
-    expect(result.calculatedTax).toBe(2_567_760);
+    expect(result.acquisitionPrice).toBe(30_098_625); // §163⑨ 환산 적용
+    expect(result.calculatedTax).toBe(2_372_030);
     // simple 모드에서도 acquiredBeforeListing echo + detail.mode = "simple"
     expect(result.acquiredBeforeListing).toBe(true);
     expect(result.postListingDetail?.detail?.mode).toBe("simple");

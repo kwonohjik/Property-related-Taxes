@@ -16,6 +16,7 @@ import type {
 import { calcPostListingConversion } from "./stock-valuation-post-listing";
 import type { PostListingValuationResult } from "./stock-valuation-post-listing";
 import { synthesizePostListingInput } from "./post-listing-flat-adapter";
+import { apply163_9Conversion } from "./apply-163-9-conversion";
 import { calcListedValuation } from "./stock-valuation-listed";
 import {
   calcUnlistedValuation,
@@ -104,15 +105,21 @@ export function computeInformationalAcquisition(
       if (input.acquiredBeforeListing) {
         const synthesizedInput = synthesizePostListingInput(input);
         const r = calcPostListingConversion(synthesizedInput);
+        // §163⑨ 환산 합성 — 양도가 × (취득기준 / 양도기준). 비과세 정보용 echo도 정정.
+        const acqStdPerShare = r.finalPerShareValue;
+        const transferStd = input.transferDatePriceAvg1Month ?? 0;
+        const acquisitionPrice = apply163_9Conversion(
+          transferPrice, acqStdPerShare, transferStd, r.totalAcquisitionPrice,
+        );
         return {
-          acquisitionPrice: r.totalAcquisitionPrice,
+          acquisitionPrice,
           usedEstimatedAcquisition: true,
-          estimatedBase: r.finalPerShareValue * shareCount,
+          estimatedBase: acqStdPerShare * shareCount,
           postListingDetail: r,
           valuationDetail: {
             method: "post_listing_conversion",
             netAssetFloorApplied: false,
-            finalPerShareValue: r.finalPerShareValue,
+            finalPerShareValue: acqStdPerShare,
           },
         };
       }
