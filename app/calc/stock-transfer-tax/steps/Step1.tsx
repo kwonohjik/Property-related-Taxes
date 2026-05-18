@@ -22,7 +22,7 @@ import { MarketTypeBlock } from "@/components/calc/stock-transfer/MarketTypeBloc
 import { MajorShareholderBlock } from "@/components/calc/stock-transfer/MajorShareholderBlock";
 import { CompanyTypeBlock } from "@/components/calc/stock-transfer/CompanyTypeBlock";
 import { OtherAssetBlock } from "@/components/calc/stock-transfer/OtherAssetBlock";
-import { AcquisitionCauseBlock } from "@/components/calc/stock-transfer/AcquisitionCauseBlock";
+import { AcquisitionInfoBlock } from "@/components/calc/stock-transfer/AcquisitionInfoBlock";
 import { SplitLotsBlock } from "@/components/calc/stock-transfer/SplitLotsBlock";
 import { withAutoSyncMajor } from "@/components/calc/stock-transfer/major-sync";
 import type {
@@ -160,31 +160,36 @@ export function Step1({ form, onChange }: Step1Props) {
 
           {/* 분기 입력 */}
           {form.lotsMode === "single" ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FieldCard label="취득일" required hint="실제 취득일 (YYYY-MM-DD)">
-                <DateInput
-                  value={form.acquisitionDate}
-                  onChange={(v) => onChange({ acquisitionDate: v })}
-                />
-              </FieldCard>
-              <FieldCard label="양도일" required hint="실제 양도일 (YYYY-MM-DD)">
-                <DateInput
-                  value={form.transferDate}
-                  onChange={(v) => onChange({ transferDate: v })}
-                />
-              </FieldCard>
-              <FieldCard label="양도 주식수" required hint="이번 거래에서 양도하는 주식수 (주)">
-                <DecimalInput
-                  value={form.shareCount}
-                  onChange={(v) => onChange({ shareCount: v })}
-                  placeholder="5000"
-                />
-              </FieldCard>
+            <div className="space-y-4">
+              {/* ⓐ 취득 정보 (amber tone, 취득일·cause·보조일자 통합) */}
+              <AcquisitionInfoBlock form={form} onChange={onChange} />
+
+              {/* ⓑ 양도 정보 (emerald tone grid 2cell) */}
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-emerald-800 font-semibold text-sm">📤 양도 정보</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FieldCard label="양도일" required hint="실제 양도일 (YYYY-MM-DD)">
+                    <DateInput
+                      value={form.transferDate}
+                      onChange={(v) => onChange({ transferDate: v })}
+                    />
+                  </FieldCard>
+                  <FieldCard label="양도 주식수" required hint="이번 거래에서 양도하는 주식수 (주)">
+                    <DecimalInput
+                      value={form.shareCount}
+                      onChange={(v) => onChange({ shareCount: v })}
+                    />
+                  </FieldCard>
+                </div>
+              </div>
+
+              {/* 발행주식 총수 (full-width) */}
               <FieldCard label="발행주식 총수" required hint="해당 법인의 발행주식 총수 (주)">
                 <DecimalInput
                   value={form.totalIssuedShares}
                   onChange={(v) => onChange({ totalIssuedShares: v })}
-                  placeholder="100000"
                 />
               </FieldCard>
             </div>
@@ -203,16 +208,11 @@ export function Step1({ form, onChange }: Step1Props) {
       ),
     });
 
-    // 4. 취득원인 — single 모드 전용 (split은 lot별로 입력)
-    if (form.lotsMode === "single") {
-      items.push({
-        key: "cause",
-        title: "취득원인 (단기 30% 기산점 §104②)",
-        render: () => <AcquisitionCauseBlock form={form} onChange={onChange} />,
-      });
-    }
+    // (v1.2) "취득원인" 별도 섹션 폐기 — AcquisitionInfoBlock(취득 정보 카드)에 통합됨
+    //   • single 모드: AcquisitionInfoBlock 내부에서 cause + 보조일자 모두 입력
+    //   • split 모드: SplitLotsBlock의 lot별 입력 (변경 없음)
 
-    // 5. 대주주 판정
+    // 4. 대주주 판정 (이전 5번)
     items.push({
       key: "major",
       title: "대주주 판정 (시행령 §157)",
