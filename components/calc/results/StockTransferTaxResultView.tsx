@@ -19,6 +19,10 @@
 import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
 import { StockFilingFormTable } from "@/components/calc/stock-transfer/StockFilingFormTable";
 import { StockTaxpayerHeaderCard } from "@/components/calc/stock-transfer/StockTaxpayerHeaderCard";
+import { useEffect, useRef, useState } from "react";
+import { useUserProfile } from "@/lib/storage/use-user-profile";
+import { useProfessionalStore } from "@/lib/stores/professional-store";
+import { clientRepository } from "@/lib/storage";
 import { StockTransferPenaltySection } from "@/components/calc/results/StockTransferPenaltySection";
 import { printScoped } from "@/components/calc/results/transfer/TransferTaxResultViewHelpers";
 import { MARKET_LABEL } from "@/components/calc/stock-transfer/market-label";
@@ -44,6 +48,8 @@ interface StockTransferTaxResultViewProps {
   brokerage?: string;
   /** 대표 양도일 (TaxpayerHeaderCard 표시용) */
   transferDate?: string;
+  /** 계좌번호 마스킹 (신고서 헤더 표시용, 디자인 §4.2) */
+  accountNumberMasked?: string;
 }
 
 /** PDF 다운로드 버튼 — 브라우저 인쇄 다이얼로그에서 "PDF로 저장" 선택 */
@@ -165,8 +171,42 @@ export function StockTransferTaxResultView({
   securityCode = "",
   brokerage = "",
   transferDate = "",
+  accountNumberMasked = "",
 }: StockTransferTaxResultViewProps) {
   const categoryLabel = TAX_CATEGORY_LABEL[result.taxCategory] ?? result.taxCategory;
+
+  // 신고서 양식 헤더용 양도인·과세연도 메타 (디자인 §4.2)
+  // — StockTaxpayerHeaderCard와 동일한 데이터 소스를 사용하되 PDF 인쇄용 표 헤더에도 전달
+  const { profile, mode } = useUserProfile();
+  const { activeClientId } = useProfessionalStore();
+  const [loadedClientName, setLoadedClientName] = useState<string | null>(null);
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    if (mode === "professional" && activeClientId) {
+      clientRepository.get(activeClientId).then((c) => {
+        if (mountedRef.current) setLoadedClientName(c?.name ?? null);
+      });
+    }
+    return () => {
+      mountedRef.current = false;
+    };
+  }, [mode, activeClientId]);
+  const clientNameResolved = (mode === "professional" && activeClientId) ? loadedClientName : null;
+  const taxpayerName = clientNameResolved ?? profile?.displayName ?? "";
+  const filingYear = (() => {
+    if (!transferDate) return undefined;
+    const d = new Date(transferDate);
+    return isNaN(d.getTime()) ? undefined : d.getFullYear();
+  })();
+  const filingHeaderProps = {
+    taxpayerName,
+    stockName: securityName,
+    stockCode: securityCode,
+    brokerName: brokerage,
+    accountNumber: accountNumberMasked,
+    filingYear,
+  };
 
   // 비과세 화면
   if (result.isExempt) {
@@ -251,7 +291,7 @@ export function StockTransferTaxResultView({
         <PostListingDetailCard result={result} />
 
         {/* 신고서 양식 표 (32행 고정 — 비과세 시에도 렌더) */}
-        <StockFilingFormTable result={result} onPrint={() => printScoped("form-table")} />
+        <StockFilingFormTable result={result} onPrint={() => printScoped("form-table")} {...filingHeaderProps} />
 
         {/* appliedRules 배지 */}
         <RuleBadges appliedRules={result.appliedRules} />
@@ -363,7 +403,7 @@ export function StockTransferTaxResultView({
       <MajorShareholderResultCard result={result} />
 
       {/* 신고서 양식 표 (32행 고정) */}
-      <StockFilingFormTable result={result} onPrint={() => printScoped("form-table")} />
+      <StockFilingFormTable result={result} onPrint={() => printScoped("form-table")} {...filingHeaderProps} />
 
       {/* PR 로드맵 카드 */}
       <PrRoadmapCard />

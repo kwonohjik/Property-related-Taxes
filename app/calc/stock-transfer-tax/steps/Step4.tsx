@@ -80,6 +80,7 @@ export function Step4({ result, form, error, isLoading, onCalculate }: Step4Prop
             securityCode={form.securityCode}
             brokerage={form.brokerage}
             transferDate={form.transferDate}
+            accountNumberMasked={form.accountNumberMasked}
           />
         </>
       )}

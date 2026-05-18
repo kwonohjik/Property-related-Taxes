@@ -44,7 +44,7 @@ useAutoSaveCalculation({
 });
 ```
 
-구현 완료: 양도세(`TransferTaxCalculator.tsx`). 타 세목 UI 완성 시 동일 패턴.
+구현 완료: 양도세(`TransferTaxCalculator.tsx`), 주식 양도세(`StockTransferTaxCalculator.tsx`). 타 세목 UI 완성 시 동일 패턴.
 
 ## resultData 구조 주의
 
@@ -54,7 +54,7 @@ useAutoSaveCalculation({
 
 - `proxy.ts` 보호 없음 (인증 불필요). Supabase 도입 시 `PROTECTED_ROUTES`에 재추가.
 - 데이터 소스: `calculationRepository.list()` (IndexedDB). Server Action 미사용.
-- 세목별 날짜 필드명: `transferDate`(양도세, top-level), `targetDate`(취득세), `deathDate`(상속세), `giftDate`(증여세), `targetDate`/`assessmentYear`(재산세·종부세).
+- 세목별 날짜 필드명: `transferDate`(양도세, top-level), `targetDate`(취득세), `deathDate`(상속세), `giftDate`(증여세), `targetDate`/`assessmentYear`(재산세·종부세), `transferDate`(주식 양도세 top-level — 분할 lot 모드는 `transferLots` 마지막 요소의 `transferDate`, `extractStockTransferDate` 헬퍼 사용).
 
 ## Supabase 전환 체크리스트
 

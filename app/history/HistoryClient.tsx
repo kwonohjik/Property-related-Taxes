@@ -216,6 +216,20 @@ export function HistoryClient() {
         setStep(0);
         router.push(route);
       });
+    } else if (record.taxType === "stock_transfer") {
+      // 주식 양도세 — 이력 inputData를 store에 hydrate (디자인 C-5 수정 모드)
+      Promise.all([
+        import("@/lib/stores/calc-wizard-stock-store"),
+      ]).then(([{ useStockTransferStore, normalizeStockFormData }]) => {
+        const hydrated = normalizeStockFormData(record.inputData);
+        useStockTransferStore.setState({
+          currentStep: 0,
+          formData: hydrated,
+          result: null,
+          error: null,
+        });
+        router.push(route);
+      });
     } else {
       router.push(route);
     }
