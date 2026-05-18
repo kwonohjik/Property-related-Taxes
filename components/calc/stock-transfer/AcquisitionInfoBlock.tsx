@@ -42,12 +42,9 @@ export function AcquisitionInfoBlock({ form, onChange }: AcquisitionInfoBlockPro
 
   return (
     <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-4 space-y-4">
-      {/* 헤더 */}
+      {/* 헤더 — §104② 안내는 FieldCard hint에서 단일 노출 (디자인 §2-E-1) */}
       <div className="flex items-center gap-2 mb-1">
         <span className="text-amber-800 font-semibold text-sm">📋 취득 정보</span>
-        <span className="text-xs text-amber-700">
-          §104② — 취득원인에 따라 단기 보유기간 기산점이 달라집니다
-        </span>
       </div>
 
       {/* 취득일 (single column) */}
