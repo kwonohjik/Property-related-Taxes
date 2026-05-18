@@ -64,10 +64,17 @@ export default function StockTransferTaxCalculator() {
     if (hasError) {
       const firstError = errors.find((e) => e.severity === "error");
       setError(firstError?.message ?? "입력 오류가 있습니다. 확인해주세요.");
+      // 에러 배너가 페이지 상단에 있어 스크롤 하단의 다음 버튼 클릭 시 보이지 않는 문제 — 상단으로 스크롤
+      if (typeof window !== "undefined") {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
       return;
     }
     setError(null);
     setStep(currentStep + 1);
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
   }, [currentStep, formData, setError, setStep]);
 
   const handleBack = useCallback(() => {

@@ -188,20 +188,32 @@ export function StockTransferTaxResultView({
         <div className="rounded-xl border-2 border-emerald-300 bg-emerald-50 px-6 py-5">
           <p className="text-lg font-semibold text-emerald-800">비과세 (양도소득세 없음)</p>
           <p className="text-sm text-emerald-700 mt-2">{exemptReasonLabel}</p>
-          <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+          <div className="mt-4 grid grid-cols-3 gap-3 text-sm">
             <div>
               <span className="text-emerald-600">양도가액</span>
               <p className="font-semibold text-emerald-900">{fmt(result.transferPrice)}</p>
+            </div>
+            <div>
+              <span className="text-emerald-600">취득가액 (정보용)</span>
+              <p className="font-semibold text-emerald-900">{fmt(result.acquisitionPrice)}</p>
             </div>
             <div>
               <span className="text-emerald-600">양도소득세 (합계)</span>
               <p className="font-semibold text-emerald-900">0</p>
             </div>
           </div>
+          {result.acquisitionPrice > 0 && (
+            <p className="mt-3 text-xs text-emerald-700">
+              ※ 비과세 사유로 산출세액은 0이지만, 사용자가 입력한 데이터로 취득가액을 정보용으로 표시합니다.
+            </p>
+          )}
         </div>
 
         {/* 대주주 판정 카드 (상장 3시장만 — 비상장·기타자산 자동 미렌더) */}
         <MajorShareholderResultCard result={result} />
+
+        {/* 취득 후 상장 환산 산식 카드 (정보용 — postListingDetail 있을 때) */}
+        <PostListingDetailCard result={result} />
 
         {/* 신고서 양식 표 (32행 고정 — 비과세 시에도 렌더) */}
         <StockFilingFormTable result={result} onPrint={() => printScoped("form-table")} />

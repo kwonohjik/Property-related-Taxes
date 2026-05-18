@@ -37,6 +37,7 @@ import { finalizeStockTax } from "./stock-transfer-finalize";
 import { STOCK, STOCK_ESTIMATED_EXPENSE_RATE } from "@/lib/tax-engine/legal-codes/stock";
 import { allocateLots } from "./lot-allocation";
 import { calcSplitModeTax } from "./lot-allocation-tax";
+import { computeInformationalAcquisition } from "./exempt-informational-acquisition";
 
 // ============================================================
 // split 모드 판정 헬퍼
@@ -487,6 +488,11 @@ function buildExemptResult(
       input.specificMatchings,
     );
   }
+
+  // 비과세더라도 사용자가 입력한 데이터로 취득가액·평가 상세를 정보용으로 계산해 echo (실 세액은 0 유지)
+  const transferPrice = calcTransferPriceSimple(input);
+  const info = computeInformationalAcquisition(input, transferPrice, lotMatchingDetail);
+
   return {
     taxCategory: classification.taxCategory,
     appliedSection94: classification.appliedSection94,
@@ -494,16 +500,16 @@ function buildExemptResult(
     isExempt: true,
     exemptReason: classification.exemptReason,
 
-    transferPrice: calcTransferPriceSimple(input),
+    transferPrice,
     transferPriceBreakdown: undefined,
 
-    acquisitionPrice: 0,
+    acquisitionPrice: info.acquisitionPrice,
     acquisitionMode: input.acquisitionMode,
-    usedEstimatedAcquisition: false,
-    estimatedBase: undefined,
+    usedEstimatedAcquisition: info.usedEstimatedAcquisition,
+    estimatedBase: info.estimatedBase,
     estimatedDeduction: undefined,
 
-    valuationDetail: undefined,
+    valuationDetail: info.valuationDetail,
 
     basicDeductionGroup: classification.basicDeductionGroup,
 
