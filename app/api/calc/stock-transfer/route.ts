@@ -105,6 +105,7 @@ export async function POST(req: NextRequest) {
     isListedSmallShareholder: coerced.isListedSmallShareholder as boolean,
     isVentureCompany: coerced.isVentureCompany as boolean,
     isKOTCTrading: coerced.isKOTCTrading as boolean,
+    isOnMarketTransaction: coerced.isOnMarketTransaction as boolean,
 
     acquisitionDate: coerced.acquisitionDate as Date,
     transferDate: coerced.transferDate as Date,

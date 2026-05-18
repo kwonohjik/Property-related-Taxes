@@ -46,6 +46,8 @@ type MajorShareholderFormSlice = Pick<
   | "combinedMarketCap"
   | "priorYearEndDate"
   | "marketType"
+  | "isKOTCTrading"
+  | "isOnMarketTransaction"
   | "selfShareRatioMode"
   | "selfOwnedShares"
   | "combinedShareRatioMode"
@@ -377,6 +379,25 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
             <p className="text-xs">상단의 &quot;대주주 여부&quot; 토글로 직접 선택하세요.</p>
           </div>
         ) : null}
+
+        {/* 장내/장외 거래 구분 (§94①3 가목 1) 단서) — KOSPI/KOSDAQ/KONEX + 비대주주 + 非K-OTC 시만 노출 */}
+        {(form.marketType === "kospi" ||
+          form.marketType === "kosdaq" ||
+          form.marketType === "konex") &&
+          !judgment.isMajor &&
+          !form.isKOTCTrading && (
+            <ToggleCard
+              checked={form.isOnMarketTransaction}
+              onCheckedChange={(v) => onChange({ isOnMarketTransaction: v })}
+              title="거래소 장내 거래 (§94①3 가목 1) 단서)"
+              description={
+                form.isOnMarketTransaction
+                  ? "✓ 장내 거래 — 비대주주 비과세 적용. 산출세액까지 정보용으로 표시되며 최종 납부세액은 0."
+                  : "장외 거래(블록딜·대량매매·시간외·개인 간 양도 등) — 비대주주여도 과세 (§104①11 가목 일반세율)."
+              }
+              tone="emerald"
+            />
+          )}
       </div>
   );
 

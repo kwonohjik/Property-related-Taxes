@@ -94,6 +94,12 @@ export interface StockTransferFormData {
   isListedSmallShareholder: boolean;
   isVentureCompany: boolean;     // 3중 패턴 default: false
   isKOTCTrading: boolean;        // 3중 패턴 default: false
+  /**
+   * 거래소 장내 거래 여부 (§94①3 가목 1) 단서).
+   * KOSPI/KOSDAQ/KONEX 비대주주 + 非K-OTC 시 비과세 판정의 명시 입력.
+   * 3중 패턴 default: true (기존 동작 유지).
+   */
+  isOnMarketTransaction: boolean;
 
   // ── 거래 일자·수량 ──
   acquisitionDate: string;       // "YYYY-MM-DD"
@@ -261,6 +267,7 @@ export function createInitialStockFormData(): StockTransferFormData {
     isListedSmallShareholder: false,
     isVentureCompany: false,             // 3중 패턴 default
     isKOTCTrading: false,                // 3중 패턴 default
+    isOnMarketTransaction: true,         // 3중 패턴 default (§94①3 가목 1) 단서 — 기존 비과세 동작 보존)
 
     acquisitionDate: "",
     transferDate: "",
@@ -415,6 +422,8 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
     isListedSmallShareholder: boolField("isListedSmallShareholder", false),
     isVentureCompany: boolField("isVentureCompany", defaults.isVentureCompany),
     isKOTCTrading: boolField("isKOTCTrading", defaults.isKOTCTrading),
+    // 마이그레이션: undefined → true (기존 sessionStorage 호환 — silent 비과세 동작 유지)
+    isOnMarketTransaction: boolField("isOnMarketTransaction", defaults.isOnMarketTransaction),
     acquisitionDate: strField("acquisitionDate"),
     transferDate: strField("transferDate"),
     shareCount: strField("shareCount"),

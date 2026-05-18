@@ -47,6 +47,19 @@ export type StockTransferInput = {
   /** K-OTC 거래 여부 */
   isKOTCTrading: boolean;
 
+  /**
+   * 거래소 장내 거래 여부 (소득세법 §94①3 가목 1) 단서).
+   *
+   * - true: KOSPI/KOSDAQ/KONEX 증권시장 장내 거래 — 비대주주 시 가목 1) 단서 비과세.
+   * - false: 장외 거래(블록딜·대량매매·시간외·개인간 양도·증여성 양도 등) — 비대주주여도 과세.
+   *
+   * KOSPI/KOSDAQ/KONEX + 비대주주 + 非K-OTC 케이스에서만 의미 있음.
+   * 대주주·비상장·K-OTC·기타자산 분기는 본 필드 무시.
+   *
+   * @default true (기존 동작 호환)
+   */
+  isOnMarketTransaction?: boolean;
+
   // 거래 일자·수량
   acquisitionDate: Date;
   transferDate: Date;
@@ -333,6 +346,7 @@ export type StockTransferResult = {
     | "listed_major"
     | "listed_non_major_in_market"
     | "listed_otc_non_major"
+    | "listed_off_market_non_major"
     | "unlisted_major"
     | "unlisted_non_major"
     | "kotc_sme_mid_exempt"

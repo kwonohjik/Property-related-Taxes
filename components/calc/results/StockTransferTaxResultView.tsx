@@ -64,7 +64,8 @@ function PdfActions({ scope = "full" }: { scope?: "full" | "form-table" }) {
 const TAX_CATEGORY_LABEL: Record<StockTransferResult["taxCategory"], string> = {
   listed_major: "§94①3 가목 — 상장 대주주",
   listed_non_major_in_market: "§94①3 가목1) — 장내 비과세",
-  listed_otc_non_major: "§94①3 가목2) — 장외 비대주주",
+  listed_otc_non_major: "§94①3 가목2) — K-OTC 비대주주",
+  listed_off_market_non_major: "§94①3 가목1) 본문 — 상장 비대주주 장외 과세",
   unlisted_major: "§94①3 나목 — 비상장 대주주",
   unlisted_non_major: "§94①3 나목 — 비상장 소액",
   kotc_sme_mid_exempt: "§94①3 나목 단서 — K-OTC 중소·중견 비과세",
@@ -188,25 +189,37 @@ export function StockTransferTaxResultView({
         <div className="rounded-xl border-2 border-emerald-300 bg-emerald-50 px-6 py-5">
           <p className="text-lg font-semibold text-emerald-800">비과세 (양도소득세 없음)</p>
           <p className="text-sm text-emerald-700 mt-2">{exemptReasonLabel}</p>
-          <div className="mt-4 grid grid-cols-3 gap-3 text-sm">
+          <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
             <div>
               <span className="text-emerald-600">양도가액</span>
               <p className="font-semibold text-emerald-900">{fmt(result.transferPrice)}</p>
             </div>
             <div>
-              <span className="text-emerald-600">취득가액 (정보용)</span>
-              <p className="font-semibold text-emerald-900">{fmt(result.acquisitionPrice)}</p>
-            </div>
-            <div>
-              <span className="text-emerald-600">양도소득세 (합계)</span>
+              <span className="text-emerald-600">최종 납부세액</span>
               <p className="font-semibold text-emerald-900">0</p>
             </div>
           </div>
-          {result.acquisitionPrice > 0 && (
-            <p className="mt-3 text-xs text-emerald-700">
-              ※ 비과세 사유로 산출세액은 0이지만, 사용자가 입력한 데이터로 취득가액을 정보용으로 표시합니다.
-            </p>
-          )}
+        </div>
+
+        {/* 정보용 전체 계산 결과 표 — 사용자가 입력한 데이터로 산출세액까지 모두 산정 */}
+        <div className="rounded-xl border border-emerald-200 overflow-hidden">
+          <div className="bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700">
+            정보용 계산 결과 (비과세 적용 전 산식) — 입력 데이터 기반
+          </div>
+          <div className="divide-y divide-emerald-100">
+            <ResultRow label="양도가액" value={result.transferPrice} />
+            <ResultRow label="취득가액" value={result.acquisitionPrice} />
+            <ResultRow label="필요경비" value={result.expenses} />
+            <ResultRow label="양도소득금액" value={result.transferIncome} highlight />
+            <ResultRow label="기본공제" value={result.basicDeduction} />
+            <ResultRow label="과세표준" value={result.taxBase} highlight />
+            <ResultRow label="산출세액 (가상)" value={result.calculatedTax} highlight />
+            <ResultRow label="지방소득세 (10%) — 비과세 미적용" value={result.localIncomeTax} />
+          </div>
+          <div className="bg-emerald-100 px-4 py-3 text-xs text-emerald-800">
+            ※ §94①3 가목 1) 단서에 따라 위 산출세액은 면제 — 최종 납부세액 <strong>0</strong>.
+            {" "}장외 거래·대주주 양도분이라면 산출세액 <strong>{fmt(result.calculatedTax)}</strong>이 그대로 부과됩니다.
+          </div>
         </div>
 
         {/* 대주주 판정 카드 (상장 3시장만 — 비상장·기타자산 자동 미렌더) */}

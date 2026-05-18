@@ -150,6 +150,8 @@ export const stockTransferInputSchema = z.object({
   isListedSmallShareholder: z.boolean(),
   isVentureCompany: z.boolean(),
   isKOTCTrading: z.boolean(),
+  // §94①3 가목 1) 단서 — 장내 거래 여부 (default true, 기존 동작 호환)
+  isOnMarketTransaction: z.boolean().optional().default(true),
 
   // 거래 일자·수량
   acquisitionDate: z.union([z.string(), z.date()]),

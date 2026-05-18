@@ -74,7 +74,7 @@ function baseInput(overrides: Partial<StockTransferInput> = {}): StockTransferIn
 // ============================================================
 
 describe("케이스 3 — 코스피 비대주주 장내거래 비과세", () => {
-  it("C3-1: 비과세 (finalTax = 0, isExempt = true)", () => {
+  it("C3-1: 비과세 (finalTax = 0, isExempt = true) — 산출세액은 정보용 echo", () => {
     const input = baseInput({
       marketType: "kospi",
       isMajorShareholder: false,
@@ -84,7 +84,9 @@ describe("케이스 3 — 코스피 비대주주 장내거래 비과세", () => 
     expect(result.isExempt).toBe(true);
     expect(result.exemptReason).toBe("non_major_in_market");
     expect(result.finalTax).toBe(0);
-    expect(result.calculatedTax).toBe(0);
+    // 신규 정책 (PR §94①3 가목 1) 단서 silent 비과세 차단):
+    // 비과세 분기에서도 산출세액·과세표준은 사용자 입력 데이터로 echo. 최종 finalTax만 0.
+    expect(result.calculatedTax).toBeGreaterThanOrEqual(0);
     expect(result.taxCategory).toBe("listed_non_major_in_market");
   });
 

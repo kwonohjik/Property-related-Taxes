@@ -69,6 +69,7 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
     isListedSmallShareholder: form.isListedSmallShareholder,
     isVentureCompany: form.isVentureCompany,        // 3중 패턴 default: false
     isKOTCTrading: form.isKOTCTrading,              // 3중 패턴 default: false
+    isOnMarketTransaction: form.isOnMarketTransaction, // §94①3 가목 1) 단서 — 3중 패턴 default: true
 
     // ── 거래 일자·수량 ──
     acquisitionDate: form.acquisitionDate,

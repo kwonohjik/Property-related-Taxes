@@ -112,11 +112,13 @@ function judgeExemption(
 ): { isExempt: boolean; reason?: StockTransferResult["exemptReason"] } {
   const { marketType, isKOTCTrading, isVentureCompany, isSmallMediumEnterprise, isMidsizeEnterprise, isListedSmallShareholder } = input;
 
-  // 1. 상장 비대주주 장내거래 → 비과세
+  // 1. 상장 비대주주 장내거래 → 비과세 (§94①3 가목 1) 단서)
+  //    isOnMarketTransaction이 명시적으로 false면 장외 거래 → 본문 적용 (과세)
   if (
     (marketType === "kospi" || marketType === "kosdaq" || marketType === "konex") &&
     !isMajor &&
-    !isKOTCTrading
+    !isKOTCTrading &&
+    input.isOnMarketTransaction !== false
   ) {
     return { isExempt: true, reason: "non_major_in_market" };
   }
@@ -207,6 +209,15 @@ function classifySection94(
       return {
         taxCategory: "listed_otc_non_major",
         appliedSection94: "①3가2)",
+        section94_2Applied: false,
+        basicDeductionGroup: "stock",
+      };
+    }
+    // 장외 비대주주 (KOSPI/KOSDAQ/KONEX 비K-OTC) — 가목 1) 단서 미해당 = 본문 적용 = 과세
+    if (input.isOnMarketTransaction === false) {
+      return {
+        taxCategory: "listed_off_market_non_major",
+        appliedSection94: "①3가1)",
         section94_2Applied: false,
         basicDeductionGroup: "stock",
       };

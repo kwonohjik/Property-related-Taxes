@@ -71,6 +71,13 @@ export function applyStockTaxRate(
   taxCategory: StockTransferResult["taxCategory"],
   isSmallMediumEnterprise: boolean,
   isShortTermHolding: boolean,
+  /**
+   * 비과세 분기에서도 "가상의 적용 세율·산출세액"을 계산하기 위한 매핑.
+   * - listed_non_major_in_market → listed_off_market_non_major (장외 비대주주 세율 동일)
+   * - kotc_sme_mid_exempt / kotc_venture_exempt → listed_otc_non_major (나목 세율)
+   * 최종 finalTax는 applyExemptZeroing에서 0으로 강제되지만, calculatedTax·appliedRate는 echo.
+   */
+  treatExemptAsTaxable: boolean = false,
 ): RateCalcResult {
   if (taxBase <= 0) {
     return {
@@ -79,6 +86,15 @@ export function applyStockTaxRate(
       appliedRuleRef: "과세표준 0 이하",
       isShortTermRate: false,
     };
+  }
+
+  // 비과세 → 과세 동등 카테고리 매핑 (산식 echo용)
+  if (treatExemptAsTaxable) {
+    if (taxCategory === "listed_non_major_in_market") {
+      taxCategory = "listed_off_market_non_major";
+    } else if (taxCategory === "kotc_sme_mid_exempt" || taxCategory === "kotc_venture_exempt") {
+      taxCategory = "listed_otc_non_major";
+    }
   }
 
   switch (taxCategory) {
@@ -117,6 +133,7 @@ export function applyStockTaxRate(
     // 상장 비대주주 장외 + 비상장 비대주주 → 나목 단일세율
     // --------------------------------------------------------
     case "listed_otc_non_major":
+    case "listed_off_market_non_major":
     case "unlisted_non_major": {
       const rate = isSmallMediumEnterprise
         ? STOCK_NON_MAJOR_SME_RATE     // 중소기업 10%

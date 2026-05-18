@@ -38,6 +38,7 @@ import { STOCK, STOCK_ESTIMATED_EXPENSE_RATE } from "@/lib/tax-engine/legal-code
 import { allocateLots } from "./lot-allocation";
 import { calcSplitModeTax } from "./lot-allocation-tax";
 import { computeInformationalAcquisition } from "./exempt-informational-acquisition";
+import { applyExemptZeroing } from "./apply-exempt-zeroing";
 
 // ============================================================
 // split 모드 판정 헬퍼
@@ -72,8 +73,13 @@ export function calculateStockTransferTax(input: StockTransferInput): StockTrans
   }
   warnings.push(...classification.warnings);
 
-  // 비과세 조기 반환
-  if (classification.isExempt) {
+  // 비과세 분기는 STEP 1~12 정상 실행 후 마지막에 finalTax·가산세만 0으로 zeroing.
+  // (조기 반환 제거 — 사용자가 입력한 데이터로 산출세액·과세표준까지 모두 echo하기 위함.
+  //  실 세액에 영향 없음 — applyExemptZeroing이 최종 분기에서 처리.)
+  // 단, marketType이 unlisted/other_asset 등 STEP 2~11에서 안전 계산이 불가능한 K-OTC 비과세는
+  // 기존 buildExemptResult 경로 유지하여 그래이스풀하게 처리.
+  if (classification.isExempt &&
+      (classification.exemptReason === "kotc_sme_mid" || classification.exemptReason === "kotc_venture")) {
     return buildExemptResult(input, classification);
   }
 
@@ -396,6 +402,7 @@ export function calculateStockTransferTax(input: StockTransferInput): StockTrans
       classification.taxCategory,
       input.isSmallMediumEnterprise,
       isShortTermHolding,
+      classification.isExempt, // 비과세 분기에서도 산식 echo
     );
   }
 
@@ -413,7 +420,7 @@ export function calculateStockTransferTax(input: StockTransferInput): StockTrans
   // ──────────────────────────────────────────────────────────
   // 결과 조립
   // ──────────────────────────────────────────────────────────
-  return {
+  const fullResult: StockTransferResult = {
     taxCategory: classification.taxCategory,
     appliedSection94: classification.appliedSection94,
     section94_2Applied: classification.section94_2Applied,
@@ -466,10 +473,17 @@ export function calculateStockTransferTax(input: StockTransferInput): StockTrans
     acquiredBeforeListing: input.acquiredBeforeListing,
     postListingDetail,
   };
+
+  // 비과세 분기(listed_non_major_in_market) zero-out — 최종 세액·가산세만 0,
+  // 중간 산식값(transferPrice·acquisitionPrice·taxBase·calculatedTax 등)은 echo
+  if (classification.isExempt) {
+    return applyExemptZeroing(fullResult, classification);
+  }
+  return fullResult;
 }
 
 // ============================================================
-// 비과세 결과 조립 (조기 반환용)
+// 비과세 결과 조립 (K-OTC 비과세 분기 전용 — 기존 호환)
 // ============================================================
 
 function buildExemptResult(
@@ -711,6 +725,7 @@ export function calculateStockTransferTaxAggregate(
           r.taxCategory,
           input.isSmallMediumEnterprise,
           r.isShortTermHolding,
+          r.isExempt, // 비과세 분기 산식 echo
         );
         const newCalculatedTax = floorTen(rateResult.calculatedTax);
         const newFinalize = finalizeStockTax(newCalculatedTax, input);
