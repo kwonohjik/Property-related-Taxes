@@ -7,6 +7,7 @@
  */
 
 import { StockTransferTaxResultView } from "@/components/calc/results/StockTransferTaxResultView";
+import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 
@@ -73,6 +74,8 @@ export function Step4({ result, form, error, isLoading, onCalculate }: Step4Prop
             shareCount={shareCount}
             isFraudulent={form.isFraudulent}
             isInternationalTransaction={form.isInternationalTransaction}
+            transferActualInputMode={form.transferActualInputMode || "per_share"}
+            perShareTransferPrice={parseAmount(form.perShareTransferPrice)}
           />
         </>
       )}

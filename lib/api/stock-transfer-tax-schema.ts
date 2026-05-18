@@ -32,6 +32,8 @@ export const acquisitionModeSchema = z.enum([
 
 export const transferPriceModeSchema = z.enum(["actual", "exchange"]);
 
+export const transferActualInputModeSchema = z.enum(["per_share", "total"]);
+
 export const netAssetOnlyReasonSchema = z.enum([
   "liquidation_or_owner_death",
   "no_business_or_short_or_closed",
@@ -127,7 +129,9 @@ export const stockTransferInputSchema = z.object({
 
   // 양도가액
   transferPriceMode: transferPriceModeSchema,
+  transferActualInputMode: transferActualInputModeSchema.optional(),  // default "per_share"
   perShareTransferPrice: z.number().min(0).optional(),
+  transferTotalPrice: z.number().int().min(0).optional(),
   exchangePropertyValue: z.number().min(0).optional(),
   exchangeDebtRelief: z.number().min(0).optional(),
   exchangeCash: z.number().min(0).optional(),
@@ -226,6 +230,19 @@ export function addStockRefines(
       }
     }
 
+    // 양도가액 total 모드 필수성 (single 모드 한정 — split 모드는 위 게이트에서 차단)
+    if (
+      data.transferPriceMode === "actual" &&
+      (data.transferActualInputMode ?? "per_share") === "total" &&
+      (!data.transferTotalPrice || data.transferTotalPrice <= 0)
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["transferTotalPrice"],
+        message: "총액 직접 입력 시 양도가액 합계는 0보다 커야 합니다",
+      });
+    }
+
     // 분할 매수·분할 양도 호환성 게이트 (Plan v2.2)
     const isSplit =
       (data.acquisitionLots && data.acquisitionLots.length > 0) ||
@@ -267,6 +284,14 @@ export function addStockRefines(
           code: z.ZodIssueCode.custom,
           path: ["transferPriceMode"],
           message: "분할 모드에서는 양도가액 모드로 교환을 지원하지 않습니다",
+        });
+      }
+      // 분할 모드에서 total 직접 입력 차단 (UI disabled의 Zod 방어선)
+      if (data.transferActualInputMode === "total") {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["transferActualInputMode"],
+          message: "분할 모드에서는 양도가액 합계 직접 입력을 지원하지 않습니다 (lot별 단가 사용)",
         });
       }
       // cause별 보조 일자 필수

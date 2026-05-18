@@ -34,17 +34,27 @@ function SectionTitle({ n, title }: { n: number; title: string }) {
 
 export function Step2({ form, onChange }: Step2Props) {
   const transferPriceMode = form.transferPriceMode || "actual";
+  const transferActualInputMode = form.transferActualInputMode || "per_share"; // 3중 패턴 default
   const acquisitionMode = form.acquisitionMode || "actual";
   const isListed = ["kospi", "kosdaq", "konex"].includes(form.marketType);
   const isSplitMode = form.lotsMode === "split";
 
-  // 실가 양도가 합계 미리보기
+  // 실가 양도가 합계 미리보기 (per_share 모드)
   const transferTotal = useMemo(() => {
     const perShare = parseAmount(form.perShareTransferPrice);
     const count = parseInt(form.shareCount || "0", 10);
     if (perShare > 0 && count > 0) return perShare * count;
     return null;
   }, [form.perShareTransferPrice, form.shareCount]);
+
+  // 역산 1주당 단가 미리보기 (total 모드, 표시 전용 — store 미러링 금지)
+  const reversedPerShare = useMemo(() => {
+    const total = parseAmount(form.transferTotalPrice);
+    const count = parseInt(form.shareCount || "0", 10);
+    if (total <= 0 || count <= 0) return null;
+    const isExact = total % count === 0; // 잔돈 0일 때만 "정확"
+    return { perShare: total / count, isExact, total, count };
+  }, [form.transferTotalPrice, form.shareCount]);
 
   // 교환 양도가 합계 미리보기
   const exchangeTotal = useMemo(() => {
@@ -88,24 +98,83 @@ export function Step2({ form, onChange }: Step2Props) {
             />
           </FieldCard>
 
-          {/* 실가 양도가 */}
+          {/* 실가 양도가 — 서브 입력 방식 분기 */}
           {transferPriceMode === "actual" && (
             <div className="space-y-3">
-              <CurrencyInput
-                label="1주당 양도가액"
-                required
-                disabled={isSplitMode}
-                hint={isSplitMode ? "분할 모드에서는 매도 lot에서 자동 산출됩니다 (Step1 참조)" : "실제 거래 가격 (원)"}
-                value={form.perShareTransferPrice}
-                onChange={(v) => onChange({ perShareTransferPrice: v })}
-                placeholder="44,750"
-              />
-              {transferTotal && (
-                <div className="rounded border border-emerald-200 bg-emerald-50/60 px-3 py-2 text-sm text-emerald-700">
-                  양도가액 합계: {parseAmount(form.perShareTransferPrice).toLocaleString()} ×{" "}
-                  {parseInt(form.shareCount || "0", 10).toLocaleString()}주 ={" "}
-                  <strong>{transferTotal.toLocaleString()}</strong>
-                </div>
+              {/* 서브 입력 방식 (per_share / total) */}
+              <FieldCard label="입력 방식">
+                <RadioCardGroup
+                  name="transferActualInputMode"
+                  value={transferActualInputMode}
+                  onChange={(v) =>
+                    onChange({ transferActualInputMode: v as "per_share" | "total" })
+                  }
+                  tone="emerald"
+                  layout="inline"
+                  options={[
+                    {
+                      value: "per_share",
+                      label: "1주당 단가",
+                      description: "1주당 양도가액 × 주식수",
+                    },
+                    {
+                      value: "total",
+                      label: "합계 직접 입력",
+                      description: isSplitMode
+                        ? "분할 모드에서는 lot별 단가만 지원됩니다 (Step1)"
+                        : "양도가액 총액을 원 단위로 직접 입력 (§96① 실지거래가액)",
+                      disabled: isSplitMode,
+                    },
+                  ]}
+                />
+              </FieldCard>
+
+              {/* per_share 분기 */}
+              {transferActualInputMode === "per_share" && (
+                <>
+                  <CurrencyInput
+                    label="1주당 양도가액"
+                    required
+                    disabled={isSplitMode}
+                    hint={isSplitMode ? "분할 모드에서는 매도 lot에서 자동 산출됩니다 (Step1 참조)" : "실제 거래 가격 (원)"}
+                    value={form.perShareTransferPrice}
+                    onChange={(v) => onChange({ perShareTransferPrice: v })}
+                  />
+                  {transferTotal && (
+                    <div className="rounded border border-emerald-200 bg-emerald-50/60 px-3 py-2 text-sm text-emerald-700">
+                      양도가액 합계: {parseAmount(form.perShareTransferPrice).toLocaleString()} ×{" "}
+                      {parseInt(form.shareCount || "0", 10).toLocaleString()}주 ={" "}
+                      <strong>{transferTotal.toLocaleString()}</strong>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* total 분기 — 합계 직접 입력 */}
+              {transferActualInputMode === "total" && (
+                <>
+                  <CurrencyInput
+                    label="양도가액 합계"
+                    required
+                    hint="계약서·등기부 등에 기재된 총 양도대금 (원)"
+                    value={form.transferTotalPrice}
+                    onChange={(v) => onChange({ transferTotalPrice: v })}
+                  />
+                  {reversedPerShare && (
+                    reversedPerShare.isExact ? (
+                      <div className="rounded border border-emerald-200 bg-emerald-50/60 px-3 py-2 text-sm text-emerald-700">
+                        참고: 1주당 단가 = <strong>{reversedPerShare.perShare.toLocaleString()}</strong>
+                        {" "}({reversedPerShare.total.toLocaleString()} ÷ {reversedPerShare.count.toLocaleString()}주)
+                      </div>
+                    ) : (
+                      <div className="rounded border border-slate-200 bg-slate-50/60 px-3 py-2 text-sm text-slate-600">
+                        참고: 1주당 단가 = <strong>{reversedPerShare.perShare.toFixed(4)}</strong>
+                        {" "}({reversedPerShare.total.toLocaleString()} ÷ {reversedPerShare.count.toLocaleString()}주)
+                        {" "}— 정확히 떨어지지 않음. 총액 그대로 사용합니다.
+                      </div>
+                    )
+                  )}
+                </>
               )}
             </div>
           )}

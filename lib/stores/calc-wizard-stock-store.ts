@@ -111,6 +111,8 @@ export interface StockTransferFormData {
 
   // ── 양도가액 ──
   transferPriceMode: "actual" | "exchange";  // 3중 패턴 default: "actual"
+  transferActualInputMode: "per_share" | "total";  // 3중 패턴 default: "per_share" (실가 입력 방식)
+  transferTotalPrice: string;        // 원 — total 모드 시 양도가액 합계 직접 입력
   perShareTransferPrice: string;     // 원
   exchangePropertyValue: string;     // 교환: 부동산 가액
   exchangeDebtRelief: string;        // 교환: 채무면제액
@@ -208,6 +210,8 @@ export function createInitialStockFormData(): StockTransferFormData {
     cumulativeTransferRatio: "",
 
     transferPriceMode: "actual",         // 3중 패턴 default
+    transferActualInputMode: "per_share", // 3중 패턴 default
+    transferTotalPrice: "",
     perShareTransferPrice: "",
     exchangePropertyValue: "",
     exchangeDebtRelief: "",
@@ -317,6 +321,8 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
     preMergerAcquisitionDate: strField("preMergerAcquisitionDate"),
     cumulativeTransferRatio: strField("cumulativeTransferRatio"),
     transferPriceMode: enumField("transferPriceMode", ["actual", "exchange"], defaults.transferPriceMode),
+    transferActualInputMode: enumField("transferActualInputMode", ["per_share", "total"], defaults.transferActualInputMode),
+    transferTotalPrice: strField("transferTotalPrice"),
     perShareTransferPrice: strField("perShareTransferPrice"),
     exchangePropertyValue: strField("exchangePropertyValue"),
     exchangeDebtRelief: strField("exchangeDebtRelief"),

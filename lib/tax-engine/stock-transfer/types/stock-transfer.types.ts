@@ -67,7 +67,16 @@ export type StockTransferInput = {
 
   // 양도가액 모드
   transferPriceMode: "actual" | "exchange";
+  /**
+   * 실가 입력 방식 (transferPriceMode === "actual" 한정).
+   * - "per_share" (default): 1주당 단가 × 주식수 (현행)
+   * - "total": 양도가액 합계 직접 입력 (§96① 실지거래가액, 계약서 총액 케이스)
+   */
+  transferActualInputMode?: "per_share" | "total";
+  /** 1주당 양도가액 (transferActualInputMode === "per_share" 또는 미지정 시 필수, 원) */
   perShareTransferPrice?: number;
+  /** 양도가액 합계 직접 입력 (transferActualInputMode === "total" 시 필수, 원) */
+  transferTotalPrice?: number;
   exchangePropertyValue?: number;
   exchangeDebtRelief?: number;
   exchangeCash?: number;

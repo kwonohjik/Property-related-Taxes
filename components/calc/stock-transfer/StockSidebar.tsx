@@ -45,15 +45,26 @@ export function StockSidebar({ currentStep, onStepClick }: StockSidebarProps) {
       );
       effectiveTransferPrice = lotSum > 0 ? lotSum : null;
     } else {
-      const perShare = parseAmount(formData.perShareTransferPrice);
-      const count = parseInt(formData.shareCount || "0", 10);
-      const transferPrice = perShare > 0 && count > 0 ? perShare * count : null;
+      // single 모드 — transferActualInputMode 분기 추가 (per_share / total)
+      const priceMode = formData.transferPriceMode || "actual";
+      const actualMode = formData.transferActualInputMode || "per_share"; // 3중 패턴 default
+      let transferPrice: number | null = null;
+      if (priceMode === "actual") {
+        if (actualMode === "total") {
+          const total = parseAmount(formData.transferTotalPrice);
+          transferPrice = total > 0 ? total : null;
+        } else {
+          const perShare = parseAmount(formData.perShareTransferPrice);
+          const count = parseInt(formData.shareCount || "0", 10);
+          transferPrice = perShare > 0 && count > 0 ? perShare * count : null;
+        }
+      }
       const exchangeTotal =
         parseAmount(formData.exchangePropertyValue) +
         parseAmount(formData.exchangeDebtRelief) +
         parseAmount(formData.exchangeCash);
       effectiveTransferPrice =
-        (formData.transferPriceMode || "actual") === "exchange"
+        priceMode === "exchange"
           ? exchangeTotal > 0
             ? exchangeTotal
             : null

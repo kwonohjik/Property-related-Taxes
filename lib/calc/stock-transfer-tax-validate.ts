@@ -308,8 +308,15 @@ export function validateStep2(form: StockTransferFormData): StockValidationError
 
   // ── 양도가액 (single 모드) ──
   if (transferPriceMode === "actual") {
-    if (isEmpty(form.perShareTransferPrice) || parseI(form.perShareTransferPrice) <= 0) {
-      errors.push({ field: "perShareTransferPrice", message: "1주당 양도가액을 입력하세요", severity: "error" });
+    const actualMode = form.transferActualInputMode || "per_share";  // 3중 패턴 default
+    if (actualMode === "total") {
+      if (isEmpty(form.transferTotalPrice) || parseI(form.transferTotalPrice) <= 0) {
+        errors.push({ field: "transferTotalPrice", message: "양도가액 합계를 입력하세요", severity: "error" });
+      }
+    } else {
+      if (isEmpty(form.perShareTransferPrice) || parseI(form.perShareTransferPrice) <= 0) {
+        errors.push({ field: "perShareTransferPrice", message: "1주당 양도가액을 입력하세요", severity: "error" });
+      }
     }
   } else if (transferPriceMode === "exchange") {
     const prop = parseI(form.exchangePropertyValue);

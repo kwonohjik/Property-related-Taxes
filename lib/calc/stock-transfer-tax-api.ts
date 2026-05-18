@@ -97,8 +97,15 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
   // ── 양도가액 ──
   body.transferPriceMode = transferPriceMode;         // 3중 패턴 default: "actual"
   if (transferPriceMode === "actual") {
-    const perShare = parseIntOrUndef(form.perShareTransferPrice);
-    if (perShare !== undefined) body.perShareTransferPrice = perShare;
+    const actualMode = form.transferActualInputMode || "per_share";  // 3중 패턴 default
+    body.transferActualInputMode = actualMode;
+    if (actualMode === "total") {
+      const total = parseIntOrUndef(form.transferTotalPrice);
+      if (total !== undefined) body.transferTotalPrice = total;
+    } else {
+      const perShare = parseIntOrUndef(form.perShareTransferPrice);
+      if (perShare !== undefined) body.perShareTransferPrice = perShare;
+    }
   } else {
     // 교환 (exchange)
     const propVal = parseIntOrUndef(form.exchangePropertyValue);

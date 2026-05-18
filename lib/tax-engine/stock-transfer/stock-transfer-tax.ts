@@ -109,7 +109,12 @@ export function calculateStockTransferTax(input: StockTransferInput): StockTrans
     // split 모드 — lot 합계 사용
     transferPrice = lotMatchingDetail.totalTransferPrice;
   } else if (input.transferPriceMode === "actual") {
-    transferPrice = (input.perShareTransferPrice ?? 0) * shareCount;
+    const actualMode = input.transferActualInputMode ?? "per_share";  // 3중 패턴 default
+    if (actualMode === "total") {
+      transferPrice = input.transferTotalPrice ?? 0;                  // 총액 직접 사용
+    } else {
+      transferPrice = (input.perShareTransferPrice ?? 0) * shareCount;
+    }
   } else {
     // exchange — 부동산 + 채무면제 + 현금
     const property = input.exchangePropertyValue ?? 0;
@@ -526,6 +531,8 @@ function buildExemptResult(
 
 function calcTransferPriceSimple(input: StockTransferInput): number {
   if (input.transferPriceMode === "actual") {
+    const actualMode = input.transferActualInputMode ?? "per_share";
+    if (actualMode === "total") return input.transferTotalPrice ?? 0;
     return (input.perShareTransferPrice ?? 0) * input.shareCount;
   }
   return (

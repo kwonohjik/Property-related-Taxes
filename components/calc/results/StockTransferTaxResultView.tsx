@@ -29,6 +29,10 @@ interface StockTransferTaxResultViewProps {
   isFraudulent?: boolean;
   /** 국제거래 여부 (부정행위와 결합 시 60% 분기) */
   isInternationalTransaction?: boolean;
+  /** 양도가액 실가 입력 방식 (산식 카드용, default "per_share") */
+  transferActualInputMode?: "per_share" | "total";
+  /** 1주당 양도가액 (per_share 모드 산식 표시용, 원) */
+  perShareTransferPrice?: number;
 }
 
 /** PDF 다운로드 버튼 — 브라우저 인쇄 다이얼로그에서 "PDF로 저장" 선택 */
@@ -92,7 +96,60 @@ function fmt(n: number): string {
   return n.toLocaleString();
 }
 
-export function StockTransferTaxResultView({ result, shareCount, isFraudulent, isInternationalTransaction }: StockTransferTaxResultViewProps) {
+/**
+ * 양도가액 산식 카드 — per_share / total 분기 표시.
+ * exchange 모드(transferPriceBreakdown 존재) 또는 split 모드는 표시 안 함.
+ */
+function TransferPriceFormulaCard({
+  result,
+  shareCount,
+  transferActualInputMode,
+  perShareTransferPrice,
+}: {
+  result: StockTransferResult;
+  shareCount: number;
+  transferActualInputMode: "per_share" | "total";
+  perShareTransferPrice: number;
+}) {
+  // 교환·분할 모드는 별도 표시 — 본 카드 미렌더
+  if (result.transferPriceBreakdown) return null;
+  return (
+    <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 px-4 py-3 text-sm">
+      <p className="font-semibold text-emerald-800 mb-1">양도가액 산식 (§96① 실지거래가액)</p>
+      {transferActualInputMode === "total" ? (
+        <>
+          <p className="text-emerald-900">
+            양도가액 합계 직접 입력 = <strong>{fmt(result.transferPrice)}</strong>
+          </p>
+          {shareCount > 0 && (() => {
+            const exact = result.transferPrice % shareCount === 0;
+            const reverse = result.transferPrice / shareCount;
+            return (
+              <p className="text-xs text-emerald-700 mt-1">
+                참고: 역산 1주당 단가 = {exact ? reverse.toLocaleString() : reverse.toFixed(4)}
+                {!exact && " (정확히 떨어지지 않음 — 계산에 미사용)"}
+              </p>
+            );
+          })()}
+        </>
+      ) : (
+        <p className="text-emerald-900">
+          1주당 양도가액 {perShareTransferPrice.toLocaleString()} × {shareCount.toLocaleString()}주
+          = <strong>{fmt(result.transferPrice)}</strong>
+        </p>
+      )}
+    </div>
+  );
+}
+
+export function StockTransferTaxResultView({
+  result,
+  shareCount,
+  isFraudulent,
+  isInternationalTransaction,
+  transferActualInputMode = "per_share",
+  perShareTransferPrice = 0,
+}: StockTransferTaxResultViewProps) {
   const categoryLabel = TAX_CATEGORY_LABEL[result.taxCategory] ?? result.taxCategory;
 
   // 비과세 화면
@@ -117,6 +174,14 @@ export function StockTransferTaxResultView({ result, shareCount, isFraudulent, i
             {categoryLabel}
           </span>
         </div>
+
+        {/* 양도가액 산식 (per_share / total 분기) */}
+        <TransferPriceFormulaCard
+          result={result}
+          shareCount={shareCount}
+          transferActualInputMode={transferActualInputMode}
+          perShareTransferPrice={perShareTransferPrice}
+        />
 
         {/* 비과세 안내 카드 */}
         <div className="rounded-xl border-2 border-emerald-300 bg-emerald-50 px-6 py-5">
@@ -186,6 +251,14 @@ export function StockTransferTaxResultView({ result, shareCount, isFraudulent, i
           </div>
         </div>
       </div>
+
+      {/* 양도가액 산식 (per_share / total 분기) */}
+      <TransferPriceFormulaCard
+        result={result}
+        shareCount={shareCount}
+        transferActualInputMode={transferActualInputMode}
+        perShareTransferPrice={perShareTransferPrice}
+      />
 
       {/* 환산 취득가 분해 (사례 48) */}
       {result.usedEstimatedAcquisition && result.valuationDetail && (
