@@ -404,6 +404,12 @@ export type StockTransferResult = {
     netAssetFloorApplied: boolean;
     netAssetFloorValue?: number;
     finalPerShareValue: number;
+    /** §163⑨ 환산 진단 — 분자(취득시 1주당 기준시가) */
+    conversionAcqStdPerShare?: number;
+    /** §163⑨ 환산 진단 — 분모(양도시 1주당 기준시가, fallback 시 1주당 양도가) */
+    conversionTransferStd?: number;
+    /** §163⑨ 환산 진단 — true면 transferDatePriceAvg1Month 미입력으로 1주당 양도가 fallback 사용 */
+    conversionUsedFallback?: boolean;
   };
 
   // 기본공제 그룹

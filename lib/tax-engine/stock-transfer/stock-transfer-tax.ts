@@ -207,13 +207,16 @@ export function calculateStockTransferTax(input: StockTransferInput): StockTrans
       // §163⑨: 환산취득가 = 양도가 × (취득시 기준시가 / 양도시 기준시가)
       const postListingResult = calcPostListingConversion(synthesizePostListingInput(input));
       const acqStdPerShare = postListingResult.finalPerShareValue;
-      // §163⑨ 환산 — transferStd 미입력 시 1주당 양도가를 자동 fallback (산식 항상 작동)
+      // §163⑨ 환산 — transferStd 미입력 시 1주당 양도가 자동 fallback
       const { transferStd, usedFallback } = resolveTransferStd(transferPrice, shareCount, input.transferDatePriceAvg1Month);
       if (usedFallback) warnings.push("양도일 직전 1개월 종가평균 미입력 — 1주당 양도가를 §163⑨ 환산 분모로 자동 사용");
       acquisitionPrice = apply163_9Conversion(transferPrice, acqStdPerShare, transferStd, postListingResult.totalAcquisitionPrice);
       estimatedBase = acqStdPerShare * shareCount;       // §163⑥4 base
       postListingDetail = postListingResult;
-      valuationDetail = { method: "post_listing_conversion", netAssetFloorApplied: false, finalPerShareValue: acqStdPerShare };
+      valuationDetail = {
+        method: "post_listing_conversion", netAssetFloorApplied: false, finalPerShareValue: acqStdPerShare,
+        conversionAcqStdPerShare: acqStdPerShare, conversionTransferStd: transferStd, conversionUsedFallback: usedFallback,
+      };
 
       for (const rule of postListingResult.appliedRules) {
         if (!warnings.includes(rule)) warnings.push(rule);

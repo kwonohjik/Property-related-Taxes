@@ -68,12 +68,16 @@ export function PostListingDetailCard({ result }: PostListingDetailCardProps) {
           §163⑨ 환산취득가 = 양도가 × (1주당 취득기준 ÷ 1주당 양도기준)
           <br />
           = <strong>{result.transferPrice.toLocaleString()}</strong> × (
-          <strong>{post.finalPerShareValue.toLocaleString()}</strong> ÷{" "}
-          <strong>{(result.valuationDetail?.finalPerShareValue && result.transferPrice && result.acquisitionPrice
-            ? Math.round(result.transferPrice * post.finalPerShareValue / result.acquisitionPrice)
-            : 0).toLocaleString()}</strong>) ={" "}
+          <strong>{(result.valuationDetail?.conversionAcqStdPerShare ?? post.finalPerShareValue).toLocaleString()}</strong> ÷{" "}
+          <strong>{(result.valuationDetail?.conversionTransferStd ?? 0).toLocaleString()}</strong>) ={" "}
           <strong>{result.acquisitionPrice.toLocaleString()}</strong>
         </p>
+        {result.valuationDetail?.conversionUsedFallback && (
+          <p className="text-[11px] text-rose-700 bg-rose-50 border border-rose-200 rounded px-2 py-1 mt-1">
+            ⚠ 양도일 직전 1개월 종가평균 미입력 — 1주당 양도가({(result.valuationDetail?.conversionTransferStd ?? 0).toLocaleString()})를 §163⑨ 환산 분모로 자동 사용.
+            정확한 환산을 위해 PostListing 카드의 &quot;양도일 직전 1개월 종가 평균&quot;에 실제 값을 입력하세요.
+          </p>
+        )}
       </div>
 
       {/* 80% 하한 미적용 안내 (Round 4 C-05) */}
