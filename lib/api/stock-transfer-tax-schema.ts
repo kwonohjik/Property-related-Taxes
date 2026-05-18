@@ -184,6 +184,7 @@ export const stockTransferInputSchema = z.object({
 
   // 환산 — 상장
   transferDatePriceAvg1Month: z.number().min(0).optional(),
+  acquisitionDatePriceAvg1Month: z.number().min(0).optional(),
   listingDate: z.union([z.string(), z.date()]).optional(),
   listingDatePriceAvg1Month: z.number().min(0).optional(),
   acquiredBeforeListing: z.boolean(),

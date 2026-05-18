@@ -131,7 +131,8 @@ export interface StockTransferFormData {
   perShareAcquisitionPrice: string;  // 실가 취득가
 
   // ── 환산 — 상장 (1개월 종가평균) ──
-  transferDatePriceAvg1Month: string;    // 양도일 직전 1개월 평균 (원)
+  transferDatePriceAvg1Month: string;    // 양도일 직전 1개월 평균 (원) — §163⑨ 분모
+  acquisitionDatePriceAvg1Month: string; // 취득일 직전 1개월 평균 (원) — §163⑨ 분자
   listingDate: string;                    // 상장일 "YYYY-MM-DD"
   listingDatePriceAvg1Month: string;     // 상장일 직전 1개월 평균 (원)
   acquiredBeforeListing: boolean;        // 3중 패턴 default: false
@@ -294,6 +295,7 @@ export function createInitialStockFormData(): StockTransferFormData {
     perShareAcquisitionPrice: "",
 
     transferDatePriceAvg1Month: "",
+    acquisitionDatePriceAvg1Month: "",
     listingDate: "",
     listingDatePriceAvg1Month: "",
     acquiredBeforeListing: false,        // 3중 패턴 default
@@ -444,6 +446,7 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
     acquisitionActualInputMode: enumField("acquisitionActualInputMode", ["per_share", "lots"], defaults.acquisitionActualInputMode),
     perShareAcquisitionPrice: strField("perShareAcquisitionPrice"),
     transferDatePriceAvg1Month: strField("transferDatePriceAvg1Month"),
+    acquisitionDatePriceAvg1Month: strField("acquisitionDatePriceAvg1Month"),
     listingDate: strField("listingDate"),
     listingDatePriceAvg1Month: strField("listingDatePriceAvg1Month"),
     acquiredBeforeListing: boolField("acquiredBeforeListing", defaults.acquiredBeforeListing),

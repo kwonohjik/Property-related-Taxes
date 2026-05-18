@@ -184,6 +184,8 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
     // 환산 — 상장 (1개월 종가평균)
     const transferAvg = parseIntOrUndef(form.transferDatePriceAvg1Month);
     if (transferAvg !== undefined) body.transferDatePriceAvg1Month = transferAvg;
+    const acquisitionAvg = parseIntOrUndef(form.acquisitionDatePriceAvg1Month);
+    if (acquisitionAvg !== undefined) body.acquisitionDatePriceAvg1Month = acquisitionAvg;
     if (form.listingDate) body.listingDate = form.listingDate;
     const listingAvg = parseIntOrUndef(form.listingDatePriceAvg1Month);
     if (listingAvg !== undefined) body.listingDatePriceAvg1Month = listingAvg;

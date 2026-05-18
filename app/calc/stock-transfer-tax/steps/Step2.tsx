@@ -358,14 +358,46 @@ export function Step2({ form, onChange }: Step2Props) {
           {/* 환산 — 상장 */}
           {acquisitionMode === "estimated" && isListed && (
             <div className="space-y-4">
-              <CurrencyInput
-                label="양도일 직전 1개월 종가 평균"
-                required
-                hint="양도일 기준 직전 1개월 평균 종가 (원, §99①3)"
-                value={form.transferDatePriceAvg1Month}
-                onChange={(v) => onChange({ transferDatePriceAvg1Month: v })}
-                placeholder="44,750"
-              />
+              {/* 일반 상장 환산 (시행령 §163⑨) — 취득 후 상장 분기가 아닐 때만 노출 */}
+              {!form.acquiredBeforeListing && (
+                <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-4 space-y-4">
+                  <p className="text-sm font-semibold text-emerald-800">
+                    환산취득가 (시행령 §163⑨) — 양도가 × (취득시 기준시가 / 양도시 기준시가)
+                  </p>
+                  <CurrencyInput
+                    label="양도시 1주당 기준시가 (양도일 직전 1개월 종가평균)"
+                    required
+                    hint="모법 §99①3 — 환산비율의 분모"
+                    value={form.transferDatePriceAvg1Month}
+                    onChange={(v) => onChange({ transferDatePriceAvg1Month: v })}
+                    placeholder="50,000"
+                  />
+                  <CurrencyInput
+                    label="취득시 1주당 기준시가 (취득일 직전 1개월 종가평균)"
+                    required
+                    hint="모법 §99①3 — 환산비율의 분자. 개산공제(§163⑥4) 산정 base"
+                    value={form.acquisitionDatePriceAvg1Month}
+                    onChange={(v) => onChange({ acquisitionDatePriceAvg1Month: v })}
+                    placeholder="30,000"
+                  />
+                  <p className="text-xs text-emerald-700">
+                    ※ 환산 모드에서는 시행령 §163⑥4에 따라 개산공제(취득기준시가 × 1%)가 자동
+                    적용되며 실비 입력값은 무시됩니다.
+                  </p>
+                </div>
+              )}
+
+              {/* 양도시 1개월 평균은 취득 후 상장 분기에서도 필요 — 위 영역이 비활성일 때 단독 노출 */}
+              {form.acquiredBeforeListing && (
+                <CurrencyInput
+                  label="양도일 직전 1개월 종가 평균"
+                  required
+                  hint="양도일 기준 직전 1개월 평균 종가 (원, §99①3)"
+                  value={form.transferDatePriceAvg1Month}
+                  onChange={(v) => onChange({ transferDatePriceAvg1Month: v })}
+                  placeholder="44,750"
+                />
+              )}
 
               {/* 취득 후 상장 환산 (사례 48 핵심) */}
               <PostListingValuationCard form={form} onChange={onChange} />

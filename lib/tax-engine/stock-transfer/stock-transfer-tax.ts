@@ -276,15 +276,16 @@ export function calculateStockTransferTax(input: StockTransferInput): StockTrans
       }
 
     } else {
-      // 상장 — 1개월 종가평균
-      const listedResult = calcListedValuation(input);
+      // 상장 — 1개월 종가평균 환산 (시행령 §163⑨ 직접 적용)
+      const listedResult = calcListedValuation(input, transferPrice);
       acquisitionPrice = listedResult.totalAcquisitionPrice;
-      // 상장 1개월 종가평균: 취득기준시가 = 1주당 평균가 × 주식수
-      estimatedBase = listedResult.perShareValue * shareCount;
+      // ★ Bug-B 정정: §163⑥4 개산공제 base = 취득기준시가 총액 (양도기준시가 아님)
+      estimatedBase = listedResult.stdPriceTotalForEstimatedDeduction;
       valuationDetail = {
         method: "monthly_avg_listed",
         netAssetFloorApplied: false,
-        finalPerShareValue: listedResult.perShareValue,
+        // ★ Bug-A 정정: 환산 후 1주당 취득가 (기존: 양도시 기준시가 그대로 = 잘못된 값)
+        finalPerShareValue: listedResult.perShareAcquisitionPrice,
       };
     }
 
@@ -315,14 +316,23 @@ export function calculateStockTransferTax(input: StockTransferInput): StockTrans
 
   // ──────────────────────────────────────────────────────────
   // STEP 4: 필요경비
+  //   ★ Bug-B 정정: 환산취득가 모드는 시행령 §163⑥4에 따라 개산공제(취득기준시가×1%) 강제
+  //   사용자가 expenseMode="actual"로 두어도 환산 모드에서는 무시되고 개산공제만 적용.
+  //   (§97② 단서 swap은 KoreanLaw 검증 후 후속 PR 검토 — 본 PR에서는 미적용)
   // ──────────────────────────────────────────────────────────
   let expenses = 0;
   const { expenseMode } = input;
 
-  if (expenseMode === "actual") {
+  if (usedEstimatedAcquisition && estimatedDeduction !== undefined && estimatedDeduction > 0) {
+    expenses = estimatedDeduction;
+    if (expenseMode === "actual" && (input.actualExpenses ?? 0) > 0) {
+      warnings.push(
+        "환산취득가 모드에서는 §163⑥4 개산공제(취득기준시가×1%)가 자동 적용됩니다 — 실비 입력값은 무시됩니다."
+      );
+    }
+  } else if (expenseMode === "actual") {
     expenses = input.actualExpenses ?? 0;
   } else {
-    // 개산공제 — estimatedDeduction 사용
     expenses = estimatedDeduction ?? 0;
   }
 

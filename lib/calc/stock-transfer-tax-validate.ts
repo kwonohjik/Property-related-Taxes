@@ -399,6 +399,17 @@ export function validateStep2(form: StockTransferFormData): StockValidationError
           severity: "error",
         });
       }
+      // 일반 상장 환산 — 취득시 1개월 기준시가 필수 (시행령 §163⑨ 환산비율 분자)
+      // 취득 후 상장(§165⑤) 분기에서는 별도 필드 사용으로 본 검증 미적용
+      if (!form.acquiredBeforeListing && !form.tradingHaltAtTransfer) {
+        if (isEmpty(form.acquisitionDatePriceAvg1Month)) {
+          errors.push({
+            field: "acquisitionDatePriceAvg1Month",
+            message: "취득일 직전 1개월 종가 평균을 입력하세요 (시행령 §163⑨ 환산비율 분자)",
+            severity: "error",
+          });
+        }
+      }
       // 취득 후 상장 ON 시 — 모드별 매트릭스 (Round 4 H-03·H-07)
       if (form.acquiredBeforeListing) {
         const mode = form.unlistedDetailMode || "simple";

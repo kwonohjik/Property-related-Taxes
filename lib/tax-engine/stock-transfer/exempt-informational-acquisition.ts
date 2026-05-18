@@ -132,16 +132,16 @@ export function computeInformationalAcquisition(
           },
         };
       }
-      const r = calcListedValuation(input);
+      const r = calcListedValuation(input, transferPrice);
       return {
         acquisitionPrice: r.totalAcquisitionPrice,
         usedEstimatedAcquisition: true,
-        estimatedBase: r.perShareValue * shareCount,
+        estimatedBase: r.stdPriceTotalForEstimatedDeduction,
         postListingDetail: undefined,
         valuationDetail: {
           method: "monthly_avg_listed",
           netAssetFloorApplied: false,
-          finalPerShareValue: r.perShareValue,
+          finalPerShareValue: r.perShareAcquisitionPrice,
         },
       };
     }
