@@ -17,6 +17,7 @@ import {
   calcUnlistedStockPerShareValue,
 } from "@/lib/tax-engine/property-valuation-stock";
 import type { EstateItem, UnlistedStockData } from "@/lib/tax-engine/types/inheritance-gift.types";
+import { KiwoomValuationAutoFetchButton } from "./KiwoomValuationAutoFetchButton";
 
 // ============================================================
 // 상장주식 항목 편집기
@@ -27,9 +28,17 @@ interface ListedStockEditorProps {
   index: number;
   onUpdate: (updated: EstateItem) => void;
   onRemove: () => void;
+  /** 평가기준일 (상속개시일·증여일) — F-01 키움 자동조회 트리거 */
+  valuationDate?: string;
 }
 
-function ListedStockEditor({ item, index, onUpdate, onRemove }: ListedStockEditorProps) {
+function ListedStockEditor({
+  item,
+  index,
+  onUpdate,
+  onRemove,
+  valuationDate,
+}: ListedStockEditorProps) {
   const set = (patch: Partial<EstateItem>) => onUpdate({ ...item, ...patch });
 
   const avgPrice = item.listedStockAvgPrice ?? 0;
@@ -75,6 +84,43 @@ function ListedStockEditor({ item, index, onUpdate, onRemove }: ListedStockEdito
           className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         />
       </div>
+
+      {/* 종목코드 (F-01 키움 자동조회 트리거) */}
+      <div className="space-y-1">
+        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
+          종목코드 (선택)
+        </label>
+        <input
+          type="text"
+          value={item.listedStockCode ?? ""}
+          onChange={(e) => {
+            const v = e.target.value
+              .toUpperCase()
+              .replace(/[^0-9A-Z]/g, "")
+              .slice(0, 6);
+            set({ listedStockCode: v });
+          }}
+          placeholder="6자리 종목코드 (예: 005930)"
+          inputMode="text"
+          maxLength={6}
+          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        />
+      </div>
+
+      {/* F-01 키움 자동조회 — 평가기준일 + 종목코드 충족 시 활성화 */}
+      {valuationDate && item.listedStockCode && (
+        <KiwoomValuationAutoFetchButton
+          stockCode={item.listedStockCode}
+          valuationDate={valuationDate}
+          syncName
+          onFill={(patch) => {
+            set({
+              listedStockAvgPrice: patch.listedStockAvgPrice,
+              ...(patch.stockName ? { name: patch.stockName } : {}),
+            });
+          }}
+        />
+      )}
 
       {/* 전후 2개월 종가 평균 */}
       <div className="space-y-1">
@@ -464,6 +510,8 @@ export interface StockValuationFormProps {
   onChange: (items: EstateItem[]) => void;
   /** "상속" 또는 "증여" */
   mode?: "inheritance" | "gift";
+  /** 평가기준일 (상속개시일 또는 증여일) — F-01 키움 자동조회 트리거 */
+  valuationDate?: string;
 }
 
 let _nextStockId = 1;
@@ -475,6 +523,7 @@ export function StockValuationForm({
   items,
   onChange,
   mode = "inheritance",
+  valuationDate,
 }: StockValuationFormProps) {
   // 비상장주식별 부동산과다보유법인 여부
   const [heavyMap, setHeavyMap] = useState<Record<string, boolean>>({});
@@ -547,6 +596,7 @@ export function StockValuationForm({
                 index={listedItems.indexOf(item)}
                 onUpdate={(updated) => handleUpdate(i, updated)}
                 onRemove={() => handleRemove(i)}
+                valuationDate={valuationDate}
               />
             ) : null,
           )}

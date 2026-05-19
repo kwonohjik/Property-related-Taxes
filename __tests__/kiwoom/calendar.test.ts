@@ -5,6 +5,7 @@ import {
   nonTradingLabel,
   buildOneMonthBeforeSlots,
   buildOneMonthAfterListingSlots,
+  buildTwoMonthSurroundingSlots,
 } from "@/lib/kiwoom/calendar";
 
 describe("KRX calendar — anchor", () => {
@@ -71,5 +72,20 @@ describe("KRX calendar — anchor", () => {
     expect(slots[0]).toBe("2024-02-01");
     expect(slots[slots.length - 1]).toBe("2024-02-29");
     expect(slots.length).toBe(29);
+  });
+
+  // F-01 §63①1가목 전후 2개월 슬롯
+  it("F-01 §63①1가목 전후 2개월 — 2024-06-15 → [2024-04-15 ~ 2024-08-15]", () => {
+    const slots = buildTwoMonthSurroundingSlots("2024-06-15");
+    expect(slots[0]).toBe("2024-04-15");
+    expect(slots[slots.length - 1]).toBe("2024-08-15");
+    // 4월(30) + 5월(31) + 6월(30) + 7월(31) + 8월(15) = 123일
+    expect(slots.length).toBe(123);
+  });
+
+  it("F-01 윤년 경계 — 2024-02-29 → [2023-12-29 ~ 2024-04-29]", () => {
+    const slots = buildTwoMonthSurroundingSlots("2024-02-29");
+    expect(slots[0]).toBe("2023-12-29");
+    expect(slots[slots.length - 1]).toBe("2024-04-29");
   });
 });

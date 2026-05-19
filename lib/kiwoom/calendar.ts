@@ -141,4 +141,39 @@ export function buildOneMonthAfterListingSlots(listingDateIso: string): string[]
   return slots;
 }
 
+/**
+ * §63①1가목 평가기준일 전후 2개월 슬롯 (상속·증여 평가).
+ *
+ * 상증법 §63①1가목 본문: "평가기준일 이전·이후 각 2개월" → 평가기준일 포함.
+ * 법률 용어 "이전·이후" = 평가기준일 포함 (사용자 검증 2026-05-19).
+ *
+ * 슬롯 = [평가기준일 − 2 month, 평가기준일 + 2 month]
+ *
+ * 예: 2024-06-15 → [2024-04-15 ~ 2024-08-15] 약 120일
+ *     2024-02-29 (윤년) → [2023-12-29 ~ 2024-04-29] 약 122일
+ *
+ * 평가기준일이 토·일이어도 anchor 시프트 없음 (전·후 모두 거래일 존재).
+ */
+export function buildTwoMonthSurroundingSlots(valuationDateIso: string): string[] {
+  if (!valuationDateIso || !/^\d{4}-\d{2}-\d{2}$/.test(valuationDateIso)) return [];
+  const [y, m, d] = valuationDateIso.split("-").map(Number);
+  const anchor = new Date(Date.UTC(y, m - 1, d));
+
+  // start = anchor − 2 month
+  const start = new Date(anchor);
+  start.setUTCMonth(start.getUTCMonth() - 2);
+
+  // end = anchor + 2 month
+  const end = new Date(anchor);
+  end.setUTCMonth(end.getUTCMonth() + 2);
+
+  const slots: string[] = [];
+  const cursor = new Date(start.getTime());
+  while (cursor.getTime() <= end.getTime()) {
+    slots.push(formatIsoDate(cursor));
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+  return slots;
+}
+
 export { KRX_HOLIDAY_FIXTURE_RANGE };

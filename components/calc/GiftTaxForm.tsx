@@ -221,6 +221,7 @@ function Step1({
           items={form.stockItems}
           onChange={(items) => set({ stockItems: items })}
           mode="gift"
+          valuationDate={form.giftDate}
         />
       </div>
     </div>

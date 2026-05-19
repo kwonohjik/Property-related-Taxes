@@ -60,9 +60,8 @@ const MARKET_OPTIONS = [
 export function MarketTypeBlock({ marketType, onChange }: MarketTypeBlockProps) {
   return (
     <FieldCard
-      label="시장 유형"
+      label=""
       hint="양도 주식이 거래되는 시장을 선택하세요. 비상장·기타자산은 별도 과세 요건을 확인하세요."
-      required
       trailing={
         <span className="text-xs text-sky-600 font-medium bg-sky-50 px-2 py-0.5 rounded">
           §94①3·4
@@ -76,6 +75,7 @@ export function MarketTypeBlock({ marketType, onChange }: MarketTypeBlockProps) 
         tone="sky"
         layout="stack"
         options={MARKET_OPTIONS}
+        className="grid grid-cols-1 sm:grid-cols-2 gap-2 space-y-0"
       />
 
       {/* 해외주식 선택 시 안내 */}

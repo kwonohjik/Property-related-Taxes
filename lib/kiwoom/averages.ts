@@ -18,6 +18,7 @@
 import {
   buildOneMonthBeforeSlots,
   buildOneMonthAfterListingSlots,
+  buildTwoMonthSurroundingSlots,
   nonTradingLabel,
   isKrxTradingDay,
 } from "./calendar";
@@ -116,6 +117,72 @@ export function oneMonthAfterListingAvg(
   args: OneMonthAfterListingArgs,
 ): OneMonthBeforeTransferResult {
   const slotDates = buildOneMonthAfterListingSlots(args.listingDateIso);
+  const quoteByDate = new Map<string, number>();
+  for (const q of args.quotes) {
+    if (q.close > 0) quoteByDate.set(q.date, q.close);
+  }
+
+  const closingPrices: (number | null)[] = [];
+  const weekendLabels: string[] = [];
+  let sum = 0;
+  let tradingDays = 0;
+
+  for (const iso of slotDates) {
+    const tradingDay = isKrxTradingDay(iso);
+    const label = nonTradingLabel(iso);
+    if (!tradingDay) {
+      closingPrices.push(null);
+      weekendLabels.push(label);
+      continue;
+    }
+    const close = quoteByDate.get(iso);
+    if (typeof close === "number" && close > 0) {
+      closingPrices.push(close);
+      weekendLabels.push("");
+      sum += close;
+      tradingDays += 1;
+    } else {
+      closingPrices.push(null);
+      weekendLabels.push("종가 없음");
+    }
+  }
+
+  const average = tradingDays > 0 ? Math.floor(sum / tradingDays) : 0;
+
+  return {
+    slotDates,
+    closingPrices,
+    weekendLabels,
+    tradingDays,
+    sum,
+    average,
+    tradingHalt: !!args.tradingHalt,
+    adminIssue: !!args.adminIssue,
+  };
+}
+
+// ============================================================
+// F-01 §63①1가목 평가기준일 전후 2개월 평균 (상속·증여 평가)
+// ============================================================
+
+export interface TwoMonthSurroundingArgs {
+  /** ka10081 응답 거래일 종가 배열 */
+  quotes: ReadonlyArray<KiwoomDailyQuote>;
+  /** "YYYY-MM-DD" — 평가기준일 (상속개시일 또는 증여일) */
+  valuationDateIso: string;
+  tradingHalt?: boolean;
+  adminIssue?: boolean;
+}
+
+/**
+ * §63①1가목 평가기준일 전후 2개월 1주당 종가 평균 (상속·증여 평가).
+ *
+ * 거래일 분모·휴장일 자동 제외 (상증령 §52의2④).
+ */
+export function twoMonthSurroundingAvg(
+  args: TwoMonthSurroundingArgs,
+): OneMonthBeforeTransferResult {
+  const slotDates = buildTwoMonthSurroundingSlots(args.valuationDateIso);
   const quoteByDate = new Map<string, number>();
   for (const q of args.quotes) {
     if (q.close > 0) quoteByDate.set(q.date, q.close);

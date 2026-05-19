@@ -216,6 +216,7 @@ function Step1({
           items={form.stockItems}
           onChange={(items) => set({ stockItems: items })}
           mode="inheritance"
+          valuationDate={form.deathDate}
         />
       </div>
     </div>

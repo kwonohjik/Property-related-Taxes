@@ -1,0 +1,109 @@
+✨ feat: F-01 §63①1가목 상속·증여 평가 자동조회 (전후 2개월 평균)
+
+## 목적
+
+상증법 §63①1가목 본문 — 상장주식 평가는 "평가기준일 이전·이후 각 2개월 동안의
+한국거래소 최종시세가액의 평균액" 사용.
+
+상속·증여세 마법사의 ListedStockEditor에서 자동조회로 평균값 산정 → listedStockAvgPrice mirror.
+
+법령 정확성: "이전·이후" = 평가기준일 포함 (사용자 검증 2026-05-19, 본 PR 인프라 정책 일치).
+
+## 본 PR 인프라 재사용
+
+- F-15·F-16 stock-master(4,384 종목) → 거래정지 자동 차단
+- F-10 stock-master 검색은 미사용 (UI에서 직접 종목코드 입력)
+- 신규 slot 알고리즘 + averages 함수 + Route handler + UI 버튼
+
+## 구현 4건
+
+### 1. lib/kiwoom/calendar.ts (수정)
+- buildTwoMonthSurroundingSlots(valuationDate) 신규
+- 슬롯 = [valuationDate − 2month, valuationDate + 2month] (평가기준일 포함)
+- 윤년 자동 보정 (JS Date overflow)
+
+### 2. lib/kiwoom/averages.ts (수정)
+- twoMonthSurroundingAvg() 신규
+- 거래일 분모·휴장일 자동 제외 (상증령 §52의2④)
+
+### 3. app/api/kiwoom/valuation-2month/route.ts (신규)
+- POST { stockCode, valuationDate } → 슬롯·평균
+- 거래정지 종목 409 차단
+- ka10081 base_dt = valuationDate + 2month (응답 200거래일 ≥ 약 88거래일 충분)
+- 캐시 hit miss 일관
+
+### 4. components/calc/KiwoomValuationAutoFetchButton.tsx (신규)
+- ListedStockEditor 마운트 (StockValuationForm)
+- syncName=true 옵션: 응답 stockName으로 종목명 자동 갱신
+- 평균값 + 거래일 + 합계 시각 표시
+
+### 5. components/calc/StockValuationForm.tsx (수정)
+- StockValuationFormProps.valuationDate 신규 (상속개시일·증여일)
+- EstateItem.listedStockCode 신규 입력 필드 (UI 메타)
+- 종목코드 + 평가기준일 충족 시 자동조회 버튼 표시
+
+### 6. components/calc/InheritanceTaxForm.tsx + GiftTaxForm.tsx (수정)
+- StockValuationForm에 valuationDate 전달 (deathDate · giftDate)
+
+### 7. lib/tax-engine/types/inheritance-gift.types.ts (수정)
+- EstateItem.listedStockCode?: string (optional UI 메타, 엔진 미전송)
+
+## 8개 동기화 지점 점검
+
+- ① 폼 상태: EstateItem 확장 — listedStockCode optional
+- ② initial value: optional 누락 OK (undefined)
+- ③ normalize: 별도 normalize 없음 (EstateItem은 단순 spread)
+- ④ API 변환: 엔진 미전송 (UI 메타)
+- ⑤ UI 위젯: ListedStockEditor input + 자동조회 버튼 추가
+- ⑥ 사이드바: 변경 없음
+- ⑦ 결과 카드: 변경 없음 (기존 listedStockAvgPrice × shares 산식 그대로)
+- ⑧ Validation: optional이므로 별도 검증 불요
+
+## anchor (2 신규)
+
+calendar.test.ts:
+- F-01 전후 2개월 — 2024-06-15 → [2024-04-15 ~ 2024-08-15] 123일
+- F-01 윤년 경계 — 2024-02-29 → [2023-12-29 ~ 2024-04-29]
+
+## 실호출 검증 (모의투자)
+
+```json
+POST /api/kiwoom/valuation-2month { "stockCode": "005930", "valuationDate": "2025-06-15" }
+→ {
+    "stockName": "삼성전자",
+    "valuationDate": "2025-06-15",
+    "slots": 123,
+    "tradingDays": 83,
+    "sum": 5050700,
+    "average": 60851,
+    "first": "2025-04-15", "last": "2025-08-15"
+}
+```
+
+## 시나리오 (상속·증여)
+
+1. 상속세·증여세 마법사 Step → 상속개시일·증여일 입력
+2. 주식 평가 섹션 → 상장주식 추가 → 종목코드 6자리 입력
+3. "🔍 키움 자동조회" 버튼 클릭 → 전후 2개월 평균 자동 산정
+4. listedStockAvgPrice 자동 mirror + 종목명도 자동 동기화 (syncName)
+5. 보유 주식수 입력 → 평가액 = 평균 × 주식수 자동 계산
+
+## 정책 준수
+
+- useEffect → store 미러링 0건 (onClick 핸들러 직접)
+- 자동 fallback 채움 0건 (네트워크 실패·거래정지 시 사용자 안내)
+- 추정 인용 금지 — slot 알고리즘 + 모의투자 실호출 검증
+
+## 회귀
+
+- 전체 3,812 PASS / 0 FAIL (이전 3,783 → +29)
+- kiwoom anchor 33 PASS (2 신규)
+- typecheck 0 error
+
+## 본 PR scope 외 (후속)
+
+- F-13 증자·합병 1개월 내 발생 시 기간 조정 (상증령 §52의2②②③)
+- F-12 자동조회 출처 라벨링 (kiwoomLastFetchedAt 표시)
+- 상속·증여 평가에 listedStockCode normalize·validate 추가 (현재 optional)
+
+Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>

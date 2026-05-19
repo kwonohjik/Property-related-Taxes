@@ -72,6 +72,8 @@ export interface EstateItem {
   /** 상장주식: 전후 2개월 일평균 종가 */
   listedStockAvgPrice?: number;
   listedStockShares?: number;
+  /** 상장주식 종목코드 (F-01 키움 자동조회 트리거 — 선택) */
+  listedStockCode?: string;
   /** 비상장주식 평가 데이터 */
   unlistedStockData?: UnlistedStockData;
   /** 임대차 정보 (임대보증금 차감) */
