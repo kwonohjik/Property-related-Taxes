@@ -53,6 +53,7 @@ function baseInput(overrides: Partial<StockTransferInput> = {}): StockTransferIn
     filingType: "preliminary",
     filingDate: new Date("2024-08-31"),
     isElectronicFiling: false,
+    filingViolation: "none",
     isFraudulent: false,
     isInternationalTransaction: false,
     realEstateGroupBasicDeductionUsed: 0,

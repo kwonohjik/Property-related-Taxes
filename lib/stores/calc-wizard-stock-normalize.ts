@@ -93,9 +93,33 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
     exchangePropertyValue: strField("exchangePropertyValue"),
     exchangeDebtRelief: strField("exchangeDebtRelief"),
     exchangeCash: strField("exchangeCash"),
-    acquisitionMode: enumField("acquisitionMode", ["actual", "sale_case", "appraisal", "estimated", "face_value"], defaults.acquisitionMode),
+    acquisitionMode: enumField("acquisitionMode", ["actual", "sale_case", "estimated", "face_value"], defaults.acquisitionMode),
     acquisitionActualInputMode: enumField("acquisitionActualInputMode", ["per_share", "lots"], defaults.acquisitionActualInputMode),
     perShareAcquisitionPrice: strField("perShareAcquisitionPrice"),
+    // R-1' 매매사례가액
+    acquisitionMarketSamplePrice: strField("acquisitionMarketSamplePrice"),
+    acquisitionMarketSampleDate: strField("acquisitionMarketSampleDate"),
+    acquisitionMarketSampleCounterparty: strField("acquisitionMarketSampleCounterparty"),
+    transferMarketSamplePrice: strField("transferMarketSamplePrice"),
+    transferMarketSampleDate: strField("transferMarketSampleDate"),
+    transferMarketSampleCounterparty: strField("transferMarketSampleCounterparty"),
+    // R-2 자본조정
+    capitalAdjustments: Array.isArray(d.capitalAdjustments)
+      ? (d.capitalAdjustments as unknown[]).map((row) => {
+          const r = (row ?? {}) as Record<string, unknown>;
+          const typeStr = typeof r.type === "string" ? r.type : "bonus_capital_reserve";
+          const allowedTypes = ["bonus_capital_reserve", "bonus_retained_earnings", "reduction_proportional", "reduction_capital_return"] as const;
+          const safeType = (allowedTypes as readonly string[]).includes(typeStr)
+            ? (typeStr as typeof allowedTypes[number])
+            : "bonus_capital_reserve";
+          return {
+            type: safeType,
+            eventDate: typeof r.eventDate === "string" ? r.eventDate : "",
+            ratio: typeof r.ratio === "string" ? r.ratio : "",
+            notes: typeof r.notes === "string" ? r.notes : "",
+          };
+        })
+      : [],
     transferDatePriceAvg1Month: strField("transferDatePriceAvg1Month"),
     acquisitionDatePriceAvg1Month: strField("acquisitionDatePriceAvg1Month"),
     transferStdInputMode: enumField("transferStdInputMode", ["direct", "daily"], defaults.transferStdInputMode),
@@ -119,6 +143,7 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
     filingType: enumField("filingType", ["preliminary", "final", "revised"], defaults.filingType),
     filingDate: strField("filingDate"),
     isElectronicFiling: boolField("isElectronicFiling", defaults.isElectronicFiling),
+    filingViolation: enumField("filingViolation", ["none", "under_report", "non_report"], defaults.filingViolation),
     isFraudulent: boolField("isFraudulent", defaults.isFraudulent),
     isInternationalTransaction: boolField("isInternationalTransaction", defaults.isInternationalTransaction),
     realEstateGroupBasicDeductionUsed: strField("realEstateGroupBasicDeductionUsed") || defaults.realEstateGroupBasicDeductionUsed,

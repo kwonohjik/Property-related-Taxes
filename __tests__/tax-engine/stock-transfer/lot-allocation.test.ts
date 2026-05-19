@@ -46,6 +46,7 @@ const baseInput = (): Omit<StockTransferInput, "acquisitionDate" | "transferDate
   filingType: "preliminary",
   filingDate: new Date("2025-05-31"),
   isElectronicFiling: false,
+  filingViolation: "none",
   isFraudulent: false,
   isInternationalTransaction: false,
   realEstateGroupBasicDeductionUsed: 0,

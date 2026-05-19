@@ -80,6 +80,7 @@ function case48Input(): StockTransferInput {
     filingType: "preliminary",
     filingDate: new Date("2023-08-31"),
     isElectronicFiling: false,
+    filingViolation: "none",
     isFraudulent: false,
     isInternationalTransaction: false,
 

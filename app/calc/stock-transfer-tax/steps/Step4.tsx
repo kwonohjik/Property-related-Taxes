@@ -72,6 +72,7 @@ export function Step4({ result, form, error, isLoading, onCalculate }: Step4Prop
           <StockTransferTaxResultView
             result={result}
             shareCount={shareCount}
+            filingViolation={form.filingViolation || "none"}
             isFraudulent={form.isFraudulent}
             isInternationalTransaction={form.isInternationalTransaction}
             transferActualInputMode={form.transferActualInputMode || "total"}

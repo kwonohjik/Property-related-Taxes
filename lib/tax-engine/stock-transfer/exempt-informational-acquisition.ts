@@ -65,8 +65,7 @@ export function computeInformationalAcquisition(
 
     if (
       acquisitionMode === "actual" ||
-      acquisitionMode === "sale_case" ||
-      acquisitionMode === "appraisal"
+      acquisitionMode === "sale_case"
     ) {
       const per = input.perShareAcquisitionPrice ?? 0;
       return {

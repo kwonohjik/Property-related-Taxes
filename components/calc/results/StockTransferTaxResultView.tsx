@@ -24,6 +24,8 @@ import { useUserProfile } from "@/lib/storage/use-user-profile";
 import { useProfessionalStore } from "@/lib/stores/professional-store";
 import { clientRepository } from "@/lib/storage";
 import { StockTransferPenaltySection } from "@/components/calc/results/StockTransferPenaltySection";
+import { MarketSampleDetailCard } from "@/components/calc/results/MarketSampleDetailCard";
+import { CapitalAdjustmentsTimelineCard } from "@/components/calc/results/CapitalAdjustmentsTimelineCard";
 import { printScoped } from "@/components/calc/results/transfer/TransferTaxResultViewHelpers";
 import { MARKET_LABEL } from "@/components/calc/stock-transfer/market-label";
 import { LotMatchingDetailCard } from "@/components/calc/results/LotMatchingDetailCard";
@@ -33,6 +35,8 @@ import { CaseFortyNineFormulaCard } from "@/components/calc/stock-transfer/CaseF
 interface StockTransferTaxResultViewProps {
   result: StockTransferResult;
   shareCount: number;
+  /** 신고 위반 여부 (가산세 게이트 — none이면 가산세 0) */
+  filingViolation?: "none" | "under_report" | "non_report";
   /** 부정행위 여부 (가산세 라벨용 — result에 없어서 form에서 별도 전달) */
   isFraudulent?: boolean;
   /** 국제거래 여부 (부정행위와 결합 시 60% 분기) */
@@ -168,6 +172,7 @@ function TransferPriceFormulaCard({
 export function StockTransferTaxResultView({
   result,
   shareCount,
+  filingViolation,
   isFraudulent,
   isInternationalTransaction,
   transferActualInputMode = "per_share",
@@ -388,9 +393,20 @@ export function StockTransferTaxResultView({
         <ProgressiveTaxBreakdown result={result} />
       )}
 
+      {/* R-1' 매매사례가액 detail */}
+      {result.marketSampleDetail && (
+        <MarketSampleDetailCard detail={result.marketSampleDetail} shareCount={shareCount} />
+      )}
+
+      {/* R-2 자본조정 시계열 */}
+      {result.capitalAdjustmentsDetail && (
+        <CapitalAdjustmentsTimelineCard detail={result.capitalAdjustmentsDetail} />
+      )}
+
       {/* 가산세·공제 상세 + 분기 안내 */}
       <StockTransferPenaltySection
         result={result}
+        filingViolation={filingViolation}
         isFraudulent={isFraudulent}
         isInternationalTransaction={isInternationalTransaction}
       />
@@ -646,12 +662,19 @@ function Warnings({ warnings }: { warnings: string[] }) {
 }
 
 function PrRoadmapCard() {
-  const stages = [
-    { label: "PR-1", desc: "상장 대주주·취득 후 상장", current: true },
-    { label: "PR-2", desc: "비상장·평가·시기별 연혁", current: false },
-    { label: "PR-3", desc: "다자산·가산세·신고서", current: false },
-    { label: "후속", desc: "§97의2·국외전출세·해외주식", current: false },
+  type PrStatus = "completed" | "current" | "pending";
+  const stages: { label: string; desc: string; status: PrStatus }[] = [
+    { label: "PR-1", desc: "상장 대주주·취득 후 상장", status: "completed" },
+    { label: "PR-2", desc: "비상장·평가·시기별 연혁", status: "completed" },
+    { label: "PR-3", desc: "다자산·가산세·신고서", status: "current" },
+    { label: "후속", desc: "§97의2·국외전출세·해외주식", status: "pending" },
   ];
+
+  const styleMap: Record<PrStatus, string> = {
+    completed: "border-emerald-300 bg-emerald-50 text-emerald-800",
+    current: "border-sky-400 bg-sky-100 text-sky-800",
+    pending: "border-slate-200 bg-white text-slate-600 opacity-60",
+  };
 
   return (
     <div className="rounded-xl border border-sky-200 bg-sky-50/60 px-5 py-4">
@@ -660,15 +683,14 @@ function PrRoadmapCard() {
         {stages.map((s) => (
           <div
             key={s.label}
-            className={`rounded-lg border px-3 py-2 text-center ${
-              s.current
-                ? "border-sky-400 bg-sky-100 text-sky-800"
-                : "border-sky-200 bg-white text-sky-600 opacity-60"
-            }`}
+            className={`rounded-lg border px-3 py-2 text-center ${styleMap[s.status]}`}
           >
             <p className="text-xs font-bold">{s.label}</p>
             <p className="text-xs mt-0.5">{s.desc}</p>
-            {s.current && (
+            {s.status === "completed" && (
+              <span className="mt-1 inline-block text-xs bg-emerald-500 text-white px-1 rounded">✓ 완료</span>
+            )}
+            {s.status === "current" && (
               <span className="mt-1 inline-block text-xs bg-sky-400 text-white px-1 rounded">현재</span>
             )}
           </div>

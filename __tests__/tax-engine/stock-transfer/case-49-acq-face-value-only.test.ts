@@ -37,6 +37,7 @@ function baseInput(patch: Partial<StockTransferInput> = {}): StockTransferInput 
     expenseMode: "actual",
     filingType: "preliminary",
     isElectronicFiling: false,
+    filingViolation: "none",
     isFraudulent: false,
     isInternationalTransaction: false,
     realEstateGroupBasicDeductionUsed: 0,

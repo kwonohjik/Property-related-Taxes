@@ -212,9 +212,34 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
   } else if (acquisitionMode === "face_value") {
     const faceVal = parseIntOrUndef(form.faceValuePerShare);
     if (faceVal !== undefined) body.faceValuePerShare = faceVal;
-  } else if (acquisitionMode === "sale_case" || acquisitionMode === "appraisal") {
+  } else if (acquisitionMode === "sale_case") {
     const perAcq = parseIntOrUndef(form.perShareAcquisitionPrice);
     if (perAcq !== undefined) body.perShareAcquisitionPrice = perAcq;
+    // R-1' 매매사례가액 — sale_case 모드 확장 (영§176의2③1호)
+    const acqMS = parseIntOrUndef(form.acquisitionMarketSamplePrice);
+    if (acqMS !== undefined) body.acquisitionMarketSamplePrice = acqMS;
+    if (form.acquisitionMarketSampleDate) body.acquisitionMarketSampleDate = form.acquisitionMarketSampleDate;
+    if (form.acquisitionMarketSampleCounterparty) body.acquisitionMarketSampleCounterparty = form.acquisitionMarketSampleCounterparty;
+  }
+
+  // R-1' 양도 매매사례가액 — acquisitionMode 무관, transferPriceMode === "actual" + 입력값 있을 때
+  if ((form.transferPriceMode || "actual") === "actual") {
+    const trnMS = parseIntOrUndef(form.transferMarketSamplePrice);
+    if (trnMS !== undefined) body.transferMarketSamplePrice = trnMS;
+    if (form.transferMarketSampleDate) body.transferMarketSampleDate = form.transferMarketSampleDate;
+    if (form.transferMarketSampleCounterparty) body.transferMarketSampleCounterparty = form.transferMarketSampleCounterparty;
+  }
+
+  // R-2 자본조정 — 단건 모드 전용 (split + adjustments는 Zod refine에서 차단)
+  if (form.capitalAdjustments && form.capitalAdjustments.length > 0 && form.lotsMode !== "split") {
+    body.capitalAdjustments = form.capitalAdjustments
+      .filter((a) => a.eventDate && a.ratio)
+      .map((a) => ({
+        type: a.type,
+        eventDate: a.eventDate,
+        ratio: parseFloat(a.ratio),
+        notes: a.notes || undefined,
+      }));
   }
 
   // 취득 후 상장 + 거래정지 (3중 패턴)
@@ -283,6 +308,7 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
   body.filingType = filingType;                                // 3중 패턴 default: "preliminary"
   body.filingDate = form.filingDate || new Date().toISOString().split("T")[0];
   body.isElectronicFiling = form.isElectronicFiling;          // default: false
+  body.filingViolation = form.filingViolation || "none";      // 3중 패턴 default: "none" — 가산세 게이트
   body.isFraudulent = form.isFraudulent;                      // default: false
   body.isInternationalTransaction = form.isInternationalTransaction;  // default: false
 

@@ -14,6 +14,8 @@ import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInp
 import { PostListingValuationCard } from "@/components/calc/stock-transfer/PostListingValuationCard";
 import { EstimatedUnlistedBlock } from "@/components/calc/stock-transfer/EstimatedUnlistedBlock";
 import { FaceValueBlock } from "@/components/calc/stock-transfer/FaceValueBlock";
+import { MarketSampleBlock } from "@/components/calc/stock-transfer/MarketSampleBlock";
+import { CapitalAdjustmentsBlock } from "@/components/calc/stock-transfer/CapitalAdjustmentsBlock";
 import { AcquisitionLotsMatrix } from "@/components/calc/stock-transfer/AcquisitionLotsMatrix";
 import {
   createEmptyAcquisitionLot,
@@ -254,15 +256,10 @@ export function Step2({ form, onChange }: Step2Props) {
                 {
                   value: "sale_case",
                   label: "매매사례가액",
-                  description: "비상장만 (상장주식 미적용) — PR-2에서 완전 지원",
+                  description: "비상장·기타자산 전용 (영§176의2③1호 — 주권상장법인 주식등 제외)",
                   disabled: isSplitMode,
                 },
-                {
-                  value: "appraisal",
-                  label: "감정가액",
-                  description: "PR-2에서 완전 지원",
-                  disabled: isSplitMode,
-                },
+                // 감정가액 모드 제거 — 영§176의2③2호 단서에 의해 주식등 적용 불가
                 {
                   value: "face_value",
                   label: "액면가 (장부분실)",
@@ -397,34 +394,20 @@ export function Step2({ form, onChange }: Step2Props) {
             <EstimatedUnlistedBlock form={form} onChange={onChange} />
           )}
 
-          {/* 매매사례가액 */}
+          {/* R-1' 매매사례가액 — sale_case 모드 강화 (영§176의2③1호) */}
           {acquisitionMode === "sale_case" && (
-            <div className="space-y-3">
-              {isListed && (
-                <div className="rounded border border-rose-200 bg-rose-50/60 px-3 py-2 text-sm text-rose-700">
-                  상장주식에는 매매사례가액을 적용할 수 없습니다 (비상장 전용).
-                </div>
-              )}
-              <CurrencyInput
-                label="1주당 매매사례가액"
-                hint="유사 매매사례 가액 (원)"
-                value={form.perShareAcquisitionPrice}
-                onChange={(v) => onChange({ perShareAcquisitionPrice: v })}
-              />
-            </div>
+            <MarketSampleBlock form={form} onChange={onChange} isListed={isListed} />
           )}
 
-          {/* 감정가액 placeholder */}
-          {acquisitionMode === "appraisal" && (
-            <div className="rounded-lg border border-slate-200 bg-slate-50/60 px-4 py-3 text-sm text-slate-600">
-              감정가액 입력은 PR-2에서 완전 지원 예정입니다.
-            </div>
-          )}
+          {/* 감정가액 모드 제거 — 영§176의2③2호 단서: 주식등 적용 불가 (2026-05-19) */}
 
           {/* 액면가 (장부분실) — PR-2 실구현 */}
           {acquisitionMode === "face_value" && (
             <FaceValueBlock form={form} onChange={onChange} />
           )}
+
+          {/* R-2 자본조정 (무상증자·감자) — 모든 모드 공통 (영§17② 단서) */}
+          <CapitalAdjustmentsBlock form={form} onChange={onChange} />
         </div>
       </section>
     </div>

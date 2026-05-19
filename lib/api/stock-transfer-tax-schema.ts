@@ -25,7 +25,6 @@ export const marketTypeSchema = z.enum([
 export const acquisitionModeSchema = z.enum([
   "actual",
   "sale_case",
-  "appraisal",
   "estimated",
   "face_value",
 ]);
@@ -52,7 +51,24 @@ export const acquisitionCauseSchema = z.enum([
 
 export const filingTypeSchema = z.enum(["preliminary", "final", "revised"]);
 
+export const filingViolationSchema = z.enum(["none", "under_report", "non_report"]);
+
 export const expenseModeSchema = z.enum(["actual", "estimated"]);
+
+// R-2 자본조정 (무상증자·감자) — 법§17② 단서·집행기준 97-163-12
+export const capitalAdjustmentTypeSchema = z.enum([
+  "bonus_capital_reserve",
+  "bonus_retained_earnings",
+  "reduction_proportional",
+  "reduction_capital_return",
+]);
+
+export const capitalAdjustmentSchema = z.object({
+  type: capitalAdjustmentTypeSchema,
+  eventDate: z.union([z.string(), z.date()]),
+  ratio: z.number().positive(),
+  notes: z.string().optional(),
+});
 
 // 분할 매수·분할 양도 (Plan v2.2)
 export const lotsModeSchema = z.enum(["single", "split"]);
@@ -182,6 +198,17 @@ export const stockTransferInputSchema = z.object({
   acquisitionActualInputMode: acquisitionActualInputModeSchema.optional(),  // default "per_share" (lots-only 모드)
   perShareAcquisitionPrice: z.number().min(0).optional(),
 
+  // R-1' 매매사례가액 (영§176의2③1호) — sale_case 모드 확장
+  acquisitionMarketSamplePrice: z.number().min(0).optional(),
+  acquisitionMarketSampleDate: z.union([z.string(), z.date()]).optional(),
+  acquisitionMarketSampleCounterparty: z.string().optional(),
+  transferMarketSamplePrice: z.number().min(0).optional(),
+  transferMarketSampleDate: z.union([z.string(), z.date()]).optional(),
+  transferMarketSampleCounterparty: z.string().optional(),
+
+  // R-2 자본조정 (무상증자·감자)
+  capitalAdjustments: z.array(capitalAdjustmentSchema).optional(),
+
   // 환산 — 상장
   transferDatePriceAvg1Month: z.number().min(0).optional(),
   acquisitionDatePriceAvg1Month: z.number().min(0).optional(),
@@ -222,6 +249,7 @@ export const stockTransferInputSchema = z.object({
   filingType: filingTypeSchema,
   filingDate: z.union([z.string(), z.date()]),
   isElectronicFiling: z.boolean(),
+  filingViolation: filingViolationSchema,
   isFraudulent: z.boolean(),
   isInternationalTransaction: z.boolean(),
 
@@ -269,6 +297,39 @@ export function addStockRefines(
         path: ["isInternationalTransaction"],
         message: "국제거래 부정 가산세(§47의2②1 단서)는 부정행위 과소신고(isFraudulent=true)와 함께 적용됩니다",
       });
+    }
+
+    // 부정행위·국제거래 가산은 신고 위반이 전제 (filingViolation !== "none")
+    if (data.filingViolation === "none" && (data.isFraudulent || data.isInternationalTransaction)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["filingViolation"],
+        message: "부정행위·국제거래 가산세는 신고 위반(과소신고 또는 무신고)이 전제됩니다. 신고 위반 여부를 선택하세요.",
+      });
+    }
+
+    // R-1' 매매사례가액 — 시장 유형 게이트 (영§176의2③1호 단서)
+    if (data.acquisitionMode === "sale_case") {
+      const isListed = ["kospi", "kosdaq", "konex"].includes(data.marketType as string);
+      if (isListed) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["acquisitionMode"],
+          message: "매매사례가액 모드는 비상장·기타자산 전용입니다 (영§176의2③1호 단서 — 주권상장법인 주식등 제외)",
+        });
+      }
+    }
+
+    // R-2 자본조정 — split 모드와 결합 차단
+    if (data.capitalAdjustments && data.capitalAdjustments.length > 0) {
+      const hasSplit = (data.acquisitionLots && data.acquisitionLots.length > 0) || (data.transferLots && data.transferLots.length > 0);
+      if (hasSplit) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["capitalAdjustments"],
+          message: "자본조정(무상증자·감자)은 단건 모드 전용입니다 (분할 매수 + 자본조정 결합은 후속 PR)",
+        });
+      }
     }
 
     // 기타자산 입력 시 관련 필드 최소 1개 필수

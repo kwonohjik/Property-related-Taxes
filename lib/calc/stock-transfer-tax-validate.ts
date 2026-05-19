@@ -16,6 +16,7 @@
  *   - isLargestShareholderGroup ?? false
  *   - bookLost ?? false
  *   - isElectronicFiling ?? false
+ *   - filingViolation || "none"
  *   - isFraudulent ?? false
  *   - isInternationalTransaction ?? false
  *   - realEstateGroupBasicDeductionUsed ?? 0
@@ -293,6 +294,14 @@ export function validateStep2(form: StockTransferFormData): StockValidationError
 
   // 분할 모드 호환성 (Plan v2.2 — UI 사전 차단 외 이중 검증)
   if (lotsMode === "split") {
+    // R-2 자본조정과 split 모드 결합 차단
+    if (form.capitalAdjustments && form.capitalAdjustments.length > 0) {
+      errors.push({
+        field: "capitalAdjustments",
+        message: "자본조정(무상증자·감자)은 단건 모드 전용입니다 (분할 매수 + 자본조정 결합은 후속 PR)",
+        severity: "error",
+      });
+    }
     if (acquisitionMode !== "actual") {
       errors.push({
         field: "acquisitionMode",
@@ -637,6 +646,87 @@ export function validateStep2(form: StockTransferFormData): StockValidationError
     });
   }
 
+  // ── R-1' 매매사례가액 (영§176의2③1호) ──
+  if (acquisitionMode === "sale_case") {
+    const isListed = ["kospi", "kosdaq", "konex"].includes(form.marketType);
+    if (isListed) {
+      errors.push({
+        field: "acquisitionMode",
+        message: "매매사례가액 모드는 비상장·기타자산 전용입니다 (영§176의2③1호 단서 — 주권상장법인 주식등 제외)",
+        severity: "error",
+      });
+    }
+    // 사례가 또는 legacy perShareAcquisitionPrice 둘 중 하나는 입력 필수
+    const samplePrice = parseI(form.acquisitionMarketSamplePrice);
+    const legacyPrice = parseI(form.perShareAcquisitionPrice);
+    if (samplePrice <= 0 && legacyPrice <= 0) {
+      errors.push({
+        field: "acquisitionMarketSamplePrice",
+        message: "취득 매매사례 1주당 가액을 입력하세요 (또는 1주당 취득가액으로 대체)",
+        severity: "error",
+      });
+    }
+  }
+
+  // ── R-2 자본조정 ──
+  if (form.capitalAdjustments && form.capitalAdjustments.length > 0) {
+    if ((form.lotsMode || "single") === "split") {
+      errors.push({
+        field: "capitalAdjustments",
+        message: "자본조정(무상증자·감자)은 단건 모드 전용입니다 (분할 매수 + 자본조정 결합은 후속 PR)",
+        severity: "error",
+      });
+    }
+    const acqDateStr = form.acquisitionDate;
+    const trnDateStr = form.transferDate;
+    form.capitalAdjustments.forEach((adj, idx) => {
+      const ratio = parseF(adj.ratio);
+      if (ratio <= 0) {
+        errors.push({
+          field: `capitalAdjustments[${idx}].ratio`,
+          message: `자본조정 #${idx + 1}: 비율은 0보다 커야 합니다`,
+          severity: "error",
+        });
+      }
+      if ((adj.type === "reduction_proportional" || adj.type === "reduction_capital_return") && ratio >= 1) {
+        errors.push({
+          field: `capitalAdjustments[${idx}].ratio`,
+          message: `자본조정 #${idx + 1}: 감자비율은 1 미만이어야 합니다 (100% 감자는 청산)`,
+          severity: "error",
+        });
+      }
+      if (adj.type.startsWith("bonus_") && ratio > 10) {
+        errors.push({
+          field: `capitalAdjustments[${idx}].ratio`,
+          message: `자본조정 #${idx + 1}: 무상증자 배정비율 10 초과 — 입력 확인 권장`,
+          severity: "warning",
+        });
+      }
+      if (isEmpty(adj.eventDate)) {
+        errors.push({
+          field: `capitalAdjustments[${idx}].eventDate`,
+          message: `자본조정 #${idx + 1}: 발생일을 입력하세요`,
+          severity: "error",
+        });
+      } else {
+        if (!isEmpty(acqDateStr) && adj.eventDate <= acqDateStr) {
+          errors.push({
+            field: `capitalAdjustments[${idx}].eventDate`,
+            message: `자본조정 #${idx + 1}: 발생일이 취득일 이전입니다 — 종전 보유자에게만 영향`,
+            severity: "error",
+          });
+        }
+        if (!isEmpty(trnDateStr) && adj.eventDate > trnDateStr) {
+          errors.push({
+            field: `capitalAdjustments[${idx}].eventDate`,
+            message: `자본조정 #${idx + 1}: 발생일이 양도일 이후입니다 — 본 양도 산정에 미반영`,
+            severity: "error",
+          });
+        }
+      }
+    });
+  }
+
   return errors;
 }
 
@@ -662,6 +752,16 @@ export function validateStep3(form: StockTransferFormData): StockValidationError
   // 신고일 필수
   if (isEmpty(form.filingDate)) {
     errors.push({ field: "filingDate", message: "신고일을 입력하세요", severity: "error" });
+  }
+
+  // 부정행위·국제거래 가산세는 신고 위반이 전제 (Zod refine과 3중 동기 — 14지점 ⑧)
+  const filingViolation = form.filingViolation || "none";
+  if (filingViolation === "none" && (form.isFraudulent || form.isInternationalTransaction)) {
+    errors.push({
+      field: "filingViolation",
+      message: "부정행위·국제거래 가산세는 신고 위반(과소신고 또는 무신고)이 전제됩니다. 신고 위반 여부를 선택하세요.",
+      severity: "error",
+    });
   }
 
   return errors;

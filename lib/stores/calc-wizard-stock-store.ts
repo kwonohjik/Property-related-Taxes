@@ -33,6 +33,18 @@ import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/
 // 분할 매수·분할 양도 lot 타입 (Plan v2.2)
 // ============================================================
 
+// R-2 자본조정 폼 (UI 측 string Date·string ratio)
+export interface CapitalAdjustmentForm {
+  type:
+    | "bonus_capital_reserve"
+    | "bonus_retained_earnings"
+    | "reduction_proportional"
+    | "reduction_capital_return";
+  eventDate: string;       // "YYYY-MM-DD"
+  ratio: string;            // parseDecimal로 변환
+  notes: string;
+}
+
 export interface AcquisitionLotForm {
   id: string;                                  // UUID (UI key, specificMatchings 참조)
   acquisitionDate: string;                     // "YYYY-MM-DD" (gift는 수증일)
@@ -132,7 +144,18 @@ export interface StockTransferFormData {
   exchangeCash: string;              // 교환: 현금
 
   // ── 취득가액 ──
-  acquisitionMode: "actual" | "sale_case" | "appraisal" | "estimated" | "face_value";  // 3중 패턴 default: "actual"
+  acquisitionMode: "actual" | "sale_case" | "estimated" | "face_value";  // 3중 패턴 default: "actual" (appraisal 제거 — §176의2③2호 단서 주식 적용 불가)
+
+  // ── R-1' 매매사례가액 (영§176의2③1호) — sale_case 모드 확장 (2026-05-19) ──
+  acquisitionMarketSamplePrice: string;       // 원
+  acquisitionMarketSampleDate: string;         // "YYYY-MM-DD"
+  acquisitionMarketSampleCounterparty: string;
+  transferMarketSamplePrice: string;
+  transferMarketSampleDate: string;
+  transferMarketSampleCounterparty: string;
+
+  // ── R-2 자본조정 (법§17② 단서 + 집행기준 97-163-12) — 2026-05-19 ──
+  capitalAdjustments: CapitalAdjustmentForm[];
   acquisitionActualInputMode: "per_share" | "lots";  // 3중 패턴 default: "per_share" — 실가 입력 방식 (lots-only 모드)
   perShareAcquisitionPrice: string;  // 실가 취득가
 
@@ -176,6 +199,7 @@ export interface StockTransferFormData {
   filingType: "preliminary" | "final" | "revised";  // 3중 패턴 default: "preliminary"
   filingDate: string;                    // "YYYY-MM-DD"
   isElectronicFiling: boolean;           // 3중 패턴 default: false
+  filingViolation: "none" | "under_report" | "non_report";  // 3중 패턴 default: "none" — 가산세 게이트
   isFraudulent: boolean;                 // 3중 패턴 default: false
   isInternationalTransaction: boolean;   // 3중 패턴 default: false
 
@@ -363,6 +387,15 @@ export function createInitialStockFormData(): StockTransferFormData {
     acquisitionMode: "actual",           // 3중 패턴 default
     acquisitionActualInputMode: "per_share", // 3중 패턴 default
     perShareAcquisitionPrice: "",
+    // R-1' 매매사례가액
+    acquisitionMarketSamplePrice: "",
+    acquisitionMarketSampleDate: "",
+    acquisitionMarketSampleCounterparty: "",
+    transferMarketSamplePrice: "",
+    transferMarketSampleDate: "",
+    transferMarketSampleCounterparty: "",
+    // R-2 자본조정
+    capitalAdjustments: [],
 
     transferDatePriceAvg1Month: "",
     acquisitionDatePriceAvg1Month: "",
@@ -392,6 +425,7 @@ export function createInitialStockFormData(): StockTransferFormData {
     filingType: "preliminary",           // 3중 패턴 default
     filingDate: "",
     isElectronicFiling: false,           // 3중 패턴 default
+    filingViolation: "none",             // 3중 패턴 default — 가산세 게이트 OFF
     isFraudulent: false,                 // 3중 패턴 default
     isInternationalTransaction: false,   // 3중 패턴 default
 

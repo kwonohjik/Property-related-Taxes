@@ -15,12 +15,14 @@ function fmt(n: number): string {
 
 interface PenaltyDetailCardProps {
   result: StockTransferResult;
+  filingViolation?: "none" | "under_report" | "non_report";
   isFraudulent?: boolean;
   isInternationalTransaction?: boolean;
 }
 
 export function StockTransferPenaltySection({
   result,
+  filingViolation,
   isFraudulent,
   isInternationalTransaction,
 }: PenaltyDetailCardProps) {
@@ -32,16 +34,19 @@ export function StockTransferPenaltySection({
     return null;
   }
 
-  // 발동된 분기 식별 (warnings에서 §47의2 추출)
-  const has47_2_1 = result.warnings.some((w) => w.includes("§47의2①1") || w.includes("§47의2 ①1"));
+  const violation = filingViolation || "none";
+  const isNonReport = violation === "non_report";
+  const isUnderReport = violation === "under_report";
   const isIntl = Boolean(isInternationalTransaction);
-  const underRate = isFraudulent && isIntl ? 60 : isFraudulent ? 40 : has47_2_1 ? 20 : 10;
+  const isFraud = Boolean(isFraudulent);
+
+  const underRate = isFraud && isIntl ? 60 : isFraud ? 40 : isNonReport ? 20 : 10;
   const underBasis =
-    isFraudulent && isIntl
+    isFraud && isIntl
       ? "§47의2②1 단서 — 국제거래 부정행위 60%"
-      : isFraudulent
+      : isFraud
         ? "§47의2②1 — 부정행위 40%"
-        : has47_2_1
+        : isNonReport
           ? "§47의2①1 — 무신고 20%"
           : "§47의2②2 — 일반 과소신고 10%";
 
@@ -54,7 +59,7 @@ export function StockTransferPenaltySection({
           {result.underReportPenalty > 0 && (
             <div className="flex justify-between py-2">
               <span className="text-rose-600">
-                {has47_2_1 ? "무신고" : "과소신고"} 가산세 ({underRate}%)
+                {isNonReport ? "무신고" : "과소신고"} 가산세 ({underRate}%)
               </span>
               <span className="font-medium text-rose-900">{fmt(result.underReportPenalty)}</span>
             </div>
@@ -95,29 +100,29 @@ export function StockTransferPenaltySection({
                 <th className="text-left px-3 py-2 font-semibold border-b border-rose-100">구분</th>
                 <th className="text-center px-3 py-2 font-semibold border-b border-rose-100 w-20">세율</th>
                 <th className="text-left px-3 py-2 font-semibold border-b border-rose-100">법령</th>
-                <th className="text-left px-3 py-2 font-semibold border-b border-rose-100">발동 조건</th>
+                <th className="text-left px-3 py-2 font-semibold border-b border-rose-100">적용 요건</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-rose-50">
-              <tr className={!isFraudulent && !has47_2_1 ? "bg-rose-100/40 font-semibold" : ""}>
+              <tr className={isUnderReport && !isFraud ? "bg-rose-100/40 font-semibold" : ""}>
                 <td className="px-3 py-2 text-slate-700">일반 과소신고</td>
                 <td className="px-3 py-2 text-center font-mono">10%</td>
                 <td className="px-3 py-2 text-slate-500">§47의2②2</td>
-                <td className="px-3 py-2 text-slate-600">신고는 했으나 산출세액 누락·과소</td>
+                <td className="px-3 py-2 text-slate-600">신고한 세액이 신고하여야 할 세액보다 적은 경우</td>
               </tr>
-              <tr className={has47_2_1 && !isFraudulent ? "bg-rose-100/40 font-semibold" : ""}>
+              <tr className={isNonReport && !isFraud ? "bg-rose-100/40 font-semibold" : ""}>
                 <td className="px-3 py-2 text-slate-700">무신고</td>
                 <td className="px-3 py-2 text-center font-mono">20%</td>
                 <td className="px-3 py-2 text-slate-500">§47의2①1</td>
                 <td className="px-3 py-2 text-slate-600">법정 신고기한까지 신고서 미제출</td>
               </tr>
-              <tr className={isFraudulent && !isIntl ? "bg-rose-100/40 font-semibold" : ""}>
+              <tr className={isFraud && !isIntl ? "bg-rose-100/40 font-semibold" : ""}>
                 <td className="px-3 py-2 text-slate-700">부정행위 과소</td>
                 <td className="px-3 py-2 text-center font-mono">40%</td>
                 <td className="px-3 py-2 text-slate-500">§47의2②1</td>
                 <td className="px-3 py-2 text-slate-600">부정행위(허위 증빙 등) 동반 과소신고</td>
               </tr>
-              <tr className={isFraudulent && isIntl ? "bg-rose-100/40 font-semibold" : ""}>
+              <tr className={isFraud && isIntl ? "bg-rose-100/40 font-semibold" : ""}>
                 <td className="px-3 py-2 text-slate-700">국제거래 부정</td>
                 <td className="px-3 py-2 text-center font-mono">60%</td>
                 <td className="px-3 py-2 text-slate-500">§47의2②1 단서</td>

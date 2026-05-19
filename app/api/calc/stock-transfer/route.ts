@@ -38,6 +38,11 @@ const STOCK_DATE_FIELDS = [
   "acquisitionLots[].decedentAcquisitionDate",
   "acquisitionLots[].preMergerAcquisitionDate",
   "transferLots[].transferDate",
+  // R-1' 매매사례가액 거래일
+  "acquisitionMarketSampleDate",
+  "transferMarketSampleDate",
+  // R-2 자본조정 발생일
+  "capitalAdjustments[].eventDate",
 ] as const;
 
 export async function POST(req: NextRequest) {
@@ -161,8 +166,20 @@ export async function POST(req: NextRequest) {
     filingType: coerced.filingType as StockTransferInput["filingType"],
     filingDate: coerced.filingDate as Date,
     isElectronicFiling: coerced.isElectronicFiling as boolean,
+    filingViolation: coerced.filingViolation as StockTransferInput["filingViolation"],
     isFraudulent: coerced.isFraudulent as boolean,
     isInternationalTransaction: coerced.isInternationalTransaction as boolean,
+
+    // R-1' 매매사례가액
+    acquisitionMarketSamplePrice: coerced.acquisitionMarketSamplePrice as number | undefined,
+    acquisitionMarketSampleDate: coerced.acquisitionMarketSampleDate as Date | undefined,
+    acquisitionMarketSampleCounterparty: coerced.acquisitionMarketSampleCounterparty as string | undefined,
+    transferMarketSamplePrice: coerced.transferMarketSamplePrice as number | undefined,
+    transferMarketSampleDate: coerced.transferMarketSampleDate as Date | undefined,
+    transferMarketSampleCounterparty: coerced.transferMarketSampleCounterparty as string | undefined,
+
+    // R-2 자본조정
+    capitalAdjustments: coerced.capitalAdjustments as StockTransferInput["capitalAdjustments"],
 
     realEstateGroupBasicDeductionUsed: coerced.realEstateGroupBasicDeductionUsed as number,
 
@@ -245,8 +262,18 @@ function buildEngineInput(coerced: Record<string, unknown>): StockTransferInput 
     filingType: coerced.filingType as StockTransferInput["filingType"],
     filingDate: coerced.filingDate as Date,
     isElectronicFiling: coerced.isElectronicFiling as boolean,
+    filingViolation: coerced.filingViolation as StockTransferInput["filingViolation"],
     isFraudulent: coerced.isFraudulent as boolean,
     isInternationalTransaction: coerced.isInternationalTransaction as boolean,
+    // R-1' 매매사례가액
+    acquisitionMarketSamplePrice: coerced.acquisitionMarketSamplePrice as number | undefined,
+    acquisitionMarketSampleDate: coerced.acquisitionMarketSampleDate as Date | undefined,
+    acquisitionMarketSampleCounterparty: coerced.acquisitionMarketSampleCounterparty as string | undefined,
+    transferMarketSamplePrice: coerced.transferMarketSamplePrice as number | undefined,
+    transferMarketSampleDate: coerced.transferMarketSampleDate as Date | undefined,
+    transferMarketSampleCounterparty: coerced.transferMarketSampleCounterparty as string | undefined,
+    // R-2 자본조정
+    capitalAdjustments: coerced.capitalAdjustments as StockTransferInput["capitalAdjustments"],
     realEstateGroupBasicDeductionUsed: coerced.realEstateGroupBasicDeductionUsed as number,
 
     // ── split 모드 (분할 매수·분할 양도 + lots-only 모드 합성) ──

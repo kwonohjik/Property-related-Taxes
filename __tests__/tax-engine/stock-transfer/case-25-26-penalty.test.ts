@@ -73,6 +73,7 @@ function penaltyBase(overrides: Partial<StockTransferInput> = {}): StockTransfer
     filingType: "preliminary",
     filingDate: new Date("2024-08-31"),
     isElectronicFiling: true,    // 전자신고 세액공제 20,000원
+    filingViolation: "under_report",  // penaltyBase는 가산세 시나리오 — 기본 과소신고 가정
     isFraudulent: false,
     isInternationalTransaction: false,
 
@@ -241,6 +242,7 @@ describe("가산세 비교 — 일반 과소신고 10% (default)", () => {
 describe("가산세 경계 — 전자신고 미신청 시 공제 없음", () => {
   const result = calculateStockTransferTax(
     penaltyBase({
+      filingViolation: "under_report",  // 부정행위 동반 과소신고
       isFraudulent: true,
       isInternationalTransaction: false,
       isElectronicFiling: false,   // 전자신고 OFF
@@ -264,5 +266,86 @@ describe("케이스 21 — 외국법인 validate 차단 (UI 레벨 — 엔진 �
     // 여기서는 차단 패턴을 문서화
     const foreignMarket = "out_of_scope_foreign";
     expect(foreignMarket).toBe("out_of_scope_foreign");
+  });
+});
+
+// ============================================================
+// filingViolation 게이트 매트릭스 anchor (2026-05-19)
+// 정상 신고 시 가산세 0 — UI에 false-positive "10% 가산세" 노출 차단
+// ============================================================
+
+describe("filingViolation 게이트 — 정상 신고 시 가산세 0 (FV-NONE)", () => {
+  const result = calculateStockTransferTax(
+    penaltyBase({
+      filingViolation: "none",
+      isFraudulent: false,
+      isInternationalTransaction: false,
+    }),
+  );
+
+  it("FV-NONE-01: underReportPenalty = 0 (정상 신고)", () => {
+    expect(result.underReportPenalty).toBe(0);
+  });
+
+  it("FV-NONE-02: finalTax = 19,480,000 (산출 19,500,000 − 전자신고 공제 20,000)", () => {
+    expect(result.finalTax).toBe(19_480_000);
+  });
+
+  it("FV-NONE-03: appliedRules에 §47의2 가산세 ref 없음", () => {
+    const allRules = [...(result.appliedRules ?? [])];
+    const hasPenaltyRule = allRules.some((r) => r.includes("§47의2"));
+    expect(hasPenaltyRule).toBe(false);
+  });
+});
+
+describe("filingViolation 게이트 — 무신고 20% (FV-NON-REPORT)", () => {
+  const result = calculateStockTransferTax(
+    penaltyBase({
+      filingViolation: "non_report",
+      isFraudulent: false,
+      isInternationalTransaction: false,
+    }),
+  );
+
+  it("FV-NR-01: underReportPenalty = 3,900,000 (§47의2①1 무신고 20%)", () => {
+    // 19,500,000 × 20% = 3,900,000
+    expect(result.underReportPenalty).toBe(3_900_000);
+  });
+
+  it("FV-NR-02: finalTax = 23,380,000 (19,500,000 + 3,900,000 − 20,000)", () => {
+    expect(result.finalTax).toBe(23_380_000);
+  });
+});
+
+describe("filingViolation 게이트 — 과소신고 10% (FV-UNDER-REPORT)", () => {
+  const result = calculateStockTransferTax(
+    penaltyBase({
+      filingViolation: "under_report",
+      isFraudulent: false,
+      isInternationalTransaction: false,
+    }),
+  );
+
+  it("FV-UR-01: underReportPenalty = 1,950,000 (§47의2②2 과소 10%)", () => {
+    expect(result.underReportPenalty).toBe(1_950_000);
+  });
+
+  it("FV-UR-02: finalTax = 21,430,000", () => {
+    expect(result.finalTax).toBe(21_430_000);
+  });
+});
+
+describe("filingViolation 게이트 — 무신고 + 부정행위 (FV-NON-REPORT-FRAUD)", () => {
+  // 무신고 ∩ 부정행위 → 40% (§47의2②1) — 부정행위 분기가 우선
+  const result = calculateStockTransferTax(
+    penaltyBase({
+      filingViolation: "non_report",
+      isFraudulent: true,
+      isInternationalTransaction: false,
+    }),
+  );
+
+  it("FV-NR-FRAUD-01: underReportPenalty = 7,800,000 (부정행위 40% 우선)", () => {
+    expect(result.underReportPenalty).toBe(7_800_000);
   });
 });

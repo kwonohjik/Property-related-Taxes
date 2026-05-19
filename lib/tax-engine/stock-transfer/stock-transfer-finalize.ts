@@ -26,34 +26,43 @@ export interface FinalizeStockResult {
 }
 
 /**
- * 신고불성실 가산세 (§47의2)
- * - 일반 과소신고: 10%
- * - 부정행위 과소신고: 40% (isFraudulent=true)
- * - 국제거래 부정: 60% (isInternationalTransaction=true)
+ * 신고불성실 가산세 (§47의2) — filingViolation 게이트 기반
  *
- * PR-1: 신고불성실(과소신고) 분기만 구현
- * PR-3: 무신고(20%) + 납부불성실(§47의4 일할) 추가
+ * 매트릭스 (filingViolation × 부정행위 × 국제거래):
+ * - none, *, *                  → 0 (정상 신고)
+ * - under_report, false, *      → 10% (§47의2②2)
+ * - under_report, true, false   → 40% (§47의2②1)
+ * - under_report, true, true    → 60% (§47의2②1 단서)
+ * - non_report,   false, *      → 20% (§47의2①1)
+ * - non_report,   true, false   → 40% (§47의2②1)
+ * - non_report,   true, true    → 60% (§47의2②1 단서)
  */
 function calcUnderReportPenalty(
   calculatedTax: number,
+  filingViolation: "none" | "under_report" | "non_report",
   isFraudulent: boolean,
   isInternationalTransaction: boolean,
 ): { penalty: number; ruleRef: string } {
   if (calculatedTax <= 0) return { penalty: 0, ruleRef: "" };
+  if (filingViolation === "none") return { penalty: 0, ruleRef: "" };
 
   let penaltyRate: number;
   let ruleRef: string;
 
   if (isFraudulent && isInternationalTransaction) {
-    // 국제거래 부정 60%
+    // 부정행위 + 국제거래 60% (§47의2②1 단서)
     penaltyRate = 0.60;
     ruleRef = STOCK.SECTION_47_2_2_1_INTERNATIONAL_FRAUD;
   } else if (isFraudulent) {
-    // 부정행위 40%
+    // 부정행위 40% (무신고·과소 공통)
     penaltyRate = 0.40;
     ruleRef = STOCK.SECTION_47_2_2_1_FRAUDULENT;
+  } else if (filingViolation === "non_report") {
+    // 일반 무신고 20% (§47의2①1)
+    penaltyRate = 0.20;
+    ruleRef = STOCK.SECTION_47_2_1_1_NO_REPORT;
   } else {
-    // 일반 과소신고 10% (PR-1 default — 무신고 20%는 PR-3)
+    // 일반 과소신고 10% (§47의2②2)
     penaltyRate = 0.10;
     ruleRef = STOCK.SECTION_47_2_1_2_UNDER_REPORT;
   }
@@ -70,12 +79,18 @@ export function finalizeStockTax(
   calculatedTax: number,
   input: StockTransferInput,
 ): FinalizeStockResult {
-  const { isFraudulent, isInternationalTransaction, isElectronicFiling } = input;
+  const {
+    filingViolation,
+    isFraudulent,
+    isInternationalTransaction,
+    isElectronicFiling,
+  } = input;
   const appliedRules: string[] = [];
 
   // STEP 10: 가산세
   const { penalty: underReportPenalty, ruleRef: penaltyRule } = calcUnderReportPenalty(
     calculatedTax,
+    filingViolation,
     isFraudulent,
     isInternationalTransaction,
   );

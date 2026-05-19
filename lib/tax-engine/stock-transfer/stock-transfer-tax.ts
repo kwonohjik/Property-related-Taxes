@@ -34,6 +34,7 @@ import {
 } from "./stock-valuation-unlisted";
 import { applyStockTaxRate } from "./stock-transfer-rate-calc";
 import { finalizeStockTax } from "./stock-transfer-finalize";
+import { buildPr2Detail } from "./stock-transfer-pr2-detail";
 import { STOCK, STOCK_ESTIMATED_EXPENSE_RATE } from "@/lib/tax-engine/legal-codes/stock";
 import { allocateLots } from "./lot-allocation";
 import { calcSplitModeTax } from "./lot-allocation-tax";
@@ -121,7 +122,13 @@ export function calculateStockTransferTax(input: StockTransferInput): StockTrans
     transferPrice = lotMatchingDetail.totalTransferPrice;
   } else if (input.transferPriceMode === "actual") {
     const actualMode = input.transferActualInputMode ?? "per_share";  // 3중 패턴 default
-    if (actualMode === "total") {
+    if (
+      input.transferMarketSamplePrice !== undefined &&
+      input.transferMarketSamplePrice > 0
+    ) {
+      // R-1' 매매사례가액 우선 (영§176의2③1호) — perShareTransferPrice 무시
+      transferPrice = Math.floor(input.transferMarketSamplePrice) * shareCount;
+    } else if (actualMode === "total") {
       transferPrice = input.transferTotalPrice ?? 0;                  // 총액 직접 사용
     } else {
       transferPrice = (input.perShareTransferPrice ?? 0) * shareCount;
@@ -308,21 +315,25 @@ export function calculateStockTransferTax(input: StockTransferInput): StockTrans
     }
 
   } else if (acquisitionMode === "sale_case") {
-    // 매매사례가액
-    acquisitionPrice = (input.perShareAcquisitionPrice ?? 0) * shareCount;
+    // R-1' 매매사례가액 — 영§176의2③1호 (주권상장법인 주식등 제외)
+    // 우선순위: acquisitionMarketSamplePrice → perShareAcquisitionPrice (legacy fallback)
+    const samplePerShare = input.acquisitionMarketSamplePrice && input.acquisitionMarketSamplePrice > 0
+      ? Math.floor(input.acquisitionMarketSamplePrice)
+      : (input.perShareAcquisitionPrice ?? 0);
+    acquisitionPrice = samplePerShare * shareCount;
     valuationDetail = {
       method: "actual_acquisition",
       netAssetFloorApplied: false,
-      finalPerShareValue: input.perShareAcquisitionPrice ?? 0,
+      finalPerShareValue: samplePerShare,
     };
 
   } else {
-    // appraisal — 감정평가액
-    acquisitionPrice = (input.perShareAcquisitionPrice ?? 0) * shareCount;
+    // 이론상 도달 불가 — acquisitionMode 4종 enum 모두 위에서 분기됨
+    acquisitionPrice = 0;
     valuationDetail = {
       method: "actual_acquisition",
       netAssetFloorApplied: false,
-      finalPerShareValue: input.perShareAcquisitionPrice ?? 0,
+      finalPerShareValue: 0,
     };
   }
 
@@ -331,6 +342,12 @@ export function calculateStockTransferTax(input: StockTransferInput): StockTrans
   if (usedEstimatedAcquisition && estimatedBase !== undefined && estimatedBase > 0) {
     estimatedDeduction = Math.floor(estimatedBase * STOCK_ESTIMATED_EXPENSE_RATE);
   }
+
+  // STEP 3.5 + 3.7: PR-2 detail (매매사례가액 + 자본조정) — sibling helper
+  const pr2 = buildPr2Detail(input, shareCount, acquisitionPrice, acquisitionMode);
+  const marketSampleDetail = pr2.marketSampleDetail;
+  const capitalAdjustmentsDetail = pr2.capitalAdjustmentsDetail;
+  warnings.push(...pr2.warningsDelta);
 
   // ──────────────────────────────────────────────────────────
   // STEP 4: 필요경비
@@ -465,6 +482,8 @@ export function calculateStockTransferTax(input: StockTransferInput): StockTrans
     estimatedDeduction,
 
     valuationDetail,
+    marketSampleDetail,
+    capitalAdjustmentsDetail,
 
     basicDeductionGroup: classification.basicDeductionGroup,
 

@@ -244,20 +244,70 @@ export function Step3({ form, onChange }: Step3Props) {
       <section>
         <SectionTitle n={5} title="가산세 (§47의2)" />
         <div className="space-y-3">
-          <ToggleCard
-            checked={form.isFraudulent}
-            onCheckedChange={(v) => onChange({ isFraudulent: v })}
-            title="부정행위 과소신고 (§47의2②1)"
-            description="부당과소신고 40% 가산세 — 허위 장부·증빙 등 부정 행위"
-            tone="rose"
-          />
-          <ToggleCard
-            checked={form.isInternationalTransaction}
-            onCheckedChange={(v) => onChange({ isInternationalTransaction: v })}
-            title="국제거래 부정행위 (§47의2②1 단서)"
-            description="국제거래 부정 60% 가산세"
-            tone="rose"
-          />
+          <FieldCard
+            label="신고 위반 여부"
+            hint="가산세는 법정 신고기한 도과·과소신고가 있을 때만 적용됩니다. 정상 신고면 '해당 없음'을 선택하세요."
+          >
+            <RadioCardGroup
+              name="filingViolation"
+              value={form.filingViolation || "none"}
+              onChange={(v) =>
+                onChange({
+                  filingViolation: v as "none" | "under_report" | "non_report",
+                  // 신고 위반 해제 시 부정행위·국제거래 플래그도 함께 해제 (3중 패턴 일관성)
+                  ...(v === "none"
+                    ? { isFraudulent: false, isInternationalTransaction: false }
+                    : {}),
+                })
+              }
+              tone="rose"
+              layout="stack"
+              options={[
+                {
+                  value: "none",
+                  label: "해당 없음 (정상 신고)",
+                  description: "법정 신고기한 내 신고 + 산출세액 정확 — 가산세 0",
+                },
+                {
+                  value: "under_report",
+                  label: "과소신고 (§47의2②2)",
+                  description: "신고는 했으나 산출세액 누락·과소 — 10% (부정행위 동반 시 40%/60%)",
+                },
+                {
+                  value: "non_report",
+                  label: "무신고 (§47의2①1)",
+                  description: "법정 신고기한까지 신고서 미제출 — 20% (부정행위 동반 시 40%/60%)",
+                },
+              ]}
+            />
+          </FieldCard>
+
+          {(form.filingViolation || "none") !== "none" && (
+            <>
+              <ToggleCard
+                checked={form.isFraudulent}
+                onCheckedChange={(v) =>
+                  onChange({
+                    isFraudulent: v,
+                    // 부정행위 해제 시 국제거래도 함께 해제 (단서 조건 종속)
+                    ...(!v ? { isInternationalTransaction: false } : {}),
+                  })
+                }
+                title="부정행위 동반 (§47의2②1)"
+                description="허위 장부·증빙 등 부정행위 동반 — 40% 가산"
+                tone="rose"
+              />
+              <ToggleCard
+                checked={form.isInternationalTransaction}
+                onCheckedChange={(v) => onChange({ isInternationalTransaction: v })}
+                title="국제거래 + 부정행위 (§47의2②1 단서)"
+                description="국제거래 + 부정행위 중복 가중 — 60% 가산 (부정행위 ON 필요)"
+                tone="rose"
+                disabled={!form.isFraudulent}
+                disabledReason="국제거래 부정 60%는 부정행위 동반(위 항목 ON)이 전제됩니다"
+              />
+            </>
+          )}
         </div>
       </section>
 

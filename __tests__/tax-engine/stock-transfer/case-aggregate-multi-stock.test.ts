@@ -65,6 +65,7 @@ function stockInput(overrides: Partial<StockTransferInput> = {}): StockTransferI
     filingType: "preliminary",
     filingDate: new Date("2024-08-31"),
     isElectronicFiling: false,
+    filingViolation: "none",
     isFraudulent: false,
     isInternationalTransaction: false,
 
@@ -239,9 +240,10 @@ describe("MA-04: 주식 2종목 고액 — 합산 과세 (§103②2호 250만 1�
     expect(result.totalCalculatedTax).toBe(19_500_000);
   });
 
-  it("MA-04-04: totalFinalTax = 21,450,000 (산출세액 + 가산세 10%)", () => {
-    // 19,500,000 + 19,500,000 × 10% = 19,500,000 + 1,950,000 = 21,450,000
-    expect(result.totalFinalTax).toBe(21_450_000);
+  it("MA-04-04: totalFinalTax = 19,500,000 (정상 신고 — filingViolation='none', 가산세 0)", () => {
+    // stockInput 기본값 filingViolation='none' → 가산세 게이트 OFF
+    // 산출세액 19,500,000 그대로 (전자신고 공제는 stockInput 기본 isElectronicFiling=false 가정)
+    expect(result.totalFinalTax).toBe(19_500_000);
   });
 
   it("MA-04-05: totalLocalIncomeTax = 1,950,000 (합산 산출세액 × 10%)", () => {

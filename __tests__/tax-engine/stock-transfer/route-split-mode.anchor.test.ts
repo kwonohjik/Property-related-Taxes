@@ -48,6 +48,7 @@ describe("LO-PRE-1: route.ts split 모드 — API 경로 회귀 보호", () => {
       filingType: "preliminary",
       filingDate: "2025-08-31",
       isElectronicFiling: false,
+      filingViolation: "none",
       isFraudulent: false,
       isInternationalTransaction: false,
       realEstateGroupBasicDeductionUsed: 0,

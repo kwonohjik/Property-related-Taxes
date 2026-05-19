@@ -95,7 +95,29 @@ export type StockTransferInput = {
   exchangeCash?: number;
 
   // 취득가액 모드
-  acquisitionMode: "actual" | "sale_case" | "appraisal" | "estimated" | "face_value";
+  acquisitionMode: "actual" | "sale_case" | "estimated" | "face_value";
+
+  // ── 매매사례가액 모드 (sale_case 강화 — 영§176의2③1호 비상장 한정) ──
+  /** 취득 매매사례 1주당 가액 (원) — sale_case 모드 활성 시 perShareAcquisitionPrice 대신 우선 적용 가능 */
+  acquisitionMarketSamplePrice?: number;
+  acquisitionMarketSampleDate?: Date;
+  acquisitionMarketSampleCounterparty?: string;
+  /** 양도 매매사례 1주당 가액 (원) — transferPriceMode === "actual"에서 perShareTransferPrice 대신 우선 적용 */
+  transferMarketSamplePrice?: number;
+  transferMarketSampleDate?: Date;
+  transferMarketSampleCounterparty?: string;
+
+  // ── 자본조정 (무상증자·감자) — 법§17② 단서·집행기준 97-163-12 ──
+  capitalAdjustments?: {
+    type:
+      | "bonus_capital_reserve"      // 자본준비금 무상증자 (양도세 — 단가 희석)
+      | "bonus_retained_earnings"    // 이익잉여금 무상증자 (의제배당 — skip)
+      | "reduction_proportional"     // 비례감자·결손보전 (양도세 — 단가 상승)
+      | "reduction_capital_return";  // 자본환급 무상감자 (의제배당 — skip)
+    eventDate: Date;
+    ratio: number;
+    notes?: string;
+  }[];
   perShareAcquisitionPrice?: number;
 
   // 환산 모드 — 상장 (1개월 종가평균)
@@ -171,6 +193,13 @@ export type StockTransferInput = {
   filingType: "preliminary" | "final" | "revised";
   filingDate: Date;
   isElectronicFiling: boolean;
+  /**
+   * 신고 위반 여부 (가산세 게이트) — default "none"
+   * - "none"        : 정상 신고 (가산세 0)
+   * - "under_report": 과소신고 (§47의2②2 10%, 부정행위 동반 시 40%/60%)
+   * - "non_report"  : 무신고 (§47의2①1 20%, 부정행위 동반 시 40%/60%)
+   */
+  filingViolation: "none" | "under_report" | "non_report";
   isFraudulent: boolean;
   isInternationalTransaction: boolean;
 
@@ -449,6 +478,44 @@ export type StockTransferResult = {
     netAssetOnlyReason?: string;
     /** [사례 49] 취득기준시가 총액 (acqFaceValuePerShare × shareCount echo) */
     acquisitionStdPriceTotal?: number;
+  };
+
+  // 매매사례가액 detail (R-1' — sale_case 강화)
+  marketSampleDetail?: {
+    acquisitionApplied: boolean;
+    transferApplied: boolean;
+    acquisitionPerShare?: number;
+    transferPerShare?: number;
+    /** 취득 사례 거래일 vs 취득일 차이 (일) */
+    acquisitionDeltaDays?: number;
+    /** 양도 사례 거래일 vs 양도일 차이 (일) */
+    transferDeltaDays?: number;
+    /** ±3개월 초과 warning 발동 여부 */
+    acquisitionOverThreeMonths: boolean;
+    transferOverThreeMonths: boolean;
+    warnings: string[];
+  };
+
+  // 자본조정 detail (R-2)
+  capitalAdjustmentsDetail?: {
+    baseShareCount: number;
+    adjustedShareCount: number;
+    baseTotalCost: number;
+    adjustedPerShareCost: number;
+    applied: {
+      type:
+        | "bonus_capital_reserve"
+        | "bonus_retained_earnings"
+        | "reduction_proportional"
+        | "reduction_capital_return";
+      eventDate: Date;
+      ratio: number;
+      beforeShares: number;
+      afterShares: number;
+      skipped: boolean;
+      reason?: string;
+    }[];
+    warnings: string[];
   };
 
   // 기본공제 그룹
