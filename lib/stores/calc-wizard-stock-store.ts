@@ -78,9 +78,13 @@ export interface SpecificMatchingForm {
 export interface StockTransferFormData {
   // ── 종목 메타데이터 (엔진 미전달 — 저장·이력·신고서 표시용) ──
   securityName: string;           // 종목명 (필수 — 빈문자 = 검증 오류)
-  securityCode: string;           // 종목코드 (선택)
+  securityCode: string;           // 종목코드 (선택) — 키움 자동조회 트리거로 재활용
   brokerage: string;              // 증권사 (선택)
   accountNumberMasked: string;    // 계좌번호 마스킹 (선택)
+
+  // ── 키움 자동조회 메타 (엔진 미전달 — UI/이력 표시용) ──
+  kiwoomTradingHalt: boolean;     // ka10001 응답 mirror — true 시 자동조회 차단 (상증령 §52의2③)
+  kiwoomLastFetchedAt: string;    // ISO 8601 — 마지막 자동조회 시각 (F-12 출처 라벨링)
 
   // ── 시장·회사 분류 ──
   marketType: "kospi" | "kosdaq" | "konex" | "unlisted" | "other_asset" | "";
@@ -338,6 +342,8 @@ export function createInitialStockFormData(): StockTransferFormData {
     securityCode: "",
     brokerage: "",
     accountNumberMasked: "",
+    kiwoomTradingHalt: false,
+    kiwoomLastFetchedAt: "",
 
     marketType: "",
     isMajorShareholder: false,

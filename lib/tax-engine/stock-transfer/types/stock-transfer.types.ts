@@ -121,10 +121,10 @@ export type StockTransferInput = {
   perShareAcquisitionPrice?: number;
 
   // 환산 모드 — 상장 (1개월 종가평균)
-  /** 양도일 직전 1개월 종가평균 (1주당, 원) — 모법 §99①3, 시행령 §163⑨ 분모 */
+  /** 양도일 직전 1개월 종가평균 (1주당, 원) — 모법 §99①3, 시행령 §165③ 준용 (상증령 §52의2④ 거래일 분모) */
   transferDatePriceAvg1Month?: number;
   /**
-   * 취득일 직전 1개월 종가평균 (1주당, 원) — 시행령 §163⑨ 분자.
+   * 취득일 직전 1개월 종가평균 (1주당, 원) — 모법 §99①3, 시행령 §165③ 준용 분자.
    *
    * 환산취득가 산식: 환산취득가 = 양도가 × (취득시 기준시가 / 양도시 기준시가)
    * 개산공제 §163⑥4: estimatedBase = acquisitionDatePriceAvg1Month × shareCount

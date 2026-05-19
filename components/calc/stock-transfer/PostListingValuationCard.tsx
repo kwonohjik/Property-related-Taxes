@@ -25,6 +25,7 @@ import { DateInput } from "@/components/ui/date-input";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 import { PostListingClosingPriceTable, autoFillDates, dayOfWeek } from "./PostListingClosingPriceTable";
 import { TransferDate1MonthClosingPriceTable } from "./TransferDate1MonthClosingPriceTable";
+import { KiwoomAutoFetchButton } from "./KiwoomAutoFetchButton";
 import { PostListingNetIncomeStatement } from "./PostListingNetIncomeStatement";
 import { PostListingNetAssetStatement } from "./PostListingNetAssetStatement";
 import { PostListingFormulaPreview } from "./PostListingFormulaPreview";
@@ -99,9 +100,9 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
         {/* direct 모드 — 기존 단일 숫자 입력 */}
         {(form.transferStdInputMode || "direct") === "direct" && (
           <FieldCard
-            label="양도일 직전 1개월 종가 평균 (1주당, §163⑨ 분모)"
+            label="양도일 직전 1개월 종가 평균 (1주당, §99①3 · 시행령 §165③ 준용)"
             required
-            hint="환산취득가 산식의 분모. 미입력 시 §163⑨ 환산 미적용으로 1주당 취득기준시가가 그대로 취득가로 표시됩니다."
+            hint="환산취득가 산식의 분모. 미입력 시 환산 미적용으로 1주당 취득기준시가가 그대로 취득가로 표시됩니다."
           >
             <CurrencyInput
               label=""
@@ -116,12 +117,20 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
         {/* daily 모드 — 일자별 종가표 + 자동 평균 mirror */}
         {form.transferStdInputMode === "daily" && (
           <>
+            {/* 키움 자동조회 버튼 — 종목코드 + 양도일 + 상장 종목 충족 시 활성화 */}
+            <KiwoomAutoFetchButton
+              securityCode={form.securityCode}
+              transferDate={form.transferDate}
+              marketType={form.marketType}
+              tradingHalt={form.kiwoomTradingHalt}
+              onFill={onChange}
+            />
             <TransferDate1MonthClosingPriceTable form={form} onChange={onChange} />
             {form.transferDatePriceAvg1Month && parseAmount(form.transferDatePriceAvg1Month) > 0 && (
               <div className="rounded-lg border border-emerald-300 bg-emerald-50/60 px-4 py-3 text-sm">
                 <p className="text-emerald-800">
                   자동 산정 평균 = <strong>{parseAmount(form.transferDatePriceAvg1Month).toLocaleString()}</strong>
-                  {" "}원 → transferDatePriceAvg1Month에 자동 mirror됨 (§163⑨ 환산 분모로 사용)
+                  {" "}원 → transferDatePriceAvg1Month에 자동 mirror됨 (§99①3 · 시행령 §165③ 준용 환산 분모)
                 </p>
               </div>
             )}
