@@ -139,19 +139,9 @@ export function SecurityMetadataBlock({
         </FieldCard>
       </div>
 
-      {/* 종목명 / 종목코드 — 한 행 좌·우 배치 */}
+      {/* 종목코드(좌) → 종목명(우) — 종목코드 입력 시 종목명 자동 채움 흐름 */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <FieldCard label="종목명" required>
-          <input
-            type="text"
-            value={securityName}
-            onChange={(e) => onChange({ securityName: e.target.value })}
-            placeholder="종목명을 입력하세요"
-            className={inputClassName}
-          />
-        </FieldCard>
-
-        <FieldCard label="종목코드 (선택)" hint="6자리 입력 후 포커스 이동 시 키움 자동조회로 시장구분·거래정지 자동 확인">
+        <FieldCard label="종목코드 (선택)" hint="6자리 입력 후 포커스 이동 시 키움 자동조회로 종목명·시장구분·거래정지 자동 확인">
           <input
             type="text"
             value={securityCode}
@@ -186,6 +176,16 @@ export function SecurityMetadataBlock({
             maxLength={6}
             inputMode="numeric"
             placeholder="6자리 숫자"
+            className={inputClassName}
+          />
+        </FieldCard>
+
+        <FieldCard label="종목명" required>
+          <input
+            type="text"
+            value={securityName}
+            onChange={(e) => onChange({ securityName: e.target.value })}
+            placeholder="종목명을 입력하세요"
             className={inputClassName}
           />
         </FieldCard>
