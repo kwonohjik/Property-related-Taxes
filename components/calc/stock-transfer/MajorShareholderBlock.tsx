@@ -36,6 +36,8 @@ import { MARKET_LABEL } from "@/components/calc/stock-transfer/market-label";
 import { MajorThresholdTimeline } from "@/components/calc/stock-transfer/MajorThresholdTimeline";
 import { computeAutoIsMajor } from "@/components/calc/stock-transfer/major-sync";
 import { KiwoomMarketCapHelper } from "./KiwoomMarketCapHelper";
+// F-06 (2026-05-19) — 직전사업연도 종료일 비거래일 → 직전거래일 적용 안내
+import { isKrxTradingDay, nonTradingLabel } from "@/lib/kiwoom/calendar";
 // Phase C (2026-05-19) — 교재 Check Point 9건 UI hint 그룹
 import {
   MarketCapHintsCard,
@@ -197,6 +199,29 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
   // (잠긴 토글이 닫혀 입력 자체에 접근 불가하던 닭-달걀 문제 차단)
   const isAutoJudgmentActive = threshold !== null;
 
+  // F-06 (2026-05-19) — 직전사업연도 종료일 거래일 여부 검증
+  // 시행령 §157①·교재 §3장 이미지 49 (3) ① 단서:
+  // "직전사업연도 종료일 현재의 최종시세가액이 없는 경우에는 직전거래일의 최종시세가액"
+  const priorYearEndTradingStatus = useMemo(() => {
+    if (!form.priorYearEndDate || !/^\d{4}-\d{2}-\d{2}$/.test(form.priorYearEndDate)) {
+      return null;
+    }
+    // 상장 시장(kospi/kosdaq/konex)에만 적용 — 비상장은 §165④ 보충적 평가 별도
+    if (
+      form.marketType !== "kospi" &&
+      form.marketType !== "kosdaq" &&
+      form.marketType !== "konex"
+    ) {
+      return null;
+    }
+    const isTrading = isKrxTradingDay(form.priorYearEndDate);
+    if (isTrading) return { isTrading: true as const };
+    return {
+      isTrading: false as const,
+      reason: nonTradingLabel(form.priorYearEndDate),
+    };
+  }, [form.priorYearEndDate, form.marketType]);
+
   const innerContent = (
     <div className={isAutoJudgmentActive ? "space-y-4" : "mt-4 space-y-4"}>
         <FieldCard label="직전 사업연도 종료일" required hint="통상 전년 12월 31일. 사업연도가 다른 경우 해당 연도 종료일.">
@@ -205,6 +230,24 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
             onChange={(v) => handleAutoSyncChange({ priorYearEndDate: v })}
           />
         </FieldCard>
+
+        {/* F-06 (2026-05-19) — 직전사업연도 종료일 비거래일 안내
+            시행령 §157① · 교재 §3장 이미지 49 (3) ①: 종료일 종가 없으면 직전거래일 종가 적용 */}
+        {priorYearEndTradingStatus && !priorYearEndTradingStatus.isTrading && (
+          <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+            <p className="font-semibold">
+              ⚠️ 비거래일 입력 — 직전거래일 종가 적용 필요 (§157①, 교재 49 (3) ①)
+            </p>
+            <p className="mt-1 text-amber-800">
+              <strong>{form.priorYearEndDate}</strong>은 {priorYearEndTradingStatus.reason}입니다.
+              해당 일자 종가가 없는 경우 <strong>직전거래일 최종시세가액</strong>을 사용해야 합니다.
+            </p>
+            <p className="mt-1 text-[10px] text-amber-700">
+              💡 키움증권 자동조회는 비거래일 입력 시 직전거래일 종가를 자동 적용합니다.
+              수동 입력 시 사용자가 직전거래일 시세로 시가총액을 산정한 뒤 입력해 주세요.
+            </p>
+          </div>
+        )}
 
         {/* F-04 키움 시가총액 자동 산정 — Step1 종목코드 + 직전 사업연도말 + 보유 주식수 충족 시 활성화 */}
         <KiwoomMarketCapHelper

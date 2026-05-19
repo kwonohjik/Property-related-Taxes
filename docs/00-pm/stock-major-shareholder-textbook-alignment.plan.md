@@ -1,6 +1,6 @@
-# 주식 양도소득세 — 대주주 판정 교재 정합화 계획서 v5
+# 주식 양도소득세 — 대주주 판정 교재 정합화 계획서 v6
 
-> 작성일: 2026-05-19 (v5 — Phase C 완료 반영)
+> 작성일: 2026-05-19 (v6 — F-06 완료 반영)
 > 작성자: Claude (Opus 4.7)
 > 영향 도메인: `lib/tax-engine/stock-transfer/` + `components/calc/stock-transfer/` + `__tests__/tax-engine/stock-transfer/`
 > 우선순위: **P0 (오판정 직결)** — 비상장 벤처 시총 임계 누락 + 2016.4.1.~12.31. 구간 시기 매트릭스 부정확
@@ -11,6 +11,7 @@
 > v2 → v3 변경 사항: §16 정정 이력 참조 (P0 2건 + P1 2건 + P2 6건 = 10건 추가 반영).
 > v3 → v4 변경 사항: §17 정정 이력 참조 (디자인 1·2차 검토 + Plan↔Design 통합 검토 결과 6건 반영).
 > v4 → v5 변경 사항: §18 정정 이력 참조 (Phase C 후속 PR → 본 PR 완료로 이동, hint 9종 + 3 그룹 collapsible UI 구현).
+> v5 → v6 변경 사항: §19 정정 이력 참조 (F-06 후속 PR → 본 PR 완료로 이동, 비거래일 검증 hint 추가).
 
 ---
 
@@ -419,7 +420,7 @@ Phase A·B Plan/Design 완료 후 Do 진입 전:
 
 ## 12. 후속 PR (본 계획 범위 외)
 
-- **F-06** — 직전거래일 종가 자동 fallback (한국거래소 OpenAPI 연계 검토)
+- ~~**F-06**~~ — ✅ 본 PR 완료 (수동 입력 경로 안내 hint + 키움 자동 fallback 기존 보존)
 - **F-08 ① / F-23 ⑯** — 상장 전환 / 신설법인 설립등기일 기준일 자동화
 - **F-09 ② / F-10 ③ / F-14 ⑦** — 합병·분할 등기일 분기
 - **F-12 ⑤ / F-13 ⑥** — 자본시장법 §178 투자기구 / 중소기업창업투자조합 합산 분기
@@ -549,7 +550,32 @@ Phase A·B Plan/Design 완료 후 Do 진입 전:
 
 **v5 후속 PR 범위 (본 PR 완료 이후)**:
 - F-24 — 본인 미보유 시 합산 강제 분기
-- F-06 — 직전거래일 fallback
+- ~~F-06 — 직전거래일 fallback~~ (v6에서 완료)
 - F-08~F-14·F-23 — 합병·분할·신설법인 특수분기
 - F-15·F-16 자동 가산 — 대차주식·사모펀드 엔진 자동 시총 가산 (현행은 사용자 수기)
 - F-25 — 2016.1.1. 의무보호예수 부칙
+
+---
+
+## 19. 정정 이력 (v5 → v6, 2026-05-19) — F-06 완료 반영
+
+본 절은 v5 작성 후 사용자 요청으로 F-06(직전거래일 fallback)을 본 PR로 통합 완료한 이력.
+
+| # | 변경 항목 | v5 상태 | v6 결과 |
+|---|---|---|---|
+| 1 | F-06 범위 결정 | "별도 PR — 직전거래일 fallback" (§12 후속) | **본 PR 통합 완료** (사용자 요청 2026-05-19) |
+| 2 | 키움 API 자동 fallback | 이미 구현됨 (`/api/kiwoom/daily-close` `priorTradingDate` 반환) | 변경 없음 — 기존 동작 보존 |
+| 3 | KiwoomMarketCapHelper 안내 | 이미 구현됨 (`info.priorTradingDate`·`info.date` 비교 표시) | 변경 없음 — 기존 동작 보존 |
+| 4 | 수동 입력 경로 안내 | 미구현 — 비거래일 인지 수단 없음 | **`MajorShareholderBlock`에 비거래일 검증 hint 추가** (amber tone) — 비상장·키움 미연동 사용자 대상 |
+| 5 | `isKrxTradingDay`·`nonTradingLabel` 재사용 | 외부 모듈에서만 사용 | `MajorShareholderBlock` `priorYearEndTradingStatus` useMemo에 통합 — store 미러링 없이 derived state |
+
+**v6 구현 상세**:
+- `MajorShareholderBlock.tsx` import에 `isKrxTradingDay`·`nonTradingLabel` 추가 (`lib/kiwoom/calendar`)
+- `priorYearEndTradingStatus` useMemo — `form.priorYearEndDate` + `form.marketType` 의존성
+  - 상장 3시장(kospi/kosdaq/konex)에서만 활성 — 비상장은 §165④ 보충적 평가 별도 트랙
+  - 비거래일이면 `{ isTrading: false, reason: "토요일 · 거래일 제외" 등 }` 반환
+- amber tone 안내 카드 — `priorYearEndDate` FieldCard 직후 노출
+  - "비거래일 입력 — 직전거래일 종가 적용 필요 (§157①, 교재 49 (3) ①)" 헤더
+  - 사용자 입력일자 + 비거래일 사유 + 안내 문구
+  - 키움 자동조회 사용 권장 + 수동 입력 시 사용자 책임 명시
+- 메모리 [[feedback_useeffect_store_mirror_forbidden]] 정합 — useMemo derived state로 store 미러링 없음
