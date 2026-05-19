@@ -19,6 +19,7 @@
 import { useState } from "react";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 import { isKiwoomFetchable, type StoreMarketType } from "@/lib/kiwoom/market-mapping";
+import { preTransferAutoFillDates } from "./PostListingClosingPriceTable";
 
 interface Props {
   securityCode: string;
@@ -93,14 +94,39 @@ export function KiwoomAutoFetchButton({
         tradingHalt: boolean;
       };
 
-      // 31-슬롯 매핑: 거래일 종가만 채우고, 비거래일은 빈 문자열 유지.
-      const dates = data.slotDates;
-      const closings = data.closingPrices.map((c) => (typeof c === "number" ? String(c) : ""));
+      // ★ API slotDates(양도일 미포함)와 UI displayDates(양도일 포함, anchor 시프트) 차이 보정.
+      // 종가를 일자 키로 Map 매핑한 후 UI displayDates에 align해서 슬롯 시프트 차단.
+      const apiCloseByDate = new Map<string, number>();
+      data.slotDates.forEach((d, i) => {
+        const c = data.closingPrices[i];
+        if (typeof c === "number") apiCloseByDate.set(d, c);
+      });
+
+      const displayDates = preTransferAutoFillDates(transferDate);
+      const dates = displayDates;
+      const closings = displayDates.map((d) => {
+        const c = apiCloseByDate.get(d);
+        return typeof c === "number" ? String(c) : "";
+      });
+
+      // displayDates 기준 평균 재산정 (양도일 포함 알고리즘 — API 기간과 1일 차이 가능)
+      let sum = 0;
+      let n = 0;
+      for (const v of closings) {
+        if (v) {
+          const num = Number(v);
+          if (num > 0) {
+            sum += num;
+            n += 1;
+          }
+        }
+      }
+      const avg = n > 0 ? Math.floor(sum / n) : 0;
 
       onFill({
         transferPriceDates: dates,
         transferPriceClosing: closings,
-        transferDatePriceAvg1Month: data.average > 0 ? String(data.average) : "",
+        transferDatePriceAvg1Month: avg > 0 ? String(avg) : "",
         kiwoomTradingHalt: data.tradingHalt,
         kiwoomLastFetchedAt: new Date().toISOString(),
       });

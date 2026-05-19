@@ -2,29 +2,15 @@ import { describe, it, expect } from "vitest";
 import { oneMonthBeforeTransferAvg } from "@/lib/kiwoom/averages";
 
 describe("oneMonthBeforeTransferAvg — anchor", () => {
-  // K-AVG-01: KOSPI 정상 — 거래일 22일 × 종가 80,000 = 평균 80,000
-  it("K-AVG-01: 일정 종가 80,000 22거래일 → 평균 80,000", () => {
-    // 2024-06-03 양도 → [2024-05-03 ~ 2024-06-02] 거래일 22일 (어린이날 5/6, 부처님오신날 5/15 휴장, 토일 8일)
+  // K-AVG-01: 일정 종가 80,000 거래일 → 평균 80,000
+  // 새 알고리즘 [5/4 ~ 6/3] 양도일 포함. 5/4(토)·5/5(일)·5/6(어린이날대체)·5/11(토)·5/12(일)·5/15(부처님)·5/18(토)·5/19(일)·5/25(토)·5/26(일)·6/1(토)·6/2(일) 제외
+  it("K-AVG-01: 일정 종가 80,000 거래일 → 평균 80,000", () => {
     const quotes = [
-      "2024-05-03",
-      "2024-05-07",
-      "2024-05-08",
-      "2024-05-09",
-      "2024-05-10",
-      "2024-05-13",
-      "2024-05-14",
-      "2024-05-16",
-      "2024-05-17",
-      "2024-05-20",
-      "2024-05-21",
-      "2024-05-22",
-      "2024-05-23",
-      "2024-05-24",
-      "2024-05-27",
-      "2024-05-28",
-      "2024-05-29",
-      "2024-05-30",
-      "2024-05-31",
+      "2024-05-07", "2024-05-08", "2024-05-09", "2024-05-10",
+      "2024-05-13", "2024-05-14", "2024-05-16", "2024-05-17",
+      "2024-05-20", "2024-05-21", "2024-05-22", "2024-05-23", "2024-05-24",
+      "2024-05-27", "2024-05-28", "2024-05-29", "2024-05-30", "2024-05-31",
+      "2024-06-03",
     ].map((date) => ({ date, close: 80000 }));
 
     const result = oneMonthBeforeTransferAvg({
@@ -32,7 +18,7 @@ describe("oneMonthBeforeTransferAvg — anchor", () => {
       transferDateIso: "2024-06-03",
     });
 
-    expect(result.tradingDays).toBe(19); // 위 19일 종가 매핑
+    expect(result.tradingDays).toBe(19);
     expect(result.average).toBe(80000);
     expect(result.sum).toBe(80000 * 19);
   });
@@ -44,13 +30,13 @@ describe("oneMonthBeforeTransferAvg — anchor", () => {
       transferDateIso: "2024-06-03",
     });
 
-    // 2024-05-04 토요일
-    const satIdx = result.slotDates.indexOf("2024-05-04");
+    // 2024-05-11 토요일 (새 알고리즘 슬롯 [5/4 ~ 6/3] 내)
+    const satIdx = result.slotDates.indexOf("2024-05-11");
     expect(satIdx).toBeGreaterThan(-1);
     expect(result.closingPrices[satIdx]).toBeNull();
     expect(result.weekendLabels[satIdx]).toContain("토요일");
 
-    // 2024-05-05 어린이날 (일요일과 겹침)
+    // 2024-05-05 일요일·어린이날
     const childrensDayIdx = result.slotDates.indexOf("2024-05-05");
     expect(childrensDayIdx).toBeGreaterThan(-1);
     expect(result.closingPrices[childrensDayIdx]).toBeNull();
@@ -66,7 +52,7 @@ describe("oneMonthBeforeTransferAvg — anchor", () => {
       ],
       transferDateIso: "2024-06-03",
     });
-    // 3거래일, 합 301 → floor(301/3) = 100
+    // 3거래일 (slot [5/4~6/3] 안), 합 301 → floor(301/3) = 100
     expect(result.tradingDays).toBe(3);
     expect(result.average).toBe(100);
   });

@@ -23,6 +23,7 @@ import { useMemo } from "react";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { calcMonthlyClosingAverage } from "@/lib/tax-engine/stock-transfer/stock-valuation-post-listing";
 import { dayOfWeek, preTransferAutoFillDates, resolvePreTransferAnchor } from "./PostListingClosingPriceTable";
+import { isKrxHolidayInFixture, nonTradingLabel } from "@/lib/kiwoom/calendar";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 
 interface TransferDate1MonthClosingPriceTableProps {
@@ -36,16 +37,18 @@ interface TransferDate1MonthClosingPriceTableProps {
 export function TransferDate1MonthClosingPriceTable({ form, onChange }: TransferDate1MonthClosingPriceTableProps) {
   // 양도일 기반 일자 자동 채움 (UTC + 윤년 처리)
   const displayDates = useMemo(() => preTransferAutoFillDates(form.transferDate), [form.transferDate]);
+
   const anchor = useMemo(() => resolvePreTransferAnchor(form.transferDate), [form.transferDate]);
   const anchorShifted = anchor !== "" && anchor !== form.transferDate;
   const total = displayDates.length;
   const leftCount = Math.ceil(total / 2);
 
-  // 미리보기 — 자동 평균 산정 (주말 + 빈문자 자동 제외)
+  // 미리보기 — 자동 평균 산정 (주말 + KRX 휴장일 + 빈문자 자동 제외)
   const preview = useMemo(() => {
     const closes = displayDates.map((d, i) => {
       const dow = dayOfWeek(d);
       if (dow === 0 || dow === 6) return 0;
+      if (isKrxHolidayInFixture(d)) return 0; // KRX 평일 휴장일 제외 (대선·현충일 등)
       return parseAmount(form.transferPriceClosing[i] || "0");
     });
     return calcMonthlyClosingAverage(displayDates, closes);
@@ -72,10 +75,11 @@ export function TransferDate1MonthClosingPriceTable({ form, onChange }: Transfer
     const next = [...form.transferPriceClosing];
     while (next.length < total) next.push("");
     next.length = total;
-    // 주말 셀 zero-out (transferDate 변경 시 인덱스 misalign 차단)
+    // 비거래일 셀 zero-out (transferDate 변경 시 인덱스 misalign 차단)
     for (let i = 0; i < total; i++) {
       const dow = dayOfWeek(displayDates[i]);
       if (dow === 0 || dow === 6) next[i] = "";
+      else if (isKrxHolidayInFixture(displayDates[i])) next[i] = ""; // KRX 평일 휴장일
     }
     next[idx] = value;
 
@@ -83,6 +87,7 @@ export function TransferDate1MonthClosingPriceTable({ form, onChange }: Transfer
     const closes = displayDates.map((d, i) => {
       const dow = dayOfWeek(d);
       if (dow === 0 || dow === 6) return 0;
+      if (isKrxHolidayInFixture(d)) return 0;
       return parseAmount(next[i] || "0");
     });
     const { avg } = calcMonthlyClosingAverage(displayDates, closes);
@@ -130,17 +135,24 @@ export function TransferDate1MonthClosingPriceTable({ form, onChange }: Transfer
             <div key={col} className="space-y-1">
               {Array.from({ length: end - start }, (_, i) => {
                 const idx = start + i;
-                const dow = dayOfWeek(displayDates[idx] ?? "");
+                const iso = displayDates[idx] ?? "";
+                const dow = dayOfWeek(iso);
                 const isWeekend = dow === 0 || dow === 6;
-                const weekendLabel = dow === 6 ? "토요일" : dow === 0 ? "일요일" : "";
+                const isHoliday = !isWeekend && isKrxHolidayInFixture(iso);
+                const nonTrading = isWeekend || isHoliday;
+                const label = isWeekend
+                  ? (dow === 6 ? "토요일 · 거래일 제외" : "일요일 · 거래일 제외")
+                  : isHoliday
+                    ? nonTradingLabel(iso) || "휴장일 · 거래일 제외"
+                    : "";
                 return (
                   <div key={idx} data-slot-idx={idx} className="grid grid-cols-[110px_1fr] gap-2 items-center">
                     <span className="text-muted-foreground tabular-nums">
                       {idx + 1}. {displayDates[idx] || "-"}
                     </span>
-                    {isWeekend ? (
+                    {nonTrading ? (
                       <div className="rounded-md border border-amber-200/60 bg-amber-100/40 px-3 py-2 text-[11px] text-amber-700 select-none">
-                        {weekendLabel} · 거래일 제외
+                        {label}
                       </div>
                     ) : (
                       <CurrencyInput

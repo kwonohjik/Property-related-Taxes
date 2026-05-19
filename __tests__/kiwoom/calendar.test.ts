@@ -25,19 +25,28 @@ describe("KRX calendar — anchor", () => {
     expect(nonTradingLabel("2020-12-31")).toContain("휴장일");
   });
 
-  // K-LEAP-01: 윤년 2024-03-01 슬롯 수 29일
-  it("K-LEAP-01: 2024-03-01 양도일 → 1개월 슬롯 29일 (2024-02-01 ~ 2024-02-29 윤년)", () => {
+  // K-LEAP-01: 윤년 2024-03-01 슬롯 — 양도일 포함 [2/2 ~ 3/1] 29일
+  // 법률 용어 "양도일 이전 1개월" = 양도일 포함 (사용자 검증)
+  it("K-LEAP-01: 2024-03-01 양도일 → [2024-02-02 ~ 2024-03-01] 29일 (양도일 포함)", () => {
     const slots = buildOneMonthBeforeSlots("2024-03-01");
-    expect(slots[0]).toBe("2024-02-01");
-    expect(slots[slots.length - 1]).toBe("2024-02-29");
+    expect(slots[0]).toBe("2024-02-02");
+    expect(slots[slots.length - 1]).toBe("2024-03-01");
     expect(slots.length).toBe(29);
   });
 
-  // 일반 케이스: 2024-06-03 → 2024-05-03 ~ 2024-06-02 (31일)
-  it("일반: 2024-06-03 → 2024-05-03 ~ 2024-06-02 (31일)", () => {
+  // 일반 케이스: 2024-06-03 (월) → [2024-05-04 ~ 2024-06-03] 31일
+  it("일반: 2024-06-03 → [2024-05-04 ~ 2024-06-03] 31일", () => {
     const slots = buildOneMonthBeforeSlots("2024-06-03");
-    expect(slots[0]).toBe("2024-05-03");
-    expect(slots[slots.length - 1]).toBe("2024-06-02");
+    expect(slots[0]).toBe("2024-05-04");
+    expect(slots[slots.length - 1]).toBe("2024-06-03");
+    expect(slots.length).toBe(31);
+  });
+
+  // anchor 시프트: 2025-06-21 (토) → anchor=6/20 (금) → [2025-05-21 ~ 2025-06-20] 31일
+  it("anchor 시프트: 2025-06-21 (토) 양도일 → anchor 6/20 (금) → [2025-05-21 ~ 2025-06-20] 31일", () => {
+    const slots = buildOneMonthBeforeSlots("2025-06-21");
+    expect(slots[0]).toBe("2025-05-21");
+    expect(slots[slots.length - 1]).toBe("2025-06-20");
     expect(slots.length).toBe(31);
   });
 });

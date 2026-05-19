@@ -69,25 +69,40 @@ export function nonTradingLabel(iso: string): string {
 }
 
 /**
- * §163⑨ 분모 기간 [transferDate − 1 month, transferDate − 1 day].
+ * §99①3·§165③ "양도일 이전 1개월" 슬롯 기간 — 양도일 포함.
  *
- * - 양도일 미포함.
- * - 윤년 처리: 2024-03-01 → [2024-02-01 ~ 2024-02-29] (29일).
- * - 일반: 2024-06-01 → [2024-05-01 ~ 2024-05-31] (31일).
+ * 법률 용어 정의 (사용자 검증, 2026-05-19):
+ *   - "이전·이후" = 양도일 포함
+ *   - "전·후" = 양도일 미포함
+ *
+ * 따라서 본 평균 분모 = [transferDate − 1 month + 1 day, transferDate] (양도일 포함).
+ *
+ * anchor 시프트: 양도일이 토·일이면 직전 평일(금요일)로 anchor 이동 후 동일 산식.
+ *   (양도일이 거래일 아니면 종가 부재 → 직전 거래일을 분모 마지막 일자로)
+ *
+ * - 윤년 처리: 2024-03-01 (금) → anchor=3/1 → [2024-02-02 ~ 2024-03-01] (29일).
+ * - 일반: 2024-06-03 (월) → anchor=6/3 → [2024-05-04 ~ 2024-06-03] (31일).
+ * - 토요일: 2025-06-21 (토) → anchor=6/20 (금) → [2025-05-21 ~ 2025-06-20] (31일).
  */
 export function buildOneMonthBeforeSlots(transferDateIso: string): string[] {
-  const transfer = parseIsoDate(transferDateIso);
-  // start = transferDate − 1 month
-  const startY = transfer.getUTCFullYear();
-  const startM = transfer.getUTCMonth() - 1;
-  const startD = transfer.getUTCDate();
-  const start = new Date(Date.UTC(startY, startM, startD));
-  // end = transferDate − 1 day
-  const end = new Date(Date.UTC(transfer.getUTCFullYear(), transfer.getUTCMonth(), transfer.getUTCDate() - 1));
+  if (!transferDateIso || !/^\d{4}-\d{2}-\d{2}$/.test(transferDateIso)) return [];
 
+  // anchor 시프트 — 양도일이 토·일이면 직전 평일까지 이동
+  const [y, m, d] = transferDateIso.split("-").map(Number);
+  const anchor = new Date(Date.UTC(y, m - 1, d));
+  while (anchor.getUTCDay() === 0 || anchor.getUTCDay() === 6) {
+    anchor.setUTCDate(anchor.getUTCDate() - 1);
+  }
+
+  // start = anchor (month-1, day+1) — JS overflow 자동 보정
+  const start = new Date(anchor);
+  start.setUTCMonth(start.getUTCMonth() - 1);
+  start.setUTCDate(start.getUTCDate() + 1);
+
+  // end = anchor (포함)
   const slots: string[] = [];
   const cursor = new Date(start.getTime());
-  while (cursor.getTime() <= end.getTime()) {
+  while (cursor.getTime() <= anchor.getTime()) {
     slots.push(formatIsoDate(cursor));
     cursor.setUTCDate(cursor.getUTCDate() + 1);
   }
