@@ -127,6 +127,30 @@ export function validateStep1(form: StockTransferFormData): StockValidationError
     }
   }
 
+  // F-15·F-16 (2026-05-19) — 대차/사모펀드 자동 가산 입력 검증 (비음수 정수)
+  const lentRaw = form.lentSharesCount?.trim();
+  if (lentRaw && lentRaw !== "" && lentRaw !== "0") {
+    const lent = parseI(form.lentSharesCount);
+    if (!Number.isFinite(lent) || lent < 0) {
+      errors.push({
+        field: "lentSharesCount",
+        message: "대차주식 수는 0 이상 정수여야 합니다 (시행령 §157 2013.2.15.~)",
+        severity: "error",
+      });
+    }
+  }
+  const pefRaw = form.pefIndirectSharesCount?.trim();
+  if (pefRaw && pefRaw !== "" && pefRaw !== "0") {
+    const pef = parseI(form.pefIndirectSharesCount);
+    if (!Number.isFinite(pef) || pef < 0) {
+      errors.push({
+        field: "pefIndirectSharesCount",
+        message: "사모펀드 간접소유 주식 수는 0 이상 정수여야 합니다 (시행령 §157 2013.2.15.~)",
+        severity: "error",
+      });
+    }
+  }
+
   // 분할 매수·분할 양도 모드 분기 (Plan v2.2) — 폼-전역 acquisitionDate/transferDate는 single 한정
   const lotsMode = form.lotsMode || "single";
 

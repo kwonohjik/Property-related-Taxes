@@ -134,6 +134,9 @@ export async function POST(req: NextRequest) {
     isVentureCompany: coerced.isVentureCompany as boolean,
     isKOTCTrading: coerced.isKOTCTrading as boolean,
     isOnMarketTransaction: coerced.isOnMarketTransaction as boolean,
+    // F-15·F-16 (2026-05-19) §157 2013.2.15.~ — 대차/사모펀드 자동 가산
+    lentSharesCount: coerced.lentSharesCount as number,
+    pefIndirectSharesCount: coerced.pefIndirectSharesCount as number,
 
     acquisitionDate: coerced.acquisitionDate as Date,
     transferDate: coerced.transferDate as Date,

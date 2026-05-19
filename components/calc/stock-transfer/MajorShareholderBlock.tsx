@@ -67,6 +67,10 @@ type MajorShareholderFormSlice = Pick<
   | "kiwoomTradingHalt"
   // Phase B (2026-05-19) — 비상장 벤처기업 시총 임계 40억 분기
   | "isVentureCompany"
+  // F-15·F-16 (2026-05-19) — 대차주식·사모펀드 간접소유 자동 가산
+  | "lentSharesCount"
+  | "pefIndirectSharesCount"
+  | "transferDate"
 >;
 
 /**
@@ -221,6 +225,12 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
       reason: nonTradingLabel(form.priorYearEndDate),
     };
   }, [form.priorYearEndDate, form.marketType]);
+
+  // F-15·F-16 (2026-05-19) — 양도일 2013.2.15. 이후 자동 가산 게이트
+  const f15f16Eligible = useMemo(() => {
+    if (!form.transferDate || !/^\d{4}-\d{2}-\d{2}$/.test(form.transferDate)) return false;
+    return form.transferDate >= "2013-02-15";
+  }, [form.transferDate]);
 
   const innerContent = (
     <div className={isAutoJudgmentActive ? "space-y-4" : "mt-4 space-y-4"}>
@@ -434,6 +444,52 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
               value={form.combinedMarketCap}
               onChange={(v) => handleAutoSyncChange({ combinedMarketCap: v })}
             />
+
+            {/* F-15·F-16 (2026-05-19) — 대차/사모펀드 자동 가산 입력 */}
+            <div className={`rounded-lg border p-3 space-y-3 ${
+              f15f16Eligible ? "border-amber-300 bg-amber-50/60" : "border-slate-200 bg-slate-50/40"
+            }`}>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-amber-900">
+                  F-15·F-16 대차·사모펀드 자동 가산 (시행령 §157 2013.2.15.~)
+                </span>
+                {!f15f16Eligible && (
+                  <span className="text-[10px] text-slate-500">
+                    {form.transferDate ? `양도일 ${form.transferDate}은 2013.2.15. 이전 → 미적용` : "양도일 입력 시 활성화"}
+                  </span>
+                )}
+              </div>
+              <FieldCard
+                label="F-15 대차주식 수"
+                hint="본인이 대여 중인 주식 수. 양도일 2013.2.15. 이후 자동 합산 (지분율 가산)"
+                unit="주"
+              >
+                <DecimalInput
+                  value={form.lentSharesCount}
+                  onChange={(v) => onChange({ lentSharesCount: v })}
+                  thousandSeparator
+                  disabled={!f15f16Eligible}
+                />
+              </FieldCard>
+              <FieldCard
+                label="F-16 사모펀드 간접소유 주식 수"
+                hint="본인·기타주주가 사모펀드 통해 간접소유. 양도일 2013.2.15. 이후 자동 합산"
+                unit="주"
+              >
+                <DecimalInput
+                  value={form.pefIndirectSharesCount}
+                  onChange={(v) => onChange({ pefIndirectSharesCount: v })}
+                  thousandSeparator
+                  disabled={!f15f16Eligible}
+                />
+              </FieldCard>
+              {f15f16Eligible && (parseDecimal(form.lentSharesCount) > 0 || parseDecimal(form.pefIndirectSharesCount) > 0) && (
+                <p className="text-[10px] text-amber-700 bg-amber-100/70 px-2 py-1 rounded">
+                  ✓ 양도일 2013.2.15. 이후 — 엔진이 지분율에 자동 가산합니다.
+                  시가총액 가산은 사용자 입력 책임 (가격 외부 의존).
+                </p>
+              )}
+            </div>
 
             {/* Phase C (2026-05-19) — Group C: 특수관계인 합산 hint 3건 */}
             <CombinedShareHintsCard />

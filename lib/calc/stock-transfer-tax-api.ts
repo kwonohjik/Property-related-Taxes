@@ -295,6 +295,9 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
     isVentureCompany: form.isVentureCompany,        // 3중 패턴 default: false
     isKOTCTrading: form.isKOTCTrading,              // 3중 패턴 default: false
     isOnMarketTransaction: form.isOnMarketTransaction, // §94①3 가목 1) 단서 — 3중 패턴 default: true
+    // F-15·F-16 (2026-05-19) — 대차주식·사모펀드 간접소유 자동 가산 (시행령 §157 2013.2.15.~)
+    lentSharesCount: parseIntOrUndef(form.lentSharesCount) ?? 0,
+    pefIndirectSharesCount: parseIntOrUndef(form.pefIndirectSharesCount) ?? 0,
 
     // ── 거래 일자·수량 ──
     acquisitionDate: form.acquisitionDate,

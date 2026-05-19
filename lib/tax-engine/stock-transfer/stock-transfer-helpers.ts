@@ -177,6 +177,9 @@ export function buildAppliedThreshold(
     // Phase B (2026-05-19) — 비상장 벤처기업 임계 분기 전파
     isVentureRule: t.isVentureRule,
     ruleSource: t.ruleSource,
+    // F-15·F-16 (2026-05-19) — 대차·사모펀드 자동 가산 적용 echo
+    shareAugmentationApplied: classification.shareAugmentationApplied,
+    augmentedShares: classification.augmentedShares,
   };
 }
 

@@ -1,6 +1,6 @@
-# 주식 양도소득세 — 대주주 판정 교재 정합화 계획서 v6
+# 주식 양도소득세 — 대주주 판정 교재 정합화 계획서 v7
 
-> 작성일: 2026-05-19 (v6 — F-06 완료 반영)
+> 작성일: 2026-05-19 (v7 — F-15·F-16 자동 가산 완료)
 > 작성자: Claude (Opus 4.7)
 > 영향 도메인: `lib/tax-engine/stock-transfer/` + `components/calc/stock-transfer/` + `__tests__/tax-engine/stock-transfer/`
 > 우선순위: **P0 (오판정 직결)** — 비상장 벤처 시총 임계 누락 + 2016.4.1.~12.31. 구간 시기 매트릭스 부정확
@@ -12,6 +12,7 @@
 > v3 → v4 변경 사항: §17 정정 이력 참조 (디자인 1·2차 검토 + Plan↔Design 통합 검토 결과 6건 반영).
 > v4 → v5 변경 사항: §18 정정 이력 참조 (Phase C 후속 PR → 본 PR 완료로 이동, hint 9종 + 3 그룹 collapsible UI 구현).
 > v5 → v6 변경 사항: §19 정정 이력 참조 (F-06 후속 PR → 본 PR 완료로 이동, 비거래일 검증 hint 추가).
+> v6 → v7 변경 사항: §20 정정 이력 참조 (F-15·F-16 자동 가산 후속 PR → 본 PR 완료로 이동).
 
 ---
 
@@ -424,7 +425,7 @@ Phase A·B Plan/Design 완료 후 Do 진입 전:
 - **F-08 ① / F-23 ⑯** — 상장 전환 / 신설법인 설립등기일 기준일 자동화
 - **F-09 ② / F-10 ③ / F-14 ⑦** — 합병·분할 등기일 분기
 - **F-12 ⑤ / F-13 ⑥** — 자본시장법 §178 투자기구 / 중소기업창업투자조합 합산 분기
-- **F-15 ⑧ / F-16 ⑨ 자동 가산** — 대차주식·사모펀드 입력값을 엔진에서 자동 시총 가산 (본 PR은 사용자 수기 합산)
+- ~~**F-15 ⑧ / F-16 ⑨ 자동 가산**~~ — ✅ v7 완료 (지분율 자동 가산, 시총은 사용자 책임)
 - **F-24 ⑰ 본인 미보유 시 합산 강제** (★ v3 신설) — 직전사업연도 종료일 본인 보유주식 0% + 특수관계인 합산만으로 대주주 판정 강제 분기. 기획재정부 금융세제-327, 2020.12.10.
 - **F-25** — 2016.1.1. 의무보호예수 부칙 토글
 
@@ -579,3 +580,37 @@ Phase A·B Plan/Design 완료 후 Do 진입 전:
   - 사용자 입력일자 + 비거래일 사유 + 안내 문구
   - 키움 자동조회 사용 권장 + 수동 입력 시 사용자 책임 명시
 - 메모리 [[feedback_useeffect_store_mirror_forbidden]] 정합 — useMemo derived state로 store 미러링 없음
+
+---
+
+## 20. 정정 이력 (v6 → v7, 2026-05-19) — F-15·F-16 자동 가산 완료 반영
+
+| # | 변경 항목 | v6 상태 | v7 결과 |
+|---|---|---|---|
+| 1 | F-15·F-16 범위 결정 | "후속 PR — 자동 가산 (엔진 측)" | **본 PR 통합 완료** (사용자 요청 2026-05-19) |
+| 2 | 엔진 입력 필드 | UI hint만 (사용자 사전 합산 책임) | **`lentSharesCount`·`pefIndirectSharesCount` optional 신설** (default 0) |
+| 3 | 시행일자 가드 | 미구현 | `transferDate >= 2013-02-15` 일 때만 가산 적용 (시행령 §157 부칙 검증) |
+| 4 | 지분율 자동 가산 | 미구현 | `judgeIsMajorShareholder` 에서 `(lent + pef) / totalIssuedShares` 로 effectiveShareRatio 가산 |
+| 5 | 시가총액 가산 정책 | 미구현 | **미적용 — 가격 외부 의존** (UI hint로 사용자 책임 안내) |
+| 6 | appliedThreshold echo | 5필드 → 7필드 | **9필드 확장** (`shareAugmentationApplied?`·`augmentedShares?` 추가) |
+| 7 | appliedRules enum | 15개 | **16개 — "F15F16대차사모펀드자동가산" 신설** |
+| 8 | UI 입력 위젯 | hint만 (Group C) | **2 DecimalInput 카드 신설** (`f15f16Eligible` 가드, 양도일 2013.2.15. 이전 disabled) |
+| 9 | 결과 카드 배지 | 미노출 | **amber tone "F-15·F-16 자동 가산 (X주)" 배지** |
+| 10 | 14지점 동기화 | 미적용 | **8지점 영향** (①②③④⑤⑦⑧⑨⑫⑭ — store·initial·normalize·API·UI·결과·validate·Zod·route handler 모두 갱신) |
+| 11 | anchor | 미작성 | **PHF-01~07 신규 anchor 8건** (`textbook-alignment-augmentation.test.ts`) |
+
+**v7 구현 상세**:
+- `StockTransferInput.lentSharesCount?` · `pefIndirectSharesCount?` (optional number, default 0)
+- `judgeIsMajorShareholder` 가산 분기 — `transferDate >= "2013-02-15"` AND `(lent + pef) > 0` AND `totalIssuedShares > 0`
+- `ClassificationResult.shareAugmentationApplied?` · `augmentedShares?` echo
+- `buildAppliedThreshold` spread 전파 — 결과 객체 `appliedThreshold` 에 자동 부착
+- `StockResult.appliedThreshold` 9필드 (5 + Phase B 2 + F-15·F-16 2)
+- 적용 안 됐을 때 `augmentedShares = 0` (UI 결과 카드 혼동 차단)
+- 메모리 [[feedback_no_silent_apportion_fallback]] 정합 — 시행일자·입력값 가드로 silent 가산 차단
+- 메모리 [[feedback_useeffect_store_mirror_forbidden]] 정합 — `f15f16Eligible` useMemo derived state
+- 800줄 정책 — `calc-wizard-stock-store.ts` 802→798줄 컴팩트 주석으로 복원
+
+**v7 후속 PR 범위 (본 PR 완료 이후)**:
+- F-24 — 본인 미보유 시 합산 강제 분기
+- F-08~F-14·F-23 — 합병·분할·신설법인 특수분기
+- F-25 — 2016.1.1. 의무보호예수 부칙

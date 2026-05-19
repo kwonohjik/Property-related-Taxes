@@ -34,6 +34,10 @@ export interface ClassificationResult {
     /** Phase B 신설 (2026-05-19) — 결과 카드 조문 라벨용 */
     ruleSource?: "§157" | "§167의8①2호" | "§167의8①2호_벤처";
   };
+  /** F-15·F-16 (2026-05-19) — 대차·사모펀드 자동 가산 적용 여부 */
+  shareAugmentationApplied?: boolean;
+  /** F-15·F-16 (2026-05-19) — 가산된 주식수 echo */
+  augmentedShares?: number;
 }
 
 // ============================================================
@@ -60,6 +64,10 @@ function judgeIsMajorShareholder(input: StockTransferInput): {
     /** Phase B 신설 — 결과 카드 조문 라벨용 */
     ruleSource?: "§157" | "§167의8①2호" | "§167의8①2호_벤처";
   };
+  /** F-15·F-16 (2026-05-19) — 대차/사모펀드 자동 가산 적용 여부 */
+  shareAugmentationApplied: boolean;
+  /** F-15·F-16 (2026-05-19) — 자동 가산된 주식수 (lent + pefIndirect) */
+  augmentedShares: number;
   /** 폼 토글(isMajorShareholder)과 자동 산출값이 다른 경우 불일치 경고 */
   mismatchWarning?: string;
 } {
@@ -70,6 +78,8 @@ function judgeIsMajorShareholder(input: StockTransferInput): {
     return {
       isMajor: input.isMajorShareholder,
       threshold: { shareRatio: 0, marketCap: 0 },
+      shareAugmentationApplied: false,
+      augmentedShares: 0,
     };
   }
 
@@ -81,11 +91,30 @@ function judgeIsMajorShareholder(input: StockTransferInput): {
     { isVentureCompany: input.isVentureCompany },
   );
 
+  // F-15·F-16 (2026-05-19) — 대차주식·사모펀드 간접소유 자동 가산 (시행령 §157 2013.2.15. 이후)
+  // 교재 §3장 이미지 51 Check Point ⑧·⑨.
+  // 양도일 >= 2013.2.15. 이고 lent/PEF 입력값이 있을 때 지분율 추가 가산.
+  // 시가총액 가산은 가격 외부 의존이라 사용자 책임 (UI hint 안내).
+  const F15_F16_EFFECTIVE_DATE = new Date("2013-02-15");
+  const lent = input.lentSharesCount ?? 0;
+  const pef = input.pefIndirectSharesCount ?? 0;
+  const rawAugment = lent + pef;
+  const shareAugmentationApplied =
+    input.transferDate >= F15_F16_EFFECTIVE_DATE &&
+    rawAugment > 0 &&
+    input.totalIssuedShares > 0;
+  // 적용 안 됐을 때는 augmentedShares 도 0 (UI 결과 카드 혼동 방지)
+  const augmentedShares = shareAugmentationApplied ? rawAugment : 0;
+  const ratioAugment = shareAugmentationApplied
+    ? augmentedShares / input.totalIssuedShares
+    : 0;
+
   // 적용 지분율·시총 결정 (2-step 판정)
   // 본인 단독 임계 우선, 미달 시 합산 적용
+  // F-15·F-16 가산은 본인·합산 모두에 적용 (대여자·간접소유 주식이 양측 판정에 동일하게 영향)
   const effectiveShareRatio = input.isLargestShareholderGroup
-    ? Math.max(input.selfShareRatio, input.combinedShareRatio)
-    : input.selfShareRatio;
+    ? Math.max(input.selfShareRatio + ratioAugment, input.combinedShareRatio + ratioAugment)
+    : input.selfShareRatio + ratioAugment;
   const effectiveMarketCap = input.isLargestShareholderGroup
     ? Math.max(input.selfMarketCap, input.combinedMarketCap)
     : input.selfMarketCap;
@@ -110,6 +139,8 @@ function judgeIsMajorShareholder(input: StockTransferInput): {
       isVentureRule: threshold.isVentureRule,
       ruleSource: threshold.ruleSource,
     },
+    shareAugmentationApplied,
+    augmentedShares,
     mismatchWarning,
   };
 }
@@ -315,9 +346,14 @@ export function classifyStockTransfer(input: StockTransferInput): Classification
   }
 
   // 대주주 판정
-  const { isMajor, threshold, mismatchWarning } = judgeIsMajorShareholder(input);
+  const { isMajor, threshold, mismatchWarning, shareAugmentationApplied, augmentedShares } =
+    judgeIsMajorShareholder(input);
   if (mismatchWarning) {
     warnings.push(mismatchWarning);
+  }
+  // F-15·F-16 (2026-05-19) — 자동 가산 적용 시 appliedRules에 명시
+  if (shareAugmentationApplied) {
+    appliedRules.push("F15F16대차사모펀드자동가산");
   }
 
   // §94① 분류
@@ -357,5 +393,7 @@ export function classifyStockTransfer(input: StockTransferInput): Classification
     appliedRules,
     warnings,
     appliedThreshold: threshold,
+    shareAugmentationApplied,
+    augmentedShares,
   };
 }

@@ -168,6 +168,9 @@ export const stockTransferInputSchema = z.object({
   isKOTCTrading: z.boolean(),
   // §94①3 가목 1) 단서 — 장내 거래 여부 (default true, 기존 동작 호환)
   isOnMarketTransaction: z.boolean().optional().default(true),
+  // F-15·F-16 (2026-05-19) — 대차주식·사모펀드 간접소유 자동 가산 (§157 2013.2.15.~)
+  lentSharesCount: z.number().int().nonnegative().optional().default(0),
+  pefIndirectSharesCount: z.number().int().nonnegative().optional().default(0),
 
   // 거래 일자·수량
   acquisitionDate: z.union([z.string(), z.date()]),

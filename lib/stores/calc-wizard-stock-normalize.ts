@@ -81,6 +81,9 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
     isKOTCTrading: boolField("isKOTCTrading", defaults.isKOTCTrading),
     // 마이그레이션: undefined → true (기존 sessionStorage 호환 — silent 비과세 동작 유지)
     isOnMarketTransaction: boolField("isOnMarketTransaction", defaults.isOnMarketTransaction),
+    // F-15·F-16 (2026-05-19) 자동 가산 — undefined → "0" 마이그레이션
+    lentSharesCount: strField("lentSharesCount") || defaults.lentSharesCount,
+    pefIndirectSharesCount: strField("pefIndirectSharesCount") || defaults.pefIndirectSharesCount,
     acquisitionDate: strField("acquisitionDate"),
     transferDate: strField("transferDate"),
     shareCount: strField("shareCount"),

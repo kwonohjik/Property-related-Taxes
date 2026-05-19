@@ -29,6 +29,24 @@ export type StockTransferInput = {
   /** 직전 사업연도 종료일 */
   priorYearEndDate: Date;
 
+  /**
+   * F-15 (2026-05-19) — 대차주식 수 (시행령 §157 2013.2.15. 이후 분).
+   * 본인이 대여 중인 주식 수. 대주주 판정 시 자동 합산되어 지분율 가산 (교재 §3장 이미지 51 ⑧).
+   * 2013.2.15. 이후 양도분에만 적용 — 그 이전 양도는 무시.
+   * `totalIssuedShares` 와 함께 지분율 가산. 시가총액 합산은 사용자 책임 (가격 외부 의존).
+   * @default 0
+   */
+  lentSharesCount?: number;
+
+  /**
+   * F-16 (2026-05-19) — 사모펀드 간접소유 주식 수 (시행령 §157 2013.2.15. 이후 분).
+   * 본인·기타주주가 사모펀드를 통해 간접소유하고 있는 주식 수 (교재 §3장 이미지 51 ⑨).
+   * 대주주 판정 시 자동 합산되어 지분율 가산. 2013.2.15. 이후 양도분에만 적용.
+   * `totalIssuedShares` 와 함께 지분율 가산. 시가총액 합산은 사용자 책임.
+   * @default 0
+   */
+  pefIndirectSharesCount?: number;
+
   // §94①4 — 기타자산 판정
   /** §94①4 다목 — 과점주주 */
   isQualifyingBlockShareholder: boolean;
@@ -583,6 +601,17 @@ export type StockTransferResult = {
      * - "§167의8①2호_벤처": 비상장 벤처기업
      */
     ruleSource?: "§157" | "§167의8①2호" | "§167의8①2호_벤처";
+    /**
+     * F-15·F-16 (2026-05-19) — 대차주식·사모펀드 간접소유 자동 가산 적용 여부.
+     * `transferDate >= 2013-02-15 && (lentSharesCount > 0 || pefIndirectSharesCount > 0)` 시 true.
+     * UI 결과 카드에서 "대차주식·사모펀드 자동 가산 적용" 안내 분기.
+     */
+    shareAugmentationApplied?: boolean;
+    /**
+     * F-15·F-16 (2026-05-19) — 자동 가산된 주식수 (lentSharesCount + pefIndirectSharesCount).
+     * 사용자 검증용 echo. shareAugmentationApplied === true 일 때만 의미 있음.
+     */
+    augmentedShares?: number;
   };
 
   // 디버그·경고
@@ -603,6 +632,7 @@ export type StockTransferResult = {
     | "로트개별법"
     | "로트선입선출"
     | "로트이동평균"
+    | "F15F16대차사모펀드자동가산"
   >;
 
   /**
