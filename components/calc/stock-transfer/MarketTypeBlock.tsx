@@ -11,7 +11,6 @@
  */
 
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
-import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 
 interface MarketTypeBlockProps {
@@ -59,15 +58,12 @@ const MARKET_OPTIONS = [
 
 export function MarketTypeBlock({ marketType, onChange }: MarketTypeBlockProps) {
   return (
-    <FieldCard
-      label=""
-      hint="양도 주식이 거래되는 시장을 선택하세요. 비상장·기타자산은 별도 과세 요건을 확인하세요."
-      trailing={
+    <div className="rounded-lg border bg-card px-4 py-3 space-y-2">
+      <div className="flex items-start justify-end">
         <span className="text-xs text-sky-600 font-medium bg-sky-50 px-2 py-0.5 rounded">
           §94①3·4
         </span>
-      }
-    >
+      </div>
       <RadioCardGroup
         name="marketType"
         value={marketType || ""}
@@ -77,9 +73,9 @@ export function MarketTypeBlock({ marketType, onChange }: MarketTypeBlockProps) 
         options={MARKET_OPTIONS}
         className="grid grid-cols-1 sm:grid-cols-2 gap-2 space-y-0"
       />
-
-      {/* 해외주식 선택 시 안내 */}
-      {/* (PR-4A 지원 완료 — 라디오 옵션에 포함되어 위 "외국법인 미지원" 카드 제거) */}
-    </FieldCard>
+      <p className="text-xs text-muted-foreground">
+        양도 주식이 거래되는 시장을 선택하세요. 비상장·기타자산은 별도 과세 요건을 확인하세요.
+      </p>
+    </div>
   );
 }
