@@ -13,6 +13,7 @@ import {
   type AcquisitionLotForm,
   type TransferLotForm,
   type SpecificMatchingForm,
+  type ExitTaxHoldingForm,
   createInitialStockFormData,
 } from "./calc-wizard-stock-store";
 
@@ -58,7 +59,7 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
     kiwoomTradingHalt: boolField("kiwoomTradingHalt", false),
     kiwoomLastFetchedAt: strField("kiwoomLastFetchedAt"),
 
-    marketType: enumField("marketType", ["kospi", "kosdaq", "konex", "unlisted", "other_asset", "foreign_stock", ""], ""),
+    marketType: enumField("marketType", ["kospi", "kosdaq", "konex", "unlisted", "other_asset", "foreign_stock", "exit_tax", ""], ""),
     isMajorShareholder: boolField("isMajorShareholder", false),
     selfShareRatio: strField("selfShareRatio"),
     selfMarketCap: strField("selfMarketCap"),
@@ -273,6 +274,21 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
     naGoodwillRow19EUAcq: strField("naGoodwillRow19EUAcq"),
     naShareCountEUAcq: strField("naShareCountEUAcq"),
 
+    // ── PR-4B 국외전출세 전용 필드 (③ 동기화 지점 — sessionStorage 마이그레이션 호환) ──
+    etYearsResidentLast10: strField("etYearsResidentLast10"),
+    etDepartureDate: strField("etDepartureDate"),
+    etIsMajorShareholder: boolField("etIsMajorShareholder", defaults.etIsMajorShareholder),
+    etHoldings: normalizeExitTaxHoldings(d.etHoldings),
+    etDeferralRequested: boolField("etDeferralRequested", defaults.etDeferralRequested),
+    etDeferralReason: enumField("etDeferralReason", ["none", "study_abroad", "other_10yr"], defaults.etDeferralReason),
+    etActualTransferDate: strField("etActualTransferDate"),
+    etActualTransferPricePerShare: strField("etActualTransferPricePerShare"),
+    etForeignTaxPaid: strField("etForeignTaxPaid"),
+    etForeignTaxExclusionReason: enumField("etForeignTaxExclusionReason", ["none", "credit_allowed", "step_up"], defaults.etForeignTaxExclusionReason),
+    etDomesticSourceTaxWithheld: strField("etDomesticSourceTaxWithheld"),
+    etHasFiledHoldingsReport: boolField("etHasFiledHoldingsReport", defaults.etHasFiledHoldingsReport),
+    etTotalFaceValue: strField("etTotalFaceValue"),
+
     // ── PR-4A 해외주식 전용 필드 (③ 동기화 지점 — sessionStorage 마이그레이션 호환) ──
     yearsResidentInKorea: strField("yearsResidentInKorea"),
     isListedForeignCorp: boolField("isListedForeignCorp", defaults.isListedForeignCorp),
@@ -306,6 +322,49 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
     foreignTaxExchangeRate: strField("foreignTaxExchangeRate"),
     foreignTaxMethod: enumField("foreignTaxMethod", ["credit", "expense"], defaults.foreignTaxMethod),
   };
+}
+
+// ============================================================
+// 분할 lot 배열 sanitizer (③ 동기화 지점)
+// ============================================================
+
+// ============================================================
+// PR-4B 국외전출세 보유 종목 배열 normalizer
+// ============================================================
+
+function normalizeExitTaxHoldings(raw: unknown): ExitTaxHoldingForm[] {
+  if (!Array.isArray(raw)) return [];
+  const validModes = ["market_price", "prior_year_std", "unlisted_sample", "unlisted_std"] as const;
+  const validMarkets = ["kospi", "kosdaq", "konex", "unlisted"] as const;
+  return raw
+    .map((r): ExitTaxHoldingForm | null => {
+      if (!r || typeof r !== "object") return null;
+      const o = r as Record<string, unknown>;
+      const idVal = typeof o.id === "string" ? o.id : null;
+      if (!idVal) return null;
+      const mode = typeof o.departureDayValuationMode === "string" &&
+        (validModes as readonly string[]).includes(o.departureDayValuationMode)
+        ? (o.departureDayValuationMode as ExitTaxHoldingForm["departureDayValuationMode"])
+        : "market_price";
+      const mkt = typeof o.marketType === "string" &&
+        (validMarkets as readonly string[]).includes(o.marketType)
+        ? (o.marketType as ExitTaxHoldingForm["marketType"])
+        : "kospi";
+      return {
+        id: idVal,
+        stockName: typeof o.stockName === "string" ? o.stockName : "",
+        marketType: mkt,
+        shareCount: typeof o.shareCount === "string" ? o.shareCount : "",
+        acquisitionDate: typeof o.acquisitionDate === "string" ? o.acquisitionDate : "",
+        perShareAcquisitionPrice: typeof o.perShareAcquisitionPrice === "string" ? o.perShareAcquisitionPrice : "",
+        departureDayValuationMode: mode,
+        departureDayMarketPrice: typeof o.departureDayMarketPrice === "string" ? o.departureDayMarketPrice : "",
+        priorYearEndMonthAvg: typeof o.priorYearEndMonthAvg === "string" ? o.priorYearEndMonthAvg : "",
+        unlistedSamplePrice: typeof o.unlistedSamplePrice === "string" ? o.unlistedSamplePrice : "",
+        unlistedStdPricePerShare: typeof o.unlistedStdPricePerShare === "string" ? o.unlistedStdPricePerShare : "",
+      };
+    })
+    .filter((l): l is ExitTaxHoldingForm => l !== null);
 }
 
 // ============================================================

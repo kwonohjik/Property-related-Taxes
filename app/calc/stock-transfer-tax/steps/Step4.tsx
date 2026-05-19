@@ -7,8 +7,12 @@
  */
 
 import { StockTransferTaxResultView } from "@/components/calc/results/StockTransferTaxResultView";
+import { ForeignStockResultCard } from "@/components/calc/results/ForeignStockResultCard";
+import { ExitTaxResultCard } from "@/components/calc/results/ExitTaxResultCard";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
+import type { ForeignStockResult } from "@/lib/tax-engine/stock-transfer/types/foreign-stock.types";
+import type { ExitTaxResult } from "@/lib/tax-engine/stock-transfer/types/exit-tax.types";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 
 interface Step4Props {
@@ -69,22 +73,34 @@ export function Step4({ result, form, error, isLoading, onCalculate }: Step4Prop
               다시 계산
             </button>
           </div>
-          <StockTransferTaxResultView
-            result={result}
-            shareCount={shareCount}
-            filingViolation={form.filingViolation || "none"}
-            isFraudulent={form.isFraudulent}
-            isInternationalTransaction={form.isInternationalTransaction}
-            transferActualInputMode={form.transferActualInputMode || "total"}
-            unlistedValuationMode={form.unlistedValuationMode || "simple"}
-            acqFaceValueOnly={form.acqFaceValueOnly === true}
-            perShareTransferPrice={parseAmount(form.perShareTransferPrice)}
-            securityName={form.securityName}
-            securityCode={form.securityCode}
-            brokerage={form.brokerage}
-            transferDate={form.transferDate}
-            accountNumberMasked={form.accountNumberMasked}
-          />
+
+          {/* PR-4B 국외전출세 — 별도 결과 카드 (ExitTaxResult 타입) */}
+          {form.marketType === "exit_tax" ? (
+            <ExitTaxResultCard result={result as unknown as ExitTaxResult} />
+          ) : /* PR-4A 해외주식 — 별도 결과 카드 (ForeignStockResult 타입) */
+          form.marketType === "foreign_stock" ? (
+            <ForeignStockResultCard
+              result={result as unknown as ForeignStockResult}
+              stockName={form.securityName}
+            />
+          ) : (
+            <StockTransferTaxResultView
+              result={result}
+              shareCount={shareCount}
+              filingViolation={form.filingViolation || "none"}
+              isFraudulent={form.isFraudulent}
+              isInternationalTransaction={form.isInternationalTransaction}
+              transferActualInputMode={form.transferActualInputMode || "total"}
+              unlistedValuationMode={form.unlistedValuationMode || "simple"}
+              acqFaceValueOnly={form.acqFaceValueOnly === true}
+              perShareTransferPrice={parseAmount(form.perShareTransferPrice)}
+              securityName={form.securityName}
+              securityCode={form.securityCode}
+              brokerage={form.brokerage}
+              transferDate={form.transferDate}
+              accountNumberMasked={form.accountNumberMasked}
+            />
+          )}
         </>
       )}
     </div>

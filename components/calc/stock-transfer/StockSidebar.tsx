@@ -16,6 +16,7 @@ import { useShallow } from "zustand/react/shallow";
 import { WizardSidebar, type WizardSidebarStep, type WizardSidebarSummaryItem } from "@/components/calc/shared/WizardSidebar";
 import { useStockTransferStore } from "@/lib/stores/calc-wizard-stock-store";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import type { ExitTaxResult } from "@/lib/tax-engine/stock-transfer/types/exit-tax.types";
 
 interface StockSidebarProps {
   currentStep: number;
@@ -36,7 +37,72 @@ export function StockSidebar({ currentStep, onStepClick, stockName }: StockSideb
     const items: WizardSidebarSummaryItem[] = [];
     const isSplitMode = formData.lotsMode === "split";
 
+    // ── PR-4B 국외전출세 (⑥ 동기화 지점) ──
+    if (formData.marketType === "exit_tax") {
+      // 보유 종목 합계 간주양도가액 (useMemo — store 미러링 금지)
+      const totalDepartureDayValue = formData.etHoldings.reduce((sum, h) => {
+        const shares = parseInt(h.shareCount.replace(/,/g, ""), 10) || 0;
+        const mode = h.departureDayValuationMode || "market_price";
+        let priceStr = "";
+        if (mode === "market_price") priceStr = h.departureDayMarketPrice;
+        else if (mode === "prior_year_std") priceStr = h.priorYearEndMonthAvg;
+        else if (mode === "unlisted_sample") priceStr = h.unlistedSamplePrice;
+        else if (mode === "unlisted_std") priceStr = h.unlistedStdPricePerShare;
+        return sum + shares * parseAmount(priceStr);
+      }, 0);
+
+      if (totalDepartureDayValue > 0) {
+        items.push({ label: "간주양도가액 합계", value: totalDepartureDayValue });
+      }
+
+      // 결과 있으면 최종값 추가
+      if (result) {
+        const r = result as unknown as ExitTaxResult;
+        if (r.isLiable) {
+          if (r.taxBase > 0) items.push({ label: "과세표준", value: r.taxBase, highlight: true });
+          if (r.incomeTax > 0) items.push({ label: "산출세액", value: r.incomeTax, highlight: true });
+          if (r.localIncomeTax > 0) items.push({ label: "지방소득세", value: r.localIncomeTax });
+          if (r.deferredTaxAmount > 0) items.push({ label: `납부유예액(${r.deferralYears}년)`, value: r.deferredTaxAmount });
+          if (r.adjustmentDeduction) items.push({ label: "조정공제", value: r.adjustmentDeduction });
+          if (r.foreignTaxCreditApplied) items.push({ label: "외국납부세액공제", value: r.foreignTaxCreditApplied });
+        }
+      }
+      return items;
+    }
+
     // 양도가액 (split: lot 합계 / single: 폼 단가 × 수량)
+    // ── PR-4A 해외주식 — KRW 환산 양도가액 미리보기 (⑥ 동기화 지점) ──
+    if (formData.marketType === "foreign_stock") {
+      const rate = parseFloat(formData.transferExchangeRate || "0");
+      const count = parseInt(formData.shareCount || "0", 10);
+      if (rate > 0 && count > 0) {
+        const fgMode = formData.fgTransferPriceMode || "per_share";
+        let fgKrw: number | null = null;
+        if (fgMode === "per_share") {
+          const perShare = parseFloat(formData.perShareTransferPriceForeign || "0");
+          if (perShare > 0) fgKrw = Math.floor(perShare * count * rate);
+        } else {
+          const total = parseFloat(formData.totalTransferPriceForeign || "0");
+          if (total > 0) fgKrw = Math.floor(total * rate);
+        }
+        if (fgKrw !== null && fgKrw > 0) {
+          items.push({ label: "양도가액(환산 참고)", value: fgKrw });
+        }
+      }
+      // 결과 있으면 최종값 추가
+      if (result) {
+        const r = result as unknown as import("@/lib/tax-engine/stock-transfer/types/foreign-stock.types").ForeignStockResult;
+        if (r.isLiable) {
+          if (r.transferPriceKrw > 0) items.push({ label: "양도가액(원화)", value: r.transferPriceKrw });
+          if (r.taxBase > 0) items.push({ label: "과세표준", value: r.taxBase, highlight: true });
+          if (r.incomeTax > 0) items.push({ label: "산출세액", value: r.incomeTax, highlight: true });
+          if (r.localIncomeTax > 0) items.push({ label: "지방소득세", value: r.localIncomeTax });
+          if (r.totalTax > 0) items.push({ label: "총 납부세액", value: r.totalTax, highlight: true });
+        }
+      }
+      return items;
+    }
+
     let effectiveTransferPrice: number | null = null;
     if (isSplitMode) {
       const lotSum = formData.transferLots.reduce(

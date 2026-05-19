@@ -45,6 +45,16 @@ const MARKET_OPTIONS = [
     label: "기타자산",
     description: "과점주주·부동산과다보유법인 (§94①4 다·라목)",
   },
+  {
+    value: "foreign_stock" as const,
+    label: "해외주식",
+    description: "외국법인 발행 주식 (§94①3 다목 + §118의2~§118의8)",
+  },
+  {
+    value: "exit_tax" as const,
+    label: "국외전출세 (§118의9)",
+    description: "거주자가 비거주자로 출국하는 경우 보유 주식 간주양도",
+  },
 ];
 
 export function MarketTypeBlock({ marketType, onChange }: MarketTypeBlockProps) {
@@ -68,25 +78,8 @@ export function MarketTypeBlock({ marketType, onChange }: MarketTypeBlockProps) 
         options={MARKET_OPTIONS}
       />
 
-      {/* Case 21 — §94①3 다목 외국법인·해외상장 주식 (본 엔진 미지원) */}
-      <div
-        className="mt-3 rounded-lg border border-rose-200/70 bg-rose-50/40 px-4 py-3 opacity-70 cursor-not-allowed"
-        aria-disabled="true"
-        title="본 계산기 현재 미지원 — 후속 PR에서 지원 예정"
-      >
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-rose-700">
-            외국법인 발행 / 해외상장 주식 (선택 불가)
-          </span>
-          <span className="text-xs bg-rose-200 text-rose-700 px-1.5 py-0.5 rounded">
-            §94①3 다목
-          </span>
-        </div>
-        <p className="text-xs text-rose-700/80 mt-1.5 leading-relaxed">
-          본 계산기 현재 미지원. 해외 발행·상장 주식의 양도는 소득세법 §94①3 다목 양도소득세 대상이지만
-          본 엔진은 아직 지원하지 않습니다 (후속 PR 지원 예정). 국외전출세(§126의3)와는 별개입니다.
-        </p>
-      </div>
+      {/* 해외주식 선택 시 안내 */}
+      {/* (PR-4A 지원 완료 — 라디오 옵션에 포함되어 위 "외국법인 미지원" 카드 제거) */}
     </FieldCard>
   );
 }

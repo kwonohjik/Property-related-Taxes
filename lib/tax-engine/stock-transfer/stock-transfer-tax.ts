@@ -21,6 +21,10 @@
  */
 
 import type { StockTransferInput, StockTransferResult, LotMatchingDetail } from "./types/stock-transfer.types";
+import type { ForeignStockInput, ForeignStockResult } from "./types/foreign-stock.types";
+import type { ExitTaxInput, ExitTaxResult } from "./types/exit-tax.types";
+import { calculateForeignStockTax } from "./foreign-stock";
+import { calculateExitTax } from "./exit-tax";
 import { classifyStockTransfer } from "./stock-classification";
 import { calcHoldingPeriod, calcBasicDeduction, floorTaxBase, floorTen, applyDeemedAcquisitionDate, buildAppliedThreshold } from "./stock-transfer-helpers";
 import { calcPostListingConversion } from "./stock-valuation-post-listing";
@@ -61,7 +65,34 @@ function isSplitMode(input: StockTransferInput): boolean {
 // 메인 계산 함수
 // ============================================================
 
-export function calculateStockTransferTax(input: StockTransferInput): StockTransferResult {
+/**
+ * 해외주식 양도소득세 오버로드 (PR-4A)
+ * marketType="foreign_stock" 시 foreign-stock.ts 엔진으로 위임
+ */
+export function calculateStockTransferTax(input: ForeignStockInput): ForeignStockResult;
+/**
+ * 국외전출세 오버로드 (PR-4B)
+ * marketType="exit_tax" 시 exit-tax.ts 엔진으로 위임
+ */
+export function calculateStockTransferTax(input: ExitTaxInput): ExitTaxResult;
+export function calculateStockTransferTax(input: StockTransferInput): StockTransferResult;
+export function calculateStockTransferTax(
+  input: StockTransferInput | ForeignStockInput | ExitTaxInput,
+): StockTransferResult | ForeignStockResult | ExitTaxResult {
+  // foreign_stock 분기 — PR-4A 독립 도메인
+  if ((input as ForeignStockInput).marketType === "foreign_stock") {
+    return calculateForeignStockTax(input as ForeignStockInput);
+  }
+
+  // exit_tax 분기 — PR-4B 독립 도메인
+  if ((input as ExitTaxInput).marketType === "exit_tax") {
+    return calculateExitTax(input as ExitTaxInput);
+  }
+
+  return calculateStockTransferTaxInternal(input as StockTransferInput);
+}
+
+function calculateStockTransferTaxInternal(input: StockTransferInput): StockTransferResult {
   const warnings: string[] = [];
   const appliedRules: StockTransferResult["appliedRules"] = [];
 
@@ -583,7 +614,7 @@ export function calculateStockTransferTaxAggregate(
 
   if (deductionMode === "each_item" || inputs.length === 1) {
     // 단건 또는 each_item 모드 — 개별 계산 합산
-    const items = inputs.map((input) => calculateStockTransferTax(input));
+    const items = inputs.map((input) => calculateStockTransferTaxInternal(input));
     const totalTransferIncome = items.reduce((s, r) => s + r.transferIncome, 0);
     const totalCalculatedTax = items.reduce((s, r) => s + r.calculatedTax, 0);
     const totalUnderReportPenalty = items.reduce((s, r) => s + r.underReportPenalty, 0);
@@ -619,7 +650,7 @@ export function calculateStockTransferTaxAggregate(
   // "aggregate" 모드 — §103② 그룹별 기본공제 1회 한도 배분
   // STEP 1: 각 종목 기본공제 최대 소진으로 단건 계산 (순수 소득금액 파악)
   const rawItems = inputs.map((input) =>
-    calculateStockTransferTax({
+    calculateStockTransferTaxInternal({
       ...input,
       // 부동산 그룹은 이미 소진됨으로 처리 → 실질적 기본공제 0
       realEstateGroupBasicDeductionUsed: BASIC_DEDUCTION_LIMIT,
@@ -672,7 +703,7 @@ export function calculateStockTransferTaxAggregate(
 
       if (stockUsed - deductThis === 0 || deductThis > 0) {
         // 기본공제 잔여분 있음 → input 그대로 계산 (엔진이 min(income, 250만) 적용)
-        return calculateStockTransferTax(input);
+        return calculateStockTransferTaxInternal(input);
       } else {
         // 기본공제 소진 → rawItems[i]가 이미 realEstateGroupBasicDeductionUsed=LIMIT으로 계산됨
         // 하지만 주식 그룹은 그 영향 안 받음 → rawItems[i]에는 basicDeduction=min(income,250만) 포함
@@ -708,7 +739,7 @@ export function calculateStockTransferTaxAggregate(
         ...input,
         realEstateGroupBasicDeductionUsed: otherAssetUsed,
       };
-      const recalc = calculateStockTransferTax(adjustedInput);
+      const recalc = calculateStockTransferTaxInternal(adjustedInput);
       otherAssetUsed += recalc.basicDeduction;
       return recalc;
     }

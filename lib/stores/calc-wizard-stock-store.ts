@@ -30,6 +30,58 @@ import { nanoid } from "nanoid";
 import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
 
 // ============================================================
+// PR-4B 국외전출세 — 보유 종목 폼 타입 (ExitTaxHoldingForm)
+// ============================================================
+
+export interface ExitTaxHoldingForm {
+  /** UI key (nanoid) */
+  id: string;
+  /** 종목명 */
+  stockName: string;
+  /** 시장 분류 (§178의9: 보유 종목은 국내 상장·비상장 주식) */
+  marketType: "kospi" | "kosdaq" | "konex" | "unlisted";
+  /** 보유 주식수 (정수 문자열) */
+  shareCount: string;
+  /** 취득일 "YYYY-MM-DD" */
+  acquisitionDate: string;
+  /** 1주당 취득가액 (원) 문자열 */
+  perShareAcquisitionPrice: string;
+  /**
+   * 출국일 시가 산정 모드 (§178의9)
+   * "market_price"    → 출국일 거래가액 직접 입력
+   * "prior_year_std"  → §99①3 기준시가 (1개월 종가평균)
+   * "unlisted_sample" → 전후 각 3개월 매매사례가액
+   * "unlisted_std"    → §99①4 비상장 기준시가
+   */
+  departureDayValuationMode: "market_price" | "prior_year_std" | "unlisted_sample" | "unlisted_std";
+  /** 출국일 거래가액 1주당 (market_price 모드) */
+  departureDayMarketPrice: string;
+  /** §99①3 1개월 종가평균 1주당 (prior_year_std 모드) */
+  priorYearEndMonthAvg: string;
+  /** 전후 각 3개월 매매사례가액 1주당 (unlisted_sample 모드) */
+  unlistedSamplePrice: string;
+  /** §99①4 비상장 기준시가 1주당 (unlisted_std 모드) */
+  unlistedStdPricePerShare: string;
+}
+
+/** 신규 국외전출세 보유 종목 빈 행 팩토리 */
+export function createEmptyExitTaxHolding(): ExitTaxHoldingForm {
+  return {
+    id: nanoid(),
+    stockName: "",
+    marketType: "kospi",           // 3중 패턴 default
+    shareCount: "",
+    acquisitionDate: "",
+    perShareAcquisitionPrice: "",
+    departureDayValuationMode: "market_price",  // 3중 패턴 default
+    departureDayMarketPrice: "",
+    priorYearEndMonthAvg: "",
+    unlistedSamplePrice: "",
+    unlistedStdPricePerShare: "",
+  };
+}
+
+// ============================================================
 // 분할 매수·분할 양도 lot 타입 (Plan v2.2)
 // ============================================================
 
@@ -87,7 +139,7 @@ export interface StockTransferFormData {
   kiwoomLastFetchedAt: string;    // ISO 8601 — 마지막 자동조회 시각 (F-12 출처 라벨링)
 
   // ── 시장·회사 분류 ──
-  marketType: "kospi" | "kosdaq" | "konex" | "unlisted" | "other_asset" | "";
+  marketType: "kospi" | "kosdaq" | "konex" | "unlisted" | "other_asset" | "foreign_stock" | "exit_tax" | "";
 
   // ── 대주주 판정 (시행령 §157) 2-step ──
   isMajorShareholder: boolean;
@@ -265,6 +317,86 @@ export interface StockTransferFormData {
   naLiabSubRow15Acq: string; naLiabSubRow16Acq: string; naLiabSubRow17Acq: string;
   naGoodwillRow19Acq: string;
   naShareCountAcq: string;
+
+  // ── PR-4B 국외전출세 전용 필드 (§118의9~§118의16) ──
+  // 활성 조건: marketType === "exit_tax" (StockTransferFormData에 통합, 별도 store 미분리)
+  /** 출국일 전 10년 중 국내 주소·거소 합계 거주 연수 (만 년 수) — 5년 이상 납세의무 */
+  etYearsResidentLast10: string;
+  /** 출국일 "YYYY-MM-DD" */
+  etDepartureDate: string;
+  /** 직전 연도말 대주주 여부 (§178의8 → §167의8 준용) */
+  etIsMajorShareholder: boolean;
+  /** 보유 종목 다건 (ExitTaxHoldingForm 배열) */
+  etHoldings: ExitTaxHoldingForm[];
+  /** 납부유예 신청 여부 (§118의16) */
+  etDeferralRequested: boolean;
+  /**
+   * 납부유예 사유 (3중 패턴 default: "none")
+   * "none"         → 납부유예 미신청
+   * "study_abroad" → 국외유학 등 10년 유예 사유
+   * "other_10yr"   → 기타 10년 사유
+   */
+  etDeferralReason: "none" | "study_abroad" | "other_10yr";
+  /** 납부유예 후 실양도일 (경정청구 §118의12용) */
+  etActualTransferDate: string;
+  /** 납부유예 후 실양도 1주당 단가 (원) */
+  etActualTransferPricePerShare: string;
+  /** 외국납부세액 (원화 환산, §118의13) */
+  etForeignTaxPaid: string;
+  /**
+   * §118의13② 적용 배제 사유 (3중 패턴 default: "none")
+   * "none"           → 배제 사유 없음 → 공제 적용
+   * "credit_allowed" → 1호: 외국정부가 산출세액에 대해 세액공제 허용
+   * "step_up"        → 2호: 외국정부가 취득가액을 출국일 시가로 조정
+   */
+  etForeignTaxExclusionReason: "none" | "credit_allowed" | "step_up";
+  /** §118의14 비거주자 원천징수 세액 (원) */
+  etDomesticSourceTaxWithheld: string;
+  /** 보유현황 신고 완료 여부 (§118의15) */
+  etHasFiledHoldingsReport: boolean;
+  /** 보유현황 미신고 가산세 계산용 액면금액 합계 (원) */
+  etTotalFaceValue: string;
+
+  // ── PR-4A 해외주식 전용 필드 (§94①3 다목 + §118의2~§118의8) ──
+  // 활성 조건: marketType === "foreign_stock"
+  /** 국내 주소·거소 거주 연수 (만 년 수) — 5년 이상 시 납세의무 충족 (§118의2) */
+  yearsResidentInKorea: string;         // DecimalInput 소수 없이 정수 문자열 "7"
+  /** §157의3①1호: 외국법인 발행 주식 여부 */
+  isListedForeignCorp: boolean;         // 3중 패턴 default: true
+  /** ISO 2자리 국가코드 (예: "US") */
+  fgCountryCode: string;                // 3중 패턴 default: "US"
+  /** 양도가액 입력 방식 (해외주식 전용) */
+  fgTransferPriceMode: "per_share" | "total";  // 3중 패턴 default: "per_share"
+  /** 1주당 외화 양도단가 (fgTransferPriceMode="per_share" 시) — DecimalInput */
+  perShareTransferPriceForeign: string;
+  /** 총 외화 양도가액 (fgTransferPriceMode="total" 시) — DecimalInput */
+  totalTransferPriceForeign: string;
+  /** 양도 통화코드 (ISO 4217, 예: "USD") */
+  transferCurrencyCode: string;         // 3중 패턴 default: "USD"
+  /** 양도일 기준환율 (원/외화, 소수점 2자리) — DecimalInput 4자리 */
+  transferExchangeRate: string;         // 빈문자 → validate 차단
+  /** 해외주식 취득가액 모드: 실가 | §178의3 시가 산정 */
+  acquisitionModeFS: "actual" | "market_price";  // 3중 패턴 default: "actual"
+  /** 1주당 외화 취득단가 (actual 모드) — DecimalInput */
+  perShareAcquisitionPriceForeign: string;
+  /** 취득 통화코드 (ISO 4217) */
+  acquisitionCurrencyCode: string;      // 3중 패턴 default: "USD"
+  /** 취득일 기준환율 (원/외화) — DecimalInput 4자리 */
+  acquisitionExchangeRate: string;      // 빈문자 → validate 차단
+  /** 자본적지출액 (외화) — DecimalInput */
+  capitalExpenditureForeign: string;
+  /** 양도비 (외화) — DecimalInput */
+  transferCostForeign: string;
+  /** 외국납부세액 유무 (§118의6) */
+  hasForeignTax: boolean;               // 3중 패턴 default: false
+  /** 외국납부세액 (외화) — DecimalInput */
+  foreignTaxPaidForeign: string;
+  /** 외국납부세액 통화코드 */
+  foreignTaxCurrencyCode: string;       // 3중 패턴 default: "USD"
+  /** 납세일 기준환율 — DecimalInput 4자리 */
+  foreignTaxExchangeRate: string;
+  /** §118의6 처리 방법: 세액공제 | 필요경비 산입 */
+  foreignTaxMethod: "credit" | "expense";  // 3중 패턴 default: "credit"
 
   // ── [사례 49] 취득시 장부분실 액면가 + 양도시 보충적 평가 혼합 ──
   // 소득세법 §99①4 후단 + 시행령 §165④ + §163⑥4 (개산공제 1% 자동)
@@ -480,6 +612,42 @@ export function createInitialStockFormData(): StockTransferFormData {
     naLiabSubRow15Acq: "", naLiabSubRow16Acq: "", naLiabSubRow17Acq: "",
     naGoodwillRow19Acq: "",
     naShareCountAcq: "",
+
+    // ── PR-4B 국외전출세 전용 초기값 (② 동기화 지점) ──
+    etYearsResidentLast10: "",
+    etDepartureDate: "",
+    etIsMajorShareholder: false,
+    etHoldings: [],
+    etDeferralRequested: false,
+    etDeferralReason: "none",          // 3중 패턴 default
+    etActualTransferDate: "",
+    etActualTransferPricePerShare: "",
+    etForeignTaxPaid: "",
+    etForeignTaxExclusionReason: "none",  // 3중 패턴 default
+    etDomesticSourceTaxWithheld: "",
+    etHasFiledHoldingsReport: false,
+    etTotalFaceValue: "",
+
+    // ── PR-4A 해외주식 전용 초기값 (② 동기화 지점) ──
+    yearsResidentInKorea: "",
+    isListedForeignCorp: true,           // 3중 패턴 default: 외국법인 발행 주식
+    fgCountryCode: "US",                 // 3중 패턴 default: 미국
+    fgTransferPriceMode: "per_share",    // 3중 패턴 default
+    perShareTransferPriceForeign: "",
+    totalTransferPriceForeign: "",
+    transferCurrencyCode: "USD",         // 3중 패턴 default
+    transferExchangeRate: "",
+    acquisitionModeFS: "actual",         // 3중 패턴 default
+    perShareAcquisitionPriceForeign: "",
+    acquisitionCurrencyCode: "USD",      // 3중 패턴 default
+    acquisitionExchangeRate: "",
+    capitalExpenditureForeign: "",
+    transferCostForeign: "",
+    hasForeignTax: false,                // 3중 패턴 default
+    foreignTaxPaidForeign: "",
+    foreignTaxCurrencyCode: "USD",       // 3중 패턴 default
+    foreignTaxExchangeRate: "",
+    foreignTaxMethod: "credit",          // 3중 패턴 default
 
     // ── [사례 49] 취득시 장부분실 액면가 + 양도시 보충적 평가 혼합 ──
     acqFaceValueOnly: false,

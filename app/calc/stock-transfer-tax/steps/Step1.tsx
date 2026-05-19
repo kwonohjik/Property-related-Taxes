@@ -25,6 +25,8 @@ import { OtherAssetBlock } from "@/components/calc/stock-transfer/OtherAssetBloc
 import { AcquisitionInfoBlock } from "@/components/calc/stock-transfer/AcquisitionInfoBlock";
 import { SplitLotsBlock } from "@/components/calc/stock-transfer/SplitLotsBlock";
 import { SecurityMetadataBlock } from "@/components/calc/stock-transfer/SecurityMetadataBlock";
+import { ForeignStockBlock } from "@/components/calc/stock-transfer/ForeignStockBlock";
+import { ExitTaxBlock } from "@/components/calc/stock-transfer/ExitTaxBlock";
 import { withAutoSyncMajor } from "@/components/calc/stock-transfer/major-sync";
 import type {
   StockTransferFormData,
@@ -138,7 +140,27 @@ export function Step1({ form, onChange }: Step1Props) {
       ),
     });
 
-    // 2. 회사 분류
+    // PR-4A 해외주식 — 선택 시 별도 입력 블록, 나머지 섹션 스킵
+    if (form.marketType === "foreign_stock") {
+      items.push({
+        key: "foreign",
+        title: "해외주식 입력 (§94①3 다목)",
+        render: () => <ForeignStockBlock form={form} onChange={onChange} />,
+      });
+      return items;  // 대주주·기타자산 섹션 스킵
+    }
+
+    // PR-4B 국외전출세 — 선택 시 별도 입력 블록, 나머지 섹션 스킵
+    if (form.marketType === "exit_tax") {
+      items.push({
+        key: "exit_tax",
+        title: "국외전출세 입력 (§118의9)",
+        render: () => <ExitTaxBlock form={form} onChange={onChange} />,
+      });
+      return items;  // 대주주·기타자산 섹션 스킵
+    }
+
+    // 2. 회사 분류 (국내주식 전용)
     items.push({
       key: "company",
       title: "회사 규모 / K-OTC / 벤처기업",

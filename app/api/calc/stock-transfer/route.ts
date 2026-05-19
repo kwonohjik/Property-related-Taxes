@@ -14,14 +14,19 @@ import {
   calculateStockTransferTax,
   calculateStockTransferTaxAggregate,
 } from "@/lib/tax-engine/stock-transfer/stock-transfer-tax";
+import type { ForeignStockInput } from "@/lib/tax-engine/stock-transfer/types/foreign-stock.types";
 import {
   stockTransferInputSchema,
   stockTransferAggregateInputSchema,
   addStockRefines,
+  foreignStockInputSchema,
 } from "@/lib/api/stock-transfer-tax-schema";
 import { coerceDates } from "@/lib/api/date-coerce";
 import { checkRateLimit, getClientIp } from "@/lib/api/rate-limit";
 import type { StockTransferInput } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
+import type { ExitTaxInput, ExitTaxHolding } from "@/lib/tax-engine/stock-transfer/types/exit-tax.types";
+import { exitTaxInputSchema } from "@/lib/api/stock-transfer-tax-schema";
+import { toDate, toOptionalDate } from "@/lib/api/date-coerce";
 
 // ⑭ Route handler 엔진 Date 필드 목록 (coerceDates 전수 적용)
 const STOCK_DATE_FIELDS = [
@@ -66,6 +71,24 @@ export async function POST(req: NextRequest) {
   // 다자산 합산 분기 감지 (items 배열이 있으면 aggregate 모드)
   if (typeof body === "object" && body !== null && "items" in body) {
     return handleAggregate(body);
+  }
+
+  // ⑨ PR-4A 해외주식 분기 (marketType === "foreign_stock")
+  if (
+    typeof body === "object" &&
+    body !== null &&
+    (body as Record<string, unknown>).marketType === "foreign_stock"
+  ) {
+    return handleForeignStock(body);
+  }
+
+  // ⑨ PR-4B 국외전출세 분기 (marketType === "exit_tax")
+  if (
+    typeof body === "object" &&
+    body !== null &&
+    (body as Record<string, unknown>).marketType === "exit_tax"
+  ) {
+    return handleExitTax(body);
   }
 
   // ⑨ Zod 검증 + ⑩ addStockRefines
@@ -305,6 +328,170 @@ async function handleAggregate(body: unknown): Promise<NextResponse> {
   try {
     const result = calculateStockTransferTaxAggregate(engineInputs, deductionMode);
     return NextResponse.json({ result, mode: "aggregate" }, { status: 200 });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Internal error";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+// ============================================================
+// ⑭ PR-4A 해외주식 Route 핸들러
+// ============================================================
+
+/** ⑭ 해외주식 Date 필드 목록 (coerceDates 적용) */
+const FOREIGN_STOCK_DATE_FIELDS = [
+  "transferDate",
+  "acquisitionDate",
+] as const;
+
+/**
+ * handleForeignStock — PR-4A §118의2~§118의8 해외주식 핸들러
+ *
+ * ⑭ Route handler 엔진 input 매핑 + coerceDates
+ * 자동 안분 fallback 금지 (feedback_no_silent_apportion_fallback):
+ *   환율·외화 단가 미입력 시 Zod superRefine에서 차단.
+ */
+async function handleForeignStock(body: unknown): Promise<NextResponse> {
+  // ⑫ Zod 검증 (foreignStockInputSchema)
+  const parsed = foreignStockInputSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Validation failed", issues: parsed.error.issues },
+      { status: 400 },
+    );
+  }
+
+  // ⑭ Date 직렬화 변환 (string → Date)
+  const rawInput = parsed.data as Record<string, unknown>;
+  const coerced = coerceDates(rawInput, [...FOREIGN_STOCK_DATE_FIELDS]);
+
+  // ⑭ 엔진 input 매핑
+  const engineInput: ForeignStockInput = {
+    marketType: "foreign_stock",
+
+    yearsResidentInKorea: coerced.yearsResidentInKorea as number,
+
+    isListedForeignCorp: coerced.isListedForeignCorp as boolean,
+    stockName: coerced.stockName as string,
+    countryCode: coerced.countryCode as string,
+
+    shareCount: coerced.shareCount as number,
+    transferDate: coerced.transferDate as Date,
+    transferPriceMode: coerced.transferPriceMode as ForeignStockInput["transferPriceMode"],
+    perShareTransferPriceForeign: coerced.perShareTransferPriceForeign as number | undefined,
+    totalTransferPriceForeign: coerced.totalTransferPriceForeign as number | undefined,
+    transferCurrencyCode: coerced.transferCurrencyCode as string,
+    transferExchangeRate: coerced.transferExchangeRate as number,
+
+    acquisitionDate: coerced.acquisitionDate as Date,
+    acquisitionMode: coerced.acquisitionMode as ForeignStockInput["acquisitionMode"],
+    perShareAcquisitionPriceForeign: coerced.perShareAcquisitionPriceForeign as number | undefined,
+    acquisitionCurrencyCode: coerced.acquisitionCurrencyCode as string,
+    acquisitionExchangeRate: coerced.acquisitionExchangeRate as number,
+
+    capitalExpenditureForeign: coerced.capitalExpenditureForeign as number,
+    transferCostForeign: coerced.transferCostForeign as number,
+
+    hasForeignTax: coerced.hasForeignTax as boolean,
+    foreignTaxPaidForeign: coerced.foreignTaxPaidForeign as number | undefined,
+    foreignTaxCurrencyCode: coerced.foreignTaxCurrencyCode as string | undefined,
+    foreignTaxExchangeRate: coerced.foreignTaxExchangeRate as number | undefined,
+    foreignTaxMethod: coerced.foreignTaxMethod as ForeignStockInput["foreignTaxMethod"],
+
+    isElectronicFiling: coerced.isElectronicFiling as boolean,
+  };
+
+  try {
+    const result = calculateStockTransferTax(engineInput);
+    return NextResponse.json({ result }, { status: 200 });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Internal error";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+// ============================================================
+// ⑭ PR-4B 국외전출세 Route 핸들러
+// ============================================================
+
+/** ⑭ 국외전출세 평면 Date 필드 목록 (coerceDates 적용) */
+const EXIT_TAX_DATE_FIELDS = [
+  "departureDate",
+  "actualTransferDate",
+] as const;
+
+/**
+ * handleExitTax — PR-4B §118의9~§118의16 국외전출세 핸들러
+ *
+ * ⑭ Route handler 엔진 input 매핑 + coerceDates
+ *
+ * 주의 (디자인 §6.2 R2-04, 12.2):
+ *   holdings[] 배열 내 acquisitionDate는 평면 coerceDates 미처리 대상.
+ *   holdings.map() 내에서 toDate() 개별 변환 필수.
+ *
+ * 자동 안분 fallback 금지 (feedback_no_silent_apportion_fallback):
+ *   모드별 시가 미입력은 Zod superRefine에서 차단.
+ */
+async function handleExitTax(body: unknown): Promise<NextResponse> {
+  // ⑫ Zod 검증 (exitTaxInputSchema)
+  const parsed = exitTaxInputSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Validation failed", issues: parsed.error.issues },
+      { status: 400 },
+    );
+  }
+
+  // ⑭ 평면 Date 직렬화 변환 (departureDate, actualTransferDate)
+  const rawInput = parsed.data as Record<string, unknown>;
+  const coerced = coerceDates(rawInput, [...EXIT_TAX_DATE_FIELDS]);
+
+  // ⑭ holdings[] 배열 내 acquisitionDate 개별 Date 변환
+  // (평면 coerceDates로 배열 내부 미변환 — 디자인 R2-04 정정)
+  const rawHoldings = (coerced.holdings ?? []) as Array<Record<string, unknown>>;
+  const holdings: ExitTaxHolding[] = rawHoldings.map((h) => ({
+    id: h.id as string,
+    stockName: h.stockName as string,
+    marketType: h.marketType as ExitTaxHolding["marketType"],
+    shareCount: h.shareCount as number,
+    acquisitionDate: toDate(h.acquisitionDate, "holdings[].acquisitionDate"),
+    perShareAcquisitionPrice: h.perShareAcquisitionPrice as number,
+    departureDayValuationMode: h.departureDayValuationMode as ExitTaxHolding["departureDayValuationMode"],
+    departureDayMarketPrice: h.departureDayMarketPrice as number | undefined,
+    priorYearEndMonthAvg: h.priorYearEndMonthAvg as number | undefined,
+    unlistedSamplePrice: h.unlistedSamplePrice as number | undefined,
+    unlistedStdPricePerShare: h.unlistedStdPricePerShare as number | undefined,
+  }));
+
+  // ⑭ 엔진 input 매핑 (ExitTaxInput)
+  const engineInput: ExitTaxInput = {
+    marketType: "exit_tax",
+
+    yearsResidentLast10: coerced.yearsResidentLast10 as number,
+    departureDate: coerced.departureDate as Date,
+
+    isMajorShareholder: coerced.isMajorShareholder as boolean,
+
+    holdings,
+
+    deferralRequested: coerced.deferralRequested as boolean,
+    deferralReason: coerced.deferralReason as ExitTaxInput["deferralReason"],
+
+    actualTransferDate: toOptionalDate(coerced.actualTransferDate),
+    actualTransferPricePerShare: coerced.actualTransferPricePerShare as number | undefined,
+
+    foreignTaxPaid: coerced.foreignTaxPaid as number | undefined,
+    foreignTaxExclusionReason: coerced.foreignTaxExclusionReason as ExitTaxInput["foreignTaxExclusionReason"],
+
+    domesticSourceTaxWithheld: coerced.domesticSourceTaxWithheld as number | undefined,
+
+    hasFiledHoldingsReport: coerced.hasFiledHoldingsReport as boolean,
+    totalFaceValue: coerced.totalFaceValue as number | undefined,
+  };
+
+  try {
+    const result = calculateStockTransferTax(engineInput);
+    return NextResponse.json({ result }, { status: 200 });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Internal error";
     return NextResponse.json({ error: message }, { status: 500 });
