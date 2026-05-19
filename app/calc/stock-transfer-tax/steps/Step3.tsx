@@ -242,8 +242,17 @@ export function Step3({ form, onChange }: Step3Props) {
 
       {/* ⑤ 가산세 분기 */}
       <section>
-        <SectionTitle n={5} title="가산세 (§47의2)" />
+        <SectionTitle n={5} title="가산세 (국세기본법 §47조의2·§47조의3)" />
         <div className="space-y-3">
+          {/* PR-3-c 신규 — 신고-단위 안내 카드 */}
+          <div className="rounded-lg border border-sky-200 bg-sky-50/60 px-4 py-3 text-xs text-sky-800">
+            <p className="font-semibold mb-1">ⓘ 신고-단위 적용</p>
+            <p className="leading-relaxed text-sky-700">
+              가산세(국세기본법 §47조의2 무신고 / §47조의3 과소신고)는 <strong>신고서 1매 단위</strong>로 적용됩니다.
+              다종목 신고 시 한 종목이라도 부정행위에 해당하면 합산 산출세액에 동일 가산세율이 적용됩니다.
+            </p>
+          </div>
+
           <FieldCard
             label="신고 위반 여부"
             hint="가산세는 법정 신고기한 도과·과소신고가 있을 때만 적용됩니다. 정상 신고면 '해당 없음'을 선택하세요."
@@ -270,12 +279,12 @@ export function Step3({ form, onChange }: Step3Props) {
                 },
                 {
                   value: "under_report",
-                  label: "과소신고 (§47의2②2)",
+                  label: "과소신고 (국세기본법 §47조의3 ①2호)",
                   description: "신고는 했으나 산출세액 누락·과소 — 10% (부정행위 동반 시 40%/60%)",
                 },
                 {
                   value: "non_report",
-                  label: "무신고 (§47의2①1)",
+                  label: "무신고 (국세기본법 §47조의2 ①2호)",
                   description: "법정 신고기한까지 신고서 미제출 — 20% (부정행위 동반 시 40%/60%)",
                 },
               ]}
@@ -293,18 +302,18 @@ export function Step3({ form, onChange }: Step3Props) {
                     ...(!v ? { isInternationalTransaction: false } : {}),
                   })
                 }
-                title="부정행위 동반 (§47의2②1)"
-                description="허위 장부·증빙 등 부정행위 동반 — 40% 가산"
+                title="부정행위 동반"
+                description="허위 장부·증빙 등 부정행위 동반 — 40% (과소: 국세기본법 §47조의3 ①1호 가목 / 무신고: 국세기본법 §47조의2 ①1호)"
                 tone="rose"
               />
               <ToggleCard
                 checked={form.isInternationalTransaction}
                 onCheckedChange={(v) => onChange({ isInternationalTransaction: v })}
-                title="국제거래 + 부정행위 (§47의2②1 단서)"
-                description="국제거래 + 부정행위 중복 가중 — 60% 가산 (부정행위 ON 필요)"
+                title="역외거래 + 부정행위"
+                description="역외거래에서 발생한 부정행위 — 60% (과소: 국세기본법 §47조의3 ①1호 가목 괄호 / 무신고: 국세기본법 §47조의2 ①1호 괄호)"
                 tone="rose"
                 disabled={!form.isFraudulent}
-                disabledReason="국제거래 부정 60%는 부정행위 동반(위 항목 ON)이 전제됩니다"
+                disabledReason="역외거래 부정 60%는 부정행위 동반(위 항목 ON)이 전제됩니다"
               />
             </>
           )}

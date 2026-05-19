@@ -4,7 +4,10 @@
  * MarketTypeBlock — 시장 유형 선택 (Step 1)
  *
  * §94①3 가목 (상장) / 나목 (비상장) / §94①4 다·라목 (기타자산)
- * 외국법인·해외상장 5번째 옵션은 disabled (별도 도메인 안내)
+ * §94①3 다목 (외국법인·해외상장) — 본 계산기 미지원 (Case 21)
+ * v3 정정 (PR-3-c, 2026-05-19): "별도 도메인" → "본 계산기 현재 미지원"
+ *   §94①3 다목은 본 양도소득세 §94 과세대상 내부이지만 본 엔진 미구현.
+ *   사용자가 다른 세금(국외전출세 §126의3)과 혼동하지 않도록 라벨 정정.
  */
 
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
@@ -65,14 +68,23 @@ export function MarketTypeBlock({ marketType, onChange }: MarketTypeBlockProps) 
         options={MARKET_OPTIONS}
       />
 
-      {/* 외국법인·해외상장 disabled 안내 */}
-      <div className="mt-3 rounded-lg border border-slate-200/70 bg-slate-50/70 px-4 py-3 opacity-60 cursor-not-allowed">
+      {/* Case 21 — §94①3 다목 외국법인·해외상장 주식 (본 엔진 미지원) */}
+      <div
+        className="mt-3 rounded-lg border border-rose-200/70 bg-rose-50/40 px-4 py-3 opacity-70 cursor-not-allowed"
+        aria-disabled="true"
+        title="본 계산기 현재 미지원 — 후속 PR에서 지원 예정"
+      >
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-slate-500">외국법인 발행 / 해외상장 주식</span>
-          <span className="text-xs bg-slate-200 text-slate-500 px-1.5 py-0.5 rounded">미지원</span>
+          <span className="text-sm font-medium text-rose-700">
+            외국법인 발행 / 해외상장 주식 (선택 불가)
+          </span>
+          <span className="text-xs bg-rose-200 text-rose-700 px-1.5 py-0.5 rounded">
+            §94①3 다목
+          </span>
         </div>
-        <p className="text-xs text-slate-400 mt-1">
-          §94①3 다목 — 해외주식은 별도 도메인 (22% 단일세율, 250만원 공제)
+        <p className="text-xs text-rose-700/80 mt-1.5 leading-relaxed">
+          본 계산기 현재 미지원. 해외 발행·상장 주식의 양도는 소득세법 §94①3 다목 양도소득세 대상이지만
+          본 엔진은 아직 지원하지 않습니다 (후속 PR 지원 예정). 국외전출세(§126의3)와는 별개입니다.
         </p>
       </div>
     </FieldCard>

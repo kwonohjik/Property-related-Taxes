@@ -1,8 +1,10 @@
 /**
- * 케이스 25·26 anchor 테스트 — 가산세 분기
+ * 케이스 25·26 anchor 테스트 — 가산세 분기 (KoreanLaw MCP 검증, v3 2026-05-19)
  *
- * 케이스 25: §47의2②1 부정행위 과소신고 가산세 40%
- * 케이스 26: §47의2②1 단서 국제거래 부정행위 가산세 60%
+ * 케이스 25: 국세기본법 §47조의3 ①1호 가목 — 과소신고 부정행위 40%
+ *           (penaltyBase 기본 filingViolation="under_report")
+ * 케이스 26: 국세기본법 §47조의3 ①1호 가목 괄호 — 과소신고 + 역외거래 부정 60%
+ * 추가 분기: 무신고(non_report) + 부정행위 = 국세기본법 §47조의2 ①1호 (CR-25-02·CR-26-02)
  *
  * 자가검증 anchor (본칙 직접 계산):
  *   과세표준 100,000,000 → 대주주 누진 20% → 산출세액 20,000,000
@@ -107,7 +109,7 @@ function penaltyBase(overrides: Partial<StockTransferInput> = {}): StockTransfer
  *   지방소득세: 1,950,000
  */
 
-describe("케이스 25 — §47의2②1 부정행위 과소신고 가산세 40%", () => {
+describe("케이스 25 — 국세기본법 §47조의3 ①1호 가목 — 과소신고 부정 40%", () => {
   const result = calculateStockTransferTax(
     penaltyBase({ isFraudulent: true, isInternationalTransaction: false }),
   );
@@ -149,7 +151,7 @@ describe("케이스 25 — §47의2②1 부정행위 과소신고 가산세 40%"
     expect(result.calculatedTax).toBe(19_500_000);
   });
 
-  it("C25-10: underReportPenalty = 7,800,000 (§47의2②1 부정 40%)", () => {
+  it("C25-10: underReportPenalty = 7,800,000 (국세기본법 §47조의3 ①1호 가목 부정 40%)", () => {
     // 19,500,000 × 40% = 7,800,000 → 10원 절사 = 7,800,000
     expect(result.underReportPenalty).toBe(7_800_000);
   });
@@ -168,17 +170,17 @@ describe("케이스 25 — §47의2②1 부정행위 과소신고 가산세 40%"
     expect(result.localIncomeTax).toBe(1_950_000);
   });
 
-  it("C25-14: appliedRules에 §47의2②1 부정 포함", () => {
-    // warnings 또는 appliedRules에 부정 가산세 ref 기록
+  it("C25-14: appliedRules에 국세기본법 §47조의3 ①1호 가목 포함", () => {
+    // warnings 또는 appliedRules에 부정 가산세 ref 기록 (v3: 국세기본법 §47조의3 정합)
     const allRules = [...(result.appliedRules ?? []), ...(result.warnings ?? [])];
     const hasFraudRule = allRules.some(
-      (r) => r.includes("§47의2") || r.includes("부정"),
+      (r) => r.includes("§47조의3") || r.includes("§47조의2") || r.includes("부정"),
     );
     expect(hasFraudRule).toBe(true);
   });
 });
 
-describe("케이스 26 — §47의2②1 단서 국제거래 부정 가산세 60%", () => {
+describe("케이스 26 — 국세기본법 §47조의3 ①1호 가목 괄호 — 과소신고 + 역외 60%", () => {
   const result = calculateStockTransferTax(
     penaltyBase({ isFraudulent: true, isInternationalTransaction: true }),
   );
@@ -191,7 +193,7 @@ describe("케이스 26 — §47의2②1 단서 국제거래 부정 가산세 60%
     expect(result.calculatedTax).toBe(19_500_000);
   });
 
-  it("C26-03: underReportPenalty = 11,700,000 (§47의2②1 단서 60%)", () => {
+  it("C26-03: underReportPenalty = 11,700,000 (국세기본법 §47조의3 ①1호 가목 괄호 역외 60%)", () => {
     // 19,500,000 × 60% = 11,700,000 → 10원 절사 = 11,700,000
     expect(result.underReportPenalty).toBe(11_700_000);
   });
@@ -209,12 +211,12 @@ describe("케이스 26 — §47의2②1 단서 국제거래 부정 가산세 60%
     expect(result.localIncomeTax).toBe(1_950_000);
   });
 
-  it("C26-07: appliedRules에 §47의2②1 국제 부정 포함", () => {
+  it("C26-07: appliedRules에 국세기본법 §47조의3 ①1호 가목 (역외) 포함", () => {
     const allRules = [...(result.appliedRules ?? []), ...(result.warnings ?? [])];
-    const hasIntlFraudRule = allRules.some(
-      (r) => r.includes("§47의2") || r.includes("국제"),
+    const hasOffshoreFraudRule = allRules.some(
+      (r) => r.includes("§47조의3") || r.includes("§47조의2") || r.includes("역외") || r.includes("국제"),
     );
-    expect(hasIntlFraudRule).toBe(true);
+    expect(hasOffshoreFraudRule).toBe(true);
   });
 });
 
@@ -293,7 +295,7 @@ describe("filingViolation 게이트 — 정상 신고 시 가산세 0 (FV-NONE)"
 
   it("FV-NONE-03: appliedRules에 §47의2 가산세 ref 없음", () => {
     const allRules = [...(result.appliedRules ?? [])];
-    const hasPenaltyRule = allRules.some((r) => r.includes("§47의2"));
+    const hasPenaltyRule = allRules.some((r) => r.includes("§47조의2") || r.includes("§47조의3"));
     expect(hasPenaltyRule).toBe(false);
   });
 });
@@ -307,7 +309,7 @@ describe("filingViolation 게이트 — 무신고 20% (FV-NON-REPORT)", () => {
     }),
   );
 
-  it("FV-NR-01: underReportPenalty = 3,900,000 (§47의2①1 무신고 20%)", () => {
+  it("FV-NR-01: underReportPenalty = 3,900,000 (국세기본법 §47조의2 ①2호 무신고 20%)", () => {
     // 19,500,000 × 20% = 3,900,000
     expect(result.underReportPenalty).toBe(3_900_000);
   });
@@ -326,7 +328,7 @@ describe("filingViolation 게이트 — 과소신고 10% (FV-UNDER-REPORT)", () 
     }),
   );
 
-  it("FV-UR-01: underReportPenalty = 1,950,000 (§47의2②2 과소 10%)", () => {
+  it("FV-UR-01: underReportPenalty = 1,950,000 (국세기본법 §47조의3 ①2호 과소 10%)", () => {
     expect(result.underReportPenalty).toBe(1_950_000);
   });
 
@@ -336,7 +338,7 @@ describe("filingViolation 게이트 — 과소신고 10% (FV-UNDER-REPORT)", () 
 });
 
 describe("filingViolation 게이트 — 무신고 + 부정행위 (FV-NON-REPORT-FRAUD)", () => {
-  // 무신고 ∩ 부정행위 → 40% (§47의2②1) — 부정행위 분기가 우선
+  // 무신고 ∩ 부정행위 → 40% (국세기본법 §47조의2 ①1호) — 부정행위 분기가 우선
   const result = calculateStockTransferTax(
     penaltyBase({
       filingViolation: "non_report",
@@ -347,5 +349,54 @@ describe("filingViolation 게이트 — 무신고 + 부정행위 (FV-NON-REPORT-
 
   it("FV-NR-FRAUD-01: underReportPenalty = 7,800,000 (부정행위 40% 우선)", () => {
     expect(result.underReportPenalty).toBe(7_800_000);
+  });
+});
+
+// ============================================================
+// CR-25-02·CR-26-02 — 무신고 + 부정행위 / 무신고 + 부정 + 역외 매트릭스
+// (v3 PR-3-c 신규 — 국세기본법 §47조의2 ①1호 / 괄호)
+// ============================================================
+
+describe("CR-25-02 — 무신고 + 부정 40% — appliedRules: 국세기본법 §47조의2 ①1호", () => {
+  const result = calculateStockTransferTax(
+    penaltyBase({
+      filingViolation: "non_report",
+      isFraudulent: true,
+      isInternationalTransaction: false,
+    }),
+  );
+
+  it("CR-25-02-01: underReportPenalty = 7,800,000 (산출 19,500,000 × 40%)", () => {
+    expect(result.underReportPenalty).toBe(7_800_000);
+  });
+
+  it("CR-25-02-02: appliedRules에 국세기본법 §47조의2 ①1호 포함", () => {
+    const allRules = [...(result.appliedRules ?? []), ...(result.warnings ?? [])];
+    const hasNoReportFraud = allRules.some(
+      (r) => r.includes("§47조의2 ①1호") && !r.includes("괄호"),
+    );
+    expect(hasNoReportFraud).toBe(true);
+  });
+});
+
+describe("CR-26-02 — 무신고 + 부정 + 역외 60% — 국세기본법 §47조의2 ①1호 괄호", () => {
+  const result = calculateStockTransferTax(
+    penaltyBase({
+      filingViolation: "non_report",
+      isFraudulent: true,
+      isInternationalTransaction: true,
+    }),
+  );
+
+  it("CR-26-02-01: underReportPenalty = 11,700,000 (산출 19,500,000 × 60%)", () => {
+    expect(result.underReportPenalty).toBe(11_700_000);
+  });
+
+  it("CR-26-02-02: appliedRules에 국세기본법 §47조의2 ①1호 (괄호) 포함", () => {
+    const allRules = [...(result.appliedRules ?? []), ...(result.warnings ?? [])];
+    const hasNoReportOffshore = allRules.some(
+      (r) => r.includes("§47조의2 ①1호") && r.includes("괄호"),
+    );
+    expect(hasNoReportOffshore).toBe(true);
   });
 });

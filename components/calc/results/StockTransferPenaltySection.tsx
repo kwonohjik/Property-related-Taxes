@@ -5,6 +5,12 @@
  *
  * StockTransferTaxResultView 800줄 정책 준수를 위해 분리 (2026-05-18).
  * 가산세 분기 매트릭스 + 신고기한 안내 + 비발동 조건.
+ *
+ * v3 정정 (PR-3-c, 2026-05-19) — KoreanLaw MCP 검증:
+ *   - 무신고  = 국세기본법 §47조의2 (이전: 소득세법 §47의2 — 오인용)
+ *   - 과소신고 = 국세기본법 §47조의3 (이전: 소득세법 §47의2②2 — 오인용)
+ *   - "국제거래" → "역외거래" (법령 본문 표기)
+ *   - 부정행위 분기: under_report → §47조의3 ①1호 가목 / non_report → §47조의2 ①1호
  */
 
 import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
@@ -41,14 +47,18 @@ export function StockTransferPenaltySection({
   const isFraud = Boolean(isFraudulent);
 
   const underRate = isFraud && isIntl ? 60 : isFraud ? 40 : isNonReport ? 20 : 10;
-  const underBasis =
-    isFraud && isIntl
-      ? "§47의2②1 단서 — 국제거래 부정행위 60%"
-      : isFraud
-        ? "§47의2②1 — 부정행위 40%"
-        : isNonReport
-          ? "§47의2①1 — 무신고 20%"
-          : "§47의2②2 — 일반 과소신고 10%";
+  // v3: 무신고/과소 별 분기 + 역외 괄호 분리
+  const underBasis = isFraud && isIntl
+    ? isNonReport
+      ? "국세기본법 §47조의2 ①1호 (괄호) — 무신고 + 역외거래 부정 60%"
+      : "국세기본법 §47조의3 ①1호 가목 (괄호) — 과소신고 + 역외거래 부정 60%"
+    : isFraud
+      ? isNonReport
+        ? "국세기본법 §47조의2 ①1호 — 무신고 부정 40%"
+        : "국세기본법 §47조의3 ①1호 가목 — 과소신고 부정 40%"
+      : isNonReport
+        ? "국세기본법 §47조의2 ①2호 — 일반 무신고 20%"
+        : "국세기본법 §47조의3 ①2호 — 일반 과소신고 10%";
 
   return (
     <div className="space-y-3">
@@ -107,31 +117,43 @@ export function StockTransferPenaltySection({
               <tr className={isUnderReport && !isFraud ? "bg-rose-100/40 font-semibold" : ""}>
                 <td className="px-3 py-2 text-slate-700">일반 과소신고</td>
                 <td className="px-3 py-2 text-center font-mono">10%</td>
-                <td className="px-3 py-2 text-slate-500">§47의2②2</td>
+                <td className="px-3 py-2 text-slate-500">국세기본법 §47조의3 ①2호</td>
                 <td className="px-3 py-2 text-slate-600">신고한 세액이 신고하여야 할 세액보다 적은 경우</td>
               </tr>
               <tr className={isNonReport && !isFraud ? "bg-rose-100/40 font-semibold" : ""}>
-                <td className="px-3 py-2 text-slate-700">무신고</td>
+                <td className="px-3 py-2 text-slate-700">일반 무신고</td>
                 <td className="px-3 py-2 text-center font-mono">20%</td>
-                <td className="px-3 py-2 text-slate-500">§47의2①1</td>
+                <td className="px-3 py-2 text-slate-500">국세기본법 §47조의2 ①2호</td>
                 <td className="px-3 py-2 text-slate-600">법정 신고기한까지 신고서 미제출</td>
               </tr>
-              <tr className={isFraud && !isIntl ? "bg-rose-100/40 font-semibold" : ""}>
+              <tr className={isFraud && !isIntl && isUnderReport ? "bg-rose-100/40 font-semibold" : ""}>
                 <td className="px-3 py-2 text-slate-700">부정행위 과소</td>
                 <td className="px-3 py-2 text-center font-mono">40%</td>
-                <td className="px-3 py-2 text-slate-500">§47의2②1</td>
+                <td className="px-3 py-2 text-slate-500">국세기본법 §47조의3 ①1호 가목</td>
                 <td className="px-3 py-2 text-slate-600">부정행위(허위 증빙 등) 동반 과소신고</td>
               </tr>
-              <tr className={isFraud && isIntl ? "bg-rose-100/40 font-semibold" : ""}>
-                <td className="px-3 py-2 text-slate-700">국제거래 부정</td>
+              <tr className={isFraud && !isIntl && isNonReport ? "bg-rose-100/40 font-semibold" : ""}>
+                <td className="px-3 py-2 text-slate-700">부정행위 무신고</td>
+                <td className="px-3 py-2 text-center font-mono">40%</td>
+                <td className="px-3 py-2 text-slate-500">국세기본법 §47조의2 ①1호</td>
+                <td className="px-3 py-2 text-slate-600">부정행위 동반 무신고</td>
+              </tr>
+              <tr className={isFraud && isIntl && isUnderReport ? "bg-rose-100/40 font-semibold" : ""}>
+                <td className="px-3 py-2 text-slate-700">역외 + 부정 과소</td>
                 <td className="px-3 py-2 text-center font-mono">60%</td>
-                <td className="px-3 py-2 text-slate-500">§47의2②1 단서</td>
-                <td className="px-3 py-2 text-slate-600">국제거래 + 부정행위 중복 가중</td>
+                <td className="px-3 py-2 text-slate-500">국세기본법 §47조의3 ①1호 가목 (괄호)</td>
+                <td className="px-3 py-2 text-slate-600">역외거래에서 발생한 부정행위로 인한 과소신고</td>
+              </tr>
+              <tr className={isFraud && isIntl && isNonReport ? "bg-rose-100/40 font-semibold" : ""}>
+                <td className="px-3 py-2 text-slate-700">역외 + 부정 무신고</td>
+                <td className="px-3 py-2 text-center font-mono">60%</td>
+                <td className="px-3 py-2 text-slate-500">국세기본법 §47조의2 ①1호 (괄호)</td>
+                <td className="px-3 py-2 text-slate-600">역외거래에서 발생한 부정행위로 인한 무신고</td>
               </tr>
               <tr>
-                <td className="px-3 py-2 text-slate-700">납부불성실</td>
+                <td className="px-3 py-2 text-slate-700">납부지연</td>
                 <td className="px-3 py-2 text-center font-mono">1일 22/100,000</td>
-                <td className="px-3 py-2 text-slate-500">§47의4</td>
+                <td className="px-3 py-2 text-slate-500">국세기본법 §47조의4</td>
                 <td className="px-3 py-2 text-slate-600">납부기한 다음날부터 1일당 약 0.022%</td>
               </tr>
             </tbody>
@@ -146,7 +168,7 @@ export function StockTransferPenaltySection({
             <br />
             확정신고: <strong>양도일 다음해 5.1 ~ 5.31</strong> (§110)
             <br />
-            법정기한 도과 시 무신고(§47의2①1 20%) 또는 과소신고(§47의2②2 10%) 자동 발동
+            법정기한 도과 시 무신고(국세기본법 §47조의2 ①2호 20%) 또는 과소신고(국세기본법 §47조의3 ①2호 10%) 자동 발동
           </p>
         </div>
 
