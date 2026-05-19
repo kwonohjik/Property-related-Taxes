@@ -40,6 +40,8 @@ export interface ClassificationResult {
   augmentedShares?: number;
   /** F-09/F-10/F-14/F-23 (2026-05-19) — 판정 기준일 override 적용 사유 echo */
   judgmentBasis?: "default" | "merger" | "split" | "split_new_entity" | "incorporation";
+  /** F-24 (2026-05-19) — 본인 미보유 시 자동 강제 합산 적용 여부 */
+  forcedCombinedJudgment?: boolean;
 }
 
 // ============================================================
@@ -72,6 +74,8 @@ function judgeIsMajorShareholder(input: StockTransferInput): {
   augmentedShares: number;
   /** F-09/F-10/F-14/F-23 (2026-05-19) — 판정 기준일 override 적용 사유 */
   judgmentBasis: "default" | "merger" | "split" | "split_new_entity" | "incorporation";
+  /** F-24 (2026-05-19) — 본인 미보유 시 자동 강제 합산 적용 여부 */
+  forcedCombinedJudgment: boolean;
   /** 폼 토글(isMajorShareholder)과 자동 산출값이 다른 경우 불일치 경고 */
   mismatchWarning?: string;
 } {
@@ -85,8 +89,19 @@ function judgeIsMajorShareholder(input: StockTransferInput): {
       shareAugmentationApplied: false,
       augmentedShares: 0,
       judgmentBasis: "default",
+      forcedCombinedJudgment: false,
     };
   }
+
+  // F-24 (2026-05-19) — 본인 미보유 시 자동 강제 합산 분기
+  // 기획재정부 금융세제-327, 2020.12.10. — 직전사업연도 종료일 본인 미보유 시 특수관계 기타주주
+  // 합산하여 §157 비율·시총 판정. `isLargestShareholderGroup` 토글 OFF여도 자동 ON 강제.
+  // 교재 §3장 이미지 51 Check Point ⑰.
+  const forcedCombinedJudgment =
+    input.selfShareRatio === 0 &&
+    input.selfMarketCap === 0 &&
+    (input.combinedShareRatio > 0 || input.combinedMarketCap > 0);
+  const effectiveLargestGroup = input.isLargestShareholderGroup || forcedCombinedJudgment;
 
   // F-09/F-10/F-14/F-23 (2026-05-19) — 판정 기준일 override (합병·분할·신설법인 특수분기)
   // judgmentDateOverride 가 있으면 매트릭스 조회에 사용. 미지정 시 priorYearEndDate 사용.
@@ -122,10 +137,11 @@ function judgeIsMajorShareholder(input: StockTransferInput): {
   // 적용 지분율·시총 결정 (2-step 판정)
   // 본인 단독 임계 우선, 미달 시 합산 적용
   // F-15·F-16 가산은 본인·합산 모두에 적용 (대여자·간접소유 주식이 양측 판정에 동일하게 영향)
-  const effectiveShareRatio = input.isLargestShareholderGroup
+  // F-24 (2026-05-19) — 본인 미보유 시 effectiveLargestGroup 자동 강제 합산
+  const effectiveShareRatio = effectiveLargestGroup
     ? Math.max(input.selfShareRatio + ratioAugment, input.combinedShareRatio + ratioAugment)
     : input.selfShareRatio + ratioAugment;
-  const effectiveMarketCap = input.isLargestShareholderGroup
+  const effectiveMarketCap = effectiveLargestGroup
     ? Math.max(input.selfMarketCap, input.combinedMarketCap)
     : input.selfMarketCap;
 
@@ -152,6 +168,7 @@ function judgeIsMajorShareholder(input: StockTransferInput): {
     shareAugmentationApplied,
     augmentedShares,
     judgmentBasis: input.judgmentBasis ?? "default",
+    forcedCombinedJudgment,
     mismatchWarning,
   };
 }
@@ -357,8 +374,15 @@ export function classifyStockTransfer(input: StockTransferInput): Classification
   }
 
   // 대주주 판정
-  const { isMajor, threshold, mismatchWarning, shareAugmentationApplied, augmentedShares, judgmentBasis } =
-    judgeIsMajorShareholder(input);
+  const {
+    isMajor,
+    threshold,
+    mismatchWarning,
+    shareAugmentationApplied,
+    augmentedShares,
+    judgmentBasis,
+    forcedCombinedJudgment,
+  } = judgeIsMajorShareholder(input);
   if (mismatchWarning) {
     warnings.push(mismatchWarning);
   }
@@ -369,6 +393,10 @@ export function classifyStockTransfer(input: StockTransferInput): Classification
   // F-09/F-10/F-14/F-23 (2026-05-19) — 판정 기준일 override 적용 시 appliedRules에 명시
   if (judgmentBasis !== "default") {
     appliedRules.push("판정기준일특수분기");
+  }
+  // F-24 (2026-05-19) — 본인 미보유 강제 합산 시 appliedRules에 명시
+  if (forcedCombinedJudgment) {
+    appliedRules.push("본인미보유강제합산");
   }
 
   // §94① 분류
@@ -411,5 +439,6 @@ export function classifyStockTransfer(input: StockTransferInput): Classification
     shareAugmentationApplied,
     augmentedShares,
     judgmentBasis,
+    forcedCombinedJudgment,
   };
 }

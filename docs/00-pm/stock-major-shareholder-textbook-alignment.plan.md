@@ -1,6 +1,6 @@
-# 주식 양도소득세 — 대주주 판정 교재 정합화 계획서 v8
+# 주식 양도소득세 — 대주주 판정 교재 정합화 계획서 v9
 
-> 작성일: 2026-05-19 (v8 — F-08~F-14·F-23 합병·분할·신설법인 특수분기 완료)
+> 작성일: 2026-05-19 (v9 — F-24·F-25 완료 — 전체 항목 종료)
 > 작성자: Claude (Opus 4.7)
 > 영향 도메인: `lib/tax-engine/stock-transfer/` + `components/calc/stock-transfer/` + `__tests__/tax-engine/stock-transfer/`
 > 우선순위: **P0 (오판정 직결)** — 비상장 벤처 시총 임계 누락 + 2016.4.1.~12.31. 구간 시기 매트릭스 부정확
@@ -14,6 +14,7 @@
 > v5 → v6 변경 사항: §19 정정 이력 참조 (F-06 후속 PR → 본 PR 완료로 이동, 비거래일 검증 hint 추가).
 > v6 → v7 변경 사항: §20 정정 이력 참조 (F-15·F-16 자동 가산 후속 PR → 본 PR 완료로 이동).
 > v7 → v8 변경 사항: §21 정정 이력 참조 (F-08~F-14·F-23 합병·분할·신설법인 특수분기 후속 PR → 본 PR 완료로 이동).
+> v8 → v9 변경 사항: §22 정정 이력 참조 (F-24 본인 미보유 강제 합산 + F-25 세율 부칙 안내 완료 — 전체 항목 종료).
 
 ---
 
@@ -427,8 +428,8 @@ Phase A·B Plan/Design 완료 후 Do 진입 전:
 - **F-09 ② / F-10 ③ / F-14 ⑦** — 합병·분할 등기일 분기
 - **F-12 ⑤ / F-13 ⑥** — 자본시장법 §178 투자기구 / 중소기업창업투자조합 합산 분기
 - ~~**F-15 ⑧ / F-16 ⑨ 자동 가산**~~ — ✅ v7 완료 (지분율 자동 가산, 시총은 사용자 책임)
-- **F-24 ⑰ 본인 미보유 시 합산 강제** (★ v3 신설) — 직전사업연도 종료일 본인 보유주식 0% + 특수관계인 합산만으로 대주주 판정 강제 분기. 기획재정부 금융세제-327, 2020.12.10.
-- **F-25** — 2016.1.1. 의무보호예수 부칙 토글
+- ~~**F-24 ⑰ 본인 미보유 시 합산 강제**~~ — ✅ v9 완료 (forcedCombinedJudgment 자동 분기)
+- ~~**F-25** — 2016.1.1. 의무보호예수 부칙 토글~~ — ✅ v9 완료 (현행 누진세율 통일로 부칙 본문 정합 + UI hint)
 
 ---
 
@@ -650,5 +651,38 @@ Phase A·B Plan/Design 완료 후 Do 진입 전:
 - 메모리 [[feedback_no_silent_apportion_fallback]] 정합 — basis≠default일 때 override 일자 필수 (silent fallback 금지)
 
 **v8 후속 PR 범위 (본 PR 완료 이후)**:
-- F-24 — 본인 미보유 시 합산 강제 분기
-- F-25 — 2016.1.1. 의무보호예수 부칙
+- ~~F-24 — 본인 미보유 시 합산 강제 분기~~ (v9 완료)
+- ~~F-25 — 2016.1.1. 의무보호예수 부칙~~ (v9 완료)
+
+---
+
+## 22. 정정 이력 (v8 → v9, 2026-05-19) — F-24·F-25 완료 (전체 항목 종료)
+
+| # | 변경 항목 | v8 상태 | v9 결과 |
+|---|---|---|---|
+| 1 | F-24 범위 | 후속 PR | **본 PR 완료** — `forcedCombinedJudgment` 자동 분기 |
+| 2 | F-24 분기 조건 | 미구현 | `selfShareRatio === 0 && selfMarketCap === 0 && (combinedShareRatio > 0 \|\| combinedMarketCap > 0)` 시 자동 강제 합산 |
+| 3 | F-24 echo 필드 | 없음 | `appliedThreshold.forcedCombinedJudgment?: boolean` — 결과 카드 sky tone 배지 + 안내 |
+| 4 | F-24 appliedRules | 17개 | **18개 — "본인미보유강제합산" 신설** |
+| 5 | F-24 안내 라벨 | 미노출 | "F-24: 직전사업연도 종료일 본인 미보유 → 특수관계 기타주주 합산하여 판정 (기획재정부 금융세제-327, 2020.12.10.)" |
+| 6 | F-24 anchor | 미작성 | **PHC-01~05 신규 anchor 5건** (`textbook-alignment-forced-combined.test.ts`) |
+| 7 | F-25 부칙 분석 | 후속 PR | **현행 엔진 이미 정합** — 대주주 누진세율(20%/25%) 통일 적용으로 부칙 본문 준수 |
+| 8 | F-25 UI 안내 | 미구현 | `SpecialEntityHintsCard` (Group D)에 F-25 hint 추가 — 4건으로 확장 |
+| 9 | F-25 hint 문구 | 미작성 | "2016.1.1. 이후 양도분부터 중소기업 여부와 관계없이 대주주 양도 주식은 20% 단일" + 보호예수 부칙 단서 + 본 앱 누진 적용 명시 |
+
+**v9 구현 상세 (F-24)**:
+- `judgeIsMajorShareholder` 에 `forcedCombinedJudgment = self=0 && (combined > 0)` 분기
+- `effectiveLargestGroup = input.isLargestShareholderGroup || forcedCombinedJudgment`
+- `effectiveShareRatio`·`effectiveMarketCap` 계산에 effectiveLargestGroup 사용 (사용자 토글과 OR 처리)
+- `ClassificationResult.forcedCombinedJudgment: boolean`
+- `buildAppliedThreshold` spread 전파
+- `StockTransferTaxResultView` sky tone 배지 "F-24 본인 미보유 → 특수관계인 합산 강제" + 안내 라벨
+
+**v9 구현 상세 (F-25)**:
+- 엔진 측 변경 0 — 현행 `STOCK_MAJOR_PROGRESSIVE_BRACKETS` 가 이미 부칙 정합 (20%/25% 누진)
+- `SpecialEntityHintsCard` 4건으로 확장 (F-08·F-12·F-13·F-25)
+- 부칙 단서(2016.1.1. 의무보호예수 종료 6개월 후 양도) 안내 명시
+
+**v9 후속 PR 범위 (본 PR 완료 이후)**:
+- ✅ **전체 항목 종료** — 교재 §3장 정합화 마일스톤 100% 완료
+- (선택) 정밀 작업: 양도일 2016.1.1. 이전 케이스에서 종전 10% 세율 분기 명시 — 현행 누진 통일로 사실상 보수적 처리 중

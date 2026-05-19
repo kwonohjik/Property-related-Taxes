@@ -182,6 +182,8 @@ export function buildAppliedThreshold(
     augmentedShares: classification.augmentedShares,
     // F-09/F-10/F-14/F-23 (2026-05-19) — 판정 기준일 override 사유 echo
     judgmentBasis: classification.judgmentBasis,
+    // F-24 (2026-05-19) — 본인 미보유 강제 합산 echo
+    forcedCombinedJudgment: classification.forcedCombinedJudgment,
   };
 }
 

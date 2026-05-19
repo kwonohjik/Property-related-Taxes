@@ -104,7 +104,7 @@ export function SpecialEntityHintsCard() {
   return (
     <details className="rounded-lg border border-rose-200 bg-rose-50/40 p-3 text-xs">
       <summary className="cursor-pointer select-none font-semibold text-rose-800">
-        💡 합병·분할·간접투자 추가 안내 (3건)
+        💡 합병·분할·간접투자·세율 부칙 안내 (4건)
       </summary>
       <ul className="mt-2 space-y-2 pl-2 text-rose-900">
         <li className="flex items-start gap-2">
@@ -127,6 +127,15 @@ export function SpecialEntityHintsCard() {
           <span className="flex-1">
             중소기업창업투자조합의 주식양도차익은 <strong>조합원 기준</strong>으로 대주주 판정 (조합 합산 ❌)
             <LawArticleModal legalBasis="재재산-466" label="재재산-466" className="ml-1" />
+          </span>
+        </li>
+        <li className="flex items-start gap-2">
+          <span className="font-medium text-rose-700">F-25 세율 부칙:</span>
+          <span className="flex-1">
+            2016.1.1. 이후 양도분부터 중소기업 여부와 관계없이 대주주 양도 주식은 <strong>20% 단일</strong>
+            (종전은 중소 10%). 2016.1.1. 현재 의무보호예수 중인 중소기업 대주주 주식을 보호예수 종료
+            6개월 후 양도 시 개정 세율(20%) 적용. 본 앱은 누진세율(20%/25%) 통일 적용.
+            <LawArticleModal legalBasis="소득세법 §104" label="§104①" className="ml-1" />
           </span>
         </li>
       </ul>

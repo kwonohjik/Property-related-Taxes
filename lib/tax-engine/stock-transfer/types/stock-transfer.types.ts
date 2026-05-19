@@ -638,6 +638,13 @@ export type StockTransferResult = {
      * UI 결과 카드에 "합병등기일 기준" 등 분기 라벨 표시.
      */
     judgmentBasis?: "default" | "merger" | "split" | "split_new_entity" | "incorporation";
+    /**
+     * F-24 (2026-05-19) — 본인 미보유 시 자동 강제 합산 적용 여부.
+     * `selfShareRatio === 0 && selfMarketCap === 0 && (combinedShareRatio > 0 || combinedMarketCap > 0)`
+     * 시 `isLargestShareholderGroup` 토글 OFF여도 자동 합산 판정 강제 (기획재정부 금융세제-327, 2020.12.10.).
+     * UI 결과 카드에 "본인 미보유 → 특수관계인 합산 강제" 안내 분기.
+     */
+    forcedCombinedJudgment?: boolean;
   };
 
   // 디버그·경고
@@ -660,6 +667,7 @@ export type StockTransferResult = {
     | "로트이동평균"
     | "F15F16대차사모펀드자동가산"
     | "판정기준일특수분기"
+    | "본인미보유강제합산"
   >;
 
   /**

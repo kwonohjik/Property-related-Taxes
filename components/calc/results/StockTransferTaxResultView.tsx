@@ -546,6 +546,12 @@ function MajorShareholderResultCard({
             특수 판정 기준일 적용
           </span>
         )}
+        {/* F-24 (2026-05-19) — 본인 미보유 강제 합산 배지 */}
+        {t.forcedCombinedJudgment && (
+          <span className="inline-flex items-center rounded-full bg-sky-200 px-2 py-0.5 text-[10px] font-bold text-sky-900">
+            F-24 본인 미보유 → 특수관계인 합산 강제
+          </span>
+        )}
       </h4>
       <dl className="text-sm text-violet-800 space-y-1">
         <div>· 시장: <strong>{MARKET_LABEL[t.marketType]}</strong></div>
@@ -565,6 +571,12 @@ function MajorShareholderResultCard({
         {t.judgmentBasis && t.judgmentBasis !== "default" && (
           <div className="text-xs text-rose-700 font-medium">
             · 판정 기준일 사유: {JUDGMENT_BASIS_LABEL[t.judgmentBasis]}
+          </div>
+        )}
+        {/* F-24 (2026-05-19) — 본인 미보유 강제 합산 안내 */}
+        {t.forcedCombinedJudgment && (
+          <div className="text-xs text-sky-700 font-medium">
+            · F-24: 직전사업연도 종료일 본인 미보유 → 특수관계 기타주주 합산하여 판정 (기획재정부 금융세제-327, 2020.12.10.)
           </div>
         )}
         <div className="pt-1 font-medium">
