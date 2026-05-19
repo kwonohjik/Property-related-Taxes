@@ -26,6 +26,7 @@ import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store
 import { PostListingClosingPriceTable, autoFillDates, dayOfWeek } from "./PostListingClosingPriceTable";
 import { TransferDate1MonthClosingPriceTable } from "./TransferDate1MonthClosingPriceTable";
 import { KiwoomAutoFetchButton } from "./KiwoomAutoFetchButton";
+import { KiwoomPostListingAutoFetchButton } from "./KiwoomPostListingAutoFetchButton";
 import { PostListingNetIncomeStatement } from "./PostListingNetIncomeStatement";
 import { PostListingNetAssetStatement } from "./PostListingNetAssetStatement";
 import { PostListingFormulaPreview } from "./PostListingFormulaPreview";
@@ -230,6 +231,14 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
         {/* listing_only / full — sub-components */}
         {mode !== "simple" && (
           <>
+            {/* F-02 키움 자동조회 — 종목코드 + 상장일 + 상장 종목 충족 시 활성화 */}
+            <KiwoomPostListingAutoFetchButton
+              securityCode={form.securityCode}
+              listingDate={form.listingDate}
+              marketType={form.marketType}
+              tradingHalt={form.kiwoomTradingHalt}
+              onFill={onChange}
+            />
             <PostListingClosingPriceTable form={form} onChange={onChange} />
             <PostListingNetIncomeStatement form={form} onChange={onChange} mode={mode} />
             <PostListingNetAssetStatement form={form} onChange={onChange} mode={mode} />

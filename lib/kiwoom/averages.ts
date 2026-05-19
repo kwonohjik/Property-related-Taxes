@@ -15,7 +15,12 @@
  *   - 분모 부족(IPO 미만·거래정지 등)이어도 자동 보간 금지. warning 메타 동봉.
  */
 
-import { buildOneMonthBeforeSlots, nonTradingLabel, isKrxTradingDay } from "./calendar";
+import {
+  buildOneMonthBeforeSlots,
+  buildOneMonthAfterListingSlots,
+  nonTradingLabel,
+  isKrxTradingDay,
+} from "./calendar";
 import type { KiwoomDailyQuote, OneMonthBeforeTransferResult } from "./types";
 
 export interface OneMonthBeforeTransferArgs {
@@ -66,6 +71,76 @@ export function oneMonthBeforeTransferAvg(
       tradingDays += 1;
     } else {
       // 거래일이지만 응답에 종가 없음 (IPO 미만·거래정지 등)
+      closingPrices.push(null);
+      weekendLabels.push("종가 없음");
+    }
+  }
+
+  const average = tradingDays > 0 ? Math.floor(sum / tradingDays) : 0;
+
+  return {
+    slotDates,
+    closingPrices,
+    weekendLabels,
+    tradingDays,
+    sum,
+    average,
+    tradingHalt: !!args.tradingHalt,
+    adminIssue: !!args.adminIssue,
+  };
+}
+
+// ============================================================
+// F-02 §165⑤ 상장일 이후 1개월 종가 평균 (사례 48 취득 후 상장)
+// ============================================================
+
+export interface OneMonthAfterListingArgs {
+  /** ka10081 응답 거래일 종가 배열 (1개월 범위 필터 후) */
+  quotes: ReadonlyArray<KiwoomDailyQuote>;
+  /** "YYYY-MM-DD" — 상장일 */
+  listingDateIso: string;
+  /** 거래정지·관리종목 플래그 */
+  tradingHalt?: boolean;
+  adminIssue?: boolean;
+}
+
+/**
+ * §165⑤ 상장일 이후 1개월 1주당 종가 평균 (사례 48 취득 후 상장 환산 분자).
+ *
+ * 산정 절차:
+ * 1. 1개월 슬롯 생성 (`buildOneMonthAfterListingSlots`) — 상장일 포함
+ * 2. 슬롯별 거래일 판정 → 종가 매핑
+ * 3. 거래일만 분모로 평균
+ */
+export function oneMonthAfterListingAvg(
+  args: OneMonthAfterListingArgs,
+): OneMonthBeforeTransferResult {
+  const slotDates = buildOneMonthAfterListingSlots(args.listingDateIso);
+  const quoteByDate = new Map<string, number>();
+  for (const q of args.quotes) {
+    if (q.close > 0) quoteByDate.set(q.date, q.close);
+  }
+
+  const closingPrices: (number | null)[] = [];
+  const weekendLabels: string[] = [];
+  let sum = 0;
+  let tradingDays = 0;
+
+  for (const iso of slotDates) {
+    const tradingDay = isKrxTradingDay(iso);
+    const label = nonTradingLabel(iso);
+    if (!tradingDay) {
+      closingPrices.push(null);
+      weekendLabels.push(label);
+      continue;
+    }
+    const close = quoteByDate.get(iso);
+    if (typeof close === "number" && close > 0) {
+      closingPrices.push(close);
+      weekendLabels.push("");
+      sum += close;
+      tradingDays += 1;
+    } else {
       closingPrices.push(null);
       weekendLabels.push("종가 없음");
     }

@@ -109,4 +109,36 @@ export function buildOneMonthBeforeSlots(transferDateIso: string): string[] {
   return slots;
 }
 
+/**
+ * §165⑤ 상장일 이후 1개월 슬롯 (사례 48 취득 후 상장 환산).
+ *
+ * - 시작: 상장일 (포함)
+ * - 종료: 상장일 + 1개월 - 1일
+ *
+ * 예: 2009-08-21 → [2009-08-21 ~ 2009-09-20] 31일
+ *     2009-02-01 → [2009-02-01 ~ 2009-02-28] 28일 (평년)
+ *     2024-02-01 → [2024-02-01 ~ 2024-02-29] 29일 (윤년)
+ *
+ * 양도일 직전 1개월과 달리 anchor 시프트 없음 (상장일은 거래소 정상 거래일 가정).
+ */
+export function buildOneMonthAfterListingSlots(listingDateIso: string): string[] {
+  if (!listingDateIso || !/^\d{4}-\d{2}-\d{2}$/.test(listingDateIso)) return [];
+  const [y, m, d] = listingDateIso.split("-").map(Number);
+
+  // start = 상장일
+  const start = new Date(Date.UTC(y, m - 1, d));
+
+  // end = 상장일 + 1개월 - 1일 (JS overflow 자동 보정)
+  const end = new Date(Date.UTC(y, m, d));
+  end.setUTCDate(end.getUTCDate() - 1);
+
+  const slots: string[] = [];
+  const cursor = new Date(start.getTime());
+  while (cursor.getTime() <= end.getTime()) {
+    slots.push(formatIsoDate(cursor));
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+  return slots;
+}
+
 export { KRX_HOLIDAY_FIXTURE_RANGE };
