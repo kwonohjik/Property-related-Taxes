@@ -38,6 +38,15 @@ export function KiwoomAutoFetchButton({
 }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<{
+    average: number;
+    tradingDays: number;
+    sum: number;
+    slotDates: string[];
+    closingPrices: (number | null)[];
+    weekendLabels: string[];
+  } | null>(null);
+  const [showDetail, setShowDetail] = useState(false);
 
   const codeValid = /^[0-9A-Z]{6}$/.test(securityCode);
   const dateValid = /^\d{4}-\d{2}-\d{2}$/.test(transferDate);
@@ -90,8 +99,10 @@ export function KiwoomAutoFetchButton({
       const data = (await res.json()) as {
         slotDates: string[];
         closingPrices: (number | null)[];
+        weekendLabels: string[];
         average: number;
         tradingDays: number;
+        sum: number;
         tradingHalt: boolean;
       };
 
@@ -131,6 +142,16 @@ export function KiwoomAutoFetchButton({
         kiwoomTradingHalt: data.tradingHalt,
         kiwoomLastFetchedAt: new Date().toISOString(),
       });
+
+      // 검증용 결과 요약
+      setInfo({
+        average: avg,
+        tradingDays: n,
+        sum,
+        slotDates: displayDates,
+        closingPrices: closings.map((c) => (c ? Number(c) : null)),
+        weekendLabels: data.weekendLabels ?? displayDates.map(() => ""),
+      });
     } catch (e) {
       setError((e as Error).message ?? "네트워크 오류");
     } finally {
@@ -166,6 +187,59 @@ export function KiwoomAutoFetchButton({
         <p className="text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded px-2 py-1">
           ❌ {error}
         </p>
+      )}
+      {info && !error && (
+        <div className="rounded-md bg-emerald-50 border border-emerald-200 px-3 py-2 text-xs text-emerald-900 space-y-2">
+          <div className="space-y-1">
+            <p>
+              ✓ 기간{" "}
+              <strong>{info.slotDates[0]} ~ {info.slotDates[info.slotDates.length - 1]}</strong>{" "}
+              ({info.slotDates.length}일) · 거래일{" "}
+              <strong>{info.tradingDays}</strong>일
+            </p>
+            <p>
+              평균 = <strong>{info.sum.toLocaleString()}</strong> ÷{" "}
+              <strong>{info.tradingDays}</strong> ={" "}
+              <strong className="text-emerald-900 text-sm">{info.average.toLocaleString()}</strong>원 (원미만 절사)
+            </p>
+            <p className="text-emerald-700">→ §99①3 환산 분모로 자동 mirror됨</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowDetail((v) => !v)}
+            className="text-xs text-emerald-800 underline hover:text-emerald-900"
+          >
+            {showDetail ? "▲ 일자별 종가 숨기기" : "▼ 일자별 종가 상세 보기 (검증용)"}
+          </button>
+          {showDetail && (
+            <div className="rounded border border-emerald-300 bg-white p-2 space-y-1 max-h-96 overflow-y-auto">
+              <p className="text-[10px] text-emerald-700 sticky top-0 bg-white pb-1 border-b border-emerald-100">
+                양도일 직전 1개월 일자별 종가 — 거래일만 분모 산입 (상증령 §52의2④ 공휴일·토요일 제외)
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-0.5 text-[11px] font-mono">
+                {info.slotDates.map((iso, i) => {
+                  const close = info.closingPrices[i];
+                  const label = info.weekendLabels[i];
+                  const isTrading = typeof close === "number" && close > 0;
+                  return (
+                    <div
+                      key={iso}
+                      className={`flex justify-between px-1.5 py-0.5 rounded ${
+                        isTrading ? "" : "bg-amber-50 text-amber-700"
+                      }`}
+                    >
+                      <span className="text-gray-500 tabular-nums">{i + 1}. {iso}</span>
+                      <span className="tabular-nums">{isTrading ? close.toLocaleString() : label || "—"}</span>
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="text-[10px] text-emerald-700 pt-1 border-t border-emerald-100 sticky bottom-0 bg-white">
+                합계 = {info.sum.toLocaleString()} · 거래일 = {info.tradingDays} · 평균 = floor(합계/거래일) = {info.average.toLocaleString()}
+              </p>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

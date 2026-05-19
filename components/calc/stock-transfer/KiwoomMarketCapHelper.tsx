@@ -155,30 +155,63 @@ export function KiwoomMarketCapHelper({
         </p>
       )}
       {info && !error && (
-        <div className="rounded-md bg-emerald-50 border border-emerald-200 px-3 py-2 text-xs text-emerald-900 space-y-1">
-          <p>
-            ✓ 종가{" "}
-            <strong>{info.close.toLocaleString()}</strong>원{" "}
-            <span className="text-emerald-700">
-              ({info.priorTradingDate && info.priorTradingDate !== info.date
-                ? `${info.date} 비거래일 → 직전 거래일 ${info.priorTradingDate}`
-                : info.date})
-            </span>
-          </p>
-          <p>
-            본인 단독 시총: <strong>{info.selfCap.toLocaleString()}</strong>원{" "}
-            {info.selfCap >= 5_000_000_000 && (
-              <span className="text-rose-700 font-semibold">→ 50억 이상 → 대주주 임계 충족</span>
-            )}
-          </p>
-          {isLargestShareholderGroup && (
+        <div className="rounded-md bg-emerald-50 border border-emerald-200 px-3 py-2 text-xs text-emerald-900 space-y-2">
+          <div className="space-y-1">
             <p>
-              합산 시총: <strong>{info.combinedCap.toLocaleString()}</strong>원{" "}
-              {info.combinedCap >= 5_000_000_000 && (
-                <span className="text-rose-700 font-semibold">→ 50억 이상 → 대주주 임계 충족</span>
-              )}
+              ✓ 직전 사업연도말 종가:{" "}
+              <strong>{info.close.toLocaleString()}</strong>원{" "}
+              <span className="text-emerald-700">
+                ({info.priorTradingDate && info.priorTradingDate !== info.date
+                  ? `${info.date} 비거래일 → 직전 거래일 ${info.priorTradingDate}`
+                  : info.date})
+              </span>
             </p>
-          )}
+          </div>
+          <div className="rounded border border-emerald-300 bg-white p-2 space-y-1.5">
+            <p className="text-[10px] text-emerald-700 border-b border-emerald-100 pb-1">
+              ▼ 시총 산식 검증 (시행령 §157①)
+            </p>
+            <div className="space-y-0.5 font-mono text-[11px]">
+              <div className="flex justify-between">
+                <span>종가 × 본인 단독 보유 주식수</span>
+                <span className="tabular-nums">
+                  {info.close.toLocaleString()} × {selfShares.toLocaleString()}
+                </span>
+              </div>
+              <div className="flex justify-between border-t border-emerald-100 pt-0.5">
+                <span className="font-semibold">= 본인 단독 시가총액</span>
+                <strong className="tabular-nums">{info.selfCap.toLocaleString()}원</strong>
+              </div>
+              {info.selfCap >= 5_000_000_000 ? (
+                <p className="text-rose-700 font-semibold text-right">
+                  → 50억 이상 → 대주주 임계 충족
+                </p>
+              ) : (
+                <p className="text-emerald-700 text-right">→ 50억 미만 → 임계 미달</p>
+              )}
+            </div>
+            {isLargestShareholderGroup && (
+              <div className="space-y-0.5 font-mono text-[11px] pt-1 border-t border-emerald-100">
+                <div className="flex justify-between">
+                  <span>종가 × 합산 보유 주식수</span>
+                  <span className="tabular-nums">
+                    {info.close.toLocaleString()} × {combinedShares.toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex justify-between border-t border-emerald-100 pt-0.5">
+                  <span className="font-semibold">= 합산 시가총액</span>
+                  <strong className="tabular-nums">{info.combinedCap.toLocaleString()}원</strong>
+                </div>
+                {info.combinedCap >= 5_000_000_000 ? (
+                  <p className="text-rose-700 font-semibold text-right">
+                    → 50억 이상 → 대주주 임계 충족
+                  </p>
+                ) : (
+                  <p className="text-emerald-700 text-right">→ 50억 미만 → 임계 미달</p>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
