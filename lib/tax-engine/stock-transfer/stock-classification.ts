@@ -38,6 +38,8 @@ export interface ClassificationResult {
   shareAugmentationApplied?: boolean;
   /** F-15·F-16 (2026-05-19) — 가산된 주식수 echo */
   augmentedShares?: number;
+  /** F-09/F-10/F-14/F-23 (2026-05-19) — 판정 기준일 override 적용 사유 echo */
+  judgmentBasis?: "default" | "merger" | "split" | "split_new_entity" | "incorporation";
 }
 
 // ============================================================
@@ -68,6 +70,8 @@ function judgeIsMajorShareholder(input: StockTransferInput): {
   shareAugmentationApplied: boolean;
   /** F-15·F-16 (2026-05-19) — 자동 가산된 주식수 (lent + pefIndirect) */
   augmentedShares: number;
+  /** F-09/F-10/F-14/F-23 (2026-05-19) — 판정 기준일 override 적용 사유 */
+  judgmentBasis: "default" | "merger" | "split" | "split_new_entity" | "incorporation";
   /** 폼 토글(isMajorShareholder)과 자동 산출값이 다른 경우 불일치 경고 */
   mismatchWarning?: string;
 } {
@@ -80,14 +84,20 @@ function judgeIsMajorShareholder(input: StockTransferInput): {
       threshold: { shareRatio: 0, marketCap: 0 },
       shareAugmentationApplied: false,
       augmentedShares: 0,
+      judgmentBasis: "default",
     };
   }
+
+  // F-09/F-10/F-14/F-23 (2026-05-19) — 판정 기준일 override (합병·분할·신설법인 특수분기)
+  // judgmentDateOverride 가 있으면 매트릭스 조회에 사용. 미지정 시 priorYearEndDate 사용.
+  // 교재 §3장 이미지 50·51 Check Point ②③⑦⑯ (2010 소령 157⑧·소령 157④ 등).
+  const judgmentDate = input.judgmentDateOverride ?? priorYearEndDate;
 
   // 상장 3시장(§157) + 비상장(§167의8①2호) 모두 자동 산출
   // Phase B (2026-05-19): isVentureCompany 옵션 전달 — 비상장 벤처 시총 40억 분기
   const threshold = getMajorShareholderThreshold(
     marketType as "kospi" | "kosdaq" | "konex" | "unlisted",
-    priorYearEndDate,
+    judgmentDate,
     { isVentureCompany: input.isVentureCompany },
   );
 
@@ -141,6 +151,7 @@ function judgeIsMajorShareholder(input: StockTransferInput): {
     },
     shareAugmentationApplied,
     augmentedShares,
+    judgmentBasis: input.judgmentBasis ?? "default",
     mismatchWarning,
   };
 }
@@ -346,7 +357,7 @@ export function classifyStockTransfer(input: StockTransferInput): Classification
   }
 
   // 대주주 판정
-  const { isMajor, threshold, mismatchWarning, shareAugmentationApplied, augmentedShares } =
+  const { isMajor, threshold, mismatchWarning, shareAugmentationApplied, augmentedShares, judgmentBasis } =
     judgeIsMajorShareholder(input);
   if (mismatchWarning) {
     warnings.push(mismatchWarning);
@@ -354,6 +365,10 @@ export function classifyStockTransfer(input: StockTransferInput): Classification
   // F-15·F-16 (2026-05-19) — 자동 가산 적용 시 appliedRules에 명시
   if (shareAugmentationApplied) {
     appliedRules.push("F15F16대차사모펀드자동가산");
+  }
+  // F-09/F-10/F-14/F-23 (2026-05-19) — 판정 기준일 override 적용 시 appliedRules에 명시
+  if (judgmentBasis !== "default") {
+    appliedRules.push("판정기준일특수분기");
   }
 
   // §94① 분류
@@ -395,5 +410,6 @@ export function classifyStockTransfer(input: StockTransferInput): Classification
     appliedThreshold: threshold,
     shareAugmentationApplied,
     augmentedShares,
+    judgmentBasis,
   };
 }

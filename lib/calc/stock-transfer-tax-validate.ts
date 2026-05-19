@@ -151,6 +151,28 @@ export function validateStep1(form: StockTransferFormData): StockValidationError
     }
   }
 
+  // F-09/F-10/F-14/F-23 (2026-05-19) — 판정 기준일 override 검증
+  // basis 가 default 가 아니면 override 일자 필수
+  if (form.judgmentBasis && form.judgmentBasis !== "default") {
+    if (!form.judgmentDateOverride || !/^\d{4}-\d{2}-\d{2}$/.test(form.judgmentDateOverride)) {
+      errors.push({
+        field: "judgmentDateOverride",
+        message:
+          "특수 판정 사유(합병/분할/신설법인)를 선택한 경우 기준일자가 필요합니다 " +
+          "(합병등기일·분할등기일·설립등기일 등)",
+        severity: "error",
+      });
+    }
+  }
+  // override 일자만 입력하고 basis 가 default 이면 효과 없음 — 경고
+  if (form.judgmentDateOverride && (!form.judgmentBasis || form.judgmentBasis === "default")) {
+    errors.push({
+      field: "judgmentBasis",
+      message: "판정 기준일 override 일자를 사용하려면 사유(합병/분할/신설법인)를 선택하세요",
+      severity: "warning",
+    });
+  }
+
   // 분할 매수·분할 양도 모드 분기 (Plan v2.2) — 폼-전역 acquisitionDate/transferDate는 single 한정
   const lotsMode = form.lotsMode || "single";
 

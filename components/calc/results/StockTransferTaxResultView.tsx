@@ -499,6 +499,15 @@ const RULE_SOURCE_LABEL: Record<NonNullable<NonNullable<StockTransferResult["app
   "§167의8①2호_벤처": "소득세법 시행령 §167의8①2호 나목 단서 (비상장 벤처)",
 };
 
+// F-09/F-10/F-14/F-23 신설 (2026-05-19) — judgmentBasis 라벨 매핑
+const JUDGMENT_BASIS_LABEL: Record<NonNullable<NonNullable<StockTransferResult["appliedThreshold"]>["judgmentBasis"]>, string> = {
+  default: "직전사업연도 종료일 (통상)",
+  merger: "F-09 합병등기일 기준 (피합병법인 — 2010 소령 157⑧)",
+  split: "F-10 분할등기일 기준 (분할 전 법인)",
+  split_new_entity: "F-14 분할 전 직전사업연도 종료일 (분할신설법인)",
+  incorporation: "F-23 설립등기일 기준 (신설법인 — 소령 157④)",
+};
+
 function MajorShareholderResultCard({
   result,
 }: {
@@ -531,6 +540,12 @@ function MajorShareholderResultCard({
             F-15·F-16 자동 가산 ({t.augmentedShares?.toLocaleString() ?? 0}주)
           </span>
         )}
+        {/* F-09/F-10/F-14/F-23 (2026-05-19) — 판정 기준일 override 배지 */}
+        {t.judgmentBasis && t.judgmentBasis !== "default" && (
+          <span className="inline-flex items-center rounded-full bg-rose-200 px-2 py-0.5 text-[10px] font-bold text-rose-900">
+            특수 판정 기준일 적용
+          </span>
+        )}
       </h4>
       <dl className="text-sm text-violet-800 space-y-1">
         <div>· 시장: <strong>{MARKET_LABEL[t.marketType]}</strong></div>
@@ -544,6 +559,12 @@ function MajorShareholderResultCard({
         {t.ruleSource && (
           <div className="text-xs text-violet-600">
             · 적용 규칙: {RULE_SOURCE_LABEL[t.ruleSource]}
+          </div>
+        )}
+        {/* F-09/F-10/F-14/F-23 (2026-05-19) — 판정 기준일 사유 명시 */}
+        {t.judgmentBasis && t.judgmentBasis !== "default" && (
+          <div className="text-xs text-rose-700 font-medium">
+            · 판정 기준일 사유: {JUDGMENT_BASIS_LABEL[t.judgmentBasis]}
           </div>
         )}
         <div className="pt-1 font-medium">

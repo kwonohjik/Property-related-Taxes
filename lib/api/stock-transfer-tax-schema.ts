@@ -171,6 +171,9 @@ export const stockTransferInputSchema = z.object({
   // F-15·F-16 (2026-05-19) — 대차주식·사모펀드 간접소유 자동 가산 (§157 2013.2.15.~)
   lentSharesCount: z.number().int().nonnegative().optional().default(0),
   pefIndirectSharesCount: z.number().int().nonnegative().optional().default(0),
+  // F-09/F-10/F-14/F-23 (2026-05-19) — 판정 기준일 override (합병·분할·신설법인 특수)
+  judgmentDateOverride: z.union([z.string(), z.date()]).optional(),
+  judgmentBasis: z.enum(["merger", "split", "split_new_entity", "incorporation"]).optional(),
 
   // 거래 일자·수량
   acquisitionDate: z.union([z.string(), z.date()]),

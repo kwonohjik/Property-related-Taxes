@@ -1,6 +1,6 @@
-# 주식 양도소득세 — 대주주 판정 교재 정합화 계획서 v7
+# 주식 양도소득세 — 대주주 판정 교재 정합화 계획서 v8
 
-> 작성일: 2026-05-19 (v7 — F-15·F-16 자동 가산 완료)
+> 작성일: 2026-05-19 (v8 — F-08~F-14·F-23 합병·분할·신설법인 특수분기 완료)
 > 작성자: Claude (Opus 4.7)
 > 영향 도메인: `lib/tax-engine/stock-transfer/` + `components/calc/stock-transfer/` + `__tests__/tax-engine/stock-transfer/`
 > 우선순위: **P0 (오판정 직결)** — 비상장 벤처 시총 임계 누락 + 2016.4.1.~12.31. 구간 시기 매트릭스 부정확
@@ -13,6 +13,7 @@
 > v4 → v5 변경 사항: §18 정정 이력 참조 (Phase C 후속 PR → 본 PR 완료로 이동, hint 9종 + 3 그룹 collapsible UI 구현).
 > v5 → v6 변경 사항: §19 정정 이력 참조 (F-06 후속 PR → 본 PR 완료로 이동, 비거래일 검증 hint 추가).
 > v6 → v7 변경 사항: §20 정정 이력 참조 (F-15·F-16 자동 가산 후속 PR → 본 PR 완료로 이동).
+> v7 → v8 변경 사항: §21 정정 이력 참조 (F-08~F-14·F-23 합병·분할·신설법인 특수분기 후속 PR → 본 PR 완료로 이동).
 
 ---
 
@@ -612,5 +613,42 @@ Phase A·B Plan/Design 완료 후 Do 진입 전:
 
 **v7 후속 PR 범위 (본 PR 완료 이후)**:
 - F-24 — 본인 미보유 시 합산 강제 분기
-- F-08~F-14·F-23 — 합병·분할·신설법인 특수분기
+- ~~F-08~F-14·F-23~~ — ✅ v8 완료 (judgmentDateOverride + judgmentBasis enum)
+- F-25 — 2016.1.1. 의무보호예수 부칙
+
+---
+
+## 21. 정정 이력 (v7 → v8, 2026-05-19) — F-08~F-14·F-23 완료 반영
+
+| # | 변경 항목 | v7 상태 | v8 결과 |
+|---|---|---|---|
+| 1 | 범위 결정 | "후속 PR — 합병·분할·신설법인 특수분기" | **본 PR 통합 완료** (사용자 요청 2026-05-19) |
+| 2 | 엔진 입력 필드 | 없음 | `judgmentDateOverride?: Date` + `judgmentBasis?: "merger"\|"split"\|"split_new_entity"\|"incorporation"` |
+| 3 | 분류 로직 분기 | priorYearEndDate 고정 | `judgmentDate = input.judgmentDateOverride ?? priorYearEndDate` — 매트릭스 조회에 사용 |
+| 4 | appliedThreshold echo | 9필드 | **10필드** — `judgmentBasis: "default"\|...` 추가 |
+| 5 | appliedRules enum | 16개 | **17개** — `"판정기준일특수분기"` 신설 |
+| 6 | F-09 합병등기일 | 미구현 | `judgmentBasis="merger"` + override 일자로 자동 적용 |
+| 7 | F-10 분할등기일 | 미구현 | `judgmentBasis="split"` |
+| 8 | F-14 분할신설법인 | 미구현 | `judgmentBasis="split_new_entity"` (분할 전 직전사업연도) |
+| 9 | F-23 설립등기일 | 미구현 | `judgmentBasis="incorporation"` |
+| 10 | F-08·F-12·F-13 UI hint | 미구현 | **`SpecialEntityHintsCard` (rose tone)** — 상장 전환·§178 투자기구·창업투자조합 3건 |
+| 11 | UI 입력 위젯 | 없음 | **ToggleCard + RadioCardGroup + DateInput** (rose tone) — 4 사유 선택 + 기준일자 |
+| 12 | 결과 카드 배지 | 미노출 | rose tone **"특수 판정 기준일 적용"** 배지 + 사유 라벨 (`JUDGMENT_BASIS_LABEL`) |
+| 13 | validation | 미구현 | basis≠default일 때 override 일자 필수 + override만 있고 basis default면 경고 |
+| 14 | 14지점 동기화 | 미적용 | **8지점 영향** (①②③④⑤⑦⑧⑨⑫⑭) |
+| 15 | anchor | 미작성 | **PHS-01~07 신규 anchor 7건** (`textbook-alignment-judgment-basis.test.ts`) |
+
+**v8 구현 상세**:
+- `StockTransferInput.judgmentDateOverride?` + `judgmentBasis?` (optional)
+- `judgeIsMajorShareholder` 에서 `judgmentDate = override ?? priorYearEndDate`
+- `ClassificationResult.judgmentBasis` (input 미지정 시 "default")
+- `buildAppliedThreshold` spread 전파
+- `MajorShareholderBlock` rose tone ToggleCard + 4-option RadioCardGroup + DateInput
+- `StockTransferTaxResultView` violet 카드 헤더에 rose 배지 + 사유 라벨 dl
+- `SpecialEntityHintsCard` collapsible (F-08·F-12·F-13)
+- 800줄 정책 — `calc-wizard-stock-store.ts` 799줄 유지 (컴팩트 주석)
+- 메모리 [[feedback_no_silent_apportion_fallback]] 정합 — basis≠default일 때 override 일자 필수 (silent fallback 금지)
+
+**v8 후속 PR 범위 (본 PR 완료 이후)**:
+- F-24 — 본인 미보유 시 합산 강제 분기
 - F-25 — 2016.1.1. 의무보호예수 부칙

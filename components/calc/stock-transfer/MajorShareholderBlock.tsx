@@ -38,11 +38,12 @@ import { computeAutoIsMajor } from "@/components/calc/stock-transfer/major-sync"
 import { KiwoomMarketCapHelper } from "./KiwoomMarketCapHelper";
 // F-06 (2026-05-19) — 직전사업연도 종료일 비거래일 → 직전거래일 적용 안내
 import { isKrxTradingDay, nonTradingLabel } from "@/lib/kiwoom/calendar";
-// Phase C (2026-05-19) — 교재 Check Point 9건 UI hint 그룹
+// Phase C + F-08/12/13 (2026-05-19) — 교재 Check Point UI hint 그룹
 import {
   MarketCapHintsCard,
   IssuedSharesHintsCard,
   CombinedShareHintsCard,
+  SpecialEntityHintsCard,
 } from "./MajorShareholderCheckpointHints";
 
 type MajorShareholderFormSlice = Pick<
@@ -71,6 +72,9 @@ type MajorShareholderFormSlice = Pick<
   | "lentSharesCount"
   | "pefIndirectSharesCount"
   | "transferDate"
+  // F-09/F-10/F-14/F-23 (2026-05-19) — 판정 기준일 override
+  | "judgmentDateOverride"
+  | "judgmentBasis"
 >;
 
 /**
@@ -258,6 +262,48 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
             </p>
           </div>
         )}
+
+        {/* F-09/F-10/F-14/F-23 (2026-05-19) — 판정 기준일 override (합병·분할·신설법인 특수) */}
+        <ToggleCard
+          checked={form.judgmentBasis !== "default"}
+          onCheckedChange={(v) =>
+            onChange({
+              judgmentBasis: v ? "merger" : "default",
+              judgmentDateOverride: v ? form.judgmentDateOverride : "",
+            })
+          }
+          title="특수 판정 기준일 (합병·분할·신설법인)"
+          description="합병등기일·분할등기일·설립등기일 등 특수분기 시 priorYearEndDate 대신 별도 기준일 사용 (시행령 §157④·소령 157⑧)"
+          tone="rose"
+        >
+          <div className="mt-3 space-y-3">
+            <RadioCardGroup
+              name="judgmentBasis"
+              value={form.judgmentBasis === "default" ? "merger" : form.judgmentBasis}
+              options={[
+                { value: "merger", label: "F-09 합병 — 피합병법인 합병등기일 기준" },
+                { value: "split", label: "F-10 분할 — 분할 전 법인 분할등기일 기준" },
+                { value: "split_new_entity", label: "F-14 분할신설법인 — 분할 전 직전사업연도 종료일" },
+                { value: "incorporation", label: "F-23 신설법인 — 설립등기일 기준" },
+              ]}
+              layout="stack"
+              tone="rose"
+              onChange={(v) => onChange({ judgmentBasis: v as "merger" | "split" | "split_new_entity" | "incorporation" })}
+            />
+            <FieldCard label="특수 판정 기준일자" required hint="해당 사유의 등기일·종료일 (ISO YYYY-MM-DD)">
+              <DateInput
+                value={form.judgmentDateOverride}
+                onChange={(v) => onChange({ judgmentDateOverride: v })}
+              />
+            </FieldCard>
+            <p className="text-[10px] text-rose-700 bg-rose-100/70 px-2 py-1 rounded">
+              ✓ 입력된 기준일로 대주주 임계 매트릭스가 조회됩니다 (시기별 1%/2%/4% 등). priorYearEndDate는 표시용으로만 사용.
+            </p>
+          </div>
+        </ToggleCard>
+
+        {/* F-08·F-12·F-13 (2026-05-19) — Group D 합병·분할·간접투자 추가 hint */}
+        <SpecialEntityHintsCard />
 
         {/* F-04 키움 시가총액 자동 산정 — Step1 종목코드 + 직전 사업연도말 + 보유 주식수 충족 시 활성화 */}
         <KiwoomMarketCapHelper

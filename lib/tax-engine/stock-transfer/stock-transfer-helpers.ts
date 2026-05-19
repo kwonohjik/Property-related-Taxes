@@ -180,6 +180,8 @@ export function buildAppliedThreshold(
     // F-15·F-16 (2026-05-19) — 대차·사모펀드 자동 가산 적용 echo
     shareAugmentationApplied: classification.shareAugmentationApplied,
     augmentedShares: classification.augmentedShares,
+    // F-09/F-10/F-14/F-23 (2026-05-19) — 판정 기준일 override 사유 echo
+    judgmentBasis: classification.judgmentBasis,
   };
 }
 

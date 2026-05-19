@@ -38,6 +38,8 @@ const STOCK_DATE_FIELDS = [
   "decedentAcquisitionDate",
   "donorAcquisitionDate",
   "preMergerAcquisitionDate",
+  // F-09/F-10/F-14/F-23 (2026-05-19) — 판정 기준일 override
+  "judgmentDateOverride",
   // 분할 매수·분할 양도 (Plan v2.2) — coerceDates dot-notation 배열 표기
   "acquisitionLots[].acquisitionDate",
   "acquisitionLots[].decedentAcquisitionDate",
@@ -137,6 +139,9 @@ export async function POST(req: NextRequest) {
     // F-15·F-16 (2026-05-19) §157 2013.2.15.~ — 대차/사모펀드 자동 가산
     lentSharesCount: coerced.lentSharesCount as number,
     pefIndirectSharesCount: coerced.pefIndirectSharesCount as number,
+    // F-09/F-10/F-14/F-23 (2026-05-19) — 판정 기준일 override
+    judgmentDateOverride: coerced.judgmentDateOverride as Date | undefined,
+    judgmentBasis: coerced.judgmentBasis as "merger" | "split" | "split_new_entity" | "incorporation" | undefined,
 
     acquisitionDate: coerced.acquisitionDate as Date,
     transferDate: coerced.transferDate as Date,

@@ -168,9 +168,11 @@ export interface StockTransferFormData {
   isListedSmallShareholder: boolean;
   isVentureCompany: boolean;     // 3중 패턴 default: false
   isKOTCTrading: boolean;        // 3중 패턴 default: false
-  // F-15·F-16 (2026-05-19) §157 2013.2.15.~: 대차/사모펀드 간접소유 자동 가산 (default "0")
+  // F-15·F-16 (default "0"), F-09/F-10/F-14/F-23 판정 기준일 override (2026-05-19)
   lentSharesCount: string;
   pefIndirectSharesCount: string;
+  judgmentDateOverride: string;
+  judgmentBasis: "default" | "merger" | "split" | "split_new_entity" | "incorporation";
   /**
    * 거래소 장내 거래 여부 (§94①3 가목 1) 단서).
    * KOSPI/KOSDAQ/KONEX 비대주주 + 非K-OTC 시 비과세 판정의 명시 입력.
@@ -526,9 +528,8 @@ export function createInitialStockFormData(): StockTransferFormData {
     isVentureCompany: false,             // 3중 패턴 default
     isKOTCTrading: false,                // 3중 패턴 default
     isOnMarketTransaction: true,         // 3중 패턴 default (§94①3 가목 1) 단서 — 기존 비과세 동작 보존)
-    // F-15·F-16 (2026-05-19) §157 2013.2.15.~ default
-    lentSharesCount: "0",
-    pefIndirectSharesCount: "0",
+    lentSharesCount: "0", pefIndirectSharesCount: "0",
+    judgmentDateOverride: "", judgmentBasis: "default",
 
     acquisitionDate: "",
     transferDate: "",

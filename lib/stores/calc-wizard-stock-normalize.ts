@@ -84,6 +84,13 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
     // F-15·F-16 (2026-05-19) 자동 가산 — undefined → "0" 마이그레이션
     lentSharesCount: strField("lentSharesCount") || defaults.lentSharesCount,
     pefIndirectSharesCount: strField("pefIndirectSharesCount") || defaults.pefIndirectSharesCount,
+    // F-09/F-10/F-14/F-23 (2026-05-19) 판정 기준일 override
+    judgmentDateOverride: strField("judgmentDateOverride"),
+    judgmentBasis: enumField(
+      "judgmentBasis",
+      ["default", "merger", "split", "split_new_entity", "incorporation"],
+      defaults.judgmentBasis,
+    ),
     acquisitionDate: strField("acquisitionDate"),
     transferDate: strField("transferDate"),
     shareCount: strField("shareCount"),

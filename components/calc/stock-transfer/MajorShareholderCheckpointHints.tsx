@@ -97,6 +97,47 @@ export function IssuedSharesHintsCard() {
 }
 
 // ────────────────────────────────────────────────────────────────
+// Group D — 합병·분할·신설법인 hint (rose tone) — F-08·F-12·F-13
+// ────────────────────────────────────────────────────────────────
+
+export function SpecialEntityHintsCard() {
+  return (
+    <details className="rounded-lg border border-rose-200 bg-rose-50/40 p-3 text-xs">
+      <summary className="cursor-pointer select-none font-semibold text-rose-800">
+        💡 합병·분할·간접투자 추가 안내 (3건)
+      </summary>
+      <ul className="mt-2 space-y-2 pl-2 text-rose-900">
+        <li className="flex items-start gap-2">
+          <span className="font-medium text-rose-700">F-08 상장 전환:</span>
+          <span className="flex-1">
+            직전사업연도 종료일에 비상장이었던 법인이 양도시점 코스닥 상장이면 <strong>코스닥 임계 적용</strong>
+            (양도일 임계 — 회신문 기획재정부재산-1483은 2009.9.21. 시점 100분의 5)
+            <LawArticleModal legalBasis="기획재정부재산-1483" label="재산-1483" className="ml-1" />
+          </span>
+        </li>
+        <li className="flex items-start gap-2">
+          <span className="font-medium text-rose-700">F-12 §178 투자기구:</span>
+          <span className="flex-1">
+            자본시장법 §178 투자기구를 통한 간접투자 주식은 시총·지분율에 <strong>합산하지 않음</strong>
+            <LawArticleModal legalBasis="재산-1237" label="재산-1237" className="ml-1" />
+          </span>
+        </li>
+        <li className="flex items-start gap-2">
+          <span className="font-medium text-rose-700">F-13 창업투자조합:</span>
+          <span className="flex-1">
+            중소기업창업투자조합의 주식양도차익은 <strong>조합원 기준</strong>으로 대주주 판정 (조합 합산 ❌)
+            <LawArticleModal legalBasis="재재산-466" label="재재산-466" className="ml-1" />
+          </span>
+        </li>
+      </ul>
+      <p className="mt-3 rounded-md bg-rose-100/70 px-2 py-1 text-[10px] text-rose-700">
+        ※ 위 케이스 해당 시 본인·합산 시총·지분율 입력값에 사전 반영해 주세요.
+      </p>
+    </details>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────
 // Group C — 특수관계인 합산 hint (amber tone)
 // F-15 대차주식 · F-16 사모펀드 · F-21 비거주자
 // ────────────────────────────────────────────────────────────────

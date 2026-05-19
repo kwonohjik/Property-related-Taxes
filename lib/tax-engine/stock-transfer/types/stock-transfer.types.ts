@@ -47,6 +47,26 @@ export type StockTransferInput = {
    */
   pefIndirectSharesCount?: number;
 
+  /**
+   * F-09/F-10/F-14/F-23 (2026-05-19) — 대주주 판정 기준일 override (합병·분할·신설법인 특수분기).
+   *
+   * 통상은 priorYearEndDate를 기준일로 사용하나, 다음 경우는 별도 일자 기준:
+   *   - F-09 합병등기일 (피합병법인 주주 신주 교부 후 양도 — 2010 소령 157⑧)
+   *   - F-10 분할등기일 (분할 전 법인 분할등기일 현재 보유 현황 기준)
+   *   - F-14 분할신설법인 — 분할 전 분할법인 직전사업연도 종료일
+   *   - F-23 설립등기일 (신설법인 직전사업연도 미존재 시 — 소령 157④)
+   *
+   * 값이 있으면 매트릭스 조회 시 이 일자 사용. 미지정 시 priorYearEndDate 사용.
+   * 교재 §3장 이미지 50·51 Check Point ②③⑦⑯.
+   */
+  judgmentDateOverride?: Date;
+
+  /**
+   * F-09/F-10/F-14/F-23 (2026-05-19) — judgmentDateOverride 사유 분류 (UI 라벨링용).
+   * 값이 있을 때만 의미. 결과 카드에 적용 사유 명시.
+   */
+  judgmentBasis?: "merger" | "split" | "split_new_entity" | "incorporation";
+
   // §94①4 — 기타자산 판정
   /** §94①4 다목 — 과점주주 */
   isQualifyingBlockShareholder: boolean;
@@ -612,6 +632,12 @@ export type StockTransferResult = {
      * 사용자 검증용 echo. shareAugmentationApplied === true 일 때만 의미 있음.
      */
     augmentedShares?: number;
+    /**
+     * F-09/F-10/F-14/F-23 (2026-05-19) — judgmentDateOverride 적용 사유 echo.
+     * 값이 있으면 priorYearEndDate 대신 judgmentDateOverride 일자가 매트릭스 조회에 사용됨.
+     * UI 결과 카드에 "합병등기일 기준" 등 분기 라벨 표시.
+     */
+    judgmentBasis?: "default" | "merger" | "split" | "split_new_entity" | "incorporation";
   };
 
   // 디버그·경고
@@ -633,6 +659,7 @@ export type StockTransferResult = {
     | "로트선입선출"
     | "로트이동평균"
     | "F15F16대차사모펀드자동가산"
+    | "판정기준일특수분기"
   >;
 
   /**
