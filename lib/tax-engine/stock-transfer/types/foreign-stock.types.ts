@@ -1,12 +1,54 @@
 /**
- * 해외주식 양도소득세 — 입력·결과 타입 (PR-4A)
+ * 해외주식 양도소득세 — 입력·결과 타입 (PR-4A + FS-09)
  *
  * 법령: 소득세법 §94①3다목 + §118의2~§118의8 (2026.4.21. 시행)
  * 시행령: §157의3, §178의3, §178의5, §178의7
+ *
+ * FS-09 §178의5② 장기할부 분할 수령 정식 구현 (2026-05-19):
+ *   장기할부조건 양도 시 각 수령일의 기준환율을 개별 적용하여 합산 (시행령 §162①3호 준용)
  */
 
 // ============================================================
-// 해외주식 Input (PR-4A)
+// FS-09 장기할부 분할 수령 — 시점별 수령 항목
+// 법령: 소득세법 시행령 §178의5② (2026.4.21. 시행)
+// "장기할부조건의 경우 양도일을 수령한 날로 본다 → 수령일 기준환율 각 적용"
+// ============================================================
+
+/**
+ * §178의5② 장기할부 시점별 수령 항목
+ *
+ * 각 수령일의 기준환율(원/외화)을 수령액에 곱하여 원화 환산.
+ * route handler에서 receiptDate는 toDate() 개별 변환 필수 (배열 내 Date 침묵 stripping 방지).
+ */
+export type InstallmentReceipt = {
+  /** 수령일 (§178의5② — 이 날짜의 기준환율 적용) */
+  receiptDate: Date;
+  /** 수령액 (외화) */
+  amountForeign: number;
+  /** 수령일 기준환율 (원/외화) — 외국환거래법 기준환율 또는 재정환율 */
+  exchangeRate: number;
+};
+
+/**
+ * §178의5② 분할 수령 결과 detail (결과 카드 표시용)
+ */
+export type InstallmentReceiptDetail = {
+  /** 수령 모드 */
+  mode: "installments";
+  /** 시점별 환산 내역 */
+  receipts: Array<{
+    receiptDate: Date;
+    amountForeign: number;
+    exchangeRate: number;
+    /** 원화 환산액 = floor(amountForeign × exchangeRate) */
+    amountKrw: number;
+  }>;
+  /** 원화 합계 */
+  totalKrw: number;
+};
+
+// ============================================================
+// 해외주식 Input (PR-4A + FS-09)
 // ============================================================
 
 export type ForeignStockInput = {
@@ -29,7 +71,7 @@ export type ForeignStockInput = {
   /** 주식 수 (정수) */
   shareCount: number;
   transferDate: Date;
-  /** 양도가액 입력 방식: 1주당 단가 또는 총액 */
+  /** 양도가액 입력 방식: 1주당 단가, 총액, 또는 분할 수령 */
   transferPriceMode: "per_share" | "total";
   /** 1주당 외화 양도단가 (transferPriceMode="per_share" 시) */
   perShareTransferPriceForeign?: number;
@@ -37,8 +79,22 @@ export type ForeignStockInput = {
   totalTransferPriceForeign?: number;
   /** 양도 통화코드: "USD" | "JPY" | "EUR" | "HKD" | "CNY" | "GBP" | "OTHER" */
   transferCurrencyCode: string;
-  /** 양도일 기준환율 (원/외화). §178의5 */
+  /** 양도일 기준환율 (원/외화). §178의5① — single 모드에서 사용 */
   transferExchangeRate: number;
+
+  // ── FS-09 §178의5② 장기할부 분할 수령 ──
+  /**
+   * 양도가액 수령 방식 (§178의5②)
+   * "single": 단일 수령 — transferExchangeRate 적용 (기존 동작 유지)
+   * "installments": 장기할부 분할 수령 — transferInstallmentReceipts[] 각 수령일 환율 적용
+   */
+  transferReceiptMode?: "single" | "installments";
+  /**
+   * §178의5② 장기할부 분할 수령 배열 (transferReceiptMode="installments" 시)
+   * 각 수령일의 기준환율로 원화 환산 후 합산.
+   * route handler에서 receiptDate를 배열 map으로 개별 toDate() 변환 필수.
+   */
+  transferInstallmentReceipts?: InstallmentReceipt[];
 
   // ── 취득 정보 ──
   acquisitionDate: Date;
@@ -136,6 +192,13 @@ export type ForeignStockResult = {
   acquisitionExchangeRate: number;
   foreignTaxExchangeRate?: number;
   shareCount: number;
+
+  // ── FS-09 §178의5② 장기할부 분할 수령 detail ──
+  /**
+   * 분할 수령 모드(installments) 시 시점별 환산 내역.
+   * single 모드에서는 undefined.
+   */
+  transferReceiptDetail?: InstallmentReceiptDetail;
 
   // ── 디버그·경고 ──
   warnings: string[];

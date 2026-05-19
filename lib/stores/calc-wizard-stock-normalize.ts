@@ -321,7 +321,36 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
     })(),
     foreignTaxExchangeRate: strField("foreignTaxExchangeRate"),
     foreignTaxMethod: enumField("foreignTaxMethod", ["credit", "expense"], defaults.foreignTaxMethod),
+
+    // ── FS-09 §178의5② 장기할부 분할 수령 normalize (③ 동기화 지점) ──
+    fsTransferReceiptMode: enumField(
+      "fsTransferReceiptMode",
+      ["single", "installments"],
+      defaults.fsTransferReceiptMode,
+    ),
+    fsTransferInstallmentReceipts: normalizeFsInstallmentReceipts(d.fsTransferInstallmentReceipts),
   };
+}
+
+// ============================================================
+// FS-09 §178의5② 분할 수령 배열 normalizer (③ 동기화 지점)
+// ============================================================
+
+function normalizeFsInstallmentReceipts(
+  raw: unknown,
+): Array<{ receiptDate: string; amountForeign: string; exchangeRate: string }> {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((r): { receiptDate: string; amountForeign: string; exchangeRate: string } | null => {
+      if (!r || typeof r !== "object") return null;
+      const o = r as Record<string, unknown>;
+      return {
+        receiptDate: typeof o.receiptDate === "string" ? o.receiptDate : "",
+        amountForeign: typeof o.amountForeign === "string" ? o.amountForeign : "",
+        exchangeRate: typeof o.exchangeRate === "string" ? o.exchangeRate : "",
+      };
+    })
+    .filter((item): item is NonNullable<typeof item> => item !== null);
 }
 
 // ============================================================

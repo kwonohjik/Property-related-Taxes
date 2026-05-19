@@ -398,6 +398,28 @@ export interface StockTransferFormData {
   /** §118의6 처리 방법: 세액공제 | 필요경비 산입 */
   foreignTaxMethod: "credit" | "expense";  // 3중 패턴 default: "credit"
 
+  // ── FS-09 §178의5② 장기할부 분할 수령 ──
+  /**
+   * 양도가액 수령 방식 (§178의5②)
+   * "single": 단일 양도일 기준환율 (기본값, 기존 동작 유지)
+   * "installments": 장기할부 분할 수령 — 시점별 환율 적용
+   * 3중 패턴 default: "single"
+   */
+  fsTransferReceiptMode: "single" | "installments";
+  /**
+   * §178의5② 분할 수령 배열
+   * 각 행: { receiptDate: string; amountForeign: string; exchangeRate: string }
+   * 3중 패턴 default: []
+   */
+  fsTransferInstallmentReceipts: Array<{
+    /** 수령일 (YYYY-MM-DD) — DateInput */
+    receiptDate: string;
+    /** 수령액 (외화) — DecimalInput */
+    amountForeign: string;
+    /** 수령일 기준환율 (원/외화) — DecimalInput 4자리 */
+    exchangeRate: string;
+  }>;
+
   // ── [사례 49] 취득시 장부분실 액면가 + 양도시 보충적 평가 혼합 ──
   // 소득세법 §99①4 후단 + 시행령 §165④ + §163⑥4 (개산공제 1% 자동)
   /** 활성 조건: marketType==="unlisted" + acquisitionMode==="estimated" + true */
@@ -648,6 +670,10 @@ export function createInitialStockFormData(): StockTransferFormData {
     foreignTaxCurrencyCode: "USD",       // 3중 패턴 default
     foreignTaxExchangeRate: "",
     foreignTaxMethod: "credit",          // 3중 패턴 default
+
+    // ── FS-09 §178의5② 장기할부 분할 수령 초기값 ──
+    fsTransferReceiptMode: "single",     // 3중 패턴 default: 단일 수령
+    fsTransferInstallmentReceipts: [],   // 3중 패턴 default: 빈 배열
 
     // ── [사례 49] 취득시 장부분실 액면가 + 양도시 보충적 평가 혼합 ──
     acqFaceValueOnly: false,

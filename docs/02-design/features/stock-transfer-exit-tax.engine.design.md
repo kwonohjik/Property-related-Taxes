@@ -94,8 +94,20 @@
 | 6 | FS-06 | 5년 미만 거주자 — §118의2 납세의무 없음 (과세 제외) | §118의2 | 자가검증 (세액=0) | ☐ TODO |
 | 7 | FS-07 | 동일 과세기간 국내주식 + 해외주식 동시 양도 — 기본공제 그룹 분리 | §103①2호(국내) vs §118의7(국외) | 자가검증 | ☐ TODO |
 | 8 | FS-08 | 해외주식 양도손실 (양도가 < 취득가) | §118의8 §100 준용 | 자가검증 (세액=0) | ☐ TODO |
-| 9 | FS-09 | 해외 비상장 외국법인 주식 (장외 매매) | §157의3①1호, §178의3 | 자가검증 | ☐ TODO |
-| 10 | FS-10 | 환율 취득일·양도일 별도 적용 (양도차익 계산) | §178의5 | FS-anchor-01에 포함 | ☐ Do 진입 전 세율 확정 필수 |
+| 9 | FS-09 | §178의5② 장기할부 분할 수령 — 수령일별 기준환율 적용 | §178의5② | FS-09a~e anchor (2026-05-19 정식 구현 완료) | ✅ 완료 |
+| 10 | FS-10 | 환율 취득일·양도일 별도 적용 (양도차익 계산) | §178의5 | FS-anchor-01에 포함 | ✅ 완료 |
+
+<!-- FS-09 정식 구현 2026-05-19
+  §178의5② 장기할부 분할 수령 — transferReceiptMode: "single"|"installments"
+  "installments" 모드: transferInstallmentReceipts[] 각 수령일 환율 개별 적용 후 합산
+  엔진: calcInstallmentTransferPrice() + InstallmentReceiptDetail 결과 echo
+  산식: transferPriceKrw = sum(floor(amountForeign_i × exchangeRate_i))
+  KoreanLaw 검증: §178의5② "양도가액 또는 취득가액을 수령하거나 지출한 날로 본다"
+    (소득세법 시행령 MST 285631, 2026.4.23. 공포·시행)
+  anchor 5건: FS-09a(single 회귀) / FS-09b(2회) / FS-09c(3회) / FS-09d(1건 warning) / FS-09e(빈배열)
+  14지점 동기화: ①②③④⑤⑦⑧⑨⑫⑬⑭ 전수 처리. ⑥ 사이드바 합계 — installments 모드 시 totalKrw echo.
+  800줄 분리: stock-transfer-exit-tax-schema.ts(145줄) / foreign-stock-fs09-installments.test.ts(340줄)
+-->
 
 ### 3.2 국외전출세 케이스 인벤토리 (PR-4B)
 

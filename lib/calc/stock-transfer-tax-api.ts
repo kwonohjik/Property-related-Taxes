@@ -48,9 +48,10 @@ function parseIntOrZero(s: string): number {
 //   환율·외화 단가 빈값 → undefined → Zod/validate에서 차단
 // ============================================================
 export function buildForeignStockApiBody(form: StockTransferFormData): Record<string, unknown> {
-  const fgTransferPriceMode = form.fgTransferPriceMode || "per_share";  // 3중 패턴 default
-  const acquisitionModeFS = form.acquisitionModeFS || "actual";           // 3중 패턴 default
-  const foreignTaxMethod = form.foreignTaxMethod || "credit";             // 3중 패턴 default
+  const fgTransferPriceMode = form.fgTransferPriceMode || "per_share";       // 3중 패턴 default
+  const acquisitionModeFS = form.acquisitionModeFS || "actual";               // 3중 패턴 default
+  const foreignTaxMethod = form.foreignTaxMethod || "credit";                 // 3중 패턴 default
+  const fsTransferReceiptMode = form.fsTransferReceiptMode || "single";       // 3중 패턴 default (FS-09)
 
   const body: Record<string, unknown> = {
     // ── 도메인 식별자 ──
@@ -73,6 +74,9 @@ export function buildForeignStockApiBody(form: StockTransferFormData): Record<st
     // 환율 — 자동 안분 fallback 금지. 빈값 → validate 차단
     transferExchangeRate: parseFloatOrUndef(form.transferExchangeRate),
 
+    // ── FS-09 §178의5② 수령 방식 ──
+    transferReceiptMode: fsTransferReceiptMode,       // 3중 패턴 default: "single"
+
     // ── 취득 정보 ──
     acquisitionDate: form.acquisitionDate,
     acquisitionMode: acquisitionModeFS,
@@ -91,13 +95,32 @@ export function buildForeignStockApiBody(form: StockTransferFormData): Record<st
     isElectronicFiling: form.isElectronicFiling,     // default: false
   };
 
-  // 양도가액 — 모드별 분기 (TypeScript 미감지 → 자가 grep 점검 필수)
-  if (fgTransferPriceMode === "per_share") {
-    const perShare = parseFloatOrUndef(form.perShareTransferPriceForeign);
-    if (perShare !== undefined) body.perShareTransferPriceForeign = perShare;
+  // 양도가액 — 수령 방식에 따라 분기 (TypeScript 미감지 → 자가 grep 점검 필수)
+  if (fsTransferReceiptMode === "installments") {
+    // FS-09: §178의5② 장기할부 분할 수령 배열 — ⑬ body spread
+    const receipts = (form.fsTransferInstallmentReceipts || [])
+      .map((r) => {
+        const amountForeign = parseFloatOrUndef(r.amountForeign);
+        const exchangeRate = parseFloatOrUndef(r.exchangeRate);
+        if (amountForeign === undefined || exchangeRate === undefined) return null;
+        return {
+          receiptDate: r.receiptDate,      // ISO string — route handler에서 toDate() 변환
+          amountForeign,
+          exchangeRate,
+        };
+      })
+      .filter((r): r is NonNullable<typeof r> => r !== null);
+    body.transferInstallmentReceipts = receipts;
+    // 분할 수령 모드에서는 단일 양도가액 필드를 포함하지 않음
   } else {
-    const total = parseFloatOrUndef(form.totalTransferPriceForeign);
-    if (total !== undefined) body.totalTransferPriceForeign = total;
+    // single 모드 — 기존 양도가액 필드 분기
+    if (fgTransferPriceMode === "per_share") {
+      const perShare = parseFloatOrUndef(form.perShareTransferPriceForeign);
+      if (perShare !== undefined) body.perShareTransferPriceForeign = perShare;
+    } else {
+      const total = parseFloatOrUndef(form.totalTransferPriceForeign);
+      if (total !== undefined) body.totalTransferPriceForeign = total;
+    }
   }
 
   // 취득가액 — actual 모드만 입력 필요
@@ -124,7 +147,8 @@ export function buildForeignStockApiBody(form: StockTransferFormData): Record<st
 //   perShareTransferPriceForeign / totalTransferPriceForeign /
 //   perShareAcquisitionPriceForeign / capitalExpenditureForeign / transferCostForeign /
 //   foreignTaxPaidForeign / foreignTaxCurrencyCode / foreignTaxExchangeRate /
-//   hasForeignTax / foreignTaxMethod / fgCountryCode(→countryCode)
+//   hasForeignTax / foreignTaxMethod / fgCountryCode(→countryCode) /
+//   fsTransferReceiptMode(→transferReceiptMode) / fsTransferInstallmentReceipts(→transferInstallmentReceipts) [FS-09]
 
 // ============================================================
 // ④⑬ PR-4B 국외전출세 전용 API 변환 (buildExitTaxApiBody)

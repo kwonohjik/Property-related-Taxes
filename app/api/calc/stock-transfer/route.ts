@@ -338,7 +338,7 @@ async function handleAggregate(body: unknown): Promise<NextResponse> {
 // ⑭ PR-4A 해외주식 Route 핸들러
 // ============================================================
 
-/** ⑭ 해외주식 Date 필드 목록 (coerceDates 적용) */
+/** ⑭ 해외주식 Date 필드 목록 (coerceDates 적용 — 평면 필드만) */
 const FOREIGN_STOCK_DATE_FIELDS = [
   "transferDate",
   "acquisitionDate",
@@ -365,6 +365,16 @@ async function handleForeignStock(body: unknown): Promise<NextResponse> {
   const rawInput = parsed.data as Record<string, unknown>;
   const coerced = coerceDates(rawInput, [...FOREIGN_STOCK_DATE_FIELDS]);
 
+  // ⑭ FS-09: transferInstallmentReceipts[] 내 receiptDate 개별 toDate() 변환
+  // 배열 내 Date는 평면 coerceDates로 미변환 — 배열 map으로 별도 처리 (디자인 R2-04 패턴)
+  type RawReceipt = { receiptDate: unknown; amountForeign: number; exchangeRate: number };
+  const rawReceipts = coerced.transferInstallmentReceipts as RawReceipt[] | undefined;
+  const installmentReceipts = rawReceipts?.map((r) => ({
+    receiptDate: toDate(r.receiptDate, "transferInstallmentReceipts[].receiptDate"),
+    amountForeign: r.amountForeign,
+    exchangeRate: r.exchangeRate,
+  }));
+
   // ⑭ 엔진 input 매핑
   const engineInput: ForeignStockInput = {
     marketType: "foreign_stock",
@@ -382,6 +392,10 @@ async function handleForeignStock(body: unknown): Promise<NextResponse> {
     totalTransferPriceForeign: coerced.totalTransferPriceForeign as number | undefined,
     transferCurrencyCode: coerced.transferCurrencyCode as string,
     transferExchangeRate: coerced.transferExchangeRate as number,
+
+    // FS-09 §178의5② 분할 수령 — ⑭ 매핑
+    transferReceiptMode: (coerced.transferReceiptMode as ForeignStockInput["transferReceiptMode"]) ?? "single",
+    transferInstallmentReceipts: installmentReceipts,
 
     acquisitionDate: coerced.acquisitionDate as Date,
     acquisitionMode: coerced.acquisitionMode as ForeignStockInput["acquisitionMode"],

@@ -599,75 +599,7 @@ describe("FS-anchor-GS-07: 기본공제 그룹 분리 — §118의7 vs §103①2
   });
 });
 
-// ============================================================
-// FS-anchor-GS-09: §178의5② 장기할부조건 분할 수령 — v1 미지원 확인
-//
-// 소득세법 시행령 §178의5②: 장기할부조건 양도 시 수령 시점별 환율 각 적용.
-// 현재 엔진 v1: 단건 양도가액 입력만 지원.
-// 장기할부 다시점 분할 수령은 후속 PR 스코프.
-//
-// 본 anchor: v1에서 총액 입력 + 단일 환율로 계산됨을 확인 (미지원 대신 총액 근사 처리)
-// ============================================================
-describe("FS-anchor-GS-09: 장기할부 분할 수령 §178의5② — v1 단일환율 근사 처리", () => {
-  /**
-   * v1 처리: §178의5② 장기할부 분할 수령 미지원.
-   * 사용자는 총 수령액 합계를 totalTransferPriceForeign에 직접 입력 + 대표 환율 사용.
-   * 추후 PR에서 시점별 분할 환율 적용 지원 예정.
-   *
-   * 본 케이스: 3회 분할 수령 총합 = 210,000 USD를 총액으로 입력
-   *   총 수령 USD: 70,000 + 70,000 + 70,000 = 210,000 USD
-   *   대표 환율: 1,350원/USD (평균 환율 근사)
-   *   transferPriceKrw = 210,000 × 1,350 = 283,500,000
-   */
-  const input: ForeignStockInput = {
-    ...BASE_INPUT,
-    transferPriceMode: "total",
-    perShareTransferPriceForeign: undefined,
-    totalTransferPriceForeign: 210_000,    // 3회 분할 수령 합계 (근사 처리)
-    transferExchangeRate: 1_350,            // 대표 환율 (시점별 환율 미적용 v1 한계)
-    transferCostForeign: 0,
-    shareCount: 1_000,
-    perShareAcquisitionPriceForeign: 80,
-    acquisitionExchangeRate: 1_200,
-  };
-  const result = calculateForeignStockTax(input);
-
-  it("v1: 총액 + 단일 환율 → 양도가액 환산 = 283,500,000", () => {
-    // 210,000 USD × 1,350원 = 283,500,000
-    expect(result.transferPriceKrw).toBe(283_500_000);
-  });
-
-  it("취득가액 = 1,000 × 80 × 1,200 = 96,000,000", () => {
-    expect(result.acquisitionPriceKrw).toBe(96_000_000);
-  });
-
-  it("양도차익 = 283,500,000 − 96,000,000 = 187,500,000", () => {
-    expect(result.transferGain).toBe(187_500_000);
-  });
-
-  it("과세표준 = 187,500,000 − 2,500,000 = 185,000,000", () => {
-    expect(result.taxBase).toBe(185_000_000);
-  });
-
-  it("§55① 세율 = 38% (1.5억~3억 구간)", () => {
-    expect(result.appliedRate).toBe(0.38);
-  });
-
-  it("산출세액 자가검증 (§55① 38%, 누진공제 19,940,000)", () => {
-    // 185,000,000 × 38% − 19,940,000
-    // = 70,300,000 − 19,940,000 = 50,360,000
-    const expected = Math.floor(185_000_000 * 0.38) - 19_940_000;
-    expect(result.incomeTax).toBe(expected);
-    expect(result.incomeTax).toBe(50_360_000);
-  });
-
-  it("납부 성공 (v1 총액 근사 처리)", () => {
-    // §178의5② 시점별 분할 환율 미구현 — v1 제한사항
-    // 총액 입력으로 정상 계산됨 확인
-    expect(result.isLiable).toBe(true);
-    expect(result.taxCategory).toBe("foreign_stock");
-  });
-});
+// FS-09a~e anchor → foreign-stock-fs09-installments.test.ts 참조 (800줄 분리)
 
 // ============================================================
 // FS-anchor-10: LTHD 미적용 확인 (§118의8 단서)

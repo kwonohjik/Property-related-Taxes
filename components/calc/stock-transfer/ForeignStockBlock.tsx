@@ -25,6 +25,10 @@ import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { DateInput } from "@/components/ui/date-input";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
+import {
+  InstallmentReceiptsMatrix,
+  createEmptyInstallmentRow,
+} from "./InstallmentReceiptsMatrix";
 
 // ── 지원 국가 목록 ──
 const COUNTRY_OPTIONS = [
@@ -49,7 +53,21 @@ const CURRENCY_OPTIONS = [
   { value: "OTHER", label: "기타 (직접 입력)" },
 ];
 
-// ── 양도가액 모드 ──
+// ── 양도가액 수령 방식 (FS-09 §178의5②) ──
+const FS_RECEIPT_MODE_OPTIONS = [
+  {
+    value: "single",
+    label: "단일 수령",
+    description: "양도일 기준환율 1개 적용 (일반 거래)",
+  },
+  {
+    value: "installments",
+    label: "장기할부 분할 수령 (§178의5②)",
+    description: "수령일별 기준환율 개별 적용 — 장기할부조건 양도",
+  },
+];
+
+// ── 양도가액 모드 (single 모드 내) ──
 const FG_TRANSFER_MODE_OPTIONS = [
   { value: "per_share", label: "1주당 단가", description: "1주당 외화 단가 입력" },
   { value: "total", label: "총액 직접 입력", description: "총 외화 양도가액 직접 입력" },
@@ -106,9 +124,10 @@ function SectionBox({
 
 export function ForeignStockBlock({ form, onChange }: ForeignStockBlockProps) {
   // 3중 패턴 default (factory default와 동일값 — display fallback 금지)
-  const fgTransferPriceMode = form.fgTransferPriceMode;   // factory: "per_share"
-  const acquisitionModeFS = form.acquisitionModeFS;        // factory: "actual"
-  const foreignTaxMethod = form.foreignTaxMethod;          // factory: "credit"
+  const fgTransferPriceMode = form.fgTransferPriceMode;         // factory: "per_share"
+  const acquisitionModeFS = form.acquisitionModeFS;              // factory: "actual"
+  const foreignTaxMethod = form.foreignTaxMethod;                // factory: "credit"
+  const fsTransferReceiptMode = form.fsTransferReceiptMode;      // factory: "single" (FS-09)
 
   return (
     <div className="space-y-5">
@@ -204,83 +223,130 @@ export function ForeignStockBlock({ form, onChange }: ForeignStockBlockProps) {
           </select>
         </FieldCard>
 
+        {/* FS-09 §178의5② 수령 방식 선택 — 영향 필드(환율·양도가액) 직전 배치 */}
         <FieldCard
-          label="양도일 기준환율"
-          hint="양도일 기준 대고객 매매기준율 (원/외화). 한국은행 또는 외국환은행 고시환율."
+          label="양도가액 수령 방식"
+          hint="장기할부조건(§162①3호)으로 양도 시 각 수령일의 기준환율 적용 (§178의5②)"
           required
-          unit={`KRW/${form.transferCurrencyCode || "USD"}`}
           trailing={
             <span className="text-xs text-emerald-600 font-medium bg-emerald-50 px-2 py-0.5 rounded">
-              §178의5
+              §178의5②
             </span>
           }
         >
-          <DecimalInput
-            value={form.transferExchangeRate}
-            onChange={(v) => onChange({ transferExchangeRate: v })}
-            placeholder="예: 1350.50"
-          />
-        </FieldCard>
-
-        <FieldCard label="양도가액 입력 방식" required>
           <RadioCardGroup
-            name="fgTransferPriceMode"
-            value={fgTransferPriceMode}
-            onChange={(v) => onChange({ fgTransferPriceMode: v as "per_share" | "total" })}
+            name="fsTransferReceiptMode"
+            value={fsTransferReceiptMode}
+            onChange={(v) => {
+              const mode = v as "single" | "installments";
+              // 분할 수령 전환 시 최초 2행 자동 추가 (빈 배열 입력 불가 UX 개선)
+              if (mode === "installments" && form.fsTransferInstallmentReceipts.length === 0) {
+                onChange({
+                  fsTransferReceiptMode: mode,
+                  fsTransferInstallmentReceipts: [
+                    createEmptyInstallmentRow(),
+                    createEmptyInstallmentRow(),
+                  ],
+                });
+              } else {
+                onChange({ fsTransferReceiptMode: mode });
+              }
+            }}
             tone="emerald"
-            layout="inline"
-            options={FG_TRANSFER_MODE_OPTIONS}
+            layout="stack"
+            options={FS_RECEIPT_MODE_OPTIONS}
           />
         </FieldCard>
 
-        {fgTransferPriceMode === "per_share" ? (
-          <FieldCard
-            label="1주당 양도가액 (외화)"
-            hint="주식 1주당 매도 단가 (외화 기준)"
-            required
-            unit={form.transferCurrencyCode || "USD"}
-          >
-            <DecimalInput
-              value={form.perShareTransferPriceForeign}
-              onChange={(v) => onChange({ perShareTransferPriceForeign: v })}
-              placeholder="외화 단가"
-            />
-          </FieldCard>
+        {fsTransferReceiptMode === "installments" ? (
+          /* FS-09: §178의5② 분할 수령 매트릭스 */
+          <InstallmentReceiptsMatrix
+            rows={form.fsTransferInstallmentReceipts}
+            currencyCode={form.transferCurrencyCode || "USD"}
+            onChange={(rows) => onChange({ fsTransferInstallmentReceipts: rows })}
+          />
         ) : (
-          <FieldCard
-            label="총 양도가액 (외화)"
-            hint="전체 양도 거래의 총 외화 금액"
-            required
-            unit={form.transferCurrencyCode || "USD"}
-          >
-            <DecimalInput
-              value={form.totalTransferPriceForeign}
-              onChange={(v) => onChange({ totalTransferPriceForeign: v })}
-              placeholder="총 외화 양도가액"
-            />
-          </FieldCard>
-        )}
+          /* single 모드: 기존 단일 환율 + 양도가액 입력 */
+          <>
+            <FieldCard
+              label="양도일 기준환율"
+              hint="양도일 기준 대고객 매매기준율 (원/외화). 한국은행 또는 외국환은행 고시환율."
+              required
+              unit={`KRW/${form.transferCurrencyCode || "USD"}`}
+              trailing={
+                <span className="text-xs text-emerald-600 font-medium bg-emerald-50 px-2 py-0.5 rounded">
+                  §178의5①
+                </span>
+              }
+            >
+              <DecimalInput
+                value={form.transferExchangeRate}
+                onChange={(v) => onChange({ transferExchangeRate: v })}
+                placeholder="예: 1350.50"
+              />
+            </FieldCard>
 
-        {/* KRW 환산 미리보기 */}
-        {(() => {
-          const rate = parseDecimal(form.transferExchangeRate);
-          const count = parseInt(form.shareCount || "0", 10);
-          if (rate <= 0) return null;
-          let krw: number | null = null;
-          if (fgTransferPriceMode === "per_share") {
-            const perShare = parseDecimal(form.perShareTransferPriceForeign);
-            if (perShare > 0 && count > 0) krw = Math.floor(perShare * count * rate);
-          } else {
-            const total = parseDecimal(form.totalTransferPriceForeign);
-            if (total > 0) krw = Math.floor(total * rate);
-          }
-          if (krw === null) return null;
-          return (
-            <div className="rounded bg-emerald-100/60 border border-emerald-200 px-3 py-2 text-xs text-emerald-800">
-              양도가액(원화 환산 참고): {krw.toLocaleString()}
-            </div>
-          );
-        })()}
+            <FieldCard label="양도가액 입력 방식" required>
+              <RadioCardGroup
+                name="fgTransferPriceMode"
+                value={fgTransferPriceMode}
+                onChange={(v) => onChange({ fgTransferPriceMode: v as "per_share" | "total" })}
+                tone="emerald"
+                layout="inline"
+                options={FG_TRANSFER_MODE_OPTIONS}
+              />
+            </FieldCard>
+
+            {fgTransferPriceMode === "per_share" ? (
+              <FieldCard
+                label="1주당 양도가액 (외화)"
+                hint="주식 1주당 매도 단가 (외화 기준)"
+                required
+                unit={form.transferCurrencyCode || "USD"}
+              >
+                <DecimalInput
+                  value={form.perShareTransferPriceForeign}
+                  onChange={(v) => onChange({ perShareTransferPriceForeign: v })}
+                  placeholder="외화 단가"
+                />
+              </FieldCard>
+            ) : (
+              <FieldCard
+                label="총 양도가액 (외화)"
+                hint="전체 양도 거래의 총 외화 금액"
+                required
+                unit={form.transferCurrencyCode || "USD"}
+              >
+                <DecimalInput
+                  value={form.totalTransferPriceForeign}
+                  onChange={(v) => onChange({ totalTransferPriceForeign: v })}
+                  placeholder="총 외화 양도가액"
+                />
+              </FieldCard>
+            )}
+
+            {/* KRW 환산 미리보기 (single 모드) */}
+            {(() => {
+              const rate = parseDecimal(form.transferExchangeRate);
+              const count = parseInt(form.shareCount || "0", 10);
+              if (rate <= 0) return null;
+              let krw: number | null = null;
+              if (fgTransferPriceMode === "per_share") {
+                const perShare = parseDecimal(form.perShareTransferPriceForeign);
+                if (perShare > 0 && count > 0) krw = Math.floor(perShare * count * rate);
+              } else {
+                const total = parseDecimal(form.totalTransferPriceForeign);
+                if (total > 0) krw = Math.floor(total * rate);
+              }
+              if (krw === null) return null;
+              return (
+                <div className="rounded bg-emerald-100/60 border border-emerald-200 px-3 py-2 text-xs text-emerald-800">
+                  양도가액(원화 환산 참고): {krw.toLocaleString()}
+                </div>
+              );
+            })()}
+          </>
+        )}
       </SectionBox>
 
       {/* ── 섹션 4: 취득가액 (§178의5) ── */}

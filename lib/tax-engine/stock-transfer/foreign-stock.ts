@@ -1,5 +1,5 @@
 /**
- * 해외주식 양도소득세 — 순수 엔진 (PR-4A)
+ * 해외주식 양도소득세 — 순수 엔진 (PR-4A + FS-09)
  *
  * 법령: 소득세법 §94①3다목 + §118의2~§118의8 (2026.4.21. 시행)
  * 시행령: §157의3, §178의3, §178의5, §178의7
@@ -7,6 +7,8 @@
  * 계산 흐름:
  *   STEP 1: 납세의무 확인 (§118의2 — 5년 이상 거주자)
  *   STEP 2: 양도가액 원화 환산 (§178의5)
+ *     FS-09: transferReceiptMode="installments" 시 §178의5② 장기할부 시점별 환율 적용
+ *     single: 기존 단일 환율 적용 (회귀 0)
  *   STEP 3: 취득가액 원화 환산 (§178의5)
  *   STEP 4: 필요경비 원화 환산 (§118의4)
  *   STEP 5: 외국납부세액 필요경비 산입 처리 (foreignTaxMethod="expense" 시)
@@ -19,7 +21,12 @@
  *   STEP 12: 최종 결과 조립
  */
 
-import type { ForeignStockInput, ForeignStockResult } from "./types/foreign-stock.types";
+import type {
+  ForeignStockInput,
+  ForeignStockResult,
+  InstallmentReceipt,
+  InstallmentReceiptDetail,
+} from "./types/foreign-stock.types";
 import { BASIC_PROGRESSIVE_BRACKETS } from "./stock-rate-tables";
 import {
   STOCK_FOREIGN,
@@ -80,6 +87,46 @@ function floorTen(n: number): number {
 }
 
 // ============================================================
+// FS-09: §178의5② 장기할부 분할 수령 환산
+// ============================================================
+
+/**
+ * §178의5② 장기할부 분할 수령 — 시점별 환율 적용 후 원화 합산
+ *
+ * 법령: 소득세법 시행령 §178의5②
+ *   "장기할부조건의 경우에는 양도일 및 취득일을 양도가액 또는 취득가액을
+ *    수령하거나 지출한 날로 본다"
+ *   → 각 수령일의 기준환율을 개별 적용하여 원화 환산 후 합산
+ *
+ * 정수 연산: 각 수령액 × 환율을 개별 floor() 후 합산 (오버플로우 방지)
+ *
+ * @param receipts 분할 수령 배열 (≥2건)
+ * @returns { totalKrw, detail }
+ */
+function calcInstallmentTransferPrice(receipts: InstallmentReceipt[]): {
+  totalKrw: number;
+  detail: InstallmentReceiptDetail;
+} {
+  const receiptItems: InstallmentReceiptDetail["receipts"] = receipts.map((r) => ({
+    receiptDate: r.receiptDate,
+    amountForeign: r.amountForeign,
+    exchangeRate: r.exchangeRate,
+    amountKrw: Math.floor(r.amountForeign * r.exchangeRate),
+  }));
+
+  const totalKrw = receiptItems.reduce((sum, item) => sum + item.amountKrw, 0);
+
+  return {
+    totalKrw,
+    detail: {
+      mode: "installments",
+      receipts: receiptItems,
+      totalKrw,
+    },
+  };
+}
+
+// ============================================================
 // 메인 계산 함수
 // ============================================================
 
@@ -117,6 +164,7 @@ export function calculateForeignStockTax(input: ForeignStockInput): ForeignStock
       transferExchangeRate: input.transferExchangeRate,
       acquisitionExchangeRate: input.acquisitionExchangeRate,
       shareCount: input.shareCount,
+      transferReceiptDetail: undefined,
       warnings: ["§118의2 납세의무 미충족 — 거주기간 5년 미만"],
       appliedRules: [STOCK_FOREIGN.SECTION_118_2_RESIDENT_REQUIREMENT],
     };
@@ -125,19 +173,47 @@ export function calculateForeignStockTax(input: ForeignStockInput): ForeignStock
   appliedRules.push(STOCK_FOREIGN.SECTION_118_2_RESIDENT_REQUIREMENT);
 
   // ──────────────────────────────────────────────────────────
-  // STEP 2: 양도가액 원화 환산 (§178의5 — 양도일 기준환율)
+  // STEP 2: 양도가액 원화 환산 (§178의5)
+  //
+  // FS-09 분기:
+  //   "installments" → §178의5② 장기할부 시점별 환율 적용 (calcInstallmentTransferPrice)
+  //   "single" (또는 미설정) → §178의5① 단일 양도일 기준환율 적용 (기존 동작 유지)
   // ──────────────────────────────────────────────────────────
   let transferPriceKrw: number;
-  if (input.transferPriceMode === "total") {
-    // 총액 직접 입력 → 환산
-    const totalForeign = input.totalTransferPriceForeign ?? 0;
-    transferPriceKrw = Math.floor(totalForeign * input.transferExchangeRate);
+  let transferReceiptDetail: InstallmentReceiptDetail | undefined;
+
+  const receiptMode = input.transferReceiptMode ?? "single";
+
+  if (receiptMode === "installments") {
+    // §178의5② 장기할부 분할 수령 — 시점별 환율 적용
+    const receipts = input.transferInstallmentReceipts ?? [];
+
+    // 검증: 배열 최소 2건 (1건은 single 모드와 동일 → 경고)
+    if (receipts.length < 2) {
+      warnings.push(
+        `§178의5② 장기할부 분할 수령: 수령 건수(${receipts.length}건)가 2건 미만입니다. ` +
+        "단일 수령(single 모드) 사용을 권장합니다.",
+      );
+    }
+
+    const { totalKrw, detail } = calcInstallmentTransferPrice(receipts);
+    transferPriceKrw = totalKrw;
+    transferReceiptDetail = detail;
+    appliedRules.push(STOCK_FOREIGN.SECTION_178_5_FX_RATE);
+    appliedRules.push("§178의5②(장기할부 분할 수령 — 수령일별 기준환율 적용)");
   } else {
-    // 1주당 단가 × 주식수 → 환산
-    const perShare = input.perShareTransferPriceForeign ?? 0;
-    transferPriceKrw = Math.floor(perShare * input.shareCount * input.transferExchangeRate);
+    // §178의5① 단일 양도일 기준환율 (기존 동작 — 회귀 없음)
+    if (input.transferPriceMode === "total") {
+      // 총액 직접 입력 → 환산
+      const totalForeign = input.totalTransferPriceForeign ?? 0;
+      transferPriceKrw = Math.floor(totalForeign * input.transferExchangeRate);
+    } else {
+      // 1주당 단가 × 주식수 → 환산
+      const perShare = input.perShareTransferPriceForeign ?? 0;
+      transferPriceKrw = Math.floor(perShare * input.shareCount * input.transferExchangeRate);
+    }
+    appliedRules.push(STOCK_FOREIGN.SECTION_178_5_FX_RATE);
   }
-  appliedRules.push(STOCK_FOREIGN.SECTION_178_5_FX_RATE);
 
   // ──────────────────────────────────────────────────────────
   // STEP 3: 취득가액 원화 환산 (§178의5 — 취득일 기준환율)
@@ -282,6 +358,9 @@ export function calculateForeignStockTax(input: ForeignStockInput): ForeignStock
     acquisitionExchangeRate: input.acquisitionExchangeRate,
     foreignTaxExchangeRate: input.foreignTaxExchangeRate,
     shareCount: input.shareCount,
+
+    // FS-09 §178의5② 분할 수령 detail (installments 모드 시만 정의)
+    transferReceiptDetail,
 
     warnings,
     appliedRules,

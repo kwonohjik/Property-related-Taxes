@@ -105,11 +105,43 @@ export function ForeignStockResultCard({ result, stockName }: ForeignStockResult
       <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-1">
         <p className="text-xs font-semibold text-slate-500 mb-2">환율 환산 (§178의5)</p>
 
-        <Row
-          label={`양도가액 (외화)`}
-          value={`— × ${fmt(result.transferExchangeRate)} = ${fmt(result.transferPriceKrw)}`}
-          sub="양도가액(외화) × 양도일 기준환율"
-        />
+        {result.transferReceiptDetail ? (
+          /* FS-09 §178의5② 분할 수령 — 시점별 환율 표 */
+          <div className="space-y-1">
+            <p className="text-xs text-fuchsia-700 font-medium mb-1">
+              §178의5② 장기할부 분할 수령 — 수령일별 기준환율 적용
+            </p>
+            {result.transferReceiptDetail.receipts.map((r, i) => {
+              const dateStr = r.receiptDate instanceof Date
+                ? r.receiptDate.toLocaleDateString("ko-KR")
+                : String(r.receiptDate);
+              return (
+                <Row
+                  key={i}
+                  label={`${i + 1}차 수령 (${dateStr})`}
+                  value={`${fmt(r.amountForeign)} × ${fmt(r.exchangeRate)} = ${fmt(r.amountKrw)}`}
+                  sub="수령액(외화) × 수령일 기준환율 (§178의5②)"
+                  indent={i > 0}
+                />
+              );
+            })}
+            <Divider />
+            <Row
+              label="양도가액 합계 (원화)"
+              value={result.transferReceiptDetail.totalKrw}
+              sub={`${result.transferReceiptDetail.receipts.length}회 분할 수령 합산`}
+              highlight
+            />
+          </div>
+        ) : (
+          /* single 모드 — 기존 단일 환율 표시 */
+          <Row
+            label="양도가액 (외화)"
+            value={`— × ${fmt(result.transferExchangeRate)} = ${fmt(result.transferPriceKrw)}`}
+            sub="양도가액(외화) × 양도일 기준환율"
+          />
+        )}
+
         <Row
           label={`취득가액 (외화)`}
           value={`— × ${fmt(result.acquisitionExchangeRate)} = ${fmt(result.acquisitionPriceKrw)}`}
