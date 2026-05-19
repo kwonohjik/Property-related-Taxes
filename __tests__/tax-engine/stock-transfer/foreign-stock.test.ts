@@ -460,6 +460,216 @@ describe("FS-anchor-09: 양도가액 총액 직접 입력 모드", () => {
 });
 
 // ============================================================
+// FS-anchor-GS-03: §178의3 시가 보충 모드 — 취득가액 미상 (market_price 모드)
+//
+// 엔진 구현 현황: acquisitionMode="market_price" 분기 구현됨.
+// §178의3 시가를 사용자가 직접 입력하면 동일 산식으로 환산.
+// warning: "§178의3 시가 산정: 사용자 입력값 사용..."
+//
+// 자가검증:
+//   acquisitionPriceKrw = 1,000 × 90 USD × 1,250원 = 112,500,000
+//   (실가 acquisitionMode="actual" 대비 취득가 상이 — 시가 보충 시나리오)
+//   transferGain = 202,500,000 − 112,500,000 − 270,000 = 89,730,000
+//   basicDeduction = 2,500,000
+//   taxBase = 87,230,000
+//   §55① 5,000만~8,800만 구간: 87,230,000 × 24% − 5,760,000
+//           = 20,935,200 − 5,760,000 = 15,175,200
+// ============================================================
+describe("FS-anchor-GS-03: §178의3 시가 보충 모드 — market_price 취득 (v1 사용자 입력)", () => {
+  /**
+   * acquisitionMode="market_price": §178의3 시가 산정
+   * v1에서는 perShareAcquisitionPriceForeign에 외부 검증된 시가를 직접 입력
+   * 엔진은 동일 환산식을 적용하되 warning을 발행
+   */
+  const input: ForeignStockInput = {
+    ...BASE_INPUT,
+    acquisitionMode: "market_price",
+    perShareAcquisitionPriceForeign: 90,       // §178의3 시가 (사용자 입력)
+    acquisitionExchangeRate: 1_250,             // 취득일 기준환율 (시가 산정 시점)
+    transferCostForeign: 200,
+  };
+  const result = calculateForeignStockTax(input);
+
+  it("납세의무 충족 (§118의2 거주기간 충족)", () => {
+    expect(result.isLiable).toBe(true);
+  });
+
+  it("취득가액 원화 = 1,000 × 90 × 1,250 = 112,500,000", () => {
+    expect(result.acquisitionPriceKrw).toBe(112_500_000);
+  });
+
+  it("양도차익 = 202,500,000 − 112,500,000 − 270,000 = 89,730,000", () => {
+    expect(result.transferGain).toBe(89_730_000);
+  });
+
+  it("과세표준 = 89,730,000 − 2,500,000 = 87,230,000", () => {
+    expect(result.taxBase).toBe(87_230_000);
+  });
+
+  it("§55① 세율 = 24% (5,000만~8,800만 구간)", () => {
+    expect(result.appliedRate).toBe(0.24);
+  });
+
+  it("누진공제 = 5,760,000 (§55① 5,000만~8,800만 구간 정확값)", () => {
+    // §55① 세율표: 5,000만 초과 ~ 8,800만 이하 → 24%, 누진공제 5,760,000
+    expect(result.progressiveDeduction).toBe(5_760_000);
+  });
+
+  it("산출세액 = floor(87,230,000 × 0.24) − 5,760,000 = 15,175,200", () => {
+    // 87,230,000 × 0.24 = 20,935,200 → floor = 20,935,200
+    // 20,935,200 − 5,760,000 = 15,175,200
+    const expected = Math.floor(87_230_000 * 0.24) - 5_760_000;
+    expect(result.incomeTax).toBe(expected);
+    expect(result.incomeTax).toBe(15_175_200);
+  });
+
+  it("§178의3 시가 보충 warning 발행", () => {
+    const hasWarning = result.warnings.some((w) => w.includes("§178의3"));
+    expect(hasWarning).toBe(true);
+  });
+
+  it("appliedRules에 §178의3 포함", () => {
+    const hasRule = result.appliedRules.some((r) => r.includes("§178의3"));
+    expect(hasRule).toBe(true);
+  });
+});
+
+// ============================================================
+// FS-anchor-GS-07: 국내+해외 기본공제 그룹 분리 확인
+//
+// §118의7 해외주식 기본공제 250만원은 §103①2호 국내주식 그룹과 별도 독립.
+// 동일 과세기간에 국내 주식 250만 + 해외 주식 250만 = 500만원 효과 가능.
+// 엔진 단건 호출 2회로 그룹 분리 구조 검증.
+// ============================================================
+describe("FS-anchor-GS-07: 기본공제 그룹 분리 — §118의7 vs §103①2호", () => {
+  /**
+   * 해외주식 결과는 §118의7 기본공제 250만원을 단독 적용.
+   * 국내주식(별도 엔진)은 §103①2호 250만원을 별도 적용.
+   * 두 그룹은 합산되지 않고 독립 처리됨.
+   *
+   * 본 테스트: 해외주식 2건 독립 호출 시 각각 250만원 기본공제 적용 확인
+   * (실제 합산 신고 시 그룹 내에서 1회만 적용됨 — 당 케이스는 단건 검증)
+   */
+
+  // 케이스 A: 양도차익 5,000,000 (250만 초과) → basicDeduction = 250만
+  const inputA: ForeignStockInput = {
+    ...BASE_INPUT,
+    shareCount: 200,
+    perShareTransferPriceForeign: 30,       // 200 × 30 × 1,350 = 8,100,000
+    perShareAcquisitionPriceForeign: 10,    // 200 × 10 × 1,200 = 2,400,000
+    transferCostForeign: 0,
+    // transferGain = 8,100,000 − 2,400,000 = 5,700,000
+  };
+  const resultA = calculateForeignStockTax(inputA);
+
+  // 케이스 B: 다른 해외 주식 (별개 종목, 동일 과세기간)
+  const inputB: ForeignStockInput = {
+    ...BASE_INPUT,
+    countryCode: "JP",
+    shareCount: 300,
+    perShareTransferPriceForeign: 20,       // 300 × 20 × 1,350 = 8,100,000
+    perShareAcquisitionPriceForeign: 8,     // 300 × 8 × 1,200 = 2,880,000
+    transferCostForeign: 0,
+    // transferGain = 8,100,000 − 2,880,000 = 5,220,000
+  };
+  const resultB = calculateForeignStockTax(inputB);
+
+  it("케이스 A: 기본공제 = 2,500,000 (§118의7 단건 적용)", () => {
+    expect(resultA.transferGain).toBe(5_700_000);
+    expect(resultA.basicDeduction).toBe(2_500_000);
+  });
+
+  it("케이스 B: 기본공제 = 2,500,000 (§118의7 단건 적용 — 별도 그룹)", () => {
+    expect(resultB.transferGain).toBe(5_220_000);
+    expect(resultB.basicDeduction).toBe(2_500_000);
+  });
+
+  it("두 결과 모두 basicDeduction = 2,500,000 (그룹 분리 독립 적용)", () => {
+    // 실제 합산 신고 시에는 동일 그룹 내 250만 1회만 적용됨
+    // 본 케이스는 엔진 단건 레벨에서 §118의7 독립 적용 구조 확인
+    expect(resultA.basicDeduction).toBe(2_500_000);
+    expect(resultB.basicDeduction).toBe(2_500_000);
+  });
+
+  it("§118의7 appliedRules 포함 확인 (국내 §103①2호와 별도 독립 근거)", () => {
+    const hasRuleA = resultA.appliedRules.some((r) => r.includes("§118의7"));
+    const hasRuleB = resultB.appliedRules.some((r) => r.includes("§118의7"));
+    expect(hasRuleA).toBe(true);
+    expect(hasRuleB).toBe(true);
+  });
+});
+
+// ============================================================
+// FS-anchor-GS-09: §178의5② 장기할부조건 분할 수령 — v1 미지원 확인
+//
+// 소득세법 시행령 §178의5②: 장기할부조건 양도 시 수령 시점별 환율 각 적용.
+// 현재 엔진 v1: 단건 양도가액 입력만 지원.
+// 장기할부 다시점 분할 수령은 후속 PR 스코프.
+//
+// 본 anchor: v1에서 총액 입력 + 단일 환율로 계산됨을 확인 (미지원 대신 총액 근사 처리)
+// ============================================================
+describe("FS-anchor-GS-09: 장기할부 분할 수령 §178의5② — v1 단일환율 근사 처리", () => {
+  /**
+   * v1 처리: §178의5② 장기할부 분할 수령 미지원.
+   * 사용자는 총 수령액 합계를 totalTransferPriceForeign에 직접 입력 + 대표 환율 사용.
+   * 추후 PR에서 시점별 분할 환율 적용 지원 예정.
+   *
+   * 본 케이스: 3회 분할 수령 총합 = 210,000 USD를 총액으로 입력
+   *   총 수령 USD: 70,000 + 70,000 + 70,000 = 210,000 USD
+   *   대표 환율: 1,350원/USD (평균 환율 근사)
+   *   transferPriceKrw = 210,000 × 1,350 = 283,500,000
+   */
+  const input: ForeignStockInput = {
+    ...BASE_INPUT,
+    transferPriceMode: "total",
+    perShareTransferPriceForeign: undefined,
+    totalTransferPriceForeign: 210_000,    // 3회 분할 수령 합계 (근사 처리)
+    transferExchangeRate: 1_350,            // 대표 환율 (시점별 환율 미적용 v1 한계)
+    transferCostForeign: 0,
+    shareCount: 1_000,
+    perShareAcquisitionPriceForeign: 80,
+    acquisitionExchangeRate: 1_200,
+  };
+  const result = calculateForeignStockTax(input);
+
+  it("v1: 총액 + 단일 환율 → 양도가액 환산 = 283,500,000", () => {
+    // 210,000 USD × 1,350원 = 283,500,000
+    expect(result.transferPriceKrw).toBe(283_500_000);
+  });
+
+  it("취득가액 = 1,000 × 80 × 1,200 = 96,000,000", () => {
+    expect(result.acquisitionPriceKrw).toBe(96_000_000);
+  });
+
+  it("양도차익 = 283,500,000 − 96,000,000 = 187,500,000", () => {
+    expect(result.transferGain).toBe(187_500_000);
+  });
+
+  it("과세표준 = 187,500,000 − 2,500,000 = 185,000,000", () => {
+    expect(result.taxBase).toBe(185_000_000);
+  });
+
+  it("§55① 세율 = 38% (1.5억~3억 구간)", () => {
+    expect(result.appliedRate).toBe(0.38);
+  });
+
+  it("산출세액 자가검증 (§55① 38%, 누진공제 19,940,000)", () => {
+    // 185,000,000 × 38% − 19,940,000
+    // = 70,300,000 − 19,940,000 = 50,360,000
+    const expected = Math.floor(185_000_000 * 0.38) - 19_940_000;
+    expect(result.incomeTax).toBe(expected);
+    expect(result.incomeTax).toBe(50_360_000);
+  });
+
+  it("납부 성공 (v1 총액 근사 처리)", () => {
+    // §178의5② 시점별 분할 환율 미구현 — v1 제한사항
+    // 총액 입력으로 정상 계산됨 확인
+    expect(result.isLiable).toBe(true);
+    expect(result.taxCategory).toBe("foreign_stock");
+  });
+});
+
+// ============================================================
 // FS-anchor-10: LTHD 미적용 확인 (§118의8 단서)
 // ============================================================
 describe("FS-anchor-10: LTHD 미적용 — §118의8 단서", () => {
