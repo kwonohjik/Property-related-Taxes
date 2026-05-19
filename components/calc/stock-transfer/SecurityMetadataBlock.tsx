@@ -19,6 +19,7 @@ import { userRepository } from "@/lib/storage/user-repository";
 import { clientRepository } from "@/lib/storage/client-repository";
 import { useProfessionalStore } from "@/lib/stores/professional-store";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
+import { KiwoomStockNameAutocomplete } from "./KiwoomStockNameAutocomplete";
 
 interface SecurityMetadataBlockProps {
   securityName: string;
@@ -181,11 +182,10 @@ export function SecurityMetadataBlock({
           />
         </FieldCard>
 
-        <FieldCard label="종목명" required>
-          <input
-            type="text"
+        <FieldCard label="종목명" required hint="입력 시 키움 마스터(4,384종목) 자동완성 dropdown 표시. ↑↓ Enter로 선택">
+          <KiwoomStockNameAutocomplete
             value={securityName}
-            onChange={(e) => onChange({ securityName: e.target.value })}
+            onChange={onChange}
             placeholder="종목명을 입력하세요"
             className={inputClassName}
           />

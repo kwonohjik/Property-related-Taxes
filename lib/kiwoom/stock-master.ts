@@ -70,6 +70,41 @@ export async function lookupStockMaster(stockCode: string): Promise<StockMasterE
   return master.get(stockCode);
 }
 
+/**
+ * 종목명/종목코드 부분 일치 검색 (F-10 typeahead).
+ *
+ * 검색 우선순위:
+ *   1. 종목코드 exact (대소문자 무시)
+ *   2. 종목명 prefix 일치
+ *   3. 종목명 부분 일치 (contains)
+ *
+ * @param query 사용자 입력 (1자 이상)
+ * @param limit 최대 후보 수 (default 10)
+ */
+export async function searchStockMaster(
+  query: string,
+  limit = 10,
+): Promise<StockMasterEntry[]> {
+  const q = query.trim();
+  if (!q) return [];
+  const master = await loadStockMaster();
+  const qUpper = q.toUpperCase();
+  const exactCode = master.get(qUpper);
+  if (exactCode) return [exactCode];
+
+  const prefix: StockMasterEntry[] = [];
+  const contains: StockMasterEntry[] = [];
+  for (const entry of master.values()) {
+    if (entry.stockName.startsWith(q)) {
+      prefix.push(entry);
+    } else if (entry.stockName.includes(q)) {
+      contains.push(entry);
+    }
+    if (prefix.length >= limit) break;
+  }
+  return [...prefix, ...contains].slice(0, limit);
+}
+
 /** marketCode (ka10099) → store marketType (lowercase) 매핑 */
 export function masterMarketCodeToStore(marketCode: string): "kospi" | "kosdaq" | "konex" | "" {
   if (marketCode === "0") return "kospi";
