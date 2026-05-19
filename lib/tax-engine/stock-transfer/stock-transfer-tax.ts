@@ -241,14 +241,14 @@ function calculateStockTransferTaxInternal(input: StockTransferInput): StockTran
     usedEstimatedAcquisition = true;
 
     if (input.acquiredBeforeListing) {
-      // 취득 후 상장 — §165⑤ 본문 (1주당 취득기준시가) + §163⑨ 환산
+      // 취득 후 상장 — §165⑤ 본문 (1주당 취득기준시가) + 시령 §176의2②1호 환산 (D-2 정정)
       // §165⑤: 1주당 취득기준시가 = 상장일 이후 1개월 종가평균 × (취득연도/상장연도 가중평균)
-      // §163⑨: 환산취득가 = 양도가 × (취득시 기준시가 / 양도시 기준시가)
+      // §176의2②1호: 환산취득가 = 양도가 × (취득시 기준시가 / 양도시 기준시가)
       const postListingResult = calcPostListingConversion(synthesizePostListingInput(input));
       const acqStdPerShare = postListingResult.finalPerShareValue;
-      // §163⑨ 환산 — transferStd 미입력 시 1주당 양도가 자동 fallback
+      // §176의2②1호 환산 — transferStd 미입력 시 1주당 양도가 자동 fallback
       const { transferStd, usedFallback } = resolveTransferStd(transferPrice, shareCount, input.transferDatePriceAvg1Month);
-      if (usedFallback) warnings.push("양도일 직전 1개월 종가평균 미입력 — 1주당 양도가를 §163⑨ 환산 분모로 자동 사용");
+      if (usedFallback) warnings.push("양도일 직전 1개월 종가평균 미입력 — 1주당 양도가를 §176의2②1호 환산 분모로 자동 사용");
       acquisitionPrice = apply163_9Conversion(transferPrice, acqStdPerShare, transferStd, postListingResult.totalAcquisitionPrice);
       estimatedBase = acqStdPerShare * shareCount;       // §163⑥4 base
       postListingDetail = postListingResult;
@@ -332,7 +332,7 @@ function calculateStockTransferTaxInternal(input: StockTransferInput): StockTran
       }
 
     } else {
-      // 상장 — 1개월 종가평균 환산 (시행령 §163⑨ 직접 적용)
+      // 상장 — 1개월 종가평균 환산 (시행령 §176의2②1호 직접 적용 — D-2 정정)
       const listedResult = calcListedValuation(input, transferPrice);
       acquisitionPrice = listedResult.totalAcquisitionPrice;
       // ★ Bug-B 정정: §163⑥4 개산공제 base = 취득기준시가 총액 (양도기준시가 아님)

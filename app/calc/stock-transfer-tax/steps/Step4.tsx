@@ -99,6 +99,7 @@ export function Step4({ result, form, error, isLoading, onCalculate }: Step4Prop
               brokerage={form.brokerage}
               transferDate={form.transferDate}
               accountNumberMasked={form.accountNumberMasked}
+              kiwoomLastFetchedAt={form.kiwoomLastFetchedAt}
             />
           )}
         </>

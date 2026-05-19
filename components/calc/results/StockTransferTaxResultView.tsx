@@ -19,6 +19,7 @@
 import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
 import { StockFilingFormTable } from "@/components/calc/stock-transfer/StockFilingFormTable";
 import { StockTaxpayerHeaderCard } from "@/components/calc/stock-transfer/StockTaxpayerHeaderCard";
+import { KiwoomFetchSourceBadge } from "@/components/calc/KiwoomFetchSourceBadge";
 import { useEffect, useRef, useState } from "react";
 import { useUserProfile } from "@/lib/storage/use-user-profile";
 import { useProfessionalStore } from "@/lib/stores/professional-store";
@@ -55,6 +56,8 @@ interface StockTransferTaxResultViewProps {
   transferDate?: string;
   /** 계좌번호 마스킹 (신고서 헤더 표시용, 디자인 §4.2) */
   accountNumberMasked?: string;
+  /** F-12 키움 자동조회 출처 라벨 (마지막 자동조회 시각 ISO 8601) */
+  kiwoomLastFetchedAt?: string;
   /** [GAP-2] 비상장 §165④ 평가 모드 — full 시 결과 헤더에 행-수준 계산 배지 표시 */
   unlistedValuationMode?: "simple" | "full";
   /** [사례 49] 취득시 장부분실 액면가 활성 시 결과 헤더에 배지 표시 */
@@ -184,6 +187,7 @@ export function StockTransferTaxResultView({
   brokerage = "",
   transferDate = "",
   accountNumberMasked = "",
+  kiwoomLastFetchedAt,
   unlistedValuationMode = "simple",
   acqFaceValueOnly = false,
 }: StockTransferTaxResultViewProps) {
@@ -325,6 +329,9 @@ export function StockTransferTaxResultView({
         brokerage={brokerage}
         transferDate={transferDate}
       />
+
+      {/* F-12 키움 자동조회 출처 라벨 */}
+      <KiwoomFetchSourceBadge fetchedAt={kiwoomLastFetchedAt} />
 
       {/* PDF 다운로드 버튼 */}
       <PdfActions />
