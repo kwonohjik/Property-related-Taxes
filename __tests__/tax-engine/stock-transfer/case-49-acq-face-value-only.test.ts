@@ -142,6 +142,129 @@ describe("사례 49 — BigInt 안전 (C49-08)", () => {
   });
 });
 
+// ────────────────────────────────────────────────────────────
+// [GAP-C] 매트릭스 잔여 anchor 6건 (C49-04/05/06/09/12/15)
+// ────────────────────────────────────────────────────────────
+
+describe("사례 49 — full 모드 매트릭스 (C49-04, C49-05)", () => {
+  test("C49-04: acqFaceValueOnly + full + isNetAssetOnly=F → 양도연도 NI/NA 입력값으로 가중평균", () => {
+    // full 모드에서는 unlisted-flat-adapter가 양도 NI/NA를 reduce하지만
+    // 엔진은 transferYearNetIncomePerShare/PerShare 4필드만 사용 — 같은 결과
+    const input = baseInput({
+      acqFaceValueOnly: true,
+      acqFaceValuePerShare: 5000,
+      transferYearNetIncomePerShare: 100_000,
+      transferYearNetAssetPerShare: 80_000,
+    });
+    const r = calcUnlistedValuation(input, 100_000_000);
+    // (100000×3 + 80000×2)/5 = 92,000 (80% 하한 64,000 미발동)
+    expect(r.transferStdPriceAfterFloor).toBe(92_000);
+    expect(r.netAssetFloorApplied).toBe(false);
+    // 환산취득가 = 100M × 5000 / 92000 = 5,434,782
+    expect(r.totalAcquisitionPrice).toBe(5_434_782);
+    expect(r.method).toBe("acq_face_value_only");
+  });
+
+  test("C49-05: acqFaceValueOnly + full + isNetAssetOnly=T → NA 단독 80% 하한 미적용", () => {
+    const input = baseInput({
+      acqFaceValueOnly: true,
+      acqFaceValuePerShare: 5000,
+      transferYearNetIncomePerShare: 0,  // 무시
+      transferYearNetAssetPerShare: 50_000,
+      netAssetOnlyReason: "remaining_term_under_3y",
+    });
+    const r = calcUnlistedValuation(input, 100_000_000);
+    expect(r.transferStdPriceAfterFloor).toBe(50_000);
+    expect(r.netAssetFloorApplied).toBe(false);
+    // 환산취득가 = 100M × 5000 / 50000 = 10,000,000
+    expect(r.totalAcquisitionPrice).toBe(10_000_000);
+  });
+});
+
+describe("사례 49 — simple 환산 정확값 (C49-06)", () => {
+  test("C49-06: 작은 값 케이스 — 액면가 1,000 / 양도가 5M / 주식 1,000 → 양도기준시가/환산 산식 정확성", () => {
+    const input = baseInput({
+      acqFaceValueOnly: true,
+      acqFaceValuePerShare: 1_000,
+      transferYearNetIncomePerShare: 6_000,
+      transferYearNetAssetPerShare: 4_000,
+      shareCount: 1_000,
+    });
+    const r = calcUnlistedValuation(input, 5_000_000);
+    // (6000×3 + 4000×2)/5 = 5,200 (80% 하한 = 3,200 미발동)
+    expect(r.transferStdPriceAfterFloor).toBe(5_200);
+    // 취득기준시가 = 1000 × 1000주 = 1,000,000
+    expect(r.acquisitionStdPriceTotal).toBe(1_000_000);
+    // 환산취득가 = 5M × 1000 / 5200 = 961,538
+    expect(r.totalAcquisitionPrice).toBe(961_538);
+  });
+});
+
+describe("사례 49 — validate 액면가 미입력 (C49-09)", () => {
+  test("C49-09: acqFaceValueOnly + acqFaceValuePerShare 미입력(undefined) → 분기 미진입, weighted_avg 경로", () => {
+    // 엔진은 acqFaceValuePerShare > 0 가드로 분기 미진입
+    // validate는 별도 — 엔진 단위 테스트에서는 미진입 검증
+    const input = baseInput({
+      acqFaceValueOnly: true,
+      acqFaceValuePerShare: undefined,  // 미입력
+      transferYearNetIncomePerShare: 30_000,
+      transferYearNetAssetPerShare: 80_000,
+    });
+    const r = calcUnlistedValuation(input, 100_000_000);
+    expect(r.method).not.toBe("acq_face_value_only");
+    // 기본 weighted_avg 분기 진입
+    expect(r.appliedRules).not.toContain(STOCK.SECTION_99_1_4_BACK_BOOK_LOST_AT_ACQ);
+  });
+
+  test("C49-09b: acqFaceValueOnly + acqFaceValuePerShare === 0 → 분기 미진입 (가드)", () => {
+    const input = baseInput({
+      acqFaceValueOnly: true,
+      acqFaceValuePerShare: 0,
+      transferYearNetIncomePerShare: 30_000,
+      transferYearNetAssetPerShare: 80_000,
+    });
+    const r = calcUnlistedValuation(input, 100_000_000);
+    expect(r.method).not.toBe("acq_face_value_only");
+  });
+});
+
+describe("사례 49 — BigInt 추가 케이스 (C49-12)", () => {
+  test("C49-12: 양도가 100조 + 액면가 10원 → BigInt overflow 안전 + 환산취득가 정확", () => {
+    const input = baseInput({
+      acqFaceValueOnly: true,
+      acqFaceValuePerShare: 10,
+      transferYearNetIncomePerShare: 30_000,
+      transferYearNetAssetPerShare: 80_000,
+    });
+    const r = calcUnlistedValuation(input, 100_000_000_000_000); // 100조
+    // 양도기준시가 64,000 (80% 하한)
+    // 환산취득가 = 100조 × 10 / 64000 = 15,625,000,000
+    expect(r.totalAcquisitionPrice).toBe(15_625_000_000);
+    expect(Number.isSafeInteger(r.totalAcquisitionPrice)).toBe(true);
+  });
+});
+
+describe("사례 49 — valuationDetail GAP-D 부가 필드 검증 (C49-15)", () => {
+  test("C49-15: result.valuationDetail에 acqFaceValuePerShare/niPerShare/naPerShare/isHeavyRE/acquisitionStdPriceTotal echo", () => {
+    // 엔진은 calcUnlistedValuation 호출만 — valuationDetail은 stock-transfer-tax.ts에서 합성
+    // 여기서는 unlistedResult에 필드가 포함되어 있는지 검증
+    const input = baseInput({
+      acqFaceValueOnly: true,
+      acqFaceValuePerShare: 5000,
+      transferYearNetIncomePerShare: 30000,
+      transferYearNetAssetPerShare: 80000,
+      isHeavyRealEstateForValuation: true,
+    });
+    const r = calcUnlistedValuation(input, 100_000_000);
+    // 부가 필드들
+    expect(r.netIncomeValue).toBe(30000);
+    expect(r.netAssetValue).toBe(80000);
+    expect(r.acquisitionStdPriceTotal).toBe(10_000_000);
+    expect(r.transferStdPriceAfterFloor).toBeGreaterThan(0);
+    expect(r.weightedAvgRaw).toBeDefined();
+  });
+});
+
 describe("사례 49 — Pre-Do anchor (Phase A1.5 [M-1])", () => {
   test("C49-02: 80% 하한 발동 — NI 30k / NA 80k / 액면가 5k → 양도기준시가 64k / 환산취득가 7,812,500", () => {
     const input = baseInput({

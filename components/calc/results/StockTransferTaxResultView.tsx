@@ -421,25 +421,21 @@ export function StockTransferTaxResultView({
       {/* 취득 후 상장 환산 상세 — Phase H ⑦ + P2 G-03 분리 */}
       <PostListingDetailCard result={result} />
 
-      {/* [사례 49] 산식 풀어쓰기 카드 — valuationDetail.method === "acq_face_value_only" 시 노출 */}
+      {/* [사례 49] 산식 풀어쓰기 카드 — valuationDetail.method === "acq_face_value_only" 시 노출
+       *  [GAP-D] valuationDetail에 부가 필드 직접 노출되어 역산 불필요 */}
       {acqFaceValueOnly && result.valuationDetail?.method === "acq_face_value_only" && (
         <CaseFortyNineFormulaCard
           transferPrice={result.transferPrice}
-          // 액면가는 result에 별도 노출 안 됨 — 취득기준시가 / 주식수로 역산 (정수 안전)
-          acqFaceValuePerShare={shareCount > 0 ? Math.floor((result.acquisitionPrice * result.valuationDetail.finalPerShareValue) / result.transferPrice) : 0}
+          acqFaceValuePerShare={result.valuationDetail.acqFaceValuePerShare ?? 0}
           shareCount={shareCount}
-          niPerShare={0 /* result 노출 누락 — GAP-D 후속 PR */}
-          naPerShare={0}
-          isHeavyRE={false}
-          isNetAssetOnly={false}
+          niPerShare={result.valuationDetail.niPerShare ?? 0}
+          naPerShare={result.valuationDetail.naPerShare ?? 0}
+          isHeavyRE={result.valuationDetail.isHeavyRE === true}
+          isNetAssetOnly={Boolean(result.valuationDetail.netAssetOnlyReason)}
           weighted={result.valuationDetail.weightedAvgPerShare ?? 0}
           transferStdPriceAfterFloor={result.valuationDetail.finalPerShareValue}
           floor80Applied={result.valuationDetail.netAssetFloorApplied}
-          acquisitionStdPriceTotal={
-            result.transferPrice > 0
-              ? Math.floor((result.acquisitionPrice * result.valuationDetail.finalPerShareValue * shareCount) / result.transferPrice)
-              : 0
-          }
+          acquisitionStdPriceTotal={result.valuationDetail.acquisitionStdPriceTotal ?? 0}
           acquisitionPrice={result.acquisitionPrice}
           expenses={result.expenses}
         />

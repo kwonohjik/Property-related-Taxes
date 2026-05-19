@@ -435,6 +435,20 @@ export type StockTransferResult = {
     transferDailyModeUsed?: boolean;
     /** daily 모드 자동 산정 평균 (= input.transferDatePriceAvg1Month, UI mirror된 값) */
     transferDailyAverage?: number;
+
+    // ── [사례 49 GAP-D] FormulaCard 입력값 직접 노출 (역산 회피) ──
+    /** [사례 49] 1주당 액면가 (input.acqFaceValuePerShare echo) */
+    acqFaceValuePerShare?: number;
+    /** [사례 49] 1주당 순손익가치 (input.transferYearNetIncomePerShare echo) */
+    niPerShare?: number;
+    /** [사례 49] 1주당 순자산가치 (input.transferYearNetAssetPerShare echo) */
+    naPerShare?: number;
+    /** [사례 49] 부동산과다보유 가중치 반전 (input.isHeavyRealEstateForValuation echo) */
+    isHeavyRE?: boolean;
+    /** [사례 49] 순자산 단독 사유 (input.netAssetOnlyReason echo) */
+    netAssetOnlyReason?: string;
+    /** [사례 49] 취득기준시가 총액 (acqFaceValuePerShare × shareCount echo) */
+    acquisitionStdPriceTotal?: number;
   };
 
   // 기본공제 그룹

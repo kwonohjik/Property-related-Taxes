@@ -38,6 +38,7 @@ import { STOCK, STOCK_ESTIMATED_EXPENSE_RATE } from "@/lib/tax-engine/legal-code
 import { allocateLots } from "./lot-allocation";
 import { calcSplitModeTax } from "./lot-allocation-tax";
 import { computeInformationalAcquisition } from "./exempt-informational-acquisition";
+import { buildExemptResult, calcTransferPriceSimple } from "./stock-transfer-exempt-result";
 import { applyExemptZeroing } from "./apply-exempt-zeroing";
 import { apply163_9Conversion, resolveTransferStd } from "./apply-163-9-conversion";
 
@@ -273,6 +274,13 @@ export function calculateStockTransferTax(input: StockTransferInput): StockTrans
         weightedAvgPerShare: unlistedResult.weightedAvgRaw !== undefined
           ? Math.floor(unlistedResult.weightedAvgRaw)
           : undefined,
+        // [GAP-D 사례 49] FormulaCard 입력값 echo — 역산 회피
+        acqFaceValuePerShare: input.acqFaceValuePerShare,
+        niPerShare: unlistedResult.netIncomeValue,
+        naPerShare: unlistedResult.netAssetValue,
+        isHeavyRE: input.isHeavyRealEstateForValuation,
+        netAssetOnlyReason: unlistedResult.netAssetOnlyReason,
+        acquisitionStdPriceTotal: unlistedResult.acquisitionStdPriceTotal,
       };
       if (unlistedResult.netAssetFloorApplied) {
         appliedRules.push("80%하한");
@@ -502,96 +510,8 @@ export function calculateStockTransferTax(input: StockTransferInput): StockTrans
   return fullResult;
 }
 
-// ============================================================
-// 비과세 결과 조립 (K-OTC 비과세 분기 전용 — 기존 호환)
-// ============================================================
-
-function buildExemptResult(
-  input: StockTransferInput,
-  classification: ReturnType<typeof classifyStockTransfer>,
-): StockTransferResult {
-  // 비과세 분기에서도 split 모드면 lotMatchingDetail 검산용 echo
-  let lotMatchingDetail: LotMatchingDetail | undefined;
-  if (isSplitMode(input)) {
-    lotMatchingDetail = allocateLots(
-      input.acquisitionLots!,
-      input.transferLots!,
-      input.costAllocationMethod!,
-      false, // 비과세 분기에서 단기 30% 게이트 무의미
-      input.isSmallMediumEnterprise,
-      input.specificMatchings,
-    );
-  }
-
-  // 비과세더라도 사용자가 입력한 데이터로 취득가액·평가 상세를 정보용으로 계산해 echo (실 세액은 0 유지)
-  const transferPrice = calcTransferPriceSimple(input);
-  const info = computeInformationalAcquisition(input, transferPrice, lotMatchingDetail);
-
-  return {
-    taxCategory: classification.taxCategory,
-    appliedSection94: classification.appliedSection94,
-    section94_2Applied: classification.section94_2Applied,
-    isExempt: true,
-    exemptReason: classification.exemptReason,
-
-    transferPrice,
-    transferPriceBreakdown: undefined,
-
-    acquisitionPrice: info.acquisitionPrice,
-    acquisitionMode: input.acquisitionMode,
-    usedEstimatedAcquisition: info.usedEstimatedAcquisition,
-    estimatedBase: info.estimatedBase,
-    estimatedDeduction: undefined,
-
-    valuationDetail: info.valuationDetail,
-
-    basicDeductionGroup: classification.basicDeductionGroup,
-
-    expenses: 0,
-    expenseMode: input.expenseMode,
-
-    transferIncome: 0,
-    basicDeduction: 0,
-    taxBase: 0,
-
-    appliedRate: 0,
-    progressiveDeduction: undefined,
-    calculatedTax: 0,
-
-    underReportPenalty: 0,
-    latePaymentPenalty: 0,
-    electronicFilingCredit: 0,
-
-    finalTax: 0,
-    localIncomeTax: 0,
-
-    holdingPeriodMonths: 0,
-    holdingPeriodDays: 0,
-    isShortTermHolding: false,
-
-    lthdStartDate: null,
-
-    appliedThreshold: buildAppliedThreshold(input, classification),
-
-    warnings: classification.warnings,
-    appliedRules: classification.appliedRules,
-    // Round 4 C-02: 비과세 분기에서도 echo (UI 결과 카드 게이트 일관성)
-    acquiredBeforeListing: input.acquiredBeforeListing,
-  };
-}
-
-function calcTransferPriceSimple(input: StockTransferInput): number {
-  if (input.transferPriceMode === "actual") {
-    const actualMode = input.transferActualInputMode ?? "per_share";
-    if (actualMode === "total") return input.transferTotalPrice ?? 0;
-    return (input.perShareTransferPrice ?? 0) * input.shareCount;
-  }
-  return (
-    (input.exchangePropertyValue ?? 0) +
-    (input.exchangeDebtRelief ?? 0) +
-    (input.exchangeCash ?? 0)
-  );
-}
+// [GAP-B] buildExemptResult + calcTransferPriceSimple → stock-transfer-exempt-result.ts로 분리
+//         800줄 정책 준수. import 후 그대로 호출.
 
 // ============================================================
 // 다자산 합산 결과 타입
