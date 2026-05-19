@@ -492,6 +492,13 @@ function isMajorTaxCategory(c: StockTransferResult["taxCategory"]): boolean {
   return c === "listed_major" || c === "unlisted_major";
 }
 
+// Phase B 신설 (2026-05-19) — appliedThreshold.ruleSource 라벨 매핑
+const RULE_SOURCE_LABEL: Record<NonNullable<NonNullable<StockTransferResult["appliedThreshold"]>["ruleSource"]>, string> = {
+  "§157": "소득세법 시행령 §157 (상장)",
+  "§167의8①2호": "소득세법 시행령 §167의8①2호 (비상장)",
+  "§167의8①2호_벤처": "소득세법 시행령 §167의8①2호 나목 단서 (비상장 벤처)",
+};
+
 function MajorShareholderResultCard({
   result,
 }: {
@@ -500,14 +507,24 @@ function MajorShareholderResultCard({
   const t = result.appliedThreshold;
   if (!t) return null; // 기타자산(other_asset) 자동 가드
 
-  // 비상장은 §167의8①2호, 상장은 §157④
-  const lawRef = t.marketType === "unlisted" ? "§167의8①2호" : "§157④";
+  // 비상장은 §167의8①2호, 상장은 §157④. Phase B — 벤처 분기 시 §167의8①2호 나목 단서
+  const lawRef = t.isVentureRule
+    ? "§167의8①2호 나목 단서"
+    : t.marketType === "unlisted"
+      ? "§167의8①2호"
+      : "§157④";
   const isUnlisted = t.marketType === "unlisted";
 
   return (
     <div className="rounded-lg border border-violet-200 bg-violet-50/60 p-4 space-y-2">
-      <h4 className="text-sm font-semibold text-violet-900">
+      <h4 className="text-sm font-semibold text-violet-900 flex items-center gap-2">
         대주주 판정 ({lawRef})
+        {/* Phase B (2026-05-19) — 비상장 벤처기업 임계 적용 배지 */}
+        {t.isVentureRule && (
+          <span className="inline-flex items-center rounded-full bg-violet-200 px-2 py-0.5 text-[10px] font-bold text-violet-900">
+            비상장 벤처기업 임계 적용 (시총 40억)
+          </span>
+        )}
       </h4>
       <dl className="text-sm text-violet-800 space-y-1">
         <div>· 시장: <strong>{MARKET_LABEL[t.marketType]}</strong></div>
@@ -517,14 +534,20 @@ function MajorShareholderResultCard({
         {t.marketCap < Infinity && (
           <div>· 시총 임계: <strong>{t.marketCap.toLocaleString()}</strong></div>
         )}
+        {/* Phase B (2026-05-19) — 적용 규칙 출처 명시 */}
+        {t.ruleSource && (
+          <div className="text-xs text-violet-600">
+            · 적용 규칙: {RULE_SOURCE_LABEL[t.ruleSource]}
+          </div>
+        )}
         <div className="pt-1 font-medium">
           판정:{" "}
           <strong>{isMajorTaxCategory(result.taxCategory) ? "대주주 해당" : "비대주주"}</strong>
         </div>
-        {/* 비상장 벤처기업 시총 임계 안내 */}
-        {isUnlisted && (
+        {/* 비상장 벤처 미적용 시 안내 */}
+        {isUnlisted && !t.isVentureRule && (
           <div className="text-xs text-violet-600 mt-1">
-            ※ 벤처기업 주식의 시총 임계는 40억원 (§167의8①2나목 단서)
+            ※ 벤처기업 주식의 시총 임계는 40억원 (§167의8①2호 나목 단서). 회사 분류에서 &quot;벤처기업&quot; 선택 시 자동 적용
           </div>
         )}
         {/* 상장 비과세 사유 표시 */}

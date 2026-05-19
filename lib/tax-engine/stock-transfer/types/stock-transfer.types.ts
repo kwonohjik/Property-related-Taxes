@@ -570,6 +570,19 @@ export type StockTransferResult = {
     priorYearEndDate: string;
     /** 해당 임계 적용 시작일 (ISO YYYY-MM-DD) */
     fromDate: string;
+    /**
+     * 비상장 벤처기업 임계 적용 여부 (Phase B 신설, 2026-05-19).
+     * `marketType === "unlisted" && isVentureCompany === true` 시 true → 시총 임계 40억 적용.
+     * UI 결과 카드에서 violet "비상장 벤처기업 임계 적용" 배지 분기에 사용.
+     */
+    isVentureRule?: boolean;
+    /**
+     * 적용 규칙 출처 (Phase B 신설, 2026-05-19).
+     * - "§157": 상장 (kospi/kosdaq/konex)
+     * - "§167의8①2호": 비상장 일반
+     * - "§167의8①2호_벤처": 비상장 벤처기업
+     */
+    ruleSource?: "§157" | "§167의8①2호" | "§167의8①2호_벤처";
   };
 
   // 디버그·경고

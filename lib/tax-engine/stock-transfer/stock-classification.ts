@@ -25,8 +25,15 @@ export interface ClassificationResult {
   basicDeductionGroup: StockTransferResult["basicDeductionGroup"];
   appliedRules: StockTransferResult["appliedRules"];
   warnings: string[];
-  /** §157 적용된 임계 (대주주 판정 결과 표시용) */
-  appliedThreshold?: { shareRatio: number; marketCap: number };
+  /** §157·§167의8 적용된 임계 (대주주 판정 결과 표시용) */
+  appliedThreshold?: {
+    shareRatio: number;
+    marketCap: number;
+    /** Phase B 신설 (2026-05-19) — UI 배지·hint 분기용 */
+    isVentureRule?: boolean;
+    /** Phase B 신설 (2026-05-19) — 결과 카드 조문 라벨용 */
+    ruleSource?: "§157" | "§167의8①2호" | "§167의8①2호_벤처";
+  };
 }
 
 // ============================================================
@@ -45,7 +52,14 @@ export interface ClassificationResult {
  */
 function judgeIsMajorShareholder(input: StockTransferInput): {
   isMajor: boolean;
-  threshold: { shareRatio: number; marketCap: number };
+  threshold: {
+    shareRatio: number;
+    marketCap: number;
+    /** Phase B 신설 — UI 배지·hint 분기용 */
+    isVentureRule?: boolean;
+    /** Phase B 신설 — 결과 카드 조문 라벨용 */
+    ruleSource?: "§157" | "§167의8①2호" | "§167의8①2호_벤처";
+  };
   /** 폼 토글(isMajorShareholder)과 자동 산출값이 다른 경우 불일치 경고 */
   mismatchWarning?: string;
 } {
@@ -60,9 +74,11 @@ function judgeIsMajorShareholder(input: StockTransferInput): {
   }
 
   // 상장 3시장(§157) + 비상장(§167의8①2호) 모두 자동 산출
+  // Phase B (2026-05-19): isVentureCompany 옵션 전달 — 비상장 벤처 시총 40억 분기
   const threshold = getMajorShareholderThreshold(
     marketType as "kospi" | "kosdaq" | "konex" | "unlisted",
     priorYearEndDate,
+    { isVentureCompany: input.isVentureCompany },
   );
 
   // 적용 지분율·시총 결정 (2-step 판정)
@@ -91,6 +107,8 @@ function judgeIsMajorShareholder(input: StockTransferInput): {
     threshold: {
       shareRatio: threshold.shareRatioThreshold,
       marketCap: threshold.marketCapThreshold,
+      isVentureRule: threshold.isVentureRule,
+      ruleSource: threshold.ruleSource,
     },
     mismatchWarning,
   };

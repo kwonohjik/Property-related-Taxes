@@ -174,6 +174,9 @@ export function buildAppliedThreshold(
     marketType,
     priorYearEndDate: input.priorYearEndDate.toISOString().slice(0, 10),
     fromDate: resolveThresholdFromDate(marketType, input.priorYearEndDate),
+    // Phase B (2026-05-19) — 비상장 벤처기업 임계 분기 전파
+    isVentureRule: t.isVentureRule,
+    ruleSource: t.ruleSource,
   };
 }
 

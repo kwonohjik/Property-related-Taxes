@@ -21,6 +21,20 @@ export interface MajorShareholderThreshold {
   shareRatioThreshold: number;
   /** 시총 임계 (원) */
   marketCapThreshold: number;
+  /**
+   * 적용 규칙 출처 (UI 라벨링용 — Phase B 신설, 2026-05-19).
+   * - "§157": 상장 (kospi/kosdaq/konex)
+   * - "§167의8①2호": 비상장 일반
+   * - "§167의8①2호_벤처": 비상장 벤처기업 (시총 임계 40억 적용)
+   *
+   * 매트릭스 상수 정의 시점엔 undefined, `getMajorShareholderThreshold()` 반환 시 동적 부착.
+   */
+  ruleSource?: "§157" | "§167의8①2호" | "§167의8①2호_벤처";
+  /**
+   * 비상장 벤처기업 임계 적용 여부 (UI 배지 분기용 — Phase B 신설, 2026-05-19).
+   * `getMajorShareholderThreshold(unlisted, _, { isVentureCompany: true })` 호출 시 true.
+   */
+  isVentureRule?: boolean;
 }
 
 /** 코스피 대주주 임계 이력 (코넥스 공통 적용 없음 — 코스닥·코넥스 별도) */
@@ -33,7 +47,9 @@ export const KOSPI_MAJOR_THRESHOLDS: MajorShareholderThreshold[] = [
   { from: new Date("2018-04-01"), shareRatioThreshold: 0.01, marketCapThreshold: 1_500_000_000 },
   // 2017.~ 2018.3.31.
   { from: new Date("2017-01-01"), shareRatioThreshold: 0.01, marketCapThreshold: 2_500_000_000 },
-  // 2013.~ 2016.12.31.
+  // 2016.4.1.~ 2016.12.31. (F-01 — 교재 §3장 이미지 48 ⑤, KoreanLaw 미검증)
+  { from: new Date("2016-04-01"), shareRatioThreshold: 0.01, marketCapThreshold: 2_500_000_000 },
+  // 2013.~ 2016.3.31. (구간 단축)
   { from: new Date("2013-01-01"), shareRatioThreshold: 0.02, marketCapThreshold: 5_000_000_000 },
   // 1999.~ 2012.12.31.
   { from: new Date("1999-01-01"), shareRatioThreshold: 0.05, marketCapThreshold: Infinity },
@@ -51,7 +67,9 @@ export const KOSDAQ_MAJOR_THRESHOLDS: MajorShareholderThreshold[] = [
   { from: new Date("2018-04-01"), shareRatioThreshold: 0.02, marketCapThreshold: 1_500_000_000 },
   // 2017.~
   { from: new Date("2017-01-01"), shareRatioThreshold: 0.02, marketCapThreshold: 2_000_000_000 },
-  // 2013.8.29.~
+  // 2016.4.1.~ 2016.12.31. (F-02 — 교재 §3장 이미지 48 ⑤, KoreanLaw 미검증)
+  { from: new Date("2016-04-01"), shareRatioThreshold: 0.02, marketCapThreshold: 2_000_000_000 },
+  // 2013.8.29.~ 2016.3.31. (구간 단축)
   { from: new Date("2013-08-29"), shareRatioThreshold: 0.02, marketCapThreshold: 4_000_000_000 },
   // 2000.~
   { from: new Date("2000-01-01"), shareRatioThreshold: 0.03, marketCapThreshold: 10_000_000_000 },
@@ -101,7 +119,10 @@ export const UNLISTED_MAJOR_THRESHOLDS: MajorShareholderThreshold[] = [
   { from: new Date("2018-04-01"), shareRatioThreshold: 0.04, marketCapThreshold: 1_500_000_000 },
   // 2017.1.1.~ 2018.3.31. (시총 50억→25억 완화 — WebSearch 검증 2026-05-17 F-6)
   { from: new Date("2017-01-01"), shareRatioThreshold: 0.04, marketCapThreshold: 2_500_000_000 },
-  // 2013.1.1.~ 2016.12.31. (시총 50억 추정·법제처 부칙 미확인)
+  // 2016.4.1.~ 2016.12.31. (F-03 — 교재 §3장 이미지 48 ⑤ 비상장 2%/50억, KoreanLaw 미검증)
+  // 2016.1.1.~3.31. 구간은 교재 미명시 → 추정 금지, 현행 행(4%/50억) 유지
+  { from: new Date("2016-04-01"), shareRatioThreshold: 0.02, marketCapThreshold: 5_000_000_000 },
+  // 2013.1.1.~ 2016.3.31. (구간 단축, 시총 50억 추정·법제처 부칙 미확인)
   // F-6 정정 (2026-05-17): 지분율 0.02 → 0.04 — 비상장은 §157 코스닥 2% 패턴 잘못 차용 정정
   { from: new Date("2013-01-01"), shareRatioThreshold: 0.04, marketCapThreshold: 5_000_000_000 },
   // ~2012.12.31. fallback (법제처 부칙 미확인)
@@ -112,10 +133,16 @@ export const UNLISTED_MAJOR_THRESHOLDS: MajorShareholderThreshold[] = [
 /**
  * 시장 타입 + 판정 기준일로 대주주 임계 조회
  * 시기별 가장 최근 적용 임계를 반환
+ *
+ * Phase B 확장 (2026-05-19):
+ * - `options.isVentureCompany === true && marketType === "unlisted"` 시 시총 임계 40억 적용
+ *   (시행령 §167의8①2호 나목 단서 — 비상장 벤처기업 별도 임계, 교재 §3장 이미지 48 ⑤)
+ * - 반환 객체에 `ruleSource`·`isVentureRule` 동적 부착
  */
 export function getMajorShareholderThreshold(
   marketType: "kospi" | "kosdaq" | "konex" | "unlisted",
   priorYearEndDate: Date,
+  options?: { isVentureCompany?: boolean },
 ): MajorShareholderThreshold {
   let thresholds: MajorShareholderThreshold[];
   if (marketType === "kospi") {
@@ -131,12 +158,24 @@ export function getMajorShareholderThreshold(
 
   // 최신 from 순 정렬 후 priorYearEndDate >= from인 첫 번째
   const sorted = [...thresholds].sort((a, b) => b.from.getTime() - a.from.getTime());
-  const match = sorted.find((t) => priorYearEndDate >= t.from);
-  if (!match) {
-    // fallback: 가장 오래된 임계
-    return sorted[sorted.length - 1];
+  const match = sorted.find((t) => priorYearEndDate >= t.from) ?? sorted[sorted.length - 1];
+
+  // Phase B — 비상장 벤처기업 분기 (§167의8①2호 나목 단서)
+  if (marketType === "unlisted" && options?.isVentureCompany) {
+    return {
+      ...match,
+      marketCapThreshold: 4_000_000_000, // 시총 40억
+      ruleSource: "§167의8①2호_벤처",
+      isVentureRule: true,
+    };
   }
-  return match;
+
+  // 일반 분기 — ruleSource·isVentureRule 동적 부착
+  return {
+    ...match,
+    ruleSource: marketType === "unlisted" ? "§167의8①2호" : "§157",
+    isVentureRule: false,
+  };
 }
 
 /**

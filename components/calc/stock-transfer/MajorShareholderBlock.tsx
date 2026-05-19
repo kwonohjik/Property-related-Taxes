@@ -57,6 +57,8 @@ type MajorShareholderFormSlice = Pick<
   // F-04 키움 시가총액 자동 산정 — Step1 종목코드 + 자동조회 메타
   | "securityCode"
   | "kiwoomTradingHalt"
+  // Phase B (2026-05-19) — 비상장 벤처기업 시총 임계 40억 분기
+  | "isVentureCompany"
 >;
 
 /**
@@ -98,8 +100,9 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
     return getMajorShareholderThreshold(
       form.marketType,
       new Date(form.priorYearEndDate),
+      { isVentureCompany: form.isVentureCompany },
     );
-  }, [form.marketType, form.priorYearEndDate]);
+  }, [form.marketType, form.priorYearEndDate, form.isVentureCompany]);
 
   const shareRatioThreshold = threshold?.shareRatioThreshold ?? 0;
   const marketCapThreshold = threshold?.marketCapThreshold ?? Infinity;
@@ -226,9 +229,14 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
                 new Date(form.priorYearEndDate),
               )}~ 적용
             </p>
-            {form.marketType === "unlisted" && (
-              <p className="text-xs text-violet-600 mt-1">
-                ※ 벤처기업은 시총 임계 40억 (조특법 §16, 시행령 §167의8①2호 나목)
+            {form.marketType === "unlisted" && threshold.isVentureRule && (
+              <p className="text-xs text-violet-700 mt-1 font-semibold">
+                ✓ 자동 적용 중 — 비상장 벤처기업 시총 임계 <strong>40억</strong> (시행령 §167의8①2호 나목)
+              </p>
+            )}
+            {form.marketType === "unlisted" && !threshold.isVentureRule && (
+              <p className="text-xs text-slate-500 mt-1">
+                벤처기업 해당 시 회사 분류 토글에서 &quot;벤처기업&quot; 선택 → 시총 임계 40억 적용 (현재: 10억)
               </p>
             )}
           </div>
