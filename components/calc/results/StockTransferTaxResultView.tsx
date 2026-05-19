@@ -28,6 +28,7 @@ import { printScoped } from "@/components/calc/results/transfer/TransferTaxResul
 import { MARKET_LABEL } from "@/components/calc/stock-transfer/market-label";
 import { LotMatchingDetailCard } from "@/components/calc/results/LotMatchingDetailCard";
 import { PostListingDetailCard } from "@/components/calc/results/PostListingDetailCard";
+import { CaseFortyNineFormulaCard } from "@/components/calc/stock-transfer/CaseFortyNineFormulaCard";
 
 interface StockTransferTaxResultViewProps {
   result: StockTransferResult;
@@ -52,6 +53,8 @@ interface StockTransferTaxResultViewProps {
   accountNumberMasked?: string;
   /** [GAP-2] 비상장 §165④ 평가 모드 — full 시 결과 헤더에 행-수준 계산 배지 표시 */
   unlistedValuationMode?: "simple" | "full";
+  /** [사례 49] 취득시 장부분실 액면가 활성 시 결과 헤더에 배지 표시 */
+  acqFaceValueOnly?: boolean;
 }
 
 /** PDF 다운로드 버튼 — 브라우저 인쇄 다이얼로그에서 "PDF로 저장" 선택 */
@@ -175,6 +178,7 @@ export function StockTransferTaxResultView({
   transferDate = "",
   accountNumberMasked = "",
   unlistedValuationMode = "simple",
+  acqFaceValueOnly = false,
 }: StockTransferTaxResultViewProps) {
   const categoryLabel = TAX_CATEGORY_LABEL[result.taxCategory] ?? result.taxCategory;
 
@@ -332,6 +336,15 @@ export function StockTransferTaxResultView({
             행-수준 계산 적용 (상증령 §54·§55)
           </span>
         )}
+        {/* [사례 49] 취득시 장부분실 액면가 배지 */}
+        {acqFaceValueOnly && (
+          <span
+            data-testid="acq-face-value-badge"
+            className="px-3 py-1 rounded-full border text-sm bg-amber-50 text-amber-700 border-amber-200"
+          >
+            취득 액면가 적용 (§99①4 후단)
+          </span>
+        )}
       </div>
 
       {/* 8항목 결과 표 */}
@@ -407,6 +420,30 @@ export function StockTransferTaxResultView({
 
       {/* 취득 후 상장 환산 상세 — Phase H ⑦ + P2 G-03 분리 */}
       <PostListingDetailCard result={result} />
+
+      {/* [사례 49] 산식 풀어쓰기 카드 — valuationDetail.method === "acq_face_value_only" 시 노출 */}
+      {acqFaceValueOnly && result.valuationDetail?.method === "acq_face_value_only" && (
+        <CaseFortyNineFormulaCard
+          transferPrice={result.transferPrice}
+          // 액면가는 result에 별도 노출 안 됨 — 취득기준시가 / 주식수로 역산 (정수 안전)
+          acqFaceValuePerShare={shareCount > 0 ? Math.floor((result.acquisitionPrice * result.valuationDetail.finalPerShareValue) / result.transferPrice) : 0}
+          shareCount={shareCount}
+          niPerShare={0 /* result 노출 누락 — GAP-D 후속 PR */}
+          naPerShare={0}
+          isHeavyRE={false}
+          isNetAssetOnly={false}
+          weighted={result.valuationDetail.weightedAvgPerShare ?? 0}
+          transferStdPriceAfterFloor={result.valuationDetail.finalPerShareValue}
+          floor80Applied={result.valuationDetail.netAssetFloorApplied}
+          acquisitionStdPriceTotal={
+            result.transferPrice > 0
+              ? Math.floor((result.acquisitionPrice * result.valuationDetail.finalPerShareValue * shareCount) / result.transferPrice)
+              : 0
+          }
+          acquisitionPrice={result.acquisitionPrice}
+          expenses={result.expenses}
+        />
+      )}
 
       {/* 대주주 판정 카드 (상장 3시장만 — 비상장·기타자산 자동 미렌더) */}
       <MajorShareholderResultCard result={result} />

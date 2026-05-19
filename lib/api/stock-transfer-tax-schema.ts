@@ -206,6 +206,11 @@ export const stockTransferInputSchema = z.object({
   bookLost: z.boolean(),
   faceValuePerShare: z.number().min(0).optional(),
 
+  // [사례 49] 취득시 장부분실 액면가 (§99①4 후단) + 양도시 §165④ 보충 평가
+  // DR-2: boolean default(false) — body 미설정 시에도 안전
+  acqFaceValueOnly: z.boolean().default(false),
+  acqFaceValuePerShare: z.number().int().positive().optional(),
+
   // 순자산 단독 평가 사유 §165④3
   netAssetOnlyReason: netAssetOnlyReasonSchema.optional(),
 

@@ -14,6 +14,7 @@
 
 import { useMemo } from "react";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
@@ -105,8 +106,16 @@ export function EstimatedUnlistedBlock({ form, onChange }: EstimatedUnlistedBloc
     isHeavyRE,
   ]);
 
-  // 취득기준시가 미리보기 — full 모드에서도 동일
+  // [사례 49] acqFaceValueOnly 활성 시 분기
+  const acqFaceValueOnly = form.acqFaceValueOnly === true;
+  const acqFaceValuePerShareNum = parseAmount(form.acqFaceValuePerShare ?? "");
+  const shareCountNum = parseInt(form.shareCount || "0", 10);
+
+  // 취득기준시가 미리보기 — full 모드에서도 동일 + [M-4] 사례 49 시 액면가 직접 표시
   const acquisitionStdPricePreview = useMemo(() => {
+    if (acqFaceValueOnly && acqFaceValuePerShareNum > 0 && shareCountNum > 0) {
+      return acqFaceValuePerShareNum;  // 1주당 액면가 직접 표시
+    }
     const ni = mode === "full" && fullReduced
       ? fullReduced.acqNi
       : parseAmount(form.acquisitionYearNetIncomePerShare);
@@ -123,12 +132,41 @@ export function EstimatedUnlistedBlock({ form, onChange }: EstimatedUnlistedBloc
     const naW = isHeavyRE ? 3 : 2;
     return Math.floor((ni * niW + na * naW) / 5);
   }, [
+    acqFaceValueOnly,
+    acqFaceValuePerShareNum,
+    shareCountNum,
     mode,
     fullReduced,
     form.acquisitionYearNetIncomePerShare,
     form.acquisitionYearNetAssetPerShare,
     isNetAssetOnly,
     isHeavyRE,
+  ]);
+
+  // [M-4] 환산취득가 미리보기 — acqFaceValueOnly 활성 시만
+  const conversionPreview = useMemo(() => {
+    if (!acqFaceValueOnly || acqFaceValuePerShareNum <= 0) return null;
+    if (!transferStdPricePreview || transferStdPricePreview.perShare <= 0) return null;
+    // 양도가 — total 모드 / per_share 모드 둘 다 fallback
+    const transferPrice =
+      form.transferActualInputMode === "total"
+        ? parseAmount(form.transferTotalPrice || "")
+        : parseAmount(form.perShareTransferPrice || "") * shareCountNum;
+    if (transferPrice <= 0) return null;
+    return Math.floor(
+      Number(
+        (BigInt(transferPrice) * BigInt(acqFaceValuePerShareNum)) /
+          BigInt(transferStdPricePreview.perShare),
+      ),
+    );
+  }, [
+    acqFaceValueOnly,
+    acqFaceValuePerShareNum,
+    shareCountNum,
+    transferStdPricePreview,
+    form.transferActualInputMode,
+    form.transferTotalPrice,
+    form.perShareTransferPrice,
   ]);
 
   return (
@@ -171,18 +209,40 @@ export function EstimatedUnlistedBlock({ form, onChange }: EstimatedUnlistedBloc
           options={[
             {
               value: "simple",
-              label: "직접 입력",
+              label: "계산결과 입력",
               description: "1주당 순손익·순자산가치를 외부에서 산출하여 입력",
             },
             {
               value: "full",
-              label: "행-수준 계산",
+              label: "평가액 계산",
               description: "24행 순손익 + 19행 순자산을 입력하여 자동 산출",
             },
           ]}
         />
         <p className="mt-2 text-xs text-fuchsia-700">ⓘ {UNLISTED_MESSAGES.TOGGLE_DATA_PERSIST}</p>
       </FieldCard>
+
+      {/* [사례 49] 취득시 장부분실 액면가 ToggleCard (§99①4 후단) */}
+      <ToggleCard
+        tone="amber"
+        title="취득시점 장부분실 — 액면가 적용 (§99①4 후단)"
+        description="장부 분실 시 액면가를 취득기준시가로 사용. 양도기준시가는 §165④ 보충 평가 정상 적용."
+        checked={form.acqFaceValueOnly ?? false}
+        onCheckedChange={(v) => onChange({ acqFaceValueOnly: v })}
+      >
+        <CurrencyInput
+          label="1주당 액면가"
+          required
+          hint="취득기준시가 = 액면가 × 주식수 (§163⑥4 개산공제 1% 자동 적용)"
+          value={form.acqFaceValuePerShare ?? ""}
+          onChange={(v) => onChange({ acqFaceValuePerShare: v })}
+        />
+      </ToggleCard>
+      {form.acqFaceValueOnly && (
+        <p className="ml-4 text-xs text-amber-600">
+          ⚠️ 양/취 모두 액면가 적용은 acquisitionMode = &quot;액면가&quot; 모드(별도)를 사용하세요. 본 토글은 취득시점만 액면가를 적용하는 사례 49 전용입니다.
+        </p>
+      )}
 
       {/* 순자산 단독 사유 선택 */}
       <FieldCard
@@ -262,8 +322,8 @@ export function EstimatedUnlistedBlock({ form, onChange }: EstimatedUnlistedBloc
         )}
       </div>
 
-      {/* 취득일 직전 사업연도 입력 — simple 모드에서만 직접 입력란 노출 */}
-      {mode === "simple" && (
+      {/* 취득일 직전 사업연도 입력 — simple 모드 + acqFaceValueOnly 비활성 시만 노출 */}
+      {mode === "simple" && !acqFaceValueOnly && (
       <div>
         <p className="text-sm font-medium text-slate-700 mb-3">
           취득일 직전 사업연도 평가 (취득기준시가 산출용)
@@ -289,14 +349,46 @@ export function EstimatedUnlistedBlock({ form, onChange }: EstimatedUnlistedBloc
       </div>
       )}
 
+      {/* [사례 49] simple 모드 + acqFaceValueOnly 활성 시 안내 배너 */}
+      {mode === "simple" && acqFaceValueOnly && (
+        <p
+          data-testid="eu-simple-acq-hidden-notice"
+          className="rounded border border-amber-200 bg-amber-50/70 px-3 py-2 text-xs text-amber-800"
+        >
+          ⓘ {UNLISTED_MESSAGES.ACQ_FACE_VALUE_NOTICE} — 취득연도 NI/NA 입력 비노출 (액면가 대체)
+        </p>
+      )}
+
       {/* 취득기준시가 미리보기 — simple·full 양 모드 공통 노출 */}
       {acquisitionStdPricePreview !== null && (
         <div className="mt-2 rounded border border-sky-200 bg-sky-50/60 px-3 py-2 text-sm text-sky-700">
           취득기준시가 (1주당): {acquisitionStdPricePreview.toLocaleString()}원
+          {acqFaceValueOnly && (
+            <span className="ml-2 text-xs text-amber-700">(액면가 — §99①4 후단)</span>
+          )}
           <span className="ml-2 text-xs">
             (개산공제 기준 = {acquisitionStdPricePreview.toLocaleString()} ×{" "}
-            {parseInt(form.shareCount || "0", 10).toLocaleString()}주 × 1%)
+            {shareCountNum.toLocaleString()}주 × 1%)
           </span>
+        </div>
+      )}
+
+      {/* [M-4 사례 49] 환산취득가 미리보기 카드 — acqFaceValueOnly 활성 시만 */}
+      {acqFaceValueOnly && conversionPreview !== null && transferStdPricePreview && (
+        <div
+          data-testid="eu-conversion-preview"
+          className="mt-2 rounded border border-fuchsia-200 bg-fuchsia-50/60 px-3 py-2 text-sm text-fuchsia-800 space-y-1"
+        >
+          <p className="font-medium">환산취득가 (사례 49 — §99①4 후단 + §165④)</p>
+          <p className="text-xs">
+            = 양도가 × (1주당 액면가 ÷ 양도기준시가)
+          </p>
+          <p className="text-xs">
+            = (양도가) × ({acqFaceValuePerShareNum.toLocaleString()} ÷ {transferStdPricePreview.perShare.toLocaleString()})
+          </p>
+          <p className="font-semibold text-fuchsia-900">
+            = {conversionPreview.toLocaleString()}원
+          </p>
         </div>
       )}
     </div>

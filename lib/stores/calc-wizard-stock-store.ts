@@ -238,6 +238,13 @@ export interface StockTransferFormData {
   naGoodwillRow19Acq: string;
   naShareCountAcq: string;
 
+  // ── [사례 49] 취득시 장부분실 액면가 + 양도시 보충적 평가 혼합 ──
+  // 소득세법 §99①4 후단 + 시행령 §165④ + §163⑥4 (개산공제 1% 자동)
+  /** 활성 조건: marketType==="unlisted" + acquisitionMode==="estimated" + true */
+  acqFaceValueOnly: boolean;            // 3중 패턴 default: false
+  /** 1주당 액면가 (원) — acqFaceValueOnly === true 시 필수 */
+  acqFaceValuePerShare: string;         // 3중 패턴 default: ""
+
   // ── 비상장 §165④ 보충적 평가 — 행-수준 직접계산 모드 (74 신규 필드) ──
   // [stock-transfer-unlisted-direct-calc] §165④ EstimatedUnlistedBlock 확장
   // simple(현행 4 필드) vs full(행-수준 산출) 3중 패턴 default: "simple"
@@ -433,6 +440,10 @@ export function createInitialStockFormData(): StockTransferFormData {
     naLiabSubRow15Acq: "", naLiabSubRow16Acq: "", naLiabSubRow17Acq: "",
     naGoodwillRow19Acq: "",
     naShareCountAcq: "",
+
+    // ── [사례 49] 취득시 장부분실 액면가 + 양도시 보충적 평가 혼합 ──
+    acqFaceValueOnly: false,
+    acqFaceValuePerShare: "",
 
     // ── 비상장 §165④ 보충적 평가 — 행-수준 직접계산 모드 ──
     unlistedValuationMode: "simple",         // 3중 패턴 default

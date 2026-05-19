@@ -260,7 +260,13 @@ export function calculateStockTransferTax(input: StockTransferInput): StockTrans
       // ★ PR-2 정정: estimatedBase = 취득기준시가 총액 (환산취득가 아님)
       estimatedBase = unlistedResult.acquisitionStdPriceTotal;
       valuationDetail = {
-        method: unlistedResult.method === "net_asset_only" ? "net_asset_only" : "weighted_avg",
+        // [사례 49] acq_face_value_only는 그대로 passthrough (UI 결과 카드 분기용)
+        method:
+          unlistedResult.method === "acq_face_value_only"
+            ? "acq_face_value_only"
+            : unlistedResult.method === "net_asset_only"
+              ? "net_asset_only"
+              : "weighted_avg",
         netAssetFloorApplied: unlistedResult.netAssetFloorApplied,
         netAssetFloorValue: unlistedResult.netAssetFloorValue,
         finalPerShareValue: unlistedResult.perShareValue,

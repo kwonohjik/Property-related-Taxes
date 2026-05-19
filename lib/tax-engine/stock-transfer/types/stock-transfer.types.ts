@@ -135,9 +135,20 @@ export type StockTransferInput = {
   acquisitionYearNetIncomePerShare?: number;
   acquisitionYearNetAssetPerShare?: number;
 
-  /** 장부분실 §99①4 */
+  /** 장부분실 §99①4 (face_value 모드 — 양/취 모두 액면가) */
   bookLost: boolean;
   faceValuePerShare?: number;
+
+  /**
+   * [사례 49] 취득시 장부분실 — 액면가만 사용 (§99①4 후단).
+   *   `marketType === "unlisted" && acquisitionMode === "estimated"` 활성 조건.
+   *   양도기준시가는 §165④ 보충 평가 정상 적용 (취득시점만 액면가).
+   *   기존 `bookLost`(face_value 모드, 양/취 모두 액면가)와 독립.
+   *   동시 활성은 validate에서 차단.
+   */
+  acqFaceValueOnly?: boolean;
+  /** [사례 49] 1주당 액면가 (원) — acqFaceValueOnly === true 시 필수 */
+  acqFaceValuePerShare?: number;
 
   /**
    * 순자산 단독 평가 사유 (시행령 §165④3)
@@ -407,6 +418,7 @@ export type StockTransferResult = {
       | "weighted_avg"
       | "net_asset_only"
       | "face_value"
+      | "acq_face_value_only"
       | "post_listing_conversion"
       | "monthly_avg_listed";
     weightedAvgPerShare?: number;

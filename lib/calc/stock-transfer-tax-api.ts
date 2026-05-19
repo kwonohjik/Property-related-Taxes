@@ -221,6 +221,24 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
   body.acquiredBeforeListing = form.acquiredBeforeListing;     // default: false
   body.tradingHaltAtTransfer = form.tradingHaltAtTransfer;     // default: false
 
+  // [사례 49] 취득시 장부분실 액면가 + 양도시 §165④ 보충 평가 혼합
+  // 활성 조건: marketType==="unlisted" + acquisitionMode==="estimated" + acqFaceValueOnly===true
+  if (
+    form.marketType === "unlisted" &&
+    form.acquisitionMode === "estimated" &&
+    form.acqFaceValueOnly === true &&
+    form.acqFaceValuePerShare
+  ) {
+    body.acqFaceValueOnly = true;
+    const faceVal = parseIntOrUndef(form.acqFaceValuePerShare);
+    if (faceVal !== undefined && faceVal > 0) {
+      body.acqFaceValuePerShare = faceVal;
+    }
+    // 취득연도 NI/NA는 body 미설정 (엔진이 액면가로 대체)
+    delete (body as Record<string, unknown>).acquisitionYearNetIncomePerShare;
+    delete (body as Record<string, unknown>).acquisitionYearNetAssetPerShare;
+  }
+
   // [unlisted-direct-calc] 비상장 §165④ full 모드 — adapter로 4 필드 자동 합성
   // 활성 조건: marketType === "unlisted" (즉 !isListed) + estimated 모드 + unlistedValuationMode === "full"
   // [E-6] isNetAssetOnly === true 시 NI 호출 skip + body NI 미설정 (엔진이 isNetAssetOnly 시 NI 값 무시)

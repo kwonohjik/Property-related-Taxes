@@ -149,6 +149,10 @@ export async function POST(req: NextRequest) {
     bookLost: coerced.bookLost as boolean,
     faceValuePerShare: coerced.faceValuePerShare as number | undefined,
 
+    // [사례 49] 취득시 장부분실 액면가 + 양도시 §165④ 보충 평가
+    acqFaceValueOnly: coerced.acqFaceValueOnly as boolean | undefined,
+    acqFaceValuePerShare: coerced.acqFaceValuePerShare as number | undefined,
+
     netAssetOnlyReason: coerced.netAssetOnlyReason as StockTransferInput["netAssetOnlyReason"],
 
     expenseMode: coerced.expenseMode as StockTransferInput["expenseMode"],

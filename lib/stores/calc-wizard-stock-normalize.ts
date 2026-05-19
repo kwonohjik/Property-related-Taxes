@@ -190,6 +190,10 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
     naGoodwillRow19Acq: strField("naGoodwillRow19Acq"),
     naShareCountAcq: strField("naShareCountAcq"),
 
+    // ── [사례 49] 취득시 장부분실 액면가 (2 필드) ──
+    acqFaceValueOnly: boolField("acqFaceValueOnly", defaults.acqFaceValueOnly),
+    acqFaceValuePerShare: strField("acqFaceValuePerShare"),
+
     // ── 비상장 §165④ 보충적 평가 — 행-수준 직접계산 모드 (74 신규 필드 + 1 enum) ──
     unlistedValuationMode: enumField("unlistedValuationMode", ["simple", "full"], defaults.unlistedValuationMode),
     // NI — 양도연도 (EUTransfer) 18 필드

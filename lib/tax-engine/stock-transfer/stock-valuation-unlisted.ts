@@ -42,8 +42,14 @@ export interface UnlistedValuationResult {
   acquisitionStdPriceTotal: number;
   /** 환산취득가 총액 = 양도가 × (취득기준시가 / 양도기준시가) */
   totalAcquisitionPrice: number;
-  /** 평가 방법 */
-  method: "weighted_avg" | "net_asset_only" | "face_value";
+  /** 평가 방법 — [사례 49] "acq_face_value_only" 추가 (취득만 액면가 + 양도 §165④) */
+  method: "weighted_avg" | "net_asset_only" | "face_value" | "acq_face_value_only";
+  /**
+   * [사례 49 — DR-1·M-2] 80% 하한 적용 후 양도기준시가 (환산 분모·UI 표시용).
+   *   분자(액면가)는 input.acqFaceValuePerShare에서 그대로 조회.
+   *   E-5 정정: float ratio 필드 제거 — 분자·분모 분리.
+   */
+  transferStdPriceAfterFloor?: number;
   /** 80% 하한 적용 여부 (§165④1 단서) */
   netAssetFloorApplied: boolean;
   /** 80% 하한값 (netAssetFloorApplied=true 시) */
@@ -152,9 +158,90 @@ export function calcUnlistedValuation(
     netAssetOnlyReason,
     isHeavyRealEstateForValuation,
   } = input;
+  const isHeavyRE = input.isHeavyRealEstateForValuation;
+  const acqFaceValueOnly = input.acqFaceValueOnly === true;
+  const acqFaceValuePerShare = input.acqFaceValuePerShare ?? 0;
 
   const warnings: string[] = [];
   const appliedRules: string[] = [STOCK.ENFORCEMENT_DECREE_165_4_1_WEIGHTED_AVG];
+
+  // ──────────────────────────────────────────────────────────
+  // [사례 49] 취득시 장부분실 액면가 + 양도시 §165④ 보충 평가 (§99①4 후단)
+  //   activate: acqFaceValueOnly === true && acqFaceValuePerShare > 0
+  //   양도기준시가는 §165④1 가중평균 본칙 + 80% 하한 (NA 단독 사유 시 단독)
+  //   취득기준시가 = 액면가 × 주식수 (§163⑥4 개산공제 1% 자동 — calcEstimatedDeductionBase가 처리)
+  //   환산취득가 = 양도가 × (액면가 / 양도기준시가) — BigInt overflow 안전
+  // ──────────────────────────────────────────────────────────
+  if (acqFaceValueOnly && acqFaceValuePerShare > 0) {
+    const niPerShare = input.transferYearNetIncomePerShare ?? 0;
+    const naPerShare = input.transferYearNetAssetPerShare ?? 0;
+    const isNetAssetOnly = !!netAssetOnlyReason;
+
+    // STEP 1: 양도기준시가 §165④1
+    const niW = isHeavyRE ? 2 : 3;
+    const naW = isHeavyRE ? 3 : 2;
+    const weighted = isNetAssetOnly
+      ? naPerShare
+      : Math.floor((niPerShare * niW + naPerShare * naW) / 5);
+
+    // STEP 2: 80% 하한 (가중평균 케이스만)
+    let transferStdPerShare = weighted;
+    let floor80Applied = false;
+    if (!isNetAssetOnly) {
+      const floor80 = Math.floor(naPerShare * 0.8);
+      if (weighted > 0 && floor80 > weighted) {
+        transferStdPerShare = floor80;
+        floor80Applied = true;
+      }
+    }
+
+    const acquisitionStdPriceTotal = acqFaceValuePerShare * shareCount;
+    appliedRules.push(STOCK.SECTION_99_1_4_BACK_BOOK_LOST_AT_ACQ);
+    if (floor80Applied) appliedRules.push(STOCK.SECTION_165_4_1_FLOOR_80);
+
+    // STEP 3: division by zero 가드 [DM-1]
+    if (transferStdPerShare <= 0) {
+      warnings.push(
+        niPerShare === 0 && naPerShare === 0
+          ? "양도연도 NI/NA 모두 미입력 — 환산취득가 산출 불가. validate에서 사전 차단 필요"
+          : "양도기준시가가 0 이하 — 환산취득가 산출 불가",
+      );
+      return {
+        perShareValue: 0,
+        acquisitionStdPriceTotal,
+        totalAcquisitionPrice: 0,
+        method: "acq_face_value_only",
+        netAssetFloorApplied: floor80Applied,
+        transferStdPriceAfterFloor: 0,
+        warnings,
+        appliedRules,
+      };
+    }
+
+    // STEP 4: 환산취득가 BigInt 안전 = 양도가 × (액면가 / 양도기준시가)
+    const totalAcquisitionPrice = Math.floor(
+      Number(
+        (BigInt(transferPrice) * BigInt(acqFaceValuePerShare)) /
+          BigInt(transferStdPerShare),
+      ),
+    );
+
+    return {
+      perShareValue: transferStdPerShare,
+      acquisitionStdPriceTotal,
+      totalAcquisitionPrice,
+      method: "acq_face_value_only",
+      netAssetFloorApplied: floor80Applied,
+      transferStdPriceAfterFloor: transferStdPerShare,
+      netAssetFloorValue: floor80Applied ? transferStdPerShare : undefined,
+      weightedAvgRaw: weighted,
+      netIncomeValue: niPerShare,
+      netAssetValue: naPerShare,
+      netAssetOnlyReason,
+      warnings,
+      appliedRules,
+    };
+  }
 
   // ──────────────────────────────────────────────────────────
   // 장부분실 + 액면가 (§99①4)

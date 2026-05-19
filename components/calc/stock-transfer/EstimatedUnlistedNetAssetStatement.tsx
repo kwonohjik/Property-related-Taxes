@@ -19,6 +19,8 @@ interface Props {
 }
 
 export function EstimatedUnlistedNetAssetStatement({ form, onChange }: Props) {
+  // [사례 49] acqFaceValueOnly 시 EUAcq 컬럼만 비노출
+  const hideAcqColumn = form.acqFaceValueOnly === true;
   return (
     <div className="rounded-lg border border-emerald-200 bg-emerald-50/30 p-4 space-y-3">
       <div className="flex items-center gap-2">
@@ -26,15 +28,23 @@ export function EstimatedUnlistedNetAssetStatement({ form, onChange }: Props) {
           2
         </span>
         <p className="text-sm font-semibold text-emerald-800">
-          순자산가액 계산서 (소령 §165④1 나목 — 양도/취득연도)
+          순자산가액 계산서 (소령 §165④1 나목 — {hideAcqColumn ? "양도연도" : "양도/취득연도"})
         </p>
       </div>
       <p className="text-xs text-amber-700 bg-amber-50/70 border border-amber-200 rounded px-2 py-1.5">
         {UNLISTED_MESSAGES.GOODWILL_NOTICE}
       </p>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      {hideAcqColumn && (
+        <p
+          data-testid="eu-na-acq-hidden-notice"
+          className="rounded border border-amber-200 bg-amber-50/70 px-3 py-2 text-xs text-amber-800"
+        >
+          ⓘ {UNLISTED_MESSAGES.ACQ_FACE_VALUE_NOTICE} — 취득연도 NA 입력 비노출
+        </p>
+      )}
+      <div className={`grid gap-3 ${hideAcqColumn ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2"}`}>
         <YearColumn form={form} onChange={onChange} col="EUTransfer" />
-        <YearColumn form={form} onChange={onChange} col="EUAcq" />
+        {!hideAcqColumn && <YearColumn form={form} onChange={onChange} col="EUAcq" />}
       </div>
     </div>
   );

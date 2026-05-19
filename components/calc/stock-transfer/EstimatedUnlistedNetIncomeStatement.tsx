@@ -21,6 +21,7 @@ interface Props {
 }
 
 export function EstimatedUnlistedNetIncomeStatement({ form, onChange }: Props) {
+  // [DM-2] 분기 우선순위: Priority 1 — NA 단독 (전체 비노출) > Priority 2 — 사례 49 (EUAcq만 비노출)
   // [E-6 (1)] 순자산 단독 평가 사유 발생 시 NI 24행 양/취 모두 비노출
   if (shouldSkipNetIncome(form)) {
     return (
@@ -32,6 +33,8 @@ export function EstimatedUnlistedNetIncomeStatement({ form, onChange }: Props) {
       </div>
     );
   }
+  // [사례 49] acqFaceValueOnly 시 EUAcq 컬럼만 비노출
+  const hideAcqColumn = form.acqFaceValueOnly === true;
   return (
     <div className="rounded-lg border border-sky-200 bg-sky-50/30 p-4 space-y-3">
       <div className="flex items-center gap-2">
@@ -39,12 +42,20 @@ export function EstimatedUnlistedNetIncomeStatement({ form, onChange }: Props) {
           1
         </span>
         <p className="text-sm font-semibold text-sky-800">
-          순손익 계산서 (상증령 §54 — 24행 × 양도/취득연도)
+          순손익 계산서 (상증령 §54 — 24행 × {hideAcqColumn ? "양도연도" : "양도/취득연도"})
         </p>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      {hideAcqColumn && (
+        <p
+          data-testid="eu-ni-acq-hidden-notice"
+          className="rounded border border-amber-200 bg-amber-50/70 px-3 py-2 text-xs text-amber-800"
+        >
+          ⓘ {UNLISTED_MESSAGES.ACQ_FACE_VALUE_NOTICE} — 취득연도 NI 입력 비노출
+        </p>
+      )}
+      <div className={`grid gap-3 ${hideAcqColumn ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2"}`}>
         <YearColumn form={form} onChange={onChange} col="EUTransfer" />
-        <YearColumn form={form} onChange={onChange} col="EUAcq" />
+        {!hideAcqColumn && <YearColumn form={form} onChange={onChange} col="EUAcq" />}
       </div>
     </div>
   );

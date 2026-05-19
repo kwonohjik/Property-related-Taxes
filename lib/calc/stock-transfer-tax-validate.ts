@@ -508,6 +508,21 @@ export function validateStep2(form: StockTransferFormData): StockValidationError
       const niSkip = (form.netAssetOnlyReason ?? "") !== "";
       const valuationMode = form.unlistedValuationMode || "simple";
 
+      // [사례 49] acqFaceValueOnly 활성 시 액면가 필수, 취득연도 NI/NA 검증 skip
+      const acqFaceValueOnly = form.acqFaceValueOnly === true;
+      if (acqFaceValueOnly) {
+        if (
+          isEmpty(form.acqFaceValuePerShare) ||
+          parseI(form.acqFaceValuePerShare) <= 0
+        ) {
+          errors.push({
+            field: "acqFaceValuePerShare",
+            message: "취득시점 액면가를 입력하세요 (§99①4 후단)",
+            severity: "error",
+          });
+        }
+      }
+
       if (valuationMode === "simple") {
         if (!niSkip && isEmpty(form.transferYearNetIncomePerShare)) {
           errors.push({
@@ -523,22 +538,26 @@ export function validateStep2(form: StockTransferFormData): StockValidationError
             severity: "error",
           });
         }
-        if (!niSkip && isEmpty(form.acquisitionYearNetIncomePerShare)) {
-          errors.push({
-            field: "acquisitionYearNetIncomePerShare",
-            message: "취득연도 1주당 순손익가치를 입력하세요",
-            severity: "error",
-          });
-        }
-        if (isEmpty(form.acquisitionYearNetAssetPerShare)) {
-          errors.push({
-            field: "acquisitionYearNetAssetPerShare",
-            message: "취득연도 1주당 순자산가치를 입력하세요",
-            severity: "error",
-          });
+        // [사례 49] acqFaceValueOnly 시 취득연도 NI/NA 검증 skip (액면가가 대체)
+        if (!acqFaceValueOnly) {
+          if (!niSkip && isEmpty(form.acquisitionYearNetIncomePerShare)) {
+            errors.push({
+              field: "acquisitionYearNetIncomePerShare",
+              message: "취득연도 1주당 순손익가치를 입력하세요",
+              severity: "error",
+            });
+          }
+          if (isEmpty(form.acquisitionYearNetAssetPerShare)) {
+            errors.push({
+              field: "acquisitionYearNetAssetPerShare",
+              message: "취득연도 1주당 순자산가치를 입력하세요",
+              severity: "error",
+            });
+          }
         }
       } else {
         // full 모드 — [M-7] 양/취 양쪽 핵심 필드 모두 필수
+        // [사례 49] acqFaceValueOnly 시 EUAcq 검증 skip
         if (!niSkip) {
           if (isEmpty(form.niShareCountEUTransfer) || parseI(form.niShareCountEUTransfer) <= 0) {
             errors.push({
@@ -547,7 +566,8 @@ export function validateStep2(form: StockTransferFormData): StockValidationError
               severity: "error",
             });
           }
-          if (isEmpty(form.niShareCountEUAcq) || parseI(form.niShareCountEUAcq) <= 0) {
+          // [사례 49] acqFaceValueOnly 시 EUAcq NI skip
+          if (!acqFaceValueOnly && (isEmpty(form.niShareCountEUAcq) || parseI(form.niShareCountEUAcq) <= 0)) {
             errors.push({
               field: "niShareCountEUAcq",
               message: "취득연도 NI 사업연도말 발행주식수 필수 (full 모드)",
@@ -562,7 +582,8 @@ export function validateStep2(form: StockTransferFormData): StockValidationError
             severity: "error",
           });
         }
-        if (isEmpty(form.naShareCountEUAcq) || parseI(form.naShareCountEUAcq) <= 0) {
+        // [사례 49] acqFaceValueOnly 시 EUAcq NA skip
+        if (!acqFaceValueOnly && (isEmpty(form.naShareCountEUAcq) || parseI(form.naShareCountEUAcq) <= 0)) {
           errors.push({
             field: "naShareCountEUAcq",
             message: "취득연도 NA 사업연도말 발행주식수 필수 (full 모드)",
@@ -572,6 +593,15 @@ export function validateStep2(form: StockTransferFormData): StockValidationError
       }
     }
   } else if (acquisitionMode === "face_value") {
+    // [M-5 사례 49] face_value 모드 + acqFaceValueOnly 동시 활성 차단
+    if (form.acqFaceValueOnly === true) {
+      errors.push({
+        field: "acqFaceValueOnly",
+        message:
+          "'액면가' 모드(양/취 모두)와 '사례 49'(취득만 액면가)는 동시 적용 불가. 둘 중 하나만 사용하세요.",
+        severity: "error",
+      });
+    }
     // 장부분실 ↔ 액면가 동시 강제 (3중 패턴: bookLost ?? false)
     if (!form.bookLost) {
       errors.push({
