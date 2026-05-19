@@ -98,6 +98,8 @@ const TAX_CATEGORY_LABEL: Record<StockTransferResult["taxCategory"], string> = {
   other_asset_block_shareholder: "§94①4 다목 — 과점주주",
   other_asset_heavy_re: "§94①4 라목 — 부동산과다보유",
   out_of_scope_foreign: "§94①3 다목 — 해외주식 (별도 도메인)",
+  foreign_stock: "§94①3 다목 — 해외주식 (§118의2~§118의8)",
+  exit_tax: "국외전출세 (§118의9~§118의16)",
 };
 
 // appliedRules 배지 스타일

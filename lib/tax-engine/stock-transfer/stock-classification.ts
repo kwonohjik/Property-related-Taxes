@@ -282,8 +282,8 @@ export function classifyStockTransfer(input: StockTransferInput): Classification
   const warnings: string[] = [];
   const appliedRules: StockTransferResult["appliedRules"] = [];
 
-  // 해외주식 차단
-  if (input.marketType === ("out_of_scope_foreign" as string)) {
+  // 해외주식·국외전출세 차단 (독립 엔진 도메인)
+  if (isForeignTaxCategory(input.marketType)) {
     warnings.push(STOCK.SECTION_94_1_3_DA + " — 해외주식은 별도 도메인");
     return {
       taxCategory: "out_of_scope_foreign",

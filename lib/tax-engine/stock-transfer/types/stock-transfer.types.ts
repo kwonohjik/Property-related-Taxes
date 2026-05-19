@@ -413,7 +413,9 @@ export type StockTransferResult = {
     | "kotc_venture_exempt"
     | "other_asset_block_shareholder"
     | "other_asset_heavy_re"
-    | "out_of_scope_foreign";
+    | "out_of_scope_foreign"
+    | "foreign_stock"
+    | "exit_tax";
 
   appliedSection94:
     | "①3가1)"

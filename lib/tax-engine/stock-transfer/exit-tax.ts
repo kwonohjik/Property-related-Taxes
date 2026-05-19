@@ -379,8 +379,8 @@ export function calculateExitTax(input: ExitTaxInput): ExitTaxResult {
       appliedRules.push(STOCK_EXIT_TAX.SECTION_118_13_2_EXCLUSION);
       warnings.push(
         input.foreignTaxExclusionReason === "credit_allowed"
-          ? "§118의13②1호: 외국정부가 산출세액 공제 허용 → 외국납부세액공제 배제"
-          : "§118의13②2호: 외국정부가 취득가액을 출국일 시가로 조정 → 외국납부세액공제 배제",
+          ? STOCK_EXIT_TAX.EXCLUSION_REASON_1_MESSAGE
+          : STOCK_EXIT_TAX.EXCLUSION_REASON_2_MESSAGE,
       );
     }
   }

@@ -35,6 +35,7 @@ import {
 import { MARKET_LABEL } from "@/components/calc/stock-transfer/market-label";
 import { MajorThresholdTimeline } from "@/components/calc/stock-transfer/MajorThresholdTimeline";
 import { computeAutoIsMajor } from "@/components/calc/stock-transfer/major-sync";
+import { KiwoomMarketCapHelper } from "./KiwoomMarketCapHelper";
 
 type MajorShareholderFormSlice = Pick<
   StockTransferFormData,
@@ -53,6 +54,9 @@ type MajorShareholderFormSlice = Pick<
   | "combinedShareRatioMode"
   | "combinedOwnedShares"
   | "totalIssuedShares"
+  // F-04 키움 시가총액 자동 산정 — Step1 종목코드 + 자동조회 메타
+  | "securityCode"
+  | "kiwoomTradingHalt"
 >;
 
 /**
@@ -192,6 +196,18 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
             onChange={(v) => handleAutoSyncChange({ priorYearEndDate: v })}
           />
         </FieldCard>
+
+        {/* F-04 키움 시가총액 자동 산정 — Step1 종목코드 + 직전 사업연도말 + 보유 주식수 충족 시 활성화 */}
+        <KiwoomMarketCapHelper
+          securityCode={form.securityCode}
+          priorYearEndDate={form.priorYearEndDate}
+          marketType={form.marketType}
+          tradingHalt={form.kiwoomTradingHalt}
+          selfOwnedShares={form.selfOwnedShares}
+          combinedOwnedShares={form.combinedOwnedShares}
+          isLargestShareholderGroup={form.isLargestShareholderGroup}
+          onFill={onChange}
+        />
 
         {/* 동적 임계 박스 — 직전 사업연도 종료일 + 시장 선택 후 자동 표시 */}
         {threshold && form.priorYearEndDate && (
