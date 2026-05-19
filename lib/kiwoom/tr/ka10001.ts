@@ -19,19 +19,36 @@ import { KiwoomError, type KiwoomStockMeta, type MarketType } from "../types";
 const PATH = "/api/dostk/stkinfo";
 const API_ID = "ka10001";
 
+/**
+ * ka10001 실응답 필드 (K-PING-01 모의투자 검증 결과, 2026-05-19):
+ *   - stk_cd / stk_nm: 종목코드·종목명 ✓
+ *   - mac: 시가총액 (백만원 추정 — 005930 응답 16,106,498 = 약 161조원)
+ *   - flo_stk: 유동주식 (천주 추정 — 005930 응답 5,846,279 천주 = 약 58.4억주)
+ *   - cap: 자본금 (억원 추정)
+ *   - cur_prc / pred_pre / flu_rt: 현재가·전일대비·등락률 (부호 prefix로 방향 표시)
+ *
+ * 응답에 ★ 없는 필드 ★:
+ *   - mket_id (시장구분 KOSPI/KOSDAQ/KONEX) — 별도 TR 또는 UI 직접 입력 필요
+ *   - trde_halt / admn_isue (거래정지·관리종목) — 별도 TR 또는 UI 직접 입력 필요
+ *
+ * 후속 F-X: 시장구분·거래정지 정확 매핑은 ka10099(전종목정보) 또는 별도 TR로 분리.
+ */
 interface Ka10001Response {
   return_code?: number;
   return_msg?: string;
   stk_cd?: string;
   stk_nm?: string;
+  // 시장구분 — 실응답 미반환. fallback 매핑 시도용 (응답 변형 대비)
   mket_id?: string;
   mket_div_nm?: string;
-  // 시가총액 — 응답 변형 (원·백만원·억원)
-  tot_stk_amt?: string | number;
-  // 상장주식수
-  lstg_stk_amt?: string | number;
-  list_stk_qty?: string | number;
-  // 거래정지·관리종목 플래그 변형
+  // 시가총액 (백만원) — 실응답 필드명 mac
+  mac?: string | number;
+  tot_stk_amt?: string | number; // fallback
+  // 유동주식 (천주) — 실응답 필드명 flo_stk
+  flo_stk?: string | number;
+  lstg_stk_amt?: string | number; // fallback
+  list_stk_qty?: string | number; // fallback
+  // 거래정지·관리종목 — 실응답 미반환. fallback 시도용
   trde_halt?: string;
   trd_halt?: string;
   mngt_isue?: string;
@@ -93,11 +110,11 @@ export async function fetchStockInfo({ stockCode, reqOverrides }: FetchStockInfo
   return {
     stockCode,
     stockName: json.stk_nm,
-    marketType: normalizeMarket(json.mket_id ?? json.mket_div_nm),
-    marketCap: toNumber(json.tot_stk_amt),
-    listedShares: toNumber(json.lstg_stk_amt ?? json.list_stk_qty),
-    tradingHalt: isYesFlag(json.trde_halt ?? json.trd_halt),
-    adminIssue: isYesFlag(json.mngt_isue ?? json.admn_isue),
+    marketType: normalizeMarket(json.mket_id ?? json.mket_div_nm), // 실응답 미반환 → UNKNOWN
+    marketCap: toNumber(json.mac ?? json.tot_stk_amt) * 1_000_000, // mac 백만원 → 원
+    listedShares: toNumber(json.flo_stk ?? json.lstg_stk_amt ?? json.list_stk_qty) * 1_000, // flo_stk 천주 → 주
+    tradingHalt: isYesFlag(json.trde_halt ?? json.trd_halt), // 실응답 미반환 → false
+    adminIssue: isYesFlag(json.mngt_isue ?? json.admn_isue), // 실응답 미반환 → false
   };
 }
 
