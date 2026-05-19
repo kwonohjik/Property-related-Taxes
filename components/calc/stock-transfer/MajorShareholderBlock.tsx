@@ -36,6 +36,12 @@ import { MARKET_LABEL } from "@/components/calc/stock-transfer/market-label";
 import { MajorThresholdTimeline } from "@/components/calc/stock-transfer/MajorThresholdTimeline";
 import { computeAutoIsMajor } from "@/components/calc/stock-transfer/major-sync";
 import { KiwoomMarketCapHelper } from "./KiwoomMarketCapHelper";
+// Phase C (2026-05-19) — 교재 Check Point 9건 UI hint 그룹
+import {
+  MarketCapHintsCard,
+  IssuedSharesHintsCard,
+  CombinedShareHintsCard,
+} from "./MajorShareholderCheckpointHints";
 
 type MajorShareholderFormSlice = Pick<
   StockTransferFormData,
@@ -316,6 +322,12 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
           onChange={(v) => handleAutoSyncChange({ selfMarketCap: v })}
         />
 
+        {/* Phase C (2026-05-19) — Group A: 시가총액 산정 hint 4건 */}
+        <MarketCapHintsCard />
+
+        {/* Phase C (2026-05-19) — Group B: 발행주식총수 산정 hint 2건 */}
+        <IssuedSharesHintsCard />
+
         {/* 최대주주그룹 합산 토글 */}
         <ToggleCard
           checked={form.isLargestShareholderGroup}
@@ -379,6 +391,9 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
               value={form.combinedMarketCap}
               onChange={(v) => handleAutoSyncChange({ combinedMarketCap: v })}
             />
+
+            {/* Phase C (2026-05-19) — Group C: 특수관계인 합산 hint 3건 */}
+            <CombinedShareHintsCard />
           </div>
         </ToggleCard>
 

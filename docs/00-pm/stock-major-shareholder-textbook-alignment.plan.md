@@ -1,6 +1,6 @@
-# 주식 양도소득세 — 대주주 판정 교재 정합화 계획서 v4
+# 주식 양도소득세 — 대주주 판정 교재 정합화 계획서 v5
 
-> 작성일: 2026-05-19 (v4 통합 정정)
+> 작성일: 2026-05-19 (v5 — Phase C 완료 반영)
 > 작성자: Claude (Opus 4.7)
 > 영향 도메인: `lib/tax-engine/stock-transfer/` + `components/calc/stock-transfer/` + `__tests__/tax-engine/stock-transfer/`
 > 우선순위: **P0 (오판정 직결)** — 비상장 벤처 시총 임계 누락 + 2016.4.1.~12.31. 구간 시기 매트릭스 부정확
@@ -10,6 +10,7 @@
 > v1 → v2 변경 사항: §15 정정 이력 참조 (10건 반영).
 > v2 → v3 변경 사항: §16 정정 이력 참조 (P0 2건 + P1 2건 + P2 6건 = 10건 추가 반영).
 > v3 → v4 변경 사항: §17 정정 이력 참조 (디자인 1·2차 검토 + Plan↔Design 통합 검토 결과 6건 반영).
+> v4 → v5 변경 사항: §18 정정 이력 참조 (Phase C 후속 PR → 본 PR 완료로 이동, hint 9종 + 3 그룹 collapsible UI 구현).
 
 ---
 
@@ -522,3 +523,33 @@ Phase A·B Plan/Design 완료 후 Do 진입 전:
 - Phase A UI 변경 0건 확정 (기존 `fromDate` 데이터 활용)
 - Phase B 영향 파일 6개 명시 (v3 3개 → v4 6개) — 작업 범위 정확화
 - 회귀 위험 분석을 "추정"에서 "grep 명령 + 위험/안전 케이스 분류" 로 구체화
+
+---
+
+## 18. 정정 이력 (v4 → v5, 2026-05-19) — Phase C 완료 반영
+
+본 절은 v4 작성 후 사용자 요청으로 Phase C(UI hint 9종)을 본 PR로 통합 완료한 이력.
+
+| # | 변경 항목 | v4 상태 | v5 결과 |
+|---|---|---|---|
+| 1 | Phase C 범위 결정 | "별도 PR로 분리 가능" (§12 후속 PR) | **본 PR 통합 완료** (사용자 요청 2026-05-19) |
+| 2 | hint 9종 구현 (F-11·F-15~F-22) | 미구현 | **`MajorShareholderCheckpointHints.tsx` 신규 컴포넌트** (3 그룹 collapsible — sky/emerald/amber tone) |
+| 3 | LawArticleModal 배지 | 미연결 | 각 hint 항목에 trailing 배지 연계 (시행령 §157·해석례 등 9건) |
+| 4 | UI 위치 통합 | 미통합 | Group A·B: 본인 시가총액 직후 / Group C: 합산 시총 입력 직후 |
+| 5 | "자동 가산 없음" 책임 명시 | 디자인 명시 | 각 그룹 카드 하단 "본 앱은 자동 가산하지 않습니다 — 사전 합산 입력 책임" 강조 박스 |
+
+**v5 구현 상세**:
+- 신규 파일 `components/calc/stock-transfer/MajorShareholderCheckpointHints.tsx` (3 컴포넌트 export)
+- `MarketCapHintsCard` — F-11·F-17·F-18·F-22 (시총 산정, sky tone)
+- `IssuedSharesHintsCard` — F-19·F-20 (발행주식총수, emerald tone)
+- `CombinedShareHintsCard` — F-15·F-16·F-21 (특수관계인 합산, amber tone)
+- 각 hint는 `<details>` collapsible로 기본 접힘 상태 → 화면 혼잡 차단
+- 메모리 [[feedback_no_silent_apportion_fallback]] 정신 — 자동 가산 없음 명시 + 사용자 책임 안내
+- §12 후속 PR 목록에서 Phase C 항목 제거 (다른 항목 F-06·F-08~F-14·F-23·F-24·F-25는 그대로 유지)
+
+**v5 후속 PR 범위 (본 PR 완료 이후)**:
+- F-24 — 본인 미보유 시 합산 강제 분기
+- F-06 — 직전거래일 fallback
+- F-08~F-14·F-23 — 합병·분할·신설법인 특수분기
+- F-15·F-16 자동 가산 — 대차주식·사모펀드 엔진 자동 시총 가산 (현행은 사용자 수기)
+- F-25 — 2016.1.1. 의무보호예수 부칙
