@@ -19,7 +19,15 @@ import { KiwoomError } from "../types";
 const PATH = "/api/dostk/stkinfo";
 const API_ID = "ka10099";
 
-export type StockListMarketTp = "0" | "10";
+/**
+ * ka10099 mrkt_tp 매핑 (모의투자 실응답 검증):
+ *   - "0"  거래소 (KOSPI), 2,452 종목
+ *   - "10" 코스닥 (KOSDAQ), 1,823 종목
+ *   - "50" 코넥스 (KONEX, F-16 2026-05-19 확정), 109 종목
+ *
+ * KONEX 응답: marketCode="50", marketName="KONEX"
+ */
+export type StockListMarketTp = "0" | "10" | "50";
 
 interface Ka10099Row {
   code?: string;

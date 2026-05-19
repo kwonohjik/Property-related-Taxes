@@ -68,7 +68,7 @@ export interface FetchDailyChartArgs {
  * 응답은 거래일만 포함 (휴장·주말 누락). 호출 측은 자체 슬롯에 매핑.
  */
 export async function fetchDailyChart(args: FetchDailyChartArgs): Promise<KiwoomDailyQuote[]> {
-  if (!/^\d{6}$/.test(args.stockCode)) {
+  if (!/^[0-9A-Z]{6}$/.test(args.stockCode)) {
     throw new KiwoomError(`종목코드는 6자리 숫자여야 합니다: ${args.stockCode}`, "stock_not_found");
   }
   const baseYmd = args.baseDateIso.replace(/-/g, "");

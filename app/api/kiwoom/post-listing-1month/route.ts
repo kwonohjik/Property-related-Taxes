@@ -33,7 +33,7 @@ import { handleKiwoomError } from "../search/route";
 import { type KiwoomDailyQuote } from "@/lib/kiwoom/types";
 
 const RequestSchema = z.object({
-  stockCode: z.string().regex(/^\d{6}$/, "종목코드는 6자리 숫자여야 합니다."),
+  stockCode: z.string().regex(/^[0-9A-Z]{6}$/, "종목코드는 6자리 숫자 또는 대문자입니다 (KONEX 영문 포함)."),
   listingDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "상장일은 YYYY-MM-DD 형식이어야 합니다."),
 });
 

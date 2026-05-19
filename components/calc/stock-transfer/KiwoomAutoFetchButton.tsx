@@ -39,7 +39,7 @@ export function KiwoomAutoFetchButton({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const codeValid = /^\d{6}$/.test(securityCode);
+  const codeValid = /^[0-9A-Z]{6}$/.test(securityCode);
   const dateValid = /^\d{4}-\d{2}-\d{2}$/.test(transferDate);
   // foreign_stock 등 키움 미지원 시장은 본 함수 외부에서 차단
   const marketValid = isKiwoomFetchable(marketType as StoreMarketType);

@@ -146,12 +146,13 @@ export function SecurityMetadataBlock({
             type="text"
             value={securityCode}
             onChange={(e) => {
-              const v = e.target.value.replace(/\D/g, "").slice(0, 6);
+              // F-16 KONEX 종목코드 영문자 포함 허용 (예: 0070X0)
+              const v = e.target.value.toUpperCase().replace(/[^0-9A-Z]/g, "").slice(0, 6);
               onChange({ securityCode: v });
             }}
             onBlur={async (e) => {
-              const code = e.target.value.replace(/\D/g, "").slice(0, 6);
-              if (!/^\d{6}$/.test(code)) return;
+              const code = e.target.value.toUpperCase().replace(/[^0-9A-Z]/g, "").slice(0, 6);
+              if (!/^[0-9A-Z]{6}$/.test(code)) return;
               try {
                 const res = await fetch("/api/kiwoom/search", {
                   method: "POST",
@@ -174,7 +175,7 @@ export function SecurityMetadataBlock({
               }
             }}
             maxLength={6}
-            inputMode="numeric"
+            inputMode="text"
             placeholder="6자리 숫자"
             className={inputClassName}
           />

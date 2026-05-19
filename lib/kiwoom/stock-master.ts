@@ -43,14 +43,16 @@ async function loadStockMaster(): Promise<Map<string, StockMasterEntry>> {
     // 캐시 재확인 (race condition)
     if (cache && now - cache.loadedAt < TTL_MS) return cache.byCode;
 
-    const [kospi, kosdaq] = await Promise.all([
+    const [kospi, kosdaq, konex] = await Promise.all([
       fetchStockList({ marketTp: "0" }),
       fetchStockList({ marketTp: "10" }),
+      fetchStockList({ marketTp: "50" }), // F-16 KONEX 추가
     ]);
 
     const byCode = new Map<string, StockMasterEntry>();
     for (const entry of kospi) byCode.set(entry.stockCode, entry);
     for (const entry of kosdaq) byCode.set(entry.stockCode, entry);
+    for (const entry of konex) byCode.set(entry.stockCode, entry);
 
     cache = { byCode, loadedAt: Date.now() };
     return byCode;
@@ -63,14 +65,15 @@ async function loadStockMaster(): Promise<Map<string, StockMasterEntry>> {
  * 자동 mirror 용도: securityCode 입력 시 marketType / tradingHalt 즉시 확정.
  */
 export async function lookupStockMaster(stockCode: string): Promise<StockMasterEntry | undefined> {
-  if (!/^\d{6}$/.test(stockCode)) return undefined;
+  if (!/^[0-9A-Z]{6}$/.test(stockCode)) return undefined;
   const master = await loadStockMaster();
   return master.get(stockCode);
 }
 
 /** marketCode (ka10099) → store marketType (lowercase) 매핑 */
-export function masterMarketCodeToStore(marketCode: string): "kospi" | "kosdaq" | "" {
+export function masterMarketCodeToStore(marketCode: string): "kospi" | "kosdaq" | "konex" | "" {
   if (marketCode === "0") return "kospi";
   if (marketCode === "10") return "kosdaq";
+  if (marketCode === "50") return "konex"; // F-16 KONEX
   return "";
 }

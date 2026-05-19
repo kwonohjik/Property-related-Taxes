@@ -19,7 +19,7 @@ import { normalizeMarketTypeToStore } from "@/lib/kiwoom/market-mapping";
 import { KiwoomError } from "@/lib/kiwoom/types";
 
 const RequestSchema = z.object({
-  stockCode: z.string().regex(/^\d{6}$/, "종목코드는 6자리 숫자여야 합니다."),
+  stockCode: z.string().regex(/^[0-9A-Z]{6}$/, "종목코드는 6자리 숫자 또는 대문자입니다 (KONEX 영문 포함)."),
 });
 
 export async function POST(req: Request) {

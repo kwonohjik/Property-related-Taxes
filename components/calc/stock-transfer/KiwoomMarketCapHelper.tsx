@@ -52,7 +52,7 @@ export function KiwoomMarketCapHelper({
     combinedCap: number;
   } | null>(null);
 
-  const codeValid = /^\d{6}$/.test(securityCode);
+  const codeValid = /^[0-9A-Z]{6}$/.test(securityCode);
   const dateValid = /^\d{4}-\d{2}-\d{2}$/.test(priorYearEndDate);
   const marketValid = isKiwoomFetchable(marketType as StoreMarketType);
   const selfShares = parseDecimal(selfOwnedShares);

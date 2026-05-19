@@ -16,4 +16,9 @@ describe("stock-master — anchor (F-15)", () => {
     expect(masterMarketCodeToStore("99")).toBe("");
     expect(masterMarketCodeToStore("")).toBe("");
   });
+
+  // F-16 KONEX 추가
+  it("K-MASTER-04: marketCode '50' → 'konex' (F-16, 2026-05-19)", () => {
+    expect(masterMarketCodeToStore("50")).toBe("konex");
+  });
 });

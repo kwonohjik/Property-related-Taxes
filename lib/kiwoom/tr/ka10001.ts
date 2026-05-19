@@ -90,7 +90,7 @@ export interface FetchStockInfoArgs {
  * @throws KiwoomError("stock_not_found") — 응답에 stk_nm 없음
  */
 export async function fetchStockInfo({ stockCode, reqOverrides }: FetchStockInfoArgs): Promise<KiwoomStockMeta> {
-  if (!/^\d{6}$/.test(stockCode)) {
+  if (!/^[0-9A-Z]{6}$/.test(stockCode)) {
     throw new KiwoomError(`종목코드는 6자리 숫자여야 합니다: ${stockCode}`, "stock_not_found");
   }
 
@@ -115,7 +115,9 @@ export async function fetchStockInfo({ stockCode, reqOverrides }: FetchStockInfo
       ? "KOSPI"
       : master?.marketCode === "10"
         ? "KOSDAQ"
-        : "UNKNOWN";
+        : master?.marketCode === "50"
+          ? "KONEX" // F-16 KONEX
+          : "UNKNOWN";
 
   return {
     stockCode,
