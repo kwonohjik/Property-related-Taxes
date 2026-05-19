@@ -24,7 +24,7 @@ import { preTransferAutoFillDates } from "./PostListingClosingPriceTable";
 interface Props {
   securityCode: string;
   transferDate: string;
-  marketType: StoreMarketType;
+  marketType: StockTransferFormData["marketType"];
   tradingHalt: boolean;
   onFill: (patch: Partial<StockTransferFormData>) => void;
 }
@@ -41,7 +41,8 @@ export function KiwoomAutoFetchButton({
 
   const codeValid = /^\d{6}$/.test(securityCode);
   const dateValid = /^\d{4}-\d{2}-\d{2}$/.test(transferDate);
-  const marketValid = isKiwoomFetchable(marketType);
+  // foreign_stock 등 키움 미지원 시장은 본 함수 외부에서 차단
+  const marketValid = isKiwoomFetchable(marketType as StoreMarketType);
   const haltBlocked = tradingHalt;
 
   const canFetch = codeValid && dateValid && marketValid && !haltBlocked && !loading;

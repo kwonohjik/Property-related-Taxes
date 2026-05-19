@@ -50,6 +50,7 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
   };
 
   return {
+    ...defaults, // foreign-stock 등 신규 필드 누락 시 default fallback (typecheck 가드)
     securityName: strField("securityName"),
     securityCode: strField("securityCode"),
     brokerage: strField("brokerage"),
@@ -57,7 +58,7 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
     kiwoomTradingHalt: boolField("kiwoomTradingHalt", false),
     kiwoomLastFetchedAt: strField("kiwoomLastFetchedAt"),
 
-    marketType: enumField("marketType", ["kospi", "kosdaq", "konex", "unlisted", "other_asset", ""], ""),
+    marketType: enumField("marketType", ["kospi", "kosdaq", "konex", "unlisted", "other_asset", "foreign_stock", ""], ""),
     isMajorShareholder: boolField("isMajorShareholder", false),
     selfShareRatio: strField("selfShareRatio"),
     selfMarketCap: strField("selfMarketCap"),
@@ -271,6 +272,39 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
     naLiabSubRow17EUAcq: strField("naLiabSubRow17EUAcq"),
     naGoodwillRow19EUAcq: strField("naGoodwillRow19EUAcq"),
     naShareCountEUAcq: strField("naShareCountEUAcq"),
+
+    // ── PR-4A 해외주식 전용 필드 (③ 동기화 지점 — sessionStorage 마이그레이션 호환) ──
+    yearsResidentInKorea: strField("yearsResidentInKorea"),
+    isListedForeignCorp: boolField("isListedForeignCorp", defaults.isListedForeignCorp),
+    fgCountryCode: ((): string => {
+      const v = d.fgCountryCode;
+      return typeof v === "string" && v.length > 0 ? v : defaults.fgCountryCode;
+    })(),
+    fgTransferPriceMode: enumField("fgTransferPriceMode", ["per_share", "total"], defaults.fgTransferPriceMode),
+    perShareTransferPriceForeign: strField("perShareTransferPriceForeign"),
+    totalTransferPriceForeign: strField("totalTransferPriceForeign"),
+    transferCurrencyCode: ((): string => {
+      const v = d.transferCurrencyCode;
+      return typeof v === "string" && v.length > 0 ? v : defaults.transferCurrencyCode;
+    })(),
+    transferExchangeRate: strField("transferExchangeRate"),
+    acquisitionModeFS: enumField("acquisitionModeFS", ["actual", "market_price"], defaults.acquisitionModeFS),
+    perShareAcquisitionPriceForeign: strField("perShareAcquisitionPriceForeign"),
+    acquisitionCurrencyCode: ((): string => {
+      const v = d.acquisitionCurrencyCode;
+      return typeof v === "string" && v.length > 0 ? v : defaults.acquisitionCurrencyCode;
+    })(),
+    acquisitionExchangeRate: strField("acquisitionExchangeRate"),
+    capitalExpenditureForeign: strField("capitalExpenditureForeign"),
+    transferCostForeign: strField("transferCostForeign"),
+    hasForeignTax: boolField("hasForeignTax", defaults.hasForeignTax),
+    foreignTaxPaidForeign: strField("foreignTaxPaidForeign"),
+    foreignTaxCurrencyCode: ((): string => {
+      const v = d.foreignTaxCurrencyCode;
+      return typeof v === "string" && v.length > 0 ? v : defaults.foreignTaxCurrencyCode;
+    })(),
+    foreignTaxExchangeRate: strField("foreignTaxExchangeRate"),
+    foreignTaxMethod: enumField("foreignTaxMethod", ["credit", "expense"], defaults.foreignTaxMethod),
   };
 }
 

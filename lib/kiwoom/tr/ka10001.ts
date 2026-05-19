@@ -15,6 +15,7 @@
 
 import { kiwoomFetch, type KiwoomRequestOptions } from "../client";
 import { KiwoomError, type KiwoomStockMeta, type MarketType } from "../types";
+import { lookupStockMaster } from "../stock-master";
 
 const PATH = "/api/dostk/stkinfo";
 const API_ID = "ka10001";
@@ -107,14 +108,23 @@ export async function fetchStockInfo({ stockCode, reqOverrides }: FetchStockInfo
     );
   }
 
+  // ★ F-15: ka10001 응답에 시장구분·거래정지·관리종목 필드가 없으므로 ka10099 마스터에서 merge
+  const master = await lookupStockMaster(stockCode).catch(() => undefined);
+  const masterMarketType: MarketType =
+    master?.marketCode === "0"
+      ? "KOSPI"
+      : master?.marketCode === "10"
+        ? "KOSDAQ"
+        : "UNKNOWN";
+
   return {
     stockCode,
     stockName: json.stk_nm,
-    marketType: normalizeMarket(json.mket_id ?? json.mket_div_nm), // 실응답 미반환 → UNKNOWN
+    marketType: master ? masterMarketType : normalizeMarket(json.mket_id ?? json.mket_div_nm),
     marketCap: toNumber(json.mac ?? json.tot_stk_amt) * 1_000_000, // mac 백만원 → 원
     listedShares: toNumber(json.flo_stk ?? json.lstg_stk_amt ?? json.list_stk_qty) * 1_000, // flo_stk 천주 → 주
-    tradingHalt: isYesFlag(json.trde_halt ?? json.trd_halt), // 실응답 미반환 → false
-    adminIssue: isYesFlag(json.mngt_isue ?? json.admn_isue), // 실응답 미반환 → false
+    tradingHalt: master?.tradingHalt ?? isYesFlag(json.trde_halt ?? json.trd_halt),
+    adminIssue: master?.adminIssue ?? isYesFlag(json.mngt_isue ?? json.admn_isue),
   };
 }
 

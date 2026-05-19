@@ -151,12 +151,41 @@ export function SecurityMetadataBlock({
           />
         </FieldCard>
 
-        <FieldCard label="종목코드 (선택)">
+        <FieldCard label="종목코드 (선택)" hint="6자리 입력 후 포커스 이동 시 키움 자동조회로 시장구분·거래정지 자동 확인">
           <input
             type="text"
             value={securityCode}
-            onChange={(e) => onChange({ securityCode: e.target.value })}
-            maxLength={12}
+            onChange={(e) => {
+              const v = e.target.value.replace(/\D/g, "").slice(0, 6);
+              onChange({ securityCode: v });
+            }}
+            onBlur={async (e) => {
+              const code = e.target.value.replace(/\D/g, "").slice(0, 6);
+              if (!/^\d{6}$/.test(code)) return;
+              try {
+                const res = await fetch("/api/kiwoom/search", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ stockCode: code }),
+                });
+                if (!res.ok) return;
+                const data = (await res.json()) as {
+                  stockName: string;
+                  marketTypeStore: "kospi" | "kosdaq" | "konex" | "";
+                  tradingHalt: boolean;
+                };
+                onChange({
+                  securityName: data.stockName || securityName,
+                  marketType: data.marketTypeStore || marketType,
+                  kiwoomTradingHalt: data.tradingHalt,
+                });
+              } catch {
+                // 네트워크 실패 시 silent — 사용자 수동 입력 그대로 유지
+              }
+            }}
+            maxLength={6}
+            inputMode="numeric"
+            placeholder="6자리 숫자"
             className={inputClassName}
           />
         </FieldCard>
