@@ -251,6 +251,30 @@ function classifySection94(
 }
 
 // ============================================================
+// 외국·국외전출세 도메인 판정 헬퍼
+// ============================================================
+
+/**
+ * 해외주식·국외전출세 도메인 여부 판정.
+ *
+ * 이들은 `foreign-stock.ts` / `exit-tax.ts` 독립 엔진에서 처리되며,
+ * `classifyStockTransfer()` 본 흐름(§94 분류·§157 대주주·§94②) 적용 대상 아님.
+ *
+ * - `foreign_stock` (소득세법 §94①3다목·§118의2~§118의8): foreign-stock.ts
+ * - `exit_tax` (소득세법 §118의9~§118의16): exit-tax.ts
+ * - `out_of_scope_foreign` (legacy): classifyStockTransfer 내 차단 분기 유지
+ */
+export function isForeignTaxCategory(
+  marketType: StockTransferInput["marketType"] | string | undefined
+): boolean {
+  return (
+    marketType === "foreign_stock" ||
+    marketType === "exit_tax" ||
+    marketType === "out_of_scope_foreign"
+  );
+}
+
+// ============================================================
 // 메인 분류 함수
 // ============================================================
 
