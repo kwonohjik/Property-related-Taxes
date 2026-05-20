@@ -14,6 +14,7 @@
 import type {
   EstateItem,
   PropertyValuationResult,
+  PriorGift,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 
@@ -115,8 +116,23 @@ export interface GiftTaxValuationFormTableProps {
   /** ⑬ §52의2 장애인 신탁 재산가액 */
   disabledTrustExclusion?: number;
 
-  /** Phase 2 — 사전증여 합산 분리 (A24 행). 현 PR 미사용. */
-  priorGiftValuationResults?: PropertyValuationResult[];
+  /**
+   * 사전증여 합산 — 본문 행 ①=A24(거주자)로 별도 분리 표시 (§47②).
+   * PriorGift는 자산 평가 정보 부재 — Phase 2에서는 ②=12(기타재산) / ⑧=08(보충적 평가) 기본값.
+   */
+  priorGifts?: PriorGift[];
+}
+
+// ============================================================
+// 사전증여 행 매핑 — PriorGift → 본문 행 표시값
+// ============================================================
+
+/**
+ * 사전증여 행 라벨 산출 — donor 관계 기반 ③ 소재지·법인명 등 칸.
+ * Phase 2: PriorGift에는 자산 명칭이 없으므로 "사전증여 (YYYY-MM-DD)" 형식 사용.
+ */
+function describePriorGift(pg: PriorGift): string {
+  return `사전증여 (${pg.giftDate})`;
 }
 
 // ============================================================
@@ -138,10 +154,12 @@ export function GiftTaxValuationFormTable({
   publicInterestExclusion = 0,
   publicTrustExclusion = 0,
   disabledTrustExclusion = 0,
+  priorGifts = [],
 }: GiftTaxValuationFormTableProps) {
   const itemMap = new Map(estateItems.map((it) => [it.id, it]));
-  const totalRows = Math.max(ROWS_FIXED, valuationResults.length);
-  const emptyRowCount = totalRows - valuationResults.length;
+  const dataRowCount = valuationResults.length + priorGifts.length;
+  const totalRows = Math.max(ROWS_FIXED, dataRowCount);
+  const emptyRowCount = totalRows - dataRowCount;
 
   const row10 = computeRow10(
     exemptAmount,
@@ -258,6 +276,46 @@ export function GiftTaxValuationFormTable({
                   </td>
                   <td className={CELL_CENTER} data-testid="col-valuation-method">
                     {methodCode}
+                  </td>
+                </tr>
+              );
+            })}
+            {priorGifts.map((pg, i) => {
+              const idx = valuationResults.length + i + 1;
+              return (
+                <tr
+                  key={`prior-${pg.giftDate}-${i}`}
+                  data-testid={`row-data-${idx}`}
+                >
+                  <td className={CELL_CENTER} data-testid="col-property-class">
+                    A24
+                  </td>
+                  <td className={CELL_CENTER} data-testid="col-property-type">
+                    12
+                  </td>
+                  <td className={CELL_CENTER} data-testid="col-overseas">
+                    [ ]여 [ ]부
+                  </td>
+                  <td className={CELL_CENTER} data-testid="col-country">
+                    &nbsp;
+                  </td>
+                  <td className={CELL_NAME} data-testid="col-name">
+                    {describePriorGift(pg)}
+                  </td>
+                  <td className={CELL_CENTER} data-testid="col-biz-no">
+                    &nbsp;
+                  </td>
+                  <td className={CELL_AMOUNT} data-testid="col-shares">
+                    &nbsp;
+                  </td>
+                  <td className={CELL_AMOUNT} data-testid="col-unit-price">
+                    &nbsp;
+                  </td>
+                  <td className={CELL_AMOUNT} data-testid="col-amount">
+                    {formatKRW(pg.giftAmount)}
+                  </td>
+                  <td className={CELL_CENTER} data-testid="col-valuation-method">
+                    08
                   </td>
                 </tr>
               );

@@ -429,7 +429,7 @@ describe("GiftTaxValuationFormTable", () => {
 |---|---|---|
 | D-1 | EstateItem 카테고리 — 부표 1 코드 04(개별주택)·06(오피스텔·상업용건물)·08(취득권리)·13(가상자산)·14(서화골동품) 부재. 또한 03(일반건물 부수토지)는 EstateItem 자체로 구분 불가 | Phase 1: 매핑되지 않은 코드는 fallback 처리 — `real_estate_apartment`는 05(공동주택), `real_estate_building`은 07(일반건물)로 통일. 사용자가 입력한 오피스텔·상업용건물도 07로 표시. 후속 PR에서 EstateItem 카테고리 분리 + 매핑 추가 |
 | D-2 | ValuationMethod `expropriation`(03)·`auction`(04)·`mortgage_special`(07) 부재 | Phase 1: fallback "08" — 사용자에게 보충적 평가로 표시되는 한계. 후속 PR |
-| D-3 | 사전증여 행 ①=A24 분리 | Phase 1: 모든 본문 행이 A11 — `priorGiftValuationResults` prop은 Phase 2 |
+| D-3 | ~~사전증여 행 ①=A24 분리~~ | ✅ **2026-05-20 해결**: `priorGifts: PriorGift[]` prop으로 본문 행 분리. ②=12(기타재산) / ⑧=08(보충적 평가) 기본 매핑. PriorGift는 자산 평가 정보 부재로 `describePriorGift()` 라벨 사용("사전증여 (YYYY-MM-DD)"). GV-9 anchor 통과. |
 | D-4 | 비거주자 신분(A25/A26) | Phase 2 (donor·donee 거주자 입력 필요) |
 | D-5 | 부표 5 (서화·골동품) 의무 동반 | 재산종류 14 미지원으로 Phase 1 무관 |
 

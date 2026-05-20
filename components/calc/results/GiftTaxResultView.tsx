@@ -271,11 +271,13 @@ export function GiftTaxResultView({
         </div>
       </div>
 
-      {/* 세액공제 상세 */}
+      {/* 세액공제 상세 — §28·§69 산출근거 펼침 (priorGiftCreditDetail + computedTax 전달) */}
       {result.totalTaxCredit > 0 && (
         <TaxCreditBreakdownCard
           credit={result.creditDetail}
           taxBeforeCredit={taxBeforeCredit}
+          priorGiftCreditDetail={result.priorGiftCreditDetail}
+          computedTax={result.computedTax}
         />
       )}
 
@@ -343,6 +345,12 @@ export function GiftTaxResultView({
             publicInterestExclusion={result.publicInterestExclusion}
             publicTrustExclusion={result.publicTrustExclusion}
             disabledTrustExclusion={result.disabledTrustExclusion}
+            priorGifts={priorGifts.map((pg) => ({
+              giftDate: pg.giftDate,
+              giftAmount: pg.giftAmount,
+              isHeir: false,
+              giftTaxPaid: 0,
+            }))}
           />
         </div>
       </div>

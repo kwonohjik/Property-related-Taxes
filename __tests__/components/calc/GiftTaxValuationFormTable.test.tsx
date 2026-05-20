@@ -17,6 +17,7 @@ import type {
   PropertyValuationResult,
   AssetCategory,
   ValuationMethod,
+  PriorGift,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
 
 function makeItem(
@@ -226,6 +227,52 @@ describe("GiftTaxValuationFormTable — 별지 제10호서식 부표 1", () => {
         "A11",
       );
     });
+  });
+
+  it("GV-9: 사전증여 A24 분리 행 — Phase 2 priorGifts prop 활성", () => {
+    const item = makeItem("i1", "cash", "현금");
+    const priorGifts: PriorGift[] = [
+      { giftDate: "2020-03-15", giftAmount: 520_000_000, isHeir: false, giftTaxPaid: 0 },
+      { giftDate: "2022-08-20", giftAmount: 300_000_000, isHeir: false, giftTaxPaid: 0 },
+    ];
+    render(
+      <GiftTaxValuationFormTable
+        valuationResults={[makeVR("i1", 1_000_000_000)]}
+        estateItems={[item]}
+        grossGiftValue={1_000_000_000}
+        exemptAmount={0}
+        aggregatedGiftValue={1_820_000_000}
+        priorGifts={priorGifts}
+      />,
+    );
+    // 본문 행 3개 (A11 1개 + A24 2개) + 빈 행 7개 = 10
+    const tbody = screen.getByTestId("table-data-tbody");
+    expect(tbody.querySelectorAll("tr")).toHaveLength(10);
+
+    // row-data-1 = A11 (당기)
+    const row1 = screen.getByTestId("row-data-1");
+    expect(within(row1).getByTestId("col-property-class")).toHaveTextContent("A11");
+    expect(within(row1).getByTestId("col-amount")).toHaveTextContent("1,000,000,000");
+
+    // row-data-2 = A24 (사전증여 1)
+    const row2 = screen.getByTestId("row-data-2");
+    expect(within(row2).getByTestId("col-property-class")).toHaveTextContent("A24");
+    expect(within(row2).getByTestId("col-property-type")).toHaveTextContent("12");
+    expect(within(row2).getByTestId("col-valuation-method")).toHaveTextContent("08");
+    expect(within(row2).getByTestId("col-amount")).toHaveTextContent("520,000,000");
+    expect(within(row2).getByTestId("col-name")).toHaveTextContent(
+      "사전증여 (2020-03-15)",
+    );
+
+    // row-data-3 = A24 (사전증여 2)
+    const row3 = screen.getByTestId("row-data-3");
+    expect(within(row3).getByTestId("col-property-class")).toHaveTextContent("A24");
+    expect(within(row3).getByTestId("col-amount")).toHaveTextContent("300,000,000");
+
+    // 계 영역 ⑨/⑭/⑮ 자기일관성
+    expect(screen.getByTestId("row-9-gross")).toHaveTextContent("1,000,000,000");
+    expect(screen.getByTestId("row-14-add")).toHaveTextContent("820,000,000");
+    expect(screen.getByTestId("row-15-sum")).toHaveTextContent("1,820,000,000");
   });
 
   it("⑪/⑫/⑬ 분리값 직접 매핑 — public*Exclusion 3 props", () => {

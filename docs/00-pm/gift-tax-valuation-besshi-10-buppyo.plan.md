@@ -451,7 +451,7 @@ interface Props {
 
 - [ ] `EstateItem` 확장 — `house`(개별주택)·`redevelopment_right`(취득권리)·`virtual_asset`(가상자산)·`artwork`(서화·골동품) 추가 → ② 재산종류코드 04/08/13/14 분기 매핑
 - [ ] ValuationMethod 확장 — `expropriation`(03)·`auction`(04)·`mortgage_special`(07) 추가
-- [ ] 사전증여 행 분리 — `priorGiftValuationResults` 별도 행 + ①=A24 표기
+- [x] 사전증여 행 분리 — `priorGifts: PriorGift[]` prop + ①=A24 표기 (2026-05-20, GV-9 anchor)
 - [ ] 비거주자 신분 ①=A25/A26 분기 (donor·donee 거주자 판정 필요)
 - [ ] 부표 5 (서화·골동품 등) 동시 작성 (재산종류 14 사용 시 의무)
 - [ ] 국외자산 토글 — `EstateItem.isOverseas?` + `countryName?` 추가
