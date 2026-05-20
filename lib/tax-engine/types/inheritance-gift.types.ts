@@ -164,22 +164,114 @@ export interface ExemptionResult {
 // 사전증여 내역 (상증법 §13·§47)
 // ============================================================
 
+// ============================================================
+// 증여자 관계 (§47② 동일인 그룹화 + §57 적용 판정)
+// ============================================================
+
+/**
+ * 증여자(donor)와 수증자의 관계 — 동일인 그룹화 기준 (상증법 §47 ②).
+ *
+ * 그룹 매핑:
+ *   A: father, mother           — 직계존속·부모 (§47② 동일인)
+ *   B: grandparent              — 직계존속·조부모 (§47② 동일인, §57 세대생략 할증 대상)
+ *   C: spouse                   — 배우자
+ *   D: lineal_descendant        — 직계비속
+ *   E: sibling                  — 형제자매
+ *   F: other_relative           — 기타친족
+ *   G: other                    — 기타·타인
+ */
+export type GiftDonorRelation =
+  | "father"
+  | "mother"
+  | "grandparent"
+  | "spouse"
+  | "lineal_descendant"
+  | "sibling"
+  | "other_relative"
+  | "other";
+
+export type DonorGroup = "A" | "B" | "C" | "D" | "E" | "F" | "G";
+
 /** 10년 이내 사전증여 내역 */
 export interface PriorGift {
   giftDate: string; // ISO date
   /** 수증인 (상속인인지 여부 — 상속인이면 §13 합산, 비상속인이면 §13 ②) */
   isHeir: boolean;
   giftAmount: number;
-  /** 당시 납부한 증여세 (§28 증여세액공제 계산용) */
+  /** 당시 납부한 증여세 (§28 증여세액공제 계산용, 정보용) */
   giftTaxPaid: number;
   /**
-   * 당시 증여세 과세표준 (§28 ① 안분 한도 분자용).
-   * 제공 시 안분 공식에서 gross 가액 대신 과세표준 사용 (법령 정확성 향상).
-   * 미제공 시 giftAmount(gross)로 fallback.
+   * 당시 증여세 과세표준 ⑤ (§58 ① 안분 한도 분자용).
+   * 가장 최근 합산 회차의 ⑤가 §58·§57 한도 산식의 분자로 사용됨.
    */
   giftTaxBase?: number;
   /** 수증인 관계 */
   doneeRelation?: DonorRelation;
+  // ===== Phase A: 동일인 §47 합산 + §58·§57 한도 산식용 =====
+  /** 그 회차의 증여자 관계 (동일인 그룹화 판정용) */
+  donor?: GiftDonorRelation;
+  /** 그 회차의 산출세액 ⑦ (§58 ⑭/⑧ — 가장 최근 합산 회차의 ⑦이 사용됨) */
+  computedTax?: number;
+  /** 그 회차의 추가 할증세액 ⑫ (§57 ⑨ 누적용, 세대생략 회차에만 입력) */
+  additionalGenerationSkipSurcharge?: number;
+  /** 그 회차에 §57 세대생략 할증 적용 여부 (미입력 시 donor=grandparent에서 자동 도출) */
+  wasGenerationSkip?: boolean;
+}
+
+// ============================================================
+// §57 할증 한도 detail (사례 2 PDF 표 ⑧⑨⑩⑪⑫⑬ 재현용)
+// ============================================================
+
+export interface GenerationSkipSurchargeDetail {
+  /** ⑧ 할증과세 = ⑦ × (부모 제외 직계존속 재산가액 / 총 증여재산가액) × 할증율 */
+  surchargeBase: number;
+  /** 부모 제외 직계존속 비율 (0~1) — 그룹 B 합산 시 1, 그 외 0 */
+  nonParentLinealRatio: number;
+  /** 할증율 (0.30 원칙 / 0.40 미성년+20억 초과) */
+  surchargeRate: number;
+  /** ⑨ 누적 기할증과세액 = Σ⑫_prior (사전증여 회차들의 추가할증 누계) */
+  priorAdditionalCumulative: number;
+  /** ⑩ 공제한도 = ⑦ × ⑤_prior / ⑤ × 할증율 */
+  surchargeCreditLimit: number;
+  /** ⑪ 차감 기할증과세액 = Min(⑨, ⑩) */
+  priorSurchargeCredit: number;
+  /** ⑫ 추가 할증세액 = Max(0, ⑧ − ⑪) */
+  additionalSurcharge: number;
+  /** ⑬ 산출세액합계 = ⑦ + ⑫ */
+  totalComputedTaxWithSurcharge: number;
+}
+
+// ============================================================
+// §58 안분 한도 detail (사례 1 ⑧⑨⑩ / 사례 2 ⑭⑮⑯ 재현용)
+// ============================================================
+
+export interface PriorGiftCreditDetail {
+  /** ⑭ 가산 증여재산의 산출세액 = 가장 최근 합산 회차의 ⑦ */
+  priorComputedTax: number;
+  /** ⑤_prior = 가장 최근 합산 회차의 합산과세표준 */
+  priorAddedTaxBase: number;
+  /** ⑤ = 금번 합산과세표준 */
+  aggregatedTaxBase: number;
+  /** ⑮ 한도 = ⑦ × ⑤_prior / ⑤ */
+  creditLimit: number;
+  /** ⑯ 공제액 = Min(⑭, ⑮) */
+  priorPaidCredit: number;
+}
+
+// ============================================================
+// 신고서 양식 표 행 (12행 사례 1 / 18행 사례 2)
+// ============================================================
+
+export interface FilingFormRow {
+  /** "①" ~ "⑱" PDF 표 행 번호 */
+  number: string;
+  label: string;
+  amount: number;
+  /** "—" 표기가 필요한 산식 무의미 행 (priorGifts=0 시 ⑩⑪⑭⑮ 등) */
+  display: "amount" | "dash" | "rate";
+  /** 행에 표시할 산식 hint (선택) */
+  formula?: string;
+  lawRef?: string;
 }
 
 // ============================================================
@@ -395,11 +487,19 @@ export interface InheritanceTaxResult extends TaxResultMeta {
 export interface GiftTaxInput {
   giftDate: string; // ISO date
   donorRelation: DonorRelation;
+  /**
+   * 금번 증여자 (필수 — 동일인 §47 합산 그룹화 + §57 적용 판정).
+   * Phase A 도입. 외부 호출자 일괄 갱신 필요.
+   */
+  donor: GiftDonorRelation;
   giftItems: EstateItem[];
   /** 비과세 체크리스트 항목 (§46·§46의2) — ExemptionChecklist 컴포넌트 출력 */
   exemptions?: ExemptionCheckedItem[];
   priorGiftsWithin10Years: PriorGift[];
-  /** 세대생략 증여 여부 */
+  /**
+   * 세대생략 증여 여부 — donor === "grandparent" 에서 자동 도출 가능.
+   * 명시 입력 시 그 값 우선 (예외 케이스 대비).
+   */
   isGenerationSkip: boolean;
   /** 수증자 미성년 여부 (세대생략 20억 초과 40% 기준) */
   isMinorDonee: boolean;
@@ -421,15 +521,31 @@ export interface GiftTaxResult extends TaxResultMeta {
   totalDeduction: number;
   /** 과세표준 (50만원 미만이면 0) */
   taxBase: number;
-  /** 산출세액 */
+  /** 산출세액 ⑦ */
   computedTax: number;
-  /** 세대생략 할증액 */
+  /**
+   * 세대생략 할증액 (Phase A 의미 재정의):
+   *   - 단독 신고 (priorGifts=0) 시: ⑧ surchargeBase 와 동일
+   *   - 합산 신고 시: ⑫ additionalSurcharge (추가 할증세액)
+   * filingFormRows·결과 카드에는 generationSkipSurchargeDetail 사용.
+   */
   generationSkipSurcharge: number;
   /** 세액공제 합계 */
   totalTaxCredit: number;
-  /** 결정세액 */
+  /** 결정세액 ⑫(사례1) 또는 ⑱(사례2) */
   finalTax: number;
   deductionDetail: GiftDeductionResult;
   creditDetail: TaxCreditResult;
   valuationResults: PropertyValuationResult[];
+  // ===== Phase A 신규 detail =====
+  /** 현재 증여자의 그룹 분기 추적용 (A~G) */
+  donorGroup: DonorGroup;
+  /** ⑫ 추가 할증세액 (단독 신고면 0, 합산 신고 시 §57 한도 차감 후 잔여) */
+  additionalGenerationSkipSurcharge: number;
+  /** §57 할증과세 세부 (donorGroup=B 일 때만 not null) */
+  generationSkipSurchargeDetail: GenerationSkipSurchargeDetail | null;
+  /** §58 안분 한도 세부 (priorGifts 그룹 일치 1건 이상일 때만 not null) */
+  priorGiftCreditDetail: PriorGiftCreditDetail | null;
+  /** 신고서 양식 표 행 (12행 사례1 / 18행 사례2) */
+  filingFormRows: FilingFormRow[];
 }

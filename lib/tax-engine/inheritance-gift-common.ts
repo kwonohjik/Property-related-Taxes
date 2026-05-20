@@ -14,8 +14,11 @@ import { applyRate, calculateProgressiveTax, truncateToThousand } from "./tax-ut
 import type {
   CalculationStep,
   PriorGift,
+  GenerationSkipSurchargeDetail,
+  DonorGroup,
 } from "./types/inheritance-gift.types";
 import type { TaxBracket as TaxBracketBase } from "./types";
+import type { PriorAggregationResult } from "./gift-prior-aggregation";
 
 // ============================================================
 // §26 상속세·증여세 누진세율 구간 (법정 기본값)
@@ -136,6 +139,121 @@ export function calcGenerationSkipSurcharge(
   });
 
   return { surchargeAmount, breakdown };
+}
+
+// ============================================================
+// §57 할증과세 한도 산식 (Phase A — 사례 2 PDF ⑧⑨⑩⑪⑫⑬ 재현용)
+// ============================================================
+
+/**
+ * 증여세 §57 세대생략 할증과세 + 한도 안분 (donorGroup="B" 일 때만 활성).
+ *
+ * 산식 (PDF 사례 2 박스):
+ *   ⑧ surchargeBase = floor(⑦ × 비율 × 할증율)
+ *     비율 = (부모 제외 직계존속 ① 누계 + 현 회차 ①) / (priorTotal + 현 회차 ①)
+ *     할증율 = 0.30 원칙 / 0.40 미성년+20억 초과
+ *   ⑩ surchargeCreditLimit = floor(⑦ × ⑤_prior / ⑤ × 할증율)
+ *   ⑪ priorSurchargeCredit = Min(⑨, ⑩)
+ *   ⑫ additionalSurcharge = Max(0, ⑧ − ⑪)
+ *   ⑬ totalComputedTaxWithSurcharge = ⑦ + ⑫
+ *
+ * @param computedTax 산출세액 ⑦
+ * @param donorGroup 현재 증여자 그룹 — "B" 일 때만 §57 활성
+ * @param isMinorDonee 수증자 미성년 여부
+ * @param currentGiftValue 금번 증여재산가액 ① (할증율 40% 판정 기준)
+ * @param priorAggregation 사전증여 합산 결과
+ * @param aggregatedTaxBase 금번 합산과세표준 ⑤
+ */
+export function calcGiftGenerationSkipSurchargeWithLimit(
+  computedTax: number,
+  donorGroup: DonorGroup,
+  isMinorDonee: boolean,
+  currentGiftValue: number,
+  priorAggregation: PriorAggregationResult,
+  aggregatedTaxBase: number,
+): {
+  detail: GenerationSkipSurchargeDetail | null;
+  additionalSurcharge: number;
+  breakdown: CalculationStep[];
+} {
+  // §57 적용 조건: 그룹 B (조부모 → 손자녀) 만
+  if (donorGroup !== "B" || computedTax <= 0) {
+    return { detail: null, additionalSurcharge: 0, breakdown: [] };
+  }
+
+  const SURCHARGE_THRESHOLD_FOR_40 = 2_000_000_000;
+  const surchargeRate =
+    isMinorDonee && currentGiftValue > SURCHARGE_THRESHOLD_FOR_40 ? 0.4 : 0.3;
+
+  // 비율 분자: 부모 제외 직계존속 ① 누계 + 현 회차 ① (donorGroup="B" 이므로 현 회차 ① 전체 포함)
+  const nonParentLinealTotal =
+    priorAggregation.nonParentLinealAmount + currentGiftValue;
+  const totalGiftAmount = priorAggregation.totalAmount + currentGiftValue;
+  const ratio = totalGiftAmount === 0 ? 0 : nonParentLinealTotal / totalGiftAmount;
+
+  // ⑧ 단일 floor — 이중 floor 회피 (PDF anchor 일치)
+  const surchargeBase = Math.floor(computedTax * ratio * surchargeRate);
+
+  // ⑩ 한도 = ⑦ × ⑤_prior / ⑤ × 할증율 (단일 floor)
+  const surchargeCreditLimit =
+    aggregatedTaxBase === 0
+      ? 0
+      : Math.floor(
+          (computedTax * priorAggregation.priorAddedTaxBase) / aggregatedTaxBase *
+            surchargeRate,
+        );
+
+  // ⑪ 차감 기할증과세액
+  const priorSurchargeCredit = Math.min(
+    priorAggregation.totalAdditionalSurcharge,
+    surchargeCreditLimit,
+  );
+
+  // ⑫ 추가 할증세액
+  const additionalSurcharge = Math.max(0, surchargeBase - priorSurchargeCredit);
+
+  const detail: GenerationSkipSurchargeDetail = {
+    surchargeBase,
+    nonParentLinealRatio: ratio,
+    surchargeRate,
+    priorAdditionalCumulative: priorAggregation.totalAdditionalSurcharge,
+    surchargeCreditLimit,
+    priorSurchargeCredit,
+    additionalSurcharge,
+    totalComputedTaxWithSurcharge: computedTax + additionalSurcharge,
+  };
+
+  const breakdown: CalculationStep[] = [
+    {
+      label: `⑧ 할증과세 (⑦ × ${(ratio * 100).toFixed(0)}% × ${surchargeRate * 100}%)`,
+      amount: surchargeBase,
+      lawRef: GIFT.GENERATION_SKIP,
+    },
+    {
+      label: "⑨ 누적 기할증과세액 (Σ⑫_prior)",
+      amount: priorAggregation.totalAdditionalSurcharge,
+    },
+    {
+      label: "⑩ 공제한도 (⑦ × 가산과표/합산과표 × 할증율)",
+      amount: surchargeCreditLimit,
+      lawRef: GIFT.GENERATION_SKIP_LIMIT_FORMULA,
+    },
+    {
+      label: "⑪ 차감 기할증과세액 Min(⑨,⑩)",
+      amount: priorSurchargeCredit,
+    },
+    {
+      label: "⑫ 추가 할증세액 (⑧ − ⑪)",
+      amount: additionalSurcharge,
+      lawRef: GIFT.GENERATION_SKIP,
+    },
+    {
+      label: "⑬ 산출세액합계 (⑦ + ⑫)",
+      amount: computedTax + additionalSurcharge,
+    },
+  ];
+
+  return { detail, additionalSurcharge, breakdown };
 }
 
 // ============================================================

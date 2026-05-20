@@ -283,9 +283,25 @@ export function buildBurdenedGiftBreakdown(params: {
   if (params.giftDate && gratuitousPortion > 0) {
     const donorRelation = info.donorRelation ?? "lineal_descendant";
     const giftDateStr = params.giftDate.toISOString().split("T")[0];
+    // Phase A: donor 매핑 (DonorRelation → GiftDonorRelation)
+    //   donorRelation은 수증자 관점, donor는 증여자 관점.
+    //   부담부증여 일반 시나리오: 증여자가 부모인 경우 "father" (단순화, 양친 구분 후속 PR).
+    //   isGenerationSkip=true 면 donor=grandparent.
+    const giftDonor: import("./types/inheritance-gift.types").GiftDonorRelation =
+      info.isGenerationSkip
+        ? "grandparent"
+        : donorRelation === "spouse"
+          ? "spouse"
+          : donorRelation === "other_relative"
+            ? "other_relative"
+            : donorRelation === "lineal_ascendant_adult" ||
+                donorRelation === "lineal_ascendant_minor"
+              ? "lineal_descendant"
+              : "father";
     const giftResult = calcGiftTax({
       giftDate: giftDateStr,
       donorRelation,
+      donor: giftDonor,
       // 부담부증여 무상이전분을 단일 자산으로 평가 — marketValue 직접 입력(이미 §60~§66 Max 평가 완료된 가액).
       giftItems: [
         {
@@ -296,12 +312,19 @@ export function buildBurdenedGiftBreakdown(params: {
         },
       ],
       // Phase 3 후속: 10년 이내 사전증여 합산 (상증법 §47②·§58)
+      // Phase A: priorGift.donor를 현재 증여자 그룹과 동일하게 매핑 — 별도 입력 없으면
+      //          현재 donor와 동일 그룹 가정 (legacy 호환).
       priorGiftsWithin10Years: (info.priorGiftsWithin10Years ?? []).map((p) => ({
         giftDate: p.giftDate,
         isHeir: false, // 증여세 §47 합산에서는 isHeir 무관 (상속세 §13 전용 필드)
         giftAmount: p.giftAmount,
         giftTaxPaid: p.giftTaxPaid,
+        donor: giftDonor, // 그룹 일치 자동 매핑
+        // §58 한도 산식은 priorComputedTax + priorTaxBase 입력 시만 적용.
+        // burdenedGiftInfo.priorGiftsWithin10Years에 명시 입력 없으면 legacy priorGiftTaxPaid fallback.
       })),
+      // Phase A: 입력에 priorComputedTax가 없으면 priorGiftTaxPaid 합계를 legacy fallback으로 전달
+      // (calcGiftTaxCredits 의 priorGiftTaxPaid 매개변수 사용)
       isGenerationSkip: info.isGenerationSkip ?? false,
       isMinorDonee: info.isMinorDonee ?? false,
       deductionInput: {

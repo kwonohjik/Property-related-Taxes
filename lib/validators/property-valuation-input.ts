@@ -103,11 +103,24 @@ export type BargainTransferInputSchema = z.infer<typeof bargainTransferInputSche
 // 사전증여 내역 스키마
 // ============================================================
 
+/** Phase A: 증여자 관계 enum (7그룹 8값, gift-prior-aggregation.ts와 동일) */
+export const giftDonorRelationSchema = z.enum([
+  "father",
+  "mother",
+  "grandparent",
+  "spouse",
+  "lineal_descendant",
+  "sibling",
+  "other_relative",
+  "other",
+]);
+
 export const priorGiftSchema = z.object({
   giftDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD 형식"),
   isHeir: z.boolean(),
   giftAmount: z.number().nonnegative(),
   giftTaxPaid: z.number().nonnegative(),
+  giftTaxBase: z.number().nonnegative().optional(),
   doneeRelation: z
     .enum([
       "spouse",
@@ -117,6 +130,11 @@ export const priorGiftSchema = z.object({
       "other_relative",
     ])
     .optional(),
+  // Phase A: 동일인 §47 합산 + §58/§57 한도 산식용
+  donor: giftDonorRelationSchema.optional(),
+  computedTax: z.number().nonnegative().optional(),
+  additionalGenerationSkipSurcharge: z.number().nonnegative().optional(),
+  wasGenerationSkip: z.boolean().optional(),
 });
 
 // ============================================================
@@ -242,6 +260,8 @@ export const giftTaxInputSchema = z.object({
     "lineal_descendant",
     "other_relative",
   ]),
+  /** Phase A: 증여자 관계 (동일인 §47 합산 그룹화 + §57 적용 판정) — 필수 */
+  donor: giftDonorRelationSchema,
   giftItems: z.array(estateItemSchema).min(1, "증여재산이 1개 이상 필요합니다."),
   exemptions: z.array(exemptionCheckedItemSchema).optional(),
   priorGiftsWithin10Years: z.array(priorGiftSchema),

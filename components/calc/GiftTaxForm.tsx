@@ -424,9 +424,26 @@ export function GiftTaxForm() {
       isFiledOnTime: form.isFiledOnTime,
       specialTreatment: form.specialTreatment || undefined,
     };
+    // Phase A donor 매핑 — donorRelation(수증자 관점) → donor(증여자 관점)
+    //   isGenerationSkip → grandparent (그룹 B)
+    //   spouse/other_relative → 동명 그룹
+    //   lineal_ascendant_* → 자녀가 부모에게 증여 → lineal_descendant
+    //   lineal_descendant → 부모가 자녀에게 → "father" (양친 구분 후속 PR)
+    const donor: import("@/lib/tax-engine/types/inheritance-gift.types").GiftDonorRelation =
+      form.isGenerationSkip
+        ? "grandparent"
+        : form.donorRelation === "spouse"
+          ? "spouse"
+          : form.donorRelation === "other_relative"
+            ? "other_relative"
+            : form.donorRelation === "lineal_ascendant_adult" ||
+                form.donorRelation === "lineal_ascendant_minor"
+              ? "lineal_descendant"
+              : "father";
     return {
       giftDate: form.giftDate,
       donorRelation: form.donorRelation,
+      donor,
       giftItems: allItems,
       exemptions: form.exemptionItems.length > 0 ? form.exemptionItems : undefined,
       priorGiftsWithin10Years: form.priorGifts,

@@ -74,6 +74,16 @@ export const GIFT = {
   GENERATION_SKIP:     "상증법 §57",
   /** 상증법 §58 — 증여세 기납부세액공제 (10년 합산 시 이중과세 방지) */
   PRIOR_TAX_CREDIT:    "상증법 §58",
+  /** 상증법 §47 ② — 동일인 증여 합산 (직계존속과 그 배우자) */
+  AGGREGATION_SAME_PERSON: "상증법 §47 ②",
+  /** 상증법 §57 ① 단서 — 미성년자 + 20억 초과 시 40% 할증 */
+  SURCHARGE_MINOR_OVER_2B: "상증법 §57 ① 단서",
+  /** §57 할증과세 한도 안분식 — KoreanLaw MCP 검증 후 정확한 시행령 조항 정정 필요 */
+  GENERATION_SKIP_LIMIT_FORMULA: "상증법 §57·시행령 §28의2 (검증 필요)",
+  /** §58 ① 안분 한도식 — 한도 = 산출세액 × 가산 과세표준 / 합산 과세표준 */
+  PRIOR_TAX_CREDIT_LIMIT_FORMULA: "상증법 §58 ①",
+  /** 매매사례가액 평가기준일 전후 가장 가까운 날 */
+  MARKET_PRICE_COMPARABLE: "상증법 §60·§61, 상증령 §49 ① 의2",
 } as const;
 
 // ============================================================

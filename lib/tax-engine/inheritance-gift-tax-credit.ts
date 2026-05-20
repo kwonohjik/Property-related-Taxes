@@ -271,10 +271,26 @@ export interface GiftTaxCreditParams {
   /** 증여재산가액 (특례 절감액 계산용) */
   giftAmount?: number;
   /**
-   * 10년 합산 기증여에 이미 납부한 증여세 합계 (§58 ① 기납부세액공제)
-   * 합산 증여 시 과거 납부세액을 공제하여 이중과세 방지
+   * @deprecated Phase A — `priorGiftComputedTax` + `priorGiftAddedTaxBase` + `aggregatedTaxBase` 사용 권장.
+   * Legacy: 산출세액 한도 단순 차감. §58 안분 한도식 미적용.
    */
   priorGiftTaxPaid?: number;
+  // ===== Phase A: §58 안분 한도식 적용 =====
+  /**
+   * 가장 최근 합산 회차의 산출세액 ⑦ (= 사례 1·2 PDF 표의 ⑧/⑭).
+   * priorAggregation.totalComputedTax 값을 그대로 전달.
+   */
+  priorGiftComputedTax?: number;
+  /**
+   * 가장 최근 합산 회차의 합산과세표준 ⑤_prior (§58 한도 분자).
+   * priorAggregation.priorAddedTaxBase 값을 그대로 전달.
+   */
+  priorGiftAddedTaxBase?: number;
+  /**
+   * 금번 합산과세표준 ⑤ (§58 한도 분모).
+   * Phase A: priorGiftComputedTax > 0 일 때만 한도 산식 적용.
+   */
+  aggregatedTaxBase?: number;
 }
 
 /**
@@ -291,6 +307,9 @@ export function calcGiftTaxCredits(params: GiftTaxCreditParams): TaxCreditResult
     foreignPropertyRatio,
     giftAmount = 0,
     priorGiftTaxPaid = 0,
+    priorGiftComputedTax = 0,
+    priorGiftAddedTaxBase = 0,
+    aggregatedTaxBase = 0,
   } = params;
 
   const totalComputedTax = computedTax + generationSkipSurcharge;
@@ -304,16 +323,40 @@ export function calcGiftTaxCredits(params: GiftTaxCreditParams): TaxCreditResult
   ];
   const appliedLaws: Set<string> = new Set();
 
-  // 0. 기납부세액공제 (§58 ① — 10년 합산 시 과거 납부 증여세 공제)
+  // 0. §58 ① 기납부세액공제 — Phase A 안분 한도식 우선 적용
+  //    한도 = floor(⑦(할증 전) × ⑤_prior / ⑤)  [PDF 사례 1·2 ⑨/⑮]
+  //    공제액 = Min(가장 최근 합산 회차 ⑦, 한도)  [⑩/⑯]
   let priorPaidCredit = 0;
-  if (priorGiftTaxPaid > 0) {
-    // 공제 한도: 산출세액을 초과할 수 없음
-    priorPaidCredit = Math.min(priorGiftTaxPaid, totalComputedTax);
+  const usePhaseAFormula =
+    priorGiftComputedTax > 0 && aggregatedTaxBase > 0 && priorGiftAddedTaxBase > 0;
+
+  if (usePhaseAFormula) {
+    const limit58 = Math.floor(
+      (computedTax * priorGiftAddedTaxBase) / aggregatedTaxBase,
+    );
+    priorPaidCredit = Math.min(priorGiftComputedTax, limit58);
     allBreakdown.push({
-      label: `기납부세액공제 (${GIFT_LAW.PRIOR_TAX_CREDIT} ①) — 합산 기증여 납부 증여세`,
+      label: `§58 ① 한도 — ⑦ × ⑤_prior / ⑤`,
+      amount: limit58,
+      lawRef: GIFT_LAW.PRIOR_TAX_CREDIT_LIMIT_FORMULA,
+      note: `${computedTax.toLocaleString()} × ${priorGiftAddedTaxBase.toLocaleString()} / ${aggregatedTaxBase.toLocaleString()}`,
+    });
+    allBreakdown.push({
+      label: `§58 ① 공제액 Min(가산 산출세액, 한도)`,
       amount: -priorPaidCredit,
       lawRef: GIFT_LAW.PRIOR_TAX_CREDIT,
-      note: `과거 납부액 ${priorGiftTaxPaid.toLocaleString()}, 산출세액 한도 적용`,
+      note: `가산 산출세액 ${priorGiftComputedTax.toLocaleString()}, 한도 ${limit58.toLocaleString()}`,
+    });
+    appliedLaws.add(GIFT_LAW.PRIOR_TAX_CREDIT);
+    appliedLaws.add(GIFT_LAW.PRIOR_TAX_CREDIT_LIMIT_FORMULA);
+  } else if (priorGiftTaxPaid > 0) {
+    // Legacy: priorGiftTaxPaid 매개변수 (deprecated, 단순 산출세액 한도)
+    priorPaidCredit = Math.min(priorGiftTaxPaid, totalComputedTax);
+    allBreakdown.push({
+      label: `기납부세액공제 (${GIFT_LAW.PRIOR_TAX_CREDIT} ①) — Legacy 단순 차감`,
+      amount: -priorPaidCredit,
+      lawRef: GIFT_LAW.PRIOR_TAX_CREDIT,
+      note: `과거 납부액 ${priorGiftTaxPaid.toLocaleString()}, 산출세액 한도 적용 (Phase A 산식 미사용)`,
     });
     appliedLaws.add(GIFT_LAW.PRIOR_TAX_CREDIT);
   }

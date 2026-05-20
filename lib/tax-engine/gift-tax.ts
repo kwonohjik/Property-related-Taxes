@@ -1,18 +1,19 @@
 /**
  * 증여세 메인 계산 엔진 (상증법 §31~§59)
  *
- * 계산 파이프라인:
+ * 계산 파이프라인 (Phase A — donor 식별자·§58 안분 한도·§57 한도 산식 적용):
  *   1. 재산 평가 (property-valuation.ts)
  *   2. 비과세 차감 (exemption-evaluator.ts)
- *   3. 동일인 10년 이내 사전증여 합산 (§47)
+ *   3. 동일인 10년 합산 (§47 ② 그룹화) — gift-prior-aggregation.ts
  *   4. 증여재산공제 (§53·§53의2)
  *   5. 과세표준 (50만원 미만이면 0)
- *   6. 산출세액 (§56 = §26 준용)
- *   7. 세대생략 할증 (§57)
- *   8. 세액공제 (§59·§69 + 조특법 §30의5·§30의6)
- *   9. 결정세액
+ *   6. 산출세액 ⑦ (§56 = §26 준용)
+ *   7. 세대생략 할증 ⑧⑨⑩⑪⑫⑬ (§57 + 한도 안분)
+ *   8. 세액공제 ⑭⑮⑯⑰ (§58 안분 한도 + §69)
+ *   9. 결정세액 ⑫(사례1) 또는 ⑱(사례2)
+ *  10. filingFormRows 빌드 (12행 또는 18행)
  *
- * Pure Engine: DB 호출 없음, 입력 검증 없음 (Orchestrator 담당)
+ * Pure Engine: DB 호출 없음, 입력 검증 없음 (Orchestrator 담당).
  */
 
 import { GIFT as GIFT_LAW } from "./legal-codes";
@@ -28,17 +29,20 @@ import { calcGiftDeductions } from "./deductions/gift-deductions";
 import {
   DEFAULT_INHERITANCE_GIFT_BRACKETS,
   calcInheritanceGiftTax,
-  calcGenerationSkipSurcharge,
-  aggregatePriorGiftsForGift,
+  calcGiftGenerationSkipSurchargeWithLimit,
 } from "./inheritance-gift-common";
+import {
+  aggregatePriorGiftsForGift,
+  getDonorGroup,
+} from "./gift-prior-aggregation";
 import { calcGiftTaxCredits } from "./inheritance-gift-tax-credit";
+import { buildFilingFormRows } from "./gift-filing-form-rows";
 import type { TaxBracket } from "./types";
 
 // ============================================================
 // 증여세 과세표준 최솟값 (§55 단서)
 // ============================================================
 
-/** 증여세 과세표준 50만원 미만이면 세금 없음 (§55 단서) */
 const TAX_BASE_MIN = 500_000;
 
 // ============================================================
@@ -46,18 +50,10 @@ const TAX_BASE_MIN = 500_000;
 // ============================================================
 
 export interface GiftTaxEngineOptions {
-  /** §56·§26 누진세율 구간 (DB에서 로드; 기본값 사용 시 undefined) */
   brackets?: TaxBracket[];
-  /** 국외재산 비율 (외국납부세액공제 한도 계산용) */
   foreignPropertyRatio?: number;
 }
 
-/**
- * 증여세 전체 계산
- *
- * @param input 증여세 계산 입력
- * @param options 세율 구간 등 옵션
- */
 export function calcGiftTax(
   input: GiftTaxInput,
   options: GiftTaxEngineOptions = {},
@@ -72,18 +68,15 @@ export function calcGiftTax(
   // STEP 1: 재산 평가
   // ─────────────────────────────────────────────
   const valuationResults = evaluateAllEstateItems(input.giftItems);
-
   const grossGiftValue = valuationResults.reduce(
     (sum, v) => sum + v.valuatedAmount,
     0,
   );
-
   allBreakdown.push({
-    label: "증여재산 평가액 합계",
+    label: "증여재산 평가액 합계 ①",
     amount: grossGiftValue,
     lawRef: GIFT_LAW.TAXABLE_VALUE,
   });
-
   for (const vr of valuationResults) {
     allWarnings.push(...vr.warnings);
   }
@@ -100,116 +93,157 @@ export function calcGiftTax(
   }
 
   // ─────────────────────────────────────────────
-  // STEP 3: 동일인 10년 합산 (§47)
+  // STEP 3: §47 ② 동일인 합산 (donor 그룹화)
   // ─────────────────────────────────────────────
-  const {
-    totalAmount: priorGiftTotal,
-    totalTaxPaid: priorGiftTaxPaid,
-    breakdown: priorGiftBreakdown,
-  } = aggregatePriorGiftsForGift(input.priorGiftsWithin10Years, input.giftDate);
+  const priorAggregation = aggregatePriorGiftsForGift(
+    input.priorGiftsWithin10Years,
+    input.giftDate,
+    input.donor,
+  );
+  allBreakdown.push(...priorAggregation.breakdown);
+  allWarnings.push(...priorAggregation.warnings);
+  allLaws.add(GIFT_LAW.AGGREGATION_SAME_PERSON);
 
-  allBreakdown.push(...priorGiftBreakdown);
-
-  // 합산 증여가액 = 금번 순수 증여가액 + 과거 10년 증여 합산
-  // ※ priorGiftTotal은 §47 합산 기준 총액(공제 전 gross 금액)임.
-  //    §53 증여재산공제(배우자 6억·직계 5천만 등)는 10년 누계를 기준으로 1회만 적용하므로
-  //    aggregatedGiftValue 전체에 대해 STEP 4에서 일괄 공제한다.
   const netCurrentGiftValue = Math.max(0, grossGiftValue - exemptAmount);
-  const aggregatedGiftValue = netCurrentGiftValue + priorGiftTotal;
+  const aggregatedGiftValue =
+    netCurrentGiftValue + priorAggregation.totalAmount;
 
   allBreakdown.push({
-    label: "10년 합산 증여가액",
+    label: "10년 합산 증여가액 ③",
     amount: aggregatedGiftValue,
     lawRef: GIFT_LAW.TAXABLE_VALUE,
-    note: `금번 ${netCurrentGiftValue.toLocaleString()} + 기증여 ${priorGiftTotal.toLocaleString()}`,
+    note: `금번 ${netCurrentGiftValue.toLocaleString()} + 기증여 ${priorAggregation.totalAmount.toLocaleString()}`,
   });
 
   // ─────────────────────────────────────────────
-  // STEP 4: 증여재산공제 (§53·§53의2)
+  // STEP 4: 증여재산공제 ④ (§53·§53의2)
   // ─────────────────────────────────────────────
   const deductionResult = calcGiftDeductions(
     input.deductionInput,
     aggregatedGiftValue,
   );
-
   const totalDeduction = deductionResult.totalDeduction;
   allBreakdown.push(...deductionResult.breakdown);
   for (const law of deductionResult.appliedLaws) allLaws.add(law);
 
   // ─────────────────────────────────────────────
-  // STEP 5: 과세표준 (상증법 §55② — 50만원 미만이면 과세 없음, 절사 규정 없음)
+  // STEP 5: 과세표준 ⑤ (§55 ②)
   // ─────────────────────────────────────────────
   const rawTaxBase = Math.max(0, aggregatedGiftValue - totalDeduction);
   const taxBase = rawTaxBase < TAX_BASE_MIN ? 0 : rawTaxBase;
-
   allBreakdown.push({
-    label: "증여세 과세표준",
+    label: "증여세 과세표준 ⑤",
     amount: taxBase,
     lawRef: GIFT_LAW.TAX_BASE,
     note:
       taxBase === 0 && rawTaxBase > 0
-        ? `50만원 미만(${rawTaxBase.toLocaleString()} — 과세 없음`
+        ? `50만원 미만(${rawTaxBase.toLocaleString()}) — 과세 없음`
         : undefined,
   });
 
   // ─────────────────────────────────────────────
-  // STEP 6: 산출세액 (§56 누진세율)
+  // STEP 6: 산출세액 ⑦ (§56 누진세율)
   // ─────────────────────────────────────────────
   const computedTax = calcInheritanceGiftTax(taxBase, brackets);
   allLaws.add(GIFT_LAW.TAX_RATE);
-
   allBreakdown.push({
-    label: "증여세 산출세액",
+    label: "증여세 산출세액 ⑦",
     amount: computedTax,
     lawRef: GIFT_LAW.TAX_RATE,
   });
 
   // ─────────────────────────────────────────────
-  // STEP 7: 세대생략 할증 (§57)
+  // STEP 7: §57 세대생략 할증 + 한도 안분 (⑧⑨⑩⑪⑫⑬)
   // ─────────────────────────────────────────────
-  const { surchargeAmount: generationSkipSurcharge, breakdown: surchargeBreakdown } =
-    calcGenerationSkipSurcharge(
-      computedTax,
-      input.isGenerationSkip,
-      input.isMinorDonee,
-      taxBase,
-      "gift",
-      undefined,       // generationSkipAssetAmount (증여세 안분 없음)
-      undefined,       // totalEstateValue (증여세 안분 없음)
-      grossGiftValue,  // §57 ② 40% 판정 기준: 증여재산가액 (과세표준 대신)
-    );
+  const donorGroup = getDonorGroup(input.donor);
+  const surchargeResult = calcGiftGenerationSkipSurchargeWithLimit(
+    computedTax,
+    donorGroup,
+    input.isMinorDonee,
+    grossGiftValue,
+    priorAggregation,
+    taxBase,
+  );
+  allBreakdown.push(...surchargeResult.breakdown);
+  if (surchargeResult.detail !== null) {
+    allLaws.add(GIFT_LAW.GENERATION_SKIP);
+    if (surchargeResult.detail.surchargeRate === 0.4) {
+      allLaws.add(GIFT_LAW.SURCHARGE_MINOR_OVER_2B);
+    }
+  }
 
-  allBreakdown.push(...surchargeBreakdown);
-  if (generationSkipSurcharge > 0) allLaws.add(GIFT_LAW.GENERATION_SKIP);
+  const totalComputedTaxWithSurcharge =
+    computedTax + surchargeResult.additionalSurcharge;
 
   // ─────────────────────────────────────────────
-  // STEP 8: 세액공제 (§59·§69 + 조특법 특례)
+  // STEP 8: 세액공제 — §58 안분 한도 + §69 (⑭⑮⑯⑰)
   // ─────────────────────────────────────────────
   const creditResult = calcGiftTaxCredits({
     creditInput: input.creditInput,
     computedTax,
-    generationSkipSurcharge,
+    generationSkipSurcharge: surchargeResult.additionalSurcharge,
     foreignPropertyRatio: options.foreignPropertyRatio,
     giftAmount: netCurrentGiftValue,
-    priorGiftTaxPaid, // §58 기납부세액공제 — 10년 합산 시 이중과세 방지
+    priorGiftComputedTax: priorAggregation.totalComputedTax,
+    priorGiftAddedTaxBase: priorAggregation.priorAddedTaxBase,
+    aggregatedTaxBase: taxBase,
   });
-
   const totalTaxCredit = creditResult.totalCredit;
   allBreakdown.push(...creditResult.breakdown);
   for (const law of creditResult.appliedLaws) allLaws.add(law);
 
   // ─────────────────────────────────────────────
   // STEP 9: 결정세액
+  //   사례 1 (12행): ⑫ = ⑦ − ⑩ − ⑪
+  //   사례 2 (18행): ⑱ = ⑬ − ⑯ − ⑰
+  //   공통: finalTax = max(0, totalComputedTaxWithSurcharge − totalTaxCredit)
   // ─────────────────────────────────────────────
   const finalTax = Math.max(
     0,
-    computedTax + generationSkipSurcharge - totalTaxCredit,
+    totalComputedTaxWithSurcharge - totalTaxCredit,
   );
-
   allBreakdown.push({
     label: "증여세 결정세액",
     amount: finalTax,
-    note: "= 산출세액 + 세대생략할증 - 세액공제",
+    note: "= 산출세액합계 − 세액공제 합계",
+  });
+
+  // ─────────────────────────────────────────────
+  // STEP 10: 결과 detail 조립
+  // ─────────────────────────────────────────────
+  const priorGiftCreditDetail =
+    priorAggregation.totalComputedTax > 0
+      ? {
+          priorComputedTax: priorAggregation.totalComputedTax,
+          priorAddedTaxBase: priorAggregation.priorAddedTaxBase,
+          aggregatedTaxBase: taxBase,
+          creditLimit:
+            taxBase === 0
+              ? 0
+              : Math.floor(
+                  (computedTax * priorAggregation.priorAddedTaxBase) / taxBase,
+                ),
+          priorPaidCredit: creditResult.giftTaxCredit,
+        }
+      : null;
+
+  // ─────────────────────────────────────────────
+  // STEP 11: filingFormRows
+  // ─────────────────────────────────────────────
+  const bracketLabel = formatBracketRate(taxBase, brackets);
+  const filingFormRows = buildFilingFormRows({
+    grossGiftValue,
+    debtAmount: 0, // 현행 증여세는 채무 미지원
+    priorTotal: priorAggregation.totalAmount,
+    totalDeduction,
+    taxBase,
+    bracketRateLabel: bracketLabel,
+    computedTax,
+    generationSkipDetail: surchargeResult.detail,
+    priorGiftCreditDetail,
+    reportingCredit: creditResult.filingCredit,
+    finalTax,
+    hasPriorGifts: priorAggregation.matchedPriorGifts.length > 0,
   });
 
   return {
@@ -219,7 +253,7 @@ export function calcGiftTax(
     totalDeduction,
     taxBase,
     computedTax,
-    generationSkipSurcharge,
+    generationSkipSurcharge: surchargeResult.additionalSurcharge,
     totalTaxCredit,
     finalTax,
     deductionDetail: deductionResult,
@@ -229,5 +263,25 @@ export function calcGiftTax(
     appliedLaws: Array.from(allLaws),
     warnings: allWarnings,
     appliedLawDate,
+    // Phase A 신규
+    donorGroup,
+    additionalGenerationSkipSurcharge: surchargeResult.additionalSurcharge,
+    generationSkipSurchargeDetail: surchargeResult.detail,
+    priorGiftCreditDetail,
+    filingFormRows,
   };
+}
+
+// ============================================================
+// 헬퍼: 세율 구간 라벨 (⑥ 표시용)
+// ============================================================
+
+function formatBracketRate(taxBase: number, brackets: TaxBracket[]): string {
+  for (const b of brackets) {
+    if (taxBase <= 0) return "0%";
+    if (b.max === null || taxBase <= b.max) {
+      return `${(b.rate * 100).toFixed(0)}%`;
+    }
+  }
+  return "—";
 }

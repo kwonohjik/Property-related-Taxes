@@ -24,6 +24,7 @@ describe("증여세 메인 엔진 — calcGiftTax()", () => {
     const input: GiftTaxInput = {
       giftDate: "2025-01-01",
       donorRelation: "lineal_descendant",
+      donor: "father",
       giftItems: [financialItem("1", 50_000_000)],
       priorGiftsWithin10Years: [],
       isGenerationSkip: false,
@@ -48,6 +49,7 @@ describe("증여세 메인 엔진 — calcGiftTax()", () => {
     const input: GiftTaxInput = {
       giftDate: "2025-01-01",
       donorRelation: "lineal_descendant",
+      donor: "father",
       giftItems: [financialItem("1", 150_000_000)],
       priorGiftsWithin10Years: [],
       isGenerationSkip: false,
@@ -67,6 +69,7 @@ describe("증여세 메인 엔진 — calcGiftTax()", () => {
     const input: GiftTaxInput = {
       giftDate: "2025-01-01",
       donorRelation: "other_relative",
+      donor: "other_relative",
       giftItems: [financialItem("1", 10_400_000)],
       priorGiftsWithin10Years: [],
       isGenerationSkip: false,
@@ -94,6 +97,7 @@ describe("증여세 메인 엔진 — calcGiftTax()", () => {
     const input: GiftTaxInput = {
       giftDate: "2025-06-01",
       donorRelation: "lineal_descendant",
+      donor: "father",
       giftItems: [financialItem("1", 50_000_000)],
       priorGiftsWithin10Years: [
         {
@@ -101,6 +105,7 @@ describe("증여세 메인 엔진 — calcGiftTax()", () => {
           isHeir: false,
           giftAmount: 40_000_000,
           giftTaxPaid: 0,
+          donor: "father", // Phase A: §47 합산 시 그룹 일치 필수
         },
       ],
       isGenerationSkip: false,
@@ -131,6 +136,7 @@ describe("증여세 메인 엔진 — calcGiftTax()", () => {
     const input: GiftTaxInput = {
       giftDate: "2025-01-01",
       donorRelation: "lineal_descendant",
+      donor: "grandparent", // Phase A: §57 적용은 그룹 B (조부모) 만
       giftItems: [financialItem("1", 300_000_000)],
       priorGiftsWithin10Years: [],
       isGenerationSkip: true,
@@ -158,6 +164,7 @@ describe("증여세 메인 엔진 — calcGiftTax()", () => {
     const input: GiftTaxInput = {
       giftDate: "2025-01-01",
       donorRelation: "lineal_descendant",
+      donor: "grandparent",
       giftItems: [financialItem("1", 3_000_000_000)],
       priorGiftsWithin10Years: [],
       isGenerationSkip: true,
@@ -176,6 +183,7 @@ describe("증여세 메인 엔진 — calcGiftTax()", () => {
     const input: GiftTaxInput = {
       giftDate: "2025-01-01",
       donorRelation: "spouse",
+      donor: "spouse",
       giftItems: [financialItem("1", 600_000_000)],
       priorGiftsWithin10Years: [],
       isGenerationSkip: false,
@@ -200,6 +208,7 @@ describe("증여세 메인 엔진 — calcGiftTax()", () => {
     const input: GiftTaxInput = {
       giftDate: "2025-01-01",
       donorRelation: "lineal_ascendant_adult",
+      donor: "lineal_descendant",
       giftItems: [financialItem("1", 150_000_000)],
       priorGiftsWithin10Years: [],
       isGenerationSkip: false,
@@ -221,6 +230,7 @@ describe("증여세 메인 엔진 — calcGiftTax()", () => {
     const input: GiftTaxInput = {
       giftDate: "2025-01-01",
       donorRelation: "lineal_descendant",
+      donor: "father",
       giftItems: [financialItem("1", 150_000_000)],
       priorGiftsWithin10Years: [],
       isGenerationSkip: false,
@@ -249,6 +259,7 @@ describe("증여세 메인 엔진 — calcGiftTax()", () => {
     const input: GiftTaxInput = {
       giftDate: "2025-01-01",
       donorRelation: "lineal_descendant",
+      donor: "grandparent", // Phase A: §57 적용은 그룹 B
       giftItems: [financialItem("1", 2_000_000_000)],
       priorGiftsWithin10Years: [],
       isGenerationSkip: true,
@@ -276,6 +287,7 @@ describe("증여세 메인 엔진 — calcGiftTax()", () => {
     const input: GiftTaxInput = {
       giftDate: "2025-01-01",
       donorRelation: "lineal_descendant",
+      donor: "grandparent",
       giftItems: [financialItem("1", 2_000_000_001)],
       priorGiftsWithin10Years: [],
       isGenerationSkip: true,
@@ -302,6 +314,7 @@ describe("증여세 메인 엔진 — calcGiftTax()", () => {
     const input: GiftTaxInput = {
       giftDate: "2025-01-01",
       donorRelation: "lineal_descendant",
+      donor: "grandparent",
       giftItems: [financialItem("1", 3_000_000_000)],
       priorGiftsWithin10Years: [],
       isGenerationSkip: true,
