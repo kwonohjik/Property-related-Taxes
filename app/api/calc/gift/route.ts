@@ -49,6 +49,11 @@ export async function POST(req: NextRequest) {
       {
         error: "입력값이 올바르지 않습니다.",
         details: parsed.error.flatten().fieldErrors,
+        issues: parsed.error.issues.map((iss) => ({
+          path: iss.path.map((p) => String(p)),
+          message: iss.message,
+          code: iss.code,
+        })),
       },
       { status: 400 },
     );

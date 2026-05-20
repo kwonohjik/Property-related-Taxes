@@ -125,19 +125,30 @@ function ItemEditor({ item, index, onUpdate, onRemove }: ItemEditorProps) {
         </button>
       </div>
 
-      {/* 자산명 */}
-      <div className="space-y-1">
-        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
-          자산 명칭 <span className="text-destructive">*</span>
-        </label>
-        <input
-          type="text"
-          value={item.name}
-          onChange={(e) => set({ name: e.target.value })}
-          placeholder={cat === "real_estate_apartment" ? "예: ○○아파트 101동 201호" : "예: ○○시 ○○동 ○○번지"}
-          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        />
-      </div>
+      {/* 자산명 — cash/financial/deposit은 위치 기반이 아니므로 선택 입력 */}
+      {(() => {
+        const isLocationless = cat === "cash" || cat === "financial" || cat === "deposit";
+        return (
+          <div className="space-y-1">
+            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
+              자산 명칭 {!isLocationless && <span className="text-destructive">*</span>}
+            </label>
+            <input
+              type="text"
+              value={item.name}
+              onChange={(e) => set({ name: e.target.value })}
+              placeholder={
+                cat === "real_estate_apartment" ? "예: ○○아파트 101동 201호"
+                : cat === "cash" ? "선택 입력 (예: 현금 보유)"
+                : cat === "financial" ? "선택 입력 (예: ○○은행 보통예금)"
+                : cat === "deposit" ? "선택 입력 (예: ○○시 ○○동 전세보증금)"
+                : "예: ○○시 ○○동 ○○번지"
+              }
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+          </div>
+        );
+      })()}
 
       {/* 평가 우선순위 안내 */}
       <p className="text-xs text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 rounded px-3 py-2">

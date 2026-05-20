@@ -359,12 +359,6 @@ export function PriorGiftInput({ gifts, onChange, mode = "inheritance" }: PriorG
         )}
       </div>
 
-      {gifts.length === 0 && (
-        <div className="rounded-md bg-gray-50 dark:bg-gray-800 px-4 py-3 text-xs text-gray-500 dark:text-gray-400 text-center">
-          없으면 빈칸으로 두고 다음 단계로 이동하세요
-        </div>
-      )}
-
       {gifts.length > 0 && (
         <div className="space-y-3">
           {gifts.map((g, i) => (

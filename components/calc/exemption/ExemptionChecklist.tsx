@@ -18,7 +18,7 @@ import {
 } from "@/lib/tax-engine/exemption-rules";
 import type { ExemptionCheckedItem } from "@/lib/tax-engine/exemption-evaluator";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
-import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { cn } from "@/lib/utils";
 
 // ============================================================
 // 리스크 배지
@@ -51,25 +51,66 @@ interface ExemptionRowProps {
   onAmountChange: (ruleId: string, amount: number) => void;
 }
 
+function YesNoButtons({ checked, onChange }: { checked: boolean; onChange: (yes: boolean) => void }) {
+  const base = "px-3 py-1.5 text-xs font-semibold rounded-md border transition-colors min-w-[44px]";
+  return (
+    <div className="flex items-center gap-1.5 shrink-0">
+      <button
+        type="button"
+        onClick={() => onChange(true)}
+        aria-pressed={checked}
+        className={cn(
+          base,
+          checked
+            ? "bg-violet-600 text-white border-violet-600 shadow-sm"
+            : "bg-white text-gray-600 border-violet-200 hover:bg-violet-50",
+        )}
+      >
+        여
+      </button>
+      <button
+        type="button"
+        onClick={() => onChange(false)}
+        aria-pressed={!checked}
+        className={cn(
+          base,
+          !checked
+            ? "bg-gray-700 text-white border-gray-700 shadow-sm"
+            : "bg-white text-gray-600 border-violet-200 hover:bg-violet-50",
+        )}
+      >
+        부
+      </button>
+    </div>
+  );
+}
+
 function ExemptionRow({ rule, checked, amount, onToggle, onAmountChange }: ExemptionRowProps) {
   return (
-    <ToggleCard
-      tone="violet"
-      title={rule.name}
-      description={
-        <span className="flex flex-col gap-0.5">
-          <span className="flex items-center gap-2">
-            <RiskBadge level={rule.riskLevel} />
-            <span className="text-xs text-gray-400 dark:text-gray-500">
-              {rule.lawRef}
-            </span>
-          </span>
-          <span>{rule.description}</span>
-        </span>
-      }
-      checked={checked}
-      onCheckedChange={() => onToggle(rule.id)}
+    <div
+      className={cn(
+        "rounded-lg border p-3 transition-colors",
+        checked
+          ? "border-violet-300 bg-violet-50/70 ring-1 ring-violet-200/50"
+          : "border-violet-200/70 bg-violet-50/40",
+      )}
     >
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1 min-w-0 space-y-1">
+          <p className={cn("text-sm font-semibold", checked ? "text-violet-900" : "text-gray-800 dark:text-gray-100")}>
+            {rule.name}
+          </p>
+          <div className="flex items-center gap-2 flex-wrap">
+            <RiskBadge level={rule.riskLevel} />
+            <span className="text-xs text-gray-400 dark:text-gray-500">{rule.lawRef}</span>
+          </div>
+          <p className="text-xs text-gray-600 dark:text-gray-300">{rule.description}</p>
+        </div>
+        <YesNoButtons checked={checked} onChange={(yes) => { if (yes !== checked) onToggle(rule.id); }} />
+      </div>
+
+      {checked && (
+        <div className="mt-3 pl-3 border-l-2 border-violet-300 space-y-2">
       <ul className="text-xs text-gray-600 dark:text-gray-300 space-y-1 list-disc list-inside">
         {rule.requirements.map((req, i) => (
           <li key={i}>{req}</li>
@@ -120,7 +161,9 @@ function ExemptionRow({ rule, checked, amount, onToggle, onAmountChange }: Exemp
           </ul>
         </div>
       )}
-    </ToggleCard>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -157,30 +200,55 @@ export function ExemptionChecklist({
     );
   };
 
+  // 마스터 토글: 이미 선택된 항목이 있으면 자동 "여", 없으면 기본 "부"
+  const [masterYes, setMasterYes] = useState<boolean>(value.length > 0);
+
   if (rules.length === 0) return null;
+
+  const handleMasterChange = (yes: boolean) => {
+    setMasterYes(yes);
+    // "부" 선택 시 기존에 선택된 모든 항목 초기화
+    if (!yes && value.length > 0) onChange([]);
+  };
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-          비과세 해당 항목 선택
-        </h3>
-        <span className="text-xs text-gray-400">
-          {value.length > 0 ? `${value.length}개 선택됨` : "없으면 건너뛰기"}
-        </span>
+      <div className="flex items-center justify-between gap-3 rounded-lg border border-violet-200/70 bg-violet-50/40 p-3">
+        <div className="min-w-0 space-y-0.5">
+          <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-100">
+            비과세 해당 여부
+          </h3>
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            해당되는 비과세 항목이 있으면 &ldquo;여&rdquo;를 선택하세요.
+          </p>
+        </div>
+        <YesNoButtons checked={masterYes} onChange={handleMasterChange} />
       </div>
-      <div className="space-y-2">
-        {rules.map((rule) => (
-          <ExemptionRow
-            key={rule.id}
-            rule={rule}
-            checked={checkedMap.has(rule.id)}
-            amount={checkedMap.get(rule.id)?.claimedAmount ?? 0}
-            onToggle={handleToggle}
-            onAmountChange={handleAmountChange}
-          />
-        ))}
-      </div>
+
+      {masterYes && (
+        <>
+          <div className="flex items-center justify-between px-1">
+            <h4 className="text-xs font-semibold text-gray-600 dark:text-gray-400">
+              비과세 해당 항목 선택
+            </h4>
+            <span className="text-xs text-gray-400">
+              {value.length > 0 ? `${value.length}개 선택됨` : "없으면 건너뛰기"}
+            </span>
+          </div>
+          <div className="space-y-2">
+            {rules.map((rule) => (
+              <ExemptionRow
+                key={rule.id}
+                rule={rule}
+                checked={checkedMap.has(rule.id)}
+                amount={checkedMap.get(rule.id)?.claimedAmount ?? 0}
+                onToggle={handleToggle}
+                onAmountChange={handleAmountChange}
+              />
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }

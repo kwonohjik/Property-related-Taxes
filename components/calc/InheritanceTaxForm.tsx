@@ -113,6 +113,76 @@ const STEPS = [
 ];
 
 // ============================================================
+// API 에러 상세화 — Zod issues → 한국어 라벨 + 메시지
+// ============================================================
+
+const INHERITANCE_FIELD_LABELS: Record<string, string> = {
+  inheritanceDate: "상속개시일",
+  reportDate: "신고일",
+  decedentRelation: "피상속인 관계",
+  hasSpouse: "배우자 유무",
+  hasLinealDescendant: "직계비속 유무",
+  estateItems: "상속재산",
+  category: "재산 종류",
+  name: "자산 명칭",
+  marketValue: "시가",
+  standardPrice: "기준시가/공시가격",
+  appraisedValue: "감정평가액",
+  listedStockAvgPrice: "상장주식 평균종가",
+  listedStockShares: "상장주식 수량",
+  listedStockCode: "상장주식 종목코드",
+  leaseDeposit: "임대보증금",
+  mortgageAmount: "저당권 설정액",
+  heirAllocations: "협의분할 — 상속인별 분배",
+  funeralExpense: "장례비",
+  debtAmount: "채무액",
+  publicCharges: "공과금",
+  spouseDeduction: "배우자공제",
+  lumpSumDeduction: "일괄공제",
+  basicDeduction: "기초공제",
+  financialAssetDeduction: "금융재산공제",
+  cohabitingHouseDeduction: "동거주택 상속공제",
+  familyBusinessDeduction: "가업상속공제",
+  farmlandDeduction: "영농상속공제",
+  shortTermRedeemDeduction: "단기재상속공제",
+  foreignTaxPaid: "외국납부세액",
+  filedWithinDeadline: "법정신고기한 내 신고",
+  priorGiftsTotal: "10년 내 사전증여 합계",
+  generationSkipAssetAmount: "세대생략 상속재산",
+};
+
+interface ApiIssue {
+  path: string[];
+  message: string;
+  code?: string;
+}
+
+function labelForInheritancePath(path: string[]): string {
+  if (path.length === 0) return "입력";
+  const parts: string[] = [];
+  for (const seg of path) {
+    if (/^\d+$/.test(seg)) {
+      parts.push(`${Number(seg) + 1}번`);
+    } else {
+      parts.push(INHERITANCE_FIELD_LABELS[seg] ?? seg);
+    }
+  }
+  return parts.join(" › ");
+}
+
+function formatInheritanceApiError(data: { error?: string; issues?: ApiIssue[] }): string {
+  if (Array.isArray(data.issues) && data.issues.length > 0) {
+    const lines = data.issues.slice(0, 8).map((iss) => {
+      const label = labelForInheritancePath(iss.path);
+      return `• ${label}: ${iss.message}`;
+    });
+    const more = data.issues.length > 8 ? `\n(외 ${data.issues.length - 8}건)` : "";
+    return `${data.error ?? "입력값이 올바르지 않습니다."}\n${lines.join("\n")}${more}`;
+  }
+  return data.error ?? "계산 중 오류가 발생했습니다.";
+}
+
+// ============================================================
 // 단계별 유효성 검사
 // ============================================================
 
@@ -608,7 +678,7 @@ export function InheritanceTaxForm() {
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
-        setError(data.error ?? "계산 중 오류가 발생했습니다.");
+        setError(formatInheritanceApiError(data));
         return;
       }
       setResult(data.result);
@@ -665,7 +735,7 @@ export function InheritanceTaxForm() {
       </div>
 
       {error && (
-        <div className="rounded-md bg-destructive/10 border border-destructive/30 px-4 py-2.5 text-sm text-destructive">
+        <div className="rounded-md bg-destructive/10 border border-destructive/30 px-4 py-2.5 text-sm text-destructive whitespace-pre-line">
           {error}
         </div>
       )}
