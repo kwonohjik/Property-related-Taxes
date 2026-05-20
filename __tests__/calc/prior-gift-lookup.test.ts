@@ -1,8 +1,9 @@
 /**
  * 증여세 사전증여 이력 조회 — 순수 함수 anchor
  *
- * 동일인 매칭 = 이름 + 생년월일 정확 일치 (v2 정책).
- * §47 그룹 매칭은 정보 표시용으로만 사용.
+ * 수증자 매칭 = clientId 정확 일치 (v3 정책).
+ *   - 일반 납세자 모드: currentClientId === null → record.clientId === null만 노출
+ *   - 세무사 모드: currentClientId === "client-X" → record.clientId === "client-X"만 노출
  */
 
 import { describe, it, expect } from "vitest";
@@ -17,15 +18,11 @@ import type { CalculationRecord } from "@/lib/storage/types";
 // fixture 헬퍼
 // ============================================================
 
-const DEFAULT_NAME = "홍길동";
-const DEFAULT_BIRTH = "1960-01-15";
-
 function makeGiftRecord(opts: {
   id?: string;
   giftDate: string;
   donor?: unknown;
-  doneeName?: string | undefined;
-  doneeBirthDate?: string | undefined;
+  clientId?: string | null;
   donorRelation?: string;
   isGenerationSkip?: boolean;
   priorGifts?: unknown[];
@@ -40,9 +37,7 @@ function makeGiftRecord(opts: {
   title?: string;
 }): CalculationRecord {
   const donor = "donor" in opts ? opts.donor : "father";
-  const doneeName = "doneeName" in opts ? opts.doneeName : DEFAULT_NAME;
-  const doneeBirthDate =
-    "doneeBirthDate" in opts ? opts.doneeBirthDate : DEFAULT_BIRTH;
+  const clientId = "clientId" in opts ? opts.clientId! : null;
   const {
     id = `id-${opts.giftDate}`,
     giftDate,
@@ -68,8 +63,6 @@ function makeGiftRecord(opts: {
     inputData: {
       giftDate,
       donor,
-      doneeName,
-      doneeBirthDate,
       donorRelation,
       isGenerationSkip,
       priorGifts,
@@ -80,7 +73,7 @@ function makeGiftRecord(opts: {
         : { success: true, result },
     taxLawVersion: giftDate,
     linkedCalculationId: null,
-    clientId: null,
+    clientId,
     createdAt,
     updatedAt: createdAt,
   };
@@ -89,17 +82,16 @@ function makeGiftRecord(opts: {
 const CURRENT = "2026-05-20";
 
 // ============================================================
-// PGL-1 ~ PGL-17 (v2: 이름+생년월일 동일인 매칭)
+// PGL-1 ~ PGL-15 (v3: clientId 매칭)
 // ============================================================
 
-describe("filterPriorGiftCandidates — 동일인(이름+생년월일) 매칭 anchor", () => {
-  it("PGL-1: 10년 경계 + 이름·생년월일 일치 → 후보 포함", () => {
+describe("filterPriorGiftCandidates — clientId 매칭 anchor", () => {
+  it("PGL-1: 10년 경계 + 본인(clientId=null) → 후보 포함", () => {
     const records = [makeGiftRecord({ giftDate: "2016-05-21" })];
     const { candidates, warnings } = filterPriorGiftCandidates(
       records,
       CURRENT,
-      DEFAULT_NAME,
-      DEFAULT_BIRTH,
+      null,
       [],
     );
     expect(candidates).toHaveLength(1);
@@ -111,42 +103,30 @@ describe("filterPriorGiftCandidates — 동일인(이름+생년월일) 매칭 an
     const { candidates, warnings } = filterPriorGiftCandidates(
       records,
       CURRENT,
-      DEFAULT_NAME,
-      DEFAULT_BIRTH,
+      null,
       [],
     );
     expect(candidates).toHaveLength(0);
     expect(warnings.find((w) => w.reason === "exceed_10y")).toBeDefined();
   });
 
-  it("PGL-3: 이름 일치 + 생년월일 다름 → 제외 + warnings.different_person", () => {
-    const records = [
-      makeGiftRecord({ giftDate: "2021-05-10", doneeBirthDate: "1965-03-20" }),
-    ];
-    const { candidates, warnings } = filterPriorGiftCandidates(
-      records,
-      CURRENT,
-      DEFAULT_NAME,
-      DEFAULT_BIRTH,
-      [],
-    );
-    expect(candidates).toHaveLength(0);
-    expect(warnings.find((w) => w.reason === "different_person")).toBeDefined();
+  it("PGL-3: 세무사 모드 — 같은 의뢰인 clientId 일치 → 후보 포함", () => {
+    const records = [makeGiftRecord({ giftDate: "2021-05-10", clientId: "client-A" })];
+    const { candidates } = filterPriorGiftCandidates(records, CURRENT, "client-A", []);
+    expect(candidates).toHaveLength(1);
+    expect(candidates[0].clientId).toBe("client-A");
   });
 
-  it("PGL-4: 이름 다름 → 제외 + warnings.different_person", () => {
-    const records = [
-      makeGiftRecord({ giftDate: "2021-05-10", doneeName: "김철수" }),
-    ];
+  it("PGL-4: 세무사 모드 — 다른 의뢰인 → 제외 + warnings.different_client", () => {
+    const records = [makeGiftRecord({ giftDate: "2021-05-10", clientId: "client-B" })];
     const { candidates, warnings } = filterPriorGiftCandidates(
       records,
       CURRENT,
-      DEFAULT_NAME,
-      DEFAULT_BIRTH,
+      "client-A",
       [],
     );
     expect(candidates).toHaveLength(0);
-    expect(warnings.find((w) => w.reason === "different_person")).toBeDefined();
+    expect(warnings.find((w) => w.reason === "different_client")).toBeDefined();
   });
 
   it("PGL-5: priorGifts.length > 0 → 포함 + hasInnerPriorGifts=true", () => {
@@ -156,13 +136,7 @@ describe("filterPriorGiftCandidates — 동일인(이름+생년월일) 매칭 an
         priorGifts: [{ giftDate: "2018-01-01", giftAmount: 100_000_000 }],
       }),
     ];
-    const { candidates } = filterPriorGiftCandidates(
-      records,
-      CURRENT,
-      DEFAULT_NAME,
-      DEFAULT_BIRTH,
-      [],
-    );
+    const { candidates } = filterPriorGiftCandidates(records, CURRENT, null, []);
     expect(candidates).toHaveLength(1);
     expect(candidates[0].hasInnerPriorGifts).toBe(true);
   });
@@ -172,8 +146,7 @@ describe("filterPriorGiftCandidates — 동일인(이름+생년월일) 매칭 an
     const { candidates, warnings } = filterPriorGiftCandidates(
       records,
       CURRENT,
-      DEFAULT_NAME,
-      DEFAULT_BIRTH,
+      null,
       ["abc"],
     );
     expect(candidates).toHaveLength(0);
@@ -184,8 +157,7 @@ describe("filterPriorGiftCandidates — 동일인(이름+생년월일) 매칭 an
     const c: PriorGiftCandidate = {
       calculationId: "abc",
       giftDate: "2021-05-10",
-      doneeName: DEFAULT_NAME,
-      doneeBirthDate: DEFAULT_BIRTH,
+      clientId: null,
       donor: "father",
       donorRelation: "lineal_descendant",
       grossGiftValue: 350_000_000,
@@ -210,26 +182,19 @@ describe("filterPriorGiftCandidates — 동일인(이름+생년월일) 매칭 an
 
   it("PGL-8: inputData.giftDate ISO string 비교 정확", () => {
     const records = [makeGiftRecord({ giftDate: "2020-12-31" })];
-    const { candidates } = filterPriorGiftCandidates(
-      records,
-      "2021-01-01",
-      DEFAULT_NAME,
-      DEFAULT_BIRTH,
-      [],
-    );
+    const { candidates } = filterPriorGiftCandidates(records, "2021-01-01", null, []);
     expect(candidates).toHaveLength(1);
   });
 
   it("PGL-9: resultData.result 누락 → warnings.result_missing", () => {
     const records = [makeGiftRecord({ giftDate: "2021-05-10", result: null })];
     expect(() =>
-      filterPriorGiftCandidates(records, CURRENT, DEFAULT_NAME, DEFAULT_BIRTH, []),
+      filterPriorGiftCandidates(records, CURRENT, null, []),
     ).not.toThrow();
     const { candidates, warnings } = filterPriorGiftCandidates(
       records,
       CURRENT,
-      DEFAULT_NAME,
-      DEFAULT_BIRTH,
+      null,
       [],
     );
     expect(candidates).toHaveLength(0);
@@ -241,8 +206,7 @@ describe("filterPriorGiftCandidates — 동일인(이름+생년월일) 매칭 an
     const { candidates, warnings } = filterPriorGiftCandidates(
       records,
       CURRENT,
-      DEFAULT_NAME,
-      DEFAULT_BIRTH,
+      null,
       [],
     );
     expect(candidates).toHaveLength(0);
@@ -254,8 +218,7 @@ describe("filterPriorGiftCandidates — 동일인(이름+생년월일) 매칭 an
     const { candidates, warnings } = filterPriorGiftCandidates(
       records,
       CURRENT,
-      DEFAULT_NAME,
-      DEFAULT_BIRTH,
+      null,
       [],
     );
     expect(candidates).toHaveLength(0);
@@ -267,8 +230,7 @@ describe("filterPriorGiftCandidates — 동일인(이름+생년월일) 매칭 an
     const { candidates, warnings } = filterPriorGiftCandidates(
       records,
       CURRENT,
-      DEFAULT_NAME,
-      DEFAULT_BIRTH,
+      null,
       [],
     );
     expect(candidates).toHaveLength(0);
@@ -280,13 +242,7 @@ describe("filterPriorGiftCandidates — 동일인(이름+생년월일) 매칭 an
       makeGiftRecord({ id: "old", giftDate: "2019-03-22" }),
       makeGiftRecord({ id: "new", giftDate: "2021-05-10" }),
     ];
-    const { candidates } = filterPriorGiftCandidates(
-      records,
-      CURRENT,
-      DEFAULT_NAME,
-      DEFAULT_BIRTH,
-      [],
-    );
+    const { candidates } = filterPriorGiftCandidates(records, CURRENT, null, []);
     expect(candidates).toHaveLength(2);
     expect(candidates[0].calculationId).toBe("new");
     expect(candidates[1].calculationId).toBe("old");
@@ -305,29 +261,17 @@ describe("filterPriorGiftCandidates — 동일인(이름+생년월일) 매칭 an
         },
       }),
     ];
-    const { candidates } = filterPriorGiftCandidates(
-      records,
-      CURRENT,
-      DEFAULT_NAME,
-      DEFAULT_BIRTH,
-      [],
-    );
+    const { candidates } = filterPriorGiftCandidates(records, CURRENT, null, []);
     expect(candidates).toHaveLength(1);
     expect(candidates[0].additionalGenerationSkipSurcharge).toBe(0);
   });
 
-  it("PGL-15: finalTax undefined → 0, inheritance silent skip", () => {
+  it("PGL-15: 일반 납세자 모드(null)는 본인 이력만, 의뢰인 이력 제외", () => {
     const records: CalculationRecord[] = [
-      makeGiftRecord({
-        giftDate: "2021-05-10",
-        result: {
-          grossGiftValue: 100_000_000,
-          taxBase: 50_000_000,
-          computedTax: 5_000_000,
-        },
-      }),
+      makeGiftRecord({ id: "self", giftDate: "2021-05-10", clientId: null }),
+      makeGiftRecord({ id: "client-a", giftDate: "2020-01-01", clientId: "client-A" }),
       {
-        ...makeGiftRecord({ giftDate: "2020-01-01" }),
+        ...makeGiftRecord({ giftDate: "2019-01-01" }),
         taxType: "inheritance",
         id: "inh-1",
       },
@@ -335,67 +279,13 @@ describe("filterPriorGiftCandidates — 동일인(이름+생년월일) 매칭 an
     const { candidates, warnings } = filterPriorGiftCandidates(
       records,
       CURRENT,
-      DEFAULT_NAME,
-      DEFAULT_BIRTH,
+      null,
       [],
     );
     expect(candidates).toHaveLength(1);
-    expect(candidates[0].finalTax).toBe(0);
+    expect(candidates[0].calculationId).toBe("self");
+    expect(warnings.find((w) => w.reason === "different_client")).toBeDefined();
+    // inheritance silent skip
     expect(warnings.find((w) => w.calculationId === "inh-1")).toBeUndefined();
-  });
-
-  it("PGL-16: doneeName 누락 (legacy) → warnings.donee_identity_missing", () => {
-    const records = [
-      makeGiftRecord({ giftDate: "2021-05-10", doneeName: undefined }),
-    ];
-    const { candidates, warnings } = filterPriorGiftCandidates(
-      records,
-      CURRENT,
-      DEFAULT_NAME,
-      DEFAULT_BIRTH,
-      [],
-    );
-    expect(candidates).toHaveLength(0);
-    expect(
-      warnings.find((w) => w.reason === "donee_identity_missing"),
-    ).toBeDefined();
-  });
-
-  it("PGL-17: doneeBirthDate 누락 (legacy) → warnings.donee_identity_missing", () => {
-    const records = [
-      makeGiftRecord({ giftDate: "2021-05-10", doneeBirthDate: undefined }),
-    ];
-    const { candidates, warnings } = filterPriorGiftCandidates(
-      records,
-      CURRENT,
-      DEFAULT_NAME,
-      DEFAULT_BIRTH,
-      [],
-    );
-    expect(candidates).toHaveLength(0);
-    expect(
-      warnings.find((w) => w.reason === "donee_identity_missing"),
-    ).toBeDefined();
-  });
-
-  it("PGL-18: 부 vs 모 — 다른 수증자(생년월일 다름)이므로 제외 (§47 그룹과 무관)", () => {
-    // 사용자 결정: §47② 부·모 동일인이라도 물리적 다른 수증자은 모달 후보에서 제외
-    const records = [
-      makeGiftRecord({
-        giftDate: "2021-05-10",
-        donor: "mother",
-        doneeName: "김영희",
-        doneeBirthDate: "1962-07-08",
-      }),
-    ];
-    const { candidates, warnings } = filterPriorGiftCandidates(
-      records,
-      CURRENT,
-      DEFAULT_NAME, // "홍길동" — 부
-      DEFAULT_BIRTH, // "1960-01-15"
-      [],
-    );
-    expect(candidates).toHaveLength(0);
-    expect(warnings.find((w) => w.reason === "different_person")).toBeDefined();
   });
 });

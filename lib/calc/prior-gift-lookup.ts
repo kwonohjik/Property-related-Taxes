@@ -33,9 +33,8 @@ export interface PriorGiftCandidate {
   calculationId: string;
   /** ISO YYYY-MM-DD */
   giftDate: string;
-  /** 수증자 본인 식별 (동일인 판단의 single source of truth) */
-  doneeName: string;
-  doneeBirthDate: string;
+  /** 의뢰인 ID (세무사 모드 — null = 본인) */
+  clientId: string | null;
   /** §47 그룹 판정 키 (정보용 — 카드 라벨 표시) */
   donor: GiftDonorRelation;
   /** 당시 수증자-증여자 관계 (정보용) */
@@ -62,12 +61,11 @@ export interface PriorGiftCandidate {
 
 export type LookupWarningReason =
   | "donor_missing"
-  | "donee_identity_missing"
   | "result_missing"
   | "future_date"
   | "exceed_10y"
   | "excluded"
-  | "different_person";
+  | "different_client";
 
 export interface LookupWarning {
   calculationId: string;
@@ -104,39 +102,34 @@ function isValidDonor(v: unknown): v is GiftDonorRelation {
 // ============================================================
 
 /**
- * 증여세 이력에서 동일인(수증자 이름+생년월일) 사전증여 후보를 추출.
+ * 증여세 이력에서 동일 수증자(=의뢰인) 사전증여 후보를 추출.
+ *
+ * 수증자 식별 모델 (단일 진실):
+ *   - 일반 납세자 모드: 수증자 = 본인. records는 이미 userId 필터링됨 → currentClientId === null이면 record.clientId === null만 노출.
+ *   - 세무사 모드: 수증자 = 의뢰인. currentClientId 매칭으로 의뢰인별 이력 격리.
  *
  * 알고리즘:
  *   1. taxType !== "gift" → silent skip
  *   2. excludeCalculationIds 포함 → warnings.excluded
- *   3. donor 누락 또는 비-enum → warnings.donor_missing
- *   4. doneeName 또는 doneeBirthDate 누락 → warnings.donee_identity_missing (legacy)
+ *   3. record.clientId !== currentClientId → warnings.different_client
+ *   4. donor 누락 또는 비-enum → warnings.donor_missing
  *   5. result.taxBase/computedTax/grossGiftValue 누락 → warnings.result_missing
  *   6. priorDate >= current → warnings.future_date (sanity)
  *   7. differenceInYears > 10 → warnings.exceed_10y
- *   8. doneeName !== currentDoneeName OR doneeBirthDate !== currentDoneeBirthDate
- *      → warnings.different_person (다른 수증자)
- *   9. 위 모두 통과 → candidates.push
+ *   8. 위 모두 통과 → candidates.push
  *
  * 정렬: giftDate desc → createdAt desc
- *
- * 정책:
- *   - 수증자(donee) 이름+생년월일 정확 일치를 동일인 판정 기준으로 사용.
- *   - 같은 수증자가 여러 증여자로부터 받은 과거 회차를 한 화면에서 검토 가능.
- *   - §47 그룹 합산은 엔진(aggregatePriorGiftsForGift)이 selected priorGifts에서 자동 처리.
  */
 export function filterPriorGiftCandidates(
   records: CalculationRecord[],
   currentGiftDate: string,
-  currentDoneeName: string,
-  currentDoneeBirthDate: string,
+  currentClientId: string | null,
   excludeCalculationIds: ReadonlyArray<string>,
 ): LookupResult {
   const current = new Date(currentGiftDate);
   const candidates: PriorGiftCandidate[] = [];
   const warnings: LookupWarning[] = [];
   const excludeSet = new Set(excludeCalculationIds);
-  const normName = currentDoneeName.trim();
 
   for (const record of records) {
     if (record.taxType !== "gift") continue; // 다른 세목 — silent
@@ -146,6 +139,16 @@ export function filterPriorGiftCandidates(
         calculationId: record.id,
         reason: "excluded",
         message: "이미 사전증여 목록에 추가된 회차",
+      });
+      continue;
+    }
+
+    // 수증자(=의뢰인) 격리 — clientId 정확 일치
+    if (record.clientId !== currentClientId) {
+      warnings.push({
+        calculationId: record.id,
+        reason: "different_client",
+        message: `${record.title}: 다른 의뢰인의 이력 — 격리됨`,
       });
       continue;
     }
@@ -162,19 +165,6 @@ export function filterPriorGiftCandidates(
         calculationId: record.id,
         reason: "donor_missing",
         message: `${record.title}: 증여자 관계(donor) 미입력`,
-      });
-      continue;
-    }
-
-    const recName =
-      typeof input?.doneeName === "string" ? input.doneeName.trim() : "";
-    const recBirth =
-      typeof input?.doneeBirthDate === "string" ? input.doneeBirthDate : "";
-    if (!recName || !recBirth) {
-      warnings.push({
-        calculationId: record.id,
-        reason: "donee_identity_missing",
-        message: `${record.title}: 수증자 이름·생년월일 미입력 (legacy 이력) — 수동 입력 필요`,
       });
       continue;
     }
@@ -221,15 +211,6 @@ export function filterPriorGiftCandidates(
       continue;
     }
 
-    if (recName !== normName || recBirth !== currentDoneeBirthDate) {
-      warnings.push({
-        calculationId: record.id,
-        reason: "different_person",
-        message: `${record.title}: 다른 수증자 (${recName} ${recBirth}) — 동일인 아님`,
-      });
-      continue;
-    }
-
     const donorRelationRaw = input.donorRelation;
     const donorRelation: DonorRelation | undefined =
       typeof donorRelationRaw === "string"
@@ -242,8 +223,7 @@ export function filterPriorGiftCandidates(
     candidates.push({
       calculationId: record.id,
       giftDate: inputGiftDate,
-      doneeName: recName,
-      doneeBirthDate: recBirth,
+      clientId: record.clientId,
       donor: input.donor as GiftDonorRelation,
       donorRelation,
       grossGiftValue: result.grossGiftValue as number,
