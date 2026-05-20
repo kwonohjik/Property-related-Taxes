@@ -46,6 +46,9 @@ interface FormState {
   donorRelation: DonorRelation;
   /** Phase A: 증여자 관계 (동일인 §47 합산 그룹화 + §57 적용 판정) */
   donor: GiftDonorRelation;
+  /** 증여자 본인 식별자 — 사전증여 이력 조회 시 동일인 매칭 (이름 + 생년월일) */
+  donorName: string;
+  donorBirthDate: string;
   isGenerationSkip: boolean;
   isMinorDonee: boolean;
   // Step 1
@@ -67,6 +70,8 @@ const INITIAL_FORM: FormState = {
   giftDate: "",
   donorRelation: "lineal_ascendant_adult",
   donor: "father",
+  donorName: "",
+  donorBirthDate: "",
   isGenerationSkip: false,
   isMinorDonee: false,
   giftItems: [],
@@ -191,6 +196,8 @@ function validateStep(step: number, form: FormState): string | null {
   if (step === 0) {
     if (!form.giftDate) return "증여일을 입력하세요.";
     if (!form.donor) return "증여자를 선택하세요.";
+    if (!form.donorName.trim()) return "증여자 이름을 입력하세요. (이력 조회 시 동일인 판단)";
+    if (!form.donorBirthDate) return "증여자 생년월일을 입력하세요. (이력 조회 시 동일인 판단)";
   }
   if (step === 1) {
     if (form.giftItems.length + form.stockItems.length === 0) {
@@ -330,6 +337,39 @@ function Step0({
             부·모는 §47② 동일인. 다른 한쪽의 사전증여도 합산 대상입니다.
           </p>
         )}
+
+        {/* 증여자 본인 식별 (이름 + 생년월일) — 사전증여 이력 조회 시 동일인 판단 */}
+        <div className="mt-3 pt-3 border-t border-violet-200 space-y-2">
+          <p className="text-[11px] font-semibold text-violet-700">
+            증여자 본인 식별 (이력 조회 시 동일인 판단용)
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1">
+              <label className="block text-[11px] font-medium text-violet-700">
+                이름 <span className="text-destructive">*</span>
+              </label>
+              <input
+                type="text"
+                value={form.donorName}
+                onChange={(e) => set({ donorName: e.target.value })}
+                placeholder="예: 홍길동"
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="block text-[11px] font-medium text-violet-700">
+                생년월일 <span className="text-destructive">*</span>
+              </label>
+              <DateInput
+                value={form.donorBirthDate}
+                onChange={(v) => set({ donorBirthDate: v })}
+              />
+            </div>
+          </div>
+          <p className="text-[11px] text-violet-600">
+            ※ 이름과 생년월일이 모두 일치하는 과거 회차만 이력 조회 결과에 노출됩니다.
+          </p>
+        </div>
       </div>
 
       <ToggleCard
@@ -410,6 +450,8 @@ function Step2({
           mode="gift"
           currentGiftDate={form.giftDate}
           currentDonor={form.donor}
+          currentDonorName={form.donorName}
+          currentDonorBirthDate={form.donorBirthDate}
         />
       </div>
     </div>

@@ -17,7 +17,6 @@
  */
 
 import { differenceInYears } from "date-fns";
-import { isSameDonorGroup } from "@/lib/tax-engine/gift-prior-aggregation";
 import type {
   DonorRelation,
   GiftDonorRelation,
@@ -34,7 +33,10 @@ export interface PriorGiftCandidate {
   calculationId: string;
   /** ISO YYYY-MM-DD */
   giftDate: string;
-  /** §47 그룹 판정 키 */
+  /** 증여자 본인 식별 (동일인 판단의 single source of truth) */
+  donorName: string;
+  donorBirthDate: string;
+  /** §47 그룹 판정 키 (정보용 — 카드 라벨 표시) */
   donor: GiftDonorRelation;
   /** 당시 수증자-증여자 관계 (정보용) */
   donorRelation: DonorRelation | undefined;
@@ -52,8 +54,6 @@ export interface PriorGiftCandidate {
   wasGenerationSkip: boolean;
   /** inputData.priorGifts.length > 0 — UI 배지용 메타 (이중 합산 위험 안내) */
   hasInnerPriorGifts: boolean;
-  /** §47 그룹 매칭 (isSameDonorGroup 결과) */
-  matchType: "same_group" | "other";
   /** 저장 시각 — 정렬 동률 시 사용 */
   createdAt: string;
   /** 자동 생성 title — 결과 화면 링크 라벨 */
@@ -62,10 +62,12 @@ export interface PriorGiftCandidate {
 
 export type LookupWarningReason =
   | "donor_missing"
+  | "donor_identity_missing"
   | "result_missing"
   | "future_date"
   | "exceed_10y"
-  | "excluded";
+  | "excluded"
+  | "different_person";
 
 export interface LookupWarning {
   calculationId: string;
@@ -102,29 +104,39 @@ function isValidDonor(v: unknown): v is GiftDonorRelation {
 // ============================================================
 
 /**
- * 증여세 이력에서 §47 합산 후보를 추출하여 same_group/other 양쪽 모두 반환.
+ * 증여세 이력에서 동일인(이름+생년월일) 사전증여 후보를 추출.
  *
- * 알고리즘 (Design §3.1):
+ * 알고리즘:
  *   1. taxType !== "gift" → silent skip
  *   2. excludeCalculationIds 포함 → warnings.excluded
  *   3. donor 누락 또는 비-enum → warnings.donor_missing
- *   4. result.taxBase/computedTax/grossGiftValue 누락 → warnings.result_missing
- *   5. priorDate >= current → warnings.future_date (sanity)
- *   6. differenceInYears > 10 → warnings.exceed_10y
- *   7. 위 모두 통과 → candidates.push (matchType=isSameDonorGroup ? "same_group" : "other")
+ *   4. donorName 또는 donorBirthDate 누락 → warnings.donor_identity_missing (legacy)
+ *   5. result.taxBase/computedTax/grossGiftValue 누락 → warnings.result_missing
+ *   6. priorDate >= current → warnings.future_date (sanity)
+ *   7. differenceInYears > 10 → warnings.exceed_10y
+ *   8. donorName !== currentDonorName OR donorBirthDate !== currentDonorBirthDate
+ *      → warnings.different_person (다른 인물)
+ *   9. 위 모두 통과 → candidates.push
  *
  * 정렬: giftDate desc → createdAt desc
+ *
+ * 정책:
+ *   - §47 그룹 매칭(isSameDonorGroup)이 아닌 이름+생년월일 정확 일치를 동일인 판정 기준으로 사용.
+ *   - 사용자 결정: 부 vs 모 같이 §47 동일인 그룹이지만 다른 인물은 후보에서 제외.
+ *     필요 시 사용자가 "사전증여 추가"로 수동 입력 (엔진은 여전히 §47 합산 처리).
  */
 export function filterPriorGiftCandidates(
   records: CalculationRecord[],
   currentGiftDate: string,
-  currentDonor: GiftDonorRelation,
+  currentDonorName: string,
+  currentDonorBirthDate: string,
   excludeCalculationIds: ReadonlyArray<string>,
 ): LookupResult {
   const current = new Date(currentGiftDate);
   const candidates: PriorGiftCandidate[] = [];
   const warnings: LookupWarning[] = [];
   const excludeSet = new Set(excludeCalculationIds);
+  const normName = currentDonorName.trim();
 
   for (const record of records) {
     if (record.taxType !== "gift") continue; // 다른 세목 — silent
@@ -149,7 +161,20 @@ export function filterPriorGiftCandidates(
       warnings.push({
         calculationId: record.id,
         reason: "donor_missing",
-        message: `${record.title}: 증여자(donor) 미입력 — §47 그룹 판정 불가`,
+        message: `${record.title}: 증여자 관계(donor) 미입력`,
+      });
+      continue;
+    }
+
+    const recName =
+      typeof input?.donorName === "string" ? input.donorName.trim() : "";
+    const recBirth =
+      typeof input?.donorBirthDate === "string" ? input.donorBirthDate : "";
+    if (!recName || !recBirth) {
+      warnings.push({
+        calculationId: record.id,
+        reason: "donor_identity_missing",
+        message: `${record.title}: 증여자 이름·생년월일 미입력 (legacy 이력) — 수동 입력 필요`,
       });
       continue;
     }
@@ -196,12 +221,14 @@ export function filterPriorGiftCandidates(
       continue;
     }
 
-    const matchType: "same_group" | "other" = isSameDonorGroup(
-      input.donor as GiftDonorRelation,
-      currentDonor,
-    )
-      ? "same_group"
-      : "other";
+    if (recName !== normName || recBirth !== currentDonorBirthDate) {
+      warnings.push({
+        calculationId: record.id,
+        reason: "different_person",
+        message: `${record.title}: 다른 인물 (${recName} ${recBirth}) — 동일인 아님`,
+      });
+      continue;
+    }
 
     const donorRelationRaw = input.donorRelation;
     const donorRelation: DonorRelation | undefined =
@@ -215,6 +242,8 @@ export function filterPriorGiftCandidates(
     candidates.push({
       calculationId: record.id,
       giftDate: inputGiftDate,
+      donorName: recName,
+      donorBirthDate: recBirth,
       donor: input.donor as GiftDonorRelation,
       donorRelation,
       grossGiftValue: result.grossGiftValue as number,
@@ -227,7 +256,6 @@ export function filterPriorGiftCandidates(
           : 0,
       wasGenerationSkip: Boolean(input.isGenerationSkip),
       hasInnerPriorGifts,
-      matchType,
       createdAt: record.createdAt,
       title: record.title,
     });

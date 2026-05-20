@@ -353,8 +353,12 @@ export interface PriorGiftInputProps {
   mode?: "inheritance" | "gift";
   /** 증여세 모드 — 현재 증여일 (이력 조회 필터 기준) */
   currentGiftDate?: string;
-  /** 증여세 모드 — 현재 증여자 (§47 동일인 그룹 판정 기준) */
+  /** 증여세 모드 — 현재 증여자 관계 (§47 표시용) */
   currentDonor?: GiftDonorRelation;
+  /** 증여세 모드 — 증여자 본인 이름 (동일인 매칭 키) */
+  currentDonorName?: string;
+  /** 증여세 모드 — 증여자 본인 생년월일 (동일인 매칭 키) */
+  currentDonorBirthDate?: string;
 }
 
 function makeEmptyGift(): PriorGift {
@@ -373,6 +377,8 @@ export function PriorGiftInput({
   mode = "inheritance",
   currentGiftDate,
   currentDonor,
+  currentDonorName,
+  currentDonorBirthDate,
 }: PriorGiftInputProps) {
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
   const handleAdd = () => onChange([...gifts, makeEmptyGift()]);
@@ -396,7 +402,11 @@ export function PriorGiftInput({
   };
 
   const canLookup =
-    mode === "gift" && Boolean(currentGiftDate) && Boolean(currentDonor);
+    mode === "gift" &&
+    Boolean(currentGiftDate) &&
+    Boolean(currentDonor) &&
+    Boolean(currentDonorName?.trim()) &&
+    Boolean(currentDonorBirthDate);
   const excludeIds = gifts
     .map((g) => g.sourceCalculationId)
     .filter((v): v is string => Boolean(v));
@@ -422,8 +432,8 @@ export function PriorGiftInput({
               disabled={!canLookup}
               title={
                 !canLookup
-                  ? "1단계에서 증여일과 증여자를 먼저 입력하세요"
-                  : "저장된 증여세 이력에서 사전증여 회차를 선택해 자동 입력합니다"
+                  ? "1단계에서 증여일·증여자 관계·증여자 이름·생년월일을 모두 입력하세요"
+                  : "저장된 증여세 이력에서 동일인(이름+생년월일 일치) 사전증여를 선택해 자동 입력합니다"
               }
               className={`text-xs rounded-md border px-3 py-1.5 transition-colors ${
                 canLookup
@@ -441,17 +451,19 @@ export function PriorGiftInput({
       </div>
       {mode === "gift" && !canLookup && (
         <p className="text-[11px] text-gray-500 -mt-2">
-          ※ 이력 조회는 1단계 증여일·증여자가 입력된 후 활성화됩니다.
+          ※ 이력 조회는 1단계 증여일·증여자 관계·이름·생년월일이 모두 입력된 후 활성화됩니다.
         </p>
       )}
 
-      {/* 이력 조회 모달 */}
+      {/* 이력 조회 모달 — 동일인(이름+생년월일) 매칭 */}
       {mode === "gift" && canLookup && (
         <PriorGiftHistoryModal
           open={historyModalOpen}
           onOpenChange={setHistoryModalOpen}
           currentGiftDate={currentGiftDate!}
           currentDonor={currentDonor!}
+          currentDonorName={currentDonorName!}
+          currentDonorBirthDate={currentDonorBirthDate!}
           excludeCalculationIds={excludeIds}
           onSelect={handleAddFromHistory}
           onManualAdd={handleAdd}

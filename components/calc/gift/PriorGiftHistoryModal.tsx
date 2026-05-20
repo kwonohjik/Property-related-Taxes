@@ -70,7 +70,11 @@ export interface PriorGiftHistoryModalProps {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   currentGiftDate: string;
+  /** 정보 표시용 (현 회차 §47 그룹 라벨) */
   currentDonor: GiftDonorRelation;
+  /** 동일인 매칭 (단일 진실) — 이름 + 생년월일 정확 일치 */
+  currentDonorName: string;
+  currentDonorBirthDate: string;
   excludeCalculationIds: string[];
   onSelect: (priorGift: PriorGift) => void;
   /** "직접 입력하기" — 빈 PriorGift 1건 추가 */
@@ -83,30 +87,28 @@ export interface PriorGiftHistoryModalProps {
 
 function CandidateCard({
   candidate,
-  currentDonor,
   onSelect,
 }: {
   candidate: PriorGiftCandidate;
-  currentDonor: GiftDonorRelation;
   onSelect: (c: PriorGiftCandidate) => void;
 }) {
   const [expandInnerInfo, setExpandInnerInfo] = useState(false);
-  const isSame = candidate.matchType === "same_group";
-
-  const containerCls = isSame
-    ? "rounded-lg border border-violet-200 bg-violet-50/40 p-4 space-y-2"
-    : "rounded-lg border border-gray-300 bg-gray-50/60 p-4 space-y-2";
 
   const recipient = candidate.donorRelation
     ? RELATION_LABEL[candidate.donorRelation] ?? "본인"
     : "본인";
 
   return (
-    <div className={containerCls}>
-      {/* 헤더 */}
+    <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-4 space-y-2">
+      {/* 헤더 — 증여자 이름·생년월일 명시 */}
       <div className="flex items-center justify-between gap-2">
-        <div className="text-sm font-semibold">
-          {candidate.giftDate} · {DONOR_LABEL[candidate.donor]} → {recipient}
+        <div className="space-y-0.5">
+          <div className="text-sm font-semibold">
+            {candidate.donorName} ({candidate.donorBirthDate})
+          </div>
+          <div className="text-[11px] text-gray-600">
+            {candidate.giftDate} · {DONOR_LABEL[candidate.donor]} → {recipient}
+          </div>
         </div>
         {candidate.hasInnerPriorGifts && (
           <button
@@ -154,27 +156,17 @@ function CandidateCard({
         </span>
       </div>
 
-      {/* §47 그룹 배지 */}
-      {isSame ? (
-        <p className="text-[11px] text-violet-700">
-          ✓ 현재 증여자(<strong>{DONOR_LABEL[currentDonor]}</strong>)와 동일 §47 그룹
-        </p>
-      ) : (
-        <p className="text-[11px] text-gray-600">
-          ℹ️ §47 그룹 외 — 별개 신고로 자동 분리 (합산·§58 한도 미반영)
-        </p>
-      )}
+      {/* 동일인 일치 배지 */}
+      <p className="text-[11px] text-violet-700">
+        ✓ 동일인 일치 (이름 + 생년월일)
+      </p>
 
       {/* 버튼 */}
       <div className="flex gap-2 pt-1">
         <button
           type="button"
           onClick={() => onSelect(candidate)}
-          className={`flex-1 rounded-md py-2 text-sm font-medium transition-colors ${
-            isSame
-              ? "bg-violet-600 text-white hover:bg-violet-700"
-              : "bg-gray-500 text-white hover:bg-gray-600"
-          }`}
+          className="flex-1 rounded-md py-2 text-sm font-medium bg-violet-600 text-white hover:bg-violet-700 transition-colors"
         >
           📋 이 회차 선택
         </button>
@@ -200,6 +192,8 @@ export function PriorGiftHistoryModal({
   onOpenChange,
   currentGiftDate,
   currentDonor,
+  currentDonorName,
+  currentDonorBirthDate,
   excludeCalculationIds,
   onSelect,
   onManualAdd,
@@ -208,7 +202,6 @@ export function PriorGiftHistoryModal({
   const [error, setError] = useState<string | null>(null);
   const [candidates, setCandidates] = useState<PriorGiftCandidate[]>([]);
   const [warnings, setWarnings] = useState<LookupWarning[]>([]);
-  const [showOther, setShowOther] = useState(false);
 
   // 모달 오픈 시점에만 fetch — setState는 모두 Promise 콜백 내부에서 (cascading render 방지)
   useEffect(() => {
@@ -227,7 +220,8 @@ export function PriorGiftHistoryModal({
         const { candidates, warnings } = filterPriorGiftCandidates(
           records,
           currentGiftDate,
-          currentDonor,
+          currentDonorName,
+          currentDonorBirthDate,
           excludeCalculationIds,
         );
         setCandidates(candidates);
@@ -243,16 +237,13 @@ export function PriorGiftHistoryModal({
     return () => {
       alive = false;
     };
-  }, [open, currentGiftDate, currentDonor, excludeCalculationIds]);
-
-  const sameGroup = useMemo(
-    () => candidates.filter((c) => c.matchType === "same_group"),
-    [candidates],
-  );
-  const otherGroup = useMemo(
-    () => candidates.filter((c) => c.matchType === "other"),
-    [candidates],
-  );
+  }, [
+    open,
+    currentGiftDate,
+    currentDonorName,
+    currentDonorBirthDate,
+    excludeCalculationIds,
+  ]);
 
   // 필터 기준 문자열 (10년 전 일자)
   const tenYearsAgo = useMemo(() => {
@@ -286,10 +277,16 @@ export function PriorGiftHistoryModal({
         {/* 필터 요약 */}
         <div className="rounded-md border border-sky-200 bg-sky-50/40 p-3 text-xs space-y-1 text-sky-800">
           <div>
-            <span className="text-sky-600">현재 증여일:</span> {currentGiftDate} ·{" "}
-            <span className="text-sky-600">증여자:</span> {DONOR_LABEL[currentDonor]}
+            <span className="text-sky-600">현재 증여일:</span> {currentGiftDate}
           </div>
-          <div className="text-sky-600">필터: 10년 이내 ({tenYearsAgo} 이후) + §47 동일인 그룹</div>
+          <div>
+            <span className="text-sky-600">증여자:</span>{" "}
+            <strong>{currentDonorName}</strong> ({currentDonorBirthDate}) ·{" "}
+            {DONOR_LABEL[currentDonor]}
+          </div>
+          <div className="text-sky-600">
+            필터: 10년 이내 ({tenYearsAgo} 이후) + 이름·생년월일 일치
+          </div>
         </div>
 
         {/* 본문 — 상태별 분기 */}
@@ -310,51 +307,24 @@ export function PriorGiftHistoryModal({
 
           {!loading && !error && (
             <>
-              {sameGroup.length > 0 && (
+              {candidates.length > 0 ? (
                 <div className="space-y-2">
                   <h4 className="text-xs font-semibold text-violet-700">
-                    ▼ §47 동일 그룹 (자동 합산 대상) — {sameGroup.length}건
+                    ▼ 동일인 사전증여 — {candidates.length}건
                   </h4>
                   <div className="space-y-3">
-                    {sameGroup.map((c) => (
+                    {candidates.map((c) => (
                       <CandidateCard
                         key={c.calculationId}
                         candidate={c}
-                        currentDonor={currentDonor}
                         onSelect={handleSelect}
                       />
                     ))}
                   </div>
                 </div>
-              )}
-
-              {otherGroup.length > 0 && (
-                <div className="space-y-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowOther((p) => !p)}
-                    className="w-full text-left text-xs font-semibold text-gray-600 hover:text-gray-800"
-                  >
-                    {showOther ? "▼" : "▶"} 기타 증여세 이력 (§47 그룹 외) — {otherGroup.length}건
-                  </button>
-                  {showOther && (
-                    <div className="space-y-3">
-                      {otherGroup.map((c) => (
-                        <CandidateCard
-                          key={c.calculationId}
-                          candidate={c}
-                          currentDonor={currentDonor}
-                          onSelect={handleSelect}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {sameGroup.length === 0 && otherGroup.length === 0 && (
+              ) : (
                 <div className="rounded-md bg-gray-100 p-6 text-center text-sm text-gray-500">
-                  조건을 만족하는 증여세 이력이 없습니다.
+                  동일인(이름 + 생년월일 일치)에 해당하는 증여세 이력이 없습니다.
                   {warnings.length > 0 && (
                     <div className="mt-2 text-xs text-gray-400">
                       {warnings.length}건의 이력이 필터·검증 조건에 의해 제외되었습니다.
