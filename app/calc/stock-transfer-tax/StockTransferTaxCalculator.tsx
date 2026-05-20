@@ -13,6 +13,7 @@ import { useRouter } from "next/navigation";
 import { StepIndicator } from "@/components/calc/StepIndicator";
 import { StockSidebar } from "@/components/calc/stock-transfer/StockSidebar";
 import { ResetButton } from "@/components/calc/shared/ResetButton";
+import { HomeButton } from "@/components/calc/shared/HomeButton";
 import { Step1 } from "./steps/Step1";
 import { Step2 } from "./steps/Step2";
 import { Step3 } from "./steps/Step3";
@@ -123,7 +124,10 @@ export default function StockTransferTaxCalculator() {
               소득세법 §94①3·4 · 2026.4.21. 시행
             </p>
           </div>
-          <ResetButton onReset={handleReset} />
+          <div className="flex items-center gap-2">
+            <HomeButton confirmMessage="홈으로 이동하면 현재 입력 중인 값이 유지된 채 페이지를 떠납니다.&#10;계속하시겠습니까?" />
+            <ResetButton onReset={handleReset} />
+          </div>
         </div>
 
         {/* 단계 인디케이터 */}
@@ -131,10 +135,7 @@ export default function StockTransferTaxCalculator() {
           <StepIndicator
             steps={Array.from(STEPS)}
             current={currentStep}
-            onStepClick={(i) => {
-              // 이전 단계만 클릭 가능
-              if (i < currentStep) setStep(i);
-            }}
+            onStepClick={(i) => setStep(i)}
           />
         </div>
 
@@ -203,7 +204,7 @@ export default function StockTransferTaxCalculator() {
                 {currentStep === 0 ? "홈으로" : "이전"}
               </button>
 
-              {currentStep < 3 && (
+              {currentStep < 2 && (
                 <button
                   type="button"
                   onClick={handleNext}
@@ -239,9 +240,7 @@ export default function StockTransferTaxCalculator() {
             <div className="sticky top-8">
               <StockSidebar
                 currentStep={currentStep}
-                onStepClick={(i) => {
-                  if (i < currentStep) setStep(i);
-                }}
+                onStepClick={(i) => setStep(i)}
                 stockName={formData.securityName || undefined}
               />
             </div>

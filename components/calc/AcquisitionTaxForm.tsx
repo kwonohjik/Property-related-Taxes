@@ -195,7 +195,11 @@ export function AcquisitionTaxForm() {
 
       {/* 메인 마법사 */}
       <div className="space-y-6">
-      <StepIndicator steps={activeSteps} current={step} />
+      <StepIndicator
+        steps={activeSteps}
+        current={step}
+        onStepClick={(s) => { setResult(null); setError(null); setStep(s); }}
+      />
 
       {/* ── Step 0: 취득 정보 ── */}
       {step === 0 && (

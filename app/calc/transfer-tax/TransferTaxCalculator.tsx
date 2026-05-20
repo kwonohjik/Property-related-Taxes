@@ -16,6 +16,7 @@ import type { TransferTaxPenaltyResult } from "@/lib/tax-engine/transfer-tax-pen
 import { validateStep } from "@/lib/calc/transfer-tax-validate";
 import { getFilingDeadline, isFilingOverdue } from "@/lib/calc/filing-deadline";
 import { ResetButton } from "@/components/calc/shared/ResetButton";
+import { HomeButton } from "@/components/calc/shared/HomeButton";
 import { computeTransferSummary } from "@/lib/stores/calc-wizard-store";
 import { useAutoSaveCalculation } from "@/lib/storage/use-auto-save-calculation";
 import { useProfessionalStore } from "@/lib/stores/professional-store";
@@ -438,7 +439,10 @@ export default function TransferTaxCalculator({
         <p className="text-xs text-muted-foreground mb-1">한국 부동산 세금 계산기</p>
         <div className="flex items-center justify-between gap-2">
           <h1 className="text-2xl font-bold">양도소득세 계산기</h1>
-          <ResetButton onReset={handleReset} />
+          <div className="flex items-center gap-2">
+            <HomeButton confirmMessage="홈으로 이동하면 현재 입력 중인 값이 유지된 채 페이지를 떠납니다.&#10;계속하시겠습니까?" />
+            <ResetButton onReset={handleReset} />
+          </div>
         </div>
       </div>
 

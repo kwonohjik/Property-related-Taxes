@@ -26,6 +26,7 @@ import { ComprehensiveTaxResultView } from "@/components/calc/results/Comprehens
 import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
 import { LoginPromptBanner } from "@/components/calc/shared/LoginPromptBanner";
 import { ResetButton } from "@/components/calc/shared/ResetButton";
+import { HomeButton } from "@/components/calc/shared/HomeButton";
 import { useComprehensiveWizardStore } from "@/lib/stores/comprehensive-wizard-store";
 import { useAutoSaveCalculation } from "@/lib/storage/use-auto-save-calculation";
 import { useProfessionalStore } from "@/lib/stores/professional-store";
@@ -102,7 +103,8 @@ function Step1Basic() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
+        <HomeButton confirmMessage="홈으로 이동하면 현재 입력 중인 값이 유지된 채 페이지를 떠납니다.&#10;계속하시겠습니까?" />
         <ResetButton onReset={reset} />
       </div>
       {/* 과세연도 */}
@@ -681,7 +683,11 @@ export default function ComprehensiveTaxPage() {
       ) : (
         <div className="space-y-6">
           {/* 단계 표시 */}
-          <StepIndicator steps={STEPS} current={currentStep} />
+          <StepIndicator
+            steps={STEPS}
+            current={currentStep}
+            onStepClick={(i) => setStep(i)}
+          />
 
           {/* 단계별 콘텐츠 */}
           {currentStep === 0 && <Step1Basic />}

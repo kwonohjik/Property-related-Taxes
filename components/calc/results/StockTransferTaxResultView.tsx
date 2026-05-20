@@ -502,10 +502,10 @@ const RULE_SOURCE_LABEL: Record<NonNullable<NonNullable<StockTransferResult["app
 // F-09/F-10/F-14/F-23 신설 (2026-05-19) — judgmentBasis 라벨 매핑
 const JUDGMENT_BASIS_LABEL: Record<NonNullable<NonNullable<StockTransferResult["appliedThreshold"]>["judgmentBasis"]>, string> = {
   default: "직전사업연도 종료일 (통상)",
-  merger: "F-09 합병등기일 기준 (피합병법인 — 2010 소령 157⑧)",
-  split: "F-10 분할등기일 기준 (분할 전 법인)",
-  split_new_entity: "F-14 분할 전 직전사업연도 종료일 (분할신설법인)",
-  incorporation: "F-23 설립등기일 기준 (신설법인 — 소령 157④)",
+  merger: "합병등기일 기준 (피합병법인 — 2010 소령 157⑧)",
+  split: "분할등기일 기준 (분할 전 법인)",
+  split_new_entity: "분할 전 직전사업연도 종료일 (분할신설법인)",
+  incorporation: "설립등기일 기준 (신설법인 — 소령 157④)",
 };
 
 function MajorShareholderResultCard({
@@ -537,7 +537,7 @@ function MajorShareholderResultCard({
         {/* F-15·F-16 (2026-05-19) — 대차/사모펀드 자동 가산 적용 배지 */}
         {t.shareAugmentationApplied && (
           <span className="inline-flex items-center rounded-full bg-amber-200 px-2 py-0.5 text-[10px] font-bold text-amber-900">
-            F-15·F-16 자동 가산 ({t.augmentedShares?.toLocaleString() ?? 0}주)
+            대차·사모펀드 자동 가산 ({t.augmentedShares?.toLocaleString() ?? 0}주)
           </span>
         )}
         {/* F-09/F-10/F-14/F-23 (2026-05-19) — 판정 기준일 override 배지 */}
@@ -549,7 +549,7 @@ function MajorShareholderResultCard({
         {/* F-24 (2026-05-19) — 본인 미보유 강제 합산 배지 */}
         {t.forcedCombinedJudgment && (
           <span className="inline-flex items-center rounded-full bg-sky-200 px-2 py-0.5 text-[10px] font-bold text-sky-900">
-            F-24 본인 미보유 → 특수관계인 합산 강제
+            본인 미보유 → 특수관계인 합산 강제
           </span>
         )}
       </h4>
@@ -557,9 +557,9 @@ function MajorShareholderResultCard({
         <div>· 시장: <strong>{MARKET_LABEL[t.marketType]}</strong></div>
         <div>· 판정 기준일: {t.priorYearEndDate}</div>
         <div>· 임계 적용 시작: {t.fromDate}</div>
-        <div>· 지분율 임계: <strong>{(t.shareRatio * 100).toFixed(1)}%</strong></div>
+        <div>· 지분율 기준: <strong>{(t.shareRatio * 100).toFixed(1)}%</strong></div>
         {t.marketCap < Infinity && (
-          <div>· 시총 임계: <strong>{t.marketCap.toLocaleString()}</strong></div>
+          <div>· 시총 기준: <strong>{t.marketCap.toLocaleString()}</strong></div>
         )}
         {/* Phase B (2026-05-19) — 적용 규칙 출처 명시 */}
         {t.ruleSource && (
@@ -576,7 +576,7 @@ function MajorShareholderResultCard({
         {/* F-24 (2026-05-19) — 본인 미보유 강제 합산 안내 */}
         {t.forcedCombinedJudgment && (
           <div className="text-xs text-sky-700 font-medium">
-            · F-24: 직전사업연도 종료일 본인 미보유 → 특수관계 기타주주 합산하여 판정 (기획재정부 금융세제-327, 2020.12.10.)
+            · 직전사업연도 종료일 본인 미보유 → 특수관계 기타주주 합산하여 판정 (기획재정부 금융세제-327, 2020.12.10.)
           </div>
         )}
         <div className="pt-1 font-medium">
@@ -586,7 +586,7 @@ function MajorShareholderResultCard({
         {/* 비상장 벤처 미적용 시 안내 */}
         {isUnlisted && !t.isVentureRule && (
           <div className="text-xs text-violet-600 mt-1">
-            ※ 벤처기업 주식의 시총 임계는 40억원 (§167의8①2호 나목 단서). 회사 분류에서 &quot;벤처기업&quot; 선택 시 자동 적용
+            ※ 벤처기업 주식의 시총 기준은 40억원 (§167의8①2호 나목 단서). 회사 분류에서 &quot;벤처기업&quot; 선택 시 자동 적용
           </div>
         )}
         {/* 상장 비과세 사유 표시 */}

@@ -4,8 +4,10 @@
  * Step 4 — 결과
  *
  * StockTransferTaxResultView + 사이드바 8항목 연동
+ * 진입 시 결과가 없으면 자동으로 계산 실행 ("계산하기" 별도 클릭 불필요).
  */
 
+import { useEffect, useRef } from "react";
 import { StockTransferTaxResultView } from "@/components/calc/results/StockTransferTaxResultView";
 import { ForeignStockResultCard } from "@/components/calc/results/ForeignStockResultCard";
 import { ExitTaxResultCard } from "@/components/calc/results/ExitTaxResultCard";
@@ -26,18 +28,22 @@ interface Step4Props {
 export function Step4({ result, form, error, isLoading, onCalculate }: Step4Props) {
   const shareCount = parseInt(form.shareCount || "0", 10);
 
+  // 결과 화면 진입 시 자동 계산 — result/error/loading 모두 비어 있을 때 1회 실행.
+  // 사용자 액션(다음·결과 보기·사이드바 4 클릭)으로 step 3 도달 시 즉시 결과 표시.
+  const autoTriggerredRef = useRef(false);
+  useEffect(() => {
+    if (!result && !isLoading && !error && !autoTriggerredRef.current) {
+      autoTriggerredRef.current = true;
+      onCalculate();
+    }
+  }, [result, isLoading, error, onCalculate]);
+
   return (
     <div className="space-y-6">
-      {/* 계산 실행 버튼 */}
-      {!result && !isLoading && (
-        <div className="text-center py-8">
-          <p className="text-slate-500 mb-4">입력이 완료되면 계산하기를 눌러 결과를 확인하세요.</p>
-          <button
-            onClick={onCalculate}
-            className="px-6 py-3 rounded-lg bg-sky-600 text-white font-semibold hover:bg-sky-700 transition-colors"
-          >
-            계산하기
-          </button>
+      {/* 결과 없음 + 비로딩 + 에러 없음: 자동 계산 트리거 직전 짧은 안내 */}
+      {!result && !isLoading && !error && (
+        <div className="text-center py-8 text-slate-500">
+          <p>계산을 시작합니다…</p>
         </div>
       )}
 

@@ -191,8 +191,8 @@ export function SplitLotsBlock({ form, onChange }: SplitLotsBlockProps) {
                   label={lot.acquisitionCause === "gift" ? "수증일" : "취득일"}
                   hint={
                     lot.acquisitionCause === "gift"
-                      ? "수증일 (주식은 §97의2 미적용)"
-                      : "실제 취득일"
+                      ? "수증일 — 주식은 §97의2 미적용"
+                      : undefined
                   }
                 >
                   <DateInput
@@ -296,7 +296,7 @@ export function SplitLotsBlock({ form, onChange }: SplitLotsBlockProps) {
                 </Button>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                <FieldCard label="양도일" hint="실제 양도일">
+                <FieldCard label="양도일">
                   <DateInput
                     value={lot.transferDate}
                     onChange={(v) => updateTransferLot(idx, { transferDate: v })}

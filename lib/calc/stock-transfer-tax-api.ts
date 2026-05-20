@@ -323,9 +323,9 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
     body.preMergerAcquisitionDate = form.preMergerAcquisitionDate;
   }
 
-  // §94①4 다목 누적 비율
-  const cumRatio = parseFloatOrUndef(form.cumulativeTransferRatio);
-  if (cumRatio !== undefined) body.cumulativeTransferRatio = cumRatio;
+  // §94①4 다목 누적 비율 — UI는 % 단위 입력, 엔진은 decimal(0.0~1.0) 수신 → ×0.01 변환
+  const cumRatioPercent = parseFloatOrUndef(form.cumulativeTransferRatio);
+  if (cumRatioPercent !== undefined) body.cumulativeTransferRatio = cumRatioPercent * 0.01;
 
   // ── 양도가액 ──
   body.transferPriceMode = transferPriceMode;         // 3중 패턴 default: "actual"
@@ -525,8 +525,16 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
   }
 
   // ── 필요경비 ──
-  body.expenseMode = form.expenseMode || "actual";
-  if ((form.expenseMode || "actual") === "actual") {
+  // 소령 §163⑥4 — expenseMode는 acquisitionMode에서 100% 자동 도출 (사용자 선택 폐지).
+  //   실가(actual)   → "actual"  (실제 경비 입력)
+  //   추계(estimated/sale_case/face_value) → "estimated" (개산공제 1% 자동)
+  const isEstimatedAcq =
+    form.acquisitionMode === "estimated" ||
+    form.acquisitionMode === "sale_case" ||
+    form.acquisitionMode === "face_value";
+  const resolvedExpenseMode: "actual" | "estimated" = isEstimatedAcq ? "estimated" : "actual";
+  body.expenseMode = resolvedExpenseMode;
+  if (resolvedExpenseMode === "actual") {
     const exp = parseIntOrUndef(form.actualExpenses);
     if (exp !== undefined) body.actualExpenses = exp;
   }

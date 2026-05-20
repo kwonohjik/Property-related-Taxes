@@ -13,6 +13,7 @@ import { useState } from "react";
 import { ChevronLeft } from "lucide-react";
 import { StepIndicator } from "@/components/calc/StepIndicator";
 import { ResetButton } from "@/components/calc/shared/ResetButton";
+import { HomeButton } from "@/components/calc/shared/HomeButton";
 import { PropertyValuationForm } from "@/components/calc/PropertyValuationForm";
 import { StockValuationForm } from "@/components/calc/StockValuationForm";
 import { ExemptionChecklist } from "@/components/calc/exemption/ExemptionChecklist";
@@ -129,7 +130,10 @@ function Step0({
         <p className="text-sm text-muted-foreground">
           증여의 기본 정보를 입력하세요.
         </p>
-        <ResetButton onReset={onReset} />
+        <div className="flex items-center gap-2">
+          <HomeButton confirmMessage="홈으로 이동하면 현재 입력 중인 값이 유지된 채 페이지를 떠납니다.&#10;계속하시겠습니까?" />
+          <ResetButton onReset={onReset} />
+        </div>
       </div>
 
       <div className="space-y-1.5">
@@ -478,7 +482,7 @@ export function GiftTaxForm() {
 
   return (
     <div className="space-y-6">
-      <StepIndicator steps={STEPS} current={step} />
+      <StepIndicator steps={STEPS} current={step} onStepClick={(i) => setStep(i)} />
 
       <div className="min-h-[300px]">
         {step === 0 && (

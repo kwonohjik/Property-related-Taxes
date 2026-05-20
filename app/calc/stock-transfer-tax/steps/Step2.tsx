@@ -87,23 +87,21 @@ export function Step2({ form, onChange }: Step2Props) {
       <section>
         <SectionTitle n={1} title="양도가액" />
         <div className="space-y-4">
-          <FieldCard label="양도가액 방식">
-            <RadioCardGroup
-              name="transferPriceMode"
-              value={transferPriceMode}
-              onChange={(v) => onChange({ transferPriceMode: v as "actual" | "exchange" })}
-              tone="emerald"
-              layout="inline"
-              options={[
-                { value: "actual", label: "실가", description: "1주당 양도가액 × 주식수" },
-                {
-                  value: "exchange",
-                  label: "교환 (PR-2)",
-                  description: "부동산·채무면제·현금 교환 (비상장·기타자산)",
-                },
-              ]}
-            />
-          </FieldCard>
+          <RadioCardGroup
+            name="transferPriceMode"
+            value={transferPriceMode}
+            onChange={(v) => onChange({ transferPriceMode: v as "actual" | "exchange" })}
+            tone="emerald"
+            layout="inline"
+            options={[
+              { value: "actual", label: "실가", description: "1주당 양도가액 × 주식수" },
+              {
+                value: "exchange",
+                label: "교환 (PR-2)",
+                description: "부동산·채무면제·현금 교환 (비상장·기타자산)",
+              },
+            ]}
+          />
 
           {/* 실가 양도가 — 서브 입력 방식 분기 */}
           {transferPriceMode === "actual" && (
@@ -230,45 +228,43 @@ export function Step2({ form, onChange }: Step2Props) {
       <section>
         <SectionTitle n={2} title="취득가액" />
         <div className="space-y-4">
-          <FieldCard label="취득가액 방식">
-            <RadioCardGroup
-              name="acquisitionMode"
-              value={acquisitionMode}
-              onChange={(v) =>
-                onChange({ acquisitionMode: v as StockTransferFormData["acquisitionMode"] })
-              }
-              tone="amber"
-              layout="stack"
-              options={[
-                {
-                  value: "actual",
-                  label: "실가",
-                  description: "실제 취득가액 (1주당)",
-                },
-                {
-                  value: "estimated",
-                  label: "환산취득가",
-                  description: isListed
-                    ? "1개월 종가평균 기반 환산 (소령 §165⑤ / §163⑥4)"
-                    : "보충적 평가 — 순손익·순자산 가중평균 (소령 §165④)",
-                  disabled: isSplitMode,
-                },
-                {
-                  value: "sale_case",
-                  label: "매매사례가액",
-                  description: "비상장·기타자산 전용 (영§176의2③1호 — 주권상장법인 주식등 제외)",
-                  disabled: isSplitMode,
-                },
-                // 감정가액 모드 제거 — 영§176의2③2호 단서에 의해 주식등 적용 불가
-                {
-                  value: "face_value",
-                  label: "액면가 (장부분실)",
-                  description: "§99①4 — 장부가 분실·멸실된 경우",
-                  disabled: isSplitMode,
-                },
-              ]}
-            />
-          </FieldCard>
+          <RadioCardGroup
+            name="acquisitionMode"
+            value={acquisitionMode}
+            onChange={(v) =>
+              onChange({ acquisitionMode: v as StockTransferFormData["acquisitionMode"] })
+            }
+            tone="amber"
+            layout="stack"
+            options={[
+              {
+                value: "actual",
+                label: "실가",
+                description: "실제 취득가액 (1주당)",
+              },
+              {
+                value: "estimated",
+                label: "환산취득가",
+                description: isListed
+                  ? "1개월 종가평균 기반 환산 (소령 §165⑤ / §163⑥4)"
+                  : "보충적 평가 — 순손익·순자산 가중평균 (소령 §165④)",
+                disabled: isSplitMode,
+              },
+              {
+                value: "sale_case",
+                label: "매매사례가액",
+                description: "비상장·기타자산 전용 (영§176의2③1호 — 주권상장법인 주식등 제외)",
+                disabled: isSplitMode,
+              },
+              // 감정가액 모드 제거 — 영§176의2③2호 단서에 의해 주식등 적용 불가
+              {
+                value: "face_value",
+                label: "액면가 (장부분실)",
+                description: "§99①4 — 장부가 분실·멸실된 경우",
+                disabled: isSplitMode,
+              },
+            ]}
+          />
 
           {/* 실가 취득가 */}
           {acquisitionMode === "actual" && isSplitMode && (

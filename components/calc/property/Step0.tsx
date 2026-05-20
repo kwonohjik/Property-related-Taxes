@@ -3,6 +3,7 @@
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { AddressSearch, type AddressValue } from "@/components/ui/address-search";
 import { ResetButton } from "@/components/calc/shared/ResetButton";
+import { HomeButton } from "@/components/calc/shared/HomeButton";
 import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
@@ -48,7 +49,10 @@ export function Step0({
     <div className="space-y-5">
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-lg font-semibold">기본 정보</h2>
-        <ResetButton onReset={onReset} />
+        <div className="flex items-center gap-2">
+          <HomeButton confirmMessage="홈으로 이동하면 현재 입력 중인 값이 유지된 채 페이지를 떠납니다.&#10;계속하시겠습니까?" />
+          <ResetButton onReset={onReset} />
+        </div>
       </div>
 
       {/* 물건 유형 */}

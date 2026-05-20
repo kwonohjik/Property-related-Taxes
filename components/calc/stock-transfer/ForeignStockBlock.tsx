@@ -180,7 +180,7 @@ export function ForeignStockBlock({ form, onChange }: ForeignStockBlockProps) {
             />
           </FieldCard>
         </div>
-        <FieldCard label="양도 주식수" required hint="이번 거래에서 양도하는 주식수 (주)">
+        <FieldCard label="양도 주식수" required>
           <DecimalInput
             value={form.shareCount}
             onChange={(v) => onChange({ shareCount: v })}

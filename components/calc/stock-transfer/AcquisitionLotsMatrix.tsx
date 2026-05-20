@@ -124,7 +124,7 @@ export function AcquisitionLotsMatrix({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <FieldCard
                   label={lot.acquisitionCause === "gift" ? "수증일" : "취득일"}
-                  hint={lot.acquisitionCause === "gift" ? "수증일 (§97의2 미적용)" : "실제 취득일"}
+                  hint={lot.acquisitionCause === "gift" ? "수증일 — §97의2 미적용" : undefined}
                 >
                   <DateInput
                     value={lot.acquisitionDate}

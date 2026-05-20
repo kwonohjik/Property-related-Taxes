@@ -68,7 +68,7 @@ export function KiwoomMarketCapHelper({
       ? "직전 사업연도말 일자 입력 필요"
       : !marketValid
         ? marketType === "unlisted"
-          ? "비상장 — 시총 임계 판정 자동조회 미지원"
+          ? "비상장 — 시총 기준 판정 자동조회 미지원"
           : "지원 시장 아님 (KOSPI · KOSDAQ · KONEX)"
         : tradingHalt
           ? "거래정지 종목 — 수동 입력 필요"

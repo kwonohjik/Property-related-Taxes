@@ -26,99 +26,33 @@
 
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import { nanoid } from "nanoid";
 import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
+import {
+  createEmptyAcquisitionLot,
+  createEmptyExitTaxHolding,
+} from "./calc-wizard-stock-types";
 
-// ============================================================
-// PR-4B 국외전출세 — 보유 종목 폼 타입 (ExitTaxHoldingForm)
-// ============================================================
+// 서브 폼 타입 + 빈 행 팩토리 — 분리 sibling: calc-wizard-stock-types.ts
+export type {
+  ExitTaxHoldingForm,
+  CapitalAdjustmentForm,
+  AcquisitionLotForm,
+  TransferLotForm,
+  SpecificMatchingForm,
+} from "./calc-wizard-stock-types";
+export {
+  createEmptyAcquisitionLot,
+  createEmptyExitTaxHolding,
+} from "./calc-wizard-stock-types";
 
-export interface ExitTaxHoldingForm {
-  /** UI key (nanoid) */
-  id: string;
-  /** 종목명 */
-  stockName: string;
-  /** 시장 분류 (§178의9: 보유 종목은 국내 상장·비상장 주식) */
-  marketType: "kospi" | "kosdaq" | "konex" | "unlisted";
-  /** 보유 주식수 (정수 문자열) */
-  shareCount: string;
-  /** 취득일 "YYYY-MM-DD" */
-  acquisitionDate: string;
-  /** 1주당 취득가액 (원) 문자열 */
-  perShareAcquisitionPrice: string;
-  /**
-   * 출국일 시가 산정 모드 (§178의9)
-   * "market_price"    → 출국일 거래가액 직접 입력
-   * "prior_year_std"  → §99①3 기준시가 (1개월 종가평균)
-   * "unlisted_sample" → 전후 각 3개월 매매사례가액
-   * "unlisted_std"    → §99①4 비상장 기준시가
-   */
-  departureDayValuationMode: "market_price" | "prior_year_std" | "unlisted_sample" | "unlisted_std";
-  /** 출국일 거래가액 1주당 (market_price 모드) */
-  departureDayMarketPrice: string;
-  /** §99①3 1개월 종가평균 1주당 (prior_year_std 모드) */
-  priorYearEndMonthAvg: string;
-  /** 전후 각 3개월 매매사례가액 1주당 (unlisted_sample 모드) */
-  unlistedSamplePrice: string;
-  /** §99①4 비상장 기준시가 1주당 (unlisted_std 모드) */
-  unlistedStdPricePerShare: string;
-}
-
-/** 신규 국외전출세 보유 종목 빈 행 팩토리 */
-export function createEmptyExitTaxHolding(): ExitTaxHoldingForm {
-  return {
-    id: nanoid(),
-    stockName: "",
-    marketType: "kospi",           // 3중 패턴 default
-    shareCount: "",
-    acquisitionDate: "",
-    perShareAcquisitionPrice: "",
-    departureDayValuationMode: "market_price",  // 3중 패턴 default
-    departureDayMarketPrice: "",
-    priorYearEndMonthAvg: "",
-    unlistedSamplePrice: "",
-    unlistedStdPricePerShare: "",
-  };
-}
-
-// ============================================================
-// 분할 매수·분할 양도 lot 타입 (Plan v2.2)
-// ============================================================
-
-// R-2 자본조정 폼 (UI 측 string Date·string ratio)
-export interface CapitalAdjustmentForm {
-  type:
-    | "bonus_capital_reserve"
-    | "bonus_retained_earnings"
-    | "reduction_proportional"
-    | "reduction_capital_return";
-  eventDate: string;       // "YYYY-MM-DD"
-  ratio: string;            // parseDecimal로 변환
-  notes: string;
-}
-
-export interface AcquisitionLotForm {
-  id: string;                                  // UUID (UI key, specificMatchings 참조)
-  acquisitionDate: string;                     // "YYYY-MM-DD" (gift는 수증일)
-  shareCount: string;                          // 주
-  perShareAcquisitionPrice: string;            // 원 (상속/증여 lot도 §163⑨ 평가가액 직접 입력)
-  acquisitionCause: "purchase" | "inheritance" | "gift" | "merger_split";
-  decedentAcquisitionDate?: string;            // 상속 시 피상속인 취득일 (§104②1)
-  preMergerAcquisitionDate?: string;           // 합병·분할 시 종전 주식 취득일 (§104②3)
-}
-
-export interface TransferLotForm {
-  id: string;
-  transferDate: string;
-  shareCount: string;
-  perShareTransferPrice: string;
-}
-
-export interface SpecificMatchingForm {
-  transferLotId: string;
-  acquisitionLotId: string;
-  shareCount: string;
-}
+// 본 store 내부에서 타입 사용을 위해 import 형태로 재바인딩
+import type {
+  ExitTaxHoldingForm,
+  CapitalAdjustmentForm,
+  AcquisitionLotForm,
+  TransferLotForm,
+  SpecificMatchingForm,
+} from "./calc-wizard-stock-types";
 
 // ============================================================
 // 폼 상태 타입 (① 동기화 지점)
@@ -133,10 +67,10 @@ export interface StockTransferFormData {
   securityCode: string;           // 종목코드 (선택) — 키움 자동조회 트리거로 재활용
   brokerage: string;              // 증권사 (선택)
   accountNumberMasked: string;    // 계좌번호 마스킹 (선택)
-
-  // ── 키움 자동조회 메타 (엔진 미전달 — UI/이력 표시용) ──
-  kiwoomTradingHalt: boolean;     // ka10001 응답 mirror — true 시 자동조회 차단 (상증령 §52의2③)
-  kiwoomLastFetchedAt: string;    // ISO 8601 — 마지막 자동조회 시각 (F-12 출처 라벨링)
+  // 키움 자동조회 메타 (UI/이력 표시 전용 — F-12 출처 라벨링)
+  kiwoomTradingHalt: boolean;
+  kiwoomLastFetchedAt: string;    // 가격/시총 fetch
+  securityMetaFetchedAt: string;  // 종목코드 메타 fetch
 
   // ── 시장·회사 분류 ──
   marketType: "kospi" | "kosdaq" | "konex" | "unlisted" | "other_asset" | "foreign_stock" | "exit_tax" | "";
@@ -193,7 +127,7 @@ export interface StockTransferFormData {
   preMergerAcquisitionDate: string;    // 합병·분할
 
   // ── §94①4 다목 누적 ──
-  cumulativeTransferRatio: string;   // 소수점 "0.3" = 30%
+  cumulativeTransferRatio: string;   // % 단위 "30" = 30% (API에서 ×0.01 → 엔진 decimal)
 
   // ── 양도가액 ──
   transferPriceMode: "actual" | "exchange";  // 3중 패턴 default: "actual"
@@ -481,19 +415,6 @@ export interface StockTransferFormData {
 // 14필드 명시 default = 3중 패턴 source of truth
 // ============================================================
 
-/**
- * 매수 lot 빈 row 팩토리 — SplitLotsBlock, AcquisitionLotsMatrix, Step2 자동 1행 추가에서 공유.
- * R-12 (계획서) 해결.
- */
-export function createEmptyAcquisitionLot(): AcquisitionLotForm {
-  return {
-    id: nanoid(),
-    acquisitionDate: "",
-    shareCount: "",
-    perShareAcquisitionPrice: "",
-    acquisitionCause: "purchase",
-  };
-}
 
 export function createInitialStockFormData(): StockTransferFormData {
   return {
@@ -503,6 +424,7 @@ export function createInitialStockFormData(): StockTransferFormData {
     accountNumberMasked: "",
     kiwoomTradingHalt: false,
     kiwoomLastFetchedAt: "",
+    securityMetaFetchedAt: "",
 
     marketType: "",
     isMajorShareholder: false,

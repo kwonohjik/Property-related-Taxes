@@ -60,12 +60,13 @@ export function OtherAssetBlock({ form, onChange }: OtherAssetBlockProps) {
         <div className="mt-3">
           <FieldCard
             label="3년 누적 양도 비율"
-            hint="최근 3년간 누적 양도 비율 (소수점, 예: 0.55 = 55%). 50% 이상이면 해당."
+            hint="최근 3년간 누적 양도 비율 (%, 예: 55 = 55%). 50% 이상이면 해당."
+            unit="%"
           >
             <DecimalInput
               value={form.cumulativeTransferRatio}
               onChange={(v) => onChange({ cumulativeTransferRatio: v })}
-              placeholder="0.5000"
+              placeholder="50"
             />
           </FieldCard>
         </div>

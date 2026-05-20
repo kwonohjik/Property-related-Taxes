@@ -339,9 +339,9 @@ export function validateStep1(form: StockTransferFormData): StockValidationError
     });
   }
 
-  // 3년 누적 양도 비율 > 1 금지
+  // 3년 누적 양도 비율 > 100 금지 (UI는 % 단위, "100" = 100%)
   const cumRatio = parseF(form.cumulativeTransferRatio);
-  if (form.cumulativeTransferRatio && cumRatio > 1) {
+  if (form.cumulativeTransferRatio && cumRatio > 100) {
     errors.push({
       field: "cumulativeTransferRatio",
       message: "3년 누적 양도 비율은 100%를 초과할 수 없습니다",
@@ -375,18 +375,13 @@ export function validateStep3(form: StockTransferFormData): StockValidationError
 
   const errors: StockValidationError[] = [];
 
-  // 3중 패턴 fallback
+  // 3중 패턴 fallback. 소령 §163⑥4 — expenseMode는 acquisitionMode에서 자동 도출.
   const acquisitionMode = form.acquisitionMode || "actual";
-  const expenseMode = form.expenseMode || "actual";
-
-  // 개산공제 모드 경고 — 환산/액면가 아닌 경우
-  if (expenseMode === "estimated" && !["estimated", "face_value"].includes(acquisitionMode)) {
-    errors.push({
-      field: "expenseMode",
-      message: "개산공제(§163⑥)는 환산취득가액 또는 액면가 모드에서 주로 사용됩니다",
-      severity: "warning",
-    });
-  }
+  const isEstimatedAcq =
+    acquisitionMode === "estimated" ||
+    acquisitionMode === "sale_case" ||
+    acquisitionMode === "face_value";
+  const expenseMode: "actual" | "estimated" = isEstimatedAcq ? "estimated" : "actual";
 
   // 신고일 필수
   if (isEmpty(form.filingDate)) {

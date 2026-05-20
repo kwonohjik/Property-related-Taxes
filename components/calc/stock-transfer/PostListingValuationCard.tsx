@@ -76,7 +76,10 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
 
         {/* ★ §163⑨ 분모 — 양도일 직전 1개월 종가 평균 (강조) */}
         {/* §163⑨ 분모 입력 — direct(단일 숫자) vs daily(일자별 평균) 모드 선택 */}
-        <FieldCard label="양도일 직전 1개월 종가 평균 (1주당, §163⑨ 분모) — 입력 방식">
+        <FieldCard
+          label="입력 방식"
+          hint="양도일 직전 1개월 종가 평균 (1주당, §163⑨ 분모) — direct(단일 숫자) vs daily(일자별 자동 평균)"
+        >
           <RadioCardGroup
             name="transferStdInputMode"
             value={form.transferStdInputMode || "direct"}
@@ -101,9 +104,9 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
         {/* direct 모드 — 기존 단일 숫자 입력 */}
         {(form.transferStdInputMode || "direct") === "direct" && (
           <FieldCard
-            label="양도일 직전 1개월 종가 평균 (1주당, §99①3 · 시행령 §165③ 준용)"
+            label="1개월 종가 평균"
             required
-            hint="환산취득가 산식의 분모. 미입력 시 환산 미적용으로 1주당 취득기준시가가 그대로 취득가로 표시됩니다."
+            hint="양도일 직전 1개월 종가 평균 (1주당, §99①3 · 시행령 §165③ 준용) — 환산취득가 산식의 분모. 미입력 시 환산 미적용으로 1주당 취득기준시가가 그대로 취득가로 표시됩니다."
           >
             <CurrencyInput
               label=""

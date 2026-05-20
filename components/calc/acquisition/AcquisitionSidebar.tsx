@@ -254,7 +254,7 @@ export function AcquisitionSidebar({ form, currentStep, onStepClick }: Props) {
   const steps: WizardSidebarStep[] = activeSteps.map((label, i) => ({
     label,
     status: i < currentStep ? "done" : i === currentStep ? "active" : "todo",
-    onClick: i < currentStep ? () => onStepClick(i) : undefined,
+    onClick: () => onStepClick(i),
   }));
 
   const summaryItems: WizardSidebarSummaryItem[] = [];

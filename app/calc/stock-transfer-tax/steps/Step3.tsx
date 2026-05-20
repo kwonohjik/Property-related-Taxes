@@ -61,8 +61,25 @@ const MARKET_LABEL: Record<string, string> = {
   other_asset: "기타",
 };
 
+// 취득가액 방식 → 필요경비 방식 자동 결정 (소령 §163⑥4)
+//   actual → expenseMode "actual" 허용 (사용자 자유 선택)
+//   estimated/sale_case/face_value → expenseMode "estimated" 강제 (개산공제 1% 자동)
+function isEstimatedAcquisition(mode: StockTransferFormData["acquisitionMode"] | undefined): boolean {
+  return mode === "estimated" || mode === "sale_case" || mode === "face_value";
+}
+
+const ACQUISITION_MODE_LABEL: Record<string, string> = {
+  actual: "실가",
+  estimated: "환산취득가",
+  sale_case: "매매사례가액",
+  face_value: "액면가 (장부분실)",
+};
+
 export function Step3({ form, onChange }: Step3Props) {
-  const expenseMode = form.expenseMode || "actual";
+  const acquisitionMode = form.acquisitionMode || "actual";
+  // 필요경비 방식은 acquisitionMode에서 자동 도출 (소령 §163⑥4) — 사용자 선택 없음.
+  // 실가 → 실제 경비 입력 / 비실가(환산·매매사례·액면가) → 개산공제 1% 자동.
+  const expenseLocked = isEstimatedAcquisition(acquisitionMode);
   const filingType = form.filingType || "preliminary";
 
   const filingDeadline = useMemo(
@@ -89,33 +106,34 @@ export function Step3({ form, onChange }: Step3Props) {
 
   return (
     <div className="space-y-8">
-      {/* ① 필요경비 */}
+      {/* ① 필요경비 — 취득가액 방식에 따라 자동 결정 (소령 §163⑥4) */}
       <section>
         <SectionTitle n={1} title="필요경비" />
         <div className="space-y-4">
-          <FieldCard label="필요경비 방식">
-            <RadioCardGroup
-              name="expenseMode"
-              value={expenseMode}
-              onChange={(v) => onChange({ expenseMode: v as "actual" | "estimated" })}
-              tone="emerald"
-              layout="inline"
-              options={[
-                {
-                  value: "actual",
-                  label: "실가",
-                  description: "증권거래세·수수료·기타 직접비용 합계",
-                },
-                {
-                  value: "estimated",
-                  label: "개산공제",
-                  description: "취득기준시가 × 1% (§163⑥4 — 환산·액면가 모드 권장)",
-                },
-              ]}
-            />
-          </FieldCard>
+          {expenseLocked ? (
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 px-4 py-3 text-sm text-emerald-800">
+              <p className="font-semibold mb-0.5">
+                개산공제 자동 적용 — 취득가액 방식 &quot;{ACQUISITION_MODE_LABEL[acquisitionMode]}&quot;
+              </p>
+              <p className="text-xs text-emerald-700">
+                소령 §163⑥4 — 취득가액을 추계(환산·매매사례·액면가)로 산정한 경우 필요경비는
+                <strong> 취득기준시가 × 1%</strong>의 개산공제로 자동 적용됩니다. 실가 모드로 변경 시
+                실제 경비 입력이 가능해집니다 (Step 2 취득가액 방식 변경).
+              </p>
+            </div>
+          ) : (
+            <div className="rounded-lg border border-sky-200 bg-sky-50/60 px-4 py-3 text-sm text-sky-800">
+              <p className="font-semibold mb-0.5">
+                실제 필요경비 입력 — 취득가액 방식 &quot;실가&quot;
+              </p>
+              <p className="text-xs text-sky-700">
+                실가 취득에서는 개산공제(§163⑥4)가 적용되지 않으며, 증권거래세·매매수수료 등
+                실제 발생한 경비를 직접 입력해야 합니다.
+              </p>
+            </div>
+          )}
 
-          {expenseMode === "actual" && (
+          {!expenseLocked && (
             <CurrencyInput
               label="필요경비 합계"
               hint="증권거래세 + 매매수수료 + 계약서 작성비 + 기타 (원)"
@@ -180,34 +198,32 @@ export function Step3({ form, onChange }: Step3Props) {
       <section>
         <SectionTitle n={4} title="신고 유형 (§105①2호)" />
         <div className="space-y-4">
-          <FieldCard label="신고 유형">
-            <RadioCardGroup
-              name="filingType"
-              value={filingType}
-              onChange={(v) =>
-                onChange({ filingType: v as "preliminary" | "final" | "revised" })
-              }
-              tone="violet"
-              layout="inline"
-              options={[
-                {
-                  value: "preliminary",
-                  label: "예정신고",
-                  description: "양도일 속하는 반기 말일 + 2개월 (§105①2호)",
-                },
-                {
-                  value: "final",
-                  label: "확정신고",
-                  description: "다음 해 5월 1~31일 (§110)",
-                },
-                {
-                  value: "revised",
-                  label: "수정신고",
-                  description: "오류 정정 재신고",
-                },
-              ]}
-            />
-          </FieldCard>
+          <RadioCardGroup
+            name="filingType"
+            value={filingType}
+            onChange={(v) =>
+              onChange({ filingType: v as "preliminary" | "final" | "revised" })
+            }
+            tone="violet"
+            layout="inline"
+            options={[
+              {
+                value: "preliminary",
+                label: "예정신고",
+                description: "양도일 속하는 반기 말일 + 2개월 (§105①2호)",
+              },
+              {
+                value: "final",
+                label: "확정신고",
+                description: "다음 해 5월 1~31일 (§110)",
+              },
+              {
+                value: "revised",
+                label: "수정신고",
+                description: "오류 정정 재신고",
+              },
+            ]}
+          />
 
           {filingType === "preliminary" && filingDeadline && (
             <div
@@ -320,17 +336,6 @@ export function Step3({ form, onChange }: Step3Props) {
         </div>
       </section>
 
-      {/* ⑥ 전자신고 공제 */}
-      <section>
-        <SectionTitle n={6} title="전자신고 세액공제" />
-        <ToggleCard
-          checked={form.isElectronicFiling}
-          onCheckedChange={(v) => onChange({ isElectronicFiling: v })}
-          title="전자신고 (§52의2)"
-          description="홈택스 전자신고 시 2만원 공제"
-          tone="emerald"
-        />
-      </section>
     </div>
   );
 }

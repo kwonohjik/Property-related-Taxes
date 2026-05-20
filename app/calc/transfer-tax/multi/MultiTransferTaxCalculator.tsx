@@ -12,6 +12,7 @@ import { AggregateSettingsPanel } from "@/components/calc/transfer/AggregateSett
 import { MultiTransferTaxResultView } from "@/components/calc/results/MultiTransferTaxResultView";
 import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
 import { ResetButton } from "@/components/calc/shared/ResetButton";
+import { HomeButton } from "@/components/calc/shared/HomeButton";
 import { StepIndicator } from "@/components/calc/StepIndicator";
 import {
   useMultiTransferStore,
@@ -64,7 +65,10 @@ function StepList({ properties, onAdd, onEdit, onRemove, onNext, onPrev, onReset
         <p className="text-sm text-muted-foreground">
           동일 과세연도에 양도하는 모든 자산을 추가하세요. 최대 20건까지 입력 가능합니다.
         </p>
-        <ResetButton onReset={onReset} />
+        <div className="flex items-center gap-2">
+          <HomeButton confirmMessage="홈으로 이동하면 현재 입력 중인 값이 유지된 채 페이지를 떠납니다.&#10;계속하시겠습니까?" />
+          <ResetButton onReset={onReset} />
+        </div>
       </div>
 
       {properties.length === 0 ? (
@@ -446,6 +450,10 @@ export default function MultiTransferTaxCalculator() {
               ? 1
               : 2
           }
+          onStepClick={(i) => {
+            const target: MultiStep = i === 0 ? "list" : i === 1 ? "settings" : "result";
+            setStep(target);
+          }}
         />
       )}
 

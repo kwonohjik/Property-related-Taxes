@@ -149,7 +149,23 @@ export function PropertyTaxForm() {
 
   return (
     <div className="space-y-6">
-      <StepIndicator current={displayStep} steps={visibleStepLabels} />
+      <StepIndicator
+        current={displayStep}
+        steps={visibleStepLabels}
+        onStepClick={(i) => {
+          // visible 인덱스 → 실제 step 인덱스 역매핑 (objectType + needsLandDetail 기반)
+          if (form.objectType === "land") {
+            if (needsLandDetail) {
+              setStep(i);
+            } else {
+              setStep(i === 0 ? 0 : i === 1 ? 1 : 3);
+            }
+          } else {
+            setStep(i === 0 ? 0 : 3);
+          }
+          setError(null);
+        }}
+      />
 
       {step === 0 && (
         <Step0

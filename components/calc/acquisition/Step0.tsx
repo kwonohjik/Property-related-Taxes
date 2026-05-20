@@ -4,6 +4,7 @@ import { AddressSearch, type AddressValue } from "@/components/ui/address-search
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { ResetButton } from "@/components/calc/shared/ResetButton";
+import { HomeButton } from "@/components/calc/shared/HomeButton";
 import { TaxHelp } from "@/components/calc/inputs/TaxHelp";
 import {
   PROPERTY_TYPE_LABELS,
@@ -64,7 +65,8 @@ export function Step0({
   }
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
+        <HomeButton confirmMessage="홈으로 이동하면 현재 입력 중인 값이 유지된 채 페이지를 떠납니다.&#10;계속하시겠습니까?" />
         <ResetButton
           onReset={() => {
             setForm(INITIAL_FORM);

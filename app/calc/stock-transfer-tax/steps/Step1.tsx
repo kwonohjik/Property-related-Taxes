@@ -123,6 +123,7 @@ export function Step1({ form, onChange }: Step1Props) {
           brokerage={form.brokerage}
           accountNumberMasked={form.accountNumberMasked}
           marketType={form.marketType}
+          securityMetaFetchedAt={form.securityMetaFetchedAt}
           onChange={onChange}
         />
       ),
@@ -209,7 +210,7 @@ export function Step1({ form, onChange }: Step1Props) {
                   <span className="text-emerald-800 font-semibold text-sm">📤 양도 정보</span>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FieldCard label="양도일" required hint="실제 양도일 (YYYY-MM-DD)">
+                  <FieldCard label="양도일" required>
                     <DateInput
                       value={form.transferDate}
                       onChange={(v) => {
@@ -227,7 +228,7 @@ export function Step1({ form, onChange }: Step1Props) {
                       }}
                     />
                   </FieldCard>
-                  <FieldCard label="양도 주식수" required hint="이번 거래에서 양도하는 주식수 (주)">
+                  <FieldCard label="양도 주식수" required>
                     <DecimalInput
                       value={form.shareCount}
                       onChange={(v) => onChange({ shareCount: v })}
@@ -238,7 +239,7 @@ export function Step1({ form, onChange }: Step1Props) {
               </div>
 
               {/* 발행주식 총수 (full-width) */}
-              <FieldCard label="발행주식 총수" required hint="해당 법인의 발행주식 총수 (주)">
+              <FieldCard label="발행주식 총수" required>
                 <DecimalInput
                   value={form.totalIssuedShares}
                   onChange={(v) => onChange({ totalIssuedShares: v })}
@@ -249,7 +250,7 @@ export function Step1({ form, onChange }: Step1Props) {
           ) : (
             <>
               <SplitLotsBlock form={form} onChange={onChange} />
-              <FieldCard label="발행주식 총수" required hint="해당 법인의 발행주식 총수 (주)">
+              <FieldCard label="발행주식 총수" required>
                 <DecimalInput
                   value={form.totalIssuedShares}
                   onChange={(v) => onChange({ totalIssuedShares: v })}
@@ -266,12 +267,20 @@ export function Step1({ form, onChange }: Step1Props) {
     //   • single 모드: AcquisitionInfoBlock 내부에서 cause + 보조일자 모두 입력
     //   • split 모드: SplitLotsBlock의 lot별 입력 (변경 없음)
 
-    // 4. 대주주 판정 (이전 5번)
-    items.push({
-      key: "major",
-      title: "대주주 판정 (시행령 §157)",
-      render: () => <MajorShareholderBlock form={form} onChange={onChange} />,
-    });
+    // 4. 대주주 판정 — §94①3(상장·비상장)에서만 의미 있음.
+    //    other_asset(§94①4) / foreign_stock(§118의2) / exit_tax(§118의9) 트랙은 대주주 무관 → 섹션 숨김.
+    const majorShareholderApplicable =
+      form.marketType === "kospi" ||
+      form.marketType === "kosdaq" ||
+      form.marketType === "konex" ||
+      form.marketType === "unlisted";
+    if (majorShareholderApplicable) {
+      items.push({
+        key: "major",
+        title: "대주주 판정 (시행령 §157)",
+        render: () => <MajorShareholderBlock form={form} onChange={onChange} />,
+      });
+    }
 
     // 6. 기타자산 §94①4 — 조건부
     if (

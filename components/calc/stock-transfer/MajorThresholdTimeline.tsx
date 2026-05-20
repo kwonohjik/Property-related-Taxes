@@ -81,7 +81,7 @@ function ThresholdTable({ market }: { market: SupportedMarket }) {
   return (
     <div className="rounded-lg border border-slate-200 bg-white p-3">
       <p className="text-sm font-semibold mb-2 text-slate-800">
-        {label} ({legal}) — 시기별 임계 이력
+        {label} ({legal}) — 시기별 기준 이력
       </p>
       <table className="w-full text-xs">
         <thead>
@@ -121,10 +121,10 @@ function ThresholdTable({ market }: { market: SupportedMarket }) {
       {market === "unlisted" && (
         <>
           <p className="text-xs text-slate-500 mt-2">
-            ※ 벤처기업은 시총 임계 40억 (조특법 §16, 시행령 §167의8①2호 나목)
+            ※ 벤처기업은 시총 기준 40억 (조특법 §16, 시행령 §167의8①2호 나목)
           </p>
           <p className="text-xs text-amber-700 mt-1">
-            ※ 2017.1.1.~2019.12.31. 임계는 법제처 연혁 API 미확인 — 추정값
+            ※ 2017.1.1.~2019.12.31. 기준은 법제처 연혁 API 미확인 — 추정값
           </p>
         </>
       )}

@@ -281,10 +281,10 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
               name="judgmentBasis"
               value={form.judgmentBasis === "default" ? "merger" : form.judgmentBasis}
               options={[
-                { value: "merger", label: "F-09 합병 — 피합병법인 합병등기일 기준" },
-                { value: "split", label: "F-10 분할 — 분할 전 법인 분할등기일 기준" },
-                { value: "split_new_entity", label: "F-14 분할신설법인 — 분할 전 직전사업연도 종료일" },
-                { value: "incorporation", label: "F-23 신설법인 — 설립등기일 기준" },
+                { value: "merger", label: "합병 — 피합병법인 합병등기일 기준" },
+                { value: "split", label: "분할 — 분할 전 법인 분할등기일 기준" },
+                { value: "split_new_entity", label: "분할신설법인 — 분할 전 직전사업연도 종료일" },
+                { value: "incorporation", label: "신설법인 — 설립등기일 기준" },
               ]}
               layout="stack"
               tone="rose"
@@ -297,7 +297,7 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
               />
             </FieldCard>
             <p className="text-[10px] text-rose-700 bg-rose-100/70 px-2 py-1 rounded">
-              ✓ 입력된 기준일로 대주주 임계 매트릭스가 조회됩니다 (시기별 1%/2%/4% 등). priorYearEndDate는 표시용으로만 사용.
+              ✓ 입력된 기준일로 대주주 기준 매트릭스가 조회됩니다 (시기별 1%/2%/4% 등). priorYearEndDate는 표시용으로만 사용.
             </p>
           </div>
         </ToggleCard>
@@ -305,23 +305,11 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
         {/* F-08·F-12·F-13 (2026-05-19) — Group D 합병·분할·간접투자 추가 hint */}
         <SpecialEntityHintsCard />
 
-        {/* F-04 키움 시가총액 자동 산정 — Step1 종목코드 + 직전 사업연도말 + 보유 주식수 충족 시 활성화 */}
-        <KiwoomMarketCapHelper
-          securityCode={form.securityCode}
-          priorYearEndDate={form.priorYearEndDate}
-          marketType={form.marketType}
-          tradingHalt={form.kiwoomTradingHalt}
-          selfOwnedShares={form.selfOwnedShares}
-          combinedOwnedShares={form.combinedOwnedShares}
-          isLargestShareholderGroup={form.isLargestShareholderGroup}
-          onFill={onChange}
-        />
-
         {/* 동적 임계 박스 — 직전 사업연도 종료일 + 시장 선택 후 자동 표시 */}
         {threshold && form.priorYearEndDate && (
           <div className="rounded-lg border border-violet-200 bg-violet-50/60 p-3 text-sm">
             <p className="font-semibold text-violet-900 mb-1">
-              현재 적용 임계 ({form.marketType === "unlisted" ? "§167의8①2호" : "§157④"})
+              현재 적용 기준 ({form.marketType === "unlisted" ? "§167의8①2호" : "§157④"})
             </p>
             <p className="text-violet-800">
               지분율 <strong>{(threshold.shareRatioThreshold * 100).toFixed(1)}%</strong> ·
@@ -336,12 +324,12 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
             </p>
             {form.marketType === "unlisted" && threshold.isVentureRule && (
               <p className="text-xs text-violet-700 mt-1 font-semibold">
-                ✓ 자동 적용 중 — 비상장 벤처기업 시총 임계 <strong>40억</strong> (시행령 §167의8①2호 나목)
+                ✓ 자동 적용 중 — 비상장 벤처기업 시총 기준 <strong>40억</strong> (시행령 §167의8①2호 나목)
               </p>
             )}
             {form.marketType === "unlisted" && !threshold.isVentureRule && (
               <p className="text-xs text-slate-500 mt-1">
-                벤처기업 해당 시 회사 분류 토글에서 &quot;벤처기업&quot; 선택 → 시총 임계 40억 적용 (현재: 10억)
+                벤처기업 해당 시 회사 분류 토글에서 &quot;벤처기업&quot; 선택 → 시총 기준 40억 적용 (현재: 10억)
               </p>
             )}
           </div>
@@ -351,7 +339,7 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
         {threshold && (
           <details className="rounded-lg border border-slate-200 bg-slate-50/40 p-3">
             <summary className="text-xs font-medium text-slate-700 cursor-pointer select-none">
-              시기별 임계 이력 보기
+              시기별 기준 이력 보기
             </summary>
             <div className="mt-3">
               <MajorThresholdTimeline
@@ -413,7 +401,20 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
           )}
         </div>
 
-        {/* 본인 단독 시총 */}
+        {/* 키움 시가총액 자동 산정 — 본인 보유 주식수 입력 이후 노출.
+            의존 순서(종목코드 + 직전 사업연도말 + 보유 주식수)와 UI 입력 순서를 일치시킴. */}
+        <KiwoomMarketCapHelper
+          securityCode={form.securityCode}
+          priorYearEndDate={form.priorYearEndDate}
+          marketType={form.marketType}
+          tradingHalt={form.kiwoomTradingHalt}
+          selfOwnedShares={form.selfOwnedShares}
+          combinedOwnedShares={form.combinedOwnedShares}
+          isLargestShareholderGroup={form.isLargestShareholderGroup}
+          onFill={onChange}
+        />
+
+        {/* 본인 단독 시총 — 자동 산정 결과가 이 필드에 채워짐 */}
         <CurrencyInput
           label="본인 단독 시가총액"
           hint="직전 사업연도 말 기준 (원)"
@@ -463,7 +464,7 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
                     thousandSeparator
                   />
                 </FieldCard>
-                <FieldCard label="본인+특수관계인 합산 보유 주식수" hint="최대주주그룹 합산 보유 주식수 (주)">
+                <FieldCard label="합산 보유 주식수" hint="본인+특수관계인 — 최대주주그룹 합산 보유 주식수 (주)">
                   <DecimalInput
                     value={form.combinedOwnedShares}
                     onChange={(v) => handleSharesChange("combined", { combinedOwnedShares: v })}
@@ -497,7 +498,7 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
             }`}>
               <div className="flex items-center gap-2">
                 <span className="text-xs font-semibold text-amber-900">
-                  F-15·F-16 대차·사모펀드 자동 가산 (시행령 §157 2013.2.15.~)
+                  대차·사모펀드 자동 가산 (시행령 §157 2013.2.15.~)
                 </span>
                 {!f15f16Eligible && (
                   <span className="text-[10px] text-slate-500">
@@ -506,7 +507,7 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
                 )}
               </div>
               <FieldCard
-                label="F-15 대차주식 수"
+                label="대차주식 수"
                 hint="본인이 대여 중인 주식 수. 양도일 2013.2.15. 이후 자동 합산 (지분율 가산)"
                 unit="주"
               >
@@ -518,7 +519,7 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
                 />
               </FieldCard>
               <FieldCard
-                label="F-16 사모펀드 간접소유 주식 수"
+                label="사모펀드 간접소유 주식 수"
                 hint="본인·기타주주가 사모펀드 통해 간접소유. 양도일 2013.2.15. 이후 자동 합산"
                 unit="주"
               >
@@ -544,19 +545,45 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
 
         {/* 판정 결과 박스 — 자동 판정 활성(상장 3시장 + 비상장) */}
         {threshold ? (
-          <div className={`rounded-lg border px-4 py-3 text-sm ${
-            judgment.isMajor
-              ? "border-violet-300 bg-violet-100/60 text-violet-900"
-              : "border-slate-200 bg-slate-50 text-slate-600"
-          }`}>
-            <p className="font-medium mb-1">
-              대주주 자동 판정: {judgment.isMajor ? "✓ 대주주 해당" : "✗ 대주주 미해당"}
-            </p>
-            <p className="text-xs">
-              시총 임계 {(marketCapThreshold / 100_000_000).toFixed(0)}억 / 지분율 임계 {(shareRatioThreshold * 100).toFixed(1)}%
-              {" "}({form.marketType === "unlisted" ? "§167의8①2호" : "§157"})
-            </p>
-          </div>
+          (() => {
+            // 어떤 항목이 기준을 충족했는지 사유 문자열 구성 (본인·합산 / 지분율·시총)
+            const reasonParts: string[] = [];
+            if (judgment.selfMeetsRatio) {
+              reasonParts.push(`지분율 ${parseDecimal(form.selfShareRatio).toFixed(2)}%`);
+            }
+            if (judgment.combMeetsRatio && !judgment.selfMeetsRatio) {
+              reasonParts.push(`합산 지분율 ${parseDecimal(form.combinedShareRatio).toFixed(2)}%`);
+            }
+            if (judgment.selfMeetsCap) {
+              reasonParts.push(
+                `시총 ${(parseAmount(form.selfMarketCap) / 100_000_000).toFixed(1)}억`,
+              );
+            }
+            if (judgment.combMeetsCap && !judgment.selfMeetsCap) {
+              reasonParts.push(
+                `합산 시총 ${(parseAmount(form.combinedMarketCap) / 100_000_000).toFixed(1)}억`,
+              );
+            }
+            const reason = reasonParts.join(" 또는 ");
+            return (
+              <div className={`rounded-lg border px-4 py-3 text-sm ${
+                judgment.isMajor
+                  ? "border-violet-300 bg-violet-100/60 text-violet-900"
+                  : "border-slate-200 bg-slate-50 text-slate-600"
+              }`}>
+                <p className="font-medium mb-1">
+                  대주주 자동 판정:{" "}
+                  {judgment.isMajor
+                    ? `✓ ${reason} → 대주주 해당`
+                    : "✗ 대주주 미해당"}
+                </p>
+                <p className="text-xs">
+                  시총 기준 {(marketCapThreshold / 100_000_000).toFixed(0)}억 / 지분율 기준 {(shareRatioThreshold * 100).toFixed(1)}%
+                  {" "}({form.marketType === "unlisted" ? "§167의8①2호" : "§157"})
+                </p>
+              </div>
+            );
+          })()
         ) : form.marketType === "other_asset" ? (
           <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
             <p className="font-medium mb-1">자동 판정 미적용 (기타자산은 §94①4 별도 트랙)</p>
@@ -585,40 +612,40 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
       </div>
   );
 
-  if (isAutoJudgmentActive) {
-    // 자동 판정 모드: 펼침 강제 + 헤더에 읽기 전용 판정 배지
-    return (
-      <div className="rounded-lg border border-violet-200 bg-violet-50/70 p-4 space-y-3">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex-1">
-            <p className="font-semibold text-violet-900">
-              대주주 여부 — 자동 판정 (§157 / §167의8①2호)
-            </p>
-            <p className="text-xs text-violet-700 mt-0.5">
-              아래 입력값 변경 시 자동으로 동기화됩니다. 임계 조건 충족 여부는 판정 결과 박스에서 확인하세요.
-            </p>
-          </div>
-          <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold ${
-            judgment.isMajor
-              ? "bg-violet-600 text-white"
-              : "bg-slate-200 text-slate-700"
-          }`}>
-            {judgment.isMajor ? "✓ 대주주" : "✗ 비대주주"}
-          </span>
-        </div>
-        {innerContent}
-      </div>
-    );
-  }
+  // 자동/수동 모드 모두 동일한 ToggleCard 트리로 통일.
+  // 이유: threshold 활성화 순간 외곽 JSX 타입이 div ↔ ToggleCard 로 바뀌면
+  //       DateInput 이 언마운트→재마운트되어 입력 도중 포커스를 잃는다
+  //       (예: "2024-12-3" 까지 입력 시 day 필드 패딩으로 valid 일자가 되어
+  //        threshold 가 null→non-null 로 전환되며 day 입력 커서가 빠짐).
+  const judgmentBadge = isAutoJudgmentActive ? (
+    <span
+      className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold ${
+        judgment.isMajor ? "bg-violet-600 text-white" : "bg-slate-200 text-slate-700"
+      }`}
+    >
+      {judgment.isMajor ? "✓ 대주주" : "✗ 비대주주"}
+    </span>
+  ) : null;
 
-  // 기타자산(§94①4) 또는 marketType 미선택: 사용자 직접 선택 ToggleCard
   return (
     <ToggleCard
-      checked={form.isMajorShareholder}
-      onCheckedChange={(v) => onChange({ isMajorShareholder: v })}
-      title="대주주 여부 (사용자 직접 선택)"
-      description="기타자산은 자동 판정 미적용 — §94①4 별도 트랙. 직접 선택하세요."
+      checked={isAutoJudgmentActive ? true : form.isMajorShareholder}
+      onCheckedChange={(v) => {
+        if (isAutoJudgmentActive) return;
+        onChange({ isMajorShareholder: v });
+      }}
+      title={
+        isAutoJudgmentActive
+          ? "대주주 여부 — 자동 판정 (§157 / §167의8①2호)"
+          : "대주주 여부 (사용자 직접 선택)"
+      }
+      description={
+        isAutoJudgmentActive
+          ? "아래 입력값 변경 시 자동으로 동기화됩니다. 기준 조건 충족 여부는 판정 결과 박스에서 확인하세요."
+          : "기타자산은 자동 판정 미적용 — §94①4 별도 트랙. 직접 선택하세요."
+      }
       tone="violet"
+      trailing={judgmentBadge}
     >
       {innerContent}
     </ToggleCard>

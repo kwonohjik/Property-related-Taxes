@@ -144,7 +144,7 @@ export function YearColumn({
 
       {/* 보조 — 주식수 + 환원율 */}
       <p className="text-[10px] font-semibold text-amber-700 mt-3">환산 보조</p>
-      <FieldCard label="20. 사업연도말 주식 또는 환산주식수">
+      <FieldCard label="20. 환산주식수" hint="사업연도말 주식 또는 환산주식수 (주)">
         <CurrencyInput
           label="" hideUnit
           value={getField(form, shareKey)}
@@ -152,7 +152,10 @@ export function YearColumn({
           placeholder="주"
         />
       </FieldCard>
-      <FieldCard label="23. 기획재정부장관이 고시하는 이자율 (%) — 시행규칙 §81② → 상증령 §17">
+      <FieldCard
+        label="23. 환원율"
+        hint="기획재정부장관이 고시하는 이자율 (%) — 시행규칙 §81② → 상증령 §17"
+      >
         <DecimalInput
           value={getField(form, rateKey) || "10"}
           onChange={(v) => onChange({ [rateKey]: v } as Partial<StockTransferFormData>)}

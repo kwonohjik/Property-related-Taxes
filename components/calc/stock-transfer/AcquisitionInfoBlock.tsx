@@ -55,7 +55,8 @@ export function AcquisitionInfoBlock({ form, onChange }: AcquisitionInfoBlockPro
   // 3중 패턴 default — store factory와 일치
   const cause = form.acquisitionCause || "purchase";
   const dateLabel = cause === "gift" ? "수증일" : "취득일";
-  const dateHint = cause === "gift" ? "수증일 (§97의2 미적용)" : "실제 취득일 (YYYY-MM-DD)";
+  // gift만 보조 정보(§97의2 미적용) 노출. purchase 등 자명 케이스는 hint 생략.
+  const dateHint = cause === "gift" ? "수증일 — §97의2 이월과세 미적용" : undefined;
 
   // 의제취득일 자동 변환 시 사용자 입력 원본을 임시 보관 (안내 메시지용)
   // store에는 변환된 값만 들어가므로 원본은 local state로만 유지
@@ -101,8 +102,8 @@ export function AcquisitionInfoBlock({ form, onChange }: AcquisitionInfoBlockPro
 
       {/* 취득원인 RadioCardGroup */}
       <FieldCard
-        label="취득원인 (단기 30% 기산점)"
-        hint="§104② — 취득원인에 따라 단기 보유기간 기산점이 달라집니다"
+        label="취득원인"
+        hint="§104② 단기 30% 기산점 — 취득원인에 따라 단기 보유기간 기산점이 달라집니다"
       >
         <RadioCardGroup
           name="acquisitionCause"

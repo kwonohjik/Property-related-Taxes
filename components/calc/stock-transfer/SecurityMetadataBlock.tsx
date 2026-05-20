@@ -20,6 +20,7 @@ import { clientRepository } from "@/lib/storage/client-repository";
 import { useProfessionalStore } from "@/lib/stores/professional-store";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 import { KiwoomStockNameAutocomplete } from "./KiwoomStockNameAutocomplete";
+import { KiwoomFetchSourceBadge } from "@/components/calc/KiwoomFetchSourceBadge";
 
 interface SecurityMetadataBlockProps {
   securityName: string;
@@ -27,6 +28,8 @@ interface SecurityMetadataBlockProps {
   brokerage: string;
   accountNumberMasked: string;
   marketType: StockTransferFormData["marketType"];
+  /** F-12 출처 라벨링 — 종목코드 자동조회 마지막 성공 시각 (ISO 8601) */
+  securityMetaFetchedAt?: string;
   onChange: (patch: Partial<StockTransferFormData>) => void;
 }
 
@@ -36,6 +39,7 @@ export function SecurityMetadataBlock({
   brokerage,
   accountNumberMasked,
   marketType,
+  securityMetaFetchedAt,
   onChange,
 }: SecurityMetadataBlockProps) {
   // 미사용 props는 형식적으로 유지 (Step1에서 주입 — 향후 식별용 메타 확장 대비)
@@ -142,7 +146,11 @@ export function SecurityMetadataBlock({
 
       {/* 종목코드(좌) → 종목명(우) — 종목코드 입력 시 종목명 자동 채움 흐름 */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <FieldCard label="종목코드 (선택)" hint="6자리 입력 후 포커스 이동 시 키움 자동조회로 종목명·시장구분·거래정지 자동 확인">
+        <FieldCard
+          label="종목코드 (선택)"
+          hint="6자리 입력 후 포커스 이동 시 키움 자동조회로 종목명·시장구분·거래정지 자동 확인"
+          trailing={<KiwoomFetchSourceBadge fetchedAt={securityMetaFetchedAt} label="키움 마스터 조회" />}
+        >
           <input
             type="text"
             value={securityCode}
@@ -170,6 +178,7 @@ export function SecurityMetadataBlock({
                   securityName: data.stockName || securityName,
                   marketType: data.marketTypeStore || marketType,
                   kiwoomTradingHalt: data.tradingHalt,
+                  securityMetaFetchedAt: new Date().toISOString(),
                 });
               } catch {
                 // 네트워크 실패 시 silent — 사용자 수동 입력 그대로 유지

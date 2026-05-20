@@ -58,6 +58,7 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
     accountNumberMasked: strField("accountNumberMasked"),
     kiwoomTradingHalt: boolField("kiwoomTradingHalt", false),
     kiwoomLastFetchedAt: strField("kiwoomLastFetchedAt"),
+    securityMetaFetchedAt: strField("securityMetaFetchedAt"),
 
     marketType: enumField("marketType", ["kospi", "kosdaq", "konex", "unlisted", "other_asset", "foreign_stock", "exit_tax", ""], ""),
     isMajorShareholder: boolField("isMajorShareholder", false),
