@@ -17,6 +17,7 @@ import { StepIndicator } from "@/components/calc/StepIndicator";
 import { ResetButton } from "@/components/calc/shared/ResetButton";
 import { HomeButton } from "@/components/calc/shared/HomeButton";
 import { InheritanceTaxResultView } from "@/components/calc/results/InheritanceTaxResultView";
+import { InheritanceSidebar } from "@/components/calc/inheritance/InheritanceSidebar";
 import { useAutoSaveCalculation } from "@/lib/storage/use-auto-save-calculation";
 import { useProfessionalStore } from "@/lib/stores/professional-store";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
@@ -298,18 +299,25 @@ export function InheritanceTaxForm() {
 
       <StepIndicator steps={[...STEPS]} current={step} onStepClick={(i) => setStep(i)} />
 
-      <div className="min-h-[300px]">
-        {step === 0 && (
-          <Step0
-            form={form}
-            set={set}
-          />
-        )}
-        {step === 1 && <Step1 form={form} set={set} />}
-        {step === 2 && <Step2 form={form} set={set} />}
-        {step === 3 && <Step3 form={form} set={set} />}
-        {step === 4 && <Step4 form={form} set={set} />}
-        {step === 5 && <Step5 form={form} set={set} />}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6 items-start">
+        <div className="min-h-[300px]">
+          {step === 0 && (
+            <Step0
+              form={form}
+              set={set}
+            />
+          )}
+          {step === 1 && <Step1 form={form} set={set} />}
+          {step === 2 && <Step2 form={form} set={set} />}
+          {step === 3 && <Step3 form={form} set={set} />}
+          {step === 4 && <Step4 form={form} set={set} />}
+          {step === 5 && <Step5 form={form} set={set} />}
+        </div>
+
+        {/* 사이드바 합계 (지점 ⑥) — 데스크톱 우측 sticky / 모바일 하단 */}
+        <aside className="lg:sticky lg:top-4 self-start order-first lg:order-last">
+          <InheritanceSidebar form={form} result={result} />
+        </aside>
       </div>
 
       {error && (
