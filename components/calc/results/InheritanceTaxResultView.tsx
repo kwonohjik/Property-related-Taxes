@@ -6,11 +6,15 @@
 
 import { useState } from "react";
 import { ChevronLeft } from "lucide-react";
-import type { InheritanceTaxResult } from "@/lib/tax-engine/types/inheritance-gift.types";
+import type {
+  InheritanceTaxResult,
+  Heir,
+} from "@/lib/tax-engine/types/inheritance-gift.types";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
 import { LoginPromptBanner } from "@/components/calc/shared/LoginPromptBanner";
 import { TaxCreditBreakdownCard } from "@/components/calc/TaxCreditBreakdownCard";
+import { HeirAllocationTable } from "@/components/calc/results/HeirAllocationTable";
 import { calcInstallmentPayment } from "@/lib/tax-engine/credits/installment-payment";
 
 // ============================================================
@@ -98,6 +102,8 @@ interface Props {
   /** 1단계로 이동 (입력값 보존) */
   onGoToFirst?: () => void;
   showLoginPrompt?: boolean;
+  /** 상속인·수유자·영리법인 배열 — HeirAllocationTable 표시용 */
+  heirs?: Heir[];
 }
 
 export function InheritanceTaxResultView({
@@ -106,6 +112,7 @@ export function InheritanceTaxResultView({
   onBack,
   onGoToFirst,
   showLoginPrompt = false,
+  heirs,
 }: Props) {
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [showValuation, setShowValuation] = useState(false);
@@ -207,6 +214,11 @@ export function InheritanceTaxResultView({
           credit={result.creditDetail}
           taxBeforeCredit={taxBeforeCredit}
         />
+      )}
+
+      {/* 상속인별 배부 표 — 종합사례 PDF 책 1859 재현 (heirAllocationResult 있을 때만) */}
+      {result.heirAllocationResult && heirs && heirs.length > 0 && (
+        <HeirAllocationTable result={result} heirs={heirs} />
       )}
 
       {/* 공제 내역 접기 */}

@@ -697,6 +697,7 @@ export function InheritanceTaxForm() {
         onReset={handleReset}
         onBack={() => { setResult(null); setStep(STEPS.length - 1); }}
         onGoToFirst={() => { setResult(null); setStep(0); }}
+        heirs={form.heirs}
       />
     );
   }

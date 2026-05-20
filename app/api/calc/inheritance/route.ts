@@ -63,7 +63,31 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const input = parsed.data as unknown as InheritanceTaxInput;
+  // 14지점 ⑭: 명시적 엔진 input 매핑 — 신규 필드(presumedItems·debtItems·heirAllocations 등)
+  // spread 누락 방지. Zod 스키마와 InheritanceTaxInput 타입 호환 보증.
+  const parsedData = parsed.data;
+  const input: InheritanceTaxInput = {
+    decedentType: parsedData.decedentType,
+    deathDate: parsedData.deathDate,
+    estateItems: parsedData.estateItems as InheritanceTaxInput["estateItems"],
+    funeralExpense: parsedData.funeralExpense ?? 0,
+    funeralIncludesBongan: parsedData.funeralIncludesBongan ?? false,
+    debts: parsedData.debts ?? 0,
+    debtItems: parsedData.debtItems as InheritanceTaxInput["debtItems"],
+    presumedItems: parsedData.presumedItems as InheritanceTaxInput["presumedItems"],
+    exemptions: parsedData.exemptions,
+    preGiftsWithin10Years:
+      parsedData.preGiftsWithin10Years as InheritanceTaxInput["preGiftsWithin10Years"],
+    heirs: parsedData.heirs as InheritanceTaxInput["heirs"],
+    deductionInput:
+      parsedData.deductionInput as InheritanceTaxInput["deductionInput"],
+    creditInput:
+      parsedData.creditInput as InheritanceTaxInput["creditInput"],
+    valuationBaseDate: parsedData.valuationBaseDate,
+    isGenerationSkip: parsedData.isGenerationSkip,
+    isMinorHeir: parsedData.isMinorHeir,
+    generationSkipAssetAmount: parsedData.generationSkipAssetAmount,
+  };
 
   // ─────────────────────────────────────────────
   // 4. 순수 엔진 계산
