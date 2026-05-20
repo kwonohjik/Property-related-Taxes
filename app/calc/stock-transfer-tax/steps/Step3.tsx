@@ -247,7 +247,7 @@ export function Step3({ form, onChange }: Step3Props) {
             </div>
           )}
 
-          <FieldCard label="신고일" required hint="실제 신고일 (YYYY-MM-DD)">
+          <FieldCard label="신고일" required>
             <DateInput
               value={form.filingDate}
               onChange={(v) => onChange({ filingDate: v })}

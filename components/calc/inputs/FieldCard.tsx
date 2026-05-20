@@ -36,7 +36,9 @@ export function FieldCard({
       data-disabled={disabled || undefined}
       className={cn(
         "rounded-lg border bg-card px-4 py-3",
-        "grid gap-2 sm:grid-cols-[120px_1fr] sm:items-start",
+        // 라벨 칼럼 160px — 한글 ~10자까지 한 줄 유지 (이전 120px에서 12자 라벨 다수 줄바꿈 발생).
+        // 모바일(sm 미만)은 grid-cols-1로 라벨이 입력 위에 올라가므로 영향 없음.
+        "grid gap-2 sm:grid-cols-[160px_1fr] sm:items-start",
         disabled && "opacity-60",
         className
       )}

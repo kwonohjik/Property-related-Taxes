@@ -167,13 +167,13 @@ export function ForeignStockBlock({ form, onChange }: ForeignStockBlockProps) {
       {/* ── 섹션 2: 기본 양도 정보 ── */}
       <SectionBox n={2} label="기본 양도 정보" tone="sky">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <FieldCard label="취득일" required hint="주식 취득일 (YYYY-MM-DD)">
+          <FieldCard label="취득일" required>
             <DateInput
               value={form.acquisitionDate}
               onChange={(v) => onChange({ acquisitionDate: v })}
             />
           </FieldCard>
-          <FieldCard label="양도일" required hint="주식 양도일 (YYYY-MM-DD)">
+          <FieldCard label="양도일" required>
             <DateInput
               value={form.transferDate}
               onChange={(v) => onChange({ transferDate: v })}
