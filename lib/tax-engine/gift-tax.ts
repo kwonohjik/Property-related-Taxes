@@ -37,6 +37,7 @@ import {
 } from "./gift-prior-aggregation";
 import { calcGiftTaxCredits } from "./inheritance-gift-tax-credit";
 import { buildFilingFormRows } from "./gift-filing-form-rows";
+import { buildBesshi10Rows } from "./gift-tax-filing-form-besshi10";
 import type { TaxBracket } from "./types";
 
 // ============================================================
@@ -246,7 +247,7 @@ export function calcGiftTax(
     hasPriorGifts: priorAggregation.matchedPriorGifts.length > 0,
   });
 
-  return {
+  const partialResult = {
     grossGiftValue,
     exemptAmount,
     aggregatedGiftValue,
@@ -269,6 +270,27 @@ export function calcGiftTax(
     generationSkipSurchargeDetail: surchargeResult.detail,
     priorGiftCreditDetail,
     filingFormRows,
+    // 별지 제10호서식 표시 전용 (default 0)
+    publicInterestExclusion: 0,
+    publicTrustExclusion: 0,
+    disabledTrustExclusion: 0,
+    debtAssumed: 0,
+    disasterLossDeduction: 0,
+    appraisalFeeDeduction: 0,
+    interestEquivalent: 0,
+    museumDeferredTax: 0,
+    underreportPenalty: 0,
+    latePaymentPenalty: 0,
+    publicInterestPenalty: 0,
+    installmentPayment: 0,
+    cashDeferred: 0,
+  };
+
+  const besshi10Rows = buildBesshi10Rows(input, partialResult, brackets);
+
+  return {
+    ...partialResult,
+    besshi10Rows,
   };
 }
 

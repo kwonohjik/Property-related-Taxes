@@ -288,15 +288,20 @@ export interface PriorGiftCreditDetail {
 // ============================================================
 
 export interface FilingFormRow {
-  /** "①" ~ "⑱" PDF 표 행 번호 */
+  /** "①" ~ "⑱" (사례 1·2) 또는 "⑰" ~ "㊼" (별지 제10호서식) PDF 표 행 번호. 헤더·도출 행은 빈 문자열 */
   number: string;
   label: string;
   amount: number;
-  /** "—" 표기가 필요한 산식 무의미 행 (priorGifts=0 시 ⑩⑪⑭⑮ 등) */
-  display: "amount" | "dash" | "rate";
+  /**
+   * "—" 표기가 필요한 산식 무의미 행 (priorGifts=0 시 ⑩⑪⑭⑮ 등) /
+   * "header" = 그룹 머리글 행 (별지 양식 "납부방법")
+   */
+  display: "amount" | "dash" | "rate" | "header";
   /** 행에 표시할 산식 hint (선택) */
   formula?: string;
   lawRef?: string;
+  /** 별지 제10호서식 2-column grid 배치 (구 buildFilingFormRows는 undefined → UI 단일 컬럼 fallback) */
+  column?: "left" | "right";
 }
 
 // ============================================================
@@ -762,6 +767,23 @@ export interface GiftTaxResult extends TaxResultMeta {
   generationSkipSurchargeDetail: GenerationSkipSurchargeDetail | null;
   /** §58 안분 한도 세부 (priorGifts 그룹 일치 1건 이상일 때만 not null) */
   priorGiftCreditDetail: PriorGiftCreditDetail | null;
-  /** 신고서 양식 표 행 (12행 사례1 / 18행 사례2) */
+  /** 신고서 양식 표 행 (12행 사례1 / 18행 사례2) — 후속 PR에서 besshi10Rows 로 대체 예정 */
   filingFormRows: FilingFormRow[];
+
+  // ===== 별지 제10호서식 [2020.03.13. 개정] 표시 전용 (default 0, 회귀 영향 없음) =====
+  publicInterestExclusion?: number;  // ⑲ §48 공익법인 출연재산가액
+  publicTrustExclusion?: number;     // ⑳ §52 공익신탁 재산가액
+  disabledTrustExclusion?: number;   // ㉑ §52의2 장애인 신탁 재산가액
+  debtAssumed?: number;              // ㉒ §47 채무액 (부담부증여 — 본 PR 범위 외)
+  disasterLossDeduction?: number;    // ㉘ §54 재해손실공제
+  appraisalFeeDeduction?: number;    // ㉙ 감정평가수수료 (500만원 한도)
+  interestEquivalent?: number;       // ㉟ 이자상당액
+  museumDeferredTax?: number;        // ㊱ §75 박물관자료 등 징수유예세액
+  underreportPenalty?: number;       // ㊷ 국기법 §47의2·§47의3
+  latePaymentPenalty?: number;       // ㊸ 국기법 §47의4
+  publicInterestPenalty?: number;    // ㊹ §78 공익법인 등 관련 가산세
+  installmentPayment?: number;       // ㊻ §71 연부연납
+  cashDeferred?: number;             // ㊼ §70② 현금 분납
+  /** 별지 제10호서식 좌·우 컬럼 행 배열 (총 34행) — UI는 본 배열만 읽음 */
+  besshi10Rows: FilingFormRow[];
 }
