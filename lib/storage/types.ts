@@ -73,9 +73,28 @@ export interface CalculationRecord {
   linkedCalculationId: string | null;
   /** 세무사 모드: 해당 계산의 의뢰인 ID (null = 본인 또는 미지정) */
   clientId: string | null;
+  /**
+   * dedup 키 — `sha1Hex(stableStringify(input) + "|" + stableStringify(result)).slice(0,16)`.
+   * `saveOrUpdateByContent` 호출 시점에만 자동 부여. 기존 레코드는 undefined.
+   * 인덱스 없음 — 단순 컬럼 (사용자당 200건 상한 내 in-memory full scan으로 충분).
+   */
+  contentHash?: string;
+  /**
+   * 입력만의 해시 (v4 신규) — `sha1Hex(stableStringify(input)).slice(0,16)`.
+   * draft 매칭 + draft→final 자동 승격에 사용.
+   * draft·final 양쪽 모두 부여. 기존 레코드는 undefined.
+   * 인덱스 없음.
+   */
+  inputHash?: string;
   createdAt: string;
   updatedAt: string;
 }
 
 /** 사용자당 최대 저장 건수 (Supabase 정책과 동일) */
 export const MAX_CALCULATIONS_PER_USER = 200;
+
+/**
+ * 한도 경고 임계값 (v4) — 본 값 이상 시 `/history`에 경고 배너 + 저장 토스트에 한도 라인 노출.
+ * MAX_CALCULATIONS_PER_USER(200) - 10 = 190.
+ */
+export const HISTORY_WARNING_THRESHOLD = 190;

@@ -45,7 +45,8 @@ export default function StockTransferTaxCalculator() {
 
   // 로컬 이력 자동 저장 — 결과 화면(step 3) 진입 + result 있을 때 1회
   const isResult = currentStep === 3 && result !== null;
-  const { pendingEditId, saveAsUpdate, saveAsNew } = useAutoSaveCalculation({
+  // v2: pendingEditId·saveAsUpdate·saveAsNew API 폐기 — saveOrUpdateByContent 자동 dedup
+  useAutoSaveCalculation({
     taxType: "stock_transfer",
     inputData: formData as unknown as Record<string, unknown>,
     resultData: isResult ? (result as unknown as Record<string, unknown>) : null,
@@ -114,11 +115,6 @@ export default function StockTransferTaxCalculator() {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-bold tracking-tight">주식 양도소득세</h1>
-              {pendingEditId && (
-                <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full border border-amber-300">
-                  수정 중: {formData.securityName || "이전 계산"}
-                </span>
-              )}
             </div>
             <p className="text-sm text-muted-foreground mt-1">
               소득세법 §94①3·4 · 2026.4.21. 시행
@@ -160,37 +156,13 @@ export default function StockTransferTaxCalculator() {
               <Step3 form={formData} onChange={updateFormData} />
             )}
             {currentStep === 3 && (
-              <>
-                {/* 수정 모드 — 저장 방식 선택 UI (TransferTaxCalculator L449~467 패턴) */}
-                {pendingEditId && result && (
-                  <div className="mb-4 flex items-center gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm">
-                    <span className="flex-1 text-amber-800">
-                      이전 이력을 불러와 수정했습니다. 저장 방식을 선택하세요.
-                    </span>
-                    <button
-                      type="button"
-                      onClick={saveAsUpdate}
-                      className="shrink-0 rounded-md bg-amber-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-700 transition-colors"
-                    >
-                      기존 이력 덮어쓰기
-                    </button>
-                    <button
-                      type="button"
-                      onClick={saveAsNew}
-                      className="shrink-0 rounded-md border border-amber-400 px-3 py-1.5 text-xs font-medium text-amber-800 hover:bg-amber-100 transition-colors"
-                    >
-                      새 이력으로 저장
-                    </button>
-                  </div>
-                )}
-                <Step4
-                  result={result}
-                  form={formData}
-                  error={error}
-                  isLoading={isLoading}
-                  onCalculate={handleCalculate}
-                />
-              </>
+              <Step4
+                result={result}
+                form={formData}
+                error={error}
+                isLoading={isLoading}
+                onCalculate={handleCalculate}
+              />
             )}
 
             {/* 하단 네비게이션 */}

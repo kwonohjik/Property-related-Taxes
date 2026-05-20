@@ -4,17 +4,21 @@
  * GiftTaxResultView — 증여세 계산 결과 화면 (#37)
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronLeft } from "lucide-react";
 import type { GiftTaxResult, EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
 import { LoginPromptBanner } from "@/components/calc/shared/LoginPromptBanner";
 import { TaxCreditBreakdownCard } from "@/components/calc/TaxCreditBreakdownCard";
+import { GenerationSkipSurchargeBreakdownCard } from "@/components/calc/results/GenerationSkipSurchargeBreakdownCard";
 import { GiftTaxFilingFormTable } from "@/components/calc/results/GiftTaxFilingFormTable";
 import { GiftTaxValuationFormTable } from "@/components/calc/results/GiftTaxValuationFormTable";
 import { HorizontalScrollContainer } from "@/components/calc/shared/HorizontalScrollContainer";
 import { calcInstallmentPayment } from "@/lib/tax-engine/credits/installment-payment";
+import { SaveButton } from "@/components/calc/shared/SaveButton";
+import { SaveToast, type SaveToastMessage } from "@/components/calc/shared/SaveToast";
+import { formatGiftSaveMessage } from "@/components/calc/gift-tax-save-handler";
 
 // ============================================================
 // 헬퍼 컴포넌트
@@ -115,6 +119,10 @@ interface Props {
   onBack: () => void;
   /** 1단계로 이동 (입력값 보존) */
   onGoToFirst?: () => void;
+  /** 수동 저장 — saveOrUpdateByContent 호출. 성공 시 {id, created} 반환, 실패 시 throw */
+  onSave?: () => Promise<{ id: string; created: boolean }>;
+  /** 자동저장 토스트 표시용 (결과 화면 마운트 시 1회) */
+  autoSaveToast?: SaveToastMessage | null;
   showLoginPrompt?: boolean;
   /** 증여재산 원본 목록 — 평가내역에서 ID 대신 자산명 표시용 */
   estateItems?: EstateItem[];
@@ -137,11 +145,31 @@ export function GiftTaxResultView({
   onReset,
   onBack,
   onGoToFirst,
+  onSave,
+  autoSaveToast = null,
   showLoginPrompt = false,
   estateItems = [],
   priorGifts = [],
 }: Props) {
   const [showValuation, setShowValuation] = useState(false);
+  const [saveMessage, setSaveMessage] = useState<SaveToastMessage | null>(autoSaveToast);
+
+  // autoSaveToast가 props로 새로 들어오면 표시 — props↔internal state 동기화 (의도된 패턴)
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (autoSaveToast) setSaveMessage(autoSaveToast);
+  }, [autoSaveToast]);
+
+  const handleSaveClick = async () => {
+    if (!onSave) return;
+    setSaveMessage(null);
+    try {
+      const outcome = await onSave();
+      setSaveMessage(formatGiftSaveMessage(outcome));
+    } catch (e) {
+      setSaveMessage(formatGiftSaveMessage(e instanceof Error ? e : new Error(String(e))));
+    }
+  };
 
   const taxBeforeCredit = result.computedTax + result.generationSkipSurcharge;
   const hasFilingFormTable =
@@ -149,8 +177,8 @@ export function GiftTaxResultView({
 
   return (
     <div className="space-y-5">
-      {/* PDF 버튼 */}
-      <div className="flex justify-end print:hidden">
+      {/* PDF · 저장 버튼 */}
+      <div className="flex justify-end gap-2 print:hidden">
         <button
           type="button"
           onClick={() => window.print()}
@@ -158,7 +186,10 @@ export function GiftTaxResultView({
         >
           🖨️ PDF / 인쇄
         </button>
+        {onSave && <SaveButton onSave={handleSaveClick} />}
       </div>
+
+      <SaveToast message={saveMessage} onClose={() => setSaveMessage(null)} />
 
       {/* 핵심 결과 카드 */}
       <div className="rounded-xl border-2 border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30 p-5">
@@ -275,6 +306,16 @@ export function GiftTaxResultView({
           <Row label="결정세액" value={formatKRW(result.finalTax)} highlight />
         </div>
       </div>
+
+      {/* §57 세대생략 할증과세 산출근거 — 그룹 B 조부모→손자녀 시만 활성 */}
+      {result.generationSkipSurchargeDetail && (
+        <GenerationSkipSurchargeBreakdownCard
+          detail={result.generationSkipSurchargeDetail}
+          computedTax={result.computedTax}
+          priorAddedTaxBase={result.priorGiftCreditDetail?.priorAddedTaxBase}
+          aggregatedTaxBase={result.priorGiftCreditDetail?.aggregatedTaxBase}
+        />
+      )}
 
       {/* 세액공제 상세 — §28·§69 산출근거 펼침 (priorGiftCreditDetail + computedTax 전달) */}
       {result.totalTaxCredit > 0 && (
@@ -404,6 +445,7 @@ export function GiftTaxResultView({
         >
           처음으로
         </button>
+        {onSave && <SaveButton variant="primary" onSave={handleSaveClick} />}
       </div>
     </div>
   );

@@ -23,4 +23,5 @@ export {
   type UserMode,
   type Client,
   MAX_CALCULATIONS_PER_USER,
+  HISTORY_WARNING_THRESHOLD,
 } from "./types";

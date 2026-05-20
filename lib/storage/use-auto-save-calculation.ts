@@ -1,12 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { calculationRepository } from "./calculation-repository";
 import { clientRepository } from "./client-repository";
 import { generateTitle } from "./title-generator";
 import type { LocalTaxType } from "./types";
 
-const EDITING_KEY = "editingCalculationId";
+export type AutoSaveStatus = "idle" | "saving" | "saved" | "error";
 
 interface Params {
   taxType: LocalTaxType;
@@ -17,28 +17,25 @@ interface Params {
 }
 
 interface Return {
+  /** 저장된 record ID (자동저장 성공 시) */
   savedId: string | null;
+  /** 이번 저장이 신규 record(true)였는지 갱신(false)이었는지 */
+  created: boolean | null;
+  status: AutoSaveStatus;
   error: string | null;
-  /**
-   * 수정 모드 진입 시 원본 레코드 ID (sessionStorage 기반).
-   * null이면 신규 계산 모드 (자동 저장).
-   * non-null이면 사용자가 saveAsUpdate() / saveAsNew() 중 선택해야 함.
-   */
-  pendingEditId: string | null;
-  /** 기존 레코드를 현재 결과로 덮어쓰기 */
-  saveAsUpdate: () => void;
-  /** 새 레코드로 저장 (수정 대기 상태 해제) */
-  saveAsNew: () => void;
 }
 
 /**
- * 결과 화면 마운트 시 계산 이력을 자동 저장하는 훅.
+ * 결과 화면 마운트 시 계산 이력을 자동 저장하는 훅 (v2 — contentHash dedup).
  *
- * - resultData가 null이면 저장 skip.
- * - sessionStorage에 "editingCalculationId"가 없으면 신규 레코드 자동 저장.
- * - sessionStorage에 "editingCalculationId"가 있으면 자동 저장하지 않고
- *   pendingEditId를 반환. 호출자가 saveAsUpdate() 또는 saveAsNew()를 호출해야 함.
- * - 동일 컴포넌트 생애 내 1회만 실행 (savedRef 플래그).
+ * - resultData가 null/empty이면 저장 skip (미계산 상태 §2.4).
+ * - 동일 입력+결과+의뢰인 조합은 항상 단일 record 1건 유지 (saveOrUpdateByContent).
+ * - 같은 컴포넌트 생애 내 같은 resultData 객체 참조의 중복 실행은 차단.
+ * - 호출자(결과 화면)는 `status`를 보고 토스트 노출 여부 결정.
+ *
+ * Breaking change vs v1:
+ * - `pendingEditId`·`saveAsUpdate`·`saveAsNew` 제거 (`editingCalculationId` sessionStorage 플래그 폐기)
+ * - history "수정"은 prefill만 수행 — 동일 contentHash면 자동 갱신, 다르면 신규
  */
 export function useAutoSaveCalculation({
   taxType,
@@ -48,72 +45,50 @@ export function useAutoSaveCalculation({
   clientId = null,
 }: Params): Return {
   const [savedId, setSavedId] = useState<string | null>(null);
+  const [created, setCreated] = useState<boolean | null>(null);
+  const [status, setStatus] = useState<AutoSaveStatus>("idle");
   const [error, setError] = useState<string | null>(null);
-  // 마운트 시점에 sessionStorage를 1회 읽어 초기값 결정.
-  // saveAsUpdate / saveAsNew에서만 명시적으로 null로 클리어.
-  const [pendingEditId, setPendingEditId] = useState<string | null>(() => {
-    if (typeof window === "undefined") return null;
-    return sessionStorage.getItem(EDITING_KEY);
-  });
-  // 마지막으로 저장한 resultData 참조. boolean 락 대신 참조 비교로 변경(2026-05-20):
-  // 같은 컴포넌트 생애 내 N회 계산이 모두 저장되도록 허용하면서, 같은 result로 useEffect가
-  // 재실행(form 변경 등)되어도 중복 저장은 차단. setResult(data.result)는 매번 JSON.parse로
-  // 생성된 새 객체이므로 참조 비교만으로 충분.
+
   const lastSavedResultRef = useRef<Record<string, unknown> | null>(null);
 
   useEffect(() => {
     if (!resultData) return;
-    // 수정 모드는 자동 저장 skip — 사용자가 saveAsUpdate / saveAsNew 선택해야 함
-    if (pendingEditId) return;
+    // 빈 객체({})는 미계산으로 간주 → skip
+    if (Object.keys(resultData).length === 0) return;
     if (lastSavedResultRef.current === resultData) return;
 
     const target = resultData;
     lastSavedResultRef.current = target;
+    // 외부 시스템(IndexedDB) 동기화용 — set-state-in-effect 의도된 사용
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setStatus("saving");
+     
+    setError(null);
 
     const now = new Date().toISOString();
     const title = generateTitle(taxType, inputData, now);
     calculationRepository
-      .save({ taxType, title, inputData, resultData: target, taxLawVersion, linkedCalculationId: null, clientId })
-      .then((id) => {
+      .saveOrUpdateByContent({
+        taxType,
+        title,
+        inputData,
+        resultData: target,
+        taxLawVersion,
+        linkedCalculationId: null,
+        clientId: clientId ?? null,
+      })
+      .then(({ id, created: c }) => {
         setSavedId(id);
+        setCreated(c);
+        setStatus("saved");
         if (clientId) clientRepository.touch(clientId);
       })
       .catch((err) => {
-        // 실패 롤백 — target이 아직 최신일 때만 (race-safe)
         if (lastSavedResultRef.current === target) lastSavedResultRef.current = null;
+        setStatus("error");
         setError(err instanceof Error ? err.message : "저장 실패");
       });
-  }, [taxType, inputData, resultData, taxLawVersion, clientId, pendingEditId]);
+  }, [taxType, inputData, resultData, taxLawVersion, clientId]);
 
-  const saveAsUpdate = useCallback(() => {
-    if (!pendingEditId || !resultData) return;
-    const now = new Date().toISOString();
-    const title = generateTitle(taxType, inputData, now);
-    sessionStorage.removeItem(EDITING_KEY);
-    calculationRepository
-      .update(pendingEditId, { taxType, title, inputData, resultData, taxLawVersion })
-      .then(() => {
-        setSavedId(pendingEditId);
-        setPendingEditId(null);
-        if (clientId) clientRepository.touch(clientId);
-      })
-      .catch((err) => setError(err instanceof Error ? err.message : "저장 실패"));
-  }, [pendingEditId, resultData, taxType, inputData, taxLawVersion, clientId]);
-
-  const saveAsNew = useCallback(() => {
-    if (!resultData) return;
-    const now = new Date().toISOString();
-    const title = generateTitle(taxType, inputData, now);
-    sessionStorage.removeItem(EDITING_KEY);
-    calculationRepository
-      .save({ taxType, title, inputData, resultData, taxLawVersion, linkedCalculationId: null, clientId })
-      .then((id) => {
-        setSavedId(id);
-        setPendingEditId(null);
-        if (clientId) clientRepository.touch(clientId);
-      })
-      .catch((err) => setError(err instanceof Error ? err.message : "저장 실패"));
-  }, [resultData, taxType, inputData, taxLawVersion, clientId]);
-
-  return { savedId, error, pendingEditId, saveAsUpdate, saveAsNew };
+  return { savedId, created, status, error };
 }

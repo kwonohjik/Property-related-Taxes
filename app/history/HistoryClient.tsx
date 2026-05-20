@@ -204,7 +204,9 @@ export function HistoryClient() {
   function handleResume(record: CalculationRecord) {
     const route = TAX_TYPE_ROUTES[record.taxType];
     if (!route) return;
-    sessionStorage.setItem("editingCalculationId", record.id);
+    // v2 (contentHash dedup): editingCalculationId 플래그 폐기.
+    // 동일 입력+결과면 saveOrUpdateByContent가 자동으로 원본 record를 update.
+    sessionStorage.removeItem("editingCalculationId");
     // 세무사 모드 — 이력에 기록된 의뢰인을 자동 활성화하여 ProfessionalClientGate 우회.
     // record.clientId가 null(미지정)이면 게이트가 다시 의뢰인 선택을 강제하지 않도록
     // null도 그대로 set (게이트가 activeClientId === null 시 게이트 표시 → 정합성 위해

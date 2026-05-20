@@ -14,6 +14,9 @@ import { ChevronLeft } from "lucide-react";
 import { StepIndicator } from "@/components/calc/StepIndicator";
 import { ResetButton } from "@/components/calc/shared/ResetButton";
 import { HomeButton } from "@/components/calc/shared/HomeButton";
+import { SaveButton } from "@/components/calc/shared/SaveButton";
+import { SaveToast, type SaveToastMessage } from "@/components/calc/shared/SaveToast";
+import { runGiftManualSave, formatGiftSaveMessage } from "@/components/calc/gift-tax-save-handler";
 import { PropertyValuationForm } from "@/components/calc/PropertyValuationForm";
 import { StockValuationForm } from "@/components/calc/StockValuationForm";
 import { ExemptionChecklist } from "@/components/calc/exemption/ExemptionChecklist";
@@ -532,6 +535,7 @@ export function GiftTaxForm() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<GiftTaxResult | null>(null);
+  const [saveMessage, setSaveMessage] = useState<SaveToastMessage | null>(null);
 
   const { activeClientId } = useProfessionalStore();
 
@@ -550,13 +554,29 @@ export function GiftTaxForm() {
   }, []);
 
   // 로컬 이력 자동 저장 — 결과 화면 진입 시 1회
-  useAutoSaveCalculation({
+  const autoSave = useAutoSaveCalculation({
     taxType: "gift",
     inputData: form as unknown as Record<string, unknown>,
     resultData: result ? (result as unknown as Record<string, unknown>) : null,
     taxLawVersion: form.giftDate || new Date().toISOString().split("T")[0],
     clientId: activeClientId,
   });
+
+  // 자동저장 상태 → SaveToastMessage 변환 (결과 화면 진입 시 1회 노출)
+  const autoSaveToast: SaveToastMessage | null =
+    autoSave.status === "saved" && autoSave.savedId
+      ? {
+          kind: "success",
+          text: autoSave.created
+            ? `✓ 이력에 자동 저장되었습니다 (ID: ${autoSave.savedId.slice(0, 8)})`
+            : `✓ 동일 입력의 기존 이력이 갱신되었습니다 (ID: ${autoSave.savedId.slice(0, 8)})`,
+        }
+      : autoSave.status === "error"
+      ? {
+          kind: "error",
+          text: "자동 저장 실패 — 우상단 저장하기 버튼으로 재시도하세요.",
+        }
+      : null;
 
   const set = (patch: Partial<FormState>) =>
     setForm((prev) => ({ ...prev, ...patch }));
@@ -642,6 +662,25 @@ export function GiftTaxForm() {
     setError(null);
   };
 
+  // 결과 미계산 시 NO_RESULT sentinel throw — 호출자가 info 토스트 분기
+  const handleManualSave = () =>
+    runGiftManualSave({
+      form: form as unknown as Record<string, unknown> & { giftDate?: string },
+      result,
+      clientId: activeClientId ?? null,
+    });
+
+  // 폼 화면용 wrapper — 토스트 표시
+  const handleManualSaveForForm = async () => {
+    setSaveMessage(null);
+    try {
+      const outcome = await handleManualSave();
+      setSaveMessage(formatGiftSaveMessage(outcome));
+    } catch (e) {
+      setSaveMessage(formatGiftSaveMessage(e instanceof Error ? e : new Error(String(e))));
+    }
+  };
+
   if (result) {
     return (
       <GiftTaxResultView
@@ -649,6 +688,8 @@ export function GiftTaxForm() {
         onReset={handleReset}
         onBack={() => { setResult(null); setStep(STEPS.length - 1); }}
         onGoToFirst={() => { setResult(null); setStep(0); }}
+        onSave={handleManualSave}
+        autoSaveToast={autoSaveToast}
         estateItems={[...form.giftItems, ...form.stockItems]}
         priorGifts={form.priorGifts.map((pg) => ({
           giftDate: pg.giftDate,
@@ -671,6 +712,11 @@ export function GiftTaxForm() {
       {/* 홈으로 · 초기화 — 내비게이션 바 위쪽 우측 */}
       <div className="flex items-center justify-end gap-2">
         <HomeButton confirmMessage="홈으로 이동하면 현재 입력 중인 값이 유지된 채 페이지를 떠납니다.&#10;계속하시겠습니까?" />
+        <SaveButton
+          onSave={handleManualSaveForForm}
+          disabled={!result}
+          disabledReason="결과를 먼저 계산하시면 자동으로 이력에 저장됩니다."
+        />
         <ResetButton
           onReset={() => {
             setForm(INITIAL_FORM);
@@ -701,6 +747,8 @@ export function GiftTaxForm() {
         </div>
       )}
 
+      <SaveToast message={saveMessage} onClose={() => setSaveMessage(null)} />
+
       <div className="flex gap-3">
         <button
           type="button"
@@ -722,6 +770,12 @@ export function GiftTaxForm() {
             ? "계산하기"
             : "다음 →"}
         </button>
+        <SaveButton
+          variant="primary"
+          onSave={handleManualSaveForForm}
+          disabled={!result}
+          disabledReason="결과를 먼저 계산하시면 자동으로 이력에 저장됩니다."
+        />
       </div>
     </div>
   );

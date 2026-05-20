@@ -102,7 +102,7 @@ export function buildBesshi10Rows(
   const r = partialResult;
   const split = deriveRelationDeductionSplit(input.donor, r.deductionDetail);
   const priorAddition = derivePriorGiftAddition(r);
-  const surcharge = r.generationSkipSurchargeDetail?.surchargeBase ?? 0;
+  const surcharge = r.generationSkipSurchargeDetail?.additionalSurcharge ?? 0;
   const computedTaxTotal = r.computedTax + surcharge;
   const rateLabel = resolveBracketLabel(r.taxBase, brackets);
 
