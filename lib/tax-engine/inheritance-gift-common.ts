@@ -73,6 +73,9 @@ export function calcInheritanceGiftTax(
  * @param mode 'inheritance' = §27, 'gift' = §57
  * @param generationSkipAssetAmount 세대생략 해당 상속재산가액 (안분용, 상속세만)
  * @param totalEstateValue 전체 상속재산가액 (안분용, 상속세만)
+ * @param nonHeirNonLegateeGifts 상속인·수유자 외 자(영리법인 등)가 받은 사전증여 가산가액
+ *   서서이-1447, 2008.6.17.: §27 ① 분모 "총상속재산가액"에서 영리법인 등의 증여재산은 차감.
+ *   분모 = totalEstateValue − nonHeirNonLegateeGifts. 상속세만 적용 (gift 모드는 무시).
  * @param assetValueForThreshold 40% 판정 기준 재산가액 (미제공 시 상속: generationSkipAssetAmount ?? totalEstateValue, 증여: taxBase로 fallback)
  */
 export function calcGenerationSkipSurcharge(
@@ -83,6 +86,7 @@ export function calcGenerationSkipSurcharge(
   mode: "inheritance" | "gift" = "inheritance",
   generationSkipAssetAmount?: number,
   totalEstateValue?: number,
+  nonHeirNonLegateeGifts?: number,
   assetValueForThreshold?: number,
 ): { surchargeAmount: number; breakdown: CalculationStep[] } {
   if (!isGenerationSkip || computedTax <= 0) {
@@ -115,15 +119,28 @@ export function calcGenerationSkipSurcharge(
   const breakdown: CalculationStep[] = [];
 
   if (hasProration) {
-    // 안분 기준세액: computedTax × (세대생략 재산 / 전체 상속재산)
-    const proratedTax = Math.floor(
-      (computedTax * generationSkipAssetAmount!) / totalEstateValue!,
+    // 안분 분모 보정: 상속세만 — 영리법인 등 상속인·수유자 외 자가 받은 증여재산 차감 (서서이-1447)
+    const denominatorAdjustment =
+      mode === "inheritance" && nonHeirNonLegateeGifts != null
+        ? nonHeirNonLegateeGifts
+        : 0;
+    const adjustedDenominator = totalEstateValue! - denominatorAdjustment;
+
+    // PDF 종합사례 (책 1864): floor(산출세액 × 세대생략재산 / 분모 × 할증율) — 단일 floor
+    surchargeAmount = Math.floor(
+      (computedTax * generationSkipAssetAmount! * surchargeRate) /
+        adjustedDenominator,
     );
-    surchargeAmount = applyRate(proratedTax, surchargeRate);
     breakdown.push({
-      label: `세대생략 할증 — 안분기준세액 (산출세액 × 세대생략재산 / 전체재산)`,
-      amount: proratedTax,
-      note: `${generationSkipAssetAmount!.toLocaleString()} / ${totalEstateValue!.toLocaleString()}`,
+      label: `세대생략 할증 — 안분기준 (산출세액 × 세대생략재산 / 분모)`,
+      amount: Math.floor(
+        (computedTax * generationSkipAssetAmount!) / adjustedDenominator,
+      ),
+      note: `${generationSkipAssetAmount!.toLocaleString()} / ${adjustedDenominator.toLocaleString()}${
+        denominatorAdjustment > 0
+          ? ` (총상속 ${totalEstateValue!.toLocaleString()} − 영리법인 등 ${denominatorAdjustment.toLocaleString()})`
+          : ""
+      }`,
       lawRef,
     });
   } else {
@@ -275,7 +292,6 @@ export function aggregatePriorGiftsForInheritance(
   deathDate: string,
   heirIdsOnly = false,
 ): { totalAmount: number; breakdown: CalculationStep[] } {
-  const death = new Date(deathDate);
   const breakdown: CalculationStep[] = [];
   let totalAmount = 0;
 

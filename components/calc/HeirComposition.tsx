@@ -22,6 +22,8 @@ const RELATION_LABELS: Record<HeirRelation, string> = {
   lineal_ascendant: "직계존속 (부모·조부모)",
   sibling: "형제자매",
   other: "기타",
+  legatee: "수유자",
+  corporate: "법인",
 };
 
 const RELATION_ICONS: Record<HeirRelation, string> = {
@@ -30,6 +32,8 @@ const RELATION_ICONS: Record<HeirRelation, string> = {
   lineal_ascendant: "👴",
   sibling: "🤝",
   other: "👤",
+  legatee: "📜",
+  corporate: "🏢",
 };
 
 const RELATION_HINTS: Record<HeirRelation, string> = {
@@ -38,6 +42,8 @@ const RELATION_HINTS: Record<HeirRelation, string> = {
   lineal_ascendant: "1인당 5,000만원 인적공제. 만 65세 이상 추가 공제 (§20)",
   sibling: "기타 인적공제 (상속 우선순위 낮음)",
   other: "법정상속인 외 수유자",
+  legatee: "유언에 의한 수유자 (법정상속인 외)",
+  corporate: "법인 수유자",
 };
 
 const HEIR_RELATIONS: HeirRelation[] = [

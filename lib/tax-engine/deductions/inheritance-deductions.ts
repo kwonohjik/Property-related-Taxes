@@ -89,6 +89,7 @@ export function calcSpouseDeduction(
   spouseActualAmount: number | undefined,
   totalEstateValue: number,
   heirs: Heir[],
+  legalShareOverride?: number,
 ): { deduction: number; breakdown: CalculationStep[] } {
   const spouseHeir = heirs.find((h) => h.relation === "spouse");
   if (!spouseHeir) {
@@ -98,17 +99,22 @@ export function calcSpouseDeduction(
     };
   }
 
-  // 법정상속분 산정 — 잔여분은 배우자에게 우선 배분 (PRD §19 명세)
-  // 절사 후 잔여분: 각 상속인 floor합산이 totalEstateValue에 미달하는 경우 배우자에게 추가.
-  const ratioMap = calcLegalShareRatios(heirs);
-  const allocations = heirs.map((h) => ({
-    id: h.id,
-    amount: Math.floor(totalEstateValue * (ratioMap.get(h.id) ?? 0)),
-  }));
-  const totalAllocated = allocations.reduce((sum, a) => sum + a.amount, 0);
-  const remainder = totalEstateValue - totalAllocated; // 절사 잔여분 (보통 0~상속인 수-1 원)
-  const spouseFloor = allocations.find((a) => a.id === spouseHeir.id)?.amount ?? 0;
-  const legalShareAmount = spouseFloor + remainder; // 잔여분 배우자 우선 배분
+  let legalShareAmount: number;
+  if (legalShareOverride !== undefined) {
+    // Phase D: 직접 입력 — PDF 책 1862 표 산식 외부 계산값 사용
+    legalShareAmount = legalShareOverride;
+  } else {
+    // 법정상속분 산정 — 잔여분은 배우자에게 우선 배분 (PRD §19 명세)
+    const ratioMap = calcLegalShareRatios(heirs);
+    const allocations = heirs.map((h) => ({
+      id: h.id,
+      amount: Math.floor(totalEstateValue * (ratioMap.get(h.id) ?? 0)),
+    }));
+    const totalAllocated = allocations.reduce((sum, a) => sum + a.amount, 0);
+    const remainder = totalEstateValue - totalAllocated;
+    const spouseFloor = allocations.find((a) => a.id === spouseHeir.id)?.amount ?? 0;
+    legalShareAmount = spouseFloor + remainder;
+  }
 
   // 실제 상속금액 미입력 시 법정상속분 적용
   const actualAmount = spouseActualAmount ?? legalShareAmount;
@@ -291,11 +297,12 @@ export function calcInheritanceDeductions(
   // ① 기초공제
   const basicDeduction = calcBasicDeduction();
 
-  // ② 배우자공제
+  // ② 배우자공제 (Phase D: spouseLegalShareOverride 우선)
   const spouseResult = calcSpouseDeduction(
     input.spouseActualAmount,
     taxableEstateValue,
     input.heirs,
+    input.spouseLegalShareOverride,
   );
   const spouseDeduction = spouseResult.deduction;
 
@@ -324,16 +331,46 @@ export function calcInheritanceDeductions(
   const financialResult = calcFinancialDeduction(input.netFinancialAssets ?? 0);
   const financialDeduction = financialResult.deduction;
 
-  // ⑥ 동거주택공제
-  const cohabitResult = calcCohabitationDeduction(input.cohabitHouseStdPrice ?? 0);
+  // ⑥ 동거주택공제 (Phase E: 직접 입력 모드)
+  let cohabitResult: { deduction: number; breakdown: CalculationStep[] };
+  if (input.cohabitDirectAmount !== undefined && input.cohabitDirectAmount > 0) {
+    const capped = Math.min(input.cohabitDirectAmount, 600_000_000);
+    cohabitResult = {
+      deduction: capped,
+      breakdown: [
+        {
+          label: "동거주택공제 (직접 입력, 한도 6억)",
+          amount: capped,
+          lawRef: INH.COHABIT_DEDUCTION,
+        },
+      ],
+    };
+  } else {
+    cohabitResult = calcCohabitationDeduction(input.cohabitHouseStdPrice ?? 0);
+  }
   const cohabitationDeduction = cohabitResult.deduction;
 
   // ⑦ 영농공제
   const farmingResult = calcFarmingDeduction(input.farmingAssetValue ?? 0);
   const farmingDeduction = farmingResult.deduction;
 
-  // ⑧ 가업상속공제
-  const bizResult = calcFamilyBusinessDeduction(input.familyBusinessValue ?? 0);
+  // ⑧ 가업상속공제 (Phase E: 직접 입력 모드 — 한도 600억 유지)
+  let bizResult: { deduction: number; breakdown: CalculationStep[] };
+  if (input.familyBusinessDirectAmount !== undefined && input.familyBusinessDirectAmount > 0) {
+    const capped = Math.min(input.familyBusinessDirectAmount, 60_000_000_000);
+    bizResult = {
+      deduction: capped,
+      breakdown: [
+        {
+          label: "가업상속공제 (직접 입력, 한도 600억)",
+          amount: capped,
+          lawRef: INH.FAMILY_BUSINESS_DEDUCTION,
+        },
+      ],
+    };
+  } else {
+    bizResult = calcFamilyBusinessDeduction(input.familyBusinessValue ?? 0);
+  }
   const familyBusinessDeduction = bizResult.deduction;
 
   // 배우자 + 기초/일괄 + 나머지 합계

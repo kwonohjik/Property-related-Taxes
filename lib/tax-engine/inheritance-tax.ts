@@ -37,6 +37,9 @@ import {
   calcGenerationSkipSurcharge,
 } from "./inheritance-gift-common";
 import { calcInheritanceTaxCredits } from "./inheritance-gift-tax-credit";
+import { evaluatePresumedInheritance } from "./presumed-inheritance";
+import { calcCorporateExemption } from "./inheritance-corporate-exemption";
+import { calcHeirAllocation } from "./inheritance-allocation";
 import type { TaxBracket } from "./types";
 
 // ============================================================
@@ -99,20 +102,71 @@ export function calcInheritanceTax(
 
   // ─────────────────────────────────────────────
   // STEP 3: 장례비·공과금·채무 차감 (§14)
+  //   debtItems 입력 시 우선 적용 (협의분할 가능). 미입력 시 legacy debts·funeralExpense 사용.
   // ─────────────────────────────────────────────
-  const { deduction: funeralDeduction, breakdown: funeralBreakdown } =
-    calcFuneralExpenseDeduction(input.funeralExpense, input.funeralIncludesBongan);
+  let funeralDeduction = 0;
+  let nonFuneralDebts = 0;
 
-  allBreakdown.push(...funeralBreakdown);
+  if (input.debtItems && input.debtItems.length > 0) {
+    // 신규 debtItems 경로 — category별 합산 + 장례비 한도 적용
+    let funeralMeal = 0; // 식대 한도 1천만
+    let funeralBongan = 0; // 봉안 한도 5백만
+    for (const di of input.debtItems) {
+      if (di.category === "funeral") {
+        if (di.isBongan) funeralBongan += di.amount;
+        else funeralMeal += di.amount;
+      } else {
+        nonFuneralDebts += di.amount;
+      }
+    }
+    funeralDeduction = Math.min(funeralMeal, 10_000_000) + Math.min(funeralBongan, 5_000_000);
+    allBreakdown.push({
+      label: "장례비 (식대 한도 1천만 + 봉안 한도 5백만)",
+      amount: -funeralDeduction,
+      lawRef: INH.DEBT_DEDUCTION,
+      note: `식대 ${funeralMeal.toLocaleString()} → ${Math.min(funeralMeal, 10_000_000).toLocaleString()}, 봉안 ${funeralBongan.toLocaleString()} → ${Math.min(funeralBongan, 5_000_000).toLocaleString()}`,
+    });
+    allBreakdown.push({
+      label: "공과금·채무 차감",
+      amount: -nonFuneralDebts,
+      lawRef: INH.DEBT_DEDUCTION,
+    });
+  } else {
+    // Legacy 경로 — funeralExpense + debts
+    const fd = calcFuneralExpenseDeduction(input.funeralExpense, input.funeralIncludesBongan);
+    funeralDeduction = fd.deduction;
+    allBreakdown.push(...fd.breakdown);
+    nonFuneralDebts = input.debts;
+    allBreakdown.push({
+      label: "공과금·채무 차감",
+      amount: -input.debts,
+      lawRef: INH.DEBT_DEDUCTION,
+    });
+  }
   allLaws.add(INH.DEBT_DEDUCTION);
+  const deductedBeforeAggregation = funeralDeduction + nonFuneralDebts;
 
-  const deductedBeforeAggregation = funeralDeduction + input.debts;
-
-  allBreakdown.push({
-    label: "공과금·채무 차감",
-    amount: -input.debts,
-    lawRef: INH.DEBT_DEDUCTION,
-  });
+  // ─────────────────────────────────────────────
+  // STEP 3.5: 추정상속재산 §15 (Phase A)
+  // ─────────────────────────────────────────────
+  let presumedTotal = 0;
+  let presumedDetail:
+    | { items: ReturnType<typeof evaluatePresumedInheritance>["items"]; total: number }
+    | undefined;
+  if (input.presumedItems && input.presumedItems.length > 0) {
+    const presumedResult = evaluatePresumedInheritance(input.presumedItems);
+    presumedTotal = presumedResult.total;
+    presumedDetail = presumedResult;
+    for (const ir of presumedResult.items) {
+      allBreakdown.push(...ir.breakdown);
+    }
+    allBreakdown.push({
+      label: "추정상속재산 §15 합계",
+      amount: presumedTotal,
+      lawRef: INH.PRESUMPTION,
+    });
+    allLaws.add(INH.PRESUMPTION);
+  }
 
   // ─────────────────────────────────────────────
   // STEP 4: 사전증여재산 합산 (§13)
@@ -126,18 +180,18 @@ export function calcInheritanceTax(
   allBreakdown.push(...priorGiftBreakdown);
 
   // ─────────────────────────────────────────────
-  // STEP 5: 상속세 과세가액
+  // STEP 5: 상속세 과세가액 (추정상속재산 §15 포함)
   // ─────────────────────────────────────────────
   const taxableEstateValue = Math.max(
     0,
-    grossEstateValue - exemptAmount - deductedBeforeAggregation + priorGiftAggregated,
+    grossEstateValue + presumedTotal - exemptAmount - deductedBeforeAggregation + priorGiftAggregated,
   );
 
   allBreakdown.push({
     label: "상속세 과세가액",
     amount: taxableEstateValue,
     lawRef: INH.TAXABLE_VALUE,
-    note: "= 평가액 - 비과세 - 장례·채무 + 사전증여",
+    note: "= 평가액 + 추정상속재산 - 비과세 - 장례·채무 + 사전증여",
   });
 
   // ─────────────────────────────────────────────
@@ -189,16 +243,26 @@ export function calcInheritanceTax(
   });
 
   // ─────────────────────────────────────────────
-  // STEP 9: 세대생략 할증 (§27)
+  // STEP 9: 세대생략 할증 (§27) — 분모 보정 (Phase F)
+  //   PDF: 분모 = grossEstateWithGifts − 영리법인 등 사전증여 가액
   // ─────────────────────────────────────────────
+  // 상속인·수유자 외 자(영리법인·기타)가 받은 사전증여 가액 합계
+  const nonHeirNonLegateeGifts = (input.preGiftsWithin10Years ?? []).reduce(
+    (sum, g) => sum + (g.beneficiaryType === "corporate" ? g.giftAmount : 0),
+    0,
+  );
+  // 세대생략 할증 분모 = 상속세 과세가액 (PDF 책 1864 산식)
+  const surchargeDenominator = taxableEstateValue;
+
   const genSkipResult = calcGenerationSkipSurcharge(
     computedTax,
     input.isGenerationSkip ?? false,
     input.isMinorHeir ?? false,
     taxBase,
     "inheritance",
-    input.generationSkipAssetAmount,  // §27 ① 안분용: 세대생략 해당 재산가액
-    grossEstateValue,                 // §27 ① 안분용: 전체 상속재산가액
+    input.generationSkipAssetAmount,
+    surchargeDenominator,
+    nonHeirNonLegateeGifts,
   );
   const generationSkipSurcharge = genSkipResult.surchargeAmount;
   if (genSkipResult.breakdown.length > 0) {
@@ -207,7 +271,36 @@ export function calcInheritanceTax(
   }
 
   // ─────────────────────────────────────────────
-  // STEP 10: 세액공제 (§28~§30·§69)
+  // STEP 10: 영리법인 §3의2② 면제 (Phase B)
+  // ─────────────────────────────────────────────
+  const corporateGifts = (input.preGiftsWithin10Years ?? []).filter(
+    (g) => g.beneficiaryType === "corporate",
+  );
+  const corporateGiftTaxBase = corporateGifts.reduce(
+    (s, g) => s + (g.giftTaxBase ?? g.giftAmount),
+    0,
+  );
+  const corporateGiftComputedTax = corporateGifts.reduce(
+    (s, g) => s + (g.corporateGiftComputedTax ?? 0),
+    0,
+  );
+
+  let corporateExemption:
+    | ReturnType<typeof calcCorporateExemption>
+    | undefined;
+  if (corporateGifts.length > 0 && corporateGiftComputedTax > 0) {
+    corporateExemption = calcCorporateExemption({
+      corporateGiftComputedTax,
+      corporateGiftTaxBase,
+      totalComputedTax: computedTax, // 할증 미포함 — PDF 책 1866
+      totalTaxBase: taxBase,
+    });
+    allBreakdown.push(...corporateExemption.breakdown);
+    allLaws.add(INH.TAXPAYER);
+  }
+
+  // ─────────────────────────────────────────────
+  // STEP 11: 세액공제 (§28~§30·§69)
   // ─────────────────────────────────────────────
   const creditResult = calcInheritanceTaxCredits({
     creditInput: input.creditInput,
@@ -215,7 +308,7 @@ export function calcInheritanceTax(
     generationSkipSurcharge,
     foreignPropertyRatio: options.foreignPropertyRatio,
     taxableEstateValue,
-    taxBase,       // §28 ① 안분 분모: 과세표준 (법령 준수)
+    taxBase,
     deathDate: input.deathDate,
   });
 
@@ -224,7 +317,7 @@ export function calcInheritanceTax(
   for (const law of creditResult.appliedLaws) allLaws.add(law);
 
   // ─────────────────────────────────────────────
-  // STEP 11: 결정세액
+  // STEP 12: 결정세액 (총액)
   // ─────────────────────────────────────────────
   const finalTax = Math.max(
     0,
@@ -236,6 +329,42 @@ export function calcInheritanceTax(
     amount: finalTax,
     note: "= 산출세액 + 세대생략할증 - 세액공제",
   });
+
+  // ─────────────────────────────────────────────
+  // STEP 13: 상속인별 배부 (Phase C) — heirs·doneeId가 제공된 경우만
+  // ─────────────────────────────────────────────
+  let heirAllocationResult: ReturnType<typeof calcHeirAllocation> | undefined;
+  const hasHeirAllocations =
+    input.heirs.length > 0 &&
+    (input.estateItems.some((e) => e.heirAllocations) ||
+      input.preGiftsWithin10Years.some((g) => g.doneeId));
+
+  if (hasHeirAllocations) {
+    // 추정상속재산 id→addedAmount Map 작성
+    const presumedAddedById = new Map<string, number>();
+    if (presumedDetail) {
+      for (const ir of presumedDetail.items) {
+        presumedAddedById.set(ir.id, ir.addedAmount);
+      }
+    }
+
+    heirAllocationResult = calcHeirAllocation({
+      heirs: input.heirs,
+      estateItems: input.estateItems,
+      presumedItems: input.presumedItems ?? [],
+      debtItems: input.debtItems ?? [],
+      priorGifts: input.preGiftsWithin10Years,
+      presumedAddedById,
+      taxBase,
+      computedTax,
+      generationSkipSurcharge,
+      corporateExemption: corporateExemption?.amount ?? 0,
+      corporateGiftTaxBase,
+      grossEstateWithGifts: taxableEstateValue,
+      isFiledOnTime: input.creditInput.isFiledOnTime,
+    });
+    allBreakdown.push(...heirAllocationResult.breakdown);
+  }
 
   return {
     grossEstateValue,
@@ -256,5 +385,9 @@ export function calcInheritanceTax(
     appliedLaws: Array.from(allLaws),
     warnings: allWarnings,
     appliedLawDate,
+    // 종합사례 PDF 확장
+    presumedInheritanceDetail: presumedDetail,
+    corporateExemption,
+    heirAllocationResult,
   };
 }

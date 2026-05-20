@@ -80,6 +80,14 @@ export interface EstateItem {
   leaseDeposit?: number;
   /** 저당권 설정 여부 */
   mortgageAmount?: number;
+
+  // ===== 종합사례 PDF 확장 (Design §2-1) =====
+  /** 협의분할 — 상속인별 분배 (합 = valuatedAmount) */
+  heirAllocations?: HeirAllocation[];
+  /** 간주상속재산 표시 분류 (§10). 결과 카드 분리 노출용. */
+  deemedCategory?: "retirement" | "insurance" | "trust";
+  /** 가업상속재산 여부 — 직접 입력 모드 표시용 */
+  isFamilyBusinessAsset?: boolean;
 }
 
 /** 비상장주식 평가 데이터 (시행령 §54) */
@@ -195,7 +203,10 @@ export type DonorGroup = "A" | "B" | "C" | "D" | "E" | "F" | "G";
 /** 10년 이내 사전증여 내역 */
 export interface PriorGift {
   giftDate: string; // ISO date
-  /** 수증인 (상속인인지 여부 — 상속인이면 §13 합산, 비상속인이면 §13 ②) */
+  /**
+   * 수증인 상속인 여부 (상속인 10년 / 비상속인 5년).
+   * @deprecated beneficiaryType 사용 권장. beneficiaryType="heir"에서 자동 도출.
+   */
   isHeir: boolean;
   giftAmount: number;
   /** 당시 납부한 증여세 (§28 증여세액공제 계산용, 정보용) */
@@ -216,6 +227,20 @@ export interface PriorGift {
   additionalGenerationSkipSurcharge?: number;
   /** 그 회차에 §57 세대생략 할증 적용 여부 (미입력 시 donor=grandparent에서 자동 도출) */
   wasGenerationSkip?: boolean;
+
+  // ===== 종합사례 PDF 확장 (Design §2-2) =====
+  /** 수증자 ID — Heir.id 참조. 상속인별 배부에 필수. */
+  doneeId?: string;
+  /**
+   * 수증자 유형:
+   *   - "heir": 상속인 (§13 ① 10년)
+   *   - "legatee": 비상속인 수유자 (§13 ② 5년) — 자연인
+   *   - "corporate": 비상속인 영리법인 (§13 ② 5년 + §3의2② 면제)
+   * 미설정 시 legacy isHeir에서 자동 추론.
+   */
+  beneficiaryType?: "heir" | "legatee" | "corporate";
+  /** 영리법인 사전증여 당시 증여세 산출세액 (§3의2② 면제 한도). beneficiaryType="corporate" 시 필수. */
+  corporateGiftComputedTax?: number;
 }
 
 // ============================================================
@@ -284,18 +309,163 @@ export type HeirRelation =
   | "child"
   | "lineal_ascendant"
   | "sibling"
-  | "other";
+  | "other"
+  // ===== 종합사례 PDF 확장 (Design §2-0) =====
+  | "legatee"         // 비상속인 수유자 (자연인, 예: 손녀)
+  | "corporate";      // 비상속인 영리법인 수증자
 
 /** 상속인 정보 */
 export interface Heir {
   id: string;
   relation: HeirRelation;
   name?: string;
-  birthDate?: string; // 미성년자·연로자 공제 계산용
+  birthDate?: string;
   isDisabled?: boolean;
-  /** 실제 상속받는 비율 (미입력 시 법정상속분 적용) */
   actualShareRatio?: number;
-  isCohabitant?: boolean; // 동거주택 상속공제 요건
+  isCohabitant?: boolean;
+  // ===== 종합사례 PDF 확장 =====
+  /** 상속인 vs 수유자·영리법인 구분. 미입력 시 relation으로 자동 추론. */
+  isHeir?: boolean;
+  /** 세대생략 수유자(직계비속 손자녀) — §27 ② 30%/40% 할증 대상 */
+  isGenerationSkipBeneficiary?: boolean;
+  /** 영리법인 수증자만: 사전증여 당시 증여세 산출세액 (§3의2② 면제 한도용) */
+  corporateGiftComputedTax?: number;
+}
+
+// ============================================================
+// 자산-수준 협의분할 (Design §2-1)
+// ============================================================
+
+export interface HeirAllocation {
+  /** Heir.id 참조 */
+  heirId: string;
+  /** 분배 금액 (원). 합계 = 자산 평가액 */
+  amount: number;
+  /** 분배 면적 (선택, 표시용) */
+  areaM2?: number;
+}
+
+// ============================================================
+// 추정상속재산 §15 (Design §2-3)
+// ============================================================
+
+export type PresumedCategory =
+  | "real_estate"      // 부동산 및 부동산권리
+  | "deposit"          // 예금 인출
+  | "other_asset"      // 기타재산
+  | "financial_debt";  // 금융기관채무
+
+export interface PresumedInheritanceItem {
+  id: string;
+  category: PresumedCategory;
+  /** 1년 이내 처분·인출·차입 금액 (원) */
+  amountWithin1Y: number;
+  /** 1년 초과 ~ 2년 이내 처분·인출·차입 금액 (원) */
+  amountWithin2Y: number;
+  /** 사용처가 객관적으로 확인된 금액 */
+  verifiedUseAmount: number;
+  /** 상속인별 분배 (선택) */
+  heirAllocations?: HeirAllocation[];
+}
+
+export interface PresumedInheritanceItemResult {
+  id: string;
+  category: PresumedCategory;
+  /** 임계 발동 여부 (1년 2억 OR 2년 5억) */
+  thresholdTriggered: boolean;
+  /** 소명대상 합계 = 1Y + 2Y (임계 미만 시 0) */
+  scrutinyAmount: number;
+  /** 미소명 = 소명대상 − 확인금액 */
+  unverifiedAmount: number;
+  /** Min(처분금액 × 20%, 2억) */
+  baseDeduction: number;
+  /** 추정상속재산 가산액 = max(0, 미소명 − baseDeduction) */
+  addedAmount: number;
+  breakdown: CalculationStep[];
+}
+
+// ============================================================
+// 채무·공과금·장례비 협의분할 (Design §2-3-1)
+// ============================================================
+
+export type DebtCategory =
+  | "financial"      // 금융기관 채무
+  | "tax"            // 공과금
+  | "personal"       // 사적 채무
+  | "funeral";       // 장례비
+
+export interface DebtItem {
+  id: string;
+  category: DebtCategory;
+  name: string;
+  /** 금액 (원). 장례비는 한도 적용 전 금액. */
+  amount: number;
+  /** 장례비 봉안시설 사용료 여부 (true 시 한도 500만, false 시 한도 1,000만) */
+  isBongan?: boolean;
+  /** 협의분할 — 상속인별 변제 분배 */
+  heirAllocations?: HeirAllocation[];
+}
+
+// ============================================================
+// 상속인별 배부 결과 (Design §2-5)
+// ============================================================
+
+export interface HeirTaxBreakdown {
+  heirId: string;
+  /** 본래상속재산 직접 분배 */
+  directEstateAmount: number;
+  /** 사전증여 가산가액 */
+  priorGiftAmount: number;
+  /** 추정상속재산 분배 */
+  presumedAmount: number;
+  /** 채무·공과금·장례비 분담 */
+  debtShare: number;
+  /** 과세가액상당액 */
+  taxableValueShare: number;
+  /** 직접배부 과세표준 (사전증여 과세표준 − 증여공제) */
+  directTaxBaseShare: number;
+  /** 간접배부 과세표준 */
+  indirectTaxBaseShare: number;
+  /** 과세표준상당액 = 직접 + 간접 */
+  taxBaseShare: number;
+  /** 산출세액상당액 (배부대상 산출세액 × 비율, 할증 전) */
+  computedTaxShare: number;
+  /** 세대생략 할증액 (수유자만) */
+  generationSkipSurcharge: number;
+  /** 사전증여세액공제 */
+  priorGiftCredit: number;
+  /** 차가감세액 = computedTaxShare + 할증 − priorGiftCredit */
+  preFilingCreditTax: number;
+  /** 신고세액공제 (3%) */
+  filingCredit: number;
+  /** 자진납부세액 */
+  finalTax: number;
+}
+
+export interface HeirAllocationResult {
+  /** Heir.id 별 산출 결과. 영리법인은 finalTax=0. */
+  perHeir: Map<string, HeirTaxBreakdown>;
+  /** 배부대상 산출세액 = 산출세액 − 영리법인 면제 (할증 미포함) */
+  distributableTax: number;
+  /** 간접배부 분모 = grossEstateWithGifts − Σ(상속인·수유자 외 자 사전증여 가액) */
+  indirectDistributionBase: number;
+  /** 간접배부 분자 = taxBase − Σ직접배부 − corporateGiftTaxBase */
+  indirectNumerator: number;
+  /** 산출세액상당액 분모 = taxBase − corporateGiftTaxBase */
+  computedTaxShareDenominator: number;
+  breakdown: CalculationStep[];
+}
+
+// ============================================================
+// 영리법인 §3의2② 면제 결과 (Design §2-5)
+// ============================================================
+
+export interface CorporateExemptionResult {
+  /** 면제세액 = Min(증여세 산출세액, 한도) */
+  amount: number;
+  /** 한도 = floor(산출세액 × 영리법인 과세표준 / 상속세 과세표준) */
+  limit: number;
+  breakdown: CalculationStep[];
 }
 
 // ============================================================
@@ -325,6 +495,24 @@ export interface InheritanceDeductionInput {
    * 미제공 시 계산일 기준으로 fallback (소급 계산 오류 가능).
    */
   deathDate?: string;
+
+  // ===== 종합사례 PDF Phase D·E 확장 =====
+  /**
+   * 가업상속공제 직접 입력 (Phase E).
+   * 제공 시 요건 판정 생략하고 입력값 그대로 적용. familyBusinessValue 우선.
+   */
+  familyBusinessDirectAmount?: number;
+  /**
+   * 동거주택공제 직접 입력 (Phase E).
+   * 제공 시 80% 산정 생략하고 입력값 그대로 적용 (한도 6억은 유지).
+   */
+  cohabitDirectAmount?: number;
+  /**
+   * §19 배우자 법정상속분 직접 입력 (Phase D).
+   * 제공 시 calcSpouseDeduction이 법정상속분 자동 산정 대신 입력값 사용.
+   * PDF 책 1862 표 산식 직접 계산: (총상속 + 상속인 사전증여 − 상속외자유증 − 채무 + 장례비 − 비과세) × 배우자 법정지분 − 배우자 사전증여 과세표준
+   */
+  spouseLegalShareOverride?: number;
 }
 
 /** 상속공제 계산 결과 */
@@ -429,11 +617,21 @@ export interface InheritanceTaxInput {
   decedentType: "resident" | "non_resident";
   deathDate: string; // ISO date YYYY-MM-DD
   estateItems: EstateItem[];
-  /** 장례비 (최대 1,500만원, 봉안시설 추가 시 +500만) */
+  /**
+   * 장례비 (최대 1,500만원, 봉안시설 추가 시 +500만)
+   * @deprecated debtItems(category="funeral") 사용 권장
+   */
   funeralExpense: number;
   funeralIncludesBongan: boolean;
-  /** 공과금·사적채무 합계 */
+  /**
+   * 공과금·사적채무 합계
+   * @deprecated debtItems 사용 권장 (협의분할 입력 가능)
+   */
   debts: number;
+  /** 채무·공과금·장례비 통합 배열 (Design §2-3-1). debts·funeralExpense 대체 — 입력 시 우선. */
+  debtItems?: DebtItem[];
+  /** 추정상속재산 §15 (Design §2-3) */
+  presumedItems?: PresumedInheritanceItem[];
   /** 비과세 체크리스트 항목 (§11·§12) — ExemptionChecklist 컴포넌트 출력 */
   exemptions?: ExemptionCheckedItem[];
   preGiftsWithin10Years: PriorGift[];
@@ -481,6 +679,17 @@ export interface InheritanceTaxResult extends TaxResultMeta {
   deductionDetail: InheritanceDeductionResult;
   creditDetail: TaxCreditResult;
   valuationResults: PropertyValuationResult[];
+
+  // ===== 종합사례 PDF 확장 (Design §2-5) =====
+  /** 추정상속재산 §15 결과 */
+  presumedInheritanceDetail?: {
+    items: PresumedInheritanceItemResult[];
+    total: number;
+  };
+  /** 영리법인 §3의2② 면제세액 */
+  corporateExemption?: CorporateExemptionResult;
+  /** 상속인별 배부 결과 */
+  heirAllocationResult?: HeirAllocationResult;
 }
 
 /** 증여세 계산 입력 전체 */
