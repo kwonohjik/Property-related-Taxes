@@ -113,15 +113,12 @@ function GiftRowEditor({
             증여 {index + 1}
           </span>
           {gift.sourceCalculationId && (
-            <a
-              href={`/history/${gift.sourceCalculationId}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-[10px] bg-violet-100 text-violet-800 rounded px-2 py-0.5 hover:bg-violet-200"
+            <span
+              className="inline-flex items-center gap-1 text-[10px] bg-violet-100 text-violet-800 rounded px-2 py-0.5"
               title="이 사전증여는 저장된 증여세 이력에서 자동 입력되었습니다. 필드를 수정하면 배지가 사라집니다."
             >
               📋 이력 기반
-            </a>
+            </span>
           )}
         </div>
         <button

@@ -209,15 +209,12 @@ export function GiftTaxResultView({
                     {pg.giftDate} {pg.donor && `· ${pg.donor}`}
                   </span>
                   {pg.sourceCalculationId && (
-                    <a
-                      href={`/history/${pg.sourceCalculationId}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-0.5 text-[10px] bg-violet-100 text-violet-800 rounded px-1.5 py-0.5 hover:bg-violet-200"
+                    <span
+                      className="inline-flex items-center gap-0.5 text-[10px] bg-violet-100 text-violet-800 rounded px-1.5 py-0.5"
                       title="저장된 증여세 이력에서 자동 입력된 회차"
                     >
                       📋 이력
-                    </a>
+                    </span>
                   )}
                 </div>
                 <span className="font-medium">{formatKRW(pg.giftAmount)}</span>

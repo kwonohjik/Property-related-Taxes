@@ -164,14 +164,6 @@ function CandidateCard({
         >
           📋 이 회차 선택
         </button>
-        <a
-          href={`/history/${candidate.calculationId}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="rounded-md border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50"
-        >
-          🔍 상세
-        </a>
       </div>
     </div>
   );
