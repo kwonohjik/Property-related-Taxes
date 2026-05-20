@@ -55,26 +55,32 @@ export function useAutoSaveCalculation({
     if (typeof window === "undefined") return null;
     return sessionStorage.getItem(EDITING_KEY);
   });
-  const savedRef = useRef(false);
+  // 마지막으로 저장한 resultData 참조. boolean 락 대신 참조 비교로 변경(2026-05-20):
+  // 같은 컴포넌트 생애 내 N회 계산이 모두 저장되도록 허용하면서, 같은 result로 useEffect가
+  // 재실행(form 변경 등)되어도 중복 저장은 차단. setResult(data.result)는 매번 JSON.parse로
+  // 생성된 새 객체이므로 참조 비교만으로 충분.
+  const lastSavedResultRef = useRef<Record<string, unknown> | null>(null);
 
   useEffect(() => {
     if (!resultData) return;
     // 수정 모드는 자동 저장 skip — 사용자가 saveAsUpdate / saveAsNew 선택해야 함
     if (pendingEditId) return;
-    // 신규 자동 저장은 컴포넌트 생애 1회만
-    if (savedRef.current) return;
-    savedRef.current = true;
+    if (lastSavedResultRef.current === resultData) return;
+
+    const target = resultData;
+    lastSavedResultRef.current = target;
 
     const now = new Date().toISOString();
     const title = generateTitle(taxType, inputData, now);
     calculationRepository
-      .save({ taxType, title, inputData, resultData, taxLawVersion, linkedCalculationId: null, clientId })
+      .save({ taxType, title, inputData, resultData: target, taxLawVersion, linkedCalculationId: null, clientId })
       .then((id) => {
         setSavedId(id);
         if (clientId) clientRepository.touch(clientId);
       })
       .catch((err) => {
-        savedRef.current = false;
+        // 실패 롤백 — target이 아직 최신일 때만 (race-safe)
+        if (lastSavedResultRef.current === target) lastSavedResultRef.current = null;
         setError(err instanceof Error ? err.message : "저장 실패");
       });
   }, [taxType, inputData, resultData, taxLawVersion, clientId, pendingEditId]);

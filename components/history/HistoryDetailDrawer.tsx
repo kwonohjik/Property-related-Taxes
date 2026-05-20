@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { CalculationRecord } from "@/lib/storage/types";
+import type { CalculationRecord, LocalTaxType } from "@/lib/storage/types";
 import { EditTitleDialog } from "./EditTitleDialog";
 
 const TAX_TYPE_ROUTES: Partial<Record<string, string>> = {
@@ -32,22 +32,25 @@ function formatDate(iso: string): string {
   });
 }
 
-function extractTotalTax(resultData: Record<string, unknown>): string {
+export function extractTotalTax(resultData: Record<string, unknown>): string {
   const inner = resultData?.result as Record<string, unknown> | undefined;
   if (inner) {
     if (inner.isExempt) return "비과세";
     if (typeof inner.totalTax === "number") return inner.totalTax.toLocaleString();
+    if (typeof inner.finalTax === "number") return inner.finalTax.toLocaleString();
   }
   const agg = resultData?.aggregated as Record<string, unknown> | undefined;
   if (typeof agg?.totalTax === "number") return agg.totalTax.toLocaleString();
   if (resultData?.isExempt) return "비과세";
   if (typeof resultData?.totalTax === "number") return resultData.totalTax.toLocaleString();
+  if (typeof resultData?.finalTax === "number") return resultData.finalTax.toLocaleString();
   return "-";
 }
 
 /** 결과 데이터에서 주요 항목을 key-value 목록으로 추출 */
-function extractResultSummaryItems(
-  resultData: Record<string, unknown>
+export function extractResultSummaryItems(
+  resultData: Record<string, unknown>,
+  taxType: LocalTaxType
 ): { label: string; value: string }[] {
   const items: { label: string; value: string }[] = [];
 
@@ -61,6 +64,13 @@ function extractResultSummaryItems(
 
   if (src.isExempt === true) {
     items.push({ label: "과세 여부", value: "비과세" });
+  } else if (taxType === "gift" || taxType === "inheritance") {
+    // 증여세·상속세: computedTax(산출) / taxBase(과세표준) / finalTax(결정세액)
+    addNum("증여재산가액", "grossGiftValue");
+    addNum("상속재산가액", "grossEstateValue");
+    addNum("과세표준", "taxBase");
+    addNum("산출세액", "computedTax");
+    addNum("결정세액", "finalTax");
   } else {
     addNum("양도차익", "transferGain");
     addNum("장기보유특별공제", "longTermDeduction");
@@ -104,12 +114,16 @@ export function HistoryDetailDrawer({
         setStep(0);
         router.push(route);
       });
+    } else if (record.taxType === "gift") {
+      // 증여세 — GiftTaxForm은 자체 useState 기반이라 sessionStorage 경유로 hydrate
+      sessionStorage.setItem("giftTaxResumeInput", JSON.stringify(record.inputData));
+      router.push(route);
     } else {
       router.push(route);
     }
   }
 
-  const summaryItems = extractResultSummaryItems(record.resultData);
+  const summaryItems = extractResultSummaryItems(record.resultData, record.taxType);
 
   async function handleDelete() {
     if (!confirm("이 계산 이력을 삭제하시겠습니까?")) return;

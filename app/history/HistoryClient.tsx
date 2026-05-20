@@ -136,12 +136,15 @@ function extractTotalTax(resultData: Record<string, unknown>): string {
   if (inner) {
     if (inner.isExempt) return "비과세";
     if (typeof inner.totalTax === "number") return inner.totalTax.toLocaleString();
+    if (typeof inner.finalTax === "number") return inner.finalTax.toLocaleString();
   }
   const agg = resultData?.aggregated as Record<string, unknown> | undefined;
   if (typeof agg?.totalTax === "number") return agg.totalTax.toLocaleString();
   if (inner && typeof inner.totalTax === "number") return inner.totalTax.toLocaleString();
   if (resultData?.isExempt) return "비과세";
   if (typeof resultData?.totalTax === "number") return resultData.totalTax.toLocaleString();
+  // 증여세·상속세 finalTax (top-level)
+  if (typeof resultData?.finalTax === "number") return resultData.finalTax.toLocaleString();
   return "-";
 }
 
@@ -216,6 +219,10 @@ export function HistoryClient() {
         setStep(0);
         router.push(route);
       });
+    } else if (record.taxType === "gift") {
+      // 증여세 — GiftTaxForm은 자체 useState 기반이라 sessionStorage 경유로 hydrate
+      sessionStorage.setItem("giftTaxResumeInput", JSON.stringify(record.inputData));
+      router.push(route);
     } else if (record.taxType === "stock_transfer") {
       // 주식 양도세 — 이력 inputData를 store에 hydrate (디자인 C-5 수정 모드)
       Promise.all([
