@@ -20,14 +20,26 @@ export const unlistedStockDataSchema = z.object({
 // 자산 종류별 discriminatedUnion 스키마
 // ============================================================
 
+// ── 종합사례 PDF 확장 — HeirAllocation·deemedCategory ──
+export const heirAllocationSchema = z.object({
+  heirId: z.string().min(1),
+  amount: z.number().nonnegative(),
+  areaM2: z.number().nonnegative().optional(),
+});
+
 const baseItemSchema = z.object({
   id: z.string().min(1),
-  name: z.string().min(1),
+  // cash·financial·deposit은 위치 기반이 아니므로 자산명 선택 입력 (빈 문자열 허용)
+  name: z.string(),
   marketValue: z.number().nonnegative().optional(),
   appraisedValue: z.number().nonnegative().optional(),
   standardPrice: z.number().nonnegative().optional(),
   mortgageAmount: z.number().nonnegative().optional(),
   leaseDeposit: z.number().nonnegative().optional(),
+  // 종합사례 PDF 확장
+  heirAllocations: z.array(heirAllocationSchema).optional(),
+  deemedCategory: z.enum(["retirement", "insurance", "trust"]).optional(),
+  isFamilyBusinessAsset: z.boolean().optional(),
 });
 
 export const landItemSchema = baseItemSchema.extend({
@@ -58,6 +70,11 @@ export const unlistedStockItemSchema = baseItemSchema.extend({
   unlistedStockData: unlistedStockDataSchema,
 });
 
+export const cashItemSchema = baseItemSchema.extend({
+  category: z.literal("cash"),
+  marketValue: z.number().nonnegative({ message: "현금 금액은 0 이상이어야 합니다." }),
+});
+
 export const financialItemSchema = baseItemSchema.extend({
   category: z.literal("financial"),
   marketValue: z.number().nonnegative(),
@@ -79,6 +96,7 @@ export const estateItemSchema = z.discriminatedUnion("category", [
   buildingItemSchema,
   listedStockItemSchema,
   unlistedStockItemSchema,
+  cashItemSchema,
   financialItemSchema,
   depositItemSchema,
   otherItemSchema,
@@ -117,7 +135,7 @@ export const giftDonorRelationSchema = z.enum([
 
 export const priorGiftSchema = z.object({
   giftDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD 형식"),
-  isHeir: z.boolean(),
+  isHeir: z.boolean().optional(),
   giftAmount: z.number().nonnegative(),
   giftTaxPaid: z.number().nonnegative(),
   giftTaxBase: z.number().nonnegative().optional(),
@@ -135,6 +153,10 @@ export const priorGiftSchema = z.object({
   computedTax: z.number().nonnegative().optional(),
   additionalGenerationSkipSurcharge: z.number().nonnegative().optional(),
   wasGenerationSkip: z.boolean().optional(),
+  // 종합사례 PDF 확장 — 상속인별 배부·영리법인 면제
+  doneeId: z.string().min(1).optional(),
+  beneficiaryType: z.enum(["heir", "legatee", "corporate"]).optional(),
+  corporateGiftComputedTax: z.number().nonnegative().optional(),
 });
 
 // ============================================================
@@ -167,12 +189,45 @@ export const exemptionInputSchema = z.object({
 
 export const heirSchema = z.object({
   id: z.string().min(1),
-  relation: z.enum(["spouse", "child", "lineal_ascendant", "sibling", "other"]),
+  relation: z.enum([
+    "spouse",
+    "child",
+    "lineal_ascendant",
+    "sibling",
+    "other",
+    // 종합사례 PDF 확장
+    "legatee",
+    "corporate",
+  ]),
   name: z.string().optional(),
   birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD 형식").optional(),
   isDisabled: z.boolean().optional(),
   actualShareRatio: z.number().min(0).max(1).optional(),
   isCohabitant: z.boolean().optional(),
+  // 종합사례 PDF 확장
+  isHeir: z.boolean().optional(),
+  isGenerationSkipBeneficiary: z.boolean().optional(),
+  corporateGiftComputedTax: z.number().nonnegative().optional(),
+});
+
+// ── DebtItem 스키마 (Phase A0 협의분할) ──
+export const debtItemSchema = z.object({
+  id: z.string().min(1),
+  category: z.enum(["financial", "tax", "personal", "funeral"]),
+  name: z.string(),
+  amount: z.number().nonnegative(),
+  isBongan: z.boolean().optional(),
+  heirAllocations: z.array(heirAllocationSchema).optional(),
+});
+
+// ── PresumedInheritanceItem 스키마 (Phase A §15) ──
+export const presumedInheritanceItemSchema = z.object({
+  id: z.string().min(1),
+  category: z.enum(["real_estate", "deposit", "other_asset", "financial_debt"]),
+  amountWithin1Y: z.number().nonnegative(),
+  amountWithin2Y: z.number().nonnegative(),
+  verifiedUseAmount: z.number().nonnegative(),
+  heirAllocations: z.array(heirAllocationSchema).optional(),
 });
 
 // ============================================================
@@ -188,6 +243,13 @@ export const inheritanceDeductionInputSchema = z.object({
   farmingAssetValue: z.number().nonnegative().optional(),
   familyBusinessValue: z.number().nonnegative().optional(),
   familyBusinessYears: z.number().int().nonnegative().optional(),
+  // 종합사례 PDF Phase D·E
+  familyBusinessDirectAmount: z.number().nonnegative().optional(),
+  cohabitDirectAmount: z.number().nonnegative().optional(),
+  spouseLegalShareOverride: z.number().nonnegative().optional(),
+  legateeAmountNonHeir: z.number().nonnegative().optional(),
+  priorGiftDeductionTotal: z.number().nonnegative().optional(),
+  disasterLossDeduction: z.number().nonnegative().optional(),
 });
 
 // ============================================================
@@ -234,15 +296,22 @@ export const inheritanceTaxInputSchema = z.object({
   decedentType: z.enum(["resident", "non_resident"]),
   deathDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD 형식"),
   estateItems: z.array(estateItemSchema).min(1, "상속재산이 1개 이상 필요합니다."),
-  funeralExpense: z.number().min(0).max(15_000_000),
-  funeralIncludesBongan: z.boolean(),
-  debts: z.number().nonnegative(),
+  // legacy debts·funeralExpense — debtItems 입력 시 우선
+  funeralExpense: z.number().min(0).max(15_000_000).optional().default(0),
+  funeralIncludesBongan: z.boolean().optional().default(false),
+  debts: z.number().nonnegative().optional().default(0),
+  // 종합사례 PDF Phase A0·A
+  debtItems: z.array(debtItemSchema).optional(),
+  presumedItems: z.array(presumedInheritanceItemSchema).optional(),
   exemptions: z.array(exemptionCheckedItemSchema).optional(),
   preGiftsWithin10Years: z.array(priorGiftSchema),
   heirs: z.array(heirSchema).min(1),
   deductionInput: inheritanceDeductionInputSchema,
   creditInput: inheritanceTaxCreditInputSchema,
   valuationBaseDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  isGenerationSkip: z.boolean().optional(),
+  isMinorHeir: z.boolean().optional(),
+  generationSkipAssetAmount: z.number().nonnegative().optional(),
 });
 
 export type InheritanceTaxInputSchema = z.infer<typeof inheritanceTaxInputSchema>;

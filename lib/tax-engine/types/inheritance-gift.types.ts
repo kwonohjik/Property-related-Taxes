@@ -510,9 +510,16 @@ export interface InheritanceDeductionInput {
   /**
    * §19 배우자 법정상속분 직접 입력 (Phase D).
    * 제공 시 calcSpouseDeduction이 법정상속분 자동 산정 대신 입력값 사용.
-   * PDF 책 1862 표 산식 직접 계산: (총상속 + 상속인 사전증여 − 상속외자유증 − 채무 + 장례비 − 비과세) × 배우자 법정지분 − 배우자 사전증여 과세표준
+   * 미입력 시 orchestrator가 PDF 책 1862 표 산식으로 자동 계산.
    */
   spouseLegalShareOverride?: number;
+  // ===== Phase D §24 분자 보정 (orchestrator → calcInheritanceDeductions 전달) =====
+  /** 상속인 외 자에게 유증한 금액 (§24 분자 차감) */
+  legateeAmountNonHeir?: number;
+  /** 증여재산공제 합계 (§24 분자 보정용) */
+  priorGiftDeductionTotal?: number;
+  /** 신고기한 내 재해손실공제 (§24 분자 보정용) */
+  disasterLossDeduction?: number;
 }
 
 /** 상속공제 계산 결과 */

@@ -254,18 +254,46 @@ export function calcFamilyBusinessDeduction(
 // ============================================================
 
 /**
- * §24 종합한도 계산
- * 공제 총액 ≤ 상속세 과세가액 - 상속인·수유자에게 사전증여된 재산가액
+ * §24 종합한도 계산 (Phase D — PDF 책 1864 표 산식)
  *
+ * 한도 = 상속세 과세가액
+ *      − 상속인 외 자에게 유증한 금액
+ *      − [모든 사전증여 가산가액 (영리법인·legatee 포함) − (증여재산공제 + 신고기한내 재해손실공제)]
+ *
+ * legacy 호출 (priorGiftToHeirTotal만 제공): 분자 = taxableEstateValue − priorGiftToHeirTotal
+ *
+ * @param rawTotalDeduction 공제 합계 (한도 적용 전)
  * @param taxableEstateValue 상속세 과세가액
- * @param priorGiftToHeirTotal 상속인에게 사전증여된 재산가액 합계 (§13 합산분)
+ * @param priorGiftToHeirTotal 상속인 사전증여 가산가액 (legacy fallback용)
+ * @param params Phase D 보정 입력 — totalPriorGiftAmount(모든 수증자) + priorGiftDeductionTotal + legateeAmountNonHeir + disasterLossDeduction
  */
 export function applyDeductionLimit(
   rawTotalDeduction: number,
   taxableEstateValue: number,
   priorGiftToHeirTotal: number,
+  params?: {
+    totalPriorGiftAmount?: number;
+    priorGiftDeductionTotal?: number;
+    legateeAmountNonHeir?: number;
+    disasterLossDeduction?: number;
+  },
 ): { limitedDeduction: number; ceiling: number; wasCapped: boolean } {
-  const ceiling = Math.max(0, taxableEstateValue - priorGiftToHeirTotal);
+  let ceiling: number;
+  if (params && params.totalPriorGiftAmount !== undefined) {
+    // Phase D 정확 산식
+    const totalGift = params.totalPriorGiftAmount;
+    const giftDeductions =
+      (params.priorGiftDeductionTotal ?? 0) +
+      (params.disasterLossDeduction ?? 0);
+    const legateeNonHeir = params.legateeAmountNonHeir ?? 0;
+    ceiling = Math.max(
+      0,
+      taxableEstateValue - legateeNonHeir - Math.max(0, totalGift - giftDeductions),
+    );
+  } else {
+    // legacy fallback
+    ceiling = Math.max(0, taxableEstateValue - priorGiftToHeirTotal);
+  }
   const limitedDeduction = Math.min(rawTotalDeduction, ceiling);
   return {
     limitedDeduction,
@@ -289,6 +317,12 @@ export function calcInheritanceDeductions(
   input: InheritanceDeductionInput,
   taxableEstateValue: number,
   priorGiftToHeirTotal: number,
+  limitParams?: {
+    totalPriorGiftAmount?: number;
+    priorGiftDeductionTotal?: number;
+    legateeAmountNonHeir?: number;
+    disasterLossDeduction?: number;
+  },
 ): InheritanceDeductionResult {
   // 인적공제(미성년자·연로자·장애인)는 상속개시일 현재 나이 기준 (상증법 §20).
   // deathDate가 제공된 경우 해당 날짜를, 없으면 오늘로 fallback.
@@ -382,11 +416,12 @@ export function calcInheritanceDeductions(
     farmingDeduction +
     familyBusinessDeduction;
 
-  // §24 종합한도 적용
+  // §24 종합한도 적용 — Phase D 분자 보정 (limitParams) 우선
   const { limitedDeduction, ceiling, wasCapped } = applyDeductionLimit(
     rawTotal,
     taxableEstateValue,
     priorGiftToHeirTotal,
+    limitParams,
   );
 
   // breakdown 구성

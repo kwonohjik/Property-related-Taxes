@@ -434,7 +434,10 @@ export const EXAMPLE_INPUT: InheritanceTaxInput = {
     familyBusinessValue: 0, // 가업상속 직접입력 모드로 처리 (Phase E)
     familyBusinessDirectAmount: 500_000_000, // 가업상속공제 직접 입력
     cohabitDirectAmount: 600_000_000, // 동거주택공제 직접 입력
-    spouseLegalShareOverride: 3_092_857_142, // Phase D — PDF 책 1862 표 산식 직접 계산값
+    // Phase D §19 배우자 법정상속분 자동 계산 — orchestrator가 분자 산식 직접 적용
+    // (spouseLegalShareOverride 미입력 시 자동)
+    legateeAmountNonHeir: 500_000_000, // 손녀 유증 (저축은행 예금 5억)
+    priorGiftDeductionTotal: 650_000_000, // 증여재산공제 합 (배우자 600M + 장남 50M)
   },
   creditInput: {
     priorGifts: EXAMPLE_PRIOR_GIFTS,

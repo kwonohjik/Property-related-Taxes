@@ -197,22 +197,107 @@ export function calcInheritanceTax(
   // ─────────────────────────────────────────────
   // STEP 6: 상속공제 (§18~§24)
   // ─────────────────────────────────────────────
-  // §24 종합한도: 과세가액 - 상속인·수유자에 대한 사전증여재산
-  // §24 한도 = taxableEstateValue - 상속인에 대한 사전증여재산
-  // ※ 수유자(유증 수령인)에 대한 사전증여도 §24 한도 계산에서 제외해야 하나,
-  //    현재 엔진은 PriorGift.isHeir로만 구분하므로 수유자는 상속인(isHeir=true)으로
-  //    입력해야 올바른 한도가 계산됨. 향후 isLegatee 필드 추가 시 수정 필요.
   // calcInheritanceDeductions가 내부에서 한도를 계산하므로 raw 금액 전달
   const { totalAmount: heirOnlyGifts } = aggregatePriorGiftsForInheritance(
     input.preGiftsWithin10Years,
     input.deathDate,
-    true, // 상속인만 (수유자는 isHeir=true로 입력 필요)
+    true, // 상속인만
   );
 
+  // Phase D §19 — 배우자 법정상속분 분자 자동 계산 (PDF 책 1862 표 산식)
+  //   분자 = 총상속(본래+간주+추정) + 상속인 사전증여 (영리법인·legatee 제외)
+  //          − 상속외자유증 − (채무 − 장례비) − 비과세
+  //   × 배우자 법정지분(1.5/3.5) − 배우자 사전증여 과세표준 = 배우자 법정상속분
+  //
+  // 옵트인: spouseLegalShareOverride 미입력 + (legateeAmountNonHeir > 0
+  //   OR priorGiftDeductionTotal > 0 OR 영리법인 사전증여 존재) 시 자동 발동.
+  //   단순 케이스(legacy)는 기존 calcSpouseDeduction 기본 법정상속분 산정 유지.
+  const hasCorporateGift = (input.preGiftsWithin10Years ?? []).some(
+    (g) => g.beneficiaryType === "corporate",
+  );
+  const wantsAutoSpouseLegalShare =
+    input.deductionInput.spouseLegalShareOverride === undefined &&
+    ((input.deductionInput.legateeAmountNonHeir ?? 0) > 0 ||
+      (input.deductionInput.priorGiftDeductionTotal ?? 0) > 0 ||
+      hasCorporateGift);
+
+  let computedSpouseLegalShare: number | undefined;
+  if (wantsAutoSpouseLegalShare) {
+    const spouseHeir = input.heirs.find((h) => h.relation === "spouse");
+    if (spouseHeir) {
+      // 상속인 사전증여 가산가액 (영리법인·legatee 제외)
+      const heirGiftAmount = (input.preGiftsWithin10Years ?? []).reduce(
+        (s, g) => s + (g.beneficiaryType === "heir" || (g.beneficiaryType === undefined && g.isHeir) ? g.giftAmount : 0),
+        0,
+      );
+      // 배우자 사전증여 과세표준
+      const spouseGiftTaxBase = (input.preGiftsWithin10Years ?? []).reduce(
+        (s, g) => s + (g.doneeId === spouseHeir.id ? (g.giftTaxBase ?? g.giftAmount) : 0),
+        0,
+      );
+      // 총상속재산 = grossEstateValue(본래+간주) + presumedTotal
+      // 상속외자유증·재해손실은 deductionInput에서
+      const legateeNonHeir = input.deductionInput.legateeAmountNonHeir ?? 0;
+      const numerator =
+        (grossEstateValue + presumedTotal) +
+        heirGiftAmount -
+        legateeNonHeir -
+        (deductedBeforeAggregation - 0 /* 장례비 차감 안 함: STEP 3에서 deductedBeforeAggregation은 채무+장례비 합. 분자는 채무만 차감 */) -
+        exemptAmount;
+      // 장례비를 다시 더해서 채무만 차감한 결과로 보정
+      // STEP 3에서 deductedBeforeAggregation = funeralDeduction + nonFuneralDebts
+      // 분자는 채무만 차감 (장례비 제외) → numerator + funeralDeduction
+      // 그러나 funeralDeduction 변수를 STEP 3에서 closure로 캡처해야 함 → 직접 계산
+      let funeralAmount = 0;
+      if (input.debtItems && input.debtItems.length > 0) {
+        let meal = 0, bongan = 0;
+        for (const di of input.debtItems) {
+          if (di.category === "funeral") {
+            if (di.isBongan) bongan += di.amount;
+            else meal += di.amount;
+          }
+        }
+        funeralAmount = Math.min(meal, 10_000_000) + Math.min(bongan, 5_000_000);
+      } else {
+        // legacy fallback
+        const fd = calcFuneralExpenseDeduction(input.funeralExpense, input.funeralIncludesBongan);
+        funeralAmount = fd.deduction;
+      }
+      // 정확 분자: + 장례비 (deductedBeforeAggregation에서 장례비 분 환산)
+      const numeratorCorrected = numerator + funeralAmount;
+
+      // 배우자 법정지분 비율 — 1.5/(1.5 + 자녀수)
+      const childCount = input.heirs.filter((h) => h.relation === "child").length;
+      const spouseRatio = 1.5 / (1.5 + childCount);
+      const spouseLegalShareRaw = Math.floor(numeratorCorrected * spouseRatio);
+      computedSpouseLegalShare = Math.max(0, spouseLegalShareRaw - spouseGiftTaxBase);
+
+      allBreakdown.push({
+        label: "§19 배우자 법정상속분 자동 산정",
+        amount: computedSpouseLegalShare,
+        lawRef: INH.SPOUSE_DEDUCTION,
+        note: `분자 ${numeratorCorrected.toLocaleString()} × ${spouseRatio.toFixed(4)} − 배우자 사전증여 과세표준 ${spouseGiftTaxBase.toLocaleString()}`,
+      });
+    }
+  }
+
   const deductionResult = calcInheritanceDeductions(
-    { ...input.deductionInput, deathDate: input.deathDate },
+    {
+      ...input.deductionInput,
+      deathDate: input.deathDate,
+      // override가 명시되어 있으면 그대로, 없으면 자동 계산값 사용
+      spouseLegalShareOverride:
+        input.deductionInput.spouseLegalShareOverride ?? computedSpouseLegalShare,
+    },
     taxableEstateValue,
-    heirOnlyGifts, // priorGiftToHeirTotal: §24 한도는 함수 내부에서 계산
+    heirOnlyGifts,
+    // Phase D §24 — 한도 분자 보정 정보 (영리법인 포함 모든 사전증여 + 증여공제 + 상속외자유증)
+    {
+      totalPriorGiftAmount: priorGiftAggregated,
+      priorGiftDeductionTotal: input.deductionInput.priorGiftDeductionTotal ?? 0,
+      legateeAmountNonHeir: input.deductionInput.legateeAmountNonHeir ?? 0,
+      disasterLossDeduction: input.deductionInput.disasterLossDeduction ?? 0,
+    },
   );
 
   const totalDeduction = deductionResult.totalDeduction;
