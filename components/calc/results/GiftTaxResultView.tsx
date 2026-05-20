@@ -10,6 +10,7 @@ import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
 import { LoginPromptBanner } from "@/components/calc/shared/LoginPromptBanner";
 import { TaxCreditBreakdownCard } from "@/components/calc/TaxCreditBreakdownCard";
+import { GiftTaxFilingFormTable } from "@/components/calc/results/GiftTaxFilingFormTable";
 import { calcInstallmentPayment } from "@/lib/tax-engine/credits/installment-payment";
 
 // ============================================================
@@ -153,6 +154,8 @@ export function GiftTaxResultView({
   const [showValuation, setShowValuation] = useState(false);
 
   const taxBeforeCredit = result.computedTax + result.generationSkipSurcharge;
+  const hasFilingFormTable =
+    result.filingFormRows && result.filingFormRows.length > 0;
 
   return (
     <div className="space-y-5">
@@ -198,6 +201,9 @@ export function GiftTaxResultView({
           )}
         </div>
       </div>
+
+      {/* Phase B: 신고서 양식 표 (12행 / 18행) */}
+      {hasFilingFormTable && <GiftTaxFilingFormTable result={result} />}
 
       {/* 과세 요약 */}
       <div className="border rounded-xl overflow-hidden">

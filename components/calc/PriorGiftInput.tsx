@@ -6,11 +6,14 @@
  * 증여세: 동일인 10년 이내 증여 합산 (§47)
  */
 
-import { useState } from "react";
 import { CurrencyInput, parseAmount, formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
-import type { PriorGift, DonorRelation } from "@/lib/tax-engine/types/inheritance-gift.types";
+import type {
+  PriorGift,
+  DonorRelation,
+  GiftDonorRelation,
+} from "@/lib/tax-engine/types/inheritance-gift.types";
 
 // ============================================================
 // 관계 메타
@@ -32,6 +35,29 @@ const DONOR_RELATION_LIST: DonorRelation[] = [
   "other_relative",
 ];
 
+// Phase A: 증여자 관계 8 enum (gift 모드에서 §47 합산 그룹화·§57 적용 판정용)
+const GIFT_DONOR_LABELS: Record<GiftDonorRelation, string> = {
+  father: "부",
+  mother: "모",
+  grandparent: "조부모",
+  spouse: "배우자",
+  lineal_descendant: "직계비속",
+  sibling: "형제자매",
+  other_relative: "기타친족",
+  other: "기타",
+};
+
+const GIFT_DONOR_LIST: GiftDonorRelation[] = [
+  "father",
+  "mother",
+  "grandparent",
+  "spouse",
+  "lineal_descendant",
+  "sibling",
+  "other_relative",
+  "other",
+];
+
 // ============================================================
 // 개별 사전증여 행 편집기
 // ============================================================
@@ -41,11 +67,20 @@ interface GiftRowEditorProps {
   index: number;
   /** 상속세 모드: 상속인 여부 선택 표시 / 증여세 모드: 숨김 */
   showIsHeir: boolean;
+  /** 증여세 모드: donor·⑤·⑦·⑫ Phase A 필드 표시 */
+  showGiftPhaseA: boolean;
   onUpdate: (updated: PriorGift) => void;
   onRemove: () => void;
 }
 
-function GiftRowEditor({ gift, index, showIsHeir, onUpdate, onRemove }: GiftRowEditorProps) {
+function GiftRowEditor({
+  gift,
+  index,
+  showIsHeir,
+  showGiftPhaseA,
+  onUpdate,
+  onRemove,
+}: GiftRowEditorProps) {
   const set = (patch: Partial<PriorGift>) => onUpdate({ ...gift, ...patch });
 
   return (
@@ -123,6 +158,88 @@ function GiftRowEditor({ gift, index, showIsHeir, onUpdate, onRemove }: GiftRowE
         onChange={(v) => set({ giftTaxPaid: parseAmount(v) })}
         hint="§28 증여세액공제 계산에 사용 — 납부하지 않았으면 0"
       />
+
+      {/* Phase A: 증여세 모드 전용 — donor + ⑤ + ⑦ + 할증 + ⑫ */}
+      {showGiftPhaseA && (
+        <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-3">
+          <div className="flex items-center gap-2">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-[10px] font-bold text-violet-800 select-none">
+              §47
+            </span>
+            <p className="text-xs font-semibold text-violet-700">
+              동일인 합산 정보 (§47 ② · §58 한도 산식용)
+            </p>
+          </div>
+
+          {/* 증여자 (donor) */}
+          <div className="space-y-1">
+            <label className="block text-xs font-medium text-violet-700">
+              증여자 (동일인 그룹 판정) <span className="text-destructive">*</span>
+            </label>
+            <select
+              value={gift.donor ?? ""}
+              onChange={(e) =>
+                set({ donor: (e.target.value || undefined) as GiftDonorRelation | undefined })
+              }
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <option value="">선택</option>
+              {GIFT_DONOR_LIST.map((d) => (
+                <option key={d} value={d}>
+                  {GIFT_DONOR_LABELS[d]}
+                </option>
+              ))}
+            </select>
+            <p className="text-[11px] text-violet-600">
+              현재 증여자와 동일인 그룹(부·모 또는 조부모)만 §47 합산 대상. 다른 그룹은 별개 신고로 자동 분리됩니다.
+            </p>
+          </div>
+
+          {/* ⑤ 합산과세표준 */}
+          <CurrencyInput
+            label="그 회차 합산과세표준 ⑤"
+            value={gift.giftTaxBase && gift.giftTaxBase > 0 ? String(gift.giftTaxBase) : ""}
+            onChange={(v) => set({ giftTaxBase: parseAmount(v) || undefined })}
+            hint="신고서 ⑤ 값. §58 한도 산식 분자(가장 최근 합산 회차) 용도."
+          />
+
+          {/* ⑦ 산출세액 */}
+          <CurrencyInput
+            label="그 회차 산출세액 ⑦"
+            value={gift.computedTax && gift.computedTax > 0 ? String(gift.computedTax) : ""}
+            onChange={(v) => set({ computedTax: parseAmount(v) || undefined })}
+            hint="신고서 ⑦ 값. §58 가산 증여재산 산출세액(가장 최근 합산 회차)."
+          />
+
+          {/* 세대생략 토글 */}
+          <ToggleCard
+            tone="rose"
+            title="그 회차에 세대생략 할증 적용 (§57)"
+            description="조부모→손자 등 세대생략 증여 회차였으면 ON. donor=조부모 시 자동 ON 권장."
+            checked={gift.wasGenerationSkip ?? false}
+            onCheckedChange={(v) => set({ wasGenerationSkip: v })}
+          />
+
+          {/* ⑫ 추가 할증세액 (할증 ON 시만) */}
+          {gift.wasGenerationSkip && (
+            <CurrencyInput
+              label="그 회차 추가 할증세액 ⑫"
+              value={
+                gift.additionalGenerationSkipSurcharge &&
+                gift.additionalGenerationSkipSurcharge > 0
+                  ? String(gift.additionalGenerationSkipSurcharge)
+                  : ""
+              }
+              onChange={(v) =>
+                set({
+                  additionalGenerationSkipSurcharge: parseAmount(v) || undefined,
+                })
+              }
+              hint="신고서 ⑫ 값. §57 누적 기할증과세액 ⑨ 산정용."
+            />
+          )}
+        </div>
+      )}
 
       {/* 요약 미리보기 */}
       {gift.giftAmount > 0 && (
@@ -256,6 +373,7 @@ export function PriorGiftInput({ gifts, onChange, mode = "inheritance" }: PriorG
               gift={g}
               index={i}
               showIsHeir={mode === "inheritance"}
+              showGiftPhaseA={mode === "gift"}
               onUpdate={(updated) => handleUpdate(i, updated)}
               onRemove={() => handleRemove(i)}
             />

@@ -32,6 +32,7 @@ import type {
   GiftDeductionInput,
   GiftTaxCreditInput,
   DonorRelation,
+  GiftDonorRelation,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { ExemptionCheckedItem } from "@/lib/tax-engine/exemption-evaluator";
 
@@ -43,6 +44,8 @@ interface FormState {
   // Step 0
   giftDate: string;
   donorRelation: DonorRelation;
+  /** Phase A: 증여자 관계 (동일인 §47 합산 그룹화 + §57 적용 판정) */
+  donor: GiftDonorRelation;
   isGenerationSkip: boolean;
   isMinorDonee: boolean;
   // Step 1
@@ -63,6 +66,7 @@ interface FormState {
 const INITIAL_FORM: FormState = {
   giftDate: "",
   donorRelation: "lineal_ascendant_adult",
+  donor: "father",
   isGenerationSkip: false,
   isMinorDonee: false,
   giftItems: [],
@@ -91,6 +95,29 @@ const RELATION_LABELS: Record<DonorRelation, string> = {
   other_relative: "기타 친족 (1천만원)",
 };
 
+// Phase A: 증여자 관계 (8 enum / 7 그룹) — UI 셀렉트 옵션
+const DONOR_LABELS: Record<GiftDonorRelation, string> = {
+  father: "부",
+  mother: "모",
+  grandparent: "조부모",
+  spouse: "배우자",
+  lineal_descendant: "직계비속",
+  sibling: "형제자매",
+  other_relative: "기타친족",
+  other: "기타",
+};
+
+const DONOR_OPTIONS: GiftDonorRelation[] = [
+  "father",
+  "mother",
+  "grandparent",
+  "spouse",
+  "lineal_descendant",
+  "sibling",
+  "other_relative",
+  "other",
+];
+
 // ============================================================
 // 단계별 유효성 검사
 // ============================================================
@@ -98,6 +125,7 @@ const RELATION_LABELS: Record<DonorRelation, string> = {
 function validateStep(step: number, form: FormState): string | null {
   if (step === 0) {
     if (!form.giftDate) return "증여일을 입력하세요.";
+    if (!form.donor) return "증여자를 선택하세요.";
   }
   if (step === 1) {
     if (form.giftItems.length + form.stockItems.length === 0) {
@@ -106,6 +134,35 @@ function validateStep(step: number, form: FormState): string | null {
     const allItems = [...form.giftItems, ...form.stockItems];
     if (allItems.some((it) => !it.name.trim())) {
       return "모든 증여재산에 자산명을 입력하세요.";
+    }
+  }
+  if (step === 2) {
+    // 사전증여 입력 시 동일인 그룹·⑤·⑦ 필수 (UI ↔ validate 모순 방지)
+    for (let i = 0; i < form.priorGifts.length; i++) {
+      const p = form.priorGifts[i];
+      if (p.giftAmount > 0) {
+        if (!p.donor) {
+          return `사전증여 ${i + 1}: 증여자를 선택하세요 (§47 합산 그룹 판정).`;
+        }
+        // 동일 그룹 priorGift이면 §58 한도 산식용으로 ⑤·⑦ 필수
+        // (다른 그룹은 자동 무시되므로 검증 제외)
+        const sameGroupHint =
+          (p.donor === "father" || p.donor === "mother") &&
+          (form.donor === "father" || form.donor === "mother");
+        const sameGrandparent =
+          p.donor === "grandparent" && form.donor === "grandparent";
+        if (sameGroupHint || sameGrandparent) {
+          if (!p.giftTaxBase || p.giftTaxBase <= 0) {
+            return `사전증여 ${i + 1}: 동일인 합산 — 그 회차 합산과세표준 ⑤을 입력하세요.`;
+          }
+          if (!p.computedTax || p.computedTax <= 0) {
+            return `사전증여 ${i + 1}: 동일인 합산 — 그 회차 산출세액 ⑦을 입력하세요.`;
+          }
+          if (p.wasGenerationSkip && !p.additionalGenerationSkipSurcharge) {
+            return `사전증여 ${i + 1}: 세대생략 회차이면 추가 할증세액 ⑫를 입력하세요.`;
+          }
+        }
+      }
     }
   }
   return null;
@@ -179,10 +236,45 @@ function Step0({
         </div>
       </div>
 
+      {/* Phase A: 증여자 (donor) — §47 합산 그룹 + §57 적용 판정 */}
+      <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-2">
+        <div className="flex items-center gap-2">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-[10px] font-bold text-violet-800 select-none">
+            §47
+          </span>
+          <p className="text-xs font-semibold text-violet-700">
+            증여자 (동일인 합산 그룹 + §57 적용 판정)
+          </p>
+        </div>
+        <select
+          value={form.donor}
+          onChange={(e) =>
+            set({ donor: e.target.value as GiftDonorRelation })
+          }
+          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          {DONOR_OPTIONS.map((d) => (
+            <option key={d} value={d}>
+              {DONOR_LABELS[d]}
+            </option>
+          ))}
+        </select>
+        {form.donor === "grandparent" && (
+          <p className="text-[11px] text-rose-700 bg-rose-50/70 rounded px-2 py-1">
+            🎯 조부모→손자녀 증여 — 세대생략 §57 할증 30% (또는 미성년+20억 초과 시 40%) 적용 대상입니다.
+          </p>
+        )}
+        {(form.donor === "father" || form.donor === "mother") && (
+          <p className="text-[11px] text-violet-600">
+            부·모는 §47② 동일인. 다른 한쪽의 사전증여도 합산 대상입니다.
+          </p>
+        )}
+      </div>
+
       <ToggleCard
         tone="violet"
         title="세대생략 증여 (§57 할증)"
-        description="수증자가 증여자의 자녀가 아닌 직계비속(손자 등) — 산출세액 30% 할증"
+        description="수증자가 증여자의 자녀가 아닌 직계비속(손자 등) — 산출세액 30% 할증. donor=조부모 시 자동 활성화 권장."
         checked={form.isGenerationSkip}
         onCheckedChange={(v) => set({ isGenerationSkip: v })}
       >
@@ -424,26 +516,10 @@ export function GiftTaxForm() {
       isFiledOnTime: form.isFiledOnTime,
       specialTreatment: form.specialTreatment || undefined,
     };
-    // Phase A donor 매핑 — donorRelation(수증자 관점) → donor(증여자 관점)
-    //   isGenerationSkip → grandparent (그룹 B)
-    //   spouse/other_relative → 동명 그룹
-    //   lineal_ascendant_* → 자녀가 부모에게 증여 → lineal_descendant
-    //   lineal_descendant → 부모가 자녀에게 → "father" (양친 구분 후속 PR)
-    const donor: import("@/lib/tax-engine/types/inheritance-gift.types").GiftDonorRelation =
-      form.isGenerationSkip
-        ? "grandparent"
-        : form.donorRelation === "spouse"
-          ? "spouse"
-          : form.donorRelation === "other_relative"
-            ? "other_relative"
-            : form.donorRelation === "lineal_ascendant_adult" ||
-                form.donorRelation === "lineal_ascendant_minor"
-              ? "lineal_descendant"
-              : "father";
     return {
       giftDate: form.giftDate,
       donorRelation: form.donorRelation,
-      donor,
+      donor: form.donor, // Phase A: 사용자 선택값 직접 사용 (미러링 금지)
       giftItems: allItems,
       exemptions: form.exemptionItems.length > 0 ? form.exemptionItems : undefined,
       priorGiftsWithin10Years: form.priorGifts,
