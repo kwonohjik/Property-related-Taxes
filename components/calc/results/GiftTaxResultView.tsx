@@ -6,41 +6,14 @@
 
 import { useState } from "react";
 import { ChevronLeft } from "lucide-react";
-import type { GiftTaxResult, EstateItem, AssetCategory } from "@/lib/tax-engine/types/inheritance-gift.types";
+import type { GiftTaxResult, EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
 import { LoginPromptBanner } from "@/components/calc/shared/LoginPromptBanner";
 import { TaxCreditBreakdownCard } from "@/components/calc/TaxCreditBreakdownCard";
 import { GiftTaxFilingFormTable } from "@/components/calc/results/GiftTaxFilingFormTable";
+import { GiftTaxValuationFormTable } from "@/components/calc/results/GiftTaxValuationFormTable";
 import { calcInstallmentPayment } from "@/lib/tax-engine/credits/installment-payment";
-
-// ============================================================
-// 자산 카테고리 한글 레이블
-// ============================================================
-
-const CATEGORY_LABELS: Partial<Record<AssetCategory, string>> = {
-  real_estate_apartment: "아파트·공동주택",
-  real_estate_building: "건물(단독·상업용)",
-  real_estate_land: "토지",
-  cash: "현금",
-  financial: "예금·펀드·채권",
-  listed_stock: "상장주식",
-  unlisted_stock: "비상장주식",
-  deposit: "전세보증금 반환채권",
-  other: "기타 재산",
-};
-
-/**
- * 자산 ID로 사용자 입력 이름 찾기
- * - 사용자가 입력한 name 우선
- * - 없으면 카테고리 한글명 사용
- */
-function getItemDisplayName(id: string, items: EstateItem[] = []): string {
-  const item = items.find((it) => it.id === id);
-  if (!item) return id;
-  if (item.name.trim()) return item.name.trim();
-  return CATEGORY_LABELS[item.category] ?? item.category;
-}
 
 // ============================================================
 // 헬퍼 컴포넌트
@@ -351,55 +324,30 @@ export function GiftTaxResultView({
         )}
       </div>
 
-      {/* 재산 평가 내역 */}
+      {/* 증여재산 및 평가명세서 (별지 제10호서식 부표 1) */}
       <div className="border rounded-xl overflow-hidden">
         <button
           type="button"
           onClick={() => setShowValuation((v) => !v)}
-          className="w-full flex items-center justify-between px-4 py-3 bg-muted/30 hover:bg-muted/50 transition-colors text-sm font-medium"
+          className="w-full flex items-center justify-between px-4 py-3 bg-muted/30 hover:bg-muted/50 transition-colors text-sm font-medium print:hidden"
         >
-          <span>증여재산 평가 내역 ({result.valuationResults.length}건)</span>
+          <span>
+            증여재산 및 평가명세서 (별지 제10호서식 부표 1) — {result.valuationResults.length}건
+          </span>
           <span>{showValuation ? "▲" : "▼"}</span>
         </button>
-        {showValuation && (
-          <div className="divide-y divide-border text-xs">
-            {result.valuationResults.map((vr, i) => {
-              const displayName = getItemDisplayName(vr.estateItemId, estateItems);
-              const methodLabel: Record<string, string> = {
-                market_value: "시가",
-                appraisal: "감정평가",
-                standard_price: "보충적 평가",
-                similar_sales: "유사매매사례",
-                acquisition_cost: "취득가액",
-                book_value: "장부가액",
-              };
-              return (
-                <div key={i} className="px-4 py-2.5 space-y-0.5">
-                  <div className="flex justify-between font-medium text-sm">
-                    <span>{displayName}</span>
-                    <span>{formatKRW(vr.valuatedAmount)}</span>
-                  </div>
-                  <p className="text-gray-400">
-                    평가방법: {methodLabel[vr.method] ?? vr.method}
-                  </p>
-                  {vr.breakdown.map((step, j) => (
-                    <div key={j} className="flex justify-between text-gray-500 dark:text-gray-400 pl-2">
-                      <span>{step.label}{step.lawRef ? ` (${step.lawRef})` : ""}</span>
-                      <span className={`font-mono ${step.amount < 0 ? "text-red-500" : ""}`}>
-                        {step.amount < 0 ? `- ${formatKRW(Math.abs(step.amount))}` : formatKRW(step.amount)}
-                      </span>
-                    </div>
-                  ))}
-                  {vr.warnings.map((w, j) => (
-                    <p key={j} className="text-amber-600 dark:text-amber-400">
-                      ⚠️ {w}
-                    </p>
-                  ))}
-                </div>
-              );
-            })}
-          </div>
-        )}
+        <div className={showValuation ? "block p-4" : "hidden print:block print:p-0"}>
+          <GiftTaxValuationFormTable
+            valuationResults={result.valuationResults}
+            estateItems={estateItems}
+            grossGiftValue={result.grossGiftValue}
+            exemptAmount={result.exemptAmount}
+            aggregatedGiftValue={result.aggregatedGiftValue}
+            publicInterestExclusion={result.publicInterestExclusion}
+            publicTrustExclusion={result.publicTrustExclusion}
+            disabledTrustExclusion={result.disabledTrustExclusion}
+          />
+        </div>
       </div>
 
       {/* 연부연납 안내 */}

@@ -1,0 +1,387 @@
+"use client";
+
+/**
+ * 증여재산 및 평가명세서 — 별지 제10호서식 부표 1 〈개정 2026. 3. 20.〉
+ *
+ * 근거: 상속세 및 증여세법 시행규칙 [별지 제10호서식 부표 1]
+ * 디자인: docs/02-design/features/gift-tax-valuation-besshi-10-buppyo.engine.design.md
+ *
+ * KoreanLaw MCP 검증 (2026-05-20):
+ * - ① 재산구분코드 9종 (A11 등) · ② 재산종류코드 14종 · ⑧ 평가기준코드 8종 확정
+ * - 본문 표 10행 · 계 영역 ⑨~⑮ 7행
+ */
+
+import type {
+  EstateItem,
+  PropertyValuationResult,
+} from "@/lib/tax-engine/types/inheritance-gift.types";
+import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
+
+// ============================================================
+// 코드 매핑 (부표 1 뒷면 작성방법 §2 / §7)
+// ============================================================
+
+/**
+ * ② 재산종류코드 매핑 — AssetCategory 실제 enum 9종 → 부표 1 코드 (Phase 1)
+ *
+ * 부표 1 코드 14종 중 03/04/06/08/13/14는 EstateItem enum 부재로 Phase 1 미사용.
+ * 오피스텔·상업용건물(06)도 현재 `real_estate_building`(07)에 묶임.
+ */
+const PROPERTY_TYPE_CODE: Record<EstateItem["category"], string> = {
+  cash: "01",
+  real_estate_land: "02",
+  real_estate_apartment: "05",
+  real_estate_building: "07",
+  listed_stock: "09",
+  unlisted_stock: "10",
+  financial: "11",
+  deposit: "12",
+  other: "12",
+};
+
+function toPropertyTypeCode(category: EstateItem["category"]): string {
+  return PROPERTY_TYPE_CODE[category] ?? "12";
+}
+
+/**
+ * ⑧ 평가기준코드 매핑 (Phase 1).
+ * cash 자산은 평가방법과 무관하게 "06"(현금 등 가액) 우선 적용.
+ */
+function toValuationMethodCode(
+  item: EstateItem,
+  vr: PropertyValuationResult,
+): string {
+  if (item.category === "cash") return "06";
+  switch (vr.method) {
+    case "market_value":
+      return "01";
+    case "appraisal":
+      return "02";
+    case "similar_sales":
+      return "05";
+    case "standard_price":
+    case "book_value":
+    case "acquisition_cost":
+      return "08";
+    default:
+      return "08";
+  }
+}
+
+/** ⑩ 표시값 (음수 가드) — exemptAmount > ⑪+⑫+⑬ 일 때 차이 표시. */
+function computeRow10(
+  exemptAmount: number,
+  excl11: number,
+  excl12: number,
+  excl13: number,
+): number {
+  return Math.max(0, exemptAmount - excl11 - excl12 - excl13);
+}
+
+/**
+ * ⑭ 증여재산가산액 표시값.
+ * 엔진 산식: aggregatedGiftValue = max(0, grossGiftValue − exemptAmount) + priorAggregation
+ * 역산:      ⑭ = aggregatedGiftValue − max(0, grossGiftValue − exemptAmount)
+ */
+function computeRow14(
+  aggregated: number,
+  gross: number,
+  exempt: number,
+): number {
+  return Math.max(0, aggregated - Math.max(0, gross - exempt));
+}
+
+// ============================================================
+// Props
+// ============================================================
+
+export interface GiftTaxValuationFormTableProps {
+  /** 본문 행 — A11 (당기 증여재산) */
+  valuationResults: PropertyValuationResult[];
+  /** valuationResults와 1:1 매칭되는 원본 EstateItem */
+  estateItems: EstateItem[];
+
+  /** ⑨ 증여재산가액 (= A11 합) */
+  grossGiftValue: number;
+  /** ⑩+⑪+⑫+⑬ 합산 (엔진 단일 필드) */
+  exemptAmount: number;
+  /** ⑮ 합계 = max(0, ⑨−⑩−⑪−⑫−⑬) + ⑭ */
+  aggregatedGiftValue: number;
+
+  /** ⑪ §48 공익법인 출연재산가액 */
+  publicInterestExclusion?: number;
+  /** ⑫ §52 공익신탁 재산가액 */
+  publicTrustExclusion?: number;
+  /** ⑬ §52의2 장애인 신탁 재산가액 */
+  disabledTrustExclusion?: number;
+
+  /** Phase 2 — 사전증여 합산 분리 (A24 행). 현 PR 미사용. */
+  priorGiftValuationResults?: PropertyValuationResult[];
+}
+
+// ============================================================
+// 컴포넌트
+// ============================================================
+
+const ROWS_FIXED = 10; // 부표 1 본문 빈 행 포함 고정 행 수
+const CELL_BASE = "border border-black p-1 align-middle text-[11px]";
+const CELL_CENTER = `${CELL_BASE} text-center`;
+const CELL_AMOUNT = `${CELL_BASE} text-right tabular-nums`;
+const CELL_NAME = `${CELL_BASE} text-left`;
+
+export function GiftTaxValuationFormTable({
+  valuationResults,
+  estateItems,
+  grossGiftValue,
+  exemptAmount,
+  aggregatedGiftValue,
+  publicInterestExclusion = 0,
+  publicTrustExclusion = 0,
+  disabledTrustExclusion = 0,
+}: GiftTaxValuationFormTableProps) {
+  const itemMap = new Map(estateItems.map((it) => [it.id, it]));
+  const totalRows = Math.max(ROWS_FIXED, valuationResults.length);
+  const emptyRowCount = totalRows - valuationResults.length;
+
+  const row10 = computeRow10(
+    exemptAmount,
+    publicInterestExclusion,
+    publicTrustExclusion,
+    disabledTrustExclusion,
+  );
+  const row14 = computeRow14(aggregatedGiftValue, grossGiftValue, exemptAmount);
+
+  return (
+    <div className="border-2 border-black bg-white p-3 text-black print:bg-white print:text-black">
+      {/* 양식 헤더 */}
+      <div className="mb-1 flex items-start justify-between text-[10px] font-medium">
+        <span>
+          ■ 상속세 및 증여세법 시행규칙 [별지 제10호서식 부표 1] 〈개정 2026. 3.
+          20.〉
+        </span>
+        <span>(앞쪽)</span>
+      </div>
+
+      {/* 관리번호 + 제목 */}
+      <div className="mb-1 flex items-end gap-3">
+        <div className="border border-black px-2 py-0.5 text-[10px]">
+          관리번호&nbsp;&nbsp;-
+        </div>
+        <h3 className="flex-1 text-center text-lg font-bold">
+          증여재산 및 평가명세서
+        </h3>
+        <div className="w-20" />
+      </div>
+
+      <p className="mb-2 text-[10px]">
+        ※ 뒤쪽의 작성방법을 읽고 작성하시기 바랍니다.
+      </p>
+
+      {/* 본문 표 — 좁은 뷰포트는 가로 스크롤 */}
+      <div className="overflow-x-auto">
+        <table
+          className="w-full min-w-[750px] border-collapse"
+          aria-label="증여재산 및 평가명세서 본문 표"
+        >
+          <caption className="sr-only">
+            증여재산 및 평가명세서 — 별지 제10호서식 부표 1
+          </caption>
+          <thead>
+            <tr>
+              <th className={`${CELL_CENTER} w-[50px]`} scope="col">
+                ① 재산구분코드
+              </th>
+              <th className={`${CELL_CENTER} w-[50px]`} scope="col">
+                ② 재산종류코드
+              </th>
+              <th className={`${CELL_CENTER} w-[60px]`} scope="col">
+                국외자산 여부
+              </th>
+              <th className={`${CELL_CENTER} w-[60px]`} scope="col">
+                국외재산 국가명
+              </th>
+              <th className={`${CELL_CENTER}`} scope="col">
+                ③ 소재지·법인명 등
+              </th>
+              <th className={`${CELL_CENTER} w-[100px]`} scope="col">
+                ④ 사업자등록번호 (지분율)
+              </th>
+              <th className={`${CELL_CENTER} w-[60px]`} scope="col">
+                ⑤ 수량(면적)
+              </th>
+              <th className={`${CELL_CENTER} w-[80px]`} scope="col">
+                ⑥ 단가
+              </th>
+              <th className={`${CELL_CENTER} w-[120px]`} scope="col">
+                ⑦ 평가가액
+              </th>
+              <th className={`${CELL_CENTER} w-[50px]`} scope="col">
+                ⑧ 평가기준코드
+              </th>
+            </tr>
+          </thead>
+          <tbody data-testid="table-data-tbody">
+            {valuationResults.map((vr, i) => {
+              const item = itemMap.get(vr.estateItemId);
+              const propertyCode = item ? toPropertyTypeCode(item.category) : "12";
+              const methodCode = item ? toValuationMethodCode(item, vr) : "08";
+              const shares = item?.listedStockShares;
+              const unitPrice = item?.listedStockAvgPrice;
+              return (
+                <tr key={vr.estateItemId} data-testid={`row-data-${i + 1}`}>
+                  <td className={CELL_CENTER} data-testid="col-property-class">
+                    A11
+                  </td>
+                  <td className={CELL_CENTER} data-testid="col-property-type">
+                    {propertyCode}
+                  </td>
+                  <td className={CELL_CENTER} data-testid="col-overseas">
+                    [ ]여 [ ]부
+                  </td>
+                  <td className={CELL_CENTER} data-testid="col-country">
+                    &nbsp;
+                  </td>
+                  <td className={CELL_NAME} data-testid="col-name">
+                    {item?.name ?? "—"}
+                  </td>
+                  <td className={CELL_CENTER} data-testid="col-biz-no">
+                    &nbsp;
+                  </td>
+                  <td className={CELL_AMOUNT} data-testid="col-shares">
+                    {shares ? shares.toLocaleString() : ""}
+                  </td>
+                  <td className={CELL_AMOUNT} data-testid="col-unit-price">
+                    {unitPrice ? formatKRW(unitPrice) : ""}
+                  </td>
+                  <td className={CELL_AMOUNT} data-testid="col-amount">
+                    {formatKRW(vr.valuatedAmount)}
+                  </td>
+                  <td className={CELL_CENTER} data-testid="col-valuation-method">
+                    {methodCode}
+                  </td>
+                </tr>
+              );
+            })}
+            {Array.from({ length: emptyRowCount }).map((_, i) => (
+              <tr
+                key={`empty-${i}`}
+                data-testid={`row-empty-${i + 1}`}
+                className="h-7"
+              >
+                <td className={CELL_CENTER}>&nbsp;</td>
+                <td className={CELL_CENTER}>&nbsp;</td>
+                <td className={CELL_CENTER}>[ ]여 [ ]부</td>
+                <td className={CELL_CENTER}>&nbsp;</td>
+                <td className={CELL_NAME}>&nbsp;</td>
+                <td className={CELL_CENTER}>&nbsp;</td>
+                <td className={CELL_AMOUNT}>&nbsp;</td>
+                <td className={CELL_AMOUNT}>&nbsp;</td>
+                <td className={CELL_AMOUNT}>&nbsp;</td>
+                <td className={CELL_CENTER}>&nbsp;</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* 계 영역 — 본문 표와 별도 표 */}
+      <table
+        className="mt-2 w-full min-w-[750px] border-collapse"
+        aria-label="증여재산 및 평가명세서 계 영역"
+      >
+        <tbody>
+          {/* ⑨ */}
+          <tr>
+            <td className={`${CELL_CENTER} w-[40px]`} rowSpan={7}>
+              계
+            </td>
+            <td className={CELL_CENTER} colSpan={2}>
+              ⑨ 증여재산가액
+            </td>
+            <td className={CELL_AMOUNT} data-testid="row-9-gross">
+              {formatKRW(grossGiftValue)}
+            </td>
+          </tr>
+          {/* ⑩ — 묶음 외부 */}
+          <tr>
+            <td className={CELL_CENTER} colSpan={2}>
+              ⑩ 비과세재산가액
+            </td>
+            <td className={CELL_AMOUNT} data-testid="row-10-exempt">
+              {formatKRW(row10)}
+            </td>
+          </tr>
+          {/* ⑪~⑬ — "과세가액 불산입액" rowSpan=3 */}
+          <tr>
+            <td className={`${CELL_CENTER} w-[80px]`} rowSpan={3}>
+              과세가액
+              <br />
+              불산입액
+            </td>
+            <td className={CELL_CENTER}>⑪ 공익법인 출연재산가액</td>
+            <td className={CELL_AMOUNT} data-testid="row-11-public-interest">
+              {formatKRW(publicInterestExclusion)}
+            </td>
+          </tr>
+          <tr>
+            <td className={CELL_CENTER}>⑫ 공익신탁 재산가액</td>
+            <td className={CELL_AMOUNT} data-testid="row-12-public-trust">
+              {formatKRW(publicTrustExclusion)}
+            </td>
+          </tr>
+          <tr>
+            <td className={CELL_CENTER}>⑬ 장애인 신탁재산가액</td>
+            <td className={CELL_AMOUNT} data-testid="row-13-disabled-trust">
+              {formatKRW(disabledTrustExclusion)}
+            </td>
+          </tr>
+          {/* ⑭ */}
+          <tr>
+            <td className={CELL_CENTER} colSpan={2}>
+              ⑭ 증여재산가산액
+            </td>
+            <td className={CELL_AMOUNT} data-testid="row-14-add">
+              {formatKRW(row14)}
+            </td>
+          </tr>
+          {/* ⑮ 합계 — 상단 굵은 테두리 */}
+          <tr>
+            <td
+              className={`${CELL_CENTER} border-t-2 border-black font-semibold`}
+              colSpan={2}
+            >
+              ⑮ 합계
+            </td>
+            <td
+              className={`${CELL_AMOUNT} border-t-2 border-black font-semibold`}
+              data-testid="row-15-sum"
+            >
+              {formatKRW(aggregatedGiftValue)}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      {/* 첨부서류 + 수수료 */}
+      <div className="mt-2 flex items-center justify-between border border-black px-2 py-1 text-[10px]">
+        <div>
+          <span className="font-semibold">첨부서류 </span>
+          증여재산 증명서류
+          <br />
+          <span className="ml-[60px] text-gray-700">
+            [예: 주주(증권계좌)번호 및 잔고증명서, 예금통장 사본 등]
+          </span>
+        </div>
+        <div className="border-l border-black pl-3 text-center">
+          수수료
+          <br />
+          없음
+        </div>
+      </div>
+
+      <p className="mt-1 text-right text-[9px] text-gray-700">
+        210mm×297mm[백상지 80g/㎡]
+      </p>
+    </div>
+  );
+}
