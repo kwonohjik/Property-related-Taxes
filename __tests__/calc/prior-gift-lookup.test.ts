@@ -24,8 +24,8 @@ function makeGiftRecord(opts: {
   id?: string;
   giftDate: string;
   donor?: unknown;
-  donorName?: string | undefined;
-  donorBirthDate?: string | undefined;
+  doneeName?: string | undefined;
+  doneeBirthDate?: string | undefined;
   donorRelation?: string;
   isGenerationSkip?: boolean;
   priorGifts?: unknown[];
@@ -40,9 +40,9 @@ function makeGiftRecord(opts: {
   title?: string;
 }): CalculationRecord {
   const donor = "donor" in opts ? opts.donor : "father";
-  const donorName = "donorName" in opts ? opts.donorName : DEFAULT_NAME;
-  const donorBirthDate =
-    "donorBirthDate" in opts ? opts.donorBirthDate : DEFAULT_BIRTH;
+  const doneeName = "doneeName" in opts ? opts.doneeName : DEFAULT_NAME;
+  const doneeBirthDate =
+    "doneeBirthDate" in opts ? opts.doneeBirthDate : DEFAULT_BIRTH;
   const {
     id = `id-${opts.giftDate}`,
     giftDate,
@@ -68,8 +68,8 @@ function makeGiftRecord(opts: {
     inputData: {
       giftDate,
       donor,
-      donorName,
-      donorBirthDate,
+      doneeName,
+      doneeBirthDate,
       donorRelation,
       isGenerationSkip,
       priorGifts,
@@ -121,7 +121,7 @@ describe("filterPriorGiftCandidates — 동일인(이름+생년월일) 매칭 an
 
   it("PGL-3: 이름 일치 + 생년월일 다름 → 제외 + warnings.different_person", () => {
     const records = [
-      makeGiftRecord({ giftDate: "2021-05-10", donorBirthDate: "1965-03-20" }),
+      makeGiftRecord({ giftDate: "2021-05-10", doneeBirthDate: "1965-03-20" }),
     ];
     const { candidates, warnings } = filterPriorGiftCandidates(
       records,
@@ -136,7 +136,7 @@ describe("filterPriorGiftCandidates — 동일인(이름+생년월일) 매칭 an
 
   it("PGL-4: 이름 다름 → 제외 + warnings.different_person", () => {
     const records = [
-      makeGiftRecord({ giftDate: "2021-05-10", donorName: "김철수" }),
+      makeGiftRecord({ giftDate: "2021-05-10", doneeName: "김철수" }),
     ];
     const { candidates, warnings } = filterPriorGiftCandidates(
       records,
@@ -184,8 +184,8 @@ describe("filterPriorGiftCandidates — 동일인(이름+생년월일) 매칭 an
     const c: PriorGiftCandidate = {
       calculationId: "abc",
       giftDate: "2021-05-10",
-      donorName: DEFAULT_NAME,
-      donorBirthDate: DEFAULT_BIRTH,
+      doneeName: DEFAULT_NAME,
+      doneeBirthDate: DEFAULT_BIRTH,
       donor: "father",
       donorRelation: "lineal_descendant",
       grossGiftValue: 350_000_000,
@@ -344,9 +344,9 @@ describe("filterPriorGiftCandidates — 동일인(이름+생년월일) 매칭 an
     expect(warnings.find((w) => w.calculationId === "inh-1")).toBeUndefined();
   });
 
-  it("PGL-16: donorName 누락 (legacy) → warnings.donor_identity_missing", () => {
+  it("PGL-16: doneeName 누락 (legacy) → warnings.donee_identity_missing", () => {
     const records = [
-      makeGiftRecord({ giftDate: "2021-05-10", donorName: undefined }),
+      makeGiftRecord({ giftDate: "2021-05-10", doneeName: undefined }),
     ];
     const { candidates, warnings } = filterPriorGiftCandidates(
       records,
@@ -357,13 +357,13 @@ describe("filterPriorGiftCandidates — 동일인(이름+생년월일) 매칭 an
     );
     expect(candidates).toHaveLength(0);
     expect(
-      warnings.find((w) => w.reason === "donor_identity_missing"),
+      warnings.find((w) => w.reason === "donee_identity_missing"),
     ).toBeDefined();
   });
 
-  it("PGL-17: donorBirthDate 누락 (legacy) → warnings.donor_identity_missing", () => {
+  it("PGL-17: doneeBirthDate 누락 (legacy) → warnings.donee_identity_missing", () => {
     const records = [
-      makeGiftRecord({ giftDate: "2021-05-10", donorBirthDate: undefined }),
+      makeGiftRecord({ giftDate: "2021-05-10", doneeBirthDate: undefined }),
     ];
     const { candidates, warnings } = filterPriorGiftCandidates(
       records,
@@ -374,18 +374,18 @@ describe("filterPriorGiftCandidates — 동일인(이름+생년월일) 매칭 an
     );
     expect(candidates).toHaveLength(0);
     expect(
-      warnings.find((w) => w.reason === "donor_identity_missing"),
+      warnings.find((w) => w.reason === "donee_identity_missing"),
     ).toBeDefined();
   });
 
-  it("PGL-18: 부 vs 모 — 다른 인물(생년월일 다름)이므로 제외 (§47 그룹과 무관)", () => {
-    // 사용자 결정: §47② 부·모 동일인이라도 물리적 다른 인물은 모달 후보에서 제외
+  it("PGL-18: 부 vs 모 — 다른 수증자(생년월일 다름)이므로 제외 (§47 그룹과 무관)", () => {
+    // 사용자 결정: §47② 부·모 동일인이라도 물리적 다른 수증자은 모달 후보에서 제외
     const records = [
       makeGiftRecord({
         giftDate: "2021-05-10",
         donor: "mother",
-        donorName: "김영희",
-        donorBirthDate: "1962-07-08",
+        doneeName: "김영희",
+        doneeBirthDate: "1962-07-08",
       }),
     ];
     const { candidates, warnings } = filterPriorGiftCandidates(

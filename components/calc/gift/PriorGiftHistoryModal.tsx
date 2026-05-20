@@ -72,9 +72,9 @@ export interface PriorGiftHistoryModalProps {
   currentGiftDate: string;
   /** 정보 표시용 (현 회차 §47 그룹 라벨) */
   currentDonor: GiftDonorRelation;
-  /** 동일인 매칭 (단일 진실) — 이름 + 생년월일 정확 일치 */
-  currentDonorName: string;
-  currentDonorBirthDate: string;
+  /** 동일인(수증자) 매칭 (단일 진실) — 이름 + 생년월일 정확 일치 */
+  currentDoneeName: string;
+  currentDoneeBirthDate: string;
   excludeCalculationIds: string[];
   onSelect: (priorGift: PriorGift) => void;
   /** "직접 입력하기" — 빈 PriorGift 1건 추가 */
@@ -100,14 +100,14 @@ function CandidateCard({
 
   return (
     <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-4 space-y-2">
-      {/* 헤더 — 증여자 이름·생년월일 명시 */}
+      {/* 헤더 — 수증자 이름·생년월일 + 증여 회차 정보 */}
       <div className="flex items-center justify-between gap-2">
         <div className="space-y-0.5">
-          <div className="text-sm font-semibold">
-            {candidate.donorName} ({candidate.donorBirthDate})
+          <div className="text-[11px] text-sky-700">
+            수증자: <strong>{candidate.doneeName}</strong> ({candidate.doneeBirthDate})
           </div>
-          <div className="text-[11px] text-gray-600">
-            {candidate.giftDate} · {DONOR_LABEL[candidate.donor]} → {recipient}
+          <div className="text-sm font-semibold">
+            {candidate.giftDate} · {DONOR_LABEL[candidate.donor]} 증여 → {recipient}
           </div>
         </div>
         {candidate.hasInnerPriorGifts && (
@@ -156,9 +156,9 @@ function CandidateCard({
         </span>
       </div>
 
-      {/* 동일인 일치 배지 */}
+      {/* 동일 수증자 일치 배지 */}
       <p className="text-[11px] text-violet-700">
-        ✓ 동일인 일치 (이름 + 생년월일)
+        ✓ 동일 수증자 일치 (이름 + 생년월일)
       </p>
 
       {/* 버튼 */}
@@ -192,8 +192,8 @@ export function PriorGiftHistoryModal({
   onOpenChange,
   currentGiftDate,
   currentDonor,
-  currentDonorName,
-  currentDonorBirthDate,
+  currentDoneeName,
+  currentDoneeBirthDate,
   excludeCalculationIds,
   onSelect,
   onManualAdd,
@@ -220,8 +220,8 @@ export function PriorGiftHistoryModal({
         const { candidates, warnings } = filterPriorGiftCandidates(
           records,
           currentGiftDate,
-          currentDonorName,
-          currentDonorBirthDate,
+          currentDoneeName,
+          currentDoneeBirthDate,
           excludeCalculationIds,
         );
         setCandidates(candidates);
@@ -240,8 +240,8 @@ export function PriorGiftHistoryModal({
   }, [
     open,
     currentGiftDate,
-    currentDonorName,
-    currentDonorBirthDate,
+    currentDoneeName,
+    currentDoneeBirthDate,
     excludeCalculationIds,
   ]);
 
@@ -280,12 +280,15 @@ export function PriorGiftHistoryModal({
             <span className="text-sky-600">현재 증여일:</span> {currentGiftDate}
           </div>
           <div>
-            <span className="text-sky-600">증여자:</span>{" "}
-            <strong>{currentDonorName}</strong> ({currentDonorBirthDate}) ·{" "}
+            <span className="text-sky-600">수증자:</span>{" "}
+            <strong>{currentDoneeName}</strong> ({currentDoneeBirthDate})
+          </div>
+          <div>
+            <span className="text-sky-600">증여자 관계:</span>{" "}
             {DONOR_LABEL[currentDonor]}
           </div>
           <div className="text-sky-600">
-            필터: 10년 이내 ({tenYearsAgo} 이후) + 이름·생년월일 일치
+            필터: 10년 이내 ({tenYearsAgo} 이후) + 수증자 이름·생년월일 일치
           </div>
         </div>
 
@@ -310,7 +313,7 @@ export function PriorGiftHistoryModal({
               {candidates.length > 0 ? (
                 <div className="space-y-2">
                   <h4 className="text-xs font-semibold text-violet-700">
-                    ▼ 동일인 사전증여 — {candidates.length}건
+                    ▼ 동일 수증자 사전증여 — {candidates.length}건
                   </h4>
                   <div className="space-y-3">
                     {candidates.map((c) => (
@@ -324,7 +327,7 @@ export function PriorGiftHistoryModal({
                 </div>
               ) : (
                 <div className="rounded-md bg-gray-100 p-6 text-center text-sm text-gray-500">
-                  동일인(이름 + 생년월일 일치)에 해당하는 증여세 이력이 없습니다.
+                  동일 수증자(이름 + 생년월일 일치)에 해당하는 증여세 이력이 없습니다.
                   {warnings.length > 0 && (
                     <div className="mt-2 text-xs text-gray-400">
                       {warnings.length}건의 이력이 필터·검증 조건에 의해 제외되었습니다.

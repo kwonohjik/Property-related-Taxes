@@ -33,9 +33,9 @@ export interface PriorGiftCandidate {
   calculationId: string;
   /** ISO YYYY-MM-DD */
   giftDate: string;
-  /** 증여자 본인 식별 (동일인 판단의 single source of truth) */
-  donorName: string;
-  donorBirthDate: string;
+  /** 수증자 본인 식별 (동일인 판단의 single source of truth) */
+  doneeName: string;
+  doneeBirthDate: string;
   /** §47 그룹 판정 키 (정보용 — 카드 라벨 표시) */
   donor: GiftDonorRelation;
   /** 당시 수증자-증여자 관계 (정보용) */
@@ -62,7 +62,7 @@ export interface PriorGiftCandidate {
 
 export type LookupWarningReason =
   | "donor_missing"
-  | "donor_identity_missing"
+  | "donee_identity_missing"
   | "result_missing"
   | "future_date"
   | "exceed_10y"
@@ -104,39 +104,39 @@ function isValidDonor(v: unknown): v is GiftDonorRelation {
 // ============================================================
 
 /**
- * 증여세 이력에서 동일인(이름+생년월일) 사전증여 후보를 추출.
+ * 증여세 이력에서 동일인(수증자 이름+생년월일) 사전증여 후보를 추출.
  *
  * 알고리즘:
  *   1. taxType !== "gift" → silent skip
  *   2. excludeCalculationIds 포함 → warnings.excluded
  *   3. donor 누락 또는 비-enum → warnings.donor_missing
- *   4. donorName 또는 donorBirthDate 누락 → warnings.donor_identity_missing (legacy)
+ *   4. doneeName 또는 doneeBirthDate 누락 → warnings.donee_identity_missing (legacy)
  *   5. result.taxBase/computedTax/grossGiftValue 누락 → warnings.result_missing
  *   6. priorDate >= current → warnings.future_date (sanity)
  *   7. differenceInYears > 10 → warnings.exceed_10y
- *   8. donorName !== currentDonorName OR donorBirthDate !== currentDonorBirthDate
- *      → warnings.different_person (다른 인물)
+ *   8. doneeName !== currentDoneeName OR doneeBirthDate !== currentDoneeBirthDate
+ *      → warnings.different_person (다른 수증자)
  *   9. 위 모두 통과 → candidates.push
  *
  * 정렬: giftDate desc → createdAt desc
  *
  * 정책:
- *   - §47 그룹 매칭(isSameDonorGroup)이 아닌 이름+생년월일 정확 일치를 동일인 판정 기준으로 사용.
- *   - 사용자 결정: 부 vs 모 같이 §47 동일인 그룹이지만 다른 인물은 후보에서 제외.
- *     필요 시 사용자가 "사전증여 추가"로 수동 입력 (엔진은 여전히 §47 합산 처리).
+ *   - 수증자(donee) 이름+생년월일 정확 일치를 동일인 판정 기준으로 사용.
+ *   - 같은 수증자가 여러 증여자로부터 받은 과거 회차를 한 화면에서 검토 가능.
+ *   - §47 그룹 합산은 엔진(aggregatePriorGiftsForGift)이 selected priorGifts에서 자동 처리.
  */
 export function filterPriorGiftCandidates(
   records: CalculationRecord[],
   currentGiftDate: string,
-  currentDonorName: string,
-  currentDonorBirthDate: string,
+  currentDoneeName: string,
+  currentDoneeBirthDate: string,
   excludeCalculationIds: ReadonlyArray<string>,
 ): LookupResult {
   const current = new Date(currentGiftDate);
   const candidates: PriorGiftCandidate[] = [];
   const warnings: LookupWarning[] = [];
   const excludeSet = new Set(excludeCalculationIds);
-  const normName = currentDonorName.trim();
+  const normName = currentDoneeName.trim();
 
   for (const record of records) {
     if (record.taxType !== "gift") continue; // 다른 세목 — silent
@@ -167,14 +167,14 @@ export function filterPriorGiftCandidates(
     }
 
     const recName =
-      typeof input?.donorName === "string" ? input.donorName.trim() : "";
+      typeof input?.doneeName === "string" ? input.doneeName.trim() : "";
     const recBirth =
-      typeof input?.donorBirthDate === "string" ? input.donorBirthDate : "";
+      typeof input?.doneeBirthDate === "string" ? input.doneeBirthDate : "";
     if (!recName || !recBirth) {
       warnings.push({
         calculationId: record.id,
-        reason: "donor_identity_missing",
-        message: `${record.title}: 증여자 이름·생년월일 미입력 (legacy 이력) — 수동 입력 필요`,
+        reason: "donee_identity_missing",
+        message: `${record.title}: 수증자 이름·생년월일 미입력 (legacy 이력) — 수동 입력 필요`,
       });
       continue;
     }
@@ -221,11 +221,11 @@ export function filterPriorGiftCandidates(
       continue;
     }
 
-    if (recName !== normName || recBirth !== currentDonorBirthDate) {
+    if (recName !== normName || recBirth !== currentDoneeBirthDate) {
       warnings.push({
         calculationId: record.id,
         reason: "different_person",
-        message: `${record.title}: 다른 인물 (${recName} ${recBirth}) — 동일인 아님`,
+        message: `${record.title}: 다른 수증자 (${recName} ${recBirth}) — 동일인 아님`,
       });
       continue;
     }
@@ -242,8 +242,8 @@ export function filterPriorGiftCandidates(
     candidates.push({
       calculationId: record.id,
       giftDate: inputGiftDate,
-      donorName: recName,
-      donorBirthDate: recBirth,
+      doneeName: recName,
+      doneeBirthDate: recBirth,
       donor: input.donor as GiftDonorRelation,
       donorRelation,
       grossGiftValue: result.grossGiftValue as number,
