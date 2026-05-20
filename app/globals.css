@@ -129,11 +129,70 @@
   }
 }
 
+/* 네이티브 가로 스크롤바 완전 숨김 — JS 가짜 스크롤바(HorizontalScrollContainer)와 병행 사용
+ * macOS 자동 숨김 정책 우회를 위해 OS 네이티브를 완전히 차단하고 JS div로 thumb 렌더. */
+.no-native-scrollbar {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+.no-native-scrollbar::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* (보존) 가로 스크롤바 항상 표시 — macOS 시스템 설정(자동 숨김)과 무관하게 강제 표시 */
+.horizontal-scroll-visible {
+  overflow-x: scroll !important;
+  scrollbar-width: auto !important; /* Firefox: thin 아닌 auto로 두께 확보 */
+  scrollbar-color: #4b5563 #d1d5db !important; /* Firefox: thumb / track */
+  scrollbar-gutter: stable; /* 콘텐츠가 짧을 때도 스크롤바 영역 예약 */
+}
+/* WebKit (Chrome·Safari·Edge) — 자동 숨김 동작 무효화 */
+.horizontal-scroll-visible::-webkit-scrollbar {
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  height: 14px !important;
+  background-color: #d1d5db !important;
+  display: block !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+.horizontal-scroll-visible::-webkit-scrollbar-track {
+  background-color: #d1d5db !important;
+  border-radius: 0 !important;
+  -webkit-box-shadow: inset 0 0 0 1px #9ca3af !important;
+}
+.horizontal-scroll-visible::-webkit-scrollbar-thumb {
+  background-color: #4b5563 !important;
+  border-radius: 7px !important;
+  border: 2px solid #d1d5db !important;
+  min-width: 40px !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+.horizontal-scroll-visible::-webkit-scrollbar-thumb:hover {
+  background-color: #1f2937 !important;
+}
+.horizontal-scroll-visible::-webkit-scrollbar-corner,
+.horizontal-scroll-visible::-webkit-scrollbar-button {
+  display: none !important;
+}
+
 /* Print / PDF 스타일 */
 @page {
   /* 브라우저 기본 인쇄 헤더(날짜·URL·제목)·푸터 제거 */
   margin: 10mm;
   size: auto;
+}
+
+/* 신고서 양식만 인쇄(form-table scope)는 A4 가로 — 원본 별지 양식 방향 일치 */
+@page form-landscape {
+  size: A4 landscape;
+  margin: 10mm;
+}
+body[data-print-scope="form-table"] {
+  page: form-landscape;
 }
 
 @media print {

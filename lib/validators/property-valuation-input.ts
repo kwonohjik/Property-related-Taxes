@@ -159,6 +159,15 @@ export const priorGiftSchema = z.object({
   corporateGiftComputedTax: z.number().nonnegative().optional(),
   // UI 메타 (이력 조회 출처) — 엔진 무시. buildInput에서 strip(④) 누락 안전망(⑨).
   sourceCalculationId: z.string().optional(),
+  // 신고서 부표 1 표시 메타 (2026-05-20) — 엔진 무관
+  propertyCategory: z
+    .enum([
+      "cash", "real_estate_land", "real_estate_apartment", "real_estate_building",
+      "listed_stock", "unlisted_stock", "financial", "deposit", "other",
+    ])
+    .optional(),
+  propertyName: z.string().optional(),
+  propertyLocation: z.string().optional(),
 });
 
 // ============================================================

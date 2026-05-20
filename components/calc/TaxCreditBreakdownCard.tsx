@@ -18,22 +18,17 @@ import type {
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 
 // ============================================================
-// 변수 배지 — 산식 변수 라벨(⑭⑮⑯⑦ 등) + 값
+// 금액 인라인 표시 — 라벨(한국어) + 값
 // ============================================================
 
-function Var({ label, val }: { label: string; val: number }) {
-  return (
-    <span className="inline-flex items-baseline gap-1">
-      <span className="text-[10px] font-bold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 rounded px-1">
-        {label}
-      </span>
-      <span className="text-[11px] font-mono">{val.toLocaleString()}</span>
-    </span>
-  );
+function Amt({ val }: { val: number }) {
+  return <span className="font-mono">{val.toLocaleString()}</span>;
 }
 
 // ============================================================
 // §28 산식 빌더 (priorGiftCreditDetail + computedTax)
+//   상증법 §28: 증여세액공제 = Min(종전 증여재산에 대한 산출세액, 공제한도)
+//   공제한도 = 산출세액 × (가산한 증여재산의 과세표준 ÷ 합산 후 과세표준)
 // ============================================================
 
 function buildSection28Formula(
@@ -50,27 +45,30 @@ function buildSection28Formula(
 
   return (
     <>
-      <div className="flex flex-wrap items-baseline gap-x-1">
-        <Var label="⑯" val={priorPaidCredit} /> = Min(
-        <Var label="⑭" val={priorComputedTax} />,{" "}
-        <Var label="⑮" val={creditLimit} />)
+      <div>
+        증여세액공제 = Min(종전 증여재산 산출세액, 공제한도)
       </div>
-      <div className="flex flex-wrap items-baseline gap-x-1 text-gray-500 dark:text-gray-400">
-        <Var label="⑭" val={priorComputedTax} /> 가장 최근 합산 회차의 ⑦
+      <div className="flex flex-wrap items-baseline gap-x-1">
+        = Min(<Amt val={priorComputedTax} />, <Amt val={creditLimit} />) ={" "}
+        <span className="font-semibold"><Amt val={priorPaidCredit} /></span>
       </div>
       {aggregatedTaxBase > 0 ? (
-        <div className="flex flex-wrap items-baseline gap-x-1 text-gray-500 dark:text-gray-400">
-          <Var label="⑮" val={creditLimit} /> = <Var label="⑦" val={computedTax} /> ×
-          (<Var label="⑤_prior" val={priorAddedTaxBase} /> ÷{" "}
-          <Var label="⑤" val={aggregatedTaxBase} />)
-        </div>
+        <>
+          <div className="text-gray-500 dark:text-gray-400 mt-1">
+            공제한도 = 산출세액 × (가산한 증여재산 과세표준 ÷ 합산 후 과세표준)
+          </div>
+          <div className="flex flex-wrap items-baseline gap-x-1 text-gray-500 dark:text-gray-400">
+            = <Amt val={computedTax} /> × (<Amt val={priorAddedTaxBase} /> ÷{" "}
+            <Amt val={aggregatedTaxBase} />) = <Amt val={creditLimit} />
+          </div>
+        </>
       ) : (
         <div className="text-rose-600 dark:text-rose-400">
-          ⑮ 0 — 과세표준 0으로 산식 무효
+          합산 후 과세표준이 0이므로 공제한도 산식 무효
         </div>
       )}
-      <div className="text-[10px] text-gray-400 dark:text-gray-500">
-        ※ ⑦은 할증 전 산출세액 (result.computedTax)
+      <div className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">
+        ※ 산출세액은 세대생략 할증 전 금액
       </div>
     </>
   );
@@ -90,34 +88,29 @@ function buildSection69Formula(credit: TaxCreditResult): React.ReactNode {
 
   return (
     <>
+      <div>
+        신고세액공제 = 신고기한 내 신고분 세액 × 3%
+      </div>
       <div className="flex flex-wrap items-baseline gap-x-1">
-        <span className="font-semibold">{credit.filingCredit.toLocaleString()}</span>
-        {" = "}
-        <Var label="기준세액" val={base} /> × 3%
+        = <Amt val={base} /> × 3% ={" "}
+        <span className="font-semibold"><Amt val={credit.filingCredit} /></span>
+      </div>
+      <div className="flex flex-wrap items-baseline gap-x-1 text-gray-500 dark:text-gray-400 mt-1">
+        신고분 세액 = (산출세액 + 세대생략 할증) − 증여세액공제
+        {foreign > 0 && <> − 외국납부세액공제</>}
+        {special > 0 && <> − 조특 특례공제</>}
       </div>
       <div className="flex flex-wrap items-baseline gap-x-1 text-gray-500 dark:text-gray-400">
-        <Var label="기준세액" val={base} /> ={" "}
-        <Var label="⑦합계" val={totalWithSurcharge} /> − §28{" "}
-        {giftCredit.toLocaleString()}
-        {foreign > 0 && (
-          <>
-            {" "}− 외국납부 {foreign.toLocaleString()}
-          </>
-        )}
-        {special > 0 && (
-          <>
-            {" "}− 조특 특례 {special.toLocaleString()}
-          </>
-        )}
+        = <Amt val={totalWithSurcharge} /> − <Amt val={giftCredit} />
+        {foreign > 0 && <> − <Amt val={foreign} /></>}
+        {special > 0 && <> − <Amt val={special} /></>}
+        {" "}= <Amt val={base} />
       </div>
       {allOthersZero && (
         <div className="text-[10px] text-gray-400 dark:text-gray-500">
           (외국납부·조특 특례 미적용)
         </div>
       )}
-      <div className="text-[10px] text-gray-400 dark:text-gray-500">
-        ※ ⑦합계 = 산출세액 + 세대생략 할증
-      </div>
       {special > 0 && (
         <div className="text-[10px] text-amber-600 dark:text-amber-400">
           ※ 조특 특례 절감 분 차감 후 3% 적용

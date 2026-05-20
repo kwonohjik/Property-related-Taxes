@@ -13,6 +13,7 @@ import { LoginPromptBanner } from "@/components/calc/shared/LoginPromptBanner";
 import { TaxCreditBreakdownCard } from "@/components/calc/TaxCreditBreakdownCard";
 import { GiftTaxFilingFormTable } from "@/components/calc/results/GiftTaxFilingFormTable";
 import { GiftTaxValuationFormTable } from "@/components/calc/results/GiftTaxValuationFormTable";
+import { HorizontalScrollContainer } from "@/components/calc/shared/HorizontalScrollContainer";
 import { calcInstallmentPayment } from "@/lib/tax-engine/credits/installment-payment";
 
 // ============================================================
@@ -117,12 +118,17 @@ interface Props {
   showLoginPrompt?: boolean;
   /** 증여재산 원본 목록 — 평가내역에서 ID 대신 자산명 표시용 */
   estateItems?: EstateItem[];
-  /** 사전증여 입력 원본 — 출처(📋 이력 기반) 배지 표시용 (Phase 2) */
+  /** 사전증여 입력 원본 — 출처(📋 이력 기반) 배지 + 부표 1 ②/③ 컬럼 표시 */
   priorGifts?: Array<{
     giftDate: string;
     giftAmount: number;
     sourceCalculationId?: string;
     donor?: string;
+    propertyCategory?:
+      | "cash" | "real_estate_land" | "real_estate_apartment" | "real_estate_building"
+      | "listed_stock" | "unlisted_stock" | "financial" | "deposit" | "other";
+    propertyName?: string;
+    propertyLocation?: string;
   }>;
 }
 
@@ -135,7 +141,6 @@ export function GiftTaxResultView({
   estateItems = [],
   priorGifts = [],
 }: Props) {
-  const [showBreakdown, setShowBreakdown] = useState(false);
   const [showValuation, setShowValuation] = useState(false);
 
   const taxBeforeCredit = result.computedTax + result.generationSkipSurcharge;
@@ -281,50 +286,8 @@ export function GiftTaxResultView({
         />
       )}
 
-      {/* 증여공제 상세 */}
-      <div className="border rounded-xl overflow-hidden">
-        <button
-          type="button"
-          onClick={() => setShowBreakdown((v) => !v)}
-          className="w-full flex items-center justify-between px-4 py-3 bg-muted/30 hover:bg-muted/50 transition-colors text-sm font-medium"
-        >
-          <span>증여재산공제 상세</span>
-          <span>{showBreakdown ? "▲" : "▼"}</span>
-        </button>
-        {showBreakdown && (
-          <div className="divide-y divide-border text-xs">
-            {result.deductionDetail.breakdown.map((step, i) => {
-              const isNegative = step.amount < 0;
-              const isFinal = step.label.startsWith("증여재산공제 적용액") || step.label.startsWith("혼인") || step.label.startsWith("출산");
-              return (
-                <div key={i} className={`flex items-center justify-between px-4 py-2.5 ${isFinal ? "bg-blue-50 dark:bg-blue-950/20" : ""}`}>
-                  <div>
-                    <span className={`${isFinal ? "font-medium text-blue-700 dark:text-blue-300" : "text-muted-foreground"}`}>
-                      {isFinal ? "▶ " : isNegative ? "- " : "  "}{step.label}
-                    </span>
-                    {step.note && (
-                      <p className="text-xs text-gray-400 mt-0.5">{step.note}</p>
-                    )}
-                    {step.lawRef && (
-                      <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-0.5">{step.lawRef}</p>
-                    )}
-                  </div>
-                  <span className={`font-mono font-medium ${isNegative ? "text-red-600 dark:text-red-400" : isFinal ? "text-blue-700 dark:text-blue-300" : ""}`}>
-                    {isNegative ? `- ${formatKRW(Math.abs(step.amount))}` : formatKRW(step.amount)}
-                  </span>
-                </div>
-              );
-            })}
-            <div className="flex items-center justify-between px-4 py-3 bg-muted/50 font-semibold text-sm border-t-2 border-border">
-              <span>공제 합계</span>
-              <span className="font-mono">{formatKRW(result.totalDeduction)}</span>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* 증여재산 및 평가명세서 (별지 제10호서식 부표 1) */}
-      <div className="border rounded-xl overflow-hidden">
+{/* 증여재산 및 평가명세서 (별지 제10호서식 부표 1) — A4 가로 양식, 카드 내부에서 가로 스크롤 */}
+      <div className="border rounded-xl">
         <button
           type="button"
           onClick={() => setShowValuation((v) => !v)}
@@ -335,24 +298,51 @@ export function GiftTaxResultView({
           </span>
           <span>{showValuation ? "▲" : "▼"}</span>
         </button>
-        <div className={showValuation ? "block p-4" : "hidden print:block print:p-0"}>
-          <GiftTaxValuationFormTable
-            valuationResults={result.valuationResults}
-            estateItems={estateItems}
-            grossGiftValue={result.grossGiftValue}
-            exemptAmount={result.exemptAmount}
-            aggregatedGiftValue={result.aggregatedGiftValue}
-            publicInterestExclusion={result.publicInterestExclusion}
-            publicTrustExclusion={result.publicTrustExclusion}
-            disabledTrustExclusion={result.disabledTrustExclusion}
-            priorGifts={priorGifts.map((pg) => ({
-              giftDate: pg.giftDate,
-              giftAmount: pg.giftAmount,
-              isHeir: false,
-              giftTaxPaid: 0,
-            }))}
-          />
-        </div>
+        {showValuation ? (
+          <HorizontalScrollContainer hint="← → 좌우 스크롤 또는 thumb 드래그로 모든 컬럼 보기">
+            <GiftTaxValuationFormTable
+              valuationResults={result.valuationResults}
+              estateItems={estateItems}
+              grossGiftValue={result.grossGiftValue}
+              exemptAmount={result.exemptAmount}
+              aggregatedGiftValue={result.aggregatedGiftValue}
+              publicInterestExclusion={result.publicInterestExclusion}
+              publicTrustExclusion={result.publicTrustExclusion}
+              disabledTrustExclusion={result.disabledTrustExclusion}
+              priorGifts={priorGifts.map((pg) => ({
+                giftDate: pg.giftDate,
+                giftAmount: pg.giftAmount,
+                isHeir: false,
+                giftTaxPaid: 0,
+                propertyCategory: pg.propertyCategory,
+                propertyName: pg.propertyName,
+                propertyLocation: pg.propertyLocation,
+              }))}
+            />
+          </HorizontalScrollContainer>
+        ) : (
+          <div className="hidden print:block print:p-0 print:overflow-visible">
+            <GiftTaxValuationFormTable
+              valuationResults={result.valuationResults}
+              estateItems={estateItems}
+              grossGiftValue={result.grossGiftValue}
+              exemptAmount={result.exemptAmount}
+              aggregatedGiftValue={result.aggregatedGiftValue}
+              publicInterestExclusion={result.publicInterestExclusion}
+              publicTrustExclusion={result.publicTrustExclusion}
+              disabledTrustExclusion={result.disabledTrustExclusion}
+              priorGifts={priorGifts.map((pg) => ({
+                giftDate: pg.giftDate,
+                giftAmount: pg.giftAmount,
+                isHeir: false,
+                giftTaxPaid: 0,
+                propertyCategory: pg.propertyCategory,
+                propertyName: pg.propertyName,
+                propertyLocation: pg.propertyLocation,
+              }))}
+            />
+          </div>
+        )}
       </div>
 
       {/* 연부연납 안내 */}

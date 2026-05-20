@@ -153,7 +153,7 @@ describe("GiftTaxValuationFormTable — 별지 제10호서식 부표 1", () => {
       ["listed_stock", "09"],
       ["unlisted_stock", "10"],
       ["financial", "11"],
-      ["deposit", "12"],
+      ["deposit", "11"],
       ["other", "12"],
     ];
     cases.forEach(([cat, code]) => {
@@ -273,6 +273,210 @@ describe("GiftTaxValuationFormTable — 별지 제10호서식 부표 1", () => {
     expect(screen.getByTestId("row-9-gross")).toHaveTextContent("1,000,000,000");
     expect(screen.getByTestId("row-14-add")).toHaveTextContent("820,000,000");
     expect(screen.getByTestId("row-15-sum")).toHaveTextContent("1,820,000,000");
+  });
+
+  // ============================================================
+  // L1~L8 — 부표 1 ② 라벨화 + ③ 사전증여 소재지 (2026-05-20)
+  // ============================================================
+
+  it("L1: 본문 행 ② 컬럼에 라벨(공동주택) + 코드((05)) 동시 표시", () => {
+    const item = makeItem("i1", "real_estate_apartment", "강남 아파트");
+    render(
+      <GiftTaxValuationFormTable
+        valuationResults={[makeVR("i1", 800_000_000)]}
+        estateItems={[item]}
+        grossGiftValue={800_000_000}
+        exemptAmount={0}
+        aggregatedGiftValue={800_000_000}
+      />,
+    );
+    const row = screen.getByTestId("row-data-1");
+    const cell = within(row).getByTestId("col-property-type");
+    expect(cell).toHaveTextContent("공동주택");
+    expect(cell).toHaveTextContent("(05)");
+  });
+
+  it("L2: 9종 EstateItem category → 정확한 라벨 매핑", () => {
+    type Case = [AssetCategory, string, string];
+    const cases: Case[] = [
+      ["cash", "현금", "(01)"],
+      ["real_estate_land", "토지", "(02)"],
+      ["real_estate_apartment", "공동주택", "(05)"],
+      ["real_estate_building", "일반건물", "(07)"],
+      ["listed_stock", "상장주식", "(09)"],
+      ["unlisted_stock", "비상장주식", "(10)"],
+      ["financial", "금융재산", "(11)"],
+      ["deposit", "금융재산", "(11)"],
+      ["other", "기타재산", "(12)"],
+    ];
+    cases.forEach(([cat, label, code]) => {
+      const item = makeItem(`i-${cat}`, cat);
+      const { unmount } = render(
+        <GiftTaxValuationFormTable
+          valuationResults={[makeVR(item.id, 1_000_000)]}
+          estateItems={[item]}
+          grossGiftValue={1_000_000}
+          exemptAmount={0}
+          aggregatedGiftValue={1_000_000}
+        />,
+      );
+      const cell = within(screen.getByTestId("row-data-1")).getByTestId(
+        "col-property-type",
+      );
+      expect(cell).toHaveTextContent(label);
+      expect(cell).toHaveTextContent(code);
+      unmount();
+    });
+  });
+
+  it("L3: 사전증여 propertyCategory 입력 시 ② 컬럼에 정확한 코드·라벨 (하드코딩 12 우회)", () => {
+    const item = makeItem("i1", "cash");
+    const priorGifts: PriorGift[] = [
+      {
+        giftDate: "2022-07-20",
+        giftAmount: 500_000_000,
+        isHeir: false,
+        giftTaxPaid: 0,
+        propertyCategory: "real_estate_apartment",
+        propertyLocation: "서울특별시 성북구 성북로15길 15",
+      },
+    ];
+    render(
+      <GiftTaxValuationFormTable
+        valuationResults={[makeVR("i1", 1_000_000_000)]}
+        estateItems={[item]}
+        grossGiftValue={1_000_000_000}
+        exemptAmount={0}
+        aggregatedGiftValue={1_500_000_000}
+        priorGifts={priorGifts}
+      />,
+    );
+    const row2 = screen.getByTestId("row-data-2");
+    const cell = within(row2).getByTestId("col-property-type");
+    expect(cell).toHaveTextContent("공동주택");
+    expect(cell).toHaveTextContent("(05)");
+  });
+
+  it("L4: 사전증여 propertyCategory 미입력 시 ② fallback '기타재산 (12)'", () => {
+    const item = makeItem("i1", "cash");
+    const priorGifts: PriorGift[] = [
+      { giftDate: "2021-05-10", giftAmount: 350_000_000, isHeir: false, giftTaxPaid: 0 },
+    ];
+    render(
+      <GiftTaxValuationFormTable
+        valuationResults={[makeVR("i1", 1_000_000_000)]}
+        estateItems={[item]}
+        grossGiftValue={1_000_000_000}
+        exemptAmount={0}
+        aggregatedGiftValue={1_350_000_000}
+        priorGifts={priorGifts}
+      />,
+    );
+    const cell = within(screen.getByTestId("row-data-2")).getByTestId(
+      "col-property-type",
+    );
+    expect(cell).toHaveTextContent("기타재산");
+    expect(cell).toHaveTextContent("(12)");
+  });
+
+  it("L5: 사전증여 propertyLocation 입력 시 ③ 컬럼에 소재지 표시", () => {
+    const item = makeItem("i1", "cash");
+    const priorGifts: PriorGift[] = [
+      {
+        giftDate: "2022-07-20",
+        giftAmount: 500_000_000,
+        isHeir: false,
+        giftTaxPaid: 0,
+        propertyLocation: "서울특별시 성북구 성북로15길 15",
+      },
+    ];
+    render(
+      <GiftTaxValuationFormTable
+        valuationResults={[makeVR("i1", 1_000_000_000)]}
+        estateItems={[item]}
+        grossGiftValue={1_000_000_000}
+        exemptAmount={0}
+        aggregatedGiftValue={1_500_000_000}
+        priorGifts={priorGifts}
+      />,
+    );
+    const cell = within(screen.getByTestId("row-data-2")).getByTestId("col-name");
+    expect(cell).toHaveTextContent("서울특별시 성북구 성북로15길 15");
+    expect(cell).toHaveTextContent("사전증여 (2022-07-20)");
+  });
+
+  it("L6: 사전증여 propertyLocation/propertyName 모두 미입력 시 fallback '사전증여 (날짜)'", () => {
+    const item = makeItem("i1", "cash");
+    const priorGifts: PriorGift[] = [
+      { giftDate: "2021-05-10", giftAmount: 350_000_000, isHeir: false, giftTaxPaid: 0 },
+    ];
+    render(
+      <GiftTaxValuationFormTable
+        valuationResults={[makeVR("i1", 1_000_000_000)]}
+        estateItems={[item]}
+        grossGiftValue={1_000_000_000}
+        exemptAmount={0}
+        aggregatedGiftValue={1_350_000_000}
+        priorGifts={priorGifts}
+      />,
+    );
+    expect(
+      within(screen.getByTestId("row-data-2")).getByTestId("col-name"),
+    ).toHaveTextContent("사전증여 (2021-05-10)");
+  });
+
+  it("L7: 사전증여 propertyName만 입력 시 ③ 컬럼에 명칭 메인 + 날짜 보조", () => {
+    const item = makeItem("i1", "cash");
+    const priorGifts: PriorGift[] = [
+      {
+        giftDate: "2020-03-15",
+        giftAmount: 200_000_000,
+        isHeir: false,
+        giftTaxPaid: 0,
+        propertyName: "삼성전자 보통주",
+      },
+    ];
+    render(
+      <GiftTaxValuationFormTable
+        valuationResults={[makeVR("i1", 1_000_000_000)]}
+        estateItems={[item]}
+        grossGiftValue={1_000_000_000}
+        exemptAmount={0}
+        aggregatedGiftValue={1_200_000_000}
+        priorGifts={priorGifts}
+      />,
+    );
+    const cell = within(screen.getByTestId("row-data-2")).getByTestId("col-name");
+    expect(cell).toHaveTextContent("삼성전자 보통주");
+    expect(cell).toHaveTextContent("사전증여 (2020-03-15)");
+  });
+
+  it("L8: 사전증여 propertyLocation + propertyName 동시 입력 시 소재지 메인 + 명칭·날짜 보조", () => {
+    const item = makeItem("i1", "cash");
+    const priorGifts: PriorGift[] = [
+      {
+        giftDate: "2022-07-20",
+        giftAmount: 500_000_000,
+        isHeir: false,
+        giftTaxPaid: 0,
+        propertyLocation: "서울특별시 성북구 성북로15길 15",
+        propertyName: "성북동 다세대주택",
+      },
+    ];
+    render(
+      <GiftTaxValuationFormTable
+        valuationResults={[makeVR("i1", 1_000_000_000)]}
+        estateItems={[item]}
+        grossGiftValue={1_000_000_000}
+        exemptAmount={0}
+        aggregatedGiftValue={1_500_000_000}
+        priorGifts={priorGifts}
+      />,
+    );
+    const cell = within(screen.getByTestId("row-data-2")).getByTestId("col-name");
+    expect(cell).toHaveTextContent("서울특별시 성북구 성북로15길 15");
+    expect(cell).toHaveTextContent("성북동 다세대주택");
+    expect(cell).toHaveTextContent("사전증여 (2022-07-20)");
   });
 
   it("⑪/⑫/⑬ 분리값 직접 매핑 — public*Exclusion 3 props", () => {

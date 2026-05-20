@@ -180,6 +180,73 @@ describe("filterPriorGiftCandidates — clientId 매칭 anchor", () => {
     expect(pg.sourceCalculationId).toBe("abc");
   });
 
+  it("PGL-7b: 부표 1 표시 메타 — candidateToPriorGift가 propertyCategory/Name 그대로 전달", () => {
+    const c: PriorGiftCandidate = {
+      calculationId: "rec-1",
+      giftDate: "2022-07-20",
+      clientId: null,
+      donor: "father",
+      donorRelation: "lineal_descendant",
+      grossGiftValue: 500_000_000,
+      finalTax: 0,
+      taxBase: 0,
+      computedTax: 0,
+      additionalGenerationSkipSurcharge: 0,
+      wasGenerationSkip: false,
+      hasInnerPriorGifts: false,
+      createdAt: "2022-07-20T00:00:00.000Z",
+      title: "증여세 2022-07-20",
+      propertyCategory: "real_estate_apartment",
+      propertyName: "성북동 다세대주택",
+    };
+    const pg = candidateToPriorGift(c);
+    expect(pg.propertyCategory).toBe("real_estate_apartment");
+    expect(pg.propertyName).toBe("성북동 다세대주택");
+    // propertyLocation은 EstateItem에 소재지 필드가 없어 prefill 불가 — 사용자 명시 입력 요구
+    expect(pg.propertyLocation).toBeUndefined();
+  });
+
+  it("PGL-7c: filterCandidates가 inputData.giftItems[0]에서 propertyCategory/Name prefill", () => {
+    const record: CalculationRecord = {
+      id: "rec-prefill",
+      userId: "local-user" as never,
+      taxType: "gift",
+      title: "현금 증여",
+      inputData: {
+        giftDate: "2022-07-20",
+        donor: "father",
+        donorRelation: "lineal_descendant",
+        isGenerationSkip: false,
+        priorGifts: [],
+        // 신규: giftItems 자동 prefill 소스
+        giftItems: [{ category: "cash", name: "현금 증여재산" }],
+      },
+      resultData: {
+        success: true,
+        result: {
+          grossGiftValue: 500_000_000,
+          finalTax: 0,
+          taxBase: 0,
+          computedTax: 0,
+          additionalGenerationSkipSurcharge: 0,
+        },
+      },
+      taxLawVersion: "2022-07-20",
+      linkedCalculationId: null,
+      clientId: null,
+      createdAt: "2022-07-20T00:00:00.000Z",
+      updatedAt: "2022-07-20T00:00:00.000Z",
+    };
+    const { candidates } = filterPriorGiftCandidates([record], CURRENT, null, []);
+    expect(candidates).toHaveLength(1);
+    expect(candidates[0].propertyCategory).toBe("cash");
+    expect(candidates[0].propertyName).toBe("현금 증여재산");
+    // 변환 시 PriorGift에도 전달
+    const pg = candidateToPriorGift(candidates[0]);
+    expect(pg.propertyCategory).toBe("cash");
+    expect(pg.propertyName).toBe("현금 증여재산");
+  });
+
   it("PGL-8: inputData.giftDate ISO string 비교 정확", () => {
     const records = [makeGiftRecord({ giftDate: "2020-12-31" })];
     const { candidates } = filterPriorGiftCandidates(records, "2021-01-01", null, []);

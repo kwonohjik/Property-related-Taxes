@@ -9,7 +9,7 @@
  * Step 3: 공제·세액공제 입력 → 결과
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronLeft } from "lucide-react";
 import { StepIndicator } from "@/components/calc/StepIndicator";
 import { ResetButton } from "@/components/calc/shared/ResetButton";
@@ -535,6 +535,20 @@ export function GiftTaxForm() {
 
   const { activeClientId } = useProfessionalStore();
 
+  // 이력 불러오기 hydration — 마운트 시 1회만 실행, sessionStorage 키 즉시 소비
+  useEffect(() => {
+    const raw = sessionStorage.getItem("giftTaxResumeInput");
+    if (!raw) return;
+    sessionStorage.removeItem("giftTaxResumeInput");
+    try {
+      const parsed = JSON.parse(raw) as Partial<FormState>;
+      setForm((prev) => ({ ...prev, ...parsed }));
+      setStep(0);
+    } catch {
+      // JSON 파싱 실패 시 무시 (빈 폼 유지)
+    }
+  }, []);
+
   // 로컬 이력 자동 저장 — 결과 화면 진입 시 1회
   useAutoSaveCalculation({
     taxType: "gift",
@@ -641,6 +655,10 @@ export function GiftTaxForm() {
           giftAmount: pg.giftAmount,
           sourceCalculationId: pg.sourceCalculationId,
           donor: pg.donor,
+          // 부표 1 표시 메타 (2026-05-20) — 결과 화면 ②/③ 컬럼 표시용
+          propertyCategory: pg.propertyCategory,
+          propertyName: pg.propertyName,
+          propertyLocation: pg.propertyLocation,
         }))}
       />
     );

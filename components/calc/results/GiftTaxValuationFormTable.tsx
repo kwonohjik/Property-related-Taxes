@@ -25,8 +25,9 @@ import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 /**
  * ② 재산종류코드 매핑 — AssetCategory 실제 enum 9종 → 부표 1 코드 (Phase 1)
  *
- * 부표 1 코드 14종 중 03/04/06/08/13/14는 EstateItem enum 부재로 Phase 1 미사용.
- * 오피스텔·상업용건물(06)도 현재 `real_estate_building`(07)에 묶임.
+ * KoreanLaw MCP 검증 (2026-05-20, 시행규칙 별지 제10호서식 부표 1 뒷면 §2):
+ * 14종 코드 중 03/04/06/08/13/14는 EstateItem enum 부재로 Phase 1 미사용.
+ * 정정 — `deposit: "12"` → `"11"` (예금은 11 금융재산, 12 기타재산 아님).
  */
 const PROPERTY_TYPE_CODE: Record<EstateItem["category"], string> = {
   cash: "01",
@@ -36,12 +37,44 @@ const PROPERTY_TYPE_CODE: Record<EstateItem["category"], string> = {
   listed_stock: "09",
   unlisted_stock: "10",
   financial: "11",
-  deposit: "12",
+  deposit: "11",
   other: "12",
 };
 
 function toPropertyTypeCode(category: EstateItem["category"]): string {
   return PROPERTY_TYPE_CODE[category] ?? "12";
+}
+
+/**
+ * ② 재산종류코드 14종 라벨 — KoreanLaw MCP 검증 (시행규칙 별지 제10호서식 부표 1 뒷면 §2).
+ * 결과 화면 표시는 가독성을 위해 약식 (예: "공동주택 (부수토지 포함)" → "공동주택").
+ */
+const PROPERTY_TYPE_LABEL: Record<string, string> = {
+  "01": "현금",
+  "02": "토지",
+  "03": "토지(부수)",
+  "04": "개별주택",
+  "05": "공동주택",
+  "06": "오피스텔ㆍ상업용",
+  "07": "일반건물",
+  "08": "부동산 취득권리",
+  "09": "상장주식",
+  "10": "비상장주식",
+  "11": "금융재산",
+  "12": "기타재산",
+  "13": "가상자산",
+  "14": "서화ㆍ골동품",
+};
+
+/** ② 컬럼 표시 — 라벨 메인 + 코드 부제 2줄 (가독성 강화). */
+function toPropertyTypeDisplay(code: string): React.ReactNode {
+  const label = PROPERTY_TYPE_LABEL[code] ?? "기타재산";
+  return (
+    <>
+      <div className="font-medium">{label}</div>
+      <div className="text-[9px] text-gray-500">({code})</div>
+    </>
+  );
 }
 
 /**
@@ -128,10 +161,31 @@ export interface GiftTaxValuationFormTableProps {
 // ============================================================
 
 /**
- * 사전증여 행 라벨 산출 — donor 관계 기반 ③ 소재지·법인명 등 칸.
- * Phase 2: PriorGift에는 자산 명칭이 없으므로 "사전증여 (YYYY-MM-DD)" 형식 사용.
+ * 사전증여 행 ③ 소재지·법인명 등 칸 표시.
+ * 우선순위: propertyLocation(주) > propertyName(보조) > fallback "사전증여 (YYYY-MM-DD)".
+ * 모두 입력 시 소재지 메인 + 자산 명칭·증여일 보조 표시.
  */
-function describePriorGift(pg: PriorGift): string {
+function describePriorGift(pg: PriorGift): React.ReactNode {
+  const loc = pg.propertyLocation?.trim();
+  const name = pg.propertyName?.trim();
+  if (loc) {
+    return (
+      <>
+        <div>{loc}</div>
+        <div className="text-[9px] text-gray-500">
+          {name ? `${name} · ` : ""}사전증여 ({pg.giftDate})
+        </div>
+      </>
+    );
+  }
+  if (name) {
+    return (
+      <>
+        <div>{name}</div>
+        <div className="text-[9px] text-gray-500">사전증여 ({pg.giftDate})</div>
+      </>
+    );
+  }
   return `사전증여 (${pg.giftDate})`;
 }
 
@@ -170,7 +224,10 @@ export function GiftTaxValuationFormTable({
   const row14 = computeRow14(aggregatedGiftValue, grossGiftValue, exemptAmount);
 
   return (
-    <div className="border-2 border-black bg-white p-3 text-black print:bg-white print:text-black">
+    <div
+      className="border-2 border-black bg-white p-3 text-black print:bg-white print:text-black"
+      style={{ width: "277mm" }}
+    >
       {/* 양식 헤더 */}
       <div className="mb-1 flex items-start justify-between text-[10px] font-medium">
         <span>
@@ -195,47 +252,39 @@ export function GiftTaxValuationFormTable({
         ※ 뒤쪽의 작성방법을 읽고 작성하시기 바랍니다.
       </p>
 
-      {/* 본문 표 — 좁은 뷰포트는 가로 스크롤 */}
-      <div className="overflow-x-auto">
+      {/* 본문 표 — A4 가로 양식, 좁은 뷰포트는 카드 측에서 가로 스크롤 */}
+      <div>
         <table
-          className="w-full min-w-[750px] border-collapse"
+          className="w-full border-collapse text-[11px]"
           aria-label="증여재산 및 평가명세서 본문 표"
         >
           <caption className="sr-only">
             증여재산 및 평가명세서 — 별지 제10호서식 부표 1
           </caption>
+          <colgroup>
+            <col style={{ width: "32mm" }} />
+            <col style={{ width: "30mm" }} />
+            <col style={{ width: "22mm" }} />
+            <col style={{ width: "25mm" }} />
+            <col />
+            <col style={{ width: "35mm" }} />
+            <col style={{ width: "22mm" }} />
+            <col style={{ width: "27mm" }} />
+            <col style={{ width: "32mm" }} />
+            <col style={{ width: "22mm" }} />
+          </colgroup>
           <thead>
             <tr>
-              <th className={`${CELL_CENTER} w-[50px]`} scope="col">
-                ① 재산구분코드
-              </th>
-              <th className={`${CELL_CENTER} w-[50px]`} scope="col">
-                ② 재산종류코드
-              </th>
-              <th className={`${CELL_CENTER} w-[60px]`} scope="col">
-                국외자산 여부
-              </th>
-              <th className={`${CELL_CENTER} w-[60px]`} scope="col">
-                국외재산 국가명
-              </th>
-              <th className={`${CELL_CENTER}`} scope="col">
-                ③ 소재지·법인명 등
-              </th>
-              <th className={`${CELL_CENTER} w-[100px]`} scope="col">
-                ④ 사업자등록번호 (지분율)
-              </th>
-              <th className={`${CELL_CENTER} w-[60px]`} scope="col">
-                ⑤ 수량(면적)
-              </th>
-              <th className={`${CELL_CENTER} w-[80px]`} scope="col">
-                ⑥ 단가
-              </th>
-              <th className={`${CELL_CENTER} w-[120px]`} scope="col">
-                ⑦ 평가가액
-              </th>
-              <th className={`${CELL_CENTER} w-[50px]`} scope="col">
-                ⑧ 평가기준코드
-              </th>
+              <th className={CELL_CENTER} scope="col">① 재산구분코드</th>
+              <th className={CELL_CENTER} scope="col">② 재산종류코드</th>
+              <th className={CELL_CENTER} scope="col">국외자산 여부</th>
+              <th className={CELL_CENTER} scope="col">국외재산 국가명</th>
+              <th className={CELL_CENTER} scope="col">③ 소재지·법인명 등</th>
+              <th className={CELL_CENTER} scope="col">④ 사업자등록번호 (지분율)</th>
+              <th className={CELL_CENTER} scope="col">⑤ 수량(면적)</th>
+              <th className={CELL_CENTER} scope="col">⑥ 단가</th>
+              <th className={CELL_CENTER} scope="col">⑦ 평가가액</th>
+              <th className={CELL_CENTER} scope="col">⑧ 평가기준코드</th>
             </tr>
           </thead>
           <tbody data-testid="table-data-tbody">
@@ -251,7 +300,7 @@ export function GiftTaxValuationFormTable({
                     A11
                   </td>
                   <td className={CELL_CENTER} data-testid="col-property-type">
-                    {propertyCode}
+                    {toPropertyTypeDisplay(propertyCode)}
                   </td>
                   <td className={CELL_CENTER} data-testid="col-overseas">
                     [ ]여 [ ]부
@@ -291,7 +340,9 @@ export function GiftTaxValuationFormTable({
                     A24
                   </td>
                   <td className={CELL_CENTER} data-testid="col-property-type">
-                    12
+                    {toPropertyTypeDisplay(
+                      pg.propertyCategory ? toPropertyTypeCode(pg.propertyCategory) : "12",
+                    )}
                   </td>
                   <td className={CELL_CENTER} data-testid="col-overseas">
                     [ ]여 [ ]부
@@ -344,7 +395,7 @@ export function GiftTaxValuationFormTable({
 
       {/* 계 영역 — 본문 표와 별도 표 */}
       <table
-        className="mt-2 w-full min-w-[750px] border-collapse"
+        className="mt-2 w-full border-collapse text-[11px]"
         aria-label="증여재산 및 평가명세서 계 영역"
       >
         <tbody>
@@ -438,7 +489,7 @@ export function GiftTaxValuationFormTable({
       </div>
 
       <p className="mt-1 text-right text-[9px] text-gray-700">
-        210mm×297mm[백상지 80g/㎡]
+        297mm×210mm[백상지 80g/㎡]
       </p>
     </div>
   );

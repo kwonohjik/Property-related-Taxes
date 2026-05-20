@@ -248,7 +248,20 @@ export interface PriorGift {
    * priorGiftSchema에도 optional로 정의되어 있음 (지점 ⑨ 안전망).
    */
   sourceCalculationId?: string;
+
+  // 신고서 부표 1 표시 메타 (2026-05-20) — 엔진 무관. 사전증여 행 ②/③ 컬럼.
+  /** ② 재산종류코드. 미입력 시 fallback "12 기타재산". */
+  propertyCategory?: GiftPriorPropertyCategory;
+  /** 자산 명칭. ③ 보조. */
+  propertyName?: string;
+  /** 소재지·법인명. ③ 주. 미입력 시 fallback "사전증여 (YYYY-MM-DD)". */
+  propertyLocation?: string;
 }
+
+/** PriorGift.propertyCategory — EstateItem.category 별칭 (순환 import 회피). */
+export type GiftPriorPropertyCategory =
+  | "cash" | "real_estate_land" | "real_estate_apartment" | "real_estate_building"
+  | "listed_stock" | "unlisted_stock" | "financial" | "deposit" | "other";
 
 // ============================================================
 // §57 할증 한도 detail (사례 2 PDF 표 ⑧⑨⑩⑪⑫⑬ 재현용)

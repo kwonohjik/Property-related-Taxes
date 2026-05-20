@@ -20,6 +20,7 @@ import { differenceInYears } from "date-fns";
 import type {
   DonorRelation,
   GiftDonorRelation,
+  GiftPriorPropertyCategory,
   PriorGift,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { CalculationRecord } from "@/lib/storage/types";
@@ -57,6 +58,11 @@ export interface PriorGiftCandidate {
   createdAt: string;
   /** 자동 생성 title — 결과 화면 링크 라벨 */
   title: string;
+  // 신고서 부표 1 표시 메타 (2026-05-20) — 자동 채움 prefill용
+  /** 출처 EstateItem.category → PriorGift.propertyCategory 자동 prefill */
+  propertyCategory?: GiftPriorPropertyCategory;
+  /** 출처 EstateItem.name → PriorGift.propertyName 자동 prefill */
+  propertyName?: string;
 }
 
 export type LookupWarningReason =
@@ -220,6 +226,26 @@ export function filterPriorGiftCandidates(
     const priorGifts = input.priorGifts;
     const hasInnerPriorGifts = Array.isArray(priorGifts) && priorGifts.length > 0;
 
+    // 부표 1 표시 메타 prefill — 출처 EstateItem 첫 항목 활용
+    // input.giftItems가 GiftTaxForm FormState 구조이면 직접, 그 외 fallback
+    const giftItems = Array.isArray(input.giftItems) ? input.giftItems : [];
+    const stockItems = Array.isArray(input.stockItems) ? input.stockItems : [];
+    const firstItem =
+      (giftItems[0] as { category?: string; name?: string } | undefined) ??
+      (stockItems[0] as { category?: string; name?: string } | undefined);
+    const VALID_CATEGORIES: GiftPriorPropertyCategory[] = [
+      "cash", "real_estate_land", "real_estate_apartment", "real_estate_building",
+      "listed_stock", "unlisted_stock", "financial", "deposit", "other",
+    ];
+    const prefilledCategory =
+      firstItem?.category && VALID_CATEGORIES.includes(firstItem.category as GiftPriorPropertyCategory)
+        ? (firstItem.category as GiftPriorPropertyCategory)
+        : undefined;
+    const prefilledName =
+      typeof firstItem?.name === "string" && firstItem.name.trim()
+        ? firstItem.name.trim()
+        : undefined;
+
     candidates.push({
       calculationId: record.id,
       giftDate: inputGiftDate,
@@ -238,6 +264,8 @@ export function filterPriorGiftCandidates(
       hasInnerPriorGifts,
       createdAt: record.createdAt,
       title: record.title,
+      propertyCategory: prefilledCategory,
+      propertyName: prefilledName,
     });
   }
 
@@ -273,6 +301,10 @@ export function candidateToPriorGift(c: PriorGiftCandidate): PriorGift {
     additionalGenerationSkipSurcharge: c.additionalGenerationSkipSurcharge, // ⑫
     wasGenerationSkip: c.wasGenerationSkip,
     sourceCalculationId: c.calculationId,
+    // 부표 1 표시 메타 (자동 prefill) — 사용자 수정 시 hasUserEditedFields가 sourceCalculationId 제거
+    propertyCategory: c.propertyCategory,
+    propertyName: c.propertyName,
+    // propertyLocation은 EstateItem에 소재지 필드가 없어 자동 prefill 불가 — 사용자 명시 입력
     // doneeId / beneficiaryType / corporateGiftComputedTax: 이력 추론 불가 → 미설정
   };
 }
