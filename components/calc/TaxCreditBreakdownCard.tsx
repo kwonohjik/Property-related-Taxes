@@ -3,58 +3,238 @@
 /**
  * TaxCreditBreakdownCard — 세액공제 내역 카드 (#35)
  * 상속세·증여세 결과 화면에서 TaxCreditResult 표시
+ *
+ * §28·§69 산출근거 펼침 (gift-tax-credit-formula-display feature):
+ *   - priorGiftCreditDetail + computedTax prop 전달 시 §28 펼침 활성화
+ *   - credit.filingCreditBase + credit.totalComputedTaxWithSurcharge 둘 다 있을 때 §69 펼침 활성화
+ *   - 상속세는 echo 미적용이라 §69 펼침 미렌더 (자동 비활성)
  */
 
-import type { TaxCreditResult } from "@/lib/tax-engine/types/inheritance-gift.types";
+import { useState } from "react";
+import type {
+  TaxCreditResult,
+  PriorGiftCreditDetail,
+} from "@/lib/tax-engine/types/inheritance-gift.types";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
+
+// ============================================================
+// 변수 배지 — 산식 변수 라벨(⑭⑮⑯⑦ 등) + 값
+// ============================================================
+
+function Var({ label, val }: { label: string; val: number }) {
+  return (
+    <span className="inline-flex items-baseline gap-1">
+      <span className="text-[10px] font-bold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 rounded px-1">
+        {label}
+      </span>
+      <span className="text-[11px] font-mono">{val.toLocaleString()}</span>
+    </span>
+  );
+}
+
+// ============================================================
+// §28 산식 빌더 (priorGiftCreditDetail + computedTax)
+// ============================================================
+
+function buildSection28Formula(
+  detail: PriorGiftCreditDetail,
+  computedTax: number,
+): React.ReactNode {
+  const {
+    priorComputedTax,
+    priorAddedTaxBase,
+    aggregatedTaxBase,
+    creditLimit,
+    priorPaidCredit,
+  } = detail;
+
+  return (
+    <>
+      <div className="flex flex-wrap items-baseline gap-x-1">
+        <Var label="⑯" val={priorPaidCredit} /> = Min(
+        <Var label="⑭" val={priorComputedTax} />,{" "}
+        <Var label="⑮" val={creditLimit} />)
+      </div>
+      <div className="flex flex-wrap items-baseline gap-x-1 text-gray-500 dark:text-gray-400">
+        <Var label="⑭" val={priorComputedTax} /> 가장 최근 합산 회차의 ⑦
+      </div>
+      {aggregatedTaxBase > 0 ? (
+        <div className="flex flex-wrap items-baseline gap-x-1 text-gray-500 dark:text-gray-400">
+          <Var label="⑮" val={creditLimit} /> = <Var label="⑦" val={computedTax} /> ×
+          (<Var label="⑤_prior" val={priorAddedTaxBase} /> ÷{" "}
+          <Var label="⑤" val={aggregatedTaxBase} />)
+        </div>
+      ) : (
+        <div className="text-rose-600 dark:text-rose-400">
+          ⑮ 0 — 과세표준 0으로 산식 무효
+        </div>
+      )}
+      <div className="text-[10px] text-gray-400 dark:text-gray-500">
+        ※ ⑦은 할증 전 산출세액 (result.computedTax)
+      </div>
+    </>
+  );
+}
+
+// ============================================================
+// §69 산식 빌더 (filingCreditBase + totalComputedTaxWithSurcharge)
+// ============================================================
+
+function buildSection69Formula(credit: TaxCreditResult): React.ReactNode {
+  const base = credit.filingCreditBase ?? 0;
+  const totalWithSurcharge = credit.totalComputedTaxWithSurcharge ?? 0;
+  const giftCredit = credit.giftTaxCredit;
+  const foreign = credit.foreignTaxCredit;
+  const special = credit.specialTreatmentCredit;
+  const allOthersZero = foreign === 0 && special === 0;
+
+  return (
+    <>
+      <div className="flex flex-wrap items-baseline gap-x-1">
+        <span className="font-semibold">{credit.filingCredit.toLocaleString()}</span>
+        {" = "}
+        <Var label="기준세액" val={base} /> × 3%
+      </div>
+      <div className="flex flex-wrap items-baseline gap-x-1 text-gray-500 dark:text-gray-400">
+        <Var label="기준세액" val={base} /> ={" "}
+        <Var label="⑦합계" val={totalWithSurcharge} /> − §28{" "}
+        {giftCredit.toLocaleString()}
+        {foreign > 0 && (
+          <>
+            {" "}− 외국납부 {foreign.toLocaleString()}
+          </>
+        )}
+        {special > 0 && (
+          <>
+            {" "}− 조특 특례 {special.toLocaleString()}
+          </>
+        )}
+      </div>
+      {allOthersZero && (
+        <div className="text-[10px] text-gray-400 dark:text-gray-500">
+          (외국납부·조특 특례 미적용)
+        </div>
+      )}
+      <div className="text-[10px] text-gray-400 dark:text-gray-500">
+        ※ ⑦합계 = 산출세액 + 세대생략 할증
+      </div>
+      {special > 0 && (
+        <div className="text-[10px] text-amber-600 dark:text-amber-400">
+          ※ 조특 특례 절감 분 차감 후 3% 적용
+        </div>
+      )}
+    </>
+  );
+}
+
+// ============================================================
+// CreditRow — formula prop으로 산출근거 펼침 토글 지원
+// ============================================================
 
 interface CreditRowProps {
   label: string;
   amount: number;
   lawRef?: string;
   highlight?: boolean;
+  /** 산출근거 산식 (펼침). undefined 시 펼침 토글 미렌더 — 기존 동작 100% 보존 */
+  formula?: React.ReactNode;
 }
 
-function CreditRow({ label, amount, lawRef, highlight }: CreditRowProps) {
+function CreditRow({ label, amount, lawRef, highlight, formula }: CreditRowProps) {
+  const [expanded, setExpanded] = useState(false);
   if (amount === 0) return null;
   return (
-    <div
-      className={`flex items-center justify-between py-2 px-3 rounded-md ${
-        highlight
-          ? "bg-emerald-50 dark:bg-emerald-900/20 font-semibold"
-          : "bg-gray-50 dark:bg-gray-800"
-      }`}
-    >
-      <div>
-        <span className={`text-sm ${highlight ? "text-emerald-800 dark:text-emerald-200" : "text-gray-700 dark:text-gray-300"}`}>
-          {label}
+    <div className="space-y-1">
+      <div
+        className={`flex items-center justify-between py-2 px-3 rounded-md ${
+          highlight
+            ? "bg-emerald-50 dark:bg-emerald-900/20 font-semibold"
+            : "bg-gray-50 dark:bg-gray-800"
+        }`}
+      >
+        <div className="flex items-center gap-2 flex-wrap">
+          <span
+            className={`text-sm ${
+              highlight
+                ? "text-emerald-800 dark:text-emerald-200"
+                : "text-gray-700 dark:text-gray-300"
+            }`}
+          >
+            {label}
+          </span>
+          {lawRef && (
+            <span className="text-xs text-gray-400 dark:text-gray-500">{lawRef}</span>
+          )}
+          {formula && (
+            <button
+              type="button"
+              onClick={() => setExpanded((p) => !p)}
+              className="text-[10px] text-gray-500 hover:text-violet-700 dark:hover:text-violet-300 transition-colors"
+              aria-expanded={expanded}
+              aria-label={`${label} 산출근거 ${expanded ? "닫기" : "펼치기"}`}
+            >
+              {expanded ? "▼ 산출근거" : "▶ 산출근거"}
+            </button>
+          )}
+        </div>
+        <span
+          className={`font-mono text-sm ${
+            highlight
+              ? "text-emerald-700 dark:text-emerald-300"
+              : "text-blue-600 dark:text-blue-400"
+          }`}
+        >
+          - {amount.toLocaleString()}
         </span>
-        {lawRef && (
-          <span className="ml-2 text-xs text-gray-400 dark:text-gray-500">{lawRef}</span>
-        )}
       </div>
-      <span className={`font-mono text-sm ${highlight ? "text-emerald-700 dark:text-emerald-300" : "text-blue-600 dark:text-blue-400"}`}>
-        - {amount.toLocaleString()}
-      </span>
+      {expanded && formula && (
+        <div className="ml-3 px-3 py-2 text-[11px] text-gray-600 dark:text-gray-400 bg-gray-50/60 dark:bg-gray-900/40 rounded-md space-y-1">
+          {formula}
+        </div>
+      )}
     </div>
   );
 }
+
+// ============================================================
+// 메인 카드
+// ============================================================
 
 export interface TaxCreditBreakdownCardProps {
   credit: TaxCreditResult;
   /** 세액공제 전 세액 (공제 효과 계산용) */
   taxBeforeCredit: number;
+  /** §28 산식 노출용 — GiftTaxResult.priorGiftCreditDetail (미전달 시 §28 펼침 미표시) */
+  priorGiftCreditDetail?: PriorGiftCreditDetail | null;
+  /** §28 산식 ⑦(할증 전) — GiftTaxResult.computedTax (미전달 시 §28 펼침 미표시) */
+  computedTax?: number;
 }
 
 export function TaxCreditBreakdownCard({
   credit,
   taxBeforeCredit,
+  priorGiftCreditDetail,
+  computedTax,
 }: TaxCreditBreakdownCardProps) {
   if (credit.totalCredit === 0) return null;
 
-  const creditRate = taxBeforeCredit > 0
-    ? ((credit.totalCredit / taxBeforeCredit) * 100).toFixed(1)
-    : "0";
+  const creditRate =
+    taxBeforeCredit > 0
+      ? ((credit.totalCredit / taxBeforeCredit) * 100).toFixed(1)
+      : "0";
+
+  // §28 산식 활성 조건: priorGiftCreditDetail + computedTax 모두 전달 시
+  const section28Formula =
+    priorGiftCreditDetail && computedTax !== undefined
+      ? buildSection28Formula(priorGiftCreditDetail, computedTax)
+      : undefined;
+
+  // §69 산식 활성 조건: echo 두 필드 모두 존재 시 (상속세 호출은 undefined → 펼침 미렌더)
+  const section69Formula =
+    credit.filingCreditBase !== undefined &&
+    credit.totalComputedTaxWithSurcharge !== undefined
+      ? buildSection69Formula(credit)
+      : undefined;
 
   return (
     <div className="border border-blue-200 dark:border-blue-800 rounded-xl overflow-hidden">
@@ -79,6 +259,7 @@ export function TaxCreditBreakdownCard({
           label="증여세액공제"
           amount={credit.giftTaxCredit}
           lawRef="§28"
+          formula={section28Formula}
         />
         <CreditRow
           label="외국납부세액공제"
@@ -94,6 +275,7 @@ export function TaxCreditBreakdownCard({
           label="신고세액공제 (3%)"
           amount={credit.filingCredit}
           lawRef="§69"
+          formula={section69Formula}
         />
         <CreditRow
           label="조특법 과세특례 (창업·가업)"

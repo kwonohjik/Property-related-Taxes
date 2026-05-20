@@ -624,6 +624,22 @@ export interface TaxCreditResult {
   totalCredit: number;
   breakdown: CalculationStep[];
   appliedLaws: string[];
+  /**
+   * §69 산식 노출용 — 신고세액공제 기준세액.
+   * = totalComputedTaxWithSurcharge − giftTaxCredit − foreignTaxCredit − specialTreatmentCredit
+   * (= 엔진 `remainingTax`, inheritance-gift-tax-credit.ts:378·399).
+   * 법정기한 외 신고 시에도 echo는 유지 (filingCredit만 0).
+   * 상속세 호출(calcInheritanceTaxCredits)에는 현재 echo 미적용 → undefined 가능.
+   */
+  filingCreditBase?: number;
+  /**
+   * §69 산식 노출용 — 산출세액 합계 (할증 포함).
+   * = computedTax + generationSkipSurcharge
+   * (= 엔진 `totalComputedTax`, inheritance-gift-tax-credit.ts:315).
+   * §28의 ⑦(할증 전, `result.computedTax`)과 구분 필수.
+   * 상속세 호출에는 현재 echo 미적용 → undefined 가능.
+   */
+  totalComputedTaxWithSurcharge?: number;
 }
 
 // ============================================================

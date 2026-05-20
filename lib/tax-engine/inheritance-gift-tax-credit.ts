@@ -425,5 +425,8 @@ export function calcGiftTaxCredits(params: GiftTaxCreditParams): TaxCreditResult
     totalCredit,
     breakdown: allBreakdown,
     appliedLaws: Array.from(appliedLaws),
+    // §69 산식 노출용 echo (UI TaxCreditBreakdownCard 산출근거 펼침)
+    filingCreditBase: Math.max(0, remainingTax),
+    totalComputedTaxWithSurcharge: totalComputedTax,
   };
 }
