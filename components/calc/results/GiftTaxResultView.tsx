@@ -5,6 +5,7 @@
  */
 
 import { useState } from "react";
+import { ChevronLeft } from "lucide-react";
 import type { GiftTaxResult, EstateItem, AssetCategory } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
@@ -138,17 +139,28 @@ interface Props {
   result: GiftTaxResult;
   onReset: () => void;
   onBack: () => void;
+  /** 1단계로 이동 (입력값 보존) */
+  onGoToFirst?: () => void;
   showLoginPrompt?: boolean;
   /** 증여재산 원본 목록 — 평가내역에서 ID 대신 자산명 표시용 */
   estateItems?: EstateItem[];
+  /** 사전증여 입력 원본 — 출처(📋 이력 기반) 배지 표시용 (Phase 2) */
+  priorGifts?: Array<{
+    giftDate: string;
+    giftAmount: number;
+    sourceCalculationId?: string;
+    donor?: string;
+  }>;
 }
 
 export function GiftTaxResultView({
   result,
   onReset,
   onBack,
+  onGoToFirst,
   showLoginPrompt = false,
   estateItems = [],
+  priorGifts = [],
 }: Props) {
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [showValuation, setShowValuation] = useState(false);
@@ -204,6 +216,43 @@ export function GiftTaxResultView({
 
       {/* Phase B: 신고서 양식 표 (12행 / 18행) */}
       {hasFilingFormTable && <GiftTaxFilingFormTable result={result} />}
+
+      {/* 사전증여 합산 — 이력 출처 배지 (Phase 2) */}
+      {priorGifts.length > 0 && (
+        <div className="border rounded-xl overflow-hidden">
+          <div className="bg-violet-50 dark:bg-violet-900/20 px-4 py-3">
+            <h3 className="text-sm font-semibold text-violet-800 dark:text-violet-200">
+              사전증여 합산 내역 (§47)
+            </h3>
+          </div>
+          <ul className="divide-y divide-border">
+            {priorGifts.map((pg, i) => (
+              <li
+                key={`${pg.giftDate}-${i}`}
+                className="px-4 py-2 flex items-center justify-between gap-2 text-sm"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-600 dark:text-gray-400">
+                    {pg.giftDate} {pg.donor && `· ${pg.donor}`}
+                  </span>
+                  {pg.sourceCalculationId && (
+                    <a
+                      href={`/history/${pg.sourceCalculationId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-0.5 text-[10px] bg-violet-100 text-violet-800 rounded px-1.5 py-0.5 hover:bg-violet-200"
+                      title="저장된 증여세 이력에서 자동 입력된 회차"
+                    >
+                      📋 이력
+                    </a>
+                  )}
+                </div>
+                <span className="font-medium">{formatKRW(pg.giftAmount)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* 과세 요약 */}
       <div className="border rounded-xl overflow-hidden">
@@ -388,18 +437,27 @@ export function GiftTaxResultView({
       <DisclaimerBanner />
 
       {/* 버튼 */}
-      <div className="flex gap-3 print:hidden">
+      <div className="flex flex-wrap gap-3 print:hidden">
         <button
           type="button"
           onClick={onBack}
-          className="flex-1 rounded-md border border-border py-2.5 text-sm font-medium hover:bg-muted transition-colors"
+          className="flex items-center justify-center gap-1 rounded-md border border-border py-2.5 px-4 text-sm font-medium hover:bg-muted transition-colors"
+          aria-label="바로 앞 단계로 돌아가기"
+        >
+          <ChevronLeft className="w-4 h-4" />
+          뒤로 가기
+        </button>
+        <button
+          type="button"
+          onClick={onGoToFirst ?? onBack}
+          className="flex-1 min-w-[120px] rounded-md border border-border py-2.5 text-sm font-medium hover:bg-muted transition-colors"
         >
           다시 계산
         </button>
         <button
           type="button"
           onClick={onReset}
-          className="flex-1 rounded-md bg-primary text-primary-foreground py-2.5 text-sm font-medium hover:bg-primary/90 transition-colors"
+          className="flex-1 min-w-[120px] rounded-md bg-primary text-primary-foreground py-2.5 text-sm font-medium hover:bg-primary/90 transition-colors"
         >
           처음으로
         </button>

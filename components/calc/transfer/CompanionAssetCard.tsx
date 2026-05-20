@@ -191,16 +191,26 @@ export function CompanionAssetCard({
             lng: asset.longitude ?? null,
             lat: asset.latitude ?? null,
           } satisfies AddressValue}
-          onChange={(v) =>
-            onChange({
+          onChange={(v) => {
+            const patch: Parameters<typeof onChange>[0] = {
               addressRoad: v.road,
               addressJibun: v.jibun,
               buildingName: v.building,
               addressDetail: v.detail,
               longitude: v.lng,
               latitude: v.lat,
-            })
-          }
+            };
+            // 소재지 선택 시 자산 명칭 자동 입력 (사용자가 비워둔 경우에만)
+            // 일괄양도(isMultiBundled)일 때만 UI에 노출되지만, 입력 시점과 무관하게 동기화
+            if (!asset.assetLabel.trim()) {
+              const auto = [v.building || v.road || v.jibun, v.detail]
+                .filter(Boolean)
+                .join(" ")
+                .trim();
+              if (auto) patch.assetLabel = auto;
+            }
+            onChange(patch);
+          }}
         />
         <p className="text-xs text-muted-foreground">
           ※ 조정대상지역 여부·공시가격 조회에 사용됩니다.

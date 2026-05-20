@@ -241,6 +241,13 @@ export interface PriorGift {
   beneficiaryType?: "heir" | "legatee" | "corporate";
   /** 영리법인 사전증여 당시 증여세 산출세액 (§3의2② 면제 한도). beneficiaryType="corporate" 시 필수. */
   corporateGiftComputedTax?: number;
+  /**
+   * 본 PriorGift가 사용자 이력에서 조회되어 자동 채워졌을 때의 출처 CalculationRecord.id.
+   * UI 메타 — "📋 이력 기반" 배지 + 결과 화면 출처 링크용. 엔진은 무시.
+   * GiftTaxForm.buildInput 변환 시 strip되어 GiftTaxInput에 전달되지 않음 (지점 ④).
+   * priorGiftSchema에도 optional로 정의되어 있음 (지점 ⑨ 안전망).
+   */
+  sourceCalculationId?: string;
 }
 
 // ============================================================

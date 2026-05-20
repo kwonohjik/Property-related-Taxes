@@ -207,23 +207,15 @@ function validateStep(step: number, form: FormState): string | null {
 function Step0({
   form,
   set,
-  onReset,
 }: {
   form: FormState;
   set: (p: Partial<FormState>) => void;
-  onReset: () => void;
 }) {
   return (
     <div className="space-y-5">
-      <div className="flex items-start justify-between gap-3">
-        <p className="text-sm text-muted-foreground">
-          피상속인(돌아가신 분)의 기본 정보를 입력하세요.
-        </p>
-        <div className="flex items-center gap-2">
-          <HomeButton confirmMessage="홈으로 이동하면 현재 입력 중인 값이 유지된 채 페이지를 떠납니다.&#10;계속하시겠습니까?" />
-          <ResetButton onReset={onReset} />
-        </div>
-      </div>
+      <p className="text-sm text-muted-foreground">
+        피상속인(돌아가신 분)의 기본 정보를 입력하세요.
+      </p>
 
       <div className="space-y-2">
         <label className="block text-sm font-medium">거주자 여부</label>
@@ -704,6 +696,7 @@ export function InheritanceTaxForm() {
         result={result}
         onReset={handleReset}
         onBack={() => { setResult(null); setStep(STEPS.length - 1); }}
+        onGoToFirst={() => { setResult(null); setStep(0); }}
       />
     );
   }
@@ -712,6 +705,19 @@ export function InheritanceTaxForm() {
 
   return (
     <div className="space-y-6">
+      {/* 홈으로 · 초기화 — 내비게이션 바 위쪽 우측 */}
+      <div className="flex items-center justify-end gap-2">
+        <HomeButton confirmMessage="홈으로 이동하면 현재 입력 중인 값이 유지된 채 페이지를 떠납니다.&#10;계속하시겠습니까?" />
+        <ResetButton
+          onReset={() => {
+            setForm(INITIAL_FORM);
+            setStep(0);
+            setResult(null);
+            setError(null);
+          }}
+        />
+      </div>
+
       <StepIndicator steps={STEPS} current={step} onStepClick={(i) => setStep(i)} />
 
       <div className="min-h-[300px]">
@@ -719,12 +725,6 @@ export function InheritanceTaxForm() {
           <Step0
             form={form}
             set={set}
-            onReset={() => {
-              setForm(INITIAL_FORM);
-              setStep(0);
-              setResult(null);
-              setError(null);
-            }}
           />
         )}
         {step === 1 && <Step1 form={form} set={set} />}

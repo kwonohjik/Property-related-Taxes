@@ -5,6 +5,7 @@
  */
 
 import { useState } from "react";
+import { ChevronLeft } from "lucide-react";
 import type { InheritanceTaxResult } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
@@ -94,6 +95,8 @@ interface Props {
   result: InheritanceTaxResult;
   onReset: () => void;
   onBack: () => void;
+  /** 1단계로 이동 (입력값 보존) */
+  onGoToFirst?: () => void;
   showLoginPrompt?: boolean;
 }
 
@@ -101,6 +104,7 @@ export function InheritanceTaxResultView({
   result,
   onReset,
   onBack,
+  onGoToFirst,
   showLoginPrompt = false,
 }: Props) {
   const [showBreakdown, setShowBreakdown] = useState(false);
@@ -330,18 +334,27 @@ export function InheritanceTaxResultView({
       <DisclaimerBanner />
 
       {/* 버튼 */}
-      <div className="flex gap-3 print:hidden">
+      <div className="flex flex-wrap gap-3 print:hidden">
         <button
           type="button"
           onClick={onBack}
-          className="flex-1 rounded-md border border-border py-2.5 text-sm font-medium hover:bg-muted transition-colors"
+          className="flex items-center justify-center gap-1 rounded-md border border-border py-2.5 px-4 text-sm font-medium hover:bg-muted transition-colors"
+          aria-label="바로 앞 단계로 돌아가기"
+        >
+          <ChevronLeft className="w-4 h-4" />
+          뒤로 가기
+        </button>
+        <button
+          type="button"
+          onClick={onGoToFirst ?? onBack}
+          className="flex-1 min-w-[120px] rounded-md border border-border py-2.5 text-sm font-medium hover:bg-muted transition-colors"
         >
           다시 계산
         </button>
         <button
           type="button"
           onClick={onReset}
-          className="flex-1 rounded-md bg-primary text-primary-foreground py-2.5 text-sm font-medium hover:bg-primary/90 transition-colors"
+          className="flex-1 min-w-[120px] rounded-md bg-primary text-primary-foreground py-2.5 text-sm font-medium hover:bg-primary/90 transition-colors"
         >
           처음으로
         </button>

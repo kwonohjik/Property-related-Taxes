@@ -157,6 +157,8 @@ export const priorGiftSchema = z.object({
   doneeId: z.string().min(1).optional(),
   beneficiaryType: z.enum(["heir", "legatee", "corporate"]).optional(),
   corporateGiftComputedTax: z.number().nonnegative().optional(),
+  // UI 메타 (이력 조회 출처) — 엔진 무시. buildInput에서 strip(④) 누락 안전망(⑨).
+  sourceCalculationId: z.string().optional(),
 });
 
 // ============================================================

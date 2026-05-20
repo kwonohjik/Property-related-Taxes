@@ -6,14 +6,35 @@
  * 증여세: 동일인 10년 이내 증여 합산 (§47)
  */
 
+import { useState } from "react";
 import { CurrencyInput, parseAmount, formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { PriorGiftHistoryModal } from "@/components/calc/gift/PriorGiftHistoryModal";
 import type {
   PriorGift,
   DonorRelation,
   GiftDonorRelation,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
+
+/**
+ * 자동 채움 후 사용자가 자동 채움 9필드 중 어느 하나라도 수정했는지 판정.
+ * 수정 시 sourceCalculationId 제거 → "📋 이력 기반" 배지 자동 사라짐.
+ */
+function hasUserEditedFields(prev: PriorGift, next: PriorGift): boolean {
+  const keys: (keyof PriorGift)[] = [
+    "giftDate",
+    "giftAmount",
+    "giftTaxPaid",
+    "giftTaxBase",
+    "doneeRelation",
+    "donor",
+    "computedTax",
+    "additionalGenerationSkipSurcharge",
+    "wasGenerationSkip",
+  ];
+  return keys.some((k) => prev[k] !== next[k]);
+}
 
 // ============================================================
 // 관계 메타
@@ -87,9 +108,22 @@ function GiftRowEditor({
     <div className="border rounded-lg p-4 space-y-3 bg-white dark:bg-gray-900">
       {/* 헤더 */}
       <div className="flex items-center justify-between">
-        <span className="font-semibold text-sm text-gray-700 dark:text-gray-200">
-          증여 {index + 1}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="font-semibold text-sm text-gray-700 dark:text-gray-200">
+            증여 {index + 1}
+          </span>
+          {gift.sourceCalculationId && (
+            <a
+              href={`/history/${gift.sourceCalculationId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-[10px] bg-violet-100 text-violet-800 rounded px-2 py-0.5 hover:bg-violet-200"
+              title="이 사전증여는 저장된 증여세 이력에서 자동 입력되었습니다. 필드를 수정하면 배지가 사라집니다."
+            >
+              📋 이력 기반
+            </a>
+          )}
+        </div>
         <button
           type="button"
           onClick={onRemove}
@@ -317,6 +351,10 @@ export interface PriorGiftInputProps {
   onChange: (gifts: PriorGift[]) => void;
   /** "inheritance": 상속세 모드 (상속인 여부 표시) / "gift": 증여세 모드 */
   mode?: "inheritance" | "gift";
+  /** 증여세 모드 — 현재 증여일 (이력 조회 필터 기준) */
+  currentGiftDate?: string;
+  /** 증여세 모드 — 현재 증여자 (§47 동일인 그룹 판정 기준) */
+  currentDonor?: GiftDonorRelation;
 }
 
 function makeEmptyGift(): PriorGift {
@@ -325,14 +363,30 @@ function makeEmptyGift(): PriorGift {
     isHeir: true,
     giftAmount: 0,
     giftTaxPaid: 0,
+    sourceCalculationId: undefined,
   };
 }
 
-export function PriorGiftInput({ gifts, onChange, mode = "inheritance" }: PriorGiftInputProps) {
+export function PriorGiftInput({
+  gifts,
+  onChange,
+  mode = "inheritance",
+  currentGiftDate,
+  currentDonor,
+}: PriorGiftInputProps) {
+  const [historyModalOpen, setHistoryModalOpen] = useState(false);
   const handleAdd = () => onChange([...gifts, makeEmptyGift()]);
+  const handleAddFromHistory = (priorGift: PriorGift) => {
+    onChange([...gifts, priorGift]);
+  };
 
   const handleUpdate = (index: number, updated: PriorGift) => {
     const next = [...gifts];
+    // 사용자가 자동 채움 후 어떤 필드라도 수정하면 sourceCalculationId 제거 (배지 자동 사라짐)
+    const prev = gifts[index];
+    if (prev.sourceCalculationId && hasUserEditedFields(prev, updated)) {
+      updated = { ...updated, sourceCalculationId: undefined };
+    }
     next[index] = updated;
     onChange(next);
   };
@@ -341,11 +395,17 @@ export function PriorGiftInput({ gifts, onChange, mode = "inheritance" }: PriorG
     onChange(gifts.filter((_, i) => i !== index));
   };
 
+  const canLookup =
+    mode === "gift" && Boolean(currentGiftDate) && Boolean(currentDonor);
+  const excludeIds = gifts
+    .map((g) => g.sourceCalculationId)
+    .filter((v): v is string => Boolean(v));
+
   const windowYears = mode === "inheritance" ? "10년 / 비상속인 5년" : "10년";
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200">
             {mode === "inheritance" ? "사전증여재산 (§13)" : "동일인 사전증여 합산 (§47)"}
@@ -354,10 +414,49 @@ export function PriorGiftInput({ gifts, onChange, mode = "inheritance" }: PriorG
             최근 {windowYears} 이내 증여 내역을 입력하세요
           </p>
         </div>
-        {gifts.length > 0 && (
-          <span className="text-xs text-gray-400">{gifts.length}건</span>
-        )}
+        <div className="flex items-center gap-2">
+          {mode === "gift" && (
+            <button
+              type="button"
+              onClick={() => setHistoryModalOpen(true)}
+              disabled={!canLookup}
+              title={
+                !canLookup
+                  ? "1단계에서 증여일과 증여자를 먼저 입력하세요"
+                  : "저장된 증여세 이력에서 사전증여 회차를 선택해 자동 입력합니다"
+              }
+              className={`text-xs rounded-md border px-3 py-1.5 transition-colors ${
+                canLookup
+                  ? "border-violet-300 bg-violet-50 hover:bg-violet-100 text-violet-700"
+                  : "border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed"
+              }`}
+            >
+              📋 이력에서 조회
+            </button>
+          )}
+          {gifts.length > 0 && (
+            <span className="text-xs text-gray-400">{gifts.length}건</span>
+          )}
+        </div>
       </div>
+      {mode === "gift" && !canLookup && (
+        <p className="text-[11px] text-gray-500 -mt-2">
+          ※ 이력 조회는 1단계 증여일·증여자가 입력된 후 활성화됩니다.
+        </p>
+      )}
+
+      {/* 이력 조회 모달 */}
+      {mode === "gift" && canLookup && (
+        <PriorGiftHistoryModal
+          open={historyModalOpen}
+          onOpenChange={setHistoryModalOpen}
+          currentGiftDate={currentGiftDate!}
+          currentDonor={currentDonor!}
+          excludeCalculationIds={excludeIds}
+          onSelect={handleAddFromHistory}
+          onManualAdd={handleAdd}
+        />
+      )}
 
       {gifts.length > 0 && (
         <div className="space-y-3">
