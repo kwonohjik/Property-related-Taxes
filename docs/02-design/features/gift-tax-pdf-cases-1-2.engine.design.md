@@ -509,7 +509,15 @@ Step 5: 결과
 - 산식 풀어쓰기: "변수 약어·floor()" 사용 금지 (memory `feedback_result_view_korean_formula`)
 - 행마다 우측 산식 hint 토글 ("▼ 산식 보기")
 
-### 5.3 사이드바 합계
+### 5.3 사이드바 합계 (해당 없음 — 본 마법사 단일 컬럼)
+
+GiftTaxForm 마법사는 양도세 TransferTaxCalculator와 달리 `WizardSidebar` 미사용 단일 컬럼 패턴. ⑥ 사이드바 합계 동기화 지점은 **본 마법사 패턴에서 해당 없음**으로 명시.
+
+결과 finalTax (⑫ 또는 ⑱)는 `GiftTaxResultView` 핵심 결과 카드에 `text-4xl font-bold` 로 강조 표시 (이미 구현).
+
+WizardSidebar 도입(증여재산가액 / 사전증여 합산 / 예상 과세표준 / 산출세액 / 결정세액 실시간 합계)은 후속 PR로 분리.
+
+#### 사이드바 도입 시 권장 구조 (참고)
 
 ```
 증여재산가액         ① 510,000,000
