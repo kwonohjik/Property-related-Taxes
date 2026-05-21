@@ -70,6 +70,14 @@ export interface FarmingInheritanceInput {
   /** 상속인 주소 (동일) */
   heirResidenceAddress?: { road?: string; jibun?: string; building?: string; detail?: string };
 
+  // ─ 부록 A: 상속인별 분리 자격 평가 (FH-1~6, 2026-05-22, KoreanLaw §16⑭ 검증 완료 `20f75e2`) ─
+  /**
+   * 상속인별 자격 평가 (선택). undefined 시 폼-수준 boolean을 모든 상속인에 동일 적용 (legacy).
+   * 입력 시 deriveQualifiedHeirIds로 heirAssessments 중 자격 충족 상속인 자동 도출.
+   * 명시 qualifiedHeirIds와 함께 입력 시 heirAssessments 자동 도출이 우선 (단, 사용자 명시 보장 옵션은 미지원 — 별도 PR).
+   */
+  heirAssessments?: FarmingHeirAssessment[];
+
   // ─ §16⑤ 본문 — 자격자 분배분만 영농상속재산가액 (F-11, 2026-05-21) ─
   /**
    * 자격 충족 상속인 ID 목록 (heirAllocations 연계).
@@ -103,6 +111,27 @@ export interface FarmingDeductionDetail {
 export interface FarmingEligibilityResult {
   eligible: boolean;
   reasons: string[];
+}
+
+/**
+ * 상속인별 자격 평가 (부록 A, 2026-05-22).
+ * 영농상속공제 §16③ 본문 "상속인이 ... 요건을 충족하는 경우" + §16⑭ "피상속인 또는 상속인" 분리.
+ */
+export interface FarmingHeirAssessment {
+  /** 상속인 ID — Heir.id 참조 */
+  heirId: string;
+  /** 18세 이상 — 상속인 단위 */
+  heirIsAdult: boolean;
+  /** 2년 직접 영농 종사 — 상속인 단위 (피상속인 65세 미만 사망 시 면제는 farming 폼-수준 decedentEarlyDeath로 일괄) */
+  heirTwoYearFarming: boolean;
+  /** 거주지 충족 (personal 전용) — 상속인 단위 */
+  heirResidenceMet: boolean;
+  /** [corporate] 신고기한 임원 + 2년 내 대표이사 — 상속인 단위 */
+  heirCorporateOfficer?: boolean;
+  /** 후계자 트랙 (재정경제부령) — 상속인 단위. true 시 18세·2년·거주 면제 */
+  isDesignatedSuccessor?: boolean;
+  /** §16⑭ 결격소득 — 상속인 단위 ("피상속인 또는 상속인" OR 분리 평가) */
+  hasDisqualifyingIncome?: boolean;
 }
 
 /** 영농상속공제 한도 — §18의3① 30억 */

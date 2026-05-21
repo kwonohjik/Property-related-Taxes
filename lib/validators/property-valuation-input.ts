@@ -345,6 +345,20 @@ export const farmingInheritanceInputSchema = z.object({
   hasTaxFraudConviction: z.boolean().optional(),
   // §16② 단서 (F-9, 2026-05-21) — corporate 전용
   isSecondaryAfterFarmingInheritance: z.boolean().optional(),
+  // 부록 A: 상속인별 분리 자격 평가 (FH-1~6, 2026-05-22)
+  heirAssessments: z
+    .array(
+      z.object({
+        heirId: z.string(),
+        heirIsAdult: z.boolean(),
+        heirTwoYearFarming: z.boolean(),
+        heirResidenceMet: z.boolean(),
+        heirCorporateOfficer: z.boolean().optional(),
+        isDesignatedSuccessor: z.boolean().optional(),
+        hasDisqualifyingIncome: z.boolean().optional(),
+      }),
+    )
+    .optional(),
   // §16⑤ 본문 자격자 분배분 (F-11, 2026-05-21)
   qualifiedHeirIds: z.array(z.string()).optional(),
   // 거주지 좌표 자동 검증 (F-10, §16②1호나, 2026-05-21)

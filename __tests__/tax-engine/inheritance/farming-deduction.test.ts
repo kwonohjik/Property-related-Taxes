@@ -9,9 +9,14 @@ import { describe, expect, it } from "vitest";
 
 import {
   calcFarmingDeduction,
+  deriveQualifiedHeirIds,
   evaluateFarmingEligibility,
+  evaluateFarmingEligibilityForHeir,
 } from "@/lib/tax-engine/deductions/inheritance-deductions";
-import type { FarmingInheritanceInput } from "@/lib/tax-engine/types/inheritance-farming.types";
+import type {
+  FarmingHeirAssessment,
+  FarmingInheritanceInput,
+} from "@/lib/tax-engine/types/inheritance-farming.types";
 
 // ============================================================
 // 헬퍼 — 기본 충족 input 생성
@@ -309,5 +314,127 @@ describe("evaluateFarmingEligibility — 자격 평가 분리", () => {
       corporateOk({ heirResidenceMet: false }),
     );
     expect(r.eligible).toBe(true);
+  });
+});
+
+// ============================================================
+// 부록 A — 상속인별 분리 자격 평가 (FH-1~6, 2026-05-22)
+// KoreanLaw §16⑭ 검증 완료 `20f75e2`
+// ============================================================
+
+function heirAssess(
+  over: Partial<FarmingHeirAssessment> = {},
+): FarmingHeirAssessment {
+  return {
+    heirId: "h1",
+    heirIsAdult: true,
+    heirTwoYearFarming: true,
+    heirResidenceMet: true,
+    ...over,
+  };
+}
+
+describe("부록 A — 상속인별 분리 자격 평가 (heirAssessments)", () => {
+  it("FH-1: heirAssessments 미입력 → deriveQualifiedHeirIds = undefined (legacy)", () => {
+    const ids = deriveQualifiedHeirIds(personalOk());
+    expect(ids).toBeUndefined();
+  });
+
+  it("FH-2: 3명 상속인 중 1명만 자격 충족 → qualifiedHeirIds=['h1'] 자동 도출", () => {
+    const input: FarmingInheritanceInput = {
+      ...personalOk(),
+      // 폼-수준 heir 필드는 무시되고 heirAssessments가 우선
+      heirAssessments: [
+        heirAssess({ heirId: "h1", heirIsAdult: true, heirTwoYearFarming: true, heirResidenceMet: true }),
+        heirAssess({ heirId: "h2", heirIsAdult: false }), // 16세
+        heirAssess({ heirId: "h3", heirTwoYearFarming: false }), // 2년 미충족 + 65세 이상
+      ],
+    };
+    const ids = deriveQualifiedHeirIds(input);
+    expect(ids).toEqual(["h1"]);
+  });
+
+  it("FH-3: 피상속인 8년 미충족 → 폼-수준 미충족 → 모든 heir [] 반환", () => {
+    const input: FarmingInheritanceInput = {
+      ...personalOk({ decedentEightYearFarming: false }),
+      heirAssessments: [
+        heirAssess({ heirId: "h1" }),
+        heirAssess({ heirId: "h2" }),
+      ],
+    };
+    const ids = deriveQualifiedHeirIds(input);
+    // 피상속인 §16②1호가 미충족 → 모든 heir 자동 미충족
+    expect(ids).toEqual([]);
+  });
+
+  it("FH-4: §18의3⑥ 조세포탈 → heirAssessments 무관 단독 종결", () => {
+    const input: FarmingInheritanceInput = {
+      ...personalOk({ hasTaxFraudConviction: true }),
+      heirAssessments: [
+        heirAssess({ heirId: "h1" }), // 모든 요건 충족이어도
+      ],
+    };
+    const ids = deriveQualifiedHeirIds(input);
+    expect(ids).toEqual([]);
+  });
+
+  it("FH-5: 후계자 트랙 + 다른 상속인 미충족 → 후계자만 자격자", () => {
+    const input: FarmingInheritanceInput = {
+      ...personalOk(),
+      heirAssessments: [
+        // h1: 후계자 트랙 — 18세·2년·거주 면제
+        heirAssess({
+          heirId: "h1",
+          heirIsAdult: false,
+          heirTwoYearFarming: false,
+          heirResidenceMet: false,
+          isDesignatedSuccessor: true,
+        }),
+        // h2: 일반 미충족
+        heirAssess({ heirId: "h2", heirIsAdult: false }),
+      ],
+    };
+    const ids = deriveQualifiedHeirIds(input);
+    expect(ids).toEqual(["h1"]);
+  });
+
+  it("FH-6: §16⑭ 상속인별 결격소득 분리 — 결격 상속인만 미충족", () => {
+    const input: FarmingInheritanceInput = {
+      ...personalOk(),
+      heirAssessments: [
+        heirAssess({ heirId: "h1", hasDisqualifyingIncome: false }),
+        heirAssess({ heirId: "h2", hasDisqualifyingIncome: true }), // §16⑭ 결격
+      ],
+    };
+    const ids = deriveQualifiedHeirIds(input);
+    expect(ids).toEqual(["h1"]);
+  });
+});
+
+describe("evaluateFarmingEligibilityForHeir — heir 단위 평가", () => {
+  it("폼-수준 충족 + heir 충족 → eligible=true", () => {
+    const r = evaluateFarmingEligibilityForHeir(
+      personalOk(),
+      heirAssess({ heirId: "h1" }),
+    );
+    expect(r.eligible).toBe(true);
+  });
+
+  it("폼-수준 충족 + heir 18세 미충족 → eligible=false + reason 노출", () => {
+    const r = evaluateFarmingEligibilityForHeir(
+      personalOk(),
+      heirAssess({ heirId: "h1", heirIsAdult: false }),
+    );
+    expect(r.eligible).toBe(false);
+    expect(r.reasons.some((s) => s.includes("18세"))).toBe(true);
+  });
+
+  it("heir.hasDisqualifyingIncome=true → input.hasDisqualifyingIncome 무시되고 heir 값 우선", () => {
+    const r = evaluateFarmingEligibilityForHeir(
+      personalOk({ hasDisqualifyingIncome: false }), // 폼-수준 false
+      heirAssess({ heirId: "h1", hasDisqualifyingIncome: true }), // heir 결격
+    );
+    expect(r.eligible).toBe(false);
+    expect(r.reasons.some((s) => s.includes("§16⑭"))).toBe(true);
   });
 });

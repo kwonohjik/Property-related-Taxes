@@ -20,6 +20,7 @@ import type {
 import type {
   FarmingDeductionDetail,
   FarmingEligibilityResult,
+  FarmingHeirAssessment,
   FarmingInheritanceInput,
 } from "../types/inheritance-farming.types";
 import { FARMING_MAX } from "../types/inheritance-farming.types";
@@ -306,6 +307,58 @@ export function evaluateFarmingEligibility(
   }
 
   return { eligible: reasons.length === 0, reasons };
+}
+
+/**
+ * 상속인별 자격 평가 (부록 A, FH-1~6, 2026-05-22).
+ *
+ * 법령 근거 (KoreanLaw MCP 검증 `20f75e2`):
+ *   - §16③ "상속인이 ... 요건을 충족하는 경우" — 상속인 단위 평가
+ *   - §16⑭ "피상속인 또는 상속인" — 상속인별 결격소득 분리
+ *
+ * 흐름:
+ *   1. 폼-수준 사유 (피상속인 8년·거주·법인 + §18의3⑥ + §16② 단서 + 피상속인 §16⑭) 전체 평가
+ *      → 미충족이면 해당 heir 자동 미충족 (전체 자격 영향)
+ *   2. 폼-수준 충족이면 heir-수준 사유 (18세·2년·거주·임원·후계자 트랙·결격소득) 평가
+ *
+ * @param input    폼-수준 FarmingInheritanceInput
+ * @param assessment 상속인별 평가 (heirAssessments 항목)
+ */
+export function evaluateFarmingEligibilityForHeir(
+  input: FarmingInheritanceInput,
+  assessment: FarmingHeirAssessment,
+): FarmingEligibilityResult {
+  // 폼-수준 사유 (피상속인 + §18의3⑥ + §16② 단서)를 동일 적용
+  // — heir.hasDisqualifyingIncome로 §16⑭ 평가 분리 (input.hasDisqualifyingIncome은 무시)
+  // — heir.isDesignatedSuccessor·heir.heirIsAdult·heirTwoYearFarming·heirResidenceMet·heirCorporateOfficer로 §16③ 평가 분리
+  const heirInput: FarmingInheritanceInput = {
+    ...input,
+    hasDisqualifyingIncome: assessment.hasDisqualifyingIncome,
+    heirIsAdult: assessment.heirIsAdult,
+    heirTwoYearFarming: assessment.heirTwoYearFarming,
+    heirResidenceMet: assessment.heirResidenceMet,
+    heirCorporateOfficer: assessment.heirCorporateOfficer,
+    isDesignatedSuccessor: assessment.isDesignatedSuccessor,
+  };
+  return evaluateFarmingEligibility(heirInput);
+}
+
+/**
+ * heirAssessments 입력 시 자격 충족 상속인 ID 자동 도출 (부록 A, FH-1~6).
+ *
+ * @returns 자격 충족 상속인 ID 목록.
+ *   - heirAssessments 미입력 시 undefined 반환 (legacy 폼-수준 평가 사용 신호)
+ *   - 폼-수준 사유(피상속인 등) 미충족 시 [] 반환 (모든 heir 미충족)
+ *   - 그 외 각 heir 평가 → eligible=true만 합산
+ */
+export function deriveQualifiedHeirIds(
+  input: FarmingInheritanceInput,
+): string[] | undefined {
+  const assessments = input.heirAssessments;
+  if (assessments === undefined) return undefined;
+  return assessments
+    .filter((a) => evaluateFarmingEligibilityForHeir(input, a).eligible)
+    .map((a) => a.heirId);
 }
 
 /**
