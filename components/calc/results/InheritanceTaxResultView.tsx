@@ -27,6 +27,7 @@ import { LoginPromptBanner } from "@/components/calc/shared/LoginPromptBanner";
 import { TaxCreditBreakdownCard } from "@/components/calc/TaxCreditBreakdownCard";
 import { HeirAllocationTable } from "@/components/calc/results/HeirAllocationTable";
 import { InheritanceFilingFormTable } from "@/components/calc/results/InheritanceFilingFormTable";
+import { CorporateExemptionFilingFormTable } from "@/components/calc/results/CorporateExemptionFilingFormTable";
 import { DebtAllocationResultCard } from "@/components/calc/results/DebtAllocationResultCard";
 import type { DebtItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { calcInstallmentPayment } from "@/lib/tax-engine/credits/installment-payment";
@@ -471,6 +472,15 @@ export function InheritanceTaxResultView({
           </div>
         </div>
       )}
+
+      {/* 부표 5 — 영리법인 면제 및 납부 명세서 (PR 2 PR-2) */}
+      {result.corporateExemption?.perCorporateBreakdown &&
+        result.corporateExemption.perCorporateBreakdown.length > 0 && (
+          <CorporateExemptionFilingFormTable
+            perCorporateBreakdown={result.corporateExemption.perCorporateBreakdown}
+            heirs={heirs}
+          />
+        )}
 
       {/* 채무·공과·장례비 협의분할 결과 카드 (debtItems ON 모드 + heirAllocationResult 있을 때) */}
       {result.heirAllocationResult &&

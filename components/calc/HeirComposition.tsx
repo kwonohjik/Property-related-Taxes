@@ -8,9 +8,20 @@
  * 배우자·자녀는 인적공제, 동거주택공제, 세대생략할증 등에 영향
  */
 
-import type { Heir, HeirRelation } from "@/lib/tax-engine/types/inheritance-gift.types";
+import type {
+  Heir,
+  HeirRelation,
+  ShareholderInfo,
+} from "@/lib/tax-engine/types/inheritance-gift.types";
 import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+
+const SHAREHOLDER_RELATION_LABEL: Record<ShareholderInfo["relation"], string> = {
+  heir: "상속인",
+  heir_spouse: "상속인의 배우자",
+  lineal_descendant_of_heir: "상속인의 직계비속",
+  spouse_of_lineal_descendant: "직계비속의 배우자",
+};
 
 // ============================================================
 // 관계 메타
@@ -54,6 +65,9 @@ const HEIR_RELATIONS: HeirRelation[] = [
   "other",
 ];
 
+// 영리법인 추가 옵션 — PR 2 PR-2 (부표 5).
+const SPECIAL_RELATIONS: HeirRelation[] = ["corporate"];
+
 // ============================================================
 // 개별 상속인 편집기
 // ============================================================
@@ -73,6 +87,7 @@ function HeirEditor({ heir, index, onUpdate, onRemove }: HeirEditorProps) {
     heir.relation === "lineal_ascendant" ||
     heir.relation === "sibling";
   const showCohabitant = heir.relation === "child";
+  const isCorporate = heir.relation === "corporate";
 
   return (
     <div className="border rounded-lg p-4 space-y-3 bg-white dark:bg-gray-900">
@@ -131,14 +146,16 @@ function HeirEditor({ heir, index, onUpdate, onRemove }: HeirEditorProps) {
         </div>
       )}
 
-      {/* 장애인 여부 */}
-      <ToggleCard
-        tone="violet"
-        title="장애인"
-        description="기대여명(년) × 1,000만원 추가 인적공제 (§20②, 2024 생명표 기준)"
-        checked={heir.isDisabled ?? false}
-        onCheckedChange={(v) => set({ isDisabled: v })}
-      />
+      {/* 장애인 여부 — 자연인 전용 */}
+      {!isCorporate && (
+        <ToggleCard
+          tone="violet"
+          title="장애인"
+          description="기대여명(년) × 1,000만원 추가 인적공제 (§20②, 2024 생명표 기준)"
+          checked={heir.isDisabled ?? false}
+          onCheckedChange={(v) => set({ isDisabled: v })}
+        />
+      )}
 
       {/* 동거주택 요건 (자녀) */}
       {showCohabitant && (
@@ -151,26 +168,281 @@ function HeirEditor({ heir, index, onUpdate, onRemove }: HeirEditorProps) {
         />
       )}
 
-      {/* 법정상속분 외 실제 상속비율 */}
+      {/* 법정상속분 외 실제 상속비율 — 자연인 전용 */}
+      {!isCorporate && (
+        <div className="space-y-1">
+          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
+            실제 상속 비율 (협의분할 시)
+          </label>
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              inputMode="decimal"
+              value={
+                heir.actualShareRatio != null
+                  ? String(heir.actualShareRatio * 100)
+                  : ""
+              }
+              onChange={(e) => {
+                const v = parseFloat(e.target.value || "");
+                set({
+                  actualShareRatio: isNaN(v)
+                    ? undefined
+                    : Math.min(100, Math.max(0, v)) / 100,
+                });
+              }}
+              placeholder="비율 입력 (%)"
+              className="w-32 rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+            <span className="text-sm text-gray-500">%</span>
+            <span className="text-xs text-gray-400">
+              (미입력 시 법정상속분 자동 적용)
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* 영리법인 전용 — 부표 5 ②③ + 주주 명세 */}
+      {isCorporate && <CorporateHeirFields heir={heir} set={set} />}
+    </div>
+  );
+}
+
+// ============================================================
+// 영리법인 전용 편집기 (부표 5 ②③ + 주주 동적 명세)
+// ============================================================
+
+let _nextShareholderId = 1;
+function generateShareholderId() {
+  return `sh-${Date.now()}-${_nextShareholderId++}`;
+}
+
+function CorporateHeirFields({
+  heir,
+  set,
+}: {
+  heir: Heir;
+  set: (patch: Partial<Heir>) => void;
+}) {
+  const shareholders = heir.shareholders ?? [];
+  const sumRatio = shareholders.reduce((s, sh) => s + (sh.shareRatio || 0), 0);
+  const sumOver = sumRatio > 1.0 + 1e-9;
+
+  const updateShareholder = (
+    index: number,
+    patch: Partial<ShareholderInfo>,
+  ) => {
+    const next = [...shareholders];
+    next[index] = { ...next[index], ...patch };
+    set({ shareholders: next });
+  };
+
+  const removeShareholder = (index: number) => {
+    set({ shareholders: shareholders.filter((_, i) => i !== index) });
+  };
+
+  const addShareholder = () => {
+    set({
+      shareholders: [
+        ...shareholders,
+        {
+          id: generateShareholderId(),
+          relation: "heir",
+          name: "",
+          shareRatio: 0,
+        },
+      ],
+    });
+  };
+
+  return (
+    <div className="rounded-lg border border-violet-200 bg-violet-50/40 dark:border-violet-700 dark:bg-violet-900/20 p-3 space-y-3">
+      <div className="flex items-center gap-2">
+        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-[10px] font-bold text-violet-800 select-none">
+          5
+        </span>
+        <p className="text-xs font-semibold text-violet-700 dark:text-violet-300">
+          부표 5 — 영리법인 면제 명세
+        </p>
+      </div>
+
+      {/* ② 사업자등록번호 */}
       <div className="space-y-1">
         <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
-          실제 상속 비율 (협의분할 시)
+          ② 사업자등록번호
         </label>
-        <div className="flex items-center gap-2">
+        <input
+          type="text"
+          value={heir.businessRegistrationNumber ?? ""}
+          onChange={(e) =>
+            set({ businessRegistrationNumber: e.target.value || undefined })
+          }
+          placeholder="000-00-00000"
+          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        />
+      </div>
+
+      {/* ③ 사업장 소재지 */}
+      <div className="space-y-1">
+        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
+          ③ 사업장 소재지
+        </label>
+        <input
+          type="text"
+          value={heir.businessAddress ?? ""}
+          onChange={(e) => set({ businessAddress: e.target.value || undefined })}
+          placeholder="법인 본점·지점 소재지"
+          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        />
+      </div>
+
+      {/* 나. 주주 명세 (⑦~⑩) */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-medium text-gray-700 dark:text-gray-300">
+            나. 상속인·직계비속 주주 명세 (⑪ = (⑤−⑥) × ⑩)
+          </p>
+          <span
+            className={
+              "text-[10px] font-mono " +
+              (sumOver ? "text-red-600 font-bold" : "text-gray-500")
+            }
+          >
+            합 {(sumRatio * 100).toFixed(2)}%
+          </span>
+        </div>
+        {sumOver && (
+          <p className="text-[10px] text-red-600">
+            ⚠ 지분율 합이 100%를 초과합니다 (외부 주주분 제외).
+          </p>
+        )}
+
+        {shareholders.length > 0 && (
+          <div className="space-y-2">
+            {shareholders.map((sh, i) => (
+              <ShareholderRow
+                key={sh.id}
+                shareholder={sh}
+                onUpdate={(patch) => updateShareholder(i, patch)}
+                onRemove={() => removeShareholder(i)}
+              />
+            ))}
+          </div>
+        )}
+
+        <button
+          type="button"
+          onClick={addShareholder}
+          className="w-full flex items-center justify-center gap-1 rounded-md border border-dashed border-violet-300 dark:border-violet-600 py-2 text-xs text-violet-700 dark:text-violet-300 hover:bg-violet-100 dark:hover:bg-violet-800/40"
+        >
+          <span className="text-base">+</span>
+          주주 추가
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ShareholderRow({
+  shareholder,
+  onUpdate,
+  onRemove,
+}: {
+  shareholder: ShareholderInfo;
+  onUpdate: (patch: Partial<ShareholderInfo>) => void;
+  onRemove: () => void;
+}) {
+  return (
+    <div className="rounded-md border border-violet-200 dark:border-violet-700 bg-white dark:bg-gray-900 p-2 space-y-2">
+      <div className="grid grid-cols-2 gap-2">
+        {/* ⑦ 구분 */}
+        <div className="space-y-1">
+          <label className="block text-[10px] font-medium text-gray-600 dark:text-gray-400">
+            ⑦ 구분
+          </label>
+          <select
+            value={shareholder.relation}
+            onChange={(e) =>
+              onUpdate({
+                relation: e.target.value as ShareholderInfo["relation"],
+              })
+            }
+            className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {(Object.keys(SHAREHOLDER_RELATION_LABEL) as ShareholderInfo["relation"][]).map(
+              (r) => (
+                <option key={r} value={r}>
+                  {SHAREHOLDER_RELATION_LABEL[r]}
+                </option>
+              ),
+            )}
+          </select>
+        </div>
+
+        {/* ⑩ 지분율 */}
+        <div className="space-y-1">
+          <label className="block text-[10px] font-medium text-gray-600 dark:text-gray-400">
+            ⑩ 지분율 (%)
+          </label>
           <input
             type="text"
             inputMode="decimal"
-            value={heir.actualShareRatio != null ? String(heir.actualShareRatio * 100) : ""}
+            value={
+              shareholder.shareRatio != null
+                ? String(shareholder.shareRatio * 100)
+                : ""
+            }
             onChange={(e) => {
               const v = parseFloat(e.target.value || "");
-              set({ actualShareRatio: isNaN(v) ? undefined : Math.min(100, Math.max(0, v)) / 100 });
+              onUpdate({
+                shareRatio: isNaN(v)
+                  ? 0
+                  : Math.min(100, Math.max(0, v)) / 100,
+              });
             }}
-            placeholder="비율 입력 (%)"
-            className="w-32 rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            placeholder="예: 60"
+            className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
-          <span className="text-sm text-gray-500">%</span>
-          <span className="text-xs text-gray-400">(미입력 시 법정상속분 자동 적용)</span>
         </div>
+
+        {/* ⑧ 성명 */}
+        <div className="space-y-1">
+          <label className="block text-[10px] font-medium text-gray-600 dark:text-gray-400">
+            ⑧ 성명
+          </label>
+          <input
+            type="text"
+            value={shareholder.name}
+            onChange={(e) => onUpdate({ name: e.target.value })}
+            placeholder="주주 성명"
+            className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          />
+        </div>
+
+        {/* ⑨ 주민등록번호 (옵션) */}
+        <div className="space-y-1">
+          <label className="block text-[10px] font-medium text-gray-600 dark:text-gray-400">
+            ⑨ 주민등록번호 (선택)
+          </label>
+          <input
+            type="text"
+            value={shareholder.residentNumber ?? ""}
+            onChange={(e) =>
+              onUpdate({ residentNumber: e.target.value || undefined })
+            }
+            placeholder="000000-0000000"
+            className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-xs font-mono focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          />
+        </div>
+      </div>
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={onRemove}
+          className="text-[10px] text-red-500 hover:text-red-700 px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
+        >
+          삭제
+        </button>
       </div>
     </div>
   );
@@ -302,6 +574,16 @@ export function HeirComposition({ heirs, onChange }: HeirCompositionProps) {
             {HEIR_RELATIONS.map((r) => (
               <RelationButton key={r} relation={r} onAdd={handleAdd} />
             ))}
+          </div>
+          <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+            <p className="text-[10px] font-medium text-violet-700 dark:text-violet-300 mb-1">
+              유증·특별연고자·사전증여 영리법인 (§3의2②, 부표 5)
+            </p>
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+              {SPECIAL_RELATIONS.map((r) => (
+                <RelationButton key={r} relation={r} onAdd={handleAdd} />
+              ))}
+            </div>
           </div>
           <button
             type="button"
