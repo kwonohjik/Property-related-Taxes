@@ -36,10 +36,13 @@ import { useState } from "react";
 import type {
   PriorGift,
   Heir,
-  GiftPriorPropertyCategory,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { isWithin13Cutoff } from "@/lib/tax-engine/inheritance-gift-common";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
+import {
+  getPropertyCategoryLabel,
+  inferPropertyKindCode,
+} from "@/components/calc/results/inheritance-filing-form-helpers";
 
 const RELATION_LABEL: Record<string, string> = {
   spouse: "배우자",
@@ -47,18 +50,6 @@ const RELATION_LABEL: Record<string, string> = {
   lineal_ascendant_minor: "직계존속(미성년)",
   lineal_descendant: "직계비속",
   other_relative: "기타친족",
-};
-
-const CATEGORY_LABEL: Record<GiftPriorPropertyCategory, string> = {
-  cash: "01 현금",
-  real_estate_land: "02 토지",
-  real_estate_apartment: "05 공동주택",
-  real_estate_building: "07 일반건물",
-  listed_stock: "09 상장주식",
-  unlisted_stock: "10 비상장주식",
-  financial: "11 금융재산",
-  deposit: "11 금융재산 (예금)",
-  other: "12 기타재산",
 };
 
 interface Props {
@@ -207,9 +198,9 @@ function renderGiftRow(
     : gift.doneeRelation
       ? RELATION_LABEL[gift.doneeRelation] ?? "—"
       : "—";
-  const categoryLabel = gift.propertyCategory
-    ? CATEGORY_LABEL[gift.propertyCategory]
-    : "12 기타재산";
+  // PR 3 (2026-05-22): 헬퍼 사용 — 토지I/II 부수토지 토글 분기 포함
+  const categoryLabel = getPropertyCategoryLabel(gift);
+  const kindCode = inferPropertyKindCode(gift);
   const computedTax = isCorporate
     ? gift.corporateGiftComputedTax ?? 0
     : gift.computedTax ?? 0;
@@ -249,6 +240,10 @@ function renderGiftRow(
         )}
       </td>
       <td className="px-3 py-2 text-[10px]">
+        {/* PR 3 (2026-05-22): 재산구분코드 표시 (A21/A22 등) */}
+        <span className="inline-block bg-gray-100 dark:bg-gray-800 rounded px-1 mr-1 font-mono">
+          {kindCode}
+        </span>
         {dimmed
           ? "§13 합산 기간 도과"
           : isCorporate

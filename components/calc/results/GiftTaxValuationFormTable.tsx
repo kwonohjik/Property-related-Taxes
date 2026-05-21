@@ -17,6 +17,7 @@ import type {
   PriorGift,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
+import { toPriorGiftPropertyTypeCode } from "@/components/calc/results/inheritance-filing-form-helpers";
 
 // ============================================================
 // 코드 매핑 (부표 1 뒷면 작성방법 §2 / §7)
@@ -340,8 +341,10 @@ export function GiftTaxValuationFormTable({
                     A24
                   </td>
                   <td className={CELL_CENTER} data-testid="col-property-type">
+                    {/* PR 3 (2026-05-22): GiftPriorPropertyCategory 전용 매핑 헬퍼 사용
+                        — EstateItem.category 와 enum 다르므로 toPriorGiftPropertyTypeCode 별도 */}
                     {toPropertyTypeDisplay(
-                      pg.propertyCategory ? toPropertyTypeCode(pg.propertyCategory) : "12",
+                      toPriorGiftPropertyTypeCode(pg as never),
                     )}
                   </td>
                   <td className={CELL_CENTER} data-testid="col-overseas">

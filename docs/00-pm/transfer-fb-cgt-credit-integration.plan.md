@@ -1,5 +1,15 @@
-# 가업상속공제 자산 양도 — 양도세 의제 §97의2④ + §18의2⑩ 공제 통합 (Plan v2)
+# 가업상속공제 자산 양도 — 양도세 의제 §97의2④ + §18의2⑩ 공제 통합 (Plan v3)
 
+> v2 → v3 정정 (2026-05-22 비판적 재검토 — Critical):
+> - **K7 ★★ 작업량 재산정 + 사전 PR 분리**: `runTransferEngineWithAcquisition` 추출은 transfer-tax.ts·helpers·rate-calc·finalize 4-파일 + 다필지·재개발·환산취득가 분기 전체 진입점 리팩토링 (5+일 작업).
+>   - **사전 PR `transfer-tax-acquisition-param-refactor.plan.md` 분리** (별도 작성 필요)
+>   - 본 PR은 그 분리 PR이 완료된 후 진입 가능 (의존성 명시)
+>   - 분리 PR scope: STEP 2를 `(input, acquisitionOverride?: number) => result` 형태로 매개변수화. 기존 호출 회귀 0건 보장
+> - **K10 ★ 적용률 자동 prefill 본 PR 종속 격상**:
+>   - v2 "자동 prefill은 후속 PR" → v3 "본 PR 핵심 의존". 사용자가 0.7853 같은 수치를 직접 입력하는 비현실성 제거
+>   - 상속세 결과(`InheritanceTaxResult.familyBusinessDetail`)에 `appliedRate` 필드 추가하여 transfer-tax 마법사에서 자동 prefill (사용자 override 가능)
+>   - 자동 prefill 없으면 본 PR 사용자 가치 제로 — 후속 PR 분리는 사용자 가치 큰 손실
+>
 > v1 → v2 정정 (2026-05-21 종합 검토):
 > - **X1 법령 오인용 정정**: §97의2② 단서는 §97의2① 한정. **§97의2④ 가업상속공제 자산에는 단서 미적용** — 본문 강제. `selectedFormula="imputed_lower"` 분기 삭제
 > - **X3 모델 단순화**: creditAmount = max(0, 의제 − 일반) 항상 산정. selectedFormula enum 제거
@@ -18,6 +28,20 @@
 > 모범 선행: `lib/tax-engine/credits/family-business-cgt-credit.ts` (산식 동결 commit `bbdabe0`)
 >
 > 정책: `[[korean-law-citation-verify]]` · `[[single-source-engine-helper]]` · `[[mirror-pattern]]` · `[[pre-do-anchor-verification]]`
+
+## 0. 의존성 (v3 추가)
+
+### 0-1. 사전 PR 의존 — `transfer-tax-acquisition-param-refactor.plan.md` (K7 분리)
+
+본 PR은 사전 PR 완료 후 진입:
+- transfer-tax.ts STEP 2 (취득가액 결정)를 `(input, acquisitionOverride?: number) => result` 매개변수화
+- 헬퍼 export `runTransferEngineWithAcquisition(input, acqOverride)` — 본 PR이 호출
+- 기존 호출처(`acquisitionOverride=undefined`) 회귀 anchor 100% 보장 (transfer-tax 전체 1,237 anchor 통과)
+- 작업량 추정: 3~5일 (다필지·재개발·환산취득가 분기 각각 검증)
+
+### 0-2. 상속세 측 의존 — InheritanceTaxResult.familyBusinessDetail.appliedRate carry (K10)
+
+상속세 마법사 결과에서 가업상속공제적용률을 노출. 양도세 마법사에서 사용자가 가업상속 자산 양도 시 이력 자동 prefill (사용자 override 가능).
 
 ## 1. 배경 — 현행 갭
 
@@ -175,17 +199,23 @@ postmgmt 측(`inheritance-family-business-postmgmt.plan.md`)의 분담:
 
 ## 4. UI 구현
 
-### 4-1. 양도세 마법사 Step1 자산 카드에 OS 토글 추가
+### 4-1. 양도세 마법사 Step1 자산 카드에 OS 토글 추가 (K10 prefill)
 
 ```
 [자산 카드]
 └── [ToggleCard "가업상속공제 적용 자산 (소법 §97의2④)" — emerald tone]
     └── (ON 시) [FamilyBusinessInheritanceTransferSection]
-        ├── 피상속인 원취득가액 CurrencyInput
-        ├── 상속개시일 현재 자산가액 CurrencyInput
-        ├── 상속개시일 DateInput
-        └── 가업상속공제적용률 DecimalInput (0~1)
+        ├── [이력 자동 조회 버튼] — 상속세 마법사 결과에서 prefill
+        │     (사용자 로그인 + 상속세 계산 이력 존재 시 활성화)
+        ├── 피상속인 원취득가액 CurrencyInput (prefill 가능)
+        ├── 상속개시일 현재 자산가액 CurrencyInput (prefill 가능)
+        ├── 상속개시일 DateInput (prefill 가능)
+        ├── 가업상속공제적용률 — prefill 표시 (예: "0.7853 — 상속세 결과 자동 도출")
+        │     + 사용자 override DecimalInput (필요 시 수정)
+        └── [경고 배지] prefill 값과 사용자 입력 차이 시 안내
 ```
+
+자동 prefill 소스: `InheritanceTaxResult.familyBusinessDetail.appliedRate` (K10 — 본 PR scope).
 
 ### 4-2. 결과 카드 §97의2④ 의제·일반 비교 표
 
@@ -236,10 +266,11 @@ postmgmt 측(`inheritance-family-business-postmgmt.plan.md`)의 분담:
 
 ## 8. 후속 PR
 
-- **자동 적용률 산정**: 가업상속공제 결과에서 적용률 자동 도출 (현재 사용자 직접 입력)
-- **이력 조회 연동**: 상속세 계산 결과에서 가업상속공제 자산 → 양도세 자동 prefill
 - **상속세 환원 공제 자동화**: 양도 발생 후 상속세 수정신고 마법사
 - **자본적지출 분리**: 피상속인 vs 상속인 지출 분리 (§97의2④ 2호 적용 시점)
+- **LTHD 보유기간 기산일 정책** (K1): 피상속인 vs 상속인 취득일 분기
+- **1세대1주택 비과세·중과 cross-cutting** (K2): 가업 자산이 주택일 때 §89·§104 영향
+- ~~자동 적용률 산정·이력 조회 연동~~ — **본 PR 종속 항목으로 격상 (K10, §0-2)**
 
 ## 9. 작업 분해
 

@@ -1,6 +1,18 @@
-# 가업상속공제 사후관리 시뮬레이터 — Phase F UI + orchestrator 메타 + 정규직 평균 (Plan v2)
+# 가업상속공제 사후관리 시뮬레이터 — Phase F UI + orchestrator 메타 + 정규직 평균 (Plan v3)
 
-> 작성일: 2026-05-21
+> v2 → v3 정정 (2026-05-22 비판적 재검토 — Critical):
+> - **L2 ★★ 5년 내 가드 자동 판정**: 위반 시점 `v.date`가 신고기한 + 5년 이내인지 orchestrator 자동 판정 추가
+>   - `isWithinFiveYears(v.date, filingDeadline)` 헬퍼 신설
+>   - 5년 후 위반 발생 시 자동 면제 (`exempted: true, exemptionReason: "outside_five_year_period"`)
+>   - JustifiableReasonCode에 `outside_five_year_period` enum 추가 (총 18종)
+>   - anchor PHF-PERIOD-1·2 추가 (4년 + 6년 케이스)
+> - **L13 ★★ 시뮬레이터 결과 → 수정신고 마법사 통합 흐름**: 단순 계산기 머무름 회피
+>   - 결과 Step4에 "상속세 수정신고서 생성" 버튼 추가
+>   - 별지 제9호서식(상속세 과세표준 신고 및 자진납부 계산서) 행 매핑
+>   - 추징세액·이자상당액·양도세 환원 공제 → 수정신고서 자동 필드 채움
+>   - 본 PR scope: PDF 출력은 후속 PR, **데이터 흐름·매핑만 구현**
+>
+> 작성일: 2026-05-21 (v3 정정 2026-05-22)
 > v1 → v2 정정 (종합 검토):
 > - **P1 enum 17종 정정** (1호 7건 + 2호 3건 + 3호 7건 = 17, "21종" 오기)
 > - **P3 OFZ 활성 carry 보강** — postmgmt input에 `ofzExemptionActive` 명시 + Step1 표시
@@ -103,6 +115,8 @@ export function mapEstateItemToPostMgmtType(category: AssetCategory): PostMgmtAs
 export interface FamilyBusinessPostMgmtInput {
   /** 가업상속공제 적용액 */
   appliedDeduction: number;
+  /** 상속개시일 (사망일) — L2 5년 가드 산정 기준 (상증법 §18의2⑤ "상속개시일부터 5년 이내") */
+  deathDate: string;
   /** 상속세 신고기한 (사망일이 속하는 달 말일 + 6개월, 상증법 §67) */
   filingDeadline: string;
   /** OFZ 특례 활성 — §15⑪1호·2호 자동 면제 (P3 보강) */
@@ -166,7 +180,9 @@ export type JustifiableReasonCode =
   | "uniform_capital_decrease"  // 바. 균등 감자
   | "court_decision"            // 사. 법원결정 무상감자·출자전환
   // OFZ 자동 면제
-  | "ofz_exemption";            // 본 PR 자동 추가 (§15㉕)
+  | "ofz_exemption"             // 본 PR 자동 추가 (§15㉕)
+  // L2 — 5년 가드 자동 면제
+  | "outside_five_year_period"; // 상속개시일 + 5년 초과 위반
 
 export interface EmploymentTracking {
   fiveYearData: MonthlyEmploymentData[];
@@ -244,6 +260,15 @@ export function isSalaryDropViolation(
 ```typescript
 import { calcFamilyBusinessRecapture, calcFamilyBusinessInterest } from "./family-business-postmanagement";
 import { calcRegularEmployeeAverage, isEmploymentDropViolation, isSalaryDropViolation } from "./family-business-employment";
+import { differenceInDays, parseISO, addYears } from "date-fns";
+
+/** L2 — 5년 내 가드 자동 판정 (상증법 §18의2⑤ "상속개시일부터 5년 이내") */
+//   사실상 신고기한 기준이 아니라 상속개시일 기준. 본 PR 정밀 산정:
+//   "사망일 + 5년" (상속개시일 = 사망일)
+export function isWithinFiveYears(violationDate: string, deathDate: string): boolean {
+  const fiveYearLimit = addYears(parseISO(deathDate), 5);
+  return parseISO(violationDate) <= fiveYearLimit;
+}
 
 export function calcFamilyBusinessPostMgmt(input: FamilyBusinessPostMgmtInput): FamilyBusinessPostMgmtResult {
   // §15⑩ 단서 — 재차 부과 분류 (자산처분 type 한정)
@@ -252,6 +277,12 @@ export function calcFamilyBusinessPostMgmt(input: FamilyBusinessPostMgmtInput): 
     .reduce((s, v) => s + (v.priorDisposedExcluded ?? 0), 0);
 
   const perViolationDetail = input.violations.map((v, i) => {
+    // 0순위 (L2): 5년 내 가드 자동 판정 — 5년 후 위반은 자동 면제
+    //   상속개시일(deathDate) + 5년 초과 시 사후관리 대상 아님
+    if (input.deathDate && !isWithinFiveYears(v.date, input.deathDate)) {
+      return { event: v, exempted: true, exemptionReason: "outside_five_year_period", recapture: 0, interest: 0 };
+    }
+
     // 1순위: 사용자 명시 정당사유
     const reason = input.justifiableReasons?.find(j => j.violationRef === i);
     if (reason) {
@@ -371,12 +402,50 @@ if (deductionResult.familyBusinessDeduction > 0 && deductionResult.familyBusines
 - OFF 시 합계만 입력 (간이): fiveYearAverage·priorTwoYearAverage·fiveYearTotalSalary·priorTwoYearTotalSalary
 - §15⑱ 분할·합병 승계 인원 토글 (정밀 모드 한정)
 
-### 4-4. Step 4 — 결과
+### 4-4. Step 4 — 결과 + 수정신고 마법사 통합 (L13)
 
 - 추징세액 + 이자상당액 + 양도세 환원 공제 (§18의2⑩) + netRecapture
-- 위반별 표 (정당사유 표시·OFZ 면제 배지·재차 부과 분기)
+- 위반별 표 (정당사유 표시·OFZ 면제 배지·재차 부과 분기·5년 외 자동 면제 배지)
 - 정규직&총급여 4호 AND 판정 (정밀: fiveYearAvg·priorTwoYearAvg·threshold)
 - **신고 6개월 카운트다운 배너** (상증법 §18의2⑨)
+
+**수정신고서 데이터 매핑** (L13):
+- "상속세 수정신고서 생성" 버튼 (Step4 하단)
+- 별지 제9호서식(상속세 과세표준 신고 및 자진납부 계산서) 행 매핑:
+  - 추징세액 → "추가 결정세액" 행
+  - 이자상당액 → "가산세 (이자상당액)" 행
+  - 양도세 환원 공제 → "기납부세액 공제" 행
+  - netRecapture → "납부세액" 행
+- 본 PR scope: **데이터 흐름·매핑만 구현** (`AmendmentReturnData` 타입 + 매핑 함수)
+- PDF 출력·세무서 제출 흐름은 후속 PR
+
+```typescript
+export interface AmendmentReturnData {
+  /** 추가 결정세액 (별지 제9호 *행) */
+  additionalDeterminedTax: number;
+  /** 이자상당액 가산세 */
+  interestPenalty: number;
+  /** 양도세 환원 공제 (기납부세액) */
+  cgtCreditReceived: number;
+  /** 최종 납부세액 */
+  netPayable: number;
+  /** 신고기한 — 사유 발생일이 속하는 달의 말일 + 6개월 */
+  amendmentDeadline: string;
+}
+
+export function buildAmendmentReturnData(
+  postMgmtResult: FamilyBusinessPostMgmtResult,
+  violationDate: string,
+): AmendmentReturnData {
+  return {
+    additionalDeterminedTax: postMgmtResult.totalRecapture,
+    interestPenalty: postMgmtResult.totalInterest,
+    cgtCreditReceived: postMgmtResult.cgtCreditApplied,
+    netPayable: postMgmtResult.netRecapture + postMgmtResult.totalInterest,
+    amendmentDeadline: addMonths(endOfMonth(parseISO(violationDate)), 6).toISOString(),
+  };
+}
+```
 
 ## 5. Pre-Do anchor (P-anchor)
 
@@ -391,6 +460,15 @@ if (deductionResult.familyBusinessDeduction > 0 && deductionResult.familyBusines
 6. **PHF-OFZ-2**: ofzExemptionActive=true + cessationSubType="industry_change" → 면제
 7. **PHF-OFZ-3 ★**: ofzExemptionActive=true + cessationSubType="business_pause" → **면제 불성립** (§15⑪3호는 §15㉕ 적용 배제 대상 아님)
 8. **PHF-OFZ-4**: ofzExemptionActive=true + asset_disposal → 면제 불성립
+
+### 5-2b. 5년 가드 자동 면제 (L2 신규)
+8a. **PHF-PERIOD-1 ★ L2**: deathDate 2026-01-01 + 위반 2027-06-01 (1.5년) → 5년 내 → 추징
+8b. **PHF-PERIOD-2 ★ L2**: deathDate 2026-01-01 + 위반 2031-06-01 (5.5년) → 5년 초과 → 자동 면제 (outside_five_year_period)
+8c. **PHF-PERIOD-3**: deathDate 2026-01-01 + 위반 정확히 2031-01-01 (5년 경계) → 5년 내 (inclusive)
+
+### 5-2c. 수정신고서 매핑 (L13 신규)
+8d. **PHF-AMEND-1**: postMgmtResult → AmendmentReturnData 매핑 — additionalDeterminedTax·interestPenalty·cgtCreditReceived·netPayable 자동 산정
+8e. **PHF-AMEND-2**: 수정신고 신고기한 = 위반일이 속하는 달 말일 + 6개월 (§18의2⑨)
 
 ### 5-3. 정규직·총급여
 9. **PHF-EMPLOY-1**: 5년 평균 81명 + 직전 2년 평균 100명 → 위반

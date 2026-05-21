@@ -281,12 +281,68 @@ export interface PriorGift {
   propertyName?: string;
   /** 소재지·법인명. ③ 주. 미입력 시 fallback "사전증여 (YYYY-MM-DD)". */
   propertyLocation?: string;
+  /**
+   * PR 3 (부표 1 enum 정합화) — 토지II 부수토지 토글.
+   * propertyCategory="real_estate_land" 일 때만 의미.
+   *   true  → 부표 03 토지II (일반건물 부수토지)
+   *   false → 부표 02 토지I (순수토지)
+   *   undefined → 부표 02/03 (구분 미지정, legacy 호환)
+   */
+  isAttachedLandToBuilding?: boolean;
 }
 
-/** PriorGift.propertyCategory — EstateItem.category 별칭 (순환 import 회피). */
+/**
+ * PriorGift.propertyCategory — 별지 제9호서식 부표 1 재산종류코드 매핑.
+ * KoreanLaw MCP 검증 (2026-05-21).
+ *
+ * 코드 / 라벨:
+ *   01 현금                          = "cash"
+ *   02/03 토지I/II                   = "real_estate_land" (isAttachedLandToBuilding 토글)
+ *   04 개별주택 (부수토지 포함)      = "real_estate_individual_house" (PR 3 신규)
+ *   05 공동주택 (부수토지 포함)      = "real_estate_apartment"
+ *   06 오피스텔·상업용 (부수토지 포함) = "real_estate_officetel" (PR 3 신규)
+ *   07 일반건물 (부수토지 제외)      = "real_estate_building"
+ *   08 부동산을 취득할 수 있는 권리  = "real_estate_acquisition_right" (PR 3 신규)
+ *   09 유가증권(상장)                = "listed_stock"
+ *   10 유가증권(비상장)              = "unlisted_stock"
+ *   11 금융재산                      = "financial" / "deposit" (보조)
+ *   12 기타재산                      = "other"
+ *
+ * Out-of-Scope (점진 도입 후속 PR):
+ *   13 가상자산
+ *   14 서화·골동품 등
+ */
 export type GiftPriorPropertyCategory =
-  | "cash" | "real_estate_land" | "real_estate_apartment" | "real_estate_building"
-  | "listed_stock" | "unlisted_stock" | "financial" | "deposit" | "other";
+  | "cash"
+  | "real_estate_land"
+  | "real_estate_individual_house"
+  | "real_estate_apartment"
+  | "real_estate_officetel"
+  | "real_estate_building"
+  | "real_estate_acquisition_right"
+  | "listed_stock"
+  | "unlisted_stock"
+  | "financial"
+  | "deposit"
+  | "other";
+
+/**
+ * PR 3 — 별지 제9호서식 부표 1 재산구분코드 (12종).
+ * 자동 추론 — `inferPropertyKindCode(gift, specialTreatment)` 헬퍼 사용.
+ *
+ *   A11 상속재산 (상속인)
+ *   A12 상속재산 (상속인 외)
+ *   A13 상속개시 전 처분재산
+ *   A21 증여재산 가산 (상속인)
+ *   A22 증여재산 가산 (상속인 외, 영리법인 포함)
+ *   A23 증여재산 가산 (창업자금 — 조특법 §30의5)
+ *   A24 증여재산 가산 (가업승계 — 조특법 §30의6)
+ *   B11~B22 비과세·과세가액불산입 (본 PR 범위 외)
+ */
+export type EstatePropertyKindCode =
+  | "A11" | "A12" | "A13"
+  | "A21" | "A22" | "A23" | "A24"
+  | "B11" | "B12" | "B13" | "B21" | "B22";
 
 // ============================================================
 // §57 할증 한도 detail (사례 2 PDF 표 ⑧⑨⑩⑪⑫⑬ 재현용)

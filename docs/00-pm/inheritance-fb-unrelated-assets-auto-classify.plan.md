@@ -1,5 +1,20 @@
-# 가업상속공제 사업무관자산 5종 자동 분류 (Plan v2)
+# 가업상속공제 사업무관자산 5종 자동 분류 (Plan v3)
 
+> v2 → v3 정정 (2026-05-22 비판적 재검토 — Critical):
+> - **M1·M4 ★★★ 데이터 모델 근본 재설계**: EstateItem 레벨 ≠ 가업 법인 내부 자산 레벨.
+>   - EstateItem.unrelatedAssetCategory 추가는 두 레벨 혼동 (잘못)
+>   - 법인 내부 자산은 **별도 입력 구조 `CorporateUnrelatedAssetsInput`** — EstateItem.familyBusinessCategory="corporate_stock" 자산의 보충 데이터
+>   - InheritanceTaxInput에 신규 필드 `corporateUnrelatedAssets?: CorporateUnrelatedAssetsInput` (corporate_stock EstateItem id별 매핑)
+> - **M3 ★ 라목 ↔ 마목 split 모델 재설계**: mutex 아닌 split.
+>   - 동일 현금성 자산이 200% 초과분만 라목, 나머지는 마목 가능 ❌ → 라목 부분만 사업무관 산입, 나머지는 사업관련 (마목 미산입). 라목·마목은 자산 유형이 다름.
+>   - 라목 = 현금·요구불예금·만기 3개월 금융상품 한정
+>   - 마목 = 영업무관 주식·채권·금융상품 (라목 자산 유형 외)
+>   - 동일 자산이 양쪽 분류 불가 — isAlsoExcessCash 플래그 폐기, 자산 유형 자체로 분기
+> - **M5 단서 5건**: ASCII 매트릭스 실제 단서 5건 (v2 "6건" 정정)
+> - **M9 anchor 12건**: §5 실제 개수와 §10 작업분해 정합 (v2 "10건" 정정)
+> - **M10 ASCII 정책**: `employee_kook_min_house` → `employee_national_size_house`
+> - **M2 non-business-land cross-cutting 결론**: Pre-Do FB-UA-LAW-1 통과 전까지 **사용자 직접 isNonBusinessLand 입력 우선** (자동 판정 cross-cutting은 후속 PR — 본 PR 가목은 수동 분류)
+>
 > v1 → v2 정정 (2026-05-21 종합 검토):
 > - **U1 구문 오류 정정**: `isLessee Employee NotExcluded` (공백) → `isLesseeEmployeeNotExcluded`
 > - **U2 식별자 ASCII**: `isLeasedHouseUnderStdPrice6억` → `isLeasedHouseStdPriceUnder6Eok`
@@ -67,24 +82,31 @@ calcFamilyBusinessStockValuation({
 
 ## 2. 데이터 모델 변경
 
-### 2-1. `EstateItem`에 사업무관자산 분류 필드 (선택적)
+### 2-1. EstateItem 확장 폐기 — 별도 CorporateUnrelatedAssetsInput 신설 (M1·M4 재설계)
+
+**v2 EstateItem.unrelatedAssetCategory 필드 추가 폐기**. 사업무관자산은 가업 법인 내부 자산이므로 EstateItem(상속재산)과 별개 레벨.
 
 ```typescript
-export interface EstateItem {
+// InheritanceTaxInput 확장
+export interface InheritanceTaxInput {
   // ... 기존
   /**
-   * 사업무관자산 분류 (상증령 §15⑤2호 가~마).
-   * familyBusinessCategory === "corporate_stock" + businessType === "corporate" 한정 의미.
-   * 단서 적용 후 잔존 가액 (사용자가 단서 판정 결과 반영).
-   * 자동 분류 모드: 본 필드 + unrelatedAssetExemption 토글로 자동 판정.
+   * 가업 법인 사업무관자산 입력 (상증령 §15⑤2호 가~마).
+   * key = corporate_stock EstateItem id (해당 법인 식별).
+   * 동일 가업 법인 주식이 여러 상속인에게 분배되어 여러 EstateItem으로 존재할 수 있어 매핑 방식.
+   * 본 PR scope: 사용자가 법인 내부 자산을 별도 입력. 자동 분류는 후속 PR.
    */
-  unrelatedAssetCategory?: "non_business_land" | "leased_real_estate" | "excessive_loans" | "excess_cash" | "unrelated_financial";
-  /** 단서 적용 면제 (사용자 명시) */
-  unrelatedAssetExempted?: boolean;
-  /** 면제 사유 */
-  unrelatedAssetExemptionReason?: "employee_kook_min_house" | "employee_loan_education" | "employee_loan_jeonse" | "other";
+  corporateUnrelatedAssets?: Record<string, CorporateUnrelatedAssetsInput>;
+}
+
+/** 가업 법인 사업무관자산 입력 (법인 단위) */
+export interface CorporateUnrelatedAssetsInput {
+  /** 법인 내부 자산 목록 — 각 자산이 §15⑤2호 가~마 중 어느 호인지 분류 */
+  assets: CorporateAssetInput[];
 }
 ```
+
+EstateItem은 변경 없음. 사업무관자산 분류는 **법인 내부 자산 단위**로만 다룸.
 
 ### 2-2. 신규 헬퍼 — `lib/tax-engine/deductions/family-business-unrelated-classify.ts`
 
@@ -97,9 +119,9 @@ export type UnrelatedAssetCategory =
   | "unrelated_financial";
 
 export type UnrelatedAssetExemptionReason =
-  | "employee_kook_min_house"     // 나목 단서 — 임직원 국민주택 무상임대
-  | "employee_loan_education"     // 다목 단서 — 임직원 학자금
-  | "employee_loan_jeonse"        // 다목 단서 — 임직원 6억 이하 전세금
+  | "employee_national_size_house"  // 나목 단서 — 임직원 국민주택 무상임대 (M10 — ASCII)
+  | "employee_loan_education"       // 다목 단서 — 임직원 학자금
+  | "employee_loan_jeonse"          // 다목 단서 — 임직원 6억 이하 전세금
   | "other";
 
 export interface CorporateAssetInput {
@@ -128,11 +150,15 @@ export interface CorporateAssetInput {
   isEmployeeLoan?: boolean;
   loanPurpose?: "education" | "house_jeonse" | "other";
   loanHouseStdPrice?: number;
-  // ─ 라목 — 과다보유현금 5개년 평균 ─
+  // ─ 라목 — 과다보유현금 (assetType="cash_equivalent" 자산 한정, M3 split 재설계) ─
+  /**
+   * 직전 5개 사업연도 말 평균 현금 보유액 (요구불예금 + 만기 3개월내 금융상품 포함).
+   * 본 자산 가액(value) − (5년 평균 × 2) > 0 시 초과분만 사업무관 산입 (split).
+   */
   fiveYearAverageCash?: number;
-  // ─ 마목 — 영업무관 금융자산 (라목 mutex — U5 강화) ─
-  /** 라목 분류 시 본 자산은 마목에서 자동 제외 (U5) */
-  isAlsoExcessCash?: boolean;
+  // ─ 마목 — 영업무관 금융자산 (assetType="stock_bond" 자산 한정, M3) ─
+  //   라목과 마목은 자산 유형이 다름 (현금성 vs 주식·채권).
+  //   동일 자산이 양쪽 분류 불가 — assetType으로 분기, isAlsoExcessCash 플래그 폐기.
 }
 
 export interface UnrelatedAssetClassificationResult {
@@ -186,15 +212,23 @@ export function calcExcessCash(
 }
 ```
 
-## 3. 단서 자동 적용 매트릭스
+## 3. 단서 자동 적용 매트릭스 (M3·M5 재설계)
 
-| 호 | 단서 | 입력 필드 | 자동 판정 조건 |
-|----|------|----------|--------------|
-| 나목 | 임직원 국민주택 무상임대 | `isLeasedHouseUnderNationalSize ∥ <6억 + isLesseEmployee 1%↓ + ≥5년 무상` | 모두 true → 제외 |
-| 다목-1 | 임직원 자녀 학자금 | `isEmployeeLoan + loanPurpose="education"` | true → 제외 |
-| 다목-2 | 임직원 6억 이하 주택 전세금 | `loanPurpose="house_jeonse" + loanHouseStdPrice ≤ 6억` | 모두 true → 제외 |
-| 라목 | 5개년 평균 × 200% 초과분만 | `currentCash − 5yrAvg × 2` (가드 ≥0) | 자동 산정 |
-| 마목 | 라목 중복 제외 | 라목 적용 후 잔여만 마목 | 순차 적용 |
+단서 **5건** (v2 "6건" 정정):
+
+| 호 | 단서 | 입력 필드 | 자동 판정 조건 | 적용 결과 |
+|----|------|----------|--------------|----------|
+| 가목 | (단서 없음) | `isNonBusinessLand` + `nonBusinessLandRatio` | 사용자 직접 분류 | 전체 또는 ratio 산입 |
+| 나목 | 임직원 국민주택 무상임대 | `(isLeasedHouseUnderNationalSize ‖ isLeasedHouseStdPriceUnder6Eok) + isLesseeEmployeeNotExcluded + leaseFreeYears ≥ 5` | 모두 true → 제외 | 전체 면제 |
+| 다목-1 | 임직원 자녀 학자금 | `isEmployeeLoan + loanPurpose="education"` | true → 제외 | 전체 면제 |
+| 다목-2 | 임직원 6억 이하 주택 전세금 | `isEmployeeLoan + loanPurpose="house_jeonse" + loanHouseStdPrice ≤ 600_000_000` | 모두 true → 제외 | 전체 면제 |
+| 라목 | **split** — 평균 × 200% 초과분만 | `assetType="cash_equivalent" + fiveYearAverageCash` | `value − 5yrAvg × 2 > 0` 시 | 초과분만 산입 (M3 split) |
+| 마목 | (단서 없음, 자산 유형으로 분리) | `assetType="stock_bond"` | 영업무관 명시 | 전체 산입 |
+
+라목·마목 자산 유형 분리 (M3):
+- 라목: 현금·요구불예금·만기 3개월 금융상품 (`cash_equivalent`)
+- 마목: 영업무관 주식·채권·금융상품 (`stock_bond`)
+- 동일 자산 양쪽 분류 불가 — assetType으로 분기
 
 ## 4. cross-cutting
 
@@ -226,28 +260,31 @@ import { judgeNonBusinessLand } from "@/lib/tax-engine/non-business-land/engine"
 11. **FB-UA-LEASE-LT5Y-1**: 5년 미만 무상임대 → 나목 단서 미적용
 12. **FB-UA-PARTIAL-1 ★ N4**: 가목 토지 부분 처분 — `nonBusinessLandRatio=0.6` → 가액의 60%만 사업무관 산입
 
-## 6. UI 통합
+## 6. UI 통합 (M1·M4 재설계 반영)
 
 본 PR scope:
-- EstateItem 카드에 사업무관자산 분류 select 추가 (corporate_stock 자산 한정 노출)
+- EstateItem 카드에는 변경 없음 (사업무관자산 분류 select 폐기)
+- **corporate_stock EstateItem 카드 내부에 "법인 내부 자산 관리" 펼침 영역 추가**
+  - 펼치면 `CorporateAssetInput[]` 자산 목록 (반복 추가 가능)
+  - 각 자산마다: 가액·assetType (5종 enum)·분류 (가~마)·단서 입력
 - 5종 자동 분류 결과 미리보기 카드 (자산별 분류·면제 사유 표시)
 
 본 PR scope 외:
 - 단서 자동 판정 UI 위젯 (임직원 정보·국민주택 판정·5년 평균 입력 등)
 - 별도 PR로 분리 — UI 시니어 위임
 
-## 7. 14개 동기화 지점
+## 7. 14개 동기화 지점 (M1·M4 재설계 반영)
 
-- ① EstateItem에 3필드 추가 (unrelatedAssetCategory·Exempted·ExemptionReason)
-- ②③ initial/normalize
-- ④ inheritance-api body 자동 carry
-- ⑤ EstateItem 카드 select (corporate_stock 한정)
+- ① InheritanceTaxInput에 `corporateUnrelatedAssets?: Record<string, CorporateUnrelatedAssetsInput>` 필드 추가
+- ②③ initial/normalize — EstateItem은 변경 없음. 별도 입력 객체 신설
+- ④ inheritance-api body — `corporateUnrelatedAssets` spread carry
+- ⑤ corporate_stock EstateItem 카드 내 펼침 영역 (법인 내부 자산 목록)
 - ⑥ 사이드바 미영향
-- ⑦ 결과 카드 — `UnrelatedAssetClassificationResult.perAssetDetail` 표
-- ⑧ validate — 분류 vs assetType 정합성 (예: land 자산에 cash 분류 차단)
-- ⑨ Zod enum 추가 (unrelatedAssetCategory 5종 + exemptionReason 4종)
-- ⑩⑫ Zod schema 확장
-- ⑬⑭ API/route 자동 carry
+- ⑦ 결과 카드 — `UnrelatedAssetClassificationResult.perAssetDetail` 표 + 라목·마목 split 시각화
+- ⑧ validate — assetType vs category 정합성 (예: cash_equivalent 자산이 마목 분류 차단)
+- ⑨ Zod enum (UnrelatedAssetCategory 5종 + ExemptionReason 4종 + assetType 6종)
+- ⑩⑫ Zod schema (CorporateAssetInput + CorporateUnrelatedAssetsInput) 신설
+- ⑬⑭ API/route — corporateUnrelatedAssets 매핑
 
 ## 8. 위험
 
@@ -268,7 +305,7 @@ import { judgeNonBusinessLand } from "@/lib/tax-engine/non-business-land/engine"
 ## 10. 작업 분해
 
 1. Plan/Design — `inheritance-gift-tax-senior` 단독 (UI는 후속)
-2. Pre-Do — FB-UA-LAW-1 (본문 재확인) + FB-UA-CLASSIFY-1~10 anchor
-3. Do — classifyUnrelatedAssets·calcExcessCash 헬퍼 + non-business-land cross-cutting + Zod
-4. Check — anchor 10건 + 전체 회귀
-5. Act — UI 단서 자동 판정 후속 PR 트리거
+2. Pre-Do — FB-UA-LAW-1 (본문 재확인) + FB-UA-CLASSIFY/CASH/MUTEX/EMPLOYEE/PARTIAL anchor **12건** (M9 정정)
+3. Do — classifyUnrelatedAssets·calcExcessCash 헬퍼 + CorporateUnrelatedAssetsInput 신설 + Zod
+4. Check — anchor 12건 + 전체 회귀
+5. Act — UI 단서 자동 판정 + non-business-land 자동 cross-cutting 후속 PR 트리거

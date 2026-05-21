@@ -119,8 +119,8 @@ interface Props {
   onBack: () => void;
   /** 1단계로 이동 (입력값 보존) */
   onGoToFirst?: () => void;
-  /** 수동 저장 — saveOrUpdateByContent 호출. 성공 시 {id, created} 반환, 실패 시 throw */
-  onSave?: () => Promise<{ id: string; created: boolean }>;
+  /** 수동 저장 — v4: {id, created, isDraft} 반환. 실패 시 throw */
+  onSave?: () => Promise<{ id: string; created: boolean; isDraft: boolean }>;
   /** 자동저장 토스트 표시용 (결과 화면 마운트 시 1회) */
   autoSaveToast?: SaveToastMessage | null;
   showLoginPrompt?: boolean;
@@ -132,9 +132,20 @@ interface Props {
     giftAmount: number;
     sourceCalculationId?: string;
     donor?: string;
+    // PR 3 (2026-05-22): 부표 1 양식 정합 — 04 개별주택·06 오피스텔·08 부동산 권리 신규
     propertyCategory?:
-      | "cash" | "real_estate_land" | "real_estate_apartment" | "real_estate_building"
-      | "listed_stock" | "unlisted_stock" | "financial" | "deposit" | "other";
+      | "cash"
+      | "real_estate_land"
+      | "real_estate_individual_house"
+      | "real_estate_apartment"
+      | "real_estate_officetel"
+      | "real_estate_building"
+      | "real_estate_acquisition_right"
+      | "listed_stock"
+      | "unlisted_stock"
+      | "financial"
+      | "deposit"
+      | "other";
     propertyName?: string;
     propertyLocation?: string;
   }>;

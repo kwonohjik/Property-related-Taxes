@@ -36,6 +36,7 @@ function hasUserEditedFields(prev: PriorGift, next: PriorGift): boolean {
     "propertyCategory",
     "propertyName",
     "propertyLocation",
+    "isAttachedLandToBuilding", // PR 3
   ];
   return keys.some((k) => prev[k] !== next[k]);
 }
@@ -84,11 +85,15 @@ const GIFT_DONOR_LIST: GiftDonorRelation[] = [
 ];
 
 // 신고서 부표 1 ② 재산종류코드 — UI 라벨 (KoreanLaw MCP 검증, 시행규칙 별지 제10호서식 부표 1 뒷면 §2)
+// PR 3 (2026-05-22): 부표 1 양식 순서 정합 — 01·02·04·05·06·07·08·09·10·11·12 (점진 도입: 13·14는 후속)
 const GIFT_PRIOR_CATEGORY_LIST: GiftPriorPropertyCategory[] = [
   "cash",
   "real_estate_land",
+  "real_estate_individual_house",
   "real_estate_apartment",
+  "real_estate_officetel",
   "real_estate_building",
+  "real_estate_acquisition_right",
   "listed_stock",
   "unlisted_stock",
   "financial",
@@ -96,14 +101,18 @@ const GIFT_PRIOR_CATEGORY_LIST: GiftPriorPropertyCategory[] = [
   "other",
 ];
 
+// PR 3 (2026-05-22): 부표 1 양식 정합 — 04 개별주택·06 오피스텔·08 부동산 권리 추가
 const GIFT_PRIOR_CATEGORY_LABELS: Record<GiftPriorPropertyCategory, string> = {
   cash: "01 현금",
-  real_estate_land: "02 토지",
-  real_estate_apartment: "05 공동주택",
-  real_estate_building: "07 일반건물",
-  listed_stock: "09 상장주식",
-  unlisted_stock: "10 비상장주식",
-  financial: "11 금융재산",
+  real_estate_land: "02/03 토지 (부수토지 토글)",
+  real_estate_individual_house: "04 개별주택 (부수토지 포함)",
+  real_estate_apartment: "05 공동주택 (부수토지 포함)",
+  real_estate_officetel: "06 오피스텔·상업용건물 (부수토지 포함)",
+  real_estate_building: "07 일반건물 (부수토지 제외)",
+  real_estate_acquisition_right: "08 부동산을 취득할 수 있는 권리",
+  listed_stock: "09 유가증권 (상장)",
+  unlisted_stock: "10 유가증권 (비상장)",
+  financial: "11 금융재산 (현금·유가증권 제외)",
   deposit: "11 금융재산 (예금)",
   other: "12 기타재산",
 };
@@ -425,6 +434,41 @@ function GiftRowEditor({
             ))}
           </select>
         </div>
+
+        {/* PR 3 (2026-05-22): 토지 부수토지 토글 — 02/03 코드 분기 */}
+        {gift.propertyCategory === "real_estate_land" && (
+          <div className="space-y-1">
+            <label className="block text-xs font-medium text-sky-700">
+              부수토지 여부 — 02/03 코드 분기
+            </label>
+            <div className="flex gap-2 text-xs">
+              <label className="flex items-center gap-1 cursor-pointer">
+                <input
+                  type="radio"
+                  checked={gift.isAttachedLandToBuilding === false}
+                  onChange={() => set({ isAttachedLandToBuilding: false })}
+                />
+                <span>02 토지I (순수토지)</span>
+              </label>
+              <label className="flex items-center gap-1 cursor-pointer">
+                <input
+                  type="radio"
+                  checked={gift.isAttachedLandToBuilding === true}
+                  onChange={() => set({ isAttachedLandToBuilding: true })}
+                />
+                <span>03 토지II (일반건물 부수토지)</span>
+              </label>
+              <label className="flex items-center gap-1 cursor-pointer text-gray-500">
+                <input
+                  type="radio"
+                  checked={gift.isAttachedLandToBuilding === undefined}
+                  onChange={() => set({ isAttachedLandToBuilding: undefined })}
+                />
+                <span>미지정</span>
+              </label>
+            </div>
+          </div>
+        )}
 
         {/* 자산 명칭 */}
         <div className="space-y-1">
