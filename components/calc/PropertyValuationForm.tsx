@@ -13,6 +13,8 @@ import { useState } from "react";
 import { CurrencyInput, parseAmount, formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { AddressSearch, type AddressValue } from "@/components/ui/address-search";
 import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
+import { DeemedCategorySection } from "@/components/calc/inheritance/DeemedCategorySection";
+import { FinancialDeductionChip } from "@/components/calc/inheritance/FinancialDeductionChip";
 import { HeirAllocationToggleSection } from "@/components/calc/inheritance/HeirAllocationToggleSection";
 import type { EstateItem, AssetCategory, ValuationMethod, Heir } from "@/lib/tax-engine/types/inheritance-gift.types";
 
@@ -296,6 +298,16 @@ function ItemEditor({ item, index, onUpdate, onRemove, mode, heirs }: ItemEditor
 
       {/* 예상 순 평가액 미리보기 */}
       <EstimatedValuePreview item={item} />
+
+      {/* 간주상속재산 분류 (보험금·신탁·퇴직금) — 상속세 전용 */}
+      {mode === "inheritance" && (
+        <DeemedCategorySection item={item} onUpdate={onUpdate} />
+      )}
+
+      {/* §22 금융재산공제 체크박스 (상속세 전용) — 상증령 §19① */}
+      {mode === "inheritance" && (
+        <FinancialDeductionChip item={item} onUpdate={onUpdate} />
+      )}
 
       {/* 상속인·수유자별 협의분할 (메인 PR 2 — 상속세 전용) */}
       {mode === "inheritance" && heirs && (

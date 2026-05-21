@@ -214,6 +214,26 @@ export function DebtAllocationInput({
                   />
                 )}
 
+                {/* §22 순금융재산 차감 채무 — financial 카테고리만 활성 (상증령 §19④) */}
+                <ToggleCard
+                  tone="rose"
+                  size="sm"
+                  title="§22 순금융재산 차감 채무"
+                  description={
+                    it.category === "financial"
+                      ? "§10① 1호 입증된 금융회사등 채무 (상증령 §19④)"
+                      : "§19④ — 금융회사등 채무만 §22 차감 대상. 사적채무·공과금·장례비는 제외"
+                  }
+                  checked={
+                    it.category === "financial" &&
+                    (it.isFinancialDebtForDeduction ?? true)
+                  }
+                  onCheckedChange={(v) =>
+                    update(idx, { isFinancialDebtForDeduction: v })
+                  }
+                  disabled={it.category !== "financial"}
+                />
+
                 {/* 협의분할 */}
                 <HeirAllocationInput
                   allocations={it.heirAllocations}

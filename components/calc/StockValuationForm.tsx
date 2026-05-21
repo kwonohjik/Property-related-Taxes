@@ -18,6 +18,7 @@ import {
 } from "@/lib/tax-engine/property-valuation-stock";
 import type { EstateItem, UnlistedStockData, Heir } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { KiwoomValuationAutoFetchButton } from "./KiwoomValuationAutoFetchButton";
+import { FinancialDeductionChip } from "@/components/calc/inheritance/FinancialDeductionChip";
 import { HeirAllocationToggleSection } from "@/components/calc/inheritance/HeirAllocationToggleSection";
 import { UnlistedStockSpecialReasonSection } from "@/components/calc/inheritance/UnlistedStockSpecialReasonSection";
 
@@ -198,6 +199,11 @@ function ListedStockEditor({
             <span className="text-indigo-700 dark:text-indigo-300">{formatKRW(totalValue)}</span>
           </div>
         </div>
+      )}
+
+      {/* §22 금융재산공제 — 상장주식 (§19① 주식 명시) */}
+      {mode === "inheritance" && (
+        <FinancialDeductionChip item={item} onUpdate={onUpdate} />
       )}
 
       {/* 상속인·수유자별 협의분할 (상속세 전용) */}
@@ -434,6 +440,11 @@ function UnlistedStockEditor({
           isDeficit={data.weightedNetIncome <= 0}
           isMinValueApplied={preview.perShareFinalValue === preview.perShareMinValue}
         />
+      )}
+
+      {/* §22 금융재산공제 — 비상장주식 (§22② 최대주주 보유분은 사용자 override) */}
+      {mode === "inheritance" && (
+        <FinancialDeductionChip item={item} onUpdate={onUpdate} />
       )}
 
       {/* 상속인·수유자별 협의분할 (상속세 전용) */}

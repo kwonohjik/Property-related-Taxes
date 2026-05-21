@@ -7,9 +7,19 @@
  * 통합 위치. shared.ts의 FormState를 import.
  */
 
+import { useMemo } from "react";
+
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { HeirComposition } from "@/components/calc/HeirComposition";
+import { AutoSuggestBadge } from "./AutoSuggestBadge";
+import {
+  suggestFamilyBusinessValue,
+  suggestLegateeAmountNonHeir,
+  suggestNetFinancialAssets,
+  suggestPriorGiftDeductionTotal,
+  suggestSpouseActualAmount,
+} from "@/lib/calc/inheritance-deduction-suggest";
 import type { FormState, FormSet } from "./shared";
 
 // ============================================================
@@ -18,6 +28,33 @@ import type { FormState, FormSet } from "./shared";
 
 export function Step4({ form, set }: { form: FormState; set: FormSet }) {
   const hasSpouse = form.heirs.some((h) => h.relation === "spouse");
+
+  // 자동 제안 — 모두 순수 함수 derive (useMemo)
+  const allEstateItems = useMemo(
+    () => [...form.estateItems, ...form.stockItems],
+    [form.estateItems, form.stockItems],
+  );
+  const suggestSpouse = useMemo(
+    () => suggestSpouseActualAmount(allEstateItems, form.heirs),
+    [allEstateItems, form.heirs],
+  );
+  const suggestNet = useMemo(
+    () => suggestNetFinancialAssets(allEstateItems, form.debtItems),
+    [allEstateItems, form.debtItems],
+  );
+  const suggestFamilyBiz = useMemo(
+    () => suggestFamilyBusinessValue(allEstateItems),
+    [allEstateItems],
+  );
+  const suggestLegatee = useMemo(
+    () => suggestLegateeAmountNonHeir(allEstateItems, form.heirs),
+    [allEstateItems, form.heirs],
+  );
+  const suggestPriorGift = useMemo(
+    () => suggestPriorGiftDeductionTotal(form.priorGifts),
+    [form.priorGifts],
+  );
+
   return (
     <div className="space-y-6">
       <HeirComposition heirs={form.heirs} onChange={(heirs) => set({ heirs })} />
@@ -28,21 +65,37 @@ export function Step4({ form, set }: { form: FormState; set: FormSet }) {
         </h3>
 
         {hasSpouse && (
-          <CurrencyInput
-            label="배우자 실제 상속액 (§19)"
-            value={form.spouseActualAmount}
-            onChange={(v) => set({ spouseActualAmount: v })}
-            hint="미입력 시 법정상속분으로 자동 산정 (최소 5억, 최대 30억 한도)"
-          />
+          <div className="space-y-2">
+            <AutoSuggestBadge
+              suggestion={suggestSpouse}
+              currentValue={form.spouseActualAmount}
+              onApply={(v) => set({ spouseActualAmount: v })}
+              label="배우자 실제 상속액"
+            />
+            <CurrencyInput
+              label="배우자 실제 상속액 (§19)"
+              value={form.spouseActualAmount}
+              onChange={(v) => set({ spouseActualAmount: v })}
+              hint="미입력 시 법정상속분으로 자동 산정 (최소 5억, 최대 30억 한도)"
+            />
+          </div>
         )}
 
-        <CurrencyInput
-          label="순 금융재산 (§22 금융재산공제용)"
-          value={form.netFinancialAssets}
-          onChange={(v) => set({ netFinancialAssets: v })}
-          hint="예금·펀드·채권 등 — 20% 공제, 최대 2억"
-          placeholder="없으면 빈칸"
-        />
+        <div className="space-y-2">
+          <AutoSuggestBadge
+            suggestion={suggestNet}
+            currentValue={form.netFinancialAssets}
+            onApply={(v) => set({ netFinancialAssets: v })}
+            label="순 금융재산"
+          />
+          <CurrencyInput
+            label="순 금융재산 (§22 금융재산공제용)"
+            value={form.netFinancialAssets}
+            onChange={(v) => set({ netFinancialAssets: v })}
+            hint="예금·펀드·채권 등 — 20% 공제, 최대 2억"
+            placeholder="없으면 빈칸"
+          />
+        </div>
 
         <CurrencyInput
           label="동거주택 공시가격 (§23의2)"
@@ -69,6 +122,12 @@ export function Step4({ form, set }: { form: FormState; set: FormSet }) {
         />
 
         <div className="space-y-2">
+          <AutoSuggestBadge
+            suggestion={suggestFamilyBiz}
+            currentValue={form.familyBusinessValue}
+            onApply={(v) => set({ familyBusinessValue: v })}
+            label="가업상속재산가액"
+          />
           <CurrencyInput
             label="가업상속재산가액 (§18의2)"
             value={form.familyBusinessValue}
@@ -103,21 +162,37 @@ export function Step4({ form, set }: { form: FormState; set: FormSet }) {
           placeholder="없으면 빈칸"
         />
 
-        <CurrencyInput
-          label="상속외자 유증 금액 (§19·§24 분자 차감)"
-          value={form.legateeAmountNonHeir}
-          onChange={(v) => set({ legateeAmountNonHeir: v })}
-          hint="상속인이 아닌 자(수유자 손자녀·기타)에게 유증한 재산가액"
-          placeholder="없으면 빈칸"
-        />
+        <div className="space-y-2">
+          <AutoSuggestBadge
+            suggestion={suggestLegatee}
+            currentValue={form.legateeAmountNonHeir}
+            onApply={(v) => set({ legateeAmountNonHeir: v })}
+            label="상속외자 유증 금액"
+          />
+          <CurrencyInput
+            label="상속외자 유증 금액 (§19·§24 분자 차감)"
+            value={form.legateeAmountNonHeir}
+            onChange={(v) => set({ legateeAmountNonHeir: v })}
+            hint="상속인이 아닌 자(수유자 손자녀·기타)에게 유증한 재산가액"
+            placeholder="없으면 빈칸"
+          />
+        </div>
 
-        <CurrencyInput
-          label="사전증여 증여재산공제 합계 (§24 분자 차감)"
-          value={form.priorGiftDeductionTotal}
-          onChange={(v) => set({ priorGiftDeductionTotal: v })}
-          hint="배우자 6억·직계비속 5천만 등 사전증여 시 적용된 증여재산공제 합"
-          placeholder="없으면 빈칸"
-        />
+        <div className="space-y-2">
+          <AutoSuggestBadge
+            suggestion={suggestPriorGift}
+            currentValue={form.priorGiftDeductionTotal}
+            onApply={(v) => set({ priorGiftDeductionTotal: v })}
+            label="사전증여 증여재산공제 합계"
+          />
+          <CurrencyInput
+            label="사전증여 증여재산공제 합계 (§24 분자 차감)"
+            value={form.priorGiftDeductionTotal}
+            onChange={(v) => set({ priorGiftDeductionTotal: v })}
+            hint="배우자 6억·직계비속 5천만 등 사전증여 시 적용된 증여재산공제 합"
+            placeholder="없으면 빈칸"
+          />
+        </div>
 
         <ToggleCard
           tone="violet"
