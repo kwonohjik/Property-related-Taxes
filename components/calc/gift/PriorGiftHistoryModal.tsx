@@ -76,6 +76,8 @@ export interface PriorGiftHistoryModalProps {
   currentClientId: string | null;
   excludeCalculationIds: string[];
   onSelect: (priorGift: PriorGift) => void;
+  /** PR-E: 영리법인 1-클릭 import 활성화. 상속세 모드에서 true 권장. */
+  enableCorporateOption?: boolean;
   /** "직접 입력하기" — 빈 PriorGift 1건 추가 */
   onManualAdd?: () => void;
 }
@@ -87,9 +89,15 @@ export interface PriorGiftHistoryModalProps {
 function CandidateCard({
   candidate,
   onSelect,
+  onSelectAsCorporate,
+  showCorporateOption = false,
 }: {
   candidate: PriorGiftCandidate;
   onSelect: (c: PriorGiftCandidate) => void;
+  /** PR-E: 영리법인 1-클릭 import 콜백 (상속세 모드 전용) */
+  onSelectAsCorporate?: (c: PriorGiftCandidate) => void;
+  /** PR-E: 영리법인 버튼 노출 — 상속세 모드 + heirs 존재 시 */
+  showCorporateOption?: boolean;
 }) {
   const [expandInnerInfo, setExpandInnerInfo] = useState(false);
 
@@ -164,6 +172,16 @@ function CandidateCard({
         >
           📋 이 회차 선택
         </button>
+        {showCorporateOption && onSelectAsCorporate && (
+          <button
+            type="button"
+            onClick={() => onSelectAsCorporate(candidate)}
+            className="rounded-md py-2 px-3 text-xs font-medium bg-violet-100 text-violet-800 hover:bg-violet-200 border border-violet-300 transition-colors"
+            title="영리법인 사전증여로 가져오기 (§13①2호 + §3의2②). 자연인 정보는 제거되고 산출세액 상당액 입력 필드가 활성화됩니다."
+          >
+            🏢 영리법인
+          </button>
+        )}
       </div>
     </div>
   );
@@ -182,6 +200,7 @@ export function PriorGiftHistoryModal({
   excludeCalculationIds,
   onSelect,
   onManualAdd,
+  enableCorporateOption = false,
 }: PriorGiftHistoryModalProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -233,6 +252,13 @@ export function PriorGiftHistoryModal({
 
   const handleSelect = (c: PriorGiftCandidate) => {
     const priorGift = candidateToPriorGift(c);
+    onSelect(priorGift);
+    onOpenChange(false);
+  };
+
+  // PR-E: 영리법인 1-클릭 import — candidateToPriorGift options.asCorporate
+  const handleSelectAsCorporate = (c: PriorGiftCandidate) => {
+    const priorGift = candidateToPriorGift(c, { asCorporate: true });
     onSelect(priorGift);
     onOpenChange(false);
   };
@@ -301,6 +327,8 @@ export function PriorGiftHistoryModal({
                         key={c.calculationId}
                         candidate={c}
                         onSelect={handleSelect}
+                        onSelectAsCorporate={handleSelectAsCorporate}
+                        showCorporateOption={enableCorporateOption}
                       />
                     ))}
                   </div>
