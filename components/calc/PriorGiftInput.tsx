@@ -121,6 +121,7 @@ function CorporateGiftFields({
 }) {
   const value = gift.corporateGiftComputedTax;
   const isMissing = !value || value <= 0;
+  const taxBaseValue = gift.giftTaxBase;
   return (
     <div className="space-y-2 pt-2">
       <CurrencyInput
@@ -135,6 +136,17 @@ function CorporateGiftFields({
           ⚠ 입력 필수 — 미입력 시 §3의2② 면제 한도를 계산할 수 없습니다.
         </p>
       )}
+
+      {/* giftTaxBase — 면제 한도 분자 정밀 지정 (옵션) */}
+      <CurrencyInput
+        label="증여세 과세표준 (선택)"
+        value={taxBaseValue && taxBaseValue > 0 ? String(taxBaseValue) : ""}
+        onChange={(v) => {
+          const parsed = parseAmount(v);
+          set({ giftTaxBase: parsed > 0 ? parsed : undefined });
+        }}
+        hint="미입력 시 위 증여재산가액(giftAmount)을 §3의2② 한도 분자로 사용. 증여세 공제 후 과세표준이 별도라면 직접 입력."
+      />
     </div>
   );
 }

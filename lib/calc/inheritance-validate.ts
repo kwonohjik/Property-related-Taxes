@@ -108,8 +108,17 @@ export function validatePresumedItem(
 
 export function validatePriorGift(gift: PriorGift): string | null {
   if (gift.beneficiaryType === "corporate") {
+    // 상증법 §13①2호 — 영리법인은 상속인 아닌 자에 해당. isHeir=true 동시 입력 차단.
+    // UI 상태머신이 corporate ON 시 isHeir=false 강제하지만, API 직접 호출 차단용 정책 강화.
+    if (gift.isHeir) {
+      return `영리법인 사전증여 ${gift.giftDate} — beneficiaryType="corporate"는 isHeir=false여야 합니다 (§13①2호: 상속인 아닌 자 5년).`;
+    }
     if (!gift.corporateGiftComputedTax || gift.corporateGiftComputedTax <= 0) {
       return `영리법인 사전증여 ${gift.giftDate} — corporateGiftComputedTax(증여세 산출세액)는 필수입니다.`;
+    }
+    // §28 증여세액공제 중복 방지 — 영리법인은 §4의2③ 비과세이므로 giftTaxPaid는 0이어야 함.
+    if (gift.giftTaxPaid > 0) {
+      return `영리법인 사전증여 ${gift.giftDate} — giftTaxPaid는 0이어야 합니다 (§4의2③ 비과세, §3의2②로 별도 공제).`;
     }
     if (!gift.doneeId) {
       return `영리법인 사전증여 ${gift.giftDate} — doneeId(수증자 Heir.id) 필수.`;

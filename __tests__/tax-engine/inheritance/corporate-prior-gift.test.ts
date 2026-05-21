@@ -8,6 +8,7 @@
 import { describe, it, expect } from "vitest";
 import { calcInheritanceTax } from "@/lib/tax-engine/inheritance-tax";
 import { calcCorporateExemption } from "@/lib/tax-engine/inheritance-corporate-exemption";
+import { validatePriorGift } from "@/lib/calc/inheritance-validate";
 import type {
   InheritanceTaxInput,
   Heir,
@@ -137,6 +138,60 @@ describe("ANCHOR-CORP — 영리법인 사전증여 합산 + §3의2② 면제",
     expect(result.priorGiftAggregated).toBe(500_000_000);
     // 영리법인 면제 미발동
     expect(result.corporateExemption?.amount ?? 0).toBe(0);
+  });
+
+  // ────────────────────────────────────────────────────
+  // Phase 1.5 — validate 정책 강화 anchor
+  // ────────────────────────────────────────────────────
+
+  it("ANCHOR-CORP-V1: corporate + isHeir=true 동시 입력 차단 (§13①2호)", () => {
+    const err = validatePriorGift({
+      giftDate: "2022-05-21",
+      giftAmount: 500_000_000,
+      giftTaxPaid: 0,
+      isHeir: true, // 위반: corporate는 상속인 아닌 자
+      beneficiaryType: "corporate",
+      corporateGiftComputedTax: 80_000_000,
+      doneeId: "donee1",
+    });
+    expect(err).toContain("isHeir=false여야 합니다");
+  });
+
+  it("ANCHOR-CORP-V2: corporate + giftTaxPaid>0 차단 (§4의2③ 비과세)", () => {
+    const err = validatePriorGift({
+      giftDate: "2022-05-21",
+      giftAmount: 500_000_000,
+      giftTaxPaid: 50_000_000, // 위반: 영리법인 증여세 비과세
+      isHeir: false,
+      beneficiaryType: "corporate",
+      corporateGiftComputedTax: 80_000_000,
+      doneeId: "donee1",
+    });
+    expect(err).toContain("giftTaxPaid는 0이어야 합니다");
+  });
+
+  it("ANCHOR-CORP-V3: corporate + 산출세액=0 차단 (기존 정책)", () => {
+    const err = validatePriorGift({
+      giftDate: "2022-05-21",
+      giftAmount: 500_000_000,
+      giftTaxPaid: 0,
+      isHeir: false,
+      beneficiaryType: "corporate",
+      corporateGiftComputedTax: 0,
+      doneeId: "donee1",
+    });
+    expect(err).toContain("corporateGiftComputedTax");
+  });
+
+  it("ANCHOR-CORP-V4: 자연인 사전증여 — validate 통과 (회귀 보호)", () => {
+    const err = validatePriorGift({
+      giftDate: "2022-05-21",
+      giftAmount: 500_000_000,
+      giftTaxPaid: 50_000_000,
+      isHeir: true,
+      // beneficiaryType 미설정 — legacy
+    });
+    expect(err).toBeNull();
   });
 
   it("ANCHOR-CORP-6: 자연인 + 영리법인 혼합 (C7) — §28 공제와 §3의2② 면제 동시 발동", () => {

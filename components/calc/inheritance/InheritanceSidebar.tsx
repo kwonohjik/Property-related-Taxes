@@ -69,11 +69,16 @@ export function InheritanceSidebar({
           />
         )}
 
-        {/* 사전증여 가산 */}
+        {/* 사전증여 가산 (corporate 행 1건 이상 시 § 3의2② 보조 라벨) */}
         {summary.priorGiftTotal > 0 && (
           <Row
             label="+ 사전증여 가산"
             value={formatKRW(summary.priorGiftTotal)}
+            sub={
+              form.priorGifts.some((g) => g.beneficiaryType === "corporate")
+                ? "🏢 일부 영리법인 포함 (§3의2②로 별도 공제)"
+                : undefined
+            }
             tone="add"
           />
         )}

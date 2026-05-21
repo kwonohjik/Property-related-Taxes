@@ -304,7 +304,8 @@ C0·C1·C2·C4·C5·C6·C7·C8 브라우저 수동 시뮬 후 완료 보고. C9�
 
 ## 9. 단계·우선순위
 
-- **Phase 1 (본 PR)**: UI 위젯 + 결과 노출 + anchor 4건. 변경 파일 2~3개, ≤+250줄 (anchor 포함 ≤+400줄)
-- **Phase 1.5 (옵션 후속)**: giftTaxBase 입력 위젯 + validate 정책 강화
+- **Phase 1 (완료, commit c48826a)**: UI 위젯 + 결과 노출 + anchor 7건. 변경 파일 2개
+- **Phase 1.5 (완료, 본 후속 PR)**: WizardSidebar corporate hint + giftTaxBase 입력 + validate 정책 강화 + anchor V1~V4
 - **Phase 2**: history 모달 corporate 자동 추론
 - **Phase 3**: 신고서 별지 11호서식 부표 영리법인 행 표시
+- **엔진 후속**: STEP 10 corporate cutoff 필터 통합 (ANCHOR-CORP-2 NOTE 참조)
