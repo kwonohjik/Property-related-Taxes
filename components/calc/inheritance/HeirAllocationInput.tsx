@@ -170,12 +170,12 @@ export function HeirAllocationInput({
             return (
               <div
                 key={a.heirId}
-                className="grid grid-cols-[1fr_auto_auto] gap-2 items-center"
+                className="flex flex-wrap items-center gap-2"
               >
-                <label className="text-xs text-muted-foreground">
+                <label className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
                   {heirShortLabel(heir)}
                 </label>
-                <div className="w-36">
+                <div className="flex-1 min-w-[140px] max-w-[200px]">
                   <CurrencyInput
                     label=""
                     value={a.amount > 0 ? String(a.amount) : ""}
@@ -198,10 +198,9 @@ export function HeirAllocationInput({
                           : parseFloat(e.target.value),
                       )
                     }
-                    className="w-24 px-2 py-1 text-xs rounded border border-border bg-background"
+                    className="w-24 shrink-0 px-2 py-1 text-xs rounded border border-border bg-background"
                   />
                 )}
-                {!showAreaInput && <span className="w-24" />}
               </div>
             );
           })}
