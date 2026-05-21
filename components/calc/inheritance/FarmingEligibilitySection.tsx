@@ -29,8 +29,54 @@ import {
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { evaluateFarmingEligibility } from "@/lib/tax-engine/deductions/inheritance-deductions";
+import { checkFarmingResidenceCompliance } from "@/lib/calc/farming-residence-check";
+import { ResidenceCheckPreviewCard } from "./ResidenceCheckPreviewCard";
 import type { FarmingInheritanceInput } from "@/lib/tax-engine/types/inheritance-farming.types";
 import type { EstateItem, Heir } from "@/lib/tax-engine/types/inheritance-gift.types";
+
+function CoordinateInput({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: { lat: number; lng: number } | undefined;
+  onChange: (v: { lat: number; lng: number } | undefined) => void;
+}) {
+  const lat = value?.lat;
+  const lng = value?.lng;
+  const setLat = (s: string) => {
+    const n = parseFloat(s);
+    onChange(Number.isFinite(n) && Number.isFinite(lng ?? NaN) ? { lat: n, lng: lng! } : Number.isFinite(n) ? { lat: n, lng: 0 } : undefined);
+  };
+  const setLng = (s: string) => {
+    const n = parseFloat(s);
+    onChange(Number.isFinite(n) && Number.isFinite(lat ?? NaN) ? { lat: lat!, lng: n } : Number.isFinite(n) ? { lat: 0, lng: n } : undefined);
+  };
+  return (
+    <div className="space-y-1">
+      <label className="block text-[11px] font-medium text-emerald-800 dark:text-emerald-200">
+        {label} (WGS84)
+      </label>
+      <div className="grid grid-cols-2 gap-2">
+        <input
+          type="text"
+          value={lat === undefined ? "" : String(lat)}
+          onChange={(e) => setLat(e.target.value)}
+          placeholder="위도 (예: 37.5665)"
+          className="w-full rounded-md border border-input bg-background px-2 py-1 text-xs"
+        />
+        <input
+          type="text"
+          value={lng === undefined ? "" : String(lng)}
+          onChange={(e) => setLng(e.target.value)}
+          placeholder="경도 (예: 126.9780)"
+          className="w-full rounded-md border border-input bg-background px-2 py-1 text-xs"
+        />
+      </div>
+    </div>
+  );
+}
 
 const EMPTY_FARMING: FarmingInheritanceInput = {
   type: "personal",
@@ -80,6 +126,12 @@ export function FarmingEligibilitySection({
   const evalResult = useMemo(
     () => (farming ? evaluateFarmingEligibility(farming) : null),
     [farming],
+  );
+
+  // F-10 거주지 자동 검증 미리보기 (옵션 A 정책 — autoMet 안내용)
+  const residenceCheck = useMemo(
+    () => (farming?.type === "personal" ? checkFarmingResidenceCompliance(estateItems, farming) : null),
+    [farming, estateItems],
   );
 
   // 거주지 자산 유형별 동적 안내 (personal 전용)
@@ -358,6 +410,31 @@ export function FarmingEligibilitySection({
                 >
                   ↺ 전체 상속인 자격 충족(legacy)로 되돌리기
                 </button>
+              )}
+            </div>
+          )}
+
+          {/* F-10 거주지 좌표 자동 검증 (personal 전용, 옵션 A 정책) */}
+          {farming.type === "personal" && (
+            <div className="space-y-2 rounded-md border border-emerald-200 bg-emerald-50/30 dark:bg-emerald-950/10 dark:border-emerald-800 p-3">
+              <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-200">
+                📍 거주지 좌표 자동 검증 (선택, §16②1호나)
+              </p>
+              <p className="text-[10px] text-emerald-700 dark:text-emerald-300">
+                WGS84 위도·경도 입력 시 자산 소재지와 직선거리 자동 비교 (안내용 — 사용자 명시 토글 우선)
+              </p>
+              <CoordinateInput
+                label="피상속인 거주지"
+                value={farming.decedentResidenceLatLng}
+                onChange={(v) => update({ decedentResidenceLatLng: v })}
+              />
+              <CoordinateInput
+                label="상속인 거주지"
+                value={farming.heirResidenceLatLng}
+                onChange={(v) => update({ heirResidenceLatLng: v })}
+              />
+              {residenceCheck && (
+                <ResidenceCheckPreviewCard result={residenceCheck} />
               )}
             </div>
           )}
