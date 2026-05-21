@@ -43,6 +43,19 @@ const baseItemSchema = z.object({
   // §22 금융재산상속공제 자동화 (2026-05-21)
   isFinancialAssetForDeduction: z.boolean().optional(),
   trustType: z.enum(["cash_trust", "real_estate", "security", "other"]).optional(),
+  // 영농상속공제 자동화 (2026-05-21, §18의3 + 시행령 §16⑤)
+  farmingCategory: z
+    .enum([
+      "farmland",
+      "pasture",
+      "forest_land",
+      "fishing_vessel",
+      "fishing_right",
+      "agricultural_building",
+      "salt_field",
+      "corporate_stock",
+    ])
+    .optional(),
 });
 
 export const landItemSchema = baseItemSchema.extend({
@@ -250,6 +263,22 @@ export const presumedInheritanceItemSchema = z.object({
 // 상속공제 입력 스키마
 // ============================================================
 
+/** 영농상속공제 자격 입력 스키마 (2026-05-21, §18의3 + 시행령 §16) */
+export const farmingInheritanceInputSchema = z.object({
+  type: z.enum(["personal", "corporate"]),
+  decedentEightYearFarming: z.boolean(),
+  decedentResidenceMet: z.boolean(),
+  decedentCorporateMet: z.boolean().optional(),
+  heirIsAdult: z.boolean(),
+  heirTwoYearFarming: z.boolean(),
+  heirResidenceMet: z.boolean(),
+  decedentEarlyDeath: z.boolean().optional(),
+  heirCorporateOfficer: z.boolean().optional(),
+  isDesignatedSuccessor: z.boolean().optional(),
+  hasDisqualifyingIncome: z.boolean().optional(),
+  hasTaxFraudConviction: z.boolean().optional(),
+});
+
 export const inheritanceDeductionInputSchema = z.object({
   heirs: z.array(heirSchema).min(1, "상속인이 1명 이상 필요합니다."),
   spouseActualAmount: z.number().nonnegative().optional(),
@@ -266,6 +295,8 @@ export const inheritanceDeductionInputSchema = z.object({
   legateeAmountNonHeir: z.number().nonnegative().optional(),
   priorGiftDeductionTotal: z.number().nonnegative().optional(),
   disasterLossDeduction: z.number().nonnegative().optional(),
+  // 영농상속공제 정밀화 (2026-05-21)
+  farming: farmingInheritanceInputSchema.optional(),
 });
 
 // ============================================================

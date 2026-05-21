@@ -256,6 +256,9 @@ export function InheritanceTaxForm() {
       legateeAmountNonHeir: parseAmount(form.legateeAmountNonHeir) || undefined,
       priorGiftDeductionTotal: parseAmount(form.priorGiftDeductionTotal) || undefined,
       deathDate: form.deathDate || undefined,
+      // 영농상속공제 정밀화 (2026-05-21, §18의3 + 시행령 §16) — form.farming은 PR-4에서 도입
+      // 현재는 form에 farming 필드 없음 → undefined 자동 전달 (legacy 모드)
+      farming: undefined,
     };
     const creditInput: InheritanceTaxCreditInput = {
       priorGifts: form.priorGifts,

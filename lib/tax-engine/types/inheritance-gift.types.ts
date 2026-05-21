@@ -106,6 +106,26 @@ export interface EstateItem {
    * 미입력 시 보수적으로 §22 미적용.
    */
   trustType?: "cash_trust" | "real_estate" | "security" | "other";
+
+  // ===== 영농상속공제 자동화 (2026-05-21, §18의3 + 시행령 §16⑤) =====
+  /**
+   * 영농상속 자산 분류 (시행령 §16⑤ 1호 가~사 + 2호).
+   * undefined: 영농 자산 아님.
+   * suggestFarmingAssetValue가 본 필드로 자동 필터링.
+   * 카테고리 호환:
+   *   - real_estate_* · other: farmland/pasture/forest_land/fishing_vessel/fishing_right/agricultural_building/salt_field
+   *   - listed_stock · unlisted_stock: corporate_stock만 가능
+   *   - financial · cash · deposit: 영농 자산 불가 (UI에서 미노출)
+   */
+  farmingCategory?:
+    | "farmland"              // 가. 농지법 §2①가 농지
+    | "pasture"               // 나. 초지법 §5 초지조성허가 초지
+    | "forest_land"           // 다. 보전산지 산림지 (5년 이상 조림)
+    | "fishing_vessel"        // 라. 어선법 §2① 어선
+    | "fishing_right"         // 마. 어업권·양식업권
+    | "agricultural_building" // 바. 농업용 건축물 + 부속토지
+    | "salt_field"            // 사. 염전
+    | "corporate_stock";      // §16⑤2호 법인 영농 주식
 }
 
 /**
@@ -496,7 +516,26 @@ export interface InheritanceDeductionInput {
   priorGiftDeductionTotal?: number;
   /** 신고기한 내 재해손실공제 (§24 분자 보정용) */
   disasterLossDeduction?: number;
+
+  // ===== 영농상속공제 정밀화 (2026-05-21, §18의3 + 시행령 §16) =====
+  /**
+   * 영농상속 자격·요건 입력. 미제공 시 legacy 호환 (evaluated=false, eligible=true 가정).
+   * 신규 사용자는 본 객체 제공 권장.
+   */
+  farming?: FarmingInheritanceInput;
 }
+
+// 영농상속 타입은 inheritance-farming.types.ts로 분리 (800줄 정책)
+import type {
+  FarmingInheritanceInput,
+  FarmingDeductionDetail,
+} from "./inheritance-farming.types";
+export type {
+  FarmingInheritanceInput,
+  FarmingDeductionDetail,
+  FarmingEligibilityResult,
+} from "./inheritance-farming.types";
+export { FARMING_MAX } from "./inheritance-farming.types";
 
 /** 상속공제 계산 결과 */
 export interface InheritanceDeductionResult {
@@ -507,6 +546,8 @@ export interface InheritanceDeductionResult {
   financialDeduction: number;
   cohabitationDeduction: number;
   farmingDeduction: number;
+  /** 영농상속공제 상세 (2026-05-21, §18의3 정밀화). farming 미입력 시 evaluated=false. */
+  farmingDetail?: FarmingDeductionDetail;
   familyBusinessDeduction: number;
   /** §24 종합한도 적용 후 최종 공제액 */
   totalDeduction: number;
@@ -553,58 +594,17 @@ export interface GiftDeductionResult {
 // ============================================================
 
 /** 상속세 세액공제 입력 */
-export interface InheritanceTaxCreditInput {
-  /** 증여세액공제 (§28) — 사전증여별 납부세액 (PriorGift에서 자동 계산) */
-  priorGifts?: PriorGift[];
-  /** 외국납부세액 (§29) */
-  foreignTaxPaid?: number;
-  /** 단기재상속 — 피상속인이 상속받은 날로부터 경과 연수 */
-  shortTermReinheritYears?: number;
-  /** 단기재상속 — 당시 상속세 납부액 */
-  shortTermReinheritTaxPaid?: number;
-  /** 법정신고기한 내 신고 여부 (§69 3% 공제) */
-  isFiledOnTime: boolean;
-}
-
-/** 증여세 세액공제 입력 */
-export interface GiftTaxCreditInput {
-  /** 외국납부세액 (§59) */
-  foreignTaxPaid?: number;
-  /** 법정신고기한 내 신고 여부 (§69 3% 공제) */
-  isFiledOnTime: boolean;
-  /** 조특법 과세특례 선택 (창업자금 §30의5 / 가업승계 §30의6) */
-  specialTreatment?: "startup" | "family_business";
-  /** 창업자금: 창업법인 설립 후 2년 이내 투자 완료 여부 */
-  startupInvestmentCompleted?: boolean;
-}
-
-/** 세액공제 계산 결과 (상속·증여 공통 구조) */
-export interface TaxCreditResult {
-  giftTaxCredit: number;        // §28
-  foreignTaxCredit: number;     // §29 or §59
-  shortTermReinheritCredit: number; // §30 (상속만)
-  filingCredit: number;         // §69
-  specialTreatmentCredit: number;   // 조특법 §30의5·§30의6
-  totalCredit: number;
-  breakdown: CalculationStep[];
-  appliedLaws: string[];
-  /**
-   * §69 산식 노출용 — 신고세액공제 기준세액.
-   * = totalComputedTaxWithSurcharge − giftTaxCredit − foreignTaxCredit − specialTreatmentCredit
-   * (= 엔진 `remainingTax`, inheritance-gift-tax-credit.ts:378·399).
-   * 법정기한 외 신고 시에도 echo는 유지 (filingCredit만 0).
-   * 상속세 호출(calcInheritanceTaxCredits)에는 현재 echo 미적용 → undefined 가능.
-   */
-  filingCreditBase?: number;
-  /**
-   * §69 산식 노출용 — 산출세액 합계 (할증 포함).
-   * = computedTax + generationSkipSurcharge
-   * (= 엔진 `totalComputedTax`, inheritance-gift-tax-credit.ts:315).
-   * §28의 ⑦(할증 전, `result.computedTax`)과 구분 필수.
-   * 상속세 호출에는 현재 echo 미적용 → undefined 가능.
-   */
-  totalComputedTaxWithSurcharge?: number;
-}
+// 세액공제 타입은 inheritance-tax-credit.types.ts로 분리 (800줄 정책)
+import type {
+  InheritanceTaxCreditInput,
+  GiftTaxCreditInput,
+  TaxCreditResult,
+} from "./inheritance-tax-credit.types";
+export type {
+  InheritanceTaxCreditInput,
+  GiftTaxCreditInput,
+  TaxCreditResult,
+};
 
 // ============================================================
 // 메인 엔진 Input / Output

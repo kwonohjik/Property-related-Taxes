@@ -9,6 +9,7 @@ import { describe, expect, it } from "vitest";
 import {
   suggestCohabitHouseCandidates,
   suggestFamilyBusinessValue,
+  suggestFarmingAssetValue,
   suggestLegateeAmountNonHeir,
   suggestNetFinancialAssets,
   suggestPriorGiftDeductionTotal,
@@ -304,6 +305,80 @@ describe("suggestLegateeAmountNonHeir", () => {
 // ============================================================
 // ADS-11: 동거주택 후보
 // ============================================================
+
+// ============================================================
+// FS-1 ~ FS-6: 영농상속재산가액
+// ============================================================
+
+describe("suggestFarmingAssetValue — 영농상속재산 §18의3", () => {
+  it("FS-1: 농지 5억 + 초지 2억 → 7억", () => {
+    const items = [
+      asset({ id: "a1", category: "real_estate_land", farmingCategory: "farmland", standardPrice: 500_000_000 }),
+      asset({ id: "a2", category: "real_estate_land", farmingCategory: "pasture", standardPrice: 200_000_000 }),
+    ];
+    const r = suggestFarmingAssetValue(items);
+    expect(r.value).toBe(700_000_000);
+    expect(r.isApplicable).toBe(true);
+  });
+
+  it("FS-2: 농지 5억 + 저당 1억 → 4억 (§16⑤ 단서)", () => {
+    const items = [
+      asset({
+        id: "a1",
+        category: "real_estate_land",
+        farmingCategory: "farmland",
+        standardPrice: 500_000_000,
+        mortgageAmount: 100_000_000,
+      }),
+    ];
+    const r = suggestFarmingAssetValue(items);
+    expect(r.value).toBe(400_000_000);
+  });
+
+  it("FS-3: farmingCategory 미설정 자산 → 제외", () => {
+    const items = [
+      asset({ id: "a1", category: "real_estate_land", standardPrice: 500_000_000 }),  // farmingCategory undefined
+      asset({ id: "a2", category: "real_estate_land", farmingCategory: "farmland", standardPrice: 200_000_000 }),
+    ];
+    const r = suggestFarmingAssetValue(items);
+    expect(r.value).toBe(200_000_000);
+  });
+
+  it("FS-4: 영농 자산 0건 → isApplicable=false", () => {
+    const r = suggestFarmingAssetValue([
+      asset({ id: "a1", category: "real_estate_land", standardPrice: 500_000_000 }),
+    ]);
+    expect(r.isApplicable).toBe(false);
+  });
+
+  it("FS-5: 담보가 자산보다 큼 → 0 (음수 차단)", () => {
+    const items = [
+      asset({
+        id: "a1",
+        category: "real_estate_land",
+        farmingCategory: "farmland",
+        standardPrice: 100_000_000,
+        mortgageAmount: 200_000_000,
+      }),
+    ];
+    const r = suggestFarmingAssetValue(items);
+    expect(r.value).toBe(0);
+  });
+
+  it("FS-6: 농지 35억 → suggestion=35억 + 30억 한도 안내", () => {
+    const items = [
+      asset({
+        id: "a1",
+        category: "real_estate_land",
+        farmingCategory: "farmland",
+        marketValue: 3_500_000_000,
+      }),
+    ];
+    const r = suggestFarmingAssetValue(items);
+    expect(r.value).toBe(3_500_000_000);
+    expect(r.notes?.some((n) => n.includes("30억 한도"))).toBe(true);
+  });
+});
 
 describe("suggestCohabitHouseCandidates", () => {
   it("ADS-11: 주택 2건 + isCohabitant=true 자녀 1명 → 후보 2건 isApplicable", () => {

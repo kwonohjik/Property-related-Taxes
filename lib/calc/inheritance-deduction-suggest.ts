@@ -285,6 +285,70 @@ export function suggestLegateeAmountNonHeir(
 }
 
 // ============================================================
+// A-7+: 영농상속재산가액 §18의3 (필드 #5)
+// ============================================================
+
+const FARMING_CATEGORY_LABEL: Record<NonNullable<EstateItem["farmingCategory"]>, string> = {
+  farmland: "농지",
+  pasture: "초지",
+  forest_land: "산림지",
+  fishing_vessel: "어선",
+  fishing_right: "어업권·양식업권",
+  agricultural_building: "농업용 건축물",
+  salt_field: "염전",
+  corporate_stock: "법인 영농 주식",
+};
+
+/**
+ * 영농상속재산가액 자동 도출 (§18의3 + 시행령 §16⑤).
+ * - estateItems 중 farmingCategory 지정된 자산 합
+ * - §16⑤ 단서 — 담보채무(mortgageAmount) 차감
+ * - 30억 cap은 엔진에서 적용 (본 헬퍼는 한도 적용 전 값 반환)
+ */
+export function suggestFarmingAssetValue(
+  estateItems: EstateItem[],
+): DeductionSuggestion {
+  const eligible = estateItems.filter((i) => i.farmingCategory !== undefined);
+  if (eligible.length === 0) {
+    return {
+      value: 0,
+      reason: "영농 자산 미지정",
+      breakdown: [],
+      isApplicable: false,
+    };
+  }
+  let totalValue = 0;
+  let totalMortgage = 0;
+  const breakdown: string[] = [];
+  for (const item of eligible) {
+    const v = getValuatedAmount(item);
+    const m = item.mortgageAmount ?? 0;
+    totalValue += v;
+    totalMortgage += m;
+    const label = FARMING_CATEGORY_LABEL[item.farmingCategory!];
+    breakdown.push(
+      `${label} ${item.name || "(자산명 미입력)"}: ${formatKrw(v)}원` +
+        (m > 0 ? ` − 저당 ${formatKrw(m)}원` : ""),
+    );
+  }
+  const value = Math.max(0, totalValue - totalMortgage);
+  breakdown.push(
+    `영농자산 합계: ${formatKrw(value)}원 (자산 ${formatKrw(totalValue)} − 담보 ${formatKrw(totalMortgage)}, 30억 한도 적용 전)`,
+  );
+  const notes: string[] = [];
+  if (value > 3_000_000_000) {
+    notes.push("💡 30억 한도 적용 시 cappedDeduction = 30억 (§18의3①)");
+  }
+  return {
+    value,
+    reason: "영농상속 자산 합 − 담보채무 (시행령 §16⑤)",
+    breakdown,
+    isApplicable: true,
+    notes: notes.length > 0 ? notes : undefined,
+  };
+}
+
+// ============================================================
 // A-9: 동거주택 공시가격 후보 §23의2 (필드 #3)
 // ============================================================
 

@@ -16,6 +16,12 @@ import type {
   InheritanceDeductionInput,
   InheritanceDeductionResult,
 } from "../types/inheritance-gift.types";
+import type {
+  FarmingDeductionDetail,
+  FarmingEligibilityResult,
+  FarmingInheritanceInput,
+} from "../types/inheritance-farming.types";
+import { FARMING_MAX } from "../types/inheritance-farming.types";
 import {
   calcPersonalDeductions,
 } from "./personal-deduction-calc";
@@ -58,10 +64,10 @@ const COHABIT_SHARE_RATE = 0.80;
 /** 동거주택공제 최댓값 (§23의2): 6억원 */
 const COHABIT_MAX = 600_000_000;
 
-/** 영농상속공제 최댓값 (§18의2): 20억원 */
-const FARMING_MAX = 2_000_000_000;
+// 영농상속공제 최댓값 — FARMING_MAX (§18의3①, 30억) → inheritance-farming.types.ts import
+// KoreanLaw MCP 검증 2026-05-21: 기존 20억 → 30억 정정 (법령 정합)
 
-/** 가업상속공제 최댓값 (§18의3): 600억원 (10년 이상 영위) */
+/** 가업상속공제 최댓값 (§18의2): 600억원 (10년 이상 영위) */
 const FAMILY_BUSINESS_MAX_10Y = 60_000_000_000;
 
 // ============================================================
@@ -208,23 +214,155 @@ export function calcCohabitationDeduction(cohabitHouseStdPrice: number): {
 }
 
 /**
- * 영농상속공제 (§18의2)
- * 농지·목장용지·어선 등 영농자산가액, 최대 30억
+ * 영농상속공제 자격 평가 (§18의3 + 시행령 §16).
+ *
+ * KoreanLaw MCP 검증 2026-05-21:
+ *   - §16②(피상속인 8년 종사·거주), §16③(상속인 2년·18세·후계자),
+ *     §16⑭(영농 부정), §18의3⑥(조세포탈)
+ *
+ * 평가 순서:
+ *   1. §18의3⑥ 조세포탈 → early return (다른 사유 평가 차단)
+ *   2. §16⑭ 영농 부정 (피상속인·상속인·후계자 모두 적용)
+ *   3. 피상속인 요건 (personal §16②1호 / corporate §16②2호)
+ *   4. 후계자 트랙(isDesignatedSuccessor=true) → 18세·2년·거주 면제 후 return
+ *   5. 상속인 요건 §16③ (개인/법인 분기)
  */
-export function calcFarmingDeduction(farmingAssetValue: number): {
+export function evaluateFarmingEligibility(
+  input: FarmingInheritanceInput,
+): FarmingEligibilityResult {
+  const reasons: string[] = [];
+
+  // 1. §18의3⑥ 조세포탈·회계부정 — 우선 배제 (단독 사유로 종결)
+  if (input.hasTaxFraudConviction) {
+    reasons.push("§18의3⑥ — 조세포탈·회계부정 형 확정 (공제 배제)");
+    return { eligible: false, reasons };
+  }
+
+  // 2. §16⑭ 영농 부정 — 피상속인·상속인·후계자 모두 적용
+  if (input.hasDisqualifyingIncome) {
+    reasons.push(
+      "§16⑭ — 사업소득+총급여 3,700만 이상 과세기간 존재 (직접 종사 부정)",
+    );
+  }
+
+  // 3. 피상속인 요건 §16②
+  if (input.type === "personal") {
+    if (!input.decedentEightYearFarming) {
+      reasons.push("§16②1호가 — 피상속인 8년 직접 영농 종사 미충족");
+    }
+    if (!input.decedentResidenceMet) {
+      reasons.push("§16②1호나 — 피상속인 거주지 미충족");
+    }
+  } else {
+    if (!input.decedentCorporateMet) {
+      reasons.push("§16②2호 — 피상속인 법인 8년 경영 + 최대주주 50%+ 미충족");
+    }
+  }
+
+  // 4. 후계자 트랙 — 18세·2년·거주 요건 면제
+  if (input.isDesignatedSuccessor === true) {
+    return { eligible: reasons.length === 0, reasons };
+  }
+
+  // 5. 상속인 요건 §16③
+  if (!input.heirIsAdult) {
+    reasons.push("§16③ — 상속인 18세 이상 미충족");
+  }
+  const skip2Year = input.decedentEarlyDeath === true;
+  if (!skip2Year && !input.heirTwoYearFarming) {
+    reasons.push(
+      input.type === "personal"
+        ? "§16③1호가 — 상속인 2년 직접 영농 종사 미충족 (피상속인 65세 미만 사망 시 면제)"
+        : "§16③2호가 — 상속인 2년 법인 종사 미충족",
+    );
+  }
+  if (input.type === "personal" && !input.heirResidenceMet) {
+    reasons.push("§16③1호나 — 상속인 거주지 미충족");
+  }
+  if (input.type === "corporate" && !input.heirCorporateOfficer) {
+    reasons.push(
+      "§16③2호나 — 상속인 신고기한 내 임원 + 2년 내 대표이사 미충족",
+    );
+  }
+
+  return { eligible: reasons.length === 0, reasons };
+}
+
+/**
+ * 영농상속공제 (§18의3)
+ * 농지·초지·산림지·어선·어업권·농업용 건축물·염전 + 법인 영농 주식, 최대 30억 (§18의3①)
+ *
+ * farming 미입력 시 legacy 호환 (evaluated=false, eligible=true 가정).
+ */
+export function calcFarmingDeduction(
+  farmingAssetValue: number,
+  farming?: FarmingInheritanceInput,
+): {
   deduction: number;
   breakdown: CalculationStep[];
+  detail: FarmingDeductionDetail;
 } {
-  if (farmingAssetValue <= 0) {
-    return { deduction: 0, breakdown: [] };
+  const evalResult: FarmingEligibilityResult = farming
+    ? evaluateFarmingEligibility(farming)
+    : { eligible: true, reasons: [] };
+  const evaluated = farming !== undefined;
+  const safeAssetValue = Math.max(0, farmingAssetValue);
+
+  // 자격 미충족 — 공제 0 + 사용자 입력값은 detail에 보존
+  if (!evalResult.eligible) {
+    return {
+      deduction: 0,
+      breakdown: [
+        { label: "영농자산가액 (입력)", amount: safeAssetValue },
+        {
+          label: "영농상속공제 (자격 미충족)",
+          amount: 0,
+          lawRef: INH.FARMING_DEDUCTION,
+          note: evalResult.reasons.join(" / "),
+        },
+      ],
+      detail: {
+        eligible: false,
+        evaluated,
+        ineligibleReasons: evalResult.reasons,
+        appliedAssetValue: safeAssetValue,
+        cappedDeduction: 0,
+      },
+    };
   }
-  const deduction = Math.min(farmingAssetValue, FARMING_MAX);
+
+  if (safeAssetValue <= 0) {
+    return {
+      deduction: 0,
+      breakdown: [],
+      detail: {
+        eligible: true,
+        evaluated,
+        ineligibleReasons: [],
+        appliedAssetValue: 0,
+        cappedDeduction: 0,
+      },
+    };
+  }
+
+  const capped = Math.min(safeAssetValue, FARMING_MAX);
   return {
-    deduction,
+    deduction: capped,
     breakdown: [
-      { label: "영농자산가액", amount: farmingAssetValue },
-      { label: "영농상속공제 (최대 20억)", amount: deduction, lawRef: INH.FARMING_DEDUCTION },
+      { label: "영농자산가액", amount: safeAssetValue },
+      {
+        label: "영농상속공제 (최대 30억)",
+        amount: capped,
+        lawRef: INH.FARMING_DEDUCTION,
+      },
     ],
+    detail: {
+      eligible: true,
+      evaluated,
+      ineligibleReasons: [],
+      appliedAssetValue: safeAssetValue,
+      cappedDeduction: capped,
+    },
   };
 }
 
@@ -384,9 +522,10 @@ export function calcInheritanceDeductions(
   }
   const cohabitationDeduction = cohabitResult.deduction;
 
-  // ⑦ 영농공제
-  const farmingResult = calcFarmingDeduction(input.farmingAssetValue ?? 0);
+  // ⑦ 영농공제 (§18의3 + 시행령 §16, 2026-05-21 정밀화)
+  const farmingResult = calcFarmingDeduction(input.farmingAssetValue ?? 0, input.farming);
   const farmingDeduction = farmingResult.deduction;
+  const farmingDetail = farmingResult.detail;
 
   // ⑧ 가업상속공제 (Phase E: 직접 입력 모드 — 한도 600억 유지)
   let bizResult: { deduction: number; breakdown: CalculationStep[] };
@@ -459,6 +598,7 @@ export function calcInheritanceDeductions(
     financialDeduction,
     cohabitationDeduction,
     farmingDeduction,
+    farmingDetail,
     familyBusinessDeduction,
     totalDeduction: limitedDeduction,
     chosenMethod,
