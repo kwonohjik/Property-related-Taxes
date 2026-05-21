@@ -127,14 +127,12 @@ export interface EstateItem {
     | "salt_field"            // 사. 염전
     | "corporate_stock";      // §16⑤2호 법인 영농 주식
 
-  // ===== 가업상속공제 정밀화 (2026-05-21, 상증법 §18의2 + 상증령 §15) =====
-  /**
-   * 가업상속 자산 분류 (상증령 §15⑤).
-   * undefined: 가업 자산 아님.
-   * farmingCategory와 동시 선택 시 validate 차단 (asset_dual_category_conflict).
-   * 분리 타입: inheritance-family-business.types.ts
-   */
+  /** 가업상속 자산 분류 (상증령 §15⑤). farmingCategory 동시 선택 시 validate 차단 (asset_dual_category_conflict). 타입: inheritance-family-business.types.ts */
   familyBusinessCategory?: FamilyBusinessCategory;
+  /** 법인 영농·가업상속 주식 사업무관자산 (시행령 §15⑤2호 + §16⑤2호). corporate_stock일 때만 의미. 타입: inheritance-corporate-non-business.types.ts */
+  corporateNonBusinessAssets?: CorporateNonBusinessAssets;
+  /** 법인 총자산 (사업무관자산 비율 분모). 미입력 시 차감 미적용 (legacy). */
+  corporateTotalAssets?: number;
 }
 
 /**
@@ -542,21 +540,14 @@ export interface InheritanceDeductionInput {
   familyBusiness?: FamilyBusinessInheritanceInput;
 }
 
-// 영농상속 타입은 inheritance-farming.types.ts로 분리 (800줄 정책)
-import type {
-  FarmingInheritanceInput,
-  FarmingDeductionDetail,
-} from "./inheritance-farming.types";
-export type {
-  FarmingInheritanceInput,
-  FarmingDeductionDetail,
-  FarmingEligibilityResult,
-} from "./inheritance-farming.types";
-export { FARMING_MAX } from "./inheritance-farming.types";
-
-// 가업상속 타입 — inheritance-family-business.types.ts 분리 (800줄 정책)
+// 분리 타입 barrel (800줄 정책: farming · family-business · corporate-non-business)
+import type { FarmingInheritanceInput, FarmingDeductionDetail } from "./inheritance-farming.types";
 import type { FamilyBusinessCategory, FamilyBusinessInheritanceInput, FamilyBusinessDeductionDetail } from "./inheritance-family-business.types";
+import type { CorporateNonBusinessAssets } from "./inheritance-corporate-non-business.types";
+export type { FarmingInheritanceInput, FarmingDeductionDetail, FarmingEligibilityResult } from "./inheritance-farming.types";
 export type { FamilyBusinessCategory, FamilyBusinessInheritanceInput, FamilyBusinessIneligibleReason, FamilyBusinessDeductionDetail, FamilyBusinessCap, FamilyBusinessMediumGuard } from "./inheritance-family-business.types";
+export type { CorporateNonBusinessAssets, CorporateStockAdjustedResult } from "./inheritance-corporate-non-business.types";
+export { FARMING_MAX } from "./inheritance-farming.types";
 export { FAMILY_BUSINESS_CAP_10Y, FAMILY_BUSINESS_CAP_20Y, FAMILY_BUSINESS_CAP_30Y, FAMILY_BUSINESS_SCALE_THRESHOLD, FAMILY_BUSINESS_OTHER_ESTATE_RATIO } from "./inheritance-family-business.types";
 
 /** 상속공제 계산 결과 */

@@ -67,6 +67,17 @@ const baseItemSchema = z.object({
       "other",
     ])
     .optional(),
+  // 법인 사업무관자산 (PR-C F-8, 시행령 §15⑤2호 + §16⑤2호)
+  corporateNonBusinessAssets: z
+    .object({
+      nonBusinessLand: z.number().nonnegative().optional(),
+      rentedRealEstate: z.number().nonnegative().optional(),
+      externalLoans: z.number().nonnegative().optional(),
+      excessCash: z.number().nonnegative().optional(),
+      nonOperatingFinancial: z.number().nonnegative().optional(),
+    })
+    .optional(),
+  corporateTotalAssets: z.number().nonnegative().optional(),
 });
 
 export const landItemSchema = baseItemSchema.extend({

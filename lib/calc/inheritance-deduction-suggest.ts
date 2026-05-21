@@ -15,6 +15,7 @@ import {
   resolveFinancialEligibility,
 } from "@/lib/calc/financial-deduction-resolver";
 import { calcRelationDeduction } from "@/lib/tax-engine/deductions/gift-deductions";
+import { calcCorporateStockAdjustedValue } from "@/lib/tax-engine/property-valuation-corporate";
 import type {
   DebtItem,
   DonorRelation,
@@ -68,6 +69,24 @@ function getValuatedAmount(item: EstateItem): number {
     return item.listedStockAvgPrice * item.listedStockShares;
   }
   return 0;
+}
+
+/**
+ * corporate_stock 자산은 사업무관자산 차감 후 가액 반환 (PR-C F-8).
+ * 시행령 §15⑤2호 + §16⑤2호 공통. 미입력 시 raw value.
+ */
+function getCorporateAdjustedAmount(item: EstateItem): number {
+  const raw = getValuatedAmount(item);
+  const isCorporateStock =
+    item.farmingCategory === "corporate_stock" ||
+    item.familyBusinessCategory === "corporate_stock";
+  if (!isCorporateStock) return raw;
+  if (!item.corporateTotalAssets) return raw;
+  return calcCorporateStockAdjustedValue(
+    raw,
+    item.corporateTotalAssets,
+    item.corporateNonBusinessAssets,
+  ).adjustedValue;
 }
 
 function formatKrw(n: number): string {
@@ -216,11 +235,16 @@ export function suggestFamilyBusinessValue(
       isApplicable: false,
     };
   }
-  const value = eligible.reduce((sum, i) => sum + getValuatedAmount(i), 0);
+  const value = eligible.reduce((sum, i) => sum + getCorporateAdjustedAmount(i), 0);
   return {
     value,
-    reason: "isFamilyBusinessAsset=true 자산 합산",
-    breakdown: eligible.map((i) => `${i.name}: ${formatKrw(getValuatedAmount(i))}원`).concat([
+    reason: "isFamilyBusinessAsset=true 자산 합산 (corporate_stock는 사업무관자산 차감)",
+    breakdown: eligible.map((i) => {
+      const adj = getCorporateAdjustedAmount(i);
+      const raw = getValuatedAmount(i);
+      const note = adj !== raw ? ` (사업무관자산 차감 / 평가 ${formatKrw(raw)}원)` : "";
+      return `${i.name}: ${formatKrw(adj)}원${note}`;
+    }).concat([
       `가업재산 합계: ${formatKrw(value)}원`,
     ]),
     isApplicable: true,
@@ -326,7 +350,7 @@ export function suggestFarmingAssetValue(
   let totalMortgage = 0;
   const breakdown: string[] = [];
   for (const item of eligible) {
-    const fullValue = getValuatedAmount(item);
+    const fullValue = getCorporateAdjustedAmount(item);
     let itemValue = fullValue;
     let itemMortgage = item.mortgageAmount ?? 0;
 
