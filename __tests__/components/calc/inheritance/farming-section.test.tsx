@@ -10,7 +10,7 @@
  */
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 
 import { FarmingCategorySection } from "@/components/calc/inheritance/FarmingCategorySection";
 import { FarmingEligibilitySection } from "@/components/calc/inheritance/FarmingEligibilitySection";
@@ -102,6 +102,67 @@ describe("[FE-UI] FarmingEligibilitySection — 자격 입력 (F-5)", () => {
     // 하단 폼(피상속인 요건 헤더)은 미렌더
     expect(screen.queryByText(/피상속인 요건/)).toBeNull();
     expect(screen.queryByText(/상속인 요건/)).toBeNull();
+  });
+
+  it("FE-UI-3: isEmptyFarming=true (빈 폼) 시 토글 OFF → Dialog 없이 즉시 onChange(undefined)", () => {
+    const calls: Array<unknown> = [];
+    const EMPTY = {
+      type: "personal" as const,
+      decedentEightYearFarming: false,
+      decedentResidenceMet: false,
+      heirIsAdult: false,
+      heirTwoYearFarming: false,
+      heirResidenceMet: false,
+    };
+    const { container } = render(
+      <FarmingEligibilitySection
+        farming={EMPTY}
+        estateItems={[]}
+        onChange={(v) => calls.push(v)}
+      />,
+    );
+    // 토글 자체의 input[type="checkbox"] (Switch 내부 native)
+    const toggleInput = container.querySelector(
+      'input[type="checkbox"]',
+    ) as HTMLInputElement | null;
+    expect(toggleInput).not.toBeNull();
+    // 토글 OFF (현재 ON 상태에서 OFF로)
+    act(() => {
+      fireEvent.click(toggleInput!);
+    });
+    // Dialog 미렌더 — confirm 단계 건너뜀
+    expect(screen.queryByText(/입력한 자격 요건 데이터가 모두 삭제/)).toBeNull();
+    // onChange(undefined) 호출
+    expect(calls).toContain(undefined);
+  });
+
+  it("FE-UI-3b: 데이터 입력된 폼 토글 OFF → Dialog 노출 (즉시 폐기 안 함)", () => {
+    const calls: Array<unknown> = [];
+    const FILLED = {
+      type: "personal" as const,
+      decedentEightYearFarming: true, // 데이터 있음
+      decedentResidenceMet: false,
+      heirIsAdult: false,
+      heirTwoYearFarming: false,
+      heirResidenceMet: false,
+    };
+    const { container } = render(
+      <FarmingEligibilitySection
+        farming={FILLED}
+        estateItems={[]}
+        onChange={(v) => calls.push(v)}
+      />,
+    );
+    const toggleInput = container.querySelector(
+      'input[type="checkbox"]',
+    ) as HTMLInputElement;
+    act(() => {
+      fireEvent.click(toggleInput);
+    });
+    // Dialog 노출 — 데이터 폐기 확인 필요
+    expect(screen.queryByText(/입력한 자격 요건 데이터가 모두 삭제/)).not.toBeNull();
+    // onChange(undefined) 미호출 (사용자 확인 대기)
+    expect(calls).not.toContain(undefined);
   });
 
   it("FE-UI-2: farming 충족 + 65세 미만 사망 → 미리보기 '모든 요건 충족' 노출", () => {
