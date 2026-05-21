@@ -13,17 +13,16 @@
  */
 
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 
 type FarmingCategory = NonNullable<EstateItem["farmingCategory"]>;
-type Option = FarmingCategory | "none";
 
 const FARMING_CATEGORY_OPTIONS: Array<{
-  value: Option;
+  value: FarmingCategory;
   label: string;
   description: string;
 }> = [
-  { value: "none", label: "비영농 자산", description: "기본값" },
   { value: "farmland", label: "농지", description: "농지법 §2①가 농지" },
   { value: "pasture", label: "초지", description: "초지법 §5 초지조성허가 초지" },
   { value: "forest_land", label: "산림지", description: "보전산지 + 산림경영계획 인가 + 5년 이상 조림" },
@@ -33,6 +32,14 @@ const FARMING_CATEGORY_OPTIONS: Array<{
   { value: "salt_field", label: "염전", description: "소금산업진흥법 §2③" },
   { value: "corporate_stock", label: "법인 영농 주식", description: "§16⑤2호 — §15⑤2호 사업무관자산 차감 후 가액 입력 권장" },
 ];
+
+/** 토글 OFF 시 farmingCategory를 undefined로 reset. 자산 유형별 default 카테고리 도출. */
+function getDefaultFarmingCategory(
+  category: EstateItem["category"],
+): FarmingCategory {
+  if (category === "listed_stock" || category === "unlisted_stock") return "corporate_stock";
+  return "farmland";
+}
 
 export interface FarmingCategorySectionProps {
   item: EstateItem;
@@ -52,23 +59,23 @@ export function FarmingCategorySection({
     return null;
   }
 
+  const isActive = item.farmingCategory !== undefined;
+
   // 카테고리별 호환 가드
   const isStock =
     item.category === "listed_stock" || item.category === "unlisted_stock";
-  const stockOnly: Option[] = ["farmland", "pasture", "forest_land",
+  const stockOnly: FarmingCategory[] = ["farmland", "pasture", "forest_land",
     "fishing_vessel", "fishing_right", "agricultural_building", "salt_field"];
 
   const options = FARMING_CATEGORY_OPTIONS.map((opt) => {
     let disabled = false;
     let hint: string = opt.description;
     if (isStock) {
-      // listed/unlisted_stock: corporate_stock과 none만 활성
       if (stockOnly.includes(opt.value)) {
         disabled = true;
         hint = "법인 주식은 corporate_stock 분류만 가능";
       }
     } else {
-      // real_estate_* / other: corporate_stock 제외
       if (opt.value === "corporate_stock") {
         disabled = true;
         hint = "법인 주식 자산만 선택 가능";
@@ -77,32 +84,43 @@ export function FarmingCategorySection({
     return { ...opt, disabled, hint, description: opt.description };
   });
 
-  const current: Option = item.farmingCategory ?? "none";
-
-  const handleChange = (v: Option) => {
-    onUpdate({
-      ...item,
-      farmingCategory: v === "none" ? undefined : v,
-    });
-  };
-
   return (
-    <div className="rounded-md border border-emerald-200 bg-emerald-50/40 dark:bg-emerald-950/20 dark:border-emerald-800 p-3 space-y-2">
-      <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-200">
-        영농상속 자산 분류 (§18의3 + 시행령 §16⑤)
-      </p>
-      <RadioCardGroup<Option>
-        name={`farming-${item.id}`}
-        layout="stack"
+    <div className="space-y-2">
+      <ToggleCard
         tone="emerald"
-        value={current}
-        options={options}
-        onChange={handleChange}
+        size="sm"
+        title="영농상속 재산 (§18의3 + 시행령 §16⑤)"
+        description={
+          isActive
+            ? "활성화됨 — 영농 자산 분류를 선택하세요."
+            : "농지·초지·산림지·어선·법인 영농주식 등 영농상속재산인 경우 체크"
+        }
+        checked={isActive}
+        onCheckedChange={(v) => {
+          if (v) {
+            onUpdate({ ...item, farmingCategory: getDefaultFarmingCategory(item.category) });
+          } else {
+            onUpdate({ ...item, farmingCategory: undefined });
+          }
+        }}
       />
-      {item.farmingCategory && (
-        <p className="text-[10px] text-emerald-700 dark:text-emerald-300 bg-emerald-100/60 dark:bg-emerald-900/30 rounded p-2">
-          ⓘ {FARMING_CATEGORY_OPTIONS.find((o) => o.value === item.farmingCategory)?.description}
-        </p>
+      {isActive && (
+        <div className="rounded-md border border-emerald-200 bg-emerald-50/40 dark:bg-emerald-950/20 dark:border-emerald-800 p-3 space-y-2">
+          <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-200">
+            영농 자산 분류
+          </p>
+          <RadioCardGroup<FarmingCategory>
+            name={`farming-${item.id}`}
+            layout="stack"
+            tone="emerald"
+            value={item.farmingCategory as FarmingCategory}
+            options={options}
+            onChange={(v) => onUpdate({ ...item, farmingCategory: v })}
+          />
+          <p className="text-[10px] text-emerald-700 dark:text-emerald-300 bg-emerald-100/60 dark:bg-emerald-900/30 rounded p-2">
+            ⓘ {FARMING_CATEGORY_OPTIONS.find((o) => o.value === item.farmingCategory)?.description}
+          </p>
+        </div>
       )}
     </div>
   );

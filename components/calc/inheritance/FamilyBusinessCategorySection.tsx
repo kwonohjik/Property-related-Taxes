@@ -24,17 +24,15 @@
  */
 
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { FamilyBusinessCategory } from "@/lib/tax-engine/types/inheritance-family-business.types";
 
-type Option = FamilyBusinessCategory | "none";
-
 const FB_CATEGORY_OPTIONS: Array<{
-  value: Option;
+  value: FamilyBusinessCategory;
   label: string;
   description: string;
 }> = [
-  { value: "none", label: "비가업 자산", description: "기본값" },
   { value: "business_real_estate", label: "가업용 부동산", description: "사업장·공장·창고·부속토지 (§15⑤1호)" },
   { value: "business_equipment", label: "가업용 기계·설비", description: "기계장치·설비 (§15⑤1호)" },
   { value: "intangible_asset", label: "가업 무형자산", description: "영업권·특허·의장권 등 (§15⑤1호)" },
@@ -42,6 +40,13 @@ const FB_CATEGORY_OPTIONS: Array<{
   { value: "corporate_stock", label: "가업 법인 주식", description: "§15⑤2호 — businessType=corporate 한정. 사업무관자산 차감 후 가액 입력 권장" },
   { value: "other", label: "기타 가업용 자산", description: "임차보증금 등 §15⑤1호 기타" },
 ];
+
+function getDefaultFamilyBusinessCategory(
+  category: EstateItem["category"],
+): FamilyBusinessCategory {
+  if (category === "listed_stock" || category === "unlisted_stock") return "corporate_stock";
+  return "business_real_estate";
+}
 
 export interface FamilyBusinessCategorySectionProps {
   item: EstateItem;
@@ -61,9 +66,11 @@ export function FamilyBusinessCategorySection({
     return null;
   }
 
+  const isActive = item.familyBusinessCategory !== undefined;
+
   const isStock =
     item.category === "listed_stock" || item.category === "unlisted_stock";
-  const nonStockOptions: Option[] = [
+  const nonStockOptions: FamilyBusinessCategory[] = [
     "business_real_estate",
     "business_equipment",
     "intangible_asset",
@@ -88,32 +95,52 @@ export function FamilyBusinessCategorySection({
     return { ...opt, disabled, hint, description: opt.description };
   });
 
-  const current: Option = item.familyBusinessCategory ?? "none";
-
-  const handleChange = (v: Option) => {
-    onUpdate({
-      ...item,
-      familyBusinessCategory: v === "none" ? undefined : v,
-    });
-  };
-
   return (
-    <div className="rounded-md border border-amber-200 bg-amber-50/40 dark:bg-amber-950/20 dark:border-amber-800 p-3 space-y-2">
-      <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">
-        가업상속 자산 분류 (§18의2 + 상증령 §15⑤)
-      </p>
-      <RadioCardGroup<Option>
-        name={`family-business-${item.id}`}
-        layout="stack"
+    <div className="space-y-2">
+      <ToggleCard
         tone="amber"
-        value={current}
-        options={options}
-        onChange={handleChange}
+        size="sm"
+        title="가업상속 재산 (§18의2 + 상증령 §15⑤)"
+        description={
+          isActive
+            ? "활성화됨 — 가업 자산 분류를 선택하세요."
+            : "사업용 부동산·기계·재고·법인 주식 등 가업상속재산인 경우 체크"
+        }
+        checked={isActive}
+        onCheckedChange={(v) => {
+          if (v) {
+            onUpdate({
+              ...item,
+              familyBusinessCategory: getDefaultFamilyBusinessCategory(item.category),
+            });
+          } else {
+            // 토글 OFF 시 가업 관련 필드 일괄 reset (corporate_stock 차감 데이터 포함)
+            onUpdate({
+              ...item,
+              familyBusinessCategory: undefined,
+              corporateNonBusinessAssets: undefined,
+              corporateTotalAssets: undefined,
+            });
+          }
+        }}
       />
-      {item.familyBusinessCategory && (
-        <p className="text-[10px] text-amber-700 dark:text-amber-300 bg-amber-100/60 dark:bg-amber-900/30 rounded p-2">
-          ⓘ {FB_CATEGORY_OPTIONS.find((o) => o.value === item.familyBusinessCategory)?.description}
-        </p>
+      {isActive && (
+        <div className="rounded-md border border-amber-200 bg-amber-50/40 dark:bg-amber-950/20 dark:border-amber-800 p-3 space-y-2">
+          <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">
+            가업 자산 분류
+          </p>
+          <RadioCardGroup<FamilyBusinessCategory>
+            name={`family-business-${item.id}`}
+            layout="stack"
+            tone="amber"
+            value={item.familyBusinessCategory as FamilyBusinessCategory}
+            options={options}
+            onChange={(v) => onUpdate({ ...item, familyBusinessCategory: v })}
+          />
+          <p className="text-[10px] text-amber-700 dark:text-amber-300 bg-amber-100/60 dark:bg-amber-900/30 rounded p-2">
+            ⓘ {FB_CATEGORY_OPTIONS.find((o) => o.value === item.familyBusinessCategory)?.description}
+          </p>
+        </div>
       )}
     </div>
   );

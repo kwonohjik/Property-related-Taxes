@@ -39,22 +39,38 @@ function makeItem(over: Partial<EstateItem> = {}): EstateItem {
 // ============================================================
 
 describe("[FC-UI] FarmingCategorySection — 영농 자산 분류 (F-4)", () => {
-  it("FC-UI-1: 비영농 default — none 라디오가 checked", () => {
+  it("FC-UI-1: 토글 OFF default — 라디오 미렌더, 토글만 노출", () => {
     render(
       <FarmingCategorySection item={makeItem()} onUpdate={() => {}} />,
     );
-    const radios = screen.getAllByRole("radio");
-    // 9 옵션 (none + 8 영농 카테고리)
-    expect(radios.length).toBe(9);
-    const noneRadio = radios.find((r) => (r as HTMLInputElement).value === "none");
-    expect(noneRadio).toBeDefined();
-    expect((noneRadio as HTMLInputElement).checked).toBe(true);
+    // 토글 OFF 시 RadioCardGroup 미렌더 (라디오 0개)
+    expect(screen.queryAllByRole("radio").length).toBe(0);
+    // 토글 라벨 노출
+    expect(screen.queryByText(/영농상속 재산/)).not.toBeNull();
   });
 
-  it("FC-UI-2: listed_stock 카테고리 → corporate_stock만 활성, 나머지 disabled", () => {
+  it("FC-UI-1b: 토글 ON (farmingCategory='farmland') → 8 라디오 노출, farmland checked", () => {
     render(
       <FarmingCategorySection
-        item={makeItem({ category: "listed_stock" })}
+        item={makeItem({ farmingCategory: "farmland" })}
+        onUpdate={() => {}}
+      />,
+    );
+    const radios = screen.getAllByRole("radio") as HTMLInputElement[];
+    // 8 옵션 (영농 카테고리만, none 폐지)
+    expect(radios.length).toBe(8);
+    const farmlandRadio = radios.find((r) => r.value === "farmland");
+    expect(farmlandRadio).toBeDefined();
+    expect(farmlandRadio!.checked).toBe(true);
+  });
+
+  it("FC-UI-2: listed_stock + 토글 ON → corporate_stock만 활성, 나머지 disabled", () => {
+    render(
+      <FarmingCategorySection
+        item={makeItem({
+          category: "listed_stock",
+          farmingCategory: "corporate_stock",
+        })}
         onUpdate={() => {}}
       />,
     );
@@ -63,12 +79,10 @@ describe("[FC-UI] FarmingCategorySection — 영농 자산 분류 (F-4)", () => 
     const farmland = radios.find((r) => r.value === "farmland");
     const pasture = radios.find((r) => r.value === "pasture");
     const corporateStock = radios.find((r) => r.value === "corporate_stock");
-    const none = radios.find((r) => r.value === "none");
 
     expect(farmland?.disabled).toBe(true);
     expect(pasture?.disabled).toBe(true);
     expect(corporateStock?.disabled).toBe(false);
-    expect(none?.disabled).toBe(false);
   });
 
   it("FC-UI-3: financial 카테고리 → 컴포넌트 미렌더", () => {
