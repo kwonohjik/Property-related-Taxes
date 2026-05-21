@@ -31,49 +31,60 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { evaluateFarmingEligibility } from "@/lib/tax-engine/deductions/inheritance-deductions";
 import { checkFarmingResidenceCompliance } from "@/lib/calc/farming-residence-check";
 import { ResidenceCheckPreviewCard } from "./ResidenceCheckPreviewCard";
+import { AddressSearch, type AddressValue } from "@/components/ui/address-search";
 import type { FarmingInheritanceInput } from "@/lib/tax-engine/types/inheritance-farming.types";
 import type { EstateItem, Heir } from "@/lib/tax-engine/types/inheritance-gift.types";
 
-function CoordinateInput({
+/** AddressSearch onChange → LatLng + Address 동시 영속화 */
+function ResidenceAddressField({
   label,
-  value,
+  address,
+  latLng,
   onChange,
 }: {
   label: string;
-  value: { lat: number; lng: number } | undefined;
-  onChange: (v: { lat: number; lng: number } | undefined) => void;
+  address: { road?: string; jibun?: string; building?: string; detail?: string } | undefined;
+  latLng: { lat: number; lng: number } | undefined;
+  onChange: (patch: {
+    address: { road?: string; jibun?: string; building?: string; detail?: string } | undefined;
+    latLng: { lat: number; lng: number } | undefined;
+  }) => void;
 }) {
-  const lat = value?.lat;
-  const lng = value?.lng;
-  const setLat = (s: string) => {
-    const n = parseFloat(s);
-    onChange(Number.isFinite(n) && Number.isFinite(lng ?? NaN) ? { lat: n, lng: lng! } : Number.isFinite(n) ? { lat: n, lng: 0 } : undefined);
-  };
-  const setLng = (s: string) => {
-    const n = parseFloat(s);
-    onChange(Number.isFinite(n) && Number.isFinite(lat ?? NaN) ? { lat: lat!, lng: n } : Number.isFinite(n) ? { lat: 0, lng: n } : undefined);
+  // AddressSearch 호환 string 형식으로 변환
+  const value: AddressValue = {
+    road: address?.road ?? "",
+    jibun: address?.jibun ?? "",
+    building: address?.building ?? "",
+    detail: address?.detail ?? "",
+    lng: latLng ? String(latLng.lng) : "",
+    lat: latLng ? String(latLng.lat) : "",
   };
   return (
     <div className="space-y-1">
       <label className="block text-[11px] font-medium text-emerald-800 dark:text-emerald-200">
-        {label} (WGS84)
+        {label} (Vworld 주소 검색)
       </label>
-      <div className="grid grid-cols-2 gap-2">
-        <input
-          type="text"
-          value={lat === undefined ? "" : String(lat)}
-          onChange={(e) => setLat(e.target.value)}
-          placeholder="위도 (예: 37.5665)"
-          className="w-full rounded-md border border-input bg-background px-2 py-1 text-xs"
-        />
-        <input
-          type="text"
-          value={lng === undefined ? "" : String(lng)}
-          onChange={(e) => setLng(e.target.value)}
-          placeholder="경도 (예: 126.9780)"
-          className="w-full rounded-md border border-input bg-background px-2 py-1 text-xs"
-        />
-      </div>
+      <AddressSearch
+        value={value}
+        onChange={(v) => {
+          const hasAddress = v.road || v.jibun || v.building || v.detail;
+          const nextAddress = hasAddress
+            ? {
+                road: v.road || undefined,
+                jibun: v.jibun || undefined,
+                building: v.building || undefined,
+                detail: v.detail || undefined,
+              }
+            : undefined;
+          const latNum = v.lat ? parseFloat(v.lat) : NaN;
+          const lngNum = v.lng ? parseFloat(v.lng) : NaN;
+          const nextLatLng =
+            Number.isFinite(latNum) && Number.isFinite(lngNum)
+              ? { lat: latNum, lng: lngNum }
+              : undefined;
+          onChange({ address: nextAddress, latLng: nextLatLng });
+        }}
+      />
     </div>
   );
 }
@@ -102,7 +113,11 @@ function isEmptyFarming(f: FarmingInheritanceInput): boolean {
     f.hasDisqualifyingIncome === undefined &&
     f.hasTaxFraudConviction === undefined &&
     f.isSecondaryAfterFarmingInheritance === undefined &&
-    f.qualifiedHeirIds === undefined
+    f.qualifiedHeirIds === undefined &&
+    f.decedentResidenceLatLng === undefined &&
+    f.heirResidenceLatLng === undefined &&
+    f.decedentResidenceAddress === undefined &&
+    f.heirResidenceAddress === undefined
   );
 }
 
@@ -421,17 +436,30 @@ export function FarmingEligibilitySection({
                 📍 거주지 좌표 자동 검증 (선택, §16②1호나)
               </p>
               <p className="text-[10px] text-emerald-700 dark:text-emerald-300">
-                WGS84 위도·경도 입력 시 자산 소재지와 직선거리 자동 비교 (안내용 — 사용자 명시 토글 우선)
+                Vworld 주소 검색 시 좌표 자동 저장 → 자산 소재지와 Haversine 30km 자동 비교
+                (안내용 — 사용자 명시 토글 우선)
               </p>
-              <CoordinateInput
+              <ResidenceAddressField
                 label="피상속인 거주지"
-                value={farming.decedentResidenceLatLng}
-                onChange={(v) => update({ decedentResidenceLatLng: v })}
+                address={farming.decedentResidenceAddress}
+                latLng={farming.decedentResidenceLatLng}
+                onChange={({ address, latLng }) =>
+                  update({
+                    decedentResidenceAddress: address,
+                    decedentResidenceLatLng: latLng,
+                  })
+                }
               />
-              <CoordinateInput
+              <ResidenceAddressField
                 label="상속인 거주지"
-                value={farming.heirResidenceLatLng}
-                onChange={(v) => update({ heirResidenceLatLng: v })}
+                address={farming.heirResidenceAddress}
+                latLng={farming.heirResidenceLatLng}
+                onChange={({ address, latLng }) =>
+                  update({
+                    heirResidenceAddress: address,
+                    heirResidenceLatLng: latLng,
+                  })
+                }
               />
               {residenceCheck && (
                 <ResidenceCheckPreviewCard result={residenceCheck} />

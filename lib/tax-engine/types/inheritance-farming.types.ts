@@ -65,6 +65,10 @@ export interface FarmingInheritanceInput {
   decedentResidenceLatLng?: { lat: number; lng: number };
   /** 상속인 주소 좌표 — 자동 30km 판정용. 미입력 시 사용자 boolean(heirResidenceMet) 그대로 사용 */
   heirResidenceLatLng?: { lat: number; lng: number };
+  /** 피상속인 주소 (Vworld AddressSearch 영속화, A 작업 2026-05-22) — sessionStorage 복원 */
+  decedentResidenceAddress?: { road?: string; jibun?: string; building?: string; detail?: string };
+  /** 상속인 주소 (동일) */
+  heirResidenceAddress?: { road?: string; jibun?: string; building?: string; detail?: string };
 
   // ─ §16⑤ 본문 — 자격자 분배분만 영농상속재산가액 (F-11, 2026-05-21) ─
   /**

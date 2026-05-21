@@ -354,6 +354,23 @@ export const farmingInheritanceInputSchema = z.object({
   heirResidenceLatLng: z
     .object({ lat: z.number(), lng: z.number() })
     .optional(),
+  // 주소 영속화 (A 작업, 2026-05-22)
+  decedentResidenceAddress: z
+    .object({
+      road: z.string().optional(),
+      jibun: z.string().optional(),
+      building: z.string().optional(),
+      detail: z.string().optional(),
+    })
+    .optional(),
+  heirResidenceAddress: z
+    .object({
+      road: z.string().optional(),
+      jibun: z.string().optional(),
+      building: z.string().optional(),
+      detail: z.string().optional(),
+    })
+    .optional(),
 });
 
 /**

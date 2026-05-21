@@ -27,7 +27,7 @@ function makeResult(over: Partial<FarmingResidenceCheckResult> = {}): FarmingRes
 }
 
 describe("[E2] ResidenceCheckPreviewCard — 옵션 A 모순 안내", () => {
-  it("E2-1: personal 모드 → 거주지 좌표 입력 영역 노출", () => {
+  it("E2-1: personal 모드 → 거주지 좌표 입력 영역 노출 + AddressSearch", () => {
     render(
       <FarmingEligibilitySection
         farming={{
@@ -43,6 +43,11 @@ describe("[E2] ResidenceCheckPreviewCard — 옵션 A 모순 안내", () => {
       />,
     );
     expect(screen.queryByText(/거주지 좌표 자동 검증/)).not.toBeNull();
+    // A 작업 — Vworld 주소 검색 라벨 노출 (피상속인·상속인 2건 라벨 + AddressSearch 내부)
+    expect(screen.queryAllByText(/Vworld 주소 검색/).length).toBeGreaterThanOrEqual(2);
+    // "피상속인 거주지" / "상속인 거주지" 라벨 노출 (queryAllByText — 자격 미충족 미리보기와 multi-match 가능)
+    expect(screen.queryAllByText(/피상속인 거주지/).length).toBeGreaterThan(0);
+    expect(screen.queryAllByText(/상속인 거주지/).length).toBeGreaterThan(0);
   });
 
   it("E2-2: corporate 모드 → 거주지 좌표 입력 영역 미렌더", () => {
