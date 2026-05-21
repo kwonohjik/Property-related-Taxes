@@ -133,6 +133,12 @@ export interface EstateItem {
   corporateNonBusinessAssets?: CorporateNonBusinessAssets;
   /** 법인 총자산 (사업무관자산 비율 분모). 미입력 시 차감 미적용 (legacy). */
   corporateTotalAssets?: number;
+
+  // ===== 거주지 자동 검증 (PR-E F-10, §16②1호나) =====
+  /** 자산 소재지 좌표 (Vworld 주소 검색 시 자동 저장). 농지·초지·산림지·농업용 건축물·염전 용. */
+  estateLatLng?: { lat: number; lng: number };
+  /** 어선·어업권 자산 전용 — 선적지·어장 연안 좌표 (§16②1호나 후단). */
+  fishingAnchorLatLng?: { lat: number; lng: number };
 }
 
 /**

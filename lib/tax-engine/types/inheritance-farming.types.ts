@@ -60,6 +60,12 @@ export interface FarmingInheritanceInput {
    */
   isSecondaryAfterFarmingInheritance?: boolean;
 
+  // ─ 거주지 좌표 자동 검증 (F-10, §16②1호나, 2026-05-21) ─
+  /** 피상속인 주소 좌표 — 자동 30km 판정용. 미입력 시 사용자 boolean(decedentResidenceMet) 그대로 사용 */
+  decedentResidenceLatLng?: { lat: number; lng: number };
+  /** 상속인 주소 좌표 — 자동 30km 판정용. 미입력 시 사용자 boolean(heirResidenceMet) 그대로 사용 */
+  heirResidenceLatLng?: { lat: number; lng: number };
+
   // ─ §16⑤ 본문 — 자격자 분배분만 영농상속재산가액 (F-11, 2026-05-21) ─
   /**
    * 자격 충족 상속인 ID 목록 (heirAllocations 연계).

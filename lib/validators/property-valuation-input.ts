@@ -67,6 +67,11 @@ const baseItemSchema = z.object({
       "other",
     ])
     .optional(),
+  // 거주지 자동 검증 좌표 (PR-E F-10, §16②1호나)
+  estateLatLng: z.object({ lat: z.number(), lng: z.number() }).optional(),
+  fishingAnchorLatLng: z
+    .object({ lat: z.number(), lng: z.number() })
+    .optional(),
   // 법인 사업무관자산 (PR-C F-8, 시행령 §15⑤2호 + §16⑤2호)
   corporateNonBusinessAssets: z
     .object({
@@ -303,6 +308,13 @@ export const farmingInheritanceInputSchema = z.object({
   isSecondaryAfterFarmingInheritance: z.boolean().optional(),
   // §16⑤ 본문 자격자 분배분 (F-11, 2026-05-21)
   qualifiedHeirIds: z.array(z.string()).optional(),
+  // 거주지 좌표 자동 검증 (F-10, §16②1호나, 2026-05-21)
+  decedentResidenceLatLng: z
+    .object({ lat: z.number(), lng: z.number() })
+    .optional(),
+  heirResidenceLatLng: z
+    .object({ lat: z.number(), lng: z.number() })
+    .optional(),
 });
 
 /**
