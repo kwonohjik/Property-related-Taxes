@@ -9,6 +9,7 @@ import type {
   PresumedInheritanceItem,
   DebtItem,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
+import type { FarmingInheritanceInput } from "@/lib/tax-engine/types/inheritance-farming.types";
 import type { ExemptionCheckedItem } from "@/lib/tax-engine/exemption-evaluator";
 
 export interface FormState {
@@ -47,6 +48,9 @@ export interface FormState {
   cohabitDirectAmount: string;
   legateeAmountNonHeir: string;
   priorGiftDeductionTotal: string;
+  // 영농상속공제 정밀화 (2026-05-21, §18의3 + 시행령 §16)
+  // 3-state: undefined (legacy 모드) / 객체 (활성화) — feedback_three_state_optional_mode_toggle
+  farming?: FarmingInheritanceInput;
   // Step 5
   isGenerationSkip: boolean;
   isMinorHeir: boolean;
@@ -83,6 +87,7 @@ export const INITIAL_FORM: FormState = {
   cohabitDirectAmount: "",
   legateeAmountNonHeir: "",
   priorGiftDeductionTotal: "",
+  farming: undefined,
   isGenerationSkip: false,
   isMinorHeir: false,
   generationSkipAssetAmount: "",

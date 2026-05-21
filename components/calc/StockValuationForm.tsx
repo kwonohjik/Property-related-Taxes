@@ -18,6 +18,7 @@ import {
 } from "@/lib/tax-engine/property-valuation-stock";
 import type { EstateItem, UnlistedStockData, Heir } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { KiwoomValuationAutoFetchButton } from "./KiwoomValuationAutoFetchButton";
+import { FarmingCategorySection } from "@/components/calc/inheritance/FarmingCategorySection";
 import { FinancialDeductionChip } from "@/components/calc/inheritance/FinancialDeductionChip";
 import { HeirAllocationToggleSection } from "@/components/calc/inheritance/HeirAllocationToggleSection";
 import { UnlistedStockSpecialReasonSection } from "@/components/calc/inheritance/UnlistedStockSpecialReasonSection";
@@ -199,6 +200,11 @@ function ListedStockEditor({
             <span className="text-indigo-700 dark:text-indigo-300">{formatKRW(totalValue)}</span>
           </div>
         </div>
+      )}
+
+      {/* 영농상속 자산 분류 — 상장주식 (corporate_stock만 가능) */}
+      {mode === "inheritance" && (
+        <FarmingCategorySection item={item} onUpdate={onUpdate} />
       )}
 
       {/* §22 금융재산공제 — 상장주식 (§19① 주식 명시) */}
@@ -440,6 +446,11 @@ function UnlistedStockEditor({
           isDeficit={data.weightedNetIncome <= 0}
           isMinValueApplied={preview.perShareFinalValue === preview.perShareMinValue}
         />
+      )}
+
+      {/* 영농상속 자산 분류 — 비상장주식 (corporate_stock만 가능) */}
+      {mode === "inheritance" && (
+        <FarmingCategorySection item={item} onUpdate={onUpdate} />
       )}
 
       {/* §22 금융재산공제 — 비상장주식 (§22② 최대주주 보유분은 사용자 override) */}

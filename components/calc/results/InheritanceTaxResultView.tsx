@@ -11,6 +11,7 @@ import type {
   InheritanceTaxResult,
   Heir,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
+import type { FarmingDeductionDetail } from "@/lib/tax-engine/types/inheritance-farming.types";
 import {
   resolveFinancialDebt,
   resolveFinancialEligibility,
@@ -85,6 +86,59 @@ function FinancialDeductionCountRow({
         {formatKRW(assetTotal)}) − 채무 {eligibleDebts.length}건 (
         {formatKRW(debtTotal)})
       </p>
+    </div>
+  );
+}
+
+function FarmingDeductionDetailRow({
+  detail,
+}: {
+  detail?: FarmingDeductionDetail;
+}) {
+  if (!detail) return null;
+
+  // RD-5: legacy (evaluated=false)
+  if (!detail.evaluated) {
+    return (
+      <div className="mx-4 my-2 rounded-md border border-violet-200 bg-violet-50 dark:bg-violet-950/20 dark:border-violet-800 p-2">
+        <p className="text-[11px] text-violet-700 dark:text-violet-300">
+          ⓘ 요건 미평가 (legacy 모드). Step4에서 영농상속공제 요건 입력을 활성화하면 자격을 자동 평가합니다.
+        </p>
+      </div>
+    );
+  }
+
+  // RD-3: 미충족 + 사용자 입력 존재
+  if (!detail.eligible && detail.appliedAssetValue > 0) {
+    return (
+      <div className="mx-4 my-2 rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 p-2 space-y-1">
+        <p className="text-[11px] font-semibold text-amber-800 dark:text-amber-200">
+          ⚠️ 입력 자산 {formatKRW(detail.appliedAssetValue)} — 자격 미충족으로 공제 0원
+        </p>
+        <ul className="space-y-0.5 text-[10px] text-amber-700 dark:text-amber-300 list-disc pl-4">
+          {detail.ineligibleReasons.map((r, i) => (
+            <li key={i}>{r}</li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
+
+  // RD-2·RD-4: cappedDeduction=0
+  if (detail.cappedDeduction === 0) {
+    return (
+      <div className="mx-4 my-2 text-[11px] text-gray-500 dark:text-gray-400">
+        ⓘ {detail.eligible ? "영농 자산 미입력" : "자격 미충족 + 자산 미입력"}
+      </div>
+    );
+  }
+
+  // RD-1·RD-1b: 정상 (cap 적용 여부 분기)
+  const capped = detail.appliedAssetValue > 3_000_000_000;
+  return (
+    <div className="mx-4 my-2 text-[11px] text-gray-600 dark:text-gray-400">
+      ⓘ 영농자산 {formatKRW(detail.appliedAssetValue)}
+      {capped && ` (30억 한도 적용 → ${formatKRW(detail.cappedDeduction)})`}
     </div>
   );
 }
@@ -352,8 +406,19 @@ export function InheritanceTaxResultView({
                 value={formatKRW(result.deductionDetail.cohabitationDeduction)}
               />
             )}
-            {result.deductionDetail.farmingDeduction > 0 && (
-              <Row label="영농상속 공제 (§23)" value={formatKRW(result.deductionDetail.farmingDeduction)} />
+            {(result.deductionDetail.farmingDeduction > 0 ||
+              result.deductionDetail.farmingDetail !== undefined) && (
+              <>
+                {result.deductionDetail.farmingDeduction > 0 && (
+                  <Row
+                    label="영농상속 공제 (§18의3)"
+                    value={formatKRW(result.deductionDetail.farmingDeduction)}
+                  />
+                )}
+                <FarmingDeductionDetailRow
+                  detail={result.deductionDetail.farmingDetail}
+                />
+              </>
             )}
             {result.deductionDetail.familyBusinessDeduction > 0 && (
               <Row

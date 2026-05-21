@@ -16,11 +16,14 @@ import { AutoSuggestBadge } from "./AutoSuggestBadge";
 import {
   suggestCohabitHouseCandidates,
   suggestFamilyBusinessValue,
+  suggestFarmingAssetValue,
   suggestLegateeAmountNonHeir,
   suggestNetFinancialAssets,
   suggestPriorGiftDeductionTotal,
   suggestSpouseActualAmount,
 } from "@/lib/calc/inheritance-deduction-suggest";
+import { evaluateFarmingEligibility } from "@/lib/tax-engine/deductions/inheritance-deductions";
+import { FarmingEligibilitySection } from "./FarmingEligibilitySection";
 import type { FormState, FormSet } from "./shared";
 
 // ============================================================
@@ -58,6 +61,15 @@ export function Step4({ form, set }: { form: FormState; set: FormSet }) {
   const cohabitCandidates = useMemo(
     () => suggestCohabitHouseCandidates(allEstateItems, form.heirs),
     [allEstateItems, form.heirs],
+  );
+  const suggestFarming = useMemo(
+    () => suggestFarmingAssetValue(allEstateItems),
+    [allEstateItems],
+  );
+  const farmingEligible = useMemo(
+    () =>
+      form.farming ? evaluateFarmingEligibility(form.farming).eligible : true,
+    [form.farming],
   );
 
   return (
@@ -168,13 +180,41 @@ export function Step4({ form, set }: { form: FormState; set: FormSet }) {
           placeholder="없으면 빈칸"
         />
 
-        <CurrencyInput
-          label="영농상속재산가액 (§23)"
-          value={form.farmingAssetValue}
-          onChange={(v) => set({ farmingAssetValue: v })}
-          hint="농지·목장·어선 등 — 최대 30억"
-          placeholder="없으면 빈칸"
-        />
+        {/* ── 영농상속공제 §18의3 ── (F-5 통합) */}
+        <div className="space-y-3 border-t border-violet-100 dark:border-violet-900 pt-3">
+          <h4 className="text-sm font-semibold text-violet-800 dark:text-violet-200">
+            영농상속공제 (§18의3)
+          </h4>
+
+          <FarmingEligibilitySection
+            farming={form.farming}
+            estateItems={allEstateItems}
+            onChange={(v) => set({ farming: v })}
+          />
+
+          {farmingEligible ? (
+            <AutoSuggestBadge
+              suggestion={suggestFarming}
+              currentValue={form.farmingAssetValue}
+              onApply={(v) => set({ farmingAssetValue: v })}
+              label="영농상속재산가액"
+            />
+          ) : suggestFarming.isApplicable ? (
+            <div className="rounded-md border border-amber-200 bg-amber-50/40 dark:bg-amber-950/20 dark:border-amber-800 p-2">
+              <p className="text-[11px] text-amber-700 dark:text-amber-300">
+                ⚠️ 자격 미충족 — 자동 채움이 비활성화됐습니다. 요건을 충족하거나 수동 입력하세요.
+              </p>
+            </div>
+          ) : null}
+
+          <CurrencyInput
+            label="영농상속재산가액 (§18의3)"
+            value={form.farmingAssetValue}
+            onChange={(v) => set({ farmingAssetValue: v })}
+            hint="농지·초지·산림지·어선·어업권·농업용 건축물·염전 등 — 최대 30억"
+            placeholder="없으면 빈칸"
+          />
+        </div>
 
         <div className="space-y-2">
           <AutoSuggestBadge
