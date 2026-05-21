@@ -307,6 +307,8 @@ interface Props {
   estateItems?: EstateItem[];
   /** 사전증여 행별 명세 — InheritanceFilingFormTable 표시용 (Phase 3) */
   priorGifts?: PriorGift[];
+  /** 상속개시일 (ISO date) — InheritanceFilingFormTable 13년 cutoff 분기용 */
+  deathDate?: string;
 }
 
 export function InheritanceTaxResultView({
@@ -319,6 +321,7 @@ export function InheritanceTaxResultView({
   debtItems,
   estateItems,
   priorGifts,
+  deathDate,
 }: Props) {
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [showValuation, setShowValuation] = useState(false);
@@ -423,11 +426,12 @@ export function InheritanceTaxResultView({
       )}
 
       {/* 사전증여재산 명세 (별지 제11호서식 부표 Phase 3 골격) */}
-      {priorGifts && priorGifts.length > 0 && result.priorGiftAggregated > 0 && (
+      {priorGifts && priorGifts.length > 0 && result.priorGiftAggregated > 0 && deathDate && (
         <InheritanceFilingFormTable
           priorGifts={priorGifts}
           heirs={heirs}
           priorGiftAggregated={result.priorGiftAggregated}
+          deathDate={deathDate}
         />
       )}
 
