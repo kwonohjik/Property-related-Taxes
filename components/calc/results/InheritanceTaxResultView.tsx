@@ -10,6 +10,7 @@ import type {
   EstateItem,
   InheritanceTaxResult,
   Heir,
+  PriorGift,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { FarmingDeductionDetail } from "@/lib/tax-engine/types/inheritance-farming.types";
 import type {
@@ -25,6 +26,7 @@ import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
 import { LoginPromptBanner } from "@/components/calc/shared/LoginPromptBanner";
 import { TaxCreditBreakdownCard } from "@/components/calc/TaxCreditBreakdownCard";
 import { HeirAllocationTable } from "@/components/calc/results/HeirAllocationTable";
+import { InheritanceFilingFormTable } from "@/components/calc/results/InheritanceFilingFormTable";
 import { DebtAllocationResultCard } from "@/components/calc/results/DebtAllocationResultCard";
 import type { DebtItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { calcInstallmentPayment } from "@/lib/tax-engine/credits/installment-payment";
@@ -303,6 +305,8 @@ interface Props {
   debtItems?: DebtItem[];
   /** 상속재산 입력 — §22 카운트 계산용 */
   estateItems?: EstateItem[];
+  /** 사전증여 행별 명세 — InheritanceFilingFormTable 표시용 (Phase 3) */
+  priorGifts?: PriorGift[];
 }
 
 export function InheritanceTaxResultView({
@@ -314,6 +318,7 @@ export function InheritanceTaxResultView({
   heirs,
   debtItems,
   estateItems,
+  priorGifts,
 }: Props) {
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [showValuation, setShowValuation] = useState(false);
@@ -414,6 +419,15 @@ export function InheritanceTaxResultView({
         <TaxCreditBreakdownCard
           credit={result.creditDetail}
           taxBeforeCredit={taxBeforeCredit}
+        />
+      )}
+
+      {/* 사전증여재산 명세 (별지 제11호서식 부표 Phase 3 골격) */}
+      {priorGifts && priorGifts.length > 0 && result.priorGiftAggregated > 0 && (
+        <InheritanceFilingFormTable
+          priorGifts={priorGifts}
+          heirs={heirs}
+          priorGiftAggregated={result.priorGiftAggregated}
         />
       )}
 
