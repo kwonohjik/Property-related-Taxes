@@ -77,5 +77,71 @@ export interface FarmingEligibilityResult {
 /** 영농상속공제 한도 — §18의3① 30억 */
 export const FARMING_MAX = 3_000_000_000;
 
+// ============================================================
+// F-7 사후관리 추징 (§18의3④ + §18의3⑥2호 + 시행령 §16⑥⑦⑧)
+// ============================================================
+
+/**
+ * 사후관리 위반 사유.
+ * - asset_disposed / farming_ceased: §18의3④ (5년 내 위반, §16⑥ 정당사유 적용 가능)
+ * - tax_fraud_conviction / accounting_fraud: §18의3⑥2호 (5년 무관, 정당사유 미적용)
+ */
+export type FarmingPostMgmtViolation =
+  | "asset_disposed"
+  | "farming_ceased"
+  | "tax_fraud_conviction"
+  | "accounting_fraud";
+
+/** §16⑥ 정당한 사유 7종 — violation ∈ {asset_disposed, farming_ceased}에만 적용 */
+export type FarmingPostMgmtJustifiedReason =
+  | "heir_death"               // 1. 상속인 사망
+  | "overseas_relocation"      // 2. 해외이주법 해외이주
+  | "expropriation"            // 3. 공익사업법 수용·협의매수
+  | "government_transfer"      // 4. 국가·지자체 양도·증여
+  | "land_exchange"            // 5. 영농상 농지 교환·분합·대토
+  | "corporate_stock_disposal" // 6. 법인주식 처분 (물납 §73 / §15⑧3호) + 최대주주 유지
+  | "other_similar";           // 7. 1~6호 유사 (재정경제부령)
+
+export interface FarmingPostMgmtInput {
+  /** 위반 사유 */
+  violation: FarmingPostMgmtViolation;
+  /** 사유 발생일 (ISO date YYYY-MM-DD) */
+  violationDate: string;
+  /** 상속세 신고기한 (= 상속개시일 + 6개월, §67) — 이자상당액 기산일 */
+  filingDeadline: string;
+  /** 사유 발생 시점의 결정세액 (이자상당액 기준액) */
+  determinedTax: number;
+  /**
+   * 국세기본법 시행령 §43의3② 이자율 (소수, 예: 0.029 = 연 2.9%).
+   * 시점별 개정 — 사용자 직접 입력 권장.
+   */
+  interestRate: number;
+  /**
+   * 정당한 사유 §16⑥ — violation ∈ {asset_disposed, farming_ceased}일 때만 적용.
+   * §18의3⑥2호 트랙(tax_fraud·accounting_fraud)에는 무시.
+   */
+  justifiedReason?: FarmingPostMgmtJustifiedReason;
+  /** [justifiedReason="corporate_stock_disposal"] 최대주주 유지 여부 */
+  maintainsMajorShareholder?: boolean;
+}
+
+export interface FarmingPostMgmtResult {
+  /** 추징 대상 여부 */
+  recaptureRequired: boolean;
+  /** 추징 면제 사유 (정당사유 인정 시) */
+  exemptedBy?: FarmingPostMgmtJustifiedReason;
+  /** 추징세액 = originalDeduction × 100% (§16⑦) */
+  recaptureAmount: number;
+  /** 이자상당액 (§16⑧) */
+  interestAmount: number;
+  /** 합계 */
+  totalRecapture: number;
+  /** 신고 기한 (사유 발생일 속하는 달 말일 + 6개월, §18의3⑦) */
+  reportDeadline: string;
+  /** 적용 일수 (filingDeadline+1 ~ violationDate) */
+  interestDays: number;
+  breakdown: CalculationStep[];
+}
+
 // `CalculationStep` re-export 의도가 아니므로 import만 유지 (다른 모듈이 본 파일을 통해 우회 import 방지)
 export type { CalculationStep };
