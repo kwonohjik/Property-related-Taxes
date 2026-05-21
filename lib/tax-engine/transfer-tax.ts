@@ -6,7 +6,6 @@
  *
  * P0-2 원칙: 세율 × 금액 곱셈은 반드시 applyRate() 사용.
  */
-
 import { TRANSFER, NBL } from "./legal-codes";
 import {
   applyRate,
@@ -67,13 +66,15 @@ import { calcCarryoverScenarios } from "./transfer-tax-carryover";
 import { buildBurdenedGiftBreakdown, assertBurdenedGiftEligible, detectBurdenedGiftMultiHouseWarning } from "./burdened-gift-apportionment";
 import { BURDENED_GIFT_TRANSFER } from "./legal-codes/burdened-gift";
 import type { TransferBurdenedGiftBreakdown } from "./types/transfer-burdened-gift.types";
+import { resolveAcquisitionOverride, type TransferTaxAcquisitionOptions } from "./transfer-tax-acquisition-override";
+export type { TransferTaxAcquisitionOptions } from "./transfer-tax-acquisition-override";
 export { parseRatesFromMap } from "./transfer-tax-helpers"; // 하위 호환 재수출
 export { calcTax } from "./transfer-tax-rate-calc";         // 하위 호환 재수출
-
 // 메인 함수: calculateTransferTax
 export function calculateTransferTax(
   rawInput: TransferTaxInput,
   rates: TaxRatesMap,
+  options?: TransferTaxAcquisitionOptions,
 ): TransferTaxResult {
   const steps: CalculationStep[] = [];
   const warnings: string[] = []; // F-2: 케이스 12 등 비차단 안내
@@ -113,7 +114,6 @@ export function calculateTransferTax(
       sub: true,
     });
   }
-
   // STEP 0.45: 상속 부동산 취득가액 의제 (소령 §176조의2④·§163⑨)
   const inheritedStep = runInheritedAcquisitionStep(rawInput, input, pre1990LandResult);
   let inheritedAcquisitionStep: InheritedAcquisitionStepResult | undefined;
@@ -122,10 +122,10 @@ export function calculateTransferTax(
     input = inheritedStep.updatedInput;
     steps.push(inheritedStep.step);
   }
-
-  // 이 지점 이후 로컬 input/workingInput은 동일 (pre-1990 + 상속 취득가액 적용 완료).
+  // STEP 0.46: 외부 취득가액 override 적용 (§97의2④ 의제 취득가액 등 — options 없으면 no-op)
+  input = resolveAcquisitionOverride(input, options);
+  // 이 지점 이후 로컬 input/workingInput은 동일 (pre-1990 + 상속 취득가액 + override 적용 완료).
   let workingInput = input;
-
   // STEP 0.475: 배우자등 이월과세 판정 및 비교과세 실행 (소득세법 §97조의2)
   // carryoverTaxation 없거나 acquisitionCause !== "carryover_gift" 이면 null 반환 → skip.
   // 재귀 호출 시 carryoverTaxation이 undefined이므로 자동으로 skip됨.
@@ -309,7 +309,7 @@ export function calculateTransferTax(
 
   // STEP 1.5: 다필지 분리 계산 (환지·합병 등)
   const mpBranchResult = handleMultiParcelBranch(
-    { rawInput, effectiveInput, input, parsedRates, multiHouseSurchargeResult, pre1990LandResult, carryoverDetail },
+    { rawInput, effectiveInput, input, parsedRates, multiHouseSurchargeResult, pre1990LandResult, carryoverDetail, options },
     steps,
   );
   if (mpBranchResult) return mpBranchResult;

@@ -61,6 +61,7 @@ import {
 } from "./transfer-tax-penalty";
 import type { Pre1990LandValuationResult } from "./pre-1990-land-valuation";
 import type { CarryoverTaxationDetail } from "./types/transfer-carryover.types";
+import type { TransferTaxAcquisitionOptions } from "./transfer-tax-acquisition-override";
 
 // ============================================================
 // H-6.5: calculateBuildingPenalty — 소득세법 §114조의2 가산세
@@ -617,20 +618,32 @@ export interface MultiParcelBranchContext {
   multiHouseSurchargeResult: MultiHouseSurchargeResult | undefined;
   pre1990LandResult: Pre1990LandValuationResult | undefined;
   carryoverDetail: CarryoverTaxationDetail | undefined;
+  /** 다필지 필지별 취득가액 override (options.acquisitionOverridesByAssetId). 없으면 기존 동작. */
+  options?: TransferTaxAcquisitionOptions;
 }
 
 export function handleMultiParcelBranch(
   ctx: MultiParcelBranchContext,
   steps: CalculationStep[],
 ): TransferTaxResult | null {
-  const { rawInput, effectiveInput, input, parsedRates, multiHouseSurchargeResult, carryoverDetail } = ctx;
+  const { rawInput, effectiveInput, input, parsedRates, multiHouseSurchargeResult, carryoverDetail, options } = ctx;
 
   if (!rawInput.parcels || rawInput.parcels.length === 0) return null;
+
+  // acquisitionOverridesByAssetId: 필지 ID별 취득가액 override 적용 (없는 필지는 기존값 유지)
+  const overrides = options?.acquisitionOverridesByAssetId;
+  const parcelsWithOverride = overrides
+    ? rawInput.parcels.map((p) =>
+        p.id !== undefined && Object.prototype.hasOwnProperty.call(overrides, p.id)
+          ? { ...p, acquisitionMethod: "actual" as const, acquisitionPrice: overrides[p.id] }
+          : p,
+      )
+    : rawInput.parcels;
 
   const mpResult = calculateMultiParcelTransfer({
     totalTransferPrice: effectiveInput.transferPrice,
     transferDate: effectiveInput.transferDate,
-    parcels: rawInput.parcels,
+    parcels: parcelsWithOverride,
   });
   for (let pi = 0; pi < mpResult.parcelResults.length; pi++) {
     const pr = mpResult.parcelResults[pi];
