@@ -31,7 +31,10 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { evaluateFarmingEligibility } from "@/lib/tax-engine/deductions/inheritance-deductions";
 import { checkFarmingResidenceCompliance } from "@/lib/calc/farming-residence-check";
 import { ResidenceCheckPreviewCard } from "./ResidenceCheckPreviewCard";
+import { HeirAssessmentCard } from "./HeirAssessmentCard";
 import { AddressSearch, type AddressValue } from "@/components/ui/address-search";
+import { deriveQualifiedHeirIds } from "@/lib/tax-engine/deductions/inheritance-deductions";
+import type { FarmingHeirAssessment } from "@/lib/tax-engine/types/inheritance-farming.types";
 import type { FarmingInheritanceInput } from "@/lib/tax-engine/types/inheritance-farming.types";
 import type { EstateItem, Heir } from "@/lib/tax-engine/types/inheritance-gift.types";
 
@@ -117,7 +120,8 @@ function isEmptyFarming(f: FarmingInheritanceInput): boolean {
     f.decedentResidenceLatLng === undefined &&
     f.heirResidenceLatLng === undefined &&
     f.decedentResidenceAddress === undefined &&
-    f.heirResidenceAddress === undefined
+    f.heirResidenceAddress === undefined &&
+    f.heirAssessments === undefined
   );
 }
 
@@ -385,8 +389,87 @@ export function FarmingEligibilitySection({
             )}
           </div>
 
-          {/* §16⑤ 본문 — 자격자 분배분 (F-11, 2026-05-21) */}
+          {/* 부록 A — 상속인별 분리 자격 평가 (heirAssessments, 2026-05-22) */}
           {heirs && heirs.length > 1 && (
+            <div className="space-y-2">
+              <ToggleCard
+                tone="violet"
+                size="sm"
+                title="상속인별 자격 분리 평가 (부록 A)"
+                description={
+                  farming.heirAssessments !== undefined
+                    ? "활성화 — 각 상속인 카드에서 18세·2년·거주·결격소득 별도 입력. 자격 충족자만 영농상속재산가액 자동 합산"
+                    : "체크 시 상속인별 18세·2년·거주·결격소득 분리 평가 (§16③ + §16⑭). 미체크 시 폼-수준 일괄 평가 (기본)"
+                }
+                checked={farming.heirAssessments !== undefined}
+                onCheckedChange={(v) => {
+                  if (v) {
+                    // ON — heirs로 default assessments 초기화
+                    const defaults: FarmingHeirAssessment[] = heirs.map((h) => ({
+                      heirId: h.id,
+                      heirIsAdult: farming.heirIsAdult,
+                      heirTwoYearFarming: farming.heirTwoYearFarming,
+                      heirResidenceMet: farming.heirResidenceMet,
+                      heirCorporateOfficer: farming.heirCorporateOfficer,
+                      isDesignatedSuccessor: farming.isDesignatedSuccessor,
+                      hasDisqualifyingIncome: farming.hasDisqualifyingIncome,
+                    }));
+                    update({ heirAssessments: defaults, qualifiedHeirIds: undefined });
+                  } else {
+                    update({ heirAssessments: undefined });
+                  }
+                }}
+              />
+
+              {farming.heirAssessments !== undefined && (
+                <div className="space-y-2">
+                  {heirs.map((h, idx) => {
+                    const assessment =
+                      farming.heirAssessments!.find((a) => a.heirId === h.id) ?? {
+                        heirId: h.id,
+                        heirIsAdult: false,
+                        heirTwoYearFarming: false,
+                        heirResidenceMet: false,
+                      };
+                    return (
+                      <HeirAssessmentCard
+                        key={h.id || idx}
+                        farming={farming}
+                        heir={h}
+                        assessment={assessment}
+                        onUpdate={(next) => {
+                          const list = farming.heirAssessments!.filter(
+                            (a) => a.heirId !== h.id,
+                          );
+                          update({ heirAssessments: [...list, next] });
+                        }}
+                      />
+                    );
+                  })}
+                  {/* 자동 도출된 qualifiedHeirIds 안내 */}
+                  {(() => {
+                    const auto = deriveQualifiedHeirIds(farming);
+                    if (auto === undefined) return null;
+                    return (
+                      <div className="rounded-md border border-violet-300 bg-violet-100/60 dark:bg-violet-900/30 dark:border-violet-700 p-2">
+                        <p className="text-[11px] font-semibold text-violet-900 dark:text-violet-100">
+                          🤖 자동 자격자 도출 — {auto.length}명 / {heirs.length}명
+                        </p>
+                        <p className="text-[10px] text-violet-800 dark:text-violet-200">
+                          {auto.length === 0
+                            ? "자격 충족 상속인 없음 — 영농상속재산가액 0"
+                            : `자격자: ${auto.map((id) => heirs.find((h) => h.id === id)?.name || id).join(", ")}`}
+                        </p>
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* §16⑤ 본문 — 자격자 분배분 (F-11, 2026-05-21, heirAssessments 미입력 시만) */}
+          {heirs && heirs.length > 1 && farming.heirAssessments === undefined && (
             <div className="space-y-1.5">
               <p className="text-xs font-semibold text-violet-800 dark:text-violet-200">
                 자격 충족 상속인 선택 (§16⑤ 본문)

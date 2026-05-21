@@ -22,7 +22,10 @@ import {
   suggestPriorGiftDeductionTotal,
   suggestSpouseActualAmount,
 } from "@/lib/calc/inheritance-deduction-suggest";
-import { evaluateFarmingEligibility } from "@/lib/tax-engine/deductions/inheritance-deductions";
+import {
+  deriveQualifiedHeirIds,
+  evaluateFarmingEligibility,
+} from "@/lib/tax-engine/deductions/inheritance-deductions";
 import { FarmingEligibilitySection } from "./FarmingEligibilitySection";
 import type { FormState, FormSet } from "./shared";
 
@@ -62,15 +65,26 @@ export function Step4({ form, set }: { form: FormState; set: FormSet }) {
     () => suggestCohabitHouseCandidates(allEstateItems, form.heirs),
     [allEstateItems, form.heirs],
   );
+  // 부록 A — heirAssessments 입력 시 자동 도출된 qualifiedHeirIds 활용
+  const farmingWithDerivedIds = useMemo(() => {
+    if (!form.farming || form.farming.heirAssessments === undefined) return form.farming;
+    const auto = deriveQualifiedHeirIds(form.farming);
+    return auto !== undefined ? { ...form.farming, qualifiedHeirIds: auto } : form.farming;
+  }, [form.farming]);
+
   const suggestFarming = useMemo(
-    () => suggestFarmingAssetValue(allEstateItems, form.farming),
-    [allEstateItems, form.farming],
+    () => suggestFarmingAssetValue(allEstateItems, farmingWithDerivedIds),
+    [allEstateItems, farmingWithDerivedIds],
   );
-  const farmingEligible = useMemo(
-    () =>
-      form.farming ? evaluateFarmingEligibility(form.farming).eligible : true,
-    [form.farming],
-  );
+  const farmingEligible = useMemo(() => {
+    if (!form.farming) return true;
+    // 부록 A — heirAssessments 입력 시 자동 도출된 자격자 1명 이상이면 eligible
+    if (form.farming.heirAssessments !== undefined) {
+      const auto = deriveQualifiedHeirIds(form.farming);
+      return auto !== undefined && auto.length > 0;
+    }
+    return evaluateFarmingEligibility(form.farming).eligible;
+  }, [form.farming]);
 
   return (
     <div className="space-y-6">
