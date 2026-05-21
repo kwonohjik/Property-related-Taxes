@@ -12,6 +12,10 @@ import type {
   Heir,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { FarmingDeductionDetail } from "@/lib/tax-engine/types/inheritance-farming.types";
+import type {
+  FamilyBusinessDeductionDetail,
+  FamilyBusinessIneligibleReason,
+} from "@/lib/tax-engine/types/inheritance-family-business.types";
 import {
   resolveFinancialDebt,
   resolveFinancialEligibility,
@@ -88,6 +92,96 @@ function FinancialDeductionCountRow({
       </p>
     </div>
   );
+}
+
+/**
+ * 가업상속공제 미충족 사유 한국어 라벨 매핑 (상증법 §18의2 + 상증령 §15).
+ * KoreanLaw MCP 검증 2026-05-21.
+ */
+const FamilyBusinessIneligibleReasonLabels: Record<FamilyBusinessIneligibleReason, string> = {
+  operating_years_below_10: "영위 10년 미만 (§18의2① 가업 정의 미충족)",
+  enterprise_size_exceeded: "기업 규모 초과 (자산 5천억 / 매출 5천억 미만 요건 위반)",
+  industry_not_eligible: "별표 업종 외 사업 (상증령 §15①1·②1)",
+  decedent_ceo_requirement_failed: "피상속인 대표이사 종사 요건 미충족 (상증령 §15③1호 나)",
+  decedent_majority_share_failed: "피상속인 지분 요건 미충족 — 40% (상장 20%) × 10년 (상증령 §15③1호 가)",
+  heir_not_adult: "상속인 18세 미만 (상증령 §15③2호 가)",
+  heir_engagement_short: "상속인 2년 가업 종사 요건 미충족 (상증령 §15③2호 나)",
+  heir_officer_not_appointed: "신고기한 내 임원 미취임 (상증령 §15③2호 다)",
+  heir_ceo_not_scheduled: "신고기한 후 2년 내 대표이사 미취임 예정 (상증령 §15③2호 라)",
+  medium_other_estate_exceeds_200pct: "중견기업 — 가업외 상속재산이 미공제 산출세액의 200% 초과 (§18의2②)",
+  tax_fraud_conviction: "조세포탈·회계부정 형 확정 (§18의2⑧1호)",
+};
+
+function FamilyBusinessDeductionDetailRow({
+  detail,
+}: {
+  detail?: FamilyBusinessDeductionDetail;
+}) {
+  if (!detail) return null;
+
+  // 직접 입력 모드
+  if (detail.usedDirectInput) {
+    return (
+      <div className="mx-4 my-2 rounded-md border border-violet-200 bg-violet-50 dark:bg-violet-950/20 dark:border-violet-800 p-2 space-y-1">
+        <p className="text-[11px] text-violet-700 dark:text-violet-300">
+          ⓘ 가업상속공제 직접 입력 모드 — 요건 판정 우회 (한도 600억). 사후관리 위반 시 추징 (별도 Phase F).
+        </p>
+      </div>
+    );
+  }
+
+  // 자격 미충족 — reasons 라벨 표시
+  if (!detail.eligible && detail.ineligibleReasons && detail.ineligibleReasons.length > 0) {
+    return (
+      <div className="mx-4 my-2 rounded-md border border-rose-300 bg-rose-50 dark:bg-rose-950/20 dark:border-rose-800 p-2 space-y-1">
+        <p className="text-[11px] font-semibold text-rose-800 dark:text-rose-200">
+          ⚠️ 가업상속공제 자격 미충족 — 공제 0원
+        </p>
+        <ul className="space-y-0.5 text-[10px] text-rose-700 dark:text-rose-300 list-disc pl-4">
+          {detail.ineligibleReasons.map((r, i) => (
+            <li key={i}>{FamilyBusinessIneligibleReasonLabels[r] ?? r}</li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
+
+  // 자격 충족 — 한도·가액 표시 + medium 가드 메타
+  if (detail.eligible && detail.deduction > 0) {
+    return (
+      <div className="mx-4 my-2 space-y-1">
+        <p className="text-[11px] text-gray-600 dark:text-gray-400">
+          ⓘ 영위 {detail.operatingYears}년 → 한도 {formatBillion(detail.appliedCap)}
+          {detail.autoDerivedValue !== undefined && detail.autoDerivedValue > 0 && (
+            <> · 자동합산 {formatKRW(detail.autoDerivedValue)}</>
+          )}
+          {detail.manualValue !== undefined && (
+            <> · 사용자 입력 {formatKRW(detail.manualValue)}</>
+          )}
+        </p>
+        {detail.mediumGuard && (
+          <div className="mt-1 rounded-md border border-sky-200 bg-sky-50/60 dark:bg-sky-950/20 dark:border-sky-800 p-2 text-[10px] text-sky-800 dark:text-sky-300">
+            <p className="font-semibold mb-1">§18의2② 200% 가드 (중견기업)</p>
+            <ul className="space-y-0.5 list-disc pl-4">
+              <li>미공제 산출세액: {formatKRW(detail.mediumGuard.taxIfNoFBD)}</li>
+              <li>200% 상한: {formatKRW(detail.mediumGuard.cap200pct)}</li>
+              <li>가업외 상속재산 net: {formatKRW(detail.mediumGuard.otherEstateNet)}</li>
+              <li>판정: {detail.mediumGuard.exceeded ? "초과 → 공제 배제" : "통과"}</li>
+            </ul>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return null;
+}
+
+/** 한도 가독화 — 60_000_000_000 → "600억". */
+function formatBillion(amount: number): string {
+  if (amount === 0) return "0";
+  const eok = amount / 100_000_000;
+  return `${eok.toLocaleString()}억`;
 }
 
 function FarmingDeductionDetailRow({
@@ -420,11 +514,19 @@ export function InheritanceTaxResultView({
                 />
               </>
             )}
-            {result.deductionDetail.familyBusinessDeduction > 0 && (
-              <Row
-                label="가업상속 공제 (§18의2)"
-                value={formatKRW(result.deductionDetail.familyBusinessDeduction)}
-              />
+            {(result.deductionDetail.familyBusinessDeduction > 0 ||
+              result.deductionDetail.familyBusinessDetail !== undefined) && (
+              <>
+                {result.deductionDetail.familyBusinessDeduction > 0 && (
+                  <Row
+                    label="가업상속 공제 (§18의2)"
+                    value={formatKRW(result.deductionDetail.familyBusinessDeduction)}
+                  />
+                )}
+                <FamilyBusinessDeductionDetailRow
+                  detail={result.deductionDetail.familyBusinessDetail}
+                />
+              </>
             )}
             <Row label="공제 합계" value={formatKRW(result.totalDeduction)} highlight />
           </div>

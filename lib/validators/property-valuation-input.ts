@@ -56,6 +56,17 @@ const baseItemSchema = z.object({
       "corporate_stock",
     ])
     .optional(),
+  // 가업상속공제 정밀화 (2026-05-21, 상증법 §18의2 + 상증령 §15⑤)
+  familyBusinessCategory: z
+    .enum([
+      "business_real_estate",
+      "business_equipment",
+      "corporate_stock",
+      "intangible_asset",
+      "inventory",
+      "other",
+    ])
+    .optional(),
 });
 
 export const landItemSchema = baseItemSchema.extend({
@@ -279,6 +290,62 @@ export const farmingInheritanceInputSchema = z.object({
   hasTaxFraudConviction: z.boolean().optional(),
 });
 
+/**
+ * 영농상속공제 사후관리 추징 입력 스키마 (F-7, §18의3④⑥ + 시행령 §16⑥⑦⑧)
+ */
+export const farmingPostMgmtInputSchema = z.object({
+  violation: z.enum([
+    "asset_disposed",
+    "farming_ceased",
+    "tax_fraud_conviction",
+    "accounting_fraud",
+  ]),
+  violationDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD 형식"),
+  filingDeadline: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD 형식"),
+  determinedTax: z.number().nonnegative(),
+  interestRate: z.number().min(0).max(1, "이자율은 소수(0~1) 형식 — 예: 0.029"),
+  /** §16⑥ 정당사유 — violation ∈ {asset_disposed, farming_ceased}에만 적용 */
+  justifiedReason: z
+    .enum([
+      "heir_death",
+      "overseas_relocation",
+      "expropriation",
+      "government_transfer",
+      "land_exchange",
+      "corporate_stock_disposal",
+      "other_similar",
+    ])
+    .optional(),
+  maintainsMajorShareholder: z.boolean().optional(),
+});
+
+export type FarmingPostMgmtInputSchema = z.infer<typeof farmingPostMgmtInputSchema>;
+
+/** 가업상속공제 자격 입력 스키마 (2026-05-21, 상증법 §18의2 + 상증령 §15) */
+export const familyBusinessInheritanceInputSchema = z.object({
+  businessType: z.enum(["individual", "corporate"]),
+  operatingYears: z.number().int().nonnegative(),
+  deathDate: z.string().optional(),
+  enterpriseSize: z.enum(["sme", "medium"]),
+  averageRevenue3Y: z.number().nonnegative().optional(),
+  totalAssets: z.number().nonnegative().optional(),
+  isEligibleIndustry: z.boolean(),
+  decedentMajorShareholdingMet: z.boolean().optional(),
+  isListedOnExchange: z.boolean().optional(),
+  decedentCEORequirementMet: z.boolean(),
+  heirIsAdult: z.boolean(),
+  heirTwoYearEngagement: z.boolean(),
+  decedentEarlyDeath: z.boolean().optional(),
+  heirOfficerByFilingDeadline: z.boolean(),
+  heirCEOWithinTwoYears: z.boolean(),
+  spouseFulfillsRequirements: z.boolean().optional(),
+  heirOtherEstateValue: z.number().nonnegative().optional(),
+  heirDebt: z.number().nonnegative().optional(),
+  unrelatedAssetsAcknowledged: z.boolean(),
+  postManagementAcknowledged: z.boolean(),
+  hasTaxFraudConviction: z.boolean().optional(),
+});
+
 export const inheritanceDeductionInputSchema = z.object({
   heirs: z.array(heirSchema).min(1, "상속인이 1명 이상 필요합니다."),
   spouseActualAmount: z.number().nonnegative().optional(),
@@ -297,6 +364,8 @@ export const inheritanceDeductionInputSchema = z.object({
   disasterLossDeduction: z.number().nonnegative().optional(),
   // 영농상속공제 정밀화 (2026-05-21)
   farming: farmingInheritanceInputSchema.optional(),
+  // 가업상속공제 정밀화 (2026-05-21, 상증법 §18의2 + 상증령 §15)
+  familyBusiness: familyBusinessInheritanceInputSchema.optional(),
 });
 
 // ============================================================

@@ -23,6 +23,24 @@ import type {
 // ────────────────────────────────────────────────────
 
 /**
+ * 가업상속공제 EstateItem 배타성·정합성 검증 (상증법 §18의2 + 상증령 §15).
+ * - 영농↔가업 분류 동시 선택 금지 (`asset_dual_category_conflict`)
+ * - businessType="individual"인데 EstateItem에 corporate_stock 분류 사용 금지 (`business_type_mismatch`)
+ */
+export function validateFamilyBusinessEstateItem(
+  item: EstateItem,
+  fb?: { businessType?: "individual" | "corporate" } | undefined,
+): string | null {
+  if (item.farmingCategory && item.familyBusinessCategory) {
+    return `자산 "${item.name}" — 영농·가업 분류 동시 선택 불가 (asset_dual_category_conflict).`;
+  }
+  if (item.familyBusinessCategory === "corporate_stock" && fb?.businessType === "individual") {
+    return `자산 "${item.name}" — 가업 유형 "개인사업자"에 법인주식 분류 불가 (business_type_mismatch).`;
+  }
+  return null;
+}
+
+/**
  * 자산의 heirAllocations 합이 평가액과 일치하는지 검증.
  * 자동 안분 fallback 금지 — 사용자 명시 입력 강제.
  */
@@ -161,6 +179,9 @@ export function validateInheritanceTaxInput(
   for (const item of input.estateItems) {
     const e = validateEstateItemAllocations(item);
     if (e) return e;
+    // 가업상속공제 배타성·정합성 (2026-05-21, 상증법 §18의2)
+    const fbe = validateFamilyBusinessEstateItem(item, input.deductionInput?.familyBusiness);
+    if (fbe) return fbe;
   }
   if (input.debtItems) {
     for (const di of input.debtItems) {
