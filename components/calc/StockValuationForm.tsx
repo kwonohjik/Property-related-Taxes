@@ -20,6 +20,7 @@ import type { EstateItem, UnlistedStockData, Heir } from "@/lib/tax-engine/types
 import { KiwoomValuationAutoFetchButton } from "./KiwoomValuationAutoFetchButton";
 import { FarmingCategorySection } from "@/components/calc/inheritance/FarmingCategorySection";
 import { FamilyBusinessCategorySection } from "@/components/calc/inheritance/FamilyBusinessCategorySection";
+import { CorporateNonBusinessAssetsSection } from "@/components/calc/inheritance/CorporateNonBusinessAssetsSection";
 import { FinancialDeductionChip } from "@/components/calc/inheritance/FinancialDeductionChip";
 import { HeirAllocationToggleSection } from "@/components/calc/inheritance/HeirAllocationToggleSection";
 import {
@@ -214,6 +215,11 @@ function ListedStockEditor({
       {/* 가업상속 자산 분류 — 상장주식 (corporate_stock만 가능) */}
       {mode === "inheritance" && (
         <FamilyBusinessCategorySection item={item} onUpdate={onUpdate} />
+      )}
+
+      {/* 법인 사업무관자산 차감 (§15⑤2호 + §16⑤2호) — corporate_stock 자산만 노출 */}
+      {mode === "inheritance" && (
+        <CorporateNonBusinessAssetsSection item={item} onUpdate={onUpdate} />
       )}
 
       {/* §22 금융재산공제 — 상장주식 (§19① 주식 명시) */}

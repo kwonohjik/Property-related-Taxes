@@ -16,6 +16,7 @@ import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput"
 import { DeemedCategorySection } from "@/components/calc/inheritance/DeemedCategorySection";
 import { FarmingCategorySection } from "@/components/calc/inheritance/FarmingCategorySection";
 import { FamilyBusinessCategorySection } from "@/components/calc/inheritance/FamilyBusinessCategorySection";
+import { CorporateNonBusinessAssetsSection } from "@/components/calc/inheritance/CorporateNonBusinessAssetsSection";
 import { FinancialDeductionChip } from "@/components/calc/inheritance/FinancialDeductionChip";
 import { HeirAllocationToggleSection } from "@/components/calc/inheritance/HeirAllocationToggleSection";
 import type { EstateItem, AssetCategory, ValuationMethod, Heir } from "@/lib/tax-engine/types/inheritance-gift.types";
@@ -350,6 +351,11 @@ function ItemEditor({ item, index, onUpdate, onRemove, mode, heirs }: ItemEditor
       {/* 가업상속 자산 분류 (§18의2 + 상증령 §15⑤) — 상속세 전용 */}
       {mode === "inheritance" && (
         <FamilyBusinessCategorySection item={item} onUpdate={onUpdate} />
+      )}
+
+      {/* 법인 사업무관자산 차감 (§15⑤2호 + §16⑤2호) — corporate_stock 자산만 노출 */}
+      {mode === "inheritance" && (
+        <CorporateNonBusinessAssetsSection item={item} onUpdate={onUpdate} />
       )}
 
       {/* §22 금융재산공제 체크박스 (상속세 전용) — 상증령 §19① */}
