@@ -533,6 +533,25 @@ export function InheritanceTaxResultView({
         )}
       </div>
 
+      {/* 영농상속공제 사후관리 안내 (PR-G) — farmingDeduction > 0 시만 노출 */}
+      {result.deductionDetail.farmingDeduction > 0 && (
+        <div className="rounded-md border border-blue-200 bg-blue-50/40 dark:bg-blue-950/20 dark:border-blue-800 p-3 space-y-2 print:hidden">
+          <p className="text-xs font-semibold text-blue-800 dark:text-blue-200">
+            💡 영농상속공제 사후관리 안내 (§18의3④ + §16⑦⑧)
+          </p>
+          <p className="text-[11px] text-blue-700 dark:text-blue-300">
+            상속개시일부터 5년 이내 영농상속재산을 처분하거나 영농 종사를 중단하면
+            공제받은 금액 100%가 추징되고 이자상당액이 가산됩니다. 조세포탈·회계부정 형 확정 시 5년 무관 추징.
+          </p>
+          <a
+            href={`/calc/inheritance-postmgmt?originalDeduction=${result.deductionDetail.farmingDeduction}`}
+            className="inline-block text-xs font-medium text-blue-700 dark:text-blue-300 underline hover:text-blue-900 dark:hover:text-blue-100"
+          >
+            → 사후관리 추징 시뮬레이터 진입
+          </a>
+        </div>
+      )}
+
       {/* 재산 평가 내역 */}
       <div className="border rounded-xl overflow-hidden">
         <button

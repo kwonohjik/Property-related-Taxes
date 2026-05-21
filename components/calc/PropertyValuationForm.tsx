@@ -15,6 +15,7 @@ import { AddressSearch, type AddressValue } from "@/components/ui/address-search
 import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
 import { DeemedCategorySection } from "@/components/calc/inheritance/DeemedCategorySection";
 import { FarmingCategorySection } from "@/components/calc/inheritance/FarmingCategorySection";
+import { FamilyBusinessCategorySection } from "@/components/calc/inheritance/FamilyBusinessCategorySection";
 import { FinancialDeductionChip } from "@/components/calc/inheritance/FinancialDeductionChip";
 import { HeirAllocationToggleSection } from "@/components/calc/inheritance/HeirAllocationToggleSection";
 import type { EstateItem, AssetCategory, ValuationMethod, Heir } from "@/lib/tax-engine/types/inheritance-gift.types";
@@ -308,6 +309,11 @@ function ItemEditor({ item, index, onUpdate, onRemove, mode, heirs }: ItemEditor
       {/* 영농상속 자산 분류 (§18의3 + 시행령 §16⑤) — 상속세 전용 */}
       {mode === "inheritance" && (
         <FarmingCategorySection item={item} onUpdate={onUpdate} />
+      )}
+
+      {/* 가업상속 자산 분류 (§18의2 + 상증령 §15⑤) — 상속세 전용 */}
+      {mode === "inheritance" && (
+        <FamilyBusinessCategorySection item={item} onUpdate={onUpdate} />
       )}
 
       {/* §22 금융재산공제 체크박스 (상속세 전용) — 상증령 §19① */}

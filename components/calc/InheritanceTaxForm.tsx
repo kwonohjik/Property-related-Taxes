@@ -259,6 +259,9 @@ export function InheritanceTaxForm() {
       // 영농상속공제 정밀화 (2026-05-21, §18의3 + 시행령 §16)
       // form.farming: undefined(legacy) | FarmingInheritanceInput(활성)
       farming: form.farming,
+      // 가업상속공제 요건 입력 (2026-05-21, §18의2 + 상증령 §15)
+      // form.familyBusiness: undefined(legacy) | FamilyBusinessInheritanceInput(활성)
+      familyBusiness: form.familyBusiness,
     };
     const creditInput: InheritanceTaxCreditInput = {
       priorGifts: form.priorGifts,

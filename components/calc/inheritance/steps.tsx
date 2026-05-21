@@ -17,6 +17,7 @@ import { PriorGiftInput } from "@/components/calc/PriorGiftInput";
 import { HeirComposition } from "@/components/calc/HeirComposition";
 import { PresumedInheritanceInput } from "./PresumedInheritanceInput";
 import { DebtAllocationInput } from "./DebtAllocationInput";
+import { FamilyBusinessEligibilitySection } from "./FamilyBusinessEligibilitySection";
 import {
   Dialog,
   DialogContent,
@@ -343,40 +344,60 @@ export function Step4({ form, set }: { form: FormState; set: FormSet }) {
           placeholder="없으면 빈칸"
         />
 
-        <div className="space-y-2">
-          <CurrencyInput
-            label="가업상속재산가액 (§18의2)"
-            value={form.familyBusinessValue}
-            onChange={(v) => set({ familyBusinessValue: v })}
-            hint="중소·중견기업 가업 — 영위 기간에 따라 최대 600억"
-            placeholder="없으면 빈칸"
-          />
-          {parseAmount(form.familyBusinessValue) > 0 && (
-            <div className="space-y-1">
-              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
-                가업 영위 기간 (년)
-              </label>
-              <input
-                type="text"
-                inputMode="numeric"
-                value={form.familyBusinessYears}
-                onChange={(e) =>
-                  set({ familyBusinessYears: e.target.value.replace(/\D/g, "") })
-                }
-                placeholder="보유기간 입력 (년)"
-                className="w-32 rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              />
-            </div>
-          )}
-        </div>
+        {/* ── 가업상속공제 §18의2 ── */}
+        <div className="space-y-3 border-t border-amber-100 dark:border-amber-900 pt-3">
+          <h4 className="text-sm font-semibold text-amber-800 dark:text-amber-200">
+            가업상속공제 (§18의2)
+          </h4>
 
-        <CurrencyInput
-          label="가업상속공제 직접 입력 (Phase E)"
-          value={form.familyBusinessDirectAmount}
-          onChange={(v) => set({ familyBusinessDirectAmount: v })}
-          hint="요건 판정 생략 모드 — 입력값 그대로 적용 (한도 600억 유지). 가업재산가액 입력보다 우선."
-          placeholder="없으면 빈칸"
-        />
+          <FamilyBusinessEligibilitySection
+            familyBusiness={form.familyBusiness}
+            onChange={(v) => set({ familyBusiness: v })}
+          />
+
+          <div className="space-y-2">
+            <CurrencyInput
+              label="가업상속재산가액 (legacy / 요건 미입력 시)"
+              value={form.familyBusinessValue}
+              onChange={(v) => set({ familyBusinessValue: v })}
+              hint="요건 판정 모드 미사용 시 가업재산가액 직접 입력 — 중소·중견기업 가업 (최대 600억)"
+              placeholder="없으면 빈칸"
+            />
+            {parseAmount(form.familyBusinessValue) > 0 && !form.familyBusiness && (
+              <div className="space-y-1">
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
+                  가업 영위 기간 (년) — legacy 모드
+                </label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={form.familyBusinessYears}
+                  onChange={(e) =>
+                    set({ familyBusinessYears: e.target.value.replace(/\D/g, "") })
+                  }
+                  placeholder="영위 기간 입력 (년)"
+                  className="w-32 rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                />
+              </div>
+            )}
+          </div>
+
+          <div className="rounded-md border border-violet-200 bg-violet-50/60 dark:bg-violet-950/20 dark:border-violet-800 p-3 space-y-2">
+            <p className="text-xs font-semibold text-violet-800 dark:text-violet-200">
+              직접 입력 모드 (Phase E escape hatch)
+            </p>
+            <p className="text-[10px] text-violet-700 dark:text-violet-300">
+              요건 판정 생략 — 입력값 그대로 적용 (한도 600억 유지). 위 가업재산가액 입력보다 우선.
+            </p>
+            <CurrencyInput
+              label="가업상속공제 직접 입력액 (원)"
+              value={form.familyBusinessDirectAmount}
+              onChange={(v) => set({ familyBusinessDirectAmount: v })}
+              hint="법정 요건 생략 — 직접 확인하고 입력하는 경우만 사용"
+              placeholder="없으면 빈칸"
+            />
+          </div>
+        </div>
 
         {/* Phase D §19·§24 보정용 입력 */}
         <CurrencyInput

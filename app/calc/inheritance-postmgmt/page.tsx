@@ -9,7 +9,8 @@
  * 본 마법사(/calc/inheritance)와 시간축 분리 — 별도 페이지.
  */
 
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 import { CurrencyInput, parseAmount, formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { DateInput } from "@/components/ui/date-input";
@@ -48,11 +49,35 @@ const JUSTIFIED_REASON_OPTIONS: Array<{
   { value: "other_similar", label: "기타 유사 사유", description: "§16⑥7호 (재정경제부령)" },
 ];
 
+// PR-G: 메인 마법사 → 본 페이지 진입 시 originalDeduction querystring 자동 채움
+const FARMING_MAX_CAP = 3_000_000_000;  // §18의3① 30억
+
+function sanitizeOriginalDeductionParam(raw: string | null): string {
+  if (!raw) return "";
+  const num = parseAmount(raw);
+  if (!Number.isFinite(num) || num <= 0) return "";
+  const capped = Math.min(num, FARMING_MAX_CAP);
+  return String(capped);
+}
+
 export default function FarmingPostMgmtPage() {
+  return (
+    <Suspense fallback={<div className="p-4 text-sm text-muted-foreground">로딩 중…</div>}>
+      <FarmingPostMgmtPageInner />
+    </Suspense>
+  );
+}
+
+function FarmingPostMgmtPageInner() {
+  const searchParams = useSearchParams();
+  const initialOriginalDeduction = sanitizeOriginalDeductionParam(
+    searchParams.get("originalDeduction"),
+  );
+
   const [violation, setViolation] = useState<FarmingPostMgmtViolation>("asset_disposed");
   const [violationDate, setViolationDate] = useState("");
   const [filingDeadline, setFilingDeadline] = useState("");
-  const [originalDeduction, setOriginalDeduction] = useState("");
+  const [originalDeduction, setOriginalDeduction] = useState(initialOriginalDeduction);
   const [determinedTax, setDeterminedTax] = useState("");
   const [interestRate, setInterestRate] = useState("0.029");  // 기본 연 2.9%
   const [justifiedReason, setJustifiedReason] = useState<FarmingPostMgmtJustifiedReason | "">("");
@@ -98,6 +123,15 @@ export default function FarmingPostMgmtPage() {
           5년 사후관리 또는 §18의3⑥ 사후 추징 시 사용.
         </p>
       </header>
+
+      {/* PR-G: 메인 마법사 진입 시 사전 채움 안내 */}
+      {initialOriginalDeduction && (
+        <div className="rounded-md border border-blue-200 bg-blue-50/40 dark:bg-blue-950/20 dark:border-blue-800 p-3 text-xs text-blue-700 dark:text-blue-300">
+          ⓘ 메인 마법사에서 진입 — 공제받은 영농상속공제액{" "}
+          <strong>{formatKRW(parseAmount(initialOriginalDeduction))}</strong>이 사전 입력되었습니다.
+          필요 시 수정 가능합니다.
+        </div>
+      )}
 
       {/* 위반 사유 */}
       <section className="space-y-2">
