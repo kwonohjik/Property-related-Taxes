@@ -1,8 +1,8 @@
-# 영농상속공제 거주지 — 행정구역 OR 조건 PRD
+# 영농상속공제 거주지 — 행정구역 OR 조건 PRD (v2)
 
 > **대상**: 시행령 §16②1호나 "시·군·구 또는 연접 시·군·구" OR 조건 자동 검증
-> **작성일**: 2026-05-21
-> **선행**: PR-E 인프라 (Haversine 30km, `dd7e2fc`) 완료
+> **작성일**: 2026-05-21 · **v2 정정**: 2026-05-22 (비판 검토 m1·m2 반영)
+> **선행**: PR-E 인프라 (Haversine 30km, `dd7e2fc`) + 옵션 A 정책 (`1e915f1`) 완료
 > **상태**: PRD 단계 — 구현 계획 미수립
 
 ---
@@ -125,16 +125,27 @@ export const SI_GUN_GU_ADJACENCY: Record<string, string[]> = {
 function reverseGeocode(latLng: LatLng): Promise<string | null>;
 ```
 
-### 4-2. 선택지
+### 4-2. 선택지 (v2 — 사전 검증 추가)
 
 | 옵션 | 장단점 |
 |---|---|
-| **Vworld 역지오코딩 API** | 기존 환경변수 재사용 / rate limit |
+| **Vworld 역지오코딩 API** | 기존 환경변수 재사용 / rate limit / **시·군·구 응답 형식 사전 검증 필수 (m2)** |
 | **OpenStreetMap Nominatim** | 무료 / 1초/요청 제한 / 한국 정확도 별도 검증 |
 | **카카오 로컬 API** | 무료 / 일일 30,000건 / 별도 키 필요 |
 | **정적 행정구역 polygon 데이터** | 외부 의존 0 / 데이터 크기 (~50MB) — 클라이언트 로드 부담 |
 
 **권장**: Vworld API (UI-E1과 동일 키 재사용).
+
+### 4-2-1. Vworld 역지오코딩 사전 검증 (Phase 3 진입 전, m2 정정)
+
+**의무 검증 항목** (응답 샘플 5건+ 첨부):
+- 좌표 → "서울특별시 강남구" 정확 반환 여부
+- "세종특별자치시 한솔동" 처럼 행정구 수준만 반환되는 케이스 비율
+- 일부 좌표에서 동·리 수준만 반환 가능성 → 시·군·구 매핑 별도 처리 필요
+- API rate limit 정확한 수치 인용 (Vworld 공식 문서)
+- API 키 만료 시 fallback 정책
+
+**미흡 시 대안**: 카카오 로컬 API 또는 OpenStreetMap Nominatim 병행.
 
 ### 4-3. 캐시 정책
 
@@ -194,17 +205,28 @@ function checkResidenceMatch(
 
 ---
 
-## 6. 단계별 PR 분할
+## 6. 단계별 PR 분할 (v2 정정)
 
-| Phase | 범위 | 작업량 | 의존 |
+| Phase | 범위 | 작업량 (v2) | 의존 |
 |---|---|---|---|
-| **Phase 1** | KoreanLaw MCP 검증 + 정적 인접 매트릭스 데이터 수집 | 중(4~6h) | — |
+| **Phase 1** | KoreanLaw MCP 검증 + 행정안전부 표준 행정구역 데이터 + 인접 매트릭스 수집 | **대(10~17h)** — v1 4~6h에서 정정 | — |
 | **Phase 2** | 행정구역 인접 헬퍼 (`lib/geo/administrative-district-adjacency.ts`) + anchor | 소(2h) | Phase 1 |
-| **Phase 3** | 역지오코딩 통합 (Vworld API + 캐시) | 중(3~4h) | UI-E1 (Vworld 통합) 완료 |
-| **Phase 4** | farming-residence-check.ts 확장 (3가지 OR 조건) + anchor | 소(2h) | Phase 2·3 |
-| **Phase 5** | UI ResidenceCheckPreviewCard 4분기 라벨 확장 | 소(1~2h) | Phase 4 + UI-E2 |
+| **Phase 3** | 역지오코딩 통합 (Vworld API + 캐시) + 시·군·구 응답 정확도 사전 검증 (m2) | 중(4~5h) — v1 3~4h | UI-E1 완료 |
+| **Phase 4** | farming-residence-check.ts 확장 (3가지 OR 조건, 옵션 A 정책 유지) + anchor | 소(2h) | Phase 2·3 |
+| **Phase 5** | UI ResidenceCheckPreviewCard 4분기 라벨 확장 (출처 명시 — m4) | 소(1~2h) | Phase 4 + UI-E2 |
 
-**총 12~16시간**. Phase 1이 가장 큰 변동 요인.
+**총 19~28시간** (v1 12~16h에서 정정 — Phase 1 m1 + Phase 3 m2 반영).
+
+### v1 vs v2 시간 비교
+- Phase 1: 4~6h → 10~17h (행정안전부 표준 데이터 + 250 시·군·구 × 5 인접 매트릭스 작성)
+- Phase 3: 3~4h → 4~5h (Vworld 역지오코딩 응답 샘플 5건 사전 검증 추가)
+- 순증: ~7~13h
+
+### Phase 1 세부 시간 (m1 정정)
+- 행정안전부 표준 행정구역 데이터 다운로드 + 파싱: 1~2h
+- KoreanLaw MCP §16②1호나 + "연접" 해석례 5건+ 조사: 2~3h
+- 250 시·군·구 × 평균 5 인접 = 1,250 엔트리 수작업/스크립트: 6~10h
+- 광역시·도 경계 OR 정책 결정 + 검토: 1~2h
 
 ---
 
@@ -253,8 +275,9 @@ function checkResidenceMatch(
 - [ ] `checkResidenceMatch` — 3가지 OR 결과 enum
 - [ ] anchor 8건 (same/adjacent/within_30km/fail × decedent·heir)
 
-### Phase 5 (UI)
-- [ ] ResidenceCheckPreviewCard 4분기 라벨
+### Phase 5 (UI — v2 정정)
+- [ ] ResidenceCheckPreviewCard 4분기 라벨 + 출처(자동/명시/미입력) 명시 (m4)
+- [ ] 옵션 A 정책 유지 — 자동이 사용자 명시 덮어쓰지 않음 (`1e915f1` 패턴)
 - [ ] 자동 결과 사용자 안내 (mirror-pattern 위반 없음)
 - [ ] 브라우저 수동 확인
 

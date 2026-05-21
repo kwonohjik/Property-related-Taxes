@@ -680,9 +680,15 @@ PR-E (대) — Vworld 거주지 자동화 (마지막)
 
 ---
 
-## 부록 A — PR-F 후속 (상속인별 분리 자격 평가)
+## 부록 A — PR-F 후속 (상속인별 분리 자격 평가, v2 정정)
 
 **상태**: PR-F (`4c9cdaf`)에서 §16⑤ 본문 자격자 분배분(qualifiedHeirIds)은 구현됨. 다만 자격자 평가는 "모든 자격자 동일 평가" 가정. 상속인별 분리 평가는 별도 PR.
+
+**⚠️ 진입 전 필수 — KoreanLaw MCP 검증 의무 (m3 정정, 2026-05-22)**:
+- §16⑭ "피상속인 또는 상속인" 해석 — "1명이라도 해당 시 전체 배제" vs "상속인별 분리"
+- §16③ 상속인 요건의 상속인별 분리 평가 가능성 (해석례 0건이면 분리 불가)
+- 분리 불가 판정 시 본 부록 자체 폐기 — heirAssessments 신규 데이터 모델 진입 금지
+- 분리 가능 판정 시만 §A-2 데이터 모델 진입
 
 ### A-1. 현재 한계 (PR-F §4-7 위험 요소)
 
@@ -753,12 +759,13 @@ export function evaluateFarmingEligibility(input: FarmingInheritanceInput): {
 )}
 ```
 
-### A-6. 작업량
+### A-6. 작업량 (v2 정정)
 
+- **KoreanLaw MCP 사전 검증 (의무 — 진입 전)**: 2~3h
 - 엔진: 2~3h (시그니처 + reasons 분리)
 - UI: 3~4h (HeirAssessmentCard 신규 + 토글 동기화)
 - anchor: 1~2h
-- **총 6~9h**
+- **총 8~12h** (v1 6~9h + KoreanLaw 검증 2~3h)
 
 ### A-7. 위험 요소
 
@@ -768,11 +775,12 @@ export function evaluateFarmingEligibility(input: FarmingInheritanceInput): {
 
 ---
 
-## 부록 B — 신규 계획서·PRD 참조
+## 부록 B — 신규 계획서·PRD 참조 (v2)
 
 | 문서 | 범위 | 상태 |
 |---|---|---|
-| `inheritance-farming-ui-integration.plan.md` | PR-C UI + PR-E UI 통합 (4 sub-PR) | 작성 완료 |
-| `inheritance-farming-administrative-district.prd.md` | 행정구역 OR 조건 (5 Phase) | PRD 단계 |
-| 본 부록 A | PR-F 상속인별 분리 자격 평가 | 계획 단계 |
+| `inheritance-farming-ui-integration.plan.md` (v2) | PR-C UI + C2 좌표 휘발 + PR-E UI 통합 (5 sub-PR) | v2 정정 완료 (2026-05-22) |
+| `inheritance-farming-administrative-district.prd.md` (v2) | 행정구역 OR 조건 (5 Phase, 19~28h) | PRD 단계 v2 정정 |
+| 본 부록 A (v2) | PR-F 상속인별 분리 자격 평가 (KoreanLaw 검증 선행) | 계획 단계 v2 정정 |
+| `inheritance-farming-followup-critical-review.md` | v1 계획서 13건 정정 사항 비판 검토 | 검토 완료 (`53be02c`) |
 
