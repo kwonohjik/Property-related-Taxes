@@ -29,8 +29,11 @@ export interface InheritanceSummaryFormInput {
   estateItems: EstateItem[];
   stockItems: EstateItem[];
   presumedItems: PresumedInheritanceItem[];
-  debtItems: DebtItem[];
-  /** legacy 합산 채무 (debtItems 없을 때만 사용) */
+  /**
+   * 방안 C 3-state — undefined: OFF 모드(legacy) / []: ON 빈 / [...]: ON 데이터
+   */
+  debtItems: DebtItem[] | undefined;
+  /** legacy 합산 채무 (debtItems undefined 또는 빈 배열일 때 사용) */
   debts: string;
   funeralExpense: string;
   funeralIncludesBongan: boolean;
@@ -103,7 +106,7 @@ export function computeInheritanceSummary(
   // ── 채무·공과·장례 ──
   let totalDebts = 0;
   let funeralApplied = 0;
-  if (form.debtItems.length > 0) {
+  if (form.debtItems && form.debtItems.length > 0) {
     // 신규 debtItems 경로 — 카테고리별 합산 + 장례 한도
     let funeralMeal = 0;
     let funeralBongan = 0;

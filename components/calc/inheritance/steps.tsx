@@ -6,6 +6,7 @@
  * InheritanceTaxForm.tsx에서 추출. FormState 타입은 인근에서 import.
  */
 
+import { useState } from "react";
 import { DateInput } from "@/components/ui/date-input";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
@@ -16,6 +17,14 @@ import { PriorGiftInput } from "@/components/calc/PriorGiftInput";
 import { HeirComposition } from "@/components/calc/HeirComposition";
 import { PresumedInheritanceInput } from "./PresumedInheritanceInput";
 import { DebtAllocationInput } from "./DebtAllocationInput";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import type { FormState, FormSet } from "./shared";
 
 // ============================================================
@@ -138,7 +147,35 @@ export function Step1({ form, set }: { form: FormState; set: FormSet }) {
 // ============================================================
 
 export function Step2({ form, set }: { form: FormState; set: FormSet }) {
-  const usesDebtItems = form.debtItems.length > 0;
+  // 방안 C 3-state: undefined(OFF) / [] (ON 빈) / [...] (ON 데이터)
+  const isAllocationMode = form.debtItems !== undefined;
+  const itemCount = form.debtItems?.length ?? 0;
+  const [pendingDiscardConfirm, setPendingDiscardConfirm] = useState(false);
+
+  const enterAllocationMode = () => {
+    set({
+      debtItems: [],
+      funeralExpense: "",
+      funeralIncludesBongan: false,
+      debts: "",
+    });
+  };
+
+  const exitAllocationMode = () => {
+    set({ debtItems: undefined });
+  };
+
+  const handleToggle = (v: boolean) => {
+    if (v) {
+      enterAllocationMode();
+    } else if (itemCount > 0) {
+      // 입력된 항목이 있으면 폐기 확인 (디자인 §3.2 상태 보장 정책)
+      setPendingDiscardConfirm(true);
+    } else {
+      exitAllocationMode();
+    }
+  };
+
   return (
     <div className="space-y-6">
       <ExemptionChecklist
@@ -147,31 +184,18 @@ export function Step2({ form, set }: { form: FormState; set: FormSet }) {
         onChange={(items) => set({ exemptionItems: items })}
       />
 
-      {/* 협의분할 모드 토글 */}
+      {/* 협의분할 모드 토글 (amber tone) */}
       <ToggleCard
         tone="amber"
-        title="채무·공과·장례비 협의분할 입력 (Phase A0)"
+        title="채무·공과·장례비 협의분할 입력"
         description="ON: 항목별 채권자명·상속인별 변제 분담 입력 / OFF: 합계 단일 금액 입력"
-        checked={usesDebtItems}
-        onCheckedChange={(v) => {
-          if (v) {
-            // 토글 ON — 빈 debtItems[]로 초기화 (사용자가 항목 추가)
-            set({
-              debtItems: [],
-              funeralExpense: "",
-              funeralIncludesBongan: false,
-              debts: "",
-            });
-            // 초기화 직후 빈 배열이라 토글이 다시 OFF로 보일 수 있음 — 위젯 사용자가 추가하면 자연스러움
-          } else {
-            set({ debtItems: [] });
-          }
-        }}
+        checked={isAllocationMode}
+        onCheckedChange={handleToggle}
       />
 
-      {usesDebtItems ? (
+      {isAllocationMode ? (
         <DebtAllocationInput
-          items={form.debtItems}
+          items={form.debtItems ?? []}
           heirs={form.heirs}
           onChange={(items) => set({ debtItems: items })}
         />
@@ -185,7 +209,11 @@ export function Step2({ form, set }: { form: FormState; set: FormSet }) {
               label="장례비용"
               value={form.funeralExpense}
               onChange={(v) => set({ funeralExpense: v })}
-              hint="최대 1,500만원 한도 자동 적용"
+              hint={
+                form.funeralIncludesBongan
+                  ? "최대 1,500만원 한도 (식대 1,000만 + 봉안 500만)"
+                  : "최대 1,000만원 한도 (식대만)"
+              }
               placeholder="금액 입력 (원)"
             />
             <ToggleCard
@@ -209,12 +237,39 @@ export function Step2({ form, set }: { form: FormState; set: FormSet }) {
         </>
       )}
 
-      {/* 채무·공과·장례 협의분할 + 추가 입력 토글 — 빈 debtItems로 시작 시 항목 추가 안내 */}
-      {usesDebtItems && form.debtItems.length === 0 && (
-        <p className="text-xs text-amber-700 dark:text-amber-400 italic px-2">
-          위에서 채무·공과금·장례비를 카테고리별로 추가하세요.
-        </p>
-      )}
+      <Dialog
+        open={pendingDiscardConfirm}
+        onOpenChange={setPendingDiscardConfirm}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>협의분할 입력 모드를 끄시겠습니까?</DialogTitle>
+            <DialogDescription>
+              입력한 채무·공과·장례비 {itemCount}개 항목이 모두 삭제되고
+              단일 금액 입력 모드로 전환됩니다. 이 동작은 되돌릴 수 없습니다.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <button
+              type="button"
+              onClick={() => setPendingDiscardConfirm(false)}
+              className="px-3 py-1.5 text-sm rounded border border-border bg-background hover:bg-muted"
+            >
+              취소
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                exitAllocationMode();
+                setPendingDiscardConfirm(false);
+              }}
+              className="px-3 py-1.5 text-sm rounded bg-rose-600 text-white hover:bg-rose-700"
+            >
+              삭제하고 끄기
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

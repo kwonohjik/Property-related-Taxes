@@ -15,6 +15,8 @@ import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
 import { LoginPromptBanner } from "@/components/calc/shared/LoginPromptBanner";
 import { TaxCreditBreakdownCard } from "@/components/calc/TaxCreditBreakdownCard";
 import { HeirAllocationTable } from "@/components/calc/results/HeirAllocationTable";
+import { DebtAllocationResultCard } from "@/components/calc/results/DebtAllocationResultCard";
+import type { DebtItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { calcInstallmentPayment } from "@/lib/tax-engine/credits/installment-payment";
 
 // ============================================================
@@ -104,6 +106,8 @@ interface Props {
   showLoginPrompt?: boolean;
   /** 상속인·수유자·영리법인 배열 — HeirAllocationTable 표시용 */
   heirs?: Heir[];
+  /** 채무·공과·장례비 협의분할 항목 (방안 C — undefined: OFF 모드) */
+  debtItems?: DebtItem[];
 }
 
 export function InheritanceTaxResultView({
@@ -113,6 +117,7 @@ export function InheritanceTaxResultView({
   onGoToFirst,
   showLoginPrompt = false,
   heirs,
+  debtItems,
 }: Props) {
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [showValuation, setShowValuation] = useState(false);
@@ -215,6 +220,19 @@ export function InheritanceTaxResultView({
           taxBeforeCredit={taxBeforeCredit}
         />
       )}
+
+      {/* 채무·공과·장례비 협의분할 결과 카드 (debtItems ON 모드 + heirAllocationResult 있을 때) */}
+      {result.heirAllocationResult &&
+        debtItems !== undefined &&
+        debtItems.length > 0 &&
+        heirs &&
+        heirs.length > 0 && (
+          <DebtAllocationResultCard
+            debtItems={debtItems}
+            heirAllocationResult={result.heirAllocationResult}
+            heirs={heirs}
+          />
+        )}
 
       {/* 상속인별 배부 표 — 종합사례 PDF 책 1859 재현 (heirAllocationResult 있을 때만) */}
       {result.heirAllocationResult && heirs && heirs.length > 0 && (

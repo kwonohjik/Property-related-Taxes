@@ -24,7 +24,13 @@ export interface FormState {
   funeralExpense: string;
   funeralIncludesBongan: boolean;
   debts: string;
-  debtItems: DebtItem[];
+  /**
+   * 채무·공과·장례비 협의분할 입력 (방안 C — 3-state).
+   * - undefined: OFF 모드 (legacy debts·funeralExpense 사용)
+   * - []: ON 모드 진입, 빈 상태
+   * - [{...}]: ON 모드 데이터 있음
+   */
+  debtItems: DebtItem[] | undefined;
   // Step 3
   priorGifts: PriorGift[];
   // Step 4
@@ -63,7 +69,7 @@ export const INITIAL_FORM: FormState = {
   funeralExpense: "",
   funeralIncludesBongan: false,
   debts: "",
-  debtItems: [],
+  debtItems: undefined,
   priorGifts: [],
   heirs: [],
   spouseActualAmount: "",

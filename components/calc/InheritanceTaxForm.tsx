@@ -138,6 +138,29 @@ function validateStep(step: number, form: FormState): string | null {
     const total = form.estateItems.length + form.stockItems.length;
     if (total === 0) return "상속재산을 1개 이상 입력하세요.";
   }
+  if (step === 2) {
+    // 방안 C — 협의분할 ON 모드일 때만 항목 검증
+    if (form.debtItems !== undefined) {
+      if (form.debtItems.length === 0) {
+        return "협의분할 모드 ON — 채무·공과·장례비 항목을 1개 이상 추가하거나 토글을 끄세요.";
+      }
+      for (const [idx, di] of form.debtItems.entries()) {
+        if (!di.name.trim()) {
+          return `채무·공과·장례비 ${idx + 1}번째 항목 — 채권자/내용을 입력하세요.`;
+        }
+        if (!Number.isFinite(di.amount) || di.amount <= 0) {
+          return `채무·공과·장례비 "${di.name}" 항목 — 금액을 0보다 큰 값으로 입력하세요.`;
+        }
+        // 협의분할 합계 ≠ 금액 차단 (기존 validateDebtItemAllocations 동일 규칙)
+        if (di.heirAllocations && di.heirAllocations.length > 0 && di.category !== "funeral") {
+          const sum = di.heirAllocations.reduce((s, a) => s + a.amount, 0);
+          if (sum !== di.amount) {
+            return `채무 "${di.name}" 협의분할 합계 ${sum.toLocaleString()}원 ≠ 금액 ${di.amount.toLocaleString()}원`;
+          }
+        }
+      }
+    }
+  }
   return null;
 }
 
@@ -245,7 +268,8 @@ export function InheritanceTaxForm() {
       isFiledOnTime: form.isFiledOnTime,
     };
     // 종합사례 PDF — debtItems 입력 시 legacy debts·funeralExpense는 0으로 (엔진 분기 통일)
-    const usesDebtItems = form.debtItems.length > 0;
+    // 방안 C 3-state: undefined / [] / [...]. ON 모드 == debtItems !== undefined
+    const usesDebtItems = form.debtItems !== undefined && form.debtItems.length > 0;
     return {
       decedentType: form.decedentType,
       deathDate: form.deathDate,
@@ -312,6 +336,7 @@ export function InheritanceTaxForm() {
           onBack={() => { setResult(null); setStep(STEPS.length - 1); }}
           onGoToFirst={() => { setResult(null); setStep(0); }}
           heirs={form.heirs}
+          debtItems={form.debtItems}
         />
         <div className="flex justify-end">
           <SaveButton variant="primary" onSave={handleManualSaveForForm} />

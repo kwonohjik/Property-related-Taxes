@@ -422,7 +422,11 @@ export function calcInheritanceTax(
   const hasHeirAllocations =
     input.heirs.length > 0 &&
     (input.estateItems.some((e) => e.heirAllocations) ||
-      input.preGiftsWithin10Years.some((g) => g.doneeId));
+      input.preGiftsWithin10Years.some((g) => g.doneeId) ||
+      (input.debtItems?.some(
+        (d) => d.heirAllocations && d.heirAllocations.length > 0,
+      ) ??
+        false));
 
   if (hasHeirAllocations) {
     // 추정상속재산 id→addedAmount Map 작성

@@ -21,6 +21,7 @@ import type {
   DebtCategory,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { CurrencyInput, parseAmount, formatKRW } from "@/components/calc/inputs/CurrencyInput";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { HeirAllocationInput } from "./HeirAllocationInput";
 
 interface DebtAllocationInputProps {
@@ -29,12 +30,54 @@ interface DebtAllocationInputProps {
   onChange: (items: DebtItem[]) => void;
 }
 
-const CATEGORY_OPTIONS: { value: DebtCategory; label: string; tone: string }[] = [
-  { value: "financial", label: "금융채무", tone: "rose" },
-  { value: "tax", label: "공과금", tone: "amber" },
-  { value: "personal", label: "사적채무", tone: "violet" },
-  { value: "funeral", label: "장례비", tone: "emerald" },
-];
+/**
+ * 카테고리별 정적 스타일 매핑 — Tailwind dynamic class purge 차단 (디자인 §4.1).
+ * `bg-${tone}-50/60` 같은 dynamic class는 JIT가 인식 못해 production에서 누락 위험.
+ */
+const CATEGORY_STYLES: Record<
+  DebtCategory,
+  {
+    label: string;
+    buttonClass: string;
+    cardBorderClass: string;
+    chipClass: string;
+  }
+> = {
+  financial: {
+    label: "금융채무",
+    buttonClass:
+      "border-rose-300 bg-rose-50/60 text-rose-700 hover:bg-rose-100 dark:bg-rose-950/30 dark:text-rose-300 dark:hover:bg-rose-900/40",
+    cardBorderClass: "border-rose-200 dark:border-rose-900",
+    chipClass:
+      "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300",
+  },
+  tax: {
+    label: "공과금",
+    buttonClass:
+      "border-amber-300 bg-amber-50/60 text-amber-700 hover:bg-amber-100 dark:bg-amber-950/30 dark:text-amber-300 dark:hover:bg-amber-900/40",
+    cardBorderClass: "border-amber-200 dark:border-amber-900",
+    chipClass:
+      "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
+  },
+  personal: {
+    label: "사적채무",
+    buttonClass:
+      "border-violet-300 bg-violet-50/60 text-violet-700 hover:bg-violet-100 dark:bg-violet-950/30 dark:text-violet-300 dark:hover:bg-violet-900/40",
+    cardBorderClass: "border-violet-200 dark:border-violet-900",
+    chipClass:
+      "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300",
+  },
+  funeral: {
+    label: "장례비",
+    buttonClass:
+      "border-emerald-300 bg-emerald-50/60 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/30 dark:text-emerald-300 dark:hover:bg-emerald-900/40",
+    cardBorderClass: "border-emerald-200 dark:border-emerald-900",
+    chipClass:
+      "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
+  },
+};
+
+const CATEGORY_ORDER: DebtCategory[] = ["financial", "tax", "personal", "funeral"];
 
 let nextId = 0;
 const newId = () => `debt_${Date.now()}_${++nextId}`;
@@ -88,18 +131,29 @@ export function DebtAllocationInput({
 
   return (
     <div className="space-y-3">
-      {/* 카테고리별 추가 버튼 */}
+      {/* 안내 카드 — 혼합 시나리오 옵션 1 강제 (디자인 §4.3, sky tone) */}
+      <div className="rounded-md border border-sky-200 bg-sky-50/40 dark:bg-sky-950/20 p-3">
+        <p className="text-xs text-sky-800 dark:text-sky-300">
+          협의분할 모드에서는 <strong>모든 채무·공과·장례비</strong>를 항목으로 입력해야 합니다.
+          단일 합계 금액만 있으면 위 토글을 끄세요.
+        </p>
+      </div>
+
+      {/* 카테고리별 추가 버튼 (정적 색조 매핑 — Tailwind purge 차단) */}
       <div className="flex flex-wrap gap-2">
-        {CATEGORY_OPTIONS.map((opt) => (
-          <button
-            key={opt.value}
-            type="button"
-            onClick={() => add(opt.value)}
-            className={`text-xs px-2.5 py-1.5 rounded border border-${opt.tone}-300 bg-${opt.tone}-50/60 dark:bg-${opt.tone}-950/30 text-${opt.tone}-700 dark:text-${opt.tone}-300 hover:bg-${opt.tone}-100 dark:hover:bg-${opt.tone}-900/40`}
-          >
-            + {opt.label} 추가
-          </button>
-        ))}
+        {CATEGORY_ORDER.map((cat) => {
+          const style = CATEGORY_STYLES[cat];
+          return (
+            <button
+              key={cat}
+              type="button"
+              onClick={() => add(cat)}
+              className={`text-xs px-2.5 py-1.5 rounded border ${style.buttonClass}`}
+            >
+              + {style.label} 추가
+            </button>
+          );
+        })}
       </div>
 
       {/* 항목 목록 */}
@@ -110,17 +164,17 @@ export function DebtAllocationInput({
       ) : (
         <div className="space-y-2">
           {items.map((it, idx) => {
-            const opt = CATEGORY_OPTIONS.find((o) => o.value === it.category)!;
+            const style = CATEGORY_STYLES[it.category];
             return (
               <div
                 key={it.id}
-                className={`rounded-md border border-${opt.tone}-200 dark:border-${opt.tone}-900 p-3 space-y-2`}
+                className={`rounded-md border p-3 space-y-2 ${style.cardBorderClass}`}
               >
                 <div className="flex items-center gap-2">
                   <span
-                    className={`text-xs px-2 py-0.5 rounded-full bg-${opt.tone}-100 dark:bg-${opt.tone}-900/40 text-${opt.tone}-700 dark:text-${opt.tone}-300 font-semibold`}
+                    className={`text-xs px-2 py-0.5 rounded-full font-semibold ${style.chipClass}`}
                   >
-                    {opt.label}
+                    {style.label}
                   </span>
                   <input
                     type="text"
@@ -148,20 +202,16 @@ export function DebtAllocationInput({
                   </button>
                 </div>
 
-                {/* 장례비 봉안 토글 */}
+                {/* 장례비 봉안 토글 — native checkbox 금지, ToggleCard 강제 */}
                 {it.category === "funeral" && (
-                  <label className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <input
-                      type="checkbox"
-                      checked={!!it.isBongan}
-                      onChange={(e) =>
-                        update(idx, { isBongan: e.target.checked })
-                      }
-                    />
-                    <span>
-                      봉안시설 사용료 (체크 시 한도 500만, 미체크 시 식대 한도 1,000만)
-                    </span>
-                  </label>
+                  <ToggleCard
+                    tone="emerald"
+                    size="sm"
+                    title="봉안시설 사용료"
+                    description="ON 시 한도 500만 / OFF 시 식대 한도 1,000만"
+                    checked={!!it.isBongan}
+                    onCheckedChange={(v) => update(idx, { isBongan: v })}
+                  />
                 )}
 
                 {/* 협의분할 */}
