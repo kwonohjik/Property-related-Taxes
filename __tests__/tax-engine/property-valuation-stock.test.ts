@@ -217,6 +217,99 @@ describe("비상장주식 1주당 가중평균 — calcUnlistedStockPerShareValu
     // 가중평균 >> 최소값(8) → 가중평균 채택
     expect(r.perShareFinalValue).toBe(r.perShareWeightedValue);
   });
+
+  // ============================================================
+  // §54④ 순자산가치만 적용 분기 (PR5-4)
+  // ============================================================
+
+  it("[S22] §54④ 1호 청산 — 무조건 1주당 순자산가치 적용", () => {
+    const data: UnlistedStockData = {
+      ...baseData,
+      assetValueOnlyReason: "liquidation",
+    };
+    const r = calcUnlistedStockPerShareValue(data, false);
+    // 가중평균 14,000 > 순자산 5,000이지만 청산법인 → 순자산가치 적용
+    expect(r.perShareWeightedValue).toBe(14_000);
+    expect(r.perShareAssetValue).toBe(5_000);
+    expect(r.perShareFinalValue).toBe(5_000); // 순자산가치 직접 적용
+  });
+
+  it("[S23] §54④ 2호 사업개시 3년 미만 — 무조건 순자산가치", () => {
+    const data: UnlistedStockData = {
+      ...baseData,
+      assetValueOnlyReason: "lt3y",
+    };
+    const r = calcUnlistedStockPerShareValue(data, false);
+    expect(r.perShareFinalValue).toBe(5_000); // 순자산가치 직접
+  });
+
+  it("[S24] §54④ 3호 부동산 80% — 단서 적용 (가중평균 < 순자산가치인 경우만)", () => {
+    // 가중평균 14,000 > 순자산 5,000 → 단서 미발동 → 가중평균 적용
+    const data1: UnlistedStockData = {
+      ...baseData,
+      assetValueOnlyReason: "real_estate_80",
+    };
+    const r1 = calcUnlistedStockPerShareValue(data1, false);
+    expect(r1.perShareFinalValue).toBe(r1.perShareWeightedValue); // 14,000
+
+    // 가중평균 2,000 < 순자산 5,000 → 단서 발동 → 순자산가치 적용
+    const data2: UnlistedStockData = {
+      ...baseData,
+      weightedNetIncome: 0, // 적자
+      assetValueOnlyReason: "real_estate_80",
+    };
+    const r2 = calcUnlistedStockPerShareValue(data2, false);
+    // 적자라 perShareIncomeValue = 0, 가중평균 = (0×3 + 5,000×2)/5 = 2,000
+    expect(r2.perShareWeightedValue).toBe(2_000);
+    expect(r2.perShareAssetValue).toBe(5_000);
+    expect(r2.perShareFinalValue).toBe(5_000); // 단서 발동 — 순자산
+  });
+
+  it("[S25] §54④ 5호 주식 80% — 단서 적용 (3호와 동일 로직)", () => {
+    const data: UnlistedStockData = {
+      ...baseData,
+      weightedNetIncome: 0,
+      assetValueOnlyReason: "stock_80",
+    };
+    const r = calcUnlistedStockPerShareValue(data, false);
+    expect(r.perShareFinalValue).toBe(5_000);
+  });
+
+  it("[S26] §54④ 6호 잔여 존속 3년 이내 — 무조건 순자산가치", () => {
+    const data: UnlistedStockData = {
+      ...baseData,
+      assetValueOnlyReason: "remaining_3y",
+    };
+    const r = calcUnlistedStockPerShareValue(data, false);
+    expect(r.perShareFinalValue).toBe(5_000);
+  });
+
+  // ============================================================
+  // 정밀도·가드 (PR5-2)
+  // ============================================================
+
+  it("[S27] §55① 후단 — 순자산가액 음수 → 0 처리", () => {
+    const data: UnlistedStockData = {
+      ...baseData,
+      netAssetValue: -1_000_000, // 음수 (자본잠식)
+    };
+    const r = calcUnlistedStockPerShareValue(data, false);
+    expect(r.perShareAssetValue).toBe(0); // 음수 → 0
+  });
+
+  it("[E1-2] 이중 floor → 단일 floor 정밀도 — 1,234,567/1,000주/10% = 12,345", () => {
+    const data: UnlistedStockData = {
+      totalShares: 1_000,
+      ownedShares: 100,
+      weightedNetIncome: 1_234_567,
+      netAssetValue: 100_000_000,
+      capitalizationRate: 0.10,
+    };
+    const r = calcUnlistedStockPerShareValue(data, false);
+    // 정정 전: floor(floor(1,234,567/1,000)/0.1) = floor(1234/0.1) = 12,340
+    // 정정 후: floor(1,234,567/(1,000×0.1)) = floor(1,234,567/100) = 12,345
+    expect(r.perShareIncomeValue).toBe(12_345);
+  });
 });
 
 // ============================================================

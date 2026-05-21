@@ -123,13 +123,16 @@ export function calcPerShareNetIncomeValue(
 /**
  * 1주당 순자산가치 계산
  * = 총 순자산가치 ÷ 총 발행주식 수
+ *
+ * 시행령 §55① 후단: 순자산가액이 0원 이하인 경우 0원으로 한다.
  */
 export function calcPerShareNetAssetValue(
   netAssetValue: number,
   totalShares: number,
 ): number {
   if (totalShares <= 0) return 0;
-  return Math.floor(netAssetValue / totalShares);
+  const guarded = Math.max(0, netAssetValue);  // §55① 후단 가드
+  return Math.floor(guarded / totalShares);
 }
 
 /**
@@ -152,12 +155,14 @@ export function calcUnlistedStockPerShareValue(
     ? data.capitalizationRate
     : DEFAULT_CAPITALIZATION_RATE;
 
-  // 회사 전체 가중평균 순손익 → 1주당 순손익 → 1주당 순손익가치
-  const perShareWeightedNetIncome = Math.floor(data.weightedNetIncome / data.totalShares);
-  const perShareIncomeValue = calcPerShareNetIncomeValue(
-    perShareWeightedNetIncome,
-    capRate,
-  );
+  // 1주당 순손익가치 — 시행령 §54①·§56①
+  // 정정 (P2-D): 이중 floor → 단일 floor (분모 합쳐 정밀도 유지)
+  // = floor(회사 전체 가중평균 순손익 / (총 발행주식 수 × 환원율))
+  // 큰 입력값에서는 이전 결과와 동일 (기존 anchor S17·S21 회귀 안전 확인)
+  const perShareIncomeValue =
+    data.totalShares > 0 && data.weightedNetIncome > 0 && capRate > 0
+      ? Math.floor(data.weightedNetIncome / (data.totalShares * capRate))
+      : 0;
   const perShareAssetValue = calcPerShareNetAssetValue(
     data.netAssetValue,
     data.totalShares,
@@ -174,11 +179,32 @@ export function calcUnlistedStockPerShareValue(
     (perShareIncomeValue * iw + perShareAssetValue * aw) / totalWeight,
   );
 
-  // 최소값: 순자산가치의 80%
+  // 최소값: 순자산가치의 80% (§54① 단서)
   const perShareMinValue = applyRate(perShareAssetValue, MIN_VALUE_RATE);
 
-  // 최종: 가중평균과 최소값 중 큰 값
-  const perShareFinalValue = Math.max(perShareWeightedValue, perShareMinValue);
+  // §54④ 순자산가치만 적용 분기 — 1호·2호·6호 무조건, 3호·5호 단서
+  let perShareFinalValue: number;
+  if (data.assetValueOnlyReason) {
+    switch (data.assetValueOnlyReason) {
+      // 1호·2호·6호: 무조건 1주당 순자산가치 적용
+      case "liquidation":     // §54④ 1호
+      case "lt3y":            // §54④ 2호 (사업개시 3년 미만·휴업·폐업)
+      case "remaining_3y":    // §54④ 6호 (잔여 존속기한 3년 이내)
+        perShareFinalValue = perShareAssetValue;
+        break;
+      // 3호·5호: 가중평균 < 1주당 순자산가치인 경우만 순자산가치 적용
+      case "real_estate_80":  // §54④ 3호 (부동산 80%)
+      case "stock_80":        // §54④ 5호 (주식 80%)
+        perShareFinalValue =
+          perShareWeightedValue < perShareAssetValue
+            ? perShareAssetValue
+            : perShareWeightedValue;
+        break;
+    }
+  } else {
+    // 기본 §54① 본칙: max(가중평균, 1주당 순자산가치 × 80%)
+    perShareFinalValue = Math.max(perShareWeightedValue, perShareMinValue);
+  }
 
   return {
     perShareIncomeValue,

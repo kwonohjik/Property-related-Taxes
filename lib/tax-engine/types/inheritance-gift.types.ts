@@ -90,6 +90,21 @@ export interface EstateItem {
   isFamilyBusinessAsset?: boolean;
 }
 
+/**
+ * 시행령 §54④ 순자산가치만 적용 사유.
+ *   - liquidation: 1호 청산절차 진행·사업계속 곤란
+ *   - lt3y: 2호 사업개시 전·3년 미만·휴업·폐업
+ *   - real_estate_80: 3호 부동산 비율 80% 이상 (단서: 가중평균 < 1주당 순자산가치인 경우만)
+ *   - stock_80: 5호 주식 등 가액 80% 이상 (단서: 가중평균 < 1주당 순자산가치인 경우만)
+ *   - remaining_3y: 6호 잔여 존속기한 3년 이내
+ */
+export type UnlistedAssetValueOnlyReason =
+  | "liquidation"
+  | "lt3y"
+  | "real_estate_80"
+  | "stock_80"
+  | "remaining_3y";
+
 /** 비상장주식 평가 데이터 (시행령 §54) */
 export interface UnlistedStockData {
   totalShares: number;
@@ -100,6 +115,11 @@ export interface UnlistedStockData {
   netAssetValue: number;
   /** 자본환원율 (기본 10%) */
   capitalizationRate: number;
+  /**
+   * §54④ 순자산가치만 적용 사유 (선택).
+   * 1·2·6호는 무조건 순자산가치 / 3·5호는 단서(가중평균 < 1주당 순자산가치인 경우만) 적용.
+   */
+  assetValueOnlyReason?: UnlistedAssetValueOnlyReason;
 }
 
 /** 재산 평가 결과 (단일 자산) */

@@ -19,6 +19,7 @@ import {
 import type { EstateItem, UnlistedStockData, Heir } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { KiwoomValuationAutoFetchButton } from "./KiwoomValuationAutoFetchButton";
 import { HeirAllocationToggleSection } from "@/components/calc/inheritance/HeirAllocationToggleSection";
+import { UnlistedStockSpecialReasonSection } from "@/components/calc/inheritance/UnlistedStockSpecialReasonSection";
 
 /**
  * 주식 자산 효과 평가액 — 상장: 평균가×주식수, 비상장: 순자산 OR 가중평균 결과값.
@@ -296,7 +297,7 @@ function UnlistedStockEditor({
       <ToggleCard
         tone="amber"
         title="부동산과다보유법인"
-        description="총자산 중 부동산 비율 80% 이상 — 순자산가치 비중 증가 (시행령 §54④)"
+        description="총자산 중 부동산 비율 80% 이상 — 순자산가치 비중 증가 (시행령 §54④ 3호)"
         checked={isRealEstateHeavy}
         onCheckedChange={(v) => onUpdateHeavy(v)}
       >
@@ -304,6 +305,12 @@ function UnlistedStockEditor({
           적용 가중치: 순손익가치×2 + 순자산가치×3 ÷ 5
         </p>
       </ToggleCard>
+
+      {/* §54④ 순자산가치만 적용 사유 */}
+      <UnlistedStockSpecialReasonSection
+        value={data?.assetValueOnlyReason}
+        onChange={(reason) => setStock({ assetValueOnlyReason: reason })}
+      />
 
       {/* 총 발행주식 수 */}
       <div className="space-y-1">
@@ -318,9 +325,12 @@ function UnlistedStockEditor({
             const v = parseInt(e.target.value.replace(/,/g, "") || "0", 10);
             setStock({ totalShares: v });
           }}
-          placeholder="주당 순자산 입력 (원)"
+          placeholder="총 발행주식 수 입력 (주)"
           className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         />
+        <p className="text-[11px] text-muted-foreground">
+          회사 전체 발행주식 총수 — 평가기준일 현재 (시행령 §56③)
+        </p>
       </div>
 
       {/* 보유 주식 수 */}
@@ -354,7 +364,7 @@ function UnlistedStockEditor({
           label="최근 3년 가중평균 순손익 (회사 전체)"
           value={data?.weightedNetIncome != null ? String(data.weightedNetIncome) : ""}
           onChange={(v) => setStock({ weightedNetIncome: parseAmount(v) })}
-          hint="(당해 연도 순손익×3 + 전년도×2 + 전전년도×1) ÷ 6"
+          hint="회사 전체 금액 (1주당 ✗) — (당해×3 + 전년×2 + 전전년×1) ÷ 6. 엔진이 발행주식수로 자동 1주당 환산."
           required
         />
 
@@ -395,10 +405,25 @@ function UnlistedStockEditor({
           label="순자산가치 (회사 전체)"
           value={data?.netAssetValue != null ? String(data.netAssetValue) : ""}
           onChange={(v) => setStock({ netAssetValue: parseAmount(v) })}
-          hint="총자산 - 총부채 (평가기준일 기준 재무상태표)"
+          hint="회사 전체 금액 (1주당 ✗) — 총자산 − 총부채 (평가기준일 재무상태표). 0 이하면 0으로 처리 (시행령 §55①)."
           required
         />
       </div>
+
+      {/* 입력값 0 절사 경고 — 비현실적 입력 감지 */}
+      {preview && data && data.totalShares > 0 && data.ownedShares > 0 &&
+       data.netAssetValue > 0 && preview.perShareAssetValue === 0 && (
+        <div className="rounded-md border border-amber-300 bg-amber-50/70 dark:bg-amber-900/20 px-3 py-2 text-xs text-amber-800 dark:text-amber-200">
+          ⚠️ 입력한 회사 전체 순자산가치({data.netAssetValue.toLocaleString()}원)가 발행주식 수({data.totalShares.toLocaleString()}주)에 비해 매우 작아 1주당 가액이 0으로 절사됩니다.
+          입력 단위가 &quot;회사 전체&quot;인지 다시 확인하세요. (1주당 금액을 입력하시려면 회사 전체 ÷ 발행주식 수 후 입력)
+        </div>
+      )}
+      {preview && data && data.totalShares > 0 && data.ownedShares > 0 &&
+       data.weightedNetIncome > 0 && preview.perShareIncomeValue === 0 && (
+        <div className="rounded-md border border-amber-300 bg-amber-50/70 dark:bg-amber-900/20 px-3 py-2 text-xs text-amber-800 dark:text-amber-200">
+          ⚠️ 입력한 회사 전체 가중평균 순손익({data.weightedNetIncome.toLocaleString()}원)이 발행주식 수에 비해 매우 작아 1주당 순손익가치가 0으로 절사됩니다. 단위 재확인 필요.
+        </div>
+      )}
 
       {/* 계산 미리보기 */}
       {preview && data && data.totalShares > 0 && data.ownedShares > 0 && (
