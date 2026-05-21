@@ -26,6 +26,11 @@ import type {
 } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { CurrencyInput, parseAmount, formatKRW } from "@/components/calc/inputs/CurrencyInput";
 
+/** 협의분할 토글 활성 가능 여부 — corporate 제외 자연인 1명 이상 */
+export function hasDistributableHeir(heirs: Heir[]): boolean {
+  return heirs.some((h) => h.relation !== "corporate");
+}
+
 interface HeirAllocationInputProps {
   allocations?: HeirAllocation[];
   /** 평가액 — 합계 검증 기준 (자산 평가액 또는 채무 금액) */
@@ -36,7 +41,7 @@ interface HeirAllocationInputProps {
   showAreaInput?: boolean;
 }
 
-function heirShortLabel(h: Heir): string {
+export function heirShortLabel(h: Heir): string {
   const relMap: Record<string, string> = {
     spouse: "배우자",
     child: "자녀",

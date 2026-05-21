@@ -155,7 +155,8 @@ export function validateInheritanceTaxInput(
 ): string | null {
   if (!input.deathDate) return "상속개시일을 입력하세요.";
   if (input.estateItems.length === 0) return "상속재산을 1개 이상 입력하세요.";
-  if (input.heirs.length === 0) return "상속인·수유자를 1명 이상 입력하세요.";
+  if (input.heirs.length === 0)
+    return "상속인·수유자를 1명 이상 등록하세요. (협의분할·법정상속분 안분의 기준)";
 
   for (const item of input.estateItems) {
     const e = validateEstateItemAllocations(item);

@@ -16,8 +16,30 @@ import {
   evaluateListedStockValue,
   calcUnlistedStockPerShareValue,
 } from "@/lib/tax-engine/property-valuation-stock";
-import type { EstateItem, UnlistedStockData } from "@/lib/tax-engine/types/inheritance-gift.types";
+import type { EstateItem, UnlistedStockData, Heir } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { KiwoomValuationAutoFetchButton } from "./KiwoomValuationAutoFetchButton";
+import { HeirAllocationToggleSection } from "@/components/calc/inheritance/HeirAllocationToggleSection";
+
+/**
+ * 주식 자산 효과 평가액 — 상장: 평균가×주식수, 비상장: 순자산 OR 가중평균 결과값.
+ */
+export function computeStockValuation(item: EstateItem): number {
+  if (item.category === "listed_stock") {
+    const avg = item.listedStockAvgPrice ?? 0;
+    const shares = item.listedStockShares ?? 0;
+    if (avg > 0 && shares > 0) return evaluateListedStockValue(avg, shares);
+    return 0;
+  }
+  if (item.category === "unlisted_stock" && item.unlistedStockData) {
+    const d = item.unlistedStockData;
+    if (d.totalShares > 0 && d.ownedShares > 0) {
+      // 보충적 평가 1주당 가액 × 보유주식 수 (부동산과다보유 분기는 별도)
+      const result = calcUnlistedStockPerShareValue(d, false);
+      return result.perShareFinalValue * d.ownedShares;
+    }
+  }
+  return 0;
+}
 
 // ============================================================
 // 상장주식 항목 편집기
@@ -30,6 +52,8 @@ interface ListedStockEditorProps {
   onRemove: () => void;
   /** 평가기준일 (상속개시일·증여일) — F-01 키움 자동조회 트리거 */
   valuationDate?: string;
+  mode: "inheritance" | "gift";
+  heirs?: Heir[];
 }
 
 function ListedStockEditor({
@@ -38,6 +62,8 @@ function ListedStockEditor({
   onUpdate,
   onRemove,
   valuationDate,
+  mode,
+  heirs,
 }: ListedStockEditorProps) {
   const set = (patch: Partial<EstateItem>) => onUpdate({ ...item, ...patch });
 
@@ -172,6 +198,16 @@ function ListedStockEditor({
           </div>
         </div>
       )}
+
+      {/* 상속인·수유자별 협의분할 (상속세 전용) */}
+      {mode === "inheritance" && heirs && (
+        <HeirAllocationToggleSection
+          item={item}
+          heirs={heirs}
+          effectiveValuation={totalValue}
+          onChange={(patch) => onUpdate({ ...item, ...patch })}
+        />
+      )}
     </div>
   );
 }
@@ -187,11 +223,15 @@ interface UnlistedStockEditorProps {
   onUpdate: (updated: EstateItem) => void;
   onUpdateHeavy: (v: boolean) => void;
   onRemove: () => void;
+  mode: "inheritance" | "gift";
+  heirs?: Heir[];
 }
 
 function UnlistedStockEditor({
   item,
   index,
+  mode,
+  heirs,
   isRealEstateHeavy,
   onUpdate,
   onUpdateHeavy,
@@ -367,6 +407,16 @@ function UnlistedStockEditor({
           isMinValueApplied={preview.perShareFinalValue === preview.perShareMinValue}
         />
       )}
+
+      {/* 상속인·수유자별 협의분할 (상속세 전용) */}
+      {mode === "inheritance" && heirs && (
+        <HeirAllocationToggleSection
+          item={item}
+          heirs={heirs}
+          effectiveValuation={computeStockValuation(item)}
+          onChange={(patch) => onUpdate({ ...item, ...patch })}
+        />
+      )}
     </div>
   );
 }
@@ -512,6 +562,8 @@ export interface StockValuationFormProps {
   mode?: "inheritance" | "gift";
   /** 평가기준일 (상속개시일 또는 증여일) — F-01 키움 자동조회 트리거 */
   valuationDate?: string;
+  /** 협의분할 분배 후보 — inheritance 모드에서 필수 */
+  heirs?: Heir[];
 }
 
 let _nextStockId = 1;
@@ -524,6 +576,7 @@ export function StockValuationForm({
   onChange,
   mode = "inheritance",
   valuationDate,
+  heirs,
 }: StockValuationFormProps) {
   // 비상장주식별 부동산과다보유법인 여부
   const [heavyMap, setHeavyMap] = useState<Record<string, boolean>>({});
@@ -597,6 +650,8 @@ export function StockValuationForm({
                 onUpdate={(updated) => handleUpdate(i, updated)}
                 onRemove={() => handleRemove(i)}
                 valuationDate={valuationDate}
+                mode={mode}
+                heirs={heirs}
               />
             ) : null,
           )}
@@ -619,6 +674,8 @@ export function StockValuationForm({
                 onUpdate={(updated) => handleUpdate(i, updated)}
                 onUpdateHeavy={(v) => handleHeavy(item.id, v)}
                 onRemove={() => handleRemove(i)}
+                mode={mode}
+                heirs={heirs}
               />
             ) : null,
           )}

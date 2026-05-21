@@ -19,45 +19,69 @@ import { DebtAllocationInput } from "./DebtAllocationInput";
 import type { FormState, FormSet } from "./shared";
 
 // ============================================================
-// Step 0 — 피상속인 기본 정보
+// Step 0 — 피상속인 기본 정보 + 상속인·수유자 구성
+// 색상 카드 + 섹션 번호 패턴 (components/calc/CLAUDE.md 강제)
 // ============================================================
 
 export function Step0({ form, set }: { form: FormState; set: FormSet }) {
   return (
-    <div className="space-y-5">
-      <p className="text-sm text-muted-foreground">
-        피상속인(돌아가신 분)의 기본 정보를 입력하세요.
-      </p>
-      <div className="space-y-2">
-        <label className="block text-sm font-medium">거주자 여부</label>
-        <div className="grid grid-cols-2 gap-3">
-          {(["resident", "non_resident"] as const).map((v) => (
-            <button
-              key={v}
-              type="button"
-              onClick={() => set({ decedentType: v })}
-              className={`rounded-lg border-2 py-3 px-4 text-sm font-medium transition-colors ${
-                form.decedentType === v
-                  ? "border-primary bg-primary/5 text-primary"
-                  : "border-border hover:border-muted-foreground/50"
-              }`}
-            >
-              {v === "resident" ? "거주자" : "비거주자"}
-              <p className="text-xs font-normal text-muted-foreground mt-0.5">
-                {v === "resident" ? "국내에 주소 or 183일 이상 거소" : "거주자 이외"}
-              </p>
-            </button>
-          ))}
+    <div className="space-y-3">
+      {/* 섹션 ① — 피상속인 기본 정보 (sky tone) */}
+      <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-3">
+        <div className="flex items-center gap-2">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-[10px] font-bold text-sky-800 select-none">
+            1
+          </span>
+          <p className="text-xs font-semibold text-sky-700">피상속인 기본 정보</p>
+        </div>
+
+        <div className="space-y-2">
+          <label className="block text-sm font-medium">거주자 여부</label>
+          <div className="grid grid-cols-2 gap-3">
+            {(["resident", "non_resident"] as const).map((v) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => set({ decedentType: v })}
+                className={`rounded-lg border-2 py-3 px-4 text-sm font-medium transition-colors ${
+                  form.decedentType === v
+                    ? "border-primary bg-primary/5 text-primary"
+                    : "border-border hover:border-muted-foreground/50"
+                }`}
+              >
+                {v === "resident" ? "거주자" : "비거주자"}
+                <p className="text-xs font-normal text-muted-foreground mt-0.5">
+                  {v === "resident" ? "국내에 주소 or 183일 이상 거소" : "거주자 이외"}
+                </p>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="block text-sm font-medium">
+            상속개시일 (사망일) <span className="text-destructive">*</span>
+          </label>
+          <DateInput value={form.deathDate} onChange={(v) => set({ deathDate: v })} />
+          <p className="text-xs text-muted-foreground">
+            평가기준일·신고기한(6개월) 계산의 기준이 됩니다.
+          </p>
         </div>
       </div>
-      <div className="space-y-1.5">
-        <label className="block text-sm font-medium">
-          상속개시일 (사망일) <span className="text-destructive">*</span>
-        </label>
-        <DateInput value={form.deathDate} onChange={(v) => set({ deathDate: v })} />
-        <p className="text-xs text-muted-foreground">
-          평가기준일·신고기한(6개월) 계산의 기준이 됩니다.
+
+      {/* 섹션 ② — 상속인·수유자 구성 (violet tone) */}
+      <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-3">
+        <div className="flex items-center gap-2">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-[10px] font-bold text-violet-800 select-none">
+            2
+          </span>
+          <p className="text-xs font-semibold text-violet-700">상속인·수유자 구성</p>
+        </div>
+        <p className="text-[11px] text-muted-foreground leading-relaxed">
+          ※ 협의분할 대상에 포함될 모든 <strong>자연인</strong>(법정상속인 + 수유자)을 등록하세요.
+          영리법인 수증자는 사전증여·유증 전용으로 별도 처리되며 일반 상속재산 협의분할 대상이 아닙니다.
         </p>
+        <HeirComposition heirs={form.heirs} onChange={(heirs) => set({ heirs })} />
       </div>
     </div>
   );
@@ -77,6 +101,7 @@ export function Step1({ form, set }: { form: FormState; set: FormSet }) {
         items={form.estateItems}
         onChange={(items) => set({ estateItems: items })}
         mode="inheritance"
+        heirs={form.heirs}
       />
       <div className="border-t border-dashed border-gray-200 dark:border-gray-700 pt-4">
         <StockValuationForm
@@ -84,6 +109,7 @@ export function Step1({ form, set }: { form: FormState; set: FormSet }) {
           onChange={(items) => set({ stockItems: items })}
           mode="inheritance"
           valuationDate={form.deathDate}
+          heirs={form.heirs}
         />
       </div>
 
@@ -208,7 +234,7 @@ export function Step3({ form, set }: { form: FormState; set: FormSet }) {
 }
 
 // ============================================================
-// Step 4 — 상속인 구성 + 공제 (Phase D·E 직접 입력 모드)
+// Step 4 — 공제·세액공제 (구 Step 4·5 통합, HeirComposition은 Step 0으로 이동)
 // ============================================================
 
 export function Step4({ form, set }: { form: FormState; set: FormSet }) {
@@ -216,9 +242,7 @@ export function Step4({ form, set }: { form: FormState; set: FormSet }) {
 
   return (
     <div className="space-y-6">
-      <HeirComposition heirs={form.heirs} onChange={(heirs) => set({ heirs })} />
-
-      <div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-4">
+      <div className="space-y-4">
         <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200">
           추가 공제 입력 (선택)
         </h3>
@@ -324,20 +348,12 @@ export function Step4({ form, set }: { form: FormState; set: FormSet }) {
           onCheckedChange={(v) => set({ preferLumpSum: v })}
         />
       </div>
-    </div>
-  );
-}
 
-// ============================================================
-// Step 5 — 세액공제
-// ============================================================
-
-export function Step5({ form, set }: { form: FormState; set: FormSet }) {
-  return (
-    <div className="space-y-5">
-      <p className="text-sm text-muted-foreground">
-        세액공제 항목을 입력하면 납부세액이 줄어듭니다.
-      </p>
+      {/* ─── 세액공제 (구 Step 5 통합) ─── */}
+      <div className="border-t border-gray-200 dark:border-gray-700 pt-5 space-y-5">
+        <p className="text-sm text-muted-foreground">
+          세액공제 항목을 입력하면 납부세액이 줄어듭니다.
+        </p>
 
       <div className="border rounded-lg p-4 space-y-3">
         <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-200">
@@ -422,6 +438,7 @@ export function Step5({ form, set }: { form: FormState; set: FormSet }) {
             placeholder="이전 상속세 납부액"
           />
         )}
+      </div>
       </div>
     </div>
   );

@@ -87,10 +87,9 @@ export const INITIAL_FORM: FormState = {
 };
 
 export const STEPS = [
-  "피상속인 정보",
+  "피상속인·상속인",
   "상속재산",
   "비과세·장례비",
   "사전증여",
-  "상속인·공제",
-  "세액공제",
+  "공제·세액공제",
 ] as const;

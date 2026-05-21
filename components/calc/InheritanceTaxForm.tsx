@@ -11,7 +11,7 @@
  * Step 5: 세액공제 입력 → 결과
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronLeft } from "lucide-react";
 import { StepIndicator } from "@/components/calc/StepIndicator";
 import { ResetButton } from "@/components/calc/shared/ResetButton";
@@ -21,6 +21,15 @@ import { InheritanceSidebar } from "@/components/calc/inheritance/InheritanceSid
 import { useAutoSaveCalculation } from "@/lib/storage/use-auto-save-calculation";
 import { useProfessionalStore } from "@/lib/stores/professional-store";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { SaveButton } from "@/components/calc/shared/SaveButton";
+import { SaveToast, type SaveToastMessage } from "@/components/calc/shared/SaveToast";
+import {
+  runInheritanceManualSave,
+  formatInheritanceSaveMessage,
+  buildInheritanceAutoSaveToast,
+  isInheritanceFormEmpty,
+  useRecordCount,
+} from "@/components/calc/inheritance-tax-save-handler";
 import type {
   InheritanceTaxInput,
   InheritanceTaxResult,
@@ -42,7 +51,6 @@ import {
   Step2,
   Step3,
   Step4,
-  Step5,
 } from "@/components/calc/inheritance/steps";
 
 
@@ -123,13 +131,12 @@ function formatInheritanceApiError(data: { error?: string; issues?: ApiIssue[] }
 function validateStep(step: number, form: FormState): string | null {
   if (step === 0) {
     if (!form.deathDate) return "상속개시일(사망일)을 입력하세요.";
+    if (form.heirs.length === 0)
+      return "상속인·수유자를 1명 이상 등록하세요. (협의분할·법정상속분 안분의 기준)";
   }
   if (step === 1) {
     const total = form.estateItems.length + form.stockItems.length;
     if (total === 0) return "상속재산을 1개 이상 입력하세요.";
-  }
-  if (step === 4) {
-    if (form.heirs.length === 0) return "상속인을 1명 이상 입력하세요.";
   }
   return null;
 }
@@ -147,14 +154,39 @@ export function InheritanceTaxForm() {
 
   const { activeClientId } = useProfessionalStore();
 
-  // 로컬 이력 자동 저장 — 결과 화면 진입 시 1회
-  useAutoSaveCalculation({
+  // 로컬 이력 자동 저장 — v4 draft 승격 통합
+  const autoSave = useAutoSaveCalculation({
     taxType: "inheritance",
     inputData: form as unknown as Record<string, unknown>,
     resultData: result ? (result as unknown as Record<string, unknown>) : null,
     taxLawVersion: form.deathDate || new Date().toISOString().split("T")[0],
     clientId: activeClientId,
   });
+  const recordCount = useRecordCount(autoSave.savedId);
+  const autoSaveToast = buildInheritanceAutoSaveToast({
+    status: autoSave.status,
+    savedId: autoSave.savedId,
+    created: autoSave.created,
+    promotedDraftCount: autoSave.promotedDraftCount,
+    count: recordCount,
+  });
+  const [saveMessage, setSaveMessage] = useState<SaveToastMessage | null>(null);
+  useEffect(() => { if (autoSaveToast) setSaveMessage(autoSaveToast); }, [autoSaveToast]);
+
+  const handleManualSaveForForm = async () => {
+    setSaveMessage(null);
+    try {
+      const outcome = await runInheritanceManualSave({
+        form: form as unknown as Record<string, unknown> & { deathDate?: string; assets?: unknown[]; heirs?: unknown[] },
+        result,
+        clientId: activeClientId ?? null,
+      });
+      setSaveMessage(formatInheritanceSaveMessage(outcome, recordCount));
+    } catch (e) {
+      setSaveMessage(formatInheritanceSaveMessage(e instanceof Error ? e : new Error(String(e)), recordCount));
+    }
+  };
+  const isEmpty = isInheritanceFormEmpty(form as unknown as { deathDate?: string; assets?: unknown[]; heirs?: unknown[] });
 
   const set = (patch: Partial<FormState>) =>
     setForm((prev) => ({ ...prev, ...patch }));
@@ -270,13 +302,22 @@ export function InheritanceTaxForm() {
   // 결과 화면
   if (result) {
     return (
-      <InheritanceTaxResultView
-        result={result}
-        onReset={handleReset}
-        onBack={() => { setResult(null); setStep(STEPS.length - 1); }}
-        onGoToFirst={() => { setResult(null); setStep(0); }}
-        heirs={form.heirs}
-      />
+      <div className="space-y-4">
+        <div className="flex justify-end">
+          <SaveButton onSave={handleManualSaveForForm} />
+        </div>
+        <InheritanceTaxResultView
+          result={result}
+          onReset={handleReset}
+          onBack={() => { setResult(null); setStep(STEPS.length - 1); }}
+          onGoToFirst={() => { setResult(null); setStep(0); }}
+          heirs={form.heirs}
+        />
+        <div className="flex justify-end">
+          <SaveButton variant="primary" onSave={handleManualSaveForForm} />
+        </div>
+        <SaveToast message={saveMessage} onClose={() => setSaveMessage(null)} />
+      </div>
     );
   }
 
@@ -287,6 +328,7 @@ export function InheritanceTaxForm() {
       {/* 홈으로 · 초기화 — 내비게이션 바 위쪽 우측 */}
       <div className="flex items-center justify-end gap-2">
         <HomeButton confirmMessage="홈으로 이동하면 현재 입력 중인 값이 유지된 채 페이지를 떠납니다.&#10;계속하시겠습니까?" />
+        <SaveButton onSave={handleManualSaveForForm} disabled={isEmpty} disabledReason="한 가지 이상 입력 후 저장해주세요." />
         <ResetButton
           onReset={() => {
             setForm(INITIAL_FORM);
@@ -311,7 +353,6 @@ export function InheritanceTaxForm() {
           {step === 2 && <Step2 form={form} set={set} />}
           {step === 3 && <Step3 form={form} set={set} />}
           {step === 4 && <Step4 form={form} set={set} />}
-          {step === 5 && <Step5 form={form} set={set} />}
         </div>
 
         {/* 사이드바 합계 (지점 ⑥) — 데스크톱 우측 sticky / 모바일 하단 */}
@@ -341,13 +382,11 @@ export function InheritanceTaxForm() {
           disabled={loading}
           className="flex-1 rounded-md bg-primary text-primary-foreground py-2.5 text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
         >
-          {loading
-            ? "계산 중..."
-            : isLastStep
-            ? "계산하기"
-            : "다음 →"}
+          {loading ? "계산 중..." : isLastStep ? "계산하기" : "다음 →"}
         </button>
+        <SaveButton variant="primary" onSave={handleManualSaveForForm} disabled={isEmpty} disabledReason="한 가지 이상 입력 후 저장해주세요." />
       </div>
+      <SaveToast message={saveMessage} onClose={() => setSaveMessage(null)} />
     </div>
   );
 }

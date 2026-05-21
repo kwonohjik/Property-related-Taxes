@@ -13,7 +13,24 @@ import { useState } from "react";
 import { CurrencyInput, parseAmount, formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { AddressSearch, type AddressValue } from "@/components/ui/address-search";
 import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
-import type { EstateItem, AssetCategory, ValuationMethod } from "@/lib/tax-engine/types/inheritance-gift.types";
+import { HeirAllocationToggleSection } from "@/components/calc/inheritance/HeirAllocationToggleSection";
+import type { EstateItem, AssetCategory, ValuationMethod, Heir } from "@/lib/tax-engine/types/inheritance-gift.types";
+
+/**
+ * 자산 카드별 "효과 평가액" 우선순위 — 시가 > 감정가 > 기준시가 > 보증금(deposit).
+ * TotalEstimatedValue·HeirAllocationToggleSection 공통 사용.
+ */
+export function computeEffectiveValuation(item: EstateItem): number {
+  if (item.category === "deposit") {
+    return item.leaseDeposit ?? 0;
+  }
+  return (
+    item.marketValue ??
+    item.appraisedValue ??
+    item.standardPrice ??
+    0
+  );
+}
 
 // ============================================================
 // 카테고리 메타
@@ -81,9 +98,13 @@ interface ItemEditorProps {
   index: number;
   onUpdate: (updated: EstateItem) => void;
   onRemove: () => void;
+  /** 상속세 모드에서 협의분할 토글 노출 — gift 모드는 미렌더 */
+  mode: "inheritance" | "gift";
+  /** 협의분할 분배 후보 — inheritance 모드에서만 의미 */
+  heirs?: Heir[];
 }
 
-function ItemEditor({ item, index, onUpdate, onRemove }: ItemEditorProps) {
+function ItemEditor({ item, index, onUpdate, onRemove, mode, heirs }: ItemEditorProps) {
   const cat = item.category as SupportedCategory;
   // cash·financial·deposit은 단순 금액 입력만 — 감정가·공시지가·저당권 불필요
   const showMarketValue = true;
@@ -275,6 +296,16 @@ function ItemEditor({ item, index, onUpdate, onRemove }: ItemEditorProps) {
 
       {/* 예상 순 평가액 미리보기 */}
       <EstimatedValuePreview item={item} />
+
+      {/* 상속인·수유자별 협의분할 (메인 PR 2 — 상속세 전용) */}
+      {mode === "inheritance" && heirs && (
+        <HeirAllocationToggleSection
+          item={item}
+          heirs={heirs}
+          effectiveValuation={computeEffectiveValuation(item)}
+          onChange={(patch) => onUpdate({ ...item, ...patch })}
+        />
+      )}
     </div>
   );
 }
@@ -406,8 +437,10 @@ export interface PropertyValuationFormProps {
   /** 현재 자산 목록 (주식 제외) */
   items: EstateItem[];
   onChange: (items: EstateItem[]) => void;
-  /** "상속" 또는 "증여" — 안내 문구 조정 */
+  /** "상속" 또는 "증여" — 안내 문구 조정 + 협의분할 노출 분기 */
   mode?: "inheritance" | "gift";
+  /** 협의분할 분배 후보 — inheritance 모드에서 필수 */
+  heirs?: Heir[];
 }
 
 let _nextId = 1;
@@ -420,6 +453,7 @@ export function PropertyValuationForm({
   items,
   onChange,
   mode = "inheritance",
+  heirs,
 }: PropertyValuationFormProps) {
   const [showAddPanel, setShowAddPanel] = useState(false);
 
@@ -471,6 +505,8 @@ export function PropertyValuationForm({
               index={i}
               onUpdate={(updated) => handleUpdate(i, updated)}
               onRemove={() => handleRemove(i)}
+              mode={mode}
+              heirs={heirs}
             />
           ))}
         </div>
