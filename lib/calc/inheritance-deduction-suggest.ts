@@ -304,9 +304,11 @@ const FARMING_CATEGORY_LABEL: Record<NonNullable<EstateItem["farmingCategory"]>,
  * - estateItems 중 farmingCategory 지정된 자산 합
  * - §16⑤ 단서 — 담보채무(mortgageAmount) 차감
  * - 30억 cap은 엔진에서 적용 (본 헬퍼는 한도 적용 전 값 반환)
+ * - farming.qualifiedHeirIds 지정 시 자격자 분배분만 합산 (F-11, §16⑤ 본문)
  */
 export function suggestFarmingAssetValue(
   estateItems: EstateItem[],
+  farming?: { qualifiedHeirIds?: string[] },
 ): DeductionSuggestion {
   const eligible = estateItems.filter((i) => i.farmingCategory !== undefined);
   if (eligible.length === 0) {
@@ -317,18 +319,40 @@ export function suggestFarmingAssetValue(
       isApplicable: false,
     };
   }
+  const qualifiedIds = farming?.qualifiedHeirIds;
+  const useAllocation = qualifiedIds !== undefined;
+
   let totalValue = 0;
   let totalMortgage = 0;
   const breakdown: string[] = [];
   for (const item of eligible) {
-    const v = getValuatedAmount(item);
-    const m = item.mortgageAmount ?? 0;
-    totalValue += v;
-    totalMortgage += m;
+    const fullValue = getValuatedAmount(item);
+    let itemValue = fullValue;
+    let itemMortgage = item.mortgageAmount ?? 0;
+
+    if (useAllocation && item.heirAllocations && item.heirAllocations.length > 0) {
+      // 자격자 분배분만 합산 (§16⑤ 본문)
+      itemValue = item.heirAllocations
+        .filter((a) => qualifiedIds!.includes(a.heirId))
+        .reduce((sum, a) => sum + a.amount, 0);
+      // 담보채무도 자격자 분배 비율로 차감
+      const totalAllocated = item.heirAllocations.reduce((s, a) => s + a.amount, 0);
+      itemMortgage =
+        totalAllocated > 0
+          ? Math.floor((item.mortgageAmount ?? 0) * (itemValue / totalAllocated))
+          : 0;
+    }
+
+    totalValue += itemValue;
+    totalMortgage += itemMortgage;
     const label = FARMING_CATEGORY_LABEL[item.farmingCategory!];
+    const sourceNote =
+      useAllocation && item.heirAllocations && item.heirAllocations.length > 0
+        ? ` (자격자 분배 / 전체 ${formatKrw(fullValue)}원)`
+        : "";
     breakdown.push(
-      `${label} ${item.name || "(자산명 미입력)"}: ${formatKrw(v)}원` +
-        (m > 0 ? ` − 저당 ${formatKrw(m)}원` : ""),
+      `${label} ${item.name || "(자산명 미입력)"}: ${formatKrw(itemValue)}원${sourceNote}` +
+        (itemMortgage > 0 ? ` − 저당 ${formatKrw(itemMortgage)}원` : ""),
     );
   }
   const value = Math.max(0, totalValue - totalMortgage);
@@ -339,9 +363,14 @@ export function suggestFarmingAssetValue(
   if (value > 3_000_000_000) {
     notes.push("💡 30억 한도 적용 시 cappedDeduction = 30억 (§18의3①)");
   }
+  if (useAllocation && qualifiedIds!.length === 0) {
+    notes.push("⚠️ 자격 충족 상속인 0명 — 영농상속재산가액 0 (§16⑤ 본문)");
+  }
   return {
     value,
-    reason: "영농상속 자산 합 − 담보채무 (시행령 §16⑤)",
+    reason: useAllocation
+      ? "영농상속 자산 합 (자격자 분배분) − 담보채무 (시행령 §16⑤)"
+      : "영농상속 자산 합 − 담보채무 (시행령 §16⑤)",
     breakdown,
     isApplicable: true,
     notes: notes.length > 0 ? notes : undefined,

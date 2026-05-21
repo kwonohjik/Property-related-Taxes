@@ -30,7 +30,7 @@ import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { evaluateFarmingEligibility } from "@/lib/tax-engine/deductions/inheritance-deductions";
 import type { FarmingInheritanceInput } from "@/lib/tax-engine/types/inheritance-farming.types";
-import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
+import type { EstateItem, Heir } from "@/lib/tax-engine/types/inheritance-gift.types";
 
 const EMPTY_FARMING: FarmingInheritanceInput = {
   type: "personal",
@@ -55,19 +55,23 @@ function isEmptyFarming(f: FarmingInheritanceInput): boolean {
     f.isDesignatedSuccessor === undefined &&
     f.hasDisqualifyingIncome === undefined &&
     f.hasTaxFraudConviction === undefined &&
-    f.isSecondaryAfterFarmingInheritance === undefined
+    f.isSecondaryAfterFarmingInheritance === undefined &&
+    f.qualifiedHeirIds === undefined
   );
 }
 
 export interface FarmingEligibilitySectionProps {
   farming: FarmingInheritanceInput | undefined;
   estateItems: EstateItem[];
+  /** 상속인 목록 — F-11 자격자 분배분 토글 UI용 */
+  heirs?: Heir[];
   onChange: (farming: FarmingInheritanceInput | undefined) => void;
 }
 
 export function FarmingEligibilitySection({
   farming,
   estateItems,
+  heirs,
   onChange,
 }: FarmingEligibilitySectionProps) {
   const isActive = farming !== undefined;
@@ -313,6 +317,50 @@ export function FarmingEligibilitySection({
               />
             )}
           </div>
+
+          {/* §16⑤ 본문 — 자격자 분배분 (F-11, 2026-05-21) */}
+          {heirs && heirs.length > 1 && (
+            <div className="space-y-1.5">
+              <p className="text-xs font-semibold text-violet-800 dark:text-violet-200">
+                자격 충족 상속인 선택 (§16⑤ 본문)
+              </p>
+              <p className="text-[10px] text-violet-700 dark:text-violet-300">
+                미체크 시 전체 상속인이 자격 충족된 것으로 간주 (전체 영농자산 합산). 1명 이상 체크하면
+                heirAllocations 중 해당 상속인 분배분만 영농상속재산가액에 합산됩니다.
+              </p>
+              {heirs.map((h) => {
+                const ids = farming.qualifiedHeirIds ?? undefined;
+                const checked = ids !== undefined && ids.includes(h.id);
+                return (
+                  <ToggleCard
+                    key={h.id}
+                    tone="violet"
+                    size="sm"
+                    title={h.name || `${h.relation} ${h.id}`}
+                    description={`관계: ${h.relation}`}
+                    checked={checked}
+                    onCheckedChange={(v) => {
+                      const current = farming.qualifiedHeirIds ?? [];
+                      const next = v
+                        ? [...current, h.id]
+                        : current.filter((id) => id !== h.id);
+                      // 1명 이상 체크 시 명시 배열, 모두 해제 시 빈배열(자격자 0명, §16⑤ 본문 0원 명시)
+                      update({ qualifiedHeirIds: next });
+                    }}
+                  />
+                );
+              })}
+              {farming.qualifiedHeirIds !== undefined && (
+                <button
+                  type="button"
+                  onClick={() => update({ qualifiedHeirIds: undefined })}
+                  className="text-[10px] underline text-violet-700 dark:text-violet-300 hover:text-violet-900"
+                >
+                  ↺ 전체 상속인 자격 충족(legacy)로 되돌리기
+                </button>
+              )}
+            </div>
+          )}
 
           {/* 실시간 미리보기 (single-source-engine-helper) */}
           {evalResult && (

@@ -59,6 +59,18 @@ export interface FarmingInheritanceInput {
    * → corporate 트랙(§16②2호) 전용. true 시 다른 요건 무관 단독 종결.
    */
   isSecondaryAfterFarmingInheritance?: boolean;
+
+  // ─ §16⑤ 본문 — 자격자 분배분만 영농상속재산가액 (F-11, 2026-05-21) ─
+  /**
+   * 자격 충족 상속인 ID 목록 (heirAllocations 연계).
+   * - undefined: 모든 상속인 자격 충족 가정 (기존 동작 호환 — 전체 영농자산 합산)
+   * - []: 명시 0건 — 자격자 없음 (영농상속재산가액 0)
+   * - [...]: 명시 자격자 — heirAllocations 중 본 ID 분배분만 합산
+   *
+   * 시행령 §16⑤ 본문: "법 제18의3제1항에서 '영농상속 재산가액'이란 다음 각 호의 구분에 따라
+   * 제3항의 요건을 갖춘 상속인이 받거나 받을 상속재산의 가액을 말한다."
+   */
+  qualifiedHeirIds?: string[];
 }
 
 /**

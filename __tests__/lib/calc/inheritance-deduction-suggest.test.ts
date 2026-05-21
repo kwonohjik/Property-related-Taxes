@@ -378,6 +378,123 @@ describe("suggestFarmingAssetValue — 영농상속재산 §18의3", () => {
     expect(r.value).toBe(3_500_000_000);
     expect(r.notes?.some((n) => n.includes("30억 한도"))).toBe(true);
   });
+
+  // ============================================================
+  // FQ-1 ~ FQ-6: §16⑤ 본문 자격자 분배분 (PR-F, 2026-05-21)
+  // ============================================================
+
+  it("FQ-1: qualifiedHeirIds=undefined → 전체 영농자산 합 (legacy 호환)", () => {
+    const items = [
+      asset({
+        id: "a1",
+        category: "real_estate_land",
+        farmingCategory: "farmland",
+        standardPrice: 1_000_000_000,
+        heirAllocations: [
+          { heirId: "h1", amount: 600_000_000 },
+          { heirId: "h2", amount: 400_000_000 },
+        ],
+      }),
+    ];
+    const r = suggestFarmingAssetValue(items, undefined);
+    expect(r.value).toBe(1_000_000_000);
+  });
+
+  it("FQ-2: qualifiedHeirIds=['h1'] + heirAllocations → h1 분배분만(6억)", () => {
+    const items = [
+      asset({
+        id: "a1",
+        category: "real_estate_land",
+        farmingCategory: "farmland",
+        standardPrice: 1_000_000_000,
+        heirAllocations: [
+          { heirId: "h1", amount: 600_000_000 },
+          { heirId: "h2", amount: 400_000_000 },
+        ],
+      }),
+    ];
+    const r = suggestFarmingAssetValue(items, { qualifiedHeirIds: ["h1"] });
+    expect(r.value).toBe(600_000_000);
+  });
+
+  it("FQ-3: qualifiedHeirIds=[] → 0 + 자격자 0명 안내", () => {
+    const items = [
+      asset({
+        id: "a1",
+        category: "real_estate_land",
+        farmingCategory: "farmland",
+        standardPrice: 1_000_000_000,
+        heirAllocations: [{ heirId: "h1", amount: 1_000_000_000 }],
+      }),
+    ];
+    const r = suggestFarmingAssetValue(items, { qualifiedHeirIds: [] });
+    expect(r.value).toBe(0);
+    expect(r.notes?.some((n) => n.includes("자격 충족 상속인 0명"))).toBe(true);
+  });
+
+  it("FQ-4: heirAllocations 미입력 + qualifiedHeirIds=['h1'] → 전체 자산 합 (legacy fallback)", () => {
+    const items = [
+      asset({
+        id: "a1",
+        category: "real_estate_land",
+        farmingCategory: "farmland",
+        standardPrice: 1_000_000_000,
+        // heirAllocations 미입력
+      }),
+    ];
+    const r = suggestFarmingAssetValue(items, { qualifiedHeirIds: ["h1"] });
+    expect(r.value).toBe(1_000_000_000);
+  });
+
+  it("FQ-5: 다중 자산 × 자격자 ['h1','h2'] 합산", () => {
+    const items = [
+      asset({
+        id: "a1",
+        category: "real_estate_land",
+        farmingCategory: "farmland",
+        standardPrice: 1_000_000_000,
+        heirAllocations: [
+          { heirId: "h1", amount: 500_000_000 },
+          { heirId: "h2", amount: 300_000_000 },
+          { heirId: "h3", amount: 200_000_000 },
+        ],
+      }),
+      asset({
+        id: "a2",
+        category: "real_estate_land",
+        farmingCategory: "pasture",
+        standardPrice: 400_000_000,
+        heirAllocations: [
+          { heirId: "h1", amount: 200_000_000 },
+          { heirId: "h3", amount: 200_000_000 },
+        ],
+      }),
+    ];
+    const r = suggestFarmingAssetValue(items, {
+      qualifiedHeirIds: ["h1", "h2"],
+    });
+    // a1: h1(5억) + h2(3억) = 8억, a2: h1(2억) + (h2 분배 없음) = 2억 → 10억
+    expect(r.value).toBe(1_000_000_000);
+  });
+
+  it("FQ-6: 자격자 분배분 + 담보 비례 차감 (§16⑤ 단서)", () => {
+    const items = [
+      asset({
+        id: "a1",
+        category: "real_estate_land",
+        farmingCategory: "farmland",
+        standardPrice: 1_000_000_000,
+        mortgageAmount: 100_000_000,
+        heirAllocations: [
+          { heirId: "h1", amount: 600_000_000 },
+          { heirId: "h2", amount: 400_000_000 },
+        ],
+      }),
+    ];
+    const r = suggestFarmingAssetValue(items, { qualifiedHeirIds: ["h1"] });
+    // h1 분배 = 6억. 담보 비례 = 1억 × 6/10 = 6천만. → 6억 − 6천만 = 5.4억
+    expect(r.value).toBe(540_000_000);
+  });
 });
 
 describe("suggestCohabitHouseCandidates", () => {

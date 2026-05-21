@@ -63,8 +63,8 @@ export function Step4({ form, set }: { form: FormState; set: FormSet }) {
     [allEstateItems, form.heirs],
   );
   const suggestFarming = useMemo(
-    () => suggestFarmingAssetValue(allEstateItems),
-    [allEstateItems],
+    () => suggestFarmingAssetValue(allEstateItems, form.farming),
+    [allEstateItems, form.farming],
   );
   const farmingEligible = useMemo(
     () =>
@@ -189,6 +189,7 @@ export function Step4({ form, set }: { form: FormState; set: FormSet }) {
           <FarmingEligibilitySection
             farming={form.farming}
             estateItems={allEstateItems}
+            heirs={form.heirs}
             onChange={(v) => set({ farming: v })}
           />
 
