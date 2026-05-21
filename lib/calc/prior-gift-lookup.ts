@@ -286,9 +286,38 @@ export function filterPriorGiftCandidates(
  * PriorGiftCandidate 를 GiftTaxForm.FormState.priorGifts 에 append 가능한 PriorGift 로 변환.
  *
  * 자동 채움 9필드 + sourceCalculationId 메타 1.
- * 추론 불가 필드(isHeir/doneeId/beneficiaryType/corporateGiftComputedTax)는 미설정.
+ * 추론 불가 필드(doneeId/beneficiaryType)는 옵션 파라미터로 처리.
+ *
+ * @param c 후보 데이터 (저장된 증여세 이력에서 추출)
+ * @param options 변환 옵션:
+ *   - `asCorporate: true` — 영리법인 사전증여로 변환 (§13①2호 + §3의2②)
+ *     · `isHeir=false` 강제 (5년 cutoff 활성)
+ *     · `giftTaxPaid=0` 강제 (§4의2③ 비과세, §28 공제 중복 방지)
+ *     · `beneficiaryType="corporate"` set
+ *     · `corporateGiftComputedTax = c.computedTax` 매핑 (§3의2② 한도 분자)
+ *     · 자연인 enum 필드(donor·doneeRelation)는 set 안 함
+ *   - 옵션 없음 — 자연인 사전증여 (기존 동작 보존)
  */
-export function candidateToPriorGift(c: PriorGiftCandidate): PriorGift {
+export function candidateToPriorGift(
+  c: PriorGiftCandidate,
+  options: { asCorporate?: boolean } = {},
+): PriorGift {
+  if (options.asCorporate) {
+    return {
+      giftDate: c.giftDate,
+      isHeir: false, // §13①2호 5년 cutoff 강제
+      giftAmount: c.grossGiftValue,
+      giftTaxPaid: 0, // §4의2③ 비과세 (영리법인은 법인세 처리)
+      giftTaxBase: c.taxBase, // §3의2② 한도 분자 fallback (corporateGiftComputedTax가 우선)
+      beneficiaryType: "corporate",
+      corporateGiftComputedTax: c.computedTax, // §3의2② 면제 한도용
+      sourceCalculationId: c.calculationId,
+      propertyCategory: c.propertyCategory,
+      propertyName: c.propertyName,
+      // donor / doneeRelation: 자연인 enum이므로 corporate 모드에서 미설정
+      // doneeId: Heir.id 참조 필요 — 사용자가 별도 매핑 (Phase 2 후속에서 입력 UI 동반)
+    };
+  }
   return {
     giftDate: c.giftDate,
     isHeir: true, // 상속세 모드 미사용 시 무영향 (default)
