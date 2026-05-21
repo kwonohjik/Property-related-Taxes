@@ -29,6 +29,7 @@ import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { calculationRepository } from "@/lib/storage/calculation-repository";
 import {
   filterPriorGiftCandidates,
+  filterInheritancePriorGiftCandidates,
   candidateToPriorGift,
   type PriorGiftCandidate,
   type LookupWarning,
@@ -70,7 +71,7 @@ export interface PriorGiftHistoryModalProps {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   currentGiftDate: string;
-  /** 정보 표시용 (현 회차 §47 그룹 라벨) */
+  /** 정보 표시용 (현 회차 §47 그룹 라벨) — 증여세 모드 전용 */
   currentDonor: GiftDonorRelation;
   /** 수증자(=의뢰인) 식별자. null = 본인 (일반 납세자 모드) */
   currentClientId: string | null;
@@ -78,6 +79,13 @@ export interface PriorGiftHistoryModalProps {
   onSelect: (priorGift: PriorGift) => void;
   /** PR-E: 영리법인 1-클릭 import 활성화. 상속세 모드에서 true 권장. */
   enableCorporateOption?: boolean;
+  /**
+   * PR 1 (2026-05-22) — 모드 분기.
+   *   "gift": 증여세 §47 동일인 그룹 매칭 + clientId 격리 (기존)
+   *   "inheritance": 상속세 옵션 B 전수 조회 (currentDonor·currentClientId 무시)
+   * 기본값: "gift" (호환)
+   */
+  mode?: "gift" | "inheritance";
   /** "직접 입력하기" — 빈 PriorGift 1건 추가 */
   onManualAdd?: () => void;
 }
@@ -201,6 +209,7 @@ export function PriorGiftHistoryModal({
   onSelect,
   onManualAdd,
   enableCorporateOption = false,
+  mode = "gift",
 }: PriorGiftHistoryModalProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -221,12 +230,20 @@ export function PriorGiftHistoryModal({
       .list({ taxType: "gift" })
       .then((records) => {
         if (!alive) return;
-        const { candidates, warnings } = filterPriorGiftCandidates(
-          records,
-          currentGiftDate,
-          currentClientId,
-          excludeCalculationIds,
-        );
+        // PR 1 (2026-05-22) — 상속세 모드 분기: 옵션 B 전수 조회
+        const { candidates, warnings } =
+          mode === "inheritance"
+            ? filterInheritancePriorGiftCandidates(
+                records,
+                currentGiftDate,
+                excludeCalculationIds,
+              )
+            : filterPriorGiftCandidates(
+                records,
+                currentGiftDate,
+                currentClientId,
+                excludeCalculationIds,
+              );
         setCandidates(candidates);
         setWarnings(warnings);
         setError(null);

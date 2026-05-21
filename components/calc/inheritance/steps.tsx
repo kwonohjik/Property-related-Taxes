@@ -286,6 +286,10 @@ export function Step3({ form, set }: { form: FormState; set: FormSet }) {
       onChange={(gifts) => set({ priorGifts: gifts })}
       mode="inheritance"
       heirs={form.heirs}
+      // PR 1 (2026-05-22): 상속세 모드 모달 활성화
+      currentDeathDate={form.deathDate}
+      // 영리법인 Heir 1건 이상 시 1-클릭 영리법인 import 자동 활성화
+      allowCorporateImport={form.heirs?.some((h) => h.relation === "corporate") ?? false}
     />
   );
 }

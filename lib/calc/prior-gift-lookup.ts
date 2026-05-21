@@ -337,3 +337,138 @@ export function candidateToPriorGift(
     // doneeId / beneficiaryType / corporateGiftComputedTax: 이력 추론 불가 → 미설정
   };
 }
+
+// ============================================================
+// PR 1 (2026-05-22) — 상속세 모드 후보 추출 (옵션 B 전수 조회)
+// ============================================================
+
+/**
+ * 상속세 모드 — 피상속인 전수 조회 (계획서 1 v2 옵션 B 단일 채택).
+ *
+ * 증여세 모드의 `filterPriorGiftCandidates` 와 달리:
+ *   - donor §47 동일인 그룹 매칭 미적용 (모든 증여자 후보 노출)
+ *   - clientId 격리 미적용 (currentClientId=null → 본인 record만 자연 노출)
+ *   - cutoff 기준: 상속개시일 (deathDate) 기준 10년 (실제 cutoff는 isHeir에 따라
+ *     5년/10년 결정되지만, 모달은 사용자가 선택 후 수동 매핑이므로 최대 10년 폭으로 검색)
+ *
+ * @param records IndexedDB 에서 로드한 증여세 이력
+ * @param deathDate 상속개시일 ISO YYYY-MM-DD
+ * @param excludeCalculationIds 이미 추가된 calculationId
+ */
+export function filterInheritancePriorGiftCandidates(
+  records: CalculationRecord[],
+  deathDate: string,
+  excludeCalculationIds: ReadonlyArray<string>,
+): LookupResult {
+  const current = new Date(deathDate);
+  const candidates: PriorGiftCandidate[] = [];
+  const warnings: LookupWarning[] = [];
+  const excludeSet = new Set(excludeCalculationIds);
+
+  for (const record of records) {
+    if (record.taxType !== "gift") continue;
+
+    if (excludeSet.has(record.id)) {
+      warnings.push({
+        calculationId: record.id,
+        reason: "excluded",
+        message: "이미 사전증여 목록에 추가된 회차",
+      });
+      continue;
+    }
+
+    const input = record.inputData as Record<string, unknown> | undefined;
+    const rawResult = record.resultData as Record<string, unknown> | undefined;
+    const result =
+      rawResult && typeof rawResult === "object" && "result" in rawResult
+        ? (rawResult.result as Record<string, unknown>)
+        : rawResult;
+
+    if (!isValidDonor(input?.donor)) {
+      warnings.push({
+        calculationId: record.id,
+        reason: "donor_missing",
+        message: `${record.title}: 증여자 관계(donor) 미입력`,
+      });
+      continue;
+    }
+
+    if (
+      typeof result?.grossGiftValue !== "number" ||
+      typeof result?.taxBase !== "number" ||
+      typeof result?.computedTax !== "number"
+    ) {
+      warnings.push({
+        calculationId: record.id,
+        reason: "result_missing",
+        message: `${record.title}: 계산 결과 누락`,
+      });
+      continue;
+    }
+
+    const inputGiftDate = input?.giftDate;
+    if (typeof inputGiftDate !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(inputGiftDate)) {
+      warnings.push({
+        calculationId: record.id,
+        reason: "result_missing",
+        message: `${record.title}: 증여일 형식 오류`,
+      });
+      continue;
+    }
+
+    const priorDate = new Date(inputGiftDate);
+    if (priorDate >= current) {
+      warnings.push({
+        calculationId: record.id,
+        reason: "future_date",
+        message: `${record.title}: 증여일이 상속개시일 이후 (${inputGiftDate})`,
+      });
+      continue;
+    }
+
+    if (differenceInYears(current, priorDate) > 10) {
+      warnings.push({
+        calculationId: record.id,
+        reason: "exceed_10y",
+        message: `${record.title}: 10년 초과 (${inputGiftDate})`,
+      });
+      continue;
+    }
+
+    const donorRelationRaw = input.donorRelation;
+    const donorRelation: DonorRelation | undefined =
+      typeof donorRelationRaw === "string"
+        ? (donorRelationRaw as DonorRelation)
+        : undefined;
+
+    const priorGifts = input.priorGifts;
+    const hasInnerPriorGifts = Array.isArray(priorGifts) && priorGifts.length > 0;
+
+    candidates.push({
+      calculationId: record.id,
+      giftDate: inputGiftDate,
+      clientId: record.clientId,
+      donor: input.donor as GiftDonorRelation,
+      donorRelation,
+      grossGiftValue: result.grossGiftValue as number,
+      finalTax: typeof result.finalTax === "number" ? result.finalTax : 0,
+      taxBase: result.taxBase as number,
+      computedTax: result.computedTax as number,
+      additionalGenerationSkipSurcharge:
+        typeof result.additionalGenerationSkipSurcharge === "number"
+          ? result.additionalGenerationSkipSurcharge
+          : 0,
+      wasGenerationSkip: Boolean(input.isGenerationSkip),
+      hasInnerPriorGifts,
+      createdAt: record.createdAt,
+      title: record.title,
+    });
+  }
+
+  candidates.sort((a, b) => {
+    if (a.giftDate !== b.giftDate) return b.giftDate.localeCompare(a.giftDate);
+    return b.createdAt.localeCompare(a.createdAt);
+  });
+
+  return { candidates, warnings };
+}

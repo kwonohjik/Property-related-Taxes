@@ -694,6 +694,16 @@ export interface PriorGiftInputProps {
   currentClientId?: string | null;
   /** 상속세 모드 — 영리법인 사전증여 doneeId select 옵션 (PR-C) */
   heirs?: import("@/lib/tax-engine/types/inheritance-gift.types").Heir[];
+  /**
+   * PR 1 (2026-05-22) — 상속세 모드 — 상속개시일 (deathDate).
+   * 모달 활성화 + 옵션 B 전수 조회 기준일.
+   */
+  currentDeathDate?: string;
+  /**
+   * PR 1 (2026-05-22) — 영리법인 1-클릭 import 옵션 노출.
+   * 영리법인 Heir 존재 시 InheritanceTaxForm 에서 자동 true.
+   */
+  allowCorporateImport?: boolean;
 }
 
 function makeEmptyGift(): PriorGift {
@@ -714,6 +724,8 @@ export function PriorGiftInput({
   currentDonor,
   currentClientId = null,
   heirs,
+  currentDeathDate,
+  allowCorporateImport,
 }: PriorGiftInputProps) {
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
   const handleAdd = () => onChange([...gifts, makeEmptyGift()]);
@@ -736,8 +748,10 @@ export function PriorGiftInput({
     onChange(gifts.filter((_, i) => i !== index));
   };
 
+  // PR 1 (2026-05-22): 상속세 모드 모달 활성화 — currentDeathDate 기준
   const canLookup =
-    mode === "gift" && Boolean(currentGiftDate) && Boolean(currentDonor);
+    (mode === "gift" && Boolean(currentGiftDate) && Boolean(currentDonor)) ||
+    (mode === "inheritance" && Boolean(currentDeathDate));
   const excludeIds = gifts
     .map((g) => g.sourceCalculationId)
     .filter((v): v is string => Boolean(v));
@@ -756,15 +770,19 @@ export function PriorGiftInput({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {mode === "gift" && (
+          {(mode === "gift" || mode === "inheritance") && (
             <button
               type="button"
               onClick={() => setHistoryModalOpen(true)}
               disabled={!canLookup}
               title={
                 !canLookup
-                  ? "1단계에서 증여일과 증여자 관계를 먼저 입력하세요"
-                  : "현재 수증자(=의뢰인)의 저장된 증여세 이력에서 사전증여를 선택해 자동 입력합니다"
+                  ? mode === "inheritance"
+                    ? "1단계에서 상속개시일을 먼저 입력하세요"
+                    : "1단계에서 증여일과 증여자 관계를 먼저 입력하세요"
+                  : mode === "inheritance"
+                    ? "저장된 증여세 이력에서 사전증여를 선택해 자동 입력합니다 (상속개시일 기준 10년 이내)"
+                    : "현재 수증자(=의뢰인)의 저장된 증여세 이력에서 사전증여를 선택해 자동 입력합니다"
               }
               className={`text-xs rounded-md border px-3 py-1.5 transition-colors ${
                 canLookup
@@ -786,7 +804,7 @@ export function PriorGiftInput({
         </p>
       )}
 
-      {/* 이력 조회 모달 — 수증자(=의뢰인) clientId 매칭 */}
+      {/* 이력 조회 모달 — 증여세: §47 동일인 매칭 / 상속세: 옵션 B 전수 조회 */}
       {mode === "gift" && canLookup && (
         <PriorGiftHistoryModal
           open={historyModalOpen}
@@ -797,6 +815,23 @@ export function PriorGiftInput({
           excludeCalculationIds={excludeIds}
           onSelect={handleAddFromHistory}
           onManualAdd={handleAdd}
+          mode="gift"
+        />
+      )}
+      {/* PR 1 (2026-05-22): 상속세 모드 모달 — currentDeathDate 기준 옵션 B 전수 조회 */}
+      {mode === "inheritance" && canLookup && (
+        <PriorGiftHistoryModal
+          open={historyModalOpen}
+          onOpenChange={setHistoryModalOpen}
+          currentGiftDate={currentDeathDate!}
+          // 상속세 모드에서는 currentDonor·currentClientId 무시 (필러 — 인터페이스 호환)
+          currentDonor={"other" as GiftDonorRelation}
+          currentClientId={null}
+          excludeCalculationIds={excludeIds}
+          onSelect={handleAddFromHistory}
+          onManualAdd={handleAdd}
+          mode="inheritance"
+          enableCorporateOption={allowCorporateImport === true}
         />
       )}
 

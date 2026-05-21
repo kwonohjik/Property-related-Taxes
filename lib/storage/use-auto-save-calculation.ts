@@ -23,6 +23,8 @@ interface Return {
   created: boolean | null;
   status: AutoSaveStatus;
   error: string | null;
+  /** v4 draft 자동 승격 — final 저장 직전 삭제한 draft 수 (별도 작업자 구현 대기) */
+  promotedDraftCount?: number;
 }
 
 /**
