@@ -134,11 +134,12 @@ export interface EstateItem {
   /** 법인 총자산 (사업무관자산 비율 분모). 미입력 시 차감 미적용 (legacy). */
   corporateTotalAssets?: number;
 
-  // ===== 거주지 자동 검증 (PR-E F-10, §16②1호나) =====
-  /** 자산 소재지 좌표 (Vworld 주소 검색 시 자동 저장). 농지·초지·산림지·농업용 건축물·염전 용. */
-  estateLatLng?: { lat: number; lng: number };
-  /** 어선·어업권 자산 전용 — 선적지·어장 연안 좌표 (§16②1호나 후단). */
-  fishingAnchorLatLng?: { lat: number; lng: number };
+  /** 자산 소재지 좌표 (F-10 §16②1호나). 농지 그룹용. 타입: inheritance-asset-location.types.ts */
+  estateLatLng?: LatLng;
+  /** 어선·어업권 자산 전용 — 선적지·어장 연안 좌표 (§16②1호나 후단) */
+  fishingAnchorLatLng?: LatLng;
+  /** 자산 소재지 주소 — AddressSearch 영속화 (C2 휘발 버그 수정 2026-05-22) */
+  estateAddress?: EstateAddress;
 }
 
 /**
@@ -436,6 +437,56 @@ export interface Heir {
   isGenerationSkipBeneficiary?: boolean;
   /** 영리법인 수증자만: 사전증여 당시 증여세 산출세액 (§3의2② 면제 한도용) */
   corporateGiftComputedTax?: number;
+
+  // ===== PR 2 (2026-05-22) — 부표 5 영리법인 면제 및 납부 명세서 =====
+  /**
+   * 영리법인 사업자등록번호 — 별지 제9호서식 부표 5 ② 컬럼.
+   * relation === "corporate" 일 때만 의미.
+   */
+  businessRegistrationNumber?: string;
+  /**
+   * 영리법인 사업장 소재지 — 별지 제9호서식 부표 5 ③ 컬럼.
+   * relation === "corporate" 일 때만 의미.
+   */
+  businessAddress?: string;
+  /**
+   * 영리법인 주주 중 상속인·직계비속 명세 (부표 5 나. 표).
+   *
+   * 상증법 §3의2② 작성방법 6:
+   *   ⑪ 면제분 납부세액 = [면제세액(⑤) − 유증가액(④)×10%] × 지분율(⑩)
+   *
+   * relation === "corporate" 일 때만 의미.
+   * 합 ≤ 1.0 (외부 주주 — 상속인 아닌 자 — 보유분은 명세 제외, validate 미차단)
+   */
+  shareholders?: ShareholderInfo[];
+}
+
+/**
+ * PR 2 — 영리법인 주주 명세 (부표 5 나. 표).
+ *
+ * §3의2② 본문: "그 영리법인의 주주 또는 출자자 중 상속인, 상속인의 배우자,
+ * 상속인의 직계비속 또는 그 직계비속의 배우자"
+ */
+export interface ShareholderInfo {
+  id: string;
+  /**
+   * 부표 5 ⑦ 구분.
+   *   - "heir": 상속인
+   *   - "heir_spouse": 상속인의 배우자
+   *   - "lineal_descendant_of_heir": 상속인의 직계비속
+   *   - "spouse_of_lineal_descendant": 직계비속의 배우자
+   */
+  relation:
+    | "heir"
+    | "heir_spouse"
+    | "lineal_descendant_of_heir"
+    | "spouse_of_lineal_descendant";
+  /** 부표 5 ⑧ 성명 */
+  name: string;
+  /** 부표 5 ⑨ 주민등록번호 (옵션 — 신고서 표시용) */
+  residentNumber?: string;
+  /** 부표 5 ⑩ 지분율. 0 ≤ r ≤ 1 (1=100%). 합 ≤1 (외부 주주분 제외) */
+  shareRatio: number;
 }
 
 // ============================================================
@@ -602,13 +653,15 @@ export interface InheritanceDeductionInput {
   familyBusiness?: FamilyBusinessInheritanceInput;
 }
 
-// 분리 타입 barrel (800줄 정책: farming · family-business · corporate-non-business)
+// 분리 타입 barrel (800줄 정책)
 import type { FarmingInheritanceInput, FarmingDeductionDetail } from "./inheritance-farming.types";
 import type { FamilyBusinessCategory, FamilyBusinessInheritanceInput, FamilyBusinessDeductionDetail } from "./inheritance-family-business.types";
 import type { CorporateNonBusinessAssets } from "./inheritance-corporate-non-business.types";
+import type { LatLng, EstateAddress } from "./inheritance-asset-location.types";
 export type { FarmingInheritanceInput, FarmingDeductionDetail, FarmingEligibilityResult } from "./inheritance-farming.types";
 export type { FamilyBusinessCategory, FamilyBusinessInheritanceInput, FamilyBusinessIneligibleReason, FamilyBusinessDeductionDetail, FamilyBusinessCap, FamilyBusinessMediumGuard } from "./inheritance-family-business.types";
 export type { CorporateNonBusinessAssets, CorporateStockAdjustedResult } from "./inheritance-corporate-non-business.types";
+export type { LatLng, EstateAddress } from "./inheritance-asset-location.types";
 export { FARMING_MAX } from "./inheritance-farming.types";
 export { FAMILY_BUSINESS_CAP_10Y, FAMILY_BUSINESS_CAP_20Y, FAMILY_BUSINESS_CAP_30Y, FAMILY_BUSINESS_SCALE_THRESHOLD, FAMILY_BUSINESS_OTHER_ESTATE_RATIO } from "./inheritance-family-business.types";
 

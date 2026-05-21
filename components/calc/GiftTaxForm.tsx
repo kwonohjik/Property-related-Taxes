@@ -663,12 +663,18 @@ export function GiftTaxForm() {
   };
 
   // 결과 미계산 시 NO_RESULT sentinel throw — 호출자가 info 토스트 분기
-  const handleManualSave = () =>
-    runGiftManualSave({
+  const handleManualSave = async (): Promise<{
+    id: string;
+    created: boolean;
+    isDraft: boolean;
+  }> => {
+    const outcome = await runGiftManualSave({
       form: form as unknown as Record<string, unknown> & { giftDate?: string },
       result,
       clientId: activeClientId ?? null,
     });
+    return { ...outcome, isDraft: false };
+  };
 
   // 폼 화면용 wrapper — 토스트 표시
   const handleManualSaveForForm = async () => {

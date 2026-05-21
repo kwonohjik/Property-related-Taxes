@@ -124,10 +124,17 @@ function ItemEditor({ item, index, onUpdate, onRemove, mode, heirs }: ItemEditor
     cat === "real_estate_building" ? "building_non_residential" :
     "land"; // real_estate_land
 
-  // ── 공시가격 조회용 로컬 주소 상태 (EstateItem에 포함되지 않음) ──
-  const [addrValue, setAddrValue] = useState<AddressValue>({
-    road: "", jibun: "", building: "", detail: "", lng: "", lat: "",
-  });
+  // ── 공시가격 조회용 주소 상태 (C2 좌표 휘발 버그 수정: EstateItem.estateAddress + estateLatLng 영속화) ──
+  // local state는 lat·lng 표시 동기화용 (string). 영속화는 onChange 시 item에 저장.
+  const [addrValue, setAddrValue] = useState<AddressValue>(() => ({
+    road: item.estateAddress?.road ?? "",
+    jibun: item.estateAddress?.jibun ?? "",
+    building: item.estateAddress?.building ?? "",
+    detail: item.estateAddress?.detail ?? "",
+    pnu: item.estateAddress?.pnu ?? "",
+    lng: item.estateLatLng ? String(item.estateLatLng.lng) : "",
+    lat: item.estateLatLng ? String(item.estateLatLng.lat) : "",
+  }));
   /** 토지·건물용 단가 (원/㎡) — StandardPriceInput 내부 상태 유지용 */
   const [standardPricePerSqm, setStandardPricePerSqm] = useState("");
 
@@ -167,7 +174,36 @@ function ItemEditor({ item, index, onUpdate, onRemove, mode, heirs }: ItemEditor
                   // 도로명(우선)·지번 + 건물명·상세주소를 결합하여 자산명에 동기화
                   const parts = [v.road || v.jibun, v.building, v.detail].filter(Boolean);
                   const auto = parts.join(" ").trim();
-                  if (auto) set({ name: auto });
+
+                  // C2 좌표 휘발 버그 수정: EstateItem에 주소·좌표 영속화
+                  const hasAddress = v.road || v.jibun || v.building || v.detail || v.pnu;
+                  const estateAddress = hasAddress
+                    ? {
+                        road: v.road || undefined,
+                        jibun: v.jibun || undefined,
+                        building: v.building || undefined,
+                        detail: v.detail || undefined,
+                        pnu: v.pnu || undefined,
+                      }
+                    : undefined;
+                  const latNum = v.lat ? parseFloat(v.lat) : NaN;
+                  const lngNum = v.lng ? parseFloat(v.lng) : NaN;
+                  const estateLatLng =
+                    Number.isFinite(latNum) && Number.isFinite(lngNum)
+                      ? { lat: latNum, lng: lngNum }
+                      : undefined;
+
+                  const patch: Partial<EstateItem> = { estateAddress };
+                  // farmingCategory 분기 (UI-E1): 어선·어업권은 fishingAnchorLatLng로
+                  if (estateLatLng) {
+                    const isFishing =
+                      item.farmingCategory === "fishing_vessel" ||
+                      item.farmingCategory === "fishing_right";
+                    if (isFishing) patch.fishingAnchorLatLng = estateLatLng;
+                    else patch.estateLatLng = estateLatLng;
+                  }
+                  if (auto) patch.name = auto;
+                  set(patch);
                 }}
               />
               <input

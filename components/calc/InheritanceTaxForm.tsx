@@ -190,7 +190,7 @@ export function InheritanceTaxForm() {
     status: autoSave.status,
     savedId: autoSave.savedId,
     created: autoSave.created,
-    promotedDraftCount: autoSave.promotedDraftCount,
+    promotedDraftCount: autoSave.promotedDraftCount ?? 0,
     count: recordCount,
   });
   const [saveMessage, setSaveMessage] = useState<SaveToastMessage | null>(null);
