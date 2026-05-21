@@ -7,6 +7,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  suggestCohabitHouseCandidates,
   suggestFamilyBusinessValue,
   suggestLegateeAmountNonHeir,
   suggestNetFinancialAssets,
@@ -299,6 +300,80 @@ describe("suggestLegateeAmountNonHeir", () => {
 // ============================================================
 // ADS-10: 배우자 실제 상속액
 // ============================================================
+
+// ============================================================
+// ADS-11: 동거주택 후보
+// ============================================================
+
+describe("suggestCohabitHouseCandidates", () => {
+  it("ADS-11: 주택 2건 + isCohabitant=true 자녀 1명 → 후보 2건 isApplicable", () => {
+    const heirs = [
+      heir({ id: "h1", relation: "child", isCohabitant: true }),
+      heir({ id: "h2", relation: "child" }),
+    ];
+    const items = [
+      asset({
+        id: "a1",
+        category: "real_estate_apartment",
+        name: "강남 아파트",
+        standardPrice: 800_000_000,
+      }),
+      asset({
+        id: "a2",
+        category: "real_estate_building",
+        name: "본가 단독주택",
+        standardPrice: 500_000_000,
+      }),
+      asset({
+        id: "a3",
+        category: "real_estate_land",
+        standardPrice: 300_000_000,
+      }),
+    ];
+    const r = suggestCohabitHouseCandidates(items, heirs);
+    expect(r.candidates.length).toBe(2);
+    expect(r.hasCohabitantChild).toBe(true);
+    expect(r.isApplicable).toBe(true);
+  });
+
+  it("동거 자녀 없음 → isApplicable=false", () => {
+    const heirs = [heir({ id: "h1", relation: "child" })];
+    const items = [
+      asset({
+        id: "a1",
+        category: "real_estate_apartment",
+        standardPrice: 800_000_000,
+      }),
+    ];
+    const r = suggestCohabitHouseCandidates(items, heirs);
+    expect(r.isApplicable).toBe(false);
+    expect(r.hasCohabitantChild).toBe(false);
+  });
+
+  it("주택 없음 → 후보 0건", () => {
+    const heirs = [heir({ id: "h1", relation: "child", isCohabitant: true })];
+    const items = [
+      asset({ id: "a1", category: "real_estate_land", standardPrice: 100_000_000 }),
+    ];
+    const r = suggestCohabitHouseCandidates(items, heirs);
+    expect(r.candidates.length).toBe(0);
+    expect(r.isApplicable).toBe(false);
+  });
+
+  it("standardPrice 0 또는 미입력 → 후보 제외", () => {
+    const heirs = [heir({ id: "h1", relation: "child", isCohabitant: true })];
+    const items = [
+      asset({ id: "a1", category: "real_estate_apartment" }),  // standardPrice undefined
+      asset({
+        id: "a2",
+        category: "real_estate_apartment",
+        standardPrice: 0,
+      }),
+    ];
+    const r = suggestCohabitHouseCandidates(items, heirs);
+    expect(r.candidates.length).toBe(0);
+  });
+});
 
 describe("suggestSpouseActualAmount", () => {
   it("ADS-10: 협의분할 spouse 분배 합", () => {

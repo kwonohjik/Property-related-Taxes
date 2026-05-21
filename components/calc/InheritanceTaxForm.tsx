@@ -337,6 +337,7 @@ export function InheritanceTaxForm() {
           onGoToFirst={() => { setResult(null); setStep(0); }}
           heirs={form.heirs}
           debtItems={form.debtItems}
+          estateItems={[...form.estateItems, ...form.stockItems]}
         />
         <div className="flex justify-end">
           <SaveButton variant="primary" onSave={handleManualSaveForForm} />

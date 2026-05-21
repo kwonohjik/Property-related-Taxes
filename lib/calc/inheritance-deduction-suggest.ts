@@ -285,6 +285,64 @@ export function suggestLegateeAmountNonHeir(
 }
 
 // ============================================================
+// A-9: 동거주택 공시가격 후보 §23의2 (필드 #3)
+// ============================================================
+
+export interface CohabitHouseCandidate {
+  itemId: string;
+  name: string;
+  stdPrice: number;
+}
+
+export interface CohabitHouseCandidates {
+  candidates: CohabitHouseCandidate[];
+  /** 자녀 중 isCohabitant=true 인 상속인이 있는지 */
+  hasCohabitantChild: boolean;
+  /** 도출 가능 여부 — 후보 1건 이상 + 동거 자녀 존재 */
+  isApplicable: boolean;
+}
+
+/**
+ * 동거주택 §23의2 후보 자산 도출.
+ * - 주택 카테고리(real_estate_apartment·real_estate_building)
+ * - standardPrice 1원 이상
+ * - 자녀 상속인 중 isCohabitant=true 존재
+ */
+export function suggestCohabitHouseCandidates(
+  estateItems: EstateItem[],
+  heirs: Heir[],
+): CohabitHouseCandidates {
+  const hasCohabitantChild = heirs.some(
+    (h) => h.relation === "child" && h.isCohabitant === true,
+  );
+  const candidates: CohabitHouseCandidate[] = [];
+  for (const item of estateItems) {
+    if (
+      item.category !== "real_estate_apartment" &&
+      item.category !== "real_estate_building"
+    ) {
+      continue;
+    }
+    if (
+      typeof item.standardPrice !== "number" ||
+      item.standardPrice <= 0
+    ) {
+      continue;
+    }
+    candidates.push({
+      itemId: item.id,
+      name: item.name || "(자산명 미입력)",
+      stdPrice: item.standardPrice,
+    });
+  }
+  return {
+    candidates,
+    hasCohabitantChild,
+    isApplicable: candidates.length > 0 && hasCohabitantChild,
+  };
+}
+
+// ============================================================
 // A-8: 배우자 실제 상속액 §19 (필드 #1) — 협의분할 한정
 // ============================================================
 

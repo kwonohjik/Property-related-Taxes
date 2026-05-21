@@ -7,9 +7,14 @@
 import { useState } from "react";
 import { ChevronLeft } from "lucide-react";
 import type {
+  EstateItem,
   InheritanceTaxResult,
   Heir,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
+import {
+  resolveFinancialDebt,
+  resolveFinancialEligibility,
+} from "@/lib/calc/financial-deduction-resolver";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
 import { LoginPromptBanner } from "@/components/calc/shared/LoginPromptBanner";
@@ -46,6 +51,40 @@ function Row({
       <span className={`font-mono text-sm ${deduction ? "text-blue-600 dark:text-blue-400" : ""}`}>
         {value}
       </span>
+    </div>
+  );
+}
+
+function FinancialDeductionCountRow({
+  estateItems,
+  debtItems,
+}: {
+  estateItems: EstateItem[];
+  debtItems?: DebtItem[];
+}) {
+  const eligibleAssets = estateItems.filter(resolveFinancialEligibility);
+  const eligibleDebts = (debtItems ?? []).filter(resolveFinancialDebt);
+  if (eligibleAssets.length === 0 && eligibleDebts.length === 0) return null;
+
+  const assetTotal = eligibleAssets.reduce((sum, i) => {
+    const v =
+      i.marketValue ??
+      i.appraisedValue ??
+      i.standardPrice ??
+      (i.listedStockAvgPrice && i.listedStockShares
+        ? i.listedStockAvgPrice * i.listedStockShares
+        : 0);
+    return sum + (v ?? 0);
+  }, 0);
+  const debtTotal = eligibleDebts.reduce((sum, d) => sum + d.amount, 0);
+
+  return (
+    <div className="px-4 pb-2 -mt-1">
+      <p className="text-[11px] text-gray-500 dark:text-gray-400 pl-3">
+        ⓘ §22 대상: 자산 {eligibleAssets.length}건 (
+        {formatKRW(assetTotal)}) − 채무 {eligibleDebts.length}건 (
+        {formatKRW(debtTotal)})
+      </p>
     </div>
   );
 }
@@ -108,6 +147,8 @@ interface Props {
   heirs?: Heir[];
   /** 채무·공과·장례비 협의분할 항목 (방안 C — undefined: OFF 모드) */
   debtItems?: DebtItem[];
+  /** 상속재산 입력 — §22 카운트 계산용 */
+  estateItems?: EstateItem[];
 }
 
 export function InheritanceTaxResultView({
@@ -118,6 +159,7 @@ export function InheritanceTaxResultView({
   showLoginPrompt = false,
   heirs,
   debtItems,
+  estateItems,
 }: Props) {
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [showValuation, setShowValuation] = useState(false);
@@ -264,10 +306,18 @@ export function InheritanceTaxResultView({
               </>
             )}
             {result.deductionDetail.financialDeduction > 0 && (
-              <Row
-                label="금융재산 공제 (§22)"
-                value={formatKRW(result.deductionDetail.financialDeduction)}
-              />
+              <>
+                <Row
+                  label="금융재산 공제 (§22)"
+                  value={formatKRW(result.deductionDetail.financialDeduction)}
+                />
+                {estateItems && (
+                  <FinancialDeductionCountRow
+                    estateItems={estateItems}
+                    debtItems={debtItems}
+                  />
+                )}
+              </>
             )}
             {result.deductionDetail.cohabitationDeduction > 0 && (
               <Row

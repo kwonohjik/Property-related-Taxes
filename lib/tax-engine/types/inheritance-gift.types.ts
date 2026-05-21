@@ -150,61 +150,15 @@ export interface PropertyValuationResult {
 }
 
 // ============================================================
-// 비과세·과세가액 불산입 (exemption-rules.ts / exemption-evaluator.ts)
+// 비과세·과세가액 불산입 — inheritance-exemption.types.ts로 분리 (2026-05-21, 800줄 정책)
 // ============================================================
-
-/**
- * 체크리스트 기반 비과세 항목 (ExemptionChecklist 컴포넌트 출력)
- * exemption-evaluator.ts에도 동일 인터페이스 export됨 (하위 호환)
- */
-export interface ExemptionCheckedItem {
-  ruleId: string;
-  /** 해당 항목의 자산 가액 또는 금액 */
-  claimedAmount: number;
-  /** 장애인 신탁: 10년 합산 기사용 공제액 */
-  priorDisabledTrustUsed?: number;
-  /**
-   * 공익법인 동족주식 초과분 금액 (§16 ②)
-   * 5%(성실공익법인 10%) 초과 보유 주식의 시가 — 이 금액은 과세됨
-   */
-  excessStockAmount?: number;
-  /** 공익법인 동족주식 5% 초과 보유 여부 (§16 ②) */
-  relatedStockExceeded?: boolean;
-  /** 혼인공제 기사용 여부 (§53의2 — 평생 1회) */
-  marriageExemptionAlreadyUsed?: boolean;
-  /** 면적 한도 항목의 실제 면적 (㎡) — 금양임야·묘토 */
-  claimedAreaM2?: number;
-  /** @deprecated claimedAreaM2 사용 권장 */
-  areaM2?: number;
-  /** 문화재 지정 취소 여부 (§12 1호 단서 — 취소 시 추징) */
-  culturalDesignationRevoked?: boolean;
-}
-
-/**
- * 비과세 입력 (상증법 §11·§12·§46·§46의2)
- * @deprecated ExemptionCheckedItem[] 방식으로 대체됨.
- */
-export interface ExemptionInput {
-  /** 전사자 해당 여부 (§11) */
-  isWarHero?: boolean;
-  /** 국가 기증 재산 금액 (§12①) */
-  donatedToState?: number;
-  /** 제사용 재산 (§12②) */
-  ceremonialProperty?: number;
-  /** 문화재 자산 (§12③) */
-  culturalProperty?: number;
-  /** 비과세 증여 — 사회통념상 금품·학자금·치료비 등 (§46) */
-  socialNormGifts?: number;
-  /** 공익법인 출연재산 (§46의2) */
-  publicInterestContribution?: number;
-}
-
-/** 비과세 계산 결과 */
-export interface ExemptionResult {
-  totalExemptAmount: number;
-  breakdown: CalculationStep[];
-  appliedLaws: string[];
-}
+// 기존 import 경로 보존을 위한 barrel re-export
+import type {
+  ExemptionCheckedItem,
+  ExemptionInput,
+  ExemptionResult,
+} from "./inheritance-exemption.types";
+export type { ExemptionCheckedItem, ExemptionInput, ExemptionResult };
 
 // ============================================================
 // 사전증여 내역 (상증법 §13·§47)
@@ -480,66 +434,15 @@ export interface DebtItem {
 }
 
 // ============================================================
-// 상속인별 배부 결과 (Design §2-5)
+// 상속인별 배부 + 영리법인 면제 — inheritance-allocation-result.types.ts로 분리
+// (2026-05-21, 800줄 정책). 기존 import 경로 보존을 위한 barrel re-export.
 // ============================================================
-
-export interface HeirTaxBreakdown {
-  heirId: string;
-  /** 본래상속재산 직접 분배 */
-  directEstateAmount: number;
-  /** 사전증여 가산가액 */
-  priorGiftAmount: number;
-  /** 추정상속재산 분배 */
-  presumedAmount: number;
-  /** 채무·공과금·장례비 분담 */
-  debtShare: number;
-  /** 과세가액상당액 */
-  taxableValueShare: number;
-  /** 직접배부 과세표준 (사전증여 과세표준 − 증여공제) */
-  directTaxBaseShare: number;
-  /** 간접배부 과세표준 */
-  indirectTaxBaseShare: number;
-  /** 과세표준상당액 = 직접 + 간접 */
-  taxBaseShare: number;
-  /** 산출세액상당액 (배부대상 산출세액 × 비율, 할증 전) */
-  computedTaxShare: number;
-  /** 세대생략 할증액 (수유자만) */
-  generationSkipSurcharge: number;
-  /** 사전증여세액공제 */
-  priorGiftCredit: number;
-  /** 차가감세액 = computedTaxShare + 할증 − priorGiftCredit */
-  preFilingCreditTax: number;
-  /** 신고세액공제 (3%) */
-  filingCredit: number;
-  /** 자진납부세액 */
-  finalTax: number;
-}
-
-export interface HeirAllocationResult {
-  /** Heir.id 별 산출 결과. 영리법인은 finalTax=0. */
-  perHeir: Map<string, HeirTaxBreakdown>;
-  /** 배부대상 산출세액 = 산출세액 − 영리법인 면제 (할증 미포함) */
-  distributableTax: number;
-  /** 간접배부 분모 = grossEstateWithGifts − Σ(상속인·수유자 외 자 사전증여 가액) */
-  indirectDistributionBase: number;
-  /** 간접배부 분자 = taxBase − Σ직접배부 − corporateGiftTaxBase */
-  indirectNumerator: number;
-  /** 산출세액상당액 분모 = taxBase − corporateGiftTaxBase */
-  computedTaxShareDenominator: number;
-  breakdown: CalculationStep[];
-}
-
-// ============================================================
-// 영리법인 §3의2② 면제 결과 (Design §2-5)
-// ============================================================
-
-export interface CorporateExemptionResult {
-  /** 면제세액 = Min(증여세 산출세액, 한도) */
-  amount: number;
-  /** 한도 = floor(산출세액 × 영리법인 과세표준 / 상속세 과세표준) */
-  limit: number;
-  breakdown: CalculationStep[];
-}
+import type {
+  HeirTaxBreakdown,
+  HeirAllocationResult,
+  CorporateExemptionResult,
+} from "./inheritance-allocation-result.types";
+export type { HeirTaxBreakdown, HeirAllocationResult, CorporateExemptionResult };
 
 // ============================================================
 // 상속공제 입력 (inheritance-deductions.ts)

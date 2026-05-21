@@ -14,6 +14,7 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { HeirComposition } from "@/components/calc/HeirComposition";
 import { AutoSuggestBadge } from "./AutoSuggestBadge";
 import {
+  suggestCohabitHouseCandidates,
   suggestFamilyBusinessValue,
   suggestLegateeAmountNonHeir,
   suggestNetFinancialAssets,
@@ -53,6 +54,10 @@ export function Step4({ form, set }: { form: FormState; set: FormSet }) {
   const suggestPriorGift = useMemo(
     () => suggestPriorGiftDeductionTotal(form.priorGifts),
     [form.priorGifts],
+  );
+  const cohabitCandidates = useMemo(
+    () => suggestCohabitHouseCandidates(allEstateItems, form.heirs),
+    [allEstateItems, form.heirs],
   );
 
   return (
@@ -97,13 +102,63 @@ export function Step4({ form, set }: { form: FormState; set: FormSet }) {
           />
         </div>
 
-        <CurrencyInput
-          label="동거주택 공시가격 (§23의2)"
-          value={form.cohabitHouseStdPrice}
-          onChange={(v) => set({ cohabitHouseStdPrice: v })}
-          hint="10년 이상 동거 + 무주택 자녀 상속 — 공시가 80%, 최대 6억"
-          placeholder="없으면 빈칸"
-        />
+        <div className="space-y-2">
+          {cohabitCandidates.isApplicable && (
+            <div className="rounded-md border border-dashed border-violet-300 bg-violet-50/40 dark:bg-violet-950/20 dark:border-violet-800 p-3 space-y-2">
+              <p className="text-xs font-semibold text-violet-800 dark:text-violet-200">
+                💡 동거주택 후보 — 자녀 상속인 중 동거 표시된 주택 자산
+              </p>
+              <div className="space-y-1.5">
+                {cohabitCandidates.candidates.map((c) => {
+                  const isSelected =
+                    form.cohabitHouseStdPrice === String(c.stdPrice);
+                  return (
+                    <button
+                      key={c.itemId}
+                      type="button"
+                      onClick={() =>
+                        set({
+                          cohabitHouseStdPrice: isSelected ? "" : String(c.stdPrice),
+                        })
+                      }
+                      className={`w-full text-left rounded border p-2 text-xs transition-colors ${
+                        isSelected
+                          ? "border-violet-400 bg-violet-100 dark:bg-violet-900/40"
+                          : "border-violet-200 bg-white dark:bg-gray-900 hover:bg-violet-50 dark:hover:bg-violet-950/30"
+                      }`}
+                    >
+                      <span className="font-medium">{c.name}</span>
+                      <span className="ml-2 font-mono text-gray-700 dark:text-gray-300">
+                        {c.stdPrice.toLocaleString("ko-KR")}원
+                      </span>
+                      {isSelected && (
+                        <span className="ml-2 text-[10px] text-violet-700 dark:text-violet-300">
+                          ✓ 선택됨
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-[10px] text-violet-600 dark:text-violet-400">
+                ⓘ §23의2 — 10년 이상 동거 + 무주택 자녀 요건은 별도 확인 필요
+              </p>
+            </div>
+          )}
+          {!cohabitCandidates.hasCohabitantChild &&
+            cohabitCandidates.candidates.length > 0 && (
+              <p className="text-[10px] text-amber-700 dark:text-amber-300">
+                ⚠️ 주택 자산은 있으나 동거 표시(isCohabitant)된 자녀 상속인이 없습니다 — Step4 상단 상속인 구성에서 동거 토글 확인.
+              </p>
+            )}
+          <CurrencyInput
+            label="동거주택 공시가격 (§23의2)"
+            value={form.cohabitHouseStdPrice}
+            onChange={(v) => set({ cohabitHouseStdPrice: v })}
+            hint="10년 이상 동거 + 무주택 자녀 상속 — 공시가 80%, 최대 6억"
+            placeholder="없으면 빈칸"
+          />
+        </div>
 
         <CurrencyInput
           label="동거주택공제 직접 입력 (Phase E)"
