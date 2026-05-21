@@ -676,3 +676,103 @@ PR-E (대) — Vworld 거주지 자동화 (마지막)
 | 2026-05-21 (v2) | A11 BigInt | PR-C §6-4 — Number 한계 분석 + 30억 cap 적용 위치 명확화 + FNB-11 경계 anchor |
 | 2026-05-21 (v2) | A14 진행순서 | §7 PR-C 우선순위 상향 (가업상속 §18의2 이미 완료) |
 | 2026-05-21 (v2) | A15 검증 누락 | §8 PR-G·PR-H KoreanLaw 재검증 항목 추가 |
+| 2026-05-21 (완료) | PR-D·H·F·C·E·FE-UI-3 | 6건 모두 master 반영 — `9412ca1`·`f05f7c8`·`4c9cdaf`·`873daca`·`dd7e2fc`·`41e8d4c` |
+
+---
+
+## 부록 A — PR-F 후속 (상속인별 분리 자격 평가)
+
+**상태**: PR-F (`4c9cdaf`)에서 §16⑤ 본문 자격자 분배분(qualifiedHeirIds)은 구현됨. 다만 자격자 평가는 "모든 자격자 동일 평가" 가정. 상속인별 분리 평가는 별도 PR.
+
+### A-1. 현재 한계 (PR-F §4-7 위험 요소)
+
+- `evaluateFarmingEligibility(farming)`는 단일 boolean 반환 — heirIsAdult·heirTwoYearFarming 등은 모든 상속인에게 동일 적용
+- 실제 상속인 A는 충족 / 상속인 B는 미충족 케이스 자동 분리 불가
+- 사용자가 qualifiedHeirIds 명시로 우회 가능하지만 자격 평가 자체는 미분리
+
+### A-2. 신규 데이터 모델
+
+```typescript
+// inheritance-farming.types.ts 확장
+export interface FarmingHeirAssessment {
+  heirId: string;
+  heirIsAdult: boolean;
+  heirTwoYearFarming: boolean;
+  heirResidenceMet: boolean;
+  heirCorporateOfficer?: boolean;  // corporate 트랙
+  isDesignatedSuccessor?: boolean;
+  // §16⑭ 결격소득은 상속인별 분리 (피상속인 분리는 farming-수준)
+  hasDisqualifyingIncome?: boolean;
+}
+
+export interface FarmingInheritanceInput {
+  // ... 기존
+  /**
+   * 상속인별 자격 평가 (선택). 미입력 시 farming 폼-수준 boolean을 모든 상속인에 동일 적용 (legacy).
+   * 입력 시 heirAssessments 중 eligible=true 상속인만 qualifiedHeirIds 자동 도출.
+   */
+  heirAssessments?: FarmingHeirAssessment[];
+}
+```
+
+### A-3. 엔진 시그니처 변경
+
+```typescript
+export function evaluateFarmingEligibility(input: FarmingInheritanceInput): {
+  eligible: boolean;            // 피상속인 요건 + 1명 이상 자격자
+  reasons: string[];
+  qualifiedHeirIds: string[];  // heirAssessments에서 자동 도출 또는 폼-수준 자격자 전체
+};
+```
+
+### A-4. anchor
+
+- **FH-1**: heirAssessments 미입력 → legacy (폼-수준 boolean 적용)
+- **FH-2**: 3명 상속인 중 1명만 자격 충족 → qualifiedHeirIds=[h1] 자동 도출
+- **FH-3**: heirAssessments 입력 + qualifiedHeirIds 명시 → heirAssessments 우선 (자동 도출)
+- **FH-4**: 모든 상속인 미충족 → eligible=false (피상속인 충족이어도)
+- **FH-5**: 후계자 트랙 + 다른 상속인 미충족 → 후계자만 qualifiedHeirIds
+- **FH-6**: §16⑭ 상속인별 결격소득 — 결격 상속인만 제외
+
+### A-5. UI
+
+`FarmingEligibilitySection`에 상속인별 자격 평가 expand 카드:
+
+```tsx
+{heirs && heirs.length > 1 && (
+  <>
+    <ToggleCard
+      title="상속인별 자격 분리 평가 (선택)"
+      checked={farming.heirAssessments !== undefined}
+      onCheckedChange={...}
+    />
+    {farming.heirAssessments && heirs.map((h) => (
+      <HeirAssessmentCard key={h.id} heir={h} ... />
+    ))}
+  </>
+)}
+```
+
+### A-6. 작업량
+
+- 엔진: 2~3h (시그니처 + reasons 분리)
+- UI: 3~4h (HeirAssessmentCard 신규 + 토글 동기화)
+- anchor: 1~2h
+- **총 6~9h**
+
+### A-7. 위험 요소
+
+- qualifiedHeirIds (PR-F) ↔ heirAssessments (PR-F 후속) 우선순위 충돌 — heirAssessments 우선 (자동 도출이 명시 입력을 덮어쓰지 않도록 정책 확정 필요)
+- 후계자 트랙 + 상속인별 분리 — 후계자만 트랙 면제, 다른 상속인은 18세·2년·거주 필수
+- §16⑭ 결격소득의 피상속인 분리 — 피상속인은 farming-수준 유지 (heirAssessments에 없음)
+
+---
+
+## 부록 B — 신규 계획서·PRD 참조
+
+| 문서 | 범위 | 상태 |
+|---|---|---|
+| `inheritance-farming-ui-integration.plan.md` | PR-C UI + PR-E UI 통합 (4 sub-PR) | 작성 완료 |
+| `inheritance-farming-administrative-district.prd.md` | 행정구역 OR 조건 (5 Phase) | PRD 단계 |
+| 본 부록 A | PR-F 상속인별 분리 자격 평가 | 계획 단계 |
+
