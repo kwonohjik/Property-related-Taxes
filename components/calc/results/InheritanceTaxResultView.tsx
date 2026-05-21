@@ -192,7 +192,7 @@ function formatBillion(amount: number): string {
   return `${eok.toLocaleString()}억`;
 }
 
-function FarmingDeductionDetailRow({
+export function FarmingDeductionDetailRow({
   detail,
 }: {
   detail?: FarmingDeductionDetail;
