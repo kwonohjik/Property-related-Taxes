@@ -274,6 +274,33 @@ export const heirSchema = z.object({
   isHeir: z.boolean().optional(),
   isGenerationSkipBeneficiary: z.boolean().optional(),
   corporateGiftComputedTax: z.number().nonnegative().optional(),
+  // PR 2 (2026-05-22) — 부표 5 영리법인 면제 명세
+  businessRegistrationNumber: z.string().optional(),
+  businessAddress: z.string().optional(),
+  shareholders: z
+    .array(
+      z.object({
+        id: z.string().min(1),
+        relation: z.enum([
+          "heir",
+          "heir_spouse",
+          "lineal_descendant_of_heir",
+          "spouse_of_lineal_descendant",
+        ]),
+        name: z.string().min(1),
+        residentNumber: z.string().optional(),
+        shareRatio: z.number().min(0).max(1),
+      }),
+    )
+    .optional()
+    .refine(
+      (arr) => {
+        if (!arr) return true;
+        const sum = arr.reduce((s, sh) => s + sh.shareRatio, 0);
+        return sum <= 1.0 + 1e-9; // 부동소수 허용 오차
+      },
+      { message: "주주 지분율 합이 100%를 초과합니다 (외부 주주분 제외)." },
+    ),
 });
 
 // ── DebtItem 스키마 (Phase A0 협의분할) ──

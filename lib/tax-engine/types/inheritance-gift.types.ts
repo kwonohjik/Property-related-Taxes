@@ -581,8 +581,16 @@ import type {
   HeirTaxBreakdown,
   HeirAllocationResult,
   CorporateExemptionResult,
+  PerCorporateExemptionDetail,
+  ShareholderPaymentDetail,
 } from "./inheritance-allocation-result.types";
-export type { HeirTaxBreakdown, HeirAllocationResult, CorporateExemptionResult };
+export type {
+  HeirTaxBreakdown,
+  HeirAllocationResult,
+  CorporateExemptionResult,
+  PerCorporateExemptionDetail,
+  ShareholderPaymentDetail,
+};
 
 // ============================================================
 // 상속공제 입력 (inheritance-deductions.ts)

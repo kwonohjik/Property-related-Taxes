@@ -69,4 +69,32 @@ export interface CorporateExemptionResult {
   /** 한도 = floor(산출세액 × 영리법인 과세표준 / 상속세 과세표준) */
   limit: number;
   breakdown: CalculationStep[];
+  /**
+   * PR 2 (2026-05-22) — 영리법인 별 분배 명세 (부표 5 양식).
+   * 다수 영리법인 시 corporateGiftTaxBase 비례 안분. 단일 영리법인이면 배열 길이 1.
+   */
+  perCorporateBreakdown?: PerCorporateExemptionDetail[];
+}
+
+/** PR 2 — 영리법인 별 면제·주주 환원 명세 (부표 5 가. + 나.) */
+export interface PerCorporateExemptionDetail {
+  /** Heir.id — 영리법인 식별자 */
+  corporateId: string;
+  /** ④ 유증·사전증여 재산가액 (해당 영리법인분) */
+  inheritedAmount: number;
+  /** ⑤ 면제세액 (해당 영리법인분 — 다수 영리법인 시 안분) */
+  exemptionAmount: number;
+  /** ⑥ ④ × 10% */
+  tenPercentBaseline: number;
+  /** 주주별 ⑪ 면제분 납부세액 = (⑤ − ⑥) × ⑩ */
+  shareholderPayments: ShareholderPaymentDetail[];
+}
+
+export interface ShareholderPaymentDetail {
+  /** ShareholderInfo.id */
+  shareholderId: string;
+  /** 부표 5 ⑩ 지분율 */
+  shareRatio: number;
+  /** 부표 5 ⑪ 면제분 납부세액 */
+  paymentAmount: number;
 }

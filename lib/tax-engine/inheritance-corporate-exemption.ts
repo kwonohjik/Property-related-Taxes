@@ -20,7 +20,27 @@ import { INH } from "./legal-codes";
 import type {
   CorporateExemptionResult,
   CalculationStep,
+  PerCorporateExemptionDetail,
+  ShareholderPaymentDetail,
+  ShareholderInfo,
 } from "./types/inheritance-gift.types";
+
+// ────────────────────────────────────────────────────
+// PR 2 (2026-05-22) — 영리법인 별 분배 입력 타입
+// ────────────────────────────────────────────────────
+
+export interface PerCorporateInput {
+  /** Heir.id */
+  corporateId: string;
+  /** 영리법인이 받았거나 받을 재산가액 (사전증여 또는 유증) */
+  inheritedAmount: number;
+  /** 영리법인 과세표준 (안분 분자 — corporateGiftTaxBase 와 동일 의미) */
+  taxBase: number;
+  /** 영리법인 증여세 산출세액 상당액 */
+  computedTax: number;
+  /** 상속인·직계비속 주주 명세 (없으면 빈 배열) */
+  shareholders: ShareholderInfo[];
+}
 
 // ────────────────────────────────────────────────────
 // 입력 타입
@@ -50,6 +70,7 @@ export interface CorporateExemptionInput {
  */
 export function calcCorporateExemption(
   input: CorporateExemptionInput,
+  opts: { perCorporateInputs?: PerCorporateInput[] } = {},
 ): CorporateExemptionResult {
   const {
     corporateGiftComputedTax,
@@ -102,5 +123,65 @@ export function calcCorporateExemption(
     },
   ];
 
-  return { amount, limit, breakdown };
+  // PR 2 (2026-05-22) — 영리법인 별 분배 명세 (부표 5)
+  let perCorporateBreakdown: PerCorporateExemptionDetail[] | undefined;
+  if (opts.perCorporateInputs && opts.perCorporateInputs.length > 0) {
+    perCorporateBreakdown = distributePerCorporate(
+      opts.perCorporateInputs,
+      amount,
+      corporateGiftTaxBase,
+    );
+  }
+
+  return { amount, limit, breakdown, perCorporateBreakdown };
+}
+
+// ────────────────────────────────────────────────────
+// PR 2 — 다수 영리법인 안분 + 주주별 책임 환원
+// ────────────────────────────────────────────────────
+
+/**
+ * 영리법인별 ⑤ 면제세액 안분 + 주주별 ⑪ 면제분 납부세액 계산.
+ *
+ * 안분 산식 (시행령 §3의2 본문 인용 후 v3 확정 — 가정 산식):
+ *   각 영리법인 ⑤ = totalExemption × (해당 영리법인 과세표준 / 영리법인 합계 과세표준)
+ *
+ * 주주별 ⑪ (작성방법 6, KoreanLaw MCP 검증):
+ *   ⑪ = (⑤ − ⑥) × 지분율  where ⑥ = ④ × 10%
+ *   음수 가드 — (⑤ − ⑥) < 0이면 0
+ */
+function distributePerCorporate(
+  inputs: PerCorporateInput[],
+  totalExemption: number,
+  totalTaxBase: number,
+): PerCorporateExemptionDetail[] {
+  if (totalTaxBase <= 0) return [];
+
+  return inputs.map((inp) => {
+    const exemptionAmount =
+      inputs.length === 1
+        ? totalExemption
+        : Math.floor((totalExemption * inp.taxBase) / totalTaxBase);
+    const tenPercentBaseline = Math.floor(inp.inheritedAmount * 0.1);
+    const residualForShareholders = Math.max(
+      0,
+      exemptionAmount - tenPercentBaseline,
+    );
+
+    const shareholderPayments: ShareholderPaymentDetail[] = inp.shareholders.map(
+      (sh) => ({
+        shareholderId: sh.id,
+        shareRatio: sh.shareRatio,
+        paymentAmount: Math.floor(residualForShareholders * sh.shareRatio),
+      }),
+    );
+
+    return {
+      corporateId: inp.corporateId,
+      inheritedAmount: inp.inheritedAmount,
+      exemptionAmount,
+      tenPercentBaseline,
+      shareholderPayments,
+    };
+  });
 }

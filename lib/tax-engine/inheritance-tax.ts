@@ -385,12 +385,65 @@ export function calcInheritanceTax(
     | ReturnType<typeof calcCorporateExemption>
     | undefined;
   if (corporateGifts.length > 0 && corporateGiftComputedTax > 0) {
-    corporateExemption = calcCorporateExemption({
-      corporateGiftComputedTax,
-      corporateGiftTaxBase,
-      totalComputedTax: computedTax, // 할증 미포함 — PDF 책 1866
-      totalTaxBase: taxBase,
-    });
+    // PR 2 (2026-05-22) — 영리법인 별 분배 명세 (부표 5) 매핑.
+    // doneeId 로 corporate Heir 의 shareholders 조회. doneeId 누락 시 빈 주주 배열.
+    const perCorporateInputs = (() => {
+      // doneeId 별 corporate 사전증여 합산
+      const byCorporateId = new Map<
+        string,
+        { inheritedAmount: number; taxBase: number; computedTax: number }
+      >();
+      let unassignedAmount = 0;
+      let unassignedBase = 0;
+      let unassignedTax = 0;
+      for (const g of corporateGifts) {
+        const base = g.giftTaxBase ?? g.giftAmount;
+        const tax = g.corporateGiftComputedTax ?? 0;
+        if (g.doneeId) {
+          const prev = byCorporateId.get(g.doneeId) ?? {
+            inheritedAmount: 0,
+            taxBase: 0,
+            computedTax: 0,
+          };
+          byCorporateId.set(g.doneeId, {
+            inheritedAmount: prev.inheritedAmount + g.giftAmount,
+            taxBase: prev.taxBase + base,
+            computedTax: prev.computedTax + tax,
+          });
+        } else {
+          unassignedAmount += g.giftAmount;
+          unassignedBase += base;
+          unassignedTax += tax;
+        }
+      }
+      const items: Parameters<typeof calcCorporateExemption>[1] = { perCorporateInputs: [] };
+      for (const [corporateId, agg] of byCorporateId.entries()) {
+        const corporateHeir = input.heirs.find(
+          (h) => h.id === corporateId && h.relation === "corporate",
+        );
+        items.perCorporateInputs!.push({
+          corporateId,
+          inheritedAmount: agg.inheritedAmount,
+          taxBase: agg.taxBase,
+          computedTax: agg.computedTax,
+          shareholders: corporateHeir?.shareholders ?? [],
+        });
+      }
+      // doneeId 미설정 사전증여 — 부표 5 행 미생성 (Heir 매핑 없으면 표시 불가).
+      // 합계는 corporateGiftTaxBase·corporateGiftComputedTax 에 이미 포함되어 기본 면제 발동.
+      void unassignedAmount; void unassignedBase; void unassignedTax;
+      return items.perCorporateInputs!.length > 0 ? items : {};
+    })();
+
+    corporateExemption = calcCorporateExemption(
+      {
+        corporateGiftComputedTax,
+        corporateGiftTaxBase,
+        totalComputedTax: computedTax, // 할증 미포함 — PDF 책 1866
+        totalTaxBase: taxBase,
+      },
+      perCorporateInputs,
+    );
     allBreakdown.push(...corporateExemption.breakdown);
     allLaws.add(INH.TAXPAYER);
   }
