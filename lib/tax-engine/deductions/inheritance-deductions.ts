@@ -12,6 +12,7 @@ import { INH } from "../legal-codes";
 import { applyRate } from "../tax-utils";
 import type {
   CalculationStep,
+  EstateItem,
   Heir,
   InheritanceDeductionInput,
   InheritanceDeductionResult,
@@ -22,6 +23,11 @@ import type {
   FarmingInheritanceInput,
 } from "../types/inheritance-farming.types";
 import { FARMING_MAX } from "../types/inheritance-farming.types";
+import {
+  calcFamilyBusinessDeductionDirect,
+  calcFamilyBusinessDeductionLegacy,
+  calcFamilyBusinessDeductionPhase2,
+} from "./family-business";
 import {
   calcPersonalDeductions,
 } from "./personal-deduction-calc";
@@ -461,6 +467,12 @@ export function calcInheritanceDeductions(
     legateeAmountNonHeir?: number;
     disasterLossDeduction?: number;
   },
+  familyBusinessAux?: {
+    /** §18의2② 200% 가드 산정용 — 가업상속공제 미적용 시 산출세액 (가업상속인 부담분). orchestrator 1차 산정값. */
+    taxIfNoFBD?: number;
+    /** EstateItem.familyBusinessCategory 자동 합산용. */
+    estateItems?: EstateItem[];
+  },
 ): InheritanceDeductionResult {
   // 인적공제(미성년자·연로자·장애인)는 상속개시일 현재 나이 기준 (상증법 §20).
   // deathDate가 제공된 경우 해당 날짜를, 없으면 오늘로 fallback.
@@ -527,24 +539,33 @@ export function calcInheritanceDeductions(
   const farmingDeduction = farmingResult.deduction;
   const farmingDetail = farmingResult.detail;
 
-  // ⑧ 가업상속공제 (Phase E: 직접 입력 모드 — 한도 600억 유지)
-  let bizResult: { deduction: number; breakdown: CalculationStep[] };
-  if (input.familyBusinessDirectAmount !== undefined && input.familyBusinessDirectAmount > 0) {
-    const capped = Math.min(input.familyBusinessDirectAmount, 60_000_000_000);
-    bizResult = {
-      deduction: capped,
-      breakdown: [
-        {
-          label: "가업상속공제 (직접 입력, 한도 600억)",
-          amount: capped,
-          lawRef: INH.FAMILY_BUSINESS_DEDUCTION,
-        },
-      ],
-    };
-  } else {
-    bizResult = calcFamilyBusinessDeduction(input.familyBusinessValue ?? 0);
-  }
-  const familyBusinessDeduction = bizResult.deduction;
+  // ⑧ 가업상속공제 (§18의2 + 상증령 §15, 2026-05-21 정밀화)
+  //    분기 우선순위: Phase E directAmount > Phase B familyBusiness 객체 > legacy familyBusinessValue+Years
+  const bizPhaseResult = (() => {
+    if (input.familyBusinessDirectAmount !== undefined && input.familyBusinessDirectAmount > 0) {
+      return calcFamilyBusinessDeductionDirect(
+        input.familyBusinessDirectAmount,
+        INH.FAMILY_BUSINESS_DEDUCTION,
+      );
+    }
+    if (input.familyBusiness) {
+      return calcFamilyBusinessDeductionPhase2({
+        input: input.familyBusiness,
+        estateItems: familyBusinessAux?.estateItems,
+        familyBusinessValueOverride: input.familyBusinessValue,
+        taxIfNoFBD: familyBusinessAux?.taxIfNoFBD ?? 0,
+        lawRef: INH.FAMILY_BUSINESS_DEDUCTION,
+      });
+    }
+    return calcFamilyBusinessDeductionLegacy(
+      input.familyBusinessValue ?? 0,
+      input.familyBusinessYears,
+      INH.FAMILY_BUSINESS_DEDUCTION,
+    );
+  })();
+  const familyBusinessDeduction = bizPhaseResult.deduction;
+  const familyBusinessDetail = bizPhaseResult.detail;
+  const bizResult = { deduction: familyBusinessDeduction, breakdown: bizPhaseResult.detail.breakdown };
 
   // 배우자 + 기초/일괄 + 나머지 합계
   const rawTotal =
@@ -600,6 +621,7 @@ export function calcInheritanceDeductions(
     farmingDeduction,
     farmingDetail,
     familyBusinessDeduction,
+    familyBusinessDetail,
     totalDeduction: limitedDeduction,
     chosenMethod,
     breakdown,

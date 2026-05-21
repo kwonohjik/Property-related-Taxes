@@ -126,6 +126,15 @@ export interface EstateItem {
     | "agricultural_building" // 바. 농업용 건축물 + 부속토지
     | "salt_field"            // 사. 염전
     | "corporate_stock";      // §16⑤2호 법인 영농 주식
+
+  // ===== 가업상속공제 정밀화 (2026-05-21, 상증법 §18의2 + 상증령 §15) =====
+  /**
+   * 가업상속 자산 분류 (상증령 §15⑤).
+   * undefined: 가업 자산 아님.
+   * farmingCategory와 동시 선택 시 validate 차단 (asset_dual_category_conflict).
+   * 분리 타입: inheritance-family-business.types.ts
+   */
+  familyBusinessCategory?: FamilyBusinessCategory;
 }
 
 /**
@@ -523,6 +532,14 @@ export interface InheritanceDeductionInput {
    * 신규 사용자는 본 객체 제공 권장.
    */
   farming?: FarmingInheritanceInput;
+
+  // ===== 가업상속공제 정밀화 (2026-05-21, 상증법 §18의2 + 상증령 §15) =====
+  /**
+   * 가업상속 자격·요건 입력 (Phase B). 미제공 시 legacy 호환.
+   * familyBusinessDirectAmount 제공 시 본 객체 무시 (Phase E escape hatch).
+   * EstateItem 자동 합산은 orchestrator에서 InheritanceTaxInput.estateItems 직접 사용.
+   */
+  familyBusiness?: FamilyBusinessInheritanceInput;
 }
 
 // 영농상속 타입은 inheritance-farming.types.ts로 분리 (800줄 정책)
@@ -537,6 +554,11 @@ export type {
 } from "./inheritance-farming.types";
 export { FARMING_MAX } from "./inheritance-farming.types";
 
+// 가업상속 타입 — inheritance-family-business.types.ts 분리 (800줄 정책)
+import type { FamilyBusinessCategory, FamilyBusinessInheritanceInput, FamilyBusinessDeductionDetail } from "./inheritance-family-business.types";
+export type { FamilyBusinessCategory, FamilyBusinessInheritanceInput, FamilyBusinessIneligibleReason, FamilyBusinessDeductionDetail, FamilyBusinessCap, FamilyBusinessMediumGuard } from "./inheritance-family-business.types";
+export { FAMILY_BUSINESS_CAP_10Y, FAMILY_BUSINESS_CAP_20Y, FAMILY_BUSINESS_CAP_30Y, FAMILY_BUSINESS_SCALE_THRESHOLD, FAMILY_BUSINESS_OTHER_ESTATE_RATIO } from "./inheritance-family-business.types";
+
 /** 상속공제 계산 결과 */
 export interface InheritanceDeductionResult {
   basicDeduction: number;
@@ -549,6 +571,8 @@ export interface InheritanceDeductionResult {
   /** 영농상속공제 상세 (2026-05-21, §18의3 정밀화). farming 미입력 시 evaluated=false. */
   farmingDetail?: FarmingDeductionDetail;
   familyBusinessDeduction: number;
+  /** 가업상속공제 상세 (2026-05-21, §18의2 정밀화). familyBusiness 미입력 시 undefined (legacy). */
+  familyBusinessDetail?: FamilyBusinessDeductionDetail;
   /** §24 종합한도 적용 후 최종 공제액 */
   totalDeduction: number;
   /** 일괄공제 vs 개별공제 선택 근거 */

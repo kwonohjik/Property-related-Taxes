@@ -298,6 +298,13 @@ export function calcInheritanceTax(
       legateeAmountNonHeir: input.deductionInput.legateeAmountNonHeir ?? 0,
       disasterLossDeduction: input.deductionInput.disasterLossDeduction ?? 0,
     },
+    // 가업상속공제 보조 입력 (2026-05-21 §18의2 정밀화)
+    //   - estateItems: familyBusinessCategory 자동 합산용
+    //   - taxIfNoFBD: §18의2② 200% 가드 산정용 (Phase F+ 정밀화 예정, 본 PR은 0 fallback)
+    {
+      estateItems: input.estateItems,
+      taxIfNoFBD: 0,
+    },
   );
 
   const totalDeduction = deductionResult.totalDeduction;
