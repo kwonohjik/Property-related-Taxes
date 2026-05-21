@@ -96,11 +96,15 @@ describe("checkFarmingResidenceCompliance — 거주지 자동 검증", () => {
     const items = [farmlandItem("a1", within), farmlandItem("a2", BUSAN)];
     const r = checkFarmingResidenceCompliance(
       items,
-      baseFarming({ decedentResidenceLatLng: SEOUL }),
+      baseFarming({
+        decedentResidenceLatLng: SEOUL,
+        decedentResidenceMet: true,
+      }),
     );
     expect(r.decedentMinDistanceKm).not.toBeNull();
     expect(r.decedentMinDistanceKm!).toBeLessThan(15);
-    expect(r.decedentMet).toBe(true);
+    expect(r.decedentAutoMet).toBe(true);
+    expect(r.decedentMet).toBe(true); // 사용자 명시
   });
 
   it("FR-4: estateLatLng 미입력 자산 자동 검증 무시", () => {
@@ -118,7 +122,8 @@ describe("checkFarmingResidenceCompliance — 거주지 자동 검증", () => {
       baseFarming({ decedentResidenceLatLng: SEOUL }),
     );
     expect(r.decedentMinDistanceKm).toBeNull();
-    expect(r.decedentMet).toBe(false);
+    expect(r.decedentAutoMet).toBeNull();
+    expect(r.decedentMet).toBe(false); // 사용자 명시 false
   });
 
   it("FR-5: 어선·어업권 — fishingAnchorLatLng 사용 분기", () => {
@@ -126,10 +131,14 @@ describe("checkFarmingResidenceCompliance — 거주지 자동 검증", () => {
     const items = [fishingItem("a1", within)];
     const r = checkFarmingResidenceCompliance(
       items,
-      baseFarming({ decedentResidenceLatLng: SEOUL }),
+      baseFarming({
+        decedentResidenceLatLng: SEOUL,
+        decedentResidenceMet: true,
+      }),
     );
     expect(r.decedentMinDistanceKm).not.toBeNull();
-    expect(r.decedentMet).toBe(true);
+    expect(r.decedentAutoMet).toBe(true);
+    expect(r.decedentMet).toBe(true); // 사용자 명시
   });
 
   it("FR-5b: 어업권 자산이지만 fishingAnchorLatLng 미입력 + estateLatLng 입력 → 자동 검증 무시", () => {
@@ -150,7 +159,7 @@ describe("checkFarmingResidenceCompliance — 거주지 자동 검증", () => {
     expect(r.decedentMinDistanceKm).toBeNull();
   });
 
-  it("FR-6: decedent/heir 모두 자동 검증 통과 → 양쪽 boolean true", () => {
+  it("FR-6: decedent/heir 양쪽 자동 검증 통과 + 사용자 명시 → 양쪽 met=true / autoMet=true", () => {
     const within = { lat: SEOUL.lat + 0.1, lng: SEOUL.lng };
     const items = [farmlandItem("a1", within)];
     const r = checkFarmingResidenceCompliance(
@@ -158,13 +167,17 @@ describe("checkFarmingResidenceCompliance — 거주지 자동 검증", () => {
       baseFarming({
         decedentResidenceLatLng: SEOUL,
         heirResidenceLatLng: SEOUL,
+        decedentResidenceMet: true,
+        heirResidenceMet: true,
       }),
     );
     expect(r.decedentMet).toBe(true);
     expect(r.heirMet).toBe(true);
+    expect(r.decedentAutoMet).toBe(true);
+    expect(r.heirAutoMet).toBe(true);
   });
 
-  it("FR-7: 사용자 override true — 자동 검증 false인데 명시 true → true", () => {
+  it("FR-7 (옵션 A): 사용자 명시 true + 자동 false → met=true / autoMet=false (모순 안내용)", () => {
     const items = [farmlandItem("a1", BUSAN)];
     const r = checkFarmingResidenceCompliance(
       items,
@@ -174,13 +187,15 @@ describe("checkFarmingResidenceCompliance — 거주지 자동 검증", () => {
       }),
     );
     // 자동: 서울→부산 ≈ 325km > 30km → false
-    // 사용자 명시 true → 최종 true
+    // 사용자 명시 true → 최종 met=true (사용자 명시 우선)
+    // autoMet=false는 UI 안내용으로 노출
     expect(r.decedentMet).toBe(true);
+    expect(r.decedentAutoMet).toBe(false);
     expect(r.decedentMinDistanceKm!).toBeGreaterThan(300);
   });
 
-  it("FR-8: 자동 검증 통과 + 사용자 boolean false → 자동 통과 (true)", () => {
-    // 자동 검증 true는 사용자 boolean=false를 덮어쓴다 (자동 검증이 더 정확)
+  it("FR-8 (옵션 A): 자동 true + 사용자 명시 false → met=false (사용자 명시 우선) / autoMet=true", () => {
+    // 옵션 A 정책 — 자동이 사용자 명시를 덮어쓰지 않음. UI는 차이를 안내
     const within = { lat: SEOUL.lat + 0.1, lng: SEOUL.lng };
     const items = [farmlandItem("a1", within)];
     const r = checkFarmingResidenceCompliance(
@@ -190,7 +205,8 @@ describe("checkFarmingResidenceCompliance — 거주지 자동 검증", () => {
         decedentResidenceMet: false,
       }),
     );
-    expect(r.decedentMet).toBe(true);
+    expect(r.decedentMet).toBe(false); // 사용자 명시 우선
+    expect(r.decedentAutoMet).toBe(true);
   });
 
   it("좌표 미입력 — 사용자 boolean 그대로 (자동 검증 무동작)", () => {
@@ -203,7 +219,8 @@ describe("checkFarmingResidenceCompliance — 거주지 자동 검증", () => {
       }),
     );
     expect(r.decedentMinDistanceKm).toBeNull();
-    expect(r.decedentMet).toBe(true); // 사용자 명시 우선
+    expect(r.decedentAutoMet).toBeNull();
+    expect(r.decedentMet).toBe(true); // 사용자 명시 그대로
   });
 
   it("farming undefined → 모든 false / null", () => {
@@ -211,6 +228,8 @@ describe("checkFarmingResidenceCompliance — 거주지 자동 검증", () => {
     const r = checkFarmingResidenceCompliance(items, undefined);
     expect(r.decedentMet).toBe(false);
     expect(r.heirMet).toBe(false);
+    expect(r.decedentAutoMet).toBeNull();
+    expect(r.heirAutoMet).toBeNull();
     expect(r.decedentMinDistanceKm).toBeNull();
     expect(r.heirMinDistanceKm).toBeNull();
   });
