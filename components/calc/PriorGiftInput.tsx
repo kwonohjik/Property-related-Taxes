@@ -115,13 +115,21 @@ const GIFT_PRIOR_CATEGORY_LABELS: Record<GiftPriorPropertyCategory, string> = {
 function CorporateGiftFields({
   gift,
   set,
+  heirs,
 }: {
   gift: PriorGift;
   set: (patch: Partial<PriorGift>) => void;
+  heirs?: import("@/lib/tax-engine/types/inheritance-gift.types").Heir[];
 }) {
   const value = gift.corporateGiftComputedTax;
   const isMissing = !value || value <= 0;
   const taxBaseValue = gift.giftTaxBase;
+  // PR-C: doneeId select — heirs 중 영리법인(또는 relation="corporate") 우선 노출
+  const corporateHeirs = (heirs ?? []).filter(
+    (h) => h.relation === "corporate" || h.isHeir === false,
+  );
+  const availableHeirs = corporateHeirs.length > 0 ? corporateHeirs : (heirs ?? []);
+  const doneeIdMissing = !gift.doneeId;
   return (
     <div className="space-y-2 pt-2">
       <CurrencyInput
@@ -147,6 +155,35 @@ function CorporateGiftFields({
         }}
         hint="미입력 시 위 증여재산가액(giftAmount)을 §3의2② 한도 분자로 사용. 증여세 공제 후 과세표준이 별도라면 직접 입력."
       />
+
+      {/* PR-C: doneeId select — 영리법인 Heir.id 매핑 (validate 차단 해소) */}
+      <div className="space-y-1">
+        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
+          영리법인 수증자 <span className="text-destructive">*</span>
+        </label>
+        <select
+          value={gift.doneeId ?? ""}
+          onChange={(e) => set({ doneeId: e.target.value || undefined })}
+          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <option value="">
+            {availableHeirs.length === 0
+              ? "상속인 단계에서 영리법인(relation=\"corporate\") 추가 필요"
+              : "선택"}
+          </option>
+          {availableHeirs.map((h) => (
+            <option key={h.id} value={h.id}>
+              {h.name ?? h.id}
+              {h.relation === "corporate" ? " (영리법인)" : ""}
+            </option>
+          ))}
+        </select>
+        {doneeIdMissing && (
+          <p className="text-[11px] text-rose-600 dark:text-rose-400">
+            ⚠ §3의2② 면제 적용을 위해 영리법인 수증자 매핑이 필요합니다.
+          </p>
+        )}
+      </div>
     </div>
   );
 }
@@ -172,6 +209,8 @@ interface GiftRowEditorProps {
   showGiftPhaseA: boolean;
   onUpdate: (updated: PriorGift) => void;
   onRemove: () => void;
+  /** 상속세 모드 — 영리법인 doneeId select 옵션 (PR-C) */
+  heirs?: import("@/lib/tax-engine/types/inheritance-gift.types").Heir[];
 }
 
 function GiftRowEditor({
@@ -181,6 +220,7 @@ function GiftRowEditor({
   showGiftPhaseA,
   onUpdate,
   onRemove,
+  heirs,
 }: GiftRowEditorProps) {
   const set = (patch: Partial<PriorGift>) => onUpdate({ ...gift, ...patch });
 
@@ -270,7 +310,7 @@ function GiftRowEditor({
           checked={isCorporate}
           onCheckedChange={handleCorporateToggle}
         >
-          <CorporateGiftFields gift={gift} set={set} />
+          <CorporateGiftFields gift={gift} set={set} heirs={heirs} />
         </ToggleCard>
       )}
 
@@ -608,6 +648,8 @@ export interface PriorGiftInputProps {
   currentDonor?: GiftDonorRelation;
   /** 증여세 모드 — 수증자(=의뢰인) 식별자. null = 본인 (일반 납세자 모드) */
   currentClientId?: string | null;
+  /** 상속세 모드 — 영리법인 사전증여 doneeId select 옵션 (PR-C) */
+  heirs?: import("@/lib/tax-engine/types/inheritance-gift.types").Heir[];
 }
 
 function makeEmptyGift(): PriorGift {
@@ -627,6 +669,7 @@ export function PriorGiftInput({
   currentGiftDate,
   currentDonor,
   currentClientId = null,
+  heirs,
 }: PriorGiftInputProps) {
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
   const handleAdd = () => onChange([...gifts, makeEmptyGift()]);
@@ -724,6 +767,7 @@ export function PriorGiftInput({
               showGiftPhaseA={mode === "gift"}
               onUpdate={(updated) => handleUpdate(i, updated)}
               onRemove={() => handleRemove(i)}
+              heirs={heirs}
             />
           ))}
         </div>

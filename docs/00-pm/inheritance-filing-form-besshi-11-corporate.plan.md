@@ -1,4 +1,8 @@
-# 상속세 신고서 양식 (별지 제11호서식) 부표 — 영리법인 사전증여 행 Phase 3 계획서
+# 상속세 신고서 양식 (별지 제9호서식 부표 1·5) — 영리법인 사전증여 행 Phase 3 계획서
+
+> 2026-05-21 PR-D 검증 결과: 본 계획서 v1의 "별지 11호" 인용은 오기 (별지 11호는 연부연납 신청서).
+> 실제 양식 = 별지 제9호서식 부표 1 (사전증여 가산) + 부표 5 (영리법인 §3의2② 면제 명세).
+> KoreanLaw MCP 검증: `mcp__claude_ai_KoreanLaw__get_annexes(상속세 및 증여세법 시행규칙, annexNo="9", knd="2")`
 
 > 2026-05-21 · feature: `inheritance-filing-form-besshi-11-corporate`
 > 선행: Phase 1 (commit `c48826a`) + Phase 1.5 (commit `bc3f8b3`)

@@ -285,6 +285,7 @@ export function Step3({ form, set }: { form: FormState; set: FormSet }) {
       gifts={form.priorGifts}
       onChange={(gifts) => set({ priorGifts: gifts })}
       mode="inheritance"
+      heirs={form.heirs}
     />
   );
 }

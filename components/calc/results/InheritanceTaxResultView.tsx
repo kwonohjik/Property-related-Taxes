@@ -425,8 +425,9 @@ export function InheritanceTaxResultView({
         />
       )}
 
-      {/* 사전증여재산 명세 (별지 제11호서식 부표 Phase 3 골격) */}
-      {priorGifts && priorGifts.length > 0 && result.priorGiftAggregated > 0 && deathDate && (
+      {/* 사전증여재산 명세 (별지 제11호서식 부표 Phase 3 골격)
+          PR-A: priorGiftAggregated=0이라도 excludedGifts(cutoff 도과)가 있으면 렌더 */}
+      {priorGifts && priorGifts.length > 0 && deathDate && (
         <InheritanceFilingFormTable
           priorGifts={priorGifts}
           heirs={heirs}
