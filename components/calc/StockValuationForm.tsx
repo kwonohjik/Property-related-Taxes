@@ -336,9 +336,12 @@ function UnlistedStockEditor({
             const v = parseInt(e.target.value.replace(/,/g, "") || "0", 10);
             setStock({ ownedShares: v });
           }}
-          placeholder="주당 가액 입력 (원)"
+          placeholder="보유 주식 수 입력 (주)"
           className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         />
+        <p className="text-[11px] text-muted-foreground">
+          피상속인(또는 수증자)이 보유한 주식 수. 총 발행주식 수의 일부.
+        </p>
       </div>
 
       <div className="border-t border-gray-100 dark:border-gray-800 pt-3 space-y-3">
@@ -461,14 +464,14 @@ function UnlistedStockPreview({
         <span>{preview.perShareWeightedValue.toLocaleString()}</span>
       </div>
       <div className="flex justify-between text-gray-500 dark:text-gray-400">
-        <span>최솟값 (순자산가치 × 80%)</span>
+        <span>최소값 (순자산가치 × 80%)</span>
         <span>{preview.perShareMinValue.toLocaleString()}</span>
       </div>
       <div className="flex justify-between font-semibold text-gray-700 dark:text-gray-200 border-t border-gray-200 dark:border-gray-700 pt-1">
         <span>1주당 최종 평가액</span>
         <span className={isMinValueApplied ? "text-amber-600 dark:text-amber-400" : ""}>
           {preview.perShareFinalValue.toLocaleString()}
-          {isMinValueApplied && " (최솟값 적용)"}
+          {isMinValueApplied && " (최소값 적용)"}
         </span>
       </div>
 
@@ -480,12 +483,12 @@ function UnlistedStockPreview({
       {/* 경고 메시지 */}
       {isDeficit && (
         <p className="text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 rounded px-2 py-1 mt-1">
-          ⚠️ 적자법인 — 순손익가치 0 적용, 최솟값(순자산 80%) 기준
+          ⚠️ 적자법인 — 순손익가치 0 적용, 최소값(순자산 80%) 기준
         </p>
       )}
       {isMinValueApplied && !isDeficit && (
         <p className="text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 rounded px-2 py-1 mt-1">
-          ⚠️ 가중평균 &lt; 최솟값 — 순자산가치 80% 최솟값 적용
+          ⚠️ 가중평균 &lt; 최소값 — 순자산가치 80% 최소값 적용
         </p>
       )}
     </div>

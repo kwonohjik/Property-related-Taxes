@@ -159,7 +159,7 @@ describe("상속공제 7종 + §24 종합한도", () => {
     const result = calcSpouseDeduction(1_000_000_000, 2_200_000_000, heirs);
     // 배우자 법정상속분 비율 = 1.5/(1.5+1) = 0.6 → 2.2억 × 0.6 = 1.32억? 아니라, 22억 * 0.6 = 13.2억
     // 실제(10억) vs 법정(13.2억) → min = 10억
-    // 10억 > 5억 최솟값, < 30억 최댓값 → 10억
+    // 10억 > 5억 최소값, < 30억 최댓값 → 10억
     expect(result.deduction).toBe(1_000_000_000);
   });
 
@@ -169,7 +169,7 @@ describe("상속공제 7종 + §24 종합한도", () => {
     expect(result.deduction).toBe(0);
   });
 
-  it("[D13] 배우자공제: 최솟값 5억 보장 (실제 1억이어도 5억)", () => {
+  it("[D13] 배우자공제: 최소값 5억 보장 (실제 1억이어도 5억)", () => {
     const heirs: Heir[] = [
       makeHeir({ id: "sp", relation: "spouse" }),
       makeHeir({ id: "c1", relation: "child" }),

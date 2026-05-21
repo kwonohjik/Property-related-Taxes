@@ -28,7 +28,7 @@ import { calcLegalShareRatios } from "../tax-utils";
 /** 기초공제 (§18 ①): 2억원 */
 const BASIC_DEDUCTION = 200_000_000;
 
-/** 배우자공제 최솟값 (§19 ②): 5억원 */
+/** 배우자공제 최소값 (§19 ②): 5억원 */
 const SPOUSE_MIN = 500_000_000;
 
 /** 배우자공제 최댓값 (§19 ②): 30억원 */
@@ -79,7 +79,7 @@ export function calcBasicDeduction(): number {
 /**
  * 배우자공제 (§19)
  * - 배우자가 실제 상속받은 금액과 법정상속분 중 작은 금액
- * - 최솟값 5억, 최댓값 30억
+ * - 최소값 5억, 최댓값 30억
  *
  * @param spouseActualAmount 배우자 실제 상속금액 (미입력 시 법정상속분으로 산정)
  * @param totalEstateValue 상속세 과세가액 (법정상속분 계산 기준)
@@ -122,7 +122,7 @@ export function calcSpouseDeduction(
   // 공제 기준: min(실제, 법정상속분)
   const baseAmount = Math.min(actualAmount, legalShareAmount);
 
-  // 최솟값·최댓값 적용
+  // 최소값·최댓값 적용
   const deduction = Math.max(SPOUSE_MIN, Math.min(baseAmount, SPOUSE_MAX));
 
   return {

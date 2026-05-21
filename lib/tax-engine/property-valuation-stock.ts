@@ -7,7 +7,7 @@
  * 비상장주식 (§63 ①1호 다목 + 시행령 §54):
  *   1주당 가치 = (순손익가치 × 3 + 순자산가치 × 2) ÷ 5
  *   부동산과다보유법인: (순손익가치 × 2 + 순자산가치 × 3) ÷ 5
- *   최솟값: 순자산가치 × 80%
+ *   최소값: 순자산가치 × 80%
  *   최댓값: 순자산가치 × 300% (상한 적용 여부는 실무 논란 → 상한 미적용 원칙)
  */
 
@@ -174,10 +174,10 @@ export function calcUnlistedStockPerShareValue(
     (perShareIncomeValue * iw + perShareAssetValue * aw) / totalWeight,
   );
 
-  // 최솟값: 순자산가치의 80%
+  // 최소값: 순자산가치의 80%
   const perShareMinValue = applyRate(perShareAssetValue, MIN_VALUE_RATE);
 
-  // 최종: 가중평균과 최솟값 중 큰 값
+  // 최종: 가중평균과 최소값 중 큰 값
   const perShareFinalValue = Math.max(perShareWeightedValue, perShareMinValue);
 
   return {
@@ -231,10 +231,10 @@ export function evaluateUnlistedStock(
 
   const warnings: string[] = [];
   if (data.weightedNetIncome <= 0) {
-    warnings.push("적자법인 — 순손익가치 0 적용, 순자산가치 80% 최솟값 기준");
+    warnings.push("적자법인 — 순손익가치 0 적용, 순자산가치 80% 최소값 기준");
   }
   if (perShareFinalValue === perShareMinValue && perShareWeightedValue < perShareMinValue) {
-    warnings.push("가중평균 < 순자산가치 80% — 최솟값 적용");
+    warnings.push("가중평균 < 순자산가치 80% — 최소값 적용");
   }
   if (isRealEstateHeavy) {
     warnings.push("부동산과다보유법인 — 가중치 순손익 40%·순자산 60% 적용");
@@ -262,7 +262,7 @@ export function evaluateUnlistedStock(
         lawRef: VALUATION.UNLISTED_STOCK,
       },
       {
-        label: "1주당 최솟값 (순자산가치 × 80%)",
+        label: "1주당 최소값 (순자산가치 × 80%)",
         amount: perShareMinValue,
       },
       {

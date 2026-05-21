@@ -311,7 +311,7 @@ describe("공통 유틸 — §14 장례비 공제", () => {
     expect(deduction).toBe(10_000_000);
   });
 
-  it("[C28] 장례비 0원 → 최솟값 500만 인정", () => {
+  it("[C28] 장례비 0원 → 최소값 500만 인정", () => {
     const { deduction } = calcFuneralExpenseDeduction(0, false);
     expect(deduction).toBe(5_000_000);
   });

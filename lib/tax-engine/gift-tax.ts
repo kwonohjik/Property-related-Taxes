@@ -41,7 +41,7 @@ import { buildBesshi10Rows } from "./gift-tax-filing-form-besshi10";
 import type { TaxBracket } from "./types";
 
 // ============================================================
-// 증여세 과세표준 최솟값 (§55 단서)
+// 증여세 과세표준 최소값 (§55 단서)
 // ============================================================
 
 const TAX_BASE_MIN = 500_000;

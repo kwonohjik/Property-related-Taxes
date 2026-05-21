@@ -175,7 +175,7 @@ describe("재산평가 — 주식", () => {
     expect(r.perShareWeightedValue).toBe(14_000);
   });
 
-  it("[T16] 비상장주식 최솟값 (순자산가치 80%) 적용", () => {
+  it("[T16] 비상장주식 최소값 (순자산가치 80%) 적용", () => {
     const data = {
       totalShares: 100_000,
       ownedShares: 10_000,
@@ -185,7 +185,7 @@ describe("재산평가 — 주식", () => {
     };
     const r = calcUnlistedStockPerShareValue(data, false);
     // 순손익가치 0 → 가중평균 = 순자산가치 40% = 5,000*2/5 = 2,000
-    // 최솟값 = 5,000 * 80% = 4,000
+    // 최소값 = 5,000 * 80% = 4,000
     expect(r.perShareFinalValue).toBe(4_000);
     expect(r.perShareMinValue).toBe(4_000);
   });

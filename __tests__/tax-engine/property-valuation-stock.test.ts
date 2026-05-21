@@ -172,7 +172,7 @@ describe("비상장주식 1주당 가중평균 — calcUnlistedStockPerShareValu
     expect(r.perShareAssetValue).toBe(5_000);
     expect(r.perShareWeightedValue).toBe(14_000);
     expect(r.perShareMinValue).toBe(4_000); // 5,000 * 80%
-    expect(r.perShareFinalValue).toBe(14_000); // 가중평균 > 최솟값
+    expect(r.perShareFinalValue).toBe(14_000); // 가중평균 > 최소값
   });
 
   it("[S18] 부동산과다보유법인 40:60 가중치 검증", () => {
@@ -181,17 +181,17 @@ describe("비상장주식 1주당 가중평균 — calcUnlistedStockPerShareValu
     expect(r.perShareWeightedValue).toBe(11_000);
   });
 
-  it("[S19] 최솟값 (순자산 80%) 발동 — 적자법인", () => {
+  it("[S19] 최소값 (순자산 80%) 발동 — 적자법인", () => {
     const lossData: UnlistedStockData = {
       ...baseData,
       weightedNetIncome: 0, // 적자
     };
     const r = calcUnlistedStockPerShareValue(lossData, false);
     // 순손익가치 0 → 가중평균 = (0*3 + 5,000*2) / 5 = 2,000
-    // 최솟값 = 5,000 * 80% = 4,000
+    // 최소값 = 5,000 * 80% = 4,000
     expect(r.perShareWeightedValue).toBe(2_000);
     expect(r.perShareMinValue).toBe(4_000);
-    expect(r.perShareFinalValue).toBe(4_000); // 최솟값 발동
+    expect(r.perShareFinalValue).toBe(4_000); // 최소값 발동
   });
 
   it("[S20] 자본환원율 미입력 → 기본값 10% 사용", () => {
@@ -214,7 +214,7 @@ describe("비상장주식 1주당 가중평균 — calcUnlistedStockPerShareValu
     // 순자산가치: 1M / 100K = 10
     expect(r.perShareIncomeValue).toBe(1_000_000);
     expect(r.perShareAssetValue).toBe(10);
-    // 가중평균 >> 최솟값(8) → 가중평균 채택
+    // 가중평균 >> 최소값(8) → 가중평균 채택
     expect(r.perShareFinalValue).toBe(r.perShareWeightedValue);
   });
 });
@@ -244,11 +244,11 @@ describe("비상장주식 총 평가액 — evaluateUnlistedStock", () => {
     expect(result.warnings.some((w) => w.includes("적자법인"))).toBe(true);
   });
 
-  it("[S25] 최솟값 발동 경고 메시지 포함", () => {
-    // weightedNetIncome를 음수로 설정해 최솟값 발동
+  it("[S25] 최소값 발동 경고 메시지 포함", () => {
+    // weightedNetIncome를 음수로 설정해 최소값 발동
     const item = makeUnlistedItem({ ...baseData, weightedNetIncome: -1 });
     const result = evaluateUnlistedStock(item, false);
-    // 적자법인 or 최솟값 경고
+    // 적자법인 or 최소값 경고
     expect(result.warnings.length).toBeGreaterThan(0);
   });
 

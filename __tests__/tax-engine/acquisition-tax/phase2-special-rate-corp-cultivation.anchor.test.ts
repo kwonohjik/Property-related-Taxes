@@ -513,7 +513,7 @@ describe("[P2-Anchor #P2-통합] calcAcquisitionTax P2 모듈 통합", () => {
   });
 
   it("#E5 이혼 재산분할 주택 5억 → 기본세율 - 2% 확인", () => {
-    // 주택 5억(1% 구간) 이혼 재산분할 → 1% - 2% = 0% (최솟값 0 보장)
+    // 주택 5억(1% 구간) 이혼 재산분할 → 1% - 2% = 0% (최소값 0 보장)
     const result = calcAcquisitionTax({
       propertyType: "housing",
       acquisitionCause: "purchase",
