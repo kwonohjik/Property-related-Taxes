@@ -1,4 +1,13 @@
-# 가업상속공제 자산 양도 — 양도세 의제 §97의2④ + §18의2⑩ 공제 통합 (Plan v1)
+# 가업상속공제 자산 양도 — 양도세 의제 §97의2④ + §18의2⑩ 공제 통합 (Plan v2)
+
+> v1 → v2 정정 (2026-05-21 종합 검토):
+> - **X1 법령 오인용 정정**: §97의2② 단서는 §97의2① 한정. **§97의2④ 가업상속공제 자산에는 단서 미적용** — 본문 강제. `selectedFormula="imputed_lower"` 분기 삭제
+> - **X3 모델 단순화**: creditAmount = max(0, 의제 − 일반) 항상 산정. selectedFormula enum 제거
+> - **X4 작업량 명시**: `calcWith`는 transfer-tax 전체 양도세 엔진 호출 (단순 헬퍼 아님)
+> - **X5 라벨 정확성**: `inheritanceMarketValue` → 상증법 §60·§63 보충적 평가가액 (시가 아님)
+> - **X6 가업상속공제적용률 산식**: 소령 §163의2 본문 Pre-Do FB-CGT-LAW-1로 확정. 잠정 산식 명시 (공제액 / 가업상속재산 평가액)
+> - **N2 자본적지출 분리 보강**: §97의2④ 2호 자본적지출 시점 — 피상속인 vs 상속인 분리 정책 명시
+> - **C1 분담 명확화**: 산정은 transfer-tax 측 책임 (본 PR), postmgmt 측은 사용자 수동 입력으로 수령
 
 > 작성일: 2026-05-21
 > 대상 법령:
@@ -52,12 +61,29 @@ export interface TransferTaxInput {
 export interface FamilyBusinessInheritanceTransferInput {
   /** 피상속인의 원취득가액 (§97의2④1호) */
   decedentAcquisitionPrice: number;
-  /** 상속개시일 현재 자산 평가액 (§97의2④2호) */
+  /**
+   * 상속개시일 현재 자산 평가가액 (§97의2④2호).
+   * 시가가 아닌 **상속세 보충적 평가가액** (상증법 §60·§63).
+   * 시가 우선 적용 시는 시가, 없으면 보충적 평가.
+   */
   inheritanceMarketValue: number;
-  /** 가업상속공제적용률 (0~1) — 시행령 §163의2 위임. 사용자 입력 또는 자동 산정 */
+  /**
+   * 가업상속공제적용률 (0~1, 소령 §163의2 위임 — Pre-Do FB-CGT-LAW-1 확정).
+   * 잠정 산식: 가업상속공제 적용액 / 가업상속재산 평가액 (단순 비율).
+   * 자산별 분리 적용 여부는 mst 조회 후 확정.
+   */
   fbDeductionAppliedRate: number;
-  /** 상속개시일 (자본적지출 시점 분기용 — §97의2① 인용) */
+  /** 상속개시일 — 자본적지출 시점 분기용 (피상속인 vs 상속인 분리) */
   inheritanceDate: string;
+  /**
+   * 자본적지출 분리 (§97의2④ 2호 적용 시점, N2 보강).
+   * 피상속인이 지출한 자본적지출 — 1호 산식에 (× appliedRate) 곱
+   * 상속인이 지출한 자본적지출 — 2호 산식에 (× (1-appliedRate)) 곱
+   * 본 PR 기본 정책: 별도 입력 필드 없이 §97② 필요경비에 합산.
+   * 정밀 분리는 후속 PR (자본적지출 별도 입력 필드).
+   */
+  decedentCapitalExpenditure?: number;
+  heirCapitalExpenditure?: number;
 }
 ```
 
@@ -66,14 +92,20 @@ export interface FamilyBusinessInheritanceTransferInput {
 ```typescript
 export interface TransferTaxResult {
   // ... 기존
-  /** 가업상속공제 §97의2④ 적용 결과 — 의제/일반 양쪽 계산 시 */
+  /**
+   * 가업상속공제 §97의2④ 적용 결과.
+   * §97의2④는 본문 강제 적용 — §97의2② 단서는 ①에만 적용되어 본 항에는 미적용.
+   * 의제 양도세액이 일반보다 낮더라도 §97의2④ 본문 그대로 적용 (selectedFormula 분기 없음).
+   */
   familyBusinessDetail?: {
+    /** §97의2④ 의제 산식 양도세액 (강제 적용) */
     cgtUnderSection97_2_4: number;
+    /** §97 일반 산식 양도세액 (참조용 — §15㉑ 산식 분자) */
     cgtUnderSection97: number;
-    creditAmount: number;       // §18의2⑩ + §15㉑
+    /** §18의2⑩ + §15㉑ 양도세 상당액 공제 = max(0, 의제 − 일반) */
+    creditAmount: number;
+    /** 가업상속공제적용률 (소령 §163의2) */
     appliedRate: number;
-    /** 적용 분기 — "imputed_lower" (의제<일반→일반 적용) / "imputed_used" */
-    selectedFormula: "imputed_used" | "imputed_lower";
   };
 }
 ```
@@ -98,40 +130,48 @@ export function calcFamilyBusinessImputedAcquisitionPrice(
 ### 3-1. transfer-tax 엔진 분기
 
 `transfer-tax.ts` STEP 2 (취득가액 결정) 분기:
-- `input.familyBusinessInheritance` 존재 시 의제 산식 적용
-- 동시에 일반 산식(피상속인 취득가액 그대로) 계산 → 두 결과 비교용
-- §97의2② 3호 단서: **§97의2 적용 결과가 일반보다 적으면 §97의2 미적용** (자기상충 회피)
+- `input.familyBusinessInheritance` 존재 시 **§97의2④ 본문 강제 적용** (단서 없음)
+- 일반 산식(§97)도 병행 계산 — §15㉑ 산식 분자 (의제 − 일반)
+- 음수 가드 — `creditAmount = max(0, 의제 − 일반)`
 
 ```typescript
+// `calcWith` = transfer-tax 전체 양도세 산정 함수 (양도가액·필요경비·LTHD·세율 모두 적용).
+//   단순 헬퍼 아님 — STEP 2 취득가액 변경 → STEP 3~8 재산정 필요.
+//   구현 시 STEP 2를 acquisitionPrice 인자로 매개변수화하여 두 번 호출.
+
 if (input.familyBusinessInheritance) {
-  const imputed = calcFamilyBusinessImputedAcquisitionPrice(...);
-  const baselineCgt = calcWith(input.acquisitionPrice);  // §97
-  const imputedCgt = calcWith(imputed);                  // §97의2④
-  if (imputedCgt >= baselineCgt) {
-    // 의제 적용 (납세자 불리 — §18의2⑩으로 환원 공제)
-    result.familyBusinessDetail = {
-      cgtUnderSection97_2_4: imputedCgt,
-      cgtUnderSection97: baselineCgt,
-      creditAmount: imputedCgt - baselineCgt,  // §15㉑ 산식
-      appliedRate: fbDeductionAppliedRate,
-      selectedFormula: "imputed_used",
-    };
-  } else {
-    // §97의2② 3호 단서 — 의제가 더 낮으면 일반 산식 사용
-    result.familyBusinessDetail = {
-      cgtUnderSection97_2_4: imputedCgt,
-      cgtUnderSection97: baselineCgt,
-      creditAmount: 0,
-      appliedRate: fbDeductionAppliedRate,
-      selectedFormula: "imputed_lower",
-    };
-  }
+  const fb = input.familyBusinessInheritance;
+  const imputedAcq = calcFamilyBusinessImputedAcquisitionPrice(
+    fb.decedentAcquisitionPrice,
+    fb.inheritanceMarketValue,
+    fb.fbDeductionAppliedRate,
+  );
+  // §97 일반 산식 — 피상속인 취득가액 그대로 (상속 자체 의제는 적용하지 않음)
+  const baselineCgt = runTransferEngineWithAcquisition(fb.decedentAcquisitionPrice);
+  // §97의2④ 의제 산식 — 의제 취득가액
+  const imputedCgt = runTransferEngineWithAcquisition(imputedAcq);
+  // §15㉑ 산식 + §18의2⑩ 음수 가드
+  const creditAmount = Math.max(0, imputedCgt - baselineCgt);
+  result.familyBusinessDetail = {
+    cgtUnderSection97_2_4: imputedCgt,
+    cgtUnderSection97: baselineCgt,
+    creditAmount,
+    appliedRate: fb.fbDeductionAppliedRate,
+  };
+  // §97의2④ 본문 강제 — 최종 양도세는 의제 산식 적용
+  result.calculatedTax = imputedCgt;
 }
 ```
 
-### 3-2. `calcFamilyBusinessCgtCredit` 직접 호출은 transfer-tax 측 책임
+### 3-2. `calcFamilyBusinessCgtCredit` 직접 호출은 transfer-tax 측 책임 (C1 분담 명확화)
 
-본 PR에서 상속세 측 환원 공제는 산정만. 실제 환급 처리(이미 신고된 상속세 수정신고)는 UI scope 외.
+본 PR에서 양도세 측 산정:
+- `result.familyBusinessDetail.creditAmount` = max(0, 의제 − 일반) (§15㉑ 산식)
+
+postmgmt 측(`inheritance-family-business-postmgmt.plan.md`)의 분담:
+- 사용자가 본 PR 양도세 결과의 `creditAmount`를 **postmgmt UI Step1 `cgtCreditAmount` 필드에 수동 입력**
+- 이력 자동 연동(C2)은 후속 PR scope — 본 세션에서는 수동 입력만 지원
+- 실제 환급 처리(이미 신고된 상속세 수정신고)는 UI scope 외 (별도 수정신고 마법사)
 
 ## 4. UI 구현
 
@@ -177,8 +217,13 @@ if (input.familyBusinessInheritance) {
 1. **FB-CGT-IMPUTED-1**: 피상속인 취득가 100M·상속개시 평가 300M·적용률 0.8 → 의제 취득가 = 100M×0.8 + 300M×0.2 = 140M
 2. **FB-CGT-IMPUTED-2**: 적용률 1.0 → 의제 취득가 = 피상속인 원취득가 (가업상속공제 100% 적용 시)
 3. **FB-CGT-IMPUTED-3**: 적용률 0 → 의제 취득가 = 상속개시일 평가액 (가업상속공제 0% 적용 시)
-4. **FB-CGT-LOWER-1**: §97의2② 3호 단서 — 의제 양도세 < 일반 양도세 시 일반 산식 적용, creditAmount=0
-5. **FB-CGT-LAW-1**: KoreanLaw MCP로 소령 §163의2 가업상속공제적용률 산정 산식 확정 (시행령 위임 사항)
+4. **FB-CGT-CREDIT-NEG-1**: 의제 양도세 < 일반 양도세 → creditAmount=0 (음수 가드, §18의2⑩ 단서)
+                            단, 양도세 자체는 **§97의2④ 본문 강제 적용** (납세자 불리해도)
+5. **FB-CGT-LAW-1**: KoreanLaw MCP로 소령 §163의2 가업상속공제적용률 산정 산식 확정 (시행령 위임 사항).
+                     - 잠정 가설: 공제액 / 가업상속재산 평가액 단순 비율
+                     - 자산별 분리 적용 vs 통합 적용 본문 확인
+6. **FB-CGT-CAPEX-1**: 자본적지출 분리 입력 시 1호·2호 산식에 각각 합산 (N2)
+                       (본 PR 기본: §97② 필요경비 통합 — capex 분리는 후속)
 
 ## 7. 위험
 

@@ -1,4 +1,13 @@
-# 가업상속공제 사업무관자산 5종 자동 분류 (Plan v1)
+# 가업상속공제 사업무관자산 5종 자동 분류 (Plan v2)
+
+> v1 → v2 정정 (2026-05-21 종합 검토):
+> - **U1 구문 오류 정정**: `isLessee Employee NotExcluded` (공백) → `isLesseeEmployeeNotExcluded`
+> - **U2 식별자 ASCII**: `isLeasedHouseUnderStdPrice6억` → `isLeasedHouseStdPriceUnder6Eok`
+> - **U3 줄임표 제거**: `category: "..." | ...` → 5종 enum 전체 명시
+> - **U4 cross-cutting 검증 Pre-Do**: non-business-land 엔진(양도세 도메인 — 개인 양도자 기준) vs 법인세법 §55의2(법인 기준) 호환성 본문 확인 강제
+> - **U5 마목·라목 mutex 정책 강화**: 라목 분류된 자산은 마목 중복 분류 금지 명시
+> - **N3 임직원 정의 cross-cutting 헬퍼 Pre-Do 추가**: `isQualifyingEmployee` (1% 미만 주주·비특수관계인)
+> - **N4 가목 토지 일부 처분 분기 정책**: non-business-land 엔진 ratio 사용 시 부분 처분 정책 명시
 
 > 작성일: 2026-05-21
 > 대상 법령:
@@ -80,6 +89,19 @@ export interface EstateItem {
 ### 2-2. 신규 헬퍼 — `lib/tax-engine/deductions/family-business-unrelated-classify.ts`
 
 ```typescript
+export type UnrelatedAssetCategory =
+  | "non_business_land"
+  | "leased_real_estate"
+  | "excessive_loans"
+  | "excess_cash"
+  | "unrelated_financial";
+
+export type UnrelatedAssetExemptionReason =
+  | "employee_kook_min_house"     // 나목 단서 — 임직원 국민주택 무상임대
+  | "employee_loan_education"     // 다목 단서 — 임직원 학자금
+  | "employee_loan_jeonse"        // 다목 단서 — 임직원 6억 이하 전세금
+  | "other";
+
 export interface CorporateAssetInput {
   /** 자산 ID */
   id: string;
@@ -88,34 +110,42 @@ export interface CorporateAssetInput {
   /** 자산 유형 */
   assetType: "land" | "building" | "loan" | "cash_equivalent" | "stock_bond" | "other";
   // ─ 가목 — 비사업용 토지 자동 판정 ─
-  /** non-business-land 엔진 통합용 — 토지 자산에만 적용 */
-  nonBusinessLandJudgment?: { isNonBusiness: boolean; ratio: number };
-  // ─ 나목 — 임대 부동산 단서 ─
+  /**
+   * non-business-land 엔진 통합용 — 토지 자산에만 적용.
+   * U4 정정: cross-cutting 시 법인세법 §55의2 기준 vs 소득세법 §104의3 기준 호환성 사전 확인.
+   * 본 PR 잠정 정책: 토지 자산은 사용자 직접 isNonBusiness boolean 입력 + ratio 입력 (자동 판정은 Pre-Do FB-UA-LAW-1 통과 후 결정).
+   */
+  isNonBusinessLand?: boolean;
+  /** 부분 처분 시 비사업용 비율 (0~1) — N4 보강 */
+  nonBusinessLandRatio?: number;
+  // ─ 나목 — 임대 부동산 단서 (U1·U2 정정) ─
   isLeasedToThirdParty?: boolean;
   isLeasedHouseUnderNationalSize?: boolean;
-  isLeasedHouseUnderStdPrice6억?: boolean;
-  isLessee Employee NotExcluded?: boolean;  // 1% 미만 주주·비특수관계인
-  leaseFreeYears?: number;  // 무상임대 기간
+  isLeasedHouseStdPriceUnder6Eok?: boolean;  // U2 — ASCII 식별자
+  isLesseeEmployeeNotExcluded?: boolean;     // U1 — 공백 제거, 1% 미만 주주·비특수관계인
+  leaseFreeYears?: number;                   // 무상임대 기간
   // ─ 다목 — 가지급금 단서 ─
   isEmployeeLoan?: boolean;
   loanPurpose?: "education" | "house_jeonse" | "other";
   loanHouseStdPrice?: number;
   // ─ 라목 — 과다보유현금 5개년 평균 ─
   fiveYearAverageCash?: number;
-  // ─ 마목 — 영업무관 금융자산 ─
+  // ─ 마목 — 영업무관 금융자산 (라목 mutex — U5 강화) ─
+  /** 라목 분류 시 본 자산은 마목에서 자동 제외 (U5) */
+  isAlsoExcessCash?: boolean;
 }
 
 export interface UnrelatedAssetClassificationResult {
   /** 5종별 합계 (단서 적용 후) */
   breakdown: UnrelatedAssetsBreakdown;
-  /** 자산별 분류 명세 */
+  /** 자산별 분류 명세 — U3 줄임표 제거 */
   perAssetDetail: Array<{
     id: string;
-    category: "non_business_land" | "leased_real_estate" | ...;
+    category: UnrelatedAssetCategory;
     rawValue: number;
-    exemptedValue: number;       // 단서 적용으로 차감된 금액
-    finalUnrelatedValue: number; // 최종 사업무관 자산 산입액
-    exemptionReason?: string;
+    exemptedValue: number;
+    finalUnrelatedValue: number;
+    exemptionReason?: UnrelatedAssetExemptionReason;
   }>;
   total: number;
 }
@@ -123,6 +153,22 @@ export interface UnrelatedAssetClassificationResult {
 export function classifyUnrelatedAssets(
   assets: CorporateAssetInput[],
 ): UnrelatedAssetClassificationResult { ... }
+
+/**
+ * N3 보강 — 임직원 자격 판정 cross-cutting 헬퍼.
+ * 상증령 §15⑤2호 나목 단서 1·2 — 1% 이상 주주 + 최대주주 특수관계인 제외.
+ * 본 헬퍼는 별도 모듈 — 가업상속공제·증여세 등 cross-cutting 가능.
+ */
+export interface EmployeeQualificationInput {
+  employeeShareRatio: number;          // 발행주식 보유 비율 (0~1)
+  isMaxShareholderRelative: boolean;   // 상증령 §2의2①1호 관계
+}
+
+export function isQualifyingEmployee(input: EmployeeQualificationInput): boolean {
+  if (input.employeeShareRatio >= 0.01) return false;  // 1% 이상 주주 제외
+  if (input.isMaxShareholderRelative) return false;    // 최대주주 특수관계인 제외
+  return true;
+}
 ```
 
 ### 2-3. 과다보유현금 라목 산정 헬퍼
@@ -167,16 +213,18 @@ import { judgeNonBusinessLand } from "@/lib/tax-engine/non-business-land/engine"
 
 ## 5. Pre-Do anchor
 
-1. **FB-UA-CLASSIFY-1**: 토지 자산 + non-business-land 판정 true → 가목 분류
+1. **FB-UA-CLASSIFY-1**: 토지 자산 + isNonBusinessLand=true → 가목 분류
 2. **FB-UA-CLASSIFY-2**: 임대 부동산 + 국민주택규모 + 5년 무상임대 + 임직원 → 나목 단서 적용 면제
 3. **FB-UA-CLASSIFY-3**: 임직원 자녀 학자금 대여 → 다목 단서 면제
 4. **FB-UA-CLASSIFY-4**: 6억 이하 주택 전세금 → 다목 단서 면제
 5. **FB-UA-CASH-1**: 현재 현금 30억 + 5년 평균 10억 → 라목 = 30 − 20 = 10억
 6. **FB-UA-CASH-2**: 현재 현금 15억 + 5년 평균 10억 → 라목 = 0 (200% 미만)
-7. **FB-UA-MUTEX-1**: 라목 적용 자산은 마목 중복 분류 금지 (§15⑤2호 마 본문 단서)
-8. **FB-UA-LAW-1**: KoreanLaw MCP로 §15⑤2호 가~마 본문 + 단서 6건 재확인 (anchor 라벨 정확성)
-9. **FB-UA-EMPLOYEE-1**: 1% 이상 주주에게 무상임대 → 나목 단서 미적용 (사업무관 산입)
-10. **FB-UA-LEASE-LT5Y-1**: 5년 미만 무상임대 → 나목 단서 미적용
+7. **FB-UA-MUTEX-1 ★ U5**: 라목 분류 자산(isAlsoExcessCash=true)은 마목 중복 분류 금지 (§15⑤2호 마 본문 단서)
+8. **FB-UA-LAW-1 ★ U4·U6**: KoreanLaw MCP로 §15⑤2호 가~마 본문 + 단서 6건 재확인 + 가목 토지 판정 기준이 법인세법 §55의2(법인 기준) vs 소득세법 §104의3(개인 양도자 기준) 호환성 본문 확인. **PASS 조건**: 본문 매칭 후 cross-cutting 가능 또는 별도 법인 기준 헬퍼 필요 판정
+9. **FB-UA-EMPLOYEE-1 ★ N3**: 1% 이상 주주에게 무상임대 → `isQualifyingEmployee=false` → 나목 단서 미적용 (사업무관 산입)
+10. **FB-UA-EMPLOYEE-2**: 최대주주 특수관계인 → `isQualifyingEmployee=false`
+11. **FB-UA-LEASE-LT5Y-1**: 5년 미만 무상임대 → 나목 단서 미적용
+12. **FB-UA-PARTIAL-1 ★ N4**: 가목 토지 부분 처분 — `nonBusinessLandRatio=0.6` → 가액의 60%만 사업무관 산입
 
 ## 6. UI 통합
 
