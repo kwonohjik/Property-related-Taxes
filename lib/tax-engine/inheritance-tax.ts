@@ -33,6 +33,7 @@ import {
   DEFAULT_INHERITANCE_GIFT_BRACKETS,
   calcInheritanceGiftTax,
   aggregatePriorGiftsForInheritance,
+  isWithin13Cutoff,
   calcFuneralExpenseDeduction,
   calcGenerationSkipSurcharge,
 } from "./inheritance-gift-common";
@@ -365,8 +366,11 @@ export function calcInheritanceTax(
   // ─────────────────────────────────────────────
   // STEP 10: 영리법인 §3의2② 면제 (Phase B)
   // ─────────────────────────────────────────────
+  // §3의2② + 집행기준 28-0-1 — "§13에 따라 가산된" 영리법인 증여재산만 면제 대상.
+  // §13 cutoff 도과 행은 priorGiftAggregated에서 제외되므로 면제 발동도 차단해야 함.
+  // isWithin13Cutoff 헬퍼로 aggregatePriorGiftsForInheritance와 단일 진실 유지.
   const corporateGifts = (input.preGiftsWithin10Years ?? []).filter(
-    (g) => g.beneficiaryType === "corporate",
+    (g) => g.beneficiaryType === "corporate" && isWithin13Cutoff(g, input.deathDate),
   );
   const corporateGiftTaxBase = corporateGifts.reduce(
     (s, g) => s + (g.giftTaxBase ?? g.giftAmount),

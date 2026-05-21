@@ -278,6 +278,25 @@ export function calcGiftGenerationSkipSurchargeWithLimit(
 // ============================================================
 
 /**
+ * §13 cutoff 판정 — 사전증여 합산 시기 도과 여부.
+ *
+ * 상증법 §13 ① 1호: 상속인 — 10년 이내
+ * 상증법 §13 ① 2호: 상속인 아닌 자 (영리법인 포함 통설) — 5년 이내
+ *
+ * single source of truth — `aggregatePriorGiftsForInheritance` + `inheritance-tax.ts`
+ * STEP 10 corporate 필터 양쪽에서 재사용 ([[single-source-engine-helper]] 정책).
+ *
+ * @param gift 사전증여 항목
+ * @param deathDate 상속개시일 (ISO date)
+ * @returns true: 합산 대상 / false: cutoff (도과)
+ */
+export function isWithin13Cutoff(gift: PriorGift, deathDate: string): boolean {
+  const elapsedYears = differenceInYears(new Date(deathDate), new Date(gift.giftDate));
+  const limitYears = gift.isHeir ? 10 : 5;
+  return elapsedYears <= limitYears;
+}
+
+/**
  * 상속세 과세가액 합산: 상속개시일 전 10년 이내 사전증여재산 (§13)
  *
  * 상속인·수유자에 대한 사전증여: 10년 이내
@@ -296,16 +315,9 @@ export function aggregatePriorGiftsForInheritance(
   let totalAmount = 0;
 
   for (const gift of priorGifts) {
-    // differenceInYears: 생일(giftDate) 기준 정확한 만 연수 계산 (365.25 근사 오류 방지)
-    // 민법 기산: giftDate 다음날 기산이 원칙이나, 상증법 §13은 "이전 10년" 기준이므로
-    // differenceInYears(death, giftDate)가 법령 취지에 부합.
-    const elapsedYears = differenceInYears(new Date(deathDate), new Date(gift.giftDate));
-
-    // 상속인: 10년, 비상속인: 5년
-    const limitYears = gift.isHeir ? 10 : 5;
-
+    // §13 ①1호 (상속인 10년) / 2호 (비상속인 5년) cutoff — isWithin13Cutoff 헬퍼 사용
     if (heirIdsOnly && !gift.isHeir) continue;
-    if (elapsedYears > limitYears) continue;
+    if (!isWithin13Cutoff(gift, deathDate)) continue;
 
     totalAmount += gift.giftAmount;
     breakdown.push({

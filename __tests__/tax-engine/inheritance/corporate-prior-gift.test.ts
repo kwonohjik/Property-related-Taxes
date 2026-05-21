@@ -8,6 +8,7 @@
 import { describe, it, expect } from "vitest";
 import { calcInheritanceTax } from "@/lib/tax-engine/inheritance-tax";
 import { calcCorporateExemption } from "@/lib/tax-engine/inheritance-corporate-exemption";
+import { isWithin13Cutoff } from "@/lib/tax-engine/inheritance-gift-common";
 import { validatePriorGift } from "@/lib/calc/inheritance-validate";
 import type {
   InheritanceTaxInput,
@@ -78,10 +79,8 @@ describe("ANCHOR-CORP — 영리법인 사전증여 합산 + §3의2② 면제",
     const result = calcInheritanceTax(buildInput({ preGiftsWithin10Years: [corpGift] }));
     // §13①2호 5년 도과 — priorGiftAggregated 합산 제외
     expect(result.priorGiftAggregated).toBe(0);
-    // NOTE: 엔진 STEP 10은 corporate 행을 별도로 필터링 (cutoff 미적용)하므로
-    //       corporateExemption.amount는 발동 가능. 이는 본 UI PR의 범위 밖
-    //       (cutoff 기반 STEP 10 필터링 통합은 후속 엔진 PR로 분리).
-    //       UI 측 정확성은 priorGiftAggregated=0으로 가산이 제외됨에 있음.
+    // STEP 10 cutoff 통합 (commit TBD) — 도과 영리법인은 §3의2② 면제도 미발동
+    expect(result.corporateExemption?.amount ?? 0).toBe(0);
   });
 
   it("ANCHOR-CORP-3: PDF 종합사례 책 1866 ⑩ — 영리법인 면제 150,000,000 재현", () => {
@@ -138,6 +137,54 @@ describe("ANCHOR-CORP — 영리법인 사전증여 합산 + §3의2② 면제",
     expect(result.priorGiftAggregated).toBe(500_000_000);
     // 영리법인 면제 미발동
     expect(result.corporateExemption?.amount ?? 0).toBe(0);
+  });
+
+  // ────────────────────────────────────────────────────
+  // 엔진 후속 — STEP 10 cutoff 필터 통합 anchor
+  // ────────────────────────────────────────────────────
+
+  it("ANCHOR-CORP-CUTOFF-1: isWithin13Cutoff 헬퍼 — 5년 0일 경계 (corporate isHeir=false)", () => {
+    expect(
+      isWithin13Cutoff(
+        { giftDate: "2021-05-21", isHeir: false, giftAmount: 0, giftTaxPaid: 0 },
+        "2026-05-21",
+      ),
+    ).toBe(true);
+  });
+
+  it("ANCHOR-CORP-CUTOFF-2: isWithin13Cutoff 헬퍼 — 6년 도과 (corporate isHeir=false)", () => {
+    expect(
+      isWithin13Cutoff(
+        { giftDate: "2020-05-20", isHeir: false, giftAmount: 0, giftTaxPaid: 0 },
+        "2026-05-21",
+      ),
+    ).toBe(false);
+  });
+
+  it("ANCHOR-CORP-CUTOFF-3: isWithin13Cutoff 헬퍼 — 10년 0일 (상속인 isHeir=true)", () => {
+    expect(
+      isWithin13Cutoff(
+        { giftDate: "2016-05-21", isHeir: true, giftAmount: 0, giftTaxPaid: 0 },
+        "2026-05-21",
+      ),
+    ).toBe(true);
+  });
+
+  it("ANCHOR-CORP-CUTOFF-4: 5년 도과 영리법인 — §3의2② 면제 발동 차단", () => {
+    const corpGiftOverdue: PriorGift = {
+      giftDate: "2020-05-20", // 5년 + 1일 도과
+      giftAmount: 500_000_000,
+      giftTaxPaid: 0,
+      isHeir: false,
+      beneficiaryType: "corporate",
+      corporateGiftComputedTax: 80_000_000,
+    };
+    const result = calcInheritanceTax(
+      buildInput({ preGiftsWithin10Years: [corpGiftOverdue] }),
+    );
+    expect(result.priorGiftAggregated).toBe(0);
+    // STEP 10 cutoff 적용 — 도과 영리법인은 면제 발동 차단 (corporateExemption undefined)
+    expect(result.corporateExemption).toBeUndefined();
   });
 
   // ────────────────────────────────────────────────────
