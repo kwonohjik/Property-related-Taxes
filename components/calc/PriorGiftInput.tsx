@@ -6,7 +6,7 @@
  * 증여세: 동일인 10년 이내 증여 합산 (§47)
  */
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { CurrencyInput, parseAmount, formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
@@ -109,6 +109,45 @@ const GIFT_PRIOR_CATEGORY_LABELS: Record<GiftPriorPropertyCategory, string> = {
 };
 
 // ============================================================
+// 영리법인 사전증여 — ToggleCard 펼침 영역 (§3의2② 산출세액 상당액 입력)
+// ============================================================
+
+function CorporateGiftFields({
+  gift,
+  set,
+}: {
+  gift: PriorGift;
+  set: (patch: Partial<PriorGift>) => void;
+}) {
+  const value = gift.corporateGiftComputedTax;
+  const isMissing = !value || value <= 0;
+  return (
+    <div className="space-y-2 pt-2">
+      <CurrencyInput
+        label="증여세 산출세액 상당액"
+        value={value && value > 0 ? String(value) : ""}
+        onChange={(v) => set({ corporateGiftComputedTax: parseAmount(v) })}
+        required
+        hint="영리법인에 증여세가 부과된다고 가정한 산출세액 (시가 기준 §26 누진세율). §3의2② 면제 한도 분자."
+      />
+      {isMissing && (
+        <p className="text-[11px] text-rose-600 dark:text-rose-400">
+          ⚠ 입력 필수 — 미입력 시 §3의2② 면제 한도를 계산할 수 없습니다.
+        </p>
+      )}
+    </div>
+  );
+}
+
+// ============================================================
+// 헬퍼: 영리법인 사전증여 행 존재 여부
+// ============================================================
+
+function hasCorporatePriorGift(gifts: PriorGift[]): boolean {
+  return gifts.some((g) => g.beneficiaryType === "corporate");
+}
+
+// ============================================================
 // 개별 사전증여 행 편집기
 // ============================================================
 
@@ -133,6 +172,47 @@ function GiftRowEditor({
 }: GiftRowEditorProps) {
   const set = (patch: Partial<PriorGift>) => onUpdate({ ...gift, ...patch });
 
+  // 영리법인 ON↔OFF 사이클에서 prev 상태 보존 (계획서 §4-1-b · 디자인 §2-1)
+  // 카드-local — store 글로벌 보존 금지, PriorGift 메타 신설 금지
+  const prevRef = useRef<{
+    isHeir: boolean;
+    doneeRelation?: DonorRelation;
+    giftTaxPaid: number;
+  } | null>(null);
+
+  const isCorporate = gift.beneficiaryType === "corporate";
+
+  function handleCorporateToggle(on: boolean) {
+    if (on) {
+      // ON 클릭 시점의 최신 gift 값을 캡처
+      prevRef.current = {
+        isHeir: gift.isHeir,
+        doneeRelation: gift.doneeRelation,
+        giftTaxPaid: gift.giftTaxPaid,
+      };
+      set({
+        beneficiaryType: "corporate",
+        isHeir: false, // 엔진 line 305: gift.isHeir ? 10 : 5 → §13①2호 5년 컷오프 강제
+        doneeRelation: undefined,
+        giftTaxPaid: 0, // §28 공제 중복 방지 (영리법인 §4의2③ 비과세)
+      });
+    } else {
+      const prev = prevRef.current ?? {
+        isHeir: true,
+        doneeRelation: undefined,
+        giftTaxPaid: 0,
+      };
+      set({
+        beneficiaryType: undefined,
+        corporateGiftComputedTax: undefined,
+        isHeir: prev.isHeir,
+        doneeRelation: prev.doneeRelation,
+        giftTaxPaid: prev.giftTaxPaid,
+      });
+      prevRef.current = null;
+    }
+  }
+
   return (
     <div className="border rounded-lg p-4 space-y-3 bg-white dark:bg-gray-900">
       {/* 헤더 */}
@@ -149,6 +229,15 @@ function GiftRowEditor({
               📋 이력 기반
             </span>
           )}
+          {isCorporate && (
+            <span
+              className="inline-flex items-center gap-1 text-[10px] bg-violet-100 text-violet-800 rounded px-2 py-0.5"
+              title="영리법인 사전증여 — 상증법 §13①2호 5년 합산 · §3의2② + 집행기준 28-0-1 면제"
+              aria-label="영리법인 사전증여 — 상증법 §13① · §3의2② · 집행기준 28-0-1"
+            >
+              🏢 영리법인
+            </span>
+          )}
         </div>
         <button
           type="button"
@@ -158,6 +247,20 @@ function GiftRowEditor({
           삭제
         </button>
       </div>
+
+      {/* 영리법인 분기 토글 (상속세 모드 전용) — §13①2호 5년 합산 + §3의2② + 집행기준 28-0-1 면제 */}
+      {showIsHeir && (
+        <ToggleCard
+          tone="violet"
+          variant="card"
+          title="🏢 수증인 = 영리법인"
+          description="상증법 §13①2호 5년 합산 · §3의2② + 집행기준 28-0-1 공제"
+          checked={isCorporate}
+          onCheckedChange={handleCorporateToggle}
+        >
+          <CorporateGiftFields gift={gift} set={set} />
+        </ToggleCard>
+      )}
 
       {/* 증여일 */}
       <div className="space-y-1">
@@ -172,7 +275,11 @@ function GiftRowEditor({
 
       {/* 수증자 관계 */}
       <div className="space-y-1">
-        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
+        <label
+          className={`block text-xs font-medium ${
+            isCorporate ? "text-gray-400" : "text-gray-600 dark:text-gray-400"
+          }`}
+        >
           수증인과의 관계
         </label>
         <select
@@ -180,7 +287,9 @@ function GiftRowEditor({
           onChange={(e) =>
             set({ doneeRelation: (e.target.value || undefined) as DonorRelation | undefined })
           }
-          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          disabled={isCorporate}
+          title={isCorporate ? "영리법인 — 자연인 관계 미적용" : undefined}
+          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-500"
         >
           <option value="">선택</option>
           {DONOR_RELATION_LIST.map((r) => (
@@ -191,7 +300,7 @@ function GiftRowEditor({
         </select>
       </div>
 
-      {/* 상속인 여부 (상속세 전용) */}
+      {/* 상속인 여부 (상속세 전용 · 영리법인 ON 시 disabled) */}
       {showIsHeir && (
         <ToggleCard
           tone="violet"
@@ -199,6 +308,12 @@ function GiftRowEditor({
           description="상속인: 10년 이내 합산 (§13①1호) / 비상속인: 5년 이내 합산 (§13①2호)"
           checked={gift.isHeir}
           onCheckedChange={(v) => set({ isHeir: v })}
+          disabled={isCorporate}
+          disabledReason={
+            isCorporate
+              ? "영리법인 — §13①2호 5년 합산 자동 적용 (상속인 분류 미적용)"
+              : undefined
+          }
         />
       )}
 
@@ -211,12 +326,17 @@ function GiftRowEditor({
         hint="증여 당시 평가액 (시가 기준)"
       />
 
-      {/* 기납부 증여세 */}
+      {/* 기납부 증여세 (영리법인 ON 시 disabled — §4의2③ 비과세 → §3의2②로 별도 공제) */}
       <CurrencyInput
         label="기납부 증여세"
         value={gift.giftTaxPaid > 0 ? String(gift.giftTaxPaid) : ""}
         onChange={(v) => set({ giftTaxPaid: parseAmount(v) })}
-        hint="§28 증여세액공제 계산에 사용 — 납부하지 않았으면 0"
+        hint={
+          isCorporate
+            ? "영리법인 — 증여세 비과세 (§4의2③). 위 ToggleCard 펼침 영역의 §3의2② 산출세액 상당액으로 공제."
+            : "§28 증여세액공제 계산에 사용 — 납부하지 않았으면 0"
+        }
+        disabled={isCorporate}
       />
 
       {/* 신고서 부표 1 표시 메타 (선택 입력) — 결과 화면 ②/③ 컬럼 표시용 */}
@@ -408,6 +528,14 @@ function AggregationSummary({
     ? gifts.filter((g) => !g.isHeir).reduce((s, g) => s + g.giftAmount, 0)
     : null;
 
+  // 영리법인 분해 (정정 E16·D6·D13 — indigo tone 유지, ↳ prefix로 분해 표시)
+  const corporateGifts = gifts.filter((g) => g.beneficiaryType === "corporate");
+  const corporateTotal = corporateGifts.reduce((s, g) => s + g.giftAmount, 0);
+  const corporateComputedTaxTotal = corporateGifts.reduce(
+    (s, g) => s + (g.corporateGiftComputedTax ?? 0),
+    0,
+  );
+
   return (
     <div className="rounded-md border border-indigo-200 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/20 px-4 py-3 space-y-2">
       <p className="text-xs font-semibold text-indigo-700 dark:text-indigo-300">
@@ -423,6 +551,20 @@ function AggregationSummary({
             <span>비상속인 증여 합계 (5년 합산)</span>
             <span>{formatKRW(nonHeirTotal)}</span>
           </div>
+          {corporateTotal > 0 && (
+            <>
+              <div className="flex justify-between text-xs text-indigo-700 dark:text-indigo-300 border-t border-indigo-200/50 pt-1">
+                <span>↳ 🏢 영리법인 증여 (5년, §13①2호)</span>
+                <span>{formatKRW(corporateTotal)}</span>
+              </div>
+              {corporateComputedTaxTotal > 0 && (
+                <div className="flex justify-between text-xs text-indigo-700 dark:text-indigo-300">
+                  <span>↳ 영리법인 증여세 산출세액 합계 (§3의2②)</span>
+                  <span>{formatKRW(corporateComputedTaxTotal)}</span>
+                </div>
+              )}
+            </>
+          )}
         </>
       )}
       <div className="flex justify-between text-xs font-bold text-indigo-800 dark:text-indigo-200 border-t border-indigo-200 dark:border-indigo-700 pt-2">
