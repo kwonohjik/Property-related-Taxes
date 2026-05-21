@@ -345,6 +345,9 @@ export const familyBusinessInheritanceInputSchema = z.object({
   heirDebt: z.number().nonnegative().optional(),
   unrelatedAssetsAcknowledged: z.boolean(),
   postManagementAcknowledged: z.boolean(),
+  // 기회발전특구 특례 (상증령 §15㉕, 2026-05-21 추가)
+  isInOpportunityDevelopmentZone: z.boolean().optional(),
+  ofzWorkforceRatio50PlusMet: z.boolean().optional(),
   hasTaxFraudConviction: z.boolean().optional(),
 });
 

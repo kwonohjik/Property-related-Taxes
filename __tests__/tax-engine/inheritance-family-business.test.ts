@@ -387,6 +387,65 @@ describe("FB-INDUSTRY/SIZE — 별표 업종·기업 규모 가드", () => {
 });
 
 // ============================================================
+// 단위 anchor — FB-OFZ (기회발전특구 특례 상증령 §15㉕)
+// ============================================================
+
+describe("FB-OFZ — 기회발전특구 특례 (상증령 §15㉕)", () => {
+  it("FB-OFZ-1: OFZ 양 요건 충족 + heirCEOWithinTwoYears=false → 라목 면제 (heir_ceo_not_scheduled 제외)", () => {
+    const elig = evaluateFamilyBusinessEligibility(buildPassingFB({
+      heirCEOWithinTwoYears: false,
+      isInOpportunityDevelopmentZone: true,
+      ofzWorkforceRatio50PlusMet: true,
+    }));
+    expect(elig.eligible).toBe(true);
+    expect(elig.reasons).not.toContain("heir_ceo_not_scheduled");
+  });
+
+  it("FB-OFZ-2: OFZ 비활성 (특구 소재 X) + heirCEOWithinTwoYears=false → 차단", () => {
+    const elig = evaluateFamilyBusinessEligibility(buildPassingFB({
+      heirCEOWithinTwoYears: false,
+      isInOpportunityDevelopmentZone: false,
+      ofzWorkforceRatio50PlusMet: true,
+    }));
+    expect(elig.eligible).toBe(false);
+    expect(elig.reasons).toContain("heir_ceo_not_scheduled");
+  });
+
+  it("FB-OFZ-3: OFZ 1호만 충족 (50% 인원 X) → 면제 불성립 (둘 다 충족해야)", () => {
+    const elig = evaluateFamilyBusinessEligibility(buildPassingFB({
+      heirCEOWithinTwoYears: false,
+      isInOpportunityDevelopmentZone: true,
+      ofzWorkforceRatio50PlusMet: false,
+    }));
+    expect(elig.eligible).toBe(false);
+    expect(elig.reasons).toContain("heir_ceo_not_scheduled");
+  });
+
+  it("FB-OFZ-4: OFZ 양 요건 충족이라도 다른 요건 미충족은 면제 대상 아님 (heir_not_adult 등)", () => {
+    const elig = evaluateFamilyBusinessEligibility(buildPassingFB({
+      heirIsAdult: false,
+      heirCEOWithinTwoYears: false,
+      isInOpportunityDevelopmentZone: true,
+      ofzWorkforceRatio50PlusMet: true,
+    }));
+    expect(elig.eligible).toBe(false);
+    expect(elig.reasons).toContain("heir_not_adult");
+    // CEO 요건은 면제됐으나 18세는 면제 대상 아님
+    expect(elig.reasons).not.toContain("heir_ceo_not_scheduled");
+  });
+
+  it("FB-OFZ-5: spouseFulfillsRequirements=true가 OFZ보다 우선 (전체 heir 요건 skip)", () => {
+    const elig = evaluateFamilyBusinessEligibility(buildPassingFB({
+      spouseFulfillsRequirements: true,
+      heirCEOWithinTwoYears: false,
+      heirIsAdult: false,
+      isInOpportunityDevelopmentZone: false,
+    }));
+    expect(elig.eligible).toBe(true);
+  });
+});
+
+// ============================================================
 // 단위 anchor — FB-INTEGRATION (orchestrator STEP ⑧ 통합 회귀)
 // ============================================================
 

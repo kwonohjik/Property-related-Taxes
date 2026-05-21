@@ -468,6 +468,36 @@ export function FamilyBusinessEligibilitySection({
             />
           </div>
 
+          {/* ── 기회발전특구 특례 (상증령 §15㉕ — emerald tone) ── */}
+          <div className="space-y-2">
+            <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+              기회발전특구 특례 (상증령 §15㉕)
+            </p>
+            <p className="text-[11px] text-muted-foreground">
+              두 요건 모두 충족 시 신고기한 후 2년 내 대표이사 취임(라목) 요건 면제
+            </p>
+            <ToggleCard
+              tone="emerald"
+              size="sm"
+              title="본사 기회발전특구 소재·이전 (§15㉕1호)"
+              description="조특법 §99의4①1호 가목 1)~5) 외 기회발전특구로 이전 또는 본사 소재"
+              checked={familyBusiness.isInOpportunityDevelopmentZone ?? false}
+              onCheckedChange={(v) =>
+                update({ isInOpportunityDevelopmentZone: v ? true : undefined })
+              }
+            />
+            <ToggleCard
+              tone="emerald"
+              size="sm"
+              title="특구 상시근무인원 50% 이상 (§15㉕2호)"
+              description="기회발전특구 사업장 상시근무인원 연평균이 전체 연평균의 100분의 50 이상"
+              checked={familyBusiness.ofzWorkforceRatio50PlusMet ?? false}
+              onCheckedChange={(v) =>
+                update({ ofzWorkforceRatio50PlusMet: v ? true : undefined })
+              }
+            />
+          </div>
+
           {/* ── 조세포탈 (rose tone) ── */}
           <ToggleCard
             tone="rose"

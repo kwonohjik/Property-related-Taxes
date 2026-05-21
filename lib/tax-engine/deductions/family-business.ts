@@ -101,7 +101,11 @@ export function evaluateFamilyBusinessEligibility(
     const engagementMet = input.heirTwoYearEngagement || input.decedentEarlyDeath === true;
     if (!engagementMet) reasons.push("heir_engagement_short");
     if (!input.heirOfficerByFilingDeadline) reasons.push("heir_officer_not_appointed");
-    if (!input.heirCEOWithinTwoYears) reasons.push("heir_ceo_not_scheduled");
+    // 라목 (2년 내 대표이사 취임) — 기회발전특구 특례 적용 시 면제 (상증령 §15㉕)
+    //   요건: 본사 특구 소재·이전 (1호) AND 상시근무인원 50%+ (2호) 모두 충족
+    const ofzExempted = input.isInOpportunityDevelopmentZone === true
+      && input.ofzWorkforceRatio50PlusMet === true;
+    if (!ofzExempted && !input.heirCEOWithinTwoYears) reasons.push("heir_ceo_not_scheduled");
   }
 
   return { eligible: reasons.length === 0, reasons };
@@ -167,6 +171,10 @@ export function calcFamilyBusinessDeductionPhase2(args: {
   const elig = evaluateFamilyBusinessEligibility(input);
   const reasons = [...elig.reasons];
 
+  // OFZ 특례 활성 여부 (상증령 §15㉕ — 결과 detail 메타 노출용)
+  const ofzExemptionActive = input.isInOpportunityDevelopmentZone === true
+    && input.ofzWorkforceRatio50PlusMet === true;
+
   // 2) 200% 가드 (중견기업 한정)
   const guard = check200PercentGuard(input, taxIfNoFBD);
   if (guard?.exceeded) {
@@ -210,6 +218,7 @@ export function calcFamilyBusinessDeductionPhase2(args: {
       deduction,
       usedDirectInput: false,
       mediumGuard: guard,
+      ofzExemptionActive: ofzExemptionActive || undefined,
       breakdown,
     },
   };

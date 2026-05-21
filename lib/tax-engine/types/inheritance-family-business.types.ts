@@ -91,6 +91,21 @@ export interface FamilyBusinessInheritanceInput {
   /** 5년 사후관리 의무 인지·동의 (UI amber tone 안내 카드). */
   postManagementAcknowledged: boolean;
 
+  // ─ 기회발전특구 특례 (상증령 §15㉕, 2026-05-21 추가) ─
+  /**
+   * 본사 기회발전특구 소재·이전 (상증령 §15㉕1호 가·나).
+   * - 가목: 본사를 기회발전특구로 이전
+   * - 나목: 본사가 기회발전특구에 소재
+   */
+  isInOpportunityDevelopmentZone?: boolean;
+  /**
+   * 기회발전특구 상시근무인원 연평균이 전체 상시근무인원 연평균의 100분의 50 이상 (상증령 §15㉕2호).
+   * isInOpportunityDevelopmentZone=true + 본 필드=true 모두 충족 시 다음 면제:
+   *   - 상증령 §15③2호 라목 (신고기한 후 2년 내 대표이사 취임) 적용 배제
+   *   - Phase F (사후관리) §15⑪1호 (대표이사 미종사) + §15⑪2호 (업종 변경) 적용 배제
+   */
+  ofzWorkforceRatio50PlusMet?: boolean;
+
   // ─ 조세포탈·회계부정 §18의2⑧1호 ─
   /** 형 확정 (공제 배제) — short-circuit. */
   hasTaxFraudConviction?: boolean;
@@ -159,6 +174,11 @@ export interface FamilyBusinessDeductionDetail {
   usedDirectInput: boolean;
   /** 200% 가드 산정 메타 (중견기업 한정) */
   mediumGuard?: FamilyBusinessMediumGuard;
+  /**
+   * 기회발전특구 특례 활성 여부 (상증령 §15㉕).
+   * true 시 heirCEOWithinTwoYears 요건 면제 적용. UI 결과 카드에 emerald tone 안내.
+   */
+  ofzExemptionActive?: boolean;
   /** breakdown — orchestrator가 전체 결과에 병합 */
   breakdown: CalculationStep[];
 }

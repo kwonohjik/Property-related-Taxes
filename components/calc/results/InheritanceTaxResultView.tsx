@@ -146,7 +146,7 @@ function FamilyBusinessDeductionDetailRow({
     );
   }
 
-  // 자격 충족 — 한도·가액 표시 + medium 가드 메타
+  // 자격 충족 — 한도·가액 표시 + medium 가드 메타 + OFZ 특례 안내
   if (detail.eligible && detail.deduction > 0) {
     return (
       <div className="mx-4 my-2 space-y-1">
@@ -159,6 +159,12 @@ function FamilyBusinessDeductionDetailRow({
             <> · 사용자 입력 {formatKRW(detail.manualValue)}</>
           )}
         </p>
+        {detail.ofzExemptionActive && (
+          <div className="mt-1 rounded-md border border-emerald-200 bg-emerald-50/60 dark:bg-emerald-950/20 dark:border-emerald-800 p-2 text-[10px] text-emerald-800 dark:text-emerald-300">
+            <p className="font-semibold">기회발전특구 특례 적용 (상증령 §15㉕)</p>
+            <p>본사 특구 소재·이전 + 상시근무인원 50% 이상 → 2년 내 대표이사 취임 요건 면제</p>
+          </div>
+        )}
         {detail.mediumGuard && (
           <div className="mt-1 rounded-md border border-sky-200 bg-sky-50/60 dark:bg-sky-950/20 dark:border-sky-800 p-2 text-[10px] text-sky-800 dark:text-sky-300">
             <p className="font-semibold mb-1">§18의2② 200% 가드 (중견기업)</p>
