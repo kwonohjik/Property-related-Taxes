@@ -244,6 +244,20 @@ export function evaluateFarmingEligibility(
     return { eligible: false, reasons };
   }
 
+  // 1-b. §16② 단서 — 영농상속 후 최대주주 사망 상속 (corporate 전용, F-9 2026-05-21)
+  // KoreanLaw MCP 검증: 시행령 §16② 단서 — "제2호에 해당하는 경우로서 영농상속이 이루어진 후에
+  // 영농상속 당시 최대주주등에 해당하는 사람(영농상속을 받은 상속인은 제외한다)의 사망으로 상속이
+  // 개시되는 경우는 적용하지 아니한다."
+  if (
+    input.type === "corporate" &&
+    input.isSecondaryAfterFarmingInheritance === true
+  ) {
+    reasons.push(
+      "§16② 단서 — 영농상속 후 최대주주 사망에 의한 상속 (적용 배제)",
+    );
+    return { eligible: false, reasons };
+  }
+
   // 2. §16⑭ 영농 부정 — 피상속인·상속인·후계자 모두 적용
   if (input.hasDisqualifyingIncome) {
     reasons.push(

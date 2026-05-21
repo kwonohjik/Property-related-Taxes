@@ -54,7 +54,8 @@ function isEmptyFarming(f: FarmingInheritanceInput): boolean {
     f.heirCorporateOfficer === undefined &&
     f.isDesignatedSuccessor === undefined &&
     f.hasDisqualifyingIncome === undefined &&
-    f.hasTaxFraudConviction === undefined
+    f.hasTaxFraudConviction === undefined &&
+    f.isSecondaryAfterFarmingInheritance === undefined
   );
 }
 
@@ -274,7 +275,7 @@ export function FarmingEligibilitySection({
           {/* §16⑭ + §18의3⑥ */}
           <div className="space-y-1.5">
             <p className="text-xs font-semibold text-rose-800 dark:text-rose-200">
-              배제 사유 (§16⑭ + §18의3⑥)
+              배제 사유 (§16⑭ + §18의3⑥{farming.type === "corporate" ? " + §16② 단서" : ""})
             </p>
             <ToggleCard
               tone="rose"
@@ -296,6 +297,21 @@ export function FarmingEligibilitySection({
                 update({ hasTaxFraudConviction: v ? true : undefined })
               }
             />
+            {/* PR-D F-9: §16② 단서 — corporate 전용 (rare) */}
+            {farming.type === "corporate" && (
+              <ToggleCard
+                tone="rose"
+                size="sm"
+                title="§16② 단서 — 영농상속 후 최대주주 사망 상속"
+                description="본 상속이 직전 영농상속 당시 최대주주(상속받지 않은 자) 사망으로 개시된 두 번째 상속인 경우 — 적용 배제 (rare)"
+                checked={farming.isSecondaryAfterFarmingInheritance ?? false}
+                onCheckedChange={(v) =>
+                  update({
+                    isSecondaryAfterFarmingInheritance: v ? true : undefined,
+                  })
+                }
+              />
+            )}
           </div>
 
           {/* 실시간 미리보기 (single-source-engine-helper) */}

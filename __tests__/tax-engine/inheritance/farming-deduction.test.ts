@@ -205,6 +205,70 @@ describe("calcFarmingDeduction — 영농상속공제 §18의3", () => {
 });
 
 // ============================================================
+// FD-17 ~ FD-19: §16② 단서 (F-9, 2026-05-21)
+// ============================================================
+
+describe("§16② 단서 — 영농상속 후 최대주주 사망 (corporate 전용)", () => {
+  it("FD-17: corporate + isSecondaryAfterFarmingInheritance=true → 0 + 단독 reason", () => {
+    const r = calcFarmingDeduction(
+      1_000_000_000,
+      corporateOk({ isSecondaryAfterFarmingInheritance: true }),
+    );
+    expect(r.deduction).toBe(0);
+    expect(r.detail.ineligibleReasons.length).toBe(1);
+    expect(r.detail.ineligibleReasons[0]).toContain("§16② 단서");
+  });
+
+  it("FD-18: personal + isSecondaryAfterFarmingInheritance=true → 단서 무시 (corporate 전용)", () => {
+    const r = calcFarmingDeduction(
+      1_000_000_000,
+      personalOk({ isSecondaryAfterFarmingInheritance: true }),
+    );
+    // personal은 단서 적용 안 됨 — 다른 요건 모두 충족이라 공제 적용
+    expect(r.deduction).toBe(1_000_000_000);
+    expect(r.detail.eligible).toBe(true);
+  });
+
+  it("FD-19: corporate + 단서=true + 다른 요건 모두 미충족 → 단서 단독 종결", () => {
+    const r = calcFarmingDeduction(
+      1_000_000_000,
+      corporateOk({
+        isSecondaryAfterFarmingInheritance: true,
+        decedentCorporateMet: false,
+        heirIsAdult: false,
+        heirCorporateOfficer: false,
+      }),
+    );
+    // 단서 early return 이므로 다른 reasons 추가 안 됨
+    expect(r.deduction).toBe(0);
+    expect(r.detail.ineligibleReasons.length).toBe(1);
+    expect(r.detail.ineligibleReasons[0]).toContain("§16② 단서");
+  });
+
+  it("FD-20: corporate + isSecondaryAfterFarmingInheritance=false → 정상 평가", () => {
+    const r = calcFarmingDeduction(
+      1_000_000_000,
+      corporateOk({ isSecondaryAfterFarmingInheritance: false }),
+    );
+    expect(r.deduction).toBe(1_000_000_000);
+    expect(r.detail.eligible).toBe(true);
+  });
+
+  it("FD-21: 단서 + hasTaxFraudConviction=true → §18의3⑥ 우선 (먼저 평가)", () => {
+    const r = calcFarmingDeduction(
+      1_000_000_000,
+      corporateOk({
+        isSecondaryAfterFarmingInheritance: true,
+        hasTaxFraudConviction: true,
+      }),
+    );
+    expect(r.deduction).toBe(0);
+    expect(r.detail.ineligibleReasons.length).toBe(1);
+    expect(r.detail.ineligibleReasons[0]).toContain("§18의3⑥");
+  });
+});
+
+// ============================================================
 // evaluateFarmingEligibility 단위
 // ============================================================
 

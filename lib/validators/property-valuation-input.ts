@@ -288,6 +288,8 @@ export const farmingInheritanceInputSchema = z.object({
   isDesignatedSuccessor: z.boolean().optional(),
   hasDisqualifyingIncome: z.boolean().optional(),
   hasTaxFraudConviction: z.boolean().optional(),
+  // §16② 단서 (F-9, 2026-05-21) — corporate 전용
+  isSecondaryAfterFarmingInheritance: z.boolean().optional(),
 });
 
 /**
