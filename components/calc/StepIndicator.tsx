@@ -10,13 +10,15 @@ export interface StepIndicatorProps {
    * 미제공 시 기존처럼 표시 전용.
    */
   onStepClick?: (index: number) => void;
+  /** root div에 추가 적용할 className (예: `!mb-0`로 기본 mb-6 override) */
+  className?: string;
 }
 
-export function StepIndicator({ steps, current, onStepClick }: StepIndicatorProps) {
+export function StepIndicator({ steps, current, onStepClick, className }: StepIndicatorProps) {
   const clickable = typeof onStepClick === "function";
 
   return (
-    <div className="flex items-center gap-1 mb-6">
+    <div className={cn("flex items-center gap-1 mb-6", className)}>
       {steps.map((label, i) => {
         const circle = (
           <div

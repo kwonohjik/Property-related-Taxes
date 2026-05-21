@@ -339,9 +339,23 @@ export function InheritanceTaxForm() {
         />
       </div>
 
-      <StepIndicator steps={[...STEPS]} current={step} onStepClick={(i) => setStep(i)} />
+      {/* StepIndicator — 헤더 바로 아래 sticky (인쇄 시 일반 흐름) */}
+      <div className="sticky top-14 z-30 -mx-4 px-4 py-3 bg-background/95 backdrop-blur border-b border-border/60 mb-4 print:static print:bg-transparent print:backdrop-blur-0 print:border-0">
+        <StepIndicator
+          steps={[...STEPS]}
+          current={step}
+          onStepClick={(i) => setStep(i)}
+          className="!mb-0"
+        />
+      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6 items-start">
+      {/* 그리드: 데스크톱 좌(사이드바) · 우(입력) / 모바일 상단 stack / 인쇄 단일 컬럼 */}
+      <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-6 items-start print:block">
+        {/* 사이드바 합계 (지점 ⑥) — 좌측 sticky (데스크톱) / 상단 stack (모바일·인쇄) */}
+        <aside className="order-first lg:sticky lg:top-36 self-start max-h-[calc(100vh-9rem)] overflow-y-auto print:static print:max-h-none print:overflow-visible">
+          <InheritanceSidebar form={form} result={result} />
+        </aside>
+
         <div className="min-h-[300px]">
           {step === 0 && (
             <Step0
@@ -354,11 +368,6 @@ export function InheritanceTaxForm() {
           {step === 3 && <Step3 form={form} set={set} />}
           {step === 4 && <Step4 form={form} set={set} />}
         </div>
-
-        {/* 사이드바 합계 (지점 ⑥) — 데스크톱 우측 sticky / 모바일 하단 */}
-        <aside className="lg:sticky lg:top-4 self-start order-first lg:order-last">
-          <InheritanceSidebar form={form} result={result} />
-        </aside>
       </div>
 
       {error && (
