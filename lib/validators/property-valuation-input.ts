@@ -40,6 +40,9 @@ const baseItemSchema = z.object({
   heirAllocations: z.array(heirAllocationSchema).optional(),
   deemedCategory: z.enum(["retirement", "insurance", "trust"]).optional(),
   isFamilyBusinessAsset: z.boolean().optional(),
+  // §22 금융재산상속공제 자동화 (2026-05-21)
+  isFinancialAssetForDeduction: z.boolean().optional(),
+  trustType: z.enum(["cash_trust", "real_estate", "security", "other"]).optional(),
 });
 
 export const landItemSchema = baseItemSchema.extend({
@@ -229,6 +232,8 @@ export const debtItemSchema = z.object({
   amount: z.number().nonnegative(),
   isBongan: z.boolean().optional(),
   heirAllocations: z.array(heirAllocationSchema).optional(),
+  // §22 순금융재산 차감 채무 여부 (2026-05-21)
+  isFinancialDebtForDeduction: z.boolean().optional(),
 });
 
 // ── PresumedInheritanceItem 스키마 (Phase A §15) ──

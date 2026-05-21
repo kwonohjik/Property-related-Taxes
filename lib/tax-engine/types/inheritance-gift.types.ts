@@ -84,10 +84,28 @@ export interface EstateItem {
   // ===== 종합사례 PDF 확장 (Design §2-1) =====
   /** 협의분할 — 상속인별 분배 (합 = valuatedAmount) */
   heirAllocations?: HeirAllocation[];
-  /** 간주상속재산 표시 분류 (§10). 결과 카드 분리 노출용. */
+  /** 간주상속재산 표시 분류 (본법 §8 보험금 / §9 신탁 / §10 퇴직금). 결과 카드 분리 노출용. */
   deemedCategory?: "retirement" | "insurance" | "trust";
   /** 가업상속재산 여부 — 직접 입력 모드 표시용 */
   isFamilyBusinessAsset?: boolean;
+
+  // ===== §22 금융재산상속공제 자동화 (2026-05-21) =====
+  /**
+   * §22 금융재산공제 대상 여부 (사용자 명시 체크).
+   * 법령: 상증령 §19① — 금융회사등 취급 예금·적금·신탁(금전)·보험금·주식·채권·수익증권 등.
+   * 우선순위: 명시값 > deemedCategory override > 카테고리 default.
+   * - undefined: 자동 추론 (resolveFinancialEligibility 헬퍼)
+   * - true: 명시 포함
+   * - false: 명시 제외 (§22② 차명·미신고 등)
+   * 안전 default 정책: 모호한 경우(특히 신탁) false 채택 — 사용자가 명시적으로 포함 체크 필요.
+   */
+  isFinancialAssetForDeduction?: boolean;
+  /**
+   * 신탁 유형 — deemedCategory==="trust"일 때만 의미.
+   * §19① "금전신탁만" §22 적용 — trustType==="cash_trust"만 default true, 그 외 false.
+   * 미입력 시 보수적으로 §22 미적용.
+   */
+  trustType?: "cash_trust" | "real_estate" | "security" | "other";
 }
 
 /**
@@ -449,6 +467,16 @@ export interface DebtItem {
   isBongan?: boolean;
   /** 협의분할 — 상속인별 변제 분배 */
   heirAllocations?: HeirAllocation[];
+  /**
+   * §22 순금융재산 산식의 차감 채무 여부 (사용자 명시 체크).
+   * 법령: 상증령 §19④ — §10① 1호로 입증된 금융회사등에 대한 채무만 차감 가능.
+   * UI: category !== "financial"이면 체크박스 disabled (resolveFinancialDebt에서 강제 false).
+   * - undefined: financial 카테고리 default true / 그 외 default false
+   * - true: 명시 — §10① 1호 입증 완료
+   * - false: 명시 제외 — 입증 미비 등
+   * 본 플래그는 §22 순금융 계산에만 영향. 채무 본래의 과세가액 차감(§14)은 그대로 작동.
+   */
+  isFinancialDebtForDeduction?: boolean;
 }
 
 // ============================================================
