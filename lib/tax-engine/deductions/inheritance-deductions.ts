@@ -381,6 +381,13 @@ export function calcFarmingDeduction(
   const evaluated = farming !== undefined;
   const safeAssetValue = Math.max(0, farmingAssetValue);
 
+  // 부록 A — heirAssessments 입력 시 자격자 N명 / 전체 M명 메타 계산
+  const totalHeirCount = farming?.heirAssessments?.length;
+  const qualifiedHeirCount =
+    farming?.heirAssessments !== undefined
+      ? (deriveQualifiedHeirIds(farming) ?? []).length
+      : undefined;
+
   // 자격 미충족 — 공제 0 + 사용자 입력값은 detail에 보존
   if (!evalResult.eligible) {
     return {
@@ -400,6 +407,8 @@ export function calcFarmingDeduction(
         ineligibleReasons: evalResult.reasons,
         appliedAssetValue: safeAssetValue,
         cappedDeduction: 0,
+        qualifiedHeirCount,
+        totalHeirCount,
       },
     };
   }
@@ -414,6 +423,8 @@ export function calcFarmingDeduction(
         ineligibleReasons: [],
         appliedAssetValue: 0,
         cappedDeduction: 0,
+        qualifiedHeirCount,
+        totalHeirCount,
       },
     };
   }
@@ -435,6 +446,8 @@ export function calcFarmingDeduction(
       ineligibleReasons: [],
       appliedAssetValue: safeAssetValue,
       cappedDeduction: capped,
+      qualifiedHeirCount,
+      totalHeirCount,
     },
   };
 }

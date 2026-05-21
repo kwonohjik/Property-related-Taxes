@@ -289,6 +289,35 @@ describe("[RD-UI] FarmingDeductionDetailRow — 5-way 분기 (F-6)", () => {
     const { container } = render(<FarmingDeductionDetailRow detail={undefined} />);
     expect(container.firstChild).toBeNull();
   });
+
+  // 부록 A — 자격자 N명 / 전체 M명 노출
+  it("RD-UI-8: heirAssessments 메타 입력 시 '부록 A — 자격 충족 상속인 N명 / 전체 M명' 노출", () => {
+    const detail: FarmingDeductionDetail = {
+      evaluated: true,
+      eligible: true,
+      ineligibleReasons: [],
+      appliedAssetValue: 1_000_000_000,
+      cappedDeduction: 1_000_000_000,
+      qualifiedHeirCount: 1,
+      totalHeirCount: 3,
+    };
+    render(<FarmingDeductionDetailRow detail={detail} />);
+    expect(screen.queryByText(/부록 A — 자격 충족 상속인/)).not.toBeNull();
+    expect(screen.queryByText(/1명/)).not.toBeNull();
+    expect(screen.queryByText(/전체 3명/)).not.toBeNull();
+  });
+
+  it("RD-UI-9: heirAssessments 메타 미입력 → '부록 A' 안내 미렌더", () => {
+    const detail: FarmingDeductionDetail = {
+      evaluated: true,
+      eligible: true,
+      ineligibleReasons: [],
+      appliedAssetValue: 1_000_000_000,
+      cappedDeduction: 1_000_000_000,
+    };
+    render(<FarmingDeductionDetailRow detail={detail} />);
+    expect(screen.queryByText(/부록 A/)).toBeNull();
+  });
 });
 
 // vi unused 가드

@@ -238,9 +238,18 @@ export function FarmingDeductionDetailRow({
   // RD-1·RD-1b: 정상 (cap 적용 여부 분기)
   const capped = detail.appliedAssetValue > 3_000_000_000;
   return (
-    <div className="mx-4 my-2 text-[11px] text-gray-600 dark:text-gray-400">
-      ⓘ 영농자산 {formatKRW(detail.appliedAssetValue)}
-      {capped && ` (30억 한도 적용 → ${formatKRW(detail.cappedDeduction)})`}
+    <div className="mx-4 my-2 space-y-1">
+      <div className="text-[11px] text-gray-600 dark:text-gray-400">
+        ⓘ 영농자산 {formatKRW(detail.appliedAssetValue)}
+        {capped && ` (30억 한도 적용 → ${formatKRW(detail.cappedDeduction)})`}
+      </div>
+      {/* 부록 A — heirAssessments 입력 시 자격자 N명 / 전체 M명 노출 */}
+      {detail.qualifiedHeirCount !== undefined && detail.totalHeirCount !== undefined && (
+        <div className="text-[10px] text-violet-700 dark:text-violet-300 bg-violet-50 dark:bg-violet-950/30 rounded p-2">
+          🤖 부록 A — 자격 충족 상속인 <span className="font-semibold">{detail.qualifiedHeirCount}명</span>{" "}
+          / 전체 {detail.totalHeirCount}명 (시행령 §16⑤ 본문)
+        </div>
+      )}
     </div>
   );
 }

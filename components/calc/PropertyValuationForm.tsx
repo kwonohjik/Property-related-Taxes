@@ -125,17 +125,24 @@ function ItemEditor({ item, index, onUpdate, onRemove, mode, heirs }: ItemEditor
     cat === "real_estate_building" ? "building_non_residential" :
     "land"; // real_estate_land
 
-  // ── 공시가격 조회용 주소 상태 (C2 좌표 휘발 버그 수정: EstateItem.estateAddress + estateLatLng 영속화) ──
+  // ── 공시가격 조회용 주소 상태 (C2 좌표 휘발 버그 수정: EstateItem.estateAddress + estateLatLng·fishingAnchorLatLng 영속화) ──
   // local state는 lat·lng 표시 동기화용 (string). 영속화는 onChange 시 item에 저장.
-  const [addrValue, setAddrValue] = useState<AddressValue>(() => ({
-    road: item.estateAddress?.road ?? "",
-    jibun: item.estateAddress?.jibun ?? "",
-    building: item.estateAddress?.building ?? "",
-    detail: item.estateAddress?.detail ?? "",
-    pnu: item.estateAddress?.pnu ?? "",
-    lng: item.estateLatLng ? String(item.estateLatLng.lng) : "",
-    lat: item.estateLatLng ? String(item.estateLatLng.lat) : "",
-  }));
+  const [addrValue, setAddrValue] = useState<AddressValue>(() => {
+    // 어선·어업권은 fishingAnchorLatLng 우선, 그 외는 estateLatLng
+    const isFishingInit =
+      item.farmingCategory === "fishing_vessel" ||
+      item.farmingCategory === "fishing_right";
+    const latLng = isFishingInit ? item.fishingAnchorLatLng : item.estateLatLng;
+    return {
+      road: item.estateAddress?.road ?? "",
+      jibun: item.estateAddress?.jibun ?? "",
+      building: item.estateAddress?.building ?? "",
+      detail: item.estateAddress?.detail ?? "",
+      pnu: item.estateAddress?.pnu ?? "",
+      lng: latLng ? String(latLng.lng) : "",
+      lat: latLng ? String(latLng.lat) : "",
+    };
+  });
   /** 토지·건물용 단가 (원/㎡) — StandardPriceInput 내부 상태 유지용 */
   const [standardPricePerSqm, setStandardPricePerSqm] = useState("");
 
@@ -158,15 +165,20 @@ function ItemEditor({ item, index, onUpdate, onRemove, mode, heirs }: ItemEditor
         </button>
       </div>
 
-      {/* 자산명 — 부동산은 소재지 검색이 진입점, 그 외는 자유 입력 */}
+      {/* 자산명 — 부동산은 소재지 검색이 진입점, 어선·어업권은 선적지 검색, 그 외는 자유 입력 */}
       {(() => {
         const isRealEstate = cat === "real_estate_apartment" || cat === "real_estate_building" || cat === "real_estate_land";
-        if (isRealEstate) {
+        const isFishing =
+          item.farmingCategory === "fishing_vessel" ||
+          item.farmingCategory === "fishing_right";
+        if (isRealEstate || isFishing) {
           return (
             <div className="space-y-2">
               <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
                 자산 명칭 <span className="text-destructive">*</span>{" "}
-                <span className="text-gray-400 font-normal">(소재지 검색)</span>
+                <span className="text-gray-400 font-normal">
+                  ({isFishing && !isRealEstate ? "선적지·어장 연안 검색" : "소재지 검색"})
+                </span>
               </label>
               <AddressSearch
                 value={addrValue}
@@ -215,7 +227,9 @@ function ItemEditor({ item, index, onUpdate, onRemove, mode, heirs }: ItemEditor
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               />
               <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                ※ 소재지를 검색하면 자산명이 자동 입력됩니다. 필요 시 별칭으로 덮어쓸 수 있습니다.
+                ※ {isFishing && !isRealEstate
+                  ? "선적지·어장 연안 주소를 검색하면 자산명·좌표가 자동 입력됩니다 (§16②1호나 거주지 30km 자동 검증용)"
+                  : "소재지를 검색하면 자산명이 자동 입력됩니다. 필요 시 별칭으로 덮어쓸 수 있습니다."}
               </p>
             </div>
           );

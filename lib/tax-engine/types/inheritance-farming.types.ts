@@ -105,6 +105,10 @@ export interface FarmingDeductionDetail {
   appliedAssetValue: number;
   /** 30억 한도 적용 후 최종 공제액 = Math.min(appliedAssetValue, FARMING_MAX). eligible=false 시 0 */
   cappedDeduction: number;
+  /** 부록 A — heirAssessments 입력 시 자동 도출된 자격자 ID 수 (undefined 시 부록 A 미사용) */
+  qualifiedHeirCount?: number;
+  /** 부록 A — heirAssessments 입력 시 전체 평가 대상 heir 수 */
+  totalHeirCount?: number;
 }
 
 /** 영농상속공제 자격 평가 결과 (evaluateFarmingEligibility 반환) */
