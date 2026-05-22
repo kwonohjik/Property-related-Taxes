@@ -9,7 +9,7 @@
  *             부동산과다보유법인: 순손익가치×2 + 순자산가치×3 ÷ 5 (시행령 §54)
  */
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { CurrencyInput, parseAmount, formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import {
@@ -22,6 +22,15 @@ import { FarmingCategorySection } from "@/components/calc/inheritance/FarmingCat
 import { FamilyBusinessCategorySection } from "@/components/calc/inheritance/FamilyBusinessCategorySection";
 import { CorporateNonBusinessAssetsSection } from "@/components/calc/inheritance/CorporateNonBusinessAssetsSection";
 import { FinancialDeductionChip } from "@/components/calc/inheritance/FinancialDeductionChip";
+import {
+  countHiddenExpandable,
+  resolveAssetToggleVisibility,
+} from "@/lib/calc/asset-toggle-visibility";
+import {
+  HintBadge,
+  getFamilyBusinessHint,
+  getFinancialDeductionHint,
+} from "@/components/calc/inheritance/AssetToggleHints";
 import { HeirAllocationToggleSection } from "@/components/calc/inheritance/HeirAllocationToggleSection";
 import {
   UnlistedStockEditor,
@@ -74,6 +83,11 @@ function ListedStockEditor({
   heirs,
 }: ListedStockEditorProps) {
   const set = (patch: Partial<EstateItem>) => onUpdate({ ...item, ...patch });
+
+  // 토글 자동 노출 정책 (asset-toggle-visibility resolver)
+  const visibility = useMemo(() => resolveAssetToggleVisibility(item), [item]);
+  const hiddenExpandableCount = countHiddenExpandable(visibility);
+  const [showExpanded, setShowExpanded] = useState(false);
 
   const avgPrice = item.listedStockAvgPrice ?? 0;
   const shares = item.listedStockShares ?? 0;
@@ -207,13 +221,13 @@ function ListedStockEditor({
         </div>
       )}
 
-      {/* 영농상속 자산 분류 — 상장주식 (corporate_stock만 가능) */}
-      {mode === "inheritance" && (
+      {/* 영농상속 자산 분류 — 카테고리별 자동 노출 (주식은 기본 default) */}
+      {mode === "inheritance" && visibility.farming === "default" && (
         <FarmingCategorySection item={item} onUpdate={onUpdate} />
       )}
 
-      {/* 가업상속 자산 분류 — 상장주식 (corporate_stock만 가능) */}
-      {mode === "inheritance" && (
+      {/* 가업상속 자산 분류 — 카테고리별 자동 노출 (주식은 기본 default) */}
+      {mode === "inheritance" && visibility.familyBusiness === "default" && (
         <FamilyBusinessCategorySection item={item} onUpdate={onUpdate} />
       )}
 
@@ -222,9 +236,42 @@ function ListedStockEditor({
         <CorporateNonBusinessAssetsSection item={item} onUpdate={onUpdate} />
       )}
 
-      {/* §22 금융재산공제 — 상장주식 (§19① 주식 명시) */}
-      {mode === "inheritance" && (
+      {/* §22 금융재산공제 — 카테고리별 자동 노출 (주식은 §19① 명시로 default) */}
+      {mode === "inheritance" && visibility.financialDeduction === "default" && (
         <FinancialDeductionChip item={item} onUpdate={onUpdate} />
+      )}
+
+      {/* 펼침 영역 — hidden_expandable 토글 모음 (주식은 통상 0이지만 일관성 위해 보존) */}
+      {mode === "inheritance" && hiddenExpandableCount > 0 && (
+        <div className="space-y-2">
+          <button
+            type="button"
+            onClick={() => setShowExpanded((v) => !v)}
+            aria-expanded={showExpanded}
+            aria-controls={`expandable-toggles-${item.id}`}
+            className="text-xs text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-300 py-1"
+          >
+            {showExpanded
+              ? "▲ 적용 옵션 접기"
+              : `▼ 더 많은 적용 옵션 보기 (${hiddenExpandableCount}개)`}
+          </button>
+          {showExpanded && (
+            <div id={`expandable-toggles-${item.id}`} className="space-y-2">
+              {visibility.familyBusiness === "hidden_expandable" && (
+                <div>
+                  <HintBadge tone="amber">{getFamilyBusinessHint(item.category)}</HintBadge>
+                  <FamilyBusinessCategorySection item={item} onUpdate={onUpdate} />
+                </div>
+              )}
+              {visibility.financialDeduction === "hidden_expandable" && (
+                <div>
+                  <HintBadge tone="emerald">{getFinancialDeductionHint(item.category)}</HintBadge>
+                  <FinancialDeductionChip item={item} onUpdate={onUpdate} />
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       )}
 
       {/* 상속인·수유자별 협의분할 (상속세 전용) */}

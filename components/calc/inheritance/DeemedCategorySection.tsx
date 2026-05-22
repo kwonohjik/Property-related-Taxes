@@ -12,11 +12,19 @@
  */
 
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import type { RadioOptionVisibility } from "@/lib/calc/asset-toggle-visibility";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 
 export interface DeemedCategorySectionProps {
   item: EstateItem;
   onUpdate: (updated: EstateItem) => void;
+  /**
+   * §10 퇴직금 옵션 노출 여부 (asset-toggle-visibility resolver 출력 직접 전달).
+   * "hidden" 시 부동산 카테고리 등에서 퇴직금 옵션 라디오 미렌더.
+   * 활성 우선 정책: 이미 deemedCategory="retirement"이면 resolver가 "visible" 자동 반환.
+   * 미전달 시 "visible" (기존 동작 호환).
+   */
+  retirementOptionVisibility?: RadioOptionVisibility;
 }
 
 const DEEMED_OPTIONS = [
@@ -36,8 +44,15 @@ const TRUST_TYPE_OPTIONS = [
 export function DeemedCategorySection({
   item,
   onUpdate,
+  retirementOptionVisibility = "visible",
 }: DeemedCategorySectionProps) {
   const current = item.deemedCategory ?? "none";
+
+  // 퇴직금 옵션 필터링: 부동산 카테고리 등에서 hidden. 단, 이미 retirement 선택값이면 무력 (활성 우선 정책 — resolver가 "visible" 반환)
+  const visibleOptions =
+    retirementOptionVisibility === "hidden"
+      ? DEEMED_OPTIONS.filter((o) => o.value !== "retirement")
+      : DEEMED_OPTIONS;
 
   return (
     <div className="rounded-md border border-violet-200 bg-violet-50/40 dark:bg-violet-950/20 dark:border-violet-800 p-2 space-y-2">
@@ -49,7 +64,7 @@ export function DeemedCategorySection({
         layout="inline"
         tone="violet"
         value={current as "none" | "insurance" | "trust" | "retirement"}
-        options={[...DEEMED_OPTIONS]}
+        options={[...visibleOptions]}
         onChange={(v) => {
           if (v === "none") {
             onUpdate({ ...item, deemedCategory: undefined, trustType: undefined });

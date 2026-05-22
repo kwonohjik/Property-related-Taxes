@@ -9,7 +9,16 @@
  * 주식(listed_stock, unlisted_stock)은 StockValuationForm을 사용
  */
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import {
+  countHiddenExpandable,
+  resolveAssetToggleVisibility,
+} from "@/lib/calc/asset-toggle-visibility";
+import {
+  HintBadge,
+  getFamilyBusinessHint,
+  getFinancialDeductionHint,
+} from "@/components/calc/inheritance/AssetToggleHints";
 import { CurrencyInput, parseAmount, formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { AddressSearch, type AddressValue } from "@/components/ui/address-search";
 import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
@@ -94,6 +103,28 @@ const INHERITANCE_CATEGORIES: SupportedCategory[] = [
   "other",
 ];
 
+/**
+ * 간주상속재산 분류별 허용 카테고리 (상속세 전용).
+ *   - insurance (§8 보험금)  : 본질적으로 금전 → 현금·예금·기타만
+ *   - trust     (§9 신탁재산) : 부동산·증권·금전신탁 다양 → 전체 허용
+ *   - retirement(§10 퇴직금)  : 본질적으로 금전 → 현금·예금만
+ */
+const DEEMED_ALLOWED_CATEGORIES: Record<
+  "none" | "insurance" | "trust" | "retirement",
+  SupportedCategory[]
+> = {
+  none: INHERITANCE_CATEGORIES,
+  insurance: ["cash", "financial", "other"],
+  trust: INHERITANCE_CATEGORIES,
+  retirement: ["cash", "financial"],
+};
+
+const DEEMED_FILTER_NOTE: Record<"insurance" | "trust" | "retirement", string> = {
+  insurance: "§8 보험금은 본질적으로 금전 수령권 — 현금·예금·기타만 추가 가능합니다.",
+  trust: "§9 신탁재산은 금전·부동산·증권 모두 가능 — 신탁 유형은 자산 추가 후 선택합니다.",
+  retirement: "§10 퇴직금·연금 등은 금전 수령권 — 현금·예금만 추가 가능합니다.",
+};
+
 // ============================================================
 // 개별 자산 항목 Form
 // ============================================================
@@ -111,6 +142,13 @@ interface ItemEditorProps {
 
 function ItemEditor({ item, index, onUpdate, onRemove, mode, heirs }: ItemEditorProps) {
   const cat = item.category as SupportedCategory;
+
+  // 토글 자동 노출 정책 (asset-toggle-visibility resolver)
+  const visibility = useMemo(() => resolveAssetToggleVisibility(item), [item]);
+  const hiddenExpandableCount = countHiddenExpandable(visibility);
+  // 펼침 state — 자산별 로컬, 새로고침 시 OFF 리셋 (sessionStorage persist는 후속 PR)
+  const [showExpanded, setShowExpanded] = useState(false);
+
   // cash·financial·deposit은 단순 금액 입력만 — 감정가·공시지가·저당권 불필요
   const showMarketValue = true;
   const showAppraisedValue = cat !== "financial" && cat !== "deposit" && cat !== "cash";
@@ -352,18 +390,22 @@ function ItemEditor({ item, index, onUpdate, onRemove, mode, heirs }: ItemEditor
       {/* 예상 순 평가액 미리보기 */}
       <EstimatedValuePreview item={item} />
 
-      {/* 간주상속재산 분류 (보험금·신탁·퇴직금) — 상속세 전용 */}
+      {/* 간주상속재산 분류 (보험금·신탁·퇴직금) — 상속세 전용. 부동산은 §10 퇴직금 옵션 자동 숨김 */}
       {mode === "inheritance" && (
-        <DeemedCategorySection item={item} onUpdate={onUpdate} />
+        <DeemedCategorySection
+          item={item}
+          onUpdate={onUpdate}
+          retirementOptionVisibility={visibility.deemedRetirementOption}
+        />
       )}
 
-      {/* 영농상속 자산 분류 (§18의3 + 시행령 §16⑤) — 상속세 전용 */}
-      {mode === "inheritance" && (
+      {/* 영농상속 자산 분류 (§18의3 + 시행령 §16⑤) — 카테고리별 자동 노출 */}
+      {mode === "inheritance" && visibility.farming === "default" && (
         <FarmingCategorySection item={item} onUpdate={onUpdate} />
       )}
 
-      {/* 가업상속 자산 분류 (§18의2 + 상증령 §15⑤) — 상속세 전용 */}
-      {mode === "inheritance" && (
+      {/* 가업상속 자산 분류 (§18의2 + 상증령 §15⑤) — 카테고리별 자동 노출 */}
+      {mode === "inheritance" && visibility.familyBusiness === "default" && (
         <FamilyBusinessCategorySection item={item} onUpdate={onUpdate} />
       )}
 
@@ -372,9 +414,42 @@ function ItemEditor({ item, index, onUpdate, onRemove, mode, heirs }: ItemEditor
         <CorporateNonBusinessAssetsSection item={item} onUpdate={onUpdate} />
       )}
 
-      {/* §22 금융재산공제 체크박스 (상속세 전용) — 상증령 §19① */}
-      {mode === "inheritance" && (
+      {/* §22 금융재산공제 체크박스 — 카테고리별 자동 노출 */}
+      {mode === "inheritance" && visibility.financialDeduction === "default" && (
         <FinancialDeductionChip item={item} onUpdate={onUpdate} />
+      )}
+
+      {/* 펼침 영역 — hidden_expandable 토글 모음 (계획서 §2 UI 패턴) */}
+      {mode === "inheritance" && hiddenExpandableCount > 0 && (
+        <div className="space-y-2">
+          <button
+            type="button"
+            onClick={() => setShowExpanded((v) => !v)}
+            aria-expanded={showExpanded}
+            aria-controls={`expandable-toggles-${item.id}`}
+            className="text-xs text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-300 py-1"
+          >
+            {showExpanded
+              ? "▲ 적용 옵션 접기"
+              : `▼ 더 많은 적용 옵션 보기 (${hiddenExpandableCount}개)`}
+          </button>
+          {showExpanded && (
+            <div id={`expandable-toggles-${item.id}`} className="space-y-2">
+              {visibility.familyBusiness === "hidden_expandable" && (
+                <div>
+                  <HintBadge tone="amber">{getFamilyBusinessHint(cat)}</HintBadge>
+                  <FamilyBusinessCategorySection item={item} onUpdate={onUpdate} />
+                </div>
+              )}
+              {visibility.financialDeduction === "hidden_expandable" && (
+                <div>
+                  <HintBadge tone="emerald">{getFinancialDeductionHint(cat)}</HintBadge>
+                  <FinancialDeductionChip item={item} onUpdate={onUpdate} />
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       )}
 
       {/* 상속인·수유자별 협의분할 (메인 PR 2 — 상속세 전용) */}
@@ -536,15 +611,24 @@ export function PropertyValuationForm({
   heirs,
 }: PropertyValuationFormProps) {
   const [showAddPanel, setShowAddPanel] = useState(false);
+  // 자산 추가 시 미리 선택할 간주상속재산 분류 (상속세 모드 전용)
+  const [pendingDeemed, setPendingDeemed] = useState<
+    "none" | "insurance" | "trust" | "retirement"
+  >("none");
 
   const handleAdd = (category: SupportedCategory) => {
     const newItem: EstateItem = {
       id: generateId(),
       category,
       name: "",
+      // 상속세 모드에서 간주상속재산 분류가 선택되어 있으면 prefilled
+      ...(mode === "inheritance" && pendingDeemed !== "none"
+        ? { deemedCategory: pendingDeemed }
+        : {}),
     };
     onChange([...items, newItem]);
     setShowAddPanel(false);
+    setPendingDeemed("none");
   };
 
   const handleUpdate = (index: number, updated: EstateItem) => {
@@ -595,17 +679,62 @@ export function PropertyValuationForm({
       {/* 자산 추가 패널 */}
       {showAddPanel ? (
         <div className="border border-dashed border-indigo-300 dark:border-indigo-700 rounded-lg p-4 space-y-3">
+          {/* 상속세 모드 전용: 간주상속재산 분류 사전 선택 → 카드 필터링 */}
+          {mode === "inheritance" && (
+            <div className="rounded-md border border-violet-200 dark:border-violet-800 bg-violet-50/40 dark:bg-violet-950/20 p-2.5 space-y-1.5">
+              <p className="text-[11px] font-semibold text-violet-800 dark:text-violet-200">
+                간주상속재산 분류 (§8·§9·§10) — 선택하면 해당 분류에 맞는 재산 종류만 표시됩니다
+              </p>
+              <div className="flex flex-wrap gap-1.5 text-[11px]">
+                {([
+                  { v: "none", label: "일반 상속재산" },
+                  { v: "insurance", label: "보험금 (§8)" },
+                  { v: "trust", label: "신탁재산 (§9)" },
+                  { v: "retirement", label: "퇴직금 등 (§10)" },
+                ] as const).map((opt) => {
+                  const active = pendingDeemed === opt.v;
+                  return (
+                    <button
+                      key={opt.v}
+                      type="button"
+                      onClick={() => setPendingDeemed(opt.v)}
+                      className={
+                        "px-2.5 py-1 rounded border transition-colors " +
+                        (active
+                          ? "border-violet-400 bg-violet-200/70 dark:bg-violet-800/40 text-violet-900 dark:text-violet-100 font-medium"
+                          : "border-violet-200/70 dark:border-violet-800/70 bg-white/40 dark:bg-violet-950/10 text-violet-700 dark:text-violet-300 hover:bg-violet-100/60")
+                      }
+                    >
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
+              {pendingDeemed !== "none" && (
+                <p className="text-[11px] text-violet-700 dark:text-violet-300 pt-0.5">
+                  ⓘ {DEEMED_FILTER_NOTE[pendingDeemed]}
+                </p>
+              )}
+            </div>
+          )}
+
           <p className="text-xs font-medium text-gray-600 dark:text-gray-400">
             추가할 재산 종류 선택
           </p>
           <div className="grid grid-cols-3 gap-2">
-            {(mode === "gift" ? GIFT_CATEGORIES : INHERITANCE_CATEGORIES).map((cat) => (
+            {(mode === "gift"
+              ? GIFT_CATEGORIES
+              : DEEMED_ALLOWED_CATEGORIES[pendingDeemed]
+            ).map((cat) => (
               <CategoryButton key={cat} category={cat} onAdd={handleAdd} />
             ))}
           </div>
           <button
             type="button"
-            onClick={() => setShowAddPanel(false)}
+            onClick={() => {
+              setShowAddPanel(false);
+              setPendingDeemed("none");
+            }}
             className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
           >
             취소
