@@ -12,6 +12,10 @@
 
 import { useMemo } from "react";
 import { evaluateUnlistedStockV2 } from "@/lib/tax-engine/property-valuation/unlisted-orchestrator";
+import {
+  deriveSection22MajorShareholder,
+  judgeIsRealEstateHeavy,
+} from "@/lib/tax-engine/property-valuation/auto-judgment";
 import type { UnlistedStockValuationInput } from "@/lib/tax-engine/types/unlisted-stock-valuation.types";
 
 export interface PerShareValuationResultCardProps {
@@ -185,6 +189,9 @@ export function PerShareValuationResultCard({ input }: PerShareValuationResultCa
         </details>
       )}
 
+      {/* PR-E·F (UI 통합 v3) — 자동 판정 결과 echo 라인 */}
+      <AutoJudgmentEchoLines input={input} />
+
       {/* 경고 */}
       {result.warnings.length > 0 && (
         <div className="rounded border border-rose-200 bg-rose-50 p-2 text-[11px] text-rose-700 space-y-1">
@@ -193,6 +200,90 @@ export function PerShareValuationResultCard({ input }: PerShareValuationResultCa
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * PR-E·F 자동 판정 결과 echo (계획서 §3-1 Section 11 라인 추가)
+ *
+ * 엔진 result 확장 없이 UI에서 헬퍼 직접 호출 (useMemo).
+ */
+function AutoJudgmentEchoLines({ input }: { input: UnlistedStockValuationInput }) {
+  const section22Mode = input.section22MajorShareholderMode ?? "auto";
+  const realEstateMode = input.realEstateHeavyMode ?? "auto";
+
+  const section22Auto = useMemo(
+    () =>
+      deriveSection22MajorShareholder({
+        ownedShares: input.ownedShares,
+        totalShares: input.totalShares,
+      }),
+    [input.ownedShares, input.totalShares],
+  );
+
+  const realEstateAuto = useMemo(
+    () =>
+      judgeIsRealEstateHeavy({
+        totalAssets: input.totalAssetsForJudgment ?? 0,
+        realEstateAssets: input.realEstateAssetsForJudgment ?? 0,
+      }),
+    [input.totalAssetsForJudgment, input.realEstateAssetsForJudgment],
+  );
+
+  const section22Applied =
+    section22Mode === "manual_on"
+      ? true
+      : section22Mode === "manual_off"
+        ? false
+        : section22Auto.isSection22Major;
+  const realEstateApplied =
+    realEstateMode === "manual_on"
+      ? true
+      : realEstateMode === "manual_off"
+        ? false
+        : realEstateAuto.isRealEstateHeavy;
+
+  const section22Source = section22Mode === "auto" ? "자동" : "수동";
+  const realEstateSource = realEstateMode === "auto" ? "자동" : "수동";
+
+  return (
+    <div className="rounded border border-violet-200 bg-violet-50/60 p-2 text-[11px] space-y-1">
+      <p className="font-semibold text-violet-800">자동 판정 결과 (PR-E·F)</p>
+      <div className="flex items-baseline gap-2">
+        <span className="text-violet-700">§22② 최대주주 추가공제 제외:</span>
+        <span
+          className={
+            section22Applied
+              ? "rounded bg-violet-600 text-white px-1.5"
+              : "rounded bg-slate-300 text-slate-800 px-1.5"
+          }
+        >
+          {section22Applied ? "해당 (ON)" : "미해당 (OFF)"}
+        </span>
+        <span className="text-[10px] text-gray-500">
+          ({section22Source} — 보유지분율 {(section22Auto.ownershipRatio * 100).toFixed(2)}%)
+        </span>
+      </div>
+      <div className="flex items-baseline gap-2">
+        <span className="text-violet-700">§54⑤ 부동산과다보유법인:</span>
+        <span
+          className={
+            realEstateApplied
+              ? "rounded bg-rose-600 text-white px-1.5"
+              : "rounded bg-slate-300 text-slate-800 px-1.5"
+          }
+        >
+          {realEstateApplied ? "해당 (가중치 2·3/5)" : "미해당 (가중치 3·2/5)"}
+        </span>
+        <span className="text-[10px] text-gray-500">
+          ({realEstateSource}
+          {realEstateMode === "auto" && (input.totalAssetsForJudgment ?? 0) > 0 && (
+            <> — 부동산 비율 {(realEstateAuto.ratio * 100).toFixed(2)}%</>
+          )}
+          )
+        </span>
+      </div>
     </div>
   );
 }

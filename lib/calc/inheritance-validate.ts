@@ -286,5 +286,40 @@ export function validateUnlistedStockV2(item: EstateItem): string | null {
     }
   }
 
+  // PR-F (UI 통합 v3): §54⑤ 자동 판정 모드 시 자산 2 필드 필수
+  if (v2.realEstateHeavyMode === "auto") {
+    const total = v2.totalAssetsForJudgment ?? 0;
+    if (total <= 0) {
+      return `비상장주식 "${item.name}" — §54⑤ 자동 판정 모드에서는 자산총액 입력이 필수입니다.`;
+    }
+    // realEstateAssetsForJudgment는 0 허용 (전부 비부동산 자산 시나리오)
+    if (v2.realEstateAssetsForJudgment === undefined) {
+      return `비상장주식 "${item.name}" — §54⑤ 자동 판정 모드에서는 부동산 자산 합계 입력이 필수입니다 (0이라도 명시).`;
+    }
+  }
+
+  // PR-E (UI 통합 v3): §22② 자동 모드 시 보유·발행 주식 수 필수 (사실상 기존 ownedShares/totalShares 검증)
+  // 별도 추가 검증 없음 — ownedShares>0 / totalShares>0 보장은 Zod에서 처리.
+
+  // PR-N (UI 통합 v3): 평가차액 행 단위 입력 시 각 행 accountName 필수 (silent omission 차단)
+  const deltaRows = v2.netAssetValueRaw.evaluationDeltaRows;
+  if (deltaRows && deltaRows.length > 0) {
+    for (let i = 0; i < deltaRows.length; i++) {
+      const row = deltaRows[i];
+      if (!row.accountName || !row.accountName.trim()) {
+        return `비상장주식 "${item.name}" — 평가차액 ${row.category === "asset" ? "자산" : "부채"} ${i + 1}번째 행의 계정과목이 비어 있습니다.`;
+      }
+    }
+    // 행 수 max 제한 (Zod와 정합)
+    const assetCount = deltaRows.filter((r) => r.category === "asset").length;
+    const liabilityCount = deltaRows.filter((r) => r.category === "liability").length;
+    if (assetCount > 50) {
+      return `비상장주식 "${item.name}" — 자산 평가차액 행은 50개를 초과할 수 없습니다.`;
+    }
+    if (liabilityCount > 30) {
+      return `비상장주식 "${item.name}" — 부채 평가차액 행은 30개를 초과할 수 없습니다.`;
+    }
+  }
+
   return null;
 }

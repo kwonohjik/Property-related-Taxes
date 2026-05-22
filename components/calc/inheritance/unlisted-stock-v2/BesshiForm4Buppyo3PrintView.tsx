@@ -105,6 +105,124 @@ export function BesshiForm4Buppyo3PrintView({ input }: BesshiForm4Buppyo3PrintVi
             </>
           )}
 
+          {/* 3쪽 — 5. 평가차액 (PR-N UI 통합 v3) */}
+          {input.netAssetValueRaw.evaluationDeltaRows &&
+            input.netAssetValueRaw.evaluationDeltaRows.length > 0 && (
+              <>
+                <SectionTitle>5. 평가차액 (별지 3쪽 — 자산·부채 계정과목별)</SectionTitle>
+                <table className="w-full border-collapse border border-black mb-3 text-[10px]">
+                  <thead>
+                    <tr className="bg-gray-100">
+                      <th className="border border-black p-1 text-left">구분</th>
+                      <th className="border border-black p-1 text-left">계정과목</th>
+                      <th className="border border-black p-1 text-right">상증법 평가액</th>
+                      <th className="border border-black p-1 text-right">재무상태표 금액</th>
+                      <th className="border border-black p-1 text-right">차액</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(() => {
+                      const rows = input.netAssetValueRaw.evaluationDeltaRows ?? [];
+                      const assetRows = rows.filter((r) => r.category === "asset");
+                      const liabilityRows = rows.filter((r) => r.category === "liability");
+                      const assetTotal = assetRows.reduce(
+                        (s, r) => s + (r.evaluationAmount - r.bookAmount),
+                        0,
+                      );
+                      const liabilityTotal = liabilityRows.reduce(
+                        (s, r) => s + (r.evaluationAmount - r.bookAmount),
+                        0,
+                      );
+                      const renderDelta = (d: number) =>
+                        d < 0 ? `△${fmt(Math.abs(d))}` : fmt(d);
+                      return (
+                        <>
+                          {assetRows.map((row, i) => {
+                            const delta = row.evaluationAmount - row.bookAmount;
+                            return (
+                              <tr key={row.rowId}>
+                                {i === 0 && (
+                                  <td
+                                    rowSpan={assetRows.length}
+                                    className="border border-black p-1 align-top font-semibold"
+                                  >
+                                    자산
+                                  </td>
+                                )}
+                                <td className="border border-black p-1">{row.accountName}</td>
+                                <td className="border border-black p-1 text-right font-mono">
+                                  {fmt(row.evaluationAmount)}
+                                </td>
+                                <td className="border border-black p-1 text-right font-mono">
+                                  {fmt(row.bookAmount)}
+                                </td>
+                                <td className="border border-black p-1 text-right font-mono">
+                                  {renderDelta(delta)}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                          {assetRows.length > 0 && (
+                            <tr className="bg-gray-50 font-semibold">
+                              <td colSpan={4} className="border border-black p-1">
+                                ① 자산 합계
+                              </td>
+                              <td className="border border-black p-1 text-right font-mono">
+                                {fmt(assetTotal)}
+                              </td>
+                            </tr>
+                          )}
+                          {liabilityRows.map((row, i) => {
+                            const delta = row.evaluationAmount - row.bookAmount;
+                            return (
+                              <tr key={row.rowId}>
+                                {i === 0 && (
+                                  <td
+                                    rowSpan={liabilityRows.length}
+                                    className="border border-black p-1 align-top font-semibold"
+                                  >
+                                    부채
+                                  </td>
+                                )}
+                                <td className="border border-black p-1">{row.accountName}</td>
+                                <td className="border border-black p-1 text-right font-mono">
+                                  {fmt(row.evaluationAmount)}
+                                </td>
+                                <td className="border border-black p-1 text-right font-mono">
+                                  {fmt(row.bookAmount)}
+                                </td>
+                                <td className="border border-black p-1 text-right font-mono">
+                                  {renderDelta(delta)}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                          {liabilityRows.length > 0 && (
+                            <tr className="bg-gray-50 font-semibold">
+                              <td colSpan={4} className="border border-black p-1">
+                                ② 부채 합계
+                              </td>
+                              <td className="border border-black p-1 text-right font-mono">
+                                {fmt(liabilityTotal)}
+                              </td>
+                            </tr>
+                          )}
+                          <tr className="bg-emerald-50 font-bold border-t-2 border-black">
+                            <td colSpan={4} className="border border-black p-1">
+                              가. 평가차액 (① − ②) → 2쪽 4.가.② 기재
+                            </td>
+                            <td className="border border-black p-1 text-right font-mono">
+                              {renderDelta(assetTotal - liabilityTotal)}
+                            </td>
+                          </tr>
+                        </>
+                      );
+                    })()}
+                  </tbody>
+                </table>
+              </>
+            )}
+
           {/* 3. 1주당 가액의 평가 */}
           {result && (
             <>
