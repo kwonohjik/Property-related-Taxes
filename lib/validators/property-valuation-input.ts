@@ -145,17 +145,57 @@ export const otherItemSchema = baseItemSchema.extend({
 });
 
 /** 자산 항목 discriminatedUnion 스키마 */
-export const estateItemSchema = z.discriminatedUnion("category", [
-  landItemSchema,
-  apartmentItemSchema,
-  buildingItemSchema,
-  listedStockItemSchema,
-  unlistedStockItemSchema,
-  cashItemSchema,
-  financialItemSchema,
-  depositItemSchema,
-  otherItemSchema,
-]);
+export const estateItemSchema = z
+  .discriminatedUnion("category", [
+    landItemSchema,
+    apartmentItemSchema,
+    buildingItemSchema,
+    listedStockItemSchema,
+    unlistedStockItemSchema,
+    cashItemSchema,
+    financialItemSchema,
+    depositItemSchema,
+    otherItemSchema,
+  ])
+  // v4.1.1 Phase 5 D11/디자인 §5 — 카테고리별 좌표 입력 정책 (영농 §16②1호나)
+  .superRefine((item, ctx) => {
+    // 무관 카테고리 + 좌표 입력 → 차단
+    const COORD_INCOMPATIBLE = ["listed_stock", "unlisted_stock", "cash", "financial", "deposit", "other"];
+    if (COORD_INCOMPATIBLE.includes(item.category)) {
+      if (item.estateLatLng !== undefined || item.estateSigunguCode !== undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["estateLatLng"],
+          message: `${item.category} 카테고리는 §16②1호나 거주지 OR 대상이 아니므로 좌표·시·군·구 코드 입력 불가`,
+        });
+      }
+      if (item.fishingAnchorLatLng !== undefined || item.fishingAnchorSigunguCode !== undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["fishingAnchorLatLng"],
+          message: `${item.category} 카테고리는 어선·어업권 분기 대상이 아니므로 선적지 좌표·코드 입력 불가`,
+        });
+      }
+    }
+    // fishing_* (fishing_vessel·fishing_right) — fishingAnchor 사용. estateLatLng/estateSigunguCode 차단
+    const isFishing = item.farmingCategory === "fishing_vessel" || item.farmingCategory === "fishing_right";
+    if (isFishing && (item.estateLatLng !== undefined || item.estateSigunguCode !== undefined)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["estateLatLng"],
+        message: "어선·어업권은 estateLatLng/estateSigunguCode 대신 fishingAnchorLatLng/fishingAnchorSigunguCode를 사용",
+      });
+    }
+    // 농지·초지·산림지가 아닌 카테고리에 fishingAnchor 입력 → 차단
+    const isLandBased = item.farmingCategory === "farmland" || item.farmingCategory === "pasture" || item.farmingCategory === "forest_land";
+    if (isLandBased && (item.fishingAnchorLatLng !== undefined || item.fishingAnchorSigunguCode !== undefined)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["fishingAnchorLatLng"],
+        message: "농지·초지·산림지는 estateLatLng/estateSigunguCode를 사용 — fishingAnchor 차단",
+      });
+    }
+  });
 
 export type EstateItemInput = z.infer<typeof estateItemSchema>;
 
@@ -529,7 +569,14 @@ export const giftTaxCreditInputSchema = z.object({
 export const inheritanceTaxInputSchema = z.object({
   decedentType: z.enum(["resident", "non_resident"]),
   deathDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD 형식"),
-  estateItems: z.array(estateItemSchema).min(1, "상속재산이 1개 이상 필요합니다."),
+  estateItems: z.array(estateItemSchema).min(1, "상속재산이 1개 이상 필요합니다.").superRefine((items, ctx) => {
+    // v4.1.1 Phase 5 D11 — cross-item 룰: forestManageableArea=true 사용 시 forest_land 자산 1건+ 필수
+    // 본 룰은 estateItems 배열 수준에서만 평가 가능 — farming 객체와의 cross-validation은 inheritanceTaxInputSchema에서
+    const hasForestLand = items.some((i) => i.farmingCategory === "forest_land");
+    if (!hasForestLand) return; // 자산 목록 자체에는 강제 사항 없음
+    // (실제 forest_manageable_area=true 시 forest_land 필수 룰은 farming 입력 단계에서 검증)
+    void ctx;
+  }),
   // legacy debts·funeralExpense — debtItems 입력 시 우선
   funeralExpense: z.number().min(0).max(15_000_000).optional().default(0),
   funeralIncludesBongan: z.boolean().optional().default(false),

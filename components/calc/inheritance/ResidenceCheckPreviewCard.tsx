@@ -1,23 +1,44 @@
 "use client";
 
 /**
- * 거주지 자동 검증 미리보기 카드 (UI-E2, 2026-05-22)
+ * 거주지 자동 검증 미리보기 카드 (UI-E2 + v4.1.1 Phase 5)
  *
  * 옵션 A 정책 (lib/calc/farming-residence-check.ts):
- *   - autoMet (자동 검증) = Haversine 30km 결과 (안내용)
+ *   - matchKind (자동 검증) = 시·군·구 동일 > 연접 > 30km > 산림지 단서 > fail
  *   - met (최종 boolean) = 사용자 명시값 그대로
  *   - 자동이 사용자 명시를 덮어쓰지 않음
  *
- * UI 분기:
- *   - autoMet=null: gray "좌표 또는 자산 위치 미입력"
- *   - autoMet 둘 다 true: emerald
- *   - 한쪽 autoMet=false: amber
- *   - 둘 다 false: rose
+ * matchKind 5분기 (디자인 v1.1 §4-3):
+ *   - same_district          — emerald "동일 시·군·구"
+ *   - adjacent_district      — emerald "연접 시·군·구"
+ *   - within_30km            — emerald "30km 직선거리"
+ *   - forest_manageable_area — emerald "산림지 통상 경영 지역 (사용자 명시)"
+ *   - fail                   — rose "4가지 조건 모두 미충족"
+ *   - null                   — gray "미입력"
  *
  * 모순 안내 (met vs autoMet):
  *   - met=true + autoMet=false → 노란 경고
  *   - met=false + autoMet=true → 파란 안내
  */
+
+import type { SigunguMatchKind } from "@/lib/tax-engine/types/inheritance-asset-location.types";
+
+function labelMatchKind(kind: SigunguMatchKind | null): string {
+  switch (kind) {
+    case "same_district":
+      return "동일 시·군·구";
+    case "adjacent_district":
+      return "연접 시·군·구";
+    case "within_30km":
+      return "30km 직선거리";
+    case "forest_manageable_area":
+      return "산림지 통상 경영 지역 (사용자 명시)";
+    case "fail":
+      return "4가지 조건 모두 미충족";
+    case null:
+      return "미입력";
+  }
+}
 
 import type { FarmingResidenceCheckResult } from "@/lib/calc/farming-residence-check";
 
@@ -37,6 +58,8 @@ export function ResidenceCheckPreviewCard({
     heirMet,
     decedentAutoMet,
     heirAutoMet,
+    decedentMatchKind,
+    heirMatchKind,
     decedentMinDistanceKm,
     heirMinDistanceKm,
   } = result;
@@ -70,25 +93,17 @@ export function ResidenceCheckPreviewCard({
     <div className="space-y-1">
       <div className={`rounded-md border ${toneClasses} p-2`}>
         <p className="text-[11px] font-semibold">
-          🤖 자동 검증 (Haversine 30km)
+          🤖 §16②1호나 거주지 OR 자동 검증
         </p>
         <p className="text-[10px] mt-0.5">
-          피상속인 {formatKm(decedentMinDistanceKm)} (
-          {decedentAutoMet === null
-            ? "좌표 미입력"
-            : decedentAutoMet
-              ? "30km 이내"
-              : "30km 초과"}
-          ) · 상속인 {formatKm(heirMinDistanceKm)} (
-          {heirAutoMet === null
-            ? "좌표 미입력"
-            : heirAutoMet
-              ? "30km 이내"
-              : "30km 초과"}
-          )
+          피상속인 — {labelMatchKind(decedentMatchKind)}
+          {decedentMinDistanceKm !== null && ` (${formatKm(decedentMinDistanceKm)})`}
+          {" · "}
+          상속인 — {labelMatchKind(heirMatchKind)}
+          {heirMinDistanceKm !== null && ` (${formatKm(heirMinDistanceKm)})`}
         </p>
         <p className="text-[10px] mt-0.5 opacity-80">
-          ※ 시·군·구·연접 OR 조건은 자동 검증 미적용 (별도 행정구역 PRD)
+          ※ 연접 시·군·구 매트릭스는 Phase 1 데이터 주입 후 활성 (옵션 A — 사용자 명시 우선)
         </p>
       </div>
 

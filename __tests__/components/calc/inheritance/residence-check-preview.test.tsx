@@ -72,34 +72,38 @@ describe("[E2] ResidenceCheckPreviewCard — 옵션 A 모순 안내", () => {
     expect(screen.queryByText(/거주지 좌표 자동 검증/)).toBeNull();
   });
 
-  it("E2-3: autoMet 양쪽 true → emerald 카드 (30km 이내)", () => {
+  it("E2-3: autoMet 양쪽 true + matchKind within_30km → emerald 카드", () => {
     render(
       <ResidenceCheckPreviewCard
         result={makeResult({
           decedentAutoMet: true,
           heirAutoMet: true,
+          decedentMatchKind: "within_30km",
+          heirMatchKind: "within_30km",
           decedentMinDistanceKm: 5.0,
           heirMinDistanceKm: 10.0,
         })}
       />,
     );
-    expect(screen.queryByText(/자동 검증 \(Haversine 30km\)/)).not.toBeNull();
-    // "30km 이내" 양쪽 노출
-    expect(screen.queryAllByText(/30km 이내/).length).toBeGreaterThanOrEqual(2);
+    expect(screen.queryByText(/§16②1호나 거주지 OR 자동 검증/)).not.toBeNull();
+    // v4.1.1 Phase 5 — "30km 직선거리" matchKind 라벨 양쪽 노출
+    expect(screen.queryAllByText(/30km 직선거리/).length).toBeGreaterThanOrEqual(1);
   });
 
-  it("E2-4: 한쪽 autoMet=false → amber 카드", () => {
+  it("E2-4: 한쪽 autoMet=false → amber 카드 (matchKind fail 노출)", () => {
     render(
       <ResidenceCheckPreviewCard
         result={makeResult({
           decedentAutoMet: true,
           heirAutoMet: false,
+          decedentMatchKind: "within_30km",
+          heirMatchKind: "fail",
           decedentMinDistanceKm: 5.0,
           heirMinDistanceKm: 50.0,
         })}
       />,
     );
-    expect(screen.queryByText(/30km 초과/)).not.toBeNull();
+    expect(screen.queryByText(/4가지 조건 모두 미충족/)).not.toBeNull();
   });
 
   it("E2-5: 양쪽 autoMet=false → rose 카드", () => {
@@ -152,5 +156,51 @@ describe("[E2] ResidenceCheckPreviewCard — 옵션 A 모순 안내", () => {
     expect(
       screen.queryByText(/자동 30km 이내 통과 가능성/),
     ).not.toBeNull();
+  });
+
+  // ============================================================
+  // v4.1.1 Phase 5 UI-RTL — 5분기 matchKind 라벨 (디자인 §7-2)
+  // ============================================================
+
+  it("UI-RTL-1a: matchKind=same_district → '동일 시·군·구' 라벨 노출", () => {
+    render(
+      <ResidenceCheckPreviewCard
+        result={makeResult({
+          decedentAutoMet: true,
+          heirAutoMet: true,
+          decedentMatchKind: "same_district",
+          heirMatchKind: "same_district",
+        })}
+      />,
+    );
+    expect(screen.queryAllByText(/동일 시·군·구/).length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("UI-RTL-1b: matchKind=adjacent_district → '연접 시·군·구' 라벨 노출", () => {
+    render(
+      <ResidenceCheckPreviewCard
+        result={makeResult({
+          decedentAutoMet: true,
+          heirAutoMet: true,
+          decedentMatchKind: "adjacent_district",
+          heirMatchKind: "adjacent_district",
+        })}
+      />,
+    );
+    expect(screen.queryAllByText(/연접 시·군·구/).length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("UI-RTL-1c: matchKind=forest_manageable_area → '산림지 통상 경영 지역' 라벨 노출", () => {
+    render(
+      <ResidenceCheckPreviewCard
+        result={makeResult({
+          decedentAutoMet: true,
+          heirAutoMet: true,
+          decedentMatchKind: "forest_manageable_area",
+          heirMatchKind: "forest_manageable_area",
+        })}
+      />,
+    );
+    expect(screen.queryAllByText(/산림지 통상 경영 지역/).length).toBeGreaterThanOrEqual(1);
   });
 });

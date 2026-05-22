@@ -318,6 +318,64 @@ describe("[RD-UI] FarmingDeductionDetailRow — 5-way 분기 (F-6)", () => {
     render(<FarmingDeductionDetailRow detail={detail} />);
     expect(screen.queryByText(/부록 A/)).toBeNull();
   });
+
+  // ============================================================
+  // v4.1.1 Phase 5 — residence echo 산식 인용 (옵션 C, D8)
+  // ============================================================
+
+  it("RD-UI-10: residence.matchKind=same_district → 산식 인용 라인 노출", () => {
+    const detail: FarmingDeductionDetail = {
+      evaluated: true,
+      eligible: true,
+      ineligibleReasons: [],
+      appliedAssetValue: 1_000_000_000,
+      cappedDeduction: 1_000_000_000,
+      residence: {
+        decedentMatchKind: "same_district",
+        heirMatchKind: "same_district",
+        decedentAutoMet: true,
+        heirAutoMet: true,
+        decedentMinDistanceKm: 0,
+        heirMinDistanceKm: 0,
+      },
+    };
+    render(<FarmingDeductionDetailRow detail={detail} />);
+    expect(screen.queryByText(/§16②1호나 거주지 자동 검증/)).not.toBeNull();
+    expect(screen.queryAllByText(/동일 시·군·구/).length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("RD-UI-11: residence=undefined (corporate 트랙) → 산식 인용 라인 미렌더", () => {
+    const detail: FarmingDeductionDetail = {
+      evaluated: true,
+      eligible: true,
+      ineligibleReasons: [],
+      appliedAssetValue: 1_000_000_000,
+      cappedDeduction: 1_000_000_000,
+      // residence 미생성
+    };
+    render(<FarmingDeductionDetailRow detail={detail} />);
+    expect(screen.queryByText(/§16②1호나 거주지 자동 검증/)).toBeNull();
+  });
+
+  it("RD-UI-12: residence.matchKind=null (좌표 미입력) → '사용자 명시' 안내 라인", () => {
+    const detail: FarmingDeductionDetail = {
+      evaluated: true,
+      eligible: true,
+      ineligibleReasons: [],
+      appliedAssetValue: 1_000_000_000,
+      cappedDeduction: 1_000_000_000,
+      residence: {
+        decedentMatchKind: null,
+        heirMatchKind: null,
+        decedentAutoMet: null,
+        heirAutoMet: null,
+        decedentMinDistanceKm: null,
+        heirMinDistanceKm: null,
+      },
+    };
+    render(<FarmingDeductionDetailRow detail={detail} />);
+    expect(screen.queryByText(/자동 거주지 검증 미수행/)).not.toBeNull();
+  });
 });
 
 // vi unused 가드
