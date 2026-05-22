@@ -229,12 +229,15 @@ describe("상속공제 7종 + §24 종합한도", () => {
     expect(wasCapped).toBe(false);
   });
 
-  // ============================================================
-  // §24 종합한도 — Phase D 정확 산식 (params.totalPriorGiftAmount 진입)
-  // ceiling = max(0, taxableEstate − legateeAmountNonHeir − max(0, totalGift − giftDeductions))
-  // Phase D 진입 시 3번째 인자 priorGiftToHeirTotal은 무시됨 (코드 L527 분기)
-  // ============================================================
+});
 
+// ============================================================
+// §24 종합한도 — Phase D 정확 산식 (params.totalPriorGiftAmount 진입)
+// ceiling = max(0, taxableEstate − legateeAmountNonHeir − max(0, totalGift − giftDeductions))
+// Phase D 진입 시 3번째 인자 priorGiftToHeirTotal은 무시됨 (코드 L527 분기)
+// ============================================================
+
+describe("§24 종합한도 — Phase D 정확 산식", () => {
   it("[P-01] Phase D 모든 보정 0 → legacy 동치 (1,500-0-max(0,500-0)=1,000M)", () => {
     const { limitedDeduction, ceiling, wasCapped } = applyDeductionLimit(
       1_200_000_000, // rawTotal

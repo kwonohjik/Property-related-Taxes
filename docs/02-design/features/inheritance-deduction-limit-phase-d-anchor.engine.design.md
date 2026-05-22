@@ -102,10 +102,13 @@ export function applyDeductionLimit(
 
 | 필드 | Pre-Do 시작값 (계획) | Pre-Do 종료값 (실측 후 동결) |
 |---|---|---|
-| `spouseLegalShareOverride` | 5,000,000,000 | TBD |
-| 추가 강화 필드 | (미정 — Pre-Do 결과 분기) | TBD |
-| 결과 `rawTotalDeduction` (cap 전) | — | TBD (> 5,965M 확정) |
-| 결과 `result.totalDeduction` | — | **5,965,000,000** (확정) |
+| `spouseLegalShareOverride` | 5,000,000,000 | **5,000,000,000** ✅ |
+| `spouseActualAmount` | (baseline) | **3,000,000,000** ✅ |
+| `familyBusinessDirectAmount` | (미정 — Pre-Do 결과 분기) | **6,000,000,000** ✅ |
+| 결과 `rawTotalDeduction` (cap 전) | — | > 5,965M (cap 발동 확정) |
+| 결과 `result.totalDeduction` | — | **5,965,000,000** ✅ (1회 PASS 확정) |
+
+> ✅ Pre-Do Step Pre-Do-1 1회 실행으로 cap 발동 확인. 추가 fine-tune 불필요.
 
 ## 4. 테스트 파일 변경 명세
 
