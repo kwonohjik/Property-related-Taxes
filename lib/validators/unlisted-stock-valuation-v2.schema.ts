@@ -73,6 +73,15 @@ export const fiscalYearAdjustmentSchema = z.object({
   subOtherByOrdinance: z.number().nonnegative().optional(),
 });
 
+/** 평가차액 행 단위 입력 (3쪽 5.평가차액) — PR-N */
+export const evaluationDeltaRowSchema = z.object({
+  rowId: z.string().min(1),
+  category: z.enum(["asset", "liability"]),
+  accountName: z.string().min(1, { message: "계정과목은 필수입니다." }),
+  evaluationAmount: z.number().nonnegative(),
+  bookAmount: z.number().nonnegative(),
+});
+
 /** 순자산가액 계산 입력 — 별지 2~3쪽 (§55① + §17의2) */
 export const unlistedNetAssetCalculationSchema = z.object({
   bsTotalAssets: z.number().nonnegative(),
@@ -95,6 +104,22 @@ export const unlistedNetAssetCalculationSchema = z.object({
   insuranceReservePolicy: z.number().nonnegative().optional(),
   insuranceExtraordinaryReserve: z.number().nonnegative().optional(),
   insuranceSurrenderReserve: z.number().nonnegative().optional(),
+  // PR-N: 평가차액 행 단위 입력 (자산 50행·부채 30행 한도)
+  evaluationDeltaRows: z
+    .array(evaluationDeltaRowSchema)
+    .max(80)
+    .optional()
+    .superRefine((rows, ctx) => {
+      if (!rows) return;
+      const assetCount = rows.filter((r) => r.category === "asset").length;
+      const liabilityCount = rows.filter((r) => r.category === "liability").length;
+      if (assetCount > 50) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "자산 평가차액 행은 50개를 초과할 수 없습니다." });
+      }
+      if (liabilityCount > 30) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "부채 평가차액 행은 30개를 초과할 수 없습니다." });
+      }
+    }),
 });
 
 /** 비상장주식 V2 평가 입력 — 별지 양식 1:1 매핑 */

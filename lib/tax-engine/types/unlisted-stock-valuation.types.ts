@@ -105,6 +105,20 @@ export interface UnlistedNetAssetCalculation {
   insuranceReservePolicy?: number;
   insuranceExtraordinaryReserve?: number;
   insuranceSurrenderReserve?: number;
+
+  // ===== PR-N: 3쪽 평가차액 행 단위 입력 (UI 통합 v3) =====
+  /**
+   * 평가차액 자산·부채 행 단위 입력 (3쪽 5.평가차액).
+   * 자산·부채는 `category` 필드로 단일 배열에 통합 저장.
+   * 미입력 시 `assetValuationDelta` 총액 사용 (3중 패턴 fallback).
+   *
+   * 엔진 진입점(`unlisted-orchestrator.ts`)이 `resolveEvaluationDelta()`를 호출하여
+   * 자산·부채 행의 **차액(자산 합 − 부채 합)**을 `assetValuationDelta`에 주입.
+   * 별지 양식 2쪽 4.가.② "평가차액" 항목과 1:1 매핑.
+   *
+   * Plan: docs/00-pm/inheritance-unlisted-stock-valuation-ui-integration.plan.md §2-1
+   */
+  evaluationDeltaRows?: import("@/lib/tax-engine/property-valuation/evaluation-delta").EvaluationDeltaRow[];
 }
 
 /** 비상장주식 V2 평가 입력 (별지 부표3 양식 1:1 매핑) */

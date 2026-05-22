@@ -67,7 +67,7 @@ const LIABILITY_ROWS: LiabilityRow[] = [
   { key: "localIncomeTax", label: "지방소득세", cellNum: "⑫", sign: "+", description: "§17의2 3호 가" },
   { key: "dividendPayable", label: "확정 배당금·상여금", cellNum: "⑬", sign: "+", description: "§17의2 3호 나" },
   { key: "retirementProvision", label: "퇴직급여 추계액", cellNum: "⑭", sign: "+", description: "§17의2 3호 다 — 전원 퇴직 가정" },
-  { key: "otherProvision", label: "기타 충당금 중 비용 확정분", cellNum: "⑮", sign: "+", description: "§17의2 4호 단서 가" },
+  { key: "otherProvision", label: "기타 (충당금 중 평가기준일 현재 비용으로 확정된 것)", cellNum: "⑮", sign: "+", description: "§17의2 4호 단서 가 — 모든 법인 적용 (보험법인 한정 아님)" },
   { key: "reserveExcluded", label: "제준비금", cellNum: "⑯", sign: "−", description: "§17의2 4호 본문 — 부채 차감" },
   { key: "allowanceExcluded", label: "제충당금", cellNum: "⑰", sign: "−", description: "§17의2 4호 본문 — 부채 차감" },
   { key: "deferredTaxAdjustment", label: "이연법인세대 등", cellNum: "⑱", sign: "+" },

@@ -43,6 +43,7 @@ import { calcNetAssetTotal, calcNetAssetPerShare } from "./net-asset-calc";
 import { calcGoodwill } from "./goodwill";
 import { calcCapitalIncreaseAdjustment } from "./capital-increase-adjustment";
 import { calcMaxShareholderPremium } from "./max-shareholder-premium";
+import { resolveEvaluationDelta } from "./evaluation-delta";
 
 /**
  * 비상장주식 V2 평가 진입점
@@ -110,7 +111,21 @@ export function evaluateUnlistedStockV2(
   const netIncomePerShare = calcPerShareNetIncomeValue(weightedNetIncomePerShare, capRate);
 
   // STEP 6: 순자산가액 + 영업권
-  const netAssetResult = calcNetAssetTotal(input.netAssetValueRaw);
+  // PR-N: 행 단위 평가차액 입력 시 자산 합−부채 합 차액을 assetValuationDelta에 주입 (3중 패턴)
+  //       행 미입력 시 기존 assetValuationDelta 총액 fallback. 별지 양식 2쪽 4.가.② 매핑.
+  const evaluationDeltaResolved = resolveEvaluationDelta({
+    assetDeltaRows: input.netAssetValueRaw.evaluationDeltaRows?.filter(
+      (r) => r.category === "asset",
+    ),
+    liabilityDeltaRows: input.netAssetValueRaw.evaluationDeltaRows?.filter(
+      (r) => r.category === "liability",
+    ),
+    assetEvaluationDeltaTotal: input.netAssetValueRaw.assetValuationDelta,
+  });
+  const netAssetResult = calcNetAssetTotal({
+    ...input.netAssetValueRaw,
+    assetValuationDelta: evaluationDeltaResolved.evaluationDelta,
+  });
 
   // 영업권 산식용: 회사 전체 가중평균 순손익액 (§59③ 준용 §56①)
   // ★ §56① 후단 음수 시 0
