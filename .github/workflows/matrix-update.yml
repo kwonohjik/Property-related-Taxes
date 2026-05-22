@@ -1,0 +1,141 @@
+name: Sigungu Adjacency Matrix Update
+
+# 영농상속공제 §16②1호나 행정구역 인접 매트릭스 자동 갱신.
+# 관련 문서:
+#   - docs/00-pm/inheritance-farming-residence-data-infra.plan.md v1.2 §11 PR-6
+#   - docs/02-design/features/inheritance-farming-residence-data-infra.engine.design.md v1.2 §4-3
+#
+# 동작:
+#   1. 분기 1회(매년 1·4·7·10월 1일) 자동 실행 — 행정구역 개편 빈도(연 1~2건) 대비 충분
+#   2. workflow_dispatch — 수동 트리거 가능 (행안부 공지 후 즉시 갱신)
+#   3. KOEDB·LSMD 최신 데이터 다운로드 → scripts/build-sigungu-adjacency.ts 재실행
+#   4. lib/geo/administrative-district-adjacency.json diff 감지 시 PR 자동 생성
+#   5. MATRIX_VERSION 자동 갱신 (현재 일자)
+#
+# 전제 조건 (Phase 1·2 완료 후 활성):
+#   - scripts/download-admin-data.ts (KOEDB·LSMD 다운로드 자동화)
+#   - scripts/build-sigungu-adjacency.ts (turf.js 매트릭스 빌드)
+#   - data/ .gitignore
+#   - lib/geo/administrative-district-adjacency.json (commit 대상)
+
+on:
+  schedule:
+    # 분기 1일 00:00 UTC (한국 09:00 KST)
+    # cron 표현식: 분 시 일 월 요일
+    - cron: "0 0 1 1,4,7,10 *"
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: "수동 트리거 사유 (행안부 공지 등)"
+        required: false
+        default: "manual"
+
+jobs:
+  update-matrix:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download admin data (KOEDB + LSMD)
+        run: |
+          # Phase 1·2 미완 — 빈 매트릭스 유지 시 본 step skip
+          if [ -f "scripts/download-admin-data.ts" ]; then
+            npx tsx scripts/download-admin-data.ts
+          else
+            echo "⚠️ scripts/download-admin-data.ts 미존재 — Phase 1·2 진입 전. workflow skip."
+            exit 0
+          fi
+
+      - name: Build adjacency matrix
+        run: |
+          if [ -f "scripts/build-sigungu-adjacency.ts" ]; then
+            npx tsx scripts/build-sigungu-adjacency.ts
+          else
+            echo "⚠️ scripts/build-sigungu-adjacency.ts 미존재 — Phase 2 진입 전. workflow skip."
+            exit 0
+          fi
+
+      - name: Update MATRIX_VERSION
+        run: |
+          if [ -f "lib/geo/administrative-district-adjacency.ts" ]; then
+            TODAY=$(date -u +%Y-%m-%d)
+            # MATRIX_VERSION = "..." 라인 갱신 (sed in-place, macOS·linux 호환)
+            sed -i.bak "s/MATRIX_VERSION = \"[^\"]*\"/MATRIX_VERSION = \"$TODAY\"/" lib/geo/administrative-district-adjacency.ts
+            rm -f lib/geo/administrative-district-adjacency.ts.bak
+          fi
+
+      - name: Run anchor tests
+        run: |
+          if [ -d "__tests__/lib/geo" ]; then
+            npx vitest run __tests__/lib/geo/ || (echo "❌ anchor 실패 — 매트릭스 검증 오류" && exit 1)
+          fi
+
+      - name: Detect changes
+        id: diff
+        run: |
+          if git diff --quiet lib/geo/; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "ℹ️ 매트릭스 변경 없음 — PR 생성 skip"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "✅ 매트릭스 변경 감지 — PR 자동 생성"
+          fi
+
+      - name: Create Pull Request
+        if: steps.diff.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          # peter-evans/create-pull-request@v7 — 보안 검토:
+          #   - permissions 명시(contents·pull-requests write)로 최소 권한 원칙
+          #   - branch 자동 생성·삭제
+          #   - 외부 commit 추가 방지 (commit-message·title·body 모두 GitHub Actions 명의)
+          commit-message: |
+            🔄 chore: 행정구역 인접 매트릭스 자동 갱신 (matrix-update cron)
+
+            - lib/geo/administrative-district-adjacency.json 재빌드
+            - MATRIX_VERSION 갱신
+            - anchor 검증 통과
+
+            관련 문서:
+            - docs/02-design/features/inheritance-farming-residence-data-infra.engine.design.md v1.2 §4-3
+          title: "matrix-update: 행정구역 인접 매트릭스 자동 갱신"
+          body: |
+            ## 자동 갱신 사유
+
+            본 PR은 영농상속공제 §16②1호나 행정구역 인접 매트릭스 자동 갱신 워크플로
+            (`.github/workflows/matrix-update.yml`)가 생성하였습니다.
+
+            ## 검증 항목 (PR 리뷰어)
+
+            - [ ] `lib/geo/administrative-district-adjacency.json` diff 검토 (행정구역 개편 반영 확인)
+            - [ ] `MATRIX_VERSION` 신규 일자 확인
+            - [ ] `__tests__/lib/geo/administrative-district-adjacency.test.ts` anchor 10건 통과
+            - [ ] 행안부 공지·KOEDB 갱신 이력 cross-reference
+
+            ## 트리거
+
+            - 분기 1회 자동 cron (매년 1·4·7·10월 1일 00:00 UTC)
+            - 또는 workflow_dispatch 수동 트리거
+
+            ## 위험 회피
+
+            - anchor 실패 시 PR 미생성 (Build adjacency step에서 vitest 실패 시 workflow 중단)
+            - permissions 최소 권한 (contents·pull-requests write만)
+          branch: matrix-update/${{ github.run_id }}
+          labels: |
+            matrix-update
+            automated
+          delete-branch: true
