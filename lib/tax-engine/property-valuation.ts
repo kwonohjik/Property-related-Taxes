@@ -16,6 +16,7 @@ import type {
   PropertyValuationResult,
   ValuationMethod,
 } from "./types/inheritance-gift.types";
+import { evaluateUnlistedStockV2 } from "./property-valuation/unlisted-orchestrator";
 
 // ============================================================
 // 임대차 환산 (§61 — 임대보증금 환산가액)
@@ -349,12 +350,95 @@ export function evaluateEstateItem(item: EstateItem): PropertyValuationResult {
 
 /**
  * 전체 상속·증여 재산 일괄 평가
- * 주식 항목은 포함하지 않음 (property-valuation-stock.ts로 처리)
+ *
+ * 주식 항목은 일반 평가에서 제외하되,
+ * 비상장주식 V2 입력(unlistedStockValuationV2)이 있는 경우는 자동 평가 (Phase 5-A).
+ * 그 외 listed_stock / legacy 비상장주식(unlistedStockData)은 호출부에서 별도 처리.
  */
 export function evaluateAllEstateItems(
   items: EstateItem[],
 ): PropertyValuationResult[] {
   return items
-    .filter((i) => i.category !== "listed_stock" && i.category !== "unlisted_stock")
-    .map((i) => evaluateEstateItem(i));
+    .filter((i) => {
+      // 비상장주식 V2 입력이 있으면 자동 평가에 포함
+      if (i.category === "unlisted_stock" && i.unlistedStockValuationV2) return true;
+      // 그 외 주식은 기존 동작 — 호출부에서 별도 처리 또는 marketValue 사용
+      return i.category !== "listed_stock" && i.category !== "unlisted_stock";
+    })
+    .map((i) => {
+      if (i.category === "unlisted_stock" && i.unlistedStockValuationV2) {
+        return evaluateUnlistedStockV2AsPropertyResult(i);
+      }
+      return evaluateEstateItem(i);
+    });
+}
+
+/**
+ * V2 평가 결과 → PropertyValuationResult 어댑터 (Phase 5-A)
+ *
+ * Plan: docs/00-pm/inheritance-unlisted-stock-valuation-besshi-4-buppyo-3.plan.md
+ * Engine: lib/tax-engine/property-valuation/unlisted-orchestrator.ts
+ */
+function evaluateUnlistedStockV2AsPropertyResult(
+  item: EstateItem,
+): PropertyValuationResult {
+  if (!item.unlistedStockValuationV2) {
+    throw new TaxCalculationError(
+      TaxErrorCode.INVALID_INPUT,
+      "evaluateUnlistedStockV2AsPropertyResult: unlistedStockValuationV2 필요",
+    );
+  }
+  const v2 = evaluateUnlistedStockV2(item.unlistedStockValuationV2);
+  return {
+    estateItemId: item.id,
+    method: "book_value" as ValuationMethod,
+    valuatedAmount: v2.totalValuation,
+    breakdown: [
+      {
+        label: "1주당 순자산가치 ④",
+        amount: v2.netAssetPerShare,
+        lawRef: VALUATION.UNLISTED_FORMULA,
+      },
+      {
+        label: "1주당 순손익가치 ⑤",
+        amount: v2.netIncomePerShare,
+        lawRef: VALUATION.UNLISTED_NET_INCOME_FORMULA,
+      },
+      {
+        label: "1주당 평가액 ⑥",
+        amount: v2.finalPerShareValue,
+        lawRef: VALUATION.UNLISTED_FORMULA,
+        note: v2.netAssetFloorApplied ? "80% 하한 발동" : "가중평균 본칙",
+      },
+      ...(v2.goodwillCalculation.goodwillFinal > 0
+        ? [
+            {
+              label: "영업권 평가액",
+              amount: v2.goodwillCalculation.goodwillFinal,
+              lawRef: VALUATION.GOODWILL_FORMULA,
+            },
+          ]
+        : []),
+      ...(v2.premiumRate > 0
+        ? [
+            {
+              label: `최대주주 할증평가 ×${(1 + v2.premiumRate) * 100}%`,
+              amount: v2.premiumPerShare,
+              lawRef: VALUATION.MAX_SHAREHOLDER_PREMIUM,
+            },
+          ]
+        : []),
+      {
+        label: "보유 주식수",
+        amount: item.unlistedStockValuationV2.ownedShares,
+        note: "주",
+      },
+      {
+        label: "비상장주식 V2 평가액",
+        amount: v2.totalValuation,
+        lawRef: VALUATION.UNLISTED_STOCK,
+      },
+    ],
+    warnings: v2.warnings,
+  };
 }

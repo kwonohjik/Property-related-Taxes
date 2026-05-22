@@ -17,6 +17,22 @@ export const unlistedStockDataSchema = z.object({
 });
 
 // ============================================================
+// 비상장주식 V2 평가 입력 — unlisted-stock-valuation-v2.schema.ts로 분리 (2026-05-22, 800줄 정책)
+// ============================================================
+// 기존 import 경로 보존을 위한 barrel re-export
+export {
+  unlistedNetAssetOnlyReasonSchema,
+  unlistedPremiumExclusionReasonSchema,
+  unlistedCapitalChangeSchema,
+  fiscalYearAdjustmentSchema,
+  unlistedNetAssetCalculationSchema,
+  unlistedStockValuationV2Schema,
+  type UnlistedStockValuationV2Input,
+} from "./unlisted-stock-valuation-v2.schema";
+
+import { unlistedStockValuationV2Schema } from "./unlisted-stock-valuation-v2.schema";
+
+// ============================================================
 // 자산 종류별 discriminatedUnion 스키마
 // ============================================================
 
@@ -122,7 +138,19 @@ export const listedStockItemSchema = baseItemSchema.extend({
 
 export const unlistedStockItemSchema = baseItemSchema.extend({
   category: z.literal("unlisted_stock"),
-  unlistedStockData: unlistedStockDataSchema,
+  // legacy 입력 모드 (기존 호환). V2 입력 시 미사용 가능
+  unlistedStockData: unlistedStockDataSchema.optional(),
+  // V2 입력 모드 (별지 부표3 완전 재현)
+  unlistedStockValuationV2: unlistedStockValuationV2Schema.optional(),
+}).superRefine((item, ctx) => {
+  // V1·V2 둘 중 하나는 필수
+  if (!item.unlistedStockData && !item.unlistedStockValuationV2) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["unlistedStockData"],
+      message: "비상장주식은 legacy 입력 또는 V2 입력 중 하나는 필수입니다.",
+    });
+  }
 });
 
 export const cashItemSchema = baseItemSchema.extend({

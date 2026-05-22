@@ -208,6 +208,11 @@ export function validateInheritanceTaxInput(
     const e = validatePriorGift(gift);
     if (e) return e;
   }
+  // 비상장주식 V2 입력 검증 (Phase 5-A)
+  for (const item of input.estateItems) {
+    const e = validateUnlistedStockV2(item);
+    if (e) return e;
+  }
   const refErrs = validateHeirReferences(
     input.heirs,
     input.preGiftsWithin10Years,
@@ -216,6 +221,70 @@ export function validateInheritanceTaxInput(
     input.presumedItems ?? [],
   );
   if (refErrs.length > 0) return refErrs[0];
+
+  return null;
+}
+
+// ────────────────────────────────────────────────────
+// 비상장주식 V2 평가 입력 검증 (Phase 5-A)
+// Plan: docs/00-pm/inheritance-unlisted-stock-valuation-besshi-4-buppyo-3.plan.md
+// KoreanLaw 검증 2026-05-22: §54④ 4호 삭제 / 조특법 §101 삭제
+// ────────────────────────────────────────────────────
+
+/**
+ * 비상장주식 V2 평가 입력 검증
+ *
+ * Zod 스키마(`unlistedStockValuationV2Schema`)와 동일 fallback·규칙 유지 (정합성 강제).
+ * UI 통과 ↔ validate 차단 모순 금지.
+ *
+ * 검증 항목:
+ *   1) V2·legacy 둘 중 하나 필수 (Zod superRefine와 동일)
+ *   2) 사업연도 종료일 순서 (1년전 > 2년전 > 3년전)
+ *   3) 소유주식수 ≤ 발행주식총수
+ *   4) 평가기준일 ≥ 사업개시일
+ *   5) 자본금 변동일 ≤ 평가기준일
+ *   6) 유상증자(paid_in)는 1주당 납입금액 필수 (§56⑤)
+ */
+export function validateUnlistedStockV2(item: EstateItem): string | null {
+  if (item.category !== "unlisted_stock") return null;
+
+  // V1·V2 둘 중 하나 필수
+  if (!item.unlistedStockData && !item.unlistedStockValuationV2) {
+    return `비상장주식 "${item.name}" — legacy 입력 또는 V2 입력 중 하나는 필수입니다.`;
+  }
+
+  // V2 입력이 없으면 추가 검증 없음 (legacy 검증은 기존 Zod 의존)
+  const v2 = item.unlistedStockValuationV2;
+  if (!v2) return null;
+
+  // 사업연도 종료일 순서
+  if (v2.fiscalYears[0].fiscalYearEndDate <= v2.fiscalYears[1].fiscalYearEndDate) {
+    return `비상장주식 "${item.name}" — 2년전 사업연도 종료일은 1년전보다 이전이어야 합니다.`;
+  }
+  if (v2.fiscalYears[1].fiscalYearEndDate <= v2.fiscalYears[2].fiscalYearEndDate) {
+    return `비상장주식 "${item.name}" — 3년전 사업연도 종료일은 2년전보다 이전이어야 합니다.`;
+  }
+
+  // 소유주식수 > 발행주식총수
+  if (v2.ownedShares > v2.totalShares) {
+    return `비상장주식 "${item.name}" — 보유주식수(${v2.ownedShares})는 발행주식총수(${v2.totalShares})를 초과할 수 없습니다.`;
+  }
+
+  // 평가기준일 < 사업개시일
+  if (v2.evaluationDate < v2.businessStartDate) {
+    return `비상장주식 "${item.name}" — 평가기준일은 사업개시일 이후여야 합니다.`;
+  }
+
+  // 자본금 변동 날짜
+  for (let i = 0; i < v2.capitalChanges.length; i++) {
+    const c = v2.capitalChanges[i];
+    if (c.changeDate > v2.evaluationDate) {
+      return `비상장주식 "${item.name}" — 자본금 변동일(${i + 1}번째)은 평가기준일 이전이어야 합니다.`;
+    }
+    if (c.changeType === "paid_in" && (!c.pricePerShare || c.pricePerShare <= 0)) {
+      return `비상장주식 "${item.name}" — 유상증자(${i + 1}번째)는 1주당 납입금액을 입력해야 합니다. (§56⑤)`;
+    }
+  }
 
   return null;
 }
