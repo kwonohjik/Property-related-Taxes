@@ -16,6 +16,7 @@ import { CarryoverGiftBlock } from "./CarryoverGiftBlock";
 import { InheritedAcquisitionDeemedSection } from "./InheritedAcquisitionDeemedSection";
 import { NewConstructionDateBlock } from "./NewConstructionDateBlock";
 import { GeneralBuildingAcquisitionCards } from "./GeneralBuildingAcquisitionCards";
+import { FamilyBusinessInheritanceTransferSection } from "./FamilyBusinessInheritanceTransferSection";
 
 const ACQUISITION_CAUSE_OPTIONS = [
   { value: "purchase", label: "매매" },
@@ -233,6 +234,14 @@ export function CompanionAcquisitionCauseSection({
           asset={asset}
           onChange={onChange}
           transferDate={transferDate}
+        />
+      )}
+
+      {/* 가업상속공제 §97의2④ 의제 취득가액 — 상속 취득원인 시만 표시 */}
+      {asset.acquisitionCause === "inheritance" && (
+        <FamilyBusinessInheritanceTransferSection
+          asset={asset}
+          onChange={onChange}
         />
       )}
 

@@ -25,6 +25,7 @@ import { CommercialBuildingValuationDetailCard } from "@/components/calc/results
 import { GeneralBuildingValuationDetailCard } from "@/components/calc/results/GeneralBuildingValuationDetailCard";
 import { BurdenedGiftDetailCard } from "@/components/calc/results/transfer/BurdenedGiftDetailCard";
 import { RedevelopmentDetailCard } from "@/components/calc/results/transfer/RedevelopmentDetailCard";
+import { FamilyBusinessImputedComparisonCard } from "@/components/calc/results/transfer/FamilyBusinessImputedComparisonCard";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
@@ -661,6 +662,11 @@ export function TransferTaxResultView({
       })()}
 
       {/* 계산 과정 토글은 명세서 카드 내 'EngineStepsSubToggle'로 통합됨 (2026-05-12) */}
+
+      {/* ⑦ 가업상속공제 §97의2④ 의제·일반 비교 결과 카드 */}
+      {result.familyBusinessDetail && (
+        <FamilyBusinessImputedComparisonCard detail={result.familyBusinessDetail} />
+      )}
 
       {/* 면책 고지 */}
       <DisclaimerBanner />
