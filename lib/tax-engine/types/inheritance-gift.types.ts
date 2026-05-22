@@ -74,8 +74,10 @@ export interface EstateItem extends EstateLocationFields {
   listedStockShares?: number;
   /** 상장주식 종목코드 (F-01 키움 자동조회 트리거 — 선택) */
   listedStockCode?: string;
-  /** 비상장주식 평가 데이터 */
+  /** 비상장주식 평가 데이터 (legacy 입력 모드) */
   unlistedStockData?: UnlistedStockData;
+  /** 비상장주식 V2 평가 입력 (별지 부표3 완전 재현 — Phase 2~4) */
+  unlistedStockValuationV2?: UnlistedStockValuationInput;
   /** 임대차 정보 (임대보증금 차감) */
   leaseDeposit?: number;
   /** 저당권 설정 여부 */
@@ -177,6 +179,33 @@ export interface PropertyValuationResult {
   breakdown: CalculationStep[];
   warnings: string[];
 }
+
+// ============================================================
+// 비상장주식 V2 평가 — unlisted-stock-valuation.types.ts로 분리 (2026-05-22, 800줄 정책)
+// ============================================================
+// 기존 import 경로 보존을 위한 barrel re-export
+import type {
+  UnlistedNetAssetOnlyReason,
+  UnlistedPremiumExclusionReason,
+  UnlistedCapitalChange,
+  FiscalYearAdjustment,
+  UnlistedNetAssetCalculation,
+  UnlistedStockValuationInput,
+  FiscalYearBreakdown,
+  UnlistedGoodwillResult,
+  UnlistedStockValuationResult,
+} from "./unlisted-stock-valuation.types";
+export type {
+  UnlistedNetAssetOnlyReason,
+  UnlistedPremiumExclusionReason,
+  UnlistedCapitalChange,
+  FiscalYearAdjustment,
+  UnlistedNetAssetCalculation,
+  UnlistedStockValuationInput,
+  FiscalYearBreakdown,
+  UnlistedGoodwillResult,
+  UnlistedStockValuationResult,
+};
 
 // ============================================================
 // 비과세·과세가액 불산입 — inheritance-exemption.types.ts로 분리 (2026-05-21, 800줄 정책)
