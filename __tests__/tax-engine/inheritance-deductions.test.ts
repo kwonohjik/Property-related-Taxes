@@ -228,6 +228,92 @@ describe("상속공제 7종 + §24 종합한도", () => {
     expect(limitedDeduction).toBe(800_000_000);
     expect(wasCapped).toBe(false);
   });
+
+  // ============================================================
+  // §24 종합한도 — Phase D 정확 산식 (params.totalPriorGiftAmount 진입)
+  // ceiling = max(0, taxableEstate − legateeAmountNonHeir − max(0, totalGift − giftDeductions))
+  // Phase D 진입 시 3번째 인자 priorGiftToHeirTotal은 무시됨 (코드 L527 분기)
+  // ============================================================
+
+  it("[P-01] Phase D 모든 보정 0 → legacy 동치 (1,500-0-max(0,500-0)=1,000M)", () => {
+    const { limitedDeduction, ceiling, wasCapped } = applyDeductionLimit(
+      1_200_000_000, // rawTotal
+      1_500_000_000, // taxableEstate
+      500_000_000, // priorGiftHeir (Phase D에선 무시)
+      { totalPriorGiftAmount: 500_000_000 },
+    );
+    expect(ceiling).toBe(1_000_000_000);
+    expect(limitedDeduction).toBe(1_000_000_000);
+    expect(wasCapped).toBe(true);
+  });
+
+  it("[P-02] Phase D legateeAmountNonHeir 단독 차감 (1,500-300-0=1,200M, rawTotal 동치)", () => {
+    const { limitedDeduction, ceiling, wasCapped } = applyDeductionLimit(
+      1_200_000_000,
+      1_500_000_000,
+      0,
+      { totalPriorGiftAmount: 0, legateeAmountNonHeir: 300_000_000 },
+    );
+    expect(ceiling).toBe(1_200_000_000);
+    expect(limitedDeduction).toBe(1_200_000_000);
+    expect(wasCapped).toBe(false);
+  });
+
+  it("[P-03] Phase D 증여공제>사전증여 → max(0, 200-500)=0 분기 (legacy였다면 1,400M)", () => {
+    const { limitedDeduction, ceiling, wasCapped } = applyDeductionLimit(
+      800_000_000,
+      1_500_000_000,
+      100_000_000,
+      { totalPriorGiftAmount: 200_000_000, priorGiftDeductionTotal: 500_000_000 },
+    );
+    expect(ceiling).toBe(1_500_000_000);
+    expect(limitedDeduction).toBe(800_000_000);
+    expect(wasCapped).toBe(false);
+  });
+
+  it("[P-04] Phase D PDF 책 1864 — 4보정 동시 + cap (8,775-500-max(0,2,960-650)=5,965M)", () => {
+    const { limitedDeduction, ceiling, wasCapped } = applyDeductionLimit(
+      7_000_000_000,
+      8_775_000_000,
+      500_000_000,
+      {
+        totalPriorGiftAmount: 2_960_000_000,
+        priorGiftDeductionTotal: 650_000_000,
+        legateeAmountNonHeir: 500_000_000,
+      },
+    );
+    expect(ceiling).toBe(5_965_000_000);
+    expect(limitedDeduction).toBe(5_965_000_000);
+    expect(wasCapped).toBe(true);
+  });
+
+  it("[P-05] Phase D P-04 입력 + rawTotal=5,000M → 미발동 경계 (5,000<5,965)", () => {
+    const { limitedDeduction, ceiling, wasCapped } = applyDeductionLimit(
+      5_000_000_000,
+      8_775_000_000,
+      500_000_000,
+      {
+        totalPriorGiftAmount: 2_960_000_000,
+        priorGiftDeductionTotal: 650_000_000,
+        legateeAmountNonHeir: 500_000_000,
+      },
+    );
+    expect(ceiling).toBe(5_965_000_000);
+    expect(limitedDeduction).toBe(5_000_000_000);
+    expect(wasCapped).toBe(false);
+  });
+
+  it("[P-06] Phase D ceiling 음수 가드 — max(0, 500-1,000-0)=0", () => {
+    const { limitedDeduction, ceiling, wasCapped } = applyDeductionLimit(
+      1_000_000_000,
+      500_000_000,
+      0,
+      { totalPriorGiftAmount: 0, legateeAmountNonHeir: 1_000_000_000 },
+    );
+    expect(ceiling).toBe(0);
+    expect(limitedDeduction).toBe(0);
+    expect(wasCapped).toBe(true);
+  });
 });
 
 // ============================================================

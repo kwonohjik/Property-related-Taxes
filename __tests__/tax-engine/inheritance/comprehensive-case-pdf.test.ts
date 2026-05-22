@@ -424,6 +424,30 @@ describe("상속세 종합사례 PDF — 통합 anchor", () => {
       expect(result.totalDeduction).toBe(4_600_000_000);
     });
 
+    // Pre-Do anchor — J-04d (Phase D 정확 산식 한도 발동 정확값)
+    // 산식: ceiling = 8,775M − 500M(legatee) − max(0, 2,960M − 650M) = 5,965M
+    // EXAMPLE_INPUT 변형: spouseLegalShareOverride + familyBusinessDirectAmount 상향으로
+    //                     rawTotal > 5,965M 유도 → wasCapped=true + totalDeduction=5,965M
+    // ⚠️ Pre-Do 단계: 실제 결과 확인 후 EXAMPLE_INPUT 변형값 fine-tune 필요
+    it("J-04d §24 한도 발동 정확값 anchor — totalDeduction=5,965M + breakdown 한도 초과 라인", () => {
+      const input = {
+        ...EXAMPLE_INPUT,
+        deductionInput: {
+          ...EXAMPLE_INPUT.deductionInput,
+          spouseLegalShareOverride: 5_000_000_000, // 배우자 50억 → cap 30억 적용
+          spouseActualAmount: 3_000_000_000,
+          familyBusinessDirectAmount: 6_000_000_000, // 가업 60억 직접 입력으로 rawTotal 상향
+        },
+      };
+      const result = calcInheritanceTax(input);
+      expect(result.totalDeduction).toBe(5_965_000_000);
+      const limitLine = result.deductionDetail.breakdown.find(
+        (s) => s.label?.includes("한도 초과"),
+      );
+      expect(limitLine).toBeDefined();
+      expect(limitLine?.amount).toBe(5_965_000_000);
+    });
+
     it("J-04c §24 한도 발동 케이스 — rawTotal 6,500M > 한도 5,965M → 한도 5,965M 적용", async () => {
       // 배우자공제를 인위적으로 늘려서 한도 초과 시뮬
       const input = {
