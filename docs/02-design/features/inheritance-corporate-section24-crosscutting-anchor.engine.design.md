@@ -3,6 +3,27 @@
 > 작성일: 2026-05-22
 > 연결 계획서: [`docs/00-pm/inheritance-corporate-section24-crosscutting-anchor.plan.md`](../../00-pm/inheritance-corporate-section24-crosscutting-anchor.plan.md)
 > 작업 유형: 회귀 anchor 보강 (엔진 변경 없음)
+>
+> **⚠️ 2026-05-22 Pre-Do 결과 — Archive 상태 (재진입 보류)**
+>
+> CC-01·02·03 3건 모두 design 가정과 실측 불일치 (실패):
+> - CC-01: ceiling **5,265M 예상 vs 실제 5,965M (변화 0)** — 영리법인 사전증여 700M→1,400M 증액해도 ceiling 미변동
+> - CC-02: finalTax baseline 동치 가정 vs 실제 **1,935,658원 차이** — §13 cutoff 도과 영리법인이 corporate 면제 산식에 여전히 영향
+> - CC-03: ceiling **8,225M 예상 vs 실제 5,965M (baseline 그대로)** — 영리법인 단독 시나리오에서도 baseline ceiling 유지
+>
+> **핵심 발견**:
+> - design §2.1 "A 산식 분자에 영리법인 포함" 전제와 실제 엔진 동작 불일치 — 영리법인 사전증여가 §24 ceiling에 **영향 0**
+> - design §2.3 "isWithin13Cutoff 단일 진실" 전제와 실제 §3의2② 면제 산식 동작 불일치 — cutoff 도과 영리법인도 면제에 영향
+> - design "A·B 동시 영향" 핵심 전제 자체가 틀림
+>
+> **재진입 조건**:
+> 1. KoreanLaw MCP로 §13 ②(상속인 외 자 5년 cutoff)·§24 종합한도 분자 정의·§3의2② 영리법인 면제 산식 본문 직접 검증
+> 2. `priorGiftAggregated`·`corporateGiftTaxBase` 산식이 영리법인 포함 여부 법령 정합 확인
+> 3. 검증 후 (a) design 가정 보정 → anchor 재정의 또는 (b) 엔진 동작 정정 → 별도 PR 분리
+>
+> 현행 실측값을 그대로 anchor에 동결할 경우 잠재적 엔진 버그를 회귀 보호하게 됨 → **본 design의 §3·§4 케이스 인벤토리·코드 명세는 잠정 보류**. 재진입 시 보정 후 사용.
+>
+> **재진입 검증 작업**: [`../../00-pm/inheritance-corporate-section24-crosscutting-reentry.plan.md`](../../00-pm/inheritance-corporate-section24-crosscutting-reentry.plan.md) — KoreanLaw MCP V-1~V-4 검증 후 판정 분기.
 
 ## 1. Scope
 

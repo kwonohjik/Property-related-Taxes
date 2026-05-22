@@ -20,6 +20,8 @@
 > 검증 후 design 가정 보정 또는 엔진 동작 정정 (별도 PR).
 >
 > 현행 anchor 실측값 그대로 동결 시 잠재적 엔진 버그를 회귀 보호하게 됨 → 본 작업 진행 보류.
+>
+> **재진입 검증 작업**: [`inheritance-corporate-section24-crosscutting-reentry.plan.md`](inheritance-corporate-section24-crosscutting-reentry.plan.md) — KoreanLaw MCP §13·§24·§3의2 검증 + 엔진 산식 추적 (V-1~V-4) → 판정 후 본 작업 재개 또는 엔진 정정 PR 분리.
 
 ## 1. 배경
 
