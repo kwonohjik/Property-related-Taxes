@@ -515,4 +515,34 @@ describe("calcFarmingDeduction — residence echo (옵션 C 산식 근거)", () 
     const r = calcFarmingDeduction(1_000_000_000, personalOk());
     expect(r.detail.residence).toBeUndefined();
   });
+
+  // ============================================================
+  // v4.1.1 PR-3 — adjacency resolver 자동 주입 (Phase 1-C 빈 매트릭스 골격)
+  // ============================================================
+
+  it("E-7-skeleton: adjacency resolver 주입 — 빈 매트릭스에서 same_district·within_30km 정상 동작", () => {
+    // calcFarmingDeduction이 내부에서 getAdjacentSigunguCodes를 자동 주입.
+    // Phase 1-C 빈 매트릭스 상태에서도 same_district·within_30km 분기 정상.
+    const farming = personalOk({
+      decedentResidenceLatLng: { lat: 37.5665, lng: 126.978 },
+      decedentResidenceSigunguCode: "1168000000",
+      heirResidenceLatLng: { lat: 37.5665, lng: 126.978 },
+      heirResidenceSigunguCode: "1168000000",
+    });
+    const estateItems = [
+      {
+        id: "a",
+        category: "real_estate_land" as const,
+        name: "강남 농지",
+        farmingCategory: "farmland" as const,
+        estateLatLng: { lat: 37.5665, lng: 126.978 },
+        estateSigunguCode: "1168000000",
+      },
+    ];
+    const r = calcFarmingDeduction(1_000_000_000, farming, estateItems);
+    // adjacency 매트릭스 비어있어도 same_district 분기는 우선 매칭 → 정상
+    expect(r.detail.residence!.decedentMatchKind).toBe("same_district");
+    // adjacency 활성 (Phase 1-C) 후 anchor E-7 본격 추가:
+    // decedent 1165(서초) ↔ asset 1168(강남) → adjacent_district 매칭 예상
+  });
 });

@@ -37,6 +37,7 @@ import { deriveQualifiedHeirIds } from "@/lib/tax-engine/deductions/inheritance-
 import type { FarmingHeirAssessment } from "@/lib/tax-engine/types/inheritance-farming.types";
 import type { FarmingInheritanceInput } from "@/lib/tax-engine/types/inheritance-farming.types";
 import type { EstateItem, Heir } from "@/lib/tax-engine/types/inheritance-gift.types";
+import { extractSigunguCodeFromPnu } from "@/lib/geo/pnu-sigungu";
 
 /** AddressSearch onChange → LatLng + Address 동시 영속화 */
 function ResidenceAddressField({
@@ -133,15 +134,8 @@ function isEmptyFarming(f: FarmingInheritanceInput): boolean {
   );
 }
 
-/**
- * PNU 19자리 앞 5자리 → 행안부 표준 시·군·구 코드 10자리.
- * v4.1.1 Phase 5 (PRD §4 가설 — Phase 3 매핑 anchor 검증 후 확정).
- * Vworld AddressSearch 결과에서 자동 추출.
- */
-function extractSigunguCodeFromPnu(pnu: string | undefined): string | undefined {
-  if (!pnu || pnu.length < 5) return undefined;
-  return pnu.slice(0, 5) + "00000";
-}
+// v4.1.1 PR-4a (M1) — extractSigunguCodeFromPnu을 lib/geo/pnu-sigungu.ts로 이전·export
+// 본 파일은 동 모듈을 import하여 사용 (위 import 구문)
 
 export interface FarmingEligibilitySectionProps {
   farming: FarmingInheritanceInput | undefined;

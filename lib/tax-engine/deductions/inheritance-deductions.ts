@@ -25,6 +25,7 @@ import type {
 } from "../types/inheritance-farming.types";
 import { FARMING_MAX } from "../types/inheritance-farming.types";
 import { checkFarmingResidenceCompliance } from "@/lib/calc/farming-residence-check";
+import { getAdjacentSigunguCodes } from "@/lib/geo/administrative-district-adjacency";
 import {
   calcFamilyBusinessDeductionDirect,
   calcFamilyBusinessDeductionLegacy,
@@ -394,7 +395,11 @@ export function calcFarmingDeduction(
   const residence =
     farming?.type === "personal" && estateItems
       ? (() => {
-          const r = checkFarmingResidenceCompliance(estateItems, farming);
+          // v4.1.1 PR-3 — adjacency resolver 자동 주입. Phase 1-C 매트릭스 데이터 주입 전까지
+          // resolver는 빈 배열 반환 → adjacent_district 분기 비활성, within_30km로 fallback
+          const r = checkFarmingResidenceCompliance(estateItems, farming, {
+            adjacentSigunguCodes: getAdjacentSigunguCodes,
+          });
           return {
             decedentMatchKind: r.decedentMatchKind,
             heirMatchKind: r.heirMatchKind,

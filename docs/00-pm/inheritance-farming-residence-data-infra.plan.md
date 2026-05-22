@@ -1,9 +1,11 @@
-# 영농상속공제 거주지 OR — Phase 1·2·3 외부 데이터 인프라 실행 계획서
+# 영농상속공제 거주지 OR — Phase 1·2·3 외부 데이터 인프라 실행 계획서 (v1.2)
 
 > **선행 PRD**: `docs/00-pm/inheritance-farming-administrative-district.prd.md` v4.1.1
-> **선행 디자인**: `docs/02-design/features/inheritance-farming-residence-or.ui.design.md` v1.1
-> **선행 commit**: `ff93e09`(Phase 0+0-Fix 엔진) · `3098d95`(Phase 5 UI 일부) · `7cf2094`(Phase 5 잔여)
+> **선행 디자인 (UI/엔진)**: `docs/02-design/features/inheritance-farming-residence-or.ui.design.md` v1.1
+> **본 계획서 디자인 (엔진/스크립트)**: [`docs/02-design/features/inheritance-farming-residence-data-infra.engine.design.md`](../02-design/features/inheritance-farming-residence-data-infra.engine.design.md) v1.2
+> **선행 commit**: `ff93e09`(Phase 0+0-Fix 엔진) · `3098d95`(Phase 5 UI 일부) · `7cf2094`(Phase 5 잔여) · `5184d74`(본 계획서)
 > **시한**: 2026-06-12 (Phase 1 진입 3주) / 2026-07-03 (Phase 5 완료 6주, 미달성 시 Phase 0~5 revert)
+> **변경 이력**: v1(초안) · v1.1(J1·J2·J3·J5·J6·J7·J9·J10·J11·J13·J14 + K1·K3 정정) · **v1.2(N3·N4·N7·N8 디자인 통합 정정)**
 > **상태**: Phase 1·2·3 미진행 (외부 데이터 의존)
 
 ---
@@ -15,9 +17,12 @@
 | Phase 1 | 데이터 출처 PoC + 해석례 + 매트릭스 작성 | 12~20h | §2~§5 |
 | Phase 2 | 인접 매트릭스 모듈 (`lib/geo/administrative-district-adjacency.ts`) | 1~2h | §6 |
 | Phase 3 | 역지오코딩 + PNU↔표준코드 매핑 | 4~6h | §7 |
-| **합계** | | **17~28h** | |
+| **합계 (필수)** | | **17~28h** | |
+| Phase 3-선택 (Vworld API 클라이언트 + 캐시) | 2~3h | §7-3.2 | 후속 |
+| **합계 (전체)** | | **19~31h** | |
 
 본 계획서는 Phase 1~3 모두 단일 PR 묶음 또는 phase별 분리 PR 선택 가능. 권장 — 분리 PR(이력 추적 명확).
+§11 분할 PR 합계는 본 §0 합계와 일치해야 함 (J1·J14 정정).
 
 ---
 
@@ -25,10 +30,12 @@
 
 본 계획 완료 시 다음 4 산출물 확보:
 
-1. **`lib/geo/administrative-district-adjacency.ts`** — 250 시·군·구 인접 매트릭스 (행안부 10자리 키)
-2. **`lib/geo/sigungu-code-list.ts`** — 행안부 시·군·구 표준 코드 + 명칭 매핑 (검증·디버깅용)
-3. **`lib/calc/vworld-reverse-geocode.ts`** — 좌표 → sigunguCode 자동 변환 (PNU 파싱 또는 API 호출)
-4. **`docs/03-research/farming-residence-interpretations.md`** — KoreanLaw 해석례 조사 결과 5건+
+1. **`lib/geo/administrative-district-adjacency.ts`** + 동명 `.json` — 250 시·군·구 인접 매트릭스 (행안부 10자리 키). **JSON 위치 = `lib/geo/` 직속** (J9 정정 — `data/`는 raw SHP·KOEDB만, 빌드 산출물은 lib/geo/ commit)
+2. **`lib/geo/sigungu-code-list.ts`** — 행안부 시·군·구 표준 코드(10자리) + 명칭 매핑. **생성 phase = Phase 1-A**(J2 정정 — KOEDB 파싱 후 즉시 산출, Phase 2·3 의존)
+3. **`lib/geo/pnu-sigungu.ts`** — `extractSigunguCodeFromPnu` 헬퍼 (PR-4 추출, 디자인 §3-5 M1). 현재 FarmingEligibilitySection 내부 함수를 lib/geo로 이전 + export
+4. **`lib/calc/vworld-reverse-geocode.ts`** — 좌표 → sigunguCode 자동 변환 (PNU 파싱 또는 API 호출, Phase 3 또는 Phase 3-선택). **캐시 = IndexedDB (Dexie)** — 좌표→코드 매핑 영속 보존 (디자인 §7 M3)
+5. **`docs/03-research/farming-residence-interpretations.md`** — KoreanLaw 해석례 조사 결과 5건+
+6. **`.github/workflows/matrix-update.yml`** — 분기 1회 자동 매트릭스 갱신 cron (N3·N7 정정, 디자인 §4-3·§2-D)
 
 ---
 
@@ -141,11 +148,17 @@ fs.writeFileSync(
 ### 4-C.3 실행·검증 (1~2h)
 
 - `npx tsx scripts/build-sigungu-adjacency.ts` 실행 (예상 5~15분, 250×250 = 62,500 쌍)
-- 결과 검증 anchor 10건 — 알려진 인접 쌍:
-  - 서울 강남(1168) ↔ 서초(1165)·송파(1171)
-  - 수원 영통(4111711)~ 용인 기흥(4146100) — 광역시·도 경계 넘는 인접
-  - 부산 동래구(2626) ↔ 금정구(2629)
-  - 제주시(5011) ↔ 서귀포시(5013) (제주 행정시 경계)
+- 결과 검증 anchor 10건 — 행안부 표준 10자리 (J7 정정):
+  - ADJ-1: 서울 강남(1168000000) ↔ 서초(1165000000)
+  - ADJ-2: 서울 강남(1168000000) ↔ 송파(1171000000)
+  - ADJ-3: 수원 영통(4111700000) ↔ 용인 기흥(4146300000) — 광역시·도 경계 넘는 인접
+  - ADJ-4: 부산 동래(2626000000) ↔ 금정(2629000000)
+  - ADJ-5: 제주시(5011000000) ↔ 서귀포시(5013000000) — 제주 행정시 경계
+  - ADJ-6: 세종특별자치시(3611000000) ↔ 인근 시·군 (정책 결정 후 확정)
+  - ADJ-7: 서울 강서(1150000000) ↔ 김포(4157000000) — 시·도 경계
+  - ADJ-8: 인천 강화(2871000000) ↔ 본토 인접 (해상 경계 정책)
+  - ADJ-9: 통영(4839000000) ↔ 거제(4831000000) — 해상 인접 정책 확인 (K3 정정 — 동일 코드 중복 오류 수정. 실제 코드는 KOEDB 검증 후 anchor 확정)
+  - ADJ-10: 매트릭스 전체 시·군·구 수 240~260 범위 검증
 
 ### 4-C.4 결과물
 
@@ -177,7 +190,10 @@ fs.writeFileSync(
 
 ### 6-1. `lib/geo/administrative-district-adjacency.ts`
 
+**선행 조건 (J5)**: `tsconfig.json`에 `"resolveJsonModule": true` 설정. 기존 프로젝트 설정 확인 후 미설정 시 PR-2 또는 PR-3에 추가.
+
 ```typescript
+// J5 — resolveJsonModule 필요. 미설정 시 fs.readFileSync + JSON.parse fallback
 import adjacencyData from "./administrative-district-adjacency.json";
 
 const ADJACENCY: Record<string, string[]> = adjacencyData;
@@ -267,23 +283,29 @@ const result = checkFarmingResidenceCompliance(estateItems, farming, {
 
 ## 8. 도구·환경
 
-### 8-1. 신규 의존성
+### 8-1. 신규 의존성 (J11 — PR-2에서 package.json 변경)
 
 ```bash
+# PR-2 commit: package.json + package-lock.json + scripts/build-sigungu-adjacency.ts 동반
 npm install --save-dev @turf/turf
 npm install --save-dev @types/geojson
 ```
 
-### 8-2. 데이터 파일 (소스 컨트롤 제외)
+### 8-2. 데이터 파일 (소스 컨트롤 제외 + 빌드 산출물 commit)
 
 ```
-data/                                  # .gitignore
-├── LSMD_ADM_SECT_RGN.shp              # 행정안전부 SHP 원본
-├── LSMD_ADM_SECT_RGN.geojson          # 변환된 GeoJSON
-└── beopjeongdong_code.txt             # KOEDB 법정동코드
+data/                                            # .gitignore (raw 원본만)
+├── LSMD_ADM_SECT_RGN.shp                        # 행정안전부 SHP 원본 (~50MB)
+├── LSMD_ADM_SECT_RGN.geojson                    # 변환된 GeoJSON
+└── beopjeongdong_code.txt                       # KOEDB 법정동코드
+
+lib/geo/                                         # commit
+├── administrative-district-adjacency.json       # 빌드 산출물 (~50KB)
+├── administrative-district-adjacency.ts         # resolver 모듈
+└── sigungu-code-list.ts                         # 행안부 표준 코드·명칭 매핑
 ```
 
-`data/`는 `.gitignore` 추가. 빌드 산출물 `lib/geo/administrative-district-adjacency.json`만 commit.
+`data/`는 `.gitignore` 추가. **빌드 산출물 JSON은 lib/geo/ 직속에 commit** (J9 정정).
 
 ### 8-3. 환경변수
 
@@ -326,11 +348,11 @@ VWORLD_API_KEY=...    # Phase 3-2 역지오코딩 (선택)
 
 | 위험 | 대응 |
 |---|---|
-| 행정구역 개편 (연 1~2건) | 매트릭스 갱신 책임 = 본 영농 도메인 (양도세 후속 재사용 시 책임 이관) |
-| SHP 파일 라이선스 (공공누리 1유형 vs 2~4유형) | 공공누리 1유형 확정 시 commit, 그 외 빌드 산출물만 commit |
-| turf.booleanIntersects 정확성 (해안선·섬) | anchor 10건으로 검증, 실패 시 수동 보정 매트릭스 추가 |
+| 행정구역 개편 (연 1~2건) | **갱신 자동화 (J13 정정)**: GitHub Actions cron(월 1회) — `scripts/build-sigungu-adjacency.ts` 재실행 + adjacency anchor 10건 재검증 + 변경 시 PR 자동 생성. 수동 fallback: 행안부 공지 모니터링 + 분기별 수동 재빌드 |
+| SHP 파일 라이선스 (공공누리 1유형 vs 2~4유형) | 공공누리 1유형 확정 시 raw 데이터도 `data/`에 commit 검토. 그 외 빌드 산출물(`lib/geo/*.json`)만 commit. 라이선스 표기는 `lib/geo/README.md` 신규 |
+| turf.booleanIntersects 정확성 (해안선·섬) | anchor 10건으로 검증, 실패 시 수동 보정 매트릭스 추가. ADJ-8(인천 강화)·ADJ-9(통영·거제) 해상 케이스 필수 검증 |
 | Vworld API rate limit | 캐시 영구화 + 사용자 1회 호출 가정 (편집 모드 외 호출 0) |
-| Phase 1 미완 + 2026-07-03 시한 | Phase 0~5 revert — `git revert ff93e09 3098d95 7cf2094` |
+| Phase 1 미완 + 2026-07-03 시한 | Phase 0~5 revert — `git revert ff93e09 3098d95 7cf2094 5184d74` (계획서까지 포함) |
 
 ---
 
@@ -338,12 +360,28 @@ VWORLD_API_KEY=...    # Phase 3-2 역지오코딩 (선택)
 
 | # | PR 제목 | 작업량 | 의존 |
 |---|---|---|---|
-| 1 | 해석례 + 데이터 출처 PoC 조사 보고서 | 5~7h | — |
-| 2 | turf.js 매트릭스 스크립트 + 산출 JSON | 5~8h | PR-1 정책 결정 |
-| 3 | adjacency.ts 모듈 + anchor 10건 + calcFarmingDeduction 통합 | 1~2h | PR-2 |
-| 4 | PNU 매핑 anchor + PropertyValuationForm 통합 | 1~2h | PR-3 |
-| 5 (선택) | Vworld 역지오코딩 클라이언트 + 캐시 | 2~3h | PR-4 |
-| **합계** | | **14~22h** | |
+| 1 | 해석례(3~4h) + 데이터 출처 PoC(2~4h) 조사 보고서 + KOEDB 파싱 → sigungu-code-list.ts | **6~10h** | — |
+| 2 | turf.js 매트릭스 스크립트 + 산출 JSON + package.json @turf/turf 추가 (J11) | 5~8h | PR-1 정책 결정 |
+| 3 | adjacency.ts 모듈 + anchor 10건 + calcFarmingDeduction 통합 + tsconfig resolveJsonModule (J5) | 1~2h | PR-2 |
+| 4 | PNU 매핑 anchor 10건 + PropertyValuationForm 통합 | 1~2h | **PR-1·PR-3** (J10 정정 — KOEDB 의존 + adjacency 통합 검증) |
+| 5 (선택) | Vworld 역지오코딩 API 클라이언트 + **IndexedDB(Dexie) 캐시** (N4·M3) | 2~3h | PR-4 |
+| 6 (선택) | **CI cron 매트릭스 갱신 워크플로** (N7·N8) — 분기 1회 자동 PR | 1~2h | PR-3 |
+| **합계 (PR-1~4 필수)** | | **13~22h** | |
+| **합계 (PR-5·6 포함)** | | **16~27h** | |
+
+§0 합계와의 정합 산수 (K1 정정):
+
+| 매핑 | Phase | 시간 |
+|---|---|---|
+| PR-1 (해석례 3~4h + PoC 2~4h + KOEDB→sigungu-code-list 1~2h) | Phase 1-A·1-B·1-D 일부 | 6~10h |
+| PR-2 (turf.js 매트릭스 5~8h) | Phase 1-C | 5~8h |
+| PR-1 + PR-2 합 | **Phase 1** | **11~18h** vs §0 12~20h (≈ 1~2h 보수 여유) |
+| PR-3 (adjacency.ts + 통합) | **Phase 2** | **1~2h** ↔ §0 1~2h |
+| PR-4 (PNU 매핑 + UI 통합) | Phase 3 (필수) | 1~2h |
+| PR-5 선택 (Vworld 역지오코딩) | Phase 3-선택 | 2~3h |
+| PR-4 + PR-5 합 | **Phase 3 전체** | **3~5h** vs §0 4~6h+2~3h (보수 여유 ~1~4h) |
+
+**정합 합계**: PR-1~4 필수 = 13~22h, PR-5 포함 = 15~25h. §0 합계 17~28h(필수) / 19~31h(전체)와 ~2~6h 보수 여유 — Phase 1 PoC가 실제 데이터 응답성에 따라 변동. 시한(2026-06-12) 진입 시 보수 여유 활용.
 
 분할 commit 메시지 한국어 — `📊 chore: 영농상속공제 §16②1호나 행정구역 데이터 PoC (PR-1)` 등.
 
