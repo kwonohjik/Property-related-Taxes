@@ -58,8 +58,8 @@ export type AssetCategory =
   | "deposit"                // 전세보증금 반환채권 (임차인인 경우 — 상속세 전용)
   | "other";                 // 기타재산
 
-/** 재산 평가 입력 (단일 자산) */
-export interface EstateItem {
+/** 재산 평가 입력 (단일 자산). 위치 필드 5종(좌표·주소·시·군·구 코드)은 EstateLocationFields mixin */
+export interface EstateItem extends EstateLocationFields {
   id: string;
   category: AssetCategory;
   name: string;
@@ -134,12 +134,7 @@ export interface EstateItem {
   /** 법인 총자산 (사업무관자산 비율 분모). 미입력 시 차감 미적용 (legacy). */
   corporateTotalAssets?: number;
 
-  /** 자산 소재지 좌표 (F-10 §16②1호나). 농지 그룹용. 타입: inheritance-asset-location.types.ts */
-  estateLatLng?: LatLng;
-  /** 어선·어업권 자산 전용 — 선적지·어장 연안 좌표 (§16②1호나 후단) */
-  fishingAnchorLatLng?: LatLng;
-  /** 자산 소재지 주소 — AddressSearch 영속화 (C2 휘발 버그 수정 2026-05-22) */
-  estateAddress?: EstateAddress;
+  // 위치 필드(좌표·주소·시·군·구 코드)는 EstateLocationFields mixin — 본 인터페이스에 직접 정의 안 함
 }
 
 /**
@@ -550,7 +545,7 @@ export interface InheritanceDeductionInput {
 import type { FarmingInheritanceInput, FarmingDeductionDetail } from "./inheritance-farming.types";
 import type { FamilyBusinessCategory, FamilyBusinessInheritanceInput, FamilyBusinessDeductionDetail } from "./inheritance-family-business.types";
 import type { CorporateNonBusinessAssets } from "./inheritance-corporate-non-business.types";
-import type { LatLng, EstateAddress } from "./inheritance-asset-location.types";
+import type { EstateLocationFields } from "./inheritance-asset-location.types";
 export type { FarmingInheritanceInput, FarmingDeductionDetail, FarmingEligibilityResult } from "./inheritance-farming.types";
 export type { FamilyBusinessCategory, FamilyBusinessInheritanceInput, FamilyBusinessIneligibleReason, FamilyBusinessDeductionDetail, FamilyBusinessCap, FamilyBusinessMediumGuard } from "./inheritance-family-business.types";
 export type { CorporateNonBusinessAssets, CorporateStockAdjustedResult } from "./inheritance-corporate-non-business.types";

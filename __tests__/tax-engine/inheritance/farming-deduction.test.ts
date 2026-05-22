@@ -438,3 +438,81 @@ describe("evaluateFarmingEligibilityForHeir — heir 단위 평가", () => {
     expect(r.reasons.some((s) => s.includes("§16⑭"))).toBe(true);
   });
 });
+
+// ============================================================
+// v4.1.1 D8 / 디자인 §7-2 — residence echo (anchor E-1·E-2·E-5)
+// ============================================================
+
+describe("calcFarmingDeduction — residence echo (옵션 C 산식 근거)", () => {
+  it("E-1: type=personal + 농지 same_district → result.detail.residence.decedentMatchKind=same_district", () => {
+    const farming = personalOk({
+      decedentResidenceLatLng: { lat: 37.5665, lng: 126.978 },
+      decedentResidenceSigunguCode: "1168000000",
+      heirResidenceLatLng: { lat: 37.5665, lng: 126.978 },
+      heirResidenceSigunguCode: "1168000000",
+    });
+    const estateItems = [
+      {
+        id: "a",
+        category: "real_estate_land" as const,
+        name: "강남 농지",
+        farmingCategory: "farmland" as const,
+        estateLatLng: { lat: 37.5665, lng: 126.978 },
+        estateSigunguCode: "1168000000",
+      },
+    ];
+    const r = calcFarmingDeduction(2_000_000_000, farming, estateItems);
+    expect(r.detail.residence).toBeDefined();
+    expect(r.detail.residence!.decedentMatchKind).toBe("same_district");
+    expect(r.detail.residence!.heirMatchKind).toBe("same_district");
+    expect(r.detail.residence!.decedentAutoMet).toBe(true);
+    expect(r.deduction).toBe(2_000_000_000);
+  });
+
+  it("E-2: 옵션 A 책임 분배 — 자동 fail + 사용자 met=true → eligible=true (matchKind=fail echo)", () => {
+    const farming = personalOk({
+      decedentResidenceMet: true, // 사용자 명시 true
+      heirResidenceMet: true,
+      decedentResidenceLatLng: { lat: 35.1796, lng: 129.0756 },
+      decedentResidenceSigunguCode: "2611000000",
+      heirResidenceLatLng: { lat: 35.1796, lng: 129.0756 },
+      heirResidenceSigunguCode: "2611000000",
+    });
+    const estateItems = [
+      {
+        id: "a",
+        category: "real_estate_land" as const,
+        name: "서울 농지",
+        farmingCategory: "farmland" as const,
+        estateLatLng: { lat: 37.5665, lng: 126.978 },
+        estateSigunguCode: "1168000000",
+      },
+    ];
+    const r = calcFarmingDeduction(1_000_000_000, farming, estateItems);
+    expect(r.detail.eligible).toBe(true); // 사용자 명시가 우선 — 공제 적용
+    expect(r.detail.residence!.decedentMatchKind).toBe("fail"); // 자동은 fail로 echo
+    expect(r.deduction).toBe(1_000_000_000);
+  });
+
+  it("E-5: corporate 트랙 — residence echo 미생성 (§16②2호 거주지 요건 없음)", () => {
+    const r = calcFarmingDeduction(
+      1_000_000_000,
+      corporateOk(),
+      [
+        {
+          id: "a",
+          category: "listed_stock",
+          name: "영농 법인 주식",
+          farmingCategory: "corporate_stock",
+        },
+      ],
+    );
+    expect(r.detail.residence).toBeUndefined();
+    expect(r.deduction).toBe(1_000_000_000);
+  });
+
+  it("E-5b: estateItems 미제공 (legacy) → residence echo 미생성", () => {
+    const r = calcFarmingDeduction(1_000_000_000, personalOk());
+    expect(r.detail.residence).toBeUndefined();
+  });
+});

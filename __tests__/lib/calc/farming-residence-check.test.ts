@@ -234,3 +234,290 @@ describe("checkFarmingResidenceCompliance — 거주지 자동 검증", () => {
     expect(r.heirMinDistanceKm).toBeNull();
   });
 });
+
+// ============================================================
+// FR-9~12: v3 Phase 0 — sigunguCode 동일/연접 OR 분기 (2026-05-22)
+// ============================================================
+
+describe("[FR-v3] 시·군·구 동일/연접 OR 자동 판정", () => {
+  const farmlandSeoul: EstateItem = {
+    id: "land-seoul",
+    category: "real_estate_land",
+    name: "강남 농지",
+    farmingCategory: "farmland",
+    estateLatLng: SEOUL,
+    estateSigunguCode: "1168000000", // 강남구
+  };
+
+  const baseFarming = (
+    extra: Partial<FarmingInheritanceInput>,
+  ): FarmingInheritanceInput => ({
+    type: "personal",
+    decedentEightYearFarming: true,
+    decedentResidenceMet: false,
+    heirIsAdult: true,
+    heirTwoYearFarming: true,
+    heirResidenceMet: false,
+    ...extra,
+  });
+
+  it("FR-9: 거주지 코드 == 자산 코드 → same_district + autoMet=true (좌표 300km 떨어져도)", () => {
+    const r = checkFarmingResidenceCompliance(
+      [farmlandSeoul],
+      baseFarming({
+        decedentResidenceLatLng: BUSAN,
+        decedentResidenceSigunguCode: "1168000000",
+      }),
+    );
+    expect(r.decedentMatchKind).toBe("same_district");
+    expect(r.decedentAutoMet).toBe(true);
+  });
+
+  it("FR-10: 연접 매트릭스 매칭 → adjacent_district", () => {
+    const r = checkFarmingResidenceCompliance(
+      [farmlandSeoul],
+      baseFarming({
+        decedentResidenceLatLng: BUSAN,
+        decedentResidenceSigunguCode: "1165000000",
+      }),
+      {
+        adjacentSigunguCodes: (code) =>
+          code === "1168000000" ? ["1165000000", "1171000000"] : [],
+      },
+    );
+    expect(r.decedentMatchKind).toBe("adjacent_district");
+    expect(r.decedentAutoMet).toBe(true);
+  });
+
+  it("FR-11: 코드 불일치·매트릭스 미주입 → 거리 30km fallback (within_30km)", () => {
+    const r = checkFarmingResidenceCompliance(
+      [farmlandSeoul],
+      baseFarming({
+        decedentResidenceLatLng: { lat: 37.6, lng: 127.0 },
+        decedentResidenceSigunguCode: "1111000000",
+      }),
+    );
+    expect(r.decedentMatchKind).toBe("within_30km");
+    expect(r.decedentAutoMet).toBe(true);
+  });
+
+  it("FR-12: 코드 불일치 + 거리 초과 → fail", () => {
+    const r = checkFarmingResidenceCompliance(
+      [farmlandSeoul],
+      baseFarming({
+        decedentResidenceLatLng: BUSAN,
+        decedentResidenceSigunguCode: "2611000000",
+      }),
+    );
+    expect(r.decedentMatchKind).toBe("fail");
+    expect(r.decedentAutoMet).toBe(false);
+  });
+});
+
+// ============================================================
+// FR-13~21: v4 Phase 0-Fix (C1·C13, 2026-05-22)
+//   - LAND_BASED 5종 → 3종 정정 (agricultural_building·salt_field 제외)
+//   - 산림지 단서 forest_manageable_area
+//   - heir 분리, 다자산 best, 코드만/좌표만 fallback
+// ============================================================
+
+describe("[FR-v4] §16②1호나 정정 — 자산 카테고리·산림지 단서·heir 분리", () => {
+  const baseFarming = (
+    extra: Partial<FarmingInheritanceInput>,
+  ): FarmingInheritanceInput => ({
+    type: "personal",
+    decedentEightYearFarming: true,
+    decedentResidenceMet: false,
+    heirIsAdult: true,
+    heirTwoYearFarming: true,
+    heirResidenceMet: false,
+    ...extra,
+  });
+
+  it("FR-13: agricultural_building은 거주지 OR 대상 아님 → matchKind null (좌표·코드 입력해도 무시)", () => {
+    const item: EstateItem = {
+      id: "barn",
+      category: "real_estate_building",
+      name: "축사",
+      farmingCategory: "agricultural_building",
+      estateLatLng: SEOUL,
+      estateSigunguCode: "1168000000",
+    };
+    const r = checkFarmingResidenceCompliance(
+      [item],
+      baseFarming({
+        decedentResidenceLatLng: SEOUL,
+        decedentResidenceSigunguCode: "1168000000",
+      }),
+    );
+    expect(r.decedentMatchKind).toBeNull();
+    expect(r.decedentAutoMet).toBeNull();
+  });
+
+  it("FR-14: salt_field도 거주지 OR 대상 아님 → matchKind null", () => {
+    const item: EstateItem = {
+      id: "salt",
+      category: "real_estate_land",
+      name: "염전",
+      farmingCategory: "salt_field",
+      estateLatLng: SEOUL,
+      estateSigunguCode: "1168000000",
+    };
+    const r = checkFarmingResidenceCompliance(
+      [item],
+      baseFarming({ decedentResidenceLatLng: SEOUL, decedentResidenceSigunguCode: "1168000000" }),
+    );
+    expect(r.decedentMatchKind).toBeNull();
+  });
+
+  it("FR-15: forest_land + decedentForestManageableArea=true 단독 → forest_manageable_area", () => {
+    const forest: EstateItem = {
+      id: "forest",
+      category: "real_estate_land",
+      name: "보전산지",
+      farmingCategory: "forest_land",
+      estateLatLng: SEOUL,
+      estateSigunguCode: "4111000000", // 수원시
+    };
+    const r = checkFarmingResidenceCompliance(
+      [forest],
+      baseFarming({
+        decedentResidenceLatLng: BUSAN, // 거리 초과
+        decedentResidenceSigunguCode: "2611000000", // 코드 불일치
+        decedentForestManageableArea: true,
+      }),
+    );
+    expect(r.decedentMatchKind).toBe("forest_manageable_area");
+    expect(r.decedentAutoMet).toBe(true);
+  });
+
+  it("FR-16: forest_land + manageable=false + 코드/거리 fail → fail (단서 미적용)", () => {
+    const forest: EstateItem = {
+      id: "forest",
+      category: "real_estate_land",
+      name: "산림지",
+      farmingCategory: "forest_land",
+      estateLatLng: SEOUL,
+      estateSigunguCode: "4111000000",
+    };
+    const r = checkFarmingResidenceCompliance(
+      [forest],
+      baseFarming({
+        decedentResidenceLatLng: BUSAN,
+        decedentResidenceSigunguCode: "2611000000",
+      }),
+    );
+    expect(r.decedentMatchKind).toBe("fail");
+  });
+
+  it("FR-17: farmland(농지)는 단서 미적용 — manageable=true여도 코드/거리 fail이면 fail", () => {
+    const farmland: EstateItem = {
+      id: "land",
+      category: "real_estate_land",
+      name: "농지",
+      farmingCategory: "farmland",
+      estateLatLng: SEOUL,
+      estateSigunguCode: "4111000000",
+    };
+    const r = checkFarmingResidenceCompliance(
+      [farmland],
+      baseFarming({
+        decedentResidenceLatLng: BUSAN,
+        decedentResidenceSigunguCode: "2611000000",
+        decedentForestManageableArea: true, // 단서 농지에 무효
+      }),
+    );
+    expect(r.decedentMatchKind).toBe("fail");
+  });
+
+  it("FR-18: heir 분리 평가 — decedent fail / heir same_district", () => {
+    const land: EstateItem = {
+      id: "land",
+      category: "real_estate_land",
+      name: "농지",
+      farmingCategory: "farmland",
+      estateLatLng: SEOUL,
+      estateSigunguCode: "1168000000",
+    };
+    const r = checkFarmingResidenceCompliance(
+      [land],
+      baseFarming({
+        decedentResidenceLatLng: BUSAN,
+        decedentResidenceSigunguCode: "2611000000",
+        heirResidenceLatLng: SEOUL,
+        heirResidenceSigunguCode: "1168000000",
+      }),
+    );
+    expect(r.decedentMatchKind).toBe("fail");
+    expect(r.heirMatchKind).toBe("same_district");
+  });
+
+  it("FR-19: 다자산 best 선정 — 자산 A(fail) + 자산 B(same) → best=same_district", () => {
+    const items: EstateItem[] = [
+      {
+        id: "a",
+        category: "real_estate_land",
+        name: "원거리 농지",
+        farmingCategory: "farmland",
+        estateLatLng: BUSAN,
+        estateSigunguCode: "2611000000",
+      },
+      {
+        id: "b",
+        category: "real_estate_land",
+        name: "근거리 농지",
+        farmingCategory: "farmland",
+        estateLatLng: SEOUL,
+        estateSigunguCode: "1168000000",
+      },
+    ];
+    const r = checkFarmingResidenceCompliance(
+      items,
+      baseFarming({
+        decedentResidenceLatLng: SEOUL,
+        decedentResidenceSigunguCode: "1168000000",
+      }),
+    );
+    expect(r.decedentMatchKind).toBe("same_district");
+  });
+
+  it("FR-20: 코드만 입력(좌표 없음) → same_district (거리 fallback 무시)", () => {
+    const land: EstateItem = {
+      id: "land",
+      category: "real_estate_land",
+      name: "농지",
+      farmingCategory: "farmland",
+      estateSigunguCode: "1168000000",
+      // estateLatLng 없음
+    };
+    const r = checkFarmingResidenceCompliance(
+      [land],
+      baseFarming({
+        decedentResidenceSigunguCode: "1168000000",
+        // decedentResidenceLatLng 없음
+      }),
+    );
+    expect(r.decedentMatchKind).toBe("same_district");
+    expect(r.decedentMinDistanceKm).toBeNull();
+  });
+
+  it("FR-21: 어선 fishing_vessel — fishingAnchorSigunguCode/LatLng 기준", () => {
+    const vessel: EstateItem = {
+      id: "boat",
+      category: "real_estate_building",
+      name: "어선",
+      farmingCategory: "fishing_vessel",
+      fishingAnchorLatLng: BUSAN,
+      fishingAnchorSigunguCode: "2611000000",
+    };
+    const r = checkFarmingResidenceCompliance(
+      [vessel],
+      baseFarming({
+        decedentResidenceLatLng: BUSAN,
+        decedentResidenceSigunguCode: "2611000000",
+      }),
+    );
+    expect(r.decedentMatchKind).toBe("same_district");
+    expect(r.decedentAutoMet).toBe(true);
+  });
+});

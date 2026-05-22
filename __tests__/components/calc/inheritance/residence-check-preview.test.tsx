@@ -20,6 +20,8 @@ function makeResult(over: Partial<FarmingResidenceCheckResult> = {}): FarmingRes
     heirMet: false,
     decedentAutoMet: null,
     heirAutoMet: null,
+    decedentMatchKind: null,
+    heirMatchKind: null,
     decedentMinDistanceKm: null,
     heirMinDistanceKm: null,
     ...over,

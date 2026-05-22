@@ -24,6 +24,7 @@ import type {
   FarmingInheritanceInput,
 } from "../types/inheritance-farming.types";
 import { FARMING_MAX } from "../types/inheritance-farming.types";
+import { checkFarmingResidenceCompliance } from "@/lib/calc/farming-residence-check";
 import {
   calcFamilyBusinessDeductionDirect,
   calcFamilyBusinessDeductionLegacy,
@@ -370,6 +371,7 @@ export function deriveQualifiedHeirIds(
 export function calcFarmingDeduction(
   farmingAssetValue: number,
   farming?: FarmingInheritanceInput,
+  estateItems?: EstateItem[],
 ): {
   deduction: number;
   breakdown: CalculationStep[];
@@ -386,6 +388,22 @@ export function calcFarmingDeduction(
   const qualifiedHeirCount =
     farming?.heirAssessments !== undefined
       ? (deriveQualifiedHeirIds(farming) ?? []).length
+      : undefined;
+
+  // v4.1.1 D8/14지점 ⑦ — type="personal"일 때만 거주지 OR echo 생성 (corporate 트랙은 §16②2호 거주지 요건 없음)
+  const residence =
+    farming?.type === "personal" && estateItems
+      ? (() => {
+          const r = checkFarmingResidenceCompliance(estateItems, farming);
+          return {
+            decedentMatchKind: r.decedentMatchKind,
+            heirMatchKind: r.heirMatchKind,
+            decedentAutoMet: r.decedentAutoMet,
+            heirAutoMet: r.heirAutoMet,
+            decedentMinDistanceKm: r.decedentMinDistanceKm,
+            heirMinDistanceKm: r.heirMinDistanceKm,
+          };
+        })()
       : undefined;
 
   // 자격 미충족 — 공제 0 + 사용자 입력값은 detail에 보존
@@ -409,6 +427,7 @@ export function calcFarmingDeduction(
         cappedDeduction: 0,
         qualifiedHeirCount,
         totalHeirCount,
+        residence,
       },
     };
   }
@@ -425,6 +444,7 @@ export function calcFarmingDeduction(
         cappedDeduction: 0,
         qualifiedHeirCount,
         totalHeirCount,
+        residence,
       },
     };
   }
@@ -448,6 +468,7 @@ export function calcFarmingDeduction(
       cappedDeduction: capped,
       qualifiedHeirCount,
       totalHeirCount,
+      residence,
     },
   };
 }
@@ -614,8 +635,12 @@ export function calcInheritanceDeductions(
   }
   const cohabitationDeduction = cohabitResult.deduction;
 
-  // ⑦ 영농공제 (§18의3 + 시행령 §16, 2026-05-21 정밀화)
-  const farmingResult = calcFarmingDeduction(input.farmingAssetValue ?? 0, input.farming);
+  // ⑦ 영농공제 (§18의3 + 시행령 §16, 2026-05-21 정밀화 + v4.1.1 D8 residence echo)
+  const farmingResult = calcFarmingDeduction(
+    input.farmingAssetValue ?? 0,
+    input.farming,
+    familyBusinessAux?.estateItems,
+  );
   const farmingDeduction = farmingResult.deduction;
   const farmingDetail = farmingResult.detail;
 

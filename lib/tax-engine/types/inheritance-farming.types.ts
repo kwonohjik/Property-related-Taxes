@@ -10,6 +10,7 @@
  */
 
 import type { CalculationStep } from "./inheritance-gift.types";
+import type { SigunguMatchKind } from "./inheritance-asset-location.types";
 
 /**
  * 영농상속 자격 입력 (§18의3 + 시행령 §16).
@@ -69,6 +70,14 @@ export interface FarmingInheritanceInput {
   decedentResidenceAddress?: { road?: string; jibun?: string; building?: string; detail?: string };
   /** 상속인 주소 (동일) */
   heirResidenceAddress?: { road?: string; jibun?: string; building?: string; detail?: string };
+  /** 피상속인 거주지 시·군·구 코드 (v3 Phase 0 2026-05-22) — §16②1호나 동일/연접 OR 자동 판정 */
+  decedentResidenceSigunguCode?: string;
+  /** 상속인 거주지 시·군·구 코드 */
+  heirResidenceSigunguCode?: string;
+  /** 피상속인 — 산림지 §16②1호나 단서 "통상적으로 직접 경영할 수 있는 지역" (v4 C1-F, KoreanLaw 검증 2026-05-22). farmingCategory=forest_land일 때만 의미 */
+  decedentForestManageableArea?: boolean;
+  /** 상속인 — 산림지 단서 (동일) */
+  heirForestManageableArea?: boolean;
 
   // ─ 부록 A: 상속인별 분리 자격 평가 (FH-1~6, 2026-05-22, KoreanLaw §16⑭ 검증 완료 `20f75e2`) ─
   /**
@@ -109,6 +118,20 @@ export interface FarmingDeductionDetail {
   qualifiedHeirCount?: number;
   /** 부록 A — heirAssessments 입력 시 전체 평가 대상 heir 수 */
   totalHeirCount?: number;
+  /**
+   * v4.1.1 D8/14지점 ⑦ — §16②1호나 거주지 OR 자동 판정 결과 echo (옵션 C 산식 근거).
+   * - type="personal"일 때만 생성. corporate 트랙(§16②2호)은 거주지 요건 없음 → undefined.
+   * - legacy(farming=undefined) 또는 좌표·코드 미입력 시 matchKind null.
+   * 결과 카드(InheritanceTaxResultView)에서 "§16②1호나 same_district 자동 확인" 산식 인용용.
+   */
+  residence?: {
+    decedentMatchKind: SigunguMatchKind | null;
+    heirMatchKind: SigunguMatchKind | null;
+    decedentAutoMet: boolean | null;
+    heirAutoMet: boolean | null;
+    decedentMinDistanceKm: number | null;
+    heirMinDistanceKm: number | null;
+  };
 }
 
 /** 영농상속공제 자격 평가 결과 (evaluateFarmingEligibility 반환) */

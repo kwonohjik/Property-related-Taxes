@@ -251,8 +251,49 @@ export function FarmingDeductionDetailRow({
           / 전체 {detail.totalHeirCount}명 (시행령 §16⑤ 본문)
         </div>
       )}
+      {/*
+        v4.1.1 D8/디자인 §4-4 — §16②1호나 거주지 OR 자동 검증 산식 근거 (옵션 C)
+        - residence === undefined: corporate 트랙 또는 legacy → 라인 미노출
+        - matchKind === null: 좌표·코드 미입력 → 사용자 명시 boolean 단독
+        - matchKind !== null: 자동 검증 결과 인용
+      */}
+      {detail.residence && (
+        <div className="text-[10px] text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/30 rounded p-2">
+          {detail.residence.decedentMatchKind === null && detail.residence.heirMatchKind === null ? (
+            <span>📍 거주지: 사용자 명시 (자동 거주지 검증 미수행 — 좌표·코드 미입력)</span>
+          ) : (
+            <>
+              📍 §16②1호나 거주지 자동 검증:
+              <span className="ml-1 font-semibold">
+                피상속인 {labelMatchKind(detail.residence.decedentMatchKind)}
+              </span>{" "}
+              ·{" "}
+              <span className="font-semibold">
+                상속인 {labelMatchKind(detail.residence.heirMatchKind)}
+              </span>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
+}
+
+function labelMatchKind(kind: "same_district" | "adjacent_district" | "within_30km" | "forest_manageable_area" | "fail" | null): string {
+  switch (kind) {
+    case "same_district":
+      return "동일 시·군·구";
+    case "adjacent_district":
+      return "연접 시·군·구";
+    case "within_30km":
+      return "30km 직선거리";
+    case "forest_manageable_area":
+      return "산림지 통상 경영 지역 (사용자 명시)";
+    case "fail":
+      return "자동 미충족 (사용자 명시값 적용)";
+    case null:
+      return "미입력";
+  }
 }
 
 function LawBadge({ law }: { law: string }) {
