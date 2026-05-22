@@ -36,6 +36,10 @@ import {
   UnlistedStockEditor,
   defaultStockData,
 } from "@/components/calc/UnlistedStockEditor";
+import {
+  UnlistedStockV2Card,
+  createDefaultUnlistedStockV2,
+} from "@/components/calc/inheritance/unlisted-stock-v2/UnlistedStockV2Card";
 
 /**
  * 주식 자산 효과 평가액 — 상장: 평균가×주식수, 비상장: 순자산 OR 가중평균 결과값.
@@ -446,17 +450,44 @@ export function StockValuationForm({
           </p>
           {items.map((item, i) =>
             item.category === "unlisted_stock" ? (
-              <UnlistedStockEditor
-                key={item.id}
-                item={item}
-                index={unlistedItems.indexOf(item)}
-                isRealEstateHeavy={heavyMap[item.id] ?? false}
-                onUpdate={(updated) => handleUpdate(i, updated)}
-                onUpdateHeavy={(v) => handleHeavy(item.id, v)}
-                onRemove={() => handleRemove(i)}
-                mode={mode}
-                heirs={heirs}
-              />
+              <div key={item.id} className="space-y-3">
+                <UnlistedStockEditor
+                  item={item}
+                  index={unlistedItems.indexOf(item)}
+                  isRealEstateHeavy={heavyMap[item.id] ?? false}
+                  onUpdate={(updated) => handleUpdate(i, updated)}
+                  onUpdateHeavy={(v) => handleHeavy(item.id, v)}
+                  onRemove={() => handleRemove(i)}
+                  mode={mode}
+                  heirs={heirs}
+                />
+                {/* V2 평가 모드 (별지 부표3 완전 재현) — optional */}
+                <ToggleCard
+                  tone="violet"
+                  title="V2 평가 모드 — 별지 부표3 완전 재현"
+                  description="ON: 사업연도 가산·차감, 자본금 변동, 자산·부채 상세, 영업권·할증평가 자동 산출. 위 간이 입력은 무시됩니다."
+                  checked={!!item.unlistedStockValuationV2}
+                  onCheckedChange={(on) => {
+                    if (on) {
+                      handleUpdate(i, {
+                        ...item,
+                        unlistedStockValuationV2: createDefaultUnlistedStockV2(),
+                      });
+                    } else {
+                      const { unlistedStockValuationV2: _, ...rest } = item;
+                      handleUpdate(i, rest as typeof item);
+                    }
+                  }}
+                />
+                {item.unlistedStockValuationV2 && (
+                  <UnlistedStockV2Card
+                    input={item.unlistedStockValuationV2}
+                    onChange={(next) =>
+                      handleUpdate(i, { ...item, unlistedStockValuationV2: next })
+                    }
+                  />
+                )}
+              </div>
             ) : null,
           )}
         </div>

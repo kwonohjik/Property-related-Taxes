@@ -1,0 +1,223 @@
+"use client";
+
+/**
+ * PerShareValuationResultCard — 별지 부표3 1쪽 3.1주당 가액 평가 결과 ③~⑨
+ *
+ * 결과는 useMemo로 evaluateUnlistedStockV2를 실시간 호출하여 표시.
+ * 입력 미완성 시 안전한 placeholder.
+ *
+ * Plan: docs/00-pm/inheritance-unlisted-stock-valuation-besshi-4-buppyo-3.plan.md
+ * UI Design: docs/02-design/features/inheritance-unlisted-stock-valuation.ui.design.md §7
+ */
+
+import { useMemo } from "react";
+import { evaluateUnlistedStockV2 } from "@/lib/tax-engine/property-valuation/unlisted-orchestrator";
+import type { UnlistedStockValuationInput } from "@/lib/tax-engine/types/unlisted-stock-valuation.types";
+
+export interface PerShareValuationResultCardProps {
+  input: UnlistedStockValuationInput;
+}
+
+function fmt(n: number): string {
+  return n.toLocaleString();
+}
+
+export function PerShareValuationResultCard({ input }: PerShareValuationResultCardProps) {
+  const result = useMemo(() => {
+    try {
+      // 최소 입력 검증
+      if (!input.totalShares || input.totalShares <= 0) return null;
+      if (!input.ownedShares || input.ownedShares <= 0) return null;
+      return evaluateUnlistedStockV2(input);
+    } catch {
+      return null;
+    }
+  }, [input]);
+
+  if (!result) {
+    return (
+      <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-4 text-center text-[12px] text-gray-500">
+        입력값을 채우면 평가 결과가 자동 계산됩니다.
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-lg border border-indigo-300 bg-indigo-50/60 p-4 space-y-3">
+      <div className="flex items-center gap-2">
+        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-200 text-[11px] font-bold text-indigo-800 select-none">6</span>
+        <p className="text-sm font-semibold text-indigo-800">1주당 가액의 평가 (별지 1쪽 ③~⑨)</p>
+      </div>
+
+      {/* ③·④·⑤·⑥-㉠·㉡·⑥ */}
+      <div className="space-y-2 text-[12px]">
+        <ResultRow
+          cellNum="③"
+          label="순자산가액"
+          value={`${fmt(result.netAssetTotal)}원`}
+          hint={`영업권 포함 전: ${fmt(result.goodwillCalculation.selfCapital)}원 + 영업권: ${fmt(result.goodwillCalculation.goodwillFinal)}원`}
+          law="상증령 §55 ① + §59 ②"
+        />
+        <ResultRow
+          cellNum="④"
+          label="1주당 순자산가치"
+          value={`${fmt(result.netAssetPerShare)}원`}
+          hint={`= ${fmt(result.netAssetTotal)}원 ÷ ${fmt(result.netAssetTotal > 0 ? Math.round(result.netAssetTotal / result.netAssetPerShare) : 0)}주 (발행주식총수)`}
+          law="상증령 §54 ②"
+        />
+        <ResultRow
+          cellNum="⑤"
+          label="1주당 순손익가치"
+          value={`${fmt(result.netIncomePerShare)}원`}
+          hint={`최근 3년 가중평균 ${fmt(result.weightedNetIncomePerShare)}원 ÷ 환원율 ${(result.capitalizationRate * 100).toFixed(0)}%`}
+          law="상증령 §56 ① + 상증규 §17 (10%)"
+        />
+        <ResultRow
+          cellNum="⑥-㉠"
+          label="가중평균"
+          value={`${fmt(result.weightedAvgPerShare)}원`}
+          hint="(⑤ × 3 + ④ × 2) ÷ 5 (일반) 또는 (⑤ × 2 + ④ × 3) ÷ 5 (부동산과다보유)"
+          law="상증령 §54 ① 본문"
+        />
+        <ResultRow
+          cellNum="⑥-㉡"
+          label="80% 하한"
+          value={`${fmt(result.netAssetFloor80)}원`}
+          hint={`④ × 80%${result.netAssetFloorApplied ? " (★ 발동)" : ""}`}
+          law="상증령 §54 ① 단서"
+        />
+        <ResultRow
+          cellNum="⑥"
+          label="1주당 평가액"
+          value={`${fmt(result.finalPerShareValue)}원`}
+          hint={`MAX(⑥-㉠, ⑥-㉡)${result.netAssetFloorApplied ? " — 80% 하한 우선" : " — 가중평균 우선"}`}
+          law="상증령 §54 ①"
+          emphasized
+        />
+
+        {/* ⑦·⑧·⑨ 할증평가 */}
+        {result.premiumRate > 0 ? (
+          <>
+            <ResultRow
+              cellNum="⑧"
+              label="최대주주 할증평가"
+              value={`${fmt(result.premiumPerShare)}원`}
+              hint={`⑥ × (1 + ${(result.premiumRate * 100).toFixed(0)}%) = ${fmt(result.finalPerShareValue)} × 1.${(result.premiumRate * 100).toFixed(0)}`}
+              law="상증법 §63 ③"
+            />
+          </>
+        ) : (
+          <>
+            <ResultRow
+              cellNum="⑦"
+              label="비최대주주 1주당 평가액"
+              value={`${fmt(result.perShareValueNonMaxShareholder)}원`}
+              hint={result.premiumExclusionReason ? `최대주주 할증 배제 사유: ${result.premiumExclusionReason}` : "비최대주주"}
+              law="상증법 §63 ③ 본문 + 상증령 §53"
+            />
+          </>
+        )}
+
+        <div className="border-t-2 border-indigo-300 pt-2 mt-2">
+          <ResultRow
+            cellNum="⑨"
+            label="보충적 평가가액"
+            value={`${fmt(result.finalPerShareForReporting)}원`}
+            hint={result.premiumRate > 0 ? "최대주주 할증 후 ⑧" : "할증 미적용 ⑦"}
+            law="상증법 §63 ① 나목 + ③"
+            emphasized
+          />
+          <ResultRow
+            cellNum="총"
+            label="비상장주식 평가액"
+            value={`${fmt(result.totalValuation)}원`}
+            hint={`⑨ × 보유 주식수`}
+            law=""
+            emphasized
+          />
+        </div>
+      </div>
+
+      {/* 영업권 평가 상세 */}
+      {result.goodwillCalculation.goodwillFinal > 0 && (
+        <div className="rounded border border-amber-200 bg-amber-50 p-2 space-y-1 text-[11px]">
+          <p className="font-semibold text-amber-800">영업권 평가 (상증령 §59 ②)</p>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
+            <span>가. 3년 가중평균 순손익액</span>
+            <span className="font-mono text-right">{fmt(result.goodwillCalculation.weightedAvg3y)}원</span>
+            <span>나. 가 × 50%</span>
+            <span className="font-mono text-right">{fmt(result.goodwillCalculation.weightedAvgHalf)}원</span>
+            <span>다. 자기자본</span>
+            <span className="font-mono text-right">{fmt(result.goodwillCalculation.selfCapital)}원</span>
+            <span>마. 다 × {(result.goodwillCalculation.rate * 100).toFixed(0)}% (§19①)</span>
+            <span className="font-mono text-right">{fmt(result.goodwillCalculation.selfCapitalRate)}원</span>
+            <span>초과이익 (나 − 마)</span>
+            <span className="font-mono text-right">{fmt(result.goodwillCalculation.annualExcessProfit)}원</span>
+            <span className="font-bold">자. 영업권 평가액</span>
+            <span className="font-mono text-right font-bold">{fmt(result.goodwillCalculation.goodwillFinal)}원</span>
+          </div>
+        </div>
+      )}
+
+      {/* §55③ 영업권 배제 안내 */}
+      {result.goodwillCalculation.excludedByLaw && (
+        <div className="rounded border border-amber-300 bg-amber-100/60 p-2 text-[11px] text-amber-800">
+          ⚠️ 영업권 자동 배제 (상증령 §55 ③) — 사유: {result.goodwillCalculation.excludedByLaw}
+        </div>
+      )}
+
+      {/* 할증 배제 안내 */}
+      {result.premiumExclusionReason && (
+        <div className="rounded border border-violet-300 bg-violet-100/60 p-2 text-[11px] text-violet-800">
+          ℹ️ 최대주주 할증평가 배제 — 사유: {result.premiumExclusionReason} (상증령 §53 ⑧)
+        </div>
+      )}
+
+      {/* 적용 규칙 */}
+      {result.appliedRules.length > 0 && (
+        <details className="text-[10px] text-gray-600">
+          <summary className="cursor-pointer hover:text-gray-800">적용 규칙 ({result.appliedRules.length}건)</summary>
+          <ul className="list-disc ml-4 mt-1 space-y-0.5">
+            {result.appliedRules.map((r, i) => (
+              <li key={i}>{r}</li>
+            ))}
+          </ul>
+        </details>
+      )}
+
+      {/* 경고 */}
+      {result.warnings.length > 0 && (
+        <div className="rounded border border-rose-200 bg-rose-50 p-2 text-[11px] text-rose-700 space-y-1">
+          {result.warnings.map((w, i) => (
+            <div key={i}>⚠️ {w}</div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface ResultRowProps {
+  cellNum: string;
+  label: string;
+  value: string;
+  hint?: string;
+  law: string;
+  emphasized?: boolean;
+}
+
+function ResultRow({ cellNum, label, value, hint, law, emphasized }: ResultRowProps) {
+  return (
+    <div className={`grid grid-cols-[3rem_1fr_auto] gap-2 items-baseline py-1 ${emphasized ? "bg-indigo-100/60 rounded px-2" : ""}`}>
+      <span className={`font-mono text-[11px] ${emphasized ? "text-indigo-900 font-bold" : "text-indigo-700"}`}>{cellNum}</span>
+      <div>
+        <div className={`${emphasized ? "font-bold text-indigo-900" : ""}`}>{label}</div>
+        {hint && <div className="text-[10px] text-gray-500">{hint}</div>}
+        {law && <div className="text-[10px] text-indigo-600 italic">{law}</div>}
+      </div>
+      <span className={`font-mono ${emphasized ? "text-indigo-900 font-bold text-sm" : "text-indigo-800"}`}>
+        {value}
+      </span>
+    </div>
+  );
+}
