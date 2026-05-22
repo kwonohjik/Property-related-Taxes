@@ -132,8 +132,28 @@ export interface UnlistedStockValuationInput {
   totalShares: number;                   // 발행주식총수 (평가기준일 현재)
   ownedShares: number;                   // 피상속인·수증인 소유 주식수
 
-  /** 부동산과다보유법인 여부 — 소법 §94①4호다목 (자산 50% 이상) */
+  /** 부동산과다보유법인 여부 — 소법 §94①4호다목 (자산 50% 이상). PR-F 자동 모드 시 도출. */
   isRealEstateHeavy: boolean;
+
+  /**
+   * PR-F (UI 통합 v3): §54⑤ 부동산과다 자동 판정 모드 (3-state).
+   * "auto": totalAssetsForJudgment / realEstateAssetsForJudgment 비율로 자동 판정
+   * "manual_on" / "manual_off": isRealEstateHeavy 직접 override
+   * Default "auto" — UI 첫 진입 시 자동 모드.
+   */
+  realEstateHeavyMode?: "auto" | "manual_on" | "manual_off";
+  /** §54⑤ 자동 판정용 자산총액 (재무상태표상). manual 모드 시 미사용. */
+  totalAssetsForJudgment?: number;
+  /** §54⑤ 자동 판정용 부동산 자산 합계 (소법 §94①4호다목1·2). manual 모드 시 미사용. */
+  realEstateAssetsForJudgment?: number;
+
+  /**
+   * PR-E (UI 통합 v3): §22② 최대주주 추가공제 제외 자동 도출 모드 (3-state).
+   * - "auto": ownedShares / totalShares 비율 자동 판정 (deriveSection22MajorShareholder)
+   * - "manual_on": 사용자 명시 ON / "manual_off": 사용자 명시 OFF
+   * ※ §22②(추가공제 제외)는 §63③(할증평가, isMaxShareholder)와 다른 개념.
+   */
+  section22MajorShareholderMode?: "auto" | "manual_on" | "manual_off";
 
   /** §54④ 순자산 단독 평가 사유 (5종) */
   netAssetOnlyReason?: UnlistedNetAssetOnlyReason;
