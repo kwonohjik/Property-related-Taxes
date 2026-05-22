@@ -78,6 +78,10 @@ export function createDefaultUnlistedStockV2(): UnlistedStockValuationInput {
     capitalChanges: [],
     netAssetValueRaw: { ...EMPTY_NET_ASSET },
     isContinuousLossLastThreeYears: false,
+    // ★ 법정 고정값 — UI 입력 위젯 미노출이 의도적 설계
+    //   capitalizationRate (§54① 환원율): 상증규 §17에 의해 100분의 10 고정 (KoreanLaw 검증 2026-05-22)
+    //   goodwillRate (§59② 영업권 이자율): 상증규 §19①에 의해 100분의 10 고정
+    //   → 두 값 모두 법령 본칙으로 고정되어 사용자 변경 불가. UI에 노출하지 않음.
     capitalizationRate: 0.10,
     isMaxShareholder: false,
     companySize: "large",
