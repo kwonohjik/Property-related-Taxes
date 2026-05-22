@@ -170,6 +170,14 @@ export interface FamilyBusinessDeductionDetail {
   finalValue: number;
   /** 공제액 (eligible=false 시 0, 그 외 min(finalValue, appliedCap)) */
   deduction: number;
+  /**
+   * 가업상속공제 적용률 (소득세법 시행령 §163의2③ — Track 2/4 prefill 소스).
+   * 산식: deduction / finalValue (분모 0 시 0).
+   * 개인가업(§163의2③1호) + 법인가업(§163의2③2호) 자산별 단순화 — 본 PR 통일 산식.
+   * 자산별 분리(법인 사업관련자산 / 총자산)는 후속 PR transfer-fb-cgt-credit-integration.
+   * 범위: 0 ≤ appliedRate ≤ 1.
+   */
+  appliedRate: number;
   /** 직접 입력 모드 사용 여부 (familyBusinessDirectAmount 사용 시 true) */
   usedDirectInput: boolean;
   /** 200% 가드 산정 메타 (중견기업 한정) */

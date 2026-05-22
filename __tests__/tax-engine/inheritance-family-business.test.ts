@@ -489,3 +489,75 @@ describe("FB-INTEGRATION — Phase B 통합 산출", () => {
     expect(r.deduction).toBe(30_000_000_000);
   });
 });
+
+// ============================================================
+// FB-APPLIED-RATE — 소득세법 시행령 §163의2③ 적용률 carry (Track 2/4 prefill 소스)
+// ============================================================
+
+describe("FB-APPLIED-RATE — 가업상속공제 적용률 (소령 §163의2③)", () => {
+  it("FB-RATE-1: Phase2 캡 미초과 (자산 200억 + 영위 15년 → cap 300억) → appliedRate=1.0", () => {
+    const r = calcFamilyBusinessDeductionPhase2({
+      input: buildPassingFB({ operatingYears: 15 }),
+      estateItems: undefined,
+      familyBusinessValueOverride: 20_000_000_000,
+      taxIfNoFBD: 0,
+      lawRef: INH.FAMILY_BUSINESS_DEDUCTION,
+    });
+    expect(r.deduction).toBe(20_000_000_000);
+    expect(r.detail.appliedRate).toBe(1);
+  });
+
+  it("FB-RATE-2: Phase2 캡 절단 (자산 500억 + 영위 15년 → cap 300억) → appliedRate=0.6", () => {
+    const r = calcFamilyBusinessDeductionPhase2({
+      input: buildPassingFB({ operatingYears: 15 }),
+      estateItems: undefined,
+      familyBusinessValueOverride: 50_000_000_000,
+      taxIfNoFBD: 0,
+      lawRef: INH.FAMILY_BUSINESS_DEDUCTION,
+    });
+    expect(r.deduction).toBe(30_000_000_000);
+    expect(r.detail.appliedRate).toBeCloseTo(0.6, 10);
+  });
+
+  it("FB-RATE-3: 자격 미충족 (영위 9년) → deduction=0 + appliedRate=0", () => {
+    const r = calcFamilyBusinessDeductionPhase2({
+      input: buildPassingFB({ operatingYears: 9 }),
+      estateItems: undefined,
+      familyBusinessValueOverride: 10_000_000_000,
+      taxIfNoFBD: 0,
+      lawRef: INH.FAMILY_BUSINESS_DEDUCTION,
+    });
+    expect(r.deduction).toBe(0);
+    expect(r.detail.appliedRate).toBe(0);
+  });
+
+  it("FB-RATE-4: 직접입력 모드 (100억 < cap 600억) → appliedRate=1.0", () => {
+    const r = calcFamilyBusinessDeductionDirect(10_000_000_000, INH.FAMILY_BUSINESS_DEDUCTION);
+    expect(r.deduction).toBe(10_000_000_000);
+    expect(r.detail.appliedRate).toBe(1);
+  });
+
+  it("FB-RATE-5: 직접입력 모드 캡 초과 (700억 → cap 600억) → finalValue=capped이므로 appliedRate=1.0", () => {
+    const r = calcFamilyBusinessDeductionDirect(70_000_000_000, INH.FAMILY_BUSINESS_DEDUCTION);
+    expect(r.deduction).toBe(60_000_000_000);
+    expect(r.detail.appliedRate).toBe(1);
+  });
+
+  it("FB-RATE-6: legacy 모드 캡 절단 (200억 + 영위 15년 → cap 300억 미초과) → appliedRate=1.0", () => {
+    const r = calcFamilyBusinessDeductionLegacy(20_000_000_000, 15, INH.FAMILY_BUSINESS_DEDUCTION);
+    expect(r.deduction).toBe(20_000_000_000);
+    expect(r.detail.appliedRate).toBe(1);
+  });
+
+  it("FB-RATE-7: legacy 모드 캡 절단 (500억 + 영위 15년 → cap 300억 절단) → appliedRate=0.6", () => {
+    const r = calcFamilyBusinessDeductionLegacy(50_000_000_000, 15, INH.FAMILY_BUSINESS_DEDUCTION);
+    expect(r.deduction).toBe(30_000_000_000);
+    expect(r.detail.appliedRate).toBeCloseTo(0.6, 10);
+  });
+
+  it("FB-RATE-8: 분모 0 가드 (familyBusinessValue=0) → appliedRate=0 (NaN 차단)", () => {
+    const r = calcFamilyBusinessDeductionLegacy(0, 15, INH.FAMILY_BUSINESS_DEDUCTION);
+    expect(r.deduction).toBe(0);
+    expect(r.detail.appliedRate).toBe(0);
+  });
+});

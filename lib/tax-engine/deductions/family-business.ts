@@ -193,6 +193,9 @@ export function calcFamilyBusinessDeductionPhase2(args: {
   // 5) 공제액
   const deduction = cap > 0 ? Math.min(finalValue, cap) : 0;
 
+  // 5-1) 적용률 (소령 §163의2③ — Track 2/4 prefill)
+  const appliedRate = finalValue > 0 ? deduction / finalValue : 0;
+
   // 6) breakdown
   const breakdown = buildPhase2Breakdown({
     operatingYears: input.operatingYears,
@@ -216,6 +219,7 @@ export function calcFamilyBusinessDeductionPhase2(args: {
       manualValue,
       finalValue,
       deduction,
+      appliedRate,
       usedDirectInput: false,
       mediumGuard: guard,
       ofzExemptionActive: ofzExemptionActive || undefined,
@@ -233,6 +237,8 @@ export function calcFamilyBusinessDeductionDirect(
 ): Phase2FamilyBusinessResult {
   const cap = FAMILY_BUSINESS_CAP_30Y;
   const capped = Math.min(directAmount, cap);
+  // 직접입력 모드 — finalValue = capped이므로 capped > 0이면 1.0 (전액 공제), 0이면 0
+  const appliedRate = capped > 0 ? 1 : 0;
   return {
     deduction: capped,
     detail: {
@@ -241,6 +247,7 @@ export function calcFamilyBusinessDeductionDirect(
       operatingYears: 0,
       finalValue: capped,
       deduction: capped,
+      appliedRate,
       usedDirectInput: true,
       breakdown: [
         { label: "가업상속공제 (직접 입력, 한도 600억)", amount: capped, lawRef },
@@ -267,6 +274,7 @@ export function calcFamilyBusinessDeductionLegacy(
         operatingYears: operatingYears ?? 0,
         finalValue: 0,
         deduction: 0,
+        appliedRate: 0,
         usedDirectInput: false,
         breakdown: [],
       },
@@ -274,6 +282,7 @@ export function calcFamilyBusinessDeductionLegacy(
   }
   const cap = familyBusinessCap(operatingYears);
   const deduction = Math.min(familyBusinessValue, cap);
+  const appliedRate = familyBusinessValue > 0 ? deduction / familyBusinessValue : 0;
   return {
     deduction,
     detail: {
@@ -284,6 +293,7 @@ export function calcFamilyBusinessDeductionLegacy(
       manualValue: familyBusinessValue,
       finalValue: familyBusinessValue,
       deduction,
+      appliedRate,
       usedDirectInput: false,
       breakdown: [
         { label: "가업상속재산가액 (legacy)", amount: familyBusinessValue },
