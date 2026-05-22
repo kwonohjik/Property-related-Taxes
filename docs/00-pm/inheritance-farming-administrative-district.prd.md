@@ -5,6 +5,7 @@
 > **선행**: PR-E 인프라 (Haversine 30km, `dd7e2fc`) + 옵션 A 정책 (`1e915f1`)
 > **상태**: Phase 0 + Phase 0-Fix **코드 작성 완료(미커밋)**. Phase 1 진입 대기.
 > **디자인 문서**: [`docs/02-design/features/inheritance-farming-residence-or.ui.design.md`](../02-design/features/inheritance-farming-residence-or.ui.design.md) v1.1 — 14 동기화 지점·케이스 인벤토리·엔진 통합·anchor 계획
+> **Phase 1·2·3 실행 계획서**: [`docs/00-pm/inheritance-farming-residence-data-infra.plan.md`](./inheritance-farming-residence-data-infra.plan.md) — 행안부 데이터 PoC·KoreanLaw 해석례·turf.js 매트릭스 스크립트·PNU 매핑 anchor 분할 PR 5단계
 
 ---
 
