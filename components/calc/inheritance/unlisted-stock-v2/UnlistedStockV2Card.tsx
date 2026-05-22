@@ -10,11 +10,15 @@
  * UI Design: docs/02-design/features/inheritance-unlisted-stock-valuation.ui.design.md §2-1·§6
  */
 
+import { useMemo } from "react";
 import { CorporateInfoSection } from "./CorporateInfoSection";
 import { FiscalYearAdjustmentTable } from "./FiscalYearAdjustmentTable";
 import { CapitalChangeTable } from "./CapitalChangeTable";
 import { NetAssetCalculationTable } from "./NetAssetCalculationTable";
 import { PerShareValuationResultCard } from "./PerShareValuationResultCard";
+import { GoodwillCalculationTable } from "./GoodwillCalculationTable";
+import { BesshiForm4Buppyo3PrintView } from "./BesshiForm4Buppyo3PrintView";
+import { evaluateUnlistedStockV2 } from "@/lib/tax-engine/property-valuation/unlisted-orchestrator";
 import type {
   UnlistedStockValuationInput,
   UnlistedNetAssetOnlyReason,
@@ -151,8 +155,28 @@ export function UnlistedStockV2Card({ input, onChange }: UnlistedStockV2CardProp
         onChange={updateNetAsset}
       />
 
-      {/* 5. 결과 카드 */}
+      {/* 5. 영업권 평가 (자동 표시) */}
+      <GoodwillPanel input={input} />
+
+      {/* 6. 결과 카드 */}
       <PerShareValuationResultCard input={input} />
+
+      {/* 7. 별지 양식 PDF 출력 미리보기 */}
+      <BesshiForm4Buppyo3PrintView input={input} />
     </div>
   );
+}
+
+function GoodwillPanel({ input }: { input: UnlistedStockValuationInput }) {
+  const result = useMemo(() => {
+    try {
+      if (input.totalShares <= 0 || input.ownedShares <= 0) return null;
+      return evaluateUnlistedStockV2(input);
+    } catch {
+      return null;
+    }
+  }, [input]);
+
+  if (!result) return null;
+  return <GoodwillCalculationTable goodwill={result.goodwillCalculation} />;
 }

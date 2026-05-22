@@ -20,6 +20,7 @@ import type {
   PriorGift,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { evaluatePresumedItem } from "@/lib/tax-engine/presumed-inheritance";
+import { evaluateUnlistedStockV2 } from "@/lib/tax-engine/property-valuation/unlisted-orchestrator";
 
 // ────────────────────────────────────────────────────
 // 입력 — InheritanceTaxForm.shared 의 FormState 부분 집합
@@ -61,6 +62,18 @@ export interface InheritanceSummary {
 // ────────────────────────────────────────────────────
 
 function estimateAssetValue(item: EstateItem): number {
+  // V2 비상장주식 평가 우선 (Phase 5-C) — 입력 완성도 충분 시 자동 산정
+  if (item.category === "unlisted_stock" && item.unlistedStockValuationV2) {
+    const v2 = item.unlistedStockValuationV2;
+    if (v2.totalShares > 0 && v2.ownedShares > 0) {
+      try {
+        const result = evaluateUnlistedStockV2(v2);
+        if (result.totalValuation > 0) return result.totalValuation;
+      } catch {
+        // 평가 실패 시 marketValue·standardPrice 등으로 fallback
+      }
+    }
+  }
   // marketValue 우선 → standardPrice → appraisedValue → listed*Shares
   if (item.marketValue && item.marketValue > 0) return item.marketValue;
   if (item.standardPrice && item.standardPrice > 0) return item.standardPrice;
