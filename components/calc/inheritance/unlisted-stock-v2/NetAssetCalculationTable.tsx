@@ -13,8 +13,9 @@
  * Plan: docs/00-pm/inheritance-unlisted-stock-valuation-besshi-4-buppyo-3.plan.md
  */
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import type { UnlistedNetAssetCalculation } from "@/lib/tax-engine/types/unlisted-stock-valuation.types";
 
 interface AssetRow {
@@ -89,7 +90,27 @@ export function NetAssetCalculationTable({
     onChange({ ...netAssetValueRaw, [key]: value });
   }
 
-  // 자동 합산 미리보기
+  // PR-M: 보험법인 토글 — 3 필드 중 하나라도 값이 있으면 default ON, 사용자 수동 override 가능
+  const insuranceHasValue =
+    (netAssetValueRaw.insuranceReservePolicy ?? 0) > 0 ||
+    (netAssetValueRaw.insuranceExtraordinaryReserve ?? 0) > 0 ||
+    (netAssetValueRaw.insuranceSurrenderReserve ?? 0) > 0;
+  const [insuranceCompanyOpen, setInsuranceCompanyOpen] = useState(insuranceHasValue);
+
+  function toggleInsuranceCompany(next: boolean) {
+    setInsuranceCompanyOpen(next);
+    if (!next) {
+      // OFF 시 3 필드 모두 클리어 (silent omission 차단 — UI/엔진 일관성)
+      onChange({
+        ...netAssetValueRaw,
+        insuranceReservePolicy: undefined,
+        insuranceExtraordinaryReserve: undefined,
+        insuranceSurrenderReserve: undefined,
+      });
+    }
+  }
+
+  // 자동 합산 미리보기 (보험법인 3 필드 가산 포함 — 엔진 net-asset-calc.ts:77~79 정합)
   const { totalAssets, totalLiabilities, netAssetBeforeGoodwill } = useMemo(() => {
     const a =
       netAssetValueRaw.bsTotalAssets +
@@ -109,7 +130,10 @@ export function NetAssetCalculationTable({
       netAssetValueRaw.otherProvision -
       netAssetValueRaw.reserveExcluded -
       netAssetValueRaw.allowanceExcluded +
-      netAssetValueRaw.deferredTaxAdjustment;
+      netAssetValueRaw.deferredTaxAdjustment +
+      (netAssetValueRaw.insuranceReservePolicy ?? 0) +
+      (netAssetValueRaw.insuranceExtraordinaryReserve ?? 0) +
+      (netAssetValueRaw.insuranceSurrenderReserve ?? 0);
     const n = Math.max(0, a - l);
     return { totalAssets: a, totalLiabilities: l, netAssetBeforeGoodwill: n };
   }, [netAssetValueRaw]);
@@ -181,6 +205,61 @@ export function NetAssetCalculationTable({
           <span className="font-mono">{totalLiabilities.toLocaleString()}원</span>
         </div>
       </div>
+
+      {/* PR-M: 보험법인 부채 가산 (§17의2 4호 단서 나·다) */}
+      <ToggleCard
+        tone="violet"
+        title="보험사업·보험회사 여부"
+        description="해당 시 책임준비금·비상위험준비금·해약환급금준비금을 부채에 가산 (§17의2 4호 단서 나·다)"
+        checked={insuranceCompanyOpen}
+        onCheckedChange={toggleInsuranceCompany}
+        variant="card"
+      >
+        <div className="space-y-1.5">
+          <p className="text-[11px] text-violet-700/80">
+            ※ 일반 충당금 ⑮ (§17의2 4호 단서 가)는 모든 법인 적용. 본 토글은 보험사업법인·보험회사에 한정 적용.
+          </p>
+          <div className="grid grid-cols-[12rem_1fr] items-center gap-2 py-0.5">
+            <div className="text-[11px]">
+              <span className="font-mono text-violet-700">+ 책임준비금</span>
+              <span className="block text-[10px] text-gray-500">(법인세법 §30① / 보험업법 §120 — §17의2 4호 단서 나·다)</span>
+            </div>
+            <CurrencyInput
+              label="책임준비금"
+              value={String(netAssetValueRaw.insuranceReservePolicy ?? "")}
+              onChange={(v) => update("insuranceReservePolicy", Number(v.replace(/,/g, "")) || 0)}
+              placeholder="0"
+              hideUnit
+            />
+          </div>
+          <div className="grid grid-cols-[12rem_1fr] items-center gap-2 py-0.5">
+            <div className="text-[11px]">
+              <span className="font-mono text-violet-700">+ 비상위험준비금</span>
+              <span className="block text-[10px] text-gray-500">(법인세법 §31① — §17의2 4호 단서 나·다)</span>
+            </div>
+            <CurrencyInput
+              label="비상위험준비금"
+              value={String(netAssetValueRaw.insuranceExtraordinaryReserve ?? "")}
+              onChange={(v) => update("insuranceExtraordinaryReserve", Number(v.replace(/,/g, "")) || 0)}
+              placeholder="0"
+              hideUnit
+            />
+          </div>
+          <div className="grid grid-cols-[12rem_1fr] items-center gap-2 py-0.5">
+            <div className="text-[11px]">
+              <span className="font-mono text-violet-700">+ 해약환급금준비금</span>
+              <span className="block text-[10px] text-gray-500">(법인세법 §32① — §17의2 4호 단서 다, 보험회사 한정)</span>
+            </div>
+            <CurrencyInput
+              label="해약환급금준비금"
+              value={String(netAssetValueRaw.insuranceSurrenderReserve ?? "")}
+              onChange={(v) => update("insuranceSurrenderReserve", Number(v.replace(/,/g, "")) || 0)}
+              placeholder="0"
+              hideUnit
+            />
+          </div>
+        </div>
+      </ToggleCard>
 
       {/* 영업권 포함 전 순자산가액 */}
       <div className="rounded border-2 border-violet-400 bg-violet-100/80 p-3 flex justify-between items-center">
