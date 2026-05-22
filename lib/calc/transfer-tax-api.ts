@@ -612,6 +612,10 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     ...(bgInfo !== undefined ? { burdenedGiftInfo: bgInfo } : {}),
     // ⑬ 재개발/재건축 spread (시행령 §166) — 누락 시 silent stripping
     ...(redevPayload !== undefined ? { redevelopment: redevPayload } : {}),
+    // ⑬ 가업상속공제 §97의2④ 의제 취득가액 spread (TypeScript 미감지 영역 — 누락 시 침묵 stripping)
+    ...(primary.familyBusinessInheritance !== undefined
+      ? { familyBusinessInheritance: primary.familyBusinessInheritance }
+      : {}),
     // ── 일괄양도 (assets 2건 이상) ──
     ...(form.assets.length > 1
       ? {

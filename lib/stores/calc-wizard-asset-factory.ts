@@ -337,6 +337,8 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     // 사례 48 — 승계조합원 신축APT 양도
     redevIsSuccessorMember: "",
     redevCompletionDate: "",
+    // 가업상속공제 §97의2④ — UI 시니어 후속 위임. 미사용 시 undefined.
+    familyBusinessInheritance: undefined,
   };
 }
 
@@ -647,5 +649,7 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (a.bgIsFiledOnTime === undefined) a.bgIsFiledOnTime = true;
   if (!Array.isArray(a.bgPriorGifts)) a.bgPriorGifts = [];
   if (a.bgGiftBuildingStdPriceAtTransfer === undefined) a.bgGiftBuildingStdPriceAtTransfer = "";
+  // 가업상속공제 §97의2④ — 미사용이면 undefined 유지 (3중 패턴: factory=undefined)
+  if (a.familyBusinessInheritance === null) a.familyBusinessInheritance = undefined;
   return a as unknown as AssetForm;
 }

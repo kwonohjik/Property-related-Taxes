@@ -382,26 +382,22 @@ export async function POST(request: NextRequest) {
           standardPriceAtTransfer: data.rentalHousingException.standardPriceAtTransferForPhrp,
         }
       : undefined,
-    // ⑭ 사례 28 — 부수토지 한도 산정 (영 §154⑦)
-    // occupancyApprovalDate / temporaryApprovalDate / actualUseDate 는 UI 레이어에서
-    // 가장 이른 날을 acquisitionDate로 변환하므로 engineInput에는 전달 불필요.
+    // ⑭ 사례 28 — 부수토지 한도 산정 (영 §154⑦). occupancyApprovalDate 등은 UI에서 acquisitionDate로 변환됨.
     buildingFootprintArea: data.buildingFootprintArea,
     isUrbanArea: data.isUrbanArea,
     appurtenantLandZone: data.appurtenantLandZone,
-    // ⑭ 상업용건물·오피스텔 환산취득가 서브객체 (TypeScript 미감지 영역 — 명시 매핑 필수)
-    // Date 변환 불필요 — 날짜 필드 없음. Zod 검증 통과 후 그대로 엔진 input에 전달.
+    // ⑭ 상업용건물·오피스텔 환산취득가 서브객체 (TypeScript 미감지 — 명시 매핑 필수)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ...(data.commercialBuildingValuation ? { commercialBuildingValuation: data.commercialBuildingValuation as any } : {}),
-    // ⑭ 일반건물(토지+건물 일괄) 환산취득가 서브객체 (TypeScript 미감지 영역 — 명시 매핑 필수)
-    // totalTransferPrice/transferDate/acquisitionDate는 route handler에서 최상위 필드 주입 패턴 적용.
-    // buildingAcquisitionDate: YYYY-MM-DD 문자열 → Date 변환 포함 (⑭ date-coerce 필수)
-    // ⑭ 부담부증여 (소령 §159) — Date 변환 없음, 그대로 spread
+    // ⑭ 일반건물 환산취득가 (TypeScript 미감지). ⑭ 부담부증여 §159 — Date 변환 없음.
     ...(data.burdenedGiftInfo ? { burdenedGiftInfo: data.burdenedGiftInfo } : {}),
     // ⑭ 재개발/재건축 (시행령 §166) — Date 4개 변환 (approvalDate/settlementSaleDate/firstDisclosureDate/completionDate)
     ...(data.redevelopment ? { redevelopment: { ...data.redevelopment, approvalDate: new Date(data.redevelopment.approvalDate), settlementSaleDate: toOptionalDate(data.redevelopment.settlementSaleDate), firstDisclosureDate: toOptionalDate(data.redevelopment.firstDisclosureDate), completionDate: toOptionalDate(data.redevelopment.completionDate) } } : {}),
     // ⑭ Phase 2 (2026-05-12): transferType 패스스루 — 양도 형태 (양도자 관점)
     // "burdened_gift" 시 엔진 §159 분기 활성. 미지정 시 "regular" 자동 보정.
     ...(data.transferType !== undefined ? { transferType: data.transferType } : {}),
+    // ⑭ 가업상속공제 §97의2④ (TypeScript 미감지 — 명시 매핑 필수). inheritanceDate: string 그대로.
+    ...(data.familyBusinessInheritance ? { familyBusinessInheritance: data.familyBusinessInheritance } : {}),
     ...(data.generalBuildingValuation ? (() => {
       const buildingAcq = toOptionalDate(data.generalBuildingValuation.buildingAcquisitionDate);
       // #4-a: 토지 상속·증여 보조 필드 Date 변환

@@ -778,6 +778,21 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
   // bg* 필드 일체는 BurdenedGiftFormSlice로 분리 (calc-wizard-asset-bg.ts).
 
   // ── 재개발/재건축 (시행령 §166) — RedevelopmentFormSlice로 분리 (calc-wizard-asset-redev.ts) ──
+
+  // ── 가업상속공제 §97의2④ 의제 취득가액 (소령 §163의2③) ──
+  /** 가업상속공제 의제 취득가액 입력. undefined = 미사용 (일반 §97 산식). */
+  familyBusinessInheritance?: {
+    /** 피상속인 원취득가액 (원) */
+    decedentAcquisitionPrice: number;
+    /** 상속개시일 현재 자산가액 (원) — §60·§63 보충적 평가 */
+    inheritanceMarketValue: number;
+    /** 가업상속공제적용률 0~1 (소령 §163의2③) */
+    fbDeductionAppliedRate: number;
+    /** 상속개시일 (YYYY-MM-DD) */
+    inheritanceDate: string;
+    decedentCapitalExpenditure?: number;
+    heirCapitalExpenditure?: number;
+  };
 }
 
 /** 하위 호환 별칭 — 기존 코드에서 CompanionAssetForm을 참조하는 곳에 사용 */

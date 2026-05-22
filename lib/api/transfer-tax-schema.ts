@@ -296,6 +296,19 @@ const propertyBaseShape = {
    */
   burdenedGiftInfo: burdenedGiftInfoSchema.optional(),
   /**
+   * ⑫ 가업상속공제 §97의2④ 의제 취득가액 입력 (소령 §163의2③).
+   * familyBusinessInheritance 미제공 시 일반 §97 산식 그대로 적용.
+   * ★★★ 침묵 stripping 차단: Zod 객체 정의 없으면 route handler에서 자동 제거됨.
+   */
+  familyBusinessInheritance: z.object({
+    decedentAcquisitionPrice: z.number().int().nonnegative(),
+    inheritanceMarketValue: z.number().int().nonnegative(),
+    fbDeductionAppliedRate: z.number().min(0).max(1),
+    inheritanceDate: z.string().date(),
+    decedentCapitalExpenditure: z.number().int().nonnegative().optional(),
+    heirCapitalExpenditure: z.number().int().nonnegative().optional(),
+  }).optional(),
+  /**
    * ⑫ 재개발/재건축 입력 (시행령 §166 본문).
    * propertyType === "redevelopment_apt" 또는 "right_to_move_in" 시 제공.
    * 미정의 시 침묵 stripping 방지를 위해 명시 필수.

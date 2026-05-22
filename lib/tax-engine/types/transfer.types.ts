@@ -57,34 +57,23 @@ export type { CommercialBuildingValuationInput, CommercialBuildingValuationResul
 import type { RedevelopmentInfo, RedevelopmentResult } from "./transfer-redevelopment.types";
 export type { RedevelopmentInfo, RedevelopmentResult, RedevelopmentBranchDetail, RedevelopmentValuationMeta } from "./transfer-redevelopment.types";
 
+// ── 가업상속공제 자산 양도 §97의2④ 타입 (800줄 정책 — sibling 엔진 파일 분리) ──
+import type { FamilyBusinessInheritanceTransferInput, FamilyBusinessCgtDetail } from "../transfer-tax-family-business";
+export type { FamilyBusinessInheritanceTransferInput, FamilyBusinessCgtDetail } from "../transfer-tax-family-business";
+
 export interface TransferTaxInput {
   /** 물건 종류 */
   propertyType: "housing" | "land" | "building" | "right_to_move_in" | "presale_right" | "mixed-use-house" | "commercial_building" | "general_building_unit" | "general_building" | "redevelopment_apt";
   /** 양도가액 (원, 정수) */
   transferPrice: number;
   /**
-   * 총 물건 양도가액 (지분 모드 전용, 원 정수).
-   *
-   * 12억 고가주택 비과세 안분 분모로 사용. 미설정 시 transferPrice를 분모로 사용 (단독 소유 호환).
-   *
-   * 본 필드의 존재 이유: 동일 물건을 다회 분할 취득(지분 단계취득)한 자산에서
-   * `transferPrice`는 이 자산이 보유한 지분에 해당하는 양도가액(예: 60% 지분 → 1,020,000,000)이다.
-   * 그러나 1세대1주택 12억 초과 안분 산식의 분모는 **물건 전체** 양도가액(예: 1,700,000,000)이어야 하므로,
-   * 지분 모드일 때 별도로 총 물건가를 전달받는다.
-   *
-   * 참고: 예제 사례 27 (아파트 2번 지분취득) anchor.
+   * 총 물건 양도가액 (지분 모드 전용). 12억 비과세 안분 분모. 미설정 시 transferPrice 사용.
+   * 사례 27 (아파트 2번 지분취득) anchor.
    */
   totalPropertyTransferPrice?: number;
   /**
-   * 부담부증여 12억 안분·고가주택 판정 분모 — F-1 (2026-05-12).
-   * D-0-2 채택안 해석 B: 부담부증여 + 1세대1주택 + 12억 초과 시
-   * 비교·안분 분모 = 증여가액(giftValuation C). 채무 양도가가 아닌 **전체 평가액 C** 사용.
-   *
-   * 근거: 국세청 해석례 5건 (ntstDcmId=010000000000028078 등) — "전체 주택가액이 12억원 초과 시 고가주택으로 본다".
-   * 산식: 과세 양도차익_burdened = (transferGain in 채무양도 단위) × (C − 12억) / C
-   *
-   * 일반 양도(transferType !== "burdened_gift") 시 미설정 — totalPropertyTransferPrice/transferPrice fallback.
-   * checkOneHouseExemption()·calcOneHouseProration()에서 우선순위 1번 분모로 사용.
+   * 부담부증여 12억 안분 분모 (F-1, 해석 B): 증여가액 전체(C). 일반 양도 시 미설정.
+   * checkOneHouseExemption()·calcOneHouseProration() 우선순위 1번 분모.
    */
   burdenedGiftDenominator?: number;
   /** 양도일 */
@@ -493,6 +482,9 @@ export interface TransferTaxInput {
    * 소득세법 시행령 §164⑧·§176조의2②2호.
    */
   commercialBuildingValuation?: CommercialBuildingValuationInput;
+
+  /** 가업상속공제 §97의2④ 의제 취득가액 입력 (선택). 미제공 시 일반 §97 산식 불변. */
+  familyBusinessInheritance?: FamilyBusinessInheritanceTransferInput;
 }
 
 export type TransferReduction =
@@ -760,6 +752,11 @@ export interface TransferTaxResult {
    * 결과 카드 "상증법 평가 명세" 섹션 + "납세의무자: 증여자" 라벨 표시에 사용.
    */
   transferBurdenedGiftBreakdown?: TransferBurdenedGiftBreakdown;
+  /**
+   * 가업상속공제 §97의2④ 의제 취득가액 상세 (familyBusinessInheritance 제공 시만 포함).
+   * UI 시니어 후속 위임 — 결과 카드 산식 표시용.
+   */
+  familyBusinessDetail?: FamilyBusinessCgtDetail;
 }
 
 // ============================================================

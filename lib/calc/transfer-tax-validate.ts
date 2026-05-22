@@ -636,6 +636,20 @@ export function validateStep(step: number, form: TransferFormData): string | nul
       const acqError = validateAssetAcquisition(a, label, form.transferDate);
       if (acqError) return acqError;
 
+      // ⑧ 가업상속공제 §97의2④ 의제 취득가액 — 토글 ON 시 4필드 전수 입력 강제
+      // 자동 안분 fallback 금지 원칙 준수 (feedback_no_silent_apportion_fallback)
+      if (a.familyBusinessInheritance) {
+        const fb = a.familyBusinessInheritance;
+        if (fb.decedentAcquisitionPrice == null || parseAmount(String(fb.decedentAcquisitionPrice)) < 0)
+          return `${label}: 가업상속공제 — 피상속인 취득가액을 입력하세요.`;
+        if (fb.inheritanceMarketValue == null || parseAmount(String(fb.inheritanceMarketValue)) <= 0)
+          return `${label}: 가업상속공제 — 상속개시일 현재 자산가액을 입력하세요.`;
+        if (fb.fbDeductionAppliedRate == null || fb.fbDeductionAppliedRate < 0 || fb.fbDeductionAppliedRate > 1)
+          return `${label}: 가업상속공제 — 적용률은 0~1 범위여야 합니다.`;
+        if (!fb.inheritanceDate)
+          return `${label}: 가업상속공제 — 상속개시일을 입력하세요.`;
+      }
+
       // ⑧ 장기임대주택 거주주택 비과세 특례 검증 (소령 §155⑳)
       const rhError = validateRentalHousingException(a.rentalHousingException, a, label, form.transferDate);
       if (rhError) return rhError;

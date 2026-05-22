@@ -47,7 +47,6 @@ import {
 import { TRANSFER_RENTAL_HOUSING } from "./legal-codes/transfer";
 import { evaluateNew993, type New993Result } from "./transfer-reductions/new-99-3";
 
-// 내부 헬퍼 — 분리 파일
 import {
   parseRatesFromMap,
   checkExemption,
@@ -68,9 +67,9 @@ import { BURDENED_GIFT_TRANSFER } from "./legal-codes/burdened-gift";
 import type { TransferBurdenedGiftBreakdown } from "./types/transfer-burdened-gift.types";
 import { resolveAcquisitionOverride, type TransferTaxAcquisitionOptions } from "./transfer-tax-acquisition-override";
 export type { TransferTaxAcquisitionOptions } from "./transfer-tax-acquisition-override";
-export { parseRatesFromMap } from "./transfer-tax-helpers"; // 하위 호환 재수출
-export { calcTax } from "./transfer-tax-rate-calc";         // 하위 호환 재수출
-// 메인 함수: calculateTransferTax
+import { applyFamilyBusinessCgtStep } from "./transfer-tax-family-business";
+export { parseRatesFromMap } from "./transfer-tax-helpers";
+export { calcTax } from "./transfer-tax-rate-calc";
 export function calculateTransferTax(
   rawInput: TransferTaxInput,
   rates: TaxRatesMap,
@@ -122,13 +121,13 @@ export function calculateTransferTax(
     input = inheritedStep.updatedInput;
     steps.push(inheritedStep.step);
   }
-  // STEP 0.46: 외부 취득가액 override 적용 (§97의2④ 의제 취득가액 등 — options 없으면 no-op)
+  // STEP 0.42: 가업상속공제 §97의2④ 의제 취득가액 — 조기 반환 (familyBusinessInheritance 없으면 no-op)
+  const fbResult = applyFamilyBusinessCgtStep(rawInput, input, rates, calculateTransferTax);
+  if (fbResult) return fbResult;
+  // STEP 0.46: 외부 취득가액 override 적용 (options 없으면 no-op)
   input = resolveAcquisitionOverride(input, options);
-  // 이 지점 이후 로컬 input/workingInput은 동일 (pre-1990 + 상속 취득가액 + override 적용 완료).
   let workingInput = input;
-  // STEP 0.475: 배우자등 이월과세 판정 및 비교과세 실행 (소득세법 §97조의2)
-  // carryoverTaxation 없거나 acquisitionCause !== "carryover_gift" 이면 null 반환 → skip.
-  // 재귀 호출 시 carryoverTaxation이 undefined이므로 자동으로 skip됨.
+  // STEP 0.475: 배우자등 이월과세 §97조의2 (carryoverTaxation 없으면 skip, 재귀 시 자동 skip)
   let carryoverDetail: CarryoverTaxationDetail | undefined;
   if (rawInput.acquisitionCause === "carryover_gift" && rawInput.carryoverTaxation) {
     const carryoverResult = calcCarryoverScenarios(
