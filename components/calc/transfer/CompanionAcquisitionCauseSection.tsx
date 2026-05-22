@@ -242,6 +242,7 @@ export function CompanionAcquisitionCauseSection({
         <FamilyBusinessInheritanceTransferSection
           asset={asset}
           onChange={onChange}
+          transferDate={transferDate}
         />
       )}
 

@@ -21,11 +21,14 @@
  *   - 800줄 정책 준수 (~180줄)
  */
 
+import { useState } from "react";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { DateInput } from "@/components/ui/date-input";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { FamilyBusinessInheritanceHistoryModal } from "./FamilyBusinessInheritanceHistoryModal";
+import type { FamilyBusinessInheritancePrefill } from "@/lib/calc/family-business-inheritance-lookup";
 
 // ── 타입 ──────────────────────────────────────────────────────
 
@@ -41,6 +44,8 @@ interface FamilyBusinessSlice {
 interface Props {
   asset: AssetForm;
   onChange: (patch: Partial<AssetForm>) => void;
+  /** 폼-전역 양도일 — K10 이력 조회 모달 가드 (상속개시일 < 양도일) */
+  transferDate?: string;
 }
 
 // ── 헬퍼 ──────────────────────────────────────────────────────
@@ -68,9 +73,25 @@ function toRateStr(rate: number): string {
 
 // ── 메인 컴포넌트 ──────────────────────────────────────────────
 
-export function FamilyBusinessInheritanceTransferSection({ asset, onChange }: Props) {
+export function FamilyBusinessInheritanceTransferSection({ asset, onChange, transferDate }: Props) {
   const isOn = asset.familyBusinessInheritance !== undefined;
   const fb = asset.familyBusinessInheritance;
+  const [lookupOpen, setLookupOpen] = useState(false);
+
+  /** K10 prefill — 상속세 이력 modal 선택 콜백 */
+  function handlePrefillFromHistory(prefill: FamilyBusinessInheritancePrefill) {
+    // 기존 decedentAcquisitionPrice·decedentCapitalExpenditure·heirCapitalExpenditure는 보존
+    onChange({
+      familyBusinessInheritance: {
+        decedentAcquisitionPrice: fb?.decedentAcquisitionPrice ?? prefill.decedentAcquisitionPrice,
+        inheritanceMarketValue: prefill.inheritanceMarketValue,
+        fbDeductionAppliedRate: prefill.fbDeductionAppliedRate,
+        inheritanceDate: prefill.inheritanceDate,
+        decedentCapitalExpenditure: fb?.decedentCapitalExpenditure,
+        heirCapitalExpenditure: fb?.heirCapitalExpenditure,
+      },
+    });
+  }
 
   /** ToggleCard ON/OFF 핸들러 — onClick에서 직접 store set (useEffect 미러링 금지) */
   function handleToggle(checked: boolean) {
@@ -120,6 +141,30 @@ export function FamilyBusinessInheritanceTransferSection({ asset, onChange }: Pr
     >
       {isOn && fb && (
         <div className="space-y-3 mt-2">
+
+          {/* K10 — 상속세 이력에서 prefill */}
+          <div className="flex items-center justify-between rounded-md border border-emerald-300 bg-emerald-50/60 px-3 py-2">
+            <div className="text-xs text-emerald-800">
+              <p className="font-semibold">상속세 이력에서 자동 채우기</p>
+              <p className="text-[10px] text-emerald-600 mt-0.5">
+                적용률·상속개시일·평가액 자동 prefill (원취득가액은 별도 입력)
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setLookupOpen(true)}
+              className="rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700 transition-colors"
+            >
+              📋 이력 조회
+            </button>
+          </div>
+
+          <FamilyBusinessInheritanceHistoryModal
+            open={lookupOpen}
+            onOpenChange={setLookupOpen}
+            currentTransferDate={transferDate || asset.acquisitionDate || ""}
+            onSelect={handlePrefillFromHistory}
+          />
 
           {/* ① 피상속인 원취득가액 */}
           <CurrencyInput
