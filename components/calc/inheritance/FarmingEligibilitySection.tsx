@@ -51,6 +51,8 @@ function ResidenceAddressField({
   onChange: (patch: {
     address: { road?: string; jibun?: string; building?: string; detail?: string } | undefined;
     latLng: { lat: number; lng: number } | undefined;
+    /** v4.1.1 Phase 5 — pnu 5자리에서 자동 추출된 시·군·구 코드 (행안부 10자리) */
+    sigunguCode: string | undefined;
   }) => void;
 }) {
   // AddressSearch 호환 string 형식으로 변환
@@ -85,7 +87,8 @@ function ResidenceAddressField({
             Number.isFinite(latNum) && Number.isFinite(lngNum)
               ? { lat: latNum, lng: lngNum }
               : undefined;
-          onChange({ address: nextAddress, latLng: nextLatLng });
+          const sigunguCode = extractSigunguCodeFromPnu(v.pnu);
+          onChange({ address: nextAddress, latLng: nextLatLng, sigunguCode });
         }}
       />
     </div>
@@ -121,8 +124,23 @@ function isEmptyFarming(f: FarmingInheritanceInput): boolean {
     f.heirResidenceLatLng === undefined &&
     f.decedentResidenceAddress === undefined &&
     f.heirResidenceAddress === undefined &&
-    f.heirAssessments === undefined
+    f.heirAssessments === undefined &&
+    // v4.1.1 Phase 5 — 신규 6 필드 (sigunguCode×2 + forestManageableArea×2)
+    f.decedentResidenceSigunguCode === undefined &&
+    f.heirResidenceSigunguCode === undefined &&
+    f.decedentForestManageableArea === undefined &&
+    f.heirForestManageableArea === undefined
   );
+}
+
+/**
+ * PNU 19자리 앞 5자리 → 행안부 표준 시·군·구 코드 10자리.
+ * v4.1.1 Phase 5 (PRD §4 가설 — Phase 3 매핑 anchor 검증 후 확정).
+ * Vworld AddressSearch 결과에서 자동 추출.
+ */
+function extractSigunguCodeFromPnu(pnu: string | undefined): string | undefined {
+  if (!pnu || pnu.length < 5) return undefined;
+  return pnu.slice(0, 5) + "00000";
 }
 
 export interface FarmingEligibilitySectionProps {
@@ -526,10 +544,11 @@ export function FarmingEligibilitySection({
                 label="피상속인 거주지"
                 address={farming.decedentResidenceAddress}
                 latLng={farming.decedentResidenceLatLng}
-                onChange={({ address, latLng }) =>
+                onChange={({ address, latLng, sigunguCode }) =>
                   update({
                     decedentResidenceAddress: address,
                     decedentResidenceLatLng: latLng,
+                    decedentResidenceSigunguCode: sigunguCode,
                   })
                 }
               />
@@ -537,13 +556,39 @@ export function FarmingEligibilitySection({
                 label="상속인 거주지"
                 address={farming.heirResidenceAddress}
                 latLng={farming.heirResidenceLatLng}
-                onChange={({ address, latLng }) =>
+                onChange={({ address, latLng, sigunguCode }) =>
                   update({
                     heirResidenceAddress: address,
                     heirResidenceLatLng: latLng,
+                    heirResidenceSigunguCode: sigunguCode,
                   })
                 }
               />
+              {/* v4.1.1 Phase 5 — 산림지 단서 ToggleCard (farmingCategory=forest_land 자산 1건+ 존재 시만 노출) */}
+              {estateItems.some((i) => i.farmingCategory === "forest_land") && (
+                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                  <ToggleCard
+                    tone="emerald"
+                    variant="card"
+                    title="피상속인 — 산림지 통상 직접 경영 가능 지역 (§16②1호나 단서)"
+                    description="자산 소재 시·군·구·연접·30km에 모두 해당되지 않더라도 산림지를 통상적으로 직접 경영할 수 있는 지역에 거주 시 거주 요건 충족 (사용자 명시)"
+                    checked={farming.decedentForestManageableArea === true}
+                    onCheckedChange={(v) =>
+                      update({ decedentForestManageableArea: v ? true : undefined })
+                    }
+                  />
+                  <ToggleCard
+                    tone="emerald"
+                    variant="card"
+                    title="상속인 — 산림지 통상 직접 경영 가능 지역 (§16②1호나 단서)"
+                    description="동일"
+                    checked={farming.heirForestManageableArea === true}
+                    onCheckedChange={(v) =>
+                      update({ heirForestManageableArea: v ? true : undefined })
+                    }
+                  />
+                </div>
+              )}
               {residenceCheck && (
                 <ResidenceCheckPreviewCard result={residenceCheck} />
               )}

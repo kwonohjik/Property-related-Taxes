@@ -72,6 +72,18 @@ const baseItemSchema = z.object({
   fishingAnchorLatLng: z
     .object({ lat: z.number(), lng: z.number() })
     .optional(),
+  // v4.1.1 Phase 0+0-Fix — 자산 소재지 시·군·구 코드 + 주소 영속화
+  estateSigunguCode: z.string().optional(),
+  fishingAnchorSigunguCode: z.string().optional(),
+  estateAddress: z
+    .object({
+      road: z.string().optional(),
+      jibun: z.string().optional(),
+      building: z.string().optional(),
+      detail: z.string().optional(),
+      pnu: z.string().optional(),
+    })
+    .optional(),
   // 법인 사업무관자산 (PR-C F-8, 시행령 §15⑤2호 + §16⑤2호)
   corporateNonBusinessAssets: z
     .object({
@@ -385,6 +397,12 @@ export const farmingInheritanceInputSchema = z.object({
       detail: z.string().optional(),
     })
     .optional(),
+  // v4.1.1 Phase 0+0-Fix — §16②1호나 시·군·구 OR 자동 판정
+  decedentResidenceSigunguCode: z.string().optional(),
+  heirResidenceSigunguCode: z.string().optional(),
+  // v4.1.1 C1-F — 산림지 §16②1호나 단서 (통상적으로 직접 경영할 수 있는 지역)
+  decedentForestManageableArea: z.boolean().optional(),
+  heirForestManageableArea: z.boolean().optional(),
 });
 
 /**
