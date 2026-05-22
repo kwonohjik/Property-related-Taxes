@@ -18,6 +18,8 @@ import { NetAssetCalculationTable } from "./NetAssetCalculationTable";
 import { PerShareValuationResultCard } from "./PerShareValuationResultCard";
 import { GoodwillCalculationTable } from "./GoodwillCalculationTable";
 import { BesshiForm4Buppyo3PrintView } from "./BesshiForm4Buppyo3PrintView";
+import { ValuationDeltaTable } from "./ValuationDeltaTable";
+import type { EvaluationDeltaRow } from "@/lib/tax-engine/property-valuation/evaluation-delta";
 import {
   MajorShareholderStockToggle,
   type Section22MajorShareholderMode,
@@ -30,7 +32,6 @@ import { judgeIsRealEstateHeavy } from "@/lib/tax-engine/property-valuation/auto
 import { evaluateUnlistedStockV2 } from "@/lib/tax-engine/property-valuation/unlisted-orchestrator";
 import type {
   UnlistedStockValuationInput,
-  UnlistedNetAssetOnlyReason,
   FiscalYearAdjustment,
   UnlistedCapitalChange,
   UnlistedNetAssetCalculation,
@@ -160,6 +161,23 @@ export function UnlistedStockV2Card({ input, onChange }: UnlistedStockV2CardProp
   const realEstateHeavyMode = input.realEstateHeavyMode ?? "auto";
   const section22Mode = input.section22MajorShareholderMode ?? "auto";
 
+  // PR-N: 평가차액 행 단위 입력 콜백 (netAssetValueRaw.evaluationDeltaRows 단일 통합 배열)
+  const handleEvaluationDeltaRowsChange = (rows: EvaluationDeltaRow[]) => {
+    onChange({
+      ...input,
+      netAssetValueRaw: {
+        ...input.netAssetValueRaw,
+        evaluationDeltaRows: rows.length > 0 ? rows : undefined,
+      },
+    });
+  };
+  const handleAssetValuationDeltaFallback = (next: number) => {
+    onChange({
+      ...input,
+      netAssetValueRaw: { ...input.netAssetValueRaw, assetValuationDelta: next },
+    });
+  };
+
   return (
     <div className="space-y-4 border-2 border-indigo-300 bg-indigo-50/30 rounded-lg p-4">
       <div className="flex items-center gap-2 pb-2 border-b border-indigo-200">
@@ -211,7 +229,15 @@ export function UnlistedStockV2Card({ input, onChange }: UnlistedStockV2CardProp
         onChange={updateCapitalChanges}
       />
 
-      {/* 4. 자산총액·부채총액 */}
+      {/* 3-B. PR-N: 평가차액 행 단위 입력 (별지 3쪽, design v3 Section 4) */}
+      <ValuationDeltaTable
+        evaluationDeltaRows={input.netAssetValueRaw.evaluationDeltaRows ?? []}
+        fallbackAssetValuationDelta={input.netAssetValueRaw.assetValuationDelta}
+        onRowsChange={handleEvaluationDeltaRowsChange}
+        onFallbackChange={handleAssetValuationDeltaFallback}
+      />
+
+      {/* 4. 자산총액·부채총액 (별지 2쪽) — ② 평가차액은 위 ValuationDeltaTable 결과 자동 반영 */}
       <NetAssetCalculationTable
         netAssetValueRaw={input.netAssetValueRaw}
         onChange={updateNetAsset}
