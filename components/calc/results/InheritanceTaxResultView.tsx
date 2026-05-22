@@ -29,6 +29,7 @@ import { HeirAllocationTable } from "@/components/calc/results/HeirAllocationTab
 import { InheritanceFilingFormTable } from "@/components/calc/results/InheritanceFilingFormTable";
 import { CorporateExemptionFilingFormTable } from "@/components/calc/results/CorporateExemptionFilingFormTable";
 import { DebtAllocationResultCard } from "@/components/calc/results/DebtAllocationResultCard";
+import { DeductionLimitNoticeCard } from "@/components/calc/inheritance/DeductionLimitNoticeCard";
 import type { DebtItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { calcInstallmentPayment } from "@/lib/tax-engine/credits/installment-payment";
 
@@ -616,6 +617,8 @@ export function InheritanceTaxResultView({
             <Row label="공제 합계" value={formatKRW(result.totalDeduction)} highlight />
           </div>
         )}
+        {/* §24 종합한도 발동 시 안내 카드 — 미발동 시 자동 숨김 */}
+        <DeductionLimitNoticeCard breakdown={result.deductionDetail.breakdown} />
       </div>
 
       {/* 영농상속공제 사후관리 안내 (PR-G) — farmingDeduction > 0 시만 노출 */}
