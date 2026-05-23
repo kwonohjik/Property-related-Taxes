@@ -27,11 +27,21 @@ import type {
   UnlistedStockValuationInput,
   UnlistedStockValuationResult,
 } from "@/lib/tax-engine/types/unlisted-stock-valuation.types";
+import dynamic from "next/dynamic";
 import { Page1CoverSection } from "./besshi/Page1CoverSection";
 import { Page2NetAssetTable } from "./besshi/Page2NetAssetTable";
 import { Page4ValuationDeltaTable } from "./besshi/Page4ValuationDeltaTable";
 import { Page5GoodwillTable } from "./besshi/Page5GoodwillTable";
 import { Page6NetIncomeBreakdown } from "./besshi/Page6NetIncomeBreakdown";
+
+// PDF 다운로드 버튼은 react-pdf web-only API (PDFDownloadLink)를 사용 — SSR/jsdom 차단
+const UnlistedStockBesshiPdfDownloadButton = dynamic(
+  () =>
+    import("./UnlistedStockBesshiPdfDownloadButton").then(
+      (m) => m.UnlistedStockBesshiPdfDownloadButton,
+    ),
+  { ssr: false },
+);
 
 // sibling re-export — 외부 import 사이트 변경 0건 보장
 export { Page1CoverSection } from "./besshi/Page1CoverSection";
@@ -58,17 +68,20 @@ export function BesshiForm4Buppyo3PrintView({ input }: BesshiForm4Buppyo3PrintVi
 
   return (
     <div className="rounded-lg border border-gray-300 bg-white print:bg-white print:border-none">
-      {/* 인쇄 미리보기 토글 — 화면 전용 */}
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        aria-expanded={open}
-        data-testid="besshi-form-toggle"
-        className="w-full flex items-center justify-between p-3 text-[12px] font-semibold text-gray-700 hover:bg-gray-50 print:hidden"
-      >
-        <span>📄 별지 제4호 부표3 비상장주식 평가서 (인쇄 미리보기)</span>
-        <span className="text-[10px] text-gray-500">{open ? "접기" : "펼치기"}</span>
-      </button>
+      {/* 헤더 — 토글 + PR-J PDF 다운로드 (화면 전용) */}
+      <div className="flex items-center justify-between p-3 print:hidden">
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+          data-testid="besshi-form-toggle"
+          className="flex-1 text-left text-[12px] font-semibold text-gray-700 hover:text-gray-900"
+        >
+          📄 별지 제4호 부표3 비상장주식 평가서 (인쇄 미리보기){" "}
+          <span className="text-[10px] text-gray-500">{open ? "접기" : "펼치기"}</span>
+        </button>
+        <UnlistedStockBesshiPdfDownloadButton input={input} />
+      </div>
 
       {/* @page A4 portrait — 인쇄 시 5쪽 자동 분리 */}
       <style jsx global>{`
