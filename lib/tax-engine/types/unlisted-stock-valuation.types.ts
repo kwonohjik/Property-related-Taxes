@@ -176,6 +176,13 @@ export interface UnlistedStockValuationInput {
   /** 영업권 §59② 이자율 (기본 0.10 — 상증규 §19①). 통상 환원율과 동일 */
   goodwillRate?: number;
 
+  /**
+   * PR-P (§54③): 평가법인이 다른 비상장주식 10% 이하 보유 시 이동평균법 취득가액 갈음 옵션.
+   * 미입력·빈 배열 → 옵션 미적용.
+   * Plan: docs/00-pm/inheritance-unlisted-stock-other-holdings-section-54-3.plan.md
+   */
+  otherUnlistedHoldings?: import("@/lib/tax-engine/property-valuation/other-unlisted-holdings").OtherUnlistedHolding[];
+
   // === 할증평가 §63③ ===
   isMaxShareholder: boolean;
   /**
@@ -245,4 +252,11 @@ export interface UnlistedStockValuationResult {
   totalValuation: number;              // ⑨ × ownedShares
   warnings: string[];
   appliedRules: string[];
+
+  /**
+   * PR-P (§54③): 다른 비상장주식 옵션 평가 결과 (참고용 메타).
+   * 자산총액(bsTotalAssets) 자동 가산 없음 — 사용자가 별도 입력 책임.
+   * 미입력·빈 배열 시 undefined.
+   */
+  otherUnlistedHoldingsEvaluated?: import("@/lib/tax-engine/property-valuation/other-unlisted-holdings").OtherUnlistedHoldingResult[];
 }

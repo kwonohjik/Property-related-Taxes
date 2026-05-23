@@ -154,6 +154,20 @@ export const unlistedStockValuationV2Schema = z
     section22MajorShareholderMode: z
       .enum(["auto", "manual_on", "manual_off"])
       .optional(),
+    // PR-P (§54③): 다른 비상장주식 10% 이하 보유 옵션 (이동평균법 취득가액 갈음)
+    otherUnlistedHoldings: z
+      .array(
+        z.object({
+          rowId: z.string().min(1),
+          issuerCorpName: z.string().min(1),
+          holdingShares: z.number().int().nonnegative(),
+          totalShares: z.number().int().positive(),
+          treasuryShares: z.number().int().nonnegative().optional(),
+          movingAverageAcquisitionValue: z.number().nonnegative().optional(),
+          marketValue: z.number().nonnegative().optional(),
+        }),
+      )
+      .optional(),
   })
   .superRefine((input, ctx) => {
     // 사업연도 종료일 순서 검증 (1년전 > 2년전 > 3년전)

@@ -44,6 +44,7 @@ import { calcGoodwill } from "./goodwill";
 import { calcCapitalIncreaseAdjustment } from "./capital-increase-adjustment";
 import { calcMaxShareholderPremium } from "./max-shareholder-premium";
 import { resolveEvaluationDelta } from "./evaluation-delta";
+import { evaluateOtherUnlistedHoldings } from "./other-unlisted-holdings";
 
 /**
  * 비상장주식 V2 평가 진입점
@@ -232,6 +233,17 @@ export function evaluateUnlistedStockV2(
     warnings.push("일부 사업연도 1주당 순손익액 음수 — §56① 가중평균 후 0 가드 적용");
   }
 
+  // PR-P (§54③): 다른 비상장주식 10% 이하 보유 옵션 평가 (참고용 메타)
+  const otherUnlistedHoldingsEvaluated = evaluateOtherUnlistedHoldings(input.otherUnlistedHoldings);
+  if (otherUnlistedHoldingsEvaluated && otherUnlistedHoldingsEvaluated.length > 0) {
+    appliedRules.push("상증령 §54③ + 법인령 §74①1호마목 (다른 비상장주식 옵션)");
+    for (const r of otherUnlistedHoldingsEvaluated) {
+      for (const w of r.warnings) {
+        warnings.push(`[${r.issuerCorpName}] ${w.message}`);
+      }
+    }
+  }
+
   return {
     netAssetTotal,
     netAssetPerShare,
@@ -252,6 +264,7 @@ export function evaluateUnlistedStockV2(
     totalValuation,
     warnings,
     appliedRules,
+    otherUnlistedHoldingsEvaluated,
   };
 }
 
