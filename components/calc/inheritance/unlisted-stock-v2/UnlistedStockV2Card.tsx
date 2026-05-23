@@ -10,8 +10,9 @@
  * UI Design: docs/02-design/features/inheritance-unlisted-stock-valuation.ui.design.md §2-1·§6
  */
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { CorporateInfoSection } from "./CorporateInfoSection";
+import { UnlistedStockHistoryModal } from "./UnlistedStockHistoryModal";
 import { FiscalYearAdjustmentTable } from "./FiscalYearAdjustmentTable";
 import { CapitalChangeTable } from "./CapitalChangeTable";
 import { NetAssetCalculationTable } from "./NetAssetCalculationTable";
@@ -101,23 +102,59 @@ export function createDefaultUnlistedStockV2(): UnlistedStockValuationInput {
 export interface UnlistedStockV2CardProps {
   input: UnlistedStockValuationInput;
   onChange: (next: UnlistedStockValuationInput) => void;
+  /** PR-H: 이력 자동조회 — 세무사 모드 의뢰인 ID (null = 본인) */
+  currentClientId?: string | null;
+  /** PR-H: 이미 자산 목록에 추가된 calculationId 배열 (중복 차단) */
+  historyExcludeIds?: string[];
 }
 
-export function UnlistedStockV2Card({ input, onChange }: UnlistedStockV2CardProps) {
+export function UnlistedStockV2Card({
+  input,
+  onChange,
+  currentClientId = null,
+  historyExcludeIds = [],
+}: UnlistedStockV2CardProps) {
+  // PR-H: 이력 조회 모달
+  const [historyOpen, setHistoryOpen] = useState(false);
+  // sourceCalculationId 메타 — UI 전용 (엔진 미전달)
+  const [sourceCalculationId, setSourceCalculationId] = useState<string | undefined>(undefined);
+
+  /**
+   * PR-H: 이력 선택 → 법인 정보만 prefill (Q1 B안)
+   * - evaluationDate·ownedShares·isMaxShareholder는 사용자 입력 보존
+   * - sourceCalculationId 메타 부착 (mirror-pattern으로 핵심 필드 수정 시 자동 제거)
+   */
+  const handleHistorySelect = (
+    partial: Partial<UnlistedStockValuationInput>,
+    sourceId: string,
+  ) => {
+    onChange({ ...input, ...partial });
+    setSourceCalculationId(sourceId);
+  };
+
+  /**
+   * PR-H: corpName 수정 시 sourceCalculationId 자동 제거 (mirror-pattern)
+   */
+  const wrappedOnChange = (next: UnlistedStockValuationInput) => {
+    if (sourceCalculationId && next.corpName !== input.corpName) {
+      setSourceCalculationId(undefined);
+    }
+    onChange(next);
+  };
   const updateCorporateInfo = (patch: Partial<UnlistedStockValuationInput>) => {
-    onChange({ ...input, ...patch });
+    wrappedOnChange({ ...input, ...patch });
   };
 
   const updateFiscalYears = (next: [FiscalYearAdjustment, FiscalYearAdjustment, FiscalYearAdjustment]) => {
-    onChange({ ...input, fiscalYears: next });
+    wrappedOnChange({ ...input, fiscalYears: next });
   };
 
   const updateCapitalChanges = (next: UnlistedCapitalChange[]) => {
-    onChange({ ...input, capitalChanges: next });
+    wrappedOnChange({ ...input, capitalChanges: next });
   };
 
   const updateNetAsset = (next: UnlistedNetAssetCalculation) => {
-    onChange({ ...input, netAssetValueRaw: next });
+    wrappedOnChange({ ...input, netAssetValueRaw: next });
   };
 
   // PR-F: §54⑤ 자동 모드 시 isRealEstateHeavy 자동 도출 (cross-field 동기화 — onChange 직접, useEffect 미사용)
@@ -144,7 +181,7 @@ export function UnlistedStockV2Card({ input, onChange }: UnlistedStockV2CardProp
       nextIsHeavy = false;
     }
 
-    onChange({
+    wrappedOnChange({
       ...input,
       realEstateHeavyMode: nextMode,
       totalAssetsForJudgment: nextTotal,
@@ -155,7 +192,7 @@ export function UnlistedStockV2Card({ input, onChange }: UnlistedStockV2CardProp
 
   // PR-E: §22② 모드 변경 (mode만 변경, isMaxShareholder는 §63③ 용이므로 분리)
   const handleSection22ModeChange = (mode: Section22MajorShareholderMode) => {
-    onChange({ ...input, section22MajorShareholderMode: mode });
+    wrappedOnChange({ ...input, section22MajorShareholderMode: mode });
   };
 
   const realEstateHeavyMode = input.realEstateHeavyMode ?? "auto";
@@ -163,7 +200,7 @@ export function UnlistedStockV2Card({ input, onChange }: UnlistedStockV2CardProp
 
   // PR-N: 평가차액 행 단위 입력 콜백 (netAssetValueRaw.evaluationDeltaRows 단일 통합 배열)
   const handleEvaluationDeltaRowsChange = (rows: EvaluationDeltaRow[]) => {
-    onChange({
+    wrappedOnChange({
       ...input,
       netAssetValueRaw: {
         ...input.netAssetValueRaw,
@@ -172,7 +209,7 @@ export function UnlistedStockV2Card({ input, onChange }: UnlistedStockV2CardProp
     });
   };
   const handleAssetValuationDeltaFallback = (next: number) => {
-    onChange({
+    wrappedOnChange({
       ...input,
       netAssetValueRaw: { ...input.netAssetValueRaw, assetValuationDelta: next },
     });
@@ -180,15 +217,47 @@ export function UnlistedStockV2Card({ input, onChange }: UnlistedStockV2CardProp
 
   return (
     <div className="space-y-4 border-2 border-indigo-300 bg-indigo-50/30 rounded-lg p-4">
-      <div className="flex items-center gap-2 pb-2 border-b border-indigo-200">
-        <span className="text-indigo-600 text-lg">📊</span>
-        <h3 className="text-sm font-bold text-indigo-900">
-          비상장주식 V2 평가 (별지 제4호 부표3 완전 재현)
-        </h3>
+      <div className="flex items-center justify-between pb-2 border-b border-indigo-200">
+        <div className="flex items-center gap-2">
+          <span className="text-indigo-600 text-lg">📊</span>
+          <h3 className="text-sm font-bold text-indigo-900">
+            비상장주식 V2 평가 (별지 제4호 부표3 완전 재현)
+          </h3>
+        </div>
+        {/* PR-H: 이력 자동 조회 버튼 */}
+        <button
+          type="button"
+          onClick={() => setHistoryOpen(true)}
+          className="text-xs px-2.5 py-1 rounded border border-indigo-300 bg-white hover:bg-indigo-100 text-indigo-700 font-medium transition-colors"
+          data-testid="open-unlisted-stock-history-modal"
+          title="기존 평가 이력에서 법인 정보를 자동으로 채웁니다"
+        >
+          📂 이력 조회
+        </button>
       </div>
       <p className="text-[11px] text-indigo-700/80">
         상증법 §63 ① 나목 + 상증령 §54·§55·§56·§59 + 상증규 §17·§17의2·§17의3·§19 (KoreanLaw 1차+2차 검증 완료)
       </p>
+
+      {/* PR-H: 이력 출처 배지 — sourceCalculationId 부착 시만 표시 */}
+      {sourceCalculationId && (
+        <p
+          className="text-[10px] text-sky-700 bg-sky-50 border border-sky-200 rounded px-2 py-1 inline-block"
+          data-testid="source-calculation-id-badge"
+        >
+          📂 이력에서 자동 채움 · 평가기준일·보유주식수·할증은 사용자 입력 보존
+        </p>
+      )}
+
+      {/* PR-H: 이력 조회 모달 */}
+      <UnlistedStockHistoryModal
+        open={historyOpen}
+        onOpenChange={setHistoryOpen}
+        currentCorpName={input.corpName || undefined}
+        currentClientId={currentClientId}
+        excludeCalculationIds={historyExcludeIds}
+        onSelect={handleHistorySelect}
+      />
 
       {/* 1. 법인 기본 정보 + §54④ 사유 + 회사 규모 */}
       <CorporateInfoSection
