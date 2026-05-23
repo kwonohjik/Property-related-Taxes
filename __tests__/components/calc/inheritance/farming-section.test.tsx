@@ -94,6 +94,62 @@ describe("[FC-UI] FarmingCategorySection — 영농 자산 분류 (F-4)", () => 
     );
     expect(container.firstChild).toBeNull();
   });
+
+  // ============================================================
+  // ELF-1·ELF-2 — agricultural_building·salt_field 좌표 옵션 b 안내 (PR-RE-3)
+  // ============================================================
+
+  it("ELF-1: farmingCategory='agricultural_building' → 거주지 OR 비대상 안내 카드 노출", () => {
+    render(
+      <FarmingCategorySection
+        item={makeItem({ farmingCategory: "agricultural_building" })}
+        onUpdate={() => {}}
+      />,
+    );
+    const notice = screen.queryByTestId("farming-residence-or-non-target-notice");
+    expect(notice).toBeTruthy();
+    expect(notice?.textContent).toContain("거주지 OR 자동 검증 비대상");
+    expect(notice?.textContent).toContain("농지·초지·산림지 3종");
+    expect(notice?.textContent).toContain("농업용 건축물");
+    expect(notice?.textContent).toContain("선택 사항");
+  });
+
+  it("ELF-2: farmingCategory='salt_field' → 거주지 OR 비대상 안내 카드 노출 + 염전 라벨", () => {
+    render(
+      <FarmingCategorySection
+        item={makeItem({ farmingCategory: "salt_field" })}
+        onUpdate={() => {}}
+      />,
+    );
+    const notice = screen.queryByTestId("farming-residence-or-non-target-notice");
+    expect(notice).toBeTruthy();
+    expect(notice?.textContent).toContain("염전");
+    expect(notice?.textContent).toContain("선택 사항");
+  });
+
+  it("ELF-3: farmingCategory='farmland' → 안내 카드 미렌더 (거주지 OR 대상)", () => {
+    render(
+      <FarmingCategorySection
+        item={makeItem({ farmingCategory: "farmland" })}
+        onUpdate={() => {}}
+      />,
+    );
+    expect(
+      screen.queryByTestId("farming-residence-or-non-target-notice"),
+    ).toBeNull();
+  });
+
+  it("ELF-4: farmingCategory='fishing_right' → 안내 카드 미렌더 (어선 분기는 별도)", () => {
+    render(
+      <FarmingCategorySection
+        item={makeItem({ farmingCategory: "fishing_right" })}
+        onUpdate={() => {}}
+      />,
+    );
+    expect(
+      screen.queryByTestId("farming-residence-or-non-target-notice"),
+    ).toBeNull();
+  });
 });
 
 // ============================================================
