@@ -120,6 +120,18 @@ export function FarmingCategorySection({
           <p className="text-[10px] text-emerald-700 dark:text-emerald-300 bg-emerald-100/60 dark:bg-emerald-900/30 rounded p-2">
             ⓘ {FARMING_CATEGORY_OPTIONS.find((o) => o.value === item.farmingCategory)?.description}
           </p>
+          {item.farmingCategory === "fishing_right" && (
+            <ToggleCard
+              tone="rose"
+              size="sm"
+              title="마을어업·협동양식업 면허 (영농상속 제외)"
+              description="시행령 §16⑤마목 단서 — 「수산업법」 §8 마을어업 면허, 「양식산업발전법」 §10① 협동양식업 면허는 영농상속재산가액에서 제외"
+              checked={item.fishingLicenseExcluded === true}
+              onCheckedChange={(v) =>
+                onUpdate({ ...item, fishingLicenseExcluded: v ? true : undefined })
+              }
+            />
+          )}
         </div>
       )}
     </div>

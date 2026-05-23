@@ -72,6 +72,8 @@ const baseItemSchema = z.object({
       "corporate_stock",
     ])
     .optional(),
+  // 어업권·양식업권 면허 제외 (PR-RE-1, 시행령 §16⑤마목 단서)
+  fishingLicenseExcluded: z.boolean().optional(),
   // 가업상속공제 정밀화 (2026-05-21, 상증법 §18의2 + 상증령 §15⑤)
   familyBusinessCategory: z
     .enum([

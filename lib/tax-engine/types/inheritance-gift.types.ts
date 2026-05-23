@@ -129,6 +129,16 @@ export interface EstateItem extends EstateLocationFields {
     | "salt_field"            // 사. 염전
     | "corporate_stock";      // §16⑤2호 법인 영농 주식
 
+  /**
+   * 어업권·양식업권 면허 제외 (PR-RE-1, 시행령 §16⑤마목 단서).
+   * 마을어업 면허·협동양식업 면허는 영농상속재산가액에서 제외.
+   * farmingCategory==="fishing_right"일 때만 의미. true 시 suggestFarmingAssetValue에서 본 자산 제외.
+   * KoreanLaw MCP 검증 (mst=283637) — §16⑤마목 "어업권 또는 「양식산업발전법」에 따른 양식업권
+   *   (「수산업법」 제8조에 따른 마을어업 면허 및 「양식산업발전법」 제10조제1항에 따른 협동양식업
+   *   면허는 제외한다)"
+   */
+  fishingLicenseExcluded?: boolean;
+
   /** 가업상속 자산 분류 (상증령 §15⑤). farmingCategory 동시 선택 시 validate 차단 (asset_dual_category_conflict). 타입: inheritance-family-business.types.ts */
   familyBusinessCategory?: FamilyBusinessCategory;
   /** 법인 영농·가업상속 주식 사업무관자산 (시행령 §15⑤2호 + §16⑤2호). corporate_stock일 때만 의미. 타입: inheritance-corporate-non-business.types.ts */

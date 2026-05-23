@@ -380,6 +380,62 @@ describe("suggestFarmingAssetValue — 영농상속재산 §18의3", () => {
   });
 
   // ============================================================
+  // FL-1 ~ FL-3: §16⑤마목 단서 — 마을어업·협동양식업 면허 제외 (PR-RE-1, 2026-05-24)
+  // ============================================================
+
+  it("FL-1: fishing_right + fishingLicenseExcluded 미입력 → 포함 (legacy 호환)", () => {
+    const items = [
+      asset({
+        id: "a1",
+        category: "real_estate_land",
+        farmingCategory: "fishing_right",
+        standardPrice: 300_000_000,
+      }),
+    ];
+    const r = suggestFarmingAssetValue(items);
+    expect(r.value).toBe(300_000_000);
+    expect(r.isApplicable).toBe(true);
+    expect(r.notes?.some((n) => n.includes("마을어업"))).toBeFalsy();
+  });
+
+  it("FL-2: fishing_right + fishingLicenseExcluded=true → 제외 + 안내", () => {
+    const items = [
+      asset({
+        id: "a1",
+        category: "real_estate_land",
+        farmingCategory: "fishing_right",
+        standardPrice: 300_000_000,
+        fishingLicenseExcluded: true,
+      }),
+      asset({
+        id: "a2",
+        category: "real_estate_land",
+        farmingCategory: "farmland",
+        standardPrice: 500_000_000,
+      }),
+    ];
+    const r = suggestFarmingAssetValue(items);
+    expect(r.value).toBe(500_000_000); // a1 제외, a2만 합산
+    expect(r.notes?.some((n) => n.includes("마을어업·협동양식업 면허"))).toBe(true);
+    expect(r.notes?.some((n) => n.includes("1건 제외"))).toBe(true);
+  });
+
+  it("FL-3: fishing_vessel + fishingLicenseExcluded=true → 무시 (어선은 단서 미적용)", () => {
+    const items = [
+      asset({
+        id: "a1",
+        category: "real_estate_land",
+        farmingCategory: "fishing_vessel",
+        standardPrice: 200_000_000,
+        fishingLicenseExcluded: true, // fishing_vessel에는 의미 없음
+      }),
+    ];
+    const r = suggestFarmingAssetValue(items);
+    expect(r.value).toBe(200_000_000); // 어선은 면허 단서 비대상이므로 포함
+    expect(r.notes?.some((n) => n.includes("마을어업"))).toBeFalsy();
+  });
+
+  // ============================================================
   // FQ-1 ~ FQ-6: §16⑤ 본문 자격자 분배분 (PR-F, 2026-05-21)
   // ============================================================
 

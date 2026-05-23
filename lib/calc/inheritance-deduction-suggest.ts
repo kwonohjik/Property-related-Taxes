@@ -334,7 +334,17 @@ export function suggestFarmingAssetValue(
   estateItems: EstateItem[],
   farming?: { qualifiedHeirIds?: string[] },
 ): DeductionSuggestion {
-  const eligible = estateItems.filter((i) => i.farmingCategory !== undefined);
+  const eligible = estateItems.filter((i) => {
+    if (i.farmingCategory === undefined) return false;
+    // PR-RE-1: §16⑤마목 단서 — 마을어업·협동양식업 면허 제외
+    if (i.farmingCategory === "fishing_right" && i.fishingLicenseExcluded === true) {
+      return false;
+    }
+    return true;
+  });
+  const excludedFishing = estateItems.filter(
+    (i) => i.farmingCategory === "fishing_right" && i.fishingLicenseExcluded === true,
+  );
   if (eligible.length === 0) {
     return {
       value: 0,
@@ -389,6 +399,11 @@ export function suggestFarmingAssetValue(
   }
   if (useAllocation && qualifiedIds!.length === 0) {
     notes.push("⚠️ 자격 충족 상속인 0명 — 영농상속재산가액 0 (§16⑤ 본문)");
+  }
+  if (excludedFishing.length > 0) {
+    notes.push(
+      `ℹ️ 마을어업·협동양식업 면허 ${excludedFishing.length}건 제외 (§16⑤마목 단서)`,
+    );
   }
   return {
     value,
