@@ -60,3 +60,10 @@ logs/
 
 # Claude Code 로컬 설정 (개인별 커스터마이제이션)
 .claude/settings.local.json
+
+# 영농상속공제 거주지 매트릭스 — 원본 데이터 (commit 금지, 공공누리 1유형이지만 50MB+ 부담)
+/data/raw/*
+!/data/raw/.gitkeep
+
+# lib/geo/*.bak — parse-koedb-txt.ts 자동 백업
+/lib/geo/*.bak

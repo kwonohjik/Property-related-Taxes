@@ -51,34 +51,42 @@ jobs:
 
       - name: Download admin data (KOEDB + LSMD)
         run: |
-          # Phase 1·2 미완 — 빈 매트릭스 유지 시 본 step skip
+          mkdir -p data/raw
           if [ -f "scripts/download-admin-data.ts" ]; then
             npx tsx scripts/download-admin-data.ts
           else
-            echo "⚠️ scripts/download-admin-data.ts 미존재 — Phase 1·2 진입 전. workflow skip."
+            echo "⚠️ scripts/download-admin-data.ts 미존재 — workflow skip."
             exit 0
           fi
 
-      - name: Build adjacency matrix
+      - name: Build sigungu list (KOEDB)
         run: |
-          if [ -f "scripts/build-sigungu-adjacency.ts" ]; then
-            npx tsx scripts/build-sigungu-adjacency.ts
+          if [ -f "scripts/parse-koedb-txt.ts" ] && [ -f "data/raw/koedb.txt" ]; then
+            npx tsx scripts/parse-koedb-txt.ts
           else
-            echo "⚠️ scripts/build-sigungu-adjacency.ts 미존재 — Phase 2 진입 전. workflow skip."
-            exit 0
+            echo "⚠️ scripts/parse-koedb-txt.ts 또는 data/raw/koedb.txt 미존재 — skip."
           fi
 
-      - name: Update MATRIX_VERSION
+      - name: Build adjacency matrix (SHP)
         run: |
-          if [ -f "lib/geo/administrative-district-adjacency.ts" ]; then
-            TODAY=$(date -u +%Y-%m-%d)
-            # MATRIX_VERSION = "..." 라인 갱신 (sed in-place, macOS·linux 호환)
-            sed -i.bak "s/MATRIX_VERSION = \"[^\"]*\"/MATRIX_VERSION = \"$TODAY\"/" lib/geo/administrative-district-adjacency.ts
-            rm -f lib/geo/administrative-district-adjacency.ts.bak
+          if [ -f "scripts/build-adjacency-matrix.ts" ] && [ -f "data/raw/lsmd.shp" ]; then
+            npx tsx scripts/build-adjacency-matrix.ts
+            # MATRIX_VERSION sed는 build-adjacency-matrix.ts 내부에서 처리
+          else
+            echo "⚠️ scripts/build-adjacency-matrix.ts 또는 data/raw/lsmd.shp 미존재 — skip."
+          fi
+
+      - name: Verify matrix
+        run: |
+          if [ -f "scripts/verify-matrix.ts" ]; then
+            npx tsx scripts/verify-matrix.ts
           fi
 
       - name: Run anchor tests
         run: |
+          if [ -d "__tests__/scripts" ]; then
+            npx vitest run __tests__/scripts/ || (echo "❌ anchor 실패 — 매트릭스 검증 오류" && exit 1)
+          fi
           if [ -d "__tests__/lib/geo" ]; then
             npx vitest run __tests__/lib/geo/ || (echo "❌ anchor 실패 — 매트릭스 검증 오류" && exit 1)
           fi
