@@ -29,6 +29,8 @@ import {
   RealEstateHeavyToggle,
   type RealEstateHeavyTogglePatch,
 } from "./RealEstateHeavyToggle";
+import { EvaluationCommitteeToggle } from "./EvaluationCommitteeToggle";
+import type { EvaluationCommitteeInput } from "@/lib/tax-engine/property-valuation/evaluation-committee-section-54-6";
 import { judgeIsRealEstateHeavy } from "@/lib/tax-engine/property-valuation/auto-judgment";
 import { evaluateUnlistedStockV2 } from "@/lib/tax-engine/property-valuation/unlisted-orchestrator";
 import type {
@@ -321,6 +323,14 @@ export function UnlistedStockV2Card({
         ownedShares={input.ownedShares}
         totalShares={input.totalShares}
         onChange={handleSection22ModeChange}
+      />
+
+      {/* 5-C. PR-K: §54⑥ 평가심의위원회 신청 옵션 (Section 11) */}
+      <EvaluationCommitteeToggle
+        value={input.evaluationCommittee}
+        onChange={(next: EvaluationCommitteeInput | undefined) =>
+          wrappedOnChange({ ...input, evaluationCommittee: next })
+        }
       />
 
       {/* 6. 결과 카드 */}
