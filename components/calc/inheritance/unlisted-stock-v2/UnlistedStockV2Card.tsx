@@ -31,6 +31,7 @@ import {
 } from "./RealEstateHeavyToggle";
 import { EvaluationCommitteeToggle } from "./EvaluationCommitteeToggle";
 import { EvaluationCommitteeResultCard } from "./EvaluationCommitteeResultCard";
+import { EvaluationCommitteeFilingGuideCard } from "./EvaluationCommitteeFilingGuideCard";
 import type { EvaluationCommitteeInput } from "@/lib/tax-engine/property-valuation/evaluation-committee-section-54-6";
 import { judgeIsRealEstateHeavy } from "@/lib/tax-engine/property-valuation/auto-judgment";
 import { evaluateUnlistedStockV2 } from "@/lib/tax-engine/property-valuation/unlisted-orchestrator";
@@ -334,6 +335,9 @@ export function UnlistedStockV2Card({
         }
       />
       <EvaluationCommitteeResultPanel input={input} />
+      {input.evaluationCommittee && (
+        <EvaluationCommitteeFilingGuideCard taxKind="inheritance" />
+      )}
 
       {/* 6. 결과 카드 */}
       <PerShareValuationResultCard input={input} />
