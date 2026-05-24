@@ -183,6 +183,13 @@ export interface UnlistedStockValuationInput {
    */
   otherUnlistedHoldings?: import("@/lib/tax-engine/property-valuation/other-unlisted-holdings").OtherUnlistedHolding[];
 
+  /**
+   * PR-K (§54⑥): 평가심의위원회 신청 옵션 (70~130% 4방법).
+   * 미입력 → 옵션 미적용. 참고용 메타로만 동작 — 본 결과 무변경.
+   * Plan: docs/00-pm/inheritance-unlisted-stock-evaluation-committee-section-54-6.plan.md
+   */
+  evaluationCommittee?: import("@/lib/tax-engine/property-valuation/evaluation-committee-section-54-6").EvaluationCommitteeInput;
+
   // === 할증평가 §63③ ===
   isMaxShareholder: boolean;
   /**
@@ -259,4 +266,11 @@ export interface UnlistedStockValuationResult {
    * 미입력·빈 배열 시 undefined.
    */
   otherUnlistedHoldingsEvaluated?: import("@/lib/tax-engine/property-valuation/other-unlisted-holdings").OtherUnlistedHoldingResult[];
+
+  /**
+   * PR-K (§54⑥): 평가심의위원회 신청 옵션 평가 결과 (참고용 메타).
+   * 본 결과 (finalPerShareForReporting·totalValuation) 무변경.
+   * 미입력 시 undefined.
+   */
+  evaluationCommitteeApplied?: import("@/lib/tax-engine/property-valuation/evaluation-committee-section-54-6").EvaluationCommitteeResult;
 }

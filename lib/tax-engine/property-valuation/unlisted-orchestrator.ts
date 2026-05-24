@@ -45,6 +45,7 @@ import { calcCapitalIncreaseAdjustment } from "./capital-increase-adjustment";
 import { calcMaxShareholderPremium } from "./max-shareholder-premium";
 import { resolveEvaluationDelta } from "./evaluation-delta";
 import { evaluateOtherUnlistedHoldings } from "./other-unlisted-holdings";
+import { applyEvaluationCommittee } from "./evaluation-committee-section-54-6";
 
 /**
  * 비상장주식 V2 평가 진입점
@@ -244,6 +245,19 @@ export function evaluateUnlistedStockV2(
     }
   }
 
+  // PR-K (§54⑥): 평가심의위원회 신청 옵션 (70~130% 4방법) — 참고용 메타, 본 결과 무변경
+  let evaluationCommitteeApplied: UnlistedStockValuationResult["evaluationCommitteeApplied"];
+  if (input.evaluationCommittee) {
+    evaluationCommitteeApplied = applyEvaluationCommittee(
+      input.evaluationCommittee,
+      finalPerShareValue,
+    );
+    appliedRules.push("상증령 §54⑥ + §49의2 (평가심의위원회 신청 옵션)");
+    for (const w of evaluationCommitteeApplied.warnings) {
+      warnings.push(`[평가심의위] ${w.message}`);
+    }
+  }
+
   return {
     netAssetTotal,
     netAssetPerShare,
@@ -265,6 +279,7 @@ export function evaluateUnlistedStockV2(
     warnings,
     appliedRules,
     otherUnlistedHoldingsEvaluated,
+    evaluationCommitteeApplied,
   };
 }
 
