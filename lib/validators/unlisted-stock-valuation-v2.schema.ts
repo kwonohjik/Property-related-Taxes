@@ -168,6 +168,15 @@ export const unlistedStockValuationV2Schema = z
         }),
       )
       .optional(),
+    // PR-K (§54⑥): 평가심의위원회 신청 옵션 (70~130% 4방법)
+    evaluationCommittee: z
+      .object({
+        method: z.enum(["clm", "dcf", "ddm", "other"]),
+        taxpayerPerShareValuation: z.number().positive(),
+        methodNotes: z.string().optional(),
+        evaluatorOrganization: z.string().optional(),
+      })
+      .optional(),
   })
   .superRefine((input, ctx) => {
     // 사업연도 종료일 순서 검증 (1년전 > 2년전 > 3년전)
@@ -218,6 +227,18 @@ export const unlistedStockValuationV2Schema = z
           message: "유상증자는 1주당 납입금액을 입력해야 합니다. (§56⑤)",
         });
       }
+    }
+    // PR-K (§54⑥): method="other" 선택 시 methodNotes(평가법 사유) 필수 (§49의2⑤2호)
+    if (
+      input.evaluationCommittee?.method === "other" &&
+      (!input.evaluationCommittee.methodNotes ||
+        input.evaluationCommittee.methodNotes.trim() === "")
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["evaluationCommittee", "methodNotes"],
+        message: "기타 평가법 선택 시 평가법 사유(methodNotes)가 필수입니다. (§49의2⑤2호)",
+      });
     }
   });
 
