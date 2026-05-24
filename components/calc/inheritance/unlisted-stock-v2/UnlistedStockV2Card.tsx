@@ -30,6 +30,7 @@ import {
   type RealEstateHeavyTogglePatch,
 } from "./RealEstateHeavyToggle";
 import { EvaluationCommitteeToggle } from "./EvaluationCommitteeToggle";
+import { EvaluationCommitteeResultCard } from "./EvaluationCommitteeResultCard";
 import type { EvaluationCommitteeInput } from "@/lib/tax-engine/property-valuation/evaluation-committee-section-54-6";
 import { judgeIsRealEstateHeavy } from "@/lib/tax-engine/property-valuation/auto-judgment";
 import { evaluateUnlistedStockV2 } from "@/lib/tax-engine/property-valuation/unlisted-orchestrator";
@@ -332,6 +333,7 @@ export function UnlistedStockV2Card({
           wrappedOnChange({ ...input, evaluationCommittee: next })
         }
       />
+      <EvaluationCommitteeResultPanel input={input} />
 
       {/* 6. 결과 카드 */}
       <PerShareValuationResultCard input={input} />
@@ -339,6 +341,29 @@ export function UnlistedStockV2Card({
       {/* 7. 별지 양식 PDF 출력 미리보기 */}
       <BesshiForm4Buppyo3PrintView input={input} />
     </div>
+  );
+}
+
+function EvaluationCommitteeResultPanel({ input }: { input: UnlistedStockValuationInput }) {
+  const result = useMemo(() => {
+    if (!input.evaluationCommittee) return null;
+    try {
+      if (input.totalShares <= 0 || input.ownedShares <= 0) return null;
+      return evaluateUnlistedStockV2(input);
+    } catch {
+      return null;
+    }
+  }, [input]);
+
+  if (!input.evaluationCommittee || !result?.evaluationCommitteeApplied) return null;
+
+  return (
+    <EvaluationCommitteeResultCard
+      result={result.evaluationCommitteeApplied}
+      taxpayerPerShareValuation={input.evaluationCommittee.taxpayerPerShareValuation}
+      baseDate={input.evaluationDate}
+      taxKind="inheritance"
+    />
   );
 }
 
