@@ -21,6 +21,10 @@ import {
 } from "@/components/calc/inheritance/AssetToggleHints";
 import { CurrencyInput, parseAmount, formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { AddressSearch, type AddressValue } from "@/components/ui/address-search";
+import {
+  resolveSigunguCode,
+  isReverseGeocodeError,
+} from "@/lib/calc/vworld-reverse-geocode";
 import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
 import { DeemedCategorySection } from "@/components/calc/inheritance/DeemedCategorySection";
 import { FarmingCategorySection } from "@/components/calc/inheritance/FarmingCategorySection";
@@ -220,7 +224,7 @@ function ItemEditor({ item, index, onUpdate, onRemove, mode, heirs }: ItemEditor
               </label>
               <AddressSearch
                 value={addrValue}
-                onChange={(v) => {
+                onChange={async (v) => {
                   setAddrValue(v);
                   // 도로명(우선)·지번 + 건물명·상세주소를 결합하여 자산명에 동기화
                   const parts = [v.road || v.jibun, v.building, v.detail].filter(Boolean);
@@ -244,17 +248,42 @@ function ItemEditor({ item, index, onUpdate, onRemove, mode, heirs }: ItemEditor
                       ? { lat: latNum, lng: lngNum }
                       : undefined;
 
+                  const isFishing =
+                    item.farmingCategory === "fishing_vessel" ||
+                    item.farmingCategory === "fishing_right";
+
                   const patch: Partial<EstateItem> = { estateAddress };
                   // farmingCategory 분기 (UI-E1): 어선·어업권은 fishingAnchorLatLng로
                   if (estateLatLng) {
-                    const isFishing =
-                      item.farmingCategory === "fishing_vessel" ||
-                      item.farmingCategory === "fishing_right";
                     if (isFishing) patch.fishingAnchorLatLng = estateLatLng;
                     else patch.estateLatLng = estateLatLng;
                   }
                   if (auto) patch.name = auto;
                   set(patch);
+
+                  // PR-RD-5b: 시·군·구 코드 자동 추출 (PNU 우선 → Vworld API fallback)
+                  // 비동기 — 실패 시 사용자 수동 입력으로 fallback (UX 차단 없음)
+                  if (v.pnu || estateLatLng) {
+                    try {
+                      const outcome = await resolveSigunguCode(
+                        v.pnu || undefined,
+                        estateLatLng?.lat,
+                        estateLatLng?.lng,
+                      );
+                      if (!isReverseGeocodeError(outcome)) {
+                        const codePatch: Partial<EstateItem> = {};
+                        if (isFishing) {
+                          codePatch.fishingAnchorSigunguCode = outcome.sigunguCode;
+                        } else {
+                          codePatch.estateSigunguCode = outcome.sigunguCode;
+                        }
+                        set(codePatch);
+                      }
+                      // error 시 silent — 기존 패턴 유지 (수동 입력 fallback)
+                    } catch {
+                      /* 네트워크 실패 silent */
+                    }
+                  }
                 }}
               />
               <input

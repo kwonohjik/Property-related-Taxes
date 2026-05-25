@@ -13,33 +13,33 @@
 
 ## 작업 목록 (8건)
 
-- [ ] **S1** Vworld API 사양 조사 (30min) — reverseGeocoding 응답 schema · level4LC vs level4L · 좌표 범위 · rate limit
-- [ ] **S2** API 프록시 라우트 (1h) — `app/api/address/reverse-geocode/route.ts` (~120줄)
-- [ ] **S3** Dexie v5 마이그레이션 (1h) — `lib/storage/db.ts`에 `reverseGeocodeCache` 테이블 추가
-- [ ] **S4** 클라이언트 헬퍼 (1h) — `lib/calc/vworld-reverse-geocode.ts` (~200줄, `reverseGeocode()` + `resolveSigunguCode()` PNU fallback)
-- [ ] **S6-VRG** anchor (1h) — `__tests__/lib/calc/vworld-reverse-geocode.test.ts` VRG-1~10
-- [ ] **S6-API** anchor (30min) — `__tests__/app/api/reverse-geocode.test.ts` API-1~5
-- [ ] **S5** PropertyValuationForm 통합 (1h) — AddressSearch onChange에서 자동 호출
-- [ ] **CV** 갭 분석 + typecheck + 전체 회귀 + 한국어 커밋 + push (30min)
+- [x] **S1** Vworld API 사양 조사 (완료) — URL `https://api.vworld.kr/req/address`, params service=address·request=getAddress·type=both·point=lng,lat·format=json, 응답 `response.result[].structure.{level1,level2,level4L,level4LC}`, 한국 영역 33~39N·124~132E, Referer 헤더 필수 (기존 search route 패턴 활용)
+- [x] **S2** API 프록시 라우트 — `app/api/address/reverse-geocode/route.ts` (130줄) — sanity check + Vworld 호출 + level4LC 추출 + 5단 응답 분기
+- [x] **S3** Dexie v5 마이그레이션 — `lib/storage/db.ts`에 `reverseGeocodeCache` 테이블 + `ReverseGeocodeCacheRecord` 타입 + resetLocalDB 갱신 (기존 4 테이블 무변경, 회귀 0)
+- [x] **S4** 클라이언트 헬퍼 — `lib/calc/vworld-reverse-geocode.ts` (178줄) — reverseGeocode() + resolveSigunguCode() PNU 우선 fallback + cacheKey() + purgeExpiredCache() + isReverseGeocodeError() type guard
+- [x] **S6-VRG** anchor — `__tests__/lib/calc/vworld-reverse-geocode.test.ts` 14 PASS (VRG-1~10 + 10b + meta 2 + fetch-throw)
+- [x] **S6-API** anchor — `__tests__/api/reverse-geocode.route.test.ts` 8 PASS (API-1~5 + 2b·2c·fetch-throw)
+- [x] **S5** PropertyValuationForm 통합 — AddressSearch onChange async + resolveSigunguCode 자동 호출 + isFishing 분기 (estateSigunguCode / fishingAnchorSigunguCode) + 실패 silent fallback
+- [x] **CV** 갭 분석 (갭 0건, anchor 초과달성) + typecheck 0 + 전체 회귀 4,893 PASS (+22 신규, 0 FAIL) + 한국어 커밋 + push
 
 ## 진행 현황
 
 - 전체 작업: 8개
-- 완료: 0개
-- 미완료: 8개
-- 상태: **진행 전 (대기)**
+- 완료: 8개
+- 미완료: 0개
+- 상태: **완료 ✅**
 
 ## 자가 점검 체크리스트 (완료 보고 전)
 
-- [ ] 8 작업 모두 완료 + TODO.md `[x]` 갱신
-- [ ] typecheck 0 에러
-- [ ] 전체 vitest 회귀 0건 (4,821 PASS 기준)
-- [ ] 신규 anchor 15건 PASS (VRG 10 + API 5)
-- [ ] 갭 분석 — 계획서 §2 산출물 4종 + 테스트 2종 = 6 파일 모두 commit
-- [ ] 14지점 ⑤ AddressSearch onChange 통합 확인
-- [ ] mirror-pattern — UI fallback·API fallback·validate 정합
-- [ ] 한국어 커밋 메시지 + push 완료
-- [ ] 미완료 0개 확인 후 완료 선언
+- [x] 8 작업 모두 완료 + TODO.md `[x]` 갱신
+- [x] typecheck 0 에러
+- [x] 전체 vitest 회귀 0건 (4,871 → 4,893 PASS, +22 신규)
+- [x] 신규 anchor 22건 PASS (VRG 14 + API 8, 계획 15건 초과달성)
+- [x] 갭 분석 — 계획서 §2 산출물 4종 + 테스트 2종 = 6 파일 모두 commit
+- [x] 14지점 ⑤ AddressSearch onChange 통합 확인
+- [x] mirror-pattern — PNU 우선 → API fallback → 실패 silent (3층 일관)
+- [x] 한국어 커밋 메시지 + push 완료
+- [x] 미완료 0개 확인 후 완료 선언
 
 ---
 
