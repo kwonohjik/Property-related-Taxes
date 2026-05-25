@@ -51,6 +51,8 @@ interface UnlistedPreviewProps {
   isRealEstateHeavy: boolean;
   isDeficit: boolean;
   isMinValueApplied: boolean;
+  /** 회사 전체 3년 가중평균 순손익 (§56①) — 1주당 순손익가치 산출근거 표시용 */
+  companyWeightedNetIncome?: number;
 }
 
 export function UnlistedStockPreview({
@@ -59,6 +61,7 @@ export function UnlistedStockPreview({
   isRealEstateHeavy,
   isDeficit,
   isMinValueApplied,
+  companyWeightedNetIncome,
 }: UnlistedPreviewProps) {
   const totalValue = preview.perShareFinalValue * ownedShares;
   const iw = isRealEstateHeavy ? 2 : 3;
@@ -68,6 +71,12 @@ export function UnlistedStockPreview({
     <div className="rounded-md bg-gray-50 dark:bg-gray-800 px-3 py-3 text-xs space-y-1.5">
       <p className="font-semibold text-gray-600 dark:text-gray-300 mb-2">계산 내역</p>
 
+      {companyWeightedNetIncome != null && (
+        <div className="flex justify-between text-gray-400 dark:text-gray-500 text-[11px]">
+          <span>3년 가중평균 순손익 (회사 전체, §56①) ÷ (발행주식수 × 환원율)</span>
+          <span>{Math.round(companyWeightedNetIncome).toLocaleString()}</span>
+        </div>
+      )}
       <div className="flex justify-between text-gray-500 dark:text-gray-400">
         <span>1주당 순손익가치</span>
         <span>{preview.perShareIncomeValue.toLocaleString()}</span>
@@ -421,6 +430,7 @@ export function UnlistedStockSimpleFields({
           isRealEstateHeavy={isRealEstateHeavy}
           isDeficit={isDeficit}
           isMinValueApplied={preview.perShareFinalValue === preview.perShareMinValue}
+          companyWeightedNetIncome={resolvedNetIncome}
         />
       )}
     </div>
