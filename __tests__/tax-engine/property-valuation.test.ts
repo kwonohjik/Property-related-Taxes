@@ -50,36 +50,57 @@ describe("재산평가 — 부동산", () => {
     expect(result.warnings.length).toBeGreaterThan(0);
   });
 
-  it("[T3] 토지 저당권 차감", () => {
+  // §66·시행령 §63: 저당권 등이 설정된 재산 = MAX(§60 평가액, 담보채권액). 차감이 아님.
+  it("[T3] 토지 §66 — 평가액 > 담보채권액 → 평가액 그대로 (차감 아님)", () => {
     const item = makeItem({
       category: "real_estate_land",
       marketValue: 200_000_000,
-      mortgageAmount: 50_000_000,
+      mortgageAmount: 50_000_000, // 담보채권액 < 평가액
     });
     const result = evaluateLand(item);
-    expect(result.valuatedAmount).toBe(150_000_000);
+    expect(result.valuatedAmount).toBe(200_000_000);
   });
 
-  it("[T4] 아파트 시가 — 임대보증금 차감", () => {
+  it("[T3b] 토지 §66 — 담보채권액 > 평가액 → 채권액으로 상향", () => {
+    const item = makeItem({
+      category: "real_estate_land",
+      standardPrice: 200_000_000,
+      mortgageAmount: 300_000_000, // 담보채권액 > 평가액 → §66 하한
+    });
+    const result = evaluateLand(item);
+    expect(result.valuatedAmount).toBe(300_000_000);
+  });
+
+  it("[T4] 아파트 §66 — 평가액 > 임대보증금 → 평가액 그대로", () => {
     const item = makeItem({
       category: "real_estate_apartment",
       marketValue: 800_000_000,
       leaseDeposit: 200_000_000,
     });
     const result = evaluateApartment(item);
-    expect(result.valuatedAmount).toBe(600_000_000);
-    expect(result.warnings.some(w => w.includes("임대보증금"))).toBe(true);
+    expect(result.valuatedAmount).toBe(800_000_000);
   });
 
-  it("[T5] 아파트 보충적 평가 + 저당권 + 임대보증금 복합 차감", () => {
+  it("[T5] 아파트 §66·§63② — 저당+임대보증금 합산 < 평가액 → 평가액 그대로", () => {
     const item = makeItem({
       category: "real_estate_apartment",
       standardPrice: 500_000_000,
       leaseDeposit: 100_000_000,
-      mortgageAmount: 50_000_000,
+      mortgageAmount: 50_000_000, // 합산 1.5억 < 5억
     });
     const result = evaluateApartment(item);
-    expect(result.valuatedAmount).toBe(350_000_000);
+    expect(result.valuatedAmount).toBe(500_000_000);
+  });
+
+  it("[T5b] 아파트 §63② — 저당+임대보증금 합산 > 평가액 → 합산액으로 상향", () => {
+    const item = makeItem({
+      category: "real_estate_apartment",
+      standardPrice: 200_000_000,
+      leaseDeposit: 100_000_000,
+      mortgageAmount: 150_000_000, // 합산 2.5억 > 2억 → §63② 합계액 하한
+    });
+    const result = evaluateApartment(item);
+    expect(result.valuatedAmount).toBe(250_000_000);
   });
 
   it("[T6] 단독주택 평가", () => {

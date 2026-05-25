@@ -22,6 +22,11 @@
  */
 
 import { INH } from "./legal-codes";
+import {
+  computeLegalShares,
+  distributeByLegalShares,
+  type LegalShareResult,
+} from "./inheritance-legal-share";
 import type {
   Heir,
   PriorGift,
@@ -115,6 +120,8 @@ export interface HeirAllocationParams {
   priorGifts: PriorGift[];
   /** 추정상속재산 항목별 가산액 — items가 PresumedInheritanceItemResult 매핑된 결과 (id→addedAmount) */
   presumedAddedById: Map<string, number>;
+  /** estateItem id → 평가액(valuatedAmount). 협의분할 미입력 자산의 법정상속분 배분 기준 */
+  valuatedAmountById: Map<string, number>;
   /** 상속세 과세표준 */
   taxBase: number;
   /** 산출세액 (할증 전) */
@@ -136,16 +143,28 @@ export interface HeirAllocationParams {
 // ────────────────────────────────────────────────────
 
 /**
- * heirAllocations에서 heir별 금액 합산. 미정의 시 빈 Map.
+ * heir별 금액 집계 — `heirAllocations` 입력 자산은 그 합, **미입력(undefined/빈배열) 자산은
+ * 법정상속분(`legalShares`)으로 자동 배분**. (계획 §2, 디자인 §2-3)
+ * @param amountOf 미입력 자산의 배분 기준 금액(평가액·채무액)
  */
-function sumAllocationsByHeir(
-  items: Array<{ heirAllocations?: HeirAllocation[] }>,
+function resolveAllocationsByHeir<T extends { heirAllocations?: HeirAllocation[] }>(
+  items: T[],
+  amountOf: (item: T) => number,
+  legalShares: LegalShareResult,
 ): Map<string, number> {
   const sums = new Map<string, number>();
   for (const item of items) {
-    if (!item.heirAllocations || item.heirAllocations.length === 0) continue;
-    for (const alloc of item.heirAllocations) {
-      sums.set(alloc.heirId, (sums.get(alloc.heirId) ?? 0) + alloc.amount);
+    if (item.heirAllocations && item.heirAllocations.length > 0) {
+      // 협의분할 입력 — 그대로 합산 (합계검증은 validate에서)
+      for (const alloc of item.heirAllocations) {
+        sums.set(alloc.heirId, (sums.get(alloc.heirId) ?? 0) + alloc.amount);
+      }
+    } else {
+      // 미입력 — 법정상속분 자동 배분
+      const dist = distributeByLegalShares(amountOf(item), legalShares);
+      for (const [heirId, amt] of dist) {
+        sums.set(heirId, (sums.get(heirId) ?? 0) + amt);
+      }
     }
   }
   return sums;
@@ -200,6 +219,7 @@ export function calcHeirAllocation(
     debtItems,
     priorGifts,
     presumedAddedById,
+    valuatedAmountById,
     taxBase,
     computedTax,
     generationSkipSurcharge,
@@ -209,26 +229,54 @@ export function calcHeirAllocation(
     isFiledOnTime,
   } = params;
 
-  // 13-1: 자산-수준 분배 집계
-  const estateByHeir = sumAllocationsByHeir(estateItems);
-  const debtByHeir = sumAllocationsByHeir(debtItems);
+  // 법정상속분 (협의분할 미입력 자산 자동 배분 기준 — 민법 §1009·§1003·§1000)
+  const legalShares = computeLegalShares(heirs);
 
-  // 추정상속재산 분배 (presumedItems[].heirAllocations × presumedAddedById의 비율 적용)
-  // 단, 본 PDF 사례는 추정상속재산 배분이 PDF 결과 표에 명시되어 있어
-  // heirAllocations 합이 곧 addedAmount와 일치하는 입력 가정.
+  // echo — 미입력 자산이 법정상속분으로 자동 배분되었는지 (결과 카드 안내용)
+  const isUnallocated = (x: { heirAllocations?: HeirAllocation[] }) =>
+    !x.heirAllocations || x.heirAllocations.length === 0;
+  const usedLegalShareFallback =
+    legalShares.shares.length > 0 &&
+    (estateItems.some(isUnallocated) ||
+      debtItems.some(isUnallocated) ||
+      presumedItems.some(
+        (pi) => (presumedAddedById.get(pi.id) ?? 0) > 0 && isUnallocated(pi),
+      ));
+
+  // 13-1: 자산-수준 분배 집계 (미입력 자산은 법정상속분 fallback)
+  const estateByHeir = resolveAllocationsByHeir(
+    estateItems,
+    (it) => valuatedAmountById.get(it.id) ?? 0,
+    legalShares,
+  );
+  const debtByHeir = resolveAllocationsByHeir(
+    debtItems,
+    (it) => it.amount,
+    legalShares,
+  );
+
+  // 추정상속재산 분배 — heirAllocations 입력 시 비율 안분, 미입력 시 법정상속분
   const presumedByHeir = new Map<string, number>();
   for (const pi of presumedItems) {
     const added = presumedAddedById.get(pi.id) ?? 0;
-    if (added === 0 || !pi.heirAllocations) continue;
-    const totalAlloc = pi.heirAllocations.reduce((s, a) => s + a.amount, 0);
-    if (totalAlloc === 0) continue;
-    for (const alloc of pi.heirAllocations) {
-      // 비율 안분 (총 분배 = added이면 비례 그대로)
-      const share = Math.floor((added * alloc.amount) / totalAlloc);
-      presumedByHeir.set(
-        alloc.heirId,
-        (presumedByHeir.get(alloc.heirId) ?? 0) + share,
-      );
+    if (added === 0) continue;
+    if (pi.heirAllocations && pi.heirAllocations.length > 0) {
+      const totalAlloc = pi.heirAllocations.reduce((s, a) => s + a.amount, 0);
+      if (totalAlloc === 0) continue;
+      for (const alloc of pi.heirAllocations) {
+        // 비율 안분 (총 분배 = added이면 비례 그대로)
+        const share = Math.floor((added * alloc.amount) / totalAlloc);
+        presumedByHeir.set(
+          alloc.heirId,
+          (presumedByHeir.get(alloc.heirId) ?? 0) + share,
+        );
+      }
+    } else {
+      // 미입력 — 법정상속분 자동 배분
+      const dist = distributeByLegalShares(added, legalShares);
+      for (const [heirId, amt] of dist) {
+        presumedByHeir.set(heirId, (presumedByHeir.get(heirId) ?? 0) + amt);
+      }
     }
   }
 
@@ -404,6 +452,7 @@ export function calcHeirAllocation(
     indirectDistributionBase: indirectDenominator,
     indirectNumerator,
     computedTaxShareDenominator,
+    usedLegalShareFallback,
     breakdown,
   };
 }

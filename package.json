@@ -9,6 +9,8 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
     "test:transfer": "vitest run transfer multi-house non-business rental new-housing self-farming expropriation pre-1990 bundled multi-parcel exchange",
     "test:acquisition": "vitest run acquisition",
     "test:property": "vitest run property-tax property-object property-house property-land property-taxpayer property-exemption property-comprehensive separate",
@@ -62,6 +64,7 @@
     "zustand": "^5.0.12"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",

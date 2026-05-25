@@ -10,10 +10,10 @@
  * API 스키마 변경 없음.
  */
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { cn } from "@/lib/utils";
-import { useStandardPriceLookup, getDefaultPriceYear } from "@/lib/hooks/useStandardPriceLookup";
+import { useStandardPriceLookup, getDefaultPriceYear, isNoticeAfterReference } from "@/lib/hooks/useStandardPriceLookup";
 
 export type PriceSource = "lookup" | "manual" | "lookup-edited";
 
@@ -75,8 +75,18 @@ export function StandardPriceInput({
     propertyKind === "land" || propertyKind === "building_non_residential";
   const propertyType = toPropertyType(propertyKind);
 
-  const { loading, msg, year, setYear, yearOptions, lookup } =
+  // 면적은 totalPrice(단가×면적) 계산 입력일 뿐 — 엔진엔 총액만 전달된다.
+  // 호출부가 area/onAreaChange를 제어하지 않으면 내부 state로 관리(uncontrolled fallback).
+  const [internalArea, setInternalArea] = useState("");
+  const areaValue = area ?? internalArea;
+
+  const { loading, msg, year, setYear, yearOptions, announcedLabel, noticeDate, lookup } =
     useStandardPriceLookup(propertyType);
+
+  // 조회된 공시가격의 실제 고시일이 평가기준일보다 늦으면(= 평가기준일 시점 미고시) 경고.
+  // 실측 데이터 없이 한 번의 조회로 공시연도 과대선택을 정확히 검증한다.
+  const noticeAfterReference =
+    msg?.kind === "ok" && isNoticeAfterReference(noticeDate, referenceDate ?? "");
 
   // 기준일이 바뀌면 조회 연도 자동 갱신 (forceYear 우선)
   useEffect(() => {
@@ -91,7 +101,7 @@ export function StandardPriceInput({
   function handlePricePerSqmChange(v: string) {
     onPricePerSqmChange?.(v);
     const sqm = parseFloat(v.replace(/,/g, "") || "0");
-    const areaNum = parseFloat(area?.replace(/,/g, "") || "0");
+    const areaNum = parseFloat(areaValue.replace(/,/g, "") || "0");
     if (sqm > 0 && areaNum > 0) {
       const computed = String(Math.floor(sqm * areaNum));
       onTotalPriceChange(computed);
@@ -101,7 +111,8 @@ export function StandardPriceInput({
 
   // ── 면적 변경 → 총액 자동계산 ──────────────────────────────────
   function handleAreaChange(v: string) {
-    onAreaChange?.(v);
+    if (onAreaChange) onAreaChange(v);
+    else setInternalArea(v);
     const areaNum = parseFloat(v || "0");
     const sqm = parseFloat(pricePerSqm?.replace(/,/g, "") || "0");
     if (sqm > 0 && areaNum > 0) {
@@ -126,7 +137,7 @@ export function StandardPriceInput({
       // 단가 저장
       onPricePerSqmChange?.(String(price));
       // 면적이 있으면 총액 자동계산
-      const areaNum = parseFloat(area?.replace(/,/g, "") || "0");
+      const areaNum = parseFloat(areaValue.replace(/,/g, "") || "0");
       if (areaNum > 0) {
         onTotalPriceChange(String(Math.floor(areaNum * price)));
       }
@@ -143,7 +154,7 @@ export function StandardPriceInput({
   const autoCalcHint =
     isAreaMode &&
     parseFloat(pricePerSqm?.replace(/,/g, "") || "0") > 0 &&
-    parseFloat(area?.replace(/,/g, "") || "0") > 0
+    parseFloat(areaValue.replace(/,/g, "") || "0") > 0
       ? "단가 × 면적 자동계산"
       : undefined;
 
@@ -191,7 +202,7 @@ export function StandardPriceInput({
               type="number"
               step="0.01"
               min={0}
-              value={area ?? ""}
+              value={areaValue}
               onChange={(e) => handleAreaChange(e.target.value)}
               placeholder="면적 입력"
               className="w-full border rounded-md px-3 py-2 text-sm bg-background"
@@ -226,10 +237,22 @@ export function StandardPriceInput({
         </p>
       )}
 
+      {/* 실제 고시일 표시 (조회 성공 시) */}
+      {msg?.kind === "ok" && announcedLabel && (
+        <p className="text-xs text-muted-foreground">{announcedLabel}</p>
+      )}
+
+      {/* 평가기준일 경계 경고 — 선택 공시연도가 평가기준일 시점에 미고시 */}
+      {noticeAfterReference && (
+        <p className="text-xs text-amber-700 bg-amber-50 dark:bg-amber-900/20 rounded px-2 py-1">
+          ⚠️ 평가기준일 시점에 이 공시가격은 아직 고시 전이었습니다. 직전 연도를 선택해 다시 조회하세요.
+        </p>
+      )}
+
       {/* 단가만 있고 면적이 없을 때 안내 */}
       {isAreaMode &&
         parseFloat(pricePerSqm?.replace(/,/g, "") || "0") > 0 &&
-        !parseFloat(area?.replace(/,/g, "") || "0") && (
+        !parseFloat(areaValue.replace(/,/g, "") || "0") && (
           <p className="text-xs text-muted-foreground">
             면적(㎡)을 입력하면 총액이 자동 계산됩니다.
           </p>

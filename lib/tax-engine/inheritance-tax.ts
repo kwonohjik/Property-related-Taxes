@@ -41,6 +41,7 @@ import { calcInheritanceTaxCredits } from "./inheritance-gift-tax-credit";
 import { evaluatePresumedInheritance } from "./presumed-inheritance";
 import { calcCorporateExemption } from "./inheritance-corporate-exemption";
 import { calcHeirAllocation } from "./inheritance-allocation";
+import { computeLegalShares } from "./inheritance-legal-share";
 import type { TaxBracket } from "./types";
 
 // ============================================================
@@ -483,14 +484,11 @@ export function calcInheritanceTax(
   // STEP 13: 상속인별 배부 (Phase C) — heirs·doneeId가 제공된 경우만
   // ─────────────────────────────────────────────
   let heirAllocationResult: ReturnType<typeof calcHeirAllocation> | undefined;
+  // 자연인 상속인(corporate·legatee·isHeir=false 제외)이 1명 이상이면 항상 상속인별 배부.
+  // 협의분할 입력 자산은 그대로, 미입력 자산은 법정상속분으로 자동 배분. (계획 §4 — 항상 배부 확정)
   const hasHeirAllocations =
-    input.heirs.length > 0 &&
-    (input.estateItems.some((e) => e.heirAllocations) ||
-      input.preGiftsWithin10Years.some((g) => g.doneeId) ||
-      (input.debtItems?.some(
-        (d) => d.heirAllocations && d.heirAllocations.length > 0,
-      ) ??
-        false));
+    computeLegalShares(input.heirs).shares.length > 0 ||
+    input.preGiftsWithin10Years.some((g) => g.doneeId);
 
   if (hasHeirAllocations) {
     // 추정상속재산 id→addedAmount Map 작성
@@ -501,6 +499,11 @@ export function calcInheritanceTax(
       }
     }
 
+    // estateItem id → 평가액 (협의분할 미입력 자산 법정상속분 배분 기준)
+    const valuatedAmountById = new Map(
+      valuationResults.map((v) => [v.estateItemId, v.valuatedAmount]),
+    );
+
     heirAllocationResult = calcHeirAllocation({
       heirs: input.heirs,
       estateItems: input.estateItems,
@@ -508,6 +511,7 @@ export function calcInheritanceTax(
       debtItems: input.debtItems ?? [],
       priorGifts: input.preGiftsWithin10Years,
       presumedAddedById,
+      valuatedAmountById,
       taxBase,
       computedTax,
       generationSkipSurcharge,

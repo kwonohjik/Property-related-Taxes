@@ -19,20 +19,21 @@ import {
   getFamilyBusinessHint,
   getFinancialDeductionHint,
 } from "@/components/calc/inheritance/AssetToggleHints";
-import { CurrencyInput, parseAmount, formatKRW } from "@/components/calc/inputs/CurrencyInput";
+import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { AddressSearch, type AddressValue } from "@/components/ui/address-search";
 import {
   resolveSigunguCode,
   isReverseGeocodeError,
 } from "@/lib/calc/vworld-reverse-geocode";
 import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
+import { EstimatedValuePreview, TotalEstimatedValue } from "@/components/calc/property-valuation-preview";
 import { DeemedCategorySection } from "@/components/calc/inheritance/DeemedCategorySection";
 import { FarmingCategorySection } from "@/components/calc/inheritance/FarmingCategorySection";
 import { FamilyBusinessCategorySection } from "@/components/calc/inheritance/FamilyBusinessCategorySection";
 import { CorporateNonBusinessAssetsSection } from "@/components/calc/inheritance/CorporateNonBusinessAssetsSection";
 import { FinancialDeductionChip } from "@/components/calc/inheritance/FinancialDeductionChip";
 import { HeirAllocationToggleSection } from "@/components/calc/inheritance/HeirAllocationToggleSection";
-import type { EstateItem, AssetCategory, ValuationMethod, Heir } from "@/lib/tax-engine/types/inheritance-gift.types";
+import type { EstateItem, AssetCategory, Heir } from "@/lib/tax-engine/types/inheritance-gift.types";
 
 /**
  * 자산 카드별 "효과 평가액" 우선순위 — 시가 > 감정가 > 기준시가 > 보증금(deposit).
@@ -142,9 +143,11 @@ interface ItemEditorProps {
   mode: "inheritance" | "gift";
   /** 협의분할 분배 후보 — inheritance 모드에서만 의미 */
   heirs?: Heir[];
+  /** 평가기준일 (상속개시일·증여일) — 기준시가 공시연도 기본값 계산용 */
+  valuationDate?: string;
 }
 
-function ItemEditor({ item, index, onUpdate, onRemove, mode, heirs }: ItemEditorProps) {
+function ItemEditor({ item, index, onUpdate, onRemove, mode, heirs, valuationDate }: ItemEditorProps) {
   const cat = item.category as SupportedCategory;
 
   // 토글 자동 노출 정책 (asset-toggle-visibility resolver)
@@ -382,6 +385,7 @@ function ItemEditor({ item, index, onUpdate, onRemove, mode, heirs }: ItemEditor
           )}
           <StandardPriceInput
             propertyKind={propertyKind}
+            referenceDate={valuationDate}
             totalPrice={item.standardPrice != null ? String(item.standardPrice) : ""}
             onTotalPriceChange={(v) => set({ standardPrice: parseAmount(v) || undefined })}
             pricePerSqm={standardPricePerSqm}
@@ -408,11 +412,11 @@ function ItemEditor({ item, index, onUpdate, onRemove, mode, heirs }: ItemEditor
       {/* 저당권 */}
       {showMortgage && (
         <CurrencyInput
-          label="저당권 설정액"
+          label="저당권 등에 의해 담보된 채권액"
           value={item.mortgageAmount != null ? String(item.mortgageAmount) : ""}
           onChange={(v) => set({ mortgageAmount: parseAmount(v) || undefined })}
           placeholder="없으면 빈칸"
-          hint="평가액에서 차감됨 (상증법 §61 특례)"
+          hint="평가기준일 현재 실제 채무 잔액(설정액 아님). §66 — 평가액이 더 크면 평가액으로 평가(차감 아님). 채무 자체는 부채 명세에 입력해야 공제됩니다."
         />
       )}
 
@@ -495,64 +499,6 @@ function ItemEditor({ item, index, onUpdate, onRemove, mode, heirs }: ItemEditor
 }
 
 // ============================================================
-// 예상 평가액 미리보기
-// ============================================================
-
-function EstimatedValuePreview({ item }: { item: EstateItem }) {
-  let base = 0;
-  let method: ValuationMethod = "standard_price";
-
-  if (item.category === "deposit") {
-    base = item.leaseDeposit ?? 0;
-    method = "market_value";
-  } else if (item.marketValue && item.marketValue > 0) {
-    base = item.marketValue;
-    method = "market_value";
-  } else if (item.appraisedValue && item.appraisedValue > 0) {
-    base = item.appraisedValue;
-    method = "appraisal";
-  } else if (item.standardPrice && item.standardPrice > 0) {
-    base = item.standardPrice;
-    method = "standard_price";
-  }
-
-  const deductions = (item.leaseDeposit ?? 0) + (item.mortgageAmount ?? 0);
-  const net = Math.max(0, base - (item.category !== "deposit" ? deductions : 0));
-
-  if (base === 0) return null;
-
-  const methodLabel: Record<ValuationMethod, string> = {
-    market_value: "시가",
-    appraisal: "감정가",
-    standard_price: "보충적 평가",
-    similar_sales: "유사매매사례",
-    acquisition_cost: "취득가액",
-    book_value: "장부가액",
-  };
-
-  return (
-    <div className="rounded-md bg-gray-50 dark:bg-gray-800 px-3 py-2 text-xs space-y-1">
-      <div className="flex justify-between text-gray-500 dark:text-gray-400">
-        <span>적용 방법</span>
-        <span className="font-medium text-indigo-600 dark:text-indigo-400">
-          {methodLabel[method]}
-        </span>
-      </div>
-      {deductions > 0 && item.category !== "deposit" && (
-        <div className="flex justify-between text-gray-500 dark:text-gray-400">
-          <span>차감 (보증금+저당)</span>
-          <span>- {formatKRW(deductions)}</span>
-        </div>
-      )}
-      <div className="flex justify-between font-semibold border-t border-gray-200 dark:border-gray-700 pt-1">
-        <span>예상 순 평가액</span>
-        <span className="text-indigo-700 dark:text-indigo-300">{formatKRW(net)}</span>
-      </div>
-    </div>
-  );
-}
-
-// ============================================================
 // 카테고리 선택 버튼
 // ============================================================
 
@@ -577,43 +523,6 @@ function CategoryButton({ category, onAdd }: CategoryButtonProps) {
 }
 
 // ============================================================
-// 총 예상 평가액 합산
-// ============================================================
-
-function TotalEstimatedValue({ items }: { items: EstateItem[] }) {
-  let total = 0;
-  for (const item of items) {
-    let base = 0;
-    if (item.category === "deposit") {
-      base = item.leaseDeposit ?? 0;
-    } else if (item.marketValue && item.marketValue > 0) {
-      base = item.marketValue;
-    } else if (item.appraisedValue && item.appraisedValue > 0) {
-      base = item.appraisedValue;
-    } else if (item.standardPrice && item.standardPrice > 0) {
-      base = item.standardPrice;
-    }
-    const deductions = (item.category !== "deposit")
-      ? (item.leaseDeposit ?? 0) + (item.mortgageAmount ?? 0)
-      : 0;
-    total += Math.max(0, base - deductions);
-  }
-
-  if (total === 0 || items.length === 0) return null;
-
-  return (
-    <div className="rounded-md border border-indigo-200 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/20 px-4 py-3 flex justify-between items-center">
-      <span className="text-sm font-medium text-indigo-700 dark:text-indigo-300">
-        재산 합계 (예상)
-      </span>
-      <span className="text-base font-bold text-indigo-800 dark:text-indigo-200">
-        {formatKRW(total)}
-      </span>
-    </div>
-  );
-}
-
-// ============================================================
 // 메인 컴포넌트
 // ============================================================
 
@@ -625,6 +534,8 @@ export interface PropertyValuationFormProps {
   mode?: "inheritance" | "gift";
   /** 협의분할 분배 후보 — inheritance 모드에서 필수 */
   heirs?: Heir[];
+  /** 평가기준일 (상속개시일·증여일) — 기준시가 공시연도 기본값 계산용 */
+  valuationDate?: string;
 }
 
 let _nextId = 1;
@@ -638,6 +549,7 @@ export function PropertyValuationForm({
   onChange,
   mode = "inheritance",
   heirs,
+  valuationDate,
 }: PropertyValuationFormProps) {
   const [showAddPanel, setShowAddPanel] = useState(false);
   // 자산 추가 시 미리 선택할 간주상속재산 분류 (상속세 모드 전용)
@@ -700,6 +612,7 @@ export function PropertyValuationForm({
               onRemove={() => handleRemove(i)}
               mode={mode}
               heirs={heirs}
+              valuationDate={valuationDate}
             />
           ))}
         </div>

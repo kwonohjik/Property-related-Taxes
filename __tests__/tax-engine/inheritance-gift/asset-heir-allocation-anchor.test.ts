@@ -236,8 +236,8 @@ describe("자산 협의분할 — 케이스 매트릭스", () => {
     }
   });
 
-  it("[C9] heirAllocations 미입력 — heirAllocationResult가 undefined OR 자동 안분", () => {
-    // C9: 자산에 heirAllocations 미입력 시 협의분할 분기 자체가 비활성
+  it("[C9] heirAllocations 미입력 — 자연인 상속인 있으면 법정상속분 자동 배부 (배우자+자녀1)", () => {
+    // 2026-05-26 정정: '항상 배부' 확정 → 미입력 자산은 법정상속분(배우자 3/5, 자녀 2/5)
     const heirs: Heir[] = [
       { id: "h1", relation: "spouse", name: "배우자" },
       { id: "h2", relation: "child", name: "자녀" },
@@ -247,8 +247,70 @@ describe("자산 협의분할 — 케이스 매트릭스", () => {
       estateItems: [apartment("a1", 10_000_000_000)],
     });
     const r = calcInheritanceTax(input);
-    // 활성 조건: estateItems에 heirAllocations OR priorGift에 doneeId
-    // 둘 다 없으면 heirAllocationResult는 undefined
-    expect(r.heirAllocationResult).toBeUndefined();
+    expect(r.heirAllocationResult).toBeDefined();
+    const h1 = r.heirAllocationResult!.perHeir.get("h1")!;
+    const h2 = r.heirAllocationResult!.perHeir.get("h2")!;
+    expect(h1.directEstateAmount).toBe(6_000_000_000); // 3/5
+    expect(h2.directEstateAmount).toBe(4_000_000_000); // 2/5
+  });
+
+  it("[C10] 미입력 자산 법정상속분 — 배우자+자녀2 → 3/7·2/7·2/7", () => {
+    const heirs: Heir[] = [
+      { id: "h1", relation: "spouse", name: "배우자" },
+      { id: "h2", relation: "child", name: "장남" },
+      { id: "h3", relation: "child", name: "차남" },
+    ];
+    const input = buildInput({
+      heirs,
+      estateItems: [apartment("a1", 7_000_000_000)],
+    });
+    const r = calcInheritanceTax(input);
+    const h1 = r.heirAllocationResult!.perHeir.get("h1")!;
+    const h2 = r.heirAllocationResult!.perHeir.get("h2")!;
+    const h3 = r.heirAllocationResult!.perHeir.get("h3")!;
+    expect(h1.directEstateAmount).toBe(3_000_000_000); // 3/7
+    expect(h2.directEstateAmount).toBe(2_000_000_000); // 2/7
+    expect(h3.directEstateAmount).toBe(2_000_000_000); // 2/7
+  });
+
+  it("[C11] 혼합 — 자산A 협의분할 입력 + 자산B 미입력(법정상속분)", () => {
+    const heirs: Heir[] = [
+      { id: "h1", relation: "spouse", name: "배우자" },
+      { id: "h2", relation: "child", name: "자녀" },
+    ];
+    const input = buildInput({
+      heirs,
+      estateItems: [
+        { ...apartment("a1", 5_000_000_000), heirAllocations: [{ heirId: "h1", amount: 5_000_000_000 }] },
+        apartment("b1", 5_000_000_000), // 미입력 → 법정상속분 3/5·2/5
+      ],
+    });
+    const r = calcInheritanceTax(input);
+    const h1 = r.heirAllocationResult!.perHeir.get("h1")!;
+    const h2 = r.heirAllocationResult!.perHeir.get("h2")!;
+    // A1 전액(50억) 배우자 + B1 법정상속분(배우자 30억·자녀 20억)
+    expect(h1.directEstateAmount).toBe(8_000_000_000);
+    expect(h2.directEstateAmount).toBe(2_000_000_000);
+  });
+
+  it("[C12] debtItems 미입력 → 채무 법정상속분 분담 (배우자 3/5)", () => {
+    const heirs: Heir[] = [
+      { id: "h1", relation: "spouse", name: "배우자" },
+      { id: "h2", relation: "child", name: "자녀" },
+    ];
+    const input: InheritanceTaxInput = {
+      ...buildInput({ heirs, estateItems: [apartment("a1", 10_000_000_000)] }),
+      debtItems: [
+        { id: "d1", category: "financial", name: "은행", amount: 700_000_000 },
+      ],
+    };
+    const r = calcInheritanceTax(input);
+    const h1 = r.heirAllocationResult!.perHeir.get("h1")!;
+    const h2 = r.heirAllocationResult!.perHeir.get("h2")!;
+    // 채무 7억 법정상속분 분담: 배우자 3/5(4.2억), 자녀 2/5(2.8억)
+    expect(h1.debtShare).toBe(420_000_000);
+    expect(h2.debtShare).toBe(280_000_000);
+    // usedLegalShareFallback echo true
+    expect(r.heirAllocationResult!.usedLegalShareFallback).toBe(true);
   });
 });

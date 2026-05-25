@@ -63,10 +63,10 @@ describe("채무·장례 legacy 경로 회귀 (IDA-LEGACY)", () => {
 
     const result = calcInheritanceTax(input);
 
-    // 채무 1,200M + 장례 한도 15M = 1,215M 차감 → 과세가액
+    // 채무 1,200M + 장례 한도 15M = 1,215M 차감 → 과세가액 (불변)
     expect(result.taxableEstateValue).toBe(2_000_000_000 - 1_215_000_000);
-    // 협의분할 부재 — heirAllocationResult 미생성
-    expect(result.heirAllocationResult).toBeUndefined();
+    // 2026-05-26 정책(항상 배부): legacy 경로여도 자연인 상속인 → 법정상속분 배부 생성
+    expect(result.heirAllocationResult).toBeDefined();
   });
 
   it("IDA-LEGACY-2: 봉안 미사용 — 식대 18M 입력 → 한도 10M 적용", () => {

@@ -368,6 +368,11 @@ export interface Heir {
   name?: string;
   birthDate?: string;
   isDisabled?: boolean;
+  /**
+   * @deprecated 2026-05-26 — 전역 협의분할 비율 폐지. 협의분할은 자산별 `heirAllocations`로 일원화,
+   * 미입력 자산은 법정상속분 자동 배분(`inheritance-legal-share.ts`). 엔진 미사용 —
+   * sessionStorage 기존 데이터 호환을 위해 타입만 잔류(validator/UI 제거됨).
+   */
   actualShareRatio?: number;
   isCohabitant?: boolean;
   // ===== 종합사례 PDF 확장 =====

@@ -377,6 +377,7 @@ function Step1({
         items={form.giftItems}
         onChange={(items) => set({ giftItems: items })}
         mode="gift"
+        valuationDate={form.giftDate}
       />
       <div className="border-t border-dashed border-gray-200 dark:border-gray-700 pt-4">
         <StockValuationForm

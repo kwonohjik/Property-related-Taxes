@@ -40,6 +40,16 @@ export function getDefaultPriceYear(dateStr: string, propertyType: string): stri
   return mmdd < cutoff ? String(year - 1) : String(year);
 }
 
+/**
+ * 조회된 실제 공시일(noticeDate, YYYYMMDD)이 평가기준일(referenceDate, YYYY-MM-DD)보다
+ * 늦은가 — true면 평가기준일 시점에 해당 공시가격이 아직 고시 전이었음을 뜻한다.
+ * 실측 데이터 없이 한 번의 조회로 공시연도 과대선택을 정확히 검증한다.
+ */
+export function isNoticeAfterReference(noticeDate: string, referenceDate: string): boolean {
+  const ref = (referenceDate ?? "").replace(/-/g, "");
+  return ref.length === 8 && noticeDate.length === 8 && noticeDate > ref;
+}
+
 export function useStandardPriceLookup(defaultPropertyType = "housing") {
   const currentYear = new Date().getFullYear();
   const yearOptions = Array.from({ length: currentYear - 1984 }, (_, i) => String(currentYear - i));
@@ -48,6 +58,8 @@ export function useStandardPriceLookup(defaultPropertyType = "housing") {
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<LookupMsg | null>(null);
   const [announcedLabel, setAnnouncedLabel] = useState<string>("");
+  /** 마지막 조회 결과의 실제 공시일자 (YYYYMMDD) — 평가기준일 경계 검증용 */
+  const [noticeDate, setNoticeDate] = useState<string>("");
 
   async function lookup(opts: LookupOptions): Promise<number | null> {
     if (!opts.jibun) {
@@ -91,6 +103,7 @@ export function useStandardPriceLookup(defaultPropertyType = "housing") {
         const d = effectiveDate;
         const pubDate = `${d.slice(0, 4)}.${parseInt(d.slice(4, 6), 10)}.${parseInt(d.slice(6, 8), 10)}.`;
         setAnnouncedLabel(`${typeName} 공시일 : ${pubDate}`);
+        setNoticeDate(d.length === 8 ? d : "");
         setMsg({ text: `${data.message ?? "조회 성공"}: ${price.toLocaleString()}`, kind: "ok" });
         return price;
       }
@@ -110,7 +123,8 @@ export function useStandardPriceLookup(defaultPropertyType = "housing") {
   function reset() {
     setMsg(null);
     setAnnouncedLabel("");
+    setNoticeDate("");
   }
 
-  return { loading, msg, year, setYear, yearOptions, announcedLabel, lookup, reset };
+  return { loading, msg, year, setYear, yearOptions, announcedLabel, noticeDate, lookup, reset };
 }
