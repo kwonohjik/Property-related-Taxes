@@ -1,33 +1,31 @@
 "use client";
 
 /**
- * UnlistedStockEditor — 비상장주식 항목 편집기 (StockValuationForm 800줄 정책 분리)
+ * UnlistedStockEditor — 비상장주식 항목 편집기 (레거시 래퍼)
  *
  * 상증법 §63①1호 다목, 시행령 §54
  *
  * PR-2 리팩터: 입력부 JSX → UnlistedStockSimpleFields.tsx 분리.
- * 공통속성 4블록(영농·가업·§22·협의분할)은 이곳에 잔류 (PR-4에서 EstateCommonAttributesSection 분리 예정).
+ * PR-4 리팩터: 공통속성 4블록 → EstateCommonAttributesSection 분리.
+ *   StockValuationForm.tsx의 UnlistedStockCard가 직접 이 두 컴포넌트를 사용하므로
+ *   이 파일은 re-export 보존 목적으로만 유지.
  *
- * 외부 import 사이트 무변경을 위해 defaultStockData·UnlistedStockPreview re-export 유지.
+ * 외부 import 사이트 무변경을 위해 defaultStockData·UnlistedStockPreview re-export 유지
+ * (feedback_800line_split_export_preservation).
  */
 
-import { calcUnlistedStockPerShareValue } from "@/lib/tax-engine/property-valuation-stock";
-import type { EstateItem, Heir } from "@/lib/tax-engine/types/inheritance-gift.types";
-import { FarmingCategorySection } from "@/components/calc/inheritance/FarmingCategorySection";
-import { FamilyBusinessCategorySection } from "@/components/calc/inheritance/FamilyBusinessCategorySection";
-import { FinancialDeductionChip } from "@/components/calc/inheritance/FinancialDeductionChip";
-import { HeirAllocationToggleSection } from "@/components/calc/inheritance/HeirAllocationToggleSection";
 import {
   UnlistedStockSimpleFields,
   defaultStockData,
   UnlistedStockPreview,
 } from "@/components/calc/UnlistedStockSimpleFields";
+import type { EstateItem, Heir } from "@/lib/tax-engine/types/inheritance-gift.types";
 
 // re-export — 외부 import 사이트 무변경 (feedback_800line_split_export_preservation)
 export { defaultStockData, UnlistedStockPreview };
 
 // ============================================================
-// 비상장주식 항목 편집기
+// 비상장주식 항목 편집기 (레거시 — StockValuationForm.UnlistedStockCard가 실사용)
 // ============================================================
 
 export interface UnlistedStockEditorProps {
@@ -44,24 +42,11 @@ export interface UnlistedStockEditorProps {
 export function UnlistedStockEditor({
   item,
   index,
-  mode,
-  heirs,
   isRealEstateHeavy,
   onUpdate,
   onUpdateHeavy,
   onRemove,
 }: UnlistedStockEditorProps) {
-  // 협의분할 effectiveValuation 계산 (공통속성 4블록용)
-  const data = item.unlistedStockData;
-  let previewForAllocation: ReturnType<typeof calcUnlistedStockPerShareValue> | null = null;
-  if (data && data.totalShares > 0) {
-    try {
-      previewForAllocation = calcUnlistedStockPerShareValue(data, isRealEstateHeavy);
-    } catch {
-      previewForAllocation = null;
-    }
-  }
-
   return (
     <div className="border rounded-lg p-4 space-y-3 bg-white dark:bg-gray-900">
       {/* 헤더 */}
@@ -88,35 +73,7 @@ export function UnlistedStockEditor({
         onUpdate={onUpdate}
         onUpdateHeavy={onUpdateHeavy}
       />
-
-      {/* 영농상속 자산 분류 — 비상장주식 (corporate_stock만 가능) */}
-      {mode === "inheritance" && (
-        <FarmingCategorySection item={item} onUpdate={onUpdate} />
-      )}
-
-      {/* 가업상속 자산 분류 — 비상장주식 (corporate_stock만 가능) */}
-      {mode === "inheritance" && (
-        <FamilyBusinessCategorySection item={item} onUpdate={onUpdate} />
-      )}
-
-      {/* §22 금융재산공제 — 비상장주식 (§22② 최대주주 보유분은 사용자 override) */}
-      {mode === "inheritance" && (
-        <FinancialDeductionChip item={item} onUpdate={onUpdate} />
-      )}
-
-      {/* 상속인·수유자별 협의분할 (상속세 전용) */}
-      {mode === "inheritance" && heirs && (
-        <HeirAllocationToggleSection
-          item={item}
-          heirs={heirs}
-          effectiveValuation={
-            previewForAllocation && data
-              ? previewForAllocation.perShareFinalValue * data.ownedShares
-              : 0
-          }
-          onChange={(patch) => onUpdate({ ...item, ...patch })}
-        />
-      )}
+      {/* 공통속성 4블록은 StockValuationForm.UnlistedStockCard에서 EstateCommonAttributesSection으로 노출 (PR-4) */}
     </div>
   );
 }

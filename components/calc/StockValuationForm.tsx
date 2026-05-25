@@ -19,20 +19,7 @@ import {
 import { evaluateUnlistedStockV2 } from "@/lib/tax-engine/property-valuation/unlisted-orchestrator";
 import type { EstateItem, UnlistedStockData, Heir } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { KiwoomValuationAutoFetchButton } from "./KiwoomValuationAutoFetchButton";
-import { FarmingCategorySection } from "@/components/calc/inheritance/FarmingCategorySection";
-import { FamilyBusinessCategorySection } from "@/components/calc/inheritance/FamilyBusinessCategorySection";
-import { CorporateNonBusinessAssetsSection } from "@/components/calc/inheritance/CorporateNonBusinessAssetsSection";
-import { FinancialDeductionChip } from "@/components/calc/inheritance/FinancialDeductionChip";
-import {
-  countHiddenExpandable,
-  resolveAssetToggleVisibility,
-} from "@/lib/calc/asset-toggle-visibility";
-import {
-  HintBadge,
-  getFamilyBusinessHint,
-  getFinancialDeductionHint,
-} from "@/components/calc/inheritance/AssetToggleHints";
-import { HeirAllocationToggleSection } from "@/components/calc/inheritance/HeirAllocationToggleSection";
+import { EstateCommonAttributesSection } from "@/components/calc/inheritance/EstateCommonAttributesSection";
 import { UnlistedStockSimpleFields } from "@/components/calc/UnlistedStockSimpleFields";
 import {
   UnlistedStockV2Card,
@@ -102,11 +89,6 @@ function ListedStockEditor({
   heirs,
 }: ListedStockEditorProps) {
   const set = (patch: Partial<EstateItem>) => onUpdate({ ...item, ...patch });
-
-  // 토글 자동 노출 정책 (asset-toggle-visibility resolver)
-  const visibility = useMemo(() => resolveAssetToggleVisibility(item), [item]);
-  const hiddenExpandableCount = countHiddenExpandable(visibility);
-  const [showExpanded, setShowExpanded] = useState(false);
 
   const avgPrice = item.listedStockAvgPrice ?? 0;
   const shares = item.listedStockShares ?? 0;
@@ -240,68 +222,14 @@ function ListedStockEditor({
         </div>
       )}
 
-      {/* 영농상속 자산 분류 — 카테고리별 자동 노출 (주식은 기본 default) */}
-      {mode === "inheritance" && visibility.farming === "default" && (
-        <FarmingCategorySection item={item} onUpdate={onUpdate} />
-      )}
-
-      {/* 가업상속 자산 분류 — 카테고리별 자동 노출 (주식은 기본 default) */}
-      {mode === "inheritance" && visibility.familyBusiness === "default" && (
-        <FamilyBusinessCategorySection item={item} onUpdate={onUpdate} />
-      )}
-
-      {/* 법인 사업무관자산 차감 (§15⑤2호 + §16⑤2호) — corporate_stock 자산만 노출 */}
-      {mode === "inheritance" && (
-        <CorporateNonBusinessAssetsSection item={item} onUpdate={onUpdate} />
-      )}
-
-      {/* §22 금융재산공제 — 카테고리별 자동 노출 (주식은 §19① 명시로 default) */}
-      {mode === "inheritance" && visibility.financialDeduction === "default" && (
-        <FinancialDeductionChip item={item} onUpdate={onUpdate} />
-      )}
-
-      {/* 펼침 영역 — hidden_expandable 토글 모음 (주식은 통상 0이지만 일관성 위해 보존) */}
-      {mode === "inheritance" && hiddenExpandableCount > 0 && (
-        <div className="space-y-2">
-          <button
-            type="button"
-            onClick={() => setShowExpanded((v) => !v)}
-            aria-expanded={showExpanded}
-            aria-controls={`expandable-toggles-${item.id}`}
-            className="text-xs text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-300 py-1"
-          >
-            {showExpanded
-              ? "▲ 적용 옵션 접기"
-              : `▼ 더 많은 적용 옵션 보기 (${hiddenExpandableCount}개)`}
-          </button>
-          {showExpanded && (
-            <div id={`expandable-toggles-${item.id}`} className="space-y-2">
-              {visibility.familyBusiness === "hidden_expandable" && (
-                <div>
-                  <HintBadge tone="amber">{getFamilyBusinessHint(item.category)}</HintBadge>
-                  <FamilyBusinessCategorySection item={item} onUpdate={onUpdate} />
-                </div>
-              )}
-              {visibility.financialDeduction === "hidden_expandable" && (
-                <div>
-                  <HintBadge tone="emerald">{getFinancialDeductionHint(item.category)}</HintBadge>
-                  <FinancialDeductionChip item={item} onUpdate={onUpdate} />
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* 상속인·수유자별 협의분할 (상속세 전용) */}
-      {mode === "inheritance" && heirs && (
-        <HeirAllocationToggleSection
-          item={item}
-          heirs={heirs}
-          effectiveValuation={totalValue}
-          onChange={(patch) => onUpdate({ ...item, ...patch })}
-        />
-      )}
+      {/* 공통속성 4블록 (EstateCommonAttributesSection) — PR-4: 상장·비상장 공용 */}
+      <EstateCommonAttributesSection
+        item={item}
+        onUpdate={onUpdate}
+        mode={mode}
+        heirs={heirs}
+        effectiveValuation={totalValue}
+      />
     </div>
   );
 }
@@ -377,11 +305,6 @@ function UnlistedStockCard({
     return 0;
   }, [currentMode, item, isRealEstateHeavy]);
 
-  // 토글 자동 노출 정책
-  const visibility = useMemo(() => resolveAssetToggleVisibility(item), [item]);
-  const hiddenExpandableCount = countHiddenExpandable(visibility);
-  const [showExpanded, setShowExpanded] = useState(false);
-
   const handleModeChange = (newMode: "simple" | "formal") => {
     if (newMode === "formal" && !item.unlistedStockValuationV2) {
       // 정식 모드 최초 선택 → V2 초기값 생성 (C-3)
@@ -444,66 +367,14 @@ function UnlistedStockCard({
         />
       )}
 
-      {/* 공통 속성 4블록 — 평가 방식과 무관하게 inheritance 모드에서 항상 노출 (PR-3 임시) */}
-      {/* PR-4에서 EstateCommonAttributesSection으로 추출 예정 */}
-      {mode === "inheritance" && (
-        <>
-          {/* 영농상속 자산 분류 */}
-          <FarmingCategorySection item={item} onUpdate={onUpdate} />
-
-          {/* 가업상속 자산 분류 */}
-          <FamilyBusinessCategorySection item={item} onUpdate={onUpdate} />
-
-          {/* §22 금융재산공제 */}
-          <FinancialDeductionChip item={item} onUpdate={onUpdate} />
-
-          {/* 법인 사업무관자산 차감 */}
-          <CorporateNonBusinessAssetsSection item={item} onUpdate={onUpdate} />
-
-          {/* 펼침 영역 — hidden_expandable 토글 */}
-          {hiddenExpandableCount > 0 && (
-            <div className="space-y-2">
-              <button
-                type="button"
-                onClick={() => setShowExpanded((v) => !v)}
-                aria-expanded={showExpanded}
-                aria-controls={`expandable-toggles-unlisted-${item.id}`}
-                className="text-xs text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-300 py-1"
-              >
-                {showExpanded
-                  ? "▲ 적용 옵션 접기"
-                  : `▼ 더 많은 적용 옵션 보기 (${hiddenExpandableCount}개)`}
-              </button>
-              {showExpanded && (
-                <div id={`expandable-toggles-unlisted-${item.id}`} className="space-y-2">
-                  {visibility.familyBusiness === "hidden_expandable" && (
-                    <div>
-                      <HintBadge tone="amber">{getFamilyBusinessHint(item.category)}</HintBadge>
-                      <FamilyBusinessCategorySection item={item} onUpdate={onUpdate} />
-                    </div>
-                  )}
-                  {visibility.financialDeduction === "hidden_expandable" && (
-                    <div>
-                      <HintBadge tone="emerald">{getFinancialDeductionHint(item.category)}</HintBadge>
-                      <FinancialDeductionChip item={item} onUpdate={onUpdate} />
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* 협의분할 */}
-          {heirs && (
-            <HeirAllocationToggleSection
-              item={item}
-              heirs={heirs}
-              effectiveValuation={effectiveValuation}
-              onChange={(patch) => onUpdate({ ...item, ...patch })}
-            />
-          )}
-        </>
-      )}
+      {/* 공통속성 4블록 (EstateCommonAttributesSection) — PR-4: 모드 밖, 카드 하단 배치 */}
+      <EstateCommonAttributesSection
+        item={item}
+        onUpdate={onUpdate}
+        mode={mode}
+        heirs={heirs}
+        effectiveValuation={effectiveValuation}
+      />
     </div>
   );
 }
