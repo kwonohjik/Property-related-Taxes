@@ -107,6 +107,45 @@ export function evaluateListedStock(item: EstateItem): PropertyValuationResult {
 // ============================================================
 
 /**
+ * §56① 회사 전체 최근 3년 순손익액 가중평균 (V1 약식 전용).
+ *
+ * 산식: (직전1년×3 + 직전2년×2 + 직전3년×1) ÷ 6
+ * 결과 음수 → 0 (§56① 단서).
+ *
+ * ★ floor 하지 않음 — 최종 1주당 환산 단계의 단일 floor(P2-D)에 위임.
+ * cf. V2 calcWeightedAvg3y는 1주당 단위 + 이중 floor(PDF 정합)로 별개 — 재사용 금지.
+ *
+ * @param y1 직전 1사업연도 순손익액 (회사 전체, 가중치 ×3). 결손 연도 음수 허용.
+ * @param y2 직전 2사업연도 순손익액 (가중치 ×2)
+ * @param y3 직전 3사업연도 순손익액 (가중치 ×1)
+ */
+export function calcCompanyWeightedNetIncome3Y(y1: number, y2: number, y3: number): number {
+  const weighted = (y1 * 3 + y2 * 2 + y3 * 1) / 6;
+  return weighted < 0 ? 0 : weighted; // §56① 단서: 음수 → 0 (floor 없음)
+}
+
+/**
+ * 유효 가중평균 순손익 해소 (single source of truth).
+ *
+ * 3년치(netIncomeY1~Y3) 중 하나라도 입력된 경우 → calcCompanyWeightedNetIncome3Y로 계산.
+ * 모두 undefined → legacy weightedNetIncome fallback (저장된 구버전 데이터 하위호환).
+ */
+export function resolveWeightedNetIncome(data: UnlistedStockData): number {
+  const has3y =
+    data.netIncomeY1 != null ||
+    data.netIncomeY2 != null ||
+    data.netIncomeY3 != null;
+  if (has3y) {
+    return calcCompanyWeightedNetIncome3Y(
+      data.netIncomeY1 ?? 0,
+      data.netIncomeY2 ?? 0,
+      data.netIncomeY3 ?? 0,
+    );
+  }
+  return data.weightedNetIncome ?? 0; // legacy
+}
+
+/**
  * 1주당 순손익가치 계산
  * = 가중평균순손익 ÷ 자본환원율
  */
@@ -159,9 +198,11 @@ export function calcUnlistedStockPerShareValue(
   // 정정 (P2-D): 이중 floor → 단일 floor (분모 합쳐 정밀도 유지)
   // = floor(회사 전체 가중평균 순손익 / (총 발행주식 수 × 환원율))
   // 큰 입력값에서는 이전 결과와 동일 (기존 anchor S17·S21 회귀 안전 확인)
+  // 3년치 우선, 없으면 legacy weightedNetIncome fallback (resolveWeightedNetIncome)
+  const resolvedNetIncome = resolveWeightedNetIncome(data);
   const perShareIncomeValue =
-    data.totalShares > 0 && data.weightedNetIncome > 0 && capRate > 0
-      ? Math.floor(data.weightedNetIncome / (data.totalShares * capRate))
+    data.totalShares > 0 && resolvedNetIncome > 0 && capRate > 0
+      ? Math.floor(resolvedNetIncome / (data.totalShares * capRate))
       : 0;
   const perShareAssetValue = calcPerShareNetAssetValue(
     data.netAssetValue,
@@ -256,7 +297,8 @@ export function evaluateUnlistedStock(
     : [GENERAL_NET_INCOME_WEIGHT, GENERAL_NET_ASSET_WEIGHT];
 
   const warnings: string[] = [];
-  if (data.weightedNetIncome <= 0) {
+  // 적자법인 판정: 3년치 우선 → legacy fallback (resolveWeightedNetIncome 기준)
+  if (resolveWeightedNetIncome(data) <= 0) {
     warnings.push("적자법인 — 순손익가치 0 적용, 순자산가치 80% 최소값 기준");
   }
   if (perShareFinalValue === perShareMinValue && perShareWeightedValue < perShareMinValue) {

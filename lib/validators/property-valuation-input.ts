@@ -11,9 +11,40 @@ import { z } from "zod";
 export const unlistedStockDataSchema = z.object({
   totalShares: z.number().int().positive({ message: "총 발행주식 수는 1 이상이어야 합니다." }),
   ownedShares: z.number().int().positive({ message: "보유 주식 수는 1 이상이어야 합니다." }),
-  weightedNetIncome: z.number(), // 최근 3년 가중평균 순손익 — 적자 시 0 입력
+  /**
+   * @deprecated 직접 입력 폐지 — netIncomeY1~Y3 가중평균으로 대체.
+   * legacy 저장 데이터 하위호환을 위해 optional로 완화.
+   * 신규 입력 경로(3년치)에서는 미전송 가능 → default(0).
+   */
+  weightedNetIncome: z.number().optional().default(0),
+  /**
+   * 평가기준일 직전 1사업연도 순손익액 (회사 전체, 가중치 ×3) — 상증령 §56①.
+   * 결손 연도는 음수 허용. 미입력(undefined) 시 0으로 처리.
+   */
+  netIncomeY1: z.number().optional(),
+  /** 직전 2사업연도 순손익액 (가중치 ×2) — 상증령 §56① */
+  netIncomeY2: z.number().optional(),
+  /** 직전 3사업연도 순손익액 (가중치 ×1) — 상증령 §56① */
+  netIncomeY3: z.number().optional(),
   netAssetValue: z.number().nonnegative({ message: "순자산가치는 0 이상이어야 합니다." }),
   capitalizationRate: z.number().min(0.01).max(1).default(0.10),
+}).superRefine((data, ctx) => {
+  // 3년치 또는 legacy weightedNetIncome 중 하나 이상 입력 여부 검증
+  // (적자법인은 모두 0일 수 있으므로 "값이 있는지" 체크 — 과도 차단 금지)
+  // legacy 경로: weightedNetIncome > 0 이면 OK
+  // 신규 경로: netIncomeY1~Y3 중 하나라도 null이 아니면 OK
+  // 모두 미입력·0·undefined이면 경고 수준 (순손익 0 = 적자법인으로 허용)
+  // ※ 완전 미입력(undefined만) 시 의도 확인이 필요하지만, 적자법인 경로로 허용
+  const has3y =
+    data.netIncomeY1 != null ||
+    data.netIncomeY2 != null ||
+    data.netIncomeY3 != null;
+  const hasLegacy = (data.weightedNetIncome ?? 0) > 0;
+  if (!has3y && !hasLegacy) {
+    // 순손익 0 처리 = 적자법인 경로 → 허용 (차단 금지). 단, 입력 의도 확인 경고 생성 안 함.
+    // 추후 UI에서 명시적 "적자법인" 체크박스로 의도 확인 예정 (PR-2).
+    void ctx; // superRefine 내 ctx 미사용 경고 억제
+  }
 });
 
 // ============================================================

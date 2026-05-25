@@ -13,6 +13,8 @@ import {
   calcUnlistedStockPerShareValue,
   calcPerShareNetIncomeValue,
   calcPerShareNetAssetValue,
+  calcCompanyWeightedNetIncome3Y,
+  resolveWeightedNetIncome,
 } from "@/lib/tax-engine/property-valuation-stock";
 import { TaxErrorCode } from "@/lib/tax-engine/tax-errors";
 import type { EstateItem, UnlistedStockData } from "@/lib/tax-engine/types/inheritance-gift.types";
@@ -374,5 +376,137 @@ describe("비상장주식 총 평가액 — evaluateUnlistedStock", () => {
     expect(labels.some((l) => l.includes("순자산가치"))).toBe(true);
     expect(labels.some((l) => l.includes("가중평균"))).toBe(true);
     expect(labels.some((l) => l.includes("총 평가액"))).toBe(true);
+  });
+});
+
+// ============================================================
+// 7. §56① 3년치 순손익 가중평균 — calcCompanyWeightedNetIncome3Y (PR-1)
+// ============================================================
+
+describe("3년치 순손익 가중평균 — calcCompanyWeightedNetIncome3Y + resolveWeightedNetIncome", () => {
+  // C-1: 3년치 흑자 — 가중평균 산식 정확성
+  it("[C-1] 3년치 모두 흑자 — (Y1×3 + Y2×2 + Y3×1) ÷ 6 정확 계산 (floor 없음)", () => {
+    // Y1=300M, Y2=240M, Y3=180M
+    // 가중합: 300M×3 + 240M×2 + 180M×1 = 900M + 480M + 180M = 1,560M
+    // ÷ 6 = 260,000,000
+    expect(calcCompanyWeightedNetIncome3Y(300_000_000, 240_000_000, 180_000_000)).toBe(260_000_000);
+  });
+
+  it("[C-1b] 3년치 소수점 결과 — floor 없이 소수점 유지 (단일 floor 위임)", () => {
+    // Y1=100M, Y2=100M, Y3=100M → (300M + 200M + 100M) / 6 = 600M/6 = 100M
+    expect(calcCompanyWeightedNetIncome3Y(100_000_000, 100_000_000, 100_000_000)).toBe(100_000_000);
+    // Y1=200M, Y2=100M, Y3=50M → (600M + 200M + 50M) / 6 = 850M/6 = 141,666,666.666...
+    expect(calcCompanyWeightedNetIncome3Y(200_000_000, 100_000_000, 50_000_000)).toBeCloseTo(141_666_666.67, 0);
+  });
+
+  // C-2: 일부 연도 음수 — 산식에 음수 반영 (합산 결과는 양수)
+  it("[C-2] 일부 연도 적자(음수) — 가중평균에 음수 반영, 결과 양수이면 정상", () => {
+    // Y1=600M, Y2=-60M, Y3=-60M
+    // 가중합: 1,800M + (-120M) + (-60M) = 1,620M → ÷6 = 270,000,000
+    expect(calcCompanyWeightedNetIncome3Y(600_000_000, -60_000_000, -60_000_000)).toBe(270_000_000);
+  });
+
+  // C-3: 가중평균 음수 → §56① 단서 0 처리
+  it("[C-3] 가중평균 결과 음수 → §56① 단서 0 처리", () => {
+    // Y1=-300M, Y2=-200M, Y3=-100M → (-900M-400M-100M)/6 = -1,400M/6 < 0 → 0
+    expect(calcCompanyWeightedNetIncome3Y(-300_000_000, -200_000_000, -100_000_000)).toBe(0);
+    // 경계: 딱 0이면 0 유지
+    expect(calcCompanyWeightedNetIncome3Y(0, 0, 0)).toBe(0);
+  });
+
+  // C-4: legacy weightedNetIncome만 → 기존 동일 결과 (회귀 보호)
+  it("[C-4] legacy fallback — 3년치 없을 때 weightedNetIncome 직접 사용", () => {
+    const legacyData: UnlistedStockData = {
+      totalShares: 100_000,
+      ownedShares: 10_000,
+      weightedNetIncome: 200_000_000,
+      netAssetValue: 500_000_000,
+      capitalizationRate: 0.10,
+    };
+    expect(resolveWeightedNetIncome(legacyData)).toBe(200_000_000);
+    // calcUnlistedStockPerShareValue 결과도 기존과 동일해야 함 (S17 회귀)
+    const r = calcUnlistedStockPerShareValue(legacyData, false);
+    expect(r.perShareIncomeValue).toBe(20_000); // 200M / (100K × 0.1) = 20,000
+    expect(r.perShareWeightedValue).toBe(14_000);
+    expect(r.perShareFinalValue).toBe(14_000);
+  });
+
+  it("[C-4b] legacy fallback — weightedNetIncome=0 (적자) 도 그대로", () => {
+    const legacyLossData: UnlistedStockData = {
+      ...baseData,
+      weightedNetIncome: 0,
+    };
+    expect(resolveWeightedNetIncome(legacyLossData)).toBe(0);
+    const r = calcUnlistedStockPerShareValue(legacyLossData, false);
+    expect(r.perShareIncomeValue).toBe(0);
+    expect(r.perShareFinalValue).toBe(4_000); // 최소값 발동
+  });
+
+  // C-5: 3년치 + 부동산과다보유 (가중치 반전) 결합
+  it("[C-5] 3년치 + isRealEstateHeavy=true 결합", () => {
+    // Y1=300M, Y2=240M, Y3=180M → resolveWeightedNetIncome = 260M
+    // 1주당 순손익가치: 260M / (100K × 0.1) = 26,000
+    // 순자산: 500M / 100K = 5,000
+    // 부동산과다 가중치 2:3 → (26,000×2 + 5,000×3) / 5 = (52,000+15,000)/5 = 13,400
+    const data3y: UnlistedStockData = {
+      totalShares: 100_000,
+      ownedShares: 10_000,
+      weightedNetIncome: 0,
+      netIncomeY1: 300_000_000,
+      netIncomeY2: 240_000_000,
+      netIncomeY3: 180_000_000,
+      netAssetValue: 500_000_000,
+      capitalizationRate: 0.10,
+    };
+    const r = calcUnlistedStockPerShareValue(data3y, true);
+    expect(r.perShareIncomeValue).toBe(26_000); // 260M / (100K × 0.1)
+    expect(r.perShareAssetValue).toBe(5_000);
+    expect(r.perShareWeightedValue).toBe(13_400); // (26,000×2 + 5,000×3) / 5
+    expect(r.perShareFinalValue).toBe(13_400);
+  });
+
+  // C-6: 3년치 + §54④ assetValueOnlyReason → 순손익 무시
+  it("[C-6] 3년치 + §54④ lt3y → 순자산가치만 적용", () => {
+    const data3y: UnlistedStockData = {
+      totalShares: 100_000,
+      ownedShares: 10_000,
+      weightedNetIncome: 0,
+      netIncomeY1: 300_000_000,
+      netIncomeY2: 240_000_000,
+      netIncomeY3: 180_000_000,
+      netAssetValue: 500_000_000,
+      capitalizationRate: 0.10,
+      assetValueOnlyReason: "lt3y",
+    };
+    const r = calcUnlistedStockPerShareValue(data3y, false);
+    // §54④ 2호: 사업개시 3년 미만 → 무조건 순자산가치
+    expect(r.perShareFinalValue).toBe(5_000);
+    // 내부 순손익가치는 3년치로 계산되어야 함 (26,000)
+    expect(r.perShareIncomeValue).toBe(26_000);
+  });
+
+  // resolveWeightedNetIncome — 3년치 우선
+  it("[C-1c] resolveWeightedNetIncome — 3년치 있으면 우선 사용", () => {
+    const data: UnlistedStockData = {
+      ...baseData,
+      weightedNetIncome: 999_999_999, // legacy 쓰레기값 (무시돼야 함)
+      netIncomeY1: 300_000_000,
+      netIncomeY2: 240_000_000,
+      netIncomeY3: 180_000_000,
+    };
+    // 3년치 가중평균 = 260M (legacy 999M 아님)
+    expect(resolveWeightedNetIncome(data)).toBe(260_000_000);
+  });
+
+  it("[C-1d] resolveWeightedNetIncome — Y1만 있어도 3년치 모드 (Y2·Y3=0)", () => {
+    const data: UnlistedStockData = {
+      ...baseData,
+      weightedNetIncome: 999_999_999,
+      netIncomeY1: 120_000_000,
+      // netIncomeY2·Y3 미입력 (undefined)
+    };
+    // has3y = true (Y1 != null) → calcCompanyWeightedNetIncome3Y(120M, 0, 0)
+    // = (120M×3 + 0×2 + 0×1) / 6 = 360M/6 = 60M
+    expect(resolveWeightedNetIncome(data)).toBe(60_000_000);
   });
 });

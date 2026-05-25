@@ -177,8 +177,20 @@ export type UnlistedAssetValueOnlyReason =
 export interface UnlistedStockData {
   totalShares: number;
   ownedShares: number;
-  /** 최근 3년 순손익 가중평균 (분자) */
+  /**
+   * @deprecated 직접 입력 폐지 — netIncomeY1~Y3 가중평균으로 대체.
+   * legacy 저장 데이터 fallback용으로 유지. resolveWeightedNetIncome() 경유 사용.
+   */
   weightedNetIncome: number;
+  /**
+   * 평가기준일 직전 1사업연도 순손익액 (회사 전체, 가중치 ×3) — 상증령 §56①
+   * 결손 연도는 음수 입력 허용.
+   */
+  netIncomeY1?: number;
+  /** 직전 2사업연도 순손익액 (가중치 ×2) — 상증령 §56① */
+  netIncomeY2?: number;
+  /** 직전 3사업연도 순손익액 (가중치 ×1) — 상증령 §56① */
+  netIncomeY3?: number;
   /** 순자산가치 */
   netAssetValue: number;
   /** 자본환원율 (기본 10%) */
