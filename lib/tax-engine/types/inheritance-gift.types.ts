@@ -78,6 +78,15 @@ export interface EstateItem extends EstateLocationFields {
   unlistedStockData?: UnlistedStockData;
   /** 비상장주식 V2 평가 입력 (별지 부표3 완전 재현 — Phase 2~4) */
   unlistedStockValuationV2?: UnlistedStockValuationInput;
+  /**
+   * 비상장주식 간편/정식 평가 모드 선택 (PR-K: 모드 선택기 재설계).
+   * - "simple": 간편평가 — 순손익·순자산 회사 전체값 2개 수치 입력 (calcUnlistedStockPerShareValue)
+   * - "formal": 정식평가 — 별지 부표3 완전 재현 (evaluateUnlistedStockV2)
+   * - undefined: 레거시 호환 (unlistedStockValuationV2 존재 시 formal, 없으면 simple로 동작)
+   * 모드 전환 시 반대 모드 데이터는 폼 state에 보존 (데이터 손실 0).
+   * 엔진 전달 전 resolveActiveUnlistedValuation 헬퍼가 비활성 데이터를 strip.
+   */
+  unlistedValuationMode?: "simple" | "formal";
   /** 임대차 정보 (임대보증금 차감) */
   leaseDeposit?: number;
   /** 저당권 설정 여부 */

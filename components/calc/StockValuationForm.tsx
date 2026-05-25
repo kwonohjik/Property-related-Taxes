@@ -373,6 +373,7 @@ export function StockValuationForm({
       name: "",
       ...(category === "unlisted_stock"
         ? {
+            unlistedValuationMode: "simple" as const,
             unlistedStockData: {
               totalShares: 0,
               ownedShares: 0,
