@@ -26,8 +26,8 @@ function mockVworldFetchSuccess(): void {
             structure: {
               level1: "서울특별시",
               level2: "강남구",
-              level4L: "1168010100",
-              level4LC: "11680",
+              level4L: "삼성동",
+              level4LC: "1168010500", // 법정동 10자리 (시·군·구 5 + 동 5)
             },
           },
         ],

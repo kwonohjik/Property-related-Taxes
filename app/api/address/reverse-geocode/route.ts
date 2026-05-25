@@ -18,10 +18,16 @@ import { NextRequest, NextResponse } from "next/server";
 const VWORLD_URL = "https://api.vworld.kr/req/address";
 
 interface VworldStructure {
+  level0?: string;   // 국가 (예: "대한민국")
   level1?: string;   // 시·도 (예: "서울특별시")
   level2?: string;   // 시·군·구 (예: "강남구")
-  level4L?: string;  // 10자리 행정구역코드
-  level4LC?: string; // 5자리 시·군·구 코드
+  level3?: string;   // 읍·면 (또는 빈 문자열)
+  level4L?: string;  // 법정동 명칭 (예: "삼성동")
+  level4LC?: string; // 법정동 10자리 코드 (예: "1168010500" — 시·군·구 5자리 + 동 5자리)
+  level4A?: string;  // 행정동 명칭
+  level4AC?: string; // 행정동 10자리 코드
+  level5?: string;   // 지번 또는 집세
+  detail?: string;   // 상세주소
 }
 
 interface VworldResult {
@@ -112,19 +118,20 @@ export async function GET(request: NextRequest) {
 
   const first = data.response.result?.[0];
   const level4LC = first?.structure?.level4LC;
-  if (!level4LC || !/^\d{5}$/.test(level4LC)) {
+  // Vworld level4LC = 법정동 10자리 코드 (시·군·구 5 + 동 5). 행안부 시·군·구 표준은 앞 5자리 + "00000".
+  if (!level4LC || !/^\d{10}$/.test(level4LC)) {
     return NextResponse.json(
       {
         error: {
           code: "NO_SIGUNGU_CODE",
-          message: "Vworld 응답에서 시·군·구 5자리 코드(level4LC) 추출 실패",
+          message: "Vworld 응답에서 법정동 10자리 코드(level4LC) 추출 실패",
         },
       },
       { status: 502 },
     );
   }
 
-  const sigunguCode = level4LC + "00000"; // 행안부 표준 10자리
+  const sigunguCode = level4LC.slice(0, 5) + "00000"; // 행안부 시·군·구 표준 10자리
   return NextResponse.json({
     sigunguCode,
     address: first.text ?? "",
