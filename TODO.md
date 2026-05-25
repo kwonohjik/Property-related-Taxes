@@ -1,128 +1,59 @@
-# 작업 TODO — 현재 진행 + 잔존
+# 작업 TODO — 비상장주식 주식수 환산(§17의3⑤) 충실도·견고성 개선
 
-> 정책: 각 작업 완료 시 본 TODO.md를 즉시 업데이트 후 다음 작업으로 이동
-> 형식: `- [ ]` 미완료 / `- [x]` 완료
+> 정책: 각 작업 완료 시 본 TODO.md 즉시 업데이트 후 다음 작업 이동. `- [ ]` 미완료 / `- [x]` 완료
+> Plan: `docs/00-pm/inheritance-unlisted-stock-share-conversion-robustness.plan.md`
+> Design: `docs/02-design/features/inheritance-unlisted-stock-share-conversion.engine.design.md`
+> 시작: 2026-05-25
 
 ---
 
-# 🔴 진행 중: PR-RD-5b — Vworld reverse-geocoding 클라이언트
+## Pre-Do — 현행 동작 관찰 (anchor 선작성)
+- [x] P1. SC-2(다년도)·SC-4(감자) anchor 작성 → 현행 PASS 기준선 확보 ✅
+- [x] P2. SC-6b(odd-product 대용량) anchor 작성 → **현행 FAIL 관찰 확인** (133,333,330 ≠ 133,333,331, round-down off-by-1) ✅
+- [x] P3. 현행 관찰 = 디자인 예측 일치 (SC-2/4/6 PASS, SC-6b FAIL) ✅
 
-> Plan: `docs/00-pm/inheritance-farming-vworld-reverse-geocode.plan.md` v1
-> 시작: 2026-05-24
-> 예상: 5.5~6.5h
+## PR-1 — calcConvertedShares 충실 재구현
+- [x] R1. `calcConvertedShares` 6단계 알고리즘 재구현 (윈도우 필터 + 연도별 누적 + safeMultiplyThenDivide) ✅
+- [x] R2. no-op 루프(`converted = converted;`) 제거 ✅
+- [x] R3. 오케스트레이터 인라인 블록 → `calcConvertedShares()` 단일 진입점 교체 ✅ (SC-6b PASS 전환 확인)
 
-## 작업 목록 (8건)
+## PR-2 — 입력 모순 검증 + 경고
+- [x] V1. 체인 모순·prior≤0 검증 → warning (자동 보정 금지, throw 금지) ✅
+- [x] V2. 윈도우 밖 변동 "환산 제외 N건" warning ✅
+- [x] V3. `appliedRules`에 "§17의3⑤ 환산 — 윈도우 내 N건" 메타 추가 ✅
 
-- [x] **S1** Vworld API 사양 조사 (완료) — URL `https://api.vworld.kr/req/address`, params service=address·request=getAddress·type=both·point=lng,lat·format=json, 응답 `response.result[].structure.{level1,level2,level4L,level4LC}`, 한국 영역 33~39N·124~132E, Referer 헤더 필수 (기존 search route 패턴 활용)
-- [x] **S2** API 프록시 라우트 — `app/api/address/reverse-geocode/route.ts` (130줄) — sanity check + Vworld 호출 + level4LC 추출 + 5단 응답 분기
-- [x] **S3** Dexie v5 마이그레이션 — `lib/storage/db.ts`에 `reverseGeocodeCache` 테이블 + `ReverseGeocodeCacheRecord` 타입 + resetLocalDB 갱신 (기존 4 테이블 무변경, 회귀 0)
-- [x] **S4** 클라이언트 헬퍼 — `lib/calc/vworld-reverse-geocode.ts` (178줄) — reverseGeocode() + resolveSigunguCode() PNU 우선 fallback + cacheKey() + purgeExpiredCache() + isReverseGeocodeError() type guard
-- [x] **S6-VRG** anchor — `__tests__/lib/calc/vworld-reverse-geocode.test.ts` 14 PASS (VRG-1~10 + 10b + meta 2 + fetch-throw)
-- [x] **S6-API** anchor — `__tests__/api/reverse-geocode.route.test.ts` 8 PASS (API-1~5 + 2b·2c·fetch-throw)
-- [x] **S5** PropertyValuationForm 통합 — AddressSearch onChange async + resolveSigunguCode 자동 호출 + isFishing 분기 (estateSigunguCode / fishingAnchorSigunguCode) + 실패 silent fallback
-- [x] **CV** 갭 분석 (갭 0건, anchor 초과달성) + typecheck 0 + 전체 회귀 4,893 PASS (+22 신규, 0 FAIL) + 한국어 커밋 + push
+## PR-3 — anchor 매트릭스 완성
+- [x] A1. SC-1·3·5·7·8·9 anchor 작성 ✅
+- [x] A2. EQ(결과동일성) anchor — 재구현=현행 bit-identical ✅
+- [x] A3. INT(통합) anchor — `evaluateUnlistedStockV2` downstream ⑤ 불변 ✅
+
+## 검증 게이트
+- [x] G1. 신규 anchor 13건 전부 PASS (재구현 후) ✅
+- [x] G2. `npx tsc --noEmit` 0건 ✅
+- [x] G3. `npx vitest run __tests__/tax-engine/property-valuation/` 회귀 0 ✅ (176 PASS)
+- [x] G4. 전체 `npm test` 회귀 0 ✅ (319파일 4910 PASS·0 FAIL)
+- [x] G5. 800줄 정책 확인 — converted-shares.ts 140줄 / orchestrator 298줄(−9) ✅
+- [x] G6. `convertedShares` 참조 컴포넌트 — Page6:41 `fy.convertedShares` 정상 표시 ✅
+
+## 미결 — 외부/사용자 결정 (별도, 구현 비차단)
+- [x] Q1. KoreanLaw 불균등 증자 환산 해석례 확인 → **검색 미발견, 본칙 §17의3⑤(count-only) 적용** ✅
+- [x] Q2. SC-8 평가연도 변동 §17의3⑤ 확인 → **검색 미발견, §56③ 구조상 환산 대상(SC-8 통과)** ✅
+- [x] Q3. UI 경고 노출 위치 → **디폴트 채택: UI 작업 0** (주 결과 카드 렌더, 사용자 override 가능) ✅
+- [x] Q4. 동일 사업연도 복수증자 → **running 잔고 순차 적용 구현 + SC-10 통과** ✅
+
+---
 
 ## 진행 현황
-
-- 전체 작업: 8개
-- 완료: 8개
+- 전체 작업: 19개 (구현 15 + 미결 4)
+- 완료: 19개
 - 미완료: 0개
 - 상태: **완료 ✅**
 
-## 자가 점검 체크리스트 (완료 보고 전)
-
-- [x] 8 작업 모두 완료 + TODO.md `[x]` 갱신
-- [x] typecheck 0 에러
-- [x] 전체 vitest 회귀 0건 (4,871 → 4,893 PASS, +22 신규)
-- [x] 신규 anchor 22건 PASS (VRG 14 + API 8, 계획 15건 초과달성)
-- [x] 갭 분석 — 계획서 §2 산출물 4종 + 테스트 2종 = 6 파일 모두 commit
-- [x] 14지점 ⑤ AddressSearch onChange 통합 확인
-- [x] mirror-pattern — PNU 우선 → API fallback → 실패 silent (3층 일관)
-- [x] 한국어 커밋 메시지 + push 완료
+## 자가 점검 (완료 보고 전)
+- [x] 구현 15 + 미결 4 모두 처리 + TODO `[x]` 갱신
+- [x] anchor 14건 PASS (SC-1~10 + 6b + EQ + INT 2)
+- [x] tsc 0건 / property-valuation 186 PASS / 전체 4910 PASS·0 FAIL
+- [x] 800줄 정책 (converted-shares 140줄)
+- [x] KoreanLaw §56③·⑤·§17의3⑤ verbatim 검증 + 추정 인용 0
 - [x] 미완료 0개 확인 후 완료 선언
-
----
-
-# 🟡 잔존: PR-K — §54⑥ 평가심의위원회 신청 옵션 (보류)
-
-> 별도 세션 대기. 본 PR-RD-5b 완료 후 또는 사용자 요청 시 진입.
-> Plan: `docs/00-pm/inheritance-unlisted-stock-evaluation-committee-section-54-6.plan.md`
-> Design: `docs/02-design/features/inheritance-unlisted-stock-evaluation-committee-section-54-6.engine.design.md`
-> Total: 9일 / 6 sub-PR / 45 anchor
-
-## 사전 준비 (Phase A-0)
-
-- [ ] policy-check skill 호출 — 4정책 사전 인식 (enum-verification·mirror-pattern·dialog-data-discard·three-state-toggle)
-- [ ] KoreanLaw MCP 재검증 — §54⑥·§49의2·§67·§68 인용 박스 (계획·디자인 첨부)
-
-## PR-K-1: 엔진·타입 + 70~130% 범위 검증 (2일, anchor 13)
-
-- [x] `lib/tax-engine/property-valuation/evaluation-committee-section-54-6.ts` 생성 (~150줄)
-- [x] EvaluationCommitteeMethod 타입 정의 ("clm"|"dcf"|"ddm"|"other")
-- [x] METHOD_LABEL Record<EvaluationCommitteeMethod, string> 4종 강제
-- [x] EvaluationCommitteeInput 타입
-- [x] EvaluationCommitteeResult 타입
-- [x] validatePerShareRange(supplementary, taxpayer) 헬퍼
-- [x] applyEvaluationCommittee(input, supplementary) 진입점
-- [x] UnlistedStockValuationInput.evaluationCommittee?
-- [x] UnlistedStockValuationResult.evaluationCommitteeApplied?
-- [x] unlisted-orchestrator.ts — applyEvaluationCommittee 호출
-- [x] appliedRules "상증령 §54⑥ + §49의2" 푸시
-- [x] 본 결과 무변경 보장
-- [x] anchor K-1-1 ~ K-1-13 (13건, 14 PASS — validatePerShareRange 헬퍼 추가)
-- [x] PR-K-1 커밋·푸시 (commit efad8b9)
-
-## PR-K-2: Zod schema + validate (0.5일, anchor 4)
-
-- [x] unlisted-stock-valuation-v2.schema.ts — evaluationCommittee 필드 추가
-- [x] method enum + taxpayerPerShareValuation + methodNotes + evaluatorOrganization
-- [x] superRefine — "other" + methodNotes 누락 차단 (§49의2⑤2호)
-- [x] anchor K-2-1 ~ K-2-4 (5건 PASS — 회귀 1 포함)
-- [x] PR-K-2 커밋·푸시 (commit 512b1c7)
-
-## PR-K-3: UI 토글·입력 폼 (2일, anchor 6)
-
-- [x] EvaluationCommitteeToggle.tsx 생성 (190줄)
-- [x] ToggleCard emerald + RadioCardGroup 4옵션
-- [x] CurrencyInput·textarea·input
-- [x] 토글 ON→OFF 데이터 폐기 Dialog (rose-600 + 입력값 있을 때만)
-- [x] UnlistedStockV2Card 섹션 5-C 통합
-- [x] anchor K-3-1 ~ K-3-6 (7건 PASS — 회귀 1 포함)
-- [x] PR-K-3 커밋·푸시 (commit 049139c)
-
-## PR-K-4: Range Indicator + 결과 카드 (1.5일, anchor 9)
-
-- [x] EvaluationCommitteeRangeIndicator.tsx 생성 (115줄)
-- [x] EvaluationCommitteeResultCard.tsx 생성 (160줄)
-- [x] inheritanceApplicationDeadline + giftApplicationDeadline + daysUntilDeadline 헬퍼 (lib/calc/evaluation-committee-deadline.ts)
-- [x] formatLocalDate helper — toISOString UTC drift 회피 (KST)
-- [x] anchor K-4-1 ~ K-4-9 (10건 PASS — 헬퍼 1 포함)
-- [x] PR-K-4 커밋·푸시 (commit dcbff49)
-
-## PR-K-5: 신고서 안내 카드 (1일, anchor 3)
-
-- [x] EvaluationCommitteeFilingGuideCard.tsx 생성 (125줄)
-- [x] §49의2⑤2호 첨부 자료 3종 체크리스트 (가·나·다)
-- [x] §49의2④ 기한 안내 (상속 4/1개월 · 증여 70/20일 분기)
-- [x] §49의2⑦ 심의 고려사항 3종
-- [x] §49의2⑨ 신용평가전문기관 안내 (amber tone — 수수료 납세자 부담)
-- [x] anchor K-5-1 ~ K-5-3 (4건 PASS — 회귀 1 포함)
-- [x] PR-K-5 커밋·푸시 (commit c077381)
-
-## PR-K-6: RTL 통합 + 14지점 점검 + 전체 회귀 (2일, anchor 10)
-
-- [x] 14 동기화 지점 grep 자가검증 (①~⑭ 모두 ✅)
-- [x] anchor K-6-1 ~ K-6-10 (10건 PASS)
-- [ ] 브라우저 수동 확인 (후속 PR 또는 사용자 검증)
-- [x] PR-K-6 커밋·푸시 (commit 0256333)
-
-## PR-K 전체 DoD
-
-- [x] 6 sub-PR 모두 완료 (efad8b9 / 512b1c7 / 049139c / dcbff49 / c077381 / 0256333)
-- [x] 45+ anchor 모두 통과 (실제 50건: K-1 14 + K-2 5 + K-3 7 + K-4 10 + K-5 4 + K-6 10)
-- [x] 기존 회귀 0건 (4,791 → 4,871 누적 +80, FAIL 0)
-- [x] TypeScript 0건
-- [x] 800줄 정책 (모든 신규 파일 ≤ 250줄)
-- [x] KoreanLaw MCP 인용 박스 (§54⑥·§49의2④⑤⑦⑨·§67·§68)
-- [ ] 브라우저 수동 확인 (후속)
-- [x] 3대 정책 위반 0건 (useEffect 미러링·자동 안분·fallback 비동기화 모두 없음)
+- [ ] git 커밋·push (사용자 요청 시 — 미요청이라 보류)

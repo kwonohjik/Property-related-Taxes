@@ -29,9 +29,7 @@ import type {
   FiscalYearBreakdown,
 } from "@/lib/tax-engine/types/unlisted-stock-valuation.types";
 import { calcFiscalYearNetIncome } from "./fiscal-year-net-income";
-import {
-  applyShareConversion,
-} from "./converted-shares";
+import { calcConvertedShares } from "./converted-shares";
 import {
   calcWeightedAvg3y,
   calcPerShareNetIncomeValue,
@@ -80,25 +78,19 @@ export function evaluateUnlistedStockV2(
     adjustedIncomes[2].adjustedNetIncome + capitalAdjustments[2],
   ];
 
-  // STEP 4: 바.환산주식수 (§17의3⑤)
-  // 단순화 가정: 평가기준일 이전 사업연도 종료일 직후의 증자/감자만 일괄 반영
-  // 사례 6은 변동 없음 → 모든 환산주식수 = totalShares
-  // 사례 1·5는 평가시점 직전 사업연도 내 변동만 발생 → 동일하게 모든 환산 = totalShares
-  const totalCapitalDelta = input.capitalChanges.reduce((sum, c) => {
-    const sign = c.changeType === "capital_reduction" ? -1 : 1;
-    return sum + sign * c.sharesIssued;
-  }, 0);
-
-  const priorEndShares = input.totalShares - totalCapitalDelta;
-  const convertedShares: [number, number, number] = [
-    input.totalShares,
-    priorEndShares > 0
-      ? applyShareConversion(priorEndShares, totalCapitalDelta)
-      : input.totalShares,
-    priorEndShares > 0
-      ? applyShareConversion(priorEndShares, totalCapitalDelta)
-      : input.totalShares,
-  ];
+  // STEP 4: 바.환산주식수 (§17의3⑤ 충실 — 연도별 누적 환산 + 3년 윈도우 필터)
+  //   정상 complete-chain → [totalShares, totalShares, totalShares] (telescoping 항등식)
+  const conversionResult = calcConvertedShares({
+    totalShares: input.totalShares,
+    fiscalYearEndDates,
+    evaluationDate: input.evaluationDate,
+    capitalChanges: input.capitalChanges,
+  });
+  const convertedShares = conversionResult.convertedShares;
+  warnings.push(...conversionResult.warnings);
+  appliedRules.push(
+    `상증규 §17의3⑤ 환산주식수 — 평가기간(3년) 내 자본변동 ${conversionResult.windowChangeCount}건 반영`,
+  );
 
   // STEP 5: 사.1주당 순손익액
   const perShareNetIncomes: [number, number, number] = [

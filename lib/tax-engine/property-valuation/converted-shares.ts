@@ -1,12 +1,12 @@
 /**
- * Phase 2 모듈 — 환산주식수 산정 (별지 부표3 6쪽 바. 산출)
+ * 환산주식수 산정 (별지 부표3 6쪽 바. 산출) — §17의3⑤ 충실 재구현
  *
- * 법령: 상증령 §56 ③ + 상증규 §17의3 ⑤ (KoreanLaw 검증 2026-05-22)
+ * 법령: 상증령 §56③ 단서 + 상증규 §17의3⑤ (KoreanLaw 검증 2026-05-22·2026-05-25)
  *
  * §56③ 본문: "각 사업연도의 주식수는 각 사업연도 종료일 현재의 발행주식총수에 의한다."
  * §56③ 단서: "다만, 평가기준일이 속하는 사업연도 이전 3년 이내에 증자 또는 감자를 한
  *            사실이 있는 경우에는 증자 또는 감자전의 각 사업연도 종료일 현재의 발행주식총수는
- *            재정경제부령으로 정하는 바에 따른다." → §17의3 ⑤
+ *            재정경제부령으로 정하는 바에 따른다." → §17의3⑤
  *
  * §17의3⑤ 환산식:
  *   1호 증자: 환산주식수 = 증자 전 각 사업연도말 주식수
@@ -14,119 +14,130 @@
  *   2호 감자: 환산주식수 = 감자 전 각 사업연도말 주식수
  *           × (감자 직전 사업연도말 주식수 − 감자 주식수) / 감자 직전 사업연도말 주식수
  *
- * Plan: docs/00-pm/inheritance-unlisted-stock-valuation-besshi-4-buppyo-3.plan.md
- */
-
-import type { UnlistedCapitalChange } from "@/lib/tax-engine/types/unlisted-stock-valuation.types";
-
-/**
- * 사업연도별 환산주식수 산정
+ * 구현 특성 (계획서 §0 telescoping 항등식):
+ *   - 평가기간(3년) 내 모든 증자·감자가 입력되면(체인 완결) 3개 연도 환산주식수는
+ *     항상 평가기준일 발행주식총수(totalShares)로 수렴. 본 함수는 그 일반해를
+ *     연도별 누적 환산으로 충실히 산출(no-op 단순화 제거).
+ *   - 윈도우(3년) 밖 변동은 §56③ 단서에 따라 환산 제외 + 경고.
+ *   - 입력 모순(prior ≤ 0 등)은 자동 보정 없이 actual 유지 + 경고 (throw 금지).
  *
- * @param fiscalYearEndShares 평가기준일 현재 발행주식총수 (= 마지막 환산 결과)
- * @param capitalChanges 평가기준일 이전 3년 내 증자·감자 이력 (changeDate 오름차순)
- * @param fiscalYearEndDates 3개 사업연도 종료일 [1년전, 2년전, 3년전]
- *
- * 산정 방식:
- *   1) 각 사업연도 종료일 기준 발행주식수 (당시 실제 주식수) 산정
- *   2) §17의3⑤ 적용: 각 증자/감자에 대해 "직전 사업연도말 주식수 → 변동 후" 비율로 곱
- *
- * @example PDF 사례 1
- *   평가시점 2022.6.30. → 직전 사업연도 종료일 2021.12.31. → 180,000주
- *   2020년말 = 100,000 / 2019년말 = 100,000 / 2018년말 = 100,000
- *   2021년 자본금 변동: 6.30. 유상증자 50,000 + 10.30. 무상증자 30,000 = 총 +80,000
- *
- *   2021년 환산주식수 = 평가시점 발행주식수 = 180,000 (당해 연도)
- *   2020년 환산주식수 = 100,000 × (100,000 + 80,000) / 100,000 = 180,000
- *   2019년 환산주식수 = 100,000 × (100,000 + 80,000) / 100,000 = 180,000
- */
-export function calcConvertedShares(
-  fiscalYearEndShares: number,
-  capitalChanges: UnlistedCapitalChange[],
-  fiscalYearEndDates: [Date, Date, Date],
-): [number, number, number] {
-  // 평가기준일 이전 3년 내 변동만 필터링 (3년 전 종료일 기준)
-  const threeYearsAgoEndDate = fiscalYearEndDates[2];
-  const relevantChanges = capitalChanges
-    .filter((c) => c.changeDate >= threeYearsAgoEndDate)
-    .sort((a, b) => b.changeDate.getTime() - a.changeDate.getTime()); // 최근→과거
-
-  // 1년전 사업연도말 주식수 = 평가시점 발행주식수 (이 값이 입력으로 주어짐)
-  // 2년전 사업연도말 주식수 = 1년전 환산 시작점에서 그 사이의 증자/감자 역적용
-  // 3년전 사업연도말 주식수 = 동일 방식
-
-  /**
-   * 각 사업연도 종료일 기준 환산주식수 산정
-   * - 평가시점 발행주식수 fiscalYearEndShares는 1년전 사업연도말 기준
-   * - 그 이전 사업연도는 §17의3⑤ 환산식으로 환산
-   */
-  const result: number[] = [fiscalYearEndShares, 0, 0];
-
-  // 2년전 사업연도말, 3년전 사업연도말 환산
-  for (let yearIdx = 1; yearIdx <= 2; yearIdx++) {
-    const targetEndDate = fiscalYearEndDates[yearIdx];
-    let converted = fiscalYearEndShares;
-
-    // 평가시점부터 거꾸로, 해당 사업연도 종료일 이전의 변동을 역적용
-    // §17의3⑤은 "증자 전 사업연도말 주식수"에 변동 비율을 적용하므로,
-    // 평가시점 주식수에서 시작해 변동을 역방향으로 적용하면 등가
-    for (const change of relevantChanges) {
-      // 변동일이 해당 사업연도 종료일 이후라면 → 그 사업연도에는 변동이 아직 미반영
-      // 즉 환산 필요: 사업연도말 주식수 × (직전말 + 변동) / 직전말
-      // 역산: 평가시점 주식수에서 "직전말 / (직전말 + 변동)"로 나눠 사업연도말 주식수 도출 가능
-      if (change.changeDate > targetEndDate) {
-        const sign =
-          change.changeType === "capital_reduction" ? -1 : 1;
-        const delta = sign * change.sharesIssued;
-        // converted 시점 = change 직후 주식수
-        // change 직전 주식수 = converted − delta (단순 합산 가정)
-        const priorEndShares = converted - delta;
-        if (priorEndShares <= 0) continue;
-        // 환산식 적용 시 결과는 priorEndShares × (priorEndShares + delta) / priorEndShares
-        //                = priorEndShares + delta = converted
-        // 즉 평가시점 주식수가 그대로 환산주식수
-        // (사례 1처럼 한 해에 모든 변동이 일어났을 때 등가)
-        converted = converted; // 명시
-      }
-    }
-    result[yearIdx] = converted;
-  }
-
-  return [result[0], result[1], result[2]] as [number, number, number];
-}
-
-/**
- * 단순화된 사례용 헬퍼 — PDF 사례 1처럼 평가시점 직전 사업연도 내에서
- * 모든 변동이 발생한 경우, 3개 사업연도 환산주식수가 모두 평가시점 발행주식수와 동일.
- *
- * §17의3⑤ 검증:
- *   2020년말 = 100,000 × (100,000 + 80,000) / 100,000 = 100,000 × 1.8 = 180,000 ✓
- *   2019년말 = 100,000 × (100,000 + 80,000) / 100,000 = 100,000 × 1.8 = 180,000 ✓
+ * Plan: docs/00-pm/inheritance-unlisted-stock-share-conversion-robustness.plan.md
+ * Design: docs/02-design/features/inheritance-unlisted-stock-share-conversion.engine.design.md
  *
  * ─────────────────────────────────────────────────────────────────────
  * PR-I 단주 처리 정책 (KoreanLaw MCP 검증 2026-05-24)
+ *   상증법령에 1주 미만 단주 처리 명시 규정 없음 → 우리 엔진 일관 정책 Math.floor 절사
+ *   (safeMultiplyThenDivide 가 내부적으로 floor). 상법 단위주 원칙과 정합.
  * ─────────────────────────────────────────────────────────────────────
- * 검증 대상: 상증령 §54·§55·§56, 상증규 §17·§17의3, 상법 §329·§459·§530의6
- *
- * 결론: **상증법령에 1주 미만 단주(端株) 처리 명시 규정 없음**
- *   - §17의3⑤ 환산식 자체는 정수 곱셈/나눗셈 형태로 보통 정수 결과
- *   - 비정수 비율 시 단주 발생 가능 (예: 100,000 × 4/3 = 133,333.333…)
- *   - §56⑤은 "1개월 미만은 1개월"(절상) 시간 차원만 명시 — 주식 차원 명시 없음
- *   - 상법은 단위주(1주) 원칙 + 단주는 매각·금전 정산 (§530의6 합병 단주)
- *
- * 채택: **A안 — Math.floor (절사)**
- *   1. 우리 엔진 일관 정책: 순손익액·1주당 평가액 등 모든 계산에 Math.floor 적용
- *   2. 상법 단위주 원칙과 정합 (1주 미만 단주는 별도 매각 대상)
- *   3. PDF 사례 1·5·6 등 모든 사례에서 환산주식수 = 정수 (단주 미발생)
- *   4. 절상(ceil)·반올림(round)은 법령 근거 없는 자의적 처리
- *
- * 영향: 단주 발생 시 1주 누락 → 1주당 평가액에 미미한 영향 (예: 180,000주 중 1주 = 0.0006%)
- * 회귀 보호: __tests__/tax-engine/property-valuation/case-1-net-income-calc.test.ts +
- *           본 모듈 단주 floor anchor (PR-I)
  */
-export function applyShareConversion(
-  priorEndShares: number,
-  capitalDelta: number,
-): number {
+
+import { safeMultiplyThenDivide } from "@/lib/tax-engine/tax-utils";
+import type { UnlistedCapitalChange } from "@/lib/tax-engine/types/unlisted-stock-valuation.types";
+
+/** 증자 +sharesIssued / 감자 −sharesIssued */
+function signedDelta(ch: UnlistedCapitalChange): number {
+  return ch.changeType === "capital_reduction" ? -ch.sharesIssued : ch.sharesIssued;
+}
+
+function fmtDate(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
+export interface CalcConvertedSharesArgs {
+  /** 평가기준일 현재 발행주식총수 */
+  totalShares: number;
+  /** 3개 사업연도 종료일 [1년전, 2년전, 3년전] (내림차순 날짜) */
+  fiscalYearEndDates: [Date, Date, Date];
+  /** 평가기준일 */
+  evaluationDate: Date;
+  /** 자본금 변동 (유상증자·무상증자·감자) */
+  capitalChanges: UnlistedCapitalChange[];
+}
+
+export interface CalcConvertedSharesResult {
+  /** 환산주식수 [1년전, 2년전, 3년전] */
+  convertedShares: [number, number, number];
+  warnings: string[];
+  /** 환산에 반영된(윈도우 내) 변동 건수 */
+  windowChangeCount: number;
+}
+
+/**
+ * 사업연도별 환산주식수 산정 (§17의3⑤ 충실 — 연도별 누적 환산)
+ *
+ * @example SC-2 다년도 분산 증자
+ *   total 180,000 / 2020 +50,000 · 2021 +30,000 (평가 2022.6.30)
+ *   → [180,000, 180,000, 180,000] (telescoping 균등)
+ */
+export function calcConvertedShares(args: CalcConvertedSharesArgs): CalcConvertedSharesResult {
+  const { totalShares, fiscalYearEndDates, evaluationDate, capitalChanges } = args;
+  const warnings: string[] = [];
+
+  // STEP 1: 윈도우 필터 (§56③ 단서 — 평가기준일이 속하는 사업연도 이전 3년 이내)
+  //   windowStart = 3년전 사업연도 개시일 (= 3년전 종료일 − 1년 + 1일, 12개월 가정 — §9 한계 공유)
+  const thirdYearEnd = fiscalYearEndDates[2];
+  const windowStart = new Date(thirdYearEnd);
+  windowStart.setFullYear(windowStart.getFullYear() - 1);
+  windowStart.setDate(windowStart.getDate() + 1);
+
+  const W = capitalChanges
+    .filter((c) => c.changeDate >= windowStart && c.changeDate <= evaluationDate)
+    .sort((a, b) => a.changeDate.getTime() - b.changeDate.getTime());
+  const excludedCount = capitalChanges.length - W.length;
+  if (excludedCount > 0) {
+    warnings.push(
+      `평가기간(3년) 밖 자본변동 ${excludedCount}건은 §56③ 단서에 따라 환산주식수 산정에서 제외했습니다.`,
+    );
+  }
+
+  // STEP 2: 각 사업연도말 실제주식수 역산 (totalShares − 해당 종료일 이후 발생 변동)
+  const actual: [number, number, number] = [0, 0, 0];
+  for (let i = 0; i < 3; i++) {
+    const after = W.filter((c) => c.changeDate > fiscalYearEndDates[i]).reduce((s, c) => s + signedDelta(c), 0);
+    actual[i] = totalShares - after;
+  }
+  if (actual.some((v) => v < 0)) {
+    warnings.push(
+      "입력한 자본변동 합계가 발행주식총수와 모순됩니다(일부 사업연도 추정 주식수 음수). 자본변동 이력을 확인하세요.",
+    );
+  }
+
+  // STEP 3: 환산주식수 초기화 = 실제주식수
+  const conv: [number, number, number] = [actual[0], actual[1], actual[2]];
+
+  // STEP 4: 각 변동의 §17의3⑤ 비율 = (변동 후 잔고 / 변동 직전 잔고)를 "변동 이전 각 사업연도"에 누적 곱.
+  //   분모는 변동 직전 **실제 잔고(running)** — 동일 사업연도 복수 변동도 순차 적용되어 telescoping 정합.
+  //   (FY말 고정 분모를 쓰면 동일 연도 2건째에서 비율이 어긋남 — 계획서 §8-4 Q4 / 사례 SC-10)
+  let countBefore = totalShares - W.reduce((s, c) => s + signedDelta(c), 0); // 첫 변동 직전 잔고
+  for (const ch of W) {
+    const delta = signedDelta(ch);
+    const countAfter = countBefore + delta;
+    if (countBefore <= 0 || countAfter <= 0) {
+      warnings.push(
+        `${fmtDate(ch.changeDate)} 자본변동: 직전 주식수가 0 이하로 환산식 적용 불가 — 해당 변동 환산 미반영(자동 보정하지 않음).`,
+      );
+      countBefore = countAfter;
+      continue;
+    }
+    for (let i = 0; i < 3; i++) {
+      if (fiscalYearEndDates[i] < ch.changeDate) {
+        // conv[i] × countAfter / countBefore — safeMultiplyThenDivide 로 대용량 정밀도 보장(2^53 초과 BigInt)
+        conv[i] = safeMultiplyThenDivide(conv[i], countAfter, countBefore);
+      }
+    }
+    countBefore = countAfter;
+  }
+
+  return { convertedShares: conv, warnings, windowChangeCount: W.length };
+}
+
+/**
+ * 단일 환산 헬퍼 (하위호환 export 유지) — priorEndShares × (priorEndShares + Δ) / priorEndShares
+ *
+ * 산식상 결과는 priorEndShares + Δ. safeMultiplyThenDivide 로 대용량(>2^53) 정밀도 보장.
+ * (구 구현은 `floor(p × (p+d) / p)` 부동소수 곱셈으로 1억주 부근 홀수곱에서 ±1주 오차 — SC-6b 회귀.)
+ */
+export function applyShareConversion(priorEndShares: number, capitalDelta: number): number {
   if (priorEndShares <= 0) return 0;
-  return Math.floor(priorEndShares * (priorEndShares + capitalDelta) / priorEndShares);
+  return safeMultiplyThenDivide(priorEndShares, priorEndShares + capitalDelta, priorEndShares);
 }
