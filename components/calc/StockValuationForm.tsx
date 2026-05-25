@@ -358,6 +358,7 @@ function UnlistedStockCard({
           isRealEstateHeavy={isRealEstateHeavy}
           onUpdate={onUpdate}
           onUpdateHeavy={onUpdateHeavy}
+          mode={mode}
         />
       )}
       {currentMode === "formal" && item.unlistedStockValuationV2 && (

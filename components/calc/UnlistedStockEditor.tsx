@@ -46,6 +46,7 @@ export function UnlistedStockEditor({
   onUpdate,
   onUpdateHeavy,
   onRemove,
+  mode = "inheritance",
 }: UnlistedStockEditorProps) {
   return (
     <div className="border rounded-lg p-4 space-y-3 bg-white dark:bg-gray-900">
@@ -72,6 +73,7 @@ export function UnlistedStockEditor({
         isRealEstateHeavy={isRealEstateHeavy}
         onUpdate={onUpdate}
         onUpdateHeavy={onUpdateHeavy}
+        mode={mode}
       />
       {/* 공통속성 4블록은 StockValuationForm.UnlistedStockCard에서 EstateCommonAttributesSection으로 노출 (PR-4) */}
     </div>

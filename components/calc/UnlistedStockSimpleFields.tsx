@@ -8,12 +8,20 @@
  * UnlistedStockEditor에 남아 있음 (PR-4에서 EstateCommonAttributesSection으로 분리 예정).
  *
  * 상증법 §63①1호 다목, 시행령 §54
+ *
+ * PR-2 (3년치 순손익 입력):
+ *  - weightedNetIncome 단일 칸 → netIncomeY1/Y2/Y3 3칸으로 교체
+ *  - 연도별 결손(적자) 토글: 로컬 state로 부호 관리, useEffect→store 미러링 금지
+ *  - 가중평균 미리보기: calcCompanyWeightedNetIncome3Y import (single-source)
  */
 
+import { useState, useMemo } from "react";
 import { CurrencyInput, parseAmount, formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import {
   calcUnlistedStockPerShareValue,
+  calcCompanyWeightedNetIncome3Y,
+  resolveWeightedNetIncome,
 } from "@/lib/tax-engine/property-valuation-stock";
 import type { EstateItem, UnlistedStockData } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { UnlistedStockSpecialReasonSection } from "@/components/calc/inheritance/UnlistedStockSpecialReasonSection";
@@ -113,6 +121,8 @@ export interface UnlistedStockSimpleFieldsProps {
   isRealEstateHeavy: boolean;
   onUpdate: (updated: EstateItem) => void;
   onUpdateHeavy: (v: boolean) => void;
+  /** 상속세("inheritance") 또는 증여세("gift") — 연도 라벨 문구에 사용 */
+  mode?: "inheritance" | "gift";
 }
 
 // ============================================================
@@ -124,6 +134,7 @@ export function UnlistedStockSimpleFields({
   isRealEstateHeavy,
   onUpdate,
   onUpdateHeavy,
+  mode = "inheritance",
 }: UnlistedStockSimpleFieldsProps) {
   const set = (patch: Partial<EstateItem>) => onUpdate({ ...item, ...patch });
   const setStock = (patch: Partial<UnlistedStockData>) =>
@@ -131,15 +142,49 @@ export function UnlistedStockSimpleFields({
 
   const data = item.unlistedStockData;
 
+  // ──────────────────────────────────────────────────────────────
+  // 결손(적자) 플래그 로컬 state — useEffect→store 미러링 금지 정책 준수
+  // store의 netIncomeYN 부호로 초기값 derive (음수면 결손).
+  // onChange에서만 부호 변환 → store 저장. 이후 display는 절대값.
+  // ──────────────────────────────────────────────────────────────
+  const [deficitY1, setDeficitY1] = useState<boolean>(() => (data?.netIncomeY1 ?? 0) < 0);
+  const [deficitY2, setDeficitY2] = useState<boolean>(() => (data?.netIncomeY2 ?? 0) < 0);
+  const [deficitY3, setDeficitY3] = useState<boolean>(() => (data?.netIncomeY3 ?? 0) < 0);
+
+  // 연도 라벨 문구 — 상속개시일 vs 증여일
+  const baseLabel = mode === "gift" ? "증여일" : "상속개시일";
+
+  // ──────────────────────────────────────────────────────────────
+  // 가중평균 미리보기 — 엔진 헬퍼 single-source (UI 자체 산식 금지)
+  // ──────────────────────────────────────────────────────────────
+  const weightedNetIncomePreview = useMemo(() => {
+    const has3y =
+      data?.netIncomeY1 != null ||
+      data?.netIncomeY2 != null ||
+      data?.netIncomeY3 != null;
+    if (!has3y) return null;
+    return calcCompanyWeightedNetIncome3Y(
+      data?.netIncomeY1 ?? 0,
+      data?.netIncomeY2 ?? 0,
+      data?.netIncomeY3 ?? 0,
+    );
+  }, [data?.netIncomeY1, data?.netIncomeY2, data?.netIncomeY3]);
+
   // 계산 미리보기
-  let preview: ReturnType<typeof calcUnlistedStockPerShareValue> | null = null;
-  if (data && data.totalShares > 0) {
+  const preview = useMemo(() => {
+    if (!data || data.totalShares <= 0) return null;
     try {
-      preview = calcUnlistedStockPerShareValue(data, isRealEstateHeavy);
+      return calcUnlistedStockPerShareValue(data, isRealEstateHeavy);
     } catch {
-      preview = null;
+      return null;
     }
-  }
+  }, [data, isRealEstateHeavy]);
+
+  // 적자법인 판정: resolveWeightedNetIncome 기준 (엔진과 동일 로직)
+  const isDeficit = data ? resolveWeightedNetIncome(data) <= 0 : false;
+
+  // resolvedNetIncome > 0인데 1주당 순손익가치가 0으로 절사되는 경우
+  const resolvedNetIncome = data ? resolveWeightedNetIncome(data) : 0;
 
   return (
     <div className="space-y-3">
@@ -164,13 +209,13 @@ export function UnlistedStockSimpleFields({
 
       {/* 부동산과다보유법인 여부 */}
       <ToggleCard
-        tone="amber"
+        tone="rose"
         title="부동산과다보유법인"
-        description="총자산 중 부동산 비율 80% 이상 — 순자산가치 비중 증가 (시행령 §54④ 3호)"
+        description="토지·건물·부동산권리 합계가 자산총액의 50% 이상인 법인 (소법 §94①4호다목) — 가중치 반전 (순손익 2/5 + 순자산 3/5), 상증령 §54① 본문 괄호"
         checked={isRealEstateHeavy}
         onCheckedChange={(v) => onUpdateHeavy(v)}
       >
-        <p className="text-xs text-amber-700 dark:text-amber-300 font-medium">
+        <p className="text-xs text-rose-700 dark:text-rose-300 font-medium">
           적용 가중치: 순손익가치×2 + 순자산가치×3 ÷ 5
         </p>
       </ToggleCard>
@@ -223,19 +268,93 @@ export function UnlistedStockSimpleFields({
         </p>
       </div>
 
+      {/* ─── 순손익가치 계산 입력 (PR-2: 3년치 입력) ─── */}
       <div className="border-t border-gray-100 dark:border-gray-800 pt-3 space-y-3">
-        <p className="text-xs font-semibold text-gray-600 dark:text-gray-400">
-          순손익가치 계산 입력
-        </p>
+        <div className="space-y-0.5">
+          <p className="text-xs font-semibold text-gray-600 dark:text-gray-400">
+            순손익가치 계산 입력 — 연도별 순손익액 (상증령 §56①)
+          </p>
+          <p className="text-[11px] text-muted-foreground">
+            각 연도 회사 전체 순손익액을 입력하면 가중평균을 자동 계산합니다.
+            미입력 연도는 0으로 처리됩니다.
+          </p>
+        </div>
 
-        {/* 최근 3년 가중평균 순손익 */}
-        <CurrencyInput
-          label="최근 3년 가중평균 순손익 (회사 전체)"
-          value={data?.weightedNetIncome != null ? String(data.weightedNetIncome) : ""}
-          onChange={(v) => setStock({ weightedNetIncome: parseAmount(v) })}
-          hint="회사 전체 금액 (1주당 ✗) — (당해×3 + 전년×2 + 전전년×1) ÷ 6. 엔진이 발행주식수로 자동 1주당 환산."
-          required
+        {/* 직전 1사업연도 (가중치 ×3) */}
+        <NetIncomeYearRow
+          label={`직전 1사업연도 순손익액 (가중치 ×3)`}
+          yearLabel={`${baseLabel} -1년`}
+          value={data?.netIncomeY1}
+          isDeficit={deficitY1}
+          onDeficitChange={(d) => {
+            setDeficitY1(d);
+            // 결손 플래그 변경 시 현재 절대값에 부호 재적용
+            const absVal = Math.abs(data?.netIncomeY1 ?? 0);
+            setStock({ netIncomeY1: d ? -absVal : absVal });
+          }}
+          onChange={(absVal) => {
+            setStock({ netIncomeY1: deficitY1 ? -absVal : absVal });
+          }}
+          hint="회사 전체 금액 (1주당 ✗). 세무조정 완료된 각 사업연도 순손익액 (시행령 §56④)."
         />
+
+        {/* 직전 2사업연도 (가중치 ×2) */}
+        <NetIncomeYearRow
+          label={`직전 2사업연도 순손익액 (가중치 ×2)`}
+          yearLabel={`${baseLabel} -2년`}
+          value={data?.netIncomeY2}
+          isDeficit={deficitY2}
+          onDeficitChange={(d) => {
+            setDeficitY2(d);
+            const absVal = Math.abs(data?.netIncomeY2 ?? 0);
+            setStock({ netIncomeY2: d ? -absVal : absVal });
+          }}
+          onChange={(absVal) => {
+            setStock({ netIncomeY2: deficitY2 ? -absVal : absVal });
+          }}
+          hint="회사 전체 금액 (1주당 ✗)."
+        />
+
+        {/* 직전 3사업연도 (가중치 ×1) */}
+        <NetIncomeYearRow
+          label={`직전 3사업연도 순손익액 (가중치 ×1)`}
+          yearLabel={`${baseLabel} -3년`}
+          value={data?.netIncomeY3}
+          isDeficit={deficitY3}
+          onDeficitChange={(d) => {
+            setDeficitY3(d);
+            const absVal = Math.abs(data?.netIncomeY3 ?? 0);
+            setStock({ netIncomeY3: d ? -absVal : absVal });
+          }}
+          onChange={(absVal) => {
+            setStock({ netIncomeY3: deficitY3 ? -absVal : absVal });
+          }}
+          hint="회사 전체 금액 (1주당 ✗)."
+        />
+
+        {/* 가중평균 미리보기 */}
+        {weightedNetIncomePreview !== null && (
+          <div className="rounded-md bg-indigo-50/60 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-700 px-3 py-2 text-xs space-y-1">
+            <p className="font-semibold text-indigo-700 dark:text-indigo-300">
+              자동 계산: 3년 가중평균 순손익 (§56①)
+            </p>
+            <p className="text-indigo-600 dark:text-indigo-400">
+              = (직전1년×3 + 직전2년×2 + 직전3년×1) ÷ 6
+              {" = "}
+              <span className="font-medium">{weightedNetIncomePreview.toLocaleString()}</span>
+              {weightedNetIncomePreview <= 0 && (
+                <span className="ml-1 text-amber-600 dark:text-amber-400">
+                  → 0 적용 (음수 시 0, §56① 단서)
+                </span>
+              )}
+            </p>
+            {weightedNetIncomePreview <= 0 && (
+              <p className="text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 rounded px-2 py-1">
+                ⚠️ 적자법인 — 순손익가치 0 적용, 최소값(순자산 80%) 기준
+              </p>
+            )}
+          </div>
+        )}
 
         {/* 자본환원율 */}
         <div className="space-y-1">
@@ -288,9 +407,9 @@ export function UnlistedStockSimpleFields({
         </div>
       )}
       {preview && data && data.totalShares > 0 && data.ownedShares > 0 &&
-       data.weightedNetIncome > 0 && preview.perShareIncomeValue === 0 && (
+       resolvedNetIncome > 0 && preview.perShareIncomeValue === 0 && (
         <div className="rounded-md border border-amber-300 bg-amber-50/70 dark:bg-amber-900/20 px-3 py-2 text-xs text-amber-800 dark:text-amber-200">
-          ⚠️ 입력한 회사 전체 가중평균 순손익({data.weightedNetIncome.toLocaleString()}원)이 발행주식 수에 비해 매우 작아 1주당 순손익가치가 0으로 절사됩니다. 단위 재확인 필요.
+          ⚠️ 입력한 회사 전체 가중평균 순손익({resolvedNetIncome.toLocaleString()}원)이 발행주식 수에 비해 매우 작아 1주당 순손익가치가 0으로 절사됩니다. 단위 재확인 필요.
         </div>
       )}
 
@@ -300,9 +419,75 @@ export function UnlistedStockSimpleFields({
           preview={preview}
           ownedShares={data.ownedShares}
           isRealEstateHeavy={isRealEstateHeavy}
-          isDeficit={data.weightedNetIncome <= 0}
+          isDeficit={isDeficit}
           isMinValueApplied={preview.perShareFinalValue === preview.perShareMinValue}
         />
+      )}
+    </div>
+  );
+}
+
+// ============================================================
+// 연도별 순손익 입력 행 (결손 토글 포함)
+// ============================================================
+
+interface NetIncomeYearRowProps {
+  label: string;
+  yearLabel: string;
+  value: number | undefined;
+  isDeficit: boolean;
+  onDeficitChange: (isDeficit: boolean) => void;
+  onChange: (absVal: number) => void;
+  hint?: string;
+}
+
+/**
+ * 단일 사업연도 순손익액 입력 행.
+ * - CurrencyInput은 음수 입력 불가이므로 절대값을 표시.
+ * - 결손(적자) 토글(ToggleCard chip)으로 부호 관리.
+ * - onChange에서 deficitFlag에 따라 부호 적용 → store 저장 (display fallback 패턴).
+ */
+function NetIncomeYearRow({
+  label,
+  yearLabel,
+  value,
+  isDeficit,
+  onDeficitChange,
+  onChange,
+  hint,
+}: NetIncomeYearRowProps) {
+  // store 값의 절대값을 표시 (음수면 절대값으로 CurrencyInput에 전달)
+  const absValue = value !== undefined ? Math.abs(value) : undefined;
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center gap-2">
+        <span className="text-xs font-medium text-gray-600 dark:text-gray-400">{label}</span>
+        <span className="text-[11px] text-muted-foreground">({yearLabel})</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <div className="flex-1">
+          <CurrencyInput
+            label=""
+            value={absValue !== undefined ? String(absValue) : ""}
+            onChange={(v) => onChange(parseAmount(v))}
+            hint={hint ?? "회사 전체 금액 (1주당 ✗)"}
+          />
+        </div>
+        <div className="flex-shrink-0 pt-1">
+          <ToggleCard
+            variant="chip"
+            tone="rose"
+            title="결손(적자)"
+            checked={isDeficit}
+            onCheckedChange={onDeficitChange}
+          />
+        </div>
+      </div>
+      {isDeficit && (absValue ?? 0) > 0 && (
+        <p className="text-[11px] text-rose-600 dark:text-rose-400 pl-1">
+          결손 적용: −{absValue!.toLocaleString()} (가중평균 산식에 음수로 반영)
+        </p>
       )}
     </div>
   );
