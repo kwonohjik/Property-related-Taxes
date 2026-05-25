@@ -38,6 +38,7 @@ import type {
   GiftDonorRelation,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { ExemptionCheckedItem } from "@/lib/tax-engine/exemption-evaluator";
+import { resolveActiveUnlistedValuation } from "@/lib/calc/unlisted-valuation-mode";
 
 // ============================================================
 // 폼 상태 타입
@@ -605,7 +606,10 @@ export function GiftTaxForm() {
   };
 
   const buildInput = (): GiftTaxInput => {
-    const allItems = [...form.giftItems, ...form.stockItems];
+    // 비상장주식 모드 strip — simple 모드인데 V2가 잔존하는 경우 엔진 전달 전 제거 (PR-3)
+    const allItems = [...form.giftItems, ...form.stockItems].map(
+      resolveActiveUnlistedValuation,
+    );
     const deductionInput: GiftDeductionInput = {
       donorRelation: form.donorRelation,
       marriageExemption: parseAmount(form.marriageExemption) || undefined,

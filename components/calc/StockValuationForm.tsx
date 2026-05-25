@@ -10,12 +10,13 @@
  */
 
 import { useMemo, useState } from "react";
-import { CurrencyInput, parseAmount, formatKRW } from "@/components/calc/inputs/CurrencyInput";
-import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
+import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import {
   evaluateListedStockValue,
   calcUnlistedStockPerShareValue,
 } from "@/lib/tax-engine/property-valuation-stock";
+import { evaluateUnlistedStockV2 } from "@/lib/tax-engine/property-valuation/unlisted-orchestrator";
 import type { EstateItem, UnlistedStockData, Heir } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { KiwoomValuationAutoFetchButton } from "./KiwoomValuationAutoFetchButton";
 import { FarmingCategorySection } from "@/components/calc/inheritance/FarmingCategorySection";
@@ -32,17 +33,15 @@ import {
   getFinancialDeductionHint,
 } from "@/components/calc/inheritance/AssetToggleHints";
 import { HeirAllocationToggleSection } from "@/components/calc/inheritance/HeirAllocationToggleSection";
-import {
-  UnlistedStockEditor,
-  defaultStockData,
-} from "@/components/calc/UnlistedStockEditor";
+import { UnlistedStockSimpleFields } from "@/components/calc/UnlistedStockSimpleFields";
 import {
   UnlistedStockV2Card,
   createDefaultUnlistedStockV2,
 } from "@/components/calc/inheritance/unlisted-stock-v2/UnlistedStockV2Card";
 
 /**
- * 주식 자산 효과 평가액 — 상장: 평균가×주식수, 비상장: 순자산 OR 가중평균 결과값.
+ * 주식 자산 효과 평가액 — 상장: 평균가×주식수, 비상장: 선택 모드에 따라 간편/정식 평가.
+ * PR-3: 모드 선택기 도입으로 V2 정식평가 결과도 반영.
  */
 export function computeStockValuation(item: EstateItem): number {
   if (item.category === "listed_stock") {
@@ -51,12 +50,28 @@ export function computeStockValuation(item: EstateItem): number {
     if (avg > 0 && shares > 0) return evaluateListedStockValue(avg, shares);
     return 0;
   }
-  if (item.category === "unlisted_stock" && item.unlistedStockData) {
-    const d = item.unlistedStockData;
-    if (d.totalShares > 0 && d.ownedShares > 0) {
-      // 보충적 평가 1주당 가액 × 보유주식 수 (부동산과다보유 분기는 별도)
-      const result = calcUnlistedStockPerShareValue(d, false);
-      return result.perShareFinalValue * d.ownedShares;
+  if (item.category === "unlisted_stock") {
+    // 모드 판정 (레거시 fallback 포함)
+    const activeMode: "simple" | "formal" =
+      item.unlistedValuationMode ?? (item.unlistedStockValuationV2 ? "formal" : "simple");
+    if (activeMode === "formal" && item.unlistedStockValuationV2) {
+      const v2 = item.unlistedStockValuationV2;
+      if (v2.totalShares > 0 && v2.ownedShares > 0) {
+        try {
+          const result = evaluateUnlistedStockV2(v2);
+          return result.totalValuation > 0 ? result.totalValuation : 0;
+        } catch {
+          return 0;
+        }
+      }
+    }
+    if (item.unlistedStockData) {
+      const d = item.unlistedStockData;
+      if (d.totalShares > 0 && d.ownedShares > 0) {
+        // 보충적 평가 1주당 가액 × 보유주식 수 (부동산과다보유 분기는 별도)
+        const result = calcUnlistedStockPerShareValue(d, false);
+        return result.perShareFinalValue * d.ownedShares;
+      }
     }
   }
   return 0;
@@ -292,6 +307,208 @@ function ListedStockEditor({
 }
 
 // ============================================================
+// 비상장주식 카드 — 모드 선택기 + 조건부 렌더 + 공통속성 (PR-3)
+// ============================================================
+
+/** 모드 판정 — 폼 state에서 현재 선택 모드를 도출 (레거시 fallback 포함) */
+function resolveDisplayMode(item: EstateItem): "simple" | "formal" {
+  return item.unlistedValuationMode ?? (item.unlistedStockValuationV2 ? "formal" : "simple");
+}
+
+// RadioCardGroup용 정적 tone 매핑 (feedback_tailwind_static_tone_mapping)
+const VALUATION_MODE_OPTIONS = [
+  {
+    value: "simple" as const,
+    label: "간편평가",
+    description: "순손익·순자산 2개 수치 — 빠른 추산",
+  },
+  {
+    value: "formal" as const,
+    label: "정식평가",
+    description: "별지 부표3 완전 재현 — 신고서용",
+  },
+];
+
+interface UnlistedStockCardProps {
+  item: EstateItem;
+  index: number;
+  isRealEstateHeavy: boolean;
+  onUpdate: (updated: EstateItem) => void;
+  onUpdateHeavy: (v: boolean) => void;
+  onRemove: () => void;
+  mode: "inheritance" | "gift";
+  heirs?: Heir[];
+}
+
+function UnlistedStockCard({
+  item,
+  index,
+  isRealEstateHeavy,
+  onUpdate,
+  onUpdateHeavy,
+  onRemove,
+  mode,
+  heirs,
+}: UnlistedStockCardProps) {
+  const currentMode = resolveDisplayMode(item);
+
+  // 협의분할 effectiveValuation 계산 — 선택 모드에 따라 다른 평가 함수 사용
+  const effectiveValuation = useMemo(() => {
+    if (currentMode === "formal" && item.unlistedStockValuationV2) {
+      const v2 = item.unlistedStockValuationV2;
+      if (v2.totalShares > 0 && v2.ownedShares > 0) {
+        try {
+          const result = evaluateUnlistedStockV2(v2);
+          return result.totalValuation > 0 ? result.totalValuation : 0;
+        } catch {
+          return 0;
+        }
+      }
+    }
+    const data = item.unlistedStockData;
+    if (data && data.totalShares > 0 && data.ownedShares > 0) {
+      try {
+        const preview = calcUnlistedStockPerShareValue(data, isRealEstateHeavy);
+        return preview.perShareFinalValue * data.ownedShares;
+      } catch {
+        return 0;
+      }
+    }
+    return 0;
+  }, [currentMode, item, isRealEstateHeavy]);
+
+  // 토글 자동 노출 정책
+  const visibility = useMemo(() => resolveAssetToggleVisibility(item), [item]);
+  const hiddenExpandableCount = countHiddenExpandable(visibility);
+  const [showExpanded, setShowExpanded] = useState(false);
+
+  const handleModeChange = (newMode: "simple" | "formal") => {
+    if (newMode === "formal" && !item.unlistedStockValuationV2) {
+      // 정식 모드 최초 선택 → V2 초기값 생성 (C-3)
+      onUpdate({
+        ...item,
+        unlistedValuationMode: "formal",
+        unlistedStockValuationV2: createDefaultUnlistedStockV2(),
+      });
+    } else {
+      // 간편 복귀 or 재진입 — V2 보존, mode만 변경 (C-2/C-5)
+      onUpdate({ ...item, unlistedValuationMode: newMode });
+    }
+  };
+
+  return (
+    <div className="border rounded-lg p-4 space-y-3 bg-white dark:bg-gray-900">
+      {/* 헤더 */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="text-lg">📋</span>
+          <span className="font-semibold text-sm text-gray-700 dark:text-gray-200">
+            비상장주식 {index + 1}
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={onRemove}
+          className="text-xs text-red-500 hover:text-red-700 dark:hover:text-red-300 px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
+        >
+          삭제
+        </button>
+      </div>
+
+      {/* ⚖️ 평가 방식 선택 — RadioCardGroup (PR-3, 계획서 §3) */}
+      <div className="space-y-1.5">
+        <p className="text-xs font-semibold text-gray-600 dark:text-gray-400">⚖️ 평가 방식</p>
+        <RadioCardGroup
+          name={`unlisted-mode-${item.id}`}
+          options={VALUATION_MODE_OPTIONS}
+          value={currentMode}
+          onChange={handleModeChange}
+          tone="violet"
+          layout="inline"
+        />
+      </div>
+
+      {/* 선택 모드 입력 — simple: 간편 필드, formal: V2 카드 */}
+      {currentMode === "simple" && (
+        <UnlistedStockSimpleFields
+          item={item}
+          isRealEstateHeavy={isRealEstateHeavy}
+          onUpdate={onUpdate}
+          onUpdateHeavy={onUpdateHeavy}
+        />
+      )}
+      {currentMode === "formal" && item.unlistedStockValuationV2 && (
+        <UnlistedStockV2Card
+          input={item.unlistedStockValuationV2}
+          onChange={(next) => onUpdate({ ...item, unlistedStockValuationV2: next })}
+        />
+      )}
+
+      {/* 공통 속성 4블록 — 평가 방식과 무관하게 inheritance 모드에서 항상 노출 (PR-3 임시) */}
+      {/* PR-4에서 EstateCommonAttributesSection으로 추출 예정 */}
+      {mode === "inheritance" && (
+        <>
+          {/* 영농상속 자산 분류 */}
+          <FarmingCategorySection item={item} onUpdate={onUpdate} />
+
+          {/* 가업상속 자산 분류 */}
+          <FamilyBusinessCategorySection item={item} onUpdate={onUpdate} />
+
+          {/* §22 금융재산공제 */}
+          <FinancialDeductionChip item={item} onUpdate={onUpdate} />
+
+          {/* 법인 사업무관자산 차감 */}
+          <CorporateNonBusinessAssetsSection item={item} onUpdate={onUpdate} />
+
+          {/* 펼침 영역 — hidden_expandable 토글 */}
+          {hiddenExpandableCount > 0 && (
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={() => setShowExpanded((v) => !v)}
+                aria-expanded={showExpanded}
+                aria-controls={`expandable-toggles-unlisted-${item.id}`}
+                className="text-xs text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-300 py-1"
+              >
+                {showExpanded
+                  ? "▲ 적용 옵션 접기"
+                  : `▼ 더 많은 적용 옵션 보기 (${hiddenExpandableCount}개)`}
+              </button>
+              {showExpanded && (
+                <div id={`expandable-toggles-unlisted-${item.id}`} className="space-y-2">
+                  {visibility.familyBusiness === "hidden_expandable" && (
+                    <div>
+                      <HintBadge tone="amber">{getFamilyBusinessHint(item.category)}</HintBadge>
+                      <FamilyBusinessCategorySection item={item} onUpdate={onUpdate} />
+                    </div>
+                  )}
+                  {visibility.financialDeduction === "hidden_expandable" && (
+                    <div>
+                      <HintBadge tone="emerald">{getFinancialDeductionHint(item.category)}</HintBadge>
+                      <FinancialDeductionChip item={item} onUpdate={onUpdate} />
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 협의분할 */}
+          {heirs && (
+            <HeirAllocationToggleSection
+              item={item}
+              heirs={heirs}
+              effectiveValuation={effectiveValuation}
+              onChange={(patch) => onUpdate({ ...item, ...patch })}
+            />
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+// ============================================================
 // 총 주식 평가액 합산
 // ============================================================
 
@@ -307,15 +524,27 @@ function TotalStockValue({ items, heavyMap }: StockTotal) {
       const avg = item.listedStockAvgPrice ?? 0;
       const shares = item.listedStockShares ?? 0;
       if (avg > 0 && shares > 0) total += evaluateListedStockValue(avg, shares);
-    } else if (item.category === "unlisted_stock" && item.unlistedStockData) {
-      try {
-        const preview = calcUnlistedStockPerShareValue(
-          item.unlistedStockData,
-          heavyMap[item.id] ?? false,
-        );
-        total += preview.perShareFinalValue * item.unlistedStockData.ownedShares;
-      } catch {
-        // 입력 미완성 — 무시
+    } else if (item.category === "unlisted_stock") {
+      // 모드 판정 — 정식 모드 우선 (PR-3)
+      const activeMode: "simple" | "formal" =
+        item.unlistedValuationMode ?? (item.unlistedStockValuationV2 ? "formal" : "simple");
+      if (activeMode === "formal" && item.unlistedStockValuationV2) {
+        try {
+          const result = evaluateUnlistedStockV2(item.unlistedStockValuationV2);
+          if (result.totalValuation > 0) total += result.totalValuation;
+        } catch {
+          // 입력 미완성 — 무시
+        }
+      } else if (item.unlistedStockData) {
+        try {
+          const preview = calcUnlistedStockPerShareValue(
+            item.unlistedStockData,
+            heavyMap[item.id] ?? false,
+          );
+          total += preview.perShareFinalValue * item.unlistedStockData.ownedShares;
+        } catch {
+          // 입력 미완성 — 무시
+        }
       }
     }
   }
@@ -451,44 +680,17 @@ export function StockValuationForm({
           </p>
           {items.map((item, i) =>
             item.category === "unlisted_stock" ? (
-              <div key={item.id} className="space-y-3">
-                <UnlistedStockEditor
-                  item={item}
-                  index={unlistedItems.indexOf(item)}
-                  isRealEstateHeavy={heavyMap[item.id] ?? false}
-                  onUpdate={(updated) => handleUpdate(i, updated)}
-                  onUpdateHeavy={(v) => handleHeavy(item.id, v)}
-                  onRemove={() => handleRemove(i)}
-                  mode={mode}
-                  heirs={heirs}
-                />
-                {/* V2 평가 모드 (별지 부표3 완전 재현) — optional */}
-                <ToggleCard
-                  tone="violet"
-                  title="V2 평가 모드 — 별지 부표3 완전 재현"
-                  description="ON: 사업연도 가산·차감, 자본금 변동, 자산·부채 상세, 영업권·할증평가 자동 산출. 위 간이 입력은 무시됩니다."
-                  checked={!!item.unlistedStockValuationV2}
-                  onCheckedChange={(on) => {
-                    if (on) {
-                      handleUpdate(i, {
-                        ...item,
-                        unlistedStockValuationV2: createDefaultUnlistedStockV2(),
-                      });
-                    } else {
-                      const { unlistedStockValuationV2: _, ...rest } = item;
-                      handleUpdate(i, rest as typeof item);
-                    }
-                  }}
-                />
-                {item.unlistedStockValuationV2 && (
-                  <UnlistedStockV2Card
-                    input={item.unlistedStockValuationV2}
-                    onChange={(next) =>
-                      handleUpdate(i, { ...item, unlistedStockValuationV2: next })
-                    }
-                  />
-                )}
-              </div>
+              <UnlistedStockCard
+                key={item.id}
+                item={item}
+                index={unlistedItems.indexOf(item)}
+                isRealEstateHeavy={heavyMap[item.id] ?? false}
+                onUpdate={(updated) => handleUpdate(i, updated)}
+                onUpdateHeavy={(v) => handleHeavy(item.id, v)}
+                onRemove={() => handleRemove(i)}
+                mode={mode}
+                heirs={heirs}
+              />
             ) : null,
           )}
         </div>

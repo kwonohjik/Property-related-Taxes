@@ -40,6 +40,7 @@ import {
   callInheritanceTaxAPI,
   formatInheritanceApiError as formatApiError,
 } from "@/lib/calc/inheritance-api";
+import { resolveActiveUnlistedValuation } from "@/lib/calc/unlisted-valuation-mode";
 import {
   type FormState,
   INITIAL_FORM,
@@ -238,7 +239,10 @@ export function InheritanceTaxForm() {
   };
 
   const buildInput = (): InheritanceTaxInput => {
-    const allItems = [...form.estateItems, ...form.stockItems];
+    // 비상장주식 모드 strip — simple 모드인데 V2가 잔존하는 경우 엔진 전달 전 제거 (PR-3)
+    const allItems = [...form.estateItems, ...form.stockItems].map(
+      resolveActiveUnlistedValuation,
+    );
     const deductionInput: InheritanceDeductionInput = {
       heirs: form.heirs,
       spouseActualAmount: parseAmount(form.spouseActualAmount) || undefined,

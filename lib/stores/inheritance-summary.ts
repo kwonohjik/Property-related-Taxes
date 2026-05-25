@@ -21,6 +21,7 @@ import type {
 } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { evaluatePresumedItem } from "@/lib/tax-engine/presumed-inheritance";
 import { evaluateUnlistedStockV2 } from "@/lib/tax-engine/property-valuation/unlisted-orchestrator";
+import { resolveActiveUnlistedValuation } from "@/lib/calc/unlisted-valuation-mode";
 
 // ────────────────────────────────────────────────────
 // 입력 — InheritanceTaxForm.shared 의 FormState 부분 집합
@@ -104,7 +105,10 @@ export function computeInheritanceSummary(
   result: InheritanceTaxResult | null,
 ): InheritanceSummary {
   // ── ① 본래상속재산 추정 ──
-  const allEstateItems = [...form.estateItems, ...form.stockItems];
+  // 비상장주식 모드 strip — simple 모드인데 V2가 잔존해도 평가 제외 (PR-3)
+  const allEstateItems = [...form.estateItems, ...form.stockItems].map(
+    resolveActiveUnlistedValuation,
+  );
   const estateValueRaw = allEstateItems.reduce(
     (s, it) => s + estimateAssetValue(it),
     0,
