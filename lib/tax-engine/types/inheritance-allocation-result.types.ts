@@ -56,6 +56,8 @@ export interface HeirAllocationResult {
   indirectNumerator: number;
   /** 산출세액상당액 분모 = taxBase − corporateGiftTaxBase */
   computedTaxShareDenominator: number;
+  /** 협의분할 미입력 자산이 법정상속분으로 자동 배분되었는지 (결과 카드 안내용 echo) */
+  usedLegalShareFallback: boolean;
   breakdown: CalculationStep[];
 }
 

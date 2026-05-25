@@ -381,7 +381,7 @@ export const heirSchema = z.object({
   name: z.string().optional(),
   birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD 형식").optional(),
   isDisabled: z.boolean().optional(),
-  actualShareRatio: z.number().min(0).max(1).optional(),
+  // actualShareRatio 제거 (2026-05-26) — 협의분할 자산별 일원화. 기존 저장값은 Zod strip으로 자동 제거.
   isCohabitant: z.boolean().optional(),
   // 종합사례 PDF 확장
   isHeir: z.boolean().optional(),

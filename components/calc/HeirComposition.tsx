@@ -168,39 +168,8 @@ function HeirEditor({ heir, index, onUpdate, onRemove }: HeirEditorProps) {
         />
       )}
 
-      {/* 법정상속분 외 실제 상속비율 — 자연인 전용 */}
-      {!isCorporate && (
-        <div className="space-y-1">
-          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
-            실제 상속 비율 (협의분할 시)
-          </label>
-          <div className="flex items-center gap-2">
-            <input
-              type="text"
-              inputMode="decimal"
-              value={
-                heir.actualShareRatio != null
-                  ? String(heir.actualShareRatio * 100)
-                  : ""
-              }
-              onChange={(e) => {
-                const v = parseFloat(e.target.value || "");
-                set({
-                  actualShareRatio: isNaN(v)
-                    ? undefined
-                    : Math.min(100, Math.max(0, v)) / 100,
-                });
-              }}
-              placeholder="비율 입력 (%)"
-              className="w-32 rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            />
-            <span className="text-sm text-gray-500">%</span>
-            <span className="text-xs text-gray-400">
-              (미입력 시 법정상속분 자동 적용)
-            </span>
-          </div>
-        </div>
-      )}
+      {/* 협의분할은 각 자산 카드에서 입력 — 전역 비율 필드(actualShareRatio) 폐지 (2026-05-26).
+          미입력 자산은 법정상속분 자동 배분. 안내는 상속인 섹션 상단에 1회 노출. */}
 
       {/* 영리법인 전용 — 부표 5 ②③ + 주주 명세 */}
       {isCorporate && <CorporateHeirFields heir={heir} set={set} />}

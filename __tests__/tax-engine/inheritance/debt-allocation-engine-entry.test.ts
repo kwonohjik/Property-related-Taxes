@@ -78,13 +78,14 @@ describe("채무 협의분할 엔진 진입 조건 확장 (IDA-ENGINE)", () => {
     expect(result.heirAllocationResult?.perHeir.size).toBeGreaterThan(0);
   });
 
-  it("IDA-ENGINE-2: 협의분할 입력 전무 → heirAllocationResult === undefined (회귀 차단)", () => {
+  it("IDA-ENGINE-2: 협의분할 입력 전무 → 자연인 상속인 법정상속분 자동 배부 (항상 배부 정책)", () => {
     const input = baseInput();
-    // 어떤 협의분할 input도 없음 (estateItems.heirAllocations·doneeId·debtItems.heirAllocations 모두 부재)
-
+    // 협의분할 미입력이어도 자연인 상속인(배우자+자녀2) 존재 → 미입력 자산 법정상속분 배부
     const result = calcInheritanceTax(input);
 
-    expect(result.heirAllocationResult).toBeUndefined();
+    // 2026-05-26 정책 변경: 자연인 상속인 1명+ 이면 항상 상속인별 배부
+    expect(result.heirAllocationResult).toBeDefined();
+    expect(result.heirAllocationResult!.perHeir.size).toBeGreaterThan(0);
   });
 
   it("IDA-ENGINE-3: 기존 estateItems.heirAllocations 케이스 — 결과 생성 동작 불변 (회귀 차단)", () => {
@@ -107,7 +108,7 @@ describe("채무 협의분할 엔진 진입 조건 확장 (IDA-ENGINE)", () => {
     expect(result.heirAllocationResult?.perHeir.size).toBeGreaterThan(0);
   });
 
-  it("IDA-ENGINE-4: debtItems는 있지만 heirAllocations 없는 케이스 → 진입 조건 false 유지", () => {
+  it("IDA-ENGINE-4: debtItems heirAllocations 없음 → 채무 법정상속분 분담 + 자산 법정상속분 배부", () => {
     const input: InheritanceTaxInput = {
       ...baseInput(),
       debtItems: [
@@ -116,17 +117,19 @@ describe("채무 협의분할 엔진 진입 조건 확장 (IDA-ENGINE)", () => {
           category: "financial",
           name: "K은행",
           amount: 400_000_000,
-          // heirAllocations 없음 (협의분할 미입력)
+          // heirAllocations 없음 → 채무 법정상속분 분담
         },
       ],
     };
 
     const result = calcInheritanceTax(input);
 
-    expect(result.heirAllocationResult).toBeUndefined();
+    // 항상 배부: 미입력 채무·자산 모두 법정상속분
+    expect(result.heirAllocationResult).toBeDefined();
+    expect(result.heirAllocationResult!.perHeir.size).toBeGreaterThan(0);
   });
 
-  it("IDA-ENGINE-5: debtItems.heirAllocations 빈 배열 → 진입 조건 false (회귀 차단)", () => {
+  it("IDA-ENGINE-5: debtItems.heirAllocations 빈 배열 → 법정상속분 배부 (length 0 = 미입력)", () => {
     const input: InheritanceTaxInput = {
       ...baseInput(),
       debtItems: [
@@ -135,13 +138,14 @@ describe("채무 협의분할 엔진 진입 조건 확장 (IDA-ENGINE)", () => {
           category: "financial",
           name: "K은행",
           amount: 400_000_000,
-          heirAllocations: [], // 빈 배열 — length > 0 가드 검증
+          heirAllocations: [], // 빈 배열 = 미입력 → 법정상속분
         },
       ],
     };
 
     const result = calcInheritanceTax(input);
 
-    expect(result.heirAllocationResult).toBeUndefined();
+    expect(result.heirAllocationResult).toBeDefined();
+    expect(result.heirAllocationResult!.perHeir.size).toBeGreaterThan(0);
   });
 });

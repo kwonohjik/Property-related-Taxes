@@ -139,6 +139,13 @@ export function HeirAllocationInput({
         )}
       </div>
 
+      {/* 미입력 시 법정상속분 자동 배분 안내 */}
+      {!hasInput && (
+        <p className="text-[11px] text-muted-foreground leading-relaxed">
+          미입력 시 <strong>법정상속분</strong>(배우자 1.5 : 직계비속·직계존속 1)으로 자동 배분됩니다.
+        </p>
+      )}
+
       {/* 상속인 토글 칩 */}
       <div className="flex flex-wrap gap-1.5">
         {distributableHeirs.map((heir) => {

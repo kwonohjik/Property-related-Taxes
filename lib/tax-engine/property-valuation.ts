@@ -61,6 +61,24 @@ function resolveValuationAmount(item: EstateItem): {
   return { amount: 0, method: "standard_price" };
 }
 
+/**
+ * §66·시행령 §63 — 저당권 등이 설정된 재산 평가 특례.
+ * §60 평가액과 "그 재산이 담보하는 채권액"(§63② — 저당+전세/임대보증금 합산) 중 **큰 금액**(MAX).
+ * 차감이 아니라 하한이다. 담보채무 자체는 별도로 §14 부채로 공제한다(Phase 2 자동반영 전까지 수동).
+ */
+function applyCollateralFloor(
+  amount: number,
+  item: EstateItem,
+): { valuatedAmount: number; securedClaim: number; raised: boolean } {
+  const securedClaim = (item.mortgageAmount ?? 0) + (item.leaseDeposit ?? 0);
+  const valuatedAmount = Math.max(amount, securedClaim);
+  return { valuatedAmount, securedClaim, raised: valuatedAmount > amount };
+}
+
+/** 담보채무는 평가에서 차감하지 않으므로 채무공제(§14) 입력을 안내 (Phase 1 — 자동반영 전) */
+const COLLATERAL_DEBT_NOTICE =
+  "저당권 등 담보채무는 평가액에서 차감되지 않습니다 — 채무로서 부채 명세(§14)에 입력해야 과세가액에서 공제됩니다.";
+
 // ============================================================
 // 토지 평가 (§61 ① — 개별공시지가)
 // ============================================================
@@ -74,24 +92,23 @@ export function evaluateLand(item: EstateItem): PropertyValuationResult {
   }
 
   const { amount, method } = resolveValuationAmount(item);
-  const mortgageDeduction = item.mortgageAmount ?? 0;
-  const netAmount = Math.max(0, amount - mortgageDeduction);
+  const { valuatedAmount, securedClaim, raised } = applyCollateralFloor(amount, item);
 
   return {
     estateItemId: item.id,
     method,
-    valuatedAmount: netAmount,
+    valuatedAmount,
     breakdown: [
       { label: "토지 평가액", amount, lawRef: VALUATION.REAL_ESTATE_SUPP },
-      ...(mortgageDeduction > 0
-        ? [{ label: "저당권 차감", amount: -mortgageDeduction, lawRef: VALUATION.COLLATERAL_SPECIAL }]
+      ...(raised
+        ? [{ label: "§66 담보채권액 하한 적용", amount: valuatedAmount, lawRef: VALUATION.COLLATERAL_SPECIAL }]
         : []),
-      { label: "순 평가액", amount: netAmount },
+      { label: "평가액", amount: valuatedAmount },
     ],
-    warnings:
-      method === "standard_price"
-        ? ["개별공시지가 기준 보충적 평가 적용 — 시가 확인 권장"]
-        : [],
+    warnings: [
+      ...(method === "standard_price" ? ["개별공시지가 기준 보충적 평가 적용 — 시가 확인 권장"] : []),
+      ...(securedClaim > 0 ? [COLLATERAL_DEBT_NOTICE] : []),
+    ],
   };
 }
 
@@ -108,32 +125,26 @@ export function evaluateApartment(item: EstateItem): PropertyValuationResult {
   }
 
   const { amount, method } = resolveValuationAmount(item);
-  const depositDeduction = item.leaseDeposit ?? 0;
-  const mortgageDeduction = item.mortgageAmount ?? 0;
-  const totalDeduction = depositDeduction + mortgageDeduction;
-  const netAmount = Math.max(0, amount - totalDeduction);
+  const { valuatedAmount, securedClaim, raised } = applyCollateralFloor(amount, item);
 
   const warnings: string[] = [];
   if (method === "standard_price") {
     warnings.push("공동주택 기준시가 보충적 평가 — 실거래가 확인 권장");
   }
-  if (depositDeduction > 0) {
-    warnings.push(`임대보증금 ${depositDeduction.toLocaleString()} 차감 적용`);
+  if (securedClaim > 0) {
+    warnings.push(COLLATERAL_DEBT_NOTICE);
   }
 
   return {
     estateItemId: item.id,
     method,
-    valuatedAmount: netAmount,
+    valuatedAmount,
     breakdown: [
       { label: "아파트 평가액", amount, lawRef: VALUATION.PRINCIPLE },
-      ...(depositDeduction > 0
-        ? [{ label: "임대보증금 차감", amount: -depositDeduction }]
+      ...(raised
+        ? [{ label: "§66·§63② 담보채권액(저당+임대보증금) 하한 적용", amount: valuatedAmount, lawRef: VALUATION.COLLATERAL_SPECIAL }]
         : []),
-      ...(mortgageDeduction > 0
-        ? [{ label: "저당권 차감", amount: -mortgageDeduction, lawRef: VALUATION.COLLATERAL_SPECIAL }]
-        : []),
-      { label: "순 평가액", amount: netAmount },
+      { label: "평가액", amount: valuatedAmount },
     ],
     warnings,
   };
@@ -152,28 +163,23 @@ export function evaluateDetachedHouse(item: EstateItem): PropertyValuationResult
   }
 
   const { amount, method } = resolveValuationAmount(item);
-  const depositDeduction = item.leaseDeposit ?? 0;
-  const mortgageDeduction = item.mortgageAmount ?? 0;
-  const netAmount = Math.max(0, amount - depositDeduction - mortgageDeduction);
+  const { valuatedAmount, securedClaim, raised } = applyCollateralFloor(amount, item);
 
   return {
     estateItemId: item.id,
     method,
-    valuatedAmount: netAmount,
+    valuatedAmount,
     breakdown: [
       { label: "단독주택 평가액", amount, lawRef: VALUATION.REAL_ESTATE_SUPP },
-      ...(depositDeduction > 0
-        ? [{ label: "임대보증금 차감", amount: -depositDeduction }]
+      ...(raised
+        ? [{ label: "§66·§63② 담보채권액(저당+임대보증금) 하한 적용", amount: valuatedAmount, lawRef: VALUATION.COLLATERAL_SPECIAL }]
         : []),
-      ...(mortgageDeduction > 0
-        ? [{ label: "저당권 차감", amount: -mortgageDeduction, lawRef: VALUATION.COLLATERAL_SPECIAL }]
-        : []),
-      { label: "순 평가액", amount: netAmount },
+      { label: "평가액", amount: valuatedAmount },
     ],
-    warnings:
-      method === "standard_price"
-        ? ["개별주택가격 보충적 평가 — 시가 확인 권장"]
-        : [],
+    warnings: [
+      ...(method === "standard_price" ? ["개별주택가격 보충적 평가 — 시가 확인 권장"] : []),
+      ...(securedClaim > 0 ? [COLLATERAL_DEBT_NOTICE] : []),
+    ],
   };
 }
 
@@ -189,24 +195,23 @@ export function evaluateBuilding(item: EstateItem): PropertyValuationResult {
     );
   }
   const { amount, method } = resolveValuationAmount(item);
-  const mortgageDeduction = item.mortgageAmount ?? 0;
-  const netAmount = Math.max(0, amount - mortgageDeduction);
+  const { valuatedAmount, securedClaim, raised } = applyCollateralFloor(amount, item);
 
   return {
     estateItemId: item.id,
     method,
-    valuatedAmount: netAmount,
+    valuatedAmount,
     breakdown: [
       { label: "건물 평가액", amount, lawRef: VALUATION.REAL_ESTATE_SUPP },
-      ...(mortgageDeduction > 0
-        ? [{ label: "저당권 차감", amount: -mortgageDeduction, lawRef: VALUATION.COLLATERAL_SPECIAL }]
+      ...(raised
+        ? [{ label: "§66 담보채권액 하한 적용", amount: valuatedAmount, lawRef: VALUATION.COLLATERAL_SPECIAL }]
         : []),
-      { label: "순 평가액", amount: netAmount },
+      { label: "평가액", amount: valuatedAmount },
     ],
-    warnings:
-      method === "standard_price"
-        ? ["건물 기준시가 보충적 평가 — 감정평가 고려 권장"]
-        : [],
+    warnings: [
+      ...(method === "standard_price" ? ["건물 기준시가 보충적 평가 — 감정평가 고려 권장"] : []),
+      ...(securedClaim > 0 ? [COLLATERAL_DEBT_NOTICE] : []),
+    ],
   };
 }
 

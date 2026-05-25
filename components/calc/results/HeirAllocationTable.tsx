@@ -122,6 +122,11 @@ export function HeirAllocationTable({
         <p className="text-xs text-indigo-700 dark:text-indigo-400 mt-1">
           상증법 §3·§28 안분 — 직접배부 + 간접배부 + 세대생략 할증 + 사전증여세액공제 + 신고세액공제
         </p>
+        {allocation.usedLegalShareFallback && (
+          <p className="mt-1.5 rounded bg-sky-50 dark:bg-sky-950/30 border border-sky-200 dark:border-sky-900 px-2 py-1 text-[11px] text-sky-800 dark:text-sky-200">
+            ℹ️ 협의분할을 입력하지 않은 재산은 <strong>법정상속분</strong>(민법 §1009·§1003)으로 자동 배분되었습니다.
+          </p>
+        )}
       </div>
 
       <div className="overflow-x-auto">

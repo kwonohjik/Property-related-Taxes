@@ -92,6 +92,10 @@ export function Step0({ form, set }: { form: FormState; set: FormSet }) {
           영리법인 수증자는 사전증여·유증 전용으로 별도 처리되며 일반 상속재산 협의분할 대상이 아닙니다.
         </p>
         <HeirComposition heirs={form.heirs} onChange={(heirs) => set({ heirs })} />
+        <p className="rounded-md bg-sky-50 dark:bg-sky-950/30 border border-sky-200 dark:border-sky-900 px-3 py-2 text-[11px] text-sky-800 dark:text-sky-200 leading-relaxed">
+          ℹ️ 협의분할은 각 <strong>자산 카드</strong>에서 상속인별로 분배합니다. 분배를 입력하지 않은 자산은
+          <strong> 법정상속분</strong>(배우자 1.5 : 직계비속·직계존속 1)으로 자동 배분됩니다.
+        </p>
       </div>
     </div>
   );
@@ -112,6 +116,7 @@ export function Step1({ form, set }: { form: FormState; set: FormSet }) {
         onChange={(items) => set({ estateItems: items })}
         mode="inheritance"
         heirs={form.heirs}
+        valuationDate={form.deathDate}
       />
       <div className="border-t border-dashed border-gray-200 dark:border-gray-700 pt-4">
         <StockValuationForm

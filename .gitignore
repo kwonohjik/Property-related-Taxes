@@ -67,3 +67,6 @@ logs/
 
 # lib/geo/*.bak — parse-koedb-txt.ts 자동 백업
 /lib/geo/*.bak
+
+# Playwright E2E 산출물 (스크린샷 등)
+e2e/_artifacts/
