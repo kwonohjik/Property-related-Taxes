@@ -132,20 +132,8 @@ export interface UnlistedStockValuationInput {
   totalShares: number;                   // 발행주식총수 (평가기준일 현재)
   ownedShares: number;                   // 피상속인·수증인 소유 주식수
 
-  /** 부동산과다보유법인 여부 — 소법 §94①4호다목 (자산 50% 이상). PR-F 자동 모드 시 도출. */
+  /** §54⑤ 부동산과다보유법인 여부 — 소법 §94①4호다목 (자산 50% 이상). 사용자 ON/OFF 직접 지정. */
   isRealEstateHeavy: boolean;
-
-  /**
-   * PR-F (UI 통합 v3): §54⑤ 부동산과다 자동 판정 모드 (3-state).
-   * "auto": totalAssetsForJudgment / realEstateAssetsForJudgment 비율로 자동 판정
-   * "manual_on" / "manual_off": isRealEstateHeavy 직접 override
-   * Default "auto" — UI 첫 진입 시 자동 모드.
-   */
-  realEstateHeavyMode?: "auto" | "manual_on" | "manual_off";
-  /** §54⑤ 자동 판정용 자산총액 (재무상태표상). manual 모드 시 미사용. */
-  totalAssetsForJudgment?: number;
-  /** §54⑤ 자동 판정용 부동산 자산 합계 (소법 §94①4호다목1·2). manual 모드 시 미사용. */
-  realEstateAssetsForJudgment?: number;
 
   /**
    * PR-E (UI 통합 v3): §22② 최대주주 추가공제 제외 자동 도출 모드 (3-state).

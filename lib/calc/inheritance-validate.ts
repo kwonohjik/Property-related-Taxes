@@ -286,18 +286,6 @@ export function validateUnlistedStockV2(item: EstateItem): string | null {
     }
   }
 
-  // PR-F (UI 통합 v3): §54⑤ 자동 판정 모드 시 자산 2 필드 필수
-  if (v2.realEstateHeavyMode === "auto") {
-    const total = v2.totalAssetsForJudgment ?? 0;
-    if (total <= 0) {
-      return `비상장주식 "${item.name}" — §54⑤ 자동 판정 모드에서는 자산총액 입력이 필수입니다.`;
-    }
-    // realEstateAssetsForJudgment는 0 허용 (전부 비부동산 자산 시나리오)
-    if (v2.realEstateAssetsForJudgment === undefined) {
-      return `비상장주식 "${item.name}" — §54⑤ 자동 판정 모드에서는 부동산 자산 합계 입력이 필수입니다 (0이라도 명시).`;
-    }
-  }
-
   // PR-E (UI 통합 v3): §22② 자동 모드 시 보유·발행 주식 수 필수 (사실상 기존 ownedShares/totalShares 검증)
   // 별도 추가 검증 없음 — ownedShares>0 / totalShares>0 보장은 Zod에서 처리.
 

@@ -244,9 +244,6 @@ function restoreUnlistedStockInput(raw: UnlistedStockV2Lite): UnlistedStockValua
     totalShares: typeof raw.totalShares === "number" ? raw.totalShares : 0,
     ownedShares: typeof raw.ownedShares === "number" ? raw.ownedShares : 0,
     isRealEstateHeavy: Boolean(raw.isRealEstateHeavy),
-    realEstateHeavyMode: raw.realEstateHeavyMode as "auto" | "manual_on" | "manual_off" | undefined,
-    totalAssetsForJudgment: typeof raw.totalAssetsForJudgment === "number" ? raw.totalAssetsForJudgment : undefined,
-    realEstateAssetsForJudgment: typeof raw.realEstateAssetsForJudgment === "number" ? raw.realEstateAssetsForJudgment : undefined,
     section22MajorShareholderMode: raw.section22MajorShareholderMode as "auto" | "manual_on" | "manual_off" | undefined,
     netAssetOnlyReason: raw.netAssetOnlyReason as UnlistedStockValuationInput["netAssetOnlyReason"],
     fiscalYears: fiscalYears as unknown as UnlistedStockValuationInput["fiscalYears"],
@@ -430,9 +427,8 @@ export function filterUnlistedStockCandidates(
  *
  * Q1 B안 — 법인 정보만 prefill:
  *   ✅ 포함: corpName·representative·businessStartDate·faceValuePerShare·totalShares·
- *           isRealEstateHeavy·realEstateHeavyMode·자동판정 자산 2필드·
- *           section22MajorShareholderMode·netAssetOnlyReason·fiscalYears·
- *           capitalChanges·netAssetValueRaw(17 + evaluationDeltaRows + 보험 3)·
+ *           isRealEstateHeavy·section22MajorShareholderMode·netAssetOnlyReason·
+ *           fiscalYears·capitalChanges·netAssetValueRaw(17 + evaluationDeltaRows + 보험 3)·
  *           isContinuousLossLastThreeYears·capitalizationRate·goodwillRate·companySize
  *   ❌ 제외: evaluationDate·ownedShares·isMaxShareholder (사용자 입력 보존 — Q1·Q7 B안)
  */
@@ -448,11 +444,8 @@ export function candidateToUnlistedStockInput(
     faceValuePerShare: src.faceValuePerShare,
     totalShares: src.totalShares,
 
-    // 자동 판정 토글 + 자산 비율 입력
+    // §54⑤ 부동산과다 + §22② 자동 도출 모드
     isRealEstateHeavy: src.isRealEstateHeavy,
-    realEstateHeavyMode: src.realEstateHeavyMode,
-    totalAssetsForJudgment: src.totalAssetsForJudgment,
-    realEstateAssetsForJudgment: src.realEstateAssetsForJudgment,
     section22MajorShareholderMode: src.section22MajorShareholderMode,
 
     // §54④ 순자산 단독 평가 사유

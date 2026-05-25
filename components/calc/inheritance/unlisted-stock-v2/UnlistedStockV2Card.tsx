@@ -25,15 +25,11 @@ import {
   MajorShareholderStockToggle,
   type Section22MajorShareholderMode,
 } from "./MajorShareholderStockToggle";
-import {
-  RealEstateHeavyToggle,
-  type RealEstateHeavyTogglePatch,
-} from "./RealEstateHeavyToggle";
+import { RealEstateHeavyToggle } from "./RealEstateHeavyToggle";
 import { EvaluationCommitteeToggle } from "./EvaluationCommitteeToggle";
 import { EvaluationCommitteeResultCard } from "./EvaluationCommitteeResultCard";
 import { EvaluationCommitteeFilingGuideCard } from "./EvaluationCommitteeFilingGuideCard";
 import type { EvaluationCommitteeInput } from "@/lib/tax-engine/property-valuation/evaluation-committee-section-54-6";
-import { judgeIsRealEstateHeavy } from "@/lib/tax-engine/property-valuation/auto-judgment";
 import { evaluateUnlistedStockV2 } from "@/lib/tax-engine/property-valuation/unlisted-orchestrator";
 import type {
   UnlistedStockValuationInput,
@@ -161,37 +157,9 @@ export function UnlistedStockV2Card({
     wrappedOnChange({ ...input, netAssetValueRaw: next });
   };
 
-  // PR-F: §54⑤ 자동 모드 시 isRealEstateHeavy 자동 도출 (cross-field 동기화 — onChange 직접, useEffect 미사용)
-  const handleRealEstateHeavyChange = (patch: RealEstateHeavyTogglePatch) => {
-    const nextMode = patch.realEstateHeavyMode ?? input.realEstateHeavyMode ?? "auto";
-    const nextTotal =
-      patch.totalAssetsForJudgment !== undefined
-        ? patch.totalAssetsForJudgment
-        : input.totalAssetsForJudgment ?? 0;
-    const nextRealEstate =
-      patch.realEstateAssetsForJudgment !== undefined
-        ? patch.realEstateAssetsForJudgment
-        : input.realEstateAssetsForJudgment ?? 0;
-
-    let nextIsHeavy = input.isRealEstateHeavy;
-    if (nextMode === "auto") {
-      nextIsHeavy = judgeIsRealEstateHeavy({
-        totalAssets: nextTotal,
-        realEstateAssets: nextRealEstate,
-      }).isRealEstateHeavy;
-    } else if (nextMode === "manual_on") {
-      nextIsHeavy = true;
-    } else if (nextMode === "manual_off") {
-      nextIsHeavy = false;
-    }
-
-    wrappedOnChange({
-      ...input,
-      realEstateHeavyMode: nextMode,
-      totalAssetsForJudgment: nextTotal,
-      realEstateAssetsForJudgment: nextRealEstate,
-      isRealEstateHeavy: nextIsHeavy,
-    });
+  // PR-F: §54⑤ 부동산과다 ON/OFF 직접 토글
+  const handleRealEstateHeavyChange = (next: boolean) => {
+    wrappedOnChange({ ...input, isRealEstateHeavy: next });
   };
 
   // PR-E: §22② 모드 변경 (mode만 변경, isMaxShareholder는 §63③ 용이므로 분리)
@@ -199,7 +167,6 @@ export function UnlistedStockV2Card({
     wrappedOnChange({ ...input, section22MajorShareholderMode: mode });
   };
 
-  const realEstateHeavyMode = input.realEstateHeavyMode ?? "auto";
   const section22Mode = input.section22MajorShareholderMode ?? "auto";
 
   // PR-N: 평가차액 행 단위 입력 콜백 (netAssetValueRaw.evaluationDeltaRows 단일 통합 배열)
@@ -282,11 +249,9 @@ export function UnlistedStockV2Card({
         }}
       />
 
-      {/* 1-B. PR-F: §54⑤ 부동산과다 자동 판정 (Section 3 — design v3) */}
+      {/* 1-B. PR-F: §54⑤ 부동산과다 ON/OFF (Section 3) */}
       <RealEstateHeavyToggle
-        mode={realEstateHeavyMode}
-        totalAssetsForJudgment={input.totalAssetsForJudgment ?? 0}
-        realEstateAssetsForJudgment={input.realEstateAssetsForJudgment ?? 0}
+        isRealEstateHeavy={input.isRealEstateHeavy}
         onChange={handleRealEstateHeavyChange}
       />
 

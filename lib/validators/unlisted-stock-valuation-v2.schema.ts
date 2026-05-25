@@ -146,10 +146,6 @@ export const unlistedStockValuationV2Schema = z
     goodwillRate: z.number().min(0.01).max(1).optional(),
     isMaxShareholder: z.boolean(),
     companySize: z.enum(["small", "medium", "large"]),
-    // PR-F (UI 통합 v3): §54⑤ 자동 판정 3-state 모드 + 자산 2 필드
-    realEstateHeavyMode: z.enum(["auto", "manual_on", "manual_off"]).optional(),
-    totalAssetsForJudgment: z.number().nonnegative().optional(),
-    realEstateAssetsForJudgment: z.number().nonnegative().optional(),
     // PR-E (UI 통합 v3): §22② 자동 도출 3-state 모드
     section22MajorShareholderMode: z
       .enum(["auto", "manual_on", "manual_off"])

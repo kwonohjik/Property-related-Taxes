@@ -1,15 +1,14 @@
 /**
- * UI 통합 anchor — Phase E validate refines (PR-E·F·N)
+ * UI 통합 anchor — Phase E·N validate refines (PR-E·N)
  *
  * 검증 대상 (UI 통합 plan v3 §5-0 + design v3 §6):
- *   UI-VAL-1: realEstateHeavyMode="auto" + 자산 미입력 → 차단
- *   UI-VAL-2: realEstateHeavyMode="auto" + realEstateAssetsForJudgment undefined → 차단
- *   UI-VAL-3: realEstateHeavyMode="manual_on" + 자산 미입력 → 통과 (manual은 자산 검증 X)
  *   UI-VAL-4: PR-N 행 단위 입력 + accountName 빈 문자열 → 차단
  *   UI-VAL-5: PR-N 행 수 초과 (자산 51행) → 차단
  *
+ * §54⑤ 부동산과다보유 판정은 사용자 ON/OFF 직접 지정 (UI ToggleCard) — auto 모드 검증 제거.
+ *
  * Plan: docs/00-pm/inheritance-unlisted-stock-valuation-ui-integration.plan.md §5-0
- * Design: docs/02-design/features/inheritance-unlisted-stock-valuation-ui-integration.design.md §3-2·§6
+ * Design: docs/02-design/features/inheritance-unlisted-stock-valuation-ui-integration.design.md §3-2
  */
 
 import { describe, it, expect } from "vitest";
@@ -78,67 +77,6 @@ function makeItem(
     } as EstateItem["unlistedStockValuationV2"],
   };
 }
-
-// ============================================================
-// UI-VAL-1·2·3: PR-F auto 모드 자산 필수
-// ============================================================
-
-describe("[UI-VAL-1] PR-F auto 모드 — 자산총액 미입력 차단", () => {
-  it("UI-VAL-1: realEstateHeavyMode='auto' + totalAssetsForJudgment 미입력 → 차단", () => {
-    const item = makeItem({
-      realEstateHeavyMode: "auto",
-      // totalAssetsForJudgment 미입력
-      realEstateAssetsForJudgment: 100_000_000,
-    });
-    const err = validateUnlistedStockV2(item);
-    expect(err).toContain("§54⑤ 자동 판정 모드에서는 자산총액 입력이 필수");
-  });
-
-  it("UI-VAL-2: realEstateHeavyMode='auto' + realEstateAssetsForJudgment undefined → 차단", () => {
-    const item = makeItem({
-      realEstateHeavyMode: "auto",
-      totalAssetsForJudgment: 1_000_000_000,
-      // realEstateAssetsForJudgment undefined
-    });
-    const err = validateUnlistedStockV2(item);
-    expect(err).toContain("부동산 자산 합계 입력이 필수");
-  });
-
-  it("UI-VAL-2b: realEstateHeavyMode='auto' + realEstateAssetsForJudgment=0 명시 → 통과 (전부 비부동산)", () => {
-    const item = makeItem({
-      realEstateHeavyMode: "auto",
-      totalAssetsForJudgment: 1_000_000_000,
-      realEstateAssetsForJudgment: 0,
-    });
-    const err = validateUnlistedStockV2(item);
-    expect(err).toBeNull();
-  });
-
-  it("UI-VAL-3: manual_on 모드 시 자산 미입력 → 통과 (수동은 자산 검증 X)", () => {
-    const item = makeItem({
-      realEstateHeavyMode: "manual_on",
-      // 자산 미입력
-    });
-    const err = validateUnlistedStockV2(item);
-    expect(err).toBeNull();
-  });
-
-  it("UI-VAL-3b: manual_off 모드 시 자산 미입력 → 통과", () => {
-    const item = makeItem({
-      realEstateHeavyMode: "manual_off",
-    });
-    const err = validateUnlistedStockV2(item);
-    expect(err).toBeNull();
-  });
-
-  it("UI-VAL-3c: 모드 미지정 (undefined) → 통과 (default 비활성)", () => {
-    const item = makeItem({
-      // realEstateHeavyMode undefined → default 동작 검증 X
-    });
-    const err = validateUnlistedStockV2(item);
-    expect(err).toBeNull();
-  });
-});
 
 // ============================================================
 // UI-VAL-4·5: PR-N 평가차액 행 단위 검증
