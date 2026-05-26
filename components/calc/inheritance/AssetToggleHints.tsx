@@ -74,5 +74,5 @@ export function getFinancialDeductionHint(category: AssetCategory): string {
   if (category === "deposit") {
     return '§19① "금융회사등이 취급" 한정 — 전세보증금 사인간 직접채권 미열거 (해석례 따라 사용자 override 가능)';
   }
-  return "§19① 열거 항목(예금·신탁·보험금·주식·채권 등) 해당 여부 확인 후 토글";
+  return "§19① 열거 항목(예금·신탁·보험금·공제금·주식·채권 등) 해당 여부 확인 후 토글";
 }

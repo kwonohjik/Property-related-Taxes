@@ -29,7 +29,9 @@ import type {
  * (채무 측 §19④도 동일 — leaseDeposit는 §22 차감 항상 제외. inheritance-gift.types.ts:103)
  */
 const CATEGORY_DEFAULT: Partial<Record<AssetCategory, boolean>> = {
-  financial: true,        // 예금·적금·부금·채권·수익증권 등
+  // 공제금(§19① 명시 열거)은 §8 보험금(생명·손해보험만)에 미해당 → deemedCategory=insurance 아닌
+  // financial로 분류. financial default true이므로 §22 금융재산공제 자동 적용 (PR6).
+  financial: true,        // 예금·적금·부금·채권·수익증권·공제금 등
   listed_stock: true,     // 상장주식 (§22② 최대주주 보유분 제외는 사용자 override)
   unlisted_stock: true,   // 비상장주식 (§22② 최대주주 보유분 제외는 사용자 override)
   // deposit(전세보증금 반환채권)·cash·real_estate_*·other → undefined → false (§19① 미열거)

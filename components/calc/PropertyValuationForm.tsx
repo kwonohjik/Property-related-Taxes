@@ -63,7 +63,7 @@ const CATEGORY_LABELS: Record<SupportedCategory, string> = {
   real_estate_building: "건물 (단독주택·상업용)",
   real_estate_apartment: "아파트·공동주택",
   cash: "현금",
-  financial: "예금·펀드·채권",
+  financial: "예금·펀드·채권·공제금",
   deposit: "전세보증금 반환채권",
   other: "기타 재산",
 };
@@ -83,7 +83,7 @@ const VALUATION_PRIORITY_HINT: Record<SupportedCategory, string> = {
   real_estate_building: "시가 → 감정가 → 개별주택가격·기준시가 순 (상증법 §61①)",
   real_estate_apartment: "시가 → 감정가 → 공동주택 기준시가 순 (상증법 §61①)",
   cash: "현금 액면가 = 시가 (상증법 §60) — §22 금융재산공제 대상 아님",
-  financial: "잔액 또는 평가기준일 시가 (상증법 §62) — §22 금융재산공제 적용",
+  financial: "예금·펀드·채권·공제금 등 잔액 또는 평가기준일 시가 (상증법 §62·시행령 §19①) — §22 금융재산공제 적용",
   deposit: "임차인이 임대인에게 맡긴 전세보증금 — 반환받을 채권 액면가 (상속세 전용)",
   other: "시가 우선 원칙 (상증법 §60)",
 };
