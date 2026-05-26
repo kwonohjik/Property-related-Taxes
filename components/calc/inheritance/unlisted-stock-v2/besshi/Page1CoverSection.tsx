@@ -12,24 +12,9 @@
 import type {
   UnlistedStockValuationInput,
   UnlistedStockValuationResult,
-  UnlistedNetAssetOnlyReason,
 } from "@/lib/tax-engine/types/unlisted-stock-valuation.types";
 import { fmt, ResultTableRow, SectionTitle } from "./BesshiSharedAtoms";
-
-// 2번 §54④ 6행 (가~바). 다(3호)는 2018.2.13. 삭제 — 회색 비활성 표시
-const NET_ASSET_REASON_ROWS: {
-  code: string;
-  label: string;
-  reason?: UnlistedNetAssetOnlyReason;
-  deleted?: boolean;
-}[] = [
-  { code: "가", label: "신고기한 내 청산절차 진행·사업계속 곤란 (1호)", reason: "liquidation" },
-  { code: "나", label: "사업개시 전·3년 미만·휴업·폐업 (2호)", reason: "lt3y" },
-  { code: "다", label: "3년 연속 결손금 (2018.2.13. 삭제)", deleted: true },
-  { code: "라", label: "자산총액 중 부동산 80% 이상 (3호)", reason: "real_estate_80" },
-  { code: "마", label: "자산총액 중 주식 등 80% 이상 (5호)", reason: "stock_holding_80" },
-  { code: "바", label: "잔여 존속기한 3년 이내 (6호)", reason: "remaining_3y" },
-];
+import { NET_ASSET_REASON_ROWS, BESSHI_P1_SECTION3 } from "./besshi-form-constants";
 
 export interface Page1CoverSectionProps {
   input: UnlistedStockValuationInput;
@@ -97,36 +82,48 @@ export function Page1CoverSection({ input, result }: Page1CoverSectionProps) {
           <SectionTitle>3. 1주당 가액의 평가</SectionTitle>
           <table className="w-full border-collapse border border-black mb-3">
             <tbody>
-              <ResultTableRow testid="p1-③" cellNum="③" label="순자산가액 (제2쪽 4.마)" value={fmt(result.netAssetTotal)} />
-              <ResultTableRow testid="p1-④" cellNum="④" label="1주당 순자산가액 (③ ÷ ①)" value={fmt(result.netAssetPerShare)} />
-              <ResultTableRow testid="p1-⑤" cellNum="⑤" label="1주당 순손익가치 (제6쪽 7.차)" value={fmt(result.netIncomePerShare)} />
-              <ResultTableRow testid="p1-⑥-㉮" cellNum="⑥㉮" label="가중평균 [{(④×2)+(⑤×3)}÷5]" value={fmt(result.weightedAvgPerShare)} />
-              <ResultTableRow testid="p1-⑥-㉯" cellNum="⑥㉯" label="1주당 순자산가액(④)의 80%" value={fmt(result.netAssetFloor80)} />
-              <ResultTableRow testid="p1-⑥" cellNum="⑥" label="1주당 평가액 (㉮·㉯ 중 많은 금액)" value={fmt(result.finalPerShareValue)} emphasized />
+              <ResultTableRow testid="p1-③" cellNum="③" label={BESSHI_P1_SECTION3.netAssetTotal} value={fmt(result.netAssetTotal)} />
+              <ResultTableRow testid="p1-④" cellNum="④" label={BESSHI_P1_SECTION3.netAssetPerShare} value={fmt(result.netAssetPerShare)} />
+              <ResultTableRow testid="p1-⑤" cellNum="⑤" label={BESSHI_P1_SECTION3.netIncomeValue} value={fmt(result.netIncomePerShare)} />
+              {/* 공식 순서: ⑥ 헤더(많은 금액) → ㉮(가중평균) → ㉯(80%) */}
+              <ResultTableRow testid="p1-⑥" cellNum="⑥" label={BESSHI_P1_SECTION3.finalPerShareHeader} value={fmt(result.finalPerShareValue)} emphasized />
+              <ResultTableRow
+                testid="p1-⑥-㉮"
+                cellNum="⑥㉮"
+                label={
+                  input.isRealEstateHeavy
+                    ? `${BESSHI_P1_SECTION3.weightedAvgNormal} ${BESSHI_P1_SECTION3.weightedAvgRealEstateNote}`
+                    : BESSHI_P1_SECTION3.weightedAvgNormal
+                }
+                value={fmt(result.weightedAvgPerShare)}
+              />
+              <ResultTableRow testid="p1-⑥-㉯" cellNum="⑥㉯" label={BESSHI_P1_SECTION3.netAssetFloor80} value={fmt(result.netAssetFloor80)} />
+              {/* 공식 순서: ⑦ 헤더 → ㉮(⑥×할증율) → ㉯(⑥+㉮) */}
               {result.premiumRate > 0 ? (
                 <>
+                  <ResultTableRow testid="p1-⑦" cellNum="⑦" label={BESSHI_P1_SECTION3.maxShareholderHeader} value={fmt(result.premiumPerShare)} emphasized />
                   <ResultTableRow
                     testid="p1-⑦-㉮"
                     cellNum="⑦㉮"
-                    label={`최대주주 할증분 (⑥ × ${(result.premiumRate * 100).toFixed(0)}%)`}
+                    label={BESSHI_P1_SECTION3.premiumSurcharge((result.premiumRate * 100).toFixed(0))}
                     value={fmt(result.premiumPerShare - result.finalPerShareValue)}
                   />
                   <ResultTableRow
                     testid="p1-⑦-㉯"
                     cellNum="⑦㉯"
-                    label="최대주주 1주당 평가액 (⑥ + ㉮)"
+                    label={BESSHI_P1_SECTION3.premiumTotal}
                     value={fmt(result.premiumPerShare)}
                     emphasized
                   />
                 </>
               ) : (
-                <ResultTableRow testid="p1-⑦" cellNum="⑦" label="최대주주 해당 없음 (⑥ 적용)" value="해당없음" unit="" />
+                <ResultTableRow testid="p1-⑦" cellNum="⑦" label={BESSHI_P1_SECTION3.nonMaxShareholder} value="해당없음" unit="" />
               )}
-              <ResultTableRow testid="p1-⑨" cellNum="⑨" label="보충적 평가가액" value={fmt(result.finalPerShareForReporting)} emphasized />
+              <ResultTableRow testid="p1-⑨" cellNum="⑨" label={BESSHI_P1_SECTION3.reportingValue} value={fmt(result.finalPerShareForReporting)} emphasized />
               <ResultTableRow
                 testid="p1-총"
                 cellNum="총"
-                label={`상속재산가액 (⑨ × 보유주식수 ${fmt(input.ownedShares)}주)`}
+                label={BESSHI_P1_SECTION3.total(fmt(input.ownedShares))}
                 value={fmt(result.totalValuation)}
                 emphasized
               />

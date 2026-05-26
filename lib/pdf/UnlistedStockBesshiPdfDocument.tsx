@@ -21,9 +21,13 @@ import {
   Text,
   StyleSheet,
 } from "@react-pdf/renderer";
-import { registerFonts } from "./fonts";
+import { registerFonts, BESSHI_FONT_STACK } from "./fonts";
 import { toOptionalDate } from "@/lib/api/date-coerce";
 import { evaluateUnlistedStockV2 } from "@/lib/tax-engine/property-valuation/unlisted-orchestrator";
+import {
+  NET_ASSET_REASON_ROWS,
+  BESSHI_P1_SECTION3,
+} from "@/components/calc/inheritance/unlisted-stock-v2/besshi/besshi-form-constants";
 import type {
   UnlistedStockValuationInput,
   UnlistedStockValuationResult,
@@ -52,7 +56,8 @@ const C = {
 
 const s = StyleSheet.create({
   page: {
-    fontFamily: "NanumGothic",
+    // NanumGothic 본문 + enclosed 글리프 fallback (①~⑲·㉠㉡·㉮㉯) — 저바이트 절단 폴백 정정
+    fontFamily: [...BESSHI_FONT_STACK],
     fontSize: 9,
     color: C.black,
     padding: 30,
@@ -176,14 +181,6 @@ function renderDelta(n: number): string {
   return n < 0 ? `△${fmt(Math.abs(n))}` : fmt(n);
 }
 
-const NET_ASSET_ONLY_REASON_LABEL: Record<string, string> = {
-  liquidation: "1호 — 청산절차 진행",
-  lt3y: "2호 — 사업개시 3년 미만·휴·폐업",
-  real_estate_80: "3호 — 부동산 80% 이상 (단서)",
-  stock_holding_80: "5호 — 주식 80% 이상 (단서)",
-  remaining_3y: "6호 — 잔여 존속기한 3년 이내",
-};
-
 const EXCLUDED_REASON_LABEL: Record<NonNullable<UnlistedGoodwillResult["excludedByLaw"]>, string> = {
   liquidation: "§55③ 1호 — 청산절차 진행 → 영업권 가산 없음",
   real_estate_80: "§55③ 2호 본문 — 부동산 80% 이상 → 영업권 가산 없음",
@@ -195,67 +192,111 @@ const EXCLUDED_REASON_LABEL: Record<NonNullable<UnlistedGoodwillResult["excluded
 // 제1쪽 — 평가대상 + 1주당 가액
 // ─────────────────────────────────────────────────────────────────
 
+// 제1쪽 1번 6셀 메타 행 스타일 (인라인)
+const m6Label = {
+  width: 80, fontSize: 8, fontWeight: 700 as const, backgroundColor: C.gray100,
+  padding: 4, borderWidth: 0.3, borderColor: C.black, borderStyle: "solid" as const,
+};
+const m6Value = {
+  flex: 1, fontSize: 8, padding: 4,
+  borderWidth: 0.3, borderColor: C.black, borderStyle: "solid" as const,
+};
+// 제1쪽 2번 6행 체크 표 스타일
+const reasonCode = { ...s.cellNum, width: 28 };
+const reasonCheck = {
+  width: 36, padding: 3, fontSize: 8, textAlign: "center" as const,
+};
+
 function Page1Cover({ input, result }: { input: UnlistedStockValuationInput; result?: UnlistedStockValuationResult }) {
+  const evalDate = toOptionalDate(input.evaluationDate);
+  const evalDateStr =
+    evalDate instanceof Date && !isNaN(evalDate.getTime()) ? evalDate.toISOString().slice(0, 10) : "-";
+  const pct = (result?.premiumRate ?? 0) * 100;
+
   return (
     <Page size="A4" style={s.page}>
       <Text style={s.title}>비상장주식 등 평가서</Text>
-      <Text style={s.subtitle}>평가심의위원회 운영규정 별지 제4호 서식 부표3 (2021.3.4. 개정)</Text>
+      <Text style={s.subtitle}>평가심의위원회 운영규정 별지 제4호 서식 부표3 (2025.07.10. 개정)</Text>
 
+      {/* 1. 평가대상 비상장법인 — 3행 6셀 */}
       <Text style={s.sectionTitle}>1. 평가대상 비상장법인</Text>
-      <View style={{ borderWidth: 0.5, borderColor: C.black, borderStyle: "solid" }}>
-        <View style={s.metaRow}>
-          <Text style={s.metaLabel}>법인명</Text>
-          <Text style={s.metaValue}>{input.corpName || "-"}</Text>
-          <Text style={s.metaLabel}>대표자</Text>
-          <Text style={s.metaValue}>{input.representative || "-"}</Text>
+      <View>
+        <View style={{ flexDirection: "row" }}>
+          <Text style={m6Label}>법인명</Text>
+          <Text style={m6Value}>{input.corpName || "-"}</Text>
+          <Text style={m6Label}>사업자등록번호</Text>
+          <Text style={m6Value}>{input.businessRegistrationNumber || "-"}</Text>
+          <Text style={m6Label}>대표자 성명</Text>
+          <Text style={m6Value}>{input.representative || "-"}</Text>
         </View>
-        <View style={s.metaRow}>
-          <Text style={s.metaLabel}>① 발행주식총수</Text>
-          <Text style={s.metaValue}>{fmt(input.totalShares)}주</Text>
-          <Text style={s.metaLabel}>1주당 액면가</Text>
-          <Text style={s.metaValue}>{fmt(input.faceValuePerShare)}원</Text>
+        <View style={{ flexDirection: "row" }}>
+          <Text style={m6Label}>① 발행주식총수</Text>
+          <Text style={m6Value}>{fmt(input.totalShares)}주</Text>
+          <Text style={m6Label}>1주당 액면가</Text>
+          <Text style={m6Value}>{fmt(input.faceValuePerShare)}원</Text>
+          <Text style={m6Label}>자본금</Text>
+          <Text style={m6Value}>{input.capital ? `${fmt(input.capital)}원` : "-"}</Text>
         </View>
-        <View style={s.metaRow}>
-          <Text style={s.metaLabel}>평가기준일</Text>
-          <Text style={s.metaValue}>{toOptionalDate(input.evaluationDate)?.toISOString().slice(0, 10) ?? "—"}</Text>
-          <Text style={s.metaLabel}>② 부동산과다보유</Text>
-          <Text style={s.metaValue}>{input.isRealEstateHeavy ? "예 (가중치 반전)" : "아니오"}</Text>
+        <View style={{ flexDirection: "row" }}>
+          <Text style={m6Label}>평가기준일</Text>
+          <Text style={m6Value}>{evalDateStr}</Text>
+          <Text style={m6Label}>② 부동산과다보유법인</Text>
+          <Text style={{ ...m6Value, flex: 3 }}>{input.isRealEstateHeavy ? "예 (가중치 반전)" : "아니오"}</Text>
         </View>
       </View>
 
-      {input.netAssetOnlyReason && (
-        <>
-          <Text style={s.sectionTitle}>2. 순자산가치로만 평가 [v] (상증령 §54④)</Text>
-          <Text style={s.badge}>선택 사유: {NET_ASSET_ONLY_REASON_LABEL[input.netAssetOnlyReason] || "-"}</Text>
-        </>
-      )}
+      {/* 2. 순자산가치로만 평가하는 경우 [v] — 6행 상시 표시 */}
+      <Text style={s.sectionTitle}>2. 순자산가치로만 평가하는 경우 [v] 표시 (상증령 §54④)</Text>
+      <View style={{ borderTopWidth: 0.5, borderTopColor: C.black, borderTopStyle: "solid" }}>
+        {NET_ASSET_REASON_ROWS.map((row) => (
+          <View
+            key={row.code}
+            style={[s.tableRow, row.deleted ? { backgroundColor: C.gray50 } : {}]}
+          >
+            <Text style={reasonCode}>{row.code}</Text>
+            <Text style={{ ...s.cellLabel, color: row.deleted ? "#9ca3af" : C.black }}>{row.label}</Text>
+            <Text style={reasonCheck}>
+              {row.deleted ? "—" : input.netAssetOnlyReason === row.reason ? "[v]" : "[ ]"}
+            </Text>
+          </View>
+        ))}
+      </View>
 
       {result && (
         <>
           <Text style={s.sectionTitle}>3. 1주당 가액의 평가</Text>
           <View>
-            <ResultRow cellNum="③" label="순자산가액" value={result.netAssetTotal} />
-            <ResultRow cellNum="④" label="1주당 순자산가액 (③ ÷ 발행주식총수)" value={result.netAssetPerShare} />
-            <ResultRow cellNum="⑤" label="1주당 순손익가치 (최근 3년 가중평균 ÷ 환원율)" value={result.netIncomePerShare} />
-            <ResultRow cellNum="⑥-㉠" label="가중평균 [(④ × 2 + ⑤ × 3) ÷ 5]" value={result.weightedAvgPerShare} />
-            <ResultRow cellNum="⑥-㉡" label="순자산가액 × 80% (하한)" value={result.netAssetFloor80} />
-            <ResultRow cellNum="⑥" label="1주당 평가액 (㉠과 ㉡ 중 큰 금액)" value={result.finalPerShareValue} emphasized />
-            {result.premiumRate > 0 ? (
-              <ResultRow
-                cellNum="⑧"
-                label={`최대주주 할증평가 (⑥ × ${((1 + result.premiumRate) * 100).toFixed(0)}%)`}
-                value={result.premiumPerShare}
-              />
-            ) : (
-              <ResultRow cellNum="⑦" label="비최대주주 1주당 평가액" value={result.perShareValueNonMaxShareholder} />
-            )}
-            <ResultRow cellNum="⑨" label="보충적 평가가액" value={result.finalPerShareForReporting} emphasized />
+            <ResultRow cellNum="③" label={BESSHI_P1_SECTION3.netAssetTotal} value={result.netAssetTotal} />
+            <ResultRow cellNum="④" label={BESSHI_P1_SECTION3.netAssetPerShare} value={result.netAssetPerShare} />
+            <ResultRow cellNum="⑤" label={BESSHI_P1_SECTION3.netIncomeValue} value={result.netIncomePerShare} />
+            {/* 공식 순서: ⑥ 헤더(많은 금액) → ㉮(가중평균) → ㉯(80%) */}
+            <ResultRow cellNum="⑥" label={BESSHI_P1_SECTION3.finalPerShareHeader} value={result.finalPerShareValue} emphasized />
             <ResultRow
-              cellNum="총"
-              label={`상속재산가액 (⑨ × 보유주식수 ${fmt(input.ownedShares)}주)`}
-              value={result.totalValuation}
-              emphasized
+              cellNum="⑥㉮"
+              label={
+                input.isRealEstateHeavy
+                  ? `${BESSHI_P1_SECTION3.weightedAvgNormal} ${BESSHI_P1_SECTION3.weightedAvgRealEstateNote}`
+                  : BESSHI_P1_SECTION3.weightedAvgNormal
+              }
+              value={result.weightedAvgPerShare}
             />
+            <ResultRow cellNum="⑥㉯" label={BESSHI_P1_SECTION3.netAssetFloor80} value={result.netAssetFloor80} />
+            {/* 공식 순서: ⑦ 헤더 → ㉮(⑥×할증율) → ㉯(⑥+㉮) */}
+            {result.premiumRate > 0 ? (
+              <>
+                <ResultRow cellNum="⑦" label={BESSHI_P1_SECTION3.maxShareholderHeader} value={result.premiumPerShare} emphasized />
+                <ResultRow
+                  cellNum="⑦㉮"
+                  label={BESSHI_P1_SECTION3.premiumSurcharge(pct.toFixed(0))}
+                  value={result.premiumPerShare - result.finalPerShareValue}
+                />
+                <ResultRow cellNum="⑦㉯" label={BESSHI_P1_SECTION3.premiumTotal} value={result.premiumPerShare} emphasized />
+              </>
+            ) : (
+              <ResultRow cellNum="⑦" label={BESSHI_P1_SECTION3.nonMaxShareholder} value={result.perShareValueNonMaxShareholder} />
+            )}
+            <ResultRow cellNum="⑨" label={BESSHI_P1_SECTION3.reportingValue} value={result.finalPerShareForReporting} emphasized />
+            <ResultRow cellNum="총" label={BESSHI_P1_SECTION3.total(fmt(input.ownedShares))} value={result.totalValuation} emphasized />
           </View>
         </>
       )}
