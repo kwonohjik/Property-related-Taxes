@@ -54,6 +54,11 @@ export function calcCapitalIncreaseAdjustment(
     if (change.changeType !== "paid_in" && change.changeType !== "capital_reduction") {
       continue;
     }
+    // 변동일 미입력 행은 건너뜀 (UI에서 validate가 차단 — 엔진 오류 방지용 defensive 가드)
+    if (!change.changeDate || !(change.changeDate instanceof Date) || isNaN(change.changeDate.getTime())) {
+      continue;
+    }
+    const changeDate = change.changeDate;
 
     const pricePerShare = change.pricePerShare ?? 0;
     const sharesIssued = change.sharesIssued ?? 0;
@@ -70,13 +75,13 @@ export function calcCapitalIncreaseAdjustment(
       fiscalYearStartDate.setDate(fiscalYearStartDate.getDate() + 1);
 
       if (
-        change.changeDate >= fiscalYearStartDate &&
-        change.changeDate <= fiscalYearEndDate
+        changeDate >= fiscalYearStartDate &&
+        changeDate <= fiscalYearEndDate
       ) {
         // 해당 사업연도 내 → §56⑤ 후단 월할 (1개월 미만 1개월 — floorToOne default)
-        const monthsDiff = monthsBetween(fiscalYearStartDate, change.changeDate);
+        const monthsDiff = monthsBetween(fiscalYearStartDate, changeDate);
         adjustments[yearIdx] += (annualAmount * monthsDiff) / 12;
-      } else if (change.changeDate > fiscalYearEndDate) {
+      } else if (changeDate > fiscalYearEndDate) {
         // 그 이전 사업연도 → 1년 full 가산 (§56⑤ 본문 "그 이전 사업연도")
         adjustments[yearIdx] += annualAmount;
       }

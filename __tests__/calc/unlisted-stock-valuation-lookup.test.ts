@@ -73,7 +73,7 @@ function makeRecord(
           })),
           capitalChanges: it.v2.capitalChanges.map((c) => ({
             ...c,
-            changeDate: c.changeDate.toISOString(),
+            changeDate: c.changeDate?.toISOString(),
           })),
         },
       })),

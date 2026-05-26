@@ -61,7 +61,7 @@ export function CapitalChangeTable({ capitalChanges, onChange, sectionNum }: Cap
       ...capitalChanges,
       {
         changeType: "paid_in",
-        changeDate: new Date(),
+        changeDate: undefined,
         sharesIssued: 0,
         pricePerShare: 0,
       },
@@ -133,7 +133,7 @@ export function CapitalChangeTable({ capitalChanges, onChange, sectionNum }: Cap
                 warning={!isValidDate(c.changeDate) ? "변동일을 입력해야 합니다." : undefined}
               >
                 <DateInput
-                  value={isValidDate(c.changeDate) ? dateToStr(c.changeDate) : ""}
+                  value={c.changeDate instanceof Date && isValidDate(c.changeDate) ? dateToStr(c.changeDate) : ""}
                   onChange={(s) => {
                     const d = strToDate(s);
                     if (d) updateRow(idx, { changeDate: d });

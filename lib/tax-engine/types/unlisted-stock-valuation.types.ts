@@ -37,7 +37,8 @@ export type UnlistedPremiumExclusionReason =
 /** 자본금 변동 (환산주식수 산정) — 상증규 §17의3⑤ */
 export interface UnlistedCapitalChange {
   changeType: "paid_in" | "free_issue" | "capital_reduction";
-  changeDate: Date;
+  /** 변동일. 새 행 추가 시 빈값(undefined)으로 시작 — 사용자가 직접 입력해야 함. validate가 미입력 차단. */
+  changeDate: Date | undefined;
   sharesIssued: number;
   /** 유상증자 1주당 납입금액 (액면가가 아닐 수 있음 — §56⑤1호) */
   pricePerShare?: number;

@@ -217,7 +217,6 @@ describe("[UI-VAL-7] 자본금 변동 — 변동일 미입력 차단", () => {
   it("UI-VAL-7a: 유상증자 변동일 undefined → 차단", () => {
     const item = makeItem({
       capitalChanges: [
-        // @ts-expect-error 의도적 invalid
         { changeType: "paid_in", changeDate: undefined, sharesIssued: 1_000, pricePerShare: 10_000 },
       ],
     });

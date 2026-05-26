@@ -38,7 +38,8 @@ export const unlistedPremiumExclusionReasonSchema = z.enum([
 /** 자본금 변동 — 상증규 §17의3⑤ + §56⑤ */
 export const unlistedCapitalChangeSchema = z.object({
   changeType: z.enum(["paid_in", "free_issue", "capital_reduction"]),
-  changeDate: z.coerce.date(),
+  /** 변동일 — 새 행은 undefined로 시작. 미입력은 inheritance-validate.ts가 차단. Zod는 optional 허용. */
+  changeDate: z.coerce.date().optional(),
   sharesIssued: z.number().int().positive({ message: "주식수는 1 이상이어야 합니다." }),
   pricePerShare: z.number().nonnegative().optional(),
 });
@@ -226,7 +227,8 @@ export const unlistedStockValuationV2Schema = z
     // 자본금 변동 날짜 검증
     for (let i = 0; i < input.capitalChanges.length; i++) {
       const c = input.capitalChanges[i];
-      if (c.changeDate > input.evaluationDate) {
+      // changeDate가 undefined인 미입력 행은 Zod optional 통과 — inheritance-validate.ts가 차단
+      if (c.changeDate !== undefined && c.changeDate > input.evaluationDate) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["capitalChanges", i, "changeDate"],

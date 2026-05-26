@@ -80,8 +80,12 @@ export function calcConvertedShares(args: CalcConvertedSharesArgs): CalcConverte
   windowStart.setFullYear(windowStart.getFullYear() - 1);
   windowStart.setDate(windowStart.getDate() + 1);
 
+  // 변동일 미입력(undefined) 행은 §56③ 단서 환산 대상에서 제외 (validate가 차단하므로 defensive)
   const W = capitalChanges
-    .filter((c) => c.changeDate >= windowStart && c.changeDate <= evaluationDate)
+    .filter((c): c is typeof c & { changeDate: Date } =>
+      c.changeDate != null && c.changeDate instanceof Date && !isNaN(c.changeDate.getTime()) &&
+      c.changeDate >= windowStart && c.changeDate <= evaluationDate
+    )
     .sort((a, b) => a.changeDate.getTime() - b.changeDate.getTime());
   const excludedCount = capitalChanges.length - W.length;
   if (excludedCount > 0) {

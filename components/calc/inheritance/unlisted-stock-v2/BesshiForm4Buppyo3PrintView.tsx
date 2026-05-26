@@ -27,7 +27,7 @@ import type {
   UnlistedStockValuationInput,
   UnlistedStockValuationResult,
 } from "@/lib/tax-engine/types/unlisted-stock-valuation.types";
-import { toDate } from "@/lib/api/date-coerce";
+import { toDate, toOptionalDate } from "@/lib/api/date-coerce";
 import dynamic from "next/dynamic";
 import { Page1CoverSection } from "./besshi/Page1CoverSection";
 import { Page2NetAssetTable } from "./besshi/Page2NetAssetTable";
@@ -72,7 +72,8 @@ function normalizeBesshiInput(input: UnlistedStockValuationInput): UnlistedStock
     })) as UnlistedStockValuationInput["fiscalYears"],
     capitalChanges: input.capitalChanges.map((c) => ({
       ...c,
-      changeDate: toDate(c.changeDate, "changeDate"),
+      // changeDate는 optional — 미입력 행은 undefined 보존 (validate가 차단하므로 여기선 강제 throw 금지)
+      changeDate: toOptionalDate(c.changeDate),
     })),
   };
 }

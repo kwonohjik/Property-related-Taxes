@@ -220,11 +220,11 @@ function restoreUnlistedStockInput(raw: UnlistedStockV2Lite): UnlistedStockValua
   if (fiscalYears.some((fy) => fy === null)) return null;
 
   const capitalChangesRaw = raw.capitalChanges;
+  // changeDate는 optional — undefined 행도 그대로 복원 (엔진·validate가 각자 처리)
   const capitalChanges = Array.isArray(capitalChangesRaw)
     ? capitalChangesRaw.map((c) => {
         const cObj = c as Record<string, unknown>;
-        const d = restoreDate(cObj.changeDate);
-        if (!d) return null;
+        const d = restoreDate(cObj.changeDate); // undefined면 그대로 undefined
         return {
           changeType: cObj.changeType as "paid_in" | "free_issue" | "capital_reduction",
           changeDate: d,
@@ -233,7 +233,6 @@ function restoreUnlistedStockInput(raw: UnlistedStockV2Lite): UnlistedStockValua
         };
       })
     : [];
-  if (capitalChanges.some((c) => c === null)) return null;
 
   return {
     corpName: String(raw.corpName ?? ""),
