@@ -46,6 +46,37 @@ function isEligible(el: Element | null): el is HTMLInputElement {
   return true;
 }
 
+/**
+ * `fromEl` 기준 DOM 순서상 다음 포커스 대상 input을 반환.
+ *
+ * - `fromEl`이 후보(eligible)에 포함되면 기존과 동일하게 그 다음 후보를 반환.
+ * - `fromEl`이 옵트아웃 영역(자체 Enter 핸들러 표 등) 안이라 후보에 없으면,
+ *   `compareDocumentPosition`으로 DOM상 뒤에 있는 첫 eligible을 반환
+ *   (FiscalYearAdjustmentTable의 마지막 셀 → 표 밖 복귀에 사용).
+ *
+ * 스코프: 가장 가까운 form / [role=dialog] / [data-enter-nav-scope], 없으면 document.
+ */
+export function getNextFocusableInput(fromEl: HTMLElement): HTMLInputElement | null {
+  const scope =
+    fromEl.closest<HTMLElement>('form, [role="dialog"], [data-enter-nav-scope]') ??
+    document;
+
+  const candidates = Array.from(
+    scope.querySelectorAll<HTMLInputElement>(FOCUSABLE_SELECTOR),
+  ).filter(isEligible);
+
+  const idx = candidates.indexOf(fromEl as HTMLInputElement);
+  if (idx !== -1) return candidates[idx + 1] ?? null;
+
+  // fromEl이 후보에 없는 경우(옵트아웃 영역) — DOM상 뒤의 첫 eligible
+  for (const cand of candidates) {
+    if (fromEl.compareDocumentPosition(cand) & Node.DOCUMENT_POSITION_FOLLOWING) {
+      return cand;
+    }
+  }
+  return null;
+}
+
 export function EnterKeyNavigationProvider() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -56,27 +87,11 @@ export function EnterKeyNavigationProvider() {
       const target = e.target as HTMLElement | null;
       if (!isEligible(target)) return;
 
-      // 스코프: 가장 가까운 form / dialog / 명시 스코프, 없으면 document
-      const scope =
-        target.closest<HTMLElement>('form, [role="dialog"], [data-enter-nav-scope]') ??
-        document;
-
-      const candidates = Array.from(
-        scope.querySelectorAll<HTMLInputElement>(FOCUSABLE_SELECTOR),
-      ).filter(isEligible);
-
-      const idx = candidates.indexOf(target);
-      if (idx === -1) return;
-
       // Enter 기본 동작(form submit 등) 차단 후 다음 입력으로 이동
       e.preventDefault();
-
-      const next = candidates[idx + 1];
-      if (next) {
-        next.focus();
-        // 포커스 후 전체 선택은 SelectOnFocusProvider(RAF)가 처리
-      }
-      // 마지막 입력이면 포커스 유지(아무 동작 없음)
+      getNextFocusableInput(target)?.focus();
+      // 포커스 후 전체 선택은 SelectOnFocusProvider(RAF)가 처리
+      // 마지막 입력이면 next=null → 포커스 유지
     };
 
     document.addEventListener("keydown", handleKeyDown);

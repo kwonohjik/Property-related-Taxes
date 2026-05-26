@@ -16,8 +16,10 @@
  * Plan(연환산): docs/00-pm/inheritance-unlisted-fiscal-year-under-1year.plan.md
  */
 
+import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DateInput } from "@/components/ui/date-input";
+import { getNextFocusableInput } from "@/components/providers/EnterKeyNavigationProvider";
 import { fiscalYearMonths } from "@/lib/tax-engine/property-valuation/fiscal-year-annualize";
 import type { FiscalYearAdjustment } from "@/lib/tax-engine/types/unlisted-stock-valuation.types";
 
@@ -117,6 +119,36 @@ export function FiscalYearAdjustmentTable({
     return fy.taxableIncome + add - sub;
   });
 
+  // Enter 키 → 같은 사업연도 열에서 아래 항목으로(①→…→㉒) 세로 이동.
+  // 열 끝(㉒)에서 Enter → 다음 사업연도 ①, 마지막 열 ㉒ → 표 밖 다음 입력으로 복귀.
+  function handleFiscalEnter(e: ReactKeyboardEvent<HTMLDivElement>) {
+    if (e.key !== "Enter" || e.shiftKey) return;
+    if (e.nativeEvent.isComposing || e.keyCode === 229) return; // IME 조합 가드
+    const cell = (e.target as HTMLElement).closest<HTMLElement>("[data-fy-col]");
+    if (!cell) return;
+    const col = Number(cell.dataset.fyCol);
+    const row = Number(cell.dataset.fyRow);
+    if (Number.isNaN(col) || Number.isNaN(row)) return;
+
+    e.preventDefault();
+    const lastRow = ROWS.length - 1;
+    const lastCol = fiscalYears.length - 1;
+    let nextCol = col;
+    let nextRow = row + 1;
+    if (nextRow > lastRow) {
+      nextCol = col + 1;
+      nextRow = 0;
+    }
+    if (nextCol > lastCol) {
+      // 마지막 열의 ㉒ → 표 밖 DOM상 다음 입력으로 복귀
+      getNextFocusableInput(e.target as HTMLElement)?.focus();
+      return;
+    }
+    e.currentTarget
+      .querySelector<HTMLInputElement>(`[data-fy-col="${nextCol}"][data-fy-row="${nextRow}"] input`)
+      ?.focus();
+  }
+
   return (
     <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-3 space-y-3">
       <div className="flex items-center gap-2">
@@ -196,9 +228,10 @@ export function FiscalYearAdjustmentTable({
       </div>
 
       {/* 22 row × 3 year 입력 — 상단 헤더와 동일 grid 트랙(라벨 13rem + 3년 균등)으로 세로 정렬 */}
+      {/* data-enter-nav="off": 전역 가로 Enter 비활성 → handleFiscalEnter가 사업연도(열) 단위 세로 이동 전담 */}
       <div className="overflow-x-auto text-[11px]">
-        <div role="table">
-          {ROWS.map((row) => (
+        <div role="table" data-enter-nav="off" onKeyDown={handleFiscalEnter}>
+          {ROWS.map((row, rowIndex) => (
             <div
               key={row.key}
               role="row"
@@ -215,7 +248,7 @@ export function FiscalYearAdjustmentTable({
                 )}
               </div>
               {fiscalYears.map((fy, idx) => (
-                <div key={idx}>
+                <div key={idx} data-fy-col={idx} data-fy-row={rowIndex}>
                   <CurrencyInput
                     label={row.label}
                     hideLabel
