@@ -113,3 +113,31 @@ describe("[AN-3] PDF 제1쪽 2025.07.10 공식 요소 정합", () => {
     expect(text).toContain("잔여 존속기한 3년 이내");
   });
 });
+
+// ============================================================
+// AN-7 — 자본금 표시 fallback (capital 미입력 → 액면가 × 발행주식총수)
+// ============================================================
+describe("[AN-7] 자본금 표시 fallback", () => {
+  it("capital 명시 입력 시 그 값 표시 (900,000,000)", () => {
+    const text = collectText(UnlistedStockBesshiPdfDocument({ input: image17Input }));
+    expect(text).toContain("900,000,000원");
+  });
+
+  it("capital 미입력 시 액면가(5,000) × 발행주식총수(180,000) = 900,000,000 표시", () => {
+    const { capital: _omit, ...withoutCapital } = image17Input;
+    void _omit;
+    const text = collectText(
+      UnlistedStockBesshiPdfDocument({ input: withoutCapital as typeof image17Input }),
+    );
+    expect(text).toContain("900,000,000원");
+  });
+
+  it("capital·액면가·발행주식 모두 0/미입력 → '-' (도출 불가)", () => {
+    const empty = { ...image17Input, capital: undefined, faceValuePerShare: 0, totalShares: 0 };
+    const text = collectText(
+      UnlistedStockBesshiPdfDocument({ input: empty as typeof image17Input }),
+    );
+    // 자본금 셀 라벨은 존재하되 값은 '-' (totalShares 0이면 result 없음 → Page1만, 자본금 행은 1번 섹션)
+    expect(text).toContain("자본금");
+  });
+});

@@ -14,7 +14,11 @@ import type {
   UnlistedStockValuationResult,
 } from "@/lib/tax-engine/types/unlisted-stock-valuation.types";
 import { fmt, ResultTableRow, SectionTitle } from "./BesshiSharedAtoms";
-import { NET_ASSET_REASON_ROWS, BESSHI_P1_SECTION3 } from "./besshi-form-constants";
+import {
+  NET_ASSET_REASON_ROWS,
+  BESSHI_P1_SECTION3,
+  resolveCapitalDisplay,
+} from "./besshi-form-constants";
 
 export interface Page1CoverSectionProps {
   input: UnlistedStockValuationInput;
@@ -23,6 +27,7 @@ export interface Page1CoverSectionProps {
 
 export function Page1CoverSection({ input, result }: Page1CoverSectionProps) {
   const reason = input.netAssetOnlyReason;
+  const capitalDisplay = resolveCapitalDisplay(input.capital, input.faceValuePerShare, input.totalShares);
   return (
     <section aria-label="제1쪽 평가대상 + 1주당 가액의 평가">
       <SectionTitle>1. 평가대상 비상장법인</SectionTitle>
@@ -42,7 +47,7 @@ export function Page1CoverSection({ input, result }: Page1CoverSectionProps) {
             <td className="border border-black p-2 bg-gray-100">1주당 액면가</td>
             <td className="border border-black p-2">{fmt(input.faceValuePerShare)}원</td>
             <td className="border border-black p-2 bg-gray-100">자본금</td>
-            <td className="border border-black p-2">{input.capital ? `${fmt(input.capital)}원` : "-"}</td>
+            <td className="border border-black p-2">{capitalDisplay ? `${fmt(capitalDisplay)}원` : "-"}</td>
           </tr>
           <tr data-besshi-cell="p1-②" data-testid="p1-②">
             <td className="border border-black p-2 bg-gray-100">평가기준일</td>

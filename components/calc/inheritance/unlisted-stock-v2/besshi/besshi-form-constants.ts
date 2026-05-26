@@ -64,3 +64,19 @@ export const BESSHI_P1_SECTION3 = {
   /** 총 상속재산가액 (⑨ × 보유주식수) */
   total: (shares: string) => `상속재산가액 (⑨ × 보유주식수 ${shares}주)`,
 } as const;
+
+/**
+ * 자본금 표시값 fallback — 명시 입력값(capital)이 없으면 액면가 × 발행주식총수로 도출.
+ * 입력 폼(CorporateInfoSection)의 capitalDisplay와 동일 로직 → 화면·PDF·입력 3곳 일관.
+ * (store에는 쓰지 않는 display fallback — mirror-pattern. capital은 평가 산식 미사용 표시 전용.)
+ * @returns 표시할 자본금(원). 도출 불가 시 undefined.
+ */
+export function resolveCapitalDisplay(
+  capital: number | undefined,
+  faceValuePerShare: number,
+  totalShares: number,
+): number | undefined {
+  if (capital && capital > 0) return capital;
+  if (faceValuePerShare > 0 && totalShares > 0) return faceValuePerShare * totalShares;
+  return undefined;
+}

@@ -27,6 +27,7 @@ import { evaluateUnlistedStockV2 } from "@/lib/tax-engine/property-valuation/unl
 import {
   NET_ASSET_REASON_ROWS,
   BESSHI_P1_SECTION3,
+  resolveCapitalDisplay,
 } from "@/components/calc/inheritance/unlisted-stock-v2/besshi/besshi-form-constants";
 import type {
   UnlistedStockValuationInput,
@@ -212,6 +213,7 @@ function Page1Cover({ input, result }: { input: UnlistedStockValuationInput; res
   const evalDateStr =
     evalDate instanceof Date && !isNaN(evalDate.getTime()) ? evalDate.toISOString().slice(0, 10) : "-";
   const pct = (result?.premiumRate ?? 0) * 100;
+  const capitalDisplay = resolveCapitalDisplay(input.capital, input.faceValuePerShare, input.totalShares);
 
   return (
     <Page size="A4" style={s.page}>
@@ -235,7 +237,7 @@ function Page1Cover({ input, result }: { input: UnlistedStockValuationInput; res
           <Text style={m6Label}>1주당 액면가</Text>
           <Text style={m6Value}>{fmt(input.faceValuePerShare)}원</Text>
           <Text style={m6Label}>자본금</Text>
-          <Text style={m6Value}>{input.capital ? `${fmt(input.capital)}원` : "-"}</Text>
+          <Text style={m6Value}>{capitalDisplay ? `${fmt(capitalDisplay)}원` : "-"}</Text>
         </View>
         <View style={{ flexDirection: "row" }}>
           <Text style={m6Label}>평가기준일</Text>
