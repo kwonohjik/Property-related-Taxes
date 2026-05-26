@@ -127,7 +127,7 @@ export function TransferDate1MonthClosingPriceTable({ form, onChange }: Transfer
       )}
 
       {/* 2-col grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs" onKeyDown={handleGridKeyDown}>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs" onKeyDown={handleGridKeyDown} data-enter-nav="off">
         {[0, 1].map((col) => {
           const start = col === 0 ? 0 : leftCount;
           const end = col === 0 ? leftCount : total;

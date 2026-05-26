@@ -4,6 +4,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { AuthMigrationListener } from "@/components/auth/AuthMigrationListener";
 import { SelectOnFocusProvider } from "@/components/providers/SelectOnFocusProvider";
+import { EnterKeyNavigationProvider } from "@/components/providers/EnterKeyNavigationProvider";
 import { HeaderProfileBadge } from "@/components/layout/HeaderProfileBadge";
 import { HeaderClientBanner } from "@/components/layout/HeaderClientBanner";
 import Link from "next/link";
@@ -62,6 +63,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         <ThemeProvider>
           <SelectOnFocusProvider>
+            <EnterKeyNavigationProvider />
             <AuthMigrationListener />
             <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur">
               <div className="mx-auto flex h-14 max-w-4xl items-center px-4">

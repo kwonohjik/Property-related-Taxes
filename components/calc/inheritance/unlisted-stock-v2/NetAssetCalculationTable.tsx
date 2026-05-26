@@ -183,6 +183,7 @@ export function NetAssetCalculationTable({
               </div>
               <CurrencyInput
                 label={row.label}
+                hideLabel
                 value={String(displayValue || "")}
                 onChange={(v) => update(row.key, Number(v.replace(/,/g, "")) || 0)}
                 placeholder="0"
@@ -214,6 +215,7 @@ export function NetAssetCalculationTable({
             </div>
             <CurrencyInput
               label={row.label}
+              hideLabel
               value={String(netAssetValueRaw[row.key] || "")}
               onChange={(v) => update(row.key, Number(v.replace(/,/g, "")) || 0)}
               placeholder="0"
@@ -247,6 +249,7 @@ export function NetAssetCalculationTable({
             </div>
             <CurrencyInput
               label="책임준비금"
+              hideLabel
               value={String(netAssetValueRaw.insuranceReservePolicy ?? "")}
               onChange={(v) => update("insuranceReservePolicy", Number(v.replace(/,/g, "")) || 0)}
               placeholder="0"
@@ -260,6 +263,7 @@ export function NetAssetCalculationTable({
             </div>
             <CurrencyInput
               label="비상위험준비금"
+              hideLabel
               value={String(netAssetValueRaw.insuranceExtraordinaryReserve ?? "")}
               onChange={(v) => update("insuranceExtraordinaryReserve", Number(v.replace(/,/g, "")) || 0)}
               placeholder="0"
@@ -273,6 +277,7 @@ export function NetAssetCalculationTable({
             </div>
             <CurrencyInput
               label="해약환급금준비금"
+              hideLabel
               value={String(netAssetValueRaw.insuranceSurrenderReserve ?? "")}
               onChange={(v) => update("insuranceSurrenderReserve", Number(v.replace(/,/g, "")) || 0)}
               placeholder="0"

@@ -63,7 +63,7 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
       description="취득 당시 비상장이었으나 양도 시점에 상장된 주식 — 상장일 이후 1개월 종가평균 기반 환산"
       tone="amber"
     >
-      <div className="mt-4 space-y-4" onKeyDown={handleEnterNext}>
+      <div className="mt-4 space-y-4" onKeyDown={handleEnterNext} data-enter-nav="off">
         {/* 환산 산식 안내 (violet) — §165⑤ + §163⑨ 합성 */}
         <div className="rounded-lg border border-violet-200 bg-violet-50/70 px-4 py-3 text-sm">
           <p className="font-semibold text-violet-800 mb-2">환산 산식 (소령 §165⑤ + §163⑨ 합성)</p>

@@ -119,7 +119,7 @@ export function KiwoomStockNameAutocomplete({
   }
 
   return (
-    <div ref={containerRef} className="relative">
+    <div ref={containerRef} className="relative" data-enter-nav="off">
       <input
         type="text"
         value={value}

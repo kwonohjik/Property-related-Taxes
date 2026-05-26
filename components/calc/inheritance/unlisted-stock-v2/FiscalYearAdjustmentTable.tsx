@@ -215,6 +215,7 @@ export function FiscalYearAdjustmentTable({
                   <td key={idx} className="py-1 px-1">
                     <CurrencyInput
                       label={row.label}
+                      hideLabel
                       value={String(fy[row.key] ?? "")}
                       onChange={(v) => {
                         const n = Number(v.replace(/,/g, "")) || 0;

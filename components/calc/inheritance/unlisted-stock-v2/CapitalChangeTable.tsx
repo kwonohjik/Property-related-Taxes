@@ -149,6 +149,7 @@ export function CapitalChangeTable({ capitalChanges, onChange, sectionNum }: Cap
               >
                 <CurrencyInput
                   label="주식수"
+                  hideLabel
                   value={String(c.sharesIssued || "")}
                   onChange={(v) => updateRow(idx, { sharesIssued: Number(v.replace(/,/g, "")) || 0 })}
                   placeholder="증가·감소 주식수"
@@ -166,6 +167,7 @@ export function CapitalChangeTable({ capitalChanges, onChange, sectionNum }: Cap
                 >
                   <CurrencyInput
                     label="1주당 금액"
+                    hideLabel
                     value={String(c.pricePerShare ?? "")}
                     onChange={(v) => updateRow(idx, { pricePerShare: Number(v.replace(/,/g, "")) || 0 })}
                     placeholder="1주당 납입·지급금액"

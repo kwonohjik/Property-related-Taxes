@@ -180,7 +180,7 @@ export function PostListingClosingPriceTable({ form, onChange }: PostListingClos
       </div>
 
       {/* 2-col grid — 좌(앞 절반) / 우(뒤 절반) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs" onKeyDown={handleGridKeyDown}>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs" onKeyDown={handleGridKeyDown} data-enter-nav="off">
         {[0, 1].map((col) => {
           const start = col === 0 ? 0 : leftCount;
           const end = col === 0 ? leftCount : total;

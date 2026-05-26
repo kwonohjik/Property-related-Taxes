@@ -37,6 +37,8 @@ export interface CurrencyInputProps {
   disabled?: boolean;
   /** FieldCard 카드 모드 래핑 시 내부 "원" 단위 표시 숨김 (단위 중복 방지) */
   hideUnit?: boolean;
+  /** 외부(FieldCard·테이블 좌측 셀)에 이미 라벨이 있을 때 입력 위 시각 라벨 숨김 (중복 방지). aria-label로 접근성은 보존 */
+  hideLabel?: boolean;
 }
 
 export function CurrencyInput({
@@ -48,6 +50,7 @@ export function CurrencyInput({
   hint,
   disabled = false,
   hideUnit = false,
+  hideLabel = false,
 }: CurrencyInputProps) {
   const [focused, setFocused] = useState(false);
   const [localRaw, setLocalRaw] = useState(toRawDigits(value));
@@ -86,7 +89,7 @@ export function CurrencyInput({
 
   return (
     <div className="space-y-1.5">
-      {label && (
+      {label && !hideLabel && (
         <label className="block text-sm font-medium">
           {label} {required && <span className="text-destructive">*</span>}
         </label>
@@ -96,6 +99,7 @@ export function CurrencyInput({
           ref={inputRef}
           type="text"
           inputMode="numeric"
+          aria-label={hideLabel && label ? label : undefined}
           value={displayValue}
           onChange={handleChange}
           onFocus={handleFocus}

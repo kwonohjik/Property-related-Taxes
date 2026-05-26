@@ -122,7 +122,7 @@ export function YearColumn({
   };
 
   return (
-    <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2" onKeyDown={handleKeyDown}>
+    <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2" onKeyDown={handleKeyDown} data-enter-nav="off">
       <p className="text-xs font-semibold text-sky-800">{COL_LABEL[col]} 사업연도</p>
 
       <p className="text-[10px] font-semibold text-sky-700 mt-2">자산</p>

@@ -407,7 +407,7 @@ export function InheritanceTaxForm() {
       </div>
 
       {/* 그리드: 데스크톱 좌(사이드바) · 우(입력) / 모바일 상단 stack / 인쇄 단일 컬럼 */}
-      <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-6 items-start print:block">
+      <div className="grid grid-cols-1 lg:grid-cols-[180px_1fr] gap-6 items-start print:block">
         {/* 사이드바 합계 (지점 ⑥) — 좌측 sticky (데스크톱) / 상단 stack (모바일·인쇄) */}
         <aside className="order-first lg:sticky lg:top-36 self-start max-h-[calc(100vh-9rem)] overflow-y-auto print:static print:max-h-none print:overflow-visible">
           <InheritanceSidebar form={{ ...form, valuationDate: form.deathDate || undefined }} result={result} />
