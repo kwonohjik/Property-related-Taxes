@@ -364,6 +364,23 @@ export function deriveQualifiedHeirIds(
 }
 
 /**
+ * 영농상속재산가액 산정에 실제 적용할 자격자 ID 목록 (PR5 — 명시 override 우선).
+ *
+ * 우선순위 (시행령 §16⑤ 본문 — 제3항 요건 갖춘 상속인이 받는 가액):
+ *   1. heirAssessments 미입력(부록 A 미사용) → 폼-수준 명시 qualifiedHeirIds 그대로 (legacy)
+ *   2. heirAssessments 입력 + qualifiedHeirIds 명시값 존재 → **명시값 우선(override)**
+ *      (사용자가 자동도출과 다르게 지정 — §16③ 요건과 다를 수 있으므로 UI 경고 배지)
+ *   3. heirAssessments 입력 + qualifiedHeirIds 미입력 → deriveQualifiedHeirIds(자동도출)
+ */
+export function resolveEffectiveQualifiedHeirIds(
+  input: FarmingInheritanceInput,
+): string[] | undefined {
+  if (input.heirAssessments === undefined) return input.qualifiedHeirIds;
+  if (input.qualifiedHeirIds !== undefined) return input.qualifiedHeirIds;
+  return deriveQualifiedHeirIds(input);
+}
+
+/**
  * 영농상속공제 (§18의3)
  * 농지·초지·산림지·어선·어업권·농업용 건축물·염전 + 법인 영농 주식, 최대 30억 (§18의3①)
  *

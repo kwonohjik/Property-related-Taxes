@@ -10,6 +10,7 @@ import { describe, expect, it } from "vitest";
 import {
   calcFarmingDeduction,
   deriveQualifiedHeirIds,
+  resolveEffectiveQualifiedHeirIds,
   evaluateFarmingEligibility,
   evaluateFarmingEligibilityForHeir,
 } from "@/lib/tax-engine/deductions/inheritance-deductions";
@@ -408,6 +409,59 @@ describe("부록 A — 상속인별 분리 자격 평가 (heirAssessments)", () 
     };
     const ids = deriveQualifiedHeirIds(input);
     expect(ids).toEqual(["h1"]);
+  });
+});
+
+describe("resolveEffectiveQualifiedHeirIds — 명시 override 우선 (PR5)", () => {
+  it("FH-OVR-1: heirAssessments 미입력 + qualifiedHeirIds 미입력 → undefined (legacy)", () => {
+    expect(resolveEffectiveQualifiedHeirIds(personalOk())).toBeUndefined();
+  });
+
+  it("FH-OVR-2: heirAssessments 미입력 + 명시 qualifiedHeirIds → 명시값 그대로 (legacy 수동)", () => {
+    const input: FarmingInheritanceInput = {
+      ...personalOk(),
+      qualifiedHeirIds: ["h1"],
+    };
+    expect(resolveEffectiveQualifiedHeirIds(input)).toEqual(["h1"]);
+  });
+
+  it("FH-OVR-3 회귀: heirAssessments 입력 + qualifiedHeirIds 미입력 → 자동도출", () => {
+    const input: FarmingInheritanceInput = {
+      ...personalOk(),
+      heirAssessments: [
+        heirAssess({ heirId: "h1", hasDisqualifyingIncome: false }),
+        heirAssess({ heirId: "h2", hasDisqualifyingIncome: true }), // §16⑭ 결격
+      ],
+    };
+    // 자동도출과 동일 (FH-6과 일치)
+    expect(resolveEffectiveQualifiedHeirIds(input)).toEqual(deriveQualifiedHeirIds(input));
+    expect(resolveEffectiveQualifiedHeirIds(input)).toEqual(["h1"]);
+  });
+
+  it("FH-OVR-4: heirAssessments 입력 + 명시 qualifiedHeirIds → 명시값 우선(override)", () => {
+    const input: FarmingInheritanceInput = {
+      ...personalOk(),
+      heirAssessments: [
+        heirAssess({ heirId: "h1", hasDisqualifyingIncome: false }),
+        heirAssess({ heirId: "h2", hasDisqualifyingIncome: true }), // 자동도출이면 h1만
+      ],
+      qualifiedHeirIds: ["h2"], // 사용자가 h2를 명시 지정 (자동도출 h1과 다름)
+    };
+    // override — 명시값 우선 (자동도출 ["h1"] 무시)
+    expect(resolveEffectiveQualifiedHeirIds(input)).toEqual(["h2"]);
+  });
+
+  it("FH-OVR-5: 명시 override가 자동도출과 다름 (경고 대상)", () => {
+    const input: FarmingInheritanceInput = {
+      ...personalOk(),
+      heirAssessments: [heirAssess({ heirId: "h1" })],
+      qualifiedHeirIds: ["h1", "h2"], // 자동도출(["h1"])보다 넓게 명시
+    };
+    const effective = resolveEffectiveQualifiedHeirIds(input);
+    const auto = deriveQualifiedHeirIds(input);
+    expect(effective).toEqual(["h1", "h2"]);
+    // override ≠ 자동도출 → UI 경고 대상
+    expect([...(effective ?? [])].sort()).not.toEqual([...(auto ?? [])].sort());
   });
 });
 
