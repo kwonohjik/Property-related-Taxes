@@ -165,6 +165,40 @@ describe("[PDF-1] 정식평가 통합 — 교재 사례 1 순손익가치 재현
   });
 });
 
+// ── 날짜 string 직렬화 방어 (sessionStorage/이력 복원 회귀) ──
+// changeDate·fiscalYearEndDate·evaluationDate가 JSON 경유로 string이 되어도
+// §56⑤ 유상증자 조정·환산주식수가 Date 입력과 동일해야 한다.
+// (수정 전: capital-increase·converted-shares의 raw Date 비교가 silent false → 증자년도 0/환산주식수 미반영)
+describe("[SER] 날짜 string 직렬화 silent false 방어", () => {
+  // sessionStorage 복원 시뮬: Date → ISO string
+  const serialized = JSON.parse(JSON.stringify(PDF_CASE_1)) as UnlistedStockValuationInput;
+  const r = evaluateUnlistedStockV2(serialized);
+  const fb = r.fiscalYearBreakdowns;
+
+  it("string changeDate: typeof 확인 (입력이 실제로 string인지)", () => {
+    expect(typeof (serialized.capitalChanges[0].changeDate as unknown)).toBe("string");
+    expect(typeof (serialized.fiscalYears[0].fiscalYearEndDate as unknown)).toBe("string");
+  });
+
+  it("라. §56⑤ 조정 = [12,500,000, 25,000,000, 25,000,000] (Date 입력과 동일)", () => {
+    expect([
+      fb[0].capitalIncreaseAdjustment,
+      fb[1].capitalIncreaseAdjustment,
+      fb[2].capitalIncreaseAdjustment,
+    ]).toEqual([12_500_000, 25_000_000, 25_000_000]);
+  });
+
+  it("바. 환산주식수 = [180,000, 180,000, 180,000] (Date 입력과 동일)", () => {
+    expect([fb[0].convertedShares, fb[1].convertedShares, fb[2].convertedShares]).toEqual([
+      180_000, 180_000, 180_000,
+    ]);
+  });
+
+  it("차. 1주당 순손익가치 ⑤ = 7,150 (Date 입력과 동일)", () => {
+    expect(r.netIncomePerShare).toBe(7_150);
+  });
+});
+
 // ── 할증율 companySize 분기 (법 §63③ 20% / 시행령 §53⑧9호 중소·중견 배제) AC-7 ──
 describe("[AC-7] 최대주주 할증율 companySize 분기", () => {
   const maxBase: UnlistedStockValuationInput = { ...PDF_CASE_1, isMaxShareholder: true };

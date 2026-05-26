@@ -46,6 +46,7 @@ import { calcMaxShareholderPremium } from "./max-shareholder-premium";
 import { resolveEvaluationDelta } from "./evaluation-delta";
 import { evaluateOtherUnlistedHoldings } from "./other-unlisted-holdings";
 import { applyEvaluationCommittee } from "./evaluation-committee-section-54-6";
+import { toOptionalDate } from "@/lib/api/date-coerce";
 
 /**
  * 비상장주식 V2 평가 진입점
@@ -62,13 +63,21 @@ export function evaluateUnlistedStockV2(
   const adjustedIncomes = input.fiscalYears.map((fy) => calcFiscalYearNetIncome(fy));
 
   // STEP 2: 라.유상증자·감자 조정
+  // 방어: sessionStorage/이력 복원 시 날짜가 string으로 도달하면 capital-increase·converted-shares의
+  //       raw Date 비교(`>=`/`>`)가 silent false가 되어 §56⑤ 조정·환산주식수가 0으로 떨어진다
+  //       (CLAUDE.md date-coerce 함정). 하위 모듈 진입 전 toOptionalDate로 Date 정규화한다.
+  //       invalid(미입력 등)는 원본을 유지해 비교에서 안전하게 제외(0)된다.
   const fiscalYearEndDates: [Date, Date, Date] = [
-    input.fiscalYears[0].fiscalYearEndDate,
-    input.fiscalYears[1].fiscalYearEndDate,
-    input.fiscalYears[2].fiscalYearEndDate,
+    toOptionalDate(input.fiscalYears[0].fiscalYearEndDate) ?? input.fiscalYears[0].fiscalYearEndDate,
+    toOptionalDate(input.fiscalYears[1].fiscalYearEndDate) ?? input.fiscalYears[1].fiscalYearEndDate,
+    toOptionalDate(input.fiscalYears[2].fiscalYearEndDate) ?? input.fiscalYears[2].fiscalYearEndDate,
   ];
+  const normalizedCapitalChanges = input.capitalChanges.map((c) => ({
+    ...c,
+    changeDate: toOptionalDate(c.changeDate) ?? c.changeDate,
+  }));
   const capitalAdjustments = calcCapitalIncreaseAdjustment(
-    input.capitalChanges,
+    normalizedCapitalChanges,
     fiscalYearEndDates,
     capRate,
   );
@@ -85,8 +94,8 @@ export function evaluateUnlistedStockV2(
   const conversionResult = calcConvertedShares({
     totalShares: input.totalShares,
     fiscalYearEndDates,
-    evaluationDate: input.evaluationDate,
-    capitalChanges: input.capitalChanges,
+    evaluationDate: toOptionalDate(input.evaluationDate) ?? input.evaluationDate,
+    capitalChanges: normalizedCapitalChanges,
   });
   const convertedShares = conversionResult.convertedShares;
   warnings.push(...conversionResult.warnings);
