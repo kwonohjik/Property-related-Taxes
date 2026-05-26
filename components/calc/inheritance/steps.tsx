@@ -355,10 +355,10 @@ export function Step4({ form, set }: { form: FormState; set: FormSet }) {
         />
 
         <CurrencyInput
-          label="영농상속재산가액 (§23)"
+          label="영농상속재산가액 (§18의3)"
           value={form.farmingAssetValue}
           onChange={(v) => set({ farmingAssetValue: v })}
-          hint="농지·목장·어선 등 — 최대 30억"
+          hint="농지·초지·산림지·어선·어업권·농어업용 건축물·염전 등(시행령 §16⑤) — 최대 30억"
           placeholder="없으면 빈칸"
         />
 

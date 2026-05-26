@@ -64,12 +64,29 @@ describe("resolveFinancialEligibility — EstateItem §22 적격", () => {
     ).toBe(true);
   });
 
+  it("DEP-3: getCategoryDefaultEligibility(deposit) → false (UI 배지 '기본 제외')", () => {
+    expect(getCategoryDefaultEligibility({ category: "deposit" })).toBe(false);
+  });
+
   it("FDR-4: category=financial + 명시 false → false (사용자 override — §22② 차명 등)", () => {
     expect(
       resolveFinancialEligibility(
         asset({ category: "financial", isFinancialAssetForDeduction: false }),
       ),
     ).toBe(false);
+  });
+
+  it("DEP-1: category=deposit, undefined → false (§19① 금융회사 취급 한정 — 전세보증금 반환채권 미열거)", () => {
+    // PR2: 전세보증금 반환채권은 임대인(사인) 채권 → §19① 금융회사 취급 금융재산 미해당
+    expect(resolveFinancialEligibility(asset({ category: "deposit" }))).toBe(false);
+  });
+
+  it("DEP-2: category=deposit + 명시 true → true (사용자 override 보존)", () => {
+    expect(
+      resolveFinancialEligibility(
+        asset({ category: "deposit", isFinancialAssetForDeduction: true }),
+      ),
+    ).toBe(true);
   });
 
   it("FDR-5: deemedCategory=insurance, undefined → true (§19① 보험금)", () => {

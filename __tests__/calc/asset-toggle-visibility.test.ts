@@ -5,7 +5,7 @@
  *   - 8-1 기본 매트릭스: 9 카테고리 × 1 = 9
  *   - 8-2 활성 우선 override: 9
  *   - 8-3 신탁 override: 6
- *   - 8-4 deposit CATEGORY_DEFAULT.deposit=true 활성 우선 자동 발동: 1
+ *   - 8-4 deposit §19① 미열거 → financialDeduction hidden_expandable (PR2 정정): 1
  *   - countHiddenExpandable 헬퍼: 9
  *   - 회귀 보호 (deemedCategory 변경·복합 시나리오): 5
  *   ─ 합계 48
@@ -74,13 +74,13 @@ describe("resolveAssetToggleVisibility — 8-1 기본 매트릭스", () => {
     expect(resolveAssetToggleVisibility(makeItem(category))).toEqual(expected);
   });
 
-  test("deposit 카테고리 — CATEGORY_DEFAULT.deposit=true 활성 우선 발동", () => {
-    // deposit은 resolveFinancialEligibility=true로 활성 우선 정책 발동 → financialDeduction default
-    // 매트릭스의 hidden_expandable이 무력화됨 (회귀 0 보장)
+  test("deposit 카테고리 — §19① 미열거로 financialDeduction hidden_expandable (PR2 정정)", () => {
+    // deposit(전세보증금 반환채권)은 §19① 금융회사 취급 미해당 → resolveFinancialEligibility=false
+    // → 활성 우선 미발동 → 매트릭스 hidden_expandable 유지 (사용자 명시 ON 시에만 default 승격)
     expect(resolveAssetToggleVisibility(makeItem("deposit"))).toEqual({
       farming: "hidden_permanent",
       familyBusiness: "hidden_permanent",
-      financialDeduction: "default", // 활성 우선 무력화
+      financialDeduction: "hidden_expandable",
       deemedRetirementOption: "visible",
     });
   });
@@ -257,8 +257,8 @@ describe("countHiddenExpandable — 펼침 카운트", () => {
     expect(countHiddenExpandable(visibility)).toBe(expected);
   });
 
-  test("deposit 카테고리 → 펼침 카운트 0 (CATEGORY_DEFAULT 활성 우선으로 §22가 default 승격, 나머지 hidden_perm)", () => {
+  test("deposit 카테고리 → 펼침 카운트 1 (PR2: §22 hidden_expandable, farming·familyBusiness hidden_perm)", () => {
     const visibility = resolveAssetToggleVisibility(makeItem("deposit"));
-    expect(countHiddenExpandable(visibility)).toBe(0);
+    expect(countHiddenExpandable(visibility)).toBe(1);
   });
 });

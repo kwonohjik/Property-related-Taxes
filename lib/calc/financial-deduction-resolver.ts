@@ -22,15 +22,17 @@ import type {
 
 /**
  * AssetCategory → §22 금융재산 default true 여부.
- * §19①에 열거된 예금·적금·신탁(금전)·보험금·주식·채권·수익증권·출자지분·어음 등.
- * deposit(전세보증금 반환채권)은 금융회사 예치인 경우만 §22 대상 — 사용자 override로 미세 조정.
+ * §19①에 열거된 예금·적금·신탁(금전)·보험금·공제금·주식·채권·수익증권·출자지분·어음 등.
+ *
+ * deposit(전세보증금 반환채권)은 §19① "금융회사등이 취급" 한정에서 제외 — 임대인(사인)에 대한
+ * 채권으로 금융회사 취급 금융재산이 아니므로 default 미적용(false). 사용자가 명시 ON 한 경우만 포함.
+ * (채무 측 §19④도 동일 — leaseDeposit는 §22 차감 항상 제외. inheritance-gift.types.ts:103)
  */
 const CATEGORY_DEFAULT: Partial<Record<AssetCategory, boolean>> = {
   financial: true,        // 예금·적금·부금·채권·수익증권 등
-  deposit: true,          // 전세보증금 반환채권
   listed_stock: true,     // 상장주식 (§22② 최대주주 보유분 제외는 사용자 override)
   unlisted_stock: true,   // 비상장주식 (§22② 최대주주 보유분 제외는 사용자 override)
-  // cash·real_estate_land·real_estate_building·real_estate_apartment·other → undefined → false
+  // deposit(전세보증금 반환채권)·cash·real_estate_*·other → undefined → false (§19① 미열거)
 };
 
 // ============================================================
