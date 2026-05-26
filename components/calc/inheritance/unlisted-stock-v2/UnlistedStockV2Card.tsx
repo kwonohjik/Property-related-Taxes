@@ -234,6 +234,8 @@ export function UnlistedStockV2Card({
       <CorporateInfoSection
         corpName={input.corpName}
         representative={input.representative}
+        businessRegistrationNumber={input.businessRegistrationNumber}
+        capital={input.capital}
         businessStartDate={input.businessStartDate}
         evaluationDate={input.evaluationDate}
         faceValuePerShare={input.faceValuePerShare}

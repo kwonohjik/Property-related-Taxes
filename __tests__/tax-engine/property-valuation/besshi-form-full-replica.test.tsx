@@ -17,7 +17,10 @@
 import { describe, it, expect, afterEach } from "vitest";
 import { render, screen, fireEvent, cleanup } from "@testing-library/react";
 import { BesshiForm4Buppyo3PrintView } from "@/components/calc/inheritance/unlisted-stock-v2/BesshiForm4Buppyo3PrintView";
-import type { UnlistedStockValuationInput } from "@/lib/tax-engine/types/unlisted-stock-valuation.types";
+import type {
+  UnlistedStockValuationInput,
+  UnlistedNetAssetOnlyReason,
+} from "@/lib/tax-engine/types/unlisted-stock-valuation.types";
 
 afterEach(() => cleanup());
 
@@ -323,5 +326,55 @@ describe("[F-10] print:break-before-page 4곳", () => {
     expand();
     const breakNodes = container.querySelectorAll('[class*="break-before-page"]');
     expect(breakNodes.length).toBe(4);
+  });
+});
+
+// ============================================================
+// AC-6: 제1쪽 2번 §54④ 6행 체크박스 (2025.07.10 양식)
+// ============================================================
+
+describe("[AC-6] 제1쪽 2번 순자산만평가 6행 체크박스", () => {
+  const reasons: [UnlistedNetAssetOnlyReason, string][] = [
+    ["liquidation", "가"],
+    ["lt3y", "나"],
+    ["real_estate_80", "라"],
+    ["stock_holding_80", "마"],
+    ["remaining_3y", "바"],
+  ];
+
+  it.each(reasons)("%s 선택 → %s행 [v]", (reason, code) => {
+    render(<BesshiForm4Buppyo3PrintView input={{ ...case6Input, netAssetOnlyReason: reason }} />);
+    expand();
+    expect(screen.getByTestId(`p1-2-${code}`)).toHaveTextContent("[v]");
+  });
+
+  it("다(2018.2.13. 삭제)행은 항상 '—'", () => {
+    render(<BesshiForm4Buppyo3PrintView input={case6Input} />);
+    expand();
+    expect(screen.getByTestId("p1-2-다")).toHaveTextContent("—");
+  });
+
+  it("사유 미선택(undefined)에도 6행 상시 표시 — 활성행 [ ]", () => {
+    render(<BesshiForm4Buppyo3PrintView input={case6Input} />);
+    expand();
+    expect(screen.getByTestId("p1-2-가")).toHaveTextContent("[ ]");
+    expect(screen.getByTestId("p1-2-바")).toHaveTextContent("[ ]");
+  });
+});
+
+// ============================================================
+// AC-9: 제1쪽 1번 사업자등록번호·자본금 (C-9)
+// ============================================================
+
+describe("[AC-9] 제1쪽 1번 사업자번호·자본금 표시", () => {
+  it("입력값 표시", () => {
+    render(
+      <BesshiForm4Buppyo3PrintView
+        input={{ ...case6Input, businessRegistrationNumber: "123-45-67890", capital: 250_000_000 }}
+      />,
+    );
+    expand();
+    expect(screen.getByTestId("p1-①")).toHaveTextContent("250,000,000"); // 자본금 (① 행)
+    expect(screen.getByText("123-45-67890")).toBeTruthy();
   });
 });

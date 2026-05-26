@@ -129,4 +129,59 @@ describe("[PDF-1] 정식평가 통합 — 교재 사례 1 순손익가치 재현
   it("차. 1주당 순손익가치 ⑤ = 715 / 0.1 = 7,150", () => {
     expect(r.netIncomePerShare).toBe(7_150);
   });
+
+  // ── 2025.07.10 양식 21항목 echo (G-3 / AC-4·AC-5) ──
+  it("[AC-4] 2021 사업연도 ②~㉒ echo 입력값 일치", () => {
+    expect(fb[0].addRefundInterest).toBe(1_000_000);   // ②
+    expect(fb[0].subEntertainmentExcess).toBe(6_000_000); // ⑯
+    expect(fb[0].subDonationExcess).toBe(3_800_000);   // ⑮
+    expect(fb[0].subWithholdingPenalty).toBe(500_000); // ⑬
+    expect(fb[0].subInterestPayment).toBe(3_000_000);  // ⑲
+    expect(fb[0].subCorporateTax).toBe(7_000_000);     // ⑧
+    expect(fb[0].subAdditionalTaxes).toBe(700_000);    // ⑨
+    expect(fb[0].subForexValuationLoss).toBeUndefined(); // ㉑ 미입력
+    expect(fb[1].addRefundInterest).toBeUndefined();     // 2020 미입력
+  });
+
+  it("[AC-5] addTotal = Σ가산(②~⑦), subTotal = Σ차감(⑧~㉒) 자기일관", () => {
+    const add =
+      (fb[0].addRefundInterest ?? 0) + (fb[0].addLossFromDividend ?? 0) +
+      (fb[0].addCarriedDonation ?? 0) + (fb[0].addCarriedCarPayment ?? 0) +
+      (fb[0].addForexValuationGain ?? 0) + (fb[0].addOtherByOrdinance ?? 0);
+    expect(add).toBe(fb[0].addTotal);
+    expect(fb[0].addTotal).toBe(1_000_000);
+
+    const sub =
+      (fb[0].subCorporateTax ?? 0) + (fb[0].subAdditionalTaxes ?? 0) +
+      (fb[0].subFines ?? 0) + (fb[0].subCompulsoryPublicCharges ?? 0) +
+      (fb[0].subPunitiveDamages ?? 0) + (fb[0].subWithholdingPenalty ?? 0) +
+      (fb[0].subExcessiveExpenses ?? 0) + (fb[0].subDonationExcess ?? 0) +
+      (fb[0].subEntertainmentExcess ?? 0) + (fb[0].subNonBusinessExpenses ?? 0) +
+      (fb[0].subNonBusinessCarExpenses ?? 0) + (fb[0].subInterestPayment ?? 0) +
+      (fb[0].subDepreciationShortage ?? 0) + (fb[0].subForexValuationLoss ?? 0) +
+      (fb[0].subOtherByOrdinance ?? 0);
+    expect(sub).toBe(fb[0].subTotal);
+    expect(fb[0].subTotal).toBe(21_000_000);
+  });
+});
+
+// ── 할증율 companySize 분기 (법 §63③ 20% / 시행령 §53⑧9호 중소·중견 배제) AC-7 ──
+describe("[AC-7] 최대주주 할증율 companySize 분기", () => {
+  const maxBase: UnlistedStockValuationInput = { ...PDF_CASE_1, isMaxShareholder: true };
+
+  it("large → premiumRate 0.20 (법 §63③)", () => {
+    expect(evaluateUnlistedStockV2({ ...maxBase, companySize: "large" }).premiumRate).toBe(0.2);
+  });
+
+  it("small(중소기업) → premiumRate 0 (§53⑧9호 배제)", () => {
+    expect(evaluateUnlistedStockV2({ ...maxBase, companySize: "small" }).premiumRate).toBe(0);
+  });
+
+  it("medium(중견기업) → premiumRate 0 (§53⑦·§53⑧9호 배제)", () => {
+    expect(evaluateUnlistedStockV2({ ...maxBase, companySize: "medium" }).premiumRate).toBe(0);
+  });
+
+  it("비최대주주 → premiumRate 0", () => {
+    expect(evaluateUnlistedStockV2({ ...PDF_CASE_1, isMaxShareholder: false, companySize: "large" }).premiumRate).toBe(0);
+  });
 });

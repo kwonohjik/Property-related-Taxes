@@ -56,11 +56,16 @@ export interface BreakdownRowProps {
   values: number[];
   emphasized?: boolean;
   unit?: string;
+  testid?: string;
 }
 
-export function BreakdownRow({ label, values, emphasized, unit = "원" }: BreakdownRowProps) {
+export function BreakdownRow({ label, values, emphasized, unit = "원", testid }: BreakdownRowProps) {
   return (
-    <tr className={emphasized ? "bg-yellow-50 font-bold print:bg-yellow-50" : ""}>
+    <tr
+      className={emphasized ? "bg-yellow-50 font-bold print:bg-yellow-50" : ""}
+      data-testid={testid}
+      data-besshi-cell={testid}
+    >
       <td className="border border-black p-1">{label}</td>
       {values.map((v, i) => (
         <td key={i} className="border border-black p-1 text-right font-mono">

@@ -126,6 +126,10 @@ export interface UnlistedStockValuationInput {
   // === 1쪽: 평가대상 비상장법인 ===
   corpName: string;
   representative?: string;
+  /** 사업자등록번호 (제1쪽 1번 — 표시 전용, 계산 무관) */
+  businessRegistrationNumber?: string;
+  /** 자본금 (제1쪽 1번 — 표시 전용, 계산 무관) */
+  capital?: number;
   businessStartDate: Date;
   evaluationDate: Date;                  // 평가기준일 (상속개시일 or 증여일)
   faceValuePerShare: number;             // 1주당 액면가액
@@ -200,6 +204,29 @@ export interface FiscalYearBreakdown {
   finalNetIncome: number;            // 마. 최종 순손익액 (다 ± 라)
   convertedShares: number;           // 바. 환산주식수 (§17의3⑤)
   perShareNetIncome: number;         // 사. 1주당 순손익액 = 마 / 바
+
+  // ── 별지 6쪽 ②~㉒ echo (optional — 2025.07.10 양식 21행 표시용, 산식 무관) ──
+  addRefundInterest?: number;          // ②
+  addLossFromDividend?: number;        // ③
+  addCarriedDonation?: number;         // ④
+  addCarriedCarPayment?: number;       // ⑤
+  addForexValuationGain?: number;      // ⑥
+  addOtherByOrdinance?: number;        // ⑦
+  subCorporateTax?: number;            // ⑧
+  subAdditionalTaxes?: number;         // ⑨
+  subFines?: number;                   // ⑩
+  subCompulsoryPublicCharges?: number; // ⑪
+  subPunitiveDamages?: number;         // ⑫
+  subWithholdingPenalty?: number;      // ⑬
+  subExcessiveExpenses?: number;       // ⑭
+  subDonationExcess?: number;          // ⑮
+  subEntertainmentExcess?: number;     // ⑯ 기업업무추진비
+  subNonBusinessExpenses?: number;     // ⑰
+  subNonBusinessCarExpenses?: number;  // ⑱
+  subInterestPayment?: number;         // ⑲
+  subDepreciationShortage?: number;    // ⑳
+  subForexValuationLoss?: number;      // ㉑
+  subOtherByOrdinance?: number;        // ㉒
 }
 
 /** 영업권 평가 결과 (별지 5쪽) */

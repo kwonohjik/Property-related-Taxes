@@ -7,7 +7,7 @@
  *
  * 산식:
  *   자산총액 (가) = ① + ② + ③ + ④ + ⑤ − ⑥ − ⑦ → ⑧ 소계
- *   부채총액 (나) = ⑨ + ⑩ + ⑪ + ⑫ + ⑬ + ⑭ + ⑮ − ⑯ − ⑰ + ⑱ → ⑲ 소계
+ *   부채총액 (나) = ⑨ + ⑩ + ⑪ + ⑫ + ⑬ + ⑭ + ⑮ − ⑯ − ⑰ − ⑱ → ⑲ 소계  (2025.07.10 양식)
  *   영업권 포함 전 순자산가액 (다) = ⑧ − ⑲ (0 이하 시 0)
  *
  * Plan: docs/00-pm/inheritance-unlisted-stock-valuation-besshi-4-buppyo-3.plan.md
@@ -71,7 +71,7 @@ const LIABILITY_ROWS: LiabilityRow[] = [
   { key: "otherProvision", label: "기타 (충당금 중 평가기준일 현재 비용으로 확정된 것)", cellNum: "⑮", sign: "+", description: "§17의2 4호 단서 가 — 모든 법인 적용 (보험법인 한정 아님)" },
   { key: "reserveExcluded", label: "제준비금", cellNum: "⑯", sign: "−", description: "§17의2 4호 본문 — 부채 차감" },
   { key: "allowanceExcluded", label: "제충당금", cellNum: "⑰", sign: "−", description: "§17의2 4호 본문 — 부채 차감" },
-  { key: "deferredTaxAdjustment", label: "이연법인세대 등", cellNum: "⑱", sign: "+" },
+  { key: "deferredTaxAdjustment", label: "이연법인세대 등", cellNum: "⑱", sign: "−" },
 ];
 
 export interface NetAssetCalculationTableProps {
@@ -129,7 +129,7 @@ export function NetAssetCalculationTable({
       netAssetValueRaw.retirementProvision +
       netAssetValueRaw.otherProvision -
       netAssetValueRaw.reserveExcluded -
-      netAssetValueRaw.allowanceExcluded +
+      netAssetValueRaw.allowanceExcluded -
       netAssetValueRaw.deferredTaxAdjustment +
       (netAssetValueRaw.insuranceReservePolicy ?? 0) +
       (netAssetValueRaw.insuranceExtraordinaryReserve ?? 0) +

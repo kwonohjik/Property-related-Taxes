@@ -106,7 +106,7 @@ export function BesshiForm4Buppyo3PrintView({ input }: BesshiForm4Buppyo3PrintVi
         >
           <h1 className="text-center text-base font-bold mb-4">비상장주식 등 평가서</h1>
           <p className="text-right text-[10px] mb-2">
-            평가심의위원회 운영규정 별지 제4호 서식 부표3 (2021.3.4. 개정)
+            평가심의위원회 운영 규정 별지 제4호 서식 부표3 (2025.07.10. 개정)
           </p>
 
           {/* 제1쪽 */}

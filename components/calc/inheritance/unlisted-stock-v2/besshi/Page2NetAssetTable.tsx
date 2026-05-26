@@ -64,7 +64,7 @@ export function Page2NetAssetTable({ raw, netAssetTotal, goodwillFinal }: Page2N
     { cellNum: "⑫", label: "지방소득세", amount: raw.localIncomeTax, testid: "p2-⑫" },
     { cellNum: "⑬", label: "배당금·상여금", amount: raw.dividendPayable, testid: "p2-⑬" },
     { cellNum: "⑭", label: "퇴직급여추계액", amount: raw.retirementProvision, testid: "p2-⑭" },
-    { cellNum: "⑮", label: "기타충당금", amount: raw.otherProvision, isSubtract: true, testid: "p2-⑮" },
+    { cellNum: "⑮", label: "기타(충당금 중 평가기준일 현재 비용으로 확정된 것)", amount: raw.otherProvision, testid: "p2-⑮" },
     { cellNum: "⑯", label: "제준비금", amount: raw.reserveExcluded, isSubtract: true, testid: "p2-⑯" },
     { cellNum: "⑰", label: "제충당금", amount: raw.allowanceExcluded, isSubtract: true, testid: "p2-⑰" },
     { cellNum: "⑱", label: "기타(이연법인세대 등)", amount: raw.deferredTaxAdjustment, isSubtract: true, testid: "p2-⑱" },
@@ -76,7 +76,7 @@ export function Page2NetAssetTable({ raw, netAssetTotal, goodwillFinal }: Page2N
     raw.farmingSurtax +
     raw.localIncomeTax +
     raw.dividendPayable +
-    raw.retirementProvision -
+    raw.retirementProvision +
     raw.otherProvision -
     raw.reserveExcluded -
     raw.allowanceExcluded -
@@ -146,7 +146,7 @@ export function Page2NetAssetTable({ raw, netAssetTotal, goodwillFinal }: Page2N
           ))}
           <tr className="bg-yellow-50 font-bold print:bg-yellow-50" data-besshi-cell="p2-⑲" data-testid="p2-⑲">
             <td className="border border-black p-1 text-center font-mono">⑲</td>
-            <td className="border border-black p-1">소계 (⑨+⑩+⑪+⑫+⑬+⑭−⑮−⑯−⑰−⑱)</td>
+            <td className="border border-black p-1">소계 (⑨+⑩+⑪+⑫+⑬+⑭+⑮−⑯−⑰−⑱)</td>
             <td className="border border-black p-1"></td>
             <td className="border border-black p-1 text-right font-mono">{fmt(liabilitySubtotal)}</td>
           </tr>

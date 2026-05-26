@@ -83,6 +83,8 @@ const COMPANY_SIZE_OPTIONS: RadioCardOption<"small" | "medium" | "large">[] = [
 export interface CorporateInfoSectionProps {
   corpName: string;
   representative?: string;
+  businessRegistrationNumber?: string;
+  capital?: number;
   businessStartDate?: Date;
   evaluationDate?: Date;
   faceValuePerShare: number;
@@ -96,6 +98,8 @@ export interface CorporateInfoSectionProps {
   onChange: (patch: {
     corpName?: string;
     representative?: string;
+    businessRegistrationNumber?: string;
+    capital?: number;
     businessStartDate?: Date | undefined;
     evaluationDate?: Date | undefined;
     faceValuePerShare?: number;
@@ -112,6 +116,8 @@ export interface CorporateInfoSectionProps {
 export function CorporateInfoSection({
   corpName,
   representative,
+  businessRegistrationNumber,
+  capital,
   businessStartDate,
   evaluationDate,
   faceValuePerShare,
@@ -140,6 +146,16 @@ export function CorporateInfoSection({
             placeholder="법인명 입력"
             className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-900"
             data-testid="unlisted-v2-corp-name"
+          />
+        </FieldCard>
+        <FieldCard label="사업자등록번호" hint="000-00-00000 (선택)">
+          <input
+            type="text"
+            value={businessRegistrationNumber ?? ""}
+            onChange={(e) => onChange({ businessRegistrationNumber: e.target.value })}
+            placeholder="사업자등록번호 (선택)"
+            className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-900"
+            data-testid="unlisted-v2-biz-reg-no"
           />
         </FieldCard>
         <FieldCard label="대표자">
@@ -178,6 +194,15 @@ export function CorporateInfoSection({
             value={String(totalShares || "")}
             onChange={(v) => onChange({ totalShares: Number(v.replace(/,/g, "")) || 0 })}
             placeholder="발행주식총수"
+            hideUnit
+          />
+        </FieldCard>
+        <FieldCard label="자본금" unit="원" hint="제1쪽 1번 (선택)">
+          <CurrencyInput
+            label="자본금"
+            value={String(capital || "")}
+            onChange={(v) => onChange({ capital: Number(v.replace(/,/g, "")) || 0 })}
+            placeholder="자본금"
             hideUnit
           />
         </FieldCard>

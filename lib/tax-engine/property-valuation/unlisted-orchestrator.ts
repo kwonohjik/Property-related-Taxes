@@ -284,9 +284,10 @@ function buildBreakdown(
   convertedShares: number,
   perShareNetIncome: number,
 ): FiscalYearBreakdown {
+  const fy = input.fiscalYears[idx];
   return {
-    label: input.fiscalYears[idx].fiscalYearLabel,
-    taxableIncome: input.fiscalYears[idx].taxableIncome,
+    label: fy.fiscalYearLabel,
+    taxableIncome: fy.taxableIncome,
     addTotal: adjusted.addTotal,
     subTotal: adjusted.subTotal,
     adjustedNetIncome: adjusted.adjustedNetIncome,
@@ -294,5 +295,27 @@ function buildBreakdown(
     finalNetIncome,
     convertedShares,
     perShareNetIncome,
+    // 별지 6쪽 ②~㉒ echo (산식 무관 — 표시용 pass-through)
+    addRefundInterest: fy.addRefundInterest,
+    addLossFromDividend: fy.addLossFromDividend,
+    addCarriedDonation: fy.addCarriedDonation,
+    addCarriedCarPayment: fy.addCarriedCarPayment,
+    addForexValuationGain: fy.addForexValuationGain,
+    addOtherByOrdinance: fy.addOtherByOrdinance,
+    subCorporateTax: fy.subCorporateTax,
+    subAdditionalTaxes: fy.subAdditionalTaxes,
+    subFines: fy.subFines,
+    subCompulsoryPublicCharges: fy.subCompulsoryPublicCharges,
+    subPunitiveDamages: fy.subPunitiveDamages,
+    subWithholdingPenalty: fy.subWithholdingPenalty,
+    subExcessiveExpenses: fy.subExcessiveExpenses,
+    subDonationExcess: fy.subDonationExcess,
+    subEntertainmentExcess: fy.subEntertainmentExcess,
+    subNonBusinessExpenses: fy.subNonBusinessExpenses,
+    subNonBusinessCarExpenses: fy.subNonBusinessCarExpenses,
+    subInterestPayment: fy.subInterestPayment,
+    subDepreciationShortage: fy.subDepreciationShortage,
+    subForexValuationLoss: fy.subForexValuationLoss,
+    subOtherByOrdinance: fy.subOtherByOrdinance,
   };
 }

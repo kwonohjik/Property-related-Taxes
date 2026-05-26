@@ -36,8 +36,8 @@ export interface Page5GoodwillTableProps {
 // §55③ 자동배제 4종 — Record 타입 강제 (memory `enum-verification-before-mapping`)
 const excludedReasonLabel: Record<NonNullable<UnlistedGoodwillResult["excludedByLaw"]>, string> = {
   liquidation: "§55③ 1호 — 청산절차 진행 → 영업권 가산 없음",
-  real_estate_80: "§55③ 2호 본문 — 부동산 80% 이상 → 영업권 가산 없음",
-  lt3y: "§55③ 2호 단서 — 사업개시 3년 미만·휴·폐업",
+  real_estate_80: "§55③ 1호 — 부동산 80%(§54④3호) → 영업권 가산 없음",
+  lt3y: "§55③ 2호 — 사업개시 3년 미만·휴·폐업(§54④2호)",
   continuous_loss_3y: "§55③ 3호 — 직전 3년 계속 결손 → 영업권 자동 0",
 };
 

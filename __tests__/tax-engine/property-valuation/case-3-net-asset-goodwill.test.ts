@@ -221,3 +221,53 @@ describe("[U-8 회귀] §55① 후단 — 부채 > 자산 시 순자산 0", () =
     expect(result.zeroFloorApplied).toBe(true);
   });
 });
+
+// ============================================================
+// 2025.07.10 개정본 재현 — ⑮·⑱ 부호 anchor (계획 G-1·G-2 / AC-1·AC-2)
+//   양식 ⑲소계 = (⑨+⑩+⑪+⑫+⑬+⑭+⑮) − ⑯ − ⑰ − ⑱
+//   ⑮ otherProvision: 부채 가산 (§17의2 4호 단서 가)
+//   ⑱ deferredTaxAdjustment: 부채 차감 (양식 ⑲소계 −⑱, §17의2 본칙 미명시)
+// ============================================================
+
+const ZERO_NET_ASSET: Omit<UnlistedNetAssetCalculation, "bsTotalAssets" | "otherProvision" | "deferredTaxAdjustment"> = {
+  assetValuationDelta: 0,
+  corpTaxReservedAmount: 0,
+  paidInCapitalIncrease: 0,
+  otherEarnedRights: 0,
+  prepaidExpenses: 0,
+  preGiftRetainedEarnings: 0,
+  bsTotalLiabilities: 0,
+  corporateTaxPayable: 0,
+  farmingSurtax: 0,
+  localIncomeTax: 0,
+  dividendPayable: 0,
+  retirementProvision: 0,
+  reserveExcluded: 0,
+  allowanceExcluded: 0,
+};
+
+describe("[AC-1] ⑱ 이연법인세대 = 부채 차감 (양식 ⑲소계 −⑱)", () => {
+  it("⑱ 10,000,000 → 부채소계 −10,000,000 (차감)", () => {
+    const result = calcNetAssetTotal({
+      ...ZERO_NET_ASSET,
+      bsTotalAssets: 100_000_000,
+      otherProvision: 0,
+      deferredTaxAdjustment: 10_000_000, // ⑱
+    });
+    expect(result.totalLiabilities).toBe(-10_000_000); // 차감
+    expect(result.netAssetBeforeGoodwill).toBe(110_000_000); // 100,000,000 − (−10,000,000)
+  });
+});
+
+describe("[AC-2] ⑮ 충당금 확정분 = 부채 가산 (§17의2 4호 단서 가)", () => {
+  it("⑮ 5,000,000 → 부채소계 +5,000,000 (가산)", () => {
+    const result = calcNetAssetTotal({
+      ...ZERO_NET_ASSET,
+      bsTotalAssets: 100_000_000,
+      otherProvision: 5_000_000, // ⑮
+      deferredTaxAdjustment: 0,
+    });
+    expect(result.totalLiabilities).toBe(5_000_000); // 가산
+    expect(result.netAssetBeforeGoodwill).toBe(95_000_000);
+  });
+});

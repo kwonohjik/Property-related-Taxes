@@ -14,7 +14,7 @@
  *
  * 별지 부표3 2~3쪽 산식:
  *   자산총액 가 = ① + ② + ③ + ④ + ⑤ − ⑥ − ⑦
- *   부채총액 나 = ⑨ + ⑩ + ⑪ + ⑫ + ⑬ + ⑭ + ⑮ − ⑯ − ⑰ + ⑱
+ *   부채총액 나 = ⑨ + ⑩ + ⑪ + ⑫ + ⑬ + ⑭ + ⑮ − ⑯ − ⑰ − ⑱  (2025.07.10 양식 ⑲소계 −⑱)
  *   영업권 포함 전 순자산가액 다 = 가 − 나
  *
  * Plan: docs/00-pm/inheritance-unlisted-stock-valuation-besshi-4-buppyo-3.plan.md
@@ -61,7 +61,7 @@ export function calcNetAssetTotal(
   // §17의2 3호 (부채 가산): ⑩~⑭ 법인세·농특세·지방세·배당금·퇴직급여추계
   // §17의2 3호 가 추가: ⑮ 기타 충당금 중 비용 확정분 (단서 가)
   // §17의2 4호 본문 (부채 차감): ⑯ 제준비금 + ⑰ 제충당금
-  // ⑱ deferredTaxAdjustment: 기타 (이연법인세대 등) — 가산
+  // ⑱ deferredTaxAdjustment: 기타 (이연법인세대 등) — 차감 (2025.07.10 양식 ⑲소계 −⑱; §17의2 본칙 미명시·양식 단일근거)
   // 보험사업 단서 (§17의2 4호 나·다): F-11 후속, 가산 처리
   const totalLiabilities =
     input.bsTotalLiabilities +
@@ -72,7 +72,7 @@ export function calcNetAssetTotal(
     input.retirementProvision +
     input.otherProvision -
     input.reserveExcluded -
-    input.allowanceExcluded +
+    input.allowanceExcluded -
     input.deferredTaxAdjustment +
     (input.insuranceReservePolicy ?? 0) +
     (input.insuranceExtraordinaryReserve ?? 0) +
