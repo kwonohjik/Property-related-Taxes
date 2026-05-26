@@ -17,6 +17,7 @@
 
 import { differenceInCalendarMonths } from "date-fns";
 import { safeMultiplyThenDivide } from "@/lib/tax-engine/tax-utils";
+import type { FiscalYearAdjustment } from "@/lib/tax-engine/types/unlisted-stock-valuation.types";
 
 /**
  * 사업연도 개월수.
@@ -55,4 +56,31 @@ export function annualizePerShareNetIncome(
   const months = fiscalYearMonths(startDate, endDate);
   if (months >= 12 || months <= 0) return perShare;
   return safeMultiplyThenDivide(perShare, 12, months);
+}
+
+/**
+ * 평가기준일 연도(Y) 기준 직전 3개 사업연도 기본값 생성 (12월 결산 가정).
+ *
+ * 슬롯 [0] = 1년전(×3): label=(Y-1), start=(Y-1)-01-01, end=(Y-1)-12-31
+ * 슬롯 [1] = 2년전(×2): label=(Y-2), start=(Y-2)-01-01, end=(Y-2)-12-31
+ * 슬롯 [2] = 3년전(×1): label=(Y-3), start=(Y-3)-01-01, end=(Y-3)-12-31
+ *
+ * 비12월 결산법인은 사용자가 종료일·개시일을 직접 수정해 대응.
+ * 개시일을 채워두면 fiscalYearMonths=12 → isShortYear=false → §17의3② 연환산 미적용(정상).
+ *
+ * @pure 순수 함수 — 테스트 용이
+ */
+export function buildDefaultFiscalYears(
+  evaluationYear: number,
+): [FiscalYearAdjustment, FiscalYearAdjustment, FiscalYearAdjustment] {
+  function slot(yearsAgo: number): FiscalYearAdjustment {
+    const y = evaluationYear - yearsAgo;
+    return {
+      fiscalYearLabel: String(y),
+      fiscalYearStartDate: new Date(y, 0, 1),   // (Y-n)-01-01
+      fiscalYearEndDate: new Date(y, 11, 31),   // (Y-n)-12-31
+      taxableIncome: 0,
+    };
+  }
+  return [slot(1), slot(2), slot(3)];
 }

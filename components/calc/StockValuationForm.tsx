@@ -25,6 +25,7 @@ import {
   UnlistedStockV2Card,
   createDefaultUnlistedStockV2,
 } from "@/components/calc/inheritance/unlisted-stock-v2/UnlistedStockV2Card";
+import { buildDefaultFiscalYears } from "@/lib/tax-engine/property-valuation/fiscal-year-annualize";
 
 /**
  * 주식 자산 효과 평가액 — 상장: 평균가×주식수, 비상장: 선택 모드에 따라 간편/정식 평가.
@@ -311,12 +312,16 @@ function UnlistedStockCard({
   const handleModeChange = (newMode: "simple" | "formal") => {
     if (newMode === "formal" && !item.unlistedStockValuationV2) {
       // 정식 모드 최초 선택 → V2 초기값 생성 (C-3)
-      // valuationDate(상속개시일/증여일)가 있으면 evaluationDate 기본값으로 주입 (mirror-pattern: useEffect 금지)
+      // valuationDate(상속개시일/증여일)가 있으면 evaluationDate + fiscalYears 기본값으로 주입
+      // (mirror-pattern: useEffect 금지 — 이벤트 핸들러 1회 주입)
       const defaultV2 = createDefaultUnlistedStockV2();
       if (valuationDate) {
         const vd = new Date(valuationDate);
         if (!isNaN(vd.getTime())) {
           defaultV2.evaluationDate = vd;
+          // 평가기준일 연도(Y) 기준 직전 3 사업연도 자동 주입 (12월 결산 가정)
+          // 사용자 이후 수정은 FiscalYearAdjustmentTable onChange로 보존
+          defaultV2.fiscalYears = buildDefaultFiscalYears(vd.getFullYear());
         }
       }
       onUpdate({
