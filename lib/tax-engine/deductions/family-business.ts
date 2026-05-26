@@ -28,6 +28,7 @@ import {
   FAMILY_BUSINESS_OTHER_ESTATE_RATIO,
   FAMILY_BUSINESS_SCALE_THRESHOLD,
 } from "../types/inheritance-gift.types";
+import { calcCorporateStockAdjustedValue } from "../property-valuation-corporate";
 
 /**
  * 영위 연수별 한도 (상증법 §18의2① 각 호).
@@ -114,14 +115,32 @@ export function evaluateFamilyBusinessEligibility(
 /**
  * EstateItem.familyBusinessCategory 자동 합산 (상증령 §15⑤).
  *
- * 사업무관자산 차감(§15⑤2호 가~마)은 본 PR 자동 계산 안 함.
- * 사용자가 EstateItem.marketValue에 차감 후 가액 직접 입력. (FB-8 후속 PR로 자동화 예정)
+ * §15⑤2호 사업무관자산 차감 (PR4): familyBusinessCategory==="corporate_stock" +
+ *   corporateTotalAssets 입력 시 `calcCorporateStockAdjustedValue`로 차감
+ *   (주식가액 × (총자산 − 사업무관자산) / 총자산). single-source — suggest와 동일 산식.
+ * corporateTotalAssets 미입력 = 직접입력 모드(marketValue에 차감 후 가액). 이중차감 가드:
+ *   동일 입력에 차감 2회 적용 불가 (corporateTotalAssets 입력 여부로 모드 분기).
+ * (raw 평가액은 marketValue 기준 — getValuatedAmount 우선순위 통일은 별도 트랙.)
  */
 export function deriveFamilyBusinessValue(estateItems: EstateItem[] | undefined): number {
   if (!estateItems) return 0;
   return estateItems
     .filter((item) => item.familyBusinessCategory !== undefined)
-    .reduce((sum, item) => sum + (item.marketValue ?? 0), 0);
+    .reduce((sum, item) => {
+      const raw = item.marketValue ?? 0;
+      // §15⑤2호 — 법인주식 + 총자산 입력 시 사업무관자산 차감
+      if (item.familyBusinessCategory === "corporate_stock" && item.corporateTotalAssets) {
+        return (
+          sum +
+          calcCorporateStockAdjustedValue(
+            raw,
+            item.corporateTotalAssets,
+            item.corporateNonBusinessAssets,
+          ).adjustedValue
+        );
+      }
+      return sum + raw;
+    }, 0);
 }
 
 /**

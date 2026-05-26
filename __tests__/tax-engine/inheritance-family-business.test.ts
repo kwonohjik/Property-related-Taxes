@@ -299,6 +299,73 @@ describe("FB-AUTO — EstateItem 자동 합산", () => {
     expect(deriveFamilyBusinessValue(undefined)).toBe(0);
   });
 
+  it("[FB15-1] corporate_stock + corporateTotalAssets 입력 → §15⑤2호 차감 (PR4)", () => {
+    // 법인주식 10억, 총자산 20억, 사업무관자산 합 5억 → floor(10억 × (20억−5억)/20억) = 7.5억
+    const estateItems: EstateItem[] = [
+      {
+        id: "1",
+        category: "unlisted_stock",
+        name: "법인주식",
+        marketValue: 1_000_000_000,
+        familyBusinessCategory: "corporate_stock",
+        corporateTotalAssets: 2_000_000_000,
+        corporateNonBusinessAssets: {
+          nonBusinessLand: 200_000_000,
+          rentedRealEstate: 100_000_000,
+          externalLoans: 50_000_000,
+          excessCash: 100_000_000,
+          nonOperatingFinancial: 50_000_000,
+        },
+      },
+    ];
+    // floor(1,000,000,000 × (2,000,000,000 − 500,000,000) / 2,000,000,000) = 750,000,000
+    expect(deriveFamilyBusinessValue(estateItems)).toBe(750_000_000);
+  });
+
+  it("[FB15-2 회귀] corporateTotalAssets 미입력 → marketValue 그대로 (직접입력 모드)", () => {
+    const estateItems: EstateItem[] = [
+      {
+        id: "1",
+        category: "unlisted_stock",
+        name: "법인주식(차감 후 직접입력)",
+        marketValue: 750_000_000,
+        familyBusinessCategory: "corporate_stock",
+        // corporateTotalAssets 미입력 → 차감 안 함
+      },
+    ];
+    expect(deriveFamilyBusinessValue(estateItems)).toBe(750_000_000);
+  });
+
+  it("[FB15-5] 혼합 — 법인주식(차감) + 개인사업자산(비차감) 합산", () => {
+    const estateItems: EstateItem[] = [
+      {
+        id: "1",
+        category: "real_estate_building",
+        name: "공장",
+        marketValue: 10_000_000_000,
+        familyBusinessCategory: "business_real_estate",
+        // 개인사업 자산 — corporate_stock 아님 → 차감 무관
+      },
+      {
+        id: "2",
+        category: "unlisted_stock",
+        name: "법인주식",
+        marketValue: 1_000_000_000,
+        familyBusinessCategory: "corporate_stock",
+        corporateTotalAssets: 2_000_000_000,
+        corporateNonBusinessAssets: {
+          nonBusinessLand: 500_000_000,
+          rentedRealEstate: 0,
+          externalLoans: 0,
+          excessCash: 0,
+          nonOperatingFinancial: 0,
+        },
+      },
+    ];
+    // 공장 100억(비차감) + 법인주식 floor(10억×(20억−5억)/20억)=7.5억 = 107.5억
+    expect(deriveFamilyBusinessValue(estateItems)).toBe(10_750_000_000);
+  });
+
   it("FB-AUTO-3: Phase B에서 manual override 우선, manual 없으면 auto 사용", () => {
     const fb = buildPassingFB({ operatingYears: 15 });
     const items: EstateItem[] = [
