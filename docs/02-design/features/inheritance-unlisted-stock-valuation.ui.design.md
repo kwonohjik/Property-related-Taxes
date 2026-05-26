@@ -51,16 +51,17 @@ UI senior가 본 디자인 기반 구현 시 다음 정책 메모리 사전 적�
 ```
 UnlistedStockValuationStep.tsx                       # 마법사 단계 진입점
 ├── CorporateInfoSection.tsx                          # 1쪽 1·2.평가대상 + 순자산 단독 사유
-│   ├── FieldCard(법인명·대표자·사업개시일·평가기준일·발행주식총수·액면가·자본금)
+│   ├── FieldCard(법인명·대표자·사업개시일·평가기준일·액면가·발행주식총수·자본금)
+│   ├── CapitalChangeTable.tsx (임베드)               # 자본금 변동 — 발행주식총수·자본금 바로 아래 (sectionNum 미전달 → 번호 badge 없음)
+│   │   ├── 행 추가/삭제 Dialog 확인 (window.confirm 금지)
+│   │   └── 행: changeDate(DateInput) + changeType(Select) + sharesIssued(CurrencyInput) + pricePerShare(CurrencyInput, optional)
+│   ├── FieldCard(보유 주식수)
 │   ├── ToggleCard(부동산과다보유법인 §54① 본문 괄호)
 │   └── RadioCardGroup(§54④ 순자산 단독 5사유, 3-state optional)
 ├── FiscalYearAdjustmentTable.tsx                     # 6쪽 ①~㉒ 가산·차감 (3년치 칼럼)
 │   ├── HorizontalScrollContainer (macOS 우회)
 │   ├── 헤더: 평가기준일 이전 1년(×3) / 2년(×2) / 3년(×1)
 │   └── 행 22개 (①~㉒) × 3년 = 66 CurrencyInput
-├── CapitalChangeTable.tsx                            # 자본금 변동 (유상증자·무상증자·감자)
-│   ├── 행 추가/삭제 Dialog 확인 (window.confirm 금지)
-│   └── 행: changeDate(DateInput) + changeType(Select) + sharesIssued(CurrencyInput) + pricePerShare(CurrencyInput, optional)
 ├── NetAssetCalculationTable.tsx                      # 2~3쪽 자산총액·부채총액
 │   ├── 자산 표 (① + ② + ③ + ④ + ⑤ − ⑥ − ⑦ → ⑧ 소계 자동 표시)
 │   ├── 부채 표 (⑨ + ⑩ + ⑪ + ⑫ + ⑬ + ⑭ + ⑮ − ⑯ − ⑰ + ⑱ → ⑲ 소계 자동 표시)
@@ -171,14 +172,20 @@ UnlistedStockValuationStep.tsx                       # 마법사 단계 진입�
   7) ⑦·⑧ 할증 (max-shareholder-premium) → ⑨ 보충적 평가가액
 
 UI 위젯 순서 (UnlistedStockValuationStep.tsx):
-  Step 1) CorporateInfoSection (법인 기본 + §54④ 사유)
+  Step 1) CorporateInfoSection (법인 기본 + 자본금 변동 임베드 + §54④ 사유)
+          └ 발행주식총수 → 자본금 → [자본금 변동사항] → 보유 주식수
   Step 2) FiscalYearAdjustmentTable (사업연도 3년 가산·차감)
-  Step 3) CapitalChangeTable (자본금 변동)
-  Step 4) NetAssetCalculationTable (자산·부채)
-  Step 5) ValuationDeltaTable (선택 — 평가차액)
-  Step 6) GoodwillCalculationTable (자동 표시)
-  Step 7) PerShareValuationResultCard (자동 표시)
+  Step 3) NetAssetCalculationTable (자산·부채)
+  Step 4) ValuationDeltaTable (선택 — 평가차액)
+  Step 5) GoodwillCalculationTable (자동 표시)
+  Step 6) PerShareValuationResultCard (자동 표시)
 ```
+
+> **의도된 순서 deviation (2026-05-26)**: `CapitalChangeTable`을 섹션 1 내부(발행주식총수·자본금 아래)로 이동.
+> 엔진 계산 순서상 capitalChanges(3)는 fiscalYears(2) 뒤지만, UI에서는 자본금 변동이 fiscalYears보다 **앞**에 온다.
+> 이는 "UI 순서 = 계산 순서" 원칙의 의식적 예외로, **§17의3⑤ 환산주식수 ↔ 발행주식총수 정합 관계**와 자본금 이름
+> 근접성을 위한 입력 그룹핑 우선(사용자 승인). capitalChanges·fiscalYears는 상호 하드 의존이 아닌 독립 입력이라
+> 입력 정확성에 영향 없음. §56⑤ 순손익 가산은 카드 안내문으로 명시.
 
 **모드 토글 배치 규칙**:
 - "순자산만 평가" 토글 → CorporateInfoSection 상단 (사유 라디오 직전)

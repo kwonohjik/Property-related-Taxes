@@ -16,7 +16,8 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup, type RadioCardOption } from "@/components/calc/inputs/RadioCardGroup";
 import { DateInput } from "@/components/ui/date-input";
-import type { UnlistedNetAssetOnlyReason } from "@/lib/tax-engine/types/unlisted-stock-valuation.types";
+import { CapitalChangeTable } from "./CapitalChangeTable";
+import type { UnlistedNetAssetOnlyReason, UnlistedCapitalChange } from "@/lib/tax-engine/types/unlisted-stock-valuation.types";
 
 /** Date ↔ YYYY-MM-DD string 변환 헬퍼 */
 function dateToStr(d: Date | undefined): string {
@@ -95,6 +96,9 @@ export interface CorporateInfoSectionProps {
   isMaxShareholder: boolean;
   companySize: "small" | "medium" | "large";
   isContinuousLossLastThreeYears: boolean;
+  /** 자본금 변동(증자·감자) 이력 — 섹션 1 내부에 임베드 (§56③·⑤ + §17의3⑤) */
+  capitalChanges: UnlistedCapitalChange[];
+  onCapitalChangesChange: (next: UnlistedCapitalChange[]) => void;
   onChange: (patch: {
     corpName?: string;
     representative?: string;
@@ -128,6 +132,8 @@ export function CorporateInfoSection({
   isMaxShareholder,
   companySize,
   isContinuousLossLastThreeYears,
+  capitalChanges,
+  onCapitalChangesChange,
   onChange,
 }: CorporateInfoSectionProps) {
   return (
@@ -206,6 +212,8 @@ export function CorporateInfoSection({
             hideUnit
           />
         </FieldCard>
+        {/* 자본금 변동사항 (증자·감자) — 발행주식총수·자본금 바로 아래에 임베드 (sectionNum 미전달 → 번호 없음) */}
+        <CapitalChangeTable capitalChanges={capitalChanges} onChange={onCapitalChangesChange} />
         <FieldCard label="보유 주식수" required unit="주" hint="피상속인·수증인 소유">
           <CurrencyInput
             label="보유주식"

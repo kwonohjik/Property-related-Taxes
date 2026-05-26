@@ -14,7 +14,6 @@ import { useMemo, useState } from "react";
 import { CorporateInfoSection } from "./CorporateInfoSection";
 import { UnlistedStockHistoryModal } from "./UnlistedStockHistoryModal";
 import { FiscalYearAdjustmentTable } from "./FiscalYearAdjustmentTable";
-import { CapitalChangeTable } from "./CapitalChangeTable";
 import { NetAssetCalculationTable } from "./NetAssetCalculationTable";
 import { PerShareValuationResultCard } from "./PerShareValuationResultCard";
 import { GoodwillCalculationTable } from "./GoodwillCalculationTable";
@@ -246,6 +245,8 @@ export function UnlistedStockV2Card({
         isMaxShareholder={input.isMaxShareholder}
         companySize={input.companySize}
         isContinuousLossLastThreeYears={input.isContinuousLossLastThreeYears}
+        capitalChanges={input.capitalChanges}
+        onCapitalChangesChange={updateCapitalChanges}
         onChange={(patch) => {
           updateCorporateInfo(patch as Partial<UnlistedStockValuationInput>);
         }}
@@ -263,11 +264,7 @@ export function UnlistedStockV2Card({
         onChange={updateFiscalYears}
       />
 
-      {/* 3. 자본금 변동 */}
-      <CapitalChangeTable
-        capitalChanges={input.capitalChanges}
-        onChange={updateCapitalChanges}
-      />
+      {/* 자본금 변동(증자·감자)은 섹션 1(CorporateInfoSection) 내부 발행주식총수·자본금 아래로 이동됨 */}
 
       {/* 3-B. PR-N: 평가차액 행 단위 입력 (별지 3쪽, design v3 Section 4) */}
       <ValuationDeltaTable

@@ -42,9 +42,14 @@ const CHANGE_TYPE_TONE: Record<UnlistedCapitalChange["changeType"], string> = {
 export interface CapitalChangeTableProps {
   capitalChanges: UnlistedCapitalChange[];
   onChange: (next: UnlistedCapitalChange[]) => void;
+  /**
+   * 섹션 번호 badge. 전달 시 헤더에 원형 번호를 표시하고, 미전달(임베드 모드) 시 번호 없이 제목만 표시.
+   * 현재 유일 호출처(CorporateInfoSection)는 섹션 1 하위 요소로 임베드하므로 전달하지 않는다.
+   */
+  sectionNum?: number;
 }
 
-export function CapitalChangeTable({ capitalChanges, onChange }: CapitalChangeTableProps) {
+export function CapitalChangeTable({ capitalChanges, onChange, sectionNum }: CapitalChangeTableProps) {
   const [deleteIdx, setDeleteIdx] = useState<number | null>(null);
 
   function addRow() {
@@ -74,7 +79,9 @@ export function CapitalChangeTable({ capitalChanges, onChange }: CapitalChangeTa
     <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-[10px] font-bold text-amber-800 select-none">4</span>
+          {sectionNum !== undefined && (
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-[10px] font-bold text-amber-800 select-none">{sectionNum}</span>
+          )}
           <p className="text-xs font-semibold text-amber-700">자본금 변동사항 (§56③·⑤ + §17의3⑤)</p>
         </div>
         <button
