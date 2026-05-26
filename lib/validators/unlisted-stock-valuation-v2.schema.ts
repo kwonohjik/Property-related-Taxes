@@ -240,6 +240,13 @@ export const unlistedStockValuationV2Schema = z
           message: "유상증자는 1주당 납입금액을 입력해야 합니다. (§56⑤)",
         });
       }
+      if (c.changeType === "capital_reduction" && !c.pricePerShare) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["capitalChanges", i, "pricePerShare"],
+          message: "유상감자는 1주당 지급금액을 입력해야 합니다. (§56⑤)",
+        });
+      }
     }
     // PR-K (§54⑥): method="other" 선택 시 methodNotes(평가법 사유) 필수 (§49의2⑤2호)
     if (

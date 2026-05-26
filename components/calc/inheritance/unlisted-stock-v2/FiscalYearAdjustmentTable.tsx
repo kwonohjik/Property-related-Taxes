@@ -21,6 +21,10 @@ import { DateInput } from "@/components/ui/date-input";
 import { fiscalYearMonths } from "@/lib/tax-engine/property-valuation/fiscal-year-annualize";
 import type { FiscalYearAdjustment } from "@/lib/tax-engine/types/unlisted-stock-valuation.types";
 
+function isValidDate(d: Date | undefined): boolean {
+  return !!d && d instanceof Date && !isNaN(d.getTime());
+}
+
 function dateToStr(d: Date): string {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -157,14 +161,22 @@ export function FiscalYearAdjustmentTable({
               </div>
               {/* 종료일 */}
               <div className="space-y-0.5">
-                <p className="text-[10px] text-gray-500 font-normal">종료일</p>
+                <p className="text-[10px] text-gray-500 font-normal">
+                  종료일
+                  <span className="ml-1 text-rose-600 font-semibold">*</span>
+                </p>
                 <DateInput
-                  value={dateToStr(fy.fiscalYearEndDate)}
+                  value={isValidDate(fy.fiscalYearEndDate) ? dateToStr(fy.fiscalYearEndDate) : ""}
                   onChange={(s) => {
                     const d = strToDate(s);
                     if (d) updateField(idx as 0 | 1 | 2, "fiscalYearEndDate", d);
                   }}
                 />
+                {!isValidDate(fy.fiscalYearEndDate) && (
+                  <p className="text-[10px] text-rose-600 font-semibold leading-snug">
+                    종료일 필수 — §56⑤·환산주식수 계산에 필요
+                  </p>
+                )}
               </div>
               {/* §17의3② 연환산 amber 안내 */}
               {isShortYear && (

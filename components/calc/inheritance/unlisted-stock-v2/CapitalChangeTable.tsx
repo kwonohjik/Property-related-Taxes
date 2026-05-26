@@ -27,6 +27,10 @@ function strToDate(s: string): Date | undefined {
   return new Date(s);
 }
 
+function isValidDate(d: Date | undefined): boolean {
+  return !!d && d instanceof Date && !isNaN(d.getTime());
+}
+
 const CHANGE_TYPE_LABEL: Record<UnlistedCapitalChange["changeType"], string> = {
   paid_in: "유상증자",
   free_issue: "무상증자",
@@ -123,9 +127,13 @@ export function CapitalChangeTable({ capitalChanges, onChange, sectionNum }: Cap
                 </button>
               </div>
 
-              <FieldCard label="변동일" required>
+              <FieldCard
+                label="변동일"
+                required
+                warning={!isValidDate(c.changeDate) ? "변동일을 입력해야 합니다." : undefined}
+              >
                 <DateInput
-                  value={dateToStr(c.changeDate)}
+                  value={isValidDate(c.changeDate) ? dateToStr(c.changeDate) : ""}
                   onChange={(s) => {
                     const d = strToDate(s);
                     if (d) updateRow(idx, { changeDate: d });
@@ -133,7 +141,12 @@ export function CapitalChangeTable({ capitalChanges, onChange, sectionNum }: Cap
                 />
               </FieldCard>
 
-              <FieldCard label="증가·감소 주식수" required unit="주">
+              <FieldCard
+                label="증가·감소 주식수"
+                required
+                unit="주"
+                warning={(!c.sharesIssued || c.sharesIssued <= 0) ? "주식수를 1 이상 입력해야 합니다." : undefined}
+              >
                 <CurrencyInput
                   label="주식수"
                   value={String(c.sharesIssued || "")}
@@ -149,6 +162,7 @@ export function CapitalChangeTable({ capitalChanges, onChange, sectionNum }: Cap
                   required
                   unit="원"
                   hint="§56⑤ — 액면가가 아닐 수 있음 (실제 납입·지급 금액)"
+                  warning={(!c.pricePerShare || c.pricePerShare <= 0) ? (c.changeType === "paid_in" ? "1주당 납입금액을 입력해야 합니다. (§56⑤)" : "1주당 지급금액을 입력해야 합니다. (§56⑤)") : undefined}
                 >
                   <CurrencyInput
                     label="1주당 금액"

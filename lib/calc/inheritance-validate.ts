@@ -290,11 +290,14 @@ export function validateInheritanceTaxInput(
  *
  * 검증 항목:
  *   1) V2·legacy 둘 중 하나 필수 (Zod superRefine와 동일)
- *   2) 사업연도 종료일 순서 (1년전 > 2년전 > 3년전)
- *   3) 소유주식수 ≤ 발행주식총수
- *   4) 평가기준일 ≥ 사업개시일
- *   5) 자본금 변동일 ≤ 평가기준일
- *   6) 유상증자(paid_in)는 1주당 납입금액 필수 (§56⑤)
+ *   2) 사업연도 종료일 3개 각각 유효 Date 필수 (순서 비교 전 존재 확인)
+ *   3) 사업연도 종료일 순서 (1년전 > 2년전 > 3년전)
+ *   4) 소유주식수 ≤ 발행주식총수
+ *   5) 평가기준일 ≥ 사업개시일
+ *   6) 자본금 변동: 변동일 유효 Date 필수 / 주식수 > 0 필수 / 변동일 ≤ 평가기준일
+ *   7) 유상증자(paid_in) — 1주당 납입금액 > 0 필수 (§56⑤)
+ *   8) 유상감자(capital_reduction) — 1주당 지급금액 > 0 필수 (§56⑤ 준용)
+ *   9) 무상증자(free_issue) — 주식수·변동일 필수, pricePerShare 검증 제외
  */
 export function validateUnlistedStockV2(item: EstateItem): string | null {
   if (item.category !== "unlisted_stock") return null;
@@ -308,7 +311,16 @@ export function validateUnlistedStockV2(item: EstateItem): string | null {
   const v2 = item.unlistedStockValuationV2;
   if (!v2) return null;
 
-  // 사업연도 종료일 순서
+  // ① 사업연도 종료일 3개 각각 유효 Date 필수 (순서 비교 전 존재 확인)
+  const YEAR_LABEL = ["1년전", "2년전", "3년전"];
+  for (let i = 0; i < 3; i++) {
+    const endDate = v2.fiscalYears[i]?.fiscalYearEndDate;
+    if (!endDate || !(endDate instanceof Date) || isNaN(endDate.getTime())) {
+      return `비상장주식 "${item.name}" — ${YEAR_LABEL[i]} 사업연도 종료일을 입력해야 합니다. (§56⑤·환산주식수 계산에 필요)`;
+    }
+  }
+
+  // ② 사업연도 종료일 순서
   if (v2.fiscalYears[0].fiscalYearEndDate <= v2.fiscalYears[1].fiscalYearEndDate) {
     return `비상장주식 "${item.name}" — 2년전 사업연도 종료일은 1년전보다 이전이어야 합니다.`;
   }
@@ -316,24 +328,45 @@ export function validateUnlistedStockV2(item: EstateItem): string | null {
     return `비상장주식 "${item.name}" — 3년전 사업연도 종료일은 2년전보다 이전이어야 합니다.`;
   }
 
-  // 소유주식수 > 발행주식총수
+  // ③ 소유주식수 > 발행주식총수
   if (v2.ownedShares > v2.totalShares) {
     return `비상장주식 "${item.name}" — 보유주식수(${v2.ownedShares})는 발행주식총수(${v2.totalShares})를 초과할 수 없습니다.`;
   }
 
-  // 평가기준일 < 사업개시일
+  // ④ 평가기준일 < 사업개시일
   if (v2.evaluationDate < v2.businessStartDate) {
     return `비상장주식 "${item.name}" — 평가기준일은 사업개시일 이후여야 합니다.`;
   }
 
-  // 자본금 변동 날짜
+  // ⑤ 자본금 변동 — 변동일·주식수·1주당 금액 검증
   for (let i = 0; i < v2.capitalChanges.length; i++) {
     const c = v2.capitalChanges[i];
+    const typeLabel =
+      c.changeType === "paid_in" ? "유상증자" :
+      c.changeType === "free_issue" ? "무상증자" : "유상감자";
+
+    // 변동일 미입력/invalid 차단
+    if (!c.changeDate || !(c.changeDate instanceof Date) || isNaN(c.changeDate.getTime())) {
+      return `비상장주식 "${item.name}" — ${typeLabel}(${i + 1}번째) 변동일을 입력해야 합니다.`;
+    }
+
+    // 주식수 필수 (무상증자 포함)
+    if (!c.sharesIssued || c.sharesIssued <= 0) {
+      return `비상장주식 "${item.name}" — ${typeLabel}(${i + 1}번째) 주식수를 1 이상 입력해야 합니다.`;
+    }
+
+    // 변동일 > 평가기준일 차단
     if (c.changeDate > v2.evaluationDate) {
       return `비상장주식 "${item.name}" — 자본금 변동일(${i + 1}번째)은 평가기준일 이전이어야 합니다.`;
     }
+
+    // 유상증자 — 1주당 납입금액 필수 (§56⑤)
     if (c.changeType === "paid_in" && (!c.pricePerShare || c.pricePerShare <= 0)) {
       return `비상장주식 "${item.name}" — 유상증자(${i + 1}번째)는 1주당 납입금액을 입력해야 합니다. (§56⑤)`;
+    }
+    // 유상감자 — 1주당 지급금액 필수 (§56⑤ 준용)
+    if (c.changeType === "capital_reduction" && (!c.pricePerShare || c.pricePerShare <= 0)) {
+      return `비상장주식 "${item.name}" — 유상감자(${i + 1}번째)는 1주당 지급금액을 입력해야 합니다. (§56⑤)`;
     }
   }
 

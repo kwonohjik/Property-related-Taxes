@@ -40,6 +40,10 @@ import {
   callInheritanceTaxAPI,
   formatInheritanceApiError as formatApiError,
 } from "@/lib/calc/inheritance-api";
+import {
+  validateInheritanceTaxInput,
+  validateUnlistedStockV2,
+} from "@/lib/calc/inheritance-validate";
 import { resolveActiveUnlistedValuation } from "@/lib/calc/unlisted-valuation-mode";
 import {
   type FormState,
@@ -138,6 +142,11 @@ function validateStep(step: number, form: FormState): string | null {
   if (step === 1) {
     const total = form.estateItems.length + form.stockItems.length;
     if (total === 0) return "상속재산을 1개 이상 입력하세요.";
+    // 비상장주식 V2 입력 검증 — 진행 차단
+    for (const item of [...form.estateItems, ...form.stockItems]) {
+      const e = validateUnlistedStockV2(item);
+      if (e) return e;
+    }
   }
   if (step === 2) {
     // 방안 C — 협의분할 ON 모드일 때만 항목 검증
@@ -307,8 +316,16 @@ export function InheritanceTaxForm() {
     setLoading(true);
     setError(null);
     try {
+      const input = buildInput();
+      // 클라이언트 전체 검증 — API 왕복 전 1차 차단 (지점 ⑧)
+      const preErr = validateInheritanceTaxInput(input);
+      if (preErr) {
+        setError(preErr);
+        setLoading(false);
+        return;
+      }
       // lib/calc/inheritance-api 단일 진입점 — body spread 신규 필드 누락 차단 (지점 ④⑬)
-      const res = await callInheritanceTaxAPI(buildInput());
+      const res = await callInheritanceTaxAPI(input);
       if (!res.ok || !("success" in res.data) || !res.data.success) {
         setError(
           "error" in res.data || "issues" in res.data
