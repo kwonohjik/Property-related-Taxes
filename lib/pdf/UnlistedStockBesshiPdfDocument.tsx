@@ -22,6 +22,7 @@ import {
   StyleSheet,
 } from "@react-pdf/renderer";
 import { registerFonts } from "./fonts";
+import { toOptionalDate } from "@/lib/api/date-coerce";
 import { evaluateUnlistedStockV2 } from "@/lib/tax-engine/property-valuation/unlisted-orchestrator";
 import type {
   UnlistedStockValuationInput,
@@ -216,7 +217,7 @@ function Page1Cover({ input, result }: { input: UnlistedStockValuationInput; res
         </View>
         <View style={s.metaRow}>
           <Text style={s.metaLabel}>평가기준일</Text>
-          <Text style={s.metaValue}>{input.evaluationDate.toISOString().slice(0, 10)}</Text>
+          <Text style={s.metaValue}>{toOptionalDate(input.evaluationDate)?.toISOString().slice(0, 10) ?? "—"}</Text>
           <Text style={s.metaLabel}>② 부동산과다보유</Text>
           <Text style={s.metaValue}>{input.isRealEstateHeavy ? "예 (가중치 반전)" : "아니오"}</Text>
         </View>
@@ -638,6 +639,7 @@ export function UnlistedStockBesshiPdfDocument({ input }: UnlistedStockBesshiPdf
 
 export function generateBesshiPdfFilename(input: UnlistedStockValuationInput): string {
   const corp = (input.corpName || "법인미입력").replace(/[/\\:*?"<>|]/g, "_");
-  const date = input.evaluationDate.toISOString().slice(0, 10);
+  const evalDate = toOptionalDate(input.evaluationDate);
+  const date = evalDate ? evalDate.toISOString().slice(0, 10) : "날짜미상";
   return `비상장주식평가서_${corp}_${date}.pdf`;
 }
