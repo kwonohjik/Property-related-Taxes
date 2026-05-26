@@ -6,7 +6,7 @@
  * InheritanceTaxForm.tsx에서 추출. FormState 타입은 인근에서 import.
  */
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { DateInput } from "@/components/ui/date-input";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
@@ -26,6 +26,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { deriveCollateralDebts } from "@/lib/tax-engine/inheritance-collateral-debt";
 import type { FormState, FormSet } from "./shared";
 
 // ============================================================
@@ -158,6 +159,12 @@ export function Step2({ form, set }: { form: FormState; set: FormSet }) {
   const itemCount = form.debtItems?.length ?? 0;
   const [pendingDiscardConfirm, setPendingDiscardConfirm] = useState(false);
 
+  // 재산평가에서 파생된 담보채무 목록 (B5 §3-2, U-2) — derive only, store 쓰기 금지
+  const derivedCollateralDebts = useMemo(
+    () => deriveCollateralDebts(form.estateItems),
+    [form.estateItems],
+  );
+
   const enterAllocationMode = () => {
     set({
       debtItems: [],
@@ -203,6 +210,7 @@ export function Step2({ form, set }: { form: FormState; set: FormSet }) {
         <DebtAllocationInput
           items={form.debtItems ?? []}
           heirs={form.heirs}
+          derivedCollateralDebts={derivedCollateralDebts}
           onChange={(items) => set({ debtItems: items })}
         />
       ) : (

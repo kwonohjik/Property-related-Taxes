@@ -14,6 +14,8 @@ import {
   resolveFinancialDebt,
   resolveFinancialEligibility,
 } from "@/lib/calc/financial-deduction-resolver";
+import { deriveCollateralDebts } from "@/lib/tax-engine/inheritance-collateral-debt";
+import { sumCollateralFinancialDebt } from "@/lib/tax-engine/inheritance-collateral-debt";
 import { calcRelationDeduction } from "@/lib/tax-engine/deductions/gift-deductions";
 import { calcCorporateStockAdjustedValue } from "@/lib/tax-engine/property-valuation-corporate";
 import type {
@@ -113,16 +115,29 @@ export function suggestNetFinancialAssets(
   const eligibleAssets = estateItems.filter(resolveFinancialEligibility);
   const eligibleDebts = (debtItems ?? []).filter(resolveFinancialDebt);
   const assets = eligibleAssets.reduce((sum, i) => sum + getValuatedAmount(i), 0);
-  const debts = eligibleDebts.reduce((sum, d) => sum + d.amount, 0);
+  const debtItemsSum = eligibleDebts.reduce((sum, d) => sum + d.amount, 0);
+  // 담보채무 §14 자동공제 중 금융채무(저당분)를 §22 순금융 차감에도 반영 (collateral-debt-auto-deduction)
+  const collateralFinancial = sumCollateralFinancialDebt(
+    deriveCollateralDebts(estateItems),
+  );
+  const debts = debtItemsSum + collateralFinancial;
   const value = Math.max(0, assets - debts);
 
   const breakdown: string[] = [
     `금융자산 합계: ${formatKrw(assets)}원 (${eligibleAssets.length}건)`,
-    `금융채무 합계: ${formatKrw(debts)}원 (${eligibleDebts.length}건)`,
+    `금융채무 합계: ${formatKrw(debtItemsSum)}원 (${eligibleDebts.length}건)`,
+    ...(collateralFinancial > 0
+      ? [`담보채무(금융 저당) 차감: ${formatKrw(collateralFinancial)}원`]
+      : []),
     `순 금융재산: ${formatKrw(value)}원`,
   ];
 
   const notes: string[] = [];
+  if (collateralFinancial > 0) {
+    notes.push(
+      "🔒 자산 평가의 담보채무(금융 저당)가 §22 순금융재산 제안에 반영되었습니다 — [적용] 버튼을 눌러야 순금융재산 입력값에 반영됩니다.",
+    );
+  }
   if (debtItems === undefined) {
     notes.push(
       "💡 부채 협의분할 모드를 켜면 §22 금융채무 차감을 자동 적용할 수 있습니다.",

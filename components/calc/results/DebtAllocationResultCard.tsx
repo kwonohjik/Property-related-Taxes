@@ -20,6 +20,7 @@ import type {
   DebtItem,
   Heir,
   HeirAllocationResult,
+  DerivedCollateralDebt,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 
@@ -27,12 +28,18 @@ interface Props {
   debtItems: DebtItem[];
   heirAllocationResult: HeirAllocationResult;
   heirs: Heir[];
+  /** §14 자동공제 담보채무 상세 (결과 echo — 설계 §3-3 B7) */
+  collateralDebtDetail?: DerivedCollateralDebt[];
 }
 
 const FUNERAL_MEAL_LIMIT = 10_000_000;
 const FUNERAL_BONGAN_LIMIT = 5_000_000;
 
-export function DebtAllocationResultCard({ debtItems, heirs }: Props) {
+export function DebtAllocationResultCard({
+  debtItems,
+  heirs,
+  collateralDebtDetail,
+}: Props) {
   // ── 카테고리별 합계 ──
   const totals = {
     financial: 0,
@@ -233,6 +240,58 @@ export function DebtAllocationResultCard({ debtItems, heirs }: Props) {
           </div>
           <p className="text-[10px] text-gray-500 dark:text-gray-400 italic">
             장례비는 한도 적용 전 입력값 기준. 상속인별 산출세액 배부는 아래 상속인별 배부 표 참조.
+          </p>
+        </div>
+      )}
+
+      {/* ④ 담보채무 §14 자동공제 상세 (B7 — collateralDebtDetail echo) */}
+      {collateralDebtDetail && collateralDebtDetail.length > 0 && (
+        <div className="rounded-md border border-amber-200 dark:border-amber-900 bg-white dark:bg-amber-950/10 p-3 space-y-1.5">
+          <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">
+            ④ 담보채무 §14 자동공제 (자산 평가 연동)
+          </p>
+          <dl className="text-xs space-y-1.5 text-gray-800 dark:text-gray-200">
+            {collateralDebtDetail.map((d) => {
+              // 상속인별 분배 한국어 풀어쓰기
+              const allocationText =
+                d.heirAllocations && d.heirAllocations.length > 0
+                  ? d.heirAllocations
+                      .map((a) => {
+                        const h = heirs.find((heir) => heir.id === a.heirId);
+                        return `${h?.name ?? a.heirId} ${formatKRW(a.amount)}`;
+                      })
+                      .join(", ")
+                  : "법정상속분";
+              return (
+                <div key={d.estateItemId} className="space-y-0.5">
+                  <div className="flex justify-between items-start gap-2">
+                    <dt className="flex items-center gap-1.5">
+                      <span className="font-medium">{d.creditorName}</span>
+                      {d.financialDebtAmount > 0 && (
+                        <span className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
+                          금융채무 {formatKRW(d.financialDebtAmount)} (§22 차감)
+                        </span>
+                      )}
+                    </dt>
+                    <dd className="font-mono font-semibold">{formatKRW(d.amount)}</dd>
+                  </div>
+                  <p className="text-[10px] text-gray-500 dark:text-gray-400 pl-0">
+                    분배: {allocationText}
+                  </p>
+                </div>
+              );
+            })}
+            <div className="flex justify-between border-t border-amber-200 dark:border-amber-900 pt-1.5 font-semibold text-amber-700 dark:text-amber-300">
+              <dt>담보채무 §14 자동공제 합계</dt>
+              <dd className="font-mono">
+                {formatKRW(
+                  collateralDebtDetail.reduce((s, d) => s + d.amount, 0),
+                )}
+              </dd>
+            </div>
+          </dl>
+          <p className="text-[10px] text-gray-500 dark:text-gray-400 italic">
+            재산평가 담보채권액(저당 + 임대보증금)이 §14①3호 「피상속인의 채무」로 과세가액에서 공제됩니다.
           </p>
         </div>
       )}

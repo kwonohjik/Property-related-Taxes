@@ -92,6 +92,20 @@ export interface EstateItem extends EstateLocationFields {
   /** 저당권 설정 여부 */
   mortgageAmount?: number;
 
+  // ===== 담보채무 §14 자동 반영 (collateral-debt-auto-deduction) =====
+  /**
+   * 명시 opt-in — ON 시 담보채권액(`mortgageAmount + leaseDeposit`)을 §14①3호 부채로 자동 공제.
+   * undefined/false=미반영 (자동 침묵 금지). 물상보증(타인 채무 담보)은 §14 공제 대상 아니므로 OFF 유지.
+   */
+  deductSecuredClaimAsDebt?: boolean;
+  /**
+   * `mortgageAmount`(저당)가 §10①1호 입증 금융회사 채무인지 — §22 순금융재산 차감 여부.
+   * `leaseDeposit`(임대보증금)은 §19④ 금융회사 채무가 아니므로 §22 차감에서 항상 제외.
+   */
+  securedClaimIsFinancialDebt?: boolean;
+  /** 담보채무 자동노출 카드 표시명 (미입력 시 "{name} 담보채무") */
+  securedClaimCreditorName?: string;
+
   // ===== 종합사례 PDF 확장 (Design §2-1) =====
   /** 협의분할 — 상속인별 분배 (합 = valuatedAmount) */
   heirAllocations?: HeirAllocation[];
@@ -772,6 +786,25 @@ export interface InheritanceTaxResult extends TaxResultMeta {
   corporateExemption?: CorporateExemptionResult;
   /** 상속인별 배부 결과 */
   heirAllocationResult?: HeirAllocationResult;
+  /** 담보채무 §14 자동공제 내역 (echo — 산식 불변, 결과·자동노출 카드 표시용) */
+  collateralDebtDetail?: DerivedCollateralDebt[];
+}
+
+/**
+ * 담보채무 §14 자동공제 파생 항목 (collateral-debt-auto-deduction).
+ * `EstateItem.deductSecuredClaimAsDebt===true`인 자산의 담보채권액을 §14 부채로 derive.
+ */
+export interface DerivedCollateralDebt {
+  /** 연결 EstateItem.id */
+  estateItemId: string;
+  /** 채권자 표시명 */
+  creditorName: string;
+  /** §14 공제액 = mortgageAmount + leaseDeposit (피상속인 채무 전부) */
+  amount: number;
+  /** §22 금융채무 차감액 = securedClaimIsFinancialDebt ? mortgageAmount : 0 (저당만, 임대보증금 제외) */
+  financialDebtAmount: number;
+  /** 연결 자산 분배를 담보채무액 비율로 환산한 상속인별 분배 (합 = amount). 미분배 시 undefined */
+  heirAllocations?: HeirAllocation[];
 }
 
 /** 증여세 계산 입력 전체 */

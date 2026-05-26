@@ -33,6 +33,7 @@ import { FamilyBusinessCategorySection } from "@/components/calc/inheritance/Fam
 import { CorporateNonBusinessAssetsSection } from "@/components/calc/inheritance/CorporateNonBusinessAssetsSection";
 import { FinancialDeductionChip } from "@/components/calc/inheritance/FinancialDeductionChip";
 import { HeirAllocationToggleSection } from "@/components/calc/inheritance/HeirAllocationToggleSection";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import type { EstateItem, AssetCategory, Heir } from "@/lib/tax-engine/types/inheritance-gift.types";
 
 /**
@@ -162,6 +163,22 @@ function ItemEditor({ item, index, onUpdate, onRemove, mode, heirs, valuationDat
   const showStandardPrice = cat === "real_estate_land" || cat === "real_estate_building" || cat === "real_estate_apartment";
   const showLeaseDeposit = cat === "real_estate_apartment" || cat === "real_estate_building" || cat === "deposit";
   const showMortgage = cat === "real_estate_land" || cat === "real_estate_building" || cat === "real_estate_apartment";
+
+  /**
+   * 담보채무 §14 자동공제 토글 노출 조건 (설계 §3-1 U-1):
+   *   real_estate_land·apartment·building·deposit 카테고리
+   *   AND (mortgageAmount > 0 OR leaseDeposit > 0)
+   * 담보채권액이 없으면 토글 무의미 — 숨김.
+   */
+  const securedClaimTotal =
+    (item.mortgageAmount ?? 0) + (item.leaseDeposit ?? 0);
+  const showCollateralDeductToggle =
+    mode === "inheritance" &&
+    (cat === "real_estate_land" ||
+      cat === "real_estate_apartment" ||
+      cat === "real_estate_building" ||
+      cat === "deposit") &&
+    securedClaimTotal > 0;
 
   const set = (patch: Partial<EstateItem>) => onUpdate({ ...item, ...patch });
 
@@ -416,8 +433,65 @@ function ItemEditor({ item, index, onUpdate, onRemove, mode, heirs, valuationDat
           value={item.mortgageAmount != null ? String(item.mortgageAmount) : ""}
           onChange={(v) => set({ mortgageAmount: parseAmount(v) || undefined })}
           placeholder="없으면 빈칸"
-          hint="평가기준일 현재 실제 채무 잔액(설정액 아님). §66 — 평가액이 더 크면 평가액으로 평가(차감 아님). 채무 자체는 부채 명세에 입력해야 공제됩니다."
+          hint="평가기준일 현재 실제 채무 잔액(설정액 아님). §66 — 평가액이 더 크면 평가액으로 평가(차감 아님). 피상속인 채무이면 아래 토글로 §14 자동공제 가능."
         />
+      )}
+
+      {/* 담보채무 §14 자동공제 토글 (설계 §3-1 B4) — 상속세 모드 + 담보채권액 >0 시만 노출 */}
+      {showCollateralDeductToggle && (
+        <ToggleCard
+          tone="amber"
+          title="이 담보채무를 §14 부채로 자동 공제"
+          description={
+            item.deductSecuredClaimAsDebt
+              ? "재산평가 담보채권액(저당 + 임대보증금)이 §14 채무로 과세가액에서 공제됩니다. 채무 명세(Step 2)에 중복 입력하지 마세요."
+              : "타인 채무를 담보한 물상보증은 OFF 유지 — §14 공제 대상이 아닙니다(§14①3호 '피상속인의 채무')."
+          }
+          checked={item.deductSecuredClaimAsDebt ?? false}
+          onCheckedChange={(v) =>
+            set({
+              deductSecuredClaimAsDebt: v || undefined,
+              // OFF 시 하위 필드도 초기화
+              securedClaimIsFinancialDebt: v
+                ? item.securedClaimIsFinancialDebt
+                : undefined,
+              securedClaimCreditorName: v
+                ? item.securedClaimCreditorName
+                : undefined,
+            })
+          }
+        >
+          {/* 금융회사 채무 여부 (§22 순금융 차감 — 저당만) */}
+          <ToggleCard
+            tone="rose"
+            size="sm"
+            title="저당채무가 금융회사 채무 (§22 순금융 차감)"
+            description="은행 등 §10①1호 입증 금융회사 저당이면 ON. 임대보증금은 §22 대상 아님(자동 제외)."
+            checked={item.securedClaimIsFinancialDebt ?? false}
+            onCheckedChange={(v) =>
+              set({ securedClaimIsFinancialDebt: v || undefined })
+            }
+            disabled={(item.mortgageAmount ?? 0) === 0}
+            disabledReason="저당채권액이 없으면 §22 금융채무 차감 무관"
+          />
+          {/* 채권자명 */}
+          <div className="pt-1">
+            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+              채권자명 (선택)
+            </label>
+            <input
+              type="text"
+              value={item.securedClaimCreditorName ?? ""}
+              onChange={(e) =>
+                set({
+                  securedClaimCreditorName: e.target.value || undefined,
+                })
+              }
+              placeholder="채권자·내용 (미입력 시 자산명 담보채무)"
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+          </div>
+        </ToggleCard>
       )}
 
       {/* 예상 순 평가액 미리보기 */}

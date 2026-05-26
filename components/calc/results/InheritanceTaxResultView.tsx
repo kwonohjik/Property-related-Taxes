@@ -535,6 +535,7 @@ export function InheritanceTaxResultView({
             debtItems={debtItems}
             heirAllocationResult={result.heirAllocationResult}
             heirs={heirs}
+            collateralDebtDetail={result.collateralDebtDetail}
           />
         )}
 

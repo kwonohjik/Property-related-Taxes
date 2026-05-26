@@ -22,6 +22,10 @@ import type {
 import { evaluatePresumedItem } from "@/lib/tax-engine/presumed-inheritance";
 import { evaluateUnlistedStockV2 } from "@/lib/tax-engine/property-valuation/unlisted-orchestrator";
 import { resolveActiveUnlistedValuation } from "@/lib/calc/unlisted-valuation-mode";
+import {
+  deriveCollateralDebts,
+  sumCollateralDebt,
+} from "@/lib/tax-engine/inheritance-collateral-debt";
 
 // ────────────────────────────────────────────────────
 // 입력 — InheritanceTaxForm.shared 의 FormState 부분 집합
@@ -145,6 +149,13 @@ export function computeInheritanceSummary(
       ? Math.min(funeralRaw, 15_000_000)
       : Math.min(funeralRaw, 10_000_000);
   }
+
+  // ── B6: 파생 담보채무 합산 (§14 자동공제) — 사이드바 totalDebts 포함 (설계 §3-4) ──
+  // estateItems에서 deductSecuredClaimAsDebt===true 항목을 파생. store 쓰기 없음(derive only).
+  const collateralDebtTotal = sumCollateralDebt(
+    deriveCollateralDebts(form.estateItems),
+  );
+  totalDebts += collateralDebtTotal;
 
   // ── 사전증여 가산 (전체) ──
   const priorGiftTotal = form.priorGifts.reduce(

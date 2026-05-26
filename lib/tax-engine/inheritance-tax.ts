@@ -42,6 +42,9 @@ import { evaluatePresumedInheritance } from "./presumed-inheritance";
 import { calcCorporateExemption } from "./inheritance-corporate-exemption";
 import { calcHeirAllocation } from "./inheritance-allocation";
 import { computeLegalShares } from "./inheritance-legal-share";
+import { deriveCollateralDebts } from "./inheritance-collateral-debt";
+import { sumCollateralDebt } from "./inheritance-collateral-debt";
+import { toCollateralDebtItems } from "./inheritance-collateral-debt";
 import type { TaxBracket } from "./types";
 
 // ============================================================
@@ -109,6 +112,10 @@ export function calcInheritanceTax(
   let funeralDeduction = 0;
   let nonFuneralDebts = 0;
 
+  // 담보채무 §14 자동공제 (collateral-debt-auto-deduction) — opt-in ON 자산의 담보채권액을 derive
+  const collateralDebts = deriveCollateralDebts(input.estateItems);
+  const collateralTotal = sumCollateralDebt(collateralDebts);
+
   if (input.debtItems && input.debtItems.length > 0) {
     // 신규 debtItems 경로 — category별 합산 + 장례비 한도 적용
     let funeralMeal = 0; // 식대 한도 1천만
@@ -143,6 +150,18 @@ export function calcInheritanceTax(
       label: "공과금·채무 차감",
       amount: -input.debts,
       lawRef: INH.DEBT_DEDUCTION,
+    });
+  }
+  // 담보채무 §14 자동공제 합산 (debtItems/legacy 경로 무관 — 별개 출처)
+  if (collateralTotal > 0) {
+    nonFuneralDebts += collateralTotal;
+    allBreakdown.push({
+      label: "담보채무 §14 자동공제 (자산 평가 연동)",
+      amount: -collateralTotal,
+      lawRef: INH.DEBT_DEDUCTION,
+      note: collateralDebts
+        .map((d) => `${d.creditorName} ${d.amount.toLocaleString()}`)
+        .join(", "),
     });
   }
   allLaws.add(INH.DEBT_DEDUCTION);
@@ -508,7 +527,8 @@ export function calcInheritanceTax(
       heirs: input.heirs,
       estateItems: input.estateItems,
       presumedItems: input.presumedItems ?? [],
-      debtItems: input.debtItems ?? [],
+      // 담보채무 §14 자동공제분을 협의분할 채무에 합산 (heirAllocations 비율 환산 완료)
+      debtItems: [...(input.debtItems ?? []), ...toCollateralDebtItems(collateralDebts)],
       priorGifts: input.preGiftsWithin10Years,
       presumedAddedById,
       valuatedAmountById,
@@ -546,5 +566,6 @@ export function calcInheritanceTax(
     presumedInheritanceDetail: presumedDetail,
     corporateExemption,
     heirAllocationResult,
+    collateralDebtDetail: collateralDebts.length > 0 ? collateralDebts : undefined,
   };
 }

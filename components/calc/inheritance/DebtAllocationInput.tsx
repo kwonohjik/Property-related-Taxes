@@ -19,6 +19,7 @@ import type {
   DebtItem,
   Heir,
   DebtCategory,
+  DerivedCollateralDebt,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { CurrencyInput, parseAmount, formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
@@ -28,6 +29,11 @@ interface DebtAllocationInputProps {
   items: DebtItem[];
   heirs: Heir[];
   onChange: (items: DebtItem[]) => void;
+  /**
+   * 재산평가에서 파생된 담보채무 목록 (B5 §3-2).
+   * derive only — 이 prop은 표시만. onChange(debtItems)로 store에 쓰지 않음 (mirror-pattern).
+   */
+  derivedCollateralDebts?: DerivedCollateralDebt[];
 }
 
 /**
@@ -82,10 +88,19 @@ const CATEGORY_ORDER: DebtCategory[] = ["financial", "tax", "personal", "funeral
 let nextId = 0;
 const newId = () => `debt_${Date.now()}_${++nextId}`;
 
+/** 정적 slate tone 클래스 매핑 — Tailwind JIT purge 차단 (feedback_tailwind_static_tone_mapping) */
+const SLATE_CARD = {
+  border: "border-slate-300 dark:border-slate-700",
+  bg: "bg-slate-50/60 dark:bg-slate-900/20",
+  text: "text-slate-700 dark:text-slate-300",
+  badge: "bg-slate-100 text-slate-700 dark:bg-slate-800/60 dark:text-slate-300",
+} as const;
+
 export function DebtAllocationInput({
   items,
   heirs,
   onChange,
+  derivedCollateralDebts = [],
 }: DebtAllocationInputProps) {
 
   const add = (category: DebtCategory) => {
@@ -131,6 +146,57 @@ export function DebtAllocationInput({
 
   return (
     <div className="space-y-3">
+      {/* 담보채무 §14 자동공제 자동노출 카드 (설계 §3-2 B5) — derive only, store 쓰기 금지 */}
+      {derivedCollateralDebts.length > 0 && (
+        <div
+          className={`rounded-md border p-3 space-y-2 ${SLATE_CARD.border} ${SLATE_CARD.bg}`}
+        >
+          <div className="flex items-center gap-1.5">
+            <span className="text-sm select-none">🔒</span>
+            <p className={`text-xs font-semibold ${SLATE_CARD.text}`}>
+              자산 평가에서 반영된 담보채무 (§14 자동 공제)
+            </p>
+          </div>
+          <div className="space-y-1.5">
+            {derivedCollateralDebts.map((d) => {
+              // 상속인별 분배 표시 텍스트
+              const allocationText =
+                d.heirAllocations && d.heirAllocations.length > 0
+                  ? d.heirAllocations
+                      .map((a) => {
+                        const h = heirs.find((h) => h.id === a.heirId);
+                        return `${h?.name ?? a.heirId} ${formatKRW(a.amount)}`;
+                      })
+                      .join(" · ")
+                  : "법정상속분";
+              return (
+                <div
+                  key={d.estateItemId}
+                  className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-700 dark:text-gray-300"
+                >
+                  <span className="font-medium">{d.creditorName}</span>
+                  <span className="font-mono">{formatKRW(d.amount)}</span>
+                  {d.financialDebtAmount > 0 && (
+                    <span
+                      className={`px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${SLATE_CARD.badge}`}
+                    >
+                      금융채무 {formatKRW(d.financialDebtAmount)}
+                    </span>
+                  )}
+                  <span className="text-gray-400 dark:text-gray-500">
+                    분배: {allocationText}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+          <p className={`text-[10px] ${SLATE_CARD.text}`}>
+            이 채무는 재산평가에서 자동 §14 공제됩니다. 수정은 재산평가 화면에서.
+            아래에 중복 입력하지 마세요 (이중 공제 위험).
+          </p>
+        </div>
+      )}
+
       {/* 안내 카드 — 혼합 시나리오 옵션 1 강제 (디자인 §4.3, sky tone) */}
       <div className="rounded-md border border-sky-200 bg-sky-50/40 dark:bg-sky-950/20 p-3">
         <p className="text-xs text-sky-800 dark:text-sky-300">

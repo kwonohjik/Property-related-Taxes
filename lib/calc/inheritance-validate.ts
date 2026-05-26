@@ -17,6 +17,7 @@ import type {
   DebtItem,
   Heir,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
+import { deriveCollateralDebts } from "@/lib/tax-engine/inheritance-collateral-debt";
 
 // ────────────────────────────────────────────────────
 // 단일 자산 — heirAllocations 합계 검증
@@ -170,6 +171,53 @@ export function validateHeirReferences(
 }
 
 // ────────────────────────────────────────────────────
+// 담보채무 §14 자동공제 검증 (B8, 설계 §3-5)
+// ────────────────────────────────────────────────────
+
+/**
+ * 자산별 담보채무 opt-in 검증:
+ *  - deductSecuredClaimAsDebt === true 인데 mortgageAmount + leaseDeposit === 0 → 오류
+ */
+export function validateCollateralDebtOptIn(item: EstateItem): string | null {
+  if (item.deductSecuredClaimAsDebt !== true) return null;
+  const total = (item.mortgageAmount ?? 0) + (item.leaseDeposit ?? 0);
+  if (total <= 0) {
+    return `자산 "${item.name}" — §14 자동공제 토글이 ON이지만 담보채권액(저당 + 임대보증금)이 0입니다. 담보채권액을 입력하거나 토글을 OFF 해주세요.`;
+  }
+  return null;
+}
+
+/**
+ * debtItems에 파생 담보채무와 금액이 일치하는 항목이 있으면 이중 공제 의심 warning 반환.
+ * 차단이 아닌 경고(명칭 자유입력이라 금액 기준만 비교 — E-2).
+ * 반환값: warning 문자열 배열 (빈 배열이면 이상 없음)
+ */
+export function warnCollateralDebtDuplication(
+  estateItems: EstateItem[],
+  debtItems: DebtItem[] | undefined,
+): string[] {
+  if (!debtItems || debtItems.length === 0) return [];
+  const derived = deriveCollateralDebts(estateItems);
+  if (derived.length === 0) return [];
+
+  const warnings: string[] = [];
+  for (const d of derived) {
+    // §22 금융채무 우선 비교, 없으면 전체 amount 비교
+    const matchAmount =
+      d.financialDebtAmount > 0 ? d.financialDebtAmount : d.amount;
+    const duplicate = debtItems.find(
+      (di) => di.category !== "funeral" && di.amount === matchAmount,
+    );
+    if (duplicate) {
+      warnings.push(
+        `채무 "${duplicate.name}"(${matchAmount.toLocaleString()}원)이 자산 평가 담보채무와 금액 일치 — 이중 공제 위험. 재산평가에서 §14 자동공제 ON 시 채무 명세에 중복 입력하지 마세요.`,
+      );
+    }
+  }
+  return warnings;
+}
+
+// ────────────────────────────────────────────────────
 // 통합 validation (마법사 마지막 단계 또는 API 호출 전)
 // ────────────────────────────────────────────────────
 
@@ -191,6 +239,9 @@ export function validateInheritanceTaxInput(
     // 가업상속공제 배타성·정합성 (2026-05-21, 상증법 §18의2)
     const fbe = validateFamilyBusinessEstateItem(item, input.deductionInput?.familyBusiness);
     if (fbe) return fbe;
+    // 담보채무 §14 자동공제 opt-in 검증 (B8, 설계 §3-5)
+    const cde = validateCollateralDebtOptIn(item);
+    if (cde) return cde;
   }
   if (input.debtItems) {
     for (const di of input.debtItems) {

@@ -172,6 +172,80 @@ describe("suggestNetFinancialAssets — 순 금융재산 §22", () => {
 });
 
 // ============================================================
+// CDA-3: 담보채무 §22 순금융 제안 차감 (collateral-debt-auto-deduction)
+// ============================================================
+
+describe("suggestNetFinancialAssets — 담보채무 §22 차감 (CDA-3)", () => {
+  it("CDA-3: 예금 3억 + 주택 저당 1.5억(opt-in ON·금융채무) → 순금융 1.5억", () => {
+    const items = [
+      asset({ id: "a1", category: "financial", marketValue: 300_000_000 }),
+      asset({
+        id: "a2",
+        category: "real_estate_apartment",
+        name: "주택",
+        marketValue: 2_000_000_000,
+        mortgageAmount: 150_000_000,
+        deductSecuredClaimAsDebt: true,
+        securedClaimIsFinancialDebt: true,
+      }),
+    ];
+    const r = suggestNetFinancialAssets(items, []);
+    // 금융자산 3억 − 담보 저당 1.5억 = 1.5억
+    expect(r.value).toBe(150_000_000);
+  });
+
+  it("CDA-3-nonfin: 저당이 금융채무 아님(securedClaimIsFinancialDebt 미설정) → 차감 0, 순금융 3억", () => {
+    const items = [
+      asset({ id: "a1", category: "financial", marketValue: 300_000_000 }),
+      asset({
+        id: "a2",
+        category: "real_estate_apartment",
+        name: "주택",
+        marketValue: 2_000_000_000,
+        mortgageAmount: 150_000_000,
+        deductSecuredClaimAsDebt: true,
+      }),
+    ];
+    const r = suggestNetFinancialAssets(items, []);
+    expect(r.value).toBe(300_000_000);
+  });
+
+  it("CDA-3-lease: 임대보증금 담보(금융채무 ON이어도) → §22 차감 0", () => {
+    const items = [
+      asset({ id: "a1", category: "financial", marketValue: 300_000_000 }),
+      asset({
+        id: "a2",
+        category: "real_estate_building",
+        name: "상가",
+        marketValue: 2_000_000_000,
+        leaseDeposit: 200_000_000,
+        deductSecuredClaimAsDebt: true,
+        securedClaimIsFinancialDebt: true,
+      }),
+    ];
+    const r = suggestNetFinancialAssets(items, []);
+    // 임대보증금은 §19④ 금융회사 채무 아님 → 차감 0
+    expect(r.value).toBe(300_000_000);
+  });
+
+  it("CDA-3-off: opt-in OFF → 담보채무 §22 차감 없음 (회귀)", () => {
+    const items = [
+      asset({ id: "a1", category: "financial", marketValue: 300_000_000 }),
+      asset({
+        id: "a2",
+        category: "real_estate_apartment",
+        name: "주택",
+        marketValue: 2_000_000_000,
+        mortgageAmount: 150_000_000,
+        securedClaimIsFinancialDebt: true,
+      }),
+    ];
+    const r = suggestNetFinancialAssets(items, []);
+    expect(r.value).toBe(300_000_000);
+  });
+});
+
+// ============================================================
 // ADS-6 ~ ADS-7: 사전증여 증여재산공제
 // ============================================================
 
