@@ -166,7 +166,7 @@ export function NetAssetCalculationTable({
             ? effectiveRaw.assetValuationDelta
             : netAssetValueRaw[row.key];
           return (
-            <div key={row.key} className="grid grid-cols-[8rem_1fr] items-center gap-2 py-0.5">
+            <div key={row.key} className="grid grid-cols-[16rem_1fr] items-center gap-2 py-0.5">
               <div className="text-[11px]">
                 <span className={`font-mono ${row.sign === "+" ? "text-emerald-700" : "text-rose-700"}`}>
                   {row.cellNum} {row.sign}
@@ -203,7 +203,7 @@ export function NetAssetCalculationTable({
       <div className="rounded border border-rose-200 bg-rose-50/60 p-2 space-y-1">
         <p className="text-[11px] font-semibold text-rose-800">나. 부채총액</p>
         {LIABILITY_ROWS.map((row) => (
-          <div key={row.key} className="grid grid-cols-[8rem_1fr] items-center gap-2 py-0.5">
+          <div key={row.key} className="grid grid-cols-[16rem_1fr] items-center gap-2 py-0.5">
             <div className="text-[11px]">
               <span className={`font-mono ${row.sign === "+" ? "text-rose-700" : "text-emerald-700"}`}>
                 {row.cellNum} {row.sign}
@@ -242,7 +242,7 @@ export function NetAssetCalculationTable({
           <p className="text-[11px] text-violet-700/80">
             ※ 일반 충당금 ⑮ (§17의2 4호 단서 가)는 모든 법인 적용. 본 토글은 보험사업법인·보험회사에 한정 적용.
           </p>
-          <div className="grid grid-cols-[12rem_1fr] items-center gap-2 py-0.5">
+          <div className="grid grid-cols-[24rem_1fr] items-center gap-2 py-0.5">
             <div className="text-[11px]">
               <span className="font-mono text-violet-700">+ 책임준비금</span>
               <span className="block text-[10px] text-gray-500">(법인세법 §30① / 보험업법 §120 — §17의2 4호 단서 나·다)</span>
@@ -256,7 +256,7 @@ export function NetAssetCalculationTable({
               hideUnit
             />
           </div>
-          <div className="grid grid-cols-[12rem_1fr] items-center gap-2 py-0.5">
+          <div className="grid grid-cols-[24rem_1fr] items-center gap-2 py-0.5">
             <div className="text-[11px]">
               <span className="font-mono text-violet-700">+ 비상위험준비금</span>
               <span className="block text-[10px] text-gray-500">(법인세법 §31① — §17의2 4호 단서 나·다)</span>
@@ -270,7 +270,7 @@ export function NetAssetCalculationTable({
               hideUnit
             />
           </div>
-          <div className="grid grid-cols-[12rem_1fr] items-center gap-2 py-0.5">
+          <div className="grid grid-cols-[24rem_1fr] items-center gap-2 py-0.5">
             <div className="text-[11px]">
               <span className="font-mono text-violet-700">+ 해약환급금준비금</span>
               <span className="block text-[10px] text-gray-500">(법인세법 §32① — §17의2 4호 단서 다, 보험회사 한정)</span>

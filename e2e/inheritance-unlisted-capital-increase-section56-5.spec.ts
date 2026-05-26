@@ -63,8 +63,8 @@ test.describe("비상장주식 V2 — §56⑤ 유상증자 조정 UI 반영", ()
     await page.getByPlaceholder("발행주식총수").fill("180000");
     await page.getByPlaceholder("보유 주식수").fill("180000");
 
-    // 사업연도 소득금액 (① 행 — 1년전/2년전/3년전)
-    const incomeRow = page.locator("tr").filter({ hasText: "각 사업연도 소득금액" });
+    // 사업연도 소득금액 (① 행 — 1년전/2년전/3년전) — 표가 div grid(role=row)로 전환됨(2026-05-27)
+    const incomeRow = page.locator('[role="row"]').filter({ hasText: "각 사업연도 소득금액" });
     await incomeRow.getByPlaceholder("0").nth(0).fill("140000000");
     await incomeRow.getByPlaceholder("0").nth(1).fill("110000000");
     await incomeRow.getByPlaceholder("0").nth(2).fill("80000000");

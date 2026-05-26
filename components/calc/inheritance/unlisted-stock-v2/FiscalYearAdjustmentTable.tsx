@@ -127,8 +127,8 @@ export function FiscalYearAdjustmentTable({
         평가기준일 이전 1·2·3년차 사업연도. 가중치 ×3·×2·×1로 가중평균 후 ÷ 환원율(10%) = 1주당 순손익가치 ⑤
       </p>
 
-      {/* 사업연도 라벨 + 개시일·종료일 헤더 */}
-      <div className="grid grid-cols-4 gap-2 text-[11px] font-semibold text-gray-700">
+      {/* 사업연도 라벨 + 개시일·종료일 헤더 (하단 입력표와 동일 grid 트랙으로 정렬) */}
+      <div className="grid grid-cols-[13rem_repeat(3,minmax(0,1fr))] gap-2 text-[11px] font-semibold text-gray-700">
         <div></div>
         {fiscalYears.map((fy, idx) => {
           const months = fiscalYearMonths(fy.fiscalYearStartDate, fy.fiscalYearEndDate);
@@ -195,55 +195,60 @@ export function FiscalYearAdjustmentTable({
         })}
       </div>
 
-      {/* 22 row × 3 year 입력 */}
-      <div className="overflow-x-auto">
-        <table className="w-full text-[11px]">
-          <tbody>
-            {ROWS.map((row) => (
-              <tr key={row.key} className="border-b border-emerald-100">
-                <td className="py-1 pr-2 align-top">
-                  <span className={`inline-block w-6 text-center font-mono ${
-                    row.group === "income" ? "text-emerald-700 font-bold" :
-                    row.group === "add" ? "text-sky-700" : "text-rose-700"
-                  }`}>{row.cellNum}</span>
-                  <span className="ml-1">{row.label}</span>
-                  {row.description && (
-                    <span className="text-[10px] text-gray-500 ml-1">({row.description})</span>
-                  )}
-                </td>
-                {fiscalYears.map((fy, idx) => (
-                  <td key={idx} className="py-1 px-1">
-                    <CurrencyInput
-                      label={row.label}
-                      hideLabel
-                      value={String(fy[row.key] ?? "")}
-                      onChange={(v) => {
-                        const n = Number(v.replace(/,/g, "")) || 0;
-                        updateField(idx as 0 | 1 | 2, row.key, n as FiscalYearAdjustment[typeof row.key]);
-                      }}
-                      placeholder="0"
-                      hideUnit
-                    />
-                  </td>
-                ))}
-              </tr>
-            ))}
-
-            {/* 다.순손익액 미리보기 행 */}
-            <tr className="border-t-2 border-emerald-300 bg-emerald-100/60">
-              <td className="py-2 pr-2 font-bold text-emerald-800">
-                <span className="inline-block w-6 text-center">다</span>
-                <span className="ml-1">순손익액 (= ① + 가산 − 차감)</span>
-              </td>
-              {previewAdjustedIncomes.map((val, idx) => (
-                <td key={idx} className="py-2 px-1 text-right font-mono font-semibold text-emerald-900">
-                  {val.toLocaleString()}
-                  <span className="ml-1 text-[10px]">원</span>
-                </td>
+      {/* 22 row × 3 year 입력 — 상단 헤더와 동일 grid 트랙(라벨 13rem + 3년 균등)으로 세로 정렬 */}
+      <div className="overflow-x-auto text-[11px]">
+        <div role="table">
+          {ROWS.map((row) => (
+            <div
+              key={row.key}
+              role="row"
+              className="grid grid-cols-[13rem_repeat(3,minmax(0,1fr))] gap-2 items-start border-b border-emerald-100 py-1"
+            >
+              <div className="pr-2">
+                <span className={`inline-block w-6 text-center font-mono ${
+                  row.group === "income" ? "text-emerald-700 font-bold" :
+                  row.group === "add" ? "text-sky-700" : "text-rose-700"
+                }`}>{row.cellNum}</span>
+                <span className="ml-1">{row.label}</span>
+                {row.description && (
+                  <span className="text-[10px] text-gray-500 ml-1">({row.description})</span>
+                )}
+              </div>
+              {fiscalYears.map((fy, idx) => (
+                <div key={idx}>
+                  <CurrencyInput
+                    label={row.label}
+                    hideLabel
+                    value={String(fy[row.key] ?? "")}
+                    onChange={(v) => {
+                      const n = Number(v.replace(/,/g, "")) || 0;
+                      updateField(idx as 0 | 1 | 2, row.key, n as FiscalYearAdjustment[typeof row.key]);
+                    }}
+                    placeholder="0"
+                    hideUnit
+                  />
+                </div>
               ))}
-            </tr>
-          </tbody>
-        </table>
+            </div>
+          ))}
+
+          {/* 다.순손익액 미리보기 행 */}
+          <div
+            role="row"
+            className="grid grid-cols-[13rem_repeat(3,minmax(0,1fr))] gap-2 items-center border-t-2 border-emerald-300 bg-emerald-100/60 py-2"
+          >
+            <div className="pr-2 font-bold text-emerald-800">
+              <span className="inline-block w-6 text-center">다</span>
+              <span className="ml-1">순손익액 (= ① + 가산 − 차감)</span>
+            </div>
+            {previewAdjustedIncomes.map((val, idx) => (
+              <div key={idx} className="text-right font-mono font-semibold text-emerald-900">
+                {val.toLocaleString()}
+                <span className="ml-1 text-[10px]">원</span>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );

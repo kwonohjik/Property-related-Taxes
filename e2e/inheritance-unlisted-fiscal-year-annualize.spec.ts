@@ -71,8 +71,8 @@ test.describe("비상장주식 V2 — §17의3② 1년 미만 사업연도 연�
     await gotoV2FormalValuationCard(page);
 
     // FiscalYearAdjustmentTable — "1년전 ×3" 컬럼(idx=0)의 개시일·종료일 DateInput 찾기
-    // 구조: grid-cols-4 → 첫 컬럼=행 라벨, 두번째~네번째=1년전/2년전/3년전
-    // "1년전 ×3" div 부모에 개시일·종료일 DateInput이 있음
+    // 구조: 상단 헤더 grid-cols-[13rem_repeat(3,1fr)] → 첫 컬럼=spacer, 두번째~네번째=1년전/2년전/3년전 (2026-05-27 정렬)
+    // "1년전 ×3" div 부모에 개시일·종료일 DateInput이 있음 (텍스트 기반 탐색이라 grid 트랙 변경 무관)
     const firstYearCol = page
       .locator("text=1년전 ×3")
       .locator("..")
