@@ -1,139 +1,59 @@
 "use client";
 
 /**
- * MajorShareholderStockToggle — §22② 최대주주 추가공제 제외 자동 도출 (PR-E)
+ * MajorShareholderStockToggle — §22② 최대주주 해당 여부 (금융재산공제 배제 토글)
  *
- * 본 컴포넌트는 §22②(추가공제 제외)만 다룬다. §63③(할증평가, isMaxShareholder)는
- * 선행 PR `max-shareholder-premium.ts` 별도 모듈에서 처리하며 의미가 다르다.
+ * 여(ON) = 최대주주 해당 → 이 비상장주식을 §22 금융재산 상속공제 대상금액에서 제외 (법 §22②).
+ * resolveFinancialEligibility가 본 값을 최우선 가드로 참조 → §22 순금융재산 제안·결과 표시에 반영.
+ * ※ §22②(금융재산공제 배제)는 §63③(할증평가 ×120%, isMaxShareholder)와 다른 개념(별도 모듈).
  *
- * 3-state RadioCardGroup:
- *   - "auto": 보유지분율 (ownedShares/totalShares) 자동 판정
- *   - "manual_on": 사용자 명시 ON (친족 합산 등 자동 판정으로 도달 불가한 시나리오)
- *   - "manual_off": 사용자 명시 OFF
- *
- * Plan: docs/00-pm/inheritance-unlisted-stock-valuation-ui-integration.plan.md §3 PR-E
- * Design: docs/02-design/features/inheritance-unlisted-stock-valuation-ui-integration.design.md §2-1
+ * Plan: docs/00-pm/inheritance-section22-major-shareholder-toggle.plan.md §3
  */
 
-import { useMemo } from "react";
-import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
-import { deriveSection22MajorShareholder } from "@/lib/tax-engine/property-valuation/auto-judgment";
-
-export type Section22MajorShareholderMode = "auto" | "manual_on" | "manual_off";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 
 export interface MajorShareholderStockToggleProps {
-  mode: Section22MajorShareholderMode;
-  ownedShares: number;
-  totalShares: number;
-  onChange: (mode: Section22MajorShareholderMode) => void;
+  /** §22② 최대주주 해당 여부 (true=배제) */
+  checked: boolean;
+  onCheckedChange: (checked: boolean) => void;
+  /** 섹션 번호 (다-섹션 카드 패턴) */
+  sectionNum?: number;
 }
 
 export function MajorShareholderStockToggle({
-  mode,
-  ownedShares,
-  totalShares,
-  onChange,
+  checked,
+  onCheckedChange,
+  sectionNum = 10,
 }: MajorShareholderStockToggleProps) {
-  const autoResult = useMemo(
-    () => deriveSection22MajorShareholder({ ownedShares, totalShares }),
-    [ownedShares, totalShares],
-  );
-
-  const ratioPercent = (autoResult.ownershipRatio * 100).toFixed(2);
-  const isAuto = mode === "auto";
-
-  // 적용될 결과 (mode에 따라)
-  const appliedIsMajor =
-    mode === "manual_on"
-      ? true
-      : mode === "manual_off"
-        ? false
-        : autoResult.isSection22Major;
-
   return (
     <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-3">
       <div className="flex items-center gap-2">
         <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-[10px] font-bold text-violet-800 select-none">
-          10
+          {sectionNum}
         </span>
         <p className="text-xs font-semibold text-violet-700">
-          §22② 최대주주 추가공제 제외 판정
+          금융재산공제가 배제되는 최대주주 해당 여부
         </p>
       </div>
       <p className="text-[11px] text-violet-700/80">
-        ⓘ §22②는 <strong>추가공제 제외</strong>용. §63③ 할증평가(×120%)는 별도 모듈 (선행 PR
-        max-shareholder-premium.ts).
+        ⓘ 상증법 <strong>§22②</strong> — 최대주주가 보유한 주식은 §22 금융재산 상속공제 대상금액에서{" "}
+        <strong>제외</strong>됩니다. §63③ 할증평가(×120%)는 별도 모듈(선행 PR max-shareholder-premium.ts).
       </p>
 
-      <RadioCardGroup
-        name="section22-major-mode"
+      <ToggleCard
         tone="violet"
-        layout="stack"
-        value={mode}
-        onChange={onChange}
-        options={[
-          {
-            value: "auto",
-            label: "자동 판정 (보유지분율 기준)",
-            description: "보유주식 ÷ 발행주식 비율로 자동 도출",
-          },
-          {
-            value: "manual_on",
-            label: "수동: 최대주주 해당 ON",
-            description:
-              "자동 판정과 다른 결론을 사용자가 직접 지정 (친족 합산 등 자동 판정으로 도달 불가한 시나리오)",
-          },
-          {
-            value: "manual_off",
-            label: "수동: 최대주주 해당 OFF",
-            description: "보유지분이 높아도 최대주주 아님으로 처리 (특수 사실관계)",
-          },
-        ]}
-      />
-
-      {isAuto && totalShares > 0 && (
-        <div className="rounded border border-violet-300 bg-violet-100/60 p-2">
-          <p className="text-[11px] text-violet-900">
-            보유지분율 = {ownedShares.toLocaleString()} / {totalShares.toLocaleString()} ={" "}
-            <strong>{ratioPercent}%</strong>
-          </p>
-          <p className="text-[11px] font-semibold text-violet-900 mt-1">
-            → §22② 최대주주{" "}
-            <span
-              className={
-                autoResult.isSection22Major
-                  ? "rounded bg-violet-600 text-white px-1.5 py-0.5"
-                  : "rounded bg-slate-300 text-slate-800 px-1.5 py-0.5"
-              }
-            >
-              {autoResult.isSection22Major ? "해당 (ON)" : "미달 (OFF)"}
-            </span>
-          </p>
+        checked={checked}
+        onCheckedChange={onCheckedChange}
+        title="최대주주 해당 (금융재산 상속공제 제외)"
+        description="여(ON): 이 비상장주식을 §22 금융재산 상속공제 대상금액에서 제외 / 부(OFF): §22 포함"
+      >
+        <div className="rounded border border-violet-300 bg-violet-100/60 p-2 text-[11px] text-violet-900">
+          ✓ 최대주주 해당 — 이 비상장주식은 §22 금융재산 상속공제 대상금액에서 제외됩니다.
+          <br />
+          순금융재산 <strong>제안값</strong>에 반영되어 있으니 §22 입력 단계에서{" "}
+          <strong>[적용]</strong> 버튼으로 입력값에 반영하세요.
         </div>
-      )}
-
-      {!isAuto && (
-        <div className="rounded border border-violet-300 bg-violet-100/60 p-2">
-          <p className="text-[11px] font-semibold text-violet-900">
-            수동 지정 결과:{" "}
-            <span
-              className={
-                appliedIsMajor
-                  ? "rounded bg-violet-600 text-white px-1.5 py-0.5"
-                  : "rounded bg-slate-300 text-slate-800 px-1.5 py-0.5"
-              }
-            >
-              {appliedIsMajor ? "최대주주 해당 (ON)" : "비대주주 (OFF)"}
-            </span>
-          </p>
-          {appliedIsMajor !== autoResult.isSection22Major && totalShares > 0 && (
-            <p className="text-[10px] text-violet-700/80 mt-1">
-              ※ 자동 판정값과 다름 — 자동: {autoResult.isSection22Major ? "ON" : "OFF"} (
-              {ratioPercent}%)
-            </p>
-          )}
-        </div>
-      )}
+      </ToggleCard>
     </div>
   );
 }

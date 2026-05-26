@@ -164,10 +164,12 @@ export const unlistedStockValuationV2Schema = z
     goodwillRate: z.number().min(0.01).max(1).optional(),
     isMaxShareholder: z.boolean(),
     companySize: z.enum(["small", "medium", "large"]),
-    // PR-E (UI 통합 v3): §22② 자동 도출 3-state 모드
-    section22MajorShareholderMode: z
-      .enum(["auto", "manual_on", "manual_off"])
-      .optional(),
+    // §22② 최대주주 해당 여부 (금융재산공제 배제 토글). 레거시 3-state string 호환:
+    // manual_on→true, manual_off·auto→false (auto는 종전 표시 전용이라 계산상 미배제=false 보존).
+    isSection22MajorShareholder: z.preprocess(
+      (v) => (v === "manual_on" ? true : v === "manual_off" || v === "auto" ? false : v),
+      z.boolean().optional(),
+    ),
     // PR-P (§54③): 다른 비상장주식 10% 이하 보유 옵션 (이동평균법 취득가액 갈음)
     otherUnlistedHoldings: z
       .array(

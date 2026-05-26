@@ -243,7 +243,16 @@ function restoreUnlistedStockInput(raw: UnlistedStockV2Lite): UnlistedStockValua
     totalShares: typeof raw.totalShares === "number" ? raw.totalShares : 0,
     ownedShares: typeof raw.ownedShares === "number" ? raw.ownedShares : 0,
     isRealEstateHeavy: Boolean(raw.isRealEstateHeavy),
-    section22MajorShareholderMode: raw.section22MajorShareholderMode as "auto" | "manual_on" | "manual_off" | undefined,
+    // §22② boolean (신규) 우선, 없으면 레거시 3-state string 마이그레이션 (manual_on→true, manual_off·auto→false)
+    isSection22MajorShareholder:
+      typeof raw.isSection22MajorShareholder === "boolean"
+        ? raw.isSection22MajorShareholder
+        : raw.section22MajorShareholderMode === "manual_on"
+          ? true
+          : raw.section22MajorShareholderMode === "manual_off" ||
+              raw.section22MajorShareholderMode === "auto"
+            ? false
+            : undefined,
     netAssetOnlyReason: raw.netAssetOnlyReason as UnlistedStockValuationInput["netAssetOnlyReason"],
     fiscalYears: fiscalYears as unknown as UnlistedStockValuationInput["fiscalYears"],
     capitalChanges: capitalChanges as unknown as UnlistedStockValuationInput["capitalChanges"],
@@ -426,7 +435,7 @@ export function filterUnlistedStockCandidates(
  *
  * Q1 B안 — 법인 정보만 prefill:
  *   ✅ 포함: corpName·representative·businessStartDate·faceValuePerShare·totalShares·
- *           isRealEstateHeavy·section22MajorShareholderMode·netAssetOnlyReason·
+ *           isRealEstateHeavy·isSection22MajorShareholder·netAssetOnlyReason·
  *           fiscalYears·capitalChanges·netAssetValueRaw(17 + evaluationDeltaRows + 보험 3)·
  *           isContinuousLossLastThreeYears·capitalizationRate·goodwillRate·companySize
  *   ❌ 제외: evaluationDate·ownedShares·isMaxShareholder (사용자 입력 보존 — Q1·Q7 B안)
@@ -443,9 +452,9 @@ export function candidateToUnlistedStockInput(
     faceValuePerShare: src.faceValuePerShare,
     totalShares: src.totalShares,
 
-    // §54① 부동산과다 + §22② 자동 도출 모드
+    // §54① 부동산과다 + §22② 최대주주 해당 여부(금융재산공제 배제)
     isRealEstateHeavy: src.isRealEstateHeavy,
-    section22MajorShareholderMode: src.section22MajorShareholderMode,
+    isSection22MajorShareholder: src.isSection22MajorShareholder,
 
     // §54④ 순자산 단독 평가 사유
     netAssetOnlyReason: src.netAssetOnlyReason,

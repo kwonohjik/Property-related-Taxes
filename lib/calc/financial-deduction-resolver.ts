@@ -53,6 +53,11 @@ const CATEGORY_DEFAULT: Partial<Record<AssetCategory, boolean>> = {
  * 사용자가 명시적으로 포함을 체크할 때만 true.
  */
 export function resolveFinancialEligibility(item: EstateItem): boolean {
+  // 우선순위 0 (법정 강제 배제): §22② — 최대주주 보유 비상장주식(V2)은 금융재산공제 금융재산에
+  // "포함되지 아니한다". 사용자 명시값(isFinancialAssetForDeduction)보다 우선해 무조건 제외.
+  if (item.unlistedStockValuationV2?.isSection22MajorShareholder === true) {
+    return false;
+  }
   // 우선순위 1: 사용자 명시값
   if (item.isFinancialAssetForDeduction !== undefined) {
     return item.isFinancialAssetForDeduction;

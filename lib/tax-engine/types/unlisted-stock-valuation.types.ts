@@ -147,12 +147,13 @@ export interface UnlistedStockValuationInput {
   isRealEstateHeavy: boolean;
 
   /**
-   * PR-E (UI 통합 v3): §22② 최대주주 추가공제 제외 자동 도출 모드 (3-state).
-   * - "auto": ownedShares / totalShares 비율 자동 판정 (deriveSection22MajorShareholder)
-   * - "manual_on": 사용자 명시 ON / "manual_off": 사용자 명시 OFF
-   * ※ §22②(추가공제 제외)는 §63③(할증평가, isMaxShareholder)와 다른 개념.
+   * §22② 최대주주 해당 여부 (금융재산 상속공제 배제 토글).
+   * true  = 최대주주 해당 → 이 비상장주식을 §22 금융재산 상속공제 대상금액에서 제외 (법 §22②).
+   * false/undefined = 미해당 → §22 포함 (비상장 default).
+   * resolveFinancialEligibility가 본 값을 최우선 가드로 참조한다.
+   * ※ §22②(금융재산공제 배제)는 §63③(할증평가 ×120%, isMaxShareholder)와 다른 개념.
    */
-  section22MajorShareholderMode?: "auto" | "manual_on" | "manual_off";
+  isSection22MajorShareholder?: boolean;
 
   /** §54④ 순자산 단독 평가 사유 (5종) */
   netAssetOnlyReason?: UnlistedNetAssetOnlyReason;
