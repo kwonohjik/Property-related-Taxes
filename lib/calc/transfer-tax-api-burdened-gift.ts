@@ -35,6 +35,8 @@ export interface BurdenedGiftInfoPayload {
     giftDate: string;
     giftAmount: number;
     giftTaxPaid: number;
+    computedTax?: number;
+    giftTaxBase?: number;
   }>;
   /** 양도시 토지 기준시가 (housing·building 시 0, 합산은 land+building) */
   landStdPriceAtTransfer: number;
@@ -89,6 +91,9 @@ export function buildBurdenedGiftInfo(primary: AssetForm): BurdenedGiftInfoPaylo
               giftDate: p.giftDate,
               giftAmount: parseAmount(p.giftAmount) || 0,
               giftTaxPaid: parseAmount(p.giftTaxPaid) || 0,
+              // §58 Phase A — 당시 산출세액·과세표준 (미입력 시 undefined → §58 미적용, validate에서 강제)
+              computedTax: parseAmount(p.computedTax) || undefined,
+              giftTaxBase: parseAmount(p.giftTaxBase) || undefined,
             }))
         : undefined,
   };

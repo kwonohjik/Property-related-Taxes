@@ -65,5 +65,9 @@ export interface BurdenedGiftFormSlice {
     giftAmount: string;
     /** 당시 납부 증여세액 (원, string) */
     giftTaxPaid: string;
+    /** 당시 증여세 산출세액 (원, string) — §58① 기납부세액공제 대상·한도 분자 (PR3) */
+    computedTax?: string;
+    /** 당시 증여세 과세표준 (원, string) — §58 한도 분자 (PR3) */
+    giftTaxBase?: string;
   }>;
 }

@@ -266,6 +266,10 @@ describe("P3-5 — 10년 이내 사전증여 합산 (§47②·§58)", () => {
         giftDate: "2022-03-01", // 2년 전
         giftAmount: 200_000_000,
         giftTaxPaid: 17_500_000,
+        // §58 Phase A 필수 (PR3): 당시 산출세액·과세표준
+        // 사전증여 200M − 직계비속 공제 50M = 과세표준 150M → 150M×20%−10M = 20M 산출세액
+        computedTax: 20_000_000,
+        giftTaxBase: 150_000_000,
       },
     ],
   };
@@ -299,11 +303,22 @@ describe("P3-5 — 10년 이내 사전증여 합산 (§47②·§58)", () => {
     expect(gt.computedTax).toBe(135_000_000);
   });
 
-  it("§58 기납부세액공제 적용 후 결정세액 — 사전증여 미합산 케이스(P3-1 finalTax 77.6M)보다 증가", () => {
+  it("[BG58-2] §58 기납부세액공제 = 20,000,000 (Min(직전 산출세액 20M, 한도 floor(135M×150M/650M)=31,153,846))", () => {
     const result = calculateTransferTax(input, rates);
     const gt = result.transferBurdenedGiftBreakdown!.giftTax!;
-    // 합산으로 누진세율 상승 → 결정세액은 P3-1(77,600,000)보다 큼
-    expect(gt.finalTax).toBeGreaterThan(77_600_000);
+    // §58 공제액 직접 검증 (PR3 priorGiftCredit echo)
+    expect(gt.priorGiftCredit).toBe(20_000_000);
+  });
+
+  it("[BG58-2b] §58 적용 후 결정세액 = 111,550,000 (자기일관성: 135M − 20M − 신고공제 3,450,000)", () => {
+    const result = calculateTransferTax(input, rates);
+    const gt = result.transferBurdenedGiftBreakdown!.giftTax!;
+    // 신고세액공제 = (135M − 20M) × 3% = 3,450,000
+    expect(gt.filingCredit).toBe(3_450_000);
+    // 결정세액 = 135M − 20M(§58) − 3,450,000(§69) = 111,550,000
+    expect(gt.finalTax).toBe(111_550_000);
+    // 자기일관성: computedTax − priorGiftCredit − filingCredit === finalTax
+    expect(gt.computedTax - gt.priorGiftCredit! - gt.filingCredit).toBe(gt.finalTax);
     // 양도세는 변동 없음 (사전증여는 증여세에만 영향)
     expect(result.calculatedTax).toBe(45_458_000);
   });

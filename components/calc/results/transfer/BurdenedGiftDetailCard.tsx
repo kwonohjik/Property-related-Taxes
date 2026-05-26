@@ -148,6 +148,15 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings }
                 <td className="py-1 pr-2 pl-3">{"  └ 증여세 산출세액"}</td>
                 <td className="text-right font-mono">{fmt(bg.giftTax.computedTax)}원</td>
               </tr>
+              {bg.giftTax.priorGiftCredit !== undefined &&
+                bg.giftTax.priorGiftCredit > 0 && (
+                  <tr>
+                    <td className="py-1 pr-2 pl-3">{"  └ §58 기납부세액공제"}</td>
+                    <td className="text-right font-mono">
+                      -{fmt(bg.giftTax.priorGiftCredit)}원
+                    </td>
+                  </tr>
+                )}
               <tr>
                 <td className="py-1 pr-2 pl-3">{"  └ 신고세액공제 (3%)"}</td>
                 <td className="text-right font-mono">-{fmt(bg.giftTax.filingCredit)}원</td>

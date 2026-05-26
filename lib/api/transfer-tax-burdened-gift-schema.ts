@@ -59,6 +59,9 @@ export const burdenedGiftInfoSchema = z.object({
         giftDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
         giftAmount: z.number().int().nonnegative(),
         giftTaxPaid: z.number().int().nonnegative(),
+        // §58 Phase A 안분 (PR3) — 당시 산출세액·과세표준
+        computedTax: z.number().int().nonnegative().optional(),
+        giftTaxBase: z.number().int().nonnegative().optional(),
       }),
     )
     .optional(),

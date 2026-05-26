@@ -30,7 +30,7 @@
   - 한도 = `floor(⑦(할증 전 산출세액) × ⑤_prior(직전 합산과세표준) / ⑤(금번 합산과세표준))`, 공제액 = `Min(직전 합산회차 산출세액, 한도)`.
   - `priorGiftComputedTax > 0 && aggregatedTaxBase > 0 && priorGiftAddedTaxBase > 0`일 때 활성.
 - `lib/tax-engine/gift-tax.ts:182~188` — 메인 증여세 경로는 `priorAggregation.totalComputedTax` 등 Phase A 필드 전달 → **안분 적용됨**.
-- **갭**: `lib/tax-engine/burdened-gift-apportionment.ts:317~327` — 부담부증여 무상이전분 증여세 산출 시 `priorGiftsWithin10Years`만 매핑하고 **`priorGiftComputedTax`·`priorGiftAddedTaxBase` 미전달** → `priorGiftTaxPaid` 합계로 **legacy 단순 산출세액 한도 차감** fallback.
+- **갭 (PR3 착수 시 코드 재검증으로 성격 정정 — `feedback_numeric_impact_verify_before_bug_claim`)**: 부담부증여는 `calcGiftTax`(메인 엔진)를 호출하므로 `priorGiftsWithin10Years`가 `aggregatePriorGiftsForGift`(gift-prior-aggregation.ts:137~138)를 거쳐 Phase A 경로를 탄다. 그러나 그 집계는 `matched[0].computedTax`·`giftTaxBase`로 한도를 산출하는데, **`BurdenedGiftInfo.priorGiftsWithin10Years` 항목 타입(transfer-burdened-gift.types.ts:90)에 `computedTax`·`giftTaxBase`가 없어** burdened map(burdened-gift-apportionment.ts:317)이 이를 전달 못 함 → `priorAggregation`=0 → Phase A 미적용. gift-tax.ts는 `priorGiftTaxPaid`를 미전달하므로 legacy fallback도 미작동 → **§58 기납부세액공제 완전 누락(0)**. 게다가 §47② 합산(누진세 증가)은 적용되므로 **사전증여분 이중과세** 발생. (계획서 초안의 "legacy 단순차감 fallback"은 부정확 — 실제는 공제 누락.)
 
 ### 법령 근거 (KoreanLaw 검증 완료 2026-05-26)
 - 상증법 §58①(납부세액공제) — 본법 mst 276123 전문 확인. `GIFT_LAW.PRIOR_TAX_CREDIT_LIMIT_FORMULA` 상수 인용 확인.

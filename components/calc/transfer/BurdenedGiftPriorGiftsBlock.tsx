@@ -27,7 +27,7 @@ export function BurdenedGiftPriorGiftsBlock({ asset, onChange }: Props) {
     onChange({
       bgPriorGifts: [
         ...rows,
-        { giftDate: "", giftAmount: "", giftTaxPaid: "" },
+        { giftDate: "", giftAmount: "", giftTaxPaid: "", computedTax: "", giftTaxBase: "" },
       ],
     });
   }
@@ -64,8 +64,9 @@ export function BurdenedGiftPriorGiftsBlock({ asset, onChange }: Props) {
         </button>
       </div>
       <p className="text-[11px] text-violet-700">
-        동일 증여자가 동일 수증자에게 10년 이내 한 증여재산을 합산하여 누진세율 적용.
-        당시 납부한 증여세액은 §58 기납부세액공제로 차감.
+        동일 증여자가 동일 수증자에게 10년 이내 한 증여재산을 합산하여 누진세율 적용(§47②).
+        §58 기납부세액공제(이중과세 방지) 적용을 위해 <strong>당시 산출세액·과세표준</strong> 입력 필수 —
+        미입력 시 합산 누진만 적용되고 공제가 누락됩니다.
       </p>
 
       {rows.length === 0 ? (
@@ -119,6 +120,31 @@ export function BurdenedGiftPriorGiftsBlock({ asset, onChange }: Props) {
                     hideUnit
                     value={row.giftTaxPaid}
                     onChange={(v) => updateRow(idx, { giftTaxPaid: v })}
+                  />
+                </div>
+              </div>
+              {/* §58 Phase A 안분 필수 — 당시 산출세액·과세표준 (PR3) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 rounded-md border border-violet-200 bg-violet-50/60 p-1.5">
+                <div>
+                  <p className="text-[10px] text-violet-700 mb-0.5">
+                    당시 산출세액 (§58 공제)
+                  </p>
+                  <CurrencyInput
+                    label=""
+                    hideUnit
+                    value={row.computedTax ?? ""}
+                    onChange={(v) => updateRow(idx, { computedTax: v })}
+                  />
+                </div>
+                <div>
+                  <p className="text-[10px] text-violet-700 mb-0.5">
+                    당시 과세표준 (§58 한도)
+                  </p>
+                  <CurrencyInput
+                    label=""
+                    hideUnit
+                    value={row.giftTaxBase ?? ""}
+                    onChange={(v) => updateRow(idx, { giftTaxBase: v })}
                   />
                 </div>
               </div>

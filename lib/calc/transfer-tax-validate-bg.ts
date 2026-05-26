@@ -101,6 +101,15 @@ export function validateBurdenedGiftAsset(
     if (!hasDate && amount > 0) {
       return `${label}: 사전증여 #${i + 1} — 증여재산가액이 입력되었으나 증여일이 비어있습니다.`;
     }
+    // §58 Phase A — 유효 사전증여 행은 당시 산출세액·과세표준 입력 필수 (미입력 시 공제 누락·이중과세)
+    if (hasDate && amount > 0) {
+      if ((parseAmount(row.computedTax) || 0) <= 0) {
+        return `${label}: 사전증여 #${i + 1} — §58 기납부세액공제 적용을 위해 당시 산출세액을 입력하세요.`;
+      }
+      if ((parseAmount(row.giftTaxBase) || 0) <= 0) {
+        return `${label}: 사전증여 #${i + 1} — §58 한도 산정을 위해 당시 과세표준을 입력하세요.`;
+      }
+    }
   }
 
   return null;

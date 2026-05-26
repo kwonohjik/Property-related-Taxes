@@ -314,17 +314,18 @@ export function buildBurdenedGiftBreakdown(params: {
       // Phase 3 후속: 10년 이내 사전증여 합산 (상증법 §47②·§58)
       // Phase A: priorGift.donor를 현재 증여자 그룹과 동일하게 매핑 — 별도 입력 없으면
       //          현재 donor와 동일 그룹 가정 (legacy 호환).
+      // PR3: computedTax·giftTaxBase를 전달해야 aggregatePriorGiftsForGift가 §58 Phase A
+      //      안분 한도(floor(금번 산출세액 × 직전 과세표준 / 합산 과세표준))를 산출한다.
+      //      미전달(undefined) 시 priorAggregation 0 → §58 미적용(공제 누락) — validation에서 입력 강제.
       priorGiftsWithin10Years: (info.priorGiftsWithin10Years ?? []).map((p) => ({
         giftDate: p.giftDate,
         isHeir: false, // 증여세 §47 합산에서는 isHeir 무관 (상속세 §13 전용 필드)
         giftAmount: p.giftAmount,
         giftTaxPaid: p.giftTaxPaid,
         donor: giftDonor, // 그룹 일치 자동 매핑
-        // §58 한도 산식은 priorComputedTax + priorTaxBase 입력 시만 적용.
-        // burdenedGiftInfo.priorGiftsWithin10Years에 명시 입력 없으면 legacy priorGiftTaxPaid fallback.
+        computedTax: p.computedTax,  // §58① 증여 당시 산출세액 (한도 분자·공제 대상)
+        giftTaxBase: p.giftTaxBase,  // §58 한도 분자 = 가산 증여재산 과세표준
       })),
-      // Phase A: 입력에 priorComputedTax가 없으면 priorGiftTaxPaid 합계를 legacy fallback으로 전달
-      // (calcGiftTaxCredits 의 priorGiftTaxPaid 매개변수 사용)
       isGenerationSkip: info.isGenerationSkip ?? false,
       isMinorDonee: info.isMinorDonee ?? false,
       deductionInput: {
@@ -340,6 +341,8 @@ export function buildBurdenedGiftBreakdown(params: {
       taxBase: giftResult.taxBase,
       computedTax: giftResult.computedTax,
       filingCredit: giftResult.creditDetail.filingCredit,
+      // §58 기납부세액공제 — calcGiftTaxCredits 결과의 giftTaxCredit(= priorPaidCredit) (PR3)
+      priorGiftCredit: giftResult.creditDetail.giftTaxCredit,
       finalTax: giftResult.finalTax,
       donorRelation,
     };

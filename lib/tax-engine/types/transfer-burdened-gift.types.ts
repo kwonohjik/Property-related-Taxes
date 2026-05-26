@@ -92,8 +92,16 @@ export interface BurdenedGiftInfo {
     giftDate: string;
     /** 당시 증여재산가액 */
     giftAmount: number;
-    /** 당시 납부한 증여세액 (§58 기납부세액공제) */
+    /** 당시 납부한 증여세액 (§47② 합산 표시·totalTaxPaid용) */
     giftTaxPaid: number;
+    /**
+     * 당시 증여세 산출세액 (§58① "증여 당시 산출세액") — §58 기납부세액공제 대상·한도 분자.
+     * 입력 시 calcGiftTax의 aggregatePriorGiftsForGift가 Phase A 안분을 적용한다.
+     * 미입력(undefined) 시 priorAggregation 0 → §58 미적용 (validation에서 입력 강제).
+     */
+    computedTax?: number;
+    /** 당시 증여세 과세표준 (§58 한도 분자 = 가산 증여재산 과세표준). Phase A 필수 */
+    giftTaxBase?: number;
   }>;
 
   // === 자산별 기준시가 — 보충적평가·취득가액 안분 (소령 §159 ① 1호) ===
@@ -204,6 +212,12 @@ export interface TransferBurdenedGiftBreakdown {
     computedTax: number;
     /** 신고세액공제 (§69 3%) */
     filingCredit: number;
+    /**
+     * §58 기납부세액공제 — 사전증여 산출세액 안분 공제액 (PR3).
+     * = Min(직전 증여 산출세액, floor(금번 산출세액 × 직전 과세표준 / 합산 과세표준)).
+     * 사전증여 미입력 시 0. (= calcGiftTaxCredits 결과의 giftTaxCredit)
+     */
+    priorGiftCredit?: number;
     /** 결정세액 (수증자 자진납부세액) */
     finalTax: number;
     /** 적용 관계 */
