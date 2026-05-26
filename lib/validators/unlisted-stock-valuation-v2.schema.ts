@@ -44,34 +44,51 @@ export const unlistedCapitalChangeSchema = z.object({
 });
 
 /** 사업연도 가산·차감 — 별지 6쪽 ①~㉒ (§56④) */
-export const fiscalYearAdjustmentSchema = z.object({
-  fiscalYearLabel: z.string().min(1),
-  fiscalYearEndDate: z.coerce.date(),
-  taxableIncome: z.number(),
-  // 가산 ②~⑦
-  addRefundInterest: z.number().nonnegative().optional(),
-  addLossFromDividend: z.number().nonnegative().optional(),
-  addCarriedDonation: z.number().nonnegative().optional(),
-  addCarriedCarPayment: z.number().nonnegative().optional(),
-  addForexValuationGain: z.number().nonnegative().optional(),
-  addOtherByOrdinance: z.number().nonnegative().optional(),
-  // 차감 ⑧~㉒
-  subCorporateTax: z.number().nonnegative().optional(),
-  subAdditionalTaxes: z.number().nonnegative().optional(),
-  subFines: z.number().nonnegative().optional(),
-  subCompulsoryPublicCharges: z.number().nonnegative().optional(),
-  subPunitiveDamages: z.number().nonnegative().optional(),
-  subWithholdingPenalty: z.number().nonnegative().optional(),
-  subExcessiveExpenses: z.number().nonnegative().optional(),
-  subDonationExcess: z.number().nonnegative().optional(),
-  subEntertainmentExcess: z.number().nonnegative().optional(),
-  subNonBusinessExpenses: z.number().nonnegative().optional(),
-  subNonBusinessCarExpenses: z.number().nonnegative().optional(),
-  subInterestPayment: z.number().nonnegative().optional(),
-  subDepreciationShortage: z.number().nonnegative().optional(),
-  subForexValuationLoss: z.number().nonnegative().optional(),
-  subOtherByOrdinance: z.number().nonnegative().optional(),
-});
+export const fiscalYearAdjustmentSchema = z
+  .object({
+    fiscalYearLabel: z.string().min(1),
+    fiscalYearEndDate: z.coerce.date(),
+    /**
+     * §17의3② 1년 미만 사업연도 연환산용 개시일 (선택).
+     * 미입력 시 12개월 가정 — 회귀 0.
+     * 입력 시 개시일 > 종료일이면 validation 차단.
+     */
+    fiscalYearStartDate: z.coerce.date().optional(),
+    taxableIncome: z.number(),
+    // 가산 ②~⑦
+    addRefundInterest: z.number().nonnegative().optional(),
+    addLossFromDividend: z.number().nonnegative().optional(),
+    addCarriedDonation: z.number().nonnegative().optional(),
+    addCarriedCarPayment: z.number().nonnegative().optional(),
+    addForexValuationGain: z.number().nonnegative().optional(),
+    addOtherByOrdinance: z.number().nonnegative().optional(),
+    // 차감 ⑧~㉒
+    subCorporateTax: z.number().nonnegative().optional(),
+    subAdditionalTaxes: z.number().nonnegative().optional(),
+    subFines: z.number().nonnegative().optional(),
+    subCompulsoryPublicCharges: z.number().nonnegative().optional(),
+    subPunitiveDamages: z.number().nonnegative().optional(),
+    subWithholdingPenalty: z.number().nonnegative().optional(),
+    subExcessiveExpenses: z.number().nonnegative().optional(),
+    subDonationExcess: z.number().nonnegative().optional(),
+    subEntertainmentExcess: z.number().nonnegative().optional(),
+    subNonBusinessExpenses: z.number().nonnegative().optional(),
+    subNonBusinessCarExpenses: z.number().nonnegative().optional(),
+    subInterestPayment: z.number().nonnegative().optional(),
+    subDepreciationShortage: z.number().nonnegative().optional(),
+    subForexValuationLoss: z.number().nonnegative().optional(),
+    subOtherByOrdinance: z.number().nonnegative().optional(),
+  })
+  .superRefine((fy, ctx) => {
+    // 개시일 > 종료일 차단 (§17의3② 입력 검증)
+    if (fy.fiscalYearStartDate && fy.fiscalYearStartDate > fy.fiscalYearEndDate) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["fiscalYearStartDate"],
+        message: "사업연도 개시일은 종료일 이전이어야 합니다.",
+      });
+    }
+  });
 
 /** 평가차액 행 단위 입력 (3쪽 5.평가차액) — PR-N */
 export const evaluationDeltaRowSchema = z.object({

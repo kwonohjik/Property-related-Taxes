@@ -30,6 +30,8 @@ import type {
 } from "@/lib/tax-engine/types/unlisted-stock-valuation.types";
 import { calcFiscalYearNetIncome } from "./fiscal-year-net-income";
 import { calcConvertedShares } from "./converted-shares";
+import { annualizePerShareNetIncome } from "./fiscal-year-annualize";
+import { fiscalYearMonths } from "./fiscal-year-annualize";
 import {
   calcWeightedAvg3y,
   calcPerShareNetIncomeValue,
@@ -99,8 +101,19 @@ export function evaluateUnlistedStockV2(
     convertedShares[2] > 0 ? Math.floor(finalNetIncomes[2] / convertedShares[2]) : 0,
   ];
 
+  // §17의3② 1년 미만 사업연도 연환산 (1주당 산출 후·가중평균 직전, §56④→⑤→환산주식수→1주당→§17의3②→§56①)
+  const annualizedPerShare: [number, number, number] = [
+    annualizePerShareNetIncome(perShareNetIncomes[0], input.fiscalYears[0].fiscalYearStartDate, input.fiscalYears[0].fiscalYearEndDate),
+    annualizePerShareNetIncome(perShareNetIncomes[1], input.fiscalYears[1].fiscalYearStartDate, input.fiscalYears[1].fiscalYearEndDate),
+    annualizePerShareNetIncome(perShareNetIncomes[2], input.fiscalYears[2].fiscalYearStartDate, input.fiscalYears[2].fiscalYearEndDate),
+  ];
+  const annualizationApplied: [boolean, boolean, boolean] = [
+    fiscalYearMonths(input.fiscalYears[0].fiscalYearStartDate, input.fiscalYears[0].fiscalYearEndDate) < 12,
+    fiscalYearMonths(input.fiscalYears[1].fiscalYearStartDate, input.fiscalYears[1].fiscalYearEndDate) < 12,
+    fiscalYearMonths(input.fiscalYears[2].fiscalYearStartDate, input.fiscalYears[2].fiscalYearEndDate) < 12,
+  ];
   // 아.1주당 가중평균 (§56①, 음수 시 0)
-  const weightedNetIncomePerShare = calcWeightedAvg3y(perShareNetIncomes);
+  const weightedNetIncomePerShare = calcWeightedAvg3y(annualizedPerShare);
   // 차.1주당 순손익가치 ⑤ = 아 ÷ 자.환원율
   const netIncomePerShare = calcPerShareNetIncomeValue(weightedNetIncomePerShare, capRate);
 
@@ -264,6 +277,9 @@ export function evaluateUnlistedStockV2(
     fiscalYearBreakdowns,
     weightedNetIncomePerShare,
     capitalizationRate: capRate,
+    // §17의3② 연환산 echo (1년 미만 사업연도 있을 때만)
+    annualizationApplied: annualizationApplied.some((a) => a) ? annualizationApplied : undefined,
+    annualizedPerShareNetIncome: annualizationApplied.some((a) => a) ? annualizedPerShare : undefined,
     goodwillCalculation: goodwill,
     premiumRate: premium.premiumRate,
     premiumExclusionReason: premium.exclusionReason,

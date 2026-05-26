@@ -8,11 +8,17 @@
  *   가산 (②~⑦): §56④ 1호 가~마
  *   차감 (⑧~㉒): §56④ 2호 가~마
  *
+ *   §17의3② 1년 미만 사업연도 연환산: 개시일(fiscalYearStartDate) 입력 시
+ *   종료일까지의 개월수 < 12이면 1주당 순손익액 × 12 / 개월수 연환산.
+ *   미입력 시 12개월 가정(종료일−1년+1일) — 회귀 0.
+ *
  * Plan: docs/00-pm/inheritance-unlisted-stock-valuation-besshi-4-buppyo-3.plan.md
+ * Plan(연환산): docs/00-pm/inheritance-unlisted-fiscal-year-under-1year.plan.md
  */
 
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DateInput } from "@/components/ui/date-input";
+import { fiscalYearMonths } from "@/lib/tax-engine/property-valuation/fiscal-year-annualize";
 import type { FiscalYearAdjustment } from "@/lib/tax-engine/types/unlisted-stock-valuation.types";
 
 function dateToStr(d: Date): string {
@@ -117,30 +123,64 @@ export function FiscalYearAdjustmentTable({
         평가기준일 이전 1·2·3년차 사업연도. 가중치 ×3·×2·×1로 가중평균 후 ÷ 환원율(10%) = 1주당 순손익가치 ⑤
       </p>
 
-      {/* 사업연도 라벨 + 종료일 헤더 */}
+      {/* 사업연도 라벨 + 개시일·종료일 헤더 */}
       <div className="grid grid-cols-4 gap-2 text-[11px] font-semibold text-gray-700">
         <div></div>
-        {fiscalYears.map((fy, idx) => (
-          <div key={idx} className="space-y-1">
-            <div className="text-emerald-700">
-              {idx === 0 ? "1년전 ×3" : idx === 1 ? "2년전 ×2" : "3년전 ×1"}
+        {fiscalYears.map((fy, idx) => {
+          const months = fiscalYearMonths(fy.fiscalYearStartDate, fy.fiscalYearEndDate);
+          const isShortYear = fy.fiscalYearStartDate !== undefined && months < 12;
+          return (
+            <div key={idx} className="space-y-1">
+              <div className="text-emerald-700">
+                {idx === 0 ? "1년전 ×3" : idx === 1 ? "2년전 ×2" : "3년전 ×1"}
+              </div>
+              <input
+                type="text"
+                value={fy.fiscalYearLabel}
+                onChange={(e) => updateField(idx as 0 | 1 | 2, "fiscalYearLabel", e.target.value)}
+                placeholder="사업연도 라벨"
+                className="w-full px-2 py-1 text-[11px] border border-gray-200 dark:border-gray-700 rounded bg-white dark:bg-gray-900"
+              />
+              {/* 개시일 (§17의3② 연환산용 — 선택 입력) */}
+              <div className="space-y-0.5">
+                <p className="text-[10px] text-gray-500 font-normal">
+                  개시일
+                  <span className="ml-1 text-gray-400">(1년 미만 시 입력)</span>
+                </p>
+                <DateInput
+                  value={fy.fiscalYearStartDate ? dateToStr(fy.fiscalYearStartDate) : ""}
+                  onChange={(s) => {
+                    const d = strToDate(s);
+                    updateField(idx as 0 | 1 | 2, "fiscalYearStartDate", d);
+                  }}
+                />
+              </div>
+              {/* 종료일 */}
+              <div className="space-y-0.5">
+                <p className="text-[10px] text-gray-500 font-normal">종료일</p>
+                <DateInput
+                  value={dateToStr(fy.fiscalYearEndDate)}
+                  onChange={(s) => {
+                    const d = strToDate(s);
+                    if (d) updateField(idx as 0 | 1 | 2, "fiscalYearEndDate", d);
+                  }}
+                />
+              </div>
+              {/* §17의3② 연환산 amber 안내 */}
+              {isShortYear && (
+                <div className="rounded border border-amber-300 bg-amber-50 px-2 py-1 text-[10px] text-amber-800 font-normal">
+                  사업연도 {months}개월 → 1주당 순손익액 ×12/{months} 연환산 (§17의3②)
+                </div>
+              )}
+              {/* hint: 미입력 안내 */}
+              {!fy.fiscalYearStartDate && (
+                <p className="text-[10px] text-gray-400 font-normal leading-snug">
+                  신설법인·결산기변경으로 1년 미만이면 개시일 입력. 미입력 시 12개월(연환산 없음).
+                </p>
+              )}
             </div>
-            <input
-              type="text"
-              value={fy.fiscalYearLabel}
-              onChange={(e) => updateField(idx as 0 | 1 | 2, "fiscalYearLabel", e.target.value)}
-              placeholder="사업연도 라벨"
-              className="w-full px-2 py-1 text-[11px] border border-gray-200 dark:border-gray-700 rounded bg-white dark:bg-gray-900"
-            />
-            <DateInput
-              value={dateToStr(fy.fiscalYearEndDate)}
-              onChange={(s) => {
-                const d = strToDate(s);
-                if (d) updateField(idx as 0 | 1 | 2, "fiscalYearEndDate", d);
-              }}
-            />
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* 22 row × 3 year 입력 */}

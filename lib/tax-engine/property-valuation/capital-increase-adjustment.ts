@@ -18,7 +18,7 @@
  * Plan: docs/00-pm/inheritance-unlisted-stock-valuation-besshi-4-buppyo-3.plan.md
  */
 
-import { differenceInCalendarMonths } from "date-fns";
+import { monthsBetween } from "./fiscal-year-annualize";
 import type { UnlistedCapitalChange } from "@/lib/tax-engine/types/unlisted-stock-valuation.types";
 
 /**
@@ -73,8 +73,8 @@ export function calcCapitalIncreaseAdjustment(
         change.changeDate >= fiscalYearStartDate &&
         change.changeDate <= fiscalYearEndDate
       ) {
-        // 해당 사업연도 내 → §56⑤ 후단 월할 (1개월 미만 1개월)
-        const monthsDiff = monthsWithMinOne(fiscalYearStartDate, change.changeDate);
+        // 해당 사업연도 내 → §56⑤ 후단 월할 (1개월 미만 1개월 — floorToOne default)
+        const monthsDiff = monthsBetween(fiscalYearStartDate, change.changeDate);
         adjustments[yearIdx] += (annualAmount * monthsDiff) / 12;
       } else if (change.changeDate > fiscalYearEndDate) {
         // 그 이전 사업연도 → 1년 full 가산 (§56⑤ 본문 "그 이전 사업연도")
@@ -89,16 +89,4 @@ export function calcCapitalIncreaseAdjustment(
     Math.floor(adjustments[1]),
     Math.floor(adjustments[2]),
   ];
-}
-
-/**
- * §56⑤ 후단 "1개월 미만은 1개월" 규칙 적용 월할 계산
- *
- * @example 2021.1.1. → 2021.6.30. = 6개월
- *   (사업연도 개시일 1.1.부터 유상증자일 6.30.까지 = 1·2·3·4·5·6월 = 6개월)
- */
-function monthsWithMinOne(start: Date, end: Date): number {
-  if (end < start) return 0;
-  const monthDiff = differenceInCalendarMonths(end, start) + 1;
-  return Math.max(monthDiff, 1);
 }

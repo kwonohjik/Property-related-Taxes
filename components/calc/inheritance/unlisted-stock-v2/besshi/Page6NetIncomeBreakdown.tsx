@@ -51,9 +51,22 @@ const SUB_ROWS: { num: string; label: string; key: EchoKey }[] = [
 
 export interface Page6NetIncomeBreakdownProps {
   result: UnlistedStockValuationResult;
+  /** §17의3② 연환산 적용 여부 — evaluateUnlistedStockV2 result.annualizationApplied */
+  annualizationApplied?: [boolean, boolean, boolean];
+  /** 연환산 후 1주당 순손익액 — evaluateUnlistedStockV2 result.annualizedPerShareNetIncome */
+  annualizedPerShareNetIncome?: [number, number, number];
 }
 
-export function Page6NetIncomeBreakdown({ result }: Page6NetIncomeBreakdownProps) {
+export function Page6NetIncomeBreakdown({
+  result,
+  annualizationApplied,
+  annualizedPerShareNetIncome,
+}: Page6NetIncomeBreakdownProps) {
+  // result.annualizationApplied/annualizedPerShareNetIncome을 우선 사용, props fallback
+  const appliedFlags = result.annualizationApplied ?? annualizationApplied;
+  const annualizedValues = result.annualizedPerShareNetIncome ?? annualizedPerShareNetIncome;
+  const hasAnnualization = appliedFlags?.some((a) => a) ?? false;
+
   const fyb = result.fiscalYearBreakdowns;
   const cell = (key: EchoKey) => fyb.map((fy) => (fy[key] as number | undefined) ?? 0);
 
@@ -88,10 +101,35 @@ export function Page6NetIncomeBreakdown({ result }: Page6NetIncomeBreakdownProps
           <BreakdownRow testid="p6-마" label="마. 순손익액 (다 ± 라)" values={fyb.map((fy) => fy.finalNetIncome)} emphasized />
           <BreakdownRow testid="p6-바" label="바. 사업연도말 주식수 또는 환산주식수" values={fyb.map((fy) => fy.convertedShares)} unit="주" />
           <BreakdownRow testid="p6-사" label="사. 주당순손익액 (마 ÷ 바) ㉓㉔㉕" values={fyb.map((fy) => fy.perShareNetIncome)} />
+          {/* §17의3② 연환산 행 — 1년 미만 사업연도 있을 때만 표시 */}
+          {hasAnnualization && annualizedValues && appliedFlags && (
+            <tr className="bg-amber-50/60 border-t border-amber-200">
+              <td className="border border-black p-1 text-amber-800 font-semibold">
+                사-환산. 연환산 후 1주당 순손익액 (§17의3②)
+              </td>
+              {annualizedValues.map((val, i) => (
+                <td key={i} className="border border-black p-1 text-right font-mono">
+                  {appliedFlags[i] ? (
+                    <span className="text-amber-800 font-semibold">
+                      {fmt(fyb[i]?.perShareNetIncome ?? 0)} → {fmt(val)}
+                      <span className="block text-[9px] font-normal text-amber-600">
+                        1년 미만 사업연도 ×12/N개월 환산
+                      </span>
+                    </span>
+                  ) : (
+                    <span className="text-gray-400 text-[10px]">12개월(미환산)</span>
+                  )}
+                </td>
+              ))}
+            </tr>
+          )}
         </tbody>
       </table>
       <p className="mb-2">
         <strong>아. 1주당 가중평균 순손익액</strong> {"{(㉓×3 + ㉔×2 + ㉕) ÷ 6}"} = {fmt(result.weightedNetIncomePerShare)}원
+        {hasAnnualization && (
+          <span className="ml-2 text-[10px] text-amber-700">※ §17의3② 1년 미만 사업연도 연환산 반영</span>
+        )}
       </p>
       <p className="mb-2">
         <strong>자. 환원율</strong> = {(result.capitalizationRate * 100).toFixed(0)}% (상증규 §17)

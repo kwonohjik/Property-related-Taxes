@@ -73,6 +73,28 @@ export function PerShareValuationResultCard({ input }: PerShareValuationResultCa
           hint={`최근 3년 가중평균 ${fmt(result.weightedNetIncomePerShare)}원 ÷ 환원율 ${(result.capitalizationRate * 100).toFixed(0)}%`}
           law="상증령 §56 ① + 상증규 §17 (10%)"
         />
+        {/* §17의3② 연환산 echo — 1년 미만 사업연도 있을 때만 표시 */}
+        {result.annualizationApplied?.some((a) => a) && result.annualizedPerShareNetIncome && (
+          <div className="rounded border border-amber-300 bg-amber-50/60 px-3 py-2 space-y-1 text-[11px]">
+            <p className="font-semibold text-amber-800">§17의3② 1년 미만 사업연도 연환산 내역</p>
+            {result.annualizationApplied.map((applied, i) => {
+              if (!applied) return null;
+              const label = i === 0 ? "1년전(×3)" : i === 1 ? "2년전(×2)" : "3년전(×1)";
+              const before = result.fiscalYearBreakdowns[i]?.perShareNetIncome ?? 0;
+              const after = result.annualizedPerShareNetIncome![i];
+              return (
+                <div key={i} className="flex items-baseline gap-1 text-amber-900">
+                  <span className="font-mono text-[10px] w-16">{label}</span>
+                  <span>1주당 순손익액</span>
+                  <span className="font-mono">{fmt(before)}</span>
+                  <span>→ ×12/N개월 →</span>
+                  <span className="font-mono font-semibold">{fmt(after)}</span>
+                  <span className="text-[10px] text-amber-600">(연환산)</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
         <ResultRow
           cellNum="⑥-㉠"
           label="가중평균"

@@ -185,3 +185,29 @@ describe("[AC-7] 최대주주 할증율 companySize 분기", () => {
     expect(evaluateUnlistedStockV2({ ...PDF_CASE_1, isMaxShareholder: false, companySize: "large" }).premiumRate).toBe(0);
   });
 });
+
+// ── §17의3② 1년 미만 사업연도 연환산 (FY / AN) ──
+describe("[FY] §17의3② 1년 미만 사업연도 연환산", () => {
+  it("FY-1(AN-2): startDate 미입력(12개월) → 연환산 미적용, 가중평균 715 회귀", () => {
+    const r = evaluateUnlistedStockV2(PDF_CASE_1);
+    expect(r.annualizationApplied).toBeUndefined();
+    expect(r.weightedNetIncomePerShare).toBe(715);
+  });
+
+  it("AN-1: 2021 사업연도 6개월(2021-07-01~12-31) → 1주당 ×2 환산 + annualizationApplied[0]=true", () => {
+    const input: typeof PDF_CASE_1 = {
+      ...PDF_CASE_1,
+      fiscalYears: [
+        { ...PDF_CASE_1.fiscalYears[0], fiscalYearStartDate: new Date("2021-07-01") },
+        PDF_CASE_1.fiscalYears[1],
+        PDF_CASE_1.fiscalYears[2],
+      ],
+    };
+    const r = evaluateUnlistedStockV2(input);
+    expect(r.annualizationApplied).toEqual([true, false, false]);
+    // 사. 1주당 순손익액 736 → ×12/6 = 1,472
+    expect(r.annualizedPerShareNetIncome?.[0]).toBe(1_472);
+    // 가중평균이 환산 반영으로 715에서 변동
+    expect(r.weightedNetIncomePerShare).not.toBe(715);
+  });
+});

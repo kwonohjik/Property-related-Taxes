@@ -49,6 +49,12 @@ export interface FiscalYearAdjustment {
   fiscalYearLabel: string;
   /** 사업연도 종료일 */
   fiscalYearEndDate: Date;
+  /**
+   * 사업연도 개시일 (§17의3② 1년 미만 사업연도 연환산용).
+   * 미입력 시 12개월 가정(종료일−1년+1일) — 회귀 0.
+   * 신설법인 첫 사업연도·결산기 변경 등 1년 미만 시 입력하면 순손익액 1년 환산.
+   */
+  fiscalYearStartDate?: Date;
   /** ① 각 사업연도 소득금액 (법인세법 §14) */
   taxableIncome: number;
 
@@ -262,6 +268,14 @@ export interface UnlistedStockValuationResult {
   fiscalYearBreakdowns: [FiscalYearBreakdown, FiscalYearBreakdown, FiscalYearBreakdown];
   weightedNetIncomePerShare: number;   // 아. 1주당 가중평균순손익액
   capitalizationRate: number;          // 자. 환원율 (상증규 §17 = 10%)
+
+  /**
+   * §17의3② 1년 미만 사업연도 연환산 echo (산식 무변경 — 표시·검증용).
+   * annualizationApplied[i] = 해당 사업연도 개월수 < 12 여부.
+   * annualizedPerShareNetIncome[i] = 환산 후 1주당 순손익액 (가중평균 입력값).
+   */
+  annualizationApplied?: [boolean, boolean, boolean];
+  annualizedPerShareNetIncome?: [number, number, number];
 
   // === 5쪽 영업권 ===
   goodwillCalculation: UnlistedGoodwillResult;
