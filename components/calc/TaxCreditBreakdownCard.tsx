@@ -7,7 +7,7 @@
  * §28·§69 산출근거 펼침 (gift-tax-credit-formula-display feature):
  *   - priorGiftCreditDetail + computedTax prop 전달 시 §28 펼침 활성화
  *   - credit.filingCreditBase + credit.totalComputedTaxWithSurcharge 둘 다 있을 때 §69 펼침 활성화
- *   - 상속세는 echo 미적용이라 §69 펼침 미렌더 (자동 비활성)
+ *   - 상속세·증여세 모두 echo 반환 (PR1, 2026-05-26) → §69 펼침 활성. 상속세는 §30 단기재상속공제 항목 추가 표시.
  */
 
 import { useState } from "react";
@@ -84,7 +84,9 @@ function buildSection69Formula(credit: TaxCreditResult): React.ReactNode {
   const giftCredit = credit.giftTaxCredit;
   const foreign = credit.foreignTaxCredit;
   const special = credit.specialTreatmentCredit;
-  const allOthersZero = foreign === 0 && special === 0;
+  // 상속세 전용 — 단기재상속세액공제(§30). 증여세는 항상 0이라 분기 비활성(무영향).
+  const shortTerm = credit.shortTermReinheritCredit;
+  const allOthersZero = foreign === 0 && special === 0 && shortTerm === 0;
 
   return (
     <>
@@ -98,11 +100,13 @@ function buildSection69Formula(credit: TaxCreditResult): React.ReactNode {
       <div className="flex flex-wrap items-baseline gap-x-1 text-gray-500 dark:text-gray-400 mt-1">
         신고분 세액 = (산출세액 + 세대생략 할증) − 증여세액공제
         {foreign > 0 && <> − 외국납부세액공제</>}
+        {shortTerm > 0 && <> − 단기재상속세액공제</>}
         {special > 0 && <> − 조특 특례공제</>}
       </div>
       <div className="flex flex-wrap items-baseline gap-x-1 text-gray-500 dark:text-gray-400">
         = <Amt val={totalWithSurcharge} /> − <Amt val={giftCredit} />
         {foreign > 0 && <> − <Amt val={foreign} /></>}
+        {shortTerm > 0 && <> − <Amt val={shortTerm} /></>}
         {special > 0 && <> − <Amt val={special} /></>}
         {" "}= <Amt val={base} />
       </div>
@@ -222,7 +226,7 @@ export function TaxCreditBreakdownCard({
       ? buildSection28Formula(priorGiftCreditDetail, computedTax)
       : undefined;
 
-  // §69 산식 활성 조건: echo 두 필드 모두 존재 시 (상속세 호출은 undefined → 펼침 미렌더)
+  // §69 산식 활성 조건: echo 두 필드 모두 존재 시 (상속세·증여세 모두 반환 — PR1)
   const section69Formula =
     credit.filingCreditBase !== undefined &&
     credit.totalComputedTaxWithSurcharge !== undefined

@@ -253,6 +253,11 @@ export function calcInheritanceTaxCredits(
     totalCredit,
     breakdown: allBreakdown,
     appliedLaws: Array.from(appliedLaws),
+    // §69 산식 노출용 echo (UI TaxCreditBreakdownCard 산출근거 펼침) — PR1
+    // remainingTax는 §28·§29·§30 차감 후·§69 적용 전 값(line 230 calcFilingCredit의
+    // taxBeforeFilingCredit와 동일). 증여세 경로와 달리 단기재상속공제(§30)까지 반영됨.
+    filingCreditBase: Math.max(0, remainingTax),
+    totalComputedTaxWithSurcharge: totalComputedTax,
   };
 }
 

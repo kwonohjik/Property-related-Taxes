@@ -253,6 +253,44 @@ describe("세액공제 통합 — 적용 순서", () => {
     expect(result.filingCredit).toBe(2_700_000);
     // 합계: 10M + 2.7M = 12.7M
     expect(result.totalCredit).toBe(12_700_000);
+
+    // [INH-ECHO-1] §69 산출근거 echo 2필드 (상속세 경로) — PR1
+    // totalComputedTaxWithSurcharge = computedTax + surcharge = 100M + 0
+    expect(result.totalComputedTaxWithSurcharge).toBe(100_000_000);
+    // filingCreditBase = §28·§29·§30 차감 후 base = 100M − 10M = 90M
+    expect(result.filingCreditBase).toBe(90_000_000);
+    // [INH-ECHO-2] filingCreditBase × 3% === filingCredit (법정기한 내)
+    expect(Math.floor(result.filingCreditBase! * 0.03)).toBe(result.filingCredit);
+  });
+
+  it("[C23b][INH-ECHO-3] 상속세 단기재상속공제(§30)>0 — echo 역산 일치", () => {
+    // 산출세액 1억, 단기재상속 1년 경과(100% 공제율), 전 납부세액 3천만, 기한 내 신고
+    const result = calcInheritanceTaxCredits({
+      creditInput: {
+        shortTermReinheritYears: 1,
+        shortTermReinheritTaxPaid: 30_000_000,
+        isFiledOnTime: true,
+      },
+      computedTax: 100_000_000,
+      generationSkipSurcharge: 0,
+      taxableEstateValue: 500_000_000,
+    });
+
+    // §30 단기재상속공제: 30M × 100% = 30M (한도 100M 내)
+    expect(result.shortTermReinheritCredit).toBe(30_000_000);
+    // echo: totalComputedTaxWithSurcharge = 100M
+    expect(result.totalComputedTaxWithSurcharge).toBe(100_000_000);
+    // filingCreditBase = 100M − 0(§28) − 0(§29) − 30M(§30) = 70M
+    expect(result.filingCreditBase).toBe(70_000_000);
+    // [INH-ECHO-3] 카드 역산 산식 일치: tWS − gift − foreign − shortTerm === base
+    expect(
+      result.totalComputedTaxWithSurcharge! -
+        result.giftTaxCredit -
+        result.foreignTaxCredit -
+        result.shortTermReinheritCredit,
+    ).toBe(result.filingCreditBase);
+    // 신고세액공제: 70M × 3% = 2,100,000
+    expect(result.filingCredit).toBe(2_100_000);
   });
 
   it("[C24] 증여세: 기한 내 신고 3% 공제 단독", () => {
@@ -292,6 +330,10 @@ describe("세액공제 통합 — 적용 순서", () => {
     // 산출 + 할증 = 117M, 신고공제: 117M × 3% = 3,510,000
     expect(result.filingCredit).toBe(3_510_000);
     expect(result.totalCredit).toBe(3_510_000);
+
+    // [INH-ECHO-1] echo: 할증 포함 산출세액 = 90M + 27M = 117M, 선행공제 0 → base = 117M
+    expect(result.totalComputedTaxWithSurcharge).toBe(117_000_000);
+    expect(result.filingCreditBase).toBe(117_000_000);
   });
 });
 
