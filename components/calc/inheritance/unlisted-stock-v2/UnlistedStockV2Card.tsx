@@ -20,10 +20,7 @@ import { GoodwillCalculationTable } from "./GoodwillCalculationTable";
 import { BesshiForm4Buppyo3PrintView } from "./BesshiForm4Buppyo3PrintView";
 import { ValuationDeltaTable } from "./ValuationDeltaTable";
 import type { EvaluationDeltaRow } from "@/lib/tax-engine/property-valuation/evaluation-delta";
-import {
-  MajorShareholderStockToggle,
-  type Section22MajorShareholderMode,
-} from "./MajorShareholderStockToggle";
+import { MajorShareholderStockToggle } from "./MajorShareholderStockToggle";
 import { EvaluationCommitteeToggle } from "./EvaluationCommitteeToggle";
 import { EvaluationCommitteeResultCard } from "./EvaluationCommitteeResultCard";
 import { EvaluationCommitteeFilingGuideCard } from "./EvaluationCommitteeFilingGuideCard";
@@ -177,12 +174,12 @@ export function UnlistedStockV2Card({
     wrappedOnChange({ ...input, netAssetValueRaw: next });
   };
 
-  // PR-E: §22② 모드 변경 (mode만 변경, isMaxShareholder는 §63③ 용이므로 분리)
-  const handleSection22ModeChange = (mode: Section22MajorShareholderMode) => {
-    wrappedOnChange({ ...input, section22MajorShareholderMode: mode });
+  // §22② 최대주주 해당 여부 토글 (금융재산공제 배제 — isMaxShareholder §63③와 분리)
+  const handleSection22Change = (checked: boolean) => {
+    wrappedOnChange({ ...input, isSection22MajorShareholder: checked });
   };
 
-  const section22Mode = input.section22MajorShareholderMode ?? "auto";
+  const isSection22Major = input.isSection22MajorShareholder ?? false;
 
   // PR-N: 평가차액 행 단위 입력 콜백 (netAssetValueRaw.evaluationDeltaRows 단일 통합 배열)
   const handleEvaluationDeltaRowsChange = (rows: EvaluationDeltaRow[]) => {
@@ -294,12 +291,10 @@ export function UnlistedStockV2Card({
       {/* 5. 영업권 평가 (자동 표시) — effectiveInput 사용으로 evaluationDate fallback 적용 */}
       <GoodwillPanel input={effectiveInput} />
 
-      {/* 5-B. PR-E: §22② 최대주주 자동 도출 (Section 10 — design v3) */}
+      {/* 5-B. §22② 최대주주 해당 여부 토글 — 금융재산공제 배제 (Section 10) */}
       <MajorShareholderStockToggle
-        mode={section22Mode}
-        ownedShares={input.ownedShares}
-        totalShares={input.totalShares}
-        onChange={handleSection22ModeChange}
+        checked={isSection22Major}
+        onCheckedChange={handleSection22Change}
       />
 
       {/* 5-C. PR-K: §54⑥ 평가심의위원회 신청 옵션 (Section 11) */}

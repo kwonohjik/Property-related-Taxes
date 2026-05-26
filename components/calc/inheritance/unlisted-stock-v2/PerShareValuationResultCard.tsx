@@ -12,7 +12,6 @@
 
 import { useMemo } from "react";
 import { evaluateUnlistedStockV2 } from "@/lib/tax-engine/property-valuation/unlisted-orchestrator";
-import { deriveSection22MajorShareholder } from "@/lib/tax-engine/property-valuation/auto-judgment";
 import type { UnlistedStockValuationInput } from "@/lib/tax-engine/types/unlisted-stock-valuation.types";
 
 export interface PerShareValuationResultCardProps {
@@ -224,34 +223,16 @@ export function PerShareValuationResultCard({ input }: PerShareValuationResultCa
 }
 
 /**
- * PR-E 자동 판정 결과 echo + PR-F 부동산과다 적용 현황
+ * §22② 최대주주(금융재산공제 배제) 현황 + §54① 부동산과다 적용 현황 echo
  */
 function AutoJudgmentEchoLines({ input }: { input: UnlistedStockValuationInput }) {
-  const section22Mode = input.section22MajorShareholderMode ?? "auto";
-
-  const section22Auto = useMemo(
-    () =>
-      deriveSection22MajorShareholder({
-        ownedShares: input.ownedShares,
-        totalShares: input.totalShares,
-      }),
-    [input.ownedShares, input.totalShares],
-  );
-
-  const section22Applied =
-    section22Mode === "manual_on"
-      ? true
-      : section22Mode === "manual_off"
-        ? false
-        : section22Auto.isSection22Major;
-
-  const section22Source = section22Mode === "auto" ? "자동" : "수동";
+  const section22Applied = input.isSection22MajorShareholder === true;
 
   return (
     <div className="rounded border border-violet-200 bg-violet-50/60 p-2 text-[11px] space-y-1">
       <p className="font-semibold text-violet-800">판정 결과</p>
       <div className="flex items-baseline gap-2">
-        <span className="text-violet-700">§22② 최대주주 추가공제 제외:</span>
+        <span className="text-violet-700">§22② 금융재산공제 배제 최대주주:</span>
         <span
           className={
             section22Applied
@@ -259,10 +240,7 @@ function AutoJudgmentEchoLines({ input }: { input: UnlistedStockValuationInput }
               : "rounded bg-slate-300 text-slate-800 px-1.5"
           }
         >
-          {section22Applied ? "해당 (ON)" : "미해당 (OFF)"}
-        </span>
-        <span className="text-[10px] text-gray-500">
-          ({section22Source} — 보유지분율 {(section22Auto.ownershipRatio * 100).toFixed(2)}%)
+          {section22Applied ? "해당 (금융재산공제 제외)" : "미해당 (포함)"}
         </span>
       </div>
       <div className="flex items-baseline gap-2">
