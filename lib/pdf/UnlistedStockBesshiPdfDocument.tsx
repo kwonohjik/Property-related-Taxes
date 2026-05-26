@@ -38,7 +38,10 @@ import {
   sumNetAssetRows,
   resolveCapitalDisplay,
 } from "@/components/calc/inheritance/unlisted-stock-v2/besshi/besshi-form-constants";
-import { resolveEvaluationDelta } from "@/lib/tax-engine/property-valuation/evaluation-delta";
+import {
+  resolveEvaluationDelta,
+  withResolvedEvaluationDelta,
+} from "@/lib/tax-engine/property-valuation/evaluation-delta";
 import type {
   UnlistedStockValuationInput,
   UnlistedStockValuationResult,
@@ -210,9 +213,11 @@ function Page2NetAsset({
   netAssetTotal: number;
   goodwillFinal: number;
 }) {
+  // ② 평가차액: 행 단위 입력 시 resolveEvaluationDelta 보정값으로 치환 (raw 직접 사용 시 행 모드 stale)
+  const eff = withResolvedEvaluationDelta(raw);
   // 화면·엔진(`net-asset-calc`)과 동일 부호 — ⑮(otherProvision)은 가산 (§17의2 3호 가)
-  const assetSubtotal = sumNetAssetRows(BESSHI_P2_ASSET_ROWS, raw);
-  const liabilitySubtotal = sumNetAssetRows(BESSHI_P2_LIABILITY_ROWS, raw);
+  const assetSubtotal = sumNetAssetRows(BESSHI_P2_ASSET_ROWS, eff);
+  const liabilitySubtotal = sumNetAssetRows(BESSHI_P2_LIABILITY_ROWS, eff);
   const preGoodwill = assetSubtotal - liabilitySubtotal;
 
   return (
@@ -228,7 +233,7 @@ function Page2NetAsset({
         <Text style={{ ...s.cellLabel, flex: 0, width: "100%", padding: 3 }}>{BESSHI_P2_SECTION4.assetGroup}</Text>
       </View>
       {BESSHI_P2_ASSET_ROWS.map((r) => (
-        <P2Row key={r.cellNum} cellNum={r.cellNum} label={r.label} amount={raw[r.field]} refText={r.ref} />
+        <P2Row key={r.cellNum} cellNum={r.cellNum} label={r.label} amount={eff[r.field]} refText={r.ref} />
       ))}
       <P2Row cellNum="⑧" label={BESSHI_P2_SECTION4.assetSubtotalFormula} amount={assetSubtotal} variant="emphasized" />
 
@@ -237,7 +242,7 @@ function Page2NetAsset({
         <Text style={{ ...s.cellLabel, flex: 0, width: "100%", padding: 3 }}>{BESSHI_P2_SECTION4.liabilityGroup}</Text>
       </View>
       {BESSHI_P2_LIABILITY_ROWS.map((r) => (
-        <P2Row key={r.cellNum} cellNum={r.cellNum} label={r.label} amount={raw[r.field]} refText={r.ref} />
+        <P2Row key={r.cellNum} cellNum={r.cellNum} label={r.label} amount={eff[r.field]} refText={r.ref} />
       ))}
       <P2Row cellNum="⑲" label={BESSHI_P2_SECTION4.liabilitySubtotalFormula} amount={liabilitySubtotal} variant="emphasized" />
 

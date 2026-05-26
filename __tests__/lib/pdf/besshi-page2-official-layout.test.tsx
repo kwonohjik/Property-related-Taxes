@@ -20,6 +20,10 @@ import { isValidElement, type ReactElement, type ReactNode } from "react";
 import { UnlistedStockBesshiPdfDocument } from "@/lib/pdf/UnlistedStockBesshiPdfDocument";
 import { evaluateUnlistedStockV2 } from "@/lib/tax-engine/property-valuation/unlisted-orchestrator";
 import { calcNetAssetTotal } from "@/lib/tax-engine/property-valuation/net-asset-calc";
+import { withResolvedEvaluationDelta } from "@/lib/tax-engine/property-valuation/evaluation-delta";
+import type {
+  EvaluationDeltaRow,
+} from "@/lib/tax-engine/property-valuation/evaluation-delta";
 import type { UnlistedStockValuationInput } from "@/lib/tax-engine/types/unlisted-stock-valuation.types";
 
 const fmt = (n: number) => n.toLocaleString();
@@ -173,5 +177,50 @@ describe("[AN-5] PDF 제2쪽 마(순자산가액) 표시 불변", () => {
   it("PDF 텍스트에 마 값 1,800,000,000 포함 (레이아웃 정합 후에도)", () => {
     const text = collectText(UnlistedStockBesshiPdfDocument({ input: an5Input }));
     expect(text).toContain("1,800,000,000");
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────
+// AN-6 입력 — 행 단위 평가차액 모드 (스크린샷 버그 회귀)
+//   assetValuationDelta=0 + evaluationDeltaRows: 토지+40M·건물+10M·차입금−20M → ② 70,000,000
+//   ① bsTotalAssets 1,000,000,000 → ⑧ 자산총액 = 1,000,000,000 + 70,000,000 = 1,070,000,000
+//   ⑨ 부채 0 → 다(영업권 전 순자산) = 1,070,000,000
+//   현행 버그: PDF가 raw.assetValuationDelta(0) 직접 읽어 ②=0, ⑧=1,000,000,000(=①) stale → RED
+// ─────────────────────────────────────────────────────────────────
+const AN6_ROWS: EvaluationDeltaRow[] = [
+  { rowId: "a1", category: "asset", accountName: "토지", evaluationAmount: 140_000_000, bookAmount: 100_000_000 },
+  { rowId: "a2", category: "asset", accountName: "건물", evaluationAmount: 120_000_000, bookAmount: 110_000_000 },
+  { rowId: "l1", category: "liability", accountName: "차입금", evaluationAmount: 70_000_000, bookAmount: 90_000_000 },
+];
+const an6Input: UnlistedStockValuationInput = {
+  ...an1Input,
+  corpName: "AN6법인",
+  netAssetValueRaw: {
+    ...an1Input.netAssetValueRaw,
+    bsTotalAssets: 1_000_000_000,
+    assetValuationDelta: 0,
+    bsTotalLiabilities: 0,
+    otherProvision: 0,
+    evaluationDeltaRows: AN6_ROWS,
+  },
+};
+
+describe("[AN-6] PDF 제2쪽 행 단위 평가차액 ② 보정 (스크린샷 회귀)", () => {
+  const eff = withResolvedEvaluationDelta(an6Input.netAssetValueRaw);
+  const engineNet = calcNetAssetTotal(eff);
+  const text = collectText(UnlistedStockBesshiPdfDocument({ input: an6Input }));
+
+  it("헬퍼 검산: ② assetValuationDelta = 70,000,000 (행 합 50M − 부채 −20M)", () => {
+    expect(eff.assetValuationDelta).toBe(70_000_000);
+  });
+  it("엔진 검산: ⑧ 자산총액 = 1,070,000,000 (① 1,000,000,000 + ② 70,000,000)", () => {
+    expect(engineNet.totalAssets).toBe(1_070_000_000);
+  });
+  it("엔진 검산: 다 영업권 전 순자산 = 1,070,000,000 (부채 0)", () => {
+    expect(engineNet.netAssetBeforeGoodwill).toBe(1_070_000_000);
+  });
+  // ↓ Pre-Do RED: 보정 전 PDF는 ②=0, ⑧=1,000,000,000(=①)만 표시 → 1,070,000,000 부재로 RED
+  it("PDF ⑧ 자산총액 소계 = 1,070,000,000 (보정 ② 반영)", () => {
+    expect(text).toContain("1,070,000,000");
   });
 });

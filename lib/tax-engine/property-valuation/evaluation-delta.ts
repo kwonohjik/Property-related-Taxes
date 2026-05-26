@@ -117,3 +117,29 @@ export function resolveEvaluationDelta(input: {
     liabilityRows: [],
   };
 }
+
+/**
+ * 순자산가액 표(별지 2쪽 4.가.②) 표시용 — `assetValuationDelta`(②)를 행 단위 입력 시
+ * `resolveEvaluationDelta` 결과(자산 합 − 부채 합)로 치환한 사본을 반환한다.
+ *
+ * 화면 입력폼(`NetAssetCalculationTable`)·별지 화면 제2쪽(`Page2NetAssetTable`)·
+ * PDF 제2쪽(`UnlistedStockBesshiPdfDocument`)이 `raw.assetValuationDelta`를 직접 읽어
+ * 행 모드에서 ②=0 stale가 되던 dual-truth 버그를 단일 진실로 해소한다.
+ * (엔진 `unlisted-orchestrator`는 이미 동일 보정을 적용 — 최종 세액은 영향 없음, 표시만 정정)
+ *
+ * - 행 입력 있음(`source === "rows"`): `assetValuationDelta`를 보정값으로 치환한 **새 객체** 반환.
+ * - 행 미입력(`source === "total"`): 원본을 **그대로** 반환(참조 동일 — useMemo 안정).
+ *
+ * category 자산/부채 행 분리 필터를 본 헬퍼가 단일 처리한다(소비처 중복 제거).
+ */
+export function withResolvedEvaluationDelta<
+  T extends { assetValuationDelta: number; evaluationDeltaRows?: EvaluationDeltaRow[] },
+>(raw: T): T {
+  const resolved = resolveEvaluationDelta({
+    assetDeltaRows: raw.evaluationDeltaRows?.filter((r) => r.category === "asset"),
+    liabilityDeltaRows: raw.evaluationDeltaRows?.filter((r) => r.category === "liability"),
+    assetEvaluationDeltaTotal: raw.assetValuationDelta,
+  });
+  if (resolved.source === "total") return raw;
+  return { ...raw, assetValuationDelta: resolved.evaluationDelta };
+}

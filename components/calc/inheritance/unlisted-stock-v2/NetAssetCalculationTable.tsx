@@ -16,6 +16,7 @@
 import { useMemo, useState } from "react";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { withResolvedEvaluationDelta } from "@/lib/tax-engine/property-valuation/evaluation-delta";
 import type { UnlistedNetAssetCalculation } from "@/lib/tax-engine/types/unlisted-stock-valuation.types";
 
 interface AssetRow {
@@ -110,33 +111,40 @@ export function NetAssetCalculationTable({
     }
   }
 
+  // 행 단위 평가차액 입력 시 ②(assetValuationDelta)를 보정값으로 치환 (엔진 단일 진실 일치)
+  const isDeltaRowMode = (netAssetValueRaw.evaluationDeltaRows?.length ?? 0) > 0;
+  const effectiveRaw = useMemo(
+    () => withResolvedEvaluationDelta(netAssetValueRaw),
+    [netAssetValueRaw],
+  );
+
   // 자동 합산 미리보기 (보험법인 3 필드 가산 포함 — 엔진 net-asset-calc.ts:77~79 정합)
   const { totalAssets, totalLiabilities, netAssetBeforeGoodwill } = useMemo(() => {
     const a =
-      netAssetValueRaw.bsTotalAssets +
-      netAssetValueRaw.assetValuationDelta +
-      netAssetValueRaw.corpTaxReservedAmount +
-      netAssetValueRaw.paidInCapitalIncrease +
-      netAssetValueRaw.otherEarnedRights -
-      netAssetValueRaw.prepaidExpenses -
-      netAssetValueRaw.preGiftRetainedEarnings;
+      effectiveRaw.bsTotalAssets +
+      effectiveRaw.assetValuationDelta +
+      effectiveRaw.corpTaxReservedAmount +
+      effectiveRaw.paidInCapitalIncrease +
+      effectiveRaw.otherEarnedRights -
+      effectiveRaw.prepaidExpenses -
+      effectiveRaw.preGiftRetainedEarnings;
     const l =
-      netAssetValueRaw.bsTotalLiabilities +
-      netAssetValueRaw.corporateTaxPayable +
-      netAssetValueRaw.farmingSurtax +
-      netAssetValueRaw.localIncomeTax +
-      netAssetValueRaw.dividendPayable +
-      netAssetValueRaw.retirementProvision +
-      netAssetValueRaw.otherProvision -
-      netAssetValueRaw.reserveExcluded -
-      netAssetValueRaw.allowanceExcluded -
-      netAssetValueRaw.deferredTaxAdjustment +
-      (netAssetValueRaw.insuranceReservePolicy ?? 0) +
-      (netAssetValueRaw.insuranceExtraordinaryReserve ?? 0) +
-      (netAssetValueRaw.insuranceSurrenderReserve ?? 0);
+      effectiveRaw.bsTotalLiabilities +
+      effectiveRaw.corporateTaxPayable +
+      effectiveRaw.farmingSurtax +
+      effectiveRaw.localIncomeTax +
+      effectiveRaw.dividendPayable +
+      effectiveRaw.retirementProvision +
+      effectiveRaw.otherProvision -
+      effectiveRaw.reserveExcluded -
+      effectiveRaw.allowanceExcluded -
+      effectiveRaw.deferredTaxAdjustment +
+      (effectiveRaw.insuranceReservePolicy ?? 0) +
+      (effectiveRaw.insuranceExtraordinaryReserve ?? 0) +
+      (effectiveRaw.insuranceSurrenderReserve ?? 0);
     const n = Math.max(0, a - l);
     return { totalAssets: a, totalLiabilities: l, netAssetBeforeGoodwill: n };
-  }, [netAssetValueRaw]);
+  }, [effectiveRaw]);
 
   return (
     <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-3">
@@ -151,26 +159,39 @@ export function NetAssetCalculationTable({
       {/* 자산총액 표 */}
       <div className="rounded border border-emerald-200 bg-emerald-50/60 p-2 space-y-1">
         <p className="text-[11px] font-semibold text-emerald-800">가. 자산총액</p>
-        {ASSET_ROWS.map((row) => (
-          <div key={row.key} className="grid grid-cols-[8rem_1fr] items-center gap-2 py-0.5">
-            <div className="text-[11px]">
-              <span className={`font-mono ${row.sign === "+" ? "text-emerald-700" : "text-rose-700"}`}>
-                {row.cellNum} {row.sign}
-              </span>{" "}
-              {row.label}
-              {row.description && (
-                <span className="block text-[10px] text-gray-500">({row.description})</span>
-              )}
+        {ASSET_ROWS.map((row) => {
+          // ② 평가차액은 행 단위 입력(4번 표) 활성 시 read-only + 보정값 표시 (dual-truth 방지)
+          const isDeltaRowLocked = row.key === "assetValuationDelta" && isDeltaRowMode;
+          const displayValue = isDeltaRowLocked
+            ? effectiveRaw.assetValuationDelta
+            : netAssetValueRaw[row.key];
+          return (
+            <div key={row.key} className="grid grid-cols-[8rem_1fr] items-center gap-2 py-0.5">
+              <div className="text-[11px]">
+                <span className={`font-mono ${row.sign === "+" ? "text-emerald-700" : "text-rose-700"}`}>
+                  {row.cellNum} {row.sign}
+                </span>{" "}
+                {row.label}
+                {row.description && (
+                  <span className="block text-[10px] text-gray-500">({row.description})</span>
+                )}
+                {isDeltaRowLocked && (
+                  <span className="block text-[10px] text-emerald-700">
+                    ④ 평가차액 표(자산 합 − 부채 합)에서 자동 계산
+                  </span>
+                )}
+              </div>
+              <CurrencyInput
+                label={row.label}
+                value={String(displayValue || "")}
+                onChange={(v) => update(row.key, Number(v.replace(/,/g, "")) || 0)}
+                placeholder="0"
+                hideUnit
+                disabled={isDeltaRowLocked}
+              />
             </div>
-            <CurrencyInput
-              label={row.label}
-              value={String(netAssetValueRaw[row.key] || "")}
-              onChange={(v) => update(row.key, Number(v.replace(/,/g, "")) || 0)}
-              placeholder="0"
-              hideUnit
-            />
-          </div>
-        ))}
+          );
+        })}
         <div className="border-t border-emerald-300 pt-1 mt-1 flex justify-between text-[11px] font-bold text-emerald-900">
           <span>⑧ 자산총액 소계</span>
           <span className="font-mono">{totalAssets.toLocaleString()}원</span>

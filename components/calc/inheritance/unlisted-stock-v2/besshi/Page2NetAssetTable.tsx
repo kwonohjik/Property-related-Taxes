@@ -17,6 +17,7 @@
  */
 
 import type { UnlistedNetAssetCalculation } from "@/lib/tax-engine/types/unlisted-stock-valuation.types";
+import { withResolvedEvaluationDelta } from "@/lib/tax-engine/property-valuation/evaluation-delta";
 import { fmt, SectionTitle } from "./BesshiSharedAtoms";
 import {
   BESSHI_P2_SECTION4,
@@ -32,9 +33,11 @@ export interface Page2NetAssetTableProps {
 }
 
 export function Page2NetAssetTable({ raw, netAssetTotal, goodwillFinal }: Page2NetAssetTableProps) {
+  // ② 평가차액: 행 단위 입력 시 resolveEvaluationDelta 보정값으로 치환 (raw.assetValuationDelta 직접 사용 시 행 모드 stale)
+  const eff = withResolvedEvaluationDelta(raw);
   // 화면·PDF·엔진(`net-asset-calc`) 동일 부호 — ⑮은 가산
-  const assetSubtotal = sumNetAssetRows(BESSHI_P2_ASSET_ROWS, raw);
-  const liabilitySubtotal = sumNetAssetRows(BESSHI_P2_LIABILITY_ROWS, raw);
+  const assetSubtotal = sumNetAssetRows(BESSHI_P2_ASSET_ROWS, eff);
+  const liabilitySubtotal = sumNetAssetRows(BESSHI_P2_LIABILITY_ROWS, eff);
   const preGoodwill = assetSubtotal - liabilitySubtotal;
 
   return (
@@ -53,7 +56,7 @@ export function Page2NetAssetTable({ raw, netAssetTotal, goodwillFinal }: Page2N
             </td>
           </tr>
           {BESSHI_P2_ASSET_ROWS.map((row) => (
-            <NetAssetTr key={row.cellNum} cellNum={row.cellNum} label={row.label} amount={raw[row.field]} refText={row.ref} testid={row.cellNum} />
+            <NetAssetTr key={row.cellNum} cellNum={row.cellNum} label={row.label} amount={eff[row.field]} refText={row.ref} testid={row.cellNum} />
           ))}
           <NetAssetTr cellNum="⑧" label={BESSHI_P2_SECTION4.assetSubtotalFormula} amount={assetSubtotal} testid="⑧" emphasis />
 
@@ -64,7 +67,7 @@ export function Page2NetAssetTable({ raw, netAssetTotal, goodwillFinal }: Page2N
             </td>
           </tr>
           {BESSHI_P2_LIABILITY_ROWS.map((row) => (
-            <NetAssetTr key={row.cellNum} cellNum={row.cellNum} label={row.label} amount={raw[row.field]} refText={row.ref} testid={row.cellNum} />
+            <NetAssetTr key={row.cellNum} cellNum={row.cellNum} label={row.label} amount={eff[row.field]} refText={row.ref} testid={row.cellNum} />
           ))}
           <NetAssetTr cellNum="⑲" label={BESSHI_P2_SECTION4.liabilitySubtotalFormula} amount={liabilitySubtotal} testid="⑲" emphasis />
 

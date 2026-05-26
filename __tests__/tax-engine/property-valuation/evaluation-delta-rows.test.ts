@@ -13,6 +13,7 @@
 import { describe, it, expect } from "vitest";
 import {
   resolveEvaluationDelta,
+  withResolvedEvaluationDelta,
   type EvaluationDeltaRow,
 } from "@/lib/tax-engine/property-valuation/evaluation-delta";
 
@@ -153,5 +154,49 @@ describe("[N-3] 총액 직접 입력 fallback (3중 패턴)", () => {
 
     // 두 방식 결과 동일성 보장
     expect(rowResult.evaluationDelta).toBe(totalResult.evaluationDelta);
+  });
+});
+
+// ============================================================
+// [N-4] withResolvedEvaluationDelta — 순자산표 ②(assetValuationDelta) 보정 헬퍼
+//   화면 입력폼·별지 화면/PDF 제2쪽이 raw.assetValuationDelta를 직접 읽어
+//   행 모드에서 ②=0 stale가 되던 dual-truth 버그 해소 (단일 진실).
+// ============================================================
+describe("[N-4] withResolvedEvaluationDelta 순자산표 ② 보정", () => {
+  // 스크린샷 시나리오: 토지 +40M, 건물 +10M, 차입금 −20M → 70,000,000
+  const SCREENSHOT_ROWS: EvaluationDeltaRow[] = [
+    { rowId: "a1", category: "asset", accountName: "토지", evaluationAmount: 140_000_000, bookAmount: 100_000_000 },
+    { rowId: "a2", category: "asset", accountName: "건물", evaluationAmount: 120_000_000, bookAmount: 110_000_000 },
+    { rowId: "l1", category: "liability", accountName: "차입금", evaluationAmount: 70_000_000, bookAmount: 90_000_000 },
+  ];
+
+  it("N-4a: 행 모드 — assetValuationDelta=0이어도 보정값 70,000,000 치환", () => {
+    const raw = { assetValuationDelta: 0, bsTotalAssets: 1_000_000_000, evaluationDeltaRows: SCREENSHOT_ROWS };
+    const eff = withResolvedEvaluationDelta(raw);
+    expect(eff.assetValuationDelta).toBe(70_000_000); // 50,000,000 − (−20,000,000)
+    expect(eff.bsTotalAssets).toBe(1_000_000_000); // 그 외 필드 보존
+    expect(raw.assetValuationDelta).toBe(0); // 원본 불변 (immutable)
+  });
+
+  it("N-4b: 총액 모드 — 행 미입력 시 원본 그대로 (참조 동일)", () => {
+    const raw = { assetValuationDelta: 91_548_350, evaluationDeltaRows: undefined };
+    const eff = withResolvedEvaluationDelta(raw);
+    expect(eff.assetValuationDelta).toBe(91_548_350);
+    expect(eff).toBe(raw); // source==="total" → 동일 참조 (useMemo 안정)
+  });
+
+  it("N-4c: 빈 배열 행 → 총액 모드 fallback", () => {
+    const raw = { assetValuationDelta: 5_000_000, evaluationDeltaRows: [] };
+    const eff = withResolvedEvaluationDelta(raw);
+    expect(eff.assetValuationDelta).toBe(5_000_000);
+    expect(eff).toBe(raw);
+  });
+
+  it("N-4d: 음수 평가차액도 정확 치환 (자산 < 부채 차액)", () => {
+    const rows: EvaluationDeltaRow[] = [
+      { rowId: "a1", category: "asset", accountName: "상품", evaluationAmount: 10_000_000, bookAmount: 30_000_000 },
+    ];
+    const eff = withResolvedEvaluationDelta({ assetValuationDelta: 0, evaluationDeltaRows: rows });
+    expect(eff.assetValuationDelta).toBe(-20_000_000);
   });
 });
