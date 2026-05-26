@@ -378,3 +378,87 @@ describe("[AC-9] 제1쪽 1번 사업자번호·자본금 표시", () => {
     expect(screen.getByText("123-45-67890")).toBeTruthy();
   });
 });
+
+// ============================================================
+// RV-2: sessionStorage 복원으로 Date 필드가 string화된 입력에도
+//        BesshiForm이 크래시 없이 렌더되고 PDF 버튼이 살아있다 (F-2·F-8 정규화).
+//
+// 현행(정규화 전) 크래시 1차 지점 = UnlistedStockBesshiPdfDownloadButton(try/catch 밖)의
+// useMemo(generateBesshiPdfFilename) → string.toISOString() TypeError.
+// (lib/api/date-coerce.ts toDate 정규화 적용 시 통과)
+// ============================================================
+
+describe("[RV-2] string화된 Date 필드 복원 입력 — 크래시 없이 렌더", () => {
+  // sessionStorage(JSON) 복원 후 Date가 ISO string으로 도달하는 상황 재현.
+  // 타입상 Date지만 런타임은 string — as unknown as Date 캐스팅으로 복원본 모사.
+  const restoredInput: UnlistedStockValuationInput = {
+    ...case6Input,
+    corpName: "㈜복원", // PDF 버튼 disabled 가드 통과 (corpName.trim())
+    evaluationDate: "2024-01-20" as unknown as Date,
+    businessStartDate: "2000-01-01" as unknown as Date,
+    fiscalYears: case6Input.fiscalYears.map((fy) => ({
+      ...fy,
+      fiscalYearEndDate: (fy.fiscalYearEndDate instanceof Date
+        ? fy.fiscalYearEndDate.toISOString().slice(0, 10)
+        : fy.fiscalYearEndDate) as unknown as Date,
+    })) as UnlistedStockValuationInput["fiscalYears"],
+  };
+
+  it("string evaluationDate 복원 입력 → toggle 렌더 (toISOString 크래시 없음)", () => {
+    render(<BesshiForm4Buppyo3PrintView input={restoredInput} />);
+    expect(screen.getByTestId("besshi-form-toggle")).toBeTruthy();
+  });
+
+  it("정규화로 평가기준일이 Date 변환되어 표시 (string→Date)", () => {
+    // PDF 버튼은 dynamic({ssr:false})라 jsdom 미로드 → 버튼 testid 대신
+    // Page1 ② 평가기준일이 정상 표시되는지로 정규화(safe 전달) 검증.
+    render(<BesshiForm4Buppyo3PrintView input={restoredInput} />);
+    expand();
+    expect(screen.getByTestId("p1-②")).toHaveTextContent("2024-01-20");
+  });
+
+  it("펼친 미리보기에서 1주당 가액이 정상 표시 (string→Date 변환 후 사례 6 산출)", () => {
+    render(<BesshiForm4Buppyo3PrintView input={restoredInput} />);
+    expand();
+    // 제1쪽 ③ 순자산가액 — 정규화 성공 시 사례 6과 동일 산출
+    expect(screen.getByTestId("p1-③")).toHaveTextContent("489,351,700");
+  });
+});
+
+// ============================================================
+// RV-6: 미완성 입력(주식수 0 + date undefined/string)에도 크래시 없이
+//        안내만 렌더되고 PDF 버튼은 disabled (F-8 회귀 방어 — try/catch fallback).
+// ============================================================
+
+describe("[RV-6] 미완성 입력 — 입력 단계 크래시 없음 (F-8 회귀 방어)", () => {
+  const incompleteUndefined: UnlistedStockValuationInput = {
+    ...case6Input,
+    totalShares: 0,
+    ownedShares: 0,
+    corpName: "",
+    evaluationDate: undefined as unknown as Date,
+  };
+  const incompleteStringDate: UnlistedStockValuationInput = {
+    ...case6Input,
+    totalShares: 0,
+    ownedShares: 0,
+    corpName: "",
+    evaluationDate: "2024-01-20" as unknown as Date,
+  };
+
+  it("주식수 0 + evaluationDate undefined → 크래시 없이 toggle 렌더", () => {
+    render(<BesshiForm4Buppyo3PrintView input={incompleteUndefined} />);
+    expect(screen.getByTestId("besshi-form-toggle")).toBeTruthy();
+  });
+
+  it("주식수 0 + string date → 크래시 없이 toggle 렌더", () => {
+    render(<BesshiForm4Buppyo3PrintView input={incompleteStringDate} />);
+    expect(screen.getByTestId("besshi-form-toggle")).toBeTruthy();
+  });
+
+  it("미완성 입력(date undefined) → 펼침 시 평가기준일 '-' (Page1 방어, 크래시 없음)", () => {
+    render(<BesshiForm4Buppyo3PrintView input={incompleteUndefined} />);
+    expand();
+    expect(screen.getByTestId("p1-②")).toHaveTextContent("-");
+  });
+});

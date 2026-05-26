@@ -29,6 +29,7 @@ import { HeirAllocationTable } from "@/components/calc/results/HeirAllocationTab
 import { InheritanceFilingFormTable } from "@/components/calc/results/InheritanceFilingFormTable";
 import { CorporateExemptionFilingFormTable } from "@/components/calc/results/CorporateExemptionFilingFormTable";
 import { DebtAllocationResultCard } from "@/components/calc/results/DebtAllocationResultCard";
+import { UnlistedStockBesshiResultSection } from "@/components/calc/results/UnlistedStockBesshiResultSection";
 import { DeductionLimitNoticeCard } from "@/components/calc/inheritance/DeductionLimitNoticeCard";
 import type { DebtItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { calcInstallmentPayment } from "@/lib/tax-engine/credits/installment-payment";
@@ -679,6 +680,9 @@ export function InheritanceTaxResultView({
           </div>
         )}
       </div>
+
+      {/* 비상장주식 별지 부표3 출력 (정식평가 V2 자산) */}
+      {estateItems && <UnlistedStockBesshiResultSection estateItems={estateItems} />}
 
       {/* 연부연납 안내 */}
       <InstallmentGuide finalTax={result.finalTax} />

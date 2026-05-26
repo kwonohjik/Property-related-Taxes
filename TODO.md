@@ -1,48 +1,43 @@
-# TODO — 비상장주식 평가서(별지 부표3) 2025.07.10 개정본 재현
+# TODO — 비상장주식 별지 부표3 결과 화면 출력 연결
 
 > 정책: 각 작업 완료 시 본 TODO.md 즉시 업데이트 후 다음 작업 이동. `- [ ]` 미완료 / `- [x]` 완료
-> 계획: `docs/00-pm/inheritance-unlisted-stock-besshi-2025-revision.plan.md`
-> 디자인: `docs/02-design/features/inheritance-unlisted-stock-besshi-2025-revision.engine.design.md`
+> 계획: `docs/00-pm/inheritance-besshi-result-view-integration.plan.md`
+> 디자인: `docs/02-design/features/inheritance-besshi-result-view-integration.ui.design.md`
 > 시작: 2026-05-26
 
 ---
 
-## Phase A — 계산/표시 버그 (최우선)
-- [x] A1. AC-1 anchor: ⑱>0 → 부채소계 차감 검증 ✅ (현행 실패 확보 후 정정 통과)
-- [x] A2. AC-2 anchor: ⑮>0 → 부채소계 가산 검증 ✅
-- [x] A3. C-1: `Page2NetAssetTable` ⑮ `isSubtract:true→false` ✅ (행+subtotal+소계라벨+⑮ 문구)
-- [x] A4. C-2: `net-asset-calc.ts` ⑱ `+deferredTaxAdjustment → −` ✅ (산식+주석, case-3 13건 회귀 0)
-- [x] A5. C-3: `NetAssetCalculationTable` ⑱ sign `"+"→"−"` ✅ (sign 메타+미리보기 산식+주석)
-- [x] A6. C-13: `Page5GoodwillTable` §55③ 호 라벨 정정 ✅ (real_estate_80→1호, lt3y→2호 본문)
-- [x] A7. AC-3: property-valuation 195건 PASS·0 FAIL ✅ (PDF 사례1 ⑱=0·⑮=0 무변동 확인)
+## Phase A — Pre-Do anchor (실패 확보 우선)
+- [x] A1. RV-2 anchor: string `evaluationDate`+완성입력으로 `BesshiForm` RTL 렌더 → 현행 크래시 실패 확보 ✅ (실측: 크래시 1차 지점 = `Page1CoverSection:64`, D-7 정정·환류 반영)
+- [x] A2. RV-6 anchor: 미완성 입력(주식수 0 + undefined/string date) → 현행 크래시 실패 확보 ✅ (Page1 undefined.toISOString 기존 취약점 동시 확인)
+- [x] A3. RV-1·3·4·5 anchor: 신규 결과뷰 섹션 RTL (V2 1건/0건/2건/간편평가+혼재) ✅ 8건 PASS (besshi-corp-header testid)
 
-## Phase B — 제6쪽 21항목 echo
-- [x] B1. C-4: `FiscalYearBreakdown` 타입에 echo 21필드 optional 추가 ✅
-- [x] B2. C-5: `buildBreakdown()` 입력 fy 21필드 spread ✅ (산식 무변경)
-- [x] B3. C-6: `Page6NetIncomeBreakdown` 21행 전개 ✅ (①+②~⑦ 가소계+⑧~㉒ 나소계+㉓㉔㉕, testid p6-②~㉒)
-- [x] B4. AC-4/AC-5: echo 일치 + Σ세부=합계 자기일관 anchor ✅ (pdf-case-1 9건 PASS)
+## Phase B — Date 정규화 (R-3, F-8 try/catch)
+- [x] B1. `BesshiForm4Buppyo3PrintView`에 `normalizeBesshiInput` + try/catch fallback 추가 ✅
+- [x] B2. 내부 모든 `input` 참조를 `safe`로 교체 (evaluate·Page1·Page2·Page4·PDF 버튼) ✅ + Page1CoverSection L64 인스턴스 가드(실측 환류) ✅
+- [x] B3. RV-2·RV-6 통과 확인 ✅ (besshi 전체 29건 PASS, 회귀 0)
 
-## Phase C — 제1쪽 충실 재현
-- [x] C1. C-8: `UnlistedStockValuationInput` +businessRegistrationNumber?·capital? ✅ (optional 표시전용)
-- [x] C2. C-7: `Page1CoverSection` 2번 6행 체크박스 상시 렌더 ✅ (다=삭제 회색, AC-6 8건 PASS)
-- [x] C3. C-9: `CorporateInfoSection` 입력 + Page1 1번 사업자번호·자본금 ✅ (부모 전달+AC-9 PASS)
-- [x] C4. C-10: `Page1CoverSection` 3번 ⑦ 2행 분리 ✅ (㉮할증분·㉯합계)
-- [x] C5. AC-6: 5사유 → 해당 행만 [v] anchor ✅
+## Phase C — 결과뷰 섹션 (R-1·R-2·R-4·R-5·R-7)
+- [x] C1. 신규 `components/calc/results/UnlistedStockBesshiResultSection.tsx` ✅ (V2 filter·다건 헤더·R-5 null)
+- [x] C2. RV-1·3·4·5 통과 확인 ✅ 8건 PASS
 
-## Phase D — 라벨·할증
-- [x] D1. C-11: 헤더 2025.07.10 + ⑯ 기업업무추진비(C-6) + ⑮ 문구(C-1) 최신화 ✅
-- [x] D2. C-12/AC-7: companySize large=0.20 / small·medium=0 anchor ✅ (medium 배제 정상)
+## Phase D — 결과뷰 연결 (R-1·R-6)
+- [x] D1. `InheritanceTaxResultView` 재산 평가 내역 다음에 섹션 연결 ✅ (estateItems 가드 + import)
+- [x] D2. `GiftTaxResultView` 평가명세서 다음에 섹션 연결 (R-6) ✅ (estateItems default [] 직접 전달)
 
 ## 검증
-- [x] V1. 갭 분석 (계획·디자인 C-1~C-13 ↔ 구현) ✅ 13개 전부 구현·갭 0
+- [x] V1. 갭 분석 (계획·디자인 R-1~R-7 / RV-1~6 ↔ 구현) ✅ 갭 0 (R-1~7·RV-1~6 전부 구현)
 - [x] V2. `npx tsc --noEmit` 0건 ✅
-- [x] V3. 전체 `npm test` 4966 PASS·0 FAIL ✅ (property-valuation 195 + besshi 23 + pdf-case-1 13 포함)
-- [ ] V4. 커밋·푸시 (한국어 메시지)
+- [x] V3. 전체 `npm test` 회귀 0 ✅ 4980 PASS·0 FAIL (신규 14: RV-2 3+RV-6 3+섹션 8)
+- [x] V4. 결과뷰 800줄 이하 확인 ✅ (749/467/54/191)
+- [ ] V5. 커밋·푸시 (한국어 메시지)
+
+> 브라우저 수동 확인: 미수행 — 출력 전용 UI 연결로 RTL anchor 14건(렌더·크래시 방어·V2 filter·다건·null)이 핵심 동작을 전수 검증. 실제 브라우저 확인은 사용자 환경에서 권장.
 
 ---
 
 ## 진행 현황
-- 전체 작업: 21개
-- 완료: 20개
-- 미완료: 1개 (V4 커밋·푸시)
+- 전체 작업: 16개
+- 완료: 15개
+- 미완료: 1개 (V5 커밋·푸시 — 진행)
 - 상태: 진행 중

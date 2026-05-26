@@ -61,7 +61,11 @@ export function Page1CoverSection({ input, result }: Page1CoverSectionProps) {
           </tr>
           <tr data-besshi-cell="p1-②" data-testid="p1-②">
             <td className="border border-black p-2 bg-gray-100">평가기준일</td>
-            <td className="border border-black p-2">{input.evaluationDate.toISOString().slice(0, 10)}</td>
+            <td className="border border-black p-2">
+              {input.evaluationDate instanceof Date && !isNaN(input.evaluationDate.getTime())
+                ? input.evaluationDate.toISOString().slice(0, 10)
+                : "-"}
+            </td>
             <td className="border border-black p-2 bg-gray-100">② 부동산과다보유법인</td>
             <td className="border border-black p-2" colSpan={3}>{input.isRealEstateHeavy ? "예 (가중치 반전)" : "아니오"}</td>
           </tr>

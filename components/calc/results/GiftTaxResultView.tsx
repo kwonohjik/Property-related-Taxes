@@ -14,6 +14,7 @@ import { TaxCreditBreakdownCard } from "@/components/calc/TaxCreditBreakdownCard
 import { GenerationSkipSurchargeBreakdownCard } from "@/components/calc/results/GenerationSkipSurchargeBreakdownCard";
 import { GiftTaxFilingFormTable } from "@/components/calc/results/GiftTaxFilingFormTable";
 import { GiftTaxValuationFormTable } from "@/components/calc/results/GiftTaxValuationFormTable";
+import { UnlistedStockBesshiResultSection } from "@/components/calc/results/UnlistedStockBesshiResultSection";
 import { HorizontalScrollContainer } from "@/components/calc/shared/HorizontalScrollContainer";
 import { calcInstallmentPayment } from "@/lib/tax-engine/credits/installment-payment";
 import { SaveButton } from "@/components/calc/shared/SaveButton";
@@ -396,6 +397,9 @@ export function GiftTaxResultView({
           </div>
         )}
       </div>
+
+      {/* 비상장주식 별지 부표3 출력 (정식평가 V2 자산, R-6) */}
+      <UnlistedStockBesshiResultSection estateItems={estateItems} />
 
       {/* 연부연납 안내 */}
       <InstallmentGuide finalTax={result.finalTax} />

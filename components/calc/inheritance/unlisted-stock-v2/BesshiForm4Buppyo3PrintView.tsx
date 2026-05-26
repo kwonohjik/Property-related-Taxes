@@ -27,6 +27,7 @@ import type {
   UnlistedStockValuationInput,
   UnlistedStockValuationResult,
 } from "@/lib/tax-engine/types/unlisted-stock-valuation.types";
+import { toDate } from "@/lib/api/date-coerce";
 import dynamic from "next/dynamic";
 import { Page1CoverSection } from "./besshi/Page1CoverSection";
 import { Page2NetAssetTable } from "./besshi/Page2NetAssetTable";
@@ -54,13 +55,43 @@ export interface BesshiForm4Buppyo3PrintViewProps {
   input: UnlistedStockValuationInput;
 }
 
+/**
+ * Date 정규화 (R-3 / F-2·F-3·F-8) — sessionStorage(JSON) 복원 시 Date 필드가 ISO string으로
+ * 도달하면 `evaluationDate.toISOString()`(Page1CoverSection·PDF 문서·파일명)이 TypeError로 깨진다.
+ * `lib/api/date-coerce.ts`의 `toDate`로 string→Date 변환(이미 Date면 idempotent, `new Date()` 직접 호출 금지).
+ * F-3: `fiscalYears`는 3-튜플이므로 map 결과를 튜플 타입으로 명시 캐스팅.
+ */
+function normalizeBesshiInput(input: UnlistedStockValuationInput): UnlistedStockValuationInput {
+  return {
+    ...input,
+    evaluationDate: toDate(input.evaluationDate, "evaluationDate"),
+    businessStartDate: toDate(input.businessStartDate, "businessStartDate"),
+    fiscalYears: input.fiscalYears.map((fy) => ({
+      ...fy,
+      fiscalYearEndDate: toDate(fy.fiscalYearEndDate, "fiscalYearEndDate"),
+    })) as UnlistedStockValuationInput["fiscalYears"],
+    capitalChanges: input.capitalChanges.map((c) => ({
+      ...c,
+      changeDate: toDate(c.changeDate, "changeDate"),
+    })),
+  };
+}
+
 export function BesshiForm4Buppyo3PrintView({ input }: BesshiForm4Buppyo3PrintViewProps) {
   const [open, setOpen] = useState(false);
 
+  // F-8: 미완성 입력(날짜 공란 등)은 toDate가 throw → 원본 fallback. 어차피 아래 가드·PDF 버튼이 막음.
+  let safe = input;
+  try {
+    safe = normalizeBesshiInput(input);
+  } catch {
+    safe = input;
+  }
+
   let result: UnlistedStockValuationResult | undefined;
   try {
-    if (input.totalShares > 0 && input.ownedShares > 0) {
-      result = evaluateUnlistedStockV2(input);
+    if (safe.totalShares > 0 && safe.ownedShares > 0) {
+      result = evaluateUnlistedStockV2(safe);
     }
   } catch {
     result = undefined;
@@ -80,7 +111,7 @@ export function BesshiForm4Buppyo3PrintView({ input }: BesshiForm4Buppyo3PrintVi
           📄 별지 제4호 부표3 비상장주식 평가서 (인쇄 미리보기){" "}
           <span className="text-[10px] text-gray-500">{open ? "접기" : "펼치기"}</span>
         </button>
-        <UnlistedStockBesshiPdfDownloadButton input={input} />
+        <UnlistedStockBesshiPdfDownloadButton input={safe} />
       </div>
 
       {/* @page A4 portrait — 인쇄 시 5쪽 자동 분리 */}
@@ -110,7 +141,7 @@ export function BesshiForm4Buppyo3PrintView({ input }: BesshiForm4Buppyo3PrintVi
           </p>
 
           {/* 제1쪽 */}
-          <Page1CoverSection input={input} result={result} />
+          <Page1CoverSection input={safe} result={result} />
 
           {/* 제1쪽 → 제2쪽 break */}
           <div className="print:break-before-page" aria-hidden="true" />
@@ -118,7 +149,7 @@ export function BesshiForm4Buppyo3PrintView({ input }: BesshiForm4Buppyo3PrintVi
           {/* 제2쪽 — 4.순자산가액 */}
           {result && (
             <Page2NetAssetTable
-              raw={input.netAssetValueRaw}
+              raw={safe.netAssetValueRaw}
               netAssetTotal={result.netAssetTotal}
               goodwillFinal={result.goodwillCalculation.goodwillFinal}
             />
@@ -128,7 +159,7 @@ export function BesshiForm4Buppyo3PrintView({ input }: BesshiForm4Buppyo3PrintVi
           <div className="print:break-before-page" aria-hidden="true" />
 
           {/* 제4쪽 — 5.평가차액 (조건부) */}
-          <Page4ValuationDeltaTable raw={input.netAssetValueRaw} />
+          <Page4ValuationDeltaTable raw={safe.netAssetValueRaw} />
 
           {/* 제4쪽 → 제5쪽 break */}
           <div className="print:break-before-page" aria-hidden="true" />
