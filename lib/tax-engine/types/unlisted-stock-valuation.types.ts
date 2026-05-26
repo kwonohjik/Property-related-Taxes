@@ -142,7 +142,7 @@ export interface UnlistedStockValuationInput {
   totalShares: number;                   // 발행주식총수 (평가기준일 현재)
   ownedShares: number;                   // 피상속인·수증인 소유 주식수
 
-  /** §54⑤ 부동산과다보유법인 여부 — 소법 §94①4호다목 (자산 50% 이상). 사용자 ON/OFF 직접 지정. */
+  /** §54① 본문 괄호 부동산과다보유법인 여부 — 소법 §94①4호다목 (자산 50% 이상). 사용자 ON/OFF 직접 지정. */
   isRealEstateHeavy: boolean;
 
   /**

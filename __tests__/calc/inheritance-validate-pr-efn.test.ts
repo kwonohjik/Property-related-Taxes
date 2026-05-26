@@ -5,7 +5,7 @@
  *   UI-VAL-4: PR-N 행 단위 입력 + accountName 빈 문자열 → 차단
  *   UI-VAL-5: PR-N 행 수 초과 (자산 51행) → 차단
  *
- * §54⑤ 부동산과다보유 판정은 사용자 ON/OFF 직접 지정 (UI ToggleCard) — auto 모드 검증 제거.
+ * §54① 본문 괄호 부동산과다보유 판정은 사용자 ON/OFF 직접 지정 (UI ToggleCard) — auto 모드 검증 제거.
  *
  * Plan: docs/00-pm/inheritance-unlisted-stock-valuation-ui-integration.plan.md §5-0
  * Design: docs/02-design/features/inheritance-unlisted-stock-valuation-ui-integration.design.md §3-2

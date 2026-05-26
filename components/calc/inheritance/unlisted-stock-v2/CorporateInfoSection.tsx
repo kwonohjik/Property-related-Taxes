@@ -229,10 +229,15 @@ export function CorporateInfoSection({
       <ToggleCard
         tone="amber"
         title="부동산과다보유법인 (상증령 §54① 본문 괄호)"
-        description="자산총액 중 토지·건물·부동산권리 ≥ 50%인 법인 — 가중치 반전 (순손익 2/5 + 순자산 3/5)"
+        description="자산총액 중 토지·건물·부동산권리 ≥ 50%인 법인 (소법 §94①4호다목) — 가중치 반전"
         checked={isRealEstateHeavy}
         onCheckedChange={(on) => onChange({ isRealEstateHeavy: on })}
-      />
+      >
+        <p className="text-[11px] text-amber-800 mt-1">
+          가중치 반전: 일반 <span className="font-mono">(순손익×3 + 순자산×2)/5</span> →
+          부동산과다 <span className="font-mono">(순손익×2 + 순자산×3)/5</span>
+        </p>
+      </ToggleCard>
 
       {/* §54④ 순자산 단독 평가 사유 */}
       <ToggleCard

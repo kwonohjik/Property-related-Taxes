@@ -7,7 +7,7 @@
  *   UI-E-1: §22② auto 모드 — 사례 6 52% → ON
  *   UI-E-2: §22② manual_off override
  *
- * §54⑤ 부동산과다보유 판정은 사용자 ON/OFF 직접 지정 (UI ToggleCard) — 자동 판정 헬퍼 제거.
+ * §54① 본문 괄호 부동산과다보유 판정은 사용자 ON/OFF 직접 지정 (UI ToggleCard) — 자동 판정 헬퍼 제거.
  *
  * Plan: docs/00-pm/inheritance-unlisted-stock-valuation-ui-integration.plan.md §5-0
  * Design: docs/02-design/features/inheritance-unlisted-stock-valuation-ui-integration.design.md §6

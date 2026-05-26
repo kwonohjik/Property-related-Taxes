@@ -266,7 +266,7 @@ function AutoJudgmentEchoLines({ input }: { input: UnlistedStockValuationInput }
         </span>
       </div>
       <div className="flex items-baseline gap-2">
-        <span className="text-violet-700">§54⑤ 부동산과다보유법인:</span>
+        <span className="text-violet-700">§54① 부동산과다보유법인:</span>
         <span
           className={
             input.isRealEstateHeavy

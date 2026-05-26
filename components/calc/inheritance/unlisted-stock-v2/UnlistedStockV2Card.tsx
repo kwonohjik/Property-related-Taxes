@@ -24,7 +24,6 @@ import {
   MajorShareholderStockToggle,
   type Section22MajorShareholderMode,
 } from "./MajorShareholderStockToggle";
-import { RealEstateHeavyToggle } from "./RealEstateHeavyToggle";
 import { EvaluationCommitteeToggle } from "./EvaluationCommitteeToggle";
 import { EvaluationCommitteeResultCard } from "./EvaluationCommitteeResultCard";
 import { EvaluationCommitteeFilingGuideCard } from "./EvaluationCommitteeFilingGuideCard";
@@ -156,11 +155,6 @@ export function UnlistedStockV2Card({
     wrappedOnChange({ ...input, netAssetValueRaw: next });
   };
 
-  // PR-F: §54⑤ 부동산과다 ON/OFF 직접 토글
-  const handleRealEstateHeavyChange = (next: boolean) => {
-    wrappedOnChange({ ...input, isRealEstateHeavy: next });
-  };
-
   // PR-E: §22② 모드 변경 (mode만 변경, isMaxShareholder는 §63③ 용이므로 분리)
   const handleSection22ModeChange = (mode: Section22MajorShareholderMode) => {
     wrappedOnChange({ ...input, section22MajorShareholderMode: mode });
@@ -250,12 +244,6 @@ export function UnlistedStockV2Card({
         onChange={(patch) => {
           updateCorporateInfo(patch as Partial<UnlistedStockValuationInput>);
         }}
-      />
-
-      {/* 1-B. PR-F: §54⑤ 부동산과다 ON/OFF (Section 3) */}
-      <RealEstateHeavyToggle
-        isRealEstateHeavy={input.isRealEstateHeavy}
-        onChange={handleRealEstateHeavyChange}
       />
 
       {/* 2. 사업연도 가산·차감 (3년치) */}

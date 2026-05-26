@@ -444,7 +444,7 @@ export function candidateToUnlistedStockInput(
     faceValuePerShare: src.faceValuePerShare,
     totalShares: src.totalShares,
 
-    // §54⑤ 부동산과다 + §22② 자동 도출 모드
+    // §54① 부동산과다 + §22② 자동 도출 모드
     isRealEstateHeavy: src.isRealEstateHeavy,
     section22MajorShareholderMode: src.section22MajorShareholderMode,
 

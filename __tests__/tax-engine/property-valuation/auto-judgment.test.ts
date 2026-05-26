@@ -11,7 +11,7 @@
  *   §22②: 추가공제 제외 (본 PR-E)
  *   §63③: 할증평가 (선행 PR max-shareholder-premium 별도 모듈)
  *
- * §54⑤ 부동산과다보유 판정은 사용자 ON/OFF 직접 지정 (UI ToggleCard) — 자동 판정 헬퍼 제거.
+ * §54① 본문 괄호 부동산과다보유 판정은 사용자 ON/OFF 직접 지정 (UI ToggleCard) — 자동 판정 헬퍼 제거.
  *
  * Plan: docs/00-pm/inheritance-unlisted-stock-valuation-followup.plan.md §3 PR-E
  * Design: docs/02-design/features/inheritance-unlisted-stock-valuation-followup.design.md §1·§6-3

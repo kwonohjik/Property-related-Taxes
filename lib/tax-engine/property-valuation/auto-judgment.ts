@@ -4,7 +4,7 @@
  * 본 PR 엔진은 `isMaxShareholder` / `isRealEstateHeavy` boolean을 직접 입력받는다.
  * 본 헬퍼는 사용자 입력값(보유주식)에서 §22② 최대주주 여부를 자동 도출한다.
  *
- * §54⑤ 부동산과다보유 판정은 사용자가 직접 ON/OFF 선택 (UI ToggleCard).
+ * §54① 본문 괄호 부동산과다보유 판정은 사용자가 직접 ON/OFF 선택 (UI ToggleCard).
  *
  * 3-state 사용 패턴 (UI 시니어 영역):
  *   - auto: 본 헬퍼 결과 그대로 사용
