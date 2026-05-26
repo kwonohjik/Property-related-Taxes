@@ -33,6 +33,18 @@ function strToDate(s: string): Date | undefined {
   return new Date(s);
 }
 
+/**
+ * 사업자등록번호 자동 하이픈 포맷 ###-##-#####
+ * - 숫자만 추출 후 재포맷 → 입력 중간 수정·백스페이스에도 자연스럽게 동작
+ * - 10자리 초과 입력 차단
+ */
+function formatBizRegNo(raw: string): string {
+  const digits = raw.replace(/\D/g, "").slice(0, 10);
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 5) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+  return `${digits.slice(0, 3)}-${digits.slice(3, 5)}-${digits.slice(5)}`;
+}
+
 const NET_ASSET_ONLY_OPTIONS: RadioCardOption<UnlistedNetAssetOnlyReason>[] = [
   {
     value: "liquidation",
@@ -88,6 +100,12 @@ export interface CorporateInfoSectionProps {
   capital?: number;
   businessStartDate?: Date;
   evaluationDate?: Date;
+  /**
+   * 평가기준일 display fallback — 상속개시일 또는 증여일 (YYYY-MM-DD)
+   * evaluationDate가 비어 있을 때 DateInput에 표시. 사용자 입력 시 store에 저장.
+   * mirror-pattern: useEffect → store write 금지. display fallback prop 방식.
+   */
+  evaluationDateFallback?: string;
   faceValuePerShare: number;
   totalShares: number;
   ownedShares: number;
@@ -124,6 +142,7 @@ export function CorporateInfoSection({
   capital,
   businessStartDate,
   evaluationDate,
+  evaluationDateFallback,
   faceValuePerShare,
   totalShares,
   ownedShares,
@@ -136,6 +155,16 @@ export function CorporateInfoSection({
   onCapitalChangesChange,
   onChange,
 }: CorporateInfoSectionProps) {
+  /**
+   * 자본금 display fallback — 액면가 × 발행주식총수
+   * capital이 store에 없으면 faceValuePerShare * totalShares를 표시.
+   * useEffect store write 금지(mirror-pattern). 사용자 수정 시 store에 저장.
+   */
+  const capitalDisplay: string = capital
+    ? String(capital)
+    : faceValuePerShare > 0 && totalShares > 0
+      ? String(faceValuePerShare * totalShares)
+      : "";
   return (
     <div className="space-y-4">
       {/* 1. 평가대상 비상장법인 */}
@@ -154,12 +183,16 @@ export function CorporateInfoSection({
             data-testid="unlisted-v2-corp-name"
           />
         </FieldCard>
-        <FieldCard label="사업자등록번호" hint="000-00-00000 (선택)">
+        <FieldCard label="사업자등록번호" hint="000-00-00000 형식으로 자동 입력 (선택)">
           <input
             type="text"
             value={businessRegistrationNumber ?? ""}
-            onChange={(e) => onChange({ businessRegistrationNumber: e.target.value })}
+            onChange={(e) => {
+              const formatted = formatBizRegNo(e.target.value);
+              onChange({ businessRegistrationNumber: formatted });
+            }}
             placeholder="사업자등록번호 (선택)"
+            maxLength={12}
             className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-900"
             data-testid="unlisted-v2-biz-reg-no"
           />
@@ -179,9 +212,13 @@ export function CorporateInfoSection({
             onChange={(s) => onChange({ businessStartDate: strToDate(s) })}
           />
         </FieldCard>
-        <FieldCard label="평가기준일" required hint="상속개시일 또는 증여일">
+        <FieldCard
+          label="평가기준일"
+          required
+          hint={evaluationDate ? undefined : evaluationDateFallback ? `상속개시일·증여일(${evaluationDateFallback}) 자동 적용 — 수정 가능` : "상속개시일 또는 증여일"}
+        >
           <DateInput
-            value={dateToStr(evaluationDate)}
+            value={dateToStr(evaluationDate) || evaluationDateFallback || ""}
             onChange={(s) => onChange({ evaluationDate: strToDate(s) })}
           />
         </FieldCard>
@@ -203,10 +240,20 @@ export function CorporateInfoSection({
             hideUnit
           />
         </FieldCard>
-        <FieldCard label="자본금" unit="원" hint="제1쪽 1번 (선택)">
+        <FieldCard
+          label="자본금"
+          unit="원"
+          hint={
+            capital
+              ? "제1쪽 1번"
+              : faceValuePerShare > 0 && totalShares > 0
+                ? `액면가(${faceValuePerShare.toLocaleString()}) × 발행주식총수(${totalShares.toLocaleString()}) 자동 계산 — 수정 가능`
+                : "제1쪽 1번 (선택)"
+          }
+        >
           <CurrencyInput
             label="자본금"
-            value={String(capital || "")}
+            value={capitalDisplay}
             onChange={(v) => onChange({ capital: Number(v.replace(/,/g, "")) || 0 })}
             placeholder="자본금"
             hideUnit

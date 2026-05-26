@@ -104,6 +104,12 @@ export interface UnlistedStockV2CardProps {
   currentClientId?: string | null;
   /** PR-H: 이미 자산 목록에 추가된 calculationId 배열 (중복 차단) */
   historyExcludeIds?: string[];
+  /**
+   * 평가기준일 display fallback — 상속개시일 또는 증여일 (YYYY-MM-DD)
+   * 사용처: StockValuationForm이 steps.tsx/GiftTaxForm.tsx의 valuationDate prop을 그대로 전달.
+   * CorporateInfoSection → DateInput value fallback에만 사용. useEffect store write 금지.
+   */
+  valuationDate?: string;
 }
 
 export function UnlistedStockV2Card({
@@ -111,6 +117,7 @@ export function UnlistedStockV2Card({
   onChange,
   currentClientId = null,
   historyExcludeIds = [],
+  valuationDate,
 }: UnlistedStockV2CardProps) {
   // PR-H: 이력 조회 모달
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -142,6 +149,21 @@ export function UnlistedStockV2Card({
   const updateCorporateInfo = (patch: Partial<UnlistedStockValuationInput>) => {
     wrappedOnChange({ ...input, ...patch });
   };
+
+  /**
+   * 엔진 호출용 effective input — evaluationDate 미입력 시 valuationDate(상속개시일·증여일) fallback 주입.
+   * store write 없이 순수 계산용으로만 사용 (mirror-pattern).
+   * 주입 대상: PerShareValuationResultCard / BesshiForm4Buppyo3PrintView / GoodwillPanel / EvaluationCommitteeResultPanel
+   */
+  const effectiveInput: UnlistedStockValuationInput = useMemo(() => {
+    if (!input.evaluationDate && valuationDate) {
+      const vd = new Date(valuationDate);
+      if (!isNaN(vd.getTime())) {
+        return { ...input, evaluationDate: vd };
+      }
+    }
+    return input;
+  }, [input, valuationDate]);
 
   const updateFiscalYears = (next: [FiscalYearAdjustment, FiscalYearAdjustment, FiscalYearAdjustment]) => {
     wrappedOnChange({ ...input, fiscalYears: next });
@@ -231,6 +253,7 @@ export function UnlistedStockV2Card({
         capital={input.capital}
         businessStartDate={input.businessStartDate}
         evaluationDate={input.evaluationDate}
+        evaluationDateFallback={valuationDate}
         faceValuePerShare={input.faceValuePerShare}
         totalShares={input.totalShares}
         ownedShares={input.ownedShares}
@@ -268,8 +291,8 @@ export function UnlistedStockV2Card({
         onChange={updateNetAsset}
       />
 
-      {/* 5. 영업권 평가 (자동 표시) */}
-      <GoodwillPanel input={input} />
+      {/* 5. 영업권 평가 (자동 표시) — effectiveInput 사용으로 evaluationDate fallback 적용 */}
+      <GoodwillPanel input={effectiveInput} />
 
       {/* 5-B. PR-E: §22② 최대주주 자동 도출 (Section 10 — design v3) */}
       <MajorShareholderStockToggle
@@ -286,16 +309,16 @@ export function UnlistedStockV2Card({
           wrappedOnChange({ ...input, evaluationCommittee: next })
         }
       />
-      <EvaluationCommitteeResultPanel input={input} />
+      <EvaluationCommitteeResultPanel input={effectiveInput} />
       {input.evaluationCommittee && (
         <EvaluationCommitteeFilingGuideCard taxKind="inheritance" />
       )}
 
-      {/* 6. 결과 카드 */}
-      <PerShareValuationResultCard input={input} />
+      {/* 6. 결과 카드 — effectiveInput 사용으로 evaluationDate fallback 적용 */}
+      <PerShareValuationResultCard input={effectiveInput} />
 
-      {/* 7. 별지 양식 PDF 출력 미리보기 */}
-      <BesshiForm4Buppyo3PrintView input={input} />
+      {/* 7. 별지 양식 PDF 출력 미리보기 — effectiveInput 사용으로 evaluationDate fallback 적용 */}
+      <BesshiForm4Buppyo3PrintView input={effectiveInput} />
     </div>
   );
 }

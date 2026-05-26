@@ -260,8 +260,10 @@ export function validateInheritanceTaxInput(
     if (e) return e;
   }
   // 비상장주식 V2 입력 검증 (Phase 5-A)
+  // ctx.evaluationDateFallback = deathDate — UI display fallback과 동일 fallback 인식 (CLAUDE.md ⑧)
+  const evalCtx = { evaluationDateFallback: input.deathDate };
   for (const item of input.estateItems) {
-    const e = validateUnlistedStockV2(item);
+    const e = validateUnlistedStockV2(item, evalCtx);
     if (e) return e;
   }
   const refErrs = validateHeirReferences(
@@ -298,8 +300,15 @@ export function validateInheritanceTaxInput(
  *   7) 유상증자(paid_in) — 1주당 납입금액 > 0 필수 (§56⑤)
  *   8) 유상감자(capital_reduction) — 1주당 지급금액 > 0 필수 (§56⑤ 준용)
  *   9) 무상증자(free_issue) — 주식수·변동일 필수, pricePerShare 검증 제외
+ *
+ * @param ctx.evaluationDateFallback — 상속개시일/증여일 (YYYY-MM-DD).
+ *   evaluationDate 미입력 시 이 값으로 대체해 비교.
+ *   UI display fallback과 동일 fallback 인식 — CLAUDE.md ⑧ 정책.
  */
-export function validateUnlistedStockV2(item: EstateItem): string | null {
+export function validateUnlistedStockV2(
+  item: EstateItem,
+  ctx?: { evaluationDateFallback?: string },
+): string | null {
   if (item.category !== "unlisted_stock") return null;
 
   // V1·V2 둘 중 하나 필수
@@ -310,6 +319,14 @@ export function validateUnlistedStockV2(item: EstateItem): string | null {
   // V2 입력이 없으면 추가 검증 없음 (legacy 검증은 기존 Zod 의존)
   const v2 = item.unlistedStockValuationV2;
   if (!v2) return null;
+
+  // evaluationDate fallback — 미입력 시 ctx.evaluationDateFallback(상속개시일/증여일) 사용
+  // UI display fallback과 동일 fallback 인식: CLAUDE.md ⑧ 정책
+  let effectiveEvaluationDate: Date | undefined = v2.evaluationDate;
+  if (!effectiveEvaluationDate && ctx?.evaluationDateFallback) {
+    const fb = new Date(ctx.evaluationDateFallback);
+    if (!isNaN(fb.getTime())) effectiveEvaluationDate = fb;
+  }
 
   // ① 사업연도 종료일 3개 각각 유효 Date 필수 (순서 비교 전 존재 확인)
   const YEAR_LABEL = ["1년전", "2년전", "3년전"];
@@ -333,8 +350,8 @@ export function validateUnlistedStockV2(item: EstateItem): string | null {
     return `비상장주식 "${item.name}" — 보유주식수(${v2.ownedShares})는 발행주식총수(${v2.totalShares})를 초과할 수 없습니다.`;
   }
 
-  // ④ 평가기준일 < 사업개시일
-  if (v2.evaluationDate < v2.businessStartDate) {
+  // ④ 평가기준일 < 사업개시일 (effectiveEvaluationDate: v2.evaluationDate || ctx fallback)
+  if (effectiveEvaluationDate && effectiveEvaluationDate < v2.businessStartDate) {
     return `비상장주식 "${item.name}" — 평가기준일은 사업개시일 이후여야 합니다.`;
   }
 
@@ -355,8 +372,8 @@ export function validateUnlistedStockV2(item: EstateItem): string | null {
       return `비상장주식 "${item.name}" — ${typeLabel}(${i + 1}번째) 주식수를 1 이상 입력해야 합니다.`;
     }
 
-    // 변동일 > 평가기준일 차단
-    if (c.changeDate > v2.evaluationDate) {
+    // 변동일 > 평가기준일 차단 (effectiveEvaluationDate 사용)
+    if (effectiveEvaluationDate && c.changeDate > effectiveEvaluationDate) {
       return `비상장주식 "${item.name}" — 자본금 변동일(${i + 1}번째)은 평가기준일 이전이어야 합니다.`;
     }
 

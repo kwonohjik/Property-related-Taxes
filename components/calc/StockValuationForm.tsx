@@ -266,6 +266,8 @@ interface UnlistedStockCardProps {
   onRemove: () => void;
   mode: "inheritance" | "gift";
   heirs?: Heir[];
+  /** 평가기준일 display fallback — 상속개시일 또는 증여일 (YYYY-MM-DD) */
+  valuationDate?: string;
 }
 
 function UnlistedStockCard({
@@ -277,6 +279,7 @@ function UnlistedStockCard({
   onRemove,
   mode,
   heirs,
+  valuationDate,
 }: UnlistedStockCardProps) {
   const currentMode = resolveDisplayMode(item);
 
@@ -308,10 +311,18 @@ function UnlistedStockCard({
   const handleModeChange = (newMode: "simple" | "formal") => {
     if (newMode === "formal" && !item.unlistedStockValuationV2) {
       // 정식 모드 최초 선택 → V2 초기값 생성 (C-3)
+      // valuationDate(상속개시일/증여일)가 있으면 evaluationDate 기본값으로 주입 (mirror-pattern: useEffect 금지)
+      const defaultV2 = createDefaultUnlistedStockV2();
+      if (valuationDate) {
+        const vd = new Date(valuationDate);
+        if (!isNaN(vd.getTime())) {
+          defaultV2.evaluationDate = vd;
+        }
+      }
       onUpdate({
         ...item,
         unlistedValuationMode: "formal",
-        unlistedStockValuationV2: createDefaultUnlistedStockV2(),
+        unlistedStockValuationV2: defaultV2,
       });
     } else {
       // 간편 복귀 or 재진입 — V2 보존, mode만 변경 (C-2/C-5)
@@ -365,6 +376,7 @@ function UnlistedStockCard({
         <UnlistedStockV2Card
           input={item.unlistedStockValuationV2}
           onChange={(next) => onUpdate({ ...item, unlistedStockValuationV2: next })}
+          valuationDate={valuationDate}
         />
       )}
 
@@ -562,6 +574,7 @@ export function StockValuationForm({
                 onRemove={() => handleRemove(i)}
                 mode={mode}
                 heirs={heirs}
+                valuationDate={valuationDate}
               />
             ) : null,
           )}

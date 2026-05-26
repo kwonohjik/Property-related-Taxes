@@ -44,6 +44,12 @@ export interface InheritanceSummaryFormInput {
   funeralExpense: string;
   funeralIncludesBongan: boolean;
   priorGifts: PriorGift[];
+  /**
+   * 평가기준일 fallback — 상속개시일 또는 증여일 (YYYY-MM-DD)
+   * 비상장 V2 evaluationDate 미입력 시 evaluateUnlistedStockV2에 주입.
+   * mirror-pattern: useEffect 없이 순수 계산 시점에 주입.
+   */
+  valuationDate?: string;
 }
 
 export interface InheritanceSummary {
@@ -66,10 +72,17 @@ export interface InheritanceSummary {
 // 헬퍼 — 자산 평가액 추정 (engine 호출 없이 입력값만으로)
 // ────────────────────────────────────────────────────
 
-function estimateAssetValue(item: EstateItem): number {
+function estimateAssetValue(item: EstateItem, valuationDate?: string): number {
   // V2 비상장주식 평가 우선 (Phase 5-C) — 입력 완성도 충분 시 자동 산정
   if (item.category === "unlisted_stock" && item.unlistedStockValuationV2) {
-    const v2 = item.unlistedStockValuationV2;
+    let v2 = item.unlistedStockValuationV2;
+    // evaluationDate 미입력 시 valuationDate(상속개시일·증여일) fallback 주입
+    if (!v2.evaluationDate && valuationDate) {
+      const vd = new Date(valuationDate);
+      if (!isNaN(vd.getTime())) {
+        v2 = { ...v2, evaluationDate: vd };
+      }
+    }
     if (v2.totalShares > 0 && v2.ownedShares > 0) {
       try {
         const result = evaluateUnlistedStockV2(v2);
@@ -114,7 +127,7 @@ export function computeInheritanceSummary(
     resolveActiveUnlistedValuation,
   );
   const estateValueRaw = allEstateItems.reduce(
-    (s, it) => s + estimateAssetValue(it),
+    (s, it) => s + estimateAssetValue(it, form.valuationDate),
     0,
   );
 

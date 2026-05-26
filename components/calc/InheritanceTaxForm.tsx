@@ -143,8 +143,10 @@ function validateStep(step: number, form: FormState): string | null {
     const total = form.estateItems.length + form.stockItems.length;
     if (total === 0) return "상속재산을 1개 이상 입력하세요.";
     // 비상장주식 V2 입력 검증 — 진행 차단
+    // ctx.evaluationDateFallback = deathDate — display fallback과 동일 fallback 인식 (CLAUDE.md ⑧)
+    const evalCtx = { evaluationDateFallback: form.deathDate || undefined };
     for (const item of [...form.estateItems, ...form.stockItems]) {
-      const e = validateUnlistedStockV2(item);
+      const e = validateUnlistedStockV2(item, evalCtx);
       if (e) return e;
     }
   }
@@ -408,7 +410,7 @@ export function InheritanceTaxForm() {
       <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-6 items-start print:block">
         {/* 사이드바 합계 (지점 ⑥) — 좌측 sticky (데스크톱) / 상단 stack (모바일·인쇄) */}
         <aside className="order-first lg:sticky lg:top-36 self-start max-h-[calc(100vh-9rem)] overflow-y-auto print:static print:max-h-none print:overflow-visible">
-          <InheritanceSidebar form={form} result={result} />
+          <InheritanceSidebar form={{ ...form, valuationDate: form.deathDate || undefined }} result={result} />
         </aside>
 
         <div className="min-h-[300px]">
