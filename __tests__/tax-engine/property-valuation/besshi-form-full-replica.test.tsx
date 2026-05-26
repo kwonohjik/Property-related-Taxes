@@ -210,13 +210,14 @@ describe("[F-4·F-5·F-6] Page2 자기일관성", () => {
     expect(Math.abs(parseAmount("p2-⑧") - sum)).toBeLessThanOrEqual(1);
   });
 
-  it("F-5: 부채총액 ⑲ === (⑨+⑩+⑪+⑫+⑬+⑭) − (⑮+⑯+⑰+⑱), tolerance ≤ 1원", () => {
+  it("F-5: 부채총액 ⑲ === (⑨+⑩+⑪+⑫+⑬+⑭+⑮) − (⑯+⑰+⑱), tolerance ≤ 1원", () => {
+    // ⑮(otherProvision)은 §17의2 3호 가 → 가산 (공식 2025.07.10). 사례 6은 ⑮=0이라 부호 무영향.
     render(<BesshiForm4Buppyo3PrintView input={case6Input} />);
     expand();
     const sum =
       (parseAmount("p2-⑨") + parseAmount("p2-⑩") + parseAmount("p2-⑪") +
-        parseAmount("p2-⑫") + parseAmount("p2-⑬") + parseAmount("p2-⑭")) -
-      (parseAmount("p2-⑮") + parseAmount("p2-⑯") + parseAmount("p2-⑰") + parseAmount("p2-⑱"));
+        parseAmount("p2-⑫") + parseAmount("p2-⑬") + parseAmount("p2-⑭") + parseAmount("p2-⑮")) -
+      (parseAmount("p2-⑯") + parseAmount("p2-⑰") + parseAmount("p2-⑱"));
     expect(Math.abs(parseAmount("p2-⑲") - sum)).toBeLessThanOrEqual(1);
   });
 
@@ -236,11 +237,11 @@ describe("[F-7] 영업권 가 = 가중평균 산식", () => {
     render(<BesshiForm4Buppyo3PrintView input={case6Input} />);
     expand();
     const expected = Math.floor((76_842_660 * 3 + 62_416_500 * 2 + -5_311_910 * 1) / 6);
-    // 마지막 td(금액 컬럼)만 파싱 — 라벨 "(① ×3 + ② ×2 + ③ ×1) ÷ 6" 숫자 제외
+    // 공식 3열 [번호][라벨][금액 col2][산식 col3] — 금액은 끝에서 2번째 td (마지막=col3 산식)
     const row = screen.getByTestId("p5-가");
     const cells = row.querySelectorAll("td");
-    const lastCell = cells[cells.length - 1];
-    const text = lastCell?.textContent || "";
+    const amtCell = cells[cells.length - 2];
+    const text = amtCell?.textContent || "";
     const actual = parseInt(text.replace(/[^0-9]/g, ""), 10);
     expect(Math.abs(actual - expected)).toBeLessThanOrEqual(1);
     expect(expected).toBe(58_341_511);

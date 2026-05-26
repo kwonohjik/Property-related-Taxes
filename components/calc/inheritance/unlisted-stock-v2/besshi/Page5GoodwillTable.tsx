@@ -1,25 +1,17 @@
 "use client";
 
 /**
- * Page5GoodwillTable — 별지 부표3 제5쪽 6.영업권 (가~자 9행)
+ * Page5GoodwillTable — 별지 부표3 제5쪽 6.영업권 (공식 2025.07.10 양식)
  *
- * 표 구조 (상증령 §59② + §55③ + 상증규 §19①):
- *   가. 평가기준일 이전 3년간 순손익액의 가중평균액 (① ×3 + ② ×2 + ③ ×1) / 6
- *   나. 가 × 50%
- *   다. 평가기준일 현재 자기자본 (영업권 포함 전 순자산가액)
- *   라. 기획재정부령이 정하는 이자율 (10% — 상증규 §19①)
- *   마. 다 × 라
- *   바. 영업권 지속연수 (5년)
- *   사. 영업권 계산액 Σⁿ₌₁⁵ (나 − 마)/(1+0.1)ⁿ
- *   아. 영업권 상당액 중 매입 무체재산권 감가상각비 공제분
- *   자. 영업권 평가액 (사 − 아) → 제2쪽 4.라 기재
+ * 공식 3열 [번호+라벨][금액 col2][산식·참조·회색 col3]:
+ *   col2(금액): 가/①②③/나/다/마/사/아/자. 라·바는 빈칸(파라미터 → col3).
+ *   col3: 가=가중평균 산식 / 라=이자율(10%) / 바=지속연수(5년) / 자=cross-ref / 그 외 회색 빈칸.
  *
- * §55③ 자동배제 4종 badge:
- *   liquidation·real_estate_80·lt3y·continuous_loss_3y
+ * 라벨·산식·ref는 `besshi-form-constants.ts` 단일 출처 (PDF Page5Goodwill와 공유).
+ * ①②③ 연도 annotation 보존(`fiscalYearBreakdowns[i].label`).
  *
- * PDF: ~/Downloads/비상장주식 평가 사례.pdf page=9 좌측 (사례 6)
- * Plan: docs/00-pm/inheritance-unlisted-stock-besshi-form-full-replica.plan.md §3.3
- * Design: docs/02-design/features/inheritance-unlisted-stock-besshi-form-full-replica.engine.design.md §5
+ * §55③ 자동배제 4종 badge + OQ-1 zero-anomaly footer 유지.
+ * 법령: 상증령 §59② + §55③ + 상증규 §19①
  */
 
 import type {
@@ -27,13 +19,13 @@ import type {
   FiscalYearBreakdown,
 } from "@/lib/tax-engine/types/unlisted-stock-valuation.types";
 import { fmt, renderDelta, SectionTitle } from "./BesshiSharedAtoms";
+import { BESSHI_P5_SECTION6 } from "./besshi-form-constants";
 
 export interface Page5GoodwillTableProps {
   goodwill: UnlistedGoodwillResult;
   fiscalYearBreakdowns: [FiscalYearBreakdown, FiscalYearBreakdown, FiscalYearBreakdown];
 }
 
-// §55③ 자동배제 4종 — Record 타입 강제 (memory `enum-verification-before-mapping`)
 const excludedReasonLabel: Record<NonNullable<UnlistedGoodwillResult["excludedByLaw"]>, string> = {
   liquidation: "§55③ 1호 — 청산절차 진행 → 영업권 가산 없음",
   real_estate_80: "§55③ 1호 — 부동산 80%(§54④3호) → 영업권 가산 없음",
@@ -41,101 +33,83 @@ const excludedReasonLabel: Record<NonNullable<UnlistedGoodwillResult["excludedBy
   continuous_loss_3y: "§55③ 3호 — 직전 3년 계속 결손 → 영업권 자동 0",
 };
 
+const TD = "border border-black p-1";
+
+/** 제5쪽 행 — [번호][라벨(다단)][금액 col2][col3] */
+function P5Tr({
+  cellNum,
+  labelLines,
+  amount,
+  col3,
+  testid,
+  variant,
+}: {
+  cellNum: string;
+  labelLines: string[];
+  amount?: number;
+  col3?: string;
+  testid: string;
+  variant?: "head" | "final";
+}) {
+  const rowClass =
+    variant === "head"
+      ? "bg-yellow-50 font-bold print:bg-yellow-50"
+      : variant === "final"
+        ? "bg-emerald-50 font-bold border-t-2 border-black print:bg-emerald-50"
+        : "";
+  return (
+    <tr className={rowClass} data-besshi-cell={testid} data-testid={testid}>
+      <td className={`${TD} text-center font-mono w-12`}>{cellNum}</td>
+      <td className={TD}>
+        {labelLines.map((ln, i) =>
+          i === 0 ? (
+            <span key={i}>{ln}</span>
+          ) : (
+            <span key={i} className="text-[9px] text-gray-500 ml-1">
+              {ln}
+            </span>
+          ),
+        )}
+      </td>
+      <td className={`${TD} text-right font-mono w-36`}>{amount === undefined ? "" : renderDelta(amount)}</td>
+      <td
+        className={`${TD} text-center text-[9px] w-44 ${col3 ? "text-gray-700" : "bg-gray-100 print:bg-gray-100"}`}
+      >
+        {col3 ?? ""}
+      </td>
+    </tr>
+  );
+}
+
 export function Page5GoodwillTable({ goodwill, fiscalYearBreakdowns }: Page5GoodwillTableProps) {
+  const P5 = BESSHI_P5_SECTION6;
+  const fyb = fiscalYearBreakdowns;
   // 사례 6 OQ-1: 나-마 양수인데 자=0 시 footer 안내 조건
   const naMinusMa = goodwill.weightedAvgHalf - goodwill.selfCapitalRate;
   const showZeroAnomalyFooter = naMinusMa > 0 && goodwill.goodwillFinal === 0 && !goodwill.excludedByLaw;
 
   return (
     <section aria-label="제5쪽 6. 영업권">
-      <SectionTitle>6. 영업권 (별지 제5쪽)</SectionTitle>
+      <div className="flex items-center justify-between text-[10px] text-gray-600">
+        <span>{P5.unitNote}</span>
+        <span>{P5.pageNote}</span>
+      </div>
+      <SectionTitle>{P5.header}</SectionTitle>
       <table className="w-full border-collapse border border-black mb-3 text-[10px]">
         <tbody>
-          {/* 가. 3년 가중평균 + 3 sub-cell */}
-          <tr className="bg-yellow-50 font-bold print:bg-yellow-50" data-besshi-cell="p5-가" data-testid="p5-가">
-            <td className="border border-black p-1 text-center font-mono w-12">가</td>
-            <td className="border border-black p-1">
-              평가기준일 이전 3년간 순손익액의 가중평균액
-              <span className="text-[9px] text-gray-600 ml-1">(① ×3 + ② ×2 + ③ ×1) ÷ 6</span>
-            </td>
-            <td className="border border-black p-1 text-right font-mono w-40">{fmt(goodwill.weightedAvg3y)}</td>
-          </tr>
-          <tr data-besshi-cell="p5-가-①" data-testid="p5-가-①">
-            <td className="border border-black p-1 text-center font-mono">①</td>
-            <td className="border border-black p-1 pl-6">
-              평가기준일 이전 1년 사업연도 순손익액 (×3)
-              <span className="text-[9px] text-gray-600 ml-1">{fiscalYearBreakdowns[0].label}</span>
-            </td>
-            <td className="border border-black p-1 text-right font-mono">{renderDelta(fiscalYearBreakdowns[0].finalNetIncome)}</td>
-          </tr>
-          <tr data-besshi-cell="p5-가-②" data-testid="p5-가-②">
-            <td className="border border-black p-1 text-center font-mono">②</td>
-            <td className="border border-black p-1 pl-6">
-              평가기준일 이전 2년 사업연도 순손익액 (×2)
-              <span className="text-[9px] text-gray-600 ml-1">{fiscalYearBreakdowns[1].label}</span>
-            </td>
-            <td className="border border-black p-1 text-right font-mono">{renderDelta(fiscalYearBreakdowns[1].finalNetIncome)}</td>
-          </tr>
-          <tr data-besshi-cell="p5-가-③" data-testid="p5-가-③">
-            <td className="border border-black p-1 text-center font-mono">③</td>
-            <td className="border border-black p-1 pl-6">
-              평가기준일 이전 3년 사업연도 순손익액 (×1)
-              <span className="text-[9px] text-gray-600 ml-1">{fiscalYearBreakdowns[2].label}</span>
-            </td>
-            <td className="border border-black p-1 text-right font-mono">{renderDelta(fiscalYearBreakdowns[2].finalNetIncome)}</td>
-          </tr>
-
-          {/* 나~자 */}
-          <tr data-besshi-cell="p5-나" data-testid="p5-나">
-            <td className="border border-black p-1 text-center font-mono">나</td>
-            <td className="border border-black p-1">가 × 50%</td>
-            <td className="border border-black p-1 text-right font-mono">{fmt(goodwill.weightedAvgHalf)}</td>
-          </tr>
-          <tr data-besshi-cell="p5-다" data-testid="p5-다">
-            <td className="border border-black p-1 text-center font-mono">다</td>
-            <td className="border border-black p-1">평가기준일 현재 자기자본 (영업권 포함 전 순자산가액)</td>
-            <td className="border border-black p-1 text-right font-mono">{fmt(goodwill.selfCapital)}</td>
-          </tr>
-          <tr data-besshi-cell="p5-라" data-testid="p5-라">
-            <td className="border border-black p-1 text-center font-mono">라</td>
-            <td className="border border-black p-1">기획재정부령이 정하는 이자율 (상증규 §19①)</td>
-            <td className="border border-black p-1 text-right font-mono">{(goodwill.rate * 100).toFixed(0)}%</td>
-          </tr>
-          <tr data-besshi-cell="p5-마" data-testid="p5-마">
-            <td className="border border-black p-1 text-center font-mono">마</td>
-            <td className="border border-black p-1">다 × 라</td>
-            <td className="border border-black p-1 text-right font-mono">{fmt(goodwill.selfCapitalRate)}</td>
-          </tr>
-          <tr data-besshi-cell="p5-바" data-testid="p5-바">
-            <td className="border border-black p-1 text-center font-mono">바</td>
-            <td className="border border-black p-1">영업권 지속연수</td>
-            <td className="border border-black p-1 text-right font-mono">{goodwill.durationYears}년</td>
-          </tr>
-          <tr data-besshi-cell="p5-사" data-testid="p5-사">
-            <td className="border border-black p-1 text-center font-mono">사</td>
-            <td className="border border-black p-1">
-              영업권 계산액
-              <span className="text-[9px] text-gray-600 ml-1">Σⁿ₌₁⁵ (나 − 마) / (1 + 0.1)ⁿ</span>
-            </td>
-            <td className="border border-black p-1 text-right font-mono">{fmt(goodwill.goodwillCalc)}</td>
-          </tr>
-          <tr data-besshi-cell="p5-아" data-testid="p5-아">
-            <td className="border border-black p-1 text-center font-mono">아</td>
-            <td className="border border-black p-1">영업권 상당액 중 매입 무체재산권 감가상각비 공제분</td>
-            <td className="border border-black p-1 text-right font-mono">{fmt(goodwill.intangibleDeduction)}</td>
-          </tr>
-          <tr
-            className="bg-emerald-50 font-bold border-t-2 border-black print:bg-emerald-50"
-            data-besshi-cell="p5-자"
-            data-testid="p5-자"
-          >
-            <td className="border border-black p-1 text-center font-mono">자</td>
-            <td className="border border-black p-1">
-              영업권 평가액 (사 − 아)
-              <span className="text-[9px] text-gray-600 ml-1">→ 제2쪽 4.라 기재</span>
-            </td>
-            <td className="border border-black p-1 text-right font-mono">{fmt(goodwill.goodwillFinal)}</td>
-          </tr>
+          <P5Tr testid="p5-가" cellNum="가" labelLines={[P5.weightedAvgLabel]} amount={goodwill.weightedAvg3y} col3={P5.weightedAvgFormula} variant="head" />
+          <P5Tr testid="p5-가-①" cellNum="①" labelLines={[P5.fy1Label, `(${fyb[0].label})`]} amount={fyb[0].finalNetIncome} />
+          <P5Tr testid="p5-가-②" cellNum="②" labelLines={[P5.fy2Label, `(${fyb[1].label})`]} amount={fyb[1].finalNetIncome} />
+          <P5Tr testid="p5-가-③" cellNum="③" labelLines={[P5.fy3Label, `(${fyb[2].label})`]} amount={fyb[2].finalNetIncome} />
+          <P5Tr testid="p5-나" cellNum="나" labelLines={[P5.halfLabel]} amount={goodwill.weightedAvgHalf} />
+          <P5Tr testid="p5-다" cellNum="다" labelLines={[P5.selfCapitalLabel]} amount={goodwill.selfCapital} />
+          {/* 라·바는 파라미터 → col2 빈칸, 값은 col3 */}
+          <P5Tr testid="p5-라" cellNum="라" labelLines={[P5.rateLabel]} col3={P5.ratePct(goodwill.rate)} />
+          <P5Tr testid="p5-마" cellNum="마" labelLines={[P5.selfCapitalRateLabel]} amount={goodwill.selfCapitalRate} />
+          <P5Tr testid="p5-바" cellNum="바" labelLines={[P5.durationLabel]} col3={P5.durationLabel2(goodwill.durationYears)} />
+          <P5Tr testid="p5-사" cellNum="사" labelLines={[P5.goodwillCalcLabel, P5.goodwillCalcFormula, P5.goodwillCalcNote]} amount={goodwill.goodwillCalc} />
+          <P5Tr testid="p5-아" cellNum="아" labelLines={[P5.intangibleLabel]} amount={goodwill.intangibleDeduction} />
+          <P5Tr testid="p5-자" cellNum="자" labelLines={[P5.finalLabel]} amount={goodwill.goodwillFinal} col3={P5.finalCrossRef} variant="final" />
         </tbody>
       </table>
 

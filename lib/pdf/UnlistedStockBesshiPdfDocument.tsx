@@ -19,11 +19,26 @@ import {
   Page,
   View,
   Text,
-  StyleSheet,
 } from "@react-pdf/renderer";
 import { registerFonts } from "./fonts";
+import { C, s } from "./besshi-pdf-styles";
 import { toOptionalDate } from "@/lib/api/date-coerce";
 import { evaluateUnlistedStockV2 } from "@/lib/tax-engine/property-valuation/unlisted-orchestrator";
+import {
+  NET_ASSET_REASON_ROWS,
+  BESSHI_P1_SECTION3,
+  BESSHI_P2_SECTION4,
+  BESSHI_P2_ASSET_ROWS,
+  BESSHI_P2_LIABILITY_ROWS,
+  BESSHI_P4_SECTION5,
+  BESSHI_P5_SECTION6,
+  BESSHI_P6_SECTION7,
+  P6_ADD_ROWS,
+  P6_SUB_ROWS,
+  sumNetAssetRows,
+  resolveCapitalDisplay,
+} from "@/components/calc/inheritance/unlisted-stock-v2/besshi/besshi-form-constants";
+import { resolveEvaluationDelta } from "@/lib/tax-engine/property-valuation/evaluation-delta";
 import type {
   UnlistedStockValuationInput,
   UnlistedStockValuationResult,
@@ -34,135 +49,7 @@ import type {
 
 registerFonts();
 
-// ─────────────────────────────────────────────────────────────────
-// 색상·스타일
-// ─────────────────────────────────────────────────────────────────
-
-const C = {
-  black: "#000000",
-  gray100: "#f3f4f6",
-  gray50: "#f9fafb",
-  yellow50: "#fefce8",
-  emerald50: "#ecfdf5",
-  rose50: "#fef2f2",
-  rose700: "#b91c1c",
-  amber50: "#fffbeb",
-  amber700: "#b45309",
-};
-
-const s = StyleSheet.create({
-  page: {
-    fontFamily: "NanumGothic",
-    fontSize: 9,
-    color: C.black,
-    padding: 30,
-    backgroundColor: "#ffffff",
-  },
-  title: {
-    fontSize: 14,
-    fontWeight: 700,
-    textAlign: "center",
-    marginBottom: 8,
-  },
-  subtitle: { fontSize: 8, textAlign: "right", marginBottom: 6 },
-  sectionTitle: {
-    fontSize: 10,
-    fontWeight: 700,
-    borderLeftWidth: 3,
-    borderLeftColor: C.black,
-    borderLeftStyle: "solid",
-    paddingLeft: 5,
-    marginTop: 8,
-    marginBottom: 4,
-  },
-  // 표 컬럼 (View flexDirection: row)
-  tableRow: {
-    flexDirection: "row",
-    borderBottomWidth: 0.5,
-    borderBottomColor: C.black,
-    borderBottomStyle: "solid",
-  },
-  tableHeader: {
-    flexDirection: "row",
-    backgroundColor: C.gray100,
-    borderTopWidth: 0.5,
-    borderTopColor: C.black,
-    borderTopStyle: "solid",
-    borderBottomWidth: 0.5,
-    borderBottomColor: C.black,
-    borderBottomStyle: "solid",
-  },
-  cellNum: {
-    width: 30,
-    padding: 3,
-    fontSize: 8,
-    textAlign: "center",
-    borderRightWidth: 0.5,
-    borderRightColor: C.black,
-    borderRightStyle: "solid",
-  },
-  cellLabel: {
-    flex: 1,
-    padding: 3,
-    fontSize: 8,
-    borderRightWidth: 0.5,
-    borderRightColor: C.black,
-    borderRightStyle: "solid",
-  },
-  cellAmount: {
-    width: 100,
-    padding: 3,
-    fontSize: 8,
-    textAlign: "right",
-  },
-  cellSubtract: {
-    width: 80,
-    padding: 3,
-    fontSize: 8,
-    textAlign: "right",
-    borderRightWidth: 0.5,
-    borderRightColor: C.black,
-    borderRightStyle: "solid",
-  },
-  emphasized: { backgroundColor: C.yellow50, fontWeight: 700 },
-  groupRow: { backgroundColor: C.gray50, fontWeight: 700 },
-  finalRow: {
-    backgroundColor: C.emerald50,
-    fontWeight: 700,
-    borderTopWidth: 1,
-    borderTopColor: C.black,
-    borderTopStyle: "solid",
-  },
-  badge: {
-    fontSize: 8,
-    backgroundColor: C.rose50,
-    borderWidth: 0.5,
-    borderColor: "#fecaca",
-    borderStyle: "solid",
-    padding: 4,
-    color: C.rose700,
-    marginTop: 4,
-  },
-  amberFooter: {
-    fontSize: 8,
-    backgroundColor: C.amber50,
-    borderWidth: 0.5,
-    borderColor: "#fde68a",
-    borderStyle: "solid",
-    padding: 4,
-    color: C.amber700,
-    marginTop: 4,
-  },
-  metaRow: { flexDirection: "row", marginBottom: 2 },
-  metaLabel: { width: 100, fontSize: 8, fontWeight: 700, backgroundColor: C.gray100, padding: 4 },
-  metaValue: { flex: 1, fontSize: 8, padding: 4, borderBottomWidth: 0.3, borderBottomColor: C.black, borderBottomStyle: "solid" },
-  footer: {
-    fontSize: 7,
-    textAlign: "center",
-    color: "#6b7280",
-    marginTop: 12,
-  },
-});
+// 색상·스타일은 ./besshi-pdf-styles 로 추출 (800줄 정책 — Page5 정합 선행 분리)
 
 // ─────────────────────────────────────────────────────────────────
 // 유틸리티
@@ -176,14 +63,6 @@ function renderDelta(n: number): string {
   return n < 0 ? `△${fmt(Math.abs(n))}` : fmt(n);
 }
 
-const NET_ASSET_ONLY_REASON_LABEL: Record<string, string> = {
-  liquidation: "1호 — 청산절차 진행",
-  lt3y: "2호 — 사업개시 3년 미만·휴·폐업",
-  real_estate_80: "3호 — 부동산 80% 이상 (단서)",
-  stock_holding_80: "5호 — 주식 80% 이상 (단서)",
-  remaining_3y: "6호 — 잔여 존속기한 3년 이내",
-};
-
 const EXCLUDED_REASON_LABEL: Record<NonNullable<UnlistedGoodwillResult["excludedByLaw"]>, string> = {
   liquidation: "§55③ 1호 — 청산절차 진행 → 영업권 가산 없음",
   real_estate_80: "§55③ 2호 본문 — 부동산 80% 이상 → 영업권 가산 없음",
@@ -195,67 +74,112 @@ const EXCLUDED_REASON_LABEL: Record<NonNullable<UnlistedGoodwillResult["excluded
 // 제1쪽 — 평가대상 + 1주당 가액
 // ─────────────────────────────────────────────────────────────────
 
+// 제1쪽 1번 6셀 메타 행 스타일 (인라인)
+const m6Label = {
+  width: 80, fontSize: 8, fontWeight: 700 as const, backgroundColor: C.gray100,
+  padding: 4, borderWidth: 0.3, borderColor: C.black, borderStyle: "solid" as const,
+};
+const m6Value = {
+  flex: 1, fontSize: 8, padding: 4,
+  borderWidth: 0.3, borderColor: C.black, borderStyle: "solid" as const,
+};
+// 제1쪽 2번 6행 체크 표 스타일
+const reasonCode = { ...s.cellNum, width: 28 };
+const reasonCheck = {
+  width: 36, padding: 3, fontSize: 8, textAlign: "center" as const,
+};
+
 function Page1Cover({ input, result }: { input: UnlistedStockValuationInput; result?: UnlistedStockValuationResult }) {
+  const evalDate = toOptionalDate(input.evaluationDate);
+  const evalDateStr =
+    evalDate instanceof Date && !isNaN(evalDate.getTime()) ? evalDate.toISOString().slice(0, 10) : "-";
+  const pct = (result?.premiumRate ?? 0) * 100;
+  const capitalDisplay = resolveCapitalDisplay(input.capital, input.faceValuePerShare, input.totalShares);
+
   return (
     <Page size="A4" style={s.page}>
       <Text style={s.title}>비상장주식 등 평가서</Text>
-      <Text style={s.subtitle}>평가심의위원회 운영규정 별지 제4호 서식 부표3 (2021.3.4. 개정)</Text>
+      <Text style={s.subtitle}>평가심의위원회 운영규정 별지 제4호 서식 부표3 (2025.07.10. 개정)</Text>
 
+      {/* 1. 평가대상 비상장법인 — 3행 6셀 */}
       <Text style={s.sectionTitle}>1. 평가대상 비상장법인</Text>
-      <View style={{ borderWidth: 0.5, borderColor: C.black, borderStyle: "solid" }}>
-        <View style={s.metaRow}>
-          <Text style={s.metaLabel}>법인명</Text>
-          <Text style={s.metaValue}>{input.corpName || "-"}</Text>
-          <Text style={s.metaLabel}>대표자</Text>
-          <Text style={s.metaValue}>{input.representative || "-"}</Text>
+      <View>
+        <View style={{ flexDirection: "row" }}>
+          <Text style={m6Label}>법인명</Text>
+          <Text style={m6Value}>{input.corpName || "-"}</Text>
+          <Text style={m6Label}>사업자등록번호</Text>
+          <Text style={m6Value}>{input.businessRegistrationNumber || "-"}</Text>
+          <Text style={m6Label}>대표자 성명</Text>
+          <Text style={m6Value}>{input.representative || "-"}</Text>
         </View>
-        <View style={s.metaRow}>
-          <Text style={s.metaLabel}>① 발행주식총수</Text>
-          <Text style={s.metaValue}>{fmt(input.totalShares)}주</Text>
-          <Text style={s.metaLabel}>1주당 액면가</Text>
-          <Text style={s.metaValue}>{fmt(input.faceValuePerShare)}원</Text>
+        <View style={{ flexDirection: "row" }}>
+          <Text style={m6Label}>① 발행주식총수</Text>
+          <Text style={m6Value}>{fmt(input.totalShares)}주</Text>
+          <Text style={m6Label}>1주당 액면가</Text>
+          <Text style={m6Value}>{fmt(input.faceValuePerShare)}원</Text>
+          <Text style={m6Label}>자본금</Text>
+          <Text style={m6Value}>{capitalDisplay ? `${fmt(capitalDisplay)}원` : "-"}</Text>
         </View>
-        <View style={s.metaRow}>
-          <Text style={s.metaLabel}>평가기준일</Text>
-          <Text style={s.metaValue}>{toOptionalDate(input.evaluationDate)?.toISOString().slice(0, 10) ?? "—"}</Text>
-          <Text style={s.metaLabel}>② 부동산과다보유</Text>
-          <Text style={s.metaValue}>{input.isRealEstateHeavy ? "예 (가중치 반전)" : "아니오"}</Text>
+        <View style={{ flexDirection: "row" }}>
+          <Text style={m6Label}>평가기준일</Text>
+          <Text style={m6Value}>{evalDateStr}</Text>
+          <Text style={m6Label}>② 부동산과다보유법인</Text>
+          <Text style={{ ...m6Value, flex: 3 }}>{input.isRealEstateHeavy ? "예 (가중치 반전)" : "아니오"}</Text>
         </View>
       </View>
 
-      {input.netAssetOnlyReason && (
-        <>
-          <Text style={s.sectionTitle}>2. 순자산가치로만 평가 [v] (상증령 §54④)</Text>
-          <Text style={s.badge}>선택 사유: {NET_ASSET_ONLY_REASON_LABEL[input.netAssetOnlyReason] || "-"}</Text>
-        </>
-      )}
+      {/* 2. 순자산가치로만 평가하는 경우 [v] — 6행 상시 표시 */}
+      <Text style={s.sectionTitle}>2. 순자산가치로만 평가하는 경우 [v] 표시 (상증령 §54④)</Text>
+      <View style={{ borderTopWidth: 0.5, borderTopColor: C.black, borderTopStyle: "solid" }}>
+        {NET_ASSET_REASON_ROWS.map((row) => (
+          <View
+            key={row.code}
+            style={[s.tableRow, row.deleted ? { backgroundColor: C.gray50 } : {}]}
+          >
+            <Text style={reasonCode}>{row.code}</Text>
+            <Text style={{ ...s.cellLabel, color: row.deleted ? "#9ca3af" : C.black }}>{row.label}</Text>
+            <Text style={reasonCheck}>
+              {row.deleted ? "—" : input.netAssetOnlyReason === row.reason ? "[v]" : "[ ]"}
+            </Text>
+          </View>
+        ))}
+      </View>
 
       {result && (
         <>
           <Text style={s.sectionTitle}>3. 1주당 가액의 평가</Text>
           <View>
-            <ResultRow cellNum="③" label="순자산가액" value={result.netAssetTotal} />
-            <ResultRow cellNum="④" label="1주당 순자산가액 (③ ÷ 발행주식총수)" value={result.netAssetPerShare} />
-            <ResultRow cellNum="⑤" label="1주당 순손익가치 (최근 3년 가중평균 ÷ 환원율)" value={result.netIncomePerShare} />
-            <ResultRow cellNum="⑥-㉠" label="가중평균 [(④ × 2 + ⑤ × 3) ÷ 5]" value={result.weightedAvgPerShare} />
-            <ResultRow cellNum="⑥-㉡" label="순자산가액 × 80% (하한)" value={result.netAssetFloor80} />
-            <ResultRow cellNum="⑥" label="1주당 평가액 (㉠과 ㉡ 중 큰 금액)" value={result.finalPerShareValue} emphasized />
-            {result.premiumRate > 0 ? (
-              <ResultRow
-                cellNum="⑧"
-                label={`최대주주 할증평가 (⑥ × ${((1 + result.premiumRate) * 100).toFixed(0)}%)`}
-                value={result.premiumPerShare}
-              />
-            ) : (
-              <ResultRow cellNum="⑦" label="비최대주주 1주당 평가액" value={result.perShareValueNonMaxShareholder} />
-            )}
-            <ResultRow cellNum="⑨" label="보충적 평가가액" value={result.finalPerShareForReporting} emphasized />
+            <ResultRow cellNum="③" label={BESSHI_P1_SECTION3.netAssetTotal} value={result.netAssetTotal} />
+            <ResultRow cellNum="④" label={BESSHI_P1_SECTION3.netAssetPerShare} value={result.netAssetPerShare} />
+            <ResultRow cellNum="⑤" label={BESSHI_P1_SECTION3.netIncomeValue} value={result.netIncomePerShare} />
+            {/* 공식 순서: ⑥ 헤더(많은 금액) → ㉮(가중평균) → ㉯(80%) */}
+            <ResultRow cellNum="⑥" label={BESSHI_P1_SECTION3.finalPerShareHeader} value={result.finalPerShareValue} emphasized />
             <ResultRow
-              cellNum="총"
-              label={`상속재산가액 (⑨ × 보유주식수 ${fmt(input.ownedShares)}주)`}
-              value={result.totalValuation}
-              emphasized
+              cellNum="⑥㉮"
+              label={
+                input.isRealEstateHeavy
+                  ? `${BESSHI_P1_SECTION3.weightedAvgNormal} ${BESSHI_P1_SECTION3.weightedAvgRealEstateNote}`
+                  : BESSHI_P1_SECTION3.weightedAvgNormal
+              }
+              value={result.weightedAvgPerShare}
             />
+            <ResultRow cellNum="⑥㉯" label={BESSHI_P1_SECTION3.netAssetFloor80} value={result.netAssetFloor80} />
+            {/* 공식 순서: ⑦ 헤더 → ㉮(⑥×할증율) → ㉯(⑥+㉮) */}
+            {result.premiumRate > 0 ? (
+              <>
+                <ResultRow cellNum="⑦" label={BESSHI_P1_SECTION3.maxShareholderHeader} value={result.premiumPerShare} emphasized />
+                <ResultRow
+                  cellNum="⑦㉮"
+                  label={BESSHI_P1_SECTION3.premiumSurcharge(pct.toFixed(0))}
+                  value={result.premiumPerShare - result.finalPerShareValue}
+                />
+                <ResultRow cellNum="⑦㉯" label={BESSHI_P1_SECTION3.premiumTotal} value={result.premiumPerShare} emphasized />
+              </>
+            ) : (
+              <ResultRow cellNum="⑦" label={BESSHI_P1_SECTION3.nonMaxShareholder} value={result.perShareValueNonMaxShareholder} />
+            )}
+            <ResultRow cellNum="⑨" label={BESSHI_P1_SECTION3.reportingValue} value={result.finalPerShareForReporting} emphasized />
+            <ResultRow cellNum="총" label={BESSHI_P1_SECTION3.total(fmt(input.ownedShares))} value={result.totalValuation} emphasized />
           </View>
         </>
       )}
@@ -286,166 +210,182 @@ function Page2NetAsset({
   netAssetTotal: number;
   goodwillFinal: number;
 }) {
-  const assetSubtotal =
-    raw.bsTotalAssets + raw.assetValuationDelta + raw.corpTaxReservedAmount +
-    raw.paidInCapitalIncrease + raw.otherEarnedRights - raw.prepaidExpenses - raw.preGiftRetainedEarnings;
-
-  const liabilitySubtotal =
-    raw.bsTotalLiabilities + raw.corporateTaxPayable + raw.farmingSurtax + raw.localIncomeTax +
-    raw.dividendPayable + raw.retirementProvision - raw.otherProvision - raw.reserveExcluded -
-    raw.allowanceExcluded - raw.deferredTaxAdjustment;
-
+  // 화면·엔진(`net-asset-calc`)과 동일 부호 — ⑮(otherProvision)은 가산 (§17의2 3호 가)
+  const assetSubtotal = sumNetAssetRows(BESSHI_P2_ASSET_ROWS, raw);
+  const liabilitySubtotal = sumNetAssetRows(BESSHI_P2_LIABILITY_ROWS, raw);
   const preGoodwill = assetSubtotal - liabilitySubtotal;
 
   return (
     <Page size="A4" style={s.page}>
-      <Text style={s.sectionTitle}>4. 순자산가액 (별지 제2쪽)</Text>
+      <View style={s.p2UnitRow}>
+        <Text style={s.p2Unit}>{BESSHI_P2_SECTION4.unitNote}</Text>
+        <Text style={s.p2Unit}>{BESSHI_P2_SECTION4.pageNote}</Text>
+      </View>
+      <Text style={s.sectionTitle}>{BESSHI_P2_SECTION4.header}</Text>
 
       {/* 가. 자산총액 */}
       <View style={[s.tableRow, s.groupRow]}>
-        <Text style={{ ...s.cellLabel, flex: 0, width: "100%", padding: 3 }}>가. 자산총액</Text>
+        <Text style={{ ...s.cellLabel, flex: 0, width: "100%", padding: 3 }}>{BESSHI_P2_SECTION4.assetGroup}</Text>
       </View>
-      <NetAssetRow cellNum="①" label="재무상태표상의 자산가액" amount={raw.bsTotalAssets} />
-      <NetAssetRow cellNum="②" label="평가차액 → 제4쪽 5.가.② 기재" amount={raw.assetValuationDelta} />
-      <NetAssetRow cellNum="③" label="법인세법상 유보금액" amount={raw.corpTaxReservedAmount} />
-      <NetAssetRow cellNum="④" label="유상증자 등" amount={raw.paidInCapitalIncrease} />
-      <NetAssetRow cellNum="⑤" label="평가기준일 현재 지급받을 권리 확정 가액" amount={raw.otherEarnedRights} />
-      <NetAssetRow cellNum="⑥" label="선급비용 등" amount={raw.prepaidExpenses} isSubtract />
-      <NetAssetRow cellNum="⑦" label="증자일 전의 잉여금의 유보액" amount={raw.preGiftRetainedEarnings} isSubtract />
-      <View style={[s.tableRow, s.emphasized]}>
-        <Text style={s.cellNum}>⑧</Text>
-        <Text style={s.cellLabel}>소계 (①+②+③+④+⑤−⑥−⑦)</Text>
-        <Text style={s.cellAmount}>{fmt(assetSubtotal)}</Text>
-      </View>
+      {BESSHI_P2_ASSET_ROWS.map((r) => (
+        <P2Row key={r.cellNum} cellNum={r.cellNum} label={r.label} amount={raw[r.field]} refText={r.ref} />
+      ))}
+      <P2Row cellNum="⑧" label={BESSHI_P2_SECTION4.assetSubtotalFormula} amount={assetSubtotal} variant="emphasized" />
 
       {/* 나. 부채총액 */}
       <View style={[s.tableRow, s.groupRow]}>
-        <Text style={{ ...s.cellLabel, flex: 0, width: "100%", padding: 3 }}>나. 부채총액</Text>
+        <Text style={{ ...s.cellLabel, flex: 0, width: "100%", padding: 3 }}>{BESSHI_P2_SECTION4.liabilityGroup}</Text>
       </View>
-      <NetAssetRow cellNum="⑨" label="재무상태표상의 부채액" amount={raw.bsTotalLiabilities} />
-      <NetAssetRow cellNum="⑩" label="법인세" amount={raw.corporateTaxPayable} />
-      <NetAssetRow cellNum="⑪" label="농어촌특별세" amount={raw.farmingSurtax} />
-      <NetAssetRow cellNum="⑫" label="지방소득세" amount={raw.localIncomeTax} />
-      <NetAssetRow cellNum="⑬" label="배당금·상여금" amount={raw.dividendPayable} />
-      <NetAssetRow cellNum="⑭" label="퇴직급여추계액" amount={raw.retirementProvision} />
-      <NetAssetRow cellNum="⑮" label="기타충당금" amount={raw.otherProvision} isSubtract />
-      <NetAssetRow cellNum="⑯" label="제준비금" amount={raw.reserveExcluded} isSubtract />
-      <NetAssetRow cellNum="⑰" label="제충당금" amount={raw.allowanceExcluded} isSubtract />
-      <NetAssetRow cellNum="⑱" label="기타(이연법인세대 등)" amount={raw.deferredTaxAdjustment} isSubtract />
-      <View style={[s.tableRow, s.emphasized]}>
-        <Text style={s.cellNum}>⑲</Text>
-        <Text style={s.cellLabel}>소계 (⑨+⑩+⑪+⑫+⑬+⑭−⑮−⑯−⑰−⑱)</Text>
-        <Text style={s.cellAmount}>{fmt(liabilitySubtotal)}</Text>
-      </View>
+      {BESSHI_P2_LIABILITY_ROWS.map((r) => (
+        <P2Row key={r.cellNum} cellNum={r.cellNum} label={r.label} amount={raw[r.field]} refText={r.ref} />
+      ))}
+      <P2Row cellNum="⑲" label={BESSHI_P2_SECTION4.liabilitySubtotalFormula} amount={liabilitySubtotal} variant="emphasized" />
 
       {/* 다·라·마 */}
-      <View style={[s.tableRow, { borderTopWidth: 1, borderTopColor: C.black, borderTopStyle: "solid" }]}>
-        <Text style={s.cellNum}>다</Text>
-        <Text style={s.cellLabel}>영업권 포함 전 순자산가액 (⑧ − ⑲)</Text>
-        <Text style={s.cellAmount}>{fmt(preGoodwill)}</Text>
-      </View>
-      <View style={s.tableRow}>
-        <Text style={s.cellNum}>라</Text>
-        <Text style={s.cellLabel}>영업권 ← 제5쪽 6.자.영업권 평가액</Text>
-        <Text style={s.cellAmount}>{fmt(goodwillFinal)}</Text>
-      </View>
-      <View style={[s.tableRow, s.finalRow]}>
-        <Text style={s.cellNum}>마</Text>
-        <Text style={s.cellLabel}>순자산가액 (다 + 라)</Text>
-        <Text style={s.cellAmount}>{fmt(netAssetTotal)}</Text>
-      </View>
+      <P2Row cellNum="다" label={BESSHI_P2_SECTION4.preGoodwillLabel} amount={preGoodwill} variant="top" />
+      <P2Row cellNum="라" label={BESSHI_P2_SECTION4.goodwillLabel} amount={goodwillFinal} refText={BESSHI_P2_SECTION4.goodwillRef} />
+      <P2Row cellNum="마" label={BESSHI_P2_SECTION4.netAssetLabel} amount={netAssetTotal} variant="final" />
     </Page>
   );
 }
 
-function NetAssetRow({
+/** 제2쪽 순자산가액 행 — [번호][라벨][값 1열][회색 참조열] 공식 2단 레이아웃 */
+function P2Row({
   cellNum,
   label,
   amount,
-  isSubtract,
+  refText,
+  variant,
 }: {
   cellNum: string;
   label: string;
-  amount: number;
-  isSubtract?: boolean;
+  amount?: number;
+  refText?: string;
+  variant?: "emphasized" | "final" | "top";
 }) {
+  const rowStyle =
+    variant === "emphasized"
+      ? [s.tableRow, s.emphasized]
+      : variant === "final"
+        ? [s.tableRow, s.finalRow]
+        : variant === "top"
+          ? [s.tableRow, s.p2TopBorder]
+          : s.tableRow;
   return (
-    <View style={s.tableRow}>
+    <View style={rowStyle}>
       <Text style={s.cellNum}>{cellNum}</Text>
       <Text style={s.cellLabel}>{label}</Text>
-      <Text style={s.cellSubtract}>{isSubtract ? fmt(amount) : ""}</Text>
-      <Text style={s.cellAmount}>{!isSubtract ? fmt(amount) : ""}</Text>
+      <Text style={s.p2Value}>{amount === undefined ? "" : fmt(amount)}</Text>
+      <Text style={s.p2Ref}>{refText ?? ""}</Text>
     </View>
   );
 }
 
 // ─────────────────────────────────────────────────────────────────
-// 제4쪽 — 5. 평가차액 (조건부)
+// 제4쪽 — 5. 평가차액 (항상 표시 · 공식 좌우 2블록)
 // ─────────────────────────────────────────────────────────────────
 
+type P4RowCells = [string, string, string, string];
+
+/** 제4쪽 한 행 — 자산 4열 + 부채 4열 (5번째 셀에 블록 구분선) */
+function P4Row({ left, right, variant }: { left: P4RowCells; right: P4RowCells; variant?: "head" | "total" }) {
+  const rowStyle =
+    variant === "head" ? [s.tableRow, s.groupRow] : variant === "total" ? [s.tableRow, s.emphasized] : s.tableRow;
+  return (
+    <View style={rowStyle}>
+      <Text style={s.p4Name}>{left[0]}</Text>
+      <Text style={s.p4Amt}>{left[1]}</Text>
+      <Text style={s.p4Amt}>{left[2]}</Text>
+      <Text style={s.p4Amt}>{left[3]}</Text>
+      <Text style={s.p4NameDiv}>{right[0]}</Text>
+      <Text style={s.p4Amt}>{right[1]}</Text>
+      <Text style={s.p4Amt}>{right[2]}</Text>
+      <Text style={s.p4Amt}>{right[3]}</Text>
+    </View>
+  );
+}
+
 function Page4ValuationDelta({ raw }: { raw: UnlistedNetAssetCalculation }) {
-  const rows = raw.evaluationDeltaRows ?? [];
-  if (rows.length === 0) return null;
+  // ★ 「①·②·가」는 엔진 resolveEvaluationDelta 단일 도출 (raw.assetValuationDelta 직접 사용 금지 — 행 모드 stale)
+  const allRows = raw.evaluationDeltaRows ?? [];
+  const resolved = resolveEvaluationDelta({
+    assetDeltaRows: allRows.filter((r) => r.category === "asset"),
+    liabilityDeltaRows: allRows.filter((r) => r.category === "liability"),
+    assetEvaluationDeltaTotal: raw.assetValuationDelta,
+  });
+  const assetRows = resolved.assetRows;
+  const liabilityRows = resolved.liabilityRows;
+  const isTotalMode = resolved.source === "total";
 
-  const assetRows = rows.filter((r) => r.category === "asset");
-  const liabilityRows = rows.filter((r) => r.category === "liability");
-  const assetTotal = assetRows.reduce((s, r) => s + (r.evaluationAmount - r.bookAmount), 0);
-  const liabilityTotal = liabilityRows.reduce((s, r) => s + (r.evaluationAmount - r.bookAmount), 0);
+  const assetEvalSum = assetRows.reduce((sum, r) => sum + r.evaluationAmount, 0);
+  const assetBookSum = assetRows.reduce((sum, r) => sum + r.bookAmount, 0);
+  const liabEvalSum = liabilityRows.reduce((sum, r) => sum + r.evaluationAmount, 0);
+  const liabBookSum = liabilityRows.reduce((sum, r) => sum + r.bookAmount, 0);
 
-  const dCellNum = { ...s.cellNum, width: 50 };
-  const dCellLabel = { ...s.cellLabel, flex: 2 };
-  const dCellAmount = { ...s.cellAmount, width: 80 };
+  const bodyCount = Math.max(assetRows.length, liabilityRows.length);
+  const renderCount = bodyCount > 0 ? bodyCount : BESSHI_P4_SECTION5.emptyTemplateRows;
+  const C5 = BESSHI_P4_SECTION5;
 
   return (
     <Page size="A4" style={s.page}>
-      <Text style={s.sectionTitle}>5. 평가차액 (별지 제4쪽 — 자산·부채 계정과목별)</Text>
-      <View style={s.tableHeader}>
-        <Text style={dCellNum}>구분</Text>
-        <Text style={dCellLabel}>계정과목</Text>
-        <Text style={dCellAmount}>상증법 평가액</Text>
-        <Text style={dCellAmount}>재무상태표</Text>
-        <Text style={dCellAmount}>차액</Text>
+      <View style={s.p2UnitRow}>
+        <Text style={s.p2Unit}>{C5.unitNote}</Text>
+        <Text style={s.p2Unit}>{C5.pageNote}</Text>
       </View>
-      {assetRows.map((row, i) => {
-        const delta = row.evaluationAmount - row.bookAmount;
+      <Text style={s.sectionTitle}>{C5.header}</Text>
+
+      {/* 헤더 바 — 가.평가차액 계산 | 제2쪽 cross-ref */}
+      <View style={s.p4HeaderBar}>
+        <Text style={s.p4HeaderL}>{C5.calcTitle}</Text>
+        <Text style={s.p4HeaderR}>{C5.crossRef}</Text>
+      </View>
+
+      {/* 블록 헤더 자산금액 | 부채금액 */}
+      <View style={s.tableRow}>
+        <Text style={s.p4BlockTitle}>{C5.assetBlock}</Text>
+        <Text style={[s.p4BlockTitle, { borderLeftWidth: 1.5, borderLeftColor: C.black, borderLeftStyle: "solid" }]}>
+          {C5.liabilityBlock}
+        </Text>
+      </View>
+
+      {/* 컬럼 헤더 ×2 */}
+      <P4Row variant="head" left={[...C5.columns]} right={[...C5.columns]} />
+
+      {/* ① 합계 / ② 합계 (맨 위) */}
+      <P4Row
+        variant="total"
+        left={[C5.assetTotalLabel, fmt(assetEvalSum), fmt(assetBookSum), renderDelta(resolved.assetDelta)]}
+        right={[C5.liabilityTotalLabel, fmt(liabEvalSum), fmt(liabBookSum), renderDelta(resolved.liabilityDelta)]}
+      />
+
+      {/* 데이터 행 (좌우 병치, 짧은 쪽 빈칸 / 데이터 없으면 빈 양식 N행) */}
+      {Array.from({ length: renderCount }).map((_, i) => {
+        const a = assetRows[i];
+        const l = liabilityRows[i];
         return (
-          <View style={s.tableRow} key={row.rowId}>
-            <Text style={dCellNum}>{i === 0 ? "자산" : ""}</Text>
-            <Text style={dCellLabel}>{row.accountName}</Text>
-            <Text style={dCellAmount}>{fmt(row.evaluationAmount)}</Text>
-            <Text style={dCellAmount}>{fmt(row.bookAmount)}</Text>
-            <Text style={dCellAmount}>{renderDelta(delta)}</Text>
-          </View>
+          <P4Row
+            key={i}
+            left={a ? [a.accountName, fmt(a.evaluationAmount), fmt(a.bookAmount), renderDelta(a.delta)] : ["", "", "", ""]}
+            right={l ? [l.accountName, fmt(l.evaluationAmount), fmt(l.bookAmount), renderDelta(l.delta)] : ["", "", "", ""]}
+          />
         );
       })}
-      {assetRows.length > 0 && (
-        <View style={[s.tableRow, s.groupRow]}>
-          <Text style={{ ...dCellLabel, flex: 1 }}>① 자산 합계</Text>
-          <Text style={dCellAmount}>{fmt(assetTotal)}</Text>
-        </View>
-      )}
-      {liabilityRows.map((row, i) => {
-        const delta = row.evaluationAmount - row.bookAmount;
-        return (
-          <View style={s.tableRow} key={row.rowId}>
-            <Text style={dCellNum}>{i === 0 ? "부채" : ""}</Text>
-            <Text style={dCellLabel}>{row.accountName}</Text>
-            <Text style={dCellAmount}>{fmt(row.evaluationAmount)}</Text>
-            <Text style={dCellAmount}>{fmt(row.bookAmount)}</Text>
-            <Text style={dCellAmount}>{renderDelta(delta)}</Text>
-          </View>
-        );
-      })}
-      {liabilityRows.length > 0 && (
-        <View style={[s.tableRow, s.groupRow]}>
-          <Text style={{ ...dCellLabel, flex: 1 }}>② 부채 합계</Text>
-          <Text style={dCellAmount}>{fmt(liabilityTotal)}</Text>
-        </View>
-      )}
+
+      {/* 가. 평가차액 (① − ②) */}
       <View style={[s.tableRow, s.finalRow]}>
-        <Text style={{ ...dCellLabel, flex: 1 }}>가. 평가차액 (① − ②) → 제2쪽 4.가.② 기재</Text>
-        <Text style={dCellAmount}>{renderDelta(assetTotal - liabilityTotal)}</Text>
+        <Text style={{ ...s.cellLabel, flex: 1 }}>{C5.deltaLabel}</Text>
+        <Text style={{ ...s.cellAmount, width: 120 }}>{renderDelta(resolved.evaluationDelta)}</Text>
       </View>
+      {isTotalMode && resolved.evaluationDelta !== 0 && (
+        <Text style={s.amberFooter}>{C5.totalModeNote}</Text>
+      )}
+
+      {/* 작성방법 */}
+      <Text style={s.p4GuideTitle}>{C5.guideTitle}</Text>
+      <Text style={s.p4GuideBody}>{C5.guideBody}</Text>
+      {C5.guideItems.map((item, i) => (
+        <Text key={i} style={s.p4GuideItem}>{`${i + 1}. ${item}`}</Text>
+      ))}
     </Page>
   );
 }
@@ -461,32 +401,31 @@ function Page5Goodwill({
   goodwill: UnlistedGoodwillResult;
   fyb: [FiscalYearBreakdown, FiscalYearBreakdown, FiscalYearBreakdown];
 }) {
+  const P5 = BESSHI_P5_SECTION6;
   const naMinusMa = goodwill.weightedAvgHalf - goodwill.selfCapitalRate;
   const showZeroAnomalyFooter = naMinusMa > 0 && goodwill.goodwillFinal === 0 && !goodwill.excludedByLaw;
 
   return (
     <Page size="A4" style={s.page}>
-      <Text style={s.sectionTitle}>6. 영업권 (별지 제5쪽)</Text>
-      <View style={[s.tableRow, s.emphasized]}>
-        <Text style={s.cellNum}>가</Text>
-        <Text style={s.cellLabel}>평가기준일 이전 3년간 순손익액의 가중평균 (①×3 + ②×2 + ③×1) ÷ 6</Text>
-        <Text style={s.cellAmount}>{fmt(goodwill.weightedAvg3y)}</Text>
+      <View style={s.p2UnitRow}>
+        <Text style={s.p2Unit}>{P5.unitNote}</Text>
+        <Text style={s.p2Unit}>{P5.pageNote}</Text>
       </View>
-      <SubFiscalRow label="① 1년전 사업연도 (×3)" fy={fyb[0]} />
-      <SubFiscalRow label="② 2년전 사업연도 (×2)" fy={fyb[1]} />
-      <SubFiscalRow label="③ 3년전 사업연도 (×1)" fy={fyb[2]} />
-      <SimpleRow cellNum="나" label="가 × 50%" value={fmt(goodwill.weightedAvgHalf)} />
-      <SimpleRow cellNum="다" label="평가기준일 현재 자기자본 (영업권 포함 전 순자산가액)" value={fmt(goodwill.selfCapital)} />
-      <SimpleRow cellNum="라" label="기획재정부령 이자율 (상증규 §19①)" value={`${(goodwill.rate * 100).toFixed(0)}%`} />
-      <SimpleRow cellNum="마" label="다 × 라" value={fmt(goodwill.selfCapitalRate)} />
-      <SimpleRow cellNum="바" label="영업권 지속연수" value={`${goodwill.durationYears}년`} />
-      <SimpleRow cellNum="사" label="영업권 계산액 Σⁿ₌₁⁵ (나 − 마) / (1 + 0.1)ⁿ" value={fmt(goodwill.goodwillCalc)} />
-      <SimpleRow cellNum="아" label="영업권 상당액 중 매입 무체재산권 감가상각비 공제분" value={fmt(goodwill.intangibleDeduction)} />
-      <View style={[s.tableRow, s.finalRow]}>
-        <Text style={s.cellNum}>자</Text>
-        <Text style={s.cellLabel}>영업권 평가액 (사 − 아) → 제2쪽 4.라 기재</Text>
-        <Text style={s.cellAmount}>{fmt(goodwill.goodwillFinal)}</Text>
-      </View>
+      <Text style={s.sectionTitle}>{P5.header}</Text>
+
+      <P5Row cellNum="가" labelLines={[P5.weightedAvgLabel]} amount={goodwill.weightedAvg3y} col3={P5.weightedAvgFormula} variant="head" />
+      <P5Row cellNum="①" labelLines={[P5.fy1Label, `(${fyb[0].label})`]} amount={fyb[0].finalNetIncome} />
+      <P5Row cellNum="②" labelLines={[P5.fy2Label, `(${fyb[1].label})`]} amount={fyb[1].finalNetIncome} />
+      <P5Row cellNum="③" labelLines={[P5.fy3Label, `(${fyb[2].label})`]} amount={fyb[2].finalNetIncome} />
+      <P5Row cellNum="나" labelLines={[P5.halfLabel]} amount={goodwill.weightedAvgHalf} />
+      <P5Row cellNum="다" labelLines={[P5.selfCapitalLabel]} amount={goodwill.selfCapital} />
+      {/* 라·바는 금액 아닌 파라미터 → col2 빈칸, 값은 col3 */}
+      <P5Row cellNum="라" labelLines={[P5.rateLabel]} col3={P5.ratePct(goodwill.rate)} />
+      <P5Row cellNum="마" labelLines={[P5.selfCapitalRateLabel]} amount={goodwill.selfCapitalRate} />
+      <P5Row cellNum="바" labelLines={[P5.durationLabel]} col3={P5.durationLabel2(goodwill.durationYears)} />
+      <P5Row cellNum="사" labelLines={[P5.goodwillCalcLabel, P5.goodwillCalcFormula, P5.goodwillCalcNote]} amount={goodwill.goodwillCalc} />
+      <P5Row cellNum="아" labelLines={[P5.intangibleLabel]} amount={goodwill.intangibleDeduction} />
+      <P5Row cellNum="자" labelLines={[P5.finalLabel]} amount={goodwill.goodwillFinal} col3={P5.finalCrossRef} variant="final" />
 
       {goodwill.excludedByLaw && (
         <Text style={s.badge}>⚠ {EXCLUDED_REASON_LABEL[goodwill.excludedByLaw]}</Text>
@@ -500,24 +439,31 @@ function Page5Goodwill({
   );
 }
 
-function SubFiscalRow({ label, fy }: { label: string; fy: FiscalYearBreakdown }) {
+/** 제5쪽 행 — [번호][라벨(다단)][금액 col2][산식·참조·회색 col3]. 라·바는 amount 미지정(col2 빈칸) */
+function P5Row({
+  cellNum,
+  labelLines,
+  amount,
+  col3,
+  variant,
+}: {
+  cellNum: string;
+  labelLines: string[];
+  amount?: number;
+  col3?: string;
+  variant?: "head" | "final";
+}) {
+  const rowStyle = variant === "head" ? [s.tableRow, s.emphasized] : variant === "final" ? [s.tableRow, s.finalRow] : s.tableRow;
   return (
-    <View style={s.tableRow}>
-      <Text style={s.cellNum}>{label.slice(0, 1)}</Text>
-      <Text style={s.cellLabel}>
-        {label.slice(2)} {fy.label}
-      </Text>
-      <Text style={s.cellAmount}>{renderDelta(fy.finalNetIncome)}</Text>
-    </View>
-  );
-}
-
-function SimpleRow({ cellNum, label, value }: { cellNum: string; label: string; value: string }) {
-  return (
-    <View style={s.tableRow}>
+    <View style={rowStyle}>
       <Text style={s.cellNum}>{cellNum}</Text>
-      <Text style={s.cellLabel}>{label}</Text>
-      <Text style={s.cellAmount}>{value}</Text>
+      <View style={s.p5LabelCell}>
+        {labelLines.map((ln, i) => (
+          <Text key={i} style={i === 0 ? s.p5LabelMain : s.p5LabelSub}>{ln}</Text>
+        ))}
+      </View>
+      <Text style={s.p5Amt}>{amount === undefined ? "" : renderDelta(amount)}</Text>
+      <Text style={col3 ? s.p5Col3 : s.p5Col3Gray}>{col3 ?? ""}</Text>
     </View>
   );
 }
@@ -527,37 +473,122 @@ function SimpleRow({ cellNum, label, value }: { cellNum: string; label: string; 
 // ─────────────────────────────────────────────────────────────────
 
 function Page6NetIncomeBreakdown({ result }: { result: UnlistedStockValuationResult }) {
+  const P6 = BESSHI_P6_SECTION7;
   const fyb = result.fiscalYearBreakdowns;
-  const fyCol = { width: 90, padding: 3, fontSize: 8, textAlign: "right" as const };
-  const labelCol = { flex: 1, padding: 3, fontSize: 8 };
+  const yrCells = (vals: number[], unit = "") =>
+    vals.map((v, i) => (
+      <Text key={i} style={s.p6FyCol}>
+        {renderDelta(v)}
+        {unit}
+      </Text>
+    ));
+  const echo = (key: keyof FiscalYearBreakdown) =>
+    fyb.map((fy) => (fy[key] as number | undefined) ?? 0);
 
   return (
     <Page size="A4" style={s.page}>
-      <Text style={s.sectionTitle}>7. 순손익액 (3년치 — 별지 제6쪽)</Text>
-      <View style={s.tableHeader}>
-        <Text style={labelCol}>구분</Text>
+      <View style={s.p2UnitRow}>
+        <Text style={s.p2Unit}>{P6.unitNote}</Text>
+        <Text style={s.p2Unit}>{P6.pageNote}</Text>
+      </View>
+      <Text style={s.sectionTitle}>{P6.header}</Text>
+
+      {/* 사업연도 헤더 */}
+      <View style={[s.tableRow, s.groupRow]}>
+        <Text style={s.p6Spacer}> </Text>
+        <Text style={s.p6Item}>{P6.fyHeaderLabel}</Text>
         {fyb.map((fy, i) => (
-          <Text key={i} style={fyCol}>
+          <Text key={i} style={s.p6FyCol}>
             {fy.label} (×{i === 0 ? 3 : i === 1 ? 2 : 1})
           </Text>
         ))}
       </View>
-      <FYBreakdownRow label="① 각 사업연도 소득금액" values={fyb.map((fy) => fy.taxableIncome)} />
-      <FYBreakdownRow label="가산 합계 (②~⑦)" values={fyb.map((fy) => fy.addTotal)} />
-      <FYBreakdownRow label="차감 합계 (⑧~㉒)" values={fyb.map((fy) => fy.subTotal)} />
-      <FYBreakdownRow label="다. 순손익액" values={fyb.map((fy) => fy.adjustedNetIncome)} emphasized />
-      <FYBreakdownRow label="라. 유상증자·감자 반영액 (§56⑤)" values={fyb.map((fy) => fy.capitalIncreaseAdjustment)} />
-      <FYBreakdownRow label="마. 최종 순손익액" values={fyb.map((fy) => fy.finalNetIncome)} emphasized />
-      <FYBreakdownRow label="바. 환산주식수" values={fyb.map((fy) => fy.convertedShares)} unit="주" />
-      <FYBreakdownRow label="사. 1주당 순손익액" values={fyb.map((fy) => fy.perShareNetIncome)} />
-      <Text style={{ fontSize: 8, marginTop: 6 }}>
-        <Text style={{ fontWeight: 700 }}>아. 1주당 가중평균 순손익액</Text> = {fmt(result.weightedNetIncomePerShare)}원
+
+      {/* ① 각 사업연도 소득금액 */}
+      <View style={s.tableRow}>
+        <Text style={s.p6Spacer}> </Text>
+        <Text style={s.p6Item}>{P6.incomeLabel}</Text>
+        {yrCells(fyb.map((fy) => fy.taxableIncome))}
+      </View>
+
+      {/* 소득에 가산할 금액 ②~⑦ (좌측 그룹 라벨) */}
+      <View style={{ flexDirection: "row" }}>
+        <View style={s.p6GroupLabel}>
+          <Text>{P6.addGroupLabel}</Text>
+        </View>
+        <View style={{ flex: 1 }}>
+          {P6_ADD_ROWS.map((r) => (
+            <View key={r.num} style={s.tableRow}>
+              <Text style={s.p6Item}>{`${r.num} ${r.label}`}</Text>
+              {yrCells(echo(r.key))}
+            </View>
+          ))}
+        </View>
+      </View>
+      {/* 가. 소계 */}
+      <View style={[s.tableRow, s.emphasized]}>
+        <Text style={s.p6Spacer}> </Text>
+        <Text style={s.p6Item}>{P6.addSubtotalLabel}</Text>
+        {yrCells(fyb.map((fy) => fy.taxableIncome + fy.addTotal))}
+      </View>
+
+      {/* 소득에서 차감할 금액 ⑧~㉒ (좌측 그룹 라벨) */}
+      <View style={{ flexDirection: "row" }}>
+        <View style={s.p6GroupLabel}>
+          <Text>{P6.subGroupLabel}</Text>
+        </View>
+        <View style={{ flex: 1 }}>
+          {P6_SUB_ROWS.map((r) => (
+            <View key={r.num} style={s.tableRow}>
+              <Text style={s.p6Item}>{`${r.num} ${r.label}`}</Text>
+              {yrCells(echo(r.key))}
+            </View>
+          ))}
+        </View>
+      </View>
+      {/* 나. 소계 */}
+      <View style={[s.tableRow, s.emphasized]}>
+        <Text style={s.p6Spacer}> </Text>
+        <Text style={s.p6Item}>{P6.subSubtotalLabel}</Text>
+        {yrCells(fyb.map((fy) => fy.subTotal))}
+      </View>
+
+      {/* 다·라·마·바·사 */}
+      <View style={[s.tableRow, s.emphasized]}>
+        <Text style={s.p6Spacer}> </Text>
+        <Text style={s.p6Item}>{P6.netLabel}</Text>
+        {yrCells(fyb.map((fy) => fy.adjustedNetIncome))}
+      </View>
+      <View style={s.tableRow}>
+        <Text style={s.p6Spacer}> </Text>
+        <Text style={s.p6Item}>{P6.capAdjLabel}</Text>
+        {yrCells(fyb.map((fy) => fy.capitalIncreaseAdjustment))}
+      </View>
+      <View style={[s.tableRow, s.emphasized]}>
+        <Text style={s.p6Spacer}> </Text>
+        <Text style={s.p6Item}>{P6.finalLabel}</Text>
+        {yrCells(fyb.map((fy) => fy.finalNetIncome))}
+      </View>
+      <View style={s.tableRow}>
+        <Text style={s.p6Spacer}> </Text>
+        <Text style={s.p6Item}>{P6.sharesLabel}</Text>
+        {yrCells(fyb.map((fy) => fy.convertedShares), "주")}
+      </View>
+      <View style={s.tableRow}>
+        <Text style={s.p6Spacer}> </Text>
+        <Text style={s.p6Item}>{`${P6.perShareLabel} ${P6.perShareMarkers.join("")}`}</Text>
+        {yrCells(fyb.map((fy) => fy.perShareNetIncome))}
+      </View>
+
+      {/* 아·자·차 */}
+      <Text style={s.p6TextLine}>
+        <Text style={{ fontWeight: 700 }}>{P6.weightedAvgLabel}</Text> = {fmt(result.weightedNetIncomePerShare)}원
       </Text>
-      <Text style={{ fontSize: 8, marginTop: 2 }}>
-        <Text style={{ fontWeight: 700 }}>자. 환원율</Text> = {(result.capitalizationRate * 100).toFixed(0)}% (상증규 §17)
+      <Text style={s.p6TextLine}>
+        <Text style={{ fontWeight: 700 }}>{P6.rateLabel}</Text> = {(result.capitalizationRate * 100).toFixed(0)}% (상증규 §17)
       </Text>
-      <Text style={{ fontSize: 8, marginTop: 2 }}>
-        <Text style={{ fontWeight: 700 }}>차. 1주당 가액</Text> = 아 ÷ 자 = {fmt(result.netIncomePerShare)}원 (제1쪽 ⑤)
+      <Text style={s.p6TextLine}>
+        <Text style={{ fontWeight: 700 }}>{P6.finalPerShareLabel}</Text> = {fmt(result.netIncomePerShare)}원 (제1쪽 ⑤)
       </Text>
 
       <Text style={s.footer}>
@@ -565,30 +596,6 @@ function Page6NetIncomeBreakdown({ result }: { result: UnlistedStockValuationRes
         KoreanLaw MCP 검증: 상증법 §63·시행령 §54·§55·§56·§59 + 시행규칙 §17·§17의2·§17의3·§19
       </Text>
     </Page>
-  );
-}
-
-function FYBreakdownRow({
-  label,
-  values,
-  emphasized,
-  unit = "",
-}: {
-  label: string;
-  values: number[];
-  emphasized?: boolean;
-  unit?: string;
-}) {
-  return (
-    <View style={[s.tableRow, emphasized ? s.emphasized : {}]}>
-      <Text style={{ flex: 1, padding: 3, fontSize: 8 }}>{label}</Text>
-      {values.map((v, i) => (
-        <Text key={i} style={{ width: 90, padding: 3, fontSize: 8, textAlign: "right" }}>
-          {renderDelta(v)}
-          {unit}
-        </Text>
-      ))}
-    </View>
   );
 }
 
@@ -610,10 +617,6 @@ export function UnlistedStockBesshiPdfDocument({ input }: UnlistedStockBesshiPdf
     result = undefined;
   }
 
-  const hasEvaluationDeltaRows =
-    !!input.netAssetValueRaw.evaluationDeltaRows &&
-    input.netAssetValueRaw.evaluationDeltaRows.length > 0;
-
   return (
     <Document>
       <Page1Cover input={input} result={result} />
@@ -624,7 +627,8 @@ export function UnlistedStockBesshiPdfDocument({ input }: UnlistedStockBesshiPdf
           goodwillFinal={result.goodwillCalculation.goodwillFinal}
         />
       )}
-      {hasEvaluationDeltaRows && <Page4ValuationDelta raw={input.netAssetValueRaw} />}
+      {/* 제4쪽 평가차액 — raw만 필요 → 항상 표시 (화면 BesshiForm4Buppyo3PrintView와 동일 ungated) */}
+      <Page4ValuationDelta raw={input.netAssetValueRaw} />
       {result && (
         <Page5Goodwill goodwill={result.goodwillCalculation} fyb={result.fiscalYearBreakdowns} />
       )}
