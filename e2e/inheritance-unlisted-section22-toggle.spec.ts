@@ -2,11 +2,13 @@
  * E2E: 비상장주식 V2 §22② 최대주주 토글 — 라벨 변경 · 자동판정 제거 · 금융재산공제 배제
  *
  * Plan: docs/00-pm/inheritance-section22-major-shareholder-toggle.plan.md §6.3
+ * Phase 2 추가: S-4 — V2 카드 내부 토글 단 1개만 존재 (EstateCommonAttributesSection 중복 부재)
  *
  * 시나리오:
  *   T-S22-1: 신규 라벨 "§22② 최대주주 보유주식 금융재산공제 배제" 표시 + 구판 "추가공제 제외 판정" 부재
  *   T-S22-2: 자동판정 라디오("자동 판정 (보유지분율 기준)") 제거 확인
  *   T-S22-3: 토글 ON → "§22 금융재산 상속공제 대상금액에서 제외" 안내 펼침 (OFF엔 미표시)
+ *   S-4: V2 카드에서 §22② 토글이 단 1개만 존재 (EstateCommonAttributesSection 중복 방지 확인)
  *
  * 진입 헬퍼: inheritance-unlisted-v2-convenience-fields.spec.ts 동일 패턴 재사용
  */
@@ -65,5 +67,21 @@ test.describe("비상장주식 V2 §22② 최대주주 토글", () => {
 
     // ON: 펼침 안내 표시
     await expect(guide.first()).toBeVisible();
+  });
+
+  test("S-4: V2 카드에서 §22② 토글 1개만 존재 (EstateCommonAttributesSection 중복 부재)", async ({
+    page,
+  }) => {
+    test.setTimeout(60_000);
+    await gotoStep0AndFillDeathDate(page, "2026", "5", "15");
+    await openV2FormalCard(page);
+
+    // §22② 토글 헤더가 정확히 1개 (V2 카드 내부 1개만, EstateCommonAttributesSection 미노출)
+    await expect(
+      page.getByText("§22② 최대주주 보유주식 금융재산공제 배제", { exact: true }),
+    ).toHaveCount(1);
+
+    // "최대주주에 해당" ToggleCard title도 1개만
+    await expect(page.getByText("최대주주에 해당", { exact: true })).toHaveCount(1);
   });
 });
