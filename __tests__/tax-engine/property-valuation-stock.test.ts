@@ -509,4 +509,84 @@ describe("3년치 순손익 가중평균 — calcCompanyWeightedNetIncome3Y + re
     // = (120M×3 + 0×2 + 0×1) / 6 = 360M/6 = 60M
     expect(resolveWeightedNetIncome(data)).toBe(60_000_000);
   });
+
+  // ============================================================
+  // A-1 (Pre-Do anchor) — §56① 연도별 1주당 절사 순서 정정
+  // 계획서: docs/00-pm/unlisted-v1-simple-net-income-per-share-fix.plan.md
+  // KoreanLaw 검증 mst=283637 (2026-05-27)
+  // ============================================================
+
+  it("[A-1] §56① 3단계 절사 — 연도별 1주당 floor 후 가중평균 (법령 정합)", () => {
+    // 입력: 3년 순손익 각 100,000,003원, 총 주식 7주, 환원율 10%
+    //
+    // 법령 §56① 3단계:
+    //   사. floor(100,000,003 / 7) = 14,285,714  (각 연도)
+    //   아. floor((14,285,714×3 + 14,285,714×2 + 14,285,714×1) / 6)
+    //      = floor(85,714,284 / 6) = floor(14,285,714) = 14,285,714
+    //   차. floor(14,285,714 / 0.10) = 142,857,140
+    //
+    // 현행 V1 (수정 전): floor(100,000,003 / (7 × 0.10)) = 142,857,147 → 법령과 7원 차이
+    const data: UnlistedStockData = {
+      totalShares: 7,
+      ownedShares: 7,
+      weightedNetIncome: 0, // legacy fallback 미사용 (has3y=true)
+      netIncomeY1: 100_000_003,
+      netIncomeY2: 100_000_003,
+      netIncomeY3: 100_000_003,
+      netAssetValue: 0,
+      capitalizationRate: 0.10,
+    };
+    const r = calcUnlistedStockPerShareValue(data, false);
+    // 법령 §56① 정합값: 142,857,140
+    expect(r.perShareIncomeValue).toBe(142_857_140);
+  });
+
+  it("[A-2] V1 결과 = V2 동일 입력 정합 (자본변동·연환산 없는 케이스)", () => {
+    // V2 (weighted-avg.ts) 경로: per-share floor → calcWeightedAvg3y → calcPerShareNetIncomeValue
+    // V1 수정 후도 동일 3단계 → 결과 일치해야 함
+    const y1 = 100_000_003, y2 = 100_000_003, y3 = 100_000_003;
+    const totalShares = 7;
+    const capRate = 0.10;
+
+    // V2 수동 재현
+    const ps1 = Math.floor(y1 / totalShares); // 14,285,714
+    const ps2 = Math.floor(y2 / totalShares);
+    const ps3 = Math.floor(y3 / totalShares);
+    const wAvgRaw = (ps1 * 3 + ps2 * 2 + ps3 * 1) / 6;
+    const wAvg = wAvgRaw <= 0 ? 0 : Math.floor(wAvgRaw); // 14,285,714
+    const v2Expected = wAvg <= 0 ? 0 : Math.floor(wAvg / capRate); // 142,857,140
+
+    const data: UnlistedStockData = {
+      totalShares,
+      ownedShares: totalShares,
+      weightedNetIncome: 0, // legacy fallback 미사용 (has3y=true)
+      netIncomeY1: y1,
+      netIncomeY2: y2,
+      netIncomeY3: y3,
+      netAssetValue: 0,
+      capitalizationRate: capRate,
+    };
+    const r = calcUnlistedStockPerShareValue(data, false);
+    expect(r.perShareIncomeValue).toBe(v2Expected);
+  });
+
+  it("[A-3] 음수 결손 연도 — per-year floor 음수 허용, 가중평균 음수 → 0", () => {
+    // Y1=300M (흑자), Y2=-600M (결손), Y3=-300M (결손)
+    // per-year: 300M/7=42,857,142 / -600M/7=Math.floor(-85,714,285)=-85,714,286 / -300M/7=-42,857,143
+    // 가중합: (42,857,142×3) + (-85,714,286×2) + (-42,857,143×1)
+    //       = 128,571,426 - 171,428,572 - 42,857,143 = -85,714,289
+    // 6으로 나누면 음수 → §56① 단서 0 → perShareIncomeValue = 0
+    const data: UnlistedStockData = {
+      totalShares: 7,
+      ownedShares: 7,
+      weightedNetIncome: 0, // legacy fallback 미사용 (has3y=true)
+      netIncomeY1: 300_000_000,
+      netIncomeY2: -600_000_000,
+      netIncomeY3: -300_000_000,
+      netAssetValue: 0,
+      capitalizationRate: 0.10,
+    };
+    const r = calcUnlistedStockPerShareValue(data, false);
+    expect(r.perShareIncomeValue).toBe(0); // 가중평균 음수 → 0
+  });
 });
