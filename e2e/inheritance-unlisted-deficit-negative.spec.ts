@@ -47,7 +47,7 @@ test.describe("비상장 간편: 결손·순자산 음수 직접 입력", () => 
 
     // 순손익가치 입력 섹션은 표시
     await expect(
-      page.getByText(/순손익가치 계산 입력/),
+      page.getByText(/순손익가치 입력/),
     ).toBeVisible();
     // 「결손(적자)」 토글 칩은 제거됨
     await expect(page.getByText("결손(적자)", { exact: true })).toHaveCount(0);
@@ -75,7 +75,7 @@ test.describe("비상장 간편: 결손·순자산 음수 직접 입력", () => 
 
     const netAsset = page
       .getByText(/순자산가치 \(회사 전체/)
-      .locator("xpath=..")
+      .locator("xpath=../..")
       .locator("input")
       .first();
     await netAsset.fill("-50000000");

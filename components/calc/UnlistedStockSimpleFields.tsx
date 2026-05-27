@@ -16,8 +16,11 @@
  *  - 가중평균 미리보기: calcCompanyWeightedNetIncome3Y import (single-source)
  */
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { CurrencyInput, parseAmount, formatKRW } from "@/components/calc/inputs/CurrencyInput";
+import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { IntegerInput } from "@/components/calc/inputs/IntegerInput";
+import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import {
   calcUnlistedStockPerShareValue,
@@ -26,6 +29,61 @@ import {
 } from "@/lib/tax-engine/property-valuation-stock";
 import type { EstateItem, UnlistedStockData } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { UnlistedStockSpecialReasonSection } from "@/components/calc/inheritance/UnlistedStockSpecialReasonSection";
+
+// ============================================================
+// 섹션 카드 (번호 원 + tone) — V2 CorporateInfoSection 패턴 차용
+// Tailwind 정적 tone 매핑 (dynamic class 금지 — JIT purge 방지)
+// ============================================================
+
+type SectionTone = "sky" | "emerald" | "violet";
+
+const SECTION_TONE: Record<SectionTone, { wrap: string; circle: string; title: string }> = {
+  sky: {
+    wrap: "border-sky-200 dark:border-sky-800 bg-sky-50/40 dark:bg-sky-900/10",
+    circle: "bg-sky-200 text-sky-800",
+    title: "text-sky-700 dark:text-sky-300",
+  },
+  emerald: {
+    wrap: "border-emerald-200 dark:border-emerald-800 bg-emerald-50/40 dark:bg-emerald-900/10",
+    circle: "bg-emerald-200 text-emerald-800",
+    title: "text-emerald-700 dark:text-emerald-300",
+  },
+  violet: {
+    wrap: "border-violet-200 dark:border-violet-800 bg-violet-50/40 dark:bg-violet-900/10",
+    circle: "bg-violet-200 text-violet-800",
+    title: "text-violet-700 dark:text-violet-300",
+  },
+};
+
+function SimpleSectionCard({
+  num,
+  tone,
+  title,
+  testid,
+  children,
+}: {
+  num: number;
+  tone: SectionTone;
+  title: string;
+  testid: string;
+  children: ReactNode;
+}) {
+  const t = SECTION_TONE[tone];
+  return (
+    <div data-testid={testid} className={`rounded-lg border ${t.wrap} p-3 space-y-3`}>
+      <div className="flex items-center gap-2">
+        <span
+          data-testid={`simple-section-num-${num}`}
+          className={`flex h-5 w-5 items-center justify-center rounded-full ${t.circle} text-[10px] font-bold select-none`}
+        >
+          {num}
+        </span>
+        <p className={`text-xs font-semibold ${t.title}`}>{title}</p>
+      </div>
+      {children}
+    </div>
+  );
+}
 
 // ============================================================
 // 비상장주식 유틸 (단일 source — UnlistedStockEditor에서 re-export)
@@ -258,25 +316,54 @@ export function UnlistedStockSimpleFields({
   const resolvedNetIncome = data ? resolveWeightedNetIncome(data) : 0;
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 border-2 border-indigo-300 dark:border-indigo-700 bg-indigo-50/30 dark:bg-indigo-900/10 rounded-lg p-4">
       {/* 법적 근거 안내 */}
       <p className="text-xs text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 rounded px-3 py-2">
         ℹ️ 1주당 가치 = (순손익가치×3 + 순자산가치×2) ÷ 5 (상증법 §63①1호 다목, 시행령 §54)
       </p>
 
-      {/* 회사명 */}
-      <div className="space-y-1">
-        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
-          회사명 <span className="text-destructive">*</span>
-        </label>
-        <input
-          type="text"
-          value={item.name}
-          onChange={(e) => set({ name: e.target.value })}
-          placeholder="예: ○○주식회사"
-          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        />
-      </div>
+      {/* ① 평가 대상·주식 수 */}
+      <SimpleSectionCard num={1} tone="sky" title="평가 대상·주식 수" testid="simple-section-shares">
+        <FieldCard label="회사명" required htmlFor="simple-corp-name" hint="비상장법인의 상호">
+          <input
+            id="simple-corp-name"
+            type="text"
+            value={item.name}
+            onChange={(e) => set({ name: e.target.value })}
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          />
+        </FieldCard>
+
+        <FieldCard
+          label="총 발행주식 수"
+          required
+          unit="주"
+          htmlFor="simple-total-shares"
+          hint="회사 전체 발행주식 총수 — 평가기준일 현재 (시행령 §56③)"
+        >
+          <IntegerInput
+            id="simple-total-shares"
+            ariaLabel="총 발행주식 수"
+            value={data?.totalShares}
+            onChange={(v) => setStock({ totalShares: v })}
+          />
+        </FieldCard>
+
+        <FieldCard
+          label="피상속인·수증자 보유 주식 수"
+          required
+          unit="주"
+          htmlFor="simple-owned-shares"
+          hint="피상속인(또는 수증자)이 보유한 주식 수. 총 발행주식 수의 일부."
+        >
+          <IntegerInput
+            id="simple-owned-shares"
+            ariaLabel="피상속인·수증자 보유 주식 수"
+            value={data?.ownedShares}
+            onChange={(v) => setStock({ ownedShares: v })}
+          />
+        </FieldCard>
+      </SimpleSectionCard>
 
       {/* 부동산과다보유법인 여부 */}
       <ToggleCard
@@ -297,59 +384,17 @@ export function UnlistedStockSimpleFields({
         onChange={(reason) => setStock({ assetValueOnlyReason: reason })}
       />
 
-      {/* 총 발행주식 수 */}
-      <div className="space-y-1">
-        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
-          총 발행주식 수 (주) <span className="text-destructive">*</span>
-        </label>
-        <input
-          type="text"
-          inputMode="numeric"
-          value={data?.totalShares ? data.totalShares.toLocaleString() : ""}
-          onChange={(e) => {
-            const v = parseInt(e.target.value.replace(/,/g, "") || "0", 10);
-            setStock({ totalShares: v });
-          }}
-          placeholder="총 발행주식 수 입력 (주)"
-          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        />
+      {/* ② 순손익가치 입력 */}
+      <SimpleSectionCard
+        num={2}
+        tone="emerald"
+        title="순손익가치 입력 — 연도별 순손익액 (§56①)"
+        testid="simple-section-net-income"
+      >
         <p className="text-[11px] text-muted-foreground">
-          회사 전체 발행주식 총수 — 평가기준일 현재 (시행령 §56③)
+          각 연도 회사 전체 순손익액을 입력하면 가중평균을 자동 계산합니다.
+          미입력 연도는 0으로 처리됩니다.
         </p>
-      </div>
-
-      {/* 보유 주식 수 */}
-      <div className="space-y-1">
-        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
-          피상속인·수증자 보유 주식 수 (주) <span className="text-destructive">*</span>
-        </label>
-        <input
-          type="text"
-          inputMode="numeric"
-          value={data?.ownedShares ? data.ownedShares.toLocaleString() : ""}
-          onChange={(e) => {
-            const v = parseInt(e.target.value.replace(/,/g, "") || "0", 10);
-            setStock({ ownedShares: v });
-          }}
-          placeholder="보유 주식 수 입력 (주)"
-          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        />
-        <p className="text-[11px] text-muted-foreground">
-          피상속인(또는 수증자)이 보유한 주식 수. 총 발행주식 수의 일부.
-        </p>
-      </div>
-
-      {/* ─── 순손익가치 계산 입력 (PR-2: 3년치 입력) ─── */}
-      <div className="border-t border-gray-100 dark:border-gray-800 pt-3 space-y-3">
-        <div className="space-y-0.5">
-          <p className="text-xs font-semibold text-gray-600 dark:text-gray-400">
-            순손익가치 계산 입력 — 연도별 순손익액 (상증령 §56①)
-          </p>
-          <p className="text-[11px] text-muted-foreground">
-            각 연도 회사 전체 순손익액을 입력하면 가중평균을 자동 계산합니다.
-            미입력 연도는 0으로 처리됩니다.
-          </p>
-        </div>
 
         {/* 직전 1사업연도 (가중치 ×3) */}
         <NetIncomeYearRow
@@ -403,46 +448,35 @@ export function UnlistedStockSimpleFields({
         )}
 
         {/* 자본환원율 */}
-        <div className="space-y-1">
-          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
-            자본환원율 (기본 10%)
-          </label>
-          <div className="relative">
-            <input
-              type="text"
-              inputMode="decimal"
-              value={data?.capitalizationRate
-                ? String(data.capitalizationRate * 100)
-                : ""}
-              onChange={(e) => {
-                const pct = parseFloat(e.target.value || "0");
-                setStock({ capitalizationRate: isNaN(pct) ? 0.1 : pct / 100 });
-              }}
-              placeholder="10"
-              className="w-full rounded-md border border-input bg-background px-3 py-2 pr-8 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            />
-            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-              %
-            </span>
-          </div>
-          <p className="text-xs text-gray-400">국세청 고시 기준 — 통상 10% 적용</p>
-        </div>
-      </div>
+        <FieldCard label="자본환원율" unit="%" htmlFor="simple-cap-rate" hint="국세청 고시 기준 — 통상 10% 적용">
+          <DecimalInput
+            value={data?.capitalizationRate ? String(data.capitalizationRate * 100) : ""}
+            onChange={(v) => {
+              const pct = parseDecimal(v);
+              setStock({ capitalizationRate: pct > 0 ? pct / 100 : 0.1 });
+            }}
+            placeholder="10"
+          />
+        </FieldCard>
+      </SimpleSectionCard>
 
-      <div className="border-t border-gray-100 dark:border-gray-800 pt-3 space-y-3">
-        <p className="text-xs font-semibold text-gray-600 dark:text-gray-400">
-          순자산가치 계산 입력
-        </p>
-
+      {/* ③ 순자산가치 입력 */}
+      <SimpleSectionCard num={3} tone="violet" title="순자산가치 입력" testid="simple-section-net-asset">
         {/* 순자산가치 — 음수 직접 입력 허용, 0 이하는 엔진에서 0 처리 (§55① 후단) */}
-        <CurrencyInput
+        <FieldCard
           label="순자산가치 (회사 전체, 영업권 포함 전)"
-          value={data?.netAssetValue != null ? String(data.netAssetValue) : ""}
-          onChange={(v) => setStock({ netAssetValue: parseAmount(v) })}
-          allowNegative
-          hint="영업권 포함 전 자기자본 (= 총자산 − 총부채, 평가기준일 재무상태표). 영업권은 §59②에 따라 자동 산출·가산됩니다. 0 이하면 0으로 처리 (시행령 §55①). 음수는 그대로 입력."
           required
-        />
+          htmlFor="simple-net-asset"
+          hint="영업권 포함 전 자기자본 (= 총자산 − 총부채, 평가기준일 재무상태표). 영업권은 §59②에 따라 자동 산출·가산됩니다. 0 이하면 0으로 처리 (시행령 §55①). 음수는 그대로 입력."
+        >
+          <CurrencyInput
+            label="순자산가치 (회사 전체, 영업권 포함 전)"
+            hideLabel
+            value={data?.netAssetValue != null ? String(data.netAssetValue) : ""}
+            onChange={(v) => setStock({ netAssetValue: parseAmount(v) })}
+            allowNegative
+          />
+        </FieldCard>
         {data?.netAssetValue != null && data.netAssetValue < 0 && (
           <p className="text-[11px] text-amber-600 dark:text-amber-400 pl-1">
             음수 순자산 → 자기자본 0으로 처리 (상증법 §55① 후단). 영업권이 있으면 영업권만 가산됩니다.
@@ -454,7 +488,7 @@ export function UnlistedStockSimpleFields({
             ℹ️ 입력한 순자산은 <strong>영업권 포함 전</strong> 금액입니다. §59② 영업권(최근 3년 가중평균 초과이익 기준)이 0을 초과하면 자동으로 가산되어 1주당 순자산가치에 반영됩니다.
           </p>
         )}
-      </div>
+      </SimpleSectionCard>
 
       {/* 입력값 0 절사 경고 — 비현실적 입력 감지 */}
       {preview && data && data.totalShares > 0 && data.ownedShares > 0 &&
@@ -511,23 +545,25 @@ function NetIncomeYearRow({
   hint,
 }: NetIncomeYearRowProps) {
   return (
-    <div className="space-y-1.5">
-      <div className="flex items-center gap-2">
-        <span className="text-xs font-medium text-gray-600 dark:text-gray-400">{label}</span>
-        <span className="text-[11px] text-muted-foreground">({yearLabel})</span>
-      </div>
+    <FieldCard
+      label={label}
+      unit="원"
+      badge={`(${yearLabel})`}
+      hint={hint ?? "회사 전체 금액 (1주당 ✗). 결손(적자)은 음수로 입력."}
+      warning={
+        value !== undefined && value < 0
+          ? `결손 입력: ${value.toLocaleString()} (가중평균 산식에 음수로 반영)`
+          : undefined
+      }
+    >
       <CurrencyInput
-        label=""
+        label={label}
+        hideLabel
+        hideUnit
         value={value !== undefined ? String(value) : ""}
         onChange={(v) => onChange(parseAmount(v))}
         allowNegative
-        hint={hint ?? "회사 전체 금액 (1주당 ✗). 결손(적자)은 음수로 입력."}
       />
-      {value !== undefined && value < 0 && (
-        <p className="text-[11px] text-rose-600 dark:text-rose-400 pl-1">
-          결손 입력: {value.toLocaleString()} (가중평균 산식에 음수로 반영)
-        </p>
-      )}
-    </div>
+    </FieldCard>
   );
 }

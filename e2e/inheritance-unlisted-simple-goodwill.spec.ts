@@ -31,8 +31,9 @@ async function openUnlistedV1SimpleCard(page: Page) {
   await page.getByText("비상장주식", { exact: true }).click();
 }
 
+// FieldCard 구조: getByText(라벨) → label span → xpath ../.. = field-card div → input
 function inputByLabel(page: Page, label: RegExp) {
-  return page.getByText(label).locator("xpath=..").locator("input").first();
+  return page.getByText(label).locator("xpath=../..").locator("input").first();
 }
 
 function netIncomeInput(page: Page, nth: 1 | 2 | 3) {
