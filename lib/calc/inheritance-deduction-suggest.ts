@@ -18,6 +18,7 @@ import { deriveCollateralDebts } from "@/lib/tax-engine/inheritance-collateral-d
 import { sumCollateralFinancialDebt } from "@/lib/tax-engine/inheritance-collateral-debt";
 import { calcRelationDeduction } from "@/lib/tax-engine/deductions/gift-deductions";
 import { calcCorporateStockAdjustedValue } from "@/lib/tax-engine/property-valuation-corporate";
+import { computeStockValuation } from "@/lib/calc/stock-valuation";
 import type {
   DebtItem,
   DonorRelation,
@@ -50,11 +51,23 @@ export interface DeductionSuggestion {
 /**
  * EstateItem의 §22 합산 평가액 도출.
  *
- * 우선순위: marketValue → appraisedValue → standardPrice → 상장주식 (평균×수량) → 0.
- * 비상장주식 등 복잡 평가는 marketValue로 캐시되어 있다고 가정.
- * 향후 PropertyValuationResult 연동 시 본 함수 시그니처 갱신 가능.
+ * 우선순위:
+ *   1. marketValue (시가 직접 입력 — AN-2 보존: 명시값이 있으면 항상 우선)
+ *   2. appraisedValue (감정평가액)
+ *   3. standardPrice (기준시가)
+ *   4. 주식 카테고리(listed_stock·unlisted_stock): computeStockValuation(item) fallback
+ *      — 상장 avg×shares / 비상장 V2 evaluateUnlistedStockV2 / V1 calcUnlistedStockPerShareValue
+ *   5. 0 (도출 불가)
+ *
+ * Phase 0 수정 (2026-05-27):
+ *   기존: 주식은 listedStockAvgPrice × listedStockShares 만 참조 → 비상장 V2·V1 누락
+ *   변경: 주식 카테고리에서 명시 평가액이 없을 때 computeStockValuation으로 derive
+ *   정책: marketValue useEffect 미러링 금지 (mirror-pattern). derive만 수행, store write 없음.
+ *
+ * export: 결과뷰(InheritanceTaxResultView)가 동일 함수를 재사용하도록 export 제공.
+ * (단일 진실 — single-source-engine-helper 정책)
  */
-function getValuatedAmount(item: EstateItem): number {
+export function getValuatedAmount(item: EstateItem): number {
   if (typeof item.marketValue === "number" && item.marketValue > 0) {
     return item.marketValue;
   }
@@ -64,11 +77,13 @@ function getValuatedAmount(item: EstateItem): number {
   if (typeof item.standardPrice === "number" && item.standardPrice > 0) {
     return item.standardPrice;
   }
+  // 주식 카테고리: computeStockValuation fallback (비상장 V2·V1 포함)
+  // 이 경로는 상장 avg×shares도 포함하므로 기존 listedStockAvgPrice×listedStockShares 경로와 동일 결과
   if (
-    typeof item.listedStockAvgPrice === "number" &&
-    typeof item.listedStockShares === "number"
+    item.category === "listed_stock" ||
+    item.category === "unlisted_stock"
   ) {
-    return item.listedStockAvgPrice * item.listedStockShares;
+    return computeStockValuation(item);
   }
   return 0;
 }

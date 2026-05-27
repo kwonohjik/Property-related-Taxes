@@ -26,44 +26,9 @@ import {
   createDefaultUnlistedStockV2,
 } from "@/components/calc/inheritance/unlisted-stock-v2/UnlistedStockV2Card";
 import { buildDefaultFiscalYears } from "@/lib/tax-engine/property-valuation/fiscal-year-annualize";
-
-/**
- * 주식 자산 효과 평가액 — 상장: 평균가×주식수, 비상장: 선택 모드에 따라 간편/정식 평가.
- * PR-3: 모드 선택기 도입으로 V2 정식평가 결과도 반영.
- */
-export function computeStockValuation(item: EstateItem): number {
-  if (item.category === "listed_stock") {
-    const avg = item.listedStockAvgPrice ?? 0;
-    const shares = item.listedStockShares ?? 0;
-    if (avg > 0 && shares > 0) return evaluateListedStockValue(avg, shares);
-    return 0;
-  }
-  if (item.category === "unlisted_stock") {
-    // 모드 판정 (레거시 fallback 포함)
-    const activeMode: "simple" | "formal" =
-      item.unlistedValuationMode ?? (item.unlistedStockValuationV2 ? "formal" : "simple");
-    if (activeMode === "formal" && item.unlistedStockValuationV2) {
-      const v2 = item.unlistedStockValuationV2;
-      if (v2.totalShares > 0 && v2.ownedShares > 0) {
-        try {
-          const result = evaluateUnlistedStockV2(v2);
-          return result.totalValuation > 0 ? result.totalValuation : 0;
-        } catch {
-          return 0;
-        }
-      }
-    }
-    if (item.unlistedStockData) {
-      const d = item.unlistedStockData;
-      if (d.totalShares > 0 && d.ownedShares > 0) {
-        // 보충적 평가 1주당 가액 × 보유주식 수 (부동산과다보유 분기는 별도)
-        const result = calcUnlistedStockPerShareValue(d, false);
-        return result.perShareFinalValue * d.ownedShares;
-      }
-    }
-  }
-  return 0;
-}
+// Phase 0: computeStockValuation은 lib/calc/stock-valuation.ts로 이동 — 단일 진실.
+// 기존 StockValuationForm import 사이트 호환을 위해 re-export.
+export { computeStockValuation } from "@/lib/calc/stock-valuation";
 
 // ============================================================
 // 상장주식 항목 편집기

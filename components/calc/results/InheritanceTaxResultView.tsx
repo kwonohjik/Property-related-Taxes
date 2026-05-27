@@ -21,6 +21,7 @@ import {
   resolveFinancialDebt,
   resolveFinancialEligibility,
 } from "@/lib/calc/financial-deduction-resolver";
+import { getValuatedAmount } from "@/lib/calc/inheritance-deduction-suggest";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
 import { LoginPromptBanner } from "@/components/calc/shared/LoginPromptBanner";
@@ -76,16 +77,7 @@ function FinancialDeductionCountRow({
   const eligibleDebts = (debtItems ?? []).filter(resolveFinancialDebt);
   if (eligibleAssets.length === 0 && eligibleDebts.length === 0) return null;
 
-  const assetTotal = eligibleAssets.reduce((sum, i) => {
-    const v =
-      i.marketValue ??
-      i.appraisedValue ??
-      i.standardPrice ??
-      (i.listedStockAvgPrice && i.listedStockShares
-        ? i.listedStockAvgPrice * i.listedStockShares
-        : 0);
-    return sum + (v ?? 0);
-  }, 0);
+  const assetTotal = eligibleAssets.reduce((sum, i) => sum + getValuatedAmount(i), 0);
   const debtTotal = eligibleDebts.reduce((sum, d) => sum + d.amount, 0);
 
   return (
