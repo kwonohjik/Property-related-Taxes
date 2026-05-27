@@ -402,7 +402,7 @@ export function UnlistedStockSimpleFields({
           yearLabel={`${baseLabel} -1년`}
           value={data?.netIncomeY1}
           onChange={(v) => setStock({ netIncomeY1: v })}
-          hint="회사 전체 금액 (1주당 ✗). 세무조정 완료된 각 사업연도 순손익액 (시행령 §56④). 결손(적자)은 음수로 입력."
+          hint="회사 전체 금액 (1주당 ✗). 세무조정 완료된 각 사업연도 순손익액 (시행령 §56④)."
         />
 
         {/* 직전 2사업연도 (가중치 ×2) */}
@@ -411,7 +411,7 @@ export function UnlistedStockSimpleFields({
           yearLabel={`${baseLabel} -2년`}
           value={data?.netIncomeY2}
           onChange={(v) => setStock({ netIncomeY2: v })}
-          hint="회사 전체 금액 (1주당 ✗). 결손(적자)은 음수로 입력."
+          hint="회사 전체 금액 (1주당 ✗)."
         />
 
         {/* 직전 3사업연도 (가중치 ×1) */}
@@ -420,7 +420,7 @@ export function UnlistedStockSimpleFields({
           yearLabel={`${baseLabel} -3년`}
           value={data?.netIncomeY3}
           onChange={(v) => setStock({ netIncomeY3: v })}
-          hint="회사 전체 금액 (1주당 ✗). 결손(적자)은 음수로 입력."
+          hint="회사 전체 금액 (1주당 ✗)."
         />
 
         {/* 가중평균 미리보기 */}
@@ -467,7 +467,7 @@ export function UnlistedStockSimpleFields({
           label="순자산가치 (회사 전체, 영업권 포함 전)"
           required
           htmlFor="simple-net-asset"
-          hint="영업권 포함 전 자기자본 (= 총자산 − 총부채, 평가기준일 재무상태표). 영업권은 §59②에 따라 자동 산출·가산됩니다. 0 이하면 0으로 처리 (시행령 §55①). 음수는 그대로 입력."
+          hint="자기자본 = 총자산 − 총부채 (평가기준일 재무상태표). 0 이하면 0으로 처리 (시행령 §55①)."
         >
           <CurrencyInput
             label="순자산가치 (회사 전체, 영업권 포함 전)"
@@ -549,7 +549,7 @@ function NetIncomeYearRow({
       label={label}
       unit="원"
       badge={`(${yearLabel})`}
-      hint={hint ?? "회사 전체 금액 (1주당 ✗). 결손(적자)은 음수로 입력."}
+      hint={hint ?? "회사 전체 금액 (1주당 ✗)."}
       warning={
         value !== undefined && value < 0
           ? `결손 입력: ${value.toLocaleString()} (가중평균 산식에 음수로 반영)`

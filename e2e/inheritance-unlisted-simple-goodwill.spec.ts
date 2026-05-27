@@ -88,7 +88,7 @@ test.describe("비상장 간편: 영업권(§59②) 가산", () => {
     await gotoStep0AndFillDeathDate(page, "2026", "5", "15");
     await openUnlistedV1SimpleCard(page);
 
-    await expect(page.getByText(/영업권 포함 전 자기자본/)).toBeVisible();
+    await expect(page.getByText(/순자산가치 \(회사 전체, 영업권 포함 전\)/)).toBeVisible();
   });
 
   test("GW-4: 순손익 3년 입력 → sky 영업권 안내 박스", async ({ page }) => {
