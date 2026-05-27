@@ -50,6 +50,7 @@ import {
   applyEstimatedProfit,
   ESTIMATED_PROFIT_REASON_LABEL,
 } from "./estimated-profit-section-56-2";
+import { safeMultiply } from "@/lib/tax-engine/tax-utils";
 import { toOptionalDate } from "@/lib/api/date-coerce";
 
 /**
@@ -164,7 +165,17 @@ export function evaluateUnlistedStockV2(
   // ★ §56① 후단 음수 시 0
   const companyWeightedRaw =
     (finalNetIncomes[0] * 3 + finalNetIncomes[1] * 2 + finalNetIncomes[2] * 1) / 6;
-  const companyWeighted3y = Math.max(0, Math.floor(companyWeightedRaw));
+  let companyWeighted3y = Math.max(0, Math.floor(companyWeightedRaw));
+
+  // PR-G2: §59③ 준용 §56② — 추정이익 적용 시 영업권 가중평균도 추정이익 기준.
+  //   "1주당 추정이익은 순손익액으로 본다" → 회사 전체 = 평균가액 × 발행주식총수.
+  //   (§59② 초과이익 = 가.순손익액×50% − 다.자기자본×10%, 다.가 회사 전체이므로 가.도 회사 전체 환산 필수)
+  if (estimatedProfitResult?.applied) {
+    companyWeighted3y = Math.max(
+      0,
+      safeMultiply(estimatedProfitResult.estimatedProfitAverage, input.totalShares),
+    );
+  }
 
   const goodwill = calcGoodwill({
     weightedAvg3y: companyWeighted3y,
@@ -258,11 +269,9 @@ export function evaluateUnlistedStockV2(
   if (goodwill.excludedByLaw) {
     warnings.push(`영업권 §55③ 자동 배제: ${goodwill.excludedByLaw}`);
   }
-  // EP-5: 추정이익 갈음 + 영업권>0 → §59③ 준용 미반영 안내 (D-4 scoped, PR-G2 분리)
+  // PR-G2: §59③ 준용 — 추정이익 적용 시 영업권 가중평균도 추정이익 기준 (goodwill>0 시 안내)
   if (estimatedProfitResult?.applied && goodwill.goodwillFinal > 0) {
-    warnings.push(
-      "[추정이익] §59③ 영업권 가중평균 순손익액 추정이익 준용은 본 버전 미반영 — 영업권은 실제 순손익 기준으로 계산됩니다.",
-    );
+    appliedRules.push("상증령 §59③ — 영업권 가중평균 순손익액도 추정이익 기준 적용");
   }
   if (netAssetResult.zeroFloorApplied) {
     warnings.push("순자산가액이 0 이하 — §55① 후단 0 처리");

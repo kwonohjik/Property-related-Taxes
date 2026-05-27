@@ -170,6 +170,8 @@ export function BesshiForm4Buppyo3PrintView({ input }: BesshiForm4Buppyo3PrintVi
             <Page5GoodwillTable
               goodwill={result.goodwillCalculation}
               fiscalYearBreakdowns={result.fiscalYearBreakdowns}
+              estimatedProfitApplied={result.estimatedProfitResult?.applied}
+              estimatedProfitAverage={result.estimatedProfitResult?.estimatedProfitAverage}
             />
           )}
 

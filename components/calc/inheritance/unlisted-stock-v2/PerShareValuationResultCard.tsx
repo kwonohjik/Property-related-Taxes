@@ -60,6 +60,17 @@ export function PerShareValuationResultCard({ input, sectionNum = 9 }: PerShareV
           hint={`영업권 포함 전: ${fmt(result.goodwillCalculation.selfCapital)}원 + 영업권: ${fmt(result.goodwillCalculation.goodwillFinal)}원`}
           law="상증령 §55 ① + §59 ②"
         />
+        {/* PR-G2: §59③ 영업권 가중평균 추정이익 준용 안내 (적용 + 영업권>0 시) */}
+        {result.estimatedProfitResult?.applied && result.goodwillCalculation.goodwillFinal > 0 && (
+          <p
+            className="rounded border border-violet-300 bg-violet-50/60 px-3 py-1.5 text-[11px] text-violet-900"
+            data-testid="result-goodwill-section59-3"
+          >
+            영업권 가중평균 순손익액: §59③ 추정이익 기준 — 추정이익 평균가액{" "}
+            {fmt(result.estimatedProfitResult.estimatedProfitAverage)}원 × 발행주식총수{" "}
+            {fmt(result.netAssetTotal > 0 ? Math.round(result.netAssetTotal / result.netAssetPerShare) : 0)}주
+          </p>
+        )}
         <ResultRow
           cellNum="④"
           label="1주당 순자산가치"

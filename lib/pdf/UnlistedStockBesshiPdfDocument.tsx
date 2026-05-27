@@ -402,9 +402,13 @@ function Page4ValuationDelta({ raw }: { raw: UnlistedNetAssetCalculation }) {
 function Page5Goodwill({
   goodwill,
   fyb,
+  estimatedProfitApplied,
+  estimatedProfitAverage,
 }: {
   goodwill: UnlistedGoodwillResult;
   fyb: [FiscalYearBreakdown, FiscalYearBreakdown, FiscalYearBreakdown];
+  estimatedProfitApplied?: boolean;
+  estimatedProfitAverage?: number;
 }) {
   const P5 = BESSHI_P5_SECTION6;
   const naMinusMa = goodwill.weightedAvgHalf - goodwill.selfCapitalRate;
@@ -432,6 +436,12 @@ function Page5Goodwill({
       <P5Row cellNum="아" labelLines={[P5.intangibleLabel]} amount={goodwill.intangibleDeduction} />
       <P5Row cellNum="자" labelLines={[P5.finalLabel]} amount={goodwill.goodwillFinal} col3={P5.finalCrossRef} variant="final" />
 
+      {estimatedProfitApplied && goodwill.goodwillFinal > 0 && (
+        <Text style={[s.p6TextLine, { color: "#5b21b6" }]}>
+          ※ 가.(최근 3년 순손익액 가중평균)은 §59③ 준용 §56②에 따라 추정이익 평균가액
+          {estimatedProfitAverage !== undefined ? ` ${fmt(estimatedProfitAverage)}원` : ""} × 발행주식총수로 환산됨.
+        </Text>
+      )}
       {goodwill.excludedByLaw && (
         <Text style={s.badge}>⚠ {EXCLUDED_REASON_LABEL[goodwill.excludedByLaw]}</Text>
       )}
@@ -641,7 +651,12 @@ export function UnlistedStockBesshiPdfDocument({ input }: UnlistedStockBesshiPdf
       {/* 제4쪽 평가차액 — raw만 필요 → 항상 표시 (화면 BesshiForm4Buppyo3PrintView와 동일 ungated) */}
       <Page4ValuationDelta raw={input.netAssetValueRaw} />
       {result && (
-        <Page5Goodwill goodwill={result.goodwillCalculation} fyb={result.fiscalYearBreakdowns} />
+        <Page5Goodwill
+          goodwill={result.goodwillCalculation}
+          fyb={result.fiscalYearBreakdowns}
+          estimatedProfitApplied={result.estimatedProfitResult?.applied}
+          estimatedProfitAverage={result.estimatedProfitResult?.estimatedProfitAverage}
+        />
       )}
       {result && <Page6NetIncomeBreakdown result={result} />}
     </Document>

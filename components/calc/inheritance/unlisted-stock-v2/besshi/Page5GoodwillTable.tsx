@@ -24,6 +24,9 @@ import { BESSHI_P5_SECTION6 } from "./besshi-form-constants";
 export interface Page5GoodwillTableProps {
   goodwill: UnlistedGoodwillResult;
   fiscalYearBreakdowns: [FiscalYearBreakdown, FiscalYearBreakdown, FiscalYearBreakdown];
+  /** PR-G2: §56② 추정이익 갈음 적용 시 가.(weightedAvg3y) §59③ 추정이익 환산 근거 표시 */
+  estimatedProfitApplied?: boolean;
+  estimatedProfitAverage?: number;
 }
 
 const excludedReasonLabel: Record<NonNullable<UnlistedGoodwillResult["excludedByLaw"]>, string> = {
@@ -81,7 +84,12 @@ function P5Tr({
   );
 }
 
-export function Page5GoodwillTable({ goodwill, fiscalYearBreakdowns }: Page5GoodwillTableProps) {
+export function Page5GoodwillTable({
+  goodwill,
+  fiscalYearBreakdowns,
+  estimatedProfitApplied,
+  estimatedProfitAverage,
+}: Page5GoodwillTableProps) {
   const P5 = BESSHI_P5_SECTION6;
   const fyb = fiscalYearBreakdowns;
   // 사례 6 OQ-1: 나-마 양수인데 자=0 시 footer 안내 조건
@@ -121,6 +129,17 @@ export function Page5GoodwillTable({ goodwill, fiscalYearBreakdowns }: Page5Good
           data-besshi-cell="p5-excluded-badge"
         >
           ⚠ {excludedReasonLabel[goodwill.excludedByLaw]}
+        </p>
+      )}
+
+      {/* PR-G2: §59③ 추정이익 준용 — 가.(weightedAvg3y)가 추정이익×주식수 환산임을 안내 */}
+      {estimatedProfitApplied && goodwill.goodwillFinal > 0 && (
+        <p
+          className="text-[10px] text-violet-800 bg-violet-50 p-2 border border-violet-200 mt-2 print:bg-violet-50"
+          data-testid="p5-section59-3"
+        >
+          ※ 가.(최근 3년 순손익액 가중평균)은 §59③ 준용 §56②에 따라 추정이익 평균가액
+          {estimatedProfitAverage !== undefined ? ` ${fmt(estimatedProfitAverage)}원` : ""} × 발행주식총수로 환산되었습니다.
         </p>
       )}
 

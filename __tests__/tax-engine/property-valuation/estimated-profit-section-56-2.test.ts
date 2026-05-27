@@ -142,10 +142,10 @@ describe("[PR-G] EP-4 절차 요건 미충족", () => {
 });
 
 // ============================================================
-// EP-5 — 추정이익 적용 + 영업권>0 → §59③ 미반영 warning
+// EP-5 교체 + EP9-1~3 — §59③ 영업권 추정이익 준용 (PR-G2)
 // ============================================================
-describe("[PR-G] EP-5 §59③ 영업권 미반영 안내", () => {
-  it("영업권>0 케이스에서 §59③ warning 노출", () => {
+describe("[PR-G2] §59③ 영업권 추정이익 준용", () => {
+  it("EP-5 교체: 추정이익 적용 + 영업권>0 → 미반영 warning 부재 + §59③ 준용", () => {
     // 고수익·저순자산 → 영업권 확실히 >0
     const highGoodwill = baseInput({
       fiscalYears: [
@@ -168,7 +168,53 @@ describe("[PR-G] EP-5 §59③ 영업권 미반영 안내", () => {
     });
     const r = evaluateUnlistedStockV2(highGoodwill);
     expect(r.goodwillCalculation.goodwillFinal).toBeGreaterThan(0);
-    expect(r.warnings.some((w) => w.includes("§59③"))).toBe(true);
+    // PR-G2: §59③ 준용 — 미반영 warning 제거 + appliedRules에 §59③ 준용
+    expect(r.warnings.some((w) => w.includes("미반영"))).toBe(false);
+    expect(r.appliedRules.some((w) => w.includes("§59③"))).toBe(true);
+    // EP9-1: 영업권 가중평균(가.) = 추정이익 평균가액(1,200) × 발행주식총수(50,000)
+    expect(r.goodwillCalculation.weightedAvg3y).toBe(1_200 * 50_000);
+  });
+
+  it("EP9-2: 추정이익 ON vs OFF → 영업권 가중평균·goodwillFinal 상이", () => {
+    const offBase = baseInput({
+      fiscalYears: [
+        { fiscalYearLabel: "2023", fiscalYearEndDate: new Date("2023-12-31"), taxableIncome: 500_000_000 },
+        { fiscalYearLabel: "2022", fiscalYearEndDate: new Date("2022-12-31"), taxableIncome: 500_000_000 },
+        { fiscalYearLabel: "2021", fiscalYearEndDate: new Date("2021-12-31"), taxableIncome: 500_000_000 },
+      ],
+      netAssetValueRaw: {
+        ...baseInput().netAssetValueRaw,
+        bsTotalAssets: 1_000_000_000,
+        assetValuationDelta: 0,
+        prepaidExpenses: 0,
+        bsTotalLiabilities: 900_000_000,
+        corporateTaxPayable: 0,
+        localIncomeTax: 0,
+        retirementProvision: 0,
+        allowanceExcluded: 0,
+      },
+    });
+    const off = evaluateUnlistedStockV2(offBase);
+    const on = evaluateUnlistedStockV2({ ...offBase, estimatedProfit: epInput() });
+    expect(on.goodwillCalculation.weightedAvg3y).not.toBe(off.goodwillCalculation.weightedAvg3y);
+    expect(on.goodwillCalculation.goodwillFinal).not.toBe(off.goodwillCalculation.goodwillFinal);
+  });
+
+  it("EP9-3: 추정이익 applied + §55③ 3년결손 배제 → goodwillFinal=0 유지 + §59③ 안내 미표시", () => {
+    const r = evaluateUnlistedStockV2(
+      baseInput({
+        fiscalYears: [
+          { fiscalYearLabel: "2023", fiscalYearEndDate: new Date("2023-12-31"), taxableIncome: 500_000_000 },
+          { fiscalYearLabel: "2022", fiscalYearEndDate: new Date("2022-12-31"), taxableIncome: 500_000_000 },
+          { fiscalYearLabel: "2021", fiscalYearEndDate: new Date("2021-12-31"), taxableIncome: 500_000_000 },
+        ],
+        isContinuousLossLastThreeYears: true,
+        estimatedProfit: epInput(),
+      }),
+    );
+    expect(r.goodwillCalculation.goodwillFinal).toBe(0);
+    expect(r.goodwillCalculation.excludedByLaw).toBe("continuous_loss_3y");
+    expect(r.appliedRules.some((w) => w.includes("§59③"))).toBe(false);
   });
 });
 
