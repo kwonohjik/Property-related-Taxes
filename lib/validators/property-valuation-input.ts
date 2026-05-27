@@ -26,7 +26,12 @@ export const unlistedStockDataSchema = z.object({
   netIncomeY2: z.number().optional(),
   /** 직전 3사업연도 순손익액 (가중치 ×1) — 상증령 §56① */
   netIncomeY3: z.number().optional(),
-  netAssetValue: z.number().nonnegative({ message: "순자산가치는 0 이상이어야 합니다." }),
+  /**
+   * 순자산가치 (회사 전체) — 음수 허용.
+   * 0 이하인 경우 엔진(`calcPerShareNetAssetValue`)에서 `Math.max(0, …)`로 0 처리 (상증령 §55① 후단).
+   * → UI에서 음수를 그대로 입력받고 계산 단계에서만 0 귀결하므로 nonnegative 제약 해제.
+   */
+  netAssetValue: z.number(),
   capitalizationRate: z.number().min(0.01).max(1).default(0.10),
 }).superRefine((data, ctx) => {
   // 3년치 또는 legacy weightedNetIncome 중 하나 이상 입력 여부 검증

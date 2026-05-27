@@ -11,11 +11,12 @@
  *
  * PR-2 (3년치 순손익 입력):
  *  - weightedNetIncome 단일 칸 → netIncomeY1/Y2/Y3 3칸으로 교체
- *  - 연도별 결손(적자) 토글: 로컬 state로 부호 관리, useEffect→store 미러링 금지
+ *  - 연도별 결손(적자): 토글 없이 음수 직접 입력 (CurrencyInput allowNegative). signed 값 store 저장.
+ *  - 음수 순자산도 직접 입력 — 엔진에서 0 처리 (상증령 §55① 후단).
  *  - 가중평균 미리보기: calcCompanyWeightedNetIncome3Y import (single-source)
  */
 
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
 import { CurrencyInput, parseAmount, formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import {
@@ -151,14 +152,8 @@ export function UnlistedStockSimpleFields({
 
   const data = item.unlistedStockData;
 
-  // ──────────────────────────────────────────────────────────────
-  // 결손(적자) 플래그 로컬 state — useEffect→store 미러링 금지 정책 준수
-  // store의 netIncomeYN 부호로 초기값 derive (음수면 결손).
-  // onChange에서만 부호 변환 → store 저장. 이후 display는 절대값.
-  // ──────────────────────────────────────────────────────────────
-  const [deficitY1, setDeficitY1] = useState<boolean>(() => (data?.netIncomeY1 ?? 0) < 0);
-  const [deficitY2, setDeficitY2] = useState<boolean>(() => (data?.netIncomeY2 ?? 0) < 0);
-  const [deficitY3, setDeficitY3] = useState<boolean>(() => (data?.netIncomeY3 ?? 0) < 0);
+  // 결손(적자)은 별도 토글 없이 음수를 직접 입력받는다 (CurrencyInput allowNegative).
+  // store(netIncomeY1~Y3)에 signed 값 그대로 저장 → 가중평균이 음수면 엔진에서 0 처리 (상증령 §56① 단서).
 
   // 연도 라벨 문구 — 상속개시일 vs 증여일
   const baseLabel = mode === "gift" ? "증여일" : "상속개시일";
@@ -294,17 +289,8 @@ export function UnlistedStockSimpleFields({
           label={`직전 1사업연도 순손익액 (가중치 ×3)`}
           yearLabel={`${baseLabel} -1년`}
           value={data?.netIncomeY1}
-          isDeficit={deficitY1}
-          onDeficitChange={(d) => {
-            setDeficitY1(d);
-            // 결손 플래그 변경 시 현재 절대값에 부호 재적용
-            const absVal = Math.abs(data?.netIncomeY1 ?? 0);
-            setStock({ netIncomeY1: d ? -absVal : absVal });
-          }}
-          onChange={(absVal) => {
-            setStock({ netIncomeY1: deficitY1 ? -absVal : absVal });
-          }}
-          hint="회사 전체 금액 (1주당 ✗). 세무조정 완료된 각 사업연도 순손익액 (시행령 §56④)."
+          onChange={(v) => setStock({ netIncomeY1: v })}
+          hint="회사 전체 금액 (1주당 ✗). 세무조정 완료된 각 사업연도 순손익액 (시행령 §56④). 결손(적자)은 음수로 입력."
         />
 
         {/* 직전 2사업연도 (가중치 ×2) */}
@@ -312,16 +298,8 @@ export function UnlistedStockSimpleFields({
           label={`직전 2사업연도 순손익액 (가중치 ×2)`}
           yearLabel={`${baseLabel} -2년`}
           value={data?.netIncomeY2}
-          isDeficit={deficitY2}
-          onDeficitChange={(d) => {
-            setDeficitY2(d);
-            const absVal = Math.abs(data?.netIncomeY2 ?? 0);
-            setStock({ netIncomeY2: d ? -absVal : absVal });
-          }}
-          onChange={(absVal) => {
-            setStock({ netIncomeY2: deficitY2 ? -absVal : absVal });
-          }}
-          hint="회사 전체 금액 (1주당 ✗)."
+          onChange={(v) => setStock({ netIncomeY2: v })}
+          hint="회사 전체 금액 (1주당 ✗). 결손(적자)은 음수로 입력."
         />
 
         {/* 직전 3사업연도 (가중치 ×1) */}
@@ -329,16 +307,8 @@ export function UnlistedStockSimpleFields({
           label={`직전 3사업연도 순손익액 (가중치 ×1)`}
           yearLabel={`${baseLabel} -3년`}
           value={data?.netIncomeY3}
-          isDeficit={deficitY3}
-          onDeficitChange={(d) => {
-            setDeficitY3(d);
-            const absVal = Math.abs(data?.netIncomeY3 ?? 0);
-            setStock({ netIncomeY3: d ? -absVal : absVal });
-          }}
-          onChange={(absVal) => {
-            setStock({ netIncomeY3: deficitY3 ? -absVal : absVal });
-          }}
-          hint="회사 전체 금액 (1주당 ✗)."
+          onChange={(v) => setStock({ netIncomeY3: v })}
+          hint="회사 전체 금액 (1주당 ✗). 결손(적자)은 음수로 입력."
         />
 
         {/* 가중평균 미리보기 */}
@@ -397,14 +367,20 @@ export function UnlistedStockSimpleFields({
           순자산가치 계산 입력
         </p>
 
-        {/* 순자산가치 */}
+        {/* 순자산가치 — 음수 직접 입력 허용, 0 이하는 엔진에서 0 처리 (§55① 후단) */}
         <CurrencyInput
           label="순자산가치 (회사 전체)"
           value={data?.netAssetValue != null ? String(data.netAssetValue) : ""}
           onChange={(v) => setStock({ netAssetValue: parseAmount(v) })}
-          hint="회사 전체 금액 (1주당 ✗) — 총자산 − 총부채 (평가기준일 재무상태표). 0 이하면 0으로 처리 (시행령 §55①)."
+          allowNegative
+          hint="회사 전체 금액 (1주당 ✗) — 총자산 − 총부채 (평가기준일 재무상태표). 0 이하면 0으로 처리 (시행령 §55①). 음수는 그대로 입력."
           required
         />
+        {data?.netAssetValue != null && data.netAssetValue < 0 && (
+          <p className="text-[11px] text-amber-600 dark:text-amber-400 pl-1">
+            음수 순자산 → 0으로 처리 (상증령 §55① 후단)
+          </p>
+        )}
       </div>
 
       {/* 입력값 0 절사 경고 — 비현실적 입력 감지 */}
@@ -445,58 +421,38 @@ interface NetIncomeYearRowProps {
   label: string;
   yearLabel: string;
   value: number | undefined;
-  isDeficit: boolean;
-  onDeficitChange: (isDeficit: boolean) => void;
-  onChange: (absVal: number) => void;
+  onChange: (val: number) => void;
   hint?: string;
 }
 
 /**
  * 단일 사업연도 순손익액 입력 행.
- * - CurrencyInput은 음수 입력 불가이므로 절대값을 표시.
- * - 결손(적자) 토글(ToggleCard chip)으로 부호 관리.
- * - onChange에서 deficitFlag에 따라 부호 적용 → store 저장 (display fallback 패턴).
+ * - 결손(적자)은 별도 토글 없이 음수를 직접 입력 (CurrencyInput allowNegative).
+ * - store(netIncomeYN)에 signed 값 그대로 저장 → 가중평균 음수 시 엔진에서 0 처리 (상증령 §56① 단서).
  */
 function NetIncomeYearRow({
   label,
   yearLabel,
   value,
-  isDeficit,
-  onDeficitChange,
   onChange,
   hint,
 }: NetIncomeYearRowProps) {
-  // store 값의 절대값을 표시 (음수면 절대값으로 CurrencyInput에 전달)
-  const absValue = value !== undefined ? Math.abs(value) : undefined;
-
   return (
     <div className="space-y-1.5">
       <div className="flex items-center gap-2">
         <span className="text-xs font-medium text-gray-600 dark:text-gray-400">{label}</span>
         <span className="text-[11px] text-muted-foreground">({yearLabel})</span>
       </div>
-      <div className="flex items-center gap-2">
-        <div className="flex-1">
-          <CurrencyInput
-            label=""
-            value={absValue !== undefined ? String(absValue) : ""}
-            onChange={(v) => onChange(parseAmount(v))}
-            hint={hint ?? "회사 전체 금액 (1주당 ✗)"}
-          />
-        </div>
-        <div className="flex-shrink-0 pt-1">
-          <ToggleCard
-            variant="chip"
-            tone="rose"
-            title="결손(적자)"
-            checked={isDeficit}
-            onCheckedChange={onDeficitChange}
-          />
-        </div>
-      </div>
-      {isDeficit && (absValue ?? 0) > 0 && (
+      <CurrencyInput
+        label=""
+        value={value !== undefined ? String(value) : ""}
+        onChange={(v) => onChange(parseAmount(v))}
+        allowNegative
+        hint={hint ?? "회사 전체 금액 (1주당 ✗). 결손(적자)은 음수로 입력."}
+      />
+      {value !== undefined && value < 0 && (
         <p className="text-[11px] text-rose-600 dark:text-rose-400 pl-1">
-          결손 적용: −{absValue!.toLocaleString()} (가중평균 산식에 음수로 반영)
+          결손 입력: {value.toLocaleString()} (가중평균 산식에 음수로 반영)
         </p>
       )}
     </div>
