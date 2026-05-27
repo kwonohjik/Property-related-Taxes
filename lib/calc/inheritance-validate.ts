@@ -51,12 +51,15 @@ export function validateEstateItemAllocations(item: EstateItem): string | null {
     return null; // 분배 미입력은 허용 (총액-단위 계산 모드)
   }
   // 평가액 추정 — marketValue / standardPrice / appraisedValue / 주식 평가액(단일 진실) 중 가장 큰 값.
-  // ★ 상장주식은 computeStockValuation 위임(§63②3호 배당차액 차감 반영) — avg×shares 재계산 금지(⑧ dual-truth).
+  // ★ 주식(상장·비상장 V1/V2)은 computeStockValuation 위임 — 엔진 valuatedAmountById·UI effectiveValuation과
+  //   동일 함수원(§63②3호 배당차액·시행령 §54 가중 반영). avg×shares 재계산 금지(⑧ dual-truth).
   const candidates = [
     item.marketValue,
     item.standardPrice,
     item.appraisedValue,
-    item.category === "listed_stock" ? computeStockValuation(item) : undefined,
+    item.category === "listed_stock" || item.category === "unlisted_stock"
+      ? computeStockValuation(item)
+      : undefined,
   ].filter((v): v is number => typeof v === "number" && v > 0);
   if (candidates.length === 0) return null;
   const expected = Math.max(...candidates);

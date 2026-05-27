@@ -258,9 +258,7 @@ export function UnlistedStockPreview({
 
 export interface UnlistedStockSimpleFieldsProps {
   item: EstateItem;
-  isRealEstateHeavy: boolean;
   onUpdate: (updated: EstateItem) => void;
-  onUpdateHeavy: (v: boolean) => void;
   /** 상속세("inheritance") 또는 증여세("gift") — 연도 라벨 문구에 사용 */
   mode?: "inheritance" | "gift";
   /** 평가기준일(상속개시일/증여일, YYYY-MM-DD) — 사업연도 연도 표시 계산용 */
@@ -273,9 +271,7 @@ export interface UnlistedStockSimpleFieldsProps {
 
 export function UnlistedStockSimpleFields({
   item,
-  isRealEstateHeavy,
   onUpdate,
-  onUpdateHeavy,
   mode = "inheritance",
   valuationDate,
 }: UnlistedStockSimpleFieldsProps) {
@@ -284,6 +280,8 @@ export function UnlistedStockSimpleFields({
     set({ unlistedStockData: { ...defaultStockData(item.unlistedStockData), ...patch } });
 
   const data = item.unlistedStockData;
+  // 부동산과다보유법인 — store(unlistedStockData)에서 read. heavyMap local state 폐지(엔진 도달 보장).
+  const isRealEstateHeavy = data?.isRealEstateHeavy ?? false;
 
   // 결손(적자)은 별도 토글 없이 음수를 직접 입력받는다 (CurrencyInput allowNegative).
   // store(netIncomeY1~Y3)에 signed 값 그대로 저장 → 가중평균이 음수면 엔진에서 0 처리 (상증령 §56① 단서).
@@ -392,7 +390,7 @@ export function UnlistedStockSimpleFields({
         title="부동산과다보유법인"
         description="토지·건물·부동산권리 합계가 자산총액의 50% 이상인 법인 (소법 §94①4호다목) — 가중치 반전 (순손익 2/5 + 순자산 3/5), 상증령 §54① 본문 괄호"
         checked={isRealEstateHeavy}
-        onCheckedChange={(v) => onUpdateHeavy(v)}
+        onCheckedChange={(v) => setStock({ isRealEstateHeavy: v || undefined })}
       >
         <p className="text-xs text-rose-700 dark:text-rose-300 font-medium">
           적용 가중치: 순손익가치×2 + 순자산가치×3 ÷ 5

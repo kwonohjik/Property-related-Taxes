@@ -83,7 +83,8 @@ export function computeStockValuation(item: EstateItem): number {
     if (item.unlistedStockData) {
       const d = item.unlistedStockData;
       if (d.totalShares > 0 && d.ownedShares > 0) {
-        const result = calcUnlistedStockPerShareValue(d, false);
+        // 부동산과다보유법인(시행령 §54① 본문 괄호) 가중치 반전 반영. 미지정 시 false(일반 법인).
+        const result = calcUnlistedStockPerShareValue(d, d.isRealEstateHeavy ?? false);
         return result.perShareFinalValue * d.ownedShares;
       }
     }
