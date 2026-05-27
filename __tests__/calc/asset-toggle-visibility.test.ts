@@ -60,11 +60,13 @@ describe("resolveAssetToggleVisibility — 8-1 기본 매트릭스", () => {
     ],
     [
       "listed_stock",
-      { farming: "default", familyBusiness: "default", financialDeduction: "default", deemedRetirementOption: "visible" },
+      // §22 일반 토글 비노출 (Phase 1 법령 override): 배제는 §22② 전용 토글로만 판단
+      { farming: "default", familyBusiness: "default", financialDeduction: "hidden_permanent", deemedRetirementOption: "visible" },
     ],
     [
       "unlisted_stock",
-      { farming: "default", familyBusiness: "default", financialDeduction: "default", deemedRetirementOption: "visible" },
+      // §22 일반 토글 비노출 (Phase 1 법령 override): 배제는 §22② 전용 토글로만 판단
+      { farming: "default", familyBusiness: "default", financialDeduction: "hidden_permanent", deemedRetirementOption: "visible" },
     ],
     [
       "other",
@@ -212,12 +214,14 @@ describe("resolveAssetToggleVisibility — 회귀 보호", () => {
     expect(result.deemedRetirementOption).toBe("visible"); // 활성 우선 발동
   });
 
-  test("listed_stock + familyBusinessCategory='corporate_stock' → 모든 토글 default 유지", () => {
+  test("listed_stock + familyBusinessCategory='corporate_stock' → §22 일반 토글 hidden_permanent (Phase 1 법령 override)", () => {
+    // farming·familyBusiness는 활성 우선 그대로 default.
+    // financialDeduction은 §22 법령 override로 hidden_permanent — §22② 전용 토글이 배제 역할 담당.
     const item = makeItem("listed_stock", { familyBusinessCategory: "corporate_stock" });
     expect(resolveAssetToggleVisibility(item)).toEqual({
       farming: "default",
       familyBusiness: "default",
-      financialDeduction: "default",
+      financialDeduction: "hidden_permanent",
       deemedRetirementOption: "visible",
     });
   });
@@ -239,6 +243,46 @@ describe("resolveAssetToggleVisibility — 회귀 보호", () => {
 });
 
 // ============================================================
+// 8-5-pre. §22 법령 override 자기일관성 anchor (Phase 1)
+//   "표시만 숨김, eligible 결과·금액 영향 0"
+// ============================================================
+
+describe("resolveAssetToggleVisibility — §22 Phase 1 주식 법령 override 자기일관성", () => {
+  test("listed_stock §22② OFF → financialDeduction hidden_permanent (토글 숨김)", () => {
+    const item = makeItem("listed_stock");
+    expect(resolveAssetToggleVisibility(item).financialDeduction).toBe("hidden_permanent");
+  });
+
+  test("unlisted_stock §22② OFF → financialDeduction hidden_permanent (토글 숨김)", () => {
+    const item = makeItem("unlisted_stock");
+    expect(resolveAssetToggleVisibility(item).financialDeduction).toBe("hidden_permanent");
+  });
+
+  test("listed_stock — countHiddenExpandable는 hidden_permanent를 집계하지 않으므로 카운트 불변(0)", () => {
+    const visibility = resolveAssetToggleVisibility(makeItem("listed_stock"));
+    // hidden_permanent 추가 전후 모두 0 — 펼침 링크 미노출 불변
+    expect(countHiddenExpandable(visibility)).toBe(0);
+  });
+
+  test("unlisted_stock — countHiddenExpandable 카운트 불변(0)", () => {
+    const visibility = resolveAssetToggleVisibility(makeItem("unlisted_stock"));
+    expect(countHiddenExpandable(visibility)).toBe(0);
+  });
+
+  test("listed_stock + isFinancialAssetForDeduction=true 명시 → 활성 우선 이후 법령 override → hidden_permanent", () => {
+    // 주식은 §22 일반 토글을 UI에 표시하지 않으므로 사용자 명시 true도 UI 상 무의미.
+    // 법령 override가 활성 우선 블록 다음에 실행 → hidden_permanent 최종 결정.
+    const item = makeItem("listed_stock", { isFinancialAssetForDeduction: true });
+    expect(resolveAssetToggleVisibility(item).financialDeduction).toBe("hidden_permanent");
+  });
+
+  test("unlisted_stock + isFinancialAssetForDeduction=true 명시 → hidden_permanent (법령 override 우선)", () => {
+    const item = makeItem("unlisted_stock", { isFinancialAssetForDeduction: true });
+    expect(resolveAssetToggleVisibility(item).financialDeduction).toBe("hidden_permanent");
+  });
+});
+
+// ============================================================
 // 8-5. countHiddenExpandable 헬퍼 (9개)
 // ============================================================
 
@@ -249,7 +293,9 @@ describe("countHiddenExpandable — 펼침 카운트", () => {
     ["real_estate_apartment", 2], // 가업 + §22 (영농은 hidden_perm)
     ["cash", 0], // 모두 hidden_perm — 펼침 링크 미노출
     ["financial", 1], // 가업만 (§22는 default — CATEGORY_DEFAULT 활성 우선)
-    ["listed_stock", 0], // 모두 default
+    // §22 법령 override: listed_stock·unlisted_stock financialDeduction → hidden_permanent
+    // hidden_permanent는 countHiddenExpandable 집계 대상 아님 → 카운트 불변(0)
+    ["listed_stock", 0],
     ["unlisted_stock", 0],
     ["other", 1], // §22만
   ])("%s 카테고리 → 펼침 카운트 %i", (category, expected) => {

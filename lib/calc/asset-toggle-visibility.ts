@@ -137,6 +137,15 @@ export function resolveAssetToggleVisibility(
     base.deemedRetirementOption = "visible";
   }
 
+  // 법령 override: 주식 §22 일반 토글 비노출.
+  // 주식은 §19①상 §22 기본 대상(eligible=true)이나, 일반 포함/제외 토글(이미지32)은
+  // 주식에서 혼동 유발 → 비노출. 배제 판단은 §22② 최대주주 전용 토글로만 수행.
+  // resolveFinancialEligibility 자체(eligible 결과)는 변경하지 않음
+  // — 결과뷰 금액·suggest 계산에 영향 없음.
+  if (item.category === "listed_stock" || item.category === "unlisted_stock") {
+    base.financialDeduction = "hidden_permanent";
+  }
+
   return base;
 }
 

@@ -76,13 +76,15 @@ describe("[AN-2] §22 순금융재산 제안 — ON 시 비상장 평가액 제�
 });
 
 // ============================================================
-// AN-6 — 부수효과: 토글 가시성 무회귀 (unlisted_stock base="default")
+// AN-6 — §22 Phase 1 법령 override: unlisted_stock financialDeduction hidden_permanent
 // ============================================================
-describe("[AN-6] §22② 가드 추가 후 자산 토글 가시성 무회귀", () => {
-  it("§22② ON/OFF 모두 financialDeduction 토글 가시성 'default' 유지", () => {
-    // unlisted_stock base가 이미 default이고 가시성 로직은 default로 올리기만 하므로 변화 없음.
-    // (§22② 배제는 resolveFinancialEligibility priority-0 가드가 담당 — AN-1 precedence 참조)
-    expect(resolveAssetToggleVisibility(unlistedV2Asset(true)).financialDeduction).toBe("default");
-    expect(resolveAssetToggleVisibility(unlistedV2Asset(false)).financialDeduction).toBe("default");
+describe("[AN-6] §22 Phase 1 — unlisted_stock 토글 가시성 hidden_permanent (법령 override)", () => {
+  it("§22② ON → financialDeduction 'hidden_permanent' (§22 일반 토글 비노출, §22② 전용 토글만 배제 역할)", () => {
+    // 법령 override(Phase 1)가 활성 우선 이후에 실행 → ON이어도 hidden_permanent 최종 결정.
+    // eligible 결과(resolveFinancialEligibility=false)는 유지 — 금액 영향 0.
+    expect(resolveAssetToggleVisibility(unlistedV2Asset(true)).financialDeduction).toBe("hidden_permanent");
+  });
+  it("§22② OFF → financialDeduction 'hidden_permanent' (주식 카테고리 법령 override 적용)", () => {
+    expect(resolveAssetToggleVisibility(unlistedV2Asset(false)).financialDeduction).toBe("hidden_permanent");
   });
 });
