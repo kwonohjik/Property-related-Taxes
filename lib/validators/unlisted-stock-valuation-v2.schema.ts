@@ -211,6 +211,15 @@ export const unlistedStockValuationV2Schema = z
         sameYearAsInheritanceOrGift: z.boolean(),
       })
       .optional(),
+    // PR-L (§63②1호): 기업공개 준비 중 평가 옵션 (MAX(공모가, §54 보충적평가))
+    preIpoListing: z
+      .object({
+        publicOfferingPrice: z.number(),
+        securitiesFilingDate: z.coerce.date(),
+        taxKind: z.enum(["inheritance", "gift"]),
+        listingDate: z.coerce.date().optional(),
+      })
+      .optional(),
   })
   .superRefine((input, ctx) => {
     // 사업연도 종료일 순서 검증 (1년전 > 2년전 > 3년전)
@@ -288,6 +297,14 @@ export const unlistedStockValuationV2Schema = z
         code: z.ZodIssueCode.custom,
         path: ["estimatedProfit", "agencyEstimates"],
         message: "추정이익 갈음은 둘 이상의 평가기관 산출액이 필요합니다. (상증령 §56②)",
+      });
+    }
+    // PR-L (§63②1호): 기업공개 준비 옵션 ON 시 공모가 > 0 필수 (신고일은 z.coerce.date 필수)
+    if (input.preIpoListing && input.preIpoListing.publicOfferingPrice <= 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["preIpoListing", "publicOfferingPrice"],
+        message: "기업공개 준비 중 평가는 공모가격(1주당)을 입력해야 합니다. (상증령 §57①1호)",
       });
     }
   });

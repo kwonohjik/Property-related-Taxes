@@ -50,8 +50,10 @@ import {
   applyEstimatedProfit,
   ESTIMATED_PROFIT_REASON_LABEL,
 } from "./estimated-profit-section-56-2";
+import { applyPreIpoListing } from "./pre-ipo-listing-section-63-2";
+import type { PreIpoListingResult } from "./pre-ipo-listing-section-63-2";
 import { safeMultiply } from "@/lib/tax-engine/tax-utils";
-import { toOptionalDate } from "@/lib/api/date-coerce";
+import { toDate, toOptionalDate } from "@/lib/api/date-coerce";
 
 /**
  * 비상장주식 V2 평가 진입점
@@ -233,7 +235,33 @@ export function evaluateUnlistedStockV2(
     appliedRules.push("§54① 단서 — 80% 하한 발동");
   }
 
-  // STEP 8: ⑦·⑧·⑨ 할증평가
+  // PR-L (§63②1호): 기업공개 준비 중 평가 override (STEP 7 직후, STEP 8 할증 직전).
+  //   §54⑥ 평가심의위 범위(70~130%) 기준은 §54 보충적평가이므로 override 전 캡처 (C3).
+  //   finalPerShareValue는 모든 §54 분기(본칙/순자산단독/단서) 결과를 포섭 → §57①2호나목 = §54 보충적평가.
+  const supplementaryPerShareValue = finalPerShareValue;
+  let preIpoListingResult: PreIpoListingResult | undefined;
+  if (input.preIpoListing) {
+    preIpoListingResult = applyPreIpoListing(
+      {
+        ...input.preIpoListing,
+        // 날짜 JSON/sessionStorage 경유 string 도달 방어 (C1 — date-coerce silent-false)
+        securitiesFilingDate: toDate(input.preIpoListing.securitiesFilingDate, "securitiesFilingDate"),
+        listingDate: toOptionalDate(input.preIpoListing.listingDate),
+      },
+      finalPerShareValue, // = §54 보충적평가 (§57①2호나목)
+      toOptionalDate(input.evaluationDate) ?? input.evaluationDate,
+    );
+    if (preIpoListingResult.applied) {
+      finalPerShareValue = preIpoListingResult.appliedValue; // MAX(공모가, §54)
+      appliedRules.push(
+        "상증법 §63②1호 + 상증령 §57① — 기업공개 준비 중 MAX(공모가, 보충적평가)",
+      );
+    } else {
+      for (const w of preIpoListingResult.warnings) warnings.push(`[§63②] ${w}`);
+    }
+  }
+
+  // STEP 8: ⑦·⑧·⑨ 할증평가 (§63③ — override된 finalPerShareValue 기준)
   const premium = calcMaxShareholderPremium({
     finalPerShareValue,
     isMaxShareholder: input.isMaxShareholder,
@@ -294,9 +322,11 @@ export function evaluateUnlistedStockV2(
   // PR-K (§54⑥): 평가심의위원회 신청 옵션 (70~130% 4방법) — 참고용 메타, 본 결과 무변경
   let evaluationCommitteeApplied: UnlistedStockValuationResult["evaluationCommitteeApplied"];
   if (input.evaluationCommittee) {
+    // C3: §54⑥ 70~130% 범위 기준은 §54 보충적평가 — §63② override값(finalPerShareValue)이 아닌
+    //     override 전 supplementaryPerShareValue 전달 (범위 무오염).
     evaluationCommitteeApplied = applyEvaluationCommittee(
       input.evaluationCommittee,
-      finalPerShareValue,
+      supplementaryPerShareValue,
     );
     appliedRules.push("상증령 §54⑥ + §49의2 (평가심의위원회 신청 옵션)");
     for (const w of evaluationCommitteeApplied.warnings) {
@@ -330,6 +360,7 @@ export function evaluateUnlistedStockV2(
     otherUnlistedHoldingsEvaluated,
     evaluationCommitteeApplied,
     estimatedProfitResult,
+    preIpoListingResult,
   };
 }
 

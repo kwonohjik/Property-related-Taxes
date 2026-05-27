@@ -75,6 +75,17 @@ function normalizeBesshiInput(input: UnlistedStockValuationInput): UnlistedStock
       // changeDate는 optional — 미입력 행은 undefined 보존 (validate가 차단하므로 여기선 강제 throw 금지)
       changeDate: toOptionalDate(c.changeDate),
     })),
+    // PR-L (C1): preIpoListing 날짜 정규화 — sessionStorage(JSON) 복원 시 string 도달 방어.
+    //   securitiesFilingDate·listingDate가 string이면 orchestrator 윈도우 비교가 silent-false.
+    preIpoListing: input.preIpoListing
+      ? {
+          ...input.preIpoListing,
+          securitiesFilingDate:
+            toOptionalDate(input.preIpoListing.securitiesFilingDate) ??
+            input.preIpoListing.securitiesFilingDate,
+          listingDate: toOptionalDate(input.preIpoListing.listingDate),
+        }
+      : undefined,
   };
 }
 
@@ -143,6 +154,17 @@ export function BesshiForm4Buppyo3PrintView({ input }: BesshiForm4Buppyo3PrintVi
 
           {/* 제1쪽 */}
           <Page1CoverSection input={safe} result={result} />
+
+          {/* PR-L: §63②1호 기업공개 준비 중 평가 적용 시 ⑥ 최종평가액 반영 안내 */}
+          {result?.preIpoListingResult?.applied && (
+            <p
+              className="text-[10px] text-emerald-800 bg-emerald-50 border border-emerald-200 p-1.5 mt-1 print:bg-emerald-50"
+              data-testid="besshi-pre-ipo-note"
+            >
+              ※ ⑥ 최종 1주당 평가액은 §63②1호(기업공개 준비 중) + 상증령 §57①에 따라 MAX(공모가격{" "}
+              {result.preIpoListingResult.publicOfferingPrice.toLocaleString("ko-KR")}, 보충적평가)를 반영했습니다.
+            </p>
+          )}
 
           {/* 제1쪽 → 제2쪽 break */}
           <div className="print:break-before-page" aria-hidden="true" />

@@ -24,7 +24,7 @@ function fmt(n: number): string {
   return n.toLocaleString();
 }
 
-export function PerShareValuationResultCard({ input, sectionNum = 9 }: PerShareValuationResultCardProps) {
+export function PerShareValuationResultCard({ input, sectionNum = 11 }: PerShareValuationResultCardProps) {
   const result = useMemo(() => {
     try {
       // 최소 입력 검증
@@ -157,10 +157,51 @@ export function PerShareValuationResultCard({ input, sectionNum = 9 }: PerShareV
           cellNum="⑥"
           label="1주당 평가액"
           value={`${fmt(result.finalPerShareValue)}원`}
-          hint={`MAX(⑥-㉠, ⑥-㉡)${result.netAssetFloorApplied ? " — 80% 하한 우선" : " — 가중평균 우선"}`}
-          law="상증령 §54 ①"
+          hint={
+            result.preIpoListingResult?.applied
+              ? `§63②1호 기업공개 준비 — MAX(공모가격 ${fmt(result.preIpoListingResult.publicOfferingPrice)}원, 보충적평가 ${fmt(result.preIpoListingResult.supplementaryValue)}원)`
+              : `MAX(⑥-㉠, ⑥-㉡)${result.netAssetFloorApplied ? " — 80% 하한 우선" : " — 가중평균 우선"}`
+          }
+          law={result.preIpoListingResult?.applied ? "상증법 §63②1호 + 상증령 §57①" : "상증령 §54 ①"}
           emphasized
         />
+
+        {/* PR-L: §63②1호 기업공개 준비 중 평가 — 적용/미적용/§54⑥ 범위 안내 */}
+        {input.preIpoListing && result.preIpoListingResult && (
+          <div
+            className={`rounded border px-3 py-2 text-[11px] ${
+              result.preIpoListingResult.applied
+                ? "border-emerald-300 bg-emerald-50/60 text-emerald-900"
+                : "border-amber-300 bg-amber-50/60 text-amber-800"
+            }`}
+            data-testid="result-pre-ipo-notice"
+          >
+            {result.preIpoListingResult.applied ? (
+              <>
+                <p className="font-semibold">
+                  §63②1호 기업공개 준비 중 평가 적용 — MAX(공모가격, 보충적평가)
+                </p>
+                <p className="mt-0.5 text-[10px] leading-snug">
+                  공모가격 {fmt(result.preIpoListingResult.publicOfferingPrice)}원
+                  {result.preIpoListingResult.appliedValue ===
+                  result.preIpoListingResult.supplementaryValue
+                    ? ` ≤ 보충적평가 ${fmt(result.preIpoListingResult.supplementaryValue)}원 → 보충적평가 적용`
+                    : ` > 보충적평가 ${fmt(result.preIpoListingResult.supplementaryValue)}원 → 공모가격 적용`}
+                </p>
+                {input.evaluationCommittee && (
+                  <p className="mt-0.5 text-[10px] leading-snug">
+                    ※ §54⑥ 평가심의위 70~130% 범위는 보충적평가({fmt(result.preIpoListingResult.supplementaryValue)}원)
+                    기준입니다 (§63② override와 무관).
+                  </p>
+                )}
+              </>
+            ) : (
+              <p className="font-semibold">
+                §63②1호 미적용 — {result.preIpoListingResult.warnings.join(" / ")}
+              </p>
+            )}
+          </div>
+        )}
 
         {/* ⑦·⑧·⑨ 할증평가 */}
         {result.premiumRate > 0 ? (

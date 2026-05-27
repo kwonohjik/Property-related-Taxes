@@ -346,6 +346,7 @@ function UnlistedStockCard({
           input={item.unlistedStockValuationV2}
           onChange={(next) => onUpdate({ ...item, unlistedStockValuationV2: next })}
           valuationDate={valuationDate}
+          taxKind={mode}
         />
       )}
 

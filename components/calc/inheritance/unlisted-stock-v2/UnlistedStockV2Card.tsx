@@ -26,6 +26,7 @@ import { EvaluationCommitteeResultCard } from "./EvaluationCommitteeResultCard";
 import { EvaluationCommitteeFilingGuideCard } from "./EvaluationCommitteeFilingGuideCard";
 import type { EvaluationCommitteeInput } from "@/lib/tax-engine/property-valuation/evaluation-committee-section-54-6";
 import { EstimatedProfitToggle } from "./EstimatedProfitToggle";
+import { PreIpoListingToggle } from "./PreIpoListingToggle";
 import { evaluateUnlistedStockV2 } from "@/lib/tax-engine/property-valuation/unlisted-orchestrator";
 import type {
   UnlistedStockValuationInput,
@@ -108,6 +109,11 @@ export interface UnlistedStockV2CardProps {
    * CorporateInfoSection → DateInput value fallback에만 사용. useEffect store write 금지.
    */
   valuationDate?: string;
+  /**
+   * 상속/증여 구분 — §63②(PR-L) 6/3개월 윈도우 분기 + §54⑥ 신고기한 안내.
+   * StockValuationForm이 mode("inheritance"|"gift")를 주입. 기본 상속.
+   */
+  taxKind?: "inheritance" | "gift";
 }
 
 export function UnlistedStockV2Card({
@@ -116,6 +122,7 @@ export function UnlistedStockV2Card({
   currentClientId = null,
   historyExcludeIds = [],
   valuationDate,
+  taxKind = "inheritance",
 }: UnlistedStockV2CardProps) {
   // PR-H: 이력 조회 모달
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -310,21 +317,30 @@ export function UnlistedStockV2Card({
         sectionNum={8}
       />
 
-      {/* 9. PR-K: §54⑥ 평가심의위원회 신청 옵션 */}
+      {/* 9. PR-L: §63②1호 기업공개 준비 중 평가 옵션 (§54 결과 → MAX override → §63③ 할증) */}
+      <PreIpoListingToggle
+        value={input.preIpoListing}
+        onChange={(next) => wrappedOnChange({ ...input, preIpoListing: next })}
+        taxKind={taxKind}
+        evaluationDate={effectiveInput.evaluationDate}
+        sectionNum={9}
+      />
+
+      {/* 10. PR-K: §54⑥ 평가심의위원회 신청 옵션 */}
       <EvaluationCommitteeToggle
         value={input.evaluationCommittee}
         onChange={(next: EvaluationCommitteeInput | undefined) =>
           wrappedOnChange({ ...input, evaluationCommittee: next })
         }
-        sectionNum={9}
+        sectionNum={10}
       />
-      <EvaluationCommitteeResultPanel input={effectiveInput} />
+      <EvaluationCommitteeResultPanel input={effectiveInput} taxKind={taxKind} />
       {input.evaluationCommittee && (
-        <EvaluationCommitteeFilingGuideCard taxKind="inheritance" />
+        <EvaluationCommitteeFilingGuideCard taxKind={taxKind} />
       )}
 
-      {/* 10. 결과 카드 — effectiveInput 사용으로 evaluationDate fallback 적용 */}
-      <PerShareValuationResultCard input={effectiveInput} sectionNum={10} />
+      {/* 11. 결과 카드 — effectiveInput 사용으로 evaluationDate fallback 적용 */}
+      <PerShareValuationResultCard input={effectiveInput} sectionNum={11} />
 
       {/* 7. 별지 양식 PDF 출력 미리보기 — effectiveInput 사용으로 evaluationDate fallback 적용 */}
       <BesshiForm4Buppyo3PrintView input={effectiveInput} />
@@ -332,7 +348,13 @@ export function UnlistedStockV2Card({
   );
 }
 
-function EvaluationCommitteeResultPanel({ input }: { input: UnlistedStockValuationInput }) {
+function EvaluationCommitteeResultPanel({
+  input,
+  taxKind = "inheritance",
+}: {
+  input: UnlistedStockValuationInput;
+  taxKind?: "inheritance" | "gift";
+}) {
   const result = useMemo(() => {
     if (!input.evaluationCommittee) return null;
     try {
@@ -350,7 +372,7 @@ function EvaluationCommitteeResultPanel({ input }: { input: UnlistedStockValuati
       result={result.evaluationCommitteeApplied}
       taxpayerPerShareValuation={input.evaluationCommittee.taxpayerPerShareValuation}
       baseDate={input.evaluationDate}
-      taxKind="inheritance"
+      taxKind={taxKind}
     />
   );
 }

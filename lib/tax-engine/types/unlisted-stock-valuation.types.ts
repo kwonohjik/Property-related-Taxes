@@ -197,6 +197,14 @@ export interface UnlistedStockValuationInput {
    */
   estimatedProfit?: import("@/lib/tax-engine/property-valuation/estimated-profit-section-56-2").EstimatedProfitInput;
 
+  /**
+   * PR-L (§63②1호): 기업공개 준비 중 법인 평가 옵션.
+   * 평가기준일이 [유가증권신고일 − 6개월(상속)/3개월(증여), 거래소 상장 전) 윈도우에 있으면
+   * 최종 1주당 평가액(§54)을 MAX(공모가격, §54 보충적평가)로 교체. 미입력 → 옵션 OFF(현행 §54).
+   * Plan: docs/00-pm/inheritance-unlisted-stock-pre-ipo-listing-section-63-2.plan.md
+   */
+  preIpoListing?: import("@/lib/tax-engine/property-valuation/pre-ipo-listing-section-63-2").PreIpoListingInput;
+
   // === 할증평가 §63③ ===
   isMaxShareholder: boolean;
   /**
@@ -318,4 +326,11 @@ export interface UnlistedStockValuationResult {
    * 미입력 시 undefined.
    */
   estimatedProfitResult?: import("@/lib/tax-engine/property-valuation/estimated-profit-section-56-2").EstimatedProfitResult;
+
+  /**
+   * PR-L (§63②1호): 기업공개 준비 중 평가 결과 echo (내부 .applied boolean 보유).
+   * applied=true 시 finalPerShareValue가 MAX(공모가, 보충적평가)로 override됨.
+   * 미입력 시 undefined.
+   */
+  preIpoListingResult?: import("@/lib/tax-engine/property-valuation/pre-ipo-listing-section-63-2").PreIpoListingResult;
 }

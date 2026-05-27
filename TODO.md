@@ -1,41 +1,48 @@
-# PR-G2 §59③ 영업권 추정이익 준용 — 구현 TODO
+# PR-L §63② 기업공개 준비 중 법인 평가 — 구현 TODO
 
-> Plan: `docs/00-pm/inheritance-unlisted-stock-estimated-profit-goodwill-section-59-3.plan.md`
-> Engine Design: `docs/02-design/features/inheritance-unlisted-stock-estimated-profit-goodwill-section-59-3.engine.design.md`
-> UI Design: `docs/02-design/features/inheritance-unlisted-stock-estimated-profit-goodwill-section-59-3.ui.design.md`
+> Plan: `docs/00-pm/inheritance-unlisted-stock-pre-ipo-listing-section-63-2.plan.md`
+> Engine Design: `docs/02-design/features/inheritance-unlisted-stock-pre-ipo-listing-section-63-2.engine.design.md`
+> UI Design: `docs/02-design/features/inheritance-unlisted-stock-pre-ipo-listing-section-63-2.ui.design.md`
 
-## 엔진 (C-1~C-3 + anchor)
+## 엔진 (시퀀셜 선행 — PL anchor RED→GREEN)
 
-- [x] E1 (EP9-1 RED) — anchor 작성 + RED 확인 (EP-5 교체·EP9-2 fail)
-- [x] E2 (C-1) — orchestrator companyWeighted3y let + safeMultiply 환산 + import
-- [x] E3 (C-2) — EP-5 미반영 warning 제거 + appliedRules gated push(goodwill>0)
-- [x] E4 (C-3) — EP-5 교체 + EP9-1~3 GREEN (16 PASS)
-- [x] E5 — property-valuation 디렉터리 258 PASS 회귀 0
+- [x] E1 (PL-1 RED) — anchor 파일 작성 + RED 확인 (applyPreIpoListing 부재) ✅ import 실패 RED
+- [x] E2 (S-2) — 신규 모듈 `pre-ipo-listing-section-63-2.ts` (applyPreIpoListing + 타입, 105줄) ✅
+- [x] E3 (S-1) — 타입 확장 (input.preIpoListing? + result.preIpoListingResult?) ✅
+- [x] E4 (S-3) — orchestrator: supplementary 캡처(C3) + 날짜정규화(C1) + override + §54⑥ 인자교체 + echo + appliedRules ✅
+- [x] E5 — PL-1~7·9·10·11 GREEN ✅ 16 PASS + property-valuation 274 PASS 회귀 0
+- [x] E6 (S-4) — Zod superRefine(공모가>0·신고일·taxKind enum) + PL-8 ✅
 
-## UI (C-4 — ⑦ 결과카드만, 화면+PDF)
+## UI (8지점 ⑤⑦ + 폼조립 + besshi)
 
-- [x] U1 — PerShareValuationResultCard ③ 영업권 §59③ 한 줄(applied && goodwill>0)
-- [x] U2 — Page5GoodwillTable + UnlistedStockBesshiPdfDocument 5쪽 note(optional prop, 화면 동일 문구)
+- [x] U1 (S-6) — `PreIpoListingToggle.tsx` 신규 (ToggleCard emerald + 공모가·신고일·상장일 + 윈도우 preview) ✅
+- [x] U2 (S-6) — `UnlistedStockV2Card` sectionNum 재배치 (§63②=9·§54⑥10·결과11 + taxKind 주입, 하드코딩 2곳 정정) ✅
+- [x] U3 (S-5) — 폼→v2 taxKind={mode} 주입 + strip 0 grep(통째 spread·Zod만) ✅
+- [x] U4 (S-7) — `PerShareValuationResultCard` MAX 분기 + 윈도우 밖 경고 + §54⑥ 범위 안내(L-5) ✅
+- [x] U5 (S-8) — `normalizeBesshiInput` 날짜정규화(C1) + besshi note(applied gated) ✅
 
 ## 검증·마무리
 
-- [x] V1 — `npx tsc --noEmit` 0건
-- [x] V2 — `npm test` 5213 PASS + PR-G e2e 3 PASS 회귀 0
-- [x] V3 — 계획↔구현 갭 분석 (아래)
+- [x] V1 — `npx tsc --noEmit` 0건 ✅
+- [x] V2 — `npm test` 5229 PASS(회귀 0) + e2e T-L-1/2/3 3 PASS + 기존 V2 e2e 7 PASS ✅
+- [x] V3 — 계획↔구현 갭 분석 ✅ (아래)
 - [ ] V4 — 커밋 + 푸시 (한국어 메시지)
 
 ---
 
 ## V3 — 계획↔구현 갭 분석
 
-| 지점 | 계획 | 구현 | 일치 |
+| 지점 | 계획/디자인 | 구현 | 일치 |
 |---|---|---|---|
-| C-1 환산 | companyWeighted3y let + safeMultiply(평균가액, 주식수) | orchestrator override + import | ✅ |
-| C-2 warning 전환 | 미반영 warning 제거 + appliedRules gated(goodwill>0) | 구현 | ✅ |
-| C-3 anchor 교체 | EP-5 교체 + EP9-1~3 | 16 PASS | ✅ |
-| C-4 UI | 결과카드 + besshi 화면 + PDF (화면+PDF 병렬) | PerShareValuationResultCard·Page5GoodwillTable·PDF 3곳 | ✅ |
-| EP9-1 | weightedAvg3y = 평균가액 × 주식수 | toBe(1,200×50,000) | ✅ |
-| EP9-2 | ON≠OFF comparative | not.toBe | ✅ |
-| EP9-3 | §55③ 배제 무간섭 + §59③ 미표시 | goodwillFinal=0·excludedByLaw 유지 | ✅ |
+| S-1 타입 | input.preIpoListing? + result.preIpoListingResult? | types 추가 | ✅ |
+| S-2 모듈 | applyPreIpoListing ≤150줄 (subMonths·MAX·window) | 105줄 | ✅ |
+| S-3 orchestrator | supplementary 캡처(C3)+날짜정규화(C1)+override+§54⑥ 인자교체+echo+appliedRules | 전부 구현 | ✅ |
+| S-4 Zod | preIpoListing z.object + superRefine(공모가>0·taxKind enum·신고일 coerce) | 구현 | ✅ |
+| S-5 폼 | taxKind={mode} 주입 + strip 0 | StockValuationForm + 통째 spread | ✅ |
+| S-6 UI | PreIpoListingToggle(emerald) + sectionNum §63②=9·§54⑥10·결과11 | 구현(하드코딩 2곳 정정 보너스) | ✅ |
+| S-7 결과 | MAX 분기 + 윈도우 경고 + §54⑥ 범위 안내(L-5) | PerShareValuationResultCard | ✅ |
+| S-8 besshi | normalizeBesshiInput 날짜정규화(C1) + note(applied gated) | 구현 | ✅ |
+| PL-1~11 | 11 anchor + 경계 + Zod + 회귀 | 16 PASS | ✅ |
+| C1~C7·DR-1~3 | 정정 전부 반영 | 코드 주석에 C1·C3 명시 | ✅ |
 
-**갭 0건**. 신규 input·Zod·validation 변경 없음(8지점 중 ⑦만, 설계대로). besshi note는 optional prop(testid 동결 보호, 기존 행 외부 추가)로 구현 — 계획 C-4 "추정이익 시 note" 충족.
+**갭 0건.** 디자인 대비 추가 구현: ① taxKind 하드코딩("inheritance") 2곳(EvaluationCommitteeFilingGuideCard·ResultPanel)을 prop으로 정정 — PR-L taxKind 주입 일관성 확보 부수효과(증여 신고기한 안내 정확화). ② e2e는 디자인 T-L-1/2에 OFF 케이스(T-L-3) 추가.
