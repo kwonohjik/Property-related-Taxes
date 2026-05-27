@@ -21,6 +21,7 @@ import {
   calcUnlistedStockPerShareValue,
 } from "@/lib/tax-engine/property-valuation-stock";
 import { evaluateUnlistedStockV2 } from "@/lib/tax-engine/property-valuation/unlisted-orchestrator";
+import { applyCapitalIncreaseShareValuation } from "@/lib/tax-engine/property-valuation/dividend-difference-section-63-2-3";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 
 /**
@@ -51,8 +52,17 @@ export function computeStockValuation(item: EstateItem): number {
   if (item.category === "listed_stock") {
     const avg = item.listedStockAvgPrice ?? 0;
     const shares = item.listedStockShares ?? 0;
-    if (avg > 0 && shares > 0) return evaluateListedStockValue(avg, shares);
-    return 0;
+    if (avg <= 0 || shares <= 0) return 0;
+    // §63②3호 (PR-L3): 상장법인 증자 신주(미상장) — 가목 평가액 − 배당차액(§57③·§18②)
+    if (item.isCapitalIncreaseUnlistedShare) {
+      const { perShareValue } = applyCapitalIncreaseShareValuation(
+        avg,
+        item.listedStockDividendDifference ?? 0,
+        item.dividendBaseDateSameAsListed ?? false,
+      );
+      return perShareValue * shares; // shares = 증자 신주(미상장) 보유 수
+    }
+    return evaluateListedStockValue(avg, shares); // §63①1호가목 (기존, 무변경)
   }
 
   if (item.category === "unlisted_stock") {

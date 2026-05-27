@@ -18,6 +18,7 @@ import type {
   Heir,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { deriveCollateralDebts } from "@/lib/tax-engine/inheritance-collateral-debt";
+import { computeStockValuation } from "@/lib/tax-engine/valuation/resolve-estate-item-value";
 
 // ────────────────────────────────────────────────────
 // 단일 자산 — heirAllocations 합계 검증
@@ -49,14 +50,13 @@ export function validateEstateItemAllocations(item: EstateItem): string | null {
   if (!item.heirAllocations || item.heirAllocations.length === 0) {
     return null; // 분배 미입력은 허용 (총액-단위 계산 모드)
   }
-  // 평가액 추정 — marketValue / standardPrice / appraisedValue / listed*Shares 중 가장 큰 값
+  // 평가액 추정 — marketValue / standardPrice / appraisedValue / 주식 평가액(단일 진실) 중 가장 큰 값.
+  // ★ 상장주식은 computeStockValuation 위임(§63②3호 배당차액 차감 반영) — avg×shares 재계산 금지(⑧ dual-truth).
   const candidates = [
     item.marketValue,
     item.standardPrice,
     item.appraisedValue,
-    item.listedStockAvgPrice && item.listedStockShares
-      ? item.listedStockAvgPrice * item.listedStockShares
-      : undefined,
+    item.category === "listed_stock" ? computeStockValuation(item) : undefined,
   ].filter((v): v is number => typeof v === "number" && v > 0);
   if (candidates.length === 0) return null;
   const expected = Math.max(...candidates);

@@ -10,12 +10,12 @@
  */
 
 import { useMemo, useState } from "react";
-import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
+import { CurrencyInput, formatKRW, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
-import {
-  evaluateListedStockValue,
-  calcUnlistedStockPerShareValue,
-} from "@/lib/tax-engine/property-valuation-stock";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import { calcUnlistedStockPerShareValue } from "@/lib/tax-engine/property-valuation-stock";
+import { applyCapitalIncreaseShareValuation } from "@/lib/tax-engine/property-valuation/dividend-difference-section-63-2-3";
 import { evaluateUnlistedStockV2 } from "@/lib/tax-engine/property-valuation/unlisted-orchestrator";
 import type { EstateItem, UnlistedStockData, Heir } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { KiwoomValuationAutoFetchButton } from "./KiwoomValuationAutoFetchButton";
@@ -27,9 +27,10 @@ import {
 } from "@/components/calc/inheritance/unlisted-stock-v2/UnlistedStockV2Card";
 import { buildDefaultFiscalYears } from "@/lib/tax-engine/property-valuation/fiscal-year-annualize";
 // Phase 0: computeStockValuation은 lib/calc/stock-valuation.ts로 이동 — 단일 진실.
-// 기존 StockValuationForm import 사이트 호환을 위해 re-export.
+// 기존 StockValuationForm import 사이트 호환을 위해 import + re-export (PR-L3: 로컬 바인딩으로 preview·사이드바 재배선에 사용).
 // D-4: resolveUnlistedDisplayMode도 re-export — EstateCommonAttributesSection 공유 사용.
-export { computeStockValuation, resolveUnlistedDisplayMode } from "@/lib/calc/stock-valuation";
+import { computeStockValuation, resolveUnlistedDisplayMode } from "@/lib/calc/stock-valuation";
+export { computeStockValuation, resolveUnlistedDisplayMode };
 
 // ============================================================
 // 상장주식 항목 편집기
@@ -59,9 +60,14 @@ function ListedStockEditor({
 
   const avgPrice = item.listedStockAvgPrice ?? 0;
   const shares = item.listedStockShares ?? 0;
-  const totalValue = avgPrice > 0 && shares > 0
-    ? evaluateListedStockValue(avgPrice, shares)
-    : 0;
+  // §63②3호 (PR-L3): 상장법인 증자 신주(미상장)
+  const isCapInc = item.isCapitalIncreaseUnlistedShare ?? false;
+  const sameBaseDate = item.dividendBaseDateSameAsListed ?? false;
+  const capInc = isCapInc
+    ? applyCapitalIncreaseShareValuation(avgPrice, item.listedStockDividendDifference ?? 0, sameBaseDate)
+    : null;
+  // ★ C-B/D-8 재배선: preview totalValue = computeStockValuation(item) (§63②3호 차감 반영, dual-truth 차단)
+  const totalValue = avgPrice > 0 && shares > 0 ? computeStockValuation(item) : 0;
 
   return (
     <div className="border rounded-lg p-4 space-y-3 bg-white dark:bg-gray-900">
@@ -157,10 +163,10 @@ function ListedStockEditor({
         <p className="text-xs text-gray-400">평가기준일 기준 전 2개월 + 후 2개월(총 4개월) 종가 평균</p>
       </div>
 
-      {/* 보유 주식 수 */}
+      {/* 보유 주식 수 — §63②3호 ON 시 "증자 신주(미상장) 보유 수"로 의미 전환 (S-B) */}
       <div className="space-y-1">
         <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
-          보유 주식 수 (주) <span className="text-destructive">*</span>
+          {isCapInc ? "증자 신주(미상장) 보유 수 (주)" : "보유 주식 수 (주)"} <span className="text-destructive">*</span>
         </label>
         <input
           type="text"
@@ -175,15 +181,68 @@ function ListedStockEditor({
         />
       </div>
 
+      {/* §63②3호 — 상장법인 증자 신주(평가기준일 현재 미상장) (PR-L3) */}
+      <ToggleCard
+        tone="violet"
+        checked={isCapInc}
+        onCheckedChange={(v) =>
+          set({
+            isCapitalIncreaseUnlistedShare: v || undefined,
+            ...(v ? {} : { listedStockDividendDifference: undefined, dividendBaseDateSameAsListed: undefined }),
+          })
+        }
+        title="§63②3호 — 상장법인 증자 신주 (평가기준일 현재 미상장)"
+        description="거래소 상장 법인의 증자로 취득한 새 주식으로 평가기준일 현재 상장되지 않은 경우. 평가 = 상장 주식 전후 2개월 평균 − 배당차액(시행규칙 §18②)."
+      >
+        <div className="space-y-3">
+          {/* §18② 단서: 배당기산일 동일 → 배당차액 제외 */}
+          <ToggleCard
+            tone="sky"
+            variant="chip"
+            checked={sameBaseDate}
+            onCheckedChange={(v) => set({ dividendBaseDateSameAsListed: v || undefined })}
+            title="정관상 배당기산일을 기존 상장주식과 동일하게 정함 → 배당차액 제외 (§18② 단서)"
+          />
+
+          <FieldCard
+            label="배당차액 (원/주)"
+            hint="시행규칙 §18② 산출액을 직접 입력. 미입력 시 가목 평가액과 동일 적용. (단서 적용 시 0)"
+          >
+            <CurrencyInput
+              label="배당차액"
+              hideLabel
+              hideUnit
+              value={sameBaseDate ? "0" : String(item.listedStockDividendDifference ?? "")}
+              onChange={(v) => {
+                const n = parseAmount(v);
+                set({ listedStockDividendDifference: n || undefined });
+              }}
+              disabled={sameBaseDate}
+            />
+          </FieldCard>
+
+          {capInc && avgPrice > 0 && (
+            <p className="text-xs text-violet-700 dark:text-violet-300 bg-violet-50 dark:bg-violet-900/20 rounded px-3 py-2">
+              1주당 = 가목 {avgPrice.toLocaleString()} − 배당차액 {capInc.effectiveDividendDifference.toLocaleString()} ={" "}
+              <span className="font-semibold">{capInc.perShareValue.toLocaleString()}</span>
+            </p>
+          )}
+        </div>
+      </ToggleCard>
+
       {/* 평가액 미리보기 */}
       {totalValue > 0 && (
         <div className="rounded-md bg-gray-50 dark:bg-gray-800 px-3 py-2 text-xs space-y-1">
           <div className="flex justify-between text-gray-500 dark:text-gray-400">
             <span>평가 산식</span>
-            <span>{avgPrice.toLocaleString()} × {shares.toLocaleString()}주</span>
+            <span>
+              {isCapInc && capInc
+                ? `(${avgPrice.toLocaleString()} − ${capInc.effectiveDividendDifference.toLocaleString()}) × ${shares.toLocaleString()}주`
+                : `${avgPrice.toLocaleString()} × ${shares.toLocaleString()}주`}
+            </span>
           </div>
           <div className="flex justify-between font-semibold border-t border-gray-200 dark:border-gray-700 pt-1">
-            <span>상장주식 평가액</span>
+            <span>{isCapInc ? "§63②3호 평가액" : "상장주식 평가액"}</span>
             <span className="text-indigo-700 dark:text-indigo-300">{formatKRW(totalValue)}</span>
           </div>
         </div>
@@ -205,8 +264,7 @@ function ListedStockEditor({
 // 비상장주식 카드 — 모드 선택기 + 조건부 렌더 + 공통속성 (PR-3)
 // ============================================================
 
-// 모드 판정 헬퍼는 lib/calc/stock-valuation.ts에서 import (D-4 단일 진실)
-import { resolveUnlistedDisplayMode } from "@/lib/calc/stock-valuation";
+// 모드 판정 헬퍼는 상단 import 사이트(line 32)에서 단일 import (D-4 단일 진실, PR-L3 중복 제거)
 
 // RadioCardGroup용 정적 tone 매핑 (feedback_tailwind_static_tone_mapping)
 const VALUATION_MODE_OPTIONS = [
@@ -375,9 +433,8 @@ function TotalStockValue({ items, heavyMap }: StockTotal) {
   let total = 0;
   for (const item of items) {
     if (item.category === "listed_stock") {
-      const avg = item.listedStockAvgPrice ?? 0;
-      const shares = item.listedStockShares ?? 0;
-      if (avg > 0 && shares > 0) total += evaluateListedStockValue(avg, shares);
+      // ★ C-B/D-8 재배선: computeStockValuation(item) — §63②3호 배당차액 차감 반영 (dual-truth 차단)
+      total += computeStockValuation(item);
     } else if (item.category === "unlisted_stock") {
       // 모드 판정 — 단일 진실 헬퍼 (D-4)
       const activeMode = resolveUnlistedDisplayMode(item);

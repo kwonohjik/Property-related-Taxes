@@ -74,6 +74,16 @@ export interface EstateItem extends EstateLocationFields {
   listedStockShares?: number;
   /** 상장주식 종목코드 (F-01 키움 자동조회 트리거 — 선택) */
   listedStockCode?: string;
+  /**
+   * §63②3호 (PR-L3): 상장된 법인의 증자로 취득한 새 주식으로서 평가기준일 현재 미상장.
+   * true 시 평가 = (상장 가목 평가액: listedStockAvgPrice) − 배당차액. 이때 listedStockShares는
+   * "증자 신주(미상장) 보유 수"로 의미 전환.
+   */
+  isCapitalIncreaseUnlistedShare?: boolean;
+  /** §63②3호 배당차액 (원/주, 직접 입력 — 시행규칙 §18② / 산식 박스 L-1) */
+  listedStockDividendDifference?: number;
+  /** §18② 단서: 정관상 신주의 배당기산일을 기존 상장주식과 동일하게 정함 → 배당차액 0 */
+  dividendBaseDateSameAsListed?: boolean;
   /** 비상장주식 평가 데이터 (legacy 입력 모드) */
   unlistedStockData?: UnlistedStockData;
   /** 비상장주식 V2 평가 입력 (별지 부표3 완전 재현 — Phase 2~4) */

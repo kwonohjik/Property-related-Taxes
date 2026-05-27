@@ -18,6 +18,7 @@ import {
   calcWeightedAvg3y,
   calcPerShareNetIncomeValue as calcPerShareNetIncomeValueV2,
 } from "./property-valuation/weighted-avg";
+import { applyCapitalIncreaseShareValuation } from "./property-valuation/dividend-difference-section-63-2-3";
 import type {
   EstateItem,
   PropertyValuationResult,
@@ -76,6 +77,56 @@ export function evaluateListedStock(item: EstateItem): PropertyValuationResult {
       TaxErrorCode.MARKET_VALUE_UNAVAILABLE,
       "상장주식 평가: 전후 2개월 종가 평균가와 주식 수가 필요합니다.",
     );
+  }
+
+  // §63②3호 (PR-L3): 상장법인 증자 신주(미상장) — 가목 평가액 − 배당차액(§57③·§18②)
+  if (item.isCapitalIncreaseUnlistedShare) {
+    const { effectiveDividendDifference, perShareValue } = applyCapitalIncreaseShareValuation(
+      avgPrice,
+      item.listedStockDividendDifference ?? 0,
+      item.dividendBaseDateSameAsListed ?? false,
+    );
+    const totalValue = perShareValue * shares;
+    const warnings: string[] = [];
+    if ((item.listedStockDividendDifference ?? 0) <= 0 && !item.dividendBaseDateSameAsListed) {
+      warnings.push("배당차액 미입력 — 가목 평가액과 동일 적용. 시행규칙 §18② 확인.");
+    }
+    return {
+      estateItemId: item.id,
+      method: "market_value",
+      valuatedAmount: totalValue,
+      breakdown: [
+        {
+          label: "전후 2개월 종가 평균 (가목)",
+          amount: Math.floor(avgPrice),
+          lawRef: VALUATION.LISTED_STOCK,
+          note: "주당 평균 종가 (원)",
+        },
+        {
+          label: item.dividendBaseDateSameAsListed
+            ? "배당차액 (배당기산일 동일 — 제외)"
+            : "배당차액",
+          amount: -effectiveDividendDifference,
+          lawRef: VALUATION.DIVIDEND_DIFFERENCE,
+        },
+        {
+          label: "1주당 평가액",
+          amount: perShareValue,
+          lawRef: VALUATION.CAPITAL_INCREASE_UNLISTED,
+        },
+        {
+          label: "증자 신주(미상장) 보유 수",
+          amount: shares,
+          note: "주",
+        },
+        {
+          label: "§63②3호 평가액",
+          amount: totalValue,
+          lawRef: VALUATION.CAPITAL_INCREASE_UNLISTED,
+        },
+      ],
+      warnings,
+    };
   }
 
   const totalValue = evaluateListedStockValue(avgPrice, shares);

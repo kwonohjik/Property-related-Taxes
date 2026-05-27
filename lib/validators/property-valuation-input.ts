@@ -174,6 +174,10 @@ export const listedStockItemSchema = baseItemSchema.extend({
     .number()
     .int()
     .positive({ message: "보유 주식 수는 1 이상이어야 합니다." }),
+  // §63②3호 (PR-L3): 상장법인 증자 신주(미상장) — discriminatedUnion strip 방지 (C-D)
+  isCapitalIncreaseUnlistedShare: z.boolean().optional(),
+  listedStockDividendDifference: z.number().nonnegative().optional(),
+  dividendBaseDateSameAsListed: z.boolean().optional(),
 });
 
 export const unlistedStockItemSchema = baseItemSchema.extend({
