@@ -16,6 +16,7 @@
  * Plan(연환산): docs/00-pm/inheritance-unlisted-fiscal-year-under-1year.plan.md
  */
 
+import { Fragment } from "react";
 import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DateInput } from "@/components/ui/date-input";
@@ -91,8 +92,8 @@ export function FiscalYearAdjustmentTable({
     onChange(next);
   }
 
-  // 사업연도별 다.순손익액 미리보기 산정
-  const previewAdjustedIncomes = fiscalYears.map((fy) => {
+  // 사업연도별 가산 소계 · 차감 소계 · 다.순손익액 미리보기 산정
+  const perYear = fiscalYears.map((fy) => {
     const add =
       (fy.addRefundInterest ?? 0) +
       (fy.addLossFromDividend ?? 0) +
@@ -116,8 +117,9 @@ export function FiscalYearAdjustmentTable({
       (fy.subDepreciationShortage ?? 0) +
       (fy.subForexValuationLoss ?? 0) +
       (fy.subOtherByOrdinance ?? 0);
-    return fy.taxableIncome + add - sub;
+    return { add, sub, adjusted: fy.taxableIncome + add - sub };
   });
+  const previewAdjustedIncomes = perYear.map((p) => p.adjusted);
 
   // Enter 키 → 같은 사업연도 열에서 아래 항목으로(①→…→㉒) 세로 이동.
   // 열 끝(㉒)에서 Enter → 다음 사업연도 ①, 마지막 열 ㉒ → 표 밖 다음 입력으로 복귀.
@@ -160,7 +162,7 @@ export function FiscalYearAdjustmentTable({
       </p>
 
       {/* 사업연도 라벨 + 개시일·종료일 헤더 (하단 입력표와 동일 grid 트랙으로 정렬) */}
-      <div className="grid grid-cols-[13rem_repeat(3,minmax(0,1fr))] gap-2 text-[11px] font-semibold text-gray-700">
+      <div className="grid grid-cols-[13rem_repeat(3,minmax(0,1fr))] gap-2 border-l-2 border-transparent pl-1.5 text-[11px] font-semibold text-gray-700">
         <div></div>
         {fiscalYears.map((fy, idx) => {
           const months = fiscalYearMonths(fy.fiscalYearStartDate, fy.fiscalYearEndDate);
@@ -231,44 +233,107 @@ export function FiscalYearAdjustmentTable({
       {/* data-enter-nav="off": 전역 가로 Enter 비활성 → handleFiscalEnter가 사업연도(열) 단위 세로 이동 전담 */}
       <div className="overflow-x-auto text-[11px]">
         <div role="table" data-enter-nav="off" onKeyDown={handleFiscalEnter}>
-          {ROWS.map((row, rowIndex) => (
-            <div
-              key={row.key}
-              role="row"
-              className="grid grid-cols-[13rem_repeat(3,minmax(0,1fr))] gap-2 items-start border-b border-emerald-100 py-1"
-            >
-              <div className="pr-2">
-                <span className={`inline-block w-6 text-center font-mono ${
-                  row.group === "income" ? "text-emerald-700 font-bold" :
-                  row.group === "add" ? "text-sky-700" : "text-rose-700"
-                }`}>{row.cellNum}</span>
-                <span className="ml-1">{row.label}</span>
-                {row.description && (
-                  <span className="text-[10px] text-gray-500 ml-1">({row.description})</span>
+          {ROWS.map((row, rowIndex) => {
+            const prevGroup = ROWS[rowIndex - 1]?.group;
+            const nextGroup = ROWS[rowIndex + 1]?.group;
+            const isFirstAdd = row.group === "add" && prevGroup !== "add";
+            const isLastAdd = row.group === "add" && nextGroup !== "add";
+            const isFirstSub = row.group === "sub" && prevGroup !== "sub";
+            const isLastSub = row.group === "sub" && nextGroup !== "sub";
+            const barClass =
+              row.group === "income"
+                ? "border-emerald-400"
+                : row.group === "add"
+                  ? "border-sky-300"
+                  : "border-rose-300";
+            return (
+              <Fragment key={row.key}>
+                {/* 가산항목 그룹 헤더 (②~⑦) */}
+                {isFirstAdd && (
+                  <div className="mt-2 mb-1 flex items-center gap-1.5 rounded border border-sky-200 bg-sky-100/70 px-2 py-1">
+                    <span className="text-xs font-bold text-sky-800">＋ 가산항목</span>
+                    <span className="text-[10px] text-sky-700/80">§56④ 1호 · ②~⑦</span>
+                  </div>
                 )}
-              </div>
-              {fiscalYears.map((fy, idx) => (
-                <div key={idx} data-fy-col={idx} data-fy-row={rowIndex}>
-                  <CurrencyInput
-                    label={row.label}
-                    hideLabel
-                    value={String(fy[row.key] ?? "")}
-                    onChange={(v) => {
-                      const n = Number(v.replace(/,/g, "")) || 0;
-                      updateField(idx as 0 | 1 | 2, row.key, n as FiscalYearAdjustment[typeof row.key]);
-                    }}
-                    placeholder="0"
-                    hideUnit
-                  />
+                {/* 차감항목 그룹 헤더 (⑧~㉒) */}
+                {isFirstSub && (
+                  <div className="mt-2 mb-1 flex items-center gap-1.5 rounded border border-rose-200 bg-rose-100/70 px-2 py-1">
+                    <span className="text-xs font-bold text-rose-800">－ 차감항목</span>
+                    <span className="text-[10px] text-rose-700/80">§56④ 2호 · ⑧~㉒</span>
+                  </div>
+                )}
+                <div
+                  role="row"
+                  className={`grid grid-cols-[13rem_repeat(3,minmax(0,1fr))] gap-2 items-start border-b border-emerald-100 border-l-2 ${barClass} pl-1.5 py-1`}
+                >
+                  <div className="pr-2">
+                    <span className={`inline-block w-6 text-center font-mono ${
+                      row.group === "income" ? "text-emerald-700 font-bold" :
+                      row.group === "add" ? "text-sky-700" : "text-rose-700"
+                    }`}>{row.cellNum}</span>
+                    <span className="ml-1">{row.label}</span>
+                    {row.description && (
+                      <span className="text-[10px] text-gray-500 ml-1">({row.description})</span>
+                    )}
+                  </div>
+                  {fiscalYears.map((fy, idx) => (
+                    <div key={idx} data-fy-col={idx} data-fy-row={rowIndex}>
+                      <CurrencyInput
+                        label={row.label}
+                        hideLabel
+                        value={String(fy[row.key] ?? "")}
+                        onChange={(v) => {
+                          const n = Number(v.replace(/,/g, "")) || 0;
+                          updateField(idx as 0 | 1 | 2, row.key, n as FiscalYearAdjustment[typeof row.key]);
+                        }}
+                        placeholder="0"
+                        hideUnit
+                      />
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          ))}
+                {/* 가산 소계 */}
+                {isLastAdd && (
+                  <div
+                    role="row"
+                    className="grid grid-cols-[13rem_repeat(3,minmax(0,1fr))] gap-2 items-center border-l-2 border-sky-400 bg-sky-50/70 pl-1.5 py-1.5"
+                  >
+                    <div className="pr-2 font-semibold text-sky-800">
+                      <span className="inline-block w-6 text-center">＋</span>
+                      <span className="ml-1">가산 소계 (②~⑦)</span>
+                    </div>
+                    {perYear.map((p, idx) => (
+                      <div key={idx} className="text-right font-mono font-semibold text-sky-900">
+                        {p.add.toLocaleString()}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {/* 차감 소계 */}
+                {isLastSub && (
+                  <div
+                    role="row"
+                    className="grid grid-cols-[13rem_repeat(3,minmax(0,1fr))] gap-2 items-center border-l-2 border-rose-400 bg-rose-50/70 pl-1.5 py-1.5"
+                  >
+                    <div className="pr-2 font-semibold text-rose-800">
+                      <span className="inline-block w-6 text-center">－</span>
+                      <span className="ml-1">차감 소계 (⑧~㉒)</span>
+                    </div>
+                    {perYear.map((p, idx) => (
+                      <div key={idx} className="text-right font-mono font-semibold text-rose-900">
+                        {p.sub.toLocaleString()}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </Fragment>
+            );
+          })}
 
           {/* 다.순손익액 미리보기 행 */}
           <div
             role="row"
-            className="grid grid-cols-[13rem_repeat(3,minmax(0,1fr))] gap-2 items-center border-t-2 border-emerald-300 bg-emerald-100/60 py-2"
+            className="grid grid-cols-[13rem_repeat(3,minmax(0,1fr))] gap-2 items-center border-t-2 border-l-2 border-emerald-400 bg-emerald-100/60 pl-1.5 py-2"
           >
             <div className="pr-2 font-bold text-emerald-800">
               <span className="inline-block w-6 text-center">다</span>
