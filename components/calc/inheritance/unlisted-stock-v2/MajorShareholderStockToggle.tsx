@@ -23,7 +23,7 @@ export interface MajorShareholderStockToggleProps {
 export function MajorShareholderStockToggle({
   checked,
   onCheckedChange,
-  sectionNum = 10,
+  sectionNum = 7,
 }: MajorShareholderStockToggleProps) {
   return (
     <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-3">

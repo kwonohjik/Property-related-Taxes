@@ -16,13 +16,15 @@ import type { UnlistedStockValuationInput } from "@/lib/tax-engine/types/unliste
 
 export interface PerShareValuationResultCardProps {
   input: UnlistedStockValuationInput;
+  /** 섹션 번호 (부모 UnlistedStockV2Card 단일 출처 — 다-섹션 카드 패턴) */
+  sectionNum?: number;
 }
 
 function fmt(n: number): string {
   return n.toLocaleString();
 }
 
-export function PerShareValuationResultCard({ input }: PerShareValuationResultCardProps) {
+export function PerShareValuationResultCard({ input, sectionNum = 9 }: PerShareValuationResultCardProps) {
   const result = useMemo(() => {
     try {
       // 최소 입력 검증
@@ -45,7 +47,7 @@ export function PerShareValuationResultCard({ input }: PerShareValuationResultCa
   return (
     <div className="rounded-lg border border-indigo-300 bg-indigo-50/60 p-4 space-y-3">
       <div className="flex items-center gap-2">
-        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-200 text-[11px] font-bold text-indigo-800 select-none">6</span>
+        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-200 text-[11px] font-bold text-indigo-800 select-none">{sectionNum}</span>
         <p className="text-sm font-semibold text-indigo-800">1주당 가액의 평가 (별지 1쪽 ③~⑨)</p>
       </div>
 

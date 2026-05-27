@@ -27,13 +27,15 @@ export interface GoodwillCalculationTableProps {
   goodwill: UnlistedGoodwillResult;
   /** 매입 무체재산권 차감액 (선택 입력) */
   onIntangibleDeductionChange?: (value: number) => void;
+  /** 섹션 번호 (부모 UnlistedStockV2Card 단일 출처 — 다-섹션 카드 패턴) */
+  sectionNum?: number;
 }
 
 function fmt(n: number): string {
   return n.toLocaleString();
 }
 
-export function GoodwillCalculationTable({ goodwill }: GoodwillCalculationTableProps) {
+export function GoodwillCalculationTable({ goodwill, sectionNum = 6 }: GoodwillCalculationTableProps) {
   const isExcluded = !!goodwill.excludedByLaw;
 
   return (
@@ -43,7 +45,7 @@ export function GoodwillCalculationTable({ goodwill }: GoodwillCalculationTableP
       <div className="flex items-center gap-2">
         <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold select-none ${
           isExcluded ? "bg-rose-200 text-rose-800" : "bg-amber-200 text-amber-800"
-        }`}>7</span>
+        }`}>{sectionNum}</span>
         <p className={`text-xs font-semibold ${isExcluded ? "text-rose-800" : "text-amber-800"}`}>
           영업권 평가 (별지 5쪽 + 상증령 §59 ② + 상증규 §19 ①)
         </p>

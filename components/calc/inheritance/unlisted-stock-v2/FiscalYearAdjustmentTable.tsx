@@ -76,11 +76,14 @@ const ROWS: RowDef[] = [
 export interface FiscalYearAdjustmentTableProps {
   fiscalYears: [FiscalYearAdjustment, FiscalYearAdjustment, FiscalYearAdjustment];
   onChange: (next: [FiscalYearAdjustment, FiscalYearAdjustment, FiscalYearAdjustment]) => void;
+  /** 섹션 번호 (부모 UnlistedStockV2Card 단일 출처 — 다-섹션 카드 패턴) */
+  sectionNum?: number;
 }
 
 export function FiscalYearAdjustmentTable({
   fiscalYears,
   onChange,
+  sectionNum = 3,
 }: FiscalYearAdjustmentTableProps) {
   function updateField<K extends keyof FiscalYearAdjustment>(
     yearIdx: 0 | 1 | 2,
@@ -154,7 +157,7 @@ export function FiscalYearAdjustmentTable({
   return (
     <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-3 space-y-3">
       <div className="flex items-center gap-2">
-        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-[10px] font-bold text-emerald-800 select-none">3</span>
+        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-[10px] font-bold text-emerald-800 select-none">{sectionNum}</span>
         <p className="text-xs font-semibold text-emerald-700">사업연도별 순손익액 (별지 6쪽 ①~㉒)</p>
       </div>
       <p className="text-[11px] text-emerald-700/80">
