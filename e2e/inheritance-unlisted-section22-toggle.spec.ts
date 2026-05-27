@@ -4,7 +4,7 @@
  * Plan: docs/00-pm/inheritance-section22-major-shareholder-toggle.plan.md §6.3
  *
  * 시나리오:
- *   T-S22-1: 신규 라벨 "금융재산공제가 배제되는 최대주주 해당 여부" 표시 + 구판 "추가공제 제외 판정" 부재
+ *   T-S22-1: 신규 라벨 "§22② 최대주주 보유주식 금융재산공제 배제" 표시 + 구판 "추가공제 제외 판정" 부재
  *   T-S22-2: 자동판정 라디오("자동 판정 (보유지분율 기준)") 제거 확인
  *   T-S22-3: 토글 ON → "§22 금융재산 상속공제 대상금액에서 제외" 안내 펼침 (OFF엔 미표시)
  *
@@ -35,7 +35,7 @@ test.describe("비상장주식 V2 §22② 최대주주 토글", () => {
     await openV2FormalCard(page);
 
     await expect(
-      page.getByText("금융재산공제가 배제되는 최대주주 해당 여부", { exact: true }),
+      page.getByText("§22② 최대주주 보유주식 금융재산공제 배제", { exact: true }),
     ).toBeVisible();
     // 구판 라벨/문구 부재
     await expect(page.getByText("최대주주 추가공제 제외 판정")).toHaveCount(0);
@@ -56,12 +56,12 @@ test.describe("비상장주식 V2 §22② 최대주주 토글", () => {
     await openV2FormalCard(page);
 
     // children 펼침 영역 고유 문구 (description·ⓘ 안내와 구분)
-    const guide = page.getByText(/\[적용\] 버튼으로 입력값에 반영/);
+    const guide = page.getByText(/\[적용\] 버튼으로 반영/);
     // OFF(기본): 펼침 안내 미표시
     await expect(guide).toHaveCount(0);
 
     // 토글 ON (ToggleCard title 클릭)
-    await page.getByText("최대주주 해당 (금융재산 상속공제 제외)", { exact: true }).click();
+    await page.getByText("최대주주에 해당", { exact: true }).click();
 
     // ON: 펼침 안내 표시
     await expect(guide.first()).toBeVisible();

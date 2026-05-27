@@ -32,26 +32,24 @@ export function MajorShareholderStockToggle({
           {sectionNum}
         </span>
         <p className="text-xs font-semibold text-violet-700">
-          금융재산공제가 배제되는 최대주주 해당 여부
+          §22② 최대주주 보유주식 금융재산공제 배제
         </p>
       </div>
       <p className="text-[11px] text-violet-700/80">
-        ⓘ 상증법 <strong>§22②</strong> — 최대주주가 보유한 주식은 §22 금융재산 상속공제 대상금액에서{" "}
-        <strong>제외</strong>됩니다. §63③ 할증평가(×120%)는 별도 모듈(선행 PR max-shareholder-premium.ts).
+        ⓘ 상증법 <strong>§22②</strong> — 최대주주가 보유한 주식은 금융재산 상속공제 대상에서{" "}
+        <strong>제외</strong>됩니다. (§63③ 할증평가 ×120%는 별도 개념)
       </p>
 
       <ToggleCard
         tone="violet"
         checked={checked}
         onCheckedChange={onCheckedChange}
-        title="최대주주 해당 (금융재산 상속공제 제외)"
-        description="여(ON): 이 비상장주식을 §22 금융재산 상속공제 대상금액에서 제외 / 부(OFF): §22 포함"
+        title="최대주주에 해당"
+        description="ON = 공제 대상 제외 · OFF = 공제 대상 포함"
       >
         <div className="rounded border border-violet-300 bg-violet-100/60 p-2 text-[11px] text-violet-900">
-          ✓ 최대주주 해당 — 이 비상장주식은 §22 금융재산 상속공제 대상금액에서 제외됩니다.
-          <br />
-          순금융재산 <strong>제안값</strong>에 반영되어 있으니 §22 입력 단계에서{" "}
-          <strong>[적용]</strong> 버튼으로 입력값에 반영하세요.
+          ✓ §22 순금융재산 <strong>제안값</strong>에 반영됨 — §22 입력 단계에서{" "}
+          <strong>[적용]</strong> 버튼으로 반영하세요.
         </div>
       </ToggleCard>
     </div>
