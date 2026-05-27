@@ -240,6 +240,11 @@ export interface UnlistedStockData {
    * 1·2·6호는 무조건 순자산가치 / 3·5호는 단서(가중평균 < 1주당 순자산가치인 경우만) 적용.
    */
   assetValueOnlyReason?: UnlistedAssetValueOnlyReason;
+  /**
+   * 부동산과다보유법인 여부 (소법 §94①4호다목) — 가중치 반전(순손익가치×2 + 순자산가치×3 ÷ 5).
+   * 상증령 §54① 본문 괄호. 미지정 시 false(일반 법인, 순손익×3 + 순자산×2 ÷ 5).
+   */
+  isRealEstateHeavy?: boolean;
 }
 
 /** 재산 평가 결과 (단일 자산) */

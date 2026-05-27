@@ -33,6 +33,11 @@ export const unlistedStockDataSchema = z.object({
    */
   netAssetValue: z.number(),
   capitalizationRate: z.number().min(0.01).max(1).default(0.10),
+  /**
+   * 부동산과다보유법인 여부 (상증령 §54① 본문 괄호 — 가중치 2:3).
+   * ⚠️ plain z.object는 미정의 키를 침묵 제거하므로, 엔진 도달 위해 스키마에 반드시 선언.
+   */
+  isRealEstateHeavy: z.boolean().optional(),
 }).superRefine((data, ctx) => {
   // 3년치 또는 legacy weightedNetIncome 중 하나 이상 입력 여부 검증
   // (적자법인은 모두 0일 수 있으므로 "값이 있는지" 체크 — 과도 차단 금지)

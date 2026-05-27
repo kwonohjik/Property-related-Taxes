@@ -31,9 +31,7 @@ export { defaultStockData, UnlistedStockPreview };
 export interface UnlistedStockEditorProps {
   item: EstateItem;
   index: number;
-  isRealEstateHeavy: boolean;
   onUpdate: (updated: EstateItem) => void;
-  onUpdateHeavy: (v: boolean) => void;
   onRemove: () => void;
   mode: "inheritance" | "gift";
   heirs?: Heir[];
@@ -42,9 +40,7 @@ export interface UnlistedStockEditorProps {
 export function UnlistedStockEditor({
   item,
   index,
-  isRealEstateHeavy,
   onUpdate,
-  onUpdateHeavy,
   onRemove,
   mode = "inheritance",
 }: UnlistedStockEditorProps) {
@@ -67,12 +63,10 @@ export function UnlistedStockEditor({
         </button>
       </div>
 
-      {/* 간편평가 입력 필드 (PR-2 분리) */}
+      {/* 간편평가 입력 필드 (PR-2 분리). 부동산과다보유법인은 unlistedStockData.isRealEstateHeavy(store)에서 내부 read. */}
       <UnlistedStockSimpleFields
         item={item}
-        isRealEstateHeavy={isRealEstateHeavy}
         onUpdate={onUpdate}
-        onUpdateHeavy={onUpdateHeavy}
         mode={mode}
       />
       {/* 공통속성 4블록은 StockValuationForm.UnlistedStockCard에서 EstateCommonAttributesSection으로 노출 (PR-4) */}

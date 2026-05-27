@@ -17,6 +17,9 @@ import type {
   ValuationMethod,
 } from "./types/inheritance-gift.types";
 import { evaluateUnlistedStockV2 } from "./property-valuation/unlisted-orchestrator";
+// listed_stock / V1 간편 비상장(unlistedStockData) 평가 단일 진실.
+// resolve-estate-item-value.ts는 property-valuation.ts를 import하지 않으므로 순환 없음(단방향).
+import { computeStockValuation } from "./valuation/resolve-estate-item-value";
 
 // ============================================================
 // 임대차 환산 (§61 — 임대보증금 환산가액)
@@ -356,26 +359,53 @@ export function evaluateEstateItem(item: EstateItem): PropertyValuationResult {
 /**
  * 전체 상속·증여 재산 일괄 평가
  *
- * 주식 항목은 일반 평가에서 제외하되,
- * 비상장주식 V2 입력(unlistedStockValuationV2)이 있는 경우는 자동 평가 (Phase 5-A).
- * 그 외 listed_stock / legacy 비상장주식(unlistedStockData)은 호출부에서 별도 처리.
+ * 모든 자산을 평가에 포함한다 (이전: listed_stock·V1 간편 비상장주식을 배제 → grossEstate 누락 버그).
+ * 라우팅:
+ *   - 비상장주식 V2 입력(unlistedStockValuationV2) → 상세 어댑터 (Phase 5-A).
+ *   - listed_stock / V1 간편 비상장(unlistedStockData) → evaluateStockAsPropertyResult (computeStockValuation 단일 진실).
+ *   - 그 외(부동산·금융·임대차 등) → evaluateEstateItem.
+ * ⚠️ evaluateEstateItem은 listed_stock/unlisted_stock에 throw하므로 주식은 반드시 위 두 분기로 라우팅.
  */
 export function evaluateAllEstateItems(
   items: EstateItem[],
 ): PropertyValuationResult[] {
-  return items
-    .filter((i) => {
-      // 비상장주식 V2 입력이 있으면 자동 평가에 포함
-      if (i.category === "unlisted_stock" && i.unlistedStockValuationV2) return true;
-      // 그 외 주식은 기존 동작 — 호출부에서 별도 처리 또는 marketValue 사용
-      return i.category !== "listed_stock" && i.category !== "unlisted_stock";
-    })
-    .map((i) => {
-      if (i.category === "unlisted_stock" && i.unlistedStockValuationV2) {
-        return evaluateUnlistedStockV2AsPropertyResult(i);
-      }
-      return evaluateEstateItem(i);
-    });
+  return items.map((i) => {
+    if (i.category === "unlisted_stock" && i.unlistedStockValuationV2) {
+      return evaluateUnlistedStockV2AsPropertyResult(i);
+    }
+    if (i.category === "listed_stock" || i.category === "unlisted_stock") {
+      return evaluateStockAsPropertyResult(i);
+    }
+    return evaluateEstateItem(i);
+  });
+}
+
+/**
+ * listed_stock / V1 간편 비상장(unlistedStockData) → PropertyValuationResult 어댑터.
+ *
+ * 평가액은 computeStockValuation 단일 진실 위임:
+ *   - 상장: 전후 2개월 평균 × 주식수 (§63①1가, §63②3호 증자신주 분기 포함).
+ *   - V1 비상장: (순손익가치×3 + 순자산가치×2) ÷ 5, 부동산과다보유법인 시 2:3 (시행령 §54①).
+ */
+function evaluateStockAsPropertyResult(item: EstateItem): PropertyValuationResult {
+  const amount = computeStockValuation(item);
+  const isListed = item.category === "listed_stock";
+  return {
+    estateItemId: item.id,
+    method: (isListed ? "market_value" : "book_value") as ValuationMethod,
+    valuatedAmount: amount,
+    breakdown: [
+      {
+        label: isListed ? "상장주식 평가액" : "비상장주식 평가액(간편)",
+        amount,
+        lawRef: isListed ? VALUATION.LISTED_STOCK : VALUATION.UNLISTED_FORMULA,
+      },
+    ],
+    warnings:
+      amount === 0
+        ? ["주식 평가액 0 — 입력(주식 수·시세 또는 순손익·순자산가치)을 확인하세요."]
+        : [],
+  };
 }
 
 /**

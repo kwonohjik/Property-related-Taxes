@@ -86,7 +86,9 @@ describe("[5-A] evaluateAllEstateItems — V2 입력 자동 평가", () => {
     expect(labels.some((l) => l.includes("최대주주 할증평가"))).toBe(true);
   });
 
-  it("V2 입력 없는 unlisted_stock은 기존 동작 (필터에서 제외)", () => {
+  it("V2 입력 없는 V1 간편 unlisted_stock도 평가에 포함 (gross-estate 배선 교정)", () => {
+    // 회귀: 이전에는 필터에서 제외(length 0)되어 grossEstate에 누락되는 버그였음.
+    // 교정 후 computeStockValuation(시행령 §54①)로 평가되어 결과에 포함된다.
     const legacyItem: EstateItem = {
       id: "stock-legacy",
       name: "legacy",
@@ -100,8 +102,9 @@ describe("[5-A] evaluateAllEstateItems — V2 입력 자동 평가", () => {
       },
     };
     const results = evaluateAllEstateItems([legacyItem]);
-    // 기존 동작 — 필터에서 제외 (호출부에서 별도 처리)
-    expect(results.length).toBe(0);
+    expect(results.length).toBe(1);
+    expect(results[0].estateItemId).toBe("stock-legacy");
+    expect(results[0].valuatedAmount).toBeGreaterThan(0);
   });
 
   it("V2 + 다른 자산 혼합 — V2만 결과에 포함", () => {

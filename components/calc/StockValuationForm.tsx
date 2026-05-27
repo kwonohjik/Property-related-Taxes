@@ -17,7 +17,7 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { calcUnlistedStockPerShareValue } from "@/lib/tax-engine/property-valuation-stock";
 import { applyCapitalIncreaseShareValuation } from "@/lib/tax-engine/property-valuation/dividend-difference-section-63-2-3";
 import { evaluateUnlistedStockV2 } from "@/lib/tax-engine/property-valuation/unlisted-orchestrator";
-import type { EstateItem, UnlistedStockData, Heir } from "@/lib/tax-engine/types/inheritance-gift.types";
+import type { EstateItem, Heir } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { KiwoomValuationAutoFetchButton } from "./KiwoomValuationAutoFetchButton";
 import { EstateCommonAttributesSection } from "@/components/calc/inheritance/EstateCommonAttributesSection";
 import { UnlistedStockSimpleFields } from "@/components/calc/UnlistedStockSimpleFields";
@@ -283,9 +283,7 @@ const VALUATION_MODE_OPTIONS = [
 interface UnlistedStockCardProps {
   item: EstateItem;
   index: number;
-  isRealEstateHeavy: boolean;
   onUpdate: (updated: EstateItem) => void;
-  onUpdateHeavy: (v: boolean) => void;
   onRemove: () => void;
   mode: "inheritance" | "gift";
   heirs?: Heir[];
@@ -296,15 +294,15 @@ interface UnlistedStockCardProps {
 function UnlistedStockCard({
   item,
   index,
-  isRealEstateHeavy,
   onUpdate,
-  onUpdateHeavy,
   onRemove,
   mode,
   heirs,
   valuationDate,
 }: UnlistedStockCardProps) {
   const currentMode = resolveUnlistedDisplayMode(item);
+  // 부동산과다보유법인 — store(unlistedStockData)에서 read. heavyMap local state 폐지(엔진 도달 보장).
+  const isRealEstateHeavy = item.unlistedStockData?.isRealEstateHeavy ?? false;
 
   // 협의분할 effectiveValuation 계산 — 선택 모드에 따라 다른 평가 함수 사용
   const effectiveValuation = useMemo(() => {
@@ -393,9 +391,7 @@ function UnlistedStockCard({
       {currentMode === "simple" && (
         <UnlistedStockSimpleFields
           item={item}
-          isRealEstateHeavy={isRealEstateHeavy}
           onUpdate={onUpdate}
-          onUpdateHeavy={onUpdateHeavy}
           mode={mode}
           valuationDate={valuationDate}
         />
@@ -427,10 +423,9 @@ function UnlistedStockCard({
 
 interface StockTotal {
   items: EstateItem[];
-  heavyMap: Record<string, boolean>;
 }
 
-function TotalStockValue({ items, heavyMap }: StockTotal) {
+function TotalStockValue({ items }: StockTotal) {
   let total = 0;
   for (const item of items) {
     if (item.category === "listed_stock") {
@@ -450,7 +445,7 @@ function TotalStockValue({ items, heavyMap }: StockTotal) {
         try {
           const preview = calcUnlistedStockPerShareValue(
             item.unlistedStockData,
-            heavyMap[item.id] ?? false,
+            item.unlistedStockData.isRealEstateHeavy ?? false,
           );
           total += preview.perShareFinalValue * item.unlistedStockData.ownedShares;
         } catch {
@@ -502,8 +497,7 @@ export function StockValuationForm({
   valuationDate,
   heirs,
 }: StockValuationFormProps) {
-  // 비상장주식별 부동산과다보유법인 여부
-  const [heavyMap, setHeavyMap] = useState<Record<string, boolean>>({});
+  // 부동산과다보유법인 여부는 unlistedStockData.isRealEstateHeavy(store)에 저장 — heavyMap local state 폐지.
   const [showAddPanel, setShowAddPanel] = useState(false);
 
   const handleAdd = (category: "listed_stock" | "unlisted_stock") => {
@@ -537,9 +531,6 @@ export function StockValuationForm({
   const handleRemove = (index: number) => {
     onChange(items.filter((_, i) => i !== index));
   };
-
-  const handleHeavy = (id: string, v: boolean) =>
-    setHeavyMap((prev) => ({ ...prev, [id]: v }));
 
   const listedItems = items.filter((i) => i.category === "listed_stock");
   const unlistedItems = items.filter((i) => i.category === "unlisted_stock");
@@ -595,9 +586,7 @@ export function StockValuationForm({
                 key={item.id}
                 item={item}
                 index={unlistedItems.indexOf(item)}
-                isRealEstateHeavy={heavyMap[item.id] ?? false}
                 onUpdate={(updated) => handleUpdate(i, updated)}
-                onUpdateHeavy={(v) => handleHeavy(item.id, v)}
                 onRemove={() => handleRemove(i)}
                 mode={mode}
                 heirs={heirs}
@@ -662,7 +651,7 @@ export function StockValuationForm({
       )}
 
       {/* 합계 */}
-      <TotalStockValue items={items} heavyMap={heavyMap} />
+      <TotalStockValue items={items} />
     </div>
   );
 }
