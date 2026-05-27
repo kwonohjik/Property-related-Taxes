@@ -42,9 +42,28 @@ const CATEGORY_DEFAULT: Partial<Record<AssetCategory, boolean>> = {
 // ============================================================
 
 /**
+ * §22② 최대주주 보유주식 배제 대상 여부 판정 (순수 함수).
+ *
+ * 상증법 §22② — 최대주주 보유 주식등은 금융재산공제 금융재산에 "포함되지 아니한다".
+ *
+ * OR 체크 두 경로:
+ *   (a) 직속 EstateItem.isSection22MajorShareholder — 상장·비상장 V1·V2 공용 (E-1 신규)
+ *   (b) V2 nested unlistedStockValuationV2.isSection22MajorShareholder — 기존 호환 유지
+ *
+ * 결과뷰 배지(D-5) 등 외부 모듈에서 import하여 단일 진실로 사용.
+ */
+export function isSection22MajorShareholderExcluded(item: EstateItem): boolean {
+  return (
+    item.isSection22MajorShareholder === true ||
+    item.unlistedStockValuationV2?.isSection22MajorShareholder === true
+  );
+}
+
+/**
  * §22 금융재산공제 대상 여부 판정.
  *
  * 우선순위:
+ *   0. §22② 법정 강제 배제 (isSection22MajorShareholderExcluded) — 사용자 명시보다 우선
  *   1. 사용자 명시값 (item.isFinancialAssetForDeduction)
  *   2. deemedCategory override (§8 보험금=true, §9 신탁=trustType 의존, §10 퇴직금=false)
  *   3. 카테고리 default (CATEGORY_DEFAULT)
@@ -53,16 +72,9 @@ const CATEGORY_DEFAULT: Partial<Record<AssetCategory, boolean>> = {
  * 사용자가 명시적으로 포함을 체크할 때만 true.
  */
 export function resolveFinancialEligibility(item: EstateItem): boolean {
-  // 우선순위 0 (법정 강제 배제): §22② — 최대주주 보유 비상장주식은 금융재산공제 금융재산에
+  // 우선순위 0 (법정 강제 배제): §22② — 최대주주 보유 주식등은 금융재산공제 금융재산에
   // "포함되지 아니한다". 사용자 명시값(isFinancialAssetForDeduction)보다 우선해 무조건 제외.
-  //
-  // OR 체크 두 경로:
-  //   (a) 직속 EstateItem.isSection22MajorShareholder — 상장·비상장 V1·V2 공용 (E-1 신규)
-  //   (b) V2 nested unlistedStockValuationV2.isSection22MajorShareholder — 기존 호환 유지
-  if (
-    item.isSection22MajorShareholder === true ||
-    item.unlistedStockValuationV2?.isSection22MajorShareholder === true
-  ) {
+  if (isSection22MajorShareholderExcluded(item)) {
     return false;
   }
   // 우선순위 1: 사용자 명시값

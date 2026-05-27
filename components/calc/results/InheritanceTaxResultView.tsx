@@ -18,6 +18,7 @@ import type {
   FamilyBusinessIneligibleReason,
 } from "@/lib/tax-engine/types/inheritance-family-business.types";
 import {
+  isSection22MajorShareholderExcluded,
   resolveFinancialDebt,
   resolveFinancialEligibility,
 } from "@/lib/calc/financial-deduction-resolver";
@@ -75,18 +76,36 @@ function FinancialDeductionCountRow({
 }) {
   const eligibleAssets = estateItems.filter(resolveFinancialEligibility);
   const eligibleDebts = (debtItems ?? []).filter(resolveFinancialDebt);
-  if (eligibleAssets.length === 0 && eligibleDebts.length === 0) return null;
+  // §22② 법정 강제 배제 자산 목록
+  const excludedBySection22 = estateItems.filter(isSection22MajorShareholderExcluded);
+  const excludedTotal = excludedBySection22.reduce(
+    (sum, i) => sum + getValuatedAmount(i),
+    0,
+  );
+
+  if (eligibleAssets.length === 0 && eligibleDebts.length === 0 && excludedBySection22.length === 0) return null;
 
   const assetTotal = eligibleAssets.reduce((sum, i) => sum + getValuatedAmount(i), 0);
   const debtTotal = eligibleDebts.reduce((sum, d) => sum + d.amount, 0);
 
   return (
-    <div className="px-4 pb-2 -mt-1">
-      <p className="text-[11px] text-gray-500 dark:text-gray-400 pl-3">
-        ⓘ §22 대상: 자산 {eligibleAssets.length}건 (
-        {formatKRW(assetTotal)}) − 채무 {eligibleDebts.length}건 (
-        {formatKRW(debtTotal)})
-      </p>
+    <div className="px-4 pb-2 -mt-1 space-y-1">
+      {(eligibleAssets.length > 0 || eligibleDebts.length > 0) && (
+        <p className="text-[11px] text-gray-500 dark:text-gray-400 pl-3">
+          ⓘ §22 대상: 자산 {eligibleAssets.length}건 (
+          {formatKRW(assetTotal)}) − 채무 {eligibleDebts.length}건 (
+          {formatKRW(debtTotal)})
+        </p>
+      )}
+      {excludedBySection22.length > 0 && (
+        <p
+          className="text-[11px] text-rose-600 dark:text-rose-400 pl-3"
+          data-testid="section22-excluded-badge"
+        >
+          ⓘ 법 §22②에 따라 최대주주 보유주식 {excludedBySection22.length}건 제외 (평가액 합계{" "}
+          {formatKRW(excludedTotal)})
+        </p>
+      )}
     </div>
   );
 }
@@ -560,12 +579,15 @@ export function InheritanceTaxResultView({
                 />
               </>
             )}
-            {result.deductionDetail.financialDeduction > 0 && (
+            {(result.deductionDetail.financialDeduction > 0 ||
+              (estateItems ?? []).some(isSection22MajorShareholderExcluded)) && (
               <>
-                <Row
-                  label="금융재산 공제 (§22)"
-                  value={formatKRW(result.deductionDetail.financialDeduction)}
-                />
+                {result.deductionDetail.financialDeduction > 0 && (
+                  <Row
+                    label="금융재산 공제 (§22)"
+                    value={formatKRW(result.deductionDetail.financialDeduction)}
+                  />
+                )}
                 {estateItems && (
                   <FinancialDeductionCountRow
                     estateItems={estateItems}

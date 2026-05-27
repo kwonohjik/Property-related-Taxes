@@ -13,6 +13,7 @@
 import { describe, expect, it } from "vitest";
 import {
   resolveFinancialEligibility,
+  isSection22MajorShareholderExcluded,
 } from "@/lib/calc/financial-deduction-resolver";
 import { suggestNetFinancialAssets } from "@/lib/calc/inheritance-deduction-suggest";
 import { resolveAssetToggleVisibility } from "@/lib/calc/asset-toggle-visibility";
@@ -72,6 +73,59 @@ describe("[AN-2] §22 순금융재산 제안 — ON 시 비상장 평가액 제�
   it("OFF → 제안 순금융재산에 비상장 평가액 포함", () => {
     const off = suggestNetFinancialAssets([unlistedV2Asset(false)], []);
     expect(off.value).toBe(663_200_000);
+  });
+});
+
+// ============================================================
+// D5-1 — isSection22MajorShareholderExcluded 헬퍼 단독 검증 (D-5 anchor)
+// ============================================================
+describe("[D5-1] isSection22MajorShareholderExcluded — 헬퍼 단독 검증", () => {
+  it("직속 isSection22MajorShareholder=true → true (배제 대상)", () => {
+    const item: EstateItem = {
+      id: "direct-on",
+      category: "listed_stock",
+      name: "상장주식",
+      isSection22MajorShareholder: true,
+    };
+    expect(isSection22MajorShareholderExcluded(item)).toBe(true);
+  });
+
+  it("V2 nested isSection22MajorShareholder=true + 직속 없음 → true (배제 대상)", () => {
+    expect(isSection22MajorShareholderExcluded(unlistedV2Asset(true))).toBe(true);
+  });
+
+  it("직속 false + V2 nested 없음 → false (배제 아님)", () => {
+    const item: EstateItem = {
+      id: "direct-off",
+      category: "listed_stock",
+      name: "상장주식",
+      isSection22MajorShareholder: false,
+    };
+    expect(isSection22MajorShareholderExcluded(item)).toBe(false);
+  });
+
+  it("직속 undefined + V2 nested undefined → false (배제 아님)", () => {
+    expect(isSection22MajorShareholderExcluded(unlistedV2Asset(undefined))).toBe(false);
+  });
+
+  it("직속 true + V2 nested false → true (직속 OR 우선)", () => {
+    const item: EstateItem = {
+      id: "direct-on-nested-off",
+      category: "unlisted_stock",
+      name: "비상장주식",
+      isSection22MajorShareholder: true,
+      unlistedStockValuationV2: {
+        isSection22MajorShareholder: false,
+      } as unknown as import("@/lib/tax-engine/types/inheritance-gift.types").UnlistedStockValuationInput,
+    };
+    expect(isSection22MajorShareholderExcluded(item)).toBe(true);
+  });
+
+  it("헬퍼 true ↔ resolveFinancialEligibility false 일관성 (단일 진실 검증)", () => {
+    // 헬퍼가 true 이면 resolveFinancialEligibility는 반드시 false
+    const item = unlistedV2Asset(true);
+    expect(isSection22MajorShareholderExcluded(item)).toBe(true);
+    expect(resolveFinancialEligibility(item)).toBe(false);
   });
 });
 
