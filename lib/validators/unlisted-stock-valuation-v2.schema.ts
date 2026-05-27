@@ -193,6 +193,24 @@ export const unlistedStockValuationV2Schema = z
         evaluatorOrganization: z.string().optional(),
       })
       .optional(),
+    // PR-G (§56②): 추정이익 갈음 옵션 (둘 이상 평가기관 1주당 추정이익 평균가액)
+    estimatedProfit: z
+      .object({
+        reasonCode: z.enum([
+          "asset_receipt_50pct",
+          "merger_split_business_change",
+          "merger_gift_section38",
+          "closure_over_1yr",
+          "disposal_gain_50pct",
+          "sales_period_under_3yr",
+          "similar_notified",
+        ]),
+        agencyEstimates: z.array(z.number().finite()),
+        filedWithinDeadline: z.boolean(),
+        baseDateAndReportWithinDeadline: z.boolean(),
+        sameYearAsInheritanceOrGift: z.boolean(),
+      })
+      .optional(),
   })
   .superRefine((input, ctx) => {
     // 사업연도 종료일 순서 검증 (1년전 > 2년전 > 3년전)
@@ -262,6 +280,14 @@ export const unlistedStockValuationV2Schema = z
         code: z.ZodIssueCode.custom,
         path: ["evaluationCommittee", "methodNotes"],
         message: "기타 평가법 선택 시 평가법 사유(methodNotes)가 필수입니다. (§49의2⑤2호)",
+      });
+    }
+    // PR-G (§56②): 추정이익 갈음 ON 시 둘 이상 평가기관 산출액 필수
+    if (input.estimatedProfit && input.estimatedProfit.agencyEstimates.length < 2) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["estimatedProfit", "agencyEstimates"],
+        message: "추정이익 갈음은 둘 이상의 평가기관 산출액이 필요합니다. (상증령 §56②)",
       });
     }
   });

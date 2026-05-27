@@ -190,6 +190,13 @@ export interface UnlistedStockValuationInput {
    */
   evaluationCommittee?: import("@/lib/tax-engine/property-valuation/evaluation-committee-section-54-6").EvaluationCommitteeInput;
 
+  /**
+   * PR-G (§56②): 추정이익 갈음 옵션 — 둘 이상 평가기관의 1주당 추정이익 평균가액으로
+   * 순손익가치(⑤) 갈음. 미입력 → 옵션 OFF(현행 가중평균 경로).
+   * Plan: docs/00-pm/inheritance-unlisted-stock-estimated-profit-section-56-2.plan.md
+   */
+  estimatedProfit?: import("@/lib/tax-engine/property-valuation/estimated-profit-section-56-2").EstimatedProfitInput;
+
   // === 할증평가 §63③ ===
   isMaxShareholder: boolean;
   /**
@@ -304,4 +311,11 @@ export interface UnlistedStockValuationResult {
    * 미입력 시 undefined.
    */
   evaluationCommitteeApplied?: import("@/lib/tax-engine/property-valuation/evaluation-committee-section-54-6").EvaluationCommitteeResult;
+
+  /**
+   * PR-G (§56②): 추정이익 갈음 결과 echo (내부 .applied boolean 보유).
+   * applied=true 시 netIncomePerShare(⑤)가 추정이익 평균가액 ÷ 환원율로 갈음됨.
+   * 미입력 시 undefined.
+   */
+  estimatedProfitResult?: import("@/lib/tax-engine/property-valuation/estimated-profit-section-56-2").EstimatedProfitResult;
 }

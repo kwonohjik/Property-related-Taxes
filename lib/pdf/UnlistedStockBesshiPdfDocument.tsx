@@ -595,6 +595,12 @@ function Page6NetIncomeBreakdown({ result }: { result: UnlistedStockValuationRes
       <Text style={s.p6TextLine}>
         <Text style={{ fontWeight: 700 }}>{P6.finalPerShareLabel}</Text> = {fmt(result.netIncomePerShare)}원 (제1쪽 ⑤)
       </Text>
+      {result.estimatedProfitResult?.applied && (
+        <Text style={[s.p6TextLine, { color: "#6d28d9" }]}>
+          ※ §56② 추정이익 갈음 적용 — 가중평균(아.) 대신 2 이상 신용평가기관 추정이익 평균가액{" "}
+          {fmt(result.estimatedProfitResult.estimatedProfitAverage)}원 ÷ 환원율로 산출
+        </Text>
+      )}
 
       <Text style={s.footer}>
         ※ 본 양식은 평가심의위원회 운영규정 별지 제4호 서식 부표3을 기준으로 작성되었습니다.{"\n"}

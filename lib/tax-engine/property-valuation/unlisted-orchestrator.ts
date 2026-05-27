@@ -46,6 +46,10 @@ import { calcMaxShareholderPremium } from "./max-shareholder-premium";
 import { resolveEvaluationDelta } from "./evaluation-delta";
 import { evaluateOtherUnlistedHoldings } from "./other-unlisted-holdings";
 import { applyEvaluationCommittee } from "./evaluation-committee-section-54-6";
+import {
+  applyEstimatedProfit,
+  ESTIMATED_PROFIT_REASON_LABEL,
+} from "./estimated-profit-section-56-2";
 import { toOptionalDate } from "@/lib/api/date-coerce";
 
 /**
@@ -124,7 +128,20 @@ export function evaluateUnlistedStockV2(
   // 아.1주당 가중평균 (§56①, 음수 시 0)
   const weightedNetIncomePerShare = calcWeightedAvg3y(annualizedPerShare);
   // 차.1주당 순손익가치 ⑤ = 아 ÷ 자.환원율
-  const netIncomePerShare = calcPerShareNetIncomeValue(weightedNetIncomePerShare, capRate);
+  let netIncomePerShare = calcPerShareNetIncomeValue(weightedNetIncomePerShare, capRate);
+
+  // STEP 5.5: §56② 추정이익 갈음 (요건 충족 시 순손익가치 대체)
+  let estimatedProfitResult: UnlistedStockValuationResult["estimatedProfitResult"];
+  if (input.estimatedProfit) {
+    estimatedProfitResult = applyEstimatedProfit(input.estimatedProfit, capRate);
+    if (estimatedProfitResult.applied) {
+      netIncomePerShare = estimatedProfitResult.perShareIncomeValue; // §56② 갈음 (F-7: 결과도 이 값)
+      appliedRules.push(
+        `상증령 §56② 추정이익 평균가액 갈음 — ${ESTIMATED_PROFIT_REASON_LABEL[estimatedProfitResult.reasonCode!]}`,
+      );
+    }
+    for (const w of estimatedProfitResult.warnings) warnings.push(`[추정이익] ${w}`);
+  }
 
   // STEP 6: 순자산가액 + 영업권
   // PR-N: 행 단위 평가차액 입력 시 자산 합−부채 합 차액을 assetValuationDelta에 주입 (3중 패턴)
@@ -241,6 +258,12 @@ export function evaluateUnlistedStockV2(
   if (goodwill.excludedByLaw) {
     warnings.push(`영업권 §55③ 자동 배제: ${goodwill.excludedByLaw}`);
   }
+  // EP-5: 추정이익 갈음 + 영업권>0 → §59③ 준용 미반영 안내 (D-4 scoped, PR-G2 분리)
+  if (estimatedProfitResult?.applied && goodwill.goodwillFinal > 0) {
+    warnings.push(
+      "[추정이익] §59③ 영업권 가중평균 순손익액 추정이익 준용은 본 버전 미반영 — 영업권은 실제 순손익 기준으로 계산됩니다.",
+    );
+  }
   if (netAssetResult.zeroFloorApplied) {
     warnings.push("순자산가액이 0 이하 — §55① 후단 0 처리");
   }
@@ -297,6 +320,7 @@ export function evaluateUnlistedStockV2(
     appliedRules,
     otherUnlistedHoldingsEvaluated,
     evaluationCommitteeApplied,
+    estimatedProfitResult,
   };
 }
 

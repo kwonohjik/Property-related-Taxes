@@ -71,9 +71,41 @@ export function PerShareValuationResultCard({ input, sectionNum = 9 }: PerShareV
           cellNum="⑤"
           label="1주당 순손익가치"
           value={`${fmt(result.netIncomePerShare)}원`}
-          hint={`최근 3년 가중평균 ${fmt(result.weightedNetIncomePerShare)}원 ÷ 환원율 ${(result.capitalizationRate * 100).toFixed(0)}%`}
-          law="상증령 §56 ① + 상증규 §17 (10%)"
+          hint={
+            result.estimatedProfitResult?.applied
+              ? `§56② 추정이익 평균가액 ${fmt(result.estimatedProfitResult.estimatedProfitAverage)}원 (기관 ${result.estimatedProfitResult.agencyCount}개 평균) ÷ 환원율 ${(result.capitalizationRate * 100).toFixed(0)}%`
+              : `최근 3년 가중평균 ${fmt(result.weightedNetIncomePerShare)}원 ÷ 환원율 ${(result.capitalizationRate * 100).toFixed(0)}%`
+          }
+          law={
+            result.estimatedProfitResult?.applied
+              ? "상증령 §56 ② + 상증규 §17의3 ①④ (추정이익 갈음)"
+              : "상증령 §56 ① + 상증규 §17 (10%)"
+          }
         />
+        {/* §56② 추정이익 갈음 — 적용/미적용/§59③ 안내 */}
+        {input.estimatedProfit && result.estimatedProfitResult && (
+          <div
+            className={`rounded border px-3 py-2 text-[11px] ${
+              result.estimatedProfitResult.applied
+                ? "border-violet-300 bg-violet-50/60 text-violet-900"
+                : "border-amber-300 bg-amber-50/60 text-amber-800"
+            }`}
+            data-testid="result-estimated-profit-notice"
+          >
+            {result.estimatedProfitResult.applied ? (
+              <p className="font-semibold">§56② 추정이익 평균가액으로 순손익가치를 갈음했습니다.</p>
+            ) : (
+              <p className="font-semibold">
+                추정이익 갈음 요건 미충족 — 가중평균 순손익가치를 적용했습니다.
+              </p>
+            )}
+            {result.estimatedProfitResult.warnings.map((w, i) => (
+              <p key={i} className="mt-0.5 text-[10px] leading-snug">
+                · {w}
+              </p>
+            ))}
+          </div>
+        )}
         {/* §17의3② 연환산 echo — 1년 미만 사업연도 있을 때만 표시 */}
         {result.annualizationApplied?.some((a) => a) && result.annualizedPerShareNetIncome && (
           <div className="rounded border border-amber-300 bg-amber-50/60 px-3 py-2 space-y-1 text-[11px]">

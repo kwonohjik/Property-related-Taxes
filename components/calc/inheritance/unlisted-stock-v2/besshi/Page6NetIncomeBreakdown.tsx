@@ -182,6 +182,12 @@ export function Page6NetIncomeBreakdown({
       <p className="mb-3" data-besshi-cell="p6-차" data-testid="p6-차">
         <strong>{P6.finalPerShareLabel}</strong> = {fmt(result.netIncomePerShare)}원 (제1쪽 ⑤)
       </p>
+      {result.estimatedProfitResult?.applied && (
+        <p className="mb-3 text-[10px] text-violet-700" data-testid="p6-추정이익">
+          ※ §56② 추정이익 갈음 적용 — 위 가중평균(아.) 대신 2 이상 신용평가기관 추정이익 평균가액{" "}
+          {fmt(result.estimatedProfitResult.estimatedProfitAverage)}원 ÷ 환원율로 산출
+        </p>
+      )}
     </section>
   );
 }

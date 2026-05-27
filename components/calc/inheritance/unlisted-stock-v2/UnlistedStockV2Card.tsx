@@ -25,6 +25,7 @@ import { EvaluationCommitteeToggle } from "./EvaluationCommitteeToggle";
 import { EvaluationCommitteeResultCard } from "./EvaluationCommitteeResultCard";
 import { EvaluationCommitteeFilingGuideCard } from "./EvaluationCommitteeFilingGuideCard";
 import type { EvaluationCommitteeInput } from "@/lib/tax-engine/property-valuation/evaluation-committee-section-54-6";
+import { EstimatedProfitToggle } from "./EstimatedProfitToggle";
 import { evaluateUnlistedStockV2 } from "@/lib/tax-engine/property-valuation/unlisted-orchestrator";
 import type {
   UnlistedStockValuationInput,
@@ -275,47 +276,55 @@ export function UnlistedStockV2Card({
 
       {/* 자본금 변동(증자·감자)은 섹션 1(CorporateInfoSection) 내부 발행주식총수·자본금 아래로 이동됨 */}
 
-      {/* 4. PR-N: 평가차액 행 단위 입력 (별지 3쪽, design v3 Section 4) */}
+      {/* 4. PR-G: §56② 추정이익 갈음 옵션 (순손익가치 대체) — 사업연도 입력 직후 */}
+      <EstimatedProfitToggle
+        value={input.estimatedProfit}
+        onChange={(next) => wrappedOnChange({ ...input, estimatedProfit: next })}
+        capitalizationRate={input.capitalizationRate}
+        sectionNum={4}
+      />
+
+      {/* 5. PR-N: 평가차액 행 단위 입력 (별지 3쪽, design v3 Section 4) */}
       <ValuationDeltaTable
         evaluationDeltaRows={input.netAssetValueRaw.evaluationDeltaRows ?? []}
         fallbackAssetValuationDelta={input.netAssetValueRaw.assetValuationDelta}
         onRowsChange={handleEvaluationDeltaRowsChange}
         onFallbackChange={handleAssetValuationDeltaFallback}
-        sectionNum={4}
-      />
-
-      {/* 5. 자산총액·부채총액 (별지 2쪽) — ② 평가차액은 위 ValuationDeltaTable 결과 자동 반영 */}
-      <NetAssetCalculationTable
-        netAssetValueRaw={input.netAssetValueRaw}
-        onChange={updateNetAsset}
         sectionNum={5}
       />
 
-      {/* 6. 영업권 평가 (자동 표시) — effectiveInput 사용으로 evaluationDate fallback 적용 */}
-      <GoodwillPanel input={effectiveInput} sectionNum={6} />
+      {/* 6. 자산총액·부채총액 (별지 2쪽) — ② 평가차액은 위 ValuationDeltaTable 결과 자동 반영 */}
+      <NetAssetCalculationTable
+        netAssetValueRaw={input.netAssetValueRaw}
+        onChange={updateNetAsset}
+        sectionNum={6}
+      />
 
-      {/* 7. §22② 최대주주 해당 여부 토글 — 금융재산공제 배제 */}
+      {/* 7. 영업권 평가 (자동 표시) — effectiveInput 사용으로 evaluationDate fallback 적용 */}
+      <GoodwillPanel input={effectiveInput} sectionNum={7} />
+
+      {/* 8. §22② 최대주주 해당 여부 토글 — 금융재산공제 배제 */}
       <MajorShareholderStockToggle
         checked={isSection22Major}
         onCheckedChange={handleSection22Change}
-        sectionNum={7}
+        sectionNum={8}
       />
 
-      {/* 8. PR-K: §54⑥ 평가심의위원회 신청 옵션 */}
+      {/* 9. PR-K: §54⑥ 평가심의위원회 신청 옵션 */}
       <EvaluationCommitteeToggle
         value={input.evaluationCommittee}
         onChange={(next: EvaluationCommitteeInput | undefined) =>
           wrappedOnChange({ ...input, evaluationCommittee: next })
         }
-        sectionNum={8}
+        sectionNum={9}
       />
       <EvaluationCommitteeResultPanel input={effectiveInput} />
       {input.evaluationCommittee && (
         <EvaluationCommitteeFilingGuideCard taxKind="inheritance" />
       )}
 
-      {/* 9. 결과 카드 — effectiveInput 사용으로 evaluationDate fallback 적용 */}
-      <PerShareValuationResultCard input={effectiveInput} sectionNum={9} />
+      {/* 10. 결과 카드 — effectiveInput 사용으로 evaluationDate fallback 적용 */}
+      <PerShareValuationResultCard input={effectiveInput} sectionNum={10} />
 
       {/* 7. 별지 양식 PDF 출력 미리보기 — effectiveInput 사용으로 evaluationDate fallback 적용 */}
       <BesshiForm4Buppyo3PrintView input={effectiveInput} />
