@@ -397,6 +397,7 @@ function UnlistedStockCard({
           onUpdate={onUpdate}
           onUpdateHeavy={onUpdateHeavy}
           mode={mode}
+          valuationDate={valuationDate}
         />
       )}
       {currentMode === "formal" && item.unlistedStockValuationV2 && (

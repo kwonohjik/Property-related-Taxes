@@ -27,6 +27,7 @@ import {
   calcCompanyWeightedNetIncome3Y,
   resolveWeightedNetIncome,
 } from "@/lib/tax-engine/property-valuation-stock";
+import { buildDefaultFiscalYears } from "@/lib/tax-engine/property-valuation/fiscal-year-annualize";
 import type { EstateItem, UnlistedStockData } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { UnlistedStockSpecialReasonSection } from "@/components/calc/inheritance/UnlistedStockSpecialReasonSection";
 
@@ -262,6 +263,8 @@ export interface UnlistedStockSimpleFieldsProps {
   onUpdateHeavy: (v: boolean) => void;
   /** 상속세("inheritance") 또는 증여세("gift") — 연도 라벨 문구에 사용 */
   mode?: "inheritance" | "gift";
+  /** 평가기준일(상속개시일/증여일, YYYY-MM-DD) — 사업연도 연도 표시 계산용 */
+  valuationDate?: string;
 }
 
 // ============================================================
@@ -274,6 +277,7 @@ export function UnlistedStockSimpleFields({
   onUpdate,
   onUpdateHeavy,
   mode = "inheritance",
+  valuationDate,
 }: UnlistedStockSimpleFieldsProps) {
   const set = (patch: Partial<EstateItem>) => onUpdate({ ...item, ...patch });
   const setStock = (patch: Partial<UnlistedStockData>) =>
@@ -286,6 +290,17 @@ export function UnlistedStockSimpleFields({
 
   // 연도 라벨 문구 — 상속개시일 vs 증여일
   const baseLabel = mode === "gift" ? "증여일" : "상속개시일";
+
+  // 사업연도 연도 — 평가기준일(상속개시일/증여일) 연도 기준 직전 1·2·3 사업연도.
+  // V2와 동일 로직(buildDefaultFiscalYears: evaluationYear − n) 재사용 (single source).
+  // 평가기준일 미입력 시 null → 기존 상대 표기("상속개시일 -1년")로 fallback.
+  const fyYears = useMemo<[string, string, string] | null>(() => {
+    if (!valuationDate) return null;
+    const y = new Date(valuationDate).getFullYear();
+    if (Number.isNaN(y)) return null;
+    const fys = buildDefaultFiscalYears(y);
+    return [fys[0].fiscalYearLabel, fys[1].fiscalYearLabel, fys[2].fiscalYearLabel];
+  }, [valuationDate]);
 
   // ──────────────────────────────────────────────────────────────
   // 가중평균 미리보기 — 엔진 헬퍼 single-source (UI 자체 산식 금지)
@@ -405,7 +420,7 @@ export function UnlistedStockSimpleFields({
         {/* 직전 1사업연도 (가중치 ×3) */}
         <NetIncomeYearRow
           label={`직전 1사업연도 순손익액 (가중치 ×3)`}
-          yearLabel={`${baseLabel} -1년`}
+          yearLabel={fyYears ? `${fyYears[0]}년` : `${baseLabel} -1년`}
           value={data?.netIncomeY1}
           onChange={(v) => setStock({ netIncomeY1: v })}
           hint="회사 전체 금액 (1주당 ✗). 세무조정 완료된 각 사업연도 순손익액 (시행령 §56④)."
@@ -414,7 +429,7 @@ export function UnlistedStockSimpleFields({
         {/* 직전 2사업연도 (가중치 ×2) */}
         <NetIncomeYearRow
           label={`직전 2사업연도 순손익액 (가중치 ×2)`}
-          yearLabel={`${baseLabel} -2년`}
+          yearLabel={fyYears ? `${fyYears[1]}년` : `${baseLabel} -2년`}
           value={data?.netIncomeY2}
           onChange={(v) => setStock({ netIncomeY2: v })}
           hint="회사 전체 금액 (1주당 ✗)."
@@ -423,7 +438,7 @@ export function UnlistedStockSimpleFields({
         {/* 직전 3사업연도 (가중치 ×1) */}
         <NetIncomeYearRow
           label={`직전 3사업연도 순손익액 (가중치 ×1)`}
-          yearLabel={`${baseLabel} -3년`}
+          yearLabel={fyYears ? `${fyYears[2]}년` : `${baseLabel} -3년`}
           value={data?.netIncomeY3}
           onChange={(v) => setStock({ netIncomeY3: v })}
           hint="회사 전체 금액 (1주당 ✗)."
@@ -555,7 +570,7 @@ function NetIncomeYearRow({
     <FieldCard
       label={label}
       unit="원"
-      badge={`(${yearLabel})`}
+      badge={<span className="text-sm font-medium text-foreground">{yearLabel}</span>}
       className={FIELD_GRID}
       hint={hint ?? "회사 전체 금액 (1주당 ✗)."}
       warning={

@@ -90,4 +90,17 @@ test.describe("비상장 간편: 입력 폼 리스타일 시각 구조", () => {
     // 섹션 카드 구조도 유지
     await expect(page.getByTestId("simple-section-num-1")).toBeVisible();
   });
+
+  test("R-7: 사업연도 연도가 상속개시일 기준 계산 표시 (2026 → 2025·2024·2023년)", async ({ page }) => {
+    test.setTimeout(60_000);
+    await gotoStep0AndFillDeathDate(page); // 상속개시일 2026-5-15
+    await openUnlistedV1SimpleCard(page);
+
+    // 직전 1·2·3 사업연도 = 평가기준일 연도(2026) − 1/−2/−3 (V2 buildDefaultFiscalYears 동일 로직)
+    await expect(page.getByText("2025년", { exact: true })).toBeVisible();
+    await expect(page.getByText("2024년", { exact: true })).toBeVisible();
+    await expect(page.getByText("2023년", { exact: true })).toBeVisible();
+    // 상대 표기 제거 확인
+    await expect(page.getByText("상속개시일 -1년")).toHaveCount(0);
+  });
 });
