@@ -165,22 +165,24 @@ describe("1주당 순자산가치 — calcPerShareNetAssetValue", () => {
 // ============================================================
 
 describe("비상장주식 1주당 가중평균 — calcUnlistedStockPerShareValue", () => {
-  it("[S17] 일반법인 60:40 가중치 검증", () => {
+  it("[S17] 일반법인 60:40 가중치 검증 (§55③ 영업권 가산)", () => {
     // 순손익가치: 200M / 0.1 / 100K = 20,000원
-    // 순자산가치: 500M / 100K = 5,000원
-    // 가중평균: (20,000*3 + 5,000*2) / 5 = 70,000/5 = 14,000원
+    // 영업권(§59②): 나=200M×50%=100M, 마=500M×10%=50M, 초과이익 50M → 50M×3.79078676=189,539,338
+    // 순자산가치: (500M + 189,539,338) / 100K = 689,539,338/100K = 6,895원
+    // 가중평균: (20,000×3 + 6,895×2) / 5 = 73,790/5 = 14,758원
     const r = calcUnlistedStockPerShareValue(baseData, false);
     expect(r.perShareIncomeValue).toBe(20_000);
-    expect(r.perShareAssetValue).toBe(5_000);
-    expect(r.perShareWeightedValue).toBe(14_000);
-    expect(r.perShareMinValue).toBe(4_000); // 5,000 * 80%
-    expect(r.perShareFinalValue).toBe(14_000); // 가중평균 > 최소값
+    expect(r.goodwill.goodwillFinal).toBe(189_539_338);
+    expect(r.perShareAssetValue).toBe(6_895);
+    expect(r.perShareWeightedValue).toBe(14_758);
+    expect(r.perShareMinValue).toBe(5_516); // 6,895 * 80%
+    expect(r.perShareFinalValue).toBe(14_758); // 가중평균 > 최소값
   });
 
-  it("[S18] 부동산과다보유법인 40:60 가중치 검증", () => {
-    // (20,000*2 + 5,000*3) / 5 = 55,000/5 = 11,000원
+  it("[S18] 부동산과다보유법인 40:60 가중치 검증 (영업권 가산)", () => {
+    // (20,000×2 + 6,895×3) / 5 = 60,685/5 = 12,137원
     const r = calcUnlistedStockPerShareValue(baseData, true);
-    expect(r.perShareWeightedValue).toBe(11_000);
+    expect(r.perShareWeightedValue).toBe(12_137);
   });
 
   it("[S19] 최소값 (순자산 80%) 발동 — 적자법인", () => {
@@ -213,10 +215,11 @@ describe("비상장주식 1주당 가중평균 — calcUnlistedStockPerShareValu
     };
     const r = calcUnlistedStockPerShareValue(data, false);
     // 순손익가치: 10B / 0.1 / 100K = 1,000,000
-    // 순자산가치: 1M / 100K = 10
+    // 영업권: 나=10B×50%=5B, 마=1M×10%=100K, 초과이익 4,999,900,000 → ×3.79078676
+    // 순자산가치(영업권 포함): (1M + 영업권) / 100K = 189,545
     expect(r.perShareIncomeValue).toBe(1_000_000);
-    expect(r.perShareAssetValue).toBe(10);
-    // 가중평균 >> 최소값(8) → 가중평균 채택
+    expect(r.perShareAssetValue).toBe(189_545);
+    // 가중평균 >> 최소값 → 가중평균 채택
     expect(r.perShareFinalValue).toBe(r.perShareWeightedValue);
   });
 
@@ -283,20 +286,25 @@ describe("비상장주식 1주당 가중평균 — calcUnlistedStockPerShareValu
       assetValueOnlyReason: "remaining_3y",
     };
     const r = calcUnlistedStockPerShareValue(data, false);
-    expect(r.perShareFinalValue).toBe(5_000);
+    // remaining_3y(6호)는 §55③ 배제 대상 아님 → 영업권 가산(189,539,338), 무조건 순자산
+    expect(r.goodwill.goodwillFinal).toBe(189_539_338);
+    expect(r.perShareFinalValue).toBe(6_895);
   });
 
   // ============================================================
   // 정밀도·가드 (PR5-2)
   // ============================================================
 
-  it("[S27] §55① 후단 — 순자산가액 음수 → 0 처리", () => {
+  it("[S27] §55① 후단 — 순자산가액 음수 → 자기자본 0 처리 (영업권만 가산)", () => {
     const data: UnlistedStockData = {
       ...baseData,
       netAssetValue: -1_000_000, // 음수 (자본잠식)
     };
     const r = calcUnlistedStockPerShareValue(data, false);
-    expect(r.perShareAssetValue).toBe(0); // 음수 → 0
+    // §55① 후단: 자기자본(다)은 0으로 가드 → 마=0, 초과이익=나=100M → 영업권 379,078,676
+    expect(r.goodwill.selfCapital).toBe(0);
+    expect(r.goodwill.goodwillFinal).toBe(379_078_676);
+    expect(r.perShareAssetValue).toBe(3_790); // 영업권만 ÷ 100K
   });
 
   it("[E1-2] 이중 floor → 단일 floor 정밀도 — 1,234,567/1,000주/10% = 12,345", () => {
@@ -319,10 +327,10 @@ describe("비상장주식 1주당 가중평균 — calcUnlistedStockPerShareValu
 // ============================================================
 
 describe("비상장주식 총 평가액 — evaluateUnlistedStock", () => {
-  it("[S22] 일반법인: 1주당 14,000원 × 10,000주 = 140,000,000원", () => {
+  it("[S22] 일반법인: 1주당 14,758원 × 10,000주 = 147,580,000원 (영업권 가산)", () => {
     const item = makeUnlistedItem(baseData);
     const result = evaluateUnlistedStock(item, false);
-    expect(result.valuatedAmount).toBe(140_000_000);
+    expect(result.valuatedAmount).toBe(147_580_000);
     expect(result.method).toBe("book_value");
     expect(result.estateItemId).toBe("u1");
   });
@@ -424,11 +432,11 @@ describe("3년치 순손익 가중평균 — calcCompanyWeightedNetIncome3Y + re
       capitalizationRate: 0.10,
     };
     expect(resolveWeightedNetIncome(legacyData)).toBe(200_000_000);
-    // calcUnlistedStockPerShareValue 결과도 기존과 동일해야 함 (S17 회귀)
+    // legacy 경로도 영업권 가산 (weightedNetIncome 200M 기준 → S17과 동일)
     const r = calcUnlistedStockPerShareValue(legacyData, false);
     expect(r.perShareIncomeValue).toBe(20_000); // 200M / (100K × 0.1) = 20,000
-    expect(r.perShareWeightedValue).toBe(14_000);
-    expect(r.perShareFinalValue).toBe(14_000);
+    expect(r.perShareWeightedValue).toBe(14_758);
+    expect(r.perShareFinalValue).toBe(14_758);
   });
 
   it("[C-4b] legacy fallback — weightedNetIncome=0 (적자) 도 그대로", () => {
@@ -443,11 +451,12 @@ describe("3년치 순손익 가중평균 — calcCompanyWeightedNetIncome3Y + re
   });
 
   // C-5: 3년치 + 부동산과다보유 (가중치 반전) 결합
-  it("[C-5] 3년치 + isRealEstateHeavy=true 결합", () => {
-    // Y1=300M, Y2=240M, Y3=180M → resolveWeightedNetIncome = 260M
+  it("[C-5] 3년치 + isRealEstateHeavy=true 결합 (영업권 가산)", () => {
+    // Y1=300M, Y2=240M, Y3=180M → 가중평균 260M
     // 1주당 순손익가치: 260M / (100K × 0.1) = 26,000
-    // 순자산: 500M / 100K = 5,000
-    // 부동산과다 가중치 2:3 → (26,000×2 + 5,000×3) / 5 = (52,000+15,000)/5 = 13,400
+    // 영업권: 나=260M×50%=130M, 마=500M×10%=50M, 초과이익 80M → 80M×3.79078676=303,262,941
+    // 순자산가치(영업권 포함): (500M + 303,262,941) / 100K = 8,032
+    // 부동산과다 가중치 2:3 → (26,000×2 + 8,032×3) / 5 = 76,096/5 = 15,219
     const data3y: UnlistedStockData = {
       totalShares: 100_000,
       ownedShares: 10_000,
@@ -460,9 +469,9 @@ describe("3년치 순손익 가중평균 — calcCompanyWeightedNetIncome3Y + re
     };
     const r = calcUnlistedStockPerShareValue(data3y, true);
     expect(r.perShareIncomeValue).toBe(26_000); // 260M / (100K × 0.1)
-    expect(r.perShareAssetValue).toBe(5_000);
-    expect(r.perShareWeightedValue).toBe(13_400); // (26,000×2 + 5,000×3) / 5
-    expect(r.perShareFinalValue).toBe(13_400);
+    expect(r.perShareAssetValue).toBe(8_032);
+    expect(r.perShareWeightedValue).toBe(15_219); // (26,000×2 + 8,032×3) / 5
+    expect(r.perShareFinalValue).toBe(15_219);
   });
 
   // C-6: 3년치 + §54④ assetValueOnlyReason → 순손익 무시

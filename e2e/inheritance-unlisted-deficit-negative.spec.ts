@@ -74,7 +74,7 @@ test.describe("비상장 간편: 결손·순자산 음수 직접 입력", () => 
     await openUnlistedV1SimpleCard(page);
 
     const netAsset = page
-      .getByText(/순자산가치 \(회사 전체\)/)
+      .getByText(/순자산가치 \(회사 전체/)
       .locator("xpath=..")
       .locator("input")
       .first();
@@ -83,7 +83,7 @@ test.describe("비상장 간편: 결손·순자산 음수 직접 입력", () => 
 
     await expect(netAsset).toHaveValue("-50,000,000");
     await expect(
-      page.getByText("음수 순자산 → 0으로 처리 (상증령 §55① 후단)", { exact: true }),
+      page.getByText(/음수 순자산 → 자기자본 0으로 처리 \(상증법 §55① 후단\)/),
     ).toBeVisible();
   });
 });

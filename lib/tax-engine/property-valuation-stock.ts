@@ -19,11 +19,17 @@ import {
   calcPerShareNetIncomeValue as calcPerShareNetIncomeValueV2,
 } from "./property-valuation/weighted-avg";
 import { applyCapitalIncreaseShareValuation } from "./property-valuation/dividend-difference-section-63-2-3";
+import { calcGoodwill, type GoodwillInput } from "./property-valuation/goodwill";
 import type {
   EstateItem,
   PropertyValuationResult,
   UnlistedStockData,
+  UnlistedAssetValueOnlyReason,
 } from "./types/inheritance-gift.types";
+import type {
+  UnlistedGoodwillResult,
+  UnlistedNetAssetOnlyReason,
+} from "./types/unlisted-stock-valuation.types";
 
 // ============================================================
 // 비상장주식 평가 가중치 상수 (시행령 §54)
@@ -231,6 +237,63 @@ export function calcPerShareNetAssetValue(
   return Math.floor(guarded / totalShares);
 }
 
+// ============================================================
+// 영업권(§59②) 가산 헬퍼 (간편평가 V1) — calcGoodwill 재사용
+// ============================================================
+
+/**
+ * V1 §54④ 사유 → goodwill 모듈의 §55③ 배제 사유 enum 매핑.
+ * §55③ 배제는 1·2호(§54④ 1·2·3호)만 — stock_80(5호)·remaining_3y(6호)는 배제 대상 아님(undefined).
+ */
+function mapToNetAssetOnlyReason(
+  r: UnlistedAssetValueOnlyReason | undefined,
+): UnlistedNetAssetOnlyReason | undefined {
+  if (!r) return undefined;
+  const map: Record<UnlistedAssetValueOnlyReason, UnlistedNetAssetOnlyReason | undefined> = {
+    liquidation: "liquidation",
+    lt3y: "lt3y",
+    real_estate_80: "real_estate_80",
+    stock_80: undefined,    // §55③ 배제 대상 아님 → 영업권 정상 가산
+    remaining_3y: undefined, // §55③ 배제 대상 아님 → 영업권 정상 가산
+  };
+  return map[r];
+}
+
+/**
+ * §55③ 3호 — 직전 3개 사업연도 순손익액이 모두 0 이하(계속결손법인) 도출.
+ * 3년치(netIncomeY1~Y3) 모두 입력되었을 때만 판정 — 일부 미입력은 false(유보).
+ * ★ 수치상 가중평균 ≤0 → 영업권은 이미 0이므로, 이 판정은 excludedByLaw 라벨 부여 목적.
+ */
+function deriveContinuousLoss(data: UnlistedStockData): boolean {
+  const has3y =
+    data.netIncomeY1 != null && data.netIncomeY2 != null && data.netIncomeY3 != null;
+  if (!has3y) return false;
+  return (
+    (data.netIncomeY1 ?? 0) <= 0 &&
+    (data.netIncomeY2 ?? 0) <= 0 &&
+    (data.netIncomeY3 ?? 0) <= 0
+  );
+}
+
+/**
+ * 영업권 산식용 회사 전체 3년 가중평균 순손익액 (§59③ 준용 §56①).
+ * = max(0, floor((Y1×3 + Y2×2 + Y3×1) / 6)) — V2 companyWeighted3y와 동일 산식.
+ * ★ 순손익가치용 1주당 가중평균(calcWeightedAvg3y)과는 법적 근거가 달라 별도 헬퍼로 분리.
+ */
+function resolveWeightedNetIncome3yForGoodwill(data: UnlistedStockData): number {
+  const has3y =
+    data.netIncomeY1 != null || data.netIncomeY2 != null || data.netIncomeY3 != null;
+  if (has3y) {
+    const raw =
+      ((data.netIncomeY1 ?? 0) * 3 +
+        (data.netIncomeY2 ?? 0) * 2 +
+        (data.netIncomeY3 ?? 0) * 1) /
+      6;
+    return Math.max(0, Math.floor(raw));
+  }
+  return Math.max(0, Math.floor(data.weightedNetIncome ?? 0)); // legacy fallback
+}
+
 /**
  * 비상장주식 1주당 평가액 계산 (시행령 §54)
  *
@@ -246,6 +309,10 @@ export function calcUnlistedStockPerShareValue(
   perShareWeightedValue: number;
   perShareMinValue: number;
   perShareFinalValue: number;
+  /** 영업권 평가 결과 (§59②) — 산출근거·§55③ 배제 사유 echo */
+  goodwill: UnlistedGoodwillResult;
+  /** 영업권 포함 후 회사 전체 순자산가액 (㉰ = max(0,netAssetValue) + goodwillFinal) */
+  netAssetWithGoodwill: number;
 } {
   const capRate = data.capitalizationRate > 0
     ? data.capitalizationRate
@@ -283,8 +350,22 @@ export function calcUnlistedStockPerShareValue(
         ? Math.floor(resolvedNetIncome / (data.totalShares * capRate))
         : 0;
   }
+  // §55③: 영업권(§59②) 평가 후 순자산 가산
+  //   가. 회사 전체 3년 가중평균 순손익 / 다. 자기자본(영업권 포함 전 순자산, 0 가드)
+  //   §55③ 배제(1·2·3호)는 calcGoodwill 내부에서 처리 → goodwillFinal 0
+  const goodwillInput: GoodwillInput = {
+    weightedAvg3y: resolveWeightedNetIncome3yForGoodwill(data),
+    selfCapital: Math.max(0, data.netAssetValue),
+    // rate 생략 → 상증규 §19① 법정 10% 기본값
+    // intangibleDeduction 미전달 → V1 범위 제외(기본 0)
+    netAssetOnlyReason: mapToNetAssetOnlyReason(data.assetValueOnlyReason),
+    isContinuousLossLastThreeYears: deriveContinuousLoss(data),
+  };
+  const goodwill = calcGoodwill(goodwillInput);
+  const netAssetWithGoodwill = Math.max(0, data.netAssetValue) + goodwill.goodwillFinal;
+
   const perShareAssetValue = calcPerShareNetAssetValue(
-    data.netAssetValue,
+    netAssetWithGoodwill,
     data.totalShares,
   );
 
@@ -332,6 +413,8 @@ export function calcUnlistedStockPerShareValue(
     perShareWeightedValue,
     perShareMinValue,
     perShareFinalValue,
+    goodwill,
+    netAssetWithGoodwill,
   };
 }
 
@@ -367,6 +450,7 @@ export function evaluateUnlistedStock(
     perShareWeightedValue,
     perShareMinValue,
     perShareFinalValue,
+    goodwill,
   } = calcUnlistedStockPerShareValue(data, isRealEstateHeavy);
 
   const totalValue = perShareFinalValue * data.ownedShares;
@@ -398,8 +482,21 @@ export function evaluateUnlistedStock(
         lawRef: VALUATION.UNLISTED_FORMULA,
         note: `가중평균순손익 ÷ 자본환원율 ${(data.capitalizationRate || DEFAULT_CAPITALIZATION_RATE) * 100}%`,
       },
+      ...(goodwill.goodwillFinal > 0
+        ? [
+            {
+              label: "영업권 (§59②)",
+              amount: goodwill.goodwillFinal,
+              lawRef: VALUATION.GOODWILL_FORMULA,
+              note: `3년 가중평균 순손익 ${goodwill.weightedAvg3y.toLocaleString()} × 50% − 자기자본 ${goodwill.selfCapital.toLocaleString()} × 10% → 초과이익 ${goodwill.annualExcessProfit.toLocaleString()} × 5년 연금현가`,
+            },
+          ]
+        : []),
       {
-        label: "1주당 순자산가치",
+        label:
+          goodwill.goodwillFinal > 0
+            ? "1주당 순자산가치 (영업권 포함)"
+            : "1주당 순자산가치",
         amount: perShareAssetValue,
         lawRef: VALUATION.UNLISTED_FORMULA,
       },

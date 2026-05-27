@@ -189,11 +189,11 @@ describe("재산평가 — 주식", () => {
     };
     const r = calcUnlistedStockPerShareValue(data, false);
     // 순손익가치: 200,000,000 / 0.1 / 100,000 = 20,000
-    // 순자산가치: 500,000,000 / 100,000 = 5,000
-    // 가중평균: (20,000*3 + 5,000*2) / 5 = (60,000 + 10,000) / 5 = 14,000
+    // 영업권(§59②) 189,539,338 가산 → 순자산 (500M+189,539,338)/100K = 6,895
+    // 가중평균: (20,000×3 + 6,895×2) / 5 = 14,758
     expect(r.perShareIncomeValue).toBe(20_000);
-    expect(r.perShareAssetValue).toBe(5_000);
-    expect(r.perShareWeightedValue).toBe(14_000);
+    expect(r.perShareAssetValue).toBe(6_895);
+    expect(r.perShareWeightedValue).toBe(14_758);
   });
 
   it("[T16] 비상장주식 최소값 (순자산가치 80%) 적용", () => {
@@ -220,8 +220,8 @@ describe("재산평가 — 주식", () => {
       capitalizationRate: 0.10,
     };
     const r = calcUnlistedStockPerShareValue(data, true); // isRealEstateHeavy
-    // (20,000*2 + 5,000*3) / 5 = (40,000 + 15,000) / 5 = 11,000
-    expect(r.perShareWeightedValue).toBe(11_000);
+    // 영업권 가산 후 순자산 6,895 → (20,000×2 + 6,895×3) / 5 = 60,685/5 = 12,137
+    expect(r.perShareWeightedValue).toBe(12_137);
   });
 
   it("[T17b] 비상장주식 evaluateUnlistedStock 총 평가액 확인", () => {
@@ -236,8 +236,8 @@ describe("재산평가 — 주식", () => {
       },
     });
     const result = evaluateUnlistedStock(item, false);
-    // perShareFinalValue = 14,000 * 10,000주 = 140,000,000
-    expect(result.valuatedAmount).toBe(140_000_000);
+    // perShareFinalValue = 14,758(영업권 가산) × 10,000주 = 147,580,000
+    expect(result.valuatedAmount).toBe(147_580_000);
   });
 });
 
