@@ -234,116 +234,116 @@ describe("상속세 종합사례 PDF — 통합 anchor", () => {
 
     // ─── 배우자 (갑) ───
     it("I-05 배우자 과세가액상당액 = 3,695,000,000", () => {
-      expect(perHeir.get(HEIR_ID.spouse)!.taxableValueShare).toBe(
+      expect(perHeir[HEIR_ID.spouse]!.taxableValueShare).toBe(
         3_695_000_000,
       );
     });
 
     it("I-06 배우자 직접배부 = 160,000,000 / 간접배부 = 941,319,862", () => {
-      const h = perHeir.get(HEIR_ID.spouse)!;
+      const h = perHeir[HEIR_ID.spouse]!;
       expect(h.directTaxBaseShare).toBe(160_000_000);
       expect(h.indirectTaxBaseShare).toBe(941_319_862);
       expect(h.taxBaseShare).toBe(1_101_319_862);
     });
 
     it("I-07 배우자 사전증여세액공제 = 22,000,000 (Min(22M, 한도) 한도≥22M)", () => {
-      expect(perHeir.get(HEIR_ID.spouse)!.priorGiftCredit).toBe(22_000_000);
+      expect(perHeir[HEIR_ID.spouse]!.priorGiftCredit).toBe(22_000_000);
     });
 
     it("I-08 배우자 자진납부세액 = 432,871,249~250 (PDF 1원 오기 toleranc)", () => {
-      const v = perHeir.get(HEIR_ID.spouse)!.finalTax;
+      const v = perHeir[HEIR_ID.spouse]!.finalTax;
       expect(Math.abs(v - 432_871_250)).toBeLessThanOrEqual(1);
     });
 
     // ─── 장남 (을) ───
     it("I-09 장남 과세가액상당액 = 2,150,000,000", () => {
-      expect(perHeir.get(HEIR_ID.son)!.taxableValueShare).toBe(2_150_000_000);
+      expect(perHeir[HEIR_ID.son]!.taxableValueShare).toBe(2_150_000_000);
     });
 
     it("I-10 장남 직접배부 1,450M / 간접배부 208,469,475~476 (PDF round half up 오기 1원 toleranc)", () => {
-      const h = perHeir.get(HEIR_ID.son)!;
+      const h = perHeir[HEIR_ID.son]!;
       expect(h.directTaxBaseShare).toBe(1_450_000_000);
       // PDF 208,469,476. 정확 계산 208,469,475.494 → round half up = 475. PDF .494→+1 오기.
       expect(Math.abs(h.indirectTaxBaseShare - 208_469_476)).toBeLessThanOrEqual(1);
     });
 
     it("I-11 장남 산출세액상당액 = 705,147,813", () => {
-      expect(perHeir.get(HEIR_ID.son)!.computedTaxShare).toBe(705_147_813);
+      expect(perHeir[HEIR_ID.son]!.computedTaxShare).toBe(705_147_813);
     });
 
     it("I-12 장남 사전증여세액공제 = 420,000,000 (Min(420M, 한도 616M))", () => {
-      expect(perHeir.get(HEIR_ID.son)!.priorGiftCredit).toBe(420_000_000);
+      expect(perHeir[HEIR_ID.son]!.priorGiftCredit).toBe(420_000_000);
     });
 
     it("I-13 장남 자진납부세액 = 276,593,379", () => {
-      expect(perHeir.get(HEIR_ID.son)!.finalTax).toBe(276_593_379);
+      expect(perHeir[HEIR_ID.son]!.finalTax).toBe(276_593_379);
     });
 
     // ─── 차남 (병) ───
     it("I-14 차남 과세가액상당액 = 1,730,000,000", () => {
-      expect(perHeir.get(HEIR_ID.son2)!.taxableValueShare).toBe(1_730_000_000);
+      expect(perHeir[HEIR_ID.son2]!.taxableValueShare).toBe(1_730_000_000);
     });
 
     it("I-15 차남 간접배부 = 554,849,527 (직접 0)", () => {
-      expect(perHeir.get(HEIR_ID.son2)!.indirectTaxBaseShare).toBe(
+      expect(perHeir[HEIR_ID.son2]!.indirectTaxBaseShare).toBe(
         554_849_527,
       );
     });
 
     it("I-16 차남 산출세액상당액 = 235,910,842", () => {
-      expect(perHeir.get(HEIR_ID.son2)!.computedTaxShare).toBe(235_910_842);
+      expect(perHeir[HEIR_ID.son2]!.computedTaxShare).toBe(235_910_842);
     });
 
     it("I-17 차남 자진납부세액 = 228,833,517", () => {
-      expect(perHeir.get(HEIR_ID.son2)!.finalTax).toBe(228_833_517);
+      expect(perHeir[HEIR_ID.son2]!.finalTax).toBe(228_833_517);
     });
 
     // ─── 손녀 (정) — 수유자 ───
     it("I-18 손녀 과세가액상당액 = 500,000,000 (저축은행 예금 유증)", () => {
-      expect(perHeir.get(HEIR_ID.granddaughter)!.taxableValueShare).toBe(
+      expect(perHeir[HEIR_ID.granddaughter]!.taxableValueShare).toBe(
         500_000_000,
       );
     });
 
     it("I-19 손녀 간접배부 = 160,361,135 (직접 0, BigInt round 적용)", () => {
-      expect(perHeir.get(HEIR_ID.granddaughter)!.indirectTaxBaseShare).toBe(
+      expect(perHeir[HEIR_ID.granddaughter]!.indirectTaxBaseShare).toBe(
         160_361_135,
       );
     });
 
     it("I-20 손녀 산출세액상당액 = 68,182,324 (할증 전)", () => {
-      expect(perHeir.get(HEIR_ID.granddaughter)!.computedTaxShare).toBe(
+      expect(perHeir[HEIR_ID.granddaughter]!.computedTaxShare).toBe(
         68_182_324,
       );
     });
 
     it("I-21 손녀 세대생략 할증 별도 가산 = 30,232,198", () => {
       expect(
-        perHeir.get(HEIR_ID.granddaughter)!.generationSkipSurcharge,
+        perHeir[HEIR_ID.granddaughter]!.generationSkipSurcharge,
       ).toBe(30_232_198);
     });
 
     it("I-22 손녀 차가감 = 98,414,522 (산출 68.18M + 할증 30.23M)", () => {
-      expect(perHeir.get(HEIR_ID.granddaughter)!.preFilingCreditTax).toBe(
+      expect(perHeir[HEIR_ID.granddaughter]!.preFilingCreditTax).toBe(
         98_414_522,
       );
     });
 
     it("I-23 손녀 신고세액공제 = 2,952,436", () => {
-      expect(perHeir.get(HEIR_ID.granddaughter)!.filingCredit).toBe(2_952_436);
+      expect(perHeir[HEIR_ID.granddaughter]!.filingCredit).toBe(2_952_436);
     });
 
     it("I-24 손녀 자진납부세액 = 95,462,086", () => {
-      expect(perHeir.get(HEIR_ID.granddaughter)!.finalTax).toBe(95_462_086);
+      expect(perHeir[HEIR_ID.granddaughter]!.finalTax).toBe(95_462_086);
     });
 
     // ─── 영리법인 (M사) ───
     it("I-25 영리법인 finalTax = 0 (§3의2② 면제)", () => {
-      expect(perHeir.get(HEIR_ID.corporate)!.finalTax).toBe(0);
+      expect(perHeir[HEIR_ID.corporate]!.finalTax).toBe(0);
     });
 
     it("I-26 영리법인 사전증여 가산가액 700M 보존 (priorGiftAmount)", () => {
-      expect(perHeir.get(HEIR_ID.corporate)!.priorGiftAmount).toBe(
+      expect(perHeir[HEIR_ID.corporate]!.priorGiftAmount).toBe(
         700_000_000,
       );
     });
@@ -351,10 +351,10 @@ describe("상속세 종합사례 PDF — 통합 anchor", () => {
     // ─── 신고세액공제 ───
     it("I-27 신고세액공제 4명 합 = 31,971,966 (배우자 13.4 + 장남 8.5 + 차남 7.1 + 손녀 2.95)", () => {
       const sum =
-        perHeir.get(HEIR_ID.spouse)!.filingCredit +
-        perHeir.get(HEIR_ID.son)!.filingCredit +
-        perHeir.get(HEIR_ID.son2)!.filingCredit +
-        perHeir.get(HEIR_ID.granddaughter)!.filingCredit;
+        perHeir[HEIR_ID.spouse]!.filingCredit +
+        perHeir[HEIR_ID.son]!.filingCredit +
+        perHeir[HEIR_ID.son2]!.filingCredit +
+        perHeir[HEIR_ID.granddaughter]!.filingCredit;
       // PDF 31,971,966 — 1원 toleranc (배우자 분 PDF round 차이)
       expect(Math.abs(sum - 31_971_966)).toBeLessThanOrEqual(1);
     });

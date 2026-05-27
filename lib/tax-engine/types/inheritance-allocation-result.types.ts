@@ -46,8 +46,8 @@ export interface HeirTaxBreakdown {
 }
 
 export interface HeirAllocationResult {
-  /** Heir.id 별 산출 결과. 영리법인은 finalTax=0. */
-  perHeir: Map<string, HeirTaxBreakdown>;
+  /** Heir.id 별 산출 결과. 영리법인은 finalTax=0. JSON-native Record (Map 금지 — 직렬화 소실 방지). */
+  perHeir: Record<string, HeirTaxBreakdown>;
   /** 배부대상 산출세액 = 산출세액 − 영리법인 면제 (할증 미포함) */
   distributableTax: number;
   /** 간접배부 분모 = grossEstateWithGifts − Σ(상속인·수유자 외 자 사전증여 가액) */

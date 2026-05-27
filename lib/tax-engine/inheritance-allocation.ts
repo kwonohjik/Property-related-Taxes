@@ -312,8 +312,8 @@ export function calcHeirAllocation(
   // 13-8: 산출세액상당액 분모 = taxBase − corporateGiftTaxBase
   const computedTaxShareDenominator = taxBase - corporateGiftTaxBase;
 
-  // 상속인별 배부 계산
-  const perHeir = new Map<string, HeirTaxBreakdown>();
+  // 상속인별 배부 계산 — Record (JSON-native, Map 직렬화 소실 방지)
+  const perHeir: Record<string, HeirTaxBreakdown> = {};
 
   for (const heir of heirs) {
     const isCorporate = heir.relation === "corporate";
@@ -322,7 +322,7 @@ export function calcHeirAllocation(
 
     if (isCorporate) {
       // 영리법인: §3의2② 면제. finalTax=0, 사전증여 가액만 표시.
-      perHeir.set(heir.id, {
+      perHeir[heir.id] = {
         heirId: heir.id,
         directEstateAmount: 0,
         priorGiftAmount: giftAmount,
@@ -338,7 +338,7 @@ export function calcHeirAllocation(
         preFilingCreditTax: 0,
         filingCredit: 0,
         finalTax: 0,
-      });
+      };
       continue;
     }
 
@@ -404,7 +404,7 @@ export function calcHeirAllocation(
     // 13-13: 자진납부세액
     const finalTax = preFilingCreditTax - filingCredit;
 
-    perHeir.set(heir.id, {
+    perHeir[heir.id] = {
       heirId: heir.id,
       directEstateAmount,
       priorGiftAmount: giftAmount,
@@ -420,7 +420,7 @@ export function calcHeirAllocation(
       preFilingCreditTax,
       filingCredit,
       finalTax,
-    });
+    };
   }
 
   const breakdown: CalculationStep[] = [

@@ -98,8 +98,8 @@ export function HeirAllocationTable({
   heirs,
 }: HeirAllocationTableProps) {
   const allocation = result.heirAllocationResult;
-  // JSON 역직렬화 후 Map이 일반 객체로 변환될 수 있음 → Map 인스턴스 여부 검사
-  if (!allocation || !(allocation.perHeir instanceof Map) || allocation.perHeir.size === 0) return null;
+  // perHeir는 Record<string, HeirTaxBreakdown> — JSON 직렬화 안전 (Map 금지)
+  if (!allocation || Object.keys(allocation.perHeir).length === 0) return null;
 
   // 표시 순서 — Heir 배열 순서 유지 + 영리법인은 마지막
   const orderedHeirs = [...heirs].sort((a, b) => {
@@ -110,7 +110,7 @@ export function HeirAllocationTable({
 
   const breakdowns: { heir: Heir; data: HeirTaxBreakdown }[] = [];
   for (const heir of orderedHeirs) {
-    const data = allocation.perHeir.get(heir.id);
+    const data = allocation.perHeir[heir.id];
     if (data) breakdowns.push({ heir, data });
   }
 

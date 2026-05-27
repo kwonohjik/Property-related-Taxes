@@ -75,7 +75,7 @@ describe("채무 협의분할 엔진 진입 조건 확장 (IDA-ENGINE)", () => {
     const result = calcInheritanceTax(input);
 
     expect(result.heirAllocationResult).toBeDefined();
-    expect(result.heirAllocationResult?.perHeir.size).toBeGreaterThan(0);
+    expect(Object.keys(result.heirAllocationResult?.perHeir ?? {}).length).toBeGreaterThan(0);
   });
 
   it("IDA-ENGINE-2: 협의분할 입력 전무 → 자연인 상속인 법정상속분 자동 배부 (항상 배부 정책)", () => {
@@ -85,7 +85,7 @@ describe("채무 협의분할 엔진 진입 조건 확장 (IDA-ENGINE)", () => {
 
     // 2026-05-26 정책 변경: 자연인 상속인 1명+ 이면 항상 상속인별 배부
     expect(result.heirAllocationResult).toBeDefined();
-    expect(result.heirAllocationResult!.perHeir.size).toBeGreaterThan(0);
+    expect(Object.keys(result.heirAllocationResult!.perHeir).length).toBeGreaterThan(0);
   });
 
   it("IDA-ENGINE-3: 기존 estateItems.heirAllocations 케이스 — 결과 생성 동작 불변 (회귀 차단)", () => {
@@ -105,7 +105,7 @@ describe("채무 협의분할 엔진 진입 조건 확장 (IDA-ENGINE)", () => {
     const result = calcInheritanceTax(input);
 
     expect(result.heirAllocationResult).toBeDefined();
-    expect(result.heirAllocationResult?.perHeir.size).toBeGreaterThan(0);
+    expect(Object.keys(result.heirAllocationResult?.perHeir ?? {}).length).toBeGreaterThan(0);
   });
 
   it("IDA-ENGINE-4: debtItems heirAllocations 없음 → 채무 법정상속분 분담 + 자산 법정상속분 배부", () => {
@@ -126,7 +126,7 @@ describe("채무 협의분할 엔진 진입 조건 확장 (IDA-ENGINE)", () => {
 
     // 항상 배부: 미입력 채무·자산 모두 법정상속분
     expect(result.heirAllocationResult).toBeDefined();
-    expect(result.heirAllocationResult!.perHeir.size).toBeGreaterThan(0);
+    expect(Object.keys(result.heirAllocationResult!.perHeir).length).toBeGreaterThan(0);
   });
 
   it("IDA-ENGINE-5: debtItems.heirAllocations 빈 배열 → 법정상속분 배부 (length 0 = 미입력)", () => {
@@ -146,6 +146,6 @@ describe("채무 협의분할 엔진 진입 조건 확장 (IDA-ENGINE)", () => {
     const result = calcInheritanceTax(input);
 
     expect(result.heirAllocationResult).toBeDefined();
-    expect(result.heirAllocationResult!.perHeir.size).toBeGreaterThan(0);
+    expect(Object.keys(result.heirAllocationResult!.perHeir).length).toBeGreaterThan(0);
   });
 });

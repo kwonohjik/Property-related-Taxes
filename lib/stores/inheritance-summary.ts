@@ -193,8 +193,8 @@ export function computeInheritanceSummary(
   let estimatedTax: number | null = null;
   if (result) {
     if (result.heirAllocationResult) {
-      estimatedTax = Array.from(
-        result.heirAllocationResult.perHeir.values(),
+      estimatedTax = Object.values(
+        result.heirAllocationResult.perHeir,
       ).reduce((s, h) => s + h.finalTax, 0);
     } else {
       estimatedTax = result.finalTax;

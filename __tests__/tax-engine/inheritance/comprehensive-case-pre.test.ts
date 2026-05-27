@@ -129,12 +129,9 @@ describe("Pre-Do anchors — 상속세 종합사례 PDF", () => {
   it("PRE-5 자진납부세액 합계 = 1,033,760,232 (영리법인 finalTax=0)", () => {
     const result = calcInheritanceTax(EXAMPLE_INPUT);
 
-    const perHeir = result.heirAllocationResult!.perHeir as Map<
-      string,
-      { finalTax: number }
-    >;
+    const perHeir = result.heirAllocationResult!.perHeir;
 
-    const sum = Array.from(perHeir.values()).reduce(
+    const sum = Object.values(perHeir).reduce(
       (s, h) => s + h.finalTax,
       0,
     );
@@ -146,16 +143,15 @@ describe("Pre-Do anchors — 상속세 종합사례 PDF", () => {
     expect(Math.abs(sum - 1_033_760_232)).toBeLessThanOrEqual(1);
 
     // 영리법인 항목 명시 검증
-    expect(perHeir.get(HEIR_ID.corporate)!.finalTax).toBe(0);
+    expect(perHeir[HEIR_ID.corporate]!.finalTax).toBe(0);
 
     // 개별 anchor — 4명 자진납부세액
-    const perHeirFull = result.heirAllocationResult!.perHeir;
-    expect(perHeirFull.get(HEIR_ID.son)!.finalTax).toBe(276_593_379);
-    expect(perHeirFull.get(HEIR_ID.son2)!.finalTax).toBe(228_833_517);
-    expect(perHeirFull.get(HEIR_ID.granddaughter)!.finalTax).toBe(95_462_086);
+    expect(perHeir[HEIR_ID.son]!.finalTax).toBe(276_593_379);
+    expect(perHeir[HEIR_ID.son2]!.finalTax).toBe(228_833_517);
+    expect(perHeir[HEIR_ID.granddaughter]!.finalTax).toBe(95_462_086);
     // 배우자 1원 차이 허용 (PDF 432,871,250 vs 우리 432,871,249)
     expect(
-      Math.abs(perHeirFull.get(HEIR_ID.spouse)!.finalTax - 432_871_250),
+      Math.abs(perHeir[HEIR_ID.spouse]!.finalTax - 432_871_250),
     ).toBeLessThanOrEqual(1);
   });
 
@@ -169,9 +165,7 @@ describe("Pre-Do anchors — 상속세 종합사례 PDF", () => {
   it("PRE-6 손녀 자진납부세액 = 95,462,086 (할증 + 신고세액공제 3%)", () => {
     const result = calcInheritanceTax(EXAMPLE_INPUT);
 
-    const granddaughter = result.heirAllocationResult!.perHeir.get(
-      HEIR_ID.granddaughter,
-    )!;
+    const granddaughter = result.heirAllocationResult!.perHeir[HEIR_ID.granddaughter]!;
 
     expect(granddaughter.computedTaxShare).toBe(68_182_324);
     expect(granddaughter.generationSkipSurcharge).toBe(30_232_198);

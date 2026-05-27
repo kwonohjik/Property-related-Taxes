@@ -64,8 +64,8 @@ describe("자산 협의분할 — Pre-Do anchor", () => {
     });
     const r = calcInheritanceTax(input);
     expect(r.heirAllocationResult).toBeDefined();
-    const h1 = r.heirAllocationResult!.perHeir.get("h1")!;
-    const h2 = r.heirAllocationResult!.perHeir.get("h2")!;
+    const h1 = r.heirAllocationResult!.perHeir["h1"]!;
+    const h2 = r.heirAllocationResult!.perHeir["h2"]!;
     expect(h1.finalTax).toBeGreaterThan(0);
     expect(h2.finalTax).toBe(0);
   });
@@ -94,7 +94,7 @@ describe("자산 협의분할 — Pre-Do anchor", () => {
       ],
     });
     const r = calcInheritanceTax(input);
-    const h3 = r.heirAllocationResult!.perHeir.get("h3")!;
+    const h3 = r.heirAllocationResult!.perHeir["h3"]!;
     expect(h3.finalTax).toBeGreaterThan(0);
     expect(h3.generationSkipSurcharge).toBeGreaterThan(0);
   });
@@ -122,8 +122,8 @@ describe("자산 협의분할 — 케이스 매트릭스", () => {
     const r = calcInheritanceTax(input);
     expect(r.heirAllocationResult).toBeDefined();
     // 배우자 finalTax가 전체 finalTax를 차지함 (자녀 = 0)
-    const h1 = r.heirAllocationResult!.perHeir.get("h1")!;
-    const h2 = r.heirAllocationResult!.perHeir.get("h2")!;
+    const h1 = r.heirAllocationResult!.perHeir["h1"]!;
+    const h2 = r.heirAllocationResult!.perHeir["h2"]!;
     expect(h2.finalTax).toBe(0);
     expect(h1.finalTax + h2.finalTax).toBe(h1.finalTax);
   });
@@ -155,9 +155,9 @@ describe("자산 협의분할 — 케이스 매트릭스", () => {
     });
     const r = calcInheritanceTax(input);
     expect(r.heirAllocationResult).toBeDefined();
-    const h1 = r.heirAllocationResult!.perHeir.get("h1")!;
-    const h2 = r.heirAllocationResult!.perHeir.get("h2")!;
-    const h3 = r.heirAllocationResult!.perHeir.get("h3")!;
+    const h1 = r.heirAllocationResult!.perHeir["h1"]!;
+    const h2 = r.heirAllocationResult!.perHeir["h2"]!;
+    const h3 = r.heirAllocationResult!.perHeir["h3"]!;
     // 배우자·자녀: 세대생략 할증 없음
     expect(h1.generationSkipSurcharge).toBe(0);
     expect(h2.generationSkipSurcharge).toBe(0);
@@ -206,8 +206,8 @@ describe("자산 협의분할 — 케이스 매트릭스", () => {
     });
     const r = calcInheritanceTax(input);
     // h1는 결과 있음, h_orphan은 perHeir에 없음
-    expect(r.heirAllocationResult!.perHeir.get("h1")).toBeDefined();
-    expect(r.heirAllocationResult!.perHeir.get("h_orphan")).toBeUndefined();
+    expect(r.heirAllocationResult!.perHeir["h1"]).toBeDefined();
+    expect(r.heirAllocationResult!.perHeir["h_orphan"]).toBeUndefined();
   });
 
   it("[C8] 법인(corporate) 포함 — corporate.finalTax = 0 (영리법인 면제)", () => {
@@ -230,7 +230,7 @@ describe("자산 협의분할 — 케이스 매트릭스", () => {
     });
     const r = calcInheritanceTax(input);
     // 법인이 분배 대상에 없어도 perHeir에 항목은 존재 가능 (영리법인은 finalTax=0)
-    const hc = r.heirAllocationResult!.perHeir.get("hc");
+    const hc = r.heirAllocationResult!.perHeir["hc"];
     if (hc) {
       expect(hc.finalTax).toBe(0);
     }
@@ -248,8 +248,8 @@ describe("자산 협의분할 — 케이스 매트릭스", () => {
     });
     const r = calcInheritanceTax(input);
     expect(r.heirAllocationResult).toBeDefined();
-    const h1 = r.heirAllocationResult!.perHeir.get("h1")!;
-    const h2 = r.heirAllocationResult!.perHeir.get("h2")!;
+    const h1 = r.heirAllocationResult!.perHeir["h1"]!;
+    const h2 = r.heirAllocationResult!.perHeir["h2"]!;
     expect(h1.directEstateAmount).toBe(6_000_000_000); // 3/5
     expect(h2.directEstateAmount).toBe(4_000_000_000); // 2/5
   });
@@ -265,9 +265,9 @@ describe("자산 협의분할 — 케이스 매트릭스", () => {
       estateItems: [apartment("a1", 7_000_000_000)],
     });
     const r = calcInheritanceTax(input);
-    const h1 = r.heirAllocationResult!.perHeir.get("h1")!;
-    const h2 = r.heirAllocationResult!.perHeir.get("h2")!;
-    const h3 = r.heirAllocationResult!.perHeir.get("h3")!;
+    const h1 = r.heirAllocationResult!.perHeir["h1"]!;
+    const h2 = r.heirAllocationResult!.perHeir["h2"]!;
+    const h3 = r.heirAllocationResult!.perHeir["h3"]!;
     expect(h1.directEstateAmount).toBe(3_000_000_000); // 3/7
     expect(h2.directEstateAmount).toBe(2_000_000_000); // 2/7
     expect(h3.directEstateAmount).toBe(2_000_000_000); // 2/7
@@ -286,8 +286,8 @@ describe("자산 협의분할 — 케이스 매트릭스", () => {
       ],
     });
     const r = calcInheritanceTax(input);
-    const h1 = r.heirAllocationResult!.perHeir.get("h1")!;
-    const h2 = r.heirAllocationResult!.perHeir.get("h2")!;
+    const h1 = r.heirAllocationResult!.perHeir["h1"]!;
+    const h2 = r.heirAllocationResult!.perHeir["h2"]!;
     // A1 전액(50억) 배우자 + B1 법정상속분(배우자 30억·자녀 20억)
     expect(h1.directEstateAmount).toBe(8_000_000_000);
     expect(h2.directEstateAmount).toBe(2_000_000_000);
@@ -305,8 +305,8 @@ describe("자산 협의분할 — 케이스 매트릭스", () => {
       ],
     };
     const r = calcInheritanceTax(input);
-    const h1 = r.heirAllocationResult!.perHeir.get("h1")!;
-    const h2 = r.heirAllocationResult!.perHeir.get("h2")!;
+    const h1 = r.heirAllocationResult!.perHeir["h1"]!;
+    const h2 = r.heirAllocationResult!.perHeir["h2"]!;
     // 채무 7억 법정상속분 분담: 배우자 3/5(4.2억), 자녀 2/5(2.8억)
     expect(h1.debtShare).toBe(420_000_000);
     expect(h2.debtShare).toBe(280_000_000);

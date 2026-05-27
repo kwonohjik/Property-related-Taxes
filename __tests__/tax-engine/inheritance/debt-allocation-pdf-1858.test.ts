@@ -167,7 +167,7 @@ describe("채무·공과·장례비 협의분할 PDF 책 1858 재현 (IDA)", () 
     const result = calcInheritanceTax(input);
 
     expect(result.heirAllocationResult).toBeDefined();
-    expect(result.heirAllocationResult?.perHeir.size).toBeGreaterThan(0);
+    expect(Object.keys(result.heirAllocationResult?.perHeir ?? {}).length).toBeGreaterThan(0);
   });
 
   it("IDA-10: 상속인 배부 결과에 3명 (배우자·장남·차남) 모두 포함", () => {
@@ -176,9 +176,9 @@ describe("채무·공과·장례비 협의분할 PDF 책 1858 재현 (IDA)", () 
     const perHeir = result.heirAllocationResult?.perHeir;
     expect(perHeir).toBeDefined();
 
-    expect(perHeir?.has(HEIR_ID.spouse)).toBe(true);
-    expect(perHeir?.has(HEIR_ID.son)).toBe(true);
-    expect(perHeir?.has(HEIR_ID.son2)).toBe(true);
+    expect(HEIR_ID.spouse in perHeir!).toBe(true);
+    expect(HEIR_ID.son in perHeir!).toBe(true);
+    expect(HEIR_ID.son2 in perHeir!).toBe(true);
   });
 
   it("IDA-11: 상속인 배부 결과 — 각 상속인이 finalTax 필드를 가짐 (구조 검증)", () => {
@@ -187,7 +187,7 @@ describe("채무·공과·장례비 협의분할 PDF 책 1858 재현 (IDA)", () 
     const perHeir = result.heirAllocationResult?.perHeir;
     expect(perHeir).toBeDefined();
 
-    for (const tax of perHeir!.values()) {
+    for (const tax of Object.values(perHeir!)) {
       expect(typeof tax.finalTax).toBe("number");
       expect(Number.isFinite(tax.finalTax)).toBe(true);
     }
