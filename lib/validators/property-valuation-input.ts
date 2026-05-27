@@ -93,6 +93,9 @@ const baseItemSchema = z.object({
   isFamilyBusinessAsset: z.boolean().optional(),
   // §22 금융재산상속공제 자동화 (2026-05-21)
   isFinancialAssetForDeduction: z.boolean().optional(),
+  // §22② 최대주주 법정 강제 배제 — 상장·비상장 V1·V2 공용 직속 필드 (2026-05-27, E-4)
+  // baseItemSchema 상속으로 listedItemSchema·unlistedItemSchema 모두 자동 적용.
+  isSection22MajorShareholder: z.boolean().optional(),
   trustType: z.enum(["cash_trust", "real_estate", "security", "other"]).optional(),
   // 영농상속공제 자동화 (2026-05-21, §18의3 + 시행령 §16⑤)
   farmingCategory: z

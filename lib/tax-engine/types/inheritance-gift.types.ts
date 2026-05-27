@@ -126,6 +126,22 @@ export interface EstateItem extends EstateLocationFields {
    */
   isFinancialAssetForDeduction?: boolean;
   /**
+   * §22② 최대주주 보유주식 법정 강제 배제 (상장·비상장 V1·V2 공용 직속 필드).
+   *
+   * 법령: 상속세 및 증여세법 §22② — 최대주주 및 최대출자자와 그 특수관계인이 보유하는 주식등은
+   *       §22 금융재산공제 금융재산에 포함되지 아니한다.
+   *
+   * - true : §22② 적용 → resolveFinancialEligibility 우선순위 0 가드에 의해 eligible=false (강제 배제)
+   * - false : §22② 미적용 → §19① 기본 eligible(true) 보존
+   * - undefined : 미설정 → 하위 경로(V2 nested 포함) 또는 카테고리 default 추론
+   *
+   * OR 호환: 비상장 V2의 기존 필드 `unlistedStockValuationV2.isSection22MajorShareholder`와
+   *          OR 체크 — 어느 쪽이든 true이면 배제. V2 nested 경로는 변경 없이 유지.
+   *
+   * 우선순위: 직속·V2 nested(우선순위 0) > isFinancialAssetForDeduction(우선순위 1)
+   */
+  isSection22MajorShareholder?: boolean;
+  /**
    * 신탁 유형 — deemedCategory==="trust"일 때만 의미.
    * §19① "금전신탁만" §22 적용 — trustType==="cash_trust"만 default true, 그 외 false.
    * 미입력 시 보수적으로 §22 미적용.
