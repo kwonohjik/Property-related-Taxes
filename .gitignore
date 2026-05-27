@@ -70,3 +70,6 @@ logs/
 
 # Playwright E2E 산출물 (스크린샷 등)
 e2e/_artifacts/
+
+# 작업 추적용 TODO (세션 로컬 — 추적 금지)
+TODO.md
