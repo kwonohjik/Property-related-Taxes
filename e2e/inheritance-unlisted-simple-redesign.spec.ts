@@ -65,9 +65,11 @@ test.describe("비상장 간편: 입력 폼 리스타일 시각 구조", () => {
     await gotoStep0AndFillDeathDate(page);
     await openUnlistedV1SimpleCard(page);
 
-    await expect(
-      page.locator('[data-testid="simple-section-shares"] [data-slot="field-card"]'),
-    ).toHaveCount(3);
+    const cards = page.locator('[data-testid="simple-section-shares"] [data-slot="field-card"]');
+    await expect(cards).toHaveCount(3);
+    // 라벨 확대/입력 축소 그리드(twMerge override) 적용 — 기본 [160px_1fr]가 [3fr_2fr]로 치환
+    await expect(cards.first()).toHaveClass(/grid-cols-\[3fr_2fr\]/);
+    await expect(cards.first()).not.toHaveClass(/grid-cols-\[160px_1fr\]/);
   });
 
   test("R-6: 리스타일 후에도 미리보기(㉮·㉱) 보존", async ({ page }) => {

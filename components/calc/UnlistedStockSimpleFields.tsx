@@ -55,6 +55,10 @@ const SECTION_TONE: Record<SectionTone, { wrap: string; circle: string; title: s
   },
 };
 
+// 간편평가 전용 FieldCard 그리드 — 좌 라벨 확대 / 우 입력 축소 (공용 FieldCard 기본 [160px_1fr] override).
+// 금액 입력란 폭을 기본 대비 약 절반으로 줄이고 그만큼 라벨 영역을 넓힘 (twMerge가 grid-cols 충돌 해소).
+const FIELD_GRID = "sm:grid-cols-[3fr_2fr]";
+
 function SimpleSectionCard({
   num,
   tone,
@@ -324,7 +328,7 @@ export function UnlistedStockSimpleFields({
 
       {/* ① 평가 대상·주식 수 */}
       <SimpleSectionCard num={1} tone="sky" title="평가 대상·주식 수" testid="simple-section-shares">
-        <FieldCard label="회사명" required htmlFor="simple-corp-name" hint="비상장법인의 상호">
+        <FieldCard label="회사명" required htmlFor="simple-corp-name" hint="비상장법인의 상호" className={FIELD_GRID}>
           <input
             id="simple-corp-name"
             type="text"
@@ -340,6 +344,7 @@ export function UnlistedStockSimpleFields({
           unit="주"
           htmlFor="simple-total-shares"
           hint="회사 전체 발행주식 총수 — 평가기준일 현재 (시행령 §56③)"
+          className={FIELD_GRID}
         >
           <IntegerInput
             id="simple-total-shares"
@@ -355,6 +360,7 @@ export function UnlistedStockSimpleFields({
           unit="주"
           htmlFor="simple-owned-shares"
           hint="피상속인(또는 수증자)이 보유한 주식 수. 총 발행주식 수의 일부."
+          className={FIELD_GRID}
         >
           <IntegerInput
             id="simple-owned-shares"
@@ -448,7 +454,7 @@ export function UnlistedStockSimpleFields({
         )}
 
         {/* 자본환원율 */}
-        <FieldCard label="자본환원율" unit="%" htmlFor="simple-cap-rate" hint="국세청 고시 기준 — 통상 10% 적용">
+        <FieldCard label="자본환원율" unit="%" htmlFor="simple-cap-rate" hint="국세청 고시 기준 — 통상 10% 적용" className={FIELD_GRID}>
           <DecimalInput
             value={data?.capitalizationRate ? String(data.capitalizationRate * 100) : ""}
             onChange={(v) => {
@@ -468,6 +474,7 @@ export function UnlistedStockSimpleFields({
           required
           htmlFor="simple-net-asset"
           hint="자기자본 = 총자산 − 총부채 (평가기준일 재무상태표). 0 이하면 0으로 처리 (시행령 §55①)."
+          className={FIELD_GRID}
         >
           <CurrencyInput
             label="순자산가치 (회사 전체, 영업권 포함 전)"
@@ -549,6 +556,7 @@ function NetIncomeYearRow({
       label={label}
       unit="원"
       badge={`(${yearLabel})`}
+      className={FIELD_GRID}
       hint={hint ?? "회사 전체 금액 (1주당 ✗)."}
       warning={
         value !== undefined && value < 0
