@@ -149,6 +149,10 @@ lib/calc/ — 클라이언트↔API 변환 (14개 동기화 지점 ④⑧ 담당
 3. Check — `ui-engine-sync-checker` (14지점 read-only) → `bkit:gap-detector` (계획-구현 matchRate)
 4. UI 시니어 단독 작업 중 자주 중단되는 5가지(800줄·14지점·TS 연쇄·plan mode 상속·복잡 컴포넌트) → memory `feedback_pdca_session_efficiency` 6가지 사전 적용
 
+### 검증 기준 (Plan·Design·Check·갭분석·검토 산출물 — 강제)
+
+계획·설계·분석·검토 문서의 모든 주장은 **추정 금지**. 인용한 file:line은 실제 파일로, 동작·수치는 throwaway probe/anchor 실측으로 검증 후 단정한다. "현행 일치 예상"·"아마"·미확인 인용 금지. 미검증 항목은 "확인 필요"로 명시. (세부 사례: memory `feedback_pre_anchor_verification` · `feedback_numeric_impact_verify_before_bug_claim` · `feedback_korean_law_citation_verify`)
+
 ### PDCA 5단계
 
 1. **PM/Plan**: 법령 근거. 엔진+UI 시니어 동시 호출. 신규 세목 UI 첫 진입 시 `docs/02-design/features/_new-tax-ui-kickoff.checklist.md`.
