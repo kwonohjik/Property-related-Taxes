@@ -33,6 +33,7 @@ import { FamilyBusinessCategorySection } from "@/components/calc/inheritance/Fam
 import { CorporateNonBusinessAssetsSection } from "@/components/calc/inheritance/CorporateNonBusinessAssetsSection";
 import { FinancialDeductionChip } from "@/components/calc/inheritance/FinancialDeductionChip";
 import { HeirAllocationToggleSection } from "@/components/calc/inheritance/HeirAllocationToggleSection";
+import { MajorShareholderStockToggle } from "@/components/calc/inheritance/unlisted-stock-v2/MajorShareholderStockToggle";
 import {
   HintBadge,
   getFamilyBusinessHint,
@@ -42,6 +43,7 @@ import {
   countHiddenExpandable,
   resolveAssetToggleVisibility,
 } from "@/lib/calc/asset-toggle-visibility";
+import { resolveUnlistedDisplayMode } from "@/lib/calc/stock-valuation";
 import type { EstateItem, Heir } from "@/lib/tax-engine/types/inheritance-gift.types";
 
 // ============================================================
@@ -105,6 +107,16 @@ function EstateCommonAttributesSectionInner({
   const hiddenExpandableCount = countHiddenExpandable(visibility);
   const [showExpanded, setShowExpanded] = useState(false);
 
+  /**
+   * §22② 최대주주 토글 표시 조건 (D-3, F-1):
+   *   - 상장주식: 항상 표시
+   *   - 비상장주식 simple(V1): 표시
+   *   - 비상장주식 formal(V2): skip — UnlistedStockV2Card 내부 토글이 담당 (S-4 중복 방지)
+   */
+  const showSection22Toggle =
+    item.category === "listed_stock" ||
+    (item.category === "unlisted_stock" && resolveUnlistedDisplayMode(item) === "simple");
+
   return (
     <>
       {/* 영농상속 자산 분류 — 카테고리별 자동 노출 */}
@@ -156,6 +168,15 @@ function EstateCommonAttributesSectionInner({
             </div>
           )}
         </div>
+      )}
+
+      {/* §22② 최대주주 보유주식 금융재산공제 배제 토글 (D-3, F-1) */}
+      {/* 상장·비상장V1(simple)에서만 렌더. 비상장V2(formal)는 UnlistedStockV2Card 내부 담당(S-4). */}
+      {showSection22Toggle && (
+        <MajorShareholderStockToggle
+          checked={item.isSection22MajorShareholder ?? false}
+          onCheckedChange={(v) => onUpdate({ ...item, isSection22MajorShareholder: v })}
+        />
       )}
 
       {/* 협의분할 (heirs 있을 때만) */}

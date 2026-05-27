@@ -28,7 +28,8 @@ import {
 import { buildDefaultFiscalYears } from "@/lib/tax-engine/property-valuation/fiscal-year-annualize";
 // Phase 0: computeStockValuation은 lib/calc/stock-valuation.ts로 이동 — 단일 진실.
 // 기존 StockValuationForm import 사이트 호환을 위해 re-export.
-export { computeStockValuation } from "@/lib/calc/stock-valuation";
+// D-4: resolveUnlistedDisplayMode도 re-export — EstateCommonAttributesSection 공유 사용.
+export { computeStockValuation, resolveUnlistedDisplayMode } from "@/lib/calc/stock-valuation";
 
 // ============================================================
 // 상장주식 항목 편집기
@@ -204,10 +205,8 @@ function ListedStockEditor({
 // 비상장주식 카드 — 모드 선택기 + 조건부 렌더 + 공통속성 (PR-3)
 // ============================================================
 
-/** 모드 판정 — 폼 state에서 현재 선택 모드를 도출 (레거시 fallback 포함) */
-function resolveDisplayMode(item: EstateItem): "simple" | "formal" {
-  return item.unlistedValuationMode ?? (item.unlistedStockValuationV2 ? "formal" : "simple");
-}
+// 모드 판정 헬퍼는 lib/calc/stock-valuation.ts에서 import (D-4 단일 진실)
+import { resolveUnlistedDisplayMode } from "@/lib/calc/stock-valuation";
 
 // RadioCardGroup용 정적 tone 매핑 (feedback_tailwind_static_tone_mapping)
 const VALUATION_MODE_OPTIONS = [
@@ -247,7 +246,7 @@ function UnlistedStockCard({
   heirs,
   valuationDate,
 }: UnlistedStockCardProps) {
-  const currentMode = resolveDisplayMode(item);
+  const currentMode = resolveUnlistedDisplayMode(item);
 
   // 협의분할 effectiveValuation 계산 — 선택 모드에 따라 다른 평가 함수 사용
   const effectiveValuation = useMemo(() => {
@@ -379,9 +378,8 @@ function TotalStockValue({ items, heavyMap }: StockTotal) {
       const shares = item.listedStockShares ?? 0;
       if (avg > 0 && shares > 0) total += evaluateListedStockValue(avg, shares);
     } else if (item.category === "unlisted_stock") {
-      // 모드 판정 — 정식 모드 우선 (PR-3)
-      const activeMode: "simple" | "formal" =
-        item.unlistedValuationMode ?? (item.unlistedStockValuationV2 ? "formal" : "simple");
+      // 모드 판정 — 단일 진실 헬퍼 (D-4)
+      const activeMode = resolveUnlistedDisplayMode(item);
       if (activeMode === "formal" && item.unlistedStockValuationV2) {
         try {
           const result = evaluateUnlistedStockV2(item.unlistedStockValuationV2);

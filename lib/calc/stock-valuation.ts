@@ -25,6 +25,22 @@ import { evaluateUnlistedStockV2 } from "@/lib/tax-engine/property-valuation/unl
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 
 /**
+ * 비상장주식 표시 모드 도출 — 단일 진실 헬퍼 (D-4)
+ *
+ * 소비처:
+ *   (a) components/calc/StockValuationForm.tsx — UnlistedStockCard 내부 판정
+ *   (b) components/calc/inheritance/EstateCommonAttributesSection.tsx — §22② 토글 분기
+ *
+ * 정책: single-source-engine-helper — 재정의 금지.
+ *
+ * @param item EstateItem (category: "unlisted_stock" 상정)
+ * @returns "simple" | "formal"
+ */
+export function resolveUnlistedDisplayMode(item: EstateItem): "simple" | "formal" {
+  return item.unlistedValuationMode ?? (item.unlistedStockValuationV2 ? "formal" : "simple");
+}
+
+/**
  * 주식 자산 효과 평가액 도출.
  *
  * - 상장: listedStockAvgPrice × listedStockShares (§63①1가)
@@ -47,9 +63,8 @@ export function computeStockValuation(item: EstateItem): number {
   }
 
   if (item.category === "unlisted_stock") {
-    // 모드 판정 — resolveActiveUnlistedValuation과 동일 로직 (레거시 fallback 포함)
-    const activeMode: "simple" | "formal" =
-      item.unlistedValuationMode ?? (item.unlistedStockValuationV2 ? "formal" : "simple");
+    // 모드 판정 — 단일 진실 헬퍼 재사용 (D-4, single-source-engine-helper)
+    const activeMode = resolveUnlistedDisplayMode(item);
 
     if (activeMode === "formal" && item.unlistedStockValuationV2) {
       const v2 = item.unlistedStockValuationV2;
