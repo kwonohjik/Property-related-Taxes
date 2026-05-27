@@ -98,7 +98,8 @@ export function HeirAllocationTable({
   heirs,
 }: HeirAllocationTableProps) {
   const allocation = result.heirAllocationResult;
-  if (!allocation || allocation.perHeir.size === 0) return null;
+  // JSON 역직렬화 후 Map이 일반 객체로 변환될 수 있음 → Map 인스턴스 여부 검사
+  if (!allocation || !(allocation.perHeir instanceof Map) || allocation.perHeir.size === 0) return null;
 
   // 표시 순서 — Heir 배열 순서 유지 + 영리법인은 마지막
   const orderedHeirs = [...heirs].sort((a, b) => {
