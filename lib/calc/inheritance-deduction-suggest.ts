@@ -18,7 +18,7 @@ import { deriveCollateralDebts } from "@/lib/tax-engine/inheritance-collateral-d
 import { sumCollateralFinancialDebt } from "@/lib/tax-engine/inheritance-collateral-debt";
 import { calcRelationDeduction } from "@/lib/tax-engine/deductions/gift-deductions";
 import { calcCorporateStockAdjustedValue } from "@/lib/tax-engine/property-valuation-corporate";
-import { computeStockValuation } from "@/lib/calc/stock-valuation";
+import { resolveEstateItemValue } from "@/lib/tax-engine/valuation/resolve-estate-item-value";
 import type {
   DebtItem,
   DonorRelation,
@@ -68,24 +68,9 @@ export interface DeductionSuggestion {
  * (단일 진실 — single-source-engine-helper 정책)
  */
 export function getValuatedAmount(item: EstateItem): number {
-  if (typeof item.marketValue === "number" && item.marketValue > 0) {
-    return item.marketValue;
-  }
-  if (typeof item.appraisedValue === "number" && item.appraisedValue > 0) {
-    return item.appraisedValue;
-  }
-  if (typeof item.standardPrice === "number" && item.standardPrice > 0) {
-    return item.standardPrice;
-  }
-  // 주식 카테고리: computeStockValuation fallback (비상장 V2·V1 포함)
-  // 이 경로는 상장 avg×shares도 포함하므로 기존 listedStockAvgPrice×listedStockShares 경로와 동일 결과
-  if (
-    item.category === "listed_stock" ||
-    item.category === "unlisted_stock"
-  ) {
-    return computeStockValuation(item);
-  }
-  return 0;
+  // J-1: §60 평가 우선순위(시가→감정가→기준시가→주식 보충평가→0)는 엔진 단일 진실로 통일.
+  // 기존 5단계 로직과 동치(resolveEstateItemValue로 이동). family-business와 동일 소스 사용.
+  return resolveEstateItemValue(item);
 }
 
 /**
