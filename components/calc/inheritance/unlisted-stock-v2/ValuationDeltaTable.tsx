@@ -100,7 +100,10 @@ export function ValuationDeltaTable({
 
   function toggleInputMode(next: boolean) {
     setInputModeUserPreference(next);
-    if (!next && hasRows) {
+    if (next && evaluationDeltaRows.length === 0) {
+      // ON 토글 시 자산·부채 빈 행 1개씩 자동 생성 → 바로 입력 가능
+      onRowsChange([makeNewRow("asset"), makeNewRow("liability")]);
+    } else if (!next && hasRows) {
       // OFF 토글 시 행 클리어 + fallback 총액으로 전환 (silent omission 차단)
       onRowsChange([]);
     }
