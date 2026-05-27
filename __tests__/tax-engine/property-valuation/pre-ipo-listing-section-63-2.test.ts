@@ -261,3 +261,108 @@ describe("PR-L Zod (PL-8) + 회귀", () => {
     expect(r.finalPerShareValue).toBeGreaterThan(0);
   });
 });
+
+// ════════════════════════════════════════════════════════════════════
+// PR-L2 — §63②2호 거래소 상장신청·협회 등록 준비 중 (preparationType 판별자)
+//   법 §63②2호 + 령 §57② — MAX(공모가, §54 보충적평가). 윈도우·MAX·할증 동일, 문자열만 분기.
+// ════════════════════════════════════════════════════════════════════
+
+describe("PR-L2 §63②2호 association_registration (모듈)", () => {
+  it("PL2-1: type=association·상속·윈도우 내·공모가>보충적 → appliedValue=공모가·applied=true", () => {
+    const r = applyPreIpoListing(
+      preIpo({ preparationType: "association_registration" }),
+      12_000,
+      EVAL_WITHIN,
+    );
+    expect(r.applied).toBe(true);
+    expect(r.appliedValue).toBe(20_000);
+    expect(r.preparationType).toBe("association_registration"); // echo
+  });
+
+  it("PL2-3: type=association·gift 신고일−4개월 → 윈도우 밖(상속 동일입력은 포함)", () => {
+    const evalDate = new Date("2023-11-01"); // 신고일 2024-03-01 − 4개월
+    const gift = applyPreIpoListing(
+      preIpo({ preparationType: "association_registration", taxKind: "gift" }),
+      12_000,
+      evalDate,
+    );
+    expect(gift.windowMonths).toBe(3);
+    expect(gift.applied).toBe(false);
+    const inh = applyPreIpoListing(
+      preIpo({ preparationType: "association_registration", taxKind: "inheritance" }),
+      12_000,
+      evalDate,
+    );
+    expect(inh.windowMonths).toBe(6);
+    expect(inh.applied).toBe(true);
+  });
+
+  it("PL2-6: echo preparationType=association", () => {
+    const r = applyPreIpoListing(preIpo({ preparationType: "association_registration" }), 12_000, EVAL_WITHIN);
+    expect(r.preparationType).toBe("association_registration");
+  });
+
+  it("PL2-7: 윈도우 밖 → warnings '협회 등록 전'·'§63②2호' 포함, '거래소 상장 전' 부재", () => {
+    const r = applyPreIpoListing(
+      preIpo({ preparationType: "association_registration", securitiesFilingDate: new Date("2025-06-01") }),
+      12_000,
+      new Date("2024-05-01"), // 신고일 −1년 이상 전 → 윈도우 밖
+    );
+    expect(r.withinWindow).toBe(false);
+    const w = r.warnings.join(" ");
+    expect(w).toContain("협회 등록 전");
+    expect(w).toContain("§63②2호");
+    expect(w).not.toContain("거래소 상장 전");
+  });
+
+  it("회귀(default): preparationType 미입력 → echo exchange_listing", () => {
+    const r = applyPreIpoListing(preIpo(), 12_000, EVAL_WITHIN);
+    expect(r.preparationType).toBe("exchange_listing");
+  });
+});
+
+describe("PR-L2 §63②2호 orchestrator + Zod", () => {
+  it("PL2-2: type=association → appliedRules '§63②2호 + §57②' 포함(§63②1호 부재)", () => {
+    const input = baseInput({
+      preIpoListing: preIpo({ preparationType: "association_registration", publicOfferingPrice: 1_000_000 }),
+    });
+    const r = evaluateUnlistedStockV2(input);
+    expect(r.preIpoListingResult?.applied).toBe(true);
+    expect(r.preIpoListingResult?.preparationType).toBe("association_registration");
+    const rules = r.appliedRules.join(" ");
+    expect(rules).toContain("§63②2호");
+    expect(rules).toContain("§57②");
+    expect(rules).toContain("협회 등록");
+    expect(rules).toContain("거래소 상장신청"); // D-1 병기
+    expect(r.appliedRules.some((s) => s.includes("§63②1호"))).toBe(false);
+  });
+
+  it("PL2-4: type=association·isMaxShareholder → override 1,000,000 기준 할증 1,200,000", () => {
+    const input = baseInput({
+      isMaxShareholder: true,
+      companySize: "large",
+      preIpoListing: preIpo({ preparationType: "association_registration", publicOfferingPrice: 1_000_000 }),
+    });
+    const r = evaluateUnlistedStockV2(input);
+    expect(r.finalPerShareValue).toBe(1_000_000);
+    expect(r.premiumPerShare).toBe(1_200_000);
+  });
+
+  it("PL2-5: Zod preparationType='association_registration' parse 성공", () => {
+    const b = baseInput();
+    const parsed = unlistedStockValuationV2Schema.safeParse({
+      ...b,
+      preIpoListing: {
+        publicOfferingPrice: 20_000,
+        securitiesFilingDate: new Date("2024-03-01"),
+        taxKind: "inheritance",
+        preparationType: "association_registration",
+      },
+    } as unknown as Record<string, unknown>);
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      const pil = (parsed.data as { preIpoListing?: { preparationType?: string } }).preIpoListing;
+      expect(pil?.preparationType).toBe("association_registration");
+    }
+  });
+});

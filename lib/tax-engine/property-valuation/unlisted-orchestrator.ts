@@ -253,8 +253,11 @@ export function evaluateUnlistedStockV2(
     );
     if (preIpoListingResult.applied) {
       finalPerShareValue = preIpoListingResult.appliedValue; // MAX(공모가, §54)
+      // PR-L2: preparationType별 인용 분기 (§63②1호+§57① / §63②2호+§57②). D-1 거래소·협회 병기.
       appliedRules.push(
-        "상증법 §63②1호 + 상증령 §57① — 기업공개 준비 중 MAX(공모가, 보충적평가)",
+        preIpoListingResult.preparationType === "association_registration"
+          ? "상증법 §63②2호 + 상증령 §57② — 거래소 상장신청·협회 등록 준비 중 MAX(공모가, 보충적평가)"
+          : "상증법 §63②1호 + 상증령 §57① — 기업공개 준비 중 MAX(공모가, 보충적평가)",
       );
     } else {
       for (const w of preIpoListingResult.warnings) warnings.push(`[§63②] ${w}`);

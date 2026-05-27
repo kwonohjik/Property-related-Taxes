@@ -211,13 +211,15 @@ export const unlistedStockValuationV2Schema = z
         sameYearAsInheritanceOrGift: z.boolean(),
       })
       .optional(),
-    // PR-L (§63②1호): 기업공개 준비 중 평가 옵션 (MAX(공모가, §54 보충적평가))
+    // PR-L (§63②1호) / PR-L2 (§63②2호): 기업공개·상장신청 준비 중 평가 (MAX(공모가, §54 보충적평가))
     preIpoListing: z
       .object({
         publicOfferingPrice: z.number(),
         securitiesFilingDate: z.coerce.date(),
         taxKind: z.enum(["inheritance", "gift"]),
         listingDate: z.coerce.date().optional(),
+        // PR-L2: 준비 유형 (미입력 → exchange_listing, PR-L 하위호환). 윈도우·MAX 동일, 문자열만 분기.
+        preparationType: z.enum(["exchange_listing", "association_registration"]).optional(),
       })
       .optional(),
   })

@@ -155,14 +155,17 @@ export function BesshiForm4Buppyo3PrintView({ input }: BesshiForm4Buppyo3PrintVi
           {/* 제1쪽 */}
           <Page1CoverSection input={safe} result={result} />
 
-          {/* PR-L: §63②1호 기업공개 준비 중 평가 적용 시 ⑥ 최종평가액 반영 안내 */}
+          {/* PR-L/L2: §63② 기업공개·상장신청 준비 중 평가 적용 시 ⑥ 최종평가액 반영 안내 (preparationType 분기) */}
           {result?.preIpoListingResult?.applied && (
             <p
               className="text-[10px] text-emerald-800 bg-emerald-50 border border-emerald-200 p-1.5 mt-1 print:bg-emerald-50"
               data-testid="besshi-pre-ipo-note"
             >
-              ※ ⑥ 최종 1주당 평가액은 §63②1호(기업공개 준비 중) + 상증령 §57①에 따라 MAX(공모가격{" "}
-              {result.preIpoListingResult.publicOfferingPrice.toLocaleString("ko-KR")}, 보충적평가)를 반영했습니다.
+              ※ ⑥ 최종 1주당 평가액은{" "}
+              {result.preIpoListingResult.preparationType === "association_registration"
+                ? "§63②2호(거래소 상장신청·협회 등록 준비) + 상증령 §57②"
+                : "§63②1호(기업공개 준비) + 상증령 §57①"}
+              에 따라 MAX(공모가격 {result.preIpoListingResult.publicOfferingPrice.toLocaleString("ko-KR")}, 보충적평가)를 반영했습니다.
             </p>
           )}
 

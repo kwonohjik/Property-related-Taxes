@@ -21,6 +21,7 @@
 
 import { useMemo, useState } from "react";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { DateInput } from "@/components/ui/date-input";
@@ -75,6 +76,12 @@ export function PreIpoListingToggle({
   const isOn = value !== undefined;
   const [discardOpen, setDiscardOpen] = useState(false);
 
+  // PR-L2: 준비 유형 — display fallback (저장된 PR-L 데이터 미보유 시 exchange, E 3중 일치)
+  const ptype = value?.preparationType ?? "exchange_listing";
+  const isAssoc = ptype === "association_registration";
+  const terminalLabel = isAssoc ? "협회 등록 전" : "거래소 상장 전";
+  const clauseLabel = isAssoc ? "§63②2호" : "§63②1호";
+
   // 윈도우 미리보기 — withinWindow·windowMonths만 신뢰 (MAX는 보충적평가 필요 → 결과 카드에 위임).
   // supplementary=0으로 호출(윈도우·applied 판정은 supplementary 무관).
   const preview = useMemo(() => {
@@ -90,6 +97,7 @@ export function PreIpoListingToggle({
         securitiesFilingDate: evaluationDate ?? new Date(),
         taxKind,
         listingDate: undefined,
+        preparationType: "exchange_listing", // factory 기본 (E 3중 일치)
       });
     } else if (isOn) {
       const hasData =
@@ -121,17 +129,40 @@ export function PreIpoListingToggle({
               {sectionNum}
             </span>
           )}
-          <p className="text-xs font-semibold text-emerald-700">기업공개(IPO) 준비 중 평가 (선택)</p>
+          <p className="text-xs font-semibold text-emerald-700">기업공개·상장신청 준비 중 평가 (선택)</p>
         </div>
         <ToggleCard
           tone="emerald"
           checked={isOn}
           onCheckedChange={handleToggle}
-          title="§63②1호 기업공개 준비 중 법인 — 특례 평가"
-          description={`유가증권 신고(미신고 시 상장신청)일 ${windowMonths}개월 전부터 거래소 상장 전까지 평가기준일이 속하면 MAX(공모가격, 보충적평가)로 평가 (상증령 §57①)`}
+          title="§63② 기업공개·상장신청 준비 중 법인 — 특례 평가"
+          description={`유가증권 신고(미신고 시 상장신청·등록신청)일 ${windowMonths}개월 전부터 ${terminalLabel}까지 평가기준일이 속하면 MAX(공모가격, 보충적평가)로 평가 (상증령 §57①②)`}
         >
           {isOn && value && (
             <div className="space-y-3 mt-2" data-testid="pre-ipo-listing-form">
+              {/* ⓪ 준비 유형 (§63②1호/2호) — 날짜 필드 앞 (라벨이 유형 의존) */}
+              <div data-testid="pre-ipo-preparation-type">
+                <RadioCardGroup
+                  name="pre-ipo-preparation-type"
+                  tone="emerald"
+                  layout="stack"
+                  value={ptype}
+                  onChange={(v) => patch({ preparationType: v as PreIpoListingInput["preparationType"] })}
+                  options={[
+                    {
+                      value: "exchange_listing",
+                      label: "거래소 상장(IPO) — §63②1호",
+                      description: "기업공개 목적 유가증권 신고 — 거래소 최초 상장 전까지 (상증령 §57①)",
+                    },
+                    {
+                      value: "association_registration",
+                      label: "거래소 상장신청·협회 등록(K-OTC) — §63②2호",
+                      description: "증권시장 거래 위한 거래소 상장신청(법) / 한국금융투자협회 등록(령) 전까지 (상증령 §57②)",
+                    },
+                  ]}
+                />
+              </div>
+
               {/* ① 공모가격 */}
               <FieldCard
                 label="공모가격 (1주당)"
@@ -148,8 +179,8 @@ export function PreIpoListingToggle({
 
               {/* ② 유가증권 신고일 */}
               <FieldCard
-                label="유가증권 신고일 (미신고 시 거래소 상장신청일)"
-                hint="기업공개를 위해 금융위원회에 유가증권 신고를 한 날 (§57①). 유가증권 신고 없이 상장신청만 한 경우 상장신청일."
+                label={`유가증권 신고일 (미신고 시 ${isAssoc ? "등록신청일" : "거래소 상장신청일"})`}
+                hint={`기업공개·상장신청을 위해 금융위원회에 유가증권 신고를 한 날 (§57①②). 유가증권 신고 없이 ${isAssoc ? "등록신청" : "상장신청"}만 한 경우 그 신청일.`}
               >
                 <DateInput
                   value={toDateStr(value.securitiesFilingDate)}
@@ -160,10 +191,10 @@ export function PreIpoListingToggle({
                 />
               </FieldCard>
 
-              {/* ③ 거래소 최초 상장일 (선택) */}
+              {/* ③ terminal — 거래소 상장일 / 협회 등록일 (선택) */}
               <FieldCard
-                label="거래소 최초 상장일 (선택)"
-                hint="아직 상장 전이면 비워두세요 (미입력 시 상장 전으로 간주)."
+                label={isAssoc ? "한국금융투자협회 등록일 (선택)" : "거래소 최초 상장일 (선택)"}
+                hint={`아직 ${terminalLabel.replace(" 전", "")} 전이면 비워두세요 (미입력 시 ${terminalLabel}으로 간주).`}
               >
                 <DateInput
                   value={toDateStr(value.listingDate)}
@@ -179,7 +210,7 @@ export function PreIpoListingToggle({
                 >
                   {preview.withinWindow ? (
                     <>
-                      평가기준일이 [신고일 − {preview.windowMonths}개월, 거래소 상장 전) 윈도우 <b>내 ✓</b>
+                      평가기준일이 [신고일 − {preview.windowMonths}개월, {terminalLabel}) 윈도우 <b>내 ✓</b>
                       {value.publicOfferingPrice > 0 ? (
                         <>
                           {" "}— 공모가격 <b>{fmt(value.publicOfferingPrice)}</b>와 보충적평가 중 큰 가액으로
@@ -191,7 +222,7 @@ export function PreIpoListingToggle({
                     </>
                   ) : (
                     <span className="text-amber-700">
-                      평가기준일이 [신고일 − {preview.windowMonths}개월, 거래소 상장 전) 윈도우 밖 — §63②1호
+                      평가기준일이 [신고일 − {preview.windowMonths}개월, {terminalLabel}) 윈도우 밖 — {clauseLabel}
                       미적용, 보충적평가(§54)가 유지됩니다.
                     </span>
                   )}
