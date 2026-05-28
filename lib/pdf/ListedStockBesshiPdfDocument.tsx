@@ -26,6 +26,7 @@ import {
   LS_P1_LABELS,
   LS_P1_STOCK_CLASS_LABEL,
   LS_P2_HEADERS,
+  stripTradingExclusionSuffix,
 } from "@/components/calc/inheritance/listed-stock/besshi/listed-besshi-constants";
 import type {
   ListedStockBesshiData,
@@ -268,7 +269,7 @@ function P2DateClosingPair({
       </View>
       <View style={[lsStyles.p2Cell, lsStyles.p2ColClosing]}>
         <Text>
-          {row?.closing != null ? fmt(row.closing) : row?.label ?? ""}
+          {row?.closing != null ? fmt(row.closing) : stripTradingExclusionSuffix(row?.label)}
         </Text>
       </View>
     </>

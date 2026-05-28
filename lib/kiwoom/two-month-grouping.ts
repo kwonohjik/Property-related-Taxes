@@ -35,8 +35,9 @@ function isoOffsetDays(baseIso: string, offsetDays: number): string {
 }
 
 function formatMonthDay(iso: string): string {
+  // 평가조서(을) 양식 — MM-DD 형식 (이미지 12 정합)
   const [, m, d] = iso.split("-");
-  return `${m}월 ${d}일`;
+  return `${m}-${d}`;
 }
 
 /**

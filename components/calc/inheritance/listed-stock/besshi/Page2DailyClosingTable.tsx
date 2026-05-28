@@ -14,7 +14,7 @@
 
 import React from "react";
 import { fmt } from "@/components/calc/inheritance/unlisted-stock-v2/besshi/BesshiSharedAtoms";
-import { LS_P2_HEADERS } from "./listed-besshi-constants";
+import { LS_P2_HEADERS, stripTradingExclusionSuffix } from "./listed-besshi-constants";
 import type {
   ListedStockDailyRow,
   ListedStockMonthGroups,
@@ -44,7 +44,7 @@ function ClosingCell({
       className="border border-slate-400 px-1 py-0.5 text-right text-xs tabular-nums"
       data-testid={testId}
     >
-      {row.closing != null ? fmt(row.closing) : row.label || ""}
+      {row.closing != null ? fmt(row.closing) : stripTradingExclusionSuffix(row.label)}
     </td>
   );
 }

@@ -70,6 +70,18 @@ export const LS_P2_HEADERS = {
 // 결과뷰 토글·산식 라벨
 // ============================================================
 
+// ============================================================
+// 비영업일 라벨 단순화 — 평가조서(을) 양식
+//   "일요일 · 거래일 제외" → "일요일" (이미지 12 정합)
+// 양도세 테이블·키움 calendar nonTradingLabel 은 기존 suffix 유지.
+// 본 헬퍼는 평가조서(을) 표시 단계에서만 적용 — 화면·PDF 공유.
+// ============================================================
+
+export function stripTradingExclusionSuffix(label: string | undefined | null): string {
+  if (!label) return "";
+  return label.replace(/\s*·\s*거래일\s*제외\s*$/, "");
+}
+
 export const LS_RESULT_LABELS = {
   page1Toggle: "▼ 상장주식 평가조서(갑)",
   page2Toggle: "▼ 상장주식 평가조서(을)",
