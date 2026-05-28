@@ -92,12 +92,14 @@ export async function searchStockMaster(
   const exactCode = master.get(qUpper);
   if (exactCode) return [exactCode];
 
+  // 종목명 매칭은 대소문자 무관 (영문 종목명·KONEX 영문 코드 대비). 한글은 toUpperCase no-op.
   const prefix: StockMasterEntry[] = [];
   const contains: StockMasterEntry[] = [];
   for (const entry of master.values()) {
-    if (entry.stockName.startsWith(q)) {
+    const nameUpper = entry.stockName.toUpperCase();
+    if (nameUpper.startsWith(qUpper)) {
       prefix.push(entry);
-    } else if (entry.stockName.includes(q)) {
+    } else if (nameUpper.includes(qUpper)) {
       contains.push(entry);
     }
     if (prefix.length >= limit) break;
