@@ -8,6 +8,7 @@
 
 import { Settings, Trash2 } from "lucide-react";
 import { EstateItemHeaderChips } from "./EstateItemHeaderChips";
+import { EstateItemActionsMenu } from "./EstateItemActionsMenu";
 import type { ChipKey, ChipState } from "./chip-config";
 
 export interface EstateItemHeaderProps {
@@ -22,6 +23,8 @@ export interface EstateItemHeaderProps {
   onToggleAdvanced: () => void;
   advancedBadgeCount: number;
   onRemove: () => void;
+  /** PR-F FU-6: 카테고리 변경 ⋮ 메뉴 콜백. 미전달 시 ⋮ 메뉴 미노출 */
+  onChangeCategory?: () => void;
 }
 
 export function EstateItemHeader({
@@ -36,6 +39,7 @@ export function EstateItemHeader({
   onToggleAdvanced,
   advancedBadgeCount,
   onRemove,
+  onChangeCategory,
 }: EstateItemHeaderProps) {
   return (
     <div
@@ -57,6 +61,11 @@ export function EstateItemHeader({
         />
       </div>
       <div className="flex items-center gap-1 shrink-0 print:hidden">
+        {/* PR-F FU-6: ⋮ 더보기 메뉴 (카테고리 변경) — onChangeCategory 미전달 시 미노출 */}
+        <EstateItemActionsMenu
+          itemId={itemId}
+          onChangeCategory={onChangeCategory}
+        />
         <button
           type="button"
           onClick={onToggleAdvanced}

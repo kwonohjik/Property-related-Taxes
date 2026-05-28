@@ -5,6 +5,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { useState } from "react";
 import { render, screen, cleanup, fireEvent, renderHook, act } from "@testing-library/react";
 import { EstateItemCardShell } from "@/components/calc/inheritance/estate-card/EstateItemCardShell";
 import { useCollapseState } from "@/components/calc/inheritance/estate-card/useCollapseState";
@@ -137,5 +138,66 @@ describe("EstateItemCardShell — collapse 토글 노출 매트릭스", () => {
     expect(captured).toBe(true);
     fireEvent.click(screen.getByTestId("estate-card-collapse-toggle-card-5"));
     expect(captured).toBe(false);
+  });
+});
+
+// ============================================================
+// PR-D RM-6 — forceExpand 자동 해제 시퀀스
+// ============================================================
+
+describe("EstateItemCardShell — forceExpand 자동 해제", () => {
+  it("초기 마운트 (forceExpand=0) → collapse 변경 없음", async () => {
+    const { rerender } = render(
+      <EstateItemCardShell
+        itemId="card-fe-1"
+        collapseEnabled={true}
+        header={<div>H</div>}
+        body={<div>B</div>}
+        forceExpand={0}
+      />,
+    );
+    // localStorage에 미리 collapse=true 저장 → hydration 후 collapsed=true
+    localStorage.setItem("estate-card-collapsed-card-fe-2", "true");
+    rerender(
+      <EstateItemCardShell
+        itemId="card-fe-2"
+        collapseEnabled={true}
+        header={<div>H</div>}
+        body={<div>B</div>}
+        forceExpand={0}
+      />,
+    );
+    // 초기 마운트에서 forceExpand=0이라도 setCollapsed 트리거 안 됨 (firstMountRef)
+    const shell = screen.getByTestId("estate-card-shell-card-fe-2");
+    // hydration 후 collapsed 복원 동작 (queueMicrotask) — 초기는 false
+    expect(shell.getAttribute("data-collapsed")).toBe("false");
+  });
+
+  it("forceExpand 0→1 변경 → collapsed=false 자동 설정", async () => {
+    function TestWrapper() {
+      const [key, setKey] = useState(0);
+      return (
+        <>
+          <button data-testid="trigger" onClick={() => setKey((k) => k + 1)}>
+            trigger
+          </button>
+          <EstateItemCardShell
+            itemId="card-fe-3"
+            collapseEnabled={true}
+            header={<div>H</div>}
+            body={<div>B</div>}
+            forceExpand={key}
+          />
+        </>
+      );
+    }
+    render(<TestWrapper />);
+    // 먼저 사용자가 카드를 접음 (collapsed=true)
+    fireEvent.click(screen.getByTestId("estate-card-collapse-toggle-card-fe-3"));
+    expect(screen.getByTestId("estate-card-shell-card-fe-3").getAttribute("data-collapsed")).toBe("true");
+
+    // forceExpand 신호 (0→1) → 자동 해제
+    fireEvent.click(screen.getByTestId("trigger"));
+    expect(screen.getByTestId("estate-card-shell-card-fe-3").getAttribute("data-collapsed")).toBe("false");
   });
 });

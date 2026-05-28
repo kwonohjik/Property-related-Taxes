@@ -14,7 +14,7 @@
  */
 
 import { ChevronDown, ChevronUp } from "lucide-react";
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { useCollapseState } from "./useCollapseState";
 
 export interface EstateItemCardShellProps {
@@ -25,6 +25,12 @@ export interface EstateItemCardShellProps {
   body: ReactNode;
   /** 외부에서 collapsed 상태를 읽고 싶을 때 (예: ⚙️ 클릭으로 자동 해제) */
   onCollapseChange?: (collapsed: boolean) => void;
+  /**
+   * Phase 2 PR-D RM-6: incrementing key — 외부에서 collapse 자동 해제 신호.
+   * 부모(ItemEditor)가 ⚙️ 클릭 시 setForceExpandKey(prev + 1) 호출 → Shell이 collapsed=false 설정.
+   * useRef 첫 마운트 가드로 초기 0 트리거 제외 ([[feedback_useeffect_store_mirror_forbidden]] 예외 — 부모→자식 신호 전파).
+   */
+  forceExpand?: number;
 }
 
 export function EstateItemCardShell({
@@ -33,8 +39,21 @@ export function EstateItemCardShell({
   header,
   body,
   onCollapseChange,
+  forceExpand,
 }: EstateItemCardShellProps) {
   const [collapsed, setCollapsed] = useCollapseState(itemId);
+
+  // PR-D RM-6: forceExpand 변경 시 자동 해제 (incrementing key + 첫 마운트 가드)
+  const firstMountRef = useRef(true);
+  useEffect(() => {
+    if (firstMountRef.current) {
+      firstMountRef.current = false;
+      return;
+    }
+    if (forceExpand !== undefined) {
+      setCollapsed(false);
+    }
+  }, [forceExpand, setCollapsed]);
 
   const toggle = () => {
     setCollapsed((prev) => {

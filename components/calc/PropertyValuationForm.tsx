@@ -17,6 +17,7 @@ import { EstateChipInlineExpand } from "@/components/calc/inheritance/estate-car
 import { EstateItemAdvancedPanel } from "@/components/calc/inheritance/estate-card/EstateItemAdvancedPanel";
 import { EstateItemCardShell } from "@/components/calc/inheritance/estate-card/EstateItemCardShell";
 import { createChipClickHandler } from "@/components/calc/inheritance/estate-card/handleChipClick";
+import { CategoryChangeDialog } from "@/components/calc/inheritance/estate-card/CategoryChangeDialog";
 import {
   countNonDefaultOptions,
   resolveChips,
@@ -137,6 +138,10 @@ function ItemEditor({ item, index, onUpdate, onRemove, mode, heirs, valuationDat
   // 카드 압축 v4: 인라인 펼침 칩 키 + ⚙️ 패널 펼침 (자산별 로컬, accordion 단일)
   const [inlineExpandedKey, setInlineExpandedKey] = useState<ChipKey | null>(null);
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  // PR-D RM-6: collapse 자동 해제 신호 (incrementing key) — ⚙️ 클릭 시 Shell에 전달
+  const [forceExpandKey, setForceExpandKey] = useState(0);
+  // PR-F FU-6: 카테고리 변경 Dialog 펼침 상태
+  const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
   // 헤더 칩 도출 (mode·heirs 의존)
   const chips: ChipState[] = useMemo(
     () => resolveChips({ item, mode, heirsCount: heirs?.length ?? 0 }),
@@ -206,14 +211,17 @@ function ItemEditor({ item, index, onUpdate, onRemove, mode, heirs, valuationDat
   );
 
   function handleToggleAdvanced() {
-    // Shell이 외부에서 collapsed 상태를 자동 해제하는 hook은 후속 PR — 본 PR은 advancedOpen 토글만
+    // PR-D RM-6: collapse 자동 해제 신호 + advancedOpen 토글
+    setForceExpandKey((k) => k + 1);
     setAdvancedOpen((v) => !v);
   }
 
   return (
+    <>
     <EstateItemCardShell
       itemId={item.id}
       collapseEnabled={totalAssetCount >= 5}
+      forceExpand={forceExpandKey}
       header={
         <EstateItemHeader
           itemId={item.id}
@@ -227,6 +235,7 @@ function ItemEditor({ item, index, onUpdate, onRemove, mode, heirs, valuationDat
           onToggleAdvanced={handleToggleAdvanced}
           advancedBadgeCount={advancedBadgeCount}
           onRemove={onRemove}
+          onChangeCategory={() => setCategoryDialogOpen(true)}
         />
       }
       body={
@@ -531,6 +540,19 @@ function ItemEditor({ item, index, onUpdate, onRemove, mode, heirs, valuationDat
     </div>
       }
     />
+    {/* PR-F FU-6: 카테고리 변경 Dialog */}
+    <CategoryChangeDialog
+      open={categoryDialogOpen}
+      item={item}
+      mode={mode}
+      onConfirm={(preserved) => {
+        // pickPreservedFields 결과를 onUpdate에 전달 — 손실 필드는 undefined로 자동 처리
+        onUpdate({ ...item, ...preserved } as EstateItem);
+        setCategoryDialogOpen(false);
+      }}
+      onCancel={() => setCategoryDialogOpen(false)}
+    />
+    </>
   );
 }
 
