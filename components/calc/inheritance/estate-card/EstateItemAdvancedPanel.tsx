@@ -28,6 +28,7 @@ import {
   getFinancialDeductionHint,
 } from "@/components/calc/inheritance/AssetToggleHints";
 import { resolveAssetToggleVisibility } from "@/lib/calc/asset-toggle-visibility";
+import { EstateValuationMetaSection } from "./EstateValuationMetaSection";
 import type {
   EstateItem,
   AssetCategory,
@@ -84,6 +85,9 @@ export function EstateItemAdvancedPanel({
         </p>
         <EstimatedValuePreview item={item} />
       </div>
+
+      {/* 상속개시자료 요약 4표 — Table A 비고/수량 (2026-05-28) */}
+      <EstateValuationMetaSection item={item} onUpdate={onUpdate} />
 
       {/* §22 기본값 되돌리기 (사용자 지정 상태일 때 — visibility=default)
        *  Phase 2 INT-8: showSection22Override=true 시 hidden_permanent에서도 노출 */}

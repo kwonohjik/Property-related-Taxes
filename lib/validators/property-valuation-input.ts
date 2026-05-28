@@ -91,6 +91,19 @@ const baseItemSchema = z.object({
   marketValue: z.number().nonnegative().optional(),
   appraisedValue: z.number().nonnegative().optional(),
   standardPrice: z.number().nonnegative().optional(),
+  // 상속개시자료 요약 4표 (2026-05-28) — Table A 비고/수량 열
+  valuationMethod: z
+    .enum([
+      "market_value",
+      "similar_sales",
+      "standard_price",
+      "appraisal",
+      "acquisition_cost",
+      "book_value",
+    ])
+    .optional(),
+  areaSqm: z.number().nonnegative().optional(),
+  quantityCount: z.number().nonnegative().optional(),
   mortgageAmount: z.number().nonnegative().optional(),
   leaseDeposit: z.number().nonnegative().optional(),
   // 담보채무 §14 자동공제 (collateral-debt-auto-deduction)
@@ -506,6 +519,9 @@ export const debtItemSchema = z.object({
   heirAllocations: z.array(heirAllocationSchema).optional(),
   // §22 순금융재산 차감 채무 여부 (2026-05-21)
   isFinancialDebtForDeduction: z.boolean().optional(),
+  // 상속개시자료 요약 4표 (2026-05-28) — Table C 채권자/비고 열
+  creditorAddress: z.string().optional(),
+  incurredDate: z.string().optional(),
 });
 
 // ── PresumedInheritanceItem 스키마 (Phase A §15) ──

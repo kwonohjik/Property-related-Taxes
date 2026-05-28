@@ -23,6 +23,7 @@ import type {
 } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { CurrencyInput, parseAmount, formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { DateInput } from "@/components/ui/date-input";
 import { HeirAllocationInput } from "./HeirAllocationInput";
 
 interface DebtAllocationInputProps {
@@ -299,6 +300,37 @@ export function DebtAllocationInput({
                   }
                   disabled={it.category !== "financial"}
                 />
+
+                {/* 상속개시자료 요약 4표 — Table C 채권자/비고 (2026-05-28) */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 rounded-md border border-slate-200 bg-slate-50/40 p-2">
+                  <div>
+                    <label className="block text-[11px] font-medium text-slate-600 mb-1">
+                      채권자 주소 (Table C)
+                    </label>
+                    <input
+                      type="text"
+                      value={it.creditorAddress ?? ""}
+                      onChange={(e) =>
+                        update(idx, {
+                          creditorAddress: e.target.value || undefined,
+                        })
+                      }
+                      placeholder="예: 강남구 역삼동"
+                      className="w-full px-2 py-1 text-sm rounded border border-border bg-background"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-medium text-slate-600 mb-1">
+                      채무 발생일 (Table C 비고)
+                    </label>
+                    <DateInput
+                      value={it.incurredDate ?? ""}
+                      onChange={(v) =>
+                        update(idx, { incurredDate: v || undefined })
+                      }
+                    />
+                  </div>
+                </div>
 
                 {/* 협의분할 */}
                 <HeirAllocationInput
