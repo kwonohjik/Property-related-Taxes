@@ -15,7 +15,7 @@ import {
   getCategoryDefaultEligibility,
 } from "@/lib/calc/financial-deduction-resolver";
 import { resolveAssetToggleVisibility } from "@/lib/calc/asset-toggle-visibility";
-import { computeEffectiveValuation } from "@/components/calc/PropertyValuationForm";
+import { computeEffectiveValuation } from "@/lib/calc/estate-item-valuation";
 
 // ============================================================
 // 타입
@@ -30,7 +30,8 @@ export type ChipKey =
   | "heir-allocation"
   | "farming"
   | "family-business"
-  | "secured-claim-14";
+  | "secured-claim-14"
+  | "major-shareholder";  // PR-B (FU-2) — 주식 자산 §22② 최대주주 토글
 
 export interface ChipState {
   key: ChipKey;
@@ -92,13 +93,16 @@ export interface ResolveChipsParams {
   item: EstateItem;
   mode: "inheritance" | "gift";
   heirsCount: number;
+  /** PR-B(FU-2): 주식 자산에서 §22② 최대주주 칩 노출 여부.
+   *  상장·V1 simple만 true. V2 formal은 카드 내부 자체 토글로 처리(중복 방지) → false. */
+  showMajorShareholderChip?: boolean;
 }
 
 /**
  * 자산 1개에 노출할 칩 목록을 좌→우 우선순위 순으로 반환.
  * Design §5.2 정렬 기준.
  */
-export function resolveChips({ item, mode, heirsCount }: ResolveChipsParams): ChipState[] {
+export function resolveChips({ item, mode, heirsCount, showMajorShareholderChip }: ResolveChipsParams): ChipState[] {
   const chips: ChipState[] = [];
 
   // 1. chip-estimated-value (항상)
@@ -214,6 +218,19 @@ export function resolveChips({ item, mode, heirsCount }: ResolveChipsParams): Ch
       isExpandable: false,
       isToggle: true,
       tooltip: "저당채무 §14 자동공제 ON — 클릭하여 OFF",
+    });
+  }
+
+  // 8. chip-major-shareholder (PR-B FU-2 — 상장·V1 simple만, V2 formal은 카드 내부 자체 토글)
+  if (showMajorShareholderChip) {
+    const isMajor = item.isSection22MajorShareholder === true;
+    chips.push({
+      key: "major-shareholder",
+      label: isMajor ? "최대주주 §22② ✓" : "최대주주 §22②",
+      tone: isMajor ? "rose" : "gray",
+      isExpandable: false,
+      isToggle: true,
+      tooltip: "§22② 최대주주 보유주식은 금융재산공제 배제 — 클릭하여 토글",
     });
   }
 

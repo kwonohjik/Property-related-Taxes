@@ -15,6 +15,7 @@ import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInp
 import { EstateItemHeader } from "@/components/calc/inheritance/estate-card/EstateItemHeader";
 import { EstateChipInlineExpand } from "@/components/calc/inheritance/estate-card/EstateChipInlineExpand";
 import { EstateItemAdvancedPanel } from "@/components/calc/inheritance/estate-card/EstateItemAdvancedPanel";
+import { EstateItemCardShell } from "@/components/calc/inheritance/estate-card/EstateItemCardShell";
 import {
   countNonDefaultOptions,
   cycleSection22,
@@ -35,19 +36,9 @@ import type { EstateItem, AssetCategory, Heir } from "@/lib/tax-engine/types/inh
 
 /**
  * 자산 카드별 "효과 평가액" 우선순위 — 시가 > 감정가 > 기준시가 > 보증금(deposit).
- * TotalEstimatedValue·HeirAllocationToggleSection 공통 사용.
+ * 본 export는 backwards-compat re-export. 본체는 lib/calc/estate-item-valuation.ts.
  */
-export function computeEffectiveValuation(item: EstateItem): number {
-  if (item.category === "deposit") {
-    return item.leaseDeposit ?? 0;
-  }
-  return (
-    item.marketValue ??
-    item.appraisedValue ??
-    item.standardPrice ??
-    0
-  );
-}
+export { computeEffectiveValuation } from "@/lib/calc/estate-item-valuation";
 
 // ============================================================
 // 카테고리 메타
@@ -143,9 +134,11 @@ interface ItemEditorProps {
   heirs?: Heir[];
   /** 평가기준일 (상속개시일·증여일) — 기준시가 공시연도 기본값 계산용 */
   valuationDate?: string;
+  /** PR-C FU-3: 자산 총 개수 — 5 이상이면 카드 collapse 토글 노출 */
+  totalAssetCount: number;
 }
 
-function ItemEditor({ item, index, onUpdate, onRemove, mode, heirs, valuationDate }: ItemEditorProps) {
+function ItemEditor({ item, index, onUpdate, onRemove, mode, heirs, valuationDate, totalAssetCount }: ItemEditorProps) {
   const cat = item.category as SupportedCategory;
 
   // 토글 자동 노출 정책 (asset-toggle-visibility resolver)
@@ -236,26 +229,32 @@ function ItemEditor({ item, index, onUpdate, onRemove, mode, heirs, valuationDat
     setInlineExpandedKey((prev) => (prev === chip.key ? null : chip.key));
   }
 
-  return (
-    <div
-      data-testid={`estate-card-shell-${item.id}`}
-      className="border rounded-lg p-4 space-y-3 bg-white dark:bg-gray-900"
-    >
-      {/* 헤더 (v4 압축: 아이콘+라벨+칩+⚙️+삭제) */}
-      <EstateItemHeader
-        itemId={item.id}
-        icon={CATEGORY_ICONS[cat]}
-        categoryLabel={CATEGORY_LABELS[cat]}
-        index={index}
-        chips={chips}
-        expandedKey={inlineExpandedKey}
-        onChipClick={handleChipClick}
-        advancedOpen={advancedOpen}
-        onToggleAdvanced={() => setAdvancedOpen((v) => !v)}
-        advancedBadgeCount={advancedBadgeCount}
-        onRemove={onRemove}
-      />
+  function handleToggleAdvanced() {
+    // Shell이 외부에서 collapsed 상태를 자동 해제하는 hook은 후속 PR — 본 PR은 advancedOpen 토글만
+    setAdvancedOpen((v) => !v);
+  }
 
+  return (
+    <EstateItemCardShell
+      itemId={item.id}
+      collapseEnabled={totalAssetCount >= 5}
+      header={
+        <EstateItemHeader
+          itemId={item.id}
+          icon={CATEGORY_ICONS[cat]}
+          categoryLabel={CATEGORY_LABELS[cat]}
+          index={index}
+          chips={chips}
+          expandedKey={inlineExpandedKey}
+          onChipClick={handleChipClick}
+          advancedOpen={advancedOpen}
+          onToggleAdvanced={handleToggleAdvanced}
+          advancedBadgeCount={advancedBadgeCount}
+          onRemove={onRemove}
+        />
+      }
+      body={
+    <div className="space-y-3">
       {/* 자산명 — 부동산은 소재지 검색이 진입점, 어선·어업권은 선적지 검색, 그 외는 자유 입력 */}
       {(() => {
         const isRealEstate = cat === "real_estate_apartment" || cat === "real_estate_building" || cat === "real_estate_land";
@@ -554,6 +553,8 @@ function ItemEditor({ item, index, onUpdate, onRemove, mode, heirs, valuationDat
         />
       )}
     </div>
+      }
+    />
   );
 }
 
@@ -672,6 +673,7 @@ export function PropertyValuationForm({
               mode={mode}
               heirs={heirs}
               valuationDate={valuationDate}
+              totalAssetCount={items.length}
             />
           ))}
         </div>

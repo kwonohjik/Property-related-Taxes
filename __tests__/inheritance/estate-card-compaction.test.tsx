@@ -224,3 +224,91 @@ describe("resolveChips — 카테고리별 칩 도출", () => {
     expect(valueChip?.label).toBe("평가액 미입력");
   });
 });
+
+// ============================================================
+// PR-B (FU-2) — chip-major-shareholder
+// ============================================================
+
+describe("chip-major-shareholder — 상장·V1 simple 노출, V2 formal 비노출", () => {
+  it("showMajorShareholderChip=undefined → 칩 미노출 (기본값)", () => {
+    const item = makeItem({ category: "listed_stock" });
+    const chips = resolveChips({ item, mode: "inheritance", heirsCount: 0 });
+    expect(chips.map((c) => c.key)).not.toContain("major-shareholder");
+  });
+
+  it("showMajorShareholderChip=false (V2 formal) → 칩 미노출", () => {
+    const item = makeItem({ category: "unlisted_stock" });
+    const chips = resolveChips({
+      item,
+      mode: "inheritance",
+      heirsCount: 0,
+      showMajorShareholderChip: false,
+    });
+    expect(chips.map((c) => c.key)).not.toContain("major-shareholder");
+  });
+
+  it("showMajorShareholderChip=true (상장·V1) → 칩 노출", () => {
+    const item = makeItem({ category: "listed_stock" });
+    const chips = resolveChips({
+      item,
+      mode: "inheritance",
+      heirsCount: 0,
+      showMajorShareholderChip: true,
+    });
+    expect(chips.map((c) => c.key)).toContain("major-shareholder");
+  });
+
+  it("isSection22MajorShareholder=true → 라벨 ✓ + rose tone", () => {
+    const item = makeItem({
+      category: "listed_stock",
+      isSection22MajorShareholder: true,
+    });
+    const chips = resolveChips({
+      item,
+      mode: "inheritance",
+      heirsCount: 0,
+      showMajorShareholderChip: true,
+    });
+    const chip = chips.find((c) => c.key === "major-shareholder");
+    expect(chip?.label).toBe("최대주주 §22② ✓");
+    expect(chip?.tone).toBe("rose");
+  });
+
+  it("isSection22MajorShareholder=false/undef → 라벨 미선택 + gray", () => {
+    const item = makeItem({ category: "listed_stock" });
+    const chips = resolveChips({
+      item,
+      mode: "inheritance",
+      heirsCount: 0,
+      showMajorShareholderChip: true,
+    });
+    const chip = chips.find((c) => c.key === "major-shareholder");
+    expect(chip?.label).toBe("최대주주 §22②");
+    expect(chip?.tone).toBe("gray");
+  });
+
+  it("mode=gift → showMajorShareholderChip 무관 미노출", () => {
+    const item = makeItem({ category: "listed_stock" });
+    const chips = resolveChips({
+      item,
+      mode: "gift",
+      heirsCount: 0,
+      showMajorShareholderChip: true,
+    });
+    // gift는 estimated-value만 — 다른 칩 모두 미노출
+    expect(chips.map((c) => c.key)).toEqual(["estimated-value"]);
+  });
+
+  it("isToggle=true (즉시 토글, 펼침 없음)", () => {
+    const item = makeItem({ category: "listed_stock" });
+    const chips = resolveChips({
+      item,
+      mode: "inheritance",
+      heirsCount: 0,
+      showMajorShareholderChip: true,
+    });
+    const chip = chips.find((c) => c.key === "major-shareholder");
+    expect(chip?.isToggle).toBe(true);
+    expect(chip?.isExpandable).toBe(false);
+  });
+});

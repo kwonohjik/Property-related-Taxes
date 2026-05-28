@@ -13,7 +13,7 @@ import { DeemedCategorySection } from "@/components/calc/inheritance/DeemedCateg
 import { FarmingCategorySection } from "@/components/calc/inheritance/FarmingCategorySection";
 import { FamilyBusinessCategorySection } from "@/components/calc/inheritance/FamilyBusinessCategorySection";
 import { HeirAllocationToggleSection } from "@/components/calc/inheritance/HeirAllocationToggleSection";
-import { computeEffectiveValuation } from "@/components/calc/PropertyValuationForm";
+import { computeEffectiveValuation } from "@/lib/calc/estate-item-valuation";
 import { resolveAssetToggleVisibility } from "@/lib/calc/asset-toggle-visibility";
 import type {
   EstateItem,
@@ -38,6 +38,7 @@ const PANEL_TITLE: Record<ChipKey, string> = {
   farming: "영농상속 자산 분류 (§16⑤)",
   "family-business": "가업상속 자산 분류 (§15⑤)",
   "secured-claim-14": "",
+  "major-shareholder": "",  // PR-B FU-2 — 즉시 토글, 패널 미렌더
 };
 
 const PANEL_TONE: Record<ChipKey, ChipTone> = {
@@ -48,6 +49,7 @@ const PANEL_TONE: Record<ChipKey, ChipTone> = {
   farming: "violet",
   "family-business": "violet",
   "secured-claim-14": "amber",
+  "major-shareholder": "rose",  // PR-B FU-2
 };
 
 export function EstateChipInlineExpand({
@@ -59,8 +61,12 @@ export function EstateChipInlineExpand({
   onClose,
 }: EstateChipInlineExpandProps) {
   if (!expandedKey) return null;
-  if (expandedKey === "estimated-value" || expandedKey === "section22" || expandedKey === "secured-claim-14") {
-    // 펼치지 않는 칩
+  if (
+    expandedKey === "estimated-value" ||
+    expandedKey === "section22" ||
+    expandedKey === "secured-claim-14" ||
+    expandedKey === "major-shareholder"  // PR-B 즉시 토글 — 패널 미렌더
+  ) {
     return null;
   }
 
