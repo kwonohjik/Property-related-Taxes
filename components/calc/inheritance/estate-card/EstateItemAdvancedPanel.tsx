@@ -1,0 +1,163 @@
+"use client";
+
+/**
+ * EstateItemAdvancedPanel — ⚙️ 고급 옵션 펼침 패널
+ *
+ * Plan §3.4 · Design D-O1·D-O2 (단일 인스턴스 정책):
+ *   - 분류·분할·영농·가업 = 인라인 펼침 단일 위치 (본 패널 미렌더)
+ *   - 본 패널 노출 항목:
+ *     · EstimatedValuePreview (상세 우선순위 표)
+ *     · hidden_expandable (§22·영농·가업 visibility=hidden_expandable인 경우)
+ *     · §22 사용자 지정 시 "기본값으로 되돌리기" 경로 (FinancialDeductionChip)
+ *     · §14 자동공제 보조 입력 (securedClaimIsFinancialDebt + 채권자명)
+ *
+ * 정책: useEffect → store 미러링 0
+ *       inline 자동 펼침은 부모 Shell의 onUpdate 콜백에서 처리
+ */
+
+import { useState } from "react";
+import { X } from "lucide-react";
+import { EstimatedValuePreview } from "@/components/calc/property-valuation-preview";
+import { FinancialDeductionChip } from "@/components/calc/inheritance/FinancialDeductionChip";
+import { FarmingCategorySection } from "@/components/calc/inheritance/FarmingCategorySection";
+import { FamilyBusinessCategorySection } from "@/components/calc/inheritance/FamilyBusinessCategorySection";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import {
+  HintBadge,
+  getFamilyBusinessHint,
+  getFinancialDeductionHint,
+} from "@/components/calc/inheritance/AssetToggleHints";
+import { resolveAssetToggleVisibility } from "@/lib/calc/asset-toggle-visibility";
+import type {
+  EstateItem,
+  AssetCategory,
+} from "@/lib/tax-engine/types/inheritance-gift.types";
+
+export interface EstateItemAdvancedPanelProps {
+  itemId: string;
+  item: EstateItem;
+  onUpdate: (updated: EstateItem) => void;
+  /** 본체에 §14 ToggleCard가 있을 때, ⚙️ 안에는 보조 입력만 노출 */
+  showSecuredClaimSubFields: boolean;
+}
+
+export function EstateItemAdvancedPanel({
+  itemId,
+  item,
+  onUpdate,
+  showSecuredClaimSubFields,
+}: EstateItemAdvancedPanelProps) {
+  const cat = item.category as AssetCategory;
+  const visibility = resolveAssetToggleVisibility(item);
+  const [showHiddenExpandable, setShowHiddenExpandable] = useState(false);
+
+  const set = (patch: Partial<EstateItem>) => onUpdate({ ...item, ...patch });
+
+  const hiddenItems: Array<"financialDeduction" | "farming" | "familyBusiness"> = [];
+  if (visibility.financialDeduction === "hidden_expandable") hiddenItems.push("financialDeduction");
+  if (visibility.farming === "hidden_expandable") hiddenItems.push("farming");
+  if (visibility.familyBusiness === "hidden_expandable") hiddenItems.push("familyBusiness");
+
+  return (
+    <div
+      id={`estate-advanced-panel-${itemId}`}
+      data-testid={`estate-advanced-panel-${itemId}`}
+      className={[
+        "mt-3 rounded-md p-4 space-y-3",
+        "border border-slate-200 bg-slate-50/40",
+        "dark:border-slate-700 dark:bg-slate-900/40",
+        "animate-in fade-in slide-in-from-top-2 duration-200",
+        "print:block",
+      ].join(" ")}
+    >
+      {/* 예상 평가 우선순위 (재사용) */}
+      <div>
+        <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1">
+          예상 평가 우선순위
+        </p>
+        <EstimatedValuePreview item={item} />
+      </div>
+
+      {/* §22 기본값 되돌리기 (사용자 지정 상태일 때 — visibility=default) */}
+      {visibility.financialDeduction === "default" &&
+        item.isFinancialAssetForDeduction !== undefined && (
+          <div className="border-t border-slate-200 dark:border-slate-700 pt-2">
+            <FinancialDeductionChip item={item} onUpdate={onUpdate} />
+          </div>
+        )}
+
+      {/* hidden_expandable 펼침 */}
+      {hiddenItems.length > 0 && (
+        <div className="border-t border-slate-200 dark:border-slate-700 pt-2 space-y-2">
+          <button
+            type="button"
+            onClick={() => setShowHiddenExpandable((v) => !v)}
+            aria-expanded={showHiddenExpandable}
+            className="text-xs text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-300 py-1"
+          >
+            {showHiddenExpandable
+              ? "▲ 추가 옵션 접기"
+              : `▼ 추가 옵션 (${hiddenItems.length}개)`}
+          </button>
+          {showHiddenExpandable && (
+            <div className="space-y-2">
+              {hiddenItems.includes("financialDeduction") && (
+                <div>
+                  <HintBadge tone="emerald">{getFinancialDeductionHint(cat)}</HintBadge>
+                  <FinancialDeductionChip item={item} onUpdate={onUpdate} />
+                </div>
+              )}
+              {hiddenItems.includes("farming") && (
+                <div>
+                  <HintBadge tone="amber">영농상속 자산 (시행령 §16⑤)</HintBadge>
+                  <FarmingCategorySection item={item} onUpdate={onUpdate} />
+                </div>
+              )}
+              {hiddenItems.includes("familyBusiness") && (
+                <div>
+                  <HintBadge tone="amber">{getFamilyBusinessHint(cat)}</HintBadge>
+                  <FamilyBusinessCategorySection item={item} onUpdate={onUpdate} />
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* §14 보조 입력 (저당채무 ON 상태일 때만) */}
+      {showSecuredClaimSubFields && item.deductSecuredClaimAsDebt && (
+        <div className="border-t border-slate-200 dark:border-slate-700 pt-2 space-y-2">
+          <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">
+            §14 담보채무 자동공제 — 보조 입력
+          </p>
+          <ToggleCard
+            tone="rose"
+            size="sm"
+            title="저당채무가 금융회사 채무 (§22 순금융 차감)"
+            description="은행 등 §10①1호 입증 금융회사 저당이면 ON. 임대보증금은 §22 대상 아님(자동 제외)."
+            checked={item.securedClaimIsFinancialDebt ?? false}
+            onCheckedChange={(v) =>
+              set({ securedClaimIsFinancialDebt: v || undefined })
+            }
+            disabled={(item.mortgageAmount ?? 0) === 0}
+            disabledReason="저당채권액이 없으면 §22 금융채무 차감 무관"
+          />
+          <div className="pt-1">
+            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+              채권자명 (선택)
+            </label>
+            <input
+              type="text"
+              value={item.securedClaimCreditorName ?? ""}
+              onChange={(e) =>
+                set({ securedClaimCreditorName: e.target.value || undefined })
+              }
+              placeholder="채권자·내용 (미입력 시 자산명 담보채무)"
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

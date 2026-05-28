@@ -1,0 +1,95 @@
+"use client";
+
+/**
+ * EstateItemHeader — 자산 카드 헤더 행 + 칩 + 액션
+ *
+ * Plan §3.1·§5 · Visual §2.1
+ */
+
+import { Settings, Trash2 } from "lucide-react";
+import { EstateItemHeaderChips } from "./EstateItemHeaderChips";
+import type { ChipKey, ChipState } from "./chip-config";
+
+export interface EstateItemHeaderProps {
+  itemId: string;
+  icon: string;
+  categoryLabel: string;
+  index: number;
+  chips: ChipState[];
+  expandedKey: ChipKey | null;
+  onChipClick: (chip: ChipState) => void;
+  advancedOpen: boolean;
+  onToggleAdvanced: () => void;
+  advancedBadgeCount: number;
+  onRemove: () => void;
+}
+
+export function EstateItemHeader({
+  itemId,
+  icon,
+  categoryLabel,
+  index,
+  chips,
+  expandedKey,
+  onChipClick,
+  advancedOpen,
+  onToggleAdvanced,
+  advancedBadgeCount,
+  onRemove,
+}: EstateItemHeaderProps) {
+  return (
+    <div
+      data-testid={`estate-card-header-${itemId}`}
+      className="flex flex-wrap items-start justify-between gap-2"
+    >
+      <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="text-lg" aria-hidden>{icon}</span>
+          <span className="font-semibold text-sm text-gray-700 dark:text-gray-200">
+            {categoryLabel} {index + 1}
+          </span>
+        </div>
+        <EstateItemHeaderChips
+          itemId={itemId}
+          chips={chips}
+          expandedKey={expandedKey}
+          onChipClick={onChipClick}
+        />
+      </div>
+      <div className="flex items-center gap-1 shrink-0 print:hidden">
+        <button
+          type="button"
+          onClick={onToggleAdvanced}
+          aria-expanded={advancedOpen}
+          aria-controls={`estate-advanced-panel-${itemId}`}
+          data-testid={`estate-advanced-panel-toggle-${itemId}`}
+          title="고급 옵션 (평가 우선순위·추가 분류·§14 보조)"
+          className={[
+            "inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs",
+            "border border-slate-200 dark:border-slate-700",
+            "transition-colors duration-150",
+            advancedOpen
+              ? "bg-slate-100 dark:bg-slate-800"
+              : "hover:bg-slate-50 dark:hover:bg-slate-800/50",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400",
+          ].join(" ")}
+        >
+          <Settings className="h-3.5 w-3.5" aria-hidden />
+          <span>옵션{advancedBadgeCount > 0 ? ` (${advancedBadgeCount})` : ""}</span>
+        </button>
+        <button
+          type="button"
+          onClick={onRemove}
+          data-testid={`estate-card-remove-${itemId}`}
+          aria-label="자산 삭제"
+          className="text-xs text-red-500 hover:text-red-700 dark:hover:text-red-300 px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
+        >
+          <span className="inline-flex items-center gap-1">
+            <Trash2 className="h-3.5 w-3.5" aria-hidden />
+            삭제
+          </span>
+        </button>
+      </div>
+    </div>
+  );
+}

@@ -10,29 +10,26 @@
  */
 
 import { useMemo, useState } from "react";
-import {
-  countHiddenExpandable,
-  resolveAssetToggleVisibility,
-} from "@/lib/calc/asset-toggle-visibility";
-import {
-  HintBadge,
-  getFamilyBusinessHint,
-  getFinancialDeductionHint,
-} from "@/components/calc/inheritance/AssetToggleHints";
+import { resolveAssetToggleVisibility } from "@/lib/calc/asset-toggle-visibility";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { EstateItemHeader } from "@/components/calc/inheritance/estate-card/EstateItemHeader";
+import { EstateChipInlineExpand } from "@/components/calc/inheritance/estate-card/EstateChipInlineExpand";
+import { EstateItemAdvancedPanel } from "@/components/calc/inheritance/estate-card/EstateItemAdvancedPanel";
+import {
+  countNonDefaultOptions,
+  cycleSection22,
+  resolveChips,
+  type ChipKey,
+  type ChipState,
+} from "@/components/calc/inheritance/estate-card/chip-config";
 import { AddressSearch, type AddressValue } from "@/components/ui/address-search";
 import {
   resolveSigunguCode,
   isReverseGeocodeError,
 } from "@/lib/calc/vworld-reverse-geocode";
 import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
-import { EstimatedValuePreview, TotalEstimatedValue } from "@/components/calc/property-valuation-preview";
-import { DeemedCategorySection } from "@/components/calc/inheritance/DeemedCategorySection";
-import { FarmingCategorySection } from "@/components/calc/inheritance/FarmingCategorySection";
-import { FamilyBusinessCategorySection } from "@/components/calc/inheritance/FamilyBusinessCategorySection";
+import { TotalEstimatedValue } from "@/components/calc/property-valuation-preview";
 import { CorporateNonBusinessAssetsSection } from "@/components/calc/inheritance/CorporateNonBusinessAssetsSection";
-import { FinancialDeductionChip } from "@/components/calc/inheritance/FinancialDeductionChip";
-import { HeirAllocationToggleSection } from "@/components/calc/inheritance/HeirAllocationToggleSection";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import type { EstateItem, AssetCategory, Heir } from "@/lib/tax-engine/types/inheritance-gift.types";
 
@@ -153,9 +150,19 @@ function ItemEditor({ item, index, onUpdate, onRemove, mode, heirs, valuationDat
 
   // 토글 자동 노출 정책 (asset-toggle-visibility resolver)
   const visibility = useMemo(() => resolveAssetToggleVisibility(item), [item]);
-  const hiddenExpandableCount = countHiddenExpandable(visibility);
-  // 펼침 state — 자산별 로컬, 새로고침 시 OFF 리셋 (sessionStorage persist는 후속 PR)
-  const [showExpanded, setShowExpanded] = useState(false);
+  // (hiddenExpandableCount·showExpanded 폐지 — EstateItemAdvancedPanel 내부에서 자체 관리)
+  // 카드 압축 v4: 인라인 펼침 칩 키 + ⚙️ 패널 펼침 (자산별 로컬, accordion 단일)
+  const [inlineExpandedKey, setInlineExpandedKey] = useState<ChipKey | null>(null);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  // 헤더 칩 도출 (mode·heirs 의존)
+  const chips: ChipState[] = useMemo(
+    () => resolveChips({ item, mode, heirsCount: heirs?.length ?? 0 }),
+    [item, mode, heirs],
+  );
+  const advancedBadgeCount = useMemo(
+    () => countNonDefaultOptions(item, mode),
+    [item, mode],
+  );
 
   // cash·financial·deposit은 단순 금액 입력만 — 감정가·공시지가·저당권 불필요
   const showMarketValue = true;
@@ -208,24 +215,46 @@ function ItemEditor({ item, index, onUpdate, onRemove, mode, heirs, valuationDat
   /** 토지·건물용 단가 (원/㎡) — StandardPriceInput 내부 상태 유지용 */
   const [standardPricePerSqm, setStandardPricePerSqm] = useState("");
 
+  // 칩 클릭 핸들러 — Plan §3.5·Design D-O1·D2-C2
+  function handleChipClick(chip: ChipState) {
+    if (chip.key === "estimated-value") return;
+    if (chip.key === "section22") {
+      // 3-state 순환: undef → true → false → undef
+      set({ isFinancialAssetForDeduction: cycleSection22(item.isFinancialAssetForDeduction) });
+      return;
+    }
+    if (chip.key === "secured-claim-14") {
+      // ON 상태에서만 칩 노출 → 클릭=OFF
+      set({
+        deductSecuredClaimAsDebt: undefined,
+        securedClaimIsFinancialDebt: undefined,
+        securedClaimCreditorName: undefined,
+      });
+      return;
+    }
+    // Expandable: accordion (key 동일 시 닫힘)
+    setInlineExpandedKey((prev) => (prev === chip.key ? null : chip.key));
+  }
+
   return (
-    <div className="border rounded-lg p-4 space-y-3 bg-white dark:bg-gray-900">
-      {/* 헤더 */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-lg">{CATEGORY_ICONS[cat]}</span>
-          <span className="font-semibold text-sm text-gray-700 dark:text-gray-200">
-            {CATEGORY_LABELS[cat]} {index + 1}
-          </span>
-        </div>
-        <button
-          type="button"
-          onClick={onRemove}
-          className="text-xs text-red-500 hover:text-red-700 dark:hover:text-red-300 px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
-        >
-          삭제
-        </button>
-      </div>
+    <div
+      data-testid={`estate-card-shell-${item.id}`}
+      className="border rounded-lg p-4 space-y-3 bg-white dark:bg-gray-900"
+    >
+      {/* 헤더 (v4 압축: 아이콘+라벨+칩+⚙️+삭제) */}
+      <EstateItemHeader
+        itemId={item.id}
+        icon={CATEGORY_ICONS[cat]}
+        categoryLabel={CATEGORY_LABELS[cat]}
+        index={index}
+        chips={chips}
+        expandedKey={inlineExpandedKey}
+        onChipClick={handleChipClick}
+        advancedOpen={advancedOpen}
+        onToggleAdvanced={() => setAdvancedOpen((v) => !v)}
+        advancedBadgeCount={advancedBadgeCount}
+        onRemove={onRemove}
+      />
 
       {/* 자산명 — 부동산은 소재지 검색이 진입점, 어선·어업권은 선적지 검색, 그 외는 자유 입력 */}
       {(() => {
@@ -494,78 +523,34 @@ function ItemEditor({ item, index, onUpdate, onRemove, mode, heirs, valuationDat
         </ToggleCard>
       )}
 
-      {/* 예상 순 평가액 미리보기 */}
-      <EstimatedValuePreview item={item} />
-
-      {/* 간주상속재산 분류 (보험금·신탁·퇴직금) — 상속세 전용. 부동산은 §10 퇴직금 옵션 자동 숨김 */}
-      {mode === "inheritance" && (
-        <DeemedCategorySection
-          item={item}
-          onUpdate={onUpdate}
-          retirementOptionVisibility={visibility.deemedRetirementOption}
-        />
-      )}
-
-      {/* 영농상속 자산 분류 (§18의3 + 시행령 §16⑤) — 카테고리별 자동 노출 */}
-      {mode === "inheritance" && visibility.farming === "default" && (
-        <FarmingCategorySection item={item} onUpdate={onUpdate} />
-      )}
-
-      {/* 가업상속 자산 분류 (§18의2 + 상증령 §15⑤) — 카테고리별 자동 노출 */}
-      {mode === "inheritance" && visibility.familyBusiness === "default" && (
-        <FamilyBusinessCategorySection item={item} onUpdate={onUpdate} />
-      )}
-
-      {/* 법인 사업무관자산 차감 (§15⑤2호 + §16⑤2호) — corporate_stock 자산만 노출 */}
+      {/* 법인 사업무관자산 차감 (§15⑤2호 + §16⑤2호) — corporate_stock 자산만 (PropertyValuationForm은 주식 미처리이나 안전상 보존) */}
       {mode === "inheritance" && (
         <CorporateNonBusinessAssetsSection item={item} onUpdate={onUpdate} />
       )}
 
-      {/* §22 금융재산공제 체크박스 — 카테고리별 자동 노출 */}
-      {mode === "inheritance" && visibility.financialDeduction === "default" && (
-        <FinancialDeductionChip item={item} onUpdate={onUpdate} />
-      )}
+      {/* ─────────────────────────────────────────────────────────
+       * 헤더 칩 인라인 펼침 (분류·분할·영농·가업)
+       * — Plan §3.5 · Design D-O1 단일 인스턴스 정책
+       * ───────────────────────────────────────────────────────── */}
+      <EstateChipInlineExpand
+        expandedKey={inlineExpandedKey}
+        itemId={item.id}
+        item={item}
+        onUpdate={onUpdate}
+        heirs={heirs}
+        onClose={() => setInlineExpandedKey(null)}
+      />
 
-      {/* 펼침 영역 — hidden_expandable 토글 모음 (계획서 §2 UI 패턴) */}
-      {mode === "inheritance" && hiddenExpandableCount > 0 && (
-        <div className="space-y-2">
-          <button
-            type="button"
-            onClick={() => setShowExpanded((v) => !v)}
-            aria-expanded={showExpanded}
-            aria-controls={`expandable-toggles-${item.id}`}
-            className="text-xs text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-300 py-1"
-          >
-            {showExpanded
-              ? "▲ 적용 옵션 접기"
-              : `▼ 더 많은 적용 옵션 보기 (${hiddenExpandableCount}개)`}
-          </button>
-          {showExpanded && (
-            <div id={`expandable-toggles-${item.id}`} className="space-y-2">
-              {visibility.familyBusiness === "hidden_expandable" && (
-                <div>
-                  <HintBadge tone="amber">{getFamilyBusinessHint(cat)}</HintBadge>
-                  <FamilyBusinessCategorySection item={item} onUpdate={onUpdate} />
-                </div>
-              )}
-              {visibility.financialDeduction === "hidden_expandable" && (
-                <div>
-                  <HintBadge tone="emerald">{getFinancialDeductionHint(cat)}</HintBadge>
-                  <FinancialDeductionChip item={item} onUpdate={onUpdate} />
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* 상속인·수유자별 협의분할 (메인 PR 2 — 상속세 전용) */}
-      {mode === "inheritance" && heirs && (
-        <HeirAllocationToggleSection
+      {/* ─────────────────────────────────────────────────────────
+       * ⚙️ 고급 옵션 패널
+       * — Plan §3.4 · Design D-O1·D-O2
+       * ───────────────────────────────────────────────────────── */}
+      {advancedOpen && mode === "inheritance" && (
+        <EstateItemAdvancedPanel
+          itemId={item.id}
           item={item}
-          heirs={heirs}
-          effectiveValuation={computeEffectiveValuation(item)}
-          onChange={(patch) => onUpdate({ ...item, ...patch })}
+          onUpdate={onUpdate}
+          showSecuredClaimSubFields={showCollateralDeductToggle}
         />
       )}
     </div>

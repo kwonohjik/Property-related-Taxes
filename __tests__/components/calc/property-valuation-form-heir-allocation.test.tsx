@@ -27,8 +27,12 @@ function makeHeirs(): Heir[] {
   ];
 }
 
-describe("[C7] PropertyValuationForm 협의분할 토글 — 모드별 분기", () => {
-  it("[C7] mode='gift' 시 협의분할 토글 미렌더", () => {
+describe("[C7] PropertyValuationForm 협의분할 진입점 — 모드별 분기", () => {
+  // 2026-05-28 estate-item-card-compaction v4 이후:
+  //   협의분할 입력은 헤더 칩 `chip-heir-allocation` 인라인 펼침 안에 위치.
+  //   따라서 본 anchor는 카드 진입점(칩)의 노출 여부로 검증.
+
+  it("[C7] mode='gift' 시 협의분할 칩 미렌더", () => {
     render(
       <PropertyValuationForm
         items={[makeItem("a1")]}
@@ -36,12 +40,11 @@ describe("[C7] PropertyValuationForm 협의분할 토글 — 모드별 분기", 
         mode="gift"
       />,
     );
-    // 토글 타이틀 미존재
-    const toggle = screen.queryByText(/협의분할 입력/);
-    expect(toggle).toBeNull();
+    const chip = screen.queryByTestId("estate-chip-heir-allocation-a1");
+    expect(chip).toBeNull();
   });
 
-  it("[C7-반례] mode='inheritance' + heirs 있음 시 협의분할 토글 노출", () => {
+  it("[C7-반례] mode='inheritance' + heirs 있음 시 협의분할 칩 노출", () => {
     render(
       <PropertyValuationForm
         items={[makeItem("a1")]}
@@ -50,11 +53,11 @@ describe("[C7] PropertyValuationForm 협의분할 토글 — 모드별 분기", 
         heirs={makeHeirs()}
       />,
     );
-    const toggle = screen.queryByText(/협의분할 입력/);
-    expect(toggle).not.toBeNull();
+    const chip = screen.queryByTestId("estate-chip-heir-allocation-a1");
+    expect(chip).not.toBeNull();
   });
 
-  it("[C7-누락] mode='inheritance'이나 heirs 미전달 시 토글 미렌더", () => {
+  it("[C7-누락] mode='inheritance'이나 heirs 미전달 시 칩 미렌더", () => {
     render(
       <PropertyValuationForm
         items={[makeItem("a1")]}
@@ -63,7 +66,7 @@ describe("[C7] PropertyValuationForm 협의분할 토글 — 모드별 분기", 
         // heirs 미전달
       />,
     );
-    const toggle = screen.queryByText(/협의분할 입력/);
-    expect(toggle).toBeNull();
+    const chip = screen.queryByTestId("estate-chip-heir-allocation-a1");
+    expect(chip).toBeNull();
   });
 });
