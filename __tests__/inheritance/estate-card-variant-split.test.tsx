@@ -1,0 +1,173 @@
+/**
+ * PR-D variant 본체 분리 — pickBodyVariant + variant 렌더 anchor
+ *
+ * Plan estate-card-followup-phase2 §FU-1·Design §4.2
+ */
+
+import { describe, it, expect, afterEach } from "vitest";
+import { render, screen, cleanup } from "@testing-library/react";
+import {
+  pickBodyVariant,
+  EstateBodySimple,
+  EstateBodyRealEstate,
+  EstateBodyDeposit,
+} from "@/components/calc/inheritance/estate-card/variants";
+import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
+import type { SupportedCategory } from "@/components/calc/inheritance/estate-card/variants/types";
+
+afterEach(() => cleanup());
+
+function makeItem(category: SupportedCategory): EstateItem {
+  return {
+    id: `t-${category}`,
+    category,
+    name: "테스트",
+  };
+}
+
+// ============================================================
+// pickBodyVariant 매핑 매트릭스 (7 카테고리)
+// ============================================================
+
+describe("pickBodyVariant — 7 SupportedCategory 매핑", () => {
+  it("real_estate_land → EstateBodyRealEstate", () => {
+    expect(pickBodyVariant("real_estate_land")).toBe(EstateBodyRealEstate);
+  });
+
+  it("real_estate_building → EstateBodyRealEstate", () => {
+    expect(pickBodyVariant("real_estate_building")).toBe(EstateBodyRealEstate);
+  });
+
+  it("real_estate_apartment → EstateBodyRealEstate", () => {
+    expect(pickBodyVariant("real_estate_apartment")).toBe(EstateBodyRealEstate);
+  });
+
+  it("deposit → EstateBodyDeposit", () => {
+    expect(pickBodyVariant("deposit")).toBe(EstateBodyDeposit);
+  });
+
+  it("cash → EstateBodySimple", () => {
+    expect(pickBodyVariant("cash")).toBe(EstateBodySimple);
+  });
+
+  it("financial → EstateBodySimple", () => {
+    expect(pickBodyVariant("financial")).toBe(EstateBodySimple);
+  });
+
+  it("other → EstateBodySimple", () => {
+    expect(pickBodyVariant("other")).toBe(EstateBodySimple);
+  });
+});
+
+// ============================================================
+// variant 렌더 + testid + 본체 필드 노출 매트릭스
+// ============================================================
+
+describe("EstateBodySimple — cash/financial/other 본체", () => {
+  it("cash → 자산명 + 현금 금액, 감정가 미노출", () => {
+    render(
+      <EstateBodySimple
+        item={makeItem("cash")}
+        onUpdate={() => {}}
+        showCollateralDeductToggle={false}
+        mode="inheritance"
+      />,
+    );
+    expect(screen.getByTestId("estate-body-variant-simple-t-cash")).toBeInTheDocument();
+    expect(screen.getByText("자산 명칭")).toBeInTheDocument();
+    expect(screen.getByText("현금 금액")).toBeInTheDocument();
+    // 감정평가액 미노출
+    expect(screen.queryByText("감정평가액")).toBeNull();
+  });
+
+  it("financial → 잔액 또는 시가, 감정가 미노출", () => {
+    render(
+      <EstateBodySimple
+        item={makeItem("financial")}
+        onUpdate={() => {}}
+        showCollateralDeductToggle={false}
+        mode="inheritance"
+      />,
+    );
+    expect(screen.getByText("잔액 또는 시가")).toBeInTheDocument();
+    expect(screen.queryByText("감정평가액")).toBeNull();
+  });
+
+  it("other → 시가 + 감정평가액 input 노출", () => {
+    render(
+      <EstateBodySimple
+        item={makeItem("other")}
+        onUpdate={() => {}}
+        showCollateralDeductToggle={false}
+        mode="inheritance"
+      />,
+    );
+    expect(screen.getByText("시가 (매매·수용·경매가액)")).toBeInTheDocument();
+    expect(screen.getByText("감정평가액")).toBeInTheDocument();
+  });
+});
+
+describe("EstateBodyDeposit — 전세보증금", () => {
+  it("자산명 + 임대보증금 + §22 미적용 hint", () => {
+    render(
+      <EstateBodyDeposit
+        item={makeItem("deposit")}
+        onUpdate={() => {}}
+        showCollateralDeductToggle={false}
+        mode="inheritance"
+      />,
+    );
+    expect(
+      screen.getByTestId("estate-body-variant-deposit-t-deposit"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("자산 명칭")).toBeInTheDocument();
+    expect(screen.getByText("임대보증금")).toBeInTheDocument();
+    expect(screen.getByText(/전세보증금/)).toBeInTheDocument();
+  });
+});
+
+describe("EstateBodyRealEstate — 부동산 3종", () => {
+  it("real_estate_land → AddressSearch + 임대보증금 input 미노출 [UV2-1]", () => {
+    render(
+      <EstateBodyRealEstate
+        item={makeItem("real_estate_land")}
+        onUpdate={() => {}}
+        showCollateralDeductToggle={false}
+        mode="inheritance"
+      />,
+    );
+    expect(
+      screen.getByTestId("estate-body-variant-realestate-t-real_estate_land"),
+    ).toBeInTheDocument();
+    // 토지는 임대보증금 input 미노출 — "임대보증금 (세입자 있는 경우)" 라벨 부재
+    expect(screen.queryByText("임대보증금 (세입자 있는 경우)")).toBeNull();
+  });
+
+  it("real_estate_apartment → 임대보증금 input 노출", () => {
+    render(
+      <EstateBodyRealEstate
+        item={makeItem("real_estate_apartment")}
+        onUpdate={() => {}}
+        showCollateralDeductToggle={false}
+        mode="inheritance"
+      />,
+    );
+    expect(screen.getByText("임대보증금 (세입자 있는 경우)")).toBeInTheDocument();
+  });
+
+  it("fishing 자산 → AddressSearch 라벨 '선적지·어장 연안 검색'", () => {
+    const item: EstateItem = {
+      ...makeItem("real_estate_land"),
+      farmingCategory: "fishing_vessel",
+    };
+    render(
+      <EstateBodyRealEstate
+        item={item}
+        onUpdate={() => {}}
+        showCollateralDeductToggle={false}
+        mode="inheritance"
+      />,
+    );
+    expect(screen.getByText(/선적지·어장 연안 검색/)).toBeInTheDocument();
+  });
+});
