@@ -240,6 +240,13 @@ export const listedStockItemSchema = baseItemSchema.extend({
       closingAverage: z.number(),
     })
     .optional(),
+
+  // 상증령 §52의2 anchor 보정 echo (이미지 13)
+  resolvedValuationAnchor: z.string().optional(),
+  valuationAnchorShifted: z.boolean().optional(),
+  valuationAnchorShiftReason: z.string().optional(),
+  valuationPeriodStart: z.string().optional(),
+  valuationPeriodEnd: z.string().optional(),
 });
 
 export const unlistedStockItemSchema = baseItemSchema.extend({

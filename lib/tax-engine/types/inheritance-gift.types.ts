@@ -145,6 +145,21 @@ export interface EstateItem extends EstateLocationFields {
    */
   listedStockDailyGroupsInput?: ListedStockMonthGroups;
 
+  // ============================================================
+  // 평가기준일 anchor shift (상증령 §52의2 — 이미지 13)
+  // 자동조회 응답 channel-fill 전용. 갑지 ④·평가구간 표시.
+  // ============================================================
+  /** anchor 보정 결과 ISO YYYY-MM-DD (사용자 입력 valuationDate이 거래일이면 동일) */
+  resolvedValuationAnchor?: string;
+  /** anchor가 사용자 입력과 다른지 여부 */
+  valuationAnchorShifted?: boolean;
+  /** shift 사유 라벨 ("토요일" / "일요일" / "납회기간" / "휴장일" 등) */
+  valuationAnchorShiftReason?: string;
+  /** 평가구간 시작 (anchor − 2개월 + 1일) */
+  valuationPeriodStart?: string;
+  /** 평가구간 종료 (anchor + 2개월 − 1일) */
+  valuationPeriodEnd?: string;
+
   /** 비상장주식 평가 데이터 (legacy 입력 모드) */
   unlistedStockData?: UnlistedStockData;
   /** 비상장주식 V2 평가 입력 (별지 부표3 완전 재현 — Phase 2~4) */

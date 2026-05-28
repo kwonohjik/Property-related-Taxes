@@ -123,6 +123,12 @@ function ListedStockEditor({
               listedStockAvgPrice: adapter.listedStockAvgPrice,
               listedStockDailyGroupsInput: adapter.listedStockDailyGroupsInput,
               ...(adapter.companyName ? { companyName: adapter.companyName } : {}),
+              // 상증령 §52의2 anchor shift echo (이미지 13)
+              resolvedValuationAnchor: adapter.resolvedValuationAnchor,
+              valuationAnchorShifted: adapter.valuationAnchorShifted,
+              valuationAnchorShiftReason: adapter.valuationAnchorShiftReason,
+              valuationPeriodStart: adapter.valuationPeriodStart,
+              valuationPeriodEnd: adapter.valuationPeriodEnd,
             });
           }}
         />

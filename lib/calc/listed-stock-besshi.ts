@@ -70,6 +70,13 @@ export interface KiwoomValuation2MonthResponse {
   tradingHalt?: boolean;
   adminIssue?: boolean;
   cached?: boolean;
+  // 상증령 §52의2 anchor 보정 (이미지 13 — 2026-05-28 추가)
+  inputValuationDate?: string;
+  resolvedAnchor?: string;
+  anchorShifted?: boolean;
+  anchorShiftReason?: string;
+  valuationPeriodStart?: string;
+  valuationPeriodEnd?: string;
 }
 
 export function applyKiwoomValuationResponse(
@@ -79,17 +86,29 @@ export function applyKiwoomValuationResponse(
   listedStockAvgPrice: number;
   companyName?: string;
   listedStockDailyGroupsInput: ListedStockMonthGroups;
+  resolvedValuationAnchor?: string;
+  valuationAnchorShifted?: boolean;
+  valuationAnchorShiftReason?: string;
+  valuationPeriodStart?: string;
+  valuationPeriodEnd?: string;
 } {
+  // anchor 기반 NO 매핑 (이미지 13) — resolvedAnchor 우선, fallback valuationDate
+  const anchorForGrouping = response.resolvedAnchor ?? response.valuationDate;
   const groups = splitTwoMonthSurroundingByMonthGroup(
     response.slotDates,
     response.closingPrices,
     response.weekendLabels,
-    response.valuationDate,
+    anchorForGrouping,
     options,
   );
   return {
     listedStockAvgPrice: response.average,
     companyName: response.stockName,
     listedStockDailyGroupsInput: groups,
+    resolvedValuationAnchor: response.resolvedAnchor,
+    valuationAnchorShifted: response.anchorShifted,
+    valuationAnchorShiftReason: response.anchorShiftReason,
+    valuationPeriodStart: response.valuationPeriodStart,
+    valuationPeriodEnd: response.valuationPeriodEnd,
   };
 }

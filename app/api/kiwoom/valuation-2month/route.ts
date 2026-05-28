@@ -27,7 +27,13 @@ import {
   setCachedStockMeta,
 } from "@/lib/kiwoom/cache";
 import { deduplicate } from "@/lib/kiwoom/dedup";
-import { buildTwoMonthSurroundingSlots, buildPartialSurroundingSlots } from "@/lib/kiwoom/calendar";
+import {
+  buildTwoMonthSurroundingSlots,
+  buildPartialSurroundingSlots,
+  buildSurroundingSlotsFromAnchor,
+  resolveValuationAnchor,
+  nonTradingLabel,
+} from "@/lib/kiwoom/calendar";
 import { handleKiwoomError } from "../search/route";
 import { type KiwoomDailyQuote } from "@/lib/kiwoom/types";
 
@@ -89,10 +95,21 @@ export async function POST(req: Request) {
       );
     }
 
+    // 상증령 §52의2 anchor 보정 (이미지 13)
+    const resolvedAnchor = resolveValuationAnchor(valuationDate);
+    const anchorShifted = resolvedAnchor !== valuationDate;
+    const anchorShiftReason = anchorShifted
+      ? nonTradingLabel(valuationDate).replace(/\s*·\s*거래일\s*제외\s*$/, "") || "비거래일"
+      : undefined;
+
     const slotDates =
       startOverrideDate && startOverrideDate <= valuationDate
         ? buildPartialSurroundingSlots(startOverrideDate, valuationDate)
-        : buildTwoMonthSurroundingSlots(valuationDate);
+        : buildSurroundingSlotsFromAnchor(resolvedAnchor);
+    // legacy fallback (anchor 적용 실패 시 — 이론상 발생 안 함)
+    if (slotDates.length === 0) {
+      slotDates.push(...buildTwoMonthSurroundingSlots(valuationDate));
+    }
     const fromDate = slotDates[0];
     const endDate = slotDates[slotDates.length - 1];
 
@@ -126,7 +143,7 @@ export async function POST(req: Request) {
 
     const result = twoMonthSurroundingAvg({
       quotes,
-      valuationDateIso: valuationDate,
+      valuationDateIso: resolvedAnchor, // anchor 기반 slot 생성·NO 매핑 (이미지 13)
       tradingHalt: meta.tradingHalt,
       adminIssue: meta.adminIssue,
     });
@@ -135,7 +152,13 @@ export async function POST(req: Request) {
       stockCode,
       stockName: meta.stockName,
       marketType: meta.marketType,
-      valuationDate,
+      valuationDate, // 사용자 입력 원본
+      inputValuationDate: valuationDate,
+      resolvedAnchor,
+      anchorShifted,
+      anchorShiftReason,
+      valuationPeriodStart: slotDates[0],
+      valuationPeriodEnd: slotDates[slotDates.length - 1],
       ...result,
       cached: !cacheMiss,
     });

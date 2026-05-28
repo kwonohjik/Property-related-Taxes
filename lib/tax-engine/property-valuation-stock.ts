@@ -217,10 +217,12 @@ export function evaluateListedStock(
   }
 
   const page1Values = computeListedBesshiPage1Values(item, avgPrice, context);
-  const valuationIso =
+  // 갑지 ④: shift된 anchor 우선 사용 (이미지 13 본문 — "기준일은 12.2가 되고...")
+  const contextValuationIso =
     context.valuationDate instanceof Date
       ? context.valuationDate.toISOString().slice(0, 10)
       : (context.valuationDate as string | undefined) ?? "";
+  const valuationIso = item.resolvedValuationAnchor ?? contextValuationIso;
 
   const toIso = (d: Date | string | undefined): string | undefined =>
     d instanceof Date ? d.toISOString().slice(0, 10) : (d as string | undefined);

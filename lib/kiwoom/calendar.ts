@@ -9,6 +9,7 @@
  */
 
 import { KRX_HOLIDAYS_2020_2026, KRX_HOLIDAY_FIXTURE_RANGE } from "./data/krx-holidays-2020-2026";
+import { isYearEndNonTrading } from "./year-end-holiday";
 
 /**
  * "YYYY-MM-DD" → Date (UTC). 잘못된 포맷은 Invalid Date.
@@ -48,11 +49,13 @@ export function isKrxHolidayInFixture(iso: string): boolean {
  *
  * - 주말 → false
  * - fixture 범위 내 휴장일 → false
- * - fixture 범위 밖 → 주말만 false (휴장일 판단 보류 — 호출 측이 키움 응답으로 보정)
+ * - 납회기간 (12-29 / 12-30 / 12-31, year-agnostic) → false
+ * - fixture 범위 밖 → 주말·납회만 false (휴장일 판단 보류 — 호출 측이 키움 응답으로 보정)
  */
 export function isKrxTradingDay(iso: string): boolean {
   if (isWeekend(iso)) return false;
   if (isKrxHolidayInFixture(iso)) return false;
+  if (isYearEndNonTrading(iso)) return false;
   return true;
 }
 
@@ -65,7 +68,80 @@ export function nonTradingLabel(iso: string): string {
   if (dow === 6) return "토요일 · 거래일 제외";
   if (dow === 0) return "일요일 · 거래일 제외";
   if (isKrxHolidayInFixture(iso)) return "휴장일 · 거래일 제외";
+  if (isYearEndNonTrading(iso)) return "납회기간 · 거래일 제외";
   return "";
+}
+
+/**
+ * 평가기준일을 거래일 anchor로 보정 — 상증령 §52의2.
+ *
+ * 1) 사용자 명시 (2026-05-28): MM-DD ∈ {12-29, 12-30, 12-31} 납회기간 → 12-28로 jump
+ * 2) cursor가 비거래일(토·일·KRX 휴장)이면 -1일씩 거꾸로 search
+ *
+ * 이미지 13 사례:
+ *   ㉮ 2022-12-03(토) → 2022-12-02(금)
+ *   ㉯ 2022-12-15(목, 거래일) → 그대로
+ *   ㉰ 2001-12-31(납회) → 12.28(금)
+ *   AS-07: 2024-12-30(납회) → jump 12.28(토) → search 12.27(금)
+ *   AS-08: 2025-12-31(납회) → jump 12.28(일) → search 12.27(토) → 12.26(금)
+ *
+ * 무한 루프 가드: 최대 30일 이전까지 search (정상 경로 6일 이내 종료).
+ */
+export function resolveValuationAnchor(valuationDateIso: string): string {
+  if (!valuationDateIso || !/^\d{4}-\d{2}-\d{2}$/.test(valuationDateIso)) {
+    return valuationDateIso;
+  }
+  const [y, m, d] = valuationDateIso.split("-").map(Number);
+  const cursor = new Date(Date.UTC(y, m - 1, d));
+
+  // Step 1: 납회기간이면 12-28로 jump
+  if (isYearEndNonTrading(valuationDateIso)) {
+    cursor.setUTCFullYear(y, 11, 28); // month=11 (Dec, 0-indexed), day=28
+  }
+
+  // Step 2: cursor가 비거래일이면 -1일씩 거꾸로 search (최대 30 iteration)
+  for (let i = 0; i < 30; i++) {
+    if (isKrxTradingDay(formatIsoDate(cursor))) {
+      return formatIsoDate(cursor);
+    }
+    cursor.setUTCDate(cursor.getUTCDate() - 1);
+  }
+
+  // 30일 안에 거래일 못 찾음 — 이론상 불가. fallback: 마지막 cursor.
+  return formatIsoDate(cursor);
+}
+
+/**
+ * anchor ± 2개월 ± 1일 슬롯 — 상증령 §52의2 평가구간.
+ *
+ * 시작 = anchor − 2개월 + 1일
+ * 종료 = anchor + 2개월 − 1일 (캘린더 그대로, 비거래일 보정 안 함)
+ *
+ * 이미지 13 사례:
+ *   anchor=2022-12-02 → [2022-10-03, 2023-02-01]
+ *   anchor=2022-12-15 → [2022-10-16, 2023-02-14]
+ *   anchor=2001-12-28 → [2001-10-29, 2002-02-27]
+ */
+export function buildSurroundingSlotsFromAnchor(anchorIso: string): string[] {
+  if (!anchorIso || !/^\d{4}-\d{2}-\d{2}$/.test(anchorIso)) return [];
+  const [y, m, d] = anchorIso.split("-").map(Number);
+  const anchor = new Date(Date.UTC(y, m - 1, d));
+
+  const start = new Date(anchor);
+  start.setUTCMonth(start.getUTCMonth() - 2);
+  start.setUTCDate(start.getUTCDate() + 1);
+
+  const end = new Date(anchor);
+  end.setUTCMonth(end.getUTCMonth() + 2);
+  end.setUTCDate(end.getUTCDate() - 1);
+
+  const slots: string[] = [];
+  const cursor = new Date(start.getTime());
+  while (cursor.getTime() <= end.getTime()) {
+    slots.push(formatIsoDate(cursor));
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+  return slots;
 }
 
 /**

@@ -29,10 +29,13 @@ describe("F-04 daily-close — anchor (UI 계산 검증)", () => {
     expect(marketCap >= 5_000_000_000).toBe(true);
   });
 
-  it("K-CAP-04: 2024-12-31 사업연도말 거래일 판정 (KRX 휴장일)", () => {
-    // 2024-12-31는 KRX 임시휴장일 → 직전 거래일 fallback 필요
+  it("K-CAP-04: 2024-12-31 사업연도말 거래일 판정 (납회기간)", () => {
+    // 사용자 명시 (2026-05-28): 납회기간 12-29 / 12-30 / 12-31 year-agnostic
+    // → 셋 다 비거래일
     expect(isKrxTradingDay("2024-12-31")).toBe(false);
-    // 2024-12-30 (월) → 거래일
-    expect(isKrxTradingDay("2024-12-30")).toBe(true);
+    expect(isKrxTradingDay("2024-12-30")).toBe(false); // 납회
+    expect(isKrxTradingDay("2024-12-29")).toBe(false); // 납회 + 일요일
+    // 2024-12-27 (금) → 거래일 (12-28 토요일 직전)
+    expect(isKrxTradingDay("2024-12-27")).toBe(true);
   });
 });

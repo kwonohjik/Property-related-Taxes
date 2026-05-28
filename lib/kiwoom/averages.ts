@@ -19,6 +19,7 @@ import {
   buildOneMonthBeforeSlots,
   buildOneMonthAfterListingSlots,
   buildTwoMonthSurroundingSlots,
+  buildSurroundingSlotsFromAnchor,
   nonTradingLabel,
   isKrxTradingDay,
 } from "./calendar";
@@ -182,7 +183,9 @@ export interface TwoMonthSurroundingArgs {
 export function twoMonthSurroundingAvg(
   args: TwoMonthSurroundingArgs,
 ): OneMonthBeforeTransferResult {
-  const slotDates = buildTwoMonthSurroundingSlots(args.valuationDateIso);
+  // valuationDateIso는 이제 route에서 resolvedAnchor를 전달 (이미지 13 본문 §52의2 보정 후).
+  // route가 anchor shift를 책임지므로 본 함수는 anchor 기반 slot 생성.
+  const slotDates = buildSurroundingSlotsFromAnchor(args.valuationDateIso);
   const quoteByDate = new Map<string, number>();
   for (const q of args.quotes) {
     if (q.close > 0) quoteByDate.set(q.date, q.close);

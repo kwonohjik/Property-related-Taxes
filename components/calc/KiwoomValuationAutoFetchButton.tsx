@@ -53,6 +53,11 @@ export function KiwoomValuationAutoFetchButton({
     slotDates: string[];
     closingPrices: (number | null)[];
     weekendLabels: string[];
+    resolvedAnchor?: string;
+    anchorShifted?: boolean;
+    anchorShiftReason?: string;
+    valuationPeriodStart?: string;
+    valuationPeriodEnd?: string;
   } | null>(null);
   const [showDetail, setShowDetail] = useState(false);
 
@@ -101,6 +106,12 @@ export function KiwoomValuationAutoFetchButton({
         slotDates: string[];
         closingPrices: (number | null)[];
         weekendLabels: string[];
+        inputValuationDate?: string;
+        resolvedAnchor?: string;
+        anchorShifted?: boolean;
+        anchorShiftReason?: string;
+        valuationPeriodStart?: string;
+        valuationPeriodEnd?: string;
       };
       const patch: { listedStockAvgPrice: number; stockName?: string } = {
         listedStockAvgPrice: data.average,
@@ -117,6 +128,12 @@ export function KiwoomValuationAutoFetchButton({
           tradingDays: data.tradingDays,
           sum: data.sum,
           average: data.average,
+          inputValuationDate: data.inputValuationDate,
+          resolvedAnchor: data.resolvedAnchor,
+          anchorShifted: data.anchorShifted,
+          anchorShiftReason: data.anchorShiftReason,
+          valuationPeriodStart: data.valuationPeriodStart,
+          valuationPeriodEnd: data.valuationPeriodEnd,
         });
       }
       // onResponse 가 있으면 호출자가 모든 patch를 책임 — stale closure 덮어쓰기 방지
@@ -131,6 +148,11 @@ export function KiwoomValuationAutoFetchButton({
         slotDates: data.slotDates,
         closingPrices: data.closingPrices,
         weekendLabels: data.weekendLabels,
+        resolvedAnchor: data.resolvedAnchor,
+        anchorShifted: data.anchorShifted,
+        anchorShiftReason: data.anchorShiftReason,
+        valuationPeriodStart: data.valuationPeriodStart,
+        valuationPeriodEnd: data.valuationPeriodEnd,
       });
     } catch (e) {
       setError((e as Error).message ?? "네트워크 오류");
@@ -170,10 +192,23 @@ export function KiwoomValuationAutoFetchButton({
       )}
       {info && !error && (
         <div className="rounded-md bg-emerald-50 border border-emerald-200 px-3 py-2 text-xs text-emerald-900 space-y-2">
+          {info.anchorShifted && info.resolvedAnchor && (
+            <div
+              className="rounded bg-amber-50 border border-amber-200 px-2 py-1.5 text-amber-900"
+              data-testid="ls-anchor-shift-notice"
+            >
+              ℹ️ 평가기준일 <strong>{valuationDate}</strong>
+              {info.anchorShiftReason && <span> ({info.anchorShiftReason})</span>}
+              이 비거래일이므로 직전 거래일 <strong>{info.resolvedAnchor}</strong>로 보정 (상증령 §52의2).
+            </div>
+          )}
           <div className="space-y-1">
             <p>
-              ✓ <strong>{info.stockName}</strong> · 기간{" "}
-              <strong>{info.slotDates[0]} ~ {info.slotDates[info.slotDates.length - 1]}</strong>{" "}
+              ✓ <strong>{info.stockName}</strong> · 평가구간{" "}
+              <strong>
+                {info.valuationPeriodStart ?? info.slotDates[0]} ~{" "}
+                {info.valuationPeriodEnd ?? info.slotDates[info.slotDates.length - 1]}
+              </strong>{" "}
               ({info.slotDates.length}일)
             </p>
             <p>
