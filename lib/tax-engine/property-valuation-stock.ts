@@ -30,6 +30,7 @@ import type {
   ListedStockBesshiData,
 } from "./types/inheritance-gift.types";
 import { EMPTY_LISTED_STOCK_MONTH_GROUPS } from "./types/inheritance-gift.types";
+import type { ListedStockMonthGroups } from "./types/listed-stock-valuation.types";
 import type {
   UnlistedGoodwillResult,
   UnlistedNetAssetOnlyReason,
@@ -105,11 +106,34 @@ function resolveListedPremiumRate(item: EstateItem): {
   return { premiumRate: 0 };
 }
 
+/**
+ * 단일 진실 소스 도출 — 갑지 ⑨ closingAvg.
+ *
+ * Plan: docs/00-pm/listed-stock-besshi-avg-dual-truth-fix.plan.md §2-1
+ *
+ * 우선순위:
+ *   1) groups.tradingDays > 0 (자동조회 응답 — 을지 D 양쪽 카운트 정답 산식) → groups.closingAverage
+ *   2) 수동 입력 모드 또는 EMPTY_LISTED_STOCK_MONTH_GROUPS → fallbackAvgPrice
+ *
+ * ⚠️ `?? fallbackAvgPrice` 패턴 금지 — closingAverage=0 (EMPTY) 이 `null/undefined`가
+ *    아니므로 0 통과 → 갑지 ⑨ = 0 버그. 반드시 tradingDays > 0 가드.
+ */
+function resolveClosingAvg(
+  groups: ListedStockMonthGroups | undefined,
+  fallbackAvgPrice: number,
+): number {
+  if (groups && groups.tradingDays > 0) {
+    return groups.closingAverage;
+  }
+  return fallbackAvgPrice;
+}
+
 /** ⑨~⑱ 산식 echo 산정 (orchestrator가 사용) */
 function computeListedBesshiPage1Values(
   item: EstateItem,
   avgPrice: number,
   context: { valuationDate?: Date | string },
+  groups?: ListedStockMonthGroups,
 ): {
   closingAvg: number;
   perShareMajorShareholder: number;
@@ -125,7 +149,9 @@ function computeListedBesshiPage1Values(
   premiumExclusionLabel?: string;
 } {
   const { premiumRate, exclusionReason } = resolveListedPremiumRate(item);
-  const perShareMajorShareholder = Math.floor(avgPrice * (1 + premiumRate));
+  // SSOT — groups.closingAverage 우선, tradingDays === 0 시 avgPrice fallback
+  const closingAvg = resolveClosingAvg(groups, avgPrice);
+  const perShareMajorShareholder = Math.floor(closingAvg * (1 + premiumRate));
 
   const premiumExclusionLabel =
     premiumRate === 0 && exclusionReason
@@ -135,7 +161,7 @@ function computeListedBesshiPage1Values(
   // §63②3호 미상장 신주 분기 — ⑪~⑰ derive
   if (!item.isCapitalIncreaseUnlistedShare) {
     return {
-      closingAvg: avgPrice,
+      closingAvg,
       perShareMajorShareholder,
       majorShareholderRate: premiumRate,
       premiumExclusionLabel,
@@ -166,7 +192,7 @@ function computeListedBesshiPage1Values(
   }
 
   const { effectiveDividendDifference, perShareValue } = applyCapitalIncreaseShareValuation(
-    avgPrice,
+    closingAvg,
     item.listedStockDividendDifference ?? 0,
     item.dividendBaseDateSameAsListed ?? false,
   );
@@ -174,7 +200,7 @@ function computeListedBesshiPage1Values(
   const perShareMajorShareholderUnlisted = Math.floor(perShareValue * (1 + premiumRate));
 
   return {
-    closingAvg: avgPrice,
+    closingAvg,
     perShareMajorShareholder,
     priorDividendRate: priorRate,
     faceValuePerShare: faceValue,
@@ -208,15 +234,20 @@ export function evaluateListedStock(
 
   const avgPrice = item.listedStockAvgPrice ?? 0;
   const shares = item.listedStockShares ?? 0;
+  const groups = item.listedStockDailyGroupsInput;
 
-  if (avgPrice <= 0 || shares <= 0) {
+  // SSOT — groups.closingAverage 우선, 수동 입력 모드(tradingDays===0) 시 avgPrice fallback.
+  // 입력 검증은 closingAvg 기준 (groups 우선) — listedStockAvgPrice 직접 입력 + groups 미전달 케이스도 수용.
+  const closingAvg = resolveClosingAvg(groups, avgPrice);
+
+  if (closingAvg <= 0 || shares <= 0) {
     throw new TaxCalculationError(
       TaxErrorCode.MARKET_VALUE_UNAVAILABLE,
       "상장주식 평가: 전후 2개월 종가 평균가와 주식 수가 필요합니다.",
     );
   }
 
-  const page1Values = computeListedBesshiPage1Values(item, avgPrice, context);
+  const page1Values = computeListedBesshiPage1Values(item, avgPrice, context, groups);
   // 갑지 ④: shift된 anchor 우선 사용 (이미지 13 본문 — "기준일은 12.2가 되고...")
   const contextValuationIso =
     context.valuationDate instanceof Date
@@ -260,7 +291,7 @@ export function evaluateListedStock(
       breakdown: [
         {
           label: "⑨ 전후 2개월 종가 평균 (가목)",
-          amount: Math.floor(avgPrice),
+          amount: Math.floor(closingAvg),
           lawRef: VALUATION.LISTED_STOCK,
           note: "주당 평균 종가 (원)",
         },
@@ -312,7 +343,7 @@ export function evaluateListedStock(
     breakdown: [
       {
         label: "⑨ 전후 2개월 종가 평균",
-        amount: Math.floor(avgPrice),
+        amount: Math.floor(closingAvg),
         lawRef: VALUATION.LISTED_STOCK,
         note: "주당 평균 종가 (원)",
       },

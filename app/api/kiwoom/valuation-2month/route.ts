@@ -20,6 +20,7 @@ import { z } from "zod";
 import { fetchStockInfo } from "@/lib/kiwoom/tr/ka10001";
 import { fetchDailyChart } from "@/lib/kiwoom/tr/ka10081";
 import { twoMonthSurroundingAvg } from "@/lib/kiwoom/averages";
+import { splitTwoMonthSurroundingByMonthGroup } from "@/lib/kiwoom/two-month-grouping";
 import {
   getCachedDailyClose,
   setCachedDailyCloses,
@@ -148,6 +149,17 @@ export async function POST(req: Request) {
       adminIssue: meta.adminIssue,
     });
 
+    // SSOT — 을지 산식(D 양쪽 카운트) 결과로 average·sum·tradingDays 덮어쓰기.
+    // Plan: docs/00-pm/listed-stock-besshi-avg-dual-truth-fix.plan.md §1-1·D-1
+    // twoMonthSurroundingAvg 의 D 1회 산식은 오답이므로 클라이언트로 전달하지 않음.
+    const groups = splitTwoMonthSurroundingByMonthGroup(
+      result.slotDates,
+      result.closingPrices,
+      result.weekendLabels,
+      resolvedAnchor,
+      startOverrideDate ? { startOverrideDate } : undefined,
+    );
+
     return NextResponse.json({
       stockCode,
       stockName: meta.stockName,
@@ -160,6 +172,10 @@ export async function POST(req: Request) {
       valuationPeriodStart: slotDates[0],
       valuationPeriodEnd: slotDates[slotDates.length - 1],
       ...result,
+      // ⚠️ 정답 산식으로 덮어쓰기 (en-route override) — result 의 average/sum/tradingDays 무효화.
+      average: groups.closingAverage,
+      sum: groups.closingSum,
+      tradingDays: groups.tradingDays,
       cached: !cacheMiss,
     });
   } catch (e) {

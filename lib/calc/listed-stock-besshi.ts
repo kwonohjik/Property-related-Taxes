@@ -102,7 +102,10 @@ export function applyKiwoomValuationResponse(
     options,
   );
   return {
-    listedStockAvgPrice: response.average,
+    // SSOT — §52의2 정답 산식 = 을지 grouping 결과의 closingAverage 단일 출처.
+    // Plan: docs/00-pm/listed-stock-besshi-avg-dual-truth-fix.plan.md §1-1
+    // (response.average 는 twoMonthSurroundingAvg(D 1회) 산식이라 오답 가능 — 무시).
+    listedStockAvgPrice: groups.closingAverage,
     companyName: response.stockName,
     listedStockDailyGroupsInput: groups,
     resolvedValuationAnchor: response.resolvedAnchor,
