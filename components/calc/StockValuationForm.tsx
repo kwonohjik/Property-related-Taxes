@@ -24,6 +24,7 @@ import { ListedStockBesshiAttributesSection } from "@/components/calc/inheritanc
 import { ListedStockSecurityInfoSection } from "@/components/calc/inheritance/listed-stock/ListedStockSecurityInfoSection";
 import { ListedStockBesshiPreviewCard } from "@/components/calc/inheritance/listed-stock/ListedStockBesshiPreviewCard";
 import { ListedStockBesshiPdfDownloadButton } from "@/components/calc/inheritance/listed-stock/ListedStockBesshiPdfDownloadButton";
+import { ListedStockValuationPreviewCard } from "@/components/calc/inheritance/listed-stock/ListedStockValuationPreviewCard";
 import {
   applyKiwoomValuationResponse,
   resolveStartOverrideDate,
@@ -217,23 +218,9 @@ function ListedStockEditor({
         </div>
       </ToggleCard>
 
-      {/* 평가액 미리보기 */}
-      {totalValue > 0 && (
-        <div className="rounded-md bg-gray-50 dark:bg-gray-800 px-3 py-2 text-xs space-y-1">
-          <div className="flex justify-between text-gray-500 dark:text-gray-400">
-            <span>평가 산식</span>
-            <span>
-              {isCapInc && capInc
-                ? `(${avgPrice.toLocaleString()} − ${capInc.effectiveDividendDifference.toLocaleString()}) × ${shares.toLocaleString()}주`
-                : `${avgPrice.toLocaleString()} × ${shares.toLocaleString()}주`}
-            </span>
-          </div>
-          <div className="flex justify-between font-semibold border-t border-gray-200 dark:border-gray-700 pt-1">
-            <span>{isCapInc ? "§63②3호 평가액" : "상장주식 평가액"}</span>
-            <span className="text-indigo-700 dark:text-indigo-300">{formatKRW(totalValue)}</span>
-          </div>
-        </div>
-      )}
+      {/* 평가액 미리보기 — §63③ 할증 반영 산식 표시 (dual-truth 차단)
+          Plan: docs/00-pm/listed-stock-form-formula-premium-display-fix.plan.md */}
+      <ListedStockValuationPreviewCard item={item} />
 
       {/* 공통속성 4블록 (EstateCommonAttributesSection) — PR-4: 상장·비상장 공용 */}
       <EstateCommonAttributesSection
