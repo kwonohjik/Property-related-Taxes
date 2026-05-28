@@ -20,6 +20,11 @@ import { evaluateUnlistedStockV2 } from "@/lib/tax-engine/property-valuation/unl
 import type { EstateItem, Heir } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { KiwoomValuationAutoFetchButton } from "./KiwoomValuationAutoFetchButton";
 import { EstateCommonAttributesSection } from "@/components/calc/inheritance/EstateCommonAttributesSection";
+import { ListedStockBesshiAttributesSection } from "@/components/calc/inheritance/listed-stock/ListedStockBesshiAttributesSection";
+import {
+  applyKiwoomValuationResponse,
+  resolveStartOverrideDate,
+} from "@/lib/calc/listed-stock-besshi";
 import { UnlistedStockSimpleFields } from "@/components/calc/UnlistedStockSimpleFields";
 import {
   UnlistedStockV2Card,
@@ -135,14 +140,35 @@ function ListedStockEditor({
           stockCode={item.listedStockCode}
           valuationDate={valuationDate}
           syncName
-          onFill={(patch) => {
-            set({
-              listedStockAvgPrice: patch.listedStockAvgPrice,
-              ...(patch.stockName ? { name: patch.stockName } : {}),
+          startOverrideDate={resolveStartOverrideDate(item, valuationDate)}
+          onResponse={(response) => {
+            // 4그룹 분할 결과를 listedStockDailyGroupsInput 캐시에 channel-fill
+            const adapter = applyKiwoomValuationResponse(response, {
+              startOverrideDate: resolveStartOverrideDate(item, valuationDate),
             });
+            set({
+              listedStockAvgPrice: adapter.listedStockAvgPrice,
+              listedStockDailyGroupsInput: adapter.listedStockDailyGroupsInput,
+              ...(adapter.companyName ? { companyName: adapter.companyName } : {}),
+            });
+          }}
+          onFill={(patch) => {
+            // onResponse가 이미 set 호출 — fallback 호환만 유지
+            if (!item.listedStockDailyGroupsInput) {
+              set({
+                listedStockAvgPrice: patch.listedStockAvgPrice,
+                ...(patch.stockName ? { name: patch.stockName } : {}),
+              });
+            }
           }}
         />
       )}
+
+      {/* 갑지 13 필드 입력 — 3 collapsible (sky·emerald·violet) */}
+      <ListedStockBesshiAttributesSection
+        item={item}
+        onUpdate={(patch) => set(patch)}
+      />
 
       {/* 전후 2개월 종가 평균 */}
       <div className="space-y-1">

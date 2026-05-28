@@ -13,10 +13,19 @@
 
 import { useState } from "react";
 
+import type { KiwoomValuation2MonthResponse } from "@/lib/calc/listed-stock-besshi";
+
 interface Props {
   stockCode: string;
   valuationDate: string; // 상속개시일 또는 증여일
   onFill: (patch: { listedStockAvgPrice: number; stockName?: string }) => void;
+  /**
+   * 응답 전체를 받아 4그룹 분할 등 별지부표 echo channel-fill에 사용 (선택).
+   * onFill 보다 먼저 호출.
+   */
+  onResponse?: (response: KiwoomValuation2MonthResponse) => void;
+  /** §52의2② 평가구간 단축 — capitalIncreaseDate || mergerDate ∈ [D−2월, D] 일 때 전달 (선택). */
+  startOverrideDate?: string;
   /** 종목명 자동 갱신 여부 (true 시 응답의 stockName으로 덮어쓰기) */
   syncName?: boolean;
 }
@@ -25,6 +34,8 @@ export function KiwoomValuationAutoFetchButton({
   stockCode,
   valuationDate,
   onFill,
+  onResponse,
+  startOverrideDate,
   syncName = false,
 }: Props) {
   const [loading, setLoading] = useState(false);
@@ -58,7 +69,11 @@ export function KiwoomValuationAutoFetchButton({
       const res = await fetch("/api/kiwoom/valuation-2month", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ stockCode, valuationDate }),
+        body: JSON.stringify({
+          stockCode,
+          valuationDate,
+          ...(startOverrideDate ? { startOverrideDate } : {}),
+        }),
       });
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { error?: string; message?: string };
@@ -86,6 +101,19 @@ export function KiwoomValuationAutoFetchButton({
         listedStockAvgPrice: data.average,
       };
       if (syncName && data.stockName) patch.stockName = data.stockName;
+      if (onResponse) {
+        onResponse({
+          stockCode,
+          stockName: data.stockName,
+          valuationDate,
+          slotDates: data.slotDates,
+          closingPrices: data.closingPrices,
+          weekendLabels: data.weekendLabels,
+          tradingDays: data.tradingDays,
+          sum: data.sum,
+          average: data.average,
+        });
+      }
       onFill(patch);
       setInfo({
         average: data.average,

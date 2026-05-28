@@ -176,4 +176,42 @@ export function buildTwoMonthSurroundingSlots(valuationDateIso: string): string[
   return slots;
 }
 
+/**
+ * §52의2 ② partial 슬롯 — 증자·합병 신주(미상장) 평가구간 단축.
+ *
+ * `startIso` ~ `valuationDateIso + 2월` 의 모든 캘린더 날짜 (ISO 정순).
+ * `startIso > valuationDateIso + 2월` 또는 형식 불일치 → []
+ *
+ * 사용처: `/api/kiwoom/valuation-2month` route, capitalIncreaseDate/mergerDate가
+ *  D−2월 이내일 때 클라이언트가 startOverrideDate 로 전달.
+ */
+export function buildPartialSurroundingSlots(
+  startIso: string,
+  valuationDateIso: string,
+): string[] {
+  if (
+    !startIso || !valuationDateIso ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(startIso) ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(valuationDateIso)
+  ) {
+    return [];
+  }
+  const [sy, sm, sd] = startIso.split("-").map(Number);
+  const start = new Date(Date.UTC(sy, sm - 1, sd));
+
+  const [vy, vm, vd] = valuationDateIso.split("-").map(Number);
+  const end = new Date(Date.UTC(vy, vm - 1, vd));
+  end.setUTCMonth(end.getUTCMonth() + 2);
+
+  if (start.getTime() > end.getTime()) return [];
+
+  const slots: string[] = [];
+  const cursor = new Date(start.getTime());
+  while (cursor.getTime() <= end.getTime()) {
+    slots.push(formatIsoDate(cursor));
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+  return slots;
+}
+
 export { KRX_HOLIDAY_FIXTURE_RANGE };

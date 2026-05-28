@@ -268,6 +268,8 @@ export function validateInheritanceTaxInput(
   for (const item of input.estateItems) {
     const e = validateUnlistedStockV2(item, evalCtx);
     if (e) return e;
+    const lsErr = validateListedStockBesshi(item);
+    if (lsErr) return lsErr;
   }
   const refErrs = validateHeirReferences(
     input.heirs,
@@ -277,6 +279,36 @@ export function validateInheritanceTaxInput(
     input.presumedItems ?? [],
   );
   if (refErrs.length > 0) return refErrs[0];
+
+  return null;
+}
+
+// ────────────────────────────────────────────────────
+// 상장주식 평가조서(갑·을) 입력 검증 — §63②3호·§63③ 분기
+// Plan: docs/00-pm/listed-stock-besshi-form-replica.plan.md
+// 정책: 자동 fallback 금지 ([[feedback_no_silent_apportion_fallback]])
+// ────────────────────────────────────────────────────
+
+export function validateListedStockBesshi(item: EstateItem): string | null {
+  if (item.category !== "listed_stock") return null;
+
+  // §63②3호 분기 활성 시 액면가·배당률·배당기산일 필수
+  if (item.isCapitalIncreaseUnlistedShare) {
+    if (!item.faceValuePerShare || item.faceValuePerShare <= 0) {
+      return `자산 "${item.name}" §63②3호 — 1주당 액면가 입력 필요`;
+    }
+    if (item.priorDividendRate == null || item.priorDividendRate < 0) {
+      return `자산 "${item.name}" §63②3호 — 직전기 배당률 입력 필요 (0 허용)`;
+    }
+    if (!item.dividendBaseDate && !item.dividendBaseDateSameAsListed) {
+      return `자산 "${item.name}" §63②3호 — 배당기산일 또는 '상장일자 동일' 토글 필요`;
+    }
+  }
+
+  // §63③ 최대주주 토글 시 기업규모 필수
+  if (item.isMaxShareholder && !item.companySize) {
+    return `자산 "${item.name}" §63③ — 기업 규모 (중소·중견·대기업) 입력 필요`;
+  }
 
   return null;
 }

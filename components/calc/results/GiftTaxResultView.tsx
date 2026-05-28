@@ -15,6 +15,7 @@ import { GenerationSkipSurchargeBreakdownCard } from "@/components/calc/results/
 import { GiftTaxFilingFormTable } from "@/components/calc/results/GiftTaxFilingFormTable";
 import { GiftTaxValuationFormTable } from "@/components/calc/results/GiftTaxValuationFormTable";
 import { UnlistedStockBesshiResultSection } from "@/components/calc/results/UnlistedStockBesshiResultSection";
+import { ListedStockBesshiResultSection } from "@/components/calc/results/ListedStockBesshiResultSection";
 import { HorizontalScrollContainer } from "@/components/calc/shared/HorizontalScrollContainer";
 import { calcInstallmentPayment } from "@/lib/tax-engine/credits/installment-payment";
 import { SaveButton } from "@/components/calc/shared/SaveButton";
@@ -127,6 +128,8 @@ interface Props {
   showLoginPrompt?: boolean;
   /** 증여재산 원본 목록 — 평가내역에서 ID 대신 자산명 표시용 */
   estateItems?: EstateItem[];
+  /** 증여일 — 상장주식 평가조서(갑) ④ 평가기준일 표시용 */
+  giftDate?: string;
   /** 사전증여 입력 원본 — 출처(📋 이력 기반) 배지 + 부표 1 ②/③ 컬럼 표시 */
   priorGifts?: Array<{
     giftDate: string;
@@ -162,6 +165,7 @@ export function GiftTaxResultView({
   showLoginPrompt = false,
   estateItems = [],
   priorGifts = [],
+  giftDate,
 }: Props) {
   const [showValuation, setShowValuation] = useState(false);
   const [saveMessage, setSaveMessage] = useState<SaveToastMessage | null>(autoSaveToast);
@@ -400,6 +404,12 @@ export function GiftTaxResultView({
 
       {/* 비상장주식 별지 부표3 출력 (정식평가 V2 자산, R-6) */}
       <UnlistedStockBesshiResultSection estateItems={estateItems} />
+
+      {/* 상장주식 평가조서(갑·을) 출력 — §63①1가·§63②3호·§63③ */}
+      <ListedStockBesshiResultSection
+        estateItems={estateItems}
+        valuationDate={giftDate}
+      />
 
       {/* 연부연납 안내 */}
       <InstallmentGuide finalTax={result.finalTax} />

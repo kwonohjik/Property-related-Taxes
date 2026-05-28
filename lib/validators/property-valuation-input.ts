@@ -188,6 +188,58 @@ export const listedStockItemSchema = baseItemSchema.extend({
   isCapitalIncreaseUnlistedShare: z.boolean().optional(),
   listedStockDividendDifference: z.number().nonnegative().optional(),
   dividendBaseDateSameAsListed: z.boolean().optional(),
+
+  // ============================================================
+  // 평가조서(갑·을) 재현 — 13 입력 + 1 캐시
+  // Plan: docs/00-pm/listed-stock-besshi-form-replica.plan.md (PR-LS-01~)
+  // ⑫ silent strip 방지 — discriminatedUnion strip 방지
+  // ============================================================
+  companyName: z.string().optional(),
+  representative: z.string().optional(),
+  companyAddress: z.string().optional(),
+  stockClass: z.enum(["common", "preferred"]).optional(),
+  listingDate: z.union([z.string(), z.date()]).optional(),
+  capitalIncreaseDate: z.union([z.string(), z.date()]).optional(),
+  mergerDate: z.union([z.string(), z.date()]).optional(),
+
+  // §63③ 최대주주 할증
+  isMaxShareholder: z.boolean().optional(),
+  companySize: z.enum(["small", "medium", "large"]).optional(),
+  premiumExclusionReason: z
+    .enum([
+      "none",
+      "smb_med",
+      "art53_8_1",
+      "art53_8_2",
+      "art53_8_3",
+      "art53_8_4",
+      "art53_8_5",
+      "art53_8_6",
+      "art53_8_7",
+      "art53_8_8",
+      "art53_8_9",
+    ])
+    .optional(),
+
+  // §63②3호 미상장 신주 — 갑지 ⑪⑬
+  priorDividendRate: z.number().nonnegative().optional(),
+  faceValuePerShare: z.number().nonnegative().optional(),
+  dividendBaseDate: z.union([z.string(), z.date()]).optional(),
+
+  // 자동조회 4그룹 캐시 — channel-fill 전용 (sourcing은 키움 응답)
+  listedStockDailyGroupsInput: z
+    .object({
+      beforeM1: z.array(z.any()),
+      beforeM2: z.array(z.any()),
+      afterM1: z.array(z.any()),
+      afterM2: z.array(z.any()),
+      beforeSubtotal: z.number(),
+      afterSubtotal: z.number(),
+      tradingDays: z.number(),
+      closingSum: z.number(),
+      closingAverage: z.number(),
+    })
+    .optional(),
 });
 
 export const unlistedStockItemSchema = baseItemSchema.extend({

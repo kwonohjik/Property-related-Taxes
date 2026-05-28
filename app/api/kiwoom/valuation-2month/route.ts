@@ -27,13 +27,22 @@ import {
   setCachedStockMeta,
 } from "@/lib/kiwoom/cache";
 import { deduplicate } from "@/lib/kiwoom/dedup";
-import { buildTwoMonthSurroundingSlots } from "@/lib/kiwoom/calendar";
+import { buildTwoMonthSurroundingSlots, buildPartialSurroundingSlots } from "@/lib/kiwoom/calendar";
 import { handleKiwoomError } from "../search/route";
 import { type KiwoomDailyQuote } from "@/lib/kiwoom/types";
 
 const RequestSchema = z.object({
   stockCode: z.string().regex(/^[0-9A-Z]{6}$/, "종목코드는 6자리 숫자 또는 대문자입니다."),
   valuationDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "평가기준일은 YYYY-MM-DD 형식입니다."),
+  /**
+   * §52의2② 증자·합병 신주(미상장) 평가구간 단축 (선택).
+   * client가 capitalIncreaseDate || mergerDate ∈ [D−2월, D] 일 때만 전달.
+   * 미전달 시 default D±2월 전체 구간.
+   */
+  startOverrideDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "단축구간 시작일은 YYYY-MM-DD 형식입니다.")
+    .optional(),
 });
 
 export async function POST(req: Request) {
@@ -52,7 +61,7 @@ export async function POST(req: Request) {
     );
   }
 
-  const { stockCode, valuationDate } = parsed.data;
+  const { stockCode, valuationDate, startOverrideDate } = parsed.data;
 
   try {
     let meta = getCachedStockMeta(stockCode);
@@ -80,7 +89,10 @@ export async function POST(req: Request) {
       );
     }
 
-    const slotDates = buildTwoMonthSurroundingSlots(valuationDate);
+    const slotDates =
+      startOverrideDate && startOverrideDate <= valuationDate
+        ? buildPartialSurroundingSlots(startOverrideDate, valuationDate)
+        : buildTwoMonthSurroundingSlots(valuationDate);
     const fromDate = slotDates[0];
     const endDate = slotDates[slotDates.length - 1];
 

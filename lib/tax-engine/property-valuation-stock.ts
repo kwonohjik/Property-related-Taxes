@@ -11,6 +11,7 @@
  *   최댓값: 순자산가치 × 300% (상한 적용 여부는 실무 논란 → 상한 미적용 원칙)
  */
 
+import { differenceInDays } from "date-fns";
 import { VALUATION } from "./legal-codes";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import { applyRate } from "./tax-utils";
@@ -25,11 +26,15 @@ import type {
   PropertyValuationResult,
   UnlistedStockData,
   UnlistedAssetValueOnlyReason,
+  ListedPremiumExclusionReason,
+  ListedStockBesshiData,
 } from "./types/inheritance-gift.types";
+import { EMPTY_LISTED_STOCK_MONTH_GROUPS } from "./types/inheritance-gift.types";
 import type {
   UnlistedGoodwillResult,
   UnlistedNetAssetOnlyReason,
 } from "./types/unlisted-stock-valuation.types";
+import { PREMIUM_EXCLUSION_LABELS } from "./data/listed-premium-exclusion-labels";
 
 // ============================================================
 // 비상장주식 평가 가중치 상수 (시행령 §54)
@@ -67,7 +72,133 @@ export function evaluateListedStockValue(
   return Math.floor(avgClosingPrice) * shares;
 }
 
-export function evaluateListedStock(item: EstateItem): PropertyValuationResult {
+/**
+ * §63③ + §53④ + §53⑧ 최대주주 할증률 결정 (listed_stock 전용).
+ *
+ * 우선순위:
+ *   1) isMaxShareholder=false → 0
+ *   2) premiumExclusionReason ∈ §53⑧ 1~9호 또는 smb_med → 0
+ *   3) companySize ∈ {small, medium} → 0 (§53④ 자동 배제)
+ *   4) companySize === "large" + isMaxShareholder=true + 배제 사유 없음 → 0.20
+ */
+function resolveListedPremiumRate(item: EstateItem): {
+  premiumRate: 0 | 0.2;
+  exclusionReason?: ListedPremiumExclusionReason;
+} {
+  if (!item.isMaxShareholder) return { premiumRate: 0 };
+
+  const explicit = item.premiumExclusionReason;
+  if (explicit && explicit !== "none") {
+    return { premiumRate: 0, exclusionReason: explicit };
+  }
+
+  if (item.companySize === "small" || item.companySize === "medium") {
+    return { premiumRate: 0, exclusionReason: "smb_med" };
+  }
+
+  // companySize === "large" + isMaxShareholder + 배제 사유 없음 → §63③ 본문 20%
+  if (item.companySize === "large") {
+    return { premiumRate: 0.2 };
+  }
+
+  // companySize 미입력 + isMaxShareholder=true → 보수적으로 0 (validate에서 입력 요구)
+  return { premiumRate: 0 };
+}
+
+/** ⑨~⑱ 산식 echo 산정 (orchestrator가 사용) */
+function computeListedBesshiPage1Values(
+  item: EstateItem,
+  avgPrice: number,
+  context: { valuationDate?: Date | string },
+): {
+  closingAvg: number;
+  perShareMajorShareholder: number;
+  priorDividendRate?: number;
+  faceValuePerShare?: number;
+  priorDividendAmount?: number;
+  dividendBaseDate?: string;
+  daysUntilDividendBase?: number;
+  dividendDifference?: number;
+  perShareValue?: number;
+  perShareMajorShareholderUnlisted?: number;
+  majorShareholderRate: 0 | 0.2;
+  premiumExclusionLabel?: string;
+} {
+  const { premiumRate, exclusionReason } = resolveListedPremiumRate(item);
+  const perShareMajorShareholder = Math.floor(avgPrice * (1 + premiumRate));
+
+  const premiumExclusionLabel =
+    premiumRate === 0 && exclusionReason
+      ? PREMIUM_EXCLUSION_LABELS[exclusionReason]
+      : undefined;
+
+  // §63②3호 미상장 신주 분기 — ⑪~⑰ derive
+  if (!item.isCapitalIncreaseUnlistedShare) {
+    return {
+      closingAvg: avgPrice,
+      perShareMajorShareholder,
+      majorShareholderRate: premiumRate,
+      premiumExclusionLabel,
+    };
+  }
+
+  const faceValue = item.faceValuePerShare ?? 0;
+  const priorRate = item.priorDividendRate ?? 0;
+  const priorDividendAmount = Math.floor(faceValue * priorRate);
+  const dividendBaseDateIso =
+    item.dividendBaseDate instanceof Date
+      ? item.dividendBaseDate.toISOString().slice(0, 10)
+      : (item.dividendBaseDate as string | undefined);
+
+  const valuationIso =
+    context.valuationDate instanceof Date
+      ? context.valuationDate.toISOString().slice(0, 10)
+      : (context.valuationDate as string | undefined);
+
+  let daysUntilDividendBase: number | undefined;
+  if (dividendBaseDateIso && valuationIso && !item.dividendBaseDateSameAsListed) {
+    daysUntilDividendBase = Math.max(
+      0,
+      differenceInDays(new Date(valuationIso), new Date(dividendBaseDateIso)),
+    );
+  } else if (item.dividendBaseDateSameAsListed) {
+    daysUntilDividendBase = 0;
+  }
+
+  const { effectiveDividendDifference, perShareValue } = applyCapitalIncreaseShareValuation(
+    avgPrice,
+    item.listedStockDividendDifference ?? 0,
+    item.dividendBaseDateSameAsListed ?? false,
+  );
+  const dividendDifference = effectiveDividendDifference;
+  const perShareMajorShareholderUnlisted = Math.floor(perShareValue * (1 + premiumRate));
+
+  return {
+    closingAvg: avgPrice,
+    perShareMajorShareholder,
+    priorDividendRate: priorRate,
+    faceValuePerShare: faceValue,
+    priorDividendAmount,
+    dividendBaseDate: dividendBaseDateIso,
+    daysUntilDividendBase,
+    dividendDifference,
+    perShareValue,
+    perShareMajorShareholderUnlisted,
+    majorShareholderRate: premiumRate,
+    premiumExclusionLabel,
+  };
+}
+
+/**
+ * 상장주식 평가 (§63①1가목 본칙 + §63②3호 미상장 신주 + §63③ 최대주주 할증).
+ *
+ * @param context.valuationDate 평가기준일 (상속개시일/증여일) — EstateItem에 deathDate/giftDate가
+ *   없으므로 orchestrator가 단일 source로 전달. 미전달 시 page1.valuationDate=""로 echo.
+ */
+export function evaluateListedStock(
+  item: EstateItem,
+  context: { valuationDate?: Date | string } = {},
+): PropertyValuationResult {
   if (item.category !== "listed_stock") {
     throw new TaxCalculationError(
       TaxErrorCode.INVALID_INPUT,
@@ -85,17 +216,40 @@ export function evaluateListedStock(item: EstateItem): PropertyValuationResult {
     );
   }
 
-  // §63②3호 (PR-L3): 상장법인 증자 신주(미상장) — 가목 평가액 − 배당차액(§57③·§18②)
+  const page1Values = computeListedBesshiPage1Values(item, avgPrice, context);
+  const valuationIso =
+    context.valuationDate instanceof Date
+      ? context.valuationDate.toISOString().slice(0, 10)
+      : (context.valuationDate as string | undefined) ?? "";
+
+  const toIso = (d: Date | string | undefined): string | undefined =>
+    d instanceof Date ? d.toISOString().slice(0, 10) : (d as string | undefined);
+
+  const besshiData: ListedStockBesshiData = {
+    page1: {
+      companyName: item.companyName,
+      representative: item.representative,
+      companyAddress: item.companyAddress,
+      valuationDate: valuationIso,
+      stockClass: item.stockClass ?? "common",
+      listingDate: toIso(item.listingDate),
+      capitalIncreaseDate: toIso(item.capitalIncreaseDate),
+      mergerDate: toIso(item.mergerDate),
+      isUnlistedShareSection: !!item.isCapitalIncreaseUnlistedShare,
+    },
+    page1Values,
+    page2: item.listedStockDailyGroupsInput ?? EMPTY_LISTED_STOCK_MONTH_GROUPS,
+  };
+
+  // §63②3호 분기 — ⑰ × shares
   if (item.isCapitalIncreaseUnlistedShare) {
-    const { effectiveDividendDifference, perShareValue } = applyCapitalIncreaseShareValuation(
-      avgPrice,
-      item.listedStockDividendDifference ?? 0,
-      item.dividendBaseDateSameAsListed ?? false,
-    );
-    const totalValue = perShareValue * shares;
+    const totalValue = (page1Values.perShareMajorShareholderUnlisted ?? 0) * shares;
     const warnings: string[] = [];
     if ((item.listedStockDividendDifference ?? 0) <= 0 && !item.dividendBaseDateSameAsListed) {
       warnings.push("배당차액 미입력 — 가목 평가액과 동일 적용. 시행규칙 §18② 확인.");
+    }
+    if (page1Values.majorShareholderRate === 0.2) {
+      warnings.push("§63③ 최대주주 등 할증 20% 적용 (대기업).");
     }
     return {
       estateItemId: item.id,
@@ -103,22 +257,28 @@ export function evaluateListedStock(item: EstateItem): PropertyValuationResult {
       valuatedAmount: totalValue,
       breakdown: [
         {
-          label: "전후 2개월 종가 평균 (가목)",
+          label: "⑨ 전후 2개월 종가 평균 (가목)",
           amount: Math.floor(avgPrice),
           lawRef: VALUATION.LISTED_STOCK,
           note: "주당 평균 종가 (원)",
         },
         {
           label: item.dividendBaseDateSameAsListed
-            ? "배당차액 (배당기산일 동일 — 제외)"
-            : "배당차액",
-          amount: -effectiveDividendDifference,
-          lawRef: VALUATION.DIVIDEND_DIFFERENCE,
+            ? "⑮ 배당차액 (배당기산일 동일 — 제외)"
+            : "⑮ 배당차액",
+          amount: -(page1Values.dividendDifference ?? 0),
+          lawRef: VALUATION.DIVIDEND_DIFFERENCE_FORMULA,
         },
         {
-          label: "1주당 평가액",
-          amount: perShareValue,
+          label: "⑯ 1주당 가액 (⑨ − ⑮)",
+          amount: page1Values.perShareValue ?? 0,
           lawRef: VALUATION.CAPITAL_INCREASE_UNLISTED,
+        },
+        {
+          label: `⑰ 최대주주 1주당 평가액 (⑯ × ${page1Values.majorShareholderRate === 0.2 ? "120%" : "100%"})`,
+          amount: page1Values.perShareMajorShareholderUnlisted ?? 0,
+          lawRef: VALUATION.LISTED_STOCK_PREMIUM,
+          note: page1Values.premiumExclusionLabel,
         },
         {
           label: "증자 신주(미상장) 보유 수",
@@ -132,10 +292,16 @@ export function evaluateListedStock(item: EstateItem): PropertyValuationResult {
         },
       ],
       warnings,
+      besshiData,
     };
   }
 
-  const totalValue = evaluateListedStockValue(avgPrice, shares);
+  // 일반 분기 — ⑩ × shares
+  const totalValue = page1Values.perShareMajorShareholder * shares;
+  const warnings: string[] = [];
+  if (page1Values.majorShareholderRate === 0.2) {
+    warnings.push("§63③ 최대주주 등 할증 20% 적용 (대기업).");
+  }
 
   return {
     estateItemId: item.id,
@@ -143,10 +309,16 @@ export function evaluateListedStock(item: EstateItem): PropertyValuationResult {
     valuatedAmount: totalValue,
     breakdown: [
       {
-        label: "전후 2개월 종가 평균",
+        label: "⑨ 전후 2개월 종가 평균",
         amount: Math.floor(avgPrice),
         lawRef: VALUATION.LISTED_STOCK,
         note: "주당 평균 종가 (원)",
+      },
+      {
+        label: `⑩ 최대주주 1주당 평가액 (⑨ × ${page1Values.majorShareholderRate === 0.2 ? "120%" : "100%"})`,
+        amount: page1Values.perShareMajorShareholder,
+        lawRef: VALUATION.LISTED_STOCK_PREMIUM,
+        note: page1Values.premiumExclusionLabel,
       },
       {
         label: "보유 주식 수",
@@ -159,7 +331,8 @@ export function evaluateListedStock(item: EstateItem): PropertyValuationResult {
         lawRef: VALUATION.LISTED_STOCK,
       },
     ],
-    warnings: [],
+    warnings,
+    besshiData,
   };
 }
 
