@@ -32,10 +32,9 @@ async function openListedStockCard(page: Page) {
 }
 
 async function fillBase(page: Page) {
-  // 전후 2개월 평균 50,000 · 보유 주식 수 100
-  await page.getByText("전후 2개월 종가 단순평균 (원/주)").click();
-  await page.locator('input[inputmode="numeric"]').first().fill("50000");
-  await page.locator('input[inputmode="numeric"]').nth(1).fill("100");
+  // UX 개편 후 testid 기반 selector
+  await page.getByTestId("ls-security-info-shares").fill("100");
+  await page.getByTestId("ls-avg-price").fill("50000");
 }
 
 const TOGGLE_TITLE = /§63②3호 — 상장법인 증자 신주/;

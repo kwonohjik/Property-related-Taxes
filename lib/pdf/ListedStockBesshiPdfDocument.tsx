@@ -387,3 +387,29 @@ export function ListedStockBesshiPdfDocument({ besshi }: Props) {
     </Document>
   );
 }
+
+/**
+ * 다운로드 파일명 생성 헬퍼.
+ * 우선순위: companyName > listedStockCode > name > "상장주식"
+ * 평가기준일은 YYYYMMDD (미입력 시 "no-date")
+ */
+export function generateListedStockBesshiPdfFilename(
+  item: {
+    companyName?: string;
+    listedStockCode?: string;
+    name?: string;
+  },
+  valuationDate?: Date | string,
+): string {
+  const id =
+    (item.companyName && item.companyName.trim()) ||
+    item.listedStockCode ||
+    (item.name && item.name.trim()) ||
+    "상장주식";
+  const iso =
+    valuationDate instanceof Date
+      ? valuationDate.toISOString().slice(0, 10)
+      : (valuationDate as string | undefined);
+  const ymd = iso ? iso.replace(/-/g, "") : "no-date";
+  return `상장주식평가조서_${id}_${ymd}.pdf`;
+}

@@ -21,6 +21,9 @@ import type { EstateItem, Heir } from "@/lib/tax-engine/types/inheritance-gift.t
 import { KiwoomValuationAutoFetchButton } from "./KiwoomValuationAutoFetchButton";
 import { EstateCommonAttributesSection } from "@/components/calc/inheritance/EstateCommonAttributesSection";
 import { ListedStockBesshiAttributesSection } from "@/components/calc/inheritance/listed-stock/ListedStockBesshiAttributesSection";
+import { ListedStockSecurityInfoSection } from "@/components/calc/inheritance/listed-stock/ListedStockSecurityInfoSection";
+import { ListedStockBesshiPreviewCard } from "@/components/calc/inheritance/listed-stock/ListedStockBesshiPreviewCard";
+import { ListedStockBesshiPdfDownloadButton } from "@/components/calc/inheritance/listed-stock/ListedStockBesshiPdfDownloadButton";
 import {
   applyKiwoomValuationResponse,
   resolveStartOverrideDate,
@@ -98,41 +101,8 @@ function ListedStockEditor({
         ℹ️ 평가기준일 전후 2개월 최종 시세 단순평균 × 주식 수 (상증법 §63①1호 가목)
       </p>
 
-      {/* 종목명 */}
-      <div className="space-y-1">
-        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
-          종목명 <span className="text-destructive">*</span>
-        </label>
-        <input
-          type="text"
-          value={item.name}
-          onChange={(e) => set({ name: e.target.value })}
-          placeholder="예: 삼성전자"
-          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        />
-      </div>
-
-      {/* 종목코드 (F-01 키움 자동조회 트리거) */}
-      <div className="space-y-1">
-        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
-          종목코드 (선택)
-        </label>
-        <input
-          type="text"
-          value={item.listedStockCode ?? ""}
-          onChange={(e) => {
-            const v = e.target.value
-              .toUpperCase()
-              .replace(/[^0-9A-Z]/g, "")
-              .slice(0, 6);
-            set({ listedStockCode: v });
-          }}
-          placeholder="6자리 종목코드 (예: 005930)"
-          inputMode="text"
-          maxLength={6}
-          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        />
-      </div>
+      {/* 종목 정보 입력 (sky 카드) — 종목명·종목코드·보유 주식 수 */}
+      <ListedStockSecurityInfoSection item={item} onUpdate={(patch) => set(patch)} />
 
       {/* F-01 키움 자동조회 — 평가기준일 + 종목코드 충족 시 활성화 */}
       {valuationDate && item.listedStockCode && (
@@ -170,6 +140,12 @@ function ListedStockEditor({
         onUpdate={(patch) => set(patch)}
       />
 
+      {/* 평가조서 미리보기 + PDF 다운로드 (계획: ux-refinement) */}
+      <div className="flex justify-end print:hidden">
+        <ListedStockBesshiPdfDownloadButton item={item} valuationDate={valuationDate} />
+      </div>
+      <ListedStockBesshiPreviewCard item={item} valuationDate={valuationDate} />
+
       {/* 전후 2개월 종가 평균 */}
       <div className="space-y-1">
         <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
@@ -185,27 +161,12 @@ function ListedStockEditor({
           }}
           placeholder="주당 순손익 입력 (원)"
           className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          data-testid="ls-avg-price"
         />
         <p className="text-xs text-gray-400">평가기준일 기준 전 2개월 + 후 2개월(총 4개월) 종가 평균</p>
       </div>
 
-      {/* 보유 주식 수 — §63②3호 ON 시 "증자 신주(미상장) 보유 수"로 의미 전환 (S-B) */}
-      <div className="space-y-1">
-        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
-          {isCapInc ? "증자 신주(미상장) 보유 수 (주)" : "보유 주식 수 (주)"} <span className="text-destructive">*</span>
-        </label>
-        <input
-          type="text"
-          inputMode="numeric"
-          value={shares > 0 ? shares.toLocaleString() : ""}
-          onChange={(e) => {
-            const v = parseInt(e.target.value.replace(/,/g, "") || "0", 10);
-            set({ listedStockShares: v || undefined });
-          }}
-          placeholder="주식 수 입력"
-          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        />
-      </div>
+      {/* 보유 주식 수는 ListedStockSecurityInfoSection 으로 이동 (UX 개편) */}
 
       {/* §63②3호 — 상장법인 증자 신주(평가기준일 현재 미상장) (PR-L3) */}
       <ToggleCard
