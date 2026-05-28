@@ -10,6 +10,25 @@
  *   - exemption-rules.ts (비과세)
  */
 
+import type {
+  ListedStockClass,
+  ListedCompanySize,
+  ListedPremiumExclusionReason,
+  ListedStockMonthGroups,
+  ListedStockBesshiData,
+} from "./listed-stock-valuation.types";
+export type {
+  ListedStockClass,
+  ListedCompanySize,
+  ListedPremiumExclusionReason,
+  ListedStockDailyRow,
+  ListedStockMonthGroups,
+  ListedStockBesshiPage1Meta,
+  ListedStockBesshiPage1Values,
+  ListedStockBesshiData,
+} from "./listed-stock-valuation.types";
+export { EMPTY_LISTED_STOCK_MONTH_GROUPS } from "./listed-stock-valuation.types";
+
 
 // ============================================================
 // 공통 공유 타입
@@ -84,6 +103,48 @@ export interface EstateItem extends EstateLocationFields {
   listedStockDividendDifference?: number;
   /** §18② 단서: 정관상 신주의 배당기산일을 기존 상장주식과 동일하게 정함 → 배당차액 0 */
   dividendBaseDateSameAsListed?: boolean;
+
+  // ============================================================
+  // 상장주식 평가조서(갑·을) 재현용 필드 (PR-LS-01 ~ LS-10)
+  // 계획: docs/00-pm/listed-stock-besshi-form-replica.plan.md
+  // 디자인: docs/02-design/features/listed-stock-besshi-form-replica.engine.design.md
+  // ============================================================
+  /** 갑지 ① 법인명 */
+  companyName?: string;
+  /** 갑지 ② 대표자 */
+  representative?: string;
+  /** 갑지 ③ 법인 소재지 */
+  companyAddress?: string;
+  /** 갑지 ⑤ 평가대상 주식 종류 (보통주/우선주) */
+  stockClass?: ListedStockClass;
+  /** 갑지 ⑥ 상장일자 */
+  listingDate?: Date | string;
+  /** 갑지 ⑦ 증자일자 — §63②3호·시행령 §52의2② 평가구간 단축 트리거 */
+  capitalIncreaseDate?: Date | string;
+  /** 갑지 ⑧ 합병일자 — §63②3호·시행령 §52의2② */
+  mergerDate?: Date | string;
+
+  /** §63③ 최대주주 등 할증평가 적용 토글 */
+  isMaxShareholder?: boolean;
+  /** §53④ 기업 규모 (중소·중견 자동 배제) */
+  companySize?: ListedCompanySize;
+  /** §53⑧ 1~9호 + 중소·중견 배제 사유 */
+  premiumExclusionReason?: ListedPremiumExclusionReason;
+
+  /** 갑지 ⑪ 직전기 배당률 (decimal 0~1, store 단위) */
+  priorDividendRate?: number;
+  /** 1주당 액면가 — §63②3호 분기 시 명시 입력 필수 (자동 fallback 금지) */
+  faceValuePerShare?: number;
+  /** 갑지 ⑬ 배당기산일 (주금납입 다음날) */
+  dividendBaseDate?: Date | string;
+
+  /**
+   * 을지 일자별 종가 4그룹 캐시 — 자동조회 채널-fill 전용.
+   * UI 입력 폼은 보유하지 않음. lib/calc/listed-stock-besshi.ts 어댑터가 채움.
+   * [[mirror-pattern]] 예외: 사용자 입력 mirror가 아닌 외부 시세 응답의 1회 캐시.
+   */
+  listedStockDailyGroupsInput?: ListedStockMonthGroups;
+
   /** 비상장주식 평가 데이터 (legacy 입력 모드) */
   unlistedStockData?: UnlistedStockData;
   /** 비상장주식 V2 평가 입력 (별지 부표3 완전 재현 — Phase 2~4) */
@@ -254,6 +315,12 @@ export interface PropertyValuationResult {
   valuatedAmount: number;
   breakdown: CalculationStep[];
   warnings: string[];
+  /**
+   * 상장주식 평가조서(갑·을) 100% 재현용 echo 데이터.
+   * `evaluateListedStock` 만 채움 (다른 평가 함수는 undefined).
+   * UI/PDF가 본 echo를 single source로 사용 — UI 재계산 금지.
+   */
+  besshiData?: ListedStockBesshiData;
 }
 
 // ============================================================
