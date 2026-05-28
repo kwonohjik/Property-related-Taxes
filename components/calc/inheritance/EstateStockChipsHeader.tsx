@@ -77,8 +77,16 @@ export function EstateStockChipsHeader({
   );
 
   const handleChipClick = useMemo(
-    () => createChipClickHandler({ item, onUpdate, setInlineExpandedKey }),
-    [item, onUpdate],
+    () =>
+      createChipClickHandler({
+        item,
+        onUpdate,
+        setInlineExpandedKey,
+        heirs,
+        effectiveValuation,
+        currentExpandedKey: inlineExpandedKey,
+      }),
+    [item, onUpdate, heirs, effectiveValuation, inlineExpandedKey],
   );
 
   // PR-E INT-8: stock visibility=hidden_permanent + 사용자 §22 명시 시 ⚙️ 패널에 FinancialDeductionChip 노출

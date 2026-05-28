@@ -14,7 +14,7 @@
  *   - useEffect 미러링 0 ([[feedback_useeffect_store_mirror_forbidden]])
  */
 
-import { ChevronDown } from "lucide-react";
+import { Check, ChevronDown, X } from "lucide-react";
 import {
   CHIP_TONE_CLASSES,
   type ChipKey,
@@ -50,7 +50,7 @@ export function EstateItemHeaderChips({
             onClick={() => onChipClick(chip)}
             disabled={chip.key === "estimated-value"}
             aria-expanded={chip.isExpandable ? isExpanded : undefined}
-            aria-pressed={chip.isToggle ? chip.label.includes("✓") : undefined}
+            aria-pressed={chip.isToggle ? chip.mark === "on" : undefined}
             aria-controls={
               chip.isExpandable
                 ? `estate-inline-expand-${chip.key}-${itemId}`
@@ -78,6 +78,12 @@ export function EstateItemHeaderChips({
               </span>
             )}
             <span>{chip.label}</span>
+            {chip.mark === "on" && (
+              <Check className="h-3.5 w-3.5" strokeWidth={3.5} aria-hidden />
+            )}
+            {chip.mark === "off" && (
+              <X className="h-3.5 w-3.5" strokeWidth={3} aria-hidden />
+            )}
             {chip.isExpandable && (
               <ChevronDown
                 className={`h-3 w-3 transition-transform duration-150 ${

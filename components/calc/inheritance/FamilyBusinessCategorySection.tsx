@@ -25,8 +25,19 @@
 
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
-import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
+import type { AssetCategory, EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { FamilyBusinessCategory } from "@/lib/tax-engine/types/inheritance-family-business.types";
+
+/**
+ * 가업상속재산 분류 입력이 불가능한 자산 카테고리 (§15⑤ 미해당).
+ * 예금·현금·예금성 채권은 가업용 사업자산이 아니므로 섹션·칩 모두 노출하지 않는다.
+ * chip-config의 가업 칩 노출 조건과 본 섹션 렌더 가드의 단일 진실(single-source).
+ */
+export const FAMILY_BUSINESS_INELIGIBLE_CATEGORIES: readonly AssetCategory[] = [
+  "financial",
+  "cash",
+  "deposit",
+];
 
 const FB_CATEGORY_OPTIONS: Array<{
   value: FamilyBusinessCategory;
@@ -58,11 +69,7 @@ export function FamilyBusinessCategorySection({
   onUpdate,
 }: FamilyBusinessCategorySectionProps) {
   // 금융·현금·예금: 가업 자산 불가 — 미렌더
-  if (
-    item.category === "financial" ||
-    item.category === "cash" ||
-    item.category === "deposit"
-  ) {
+  if (FAMILY_BUSINESS_INELIGIBLE_CATEGORIES.includes(item.category)) {
     return null;
   }
 

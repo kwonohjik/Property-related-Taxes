@@ -16,6 +16,7 @@ import {
 } from "@/lib/calc/financial-deduction-resolver";
 import { resolveAssetToggleVisibility } from "@/lib/calc/asset-toggle-visibility";
 import { computeEffectiveValuation } from "@/lib/calc/estate-item-valuation";
+import { FAMILY_BUSINESS_INELIGIBLE_CATEGORIES } from "@/components/calc/inheritance/FamilyBusinessCategorySection";
 
 // ============================================================
 // 타입
@@ -39,6 +40,13 @@ export interface ChipState {
   tone: ChipTone;
   isExpandable: boolean;
   isToggle: boolean;
+  /**
+   * 체크 표시 — 라벨과 분리하여 굵은 아이콘으로 렌더.
+   *   "on"  → 굵은 Check 아이콘 (적용됨)
+   *   "off" → X 아이콘 (미적용, §22 3-state OFF 등)
+   *   undefined → 아이콘 없음
+   */
+  mark?: "on" | "off";
   /** 사용자 지정값(기본값과 다름) 표시용 violet 외곽 */
   isUserOverride?: boolean;
   /** hover tooltip */
@@ -143,7 +151,8 @@ export function resolveChips({ item, mode, heirsCount, showMajorShareholderChip 
       item.isFinancialAssetForDeduction !== defaultEligible;
     chips.push({
       key: "section22",
-      label: eligible ? "§22 ✓" : "§22 ✗",
+      label: "금융재산 공제",
+      mark: eligible ? "on" : "off",
       tone: eligible ? "emerald" : "gray",
       isExpandable: false,
       isToggle: true,
@@ -176,7 +185,8 @@ export function resolveChips({ item, mode, heirsCount, showMajorShareholderChip 
     } else {
       chips.push({
         key: "heir-allocation",
-        label: "협의분할 ✓",
+        label: "협의분할",
+        mark: "on",
         tone: "sky",
         isExpandable: true,
         isToggle: false,
@@ -189,7 +199,8 @@ export function resolveChips({ item, mode, heirsCount, showMajorShareholderChip 
   if (visibility.farming !== "hidden_permanent") {
     chips.push({
       key: "farming",
-      label: item.farmingCategory ? "영농 §16⑤ ✓" : "영농 §16⑤",
+      label: "영농 §16⑤",
+      mark: item.farmingCategory ? "on" : undefined,
       tone: "violet",
       isExpandable: true,
       isToggle: false,
@@ -198,10 +209,17 @@ export function resolveChips({ item, mode, heirsCount, showMajorShareholderChip 
   }
 
   // 6. chip-family-business
-  if (visibility.familyBusiness !== "hidden_permanent") {
+  //   카테고리 가드: 활성 우선(resolveAssetToggleVisibility)이 familyBusiness를 default로
+  //   승격해도, 가업 분류 입력 불가 카테고리(financial·cash·deposit)는 칩 원천 차단.
+  //   FamilyBusinessCategorySection 렌더 가드와 단일 진실 → 빈 패널 버그 방지.
+  if (
+    visibility.familyBusiness !== "hidden_permanent" &&
+    !FAMILY_BUSINESS_INELIGIBLE_CATEGORIES.includes(item.category)
+  ) {
     chips.push({
       key: "family-business",
-      label: item.familyBusinessCategory ? "가업 §15⑤ ✓" : "가업 §15⑤",
+      label: "가업 §15⑤",
+      mark: item.familyBusinessCategory ? "on" : undefined,
       tone: "violet",
       isExpandable: true,
       isToggle: false,
@@ -226,7 +244,8 @@ export function resolveChips({ item, mode, heirsCount, showMajorShareholderChip 
     const isMajor = item.isSection22MajorShareholder === true;
     chips.push({
       key: "major-shareholder",
-      label: isMajor ? "최대주주 §22② ✓" : "최대주주 §22②",
+      label: "최대주주 §22②",
+      mark: isMajor ? "on" : undefined,
       tone: isMajor ? "rose" : "gray",
       isExpandable: false,
       isToggle: true,

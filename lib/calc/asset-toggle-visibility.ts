@@ -70,7 +70,7 @@ const MATRIX: Record<AssetCategory, AssetToggleVisibility> = {
   },
   financial: {
     farming: "hidden_permanent", // §16⑤ 미열거 (검증 정정)
-    familyBusiness: "hidden_expandable", // §15⑤2호 마목 "영업관련" 단서
+    familyBusiness: "hidden_permanent", // §15⑤ 미해당 — 예금·펀드·채권은 가업용 사업자산 아님 (사업무관자산, 사용자 결정 2026-05-29)
     financialDeduction: "default", // §19① 예금·적금·부금·채권·수익증권 등
     deemedRetirementOption: "visible",
   },

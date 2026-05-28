@@ -55,8 +55,9 @@ describe("resolveAssetToggleVisibility — 8-1 기본 매트릭스", () => {
     ],
     [
       "financial",
-      // financial은 CATEGORY_DEFAULT=true로 활성 우선 자동 발동 → financialDeduction "default" 그대로
-      { farming: "hidden_permanent", familyBusiness: "hidden_expandable", financialDeduction: "default", deemedRetirementOption: "visible" },
+      // financial은 CATEGORY_DEFAULT=true로 활성 우선 자동 발동 → financialDeduction "default" 그대로.
+      // familyBusiness는 §15⑤ 미해당(예금·펀드·채권은 사업자산 아님) → hidden_permanent (2026-05-29 정정)
+      { farming: "hidden_permanent", familyBusiness: "hidden_permanent", financialDeduction: "default", deemedRetirementOption: "visible" },
     ],
     [
       "listed_stock",
@@ -292,7 +293,7 @@ describe("countHiddenExpandable — 펼침 카운트", () => {
     ["real_estate_building", 1], // §22만
     ["real_estate_apartment", 2], // 가업 + §22 (영농은 hidden_perm)
     ["cash", 0], // 모두 hidden_perm — 펼침 링크 미노출
-    ["financial", 1], // 가업만 (§22는 default — CATEGORY_DEFAULT 활성 우선)
+    ["financial", 0], // §22는 default(활성 우선), 가업도 hidden_permanent로 정정 → 펼침 0 (2026-05-29)
     // §22 법령 override: listed_stock·unlisted_stock financialDeduction → hidden_permanent
     // hidden_permanent는 countHiddenExpandable 집계 대상 아님 → 카운트 불변(0)
     ["listed_stock", 0],

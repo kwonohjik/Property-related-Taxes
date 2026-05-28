@@ -37,20 +37,23 @@ test.describe("PR-G S-1: 헤더 칩 ↔ ⚙️ 패널 상태 동기", () => {
     const shell = page.locator('[data-testid^="estate-card-shell-"]').first();
     await expect(shell).toBeVisible();
 
-    // §22 칩 — financial은 default true → "§22 ✓"
+    // §22 칩 — 라벨 "금융재산 공제" + 체크는 mark(굵은 아이콘)·aria-pressed로 표현 (2026-05-29)
     const section22Chip = page.locator('[data-testid^="estate-chip-section22-"]').first();
-    await expect(section22Chip).toContainText("§22 ✓");
+    await expect(section22Chip).toContainText("금융재산 공제");
+    await expect(section22Chip).not.toContainText("✓"); // ✓는 아이콘으로 분리, 라벨 텍스트엔 없음
+    await expect(section22Chip).toHaveAttribute("aria-pressed", "true"); // financial 기본 ON
 
-    // 1회 클릭 → true (사용자 지정) — 라벨 동일하나 isUserOverride violet 외곽
+    // 1회 클릭 → true (사용자 지정) — 여전히 ON
     await section22Chip.click();
+    await expect(section22Chip).toHaveAttribute("aria-pressed", "true");
 
     // 2회 클릭 → false (사용자 지정 OFF)
     await section22Chip.click();
-    await expect(section22Chip).toContainText("§22 ✗");
+    await expect(section22Chip).toHaveAttribute("aria-pressed", "false");
 
-    // 3회 클릭 → undefined (기본 복귀)
+    // 3회 클릭 → undefined (기본 복귀) → ON
     await section22Chip.click();
-    await expect(section22Chip).toContainText("§22 ✓");
+    await expect(section22Chip).toHaveAttribute("aria-pressed", "true");
   });
 
   test("S-1b: 분류 칩 인라인 펼침 + 보험금 선택 → 칩 라벨 갱신", async ({ page }) => {

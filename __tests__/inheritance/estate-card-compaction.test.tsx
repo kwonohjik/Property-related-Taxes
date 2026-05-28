@@ -131,23 +131,26 @@ describe("resolveChips — 카테고리별 칩 도출", () => {
     expect(keys).not.toContain("section22");
   });
 
-  it("financial 카테고리 → §22 칩 노출 (default eligible)", () => {
+  it("financial 카테고리 → §22 칩 노출 (label '금융재산 공제' + mark on)", () => {
     const item = makeItem({ category: "financial" });
     const chips = resolveChips({ item, mode: "inheritance", heirsCount: 0 });
     const section22Chip = chips.find((c) => c.key === "section22");
     expect(section22Chip).toBeDefined();
-    expect(section22Chip?.label).toBe("§22 ✓"); // financial 기본=ON
+    expect(section22Chip?.label).toBe("금융재산 공제"); // 라벨 변경 (2026-05-29)
+    expect(section22Chip?.label).not.toContain("✓"); // 체크는 mark로 분리
+    expect(section22Chip?.mark).toBe("on"); // financial 기본=ON
     expect(section22Chip?.tone).toBe("emerald");
   });
 
-  it("isFinancialAssetForDeduction=false (사용자 OFF) → §22 ✗ + isUserOverride", () => {
+  it("isFinancialAssetForDeduction=false (사용자 OFF) → mark off + isUserOverride", () => {
     const item = makeItem({
       category: "financial",
       isFinancialAssetForDeduction: false,
     });
     const chips = resolveChips({ item, mode: "inheritance", heirsCount: 0 });
     const section22Chip = chips.find((c) => c.key === "section22");
-    expect(section22Chip?.label).toBe("§22 ✗");
+    expect(section22Chip?.label).toBe("금융재산 공제");
+    expect(section22Chip?.mark).toBe("off");
     expect(section22Chip?.tone).toBe("gray");
     expect(section22Chip?.isUserOverride).toBe(true);
   });
@@ -174,13 +177,14 @@ describe("resolveChips — 카테고리별 칩 도출", () => {
     expect(heirChip?.tone).toBe("amber");
   });
 
-  it("heirAllocations=[{...}] → 협의분할 ✓ sky", () => {
+  it("heirAllocations=[{...}] → 협의분할 (label + mark on) sky", () => {
     const item = makeItem({
       heirAllocations: [{ heirId: "h1", amount: 1_100_000_000 }],
     });
     const chips = resolveChips({ item, mode: "inheritance", heirsCount: 2 });
     const heirChip = chips.find((c) => c.key === "heir-allocation");
-    expect(heirChip?.label).toBe("협의분할 ✓");
+    expect(heirChip?.label).toBe("협의분할");
+    expect(heirChip?.mark).toBe("on");
     expect(heirChip?.tone).toBe("sky");
   });
 
@@ -208,6 +212,24 @@ describe("resolveChips — 카테고리별 칩 도출", () => {
     });
     const chips = resolveChips({ item, mode: "inheritance", heirsCount: 0 });
     expect(chips.map((c) => c.key)).toContain("secured-claim-14");
+  });
+
+  // 항목3 — financial 자산은 가업 §15⑤ 칩 미노출 (예금·펀드·채권은 §15⑤ 미해당, 2026-05-29)
+  it("financial 카테고리 → 가업 §15⑤ 칩 미노출", () => {
+    const item = makeItem({ category: "financial" });
+    const chips = resolveChips({ item, mode: "inheritance", heirsCount: 0 });
+    expect(chips.map((c) => c.key)).not.toContain("family-business");
+  });
+
+  // [검토-C] 활성 우선 경로 회귀 — 레거시 familyBusinessCategory가 설정돼 있어도
+  // financial은 카테고리 가드로 칩 원천 차단 (빈 패널 버그 방지)
+  it("financial + familyBusinessCategory 설정(레거시) → 가업 칩 여전히 미노출", () => {
+    const item = makeItem({
+      category: "financial",
+      familyBusinessCategory: "business_real_estate",
+    });
+    const chips = resolveChips({ item, mode: "inheritance", heirsCount: 0 });
+    expect(chips.map((c) => c.key)).not.toContain("family-business");
   });
 
   it("estimated-value 칩 라벨 = 평가액 금액 포맷", () => {
@@ -270,7 +292,8 @@ describe("chip-major-shareholder — 상장·V1 simple 노출, V2 formal 비노�
       showMajorShareholderChip: true,
     });
     const chip = chips.find((c) => c.key === "major-shareholder");
-    expect(chip?.label).toBe("최대주주 §22② ✓");
+    expect(chip?.label).toBe("최대주주 §22②");
+    expect(chip?.mark).toBe("on");
     expect(chip?.tone).toBe("rose");
   });
 
@@ -284,6 +307,7 @@ describe("chip-major-shareholder — 상장·V1 simple 노출, V2 formal 비노�
     });
     const chip = chips.find((c) => c.key === "major-shareholder");
     expect(chip?.label).toBe("최대주주 §22②");
+    expect(chip?.mark).toBeUndefined();
     expect(chip?.tone).toBe("gray");
   });
 

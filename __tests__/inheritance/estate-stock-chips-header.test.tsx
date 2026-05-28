@@ -137,7 +137,7 @@ describe("EstateStockChipsHeader — chip-major-shareholder 노출 매트릭스"
     ).toBeInTheDocument();
   });
 
-  it("isSection22MajorShareholder=true 시 칩 라벨 '최대주주 §22② ✓'", () => {
+  it("isSection22MajorShareholder=true 시 칩 라벨 '최대주주 §22②' + 체크(aria-pressed)", () => {
     render(
       <EstateStockChipsHeader
         item={makeStockItem({ isSection22MajorShareholder: true })}
@@ -150,6 +150,9 @@ describe("EstateStockChipsHeader — chip-major-shareholder 노출 매트릭스"
       />,
     );
     const chip = screen.getByTestId("estate-chip-major-shareholder-stock-1");
-    expect(chip.textContent).toContain("최대주주 §22② ✓");
+    // 체크는 라벨 텍스트(✓)가 아니라 굵은 Check 아이콘 + aria-pressed로 표현 (2026-05-29)
+    expect(chip.textContent).toContain("최대주주 §22②");
+    expect(chip.textContent).not.toContain("✓");
+    expect(chip).toHaveAttribute("aria-pressed", "true");
   });
 });

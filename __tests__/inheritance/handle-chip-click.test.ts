@@ -10,7 +10,7 @@ import type {
   ChipKey,
   ChipState,
 } from "@/components/calc/inheritance/estate-card/chip-config";
-import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
+import type { EstateItem, Heir } from "@/lib/tax-engine/types/inheritance-gift.types";
 
 function makeItem(overrides: Partial<EstateItem> = {}): EstateItem {
   return {
@@ -19,6 +19,15 @@ function makeItem(overrides: Partial<EstateItem> = {}): EstateItem {
     name: "테스트",
     ...overrides,
   };
+}
+
+function makeHeir(overrides: Partial<Heir> = {}): Heir {
+  return {
+    id: "h1",
+    relation: "child",
+    name: "자녀",
+    ...overrides,
+  } as Heir;
 }
 
 function makeChip(key: ChipKey): ChipState {
@@ -153,7 +162,7 @@ describe("createChipClickHandler", () => {
     expect(updater("farming")).toBe("classification"); // 다른 key였으면 새 key로 전환
   });
 
-  it("heir-allocation·farming·family-business 모두 accordion 패턴", () => {
+  it("farming·family-business는 순수 accordion 패턴 (onUpdate 0)", () => {
     const onUpdate = vi.fn();
     const setExpand = vi.fn();
     const handler = createChipClickHandler({
@@ -161,10 +170,129 @@ describe("createChipClickHandler", () => {
       onUpdate,
       setInlineExpandedKey: setExpand,
     });
-    for (const key of ["heir-allocation", "farming", "family-business"] as const) {
+    for (const key of ["farming", "family-business"] as const) {
       handler(makeChip(key));
     }
-    expect(setExpand).toHaveBeenCalledTimes(3);
-    expect(onUpdate).not.toHaveBeenCalled(); // 모두 accordion만, onUpdate 0
+    expect(setExpand).toHaveBeenCalledTimes(2);
+    expect(onUpdate).not.toHaveBeenCalled(); // accordion만, onUpdate 0
+  });
+});
+
+// ============================================================
+// 항목2 — heir-allocation 칩 클릭 시 협의분할 토글 자동 ON (2026-05-29)
+// ============================================================
+
+describe("createChipClickHandler — heir-allocation 자동 ON", () => {
+  it("펼치는 방향 + 자연인 상속인 + 평가액>0 → heirAllocations 자동 세팅(firstHeir 전액)", () => {
+    const onUpdate = vi.fn();
+    const setExpand = vi.fn();
+    const handler = createChipClickHandler({
+      item: makeItem({ marketValue: 1_100_000_000 }),
+      onUpdate,
+      setInlineExpandedKey: setExpand,
+      heirs: [makeHeir({ id: "h1" })],
+      currentExpandedKey: null, // 펼치는 방향
+    });
+    handler(makeChip("heir-allocation"));
+    expect(onUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        heirAllocations: [{ heirId: "h1", amount: 1_100_000_000 }],
+      }),
+    );
+    expect(setExpand).toHaveBeenCalled();
+  });
+
+  it("effectiveValuation 명시(주식 평균가×주식수) → 그 값으로 세팅 (computeEffectiveValuation 미사용)", () => {
+    const onUpdate = vi.fn();
+    const handler = createChipClickHandler({
+      item: makeItem({ marketValue: 999 }), // computeEffectiveValuation과 다른 값
+      onUpdate,
+      setInlineExpandedKey: vi.fn(),
+      heirs: [makeHeir({ id: "h2" })],
+      effectiveValuation: 5_000_000_000,
+      currentExpandedKey: null,
+    });
+    handler(makeChip("heir-allocation"));
+    expect(onUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        heirAllocations: [{ heirId: "h2", amount: 5_000_000_000 }],
+      }),
+    );
+  });
+
+  it("[검토-B] 닫는 방향(currentExpandedKey='heir-allocation') → 자동 세팅 안 함, 닫기만", () => {
+    const onUpdate = vi.fn();
+    const setExpand = vi.fn();
+    const handler = createChipClickHandler({
+      item: makeItem({ marketValue: 1_100_000_000 }),
+      onUpdate,
+      setInlineExpandedKey: setExpand,
+      heirs: [makeHeir()],
+      currentExpandedKey: "heir-allocation", // 이미 열림 → 닫는 방향
+    });
+    handler(makeChip("heir-allocation"));
+    expect(onUpdate).not.toHaveBeenCalled();
+    const updater = setExpand.mock.calls[0][0] as (
+      p: "heir-allocation" | null,
+    ) => unknown;
+    expect(updater("heir-allocation")).toBe(null); // 닫힘
+  });
+
+  it("disabled — 자연인 상속인 없음(법인만) → 자동 세팅 안 함, 펼침만", () => {
+    const onUpdate = vi.fn();
+    const setExpand = vi.fn();
+    const handler = createChipClickHandler({
+      item: makeItem({ marketValue: 1_100_000_000 }),
+      onUpdate,
+      setInlineExpandedKey: setExpand,
+      heirs: [makeHeir({ id: "c1", relation: "corporate" })],
+      currentExpandedKey: null,
+    });
+    handler(makeChip("heir-allocation"));
+    expect(onUpdate).not.toHaveBeenCalled();
+    expect(setExpand).toHaveBeenCalled();
+  });
+
+  it("disabled — 평가액 0 → 자동 세팅 안 함, 펼침만", () => {
+    const onUpdate = vi.fn();
+    const handler = createChipClickHandler({
+      item: makeItem({ marketValue: undefined }), // computeEffectiveValuation=0
+      onUpdate,
+      setInlineExpandedKey: vi.fn(),
+      heirs: [makeHeir()],
+      currentExpandedKey: null,
+    });
+    handler(makeChip("heir-allocation"));
+    expect(onUpdate).not.toHaveBeenCalled();
+  });
+
+  it("이미 heirAllocations 정의됨 → 재세팅 안 함", () => {
+    const onUpdate = vi.fn();
+    const handler = createChipClickHandler({
+      item: makeItem({
+        marketValue: 1_100_000_000,
+        heirAllocations: [{ heirId: "h1", amount: 500_000_000 }],
+      }),
+      onUpdate,
+      setInlineExpandedKey: vi.fn(),
+      heirs: [makeHeir()],
+      currentExpandedKey: null,
+    });
+    handler(makeChip("heir-allocation"));
+    expect(onUpdate).not.toHaveBeenCalled();
+  });
+
+  it("heirs 미전달 → 자동 세팅 안 함 (PropertyValuationForm fallback 경로)", () => {
+    const onUpdate = vi.fn();
+    const setExpand = vi.fn();
+    const handler = createChipClickHandler({
+      item: makeItem({ marketValue: 1_100_000_000 }),
+      onUpdate,
+      setInlineExpandedKey: setExpand,
+      currentExpandedKey: null,
+    });
+    handler(makeChip("heir-allocation"));
+    expect(onUpdate).not.toHaveBeenCalled();
+    expect(setExpand).toHaveBeenCalled();
   });
 });

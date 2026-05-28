@@ -31,6 +31,21 @@ export function hasDistributableHeir(heirs: Heir[]): boolean {
   return heirs.some((h) => h.relation !== "corporate");
 }
 
+/**
+ * 협의분할 ON 전환 시 초기 배분 — 첫 자연인 상속인에게 전액 할당.
+ * 자연인 상속인이 없으면 빈 배열(영리법인은 협의분할 대상 아님).
+ * HeirAllocationToggleSection·handleChipClick(칩 클릭 자동 ON)에서 공용.
+ */
+export function buildInitialHeirAllocations(
+  heirs: Heir[],
+  effectiveValuation: number,
+): HeirAllocation[] {
+  const firstHeir = heirs.find((h) => h.relation !== "corporate");
+  return firstHeir
+    ? [{ heirId: firstHeir.id, amount: effectiveValuation }]
+    : [];
+}
+
 interface HeirAllocationInputProps {
   allocations?: HeirAllocation[];
   /** 평가액 — 합계 검증 기준 (자산 평가액 또는 채무 금액) */

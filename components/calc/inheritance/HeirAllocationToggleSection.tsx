@@ -17,11 +17,11 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import {
   HeirAllocationInput,
   hasDistributableHeir,
+  buildInitialHeirAllocations,
 } from "./HeirAllocationInput";
 import type {
   EstateItem,
   Heir,
-  HeirAllocation,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
 
 interface HeirAllocationToggleSectionProps {
@@ -53,11 +53,9 @@ export function HeirAllocationToggleSection({
       checked={!!item.heirAllocations}
       onCheckedChange={(on) => {
         if (on) {
-          const firstHeir = heirs.find((h) => h.relation !== "corporate");
-          const initial: HeirAllocation[] = firstHeir
-            ? [{ heirId: firstHeir.id, amount: effectiveValuation }]
-            : [];
-          onChange({ heirAllocations: initial });
+          onChange({
+            heirAllocations: buildInitialHeirAllocations(heirs, effectiveValuation),
+          });
         } else {
           onChange({ heirAllocations: undefined });
         }

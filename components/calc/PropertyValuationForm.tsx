@@ -168,8 +168,15 @@ function ItemEditor({ item, index, onUpdate, onRemove, mode, heirs, valuationDat
   // 칩 클릭 핸들러 — Phase 2 INT-1: createChipClickHandler 공통 helper 사용
   // (EstateCommonAttributesSection도 동일 helper 사용 예정 — PR-E)
   const handleChipClick = useMemo(
-    () => createChipClickHandler({ item, onUpdate, setInlineExpandedKey }),
-    [item, onUpdate],
+    () =>
+      createChipClickHandler({
+        item,
+        onUpdate,
+        setInlineExpandedKey,
+        heirs,
+        currentExpandedKey: inlineExpandedKey,
+      }),
+    [item, onUpdate, heirs, inlineExpandedKey],
   );
 
   function handleToggleAdvanced() {
