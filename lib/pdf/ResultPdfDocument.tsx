@@ -9,6 +9,11 @@ import {
   Text,
   StyleSheet,
 } from "@react-pdf/renderer";
+import { InheritanceHeirAllocationSection } from "@/lib/pdf/sections/inheritance-heir-allocation-section";
+import type {
+  Heir,
+  InheritanceTaxResult,
+} from "@/lib/tax-engine/types/inheritance-gift.types";
 
 // ─── 공통 타입 ──────────────────────────────────────────────────
 interface CalcStep {
@@ -423,7 +428,7 @@ function AcquisitionSection({ r }: { r: R }) {
   );
 }
 
-function InheritanceGiftSection({ r, taxType }: { r: R; taxType: string }) {
+function InheritanceGiftSection({ r, taxType, inputData }: { r: R; taxType: string; inputData?: R }) {
   const isInheritance = taxType === "inheritance";
   return (
     <>
@@ -463,6 +468,14 @@ function InheritanceGiftSection({ r, taxType }: { r: R; taxType: string }) {
           <View style={s.rowLast}><Text style={s.lbl}>결정세액</Text><Text style={s.valAccent}>{fmt(r.finalTax)}</Text></View>
         )}
       </View>
+
+      {/* Phase D: 상속인별 상속세부담액 집계 표 (이미지 8) — 상속세 한정·heirs 존재 시 */}
+      {isInheritance && r.heirAllocationResult && Array.isArray(inputData?.heirs) && (inputData!.heirs as unknown[]).length > 0 && (
+        <InheritanceHeirAllocationSection
+          result={r as unknown as InheritanceTaxResult}
+          heirs={inputData!.heirs as unknown as Heir[]}
+        />
+      )}
     </>
   );
 }
@@ -672,7 +685,7 @@ export function ResultPdfDocument({
         {taxType === "transfer" && <TransferSection r={r} />}
         {taxType === "transfer_multi" && <TransferMultiSection r={r} />}
         {taxType === "acquisition" && <AcquisitionSection r={r} />}
-        {(taxType === "inheritance" || taxType === "gift") && <InheritanceGiftSection r={r} taxType={taxType} />}
+        {(taxType === "inheritance" || taxType === "gift") && <InheritanceGiftSection r={r} taxType={taxType} inputData={inputData} />}
         {taxType === "property" && <PropertySection r={r} />}
         {taxType === "comprehensive_property" && <ComprehensiveSection r={r} />}
 

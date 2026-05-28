@@ -112,7 +112,7 @@ describe("EstateStockChipsHeader — chip-major-shareholder 노출 매트릭스"
     fireEvent.click(
       screen.getByTestId("estate-chip-major-shareholder-stock-1"),
     );
-    expect(captured?.isSection22MajorShareholder).toBe(true);
+    expect((captured as EstateItem | null)?.isSection22MajorShareholder).toBe(true);
   });
 
   it("⚙️ 옵션 버튼 노출 + 클릭 → 패널 펼침", () => {

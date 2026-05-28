@@ -43,6 +43,44 @@ export interface HeirTaxBreakdown {
   filingCredit: number;
   /** 자진납부세액 */
   finalTax: number;
+
+  // ============================================================
+  // Phase B2 echo 필드 — PDF 표8 (이미지 8) 재현용 중간값 노출
+  // 산식 변경 0 — 모두 optional. heir-allocation-summary-table.engine.design.md
+  // ============================================================
+  /**
+   * 자산 4분류 합계 (협의분할 분배 후 본인 몫).
+   * - perHeir[heir].categoryBreakdown — 협의분할 입력 또는 법정상속분 fallback 분배
+   * - perHeir[corp].categoryBreakdown — 모든 0 (본래 상속재산 없음, 사전증여만)
+   */
+  categoryBreakdown?: {
+    financial: number;
+    realEstate: number;
+    stock: number;
+    other: number;
+  };
+  /** ① 총상속재산 (채무공제 전) = Σ categoryBreakdown */
+  grossInheritance?: number;
+  /** ㉠ 과세제외 재산 (비과세 + 과세가액불산입). 일반적으로 0. */
+  excludedFromTaxation?: number;
+  /**
+   * ⑩b / ⑫b 공제 한도 — 한 필드 두 의미 (D-8):
+   * - heir(spouse/child/...): §28 사전증여공제 한도 = floor(⑪ × directTaxBaseShare / taxBaseShare)
+   * - corporate: §3의2② 면제 한도 = floor(⑦ × corporateGiftTaxBase / taxBase)
+   * UI는 heir.relation으로 분기하여 ⑩b/⑫b 라벨 분리 표시.
+   */
+  priorGiftCreditLimit?: number;
+  /**
+   * ⑩a / ⑫a 증여세 산출세액.
+   * - heir: PriorGift.giftTaxPaid 합 (donee 기준)
+   * - corp: Heir.corporateGiftComputedTax (영리법인 사전증여 시 부담 증여세 산출세액)
+   */
+  priorGiftComputedTax?: number;
+  /**
+   * *5 부담비율 = taxBaseShare / (taxBase − corporate 사전증여 과세표준) (4자리 round).
+   * corp는 비율 계산 대상이 아니므로 undefined (UI는 — 표시).
+   */
+  burdenRatio?: number;
 }
 
 export interface HeirAllocationResult {

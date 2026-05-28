@@ -901,6 +901,33 @@ export interface InheritanceTaxResult extends TaxResultMeta {
   heirAllocationResult?: HeirAllocationResult;
   /** 담보채무 §14 자동공제 내역 (echo — 산식 불변, 결과·자동노출 카드 표시용) */
   collateralDebtDetail?: DerivedCollateralDebt[];
+
+  /**
+   * Phase B3 — 상속인별 상속세부담액 집계 표 (이미지 8) 합계행 echo.
+   * heir-allocation-summary-table.engine.design.md §B5
+   */
+  summaryTable?: {
+    /** *1 과세표준 배부대상 과세가액 = 과세가액 − Σ가산 증여재산 (이미지 15) */
+    distributableTaxBase: number;
+    /** *2 할증과세 대상 과세가액 = 과세가액 − 영리법인 등 사전증여가액 (이미지 16 §27①) */
+    surchargeTargetTaxableValue: number;
+    /** *3·*5 분모 = taxBase − 영리법인 사전증여 과세표준 (이미지 16) */
+    distributableTaxBaseAfterGifts: number;
+    /**
+     * ⑩b 합계행 표시값 = floor((⑦+⑧) × corporateGiftTaxBase / taxBase). 할증 포함.
+     * perHeir[corp].priorGiftCreditLimit(할증 미포함)과 의도적 분리 (D-8).
+     */
+    corporateExemptionLimitDisplay: number;
+    /** 자산 4분류 합계 (모든 상속인 합) */
+    categoryTotals: {
+      financial: number;
+      realEstate: number;
+      stock: number;
+      other: number;
+    };
+    /** ㉠ 과세제외 재산 전체 합 (비과세 + 과세가액불산입) */
+    totalExcludedFromTaxation: number;
+  };
 }
 
 /**

@@ -28,6 +28,7 @@ import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
 import { LoginPromptBanner } from "@/components/calc/shared/LoginPromptBanner";
 import { TaxCreditBreakdownCard } from "@/components/calc/TaxCreditBreakdownCard";
 import { HeirAllocationTable } from "@/components/calc/results/HeirAllocationTable";
+import { HeirAllocationSummaryTable } from "@/components/calc/results/HeirAllocationSummaryTable";
 import { InheritanceFilingFormTable } from "@/components/calc/results/InheritanceFilingFormTable";
 import { CorporateExemptionFilingFormTable } from "@/components/calc/results/CorporateExemptionFilingFormTable";
 import { DebtAllocationResultCard } from "@/components/calc/results/DebtAllocationResultCard";
@@ -554,6 +555,11 @@ export function InheritanceTaxResultView({
       {/* 상속인별 배부 표 — 종합사례 PDF 책 1859 재현 (heirAllocationResult 있을 때만) */}
       {result.heirAllocationResult && heirs && heirs.length > 0 && (
         <HeirAllocationTable result={result} heirs={heirs} />
+      )}
+
+      {/* 상속인별 상속세부담액 집계 표 (이미지 8 — 33행 PDF 1:1 매트릭스) */}
+      {result.heirAllocationResult && heirs && heirs.length > 0 && (
+        <HeirAllocationSummaryTable result={result} heirs={heirs} />
       )}
 
       {/* 공제 내역 접기 */}

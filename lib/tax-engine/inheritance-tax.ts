@@ -41,6 +41,7 @@ import { calcInheritanceTaxCredits } from "./inheritance-gift-tax-credit";
 import { evaluatePresumedInheritance } from "./presumed-inheritance";
 import { calcCorporateExemption } from "./inheritance-corporate-exemption";
 import { calcHeirAllocation } from "./inheritance-allocation";
+import { buildSummaryCategory } from "./inheritance-asset-category";
 import { computeLegalShares } from "./inheritance-legal-share";
 import { deriveCollateralDebts } from "./inheritance-collateral-debt";
 import { sumCollateralDebt } from "./inheritance-collateral-debt";
@@ -543,6 +544,44 @@ export function calcInheritanceTax(
     allBreakdown.push(...heirAllocationResult.breakdown);
   }
 
+  // Phase B5: summaryTable 조립 (PDF 표8 합계행 echo, 산식 변경 0)
+  // heir-allocation-summary-table.engine.design.md §B5
+  const corporateGiftTaxBaseForSummary = (input.preGiftsWithin10Years ?? []).reduce(
+    (sum, g) => sum + (g.beneficiaryType === "corporate" ? (g.giftTaxBase ?? g.giftAmount) : 0),
+    0,
+  );
+  const corporateExemptionLimitDisplay =
+    corporateGiftTaxBaseForSummary > 0 && taxBase > 0
+      ? Math.floor(
+          ((computedTax + generationSkipSurcharge) *
+            corporateGiftTaxBaseForSummary) /
+            taxBase,
+        )
+      : 0;
+  const categoryTotals = (() => {
+    const t = { financial: 0, realEstate: 0, stock: 0, other: 0 };
+    for (const item of input.estateItems ?? []) {
+      const cat = buildSummaryCategory(item);
+      const valuated =
+        valuationResults.find((v) => v.estateItemId === item.id)
+          ?.valuatedAmount ?? 0;
+      t[cat] += valuated;
+    }
+    return t;
+  })();
+  const summaryTable = heirAllocationResult
+    ? {
+        distributableTaxBase: heirAllocationResult.indirectDistributionBase,
+        surchargeTargetTaxableValue:
+          taxableEstateValue - nonHeirNonLegateeGifts,
+        distributableTaxBaseAfterGifts:
+          heirAllocationResult.computedTaxShareDenominator,
+        corporateExemptionLimitDisplay,
+        categoryTotals,
+        totalExcludedFromTaxation: exemptAmount,
+      }
+    : undefined;
+
   return {
     grossEstateValue,
     exemptAmount,
@@ -567,5 +606,7 @@ export function calcInheritanceTax(
     corporateExemption,
     heirAllocationResult,
     collateralDebtDetail: collateralDebts.length > 0 ? collateralDebts : undefined,
+    // Phase B5 echo
+    summaryTable,
   };
 }

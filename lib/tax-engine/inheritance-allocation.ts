@@ -27,6 +27,11 @@ import {
   distributeByLegalShares,
   type LegalShareResult,
 } from "./inheritance-legal-share";
+import {
+  buildSummaryCategory,
+  emptyCategoryBreakdown,
+  type CategoryBreakdown,
+} from "./inheritance-asset-category";
 import type {
   Heir,
   PriorGift,
@@ -249,6 +254,29 @@ export function calcHeirAllocation(
     (it) => valuatedAmountById.get(it.id) ?? 0,
     legalShares,
   );
+
+  // Phase B4: 자산 4분류 categoryBreakdown 집계 (PDF 표8 상단 4행 echo)
+  const categoryBreakdownByHeir = new Map<string, CategoryBreakdown>();
+  for (const heir of heirs) {
+    categoryBreakdownByHeir.set(heir.id, emptyCategoryBreakdown());
+  }
+  for (const item of estateItems) {
+    const cat = buildSummaryCategory(item);
+    const amount = valuatedAmountById.get(item.id) ?? 0;
+    if (item.heirAllocations && item.heirAllocations.length > 0) {
+      for (const alloc of item.heirAllocations) {
+        const bucket = categoryBreakdownByHeir.get(alloc.heirId);
+        if (bucket) bucket[cat] += alloc.amount;
+      }
+    } else {
+      // 법정상속분 fallback (corp·legatee 자동 제외 — inheritance-legal-share.ts:36-37)
+      const dist = distributeByLegalShares(amount, legalShares);
+      for (const [heirId, amt] of dist) {
+        const bucket = categoryBreakdownByHeir.get(heirId);
+        if (bucket) bucket[cat] += amt;
+      }
+    }
+  }
   const debtByHeir = resolveAllocationsByHeir(
     debtItems,
     (it) => it.amount,
@@ -322,6 +350,11 @@ export function calcHeirAllocation(
 
     if (isCorporate) {
       // 영리법인: §3의2② 면제. finalTax=0, 사전증여 가액만 표시.
+      // Phase B4 D-6: §3의2② 한도 echo (inheritance-corporate-exemption.ts:101과 동일 산식)
+      const corpLimit =
+        taxBase > 0 && giftTaxBase > 0
+          ? Math.floor((computedTax * giftTaxBase) / taxBase)
+          : 0;
       perHeir[heir.id] = {
         heirId: heir.id,
         directEstateAmount: 0,
@@ -338,6 +371,11 @@ export function calcHeirAllocation(
         preFilingCreditTax: 0,
         filingCredit: 0,
         finalTax: 0,
+        // Phase B2 echo — corp 분기
+        categoryBreakdown: emptyCategoryBreakdown(),
+        grossInheritance: 0,
+        priorGiftCreditLimit: corpLimit, // ⑩b 영리법인 적용값 (할증 미포함)
+        priorGiftComputedTax: heir.corporateGiftComputedTax ?? 0, // ⑩a
       };
       continue;
     }
@@ -385,12 +423,16 @@ export function calcHeirAllocation(
     //   공제 = Min(증여세 산출세액(giftTaxPaid), 한도)
     const giftTaxPaid = computedTaxByDonee.get(heir.id) ?? 0;
     let priorGiftCredit = 0;
-    if (giftTaxPaid > 0 && taxBaseShare > 0 && directTaxBaseShare > 0) {
-      const limit = Number(
-        (BigInt(computedTaxShare) * BigInt(directTaxBaseShare)) /
-          BigInt(taxBaseShare),
+    let priorGiftCreditLimitForEcho = 0; // Phase B2 echo (⑫b)
+    if (taxBaseShare > 0 && directTaxBaseShare > 0) {
+      // PDF 책 안분 round-half-up — BigInt floor는 1원 차이 발생
+      priorGiftCreditLimitForEcho = bigIntRoundDiv(
+        BigInt(computedTaxShare) * BigInt(directTaxBaseShare),
+        BigInt(taxBaseShare),
       );
-      priorGiftCredit = Math.min(giftTaxPaid, limit);
+      if (giftTaxPaid > 0) {
+        priorGiftCredit = Math.min(giftTaxPaid, priorGiftCreditLimitForEcho);
+      }
     }
 
     // 13-11: 차가감세액 = (산출세액상당액 + 할증) − 사전증여세액공제
@@ -403,6 +445,15 @@ export function calcHeirAllocation(
 
     // 13-13: 자진납부세액
     const finalTax = preFilingCreditTax - filingCredit;
+
+    // Phase B4 echo — heir 분기
+    // *5 부담비율 = taxBaseShare / (taxBase − corporate 사전증여 과세표준) — 4자리 절사
+    // PDF 책 표8 0.3169·0.4772·0.1596·0.0461 모두 절사(floor) — round-down
+    const burdenRatio =
+      computedTaxShareDenominator > 0
+        ? Math.floor((taxBaseShare / computedTaxShareDenominator) * 10000) /
+          10000
+        : 0;
 
     perHeir[heir.id] = {
       heirId: heir.id,
@@ -420,7 +471,22 @@ export function calcHeirAllocation(
       preFilingCreditTax,
       filingCredit,
       finalTax,
+      // Phase B2 echo — heir 분기
+      priorGiftCreditLimit: priorGiftCreditLimitForEcho, // ⑫b
+      priorGiftComputedTax: giftTaxPaid, // ⑫a
+      burdenRatio, // *5
     };
+  }
+
+  // Phase B4: categoryBreakdown · grossInheritance를 heir 분기에 후입력
+  for (const heir of heirs) {
+    if (heir.relation === "corporate") continue;
+    const bd = categoryBreakdownByHeir.get(heir.id);
+    if (bd && perHeir[heir.id]) {
+      perHeir[heir.id].categoryBreakdown = bd;
+      perHeir[heir.id].grossInheritance =
+        bd.financial + bd.realEstate + bd.stock + bd.other;
+    }
   }
 
   const breakdown: CalculationStep[] = [
