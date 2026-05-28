@@ -3,11 +3,10 @@
 /**
  * ListedStockSecurityInfoSection — 종목 정보 sky 카드.
  *
- * 묶음: 종목명·종목코드·보유 주식 수 3 필드.
- * 스타일: `ListedStockBesshiAttributesSection`의 갑지 정보 입력 카드와 동일 패턴.
- * 키움 자동조회 카드·⑨ 평균가 필드는 본 카드 외부에 별도 유지.
+ * 묶음: 종목코드(필수) → 종목명(자동 채움) → 보유 주식 수.
+ * 종목코드 FieldCard 의 `trailing` 슬롯에 키움 자동조회 버튼(inline variant)을 받음.
  *
- * Plan: docs/00-pm/listed-stock-besshi-form-ux-refinement.plan.md §3-1
+ * Plan: docs/00-pm/listed-stock-security-info-layout-reorder.plan.md §3 Step C-1
  */
 
 import React from "react";
@@ -17,9 +16,18 @@ import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 interface Props {
   item: EstateItem;
   onUpdate: (patch: Partial<EstateItem>) => void;
+  /** 종목코드 FieldCard 우측 슬롯 — 키움 자동조회 버튼(inline variant) 등. */
+  autoFetchSlot?: React.ReactNode;
+  /** 종목코드 FieldCard 하단 warning 슬롯 — 자동조회 disabled 사유 또는 error 등. */
+  autoFetchWarning?: React.ReactNode;
 }
 
-export function ListedStockSecurityInfoSection({ item, onUpdate }: Props) {
+export function ListedStockSecurityInfoSection({
+  item,
+  onUpdate,
+  autoFetchSlot,
+  autoFetchWarning,
+}: Props) {
   const set = (patch: Partial<EstateItem>) => onUpdate(patch);
   const isCapInc = item.isCapitalIncreaseUnlistedShare ?? false;
   const sharesLabel = isCapInc
@@ -36,24 +44,19 @@ export function ListedStockSecurityInfoSection({ item, onUpdate }: Props) {
         <div>
           <h4 className="text-sm font-semibold text-sky-900">종목 정보 입력</h4>
           <p className="text-xs text-sky-700 mt-0.5">
-            종목명·종목코드·보유 주식 수
+            종목코드·종목명·보유 주식 수
           </p>
         </div>
       </div>
 
       <div className="space-y-3">
-        <FieldCard label="종목명">
-          <input
-            type="text"
-            value={item.name}
-            onChange={(e) => set({ name: e.target.value })}
-            placeholder="예: 삼성전자"
-            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-            data-testid="ls-security-info-name"
-          />
-        </FieldCard>
-
-        <FieldCard label="종목코드 (선택)">
+        <FieldCard
+          label="종목코드"
+          required
+          trailing={autoFetchSlot}
+          warning={autoFetchWarning}
+          hint="6자리 종목코드 (예: 005930)"
+        >
           <input
             type="text"
             value={item.listedStockCode ?? ""}
@@ -69,6 +72,20 @@ export function ListedStockSecurityInfoSection({ item, onUpdate }: Props) {
             maxLength={6}
             className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
             data-testid="ls-security-info-code"
+          />
+        </FieldCard>
+
+        <FieldCard
+          label="종목명"
+          hint="키움 자동조회 시 자동 입력 — 직접 수정도 가능"
+        >
+          <input
+            type="text"
+            value={item.name}
+            onChange={(e) => set({ name: e.target.value })}
+            placeholder="키움 자동조회 시 자동 입력"
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            data-testid="ls-security-info-name"
           />
         </FieldCard>
 

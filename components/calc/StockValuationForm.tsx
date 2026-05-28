@@ -18,7 +18,8 @@ import { calcUnlistedStockPerShareValue } from "@/lib/tax-engine/property-valuat
 import { applyCapitalIncreaseShareValuation } from "@/lib/tax-engine/property-valuation/dividend-difference-section-63-2-3";
 import { evaluateUnlistedStockV2 } from "@/lib/tax-engine/property-valuation/unlisted-orchestrator";
 import type { EstateItem, Heir } from "@/lib/tax-engine/types/inheritance-gift.types";
-import { KiwoomValuationAutoFetchButton } from "./KiwoomValuationAutoFetchButton";
+import { KiwoomValuationResultCard } from "@/components/calc/inheritance/listed-stock/KiwoomValuationResultCard";
+import { useKiwoomValuationFetch } from "@/components/calc/inheritance/listed-stock/useKiwoomValuationFetch";
 import { EstateCommonAttributesSection } from "@/components/calc/inheritance/EstateCommonAttributesSection";
 import { ListedStockBesshiAttributesSection } from "@/components/calc/inheritance/listed-stock/ListedStockBesshiAttributesSection";
 import { ListedStockSecurityInfoSection } from "@/components/calc/inheritance/listed-stock/ListedStockSecurityInfoSection";
@@ -44,6 +45,97 @@ export { computeStockValuation, resolveUnlistedDisplayMode };
 // ============================================================
 // 상장주식 항목 편집기
 // ============================================================
+
+/**
+ * 종목 정보 카드 + inline 자동조회 버튼 + 결과 카드 통합.
+ *
+ * 자동조회 가능 조건(평가기준일 + 종목코드 둘 다 입력) 충족 시에만 본 컴포넌트가
+ * `useKiwoomValuationFetch` hook 1회 호출 → 버튼은 종목코드 FieldCard `trailing`,
+ * 결과 카드는 직후 별도 위치에 렌더.
+ *
+ * Plan: docs/00-pm/listed-stock-security-info-layout-reorder.plan.md §3 Step C-2
+ */
+function ListedStockAutoFetchIntegration({
+  item,
+  valuationDate,
+  set,
+}: {
+  item: EstateItem;
+  valuationDate: string;
+  set: (patch: Partial<EstateItem>) => void;
+}) {
+  const startOverrideDate = resolveStartOverrideDate(item, valuationDate);
+  const fetchState = useKiwoomValuationFetch({
+    stockCode: item.listedStockCode ?? "",
+    valuationDate,
+    startOverrideDate,
+    syncName: true,
+    onResponse: (response) => {
+      // 4그룹 분할 결과를 listedStockDailyGroupsInput 캐시에 channel-fill.
+      // ★ onFill 은 전달하지 않음 — stale closure 덮어쓰기 방지
+      //   (listed-stock-besshi-page2-empty-bug-fix.plan §2)
+      const adapter = applyKiwoomValuationResponse(response, {
+        startOverrideDate,
+      });
+      set({
+        listedStockAvgPrice: adapter.listedStockAvgPrice,
+        listedStockDailyGroupsInput: adapter.listedStockDailyGroupsInput,
+        // 종목명 동시 mirror (Plan §3 Step C-2):
+        //   name        — 자산 카드 헤더용 별명 (사용자 친화)
+        //   companyName — 갑지 ① 정식 법인명
+        //   키움 stockName 은 정식 법인명이므로 둘 다 정합.
+        name: response.stockName || item.name,
+        ...(adapter.companyName ? { companyName: adapter.companyName } : {}),
+        // 상증령 §52의2 anchor shift echo (이미지 13)
+        resolvedValuationAnchor: adapter.resolvedValuationAnchor,
+        valuationAnchorShifted: adapter.valuationAnchorShifted,
+        valuationAnchorShiftReason: adapter.valuationAnchorShiftReason,
+        valuationPeriodStart: adapter.valuationPeriodStart,
+        valuationPeriodEnd: adapter.valuationPeriodEnd,
+      });
+    },
+  });
+
+  // inline 버튼 — hook 결과를 직접 사용 (state 공유). KiwoomValuationAutoFetchButton
+  // 컴포넌트는 본 통합에서 사용하지 않음 (별도 hook 인스턴스 회피).
+  const inlineButton = (
+    <button
+      type="button"
+      disabled={!fetchState.canFetch}
+      onClick={fetchState.fetch}
+      className="rounded-md bg-sky-600 px-3 py-2 text-sm font-semibold text-white shadow hover:bg-sky-700 disabled:bg-sky-200 disabled:text-sky-500 disabled:cursor-not-allowed whitespace-nowrap"
+      title={fetchState.disabledReason ?? "전후 2개월 평균 자동 계산"}
+      data-testid="ls-inline-auto-fetch-button"
+    >
+      {fetchState.loading ? "🔄 조회 중..." : "🔍 키움 자동조회"}
+    </button>
+  );
+
+  return (
+    <>
+      <ListedStockSecurityInfoSection
+        item={item}
+        onUpdate={set}
+        autoFetchSlot={inlineButton}
+        autoFetchWarning={
+          fetchState.error
+            ? `❌ ${fetchState.error}`
+            : fetchState.disabledReason
+              ? `⚠️ ${fetchState.disabledReason}`
+              : undefined
+        }
+      />
+      <KiwoomValuationResultCard
+        info={fetchState.info}
+        error={fetchState.error}
+        valuationDate={valuationDate}
+        showDetail={fetchState.showDetail}
+        onToggleDetail={() => fetchState.setShowDetail((v) => !v)}
+        showError={false} // error 는 ListedStockSecurityInfoSection 의 warning 슬롯에서 노출
+      />
+    </>
+  );
+}
 
 interface ListedStockEditorProps {
   item: EstateItem;
@@ -102,38 +194,16 @@ function ListedStockEditor({
         ℹ️ 평가기준일 전후 2개월 최종 시세 단순평균 × 주식 수 (상증법 §63①1호 가목)
       </p>
 
-      {/* 종목 정보 입력 (sky 카드) — 종목명·종목코드·보유 주식 수 */}
-      <ListedStockSecurityInfoSection item={item} onUpdate={(patch) => set(patch)} />
+      {/* 종목 정보 입력 (sky 카드) — 종목코드·종목명·보유 주식 수
+          + 종목코드 우측 inline 자동조회 버튼 + 결과 카드는 직후 별도 위치에 렌더.
+          평가기준일·종목코드 미입력 시 inline 버튼은 disabled, 결과 카드는 미렌더.
+          Plan: docs/00-pm/listed-stock-security-info-layout-reorder.plan.md */}
+      <ListedStockAutoFetchIntegration
+        item={item}
+        valuationDate={valuationDate ?? ""}
+        set={set}
+      />
 
-      {/* F-01 키움 자동조회 — 평가기준일 + 종목코드 충족 시 활성화 */}
-      {valuationDate && item.listedStockCode && (
-        <KiwoomValuationAutoFetchButton
-          stockCode={item.listedStockCode}
-          valuationDate={valuationDate}
-          syncName
-          startOverrideDate={resolveStartOverrideDate(item, valuationDate)}
-          onResponse={(response) => {
-            // 4그룹 분할 결과를 listedStockDailyGroupsInput 캐시에 channel-fill.
-            // ★ onFill은 전달하지 않음 — 같은 동기 사이클에서 두 번 set 호출 시
-            //   stale closure 로 listedStockDailyGroupsInput 이 덮어쓰여 소실되는 버그 회피.
-            //   (listed-stock-besshi-page2-empty-bug-fix.plan §2)
-            const adapter = applyKiwoomValuationResponse(response, {
-              startOverrideDate: resolveStartOverrideDate(item, valuationDate),
-            });
-            set({
-              listedStockAvgPrice: adapter.listedStockAvgPrice,
-              listedStockDailyGroupsInput: adapter.listedStockDailyGroupsInput,
-              ...(adapter.companyName ? { companyName: adapter.companyName } : {}),
-              // 상증령 §52의2 anchor shift echo (이미지 13)
-              resolvedValuationAnchor: adapter.resolvedValuationAnchor,
-              valuationAnchorShifted: adapter.valuationAnchorShifted,
-              valuationAnchorShiftReason: adapter.valuationAnchorShiftReason,
-              valuationPeriodStart: adapter.valuationPeriodStart,
-              valuationPeriodEnd: adapter.valuationPeriodEnd,
-            });
-          }}
-        />
-      )}
 
       {/* 갑지 13 필드 입력 — 3 collapsible (sky·emerald·violet) */}
       <ListedStockBesshiAttributesSection

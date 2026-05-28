@@ -54,6 +54,8 @@ function TestHarness({ onUpdate }: { onUpdate: (patch: Partial<EstateItem>) => v
         onUpdate({
           listedStockAvgPrice: adapter.listedStockAvgPrice,
           listedStockDailyGroupsInput: adapter.listedStockDailyGroupsInput,
+          // A-2: name + companyName 둘 다 mirror — 자산 카드 헤더용 + 갑지 ① 정합
+          name: response.stockName || "",
           ...(adapter.companyName ? { companyName: adapter.companyName } : {}),
         });
       }}
@@ -74,6 +76,16 @@ describe("listed-stock channel-fill (page2 empty bug fix)", () => {
     expect(lastPatch.listedStockDailyGroupsInput).toBeDefined();
     expect(lastPatch.listedStockDailyGroupsInput?.beforeM1).toHaveLength(31);
     expect(lastPatch.listedStockDailyGroupsInput?.afterM1).toHaveLength(31);
+    expect(lastPatch.companyName).toBe("테스트사");
+  });
+
+  it("A-2 name + companyName 동시 mirror — 자산 카드 헤더용 + 갑지 ① 정합", async () => {
+    const onUpdate = vi.fn();
+    const { getByRole } = render(<TestHarness onUpdate={onUpdate} />);
+    fireEvent.click(getByRole("button", { name: /키움 자동조회/ }));
+    await waitFor(() => expect(onUpdate).toHaveBeenCalled());
+    const lastPatch = onUpdate.mock.calls[0][0] as Partial<EstateItem>;
+    expect(lastPatch.name).toBe("테스트사");
     expect(lastPatch.companyName).toBe("테스트사");
   });
 
