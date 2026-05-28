@@ -18,10 +18,15 @@ import type { KiwoomValuation2MonthResponse } from "@/lib/calc/listed-stock-bess
 interface Props {
   stockCode: string;
   valuationDate: string; // 상속개시일 또는 증여일
-  onFill: (patch: { listedStockAvgPrice: number; stockName?: string }) => void;
+  /**
+   * 평균가·종목명 patch 콜백 (선택).
+   * onResponse 가 제공된 경우 호출자가 모든 patch를 책임하므로 본 콜백은 호출되지 않음
+   * (stale closure 덮어쓰기 방지 — listed-stock-besshi-page2-empty-bug-fix.plan §2).
+   */
+  onFill?: (patch: { listedStockAvgPrice: number; stockName?: string }) => void;
   /**
    * 응답 전체를 받아 4그룹 분할 등 별지부표 echo channel-fill에 사용 (선택).
-   * onFill 보다 먼저 호출.
+   * onFill 과 동시 전달 시 onResponse 만 호출.
    */
   onResponse?: (response: KiwoomValuation2MonthResponse) => void;
   /** §52의2② 평가구간 단축 — capitalIncreaseDate || mergerDate ∈ [D−2월, D] 일 때 전달 (선택). */
@@ -114,7 +119,10 @@ export function KiwoomValuationAutoFetchButton({
           average: data.average,
         });
       }
-      onFill(patch);
+      // onResponse 가 있으면 호출자가 모든 patch를 책임 — stale closure 덮어쓰기 방지
+      if (onFill && !onResponse) {
+        onFill(patch);
+      }
       setInfo({
         average: data.average,
         tradingDays: data.tradingDays,

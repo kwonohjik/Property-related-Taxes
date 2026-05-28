@@ -112,7 +112,10 @@ function ListedStockEditor({
           syncName
           startOverrideDate={resolveStartOverrideDate(item, valuationDate)}
           onResponse={(response) => {
-            // 4그룹 분할 결과를 listedStockDailyGroupsInput 캐시에 channel-fill
+            // 4그룹 분할 결과를 listedStockDailyGroupsInput 캐시에 channel-fill.
+            // ★ onFill은 전달하지 않음 — 같은 동기 사이클에서 두 번 set 호출 시
+            //   stale closure 로 listedStockDailyGroupsInput 이 덮어쓰여 소실되는 버그 회피.
+            //   (listed-stock-besshi-page2-empty-bug-fix.plan §2)
             const adapter = applyKiwoomValuationResponse(response, {
               startOverrideDate: resolveStartOverrideDate(item, valuationDate),
             });
@@ -121,15 +124,6 @@ function ListedStockEditor({
               listedStockDailyGroupsInput: adapter.listedStockDailyGroupsInput,
               ...(adapter.companyName ? { companyName: adapter.companyName } : {}),
             });
-          }}
-          onFill={(patch) => {
-            // onResponse가 이미 set 호출 — fallback 호환만 유지
-            if (!item.listedStockDailyGroupsInput) {
-              set({
-                listedStockAvgPrice: patch.listedStockAvgPrice,
-                ...(patch.stockName ? { name: patch.stockName } : {}),
-              });
-            }
           }}
         />
       )}
