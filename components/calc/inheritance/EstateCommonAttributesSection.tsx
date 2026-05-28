@@ -28,6 +28,7 @@
  */
 
 import { useMemo, useState } from "react";
+import { EstateStockChipsHeader } from "@/components/calc/inheritance/EstateStockChipsHeader";
 import { FarmingCategorySection } from "@/components/calc/inheritance/FarmingCategorySection";
 import { FamilyBusinessCategorySection } from "@/components/calc/inheritance/FamilyBusinessCategorySection";
 import { CorporateNonBusinessAssetsSection } from "@/components/calc/inheritance/CorporateNonBusinessAssetsSection";
@@ -45,6 +46,20 @@ import {
 } from "@/lib/calc/asset-toggle-visibility";
 import { resolveUnlistedDisplayMode } from "@/lib/calc/stock-valuation";
 import type { EstateItem, Heir } from "@/lib/tax-engine/types/inheritance-gift.types";
+
+// ============================================================
+// PR-E: 카테고리 라벨·아이콘 매핑 (EstateStockChipsHeader 전달용)
+// ============================================================
+
+const CATEGORY_ICONS = {
+  listed_stock: "📈",
+  unlisted_stock: "📊",
+} as const;
+
+const CATEGORY_LABELS = {
+  listed_stock: "상장주식",
+  unlisted_stock: "비상장주식",
+} as const;
 
 // ============================================================
 // Props
@@ -117,8 +132,23 @@ function EstateCommonAttributesSectionInner({
     item.category === "listed_stock" ||
     (item.category === "unlisted_stock" && resolveUnlistedDisplayMode(item) === "simple");
 
+  // PR-E: chip-major-shareholder 칩은 동일 분기 — V1(상장·simple)만 노출, V2(formal)는 미노출
+  const showMajorShareholderChip = showSection22Toggle;
+
   return (
     <>
+      {/* PR-E: 상단 헤더 칩 (chip-major-shareholder + ⚙️ 옵션) — 빠른 토글 진입점 */}
+      <EstateStockChipsHeader
+        item={item}
+        onUpdate={onUpdate}
+        heirs={heirs}
+        effectiveValuation={effectiveValuation}
+        showMajorShareholderChip={showMajorShareholderChip}
+        icon={CATEGORY_ICONS[item.category as keyof typeof CATEGORY_ICONS] ?? "📊"}
+        categoryLabel={CATEGORY_LABELS[item.category as keyof typeof CATEGORY_LABELS] ?? "주식"}
+        index={0}
+      />
+
       {/* 영농상속 자산 분류 — 카테고리별 자동 노출 */}
       {visibility.farming === "default" && (
         <FarmingCategorySection item={item} onUpdate={onUpdate} />
