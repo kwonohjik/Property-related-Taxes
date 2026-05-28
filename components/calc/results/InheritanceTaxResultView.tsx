@@ -35,7 +35,8 @@ import { DebtAllocationResultCard } from "@/components/calc/results/DebtAllocati
 import { UnlistedStockBesshiResultSection } from "@/components/calc/results/UnlistedStockBesshiResultSection";
 import { ListedStockBesshiResultSection } from "@/components/calc/results/ListedStockBesshiResultSection";
 import { DeductionLimitNoticeCard } from "@/components/calc/inheritance/DeductionLimitNoticeCard";
-import type { DebtItem } from "@/lib/tax-engine/types/inheritance-gift.types";
+import { SourceDataSummarySection } from "@/components/calc/results/source-summary/SourceDataSummarySection";
+import type { DebtItem, PresumedInheritanceItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { calcInstallmentPayment } from "@/lib/tax-engine/credits/installment-payment";
 
 // ============================================================
@@ -375,6 +376,8 @@ interface Props {
   priorGifts?: PriorGift[];
   /** 상속개시일 (ISO date) — InheritanceFilingFormTable 13년 cutoff 분기용 */
   deathDate?: string;
+  /** 추정상속재산 입력 — SourceDataSummarySection Table B용 (2026-05-28) */
+  presumedItems?: PresumedInheritanceItem[];
 }
 
 export function InheritanceTaxResultView({
@@ -388,6 +391,7 @@ export function InheritanceTaxResultView({
   estateItems,
   priorGifts,
   deathDate,
+  presumedItems,
 }: Props) {
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [showValuation, setShowValuation] = useState(false);
@@ -406,6 +410,20 @@ export function InheritanceTaxResultView({
           🖨️ PDF / 인쇄
         </button>
       </div>
+
+      {/* 상속개시자료 요약 — 4표 (Table A·B·C·D) */}
+      {heirs && heirs.length > 0 && (
+        <SourceDataSummarySection
+          deathDate={deathDate}
+          heirs={heirs}
+          estateItems={estateItems}
+          presumedItems={presumedItems}
+          presumedResultItems={result.presumedInheritanceDetail?.items}
+          presumedTotal={result.presumedInheritanceDetail?.total}
+          debtItems={debtItems}
+          priorGifts={priorGifts}
+        />
+      )}
 
       {/* 핵심 결과 카드 */}
       <div className="rounded-xl border-2 border-primary bg-primary/5 p-5">

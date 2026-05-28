@@ -200,6 +200,17 @@ export interface EstateItem extends EstateLocationFields {
   /** 가업상속재산 여부 — 직접 입력 모드 표시용 */
   isFamilyBusinessAsset?: boolean;
 
+  // ===== 상속개시자료 요약 4표 — Table A 비고/수량 열 (2026-05-28) =====
+  /**
+   * 평가방식 enum — 결과뷰 Table A 비고 열 단일 도출. 기존 `ValuationMethod` 타입 재사용.
+   * undefined 시 fallback 우선순위: marketValue→"시가" / appraisedValue→"감정가액" / standardPrice→"기준시가".
+   */
+  valuationMethod?: ValuationMethod;
+  /** 부동산 면적 (㎡) — Table A "수량(면적)" 열 표시용. 미입력 시 Σ(heirAllocations.areaM2) fallback. */
+  areaSqm?: number;
+  /** 기타자산 수량 (점 등) — category==="other"일 때 Table A 수량 열 표시. */
+  quantityCount?: number;
+
   // ===== §22 금융재산상속공제 자동화 (2026-05-21) =====
   /**
    * §22 금융재산공제 대상 여부 (사용자 명시 체크).
@@ -633,6 +644,12 @@ export interface DebtItem {
   isBongan?: boolean;
   /** 협의분할 — 상속인별 변제 분배 */
   heirAllocations?: HeirAllocation[];
+
+  // ===== 상속개시자료 요약 4표 — Table C 채권자/비고 열 (2026-05-28) =====
+  /** 채권자 주소 — Table C "채권자 주소 등" 열. */
+  creditorAddress?: string;
+  /** 채무 발생일 (ISO date) — Table C "비고" 열 "YYYY.M.D. 발생" 형식. */
+  incurredDate?: string;
   /**
    * §22 순금융재산 산식의 차감 채무 여부 (사용자 명시 체크).
    * 법령: 상증령 §19④ — §10① 1호로 입증된 금융회사등에 대한 채무만 차감 가능.

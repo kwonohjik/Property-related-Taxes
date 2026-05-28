@@ -369,6 +369,7 @@ export function InheritanceTaxForm() {
           estateItems={[...form.estateItems, ...form.stockItems]}
           priorGifts={form.priorGifts}
           deathDate={form.deathDate}
+          presumedItems={form.presumedItems}
         />
         <div className="flex justify-end">
           <SaveButton variant="primary" onSave={handleManualSaveForForm} />
