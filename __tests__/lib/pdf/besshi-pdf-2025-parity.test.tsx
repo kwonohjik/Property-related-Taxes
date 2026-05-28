@@ -120,7 +120,7 @@ describe("[AN-3] PDF 제1쪽 2025.07.10 공식 요소 정합", () => {
 describe("[AN-7] 자본금 표시 fallback", () => {
   it("capital 명시 입력 시 그 값 표시 (900,000,000)", () => {
     const text = collectText(UnlistedStockBesshiPdfDocument({ input: image17Input }));
-    expect(text).toContain("900,000,000원");
+    expect(text).toContain("900,000,000");
   });
 
   it("capital 미입력 시 액면가(5,000) × 발행주식총수(180,000) = 900,000,000 표시", () => {
@@ -129,7 +129,7 @@ describe("[AN-7] 자본금 표시 fallback", () => {
     const text = collectText(
       UnlistedStockBesshiPdfDocument({ input: withoutCapital as typeof image17Input }),
     );
-    expect(text).toContain("900,000,000원");
+    expect(text).toContain("900,000,000");
   });
 
   it("capital·액면가·발행주식 모두 0/미입력 → '-' (도출 불가)", () => {

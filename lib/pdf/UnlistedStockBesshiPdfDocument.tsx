@@ -119,9 +119,9 @@ function Page1Cover({ input, result }: { input: UnlistedStockValuationInput; res
           <Text style={m6Label}>① 발행주식총수</Text>
           <Text style={m6Value}>{fmt(input.totalShares)}주</Text>
           <Text style={m6Label}>1주당 액면가</Text>
-          <Text style={m6Value}>{fmt(input.faceValuePerShare)}원</Text>
+          <Text style={m6Value}>{fmt(input.faceValuePerShare)}</Text>
           <Text style={m6Label}>자본금</Text>
-          <Text style={m6Value}>{capitalDisplay ? `${fmt(capitalDisplay)}원` : "-"}</Text>
+          <Text style={m6Value}>{capitalDisplay ? fmt(capitalDisplay) : "-"}</Text>
         </View>
         <View style={{ flexDirection: "row" }}>
           <Text style={m6Label}>평가기준일</Text>
@@ -195,7 +195,7 @@ function ResultRow({ cellNum, label, value, emphasized }: { cellNum: string; lab
     <View style={[s.tableRow, emphasized ? s.emphasized : {}]}>
       <Text style={s.cellNum}>{cellNum}</Text>
       <Text style={s.cellLabel}>{label}</Text>
-      <Text style={s.cellAmount}>{fmt(value)}원</Text>
+      <Text style={s.cellAmount}>{fmt(value)}</Text>
     </View>
   );
 }
@@ -439,7 +439,7 @@ function Page5Goodwill({
       {estimatedProfitApplied && goodwill.goodwillFinal > 0 && (
         <Text style={[s.p6TextLine, { color: "#5b21b6" }]}>
           ※ 가.(최근 3년 순손익액 가중평균)은 §59③ 준용 §56②에 따라 추정이익 평균가액
-          {estimatedProfitAverage !== undefined ? ` ${fmt(estimatedProfitAverage)}원` : ""} × 발행주식총수로 환산됨.
+          {estimatedProfitAverage !== undefined ? ` ${fmt(estimatedProfitAverage)}` : ""} × 발행주식총수로 환산됨.
         </Text>
       )}
       {goodwill.excludedByLaw && (
@@ -447,7 +447,7 @@ function Page5Goodwill({
       )}
       {showZeroAnomalyFooter && (
         <Text style={s.amberFooter}>
-          ※ 나(가 × 50%) − 마(다 × 라) = {fmt(naMinusMa)}원 양수이나 5년 PV 산식 적용 후 영업권 평가액이 0으로 산출됨.
+          ※ 나(가 × 50%) − 마(다 × 라) = {fmt(naMinusMa)} 양수이나 5년 PV 산식 적용 후 영업권 평가액이 0으로 산출됨.
         </Text>
       )}
     </Page>
@@ -597,18 +597,18 @@ function Page6NetIncomeBreakdown({ result }: { result: UnlistedStockValuationRes
 
       {/* 아·자·차 */}
       <Text style={s.p6TextLine}>
-        <Text style={{ fontWeight: 700 }}>{P6.weightedAvgLabel}</Text> = {fmt(result.weightedNetIncomePerShare)}원
+        <Text style={{ fontWeight: 700 }}>{P6.weightedAvgLabel}</Text> = {fmt(result.weightedNetIncomePerShare)}
       </Text>
       <Text style={s.p6TextLine}>
         <Text style={{ fontWeight: 700 }}>{P6.rateLabel}</Text> = {(result.capitalizationRate * 100).toFixed(0)}% (상증규 §17)
       </Text>
       <Text style={s.p6TextLine}>
-        <Text style={{ fontWeight: 700 }}>{P6.finalPerShareLabel}</Text> = {fmt(result.netIncomePerShare)}원 (제1쪽 ⑤)
+        <Text style={{ fontWeight: 700 }}>{P6.finalPerShareLabel}</Text> = {fmt(result.netIncomePerShare)} (제1쪽 ⑤)
       </Text>
       {result.estimatedProfitResult?.applied && (
         <Text style={[s.p6TextLine, { color: "#6d28d9" }]}>
           ※ §56② 추정이익 갈음 적용 — 가중평균(아.) 대신 2 이상 신용평가기관 추정이익 평균가액{" "}
-          {fmt(result.estimatedProfitResult.estimatedProfitAverage)}원 ÷ 환원율로 산출
+          {fmt(result.estimatedProfitResult.estimatedProfitAverage)} ÷ 환원율로 산출
         </Text>
       )}
 

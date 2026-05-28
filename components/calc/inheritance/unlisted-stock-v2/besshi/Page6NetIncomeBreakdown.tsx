@@ -171,7 +171,7 @@ export function Page6NetIncomeBreakdown({
         </tbody>
       </table>
       <p className="mb-2">
-        <strong>{P6.weightedAvgLabel}</strong> = {fmt(result.weightedNetIncomePerShare)}원
+        <strong>{P6.weightedAvgLabel}</strong> = {fmt(result.weightedNetIncomePerShare)}
         {hasAnnualization && (
           <span className="ml-2 text-[10px] text-amber-700">※ §17의3② 1년 미만 사업연도 연환산 반영</span>
         )}
@@ -180,12 +180,12 @@ export function Page6NetIncomeBreakdown({
         <strong>{P6.rateLabel}</strong> = {(result.capitalizationRate * 100).toFixed(0)}% (상증규 §17)
       </p>
       <p className="mb-3" data-besshi-cell="p6-차" data-testid="p6-차">
-        <strong>{P6.finalPerShareLabel}</strong> = {fmt(result.netIncomePerShare)}원 (제1쪽 ⑤)
+        <strong>{P6.finalPerShareLabel}</strong> = {fmt(result.netIncomePerShare)} (제1쪽 ⑤)
       </p>
       {result.estimatedProfitResult?.applied && (
         <p className="mb-3 text-[10px] text-violet-700" data-testid="p6-추정이익">
           ※ §56② 추정이익 갈음 적용 — 위 가중평균(아.) 대신 2 이상 신용평가기관 추정이익 평균가액{" "}
-          {fmt(result.estimatedProfitResult.estimatedProfitAverage)}원 ÷ 환원율로 산출
+          {fmt(result.estimatedProfitResult.estimatedProfitAverage)} ÷ 환원율로 산출
         </p>
       )}
     </section>

@@ -35,29 +35,29 @@ export function Page1CoverSection({ input, result }: Page1CoverSectionProps) {
         <tbody>
           <tr>
             <td className="border border-black p-2 bg-gray-100">법인명</td>
-            <td className="border border-black p-2">{input.corpName || "-"}</td>
+            <td className="border border-black p-2 font-mono">{input.corpName || "-"}</td>
             <td className="border border-black p-2 bg-gray-100">사업자등록번호</td>
-            <td className="border border-black p-2">{input.businessRegistrationNumber || "-"}</td>
+            <td className="border border-black p-2 font-mono">{input.businessRegistrationNumber || "-"}</td>
             <td className="border border-black p-2 bg-gray-100">대표자</td>
-            <td className="border border-black p-2">{input.representative || "-"}</td>
+            <td className="border border-black p-2 font-mono">{input.representative || "-"}</td>
           </tr>
           <tr data-besshi-cell="p1-①" data-testid="p1-①">
             <td className="border border-black p-2 bg-gray-100">① 발행주식총수</td>
-            <td className="border border-black p-2">{fmt(input.totalShares)}주</td>
+            <td className="border border-black p-2 font-mono">{fmt(input.totalShares)}주</td>
             <td className="border border-black p-2 bg-gray-100">1주당 액면가</td>
-            <td className="border border-black p-2">{fmt(input.faceValuePerShare)}원</td>
+            <td className="border border-black p-2 font-mono">{fmt(input.faceValuePerShare)}</td>
             <td className="border border-black p-2 bg-gray-100">자본금</td>
-            <td className="border border-black p-2">{capitalDisplay ? `${fmt(capitalDisplay)}원` : "-"}</td>
+            <td className="border border-black p-2 font-mono">{capitalDisplay ? fmt(capitalDisplay) : "-"}</td>
           </tr>
           <tr data-besshi-cell="p1-②" data-testid="p1-②">
             <td className="border border-black p-2 bg-gray-100">평가기준일</td>
-            <td className="border border-black p-2">
+            <td className="border border-black p-2 font-mono">
               {input.evaluationDate instanceof Date && !isNaN(input.evaluationDate.getTime())
                 ? input.evaluationDate.toISOString().slice(0, 10)
                 : "-"}
             </td>
             <td className="border border-black p-2 bg-gray-100">② 부동산과다보유법인</td>
-            <td className="border border-black p-2" colSpan={3}>{input.isRealEstateHeavy ? "예 (가중치 반전)" : "아니오"}</td>
+            <td className="border border-black p-2 font-mono" colSpan={3}>{input.isRealEstateHeavy ? "예 (가중치 반전)" : "아니오"}</td>
           </tr>
         </tbody>
       </table>
@@ -85,7 +85,12 @@ export function Page1CoverSection({ input, result }: Page1CoverSectionProps) {
       {result && (
         <>
           <SectionTitle>3. 1주당 가액의 평가</SectionTitle>
-          <table className="w-full border-collapse border border-black mb-3">
+          <table className="w-full table-fixed border-collapse border border-black mb-3">
+            <colgroup>
+              <col className="w-12" />
+              <col />
+              <col className="w-40" />
+            </colgroup>
             <tbody>
               <ResultTableRow testid="p1-③" cellNum="③" label={BESSHI_P1_SECTION3.netAssetTotal} value={fmt(result.netAssetTotal)} />
               <ResultTableRow testid="p1-④" cellNum="④" label={BESSHI_P1_SECTION3.netAssetPerShare} value={fmt(result.netAssetPerShare)} />

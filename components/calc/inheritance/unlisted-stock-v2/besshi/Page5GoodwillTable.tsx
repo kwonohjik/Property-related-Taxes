@@ -139,7 +139,7 @@ export function Page5GoodwillTable({
           data-testid="p5-section59-3"
         >
           ※ 가.(최근 3년 순손익액 가중평균)은 §59③ 준용 §56②에 따라 추정이익 평균가액
-          {estimatedProfitAverage !== undefined ? ` ${fmt(estimatedProfitAverage)}원` : ""} × 발행주식총수로 환산되었습니다.
+          {estimatedProfitAverage !== undefined ? ` ${fmt(estimatedProfitAverage)}` : ""} × 발행주식총수로 환산되었습니다.
         </p>
       )}
 
@@ -149,7 +149,7 @@ export function Page5GoodwillTable({
           className="text-[10px] text-amber-700 bg-amber-50 p-2 border border-amber-200 mt-2 print:bg-amber-50"
           data-testid="p5-zero-anomaly-footer"
         >
-          ※ 나(가 × 50%) − 마(다 × 라) = {fmt(naMinusMa)}원 양수이나 5년 PV 산식 적용 후 영업권 평가액이 0으로
+          ※ 나(가 × 50%) − 마(다 × 라) = {fmt(naMinusMa)} 양수이나 5년 PV 산식 적용 후 영업권 평가액이 0으로
           산출되었습니다. 상세 근거는 엔진 출력 `appliedRules`·`warnings` 참조.
         </p>
       )}

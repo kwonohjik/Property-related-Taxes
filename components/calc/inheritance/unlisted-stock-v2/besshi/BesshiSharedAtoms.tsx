@@ -34,7 +34,7 @@ export interface ResultTableRowProps {
   unit?: string;
 }
 
-export function ResultTableRow({ cellNum, label, value, emphasized, testid, unit = "원" }: ResultTableRowProps) {
+export function ResultTableRow({ cellNum, label, value, emphasized, testid, unit = "" }: ResultTableRowProps) {
   return (
     <tr
       className={emphasized ? "bg-yellow-50 font-bold print:bg-yellow-50" : ""}
@@ -59,7 +59,7 @@ export interface BreakdownRowProps {
   testid?: string;
 }
 
-export function BreakdownRow({ label, values, emphasized, unit = "원", testid }: BreakdownRowProps) {
+export function BreakdownRow({ label, values, emphasized, unit = "", testid }: BreakdownRowProps) {
   return (
     <tr
       className={emphasized ? "bg-yellow-50 font-bold print:bg-yellow-50" : ""}
