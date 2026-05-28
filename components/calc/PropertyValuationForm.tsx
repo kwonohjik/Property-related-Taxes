@@ -16,9 +16,9 @@ import { EstateItemHeader } from "@/components/calc/inheritance/estate-card/Esta
 import { EstateChipInlineExpand } from "@/components/calc/inheritance/estate-card/EstateChipInlineExpand";
 import { EstateItemAdvancedPanel } from "@/components/calc/inheritance/estate-card/EstateItemAdvancedPanel";
 import { EstateItemCardShell } from "@/components/calc/inheritance/estate-card/EstateItemCardShell";
+import { createChipClickHandler } from "@/components/calc/inheritance/estate-card/handleChipClick";
 import {
   countNonDefaultOptions,
-  cycleSection22,
   resolveChips,
   type ChipKey,
   type ChipState,
@@ -98,26 +98,16 @@ const INHERITANCE_CATEGORIES: SupportedCategory[] = [
 ];
 
 /**
- * 간주상속재산 분류별 허용 카테고리 (상속세 전용).
- *   - insurance (§8 보험금)  : 본질적으로 금전 → 현금·예금·기타만
- *   - trust     (§9 신탁재산) : 부동산·증권·금전신탁 다양 → 전체 허용
- *   - retirement(§10 퇴직금)  : 본질적으로 금전 → 현금·예금만
+ * 간주상속재산 분류별 허용 카테고리는 lib/calc/deemed-category-policy.ts로 분리.
+ * Phase 2 INT-4 — PR-F category-change-policy가 의존하므로 lib 격상.
+ * 기존 사용 사이트는 본 파일에서 re-export 받음 (backwards-compat).
  */
-const DEEMED_ALLOWED_CATEGORIES: Record<
-  "none" | "insurance" | "trust" | "retirement",
-  SupportedCategory[]
-> = {
-  none: INHERITANCE_CATEGORIES,
-  insurance: ["cash", "financial", "other"],
-  trust: INHERITANCE_CATEGORIES,
-  retirement: ["cash", "financial"],
-};
+import {
+  DEEMED_ALLOWED_CATEGORIES,
+  DEEMED_FILTER_NOTE,
+} from "@/lib/calc/deemed-category-policy";
 
-const DEEMED_FILTER_NOTE: Record<"insurance" | "trust" | "retirement", string> = {
-  insurance: "§8 보험금은 본질적으로 금전 수령권 — 현금·예금·기타만 추가 가능합니다.",
-  trust: "§9 신탁재산은 금전·부동산·증권 모두 가능 — 신탁 유형은 자산 추가 후 선택합니다.",
-  retirement: "§10 퇴직금·연금 등은 금전 수령권 — 현금·예금만 추가 가능합니다.",
-};
+export { DEEMED_ALLOWED_CATEGORIES, DEEMED_FILTER_NOTE };
 
 // ============================================================
 // 개별 자산 항목 Form
@@ -208,26 +198,12 @@ function ItemEditor({ item, index, onUpdate, onRemove, mode, heirs, valuationDat
   /** 토지·건물용 단가 (원/㎡) — StandardPriceInput 내부 상태 유지용 */
   const [standardPricePerSqm, setStandardPricePerSqm] = useState("");
 
-  // 칩 클릭 핸들러 — Plan §3.5·Design D-O1·D2-C2
-  function handleChipClick(chip: ChipState) {
-    if (chip.key === "estimated-value") return;
-    if (chip.key === "section22") {
-      // 3-state 순환: undef → true → false → undef
-      set({ isFinancialAssetForDeduction: cycleSection22(item.isFinancialAssetForDeduction) });
-      return;
-    }
-    if (chip.key === "secured-claim-14") {
-      // ON 상태에서만 칩 노출 → 클릭=OFF
-      set({
-        deductSecuredClaimAsDebt: undefined,
-        securedClaimIsFinancialDebt: undefined,
-        securedClaimCreditorName: undefined,
-      });
-      return;
-    }
-    // Expandable: accordion (key 동일 시 닫힘)
-    setInlineExpandedKey((prev) => (prev === chip.key ? null : chip.key));
-  }
+  // 칩 클릭 핸들러 — Phase 2 INT-1: createChipClickHandler 공통 helper 사용
+  // (EstateCommonAttributesSection도 동일 helper 사용 예정 — PR-E)
+  const handleChipClick = useMemo(
+    () => createChipClickHandler({ item, onUpdate, setInlineExpandedKey }),
+    [item, onUpdate],
+  );
 
   function handleToggleAdvanced() {
     // Shell이 외부에서 collapsed 상태를 자동 해제하는 hook은 후속 PR — 본 PR은 advancedOpen 토글만

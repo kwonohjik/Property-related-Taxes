@@ -28,6 +28,11 @@ export interface EstateChipInlineExpandProps {
   onUpdate: (updated: EstateItem) => void;
   heirs?: Heir[];
   onClose: () => void;
+  /**
+   * Phase 2 INT-2: 호출자(주식 카드 등)에서 자체 평가액(평균가×주식수 등) 전달.
+   * 미전달 시 computeEffectiveValuation(item) fallback (현재 동작 — backwards-compat).
+   */
+  effectiveValuation?: number;
 }
 
 const PANEL_TITLE: Record<ChipKey, string> = {
@@ -59,6 +64,7 @@ export function EstateChipInlineExpand({
   onUpdate,
   heirs,
   onClose,
+  effectiveValuation,
 }: EstateChipInlineExpandProps) {
   if (!expandedKey) return null;
   if (
@@ -108,7 +114,7 @@ export function EstateChipInlineExpand({
           <HeirAllocationToggleSection
             item={item}
             heirs={heirs}
-            effectiveValuation={computeEffectiveValuation(item)}
+            effectiveValuation={effectiveValuation ?? computeEffectiveValuation(item)}
             onChange={(patch) => onUpdate({ ...item, ...patch })}
           />
         )}

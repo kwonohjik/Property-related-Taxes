@@ -39,6 +39,12 @@ export interface EstateItemAdvancedPanelProps {
   onUpdate: (updated: EstateItem) => void;
   /** 본체에 §14 ToggleCard가 있을 때, ⚙️ 안에는 보조 입력만 노출 */
   showSecuredClaimSubFields: boolean;
+  /**
+   * Phase 2 INT-8: 주식 자산 등에서 visibility.financialDeduction=hidden_permanent임에도
+   * 사용자가 isFinancialAssetForDeduction 명시 override한 경우 FinancialDeductionChip 노출.
+   * 기본 false — backwards-compat.
+   */
+  showSection22Override?: boolean;
 }
 
 export function EstateItemAdvancedPanel({
@@ -46,6 +52,7 @@ export function EstateItemAdvancedPanel({
   item,
   onUpdate,
   showSecuredClaimSubFields,
+  showSection22Override = false,
 }: EstateItemAdvancedPanelProps) {
   const cat = item.category as AssetCategory;
   const visibility = resolveAssetToggleVisibility(item);
@@ -78,13 +85,17 @@ export function EstateItemAdvancedPanel({
         <EstimatedValuePreview item={item} />
       </div>
 
-      {/* §22 기본값 되돌리기 (사용자 지정 상태일 때 — visibility=default) */}
-      {visibility.financialDeduction === "default" &&
-        item.isFinancialAssetForDeduction !== undefined && (
-          <div className="border-t border-slate-200 dark:border-slate-700 pt-2">
-            <FinancialDeductionChip item={item} onUpdate={onUpdate} />
-          </div>
-        )}
+      {/* §22 기본값 되돌리기 (사용자 지정 상태일 때 — visibility=default)
+       *  Phase 2 INT-8: showSection22Override=true 시 hidden_permanent에서도 노출 */}
+      {((visibility.financialDeduction === "default" &&
+        item.isFinancialAssetForDeduction !== undefined) ||
+        (showSection22Override &&
+          visibility.financialDeduction === "hidden_permanent" &&
+          item.isFinancialAssetForDeduction !== undefined)) && (
+        <div className="border-t border-slate-200 dark:border-slate-700 pt-2">
+          <FinancialDeductionChip item={item} onUpdate={onUpdate} />
+        </div>
+      )}
 
       {/* hidden_expandable 펼침 */}
       {hiddenItems.length > 0 && (
