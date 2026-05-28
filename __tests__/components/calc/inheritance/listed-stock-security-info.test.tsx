@@ -30,7 +30,7 @@ describe("ListedStockSecurityInfoSection", () => {
     const { getByTestId } = render(
       <ListedStockSecurityInfoSection item={item} onUpdate={() => {}} />,
     );
-    expect((getByTestId("ls-security-info-name") as HTMLInputElement).value).toBe("삼성전자");
+    expect((getByTestId("ls-security-info-name-input") as HTMLInputElement).value).toBe("삼성전자");
     expect((getByTestId("ls-security-info-code") as HTMLInputElement).value).toBe("005930");
     expect((getByTestId("ls-security-info-shares") as HTMLInputElement).value).toBe("100");
   });
@@ -58,7 +58,7 @@ describe("ListedStockSecurityInfoSection", () => {
     const { getByTestId } = render(
       <ListedStockSecurityInfoSection item={item} onUpdate={onUpdate} />,
     );
-    fireEvent.change(getByTestId("ls-security-info-name"), {
+    fireEvent.change(getByTestId("ls-security-info-name-input"), {
       target: { value: "현대차" },
     });
     expect(onUpdate).toHaveBeenCalledWith({ name: "현대차" });

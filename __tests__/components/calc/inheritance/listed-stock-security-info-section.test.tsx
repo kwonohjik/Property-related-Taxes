@@ -28,7 +28,7 @@ describe("ListedStockSecurityInfoSection — 순서·라벨·trailing 슬롯", (
       <ListedStockSecurityInfoSection item={BASE_ITEM} onUpdate={vi.fn()} />,
     );
     const code = screen.getByTestId("ls-security-info-code");
-    const name = screen.getByTestId("ls-security-info-name");
+    const name = screen.getByTestId("ls-security-info-name-input");
     const shares = screen.getByTestId("ls-security-info-shares");
     // DOM 순서 검증 — compareDocumentPosition 비트마스크 4 = following
     expect(code.compareDocumentPosition(name) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -48,7 +48,7 @@ describe("ListedStockSecurityInfoSection — 순서·라벨·trailing 슬롯", (
     expect(required?.textContent).toContain("*");
 
     // 종목명 FieldCard 는 required 없음 (별표 없음)
-    const nameInput = screen.getByTestId("ls-security-info-name");
+    const nameInput = screen.getByTestId("ls-security-info-name-input");
     const nameField = nameInput.closest('[data-slot="field-card"]');
     expect(nameField).not.toBeNull();
     expect(nameField!.querySelector("span.text-destructive")).toBeNull();
@@ -86,11 +86,11 @@ describe("ListedStockSecurityInfoSection — 순서·라벨·trailing 슬롯", (
     expect(screen.getByText(/평가기준일 입력 필요/)).toBeTruthy();
   });
 
-  it("A-1 종목명 input 은 read-only 아님 — 사용자 수정 가능 (placeholder='키움 자동조회 시 자동 입력')", () => {
+  it("A-1 종목명 input 은 read-only 아님 — 사용자 수정 가능 (placeholder 에 '자동 입력' 포함)", () => {
     render(
       <ListedStockSecurityInfoSection item={BASE_ITEM} onUpdate={vi.fn()} />,
     );
-    const name = screen.getByTestId("ls-security-info-name") as HTMLInputElement;
+    const name = screen.getByTestId("ls-security-info-name-input") as HTMLInputElement;
     expect(name.readOnly).toBe(false);
     expect(name.disabled).toBe(false);
     expect(name.placeholder).toContain("자동 입력");

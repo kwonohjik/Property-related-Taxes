@@ -76,6 +76,8 @@ if (syncName && data.stockName) patch.stockName = data.stockName;
 
 **(a) 채택** — onResponse 에 `name: adapter.companyName ?? adapter.stockName` 1줄 추가로 즉시 정합. 자동조회 실패 시 사용자가 직접 종목명 입력 가능(현재와 동일). 본 PR 범위 최소.
 
+> **후속 PR(2026-05-28 완료)**: 옵션 (c) typeahead 채택 → `docs/00-pm/listed-stock-name-autocomplete.plan.md` 분리. 본 reorder 결과(layout·trailing·warning) 100% 보존, 종목명 input만 typeahead로 교체. `InheritanceStockNameAutocomplete` 단독 wrapper(Option B) 채택. 5410 PASS.
+
 ---
 
 ## 3. 작업 분해

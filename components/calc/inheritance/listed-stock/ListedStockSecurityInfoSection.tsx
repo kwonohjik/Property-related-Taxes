@@ -12,6 +12,7 @@
 import React from "react";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
+import { InheritanceStockNameAutocomplete } from "./InheritanceStockNameAutocomplete";
 
 interface Props {
   item: EstateItem;
@@ -77,15 +78,17 @@ export function ListedStockSecurityInfoSection({
 
         <FieldCard
           label="종목명"
-          hint="키움 자동조회 시 자동 입력 — 직접 수정도 가능"
+          hint="회사명 입력 시 매치 목록 표시 → 선택 시 종목코드 자동 채움. 종목코드 입력 후 자동조회 시에도 자동 채움 — 직접 수정 가능"
         >
-          <input
-            type="text"
+          <InheritanceStockNameAutocomplete
             value={item.name}
-            onChange={(e) => set({ name: e.target.value })}
-            placeholder="키움 자동조회 시 자동 입력"
+            onSelect={(m) =>
+              set({ name: m.stockName, listedStockCode: m.stockCode })
+            }
+            onNameChange={(name) => set({ name })}
+            placeholder="종목명 검색 또는 자동조회 시 자동 입력 (예: 삼성전자)"
             className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-            data-testid="ls-security-info-name"
+            testId="ls-security-info-name"
           />
         </FieldCard>
 
