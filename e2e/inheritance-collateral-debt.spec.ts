@@ -32,7 +32,7 @@ test.describe("담보채무 §14 자동공제 토글 ON → 자동노출", () =>
     // 저당권 담보채권액 5천만
     const mortgageInput = page
       .getByText("저당권 등에 의해 담보된 채권액", { exact: true })
-      .locator("xpath=following-sibling::div/input");
+      .locator("xpath=ancestor::div[@data-slot='field-card']//input");
     await mortgageInput.fill("50000000");
 
     // 담보채무 §14 자동공제 토글 ON
@@ -63,7 +63,7 @@ test.describe("담보채무 §14 자동공제 토글 ON → 자동노출", () =>
     await page.getByPlaceholder("공시지가 단가").fill("1000000");
     const mortgageInput = page
       .getByText("저당권 등에 의해 담보된 채권액", { exact: true })
-      .locator("xpath=following-sibling::div/input");
+      .locator("xpath=ancestor::div[@data-slot='field-card']//input");
     await mortgageInput.fill("50000000");
     // 토글 ON 하지 않음
 

@@ -16,6 +16,8 @@
 
 import { useState } from "react";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import { EstateBodySection } from "./EstateBodySection";
 import { AddressSearch, type AddressValue } from "@/components/ui/address-search";
 import {
   resolveSigunguCode,
@@ -39,6 +41,18 @@ const PRIORITY_HINT: Record<
   real_estate_building: "시가 → 감정가 → 개별주택가격·기준시가 순 (상증법 §61①)",
   real_estate_apartment: "시가 → 감정가 → 공동주택 기준시가 순 (상증법 §61①)",
 };
+
+const SUBTITLE: Record<
+  "real_estate_land" | "real_estate_building" | "real_estate_apartment",
+  string
+> = {
+  real_estate_land: "소재지 · 시가 · 감정가 · 개별공시지가 — 상증법 §60~66",
+  real_estate_building: "소재지 · 시가 · 감정가 · 기준시가 — 상증법 §60~66",
+  real_estate_apartment: "소재지 · 시가 · 감정가 · 공동주택 기준시가 — 상증법 §60~66",
+};
+
+const TEXT_INPUT_CLASS =
+  "w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 export function EstateBodyRealEstate({
   item,
@@ -77,14 +91,17 @@ export function EstateBodyRealEstate({
       data-testid={`estate-body-variant-realestate-${item.id}`}
       className="space-y-3"
     >
+      <EstateBodySection title="평가액 입력" subtitle={SUBTITLE[cat]}>
       {/* 소재지 (AddressSearch + 별칭 + Vworld 좌표 자동) */}
-      <div className="space-y-2">
-        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
-          자산 명칭 <span className="text-destructive">*</span>{" "}
-          <span className="text-gray-400 font-normal">
-            ({isFishingAsset(item) ? "선적지·어장 연안 검색" : "소재지 검색"})
-          </span>
-        </label>
+      <FieldCard
+        label={`자산 명칭 (${isFishingAsset(item) ? "선적지·어장 연안 검색" : "소재지 검색"})`}
+        required
+        hint={
+          isFishingAsset(item)
+            ? "선적지·어장 연안 주소를 검색하면 자산명·좌표가 자동 입력됩니다 (§16②1호나 거주지 30km 자동 검증용)"
+            : "소재지를 검색하면 자산명이 자동 입력됩니다. 필요 시 아래 별칭으로 덮어쓸 수 있습니다."
+        }
+      >
         <AddressSearch
           value={addrValue}
           onChange={async (v) => {
@@ -140,19 +157,18 @@ export function EstateBodyRealEstate({
             }
           }}
         />
+      </FieldCard>
+
+      {/* 별칭 */}
+      <FieldCard label="별칭" hint="선택 — 자산을 구분할 이름 (소재지 검색 시 자동 입력된 자산명을 덮어씀)">
         <input
           type="text"
           value={item.name}
           onChange={(e) => set({ name: e.target.value })}
-          placeholder="별칭 (선택 — 예: 강남 아파트, 본가 토지)"
-          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          placeholder="예: 강남 아파트, 본가 토지"
+          className={TEXT_INPUT_CLASS}
         />
-        <p className="text-[11px] text-gray-500 dark:text-gray-400">
-          ※ {isFishingAsset(item)
-            ? "선적지·어장 연안 주소를 검색하면 자산명·좌표가 자동 입력됩니다 (§16②1호나 거주지 30km 자동 검증용)"
-            : "소재지를 검색하면 자산명이 자동 입력됩니다. 필요 시 별칭으로 덮어쓸 수 있습니다."}
-        </p>
-      </div>
+      </FieldCard>
 
       {/* 평가 우선순위 안내 */}
       <p className="text-xs text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 rounded px-3 py-2">
@@ -160,69 +176,99 @@ export function EstateBodyRealEstate({
       </p>
 
       {/* 시가 */}
-      <CurrencyInput
+      <FieldCard
         label="시가 (매매·수용·경매가액)"
-        value={item.marketValue != null ? String(item.marketValue) : ""}
-        onChange={(v) => set({ marketValue: parseAmount(v) || undefined })}
-        placeholder="없으면 빈칸"
+        unit="원"
         hint="평가기간(±6개월) 내 실거래가"
-      />
+      >
+        <CurrencyInput
+          label="시가 (매매·수용·경매가액)"
+          value={item.marketValue != null ? String(item.marketValue) : ""}
+          onChange={(v) => set({ marketValue: parseAmount(v) || undefined })}
+          placeholder="없으면 빈칸"
+          hideLabel
+          hideUnit
+        />
+      </FieldCard>
 
       {/* 감정평가액 */}
-      <CurrencyInput
+      <FieldCard
         label="감정평가액"
-        value={item.appraisedValue != null ? String(item.appraisedValue) : ""}
-        onChange={(v) => set({ appraisedValue: parseAmount(v) || undefined })}
-        placeholder="없으면 빈칸"
+        unit="원"
         hint="감정평가법인 감정가 (시가 없을 때 2순위)"
-      />
-
-      {/* 보충적 평가 (StandardPriceInput) */}
-      <div className="space-y-2">
-        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
-          {cat === "real_estate_land" ? "개별공시지가 (면적 포함 합산)" : "기준시가"}
-        </label>
-        {!addrValue.jibun && (
-          <p className="text-[11px] text-amber-700 bg-amber-50 dark:bg-amber-900/20 rounded px-2 py-1">
-            ⚠️ 공시가격 자동 조회는 상단 <strong>자산 명칭(소재지 검색)</strong>에서
-            지번 주소를 선택해야 활성화됩니다.
-          </p>
-        )}
-        <StandardPriceInput
-          propertyKind={propertyKind}
-          referenceDate={valuationDate}
-          totalPrice={item.standardPrice != null ? String(item.standardPrice) : ""}
-          onTotalPriceChange={(v) =>
-            set({ standardPrice: parseAmount(v) || undefined })
-          }
-          pricePerSqm={standardPricePerSqm}
-          onPricePerSqmChange={setStandardPricePerSqm}
-          jibun={addrValue.jibun}
-          label=""
-          hint="시가·감정가 모두 없을 때 최종 적용"
-          enableLookup={true}
+      >
+        <CurrencyInput
+          label="감정평가액"
+          value={item.appraisedValue != null ? String(item.appraisedValue) : ""}
+          onChange={(v) => set({ appraisedValue: parseAmount(v) || undefined })}
+          placeholder="없으면 빈칸"
+          hideLabel
+          hideUnit
         />
-      </div>
+      </FieldCard>
+
+      {/* 보충적 평가 (StandardPriceInput) — 복합 위젯이라 children으로 직접 배치 */}
+      <FieldCard
+        label={cat === "real_estate_land" ? "개별공시지가 (면적 포함 합산)" : "기준시가"}
+        hint="시가·감정가 모두 없을 때 최종 적용"
+      >
+        <div className="space-y-2">
+          {!addrValue.jibun && (
+            <p className="text-[11px] text-amber-700 bg-amber-50 dark:bg-amber-900/20 rounded px-2 py-1">
+              ⚠️ 공시가격 자동 조회는 상단 <strong>자산 명칭(소재지 검색)</strong>에서
+              지번 주소를 선택해야 활성화됩니다.
+            </p>
+          )}
+          <StandardPriceInput
+            propertyKind={propertyKind}
+            referenceDate={valuationDate}
+            totalPrice={item.standardPrice != null ? String(item.standardPrice) : ""}
+            onTotalPriceChange={(v) =>
+              set({ standardPrice: parseAmount(v) || undefined })
+            }
+            pricePerSqm={standardPricePerSqm}
+            onPricePerSqmChange={setStandardPricePerSqm}
+            jibun={addrValue.jibun}
+            label=""
+            enableLookup={true}
+          />
+        </div>
+      </FieldCard>
 
       {/* 임대보증금 (apartment·building만 — land 미노출 [UV2-1]) */}
       {showLeaseDeposit && (
-        <CurrencyInput
+        <FieldCard
           label="임대보증금 (세입자 있는 경우)"
-          value={item.leaseDeposit != null ? String(item.leaseDeposit) : ""}
-          onChange={(v) => set({ leaseDeposit: parseAmount(v) || undefined })}
-          placeholder="없으면 빈칸"
+          unit="원"
           hint="평가액에서 차감됨"
-        />
+        >
+          <CurrencyInput
+            label="임대보증금 (세입자 있는 경우)"
+            value={item.leaseDeposit != null ? String(item.leaseDeposit) : ""}
+            onChange={(v) => set({ leaseDeposit: parseAmount(v) || undefined })}
+            placeholder="없으면 빈칸"
+            hideLabel
+            hideUnit
+          />
+        </FieldCard>
       )}
 
       {/* 저당권 */}
-      <CurrencyInput
+      <FieldCard
         label="저당권 등에 의해 담보된 채권액"
-        value={item.mortgageAmount != null ? String(item.mortgageAmount) : ""}
-        onChange={(v) => set({ mortgageAmount: parseAmount(v) || undefined })}
-        placeholder="없으면 빈칸"
+        unit="원"
         hint="평가기준일 현재 실제 채무 잔액(설정액 아님). §66 — 평가액이 더 크면 평가액으로 평가(차감 아님). 피상속인 채무이면 아래 토글로 §14 자동공제 가능."
-      />
+      >
+        <CurrencyInput
+          label="저당권 등에 의해 담보된 채권액"
+          value={item.mortgageAmount != null ? String(item.mortgageAmount) : ""}
+          onChange={(v) => set({ mortgageAmount: parseAmount(v) || undefined })}
+          placeholder="없으면 빈칸"
+          hideLabel
+          hideUnit
+        />
+      </FieldCard>
+      </EstateBodySection>
 
       {/* §14 자동공제 토글 (조건부) */}
       {showCollateralDeductToggle && (
