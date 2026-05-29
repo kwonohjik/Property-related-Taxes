@@ -206,27 +206,11 @@ export function DebtAllocationInput({
         </p>
       </div>
 
-      {/* 카테고리별 추가 버튼 (정적 색조 매핑 — Tailwind purge 차단) */}
-      <div className="flex flex-wrap gap-2">
-        {CATEGORY_ORDER.map((cat) => {
-          const style = CATEGORY_STYLES[cat];
-          return (
-            <button
-              key={cat}
-              type="button"
-              onClick={() => add(cat)}
-              className={`text-xs px-2.5 py-1.5 rounded border ${style.buttonClass}`}
-            >
-              + {style.label} 추가
-            </button>
-          );
-        })}
-      </div>
-
       {/* 항목 목록 */}
       {items.length === 0 ? (
         <p className="text-xs text-muted-foreground italic px-2">
-          채무·공과금·장례비를 입력하세요. 협의분할 시 상속인별 변제 분담도 입력 가능합니다.
+          채무·공과금·장례비를 입력하세요. 아래 + 버튼으로 카테고리별 추가 가능합니다.
+          협의분할 시 상속인별 변제 분담도 입력 가능합니다.
         </p>
       ) : (
         <div className="space-y-2">
@@ -346,6 +330,23 @@ export function DebtAllocationInput({
           })}
         </div>
       )}
+
+      {/* 카테고리별 추가 버튼 — 항목 목록 하단 배치 (자산 추가 패턴과 일관성, 다건 추가 시 한 방향 down-scroll) */}
+      <div className="flex flex-wrap gap-2" data-testid="debt-add-buttons">
+        {CATEGORY_ORDER.map((cat) => {
+          const style = CATEGORY_STYLES[cat];
+          return (
+            <button
+              key={cat}
+              type="button"
+              onClick={() => add(cat)}
+              className={`text-xs px-2.5 py-1.5 rounded border ${style.buttonClass}`}
+            >
+              + {style.label} 추가
+            </button>
+          );
+        })}
+      </div>
 
       {/* 합계 요약 */}
       {items.length > 0 && (
