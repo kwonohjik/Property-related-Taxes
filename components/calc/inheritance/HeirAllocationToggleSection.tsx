@@ -37,11 +37,12 @@ export function HeirAllocationToggleSection({
   effectiveValuation,
   onChange,
 }: HeirAllocationToggleSectionProps) {
+  // [UX3-AC1] 평가액 0이어도 토글 활성 — canDistribute만 차단.
+  // 사용자가 평가액 입력 전에 협의분할 패널을 펼쳐 분배 대상을 미리 선택할 수 있도록 함.
+  // 합계 ≠ 평가액 검증은 HeirAllocationInput 내부 배지가 담당.
   const canDistribute = hasDistributableHeir(heirs);
-  const isDisabled = !canDistribute || effectiveValuation === 0;
-  const disabledReason = !canDistribute
-    ? "Step 0에서 상속인·수유자(자연인)를 먼저 등록하세요"
-    : "평가액을 먼저 입력하세요";
+  const isDisabled = !canDistribute;
+  const disabledReason = "Step 0에서 상속인·수유자(자연인)를 먼저 등록하세요";
 
   return (
     <ToggleCard

@@ -91,8 +91,12 @@ export function HeirAllocationInput({
       const next = allocs.filter((a) => a.heirId !== heir.id);
       onChange(next.length > 0 ? next : undefined);
     } else {
-      // 추가
-      onChange([...allocs, { heirId: heir.id, amount: 0 }]);
+      // [UX3-AC5..7] 추가 시 잔여 금액 자동 채움 — 사용자 명시 액션(칩 클릭)에 한정한
+      // 단발 동작이므로 [[feedback_no_silent_apportion_fallback]] 자동 안분 fallback 정책
+      // 위반이 아님. 음수 가드(Math.max)로 첫 행 과대 입력 케이스 보호.
+      const currentSum = allocs.reduce((s, a) => s + a.amount, 0);
+      const remaining = Math.max(0, expectedTotal - currentSum);
+      onChange([...allocs, { heirId: heir.id, amount: remaining }]);
     }
   };
 
@@ -131,7 +135,13 @@ export function HeirAllocationInput({
           <span className="text-xs font-semibold text-sky-700 dark:text-sky-300">
             협의분할 (상속인별 분배)
           </span>
-          {hasInput && (
+          {hasInput && expectedTotal === 0 && (
+            // [UX3-AC1] 평가액 미입력 — rose/emerald 평가 보류, 회색 안내
+            <span className="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">
+              합계 {formatKRW(sum)} (평가액 미입력 — 카드 본체에서 시가·감정가·기준시가 입력)
+            </span>
+          )}
+          {hasInput && expectedTotal > 0 && (
             <span
               className={`text-xs px-1.5 py-0.5 rounded ${
                 matched

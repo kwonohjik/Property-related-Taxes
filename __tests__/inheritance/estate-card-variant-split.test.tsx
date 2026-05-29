@@ -143,10 +143,16 @@ describe("EstateBodyRealEstate — 부동산 3종", () => {
     expect(screen.queryByText("임대보증금 (세입자 있는 경우)")).toBeNull();
   });
 
-  it("real_estate_apartment → 임대보증금 input 노출", () => {
+  it("real_estate_apartment → 임대보증금 input 노출 (advanced ON 또는 leaseDeposit 사전세팅) [UX3-Issue3 정정]", () => {
+    // 변경(2026-05-29 UX3): 시가·감정가·임대보증금·저당권은 advanced 토글 children으로 이동.
+    // 자동 ON 조건: marketValue/appraisedValue/leaseDeposit/mortgageAmount 중 하나라도 > 0.
+    // 사전 leaseDeposit 세팅으로 자동 ON 검증.
     render(
       <EstateBodyRealEstate
-        item={makeItem("real_estate_apartment")}
+        item={{
+          ...makeItem("real_estate_apartment"),
+          leaseDeposit: 100_000_000,
+        }}
         onUpdate={() => {}}
         showCollateralDeductToggle={false}
         mode="inheritance"

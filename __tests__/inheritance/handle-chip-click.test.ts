@@ -253,17 +253,24 @@ describe("createChipClickHandler — heir-allocation 자동 ON", () => {
     expect(setExpand).toHaveBeenCalled();
   });
 
-  it("disabled — 평가액 0 → 자동 세팅 안 함, 펼침만", () => {
+  it("평가액 0 → 자동 ON (첫 자연인 amount:0 1행) [UX3-AC1 정정]", () => {
+    // 이전: eff > 0 가드로 자동 세팅 안 함.
+    // 변경(2026-05-29 UX3): 평가액 0이어도 자동 ON — 협의분할 패널을 평가액 입력 전 미리 열 수 있도록.
+    // amount:0 1행이 생성되어 Issue 2 잔여 자동 채움이 후속 평가액 입력 시점에 동작.
     const onUpdate = vi.fn();
     const handler = createChipClickHandler({
       item: makeItem({ marketValue: undefined }), // computeEffectiveValuation=0
       onUpdate,
       setInlineExpandedKey: vi.fn(),
-      heirs: [makeHeir()],
+      heirs: [makeHeir({ id: "h1", relation: "spouse" })],
       currentExpandedKey: null,
     });
     handler(makeChip("heir-allocation"));
-    expect(onUpdate).not.toHaveBeenCalled();
+    expect(onUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        heirAllocations: [{ heirId: "h1", amount: 0 }],
+      }),
+    );
   });
 
   it("이미 heirAllocations 정의됨 → 재세팅 안 함", () => {

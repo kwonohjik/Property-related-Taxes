@@ -85,8 +85,10 @@ export function createChipClickHandler({
       // 펼치는 방향일 때만 자동 ON 세팅 — 닫는 방향에서 OFF 데이터가 ON으로 뒤집히는 모순 방지([검토-B])
       const willOpen = currentExpandedKey !== "heir-allocation";
       if (willOpen && item.heirAllocations === undefined && heirs) {
+        // [UX3-AC1] eff 0이어도 자동 ON — 첫 자연인 amount:0 1행으로 시작.
+        // 사용자가 평가액 입력 전 협의분할 패널을 미리 열 수 있도록 함.
         const eff = effectiveValuation ?? computeEffectiveValuation(item);
-        if (hasDistributableHeir(heirs) && eff > 0) {
+        if (hasDistributableHeir(heirs)) {
           onUpdate({
             ...item,
             heirAllocations: buildInitialHeirAllocations(heirs, eff),

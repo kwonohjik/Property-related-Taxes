@@ -175,6 +175,86 @@ export function EstateBodyRealEstate({
         ℹ️ {PRIORITY_HINT[cat]}
       </p>
 
+      {/* [UX3-Issue3] 시가·감정가는 RealEstateAdvancedFields(advanced 토글)로 이동.
+          기준시가는 대표 평가액으로 항상 노출 유지. */}
+
+      {/* 보충적 평가 (StandardPriceInput) — 복합 위젯이라 children으로 직접 배치 */}
+      <FieldCard
+        label={cat === "real_estate_land" ? "개별공시지가 (면적 포함 합산)" : "기준시가"}
+        hint="시가·감정가 모두 없을 때 최종 적용"
+      >
+        <div className="space-y-2">
+          {!addrValue.jibun && (
+            <p className="text-[11px] text-amber-700 bg-amber-50 dark:bg-amber-900/20 rounded px-2 py-1">
+              ⚠️ 공시가격 자동 조회는 상단 <strong>자산 명칭(소재지 검색)</strong>에서
+              지번 주소를 선택해야 활성화됩니다.
+            </p>
+          )}
+          <StandardPriceInput
+            propertyKind={propertyKind}
+            referenceDate={valuationDate}
+            totalPrice={item.standardPrice != null ? String(item.standardPrice) : ""}
+            onTotalPriceChange={(v) =>
+              set({ standardPrice: parseAmount(v) || undefined })
+            }
+            pricePerSqm={standardPricePerSqm}
+            onPricePerSqmChange={setStandardPricePerSqm}
+            jibun={addrValue.jibun}
+            label=""
+            enableLookup={true}
+          />
+        </div>
+      </FieldCard>
+
+      </EstateBodySection>
+
+      {/* [UX3-Issue3] 시가·감정가·임대보증금·저당권 advanced 토글
+          기본 노출은 기준시가만, 시가/감정가/임대보증금/저당권은 토글 ON 시 펼침.
+          기존 데이터 있으면 자동 ON (비파괴). §14 자동공제 토글도 children 안쪽으로 이동. */}
+      <RealEstateAdvancedFields
+        item={item}
+        set={set}
+        showLeaseDeposit={showLeaseDeposit}
+        showCollateralDeductToggle={showCollateralDeductToggle}
+      />
+    </div>
+  );
+}
+
+// ============================================================
+// RealEstateAdvancedFields — Issue 3 advanced 토글 묶음
+// ============================================================
+
+interface RealEstateAdvancedFieldsProps {
+  item: EstateItem;
+  set: (patch: Partial<EstateItem>) => void;
+  showLeaseDeposit: boolean;
+  showCollateralDeductToggle: boolean;
+}
+
+function RealEstateAdvancedFields({
+  item,
+  set,
+  showLeaseDeposit,
+  showCollateralDeductToggle,
+}: RealEstateAdvancedFieldsProps) {
+  // [UX3-AC13] mount 1회만 평가 — Shell collapse는 outer hidden이라 EstateBody는 unmount 안 됨.
+  // 사용자가 OFF로 닫아도 store 값은 보존(비파괴) — 재 ON 시 그대로 노출.
+  const hasAdvancedValue =
+    (item.marketValue ?? 0) > 0 ||
+    (item.appraisedValue ?? 0) > 0 ||
+    (item.leaseDeposit ?? 0) > 0 ||
+    (item.mortgageAmount ?? 0) > 0;
+  const [advancedOpen, setAdvancedOpen] = useState(hasAdvancedValue);
+
+  return (
+    <ToggleCard
+      tone="amber"
+      title="시가·감정가·임대보증금·저당권 입력"
+      description="해당 사항이 있는 경우에만 ON — 시가·감정가가 있으면 기준시가보다 우선 적용됩니다 (상증법 §60①)"
+      checked={advancedOpen}
+      onCheckedChange={setAdvancedOpen}
+    >
       {/* 시가 */}
       <FieldCard
         label="시가 (매매·수용·경매가액)"
@@ -205,34 +285,6 @@ export function EstateBodyRealEstate({
           hideLabel
           hideUnit
         />
-      </FieldCard>
-
-      {/* 보충적 평가 (StandardPriceInput) — 복합 위젯이라 children으로 직접 배치 */}
-      <FieldCard
-        label={cat === "real_estate_land" ? "개별공시지가 (면적 포함 합산)" : "기준시가"}
-        hint="시가·감정가 모두 없을 때 최종 적용"
-      >
-        <div className="space-y-2">
-          {!addrValue.jibun && (
-            <p className="text-[11px] text-amber-700 bg-amber-50 dark:bg-amber-900/20 rounded px-2 py-1">
-              ⚠️ 공시가격 자동 조회는 상단 <strong>자산 명칭(소재지 검색)</strong>에서
-              지번 주소를 선택해야 활성화됩니다.
-            </p>
-          )}
-          <StandardPriceInput
-            propertyKind={propertyKind}
-            referenceDate={valuationDate}
-            totalPrice={item.standardPrice != null ? String(item.standardPrice) : ""}
-            onTotalPriceChange={(v) =>
-              set({ standardPrice: parseAmount(v) || undefined })
-            }
-            pricePerSqm={standardPricePerSqm}
-            onPricePerSqmChange={setStandardPricePerSqm}
-            jibun={addrValue.jibun}
-            label=""
-            enableLookup={true}
-          />
-        </div>
       </FieldCard>
 
       {/* 임대보증금 (apartment·building만 — land 미노출 [UV2-1]) */}
@@ -268,12 +320,13 @@ export function EstateBodyRealEstate({
           hideUnit
         />
       </FieldCard>
-      </EstateBodySection>
 
-      {/* §14 자동공제 토글 (조건부) */}
+      {/* §14 자동공제 토글 — [UX3-AC15·16] advanced children 안쪽으로 이동.
+          OFF 시 함께 숨김으로 사용자 혼란(외곽 표시) 차단. */}
       {showCollateralDeductToggle && (
         <ToggleCard
           tone="amber"
+          size="sm"
           title="이 담보채무를 §14 부채로 자동 공제"
           description={
             item.deductSecuredClaimAsDebt
@@ -321,6 +374,6 @@ export function EstateBodyRealEstate({
           </div>
         </ToggleCard>
       )}
-    </div>
+    </ToggleCard>
   );
 }
