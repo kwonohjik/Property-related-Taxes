@@ -213,4 +213,43 @@ test.describe("사전증여 수증자 select — 인별 배부 검증 (2-B)", ()
       await expect(badge).toContainText("수증자(상속인)가 지정되지 않아");
     },
   );
+
+  test(
+    "PG-6: 결과 계산 + 자동저장 후 무한 렌더 루프 없음 (autoSaveToast useMemo 회귀 가드)",
+    async ({ page }) => {
+      test.setTimeout(90_000);
+
+      // 콘솔/페이지 에러 수집 — "Maximum update depth exceeded" 감지
+      const renderLoopErrors: string[] = [];
+      const capture = (text: string) => {
+        if (/Maximum update depth exceeded/i.test(text)) {
+          renderLoopErrors.push(text);
+        }
+      };
+      page.on("console", (msg) => {
+        if (msg.type() === "error") capture(msg.text());
+      });
+      page.on("pageerror", (err) => capture(err.message));
+
+      await gotoStep0WithChild(page);
+      await addLandAsset(page);
+      await proceedToStep2(page);
+      await proceedToStep3(page);
+      await addPriorGift(page);
+      // 계산 → 결과 → 자동저장(status="saved") 발동
+      await proceedToResult(page);
+
+      // 자동저장(IndexedDB) 완료 토스트가 뜰 시간 확보 — 루프는 saved 직후 발동
+      await expect(page.getByText(/자동 저장|이력|갱신/).first()).toBeVisible({
+        timeout: 10_000,
+      });
+      await page.waitForTimeout(2_000);
+
+      // 무한 렌더 루프(Maximum update depth) 콘솔 에러가 없어야 함
+      expect(
+        renderLoopErrors,
+        `렌더 루프 에러 감지:\n${renderLoopErrors.slice(0, 3).join("\n")}`,
+      ).toHaveLength(0);
+    },
+  );
 });

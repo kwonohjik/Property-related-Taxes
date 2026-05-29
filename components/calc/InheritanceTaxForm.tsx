@@ -11,7 +11,7 @@
  * Step 5: 세액공제 입력 → 결과
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ChevronLeft } from "lucide-react";
 import { StepIndicator } from "@/components/calc/StepIndicator";
 import { ResetButton } from "@/components/calc/shared/ResetButton";
@@ -198,13 +198,26 @@ export function InheritanceTaxForm() {
     clientId: activeClientId,
   });
   const recordCount = useRecordCount(autoSave.savedId);
-  const autoSaveToast = buildInheritanceAutoSaveToast({
-    status: autoSave.status,
-    savedId: autoSave.savedId,
-    created: autoSave.created,
-    promotedDraftCount: autoSave.promotedDraftCount ?? 0,
-    count: recordCount,
-  });
+  // useMemo로 참조 안정화 — buildInheritanceAutoSaveToast는 매 렌더 새 객체를 반환하므로
+  // 그대로 useEffect 의존성에 넣으면 status="saved" 안정 상태에서도 매 렌더 재실행 →
+  // setSaveMessage(새 객체) → 재렌더 무한 루프 (Maximum update depth). 원시값 의존으로 차단.
+  const autoSaveToast = useMemo(
+    () =>
+      buildInheritanceAutoSaveToast({
+        status: autoSave.status,
+        savedId: autoSave.savedId,
+        created: autoSave.created,
+        promotedDraftCount: autoSave.promotedDraftCount ?? 0,
+        count: recordCount,
+      }),
+    [
+      autoSave.status,
+      autoSave.savedId,
+      autoSave.created,
+      autoSave.promotedDraftCount,
+      recordCount,
+    ],
+  );
   const [saveMessage, setSaveMessage] = useState<SaveToastMessage | null>(null);
   useEffect(() => { if (autoSaveToast) setSaveMessage(autoSaveToast); }, [autoSaveToast]);
 
