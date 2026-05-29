@@ -69,6 +69,32 @@ export function HeirAllocationSummaryTable({
         </div>
       )}
 
+      {/* 2-B: 사전증여 수증자 미지정 안내 배지
+       * ② 행 total > 0 이면서 인별 셀이 모두 0(null)인 경우 — doneeId 미지정 상태.
+       * 자동 안분 fallback 금지 정책에 따라 사용자에게 명시 입력 유도.
+       */}
+      {(() => {
+        const priorGiftRow = data.rows.find((r) => r.rowId === "row-2-priorGift");
+        const hasPriorGiftTotal =
+          priorGiftRow != null && (priorGiftRow.total ?? 0) > 0;
+        const allPerHeirZero =
+          hasPriorGiftTotal &&
+          data.heirOrder.every(
+            (id) =>
+              !priorGiftRow!.perHeir[id] || priorGiftRow!.perHeir[id] === 0,
+          );
+        if (!allPerHeirZero) return null;
+        return (
+          <div
+            className="mb-3 rounded-md bg-sky-100/70 dark:bg-sky-900/40 px-3 py-2 text-xs text-sky-800 dark:text-sky-200"
+            data-testid="prior-gift-donee-missing-badge"
+          >
+            ⓘ 사전증여 합계는 과세가액에 반영되었으나, 수증자(상속인)가 지정되지 않아
+            인별 배부가 생략되었습니다. 사전증여 입력에서 수증자를 선택하세요.
+          </div>
+        );
+      })()}
+
       <HorizontalScrollContainer>
         <table
           role="table"

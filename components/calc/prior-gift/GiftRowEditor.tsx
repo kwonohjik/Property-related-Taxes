@@ -4,6 +4,7 @@
  * GiftRowEditor — 개별 사전증여 행 편집기.
  *
  * PriorGiftInput.tsx 800줄 분할 (PR Z, 2026-05-22).
+ * 2-B (2026-05-29): 수증자(Heir) select 추가 — doneeId + isHeir 동시 동기화.
  */
 
 import { useRef } from "react";
@@ -29,7 +30,35 @@ import type {
   GiftDonorRelation,
   GiftPriorPropertyCategory,
   Heir,
+  HeirRelation,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
+
+// ============================================================
+// 수증자 select 헬퍼
+// ============================================================
+
+/** Heir.relation이 비상속인(수유자·영리법인)인지 판정 */
+function isNonHeirRelation(relation: HeirRelation): boolean {
+  return relation === "legatee" || relation === "corporate";
+}
+
+/** Heir.id → isHeir 도출 (relation 기반, isHeir prop 보조) */
+function deriveIsHeirFromHeir(h: Heir): boolean {
+  // Heir.isHeir prop이 명시된 경우 우선
+  if (h.isHeir !== undefined) return h.isHeir;
+  // relation으로 자동 추론
+  return !isNonHeirRelation(h.relation);
+}
+
+const HEIR_RELATION_LABEL: Record<HeirRelation, string> = {
+  spouse: "배우자",
+  child: "자녀",
+  lineal_ascendant: "직계존속",
+  sibling: "형제자매",
+  other: "기타",
+  legatee: "수유자",
+  corporate: "영리법인",
+};
 
 export interface GiftRowEditorProps {
   gift: PriorGift;
@@ -64,6 +93,27 @@ export function GiftRowEditor({
   } | null>(null);
 
   const isCorporate = gift.beneficiaryType === "corporate";
+
+  // ============================================================
+  // 2-B: 수증자 select onChange 핸들러
+  // useEffect → store 미러링 금지 정책 준수 — onChange에서 doneeId·isHeir 동시 patch.
+  // ============================================================
+  function handleDoneeSelect(heirId: string) {
+    if (!heirId) {
+      // "선택 안 함" → doneeId 제거, isHeir 기존값 유지
+      set({ doneeId: undefined });
+      return;
+    }
+    const selectedHeir = (heirs ?? []).find((h) => h.id === heirId);
+    if (!selectedHeir) {
+      set({ doneeId: heirId });
+      return;
+    }
+    // doneeId + isHeir 동시 patch — §2.3 N1 교차 일관성 준수
+    // isWithin13Cutoff(inheritance-gift-common.ts:295)가 gift.isHeir로 cutoff 10년/5년 판정
+    const derivedIsHeir = deriveIsHeirFromHeir(selectedHeir);
+    set({ doneeId: heirId, isHeir: derivedIsHeir });
+  }
 
   function handleCorporateToggle(on: boolean) {
     if (on) {
@@ -187,7 +237,48 @@ export function GiftRowEditor({
         </select>
       </div>
 
-      {/* 상속인 여부 (상속세 전용 · 영리법인 ON 시 disabled) */}
+      {/* 수증자(상속인·수유자) select — 2-B: 인별 배부 대상 지정
+       * 영리법인 ON 시 CorporateGiftFields.doneeId가 처리하므로 숨김.
+       * doneeId 선택 시 isHeir를 onChange에서 동시 patch (useEffect 미러링 금지 준수).
+       * 미선택 허용(자동 안분 fallback 금지 정책) — 미지정 시 ② 인별 배부 0 + 안내 배지.
+       */}
+      {showIsHeir && !isCorporate && (heirs ?? []).length > 0 && (
+        <div className="space-y-1">
+          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
+            수증자 (상속인·수유자)
+          </label>
+          <select
+            data-testid="gift-donee-select"
+            value={gift.doneeId ?? ""}
+            onChange={(e) => handleDoneeSelect(e.target.value)}
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <option value="">선택 안 함 (인별 배부 생략)</option>
+            {(heirs ?? []).map((h) => (
+              <option key={h.id} value={h.id}>
+                {HEIR_RELATION_LABEL[h.relation]}
+                {h.name ? ` (${h.name})` : ""}
+                {isNonHeirRelation(h.relation) ? " — 비상속인" : ""}
+              </option>
+            ))}
+          </select>
+          {!gift.doneeId && (
+            <p className="text-[11px] text-sky-600 dark:text-sky-400">
+              ⓘ 수증자를 지정하면 상속인별 배부표 ② 사전증여 열에 반영됩니다.
+            </p>
+          )}
+          {gift.doneeId && (
+            <p className="text-[11px] text-violet-600 dark:text-violet-400">
+              ✓ 상속인 여부가 수증자 관계에서 자동 결정됩니다.
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* 상속인 여부 (상속세 전용 · 영리법인 ON 시 disabled)
+       * 2-B: doneeId 지정 시 — isHeir가 수증자 관계에서 자동 도출되므로 disabled(읽기 전용 표시).
+       *      doneeId 미지정 시 — 사용자 수동 입력 가능 (기존 동작 유지).
+       */}
       {showIsHeir && (
         <ToggleCard
           tone="violet"
@@ -195,11 +286,13 @@ export function GiftRowEditor({
           description="상속인: 10년 이내 합산 (§13①1호) / 비상속인: 5년 이내 합산 (§13①2호)"
           checked={gift.isHeir}
           onCheckedChange={(v) => set({ isHeir: v })}
-          disabled={isCorporate}
+          disabled={isCorporate || !!gift.doneeId}
           disabledReason={
             isCorporate
               ? "영리법인 — §13①2호 5년 합산 자동 적용 (상속인 분류 미적용)"
-              : undefined
+              : gift.doneeId
+                ? "수증자 지정됨 — 상속인 여부가 수증자 관계에서 자동 결정됩니다"
+                : undefined
           }
         />
       )}

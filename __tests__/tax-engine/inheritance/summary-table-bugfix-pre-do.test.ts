@@ -407,3 +407,83 @@ describe("AN-5: §13 도과 증여 제외 — ② total = priorGiftAggregated (�
     expect(sumPerHeirGift).toBe(r.priorGiftAggregated);
   });
 });
+
+// ============================================================
+// AN-4: doneeId 지정 priorGift → ② 인별 배부 정상 동작 (2-B UI 완료 후 GREEN)
+// ============================================================
+
+describe("AN-4: doneeId 지정 → 인별 priorGiftAmount 배부 + ② total·Σ 인별 일치", () => {
+  /**
+   * 2-B(GiftRowEditor 수증자 select) 구현 완료 후 전체 데이터 경로 검증.
+   * doneeId가 지정된 priorGift는 sumPriorGiftsByDonee가 정상 배부함(2026-05-29 엔진 완료).
+   *
+   * 시나리오:
+   *   deathDate: 2026-01-01
+   *   h1(배우자): 500M 증여 (10년 이내, doneeId="h1")
+   *   h2(자녀): 300M 증여 (10년 이내, doneeId="h2")
+   *   합계: 800M = priorGiftAggregated
+   *   ② total = 800M / h1 인별 = 500M / h2 인별 = 300M / Σ 인별 = 800M
+   */
+
+  const priorGifts: PriorGift[] = [
+    {
+      giftDate: "2018-01-01",
+      isHeir: true,
+      giftAmount: 500_000_000,
+      giftTaxPaid: 0,
+      doneeId: "h1",
+      beneficiaryType: "heir",
+    },
+    {
+      giftDate: "2018-06-01",
+      isHeir: true,
+      giftAmount: 300_000_000,
+      giftTaxPaid: 0,
+      doneeId: "h2",
+      beneficiaryType: "heir",
+    },
+  ];
+
+  const r = calcInheritanceTax(
+    baseInput({
+      deathDate: "2026-01-01",
+      preGiftsWithin10Years: priorGifts,
+    }),
+  );
+
+  const summaryRows = buildSummaryTable(r, HEIRS_2);
+  const row2 = summaryRows.rows.find((row) => row.rowId === "row-2-priorGift");
+
+  it("priorGiftAggregated = 800M (정상 합산)", () => {
+    expect(r.priorGiftAggregated).toBe(800_000_000);
+  });
+
+  it("② total = 800M (priorGiftAggregated 와 일치)", () => {
+    expect(row2?.total ?? 0).toBe(800_000_000);
+  });
+
+  it("h1(배우자) 인별 priorGiftAmount = 500M", () => {
+    const perHeir = r.heirAllocationResult?.perHeir ?? {};
+    expect(perHeir["h1"]?.priorGiftAmount ?? 0).toBe(500_000_000);
+  });
+
+  it("h2(자녀) 인별 priorGiftAmount = 300M", () => {
+    const perHeir = r.heirAllocationResult?.perHeir ?? {};
+    expect(perHeir["h2"]?.priorGiftAmount ?? 0).toBe(300_000_000);
+  });
+
+  it("② Σ 인별 = priorGiftAggregated = 800M (합계열 = 인별합 정합)", () => {
+    const perHeir = r.heirAllocationResult?.perHeir ?? {};
+    const sumPerHeir = Object.values(perHeir).reduce(
+      (s, h) => s + (h?.priorGiftAmount ?? 0),
+      0,
+    );
+    expect(sumPerHeir).toBe(r.priorGiftAggregated);
+    expect(sumPerHeir).toBe(800_000_000);
+  });
+
+  it("② 배부표 perHeir[h1] = 500M, perHeir[h2] = 300M (buildSummaryTable 경유)", () => {
+    expect(row2?.perHeir["h1"] ?? 0).toBe(500_000_000);
+    expect(row2?.perHeir["h2"] ?? 0).toBe(300_000_000);
+  });
+});
