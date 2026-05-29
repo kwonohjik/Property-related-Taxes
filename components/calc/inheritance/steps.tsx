@@ -34,7 +34,15 @@ import type { FormState, FormSet } from "./shared";
 // 색상 카드 + 섹션 번호 패턴 (components/calc/CLAUDE.md 강제)
 // ============================================================
 
-export function Step0({ form, set }: { form: FormState; set: FormSet }) {
+export function Step0({
+  form,
+  set,
+  setHeirs,
+}: {
+  form: FormState;
+  set: FormSet;
+  setHeirs: (heirs: FormState["heirs"]) => void;
+}) {
   return (
     <div className="space-y-3">
       {/* 섹션 ① — 피상속인 기본 정보 (sky tone) */}
@@ -92,7 +100,7 @@ export function Step0({ form, set }: { form: FormState; set: FormSet }) {
           ※ 협의분할 대상에 포함될 모든 <strong>자연인</strong>(법정상속인 + 수유자)을 등록하세요.
           영리법인 수증자는 사전증여·유증 전용으로 별도 처리되며 일반 상속재산 협의분할 대상이 아닙니다.
         </p>
-        <HeirComposition heirs={form.heirs} onChange={(heirs) => set({ heirs })} />
+        <HeirComposition heirs={form.heirs} onChange={setHeirs} />
         <p className="rounded-md bg-sky-50 dark:bg-sky-950/30 border border-sky-200 dark:border-sky-900 px-3 py-2 text-[11px] text-sky-800 dark:text-sky-200 leading-relaxed">
           ℹ️ 협의분할은 각 <strong>자산 카드</strong>에서 상속인별로 분배합니다. 분배를 입력하지 않은 자산은
           <strong> 법정상속분</strong>(배우자 1.5 : 직계비속·직계존속 1)으로 자동 배분됩니다.

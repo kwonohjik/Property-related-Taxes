@@ -669,6 +669,7 @@ export interface DebtItem {
 import type {
   HeirTaxBreakdown,
   HeirAllocationResult,
+  AllocationMismatch,
   CorporateExemptionResult,
   PerCorporateExemptionDetail,
   ShareholderPaymentDetail,
@@ -676,6 +677,7 @@ import type {
 export type {
   HeirTaxBreakdown,
   HeirAllocationResult,
+  AllocationMismatch,
   CorporateExemptionResult,
   PerCorporateExemptionDetail,
   ShareholderPaymentDetail,

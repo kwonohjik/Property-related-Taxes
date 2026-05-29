@@ -83,9 +83,27 @@ export interface HeirTaxBreakdown {
   burdenRatio?: number;
 }
 
+/**
+ * T3(a) 자산 단위 정합 불변식 위반 — 협의분할 합이 엔진 평가액과 불일치한 자산.
+ * 정상 흐름에서는 검증(validateEstateItemAllocations)이 선차단하므로 비어 있어야 한다.
+ * 검증 우회 경로(직접 API·검증 갭) 방어용 echo (산식 영향 0, JSON-native).
+ */
+export interface AllocationMismatch {
+  /** 불일치 자산 id */
+  assetId: string;
+  /** 엔진 권위 평가액 (resolveEngineValuatedAmount) */
+  expected: number;
+  /** Σ heirAllocations.amount */
+  actual: number;
+  /** actual − expected */
+  delta: number;
+}
+
 export interface HeirAllocationResult {
   /** Heir.id 별 산출 결과. 영리법인은 finalTax=0. JSON-native Record (Map 금지 — 직렬화 소실 방지). */
   perHeir: Record<string, HeirTaxBreakdown>;
+  /** T3(a) 자산 단위 정합 가드 — 비면 정합. 검증 우회 방어용 echo. */
+  allocationMismatch?: AllocationMismatch[];
   /** 배부대상 산출세액 = 산출세액 − 영리법인 면제 (할증 미포함) */
   distributableTax: number;
   /** 간접배부 분모 = grossEstateWithGifts − Σ(상속인·수유자 외 자 사전증여 가액) */

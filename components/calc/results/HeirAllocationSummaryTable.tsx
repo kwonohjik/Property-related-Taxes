@@ -89,8 +89,32 @@ export function HeirAllocationSummaryTable({
             className="mb-3 rounded-md bg-sky-100/70 dark:bg-sky-900/40 px-3 py-2 text-xs text-sky-800 dark:text-sky-200"
             data-testid="prior-gift-donee-missing-badge"
           >
-            ⓘ 사전증여 합계는 과세가액에 반영되었으나, 수증자(상속인)가 지정되지 않아
-            인별 배부가 생략되었습니다. 사전증여 입력에서 수증자를 선택하세요.
+            ⓘ 사전증여 합계·증여세액공제(§28)는 <strong>과세가액·세액공제 합계에 이미 반영</strong>되었으나,
+            수증자(상속인)가 지정되지 않아 ②·⑩·⑫ <strong>인별 배부만 생략</strong>되었습니다.
+            사전증여 입력에서 수증자를 선택하면 인별 배부가 표시됩니다.
+          </div>
+        );
+      })()}
+
+      {/* T3(a): 자산 단위 정합 가드 — 협의분할 합 ≠ 엔진 평가액 (검증 우회 경로 방어).
+       * 정상 흐름은 validate가 선차단하므로 미발생. echo allocationMismatch 노출. */}
+      {(() => {
+        const mm = result.heirAllocationResult?.allocationMismatch ?? [];
+        if (mm.length === 0) return null;
+        return (
+          <div
+            className="mb-3 rounded-md bg-rose-100/70 dark:bg-rose-900/40 px-3 py-2 text-xs text-rose-800 dark:text-rose-200"
+            data-testid="allocation-mismatch-badge"
+          >
+            ⚠️ 협의분할 합계가 자산 평가액과 일치하지 않습니다 — 입력 재확인 필요:
+            <ul className="mt-1 list-disc pl-4">
+              {mm.map((m) => (
+                <li key={m.assetId}>
+                  자산 {m.assetId}: 인별 합 {m.actual.toLocaleString()} ≠ 평가액{" "}
+                  {m.expected.toLocaleString()} (차이 {m.delta.toLocaleString()})
+                </li>
+              ))}
+            </ul>
           </div>
         );
       })()}

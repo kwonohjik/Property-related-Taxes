@@ -49,6 +49,7 @@ import {
   type FormState,
   INITIAL_FORM,
   STEPS,
+  pruneOrphanHeirReferences,
 } from "@/components/calc/inheritance/shared";
 import {
   Step0,
@@ -189,6 +190,24 @@ export function InheritanceTaxForm() {
 
   const { activeClientId } = useProfessionalStore();
 
+  // 이력 "수정" hydration — 마운트 시 1회만 실행, sessionStorage 키 즉시 소비.
+  // 증여세(giftTaxResumeInput)와 동일 패턴. 누락 시 상속개시일·상속인·상속재산이
+  // 모두 빈 폼으로 떠서 사용자 입력 데이터가 복원되지 않음.
+  useEffect(() => {
+    const raw = sessionStorage.getItem("inheritanceTaxResumeInput");
+    if (!raw) return;
+    sessionStorage.removeItem("inheritanceTaxResumeInput");
+    try {
+      const parsed = JSON.parse(raw) as Partial<FormState>;
+      // 저장된 이력에 삭제된 상속인을 참조하는 고아 협의분할·doneeId가 남아 있을 수
+      // 있으므로 복원 직후 정리(연쇄 삭제 미적용 시기에 저장된 레코드 healing).
+      setForm((prev) => pruneOrphanHeirReferences({ ...prev, ...parsed }));
+      setStep(0);
+    } catch {
+      // JSON 파싱 실패 시 무시 (빈 폼 유지)
+    }
+  }, []);
+
   // 로컬 이력 자동 저장 — v4 draft 승격 통합
   const autoSave = useAutoSaveCalculation({
     taxType: "inheritance",
@@ -238,6 +257,11 @@ export function InheritanceTaxForm() {
 
   const set = (patch: Partial<FormState>) =>
     setForm((prev) => ({ ...prev, ...patch }));
+
+  // 상속인 변경 전용 — 삭제 시 그 상속인을 참조하던 협의분할·doneeId·영농 자격자를
+  // 연쇄 정리하여 고아 참조(validateHeirReferences 차단)를 사전 차단.
+  const setHeirs = (heirs: FormState["heirs"]) =>
+    setForm((prev) => pruneOrphanHeirReferences({ ...prev, heirs }));
 
   const handleNext = () => {
     const err = validateStep(step, form);
@@ -432,6 +456,7 @@ export function InheritanceTaxForm() {
             <Step0
               form={form}
               set={set}
+              setHeirs={setHeirs}
             />
           )}
           {step === 1 && <Step1 form={form} set={set} />}

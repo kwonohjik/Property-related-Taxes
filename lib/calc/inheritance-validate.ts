@@ -18,7 +18,7 @@ import type {
   Heir,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { deriveCollateralDebts } from "@/lib/tax-engine/inheritance-collateral-debt";
-import { resolveEstateItemValue } from "@/lib/tax-engine/valuation/resolve-estate-item-value";
+import { resolveEngineValuatedAmount } from "@/lib/tax-engine/property-valuation";
 
 // ────────────────────────────────────────────────────
 // 단일 자산 — heirAllocations 합계 검증
@@ -46,7 +46,8 @@ export function validateFamilyBusinessEstateItem(
  * 자산의 heirAllocations 합이 평가액과 일치하는지 검증.
  * 자동 안분 fallback 금지 — 사용자 명시 입력 강제.
  *
- * 1-B 수정: expected를 §60 단일 진실 resolveEstateItemValue에 위임.
+ * T2 수정: expected를 엔진 권위 평가 resolveEngineValuatedAmount에 위임(§66 하한·주식 라우팅 포함).
+ * 1-B(이전): expected를 §60 단일 진실 resolveEstateItemValue에 위임.
  *   - 수정 전: max(marketValue, standardPrice, appraisedValue, computeStockValuation)
  *     → 명시값<csv 케이스에서 expected=csv, 엔진(1-A 후)=명시값 → 합계열<인별열 역방향 갭
  *   - 수정 후: resolveEstateItemValue(explicit-first) = 엔진과 동일 → 4경로 단일 진실 통일
@@ -58,8 +59,10 @@ export function validateEstateItemAllocations(item: EstateItem): string | null {
   if (!item.heirAllocations || item.heirAllocations.length === 0) {
     return null; // 분배 미입력은 허용 (총액-단위 계산 모드)
   }
-  // §60 단일 진실: resolveEstateItemValue (엔진·UI·validate 4경로 통일)
-  const expected = resolveEstateItemValue(item);
+  // T2 (R1): 엔진 권위 평가액 단일 진실 — §66 담보 하한·주식 라우팅 포함.
+  //   resolveEstateItemValue(§60 우선순위만)는 §66 하한 미적용 → 엔진(categoryTotals)과
+  //   괴리하여 협의분할 합(650)이 엔진 평가(550 vs 담보 650)와 다른 기준으로 통과되던 dual-truth 제거.
+  const expected = resolveEngineValuatedAmount(item);
   if (expected === 0) return null;
   const sum = item.heirAllocations.reduce((s, a) => s + a.amount, 0);
   if (sum !== expected) {

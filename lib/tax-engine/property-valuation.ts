@@ -384,6 +384,19 @@ export function evaluateAllEstateItems(
 }
 
 /**
+ * 엔진 권위 평가액(valuatedAmount) 단일 진실 헬퍼 (T2 — R1 dual-truth 제거).
+ *
+ * `resolveEstateItemValue`(§60 우선순위만)와 달리 §66 담보채권 하한(`max(평가, securedClaim)`)·
+ * 주식 라우팅을 **엔진과 동일하게** 반영한다. 검증(`validateEstateItemAllocations`)·
+ * 집계표 표시(source-summary)가 이 함수를 단일 진실로 사용해 합계열↔인별열 기준을 통일.
+ *
+ * ⚠️ `evaluateEstateItem`은 주식에 throw → 반드시 `evaluateAllEstateItems` 경유(주식 라우팅 포함).
+ */
+export function resolveEngineValuatedAmount(item: EstateItem): number {
+  return evaluateAllEstateItems([item])[0]?.valuatedAmount ?? 0;
+}
+
+/**
  * listed_stock / V1 간편 비상장(unlistedStockData) → PropertyValuationResult 어댑터.
  *
  * 평가액은 §60 단일 진실 resolveEstateItemValue에 위임 (1-A 수정):

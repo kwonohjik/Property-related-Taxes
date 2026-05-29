@@ -37,6 +37,7 @@ import type {
   PriorGift,
   HeirAllocation,
   HeirAllocationResult,
+  AllocationMismatch,
   HeirTaxBreakdown,
   CalculationStep,
   EstateItem,
@@ -176,6 +177,61 @@ function resolveAllocationsByHeir<T extends { heirAllocations?: HeirAllocation[]
 }
 
 /**
+ * Map<heirId, raw>을 목표 총액(target)으로 비율 환산 — 마지막 항목 잔액 흡수(Σ==target 보장).
+ * `scaleAllocations`(inheritance-collateral-debt.ts)의 Map 버전. raw 합 0이면 빈 Map.
+ */
+function scaleMapToTotal(
+  raw: Map<string, number>,
+  target: number,
+): Map<string, number> {
+  const out = new Map<string, number>();
+  const entries = [...raw.entries()].filter(([, v]) => v !== 0);
+  if (entries.length === 0 || target <= 0) return out;
+  const denom = entries.reduce((s, [, v]) => s + v, 0);
+  if (denom <= 0) return out;
+  let running = 0;
+  entries.forEach(([heirId, v], i) => {
+    const isLast = i === entries.length - 1;
+    const amt = isLast ? target - running : Math.floor((target * v) / denom);
+    running += amt;
+    out.set(heirId, amt);
+  });
+  return out;
+}
+
+/**
+ * T7 (R3): 장례비 §14 한도(식대 1천만·봉안 5백만) 적용 후 채무 인별 배부.
+ * funeral을 식대/봉안 category별로 raw 분배 → capped 총액으로 비율 환산(잔액 흡수).
+ * 비-funeral 채무는 그대로. Σ debtByHeir == deductedBeforeAggregation(엔진 STEP3 capped)와 정합.
+ */
+function computeDebtByHeirWithFuneralCap(
+  debtItems: DebtItem[],
+  legalShares: LegalShareResult,
+): Map<string, number> {
+  const mealItems = debtItems.filter((d) => d.category === "funeral" && !d.isBongan);
+  const bonganItems = debtItems.filter((d) => d.category === "funeral" && d.isBongan);
+  const nonFuneralItems = debtItems.filter((d) => d.category !== "funeral");
+
+  const rawMeal = mealItems.reduce((s, d) => s + d.amount, 0);
+  const rawBongan = bonganItems.reduce((s, d) => s + d.amount, 0);
+  const cappedMeal = Math.min(rawMeal, 10_000_000);
+  const cappedBongan = Math.min(rawBongan, 5_000_000);
+
+  const nonFuneralByHeir = resolveAllocationsByHeir(nonFuneralItems, (it) => it.amount, legalShares);
+  const mealRawByHeir = resolveAllocationsByHeir(mealItems, (it) => it.amount, legalShares);
+  const bonganRawByHeir = resolveAllocationsByHeir(bonganItems, (it) => it.amount, legalShares);
+
+  // 한도 미초과면 capped==raw → scaleMapToTotal이 동일값 반환(잔차 0).
+  const mealByHeir = scaleMapToTotal(mealRawByHeir, cappedMeal);
+  const bonganByHeir = scaleMapToTotal(bonganRawByHeir, cappedBongan);
+
+  const merged = new Map<string, number>(nonFuneralByHeir);
+  for (const [heirId, amt] of mealByHeir) merged.set(heirId, (merged.get(heirId) ?? 0) + amt);
+  for (const [heirId, amt] of bonganByHeir) merged.set(heirId, (merged.get(heirId) ?? 0) + amt);
+  return merged;
+}
+
+/**
  * 사전증여 가액·과세표준을 상속인별로 합산 (doneeId 기준).
  */
 function sumPriorGiftsByDonee(priorGifts: PriorGift[]): {
@@ -277,11 +333,11 @@ export function calcHeirAllocation(
       }
     }
   }
-  const debtByHeir = resolveAllocationsByHeir(
-    debtItems,
-    (it) => it.amount,
-    legalShares,
-  );
+  // T7 (R3): 장례비 §14 한도(식대 1천만·봉안 5백만)를 인별 배부에도 적용.
+  //   엔진 과세가액 차감(deductedBeforeAggregation)은 capped인데 per-heir debtShare가
+  //   uncapped(it.amount)면 ㉡ 합계≠실제공제(18M 갭)·per-heir ④ 과다차감.
+  //   funeral을 식대/봉안 category별로 raw 분배 → capped로 scaleAllocations(잔액 흡수)하여 병합.
+  const debtByHeir = computeDebtByHeirWithFuneralCap(debtItems, legalShares);
 
   // 추정상속재산 분배 — heirAllocations 입력 시 비율 안분, 미입력 시 법정상속분
   const presumedByHeir = new Map<string, number>();
@@ -478,6 +534,48 @@ export function calcHeirAllocation(
     };
   }
 
+  // T10 (N4): 배부 총액 보존 — 잔액 흡수.
+  //   간접배부·산출세액 배부는 상속인별 독립 round로 floor 잔차가 남아 Σ가 분자와 ±N원 어긋난다.
+  //   (T2·T7로 Σbase==분모 성립 후엔 잔차만 남음 — 1.435% 과다배부는 T2·T7이 이미 제거.)
+  //   최다 과세표준상당액(taxBaseShare) 비-corp 상속인에 잔차 흡수 → Σ indirect==indirectNumerator,
+  //   Σ computedTaxShare==distributableTax 정확 보존. 흡수 상속인의 하류 필드 재계산.
+  {
+    const nonCorp = heirs.filter((h) => h.relation !== "corporate" && perHeir[h.id]);
+    if (nonCorp.length > 0 && indirectDenominator > 0 && computedTaxShareDenominator > 0) {
+      const absorber = nonCorp.reduce((a, b) =>
+        perHeir[b.id].taxBaseShare > perHeir[a.id].taxBaseShare ? b : a,
+      );
+      const ab = perHeir[absorber.id];
+
+      // (1) 간접배부 잔차 → indirect·taxBaseShare
+      const sumIndirect = nonCorp.reduce((s, h) => s + perHeir[h.id].indirectTaxBaseShare, 0);
+      const indirectResidual = indirectNumerator - sumIndirect;
+      ab.indirectTaxBaseShare += indirectResidual;
+      ab.taxBaseShare += indirectResidual;
+
+      // (2) 산출세액 배부 잔차 → computedTaxShare (Σ==distributableTax)
+      const sumComputed = nonCorp.reduce((s, h) => s + perHeir[h.id].computedTaxShare, 0);
+      const computedResidual = distributableTax - sumComputed;
+      ab.computedTaxShare += computedResidual;
+
+      // (3) 흡수 상속인 하류 재계산 (preFiling → filing → final → burden → §28 한도 echo)
+      if (ab.taxBaseShare > 0 && ab.directTaxBaseShare > 0) {
+        const newLimit = bigIntRoundDiv(
+          BigInt(ab.computedTaxShare) * BigInt(ab.directTaxBaseShare),
+          BigInt(ab.taxBaseShare),
+        );
+        ab.priorGiftCreditLimit = newLimit;
+        const giftTaxPaidAb = computedTaxByDonee.get(absorber.id) ?? 0;
+        ab.priorGiftCredit = giftTaxPaidAb > 0 ? Math.min(giftTaxPaidAb, newLimit) : 0;
+      }
+      ab.preFilingCreditTax = ab.computedTaxShare + ab.generationSkipSurcharge - ab.priorGiftCredit;
+      ab.filingCredit = isFiledOnTime ? Math.round(ab.preFilingCreditTax * 0.03) : 0;
+      ab.finalTax = ab.preFilingCreditTax - ab.filingCredit;
+      ab.burdenRatio =
+        Math.floor((ab.taxBaseShare / computedTaxShareDenominator) * 10000) / 10000;
+    }
+  }
+
   // Phase B4: categoryBreakdown · grossInheritance를 heir 분기에 후입력
   for (const heir of heirs) {
     if (heir.relation === "corporate") continue;
@@ -512,6 +610,19 @@ export function calcHeirAllocation(
     },
   ];
 
+  // T3(a): 자산 단위 정합 가드 — 협의분할 합 ≠ 엔진 평가액(valuatedAmountById) 자산 echo.
+  //   정상 흐름은 validateEstateItemAllocations가 선차단 → 비어 있음. 검증 우회 방어용.
+  const allocationMismatch: AllocationMismatch[] = [];
+  for (const item of estateItems) {
+    if (!item.heirAllocations || item.heirAllocations.length === 0) continue;
+    const expected = valuatedAmountById.get(item.id) ?? 0;
+    if (expected === 0) continue;
+    const actual = item.heirAllocations.reduce((s, a) => s + a.amount, 0);
+    if (actual !== expected) {
+      allocationMismatch.push({ assetId: item.id, expected, actual, delta: actual - expected });
+    }
+  }
+
   return {
     perHeir,
     distributableTax,
@@ -520,5 +631,6 @@ export function calcHeirAllocation(
     computedTaxShareDenominator,
     usedLegalShareFallback,
     breakdown,
+    ...(allocationMismatch.length > 0 ? { allocationMismatch } : {}),
   };
 }

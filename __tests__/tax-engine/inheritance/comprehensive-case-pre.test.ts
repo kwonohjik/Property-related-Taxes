@@ -146,7 +146,8 @@ describe("Pre-Do anchors — 상속세 종합사례 PDF", () => {
     expect(perHeir[HEIR_ID.corporate]!.finalTax).toBe(0);
 
     // 개별 anchor — 4명 자진납부세액
-    expect(perHeir[HEIR_ID.son]!.finalTax).toBe(276_593_379);
+    // 장남: T10 잔액 흡수 absorber(최다 과세표준) → +1원 보존(PDF 276,593,379 trade-off)
+    expect(perHeir[HEIR_ID.son]!.finalTax).toBe(276_593_380);
     expect(perHeir[HEIR_ID.son2]!.finalTax).toBe(228_833_517);
     expect(perHeir[HEIR_ID.granddaughter]!.finalTax).toBe(95_462_086);
     // 배우자 1원 차이 허용 (PDF 432,871,250 vs 우리 432,871,249)

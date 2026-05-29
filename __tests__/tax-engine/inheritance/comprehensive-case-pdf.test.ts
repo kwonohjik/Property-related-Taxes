@@ -267,16 +267,16 @@ describe("상속세 종합사례 PDF — 통합 anchor", () => {
       expect(Math.abs(h.indirectTaxBaseShare - 208_469_476)).toBeLessThanOrEqual(1);
     });
 
-    it("I-11 장남 산출세액상당액 = 705,147,813", () => {
-      expect(perHeir[HEIR_ID.son]!.computedTaxShare).toBe(705_147_813);
+    it("I-11 장남 산출세액상당액 = 705,147,814 (T10 잔액 흡수 — 장남=최다 과세표준 absorber, PDF 705,147,813 대비 +1원 보존 trade-off)", () => {
+      expect(perHeir[HEIR_ID.son]!.computedTaxShare).toBe(705_147_814);
     });
 
     it("I-12 장남 사전증여세액공제 = 420,000,000 (Min(420M, 한도 616M))", () => {
       expect(perHeir[HEIR_ID.son]!.priorGiftCredit).toBe(420_000_000);
     });
 
-    it("I-13 장남 자진납부세액 = 276,593,379", () => {
-      expect(perHeir[HEIR_ID.son]!.finalTax).toBe(276_593_379);
+    it("I-13 장남 자진납부세액 = 276,593,380 (T10 잔액 흡수 +1원, PDF 276,593,379 대비 보존 trade-off)", () => {
+      expect(perHeir[HEIR_ID.son]!.finalTax).toBe(276_593_380);
     });
 
     // ─── 차남 (병) ───

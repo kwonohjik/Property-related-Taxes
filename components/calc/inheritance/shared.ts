@@ -113,3 +113,70 @@ export const STEPS = [
   "사전증여",
   "공제·세액공제",
 ] as const;
+
+/**
+ * 존재하지 않는 상속인(Heir)을 참조하는 고아(orphan) 참조를 일괄 제거한다.
+ *
+ * 상속인 삭제(HeirComposition) 또는 이력 "수정" 복원 시, 삭제된 상속인에게
+ * 분배돼 있던 협의분할(heirAllocations)·사전증여 doneeId·영농 자격자 참조가 남으면
+ * validateHeirReferences가 계산을 차단한다(예: `자산 "..." heirId "..."가 Heir에 없음`).
+ * 본 함수로 heirs 배열에 실존하는 id만 남기도록 정리한다.
+ *
+ * - heirAllocations: 고아 항목만 제거. 전부 제거되면 undefined로 되돌려
+ *   협의분할 OFF(법정상속분 안분) 상태로 복귀. 일부만 남으면 그대로 두어
+ *   합계 검증/법정상속분 fallback이 후속 처리하도록 위임.
+ * - priorGifts.doneeId: 고아면 undefined.
+ * - farming.qualifiedHeirIds·heirAssessments: 고아 id 제거.
+ *
+ * 참조 변경이 없으면 원본 객체 참조를 그대로 반환(불필요한 리렌더 방지).
+ */
+export function pruneOrphanHeirReferences(form: FormState): FormState {
+  const heirIds = new Set(form.heirs.map((h) => h.id));
+
+  const pruneAllocs = <T extends { heirAllocations?: { heirId: string }[] }>(
+    item: T,
+  ): T => {
+    if (!item.heirAllocations) return item;
+    const kept = item.heirAllocations.filter((a) => heirIds.has(a.heirId));
+    if (kept.length === item.heirAllocations.length) return item;
+    return { ...item, heirAllocations: kept.length > 0 ? kept : undefined };
+  };
+
+  const estateItems = form.estateItems.map(pruneAllocs);
+  const stockItems = form.stockItems.map(pruneAllocs);
+  const presumedItems = form.presumedItems.map(pruneAllocs);
+  const debtItems = form.debtItems?.map(pruneAllocs);
+
+  const priorGifts = form.priorGifts.map((g) =>
+    g.doneeId && !heirIds.has(g.doneeId) ? { ...g, doneeId: undefined } : g,
+  );
+
+  let farming = form.farming;
+  if (farming) {
+    const nextQualified = farming.qualifiedHeirIds?.filter((id) => heirIds.has(id));
+    const nextAssessments = farming.heirAssessments?.filter((a) => heirIds.has(a.heirId));
+    const qualifiedChanged =
+      nextQualified !== undefined &&
+      nextQualified.length !== (farming.qualifiedHeirIds?.length ?? 0);
+    const assessmentsChanged =
+      nextAssessments !== undefined &&
+      nextAssessments.length !== (farming.heirAssessments?.length ?? 0);
+    if (qualifiedChanged || assessmentsChanged) {
+      farming = {
+        ...farming,
+        ...(qualifiedChanged ? { qualifiedHeirIds: nextQualified } : {}),
+        ...(assessmentsChanged ? { heirAssessments: nextAssessments } : {}),
+      };
+    }
+  }
+
+  return {
+    ...form,
+    estateItems,
+    stockItems,
+    presumedItems,
+    debtItems,
+    priorGifts,
+    farming,
+  };
+}

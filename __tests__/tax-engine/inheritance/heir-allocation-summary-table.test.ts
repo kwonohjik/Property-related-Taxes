@@ -65,8 +65,8 @@ describe("Pre-Do — 상속인별 상속세부담액 집계 표 (이미지 8)", 
       expect(Math.abs(v - 432_871_250)).toBeLessThanOrEqual(1);
     });
 
-    it("AN-13: ⑮ 장남 276,593,379", () => {
-      expect(perHeir[HEIR_ID.son]?.finalTax).toBe(276_593_379);
+    it("AN-13: ⑮ 장남 276,593,380 (T10 잔액 흡수 absorber +1원, PDF 276,593,379 보존 trade-off)", () => {
+      expect(perHeir[HEIR_ID.son]?.finalTax).toBe(276_593_380);
     });
 
     it("AN-14: ⑮ 차남 228,833,517", () => {

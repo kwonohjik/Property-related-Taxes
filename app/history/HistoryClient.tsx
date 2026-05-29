@@ -225,6 +225,10 @@ export function HistoryClient() {
       // 증여세 — GiftTaxForm은 자체 useState 기반이라 sessionStorage 경유로 hydrate
       sessionStorage.setItem("giftTaxResumeInput", JSON.stringify(record.inputData));
       router.push(route);
+    } else if (record.taxType === "inheritance") {
+      // 상속세 — InheritanceTaxForm은 자체 useState 기반이라 sessionStorage 경유로 hydrate
+      sessionStorage.setItem("inheritanceTaxResumeInput", JSON.stringify(record.inputData));
+      router.push(route);
     } else if (record.taxType === "stock_transfer") {
       // 주식 양도세 — 이력 inputData를 store에 hydrate (디자인 C-5 수정 모드)
       Promise.all([

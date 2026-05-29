@@ -118,6 +118,10 @@ export function HistoryDetailDrawer({
       // 증여세 — GiftTaxForm은 자체 useState 기반이라 sessionStorage 경유로 hydrate
       sessionStorage.setItem("giftTaxResumeInput", JSON.stringify(record.inputData));
       router.push(route);
+    } else if (record.taxType === "inheritance") {
+      // 상속세 — InheritanceTaxForm은 자체 useState 기반이라 sessionStorage 경유로 hydrate
+      sessionStorage.setItem("inheritanceTaxResumeInput", JSON.stringify(record.inputData));
+      router.push(route);
     } else {
       router.push(route);
     }
