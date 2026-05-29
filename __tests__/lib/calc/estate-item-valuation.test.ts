@@ -58,4 +58,25 @@ describe("computeEffectiveValuation — 우선순위 매트릭스", () => {
     });
     expect(computeEffectiveValuation(item)).toBe(0);
   });
+
+  // 2026-05-29 — 상장·비상장 주식 보충평가 fallback (chip-config 칩 라벨 "평가액 미입력" 오표시 정정)
+  // [[project_section22_major_shareholder_toggle]] Phase0 동일 패턴
+  it("상장주식 명시 평가액 없음 → 전후 2개월 평균×주식수 (§63①1가)", () => {
+    const item = makeItem({
+      category: "listed_stock",
+      listedStockAvgPrice: 10_000,
+      listedStockShares: 15_000,
+    });
+    expect(computeEffectiveValuation(item)).toBe(150_000_000);
+  });
+
+  it("상장주식이라도 marketValue 명시 시 명시값 우선 (§60 시가 우선)", () => {
+    const item = makeItem({
+      category: "listed_stock",
+      marketValue: 200_000_000,
+      listedStockAvgPrice: 10_000,
+      listedStockShares: 15_000,
+    });
+    expect(computeEffectiveValuation(item)).toBe(200_000_000);
+  });
 });
