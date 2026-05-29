@@ -524,13 +524,22 @@ export function calcInheritanceTax(
       valuationResults.map((v) => [v.estateItemId, v.valuatedAmount]),
     );
 
+    // 2-C 수정: calcHeirAllocation에 cutoff-필터된 증여만 전달 (§13 도과분 제외).
+    //   - 수정 전: input.preGiftsWithin10Years 전체 전달 → 도과분 포함 → 인별 priorGiftAmount 과다
+    //   - 수정 후: isWithin13Cutoff 필터 → aggregatePriorGiftsForInheritance와 동일 집합 보장
+    //   - isWithin13Cutoff(inheritance-gift-common.ts:293)는 gift.isHeir로 10/5년 판정
+    //     → aggregatePriorGiftsForInheritance(:309)와 동일 함수 사용 — 필터 정확 일치
+    const cutoffFilteredGifts = (input.preGiftsWithin10Years ?? []).filter(
+      (g) => isWithin13Cutoff(g, input.deathDate),
+    );
+
     heirAllocationResult = calcHeirAllocation({
       heirs: input.heirs,
       estateItems: input.estateItems,
       presumedItems: input.presumedItems ?? [],
       // 담보채무 §14 자동공제분을 협의분할 채무에 합산 (heirAllocations 비율 환산 완료)
       debtItems: [...(input.debtItems ?? []), ...toCollateralDebtItems(collateralDebts)],
-      priorGifts: input.preGiftsWithin10Years,
+      priorGifts: cutoffFilteredGifts,
       presumedAddedById,
       valuatedAmountById,
       taxBase,

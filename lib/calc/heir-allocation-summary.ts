@@ -215,10 +215,12 @@ export function buildSummaryTable(
   });
 
   // ② 사전증여
-  const priorGiftTotal = Object.values(perHeirEngine).reduce(
-    (s, p) => s + (p?.priorGiftAmount ?? 0),
-    0,
-  );
+  // 2-A 수정: total을 인별 합(doneeId 없으면 0) 대신 엔진 echo priorGiftAggregated로 교체.
+  //   - 수정 전: Σ perHeir.priorGiftAmount → doneeId 미지정 시 0 → ② 합계열 누락(Bug #2).
+  //   - 수정 후: result.priorGiftAggregated (§13 cutoff 적용 합계) → ④ 합계열과 정합.
+  //   - 한계: 2-A는 합계열 표시 전용. 인별 ④(taxableValueShare)는 2-B(doneeId select) 완료 후 정합.
+  //     doneeId 미지정 시 인별 셀은 0 유지 → UI에서 "수증자 미지정 — 인별 배부 생략" 배지 표시 예정.
+  const priorGiftTotal = result.priorGiftAggregated ?? 0;
   rows.push({
     rowId: "row-2-priorGift",
     groupId: "value",

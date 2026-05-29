@@ -18,7 +18,7 @@ import type {
   Heir,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { deriveCollateralDebts } from "@/lib/tax-engine/inheritance-collateral-debt";
-import { computeStockValuation } from "@/lib/tax-engine/valuation/resolve-estate-item-value";
+import { resolveEstateItemValue } from "@/lib/tax-engine/valuation/resolve-estate-item-value";
 
 // ────────────────────────────────────────────────────
 // 단일 자산 — heirAllocations 합계 검증
@@ -45,24 +45,22 @@ export function validateFamilyBusinessEstateItem(
 /**
  * 자산의 heirAllocations 합이 평가액과 일치하는지 검증.
  * 자동 안분 fallback 금지 — 사용자 명시 입력 강제.
+ *
+ * 1-B 수정: expected를 §60 단일 진실 resolveEstateItemValue에 위임.
+ *   - 수정 전: max(marketValue, standardPrice, appraisedValue, computeStockValuation)
+ *     → 명시값<csv 케이스에서 expected=csv, 엔진(1-A 후)=명시값 → 합계열<인별열 역방향 갭
+ *   - 수정 후: resolveEstateItemValue(explicit-first) = 엔진과 동일 → 4경로 단일 진실 통일
+ *     → explicit-first: marketValue > appraisedValue > standardPrice > computeStockValuation
+ *
+ * ⑧ 동기화 지점: API/UI fallback과 validate가 동일 함수 사용 → UI 통과 ↔ validate 차단 모순 제거.
  */
 export function validateEstateItemAllocations(item: EstateItem): string | null {
   if (!item.heirAllocations || item.heirAllocations.length === 0) {
     return null; // 분배 미입력은 허용 (총액-단위 계산 모드)
   }
-  // 평가액 추정 — marketValue / standardPrice / appraisedValue / 주식 평가액(단일 진실) 중 가장 큰 값.
-  // ★ 주식(상장·비상장 V1/V2)은 computeStockValuation 위임 — 엔진 valuatedAmountById·UI effectiveValuation과
-  //   동일 함수원(§63②3호 배당차액·시행령 §54 가중 반영). avg×shares 재계산 금지(⑧ dual-truth).
-  const candidates = [
-    item.marketValue,
-    item.standardPrice,
-    item.appraisedValue,
-    item.category === "listed_stock" || item.category === "unlisted_stock"
-      ? computeStockValuation(item)
-      : undefined,
-  ].filter((v): v is number => typeof v === "number" && v > 0);
-  if (candidates.length === 0) return null;
-  const expected = Math.max(...candidates);
+  // §60 단일 진실: resolveEstateItemValue (엔진·UI·validate 4경로 통일)
+  const expected = resolveEstateItemValue(item);
+  if (expected === 0) return null;
   const sum = item.heirAllocations.reduce((s, a) => s + a.amount, 0);
   if (sum !== expected) {
     return `자산 "${item.name}" 협의분할 합계 ${sum.toLocaleString()}원 ≠ 평가액 ${expected.toLocaleString()}원`;

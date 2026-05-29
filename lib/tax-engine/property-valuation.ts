@@ -19,7 +19,10 @@ import type {
 import { evaluateUnlistedStockV2 } from "./property-valuation/unlisted-orchestrator";
 // listed_stock / V1 간편 비상장(unlistedStockData) 평가 단일 진실.
 // resolve-estate-item-value.ts는 property-valuation.ts를 import하지 않으므로 순환 없음(단방향).
-import { computeStockValuation } from "./valuation/resolve-estate-item-value";
+import {
+  computeStockValuation,
+  resolveEstateItemValue,
+} from "./valuation/resolve-estate-item-value";
 
 // ============================================================
 // 임대차 환산 (§61 — 임대보증금 환산가액)
@@ -383,20 +386,54 @@ export function evaluateAllEstateItems(
 /**
  * listed_stock / V1 간편 비상장(unlistedStockData) → PropertyValuationResult 어댑터.
  *
- * 평가액은 computeStockValuation 단일 진실 위임:
- *   - 상장: 전후 2개월 평균 × 주식수 (§63①1가, §63②3호 증자신주 분기 포함).
- *   - V1 비상장: (순손익가치×3 + 순자산가치×2) ÷ 5, 부동산과다보유법인 시 2:3 (시행령 §54①).
+ * 평가액은 §60 단일 진실 resolveEstateItemValue에 위임 (1-A 수정):
+ *   1순위: marketValue (시가 — 매매사례가·감정가·수용가·경매가)
+ *   2순위: appraisedValue (감정가)
+ *   3순위: standardPrice (기준시가)
+ *   4순위: computeStockValuation (주식 보충평가 — §63 2개월 평균 또는 §54 순손익·순자산)
+ *
+ * 수정 전(Bug #1): computeStockValuation 단독 → 명시 시가·감정·기준시가 무시 → 법령 §60 위반.
+ * 수정 후: resolveEstateItemValue → 4경로(엔진·validate·UI·문서상) 단일 진실 통일.
+ *
+ * 범위: 상장(listed_stock) + V1 간편 비상장(unlisted_stock, unlistedValuationMode="simple").
+ * V2 비상장은 evaluateAllEstateItems(:373)에서 이미 별도 라우팅 — 본 함수 미호출.
+ *
+ * ⚠️ breakdown.method 보정:
+ *   - marketValue 사용 시: "market_value"
+ *   - appraisedValue 사용 시: "appraisal"
+ *   - standardPrice 사용 시: "standard_price"
+ *   - computeStockValuation fallback: 기존 method 유지 (상장="market_value", V1="book_value")
  */
 function evaluateStockAsPropertyResult(item: EstateItem): PropertyValuationResult {
-  const amount = computeStockValuation(item);
+  // §60 우선순위: 명시 평가액 → 주식 보충평가 fallback
+  const amount = resolveEstateItemValue(item);
   const isListed = item.category === "listed_stock";
+
+  // method: 어느 경로로 평가했는지 정확히 반영
+  let method: ValuationMethod;
+  let label: string;
+  if (typeof item.marketValue === "number" && item.marketValue > 0) {
+    method = "market_value";
+    label = isListed ? "상장주식 시가 (명시)" : "비상장주식 시가 (명시)";
+  } else if (typeof item.appraisedValue === "number" && item.appraisedValue > 0) {
+    method = "appraisal";
+    label = isListed ? "상장주식 감정가액" : "비상장주식 감정가액";
+  } else if (typeof item.standardPrice === "number" && item.standardPrice > 0) {
+    method = "standard_price";
+    label = isListed ? "상장주식 기준시가" : "비상장주식 기준시가";
+  } else {
+    // 주식 보충평가 fallback (§63 2개월 평균 또는 §54 순손익·순자산)
+    method = (isListed ? "market_value" : "book_value") as ValuationMethod;
+    label = isListed ? "상장주식 평가액" : "비상장주식 평가액(간편)";
+  }
+
   return {
     estateItemId: item.id,
-    method: (isListed ? "market_value" : "book_value") as ValuationMethod,
+    method,
     valuatedAmount: amount,
     breakdown: [
       {
-        label: isListed ? "상장주식 평가액" : "비상장주식 평가액(간편)",
+        label,
         amount,
         lawRef: isListed ? VALUATION.LISTED_STOCK : VALUATION.UNLISTED_FORMULA,
       },
