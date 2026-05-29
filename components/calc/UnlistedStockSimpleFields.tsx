@@ -28,8 +28,27 @@ import {
   resolveWeightedNetIncome,
 } from "@/lib/tax-engine/property-valuation-stock";
 import { buildDefaultFiscalYears } from "@/lib/tax-engine/property-valuation/fiscal-year-annualize";
-import type { EstateItem, UnlistedStockData } from "@/lib/tax-engine/types/inheritance-gift.types";
+import type { EstateItem, UnlistedStockData, UnlistedAssetValueOnlyReason } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { UnlistedStockSpecialReasonSection } from "@/components/calc/inheritance/UnlistedStockSpecialReasonSection";
+
+// ============================================================
+// §54④ 호별 분류 — 1·2·6호(무조건 순자산) / 3·5호(단서 조건부) / undefined(본칙)
+// 엔진 분기와 단일 진실 (lib/tax-engine/property-valuation-stock.ts:592-614).
+// ============================================================
+
+/** 순손익가치 입력이 계산에 사용되는지 판정 — 1·2·6호는 사용 안 함, 3·5호·undefined는 사용. */
+function isNetIncomeRequired(reason: UnlistedAssetValueOnlyReason | undefined): boolean {
+  if (!reason) return true; // 본칙 §54①: max(가중평균, 순자산 80%)
+  // 1호·2호·6호: 무조건 순자산가치 → 순손익 입력 불필요
+  if (reason === "liquidation" || reason === "lt3y" || reason === "remaining_3y") return false;
+  // 3호·5호: 단서 (가중평균 < 순자산일 때만 순자산) → 가중평균 계산 필요 → 순손익 입력 필요
+  return true;
+}
+
+/** 3호·5호 단서 사유 여부 (UI 안내 카드 노출용). */
+function isConditionalReason(reason: UnlistedAssetValueOnlyReason | undefined): boolean {
+  return reason === "real_estate_80" || reason === "stock_80";
+}
 
 // ============================================================
 // 섹션 카드 (번호 원 + tone) — V2 CorporateInfoSection 패턴 차용
@@ -403,13 +422,28 @@ export function UnlistedStockSimpleFields({
         onChange={(reason) => setStock({ assetValueOnlyReason: reason })}
       />
 
-      {/* ② 순손익가치 입력 */}
+      {/* ② 순손익가치 입력 — §54④ 1·2·6호 선택 시 숨김 (무조건 순자산가치, 순손익 계산 미사용) */}
+      {isNetIncomeRequired(data?.assetValueOnlyReason) && (
       <SimpleSectionCard
         num={2}
         tone="emerald"
         title="순손익가치 입력 — 연도별 순손익액 (§56①)"
         testid="simple-section-net-income"
       >
+        {isConditionalReason(data?.assetValueOnlyReason) && (
+          <div
+            data-testid="simple-net-income-conditional-notice"
+            className="rounded-md border border-amber-300 bg-amber-50/70 dark:bg-amber-900/20 px-3 py-2 text-xs text-amber-800 dark:text-amber-200 space-y-1"
+          >
+            <p className="font-semibold">
+              ⚠️ §54④ {data?.assetValueOnlyReason === "real_estate_80" ? "3호" : "5호"} 단서 적용 사유 — 순손익가치 입력 필요
+            </p>
+            <p>
+              이 사유는 <strong>가중평균 &lt; 1주당 순자산가치인 경우에만</strong> 순자산가치를 적용합니다.
+              비교를 위해 가중평균(순손익+순자산) 산정이 필요하므로 순손익가치도 입력해 주세요.
+            </p>
+          </div>
+        )}
         <p className="text-[11px] text-muted-foreground">
           각 연도 회사 전체 순손익액을 입력하면 가중평균을 자동 계산합니다.
           미입력 연도는 0으로 처리됩니다.
@@ -478,6 +512,7 @@ export function UnlistedStockSimpleFields({
           />
         </FieldCard>
       </SimpleSectionCard>
+      )}
 
       {/* ③ 순자산가치 입력 */}
       <SimpleSectionCard num={3} tone="violet" title="순자산가치 입력" testid="simple-section-net-asset">
