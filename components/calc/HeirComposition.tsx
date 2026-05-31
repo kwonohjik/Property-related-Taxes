@@ -15,6 +15,7 @@ import type {
 } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { useState } from "react";
 
 const SHAREHOLDER_RELATION_LABEL: Record<ShareholderInfo["relation"], string> = {
   heir: "상속인",
@@ -69,6 +70,56 @@ const HEIR_RELATIONS: HeirRelation[] = [
 const SPECIAL_RELATIONS: HeirRelation[] = ["legatee", "corporate"];
 
 // ============================================================
+// 관계 변경 시 정합성 정리
+// ============================================================
+
+/**
+ * 이미 추가된 상속인/수유자/법인의 관계(relation)를 변경할 때, 새 관계에서 의미 없는
+ * 입력 필드를 정리한다. id·이름·자산 협의분할(heirAllocations 참조)은 보존되므로
+ * 삭제·재추가와 달리 배분 데이터가 소실되지 않는다.
+ *
+ * 정리 규칙 (엔진 계산 정합성):
+ *  - 법인(corporate)으로 변경: 자연인 전용 필드 제거(birthDate·isDisabled·isCohabitant·
+ *    isGenerationSkipBeneficiary). 법인은 인적공제(§20)·동거주택(§23의2)·세대생략(§27) 대상 아님.
+ *  - 자연인으로 변경: 법인 전용 필드 제거(isForProfit·shareholders·사업자번호·사업장·
+ *    corporateGiftComputedTax).
+ *  - 자녀(child) 외로 변경: 동거주택(§23의2) 해제(자녀 전용 UI).
+ *  - 생년월일 비대상 관계(배우자·기타·수유자·법인)로 변경: birthDate 제거 — 화면에 보이지
+ *    않는 잔류 데이터가 미성년·연로자·장애인 공제(§20: birthDate/isDisabled만 검사, 관계 무관)에
+ *    영향 주는 것을 차단.
+ */
+export function changeHeirRelation(heir: Heir, newRelation: HeirRelation): Heir {
+  if (heir.relation === newRelation) return heir;
+
+  const next: Heir = { ...heir, relation: newRelation };
+  const showBirthDate =
+    newRelation === "child" ||
+    newRelation === "lineal_ascendant" ||
+    newRelation === "sibling";
+
+  if (newRelation === "corporate") {
+    // 법인 — 자연인 전용 필드 제거
+    next.birthDate = undefined;
+    next.isDisabled = undefined;
+    next.isCohabitant = undefined;
+    next.isGenerationSkipBeneficiary = undefined;
+  } else {
+    // 자연인 — 법인 전용 필드 제거
+    next.isForProfit = undefined;
+    next.shareholders = undefined;
+    next.businessRegistrationNumber = undefined;
+    next.businessAddress = undefined;
+    next.corporateGiftComputedTax = undefined;
+    // 동거주택(§23의2)은 자녀 전용
+    if (newRelation !== "child") next.isCohabitant = undefined;
+    // 생년월일 UI 비대상 관계면 제거 (보이지 않는 데이터의 공제 영향 차단)
+    if (!showBirthDate) next.birthDate = undefined;
+  }
+
+  return next;
+}
+
+// ============================================================
 // 개별 상속인 편집기
 // ============================================================
 
@@ -81,6 +132,7 @@ interface HeirEditorProps {
 
 function HeirEditor({ heir, index, onUpdate, onRemove }: HeirEditorProps) {
   const set = (patch: Partial<Heir>) => onUpdate({ ...heir, ...patch });
+  const [changingRelation, setChangingRelation] = useState(false);
 
   const showBirthDate =
     heir.relation === "child" ||
@@ -90,7 +142,10 @@ function HeirEditor({ heir, index, onUpdate, onRemove }: HeirEditorProps) {
   const isCorporate = heir.relation === "corporate";
 
   return (
-    <div className="border rounded-lg p-4 space-y-3 bg-white dark:bg-gray-900">
+    <div
+      className="border rounded-lg p-4 space-y-3 bg-white dark:bg-gray-900"
+      data-testid={`heir-editor-${index}`}
+    >
       {/* 헤더 */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -99,14 +154,45 @@ function HeirEditor({ heir, index, onUpdate, onRemove }: HeirEditorProps) {
             {RELATION_LABELS[heir.relation]} {index + 1}
           </span>
         </div>
-        <button
-          type="button"
-          onClick={onRemove}
-          className="text-xs text-red-500 hover:text-red-700 dark:hover:text-red-300 px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
-        >
-          삭제
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => setChangingRelation((v) => !v)}
+            aria-expanded={changingRelation}
+            data-testid={`heir-change-relation-${index}`}
+            className="text-xs text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 px-2 py-1 rounded hover:bg-indigo-50 dark:hover:bg-indigo-900/20"
+          >
+            종류 변경
+          </button>
+          <button
+            type="button"
+            onClick={onRemove}
+            className="text-xs text-red-500 hover:text-red-700 dark:hover:text-red-300 px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
+          >
+            삭제
+          </button>
+        </div>
       </div>
+
+      {/* 종류(관계) 변경 — 잘못 선택한 경우 삭제·재추가 없이 교정 (이름·자산 배분 보존) */}
+      {changingRelation && (
+        <div
+          className="rounded-lg border border-indigo-200 bg-indigo-50/50 dark:border-indigo-700 dark:bg-indigo-900/20 p-3 space-y-2"
+          data-testid={`heir-relation-picker-${index}`}
+        >
+          <p className="text-[11px] font-medium text-indigo-700 dark:text-indigo-300">
+            변경할 관계를 선택하세요 — 관계에 맞지 않는 입력값(법인·자연인 전용)은 자동
+            정리됩니다
+          </p>
+          <RelationPickerGrid
+            currentRelation={heir.relation}
+            onPick={(r) => {
+              onUpdate(changeHeirRelation(heir, r));
+              setChangingRelation(false);
+            }}
+          />
+        </div>
+      )}
 
       {/* 공제 안내 */}
       <p className="text-xs text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 rounded px-3 py-2">
@@ -440,20 +526,75 @@ function ShareholderRow({
 interface RelationButtonProps {
   relation: HeirRelation;
   onAdd: (r: HeirRelation) => void;
+  isCurrent?: boolean;
 }
 
-function RelationButton({ relation, onAdd }: RelationButtonProps) {
+function RelationButton({ relation, onAdd, isCurrent }: RelationButtonProps) {
   return (
     <button
       type="button"
       onClick={() => onAdd(relation)}
-      className="flex flex-col items-center gap-1 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors text-xs"
+      aria-current={isCurrent ? "true" : undefined}
+      className={
+        "relative flex flex-col items-center gap-1 px-3 py-2 rounded-lg border transition-colors text-xs " +
+        (isCurrent
+          ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 ring-1 ring-indigo-300 dark:ring-indigo-600"
+          : "border-gray-200 dark:border-gray-700 hover:border-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20")
+      }
     >
       <span className="text-xl">{RELATION_ICONS[relation]}</span>
       <span className="text-gray-600 dark:text-gray-300 text-center leading-tight">
         {RELATION_LABELS[relation]}
       </span>
+      {isCurrent && (
+        <span className="absolute -top-1.5 -right-1.5 rounded-full bg-indigo-500 px-1.5 py-0.5 text-[9px] font-bold leading-none text-white">
+          현재
+        </span>
+      )}
     </button>
+  );
+}
+
+/**
+ * 관계 선택 그리드 — 상속인 추가 / 종류 변경 공용.
+ * 법정상속인 5종 + 상속인 외(수유자·법인) 2종을 동일 레이아웃으로 노출.
+ * currentRelation 전달 시 해당 버튼에 "현재" 배지 강조.
+ */
+function RelationPickerGrid({
+  onPick,
+  currentRelation,
+}: {
+  onPick: (r: HeirRelation) => void;
+  currentRelation?: HeirRelation;
+}) {
+  return (
+    <>
+      <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+        {HEIR_RELATIONS.map((r) => (
+          <RelationButton
+            key={r}
+            relation={r}
+            onAdd={onPick}
+            isCurrent={r === currentRelation}
+          />
+        ))}
+      </div>
+      <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+        <p className="text-[10px] font-medium text-violet-700 dark:text-violet-300 mb-1">
+          수유자(유증)·영리법인 — 상속인 외 (§19·§24 유증액 · §3의2② 부표 5)
+        </p>
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+          {SPECIAL_RELATIONS.map((r) => (
+            <RelationButton
+              key={r}
+              relation={r}
+              onAdd={onPick}
+              isCurrent={r === currentRelation}
+            />
+          ))}
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -497,8 +638,6 @@ let _nextHeirId = 1;
 function generateHeirId() {
   return `heir-${Date.now()}-${_nextHeirId++}`;
 }
-
-import { useState } from "react";
 
 export function HeirComposition({ heirs, onChange }: HeirCompositionProps) {
   const [showAddPanel, setShowAddPanel] = useState(false);
@@ -555,21 +694,7 @@ export function HeirComposition({ heirs, onChange }: HeirCompositionProps) {
           <p className="text-xs font-medium text-gray-600 dark:text-gray-400">
             상속인 관계 선택
           </p>
-          <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
-            {HEIR_RELATIONS.map((r) => (
-              <RelationButton key={r} relation={r} onAdd={handleAdd} />
-            ))}
-          </div>
-          <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
-            <p className="text-[10px] font-medium text-violet-700 dark:text-violet-300 mb-1">
-              수유자(유증)·영리법인 — 상속인 외 (§19·§24 유증액 · §3의2② 부표 5)
-            </p>
-            <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
-              {SPECIAL_RELATIONS.map((r) => (
-                <RelationButton key={r} relation={r} onAdd={handleAdd} />
-              ))}
-            </div>
-          </div>
+          <RelationPickerGrid onPick={handleAdd} />
           <button
             type="button"
             onClick={() => setShowAddPanel(false)}
