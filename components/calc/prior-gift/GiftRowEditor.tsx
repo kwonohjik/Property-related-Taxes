@@ -32,23 +32,16 @@ import type {
   Heir,
   HeirRelation,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
+import {
+  isNonHeirRelation,
+  deriveIsHeirFromHeir,
+  deriveBeneficiaryTypeFromHeir,
+  deriveDoneeRelationFromHeir,
+} from "@/lib/calc/prior-gift-donee-derive";
 
 // ============================================================
-// 수증자 select 헬퍼
+// 수증자 select 헬퍼 — 파생 로직은 lib/calc/prior-gift-donee-derive.ts 단일 진실
 // ============================================================
-
-/** Heir.relation이 비상속인(수유자·영리법인)인지 판정 */
-function isNonHeirRelation(relation: HeirRelation): boolean {
-  return relation === "legatee" || relation === "corporate";
-}
-
-/** Heir.id → isHeir 도출 (relation 기반, isHeir prop 보조) */
-function deriveIsHeirFromHeir(h: Heir): boolean {
-  // Heir.isHeir prop이 명시된 경우 우선
-  if (h.isHeir !== undefined) return h.isHeir;
-  // relation으로 자동 추론
-  return !isNonHeirRelation(h.relation);
-}
 
 const HEIR_RELATION_LABEL: Record<HeirRelation, string> = {
   spouse: "배우자",
@@ -100,7 +93,7 @@ export function GiftRowEditor({
   // ============================================================
   function handleDoneeSelect(heirId: string) {
     if (!heirId) {
-      // "선택 안 함" → doneeId 제거, isHeir 기존값 유지
+      // "선택 안 함" → doneeId 제거, isHeir·doneeRelation 기존값 유지 (수동 경로 복귀)
       set({ doneeId: undefined });
       return;
     }
@@ -109,10 +102,15 @@ export function GiftRowEditor({
       set({ doneeId: heirId });
       return;
     }
-    // doneeId + isHeir 동시 patch — §2.3 N1 교차 일관성 준수
-    // isWithin13Cutoff(inheritance-gift-common.ts:295)가 gift.isHeir로 cutoff 10년/5년 판정
-    const derivedIsHeir = deriveIsHeirFromHeir(selectedHeir);
-    set({ doneeId: heirId, isHeir: derivedIsHeir });
+    // doneeId + isHeir + beneficiaryType + doneeRelation 4필드 동시 patch (useEffect 미러링 금지).
+    //   isHeir: §13 cutoff(common.ts:295) / beneficiaryType: §13 분류 우월 키(inheritance-tax.ts:252)
+    //   doneeRelation: §53 증여재산공제 제안(inheritance-deduction-suggest.ts:198)
+    set({
+      doneeId: heirId,
+      isHeir: deriveIsHeirFromHeir(selectedHeir),
+      beneficiaryType: deriveBeneficiaryTypeFromHeir(selectedHeir),
+      doneeRelation: deriveDoneeRelationFromHeir(selectedHeir.relation),
+    });
   }
 
   function handleCorporateToggle(on: boolean) {
@@ -206,95 +204,136 @@ export function GiftRowEditor({
         />
       </div>
 
-      {/* 수증자 관계 */}
-      <div className="space-y-1">
-        <label
-          className={`block text-xs font-medium ${
-            isCorporate ? "text-gray-400" : "text-gray-600 dark:text-gray-400"
-          }`}
-        >
-          수증인과의 관계
-        </label>
-        <select
-          value={gift.doneeRelation ?? ""}
-          onChange={(e) =>
-            set({
-              doneeRelation: (e.target.value || undefined) as
-                | DonorRelation
-                | undefined,
-            })
-          }
-          disabled={isCorporate}
-          title={isCorporate ? "영리법인 — 자연인 관계 미적용" : undefined}
-          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-500"
-        >
-          <option value="">선택</option>
-          {DONOR_RELATION_LIST.map((r) => (
-            <option key={r} value={r}>
-              {DONOR_RELATION_LABELS[r]}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* 수증자(상속인·수유자) select — 2-B: 인별 배부 대상 지정
-       * 영리법인 ON 시 CorporateGiftFields.doneeId가 처리하므로 숨김.
-       * doneeId 선택 시 isHeir를 onChange에서 동시 patch (useEffect 미러링 금지 준수).
-       * 미선택 허용(자동 안분 fallback 금지 정책) — 미지정 시 ② 인별 배부 0 + 안내 배지.
-       */}
-      {showIsHeir && !isCorporate && (heirs ?? []).length > 0 && (
+      {/* 수증인과의 관계 — 증여세 모드 전용 (§53 증여재산공제 핵심 입력, 증여일 직후 유지) */}
+      {showGiftPhaseA && (
         <div className="space-y-1">
           <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
-            수증자 (상속인·수유자)
+            수증인과의 관계
           </label>
           <select
-            data-testid="gift-donee-select"
-            value={gift.doneeId ?? ""}
-            onChange={(e) => handleDoneeSelect(e.target.value)}
+            value={gift.doneeRelation ?? ""}
+            onChange={(e) =>
+              set({
+                doneeRelation: (e.target.value || undefined) as
+                  | DonorRelation
+                  | undefined,
+              })
+            }
             className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <option value="">선택 안 함 (인별 배부 생략)</option>
-            {(heirs ?? []).map((h) => (
-              <option key={h.id} value={h.id}>
-                {HEIR_RELATION_LABEL[h.relation]}
-                {h.name ? ` (${h.name})` : ""}
-                {isNonHeirRelation(h.relation) ? " — 비상속인" : ""}
+            <option value="">선택</option>
+            {DONOR_RELATION_LIST.map((r) => (
+              <option key={r} value={r}>
+                {DONOR_RELATION_LABELS[r]}
               </option>
             ))}
           </select>
-          {!gift.doneeId && (
-            <p className="text-[11px] text-sky-600 dark:text-sky-400">
-              ⓘ 수증자를 지정하면 상속인별 배부표 ② 사전증여 열에 반영됩니다.
-            </p>
-          )}
-          {gift.doneeId && (
-            <p className="text-[11px] text-violet-600 dark:text-violet-400">
-              ✓ 상속인 여부가 수증자 관계에서 자동 결정됩니다.
-            </p>
-          )}
         </div>
       )}
 
-      {/* 상속인 여부 (상속세 전용 · 영리법인 ON 시 disabled)
-       * 2-B: doneeId 지정 시 — isHeir가 수증자 관계에서 자동 도출되므로 disabled(읽기 전용 표시).
-       *      doneeId 미지정 시 — 사용자 수동 입력 가능 (기존 동작 유지).
+      {/* ③ 수증자 (상속인·수유자) select — 상속세 모드 최상단 (증여일 직후).
+       * 도메인: 증여인=피상속인(고정), 수증인=Step1 heirs 중 선택.
+       * corporate Heir 제외(영리법인 토글 전담). doneeId 선택 시 isHeir·beneficiaryType·doneeRelation 자동 도출.
+       * orphan(Step1 삭제) 가드: matchedHeir 없으면 amber 안내 + select value="".
        */}
-      {showIsHeir && (
-        <ToggleCard
-          tone="violet"
-          title="상속인에게 증여"
-          description="상속인: 10년 이내 합산 (§13①1호) / 비상속인: 5년 이내 합산 (§13①2호)"
-          checked={gift.isHeir}
-          onCheckedChange={(v) => set({ isHeir: v })}
-          disabled={isCorporate || !!gift.doneeId}
-          disabledReason={
-            isCorporate
-              ? "영리법인 — §13①2호 5년 합산 자동 적용 (상속인 분류 미적용)"
-              : gift.doneeId
-                ? "수증자 지정됨 — 상속인 여부가 수증자 관계에서 자동 결정됩니다"
-                : undefined
-          }
-        />
+      {showIsHeir && !isCorporate && (heirs ?? []).length > 0 && (() => {
+        const matchedHeir = (heirs ?? []).find((h) => h.id === gift.doneeId);
+        return (
+          <div className="space-y-1">
+            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
+              수증자 (상속인·수유자)
+            </label>
+            <select
+              data-testid="gift-donee-select"
+              value={matchedHeir ? gift.doneeId : ""}
+              onChange={(e) => handleDoneeSelect(e.target.value)}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <option value="">선택 안 함 (인별 배부 생략)</option>
+              {(heirs ?? [])
+                .filter((h) => h.relation !== "corporate")
+                .map((h) => (
+                  <option key={h.id} value={h.id}>
+                    {HEIR_RELATION_LABEL[h.relation]}
+                    {h.name ? ` (${h.name})` : ""}
+                    {isNonHeirRelation(h.relation) ? " — 비상속인" : ""}
+                  </option>
+                ))}
+            </select>
+
+            {/* ④ 요약 배지 (read-only) — doneeId 선택 + 매칭 Heir 존재 */}
+            {gift.doneeId && matchedHeir && (
+              <div
+                data-testid="gift-donee-summary"
+                className="rounded-md bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-700 px-3 py-2 text-[11px] text-violet-700 dark:text-violet-300"
+              >
+                {HEIR_RELATION_LABEL[matchedHeir.relation]}
+                {matchedHeir.name ? ` (${matchedHeir.name})` : ""}
+                {" · "}
+                {deriveBeneficiaryTypeFromHeir(matchedHeir) === "heir"
+                  ? "상속인 · §13①1호 10년 합산"
+                  : "비상속인 · §13①2호 5년 합산"}
+              </div>
+            )}
+
+            {/* ④' orphan 안내 — doneeId 있으나 매칭 Heir 삭제됨 */}
+            {gift.doneeId && !matchedHeir && (
+              <p
+                data-testid="gift-donee-orphan"
+                className="text-[11px] text-amber-600 dark:text-amber-400"
+              >
+                ⚠️ 지정한 수증자가 상속인 목록에서 삭제되었습니다 — 수증자를 다시 선택하세요.
+              </p>
+            )}
+
+            {/* 미선택 안내 */}
+            {!gift.doneeId && (
+              <p className="text-[11px] text-sky-600 dark:text-sky-400">
+                ⓘ 수증자를 지정하면 상속인별 배부표 ② 사전증여 열에 반영됩니다. (미지정 시 합산만)
+              </p>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* ⑤ 상속인에게 증여 토글 + ⑥ 수증인과의 관계 — 상속세 모드 doneeId 미선택 시에만 (수동 경로).
+       * isHeir(§13 게이트)가 doneeRelation(§53 관계)보다 위 — 사용자 지적 반영.
+       */}
+      {showIsHeir && !isCorporate && !gift.doneeId && (
+        <>
+          <ToggleCard
+            tone="violet"
+            title="상속인에게 증여"
+            description="상속인: 10년 이내 합산 (§13①1호) / 비상속인: 5년 이내 합산 (§13①2호)"
+            checked={gift.isHeir}
+            onCheckedChange={(v) =>
+              set({ isHeir: v, beneficiaryType: v ? "heir" : "legatee" })
+            }
+          />
+          <div className="space-y-1">
+            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
+              수증인과의 관계
+            </label>
+            <select
+              value={gift.doneeRelation ?? ""}
+              onChange={(e) =>
+                set({
+                  doneeRelation: (e.target.value || undefined) as
+                    | DonorRelation
+                    | undefined,
+                })
+              }
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <option value="">선택</option>
+              {DONOR_RELATION_LIST.map((r) => (
+                <option key={r} value={r}>
+                  {DONOR_RELATION_LABELS[r]}
+                </option>
+              ))}
+            </select>
+          </div>
+        </>
       )}
 
       {/* 증여가액 */}
