@@ -95,7 +95,12 @@ export function GiftRowEditor({
     if (userTouchedTax) return {};
     const tax = autoComputePriorGiftTax(next.giftAmount ?? 0, next.doneeRelation);
     if (next.beneficiaryType === "corporate") {
-      return { corporateGiftComputedTax: tax, giftTaxPaid: 0, giftTaxBase: undefined };
+      // 세액 0(가액 미입력 등)이면 cgct를 undefined로 — 0 store 잔재 예방(빈칸 버그 발생 경로 차단).
+      return {
+        corporateGiftComputedTax: tax > 0 ? tax : undefined,
+        giftTaxPaid: 0,
+        giftTaxBase: undefined,
+      };
     }
     return { giftTaxPaid: tax };
   }
@@ -345,7 +350,8 @@ export function GiftRowEditor({
       {(() => {
         const corpNeedsFallback =
           isCorporate &&
-          gift.corporateGiftComputedTax === undefined &&
+          (gift.corporateGiftComputedTax === undefined ||
+            gift.corporateGiftComputedTax <= 0) &&
           (gift.giftAmount ?? 0) > 0 &&
           !userTouchedTax;
         const taxValue = corpNeedsFallback
@@ -359,14 +365,14 @@ export function GiftRowEditor({
             <CurrencyInput
               label={
                 isCorporate
-                  ? "§3의2② 산출세액 상당액 (자동·수정 가능)"
+                  ? "⑩a 상속인외 증여세 산출세액"
                   : "기납부 증여세 (자동·수정 가능)"
               }
               value={taxValue > 0 ? String(taxValue) : ""}
               onChange={handleTaxAmountChange}
               hint={
                 isCorporate
-                  ? "영리법인 증여세는 비과세(§4의2③). §3의2② 면제 한도 분자 — 증여재산가액·관계로 자동 산출."
+                  ? "영리법인 증여세는 비과세(§4의2③). §3의2② 면제 한도 분자 — 증여재산가액·관계로 자동 산출(수정 가능)."
                   : "§28 증여세액공제 계산 — 증여재산가액·수증자 관계로 자동 산출(수정 가능)."
               }
             />

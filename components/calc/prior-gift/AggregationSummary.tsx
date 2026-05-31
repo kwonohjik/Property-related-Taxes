@@ -7,6 +7,7 @@
  */
 
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
+import { applyCorporateGiftTaxFallback } from "@/lib/calc/prior-gift-auto-tax";
 import type { PriorGift } from "@/lib/tax-engine/types/inheritance-gift.types";
 
 export function AggregationSummary({
@@ -33,7 +34,11 @@ export function AggregationSummary({
       : null;
 
   // 영리법인 분해 (정정 E16·D6·D13 — indigo tone 유지, ↳ prefix로 분해 표시)
-  const corporateGifts = gifts.filter((g) => g.beneficiaryType === "corporate");
+  // ⑩a 산출세액은 fallback 적용본으로 합산 — cgct=0 store 잔재가 합계 0·행 숨김을 유발하는 dual-truth 방지.
+  // (표시 GiftRowEditor·API buildInput과 동일 single-source applyCorporateGiftTaxFallback)
+  const corporateGifts = applyCorporateGiftTaxFallback(gifts).filter(
+    (g) => g.beneficiaryType === "corporate",
+  );
   const corporateTotal = corporateGifts.reduce((s, g) => s + g.giftAmount, 0);
   const corporateComputedTaxTotal = corporateGifts.reduce(
     (s, g) => s + (g.corporateGiftComputedTax ?? 0),

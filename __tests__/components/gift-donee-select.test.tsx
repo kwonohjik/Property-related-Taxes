@@ -247,13 +247,13 @@ describe("GiftRowEditor — 수증자 select (2-B anchor)", () => {
     expect(updated.giftTaxBase).toBeUndefined();
   });
 
-  it("T-19: 영리법인 수증자 시 세액 라벨 '§3의2② 산출세액 상당액'", () => {
+  it("T-19(A6): 영리법인 수증자 시 세액 라벨 '⑩a 상속인외 증여세 산출세액' (결과표 row-10a 통일)", () => {
     const HEIR_CORP: Heir = { id: "corp-1", relation: "corporate", name: "M주식회사" };
     renderEditor(
       makeGift({ beneficiaryType: "corporate", isHeir: false, doneeId: "corp-1", giftAmount: 700_000_000, corporateGiftComputedTax: 150_000_000 }),
       { showIsHeir: true, heirs: [HEIR_CORP] },
     );
-    expect(screen.getByText(/§3의2② 산출세액 상당액/)).toBeDefined();
+    expect(screen.getByText(/⑩a 상속인외 증여세 산출세액/)).toBeDefined();
   });
 
   it("T-20: 부표1 기본 접힘 — 토글 버튼 존재", () => {
@@ -268,10 +268,24 @@ describe("GiftRowEditor — 수증자 select (2-B anchor)", () => {
       makeGift({ beneficiaryType: "corporate", isHeir: false, doneeId: "corp-1", giftAmount: 700_000_000 }),
       { showIsHeir: true, heirs: [HEIR_CORP] },
     );
-    const labels = screen.getAllByText(/§3의2② 산출세액 상당액/);
+    const labels = screen.getAllByText(/⑩a 상속인외 증여세 산출세액/);
     const wrapper = labels[0].closest("div.space-y-1\\.5") as HTMLElement;
     const input = wrapper.querySelector("input") as HTMLInputElement;
     // 진입 fallback — autoCompute 150m 표시 (빈칸 아님)
+    expect(input.value.replace(/,/g, "")).toBe("150000000");
+  });
+
+  it("T-22(A5): 기존 영리법인 데이터 cgct=0 + 700m 진입 → 세액란 150,000,000 표시 (0 빈칸 버그 수정)", () => {
+    const HEIR_CORP: Heir = { id: "corp-1", relation: "corporate", name: "M주식회사" };
+    // store에 cgct=0이 굳은 케이스(이미지30) — 가액 입력 전 수증자 선택·구버전 데이터.
+    // 변경 전: cgct ?? 0 = 0 → 빈칸. 변경 후: cgct<=0+가액>0 → autoCompute 150m.
+    renderEditor(
+      makeGift({ beneficiaryType: "corporate", isHeir: false, doneeId: "corp-1", giftAmount: 700_000_000, corporateGiftComputedTax: 0 }),
+      { showIsHeir: true, heirs: [HEIR_CORP] },
+    );
+    const labels = screen.getAllByText(/⑩a 상속인외 증여세 산출세액/);
+    const wrapper = labels[0].closest("div.space-y-1\\.5") as HTMLElement;
+    const input = wrapper.querySelector("input") as HTMLInputElement;
     expect(input.value.replace(/,/g, "")).toBe("150000000");
   });
 

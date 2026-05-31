@@ -10,6 +10,7 @@ import {
   autoComputePriorGiftTax,
   applyCorporateGiftTaxFallback,
 } from "@/lib/calc/prior-gift-auto-tax";
+import { validatePriorGift } from "@/lib/calc/inheritance-validate";
 import type { PriorGift } from "@/lib/tax-engine/types/inheritance-gift.types";
 
 describe("autoComputePriorGiftTax — 단순 1건 독립 (§53 공제 + §56 세율)", () => {
@@ -69,9 +70,16 @@ describe("applyCorporateGiftTaxFallback — 진입 fallback (기존 데이터 cg
     expect(g.corporateGiftComputedTax).toBe(150_000_000);
   });
 
-  it("corporate cgct 0 (사용자 명시) → 존중 (덮어쓰지 않음)", () => {
+  it("A1: corporate cgct 0 + 가액 700m → 150m 주입 (0=미계산 간주 — 빈칸 버그 수정)", () => {
+    // 변경 정책: 영리법인은 가액>0이면 산출세액>0이 정상. cgct≤0은 미계산으로 간주해 법정값 도출.
+    // (이전 "0 존중" anchor는 cgct=0 store 잔재가 표시 빈칸·계산 0을 유발해 폐기 — feedback_anchor_correction_legal_priority)
     const [g] = applyCorporateGiftTaxFallback([corpGift({ corporateGiftComputedTax: 0 })]);
-    expect(g.corporateGiftComputedTax).toBe(0);
+    expect(g.corporateGiftComputedTax).toBe(150_000_000);
+  });
+
+  it("A1b: corporate cgct 음수 + 가액 700m → 150m 주입", () => {
+    const [g] = applyCorporateGiftTaxFallback([corpGift({ corporateGiftComputedTax: -1 })]);
+    expect(g.corporateGiftComputedTax).toBe(150_000_000);
   });
 
   it("corporate cgct >0 (이력·계산값) → 그대로 유지", () => {
@@ -84,10 +92,29 @@ describe("applyCorporateGiftTaxFallback — 진입 fallback (기존 데이터 cg
     expect(g.corporateGiftComputedTax).toBeUndefined();
   });
 
+  it("A4: corporate cgct 0 + 가액 0 → 미채움 (가액 가드 — 0 유지, validate 차단 위임)", () => {
+    const [g] = applyCorporateGiftTaxFallback([corpGift({ giftAmount: 0, corporateGiftComputedTax: 0 })]);
+    expect(g.corporateGiftComputedTax).toBe(0); // 가액 0이라 autoCompute 미발동 — 0 그대로
+  });
+
   it("비corporate(자연인) → 변경 안 함 (§28 위험 회피, 동일 참조)", () => {
     const natural: PriorGift = { giftDate: "2022-06-10", isHeir: true, giftAmount: 760_000_000, giftTaxPaid: 0, beneficiaryType: "heir" };
     const result = applyCorporateGiftTaxFallback([natural]);
     expect(result[0]).toBe(natural); // 동일 참조 — 미변경
     expect(result[0].giftTaxPaid).toBe(0);
+  });
+
+  // ───── A8: ⑧ validation 동기화 — fallback 후 cgct=0이던 입력이 통과하는지 ─────
+  it("A8: fallback 후 cgct=0이던 영리법인 → validatePriorGift 통과 (UI/API 통과 ↔ validate 차단 모순 0)", () => {
+    const [g] = applyCorporateGiftTaxFallback([
+      corpGift({ corporateGiftComputedTax: 0, doneeId: "corp-1" }),
+    ]);
+    expect(g.corporateGiftComputedTax).toBe(150_000_000);
+    expect(validatePriorGift(g)).toBeNull();
+  });
+
+  it("A8b: fallback 전 cgct=0 영리법인 → validatePriorGift 차단 (fallback 필요성 입증)", () => {
+    const err = validatePriorGift(corpGift({ corporateGiftComputedTax: 0, doneeId: "corp-1" }));
+    expect(err).toContain("corporateGiftComputedTax");
   });
 });

@@ -49,10 +49,12 @@ export function autoComputePriorGiftTax(
 /**
  * 영리법인 사전증여 §3의2② 산출세액 상당액 진입 fallback (phase2-후속).
  *
- * 기존 데이터·진입 시점(onChange 트리거 없음)에 corporateGiftComputedTax가 미설정(undefined)이고
+ * 기존 데이터·진입 시점(onChange 트리거 없음)에 corporateGiftComputedTax가 미설정(undefined)·0·음수이고
  * 증여재산가액이 있으면 autoComputePriorGiftTax로 채워 계산 정합을 보장.
- *   - corporateGiftComputedTax === undefined → 미계산 → fallback
- *   - === 0 (사용자 명시) 또는 > 0 (계산값) → 존중 (덮어쓰지 않음)
+ *   - corporateGiftComputedTax === undefined 또는 ≤ 0 → 미계산 → fallback (가액>0 시)
+ *     (영리법인은 가액>0이면 산출세액>0이 정상. cgct=0은 가액 입력 전 수증자 선택·구버전 데이터의 잔재로
+ *      표시 빈칸·계산 0·validate 차단을 유발 — probe 실증. feedback_anchor_correction_legal_priority)
+ *   - > 0 (이력·계산값) → 존중 (덮어쓰지 않음)
  *
  * UI 표시 fallback(GiftRowEditor)과 동일 산식 — mirror 3중(표시·API) single-source.
  * store(폼 state)는 변경하지 않음 — 엔진 전달용 정제만.
@@ -63,7 +65,8 @@ export function autoComputePriorGiftTax(
 export function applyCorporateGiftTaxFallback(gifts: PriorGift[]): PriorGift[] {
   return gifts.map((g) =>
     g.beneficiaryType === "corporate" &&
-    g.corporateGiftComputedTax === undefined &&
+    (g.corporateGiftComputedTax === undefined ||
+      g.corporateGiftComputedTax <= 0) &&
     (g.giftAmount ?? 0) > 0
       ? {
           ...g,
