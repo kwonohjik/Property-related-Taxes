@@ -6,6 +6,8 @@
  *   → §24 종합한도 적용 (= 상속세 과세가액 - 상속인·수유자에 대한 사전증여재산)
  *
  * §24 종합한도: 상속공제 총액 ≤ (상속세 과세가액 - 상속인·수유자의 사전증여재산가액)
+ *
+ * 영농상속공제 관련 함수는 800줄 정책에 따라 inheritance-farming-deduction.ts로 분리 (2026-05-31).
  */
 
 import { INH } from "../legal-codes";
@@ -18,14 +20,17 @@ import type {
   InheritanceDeductionResult,
 } from "../types/inheritance-gift.types";
 import type {
+  LumpSumComparisonDetail,
+  SpouseDeductionDetail,
+  FinancialDeductionDetail,
+  CohabitDeductionDetail,
+  DeductionLimitCeilingDetail,
+} from "../types/inheritance-deduction-detail.types";
+import type {
   FarmingDeductionDetail,
-  FarmingEligibilityResult,
   FarmingHeirAssessment,
   FarmingInheritanceInput,
 } from "../types/inheritance-farming.types";
-import { FARMING_MAX } from "../types/inheritance-farming.types";
-import { checkFarmingResidenceCompliance } from "@/lib/calc/farming-residence-check";
-import { getAdjacentSigunguCodes } from "@/lib/geo/administrative-district-adjacency";
 import {
   calcFamilyBusinessDeductionDirect,
   calcFamilyBusinessDeductionLegacy,
@@ -35,6 +40,15 @@ import {
   calcPersonalDeductions,
 } from "./personal-deduction-calc";
 import { calcLegalShareRatios } from "../tax-utils";
+
+// 영농 관련 함수 re-export (분리된 모듈 — 외부 import 경로 무변경)
+export {
+  evaluateFarmingEligibility,
+  evaluateFarmingEligibilityForHeir,
+  deriveQualifiedHeirIds,
+  resolveEffectiveQualifiedHeirIds,
+  calcFarmingDeduction,
+} from "./inheritance-farming-deduction";
 
 // ============================================================
 // 공제 한도 상수
@@ -78,9 +92,6 @@ function cohabitShareRate(deathDate?: string): number {
 /** 동거주택공제 최댓값 (§23의2): 6억원 */
 const COHABIT_MAX = 600_000_000;
 
-// 영농상속공제 최댓값 — FARMING_MAX (§18의3①, 30억) → inheritance-farming.types.ts import
-// KoreanLaw MCP 검증 2026-05-21: 기존 20억 → 30억 정정 (법령 정합)
-
 /** 가업상속공제 최댓값 (§18의2): 600억원 (10년 이상 영위) */
 const FAMILY_BUSINESS_MAX_10Y = 60_000_000_000;
 
@@ -101,6 +112,8 @@ export function calcBasicDeduction(): number {
  * - 배우자가 실제 상속받은 금액과 법정상속분 중 작은 금액
  * - 최소값 5억, 최댓값 30억
  *
+ * E5: 중간값(legalShareCapped·actualAmountCapped·baseBeforeFloor·floorApplied) 반환 추가.
+ *
  * @param spouseActualAmount 배우자 실제 상속금액 (미입력 시 법정상속분으로 산정)
  * @param totalEstateValue 상속세 과세가액 (법정상속분 계산 기준)
  * @param heirs 상속인 목록 (배우자 존재 여부 및 법정상속분 산정)
@@ -110,12 +123,24 @@ export function calcSpouseDeduction(
   totalEstateValue: number,
   heirs: Heir[],
   legalShareOverride?: number,
-): { deduction: number; breakdown: CalculationStep[] } {
+): {
+  deduction: number;
+  breakdown: CalculationStep[];
+  // E5 중간값 — spouseDeductionDetail 조립용
+  legalShareCapped: number;
+  actualAmountCapped: number;
+  baseBeforeFloor: number;
+  floorApplied: boolean;
+} {
   const spouseHeir = heirs.find((h) => h.relation === "spouse");
   if (!spouseHeir) {
     return {
       deduction: 0,
       breakdown: [{ label: "배우자 없음 — 배우자공제 미적용", amount: 0 }],
+      legalShareCapped: 0,
+      actualAmountCapped: 0,
+      baseBeforeFloor: 0,
+      floorApplied: false,
     };
   }
 
@@ -139,24 +164,33 @@ export function calcSpouseDeduction(
   // 실제 상속금액 미입력 시 법정상속분 적용
   const actualAmount = spouseActualAmount ?? legalShareAmount;
 
-  // 공제 기준: min(실제, 법정상속분)
-  const baseAmount = Math.min(actualAmount, legalShareAmount);
+  // E5: 30억 한도 각각 적용
+  const legalShareCapped = Math.min(legalShareAmount, SPOUSE_MAX);
+  const actualAmountCapped = Math.min(actualAmount, SPOUSE_MAX);
+
+  // 공제 기준: min(실제capped, 법정상속분capped)
+  const baseBeforeFloor = Math.min(actualAmountCapped, legalShareCapped);
 
   // 최소값·최댓값 적용
-  const deduction = Math.max(SPOUSE_MIN, Math.min(baseAmount, SPOUSE_MAX));
+  const floorApplied = baseBeforeFloor < SPOUSE_MIN;
+  const deduction = Math.max(SPOUSE_MIN, baseBeforeFloor);
 
   return {
     deduction,
     breakdown: [
       { label: "법정상속분", amount: legalShareAmount, lawRef: INH.SPOUSE_DEDUCTION },
       { label: "배우자 실제 상속금액", amount: actualAmount },
-      { label: "공제 기준액 (min)", amount: baseAmount },
+      { label: "공제 기준액 (min)", amount: baseBeforeFloor },
       {
         label: `배우자공제 (min(5억,기준) ~ max 30억)`,
         amount: deduction,
         lawRef: INH.SPOUSE_DEDUCTION,
       },
     ],
+    legalShareCapped,
+    actualAmountCapped,
+    baseBeforeFloor,
+    floorApplied,
   };
 }
 
@@ -166,42 +200,82 @@ export function calcSpouseDeduction(
  *   ≤ 2천만: 전액 (100%)
  *   2천만 < x ≤ 1억: 2천만원 고정
  *   1억 < x: 20% (최대 2억)
+ *
+ * E2: rawDeduction 변수 분리 + detail 반환.
+ * rows[]는 orchestrator(inheritance-tax.ts)가 estateItems/debtItems 집계 후 주입.
  */
 export function calcFinancialDeduction(netFinancialAssets: number): {
   deduction: number;
   breakdown: CalculationStep[];
+  detail: FinancialDeductionDetail;
 } {
   if (netFinancialAssets <= 0) {
-    return { deduction: 0, breakdown: [] };
+    return {
+      deduction: 0,
+      breakdown: [],
+      detail: {
+        rows: [],
+        netFinancial: netFinancialAssets,
+        bracket: "tier1",
+        rate: 1.0,
+        rawDeduction: 0,
+        cap: FINANCIAL_MAX,
+        cappedDeduction: 0,
+      },
+    };
   }
 
-  let deduction: number;
+  let rawDeduction: number;
+  let bracket: "tier1" | "tier2" | "tier3";
+  let rate: number;
   let note: string;
 
   if (netFinancialAssets <= FINANCIAL_FULL_EXEMPT_MAX) {
-    deduction = netFinancialAssets;
+    // tier1: ≤ 2천만 → 전액
+    rawDeduction = netFinancialAssets;
+    bracket = "tier1";
+    rate = 1.0;
     note = "2천만원 이하 — 전액 공제";
   } else if (netFinancialAssets <= FINANCIAL_MID_MAX) {
-    deduction = FINANCIAL_MID_FIXED;
+    // tier2: 2천만 초과~1억 이하 → 2천만원 고정
+    rawDeduction = FINANCIAL_MID_FIXED;
+    bracket = "tier2";
+    rate = 0; // 고정액이므로 율 표현 불가 → 0
     note = "2천만~1억 구간 — 2천만원 고정 공제";
   } else {
-    deduction = Math.min(applyRate(netFinancialAssets, FINANCIAL_OVER_RATE), FINANCIAL_MAX);
+    // tier3: 1억 초과 → 20% (최대 2억)
+    rawDeduction = applyRate(netFinancialAssets, FINANCIAL_OVER_RATE);
+    bracket = "tier3";
+    rate = FINANCIAL_OVER_RATE;
     note = "1억 초과 — 20% 공제 (최대 2억)";
   }
 
+  const cappedDeduction = Math.min(rawDeduction, FINANCIAL_MAX);
+
   return {
-    deduction,
+    deduction: cappedDeduction,
     breakdown: [
       { label: "순금융재산", amount: netFinancialAssets },
-      { label: `금융재산공제 (${note})`, amount: deduction, lawRef: INH.FINANCIAL_DEDUCTION },
+      { label: `금융재산공제 (${note})`, amount: cappedDeduction, lawRef: INH.FINANCIAL_DEDUCTION },
     ],
+    detail: {
+      rows: [], // orchestrator가 estateItems/debtItems 집계 후 주입
+      netFinancial: netFinancialAssets,
+      bracket,
+      rate,
+      rawDeduction,
+      cap: FINANCIAL_MAX,
+      cappedDeduction,
+    },
   };
 }
 
 /**
  * 동거주택 상속공제 (§23의2)
- * 공제액 = 주택 공시가격 × 80%, 최대 6억
+ * 공제액 = 주택 공시가격 × 80% 또는 100%, 최대 6억
  * (요건 확인은 UI에서 체크박스로 처리, 여기서는 금액만 계산)
+ *
+ * E3: detail: CohabitDeductionDetail 반환 추가.
  */
 export function calcCohabitationDeduction(
   cohabitHouseStdPrice: number,
@@ -210,19 +284,32 @@ export function calcCohabitationDeduction(
 ): {
   deduction: number;
   breakdown: CalculationStep[];
+  detail: CohabitDeductionDetail;
 } {
   // §23의2① 담보된 피상속인 채무액을 뺀 가액
   const base = Math.max(0, cohabitHouseStdPrice - securedDebt);
   if (base <= 0) {
-    return { deduction: 0, breakdown: [] };
+    return {
+      deduction: 0,
+      breakdown: [],
+      detail: {
+        housingValue: cohabitHouseStdPrice,
+        securedDebt,
+        base: 0,
+        rate: cohabitShareRate(deathDate),
+        rawDeduction: 0,
+        cap: COHABIT_MAX,
+        cappedDeduction: 0,
+      },
+    };
   }
 
   const rate = cohabitShareRate(deathDate);
-  const raw = applyRate(base, rate);
-  const deduction = Math.min(raw, COHABIT_MAX);
+  const rawDeduction = applyRate(base, rate);
+  const cappedDeduction = Math.min(rawDeduction, COHABIT_MAX);
 
   return {
-    deduction,
+    deduction: cappedDeduction,
     breakdown: [
       { label: "동거주택 공시가격", amount: cohabitHouseStdPrice },
       ...(securedDebt > 0
@@ -236,288 +323,24 @@ export function calcCohabitationDeduction(
         : []),
       {
         label: `동거주택공제 (${Math.round(rate * 100)}%, 최대 6억)`,
-        amount: deduction,
+        amount: cappedDeduction,
         lawRef: INH.COHABIT_DEDUCTION,
       },
     ],
-  };
-}
-
-/**
- * 영농상속공제 자격 평가 (§18의3 + 시행령 §16).
- *
- * KoreanLaw MCP 검증 2026-05-21:
- *   - §16②(피상속인 8년 종사·거주), §16③(상속인 2년·18세·후계자),
- *     §16⑭(영농 부정), §18의3⑥(조세포탈)
- *
- * 평가 순서:
- *   1. §18의3⑥ 조세포탈 → early return (다른 사유 평가 차단)
- *   2. §16⑭ 영농 부정 (피상속인·상속인·후계자 모두 적용)
- *   3. 피상속인 요건 (personal §16②1호 / corporate §16②2호)
- *   4. 후계자 트랙(isDesignatedSuccessor=true) → 18세·2년·거주 면제 후 return
- *   5. 상속인 요건 §16③ (개인/법인 분기)
- */
-export function evaluateFarmingEligibility(
-  input: FarmingInheritanceInput,
-): FarmingEligibilityResult {
-  const reasons: string[] = [];
-
-  // 1. §18의3⑥ 조세포탈·회계부정 — 우선 배제 (단독 사유로 종결)
-  if (input.hasTaxFraudConviction) {
-    reasons.push("§18의3⑥ — 조세포탈·회계부정 형 확정 (공제 배제)");
-    return { eligible: false, reasons };
-  }
-
-  // 1-b. §16② 단서 — 영농상속 후 최대주주 사망 상속 (corporate 전용, F-9 2026-05-21)
-  // KoreanLaw MCP 검증: 시행령 §16② 단서 — "제2호에 해당하는 경우로서 영농상속이 이루어진 후에
-  // 영농상속 당시 최대주주등에 해당하는 사람(영농상속을 받은 상속인은 제외한다)의 사망으로 상속이
-  // 개시되는 경우는 적용하지 아니한다."
-  if (
-    input.type === "corporate" &&
-    input.isSecondaryAfterFarmingInheritance === true
-  ) {
-    reasons.push(
-      "§16② 단서 — 영농상속 후 최대주주 사망에 의한 상속 (적용 배제)",
-    );
-    return { eligible: false, reasons };
-  }
-
-  // 2. §16⑭ 영농 부정 — 피상속인·상속인·후계자 모두 적용
-  if (input.hasDisqualifyingIncome) {
-    reasons.push(
-      "§16⑭ — 사업소득+총급여 3,700만 이상 과세기간 존재 (직접 종사 부정)",
-    );
-  }
-
-  // 3. 피상속인 요건 §16②
-  if (input.type === "personal") {
-    if (!input.decedentEightYearFarming) {
-      reasons.push("§16②1호가 — 피상속인 8년 직접 영농 종사 미충족");
-    }
-    if (!input.decedentResidenceMet) {
-      reasons.push("§16②1호나 — 피상속인 거주지 미충족");
-    }
-  } else {
-    if (!input.decedentCorporateMet) {
-      reasons.push("§16②2호 — 피상속인 법인 8년 경영 + 최대주주 50%+ 미충족");
-    }
-  }
-
-  // 4. 후계자 트랙 — 18세·2년·거주 요건 면제
-  if (input.isDesignatedSuccessor === true) {
-    return { eligible: reasons.length === 0, reasons };
-  }
-
-  // 5. 상속인 요건 §16③
-  if (!input.heirIsAdult) {
-    reasons.push("§16③ — 상속인 18세 이상 미충족");
-  }
-  const skip2Year = input.decedentEarlyDeath === true;
-  if (!skip2Year && !input.heirTwoYearFarming) {
-    reasons.push(
-      input.type === "personal"
-        ? "§16③1호가 — 상속인 2년 직접 영농 종사 미충족 (피상속인 65세 미만 사망 시 면제)"
-        : "§16③2호가 — 상속인 2년 법인 종사 미충족",
-    );
-  }
-  if (input.type === "personal" && !input.heirResidenceMet) {
-    reasons.push("§16③1호나 — 상속인 거주지 미충족");
-  }
-  if (input.type === "corporate" && !input.heirCorporateOfficer) {
-    reasons.push(
-      "§16③2호나 — 상속인 신고기한 내 임원 + 2년 내 대표이사 미충족",
-    );
-  }
-
-  return { eligible: reasons.length === 0, reasons };
-}
-
-/**
- * 상속인별 자격 평가 (부록 A, FH-1~6, 2026-05-22).
- *
- * 법령 근거 (KoreanLaw MCP 검증 `20f75e2`):
- *   - §16③ "상속인이 ... 요건을 충족하는 경우" — 상속인 단위 평가
- *   - §16⑭ "피상속인 또는 상속인" — 상속인별 결격소득 분리
- *
- * 흐름:
- *   1. 폼-수준 사유 (피상속인 8년·거주·법인 + §18의3⑥ + §16② 단서 + 피상속인 §16⑭) 전체 평가
- *      → 미충족이면 해당 heir 자동 미충족 (전체 자격 영향)
- *   2. 폼-수준 충족이면 heir-수준 사유 (18세·2년·거주·임원·후계자 트랙·결격소득) 평가
- *
- * @param input    폼-수준 FarmingInheritanceInput
- * @param assessment 상속인별 평가 (heirAssessments 항목)
- */
-export function evaluateFarmingEligibilityForHeir(
-  input: FarmingInheritanceInput,
-  assessment: FarmingHeirAssessment,
-): FarmingEligibilityResult {
-  // 폼-수준 사유 (피상속인 + §18의3⑥ + §16② 단서)를 동일 적용
-  // — heir.hasDisqualifyingIncome로 §16⑭ 평가 분리 (input.hasDisqualifyingIncome은 무시)
-  // — heir.isDesignatedSuccessor·heir.heirIsAdult·heirTwoYearFarming·heirResidenceMet·heirCorporateOfficer로 §16③ 평가 분리
-  const heirInput: FarmingInheritanceInput = {
-    ...input,
-    hasDisqualifyingIncome: assessment.hasDisqualifyingIncome,
-    heirIsAdult: assessment.heirIsAdult,
-    heirTwoYearFarming: assessment.heirTwoYearFarming,
-    heirResidenceMet: assessment.heirResidenceMet,
-    heirCorporateOfficer: assessment.heirCorporateOfficer,
-    isDesignatedSuccessor: assessment.isDesignatedSuccessor,
-  };
-  return evaluateFarmingEligibility(heirInput);
-}
-
-/**
- * heirAssessments 입력 시 자격 충족 상속인 ID 자동 도출 (부록 A, FH-1~6).
- *
- * @returns 자격 충족 상속인 ID 목록.
- *   - heirAssessments 미입력 시 undefined 반환 (legacy 폼-수준 평가 사용 신호)
- *   - 폼-수준 사유(피상속인 등) 미충족 시 [] 반환 (모든 heir 미충족)
- *   - 그 외 각 heir 평가 → eligible=true만 합산
- */
-export function deriveQualifiedHeirIds(
-  input: FarmingInheritanceInput,
-): string[] | undefined {
-  const assessments = input.heirAssessments;
-  if (assessments === undefined) return undefined;
-  return assessments
-    .filter((a) => evaluateFarmingEligibilityForHeir(input, a).eligible)
-    .map((a) => a.heirId);
-}
-
-/**
- * 영농상속재산가액 산정에 실제 적용할 자격자 ID 목록 (PR5 — 명시 override 우선).
- *
- * 우선순위 (시행령 §16⑤ 본문 — 제3항 요건 갖춘 상속인이 받는 가액):
- *   1. heirAssessments 미입력(부록 A 미사용) → 폼-수준 명시 qualifiedHeirIds 그대로 (legacy)
- *   2. heirAssessments 입력 + qualifiedHeirIds 명시값 존재 → **명시값 우선(override)**
- *      (사용자가 자동도출과 다르게 지정 — §16③ 요건과 다를 수 있으므로 UI 경고 배지)
- *   3. heirAssessments 입력 + qualifiedHeirIds 미입력 → deriveQualifiedHeirIds(자동도출)
- */
-export function resolveEffectiveQualifiedHeirIds(
-  input: FarmingInheritanceInput,
-): string[] | undefined {
-  if (input.heirAssessments === undefined) return input.qualifiedHeirIds;
-  if (input.qualifiedHeirIds !== undefined) return input.qualifiedHeirIds;
-  return deriveQualifiedHeirIds(input);
-}
-
-/**
- * 영농상속공제 (§18의3)
- * 농지·초지·산림지·어선·어업권·농업용 건축물·염전 + 법인 영농 주식, 최대 30억 (§18의3①)
- *
- * farming 미입력 시 legacy 호환 (evaluated=false, eligible=true 가정).
- */
-export function calcFarmingDeduction(
-  farmingAssetValue: number,
-  farming?: FarmingInheritanceInput,
-  estateItems?: EstateItem[],
-): {
-  deduction: number;
-  breakdown: CalculationStep[];
-  detail: FarmingDeductionDetail;
-} {
-  const evalResult: FarmingEligibilityResult = farming
-    ? evaluateFarmingEligibility(farming)
-    : { eligible: true, reasons: [] };
-  const evaluated = farming !== undefined;
-  const safeAssetValue = Math.max(0, farmingAssetValue);
-
-  // 부록 A — heirAssessments 입력 시 자격자 N명 / 전체 M명 메타 계산
-  const totalHeirCount = farming?.heirAssessments?.length;
-  const qualifiedHeirCount =
-    farming?.heirAssessments !== undefined
-      ? (deriveQualifiedHeirIds(farming) ?? []).length
-      : undefined;
-
-  // v4.1.1 D8/14지점 ⑦ — type="personal"일 때만 거주지 OR echo 생성 (corporate 트랙은 §16②2호 거주지 요건 없음)
-  const residence =
-    farming?.type === "personal" && estateItems
-      ? (() => {
-          // v4.1.1 PR-3 — adjacency resolver 자동 주입. Phase 1-C 매트릭스 데이터 주입 전까지
-          // resolver는 빈 배열 반환 → adjacent_district 분기 비활성, within_30km로 fallback
-          const r = checkFarmingResidenceCompliance(estateItems, farming, {
-            adjacentSigunguCodes: getAdjacentSigunguCodes,
-          });
-          return {
-            decedentMatchKind: r.decedentMatchKind,
-            heirMatchKind: r.heirMatchKind,
-            decedentAutoMet: r.decedentAutoMet,
-            heirAutoMet: r.heirAutoMet,
-            decedentMinDistanceKm: r.decedentMinDistanceKm,
-            heirMinDistanceKm: r.heirMinDistanceKm,
-          };
-        })()
-      : undefined;
-
-  // 자격 미충족 — 공제 0 + 사용자 입력값은 detail에 보존
-  if (!evalResult.eligible) {
-    return {
-      deduction: 0,
-      breakdown: [
-        { label: "영농자산가액 (입력)", amount: safeAssetValue },
-        {
-          label: "영농상속공제 (자격 미충족)",
-          amount: 0,
-          lawRef: INH.FARMING_DEDUCTION,
-          note: evalResult.reasons.join(" / "),
-        },
-      ],
-      detail: {
-        eligible: false,
-        evaluated,
-        ineligibleReasons: evalResult.reasons,
-        appliedAssetValue: safeAssetValue,
-        cappedDeduction: 0,
-        qualifiedHeirCount,
-        totalHeirCount,
-        residence,
-      },
-    };
-  }
-
-  if (safeAssetValue <= 0) {
-    return {
-      deduction: 0,
-      breakdown: [],
-      detail: {
-        eligible: true,
-        evaluated,
-        ineligibleReasons: [],
-        appliedAssetValue: 0,
-        cappedDeduction: 0,
-        qualifiedHeirCount,
-        totalHeirCount,
-        residence,
-      },
-    };
-  }
-
-  const capped = Math.min(safeAssetValue, FARMING_MAX);
-  return {
-    deduction: capped,
-    breakdown: [
-      { label: "영농자산가액", amount: safeAssetValue },
-      {
-        label: "영농상속공제 (최대 30억)",
-        amount: capped,
-        lawRef: INH.FARMING_DEDUCTION,
-      },
-    ],
     detail: {
-      eligible: true,
-      evaluated,
-      ineligibleReasons: [],
-      appliedAssetValue: safeAssetValue,
-      cappedDeduction: capped,
-      qualifiedHeirCount,
-      totalHeirCount,
-      residence,
+      housingValue: cohabitHouseStdPrice,
+      securedDebt,
+      base,
+      rate,
+      rawDeduction,
+      cap: COHABIT_MAX,
+      cappedDeduction,
     },
   };
 }
 
 /**
- * 가업상속공제 (§18의3)
+ * 가업상속공제 (§18의2)
  * 최대 600억 (10년 이상 영위 기준)
  * ※ 가업상속공제 적용 시 배우자공제는 제한 있음 — 단순화하여 한도만 적용
  */
@@ -550,6 +373,8 @@ export function calcFamilyBusinessDeduction(
  *
  * legacy 호출 (priorGiftToHeirTotal만 제공): 분자 = taxableEstateValue − priorGiftToHeirTotal
  *
+ * E4: ceilingDetail: DeductionLimitCeilingDetail 반환 추가.
+ *
  * @param rawTotalDeduction 공제 합계 (한도 적용 전)
  * @param taxableEstateValue 상속세 과세가액
  * @param priorGiftToHeirTotal 상속인 사전증여 가산가액 (legacy fallback용)
@@ -565,37 +390,69 @@ export function applyDeductionLimit(
     legateeAmountNonHeir?: number;
     disasterLossDeduction?: number;
   },
-): { limitedDeduction: number; ceiling: number; wasCapped: boolean } {
+): {
+  limitedDeduction: number;
+  ceiling: number;
+  wasCapped: boolean;
+  ceilingDetail: DeductionLimitCeilingDetail;
+} {
   let ceiling: number;
+  let legateeNonHeir: number;
+  let totalGift: number;
+  let giftDeductions: number;
+  let netPriorGiftDeducted: number;
+
   if (params && params.totalPriorGiftAmount !== undefined) {
     // Phase D 정확 산식
-    const totalGift = params.totalPriorGiftAmount;
-    const giftDeductions =
+    totalGift = params.totalPriorGiftAmount;
+    giftDeductions =
       (params.priorGiftDeductionTotal ?? 0) +
       (params.disasterLossDeduction ?? 0);
-    const legateeNonHeir = params.legateeAmountNonHeir ?? 0;
-    ceiling = Math.max(
-      0,
-      taxableEstateValue - legateeNonHeir - Math.max(0, totalGift - giftDeductions),
-    );
+    legateeNonHeir = params.legateeAmountNonHeir ?? 0;
+    netPriorGiftDeducted = Math.max(0, totalGift - giftDeductions);
+    ceiling = Math.max(0, taxableEstateValue - legateeNonHeir - netPriorGiftDeducted);
   } else {
     // legacy fallback
+    totalGift = priorGiftToHeirTotal;
+    giftDeductions = 0;
+    legateeNonHeir = 0;
+    netPriorGiftDeducted = priorGiftToHeirTotal;
     ceiling = Math.max(0, taxableEstateValue - priorGiftToHeirTotal);
   }
+
   const limitedDeduction = Math.min(rawTotalDeduction, ceiling);
-  return {
-    limitedDeduction,
+  const wasCapped = rawTotalDeduction > ceiling;
+
+  const ceilingDetail: DeductionLimitCeilingDetail = {
+    taxableEstateValue,
+    legateeAmountNonHeir: legateeNonHeir,
+    heirWaiverAmount: 0, // §24 ②호 미구현 — 항상 0
+    totalPriorGiftAmount: totalGift,
+    priorGiftDeductionTotal: params?.priorGiftDeductionTotal ?? 0,
+    disasterLossDeduction: params?.disasterLossDeduction ?? 0,
+    netPriorGiftDeducted,
     ceiling,
-    wasCapped: rawTotalDeduction > ceiling,
+    rawTotalDeduction,
+    wasCapped,
+    limitedDeduction,
   };
+
+  return { limitedDeduction, ceiling, wasCapped, ceilingDetail };
 }
 
 // ============================================================
 // 통합 공제 계산 (7종 + §24 한도)
 // ============================================================
 
+// 분리된 영농 함수들을 내부에서 사용하기 위한 import
+import {
+  calcFarmingDeduction as _calcFarmingDeduction,
+} from "./inheritance-farming-deduction";
+
 /**
  * 상속공제 전체 계산
+ *
+ * E6: lumpSumComparisonDetail 조립 + financial/cohabit/limit detail을 result에 주입 + rawTotalDeduction 노출.
  *
  * @param input 공제 입력
  * @param taxableEstateValue 상속세 과세가액 (배우자 법정상속분·§24 한도 계산에 사용)
@@ -659,11 +516,23 @@ export function calcInheritanceDeductions(
   const chosenBasicPersonal =
     chosenMethod === "lump_sum" ? LUMP_SUM_DEDUCTION : itemizedTotal;
 
+  // E6: lumpSumComparisonDetail 조립
+  const lumpSumComparisonDetail: LumpSumComparisonDetail = {
+    basicDeduction,
+    personalDeductionTotal,
+    itemizedSubtotal: itemizedTotal,
+    lumpSumAmount: LUMP_SUM_DEDUCTION,
+    selectedAmount: chosenBasicPersonal,
+    selectedMethod: chosenMethod,
+    spouseSoleHeirExclusion: isSpouseSoleHeir,
+  };
+
   // ⑤ 금융재산공제
   const financialResult = calcFinancialDeduction(input.netFinancialAssets ?? 0);
   const financialDeduction = financialResult.deduction;
 
   // ⑥ 동거주택공제 (Phase E: 직접 입력 모드)
+  let cohabitDeductionDetail: CohabitDeductionDetail;
   let cohabitResult: { deduction: number; breakdown: CalculationStep[] };
   if (input.cohabitDirectAmount !== undefined && input.cohabitDirectAmount > 0) {
     const capped = Math.min(input.cohabitDirectAmount, 600_000_000);
@@ -677,14 +546,26 @@ export function calcInheritanceDeductions(
         },
       ],
     };
+    // directAmount 모드: 내부 산식은 단순 — housingValue=directAmount, securedDebt=0, base=directAmount, rate=1.0
+    cohabitDeductionDetail = {
+      housingValue: input.cohabitDirectAmount,
+      securedDebt: 0,
+      base: input.cohabitDirectAmount,
+      rate: 1.0,
+      rawDeduction: input.cohabitDirectAmount,
+      cap: COHABIT_MAX,
+      cappedDeduction: capped,
+    };
   } else {
     // securedDebt는 1차 0 (§23의2① 담보채무 연동은 후속). deathDate로 80%/100% historical 분기.
-    cohabitResult = calcCohabitationDeduction(input.cohabitHouseStdPrice ?? 0, 0, baseDate);
+    const cohabitFull = calcCohabitationDeduction(input.cohabitHouseStdPrice ?? 0, 0, baseDate);
+    cohabitResult = { deduction: cohabitFull.deduction, breakdown: cohabitFull.breakdown };
+    cohabitDeductionDetail = cohabitFull.detail;
   }
   const cohabitationDeduction = cohabitResult.deduction;
 
   // ⑦ 영농공제 (§18의3 + 시행령 §16, 2026-05-21 정밀화 + v4.1.1 D8 residence echo)
-  const farmingResult = calcFarmingDeduction(
+  const farmingResult = _calcFarmingDeduction(
     input.farmingAssetValue ?? 0,
     input.farming,
     familyBusinessAux?.estateItems,
@@ -730,12 +611,13 @@ export function calcInheritanceDeductions(
     familyBusinessDeduction;
 
   // §24 종합한도 적용 — Phase D 분자 보정 (limitParams) 우선
-  const { limitedDeduction, ceiling, wasCapped } = applyDeductionLimit(
+  const limitResult = applyDeductionLimit(
     rawTotal,
     taxableEstateValue,
     priorGiftToHeirTotal,
     limitParams,
   );
+  const { limitedDeduction, ceiling, wasCapped, ceilingDetail } = limitResult;
 
   // breakdown 구성
   const breakdown: CalculationStep[] = [
@@ -761,6 +643,18 @@ export function calcInheritanceDeductions(
       : []),
     { label: "최종 상속공제액", amount: limitedDeduction },
   ];
+
+  // E6: spouseDeductionDetail 기본 조립 (legalShareTable·actualAmountTable은 orchestrator patch)
+  const spouseDeductionDetail: SpouseDeductionDetail = {
+    legalShareTable: undefined, // orchestrator(Phase D)가 채움
+    actualAmountTable: undefined, // orchestrator가 estateItems/debtItems 집계 후 채움
+    capAmount: SPOUSE_MAX,
+    legalShareCapped: spouseResult.legalShareCapped,
+    actualAmountCapped: spouseResult.actualAmountCapped,
+    baseBeforeFloor: spouseResult.baseBeforeFloor,
+    floorApplied: spouseResult.floorApplied,
+    deduction: spouseDeduction,
+  };
 
   return {
     basicDeduction:
@@ -790,5 +684,12 @@ export function calcInheritanceDeductions(
       INH.FAMILY_BUSINESS_DEDUCTION,
       INH.DEDUCTION_LIMIT,
     ],
+    // E6 detail 노출
+    lumpSumComparisonDetail,
+    spouseDeductionDetail,
+    financialDeductionDetail: financialResult.detail,
+    cohabitDeductionDetail,
+    deductionLimitDetail: ceilingDetail,
+    rawTotalDeduction: rawTotal,
   };
 }

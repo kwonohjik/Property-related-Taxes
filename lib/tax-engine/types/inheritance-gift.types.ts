@@ -761,10 +761,27 @@ import type { FarmingInheritanceInput, FarmingDeductionDetail } from "./inherita
 import type { FamilyBusinessCategory, FamilyBusinessInheritanceInput, FamilyBusinessDeductionDetail } from "./inheritance-family-business.types";
 import type { CorporateNonBusinessAssets } from "./inheritance-corporate-non-business.types";
 import type { EstateLocationFields } from "./inheritance-asset-location.types";
+import type {
+  LumpSumComparisonDetail,
+  SpouseDeductionDetail,
+  FinancialDeductionDetail,
+  CohabitDeductionDetail,
+  DeductionLimitCeilingDetail,
+} from "./inheritance-deduction-detail.types";
 export type { FarmingInheritanceInput, FarmingDeductionDetail, FarmingEligibilityResult } from "./inheritance-farming.types";
 export type { FamilyBusinessCategory, FamilyBusinessInheritanceInput, FamilyBusinessIneligibleReason, FamilyBusinessDeductionDetail, FamilyBusinessCap, FamilyBusinessMediumGuard } from "./inheritance-family-business.types";
 export type { CorporateNonBusinessAssets, CorporateStockAdjustedResult } from "./inheritance-corporate-non-business.types";
 export type { LatLng, EstateAddress } from "./inheritance-asset-location.types";
+export type {
+  LumpSumComparisonDetail,
+  SpouseLegalShareTable,
+  SpouseActualAmountTable,
+  SpouseDeductionDetail,
+  FinancialBreakdownRow,
+  FinancialDeductionDetail,
+  CohabitDeductionDetail,
+  DeductionLimitCeilingDetail,
+} from "./inheritance-deduction-detail.types";
 export { FARMING_MAX } from "./inheritance-farming.types";
 export { FAMILY_BUSINESS_CAP_10Y, FAMILY_BUSINESS_CAP_20Y, FAMILY_BUSINESS_CAP_30Y, FAMILY_BUSINESS_SCALE_THRESHOLD, FAMILY_BUSINESS_OTHER_ESTATE_RATIO } from "./inheritance-family-business.types";
 
@@ -790,6 +807,19 @@ export interface InheritanceDeductionResult {
   lumpSumExcludedBySpouseSoleHeir?: boolean;
   breakdown: CalculationStep[];
   appliedLaws: string[];
+  // ── 계산 근거 detail (2026-05-31 신설) ──────────────────────────
+  /** ① §21 일괄 vs 항목별 비교 detail */
+  lumpSumComparisonDetail?: LumpSumComparisonDetail;
+  /** ③ §19 배우자공제 계산 근거 detail */
+  spouseDeductionDetail?: SpouseDeductionDetail;
+  /** ④ §22 금융재산공제 계산 근거 detail (rows[]는 orchestrator 주입) */
+  financialDeductionDetail?: FinancialDeductionDetail;
+  /** ⑤ §23의2 동거주택공제 계산 근거 detail */
+  cohabitDeductionDetail?: CohabitDeductionDetail;
+  /** ⑥ §24 종합한도 계산 근거 detail */
+  deductionLimitDetail?: DeductionLimitCeilingDetail;
+  /** §24 한도 적용 전 공제 합계 (rawTotal — UI 표시용) */
+  rawTotalDeduction?: number;
 }
 
 // ============================================================

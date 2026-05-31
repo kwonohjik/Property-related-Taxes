@@ -23,6 +23,12 @@ import type {
   InheritanceTaxResult,
   CalculationStep,
 } from "./types/inheritance-gift.types";
+import type {
+  SpouseLegalShareTable,
+  SpouseActualAmountTable,
+  FinancialBreakdownRow,
+} from "./types/inheritance-deduction-detail.types";
+import { resolveEstateItemValue } from "./valuation/resolve-estate-item-value";
 
 import { evaluateAllEstateItems } from "./property-valuation";
 import {
@@ -240,6 +246,8 @@ export function calcInheritanceTax(
   const wantsAutoSpouseLegalShare =
     input.deductionInput.spouseLegalShareOverride === undefined;
 
+  // E7(a): Phase D closure 결과 보관 — 블록 밖 선언으로 patch 가능
+  let phaseDLegalShareTable: SpouseLegalShareTable | undefined;
   let computedSpouseLegalShare: number | undefined;
   if (wantsAutoSpouseLegalShare) {
     const spouseHeir = input.heirs.find((h) => h.relation === "spouse");
@@ -309,8 +317,116 @@ export function calcInheritanceTax(
         lawRef: INH.SPOUSE_DEDUCTION,
         note: `분자 ${numeratorCorrected.toLocaleString()} × ${spouseRatio.toFixed(4)} − 배우자 사전증여 과세표준 ${spouseGiftTaxBase.toLocaleString()}`,
       });
+
+      // E7(a): Phase D closure 값으로 legalShareTable 조립 (7행)
+      // 교재 §19①1호 분자 산식: (A−B+C) × D − E = 배우자 법정상속분
+      phaseDLegalShareTable = {
+        grossPlusPresumed: grossEstateValue + presumedTotal,
+        heirPriorGiftAdded: heirGiftAmount,
+        legateeNonHeirDeducted: legateeNonHeir,
+        debtDeducted: nonFuneralDebts,    // 채무만 (장례비 제외)
+        exemptDeducted: exemptAmount,
+        numerator: numeratorCorrected,
+        spouseRatio,
+        spouseLegalShareRaw,
+        spouseGiftTaxBaseDeducted: spouseGiftTaxBase,
+        legalShare: computedSpouseLegalShare,
+      } satisfies SpouseLegalShareTable;
     }
   }
+
+  // E7(b): 배우자 실제상속액 집계 (D-2 A — estateItems/debtItems 배우자 heirAllocations 합산)
+  // §19-17-1: 배우자 실제 상속액 = 배우자 귀속 자산 − 배우자 승계 채무(장례비 제외)
+  // lib/calc import 금지 → orchestrator에서 직접 집계
+  let phaseDActualAmountTable: SpouseActualAmountTable | undefined;
+  {
+    const spouseHeir = input.heirs.find((h) => h.relation === "spouse");
+    if (spouseHeir) {
+      let spouseAssetTotal = 0;
+      let hasAnyAllocation = false;
+      for (const item of input.estateItems) {
+        if (!item.heirAllocations) continue;
+        hasAnyAllocation = true;
+        for (const alloc of item.heirAllocations) {
+          if (alloc.heirId === spouseHeir.id) spouseAssetTotal += alloc.amount;
+        }
+      }
+      if (hasAnyAllocation) {
+        // 배우자 승계 채무 (장례비 제외)
+        let spouseDebtTotal = 0;
+        for (const debt of input.debtItems ?? []) {
+          if (debt.category === "funeral") continue;
+          if (!debt.heirAllocations) continue;
+          for (const alloc of debt.heirAllocations) {
+            if (alloc.heirId === spouseHeir.id) spouseDebtTotal += alloc.amount;
+          }
+        }
+        const actualAmount = Math.max(0, spouseAssetTotal - spouseDebtTotal);
+        phaseDActualAmountTable = {
+          spouseEstateValue: spouseAssetTotal,
+          spouseDebtDeducted: spouseDebtTotal,
+          spouseExemptDeducted: 0,
+          actualAmount,
+        } satisfies SpouseActualAmountTable;
+      }
+    }
+  }
+
+  // E7(c): 금융재산 분해 rows[] 집계 (D-1 A — §22 자동 집계, §22② 최대주주 제외 포함)
+  // lib/calc/financial-deduction-resolver import 금지 → 엔진 내부 판정 로직을 인라인으로 재구현
+  // (단일 진실 원칙 — 집계 결과를 financialDeductionDetail.rows에 주입; 판정 기준은 동일 §22①·②)
+  const phaseDFinancialRows: FinancialBreakdownRow[] = (() => {
+    // 자산 종류별 집계: 예금·상장주식·보험금·기타금융 구분
+    let depositTotal = 0;
+    let listedStockTotal = 0;
+    let insuranceTotal = 0;
+    let otherFinancialTotal = 0;
+    for (const item of input.estateItems) {
+      // §22② 최대주주 강제 배제 (엔진 내부 판정 — lib/calc 미사용)
+      const isMajorShareholder =
+        item.isSection22MajorShareholder === true ||
+        item.unlistedStockValuationV2?.isSection22MajorShareholder === true;
+      if (isMajorShareholder) continue;
+      // 사용자 명시 배제
+      if (item.isFinancialAssetForDeduction === false) continue;
+      // §22 적격 판정 (카테고리 기반 — financial·listed_stock + deemedCategory insurance)
+      const val = resolveEstateItemValue(item);
+      if (val <= 0) continue;
+      if (item.deemedCategory === "insurance") {
+        insuranceTotal += val;
+      } else if (item.category === "listed_stock") {
+        listedStockTotal += val;
+      } else if (item.category === "financial") {
+        // 사용자 명시 포함이거나 카테고리 default true
+        if (item.isFinancialAssetForDeduction === true || item.isFinancialAssetForDeduction === undefined) {
+          depositTotal += val;
+        }
+      } else if (item.category === "unlisted_stock") {
+        if (item.isFinancialAssetForDeduction === true) {
+          otherFinancialTotal += val;
+        }
+      } else {
+        // 그 외: 사용자 명시 포함만
+        if (item.isFinancialAssetForDeduction === true) {
+          otherFinancialTotal += val;
+        }
+      }
+    }
+    // 금융채무 집계 (category=financial debtItem)
+    let financialDebtTotal = 0;
+    for (const debt of input.debtItems ?? []) {
+      if (debt.category !== "financial") continue;
+      if (debt.isFinancialDebtForDeduction === false) continue;
+      financialDebtTotal += debt.amount;
+    }
+    const rows: FinancialBreakdownRow[] = [];
+    if (depositTotal > 0) rows.push({ label: "예금", amount: depositTotal });
+    if (listedStockTotal > 0) rows.push({ label: "상장주식", amount: listedStockTotal });
+    if (insuranceTotal > 0) rows.push({ label: "보험금", amount: insuranceTotal });
+    if (otherFinancialTotal > 0) rows.push({ label: "기타금융", amount: otherFinancialTotal });
+    if (financialDebtTotal > 0) rows.push({ label: "금융채무", amount: financialDebtTotal });
+    return rows;
+  })();
 
   const deductionResult = calcInheritanceDeductions(
     {
@@ -337,6 +453,17 @@ export function calcInheritanceTax(
       taxIfNoFBD: 0,
     },
   );
+
+  // E7 patch: detail 필드 3종 주입 (result는 calcInheritanceDeductions가 이미 기본 조립; orchestrator가 추가 정보 보강)
+  // (a) spouseDeductionDetail — legalShareTable(Phase D) + actualAmountTable(협의분할 집계) 보강
+  if (deductionResult.spouseDeductionDetail) {
+    deductionResult.spouseDeductionDetail.legalShareTable = phaseDLegalShareTable;
+    deductionResult.spouseDeductionDetail.actualAmountTable = phaseDActualAmountTable;
+  }
+  // (b) financialDeductionDetail — rows[] 주입 (estateItems/debtItems 종류별 집계)
+  if (deductionResult.financialDeductionDetail) {
+    deductionResult.financialDeductionDetail.rows = phaseDFinancialRows;
+  }
 
   const totalDeduction = deductionResult.totalDeduction;
   allBreakdown.push(...deductionResult.breakdown);

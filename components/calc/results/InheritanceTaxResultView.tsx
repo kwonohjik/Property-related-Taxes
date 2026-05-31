@@ -2,6 +2,7 @@
 
 /**
  * InheritanceTaxResultView — 상속세 계산 결과 화면 (#36)
+ * 상속공제 상세 내역 섹션 → DeductionBreakdownSection 위임 (U1 분리)
  */
 
 import { useState } from "react";
@@ -11,18 +12,10 @@ import type {
   InheritanceTaxResult,
   Heir,
   PriorGift,
+  DebtItem,
+  PresumedInheritanceItem,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { FarmingDeductionDetail } from "@/lib/tax-engine/types/inheritance-farming.types";
-import type {
-  FamilyBusinessDeductionDetail,
-  FamilyBusinessIneligibleReason,
-} from "@/lib/tax-engine/types/inheritance-family-business.types";
-import {
-  isSection22MajorShareholderExcluded,
-  resolveFinancialDebt,
-  resolveFinancialEligibility,
-} from "@/lib/calc/financial-deduction-resolver";
-import { getValuatedAmount } from "@/lib/calc/inheritance-deduction-suggest";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
 import { LoginPromptBanner } from "@/components/calc/shared/LoginPromptBanner";
@@ -34,291 +27,13 @@ import { CorporateExemptionFilingFormTable } from "@/components/calc/results/Cor
 import { DebtAllocationResultCard } from "@/components/calc/results/DebtAllocationResultCard";
 import { UnlistedStockBesshiResultSection } from "@/components/calc/results/UnlistedStockBesshiResultSection";
 import { ListedStockBesshiResultSection } from "@/components/calc/results/ListedStockBesshiResultSection";
-import { DeductionLimitNoticeCard } from "@/components/calc/inheritance/DeductionLimitNoticeCard";
 import { SourceDataSummarySection } from "@/components/calc/results/source-summary/SourceDataSummarySection";
-import type { DebtItem, PresumedInheritanceItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { calcInstallmentPayment } from "@/lib/tax-engine/credits/installment-payment";
-
-// ============================================================
-// 헬퍼 컴포넌트
-// ============================================================
-
-function Row({
-  label,
-  value,
-  sub = false,
-  highlight = false,
-  deduction = false,
-}: {
-  label: string;
-  value: string;
-  sub?: boolean;
-  highlight?: boolean;
-  deduction?: boolean;
-}) {
-  return (
-    <div
-      className={`flex items-center justify-between px-4 py-2.5 ${
-        highlight ? "bg-muted/50 font-semibold" : ""
-      } ${sub ? "pl-7" : ""}`}
-    >
-      <span className={sub ? "text-xs text-muted-foreground" : "text-sm"}>{label}</span>
-      <span className={`font-mono text-sm ${deduction ? "text-blue-600 dark:text-blue-400" : ""}`}>
-        {value}
-      </span>
-    </div>
-  );
-}
-
-function FinancialDeductionCountRow({
-  estateItems,
-  debtItems,
-}: {
-  estateItems: EstateItem[];
-  debtItems?: DebtItem[];
-}) {
-  const eligibleAssets = estateItems.filter(resolveFinancialEligibility);
-  const eligibleDebts = (debtItems ?? []).filter(resolveFinancialDebt);
-  // §22② 법정 강제 배제 자산 목록
-  const excludedBySection22 = estateItems.filter(isSection22MajorShareholderExcluded);
-  const excludedTotal = excludedBySection22.reduce(
-    (sum, i) => sum + getValuatedAmount(i),
-    0,
-  );
-
-  if (eligibleAssets.length === 0 && eligibleDebts.length === 0 && excludedBySection22.length === 0) return null;
-
-  const assetTotal = eligibleAssets.reduce((sum, i) => sum + getValuatedAmount(i), 0);
-  const debtTotal = eligibleDebts.reduce((sum, d) => sum + d.amount, 0);
-
-  return (
-    <div className="px-4 pb-2 -mt-1 space-y-1">
-      {(eligibleAssets.length > 0 || eligibleDebts.length > 0) && (
-        <p className="text-[11px] text-gray-500 dark:text-gray-400 pl-3">
-          ⓘ §22 대상: 자산 {eligibleAssets.length}건 (
-          {formatKRW(assetTotal)}) − 채무 {eligibleDebts.length}건 (
-          {formatKRW(debtTotal)})
-        </p>
-      )}
-      {excludedBySection22.length > 0 && (
-        <p
-          className="text-[11px] text-rose-600 dark:text-rose-400 pl-3"
-          data-testid="section22-excluded-badge"
-        >
-          ⓘ 법 §22②에 따라 최대주주 보유주식 {excludedBySection22.length}건 제외 (평가액 합계{" "}
-          {formatKRW(excludedTotal)})
-        </p>
-      )}
-    </div>
-  );
-}
-
-/**
- * 가업상속공제 미충족 사유 한국어 라벨 매핑 (상증법 §18의2 + 상증령 §15).
- * KoreanLaw MCP 검증 2026-05-21.
- */
-const FamilyBusinessIneligibleReasonLabels: Record<FamilyBusinessIneligibleReason, string> = {
-  operating_years_below_10: "영위 10년 미만 (§18의2① 가업 정의 미충족)",
-  enterprise_size_exceeded: "기업 규모 초과 (자산 5천억 / 매출 5천억 미만 요건 위반)",
-  industry_not_eligible: "별표 업종 외 사업 (상증령 §15①1·②1)",
-  decedent_ceo_requirement_failed: "피상속인 대표이사 종사 요건 미충족 (상증령 §15③1호 나)",
-  decedent_majority_share_failed: "피상속인 지분 요건 미충족 — 40% (상장 20%) × 10년 (상증령 §15③1호 가)",
-  heir_not_adult: "상속인 18세 미만 (상증령 §15③2호 가)",
-  heir_engagement_short: "상속인 2년 가업 종사 요건 미충족 (상증령 §15③2호 나)",
-  heir_officer_not_appointed: "신고기한 내 임원 미취임 (상증령 §15③2호 다)",
-  heir_ceo_not_scheduled: "신고기한 후 2년 내 대표이사 미취임 예정 (상증령 §15③2호 라)",
-  medium_other_estate_exceeds_200pct: "중견기업 — 가업외 상속재산이 미공제 산출세액의 200% 초과 (§18의2②)",
-  tax_fraud_conviction: "조세포탈·회계부정 형 확정 (§18의2⑧1호)",
-};
-
-function FamilyBusinessDeductionDetailRow({
-  detail,
-}: {
-  detail?: FamilyBusinessDeductionDetail;
-}) {
-  if (!detail) return null;
-
-  // 직접 입력 모드
-  if (detail.usedDirectInput) {
-    return (
-      <div className="mx-4 my-2 rounded-md border border-violet-200 bg-violet-50 dark:bg-violet-950/20 dark:border-violet-800 p-2 space-y-1">
-        <p className="text-[11px] text-violet-700 dark:text-violet-300">
-          ⓘ 가업상속공제 직접 입력 모드 — 요건 판정 우회 (한도 600억). 사후관리 위반 시 추징 (별도 Phase F).
-        </p>
-      </div>
-    );
-  }
-
-  // 자격 미충족 — reasons 라벨 표시
-  if (!detail.eligible && detail.ineligibleReasons && detail.ineligibleReasons.length > 0) {
-    return (
-      <div className="mx-4 my-2 rounded-md border border-rose-300 bg-rose-50 dark:bg-rose-950/20 dark:border-rose-800 p-2 space-y-1">
-        <p className="text-[11px] font-semibold text-rose-800 dark:text-rose-200">
-          ⚠️ 가업상속공제 자격 미충족 — 공제 0원
-        </p>
-        <ul className="space-y-0.5 text-[10px] text-rose-700 dark:text-rose-300 list-disc pl-4">
-          {detail.ineligibleReasons.map((r, i) => (
-            <li key={i}>{FamilyBusinessIneligibleReasonLabels[r] ?? r}</li>
-          ))}
-        </ul>
-      </div>
-    );
-  }
-
-  // 자격 충족 — 한도·가액 표시 + medium 가드 메타 + OFZ 특례 안내
-  if (detail.eligible && detail.deduction > 0) {
-    return (
-      <div className="mx-4 my-2 space-y-1">
-        <p className="text-[11px] text-gray-600 dark:text-gray-400">
-          ⓘ 영위 {detail.operatingYears}년 → 한도 {formatBillion(detail.appliedCap)}
-          {detail.autoDerivedValue !== undefined && detail.autoDerivedValue > 0 && (
-            <> · 자동합산 {formatKRW(detail.autoDerivedValue)}</>
-          )}
-          {detail.manualValue !== undefined && (
-            <> · 사용자 입력 {formatKRW(detail.manualValue)}</>
-          )}
-        </p>
-        {detail.ofzExemptionActive && (
-          <div className="mt-1 rounded-md border border-emerald-200 bg-emerald-50/60 dark:bg-emerald-950/20 dark:border-emerald-800 p-2 text-[10px] text-emerald-800 dark:text-emerald-300">
-            <p className="font-semibold">기회발전특구 특례 적용 (상증령 §15㉕)</p>
-            <p>본사 특구 소재·이전 + 상시근무인원 50% 이상 → 2년 내 대표이사 취임 요건 면제</p>
-          </div>
-        )}
-        {detail.mediumGuard && (
-          <div className="mt-1 rounded-md border border-sky-200 bg-sky-50/60 dark:bg-sky-950/20 dark:border-sky-800 p-2 text-[10px] text-sky-800 dark:text-sky-300">
-            <p className="font-semibold mb-1">§18의2② 200% 가드 (중견기업)</p>
-            <ul className="space-y-0.5 list-disc pl-4">
-              <li>미공제 산출세액: {formatKRW(detail.mediumGuard.taxIfNoFBD)}</li>
-              <li>200% 상한: {formatKRW(detail.mediumGuard.cap200pct)}</li>
-              <li>가업외 상속재산 net: {formatKRW(detail.mediumGuard.otherEstateNet)}</li>
-              <li>판정: {detail.mediumGuard.exceeded ? "초과 → 공제 배제" : "통과"}</li>
-            </ul>
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  return null;
-}
-
-/** 한도 가독화 — 60_000_000_000 → "600억". */
-function formatBillion(amount: number): string {
-  if (amount === 0) return "0";
-  const eok = amount / 100_000_000;
-  return `${eok.toLocaleString()}억`;
-}
-
-export function FarmingDeductionDetailRow({
-  detail,
-}: {
-  detail?: FarmingDeductionDetail;
-}) {
-  if (!detail) return null;
-
-  // RD-5: legacy (evaluated=false)
-  if (!detail.evaluated) {
-    return (
-      <div className="mx-4 my-2 rounded-md border border-violet-200 bg-violet-50 dark:bg-violet-950/20 dark:border-violet-800 p-2">
-        <p className="text-[11px] text-violet-700 dark:text-violet-300">
-          ⓘ 요건 미평가 (legacy 모드). Step4에서 영농상속공제 요건 입력을 활성화하면 자격을 자동 평가합니다.
-        </p>
-      </div>
-    );
-  }
-
-  // RD-3: 미충족 + 사용자 입력 존재
-  if (!detail.eligible && detail.appliedAssetValue > 0) {
-    return (
-      <div className="mx-4 my-2 rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 p-2 space-y-1">
-        <p className="text-[11px] font-semibold text-amber-800 dark:text-amber-200">
-          ⚠️ 입력 자산 {formatKRW(detail.appliedAssetValue)} — 자격 미충족으로 공제 0원
-        </p>
-        <ul className="space-y-0.5 text-[10px] text-amber-700 dark:text-amber-300 list-disc pl-4">
-          {detail.ineligibleReasons.map((r, i) => (
-            <li key={i}>{r}</li>
-          ))}
-        </ul>
-      </div>
-    );
-  }
-
-  // RD-2·RD-4: cappedDeduction=0
-  if (detail.cappedDeduction === 0) {
-    return (
-      <div className="mx-4 my-2 text-[11px] text-gray-500 dark:text-gray-400">
-        ⓘ {detail.eligible ? "영농 자산 미입력" : "자격 미충족 + 자산 미입력"}
-      </div>
-    );
-  }
-
-  // RD-1·RD-1b: 정상 (cap 적용 여부 분기)
-  const capped = detail.appliedAssetValue > 3_000_000_000;
-  return (
-    <div className="mx-4 my-2 space-y-1">
-      <div className="text-[11px] text-gray-600 dark:text-gray-400">
-        ⓘ 영농자산 {formatKRW(detail.appliedAssetValue)}
-        {capped && ` (30억 한도 적용 → ${formatKRW(detail.cappedDeduction)})`}
-      </div>
-      {/* 부록 A — heirAssessments 입력 시 자격자 N명 / 전체 M명 노출 */}
-      {detail.qualifiedHeirCount !== undefined && detail.totalHeirCount !== undefined && (
-        <div className="text-[10px] text-violet-700 dark:text-violet-300 bg-violet-50 dark:bg-violet-950/30 rounded p-2">
-          🤖 부록 A — 자격 충족 상속인 <span className="font-semibold">{detail.qualifiedHeirCount}명</span>{" "}
-          / 전체 {detail.totalHeirCount}명 (시행령 §16⑤ 본문)
-        </div>
-      )}
-      {/*
-        v4.1.1 D8/디자인 §4-4 — §16②1호나 거주지 OR 자동 검증 산식 근거 (옵션 C)
-        - residence === undefined: corporate 트랙 또는 legacy → 라인 미노출
-        - matchKind === null: 좌표·코드 미입력 → 사용자 명시 boolean 단독
-        - matchKind !== null: 자동 검증 결과 인용
-      */}
-      {detail.residence && (
-        <div className="text-[10px] text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/30 rounded p-2">
-          {detail.residence.decedentMatchKind === null && detail.residence.heirMatchKind === null ? (
-            <span>📍 거주지: 사용자 명시 (자동 거주지 검증 미수행 — 좌표·코드 미입력)</span>
-          ) : (
-            <>
-              📍 §16②1호나 거주지 자동 검증:
-              <span className="ml-1 font-semibold">
-                피상속인 {labelMatchKind(detail.residence.decedentMatchKind)}
-              </span>{" "}
-              ·{" "}
-              <span className="font-semibold">
-                상속인 {labelMatchKind(detail.residence.heirMatchKind)}
-              </span>
-            </>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function labelMatchKind(kind: "same_district" | "adjacent_district" | "within_30km" | "forest_manageable_area" | "fail" | null): string {
-  switch (kind) {
-    case "same_district":
-      return "동일 시·군·구";
-    case "adjacent_district":
-      return "연접 시·군·구";
-    case "within_30km":
-      return "30km 직선거리";
-    case "forest_manageable_area":
-      return "산림지 통상 경영 지역 (사용자 명시)";
-    case "fail":
-      return "자동 미충족 (사용자 명시값 적용)";
-    case null:
-      return "미입력";
-  }
-}
-
-function LawBadge({ law }: { law: string }) {
-  return (
-    <span className="inline-block text-xs px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 mr-1 mb-1">
-      {law}
-    </span>
-  );
-}
+import { DeductionBreakdownSection } from "./deduction-breakdown/DeductionBreakdownSection";
+// re-export 보존 — shared.tsx 에서 실제 구현
+export { Row, formatBillion, LawBadge } from "./deduction-breakdown/shared";
+// re-export 보존 — FarmingDeductionDetailRow (farming-section.test.tsx 사용)
+export { FarmingDeductionDetailRow } from "./deduction-breakdown/FarmingDeductionDetailRowExport";
 
 // ============================================================
 // 연부연납 안내
@@ -352,6 +67,45 @@ function InstallmentGuide({ finalTax }: { finalTax: number }) {
         </p>
       </div>
     </div>
+  );
+}
+
+// ============================================================
+// 과세 요약 Row
+// ============================================================
+
+function SummaryRow({
+  label,
+  value,
+  sub = false,
+  highlight = false,
+  deduction = false,
+}: {
+  label: string;
+  value: string;
+  sub?: boolean;
+  highlight?: boolean;
+  deduction?: boolean;
+}) {
+  return (
+    <div
+      className={`flex items-center justify-between px-4 py-2.5 ${
+        highlight ? "bg-muted/50 font-semibold" : ""
+      } ${sub ? "pl-7" : ""}`}
+    >
+      <span className={sub ? "text-xs text-muted-foreground" : "text-sm"}>{label}</span>
+      <span className={`font-mono text-sm ${deduction ? "text-blue-600 dark:text-blue-400" : ""}`}>
+        {value}
+      </span>
+    </div>
+  );
+}
+
+function LawBadgeLocal({ law }: { law: string }) {
+  return (
+    <span className="inline-block text-xs px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 mr-1 mb-1">
+      {law}
+    </span>
   );
 }
 
@@ -393,7 +147,6 @@ export function InheritanceTaxResultView({
   deathDate,
   presumedItems,
 }: Props) {
-  const [showBreakdown, setShowBreakdown] = useState(false);
   const [showValuation, setShowValuation] = useState(false);
 
   const taxBeforeCredit = result.computedTax + result.generationSkipSurcharge;
@@ -407,7 +160,7 @@ export function InheritanceTaxResultView({
           onClick={() => window.print()}
           className="rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors"
         >
-          🖨️ PDF / 인쇄
+          PDF / 인쇄
         </button>
       </div>
 
@@ -461,12 +214,12 @@ export function InheritanceTaxResultView({
           <h3 className="text-sm font-semibold">상속세 과세 요약</h3>
         </div>
         <div className="divide-y divide-border">
-          <Row label="상속재산 평가액" value={formatKRW(result.grossEstateValue)} />
+          <SummaryRow label="상속재산 평가액" value={formatKRW(result.grossEstateValue)} />
           {result.exemptAmount > 0 && (
-            <Row label="비과세 차감" value={`- ${formatKRW(result.exemptAmount)}`} sub deduction />
+            <SummaryRow label="비과세 차감" value={`- ${formatKRW(result.exemptAmount)}`} sub deduction />
           )}
           {result.deductedBeforeAggregation > 0 && (
-            <Row
+            <SummaryRow
               label="장례비·채무 차감"
               value={`- ${formatKRW(result.deductedBeforeAggregation)}`}
               sub
@@ -474,30 +227,30 @@ export function InheritanceTaxResultView({
             />
           )}
           {result.priorGiftAggregated > 0 && (
-            <Row
+            <SummaryRow
               label="사전증여재산 합산"
               value={`+ ${formatKRW(result.priorGiftAggregated)}`}
               sub
             />
           )}
-          <Row label="상속세 과세가액" value={formatKRW(result.taxableEstateValue)} highlight />
-          <Row label="상속공제 합계" value={`- ${formatKRW(result.totalDeduction)}`} sub deduction />
-          <Row label="과세표준" value={formatKRW(result.taxBase)} highlight />
-          <Row label="산출세액 (누진세율)" value={formatKRW(result.computedTax)} />
+          <SummaryRow label="상속세 과세가액" value={formatKRW(result.taxableEstateValue)} highlight />
+          <SummaryRow label="상속공제 합계" value={`- ${formatKRW(result.totalDeduction)}`} sub deduction />
+          <SummaryRow label="과세표준" value={formatKRW(result.taxBase)} highlight />
+          <SummaryRow label="산출세액 (누진세율)" value={formatKRW(result.computedTax)} />
           {result.generationSkipSurcharge > 0 && (
-            <Row
+            <SummaryRow
               label="세대생략 할증 (30% / 40%)"
               value={`+ ${formatKRW(result.generationSkipSurcharge)}`}
             />
           )}
           {result.totalTaxCredit > 0 && (
-            <Row
+            <SummaryRow
               label="세액공제"
               value={`- ${formatKRW(result.totalTaxCredit)}`}
               deduction
             />
           )}
-          <Row label="결정세액" value={formatKRW(result.finalTax)} highlight />
+          <SummaryRow label="결정세액" value={formatKRW(result.finalTax)} highlight />
         </div>
       </div>
 
@@ -509,8 +262,7 @@ export function InheritanceTaxResultView({
         />
       )}
 
-      {/* 사전증여재산 명세 (별지 제11호서식 부표 Phase 3 골격)
-          PR-A: priorGiftAggregated=0이라도 excludedGifts(cutoff 도과)가 있으면 렌더 */}
+      {/* 사전증여재산 명세 */}
       {priorGifts && priorGifts.length > 0 && deathDate && (
         <InheritanceFilingFormTable
           priorGifts={priorGifts}
@@ -525,7 +277,7 @@ export function InheritanceTaxResultView({
         <div className="rounded-lg border border-violet-200 dark:border-violet-700 bg-violet-50/40 dark:bg-violet-900/20 p-4 space-y-2">
           <div className="flex items-center gap-2">
             <span className="inline-flex items-center gap-1 text-[10px] bg-violet-200 text-violet-800 rounded px-2 py-0.5">
-              🏢 §3의2②
+              §3의2②
             </span>
             <p className="text-sm font-semibold text-violet-700 dark:text-violet-300">
               영리법인 사전증여 면제 (§3의2② · 집행기준 28-0-1)
@@ -547,7 +299,7 @@ export function InheritanceTaxResultView({
         </div>
       )}
 
-      {/* 부표 5 — 영리법인 면제 및 납부 명세서 (PR 2 PR-2) */}
+      {/* 부표 5 — 영리법인 면제 및 납부 명세서 */}
       {result.corporateExemption?.perCorporateBreakdown &&
         result.corporateExemption.perCorporateBreakdown.length > 0 && (
           <CorporateExemptionFilingFormTable
@@ -556,7 +308,7 @@ export function InheritanceTaxResultView({
           />
         )}
 
-      {/* 채무·공과·장례비 협의분할 결과 카드 (debtItems ON 모드 + heirAllocationResult 있을 때) */}
+      {/* 채무·공과·장례비 협의분할 결과 카드 */}
       {result.heirAllocationResult &&
         debtItems !== undefined &&
         debtItems.length > 0 &&
@@ -570,106 +322,28 @@ export function InheritanceTaxResultView({
           />
         )}
 
-      {/* 상속인별 배부 표 — 종합사례 PDF 책 1859 재현 (heirAllocationResult 있을 때만) */}
+      {/* 상속인별 배부 표 */}
       {result.heirAllocationResult && heirs && heirs.length > 0 && (
         <HeirAllocationTable result={result} heirs={heirs} />
       )}
 
-      {/* 상속인별 상속세부담액 집계 표 (이미지 8 — 33행 PDF 1:1 매트릭스) */}
+      {/* 상속인별 상속세부담액 집계 표 */}
       {result.heirAllocationResult && heirs && heirs.length > 0 && (
         <HeirAllocationSummaryTable result={result} heirs={heirs} />
       )}
 
-      {/* 공제 내역 접기 */}
-      <div className="border rounded-xl overflow-hidden">
-        <button
-          type="button"
-          onClick={() => setShowBreakdown((v) => !v)}
-          className="w-full flex items-center justify-between px-4 py-3 bg-muted/30 hover:bg-muted/50 transition-colors text-sm font-medium"
-        >
-          <span>상속공제 상세 내역</span>
-          <span>{showBreakdown ? "▲" : "▼"}</span>
-        </button>
-        {showBreakdown && (
-          <div className="divide-y divide-border text-xs">
-            {result.deductionDetail.chosenMethod === "lump_sum" ? (
-              <Row label="일괄공제 (§21)" value={formatKRW(result.deductionDetail.lumpSumDeduction)} />
-            ) : (
-              <>
-                {result.deductionDetail.lumpSumExcludedBySpouseSoleHeir && (
-                  <Row label="ⓘ 배우자 단독상속 — 일괄공제 배제 (§21②)" value="기초+인적만" />
-                )}
-                <Row label="기초공제 (§18)" value={formatKRW(result.deductionDetail.basicDeduction)} />
-                <Row label="배우자 공제 (§19)" value={formatKRW(result.deductionDetail.spouseDeduction)} />
-                <Row
-                  label="인적공제 합계 (§20)"
-                  value={formatKRW(result.deductionDetail.personalDeductionTotal)}
-                />
-              </>
-            )}
-            {(result.deductionDetail.financialDeduction > 0 ||
-              (estateItems ?? []).some(isSection22MajorShareholderExcluded)) && (
-              <>
-                {result.deductionDetail.financialDeduction > 0 && (
-                  <Row
-                    label="금융재산 공제 (§22)"
-                    value={formatKRW(result.deductionDetail.financialDeduction)}
-                  />
-                )}
-                {estateItems && (
-                  <FinancialDeductionCountRow
-                    estateItems={estateItems}
-                    debtItems={debtItems}
-                  />
-                )}
-              </>
-            )}
-            {result.deductionDetail.cohabitationDeduction > 0 && (
-              <Row
-                label="동거주택 공제 (§23의2)"
-                value={formatKRW(result.deductionDetail.cohabitationDeduction)}
-              />
-            )}
-            {(result.deductionDetail.farmingDeduction > 0 ||
-              result.deductionDetail.farmingDetail !== undefined) && (
-              <>
-                {result.deductionDetail.farmingDeduction > 0 && (
-                  <Row
-                    label="영농상속 공제 (§18의3)"
-                    value={formatKRW(result.deductionDetail.farmingDeduction)}
-                  />
-                )}
-                <FarmingDeductionDetailRow
-                  detail={result.deductionDetail.farmingDetail}
-                />
-              </>
-            )}
-            {(result.deductionDetail.familyBusinessDeduction > 0 ||
-              result.deductionDetail.familyBusinessDetail !== undefined) && (
-              <>
-                {result.deductionDetail.familyBusinessDeduction > 0 && (
-                  <Row
-                    label="가업상속 공제 (§18의2)"
-                    value={formatKRW(result.deductionDetail.familyBusinessDeduction)}
-                  />
-                )}
-                <FamilyBusinessDeductionDetailRow
-                  detail={result.deductionDetail.familyBusinessDetail}
-                />
-              </>
-            )}
-            <Row label="공제 합계" value={formatKRW(result.totalDeduction)} highlight />
-          </div>
-        )}
-        {/* §24 종합한도 발동 시 안내 카드 — 미발동 시 자동 숨김 */}
-        <DeductionLimitNoticeCard breakdown={result.deductionDetail.breakdown} />
-      </div>
+      {/* 상속공제 상세 내역 (U1 분리 → DeductionBreakdownSection) */}
+      <DeductionBreakdownSection
+        result={result}
+        estateItems={estateItems}
+        debtItems={debtItems}
+      />
 
-      {/* 영농상속공제 사후관리 안내 (PR-G) — farmingDeduction > 0 시만 노출 */}
+      {/* 영농상속공제 사후관리 안내 */}
       {result.deductionDetail.farmingDeduction > 0 && (
         <div className="rounded-md border border-blue-200 bg-blue-50/40 dark:bg-blue-950/20 dark:border-blue-800 p-3 space-y-2 print:hidden">
           <p className="text-xs font-semibold text-blue-800 dark:text-blue-200">
-            💡 영농상속공제 사후관리 안내 (§18의3④ + §16⑦⑧)
+            영농상속공제 사후관리 안내 (§18의3④ + §16⑦⑧)
           </p>
           <p className="text-[11px] text-blue-700 dark:text-blue-300">
             상속개시일부터 5년 이내 영농상속재산을 처분하거나 영농 종사를 중단하면
@@ -715,7 +389,7 @@ export function InheritanceTaxResultView({
                 </p>
                 {vr.warnings.map((w, j) => (
                   <p key={j} className="text-amber-600 dark:text-amber-400">
-                    ⚠️ {w}
+                    {w}
                   </p>
                 ))}
               </div>
@@ -727,7 +401,7 @@ export function InheritanceTaxResultView({
       {/* 비상장주식 별지 부표3 출력 (정식평가 V2 자산) */}
       {estateItems && <UnlistedStockBesshiResultSection estateItems={estateItems} />}
 
-      {/* 상장주식 평가조서(갑·을) 출력 — §63①1가·§63②3호·§63③ */}
+      {/* 상장주식 평가조서(갑·을) 출력 */}
       {estateItems && (
         <ListedStockBesshiResultSection
           estateItems={estateItems}
@@ -747,7 +421,7 @@ export function InheritanceTaxResultView({
           <ul className="space-y-1.5">
             {result.warnings.map((w, i) => (
               <li key={i} className="text-xs text-amber-700 dark:text-amber-400">
-                ⚠️ {w}
+                {w}
               </li>
             ))}
           </ul>
@@ -758,7 +432,7 @@ export function InheritanceTaxResultView({
       {result.appliedLaws.length > 0 && (
         <div className="flex flex-wrap">
           {result.appliedLaws.map((law) => (
-            <LawBadge key={law} law={law} />
+            <LawBadgeLocal key={law} law={law} />
           ))}
         </div>
       )}
@@ -798,3 +472,8 @@ export function InheritanceTaxResultView({
     </div>
   );
 }
+
+// ============================================================
+// 하위 호환 re-export (FarmingDeductionDetail 타입 노출)
+// ============================================================
+export type { FarmingDeductionDetail };
