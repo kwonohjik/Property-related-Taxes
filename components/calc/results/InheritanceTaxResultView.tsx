@@ -5,7 +5,7 @@
  * 상속공제 상세 내역 섹션 → DeductionBreakdownSection 위임 (U1 분리)
  */
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { ChevronLeft } from "lucide-react";
 import type {
   EstateItem,
@@ -113,6 +113,22 @@ function LawBadgeLocal({ law }: { law: string }) {
 // 메인 컴포넌트
 // ============================================================
 
+/**
+ * 재산 평가 내역 표시명 — 사용자가 자산 이름(name)을 비우면 내부 id(prop-…·stock-…) 대신
+ * 카테고리 한글 라벨 표시. (출처: CategoryChangeDialog CATEGORY_LABELS + listed/unlisted_stock)
+ */
+const ASSET_CATEGORY_LABELS: Record<EstateItem["category"], string> = {
+  real_estate_land: "토지",
+  real_estate_building: "단독주택·건물",
+  real_estate_apartment: "아파트·공동주택",
+  listed_stock: "상장주식",
+  unlisted_stock: "비상장주식",
+  cash: "현금",
+  financial: "예금·펀드·채권·공제금",
+  deposit: "전세보증금 반환채권",
+  other: "기타 재산",
+};
+
 interface Props {
   result: InheritanceTaxResult;
   onReset: () => void;
@@ -148,6 +164,15 @@ export function InheritanceTaxResultView({
   presumedItems,
 }: Props) {
   const [showValuation, setShowValuation] = useState(false);
+
+  // 재산 평가 내역 표시명 — 자산 id → name(있으면) 또는 카테고리 한글 라벨 (내부 id 노출 방지)
+  const assetNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const it of estateItems ?? []) {
+      map.set(it.id, it.name?.trim() || ASSET_CATEGORY_LABELS[it.category] || "재산");
+    }
+    return map;
+  }, [estateItems]);
 
   const taxBeforeCredit = result.computedTax + result.generationSkipSurcharge;
 
@@ -373,7 +398,7 @@ export function InheritanceTaxResultView({
             {result.valuationResults.map((vr, i) => (
               <div key={i} className="px-4 py-2.5 space-y-0.5">
                 <div className="flex justify-between font-medium text-sm">
-                  <span>{vr.estateItemId}</span>
+                  <span>{assetNameById.get(vr.estateItemId) ?? "재산"}</span>
                   <span>{formatKRW(vr.valuatedAmount)}</span>
                 </div>
                 <p className="text-gray-400">
