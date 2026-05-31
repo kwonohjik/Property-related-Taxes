@@ -34,7 +34,10 @@ import { evaluateAllEstateItems } from "./property-valuation";
 import {
   evaluateExemptions,
 } from "./exemption-evaluator";
-import { calcInheritanceDeductions } from "./deductions/inheritance-deductions";
+import {
+  calcInheritanceDeductions,
+  computePriorGiftDeductionForLimit,
+} from "./deductions/inheritance-deductions";
 import { calcRelationDeduction } from "./deductions/gift-deductions";
 import {
   DEFAULT_INHERITANCE_GIFT_BRACKETS,
@@ -441,7 +444,14 @@ export function calcInheritanceTax(
     // Phase D §24 — 한도 분자 보정 정보 (영리법인 포함 모든 사전증여 + 증여공제 + 상속외자유증)
     {
       totalPriorGiftAmount: priorGiftAggregated,
-      priorGiftDeductionTotal: input.deductionInput.priorGiftDeductionTotal ?? 0,
+      // §24 3호 증여재산공제: 명시 입력 우선(override), 미입력 시 사전증여 내역(§53 관계/giftTaxBase)에서 자동 도출.
+      // 배우자 법정상속분 분자와 동일 산식 — 수동 미입력 시 0으로 누락되던 dual-truth 차단.
+      priorGiftDeductionTotal:
+        input.deductionInput.priorGiftDeductionTotal ??
+        computePriorGiftDeductionForLimit(
+          input.preGiftsWithin10Years,
+          input.deathDate,
+        ),
       legateeAmountNonHeir: input.deductionInput.legateeAmountNonHeir ?? 0,
       disasterLossDeduction: input.deductionInput.disasterLossDeduction ?? 0,
     },

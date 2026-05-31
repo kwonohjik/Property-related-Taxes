@@ -14,11 +14,15 @@ import { INH } from "../legal-codes";
 import { applyRate } from "../tax-utils";
 import type {
   CalculationStep,
+  DonorRelation,
   EstateItem,
   Heir,
   InheritanceDeductionInput,
   InheritanceDeductionResult,
+  PriorGift,
 } from "../types/inheritance-gift.types";
+import { calcRelationDeduction } from "./gift-deductions";
+import { isWithin13Cutoff } from "../inheritance-gift-common";
 import type {
   LumpSumComparisonDetail,
   SpouseDeductionDetail,
@@ -409,7 +413,12 @@ export function applyDeductionLimit(
       (params.priorGiftDeductionTotal ?? 0) +
       (params.disasterLossDeduction ?? 0);
     legateeNonHeir = params.legateeAmountNonHeir ?? 0;
-    netPriorGiftDeducted = Math.max(0, totalGift - giftDeductions);
+    // §24 단서: 제3호(사전증여 가산가액)는 상속세 과세가액 5억원 초과 시에만 차감.
+    // (1·2호 유증·포기는 단서 무관 — 항상 차감.)
+    netPriorGiftDeducted =
+      taxableEstateValue > SECTION24_GIFT_DEDUCTION_THRESHOLD
+        ? Math.max(0, totalGift - giftDeductions)
+        : 0;
     ceiling = Math.max(0, taxableEstateValue - legateeNonHeir - netPriorGiftDeducted);
   } else {
     // legacy fallback
@@ -438,6 +447,63 @@ export function applyDeductionLimit(
   };
 
   return { limitedDeduction, ceiling, wasCapped, ceilingDetail };
+}
+
+// ============================================================
+// §24 사전증여 증여재산공제 자동 도출 (§24 3호 — §53·§53의2·§54 공제 차감)
+// ============================================================
+
+/** §24 단서 — 제3호(사전증여 가산가액)는 상속세 과세가액이 이 금액을 초과할 때만 차감 (KoreanLaw mst 276123). */
+export const SECTION24_GIFT_DEDUCTION_THRESHOLD = 500_000_000;
+
+/**
+ * §24 3호: 상속세 과세가액에서 차감할 「가산 증여재산가액 − 증여재산공제(§53·§53의2·§54)」 중
+ * **증여재산공제 합계**를 사전증여 내역에서 자동 도출한다.
+ *
+ * 배우자 법정상속분 분자(inheritance-tax.ts:263~)와 동일한 건별 우선순위:
+ *   1. giftTaxBase 명시 → max(0, giftAmount − giftTaxBase)  (그 증여의 실제 공제 실액)
+ *   2. giftTaxBase 없고 doneeRelation 있음 → 관계별 그룹 합산 후 calcRelationDeduction (§53 관계한도 1회)
+ *   3. 둘 다 없음 → 0 (보수적 — 화면에 안 보이는 미입력 건의 과대공제 차단)
+ *
+ * §13 cutoff(상속인 10년·비상속인 5년) 통과 건만 — totalPriorGiftAmount(가산가액)와 동일 모집단.
+ * 영리법인 사전증여는 통상 giftTaxBase=giftAmount → 공제 0 (정합).
+ *
+ * 수동 입력(deductionInput.priorGiftDeductionTotal)이 명시되면 호출측에서 그 값을 우선(override).
+ *
+ * @param preGifts 사전증여 내역
+ * @param deathDate 상속개시일 (§13 cutoff 판정)
+ */
+export function computePriorGiftDeductionForLimit(
+  preGifts: PriorGift[] | undefined,
+  deathDate: string,
+): number {
+  if (!preGifts || preGifts.length === 0) return 0;
+
+  let explicitTotal = 0; // giftTaxBase 명시 건의 공제 합
+  const relationSums = new Map<DonorRelation, number>(); // 관계별 gross 합 (giftTaxBase 미명시 건)
+
+  for (const g of preGifts) {
+    if (!isWithin13Cutoff(g, deathDate)) continue;
+    if (g.giftTaxBase !== undefined) {
+      explicitTotal += Math.max(0, g.giftAmount - g.giftTaxBase);
+    } else if (g.doneeRelation) {
+      relationSums.set(
+        g.doneeRelation,
+        (relationSums.get(g.doneeRelation) ?? 0) + g.giftAmount,
+      );
+    }
+    // 둘 다 미입력 → 공제 0 (보수적)
+  }
+
+  let groupedTotal = 0;
+  for (const [rel, sum] of relationSums.entries()) {
+    groupedTotal += calcRelationDeduction(
+      { donorRelation: rel, priorUsedDeduction: 0 },
+      sum,
+    ).relationDeduction;
+  }
+
+  return explicitTotal + groupedTotal;
 }
 
 // ============================================================

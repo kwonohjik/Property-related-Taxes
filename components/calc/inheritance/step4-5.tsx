@@ -299,8 +299,8 @@ export function Step4({ form, set }: { form: FormState; set: FormSet }) {
             label="사전증여 증여재산공제 합계 (§24 분자 차감)"
             value={form.priorGiftDeductionTotal}
             onChange={(v) => set({ priorGiftDeductionTotal: v })}
-            hint="배우자 6억·직계비속 5천만 등 사전증여 시 적용된 증여재산공제 합"
-            placeholder="없으면 빈칸"
+            hint="비우면 사전증여 수증자 관계(§53 배우자 6억·직계비속 5천만 등)로 자동 계산됩니다. 직접 입력하면 그 값으로 덮어씁니다."
+            placeholder="비우면 자동 계산"
           />
         </div>
       </div>

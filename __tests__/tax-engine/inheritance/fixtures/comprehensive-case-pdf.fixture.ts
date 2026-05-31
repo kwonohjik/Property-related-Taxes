@@ -436,7 +436,8 @@ export const EXAMPLE_INPUT: InheritanceTaxInput = {
     // Phase D §19 배우자 법정상속분 자동 계산 — orchestrator가 분자 산식 직접 적용
     // (spouseLegalShareOverride 미입력 시 자동)
     legateeAmountNonHeir: 500_000_000, // 손녀 유증 (저축은행 예금 5억)
-    priorGiftDeductionTotal: 650_000_000, // 증여재산공제 합 (배우자 600M + 장남 50M)
+    // priorGiftDeductionTotal 미입력 — §24 자동 도출 검증(dual-truth 차단):
+    // preGifts giftTaxBase에서 650M(배우자 600 + 장남 50 + 법인 0) 자동 계산되어야 ceiling 5,965M 유지.
   },
   creditInput: {
     priorGifts: EXAMPLE_PRIOR_GIFTS,
