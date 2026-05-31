@@ -22,6 +22,7 @@ import { evaluateUnlistedStockV2 } from "./property-valuation/unlisted-orchestra
 import {
   computeStockValuation,
   resolveEstateItemValue,
+  resolveUnlistedDisplayMode,
 } from "./valuation/resolve-estate-item-value";
 
 // ============================================================
@@ -373,7 +374,15 @@ export function evaluateAllEstateItems(
   items: EstateItem[],
 ): PropertyValuationResult[] {
   return items.map((i) => {
-    if (i.category === "unlisted_stock" && i.unlistedStockValuationV2) {
+    // V2 라우팅은 mode==="formal" + V2 객체 동시 충족 시에만 (2026-05-31 fix — dual-truth 차단).
+    // 종전: V2 객체 존재만으로 라우팅 → simple mode에서 V2 객체 stale 잔류 시 V1 산식 무시되어
+    // computeStockValuation(resolveUnlistedDisplayMode 통과·V1=500m)과 evaluateAllEstateItems(V2=400m)
+    // 사이 dual-truth 발생. resolveUnlistedDisplayMode 단일 진실 통일로 3경로 정합.
+    if (
+      i.category === "unlisted_stock" &&
+      resolveUnlistedDisplayMode(i) === "formal" &&
+      i.unlistedStockValuationV2
+    ) {
       return evaluateUnlistedStockV2AsPropertyResult(i);
     }
     if (i.category === "listed_stock" || i.category === "unlisted_stock") {
