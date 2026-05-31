@@ -339,16 +339,20 @@ export function calcHeirAllocation(
   //   funeral을 식대/봉안 category별로 raw 분배 → capped로 scaleAllocations(잔액 흡수)하여 병합.
   const debtByHeir = computeDebtByHeirWithFuneralCap(debtItems, legalShares);
 
-  // 추정상속재산 분배 — heirAllocations 입력 시 비율 안분, 미입력 시 법정상속분
+  // 추정상속재산 분배 — heirAllocations 입력 항목은 개별 비율 안분, 미입력 항목은 법정상속분.
+  // ★ 미입력 항목이 여럿이면 added를 합산한 뒤 **1회만** distributeByLegalShares 적용.
+  //   (항목별로 floor 안분하면 매 항목 잔액 흡수자(최다분자 상속인)가 +오차를 누적해
+  //    350M → 배우자 150,000,004 / 자녀 99,999,998 같은 오차 발생. 합산 1회 안분으로 차단.)
   const presumedByHeir = new Map<string, number>();
+  let unallocatedPresumedTotal = 0; // 미입력(법정상속분 fallback) 항목 added 합산
   for (const pi of presumedItems) {
     const added = presumedAddedById.get(pi.id) ?? 0;
     if (added === 0) continue;
-    if (pi.heirAllocations && pi.heirAllocations.length > 0) {
-      const totalAlloc = pi.heirAllocations.reduce((s, a) => s + a.amount, 0);
-      if (totalAlloc === 0) continue;
+    const totalAlloc =
+      pi.heirAllocations?.reduce((s, a) => s + a.amount, 0) ?? 0;
+    if (pi.heirAllocations && pi.heirAllocations.length > 0 && totalAlloc > 0) {
+      // 협의분할 입력 — 개별 비율 안분 (사용자 명시 분배. 통상 added == totalAlloc)
       for (const alloc of pi.heirAllocations) {
-        // 비율 안분 (총 분배 = added이면 비례 그대로)
         const share = Math.floor((added * alloc.amount) / totalAlloc);
         presumedByHeir.set(
           alloc.heirId,
@@ -356,11 +360,14 @@ export function calcHeirAllocation(
         );
       }
     } else {
-      // 미입력 — 법정상속분 자동 배분
-      const dist = distributeByLegalShares(added, legalShares);
-      for (const [heirId, amt] of dist) {
-        presumedByHeir.set(heirId, (presumedByHeir.get(heirId) ?? 0) + amt);
-      }
+      // 미입력(또는 빈 협의분할) — 합산 후 일괄 안분 대상에 누적
+      unallocatedPresumedTotal += added;
+    }
+  }
+  if (unallocatedPresumedTotal > 0) {
+    const dist = distributeByLegalShares(unallocatedPresumedTotal, legalShares);
+    for (const [heirId, amt] of dist) {
+      presumedByHeir.set(heirId, (presumedByHeir.get(heirId) ?? 0) + amt);
     }
   }
 
