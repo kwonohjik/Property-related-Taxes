@@ -29,11 +29,26 @@ import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
  * 비상장주식 표시 모드 도출 — 단일 진실 헬퍼.
  * (J-1 이동: lib/calc/stock-valuation.ts → 엔진. EstateItem 필드 접근만이라 무손실.)
  *
+ * 우선순위 (2026-05-31 보강 — V1 사용자 보호):
+ *   1. `unlistedValuationMode` 명시 → 그대로 사용 (사용자 명시 선택 최우선)
+ *   2. `unlistedStockData` 존재 → "simple" (V1 사용자 보호. V2 객체가 stale 잔류해도 V1 우선)
+ *   3. `unlistedStockValuationV2` 단독 → "formal"
+ *   4. 모두 없음 → "simple" (default)
+ *
+ * 보강 사유: 사용자 store에 `unlistedValuationMode` 필드가 명시 저장되지 않은 채
+ * V2 객체만 stale 잔류한 케이스(사용자가 한 번 V2 켰다가 V1로 복귀)에서,
+ * 종전 default "formal" → V2 라우팅 → V1 산식 무시되어 dual-truth 발생.
+ * `unlistedStockData` 존재 시 simple 우선으로 V1 사용자 보호. V2 정식 사용자는
+ * unlistedStockData를 사용하지 않으므로 영향 없음(또는 mode 명시로 1순위 hit).
+ *
  * @param item EstateItem (category: "unlisted_stock" 상정)
  * @returns "simple" | "formal"
  */
 export function resolveUnlistedDisplayMode(item: EstateItem): "simple" | "formal" {
-  return item.unlistedValuationMode ?? (item.unlistedStockValuationV2 ? "formal" : "simple");
+  if (item.unlistedValuationMode) return item.unlistedValuationMode;
+  if (item.unlistedStockData) return "simple";
+  if (item.unlistedStockValuationV2) return "formal";
+  return "simple";
 }
 
 /**

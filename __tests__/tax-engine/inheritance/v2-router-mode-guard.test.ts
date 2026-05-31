@@ -81,6 +81,28 @@ describe("evaluateAllEstateItems — V2 라우터 mode 검사 (dual-truth fix)",
     expect(() => evaluateAllEstateItems([item])).toThrow();
   });
 
+  // ★ 보강 fix (2026-05-31): unlistedValuationMode 미저장 + V1 data + V2 stale 케이스
+  it("mode 미저장 + unlistedStockData 존재 + V2 stale → V1 라우팅 (default formal 회피)", () => {
+    const item: EstateItem = {
+      id: "unlisted-mode-missing",
+      category: "unlisted_stock",
+      name: "비상장 — mode 필드 누락 + V1 데이터 + V2 stale",
+      // unlistedValuationMode 의도적 미설정 — store에 mode 필드 명시 저장 안 된 사용자 케이스
+      unlistedStockData: {
+        totalShares: 25_000,
+        ownedShares: 25_000,
+        weightedNetIncome: 0,
+        netAssetValue: 500_000_000,
+        capitalizationRate: 0.1,
+        assetValueOnlyReason: "liquidation",
+      },
+      unlistedStockValuationV2: makeStaleV2(),
+    };
+    const [result] = evaluateAllEstateItems([item]);
+    // 종전 default "formal" → V2 throw였으나, 보강 후 V1 data 존재로 simple 판정 → V1 평가 → 500m
+    expect(result.valuatedAmount).toBe(500_000_000);
+  });
+
   it("simple 모드 + V2 객체 잔류 (사용자 케이스) — V2 throw 없이 V1으로 평가 완료", () => {
     // 위 첫 테스트와 동일하지만 throw가 일어나지 않음을 명시적으로 검증.
     const item: EstateItem = {
