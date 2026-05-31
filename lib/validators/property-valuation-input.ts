@@ -38,6 +38,14 @@ export const unlistedStockDataSchema = z.object({
    * ⚠️ plain z.object는 미정의 키를 침묵 제거하므로, 엔진 도달 위해 스키마에 반드시 선언.
    */
   isRealEstateHeavy: z.boolean().optional(),
+  /**
+   * §54④ 순자산가치만 적용 사유 (선택) — 1·2·6호 무조건 / 3·5호 단서.
+   * ⚠️ 누락 시 z.object 침묵 strip → 엔진이 본칙(80% 최소값) 적용 → 1주당 순자산가치
+   *    대신 80% 적용되어 평가액 과소산정(예: 500m→400m). 14지점 ⑫ 정합.
+   */
+  assetValueOnlyReason: z
+    .enum(["liquidation", "lt3y", "real_estate_80", "stock_80", "remaining_3y"])
+    .optional(),
 }).superRefine((data, ctx) => {
   // 3년치 또는 legacy weightedNetIncome 중 하나 이상 입력 여부 검증
   // (적자법인은 모두 0일 수 있으므로 "값이 있는지" 체크 — 과도 차단 금지)
@@ -268,6 +276,12 @@ export const unlistedStockItemSchema = baseItemSchema.extend({
   unlistedStockData: unlistedStockDataSchema.optional(),
   // V2 입력 모드 (별지 부표3 완전 재현)
   unlistedStockValuationV2: unlistedStockValuationV2Schema.optional(),
+  /**
+   * 간편(simple)/정식(formal) 평가 모드 명시 (선택).
+   * ⚠️ 누락 시 z.object 침묵 strip → 서버 resolveUnlistedDisplayMode가 default 판정에 의존.
+   *    V1+V2 객체 공존 시 라우팅 오판 위험 → 엔진 도달 위해 스키마 선언 (14지점 ⑫).
+   */
+  unlistedValuationMode: z.enum(["simple", "formal"]).optional(),
 }).superRefine((item, ctx) => {
   // V1·V2 둘 중 하나는 필수
   if (!item.unlistedStockData && !item.unlistedStockValuationV2) {
