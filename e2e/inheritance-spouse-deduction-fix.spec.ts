@@ -74,3 +74,35 @@ test("일괄공제 토글 제거 — 공제 단계에 '일괄공제 선택' 토�
   });
   await expect(page.getByText(/일괄공제 선택/)).toHaveCount(0);
 });
+
+test("§21② 배우자 단독상속 → 일괄공제 배제 안내 노출", async ({ page }) => {
+  test.setTimeout(90_000);
+  await page.goto("/calc/inheritance-tax");
+  await page.getByLabel("연도").first().fill("2024");
+  await page.getByLabel("월").first().fill("6");
+  await page.getByLabel("일").first().fill("10");
+  // 배우자만 상속인 (자녀 미추가 → 배우자 단독상속)
+  await page.getByRole("button", { name: /상속인 추가/ }).click();
+  await page.getByText("배우자", { exact: true }).click();
+  await page.getByRole("button", { name: /^다음/ }).click();
+
+  // 토지 20억
+  await page.getByRole("button", { name: /상속재산 추가/ }).click();
+  await page.getByRole("button", { name: /토지/ }).first().click();
+  await page.getByPlaceholder("면적 입력").fill("2000");
+  await page.getByPlaceholder("공시지가 단가").fill("1000000");
+
+  // Step2 → Step3 → Step4 → 계산
+  await page.getByRole("button", { name: /^다음/ }).click();
+  await page.getByRole("button", { name: /^다음/ }).click();
+  await page.getByRole("button", { name: /^다음/ }).click();
+  await page.getByRole("button", { name: /계산하기/ }).click();
+  await expect(page.getByText("상속세 결정세액")).toBeVisible({ timeout: 15_000 });
+
+  // 상속공제 상세 내역 펼침 → §21② 배제 안내 + 일괄공제 Row 없음
+  await page.getByText("상속공제 상세 내역").click();
+  await expect(page.getByText(/배우자 단독상속 — 일괄공제 배제/)).toBeVisible({
+    timeout: 5_000,
+  });
+  await expect(page.getByText("일괄공제 (§21)")).toHaveCount(0);
+});

@@ -643,8 +643,19 @@ export function calcInheritanceDeductions(
   //    합리적 납세자는 항상 큰 금액을 선택하므로 토글 없이 자동 max (2026-05-31 preferLumpSum 토글 제거).
   //    기초+인적이 5억을 초과(인적공제 다수)하는 경우만 항목별이 자동 선택됨.
   const itemizedTotal = basicDeduction + personalDeductionTotal;
-  const chosenMethod: "lump_sum" | "itemized" =
-    LUMP_SUM_DEDUCTION >= itemizedTotal ? "lump_sum" : "itemized";
+  // §21② 배우자가 단독으로 상속받는 경우 → 일괄공제 배제, 기초+인적공제만 적용.
+  //    상속인이 배우자 1인(다른 순위 상속인·공동상속인 부존재 또는 전원 상속포기)인 경우.
+  //    수유자(legatee)·영리법인 수증자(corporate)는 상속인이 아니므로 제외하고 판정.
+  const realHeirs = input.heirs.filter(
+    (h) => h.relation !== "legatee" && h.relation !== "corporate",
+  );
+  const isSpouseSoleHeir =
+    realHeirs.length > 0 && realHeirs.every((h) => h.relation === "spouse");
+  const chosenMethod: "lump_sum" | "itemized" = isSpouseSoleHeir
+    ? "itemized"
+    : LUMP_SUM_DEDUCTION >= itemizedTotal
+      ? "lump_sum"
+      : "itemized";
   const chosenBasicPersonal =
     chosenMethod === "lump_sum" ? LUMP_SUM_DEDUCTION : itemizedTotal;
 
@@ -766,6 +777,7 @@ export function calcInheritanceDeductions(
     familyBusinessDetail,
     totalDeduction: limitedDeduction,
     chosenMethod,
+    lumpSumExcludedBySpouseSoleHeir: isSpouseSoleHeir,
     breakdown,
     appliedLaws: [
       INH.BASIC_DEDUCTION,

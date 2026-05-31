@@ -786,6 +786,8 @@ export interface InheritanceDeductionResult {
   totalDeduction: number;
   /** 일괄공제 vs 개별공제 선택 근거 */
   chosenMethod: "lump_sum" | "itemized";
+  /** §21② 배우자 단독상속 → 일괄공제 배제 여부 (true면 chosenMethod="itemized" 강제) */
+  lumpSumExcludedBySpouseSoleHeir?: boolean;
   breakdown: CalculationStep[];
   appliedLaws: string[];
 }

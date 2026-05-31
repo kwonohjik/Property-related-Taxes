@@ -149,4 +149,43 @@ describe("상속공제 4,600m 정합 — 6개 수정 anchor", () => {
       expect(r.lumpSumDeduction).toBe(500_000_000);
     });
   });
+
+  // ── §21② 배우자가 단독으로 상속받는 경우 일괄공제 배제 (KoreanLaw mst 276123) ──
+  // "배우자가 단독으로 상속받는 경우에는 제18조와 제20조제1항에 따른 공제액을 합친 금액으로만 공제"
+  // 판정: 상속인(legatee·corporate 수유자·수증자 제외)이 배우자뿐.
+  describe("CI-SS §21② 배우자 단독상속 일괄공제 배제", () => {
+    const HUGE = 10_000_000_000;
+    const ssSpouse: Heir = { id: "sp", relation: "spouse", name: "배우자" };
+    const ssChild: Heir = { id: "c1", relation: "child", name: "자녀" };
+
+    it("CI-SS1 배우자 단독상속 → 일괄 배제, 기초 2억만", () => {
+      const r = calcInheritanceDeductions({ heirs: [ssSpouse], deathDate: "2024-06-10" }, HUGE, 0);
+      expect(r.chosenMethod).toBe("itemized");
+      expect(r.lumpSumDeduction).toBe(0);
+      expect(r.basicDeduction).toBe(200_000_000);
+      expect(r.lumpSumExcludedBySpouseSoleHeir).toBe(true);
+    });
+
+    it("CI-SS2 배우자+자녀 공동상속 → 일괄 5억 적용 (단독 아님)", () => {
+      const r = calcInheritanceDeductions(
+        { heirs: [ssSpouse, ssChild], deathDate: "2024-06-10" },
+        HUGE,
+        0,
+      );
+      expect(r.chosenMethod).toBe("lump_sum");
+      expect(r.lumpSumDeduction).toBe(500_000_000);
+      expect(r.lumpSumExcludedBySpouseSoleHeir).toBe(false);
+    });
+
+    it("CI-SS3 배우자+수유자(legatee)만 → 배우자 단독상속(수유자 제외) → 배제", () => {
+      const legatee: Heir = { id: "lg", relation: "legatee", name: "손녀" };
+      const r = calcInheritanceDeductions(
+        { heirs: [ssSpouse, legatee], deathDate: "2024-06-10" },
+        HUGE,
+        0,
+      );
+      expect(r.chosenMethod).toBe("itemized");
+      expect(r.lumpSumExcludedBySpouseSoleHeir).toBe(true);
+    });
+  });
 });

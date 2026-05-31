@@ -596,6 +596,9 @@ export function InheritanceTaxResultView({
               <Row label="일괄공제 (§21)" value={formatKRW(result.deductionDetail.lumpSumDeduction)} />
             ) : (
               <>
+                {result.deductionDetail.lumpSumExcludedBySpouseSoleHeir && (
+                  <Row label="ⓘ 배우자 단독상속 — 일괄공제 배제 (§21②)" value="기초+인적만" />
+                )}
                 <Row label="기초공제 (§18)" value={formatKRW(result.deductionDetail.basicDeduction)} />
                 <Row label="배우자 공제 (§19)" value={formatKRW(result.deductionDetail.spouseDeduction)} />
                 <Row
