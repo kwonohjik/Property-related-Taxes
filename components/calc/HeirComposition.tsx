@@ -171,8 +171,24 @@ function HeirEditor({ heir, index, onUpdate, onRemove }: HeirEditorProps) {
       {/* 협의분할은 각 자산 카드에서 입력 — 전역 비율 필드(actualShareRatio) 폐지 (2026-05-26).
           미입력 자산은 법정상속분 자동 배분. 안내는 상속인 섹션 상단에 1회 노출. */}
 
-      {/* 영리법인 전용 — 부표 5 ②③ + 주주 명세 */}
-      {isCorporate && <CorporateHeirFields heir={heir} set={set} />}
+      {/* 법인 — 영리법인 여부 (donee-phase2). 사전증여 §3의2② 적용 판정. */}
+      {isCorporate && (
+        <div data-testid="heir-is-for-profit">
+          <ToggleCard
+            tone="violet"
+            size="sm"
+            title="영리법인 여부"
+            description="ON: 영리법인 (사전증여 §3의2② 면제·산출세액 상당액 자동) / OFF: 비영리법인 (§3의2② 미적용)"
+            checked={heir.isForProfit !== false}
+            onCheckedChange={(v) => set({ isForProfit: v ? undefined : false })}
+          />
+        </div>
+      )}
+
+      {/* 영리법인 전용 — 부표 5 ②③ + 주주 명세 (비영리법인은 미표시) */}
+      {isCorporate && heir.isForProfit !== false && (
+        <CorporateHeirFields heir={heir} set={set} />
+      )}
     </div>
   );
 }

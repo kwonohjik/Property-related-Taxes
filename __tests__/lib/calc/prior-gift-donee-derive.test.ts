@@ -42,8 +42,14 @@ describe("A1 — deriveDoneeRelationFromHeir (Heir.relation → DonorRelation)",
 });
 
 describe("A2 — deriveBeneficiaryTypeFromHeir (Heir → beneficiaryType, isHeir 일관)", () => {
-  it("corporate → corporate", () => {
+  it("corporate (isForProfit 미설정) → corporate (영리법인 기본)", () => {
     expect(deriveBeneficiaryTypeFromHeir(makeHeir("corporate"))).toBe("corporate");
+  });
+  it("corporate + isForProfit=true → corporate (영리법인)", () => {
+    expect(deriveBeneficiaryTypeFromHeir(makeHeir("corporate", { isForProfit: true }))).toBe("corporate");
+  });
+  it("corporate + isForProfit=false → legatee (비영리법인 §3의2② 미적용) [phase2]", () => {
+    expect(deriveBeneficiaryTypeFromHeir(makeHeir("corporate", { isForProfit: false }))).toBe("legatee");
   });
   it("legatee → legatee", () => {
     expect(deriveBeneficiaryTypeFromHeir(makeHeir("legatee"))).toBe("legatee");

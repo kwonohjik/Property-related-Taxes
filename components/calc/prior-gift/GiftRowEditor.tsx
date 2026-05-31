@@ -7,7 +7,7 @@
  * 2-B (2026-05-29): 수증자(Heir) select 추가 — doneeId + isHeir 동시 동기화.
  */
 
-import { useRef } from "react";
+import { useState } from "react";
 import {
   CurrencyInput,
   parseAmount,
@@ -15,7 +15,6 @@ import {
 } from "@/components/calc/inputs/CurrencyInput";
 import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
-import { CorporateGiftFields } from "@/components/calc/prior-gift/CorporateGiftFields";
 import {
   DONOR_RELATION_LABELS,
   DONOR_RELATION_LIST,
@@ -38,6 +37,7 @@ import {
   deriveBeneficiaryTypeFromHeir,
   deriveDoneeRelationFromHeir,
 } from "@/lib/calc/prior-gift-donee-derive";
+import { autoComputePriorGiftTax } from "@/lib/calc/prior-gift-auto-tax";
 
 // ============================================================
 // 수증자 select 헬퍼 — 파생 로직은 lib/calc/prior-gift-donee-derive.ts 단일 진실
@@ -77,23 +77,36 @@ export function GiftRowEditor({
 }: GiftRowEditorProps) {
   const set = (patch: Partial<PriorGift>) => onUpdate({ ...gift, ...patch });
 
-  // 영리법인 ON↔OFF 사이클에서 prev 상태 보존 (계획서 §4-1-b · 디자인 §2-1)
-  // 카드-local — store 글로벌 보존 금지, PriorGift 메타 신설 금지
-  const prevRef = useRef<{
-    isHeir: boolean;
-    doneeRelation?: DonorRelation;
-    giftTaxPaid: number;
-  } | null>(null);
+  // 세액 입력란(giftTaxPaid·corporateGiftComputedTax 공통) 사용자 수동 수정 여부 — 자동 덮어쓰기 차단.
+  // 카드-local useState (showAutoBadge가 render에 영향 → ref 아닌 state. useEffect→store 미러링 아님).
+  const [userTouchedTax, setUserTouchedTax] = useState(false);
+
+  // 부표1(신고서 메타) 기본 접힘 (donee-phase2 — 입력 간소화, print 자동 펼침)
+  const [besshiOpen, setBesshiOpen] = useState(false);
 
   const isCorporate = gift.beneficiaryType === "corporate";
 
+  /**
+   * 자동계산 세액 patch (mirror) — userTouchedTax 미터치 시에만 적용.
+   *   영리법인: corporateGiftComputedTax(§3의2② 산출세액 상당액)·giftTaxPaid=0·giftTaxBase=undefined
+   *   그 외(상속인·수유자·비영리법인): giftTaxPaid
+   */
+  function computeTaxPatch(next: PriorGift): Partial<PriorGift> {
+    if (userTouchedTax) return {};
+    const tax = autoComputePriorGiftTax(next.giftAmount ?? 0, next.doneeRelation);
+    if (next.beneficiaryType === "corporate") {
+      return { corporateGiftComputedTax: tax, giftTaxPaid: 0, giftTaxBase: undefined };
+    }
+    return { giftTaxPaid: tax };
+  }
+
   // ============================================================
-  // 2-B: 수증자 select onChange 핸들러
-  // useEffect → store 미러링 금지 정책 준수 — onChange에서 doneeId·isHeir 동시 patch.
+  // 수증자 select onChange — doneeId·isHeir·beneficiaryType·doneeRelation 4필드 + 자동계산 단일 set
+  // (useEffect → store 미러링 금지 정책 준수).
   // ============================================================
   function handleDoneeSelect(heirId: string) {
     if (!heirId) {
-      // "선택 안 함" → doneeId 제거, isHeir·doneeRelation 기존값 유지 (수동 경로 복귀)
+      // "선택 안 함" → doneeId 제거, 나머지 기존값 유지 (수동 경로 복귀)
       set({ doneeId: undefined });
       return;
     }
@@ -102,46 +115,31 @@ export function GiftRowEditor({
       set({ doneeId: heirId });
       return;
     }
-    // doneeId + isHeir + beneficiaryType + doneeRelation 4필드 동시 patch (useEffect 미러링 금지).
-    //   isHeir: §13 cutoff(common.ts:295) / beneficiaryType: §13 분류 우월 키(inheritance-tax.ts:252)
-    //   doneeRelation: §53 증여재산공제 제안(inheritance-deduction-suggest.ts:198)
-    set({
+    const corePatch: Partial<PriorGift> = {
       doneeId: heirId,
       isHeir: deriveIsHeirFromHeir(selectedHeir),
       beneficiaryType: deriveBeneficiaryTypeFromHeir(selectedHeir),
       doneeRelation: deriveDoneeRelationFromHeir(selectedHeir.relation),
-    });
+    };
+    set({ ...corePatch, ...computeTaxPatch({ ...gift, ...corePatch }) });
   }
 
-  function handleCorporateToggle(on: boolean) {
-    if (on) {
-      // ON 클릭 시점의 최신 gift 값을 캡처
-      prevRef.current = {
-        isHeir: gift.isHeir,
-        doneeRelation: gift.doneeRelation,
-        giftTaxPaid: gift.giftTaxPaid,
-      };
-      set({
-        beneficiaryType: "corporate",
-        isHeir: false, // 엔진 line 305: gift.isHeir ? 10 : 5 → §13①2호 5년 컷오프 강제
-        doneeRelation: undefined,
-        giftTaxPaid: 0, // §28 공제 중복 방지 (영리법인 §4의2③ 비과세)
-      });
-    } else {
-      const prev = prevRef.current ?? {
-        isHeir: true,
-        doneeRelation: undefined,
-        giftTaxPaid: 0,
-      };
-      set({
-        beneficiaryType: undefined,
-        corporateGiftComputedTax: undefined,
-        isHeir: prev.isHeir,
-        doneeRelation: prev.doneeRelation,
-        giftTaxPaid: prev.giftTaxPaid,
-      });
-      prevRef.current = null;
-    }
+  // 증여재산가액 onChange — 가액 반영 후 자동 세액 재계산 (단일 set)
+  function handleGiftAmountChange(v: string) {
+    const giftAmount = parseAmount(v);
+    set({ giftAmount, ...computeTaxPatch({ ...gift, giftAmount }) });
+  }
+
+  // 수동 경로 관계 onChange — doneeRelation 반영 후 자동 세액 재계산 (P6 경로2)
+  function handleManualRelationChange(rel: DonorRelation | undefined) {
+    set({ doneeRelation: rel, ...computeTaxPatch({ ...gift, doneeRelation: rel }) });
+  }
+
+  // 세액 입력란 수동 수정 — userTouchedTax 플래그 set 후 자동 덮어쓰기 차단
+  function handleTaxAmountChange(v: string) {
+    setUserTouchedTax(true);
+    const amount = parseAmount(v);
+    set(isCorporate ? { corporateGiftComputedTax: amount } : { giftTaxPaid: amount });
   }
 
   return (
@@ -179,19 +177,8 @@ export function GiftRowEditor({
         </button>
       </div>
 
-      {/* 영리법인 분기 토글 (상속세 모드 전용) — §13①2호 5년 합산 + §3의2② + 집행기준 28-0-1 면제 */}
-      {showIsHeir && (
-        <ToggleCard
-          tone="violet"
-          variant="card"
-          title="🏢 수증인 = 영리법인"
-          description="상증법 §13①2호 5년 합산 · §3의2② + 집행기준 28-0-1 공제"
-          checked={isCorporate}
-          onCheckedChange={handleCorporateToggle}
-        >
-          <CorporateGiftFields gift={gift} set={set} heirs={heirs} />
-        </ToggleCard>
-      )}
+      {/* 영리법인 토글 폐지 (donee-phase2) — 영리법인 여부는 Step1에서 결정,
+       * 수증인은 아래 드롭다운에서 영리법인 포함 통일 선택. */}
 
       {/* 증여일 */}
       <div className="space-y-1">
@@ -231,17 +218,23 @@ export function GiftRowEditor({
         </div>
       )}
 
-      {/* ③ 수증자 (상속인·수유자) select — 상속세 모드 최상단 (증여일 직후).
-       * 도메인: 증여인=피상속인(고정), 수증인=Step1 heirs 중 선택.
-       * corporate Heir 제외(영리법인 토글 전담). doneeId 선택 시 isHeir·beneficiaryType·doneeRelation 자동 도출.
+      {/* ③ 수증자 드롭다운 — 상속세 모드 최상단 (증여일 직후).
+       * 도메인: 증여인=피상속인(고정), 수증인=Step1 heirs 전체 중 선택(영리법인 포함 — donee-phase2).
+       * doneeId 선택 시 isHeir·beneficiaryType·doneeRelation + 자동계산 세액 도출.
        * orphan(Step1 삭제) 가드: matchedHeir 없으면 amber 안내 + select value="".
        */}
-      {showIsHeir && !isCorporate && (heirs ?? []).length > 0 && (() => {
+      {showIsHeir && (heirs ?? []).length > 0 && (() => {
         const matchedHeir = (heirs ?? []).find((h) => h.id === gift.doneeId);
+        const summaryLabel = (h: Heir): string => {
+          if (h.relation === "corporate") {
+            return h.isForProfit === false ? "비영리법인" : "영리법인";
+          }
+          return HEIR_RELATION_LABEL[h.relation];
+        };
         return (
           <div className="space-y-1">
             <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
-              수증자 (상속인·수유자)
+              수증자 (상속인·수유자·법인)
             </label>
             <select
               data-testid="gift-donee-select"
@@ -250,15 +243,15 @@ export function GiftRowEditor({
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <option value="">선택 안 함 (인별 배부 생략)</option>
-              {(heirs ?? [])
-                .filter((h) => h.relation !== "corporate")
-                .map((h) => (
-                  <option key={h.id} value={h.id}>
-                    {HEIR_RELATION_LABEL[h.relation]}
-                    {h.name ? ` (${h.name})` : ""}
-                    {isNonHeirRelation(h.relation) ? " — 비상속인" : ""}
-                  </option>
-                ))}
+              {(heirs ?? []).map((h) => (
+                <option key={h.id} value={h.id}>
+                  {summaryLabel(h)}
+                  {h.name ? ` (${h.name})` : ""}
+                  {h.relation !== "corporate" && isNonHeirRelation(h.relation)
+                    ? " — 비상속인"
+                    : ""}
+                </option>
+              ))}
             </select>
 
             {/* ④ 요약 배지 (read-only) — doneeId 선택 + 매칭 Heir 존재 */}
@@ -267,7 +260,7 @@ export function GiftRowEditor({
                 data-testid="gift-donee-summary"
                 className="rounded-md bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-700 px-3 py-2 text-[11px] text-violet-700 dark:text-violet-300"
               >
-                {HEIR_RELATION_LABEL[matchedHeir.relation]}
+                {summaryLabel(matchedHeir)}
                 {matchedHeir.name ? ` (${matchedHeir.name})` : ""}
                 {" · "}
                 {deriveBeneficiaryTypeFromHeir(matchedHeir) === "heir"
@@ -298,6 +291,7 @@ export function GiftRowEditor({
 
       {/* ⑤ 상속인에게 증여 토글 + ⑥ 수증인과의 관계 — 상속세 모드 doneeId 미선택 시에만 (수동 경로).
        * isHeir(§13 게이트)가 doneeRelation(§53 관계)보다 위 — 사용자 지적 반영.
+       * 관계 수동 선택 시 자동계산(P6 경로2).
        */}
       {showIsHeir && !isCorporate && !gift.doneeId && (
         <>
@@ -317,11 +311,9 @@ export function GiftRowEditor({
             <select
               value={gift.doneeRelation ?? ""}
               onChange={(e) =>
-                set({
-                  doneeRelation: (e.target.value || undefined) as
-                    | DonorRelation
-                    | undefined,
-                })
+                handleManualRelationChange(
+                  (e.target.value || undefined) as DonorRelation | undefined,
+                )
               }
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
@@ -336,38 +328,66 @@ export function GiftRowEditor({
         </>
       )}
 
-      {/* 증여가액 */}
+      {/* 증여가액 — 입력 시 자동 세액 재계산 */}
       <CurrencyInput
         label="증여재산가액"
         value={gift.giftAmount > 0 ? String(gift.giftAmount) : ""}
-        onChange={(v) => set({ giftAmount: parseAmount(v) })}
+        onChange={handleGiftAmountChange}
         required
         hint="증여 당시 평가액 (시가 기준)"
       />
 
-      {/* 기납부 증여세 (영리법인 ON 시 disabled — §4의2③ 비과세 → §3의2②로 별도 공제) */}
-      <CurrencyInput
-        label="기납부 증여세"
-        value={gift.giftTaxPaid > 0 ? String(gift.giftTaxPaid) : ""}
-        onChange={(v) => set({ giftTaxPaid: parseAmount(v) })}
-        hint={
-          isCorporate
-            ? "영리법인 — 증여세 비과세 (§4의2③). 위 ToggleCard 펼침 영역의 §3의2② 산출세액 상당액으로 공제."
-            : "§28 증여세액공제 계산에 사용 — 납부하지 않았으면 0"
-        }
-        disabled={isCorporate}
-      />
+      {/* 세액 입력란 — 자동계산(수정 가능). 영리법인은 §3의2② 산출세액 상당액, 그 외는 기납부 증여세.
+       * userTouchedTax(useRef) 미터치 시 giftAmount·doneeRelation 변경마다 자동 재계산. 수동 수정 시 고정. */}
+      {(() => {
+        const taxValue = isCorporate
+          ? gift.corporateGiftComputedTax ?? 0
+          : gift.giftTaxPaid;
+        const showAutoBadge = !userTouchedTax && taxValue > 0;
+        return (
+          <div className="space-y-1">
+            <CurrencyInput
+              label={
+                isCorporate
+                  ? "§3의2② 산출세액 상당액 (자동·수정 가능)"
+                  : "기납부 증여세 (자동·수정 가능)"
+              }
+              value={taxValue > 0 ? String(taxValue) : ""}
+              onChange={handleTaxAmountChange}
+              hint={
+                isCorporate
+                  ? "영리법인 증여세는 비과세(§4의2③). §3의2② 면제 한도 분자 — 증여재산가액·관계로 자동 산출."
+                  : "§28 증여세액공제 계산 — 증여재산가액·수증자 관계로 자동 산출(수정 가능)."
+              }
+            />
+            {showAutoBadge && (
+              <p className="text-[11px] text-emerald-600 dark:text-emerald-400">
+                🧮 자동계산 (증여재산가액 − §53 공제 → §56 세율). 직접 입력 시 자동 갱신 중지.
+              </p>
+            )}
+          </div>
+        );
+      })()}
 
-      {/* 신고서 부표 1 표시 메타 (선택 입력) — 결과 화면 ②/③ 컬럼 표시용 */}
+      {/* 신고서 부표 1 표시 메타 (선택 입력·기본 접힘) — 결과 화면 ②/③ 컬럼 표시용.
+       * donee-phase2: 필수 입력과 시각 분리. print 시 자동 펼침([[print-only-css-toggle]]). */}
       <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-3">
-        <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setBesshiOpen((o) => !o)}
+          className="flex items-center gap-2 w-full text-left print:hidden"
+          data-testid="gift-besshi-toggle"
+        >
           <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-[10px] font-bold text-sky-800 select-none">
             부표
           </span>
-          <p className="text-xs font-semibold text-sky-700">
+          <p className="text-xs font-semibold text-sky-700 flex-1">
             증여재산 및 평가명세서 (별지 제10호서식 부표 1) 표시 (선택 입력)
           </p>
-        </div>
+          <span className="text-sky-600 text-xs">{besshiOpen ? "▲" : "▼"}</span>
+        </button>
+
+        <div className={besshiOpen ? "block space-y-3" : "hidden print:block print:space-y-3"}>
 
         {/* 자산 종류 — 부표 1 ② 컬럼 */}
         <div className="space-y-1">
@@ -462,6 +482,7 @@ export function GiftRowEditor({
           <p className="text-[11px] text-sky-600">
             미입력 시 결과 화면 ③ 컬럼에 &quot;사전증여 (YYYY-MM-DD)&quot;로 표시됩니다.
           </p>
+        </div>
         </div>
       </div>
 

@@ -37,14 +37,20 @@ export function deriveIsHeirFromHeir(h: Heir): boolean {
  *
  * ★ relation만 보면 deriveIsHeirFromHeir(isHeir prop 우선)과 어긋나 cutoff·분류 모순 →
  *   Heir 객체를 받아 deriveIsHeirFromHeir과 동일 기준으로 일관화.
- *   - corporate → "corporate" (§13①2호 5년 + §3의2②)
+ *   - corporate + isForProfit !== false → "corporate" (영리법인, §13①2호 5년 + §3의2②)
+ *   - corporate + isForProfit === false → "legatee" (비영리법인 — §3의2② 미적용, 일반 비상속인 5년) [donee-phase2]
  *   - deriveIsHeirFromHeir=false (legatee or isHeir prop=false) → "legatee" (비상속인 5년)
  *   - 그 외 → "heir" (상속인 10년)
+ *
+ * ⚠️ isForProfit은 relation을 바꾸지 않음(corporate 유지) — beneficiaryType 도출에만 영향.
+ *   협의분할·법정상속분·배부 제외는 relation==="corporate" 판정(27곳) 무변경.
  */
 export function deriveBeneficiaryTypeFromHeir(
   h: Heir,
 ): "heir" | "legatee" | "corporate" {
-  if (h.relation === "corporate") return "corporate";
+  if (h.relation === "corporate") {
+    return h.isForProfit === false ? "legatee" : "corporate";
+  }
   if (!deriveIsHeirFromHeir(h)) return "legatee";
   return "heir";
 }

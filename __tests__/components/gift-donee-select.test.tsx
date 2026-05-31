@@ -8,7 +8,7 @@
  * 검증 항목:
  *  T-01: 상속세 모드(showIsHeir=true) + heirs 있음 → 수증자 select 렌더
  *  T-02: 증여세 모드(showIsHeir=false) → 수증자 select 미렌더
- *  T-03: 영리법인 ON(isCorporate) → 수증자 select 숨김 (CorporateGiftFields가 처리)
+ *  T-03(phase2): 영리법인 토글 폐지 — 수증자 select 항상 노출(드롭다운 통일)
  *  T-04: 수증자 select 선택 시 doneeId set
  *  T-05: 수증자 선택 시 isHeir=true (상속인 relation=child)인 경우 isHeir=true 동시 set
  *  T-06: 수유자(relation=legatee) 선택 시 isHeir=false 동시 set — N1 교차 일관성
@@ -90,12 +90,14 @@ describe("GiftRowEditor — 수증자 select (2-B anchor)", () => {
     expect(screen.queryByTestId("gift-donee-select")).toBeNull();
   });
 
-  it("T-03: 영리법인 ON → 수증자 select 숨김", () => {
+  it("T-03(phase2): 영리법인 토글 폐지 — 수증자 select 항상 노출(드롭다운 통일)", () => {
     renderEditor(makeGift({ beneficiaryType: "corporate", isHeir: false }), {
       showIsHeir: true,
       heirs: HEIRS,
     });
-    expect(screen.queryByTestId("gift-donee-select")).toBeNull();
+    // 영리법인 토글 폐지 → 드롭다운은 그대로 노출. "수증인 = 영리법인" 토글 부재
+    expect(screen.getByTestId("gift-donee-select")).toBeDefined();
+    expect(screen.queryByText("🏢 수증인 = 영리법인")).toBeNull();
   });
 
   it("T-04: 수증자 select 선택 시 doneeId set", () => {
@@ -201,7 +203,7 @@ describe("GiftRowEditor — 수증자 select (2-B anchor)", () => {
     expect(summary.textContent).toContain("5년");
   });
 
-  it("T-13(A6): corporate Heir는 수증자 select 옵션에서 제외", () => {
+  it("T-13(phase2): corporate Heir도 수증자 select 옵션에 포함(드롭다운 통일)", () => {
     const HEIR_CORP: Heir = { id: "corp-1", relation: "corporate", name: "M주식회사" };
     renderEditor(makeGift(), {
       showIsHeir: true,
@@ -210,7 +212,53 @@ describe("GiftRowEditor — 수증자 select (2-B anchor)", () => {
     const select = screen.getByTestId("gift-donee-select") as HTMLSelectElement;
     const optionValues = Array.from(select.options).map((o) => o.value);
     expect(optionValues).toContain(HEIR_CHILD.id);
-    expect(optionValues).not.toContain(HEIR_CORP.id); // 영리법인 토글 전담
+    expect(optionValues).toContain(HEIR_CORP.id); // phase2 — 영리법인 포함
+    // 영리법인 라벨 표기
+    const corpOption = Array.from(select.options).find((o) => o.value === HEIR_CORP.id);
+    expect(corpOption?.textContent).toContain("영리법인");
+  });
+
+  // ===== phase2 자동계산·라벨·부표1 신규 anchor =====
+
+  it("T-17: 배우자 선택 시 기납부 증여세 자동 22,000,000 (giftAmount 사전 입력)", () => {
+    const { onUpdate } = renderEditor(makeGift({ giftAmount: 760_000_000 }), {
+      showIsHeir: true,
+      heirs: HEIRS,
+    });
+    const select = screen.getByTestId("gift-donee-select") as HTMLSelectElement;
+    fireEvent.change(select, { target: { value: HEIR_SPOUSE.id } });
+    const updated: PriorGift = onUpdate.mock.calls[0][0];
+    expect(updated.giftTaxPaid).toBe(22_000_000); // 자동계산
+    expect(updated.doneeRelation).toBe("spouse");
+  });
+
+  it("T-18: 영리법인 선택 시 corporateGiftComputedTax 자동 150m·giftTaxPaid 0·giftTaxBase undefined", () => {
+    const HEIR_CORP: Heir = { id: "corp-1", relation: "corporate", name: "M주식회사" };
+    const { onUpdate } = renderEditor(makeGift({ giftAmount: 700_000_000 }), {
+      showIsHeir: true,
+      heirs: [HEIR_CORP],
+    });
+    const select = screen.getByTestId("gift-donee-select") as HTMLSelectElement;
+    fireEvent.change(select, { target: { value: HEIR_CORP.id } });
+    const updated: PriorGift = onUpdate.mock.calls[0][0];
+    expect(updated.beneficiaryType).toBe("corporate");
+    expect(updated.corporateGiftComputedTax).toBe(150_000_000);
+    expect(updated.giftTaxPaid).toBe(0);
+    expect(updated.giftTaxBase).toBeUndefined();
+  });
+
+  it("T-19: 영리법인 수증자 시 세액 라벨 '§3의2② 산출세액 상당액'", () => {
+    const HEIR_CORP: Heir = { id: "corp-1", relation: "corporate", name: "M주식회사" };
+    renderEditor(
+      makeGift({ beneficiaryType: "corporate", isHeir: false, doneeId: "corp-1", giftAmount: 700_000_000, corporateGiftComputedTax: 150_000_000 }),
+      { showIsHeir: true, heirs: [HEIR_CORP] },
+    );
+    expect(screen.getByText(/§3의2② 산출세액 상당액/)).toBeDefined();
+  });
+
+  it("T-20: 부표1 기본 접힘 — 토글 버튼 존재", () => {
+    renderEditor(makeGift(), { showIsHeir: true, heirs: HEIRS });
+    expect(screen.getByTestId("gift-besshi-toggle")).toBeDefined();
   });
 
   it("T-14(A8): orphan doneeId(Heir 삭제) → amber 안내 + select value=''", () => {

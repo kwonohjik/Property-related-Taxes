@@ -516,6 +516,12 @@ export interface Heir {
   // ===== 종합사례 PDF 확장 =====
   /** 상속인 vs 수유자·영리법인 구분. 미입력 시 relation으로 자동 추론. */
   isHeir?: boolean;
+  /**
+   * 영리법인 여부 (relation === "corporate"일 때만 의미) — Step1에서 결정 (donee-phase2).
+   * undefined·true = 영리법인(§3의2② 면제·산출세액 상당액 자동), false = 비영리법인(§3의2② 미적용).
+   * 미설정 시 영리법인으로 간주(기존 corporate Heir 호환).
+   */
+  isForProfit?: boolean;
   /** 세대생략 수유자(직계비속 손자녀) — §27 ② 30%/40% 할증 대상 */
   isGenerationSkipBeneficiary?: boolean;
   /** 영리법인 수증자만: 사전증여 당시 증여세 산출세액 (§3의2② 면제 한도용) */

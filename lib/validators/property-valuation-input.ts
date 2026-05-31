@@ -493,6 +493,8 @@ export const heirSchema = z.object({
   // 종합사례 PDF 확장
   isHeir: z.boolean().optional(),
   isGenerationSkipBeneficiary: z.boolean().optional(),
+  // donee-phase2 — 영리법인 여부 (corporate Heir, §3의2② 적용 판정). ⚠️ z.object 침묵 strip 방지.
+  isForProfit: z.boolean().optional(),
   corporateGiftComputedTax: z.number().nonnegative().optional(),
   // PR 2 (2026-05-22) — 부표 5 영리법인 면제 명세
   businessRegistrationNumber: z.string().optional(),
