@@ -202,15 +202,15 @@ describe("상속세 메인 엔진 — calcInheritanceTax()", () => {
      * 장례비 1,500만, 일반 한도 1,000만 → 공제 1,000만 (시행령 §9)
      * 과세가액 = 30억 - 1000만 = 2,990,000,000
      * 배우자 법정상속분: 1.5/(1.5+1) = 0.6 → 2990M × 0.6 = 1,794,000,000
-     * 배우자공제 = min(max(1794M, 5억), 30억) = 1,794,000,000
-     * 기초공제 2억 + 자녀 500만 = 205M
-     * 일괄 5억 > 205M → 일괄 선택
-     * rawTotal = 1794M + 500M = 2,294,000,000
+     * 배우자 법정상속분(정밀산식 I-1, 장례비 제외) = 3,000M × 1.5/2.5 = 1,800M
+     * 배우자공제 = min(max(1800M, 5억), 30억) = 1,800,000,000
+     * 기초공제 2억 + 자녀 500만 = 205M / 일괄 5억 > 205M → 일괄 선택
+     * rawTotal = 1800M + 500M = 2,300,000,000
      * §24 한도 = 2990M (no prior gifts) → no cap
-     * 과세표준 = 2990M - 2294M = 696,000,000
-     * 696M > 500M → 30% 구간: floor(696M×0.3) - 60M = 208,800,000 - 60,000,000 = 148,800,000
-     * 신고공제 = floor(148.8M × 0.03) = 4,464,000
-     * 결정세액 = 148,800,000 - 4,464,000 = 144,336,000
+     * 과세표준 = 2990M - 2300M = 690,000,000
+     * 690M > 500M → 30% 구간: floor(690M×0.3) - 60M = 207,000,000 - 60,000,000 = 147,000,000
+     * 신고공제 = floor(147M × 0.03) = 4,410,000
+     * 결정세액 = 147,000,000 - 4,410,000 = 142,590,000
      */
     const heirs: Heir[] = [heirSpouse(), heirChild()];
     const input: InheritanceTaxInput = {
@@ -227,10 +227,10 @@ describe("상속세 메인 엔진 — calcInheritanceTax()", () => {
     };
     const result = calcInheritanceTax(input);
     expect(result.taxableEstateValue).toBe(2_990_000_000);
-    expect(result.deductionDetail.spouseDeduction).toBe(1_794_000_000);
-    expect(result.computedTax).toBe(148_800_000);
-    expect(result.creditDetail.filingCredit).toBe(4_464_000);
-    expect(result.finalTax).toBe(144_336_000);
+    expect(result.deductionDetail.spouseDeduction).toBe(1_800_000_000);
+    expect(result.computedTax).toBe(147_000_000);
+    expect(result.creditDetail.filingCredit).toBe(4_410_000);
+    expect(result.finalTax).toBe(142_590_000);
   });
 
   // ──── E7: 봉안시설 포함 장례비 ───────────────────────────

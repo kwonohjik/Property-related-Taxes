@@ -67,8 +67,13 @@ const FINANCIAL_MID_FIXED = 20_000_000;
 /** 금융재산공제 초과구간 공제율: 20% */
 const FINANCIAL_OVER_RATE = 0.20;
 
-/** 동거주택공제 공제율 (§23의2): 80% */
-const COHABIT_SHARE_RATE = 0.80;
+/**
+ * 동거주택공제 공제율 (§23의2): 2019.12.31. 개정(2020.1.1. 시행)으로 80%→100%.
+ * KoreanLaw 검증(mst 276123 §23의2①): "담보된 피상속인 채무액을 뺀 가액의 100분의 100", 한도 6억.
+ */
+function cohabitShareRate(deathDate?: string): number {
+  return (deathDate ?? "9999-12-31") >= "2020-01-01" ? 1.0 : 0.8;
+}
 
 /** 동거주택공제 최댓값 (§23의2): 6억원 */
 const COHABIT_MAX = 600_000_000;
@@ -198,23 +203,39 @@ export function calcFinancialDeduction(netFinancialAssets: number): {
  * 공제액 = 주택 공시가격 × 80%, 최대 6억
  * (요건 확인은 UI에서 체크박스로 처리, 여기서는 금액만 계산)
  */
-export function calcCohabitationDeduction(cohabitHouseStdPrice: number): {
+export function calcCohabitationDeduction(
+  cohabitHouseStdPrice: number,
+  securedDebt = 0,
+  deathDate?: string,
+): {
   deduction: number;
   breakdown: CalculationStep[];
 } {
-  if (cohabitHouseStdPrice <= 0) {
+  // §23의2① 담보된 피상속인 채무액을 뺀 가액
+  const base = Math.max(0, cohabitHouseStdPrice - securedDebt);
+  if (base <= 0) {
     return { deduction: 0, breakdown: [] };
   }
 
-  const raw = applyRate(cohabitHouseStdPrice, COHABIT_SHARE_RATE);
+  const rate = cohabitShareRate(deathDate);
+  const raw = applyRate(base, rate);
   const deduction = Math.min(raw, COHABIT_MAX);
 
   return {
     deduction,
     breakdown: [
       { label: "동거주택 공시가격", amount: cohabitHouseStdPrice },
+      ...(securedDebt > 0
+        ? [
+            {
+              label: "− 담보된 피상속인 채무 (§23의2①)",
+              amount: -securedDebt,
+              lawRef: INH.COHABIT_DEDUCTION,
+            },
+          ]
+        : []),
       {
-        label: `동거주택공제 (80%, 최대 6억)`,
+        label: `동거주택공제 (${Math.round(rate * 100)}%, 최대 6억)`,
         amount: deduction,
         lawRef: INH.COHABIT_DEDUCTION,
       },
@@ -653,7 +674,8 @@ export function calcInheritanceDeductions(
       ],
     };
   } else {
-    cohabitResult = calcCohabitationDeduction(input.cohabitHouseStdPrice ?? 0);
+    // securedDebt는 1차 0 (§23의2① 담보채무 연동은 후속). deathDate로 80%/100% historical 분기.
+    cohabitResult = calcCohabitationDeduction(input.cohabitHouseStdPrice ?? 0, 0, baseDate);
   }
   const cohabitationDeduction = cohabitResult.deduction;
 

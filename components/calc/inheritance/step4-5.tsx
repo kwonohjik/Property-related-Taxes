@@ -42,8 +42,8 @@ export function Step4({ form, set }: { form: FormState; set: FormSet }) {
     [form.estateItems, form.stockItems],
   );
   const suggestSpouse = useMemo(
-    () => suggestSpouseActualAmount(allEstateItems, form.heirs),
-    [allEstateItems, form.heirs],
+    () => suggestSpouseActualAmount(allEstateItems, form.heirs, form.debtItems),
+    [allEstateItems, form.heirs, form.debtItems],
   );
   const suggestNet = useMemo(
     () => suggestNetFinancialAssets(allEstateItems, form.debtItems),

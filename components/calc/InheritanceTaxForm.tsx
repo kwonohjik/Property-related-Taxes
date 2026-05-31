@@ -47,6 +47,11 @@ import {
 import { resolveActiveUnlistedValuation } from "@/lib/calc/unlisted-valuation-mode";
 import { applyCorporateGiftTaxFallback } from "@/lib/calc/prior-gift-auto-tax";
 import {
+  suggestSpouseActualAmount,
+  suggestNetFinancialAssets,
+  suggestLegateeAmountNonHeir,
+} from "@/lib/calc/inheritance-deduction-suggest";
+import {
   type FormState,
   INITIAL_FORM,
   STEPS,
@@ -292,11 +297,18 @@ export function InheritanceTaxForm() {
     const allItems = [...form.estateItems, ...form.stockItems].map(
       resolveActiveUnlistedValuation,
     );
+    // 자동 도출 (mirror, R4): 빈 문자열(미입력)일 때만 자산·협의분할 기반 자동, "0"·명시값 우선.
+    // store는 불변(form 그대로) — useEffect→store 미러링 아님. UI는 자동값을 display fallback으로 표시.
+    const autoOrManual = (raw: string, auto: number): number | undefined =>
+      raw === "" ? (auto > 0 ? auto : undefined) : parseAmount(raw) || undefined;
+    const spouseAuto = suggestSpouseActualAmount(allItems, form.heirs, form.debtItems).value;
+    const netFinAuto = suggestNetFinancialAssets(allItems, form.debtItems).value;
+    const legateeAuto = suggestLegateeAmountNonHeir(allItems, form.heirs).value;
     const deductionInput: InheritanceDeductionInput = {
       heirs: form.heirs,
-      spouseActualAmount: parseAmount(form.spouseActualAmount) || undefined,
+      spouseActualAmount: autoOrManual(form.spouseActualAmount, spouseAuto),
       preferLumpSum: form.preferLumpSum,
-      netFinancialAssets: parseAmount(form.netFinancialAssets) || undefined,
+      netFinancialAssets: autoOrManual(form.netFinancialAssets, netFinAuto),
       cohabitHouseStdPrice: parseAmount(form.cohabitHouseStdPrice) || undefined,
       farmingAssetValue: parseAmount(form.farmingAssetValue) || undefined,
       familyBusinessValue: parseAmount(form.familyBusinessValue) || undefined,
@@ -306,7 +318,7 @@ export function InheritanceTaxForm() {
       // Phase D·E 신규 — 종합사례 PDF
       familyBusinessDirectAmount: parseAmount(form.familyBusinessDirectAmount) || undefined,
       cohabitDirectAmount: parseAmount(form.cohabitDirectAmount) || undefined,
-      legateeAmountNonHeir: parseAmount(form.legateeAmountNonHeir) || undefined,
+      legateeAmountNonHeir: autoOrManual(form.legateeAmountNonHeir, legateeAuto),
       priorGiftDeductionTotal: parseAmount(form.priorGiftDeductionTotal) || undefined,
       deathDate: form.deathDate || undefined,
       // 영농상속공제 정밀화 (2026-05-21, §18의3 + 시행령 §16)

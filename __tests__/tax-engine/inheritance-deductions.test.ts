@@ -198,12 +198,12 @@ describe("상속공제 7종 + §24 종합한도", () => {
     expect(r.deduction).toBe(200_000_000);
   });
 
-  it("[D18] 동거주택공제: 5억 × 80% = 4억 (6억 이하)", () => {
+  it("[D18] 동거주택공제: 5억 × 100% = 5억 (§23의2 2020.1.1. 개정, 6억 이하)", () => {
     const r = calcCohabitationDeduction(500_000_000);
-    expect(r.deduction).toBe(400_000_000);
+    expect(r.deduction).toBe(500_000_000);
   });
 
-  it("[D19] 동거주택공제: 8억 × 80% = 6.4억 → 상한 6억", () => {
+  it("[D19] 동거주택공제: 8억 × 100% = 8억 → 상한 6억", () => {
     const r = calcCohabitationDeduction(800_000_000);
     expect(r.deduction).toBe(600_000_000);
   });

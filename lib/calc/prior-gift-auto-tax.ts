@@ -28,6 +28,29 @@ import type {
  * @param doneeRelation §53 관계별 공제 결정용. undefined(영리법인·비친족 수유자) → 공제 0.
  * @returns 산출세액 (원, 정수). giftAmount ≤ 0 또는 과세표준 < 50만원(§55 단서) → 0.
  */
+/**
+ * 사전증여 1건의 증여세 과세표준 자동계산 (증여재산가액 − §53 관계별 공제).
+ *
+ * 상속세 모드 사전증여엔 과세표준(giftTaxBase) 입력 UI가 없어(증여세 모드 전용),
+ * 배우자 법정상속분(§19) 산정의 spouseGiftTaxBase가 giftAmount로 fallback되는 버그를 차단.
+ *   배우자 760m → 760m − 600m(§53 배우자공제) = 160m.
+ *
+ * @returns 과세표준 (원, 정수). §55 단서(50만원 미만)는 적용 안 함 — 한도 분자 차감용 raw 과세표준.
+ */
+export function autoComputeGiftTaxBase(
+  giftAmount: number,
+  doneeRelation: DonorRelation | undefined,
+): number {
+  if (giftAmount <= 0) return 0;
+  const deduction = doneeRelation
+    ? calcRelationDeduction(
+        { donorRelation: doneeRelation, priorUsedDeduction: 0 },
+        giftAmount,
+      ).relationDeduction
+    : 0;
+  return Math.max(0, giftAmount - deduction);
+}
+
 export function autoComputePriorGiftTax(
   giftAmount: number,
   doneeRelation: DonorRelation | undefined,
@@ -35,13 +58,7 @@ export function autoComputePriorGiftTax(
   if (giftAmount <= 0) return 0;
   // §53 관계별 증여재산공제 (10년 통산 한도, 단건이므로 priorUsedDeduction=0).
   // doneeRelation 없으면 공제 0 (영리법인·관계 미지정).
-  const deduction = doneeRelation
-    ? calcRelationDeduction(
-        { donorRelation: doneeRelation, priorUsedDeduction: 0 },
-        giftAmount,
-      ).relationDeduction
-    : 0;
-  const taxBase = Math.max(0, giftAmount - deduction);
+  const taxBase = autoComputeGiftTaxBase(giftAmount, doneeRelation);
   if (taxBase < 500_000) return 0; // §55 단서 — 과세표준 50만원 미만 비과세
   return calcInheritanceGiftTax(taxBase); // §56 누진세율 (brackets 기본값)
 }

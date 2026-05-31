@@ -496,6 +496,7 @@ export function suggestCohabitHouseCandidates(
 export function suggestSpouseActualAmount(
   estateItems: EstateItem[],
   heirs: Heir[],
+  debtItems?: DebtItem[],
 ): DeductionSuggestion {
   const spouseIds = new Set(
     heirs.filter((h) => h.relation === "spouse").map((h) => h.id),
@@ -508,7 +509,7 @@ export function suggestSpouseActualAmount(
       isApplicable: false,
     };
   }
-  let total = 0;
+  let assetTotal = 0;
   let hasAllocations = false;
   const breakdown: string[] = [];
   for (const item of estateItems) {
@@ -516,7 +517,7 @@ export function suggestSpouseActualAmount(
     hasAllocations = true;
     for (const alloc of item.heirAllocations) {
       if (spouseIds.has(alloc.heirId)) {
-        total += alloc.amount;
+        assetTotal += alloc.amount;
         breakdown.push(`${item.name} → 배우자: ${formatKrw(alloc.amount)}원`);
       }
     }
@@ -529,10 +530,23 @@ export function suggestSpouseActualAmount(
       isApplicable: false,
     };
   }
-  breakdown.push(`배우자 분배 합계: ${formatKrw(total)}원`);
+  // §19-17-1: 배우자 실제 상속액 = 배우자 배분 자산 − 배우자 승계 공과금·채무 (장례비 제외)
+  let debtTotal = 0;
+  for (const debt of debtItems ?? []) {
+    if (debt.category === "funeral") continue;
+    if (!debt.heirAllocations) continue;
+    for (const alloc of debt.heirAllocations) {
+      if (spouseIds.has(alloc.heirId)) {
+        debtTotal += alloc.amount;
+        breakdown.push(`승계 채무 → 배우자: −${formatKrw(alloc.amount)}원`);
+      }
+    }
+  }
+  const total = Math.max(0, assetTotal - debtTotal);
+  breakdown.push(`배우자 실제 상속액 (자산 − 승계채무): ${formatKrw(total)}원`);
   return {
     value: total,
-    reason: "협의분할 중 배우자 분배 합",
+    reason: "협의분할 배우자 자산 − 승계채무 (집행기준 19-17-1)",
     breakdown,
     isApplicable: true,
   };
