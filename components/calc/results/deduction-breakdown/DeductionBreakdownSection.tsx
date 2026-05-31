@@ -75,17 +75,20 @@ export function DeductionBreakdownSection({ result, estateItems, debtItems }: Pr
                 triggerLabel="기초공제 (§18)"
                 triggerValue={formatKRW(dd.basicDeduction)}
               />
-              {/* ③ 배우자공제 */}
-              <SpouseDeductionDetailCard
-                detail={dd.spouseDeductionDetail}
-                triggerLabel="배우자 공제 (§19)"
-                triggerValue={formatKRW(dd.spouseDeduction)}
-              />
               <Row
                 label="인적공제 합계 (§20)"
                 value={formatKRW(dd.personalDeductionTotal)}
               />
             </>
+          )}
+
+          {/* ③ 배우자공제 — 일괄/항목별 선택과 무관하게 항상 별도 가산 (§19) */}
+          {dd.spouseDeduction > 0 && (
+            <SpouseDeductionDetailCard
+              detail={dd.spouseDeductionDetail}
+              triggerLabel="배우자 공제 (§19)"
+              triggerValue={formatKRW(dd.spouseDeduction)}
+            />
           )}
 
           {/* ② 가업상속공제 */}

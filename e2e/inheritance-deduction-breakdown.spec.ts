@@ -123,8 +123,11 @@ test.describe("상속공제 항목별 펼침 UI", () => {
       await proceedToResult(page);
       await openDeductionBreakdown(page);
 
-      // 배우자 공제 Row
-      await expect(page.getByText(/배우자.*공제.*§19/)).toBeVisible({ timeout: 5_000 });
+      // 배우자 공제 Row — 섹션 한정 (일괄공제 lump_sum 케이스에서도 항상 표시되어야 함).
+      // 기초2억+인적1억=3억<5억 → lump_sum. 배우자공제는 일괄/항목별 무관 항상 가산.
+      await expect(
+        page.getByTestId("deduction-breakdown-section").getByText(/배우자.*공제.*§19/),
+      ).toBeVisible({ timeout: 5_000 });
     },
   );
 
@@ -178,8 +181,10 @@ test.describe("상속공제 항목별 펼침 UI", () => {
       await proceedToResult(page);
       await openDeductionBreakdown(page);
 
-      // 배우자공제 행의 ▼ 버튼 (배우자공제 행 옆)
-      const spouseRow = page.getByText(/배우자.*공제.*§19/);
+      // 배우자공제 행의 ▼ 버튼 (배우자공제 행 옆) — 섹션 한정
+      const spouseRow = page
+        .getByTestId("deduction-breakdown-section")
+        .getByText(/배우자.*공제.*§19/);
       await expect(spouseRow).toBeVisible({ timeout: 5_000 });
 
       // ▼ 버튼이 있으면 클릭 (spouseDeductionDetail 있을 때만)
