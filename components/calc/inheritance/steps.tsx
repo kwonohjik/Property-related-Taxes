@@ -442,13 +442,6 @@ export function Step4({ form, set }: { form: FormState; set: FormSet }) {
           placeholder="없으면 빈칸"
         />
 
-        <ToggleCard
-          tone="violet"
-          title="일괄공제 선택 (§21 5억)"
-          description="미체크 시 기초공제+인적공제·배우자공제 합산과 자동 비교하여 큰 금액 적용"
-          checked={form.preferLumpSum}
-          onCheckedChange={(v) => set({ preferLumpSum: v })}
-        />
       </div>
 
       {/* ─── 세액공제 (구 Step 5 통합) ─── */}

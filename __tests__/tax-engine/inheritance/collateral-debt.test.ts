@@ -45,7 +45,6 @@ function baseInput(estateItems: EstateItem[]): InheritanceTaxInput {
     deductionInput: {
       heirs: HEIRS,
       spouseActualAmount: 0,
-      preferLumpSum: true,
       netFinancialAssets: 0,
       cohabitHouseStdPrice: 0,
       farmingAssetValue: 0,

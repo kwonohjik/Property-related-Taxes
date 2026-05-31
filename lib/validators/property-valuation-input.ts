@@ -680,7 +680,6 @@ export const familyBusinessInheritanceInputSchema = z.object({
 export const inheritanceDeductionInputSchema = z.object({
   heirs: z.array(heirSchema).min(1, "상속인이 1명 이상 필요합니다."),
   spouseActualAmount: z.number().nonnegative().optional(),
-  preferLumpSum: z.boolean().optional(),
   netFinancialAssets: z.number().nonnegative().optional(),
   cohabitHouseStdPrice: z.number().nonnegative().optional(),
   farmingAssetValue: z.number().nonnegative().optional(),

@@ -8,7 +8,10 @@
  */
 import { describe, it, expect } from "vitest";
 import { calcInheritanceTax } from "@/lib/tax-engine/inheritance-tax";
-import { calcCohabitationDeduction } from "@/lib/tax-engine/deductions/inheritance-deductions";
+import {
+  calcCohabitationDeduction,
+  calcInheritanceDeductions,
+} from "@/lib/tax-engine/deductions/inheritance-deductions";
 import { autoComputeGiftTaxBase } from "@/lib/calc/prior-gift-auto-tax";
 import { suggestSpouseActualAmount } from "@/lib/calc/inheritance-deduction-suggest";
 import { EXAMPLE_INPUT } from "./fixtures/comprehensive-case-pdf.fixture";
@@ -96,6 +99,54 @@ describe("상속공제 4,600m 정합 — 6개 수정 anchor", () => {
       expect(
         calcInheritanceTax({ ...EXAMPLE_INPUT, preGiftsWithin10Years: gifts }).totalDeduction,
       ).toBe(4_600_000_000);
+    });
+  });
+
+  // ── 버그① 일괄공제 토글 제거 — §21① 항상 자동 max(기초+인적, 5억) ──
+  // KoreanLaw mst 276123: "제18조와 제20조제1항에 따른 공제액을 합친 금액과 5억원 중 큰 금액".
+  // 배우자공제(§19)는 비교 대상 아님. preferLumpSum 토글 제거(2026-05-31) — 항상 자동.
+  describe("CI-LS 일괄공제 항상 자동 (preferLumpSum 토글 제거)", () => {
+    const HUGE = 10_000_000_000; // §24 종합한도 회피용 큰 과세가액
+    const spouse: Heir = { id: "sp", relation: "spouse", name: "배우자" };
+    const child = (n: number): Heir => ({ id: `c${n}`, relation: "child", name: `자녀${n}` });
+
+    it("CI-LS1 기초2억+자녀1(5천만)=2.5억 < 5억 → 일괄 5억 자동", () => {
+      const r = calcInheritanceDeductions(
+        { heirs: [spouse, child(1)], deathDate: "2024-06-10" },
+        HUGE,
+        0,
+      );
+      expect(r.chosenMethod).toBe("lump_sum");
+      expect(r.lumpSumDeduction).toBe(500_000_000);
+      expect(r.basicDeduction).toBe(0);
+      expect(r.personalDeductionTotal).toBe(0);
+    });
+
+    it("CI-LS2 기초2억+자녀7×5천만=5.5억 > 5억 → 항목별 자동", () => {
+      const r = calcInheritanceDeductions(
+        {
+          heirs: [child(1), child(2), child(3), child(4), child(5), child(6), child(7)],
+          deathDate: "2024-06-10",
+        },
+        HUGE,
+        0,
+      );
+      expect(r.chosenMethod).toBe("itemized");
+      expect(r.basicDeduction).toBe(200_000_000);
+      expect(r.personalDeductionTotal).toBe(350_000_000);
+      expect(r.lumpSumDeduction).toBe(0);
+    });
+
+    it("CI-LS3 회귀: 토글 OFF였던 케이스(배우자+자녀2, 기초+인적 3억) → 자동 일괄 5억", () => {
+      // 구 버그: preferLumpSum=false → 항목별 3억 강제 → 합계 과소(이미지 4,400m).
+      // 신: 토글 제거 → §21① 항상 max → 일괄 5억 (정답 4,600m의 본질).
+      const r = calcInheritanceDeductions(
+        { heirs: [spouse, child(1), child(2)], deathDate: "2024-06-10" },
+        HUGE,
+        0,
+      );
+      expect(r.chosenMethod).toBe("lump_sum");
+      expect(r.lumpSumDeduction).toBe(500_000_000);
     });
   });
 });

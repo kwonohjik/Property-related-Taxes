@@ -65,7 +65,6 @@ function buildInput(): InheritanceTaxInput {
     deductionInput: {
       heirs: HEIRS_SIMPLE,
       spouseActualAmount: 0,
-      preferLumpSum: true,
       netFinancialAssets: 0,
       cohabitHouseStdPrice: 0,
       farmingAssetValue: 0,

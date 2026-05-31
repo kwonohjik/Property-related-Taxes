@@ -698,8 +698,6 @@ export interface InheritanceDeductionInput {
   heirs: Heir[];
   /** 배우자 실제 상속금액 (미입력 시 법정상속분으로 산정) */
   spouseActualAmount?: number;
-  /** 일괄공제 선택 여부 (§21 5억 / 기초+인적공제 자동비교) */
-  preferLumpSum?: boolean;
   /** 순금융재산 (§22 금융재산공제 계산용) */
   netFinancialAssets?: number;
   /** 동거주택 — 상속주택 공시가격 */

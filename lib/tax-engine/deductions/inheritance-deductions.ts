@@ -2,7 +2,7 @@
  * 상속공제 7종 + §24 종합한도 (상증법 §18~§23의2·§24)
  *
  * 적용 순서:
- *   기초공제(§18) + {배우자공제(§19) + 인적공제(§20) vs 일괄공제(§21)} + 금융공제(§22) + 재해공제(§23) + 동거주택공제(§23의2)
+ *   배우자공제(§19) + max(기초공제(§18)+인적공제(§20①), 일괄공제(§21) 5억) + 금융공제(§22) + 재해공제(§23) + 동거주택공제(§23의2)
  *   → §24 종합한도 적용 (= 상속세 과세가액 - 상속인·수유자에 대한 사전증여재산)
  *
  * §24 종합한도: 상속공제 총액 ≤ (상속세 과세가액 - 상속인·수유자의 사전증여재산가액)
@@ -638,22 +638,15 @@ export function calcInheritanceDeductions(
   const personalResult = calcPersonalDeductions(input.heirs, baseDate);
   const personalDeductionTotal = personalResult.total;
 
-  // ④ 일괄공제 vs 기초+인적 선택 (§21)
+  // ④ 일괄공제 vs 기초+인적 — §21① "큰 금액으로 공제받을 수 있다" 자동 적용.
+  //    일괄공제(§21) = max(기초공제§18 + 그 밖의 인적공제§20①, 5억). 배우자공제(§19)는 비교 대상 아님.
+  //    합리적 납세자는 항상 큰 금액을 선택하므로 토글 없이 자동 max (2026-05-31 preferLumpSum 토글 제거).
+  //    기초+인적이 5억을 초과(인적공제 다수)하는 경우만 항목별이 자동 선택됨.
   const itemizedTotal = basicDeduction + personalDeductionTotal;
-  let chosenMethod: "lump_sum" | "itemized";
-  let chosenBasicPersonal: number;
-
-  // preferLumpSum=false 명시 시 → 납세자가 항목별 공제를 원하므로 일괄공제 선택 안 함
-  // 그 외(true/undefined) → 항상 납세자에게 유리한 쪽 자동 선택 (§21)
-  //   ※ preferLumpSum=true여도 인적공제 합계가 5억 초과 시 강제 선택 시 불이익 발생하므로
-  //      금액 비교로 최적화. UI에서 사용자가 "일괄공제 원함"을 나타낼 때는 미설정(undefined)으로 전달.
-  if (input.preferLumpSum !== false && LUMP_SUM_DEDUCTION >= itemizedTotal) {
-    chosenMethod = "lump_sum";
-    chosenBasicPersonal = LUMP_SUM_DEDUCTION;
-  } else {
-    chosenMethod = "itemized";
-    chosenBasicPersonal = itemizedTotal;
-  }
+  const chosenMethod: "lump_sum" | "itemized" =
+    LUMP_SUM_DEDUCTION >= itemizedTotal ? "lump_sum" : "itemized";
+  const chosenBasicPersonal =
+    chosenMethod === "lump_sum" ? LUMP_SUM_DEDUCTION : itemizedTotal;
 
   // ⑤ 금융재산공제
   const financialResult = calcFinancialDeduction(input.netFinancialAssets ?? 0);

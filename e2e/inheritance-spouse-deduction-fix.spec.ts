@@ -50,3 +50,27 @@ test("정밀산식 I-1 — 배우자+자녀1 토지 30억 → 상속공제 2,300
     timeout: 5_000,
   });
 });
+
+test("일괄공제 토글 제거 — 공제 단계에 '일괄공제 선택' 토글 없음 (§21① 항상 자동)", async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  await gotoStep1SpouseChild(page);
+
+  // 단계 진행용 최소 재산 (토지 10억)
+  await page.getByRole("button", { name: /상속재산 추가/ }).click();
+  await page.getByRole("button", { name: /토지/ }).first().click();
+  await page.getByPlaceholder("면적 입력").fill("1000");
+  await page.getByPlaceholder("공시지가 단가").fill("1000000");
+
+  // Step2 → Step3 → Step4(공제·세액공제 통합)
+  await page.getByRole("button", { name: /^다음/ }).click();
+  await page.getByRole("button", { name: /^다음/ }).click();
+  await page.getByRole("button", { name: /^다음/ }).click();
+
+  // 공제 단계 도달 (계산하기 버튼 노출) → '일괄공제 선택' 토글이 더 이상 없어야 함
+  await expect(page.getByRole("button", { name: /계산하기/ })).toBeVisible({
+    timeout: 15_000,
+  });
+  await expect(page.getByText(/일괄공제 선택/)).toHaveCount(0);
+});

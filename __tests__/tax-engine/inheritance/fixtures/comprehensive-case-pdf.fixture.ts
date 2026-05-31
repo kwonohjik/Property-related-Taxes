@@ -427,7 +427,6 @@ export const EXAMPLE_INPUT: InheritanceTaxInput = {
   deductionInput: {
     heirs: EXAMPLE_HEIRS,
     spouseActualAmount: 2_800_000_000, // PDF 책 1863 ③ 배우자 실제 상속
-    preferLumpSum: true, // 자동 max 비교 (PDF 책 1862 ①: max(itemized 300M, 일괄 500M) = 500M)
     netFinancialAssets: 1_155_000_000, // PDF 책 1863 ④ 순금융재산
     cohabitHouseStdPrice: 0, // 차남 동거주택 직접입력 모드로 처리 (Phase E)
     farmingAssetValue: 0,

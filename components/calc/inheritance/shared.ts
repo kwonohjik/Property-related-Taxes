@@ -38,7 +38,6 @@ export interface FormState {
   // Step 4
   heirs: Heir[];
   spouseActualAmount: string;
-  preferLumpSum: boolean;
   netFinancialAssets: string;
   cohabitHouseStdPrice: string;
   farmingAssetValue: string;
@@ -85,7 +84,6 @@ export const INITIAL_FORM: FormState = {
   priorGifts: [],
   heirs: [],
   spouseActualAmount: "",
-  preferLumpSum: true, // §21 기본 자동 max(일괄 vs 항목별 유리한 쪽). false는 항목별 강제
   netFinancialAssets: "",
   cohabitHouseStdPrice: "",
   farmingAssetValue: "",

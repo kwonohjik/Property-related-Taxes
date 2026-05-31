@@ -307,7 +307,6 @@ export function InheritanceTaxForm() {
     const deductionInput: InheritanceDeductionInput = {
       heirs: form.heirs,
       spouseActualAmount: autoOrManual(form.spouseActualAmount, spouseAuto),
-      preferLumpSum: form.preferLumpSum,
       netFinancialAssets: autoOrManual(form.netFinancialAssets, netFinAuto),
       cohabitHouseStdPrice: parseAmount(form.cohabitHouseStdPrice) || undefined,
       farmingAssetValue: parseAmount(form.farmingAssetValue) || undefined,

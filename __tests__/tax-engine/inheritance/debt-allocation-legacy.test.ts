@@ -38,7 +38,6 @@ function baseInput(overrides: Partial<InheritanceTaxInput>): InheritanceTaxInput
     deductionInput: {
       heirs: HEIRS,
       spouseActualAmount: 0,
-      preferLumpSum: true,
       netFinancialAssets: 0,
       cohabitHouseStdPrice: 0,
       farmingAssetValue: 0,
