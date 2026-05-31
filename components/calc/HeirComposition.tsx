@@ -52,8 +52,8 @@ const RELATION_HINTS: Record<HeirRelation, string> = {
   child: "1인당 5,000만원 인적공제. 미성년자는 추가 공제 (§20)",
   lineal_ascendant: "1인당 5,000만원 인적공제. 만 65세 이상 추가 공제 (§20)",
   sibling: "기타 인적공제 (상속 우선순위 낮음)",
-  other: "법정상속인 외 수유자",
-  legatee: "유언에 의한 수유자 (법정상속인 외)",
+  other: "기타 법정상속인 (4촌 이내 방계혈족 등) — 법정상속분 배분 대상",
+  legatee: "유증받은 수유자 (법정상속인 외) — 상속인 외 유증액 자동 집계 (§19·§24)",
   corporate: "법인 수유자",
 };
 
@@ -65,8 +65,8 @@ const HEIR_RELATIONS: HeirRelation[] = [
   "other",
 ];
 
-// 영리법인 추가 옵션 — PR 2 PR-2 (부표 5).
-const SPECIAL_RELATIONS: HeirRelation[] = ["corporate"];
+// 상속인 외 — 수유자(legatee, 유증)·영리법인(corporate). §19·§24 상속인 외 유증액 · §3의2② 부표 5.
+const SPECIAL_RELATIONS: HeirRelation[] = ["legatee", "corporate"];
 
 // ============================================================
 // 개별 상속인 편집기
@@ -562,7 +562,7 @@ export function HeirComposition({ heirs, onChange }: HeirCompositionProps) {
           </div>
           <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
             <p className="text-[10px] font-medium text-violet-700 dark:text-violet-300 mb-1">
-              유증·특별연고자·사전증여 영리법인 (§3의2②, 부표 5)
+              수유자(유증)·영리법인 — 상속인 외 (§19·§24 유증액 · §3의2② 부표 5)
             </p>
             <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
               {SPECIAL_RELATIONS.map((r) => (
