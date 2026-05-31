@@ -45,6 +45,7 @@ import {
   validateUnlistedStockV2,
 } from "@/lib/calc/inheritance-validate";
 import { resolveActiveUnlistedValuation } from "@/lib/calc/unlisted-valuation-mode";
+import { applyCorporateGiftTaxFallback } from "@/lib/calc/prior-gift-auto-tax";
 import {
   type FormState,
   INITIAL_FORM,
@@ -315,8 +316,11 @@ export function InheritanceTaxForm() {
       // form.familyBusiness: undefined(legacy) | FamilyBusinessInheritanceInput(활성)
       familyBusiness: form.familyBusiness,
     };
+    // 영리법인 §3의2② 산출세액 상당액 진입 fallback (phase2-후속): cgct 미설정 + 가액 → autoCompute.
+    // 표시 fallback(GiftRowEditor)과 동일 산식 — mirror 3중 single-source. store는 불변(엔진 전달용 정제).
+    const normalizedPriorGifts = applyCorporateGiftTaxFallback(form.priorGifts);
     const creditInput: InheritanceTaxCreditInput = {
-      priorGifts: form.priorGifts,
+      priorGifts: normalizedPriorGifts,
       foreignTaxPaid: parseAmount(form.foreignTaxPaid) || undefined,
       shortTermReinheritYears: form.shortTermReinheritYears
         ? parseInt(form.shortTermReinheritYears, 10)
@@ -338,7 +342,7 @@ export function InheritanceTaxForm() {
       debtItems: usesDebtItems ? form.debtItems : undefined,
       presumedItems: form.presumedItems.length > 0 ? form.presumedItems : undefined,
       exemptions: form.exemptionItems.length > 0 ? form.exemptionItems : undefined,
-      preGiftsWithin10Years: form.priorGifts,
+      preGiftsWithin10Years: normalizedPriorGifts,
       heirs: form.heirs,
       deductionInput,
       creditInput,

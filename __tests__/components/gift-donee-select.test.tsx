@@ -261,6 +261,20 @@ describe("GiftRowEditor — 수증자 select (2-B anchor)", () => {
     expect(screen.getByTestId("gift-besshi-toggle")).toBeDefined();
   });
 
+  it("T-21(진입 fallback): 기존 영리법인 데이터(cgct 미설정+700m) 진입 시 세액란 150,000,000 표시", () => {
+    const HEIR_CORP: Heir = { id: "corp-1", relation: "corporate", name: "M주식회사" };
+    // onChange 트리거 없이 진입 — corporateGiftComputedTax 미설정, giftAmount만 존재 (사용자 케이스)
+    renderEditor(
+      makeGift({ beneficiaryType: "corporate", isHeir: false, doneeId: "corp-1", giftAmount: 700_000_000 }),
+      { showIsHeir: true, heirs: [HEIR_CORP] },
+    );
+    const labels = screen.getAllByText(/§3의2② 산출세액 상당액/);
+    const wrapper = labels[0].closest("div.space-y-1\\.5") as HTMLElement;
+    const input = wrapper.querySelector("input") as HTMLInputElement;
+    // 진입 fallback — autoCompute 150m 표시 (빈칸 아님)
+    expect(input.value.replace(/,/g, "")).toBe("150000000");
+  });
+
   it("T-14(A8): orphan doneeId(Heir 삭제) → amber 안내 + select value=''", () => {
     // doneeId는 있으나 heirs 목록에 매칭 Heir 없음
     renderEditor(makeGift({ doneeId: "deleted-heir-id" }), {

@@ -6,7 +6,11 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { autoComputePriorGiftTax } from "@/lib/calc/prior-gift-auto-tax";
+import {
+  autoComputePriorGiftTax,
+  applyCorporateGiftTaxFallback,
+} from "@/lib/calc/prior-gift-auto-tax";
+import type { PriorGift } from "@/lib/tax-engine/types/inheritance-gift.types";
 
 describe("autoComputePriorGiftTax — 단순 1건 독립 (§53 공제 + §56 세율)", () => {
   it("P1: 배우자 760m → 22,000,000 (이미지26 — 760m−600m=160m 과표)", () => {
@@ -45,5 +49,45 @@ describe("autoComputePriorGiftTax — 단순 1건 독립 (§53 공제 + §56 세
 
   it("직계존속(성인) 200m → (200m−5천만=150m 과표) 20,000,000", () => {
     expect(autoComputePriorGiftTax(200_000_000, "lineal_ascendant_adult")).toBe(20_000_000);
+  });
+});
+
+describe("applyCorporateGiftTaxFallback — 진입 fallback (기존 데이터 cgct 미설정)", () => {
+  function corpGift(o: Partial<PriorGift> = {}): PriorGift {
+    return {
+      giftDate: "2021-08-10",
+      isHeir: false,
+      giftAmount: 700_000_000,
+      giftTaxPaid: 0,
+      beneficiaryType: "corporate",
+      ...o,
+    };
+  }
+
+  it("corporate cgct undefined + 가액 700m → cgct 150,000,000 주입 (사용자 케이스)", () => {
+    const [g] = applyCorporateGiftTaxFallback([corpGift()]);
+    expect(g.corporateGiftComputedTax).toBe(150_000_000);
+  });
+
+  it("corporate cgct 0 (사용자 명시) → 존중 (덮어쓰지 않음)", () => {
+    const [g] = applyCorporateGiftTaxFallback([corpGift({ corporateGiftComputedTax: 0 })]);
+    expect(g.corporateGiftComputedTax).toBe(0);
+  });
+
+  it("corporate cgct >0 (이력·계산값) → 그대로 유지", () => {
+    const [g] = applyCorporateGiftTaxFallback([corpGift({ corporateGiftComputedTax: 99_000_000 })]);
+    expect(g.corporateGiftComputedTax).toBe(99_000_000);
+  });
+
+  it("corporate 가액 0 → fallback 안 함 (cgct undefined 유지)", () => {
+    const [g] = applyCorporateGiftTaxFallback([corpGift({ giftAmount: 0 })]);
+    expect(g.corporateGiftComputedTax).toBeUndefined();
+  });
+
+  it("비corporate(자연인) → 변경 안 함 (§28 위험 회피, 동일 참조)", () => {
+    const natural: PriorGift = { giftDate: "2022-06-10", isHeir: true, giftAmount: 760_000_000, giftTaxPaid: 0, beneficiaryType: "heir" };
+    const result = applyCorporateGiftTaxFallback([natural]);
+    expect(result[0]).toBe(natural); // 동일 참조 — 미변경
+    expect(result[0].giftTaxPaid).toBe(0);
   });
 });

@@ -338,11 +338,21 @@ export function GiftRowEditor({
       />
 
       {/* 세액 입력란 — 자동계산(수정 가능). 영리법인은 §3의2② 산출세액 상당액, 그 외는 기납부 증여세.
-       * userTouchedTax(useRef) 미터치 시 giftAmount·doneeRelation 변경마다 자동 재계산. 수동 수정 시 고정. */}
+       * userTouchedTax 미터치 시 giftAmount·doneeRelation 변경마다 자동 재계산. 수동 수정 시 고정.
+       * ★ 진입 fallback(phase2-후속): 영리법인 cgct 미설정(undefined)이고 가액 있으면, onChange 트리거 없이도
+       *   표시값을 autoComputePriorGiftTax로 derive (기존 데이터·진입 시점 빈칸 해소). store mirror 아님(표시 전용).
+       *   계산 정합은 lib/calc/inheritance-api.ts API fallback이 동일 산식으로 보장(mirror 3중). */}
       {(() => {
-        const taxValue = isCorporate
-          ? gift.corporateGiftComputedTax ?? 0
-          : gift.giftTaxPaid;
+        const corpNeedsFallback =
+          isCorporate &&
+          gift.corporateGiftComputedTax === undefined &&
+          (gift.giftAmount ?? 0) > 0 &&
+          !userTouchedTax;
+        const taxValue = corpNeedsFallback
+          ? autoComputePriorGiftTax(gift.giftAmount ?? 0, gift.doneeRelation)
+          : isCorporate
+            ? gift.corporateGiftComputedTax ?? 0
+            : gift.giftTaxPaid;
         const showAutoBadge = !userTouchedTax && taxValue > 0;
         return (
           <div className="space-y-1">
