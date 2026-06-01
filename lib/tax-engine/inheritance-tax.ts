@@ -53,6 +53,7 @@ import { calcInheritanceTaxCredits } from "./inheritance-gift-tax-credit";
 import { evaluatePresumedInheritance } from "./presumed-inheritance";
 import { calcCorporateExemption } from "./inheritance-corporate-exemption";
 import { calcHeirAllocation } from "./inheritance-allocation";
+import { reconcileSummaryWithAllocation } from "./inheritance-summary-reconcile";
 import { computeGenerationSkipSurcharge } from "./inheritance-generation-skip";
 import { derivePriorGiftTaxBase } from "./inheritance-prior-gift-taxbase";
 import { buildSummaryCategory } from "./inheritance-asset-category";
@@ -653,25 +654,20 @@ export function calcInheritanceTax(
     taxableEstateValue,
     taxBase,
     deathDate: input.deathDate,
+    // §69①2호 — 영리법인 면제(§3의2②)를 신고세액공제 기준에서 차감 (Path B fallback)
+    corporateExemptionAmount: corporateExemption?.amount ?? 0,
   });
 
-  const totalTaxCredit = creditResult.totalCredit;
+  let totalTaxCredit = creditResult.totalCredit;
   allBreakdown.push(...creditResult.breakdown);
   for (const law of creditResult.appliedLaws) allLaws.add(law);
 
-  // ─────────────────────────────────────────────
-  // STEP 12: 결정세액 (총액)
-  // ─────────────────────────────────────────────
-  const finalTax = Math.max(
+  // STEP 12: 결정세액 = 산출 + 할증 − 영리법인 면제(§3의2②) − 세액공제.
+  //   배부 발동 시(Path A) STEP 13.5에서 배부표 합으로 정합. 미발동 시(Path B) 본 값. breakdown은 13.5 후 push.
+  let finalTax = Math.max(
     0,
-    computedTax + generationSkipSurcharge - totalTaxCredit,
+    computedTax + generationSkipSurcharge - (corporateExemption?.amount ?? 0) - totalTaxCredit,
   );
-
-  allBreakdown.push({
-    label: "결정세액",
-    amount: finalTax,
-    note: "= 산출세액 + 세대생략할증 - 세액공제",
-  });
 
   // ─────────────────────────────────────────────
   // STEP 13: 상속인별 배부 (Phase C) — heirs·doneeId·세대생략 수유자가 제공된 경우
@@ -715,6 +711,23 @@ export function calcInheritanceTax(
     });
     allBreakdown.push(...heirAllocationResult.breakdown);
   }
+
+  // STEP 13.5: §69 신고세액공제를 배부표 per-heir round 합과 일치 (가드 충족 시).
+  //   상세 근거·가드: inheritance-summary-reconcile.ts
+  if (heirAllocationResult) {
+    const r = reconcileSummaryWithAllocation(heirAllocationResult, creditResult, finalTax);
+    creditResult.filingCredit = r.filingCredit;
+    creditResult.filingCreditBase = r.filingCreditBase;
+    creditResult.totalCredit = r.totalCredit;
+    totalTaxCredit = r.totalCredit;
+    finalTax = r.finalTax;
+  }
+
+  allBreakdown.push({
+    label: "결정세액",
+    amount: finalTax,
+    note: "= 산출세액 + 세대생략할증 - 영리법인 면제 - 세액공제",
+  });
 
   // Phase B5: summaryTable 조립 (PDF 표8 합계행 echo, 산식 변경 0)
   // heir-allocation-summary-table.engine.design.md §B5

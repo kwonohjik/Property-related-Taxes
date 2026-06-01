@@ -56,9 +56,11 @@ describe("AL-1 giftTaxBase 미입력 → §53 자동 도출 후 배부값 동일
   const result = calcInheritanceTax(STRIPPED_INPUT);
   const perHeir = result.heirAllocationResult!.perHeir;
 
-  it("엔진 결정세액(result.finalTax) 불변 = 1,179,260,233 (배부 정정과 무관)", () => {
-    // 총 결정세액은 §53 배부 도출과 독립 — 산출세액·할증·공제는 무변경.
-    expect(result.finalTax).toBe(1_179_260_233);
+  it("엔진 결정세액(result.finalTax) = 1,033,760,232 (배부표 ⑮ 합 = 영리법인 면제·§69 정합)", () => {
+    // 결정세액 = 산출 + 할증 − 영리법인 면제(§3의2② 150M) − 세액공제(§28 442M + §69 31,971,966).
+    // (구 anchor 1,179,260,233은 영리법인 면제 미차감 버그값 — 동일 테스트 line 64 per-heir 합과
+    //  자기모순이었음. inheritance-filing-credit-corporate-exemption.plan.md 정정.)
+    expect(result.finalTax).toBe(1_033_760_232);
   });
 
   it("상속인별 자진납부세액 합 = BASE(giftTaxBase 명시)와 완전 동일 (도출=명시 정합)", () => {

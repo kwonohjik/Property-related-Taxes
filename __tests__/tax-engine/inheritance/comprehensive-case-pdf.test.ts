@@ -479,4 +479,40 @@ describe("상속세 종합사례 PDF — 통합 anchor", () => {
       expect(result.generationSkipSurcharge).toBe(0);
     });
   });
+
+  // ────────────────────────────────────────────────────
+  // [K] 요약 레벨 ↔ 배부표 일치 (영리법인 면제 §3의2② · §69 신고세액공제)
+  //   docs/00-pm/inheritance-filing-credit-corporate-exemption.plan.md
+  //   요약 화면(이미지6)이 영리법인 면제 150M를 §69 기준·결정세액에서 누락 → 배부표(이미지7)와 정합.
+  // ────────────────────────────────────────────────────
+  describe("[K] 요약 신고세액공제·결정세액 = 배부표 합", () => {
+    const result = calcInheritanceTax(EXAMPLE_INPUT);
+    const ph = Object.values(result.heirAllocationResult!.perHeir);
+
+    it("K-01 요약 신고세액공제 = 배부표 ⑭ 합 = 31,971,966", () => {
+      expect(result.creditDetail.filingCredit).toBe(31_971_966);
+    });
+
+    it("K-02 §69 기준세액(filingCreditBase) = 배부표 ⑬ 합 = 1,065,732,198", () => {
+      expect(result.creditDetail.filingCreditBase).toBe(1_065_732_198);
+    });
+
+    it("K-03 결정세액 = 배부표 ⑮ 합 = 1,033,760,232 (영리법인 면제 150M 반영)", () => {
+      expect(result.finalTax).toBe(1_033_760_232);
+    });
+
+    it("K-04 세액공제 합계 = §28 442M + §69 31,971,966 = 473,971,966", () => {
+      expect(result.totalTaxCredit).toBe(473_971_966);
+    });
+
+    it("K-05 교차 일치 불변식: 요약 finalTax === Σ perHeir.finalTax", () => {
+      const sumFinal = ph.reduce((s, h) => s + h.finalTax, 0);
+      expect(result.finalTax).toBe(sumFinal);
+    });
+
+    it("K-06 교차 일치 불변식: 요약 filingCredit === Σ perHeir.filingCredit", () => {
+      const sumFiling = ph.reduce((s, h) => s + h.filingCredit, 0);
+      expect(result.creditDetail.filingCredit).toBe(sumFiling);
+    });
+  });
 });

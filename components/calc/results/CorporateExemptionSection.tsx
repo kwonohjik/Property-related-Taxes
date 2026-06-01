@@ -1,8 +1,13 @@
 "use client";
 
 /**
- * CorporateExemptionFilingFormTable — 별지 제9호서식 부표 5
- * (영리법인 상속세 면제 및 납부 명세서) — PR 2 PR-2
+ * CorporateExemptionSection — 영리법인 상속세 면제 (§3의2②) 단일 섹션
+ * (면제 산출 요약 + 별지 제9호서식 부표 5 명세서)
+ *
+ * docs/00-pm/inheritance-corporate-exemption-section-merge.plan.md
+ * 분리돼 있던 ①"영리법인 사전증여 면제" 인라인 카드 + ②"부표 5" 표를 단일 섹션으로 통합.
+ *   - 면제 산출 요약(breakdown 3행 + 차감): 상시 노출(토글 바깥).
+ *   - 부표 5 명세서(가./나. 표): perCorporateBreakdown 있을 때만 + 펼침 토글.
  *
  * 근거 양식 (KoreanLaw MCP 검증 2026-05-21):
  *   - 상속세 및 증여세법 시행규칙 별지 제9호서식 부표 5
@@ -26,6 +31,7 @@ import type {
   Heir,
   ShareholderInfo,
   PerCorporateExemptionDetail,
+  CorporateExemptionResult,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 
@@ -37,22 +43,27 @@ const SHAREHOLDER_RELATION_LABEL: Record<ShareholderInfo["relation"], string> = 
 };
 
 interface Props {
-  /** 영리법인별 분배 명세 — calcCorporateExemption(opts.perCorporateInputs)의 산출물 */
-  perCorporateBreakdown: PerCorporateExemptionDetail[];
+  /** §3의2② 영리법인 면제 결과 — 면제 산출 요약(breakdown·amount) + 부표5(perCorporateBreakdown) */
+  corporateExemption: CorporateExemptionResult;
   /** Heir[] — corporate Heir의 법인명·사업자번호·사업장·주주 매핑 조회 */
   heirs?: Heir[];
 }
 
-export function CorporateExemptionFilingFormTable({
-  perCorporateBreakdown,
+export function CorporateExemptionSection({
+  corporateExemption,
   heirs,
 }: Props) {
-  // 인쇄 토글 — early return 이전에 hook 호출 (react-hooks/rules-of-hooks).
+  // 인쇄 토글(부표5 전용) — early return 이전에 hook 호출 (react-hooks/rules-of-hooks).
   const [open, setOpen] = useState(false);
 
-  if (!perCorporateBreakdown || perCorporateBreakdown.length === 0) {
+  // 면제세액 0이면 섹션 미표시 (요약·부표5 모두 무의미).
+  if (!corporateExemption || corporateExemption.amount <= 0) {
     return null;
   }
+
+  // 부표5 데이터 — 영리법인 사전증여에 doneeId 미설정 시 빈 배열(요약만 표시).
+  const perCorporateBreakdown = corporateExemption.perCorporateBreakdown ?? [];
+  const hasFilingForm = perCorporateBreakdown.length > 0;
 
   const heirById = new Map((heirs ?? []).map((h) => [h.id, h]));
 
@@ -72,27 +83,57 @@ export function CorporateExemptionFilingFormTable({
 
   return (
     <div className="rounded-lg border border-violet-200 dark:border-violet-800 bg-white dark:bg-gray-900 overflow-hidden">
-      <div className="px-4 py-3 bg-violet-50 dark:bg-violet-900/20 border-b border-violet-200 dark:border-violet-800 flex items-center justify-between gap-3">
+      {/* 단일 헤더 */}
+      <div className="px-4 py-3 bg-violet-50 dark:bg-violet-900/20 border-b border-violet-200 dark:border-violet-800 flex items-center gap-2">
+        <span className="inline-flex items-center gap-1 text-[10px] bg-violet-200 text-violet-800 rounded px-2 py-0.5">
+          §3의2②
+        </span>
         <div>
           <p className="text-sm font-semibold text-violet-800 dark:text-violet-200">
-            🏢 부표 5 — 영리법인 상속세 면제 및 납부 명세서
+            영리법인 상속세 면제 (§3의2②)
           </p>
           <p className="text-[11px] text-violet-700 dark:text-violet-300 mt-0.5">
-            상속세 및 증여세법 시행규칙 별지 제9호서식 부표 5 (§3의2②)
+            집행기준 28-0-1 · 상속세 및 증여세법 시행규칙 별지 제9호서식 부표 5
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setOpen((p) => !p)}
-          className="text-xs rounded-md border border-violet-300 dark:border-violet-600 px-2 py-1 hover:bg-violet-100 dark:hover:bg-violet-800/40 print:hidden"
-          aria-expanded={open}
-        >
-          {open ? "▲ 접기" : "▼ 펼치기 (인쇄 시 자동 펼침)"}
-        </button>
       </div>
 
-      <div className={open ? "block" : "hidden print:block"}>
-        <div className="print:bg-white print:text-black">
+      {/* 면제 산출 요약 (상시 노출 — 토글 바깥) */}
+      <div className="px-4 py-3 space-y-2 bg-violet-50/40 dark:bg-violet-900/10 border-b border-violet-200 dark:border-violet-800">
+        {corporateExemption.breakdown.map((step, i) => (
+          <div
+            key={i}
+            className="flex justify-between text-xs text-gray-700 dark:text-gray-300"
+          >
+            <span>{step.label}</span>
+            <span className="font-mono">{formatKRW(step.amount)}</span>
+          </div>
+        ))}
+        <div className="flex justify-between text-sm font-bold text-violet-800 dark:text-violet-200 border-t border-violet-200 dark:border-violet-700 pt-2">
+          <span>상속세 산출세액에서 차감 (면제)</span>
+          <span>− {formatKRW(corporateExemption.amount)}</span>
+        </div>
+      </div>
+
+      {/* 부표 5 명세서 (펼침 — perCorporateBreakdown 있을 때만) */}
+      {hasFilingForm && (
+        <>
+          <div className="px-4 py-2 bg-violet-50/60 dark:bg-violet-900/15 border-b border-violet-200 dark:border-violet-800 flex items-center justify-between gap-3">
+            <p className="text-xs font-semibold text-violet-700 dark:text-violet-300">
+              🏢 부표 5 — 영리법인 상속세 면제 및 납부 명세서
+            </p>
+            <button
+              type="button"
+              onClick={() => setOpen((p) => !p)}
+              className="text-xs rounded-md border border-violet-300 dark:border-violet-600 px-2 py-1 hover:bg-violet-100 dark:hover:bg-violet-800/40 print:hidden"
+              aria-expanded={open}
+            >
+              {open ? "▲ 접기" : "▼ 펼치기 (인쇄 시 자동 펼침)"}
+            </button>
+          </div>
+
+          <div className={open ? "block" : "hidden print:block"}>
+            <div className="print:bg-white print:text-black">
           {/* 가. 상속세 면제대상 영리법인 */}
           <div className="px-4 py-2 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
             <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">
@@ -202,8 +243,10 @@ export function CorporateExemptionFilingFormTable({
               </tbody>
             </table>
           </div>
-        </div>
-      </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
