@@ -17,34 +17,17 @@ import type {
   PriorGift,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
-import { toPriorGiftPropertyTypeCode } from "@/components/calc/results/inheritance-filing-form-helpers";
+import {
+  toPriorGiftPropertyTypeCode,
+  toEstateItemTypeCode,
+  toEstateItemValuationMethodCode,
+} from "@/components/calc/results/inheritance-filing-form-helpers";
 
 // ============================================================
 // 코드 매핑 (부표 1 뒷면 작성방법 §2 / §7)
+// 재산종류코드(toEstateItemTypeCode)·평가기준코드(toEstateItemValuationMethodCode)는
+// inheritance-filing-form-helpers.ts 공유 (상속 부표2와 단일 출처). 여기는 라벨 표시만.
 // ============================================================
-
-/**
- * ② 재산종류코드 매핑 — AssetCategory 실제 enum 9종 → 부표 1 코드 (Phase 1)
- *
- * KoreanLaw MCP 검증 (2026-05-20, 시행규칙 별지 제10호서식 부표 1 뒷면 §2):
- * 14종 코드 중 03/04/06/08/13/14는 EstateItem enum 부재로 Phase 1 미사용.
- * 정정 — `deposit: "12"` → `"11"` (예금은 11 금융재산, 12 기타재산 아님).
- */
-const PROPERTY_TYPE_CODE: Record<EstateItem["category"], string> = {
-  cash: "01",
-  real_estate_land: "02",
-  real_estate_apartment: "05",
-  real_estate_building: "07",
-  listed_stock: "09",
-  unlisted_stock: "10",
-  financial: "11",
-  deposit: "11",
-  other: "12",
-};
-
-function toPropertyTypeCode(category: EstateItem["category"]): string {
-  return PROPERTY_TYPE_CODE[category] ?? "12";
-}
 
 /**
  * ② 재산종류코드 14종 라벨 — KoreanLaw MCP 검증 (시행규칙 별지 제10호서식 부표 1 뒷면 §2).
@@ -76,31 +59,6 @@ function toPropertyTypeDisplay(code: string): React.ReactNode {
       <div className="text-[9px] text-gray-500">({code})</div>
     </>
   );
-}
-
-/**
- * ⑧ 평가기준코드 매핑 (Phase 1).
- * cash 자산은 평가방법과 무관하게 "06"(현금 등 가액) 우선 적용.
- */
-function toValuationMethodCode(
-  item: EstateItem,
-  vr: PropertyValuationResult,
-): string {
-  if (item.category === "cash") return "06";
-  switch (vr.method) {
-    case "market_value":
-      return "01";
-    case "appraisal":
-      return "02";
-    case "similar_sales":
-      return "05";
-    case "standard_price":
-    case "book_value":
-    case "acquisition_cost":
-      return "08";
-    default:
-      return "08";
-  }
 }
 
 /** ⑩ 표시값 (음수 가드) — exemptAmount > ⑪+⑫+⑬ 일 때 차이 표시. */
@@ -291,8 +249,8 @@ export function GiftTaxValuationFormTable({
           <tbody data-testid="table-data-tbody">
             {valuationResults.map((vr, i) => {
               const item = itemMap.get(vr.estateItemId);
-              const propertyCode = item ? toPropertyTypeCode(item.category) : "12";
-              const methodCode = item ? toValuationMethodCode(item, vr) : "08";
+              const propertyCode = item ? toEstateItemTypeCode(item.category) : "12";
+              const methodCode = item ? toEstateItemValuationMethodCode(item, vr) : "08";
               const shares = item?.listedStockShares;
               const unitPrice = item?.listedStockAvgPrice;
               return (

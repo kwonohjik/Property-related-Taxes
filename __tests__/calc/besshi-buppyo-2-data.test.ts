@@ -1,0 +1,159 @@
+/**
+ * besshi-buppyo-2-data anchor — 별지 제9호서식 부표 2 데이터 어댑터
+ *
+ * 종합사례 fixture(comprehensive-case-pdf)로 calcInheritanceTax 실행 → 실제 결과로 검증.
+ * Plan §5 (AN-1·AN-2·AN-3) · Design 케이스 인벤토리 C-1~C-5.
+ * Pre-Do anchor: 자기일관(AN-1) · 나 필터(AN-2) · 코드 단일출처(AN-3).
+ */
+
+import { describe, it, expect } from "vitest";
+import { calcInheritanceTax } from "@/lib/tax-engine/inheritance-tax";
+import { computeLegalShares } from "@/lib/tax-engine/inheritance-legal-share";
+import { buildBuppyo2Data } from "@/lib/calc/besshi-buppyo-2-data";
+import {
+  EXAMPLE_HEIRS,
+  EXAMPLE_INPUT,
+  EXAMPLE_ESTATE_ITEMS,
+  EXAMPLE_PRIOR_GIFTS,
+  HEIR_ID,
+} from "../tax-engine/inheritance/fixtures/comprehensive-case-pdf.fixture";
+
+const OFFICIAL_METHOD_CODES = ["01", "02", "03", "04", "05", "06", "07", "08"];
+
+describe("부표 2 데이터 어댑터 (besshi-buppyo-2)", () => {
+  const result = calcInheritanceTax(EXAMPLE_INPUT);
+  const data = buildBuppyo2Data(
+    result,
+    EXAMPLE_HEIRS,
+    EXAMPLE_ESTATE_ITEMS,
+    EXAMPLE_PRIOR_GIFTS,
+  );
+  const byId = (id: string) => data.find((d) => d.heirId === id)!;
+  const perHeir = result.heirAllocationResult!.perHeir;
+
+  // ── N장 ──
+  it("B2-1: N장 = 상속인 수 (5장: 배우자·자2·손녀·법인)", () => {
+    expect(data.length).toBe(EXAMPLE_HEIRS.length);
+    expect(data.length).toBe(5);
+  });
+
+  // ── AN-1 자기일관 ──
+  it("B2-2: 가 actualShareAmount === 계 grossEstateValue === perHeir.grossInheritance", () => {
+    for (const d of data) {
+      const gross = perHeir[d.heirId]?.grossInheritance ?? 0;
+      expect(d.sectionA.actualShareAmount).toBe(gross);
+      expect(d.sectionTotal.grossEstateValue).toBe(gross);
+    }
+  });
+  it("B2-3: 계 total === perHeir.taxableValueShare", () => {
+    for (const d of data) {
+      expect(d.sectionTotal.total).toBe(
+        perHeir[d.heirId]?.taxableValueShare ?? 0,
+      );
+    }
+  });
+  it("B2-4: 실제상속지분율 = grossInheritance ÷ Σgross (합 ≈ 1)", () => {
+    const sum = data.reduce((s, d) => s + d.sectionA.actualShareRatio, 0);
+    expect(sum).toBeCloseTo(1, 6);
+  });
+
+  // ── AN-1 R-1: 법정상속재산가액 = floor(과세가액 × 법정지분) ──
+  it("B2-5: 법정상속분 도출 — 배우자 legalShareLabel·금액 = computeLegalShares 정합", () => {
+    const legal = computeLegalShares(EXAMPLE_HEIRS);
+    const spouseShare = legal.shares.find((s) => s.heirId === HEIR_ID.spouse)!;
+    const sp = byId(HEIR_ID.spouse).sectionA;
+    expect(sp.legalShareLabel).toBe(
+      `${spouseShare.numerator}/${legal.denominator}`,
+    );
+    expect(sp.legalShareAmount).toBe(
+      Math.floor(
+        (result.taxableEstateValue * spouseShare.numerator) / legal.denominator,
+      ),
+    );
+  });
+  it("B2-6: C-3 수유자(legatee)·C-4 법인 → 법정상속지분율 공란(null)", () => {
+    expect(byId(HEIR_ID.granddaughter).sectionA.legalShareLabel).toBeNull();
+    expect(byId(HEIR_ID.granddaughter).sectionA.legalShareAmount).toBeNull();
+    expect(byId(HEIR_ID.corporate).sectionA.legalShareLabel).toBeNull();
+  });
+
+  // ── AN-2 나 섹션 필터 ──
+  it("B2-7: 본래상속 행 = heirAllocations heirId 매칭분만 (배우자)", () => {
+    const spouseEstateRows = byId(HEIR_ID.spouse).itemRows.filter((r) =>
+      r.kindCode.startsWith("A1"),
+    );
+    const expected = EXAMPLE_ESTATE_ITEMS.filter((it) =>
+      (it.heirAllocations ?? []).some((a) => a.heirId === HEIR_ID.spouse),
+    ).length;
+    expect(spouseEstateRows.length).toBe(expected);
+    expect(expected).toBeGreaterThan(0);
+  });
+  it("B2-8: 본래상속 재산구분코드 — 배우자=A11", () => {
+    const rows = byId(HEIR_ID.spouse).itemRows.filter((r) =>
+      r.kindCode.startsWith("A1"),
+    );
+    for (const r of rows) expect(r.kindCode).toBe("A11");
+  });
+
+  // ── AN-2 나 사전증여 행 (doneeId 매칭) ──
+  it("B2-9: 나 사전증여 행 — 법인 donee = A22, 상속인 donee = A21", () => {
+    const corpGiftRows = byId(HEIR_ID.corporate).itemRows.filter(
+      (r) => r.kindCode === "A22",
+    );
+    expect(corpGiftRows.length).toBeGreaterThan(0); // 법인 사전증여 존재
+    const spouseGiftRows = byId(HEIR_ID.spouse).itemRows.filter(
+      (r) => r.kindCode === "A21",
+    );
+    expect(spouseGiftRows.length).toBeGreaterThan(0); // 배우자 사전증여 존재
+  });
+
+  // ── P2-1 나↔계 가산증여 동일 소스 자기일관 ──
+  it("B2-10: 계 가산증여 §13 = Σ(나 사전증여 행) = Σ priorGifts(donee) (단일 소스)", () => {
+    for (const d of data) {
+      const giftRowSum = d.itemRows
+        .filter((r) => ["A21", "A22", "A23", "A24"].includes(r.kindCode))
+        .reduce((s, r) => s + r.valuatedAmount, 0);
+      const fixtureSum = EXAMPLE_PRIOR_GIFTS.filter(
+        (g) => g.doneeId === d.heirId,
+      ).reduce((s, g) => s + g.giftAmount, 0);
+      expect(d.sectionTotal.priorGift13).toBe(giftRowSum);
+      expect(d.sectionTotal.priorGift13).toBe(fixtureSum);
+      expect(d.sectionTotal.priorGift30_5).toBe(0); // PriorGift 경로 없음
+      expect(d.sectionTotal.priorGift30_6).toBe(0);
+    }
+  });
+
+  // ── AN-3 코드 단일출처 ──
+  it("B2-11: 평가기준코드 — 전부 공식 8종 {01..08}", () => {
+    for (const d of data) {
+      for (const r of d.itemRows) {
+        expect(OFFICIAL_METHOD_CODES).toContain(r.valuationMethodCode);
+      }
+    }
+  });
+  it("B2-12: 현금 자산 평가기준코드 = 06 (현금 등 가액)", () => {
+    // estate_cash → 배우자 배분. 배우자 나 행 중 현금(typeCode 01) → method 06
+    const cashRow = byId(HEIR_ID.spouse).itemRows.find(
+      (r) => r.typeCode === "01",
+    );
+    expect(cashRow).toBeDefined();
+    expect(cashRow!.valuationMethodCode).toBe("06");
+  });
+
+  // ── 비과세·과세불산입 세부 3종 공란 (D-4) ──
+  it("B2-13: 비과세·과세가액불산입 세부 = null(공란)", () => {
+    for (const d of data) {
+      expect(d.sectionTotal.nonTaxableTotal).toBeNull();
+      expect(d.sectionTotal.exclusionTotal).toBeNull();
+    }
+  });
+
+  // ── 내부 id 비노출 ──
+  it("B2-14: 나 행 locationOrName 에 내부 id(estate_·heir_) 미노출", () => {
+    for (const d of data) {
+      for (const r of d.itemRows) {
+        expect(r.locationOrName).not.toMatch(/estate_|heir_|legatee_|corporate_/);
+      }
+    }
+  });
+});

@@ -25,7 +25,7 @@ import { buildSummaryTable, sortHeirs } from "@/lib/calc/heir-allocation-summary
 import { FF9_CALC_LABELS, FF9_LAW_REFS } from "@/components/calc/inheritance/filing-form-9/filing-form-9-constants";
 
 /** ⑤ 피상속인과의 관계 라벨 (이미지1 child="자" 표기 우선). labelOf(name 우선)는 부적합. */
-const HEIR_RELATION_TO_DECLARANT_LABEL: Record<HeirRelation, string> = {
+export const HEIR_RELATION_TO_DECLARANT_LABEL: Record<HeirRelation, string> = {
   spouse: "배우자",
   child: "자",
   lineal_ascendant: "직계존속",

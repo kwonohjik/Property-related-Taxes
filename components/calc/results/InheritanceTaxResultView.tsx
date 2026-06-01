@@ -21,6 +21,7 @@ import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
 import { LoginPromptBanner } from "@/components/calc/shared/LoginPromptBanner";
 import { HeirAllocationSummaryTable } from "@/components/calc/results/HeirAllocationSummaryTable";
 import { FilingForm9CoverSection } from "@/components/calc/inheritance/filing-form-9/FilingForm9CoverSection";
+import { BesshiBuppyo2Section } from "@/components/calc/inheritance/besshi-buppyo-2";
 import { InheritanceFilingFormTable } from "@/components/calc/results/InheritanceFilingFormTable";
 import { CorporateExemptionSection } from "@/components/calc/results/CorporateExemptionSection";
 import { DebtAllocationResultCard } from "@/components/calc/results/DebtAllocationResultCard";
@@ -334,6 +335,20 @@ export function InheritanceTaxResultView({
       {result.heirAllocationResult && heirs && heirs.length > 0 && (
         <FilingForm9CoverSection result={result} heirs={heirs} deathDate={deathDate} />
       )}
+
+      {/* 별지 제9호서식 부표 2 — 상속인별 상속재산 및 평가명세서 (A4 가로, 상속인별 N장) */}
+      {result.heirAllocationResult &&
+        heirs &&
+        heirs.length > 0 &&
+        (estateItems || priorGifts) && (
+          <BesshiBuppyo2Section
+            result={result}
+            heirs={heirs}
+            estateItems={estateItems}
+            priorGifts={priorGifts}
+            deathDate={deathDate}
+          />
+        )}
 
       {/* 영농상속공제 사후관리 안내 */}
       {result.deductionDetail.farmingDeduction > 0 && (
