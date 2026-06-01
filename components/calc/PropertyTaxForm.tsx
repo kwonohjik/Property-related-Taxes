@@ -6,6 +6,10 @@ import { ChevronLeft } from "lucide-react";
 import { StepIndicator } from "@/components/calc/StepIndicator";
 import { PropertyTaxResultView } from "@/components/calc/results/PropertyTaxResultView";
 import { useAutoSaveCalculation } from "@/lib/storage/use-auto-save-calculation";
+import { runPropertyManualSave, formatPropertySaveMessage } from "@/components/calc/property-tax-save-handler";
+import { useRecordCount } from "@/components/calc/shared/save-handler-builders";
+import { SaveButton } from "@/components/calc/shared/SaveButton";
+import { SaveToast, type SaveToastMessage } from "@/components/calc/shared/SaveToast";
 import { useProfessionalStore } from "@/lib/stores/professional-store";
 import { INITIAL_FORM, validateStep, callPropertyTaxAPI, type FormState } from "./property/shared";
 import { Step0 } from "./property/Step0";
@@ -35,6 +39,25 @@ export function PropertyTaxForm() {
     taxLawVersion: `${new Date().getFullYear()}-06-01`, // 재산세 과세기준일
     clientId: activeClientId,
   });
+
+  // 수동 저장 — 자동저장과 별개로 사용자가 원할 때 즉시 이력 저장(갱신)
+  const [saveMessage, setSaveMessage] = useState<SaveToastMessage | null>(null);
+  const recordCount = useRecordCount(result);
+  const handleManualSave = async () => {
+    setSaveMessage(null);
+    try {
+      const outcome = await runPropertyManualSave({
+        form: form as unknown as Record<string, unknown>,
+        result,
+        clientId: activeClientId ?? null,
+      });
+      setSaveMessage(formatPropertySaveMessage(outcome, recordCount));
+    } catch (e) {
+      setSaveMessage(
+        formatPropertySaveMessage(e instanceof Error ? e : new Error(String(e)), recordCount),
+      );
+    }
+  };
 
   const needsLandDetail =
     form.objectType === "land" &&
@@ -134,15 +157,20 @@ export function PropertyTaxForm() {
   if (step === 4 && result) {
     return (
       <div>
+        <div className="flex justify-end mb-4">
+          <SaveButton onSave={handleManualSave} />
+        </div>
         <PropertyTaxResultView result={result} />
-        <div className="mt-6 flex justify-center">
+        <div className="mt-6 flex justify-center gap-3">
           <button
             onClick={handleReset}
             className="px-6 py-2 rounded-md border text-sm font-medium hover:bg-muted transition-colors"
           >
             다시 계산하기
           </button>
+          <SaveButton variant="primary" onSave={handleManualSave} className="flex-none px-6" />
         </div>
+        <SaveToast message={saveMessage} onClose={() => setSaveMessage(null)} />
       </div>
     );
   }

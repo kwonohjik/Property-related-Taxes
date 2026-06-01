@@ -29,6 +29,10 @@ import { ResetButton } from "@/components/calc/shared/ResetButton";
 import { HomeButton } from "@/components/calc/shared/HomeButton";
 import { useComprehensiveWizardStore } from "@/lib/stores/comprehensive-wizard-store";
 import { useAutoSaveCalculation } from "@/lib/storage/use-auto-save-calculation";
+import { runComprehensiveManualSave, formatComprehensiveSaveMessage } from "@/components/calc/comprehensive-tax-save-handler";
+import { useRecordCount } from "@/components/calc/shared/save-handler-builders";
+import { SaveButton } from "@/components/calc/shared/SaveButton";
+import { SaveToast, type SaveToastMessage } from "@/components/calc/shared/SaveToast";
 import { useProfessionalStore } from "@/lib/stores/professional-store";
 import type { ComprehensiveTaxResult } from "@/lib/tax-engine/types/comprehensive.types";
 
@@ -607,6 +611,25 @@ export default function ComprehensiveTaxPage() {
     clientId: activeClientId,
   });
 
+  // 수동 저장 — 자동저장과 별개로 사용자가 원할 때 즉시 이력 저장(갱신)
+  const [saveMessage, setSaveMessage] = useState<SaveToastMessage | null>(null);
+  const recordCount = useRecordCount(result);
+  const handleManualSave = async () => {
+    setSaveMessage(null);
+    try {
+      const outcome = await runComprehensiveManualSave({
+        form: formData as unknown as Record<string, unknown>,
+        result,
+        clientId: activeClientId ?? null,
+      });
+      setSaveMessage(formatComprehensiveSaveMessage(outcome, recordCount));
+    } catch (e) {
+      setSaveMessage(
+        formatComprehensiveSaveMessage(e instanceof Error ? e : new Error(String(e)), recordCount),
+      );
+    }
+  };
+
   // 이전 단계
   function handlePrev() {
     if (currentStep === 0) {
@@ -659,6 +682,9 @@ export default function ComprehensiveTaxPage() {
       {/* 결과 화면 */}
       {showResult ? (
         <div className="space-y-6">
+          <div className="flex justify-end">
+            <SaveButton onSave={handleManualSave} />
+          </div>
           <ComprehensiveTaxResultView result={result} />
           <LoginPromptBanner />
           <div className="flex gap-3">
@@ -679,6 +705,7 @@ export default function ComprehensiveTaxPage() {
               다시 계산
             </button>
           </div>
+          <SaveToast message={saveMessage} onClose={() => setSaveMessage(null)} />
         </div>
       ) : (
         <div className="space-y-6">

@@ -121,4 +121,17 @@ describe("saveOrUpdateByContent — dedup 정책", () => {
     expect(r.created).toBe(true);
     expect((await repo.list())).toHaveLength(2);
   });
+
+  it("D-8: 휘발성 항목 id만 다른 동일 계산 반복 → record 1건 (id 정규화)", async () => {
+    const repo = createCalculationRepository(UID);
+    await repo.saveOrUpdateByContent(
+      makeInput({ inputData: { heirs: [{ id: "heir-111-1", name: "A" }], amount: 1000 } })
+    );
+    // 새 세션·폼 리셋 후 같은 내용을 다시 입력하면 항목 id가 Date.now() 기반으로 달라진다.
+    const r2 = await repo.saveOrUpdateByContent(
+      makeInput({ inputData: { heirs: [{ id: "heir-999-1", name: "A" }], amount: 1000 } })
+    );
+    expect(r2.created).toBe(false);
+    expect(await repo.list()).toHaveLength(1);
+  });
 });

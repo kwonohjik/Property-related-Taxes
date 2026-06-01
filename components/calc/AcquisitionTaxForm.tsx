@@ -17,6 +17,10 @@ import { StepIndicator } from "@/components/calc/StepIndicator";
 import { AcquisitionTaxResultView } from "@/components/calc/results/AcquisitionTaxResultView";
 import { callAcquisitionTaxAPI } from "@/lib/calc/acquisition-tax-api";
 import { useAutoSaveCalculation } from "@/lib/storage/use-auto-save-calculation";
+import { runAcquisitionManualSave, formatAcquisitionSaveMessage } from "@/components/calc/acquisition-tax-save-handler";
+import { useRecordCount } from "@/components/calc/shared/save-handler-builders";
+import { SaveButton } from "@/components/calc/shared/SaveButton";
+import { SaveToast, type SaveToastMessage } from "@/components/calc/shared/SaveToast";
 import { useProfessionalStore } from "@/lib/stores/professional-store";
 import type { AcquisitionTaxResult } from "@/lib/tax-engine/types/acquisition.types";
 import {
@@ -106,6 +110,25 @@ export function AcquisitionTaxForm() {
       new Date().toISOString().split("T")[0],
     clientId: activeClientId,
   });
+
+  // 수동 저장 — 자동저장과 별개로 사용자가 원할 때 즉시 이력 저장(갱신)
+  const [saveMessage, setSaveMessage] = useState<SaveToastMessage | null>(null);
+  const recordCount = useRecordCount(result);
+  const handleManualSave = async () => {
+    setSaveMessage(null);
+    try {
+      const outcome = await runAcquisitionManualSave({
+        form: form as unknown as Record<string, unknown>,
+        result,
+        clientId: activeClientId ?? null,
+      });
+      setSaveMessage(formatAcquisitionSaveMessage(outcome, recordCount));
+    } catch (e) {
+      setSaveMessage(
+        formatAcquisitionSaveMessage(e instanceof Error ? e : new Error(String(e)), recordCount),
+      );
+    }
+  };
 
   const isOriginal = ["new_construction", "extension", "reconstruction", "reclamation"].includes(form.acquisitionCause);
   const isBurdened = form.acquisitionCause === "burdened_gift";
@@ -223,6 +246,9 @@ export function AcquisitionTaxForm() {
         <>
           {isDeemed && result ? (
             <div className="space-y-4">
+              <div className="flex justify-end">
+                <SaveButton onSave={handleManualSave} />
+              </div>
               <AcquisitionTaxResultView
                 result={result}
                 isRegulatedArea={form.isRegulatedArea}
@@ -290,6 +316,9 @@ export function AcquisitionTaxForm() {
         <>
           {result ? (
             <div className="space-y-4">
+              <div className="flex justify-end">
+                <SaveButton onSave={handleManualSave} />
+              </div>
               <AcquisitionTaxResultView
                 result={result}
                 isRegulatedArea={form.isRegulatedArea}
@@ -346,6 +375,7 @@ export function AcquisitionTaxForm() {
           </button>
         </div>
       )}
+      <SaveToast message={saveMessage} onClose={() => setSaveMessage(null)} />
       </div> {/* 메인 마법사 끝 */}
     </div>
   );

@@ -8,7 +8,7 @@
  * 부동산 양도세 마법사와 완전히 분리된 독립 도메인.
  */
 
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { StepIndicator } from "@/components/calc/StepIndicator";
 import { StockSidebar } from "@/components/calc/stock-transfer/StockSidebar";
@@ -22,6 +22,10 @@ import { useStockTransferStore } from "@/lib/stores/calc-wizard-stock-store";
 import { callStockTransferTaxAPI } from "@/lib/calc/stock-transfer-tax-api";
 import { validateStep1, validateStep2, validateStep3 } from "@/lib/calc/stock-transfer-tax-validate";
 import { useAutoSaveCalculation } from "@/lib/storage/use-auto-save-calculation";
+import { runStockManualSave, formatStockSaveMessage } from "@/components/calc/stock-transfer-save-handler";
+import { useRecordCount } from "@/components/calc/shared/save-handler-builders";
+import { SaveButton } from "@/components/calc/shared/SaveButton";
+import { SaveToast, type SaveToastMessage } from "@/components/calc/shared/SaveToast";
 import { useProfessionalStore } from "@/lib/stores/professional-store";
 import { extractStockTransferDate } from "@/lib/storage/title-generator";
 import { ChevronLeft } from "lucide-react";
@@ -53,6 +57,25 @@ export default function StockTransferTaxCalculator() {
     taxLawVersion: extractStockTransferDate(formData as unknown as Record<string, unknown>) ?? new Date().toISOString().split("T")[0],
     clientId: activeClientId,
   });
+
+  // 수동 저장 — 자동저장과 별개로 사용자가 원할 때 즉시 이력 저장(갱신)
+  const [saveMessage, setSaveMessage] = useState<SaveToastMessage | null>(null);
+  const recordCount = useRecordCount(result);
+  const handleManualSave = async () => {
+    setSaveMessage(null);
+    try {
+      const outcome = await runStockManualSave({
+        form: formData as unknown as Record<string, unknown>,
+        result,
+        clientId: activeClientId ?? null,
+      });
+      setSaveMessage(formatStockSaveMessage(outcome, recordCount));
+    } catch (e) {
+      setSaveMessage(
+        formatStockSaveMessage(e instanceof Error ? e : new Error(String(e)), recordCount),
+      );
+    }
+  };
 
   // 다음 단계 진행 (validation 체크)
   const handleNext = useCallback(() => {
@@ -122,9 +145,12 @@ export default function StockTransferTaxCalculator() {
           </div>
           <div className="flex items-center gap-2">
             <HomeButton confirmMessage="홈으로 이동하면 현재 입력 중인 값이 유지된 채 페이지를 떠납니다.&#10;계속하시겠습니까?" />
+            <SaveButton onSave={handleManualSave} />
             <ResetButton onReset={handleReset} />
           </div>
         </div>
+
+        <SaveToast message={saveMessage} onClose={() => setSaveMessage(null)} />
 
         {/* 단계 인디케이터 */}
         <div className="mb-6">

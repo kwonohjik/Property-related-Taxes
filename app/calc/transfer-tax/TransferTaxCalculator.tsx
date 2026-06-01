@@ -19,6 +19,10 @@ import { ResetButton } from "@/components/calc/shared/ResetButton";
 import { HomeButton } from "@/components/calc/shared/HomeButton";
 import { computeTransferSummary } from "@/lib/stores/calc-wizard-store";
 import { useAutoSaveCalculation } from "@/lib/storage/use-auto-save-calculation";
+import { runTransferManualSave, formatTransferSaveMessage } from "@/components/calc/transfer-tax-save-handler";
+import { useRecordCount } from "@/components/calc/shared/save-handler-builders";
+import { SaveButton } from "@/components/calc/shared/SaveButton";
+import { SaveToast, type SaveToastMessage } from "@/components/calc/shared/SaveToast";
 import { useProfessionalStore } from "@/lib/stores/professional-store";
 import { ChevronLeft } from "lucide-react";
 import { Step1 } from "./steps/Step1";
@@ -93,6 +97,25 @@ export default function TransferTaxCalculator({
     taxLawVersion: formData.transferDate || new Date().toISOString().split("T")[0],
     clientId: activeClientId,
   });
+
+  // 수동 저장 — 자동저장과 별개로 사용자가 원할 때 즉시 이력 저장(갱신)
+  const [saveMessage, setSaveMessage] = useState<SaveToastMessage | null>(null);
+  const recordCount = useRecordCount(result);
+  const handleManualSave = async () => {
+    setSaveMessage(null);
+    try {
+      const outcome = await runTransferManualSave({
+        form: formData as unknown as Record<string, unknown>,
+        result,
+        clientId: activeClientId ?? null,
+      });
+      setSaveMessage(formatTransferSaveMessage(outcome, recordCount));
+    } catch (e) {
+      setSaveMessage(
+        formatTransferSaveMessage(e instanceof Error ? e : new Error(String(e)), recordCount),
+      );
+    }
+  };
 
   // 잘못된 step 상태 복구: currentStep >= totalSteps인데 result가 없으면 step 0으로 리셋
   useEffect(() => {
@@ -442,10 +465,13 @@ export default function TransferTaxCalculator({
           <h1 className="text-2xl font-bold">양도소득세 계산기</h1>
           <div className="flex items-center gap-2">
             <HomeButton confirmMessage="홈으로 이동하면 현재 입력 중인 값이 유지된 채 페이지를 떠납니다.&#10;계속하시겠습니까?" />
+            <SaveButton onSave={handleManualSave} />
             <ResetButton onReset={handleReset} />
           </div>
         </div>
       </div>
+
+      <SaveToast message={saveMessage} onClose={() => setSaveMessage(null)} />
 
       {isResult && result ? (
         result.mode === "single" ? (
