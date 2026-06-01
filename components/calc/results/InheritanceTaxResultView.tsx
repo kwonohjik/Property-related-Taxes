@@ -22,7 +22,7 @@ import { LoginPromptBanner } from "@/components/calc/shared/LoginPromptBanner";
 import { TaxCreditBreakdownCard } from "@/components/calc/TaxCreditBreakdownCard";
 import { HeirAllocationSummaryTable } from "@/components/calc/results/HeirAllocationSummaryTable";
 import { InheritanceFilingFormTable } from "@/components/calc/results/InheritanceFilingFormTable";
-import { CorporateExemptionFilingFormTable } from "@/components/calc/results/CorporateExemptionFilingFormTable";
+import { CorporateExemptionSection } from "@/components/calc/results/CorporateExemptionSection";
 import { DebtAllocationResultCard } from "@/components/calc/results/DebtAllocationResultCard";
 import { UnlistedStockBesshiResultSection } from "@/components/calc/results/UnlistedStockBesshiResultSection";
 import { ListedStockBesshiResultSection } from "@/components/calc/results/ListedStockBesshiResultSection";
@@ -311,41 +311,13 @@ export function InheritanceTaxResultView({
         />
       )}
 
-      {/* 영리법인 사전증여 면제 (§3의2② + 집행기준 28-0-1) */}
+      {/* 영리법인 상속세 면제 (§3의2②) — 면제 산출 요약 + 부표 5 명세서 단일 섹션 */}
       {result.corporateExemption && result.corporateExemption.amount > 0 && (
-        <div className="rounded-lg border border-violet-200 dark:border-violet-700 bg-violet-50/40 dark:bg-violet-900/20 p-4 space-y-2">
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1 text-[10px] bg-violet-200 text-violet-800 rounded px-2 py-0.5">
-              §3의2②
-            </span>
-            <p className="text-sm font-semibold text-violet-700 dark:text-violet-300">
-              영리법인 사전증여 면제 (§3의2② · 집행기준 28-0-1)
-            </p>
-          </div>
-          {result.corporateExemption.breakdown.map((step, i) => (
-            <div
-              key={i}
-              className="flex justify-between text-xs text-gray-700 dark:text-gray-300"
-            >
-              <span>{step.label}</span>
-              <span className="font-mono">{formatKRW(step.amount)}</span>
-            </div>
-          ))}
-          <div className="flex justify-between text-sm font-bold text-violet-800 dark:text-violet-200 border-t border-violet-200 dark:border-violet-700 pt-2">
-            <span>상속세 산출세액에서 차감 (면제)</span>
-            <span>− {formatKRW(result.corporateExemption.amount)}</span>
-          </div>
-        </div>
+        <CorporateExemptionSection
+          corporateExemption={result.corporateExemption}
+          heirs={heirs}
+        />
       )}
-
-      {/* 부표 5 — 영리법인 면제 및 납부 명세서 */}
-      {result.corporateExemption?.perCorporateBreakdown &&
-        result.corporateExemption.perCorporateBreakdown.length > 0 && (
-          <CorporateExemptionFilingFormTable
-            perCorporateBreakdown={result.corporateExemption.perCorporateBreakdown}
-            heirs={heirs}
-          />
-        )}
 
       {/* 채무·공과·장례비 협의분할 결과 카드 */}
       {result.heirAllocationResult &&

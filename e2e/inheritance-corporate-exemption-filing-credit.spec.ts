@@ -76,7 +76,7 @@ test.describe("영리법인 면제 요약 반영 + §69 산식 정합", () => {
     await addCorporatePriorGift(page);
     await gotoResult(page);
 
-    // ① 요약 산식 행 "영리법인 면제 (§3의2②)" 노출 (카드 헤더 "영리법인 사전증여 면제…"와 구분 — exact)
+    // ① 과세요약 산식 행 "영리법인 면제 (§3의2②)" 노출 (카드 메인 제목 "영리법인 상속세 면제…"와 구분 — exact)
     await expect(
       page.getByText("영리법인 면제 (§3의2②)", { exact: true }),
     ).toBeVisible();
@@ -94,5 +94,36 @@ test.describe("영리법인 면제 요약 반영 + §69 산식 정합", () => {
       .last();
     await expect(filingFormula).toBeVisible();
     await expect(filingFormula).toContainText("영리법인 면제");
+  });
+
+  test("CE-2: 영리법인 면제 단일 섹션 — 요약 + 부표5 통합, 분리 카드 제거", async ({
+    page,
+  }) => {
+    test.setTimeout(90_000);
+
+    await gotoStep0(page);
+    await addLandAndGotoStep3(page);
+    await addCorporatePriorGift(page);
+    await gotoResult(page);
+
+    // 통합 카드 메인 제목 1개 (과세요약 SummaryRow "영리법인 면제 (§3의2②)"와 "상속세" 유무로 구분)
+    await expect(
+      page.getByText("영리법인 상속세 면제 (§3의2②)", { exact: true }),
+    ).toBeVisible();
+
+    // 구 분리 인라인 카드 제목 제거 확인
+    await expect(page.getByText(/영리법인 사전증여 면제/)).toHaveCount(0);
+
+    // 면제 산출 요약(차감) 상시 노출
+    await expect(page.getByText(/상속세 산출세액에서 차감/)).toBeVisible();
+
+    // 부표 5 펼침 → 가. 표 노출 (부표1 보조명세에도 동일 토글 존재 → 부표5 헤더 부모로 스코프)
+    const buppyoHeaderRow = page
+      .getByText("🏢 부표 5 — 영리법인 상속세 면제 및 납부 명세서")
+      .locator("..");
+    await buppyoHeaderRow.getByRole("button", { name: /펼치기/ }).click();
+    await expect(
+      page.getByText(/가\. 상속세 면제대상 영리법인/),
+    ).toBeVisible();
   });
 });
