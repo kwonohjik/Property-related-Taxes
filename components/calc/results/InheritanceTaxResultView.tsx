@@ -16,12 +16,14 @@ import type {
   PresumedInheritanceItem,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { FarmingDeductionDetail } from "@/lib/tax-engine/types/inheritance-farming.types";
+import type { FamilyBusinessInheritanceInput } from "@/lib/tax-engine/types/inheritance-family-business.types";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
 import { LoginPromptBanner } from "@/components/calc/shared/LoginPromptBanner";
 import { HeirAllocationSummaryTable } from "@/components/calc/results/HeirAllocationSummaryTable";
 import { FilingForm9CoverSection } from "@/components/calc/inheritance/filing-form-9/FilingForm9CoverSection";
 import { BesshiBuppyo2Section } from "@/components/calc/inheritance/besshi-buppyo-2";
+import { DeductionBesshiFormsSection } from "@/components/calc/inheritance/deduction-besshi";
 import { InheritanceFilingFormTable } from "@/components/calc/results/InheritanceFilingFormTable";
 import { CorporateExemptionSection } from "@/components/calc/results/CorporateExemptionSection";
 import { DebtAllocationResultCard } from "@/components/calc/results/DebtAllocationResultCard";
@@ -142,6 +144,8 @@ interface Props {
   deathDate?: string;
   /** 추정상속재산 입력 — SourceDataSummarySection Table B용 (2026-05-28) */
   presumedItems?: PresumedInheritanceItem[];
+  /** 가업상속 입력 — 별지 제1호서식(가업상속공제신고서) 나·다 칸용 */
+  familyBusinessInput?: FamilyBusinessInheritanceInput;
 }
 
 export function InheritanceTaxResultView({
@@ -156,6 +160,7 @@ export function InheritanceTaxResultView({
   priorGifts,
   deathDate,
   presumedItems,
+  familyBusinessInput,
 }: Props) {
   const [showValuation, setShowValuation] = useState(false);
 
@@ -349,6 +354,18 @@ export function InheritanceTaxResultView({
             deathDate={deathDate}
           />
         )}
+
+      {/* 채무·공과금·장례비·상속공제 명세 (부표3·별지5호·별지1호) */}
+      {result.deductionDetail && (
+        <DeductionBesshiFormsSection
+          result={result}
+          heirs={heirs}
+          debtItems={debtItems}
+          estateItems={estateItems}
+          familyBusinessInput={familyBusinessInput}
+          deathDate={deathDate}
+        />
+      )}
 
       {/* 영농상속공제 사후관리 안내 */}
       {result.deductionDetail.farmingDeduction > 0 && (

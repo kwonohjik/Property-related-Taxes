@@ -1,0 +1,1 @@
+export { DeductionBesshiFormsSection } from "./DeductionBesshiFormsSection";
