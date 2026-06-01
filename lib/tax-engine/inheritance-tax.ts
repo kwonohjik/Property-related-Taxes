@@ -51,6 +51,7 @@ import { calcInheritanceTaxCredits } from "./inheritance-gift-tax-credit";
 import { evaluatePresumedInheritance } from "./presumed-inheritance";
 import { calcCorporateExemption } from "./inheritance-corporate-exemption";
 import { calcHeirAllocation } from "./inheritance-allocation";
+import { derivePriorGiftTaxBase } from "./inheritance-prior-gift-taxbase";
 import { buildSummaryCategory } from "./inheritance-asset-category";
 import { computeLegalShares } from "./inheritance-legal-share";
 import { deriveCollateralDebts } from "./inheritance-collateral-debt";
@@ -84,6 +85,19 @@ export function calcInheritanceTax(
   const allBreakdown: CalculationStep[] = [];
   const allWarnings: string[] = [];
   const allLaws: Set<string> = new Set([INH.TAXABLE_VALUE]);
+
+  // ─────────────────────────────────────────────
+  // STEP 0.5: §53 증여재산공제 사전 도출 (상증법 §53, KoreanLaw mst 276123 검증 2026-06-01)
+  //   상속세 모드 UI(GiftRowEditor)는 giftTaxBase 입력란이 없어(증여세 모드 전용) 항상 undefined.
+  //   → doneeId → heirs.relation → §53 관계공제(배우자 6억·직계비속 5천 등, 수증자 단위 10년 통산)를
+  //     미리 도출하여 이후 전 STEP(§19 배우자공제·§24 종합한도·STEP 13 상속인별 배부)에서 일관 사용.
+  //   ① giftTaxBase 명시 건은 보존(회귀 0) ② doneeId/관계 기반 도출 ④ legatee·corporate·orphan 미개입.
+  //   이후 `input.preGiftsWithin10Years` 직접 참조 금지 — `preGifts`로 통일.
+  // ─────────────────────────────────────────────
+  const preGifts =
+    input.preGiftsWithin10Years && input.heirs && input.heirs.length > 0
+      ? derivePriorGiftTaxBase(input.preGiftsWithin10Years, input.heirs)
+      : (input.preGiftsWithin10Years ?? []);
 
   // ─────────────────────────────────────────────
   // STEP 1: 재산 평가
@@ -205,7 +219,7 @@ export function calcInheritanceTax(
   // ─────────────────────────────────────────────
   const { totalAmount: priorGiftAggregated, breakdown: priorGiftBreakdown } =
     aggregatePriorGiftsForInheritance(
-      input.preGiftsWithin10Years,
+      preGifts,
       input.deathDate,
     );
 
@@ -231,7 +245,7 @@ export function calcInheritanceTax(
   // ─────────────────────────────────────────────
   // calcInheritanceDeductions가 내부에서 한도를 계산하므로 raw 금액 전달
   const { totalAmount: heirOnlyGifts } = aggregatePriorGiftsForInheritance(
-    input.preGiftsWithin10Years,
+    preGifts,
     input.deathDate,
     true, // 상속인만
   );
@@ -256,14 +270,14 @@ export function calcInheritanceTax(
     const spouseHeir = input.heirs.find((h) => h.relation === "spouse");
     if (spouseHeir) {
       // 상속인 사전증여 가산가액 (영리법인·legatee 제외)
-      const heirGiftAmount = (input.preGiftsWithin10Years ?? []).reduce(
+      const heirGiftAmount = (preGifts ?? []).reduce(
         (s, g) => s + (g.beneficiaryType === "heir" || (g.beneficiaryType === undefined && g.isHeir) ? g.giftAmount : 0),
         0,
       );
       // 배우자 사전증여 과세표준
       // 배우자 사전증여 과세표준 — giftTaxBase 명시 우선, 미설정 시 (giftAmount − §53 관계공제) 자동 도출.
       // (상속세 모드엔 giftTaxBase 입력 UI 없어 가액 fallback 시 과대 차감되던 버그 차단. 배우자 760m → 160m)
-      const spouseGiftTaxBase = (input.preGiftsWithin10Years ?? []).reduce((s, g) => {
+      const spouseGiftTaxBase = (preGifts ?? []).reduce((s, g) => {
         if (g.doneeId !== spouseHeir.id) return s;
         if (g.giftTaxBase !== undefined) return s + g.giftTaxBase;
         if (!g.doneeRelation) return s + g.giftAmount;
@@ -449,7 +463,7 @@ export function calcInheritanceTax(
       priorGiftDeductionTotal:
         input.deductionInput.priorGiftDeductionTotal ??
         computePriorGiftDeductionForLimit(
-          input.preGiftsWithin10Years,
+          preGifts,
           input.deathDate,
         ),
       legateeAmountNonHeir: input.deductionInput.legateeAmountNonHeir ?? 0,
@@ -507,7 +521,7 @@ export function calcInheritanceTax(
   //   PDF: 분모 = grossEstateWithGifts − 영리법인 등 사전증여 가액
   // ─────────────────────────────────────────────
   // 상속인·수유자 외 자(영리법인·기타)가 받은 사전증여 가액 합계
-  const nonHeirNonLegateeGifts = (input.preGiftsWithin10Years ?? []).reduce(
+  const nonHeirNonLegateeGifts = (preGifts ?? []).reduce(
     (sum, g) => sum + (g.beneficiaryType === "corporate" ? g.giftAmount : 0),
     0,
   );
@@ -536,7 +550,7 @@ export function calcInheritanceTax(
   // §3의2② + 집행기준 28-0-1 — "§13에 따라 가산된" 영리법인 증여재산만 면제 대상.
   // §13 cutoff 도과 행은 priorGiftAggregated에서 제외되므로 면제 발동도 차단해야 함.
   // isWithin13Cutoff 헬퍼로 aggregatePriorGiftsForInheritance와 단일 진실 유지.
-  const corporateGifts = (input.preGiftsWithin10Years ?? []).filter(
+  const corporateGifts = (preGifts ?? []).filter(
     (g) => g.beneficiaryType === "corporate" && isWithin13Cutoff(g, input.deathDate),
   );
   const corporateGiftTaxBase = corporateGifts.reduce(
@@ -654,7 +668,7 @@ export function calcInheritanceTax(
   // 협의분할 입력 자산은 그대로, 미입력 자산은 법정상속분으로 자동 배분. (계획 §4 — 항상 배부 확정)
   const hasHeirAllocations =
     computeLegalShares(input.heirs).shares.length > 0 ||
-    input.preGiftsWithin10Years.some((g) => g.doneeId);
+    preGifts.some((g) => g.doneeId);
 
   if (hasHeirAllocations) {
     // 추정상속재산 id→addedAmount Map 작성
@@ -675,7 +689,9 @@ export function calcInheritanceTax(
     //   - 수정 후: isWithin13Cutoff 필터 → aggregatePriorGiftsForInheritance와 동일 집합 보장
     //   - isWithin13Cutoff(inheritance-gift-common.ts:293)는 gift.isHeir로 10/5년 판정
     //     → aggregatePriorGiftsForInheritance(:309)와 동일 함수 사용 — 필터 정확 일치
-    const cutoffFilteredGifts = (input.preGiftsWithin10Years ?? []).filter(
+    // 대안 A: §53 증여재산공제 자동 도출은 STEP 0.5에서 전체 preGifts에 이미 적용됨.
+    //   여기서는 §13 cutoff 필터만 추가 적용 (derive 중복 호출 제거).
+    const cutoffFilteredGifts = preGifts.filter(
       (g) => isWithin13Cutoff(g, input.deathDate),
     );
 
@@ -701,7 +717,7 @@ export function calcInheritanceTax(
 
   // Phase B5: summaryTable 조립 (PDF 표8 합계행 echo, 산식 변경 0)
   // heir-allocation-summary-table.engine.design.md §B5
-  const corporateGiftTaxBaseForSummary = (input.preGiftsWithin10Years ?? []).reduce(
+  const corporateGiftTaxBaseForSummary = (preGifts ?? []).reduce(
     (sum, g) => sum + (g.beneficiaryType === "corporate" ? (g.giftTaxBase ?? g.giftAmount) : 0),
     0,
   );
