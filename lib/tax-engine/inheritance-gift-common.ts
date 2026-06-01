@@ -16,6 +16,7 @@ import type {
   PriorGift,
   GenerationSkipSurchargeDetail,
   DonorGroup,
+  Heir,
 } from "./types/inheritance-gift.types";
 import type { TaxBracket as TaxBracketBase } from "./types";
 import type { PriorAggregationResult } from "./gift-prior-aggregation";
@@ -421,4 +422,32 @@ export function calcFuneralExpenseDeduction(
  */
 export function truncateTaxBase(amount: number): number {
   return truncateToThousand(amount);
+}
+
+// ============================================================
+// §27 세대생략 — 미성년 판정 헬퍼
+// ============================================================
+
+/**
+ * §27② 미성년 판정 (민법 §4: 19세 미만).
+ *
+ * 우선순위:
+ *   1. heir.isMinorOverride != null → 수동 override (true/false)
+ *   2. heir.birthDate 존재 → differenceInYears(deathDate, birthDate) < 19
+ *   3. 미입력 → false (보수적 — 30% 적용)
+ *
+ * @param heir 상속인·수유자 정보
+ * @param deathDate 상속개시일 (Date | string)
+ */
+export function resolveMinorBeneficiary(
+  heir: Heir,
+  deathDate: Date | string,
+): boolean {
+  if (heir.isMinorOverride != null) return heir.isMinorOverride;
+  if (heir.birthDate) {
+    const death = typeof deathDate === "string" ? new Date(deathDate) : deathDate;
+    const birth = new Date(heir.birthDate);
+    return differenceInYears(death, birth) < 19;
+  }
+  return false;
 }

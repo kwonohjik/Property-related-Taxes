@@ -30,6 +30,7 @@ import { ListedStockBesshiResultSection } from "@/components/calc/results/Listed
 import { SourceDataSummarySection } from "@/components/calc/results/source-summary/SourceDataSummarySection";
 import { calcInstallmentPayment } from "@/lib/tax-engine/credits/installment-payment";
 import { DeductionBreakdownSection } from "./deduction-breakdown/DeductionBreakdownSection";
+import { InheritanceGenerationSkipDetailCard } from "@/components/calc/results/InheritanceGenerationSkipDetailCard";
 // re-export 보존 — shared.tsx 에서 실제 구현
 export { Row, formatBillion, LawBadge } from "./deduction-breakdown/shared";
 // re-export 보존 — FarmingDeductionDetailRow (farming-section.test.tsx 사용)
@@ -285,6 +286,11 @@ export function InheritanceTaxResultView({
           credit={result.creditDetail}
           taxBeforeCredit={taxBeforeCredit}
         />
+      )}
+
+      {/* B-5 (2026-06-01): §27 세대생략 할증 수유자별 산식 카드 */}
+      {result.generationSkipDetail && (
+        <InheritanceGenerationSkipDetailCard detail={result.generationSkipDetail} />
       )}
 
       {/* 사전증여재산 명세 */}

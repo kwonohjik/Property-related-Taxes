@@ -319,42 +319,13 @@ export function Step5({ form, set }: { form: FormState; set: FormSet }) {
         세액공제 항목을 입력하면 납부세액이 줄어듭니다.
       </p>
 
-      <div className="border rounded-lg p-4 space-y-3">
-        <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-200">
-          세대생략 할증과세 (§27)
-        </h4>
-        <p className="text-xs text-gray-500 dark:text-gray-400">
-          자녀를 건너뛴 손자·외손자 등이 상속받는 경우 산출세액의 30%(또는 40%) 할증
-        </p>
-        <ToggleCard
-          tone="violet"
-          title="세대생략 상속 해당"
-          checked={form.isGenerationSkip}
-          onCheckedChange={(v) =>
-            set({
-              isGenerationSkip: v,
-              isMinorHeir: v ? form.isMinorHeir : false,
-              generationSkipAssetAmount: v ? form.generationSkipAssetAmount : "",
-            })
-          }
-        >
-          <ToggleCard
-            tone="violet"
-            size="sm"
-            title="세대생략 상속인이 미성년자"
-            description="미성년자 + 과세표준 20억 초과 시 40% 할증"
-            checked={form.isMinorHeir}
-            onCheckedChange={(v) => set({ isMinorHeir: v })}
-          />
-          <CurrencyInput
-            label="세대생략 해당 상속재산가액 (일부만 세대생략인 경우)"
-            value={form.generationSkipAssetAmount}
-            onChange={(v) => set({ generationSkipAssetAmount: v })}
-            hint="전체 상속인 중 일부만 세대생략인 경우 해당 재산가액 입력. 전체가 세대생략이면 빈칸."
-            placeholder="없으면 빈칸 (전액 할증 적용)"
-          />
-        </ToggleCard>
-      </div>
+      {/* B-4 (2026-06-01): 전역 세대생략 입력 제거 → read-only 안내 (§27 자동 도출) */}
+      {form.heirs.some((h) => h.isGenerationSkipBeneficiary) && (
+        <div className="rounded-md border border-sky-200 bg-sky-50/40 dark:border-sky-700 dark:bg-sky-900/20 px-3 py-2 text-[11px] text-sky-800 dark:text-sky-200">
+          ℹ️ <strong>세대생략 할증과세 (§27)</strong> — 상속인 등록 단계에서 수유자에 체크한
+          세대생략 대상 정보를 기반으로 자동 산출됩니다. 별도 입력이 필요하지 않습니다.
+        </div>
+      )}
 
       <ToggleCard
         tone="violet"

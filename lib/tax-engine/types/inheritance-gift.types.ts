@@ -464,6 +464,45 @@ export interface PriorGiftCreditDetail {
 }
 
 // ============================================================
+// §27 세대생략 할증 per-heir detail (상속세 전용 — 증여세 GenerationSkipSurchargeDetail 재사용 금지)
+// ============================================================
+
+/**
+ * §27 세대생략 수유자 1인 할증 계산 행
+ * feedback_no_internal_id_in_result: heirName은 내부 id 대신 표시용 이름 사용
+ */
+export interface InheritanceGenerationSkipHeirRow {
+  /** Heir.id — 배부 연결용 */
+  heirId: string;
+  /** 표시용 이름 (내부 id 노출 금지) */
+  heirName?: string;
+  /** 분자 = 직접 유증·상속분 + §13 cutoff 내 사전증여 */
+  numerator: number;
+  /** 할증율 0.30 / 0.40 */
+  rate: number;
+  /** 미성년 여부 (resolveMinorBeneficiary 도출) */
+  isMinor: boolean;
+  /** floor(computedTax × numerator × rate / denominator) — 개별 단일 floor */
+  surcharge: number;
+}
+
+/**
+ * §27 세대생략 할증 전체 상세 (상속세 전용)
+ * InheritanceTaxResult.generationSkipDetail 에 저장.
+ * 레거시 단일 경로에서도 rows 1행으로 통일하여 결과 카드 공통 표시 가능.
+ */
+export interface InheritanceGenerationSkipDetail {
+  /** adjustedDenominator = taxableEstateValue − nonHeirNonLegateeGifts */
+  denominator: number;
+  /** 산출세액 (할증 전) */
+  computedTax: number;
+  /** per-heir 할증 행 배열 */
+  rows: InheritanceGenerationSkipHeirRow[];
+  /** Σ surcharge */
+  total: number;
+}
+
+// ============================================================
 // 신고서 양식 표 행 (12행 사례 1 / 18행 사례 2)
 // ============================================================
 
@@ -524,6 +563,13 @@ export interface Heir {
   isForProfit?: boolean;
   /** 세대생략 수유자(직계비속 손자녀) — §27 ② 30%/40% 할증 대상 */
   isGenerationSkipBeneficiary?: boolean;
+  /**
+   * §27 미성년 여부 수동 override (3-state).
+   * - undefined: birthDate 기반 자동 판정 (differenceInYears(deathDate, birthDate) < 19, 민법 §4)
+   * - true:  강제 미성년 처리 (연령 개정 대비 or birthDate 미입력 시 수동)
+   * - false: 강제 성년 처리 (자동 판정 결과 무효화)
+   */
+  isMinorOverride?: boolean;
   /** 영리법인 수증자만: 사전증여 당시 증여세 산출세액 (§3의2② 면제 한도용) */
   corporateGiftComputedTax?: number;
 
@@ -934,8 +980,15 @@ export interface InheritanceTaxResult extends TaxResultMeta {
   taxBase: number;
   /** 산출세액 (누진세율) */
   computedTax: number;
-  /** 세대생략 할증액 */
+  /** 세대생략 할증액 (합계) — 기존 필드 유지 */
   generationSkipSurcharge: number;
+  /**
+   * §27 세대생략 할증 per-heir 상세 (A-3 신규).
+   * - per-heir 경로: rows에 수유자별 행 포함
+   * - 레거시 단일 경로: rows 1행 (heirId="legacy")
+   * - 할증 없음: null
+   */
+  generationSkipDetail: InheritanceGenerationSkipDetail | null;
   /** 세액공제 합계 */
   totalTaxCredit: number;
   /** 결정세액 */

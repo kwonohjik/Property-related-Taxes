@@ -443,9 +443,8 @@ export const EXAMPLE_INPUT: InheritanceTaxInput = {
     priorGifts: EXAMPLE_PRIOR_GIFTS,
     isFiledOnTime: true,
   },
-  isGenerationSkip: true,
-  isMinorHeir: false,
-  generationSkipAssetAmount: 500_000_000, // 손녀 유증
+  // §27 세대생략 할증 — 전역 3필드 제거 (isGenerationSkip·isMinorHeir·generationSkipAssetAmount)
+  // 손녀(legatee_granddaughter_jeong).isGenerationSkipBeneficiary=true + heirAllocations 500M에서 자동 도출.
 } as InheritanceTaxInput;
 
 // ============================================================

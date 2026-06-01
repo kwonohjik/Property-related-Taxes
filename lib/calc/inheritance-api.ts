@@ -77,10 +77,12 @@ export async function callInheritanceTaxAPI(
     presumedItems: input.presumedItems,
     exemptions: input.exemptions,
     preGiftsWithin10Years: input.preGiftsWithin10Years,
+    // B-6 (2026-06-01): heirs 통째 spread → isMinorOverride·isGenerationSkipBeneficiary 자동 포함
     heirs: input.heirs,
     deductionInput: input.deductionInput,
     creditInput: input.creditInput,
     valuationBaseDate: input.valuationBaseDate,
+    // 레거시 전역 3필드 — deprecated. heirs[].isGenerationSkipBeneficiary 우선. 구 이력 하위호환.
     isGenerationSkip: input.isGenerationSkip,
     isMinorHeir: input.isMinorHeir,
     generationSkipAssetAmount: input.generationSkipAssetAmount,

@@ -80,7 +80,7 @@ describe("changeHeirRelation — 종류 변경 정합성 정리", () => {
     expect(next.isDisabled).toBe(true);
   });
 
-  it("CR-5: 기타 → 수유자 — birthDate 제거, id 보존 (직전 버그4 교정 경로)", () => {
+  it("CR-5: 기타 → 수유자 — birthDate 보존, id 보존 (B-2: legatee §27 미성년 판정용)", () => {
     const other: Heir = {
       id: "heir-granddaughter",
       relation: "other",
@@ -92,8 +92,8 @@ describe("changeHeirRelation — 종류 변경 정합성 정리", () => {
     // id 보존 → 자산 heirAllocations[].heirId 참조가 그대로 유효 (삭제·재추가와 결정적 차이)
     expect(next.id).toBe("heir-granddaughter");
     expect(next.name).toBe("홍손녀딸");
-    // 수유자는 생년월일 비대상 → 제거
-    expect(next.birthDate).toBeUndefined();
+    // B-2 (2026-06-01): legatee는 §27 미성년 자동 판정을 위해 birthDate 보존
+    expect(next.birthDate).toBe("2015-05-05");
   });
 
   it("CR-6: 동일 관계 — 원본 참조 그대로 반환 (불필요 리렌더 방지)", () => {

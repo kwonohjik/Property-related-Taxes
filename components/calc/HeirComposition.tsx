@@ -11,18 +11,12 @@
 import type {
   Heir,
   HeirRelation,
-  ShareholderInfo,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
-import { useState } from "react";
-
-const SHAREHOLDER_RELATION_LABEL: Record<ShareholderInfo["relation"], string> = {
-  heir: "상속인",
-  heir_spouse: "상속인의 배우자",
-  lineal_descendant_of_heir: "상속인의 직계비속",
-  spouse_of_lineal_descendant: "직계비속의 배우자",
-};
+import { useState, useMemo } from "react";
+import { differenceInYears } from "date-fns";
+import { CorporateHeirFields } from "@/components/calc/inheritance/CorporateHeirFields";
 
 // ============================================================
 // 관계 메타
@@ -92,10 +86,12 @@ export function changeHeirRelation(heir: Heir, newRelation: HeirRelation): Heir 
   if (heir.relation === newRelation) return heir;
 
   const next: Heir = { ...heir, relation: newRelation };
+  // B-2 (2026-06-01): legatee 추가 — §27 미성년 판정용 생년월일 보존
   const showBirthDate =
     newRelation === "child" ||
     newRelation === "lineal_ascendant" ||
-    newRelation === "sibling";
+    newRelation === "sibling" ||
+    newRelation === "legatee";
 
   if (newRelation === "corporate") {
     // 법인 — 자연인 전용 필드 제거
@@ -103,6 +99,7 @@ export function changeHeirRelation(heir: Heir, newRelation: HeirRelation): Heir 
     next.isDisabled = undefined;
     next.isCohabitant = undefined;
     next.isGenerationSkipBeneficiary = undefined;
+    next.isMinorOverride = undefined;
   } else {
     // 자연인 — 법인 전용 필드 제거
     next.isForProfit = undefined;
@@ -112,6 +109,11 @@ export function changeHeirRelation(heir: Heir, newRelation: HeirRelation): Heir 
     next.corporateGiftComputedTax = undefined;
     // 동거주택(§23의2)은 자녀 전용
     if (newRelation !== "child") next.isCohabitant = undefined;
+    // 세대생략 체크는 legatee 전용 — legatee 외로 변경 시 제거
+    if (newRelation !== "legatee") {
+      next.isGenerationSkipBeneficiary = undefined;
+      next.isMinorOverride = undefined;
+    }
     // 생년월일 UI 비대상 관계면 제거 (보이지 않는 데이터의 공제 영향 차단)
     if (!showBirthDate) next.birthDate = undefined;
   }
@@ -126,20 +128,37 @@ export function changeHeirRelation(heir: Heir, newRelation: HeirRelation): Heir 
 interface HeirEditorProps {
   heir: Heir;
   index: number;
+  deathDate?: string;
   onUpdate: (updated: Heir) => void;
   onRemove: () => void;
 }
 
-function HeirEditor({ heir, index, onUpdate, onRemove }: HeirEditorProps) {
+function HeirEditor({ heir, index, deathDate, onUpdate, onRemove }: HeirEditorProps) {
   const set = (patch: Partial<Heir>) => onUpdate({ ...heir, ...patch });
   const [changingRelation, setChangingRelation] = useState(false);
 
+  const isLegatee = heir.relation === "legatee";
+  // B-2 (2026-06-01): legatee 추가 (§27 미성년 판정용)
   const showBirthDate =
     heir.relation === "child" ||
     heir.relation === "lineal_ascendant" ||
-    heir.relation === "sibling";
+    heir.relation === "sibling" ||
+    isLegatee;
   const showCohabitant = heir.relation === "child";
   const isCorporate = heir.relation === "corporate";
+
+  // B-3 미성년 자동 판정 — birthDate + deathDate 있을 때만
+  const autoIsMinor = useMemo(() => {
+    if (!heir.birthDate || !deathDate) return null;
+    try {
+      const death = new Date(deathDate);
+      const birth = new Date(heir.birthDate);
+      if (isNaN(death.getTime()) || isNaN(birth.getTime())) return null;
+      return differenceInYears(death, birth) < 19;
+    } catch {
+      return null;
+    }
+  }, [heir.birthDate, deathDate]);
 
   return (
     <div
@@ -224,12 +243,85 @@ function HeirEditor({ heir, index, onUpdate, onRemove }: HeirEditorProps) {
             {heir.relation === "lineal_ascendant" && (
               <span className="text-amber-600">(만 65세 이상 연로자 공제 판별용)</span>
             )}
+            {isLegatee && (
+              <span className="text-rose-600">(40% 할증·미성년 판별용 — §27②)</span>
+            )}
           </label>
           <DateInput
             value={heir.birthDate ?? ""}
             onChange={(v) => set({ birthDate: v || undefined })}
           />
         </div>
+      )}
+
+      {/* B-1/B-3 — legatee 전용: 세대생략 할증 토글 + 미성년 3-state override */}
+      {isLegatee && (
+        <>
+          <ToggleCard
+            tone="rose"
+            title="§27 세대생략 할증 대상 — 자녀를 건너뛴 직계비속 유증(손자녀 등)"
+            description="ON 시: 산출세액 × (유증분 / 과세가액) × 30% (미성년+20억 초과 40%) 할증 자동 산출"
+            checked={heir.isGenerationSkipBeneficiary ?? false}
+            onCheckedChange={(v) =>
+              set({
+                isGenerationSkipBeneficiary: v || undefined,
+                isMinorOverride: v ? heir.isMinorOverride : undefined,
+              })
+            }
+          />
+
+          {/* 미성년 3-state override — 세대생략 ON + birthDate 입력 시만 표시 */}
+          {heir.isGenerationSkipBeneficiary && heir.birthDate && autoIsMinor !== null && (
+            <div className="ml-4 rounded-lg border border-rose-200 bg-rose-50/40 dark:border-rose-700 dark:bg-rose-900/20 p-3 space-y-2">
+              <p className="text-[11px] text-rose-700 dark:text-rose-300">
+                상속개시일 기준 미성년자 (자동 판정:{" "}
+                <strong>{autoIsMinor ? "예 (미성년)" : "아니오 (성년)"}</strong>)
+                {autoIsMinor && (
+                  <span className="ml-1 text-rose-600">
+                    — 과세표준 20억 초과 시 40% 할증 적용
+                  </span>
+                )}
+              </p>
+              <ToggleCard
+                tone="rose"
+                size="sm"
+                title="미성년 판정 수동 변경"
+                description="자동 판정 결과를 재정의합니다 (연령기준 개정 대비)"
+                checked={heir.isMinorOverride !== undefined}
+                onCheckedChange={(v) =>
+                  set({ isMinorOverride: v ? autoIsMinor : undefined })
+                }
+              >
+                {heir.isMinorOverride !== undefined && (
+                  <ToggleCard
+                    tone="rose"
+                    size="sm"
+                    title="미성년자로 처리"
+                    description="ON: 미성년 (40% 할증 적용 가능) / OFF: 성년 (30% 할증)"
+                    checked={heir.isMinorOverride}
+                    onCheckedChange={(v) => set({ isMinorOverride: v })}
+                  />
+                )}
+              </ToggleCard>
+            </div>
+          )}
+
+          {/* birthDate 미입력 시 수동 미성년 toggle (단독 제공) */}
+          {heir.isGenerationSkipBeneficiary && !heir.birthDate && (
+            <div className="ml-4 rounded-lg border border-rose-200 bg-rose-50/40 dark:border-rose-700 dark:bg-rose-900/20 p-3">
+              <ToggleCard
+                tone="rose"
+                size="sm"
+                title="미성년자 (생년월일 미입력 — 수동 지정)"
+                description="과세표준 20억 초과 시 40% 할증. 생년월일 입력 시 자동 판정으로 전환됩니다."
+                checked={heir.isMinorOverride === true}
+                onCheckedChange={(v) =>
+                  set({ isMinorOverride: v ? true : undefined })
+                }
+              />
+            </div>
+          )}
+        </>
       )}
 
       {/* 장애인 여부 — 자연인 전용 */}
@@ -275,246 +367,6 @@ function HeirEditor({ heir, index, onUpdate, onRemove }: HeirEditorProps) {
       {isCorporate && heir.isForProfit !== false && (
         <CorporateHeirFields heir={heir} set={set} />
       )}
-    </div>
-  );
-}
-
-// ============================================================
-// 영리법인 전용 편집기 (부표 5 ②③ + 주주 동적 명세)
-// ============================================================
-
-let _nextShareholderId = 1;
-function generateShareholderId() {
-  return `sh-${Date.now()}-${_nextShareholderId++}`;
-}
-
-function CorporateHeirFields({
-  heir,
-  set,
-}: {
-  heir: Heir;
-  set: (patch: Partial<Heir>) => void;
-}) {
-  const shareholders = heir.shareholders ?? [];
-  const sumRatio = shareholders.reduce((s, sh) => s + (sh.shareRatio || 0), 0);
-  const sumOver = sumRatio > 1.0 + 1e-9;
-
-  const updateShareholder = (
-    index: number,
-    patch: Partial<ShareholderInfo>,
-  ) => {
-    const next = [...shareholders];
-    next[index] = { ...next[index], ...patch };
-    set({ shareholders: next });
-  };
-
-  const removeShareholder = (index: number) => {
-    set({ shareholders: shareholders.filter((_, i) => i !== index) });
-  };
-
-  const addShareholder = () => {
-    set({
-      shareholders: [
-        ...shareholders,
-        {
-          id: generateShareholderId(),
-          relation: "heir",
-          name: "",
-          shareRatio: 0,
-        },
-      ],
-    });
-  };
-
-  return (
-    <div className="rounded-lg border border-violet-200 bg-violet-50/40 dark:border-violet-700 dark:bg-violet-900/20 p-3 space-y-3">
-      <div className="flex items-center gap-2">
-        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-[10px] font-bold text-violet-800 select-none">
-          5
-        </span>
-        <p className="text-xs font-semibold text-violet-700 dark:text-violet-300">
-          부표 5 — 영리법인 면제 명세
-        </p>
-      </div>
-
-      {/* ② 사업자등록번호 */}
-      <div className="space-y-1">
-        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
-          ② 사업자등록번호
-        </label>
-        <input
-          type="text"
-          value={heir.businessRegistrationNumber ?? ""}
-          onChange={(e) =>
-            set({ businessRegistrationNumber: e.target.value || undefined })
-          }
-          placeholder="000-00-00000"
-          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        />
-      </div>
-
-      {/* ③ 사업장 소재지 */}
-      <div className="space-y-1">
-        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
-          ③ 사업장 소재지
-        </label>
-        <input
-          type="text"
-          value={heir.businessAddress ?? ""}
-          onChange={(e) => set({ businessAddress: e.target.value || undefined })}
-          placeholder="법인 본점·지점 소재지"
-          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        />
-      </div>
-
-      {/* 나. 주주 명세 (⑦~⑩) */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <p className="text-xs font-medium text-gray-700 dark:text-gray-300">
-            나. 상속인·직계비속 주주 명세 (⑪ = (⑤−⑥) × ⑩)
-          </p>
-          <span
-            className={
-              "text-[10px] font-mono " +
-              (sumOver ? "text-red-600 font-bold" : "text-gray-500")
-            }
-          >
-            합 {(sumRatio * 100).toFixed(2)}%
-          </span>
-        </div>
-        {sumOver && (
-          <p className="text-[10px] text-red-600">
-            ⚠ 지분율 합이 100%를 초과합니다 (외부 주주분 제외).
-          </p>
-        )}
-
-        {shareholders.length > 0 && (
-          <div className="space-y-2">
-            {shareholders.map((sh, i) => (
-              <ShareholderRow
-                key={sh.id}
-                shareholder={sh}
-                onUpdate={(patch) => updateShareholder(i, patch)}
-                onRemove={() => removeShareholder(i)}
-              />
-            ))}
-          </div>
-        )}
-
-        <button
-          type="button"
-          onClick={addShareholder}
-          className="w-full flex items-center justify-center gap-1 rounded-md border border-dashed border-violet-300 dark:border-violet-600 py-2 text-xs text-violet-700 dark:text-violet-300 hover:bg-violet-100 dark:hover:bg-violet-800/40"
-        >
-          <span className="text-base">+</span>
-          주주 추가
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function ShareholderRow({
-  shareholder,
-  onUpdate,
-  onRemove,
-}: {
-  shareholder: ShareholderInfo;
-  onUpdate: (patch: Partial<ShareholderInfo>) => void;
-  onRemove: () => void;
-}) {
-  return (
-    <div className="rounded-md border border-violet-200 dark:border-violet-700 bg-white dark:bg-gray-900 p-2 space-y-2">
-      <div className="grid grid-cols-2 gap-2">
-        {/* ⑦ 구분 */}
-        <div className="space-y-1">
-          <label className="block text-[10px] font-medium text-gray-600 dark:text-gray-400">
-            ⑦ 구분
-          </label>
-          <select
-            value={shareholder.relation}
-            onChange={(e) =>
-              onUpdate({
-                relation: e.target.value as ShareholderInfo["relation"],
-              })
-            }
-            className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            {(Object.keys(SHAREHOLDER_RELATION_LABEL) as ShareholderInfo["relation"][]).map(
-              (r) => (
-                <option key={r} value={r}>
-                  {SHAREHOLDER_RELATION_LABEL[r]}
-                </option>
-              ),
-            )}
-          </select>
-        </div>
-
-        {/* ⑩ 지분율 */}
-        <div className="space-y-1">
-          <label className="block text-[10px] font-medium text-gray-600 dark:text-gray-400">
-            ⑩ 지분율 (%)
-          </label>
-          <input
-            type="text"
-            inputMode="decimal"
-            value={
-              shareholder.shareRatio != null
-                ? String(shareholder.shareRatio * 100)
-                : ""
-            }
-            onChange={(e) => {
-              const v = parseFloat(e.target.value || "");
-              onUpdate({
-                shareRatio: isNaN(v)
-                  ? 0
-                  : Math.min(100, Math.max(0, v)) / 100,
-              });
-            }}
-            placeholder="예: 60"
-            className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          />
-        </div>
-
-        {/* ⑧ 성명 */}
-        <div className="space-y-1">
-          <label className="block text-[10px] font-medium text-gray-600 dark:text-gray-400">
-            ⑧ 성명
-          </label>
-          <input
-            type="text"
-            value={shareholder.name}
-            onChange={(e) => onUpdate({ name: e.target.value })}
-            placeholder="주주 성명"
-            className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          />
-        </div>
-
-        {/* ⑨ 주민등록번호 (옵션) */}
-        <div className="space-y-1">
-          <label className="block text-[10px] font-medium text-gray-600 dark:text-gray-400">
-            ⑨ 주민등록번호 (선택)
-          </label>
-          <input
-            type="text"
-            value={shareholder.residentNumber ?? ""}
-            onChange={(e) =>
-              onUpdate({ residentNumber: e.target.value || undefined })
-            }
-            placeholder="000000-0000000"
-            className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-xs font-mono focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          />
-        </div>
-      </div>
-      <div className="flex justify-end">
-        <button
-          type="button"
-          onClick={onRemove}
-          className="text-[10px] text-red-500 hover:text-red-700 px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
-        >
-          삭제
-        </button>
-      </div>
     </div>
   );
 }
@@ -632,6 +484,8 @@ function HeirSummary({ heirs }: { heirs: Heir[] }) {
 export interface HeirCompositionProps {
   heirs: Heir[];
   onChange: (heirs: Heir[]) => void;
+  /** 상속개시일 — legatee §27 미성년 자동 판정용 (B-2) */
+  deathDate?: string;
 }
 
 let _nextHeirId = 1;
@@ -639,7 +493,7 @@ function generateHeirId() {
   return `heir-${Date.now()}-${_nextHeirId++}`;
 }
 
-export function HeirComposition({ heirs, onChange }: HeirCompositionProps) {
+export function HeirComposition({ heirs, onChange, deathDate }: HeirCompositionProps) {
   const [showAddPanel, setShowAddPanel] = useState(false);
 
   const handleAdd = (relation: HeirRelation) => {
@@ -682,6 +536,7 @@ export function HeirComposition({ heirs, onChange }: HeirCompositionProps) {
               key={heir.id}
               heir={heir}
               index={i}
+              deathDate={deathDate}
               onUpdate={(updated) => handleUpdate(i, updated)}
               onRemove={() => handleRemove(i)}
             />

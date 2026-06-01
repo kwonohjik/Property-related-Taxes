@@ -22,6 +22,8 @@ import type {
   InheritanceTaxInput,
   InheritanceTaxResult,
   CalculationStep,
+  InheritanceGenerationSkipDetail,
+  InheritanceGenerationSkipHeirRow,
 } from "./types/inheritance-gift.types";
 import type {
   SpouseLegalShareTable,
@@ -45,12 +47,12 @@ import {
   aggregatePriorGiftsForInheritance,
   isWithin13Cutoff,
   calcFuneralExpenseDeduction,
-  calcGenerationSkipSurcharge,
 } from "./inheritance-gift-common";
 import { calcInheritanceTaxCredits } from "./inheritance-gift-tax-credit";
 import { evaluatePresumedInheritance } from "./presumed-inheritance";
 import { calcCorporateExemption } from "./inheritance-corporate-exemption";
 import { calcHeirAllocation } from "./inheritance-allocation";
+import { computeGenerationSkipSurcharge } from "./inheritance-generation-skip";
 import { derivePriorGiftTaxBase } from "./inheritance-prior-gift-taxbase";
 import { buildSummaryCategory } from "./inheritance-asset-category";
 import { computeLegalShares } from "./inheritance-legal-share";
@@ -224,6 +226,15 @@ export function calcInheritanceTax(
     );
 
   allBreakdown.push(...priorGiftBreakdown);
+
+  // ─────────────────────────────────────────────
+  // STEP 4.5: §13 cutoff 필터 끌어올림 (STEP 8.5·9·13 공유)
+  //   cutoffFilteredGifts는 이하 세 STEP에서 동일 집합을 참조.
+  //   (기존 STEP 13 내부에서 중복 계산하던 것을 단일 진실로 통일)
+  // ─────────────────────────────────────────────
+  const cutoffFilteredGifts = preGifts.filter(
+    (g) => isWithin13Cutoff(g, input.deathDate),
+  );
 
   // ─────────────────────────────────────────────
   // STEP 5: 상속세 과세가액 (추정상속재산 §15 포함)
@@ -516,33 +527,31 @@ export function calcInheritanceTax(
     lawRef: INH.TAX_RATE,
   });
 
-  // ─────────────────────────────────────────────
-  // STEP 9: 세대생략 할증 (§27) — 분모 보정 (Phase F)
-  //   PDF: 분모 = grossEstateWithGifts − 영리법인 등 사전증여 가액
-  // ─────────────────────────────────────────────
-  // 상속인·수유자 외 자(영리법인·기타)가 받은 사전증여 가액 합계
-  const nonHeirNonLegateeGifts = (preGifts ?? []).reduce(
-    (sum, g) => sum + (g.beneficiaryType === "corporate" ? g.giftAmount : 0),
-    0,
+  // valuatedAmountById — STEP 8.5(genSkip) 및 STEP 13(calcHeirAllocation) 공유
+  const valuatedAmountById = new Map(
+    valuationResults.map((v) => [v.estateItemId, v.valuatedAmount]),
   );
-  // 세대생략 할증 분모 = 상속세 과세가액 (PDF 책 1864 산식)
-  const surchargeDenominator = taxableEstateValue;
 
-  const genSkipResult = calcGenerationSkipSurcharge(
+  // ─────────────────────────────────────────────
+  // STEP 8.5 + 9: 세대생략 할증 (§27) — inheritance-generation-skip.ts 분리 (800줄 정책)
+  // ─────────────────────────────────────────────
+  const genSkip = computeGenerationSkipSurcharge({
+    input,
     computedTax,
-    input.isGenerationSkip ?? false,
-    input.isMinorHeir ?? false,
     taxBase,
-    "inheritance",
-    input.generationSkipAssetAmount,
-    surchargeDenominator,
+    taxableEstateValue,
+    preGifts: preGifts ?? [],
+    cutoffFilteredGifts,
+    valuatedAmountById,
+  });
+  const {
+    generationSkipSurcharge,
+    perHeirSurcharge,
+    generationSkipDetail,
     nonHeirNonLegateeGifts,
-  );
-  const generationSkipSurcharge = genSkipResult.surchargeAmount;
-  if (genSkipResult.breakdown.length > 0) {
-    allBreakdown.push(...genSkipResult.breakdown);
-    allLaws.add(INH.GENERATION_SKIP);
-  }
+  } = genSkip;
+  allBreakdown.push(...genSkip.breakdown);
+  if (genSkip.lawApplied) allLaws.add(INH.GENERATION_SKIP);
 
   // ─────────────────────────────────────────────
   // STEP 10: 영리법인 §3의2② 면제 (Phase B)
@@ -661,14 +670,15 @@ export function calcInheritanceTax(
   });
 
   // ─────────────────────────────────────────────
-  // STEP 13: 상속인별 배부 (Phase C) — heirs·doneeId가 제공된 경우만
+  // STEP 13: 상속인별 배부 (Phase C) — heirs·doneeId·세대생략 수유자가 제공된 경우
   // ─────────────────────────────────────────────
   let heirAllocationResult: ReturnType<typeof calcHeirAllocation> | undefined;
   // 자연인 상속인(corporate·legatee·isHeir=false 제외)이 1명 이상이면 항상 상속인별 배부.
-  // 협의분할 입력 자산은 그대로, 미입력 자산은 법정상속분으로 자동 배분. (계획 §4 — 항상 배부 확정)
+  // 세대생략 수유자(isGenerationSkipBeneficiary)가 있어도 배부 진입 (D2 추가).
   const hasHeirAllocations =
     computeLegalShares(input.heirs).shares.length > 0 ||
-    preGifts.some((g) => g.doneeId);
+    preGifts.some((g) => g.doneeId) ||
+    input.heirs.some((h) => h.isGenerationSkipBeneficiary);
 
   if (hasHeirAllocations) {
     // 추정상속재산 id→addedAmount Map 작성
@@ -679,22 +689,8 @@ export function calcInheritanceTax(
       }
     }
 
-    // estateItem id → 평가액 (협의분할 미입력 자산 법정상속분 배분 기준)
-    const valuatedAmountById = new Map(
-      valuationResults.map((v) => [v.estateItemId, v.valuatedAmount]),
-    );
-
     // 2-C 수정: calcHeirAllocation에 cutoff-필터된 증여만 전달 (§13 도과분 제외).
-    //   - 수정 전: input.preGiftsWithin10Years 전체 전달 → 도과분 포함 → 인별 priorGiftAmount 과다
-    //   - 수정 후: isWithin13Cutoff 필터 → aggregatePriorGiftsForInheritance와 동일 집합 보장
-    //   - isWithin13Cutoff(inheritance-gift-common.ts:293)는 gift.isHeir로 10/5년 판정
-    //     → aggregatePriorGiftsForInheritance(:309)와 동일 함수 사용 — 필터 정확 일치
-    // 대안 A: §53 증여재산공제 자동 도출은 STEP 0.5에서 전체 preGifts에 이미 적용됨.
-    //   여기서는 §13 cutoff 필터만 추가 적용 (derive 중복 호출 제거).
-    const cutoffFilteredGifts = preGifts.filter(
-      (g) => isWithin13Cutoff(g, input.deathDate),
-    );
-
+    //   cutoffFilteredGifts는 STEP 4.5에서 이미 계산 (단일 진실).
     heirAllocationResult = calcHeirAllocation({
       heirs: input.heirs,
       estateItems: input.estateItems,
@@ -707,6 +703,7 @@ export function calcInheritanceTax(
       taxBase,
       computedTax,
       generationSkipSurcharge,
+      perHeirSurcharge,
       corporateExemption: corporateExemption?.amount ?? 0,
       corporateGiftTaxBase,
       grossEstateWithGifts: taxableEstateValue,
@@ -763,6 +760,7 @@ export function calcInheritanceTax(
     taxBase,
     computedTax,
     generationSkipSurcharge,
+    generationSkipDetail,
     totalTaxCredit,
     finalTax,
     deductionDetail: deductionResult,

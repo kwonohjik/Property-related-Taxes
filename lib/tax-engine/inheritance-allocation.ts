@@ -134,6 +134,11 @@ export interface HeirAllocationParams {
   computedTax: number;
   /** 세대생략 할증세액 (해당 수유자에게 직접 가산) */
   generationSkipSurcharge: number;
+  /**
+   * §27 per-heir 할증세액 Map (heirId → 개별 할증액).
+   * STEP 9 per-heir 경로 시 존재 — undefined면 레거시 단일 fallback 사용.
+   */
+  perHeirSurcharge?: Record<string, number>;
   /** 영리법인 면제세액 */
   corporateExemption: number;
   /** 영리법인 사전증여 과세표준 (분모 보정용) */
@@ -264,6 +269,44 @@ function sumPriorGiftsByDonee(priorGifts: PriorGift[]): {
 }
 
 // ────────────────────────────────────────────────────
+// A-4: §27 분자 집계 헬퍼 — STEP 8.5·STEP 9·STEP 13 공유 (단일 진실)
+// ────────────────────────────────────────────────────
+
+/**
+ * heir별 재산가액 집계 (§27 분자 도출용 — STEP 8.5).
+ * 내부 resolveAllocationsByHeir를 래핑하여 STEP 8.5와 STEP 13이 동일 로직 공유.
+ *
+ * @param estateItems 상속재산 항목 배열
+ * @param valuatedAmountById estateItem id → 평가액 Map
+ * @param legalShares 법정상속분 (computeLegalShares 결과)
+ * @returns Map<heirId, 수령 재산가액>
+ */
+export function aggregateEstateByHeir(
+  estateItems: EstateItem[],
+  valuatedAmountById: Map<string, number>,
+  legalShares: LegalShareResult,
+): Map<string, number> {
+  return resolveAllocationsByHeir(
+    estateItems,
+    (it) => valuatedAmountById.get(it.id) ?? 0,
+    legalShares,
+  );
+}
+
+/**
+ * §13 cutoff 필터 후 수증자별 사전증여 가액 집계 (§27 분자 도출용 — STEP 8.5).
+ * 내부 sumPriorGiftsByDonee.amountByDonee를 래핑.
+ *
+ * @param cutoffFilteredGifts isWithin13Cutoff 필터 완료된 사전증여 배열
+ * @returns Map<doneeId, 증여가액 합계>
+ */
+export function aggregatePriorGiftByDonee(
+  cutoffFilteredGifts: PriorGift[],
+): Map<string, number> {
+  return sumPriorGiftsByDonee(cutoffFilteredGifts).amountByDonee;
+}
+
+// ────────────────────────────────────────────────────
 // 통합 배부 계산
 // ────────────────────────────────────────────────────
 
@@ -284,6 +327,7 @@ export function calcHeirAllocation(
     taxBase,
     computedTax,
     generationSkipSurcharge,
+    perHeirSurcharge,
     corporateExemption,
     corporateGiftTaxBase,
     grossEstateWithGifts,
@@ -477,9 +521,10 @@ export function calcHeirAllocation(
         : 0;
 
     // 13-9: 세대생략 할증 가산 (수유자만)
-    const surchargeForHeir = heir.isGenerationSkipBeneficiary
-      ? generationSkipSurcharge
-      : 0;
+    // per-heir 경로: perHeirSurcharge[id] 개별값, 레거시: generationSkipSurcharge 전액
+    const surchargeForHeir = perHeirSurcharge != null
+      ? (perHeirSurcharge[heir.id] ?? 0)
+      : (heir.isGenerationSkipBeneficiary ? generationSkipSurcharge : 0);
 
     // 13-10: 사전증여세액공제 (§28 안분 한도)
     //   한도 = floor(상속인별 산출세액상당액 × 사전증여 과세표준 / 과세표준상당액)
