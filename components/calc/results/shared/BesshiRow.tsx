@@ -54,7 +54,8 @@ export function BesshiRow({
           </span>
         )}
       </td>
-      <td className="py-1.5 px-2 text-right tabular-nums">
+      {/* 금액 칸: 고정폭(font-mono) + tabular-nums + 우측정렬 → 천·백만·십억 콤마 세로 정렬 */}
+      <td className="py-1.5 px-2 text-right font-mono tabular-nums whitespace-nowrap">
         {row.display === "rate" ? (
           <span className="font-bold text-violet-700 dark:text-violet-300">
             {row.formula}

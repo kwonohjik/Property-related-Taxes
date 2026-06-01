@@ -54,6 +54,13 @@ describe("FilingForm9CoverSection (별지 제9호서식 화면)", () => {
     expect(screen.getByTestId("ff9-㊳").textContent).toContain("1,033,760,232");
   });
 
+  it("금액 칸 고정폭(font-mono) + 우측정렬 — 콤마 세로 정렬 보장", () => {
+    renderForm();
+    const amtCell = screen.getByTestId("ff9-⑰").querySelector("td:last-child");
+    expect(amtCell?.className).toContain("font-mono");
+    expect(amtCell?.className).toContain("text-right");
+  });
+
   it("㉟ 면제세액 = 0 (dash) — 이중계상 없음", () => {
     renderForm();
     // ㉟ 행 존재 (값 0 → dash). 금액 콤마 없음
