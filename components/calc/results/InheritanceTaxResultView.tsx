@@ -20,7 +20,6 @@ import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
 import { LoginPromptBanner } from "@/components/calc/shared/LoginPromptBanner";
 import { TaxCreditBreakdownCard } from "@/components/calc/TaxCreditBreakdownCard";
-import { HeirAllocationTable } from "@/components/calc/results/HeirAllocationTable";
 import { HeirAllocationSummaryTable } from "@/components/calc/results/HeirAllocationSummaryTable";
 import { InheritanceFilingFormTable } from "@/components/calc/results/InheritanceFilingFormTable";
 import { CorporateExemptionFilingFormTable } from "@/components/calc/results/CorporateExemptionFilingFormTable";
@@ -138,7 +137,7 @@ interface Props {
   /** 1단계로 이동 (입력값 보존) */
   onGoToFirst?: () => void;
   showLoginPrompt?: boolean;
-  /** 상속인·수유자·영리법인 배열 — HeirAllocationTable 표시용 */
+  /** 상속인·수유자·영리법인 배열 — HeirAllocationSummaryTable 표시용 */
   heirs?: Heir[];
   /** 채무·공과·장례비 협의분할 항목 (방안 C — undefined: OFF 모드) */
   debtItems?: DebtItem[];
@@ -353,11 +352,6 @@ export function InheritanceTaxResultView({
             collateralDebtDetail={result.collateralDebtDetail}
           />
         )}
-
-      {/* 상속인별 배부 표 */}
-      {result.heirAllocationResult && heirs && heirs.length > 0 && (
-        <HeirAllocationTable result={result} heirs={heirs} />
-      )}
 
       {/* 상속인별 상속세부담액 집계 표 */}
       {result.heirAllocationResult && heirs && heirs.length > 0 && (

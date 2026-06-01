@@ -9,7 +9,7 @@
  *  ③ 상속인별 채무·공과·장례비 분담 표 — §5.4
  *
  * 진입 조건: `result.heirAllocationResult !== undefined` AND `debtItems !== undefined`.
- * 상속인별 산출세액 배부는 기존 HeirAllocationTable이 담당 — 본 카드는 채무 정보에 집중.
+ * 상속인별 산출세액 배부는 HeirAllocationSummaryTable이 담당 — 본 카드는 채무 정보에 집중.
  *
  * 정책:
  *  - feedback_no_won_suffix — "원" 단위 미표기 (formatKRW 콤마만)
@@ -67,7 +67,7 @@ export function DebtAllocationResultCard({
     totals.financial + totals.tax + totals.personal + funeralApplied;
 
   // ── 상속인별 채무 분담 (UI display — 카테고리별 sum) ──
-  // 엔진 진실: 상속인별 산출세액은 HeirAllocationTable (heirAllocationResult)에 노출.
+  // 엔진 진실: 상속인별 산출세액은 HeirAllocationSummaryTable (heirAllocationResult)에 노출.
   // 여기서는 사용자 입력 debtItems.heirAllocations 자체를 카테고리별 합산.
   const heirSums = new Map<
     string,
