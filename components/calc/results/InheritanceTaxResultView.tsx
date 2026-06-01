@@ -269,6 +269,13 @@ export function InheritanceTaxResultView({
               value={`+ ${formatKRW(result.generationSkipSurcharge)}`}
             />
           )}
+          {result.corporateExemption && result.corporateExemption.amount > 0 && (
+            <SummaryRow
+              label="영리법인 면제 (§3의2②)"
+              value={`- ${formatKRW(result.corporateExemption.amount)}`}
+              deduction
+            />
+          )}
           {result.totalTaxCredit > 0 && (
             <SummaryRow
               label="세액공제"
@@ -285,6 +292,7 @@ export function InheritanceTaxResultView({
         <TaxCreditBreakdownCard
           credit={result.creditDetail}
           taxBeforeCredit={taxBeforeCredit}
+          corporateExemption={result.corporateExemption?.amount ?? 0}
         />
       )}
 

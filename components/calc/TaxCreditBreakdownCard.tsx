@@ -78,7 +78,10 @@ function buildSection28Formula(
 // §69 산식 빌더 (filingCreditBase + totalComputedTaxWithSurcharge)
 // ============================================================
 
-function buildSection69Formula(credit: TaxCreditResult): React.ReactNode {
+function buildSection69Formula(
+  credit: TaxCreditResult,
+  corporateExemption: number,
+): React.ReactNode {
   const base = credit.filingCreditBase ?? 0;
   const totalWithSurcharge = credit.totalComputedTaxWithSurcharge ?? 0;
   const giftCredit = credit.giftTaxCredit;
@@ -86,6 +89,8 @@ function buildSection69Formula(credit: TaxCreditResult): React.ReactNode {
   const special = credit.specialTreatmentCredit;
   // 상속세 전용 — 단기재상속세액공제(§30). 증여세는 항상 0이라 분기 비활성(무영향).
   const shortTerm = credit.shortTermReinheritCredit;
+  // 영리법인 면제(§3의2②) — §69①2호 "산출세액에서 공제·감면되는 금액"에 포함 → 기준세액에서 차감.
+  const corp = corporateExemption;
   const allOthersZero = foreign === 0 && special === 0 && shortTerm === 0;
 
   return (
@@ -99,18 +104,23 @@ function buildSection69Formula(credit: TaxCreditResult): React.ReactNode {
       </div>
       <div className="flex flex-wrap items-baseline gap-x-1 text-gray-500 dark:text-gray-400 mt-1">
         신고분 세액 = (산출세액 + 세대생략 할증) − 증여세액공제
+        {corp > 0 && <> − 영리법인 면제</>}
         {foreign > 0 && <> − 외국납부세액공제</>}
         {shortTerm > 0 && <> − 단기재상속세액공제</>}
         {special > 0 && <> − 조특 특례공제</>}
       </div>
       <div className="flex flex-wrap items-baseline gap-x-1 text-gray-500 dark:text-gray-400">
         = <Amt val={totalWithSurcharge} /> − <Amt val={giftCredit} />
+        {corp > 0 && <> − <Amt val={corp} /></>}
         {foreign > 0 && <> − <Amt val={foreign} /></>}
         {shortTerm > 0 && <> − <Amt val={shortTerm} /></>}
         {special > 0 && <> − <Amt val={special} /></>}
         {" "}= <Amt val={base} />
       </div>
-      {allOthersZero && (
+      <div className="text-[10px] text-gray-400 dark:text-gray-500">
+        ※ 상속인별 신고분 세액에 각각 3% 적용 후 합산 (원 미만 반올림)
+      </div>
+      {allOthersZero && corp === 0 && (
         <div className="text-[10px] text-gray-400 dark:text-gray-500">
           (외국납부·조특 특례 미적용)
         </div>
@@ -205,6 +215,11 @@ export interface TaxCreditBreakdownCardProps {
   priorGiftCreditDetail?: PriorGiftCreditDetail | null;
   /** §28 산식 ⑦(할증 전) — GiftTaxResult.computedTax (미전달 시 §28 펼침 미표시) */
   computedTax?: number;
+  /**
+   * 영리법인 면제세액 (§3의2②) — §69 신고분 세액 산식에서 차감 항으로 표시.
+   * 상속세 전용. 미전달(0) 시 면제 항 미표시 (증여세는 항상 0).
+   */
+  corporateExemption?: number;
 }
 
 export function TaxCreditBreakdownCard({
@@ -212,6 +227,7 @@ export function TaxCreditBreakdownCard({
   taxBeforeCredit,
   priorGiftCreditDetail,
   computedTax,
+  corporateExemption = 0,
 }: TaxCreditBreakdownCardProps) {
   if (credit.totalCredit === 0) return null;
 
@@ -230,7 +246,7 @@ export function TaxCreditBreakdownCard({
   const section69Formula =
     credit.filingCreditBase !== undefined &&
     credit.totalComputedTaxWithSurcharge !== undefined
-      ? buildSection69Formula(credit)
+      ? buildSection69Formula(credit, corporateExemption)
       : undefined;
 
   return (

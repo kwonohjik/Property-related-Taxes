@@ -139,6 +139,13 @@ export interface InheritanceTaxCreditParams {
    * §13 합산 기간(상속인 10년, 비상속인 5년) 외 사전증여를 제외하기 위해 필요
    */
   deathDate?: string;
+  /**
+   * 영리법인 면제세액 (§3의2②). §69①2호 "산출세액에서 공제·감면되는 금액"에 해당 →
+   * 신고세액공제 기준세액에서 차감. 배부 발동 시(Path A)는 inheritance-tax.ts STEP 13.5가
+   * 배부표 합으로 덮어쓰므로 본 값은 배부 미발동(Path B) fallback 정합용.
+   * 기본 0 (영리법인 사전증여 없음).
+   */
+  corporateExemptionAmount?: number;
 }
 
 /**
@@ -157,6 +164,7 @@ export function calcInheritanceTaxCredits(
     taxableEstateValue,
     taxBase,
     deathDate,
+    corporateExemptionAmount = 0,
   } = params;
 
   const totalComputedTax = computedTax + generationSkipSurcharge;
@@ -228,9 +236,11 @@ export function calcInheritanceTaxCredits(
   }
 
   // 4. 신고세액공제 (§69) — 나머지 금액의 3%
+  //   §69①2호: 영리법인 면제세액(§3의2②)도 "산출세액에서 공제·감면되는 금액"에 해당 → 기준에서 차감.
+  const filingCreditBaseAmount = Math.max(0, remainingTax - corporateExemptionAmount);
   const filingResult = calcFilingCredit({
     isFiledOnTime: creditInput.isFiledOnTime,
-    taxBeforeFilingCredit: Math.max(0, remainingTax),
+    taxBeforeFilingCredit: filingCreditBaseAmount,
   });
   const filingCredit = filingResult.creditAmount;
   allBreakdown.push(...filingResult.breakdown);
@@ -254,9 +264,9 @@ export function calcInheritanceTaxCredits(
     breakdown: allBreakdown,
     appliedLaws: Array.from(appliedLaws),
     // §69 산식 노출용 echo (UI TaxCreditBreakdownCard 산출근거 펼침) — PR1
-    // remainingTax는 §28·§29·§30 차감 후·§69 적용 전 값(line 230 calcFilingCredit의
+    // §28·§29·§30 + 영리법인 면제(§3의2②) 차감 후·§69 적용 전 값(calcFilingCredit의
     // taxBeforeFilingCredit와 동일). 증여세 경로와 달리 단기재상속공제(§30)까지 반영됨.
-    filingCreditBase: Math.max(0, remainingTax),
+    filingCreditBase: filingCreditBaseAmount,
     totalComputedTaxWithSurcharge: totalComputedTax,
   };
 }
