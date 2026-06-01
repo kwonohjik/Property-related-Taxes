@@ -157,8 +157,11 @@ export function HeirAllocationSummaryTable({
                 data-testid={`heir-summary-row-${row.rowId}`}
                 className={[
                   "border-b border-violet-200/60 dark:border-violet-800/60",
+                  row.isGroupHeader
+                    ? "bg-violet-100/60 dark:bg-violet-900/40 font-semibold text-violet-900 dark:text-violet-100"
+                    : "",
                   row.isHeaderGroup
-                    ? "bg-violet-100/40 dark:bg-violet-900/30 font-medium"
+                    ? "bg-violet-100/40 dark:bg-violet-900/30 font-semibold"
                     : "",
                   row.isBoldFinal
                     ? "bg-violet-200/50 dark:bg-violet-800/50 font-bold text-violet-950 dark:text-violet-50"
@@ -167,7 +170,10 @@ export function HeirAllocationSummaryTable({
               >
                 <th
                   scope="row"
-                  className="sticky left-0 bg-violet-50 dark:bg-violet-950/60 px-3 py-1.5 text-left font-normal text-violet-900 dark:text-violet-100 whitespace-nowrap"
+                  className={[
+                    "sticky left-0 bg-violet-50 dark:bg-violet-950/60 px-3 py-1.5 text-left text-violet-900 dark:text-violet-100 whitespace-nowrap",
+                    row.isGroupChild ? "pl-7" : "",
+                  ].join(" ")}
                 >
                   {row.rowNo && (
                     <span className="mr-1 font-semibold text-violet-700 dark:text-violet-300">
@@ -177,25 +183,25 @@ export function HeirAllocationSummaryTable({
                   {row.label}
                 </th>
                 <td
-                  className="px-3 py-1.5"
+                  className="px-3 py-1.5 tabular-nums"
                   data-testid={`heir-summary-cell-total-${row.rowId}`}
                 >
                   {row.rowId === "row-s5-burdenRatio"
                     ? row.total != null
                       ? row.total.toFixed(4)
-                      : "—"
+                      : ""
                     : fmt(row.total)}
                 </td>
                 {data.heirOrder.map((id) => (
                   <td
                     key={id}
-                    className="px-3 py-1.5"
+                    className="px-3 py-1.5 tabular-nums"
                     data-testid={`heir-summary-cell-${id}-${row.rowId}`}
                   >
                     {row.rowId === "row-s5-burdenRatio"
                       ? row.perHeir[id] != null
                         ? (row.perHeir[id] as number).toFixed(4)
-                        : "—"
+                        : ""
                       : fmt(row.perHeir[id])}
                   </td>
                 ))}

@@ -69,7 +69,8 @@ export function InheritanceHeirAllocationSection({ result, heirs }: Props) {
 
   const formatRow = (value: number | null, rowId: string): string => {
     if (rowId === "row-s5-burdenRatio") {
-      return value != null ? value.toFixed(4) : "—";
+      // 이슈3: 미배부 = 빈칸 (대시 제거)
+      return value != null ? value.toFixed(4) : "";
     }
     return fmt(value);
   };
@@ -105,10 +106,17 @@ export function InheritanceHeirAllocationSection({ result, heirs }: Props) {
             style={[
               s.row,
               row.isHeaderGroup ? s.headerGroupRow : {},
+              row.isGroupHeader ? s.headerGroupRow : {},
               row.isBoldFinal ? s.finalRow : {},
             ]}
           >
-            <Text style={[s.cellLabel, { width: LABEL_WIDTH }]}>
+            <Text
+              style={[
+                s.cellLabel,
+                { width: LABEL_WIDTH },
+                row.isGroupChild ? { paddingLeft: 12 } : {},
+              ]}
+            >
               {row.rowNo ? `${row.rowNo} ${row.label}` : row.label}
             </Text>
             <Text style={[s.cellNum, { width: TOTAL_WIDTH }]}>

@@ -31,6 +31,11 @@
 import { describe, it, expect } from "vitest";
 import { calcInheritanceTax } from "@/lib/tax-engine/inheritance-tax";
 import {
+  buildSummaryTable,
+  fmt,
+} from "@/lib/calc/heir-allocation-summary";
+import {
+  EXAMPLE_HEIRS,
   EXAMPLE_INPUT,
   HEIR_ID,
 } from "./fixtures/comprehensive-case-pdf.fixture";
@@ -175,6 +180,80 @@ describe("Pre-Do — 상속인별 상속세부담액 집계 표 (이미지 8)", 
         stock: 650_000_000,
         other: 360_000_000,
       });
+    });
+  });
+
+  // ────────────────────────────────────────
+  // UI 가독성 수정 (2026-06-01) — 그룹 헤더 행 / rowNo 단축 / fmt 빈칸
+  // Plan: docs/00-pm/inheritance-heir-allocation-summary-table-ui-fix.plan.md
+  // ────────────────────────────────────────
+  describe("[UI-FIX] 그룹 헤더 행 삽입 (이슈1)", () => {
+    const table = buildSummaryTable(result, EXAMPLE_HEIRS);
+    const byId = (id: string) => table.rows.find((r) => r.rowId === id);
+
+    it("UF-1: ⑥ 과세표준 그룹 헤더 행 존재 — 값 칸 공란(null)", () => {
+      const g = byId("row-6-group");
+      expect(g).toBeDefined();
+      expect(g?.isGroupHeader).toBe(true);
+      expect(g?.rowNo).toBe("⑥");
+      expect(g?.label).toBe("과세표준");
+      expect(g?.total).toBeNull();
+    });
+
+    it("UF-2: ⑩ 상속인(수유자)외 증여세액공제 그룹 헤더 행 존재", () => {
+      const g = byId("row-10-group");
+      expect(g?.isGroupHeader).toBe(true);
+      expect(g?.rowNo).toBe("⑩");
+      expect(g?.label).toBe("상속인(수유자)외 증여세액공제");
+    });
+
+    it("UF-3: ⑫ 상속인등의 증여세액공제 그룹 헤더 행 존재", () => {
+      const g = byId("row-12-group");
+      expect(g?.isGroupHeader).toBe(true);
+      expect(g?.rowNo).toBe("⑫");
+      expect(g?.label).toBe("상속인등의 증여세액공제");
+    });
+
+    it("UF-4: 세부행 rowNo 단축 + isGroupChild (㉠/a 등, rowId 불변)", () => {
+      expect(byId("row-6a-direct")?.rowNo).toBe("㉠");
+      expect(byId("row-6a-direct")?.isGroupChild).toBe(true);
+      expect(byId("row-6b-indirect")?.rowNo).toBe("㉡");
+      expect(byId("row-6c-total")?.rowNo).toBe("㉢");
+      expect(byId("row-10a-corpGiftTax")?.rowNo).toBe("a");
+      expect(byId("row-10a-corpGiftTax")?.isGroupChild).toBe(true);
+      expect(byId("row-10c-corpCredit")?.label).toBe(
+        "공제할 증여세액 = Min(a, b)",
+      );
+      expect(byId("row-12a-priorGiftTax")?.rowNo).toBe("a");
+      expect(byId("row-12c-credit")?.label).toBe(
+        "사전증여세액공제 = Min(a, b)",
+      );
+    });
+
+    it("UF-5: 그룹 헤더 행이 세부행 바로 앞에 위치 (순서)", () => {
+      const ids = table.rows.map((r) => r.rowId);
+      expect(ids.indexOf("row-6-group")).toBe(
+        ids.indexOf("row-6a-direct") - 1,
+      );
+      expect(ids.indexOf("row-10-group")).toBe(
+        ids.indexOf("row-10a-corpGiftTax") - 1,
+      );
+      expect(ids.indexOf("row-12-group")).toBe(
+        ids.indexOf("row-12a-priorGiftTax") - 1,
+      );
+    });
+  });
+
+  describe("[UI-FIX] fmt — 값0만 '0', 미배부는 빈칸 (이슈3)", () => {
+    it("UF-6: fmt(null)='', fmt(undefined)='', fmt(0)='0'", () => {
+      expect(fmt(null)).toBe("");
+      expect(fmt(undefined)).toBe("");
+      expect(fmt(0)).toBe("0");
+    });
+
+    it("UF-7: fmt(정수)=천단위 콤마, 대시(—) 미사용", () => {
+      expect(fmt(150_000_000)).toBe("150,000,000");
+      expect(fmt(null)).not.toBe("—");
     });
   });
 

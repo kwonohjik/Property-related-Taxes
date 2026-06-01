@@ -273,3 +273,81 @@ describe("ANCHOR-CORP — 영리법인 사전증여 합산 + §3의2② 면제",
     expect(result.totalTaxCredit).toBeGreaterThan(0);
   });
 });
+
+describe("ANCHOR-CORP-10A — 영리법인 배부 표 ⑩a 단일 진실 (이미지8 모순 수정)", () => {
+  const CORP_HEIR: Heir = {
+    id: "corp1",
+    relation: "corporate",
+    name: "영리법인",
+    isHeir: false,
+    isForProfit: true,
+  };
+
+  function buildCorpAlloc(
+    corpGifts: PriorGift[],
+    extraHeirs: Heir[] = [CORP_HEIR],
+  ): InheritanceTaxInput {
+    const allHeirs = [HEIR_CHILD, ...extraHeirs];
+    return buildInput({
+      heirs: allHeirs,
+      deductionInput: { heirs: allHeirs, deathDate: "2026-05-21" },
+      preGiftsWithin10Years: corpGifts,
+      creditInput: { isFiledOnTime: true, priorGifts: corpGifts },
+    });
+  }
+
+  const corpGift = (overrides: Partial<PriorGift> = {}): PriorGift => ({
+    giftDate: "2023-05-21",
+    giftAmount: 700_000_000,
+    giftTaxPaid: 0,
+    isHeir: false,
+    beneficiaryType: "corporate",
+    corporateGiftComputedTax: 150_000_000,
+    doneeId: "corp1",
+    ...overrides,
+  });
+
+  it("CORP-10A-1: ⑩a = PriorGift.corporateGiftComputedTax (현행 0 → 150,000,000)", () => {
+    const result = calcInheritanceTax(buildCorpAlloc([corpGift()]));
+    const corp = result.heirAllocationResult?.perHeir["corp1"];
+    expect(corp?.priorGiftComputedTax).toBe(150_000_000);
+  });
+
+  it("CORP-10A-2: 자기일관성 ⑩c = Min(⑩a, ⑩b) (단일 영리법인)", () => {
+    const result = calcInheritanceTax(buildCorpAlloc([corpGift()]));
+    const corp = result.heirAllocationResult?.perHeir["corp1"];
+    const a = corp?.priorGiftComputedTax ?? 0;
+    const b = corp?.priorGiftCreditLimit ?? 0;
+    expect(result.corporateExemption?.amount).toBe(Math.min(a, b));
+  });
+
+  it("CORP-10A-3: 영리법인 2개 — doneeId별 ⑩a 분리 (150M·80M)", () => {
+    const CORP2: Heir = {
+      id: "corp2",
+      relation: "corporate",
+      name: "영리법인2",
+      isHeir: false,
+      isForProfit: true,
+    };
+    const g1 = corpGift({ corporateGiftComputedTax: 150_000_000, doneeId: "corp1" });
+    const g2 = corpGift({
+      giftAmount: 400_000_000,
+      corporateGiftComputedTax: 80_000_000,
+      doneeId: "corp2",
+    });
+    const result = calcInheritanceTax(buildCorpAlloc([g1, g2], [CORP_HEIR, CORP2]));
+    expect(result.heirAllocationResult?.perHeir["corp1"]?.priorGiftComputedTax).toBe(
+      150_000_000,
+    );
+    expect(result.heirAllocationResult?.perHeir["corp2"]?.priorGiftComputedTax).toBe(
+      80_000_000,
+    );
+  });
+
+  it("CORP-10A-4 (회귀): §13 도과 영리법인 → ⑩a=0 (cutoff 제외)", () => {
+    const overdue = corpGift({ giftDate: "2020-05-20" }); // 5년 + 1일 도과
+    const result = calcInheritanceTax(buildCorpAlloc([overdue]));
+    const corp = result.heirAllocationResult?.perHeir["corp1"];
+    expect(corp?.priorGiftComputedTax ?? 0).toBe(0);
+  });
+});

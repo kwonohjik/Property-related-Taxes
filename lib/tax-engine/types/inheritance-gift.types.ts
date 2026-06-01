@@ -570,7 +570,11 @@ export interface Heir {
    * - false: 강제 성년 처리 (자동 판정 결과 무효화)
    */
   isMinorOverride?: boolean;
-  /** 영리법인 수증자만: 사전증여 당시 증여세 산출세액 (§3의2② 면제 한도용) */
+  /**
+   * 영리법인 수증자 사전증여 당시 증여세 산출세액 (§3의2② 면제 한도용).
+   * ※ 현재 입력 UI·API 경로 없음 — ⑩a 배부 표는 PriorGift.corporateGiftComputedTax(doneeId 합산)를
+   *   단일 진실로 사용(inheritance-allocation.ts). 이 Heir 필드는 하위호환 fallback만 잔류.
+   */
   corporateGiftComputedTax?: number;
 
   // ===== PR 2 (2026-05-22) — 부표 5 영리법인 면제 및 납부 명세서 =====
@@ -980,6 +984,16 @@ export interface InheritanceTaxResult extends TaxResultMeta {
   taxBase: number;
   /** 산출세액 (누진세율) */
   computedTax: number;
+  /**
+   * ⑦ 산출세액 적용 한계세율 (§26) — 산식 표시용 echo. 예: 0.5.
+   * `findApplicableBracket(taxBase)` 결과. 계산 영향 0 (표시 전용).
+   */
+  computedTaxAppliedRate?: number;
+  /**
+   * ⑦ 산출세액 누진공제액 (§26) — 산식 표시용 echo. 예: 460_000_000.
+   * `findApplicableBracket(taxBase)` 결과. 계산 영향 0 (표시 전용).
+   */
+  computedTaxProgressiveDeduction?: number;
   /** 세대생략 할증액 (합계) — 기존 필드 유지 */
   generationSkipSurcharge: number;
   /**

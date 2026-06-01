@@ -44,6 +44,7 @@ import { calcRelationDeduction } from "./deductions/gift-deductions";
 import {
   DEFAULT_INHERITANCE_GIFT_BRACKETS,
   calcInheritanceGiftTax,
+  findApplicableBracket,
   aggregatePriorGiftsForInheritance,
   isWithin13Cutoff,
   calcFuneralExpenseDeduction,
@@ -519,6 +520,9 @@ export function calcInheritanceTax(
   // STEP 8: 산출세액 (§26 누진세율)
   // ─────────────────────────────────────────────
   const computedTax = calcInheritanceGiftTax(taxBase, brackets);
+  // ⑦ 산식 표시용 echo — 적용 한계세율·누진공제 (계산 영향 0, 동일 brackets 조회)
+  const { rate: computedTaxAppliedRate, deduction: computedTaxProgressiveDeduction } =
+    findApplicableBracket(taxBase, brackets);
   allLaws.add(INH.TAX_RATE);
 
   allBreakdown.push({
@@ -759,6 +763,8 @@ export function calcInheritanceTax(
     totalDeduction,
     taxBase,
     computedTax,
+    computedTaxAppliedRate,
+    computedTaxProgressiveDeduction,
     generationSkipSurcharge,
     generationSkipDetail,
     totalTaxCredit,

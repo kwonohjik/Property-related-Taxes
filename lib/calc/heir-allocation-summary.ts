@@ -32,6 +32,10 @@ export interface SummaryTableRow {
   perHeir: Record<string, number | null>;
   isBoldFinal?: boolean;
   isHeaderGroup?: boolean;
+  /** 그룹 헤더 행(⑥ 과세표준 등) — 값 칸 공란, 라벨만 표시 (이미지4 rowSpan 그룹 칼럼 복원) */
+  isGroupHeader?: boolean;
+  /** 그룹 헤더에 종속된 세부행(㉠직접배부 등) — 라벨 들여쓰기 */
+  isGroupChild?: boolean;
 }
 
 export interface SummaryTableData {
@@ -86,7 +90,8 @@ export function labelOf(heirId: string, heirs: Heir[]): string {
 }
 
 export function fmt(v: number | null | undefined): string {
-  if (v === null || v === undefined) return "—";
+  // 이슈3: 값 0만 "0", 구조적 미배부(null/undefined)는 빈칸 — 대시("—") 제거.
+  if (v === null || v === undefined) return "";
   if (v === 0) return "0";
   return v.toLocaleString();
 }
@@ -298,7 +303,18 @@ export function buildSummaryTable(
     perHeir: headerOnly(),
   });
 
-  // ⑥ 직접배부
+  // ⑥ 과세표준 — 그룹 헤더 행 (이미지4 rowSpan 그룹 칼럼 복원)
+  rows.push({
+    rowId: "row-6-group",
+    groupId: "taxBase",
+    rowNo: "⑥",
+    label: "과세표준",
+    isGroupHeader: true,
+    total: null,
+    perHeir: headerOnly(),
+  });
+
+  // ⑥ ㉠ 직접배부
   const directTotal = Object.values(perHeirEngine).reduce(
     (s, p) => s + (p?.directTaxBaseShare ?? 0),
     0,
@@ -306,13 +322,14 @@ export function buildSummaryTable(
   rows.push({
     rowId: "row-6a-direct",
     groupId: "taxBase",
-    rowNo: "⑥㉠",
+    rowNo: "㉠",
     label: "직접배부",
+    isGroupChild: true,
     total: directTotal || null,
     perHeir: buildPerHeir(sorted, (h) => get(h.id)?.directTaxBaseShare),
   });
 
-  // ⑥ 간접배부
+  // ⑥ ㉡ 간접배부
   const indirectTotal = Object.values(perHeirEngine).reduce(
     (s, p) => s + (p?.indirectTaxBaseShare ?? 0),
     0,
@@ -320,19 +337,21 @@ export function buildSummaryTable(
   rows.push({
     rowId: "row-6b-indirect",
     groupId: "taxBase",
-    rowNo: "⑥㉡",
+    rowNo: "㉡",
     label: "간접배부",
+    isGroupChild: true,
     total: indirectTotal || null,
     perHeir: buildPerHeir(sorted, (h) => get(h.id)?.indirectTaxBaseShare),
   });
 
-  // ⑥ ㉢ 과세표준상당액
+  // ⑥ ㉢ 과세표준상당액 계
   rows.push({
     rowId: "row-6c-total",
     groupId: "taxBase",
-    rowNo: "⑥㉢",
+    rowNo: "㉢",
     label: "과세표준상당액 계",
     isHeaderGroup: true,
+    isGroupChild: true,
     total: result.taxBase ?? null,
     perHeir: buildPerHeir(sorted, (h) => get(h.id)?.taxBaseShare),
   });
@@ -379,12 +398,24 @@ export function buildSummaryTable(
     perHeir: headerOnly(),
   });
 
+  // ⑩ 상속인(수유자)외 증여세액공제 — 그룹 헤더 행
+  rows.push({
+    rowId: "row-10-group",
+    groupId: "credit10",
+    rowNo: "⑩",
+    label: "상속인(수유자)외 증여세액공제",
+    isGroupHeader: true,
+    total: null,
+    perHeir: headerOnly(),
+  });
+
   // ⑩a/b/c (영리법인 행만)
   rows.push({
     rowId: "row-10a-corpGiftTax",
     groupId: "credit10",
-    rowNo: "⑩a",
+    rowNo: "a",
     label: "증여세 산출세액",
+    isGroupChild: true,
     total:
       Object.entries(perHeirEngine).reduce(
         (s, [id, p]) =>
@@ -401,8 +432,9 @@ export function buildSummaryTable(
   rows.push({
     rowId: "row-10b-corpLimit",
     groupId: "credit10",
-    rowNo: "⑩b",
+    rowNo: "b",
     label: "공제 한도",
+    isGroupChild: true,
     total: summary?.corporateExemptionLimitDisplay ?? null,
     perHeir: buildPerHeir(sorted, (h) => get(h.id)?.priorGiftCreditLimit, [
       "corporate",
@@ -411,8 +443,9 @@ export function buildSummaryTable(
   rows.push({
     rowId: "row-10c-corpCredit",
     groupId: "credit10",
-    rowNo: "⑩c",
-    label: "공제할 증여세액 = Min(⑩a, ⑩b)",
+    rowNo: "c",
+    label: "공제할 증여세액 = Min(a, b)",
+    isGroupChild: true,
     total: result.corporateExemption?.amount ?? null,
     perHeir: buildPerHeir(
       sorted,
@@ -497,11 +530,22 @@ export function buildSummaryTable(
     }
     return s;
   };
+  // ⑫ 상속인등의 증여세액공제 — 그룹 헤더 행
+  rows.push({
+    rowId: "row-12-group",
+    groupId: "credit12",
+    rowNo: "⑫",
+    label: "상속인등의 증여세액공제",
+    isGroupHeader: true,
+    total: null,
+    perHeir: headerOnly(),
+  });
   rows.push({
     rowId: "row-12a-priorGiftTax",
     groupId: "credit12",
-    rowNo: "⑫a",
+    rowNo: "a",
     label: "증여세 산출세액",
+    isGroupChild: true,
     total:
       sumByHeirNoCorp((id) => get(id)?.priorGiftComputedTax) || null,
     perHeir: buildPerHeir(
@@ -513,8 +557,9 @@ export function buildSummaryTable(
   rows.push({
     rowId: "row-12b-limit",
     groupId: "credit12",
-    rowNo: "⑫b",
+    rowNo: "b",
     label: "공제 한도",
+    isGroupChild: true,
     total: sumByHeirNoCorp((id) => get(id)?.priorGiftCreditLimit) || null,
     perHeir: buildPerHeir(
       sorted,
@@ -525,8 +570,9 @@ export function buildSummaryTable(
   rows.push({
     rowId: "row-12c-credit",
     groupId: "credit12",
-    rowNo: "⑫c",
-    label: "사전증여세액공제 = Min(⑫a, ⑫b)",
+    rowNo: "c",
+    label: "사전증여세액공제 = Min(a, b)",
+    isGroupChild: true,
     total: sumByHeirNoCorp((id) => get(id)?.priorGiftCredit) || null,
     perHeir: buildPerHeir(sorted, (h) => get(h.id)?.priorGiftCredit, HEIR_NO_CORP),
   });

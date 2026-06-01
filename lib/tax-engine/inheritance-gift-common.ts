@@ -53,6 +53,28 @@ export function calcInheritanceGiftTax(
   return calculateProgressiveTax(taxBase, brackets);
 }
 
+/**
+ * 과세표준에 적용되는 누진세율 구간의 한계세율·누진공제 조회 (§26 / §56).
+ *
+ * 산출세액 산식 표시용 echo — `calcInheritanceGiftTax`(=`calculateProgressiveTax`)는
+ * 결과액만 반환하므로, 적용 세율·누진공제를 별도로 노출하기 위한 순수 조회 함수.
+ * 계산 로직에는 영향 없음 (동일 brackets로 동일 bracket 선택).
+ *
+ * @param taxBase 과세표준
+ * @param brackets 세율 구간 (기본값: DEFAULT_INHERITANCE_GIFT_BRACKETS)
+ * @returns { rate, deduction } — taxBase<=0 이면 { 0, 0 }
+ */
+export function findApplicableBracket(
+  taxBase: number,
+  brackets: TaxBracketBase[] = DEFAULT_INHERITANCE_GIFT_BRACKETS,
+): { rate: number; deduction: number } {
+  if (taxBase <= 0) return { rate: 0, deduction: 0 };
+  const b =
+    brackets.find((x) => x.max === null || taxBase <= x.max) ??
+    brackets[brackets.length - 1];
+  return { rate: b.rate, deduction: b.deduction };
+}
+
 // ============================================================
 // 세대생략 할증과세 (§27 / §57)
 // ============================================================

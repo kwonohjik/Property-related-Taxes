@@ -243,10 +243,12 @@ function sumPriorGiftsByDonee(priorGifts: PriorGift[]): {
   amountByDonee: Map<string, number>;
   taxBaseByDonee: Map<string, number>;
   computedTaxByDonee: Map<string, number>;
+  corporateComputedTaxByDonee: Map<string, number>;
 } {
   const amountByDonee = new Map<string, number>();
   const taxBaseByDonee = new Map<string, number>();
   const computedTaxByDonee = new Map<string, number>();
+  const corporateComputedTaxByDonee = new Map<string, number>();
 
   for (const gift of priorGifts) {
     if (!gift.doneeId) continue;
@@ -263,9 +265,21 @@ function sumPriorGiftsByDonee(priorGifts: PriorGift[]): {
       gift.doneeId,
       (computedTaxByDonee.get(gift.doneeId) ?? 0) + gift.giftTaxPaid,
     );
+    // ⑩a 영리법인 증여세 산출세액 — PriorGift 단일 진실 (Heir.corporateGiftComputedTax 죽은 필드 대체).
+    // 자연인 gift는 corporateGiftComputedTax undefined(→0)이라 키 값 0 — corporate 분기에서만 사용(무해).
+    corporateComputedTaxByDonee.set(
+      gift.doneeId,
+      (corporateComputedTaxByDonee.get(gift.doneeId) ?? 0) +
+        (gift.corporateGiftComputedTax ?? 0),
+    );
   }
 
-  return { amountByDonee, taxBaseByDonee, computedTaxByDonee };
+  return {
+    amountByDonee,
+    taxBaseByDonee,
+    computedTaxByDonee,
+    corporateComputedTaxByDonee,
+  };
 }
 
 // ────────────────────────────────────────────────────
@@ -415,8 +429,12 @@ export function calcHeirAllocation(
     }
   }
 
-  const { amountByDonee, taxBaseByDonee, computedTaxByDonee } =
-    sumPriorGiftsByDonee(priorGifts);
+  const {
+    amountByDonee,
+    taxBaseByDonee,
+    computedTaxByDonee,
+    corporateComputedTaxByDonee,
+  } = sumPriorGiftsByDonee(priorGifts);
 
   // 13-3: 직접배부 과세표준 = priorGiftTaxBase (이미 증여공제 후 값)
   // 13-4 & 13-5: 간접배부 분모·분자
@@ -482,7 +500,9 @@ export function calcHeirAllocation(
         categoryBreakdown: emptyCategoryBreakdown(),
         grossInheritance: 0,
         priorGiftCreditLimit: corpLimit, // ⑩b 영리법인 적용값 (할증 미포함)
-        priorGiftComputedTax: heir.corporateGiftComputedTax ?? 0, // ⑩a
+        priorGiftComputedTax:
+          corporateComputedTaxByDonee.get(heir.id) ??
+          (heir.corporateGiftComputedTax || 0), // ⑩a — PriorGift 단일 진실
       };
       continue;
     }

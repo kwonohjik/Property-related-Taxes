@@ -30,6 +30,7 @@ import { ListedStockBesshiResultSection } from "@/components/calc/results/Listed
 import { SourceDataSummarySection } from "@/components/calc/results/source-summary/SourceDataSummarySection";
 import { calcInstallmentPayment } from "@/lib/tax-engine/credits/installment-payment";
 import { DeductionBreakdownSection } from "./deduction-breakdown/DeductionBreakdownSection";
+import { AllocationBreakdownSection } from "./allocation-breakdown/AllocationBreakdownSection";
 import { InheritanceGenerationSkipDetailCard } from "@/components/calc/results/InheritanceGenerationSkipDetailCard";
 // re-export 보존 — shared.tsx 에서 실제 구현
 export { Row, formatBillion, LawBadge } from "./deduction-breakdown/shared";
@@ -369,6 +370,11 @@ export function InheritanceTaxResultView({
         estateItems={estateItems}
         debtItems={debtItems}
       />
+
+      {/* 상속세 산출세액·증여세액공제 계산 근거 (배부 6항목 펼침) */}
+      {result.heirAllocationResult && heirs && heirs.length > 0 && (
+        <AllocationBreakdownSection result={result} heirs={heirs} />
+      )}
 
       {/* 영농상속공제 사후관리 안내 */}
       {result.deductionDetail.farmingDeduction > 0 && (
