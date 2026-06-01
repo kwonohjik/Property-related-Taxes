@@ -13,6 +13,7 @@ import type { Heir, InheritanceTaxResult } from "@/lib/tax-engine/types/inherita
 import { sortHeirs, labelOf } from "@/lib/calc/heir-allocation-summary";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { DetailTable, DetailRow, SubTotalRow, ExpandButton } from "../deduction-breakdown/shared";
+import { GenerationSkipFormulaRows } from "./GenerationSkipFormulaRows";
 
 export function ComputedTaxDetailCard({
   result,
@@ -56,9 +57,9 @@ export function ComputedTaxDetailCard({
             </div>
           )}
           <DetailRow label="⑧ 세대생략 가산액" value={formatKRW(result.generationSkipSurcharge)} />
-          <div className="px-3 py-1 text-[11px] text-muted-foreground">
-            → 세대생략 가산 상세 산식은 위 「세대생략 할증과세」 카드 참조
-          </div>
+          {result.generationSkipDetail && (
+            <GenerationSkipFormulaRows detail={result.generationSkipDetail} />
+          )}
           <SubTotalRow label="⑨ 산출세액 소계 (⑦ + ⑧)" value={formatKRW(subtotal)} />
           <DetailRow
             label={`배부대상 산출세액 = ⑦ − 영리법인 면제 ${formatKRW(result.corporateExemption?.amount ?? 0)}`}

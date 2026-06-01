@@ -33,6 +33,7 @@
  */
 
 import { useState } from "react";
+import { ExpandToggleButton } from "./shared/ExpandToggleButton";
 import type {
   PriorGift,
   Heir,
@@ -92,14 +93,7 @@ export function InheritanceFilingFormTable({
             상속세 및 증여세법 시행규칙 별지 제9호서식 부표 1 (가산하는 증여재산가액) 보조 명세 · 영리법인은 부표 5 별도 양식
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setOpen((p) => !p)}
-          className="text-xs rounded-md border border-gray-300 dark:border-gray-600 px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-700 print:hidden"
-          aria-expanded={open}
-        >
-          {open ? "▲ 접기" : "▼ 펼치기 (인쇄 시 자동 펼침)"}
-        </button>
+        <ExpandToggleButton open={open} onClick={() => setOpen((p) => !p)} tone="slate" />
       </div>
 
       <div className={open ? "block" : "hidden print:block"}>

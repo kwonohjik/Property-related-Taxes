@@ -12,103 +12,11 @@
  */
 
 import { useState } from "react";
-import type {
-  GiftTaxResult,
-  FilingFormRow,
-} from "@/lib/tax-engine/types/inheritance-gift.types";
+import type { GiftTaxResult } from "@/lib/tax-engine/types/inheritance-gift.types";
+import { BesshiColumn } from "@/components/calc/results/shared/BesshiRow";
 
 interface Props {
   result: GiftTaxResult;
-}
-
-function formatAmount(n: number): string {
-  return n.toLocaleString("ko-KR");
-}
-
-function BesshiRow({
-  row,
-  showLaw,
-}: {
-  row: FilingFormRow;
-  showLaw: boolean;
-}) {
-  if (row.display === "header") {
-    return (
-      <tr className="bg-gray-100 dark:bg-gray-800 border-t border-b border-gray-400 dark:border-gray-600">
-        <td
-          colSpan={showLaw ? 4 : 3}
-          className="py-1.5 px-2 text-center font-bold text-sm text-gray-800 dark:text-gray-100"
-        >
-          {row.label}
-        </td>
-      </tr>
-    );
-  }
-  return (
-    <tr className="border-b border-gray-200 dark:border-gray-700">
-      <td className="py-1.5 px-2 text-center w-10 font-semibold tabular-nums text-violet-700 dark:text-violet-300">
-        {row.number}
-      </td>
-      <td className="py-1.5 px-2 text-sm text-gray-900 dark:text-gray-100">
-        <span>{row.label}</span>
-        {row.formula && row.display !== "rate" && (
-          <span className="ml-1 text-[10px] text-gray-500 dark:text-gray-400">
-            ({row.formula})
-          </span>
-        )}
-      </td>
-      <td className="py-1.5 px-2 text-right tabular-nums">
-        {row.display === "rate" ? (
-          <span className="font-bold text-violet-700 dark:text-violet-300">
-            {row.formula}
-          </span>
-        ) : row.display === "dash" ? (
-          <span className="text-gray-400">—</span>
-        ) : (
-          <span className="text-gray-900 dark:text-gray-100">
-            {formatAmount(row.amount)}
-          </span>
-        )}
-      </td>
-      {showLaw && (
-        <td className="py-1.5 px-2 text-[10px] text-gray-500 dark:text-gray-400 w-24">
-          {row.lawRef ?? ""}
-        </td>
-      )}
-    </tr>
-  );
-}
-
-function BesshiColumn({
-  rows,
-  showLaw,
-}: {
-  rows: FilingFormRow[];
-  showLaw: boolean;
-}) {
-  return (
-    <table className="w-full text-sm border-r border-gray-300 dark:border-gray-700 last:border-r-0">
-      <thead className="border-b-2 border-gray-400 dark:border-gray-600">
-        <tr className="text-xs text-gray-600 dark:text-gray-400">
-          <th className="py-1.5 px-2 text-center font-semibold w-10">번호</th>
-          <th className="py-1.5 px-2 text-left font-semibold">구분</th>
-          <th className="py-1.5 px-2 text-right font-semibold">금액</th>
-          {showLaw && (
-            <th className="py-1.5 px-2 text-left font-semibold w-24">근거</th>
-          )}
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((row, i) => (
-          <BesshiRow
-            key={`${row.number}-${row.label}-${i}`}
-            row={row}
-            showLaw={showLaw}
-          />
-        ))}
-      </tbody>
-    </table>
-  );
 }
 
 export function GiftTaxFilingFormTable({ result }: Props) {

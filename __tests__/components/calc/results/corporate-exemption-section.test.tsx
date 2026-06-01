@@ -88,7 +88,10 @@ describe("CorporateExemptionSection — 영리법인 면제 단일 섹션", () =
     // 부표 5 표(가./나.)·펼침 토글 미렌더 (단, 헤더 부제의 "별지…부표 5" 문구는 상시 노출 → 표 마커로 판정)
     expect(screen.queryByText(/가\. 상속세 면제대상 영리법인/)).toBeNull();
     expect(screen.queryByText(/나\. 상속세 납부 대상자/)).toBeNull();
-    expect(screen.queryByRole("button", { name: /펼치기|접기/ })).toBeNull();
+    // 요약 펼침 토글(summaryOpen)은 단일 섹션 통합 후 상시 노출 → 부표5 전용 표·헤더만 미렌더로 판정
+    expect(
+      screen.queryByText(/부표 5 — 영리법인 상속세 면제 및 납부 명세서/),
+    ).toBeNull();
   });
 
   it("CES-3: amount > 0 + 영리법인 1개 + 주주 매핑 → 요약 + 가/나 표 모두 렌더", () => {

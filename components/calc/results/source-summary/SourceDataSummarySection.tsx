@@ -18,6 +18,7 @@ import { EstateAllocationTable } from "./EstateAllocationTable";
 import { PresumedInheritanceTable } from "./PresumedInheritanceTable";
 import { DebtAllocationTable } from "./DebtAllocationTable";
 import { PriorGiftSummaryTable } from "./PriorGiftSummaryTable";
+import { expandToggleClass, expandToggleLabel } from "../shared/ExpandToggleButton";
 
 interface Props {
   deathDate?: string;
@@ -52,21 +53,25 @@ export function SourceDataSummarySection({
 
   return (
     <section
-      className="rounded-lg border border-slate-200 bg-white shadow-sm"
+      className="rounded-lg border border-sky-200 bg-white shadow-sm"
       data-testid="source-data-summary"
     >
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between rounded-t-lg bg-slate-100 px-4 py-3 text-left hover:bg-slate-200"
+        className="flex w-full items-center justify-between rounded-t-lg bg-sky-50 px-4 py-3 text-left hover:bg-sky-100"
         aria-expanded={open}
       >
-        <span className="text-sm font-semibold text-slate-800">
+        <span className="flex items-center gap-2 text-sm font-semibold text-sky-900">
+          <span
+            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sky-200 text-sky-800"
+            aria-hidden
+          >
+            📋
+          </span>
           상속개시자료 요약 (협의분할 · 추정상속 · 채무 · 사전증여)
         </span>
-        <span className="text-xs text-slate-600">
-          {open ? "▲ 접기" : "▼ 펼쳐서 표 4종 보기"}
-        </span>
+        <span className={expandToggleClass("sky")}>{expandToggleLabel(open)}</span>
       </button>
 
       {open && (

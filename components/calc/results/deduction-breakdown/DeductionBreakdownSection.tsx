@@ -15,6 +15,7 @@ import type {
   CalculationStep,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { Row } from "./shared";
+import { expandToggleClass, expandToggleLabel } from "../shared/ExpandToggleButton";
 import { LumpSumDetailCard } from "./LumpSumDetailCard";
 import { SpouseDeductionDetailCard } from "./SpouseDeductionDetailCard";
 import { FinancialDeductionDetailCard } from "./FinancialDeductionDetailCard";
@@ -53,7 +54,7 @@ export function DeductionBreakdownSection({ result, estateItems, debtItems }: Pr
         data-testid="deduction-breakdown-toggle"
       >
         <span>상속공제 상세 내역</span>
-        <span>{showBreakdown ? "▲" : "▼"}</span>
+        <span className={expandToggleClass("slate")}>{expandToggleLabel(showBreakdown)}</span>
       </button>
 
       {showBreakdown && (

@@ -16,6 +16,7 @@ import { TaxBaseShareDetailCard } from "./TaxBaseShareDetailCard";
 import { ComputedTaxDetailCard } from "./ComputedTaxDetailCard";
 import { CorporateGiftCreditDetailCard } from "./CorporateGiftCreditDetailCard";
 import { HeirGiftCreditDetailCard } from "./HeirGiftCreditDetailCard";
+import { expandToggleClass, expandToggleLabel } from "../shared/ExpandToggleButton";
 
 interface Props {
   result: InheritanceTaxResult;
@@ -38,7 +39,7 @@ export function AllocationBreakdownSection({ result, heirs }: Props) {
         data-testid="allocation-breakdown-toggle"
       >
         <span>상속세 산출세액·증여세액공제 계산 근거</span>
-        <span>{show ? "▲" : "▼"}</span>
+        <span className={expandToggleClass("slate")}>{expandToggleLabel(show)}</span>
       </button>
       <div className={show ? "block" : "hidden print:block"}>
         <div className="hidden print:block px-4 py-2 text-sm font-medium bg-muted/30">

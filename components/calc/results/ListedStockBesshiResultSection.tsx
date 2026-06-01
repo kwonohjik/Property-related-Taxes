@@ -13,9 +13,11 @@
  * Design UI: docs/02-design/features/listed-stock-besshi-form-replica.ui.design.md §2
  */
 
+import { useState } from "react";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { evaluateListedStock } from "@/lib/tax-engine/property-valuation-stock";
 import { ListedStockBesshiResultView } from "@/components/calc/inheritance/listed-stock/ListedStockBesshiResultView";
+import { ExpandToggleButton } from "./shared/ExpandToggleButton";
 
 export interface ListedStockBesshiResultSectionProps {
   estateItems: EstateItem[];
@@ -27,6 +29,9 @@ export function ListedStockBesshiResultSection({
   estateItems,
   valuationDate,
 }: ListedStockBesshiResultSectionProps) {
+  // 기본 접힘 — 인쇄 시 CSS 자동 펼침 (print-only-css-toggle)
+  const [open, setOpen] = useState(false);
+
   const listedItems = estateItems.filter(
     (it) =>
       it.category === "listed_stock" &&
@@ -40,9 +45,13 @@ export function ListedStockBesshiResultSection({
       className="border border-border rounded-xl overflow-hidden"
       data-testid="ls-besshi-result-section"
     >
-      <h4 className="px-4 py-3 bg-muted/30 text-sm font-medium">
-        상장주식 평가조서 (갑·을) — {listedItems.length}건
-      </h4>
+      <div className="px-4 py-3 bg-muted/30 flex items-center justify-between gap-2">
+        <h4 className="text-sm font-medium">
+          상장주식 평가조서 (갑·을) — {listedItems.length}건
+        </h4>
+        <ExpandToggleButton open={open} onClick={() => setOpen((v) => !v)} tone="slate" />
+      </div>
+      <div className={open ? "block" : "hidden print:block"}>
       {listedItems.map((it) => {
         try {
           const result = evaluateListedStock(it, { valuationDate });
@@ -72,6 +81,7 @@ export function ListedStockBesshiResultSection({
           return null;
         }
       })}
+      </div>
     </section>
   );
 }

@@ -16,6 +16,7 @@
  *  - feedback_ui_engine_dual_truth_avoidance — 사이드바 컴퓨팅 함수가 아닌 자체 합산 OK (UI display용, 엔진 매트릭스 무관)
  */
 
+import { useState } from "react";
 import type {
   DebtItem,
   Heir,
@@ -23,6 +24,7 @@ import type {
   DerivedCollateralDebt,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
+import { ExpandToggleButton } from "./shared/ExpandToggleButton";
 
 interface Props {
   debtItems: DebtItem[];
@@ -40,6 +42,9 @@ export function DebtAllocationResultCard({
   heirs,
   collateralDebtDetail,
 }: Props) {
+  // 기본 접힘 — 인쇄 시 CSS로 자동 펼침 (print-only-css-toggle)
+  const [open, setOpen] = useState(false);
+
   // ── 카테고리별 합계 ──
   const totals = {
     financial: 0,
@@ -87,14 +92,20 @@ export function DebtAllocationResultCard({
 
   return (
     <section className="rounded-lg border border-violet-200 bg-violet-50/30 dark:bg-violet-950/20 dark:border-violet-900 p-4 space-y-4">
-      <header className="flex items-center justify-between">
+      <header className="flex items-center justify-between gap-2">
         <h3 className="text-sm font-semibold text-violet-900 dark:text-violet-200">
           채무·공과·장례비 협의분할 결과 (§14①1·2·3호)
         </h3>
-        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
-          협의분할 모드
-        </span>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
+            협의분할 모드
+          </span>
+          <ExpandToggleButton open={open} onClick={() => setOpen((v) => !v)} tone="violet" />
+        </div>
       </header>
+
+      {/* 본문 ①②③④ — 기본 접힘, 인쇄 시 자동 펼침 */}
+      <div className={`space-y-4 ${open ? "block" : "hidden print:block"}`}>
 
       {/* ① 카테고리별 합계 — rose */}
       <div className="rounded-md border border-rose-200 dark:border-rose-900 bg-white dark:bg-rose-950/10 p-3 space-y-1.5">
@@ -295,6 +306,7 @@ export function DebtAllocationResultCard({
           </p>
         </div>
       )}
+      </div>
     </section>
   );
 }

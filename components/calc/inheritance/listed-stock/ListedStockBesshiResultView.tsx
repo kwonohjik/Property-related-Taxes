@@ -13,6 +13,7 @@ import React, { useState } from "react";
 import { Page1CoverSection } from "./besshi/Page1CoverSection";
 import { Page2DailyClosingTable } from "./besshi/Page2DailyClosingTable";
 import { LS_RESULT_LABELS } from "./besshi/listed-besshi-constants";
+import { expandToggleClass, expandToggleLabel } from "@/components/calc/results/shared/ExpandToggleButton";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { ListedStockBesshiData } from "@/lib/tax-engine/types/listed-stock-valuation.types";
 
@@ -23,8 +24,8 @@ interface Props {
 }
 
 export function ListedStockBesshiResultView({ item, besshi, valuatedAmount }: Props) {
-  const [page1Open, setPage1Open] = useState(true);
-  const [page2Open, setPage2Open] = useState(true);
+  const [page1Open, setPage1Open] = useState(false);
+  const [page2Open, setPage2Open] = useState(false);
 
   return (
     <section
@@ -54,10 +55,12 @@ export function ListedStockBesshiResultView({ item, besshi, valuatedAmount }: Pr
       <button
         type="button"
         onClick={() => setPage1Open((v) => !v)}
-        className="w-full text-left text-sm font-semibold py-2 px-3 bg-white border border-sky-300 rounded mb-2 print:hidden"
+        className="w-full flex items-center justify-between gap-2 text-left text-sm font-semibold py-2 px-3 bg-white border border-sky-300 rounded mb-2 print:hidden"
         data-testid="ls-besshi-p1-toggle"
+        aria-expanded={page1Open}
       >
-        {page1Open ? "▼" : "▶"} {LS_RESULT_LABELS.page1Toggle.slice(2)}
+        <span>{LS_RESULT_LABELS.page1Toggle.slice(2)}</span>
+        <span className={expandToggleClass("sky")}>{expandToggleLabel(page1Open)}</span>
       </button>
       <div className={page1Open ? "block mb-3" : "hidden print:block mb-3"}>
         <Page1CoverSection besshi={besshi} />
@@ -67,10 +70,12 @@ export function ListedStockBesshiResultView({ item, besshi, valuatedAmount }: Pr
       <button
         type="button"
         onClick={() => setPage2Open((v) => !v)}
-        className="w-full text-left text-sm font-semibold py-2 px-3 bg-white border border-sky-300 rounded mb-2 print:hidden"
+        className="w-full flex items-center justify-between gap-2 text-left text-sm font-semibold py-2 px-3 bg-white border border-sky-300 rounded mb-2 print:hidden"
         data-testid="ls-besshi-p2-toggle"
+        aria-expanded={page2Open}
       >
-        {page2Open ? "▼" : "▶"} {LS_RESULT_LABELS.page2Toggle.slice(2)}
+        <span>{LS_RESULT_LABELS.page2Toggle.slice(2)}</span>
+        <span className={expandToggleClass("sky")}>{expandToggleLabel(page2Open)}</span>
       </button>
       <div className={page2Open ? "block" : "hidden print:block"}>
         <Page2DailyClosingTable page2={besshi.page2} />

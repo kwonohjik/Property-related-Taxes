@@ -7,7 +7,7 @@
 
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type {
   Heir,
   InheritanceTaxResult,
@@ -19,6 +19,7 @@ import {
 } from "@/lib/calc/heir-allocation-summary";
 import { HorizontalScrollContainer } from "@/components/calc/shared/HorizontalScrollContainer";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { ExpandToggleButton } from "./shared/ExpandToggleButton";
 
 interface Props {
   result: InheritanceTaxResult;
@@ -35,6 +36,8 @@ export function HeirAllocationSummaryTable({
     () => buildSummaryTable(result, heirs),
     [result, heirs],
   );
+  // 기본 펼침 — 접기 시 인쇄 시 CSS 자동 펼침 (print-only-css-toggle)
+  const [open, setOpen] = useState(true);
 
   if (!result.heirAllocationResult || heirs.length === 0) {
     return null;
@@ -45,17 +48,22 @@ export function HeirAllocationSummaryTable({
       aria-labelledby="heir-allocation-summary-title"
       className="rounded-2xl border border-violet-200 bg-violet-50 p-4 dark:border-violet-800 dark:bg-violet-950/60 print:border-violet-300 print:bg-white"
     >
-      <h3
-        id="heir-allocation-summary-title"
-        className="mb-3 text-base font-semibold text-violet-900 dark:text-violet-100 flex items-center gap-2"
-      >
-        {sectionNum !== undefined && (
-          <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-[10px] font-bold text-violet-800 dark:bg-violet-700 dark:text-violet-100 select-none">
-            {sectionNum}
-          </span>
-        )}
-        상속인별 상속세부담액 집계
-      </h3>
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <h3
+          id="heir-allocation-summary-title"
+          className="text-base font-semibold text-violet-900 dark:text-violet-100 flex items-center gap-2"
+        >
+          {sectionNum !== undefined && (
+            <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-[10px] font-bold text-violet-800 dark:bg-violet-700 dark:text-violet-100 select-none">
+              {sectionNum}
+            </span>
+          )}
+          상속인별 상속세부담액 집계
+        </h3>
+        <ExpandToggleButton open={open} onClick={() => setOpen((v) => !v)} tone="violet" />
+      </div>
+
+      <div className={open ? "block" : "hidden print:block"}>
 
       {data.usedLegalShareFallback && (
         <div className="mb-3 rounded-md bg-violet-100/70 dark:bg-violet-900/40 px-3 py-2 text-xs text-violet-800 dark:text-violet-200">
@@ -234,6 +242,7 @@ export function HeirAllocationSummaryTable({
           배부대상 과세가액, 원 미만 절사)
         </span>
       </p>
+      </div>
     </section>
   );
 }

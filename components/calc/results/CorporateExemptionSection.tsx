@@ -34,6 +34,7 @@ import type {
   CorporateExemptionResult,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
+import { ExpandToggleButton } from "./shared/ExpandToggleButton";
 
 const SHAREHOLDER_RELATION_LABEL: Record<ShareholderInfo["relation"], string> = {
   heir: "상속인",
@@ -53,8 +54,9 @@ export function CorporateExemptionSection({
   corporateExemption,
   heirs,
 }: Props) {
-  // 인쇄 토글(부표5 전용) — early return 이전에 hook 호출 (react-hooks/rules-of-hooks).
-  const [open, setOpen] = useState(false);
+  // 인쇄 토글 — early return 이전에 hook 호출 (react-hooks/rules-of-hooks).
+  const [open, setOpen] = useState(false); // 부표5 전용
+  const [summaryOpen, setSummaryOpen] = useState(false); // 면제 산출 요약 — 기본 접힘
 
   // 면제세액 0이면 섹션 미표시 (요약·부표5 모두 무의미).
   if (!corporateExemption || corporateExemption.amount <= 0) {
@@ -84,22 +86,27 @@ export function CorporateExemptionSection({
   return (
     <div className="rounded-lg border border-violet-200 dark:border-violet-800 bg-white dark:bg-gray-900 overflow-hidden">
       {/* 단일 헤더 */}
-      <div className="px-4 py-3 bg-violet-50 dark:bg-violet-900/20 border-b border-violet-200 dark:border-violet-800 flex items-center gap-2">
-        <span className="inline-flex items-center gap-1 text-[10px] bg-violet-200 text-violet-800 rounded px-2 py-0.5">
-          §3의2②
-        </span>
-        <div>
-          <p className="text-sm font-semibold text-violet-800 dark:text-violet-200">
-            영리법인 상속세 면제 (§3의2②)
-          </p>
-          <p className="text-[11px] text-violet-700 dark:text-violet-300 mt-0.5">
-            집행기준 28-0-1 · 상속세 및 증여세법 시행규칙 별지 제9호서식 부표 5
-          </p>
+      <div className="px-4 py-3 bg-violet-50 dark:bg-violet-900/20 border-b border-violet-200 dark:border-violet-800 flex items-center gap-2 justify-between">
+        <div className="flex items-center gap-2">
+          <span className="inline-flex items-center gap-1 text-[10px] bg-violet-200 text-violet-800 rounded px-2 py-0.5">
+            §3의2②
+          </span>
+          <div>
+            <p className="text-sm font-semibold text-violet-800 dark:text-violet-200">
+              영리법인 상속세 면제 (§3의2②)
+            </p>
+            <p className="text-[11px] text-violet-700 dark:text-violet-300 mt-0.5">
+              집행기준 28-0-1 · 상속세 및 증여세법 시행규칙 별지 제9호서식 부표 5
+            </p>
+          </div>
         </div>
+        <ExpandToggleButton open={summaryOpen} onClick={() => setSummaryOpen((v) => !v)} tone="violet" />
       </div>
 
-      {/* 면제 산출 요약 (상시 노출 — 토글 바깥) */}
-      <div className="px-4 py-3 space-y-2 bg-violet-50/40 dark:bg-violet-900/10 border-b border-violet-200 dark:border-violet-800">
+      {/* 면제 산출 요약 (기본 접힘 — 인쇄 시 자동 펼침) */}
+      <div
+        className={`px-4 py-3 space-y-2 bg-violet-50/40 dark:bg-violet-900/10 border-b border-violet-200 dark:border-violet-800 ${summaryOpen ? "block" : "hidden print:block"}`}
+      >
         {corporateExemption.breakdown.map((step, i) => (
           <div
             key={i}
@@ -122,14 +129,7 @@ export function CorporateExemptionSection({
             <p className="text-xs font-semibold text-violet-700 dark:text-violet-300">
               🏢 부표 5 — 영리법인 상속세 면제 및 납부 명세서
             </p>
-            <button
-              type="button"
-              onClick={() => setOpen((p) => !p)}
-              className="text-xs rounded-md border border-violet-300 dark:border-violet-600 px-2 py-1 hover:bg-violet-100 dark:hover:bg-violet-800/40 print:hidden"
-              aria-expanded={open}
-            >
-              {open ? "▲ 접기" : "▼ 펼치기 (인쇄 시 자동 펼침)"}
-            </button>
+            <ExpandToggleButton open={open} onClick={() => setOpen((p) => !p)} tone="violet" />
           </div>
 
           <div className={open ? "block" : "hidden print:block"}>

@@ -19,8 +19,8 @@ import type { FarmingDeductionDetail } from "@/lib/tax-engine/types/inheritance-
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
 import { LoginPromptBanner } from "@/components/calc/shared/LoginPromptBanner";
-import { TaxCreditBreakdownCard } from "@/components/calc/TaxCreditBreakdownCard";
 import { HeirAllocationSummaryTable } from "@/components/calc/results/HeirAllocationSummaryTable";
+import { FilingForm9CoverSection } from "@/components/calc/inheritance/filing-form-9/FilingForm9CoverSection";
 import { InheritanceFilingFormTable } from "@/components/calc/results/InheritanceFilingFormTable";
 import { CorporateExemptionSection } from "@/components/calc/results/CorporateExemptionSection";
 import { DebtAllocationResultCard } from "@/components/calc/results/DebtAllocationResultCard";
@@ -30,7 +30,7 @@ import { SourceDataSummarySection } from "@/components/calc/results/source-summa
 import { calcInstallmentPayment } from "@/lib/tax-engine/credits/installment-payment";
 import { DeductionBreakdownSection } from "./deduction-breakdown/DeductionBreakdownSection";
 import { AllocationBreakdownSection } from "./allocation-breakdown/AllocationBreakdownSection";
-import { InheritanceGenerationSkipDetailCard } from "@/components/calc/results/InheritanceGenerationSkipDetailCard";
+import { expandToggleClass, expandToggleLabel } from "./shared/ExpandToggleButton";
 // re-export 보존 — shared.tsx 에서 실제 구현
 export { Row, formatBillion, LawBadge } from "./deduction-breakdown/shared";
 // re-export 보존 — FarmingDeductionDetailRow (farming-section.test.tsx 사용)
@@ -102,14 +102,6 @@ function SummaryRow({
   );
 }
 
-function LawBadgeLocal({ law }: { law: string }) {
-  return (
-    <span className="inline-block text-xs px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 mr-1 mb-1">
-      {law}
-    </span>
-  );
-}
-
 // ============================================================
 // 메인 컴포넌트
 // ============================================================
@@ -175,8 +167,6 @@ export function InheritanceTaxResultView({
     return map;
   }, [estateItems]);
 
-  const taxBeforeCredit = result.computedTax + result.generationSkipSurcharge;
-
   return (
     <div className="space-y-5">
       {/* PDF 버튼 */}
@@ -190,25 +180,11 @@ export function InheritanceTaxResultView({
         </button>
       </div>
 
-      {/* 상속개시자료 요약 — 4표 (Table A·B·C·D) */}
-      {heirs && heirs.length > 0 && (
-        <SourceDataSummarySection
-          deathDate={deathDate}
-          heirs={heirs}
-          estateItems={estateItems}
-          presumedItems={presumedItems}
-          presumedResultItems={result.presumedInheritanceDetail?.items}
-          presumedTotal={result.presumedInheritanceDetail?.total}
-          debtItems={debtItems}
-          priorGifts={priorGifts}
-        />
-      )}
-
       {/* 핵심 결과 카드 */}
       <div className="rounded-xl border-2 border-primary bg-primary/5 p-5">
         <p className="text-sm font-medium text-muted-foreground mb-1">상속세 결정세액</p>
-        <p className="text-4xl font-bold tracking-tight">{formatKRW(result.finalTax)}</p>
-        <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+        <p className="text-xl font-bold tracking-tight">{formatKRW(result.finalTax)}</p>
+        <div className="mt-3 grid grid-cols-3 gap-2 text-xs text-muted-foreground">
           <div>
             <span>산출세액</span>
             <p className="font-semibold text-foreground text-base mt-0.5">
@@ -287,18 +263,22 @@ export function InheritanceTaxResultView({
         </div>
       </div>
 
-      {/* 세액공제 상세 */}
-      {result.totalTaxCredit > 0 && (
-        <TaxCreditBreakdownCard
-          credit={result.creditDetail}
-          taxBeforeCredit={taxBeforeCredit}
-          corporateExemption={result.corporateExemption?.amount ?? 0}
-        />
-      )}
+      {/* 세액공제 상세: 결정세액 카드 요약 + AllocationBreakdownSection ⑩·⑫ 로 노출 (별도 카드 숨김) */}
 
-      {/* B-5 (2026-06-01): §27 세대생략 할증 수유자별 산식 카드 */}
-      {result.generationSkipDetail && (
-        <InheritanceGenerationSkipDetailCard detail={result.generationSkipDetail} />
+      {/* §27 세대생략 할증 산식: ⑧ 세대생략 가산액 펼침 내부로 통합 (AllocationBreakdownSection) */}
+
+      {/* 상속개시자료 요약 — 4표 (Table A·B·C·D) — 사전증여재산 명세 바로 위 */}
+      {heirs && heirs.length > 0 && (
+        <SourceDataSummarySection
+          deathDate={deathDate}
+          heirs={heirs}
+          estateItems={estateItems}
+          presumedItems={presumedItems}
+          presumedResultItems={result.presumedInheritanceDetail?.items}
+          presumedTotal={result.presumedInheritanceDetail?.total}
+          debtItems={debtItems}
+          priorGifts={priorGifts}
+        />
       )}
 
       {/* 사전증여재산 명세 */}
@@ -350,6 +330,11 @@ export function InheritanceTaxResultView({
         <AllocationBreakdownSection result={result} heirs={heirs} />
       )}
 
+      {/* 별지 제9호서식 상속세과세표준신고 및 자진납부계산서 (앞쪽) */}
+      {result.heirAllocationResult && heirs && heirs.length > 0 && (
+        <FilingForm9CoverSection result={result} heirs={heirs} deathDate={deathDate} />
+      )}
+
       {/* 영농상속공제 사후관리 안내 */}
       {result.deductionDetail.farmingDeduction > 0 && (
         <div className="rounded-md border border-blue-200 bg-blue-50/40 dark:bg-blue-950/20 dark:border-blue-800 p-3 space-y-2 print:hidden">
@@ -377,7 +362,7 @@ export function InheritanceTaxResultView({
           className="w-full flex items-center justify-between px-4 py-3 bg-muted/30 hover:bg-muted/50 transition-colors text-sm font-medium"
         >
           <span>재산 평가 내역 ({result.valuationResults.length}건)</span>
-          <span>{showValuation ? "▲" : "▼"}</span>
+          <span className={expandToggleClass("slate")}>{expandToggleLabel(showValuation)}</span>
         </button>
         {showValuation && (
           <div className="divide-y divide-border text-xs">
@@ -439,14 +424,7 @@ export function InheritanceTaxResultView({
         </div>
       )}
 
-      {/* 근거 조문 */}
-      {result.appliedLaws.length > 0 && (
-        <div className="flex flex-wrap">
-          {result.appliedLaws.map((law) => (
-            <LawBadgeLocal key={law} law={law} />
-          ))}
-        </div>
-      )}
+      {/* 근거 조문 배지 모음 숨김 — 각 카드·산식에 조문 링크가 이미 노출됨 */}
 
       {/* 로그인 유도 */}
       {showLoginPrompt && <LoginPromptBanner />}
