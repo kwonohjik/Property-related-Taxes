@@ -130,7 +130,9 @@ PrintSectionNode {
 |---|---|---|
 | **PR-1** ✅ | 레지스트리 + 선택 UI + 화면 인쇄 선택 출력 (§5의 1~3) | 사용자 원래 문제 즉시 해결 |
 | **PR-2** ✅ | route POST화 + PDF 버튼 + ResultPdfDocument 선택 필터 (현존 상속세 PDF 섹션=요약·상속인별 한정) | 서버 PDF 선택 골격 |
-| **PR-3~** | 별지 5종 PDF(filing-form-9·besshi-buppyo-2·deduction-besshi·unlisted·listed)를 react-pdf 구현 + pdf 채널 승격 | 서식별 점진 |
+| **PR-3a** ✅ | 별지 제9호서식 통합 PDF 연결 (기존 `FilingForm9PdfPage` 재사용 + ResultPdfDocument 통합 + pdf 승격) | 별지9호 선택 PDF |
+| **PR-3b~** | 나머지 별지 4종(besshi-buppyo-2·deduction-besshi·unlisted·listed) 통합 PDF 연결 + pdf 승격 | 서식별 점진 |
+> ⚠️ 전제 정정: 별지는 **이미 개별 react-pdf 다운로드 존재**(FilingForm9PdfDownloadButton 등). PR-3는 신규 포팅이 아니라 **통합 결과 PDF(ResultPdfDocument)에 연결**하는 작업.
 > 단일 세션 완주를 원하면 위 순서대로 Do, 각 단계 anchor GREEN 후 다음. 한 PR로 합치면 리뷰·회귀 위험 大.
 
 ### 비범위 (후속)

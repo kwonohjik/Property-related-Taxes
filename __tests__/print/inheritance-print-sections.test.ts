@@ -37,9 +37,13 @@ const ALL_LEAVES: PrintSectionId[] = [
   "warnings",
 ];
 
-// PDF 채널 (PR-2): 현존 ResultPdfDocument 상속세 섹션으로 표현 가능한 노드만.
-// 별지 5종은 react-pdf 미구현(PR-3)이라 screen-only — 구현 시 pdf 승격.
-const PDF_LEAVES: PrintSectionId[] = ["tax-summary", "heir-allocation-summary"];
+// PDF 채널: 현존 PDF 표현 노드(요약·상속인별) + PR-3a 별지9호 통합.
+// 나머지 별지 4종은 PR-3b~ 미구현이라 screen-only — 구현 시 pdf 승격.
+const PDF_LEAVES: PrintSectionId[] = [
+  "tax-summary",
+  "heir-allocation-summary",
+  "filing-form-9",
+];
 
 describe("선택 출력 레지스트리 — Pre-Do anchor", () => {
   // PD-1: 선택 0건 → 모든 leaf print:hidden
@@ -99,13 +103,13 @@ describe("선택 출력 레지스트리 — Pre-Do anchor", () => {
       "filing-form-9",
       "core-result",
     ]);
-    // 화면 전용 노드(core-result·filing-form-9) 선택은 PDF에서 제외
+    // 화면 전용 노드(core-result) 선택은 PDF에서 제외, pdf 채널(filing-form-9·tax-summary)은 포함
     expect(
       selectPdfSections(
         new Set(["core-result", "filing-form-9", "tax-summary"]),
         available
-      )
-    ).toEqual(["tax-summary"]);
+      ).sort()
+    ).toEqual(["filing-form-9", "tax-summary"]);
     // pdf 채널 둘 다 선택
     expect(
       selectPdfSections(

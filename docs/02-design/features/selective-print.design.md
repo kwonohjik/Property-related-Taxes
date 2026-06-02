@@ -241,6 +241,20 @@ export async function POST(req, ctx) {
 
 **deviation**: PR-1에서 별지를 `pdf` 채널로 선표시했으나 실제 PDF 미구현 → PR-2에서 **현존 PDF 표현 가능 노드(요약·상속인별)만 pdf 채널**로 정정(거짓 선택 방지). 별지는 PR-3에서 react-pdf 구현과 함께 pdf 승격.
 
+### 10-3. PR-3a 갭 분석 (별지 제9호서식 PDF)
+
+⚠️ **전제 정정 (실측)**: "별지는 PDF 미구현"은 부정확했다. 각 별지는 **이미 개별 react-pdf 다운로드**를 갖고 있다(`FilingForm9PdfDownloadButton`·`InheritanceFilingForm9PdfDocument`·`Buppyo2PdfDownloadButton`·`DeductionBesshiPdfButtons`). 미연결이었던 것은 **통합 결과 PDF(`ResultPdfDocument`, `/api/pdf/result/[id]`)**뿐. → PR-3는 "신규 포팅"이 아니라 **기존 별지 react-pdf를 통합 PDF에 연결**하는 작업.
+
+| 항목 | 설계 | 구현 | 판정 |
+|---|---|---|---|
+| 데이터 어댑터 | 화면과 동일 소스 | `buildFilingForm9Data` **그대로 재사용**(신규 0) → dual-truth 0 | ✓ |
+| react-pdf Page | 신규 | 기존 `InheritanceFilingForm9PdfDocument`에서 `FilingForm9PdfPage` 추출(Document 중첩 회피), 기존 다운로드 버튼 무변경 | ✓ |
+| ResultPdfDocument 통합 | selected 시 별지 Page | `filing-form-9` 선택 + 상속세 + heirAllocation·heirs 시 `<FilingForm9PdfPage>` 형제 Page 추가 | ✓ |
+| pdf 채널 승격 | filing-form-9 → pdf | SCREEN_PDF, PD-4·PD-6 갱신 | ✓ |
+| 수치 일치 | 화면=PDF | 동일 `buildFilingForm9Data` → 자동. 기존 `filing-form-9-data.test.ts`가 어댑터 검증 | ✓ |
+| 직렬화 | deathDate string·Map 회피 | deathDate=`str(inputData.deathDate)`, 별지9호 계산표는 총액(Map 비의존) | ✓ |
+| **나머지 별지 4종** | PR-3b~ | besshi-buppyo-2·deduction-besshi·unlisted·listed 미통합(개별 다운로드는 기존 존재) | 의도된 비범위 |
+
 ## 9. 동기화 체크리스트 (출력 레지스트리 — 14지점과 별개)
 
 신규 결과뷰 섹션 추가 시:

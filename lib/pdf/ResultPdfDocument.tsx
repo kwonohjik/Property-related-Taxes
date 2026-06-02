@@ -10,6 +10,8 @@ import {
   StyleSheet,
 } from "@react-pdf/renderer";
 import { InheritanceHeirAllocationSection } from "@/lib/pdf/sections/inheritance-heir-allocation-section";
+import { FilingForm9PdfPage } from "@/lib/pdf/InheritanceFilingForm9PdfDocument";
+import { buildFilingForm9Data } from "@/lib/calc/filing-form-9-data";
 import type {
   Heir,
   InheritanceTaxResult,
@@ -671,6 +673,22 @@ export function ResultPdfDocument({
   const determinedTax = num(r.determinedTax);
   const localIncomeTax = num(r.localIncomeTax);
 
+  // 별지 제9호서식 — 상속세 + filing-form-9 선택 + heirAllocation·heirs 존재 시 별도 Page (PR-3a)
+  const heirsArr = Array.isArray(inputData?.heirs) ? (inputData!.heirs as unknown as Heir[]) : [];
+  const showFilingForm9 =
+    taxType === "inheritance" &&
+    Array.isArray(selectedSectionIds) &&
+    selectedSectionIds.includes("filing-form-9") &&
+    !!r.heirAllocationResult &&
+    heirsArr.length > 0;
+  const filingForm9Data = showFilingForm9
+    ? buildFilingForm9Data(
+        r as unknown as InheritanceTaxResult,
+        heirsArr,
+        str(inputData?.deathDate)
+      )
+    : null;
+
   return (
     <Document title={`${taxTypeLabel} 계산 결과`} author="KoreanTaxCalc">
       <Page size="A4" style={s.page}>
@@ -746,6 +764,9 @@ export function ResultPdfDocument({
 
         <Text style={s.pageNumber} render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages}`} fixed />
       </Page>
+
+      {/* 별지 제9호서식 (선택 시) — 화면과 동일 buildFilingForm9Data (PR-3a) */}
+      {filingForm9Data && <FilingForm9PdfPage data={filingForm9Data} />}
     </Document>
   );
 }

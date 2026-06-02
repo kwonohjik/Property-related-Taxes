@@ -81,8 +81,9 @@ export const INHERITANCE_PRINT_SECTIONS: PrintSectionGroup[] = [
     id: "group:forms",
     label: "공식 신고서식",
     children: [
-      // 별지 react-pdf는 PR-3 미구현 → 현재 screen-only (거짓 선택 방지). PR-3에서 pdf 승격.
-      { id: "filing-form-9", label: "별지 제9호서식 (앞쪽)", channel: SCREEN },
+      // PR-3a: 별지9호 react-pdf(FilingForm9PdfPage) ResultPdfDocument 통합 완료 → pdf 승격
+      { id: "filing-form-9", label: "별지 제9호서식 (앞쪽)", channel: SCREEN_PDF },
+      // 나머지 별지 react-pdf는 PR-3b~ 미구현 → screen-only (거짓 선택 방지)
       { id: "besshi-buppyo-2", label: "별지 제9호서식 부표2 (상속인별)", channel: SCREEN },
       {
         id: "deduction-besshi",
