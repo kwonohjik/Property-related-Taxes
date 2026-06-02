@@ -122,6 +122,8 @@ const baseItemSchema = z.object({
   heirAllocations: z.array(heirAllocationSchema).optional(),
   deemedCategory: z.enum(["retirement", "insurance", "trust"]).optional(),
   isFamilyBusinessAsset: z.boolean().optional(),
+  // §23의2 동거주택 상속공제 자동도출 (v3)
+  isCohabitantHouse: z.boolean().optional(),
   // §22 금융재산상속공제 자동화 (2026-05-21)
   isFinancialAssetForDeduction: z.boolean().optional(),
   // §22② 최대주주 법정 강제 배제 — 상장·비상장 V1·V2 공용 직속 필드 (2026-05-27, E-4)
@@ -685,6 +687,7 @@ export const inheritanceDeductionInputSchema = z.object({
   spouseActualAmount: z.number().nonnegative().optional(),
   netFinancialAssets: z.number().nonnegative().optional(),
   cohabitHouseStdPrice: z.number().nonnegative().optional(),
+  cohabitSecuredDebt: z.number().nonnegative().optional(),
   farmingAssetValue: z.number().nonnegative().optional(),
   familyBusinessValue: z.number().nonnegative().optional(),
   familyBusinessYears: z.number().int().nonnegative().optional(),

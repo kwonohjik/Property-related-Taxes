@@ -199,6 +199,12 @@ export interface EstateItem extends EstateLocationFields {
   deemedCategory?: "retirement" | "insurance" | "trust";
   /** 가업상속재산 여부 — 직접 입력 모드 표시용 */
   isFamilyBusinessAsset?: boolean;
+  /**
+   * §23의2 동거주택 상속공제 — 자산 카드에서 명시 지정한 동거주택(단일).
+   * true 시 deriveCohabitHouseStdPrice가 본 자산의 standardPrice(gross)와 mortgageAmount(담보채무)를
+   * cohabitHouseStdPrice·cohabitSecuredDebt로 도출. 복수 지정은 자동도출 포기(isApplicable=false).
+   */
+  isCohabitantHouse?: boolean;
 
   // ===== 상속개시자료 요약 4표 — Table A 비고/수량 열 (2026-05-28) =====
   /**
@@ -752,8 +758,10 @@ export interface InheritanceDeductionInput {
   spouseActualAmount?: number;
   /** 순금융재산 (§22 금융재산공제 계산용) */
   netFinancialAssets?: number;
-  /** 동거주택 — 상속주택 공시가격 */
+  /** 동거주택 — 상속주택 공시가격 (gross, 담보채무 차감 전) */
   cohabitHouseStdPrice?: number;
+  /** §23의2① 담보된 피상속인 채무(저당). cohabitHouseStdPrice(gross)에서 엔진이 단일 차감. */
+  cohabitSecuredDebt?: number;
   /** 영농상속 — 농지·목장용지·어선 가액 */
   farmingAssetValue?: number;
   /** 가업상속 — 가업상속재산가액 */
