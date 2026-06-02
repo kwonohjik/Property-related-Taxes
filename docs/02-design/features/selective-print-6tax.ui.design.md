@@ -217,6 +217,20 @@ const availablePrintIds = useMemo<Set<string>>(() => { /* §2 가드 1:1 */ }, [
 
 **deviation 3 (E2E 생략)**: 취득세 마법사는 6단계 + native select 2개 + RadioCardGroup + 취득일 위젯으로 안정적 E2E 입력에 비용 과다. 선택 패널·`PrintSection`·`print:hidden` 가시성은 **PR-A 제네릭 컴포넌트**로 **PR-B1 증여세 E2E**(패널 노출·0건 가드·print 미디어 토글)가 실브라우저 검증 — 취득세는 `allGroups={ACQUISITION_PRINT_SECTIONS}`만 주입(컴포넌트 동작 세목 무관). 취득세 고유(11 leaf·availableIds·PDF 필터)는 anchor 7로 검증. 후속 PR에서 취득세 전용 E2E 추가 가능.
 
+## 7-6. PR-D 갭 분석 (재산세 선택 출력 — 구현 완료)
+
+| 항목 | 설계 | 구현 | 판정 |
+|---|---|---|---|
+| `PROPERTY_PRINT_SECTIONS` 7 leaf | §2.3 (계산4·기타3) | `property-print-sections.ts` 7 leaf 2그룹 + 바인딩 래퍼 | ✓ |
+| pdf 채널 | §2.3 computed-tax 1종 | `computed-tax` SCREEN_PDF (PropertySection 단일 계산표 대표) | ✓ |
+| 결과뷰 통합 | §3 상속세 복제 | 7 `PrintSection` + 패널 **신규** + `savedId` + `handlePrintPdf` + `availablePrintIds` (useState/useMemo 신규 import — 기존 순수 컴포넌트) | ✓ |
+| 결과뷰 1곳 렌더 | §3 :163 | `const autoSave` + `savedId` 전달 (취득세 2곳과 달리 1곳) | ✓ |
+| ResultPdfDocument 필터 | §5 computed-tax 대표 | PropertySection `selectedSectionIds` 필터(미포함 시 null) + 호출부 | ✓ |
+| anchor | §6 PD-prop | property 7 + 전체 회귀 + tsc 0 | ✓ |
+| E2E | §6 세목별 spec | **생략**(PR-C 동일) — 제네릭 패널 PR-B1 E2E + anchor 7 | ⚠️ |
+
+**단순성**: 재산세는 isExempt 전용 화면 없음 + 모든 섹션 단일 카드(보조 카드 묶음 불필요) → PR-C 대비 단순. 각 `<section>`을 1:1로 PrintSection 래핑(className 불요). E2E는 PR-C와 동일 사유로 생략(제네릭 패널은 PR-B1 E2E 검증).
+
 ## 8. 케이스 인벤토리 요약 (leaf·pdf 채널 수 — 검토 U1 반영)
 | 세목 | leaf | pdf 채널 | 별지 PDF |
 |---|---|---|---|

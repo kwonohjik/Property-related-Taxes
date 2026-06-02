@@ -14,6 +14,13 @@
 
 import type { PropertyTaxResult } from "@/lib/tax-engine/types/property.types";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { useState, useMemo } from "react";
+import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPanel";
+import { PrintSection } from "@/components/calc/results/shared/PrintSection";
+import {
+  PROPERTY_PRINT_SECTIONS,
+  type PropertyPrintSectionId,
+} from "@/lib/print/property-print-sections";
 
 function formatKRW(amount: number): string {
   return amount.toLocaleString("ko-KR");
@@ -25,6 +32,8 @@ function formatRate(rate: number): string {
 
 interface Props {
   result: PropertyTaxResult;
+  /** 저장된 계산 id — 서버 PDF 선택 출력(PR-D)용. 미저장/비로그인 시 undefined */
+  savedId?: string;
 }
 
 function TaxRow({
@@ -61,7 +70,7 @@ function TaxRow({
   );
 }
 
-export function PropertyTaxResultView({ result }: Props) {
+export function PropertyTaxResultView({ result, savedId }: Props) {
   const {
     publishedPrice,
     fairMarketRatio,
@@ -82,10 +91,65 @@ export function PropertyTaxResultView({ result }: Props) {
 
   const capApplied = determinedTax < calculatedTaxBeforeCap;
 
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const [selectedPrintIds, setSelectedPrintIds] = useState<Set<string>>(
+    () => new Set()
+  );
+
+  // 선택 항목 서버 PDF 다운로드 (PR-D). savedId(로그인+저장) 있을 때만 활성.
+  async function handlePrintPdf(pdfSections: string[]) {
+    if (!savedId || pdfSections.length === 0) return;
+    setPdfBusy(true);
+    try {
+      const res = await fetch(`/api/pdf/result/${savedId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sections: pdfSections }),
+      });
+      if (!res.ok) throw new Error("PDF 생성 실패");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `재산세_계산결과_${savedId.slice(0, 8)}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      alert("PDF 생성에 실패했습니다. 잠시 후 다시 시도해 주세요.");
+    } finally {
+      setPdfBusy(false);
+    }
+  }
+
+  // 현재 결과뷰에 실제 렌더되는 leaf id (각 섹션 렌더 가드와 1:1 — 설계 §2.3)
+  const availablePrintIds = useMemo<Set<PropertyPrintSectionId>>(() => {
+    const s = new Set<PropertyPrintSectionId>();
+    s.add("tax-base");
+    s.add("computed-tax");
+    s.add("surtax");
+    s.add("total-payable");
+    if (installment.eligible) s.add("installment");
+    if (warnings.length > 0) s.add("warnings");
+    if (legalBasis.length > 0) s.add("legal-basis");
+    return s;
+  }, [installment, warnings, legalBasis]);
+
   return (
     <div className="space-y-6">
+      {/* 출력 항목 선택 패널 (선택 항목만 인쇄·PDF) */}
+      <PrintSelectionPanel
+        allGroups={PROPERTY_PRINT_SECTIONS}
+        selectedIds={selectedPrintIds}
+        availableIds={availablePrintIds}
+        onChange={setSelectedPrintIds}
+        onPrintPdf={handlePrintPdf}
+        pdfReady={!!savedId}
+        pdfBusy={pdfBusy}
+      />
+
       {/* ─── 경고 메시지 ─── */}
       {warnings.length > 0 && (
+        <PrintSection id="warnings" selectedIds={selectedPrintIds}>
         <div className="rounded-md bg-amber-50 border border-amber-200 p-3 space-y-1">
           {warnings.map((w, i) => (
             <p key={i} className="text-xs text-amber-800">
@@ -93,9 +157,11 @@ export function PropertyTaxResultView({ result }: Props) {
             </p>
           ))}
         </div>
+        </PrintSection>
       )}
 
       {/* ─── 과세표준 ─── */}
+      <PrintSection id="tax-base" selectedIds={selectedPrintIds}>
       <section className="space-y-1">
         <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
           과세표준
@@ -117,8 +183,10 @@ export function PropertyTaxResultView({ result }: Props) {
           />
         </div>
       </section>
+      </PrintSection>
 
       {/* ─── 산출세액 ─── */}
+      <PrintSection id="computed-tax" selectedIds={selectedPrintIds}>
       <section className="space-y-1">
         <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
           산출세액
@@ -151,8 +219,10 @@ export function PropertyTaxResultView({ result }: Props) {
           )}
         </div>
       </section>
+      </PrintSection>
 
       {/* ─── 부가세 ─── */}
+      <PrintSection id="surtax" selectedIds={selectedPrintIds}>
       <section className="space-y-1">
         <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
           부가세
@@ -183,8 +253,10 @@ export function PropertyTaxResultView({ result }: Props) {
           <TaxRow label="부가세 합계" amount={totalSurtax} />
         </div>
       </section>
+      </PrintSection>
 
       {/* ─── 총 납부세액 ─── */}
+      <PrintSection id="total-payable" selectedIds={selectedPrintIds}>
       <section>
         <div className="rounded-md border bg-primary/5 divide-y">
           <TaxRow label="재산세 (확정세액)" amount={determinedTax} />
@@ -192,9 +264,11 @@ export function PropertyTaxResultView({ result }: Props) {
           <TaxRow label="총 납부세액" amount={totalPayable} highlight />
         </div>
       </section>
+      </PrintSection>
 
       {/* ─── 분납 안내 ─── */}
       {installment.eligible && (
+        <PrintSection id="installment" selectedIds={selectedPrintIds}>
         <section className="rounded-md bg-blue-50 border border-blue-200 p-4 space-y-2">
           <h4 className="text-sm font-semibold text-blue-800">
             분납 안내 (지방세법 §115)
@@ -213,10 +287,12 @@ export function PropertyTaxResultView({ result }: Props) {
             </div>
           </div>
         </section>
+        </PrintSection>
       )}
 
       {/* ─── 법령 근거 ─── */}
       {legalBasis.length > 0 && (
+        <PrintSection id="legal-basis" selectedIds={selectedPrintIds}>
         <section>
           <details className="text-xs text-muted-foreground">
             <summary className="cursor-pointer hover:text-foreground transition-colors">
@@ -231,6 +307,7 @@ export function PropertyTaxResultView({ result }: Props) {
             </ul>
           </details>
         </section>
+        </PrintSection>
       )}
     </div>
   );

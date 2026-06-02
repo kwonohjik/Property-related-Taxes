@@ -510,7 +510,9 @@ function InheritanceGiftSection({
   );
 }
 
-function PropertySection({ r }: { r: R }) {
+function PropertySection({ r, selectedSectionIds }: { r: R; selectedSectionIds?: string[] }) {
+  // computed-tax 대표 노드 — 선택 필터(POST) 적용 시 미포함이면 null (단일 계산표, 검토 U1)
+  if (selectedSectionIds !== undefined && !selectedSectionIds.includes("computed-tax")) return null;
   return (
     <>
       <Text style={s.sectionTitle}>계산 내역</Text>
@@ -717,7 +719,7 @@ export function ResultPdfDocument({
         {taxType === "transfer_multi" && <TransferMultiSection r={r} />}
         {taxType === "acquisition" && <AcquisitionSection r={r} selectedSectionIds={selectedSectionIds} />}
         {(taxType === "inheritance" || taxType === "gift") && <InheritanceGiftSection r={r} taxType={taxType} inputData={inputData} selectedSectionIds={selectedSectionIds} />}
-        {taxType === "property" && <PropertySection r={r} />}
+        {taxType === "property" && <PropertySection r={r} selectedSectionIds={selectedSectionIds} />}
         {taxType === "comprehensive_property" && <ComprehensiveSection r={r} />}
 
         {/* 계산 단계 */}
