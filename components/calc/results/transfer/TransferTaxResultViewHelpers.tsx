@@ -32,6 +32,35 @@ export function printScoped(
   setTimeout(() => window.print(), 0);
 }
 
+/** 선택 항목 서버 PDF 다운로드 (PR-F1 PrintSelectionPanel onPrintPdf 위임). savedId 없거나 0건이면 no-op. */
+export async function downloadSelectedPdf(
+  savedId: string | undefined,
+  pdfSections: string[],
+  setBusy: (b: boolean) => void,
+) {
+  if (!savedId || pdfSections.length === 0) return;
+  setBusy(true);
+  try {
+    const res = await fetch(`/api/pdf/result/${savedId}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sections: pdfSections }),
+    });
+    if (!res.ok) throw new Error("PDF 생성 실패");
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `양도소득세_계산결과_${savedId.slice(0, 8)}.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch {
+    alert("PDF 생성에 실패했습니다. 잠시 후 다시 시도해 주세요.");
+  } finally {
+    setBusy(false);
+  }
+}
+
 // ── 포맷 ───────────────────────────────────────────────────────
 
 export function formatRate(rate: number): string {

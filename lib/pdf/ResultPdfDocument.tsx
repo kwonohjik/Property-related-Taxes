@@ -183,8 +183,10 @@ function getTotalTax(taxType: string, r: R): number | undefined {
 
 // ─── 세금 유형별 상세 섹션 ────────────────────────────────────────
 
-function TransferSection({ r }: { r: R }) {
+function TransferSection({ r, selectedSectionIds }: { r: R; selectedSectionIds?: string[] }) {
   if (bool(r.isExempt)) return null;
+  // calculation 대표 노드 — 선택 필터(POST) 적용 시 미포함이면 null (계산 내역, 검토 U1)
+  if (selectedSectionIds !== undefined && !selectedSectionIds.includes("calculation")) return null;
   // Round 11 (2026-05-07): 양도세 신고서 양식 통일 — FilingFormTable과 동일 흐름.
   const transferGain = (num(r.transferGain) ?? 0) as number;
   const ltdAmount = (num(r.longTermHoldingDeduction) ?? 0) as number;
@@ -717,7 +719,7 @@ export function ResultPdfDocument({
         {inputData && <InputSection taxType={taxType} inputData={inputData} />}
 
         {/* 세금 유형별 상세 섹션 */}
-        {taxType === "transfer" && <TransferSection r={r} />}
+        {taxType === "transfer" && <TransferSection r={r} selectedSectionIds={selectedSectionIds} />}
         {taxType === "transfer_multi" && <TransferMultiSection r={r} />}
         {taxType === "acquisition" && <AcquisitionSection r={r} selectedSectionIds={selectedSectionIds} />}
         {(taxType === "inheritance" || taxType === "gift") && <InheritanceGiftSection r={r} taxType={taxType} inputData={inputData} selectedSectionIds={selectedSectionIds} />}

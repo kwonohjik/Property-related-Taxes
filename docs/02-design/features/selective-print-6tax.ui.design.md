@@ -108,6 +108,18 @@ function PrintSelectionPanel({ groups, selectedIds, availableIds, onChange, onPr
 | `warnings` | 경고 | 기타 | warnings 배너 | ✓ | ✗ |
 - **7 leaf**. ⚠️ **pdf 채널 1**(검토 U1): `ComprehensiveSection`은 주택분 계산표만 단일 렌더(토지분 PDF 없음) → `housing-tax` 1개 대표. 토지분은 화면 인쇄로만.
 
+### 2.5 양도세 (transfer, 단일 자산) — `TransferTaxResultView.tsx`. 기존 printScoped(`body[data-print-scope]` CSS scope) → PrintSelectionPanel 통일 (PR-F1).
+| data-print-id | 라벨 | 그룹 | 렌더 가드 (실측) | screen | pdf |
+|---|---|---|---|---|---|
+| `form-table` | 신고서 양식 표 | 신고서식 | 항상(FilingFormTable·이월과세 비교 또는 일반) | ✓ | ✗ |
+| `detailed-statement` | 계산결과 상세명세서 | 신고서식 | 항상(DetailedCalculationStatementCard) | ✓ | ✗ |
+| `calculation` | 핵심 결과·계산 내역 | 계산 | 항상 | ✓ | **✓ (PDF 계산표 대표)** |
+| `phd` | 개별주택가격 미공시 환산 | 계산 | `preHousingDisclosureDetail` | ✓ | ✗ |
+| `split-detail` | 토지/건물 분리 양도차익 | 계산 | `splitDetail` | ✓ | ✗ |
+- **5 leaf**(2그룹: 신고서식2·계산3). pdf 채널 1: `calculation`(TransferSection). 기존 printScoped scope 중 5종이 leaf(full=전체·steps=미사용 제외).
+- ⚠️ **printScoped(CSS body scope) 완전 제거** — PrintSection(print:hidden)과 공존 불가(미선택 시 scope 인쇄 무효). 하위 컴포넌트 onPrint prop 제거(PHD는 필수→optional化+가드).
+- ⚠️ 다중(Multi)·주식(Stock)·겸용(MixedUse)은 **F2~F4**(별도 PR). CSS scope 규칙(globals.css)은 그들이 공유하므로 F1에서 유지.
+
 ## 3. 세목별 결과뷰 통합 패턴 (상속세 복제)
 
 각 결과뷰에:
@@ -245,6 +257,24 @@ const availablePrintIds = useMemo<Set<string>>(() => { /* §2 가드 1:1 */ }, [
 
 **토지분 PDF 부재(설계 명시)**: ComprehensiveSection은 주택분 계산표만 렌더(토지분 종합합산·별도합산 PDF 없음). aggregate-land·separate-land는 `screen`만 채널 — 화면 인쇄로만 출력. housing-tax 1종이 pdf 대표(검토 U1). sub 컴포넌트 null 가드(excludedCount===0·!isSubjectToHousingTax·!aggregateLandTax·!separateLandTax)와 availablePrintIds 1:1 일치.
 
+## 7-8. PR-F1 갭 분석 (양도세 단일 자산 — 구현 완료)
+
+| 항목 | 설계 | 구현 | 판정 |
+|---|---|---|---|
+| `TRANSFER_PRINT_SECTIONS` 5 leaf | §2.5 (신고서식2·계산3) | `transfer-print-sections.ts` 5 leaf 2그룹 | ✓ |
+| pdf 채널 | §2.5 calculation 1종 | `calculation` SCREEN_PDF (TransferSection 계산 내역) | ✓ |
+| printScoped 제거 | §2.5 완전 제거 | printScoped import·호출 9곳·data-print-section 3곳 전부 제거(잔존 0). PrintSection 5/5 균형 | ✓ |
+| 하위 onPrint 제거 | §2.5 | FilingFormTable·CarryoverScenarioB·DetailedStatement(optional, prop 제거) / PHD(필수→optional化+가드) | ✓ |
+| 결과뷰 통합 | §3 | 5 PrintSection + 패널 + savedId + hooks. 상단 printScoped 버튼·계산/분할 자체 버튼 제거 | ✓ |
+| 마법사 | §3 :479 | `const autoSave` + `savedId` 전달(result.result wrapper) | ✓ |
+| ResultPdfDocument | §5 | TransferSection `selectedSectionIds` 필터(calculation) + isExempt null 유지 | ✓ |
+| 800줄 정책 | 강제 | handlePrintPdf → Helpers `downloadSelectedPdf` 추출(815→794) | ✓ |
+| anchor | §6 PD-tr | transfer 7 + 전체 회귀 + tsc 0 | ✓ |
+
+**CSS scope 유지(F1 한정)**: globals.css `body[data-print-scope]` 규칙은 다중/주식/겸용(F2~F4)이 공유하므로 F1에서 제거하지 않음. printScoped 호출이 없어진 TransferTaxResultView는 data-print-scope 미설정 → CSS scope 규칙 비활성(무해). F4 완료 시 CSS 규칙 제거 예정.
+
+**deviation(E2E 생략)**: PR-C~E와 동일 — 제네릭 패널은 PR-B1 E2E + anchor 7로 검증. 양도세 마법사 입력 복잡도(자산 카드)로 E2E 생략, 후속 가능.
+
 ## 8. 케이스 인벤토리 요약 (leaf·pdf 채널 수 — 검토 U1 반영)
 | 세목 | leaf | pdf 채널 | 별지 PDF |
 |---|---|---|---|
@@ -252,4 +282,5 @@ const availablePrintIds = useMemo<Set<string>>(() => { /* §2 가드 1:1 */ }, [
 | 취득 | 11 | 1 (tax-detail = 계산표 대표) | 없음 |
 | 재산 | 7 | 1 (computed-tax = 계산표 대표) | 없음 |
 | 종부 | 7 | 1 (housing-tax = 주택분 계산표 대표) | 없음 |
+| 양도(단일) | 5 | 1 (calculation = 계산 내역 대표) | 없음 — printScoped→PrintSelectionPanel 통일(F1). 다중/주식/겸용 F2~F4 |
 > pdf 채널 = ResultPdfDocument에서 **실제 분리 렌더 가능한 단위만**(거짓 선택 방지, PR-2 교훈). 취득·재산·종부 계산표는 단일 표라 대표 1노드.
