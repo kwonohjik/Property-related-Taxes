@@ -120,6 +120,19 @@ function PrintSelectionPanel({ groups, selectedIds, availableIds, onChange, onPr
 - ⚠️ **printScoped(CSS body scope) 완전 제거** — PrintSection(print:hidden)과 공존 불가(미선택 시 scope 인쇄 무효). 하위 컴포넌트 onPrint prop 제거(PHD는 필수→optional化+가드).
 - ⚠️ 다중(Multi)·주식(Stock)·겸용(MixedUse)은 **F2~F4**(별도 PR). CSS scope 규칙(globals.css)은 그들이 공유하므로 F1에서 유지.
 
+### 2.6 양도세 (transfer_multi, 다중 자산) — `MultiTransferTaxResultView.tsx`. 기존 자체 printScoped → PrintSelectionPanel 통일 (PR-F2).
+| data-print-id | 라벨 | 그룹 | 렌더 가드 (실측) | screen | pdf |
+|---|---|---|---|---|---|
+| `summary` | 합산 결과 | 합산 | 항상(MultiTransferTaxSummaryCard) | ✓ | **✓ (PDF 계산표 대표)** |
+| `detailed-statement` | 계산결과 상세명세서 | 합산 | 항상 | ✓ | ✗ |
+| `reduction-recalc` | 감면세액 합산 재계산 | 상세 | sub 내부 가드(ReductionRecalculationSection) | ✓ | ✗ |
+| `group-tax` | 세율군별 분리 산출 | 상세 | sub 내부 가드(GroupTaxCards) | ✓ | ✗ |
+| `loss-offset` | 차손 통산 표 | 상세 | sub 내부 가드(LossOffsetTable) | ✓ | ✗ |
+| `per-property` | 건별 상세 (자산별 신고서) | 상세 | `properties.map` | ✓ | ✗ |
+- **6 leaf**(2그룹: 합산2·상세4). pdf 채널 1: `summary`(TransferMultiSection 다건 합산 계산).
+- ⚠️ 자체 printScoped 정의(L58) + sub(PropertyBreakdownAccordion) 자산별 form-table 버튼 제거. 기존 GET 전체 PDF 버튼 → 패널 POST(`downloadSelectedPdf` 재사용). savedId 이미 마법사 전달(L589, 수동저장 state).
+- availablePrintIds: sub 컴포넌트 내부 가드라 6개 항상(빈 섹션은 화면 불변·인쇄 미선택 숨김).
+
 ## 3. 세목별 결과뷰 통합 패턴 (상속세 복제)
 
 각 결과뷰에:
@@ -275,6 +288,25 @@ const availablePrintIds = useMemo<Set<string>>(() => { /* §2 가드 1:1 */ }, [
 
 **deviation(E2E 생략)**: PR-C~E와 동일 — 제네릭 패널은 PR-B1 E2E + anchor 7로 검증. 양도세 마법사 입력 복잡도(자산 카드)로 E2E 생략, 후속 가능.
 
+## 7-9. PR-F2 갭 분석 (양도세 다중 자산 — 구현 완료)
+
+| 항목 | 설계 | 구현 | 판정 |
+|---|---|---|---|
+| `MULTI_TRANSFER_PRINT_SECTIONS` 6 leaf | §2.6 (합산2·상세4) | `multi-transfer-print-sections.ts` 6 leaf 2그룹 | ✓ |
+| pdf 채널 | §2.6 summary 1종 | `summary` SCREEN_PDF (TransferMultiSection 다건 합산) | ✓ |
+| 자체 printScoped 제거 | §2.6 | printScoped 정의(L58)·호출·data-print-section 전부 제거(잔존 0). PrintSection 6/6 균형 | ✓ |
+| sub form-table 버튼 제거 | §2.6 | PropertyBreakdownAccordion 자산별 신고서 버튼 div 제거(printScoped) | ✓ |
+| 결과뷰 통합 | §3 | 6 PrintSection + 패널 + selectedPrintIds·hooks | ✓ |
+| GET→POST PDF | §2.6 | 기존 handlePdfDownload(GET 전체) → handlePrintPdf(POST sections, `downloadSelectedPdf` 재사용) | ✓ |
+| 마법사 savedId | §3 :589 | 이미 전달(수동저장 state) — 수정 불요 | ✓ |
+| ResultPdfDocument | §5 | TransferMultiSection `selectedSectionIds` 필터(summary) | ✓ |
+| 800줄 정책 | 강제 | 755줄(printScoped·sub 버튼 제거로 감소) | ✓ |
+| anchor | §6 PD-mtr | multi-transfer 7 + 전체 회귀 + tsc 0 | ✓ |
+
+**availablePrintIds 6개 항상(deviation)**: reduction-recalc·group-tax·loss-offset은 sub 컴포넌트 내부 null 가드(result만으로 판단 어려움)라 availablePrintIds에 6개 항상 추가. sub가 null이면 빈 PrintSection(화면 불변, 인쇄 미선택 숨김) — 패널엔 항상 표시되나 무해. F1과 달리 가드 1:1 대신 sub 위임.
+
+**E2E 생략**: PR-F1·C~E 동일 — 제네릭 패널 PR-B1 E2E + anchor 7.
+
 ## 8. 케이스 인벤토리 요약 (leaf·pdf 채널 수 — 검토 U1 반영)
 | 세목 | leaf | pdf 채널 | 별지 PDF |
 |---|---|---|---|
@@ -283,4 +315,5 @@ const availablePrintIds = useMemo<Set<string>>(() => { /* §2 가드 1:1 */ }, [
 | 재산 | 7 | 1 (computed-tax = 계산표 대표) | 없음 |
 | 종부 | 7 | 1 (housing-tax = 주택분 계산표 대표) | 없음 |
 | 양도(단일) | 5 | 1 (calculation = 계산 내역 대표) | 없음 — printScoped→PrintSelectionPanel 통일(F1). 다중/주식/겸용 F2~F4 |
+| 양도(다중) | 6 | 1 (summary = 다건 합산 대표) | 없음 — printScoped→PrintSelectionPanel 통일(F2). 주식/겸용 F3~F4 |
 > pdf 채널 = ResultPdfDocument에서 **실제 분리 렌더 가능한 단위만**(거짓 선택 방지, PR-2 교훈). 취득·재산·종부 계산표는 단일 표라 대표 1노드.

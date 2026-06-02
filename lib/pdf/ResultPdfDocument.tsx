@@ -289,7 +289,9 @@ function TransferSplitSection({ r }: { r: R }) {
   );
 }
 
-function TransferMultiSection({ r }: { r: R }) {
+function TransferMultiSection({ r, selectedSectionIds }: { r: R; selectedSectionIds?: string[] }) {
+  // summary 대표 노드 — 선택 필터(POST) 적용 시 미포함이면 null (다건 합산 계산, 검토 U1)
+  if (selectedSectionIds !== undefined && !selectedSectionIds.includes("summary")) return null;
   const props = Array.isArray(r.properties) ? (r.properties as R[]) : [];
   const lossTable = Array.isArray(r.lossOffsetTable) ? (r.lossOffsetTable as R[]) : [];
   const comparedTax = str(r.comparedTaxApplied) ?? "none";
@@ -720,7 +722,7 @@ export function ResultPdfDocument({
 
         {/* 세금 유형별 상세 섹션 */}
         {taxType === "transfer" && <TransferSection r={r} selectedSectionIds={selectedSectionIds} />}
-        {taxType === "transfer_multi" && <TransferMultiSection r={r} />}
+        {taxType === "transfer_multi" && <TransferMultiSection r={r} selectedSectionIds={selectedSectionIds} />}
         {taxType === "acquisition" && <AcquisitionSection r={r} selectedSectionIds={selectedSectionIds} />}
         {(taxType === "inheritance" || taxType === "gift") && <InheritanceGiftSection r={r} taxType={taxType} inputData={inputData} selectedSectionIds={selectedSectionIds} />}
         {taxType === "property" && <PropertySection r={r} selectedSectionIds={selectedSectionIds} />}
