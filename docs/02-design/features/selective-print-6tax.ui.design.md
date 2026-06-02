@@ -133,6 +133,17 @@ function PrintSelectionPanel({ groups, selectedIds, availableIds, onChange, onPr
 - ⚠️ 자체 printScoped 정의(L58) + sub(PropertyBreakdownAccordion) 자산별 form-table 버튼 제거. 기존 GET 전체 PDF 버튼 → 패널 POST(`downloadSelectedPdf` 재사용). savedId 이미 마법사 전달(L589, 수동저장 state).
 - availablePrintIds: sub 컴포넌트 내부 가드라 6개 항상(빈 섹션은 화면 불변·인쇄 미선택 숨김).
 
+### 2.7 주식 양도세 (stock-transfer) — `StockTransferTaxResultView.tsx`. 기존 printScoped("full"/"form-table") → PrintSelectionPanel 통일 (PR-F3).
+| data-print-id | 라벨 | 그룹 | 렌더 가드 (실측) | screen | pdf |
+|---|---|---|---|---|---|
+| `calculation` | 핵심 결과 (분류·결과표·양도가액 산식) | 계산 내역 | 항상(헤더·분류배지·결과표·양도가액 산식) | ✓ | ✗ |
+| `detail-cards` | 상세 분해·판정 (환산·누진·평가·가산세·대주주) | 계산 내역 | 항상(과세=보유기간, 비과세=대주주판정 통상 존재) | ✓ | ✗ |
+| `filing-form` | 주식 신고서 양식 표 (32행) | 신고서식 | 항상(StockFilingFormTable 32행 고정) | ✓ | ✗ |
+- **3 leaf**(2그룹: 계산2·신고서식1). **pdf 채널 0** — ResultPdfDocument에 stock-transfer 섹션 부재(taxType 매칭: transfer·transfer_multi·acquisition·inheritance·gift·property·comprehensive_property). PR-2 거짓 선택 방지 → 전부 SCREEN, window.print(브라우저 PDF 저장)만.
+- ⚠️ printScoped 호출 4곳(full L73·form-table L81·312·473) + `PdfActions` 컴포넌트 + data-print-section 2곳(L241·324) 완전 제거. 비과세·과세 2경로 각 3 PrintSection.
+- ⚠️ onPrintPdf 미전달 → "선택 항목 PDF" 버튼 숨김. savedId·downloadSelectedPdf·hooks·Step4·ResultPdfDocument 수정 **불요**(F1/F2와 결정적 차이). StockFilingFormTable onPrint 이미 optional+가드 → 미전달만.
+- CSS scope 규칙(globals.css)은 겸용(F4)이 공유하므로 F3에서 유지.
+
 ## 3. 세목별 결과뷰 통합 패턴 (상속세 복제)
 
 각 결과뷰에:
@@ -307,6 +318,28 @@ const availablePrintIds = useMemo<Set<string>>(() => { /* §2 가드 1:1 */ }, [
 
 **E2E 생략**: PR-F1·C~E 동일 — 제네릭 패널 PR-B1 E2E + anchor 7.
 
+## 7-10. PR-F3 갭 분석 (주식 양도세 — 구현 완료)
+
+| 항목 | 설계 | 구현 | 판정 |
+|---|---|---|---|
+| `STOCK_TRANSFER_PRINT_SECTIONS` 3 leaf | §2.7 (계산2·신고서식1) | `stock-transfer-print-sections.ts` 3 leaf 2그룹 | ✓ |
+| pdf 채널 | §2.7 **0종** | 전부 SCREEN — ResultPdfDocument에 stock-transfer 섹션 부재(PR-2 거짓 선택 방지) | ✓ |
+| printScoped 제거 | §2.7 완전 제거 | printScoped import·호출 4곳(full·form-table×3)·`PdfActions` 컴포넌트·data-print-section 2곳 전부 제거(코드 잔존 0, 주석 설명만) | ✓ |
+| 결과뷰 통합 | §3 | 비과세·과세 2경로 각 3 PrintSection + 패널 + selectedPrintIds·useMemo. onPrintPdf 미전달 | ✓ |
+| StockFilingFormTable | §2.7 | onPrint 미전달(이미 optional+`{onPrint && ...}` 가드) — 컴포넌트 수정 0 | ✓ |
+| Step4·savedId | — | PDF 채널 0 → savedId·downloadSelectedPdf·hooks·Step4 수정 **불요**(F1/F2와 차이) | ✓ |
+| ResultPdfDocument | §5 | stock 섹션 부재 → **수정 0**(거짓 선택 방지) | ✓ |
+| 800줄 정책 | 강제 | 789줄(PdfActions 제거로 감소) | ✓ |
+| anchor | §6 PD-st | stock-transfer 7(pdf 0종·selectPdf 항상 빈) + 전체 회귀 + tsc 0 | ✓ |
+
+**pdf 채널 0(F1/F2와 결정적 차이)**: ResultPdfDocument의 taxType 매칭은 transfer·transfer_multi·acquisition·inheritance·gift·property·comprehensive_property — **stock-transfer 부재**. 서버 PDF가 stock 본문을 렌더하지 못하므로 PR-2 거짓 선택 방지 원칙에 따라 어떤 leaf에도 pdf 채널 미부여. `onPrintPdf` 미전달 → "선택 항목 PDF" 버튼 자동 숨김(PrintSelectionPanel `{onPrintPdf && ...}`), "선택 항목 인쇄"(window.print → 브라우저 PDF 저장)만 노출. 기존 printScoped("full") 동작과 본질적으로 동일. **후속**: stock 서버 PDF 섹션 신규 시 calculation/filing-form에 pdf 채널 승격 가능(증여 별지 PR-B2 패턴).
+
+**availablePrintIds 3개 항상(deviation)**: calculation·detail-cards·filing-form 모두 항상 가용. detail-cards 내부는 전부 조건부 카드(환산·로트·취득후상장·사례49 등)지만 과세 화면은 최소 보유기간, 비과세는 대주주판정이 통상 존재. 완전히 빈 경우는 화면 불변+인쇄 미선택 숨김으로 무해(F2 동일 패턴).
+
+**CSS scope(F1~F3 공유)**: globals.css `body[data-print-scope]` 규칙은 겸용(F4)이 아직 printScoped 사용 → 유지. F3에서 stock printScoped 호출 제거로 본 결과뷰는 규칙 비활성(무해). F4 완료 시 제거 예정.
+
+**E2E 생략**: PR-F1·F2·C~E 동일 — 제네릭 패널 PR-B1 E2E + anchor 7.
+
 ## 8. 케이스 인벤토리 요약 (leaf·pdf 채널 수 — 검토 U1 반영)
 | 세목 | leaf | pdf 채널 | 별지 PDF |
 |---|---|---|---|
@@ -316,4 +349,5 @@ const availablePrintIds = useMemo<Set<string>>(() => { /* §2 가드 1:1 */ }, [
 | 종부 | 7 | 1 (housing-tax = 주택분 계산표 대표) | 없음 |
 | 양도(단일) | 5 | 1 (calculation = 계산 내역 대표) | 없음 — printScoped→PrintSelectionPanel 통일(F1). 다중/주식/겸용 F2~F4 |
 | 양도(다중) | 6 | 1 (summary = 다건 합산 대표) | 없음 — printScoped→PrintSelectionPanel 통일(F2). 주식/겸용 F3~F4 |
+| 양도(주식) | 3 | **0** (서버 PDF 섹션 부재 — 전부 SCREEN, window.print) | 없음 — printScoped→PrintSelectionPanel 통일(F3). 겸용 F4 |
 > pdf 채널 = ResultPdfDocument에서 **실제 분리 렌더 가능한 단위만**(거짓 선택 방지, PR-2 교훈). 취득·재산·종부 계산표는 단일 표라 대표 1노드.
