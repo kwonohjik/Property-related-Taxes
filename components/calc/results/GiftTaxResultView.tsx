@@ -4,7 +4,7 @@
  * GiftTaxResultView — 증여세 계산 결과 화면 (#37)
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ChevronLeft } from "lucide-react";
 import type { GiftTaxResult, EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
@@ -21,6 +21,12 @@ import { calcInstallmentPayment } from "@/lib/tax-engine/credits/installment-pay
 import { SaveButton } from "@/components/calc/shared/SaveButton";
 import { SaveToast, type SaveToastMessage } from "@/components/calc/shared/SaveToast";
 import { formatGiftSaveMessage } from "@/components/calc/gift-tax-save-handler";
+import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPanel";
+import { PrintSection } from "@/components/calc/results/shared/PrintSection";
+import {
+  GIFT_PRINT_SECTIONS,
+  type GiftPrintSectionId,
+} from "@/lib/print/gift-print-sections";
 
 // ============================================================
 // 헬퍼 컴포넌트
@@ -153,6 +159,8 @@ interface Props {
     propertyName?: string;
     propertyLocation?: string;
   }>;
+  /** 저장된 계산 id — 서버 PDF 선택 출력(PR-B1)용. 미저장/비로그인 시 undefined */
+  savedId?: string;
 }
 
 export function GiftTaxResultView({
@@ -166,13 +174,18 @@ export function GiftTaxResultView({
   estateItems = [],
   priorGifts = [],
   giftDate,
+  savedId,
 }: Props) {
   const [showValuation, setShowValuation] = useState(false);
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const [selectedPrintIds, setSelectedPrintIds] = useState<Set<string>>(
+    () => new Set()
+  );
   const [saveMessage, setSaveMessage] = useState<SaveToastMessage | null>(autoSaveToast);
 
   // autoSaveToast가 props로 새로 들어오면 표시 — props↔internal state 동기화 (의도된 패턴)
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+     
     if (autoSaveToast) setSaveMessage(autoSaveToast);
   }, [autoSaveToast]);
 
@@ -191,23 +204,84 @@ export function GiftTaxResultView({
   const hasFilingFormTable =
     result.filingFormRows && result.filingFormRows.length > 0;
 
+  // 선택 항목 서버 PDF 다운로드 (PR-B1). savedId(로그인+저장) 있을 때만 활성.
+  async function handlePrintPdf(pdfSections: string[]) {
+    if (!savedId || pdfSections.length === 0) return;
+    setPdfBusy(true);
+    try {
+      const res = await fetch(`/api/pdf/result/${savedId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sections: pdfSections }),
+      });
+      if (!res.ok) throw new Error("PDF 생성 실패");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `증여세_계산결과_${savedId.slice(0, 8)}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      alert("PDF 생성에 실패했습니다. 잠시 후 다시 시도해 주세요.");
+    } finally {
+      setPdfBusy(false);
+    }
+  }
+
+  // 현재 결과뷰에 실제 렌더되는 leaf id (각 섹션 렌더 가드와 1:1 — 설계 §2.1)
+  const availablePrintIds = useMemo<Set<GiftPrintSectionId>>(() => {
+    const s = new Set<GiftPrintSectionId>();
+    const items = estateItems ?? [];
+    s.add("core-result");
+    s.add("tax-summary");
+    if (result.generationSkipSurchargeDetail) s.add("gen-skip-surcharge");
+    if (result.totalTaxCredit > 0) s.add("tax-credit");
+    if (priorGifts.length > 0) s.add("prior-gift");
+    if (result.filingFormRows && result.filingFormRows.length > 0)
+      s.add("filing-form-10");
+    if (result.valuationResults.length > 0) s.add("valuation-form");
+    if (items.some((it) => it.unlistedStockValuationV2)) s.add("unlisted-stock-besshi");
+    if (
+      items.some(
+        (it) =>
+          it.category === "listed_stock" &&
+          (it.listedStockAvgPrice ?? 0) > 0 &&
+          (it.listedStockShares ?? 0) > 0
+      )
+    )
+      s.add("listed-stock-besshi");
+    if (
+      calcInstallmentPayment({ finalTax: result.finalTax, isFamilyBusiness: false })
+        .eligible
+    )
+      s.add("installment");
+    if (result.warnings.length > 0) s.add("warnings");
+    return s;
+  }, [result, estateItems, priorGifts]);
+
   return (
     <div className="space-y-5">
-      {/* PDF · 저장 버튼 */}
+      {/* 출력 항목 선택 패널 (선택 항목만 인쇄·PDF) */}
+      <PrintSelectionPanel
+        allGroups={GIFT_PRINT_SECTIONS}
+        selectedIds={selectedPrintIds}
+        availableIds={availablePrintIds}
+        onChange={setSelectedPrintIds}
+        onPrintPdf={handlePrintPdf}
+        pdfReady={!!savedId}
+        pdfBusy={pdfBusy}
+      />
+
+      {/* 저장 버튼 */}
       <div className="flex justify-end gap-2 print:hidden">
-        <button
-          type="button"
-          onClick={() => window.print()}
-          className="rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors"
-        >
-          🖨️ PDF / 인쇄
-        </button>
         {onSave && <SaveButton onSave={handleSaveClick} />}
       </div>
 
       <SaveToast message={saveMessage} onClose={() => setSaveMessage(null)} />
 
       {/* 핵심 결과 카드 */}
+      <PrintSection id="core-result" selectedIds={selectedPrintIds}>
       <div className="rounded-xl border-2 border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30 p-5">
         <p className="text-sm font-medium text-emerald-700 dark:text-emerald-400 mb-1">
           증여세 결정세액
@@ -238,12 +312,18 @@ export function GiftTaxResultView({
           )}
         </div>
       </div>
+      </PrintSection>
 
       {/* Phase B: 신고서 양식 표 (12행 / 18행) */}
-      {hasFilingFormTable && <GiftTaxFilingFormTable result={result} />}
+      {hasFilingFormTable && (
+        <PrintSection id="filing-form-10" selectedIds={selectedPrintIds}>
+          <GiftTaxFilingFormTable result={result} />
+        </PrintSection>
+      )}
 
       {/* 사전증여 합산 — 이력 출처 배지 (Phase 2) */}
       {priorGifts.length > 0 && (
+        <PrintSection id="prior-gift" selectedIds={selectedPrintIds}>
         <div className="border rounded-xl overflow-hidden">
           <div className="bg-violet-50 dark:bg-violet-900/20 px-4 py-3">
             <h3 className="text-sm font-semibold text-violet-800 dark:text-violet-200">
@@ -274,9 +354,11 @@ export function GiftTaxResultView({
             ))}
           </ul>
         </div>
+        </PrintSection>
       )}
 
       {/* 과세 요약 */}
+      <PrintSection id="tax-summary" selectedIds={selectedPrintIds}>
       <div className="border rounded-xl overflow-hidden">
         <div className="bg-muted/30 px-4 py-3">
           <h3 className="text-sm font-semibold">증여세 과세 요약</h3>
@@ -322,28 +404,34 @@ export function GiftTaxResultView({
           <Row label="결정세액" value={formatKRW(result.finalTax)} highlight />
         </div>
       </div>
+      </PrintSection>
 
       {/* §57 세대생략 할증과세 산출근거 — 그룹 B 조부모→손자녀 시만 활성 */}
       {result.generationSkipSurchargeDetail && (
+        <PrintSection id="gen-skip-surcharge" selectedIds={selectedPrintIds}>
         <GenerationSkipSurchargeBreakdownCard
           detail={result.generationSkipSurchargeDetail}
           computedTax={result.computedTax}
           priorAddedTaxBase={result.priorGiftCreditDetail?.priorAddedTaxBase}
           aggregatedTaxBase={result.priorGiftCreditDetail?.aggregatedTaxBase}
         />
+        </PrintSection>
       )}
 
       {/* 세액공제 상세 — §28·§69 산출근거 펼침 (priorGiftCreditDetail + computedTax 전달) */}
       {result.totalTaxCredit > 0 && (
+        <PrintSection id="tax-credit" selectedIds={selectedPrintIds}>
         <TaxCreditBreakdownCard
           credit={result.creditDetail}
           taxBeforeCredit={taxBeforeCredit}
           priorGiftCreditDetail={result.priorGiftCreditDetail}
           computedTax={result.computedTax}
         />
+        </PrintSection>
       )}
 
 {/* 증여재산 및 평가명세서 (별지 제10호서식 부표 1) — A4 가로 양식, 카드 내부에서 가로 스크롤 */}
+      <PrintSection id="valuation-form" selectedIds={selectedPrintIds}>
       <div className="border rounded-xl">
         <button
           type="button"
@@ -401,21 +489,29 @@ export function GiftTaxResultView({
           </div>
         )}
       </div>
+      </PrintSection>
 
       {/* 비상장주식 별지 부표3 출력 (정식평가 V2 자산, R-6) */}
-      <UnlistedStockBesshiResultSection estateItems={estateItems} />
+      <PrintSection id="unlisted-stock-besshi" selectedIds={selectedPrintIds}>
+        <UnlistedStockBesshiResultSection estateItems={estateItems} />
+      </PrintSection>
 
       {/* 상장주식 평가조서(갑·을) 출력 — §63①1가·§63②3호·§63③ */}
-      <ListedStockBesshiResultSection
-        estateItems={estateItems}
-        valuationDate={giftDate}
-      />
+      <PrintSection id="listed-stock-besshi" selectedIds={selectedPrintIds}>
+        <ListedStockBesshiResultSection
+          estateItems={estateItems}
+          valuationDate={giftDate}
+        />
+      </PrintSection>
 
       {/* 연부연납 안내 */}
-      <InstallmentGuide finalTax={result.finalTax} />
+      <PrintSection id="installment" selectedIds={selectedPrintIds}>
+        <InstallmentGuide finalTax={result.finalTax} />
+      </PrintSection>
 
       {/* 경고 */}
       {result.warnings.length > 0 && (
+        <PrintSection id="warnings" selectedIds={selectedPrintIds}>
         <div className="border border-amber-200 dark:border-amber-700 rounded-xl p-4 space-y-2">
           <h4 className="text-sm font-semibold text-amber-800 dark:text-amber-200">
             주의 사항
@@ -428,6 +524,7 @@ export function GiftTaxResultView({
             ))}
           </ul>
         </div>
+        </PrintSection>
       )}
 
       {/* 근거 조문 */}

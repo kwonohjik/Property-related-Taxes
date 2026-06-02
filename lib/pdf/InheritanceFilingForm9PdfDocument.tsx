@@ -57,9 +57,12 @@ function CalcRow({ row }: { row: FilingFormRow }) {
   );
 }
 
-export function InheritanceFilingForm9PdfDocument({ data }: { data: FilingForm9Data }) {
+/**
+ * 별지9호 단일 Page — 통합 결과 PDF(ResultPdfDocument)에서 재사용 가능하도록 분리.
+ * (Document 중첩 불가 → Page 단위로 추출)
+ */
+export function FilingForm9PdfPage({ data }: { data: FilingForm9Data }) {
   return (
-    <Document>
       <Page size="A4" style={s.page}>
         <Text style={s.subtitle}>{FF9_FORM_SUBTITLE}</Text>
         <Text style={s.title}>{FF9_FORM_TITLE}</Text>
@@ -138,6 +141,13 @@ export function InheritanceFilingForm9PdfDocument({ data }: { data: FilingForm9D
           ※ 식별정보(성명·주민등록번호·주소)·납부방법 금액은 자동 산출되지 않습니다 — 인쇄 후 수기 작성.
         </Text>
       </Page>
+  );
+}
+
+export function InheritanceFilingForm9PdfDocument({ data }: { data: FilingForm9Data }) {
+  return (
+    <Document>
+      <FilingForm9PdfPage data={data} />
     </Document>
   );
 }

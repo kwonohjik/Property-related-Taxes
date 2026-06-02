@@ -701,6 +701,7 @@ export function GiftTaxForm() {
         onGoToFirst={() => { setResult(null); setStep(0); }}
         onSave={handleManualSave}
         autoSaveToast={autoSaveToast}
+        savedId={autoSave.savedId ?? undefined}
         estateItems={[...form.giftItems, ...form.stockItems]}
         priorGifts={form.priorGifts.map((pg) => ({
           giftDate: pg.giftDate,

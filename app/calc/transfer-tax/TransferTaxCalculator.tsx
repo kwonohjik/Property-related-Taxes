@@ -90,7 +90,7 @@ export default function TransferTaxCalculator({
 
   // 로컬 이력 자동 저장 — 결과 화면 진입 시 1회
   // v2: pendingEditId·saveAsUpdate·saveAsNew API 폐기 — saveOrUpdateByContent 자동 dedup
-  useAutoSaveCalculation({
+  const autoSave = useAutoSaveCalculation({
     taxType: "transfer",
     inputData: formData as unknown as Record<string, unknown>,
     resultData: isResult ? (result as unknown as Record<string, unknown>) : null,
@@ -478,6 +478,7 @@ export default function TransferTaxCalculator({
           <>
             <TransferTaxResultView
               result={result.result}
+              savedId={autoSave.savedId ?? undefined}
               onReset={handleReset}
               onBack={() => {
                 setStep(totalSteps - 1);

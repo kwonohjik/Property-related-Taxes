@@ -16,7 +16,7 @@
  *   ⑤ 실효 주택 수 (effectiveHouseCount)
  */
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { differenceInDays, parseISO } from "date-fns";
 import type { AcquisitionTaxResult } from "@/lib/tax-engine/types/acquisition.types";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
@@ -27,6 +27,12 @@ import { LinearInterpolationGraph } from "./acquisition/LinearInterpolationGraph
 import { ReductionPossibilityPanel } from "./acquisition/ReductionPossibilityPanel";
 import { DeemedAcquisitionResultCard } from "./acquisition/DeemedAcquisitionResultCard";
 import { InstallmentResultCard } from "./acquisition/InstallmentResultCard";
+import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPanel";
+import { PrintSection } from "@/components/calc/results/shared/PrintSection";
+import {
+  ACQUISITION_PRINT_SECTIONS,
+  type AcquisitionPrintSectionId,
+} from "@/lib/print/acquisition-print-sections";
 
 // ============================================================
 // 포맷 유틸
@@ -337,14 +343,69 @@ interface Props {
     paymentDate: string;
     amount: string;
   }>;
+  /** 저장된 계산 id — 서버 PDF 선택 출력(PR-C)용. 미저장/비로그인 시 undefined */
+  savedId?: string;
 }
 
-export function AcquisitionTaxResultView({ result, isRegulatedArea = false, isCorporation = false, onGoToStep, installmentRows }: Props) {
+export function AcquisitionTaxResultView({ result, isRegulatedArea = false, isCorporation = false, onGoToStep, installmentRows, savedId }: Props) {
   const [showSteps, setShowSteps] = useState(false);
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const [selectedPrintIds, setSelectedPrintIds] = useState<Set<string>>(
+    () => new Set()
+  );
 
   // 간주취득 판정 — deemedDetail 존재 여부 또는 acquisitionCause 기준
   const isDeemedAcquisition = result.deemedDetail !== undefined ||
     ["deemed_major_shareholder", "deemed_land_category", "deemed_renovation"].includes(result.acquisitionCause);
+
+  // 선택 항목 서버 PDF 다운로드 (PR-C). savedId(로그인+저장) 있을 때만 활성.
+  async function handlePrintPdf(pdfSections: string[]) {
+    if (!savedId || pdfSections.length === 0) return;
+    setPdfBusy(true);
+    try {
+      const res = await fetch(`/api/pdf/result/${savedId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sections: pdfSections }),
+      });
+      if (!res.ok) throw new Error("PDF 생성 실패");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `취득세_계산결과_${savedId.slice(0, 8)}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      alert("PDF 생성에 실패했습니다. 잠시 후 다시 시도해 주세요.");
+    } finally {
+      setPdfBusy(false);
+    }
+  }
+
+  // 현재 결과뷰에 실제 렌더되는 leaf id (각 섹션 렌더 가드와 1:1 — 설계 §2.2)
+  const availablePrintIds = useMemo<Set<AcquisitionPrintSectionId>>(() => {
+    const s = new Set<AcquisitionPrintSectionId>();
+    if (isDeemedAcquisition) s.add("deemed-acquisition");
+    s.add("tax-info");
+    s.add("tax-detail");
+    if (result.additionalTaxDetail) s.add("surtax-detail");
+    if (result.installmentFilingSchedule && result.installmentFilingSchedule.length > 0)
+      s.add("installment");
+    if (!isDeemedAcquisition) s.add("reduction-panel");
+    if (
+      !isDeemedAcquisition ||
+      result.specialRateDetail ||
+      result.corpSurchargeDetail ||
+      result.selfCultivationReductionDetail
+    )
+      s.add("surcharge-detail");
+    if (!isDeemedAcquisition) s.add("house-count");
+    if (result.steps.length > 0) s.add("steps");
+    if (result.warnings.length > 0) s.add("warnings");
+    if (result.legalBasis.length > 0) s.add("legal-basis");
+    return s;
+  }, [result, isDeemedAcquisition]);
 
   if (result.isExempt) {
     return (
@@ -364,10 +425,26 @@ export function AcquisitionTaxResultView({ result, isRegulatedArea = false, isCo
 
   return (
     <div className="space-y-4">
+      {/* 출력 항목 선택 패널 (선택 항목만 인쇄·PDF) */}
+      <PrintSelectionPanel
+        allGroups={ACQUISITION_PRINT_SECTIONS}
+        selectedIds={selectedPrintIds}
+        availableIds={availablePrintIds}
+        onChange={setSelectedPrintIds}
+        onPrintPdf={handlePrintPdf}
+        pdfReady={!!savedId}
+        pdfBusy={pdfBusy}
+      />
+
       {/* 간주취득 결과 카드 — 최상단 (요약 카드 직전) */}
-      {isDeemedAcquisition && <DeemedAcquisitionResultCard result={result} />}
+      {isDeemedAcquisition && (
+        <PrintSection id="deemed-acquisition" selectedIds={selectedPrintIds}>
+          <DeemedAcquisitionResultCard result={result} />
+        </PrintSection>
+      )}
 
       {/* 과세 정보 요약 */}
+      <PrintSection id="tax-info" selectedIds={selectedPrintIds}>
       <div className="rounded-lg border bg-muted/30 p-4">
         <h3 className="mb-3 text-sm font-semibold text-muted-foreground">과세 정보</h3>
         <div className="grid grid-cols-2 gap-2 text-sm">
@@ -411,8 +488,10 @@ export function AcquisitionTaxResultView({ result, isRegulatedArea = false, isCo
           </div>
         )}
       </div>
+      </PrintSection>
 
       {/* 세액 상세 */}
+      <PrintSection id="tax-detail" selectedIds={selectedPrintIds}>
       <div className="rounded-lg border p-4">
         <h3 className="mb-3 text-sm font-semibold text-muted-foreground">세액 명세</h3>
 
@@ -462,36 +541,45 @@ export function AcquisitionTaxResultView({ result, isRegulatedArea = false, isCo
           </div>
         )}
       </div>
+      </PrintSection>
 
       {/* 부가세 상세 */}
       {result.additionalTaxDetail && (
-        <AdditionalTaxDetailCard
-          detail={result.additionalTaxDetail}
-          acquisitionTax={result.acquisitionTax}
-        />
+        <PrintSection id="surtax-detail" selectedIds={selectedPrintIds}>
+          <AdditionalTaxDetailCard
+            detail={result.additionalTaxDetail}
+            acquisitionTax={result.acquisitionTax}
+          />
+        </PrintSection>
       )}
 
       {/* 연부취득 신고 일정 카드 */}
       {result.installmentFilingSchedule && result.installmentFilingSchedule.length > 0 && (
-        <InstallmentResultCard
-          installmentFilingSchedule={result.installmentFilingSchedule}
-          acquisitionTax={result.acquisitionTax}
-          isSurcharged={result.isSurcharged}
-          installmentRows={installmentRows}
-        />
+        <PrintSection id="installment" selectedIds={selectedPrintIds}>
+          <InstallmentResultCard
+            installmentFilingSchedule={result.installmentFilingSchedule}
+            acquisitionTax={result.acquisitionTax}
+            isSurcharged={result.isSurcharged}
+            installmentRows={installmentRows}
+          />
+        </PrintSection>
       )}
 
-      {/* 6~9억 선형보간 그래프 — 간주취득 시 숨김 */}
-      {!isDeemedAcquisition && result.rateType === "linear_interpolation" && (
-        <LinearInterpolationGraph
-          acquisitionValue={result.acquisitionValue}
-          appliedRate={result.appliedRate}
-        />
+      {/* 감면·세율 분석 (선형보간 그래프 + 감면 가능성) — 간주취득 시 숨김 */}
+      {!isDeemedAcquisition && (
+        <PrintSection id="reduction-panel" selectedIds={selectedPrintIds} className="space-y-4">
+          {result.rateType === "linear_interpolation" && (
+            <LinearInterpolationGraph
+              acquisitionValue={result.acquisitionValue}
+              appliedRate={result.appliedRate}
+            />
+          )}
+          <ReductionPossibilityPanel result={result} onGoToStep={onGoToStep} />
+        </PrintSection>
       )}
 
-      {/* 감면·배제 가능성 패널 — 간주취득 시 숨김 */}
-      {!isDeemedAcquisition && <ReductionPossibilityPanel result={result} onGoToStep={onGoToStep} />}
-
+      {/* 중과·특례 상세 (중과 사유·배제·흐름도·일시적2주택·세율특례·법인중과·자경농지) */}
+      <PrintSection id="surcharge-detail" selectedIds={selectedPrintIds} className="space-y-4">
       {/* 중과 사유 */}
       {result.isSurcharged && result.surchargeReason && (
         <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 space-y-2">
@@ -529,29 +617,29 @@ export function AcquisitionTaxResultView({ result, isRegulatedArea = false, isCo
       {result.selfCultivationReductionDetail && (
         <SelfCultivationDetailCard detail={result.selfCultivationReductionDetail} />
       )}
+      </PrintSection>
 
-      {/* ⑤ 실효 주택 수 — 간주취득 시 숨김 */}
-      {!isDeemedAcquisition && result.surchargeDetail?.effectiveHouseCount !== undefined && (
-        <div className="rounded-lg border border-border bg-muted/20 px-4 py-2 flex items-center justify-between">
-          <EffectiveHouseCountBadge count={result.surchargeDetail.effectiveHouseCount} />
-        </div>
-      )}
-
-      {/* 주택 수 검산기 — 간주취득 시 숨김 */}
-      {!isDeemedAcquisition && <HouseCountVerifier result={result} />}
-
-      {/* 세율 시뮬레이션 표 — 간주취득 시 숨김 */}
+      {/* 실효 주택 수·검산·시뮬레이션 — 간주취득 시 숨김 */}
       {!isDeemedAcquisition && (
-        <RateScenarioTable
-          result={result}
-          isRegulatedArea={isRegulatedArea}
-          isCorporation={isCorporation}
-          acquisitionValue={result.acquisitionValue}
-        />
+        <PrintSection id="house-count" selectedIds={selectedPrintIds} className="space-y-4">
+          {result.surchargeDetail?.effectiveHouseCount !== undefined && (
+            <div className="rounded-lg border border-border bg-muted/20 px-4 py-2 flex items-center justify-between">
+              <EffectiveHouseCountBadge count={result.surchargeDetail.effectiveHouseCount} />
+            </div>
+          )}
+          <HouseCountVerifier result={result} />
+          <RateScenarioTable
+            result={result}
+            isRegulatedArea={isRegulatedArea}
+            isCorporation={isCorporation}
+            acquisitionValue={result.acquisitionValue}
+          />
+        </PrintSection>
       )}
 
       {/* 경고 메시지 */}
       {result.warnings.length > 0 && (
+        <PrintSection id="warnings" selectedIds={selectedPrintIds}>
         <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-3 dark:border-yellow-800 dark:bg-yellow-950">
           <p className="mb-1 text-sm font-medium text-yellow-800 dark:text-yellow-200">
             유의사항
@@ -564,11 +652,12 @@ export function AcquisitionTaxResultView({ result, isRegulatedArea = false, isCo
             ))}
           </ul>
         </div>
+        </PrintSection>
       )}
 
       {/* 계산 과정 토글 */}
       {result.steps.length > 0 && (
-        <>
+        <PrintSection id="steps" selectedIds={selectedPrintIds} className="space-y-2">
           <button
             type="button"
             onClick={() => setShowSteps((v) => !v)}
@@ -598,17 +687,19 @@ export function AcquisitionTaxResultView({ result, isRegulatedArea = false, isCo
               ))}
             </div>
           )}
-        </>
+        </PrintSection>
       )}
 
       {/* 법령 근거 */}
       {result.legalBasis.length > 0 && (
+        <PrintSection id="legal-basis" selectedIds={selectedPrintIds}>
         <div className="text-xs text-muted-foreground flex flex-wrap gap-1 items-center">
           <span className="font-medium">적용 법령:</span>
           {result.legalBasis.filter(Boolean).map((b, i) => (
             <LawArticleModal key={i} legalBasis={b} />
           ))}
         </div>
+        </PrintSection>
       )}
     </div>
   );

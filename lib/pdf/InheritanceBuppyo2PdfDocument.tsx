@@ -301,13 +301,10 @@ function FallbackNote() {
 const FOOTER_NOTE =
   "※ 주민등록번호·주소·단가 등 미수집 칸과 비과세·과세가액불산입 세부는 인쇄 후 수기 작성.";
 
-export function InheritanceBuppyo2PdfDocument({
-  data,
-}: {
-  data: Buppyo2HeirData[];
-}) {
+/** 부표2 Page 배열 — 통합 결과 PDF(ResultPdfDocument)에서 재사용 (상속인별 N장) */
+export function Buppyo2Pages({ data }: { data: Buppyo2HeirData[] }) {
   return (
-    <Document>
+    <>
       {data.map((d, idx) => {
         const who = `상속인 ${CIRCLED[idx] ?? `${idx + 1}`} ${d.sectionA.name || d.sectionA.relation}`;
         const { page1Rows, page2Rows, needsContinuation, needsPage2 } =
@@ -337,6 +334,14 @@ export function InheritanceBuppyo2PdfDocument({
           </React.Fragment>
         );
       })}
+    </>
+  );
+}
+
+export function InheritanceBuppyo2PdfDocument({ data }: { data: Buppyo2HeirData[] }) {
+  return (
+    <Document>
+      <Buppyo2Pages data={data} />
     </Document>
   );
 }

@@ -603,7 +603,7 @@ export default function ComprehensiveTaxPage() {
   const { activeClientId } = useProfessionalStore();
 
   // 로컬 이력 자동 저장 — 결과 화면 진입 시 1회
-  useAutoSaveCalculation({
+  const autoSave = useAutoSaveCalculation({
     taxType: "comprehensive_property",
     inputData: formData as unknown as Record<string, unknown>,
     resultData: result ? (result as unknown as Record<string, unknown>) : null,
@@ -685,7 +685,7 @@ export default function ComprehensiveTaxPage() {
           <div className="flex justify-end">
             <SaveButton onSave={handleManualSave} />
           </div>
-          <ComprehensiveTaxResultView result={result} />
+          <ComprehensiveTaxResultView result={result} savedId={autoSave.savedId ?? undefined} />
           <LoginPromptBanner />
           <div className="flex gap-3">
             <button

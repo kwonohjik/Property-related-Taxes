@@ -20,14 +20,19 @@ import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/
 import { StockFilingFormTable } from "@/components/calc/stock-transfer/StockFilingFormTable";
 import { StockTaxpayerHeaderCard } from "@/components/calc/stock-transfer/StockTaxpayerHeaderCard";
 import { KiwoomFetchSourceBadge } from "@/components/calc/KiwoomFetchSourceBadge";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { useUserProfile } from "@/lib/storage/use-user-profile";
 import { useProfessionalStore } from "@/lib/stores/professional-store";
 import { clientRepository } from "@/lib/storage";
 import { StockTransferPenaltySection } from "@/components/calc/results/StockTransferPenaltySection";
 import { MarketSampleDetailCard } from "@/components/calc/results/MarketSampleDetailCard";
 import { CapitalAdjustmentsTimelineCard } from "@/components/calc/results/CapitalAdjustmentsTimelineCard";
-import { printScoped } from "@/components/calc/results/transfer/TransferTaxResultViewHelpers";
+import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPanel";
+import { PrintSection } from "@/components/calc/results/shared/PrintSection";
+import {
+  STOCK_TRANSFER_PRINT_SECTIONS,
+  type StockTransferPrintSectionId,
+} from "@/lib/print/stock-transfer-print-sections";
 import { MARKET_LABEL } from "@/components/calc/stock-transfer/market-label";
 import { LotMatchingDetailCard } from "@/components/calc/results/LotMatchingDetailCard";
 import { PostListingDetailCard } from "@/components/calc/results/PostListingDetailCard";
@@ -62,30 +67,6 @@ interface StockTransferTaxResultViewProps {
   unlistedValuationMode?: "simple" | "full";
   /** [사례 49] 취득시 장부분실 액면가 활성 시 결과 헤더에 배지 표시 */
   acqFaceValueOnly?: boolean;
-}
-
-/** PDF 다운로드 버튼 — 브라우저 인쇄 다이얼로그에서 "PDF로 저장" 선택 */
-function PdfActions() {
-  return (
-    <div className="print:hidden flex flex-wrap gap-2 justify-end">
-      <button
-        type="button"
-        onClick={() => printScoped("full")}
-        className="rounded-md border border-sky-300 bg-sky-50 px-3 py-1.5 text-xs font-medium text-sky-700 hover:bg-sky-100 transition-colors"
-        title="결과 화면 전체를 PDF로 저장 (브라우저 인쇄 다이얼로그 → PDF로 저장 선택)"
-      >
-        🧾 전체 PDF 다운로드
-      </button>
-      <button
-        type="button"
-        onClick={() => printScoped("form-table")}
-        className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100 transition-colors"
-        title="32행 신고서 양식만 PDF로 저장"
-      >
-        📄 신고서 양식만 PDF
-      </button>
-    </div>
-  );
 }
 
 // 분류 배지 라벨
@@ -226,6 +207,16 @@ export function StockTransferTaxResultView({
     filingYear,
   };
 
+  // 출력 항목 선택 (PR-F3) — 기존 printScoped("full"/"form-table") → PrintSelectionPanel 통일.
+  // ⚠️ pdf 채널 0(ResultPdfDocument에 stock 섹션 부재) → onPrintPdf 미전달.
+  //    "선택 항목 인쇄"(window.print → 브라우저 PDF 저장)만 노출. 설계 §2.7.
+  const [selectedPrintIds, setSelectedPrintIds] = useState<Set<string>>(() => new Set());
+  // 현재 결과뷰에 실제 렌더되는 leaf id (비과세·과세 공통 3종)
+  const availablePrintIds = useMemo<Set<StockTransferPrintSectionId>>(
+    () => new Set<StockTransferPrintSectionId>(["calculation", "detail-cards", "filing-form"]),
+    [],
+  );
+
   // 비과세 화면
   if (result.isExempt) {
     const exemptReasonLabel =
@@ -238,7 +229,17 @@ export function StockTransferTaxResultView({
             : "비과세";
 
     return (
-      <div data-print-section="full" className="space-y-6">
+      <div className="space-y-6">
+        {/* 출력 항목 선택 패널 (선택 항목만 인쇄 — 브라우저 PDF 저장) */}
+        <PrintSelectionPanel
+          allGroups={STOCK_TRANSFER_PRINT_SECTIONS}
+          selectedIds={selectedPrintIds}
+          availableIds={availablePrintIds}
+          onChange={setSelectedPrintIds}
+        />
+
+        {/* ── 핵심 결과 (헤더·분류·산식·비과세 안내·정보용표) ── */}
+        <PrintSection id="calculation" selectedIds={selectedPrintIds} className="space-y-6">
         {/* 양도인 + 종목 헤더 카드 */}
         <StockTaxpayerHeaderCard
           securityName={securityName}
@@ -246,9 +247,6 @@ export function StockTransferTaxResultView({
           brokerage={brokerage}
           transferDate={transferDate}
         />
-
-        {/* PDF 다운로드 버튼 */}
-        <PdfActions />
 
         {/* 분류 배지 */}
         <div className="flex flex-wrap gap-2">
@@ -301,27 +299,43 @@ export function StockTransferTaxResultView({
             {" "}장외 거래·대주주 양도분이라면 산출세액 <strong>{fmt(result.calculatedTax)}</strong>이 그대로 부과됩니다.
           </div>
         </div>
+        </PrintSection>
 
+        {/* ── 상세 분해·판정 (대주주·취득후상장) ── */}
+        <PrintSection id="detail-cards" selectedIds={selectedPrintIds} className="space-y-6">
         {/* 대주주 판정 카드 (상장 3시장만 — 비상장·기타자산 자동 미렌더) */}
         <MajorShareholderResultCard result={result} />
 
         {/* 취득 후 상장 환산 산식 카드 (정보용 — postListingDetail 있을 때) */}
         <PostListingDetailCard result={result} />
+        </PrintSection>
 
-        {/* 신고서 양식 표 (32행 고정 — 비과세 시에도 렌더) */}
-        <StockFilingFormTable result={result} onPrint={() => printScoped("form-table")} {...filingHeaderProps} />
+        {/* ── 신고서 양식 표 (32행 고정 — 비과세 시에도 렌더) ── */}
+        <PrintSection id="filing-form" selectedIds={selectedPrintIds}>
+        <StockFilingFormTable result={result} {...filingHeaderProps} />
+        </PrintSection>
 
-        {/* appliedRules 배지 */}
+        {/* appliedRules 배지 (항상 인쇄) */}
         <RuleBadges appliedRules={result.appliedRules} />
 
-        {/* 경고 */}
+        {/* 경고 (항상 인쇄) */}
         <Warnings warnings={result.warnings} />
       </div>
     );
   }
 
   return (
-    <div data-print-section="full" className="space-y-6">
+    <div className="space-y-6">
+      {/* 출력 항목 선택 패널 (선택 항목만 인쇄 — 브라우저 PDF 저장) */}
+      <PrintSelectionPanel
+        allGroups={STOCK_TRANSFER_PRINT_SECTIONS}
+        selectedIds={selectedPrintIds}
+        availableIds={availablePrintIds}
+        onChange={setSelectedPrintIds}
+      />
+
+      {/* ── 핵심 결과 (헤더·키움배지·분류·결과표·양도가액 산식) ── */}
+      <PrintSection id="calculation" selectedIds={selectedPrintIds} className="space-y-6">
       {/* 양도인 + 종목 헤더 카드 */}
       <StockTaxpayerHeaderCard
         securityName={securityName}
@@ -332,9 +346,6 @@ export function StockTransferTaxResultView({
 
       {/* F-12 키움 자동조회 출처 라벨 */}
       <KiwoomFetchSourceBadge fetchedAt={kiwoomLastFetchedAt} />
-
-      {/* PDF 다운로드 버튼 */}
-      <PdfActions />
 
       {/* 분류 배지 */}
       <div className="flex flex-wrap gap-2">
@@ -391,7 +402,10 @@ export function StockTransferTaxResultView({
         transferActualInputMode={transferActualInputMode}
         perShareTransferPrice={perShareTransferPrice}
       />
+      </PrintSection>
 
+      {/* ── 상세 분해·판정 (환산·누진·매매·자본·가산세·보유기간·로트·취득후상장·사례49·대주주) ── */}
+      <PrintSection id="detail-cards" selectedIds={selectedPrintIds} className="space-y-6">
       {/* 환산 취득가 분해 (사례 48) */}
       {result.usedEstimatedAcquisition && result.valuationDetail && (
         <EstimatedValuationBreakdown result={result} shareCount={shareCount} />
@@ -468,14 +482,17 @@ export function StockTransferTaxResultView({
 
       {/* 대주주 판정 카드 (상장 3시장만 — 비상장·기타자산 자동 미렌더) */}
       <MajorShareholderResultCard result={result} />
+      </PrintSection>
 
-      {/* 신고서 양식 표 (32행 고정) */}
-      <StockFilingFormTable result={result} onPrint={() => printScoped("form-table")} {...filingHeaderProps} />
+      {/* ── 신고서 양식 표 (32행 고정) ── */}
+      <PrintSection id="filing-form" selectedIds={selectedPrintIds}>
+      <StockFilingFormTable result={result} {...filingHeaderProps} />
+      </PrintSection>
 
-      {/* PR 로드맵 카드 */}
+      {/* PR 로드맵 카드 (항상 — 개발용 로드맵) */}
       <PrRoadmapCard />
 
-      {/* 경고 */}
+      {/* 경고 (항상 인쇄) */}
       <Warnings warnings={result.warnings} />
     </div>
   );
