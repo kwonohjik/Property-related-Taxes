@@ -112,7 +112,10 @@ export function PrintSelectionPanel({
   const clearAll = () => onChange(new Set());
 
   return (
-    <div className="rounded-xl border border-sky-200 bg-sky-50/50 dark:border-sky-800 dark:bg-sky-950/20 p-4 print:hidden">
+    <div
+      data-testid="print-selection-panel"
+      className="rounded-xl border border-sky-200 bg-sky-50/50 dark:border-sky-800 dark:bg-sky-950/20 p-4 print:hidden"
+    >
       <div className="flex items-center justify-between gap-2 mb-3">
         <div className="flex items-center gap-2">
           <span className="flex h-6 w-6 items-center justify-center rounded-full bg-sky-600 text-xs font-bold text-white">
@@ -205,6 +208,7 @@ export function PrintSelectionPanel({
           )}
           <button
             type="button"
+            data-testid="print-selected-button"
             onClick={() => window.print()}
             disabled={selectedCount === 0}
             className="inline-flex items-center gap-1.5 rounded-md bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
