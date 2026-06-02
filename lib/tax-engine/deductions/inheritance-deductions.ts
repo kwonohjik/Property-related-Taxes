@@ -619,8 +619,13 @@ export function calcInheritanceDeductions(
       cappedDeduction: capped,
     };
   } else {
-    // securedDebt는 1차 0 (§23의2① 담보채무 연동은 후속). deathDate로 80%/100% historical 분기.
-    const cohabitFull = calcCohabitationDeduction(input.cohabitHouseStdPrice ?? 0, 0, baseDate);
+    // §23의2① 담보채무(저당) 차감 — buildInput이 deriveCohabitHouseStdPrice로 cohabitSecuredDebt 주입.
+    // cohabitHouseStdPrice는 gross(공시가격), securedDebt는 본 함수가 단일 차감(deductions.ts:294). deathDate로 80%/100% historical 분기.
+    const cohabitFull = calcCohabitationDeduction(
+      input.cohabitHouseStdPrice ?? 0,
+      input.cohabitSecuredDebt ?? 0,
+      baseDate,
+    );
     cohabitResult = { deduction: cohabitFull.deduction, breakdown: cohabitFull.breakdown };
     cohabitDeductionDetail = cohabitFull.detail;
   }

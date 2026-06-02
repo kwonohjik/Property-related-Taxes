@@ -10,6 +10,8 @@ import {
   StyleSheet,
 } from "@react-pdf/renderer";
 import { InheritanceHeirAllocationSection } from "@/lib/pdf/sections/inheritance-heir-allocation-section";
+import { InheritanceSelectedBesshiPages } from "@/lib/pdf/inheritance-besshi-pages";
+import { GiftSelectedBesshiPages } from "@/lib/pdf/gift-besshi-pages";
 import type {
   Heir,
   InheritanceTaxResult,
@@ -32,6 +34,12 @@ export interface ResultPdfProps {
   createdAt: string;
   resultData: R;
   inputData?: R;
+  /**
+   * 선택 출력(상속세, PR-2). 지정 시 해당 leaf id만 PDF에 포함.
+   * undefined(GET 하위호환)면 전체 렌더.
+   * 현재 매핑: "tax-summary"→계산 내역 표, "heir-allocation-summary"→상속인별 집계.
+   */
+  selectedSectionIds?: string[];
 }
 
 // ─── 색상·스타일 ──────────────────────────────────────────────────
@@ -175,8 +183,10 @@ function getTotalTax(taxType: string, r: R): number | undefined {
 
 // ─── 세금 유형별 상세 섹션 ────────────────────────────────────────
 
-function TransferSection({ r }: { r: R }) {
+function TransferSection({ r, selectedSectionIds }: { r: R; selectedSectionIds?: string[] }) {
   if (bool(r.isExempt)) return null;
+  // calculation 대표 노드 — 선택 필터(POST) 적용 시 미포함이면 null (계산 내역, 검토 U1)
+  if (selectedSectionIds !== undefined && !selectedSectionIds.includes("calculation")) return null;
   // Round 11 (2026-05-07): 양도세 신고서 양식 통일 — FilingFormTable과 동일 흐름.
   const transferGain = (num(r.transferGain) ?? 0) as number;
   const ltdAmount = (num(r.longTermHoldingDeduction) ?? 0) as number;
@@ -279,7 +289,9 @@ function TransferSplitSection({ r }: { r: R }) {
   );
 }
 
-function TransferMultiSection({ r }: { r: R }) {
+function TransferMultiSection({ r, selectedSectionIds }: { r: R; selectedSectionIds?: string[] }) {
+  // summary 대표 노드 — 선택 필터(POST) 적용 시 미포함이면 null (다건 합산 계산, 검토 U1)
+  if (selectedSectionIds !== undefined && !selectedSectionIds.includes("summary")) return null;
   const props = Array.isArray(r.properties) ? (r.properties as R[]) : [];
   const lossTable = Array.isArray(r.lossOffsetTable) ? (r.lossOffsetTable as R[]) : [];
   const comparedTax = str(r.comparedTaxApplied) ?? "none";
@@ -383,9 +395,11 @@ function TransferMultiSection({ r }: { r: R }) {
   );
 }
 
-function AcquisitionSection({ r }: { r: R }) {
+function AcquisitionSection({ r, selectedSectionIds }: { r: R; selectedSectionIds?: string[] }) {
   const isExempt = bool(r.isExempt);
   if (isExempt) return null;
+  // tax-detail 대표 노드 — 선택 필터(POST) 적용 시 미포함이면 null (단일 계산표, 검토 U1)
+  if (selectedSectionIds !== undefined && !selectedSectionIds.includes("tax-detail")) return null;
   return (
     <>
       <Text style={s.sectionTitle}>계산 내역</Text>
@@ -428,10 +442,28 @@ function AcquisitionSection({ r }: { r: R }) {
   );
 }
 
-function InheritanceGiftSection({ r, taxType, inputData }: { r: R; taxType: string; inputData?: R }) {
+function InheritanceGiftSection({
+  r,
+  taxType,
+  inputData,
+  selectedSectionIds,
+}: {
+  r: R;
+  taxType: string;
+  inputData?: R;
+  selectedSectionIds?: string[];
+}) {
   const isInheritance = taxType === "inheritance";
+  // 선택 필터 (상속세 PR-2·증여세 PR-B1). 미지정(전체 GET)이면 항상 렌더.
+  // 증여세 pdf 채널은 tax-summary(계산표) 1종 — 별지는 PR-B2에서 승격.
+  const filtered = selectedSectionIds !== undefined;
+  const showSummary = !filtered || selectedSectionIds!.includes("tax-summary");
+  const showHeirAllocation =
+    !filtered || selectedSectionIds!.includes("heir-allocation-summary");
   return (
     <>
+      {showSummary && (
+      <>
       <Text style={s.sectionTitle}>계산 내역</Text>
       <View style={s.table}>
         {isInheritance && num(r.grossEstateValue) !== undefined && (
@@ -468,9 +500,11 @@ function InheritanceGiftSection({ r, taxType, inputData }: { r: R; taxType: stri
           <View style={s.rowLast}><Text style={s.lbl}>결정세액</Text><Text style={s.valAccent}>{fmt(r.finalTax)}</Text></View>
         )}
       </View>
+      </>
+      )}
 
       {/* Phase D: 상속인별 상속세부담액 집계 표 (이미지 8) — 상속세 한정·heirs 존재 시 */}
-      {isInheritance && r.heirAllocationResult && Array.isArray(inputData?.heirs) && (inputData!.heirs as unknown[]).length > 0 && (
+      {showHeirAllocation && isInheritance && r.heirAllocationResult && Array.isArray(inputData?.heirs) && (inputData!.heirs as unknown[]).length > 0 && (
         <InheritanceHeirAllocationSection
           result={r as unknown as InheritanceTaxResult}
           heirs={inputData!.heirs as unknown as Heir[]}
@@ -480,7 +514,9 @@ function InheritanceGiftSection({ r, taxType, inputData }: { r: R; taxType: stri
   );
 }
 
-function PropertySection({ r }: { r: R }) {
+function PropertySection({ r, selectedSectionIds }: { r: R; selectedSectionIds?: string[] }) {
+  // computed-tax 대표 노드 — 선택 필터(POST) 적용 시 미포함이면 null (단일 계산표, 검토 U1)
+  if (selectedSectionIds !== undefined && !selectedSectionIds.includes("computed-tax")) return null;
   return (
     <>
       <Text style={s.sectionTitle}>계산 내역</Text>
@@ -517,7 +553,9 @@ function PropertySection({ r }: { r: R }) {
   );
 }
 
-function ComprehensiveSection({ r }: { r: R }) {
+function ComprehensiveSection({ r, selectedSectionIds }: { r: R; selectedSectionIds?: string[] }) {
+  // housing-tax 대표 노드 — 선택 필터 적용 시 미포함이면 null (주택분 계산표만, 토지분 PDF 없음, 검토 U1)
+  if (selectedSectionIds !== undefined && !selectedSectionIds.includes("housing-tax")) return null;
   return (
     <>
       <Text style={s.sectionTitle}>계산 내역 (주택분)</Text>
@@ -636,6 +674,7 @@ export function ResultPdfDocument({
   createdAt,
   resultData: r,
   inputData,
+  selectedSectionIds,
 }: ResultPdfProps) {
   const isExempt = bool(r.isExempt);
   const totalTax = getTotalTax(taxType, r);
@@ -682,12 +721,12 @@ export function ResultPdfDocument({
         {inputData && <InputSection taxType={taxType} inputData={inputData} />}
 
         {/* 세금 유형별 상세 섹션 */}
-        {taxType === "transfer" && <TransferSection r={r} />}
-        {taxType === "transfer_multi" && <TransferMultiSection r={r} />}
-        {taxType === "acquisition" && <AcquisitionSection r={r} />}
-        {(taxType === "inheritance" || taxType === "gift") && <InheritanceGiftSection r={r} taxType={taxType} inputData={inputData} />}
-        {taxType === "property" && <PropertySection r={r} />}
-        {taxType === "comprehensive_property" && <ComprehensiveSection r={r} />}
+        {taxType === "transfer" && <TransferSection r={r} selectedSectionIds={selectedSectionIds} />}
+        {taxType === "transfer_multi" && <TransferMultiSection r={r} selectedSectionIds={selectedSectionIds} />}
+        {taxType === "acquisition" && <AcquisitionSection r={r} selectedSectionIds={selectedSectionIds} />}
+        {(taxType === "inheritance" || taxType === "gift") && <InheritanceGiftSection r={r} taxType={taxType} inputData={inputData} selectedSectionIds={selectedSectionIds} />}
+        {taxType === "property" && <PropertySection r={r} selectedSectionIds={selectedSectionIds} />}
+        {taxType === "comprehensive_property" && <ComprehensiveSection r={r} selectedSectionIds={selectedSectionIds} />}
 
         {/* 계산 단계 */}
         {steps.length > 0 && (
@@ -720,6 +759,24 @@ export function ResultPdfDocument({
 
         <Text style={s.pageNumber} render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages}`} fixed />
       </Page>
+
+      {/* 상속세 별지 선택 출력 (PR-3a/3b) — filing-form-9·부표2·부표3묶음·상장·비상장 */}
+      {taxType === "inheritance" && (
+        <InheritanceSelectedBesshiPages
+          resultData={r}
+          inputData={inputData}
+          selectedSectionIds={selectedSectionIds}
+        />
+      )}
+
+      {/* 증여세 별지 선택 출력 (PR-B2) — 별지10호·부표1·상장·비상장 */}
+      {taxType === "gift" && (
+        <GiftSelectedBesshiPages
+          resultData={r}
+          inputData={inputData}
+          selectedSectionIds={selectedSectionIds}
+        />
+      )}
     </Document>
   );
 }

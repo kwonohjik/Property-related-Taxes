@@ -99,7 +99,7 @@ export function AcquisitionTaxForm() {
   const { activeClientId } = useProfessionalStore();
 
   // 로컬 이력 자동 저장 — 결과 화면 진입 시 1회
-  useAutoSaveCalculation({
+  const autoSave = useAutoSaveCalculation({
     taxType: "acquisition",
     inputData: form as unknown as Record<string, unknown>,
     resultData: result ? (result as unknown as Record<string, unknown>) : null,
@@ -255,6 +255,7 @@ export function AcquisitionTaxForm() {
                 isCorporation={isCorporation}
                 onGoToStep={(s) => { setResult(null); setError(null); setStep(s); }}
                 installmentRows={form.installments?.map((r) => ({ label: r.label, paymentDate: r.paymentDate, amount: r.amount }))}
+                savedId={autoSave.savedId ?? undefined}
               />
               <button
                 type="button"
@@ -325,6 +326,7 @@ export function AcquisitionTaxForm() {
                 isCorporation={isCorporation}
                 onGoToStep={(s) => { setResult(null); setError(null); setStep(s); }}
                 installmentRows={form.installments?.map((r) => ({ label: r.label, paymentDate: r.paymentDate, amount: r.amount }))}
+                savedId={autoSave.savedId ?? undefined}
               />
               <button
                 type="button"

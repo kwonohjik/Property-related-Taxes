@@ -32,7 +32,7 @@ export function PropertyTaxForm() {
   const { activeClientId } = useProfessionalStore();
 
   // 로컬 이력 자동 저장 — 결과 화면 진입 시 1회
-  useAutoSaveCalculation({
+  const autoSave = useAutoSaveCalculation({
     taxType: "property",
     inputData: form as unknown as Record<string, unknown>,
     resultData: result ? (result as unknown as Record<string, unknown>) : null,
@@ -160,7 +160,7 @@ export function PropertyTaxForm() {
         <div className="flex justify-end mb-4">
           <SaveButton onSave={handleManualSave} />
         </div>
-        <PropertyTaxResultView result={result} />
+        <PropertyTaxResultView result={result} savedId={autoSave.savedId ?? undefined} />
         <div className="mt-6 flex justify-center gap-3">
           <button
             onClick={handleReset}

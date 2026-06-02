@@ -31,6 +31,12 @@ import { UnlistedStockBesshiResultSection } from "@/components/calc/results/Unli
 import { ListedStockBesshiResultSection } from "@/components/calc/results/ListedStockBesshiResultSection";
 import { SourceDataSummarySection } from "@/components/calc/results/source-summary/SourceDataSummarySection";
 import { calcInstallmentPayment } from "@/lib/tax-engine/credits/installment-payment";
+import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPanel";
+import { PrintSection } from "@/components/calc/results/shared/PrintSection";
+import {
+  INHERITANCE_PRINT_SECTIONS,
+  type PrintSectionId,
+} from "@/lib/print/inheritance-print-sections";
 import { DeductionBreakdownSection } from "./deduction-breakdown/DeductionBreakdownSection";
 import { AllocationBreakdownSection } from "./allocation-breakdown/AllocationBreakdownSection";
 import { expandToggleClass, expandToggleLabel } from "./shared/ExpandToggleButton";
@@ -150,6 +156,8 @@ interface Props {
   decedentName?: string;
   /** 피상속인 주민등록번호 — 각 신고서 인적사항 칸 */
   decedentResidentNumber?: string;
+  /** 저장된 계산 id — 서버 PDF 선택 출력(PR-2)용. 미저장/비로그인 시 undefined */
+  savedId?: string;
 }
 
 export function InheritanceTaxResultView({
@@ -167,8 +175,77 @@ export function InheritanceTaxResultView({
   familyBusinessInput,
   decedentName,
   decedentResidentNumber,
+  savedId,
 }: Props) {
   const [showValuation, setShowValuation] = useState(false);
+  const [pdfBusy, setPdfBusy] = useState(false);
+
+  // 선택 항목 서버 PDF 다운로드 (PR-2). savedId(로그인+저장) 있을 때만 활성.
+  async function handlePrintPdf(pdfSections: string[]) {
+    if (!savedId || pdfSections.length === 0) return;
+    setPdfBusy(true);
+    try {
+      const res = await fetch(`/api/pdf/result/${savedId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sections: pdfSections }),
+      });
+      if (!res.ok) throw new Error("PDF 생성 실패");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `상속세_계산결과_${savedId.slice(0, 8)}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      alert("PDF 생성에 실패했습니다. 잠시 후 다시 시도해 주세요.");
+    } finally {
+      setPdfBusy(false);
+    }
+  }
+
+  // 선택 출력 — 기본 전체 미선택 (사용자가 필요한 항목만 추가). 제네릭 패널 정합 위해 string Set.
+  const [selectedPrintIds, setSelectedPrintIds] = useState<Set<string>>(
+    () => new Set()
+  );
+
+  // 현재 결과뷰에 실제 렌더되는 leaf id (각 섹션 렌더 가드와 1:1 — 설계 §1)
+  const availablePrintIds = useMemo<Set<PrintSectionId>>(() => {
+    const s = new Set<PrintSectionId>();
+    const hasHeirs = !!heirs && heirs.length > 0;
+    const hasAlloc = !!result.heirAllocationResult && hasHeirs;
+    const items = estateItems ?? [];
+    s.add("core-result");
+    s.add("tax-summary");
+    if (hasAlloc) s.add("heir-allocation-summary");
+    s.add("deduction-breakdown");
+    if (hasAlloc) s.add("allocation-breakdown");
+    if (hasHeirs) s.add("source-data");
+    if (priorGifts && priorGifts.length > 0 && deathDate) s.add("prior-gift-filing");
+    if (result.corporateExemption && result.corporateExemption.amount > 0)
+      s.add("corporate-exemption");
+    if (hasAlloc && debtItems && debtItems.length > 0) s.add("debt-allocation");
+    if (hasAlloc) s.add("filing-form-9");
+    if (hasAlloc && (items.length > 0 || (priorGifts?.length ?? 0) > 0))
+      s.add("besshi-buppyo-2");
+    if (result.deductionDetail) s.add("deduction-besshi");
+    s.add("valuation-detail");
+    if (items.some((it) => it.unlistedStockValuationV2)) s.add("unlisted-stock-besshi");
+    if (
+      items.some(
+        (it) =>
+          it.category === "listed_stock" &&
+          (it.listedStockAvgPrice ?? 0) > 0 &&
+          (it.listedStockShares ?? 0) > 0
+      )
+    )
+      s.add("listed-stock-besshi");
+    if (calcInstallmentPayment({ finalTax: result.finalTax }).eligible)
+      s.add("installment-guide");
+    if (result.warnings.length > 0) s.add("warnings");
+    return s;
+  }, [result, heirs, debtItems, estateItems, priorGifts, deathDate]);
 
   // 재산 평가 내역 표시명 — 자산 id → name(있으면) 또는 카테고리 한글 라벨 (내부 id 노출 방지)
   const assetNameById = useMemo(() => {
@@ -181,18 +258,19 @@ export function InheritanceTaxResultView({
 
   return (
     <div className="space-y-5">
-      {/* PDF 버튼 */}
-      <div className="flex justify-end print:hidden">
-        <button
-          type="button"
-          onClick={() => window.print()}
-          className="rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors"
-        >
-          PDF / 인쇄
-        </button>
-      </div>
+      {/* 출력 항목 선택 패널 (선택 항목만 인쇄·PDF) */}
+      <PrintSelectionPanel
+        allGroups={INHERITANCE_PRINT_SECTIONS}
+        selectedIds={selectedPrintIds}
+        availableIds={availablePrintIds}
+        onChange={setSelectedPrintIds}
+        onPrintPdf={handlePrintPdf}
+        pdfReady={!!savedId}
+        pdfBusy={pdfBusy}
+      />
 
       {/* 핵심 결과 카드 */}
+      <PrintSection id="core-result" selectedIds={selectedPrintIds}>
       <div className="rounded-xl border-2 border-primary bg-primary/5 p-5">
         <p className="text-sm font-medium text-muted-foreground mb-1">상속세 결정세액</p>
         <p className="text-xl font-bold tracking-tight">{formatKRW(result.finalTax)}</p>
@@ -221,8 +299,10 @@ export function InheritanceTaxResultView({
           )}
         </div>
       </div>
+      </PrintSection>
 
       {/* 과세 요약 */}
+      <PrintSection id="tax-summary" selectedIds={selectedPrintIds}>
       <div className="border rounded-xl overflow-hidden">
         <div className="bg-muted/30 px-4 py-3">
           <h3 className="text-sm font-semibold">상속세 과세 요약</h3>
@@ -274,6 +354,7 @@ export function InheritanceTaxResultView({
           <SummaryRow label="결정세액" value={formatKRW(result.finalTax)} highlight />
         </div>
       </div>
+      </PrintSection>
 
       {/* 세액공제 상세: 결정세액 카드 요약 + AllocationBreakdownSection ⑩·⑫ 로 노출 (별도 카드 숨김) */}
 
@@ -281,34 +362,40 @@ export function InheritanceTaxResultView({
 
       {/* 상속개시자료 요약 — 4표 (Table A·B·C·D) — 사전증여재산 명세 바로 위 */}
       {heirs && heirs.length > 0 && (
-        <SourceDataSummarySection
-          deathDate={deathDate}
-          heirs={heirs}
-          estateItems={estateItems}
-          presumedItems={presumedItems}
-          presumedResultItems={result.presumedInheritanceDetail?.items}
-          presumedTotal={result.presumedInheritanceDetail?.total}
-          debtItems={debtItems}
-          priorGifts={priorGifts}
-        />
+        <PrintSection id="source-data" selectedIds={selectedPrintIds}>
+          <SourceDataSummarySection
+            deathDate={deathDate}
+            heirs={heirs}
+            estateItems={estateItems}
+            presumedItems={presumedItems}
+            presumedResultItems={result.presumedInheritanceDetail?.items}
+            presumedTotal={result.presumedInheritanceDetail?.total}
+            debtItems={debtItems}
+            priorGifts={priorGifts}
+          />
+        </PrintSection>
       )}
 
       {/* 사전증여재산 명세 */}
       {priorGifts && priorGifts.length > 0 && deathDate && (
-        <InheritanceFilingFormTable
-          priorGifts={priorGifts}
-          heirs={heirs}
-          priorGiftAggregated={result.priorGiftAggregated}
-          deathDate={deathDate}
-        />
+        <PrintSection id="prior-gift-filing" selectedIds={selectedPrintIds}>
+          <InheritanceFilingFormTable
+            priorGifts={priorGifts}
+            heirs={heirs}
+            priorGiftAggregated={result.priorGiftAggregated}
+            deathDate={deathDate}
+          />
+        </PrintSection>
       )}
 
       {/* 영리법인 상속세 면제 (§3의2②) — 면제 산출 요약 + 부표 5 명세서 단일 섹션 */}
       {result.corporateExemption && result.corporateExemption.amount > 0 && (
-        <CorporateExemptionSection
-          corporateExemption={result.corporateExemption}
-          heirs={heirs}
-        />
+        <PrintSection id="corporate-exemption" selectedIds={selectedPrintIds}>
+          <CorporateExemptionSection
+            corporateExemption={result.corporateExemption}
+            heirs={heirs}
+          />
+        </PrintSection>
       )}
 
       {/* 채무·공과·장례비 협의분할 결과 카드 */}
@@ -317,31 +404,84 @@ export function InheritanceTaxResultView({
         debtItems.length > 0 &&
         heirs &&
         heirs.length > 0 && (
-          <DebtAllocationResultCard
-            debtItems={debtItems}
-            heirAllocationResult={result.heirAllocationResult}
-            heirs={heirs}
-            collateralDebtDetail={result.collateralDebtDetail}
-          />
+          <PrintSection id="debt-allocation" selectedIds={selectedPrintIds}>
+            <DebtAllocationResultCard
+              debtItems={debtItems}
+              heirAllocationResult={result.heirAllocationResult}
+              heirs={heirs}
+              collateralDebtDetail={result.collateralDebtDetail}
+            />
+          </PrintSection>
         )}
 
       {/* 상속인별 상속세부담액 집계 표 */}
       {result.heirAllocationResult && heirs && heirs.length > 0 && (
-        <HeirAllocationSummaryTable result={result} heirs={heirs} />
+        <PrintSection id="heir-allocation-summary" selectedIds={selectedPrintIds}>
+          <HeirAllocationSummaryTable result={result} heirs={heirs} />
+        </PrintSection>
       )}
 
       {/* 상속공제 상세 내역 (U1 분리 → DeductionBreakdownSection) */}
-      <DeductionBreakdownSection
-        result={result}
-        estateItems={estateItems}
-        debtItems={debtItems}
-        heirs={heirs}
-        familyBusinessHeirId={familyBusinessInput?.heirId}
-      />
+      <PrintSection id="deduction-breakdown" selectedIds={selectedPrintIds}>
+        <DeductionBreakdownSection
+          result={result}
+          estateItems={estateItems}
+          debtItems={debtItems}
+          heirs={heirs}
+          familyBusinessHeirId={familyBusinessInput?.heirId}
+        />
+      </PrintSection>
 
       {/* 상속세 산출세액·증여세액공제 계산 근거 (배부 6항목 펼침) */}
       {result.heirAllocationResult && heirs && heirs.length > 0 && (
-        <AllocationBreakdownSection result={result} heirs={heirs} />
+        <PrintSection id="allocation-breakdown" selectedIds={selectedPrintIds}>
+          <AllocationBreakdownSection result={result} heirs={heirs} />
+        </PrintSection>
+      )}
+
+      {/* 별지 제9호서식 상속세과세표준신고 및 자진납부계산서 (앞쪽) */}
+      {result.heirAllocationResult && heirs && heirs.length > 0 && (
+        <PrintSection id="filing-form-9" selectedIds={selectedPrintIds}>
+          <FilingForm9CoverSection
+            result={result}
+            heirs={heirs}
+            deathDate={deathDate}
+            decedentName={decedentName}
+            decedentResidentNumber={decedentResidentNumber}
+          />
+        </PrintSection>
+      )}
+
+      {/* 별지 제9호서식 부표 2 — 상속인별 상속재산 및 평가명세서 (A4 가로, 상속인별 N장) */}
+      {result.heirAllocationResult &&
+        heirs &&
+        heirs.length > 0 &&
+        (estateItems || priorGifts) && (
+          <PrintSection id="besshi-buppyo-2" selectedIds={selectedPrintIds}>
+            <BesshiBuppyo2Section
+              result={result}
+              heirs={heirs}
+              estateItems={estateItems}
+              priorGifts={priorGifts}
+              deathDate={deathDate}
+            />
+          </PrintSection>
+        )}
+
+      {/* 채무·공과금·장례비·상속공제 명세 (부표3·별지5호·별지1호) */}
+      {result.deductionDetail && (
+        <PrintSection id="deduction-besshi" selectedIds={selectedPrintIds}>
+          <DeductionBesshiFormsSection
+            result={result}
+            heirs={heirs}
+            debtItems={debtItems}
+            estateItems={estateItems}
+            familyBusinessInput={familyBusinessInput}
+            deathDate={deathDate}
+            decedentName={decedentName}
+            decedentResidentNumber={decedentResidentNumber}
+          />
+        </PrintSection>
       )}
 
       {/* 영농상속공제 사후관리 안내 */}
@@ -364,6 +504,7 @@ export function InheritanceTaxResultView({
       )}
 
       {/* 재산 평가 내역 */}
+      <PrintSection id="valuation-detail" selectedIds={selectedPrintIds}>
       <div className="border rounded-xl overflow-hidden">
         <button
           type="button"
@@ -402,62 +543,33 @@ export function InheritanceTaxResultView({
           </div>
         )}
       </div>
+      </PrintSection>
 
       {/* 비상장주식 별지 부표3 출력 (정식평가 V2 자산) */}
-      {estateItems && <UnlistedStockBesshiResultSection estateItems={estateItems} />}
+      {estateItems && (
+        <PrintSection id="unlisted-stock-besshi" selectedIds={selectedPrintIds}>
+          <UnlistedStockBesshiResultSection estateItems={estateItems} />
+        </PrintSection>
+      )}
 
       {/* 상장주식 평가조서(갑·을) 출력 */}
       {estateItems && (
-        <ListedStockBesshiResultSection
-          estateItems={estateItems}
-          valuationDate={deathDate}
-        />
-      )}
-
-      {/* 별지 제9호서식 상속세과세표준신고 및 자진납부계산서 (앞쪽) */}
-      {result.heirAllocationResult && heirs && heirs.length > 0 && (
-        <FilingForm9CoverSection
-          result={result}
-          heirs={heirs}
-          deathDate={deathDate}
-          decedentName={decedentName}
-          decedentResidentNumber={decedentResidentNumber}
-        />
-      )}
-
-      {/* 별지 제9호서식 부표 2 — 상속인별 상속재산 및 평가명세서 (A4 가로, 상속인별 N장) */}
-      {result.heirAllocationResult &&
-        heirs &&
-        heirs.length > 0 &&
-        (estateItems || priorGifts) && (
-          <BesshiBuppyo2Section
-            result={result}
-            heirs={heirs}
+        <PrintSection id="listed-stock-besshi" selectedIds={selectedPrintIds}>
+          <ListedStockBesshiResultSection
             estateItems={estateItems}
-            priorGifts={priorGifts}
-            deathDate={deathDate}
+            valuationDate={deathDate}
           />
-        )}
-
-      {/* 채무·공과금·장례비·상속공제 명세 (부표3·별지5호·별지1호) */}
-      {result.deductionDetail && (
-        <DeductionBesshiFormsSection
-          result={result}
-          heirs={heirs}
-          debtItems={debtItems}
-          estateItems={estateItems}
-          familyBusinessInput={familyBusinessInput}
-          deathDate={deathDate}
-          decedentName={decedentName}
-          decedentResidentNumber={decedentResidentNumber}
-        />
+        </PrintSection>
       )}
 
       {/* 연부연납 안내 */}
-      <InstallmentGuide finalTax={result.finalTax} />
+      <PrintSection id="installment-guide" selectedIds={selectedPrintIds}>
+        <InstallmentGuide finalTax={result.finalTax} />
+      </PrintSection>
 
       {/* 경고 메시지 */}
       {result.warnings.length > 0 && (
+        <PrintSection id="warnings" selectedIds={selectedPrintIds}>
         <div className="border border-amber-200 dark:border-amber-700 rounded-xl p-4 space-y-2">
           <h4 className="text-sm font-semibold text-amber-800 dark:text-amber-200">
             주의 사항
@@ -470,6 +582,7 @@ export function InheritanceTaxResultView({
             ))}
           </ul>
         </div>
+        </PrintSection>
       )}
 
       {/* 근거 조문 배지 모음 숨김 — 각 카드·산식에 조문 링크가 이미 노출됨 */}

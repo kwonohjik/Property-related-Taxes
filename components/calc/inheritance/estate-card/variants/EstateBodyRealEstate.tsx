@@ -59,6 +59,7 @@ export function EstateBodyRealEstate({
   onUpdate,
   valuationDate,
   showCollateralDeductToggle,
+  hasCohabitantChild = false,
 }: VariantBodyProps) {
   const cat = item.category as
     | "real_estate_land"
@@ -216,6 +217,8 @@ export function EstateBodyRealEstate({
         set={set}
         showLeaseDeposit={showLeaseDeposit}
         showCollateralDeductToggle={showCollateralDeductToggle}
+        showCohabitToggle={showLeaseDeposit}
+        hasCohabitantChild={hasCohabitantChild}
       />
     </div>
   );
@@ -230,6 +233,10 @@ interface RealEstateAdvancedFieldsProps {
   set: (patch: Partial<EstateItem>) => void;
   showLeaseDeposit: boolean;
   showCollateralDeductToggle: boolean;
+  /** §23의2 동거주택 체크 노출 (주택 카테고리: apartment·building) */
+  showCohabitToggle: boolean;
+  /** 동거 자녀 존재 여부 — 미존재 시 체크 disabled */
+  hasCohabitantChild: boolean;
 }
 
 function RealEstateAdvancedFields({
@@ -237,6 +244,8 @@ function RealEstateAdvancedFields({
   set,
   showLeaseDeposit,
   showCollateralDeductToggle,
+  showCohabitToggle,
+  hasCohabitantChild,
 }: RealEstateAdvancedFieldsProps) {
   // [UX3-AC13] mount 1회만 평가 — Shell collapse는 outer hidden이라 EstateBody는 unmount 안 됨.
   // 사용자가 OFF로 닫아도 store 값은 보존(비파괴) — 재 ON 시 그대로 노출.
@@ -373,6 +382,22 @@ function RealEstateAdvancedFields({
             />
           </div>
         </ToggleCard>
+      )}
+
+      {/* §23의2 동거주택 공제 대상 — 체크 시 본 자산의 기준시가가 동거주택 공제로 자동 도출(gross, 담보채무는 엔진 차감) */}
+      {showCohabitToggle && (
+        <div data-testid={`cohabit-house-toggle-${item.id}`}>
+          <ToggleCard
+            tone="violet"
+            size="sm"
+            title="동거주택 공제 대상 (§23의2)"
+            description="10년 이상 동거·무주택 자녀가 상속받는 주택 — 위 기준시가가 §23의2 공제에 자동 사용됩니다 (담보채무 차감 후 100%, 최대 6억)."
+            checked={item.isCohabitantHouse ?? false}
+            onCheckedChange={(v) => set({ isCohabitantHouse: v || undefined })}
+            disabled={!hasCohabitantChild}
+            disabledReason="상속인 구성(Step 0)에서 자녀의 동거(isCohabitant) 여부를 먼저 설정하세요."
+          />
+        </div>
       )}
     </ToggleCard>
   );

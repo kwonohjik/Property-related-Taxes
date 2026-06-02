@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,13 @@ import { FilingFormTable } from "@/components/calc/results/transfer/FilingFormTa
 import { DetailedCalculationStatementCard } from "@/components/calc/results/transfer/DetailedCalculationStatementCard";
 import { aggregateToFilingResult } from "@/components/calc/results/BundledAllocationCard";
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
+import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPanel";
+import { PrintSection } from "@/components/calc/results/shared/PrintSection";
+import { downloadSelectedPdf } from "@/components/calc/results/transfer/TransferTaxResultViewHelpers";
+import {
+  MULTI_TRANSFER_PRINT_SECTIONS,
+  type MultiTransferPrintSectionId,
+} from "@/lib/print/multi-transfer-print-sections";
 
 /**
  * PerPropertyBreakdown → TransferTaxResult 형태로 어댑팅 (FilingFormTable 호환).
@@ -53,17 +60,6 @@ function breakdownToFilingResult(b: PerPropertyBreakdown): TransferTaxResult {
     totalTax: determinedTax + totalPenalty + localIncomeTax,
     steps: b.steps,
   };
-}
-
-function printScoped(scope: "form-table" | "full" | "detailed-statement") {
-  if (typeof document === "undefined") return;
-  document.body.dataset.printScope = scope;
-  const cleanup = () => {
-    delete document.body.dataset.printScope;
-    window.removeEventListener("afterprint", cleanup);
-  };
-  window.addEventListener("afterprint", cleanup);
-  setTimeout(() => window.print(), 0);
 }
 
 interface MultiTransferTaxResultViewProps {
@@ -484,16 +480,7 @@ function PropertyBreakdownAccordion({
             </div>
           )}
 
-          {/* 신고서 양식 표 — 자산별 */}
-          <div className="mt-3 print:hidden flex justify-end">
-            <button
-              type="button"
-              onClick={() => printScoped("form-table")}
-              className="rounded-md border border-border px-2.5 py-1 text-[11px] font-medium hover:bg-muted transition-colors"
-            >
-              🧾 이 자산 신고서 양식 PDF
-            </button>
-          </div>
+          {/* 신고서 양식 표 — 자산별 (PR-F2: printScoped 버튼 제거, 패널 per-property로 통일) */}
           <div className="mt-2">
             {(() => {
               // 다자산 자산별 카드: property.form.assets[0]에서 재개발 메타 도출
@@ -656,58 +643,41 @@ export function MultiTransferTaxResultView({
 }: MultiTransferTaxResultViewProps) {
   // showSteps는 명세서 카드의 EngineStepsSubToggle로 통합됨 (2026-05-12)
   const [isPdfLoading, setIsPdfLoading] = useState(false);
+  const [selectedPrintIds, setSelectedPrintIds] = useState<Set<string>>(
+    () => new Set()
+  );
 
-  async function handlePdfDownload() {
-    if (!savedId) return;
-    setIsPdfLoading(true);
-    try {
-      const res = await fetch(`/api/pdf/result/${savedId}`);
-      if (!res.ok) throw new Error("PDF 생성 실패");
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `양도소득세_다건_${savedId.slice(0, 8)}.pdf`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch {
-      alert("PDF 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.");
-    } finally {
-      setIsPdfLoading(false);
-    }
-  }
+  // 현재 결과뷰에 실제 렌더되는 leaf id (설계 §2.6 — sub 컴포넌트 내부 가드라 6개 항상)
+  const availablePrintIds = useMemo<Set<MultiTransferPrintSectionId>>(() => {
+    const s = new Set<MultiTransferPrintSectionId>();
+    s.add("summary");
+    s.add("detailed-statement");
+    s.add("reduction-recalc");
+    s.add("group-tax");
+    s.add("loss-offset");
+    s.add("per-property");
+    return s;
+  }, []);
+
+  // 선택 항목 서버 PDF 다운로드 (PR-F2) — Helpers downloadSelectedPdf 위임 (POST sections)
+  const handlePrintPdf = (pdfSections: string[]) =>
+    downloadSelectedPdf(savedId ?? undefined, pdfSections, setIsPdfLoading);
 
   return (
-    <div className="space-y-4" data-print-section="full">
-      {/* PDF / 인쇄 버튼 */}
-      <div className="flex justify-end gap-2 print:hidden">
-        <button
-          type="button"
-          onClick={() => printScoped("form-table")}
-          className="rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors"
-        >
-          🧾 신고서 양식 PDF (전체)
-        </button>
-        <button
-          type="button"
-          onClick={() => printScoped("full")}
-          className="rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors"
-        >
-          🖨️ 전체 PDF / 인쇄
-        </button>
-        {savedId && isLoggedIn && (
-          <button
-            type="button"
-            onClick={handlePdfDownload}
-            disabled={isPdfLoading}
-            className="rounded-md border border-primary/60 bg-primary/5 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
-          >
-            {isPdfLoading ? "생성 중..." : "📄 PDF 다운로드"}
-          </button>
-        )}
-      </div>
+    <div className="space-y-4">
+      {/* 출력 항목 선택 패널 (선택 항목만 인쇄·PDF) */}
+      <PrintSelectionPanel
+        allGroups={MULTI_TRANSFER_PRINT_SECTIONS}
+        selectedIds={selectedPrintIds}
+        availableIds={availablePrintIds}
+        onChange={setSelectedPrintIds}
+        onPrintPdf={handlePrintPdf}
+        pdfReady={!!savedId}
+        pdfBusy={isPdfLoading}
+      />
 
       {/* 합산 결과 카드 */}
+      <PrintSection id="summary" selectedIds={selectedPrintIds}>
       <MultiTransferTaxSummaryCard
         result={result}
         properties={properties}
@@ -715,9 +685,11 @@ export function MultiTransferTaxResultView({
         priorPaidTax={priorPaidTax}
         priorPaidLocalTax={priorPaidLocalTax}
       />
+      </PrintSection>
 
       {/* ── 계산결과 상세명세서 (다건 합산) ── */}
       {/* 신고서 양식 32 항목별 산식·변수값·법령 노출 (자산별 펼침 포함) */}
+      <PrintSection id="detailed-statement" selectedIds={selectedPrintIds}>
       {(() => {
         const adapted = aggregateToFilingResult(result);
         const aggregateMeta = {
@@ -731,21 +703,28 @@ export function MultiTransferTaxResultView({
             formData={firstProperty?.form}
             asset={firstProperty?.form?.assets[0]}
             aggregate={aggregateMeta}
-            onPrint={() => printScoped("detailed-statement")}
           />
         );
       })()}
+      </PrintSection>
 
       {/* 감면세액 합산 재계산 내역 (자경·공익수용 등) */}
-      <ReductionRecalculationSection result={result} properties={properties} />
+      <PrintSection id="reduction-recalc" selectedIds={selectedPrintIds}>
+        <ReductionRecalculationSection result={result} properties={properties} />
+      </PrintSection>
 
       {/* 세율군별 분리 산출 (2개 이상 그룹일 때) */}
-      <GroupTaxCards result={result} />
+      <PrintSection id="group-tax" selectedIds={selectedPrintIds}>
+        <GroupTaxCards result={result} />
+      </PrintSection>
 
       {/* 차손 통산 표 */}
-      <LossOffsetTable result={result} properties={properties} />
+      <PrintSection id="loss-offset" selectedIds={selectedPrintIds}>
+        <LossOffsetTable result={result} properties={properties} />
+      </PrintSection>
 
       {/* 건별 breakdown */}
+      <PrintSection id="per-property" selectedIds={selectedPrintIds}>
       <div className="space-y-2">
         <h3 className="font-medium text-sm text-muted-foreground">건별 상세</h3>
         {result.properties.map((p) => (
@@ -756,6 +735,7 @@ export function MultiTransferTaxResultView({
           />
         ))}
       </div>
+      </PrintSection>
 
       {/* 합산 계산 과정 토글은 명세서 카드 내 'EngineStepsSubToggle'로 통합됨 (2026-05-12) */}
 

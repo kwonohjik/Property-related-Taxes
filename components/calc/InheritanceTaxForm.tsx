@@ -50,6 +50,8 @@ import {
   suggestSpouseActualAmount,
   suggestNetFinancialAssets,
   suggestLegateeAmountNonHeir,
+  suggestFarmingAssetValue,
+  deriveCohabitHouseStdPrice,
 } from "@/lib/calc/inheritance-deduction-suggest";
 import {
   type FormState,
@@ -292,6 +294,23 @@ export function InheritanceTaxForm() {
     }
   };
 
+  // 추가공제 자동 도출값 — display fallback(Step4)과 API autoOrManual(buildInput)이 공유(3중 일치).
+  const autoAllItems = useMemo(
+    () =>
+      [...form.estateItems, ...form.stockItems].map(resolveActiveUnlistedValuation),
+    [form.estateItems, form.stockItems],
+  );
+  const autos = useMemo(
+    () => ({
+      spouse: suggestSpouseActualAmount(autoAllItems, form.heirs, form.debtItems),
+      netFin: suggestNetFinancialAssets(autoAllItems, form.debtItems),
+      cohabit: deriveCohabitHouseStdPrice(autoAllItems, form.heirs),
+      farming: suggestFarmingAssetValue(autoAllItems, form.farming),
+      legatee: suggestLegateeAmountNonHeir(autoAllItems, form.heirs),
+    }),
+    [autoAllItems, form.heirs, form.debtItems, form.farming],
+  );
+
   const buildInput = (): InheritanceTaxInput => {
     // 비상장주식 모드 strip — simple 모드인데 V2가 잔존하는 경우 엔진 전달 전 제거 (PR-3)
     const allItems = [...form.estateItems, ...form.stockItems].map(
@@ -299,17 +318,19 @@ export function InheritanceTaxForm() {
     );
     // 자동 도출 (mirror, R4): 빈 문자열(미입력)일 때만 자산·협의분할 기반 자동, "0"·명시값 우선.
     // store는 불변(form 그대로) — useEffect→store 미러링 아님. UI는 자동값을 display fallback으로 표시.
+    // autos는 component-scope useMemo와 동일 산식(3중 일치 — display ↔ API autoOrManual).
     const autoOrManual = (raw: string, auto: number): number | undefined =>
       raw === "" ? (auto > 0 ? auto : undefined) : parseAmount(raw) || undefined;
-    const spouseAuto = suggestSpouseActualAmount(allItems, form.heirs, form.debtItems).value;
-    const netFinAuto = suggestNetFinancialAssets(allItems, form.debtItems).value;
-    const legateeAuto = suggestLegateeAmountNonHeir(allItems, form.heirs).value;
+    const spouseAuto = autos.spouse.value;
+    const netFinAuto = autos.netFin.value;
+    const legateeAuto = autos.legatee.value;
     const deductionInput: InheritanceDeductionInput = {
       heirs: form.heirs,
       spouseActualAmount: autoOrManual(form.spouseActualAmount, spouseAuto),
       netFinancialAssets: autoOrManual(form.netFinancialAssets, netFinAuto),
-      cohabitHouseStdPrice: parseAmount(form.cohabitHouseStdPrice) || undefined,
-      farmingAssetValue: parseAmount(form.farmingAssetValue) || undefined,
+      cohabitHouseStdPrice: autoOrManual(form.cohabitHouseStdPrice, autos.cohabit.value),
+      cohabitSecuredDebt: autos.cohabit.securedDebt || undefined,
+      farmingAssetValue: autoOrManual(form.farmingAssetValue, autos.farming.value),
       familyBusinessValue: parseAmount(form.familyBusinessValue) || undefined,
       familyBusinessYears: form.familyBusinessYears
         ? parseInt(form.familyBusinessYears, 10)
@@ -425,6 +446,7 @@ export function InheritanceTaxForm() {
           familyBusinessInput={form.familyBusiness}
           decedentName={form.decedentName}
           decedentResidentNumber={form.decedentResidentNumber}
+          savedId={autoSave.savedId ?? undefined}
         />
         <div className="flex justify-end">
           <SaveButton variant="primary" onSave={handleManualSaveForForm} />
@@ -480,7 +502,7 @@ export function InheritanceTaxForm() {
           {step === 1 && <Step1 form={form} set={set} />}
           {step === 2 && <Step2 form={form} set={set} />}
           {step === 3 && <Step3 form={form} set={set} />}
-          {step === 4 && <Step4 form={form} set={set} />}
+          {step === 4 && <Step4 form={form} set={set} autos={autos} />}
         </div>
       </div>
 

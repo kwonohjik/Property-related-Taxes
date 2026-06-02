@@ -5,7 +5,7 @@
  * ResultView + Row 헬퍼 컴포넌트
  */
 
-// useState는 EngineStepsSubToggle로 이전되어 제거 (2026-05-12)
+import { useState, useMemo } from "react";
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import { cn } from "@/lib/utils";
 // LawArticleModal은 EngineStepsSubToggle로 이전되어 제거 (2026-05-12)
@@ -16,7 +16,7 @@ import { NonBusinessLandResultCard } from "@/components/calc/NonBusinessLandResu
 import { MultiHouseSurchargeDetailCard } from "@/components/calc/MultiHouseSurchargeDetailCard";
 import { FilingFormTable } from "@/components/calc/results/transfer/FilingFormTable";
 import { DetailedCalculationStatementCard } from "@/components/calc/results/transfer/DetailedCalculationStatementCard";
-import { printScoped, formatRate, Row } from "@/components/calc/results/transfer/TransferTaxResultViewHelpers";
+import { formatRate, Row, downloadSelectedPdf } from "@/components/calc/results/transfer/TransferTaxResultViewHelpers";
 import { CarryoverComparisonCard } from "@/components/calc/results/transfer/CarryoverComparisonCard";
 import { CarryoverScenarioBFilingCard } from "@/components/calc/results/transfer/CarryoverScenarioBFilingCard";
 import { PreHousingDisclosureDetailSection } from "@/components/calc/results/transfer/PreHousingDisclosureDetailSection";
@@ -28,6 +28,12 @@ import { RedevelopmentDetailCard } from "@/components/calc/results/transfer/Rede
 import { FamilyBusinessImputedComparisonCard } from "@/components/calc/results/transfer/FamilyBusinessImputedComparisonCard";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPanel";
+import { PrintSection } from "@/components/calc/results/shared/PrintSection";
+import {
+  TRANSFER_PRINT_SECTIONS,
+  type TransferPrintSectionId,
+} from "@/lib/print/transfer-print-sections";
 
 // ── Props ──────────────────────────────────────────────────────
 
@@ -42,6 +48,8 @@ interface Props {
   formData?: TransferFormData;
   asset?: AssetForm;
   transferPriceOverride?: number;
+  /** 저장된 계산 id — 서버 PDF 선택 출력(PR-F1)용. 미저장/비로그인 시 undefined */
+  savedId?: string;
 }
 
 // ── 메인 컴포넌트 ──────────────────────────────────────────────
@@ -57,6 +65,7 @@ export function TransferTaxResultView({
   formData,
   asset,
   transferPriceOverride,
+  savedId,
 }: Props) {
   // showSteps 상태는 명세서 카드의 EngineStepsSubToggle로 통합되어 제거 (2026-05-12)
 
@@ -69,28 +78,41 @@ export function TransferTaxResultView({
   const isCarryoverMode = !!carryoverDetail?.isEligible;
   const adoptedA = carryoverDetail?.adoptedScenario === "A";
 
-  return (
-    <div className="space-y-5" data-print-section="full">
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const [selectedPrintIds, setSelectedPrintIds] = useState<Set<string>>(
+    () => new Set()
+  );
 
-      {/* PDF 인쇄 버튼 */}
-      <div className="flex justify-end gap-2 print:hidden">
-        <button
-          type="button"
-          onClick={() => printScoped("form-table")}
-          className="rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors"
-        >
-          🧾 신고서 양식 PDF
-        </button>
-        <button
-          type="button"
-          onClick={() => printScoped("full")}
-          className="rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors"
-        >
-          🖨️ 전체 PDF / 인쇄
-        </button>
-      </div>
+  // 선택 항목 서버 PDF 다운로드 (PR-F1) — Helpers downloadSelectedPdf 위임 (800줄 정책)
+  const handlePrintPdf = (pdfSections: string[]) =>
+    downloadSelectedPdf(savedId, pdfSections, setPdfBusy);
+
+  // 현재 결과뷰에 실제 렌더되는 leaf id (printScoped scope → leaf, 설계 §2.5)
+  const availablePrintIds = useMemo<Set<TransferPrintSectionId>>(() => {
+    const s = new Set<TransferPrintSectionId>();
+    s.add("form-table");
+    s.add("detailed-statement");
+    s.add("calculation");
+    if (result.preHousingDisclosureDetail) s.add("phd");
+    if (result.splitDetail) s.add("split-detail");
+    return s;
+  }, [result]);
+
+  return (
+    <div className="space-y-5">
+      {/* 출력 항목 선택 패널 (선택 항목만 인쇄·PDF) */}
+      <PrintSelectionPanel
+        allGroups={TRANSFER_PRINT_SECTIONS}
+        selectedIds={selectedPrintIds}
+        availableIds={availablePrintIds}
+        onChange={setSelectedPrintIds}
+        onPrintPdf={handlePrintPdf}
+        pdfReady={!!savedId}
+        pdfBusy={pdfBusy}
+      />
 
       {/* ── 신고서 양식 표 ── */}
+      <PrintSection id="form-table" selectedIds={selectedPrintIds}>
       {isCarryoverMode && carryoverDetail ? (
         /* 이월과세 비교과세 모드: Scenario A(채택) + Scenario B(미적용) 나란히 */
         <div className="space-y-3">
@@ -108,7 +130,6 @@ export function TransferTaxResultView({
               title="[A] 이월과세 적용"
               subtitle={`보유기간 ${carryoverDetail.scenarioA.holdingPeriodYears}년 (증여자 취득일 기산) · 취득가액 ${formatKRW(carryoverDetail.scenarioA.acquisitionPrice)}`}
               adopted={adoptedA}
-              onPrint={() => printScoped("form-table")}
               redevSubject={
                 result.redevelopmentDetail
                   ? ((resolvedAsset?.redevSubject || (resolvedAsset?.assetKind === "right_to_move_in" ? "right" : "apt")) as "right" | "apt")
@@ -126,7 +147,6 @@ export function TransferTaxResultView({
               transferPrice={transferPriceOverride ?? Number(formData?.contractTotalPrice ?? 0)}
               transferDate={formData?.transferDate}
               giftRegistryDate={resolvedAsset?.carryover?.giftRegistryDate}
-              onPrint={() => printScoped("form-table")}
             />
           </div>
         </div>
@@ -137,7 +157,6 @@ export function TransferTaxResultView({
           formData={formData}
           asset={asset}
           transferPriceOverride={transferPriceOverride}
-          onPrint={() => printScoped("form-table")}
           redevSubject={
             result.redevelopmentDetail
               ? ((resolvedAsset?.redevSubject || (resolvedAsset?.assetKind === "right_to_move_in" ? "right" : "apt")) as "right" | "apt")
@@ -150,10 +169,12 @@ export function TransferTaxResultView({
           }
         />
       )}
+      </PrintSection>
 
       {/* ── 계산결과 상세명세서 ── */}
       {/* 신고서 양식 32 항목별 산식·변수값·법령 노출 (사용자 검증용)
           이월과세 모드: 채택된 시나리오 기준 명세서만 표시 (result 자체가 채택값) */}
+      <PrintSection id="detailed-statement" selectedIds={selectedPrintIds}>
       <DetailedCalculationStatementCard
         result={result}
         formData={formData}
@@ -171,20 +192,12 @@ export function TransferTaxResultView({
             ? resolvedAsset?.carryover?.donorAcquisitionDate
             : undefined
         }
-        onPrint={() => printScoped("detailed-statement")}
       />
+      </PrintSection>
 
       {/* ── 핵심 결과 카드 + 계산 내역 ── */}
-      <div data-print-section="calculation" className="space-y-5">
-        <div className="flex justify-end print:hidden">
-          <button
-            type="button"
-            onClick={() => printScoped("calculation")}
-            className="rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors"
-          >
-            🖨️ 계산 내역 PDF
-          </button>
-        </div>
+      <PrintSection id="calculation" selectedIds={selectedPrintIds}>
+      <div className="space-y-5">
 
         {/* 비과세 / 납부세액 요약 */}
         {result.isExempt ? (
@@ -582,14 +595,16 @@ export function TransferTaxResultView({
             </div>
           </div>
         )}
-      </div>{/* /data-print-section="calculation" */}
+      </div>
+      </PrintSection>
 
       {/* 개별주택가격 미공시 취득 환산 상세 */}
       {result.preHousingDisclosureDetail && (
+        <PrintSection id="phd" selectedIds={selectedPrintIds}>
         <PreHousingDisclosureDetailSection
           result={result}
-          onPrint={() => printScoped("phd")}
         />
+        </PrintSection>
       )}
 
       {/* 토지/건물 분리 양도차익 상세 */}
@@ -603,7 +618,8 @@ export function TransferTaxResultView({
         const headerCls = (owned: boolean) =>
           owned ? "font-medium text-center" : "font-medium text-center text-muted-foreground/50";
         return (
-          <div data-print-section="split-detail" className="rounded-lg border border-border p-4 space-y-2">
+          <PrintSection id="split-detail" selectedIds={selectedPrintIds}>
+          <div className="rounded-lg border border-border p-4 space-y-2">
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2 flex-wrap">
                 <p className="text-sm font-semibold">토지/건물 분리 양도차익</p>
@@ -613,13 +629,6 @@ export function TransferTaxResultView({
                   </span>
                 )}
               </div>
-              <button
-                type="button"
-                onClick={() => printScoped("split-detail")}
-                className="print:hidden shrink-0 rounded-md border border-border px-2.5 py-1 text-xs font-medium hover:bg-muted transition-colors"
-              >
-                🖨️ PDF
-              </button>
             </div>
             <div className="text-xs grid grid-cols-3 gap-x-2 gap-y-1">
               <span />
@@ -658,6 +667,7 @@ export function TransferTaxResultView({
               <span className={colCls(buildingIsOwned)}>{result.splitDetail.building.longTermDeduction.toLocaleString()}</span>
             </div>
           </div>
+          </PrintSection>
         );
       })()}
 

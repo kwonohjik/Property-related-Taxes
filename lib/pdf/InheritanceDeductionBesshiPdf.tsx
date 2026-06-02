@@ -365,6 +365,25 @@ function Besshi1Page({ d }: { d: Besshi1Data }) {
   );
 }
 
+/** 부표3·별지5호·별지1호 Page 배열 — 통합 결과 PDF에서 재사용 */
+export function DeductionBesshiPages({
+  bp3,
+  b5,
+  b1,
+}: {
+  bp3: Buppyo3Data;
+  b5: Besshi5Data | null;
+  b1: Besshi1Data | null;
+}) {
+  return (
+    <>
+      <Buppyo3Page d={bp3} />
+      {b5 ? <Besshi5Page d={b5} /> : null}
+      {b1 ? <Besshi1Page d={b1} /> : null}
+    </>
+  );
+}
+
 export function InheritanceDeductionBesshiPdf({
   bp3,
   b5,
@@ -376,9 +395,7 @@ export function InheritanceDeductionBesshiPdf({
 }) {
   return (
     <Document>
-      <Buppyo3Page d={bp3} />
-      {b5 ? <Besshi5Page d={b5} /> : null}
-      {b1 ? <Besshi1Page d={b1} /> : null}
+      <DeductionBesshiPages bp3={bp3} b5={b5} b1={b1} />
     </Document>
   );
 }

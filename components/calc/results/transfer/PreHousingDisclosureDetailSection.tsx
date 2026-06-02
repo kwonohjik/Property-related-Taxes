@@ -38,7 +38,8 @@ function PhdRow({ label, value, formula, highlight }: PhdRowProps) {
 
 interface Props {
   result: TransferTaxResult;
-  onPrint: () => void;
+  /** PR-F1: printScoped 제거(PrintSelectionPanel 통일) → optional. 미전달 시 자체 인쇄 버튼 숨김. */
+  onPrint?: () => void;
 }
 
 export function PreHousingDisclosureDetailSection({ result, onPrint }: Props) {
@@ -54,6 +55,7 @@ export function PreHousingDisclosureDetailSection({ result, onPrint }: Props) {
         <p className="text-sm font-semibold text-blue-900 dark:text-blue-200">
           개별주택가격 미공시 취득 환산 (소득세법 시행령 §164 ⑤)
         </p>
+        {onPrint && (
         <button
           type="button"
           onClick={onPrint}
@@ -61,6 +63,7 @@ export function PreHousingDisclosureDetailSection({ result, onPrint }: Props) {
         >
           🖨️ PDF
         </button>
+        )}
       </div>
 
       {/* 1. 시점별 기준시가 합계 */}
