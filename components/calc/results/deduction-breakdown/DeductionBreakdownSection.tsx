@@ -13,6 +13,7 @@ import type {
   EstateItem,
   DebtItem,
   CalculationStep,
+  Heir,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { Row } from "./shared";
 import { expandToggleClass, expandToggleLabel } from "../shared/ExpandToggleButton";
@@ -31,9 +32,13 @@ interface Props {
   result: InheritanceTaxResult;
   estateItems?: EstateItem[];
   debtItems?: DebtItem[];
+  /** 가업상속인명 resolve용 (feedback_no_internal_id_in_result) */
+  heirs?: Heir[];
+  /** 가업상속인 heirId — familyBusiness.heirId (resolvedRequirements 표시) */
+  familyBusinessHeirId?: string;
 }
 
-export function DeductionBreakdownSection({ result, estateItems, debtItems }: Props) {
+export function DeductionBreakdownSection({ result, estateItems, debtItems, heirs, familyBusinessHeirId }: Props) {
   const [showBreakdown, setShowBreakdown] = useState(false);
 
   const dd = result.deductionDetail;
@@ -98,6 +103,8 @@ export function DeductionBreakdownSection({ result, estateItems, debtItems }: Pr
               detail={dd.familyBusinessDetail}
               triggerLabel="가업상속 공제 (§18의2)"
               triggerValue={formatKRW(dd.familyBusinessDeduction)}
+              heirs={heirs}
+              heirId={familyBusinessHeirId}
             />
           )}
 

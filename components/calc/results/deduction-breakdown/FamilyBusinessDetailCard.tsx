@@ -12,7 +12,32 @@ import type {
   FamilyBusinessDeductionDetail,
   FamilyBusinessIneligibleReason,
 } from "@/lib/tax-engine/types/inheritance-family-business.types";
+import type { Heir, HeirRelation } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { formatBillion, DetailTable, DetailRow, SubTotalRow, ExpandButton } from "./shared";
+
+/** 가업상속인명 resolve — id 직접노출 금지 (feedback_no_internal_id_in_result) */
+function resolveHeirName(heirId: string | undefined, heirs: Heir[] | undefined): string {
+  if (!heirId || !heirs) return "미지정";
+  const heir = heirs.find((h) => h.id === heirId);
+  if (!heir) return "미지정";
+  if (heir.name?.trim()) return heir.name.trim();
+  const RELATION_LABEL: Record<HeirRelation, string> = {
+    spouse: "배우자",
+    child: "자녀",
+    lineal_ascendant: "직계존속",
+    sibling: "형제자매",
+    other: "기타",
+    legatee: "수유자",
+    corporate: "영리법인",
+  };
+  return RELATION_LABEL[heir.relation] ?? heir.relation;
+}
+
+const SOURCE_LABEL: Record<"auto" | "override" | "legacy", string> = {
+  auto: "자동판정",
+  override: "수동 보정",
+  legacy: "기존 입력",
+};
 
 const FamilyBusinessIneligibleReasonLabels: Record<FamilyBusinessIneligibleReason, string> = {
   operating_years_below_10: "영위 10년 미만 (§18의2① 가업 정의 미충족)",
@@ -39,9 +64,13 @@ interface Props {
   detail?: FamilyBusinessDeductionDetail;
   triggerLabel: string;
   triggerValue: string;
+  /** 가업상속인명 resolve용 — heirId→name (feedback_no_internal_id_in_result) */
+  heirs?: Heir[];
+  /** 가업상속인 heirId — detail.resolvedRequirements와 함께 노출 */
+  heirId?: string;
 }
 
-export function FamilyBusinessDetailCard({ detail, triggerLabel, triggerValue }: Props) {
+export function FamilyBusinessDetailCard({ detail, triggerLabel, triggerValue, heirs, heirId }: Props) {
   const [open, setOpen] = useState(false);
 
   const hasExpandable = detail !== undefined;
@@ -143,6 +172,75 @@ export function FamilyBusinessDetailCard({ detail, triggerLabel, triggerValue }:
                 <li>가업외 상속재산 net: {formatKRW(detail.mediumGuard.otherEstateNet)}</li>
                 <li>판정: {detail.mediumGuard.exceeded ? "초과 → 공제 배제" : "통과"}</li>
               </ul>
+            </div>
+          )}
+
+          {/* 요건 자동판정 메타 (Phase 1 — resolvedRequirements) */}
+          {detail.resolvedRequirements && (
+            <div className="mx-4 mb-2 rounded-md border border-sky-200 bg-sky-50/40 dark:bg-sky-950/20 dark:border-sky-800 p-2 text-[10px] text-sky-800 dark:text-sky-300 space-y-1">
+              <p className="font-semibold">요건 자동판정 근거 (상증령 §15③2호)</p>
+              {/* 가업상속인명 (id 직접 노출 금지) */}
+              {heirId && (
+                <p>가업상속인: {resolveHeirName(heirId, heirs)}</p>
+              )}
+              <p>신고기한 (§67): {detail.resolvedRequirements.filingDeadline}</p>
+              <ul className="space-y-0.5 list-none pl-1">
+                {/* 피상속인 요건 (Phase 2 — source Partial이므로 optional) */}
+                {detail.resolvedRequirements.source.decedentMajorShareholdingMet && (
+                  <li>
+                    피상속인 가. 지분 요건:{" "}
+                    <span className={detail.resolvedRequirements.source.decedentMajorShareholdingMet === "override" ? "text-amber-700 dark:text-amber-300 font-medium" : ""}>
+                      {SOURCE_LABEL[detail.resolvedRequirements.source.decedentMajorShareholdingMet]}
+                    </span>
+                  </li>
+                )}
+                {detail.resolvedRequirements.source.decedentCEORequirementMet && (
+                  <li>
+                    피상속인 나. 대표이사:{" "}
+                    <span className={detail.resolvedRequirements.source.decedentCEORequirementMet === "override" ? "text-amber-700 dark:text-amber-300 font-medium" : ""}>
+                      {SOURCE_LABEL[detail.resolvedRequirements.source.decedentCEORequirementMet]}
+                    </span>
+                  </li>
+                )}
+                {/* 상속인 요건 (Phase 1) */}
+                <li>
+                  가. 18세 이상:{" "}
+                  <span className={detail.resolvedRequirements.source.heirIsAdult === "override" ? "text-amber-700 dark:text-amber-300 font-medium" : ""}>
+                    {detail.resolvedRequirements.source.heirIsAdult
+                      ? SOURCE_LABEL[detail.resolvedRequirements.source.heirIsAdult]
+                      : "—"}
+                  </span>
+                </li>
+                <li>
+                  나. 2년 종사:{" "}
+                  <span className={detail.resolvedRequirements.source.heirTwoYearEngagement === "override" ? "text-amber-700 dark:text-amber-300 font-medium" : ""}>
+                    {detail.resolvedRequirements.source.heirTwoYearEngagement
+                      ? SOURCE_LABEL[detail.resolvedRequirements.source.heirTwoYearEngagement]
+                      : "—"}
+                  </span>
+                </li>
+                <li>
+                  다. 임원취임:{" "}
+                  <span className={detail.resolvedRequirements.source.heirOfficerByFilingDeadline === "override" ? "text-amber-700 dark:text-amber-300 font-medium" : ""}>
+                    {detail.resolvedRequirements.source.heirOfficerByFilingDeadline
+                      ? SOURCE_LABEL[detail.resolvedRequirements.source.heirOfficerByFilingDeadline]
+                      : "—"}
+                  </span>
+                </li>
+                <li>
+                  라. 대표이사:{" "}
+                  <span className={detail.resolvedRequirements.source.heirCEOWithinTwoYears === "override" ? "text-amber-700 dark:text-amber-300 font-medium" : ""}>
+                    {detail.resolvedRequirements.source.heirCEOWithinTwoYears
+                      ? SOURCE_LABEL[detail.resolvedRequirements.source.heirCEOWithinTwoYears]
+                      : "—"}
+                  </span>
+                </li>
+              </ul>
+              {Object.values(detail.resolvedRequirements.source).some((s) => s === "override") && (
+                <p className="text-amber-700 dark:text-amber-300">
+                  ⚠️ 수동 보정 항목이 있습니다. 근거서류를 보관하세요.
+                </p>
+              )}
             </div>
           )}
         </>

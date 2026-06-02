@@ -427,6 +427,8 @@ export function InheritanceTaxResultView({
           result={result}
           estateItems={estateItems}
           debtItems={debtItems}
+          heirs={heirs}
+          familyBusinessHeirId={familyBusinessInput?.heirId}
         />
       </PrintSection>
 

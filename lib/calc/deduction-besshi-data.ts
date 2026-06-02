@@ -484,7 +484,11 @@ export function buildBesshi1Data(
     shareRatio: fbi?.decedentShareRatio?.trim() || undefined,
     heirName: fbHeir?.name?.trim() || undefined,
     heirResidentNumber: fbHeir?.residentNumber?.trim() || undefined,
-    heirEngagement: fbi?.heirEngagementPeriod?.trim() || undefined,
+    // 신규 구조화 필드(heirEngagementStartDate) 우선 — 미입력 시 legacy 텍스트(heirEngagementPeriod). (eligibility-autoderive)
+    heirEngagement:
+      (fbi?.heirEngagementStartDate ? `${fbi.heirEngagementStartDate}부터 종사` : undefined) ||
+      fbi?.heirEngagementPeriod?.trim() ||
+      undefined,
     officerAppointDate: fbi?.heirOfficerAppointDate || undefined,
     assetRows,
     declaredAmount: fbd.deduction,

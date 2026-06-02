@@ -464,6 +464,8 @@ export function Step4({
           <FamilyBusinessEligibilitySection
             familyBusiness={form.familyBusiness}
             onChange={(v) => set({ familyBusiness: v })}
+            deathDate={form.deathDate}
+            heirs={form.heirs}
           />
 
           <div className="space-y-2">

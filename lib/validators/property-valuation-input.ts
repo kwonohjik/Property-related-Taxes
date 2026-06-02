@@ -5,6 +5,9 @@
 import { z } from "zod";
 import { unlistedStockDataSchema } from "./property-valuation-input-unlisted-data";
 
+// 가업상속공제 스키마 — 800줄 정책으로 sibling 분리(2026-06-02)
+import { familyBusinessInheritanceInputSchema } from "./family-business-inheritance-schema";
+
 // ============================================================
 // 비상장주식 평가 데이터 스키마 — property-valuation-input-unlisted-data.ts로 분리(800줄).
 // 재바인딩 + re-export로 외부 import 경로·내부 사용처 무변경.
@@ -602,32 +605,8 @@ export const farmingPostMgmtInputSchema = z.object({
 export type FarmingPostMgmtInputSchema = z.infer<typeof farmingPostMgmtInputSchema>;
 
 /** 가업상속공제 자격 입력 스키마 (2026-05-21, 상증법 §18의2 + 상증령 §15) */
-export const familyBusinessInheritanceInputSchema = z.object({
-  businessType: z.enum(["individual", "corporate"]),
-  operatingYears: z.number().int().nonnegative(),
-  deathDate: z.string().optional(),
-  enterpriseSize: z.enum(["sme", "medium"]),
-  averageRevenue3Y: z.number().nonnegative().optional(),
-  totalAssets: z.number().nonnegative().optional(),
-  isEligibleIndustry: z.boolean(),
-  decedentMajorShareholdingMet: z.boolean().optional(),
-  isListedOnExchange: z.boolean().optional(),
-  decedentCEORequirementMet: z.boolean(),
-  heirIsAdult: z.boolean(),
-  heirTwoYearEngagement: z.boolean(),
-  decedentEarlyDeath: z.boolean().optional(),
-  heirOfficerByFilingDeadline: z.boolean(),
-  heirCEOWithinTwoYears: z.boolean(),
-  spouseFulfillsRequirements: z.boolean().optional(),
-  heirOtherEstateValue: z.number().nonnegative().optional(),
-  heirDebt: z.number().nonnegative().optional(),
-  unrelatedAssetsAcknowledged: z.boolean(),
-  postManagementAcknowledged: z.boolean(),
-  // 기회발전특구 특례 (상증령 §15㉕, 2026-05-21 추가)
-  isInOpportunityDevelopmentZone: z.boolean().optional(),
-  ofzWorkforceRatio50PlusMet: z.boolean().optional(),
-  hasTaxFraudConviction: z.boolean().optional(),
-});
+// 가업상속공제 스키마 — sibling(family-business-inheritance-schema.ts) 정의. 재수출로 외부 import 호환.
+export { familyBusinessInheritanceInputSchema };
 
 export const inheritanceDeductionInputSchema = z.object({
   heirs: z.array(heirSchema).min(1, "상속인이 1명 이상 필요합니다."),

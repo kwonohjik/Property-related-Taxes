@@ -30,15 +30,11 @@ import type {
   CohabitDeductionDetail,
   DeductionLimitCeilingDetail,
 } from "../types/inheritance-deduction-detail.types";
-import type {
-  FarmingDeductionDetail,
-  FarmingHeirAssessment,
-  FarmingInheritanceInput,
-} from "../types/inheritance-farming.types";
 import {
   calcFamilyBusinessDeductionDirect,
   calcFamilyBusinessDeductionLegacy,
   calcFamilyBusinessDeductionPhase2,
+  resolveFamilyBusinessRequirements,
 } from "./family-business";
 import {
   calcPersonalDeductions,
@@ -654,12 +650,23 @@ export function calcInheritanceDeductions(
       );
     }
     if (input.familyBusiness) {
+      // 요건 자동판정(Phase 1): 가업상속인 birthDate를 heirs[heirId]에서 도출(없으면 familyBusiness.heirBirthDate).
+      //   heirs·baseDate(상속개시일) 모두 스코프 내 → 스레딩 불필요. (eligibility-autoderive.engine.design.md)
+      const heirBirthDate =
+        input.heirs.find((h) => h.id === input.familyBusiness!.heirId)?.birthDate ??
+        input.familyBusiness.heirBirthDate;
+      const resolved = resolveFamilyBusinessRequirements(
+        input.familyBusiness,
+        heirBirthDate,
+        baseDate,
+      );
       return calcFamilyBusinessDeductionPhase2({
-        input: input.familyBusiness,
+        input: resolved.resolvedInput,
         estateItems: familyBusinessAux?.estateItems,
         familyBusinessValueOverride: input.familyBusinessValue,
         taxIfNoFBD: familyBusinessAux?.taxIfNoFBD ?? 0,
         lawRef: INH.FAMILY_BUSINESS_DEDUCTION,
+        resolvedMeta: { filingDeadline: resolved.filingDeadline, source: resolved.source },
       });
     }
     return calcFamilyBusinessDeductionLegacy(
