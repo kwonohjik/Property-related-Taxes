@@ -5,8 +5,8 @@
  * ⚠️ 이 테스트는 `lib/print/gift-print-sections.ts` 구현 전에 작성됨.
  *    모듈 미구현 상태에서 RED(import 실패) → 디자인 환류 기회 확보 후 Do 진입.
  *
- * PR-B1 pdf 채널 = tax-summary(계산표) 1종만.
- *   별지 4종(filing-form-10·valuation-form·주식2)은 react-pdf/gift 위임 미구현 → PR-B2에서 pdf 승격.
+ * pdf 채널 (PR-B2 완료) = tax-summary(계산표) + 별지4(filing-form-10·valuation-form·주식2) = 5종.
+ *   PR-B1 시점엔 tax-summary 1종, PR-B2에서 별지4 react-pdf 신규/위임 후 승격.
  *   (PR-2 거짓 선택 방지 교훈: 실제 분리 렌더 가능한 노드만 pdf 채널 부여)
  */
 import { describe, it, expect } from "vitest";
@@ -35,8 +35,14 @@ const ALL_LEAVES: GiftPrintSectionId[] = [
   "warnings",
 ];
 
-// PDF 채널 (PR-B1): 현존 ResultPdfDocument gift 계산표로 표현 가능한 tax-summary 1종.
-const PDF_LEAVES: GiftPrintSectionId[] = ["tax-summary"];
+// PDF 채널 (PR-B2): tax-summary(계산표) + 별지4(별지10호·부표1·주식2) = 5종.
+const PDF_LEAVES: GiftPrintSectionId[] = [
+  "tax-summary",
+  "filing-form-10",
+  "valuation-form",
+  "unlisted-stock-besshi",
+  "listed-stock-besshi",
+];
 
 describe("증여세 선택 출력 레지스트리 — Pre-Do anchor (PR-B1)", () => {
   // PD-gift-1: 선택 0건 → 모든 leaf print:hidden
@@ -68,8 +74,8 @@ describe("증여세 선택 출력 레지스트리 — Pre-Do anchor (PR-B1)", ()
     }
   });
 
-  // PD-gift-4: PDF 채널 = tax-summary 1종 (PR-B1). 별지는 screen만(PR-B2 승격 전).
-  it("PD-gift-4: pdfEligibleIds는 tax-summary 1종 (PR-B1)", () => {
+  // PD-gift-4: PDF 채널 5종 (PR-B2 완료) — tax-summary + 별지4.
+  it("PD-gift-4: pdfEligibleIds는 pdf 채널 5종 (PR-B2)", () => {
     const ids = pdfEligibleIds();
     expect([...ids].sort()).toEqual([...PDF_LEAVES].sort());
   });
@@ -85,25 +91,25 @@ describe("증여세 선택 출력 레지스트리 — Pre-Do anchor (PR-B1)", ()
     expect(resolveGroupCheckState(summary!, new Set(leafIds))).toBe("all");
   });
 
-  // PD-gift-6: 서버 PDF 선택 변환 (선택 ∩ pdf 채널 ∩ 가용) — PR-B1
-  it("PD-gift-6: selectPdfSections — pdf 채널(tax-summary)만, screen 노드·미가용 제외", () => {
+  // PD-gift-6: 서버 PDF 선택 변환 (선택 ∩ pdf 채널 ∩ 가용) — PR-B2
+  it("PD-gift-6: selectPdfSections — pdf 채널(tax-summary·별지4)만, screen 노드·미가용 제외", () => {
     const available = new Set<GiftPrintSectionId>([
       "tax-summary",
       "core-result",
       "filing-form-10",
     ]);
-    // screen 전용(core-result·filing-form-10) 선택은 PDF에서 제외, tax-summary만 포함
+    // screen 전용(core-result)만 제외, tax-summary·filing-form-10(pdf)은 포함
     expect(
       selectPdfSections(
         new Set(["core-result", "filing-form-10", "tax-summary"]),
         available
-      )
-    ).toEqual(["tax-summary"]);
-    // tax-summary 미선택 → PDF 0건
+      ).sort()
+    ).toEqual(["filing-form-10", "tax-summary"]);
+    // pdf 채널 미선택(core-result만) → PDF 0건
     expect(
-      selectPdfSections(new Set(["core-result", "filing-form-10"]), available)
+      selectPdfSections(new Set(["core-result"]), available)
     ).toEqual([]);
-    // tax-summary 미가용 → 제외
+    // pdf 채널 미가용 → 제외 (tax-summary 선택했으나 available에 없음)
     expect(
       selectPdfSections(new Set(["tax-summary"]), new Set(["core-result"]))
     ).toEqual([]);

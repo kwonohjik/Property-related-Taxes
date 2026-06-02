@@ -11,6 +11,7 @@ import {
 } from "@react-pdf/renderer";
 import { InheritanceHeirAllocationSection } from "@/lib/pdf/sections/inheritance-heir-allocation-section";
 import { InheritanceSelectedBesshiPages } from "@/lib/pdf/inheritance-besshi-pages";
+import { GiftSelectedBesshiPages } from "@/lib/pdf/gift-besshi-pages";
 import type {
   Heir,
   InheritanceTaxResult,
@@ -752,6 +753,15 @@ export function ResultPdfDocument({
       {/* 상속세 별지 선택 출력 (PR-3a/3b) — filing-form-9·부표2·부표3묶음·상장·비상장 */}
       {taxType === "inheritance" && (
         <InheritanceSelectedBesshiPages
+          resultData={r}
+          inputData={inputData}
+          selectedSectionIds={selectedSectionIds}
+        />
+      )}
+
+      {/* 증여세 별지 선택 출력 (PR-B2) — 별지10호·부표1·상장·비상장 */}
+      {taxType === "gift" && (
+        <GiftSelectedBesshiPages
           resultData={r}
           inputData={inputData}
           selectedSectionIds={selectedSectionIds}

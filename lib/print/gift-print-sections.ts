@@ -7,8 +7,8 @@
  * 화면 표시 불변 원칙: 선택은 "인쇄 대상"만 제어한다. 미선택이어도 화면엔 그대로 보이고
  * 인쇄(print)에서만 print:hidden으로 제거 → 기존 화면 동작 회귀 0.
  *
- * PR-B1 pdf 채널 = tax-summary(계산표) 1종.
- *   별지 4종(filing-form-10·valuation-form·주식2)은 react-pdf/gift 위임 미구현 → PR-B2에서 pdf 승격.
+ * pdf 채널 (PR-B2 완료) = tax-summary(계산표) + 별지4(filing-form-10·valuation-form·주식2) = 5종.
+ *   PR-B1=tax-summary, PR-B2=별지4 (GiftFilingForm10/GiftValuationForm PDF + gift-besshi-pages 위임).
  *   (PR-2 거짓 선택 방지: 실제 분리 렌더 가능한 노드만 pdf 채널)
  */
 
@@ -71,19 +71,19 @@ export const GIFT_PRINT_SECTIONS: GiftPrintSectionGroup[] = [
     id: "group:forms",
     label: "공식 신고서식",
     children: [
-      // PR-B2: GiftFilingForm10PdfDocument react-pdf 포팅 후 pdf 승격 예정
-      { id: "filing-form-10", label: "별지 제10호서식", channel: SCREEN },
-      // PR-B2: GiftValuationFormPdfDocument 신규 후 pdf 승격 예정
-      { id: "valuation-form", label: "증여재산 및 평가명세서 (부표1)", channel: SCREEN },
+      // PR-B2: GiftFilingForm10PdfDocument react-pdf 포팅 완료 → pdf 승격
+      { id: "filing-form-10", label: "별지 제10호서식", channel: SCREEN_PDF },
+      // PR-B2: GiftValuationFormPdfDocument 신규 완료 → pdf 승격
+      { id: "valuation-form", label: "증여재산 및 평가명세서 (부표1)", channel: SCREEN_PDF },
     ],
   },
   {
     id: "group:valuation",
     label: "재산 평가",
     children: [
-      // PR-B2: gift-besshi-pages 위임 후 pdf 승격 예정 (주식 별지 react-pdf는 PR-3b 재사용)
-      { id: "unlisted-stock-besshi", label: "비상장주식 별지4 부표3", channel: SCREEN },
-      { id: "listed-stock-besshi", label: "상장주식 평가조서 (갑·을)", channel: SCREEN },
+      // PR-B2: gift-besshi-pages 위임 완료 → pdf 승격 (주식 별지 react-pdf는 PR-3b 재사용)
+      { id: "unlisted-stock-besshi", label: "비상장주식 별지4 부표3", channel: SCREEN_PDF },
+      { id: "listed-stock-besshi", label: "상장주식 평가조서 (갑·을)", channel: SCREEN_PDF },
     ],
   },
   {

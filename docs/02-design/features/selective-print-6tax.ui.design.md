@@ -128,7 +128,7 @@ const availablePrintIds = useMemo<Set<string>>(() => { /* §2 가드 1:1 */ }, [
 
 | 별지 | 화면 컴포넌트 | PDF | 데이터 |
 |---|---|---|---|
-| 별지10호 | `GiftTaxFilingFormTable` | **신규** `lib/pdf/GiftFilingForm10PdfDocument.tsx`(`FilingForm10PdfPage` export) | `result.filingFormRows` 등 화면 동일 |
+| 별지10호 | `GiftTaxFilingFormTable` | **신규** `lib/pdf/GiftFilingForm10PdfDocument.tsx`(`FilingForm10PdfPage` export) | `result.besshi10Rows`(FilingFormRow[]) — 화면 동일(filingFormRows 아님, §7-4 정정) |
 | 부표1 | `GiftTaxValuationFormTable` | **신규** `lib/pdf/GiftValuationFormPdfDocument.tsx` | `result.valuationResults`·grossGiftValue·exemptAmount·aggregatedGiftValue (화면 `:360-365` 동일 props) |
 | 비상장 | `UnlistedStockBesshiResultSection` | **재사용** `UnlistedStockBesshiPages`(PR-3b) | estateItems V2 |
 | 상장 | `ListedStockBesshiResultSection` | **재사용** `ListedStockBesshiPages`(PR-3b) | estateItems 상장 |
@@ -178,6 +178,23 @@ const availablePrintIds = useMemo<Set<string>>(() => { /* §2 가드 1:1 */ }, [
 | anchor | §6 PD-gift | `gift-print-sections.test.ts` 7 + 전체 5971 + 상속세·증여세 E2E 2 PASS | ✓ |
 
 **deviation(거짓 선택 방지)**: §2.1·§8 표는 **PR-B2 완료 후 최종 상태**(pdf 5종) 기술. PR-B1 시점엔 ResultPdfDocument가 실제 분리 렌더 가능한 `tax-summary`(계산표) 1종만 pdf 채널. 별지 4종(filing-form-10·valuation-form·주식2)은 PR-B2(별지10·부표1 react-pdf 신규 + `gift-besshi-pages` 위임)에서 pdf 승격. (PR-2 교훈: 미구현 노드를 pdf로 표시하면 빈 PDF 위험 → screen 유지)
+
+## 7-4. PR-B2 갭 분석 (증여세 별지 PDF — 구현 완료)
+
+| 항목 | 설계 | 구현 | 판정 |
+|---|---|---|---|
+| 별지10호 PDF | §4 신규 `GiftFilingForm10PdfDocument`(FilingForm10PdfPage) | `result.besshi10Rows`(FilingFormRow[]) → 별지9호 `CalcRow` 템플릿 좌(⑰~㊱)·우(㊲~㊼) 순차 | ✓ |
+| 부표1 PDF | §4 신규 `GiftValuationFormPdfDocument` | landscape 10컬럼 + 계 ⑨~⑮. 화면과 동일 헬퍼·산식 | ✓ |
+| 주식2 PDF | §4 재사용 `ListedStock`·`UnlistedStock`BesshiPages(PR-3b) | `gift-besshi-pages` 위임에서 estateItems(giftItems+stockItems) 필터 후 재사용 | ✓ |
+| 위임 | §4 `GiftSelectedBesshiPages` | 신규 — inheritance-besshi-pages 패턴, selectedSectionIds 조건부 4 Page | ✓ |
+| 산식 단일출처 | (dual-truth 0) | `lib/calc/gift-valuation-besshi.ts`(computeRow10·14·LABEL) 추출 — 화면·PDF 공유, 화면 RTL anchor 회귀 0 | ✓ |
+| ResultPdfDocument | §5 gift 분기 위임 호출 | `taxType==="gift"` → GiftSelectedBesshiPages | ✓ |
+| 채널 승격 | §2.1 pdf 5종 | filing-form-10·valuation-form·주식2 → SCREEN_PDF (PR-B1 tax-summary + 4 = 5) | ✓ |
+| anchor | §6 | gift-valuation 3 + gift-print 5종 + 전체 5974 + tsc 0 | ✓ |
+
+**정정(§4 실측)**: §4 표는 별지10호 데이터를 "result.filingFormRows"로 기술했으나, 화면(`GiftTaxFilingFormTable`)·엔진 실측 결과 **`result.besshi10Rows`(FilingFormRow[])** 가 정확(filingFormRows는 구 12/18행, besshi10Rows로 대체). §4 표 정정 반영.
+
+**deviation(렌더러 중복 허용)**: 별지10호 `CalcRow`는 별지9호와 동일 패턴이나 별지9호 무변경(회귀 0) 위해 복제. dual-truth 0의 핵심은 **데이터(besshi10Rows·valuationResults)**가 단일 — 렌더러(화면 HTML/PDF) 중복은 허용([[ui_engine_dual_truth_avoidance]]). 부표1 산식(computeRow10·14)·라벨은 `gift-valuation-besshi` 단일 출처로 추출.
 
 ## 8. 케이스 인벤토리 요약 (leaf·pdf 채널 수 — 검토 U1 반영)
 | 세목 | leaf | pdf 채널 | 별지 PDF |

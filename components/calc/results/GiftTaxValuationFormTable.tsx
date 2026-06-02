@@ -22,6 +22,11 @@ import {
   toEstateItemTypeCode,
   toEstateItemValuationMethodCode,
 } from "@/components/calc/results/inheritance-filing-form-helpers";
+import {
+  PROPERTY_TYPE_LABEL,
+  computeRow10,
+  computeRow14,
+} from "@/lib/calc/gift-valuation-besshi";
 
 // ============================================================
 // 코드 매핑 (부표 1 뒷면 작성방법 §2 / §7)
@@ -29,28 +34,7 @@ import {
 // inheritance-filing-form-helpers.ts 공유 (상속 부표2와 단일 출처). 여기는 라벨 표시만.
 // ============================================================
 
-/**
- * ② 재산종류코드 14종 라벨 — KoreanLaw MCP 검증 (시행규칙 별지 제10호서식 부표 1 뒷면 §2).
- * 결과 화면 표시는 가독성을 위해 약식 (예: "공동주택 (부수토지 포함)" → "공동주택").
- */
-const PROPERTY_TYPE_LABEL: Record<string, string> = {
-  "01": "현금",
-  "02": "토지",
-  "03": "토지(부수)",
-  "04": "개별주택",
-  "05": "공동주택",
-  "06": "오피스텔ㆍ상업용",
-  "07": "일반건물",
-  "08": "부동산 취득권리",
-  "09": "상장주식",
-  "10": "비상장주식",
-  "11": "금융재산",
-  "12": "기타재산",
-  "13": "가상자산",
-  "14": "서화ㆍ골동품",
-};
-
-/** ② 컬럼 표시 — 라벨 메인 + 코드 부제 2줄 (가독성 강화). */
+/** ② 컬럼 표시 — 라벨 메인 + 코드 부제 2줄 (가독성 강화). PROPERTY_TYPE_LABEL은 gift-valuation-besshi 단일 출처. */
 function toPropertyTypeDisplay(code: string): React.ReactNode {
   const label = PROPERTY_TYPE_LABEL[code] ?? "기타재산";
   return (
@@ -61,28 +45,7 @@ function toPropertyTypeDisplay(code: string): React.ReactNode {
   );
 }
 
-/** ⑩ 표시값 (음수 가드) — exemptAmount > ⑪+⑫+⑬ 일 때 차이 표시. */
-function computeRow10(
-  exemptAmount: number,
-  excl11: number,
-  excl12: number,
-  excl13: number,
-): number {
-  return Math.max(0, exemptAmount - excl11 - excl12 - excl13);
-}
-
-/**
- * ⑭ 증여재산가산액 표시값.
- * 엔진 산식: aggregatedGiftValue = max(0, grossGiftValue − exemptAmount) + priorAggregation
- * 역산:      ⑭ = aggregatedGiftValue − max(0, grossGiftValue − exemptAmount)
- */
-function computeRow14(
-  aggregated: number,
-  gross: number,
-  exempt: number,
-): number {
-  return Math.max(0, aggregated - Math.max(0, gross - exempt));
-}
+// computeRow10·computeRow14는 gift-valuation-besshi.ts 단일 출처 (화면·PDF 공유, dual-truth 0).
 
 // ============================================================
 // Props
