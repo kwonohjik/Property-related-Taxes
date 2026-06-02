@@ -60,6 +60,7 @@ import { buildSummaryCategory } from "./inheritance-asset-category";
 import { computeLegalShares } from "./inheritance-legal-share";
 import { deriveCollateralDebts } from "./inheritance-collateral-debt";
 import { sumCollateralDebt } from "./inheritance-collateral-debt";
+import { buildPhaseDFinancialRows } from "./inheritance-tax-financial-rows";
 import { toCollateralDebtItems } from "./inheritance-collateral-debt";
 import type { TaxBracket } from "./types";
 
@@ -402,61 +403,13 @@ export function calcInheritanceTax(
     }
   }
 
-  // E7(c): 금융재산 분해 rows[] 집계 (D-1 A — §22 자동 집계, §22② 최대주주 제외 포함)
-  // lib/calc/financial-deduction-resolver import 금지 → 엔진 내부 판정 로직을 인라인으로 재구현
-  // (단일 진실 원칙 — 집계 결과를 financialDeductionDetail.rows에 주입; 판정 기준은 동일 §22①·②)
-  const phaseDFinancialRows: FinancialBreakdownRow[] = (() => {
-    // 자산 종류별 집계: 예금·상장주식·보험금·기타금융 구분
-    let depositTotal = 0;
-    let listedStockTotal = 0;
-    let insuranceTotal = 0;
-    let otherFinancialTotal = 0;
-    for (const item of input.estateItems) {
-      // §22② 최대주주 강제 배제 (엔진 내부 판정 — lib/calc 미사용)
-      const isMajorShareholder =
-        item.isSection22MajorShareholder === true ||
-        item.unlistedStockValuationV2?.isSection22MajorShareholder === true;
-      if (isMajorShareholder) continue;
-      // 사용자 명시 배제
-      if (item.isFinancialAssetForDeduction === false) continue;
-      // §22 적격 판정 (카테고리 기반 — financial·listed_stock + deemedCategory insurance)
-      const val = resolveEstateItemValue(item);
-      if (val <= 0) continue;
-      if (item.deemedCategory === "insurance") {
-        insuranceTotal += val;
-      } else if (item.category === "listed_stock") {
-        listedStockTotal += val;
-      } else if (item.category === "financial") {
-        // 사용자 명시 포함이거나 카테고리 default true
-        if (item.isFinancialAssetForDeduction === true || item.isFinancialAssetForDeduction === undefined) {
-          depositTotal += val;
-        }
-      } else if (item.category === "unlisted_stock") {
-        if (item.isFinancialAssetForDeduction === true) {
-          otherFinancialTotal += val;
-        }
-      } else {
-        // 그 외: 사용자 명시 포함만
-        if (item.isFinancialAssetForDeduction === true) {
-          otherFinancialTotal += val;
-        }
-      }
-    }
-    // 금융채무 집계 (category=financial debtItem)
-    let financialDebtTotal = 0;
-    for (const debt of input.debtItems ?? []) {
-      if (debt.category !== "financial") continue;
-      if (debt.isFinancialDebtForDeduction === false) continue;
-      financialDebtTotal += debt.amount;
-    }
-    const rows: FinancialBreakdownRow[] = [];
-    if (depositTotal > 0) rows.push({ label: "예금", amount: depositTotal });
-    if (listedStockTotal > 0) rows.push({ label: "상장주식", amount: listedStockTotal });
-    if (insuranceTotal > 0) rows.push({ label: "보험금", amount: insuranceTotal });
-    if (otherFinancialTotal > 0) rows.push({ label: "기타금융", amount: otherFinancialTotal });
-    if (financialDebtTotal > 0) rows.push({ label: "금융채무", amount: financialDebtTotal });
-    return rows;
-  })();
+  // E7(c): §22 금융재산 분해 rows[] 집계 — inheritance-tax-financial-rows.ts로 분리 (800줄).
+  // 공제 base(suggestNetFinancialAssets)와 정합: Σ적격금융 − 금융채무 − 담보 금융저당. §22② 최대주주 제외.
+  const phaseDFinancialRows: FinancialBreakdownRow[] = buildPhaseDFinancialRows(
+    input.estateItems,
+    input.debtItems,
+    collateralDebts,
+  );
 
   const deductionResult = calcInheritanceDeductions(
     {
