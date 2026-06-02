@@ -37,12 +37,15 @@ const ALL_LEAVES: PrintSectionId[] = [
   "warnings",
 ];
 
-// PDF 채널: 현존 PDF 표현 노드(요약·상속인별) + PR-3a 별지9호 통합.
-// 나머지 별지 4종은 PR-3b~ 미구현이라 screen-only — 구현 시 pdf 승격.
+// PDF 채널: 현존 PDF 표현 노드(요약·상속인별) + 별지 5종 통합(PR-3a/3b).
 const PDF_LEAVES: PrintSectionId[] = [
   "tax-summary",
   "heir-allocation-summary",
   "filing-form-9",
+  "besshi-buppyo-2",
+  "deduction-besshi",
+  "unlisted-stock-besshi",
+  "listed-stock-besshi",
 ];
 
 describe("선택 출력 레지스트리 — Pre-Do anchor", () => {

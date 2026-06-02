@@ -628,7 +628,8 @@ export interface UnlistedStockBesshiPdfDocumentProps {
   input: UnlistedStockValuationInput;
 }
 
-export function UnlistedStockBesshiPdfDocument({ input }: UnlistedStockBesshiPdfDocumentProps) {
+/** 비상장주식 별지4 부표3 Page 배열 — 통합 결과 PDF에서 재사용 (법인 1건) */
+export function UnlistedStockBesshiPages({ input }: UnlistedStockBesshiPdfDocumentProps) {
   let result: UnlistedStockValuationResult | undefined;
   try {
     if (input.totalShares > 0 && input.ownedShares > 0) {
@@ -639,7 +640,7 @@ export function UnlistedStockBesshiPdfDocument({ input }: UnlistedStockBesshiPdf
   }
 
   return (
-    <Document>
+    <>
       <Page1Cover input={input} result={result} />
       {result && (
         <Page2NetAsset
@@ -659,6 +660,14 @@ export function UnlistedStockBesshiPdfDocument({ input }: UnlistedStockBesshiPdf
         />
       )}
       {result && <Page6NetIncomeBreakdown result={result} />}
+    </>
+  );
+}
+
+export function UnlistedStockBesshiPdfDocument({ input }: UnlistedStockBesshiPdfDocumentProps) {
+  return (
+    <Document>
+      <UnlistedStockBesshiPages input={input} />
     </Document>
   );
 }

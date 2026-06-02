@@ -255,6 +255,21 @@ export async function POST(req, ctx) {
 | 직렬화 | deathDate string·Map 회피 | deathDate=`str(inputData.deathDate)`, 별지9호 계산표는 총액(Map 비의존) | ✓ |
 | **나머지 별지 4종** | PR-3b~ | besshi-buppyo-2·deduction-besshi·unlisted·listed 미통합(개별 다운로드는 기존 존재) | 의도된 비범위 |
 
+### 10-4. PR-3b 갭 분석 (나머지 별지 4종 통합)
+
+PR-3a와 동일 패턴(기존 Document → Page 추출 → 통합). 4종 모두 기존 react-pdf Document 보유.
+
+| 별지 | 기존 Document | Page 추출 | 데이터 어댑터(재사용) | 통합 |
+|---|---|---|---|---|
+| besshi-buppyo-2 | `InheritanceBuppyo2PdfDocument` | `Buppyo2Pages`(상속인 N장) | `buildBuppyo2Data(result,heirs,estateItems,priorGifts)` | ✓ |
+| deduction-besshi | `InheritanceDeductionBesshiPdf` | `DeductionBesshiPages` | `buildBuppyo3/Besshi5/Besshi1Data` | ✓ |
+| listed-stock-besshi | `ListedStockBesshiPdfDocument` | `ListedStockBesshiPages` | `evaluateListedStock` per 종목(N map) | ✓ |
+| unlisted-stock-besshi | `UnlistedStockBesshiPdfDocument` | `UnlistedStockBesshiPages` | `unlistedStockValuationV2` per 법인(N map) | ✓ |
+
+- **통합 위임**: 별지 5종 전체를 `lib/pdf/inheritance-besshi-pages.tsx`의 `InheritanceSelectedBesshiPages`로 묶어 ResultPdfDocument가 한 줄 위임(800줄 정책 → ResultPdfDocument 761줄).
+- **데이터**: 저장 input_data(raw form)에서 화면과 동일 가공 재현(estateItems = estateItems+stockItems 합성, familyBusiness 매핑, deathDate string). 모든 어댑터 화면과 공유 → dual-truth 0.
+- **pdf 채널**: 별지 5종 전부 SCREEN_PDF 승격. `pdfEligibleIds` = 요약·상속인별 + 별지 5종 = 7종. anchor PD-4 갱신 7 PASS.
+
 ## 9. 동기화 체크리스트 (출력 레지스트리 — 14지점과 별개)
 
 신규 결과뷰 섹션 추가 시:

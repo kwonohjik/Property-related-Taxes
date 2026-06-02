@@ -194,13 +194,10 @@ function KyeBlock({ t }: { t: Buppyo2SectionTotal }) {
 
 const CIRCLED = ["①", "②", "③", "④", "⑤", "⑥", "⑦", "⑧", "⑨", "⑩"];
 
-export function InheritanceBuppyo2PdfDocument({
-  data,
-}: {
-  data: Buppyo2HeirData[];
-}) {
+/** 부표2 Page 배열 — 통합 결과 PDF(ResultPdfDocument)에서 재사용 (상속인별 N장) */
+export function Buppyo2Pages({ data }: { data: Buppyo2HeirData[] }) {
   return (
-    <Document>
+    <>
       {data.map((d, idx) => (
         <Page key={d.heirId} size="A4" orientation="landscape" style={bp.page}>
           <Text style={bp.subtitle}>{BP2_FORM_SUBTITLE}</Text>
@@ -221,6 +218,14 @@ export function InheritanceBuppyo2PdfDocument({
           </Text>
         </Page>
       ))}
+    </>
+  );
+}
+
+export function InheritanceBuppyo2PdfDocument({ data }: { data: Buppyo2HeirData[] }) {
+  return (
+    <Document>
+      <Buppyo2Pages data={data} />
     </Document>
   );
 }

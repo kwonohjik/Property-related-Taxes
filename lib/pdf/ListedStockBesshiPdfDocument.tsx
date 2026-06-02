@@ -380,11 +380,20 @@ function Page2(props: Props) {
 // Document
 // ============================================================
 
+/** 상장주식 평가조서(갑·을) Page 배열 — 통합 결과 PDF에서 재사용 (종목 1건) */
+export function ListedStockBesshiPages({ besshi }: Props) {
+  return (
+    <>
+      <Page1 besshi={besshi} />
+      <Page2 besshi={besshi} />
+    </>
+  );
+}
+
 export function ListedStockBesshiPdfDocument({ besshi }: Props) {
   return (
     <Document>
-      <Page1 besshi={besshi} />
-      <Page2 besshi={besshi} />
+      <ListedStockBesshiPages besshi={besshi} />
     </Document>
   );
 }

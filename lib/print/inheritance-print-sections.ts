@@ -81,14 +81,13 @@ export const INHERITANCE_PRINT_SECTIONS: PrintSectionGroup[] = [
     id: "group:forms",
     label: "공식 신고서식",
     children: [
-      // PR-3a: 별지9호 react-pdf(FilingForm9PdfPage) ResultPdfDocument 통합 완료 → pdf 승격
+      // PR-3a/3b: 별지 react-pdf를 ResultPdfDocument에 통합 완료 → pdf 승격
       { id: "filing-form-9", label: "별지 제9호서식 (앞쪽)", channel: SCREEN_PDF },
-      // 나머지 별지 react-pdf는 PR-3b~ 미구현 → screen-only (거짓 선택 방지)
-      { id: "besshi-buppyo-2", label: "별지 제9호서식 부표2 (상속인별)", channel: SCREEN },
+      { id: "besshi-buppyo-2", label: "별지 제9호서식 부표2 (상속인별)", channel: SCREEN_PDF },
       {
         id: "deduction-besshi",
         label: "부표3·별지5호·별지1호 (채무·공과·장례·영농·가업)",
-        channel: SCREEN,
+        channel: SCREEN_PDF,
       },
     ],
   },
@@ -97,9 +96,9 @@ export const INHERITANCE_PRINT_SECTIONS: PrintSectionGroup[] = [
     label: "재산 평가",
     children: [
       { id: "valuation-detail", label: "재산 평가 내역", channel: SCREEN },
-      // 별지 react-pdf는 PR-3 미구현 → screen-only (PR-3에서 pdf 승격)
-      { id: "unlisted-stock-besshi", label: "비상장주식 별지4 부표3", channel: SCREEN },
-      { id: "listed-stock-besshi", label: "상장주식 평가조서 (갑·을)", channel: SCREEN },
+      // PR-3b: ResultPdfDocument 통합 완료 → pdf 승격
+      { id: "unlisted-stock-besshi", label: "비상장주식 별지4 부표3", channel: SCREEN_PDF },
+      { id: "listed-stock-besshi", label: "상장주식 평가조서 (갑·을)", channel: SCREEN_PDF },
     ],
   },
   {
