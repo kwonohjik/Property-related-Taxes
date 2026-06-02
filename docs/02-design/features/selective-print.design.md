@@ -33,7 +33,10 @@
 | 21 | :465 | — | 면책고지 | C | 항상 | — | — | 항상 출력(법적 고지) |
 | 22 | :468-492 | — | 하단 버튼 | C | 항상 | — | — | 이미 `print:hidden` |
 
-- **선택 가능 노드(leaf)**: **17종** (2~13·15~19). PDF 채널(`pdf:✓`): 별지 **5종**(11·12·13·16·17) — 부표3/별지5/별지1은 화면 단일 카드라 `deduction-besshi`로 통합(Do deviation). 서버 PDF(PR-3)에서 페이지 단위 7종 세분화는 그때 재평가.
+- **선택 가능 노드(leaf)**: **17종** (2~13·15~19). 부표3/별지5/별지1은 화면 단일 카드라 `deduction-besshi`로 통합(Do deviation).
+- **PDF 채널 (실측 기준 — 거짓 선택 방지)**:
+  - ⚠️ 표의 `pdf:✓`(별지 5종)는 **PR-3 목표값**(별지 react-pdf 구현 후). **PR-2 현재**는 별지 PDF 미구현이므로 별지 5종은 모두 **screen-only**.
+  - **PR-2 실제 pdf 채널 = `tax-summary`·`heir-allocation-summary`** (현존 `ResultPdfDocument` 상속세 섹션 = 계산 내역 표 + 상속인별 집계로 표현 가능한 노드). 별지는 PR-3에서 `["screen","pdf"]`로 승격.
 - **항상 출력(선택 무관)**: 면책고지(21)는 법적 고지이므로 선택 트리에서 제외하고 인쇄 시 항상 포함.
 
 ## 2. 계층 트리 (큰 섹션 → 개별 서식)
@@ -118,6 +121,12 @@ export function resolveGroupCheckState(
   group: PrintSectionGroup,
   selectedIds: ReadonlySet<string>
 ): GroupCheckState;
+
+// 서버 PDF에 포함할 섹션 (PR-2) — 선택 ∩ pdf 채널 ∩ 가용. Panel·route 공용 단일 헬퍼.
+export function selectPdfSections(
+  selectedIds: ReadonlySet<string>,
+  availableIds?: ReadonlySet<string>
+): PrintSectionId[];
 ```
 
 ### 설계 근거
@@ -216,6 +225,21 @@ export async function POST(req, ctx) {
 | 서버 PDF(PR-2)·별지 PDF(PR-3) | 범위 | **미구현(별도 PR)** | 의도된 비범위 |
 
 **잔여(후속 PR)**: route POST·`ResultPdfDocument` 필터·별지 react-pdf(PR-2/3), E2E Playwright(브라우저 인쇄 미리보기 검증).
+
+### 10-2. PR-2 갭 분석 (서버 PDF 골격)
+
+| 항목 | 설계 | 구현 | 판정 |
+|---|---|---|---|
+| route POST | `{ sections }` body, GET 하위호환 | `buildPdfResponse` 공유 헬퍼 + GET/POST, 빈 sections 400 | ✓ |
+| ResultPdfDocument 필터 | `selectedSectionIds` prop | prop + `InheritanceGiftSection` 조건부(요약·상속인별) | ✓ |
+| pdf 채널 정정 | 별지는 PR-3까지 screen-only | tax-summary·heir-allocation-summary만 pdf, 별지 5종 screen | ✓ (PR-1의 시기상조 pdf 표시 정정) |
+| PDF 버튼 | 로그인+savedId 조건 | `PrintSelectionPanel` PDF 버튼 + `savedId` prop + 비활성 안내 | ✓ |
+| 선택→PDF 변환 | 단일 헬퍼 | `selectPdfSections`(Panel·route 공용) | ✓ |
+| savedId 전달 | 마법사 → 결과뷰 | `InheritanceTaxForm:425 savedId={autoSave.savedId ?? undefined}` | ✓ |
+| anchor | PD-4 갱신 + PD-6 | 7 PASS | ✓ |
+| **별지 PDF(PR-3)** | 범위 | **미구현** | 의도된 비범위 |
+
+**deviation**: PR-1에서 별지를 `pdf` 채널로 선표시했으나 실제 PDF 미구현 → PR-2에서 **현존 PDF 표현 가능 노드(요약·상속인별)만 pdf 채널**로 정정(거짓 선택 방지). 별지는 PR-3에서 react-pdf 구현과 함께 pdf 승격.
 
 ## 9. 동기화 체크리스트 (출력 레지스트리 — 14지점과 별개)
 

@@ -32,6 +32,12 @@ export interface ResultPdfProps {
   createdAt: string;
   resultData: R;
   inputData?: R;
+  /**
+   * 선택 출력(상속세, PR-2). 지정 시 해당 leaf id만 PDF에 포함.
+   * undefined(GET 하위호환)면 전체 렌더.
+   * 현재 매핑: "tax-summary"→계산 내역 표, "heir-allocation-summary"→상속인별 집계.
+   */
+  selectedSectionIds?: string[];
 }
 
 // ─── 색상·스타일 ──────────────────────────────────────────────────
@@ -428,10 +434,27 @@ function AcquisitionSection({ r }: { r: R }) {
   );
 }
 
-function InheritanceGiftSection({ r, taxType, inputData }: { r: R; taxType: string; inputData?: R }) {
+function InheritanceGiftSection({
+  r,
+  taxType,
+  inputData,
+  selectedSectionIds,
+}: {
+  r: R;
+  taxType: string;
+  inputData?: R;
+  selectedSectionIds?: string[];
+}) {
   const isInheritance = taxType === "inheritance";
+  // 선택 필터 (상속세, PR-2). 미지정(전체) 또는 증여세는 항상 렌더.
+  const filtered = isInheritance && selectedSectionIds !== undefined;
+  const showSummary = !filtered || selectedSectionIds!.includes("tax-summary");
+  const showHeirAllocation =
+    !filtered || selectedSectionIds!.includes("heir-allocation-summary");
   return (
     <>
+      {showSummary && (
+      <>
       <Text style={s.sectionTitle}>계산 내역</Text>
       <View style={s.table}>
         {isInheritance && num(r.grossEstateValue) !== undefined && (
@@ -468,9 +491,11 @@ function InheritanceGiftSection({ r, taxType, inputData }: { r: R; taxType: stri
           <View style={s.rowLast}><Text style={s.lbl}>결정세액</Text><Text style={s.valAccent}>{fmt(r.finalTax)}</Text></View>
         )}
       </View>
+      </>
+      )}
 
       {/* Phase D: 상속인별 상속세부담액 집계 표 (이미지 8) — 상속세 한정·heirs 존재 시 */}
-      {isInheritance && r.heirAllocationResult && Array.isArray(inputData?.heirs) && (inputData!.heirs as unknown[]).length > 0 && (
+      {showHeirAllocation && isInheritance && r.heirAllocationResult && Array.isArray(inputData?.heirs) && (inputData!.heirs as unknown[]).length > 0 && (
         <InheritanceHeirAllocationSection
           result={r as unknown as InheritanceTaxResult}
           heirs={inputData!.heirs as unknown as Heir[]}
@@ -636,6 +661,7 @@ export function ResultPdfDocument({
   createdAt,
   resultData: r,
   inputData,
+  selectedSectionIds,
 }: ResultPdfProps) {
   const isExempt = bool(r.isExempt);
   const totalTax = getTotalTax(taxType, r);
@@ -685,7 +711,7 @@ export function ResultPdfDocument({
         {taxType === "transfer" && <TransferSection r={r} />}
         {taxType === "transfer_multi" && <TransferMultiSection r={r} />}
         {taxType === "acquisition" && <AcquisitionSection r={r} />}
-        {(taxType === "inheritance" || taxType === "gift") && <InheritanceGiftSection r={r} taxType={taxType} inputData={inputData} />}
+        {(taxType === "inheritance" || taxType === "gift") && <InheritanceGiftSection r={r} taxType={taxType} inputData={inputData} selectedSectionIds={selectedSectionIds} />}
         {taxType === "property" && <PropertySection r={r} />}
         {taxType === "comprehensive_property" && <ComprehensiveSection r={r} />}
 

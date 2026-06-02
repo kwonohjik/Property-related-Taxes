@@ -12,6 +12,7 @@ import {
   pdfEligibleIds,
   resolvePrintVisibilityClass,
   resolveGroupCheckState,
+  selectPdfSections,
   type PrintSectionId,
 } from "@/lib/print/inheritance-print-sections";
 
@@ -36,14 +37,9 @@ const ALL_LEAVES: PrintSectionId[] = [
   "warnings",
 ];
 
-// 별지 5종 (channel: pdf)
-const PDF_LEAVES: PrintSectionId[] = [
-  "filing-form-9",
-  "besshi-buppyo-2",
-  "deduction-besshi",
-  "unlisted-stock-besshi",
-  "listed-stock-besshi",
-];
+// PDF 채널 (PR-2): 현존 ResultPdfDocument 상속세 섹션으로 표현 가능한 노드만.
+// 별지 5종은 react-pdf 미구현(PR-3)이라 screen-only — 구현 시 pdf 승격.
+const PDF_LEAVES: PrintSectionId[] = ["tax-summary", "heir-allocation-summary"];
 
 describe("선택 출력 레지스트리 — Pre-Do anchor", () => {
   // PD-1: 선택 0건 → 모든 leaf print:hidden
@@ -75,8 +71,8 @@ describe("선택 출력 레지스트리 — Pre-Do anchor", () => {
     }
   });
 
-  // PD-4: PDF 채널 = 별지 5종 정확히
-  it("PD-4: pdfEligibleIds는 별지 5종과 정확히 일치", () => {
+  // PD-4: PDF 채널 = 현존 PDF 표현 가능 노드(요약·상속인별 집계)
+  it("PD-4: pdfEligibleIds는 PDF 채널 노드와 정확히 일치 (PR-2)", () => {
     const ids = pdfEligibleIds();
     expect([...ids].sort()).toEqual([...PDF_LEAVES].sort());
   });
@@ -93,6 +89,36 @@ describe("선택 출력 레지스트리 — Pre-Do anchor", () => {
     expect(resolveGroupCheckState(forms!, new Set(["filing-form-9"]))).toBe("partial");
     // all (자식 전부)
     expect(resolveGroupCheckState(forms!, new Set(formLeafIds))).toBe("all");
+  });
+
+  // PD-6: 서버 PDF 선택 변환 (선택 ∩ pdf 채널 ∩ 가용) — PR-2
+  it("PD-6: selectPdfSections — pdf 채널 노드만, 비채널·미가용 제외", () => {
+    const available = new Set<PrintSectionId>([
+      "tax-summary",
+      "heir-allocation-summary",
+      "filing-form-9",
+      "core-result",
+    ]);
+    // 화면 전용 노드(core-result·filing-form-9) 선택은 PDF에서 제외
+    expect(
+      selectPdfSections(
+        new Set(["core-result", "filing-form-9", "tax-summary"]),
+        available
+      )
+    ).toEqual(["tax-summary"]);
+    // pdf 채널 둘 다 선택
+    expect(
+      selectPdfSections(
+        new Set(["tax-summary", "heir-allocation-summary"]),
+        available
+      ).sort()
+    ).toEqual(["heir-allocation-summary", "tax-summary"]);
+    // 미가용은 제외
+    expect(
+      selectPdfSections(new Set(["heir-allocation-summary"]), new Set(["tax-summary"]))
+    ).toEqual([]);
+    // 선택 0건
+    expect(selectPdfSections(new Set(), available)).toEqual([]);
   });
 
   // 트리 구조 sanity — 그룹 5개, 모든 leaf가 정확히 한 그룹에 속함

@@ -423,6 +423,7 @@ export function InheritanceTaxForm() {
           deathDate={form.deathDate}
           presumedItems={form.presumedItems}
           familyBusinessInput={form.familyBusiness}
+          savedId={autoSave.savedId ?? undefined}
         />
         <div className="flex justify-end">
           <SaveButton variant="primary" onSave={handleManualSaveForForm} />

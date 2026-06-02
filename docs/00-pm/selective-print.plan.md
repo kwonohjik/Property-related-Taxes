@@ -128,9 +128,9 @@ PrintSectionNode {
 ### 권장 PR 분할 (범위 大 — 강력 권장)
 | 단계 | 내용 | 독립 가치 |
 |---|---|---|
-| **PR-1** | 레지스트리 + 선택 UI + 화면 인쇄 선택 출력 (§5의 1~3) | 사용자 원래 문제 즉시 해결 |
-| **PR-2** | route POST화 + PDF 버튼 + ResultPdfDocument 선택 필터 (현존 상속세 PDF 섹션 한정) | 서버 PDF 선택 골격 |
-| **PR-3~** | 별지 7종 PDF를 서식 묶음 단위로 순차 (각 anchor 통과 후 다음) | 서식별 점진 |
+| **PR-1** ✅ | 레지스트리 + 선택 UI + 화면 인쇄 선택 출력 (§5의 1~3) | 사용자 원래 문제 즉시 해결 |
+| **PR-2** ✅ | route POST화 + PDF 버튼 + ResultPdfDocument 선택 필터 (현존 상속세 PDF 섹션=요약·상속인별 한정) | 서버 PDF 선택 골격 |
+| **PR-3~** | 별지 5종 PDF(filing-form-9·besshi-buppyo-2·deduction-besshi·unlisted·listed)를 react-pdf 구현 + pdf 채널 승격 | 서식별 점진 |
 > 단일 세션 완주를 원하면 위 순서대로 Do, 각 단계 anchor GREEN 후 다음. 한 PR로 합치면 리뷰·회귀 위험 大.
 
 ### 비범위 (후속)

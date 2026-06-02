@@ -60,8 +60,9 @@ export const INHERITANCE_PRINT_SECTIONS: PrintSectionGroup[] = [
     label: "계산 요약",
     children: [
       { id: "core-result", label: "핵심 결과 (결정세액)", channel: SCREEN },
-      { id: "tax-summary", label: "상속세 과세 요약", channel: SCREEN },
-      { id: "heir-allocation-summary", label: "상속인별 상속세부담액 집계", channel: SCREEN },
+      // 서버 PDF(PR-2): 현존 ResultPdfDocument 상속세 섹션으로 표현 가능 → pdf 채널
+      { id: "tax-summary", label: "상속세 과세 요약", channel: SCREEN_PDF },
+      { id: "heir-allocation-summary", label: "상속인별 상속세부담액 집계", channel: SCREEN_PDF },
       { id: "deduction-breakdown", label: "상속공제 상세 내역", channel: SCREEN },
       { id: "allocation-breakdown", label: "산출세액·증여세액공제 근거", channel: SCREEN },
     ],
@@ -80,12 +81,13 @@ export const INHERITANCE_PRINT_SECTIONS: PrintSectionGroup[] = [
     id: "group:forms",
     label: "공식 신고서식",
     children: [
-      { id: "filing-form-9", label: "별지 제9호서식 (앞쪽)", channel: SCREEN_PDF },
-      { id: "besshi-buppyo-2", label: "별지 제9호서식 부표2 (상속인별)", channel: SCREEN_PDF },
+      // 별지 react-pdf는 PR-3 미구현 → 현재 screen-only (거짓 선택 방지). PR-3에서 pdf 승격.
+      { id: "filing-form-9", label: "별지 제9호서식 (앞쪽)", channel: SCREEN },
+      { id: "besshi-buppyo-2", label: "별지 제9호서식 부표2 (상속인별)", channel: SCREEN },
       {
         id: "deduction-besshi",
         label: "부표3·별지5호·별지1호 (채무·공과·장례·영농·가업)",
-        channel: SCREEN_PDF,
+        channel: SCREEN,
       },
     ],
   },
@@ -94,8 +96,9 @@ export const INHERITANCE_PRINT_SECTIONS: PrintSectionGroup[] = [
     label: "재산 평가",
     children: [
       { id: "valuation-detail", label: "재산 평가 내역", channel: SCREEN },
-      { id: "unlisted-stock-besshi", label: "비상장주식 별지4 부표3", channel: SCREEN_PDF },
-      { id: "listed-stock-besshi", label: "상장주식 평가조서 (갑·을)", channel: SCREEN_PDF },
+      // 별지 react-pdf는 PR-3 미구현 → screen-only (PR-3에서 pdf 승격)
+      { id: "unlisted-stock-besshi", label: "비상장주식 별지4 부표3", channel: SCREEN },
+      { id: "listed-stock-besshi", label: "상장주식 평가조서 (갑·을)", channel: SCREEN },
     ],
   },
   {
@@ -133,6 +136,19 @@ export function resolvePrintVisibilityClass(
   selectedIds: ReadonlySet<string>
 ): "" | "print:hidden" {
   return selectedIds.has(id) ? "" : "print:hidden";
+}
+
+/**
+ * 서버 PDF에 포함할 섹션 (PR-2) — 선택 ∩ pdf 채널 ∩ (가용).
+ * PrintSelectionPanel·route 공용 단일 헬퍼 (이중 정의 금지).
+ */
+export function selectPdfSections(
+  selectedIds: ReadonlySet<string>,
+  availableIds?: ReadonlySet<string>
+): PrintSectionId[] {
+  return pdfEligibleIds().filter(
+    (id) => selectedIds.has(id) && (!availableIds || availableIds.has(id))
+  );
 }
 
 /** 그룹 체크 상태 (부모 체크박스 indeterminate 판정) */

@@ -149,6 +149,8 @@ interface Props {
   presumedItems?: PresumedInheritanceItem[];
   /** 가업상속 입력 — 별지 제1호서식(가업상속공제신고서) 나·다 칸용 */
   familyBusinessInput?: FamilyBusinessInheritanceInput;
+  /** 저장된 계산 id — 서버 PDF 선택 출력(PR-2)용. 미저장/비로그인 시 undefined */
+  savedId?: string;
 }
 
 export function InheritanceTaxResultView({
@@ -164,8 +166,35 @@ export function InheritanceTaxResultView({
   deathDate,
   presumedItems,
   familyBusinessInput,
+  savedId,
 }: Props) {
   const [showValuation, setShowValuation] = useState(false);
+  const [pdfBusy, setPdfBusy] = useState(false);
+
+  // 선택 항목 서버 PDF 다운로드 (PR-2). savedId(로그인+저장) 있을 때만 활성.
+  async function handlePrintPdf(pdfSections: PrintSectionId[]) {
+    if (!savedId || pdfSections.length === 0) return;
+    setPdfBusy(true);
+    try {
+      const res = await fetch(`/api/pdf/result/${savedId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sections: pdfSections }),
+      });
+      if (!res.ok) throw new Error("PDF 생성 실패");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `상속세_계산결과_${savedId.slice(0, 8)}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      alert("PDF 생성에 실패했습니다. 잠시 후 다시 시도해 주세요.");
+    } finally {
+      setPdfBusy(false);
+    }
+  }
 
   // 선택 출력 — 기본 전체 미선택 (사용자가 필요한 항목만 추가)
   const [selectedPrintIds, setSelectedPrintIds] = useState<Set<PrintSectionId>>(
@@ -220,11 +249,14 @@ export function InheritanceTaxResultView({
 
   return (
     <div className="space-y-5">
-      {/* 출력 항목 선택 패널 (선택 항목만 인쇄) */}
+      {/* 출력 항목 선택 패널 (선택 항목만 인쇄·PDF) */}
       <PrintSelectionPanel
         selectedIds={selectedPrintIds}
         availableIds={availablePrintIds}
         onChange={setSelectedPrintIds}
+        onPrintPdf={handlePrintPdf}
+        pdfReady={!!savedId}
+        pdfBusy={pdfBusy}
       />
 
       {/* 핵심 결과 카드 */}

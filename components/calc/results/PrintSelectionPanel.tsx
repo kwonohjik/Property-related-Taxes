@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useRef } from "react";
-import { Printer } from "lucide-react";
+import { Printer, FileDown } from "lucide-react";
 import {
   INHERITANCE_PRINT_SECTIONS,
   resolveGroupCheckState,
+  selectPdfSections,
   type PrintSectionGroup,
   type PrintSectionId,
 } from "@/lib/print/inheritance-print-sections";
@@ -53,11 +54,19 @@ export function PrintSelectionPanel({
   selectedIds,
   availableIds,
   onChange,
+  onPrintPdf,
+  pdfReady = false,
+  pdfBusy = false,
 }: {
   selectedIds: Set<PrintSectionId>;
   /** 현재 결과뷰에 실제 렌더되는 leaf id (가용성) */
   availableIds: ReadonlySet<PrintSectionId>;
   onChange: (next: Set<PrintSectionId>) => void;
+  /** 선택 항목 서버 PDF 다운로드 (PR-2). 미지정 시 PDF 버튼 숨김 */
+  onPrintPdf?: (pdfSections: PrintSectionId[]) => void;
+  /** 로그인+저장 완료 — PDF 다운로드 가능 여부 */
+  pdfReady?: boolean;
+  pdfBusy?: boolean;
 }) {
   // 가용 노드만 남긴 그룹 트리
   const groups = useMemo<PrintSectionGroup[]>(
@@ -74,6 +83,12 @@ export function PrintSelectionPanel({
     [groups]
   );
   const selectedCount = allAvailable.filter((id) => selectedIds.has(id)).length;
+
+  // 서버 PDF에 실제 포함될 항목 (선택 ∩ pdf 채널 ∩ 가용) — 단일 헬퍼 (PR-2)
+  const pdfSelected = useMemo(
+    () => selectPdfSections(selectedIds, availableIds),
+    [selectedIds, availableIds]
+  );
 
   const toggleLeaf = (id: PrintSectionId) => {
     const next = new Set(selectedIds);
@@ -169,16 +184,41 @@ export function PrintSelectionPanel({
             ? `${selectedCount}개 항목 선택됨`
             : "출력할 항목을 선택하세요"}
         </span>
-        <button
-          type="button"
-          onClick={() => window.print()}
-          disabled={selectedCount === 0}
-          className="inline-flex items-center gap-1.5 rounded-md bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <Printer className="h-4 w-4" />
-          선택 항목 인쇄
-        </button>
+        <div className="flex items-center gap-2">
+          {onPrintPdf && (
+            <button
+              type="button"
+              onClick={() => onPrintPdf(pdfSelected)}
+              disabled={!pdfReady || pdfBusy || pdfSelected.length === 0}
+              title={
+                !pdfReady
+                  ? "로그인 후 또는 화면 인쇄(PDF 저장)로 이용하세요"
+                  : pdfSelected.length === 0
+                    ? "PDF 출력 가능 항목(과세 요약·상속인별 집계)을 선택하세요"
+                    : undefined
+              }
+              className="inline-flex items-center gap-1.5 rounded-md border border-sky-600 px-3.5 py-2 text-sm font-medium text-sky-700 dark:text-sky-300 hover:bg-sky-100 dark:hover:bg-sky-900/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <FileDown className="h-4 w-4" />
+              {pdfBusy ? "생성 중..." : "선택 항목 PDF"}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => window.print()}
+            disabled={selectedCount === 0}
+            className="inline-flex items-center gap-1.5 rounded-md bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Printer className="h-4 w-4" />
+            선택 항목 인쇄
+          </button>
+        </div>
       </div>
+      {onPrintPdf && !pdfReady && (
+        <p className="mt-2 text-[11px] text-sky-600 dark:text-sky-400">
+          ※ 서버 PDF는 로그인·저장 후 이용할 수 있습니다. 비로그인 시 “선택 항목 인쇄”의 PDF 저장을 이용하세요.
+        </p>
+      )}
     </div>
   );
 }
