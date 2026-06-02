@@ -484,6 +484,89 @@ export function suggestCohabitHouseCandidates(
 }
 
 // ============================================================
+// A-9+: 동거주택 공시가격 자동도출 §23의2 (필드 #3, v3)
+// ============================================================
+
+/**
+ * §23의2 동거주택 공시가격 자동도출.
+ * - `isCohabitantHouse === true` 단일 주택 자산. 복수면 자동도출 포기(isApplicable=false, §23의2 1세대1주택).
+ * - `value = standardPrice` (**gross — 담보채무 차감 금지**). securedDebt = mortgageAmount.
+ *   ★ E-1: §23의2① 담보채무 차감은 엔진 calcCohabitationDeduction(deductions.ts:294)이 단일 수행.
+ *   derive가 또 빼면 이중차감(5억·저당1억 → 공제 3억, 정답 4억).
+ * - 담보채무 = 저당 등 담보권 설정 채무만(KoreanLaw §23의2① mst 276123 검증). 일반 임대보증금(무담보) 제외.
+ * - heirs: 동거 자녀(relation==="child" && isCohabitant) 보조 안내.
+ */
+export function deriveCohabitHouseStdPrice(
+  estateItems: EstateItem[],
+  heirs: Heir[],
+): DeductionSuggestion & { securedDebt: number } {
+  const houses = estateItems.filter((i) => i.isCohabitantHouse === true);
+  const hasCohabitantChild = heirs.some(
+    (h) => h.relation === "child" && h.isCohabitant === true,
+  );
+
+  if (houses.length === 0) {
+    return {
+      value: 0,
+      securedDebt: 0,
+      reason: "동거주택 미지정",
+      breakdown: [],
+      isApplicable: false,
+    };
+  }
+  if (houses.length > 1) {
+    return {
+      value: 0,
+      securedDebt: 0,
+      reason: "동거주택 복수 지정 — 1건만 선택",
+      breakdown: houses.map(
+        (h) => `${h.name || "(자산명 미입력)"}: ${formatKrw(h.standardPrice ?? 0)}원`,
+      ),
+      isApplicable: false,
+      notes: ["⚠️ §23의2는 1세대 1주택 — 동거주택을 1건만 지정하세요."],
+    };
+  }
+
+  const h = houses[0];
+  const stdPrice = h.standardPrice ?? 0;
+  if (stdPrice <= 0) {
+    return {
+      value: 0,
+      securedDebt: 0,
+      reason: "동거주택 공시가격 미입력",
+      breakdown: [],
+      isApplicable: false,
+      notes: ["주택 자산의 공시가격(기준시가)을 입력하세요."],
+    };
+  }
+
+  // §23의2① "담보된 피상속인 채무" = 저당 등 담보권 설정 채무(임대보증금 제외).
+  const securedDebt = h.mortgageAmount ?? 0;
+
+  const breakdown: string[] = [
+    `동거주택 공시가격: ${formatKrw(stdPrice)}원`,
+    ...(securedDebt > 0
+      ? [`§23의2① 담보채무(저당) 차감(엔진): ${formatKrw(securedDebt)}원`]
+      : []),
+  ];
+  const notes: string[] = [];
+  if (!hasCohabitantChild) {
+    notes.push(
+      "ⓘ 동거(isCohabitant) 표시된 자녀 상속인이 없습니다 — §23의2 10년 동거·무주택 요건을 확인하세요.",
+    );
+  }
+
+  return {
+    value: stdPrice, // ★ gross — securedDebt 차감은 엔진 단일 수행
+    securedDebt,
+    reason: "동거주택 공시가격 자동도출 (§23의2)",
+    breakdown,
+    isApplicable: true,
+    notes: notes.length > 0 ? notes : undefined,
+  };
+}
+
+// ============================================================
 // A-8: 배우자 실제 상속액 §19 (필드 #1) — 협의분할 한정
 // ============================================================
 
@@ -501,6 +584,25 @@ export function suggestSpouseActualAmount(
       reason: "배우자 상속인 없음",
       breakdown: [],
       isApplicable: false,
+    };
+  }
+  // ★ R-1: 일부 자산만 협의분할 입력(0<allocated<total) → 미입력 자산의 배우자 귀속 불명 →
+  //   자동값이 과소(법정상속분 fallback 대비)하여 잘못된 auto-fill 위험 → 자동도출 포기.
+  const totalCount = estateItems.length;
+  const allocatedCount = estateItems.filter(
+    (i) => i.heirAllocations && i.heirAllocations.length > 0,
+  ).length;
+  if (allocatedCount > 0 && allocatedCount < totalCount) {
+    return {
+      value: 0,
+      reason: "일부 자산만 협의분할 — 전체 협의분할 또는 §19 직접 입력 필요",
+      breakdown: [
+        `협의분할 입력 ${allocatedCount}/${totalCount}건 — 미입력 자산의 배우자 귀속을 알 수 없어 자동도출하지 않습니다.`,
+      ],
+      isApplicable: false,
+      notes: [
+        "⚠️ 일부 자산만 협의분할이 입력되어 배우자 실제 상속액을 정확히 도출할 수 없습니다. 모든 자산에 협의분할을 입력하거나 배우자 실제 상속액을 직접 입력하세요.",
+      ],
     };
   }
   let assetTotal = 0;
