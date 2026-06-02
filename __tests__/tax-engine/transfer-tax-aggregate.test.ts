@@ -2,7 +2,7 @@
  * 양도소득세 다건 동시 양도 엔진 테스트
  *
  * T-M01 ~ T-M15
- * §92 · §102② · §103 · §104의2 · 조특법 §127②
+ * §92 · §102② · §103 · §104⑤ · 조특법 §127②
  */
 
 import { describe, it, expect } from "vitest";
@@ -609,5 +609,38 @@ describe("T-M15: pro-rata 잔차 보정", () => {
     // 차손 1.5억이 모두 차익에 통산되어야 함
     expect(totalSameGroupOffset).toBe(150_000_000);
     expect(r.unusedLoss).toBe(0);
+  });
+});
+
+// ============================================================
+// T-M16: 비교과세 인용 정정 — §104의2(지정지역) → §104⑤(둘 이상 양도 큰 세액)
+// 코드리뷰 2026-06-03: KoreanLaw 검증 결과 §104의2는 "지정지역의 운영" 조문이고
+// 다건 비교과세 근거는 §104⑤임을 확인 → 인용 문자열 정정 회귀 방어.
+// ============================================================
+
+describe("T-M16: 비교과세 §104⑤ 인용 정정 (A 회귀)", () => {
+  it("비교과세 step label·legalBasis = §104⑤ (§104의2 아님)", () => {
+    const input: AggregateTransferInput = {
+      taxYear: 2024,
+      annualBasicDeductionUsed: 0,
+      properties: [
+        makeItem("S", "단기 토지", {
+          propertyType: "land",
+          transferPrice: 300_000_000,
+          acquisitionPrice: 150_000_000,
+          acquisitionDate: new Date("2024-01-01"),
+          transferDate: new Date("2024-06-01"), // 1년 미만 → short_term → 비교과세 step 생성
+          isOneHousehold: false,
+          householdHousingCount: 0,
+          residencePeriodMonths: 0,
+        }),
+      ],
+    };
+    const r = calculateTransferTaxAggregate(input, mockRates);
+    const compStep = r.steps.find((s) => s.label.includes("비교과세"));
+    expect(compStep).toBeDefined();
+    expect(compStep!.label).toContain("§104⑤");
+    expect(compStep!.label).not.toContain("§104의2");
+    expect(compStep!.legalBasis).toBe("소득세법 §104⑤");
   });
 });

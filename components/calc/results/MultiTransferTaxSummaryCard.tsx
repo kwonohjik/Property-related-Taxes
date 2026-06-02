@@ -85,9 +85,9 @@ function ComparativeTaxBadge({ applied }: { applied: "groups" | "general" | "non
     <Badge
       variant={applied === "groups" ? "destructive" : "default"}
       className="text-xs"
-      title="소득세법 §104의2 비교과세"
+      title="소득세법 §104⑤ 비교과세"
     >
-      §104의2 비교과세 — {applied === "groups" ? "세율군별(방법 B)" : "전체 누진(방법 A)"} 적용
+      §104⑤ 비교과세 — {applied === "groups" ? "세율군별(방법 B)" : "전체 누진(방법 A)"} 적용
     </Badge>
   );
 }

@@ -9,7 +9,7 @@
  *   - 소득세법 §92 — 동일 과세기간 양도소득금액 합산
  *   - 소득세법 §102 ② + 시행령 §167의2 — 양도차손 통산
  *   - 소득세법 §103 — 연 250만원 기본공제
- *   - 소득세법 §104의2 — 비교과세
+ *   - 소득세법 §104⑤ — 비교과세
  *   - 조특법 §127 ② — 감면 중복배제 (자산 내)
  *   - 조특법 §133 — 감면 종합한도 (자경 1억 / 수용 2억)
  */
@@ -237,7 +237,7 @@ export interface AggregateTransferResult {
   calculatedTaxByGroups: number;
   /** 방법 A: 전체 누진세율 적용 산출세액 */
   calculatedTaxByGeneral: number;
-  /** 비교과세(§104의2) 적용 결과 */
+  /** 비교과세(§104⑤) 적용 결과 */
   comparedTaxApplied: "groups" | "general" | "none";
   /** MAX(byGroups, byGeneral) */
   calculatedTax: number;

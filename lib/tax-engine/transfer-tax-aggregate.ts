@@ -5,7 +5,7 @@
  *   - §92              : 양도소득금액 합산 → 통합 과세표준
  *   - §102 ②·시행령 §167의2 : 양도차손 통산 (그룹 내 → 타군 pro-rata 안분, 이월 불인정)
  *   - §103             : 기본공제 연 1회 250만원, 미등기 배제
- *   - §104의2          : 비교과세 MAX(세율군별 분리세액 합, 전체 누진세액)
+ *   - §104⑤          : 비교과세 MAX(세율군별 분리세액 합, 전체 누진세액)
  *   - 조특법 §127 ②    : 감면 중복배제는 건별 독립 적용 후 합산
  *
  * 순수 함수. DB 직접 호출 없음. 모든 세율 데이터는 rates 매개변수로 주입.
@@ -190,7 +190,7 @@ export function calculateTransferTaxAggregate(
   const generalTaxBase = Math.max(0, totalIncomeAfterOffset - totalBasicDeduction);
   const calculatedTaxByGeneral = applyGeneralProgressive(generalTaxBase, rates);
 
-  // M-7: 비교과세 (§104의2)
+  // M-7: 비교과세 (§104⑤)
   const hasSurchargeGroup = groupTaxes.some((g) =>
     g.group === "multi_house_surcharge" ||
     g.group === "non_business_land" ||
@@ -213,7 +213,7 @@ export function calculateTransferTaxAggregate(
   }
 
   steps.push({
-    label: "비교과세 (§104의2)",
+    label: "비교과세 (§104⑤)",
     formula: `세율군별 ${calculatedTaxByGroups.toLocaleString()} vs 전체누진 ${calculatedTaxByGeneral.toLocaleString()} → ${comparedTaxApplied === "none" ? "비교 불필요 (중과·단기 없음)" : `MAX = ${calculatedTax.toLocaleString()} (${comparedTaxApplied === "groups" ? "세율군별" : "전체누진"})`}`,
     amount: calculatedTax,
     legalBasis: TRANSFER.COMPARATIVE_TAXATION,

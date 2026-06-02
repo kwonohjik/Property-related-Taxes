@@ -114,10 +114,10 @@ export const STATEMENT_GROUPS: GroupDef[] = [
     ],
   },
   // 다건 합산 절차 — 다건 모드에서만 활성 항목이 있음 (단건 모드는 빈 그룹으로 자동 미렌더).
-  // §102② 차손통산·§103 기본공제 배분·§104의2 비교과세 등 다건 전용 합산 step 노출.
+  // §102② 차손통산·§103 기본공제 배분·§104⑤ 비교과세 등 다건 전용 합산 step 노출.
   {
     id: "aggregate",
-    title: "4단계 — 다건 합산 절차 (§102②·§103·§104의2)",
+    title: "4단계 — 다건 합산 절차 (§102②·§103·§104⑤)",
     tone: "violet",
     itemKeys: ["lossOffset", "basicDeductionAggregate", "comparedTaxation"],
   },
