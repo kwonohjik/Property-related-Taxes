@@ -231,6 +231,20 @@ const availablePrintIds = useMemo<Set<string>>(() => { /* §2 가드 1:1 */ }, [
 
 **단순성**: 재산세는 isExempt 전용 화면 없음 + 모든 섹션 단일 카드(보조 카드 묶음 불필요) → PR-C 대비 단순. 각 `<section>`을 1:1로 PrintSection 래핑(className 불요). E2E는 PR-C와 동일 사유로 생략(제네릭 패널은 PR-B1 E2E 검증).
 
+## 7-7. PR-E 갭 분석 (종합부동산세 선택 출력 — 구현 완료)
+
+| 항목 | 설계 | 구현 | 판정 |
+|---|---|---|---|
+| `COMPREHENSIVE_PRINT_SECTIONS` 7 leaf | §2.4 (자료1·주택분2·토지분2·합계1·기타1) | `comprehensive-print-sections.ts` 7 leaf **5그룹** + 바인딩 래퍼 | ✓ |
+| pdf 채널 | §2.4 housing-tax 1종 | `housing-tax` SCREEN_PDF (주택분 계산표 대표, 토지분 PDF 없음) | ✓ |
+| 결과뷰 통합 | §3 상속세 복제 | 7 `PrintSection` + 패널 **신규** + `savedId` + `handlePrintPdf` + `availablePrintIds` (useState/useMemo 신규 import). sub 컴포넌트 6종 1:1 래핑 | ✓ |
+| 마법사 = page | §3 `comprehensive page` | `app/calc/comprehensive-tax/page.tsx:688` — `const autoSave` + `savedId` 전달 (form 아닌 page) | ✓ |
+| ResultPdfDocument 필터 | §5 housing-tax 대표 | ComprehensiveSection `selectedSectionIds` 필터(미포함 시 null) + 호출부 | ✓ |
+| anchor | §6 PD-comp | comprehensive 7 + 전체 회귀 + tsc 0 | ✓ |
+| E2E | §6 세목별 spec | **생략**(PR-C/D 동일) — 제네릭 패널 PR-B1 E2E + anchor 7 | ⚠️ |
+
+**토지분 PDF 부재(설계 명시)**: ComprehensiveSection은 주택분 계산표만 렌더(토지분 종합합산·별도합산 PDF 없음). aggregate-land·separate-land는 `screen`만 채널 — 화면 인쇄로만 출력. housing-tax 1종이 pdf 대표(검토 U1). sub 컴포넌트 null 가드(excludedCount===0·!isSubjectToHousingTax·!aggregateLandTax·!separateLandTax)와 availablePrintIds 1:1 일치.
+
 ## 8. 케이스 인벤토리 요약 (leaf·pdf 채널 수 — 검토 U1 반영)
 | 세목 | leaf | pdf 채널 | 별지 PDF |
 |---|---|---|---|

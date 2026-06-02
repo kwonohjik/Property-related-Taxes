@@ -549,7 +549,9 @@ function PropertySection({ r, selectedSectionIds }: { r: R; selectedSectionIds?:
   );
 }
 
-function ComprehensiveSection({ r }: { r: R }) {
+function ComprehensiveSection({ r, selectedSectionIds }: { r: R; selectedSectionIds?: string[] }) {
+  // housing-tax 대표 노드 — 선택 필터 적용 시 미포함이면 null (주택분 계산표만, 토지분 PDF 없음, 검토 U1)
+  if (selectedSectionIds !== undefined && !selectedSectionIds.includes("housing-tax")) return null;
   return (
     <>
       <Text style={s.sectionTitle}>계산 내역 (주택분)</Text>
@@ -720,7 +722,7 @@ export function ResultPdfDocument({
         {taxType === "acquisition" && <AcquisitionSection r={r} selectedSectionIds={selectedSectionIds} />}
         {(taxType === "inheritance" || taxType === "gift") && <InheritanceGiftSection r={r} taxType={taxType} inputData={inputData} selectedSectionIds={selectedSectionIds} />}
         {taxType === "property" && <PropertySection r={r} selectedSectionIds={selectedSectionIds} />}
-        {taxType === "comprehensive_property" && <ComprehensiveSection r={r} />}
+        {taxType === "comprehensive_property" && <ComprehensiveSection r={r} selectedSectionIds={selectedSectionIds} />}
 
         {/* 계산 단계 */}
         {steps.length > 0 && (

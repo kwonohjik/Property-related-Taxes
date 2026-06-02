@@ -17,6 +17,13 @@
 
 import type { ComprehensiveTaxResult } from "@/lib/tax-engine/types/comprehensive.types";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
+import { useState, useMemo } from "react";
+import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPanel";
+import { PrintSection } from "@/components/calc/results/shared/PrintSection";
+import {
+  COMPREHENSIVE_PRINT_SECTIONS,
+  type ComprehensivePrintSectionId,
+} from "@/lib/print/comprehensive-print-sections";
 
 // ============================================================
 // 포맷 헬퍼
@@ -408,13 +415,70 @@ function GrandTotalSection({
 
 interface Props {
   result: ComprehensiveTaxResult;
+  /** 저장된 계산 id — 서버 PDF 선택 출력(PR-E)용. 미저장/비로그인 시 undefined */
+  savedId?: string;
 }
 
-export function ComprehensiveTaxResultView({ result }: Props) {
+export function ComprehensiveTaxResultView({ result, savedId }: Props) {
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const [selectedPrintIds, setSelectedPrintIds] = useState<Set<string>>(
+    () => new Set()
+  );
+
+  // 선택 항목 서버 PDF 다운로드 (PR-E). savedId(로그인+저장) 있을 때만 활성.
+  async function handlePrintPdf(pdfSections: string[]) {
+    if (!savedId || pdfSections.length === 0) return;
+    setPdfBusy(true);
+    try {
+      const res = await fetch(`/api/pdf/result/${savedId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sections: pdfSections }),
+      });
+      if (!res.ok) throw new Error("PDF 생성 실패");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `종합부동산세_계산결과_${savedId.slice(0, 8)}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      alert("PDF 생성에 실패했습니다. 잠시 후 다시 시도해 주세요.");
+    } finally {
+      setPdfBusy(false);
+    }
+  }
+
+  // 현재 결과뷰에 실제 렌더되는 leaf id (각 sub 컴포넌트 가드와 1:1 — 설계 §2.4)
+  const availablePrintIds = useMemo<Set<ComprehensivePrintSectionId>>(() => {
+    const s = new Set<ComprehensivePrintSectionId>();
+    if (result.aggregationExclusion.excludedCount > 0) s.add("aggregation-exclusion");
+    s.add("housing-tax-base");
+    if (result.isSubjectToHousingTax) s.add("housing-tax");
+    if (result.aggregateLandTax) s.add("aggregate-land");
+    if (result.separateLandTax) s.add("separate-land");
+    s.add("grand-total");
+    if (result.warnings.length > 0) s.add("warnings");
+    return s;
+  }, [result]);
+
   return (
     <div className="space-y-6">
+      {/* 출력 항목 선택 패널 (선택 항목만 인쇄·PDF) */}
+      <PrintSelectionPanel
+        allGroups={COMPREHENSIVE_PRINT_SECTIONS}
+        selectedIds={selectedPrintIds}
+        availableIds={availablePrintIds}
+        onChange={setSelectedPrintIds}
+        onPrintPdf={handlePrintPdf}
+        pdfReady={!!savedId}
+        pdfBusy={pdfBusy}
+      />
+
       {/* 경고 메시지 */}
       {result.warnings.length > 0 && (
+        <PrintSection id="warnings" selectedIds={selectedPrintIds}>
         <div className="rounded-md bg-amber-50 border border-amber-200 p-3 space-y-1">
           {result.warnings.map((w, i) => (
             <p key={i} className="text-xs text-amber-800">
@@ -422,23 +486,36 @@ export function ComprehensiveTaxResultView({ result }: Props) {
             </p>
           ))}
         </div>
+        </PrintSection>
       )}
 
       {/* 합산배제 */}
-      <AggregationExclusionSection result={result} />
+      <PrintSection id="aggregation-exclusion" selectedIds={selectedPrintIds}>
+        <AggregationExclusionSection result={result} />
+      </PrintSection>
 
       {/* 과세표준 */}
-      <HousingTaxBaseSection result={result} />
+      <PrintSection id="housing-tax-base" selectedIds={selectedPrintIds}>
+        <HousingTaxBaseSection result={result} />
+      </PrintSection>
 
       {/* 주택분 세액 */}
-      <HousingTaxSection result={result} />
+      <PrintSection id="housing-tax" selectedIds={selectedPrintIds}>
+        <HousingTaxSection result={result} />
+      </PrintSection>
 
       {/* 토지분 */}
-      <AggregateLandSection result={result} />
-      <SeparateLandSection result={result} />
+      <PrintSection id="aggregate-land" selectedIds={selectedPrintIds}>
+        <AggregateLandSection result={result} />
+      </PrintSection>
+      <PrintSection id="separate-land" selectedIds={selectedPrintIds}>
+        <SeparateLandSection result={result} />
+      </PrintSection>
 
       {/* 총 납부세액 */}
-      <GrandTotalSection result={result} />
+      <PrintSection id="grand-total" selectedIds={selectedPrintIds}>
+        <GrandTotalSection result={result} />
+      </PrintSection>
 
       {/* 과세기준일 및 법령 정보 */}
       <div className="text-xs text-muted-foreground space-y-0.5">
