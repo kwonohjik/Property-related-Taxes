@@ -204,6 +204,43 @@ describe("buildBesshi1Data — 별지1호 (가업상속공제)", () => {
     expect(b1!.assetRows[0].kindLabel).toBe("법인 주식");
     expect(b1!.assetRows[0].amount).toBe(500_000_000); // valuatedAmount (not marketValue)
   });
+  it("B1-LISTED-1 상장여부 자동 판정 — fbi 미입력+비상장주식 가업자산 → isListed=false (자동 비상장)", () => {
+    const r = mkResult(
+      { ...baseDeduction, familyBusinessDeduction: 500_000_000, familyBusinessDetail: { deduction: 500_000_000, operatingYears: 25, appliedCap: 40_000_000_000, eligible: true } },
+      [{ estateItemId: "s1", valuatedAmount: 500_000_000 }],
+    );
+    const b1 = buildBesshi1Data(
+      r,
+      [{ id: "s1", category: "unlisted_stock", name: "M 주식회사", familyBusinessCategory: "corporate_stock" }] as never,
+      undefined,
+    );
+    expect(b1!.isListed).toBe(false);
+  });
+  it("B1-LISTED-2 상장여부 자동 판정 — 상장주식 가업자산 → isListed=true (자동 상장)", () => {
+    const r = mkResult(
+      { ...baseDeduction, familyBusinessDeduction: 500_000_000, familyBusinessDetail: { deduction: 500_000_000, operatingYears: 25, appliedCap: 40_000_000_000, eligible: true } },
+      [{ estateItemId: "s1", valuatedAmount: 500_000_000 }],
+    );
+    const b1 = buildBesshi1Data(
+      r,
+      [{ id: "s1", category: "listed_stock", name: "M 주식회사", companyName: "M 주식회사", familyBusinessCategory: "corporate_stock" }] as never,
+      undefined,
+    );
+    expect(b1!.isListed).toBe(true);
+    expect(b1!.businessName).toBe("M 주식회사"); // companyName fallback
+  });
+  it("B1-LISTED-3 명시 입력 override — 자산은 비상장이나 isListedOnExchange:true 우선", () => {
+    const r = mkResult(
+      { ...baseDeduction, familyBusinessDeduction: 500_000_000, familyBusinessDetail: { deduction: 500_000_000, operatingYears: 25, appliedCap: 40_000_000_000, eligible: true } },
+      [{ estateItemId: "s1", valuatedAmount: 500_000_000 }],
+    );
+    const b1 = buildBesshi1Data(
+      r,
+      [{ id: "s1", category: "unlisted_stock", name: "M사 주식", familyBusinessCategory: "corporate_stock" }] as never,
+      { enterpriseSize: "sme", isListedOnExchange: true, operatingYears: 25 } as never,
+    );
+    expect(b1!.isListed).toBe(true);
+  });
   it("E-12 가업 미적용(deduction=0) → null (렌더 가드)", () => {
     expect(buildBesshi1Data(mkResult({ ...baseDeduction, familyBusinessDetail: { deduction: 0 } }), [], undefined)).toBeNull();
   });

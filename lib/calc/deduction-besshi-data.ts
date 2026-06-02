@@ -377,6 +377,21 @@ function deriveFamilyBusinessQuantity(e: EstateItem): { quantity?: string; quant
 }
 
 /**
+ * 나. 상장여부 자동 판정 — 가업자산 종류(category)로 도출.
+ * 주식 평가조서가 상장(listed_stock)·비상장(unlisted_stock)으로 이미 구분되므로 자동 체크.
+ * 명시 입력(isListedOnExchange)이 있으면 사용자 override 우선. 주식 외(부동산 등)는 판정 불가(undefined).
+ */
+function deriveFamilyBusinessIsListed(
+  familyAssets: EstateItem[],
+  explicit: boolean | undefined,
+): boolean | undefined {
+  if (explicit != null) return explicit;
+  if (familyAssets.some((e) => e.category === "listed_stock")) return true;
+  if (familyAssets.some((e) => e.category === "unlisted_stock")) return false;
+  return undefined;
+}
+
+/**
  * 가업상속인 식별 — 가업자산 heirAllocations 최대 금액 수령자(C-1/C-2), 미입력 시 대표 상속인(C-3).
  * 계획: docs/00-pm/inheritance-besshi1-family-business-autofill.plan.md §4
  */
@@ -439,9 +454,10 @@ export function buildBesshi1Data(
     };
   });
 
-  // 가. 상호(법인명) — 첫 가업자산의 법인명(비상장 corpName 우선) ?? 자산명
+  // 가. 상호(법인명) — 비상장 corpName ?? 상장 평가조서 ① 법인명(companyName) ?? 자산명
   const businessName =
     familyAssets[0]?.unlistedStockValuationV2?.corpName?.trim() ||
+    familyAssets[0]?.companyName?.trim() ||
     familyAssets[0]?.name?.trim() ||
     undefined;
 
@@ -458,7 +474,7 @@ export function buildBesshi1Data(
     industry: fbi?.industryName?.trim() || undefined,
     isSme: fbi ? fbi.enterpriseSize === "sme" : undefined,
     isMedium: fbi ? fbi.enterpriseSize === "medium" : undefined,
-    isListed: fbi?.isListedOnExchange,
+    isListed: deriveFamilyBusinessIsListed(familyAssets, fbi?.isListedOnExchange),
     avgRevenue3Y: fbi?.averageRevenue3Y,
     operatingYears: fbd.operatingYears,
     isMajorShareholder: fbi?.decedentMajorShareholdingMet,
