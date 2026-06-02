@@ -19,6 +19,7 @@ import { sumCollateralFinancialDebt } from "@/lib/tax-engine/inheritance-collate
 import { calcRelationDeduction } from "@/lib/tax-engine/deductions/gift-deductions";
 import { calcCorporateStockAdjustedValue } from "@/lib/tax-engine/property-valuation-corporate";
 import { resolveEstateItemValue } from "@/lib/tax-engine/valuation/resolve-estate-item-value";
+import { isStatutoryHeir } from "@/lib/calc/heir-allocation-summary";
 import type {
   DebtItem,
   DonorRelation,
@@ -274,16 +275,9 @@ export function suggestLegateeAmountNonHeir(
   estateItems: EstateItem[],
   heirs: Heir[],
 ): DeductionSuggestion {
-  // legatee·corporate 또는 isHeir===false 인 자
+  // 비상속인(수유자·영리법인·isHeir===false) — isStatutoryHeir 단일 진실
   const nonHeirIds = new Set(
-    heirs
-      .filter(
-        (h) =>
-          h.relation === "legatee" ||
-          h.relation === "corporate" ||
-          h.isHeir === false,
-      )
-      .map((h) => h.id),
+    heirs.filter((h) => !isStatutoryHeir(h)).map((h) => h.id),
   );
   if (nonHeirIds.size === 0) {
     return {

@@ -67,6 +67,18 @@ export function sortHeirs(heirs: Heir[]): Heir[] {
   );
 }
 
+/**
+ * 법정상속인 여부 — 비상속인(수유자 legatee · 영리법인 corporate · isHeir===false) 제외.
+ * 상증법: 부표2 「상속인별」 서식 등 상속인 한정 산출의 단일 진실(enum exact 비교).
+ */
+export function isStatutoryHeir(h: Heir): boolean {
+  return (
+    h.relation !== "legatee" &&
+    h.relation !== "corporate" &&
+    h.isHeir !== false
+  );
+}
+
 export function labelOf(heirId: string, heirs: Heir[]): string {
   const h = heirs.find((x) => x.id === heirId);
   if (!h) return heirId;

@@ -24,7 +24,7 @@ import type {
   EstatePropertyKindCode,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { computeLegalShares } from "@/lib/tax-engine/inheritance-legal-share";
-import { sortHeirs } from "@/lib/calc/heir-allocation-summary";
+import { sortHeirs, isStatutoryHeir } from "@/lib/calc/heir-allocation-summary";
 import { HEIR_RELATION_TO_DECLARANT_LABEL } from "@/lib/calc/filing-form-9-data";
 import {
   toEstateItemTypeCode,
@@ -139,7 +139,8 @@ export function buildBuppyo2Data(
   estateItems: EstateItem[],
   priorGifts: PriorGift[],
 ): Buppyo2HeirData[] {
-  const sorted = sortHeirs(heirs);
+  // 상속인만 — 비상속인(수유자·영리법인·isHeir===false)은 부표2 미작성 (시트·번호·⑦ 분모 모두 상속인 기준)
+  const sorted = sortHeirs(heirs).filter(isStatutoryHeir);
   const perHeir = result.heirAllocationResult?.perHeir ?? {};
   const usedLegalShareFallback =
     result.heirAllocationResult?.usedLegalShareFallback ?? false;
