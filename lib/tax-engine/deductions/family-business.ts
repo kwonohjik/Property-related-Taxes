@@ -40,6 +40,8 @@ export {
   deriveFBHeirEngagement,
   suggestFBOperatingYears,
   resolveFamilyBusinessRequirements,
+  deriveFBDecedentShareholding,
+  deriveFBDecedentCEO,
 } from "./family-business-autoderive";
 
 /**

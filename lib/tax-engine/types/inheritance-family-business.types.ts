@@ -100,6 +100,18 @@ export interface FamilyBusinessInheritanceInput {
   heirOfficerByFilingDeadlineOverride?: boolean;
   /** 2년내 대표이사(라목) override. */
   heirCEOWithinTwoYearsOverride?: boolean;
+
+  // ─ 피상속인 요건 자동판정 기초데이터 (Phase 2, 2026-06-02, corporate) ─
+  /** 가목 — 최대주주등+특수관계인 합산 지분율 (소수 0~1, 예 0.45). isListedOnExchange와 결합해 40%/20% 비교. */
+  decedentShareRatioNum?: number;
+  /** 가목 — 지분 취득(보유 시작)일 (ISO date). deathDate 기준 10년 이상 보유 자동판정. "계속 보유"는 override. */
+  decedentShareAcquiredDate?: string;
+  /** 나목 — 피상속인 대표이사 재직 구간 목록(비중첩). 1호(50%)·3호(소급10년중5년) 자동. 2호(승계)는 override. */
+  decedentCEOPeriods?: Array<{ startDate: string; endDate: string }>;
+  /** 가목 지분 요건 override — undefined=자동 / true·false=수동(계속보유 등). */
+  decedentMajorShareholdingMetOverride?: boolean;
+  /** 나목 대표이사 종사 override — undefined=자동(1·3호) / true·false=수동(2호 승계 등). */
+  decedentCEORequirementMetOverride?: boolean;
   /**
    * 상속인의 배우자가 가~라 요건 모두 충족 → 상속인 충족 간주 (상증령 §15③2호 후단).
    * true 시 heirIsAdult·heirTwoYearEngagement·heirOfficerByFilingDeadline·heirCEOWithinTwoYears 평가 skip.
@@ -241,13 +253,17 @@ export interface FamilyBusinessDeductionDetail {
   resolvedRequirements?: {
     /** §67 신고기한 (다목·라목 판정 근거 — 결과 표시용) */
     filingDeadline: string;
-    /** 4개 heir 요건별 판정 출처 */
-    source: Record<
-      | "heirIsAdult"
-      | "heirTwoYearEngagement"
-      | "heirOfficerByFilingDeadline"
-      | "heirCEOWithinTwoYears",
-      "auto" | "override" | "legacy"
+    /** 요건별 판정 출처 (Phase 1 heir 4종 + Phase 2 decedent 2종) */
+    source: Partial<
+      Record<
+        | "heirIsAdult"
+        | "heirTwoYearEngagement"
+        | "heirOfficerByFilingDeadline"
+        | "heirCEOWithinTwoYears"
+        | "decedentMajorShareholdingMet"
+        | "decedentCEORequirementMet",
+        "auto" | "override" | "legacy"
+      >
     >;
   };
   /** breakdown — orchestrator가 전체 결과에 병합 */

@@ -54,6 +54,8 @@ export function validateFamilyBusinessDates(
         heirBirthDate?: string;
         heirEngagementStartDate?: string;
         heirCEOAppointDate?: string;
+        decedentShareAcquiredDate?: string;
+        decedentCEOPeriods?: Array<{ startDate: string; endDate: string }>;
       }
     | undefined,
   deathDate: string,
@@ -67,6 +69,17 @@ export function validateFamilyBusinessDates(
   }
   if (fb.heirCEOAppointDate && fb.heirCEOAppointDate < deathDate) {
     return "대표이사 취임(예정)일이 상속개시일보다 이릅니다 (§15③2호라는 신고기한 후 2년 이내). 날짜를 확인하세요.";
+  }
+  // Phase 2 — 피상속인 요건 날짜 정합성 (상증령 §15③1호)
+  if (fb.decedentShareAcquiredDate && fb.decedentShareAcquiredDate > deathDate) {
+    return "지분 취득일이 상속개시일보다 늦습니다 (§15③1호가는 10년 이상 계속 보유). 날짜를 확인하세요.";
+  }
+  if (fb.decedentCEOPeriods) {
+    for (const p of fb.decedentCEOPeriods) {
+      if (p.startDate && p.endDate && p.startDate > p.endDate) {
+        return "피상속인 대표이사 재직기간의 시작일이 종료일보다 늦습니다. 날짜를 확인하세요.";
+      }
+    }
   }
   return null;
 }

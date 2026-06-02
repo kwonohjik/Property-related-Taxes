@@ -177,6 +177,82 @@ if (input.familyBusiness) {
 
 ---
 
+## Phase 2 — 피상속인 요건 자동판정 (상증령 §15③1호, corporate)
+
+> 2026-06-02 추가. Phase 1(상속인 4요건) 완료(b6cd256) 위에 피상속인 요건 2종 자동판정 추가.
+> 高법령리스크(plan §9): 나목 2호 "승계"·가목 "계속 보유"·"직접 종사" 실질은 **자동 불가 → override**.
+
+### 케이스 인벤토리 (Phase 2)
+테스트: `__tests__/tax-engine/inheritance/family-business-autoderive-p2.test.ts`
+
+| # | 시나리오 | 법령 | 기대 | 상태 |
+|---|---|---|---|---|
+| P2-1 | 비상장 지분 40% + 취득 후 10년 당일 상속 → 충족(가) | §15③1호가 | met | ☐ |
+| P2-2 | 비상장 지분 39% → 미충족(가) | 가 | !met | ☐ |
+| P2-3 | 비상장 지분 40% + 취득 후 9년364일 → 미충족(가, 보유<10년) | 가 | !met | ☐ |
+| P2-4 | 상장 지분 20% + 10년 → 충족(가) | 가(상장 20%) | met | ☐ |
+| P2-5 | 지분율/취득일 미입력 → false(보수적) | 가 | false | ☐ |
+| P2-6 | decedentMajorShareholdingMetOverride=true + 미입력 → override 충족 | override | met | ☐ |
+| P2-7 | 나목 1호: 영위 20년 중 대표 11년(55%) → 충족(alt=1) | §15③1호나1 | met,alt1 | ☐ |
+| P2-8 | 나목 1호: 영위 20년 중 대표 9년(45%) + 3호 미충족 → 미충족 | 나1·3 | !met | ☐ |
+| P2-9 | 나목 3호: 소급10년 중 대표 5년 정확 → 충족(alt=3) | §15③1호나3 | met,alt3 | ☐ |
+| P2-10 | 나목 3호: 소급10년 중 대표 4년364일 → 미충족 | 나3 | !met | ☐ |
+| P2-11 | 나목 다구간 합산(2구간) 50% → 충족 | 나1 | met | ☐ |
+| P2-12 | decedentCEORequirementMetOverride=true(2호 승계) → override 충족 | 나2 override | met | ☐ |
+| P2-13 | resolve 6요건: 가·나 source 노출 | resolve | source | ☐ |
+| P2-14 | legacy: decedentCEORequirementMet boolean fallback(기초데이터 없음) | 하위호환 | legacy | ☐ |
+
+### 함수 명세 (family-business-autoderive.ts 추가)
+
+```
+clipDays(periodStart, periodEnd, lo, hi): number
+  s = max(periodStart, lo); e = min(periodEnd, hi)        // YYYY-MM-DD 사전순 max/min
+  = max(0, differenceInDays(parseISO(e), parseISO(s)))     // 비중첩 구간 가정(중첩=사용자 오류)
+
+deriveFBDecedentShareholding(shareRatioNum?, acquiredDate?, deathDate, isListed): boolean
+  if (!shareRatioNum || !acquiredDate) return false
+  threshold = isListed ? 0.20 : 0.40                       // 상증령 §15③1호가
+  return shareRatioNum >= threshold
+    && differenceInYears(parseISO(deathDate), parseISO(acquiredDate)) >= 10
+  // ⚠️ "계속 보유"(매도·재취득 없음) 자동 불가 → UI 경고 + override
+
+deriveFBDecedentCEO(periods?, openingDate?, deathDate):
+    { met, satisfiedAlternative: 1|3|null, ratioPercent }
+  if (!periods?.length || !openingDate) return { met:false, satisfiedAlternative:null, ratioPercent:0 }
+  operatingDays = differenceInDays(parseISO(deathDate), parseISO(openingDate))
+  if (operatingDays <= 0) return { met:false, ... }
+  // 1호: 영위기간 내 재직일 합 >= 영위기간의 50% — 정수 비교(윤년 분포 artifact·float 회피)
+  ceoDaysOp = Σ clipDays(p.start, p.end, openingDate, deathDate)
+  alt1 = ceoDaysOp * 2 >= operatingDays    // 예 3653*2=7306 >= 7305(20년) → 정확히 충족
+  // 3호: 소급10년 [death−10y, death] 내 재직일 합 >= 5년치 일수
+  windowStart = format(subYears(parseISO(deathDate),10),"yyyy-MM-dd")
+  fiveYearDays = differenceInDays(parseISO(deathDate), subYears(parseISO(deathDate),5))
+  ceoDaysWin = Σ clipDays(p.start, p.end, windowStart, deathDate)
+  alt3 = ceoDaysWin >= fiveYearDays
+  met = alt1 || alt3                                       // 2호(승계)는 자동 제외 → override
+  return { met, satisfiedAlternative: alt1?1:alt3?3:null, ratioPercent: ceoDaysOp/operatingDays*100 }
+```
+- 영위기간 = `openingDate ~ deathDate` (법적 영위기간 ≠ 개업일 가능 → 中 리스크, override 유도).
+- 나목 2호(10년 승계 계속재직)의 "승계일" 자동 판정 불가 → **override only**(자동은 1·3호만).
+
+### resolve 확장 (4 → 6 요건)
+`resolveFamilyBusinessRequirements`가 `decedentMajorShareholdingMet`·`decedentCEORequirementMet`도 resolve:
+- `decedentMajorShareholdingMet`: override > (shareRatioNum & acquiredDate 존재 → deriveFBDecedentShareholding) > legacy boolean > false
+- `decedentCEORequirementMet`: override > (decedentCEOPeriods & openingDate 존재 → deriveFBDecedentCEO.met) > legacy boolean > false
+- `resolvedInput`은 이제 6개 boolean 덮어씀(4 heir + 2 decedent). evaluator의 `businessType==="corporate"` 게이트(가목)·OFZ·spouse-skip 정상 동작.
+- `resolvedRequirements.source`에 `decedentMajorShareholdingMet`·`decedentCEORequirementMet` 키 추가.
+
+### Silent fallback / 정밀 리스크
+- 지분율·취득일·재직구간 미입력 → false(보수적), 자동 충족 채움 금지.
+- 가목 "계속 보유"·나목 2호 "승계"·"직접 종사" 실질 → 자동 결과에 경고 상시 + override 유도(자동 1차 유지).
+- 다구간 중첩은 사용자 입력 오류(validate에서 시작>종료만 차단, 중첩 검출은 Phase 3).
+
+### validate (⑧)
+- `decedentShareAcquiredDate > deathDate` → 차단(취득이 상속 이후 모순).
+- `decedentCEOPeriods[i].startDate > endDate` → 차단.
+
+---
+
 ## UI 통합 위임
 
 UI 명세는 `eligibility-autoderive.ui.design.md`. 8개 동기화 지점 중 UI측(① 폼상태·⑤ 위젯·⑥ 사이드바·⑦ 결과카드·⑧ validate) UI 시니어 책임. 엔진측 게이트는 **⑫ Zod**(property-valuation-input.ts:656~681 신규 필드 추가 — 미추가 시 침묵 strip) + 통합점(inheritance-deductions.ts:651).

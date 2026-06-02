@@ -12,7 +12,16 @@
  *   - store=기초데이터, 엔진=resolve(미러링 없음).
  */
 
-import { addMonths, addYears, differenceInYears, endOfMonth, format, parseISO } from "date-fns";
+import {
+  addMonths,
+  addYears,
+  differenceInDays,
+  differenceInYears,
+  endOfMonth,
+  format,
+  parseISO,
+  subYears,
+} from "date-fns";
 
 import type { FamilyBusinessInheritanceInput } from "../types/inheritance-gift.types";
 
@@ -85,18 +94,99 @@ export function suggestFBOperatingYears(openingDate: string, deathDate: string):
   return differenceInYears(parseISO(deathDate), parseISO(openingDate));
 }
 
+// ─ Phase 2 — 피상속인 요건 자동판정 (상증령 §15③1호, corporate) ─
+
+/**
+ * 구간[ps,pe]과 윈도우[lo,hi]의 교집합 일수 (비중첩 구간 가정 — 중첩=사용자 오류).
+ * YYYY-MM-DD 사전순 max/min, differenceInDays는 parseISO 후.
+ */
+function clipDays(ps: string, pe: string, lo: string, hi: string): number {
+  const s = ps > lo ? ps : lo;
+  const e = pe < hi ? pe : hi;
+  if (s >= e) return 0;
+  return Math.max(0, differenceInDays(parseISO(e), parseISO(s)));
+}
+
+/**
+ * §15③1호가 — 최대주주등 지분 40%(상장 20%) 이상 × 10년 이상 계속 보유 (corporate).
+ * ⚠️ "계속 보유"(매도·재취득 없음)는 자동 불가 → UI 경고 + override. 미입력 시 false(보수적).
+ */
+export function deriveFBDecedentShareholding(
+  shareRatioNum: number | undefined,
+  acquiredDate: string | undefined,
+  deathDate: string,
+  isListed: boolean,
+): boolean {
+  if (shareRatioNum == null || !acquiredDate) return false;
+  const threshold = isListed ? 0.2 : 0.4;
+  return (
+    shareRatioNum >= threshold &&
+    differenceInYears(parseISO(deathDate), parseISO(acquiredDate)) >= 10
+  );
+}
+
+/** deriveFBDecedentCEO 결과 */
+export interface DecedentCEOResult {
+  met: boolean;
+  /** 충족 대안 (1호 50% / 3호 소급10년중5년 / 미충족 null). 2호(승계)는 자동 제외 → override. */
+  satisfiedAlternative: 1 | 3 | null;
+  /** 영위기간 내 대표이사 재직 비율(%) — 표시용 */
+  ratioPercent: number;
+}
+
+/**
+ * §15③1호나 — 가업 영위기간 중 대표이사 재직 요건 자동판정 (1호·3호만, 2호 승계는 override).
+ *   1호: 영위기간(개업~상속개시)의 50% 이상 재직 — 정수 비교(윤년 artifact 회피).
+ *   3호: 상속개시일 소급 10년 중 5년 이상 재직.
+ */
+export function deriveFBDecedentCEO(
+  periods: Array<{ startDate: string; endDate: string }> | undefined,
+  openingDate: string | undefined,
+  deathDate: string,
+): DecedentCEOResult {
+  if (!periods?.length || !openingDate) {
+    return { met: false, satisfiedAlternative: null, ratioPercent: 0 };
+  }
+  const operatingDays = differenceInDays(parseISO(deathDate), parseISO(openingDate));
+  if (operatingDays <= 0) return { met: false, satisfiedAlternative: null, ratioPercent: 0 };
+
+  // 1호 — 영위기간 내 재직일 합 (정수 비교: ceoDays*2 >= operatingDays)
+  const ceoDaysOp = periods.reduce(
+    (sum, p) => sum + clipDays(p.startDate, p.endDate, openingDate, deathDate),
+    0,
+  );
+  const alt1 = ceoDaysOp * 2 >= operatingDays;
+
+  // 3호 — 소급 10년 [death−10y, death] 내 재직일 합 >= 5년치 일수
+  const windowStart = format(subYears(parseISO(deathDate), 10), "yyyy-MM-dd");
+  const fiveYearDays = differenceInDays(parseISO(deathDate), subYears(parseISO(deathDate), 5));
+  const ceoDaysWin = periods.reduce(
+    (sum, p) => sum + clipDays(p.startDate, p.endDate, windowStart, deathDate),
+    0,
+  );
+  const alt3 = ceoDaysWin >= fiveYearDays;
+
+  return {
+    met: alt1 || alt3,
+    satisfiedAlternative: alt1 ? 1 : alt3 ? 3 : null,
+    ratioPercent: (ceoDaysOp / operatingDays) * 100,
+  };
+}
+
 /** resolveFamilyBusinessRequirements 반환 */
 export interface ResolvedFamilyBusinessRequirements {
-  /** 4개 heir 요건만 resolved boolean으로 덮어쓴 사본 (decedent·spouse·OFZ는 미변경) */
+  /** 6개 요건(heir 4 + decedent 2)을 resolved boolean으로 덮어쓴 사본 (spouse·OFZ는 미변경) */
   resolvedInput: FamilyBusinessInheritanceInput;
   /** §67 신고기한 (다목·라목 근거 — 결과 표시) */
   filingDeadline: string;
-  /** 4개 heir 요건별 판정 출처 */
+  /** 요건별 판정 출처 (heir 4종 + decedent 2종) */
   source: Record<
     | "heirIsAdult"
     | "heirTwoYearEngagement"
     | "heirOfficerByFilingDeadline"
-    | "heirCEOWithinTwoYears",
+    | "heirCEOWithinTwoYears"
+    | "decedentMajorShareholdingMet"
+    | "decedentCEORequirementMet",
     FamilyBusinessRequirementSource
   >;
 }
@@ -186,6 +276,44 @@ export function resolveFamilyBusinessRequirements(
     srcCEO = "legacy";
   }
 
+  // ─ Phase 2 피상속인 요건 (corporate) ─
+  // 가목 — 최대주주 지분 40%(상장20%)×10년 보유
+  let decedentMajorShareholdingMet: boolean;
+  let srcShare: FamilyBusinessRequirementSource;
+  if (input.decedentMajorShareholdingMetOverride != null) {
+    decedentMajorShareholdingMet = input.decedentMajorShareholdingMetOverride;
+    srcShare = "override";
+  } else if (input.decedentShareRatioNum != null && input.decedentShareAcquiredDate) {
+    decedentMajorShareholdingMet = deriveFBDecedentShareholding(
+      input.decedentShareRatioNum,
+      input.decedentShareAcquiredDate,
+      deathDate,
+      input.isListedOnExchange === true,
+    );
+    srcShare = "auto";
+  } else {
+    decedentMajorShareholdingMet = input.decedentMajorShareholdingMet ?? false;
+    srcShare = "legacy";
+  }
+
+  // 나목 — 대표이사 종사 (1호·3호 자동, 2호 승계 override)
+  let decedentCEORequirementMet: boolean;
+  let srcDecedentCEO: FamilyBusinessRequirementSource;
+  if (input.decedentCEORequirementMetOverride != null) {
+    decedentCEORequirementMet = input.decedentCEORequirementMetOverride;
+    srcDecedentCEO = "override";
+  } else if (input.decedentCEOPeriods?.length && input.openingDate) {
+    decedentCEORequirementMet = deriveFBDecedentCEO(
+      input.decedentCEOPeriods,
+      input.openingDate,
+      deathDate,
+    ).met;
+    srcDecedentCEO = "auto";
+  } else {
+    decedentCEORequirementMet = input.decedentCEORequirementMet;
+    srcDecedentCEO = "legacy";
+  }
+
   return {
     resolvedInput: {
       ...input,
@@ -193,6 +321,8 @@ export function resolveFamilyBusinessRequirements(
       heirTwoYearEngagement,
       heirOfficerByFilingDeadline,
       heirCEOWithinTwoYears,
+      decedentMajorShareholdingMet,
+      decedentCEORequirementMet,
     },
     filingDeadline,
     source: {
@@ -200,6 +330,8 @@ export function resolveFamilyBusinessRequirements(
       heirTwoYearEngagement: srcEngagement,
       heirOfficerByFilingDeadline: srcOfficer,
       heirCEOWithinTwoYears: srcCEO,
+      decedentMajorShareholdingMet: srcShare,
+      decedentCEORequirementMet: srcDecedentCEO,
     },
   };
 }

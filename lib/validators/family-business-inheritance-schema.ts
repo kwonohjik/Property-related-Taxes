@@ -43,4 +43,12 @@ export const familyBusinessInheritanceInputSchema = z.object({
   heirTwoYearEngagementOverride: z.boolean().optional(),
   heirOfficerByFilingDeadlineOverride: z.boolean().optional(),
   heirCEOWithinTwoYearsOverride: z.boolean().optional(),
+  // ⑫ Phase 2 피상속인 요건 자동판정 (2026-06-02, corporate)
+  decedentShareRatioNum: z.number().optional(),
+  decedentShareAcquiredDate: z.string().optional(),
+  decedentCEOPeriods: z
+    .array(z.object({ startDate: z.string(), endDate: z.string() }))
+    .optional(),
+  decedentMajorShareholdingMetOverride: z.boolean().optional(),
+  decedentCEORequirementMetOverride: z.boolean().optional(),
 });

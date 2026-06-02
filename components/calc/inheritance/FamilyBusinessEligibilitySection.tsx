@@ -49,6 +49,7 @@ import type { FamilyBusinessInheritanceInput } from "@/lib/tax-engine/types/inhe
 import type { Heir } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { FamilyBusinessHeirSelector } from "./family-business/FamilyBusinessHeirSelector";
 import { FbHeirRequirementsSection } from "./family-business/FbHeirRequirementsSection";
+import { FbDecedentRequirementsSection } from "./family-business/FbDecedentRequirementsSection";
 
 // 빈 FamilyBusinessInheritanceInput — ON 토글 시 초기화
 const EMPTY_FB: FamilyBusinessInheritanceInput = {
@@ -344,42 +345,33 @@ export function FamilyBusinessEligibilitySection({
           </div>
 
           {/* ── 섹션② 피상속인 요건 (amber) ── */}
-          <div className="rounded-md border border-amber-200 bg-amber-50/60 dark:bg-amber-950/20 p-3 space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-[10px] font-bold text-amber-800 select-none">2</span>
-              <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">피상속인 요건 (상증령 §15③1호)</p>
-            </div>
-
-            {isCorporate && (
-              <>
-                <ToggleCard
-                  tone="amber"
-                  size="sm"
-                  title="거래소 상장 법인"
-                  description="체크 시 지분 요건이 40% → 20%로 완화됩니다."
-                  checked={familyBusiness.isListedOnExchange ?? false}
-                  onCheckedChange={(v) => update({ isListedOnExchange: v ? true : undefined })}
-                />
-                <ToggleCard
-                  tone="amber"
-                  size="sm"
-                  title={`최대주주·특수관계인 합산 지분 ${(familyBusiness.isListedOnExchange ? 20 : 40)}% 이상 × 10년 보유`}
-                  description={`상증령 §15③1호 가 — ${familyBusiness.isListedOnExchange ? "상장법인 20%" : "비상장·코넥스 40%"} 기준`}
-                  checked={familyBusiness.decedentMajorShareholdingMet ?? false}
-                  onCheckedChange={(v) => update({ decedentMajorShareholdingMet: v ? true : undefined })}
-                />
-              </>
-            )}
-
-            <ToggleCard
-              tone="amber"
-              size="sm"
-              title="대표이사 종사 요건 충족 (상증령 §15③1호 나)"
-              description="50% 이상 재임 / 상속인 승계 후 10년 계속 / 10년 중 5년 이상 재임 중 1 충족"
-              checked={familyBusiness.decedentCEORequirementMet}
-              onCheckedChange={(v) => update({ decedentCEORequirementMet: v })}
+          {isCorporate && deathDate ? (
+            <FbDecedentRequirementsSection
+              familyBusiness={familyBusiness}
+              deathDate={deathDate}
+              onChange={update}
             />
-          </div>
+          ) : isCorporate ? (
+            <div className="rounded-md border border-amber-200 bg-amber-50/60 dark:bg-amber-950/20 p-3 text-[11px] text-amber-700 dark:text-amber-300">
+              상속개시일을 입력하면 피상속인 요건 자동판정이 활성화됩니다.
+            </div>
+          ) : (
+            /* 개인사업 — 지분 요건 없음, 대표이사 요건만 레거시 토글 */
+            <div className="rounded-md border border-amber-200 bg-amber-50/60 dark:bg-amber-950/20 p-3 space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-[10px] font-bold text-amber-800 select-none">2</span>
+                <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">피상속인 요건 (상증령 §15③1호)</p>
+              </div>
+              <ToggleCard
+                tone="amber"
+                size="sm"
+                title="대표이사 종사 요건 충족 (상증령 §15③1호 나)"
+                description="50% 이상 재임 / 상속인 승계 후 10년 계속 / 10년 중 5년 이상 재임 중 1 충족"
+                checked={familyBusiness.decedentCEORequirementMet}
+                onCheckedChange={(v) => update({ decedentCEORequirementMet: v })}
+              />
+            </div>
+          )}
 
           {/* ── 섹션③ 가업상속인 지정 (sky) ── */}
           <div className="rounded-md border border-sky-200 bg-sky-50/60 dark:bg-sky-950/20 dark:border-sky-800 p-3 space-y-2">

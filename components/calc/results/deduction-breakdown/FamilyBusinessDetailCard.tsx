@@ -185,28 +185,54 @@ export function FamilyBusinessDetailCard({ detail, triggerLabel, triggerValue, h
               )}
               <p>신고기한 (§67): {detail.resolvedRequirements.filingDeadline}</p>
               <ul className="space-y-0.5 list-none pl-1">
+                {/* 피상속인 요건 (Phase 2 — source Partial이므로 optional) */}
+                {detail.resolvedRequirements.source.decedentMajorShareholdingMet && (
+                  <li>
+                    피상속인 가. 지분 요건:{" "}
+                    <span className={detail.resolvedRequirements.source.decedentMajorShareholdingMet === "override" ? "text-amber-700 dark:text-amber-300 font-medium" : ""}>
+                      {SOURCE_LABEL[detail.resolvedRequirements.source.decedentMajorShareholdingMet]}
+                    </span>
+                  </li>
+                )}
+                {detail.resolvedRequirements.source.decedentCEORequirementMet && (
+                  <li>
+                    피상속인 나. 대표이사:{" "}
+                    <span className={detail.resolvedRequirements.source.decedentCEORequirementMet === "override" ? "text-amber-700 dark:text-amber-300 font-medium" : ""}>
+                      {SOURCE_LABEL[detail.resolvedRequirements.source.decedentCEORequirementMet]}
+                    </span>
+                  </li>
+                )}
+                {/* 상속인 요건 (Phase 1) */}
                 <li>
                   가. 18세 이상:{" "}
                   <span className={detail.resolvedRequirements.source.heirIsAdult === "override" ? "text-amber-700 dark:text-amber-300 font-medium" : ""}>
-                    {SOURCE_LABEL[detail.resolvedRequirements.source.heirIsAdult]}
+                    {detail.resolvedRequirements.source.heirIsAdult
+                      ? SOURCE_LABEL[detail.resolvedRequirements.source.heirIsAdult]
+                      : "—"}
                   </span>
                 </li>
                 <li>
                   나. 2년 종사:{" "}
                   <span className={detail.resolvedRequirements.source.heirTwoYearEngagement === "override" ? "text-amber-700 dark:text-amber-300 font-medium" : ""}>
-                    {SOURCE_LABEL[detail.resolvedRequirements.source.heirTwoYearEngagement]}
+                    {detail.resolvedRequirements.source.heirTwoYearEngagement
+                      ? SOURCE_LABEL[detail.resolvedRequirements.source.heirTwoYearEngagement]
+                      : "—"}
                   </span>
                 </li>
                 <li>
                   다. 임원취임:{" "}
                   <span className={detail.resolvedRequirements.source.heirOfficerByFilingDeadline === "override" ? "text-amber-700 dark:text-amber-300 font-medium" : ""}>
-                    {SOURCE_LABEL[detail.resolvedRequirements.source.heirOfficerByFilingDeadline]}
+                    {detail.resolvedRequirements.source.heirOfficerByFilingDeadline
+                      ? SOURCE_LABEL[detail.resolvedRequirements.source.heirOfficerByFilingDeadline]
+                      : "—"}
                   </span>
                 </li>
                 <li>
                   라. 대표이사:{" "}
                   <span className={detail.resolvedRequirements.source.heirCEOWithinTwoYears === "override" ? "text-amber-700 dark:text-amber-300 font-medium" : ""}>
-                    {SOURCE_LABEL[detail.resolvedRequirements.source.heirCEOWithinTwoYears]}
+                    {detail.resolvedRequirements.source.heirCEOWithinTwoYears
+                      ? SOURCE_LABEL[detail.resolvedRequirements.source.heirCEOWithinTwoYears]
+                      : "—"}
                   </span>
                 </li>
               </ul>
