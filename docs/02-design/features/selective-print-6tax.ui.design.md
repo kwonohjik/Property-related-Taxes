@@ -196,6 +196,27 @@ const availablePrintIds = useMemo<Set<string>>(() => { /* §2 가드 1:1 */ }, [
 
 **deviation(렌더러 중복 허용)**: 별지10호 `CalcRow`는 별지9호와 동일 패턴이나 별지9호 무변경(회귀 0) 위해 복제. dual-truth 0의 핵심은 **데이터(besshi10Rows·valuationResults)**가 단일 — 렌더러(화면 HTML/PDF) 중복은 허용([[ui_engine_dual_truth_avoidance]]). 부표1 산식(computeRow10·14)·라벨은 `gift-valuation-besshi` 단일 출처로 추출.
 
+## 7-5. PR-C 갭 분석 (취득세 선택 출력 — 구현 완료)
+
+| 항목 | 설계 | 구현 | 판정 |
+|---|---|---|---|
+| `ACQUISITION_PRINT_SECTIONS` 11 leaf | §2.2 (요약4·분석3·기타4) | `acquisition-print-sections.ts` 11 leaf 3그룹 + 바인딩 래퍼 | ✓ |
+| pdf 채널 | §2.2 tax-detail 1종 | `tax-detail` SCREEN_PDF (AcquisitionSection 단일 계산표 대표) | ✓ |
+| 결과뷰 통합 | §3 상속세 복제 | 11 `PrintSection` + 패널 + `savedId` + `handlePrintPdf` + `availablePrintIds`. isExempt early return 유지 | ✓ |
+| 인쇄 버튼 | §2.2 신규(없음) | `window.print` 없던 결과뷰에 `PrintSelectionPanel` 신규 도입(인쇄·PDF 버튼 제공) | ✓ |
+| 결과뷰 2곳 렌더 | §3 :252·322 양쪽 | `const autoSave` + 2곳 `savedId` 전달(replace_all) | ✓ |
+| `savedId` | §3 Do 진입 확인 | `useAutoSaveCalculation` 반환 미할당 → `const autoSave` 할당 후 전달 | ✓ |
+| ResultPdfDocument 필터 | §5 tax-detail 대표 | AcquisitionSection `selectedSectionIds` 필터(미포함 시 null) + 호출부 | ✓ |
+| 분석 3섹션 간주취득 제외 | §2.2 | availableIds: reduction-panel·house-count = !isDeemed, surcharge-detail = !isDeemed‖특례 | ✓ |
+| anchor | §6 PD-acq | acquisition 7 + 전체 5981 + tsc 0 | ✓ |
+| E2E | §6 세목별 spec | **생략**(취득세 마법사 6단계 입력 복잡도) — 제네릭 패널 PR-B1 E2E + anchor 7 | ⚠️ |
+
+**deviation 1 (보조카드 묶음)**: 설계 §2.2 11 leaf에 없는 보조 카드(선형보간 그래프·세율특례·법인중과·자경농지)는 **인접 leaf PrintSection 연속 구간에 포함** — linear→`reduction-panel`, specialRate·corp·selfCultivation→`surcharge-detail`. PrintSection이 연속 블록을 감싸므로 경계만 정하면 자동 포함. 다중 카드 PrintSection은 `className="space-y-4"`로 내부 간격 유지.
+
+**deviation 2 (surcharge-detail availableIds)**: 설계 가드 "isSurcharged·!isDeemed"이나, 구간에 specialRate/corp/selfCultivation(isDeemed 무관)이 포함되므로 `available = !isDeemedAcquisition ‖ specialRateDetail ‖ corpSurchargeDetail ‖ selfCultivationReductionDetail`로 확장.
+
+**deviation 3 (E2E 생략)**: 취득세 마법사는 6단계 + native select 2개 + RadioCardGroup + 취득일 위젯으로 안정적 E2E 입력에 비용 과다. 선택 패널·`PrintSection`·`print:hidden` 가시성은 **PR-A 제네릭 컴포넌트**로 **PR-B1 증여세 E2E**(패널 노출·0건 가드·print 미디어 토글)가 실브라우저 검증 — 취득세는 `allGroups={ACQUISITION_PRINT_SECTIONS}`만 주입(컴포넌트 동작 세목 무관). 취득세 고유(11 leaf·availableIds·PDF 필터)는 anchor 7로 검증. 후속 PR에서 취득세 전용 E2E 추가 가능.
+
 ## 8. 케이스 인벤토리 요약 (leaf·pdf 채널 수 — 검토 U1 반영)
 | 세목 | leaf | pdf 채널 | 별지 PDF |
 |---|---|---|---|

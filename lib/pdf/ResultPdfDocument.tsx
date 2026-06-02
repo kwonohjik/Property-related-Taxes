@@ -391,9 +391,11 @@ function TransferMultiSection({ r }: { r: R }) {
   );
 }
 
-function AcquisitionSection({ r }: { r: R }) {
+function AcquisitionSection({ r, selectedSectionIds }: { r: R; selectedSectionIds?: string[] }) {
   const isExempt = bool(r.isExempt);
   if (isExempt) return null;
+  // tax-detail 대표 노드 — 선택 필터(POST) 적용 시 미포함이면 null (단일 계산표, 검토 U1)
+  if (selectedSectionIds !== undefined && !selectedSectionIds.includes("tax-detail")) return null;
   return (
     <>
       <Text style={s.sectionTitle}>계산 내역</Text>
@@ -713,7 +715,7 @@ export function ResultPdfDocument({
         {/* 세금 유형별 상세 섹션 */}
         {taxType === "transfer" && <TransferSection r={r} />}
         {taxType === "transfer_multi" && <TransferMultiSection r={r} />}
-        {taxType === "acquisition" && <AcquisitionSection r={r} />}
+        {taxType === "acquisition" && <AcquisitionSection r={r} selectedSectionIds={selectedSectionIds} />}
         {(taxType === "inheritance" || taxType === "gift") && <InheritanceGiftSection r={r} taxType={taxType} inputData={inputData} selectedSectionIds={selectedSectionIds} />}
         {taxType === "property" && <PropertySection r={r} />}
         {taxType === "comprehensive_property" && <ComprehensiveSection r={r} />}
