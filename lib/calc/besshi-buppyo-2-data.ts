@@ -100,6 +100,8 @@ export interface Buppyo2HeirData {
   heirId: string;
   sectionA: Buppyo2SectionA;
   itemRows: Buppyo2ItemRow[];
+  /** 2쪽 「상속인별 상속재산명세」 계 행 — ⑮평가가액 합계 (Σ itemRows.valuatedAmount). UI 무산술 */
+  itemRowsTotal: number;
   sectionTotal: Buppyo2SectionTotal;
   /** 협의분할 미입력 자산이 법정상속분 fallback으로 계 합계에 반영됨 (안내 배지용) */
   usedLegalShareFallback: boolean;
@@ -147,6 +149,13 @@ export function buildBuppyo2Data(
   const numeratorByHeir = new Map<string, number>();
   for (const s of legal.shares) numeratorByHeir.set(s.heirId, s.numerator);
 
+  // 작성방법 #3 법정상속재산가액 base — 엔진 §19 echo(numeratorCorrected) 단일 진실.
+  //   = (총상속+추정) + 상속인사전증여 − 상속인외유증 − 채무 − 비과세 (heir-독립 공유 base).
+  //   배우자 부재(Phase D 미발동) 시 taxableEstateValue fallback (근사). 어댑터 재계산 금지.
+  const legalShareBase =
+    result.deductionDetail?.spouseDeductionDetail?.legalShareTable?.numerator ??
+    result.taxableEstateValue;
+
   // 실제상속지분율 분모 = Σ grossInheritance
   const totalGross = sorted.reduce(
     (sum, h) => sum + (perHeir[h.id]?.grossInheritance ?? 0),
@@ -162,15 +171,19 @@ export function buildBuppyo2Data(
   return sorted.map((heir) => {
     const breakdown = perHeir[heir.id];
     const grossInheritance = breakdown?.grossInheritance ?? 0;
+    const presumedAmount = breakdown?.presumedAmount ?? 0;
+    // 사전증여 (doneeId 매칭) — 나 행·계 가산증여·⑧ 명세합계 공용 단일 소스
+    const myPriorGifts = priorGifts.filter((g) => g.doneeId === heir.id);
+    const priorGift13 = myPriorGifts.reduce((s, g) => s + g.giftAmount, 0);
 
     // ── 가 섹션 ──
     const numerator = numeratorByHeir.get(heir.id);
     const legalShareLabel =
       numerator !== undefined ? `${numerator}/${legal.denominator}` : null;
-    // 작성방법 #3 — 과세가액 base × 법정지분 (단순 케이스 정확, 복합 케이스 근사 — AN-1)
+    // 작성방법 #3 — base(엔진 §19 echo) × 법정지분. legatee·corporate(numerator 없음) → null
     const legalShareAmount =
       numerator !== undefined
-        ? Math.floor((result.taxableEstateValue * numerator) / legal.denominator)
+        ? Math.floor((legalShareBase * numerator) / legal.denominator)
         : null;
     const actualShareRatio = totalGross > 0 ? grossInheritance / totalGross : 0;
 
@@ -180,7 +193,8 @@ export function buildBuppyo2Data(
       legalShareLabel,
       legalShareAmount,
       actualShareRatio,
-      actualShareAmount: grossInheritance,
+      // ⑧ 실제상속재산가액 = 명세합계(본래+추정+사전증여), 작성방법 #5. 완전입력 시 itemRowsTotal과 동치
+      actualShareAmount: grossInheritance + presumedAmount + priorGift13,
     };
 
     // ── 나 섹션: 본래상속 행 (협의분할 입력분만, 자동 안분 금지) ──
@@ -210,8 +224,21 @@ export function buildBuppyo2Data(
       });
     }
 
+    // ── 나 섹션: 추정상속재산 행 (§15 일괄 추정 — 상속인별 단일 행) ──
+    if (presumedAmount > 0) {
+      itemRows.push({
+        kindCode: "A13", // 상속개시 전 처분재산등 (§15 추정상속재산)
+        typeCode: "12", // 기타재산 (D-1 — 양식 뒷면 코드표 확인 전 placeholder)
+        locationOrName: "추정상속재산",
+        isOverseasAsset: false,
+        quantityOrArea: null,
+        unitPrice: null,
+        valuatedAmount: presumedAmount,
+        valuationMethodCode: "08", // D-2 — 코드표 확인 전 placeholder
+      });
+    }
+
     // ── 나 섹션: 사전증여 행 (doneeId 매칭분만) ──
-    const myPriorGifts = priorGifts.filter((g) => g.doneeId === heir.id);
     for (const gift of myPriorGifts) {
       itemRows.push({
         kindCode: inferPropertyKindCode(gift),
@@ -228,23 +255,24 @@ export function buildBuppyo2Data(
       });
     }
 
-    // ── 계 섹션 ──
-    const priorGift13 = myPriorGifts.reduce((s, g) => s + g.giftAmount, 0);
+    // ── 계 섹션 ── (priorGift13·presumedAmount는 위에서 산출 — 단일 소스)
     const sectionTotal: Buppyo2SectionTotal = {
       grossEstateValue: grossInheritance,
-      presumedAmount: breakdown?.presumedAmount ?? 0,
+      presumedAmount,
       nonTaxableTotal: null,
       exclusionTotal: null,
       priorGift13,
       priorGift30_5: 0,
       priorGift30_6: 0,
-      total: breakdown?.taxableValueShare ?? 0,
+      // ㉘ 합계 = ⑰+⑱+㉕ (비과세·불산입 공란, 채무 행 없음 → 채무 미차감) = ⑧ 실제상속재산가액
+      total: grossInheritance + presumedAmount + priorGift13,
     };
 
     return {
       heirId: heir.id,
       sectionA,
       itemRows,
+      itemRowsTotal: itemRows.reduce((s, r) => s + r.valuatedAmount, 0),
       sectionTotal,
       usedLegalShareFallback,
     };
