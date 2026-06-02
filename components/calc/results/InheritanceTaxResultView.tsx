@@ -50,7 +50,7 @@ function InstallmentGuide({ finalTax }: { finalTax: number }) {
   return (
     <div className="border border-amber-200 dark:border-amber-700 rounded-xl overflow-hidden">
       <div className="bg-amber-50 dark:bg-amber-900/20 px-4 py-3">
-        <h4 className="text-sm font-semibold text-amber-800 dark:text-amber-200">
+        <h4 className="text-sm font-medium text-amber-800 dark:text-amber-200">
           연부연납 안내 (상증법 §71)
         </h4>
         <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
@@ -146,6 +146,10 @@ interface Props {
   presumedItems?: PresumedInheritanceItem[];
   /** 가업상속 입력 — 별지 제1호서식(가업상속공제신고서) 나·다 칸용 */
   familyBusinessInput?: FamilyBusinessInheritanceInput;
+  /** 피상속인 성명 — 각 신고서 인적사항 칸 (계산 미사용, 식별정보) */
+  decedentName?: string;
+  /** 피상속인 주민등록번호 — 각 신고서 인적사항 칸 */
+  decedentResidentNumber?: string;
 }
 
 export function InheritanceTaxResultView({
@@ -161,6 +165,8 @@ export function InheritanceTaxResultView({
   deathDate,
   presumedItems,
   familyBusinessInput,
+  decedentName,
+  decedentResidentNumber,
 }: Props) {
   const [showValuation, setShowValuation] = useState(false);
 
@@ -336,37 +342,6 @@ export function InheritanceTaxResultView({
         <AllocationBreakdownSection result={result} heirs={heirs} />
       )}
 
-      {/* 별지 제9호서식 상속세과세표준신고 및 자진납부계산서 (앞쪽) */}
-      {result.heirAllocationResult && heirs && heirs.length > 0 && (
-        <FilingForm9CoverSection result={result} heirs={heirs} deathDate={deathDate} />
-      )}
-
-      {/* 별지 제9호서식 부표 2 — 상속인별 상속재산 및 평가명세서 (A4 가로, 상속인별 N장) */}
-      {result.heirAllocationResult &&
-        heirs &&
-        heirs.length > 0 &&
-        (estateItems || priorGifts) && (
-          <BesshiBuppyo2Section
-            result={result}
-            heirs={heirs}
-            estateItems={estateItems}
-            priorGifts={priorGifts}
-            deathDate={deathDate}
-          />
-        )}
-
-      {/* 채무·공과금·장례비·상속공제 명세 (부표3·별지5호·별지1호) */}
-      {result.deductionDetail && (
-        <DeductionBesshiFormsSection
-          result={result}
-          heirs={heirs}
-          debtItems={debtItems}
-          estateItems={estateItems}
-          familyBusinessInput={familyBusinessInput}
-          deathDate={deathDate}
-        />
-      )}
-
       {/* 영농상속공제 사후관리 안내 */}
       {result.deductionDetail.farmingDeduction > 0 && (
         <div className="rounded-md border border-blue-200 bg-blue-50/40 dark:bg-blue-950/20 dark:border-blue-800 p-3 space-y-2 print:hidden">
@@ -434,6 +409,45 @@ export function InheritanceTaxResultView({
         <ListedStockBesshiResultSection
           estateItems={estateItems}
           valuationDate={deathDate}
+        />
+      )}
+
+      {/* 별지 제9호서식 상속세과세표준신고 및 자진납부계산서 (앞쪽) */}
+      {result.heirAllocationResult && heirs && heirs.length > 0 && (
+        <FilingForm9CoverSection
+          result={result}
+          heirs={heirs}
+          deathDate={deathDate}
+          decedentName={decedentName}
+          decedentResidentNumber={decedentResidentNumber}
+        />
+      )}
+
+      {/* 별지 제9호서식 부표 2 — 상속인별 상속재산 및 평가명세서 (A4 가로, 상속인별 N장) */}
+      {result.heirAllocationResult &&
+        heirs &&
+        heirs.length > 0 &&
+        (estateItems || priorGifts) && (
+          <BesshiBuppyo2Section
+            result={result}
+            heirs={heirs}
+            estateItems={estateItems}
+            priorGifts={priorGifts}
+            deathDate={deathDate}
+          />
+        )}
+
+      {/* 채무·공과금·장례비·상속공제 명세 (부표3·별지5호·별지1호) */}
+      {result.deductionDetail && (
+        <DeductionBesshiFormsSection
+          result={result}
+          heirs={heirs}
+          debtItems={debtItems}
+          estateItems={estateItems}
+          familyBusinessInput={familyBusinessInput}
+          deathDate={deathDate}
+          decedentName={decedentName}
+          decedentResidentNumber={decedentResidentNumber}
         />
       )}
 

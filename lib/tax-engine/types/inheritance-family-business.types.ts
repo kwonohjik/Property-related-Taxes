@@ -109,6 +109,26 @@ export interface FamilyBusinessInheritanceInput {
   // ─ 조세포탈·회계부정 §18의2⑧1호 ─
   /** 형 확정 (공제 배제) — short-circuit. */
   hasTaxFraudConviction?: boolean;
+
+  // ─ 별지 제1호서식 표시 전용 식별정보 (계산 미사용, 신고서 자동채움) ─
+  /** 가. 사업자등록번호 */
+  businessRegistrationNumber?: string;
+  /** 가. 성명(대표자) */
+  representativeName?: string;
+  /** 가. 대표자 주민등록번호 */
+  representativeResidentNumber?: string;
+  /** 가. 개업연월일 (ISO date) */
+  openingDate?: string;
+  /** 가. 업종 */
+  industryName?: string;
+  /** 다. 피상속인 대표이사 재직기간 (표시 텍스트, 예 "20년") */
+  decedentCeoTenure?: string;
+  /** 다. 특수관계인포함 지분율 (표시 텍스트, 예 "60%") */
+  decedentShareRatio?: string;
+  /** 라. 가업상속인 가업종사기간 (표시 텍스트) */
+  heirEngagementPeriod?: string;
+  /** 라. 임원/대표이사 취임일 (ISO date) */
+  heirOfficerAppointDate?: string;
 }
 
 /**

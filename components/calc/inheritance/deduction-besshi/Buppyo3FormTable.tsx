@@ -7,7 +7,7 @@
 
 import type { Buppyo3Data } from "@/lib/calc/deduction-besshi-data";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
-import { BP3, BP3_DEDUCTION_ROWS, PAPER_FOOTER, HANDWRITE_NOTE } from "./deduction-besshi-constants";
+import { BP3, BP3_COLS, BP3_DEDUCTION_ROWS, PAPER_FOOTER, HANDWRITE_NOTE } from "./deduction-besshi-constants";
 
 const HEAD = "border border-black p-1 bg-gray-100 text-[10px] font-medium text-center align-middle";
 const VAL = "border border-black p-1 text-[10px] align-middle";
@@ -15,6 +15,16 @@ const AMT = "border border-black p-1 text-[10px] text-right font-mono tabular-nu
 
 function pad(dataLen: number, fixed: number): number[] {
   return Array.from({ length: Math.max(0, fixed - dataLen) }, (_, i) => i);
+}
+/** colgroup — 값 셀이 비어도 폭 확보(table-fixed). 화면·PDF 동일 비율(BP3_COLS). */
+function ColGroup({ widths }: { widths: readonly string[] }) {
+  return (
+    <colgroup>
+      {widths.map((w, i) => (
+        <col key={i} style={{ width: w }} />
+      ))}
+    </colgroup>
+  );
 }
 function dval(v: number | null, force = false): string {
   if (v == null) return "—";
@@ -30,7 +40,8 @@ export function Buppyo3FormTable({ data }: { data: Buppyo3Data }) {
 
       {/* 가. 채무 */}
       <p className="mb-1 mt-2 text-[11px] font-bold">가. 채무</p>
-      <table className="w-full border-collapse">
+      <table className="w-full table-fixed border-collapse">
+        <ColGroup widths={BP3_COLS.debt} />
         <thead>
           <tr>
             <th className={HEAD}>① 채무종류</th>
@@ -66,7 +77,8 @@ export function Buppyo3FormTable({ data }: { data: Buppyo3Data }) {
 
       {/* 나. 공과금 */}
       <p className="mb-1 mt-3 text-[11px] font-bold">나. 공과금</p>
-      <table className="w-full border-collapse">
+      <table className="w-full table-fixed border-collapse">
+        <ColGroup widths={BP3_COLS.utility} />
         <thead>
           <tr>
             <th className={HEAD}>⑧ 공과금종류코드</th>
@@ -96,7 +108,8 @@ export function Buppyo3FormTable({ data }: { data: Buppyo3Data }) {
 
       {/* 다. 장례비용 */}
       <p className="mb-1 mt-3 text-[11px] font-bold">다. 장례비용</p>
-      <table className="w-full border-collapse">
+      <table className="w-full table-fixed border-collapse">
+        <ColGroup widths={BP3_COLS.funeral} />
         <thead>
           <tr>
             <th className={HEAD}>⑬ 주민(사업자)번호</th>
@@ -126,7 +139,8 @@ export function Buppyo3FormTable({ data }: { data: Buppyo3Data }) {
 
       {/* 라. 상속공제 */}
       <p className="mb-1 mt-3 text-[11px] font-bold">라. 상속공제</p>
-      <table className="w-full border-collapse">
+      <table className="w-full table-fixed border-collapse">
+        <ColGroup widths={BP3_COLS.deduction} />
         <tbody>
           {BP3_DEDUCTION_ROWS.map((row) => {
             const v = data.deduction[row.key] as number | null;

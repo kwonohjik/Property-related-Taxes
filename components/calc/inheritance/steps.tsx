@@ -54,6 +54,30 @@ export function Step0({
           <p className="text-xs font-semibold text-sky-700">피상속인 기본 정보</p>
         </div>
 
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium">피상속인 성명</label>
+            <input
+              type="text"
+              value={form.decedentName}
+              onChange={(e) => set({ decedentName: e.target.value })}
+              placeholder="성명"
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium">주민등록번호</label>
+            <input
+              type="text"
+              inputMode="numeric"
+              value={form.decedentResidentNumber}
+              onChange={(e) => set({ decedentResidentNumber: e.target.value })}
+              placeholder="앞 6자리-뒤 7자리"
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-mono focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+          </div>
+        </div>
+
         <div className="space-y-2">
           <label className="block text-sm font-medium">거주자 여부</label>
           <div className="grid grid-cols-2 gap-3">

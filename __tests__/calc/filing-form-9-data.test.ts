@@ -90,6 +90,15 @@ describe("별지 제9호서식 데이터 어댑터 (FF9-1~18)", () => {
   it("FF9-15b: ⑫ 상속개시일 = 2023-03-05", () => {
     expect(data.deathDate).toBe("2023-03-05");
   });
+  it("FF9-15c: ⑦⑧ 피상속인 인적사항 Step1 입력 pass-through", () => {
+    const d2 = buildFilingForm9Data(result, EXAMPLE_HEIRS, DEATH_DATE, "홍 피상", "350505-1234567");
+    expect(d2.decedentName).toBe("홍 피상");
+    expect(d2.decedentResidentNumber).toBe("350505-1234567");
+  });
+  it("FF9-15d: 피상속인 미입력 시 빈 문자열", () => {
+    expect(data.decedentName).toBe("");
+    expect(data.decedentResidentNumber).toBe("");
+  });
 
   // ── 행 빌드 구조 ──
   it("leftRows 18개(⑰~㉞) · rightRows 영리법인면제·납부방법 헤더 포함", () => {

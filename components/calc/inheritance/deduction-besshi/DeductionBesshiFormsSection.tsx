@@ -38,22 +38,38 @@ interface Props {
   estateItems?: EstateItem[];
   familyBusinessInput?: FamilyBusinessInheritanceInput;
   deathDate?: string;
+  decedentName?: string;
+  decedentResidentNumber?: string;
 }
 
 export function DeductionBesshiFormsSection({
   result,
+  heirs,
   debtItems,
   estateItems,
   familyBusinessInput,
   deathDate,
+  decedentName,
+  decedentResidentNumber,
 }: Props) {
   const [open, setOpen] = useState(false);
 
   const bp3 = useMemo(() => buildBuppyo3Data(result, debtItems), [result, debtItems]);
-  const b5 = useMemo(() => buildBesshi5Data(result), [result]);
+  const b5 = useMemo(
+    () => buildBesshi5Data(result, estateItems, debtItems, heirs, decedentName, decedentResidentNumber),
+    [result, estateItems, debtItems, heirs, decedentName, decedentResidentNumber],
+  );
   const b1 = useMemo(
-    () => buildBesshi1Data(result, estateItems, familyBusinessInput),
-    [result, estateItems, familyBusinessInput],
+    () =>
+      buildBesshi1Data(
+        result,
+        estateItems,
+        familyBusinessInput,
+        heirs,
+        decedentName,
+        decedentResidentNumber,
+      ),
+    [result, estateItems, familyBusinessInput, heirs, decedentName, decedentResidentNumber],
   );
 
   if (!result.deductionDetail) return null;
@@ -61,10 +77,10 @@ export function DeductionBesshiFormsSection({
   return (
     <section
       data-testid="besshi-forms-root"
-      className="rounded-2xl border border-slate-300 bg-white p-4 dark:border-slate-700 dark:bg-slate-950/40 print:border-black print:bg-white"
+      className="rounded-2xl border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-950/40 print:border-black print:bg-white"
     >
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+      <div className="flex items-center justify-between gap-2 px-4 py-3">
+        <h3 className="text-sm font-medium text-slate-900 dark:text-slate-100">
           채무·공과금·장례비·상속공제 명세 (부표3·별지5호·별지1호)
         </h3>
         <div className="flex items-center gap-2">
@@ -73,7 +89,7 @@ export function DeductionBesshiFormsSection({
         </div>
       </div>
 
-      <div className={open ? "block space-y-4" : "hidden space-y-4 print:block"}>
+      <div className={open ? "block space-y-4 px-4 pb-4" : "hidden space-y-4 px-4 pb-4 print:block"}>
         <Buppyo3FormTable data={bp3} />
         {b5 ? <Besshi5FormTable data={b5} /> : null}
         {b1 ? <Besshi1FormTable data={b1} /> : null}

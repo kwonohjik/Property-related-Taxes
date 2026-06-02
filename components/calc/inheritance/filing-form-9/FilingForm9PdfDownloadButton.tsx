@@ -42,12 +42,20 @@ interface Props {
   result: InheritanceTaxResult;
   heirs: Heir[];
   deathDate?: string;
+  decedentName?: string;
+  decedentResidentNumber?: string;
 }
 
-export function FilingForm9PdfDownloadButton({ result, heirs, deathDate }: Props) {
+export function FilingForm9PdfDownloadButton({
+  result,
+  heirs,
+  deathDate,
+  decedentName,
+  decedentResidentNumber,
+}: Props) {
   const data = useMemo(
-    () => buildFilingForm9Data(result, heirs, deathDate),
-    [result, heirs, deathDate],
+    () => buildFilingForm9Data(result, heirs, deathDate, decedentName, decedentResidentNumber),
+    [result, heirs, deathDate, decedentName, decedentResidentNumber],
   );
   const document = useMemo(
     () => <InheritanceFilingForm9PdfDocument data={data} />,

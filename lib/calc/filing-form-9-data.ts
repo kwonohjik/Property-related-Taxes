@@ -42,7 +42,11 @@ export interface FilingForm9Data {
   leftRows: FilingFormRow[];
   rightRows: FilingFormRow[];
   /** 신고인 도출 (대표상속인 = sortHeirs[0]) */
-  declarant: { name: string; relationLabel: string } | null;
+  declarant: { name: string; relationLabel: string; residentNumber: string } | null;
+  /** ⑦ 피상속인 성명 (Step1 입력, 미입력 "") */
+  decedentName: string;
+  /** ⑧ 피상속인 주민등록번호 (Step1 입력, 미입력 "") */
+  decedentResidentNumber: string;
   /** ⑫ 상속개시일 YYYY-MM-DD (없으면 "") */
   deathDate: string;
   /** ⑪ 상속원인 기본 사망 */
@@ -85,6 +89,8 @@ export function buildFilingForm9Data(
   result: InheritanceTaxResult,
   heirs: Heir[],
   deathDateInput?: string,
+  decedentName?: string,
+  decedentResidentNumber?: string,
 ): FilingForm9Data {
   const summary = buildSummaryTable(result, heirs);
   const rowTotal = (rowId: string): number =>
@@ -184,6 +190,7 @@ export function buildFilingForm9Data(
     ? {
         name: head.name?.trim() ?? "",
         relationLabel: HEIR_RELATION_TO_DECLARANT_LABEL[head.relation] ?? "",
+        residentNumber: head.residentNumber?.trim() ?? "",
       }
     : null;
 
@@ -192,6 +199,8 @@ export function buildFilingForm9Data(
     leftRows,
     rightRows,
     declarant,
+    decedentName: decedentName?.trim() ?? "",
+    decedentResidentNumber: decedentResidentNumber?.trim() ?? "",
     deathDate: deathDateInput ? toIsoDate(deathDateInput) : "",
     inheritanceCause: "death",
     filingDueDate: dueDates.filingDueDate,

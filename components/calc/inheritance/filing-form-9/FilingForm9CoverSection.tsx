@@ -50,6 +50,10 @@ interface Props {
   heirs?: Heir[];
   /** 상속개시일 (ISO) — ⑫·신고기한·분납기한 도출 */
   deathDate?: string;
+  /** ⑦ 피상속인 성명 (Step1 입력) */
+  decedentName?: string;
+  /** ⑧ 피상속인 주민등록번호 (Step1 입력) */
+  decedentResidentNumber?: string;
 }
 
 const HEAD = "border border-black p-1.5 bg-gray-100 dark:bg-gray-800 text-[11px] font-medium align-middle";
@@ -59,30 +63,42 @@ function chk(label: string, checked: boolean): string {
   return `${checked ? "[V]" : "[ ]"} ${label}`;
 }
 
-export function FilingForm9CoverSection({ result, heirs, deathDate }: Props) {
+export function FilingForm9CoverSection({
+  result,
+  heirs,
+  deathDate,
+  decedentName,
+  decedentResidentNumber,
+}: Props) {
   const [open, setOpen] = useState(false);
 
   if (!result.heirAllocationResult || !heirs || heirs.length === 0) return null;
 
-  const data = buildFilingForm9Data(result, heirs, deathDate);
+  const data = buildFilingForm9Data(result, heirs, deathDate, decedentName, decedentResidentNumber);
 
   return (
     <section
       data-testid="ff9-cover-section"
       aria-labelledby="ff9-title"
-      className="rounded-2xl border border-slate-300 bg-white p-4 dark:border-slate-700 dark:bg-slate-950/40 print:border-black print:bg-white"
+      className="rounded-2xl border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-950/40 print:border-black print:bg-white"
     >
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <h3 id="ff9-title" className="text-base font-semibold text-slate-900 dark:text-slate-100">
+      <div className="flex items-center justify-between gap-2 px-4 py-3">
+        <h3 id="ff9-title" className="text-sm font-medium text-slate-900 dark:text-slate-100">
           {FF9_FORM_TITLE} (별지 제9호서식)
         </h3>
         <div className="flex items-center gap-2">
-          <FilingForm9PdfDownloadButton result={result} heirs={heirs} deathDate={deathDate} />
+          <FilingForm9PdfDownloadButton
+            result={result}
+            heirs={heirs}
+            deathDate={deathDate}
+            decedentName={decedentName}
+            decedentResidentNumber={decedentResidentNumber}
+          />
           <ExpandToggleButton open={open} onClick={() => setOpen((v) => !v)} tone="slate" />
         </div>
       </div>
 
-      <div className={open ? "block" : "hidden print:block"}>
+      <div className={open ? "block px-4 pb-4" : "hidden px-4 pb-4 print:block"}>
         <div className="print:bg-white print:text-black">
           {/* 제목 */}
           <header className="mb-2 text-center">
@@ -104,7 +120,7 @@ export function FilingForm9CoverSection({ result, heirs, deathDate }: Props) {
                 <th className={`${HEAD} w-28`}>① {L["①"]}</th>
                 <td className={VAL} data-testid="ff9-①">{data.declarant?.name || ""}</td>
                 <th className={`${HEAD} w-28`}>② {L["②"]}</th>
-                <td className={VAL} data-testid="ff9-②"></td>
+                <td className={VAL} data-testid="ff9-②">{data.declarant?.residentNumber || ""}</td>
               </tr>
               <tr>
                 <th className={HEAD}>③ {L["③"]}</th>
@@ -127,9 +143,9 @@ export function FilingForm9CoverSection({ result, heirs, deathDate }: Props) {
               <tr>
                 <th rowSpan={3} className={`${HEAD} text-center`}>{L.decedentTitle}</th>
                 <th className={HEAD}>⑦ {L["⑦"]}</th>
-                <td className={VAL} data-testid="ff9-⑦"></td>
+                <td className={VAL} data-testid="ff9-⑦">{data.decedentName}</td>
                 <th className={HEAD}>⑧ {L["⑧"]}</th>
-                <td className={VAL} data-testid="ff9-⑧"></td>
+                <td className={VAL} data-testid="ff9-⑧">{data.decedentResidentNumber}</td>
               </tr>
               <tr>
                 <th className={HEAD}>⑩ {L["⑩"]}</th>

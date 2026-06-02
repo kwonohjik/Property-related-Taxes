@@ -7,7 +7,7 @@
 
 import type { Besshi5Data } from "@/lib/calc/deduction-besshi-data";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
-import { B5, B5_LIMIT_TABLE, PAPER_FOOTER, HANDWRITE_NOTE } from "./deduction-besshi-constants";
+import { B5, B5_COLS, B5_LIMIT_TABLE, PAPER_FOOTER, HANDWRITE_NOTE } from "./deduction-besshi-constants";
 
 const HEAD = "border border-black p-1 bg-gray-100 text-[10px] font-medium text-center align-middle";
 const VAL = "border border-black p-1 text-[10px] align-middle";
@@ -15,6 +15,16 @@ const AMT = "border border-black p-1 text-[10px] text-right font-mono tabular-nu
 
 function pad(len: number, fixed: number): number[] {
   return Array.from({ length: Math.max(0, fixed - len) }, (_, i) => i);
+}
+/** colgroup — 값 셀이 비어도 폭 확보(table-fixed). 화면·PDF 동일 비율(B5_COLS). */
+function ColGroup({ widths }: { widths: readonly string[] }) {
+  return (
+    <colgroup>
+      {widths.map((w, i) => (
+        <col key={i} style={{ width: w }} />
+      ))}
+    </colgroup>
+  );
 }
 
 function FinancialTable({ rows, totalLabel, total, totalTestId, rowPrefix }: {
@@ -25,7 +35,8 @@ function FinancialTable({ rows, totalLabel, total, totalTestId, rowPrefix }: {
   rowPrefix: string;
 }) {
   return (
-    <table className="w-full border-collapse">
+    <table className="w-full table-fixed border-collapse">
+      <ColGroup widths={B5_COLS.financial} />
       <thead>
         <tr>
           <th className={HEAD}>종류</th>
@@ -67,19 +78,20 @@ export function Besshi5FormTable({ data }: { data: Besshi5Data }) {
 
       {/* 1. 인적사항 */}
       <p className="mb-1 mt-2 text-[11px] font-bold">1. 피상속인 및 신고인(상속인) 인적사항</p>
-      <table className="w-full border-collapse">
+      <table className="w-full table-fixed border-collapse">
+        <ColGroup widths={B5_COLS.person} />
         <tbody>
           <tr>
             <th className={HEAD}>피상속인 성명</th>
-            <td className={VAL} data-testid="b5-피상속인-성명">&nbsp;</td>
+            <td className={VAL} data-testid="b5-피상속인-성명">{data.decedentName ?? " "}</td>
             <th className={HEAD}>주민등록번호</th>
-            <td className={VAL}>&nbsp;</td>
+            <td className={VAL} data-testid="b5-피상속인-주민번호">{data.decedentResidentNumber ?? " "}</td>
           </tr>
           <tr>
             <th className={HEAD}>상속인 성명</th>
-            <td className={VAL} data-testid="b5-상속인-성명">&nbsp;</td>
+            <td className={VAL} data-testid="b5-상속인-성명">{data.heirName ?? " "}</td>
             <th className={HEAD}>주민등록번호</th>
-            <td className={VAL}>&nbsp;</td>
+            <td className={VAL} data-testid="b5-상속인-주민번호">{data.heirResidentNumber ?? " "}</td>
           </tr>
         </tbody>
       </table>
@@ -93,7 +105,8 @@ export function Besshi5FormTable({ data }: { data: Besshi5Data }) {
 
       {/* 3. 공제금액 */}
       <p className="mb-1 mt-3 text-[11px] font-bold">3. 금융재산 상속공제금액</p>
-      <table className="w-full border-collapse">
+      <table className="w-full table-fixed border-collapse">
+        <ColGroup widths={B5_COLS.amount} />
         <tbody>
           <tr>
             <td className={VAL}>③ 순금융재산가액 (① − ②)</td>
@@ -113,7 +126,8 @@ export function Besshi5FormTable({ data }: { data: Besshi5Data }) {
       {/* 한도액 표 (작성방법) */}
       <details className="mt-2 text-[9px] text-gray-600 print:open">
         <summary className="cursor-pointer print:hidden">④ 한도액 산정표 보기</summary>
-        <table className="mt-1 w-full border-collapse">
+        <table className="mt-1 w-full table-fixed border-collapse">
+          <ColGroup widths={B5_COLS.limit} />
           <tbody>
             {B5_LIMIT_TABLE.map((r, i) => (
               <tr key={i}>

@@ -191,6 +191,7 @@ export function buildBuppyo2Data(
     const sectionA: Buppyo2SectionA = {
       relation: HEIR_RELATION_TO_DECLARANT_LABEL[heir.relation] ?? "",
       name: heir.name?.trim() ?? "",
+      residentId: heir.residentNumber?.trim() || undefined,
       legalShareLabel,
       legalShareAmount,
       actualShareRatio,

@@ -392,11 +392,34 @@ export function aggregatePriorGiftsForGift(
 /** 장례비 최소값 (증빙 없어도 인정): 500만원 */
 const FUNERAL_MIN = 5_000_000;
 
-/** 장례비 일반 한도: 1,000만원 (상증법 시행령 §9 ①) */
-const FUNERAL_GENERAL_MAX = 10_000_000;
+/** 장례비 일반(식대) 한도: 1,000만원 (상증법 시행령 §9 ①) */
+export const FUNERAL_GENERAL_MAX = 10_000_000;
 
 /** 봉안시설·자연장지 추가 한도: 500만원 */
-const FUNERAL_BONGAN_EXTRA = 5_000_000;
+export const FUNERAL_BONGAN_EXTRA = 5_000_000;
+
+/**
+ * 장례비 행별 한도 적용 (debtItems 경로) — 식대(비봉안) 합계 1,000만, 봉안 합계 500만.
+ * 카테고리별 잔여 한도를 순차 소진하며 각 행의 한도내 공제 인정액을 반환.
+ * 합계(Σ 반환값) = min(식대합, 1,000만) + min(봉안합, 500만) = 엔진 funeralDeduction.
+ */
+export function capFuneralRowAmounts(
+  rows: { amount: number; isBongan: boolean }[],
+): number[] {
+  let mealBudget = FUNERAL_GENERAL_MAX;
+  let bonganBudget = FUNERAL_BONGAN_EXTRA;
+  return rows.map((r) => {
+    const raw = Math.max(r.amount, 0);
+    if (r.isBongan) {
+      const allowed = Math.min(raw, bonganBudget);
+      bonganBudget -= allowed;
+      return allowed;
+    }
+    const allowed = Math.min(raw, mealBudget);
+    mealBudget -= allowed;
+    return allowed;
+  });
+}
 
 /**
  * 장례비 공제 계산 (§14 ③)

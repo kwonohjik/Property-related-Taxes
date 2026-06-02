@@ -486,6 +486,7 @@ export const heirSchema = z.object({
     "corporate",
   ]),
   name: z.string().optional(),
+  residentNumber: z.string().optional(), // 신고서 인적사항 칸(식별정보, 계산 미사용)·strip 방지
   birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD 형식").optional(),
   isDisabled: z.boolean().optional(),
   // actualShareRatio 제거 (2026-05-26) — 협의분할 자산별 일원화. 기존 저장값은 Zod strip으로 자동 제거.

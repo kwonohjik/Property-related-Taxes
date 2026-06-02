@@ -232,6 +232,21 @@ function HeirEditor({ heir, index, deathDate, onUpdate, onRemove }: HeirEditorPr
         />
       </div>
 
+      {/* 주민등록번호 (선택) — 신고서 인적사항 칸 */}
+      <div className="space-y-1">
+        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
+          주민등록번호 (선택)
+        </label>
+        <input
+          type="text"
+          inputMode="numeric"
+          value={heir.residentNumber ?? ""}
+          onChange={(e) => set({ residentNumber: e.target.value || undefined })}
+          placeholder="앞 6자리-뒤 7자리"
+          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-mono focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        />
+      </div>
+
       {/* 생년월일 */}
       {showBirthDate && (
         <div className="space-y-1">

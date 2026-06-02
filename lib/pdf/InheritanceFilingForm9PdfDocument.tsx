@@ -68,8 +68,20 @@ export function InheritanceFilingForm9PdfDocument({ data }: { data: FilingForm9D
         <View style={s.metaRow}>
           <Text style={s.metaLabel}>① 신고인</Text>
           <Text style={s.metaValue}>{data.declarant?.name ?? ""}</Text>
+          <Text style={s.metaLabel}>② 주민등록번호</Text>
+          <Text style={s.metaValue}>{data.declarant?.residentNumber ?? ""}</Text>
+        </View>
+        <View style={s.metaRow}>
           <Text style={s.metaLabel}>⑤ 관계</Text>
           <Text style={s.metaValue}>{data.declarant?.relationLabel ?? ""}</Text>
+          <Text style={s.metaLabel} />
+          <Text style={s.metaValue} />
+        </View>
+        <View style={s.metaRow}>
+          <Text style={s.metaLabel}>⑦ 피상속인</Text>
+          <Text style={s.metaValue}>{data.decedentName}</Text>
+          <Text style={s.metaLabel}>⑧ 주민등록번호</Text>
+          <Text style={s.metaValue}>{data.decedentResidentNumber}</Text>
         </View>
         <View style={s.metaRow}>
           <Text style={s.metaLabel}>⑫ 상속개시일</Text>

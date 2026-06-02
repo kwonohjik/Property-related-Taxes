@@ -22,7 +22,7 @@ import type {
 import { buildBuppyo2Data } from "@/lib/calc/besshi-buppyo-2-data";
 import { ExpandToggleButton } from "@/components/calc/results/shared/ExpandToggleButton";
 import { Buppyo2HeirSheet } from "./Buppyo2HeirSheet";
-import { BP2_FORM_TITLE, BP2_FORM_SUBTITLE } from "./besshi-buppyo-2-constants";
+import { BP2_FORM_SUBTITLE } from "./besshi-buppyo-2-constants";
 
 const Buppyo2PdfDownloadButton = dynamic(
   () =>
@@ -66,14 +66,14 @@ export function BesshiBuppyo2Section({
     <section
       data-testid="buppyo2-root"
       aria-labelledby="buppyo2-title"
-      className="rounded-2xl border border-slate-300 bg-white p-4 dark:border-slate-700 dark:bg-slate-950/40 print:border-black print:bg-white"
+      className="rounded-2xl border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-950/40 print:border-black print:bg-white"
     >
-      <div className="mb-3 flex items-center justify-between gap-2">
+      <div className="flex items-center justify-between gap-2 px-4 py-3">
         <h3
           id="buppyo2-title"
-          className="text-base font-semibold text-slate-900 dark:text-slate-100"
+          className="text-sm font-medium text-slate-900 dark:text-slate-100"
         >
-          {BP2_FORM_TITLE} (별지 제9호서식 부표 2)
+          {BP2_FORM_SUBTITLE}
         </h3>
         <div className="flex items-center gap-2">
           <Buppyo2PdfDownloadButton data={data} deathDate={deathDate} />
@@ -87,18 +87,8 @@ export function BesshiBuppyo2Section({
         </div>
       </div>
 
-      <div className={open ? "block" : "hidden print:block"}>
+      <div className={open ? "block px-4 pb-4" : "hidden px-4 pb-4 print:block"}>
         <div className="print:bg-white print:text-black">
-          <header className="mb-2 text-center">
-            <p className="text-[10px] text-slate-500">{BP2_FORM_SUBTITLE}</p>
-            <p className="text-lg font-bold tracking-wide text-slate-900 dark:text-slate-50">
-              {BP2_FORM_TITLE}
-            </p>
-            <p className="text-[10px] text-slate-500">
-              상속인 수만큼 작성 — 총 {data.length}장
-            </p>
-          </header>
-
           {data.map((d, idx) => (
             <Buppyo2HeirSheet key={d.heirId} heirData={d} idx={idx} />
           ))}

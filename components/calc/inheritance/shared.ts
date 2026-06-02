@@ -15,6 +15,8 @@ import type { ExemptionCheckedItem } from "@/lib/tax-engine/exemption-evaluator"
 
 export interface FormState {
   // Step 0
+  decedentName: string;
+  decedentResidentNumber: string;
   decedentType: "resident" | "non_resident";
   deathDate: string;
   // Step 1 — 상속재산 + 추정상속재산
@@ -71,6 +73,8 @@ export interface FormState {
 export type FormSet = (p: Partial<FormState>) => void;
 
 export const INITIAL_FORM: FormState = {
+  decedentName: "",
+  decedentResidentNumber: "",
   decedentType: "resident",
   deathDate: "",
   estateItems: [],

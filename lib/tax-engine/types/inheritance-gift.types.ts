@@ -543,6 +543,8 @@ export interface Heir {
   id: string;
   relation: HeirRelation;
   name?: string;
+  /** 주민등록번호 (각 신고서 인적사항 칸 — 계산 미사용, 식별정보) */
+  residentNumber?: string;
   birthDate?: string;
   isDisabled?: boolean;
   /**

@@ -37,6 +37,7 @@ import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInp
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { DateInput } from "@/components/ui/date-input";
 import {
   evaluateFamilyBusinessEligibility,
   familyBusinessCap,
@@ -94,6 +95,36 @@ const INELIGIBLE_REASON_LABELS: Record<string, string> = {
   medium_other_estate_exceeds_200pct: "가업외 상속재산 200% 초과 (§18의2② + 상증령 §15⑥⑦)",
   tax_fraud_conviction: "조세포탈·회계부정 형 확정 (§18의2⑧1호)",
 };
+
+/** 신고서 표시 정보 — 짧은 텍스트 입력 (계산 미사용) */
+function FbTextField({
+  label,
+  value,
+  onChange,
+  mono,
+  placeholder,
+}: {
+  label: string;
+  value?: string;
+  onChange: (v: string | undefined) => void;
+  mono?: boolean;
+  placeholder?: string;
+}) {
+  return (
+    <div className="space-y-1">
+      <label className="block text-[11px] font-medium text-amber-700 dark:text-amber-300">
+        {label}
+      </label>
+      <input
+        type="text"
+        value={value ?? ""}
+        onChange={(e) => onChange(e.target.value || undefined)}
+        placeholder={placeholder}
+        className={`w-full rounded-md border border-input bg-background px-2 py-1.5 text-xs ${mono ? "font-mono" : ""} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring`}
+      />
+    </div>
+  );
+}
 
 export interface FamilyBusinessEligibilitySectionProps {
   familyBusiness: FamilyBusinessInheritanceInput | undefined;
@@ -158,6 +189,37 @@ export function FamilyBusinessEligibilitySection({
 
       {familyBusiness && (
         <div className="rounded-md border border-amber-200 bg-amber-50/30 dark:bg-amber-950/10 dark:border-amber-800 p-3 space-y-4">
+
+          {/* ── 신고서 표시 정보 (별지 제1호서식 가·다·라 식별정보, 계산 미사용) ── */}
+          <div className="space-y-2 rounded border border-amber-200 bg-amber-100/40 dark:bg-amber-900/20 p-2">
+            <p className="text-[11px] font-semibold text-amber-800 dark:text-amber-200">
+              별지 제1호서식 표시 정보 (선택 — 계산에는 사용되지 않음)
+            </p>
+            {/* 가. 가업현황 */}
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <FbTextField label="사업자등록번호" mono value={familyBusiness.businessRegistrationNumber} onChange={(v) => update({ businessRegistrationNumber: v })} />
+              <FbTextField label="업종" value={familyBusiness.industryName} onChange={(v) => update({ industryName: v })} />
+              <FbTextField label="대표자 성명" value={familyBusiness.representativeName} onChange={(v) => update({ representativeName: v })} />
+              <FbTextField label="대표자 주민등록번호" mono value={familyBusiness.representativeResidentNumber} onChange={(v) => update({ representativeResidentNumber: v })} />
+            </div>
+            <div className="space-y-1">
+              <label className="block text-[11px] font-medium text-amber-700 dark:text-amber-300">개업연월일</label>
+              <DateInput value={familyBusiness.openingDate ?? ""} onChange={(v) => update({ openingDate: v || undefined })} />
+            </div>
+            {/* 다. 피상속인 */}
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <FbTextField label="대표이사 재직기간" placeholder="예: 20년" value={familyBusiness.decedentCeoTenure} onChange={(v) => update({ decedentCeoTenure: v })} />
+              <FbTextField label="특수관계인포함 지분율" placeholder="예: 60%" value={familyBusiness.decedentShareRatio} onChange={(v) => update({ decedentShareRatio: v })} />
+            </div>
+            {/* 라. 가업상속인 */}
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <FbTextField label="가업종사기간" value={familyBusiness.heirEngagementPeriod} onChange={(v) => update({ heirEngagementPeriod: v })} />
+              <div className="space-y-1">
+                <label className="block text-[11px] font-medium text-amber-700 dark:text-amber-300">임원/대표이사 취임일</label>
+                <DateInput value={familyBusiness.heirOfficerAppointDate ?? ""} onChange={(v) => update({ heirOfficerAppointDate: v || undefined })} />
+              </div>
+            </div>
+          </div>
 
           {/* ── 사업 유형 ── */}
           <div className="space-y-1.5">

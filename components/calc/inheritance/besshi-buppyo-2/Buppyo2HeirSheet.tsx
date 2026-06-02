@@ -14,6 +14,8 @@ import { Buppyo2NaTable, Buppyo2NaPage1 } from "./Buppyo2NaTable";
 import { Buppyo2KyeSection } from "./Buppyo2KyeSection";
 import {
   BP2_NA_SECTION_TITLE,
+  BP2_FORM_TITLE,
+  BP2_FORM_SUBTITLE,
   splitBuppyo2NaRows,
 } from "./besshi-buppyo-2-constants";
 
@@ -42,18 +44,12 @@ export function Buppyo2HeirSheet({
           needsPage2 ? " print:break-after-page" : ""
         }`}
       >
-        <p className="mb-2 text-[11px] font-semibold">
-          상속인 {num} {who}
-        </p>
-
-        {heirData.usedLegalShareFallback && (
-          <p
-            data-testid={`buppyo2-sheet-${idx}-fallback`}
-            className="mb-2 rounded border border-amber-300 bg-amber-50 p-1.5 text-[10px] text-amber-700"
-          >
-            협의분할 미입력 자산은 명세(나) 행에서 생략되며, 계 합계에는 법정상속분 기준으로 포함됩니다.
+        <header className="mb-3">
+          <p className="text-[10px] text-slate-500">{BP2_FORM_SUBTITLE}</p>
+          <p className="text-center text-lg font-bold tracking-wide text-slate-900 dark:text-slate-50">
+            {BP2_FORM_TITLE}
           </p>
-        )}
+        </header>
 
         <Buppyo2GaSection data={a} idx={idx} />
 

@@ -13,11 +13,23 @@ import type {
   DebtItem,
   DebtCategory,
   EstateItem,
+  AssetCategory,
+  Heir,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
+import {
+  resolveFinancialEligibility,
+  resolveFinancialDebt,
+} from "./financial-deduction-resolver";
+import { resolveEstateItemValue } from "@/lib/tax-engine/valuation/resolve-estate-item-value";
+import { sortHeirs } from "./heir-allocation-summary";
 import type {
   FamilyBusinessInheritanceInput,
   FamilyBusinessCategory,
 } from "@/lib/tax-engine/types/inheritance-family-business.types";
+import {
+  capFuneralRowAmounts,
+  calcFuneralExpenseDeduction,
+} from "@/lib/tax-engine/inheritance-gift-common";
 
 // ── 코드 매핑 (Record<EnumType,…> — enum 추가 시 컴파일러 누락 catch) ──
 export const DEBT_CATEGORY_LABEL: Record<DebtCategory, string> = {
@@ -127,18 +139,25 @@ export function buildBuppyo3Data(
   let utilityRows: Buppyo3UtilityRow[] = items
     .filter((d) => d.category === "tax")
     .map((d) => ({ detailName: d.name.trim() || undefined, amount: d.amount }));
-  let funeralRows: Buppyo3FuneralRow[] = items
-    .filter((d) => d.category === "funeral")
-    .map((d) => ({
-      detail: (d.name.trim() || DEBT_CATEGORY_LABEL.funeral) + (d.isBongan ? " (봉안시설)" : ""),
-      amount: d.amount,
-    }));
+  // 장례비 §14③: 식대 1,000만 + 봉안 500만 한도 내 공제 인정액만 표시 (행별 한도 적용, 합계 = funeralDeduction)
+  const funeralItems = items.filter((d) => d.category === "funeral");
+  const cappedFuneralAmounts = capFuneralRowAmounts(
+    funeralItems.map((d) => ({ amount: d.amount, isBongan: !!d.isBongan })),
+  );
+  let funeralRows: Buppyo3FuneralRow[] = funeralItems.map((d, i) => ({
+    detail: (d.name.trim() || DEBT_CATEGORY_LABEL.funeral) + (d.isBongan ? " (봉안시설)" : ""),
+    amount: cappedFuneralAmounts[i],
+  }));
 
   // legacy fallback (debtItems 미입력 — funeralExpense/debts 단일 행)
   if (useLegacy) {
+    const legacyFuneralDeduction = calcFuneralExpenseDeduction(
+      legacy!.funeralExpense,
+      legacy!.funeralIncludesBongan,
+    ).deduction;
     funeralRows =
       legacy!.funeralExpense > 0
-        ? [{ detail: "장례비" + (legacy!.funeralIncludesBongan ? " (봉안시설)" : ""), amount: legacy!.funeralExpense }]
+        ? [{ detail: "장례비" + (legacy!.funeralIncludesBongan ? " (봉안시설)" : ""), amount: legacyFuneralDeduction }]
         : [];
     debtRows = legacy!.debts > 0 ? [{ kindLabel: "채무·공과금", amount: legacy!.debts }] : [];
     utilityRows = [];
@@ -192,6 +211,14 @@ export interface Besshi5AssetRow {
 }
 export type Besshi5DebtRow = Besshi5AssetRow;
 export interface Besshi5Data {
+  /** 피상속인 성명 (Step1 입력) */
+  decedentName?: string;
+  /** 피상속인 주민등록번호 (Step1 입력) */
+  decedentResidentNumber?: string;
+  /** 신고인(대표 상속인) 성명 — sortHeirs 우선순위 1순위 */
+  heirName?: string;
+  /** 신고인(대표 상속인) 주민등록번호 */
+  heirResidentNumber?: string;
   assetRows: Besshi5AssetRow[];
   assetTotal: number; // ①
   debtRows: Besshi5DebtRow[];
@@ -201,20 +228,82 @@ export interface Besshi5Data {
   deduction: number; // ⑤
 }
 
-/** financialDeductionDetail 단일출처. 미적용 시 null (렌더 가드) */
-export function buildBesshi5Data(result: InheritanceTaxResult): Besshi5Data | null {
+/** 금융재산 종류(종류 칸) 라벨 — name 우선, 없으면 엔진 집계 라벨과 동일 종류명 (보험금·상장주식·예금 등) */
+const FINANCIAL_ASSET_KIND_LABEL: Record<AssetCategory, string> = {
+  real_estate_land: "토지",
+  real_estate_building: "건물",
+  real_estate_apartment: "아파트",
+  listed_stock: "상장주식",
+  unlisted_stock: "비상장주식",
+  cash: "현금",
+  financial: "예금",
+  deposit: "전세보증금",
+  other: "기타금융",
+};
+
+function financialAssetKindLabel(item: EstateItem): string {
+  if (item.name?.trim()) return item.name.trim();
+  if (item.deemedCategory === "insurance") return "보험금";
+  return FINANCIAL_ASSET_KIND_LABEL[item.category] ?? "금융재산";
+}
+
+/**
+ * financialDeductionDetail 단일출처. 미적용 시 null (렌더 가드).
+ *
+ * estateItems·debtItems 제공 시: §22 적격 자산·금융채무를 **입력한 대로 항목별** 기재
+ * (합계 1행 금지). 적격 판정은 financial-deduction-resolver 단일 진실, 평가액은 엔진 §60.
+ * 미제공 시(legacy·테스트): fdd.rows(종류별 집계) fallback.
+ */
+export function buildBesshi5Data(
+  result: InheritanceTaxResult,
+  estateItems?: EstateItem[],
+  debtItems?: DebtItem[],
+  heirs?: Heir[],
+  decedentName?: string,
+  decedentResidentNumber?: string,
+): Besshi5Data | null {
   const fdd = result.deductionDetail.financialDeductionDetail;
   const finalDeduction = result.deductionDetail.financialDeduction;
   if (!fdd || (fdd.netFinancial <= 0 && finalDeduction <= 0)) return null;
 
-  const assetRows: Besshi5AssetRow[] = fdd.rows
-    .filter((r) => !isDebtLabel(r.label))
-    .map((r) => ({ kindLabel: r.label, amount: r.amount }));
-  const debtRows: Besshi5DebtRow[] = fdd.rows
-    .filter((r) => isDebtLabel(r.label))
-    .map((r) => ({ kindLabel: r.label, amount: r.amount }));
+  // 신고인(대표 상속인) — 별지 제9호서식과 동일 도출(sortHeirs 1순위)
+  const representative = heirs && heirs.length > 0 ? sortHeirs(heirs)[0] : undefined;
+  const heirName = representative?.name?.trim() || undefined;
+  const heirResidentNumber = representative?.residentNumber?.trim() || undefined;
+
+  let assetRows: Besshi5AssetRow[];
+  let debtRows: Besshi5DebtRow[];
+
+  if (estateItems !== undefined || debtItems !== undefined) {
+    // 항목별 기재 (입력한 대로)
+    assetRows = (estateItems ?? [])
+      .filter(resolveFinancialEligibility)
+      .map((item) => ({
+        kindLabel: financialAssetKindLabel(item),
+        amount: resolveEstateItemValue(item),
+      }))
+      .filter((r) => r.amount > 0);
+    debtRows = (debtItems ?? [])
+      .filter(resolveFinancialDebt)
+      .map((d) => ({
+        kindLabel: d.name.trim() || "금융채무",
+        amount: d.amount,
+      }));
+  } else {
+    // legacy fallback — fdd.rows(종류별 집계)
+    assetRows = fdd.rows
+      .filter((r) => !isDebtLabel(r.label))
+      .map((r) => ({ kindLabel: r.label, amount: r.amount }));
+    debtRows = fdd.rows
+      .filter((r) => isDebtLabel(r.label))
+      .map((r) => ({ kindLabel: r.label, amount: r.amount }));
+  }
 
   return {
+    decedentName: decedentName?.trim() || undefined,
+    decedentResidentNumber: decedentResidentNumber?.trim() || undefined,
+    heirName,
+    heirResidentNumber,
     assetRows,
     assetTotal: sumAmount(assetRows),
     debtRows,
@@ -259,8 +348,9 @@ export interface Besshi1Data {
   decedentResidentId?: string;
   ceoTenure?: string;
   shareRatio?: string;
-  // 라. 가업상속인 — 미수집
+  // 라. 가업상속인
   heirName?: string;
+  heirResidentNumber?: string;
   heirEngagement?: string;
   officerAppointDate?: string;
   heirAddress?: string;
@@ -271,11 +361,60 @@ export interface Besshi1Data {
   appliedCap?: number;
 }
 
-/** familyBusinessDetail.deduction>0 시만 반환 (렌더 가드). familyBusinessInput 전달 시 나·다 추가 채움 */
+/** 마. 수량(면적) 도출 — 주식: 주식수("N주"), 부동산: 면적("N㎡"). 단가 역산용 숫자도 반환. */
+function deriveFamilyBusinessQuantity(e: EstateItem): { quantity?: string; quantityNum?: number } {
+  const shares = e.listedStockShares ?? e.unlistedStockValuationV2?.ownedShares;
+  if (shares != null && shares > 0) {
+    return { quantity: `${shares.toLocaleString("ko-KR")}주`, quantityNum: shares };
+  }
+  if (e.areaSqm != null && e.areaSqm > 0) {
+    return { quantity: `${e.areaSqm.toLocaleString("ko-KR")}㎡`, quantityNum: e.areaSqm };
+  }
+  if (e.quantityCount != null && e.quantityCount > 0) {
+    return { quantity: e.quantityCount.toLocaleString("ko-KR"), quantityNum: e.quantityCount };
+  }
+  return {};
+}
+
+/**
+ * 가업상속인 식별 — 가업자산 heirAllocations 최대 금액 수령자(C-1/C-2), 미입력 시 대표 상속인(C-3).
+ * 계획: docs/00-pm/inheritance-besshi1-family-business-autofill.plan.md §4
+ */
+function resolveFamilyBusinessHeir(familyAssets: EstateItem[], heirs?: Heir[]): Heir | undefined {
+  if (!heirs || heirs.length === 0) return undefined;
+  const allocSum = new Map<string, number>();
+  for (const asset of familyAssets) {
+    for (const alloc of asset.heirAllocations ?? []) {
+      allocSum.set(alloc.heirId, (allocSum.get(alloc.heirId) ?? 0) + alloc.amount);
+    }
+  }
+  if (allocSum.size > 0) {
+    let bestId = "";
+    let bestAmt = -1;
+    for (const [id, amt] of allocSum) {
+      if (amt > bestAmt) {
+        bestAmt = amt;
+        bestId = id;
+      }
+    }
+    const matched = heirs.find((h) => h.id === bestId);
+    if (matched) return matched;
+  }
+  return sortHeirs(heirs)[0]; // C-3 fallback (별지 제9호 신고인과 동일)
+}
+
+/**
+ * familyBusinessDetail.deduction>0 시만 반환 (렌더 가드).
+ * heirs·decedentName·decedentResidentNumber 전달 시 다(피상속인)·라(가업상속인) 인적사항 자동채움.
+ * 식별정보·자산 수량/단가는 표시 전용(계산 미사용).
+ */
 export function buildBesshi1Data(
   result: InheritanceTaxResult,
   estateItems: EstateItem[] | undefined,
   familyBusinessInput?: FamilyBusinessInheritanceInput,
+  heirs?: Heir[],
+  decedentName?: string,
+  decedentResidentNumber?: string,
 ): Besshi1Data | null {
   const fbd = result.deductionDetail.familyBusinessDetail;
   if (!fbd || fbd.deduction <= 0) return null;
@@ -284,21 +423,53 @@ export function buildBesshi1Data(
   const valuatedAmountOf = (id: string): number =>
     result.valuationResults.find((v) => v.estateItemId === id)?.valuatedAmount ?? 0;
 
-  const assetRows: Besshi1AssetRow[] = (estateItems ?? [])
-    .filter((e) => e.familyBusinessCategory != null)
-    .map((e) => ({
+  const familyAssets = (estateItems ?? []).filter((e) => e.familyBusinessCategory != null);
+
+  const assetRows: Besshi1AssetRow[] = familyAssets.map((e) => {
+    const amount = valuatedAmountOf(e.id);
+    const { quantity, quantityNum } = deriveFamilyBusinessQuantity(e);
+    const unitPrice =
+      quantityNum && quantityNum > 0 ? Math.floor(amount / quantityNum) : undefined;
+    return {
       kindLabel: FAMILY_BUSINESS_CATEGORY_LABEL[e.familyBusinessCategory!],
-      amount: valuatedAmountOf(e.id),
-      note: e.name.trim() || undefined,
-    }));
+      quantity,
+      unitPrice,
+      amount,
+      note: e.name?.trim() || undefined,
+    };
+  });
+
+  // 가. 상호(법인명) — 첫 가업자산의 법인명(비상장 corpName 우선) ?? 자산명
+  const businessName =
+    familyAssets[0]?.unlistedStockValuationV2?.corpName?.trim() ||
+    familyAssets[0]?.name?.trim() ||
+    undefined;
+
+  // 라. 가업상속인 (§4 식별)
+  const fbHeir = resolveFamilyBusinessHeir(familyAssets, heirs);
 
   return {
+    // 가. 가업현황 — 상호는 자산명(Phase 2), 나머지 식별정보는 familyBusinessInput 표시 필드(Phase 3)
+    businessName,
+    bizNo: fbi?.businessRegistrationNumber?.trim() || undefined,
+    representativeName: fbi?.representativeName?.trim() || undefined,
+    residentId: fbi?.representativeResidentNumber?.trim() || undefined,
+    openDate: fbi?.openingDate || undefined,
+    industry: fbi?.industryName?.trim() || undefined,
     isSme: fbi ? fbi.enterpriseSize === "sme" : undefined,
     isMedium: fbi ? fbi.enterpriseSize === "medium" : undefined,
     isListed: fbi?.isListedOnExchange,
     avgRevenue3Y: fbi?.averageRevenue3Y,
     operatingYears: fbd.operatingYears,
     isMajorShareholder: fbi?.decedentMajorShareholdingMet,
+    decedentName: decedentName?.trim() || undefined,
+    decedentResidentId: decedentResidentNumber?.trim() || undefined,
+    ceoTenure: fbi?.decedentCeoTenure?.trim() || undefined,
+    shareRatio: fbi?.decedentShareRatio?.trim() || undefined,
+    heirName: fbHeir?.name?.trim() || undefined,
+    heirResidentNumber: fbHeir?.residentNumber?.trim() || undefined,
+    heirEngagement: fbi?.heirEngagementPeriod?.trim() || undefined,
+    officerAppointDate: fbi?.heirOfficerAppointDate || undefined,
     assetRows,
     declaredAmount: fbd.deduction,
     appliedCap: fbd.appliedCap,
