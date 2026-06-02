@@ -164,10 +164,25 @@ const availablePrintIds = useMemo<Set<string>>(() => { /* §2 가드 1:1 */ }, [
 
 **deviation(설계 보강)**: 설계 §1.1은 "헬퍼 기본값 제거"였으나, 상속세 회귀 0을 위해 **inheritance-print-sections.ts에 기존 시그니처 래퍼 유지**(shared는 groups 필수, inheritance 래퍼는 INHERITANCE 바인딩). 기존 anchor·PrintSelectionPanel 외 호출부 무변경. `selectedPrintIds`는 제네릭 패널(`Set<string>`) 정합 위해 `Set<PrintSectionId>`→`Set<string>` 완화(add는 PrintSectionId 리터럴, 레지스트리 anchor가 정합 방어).
 
+## 7-3. PR-B1 갭 분석 (증여세 화면 인쇄 — 구현 완료)
+
+| 항목 | 설계 | 구현 | 판정 |
+|---|---|---|---|
+| `GIFT_PRINT_SECTIONS` 11 leaf | §2.1 (요약4·자료1·서식2·평가2·기타2) | `gift-print-sections.ts` 11 leaf + 바인딩 래퍼(inheritance 패턴) | ✓ |
+| pdf 채널 | §2.1·§8 "5종" | **PR-B1=`tax-summary`(계산표) 1종만**. 별지4는 PR-B2 승격 | ⚠️ 단계 분할 |
+| `GiftTaxResultView` 통합 | §3 상속세 복제 | 11 `PrintSection` + 패널 + `savedId` + `handlePrintPdf` + `availablePrintIds`(렌더 가드 1:1) | ✓ |
+| `window.print()` 버튼 | §3 패널로 대체 | 제거 → "선택 항목 인쇄"(패널) | ✓ |
+| `savedId` 전달 | §3 "Do 진입 시 확인" | `GiftTaxForm` `savedId={autoSave.savedId ?? undefined}` 추가 | ✓ |
+| ResultPdfDocument gift 필터 | §5 gift 분기 필터 | `filtered`에서 `isInheritance` 제거 → gift도 `tax-summary` 필터. GET(전체) 회귀 0 | ✓ |
+| 별지 PDF | §4 신규2+재사용2 | PR-B2로 분리(gift 위임·react-pdf 미구현) | → PR-B2 |
+| anchor | §6 PD-gift | `gift-print-sections.test.ts` 7 + 전체 5971 + 상속세·증여세 E2E 2 PASS | ✓ |
+
+**deviation(거짓 선택 방지)**: §2.1·§8 표는 **PR-B2 완료 후 최종 상태**(pdf 5종) 기술. PR-B1 시점엔 ResultPdfDocument가 실제 분리 렌더 가능한 `tax-summary`(계산표) 1종만 pdf 채널. 별지 4종(filing-form-10·valuation-form·주식2)은 PR-B2(별지10·부표1 react-pdf 신규 + `gift-besshi-pages` 위임)에서 pdf 승격. (PR-2 교훈: 미구현 노드를 pdf로 표시하면 빈 PDF 위험 → screen 유지)
+
 ## 8. 케이스 인벤토리 요약 (leaf·pdf 채널 수 — 검토 U1 반영)
 | 세목 | leaf | pdf 채널 | 별지 PDF |
 |---|---|---|---|
-| 증여 | 11 | 5 (tax-summary·filing-form-10·valuation-form·주식2) | 신규 2 + 재사용 2 |
+| 증여 | 11 | 5 (tax-summary·filing-form-10·valuation-form·주식2) — **PR-B1=tax-summary 1, 별지4 PR-B2 승격** | 신규 2 + 재사용 2 |
 | 취득 | 11 | 1 (tax-detail = 계산표 대표) | 없음 |
 | 재산 | 7 | 1 (computed-tax = 계산표 대표) | 없음 |
 | 종부 | 7 | 1 (housing-tax = 주택분 계산표 대표) | 없음 |

@@ -447,8 +447,9 @@ function InheritanceGiftSection({
   selectedSectionIds?: string[];
 }) {
   const isInheritance = taxType === "inheritance";
-  // 선택 필터 (상속세, PR-2). 미지정(전체) 또는 증여세는 항상 렌더.
-  const filtered = isInheritance && selectedSectionIds !== undefined;
+  // 선택 필터 (상속세 PR-2·증여세 PR-B1). 미지정(전체 GET)이면 항상 렌더.
+  // 증여세 pdf 채널은 tax-summary(계산표) 1종 — 별지는 PR-B2에서 승격.
+  const filtered = selectedSectionIds !== undefined;
   const showSummary = !filtered || selectedSectionIds!.includes("tax-summary");
   const showHeirAllocation =
     !filtered || selectedSectionIds!.includes("heir-allocation-summary");
