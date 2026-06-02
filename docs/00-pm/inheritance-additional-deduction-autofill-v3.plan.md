@@ -233,7 +233,7 @@ deriveCohabitHouseStdPrice(estateItems, heirs): { value, securedDebt, isApplicab
 
 ## 11. 미해결·후속
 
-1. ✅ **[해소]** §23의2① 담보채무 범위 — KoreanLaw 검증 완료(2026-06-02): **저당(담보권) 채무만, 임대보증금 제외**. `deriveCohabitHouseStdPrice`의 `securedDebt = item.mortgageAmount ?? 0` 확정(§3-2). 시행령 §20의2(§21의3 아님). **추가 고려**: 부수토지 가액(소득법 §89①3호)도 동거주택 base에 포함 — `standardPrice`가 주택+부수토지 합산 공시가인지 확인(주택 단독이면 부수토지 별도 합산 필요, Design에서 검토).
+1. ✅ **[해소]** §23의2① 담보채무 범위 — KoreanLaw 검증 완료(2026-06-02): **저당(담보권) 채무만, 임대보증금 제외**. `deriveCohabitHouseStdPrice`의 `securedDebt = item.mortgageAmount ?? 0` 확정(§3-2). 시행령 §20의2(§21의3 아님). ✅ **[부수토지 해소]** §61①4호 주택평가=개별/공동주택가격이 **부수토지 이미 포함** → 단일 주택 standardPrice가 정확, 별도 합산 불필요(13단계검토 취소, `inheritance-cohabit-ancillary-land.plan.md`).
 2. §22 phaseDFinancialRows 담보저당 차감 누락 dual-truth — 별도 트랙.
 3. orphan `step4-5.tsx`의 `suggestFamilyBusinessValue`·`suggestPriorGiftDeductionTotal` 배지(가업·사전증여) 이관 — 본 작업 후속 Phase.
 4. `cohabitDirectAmount` Phase E 라벨/위치 정리 — 본 작업 포함 또는 후속.
