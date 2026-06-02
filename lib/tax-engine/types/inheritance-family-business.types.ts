@@ -63,16 +63,43 @@ export interface FamilyBusinessInheritanceInput {
   decedentCEORequirementMet: boolean;
 
   // ─ 상속인 요건 (상증령 §15③2호) ─
-  /** 18세 이상 — 가. */
+  /**
+   * 18세 이상 — 가. (legacy boolean — 자동도출/override 미입력 시 fallback)
+   * resolve 우선순위: heirIsAdultOverride > (heirId.birthDate ?? heirBirthDate 기반 자동) > 본 boolean.
+   */
   heirIsAdult: boolean;
-  /** 상속개시 전 영위기간 중 2년 이상 직접 가업 종사 — 나. */
+  /** 상속개시 전 영위기간 중 2년 이상 직접 가업 종사 — 나. (legacy boolean) */
   heirTwoYearEngagement: boolean;
-  /** 피상속인 65세 미만 사망 or 천재지변·인재 사망 (2년 요건 면제) — 나 단서. */
+  /** 피상속인 65세 미만 사망 or 천재지변·인재 사망 (2년 요건 면제) — 나 단서. (수동 토글 유지) */
   decedentEarlyDeath?: boolean;
-  /** 신고기한까지 임원 취임 — 다. */
+  /** 신고기한까지 임원 취임 — 다. (legacy boolean) */
   heirOfficerByFilingDeadline: boolean;
-  /** 신고기한 후 2년 이내 대표이사 취임 예정 — 라. */
+  /** 신고기한 후 2년 이내 대표이사 취임 예정 — 라. (legacy boolean) */
   heirCEOWithinTwoYears: boolean;
+
+  // ─ 요건 자동판정 기초데이터 (Phase 1, 2026-06-02) ─
+  // store=기초데이터, 엔진=resolveFamilyBusinessRequirements가 계산 시점에 도출. (eligibility-autoderive.engine.design.md)
+  /**
+   * 가업상속인 Heir.id — 지정 상속인의 Heir.birthDate를 18세 판정에 재사용 (§20·§27과 단일소스).
+   * corporate(영리법인)는 지정 불가(자연인 요건). orchestrator가 input.heirs에서 birthDate 도출.
+   */
+  heirId?: string;
+  /** 가업상속인 생년월일 — heirId의 Heir.birthDate 미입력 시 fallback (ISO date). */
+  heirBirthDate?: string;
+  /** 상속인 가업종사 시작일 — 2년 종사(나목) 자동판정 (ISO date, 기존 heirEngagementPeriod string 승격). */
+  heirEngagementStartDate?: string;
+  /** 상속인 대표이사 취임(예정)일 — 라목 2년내 자동판정 (ISO date). */
+  heirCEOAppointDate?: string;
+
+  // ─ 요건 수동 override 3-state (undefined=자동도출 / true·false=수동, 상증령 §15③2호) ─
+  /** 18세(가목) override — undefined=birthDate 자동, true/false=수동. */
+  heirIsAdultOverride?: boolean;
+  /** 2년 종사(나목) override. */
+  heirTwoYearEngagementOverride?: boolean;
+  /** 신고기한 임원취임(다목) override. */
+  heirOfficerByFilingDeadlineOverride?: boolean;
+  /** 2년내 대표이사(라목) override. */
+  heirCEOWithinTwoYearsOverride?: boolean;
   /**
    * 상속인의 배우자가 가~라 요건 모두 충족 → 상속인 충족 간주 (상증령 §15③2호 후단).
    * true 시 heirIsAdult·heirTwoYearEngagement·heirOfficerByFilingDeadline·heirCEOWithinTwoYears 평가 skip.
@@ -207,6 +234,22 @@ export interface FamilyBusinessDeductionDetail {
    * true 시 heirCEOWithinTwoYears 요건 면제 적용. UI 결과 카드에 emerald tone 안내.
    */
   ofzExemptionActive?: boolean;
+  /**
+   * 요건 자동판정 메타 (Phase 1, 2026-06-02) — resolveFamilyBusinessRequirements 결과.
+   * UI 결과카드가 신고기한·요건별 판정근거(auto/override/legacy) 노출. 미제공 시(legacy 경로) undefined.
+   */
+  resolvedRequirements?: {
+    /** §67 신고기한 (다목·라목 판정 근거 — 결과 표시용) */
+    filingDeadline: string;
+    /** 4개 heir 요건별 판정 출처 */
+    source: Record<
+      | "heirIsAdult"
+      | "heirTwoYearEngagement"
+      | "heirOfficerByFilingDeadline"
+      | "heirCEOWithinTwoYears",
+      "auto" | "override" | "legacy"
+    >;
+  };
   /** breakdown — orchestrator가 전체 결과에 병합 */
   breakdown: CalculationStep[];
 }

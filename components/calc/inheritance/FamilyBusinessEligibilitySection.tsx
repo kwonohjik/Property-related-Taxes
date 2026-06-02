@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * 가업상속공제 자격 입력 (FB-ELIG)
+ * 가업상속공제 자격 입력 (FB-ELIG) — 오케스트레이터
  *
  * 법령: 상증법 §18의2 + 상증령 §15
  *
@@ -9,9 +9,10 @@
  *   - 상증법 §18의2 mst=276123 (시행 2026-01-02)
  *   - 상증령 §15 mst=283637 (시행 2026-02-27)
  *
- * 3-state 토글:
- *   - undefined: legacy 모드 (폼 미렌더)
- *   - 객체: 활성화 (요건 입력)
+ * 800줄 정책 분리 (2026-06-02):
+ *   - family-business/FamilyBusinessHeirSelector.tsx  (섹션③ ~80줄)
+ *   - family-business/FbHeirRequirementsSection.tsx   (섹션④ ~230줄)
+ *   - family-business/FbAutoCheckPreviewCard.tsx      (미리보기 공통 ~100줄)
  *
  * 정책:
  *   - feedback_three_state_optional_mode_toggle (3-state)
@@ -21,6 +22,7 @@
  *   - feedback_useeffect_store_mirror_forbidden
  *   - feedback_toggle_card_visibility (ToggleCard·RadioCardGroup 강제)
  *   - feedback_tailwind_static_tone_mapping (dynamic class 금지)
+ *   - feedback_800line_split_export_preservation (re-export 보존)
  */
 
 import { useMemo, useState } from "react";
@@ -41,8 +43,12 @@ import { DateInput } from "@/components/ui/date-input";
 import {
   evaluateFamilyBusinessEligibility,
   familyBusinessCap,
+  suggestFBOperatingYears,
 } from "@/lib/tax-engine/deductions/family-business";
 import type { FamilyBusinessInheritanceInput } from "@/lib/tax-engine/types/inheritance-family-business.types";
+import type { Heir } from "@/lib/tax-engine/types/inheritance-gift.types";
+import { FamilyBusinessHeirSelector } from "./family-business/FamilyBusinessHeirSelector";
+import { FbHeirRequirementsSection } from "./family-business/FbHeirRequirementsSection";
 
 // 빈 FamilyBusinessInheritanceInput — ON 토글 시 초기화
 const EMPTY_FB: FamilyBusinessInheritanceInput = {
@@ -129,11 +135,17 @@ function FbTextField({
 export interface FamilyBusinessEligibilitySectionProps {
   familyBusiness: FamilyBusinessInheritanceInput | undefined;
   onChange: (fb: FamilyBusinessInheritanceInput | undefined) => void;
+  /** 상속개시일 — 영위연수 제안·신고기한·18세 useMemo 계산용 */
+  deathDate?: string;
+  /** 상속인 목록 — 가업상속인 선택 RadioCardGroup용 */
+  heirs?: Heir[];
 }
 
 export function FamilyBusinessEligibilitySection({
   familyBusiness,
   onChange,
+  deathDate,
+  heirs,
 }: FamilyBusinessEligibilitySectionProps) {
   const isActive = familyBusiness !== undefined;
   const [discardOpen, setDiscardOpen] = useState(false);
@@ -154,6 +166,22 @@ export function FamilyBusinessEligibilitySection({
     [familyBusiness],
   );
 
+  // 영위연수 제안값 (useMemo — store 미러링 없음, 제안만)
+  const suggestedYears = useMemo(() => {
+    if (!familyBusiness?.openingDate || !deathDate) return null;
+    try {
+      return suggestFBOperatingYears(familyBusiness.openingDate, deathDate);
+    } catch {
+      return null;
+    }
+  }, [familyBusiness, deathDate]);
+
+  // 선택된 Heir의 birthDate (섹션④에 전달)
+  const selectedHeirBirthDate = useMemo(() => {
+    if (!familyBusiness?.heirId || !heirs) return undefined;
+    return heirs.find((h) => h.id === familyBusiness.heirId)?.birthDate;
+  }, [familyBusiness, heirs]);
+
   const handleToggleOn = () => onChange({ ...EMPTY_FB });
   const handleToggleOff = () => {
     if (!familyBusiness || isEmptyFb(familyBusiness)) {
@@ -169,8 +197,6 @@ export function FamilyBusinessEligibilitySection({
   };
 
   const isCorporate = familyBusiness?.businessType === "corporate";
-  const spouseFulfills = familyBusiness?.spouseFulfillsRequirements === true;
-  const earlyDeath = familyBusiness?.decedentEarlyDeath === true;
   const isMedium = familyBusiness?.enterpriseSize === "medium";
 
   return (
@@ -214,135 +240,115 @@ export function FamilyBusinessEligibilitySection({
             {/* 라. 가업상속인 */}
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               <FbTextField label="가업종사기간" value={familyBusiness.heirEngagementPeriod} onChange={(v) => update({ heirEngagementPeriod: v })} />
-              <div className="space-y-1">
-                <label className="block text-[11px] font-medium text-amber-700 dark:text-amber-300">임원/대표이사 취임일</label>
-                <DateInput value={familyBusiness.heirOfficerAppointDate ?? ""} onChange={(v) => update({ heirOfficerAppointDate: v || undefined })} />
-              </div>
             </div>
           </div>
 
-          {/* ── 사업 유형 ── */}
-          <div className="space-y-1.5">
-            <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">
-              사업 유형 (§18의2 + 상증령 §15)
-            </p>
+          {/* ── 섹션① 가업 기본 (amber) ── */}
+          <div className="rounded-md border border-amber-200 bg-amber-50/60 dark:bg-amber-950/20 p-3 space-y-3">
+            <div className="flex items-center gap-2">
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-[10px] font-bold text-amber-800 select-none">1</span>
+              <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">가업 기본 정보</p>
+            </div>
+
+            {/* 사업 유형 */}
             <RadioCardGroup<"individual" | "corporate">
               name="fb-business-type"
               layout="inline"
               tone="amber"
               value={familyBusiness.businessType}
               options={[
-                {
-                  value: "individual",
-                  label: "개인사업 (소득세법)",
-                  description: "지분 요건 미적용",
-                },
-                {
-                  value: "corporate",
-                  label: "법인 (법인세법)",
-                  description: "지분 40%·상장 20% 요건 적용",
-                },
+                { value: "individual", label: "개인사업 (소득세법)", description: "지분 요건 미적용" },
+                { value: "corporate", label: "법인 (법인세법)", description: "지분 40%·상장 20% 요건 적용" },
               ]}
               onChange={(v) => update({ businessType: v })}
             />
-          </div>
 
-          {/* ── 영위 연수 + 한도 미리보기 ── */}
-          <div className="space-y-1.5">
-            <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">
-              가업 영위 연수
-            </p>
-            <DecimalInput
-              value={familyBusiness.operatingYears > 0 ? String(familyBusiness.operatingYears) : ""}
-              onChange={(v) =>
-                update({ operatingYears: parseDecimal(v) ?? 0 })
-              }
-              placeholder="영위 연수 입력 (년)"
-            />
-            {capPreview !== null && (
-              <div className="rounded bg-amber-100/60 dark:bg-amber-900/30 border border-amber-200 px-2 py-1.5 text-[11px] text-amber-800 dark:text-amber-200">
-                {capPreview === 0
-                  ? "⚠️ 10년 미만 — 공제 자격 미충족"
-                  : capPreview === 30_000_000_000
-                    ? "✓ 10년 이상 (1호) — 한도 300억"
-                    : capPreview === 40_000_000_000
-                      ? "✓ 20년 이상 (2호) — 한도 400억"
-                      : "✓ 30년 이상 (3호) — 한도 600억"}
-              </div>
-            )}
-          </div>
-
-          {/* ── 기업 규모 ── */}
-          <div className="space-y-1.5">
-            <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">
-              기업 규모 (상증령 §15①②)
-            </p>
-            <RadioCardGroup<"sme" | "medium">
-              name="fb-enterprise-size"
-              layout="inline"
-              tone="amber"
-              value={familyBusiness.enterpriseSize}
-              options={[
-                {
-                  value: "sme",
-                  label: "중소기업",
-                  description: "자산총액 5천억 미만",
-                },
-                {
-                  value: "medium",
-                  label: "중견기업",
-                  description: "평균매출 5천억 미만 + 200% 가드 적용",
-                },
-              ]}
-              onChange={(v) => update({ enterpriseSize: v })}
-            />
-
-            {/* 규모 수치 입력 */}
-            {familyBusiness.enterpriseSize === "sme" ? (
-              <CurrencyInput
-                label="자산총액 (원)"
-                value={
-                  familyBusiness.totalAssets != null
-                    ? String(familyBusiness.totalAssets)
-                    : ""
-                }
-                onChange={(v) =>
-                  update({ totalAssets: parseAmount(v) || undefined })
-                }
-                hint="중소기업 기준 5천억 이하 확인용 — 미입력 시 기준 미충족으로 처리"
-                placeholder="없으면 빈칸"
+            {/* 영위 연수 + 제안 */}
+            <div className="space-y-1.5">
+              <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-300">가업 영위 연수</p>
+              <DecimalInput
+                value={familyBusiness.operatingYears > 0 ? String(familyBusiness.operatingYears) : ""}
+                onChange={(v) => update({ operatingYears: parseDecimal(v) ?? 0 })}
+                placeholder="영위 연수 입력 (년)"
               />
-            ) : (
-              <CurrencyInput
-                label="직전 3개 과세기간 평균 매출액 (원)"
-                value={
-                  familyBusiness.averageRevenue3Y != null
-                    ? String(familyBusiness.averageRevenue3Y)
-                    : ""
-                }
-                onChange={(v) =>
-                  update({ averageRevenue3Y: parseAmount(v) || undefined })
-                }
-                hint="중견기업 기준 5천억 이하 확인용 — 미입력 시 기준 미충족으로 처리"
-                placeholder="없으면 빈칸"
+              {/* 영위연수 제안 (자동 덮어쓰기 금지 — 버튼 클릭으로만 채움) */}
+              {suggestedYears !== null && familyBusiness.operatingYears === 0 && (
+                <div className="rounded bg-amber-100/60 dark:bg-amber-900/30 border border-amber-200 px-2 py-1.5 text-[11px] text-amber-800 dark:text-amber-200 flex items-center justify-between gap-2">
+                  <span>
+                    개업일~상속개시일 기준 제안값: <strong>{suggestedYears}년</strong>
+                    <span className="ml-1 opacity-70">(확인 후 적용 — 자동 덮어쓰기 아님)</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => update({ operatingYears: suggestedYears })}
+                    className="shrink-0 px-2 py-0.5 text-[10px] rounded border border-amber-400 bg-amber-50 hover:bg-amber-100 text-amber-800"
+                  >
+                    적용
+                  </button>
+                </div>
+              )}
+              {capPreview !== null && (
+                <div className="rounded bg-amber-100/60 dark:bg-amber-900/30 border border-amber-200 px-2 py-1.5 text-[11px] text-amber-800 dark:text-amber-200">
+                  {capPreview === 0
+                    ? "⚠️ 10년 미만 — 공제 자격 미충족"
+                    : capPreview === 30_000_000_000
+                      ? "✓ 10년 이상 (1호) — 한도 300억"
+                      : capPreview === 40_000_000_000
+                        ? "✓ 20년 이상 (2호) — 한도 400억"
+                        : "✓ 30년 이상 (3호) — 한도 600억"}
+                </div>
+              )}
+            </div>
+
+            {/* 기업 규모 */}
+            <div className="space-y-1.5">
+              <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-300">기업 규모 (상증령 §15①②)</p>
+              <RadioCardGroup<"sme" | "medium">
+                name="fb-enterprise-size"
+                layout="inline"
+                tone="amber"
+                value={familyBusiness.enterpriseSize}
+                options={[
+                  { value: "sme", label: "중소기업", description: "자산총액 5천억 미만" },
+                  { value: "medium", label: "중견기업", description: "평균매출 5천억 미만 + 200% 가드 적용" },
+                ]}
+                onChange={(v) => update({ enterpriseSize: v })}
               />
-            )}
+              {familyBusiness.enterpriseSize === "sme" ? (
+                <CurrencyInput
+                  label="자산총액 (원)"
+                  value={familyBusiness.totalAssets != null ? String(familyBusiness.totalAssets) : ""}
+                  onChange={(v) => update({ totalAssets: parseAmount(v) || undefined })}
+                  hint="중소기업 기준 5천억 이하 확인용 — 미입력 시 기준 미충족으로 처리"
+                  placeholder="없으면 빈칸"
+                />
+              ) : (
+                <CurrencyInput
+                  label="직전 3개 과세기간 평균 매출액 (원)"
+                  value={familyBusiness.averageRevenue3Y != null ? String(familyBusiness.averageRevenue3Y) : ""}
+                  onChange={(v) => update({ averageRevenue3Y: parseAmount(v) || undefined })}
+                  hint="중견기업 기준 5천억 이하 확인용 — 미입력 시 기준 미충족으로 처리"
+                  placeholder="없으면 빈칸"
+                />
+              )}
+            </div>
+
+            {/* 별표 업종 */}
+            <ToggleCard
+              tone="sky"
+              title="별표 업종 해당 (상증령 §15①1·②1)"
+              description="상증령 별표에 열거된 업종 영위 자기 확인"
+              checked={familyBusiness.isEligibleIndustry}
+              onCheckedChange={(v) => update({ isEligibleIndustry: v })}
+            />
           </div>
 
-          {/* ── 별표 업종 ── */}
-          <ToggleCard
-            tone="sky"
-            title="별표 업종 해당 (상증령 §15①1·②1)"
-            description="상증령 별표에 열거된 업종 영위 자기 확인"
-            checked={familyBusiness.isEligibleIndustry}
-            onCheckedChange={(v) => update({ isEligibleIndustry: v })}
-          />
-
-          {/* ── 피상속인 요건 ── */}
+          {/* ── 섹션② 피상속인 요건 (amber) ── */}
           <div className="rounded-md border border-amber-200 bg-amber-50/60 dark:bg-amber-950/20 p-3 space-y-2">
-            <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">
-              피상속인 요건 (상증령 §15③1호)
-            </p>
+            <div className="flex items-center gap-2">
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-[10px] font-bold text-amber-800 select-none">2</span>
+              <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">피상속인 요건 (상증령 §15③1호)</p>
+            </div>
 
             {isCorporate && (
               <>
@@ -352,9 +358,7 @@ export function FamilyBusinessEligibilitySection({
                   title="거래소 상장 법인"
                   description="체크 시 지분 요건이 40% → 20%로 완화됩니다."
                   checked={familyBusiness.isListedOnExchange ?? false}
-                  onCheckedChange={(v) =>
-                    update({ isListedOnExchange: v ? true : undefined })
-                  }
+                  onCheckedChange={(v) => update({ isListedOnExchange: v ? true : undefined })}
                 />
                 <ToggleCard
                   tone="amber"
@@ -362,9 +366,7 @@ export function FamilyBusinessEligibilitySection({
                   title={`최대주주·특수관계인 합산 지분 ${(familyBusiness.isListedOnExchange ? 20 : 40)}% 이상 × 10년 보유`}
                   description={`상증령 §15③1호 가 — ${familyBusiness.isListedOnExchange ? "상장법인 20%" : "비상장·코넥스 40%"} 기준`}
                   checked={familyBusiness.decedentMajorShareholdingMet ?? false}
-                  onCheckedChange={(v) =>
-                    update({ decedentMajorShareholdingMet: v ? true : undefined })
-                  }
+                  onCheckedChange={(v) => update({ decedentMajorShareholdingMet: v ? true : undefined })}
                 />
               </>
             )}
@@ -379,82 +381,44 @@ export function FamilyBusinessEligibilitySection({
             />
           </div>
 
-          {/* ── 상속인 요건 ── */}
-          <div className="rounded-md border border-amber-200 bg-amber-50/60 dark:bg-amber-950/20 p-3 space-y-2">
-            <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">
-              상속인 요건 (상증령 §15③2호)
-            </p>
-
-            <ToggleCard
-              tone="amber"
-              size="sm"
-              title="상속인의 배우자가 가~라 요건 모두 충족"
-              description="충족 시 상속인 본인의 4종 요건 평가 skip (상증령 §15③2호 후단 간주)"
-              checked={familyBusiness.spouseFulfillsRequirements ?? false}
-              onCheckedChange={(v) =>
-                update({ spouseFulfillsRequirements: v ? true : undefined })
-              }
-            />
-
-            <ToggleCard
-              tone="amber"
-              size="sm"
-              title="18세 이상 (상증령 §15③2호 가)"
-              description="상속개시일 현재"
-              checked={familyBusiness.heirIsAdult}
-              onCheckedChange={(v) => update({ heirIsAdult: v })}
-              disabled={spouseFulfills}
-              disabledReason="배우자 간주 충족 — 개인 요건 평가 skip"
-            />
-
-            <ToggleCard
-              tone="amber"
-              size="sm"
-              title="상속개시 전 영위기간 중 2년 이상 직접 가업 종사 (상증령 §15③2호 나)"
-              description="피상속인 65세 미만 사망 또는 천재지변·인재 사망 시 면제 가능 (아래)"
-              checked={familyBusiness.heirTwoYearEngagement}
-              onCheckedChange={(v) => update({ heirTwoYearEngagement: v })}
-              disabled={spouseFulfills || earlyDeath}
-              disabledReason={
-                spouseFulfills
-                  ? "배우자 간주 충족"
-                  : "65세 미만·천재지변 사망 — 2년 요건 면제"
-              }
-            />
-
-            <ToggleCard
-              tone="amber"
-              size="sm"
-              title="피상속인 65세 미만 사망 또는 천재지변·인재 사망 (나 단서)"
-              description="체크 시 상속인 2년 종사 요건 면제"
-              checked={familyBusiness.decedentEarlyDeath ?? false}
-              onCheckedChange={(v) =>
-                update({ decedentEarlyDeath: v ? true : undefined })
-              }
-            />
-
-            <ToggleCard
-              tone="amber"
-              size="sm"
-              title="신고기한까지 임원 취임 (상증령 §15③2호 다)"
-              checked={familyBusiness.heirOfficerByFilingDeadline}
-              onCheckedChange={(v) => update({ heirOfficerByFilingDeadline: v })}
-              disabled={spouseFulfills}
-              disabledReason="배우자 간주 충족"
-            />
-
-            <ToggleCard
-              tone="amber"
-              size="sm"
-              title="신고기한 후 2년 이내 대표이사 취임 예정 (상증령 §15③2호 라)"
-              checked={familyBusiness.heirCEOWithinTwoYears}
-              onCheckedChange={(v) => update({ heirCEOWithinTwoYears: v })}
-              disabled={spouseFulfills}
-              disabledReason="배우자 간주 충족"
-            />
+          {/* ── 섹션③ 가업상속인 지정 (sky) ── */}
+          <div className="rounded-md border border-sky-200 bg-sky-50/60 dark:bg-sky-950/20 dark:border-sky-800 p-3 space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-[10px] font-bold text-sky-800 select-none">3</span>
+              <p className="text-xs font-semibold text-sky-700 dark:text-sky-200">가업상속인 지정 (§15③2호)</p>
+            </div>
+            {heirs && heirs.length > 0 && deathDate ? (
+              <FamilyBusinessHeirSelector
+                heirs={heirs}
+                heirId={familyBusiness.heirId}
+                heirBirthDate={familyBusiness.heirBirthDate}
+                deathDate={deathDate}
+                onChange={update}
+              />
+            ) : (
+              <p className="text-[11px] text-sky-600 dark:text-sky-400">
+                상속인을 먼저 등록하면 가업상속인을 선택할 수 있습니다.
+              </p>
+            )}
           </div>
 
-          {/* ── 200% 가드 (중견기업 한정) ── */}
+          {/* ── 섹션④ 상속인 요건 — FbHeirRequirementsSection (sky) ── */}
+          {deathDate ? (
+            <FbHeirRequirementsSection
+              familyBusiness={familyBusiness}
+              heirBirthDate={selectedHeirBirthDate}
+              deathDate={deathDate}
+              onChange={update}
+            />
+          ) : (
+            <div className="rounded-md border border-sky-200 bg-sky-50/60 dark:bg-sky-950/20 p-3 text-[11px] text-sky-700 dark:text-sky-300">
+              상속개시일을 입력하면 상속인 요건 자동판정이 활성화됩니다.
+            </div>
+          )}
+
+          {/* ── 섹션⑤ 안내·동의 (amber) ── */}
+
+          {/* 200% 가드 (중견기업 한정) */}
           {isMedium && (
             <div className="rounded-md border border-amber-300 bg-amber-50/70 dark:bg-amber-950/20 dark:border-amber-700 p-3 space-y-2">
               <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">
@@ -466,34 +430,22 @@ export function FamilyBusinessEligibilitySection({
               </p>
               <CurrencyInput
                 label="가업외 상속재산가액 (원)"
-                value={
-                  familyBusiness.heirOtherEstateValue != null
-                    ? String(familyBusiness.heirOtherEstateValue)
-                    : ""
-                }
-                onChange={(v) =>
-                  update({ heirOtherEstateValue: parseAmount(v) || undefined })
-                }
+                value={familyBusiness.heirOtherEstateValue != null ? String(familyBusiness.heirOtherEstateValue) : ""}
+                onChange={(v) => update({ heirOtherEstateValue: parseAmount(v) || undefined })}
                 hint="가업상속인이 받는 가업 외 상속재산 가액"
                 placeholder="없으면 빈칸"
               />
               <CurrencyInput
                 label="가업상속인 부담 채무 (원)"
-                value={
-                  familyBusiness.heirDebt != null
-                    ? String(familyBusiness.heirDebt)
-                    : ""
-                }
-                onChange={(v) =>
-                  update({ heirDebt: parseAmount(v) || undefined })
-                }
+                value={familyBusiness.heirDebt != null ? String(familyBusiness.heirDebt) : ""}
+                onChange={(v) => update({ heirDebt: parseAmount(v) || undefined })}
                 hint="가업상속인이 승계하는 채무 (상증령 §15⑥1호 차감)"
                 placeholder="없으면 빈칸"
               />
             </div>
           )}
 
-          {/* ── 사업무관자산 안내 (sky tone) ── */}
+          {/* 사업무관자산 안내 (sky tone) */}
           <div className="rounded-md border border-sky-200 bg-sky-50/60 dark:bg-sky-950/20 dark:border-sky-800 p-3 space-y-2">
             <p className="text-xs font-semibold text-sky-800 dark:text-sky-200">
               ⓘ 사업무관자산 차감 안내 (§15⑤2호)
@@ -512,7 +464,7 @@ export function FamilyBusinessEligibilitySection({
             />
           </div>
 
-          {/* ── 사후관리 안내 (amber tone) ── */}
+          {/* 사후관리 안내 (amber tone) */}
           <div className="rounded-md border border-amber-200 bg-amber-50/60 dark:bg-amber-950/20 p-3 space-y-2">
             <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">
               ⓘ 사후관리 의무 안내 (§18의2⑤)
@@ -530,7 +482,7 @@ export function FamilyBusinessEligibilitySection({
             />
           </div>
 
-          {/* ── 기회발전특구 특례 (상증령 §15㉕ — emerald tone) ── */}
+          {/* 기회발전특구 특례 (상증령 §15㉕ — emerald tone) */}
           <div className="space-y-2">
             <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">
               기회발전특구 특례 (상증령 §15㉕)
@@ -544,9 +496,7 @@ export function FamilyBusinessEligibilitySection({
               title="본사 기회발전특구 소재·이전 (§15㉕1호)"
               description="조특법 §99의4①1호 가목 1)~5) 외 기회발전특구로 이전 또는 본사 소재"
               checked={familyBusiness.isInOpportunityDevelopmentZone ?? false}
-              onCheckedChange={(v) =>
-                update({ isInOpportunityDevelopmentZone: v ? true : undefined })
-              }
+              onCheckedChange={(v) => update({ isInOpportunityDevelopmentZone: v ? true : undefined })}
             />
             <ToggleCard
               tone="emerald"
@@ -554,25 +504,21 @@ export function FamilyBusinessEligibilitySection({
               title="특구 상시근무인원 50% 이상 (§15㉕2호)"
               description="기회발전특구 사업장 상시근무인원 연평균이 전체 연평균의 100분의 50 이상"
               checked={familyBusiness.ofzWorkforceRatio50PlusMet ?? false}
-              onCheckedChange={(v) =>
-                update({ ofzWorkforceRatio50PlusMet: v ? true : undefined })
-              }
+              onCheckedChange={(v) => update({ ofzWorkforceRatio50PlusMet: v ? true : undefined })}
             />
           </div>
 
-          {/* ── 조세포탈 (rose tone) ── */}
+          {/* 조세포탈 (rose tone) */}
           <ToggleCard
             tone="rose"
             size="sm"
             title="조세포탈·회계부정 형 확정 (§18의2⑧1호) — 공제 배제"
             description="§15⑲1호 조세범처벌법 §3① 벌금 / §15⑲2호 외부감사법 §39① (자산 5% 이상)"
             checked={familyBusiness.hasTaxFraudConviction ?? false}
-            onCheckedChange={(v) =>
-              update({ hasTaxFraudConviction: v ? true : undefined })
-            }
+            onCheckedChange={(v) => update({ hasTaxFraudConviction: v ? true : undefined })}
           />
 
-          {/* ── 실시간 자격 미리보기 ── */}
+          {/* 실시간 자격 미리보기 */}
           {evalResult && (
             evalResult.eligible ? (
               <div className="rounded-md border border-emerald-300 bg-emerald-50 dark:bg-emerald-950/30 dark:border-emerald-800 p-2">

@@ -43,6 +43,35 @@ export function validateFamilyBusinessEstateItem(
 }
 
 /**
+ * ⑧ 가업상속공제 요건 자동판정 기초데이터 날짜 정합성 검증 (Phase 1, 2026-06-02).
+ *
+ * 입력오류·기간계산오류 차단(사용자 핵심 요구). 날짜는 전부 optional — 입력된 경우에만 모순 검사
+ * (자동 안분 fallback 금지: 미입력은 차단하지 않고 요건 자동판정에서 false 처리). 비교는 YYYY-MM-DD 사전순.
+ */
+export function validateFamilyBusinessDates(
+  fb:
+    | {
+        heirBirthDate?: string;
+        heirEngagementStartDate?: string;
+        heirCEOAppointDate?: string;
+      }
+    | undefined,
+  deathDate: string,
+): string | null {
+  if (!fb) return null;
+  if (fb.heirBirthDate && fb.heirBirthDate > deathDate) {
+    return "가업상속인 생년월일이 상속개시일보다 늦습니다. 날짜를 확인하세요.";
+  }
+  if (fb.heirEngagementStartDate && fb.heirEngagementStartDate > deathDate) {
+    return "가업종사 시작일이 상속개시일보다 늦습니다 (§15③2호나는 상속개시일 전 종사). 날짜를 확인하세요.";
+  }
+  if (fb.heirCEOAppointDate && fb.heirCEOAppointDate < deathDate) {
+    return "대표이사 취임(예정)일이 상속개시일보다 이릅니다 (§15③2호라는 신고기한 후 2년 이내). 날짜를 확인하세요.";
+  }
+  return null;
+}
+
+/**
  * 자산의 heirAllocations 합이 평가액과 일치하는지 검증.
  * 자동 안분 fallback 금지 — 사용자 명시 입력 강제.
  *
@@ -247,6 +276,12 @@ export function validateInheritanceTaxInput(
     const cde = validateCollateralDebtOptIn(item);
     if (cde) return cde;
   }
+  // 가업상속공제 요건 날짜 정합성 (Phase 1, 2026-06-02)
+  const fbDateErr = validateFamilyBusinessDates(
+    input.deductionInput?.familyBusiness,
+    input.deathDate,
+  );
+  if (fbDateErr) return fbDateErr;
   if (input.debtItems) {
     for (const di of input.debtItems) {
       const e = validateDebtItemAllocations(di);

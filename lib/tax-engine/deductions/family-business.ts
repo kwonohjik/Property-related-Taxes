@@ -31,6 +31,17 @@ import {
 import { calcCorporateStockAdjustedValue } from "../property-valuation-corporate";
 import { resolveEstateItemValue } from "../valuation/resolve-estate-item-value";
 
+// 요건 자동판정(Phase 1) — re-export로 import 사이트 단일화 (eligibility-autoderive)
+export {
+  calcInheritanceFilingDeadline,
+  deriveFBHeirIsAdult,
+  deriveFBHeirOfficerByDeadline,
+  deriveFBHeirCEOWithinTwoYears,
+  deriveFBHeirEngagement,
+  suggestFBOperatingYears,
+  resolveFamilyBusinessRequirements,
+} from "./family-business-autoderive";
+
 /**
  * 영위 연수별 한도 (상증법 §18의2① 각 호).
  *
@@ -185,8 +196,10 @@ export function calcFamilyBusinessDeductionPhase2(args: {
   familyBusinessValueOverride?: number;
   taxIfNoFBD: number;
   lawRef: string;
+  /** 요건 자동판정 메타 (resolveFamilyBusinessRequirements 결과) — detail.resolvedRequirements echo. */
+  resolvedMeta?: FamilyBusinessDeductionDetail["resolvedRequirements"];
 }): Phase2FamilyBusinessResult {
-  const { input, estateItems, familyBusinessValueOverride, taxIfNoFBD, lawRef } = args;
+  const { input, estateItems, familyBusinessValueOverride, taxIfNoFBD, lawRef, resolvedMeta } = args;
 
   // 1) 요건 판정
   const elig = evaluateFamilyBusinessEligibility(input);
@@ -244,6 +257,7 @@ export function calcFamilyBusinessDeductionPhase2(args: {
       usedDirectInput: false,
       mediumGuard: guard,
       ofzExemptionActive: ofzExemptionActive || undefined,
+      resolvedRequirements: resolvedMeta,
       breakdown,
     },
   };

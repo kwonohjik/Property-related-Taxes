@@ -335,6 +335,8 @@ export function InheritanceTaxResultView({
         result={result}
         estateItems={estateItems}
         debtItems={debtItems}
+        heirs={heirs}
+        familyBusinessHeirId={familyBusinessInput?.heirId}
       />
 
       {/* 상속세 산출세액·증여세액공제 계산 근거 (배부 6항목 펼침) */}

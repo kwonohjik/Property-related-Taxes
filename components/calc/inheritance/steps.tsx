@@ -404,6 +404,8 @@ export function Step4({ form, set }: { form: FormState; set: FormSet }) {
           <FamilyBusinessEligibilitySection
             familyBusiness={form.familyBusiness}
             onChange={(v) => set({ familyBusiness: v })}
+            deathDate={form.deathDate}
+            heirs={form.heirs}
           />
 
           <div className="space-y-2">
