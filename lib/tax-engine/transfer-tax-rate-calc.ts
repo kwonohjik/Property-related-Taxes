@@ -242,15 +242,53 @@ export function calcTax(
 
   const roundRate = (r: number) => Math.round(r * 10000) / 10000;
 
-  // T-2: 비사업용 토지 누진 + 10%p
+  // 보유기간 기산 (§104② — 상속은 피상속인·증여이월은 증여자 취득일, 사례 48 승계조합원은 준공일).
+  // T-2 비사업용 토지 §104①후단 비교와 T-2.5 단기 특례세율이 공유.
+  const successorRateBasis = getEffectiveAcquisitionDate(input);
+  const isSuccessorRedev =
+    input.propertyType === "redevelopment_apt" &&
+    input.redevelopment?.isSuccessorMember === true &&
+    input.redevelopment?.completionDate !== undefined;
+  const rateBasisAcquisitionDate = isSuccessorRedev
+    ? successorRateBasis
+    : input.acquisitionCause === "inheritance" && input.decedentAcquisitionDate
+      ? input.decedentAcquisitionDate
+      : input.acquisitionCause === "gift" && input.donorAcquisitionDate
+        ? input.donorAcquisitionDate
+        : input.acquisitionDate;
+  const holdingForRate = calculateHoldingPeriod(rateBasisAcquisitionDate, input.transferDate);
+  const holdingMonthsTotal = holdingForRate.years * 12 + holdingForRate.months;
+
+  // T-2: 비사업용 토지 누진 + 10%p (§104①8호)
   if (input.isNonBusinessLand && surchargeRates.non_business_land) {
     const additionalRate = surchargeRates.non_business_land.additionalRate;
     const progressiveTax = calculateProgressiveTax(taxBase, brackets);
     const bracket = brackets.find((b) => taxBase <= (b.max ?? Infinity));
     const baseRate = bracket?.rate ?? brackets[brackets.length - 1].rate;
     const surchargeAmount = applyRate(taxBase, additionalRate);
+    const nblTax = progressiveTax + surchargeAmount;
+
+    // §104① 후단 — 하나의 자산이 둘 이상의 호에 해당하면 큰 산출세액을 적용.
+    // 비사업용 토지(§104①8호)를 단기보유하면 토지 단기세율(1년 미만 50%·1~2년 40%, §104①3·2호)과
+    // 비교하여 큰 세액. 토지이므로 주택 단기세율(70%/60%)이 아닌 50%/40% 사용.
+    const nblShortTermRate =
+      holdingMonthsTotal < 12 ? 0.50 :
+      holdingMonthsTotal < 24 ? 0.40 :
+      null;
+    if (nblShortTermRate !== null) {
+      const nblShortTermTax = applyRate(taxBase, nblShortTermRate);
+      if (nblShortTermTax > nblTax) {
+        return {
+          calculatedTax: nblShortTermTax,
+          appliedRate: nblShortTermRate,
+          progressiveDeduction: 0,
+          surchargeSuspended: false,
+          shortTermNote: `보유기간 ${holdingMonthsTotal < 12 ? "1년" : "2년"} 미만 단기세율 적용 (§104①후단: 비사업용 누진세액과 비교한 큰 세액)`,
+        };
+      }
+    }
     return {
-      calculatedTax: progressiveTax + surchargeAmount,
+      calculatedTax: nblTax,
       surchargeType: "non_business_land",
       surchargeRate: roundRate(additionalRate),
       appliedRate: roundRate(baseRate + additionalRate),
@@ -268,20 +306,7 @@ export function calcTax(
 
   // T-2.5: 단기보유 특례세율 (소득세법 §104①2~3호, 7~8호)
   // 사례 48 — 승계조합원 신축APT 양도 시 기산일 = 준공일 (사전-2019-법령해석재산-0649).
-  const successorRateBasis = getEffectiveAcquisitionDate(input);
-  const isSuccessorRedev =
-    input.propertyType === "redevelopment_apt" &&
-    input.redevelopment?.isSuccessorMember === true &&
-    input.redevelopment?.completionDate !== undefined;
-  const rateBasisAcquisitionDate = isSuccessorRedev
-    ? successorRateBasis
-    : input.acquisitionCause === "inheritance" && input.decedentAcquisitionDate
-      ? input.decedentAcquisitionDate
-      : input.acquisitionCause === "gift" && input.donorAcquisitionDate
-        ? input.donorAcquisitionDate
-        : input.acquisitionDate;
-  const holdingForRate = calculateHoldingPeriod(rateBasisAcquisitionDate, input.transferDate);
-  const holdingMonthsTotal = holdingForRate.years * 12 + holdingForRate.months;
+  // 보유기간 기산(rateBasisAcquisitionDate·holdingMonthsTotal)은 T-2 앞에서 계산됨 (§104② 공유).
   const isHousingLikeProp =
     input.propertyType === "housing" ||
     input.propertyType === "right_to_move_in" ||

@@ -225,5 +225,86 @@ describe("T-26: 비사업용 토지 정밀 판정 연동", () => {
 });
 
 // ============================================================
+// H-1 회귀: §104① 후단 — 비사업용 토지 단기보유 비교과세
+// 하나의 자산이 비사업용 토지(§104①8호)이면서 단기보유(§104①3·2호)에
+// 해당하면 둘 중 큰 산출세액 적용. (코드리뷰 2026-06-03 발견·실증)
+// ============================================================
+describe("H-1: 비사업용 토지 단기보유 §104①후단 비교과세", () => {
+  // 비사업용 토지 기본 입력 (차익은 acquisitionPrice로 조정)
+  const nblLand = (overrides?: Partial<TransferTaxInput>): TransferTaxInput =>
+    baseInput({
+      propertyType: "land",
+      transferPrice: 500_000_000,
+      acquisitionPrice: 200_000_000, // 차익 3억
+      acquisitionDate: new Date("2024-01-01"),
+      transferDate: new Date("2024-06-01"), // 5개월 = 1년 미만
+      isNonBusinessLand: true,
+      isOneHousehold: false,
+      householdHousingCount: 0,
+      residencePeriodMonths: 0,
+      expenses: 0,
+      ...overrides,
+    });
+
+  it("1년 미만 보유 — 단기 50% > 비사업용 누진+10%p → 단기세율 적용", () => {
+    // 과세표준 2.975억: 단기 50% = 148,750,000 vs 비사업용(38%+10%p) = 122,860,000
+    const r = calculateTransferTax(nblLand(), mockRates);
+    expect(r.taxBase).toBe(297_500_000);
+    expect(r.calculatedTax).toBe(148_750_000); // 큰 세액 = 단기 50%
+    expect(r.appliedRate).toBe(0.5);
+    expect(r.surchargeType).toBeUndefined(); // 단기 단일세율 → 중과 표시 없음
+    expect(r.shortTermNote).toContain("§104①후단");
+  });
+
+  it("1~2년 보유 + 낮은 과세표준(1.475억) — 단기 40% > 비사업용 → 40% 적용", () => {
+    // 차익 1.5억(과표 1.475억): 단기 40% = 59,000,000 vs 비사업용(35%+10%p) = 50,935,000
+    const r = calculateTransferTax(
+      nblLand({ transferPrice: 350_000_000, transferDate: new Date("2025-06-01") }),
+      mockRates,
+    );
+    expect(r.taxBase).toBe(147_500_000);
+    expect(r.calculatedTax).toBe(59_000_000); // 큰 세액 = 단기 40%
+    expect(r.appliedRate).toBe(0.4);
+    expect(r.surchargeType).toBeUndefined();
+  });
+
+  it("1~2년 보유 + 높은 과세표준(2.975억) — 비사업용 누진+10%p > 단기 40% → 비사업용 유지", () => {
+    // 차익 3억(과표 2.975억): 비사업용 = 122,860,000 vs 단기 40% = 119,000,000
+    const r = calculateTransferTax(
+      nblLand({ transferDate: new Date("2025-06-01") }),
+      mockRates,
+    );
+    expect(r.taxBase).toBe(297_500_000);
+    expect(r.calculatedTax).toBe(122_860_000); // 큰 세액 = 비사업용 누진+10%p
+    expect(r.surchargeType).toBe("non_business_land");
+    expect(r.surchargeRate).toBe(0.1);
+  });
+
+  it("정확히 2년 보유(24개월) — 단기 미해당 → 비사업용 누진+10%p", () => {
+    const r = calculateTransferTax(
+      nblLand({ acquisitionDate: new Date("2022-06-01"), transferDate: new Date("2024-06-01") }),
+      mockRates,
+    );
+    expect(r.calculatedTax).toBe(122_860_000);
+    expect(r.surchargeType).toBe("non_business_land");
+  });
+
+  it("장기보유(3년 이상) — 단기 비교 없음, 비사업용 누진+10%p + LTHD 정상", () => {
+    const r = calculateTransferTax(
+      nblLand({ acquisitionDate: new Date("2021-01-01"), transferDate: new Date("2024-06-01") }),
+      mockRates,
+    );
+    expect(r.surchargeType).toBe("non_business_land");
+    expect(r.longTermHoldingRate).toBeGreaterThan(0); // 비사업용도 LTHD 적용 (다주택 중과만 배제)
+  });
+
+  it("대조군: 사업용 토지 1년 미만 — 단기 50% 정상 적용 (회귀 방어)", () => {
+    const r = calculateTransferTax(nblLand({ isNonBusinessLand: false }), mockRates);
+    expect(r.calculatedTax).toBe(148_750_000);
+    expect(r.appliedRate).toBe(0.5);
+  });
+});
+
+// ============================================================
 // T-27: rentalReductionDetails 제공 → 정밀 감면 엔진 연동
 // ============================================================

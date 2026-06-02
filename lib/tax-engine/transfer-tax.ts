@@ -9,9 +9,7 @@
 import { TRANSFER, NBL } from "./legal-codes";
 import {
   applyRate,
-  calculateHoldingPeriod,
   isSurchargeSuspended,
-  truncateToWon,
 } from "./tax-utils";
 import {
   type MultiHouseSurchargeInput,
@@ -40,11 +38,7 @@ import type {
 } from "./types/transfer.types";
 import type { CarryoverTaxationDetail } from "./types/transfer-carryover.types";
 export type { TransferTaxInput, TransferReduction, CalculationStep, TransferTaxResult };
-import {
-  calculateRentalHousingException,
-  type RentalHousingExceptionResult,
-} from "./transfer-tax/rental-housing-exception";
-import { TRANSFER_RENTAL_HOUSING } from "./legal-codes/transfer";
+import { runRentalHousingExceptionStep } from "./transfer-tax-rental-housing-step";
 import { evaluateNew993, type New993Result } from "./transfer-reductions/new-99-3";
 
 import {
@@ -405,98 +399,21 @@ export function calculateTransferTax(
   }
 
   // STEP 2.5: 장기임대주택 보유자 거주주택 비과세 특례 (소령 §155⑳ + §161)
-  // gain 계산 완료 후 실행 — A/B 시나리오별 taxableGain 결정.
-  // applied=true 시 STEP 3(일반 12억 안분)을 건너뛰고 특례 결과로 직접 진행.
-  let rentalHousingExceptionDetail: RentalHousingExceptionResult | undefined;
+  // gain 계산 완료 후 실행. applied=true 시 특례 결과로 즉시 반환(STEP 3 이후 생략),
+  // false 시 미적용 사유만 steps에 기록하고 일반 경로 계속. (구현: transfer-tax-rental-housing-step.ts)
   if (effectiveInput.rentalHousingException?.applyException) {
-    const holdPeriod = calculateHoldingPeriod(effectiveInput.acquisitionDate, effectiveInput.transferDate);
-    const holdYears = holdPeriod.years;
-    const liveYears = Math.floor(effectiveInput.residencePeriodMonths / 12);
-    rentalHousingExceptionDetail = calculateRentalHousingException(
-      effectiveInput.rentalHousingException,
+    const rheResult = runRentalHousingExceptionStep({
+      effectiveInput,
+      input,
       transferGain,
-      effectiveInput.transferPrice,
-      holdYears,
-      liveYears,
-      holdYears,    // 거주주택 보유연수 (B 시나리오 시 PHRP 보유연수와 동일)
-      liveYears,    // 거주주택 거주연수
-    );
-    if (rentalHousingExceptionDetail.applied) {
-      steps.push({
-        label: "장기임대주택 보유자 거주주택 비과세 특례",
-        formula: `§155⑳ + §161 — ${rentalHousingExceptionDetail.scenarioId} 시나리오 적용`,
-        amount: rentalHousingExceptionDetail.taxableGain,
-        legalBasis: TRANSFER_RENTAL_HOUSING.PIT_RD_155_20,
-      });
-      // 특례 적용 시: taxableGain을 특례 결과로 대체하고 최종 결과 반환
-      const rhe = rentalHousingExceptionDetail;
-      const rheTaxBase = truncateToWon(Math.max(0, rhe.taxableGain - 2_500_000));
-      const rheTaxResult = calcTax(rheTaxBase, parsedRates, effectiveInput, multiHouseSurchargeResult);
-      // §161 비과세 양도소득금액 — 양도소득금액(§95①) 단계에서 분리 표기용
-      // = §95① 양도소득금액 − 과세대상 양도소득금액
-      // FilingFormTable의 "비과세 양도소득금액" 행에 표시 (양도차익 단계 비과세 분리 X)
-      const nontaxableGainAmount = Math.max(0, rhe.formulaTrace.gain95Table1 - rhe.taxableGain);
-      // 명세서 카드 "비과세 양도소득금액 (소령 §161①)" 행에서 step.formula 자동 매핑.
-      // 정식 step emit으로 사용자가 §161① 안분 산식·근거 검증 가능 (이전: result 필드만 표시).
-      if (nontaxableGainAmount > 0) {
-        steps.push({
-          label: "비과세 양도소득금액 (소령 §161①)",
-          formula: `§95① 양도소득금액 ${rhe.formulaTrace.gain95Table1.toLocaleString()} − 과세대상 양도소득금액 ${rhe.taxableGain.toLocaleString()} = ${nontaxableGainAmount.toLocaleString()}`,
-          amount: nontaxableGainAmount,
-          legalBasis: TRANSFER_RENTAL_HOUSING.PIT_RD_155_20,
-        });
-      }
-      return {
-        isExempt: rhe.taxableGain === 0,
-        exemptReason: rhe.taxableGain === 0 ? "장기임대주택 보유자 거주주택 비과세 (§155⑳)" : undefined,
-        transferGain,
-        taxableGain: rhe.taxableGain,
-        usedEstimatedAcquisition: usedEstimated,
-        // 환산취득가·개산공제 분리 표기를 위해 result에 명시 (FilingFormTable 환산 분기 진입 조건)
-        // 누락 시 fallback 분기로 떨어져 "취득가액 = 환산취득가 + 개산공제 합산" 흡수 표시 발생
-        estimatedBase: usedEstimated ? estimatedBase : undefined,
-        estimatedDeduction: usedEstimated ? estimatedDeduction : undefined,
-        longTermHoldingDeduction: rhe.formulaTrace.gain95Table1 > 0
-          ? transferGain - rhe.formulaTrace.gain95Table1
-          : 0,
-        // 장기보유공제율 — 0 강제 시 결과 카드에 "장기보유특별공제 (0%)"로 잘못 표시되므로 실제 공제율 산출
-        longTermHoldingRate: transferGain > 0 && rhe.formulaTrace.gain95Table1 > 0
-          ? (transferGain - rhe.formulaTrace.gain95Table1) / transferGain
-          : 0,
-        lthdStartDate: resolveLTHDStartDate(effectiveInput),
-        nontaxableGainAmount,
-        basicDeduction: rhe.taxableGain > 0 ? 2_500_000 : 0,
-        taxBase: rheTaxBase,
-        appliedRate: rheTaxResult.appliedRate,
-        progressiveDeduction: rheTaxResult.progressiveDeduction,
-        calculatedTax: rheTaxResult.calculatedTax,
-        isSurchargeSuspended: false,
-        reductionAmount: 0,
-        determinedTax: rheTaxResult.calculatedTax,
-        penaltyTax: 0,
-        penaltyBase: 0,
-        localIncomeTax: applyRate(rheTaxResult.calculatedTax, 0.1),
-        totalTax: rheTaxResult.calculatedTax + applyRate(rheTaxResult.calculatedTax, 0.1),
-        steps,
-        rentalHousingExceptionDetail: rhe,
-      };
-    } else {
-      // applied=false: 미적용 사유를 steps에 기록하여 결과 화면에서 노출 (침묵 실패 차단)
-      const reasons = [
-        ...rentalHousingExceptionDetail.eligibility.residenceFailReasons,
-        ...rentalHousingExceptionDetail.eligibility.failReasons.map((r) => r.message),
-      ];
-      const reasonText =
-        reasons.length > 0
-          ? reasons.join(" · ")
-          : "장기임대주택 거주주택 비과세 특례 요건 미충족";
-      steps.push({
-        label: "장기임대주택 거주주택 비과세 특례 — 적용 불가",
-        formula: reasonText,
-        amount: 0,
-        legalBasis: TRANSFER_RENTAL_HOUSING.PIT_RD_155_20,
-      });
-    }
+      usedEstimated,
+      estimatedBase,
+      estimatedDeduction,
+      parsedRates,
+      multiHouseSurchargeResult,
+      steps,
+    });
+    if (rheResult) return rheResult;
   }
 
   // STEP 3: 과세 양도차익 (12억 초과분 안분 — 부분과세인 경우)
