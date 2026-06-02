@@ -44,7 +44,7 @@ useAutoSaveCalculation({
 });
 ```
 
-구현 완료: 양도세(`TransferTaxCalculator.tsx`), 주식 양도세(`StockTransferTaxCalculator.tsx`). 타 세목 UI 완성 시 동일 패턴.
+구현 완료: 6대 세목 전부 + 주식 양도세 (결과 화면 자동 저장 + 수동 `SaveButton`). 세목별 Calculator/Form/page에 동일 패턴 적용 (이력 dedup은 content-hash id 정규화 — `canonicalizeVolatileIds`).
 
 ## resultData 구조 주의
 

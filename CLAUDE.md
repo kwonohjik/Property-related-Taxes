@@ -6,9 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **KoreanTaxCalc** — 한국 부동산 6대 세금 자동계산 웹 앱 (양도·상속·증여·취득·재산·종합부동산세).
 
-- 구현 현황: [`docs/00-pm/korean-tax-calc.roadmap.md`](docs/00-pm/korean-tax-calc.roadmap.md). 양도세만 엔진·UI·API·테스트 완전 구현. 나머지는 엔진 완료·UI 대기.
-- 진행 중: 양도세 감면 23개 조문 확장 — `lib/tax-engine/transfer-reductions/` (계획: `docs/00-pm/transfer-reduction-expansion.plan.md`).
-- 최근 완료 작업 이력: [`docs/00-pm/recent-completions.md`](docs/00-pm/recent-completions.md).
+- 구현 현황: 6대 세목(양도·상속·증여·취득·재산·종부) + 주식양도세 전부 엔진·UI·API·결과뷰·테스트 구현 완료. 계산 결과 선택 출력 공통화(8 결과뷰, 2026-06). 상속·증여세는 별지 서식(별지9호·부표2·부표3·부표5 등) PDF 재현까지 확장.
+- 최근 완료 작업 이력: [`docs/00-pm/recent-completions.md`](docs/00-pm/recent-completions.md). 초기 계획(현황과 차이 큼 — Next.js 16·6세목 완료 등 미반영): [`docs/00-pm/korean-tax-calc.roadmap.md`](docs/00-pm/korean-tax-calc.roadmap.md).
+- 양도세 감면 23개 조문 확장: `lib/tax-engine/transfer-reductions/` 골격 + §99의3 완료, 나머지 조문 후속 대기 (계획: `docs/00-pm/transfer-reduction-expansion.plan.md`).
 
 ## ⚠️ Next.js 16 주의사항
 
