@@ -165,6 +165,12 @@ function ItemEditor({ item, index, onUpdate, onRemove, mode, heirs, valuationDat
       cat === "deposit") &&
     securedClaimTotal > 0;
 
+  // §23의2 동거주택 체크 활성 조건 — 동거 자녀 존재 여부 (EstateItem엔 heirs 없어 ItemEditor에서 도출)
+  const hasCohabitantChild =
+    mode === "inheritance" &&
+    (heirs?.some((h) => h.relation === "child" && h.isCohabitant === true) ??
+      false);
+
   // 칩 클릭 핸들러 — Phase 2 INT-1: createChipClickHandler 공통 helper 사용
   // (EstateCommonAttributesSection도 동일 helper 사용 예정 — PR-E)
   const handleChipClick = useMemo(
@@ -214,6 +220,7 @@ function ItemEditor({ item, index, onUpdate, onRemove, mode, heirs, valuationDat
         onUpdate={onUpdate}
         valuationDate={valuationDate}
         showCollateralDeductToggle={showCollateralDeductToggle}
+        hasCohabitantChild={hasCohabitantChild}
         mode={mode}
       />
 
@@ -341,8 +348,16 @@ export function PropertyValuationForm({
   };
 
   const handleUpdate = (index: number, updated: EstateItem) => {
-    const next = [...items];
+    let next = [...items];
     next[index] = updated;
+    // §23의2 동거주택 단일선택 — 한 주택을 동거주택으로 지정하면 다른 주택은 자동 해제(1세대 1주택)
+    if (updated.isCohabitantHouse === true) {
+      next = next.map((it, i) =>
+        i !== index && it.isCohabitantHouse
+          ? { ...it, isCohabitantHouse: undefined }
+          : it,
+      );
+    }
     onChange(next);
   };
 

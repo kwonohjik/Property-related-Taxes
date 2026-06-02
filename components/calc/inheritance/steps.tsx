@@ -27,7 +27,24 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { deriveCollateralDebts } from "@/lib/tax-engine/inheritance-collateral-debt";
+import { AutoSuggestBadge } from "./AutoSuggestBadge";
+import type { DeductionSuggestion } from "@/lib/calc/inheritance-deduction-suggest";
 import type { FormState, FormSet } from "./shared";
+
+/** Step4 추가공제 자동 도출값 — InheritanceTaxForm useMemo에서 계산해 prop 전달(3중 일치). */
+export type Step4Autos = {
+  spouse: DeductionSuggestion;
+  netFin: DeductionSuggestion;
+  cohabit: DeductionSuggestion & { securedDebt: number };
+  farming: DeductionSuggestion;
+  legatee: DeductionSuggestion;
+};
+
+/** 표시 fallback — 미입력("")이고 자동값이 있으면 자동값(원단위 문자열)을 칸에 표시. 편집 시 store 값 우선. */
+function autoFillValue(raw: string, s: DeductionSuggestion): string {
+  if (raw !== "") return raw;
+  return s.isApplicable && s.value > 0 ? s.value.toLocaleString("ko-KR") : "";
+}
 
 // ============================================================
 // Step 0 — 피상속인 기본 정보 + 상속인·수유자 구성
@@ -344,7 +361,15 @@ export function Step3({ form, set }: { form: FormState; set: FormSet }) {
 // Step 4 — 공제·세액공제 (구 Step 4·5 통합, HeirComposition은 Step 0으로 이동)
 // ============================================================
 
-export function Step4({ form, set }: { form: FormState; set: FormSet }) {
+export function Step4({
+  form,
+  set,
+  autos,
+}: {
+  form: FormState;
+  set: FormSet;
+  autos: Step4Autos;
+}) {
   const hasSpouse = form.heirs.some((h) => h.relation === "spouse");
 
   return (
@@ -353,31 +378,58 @@ export function Step4({ form, set }: { form: FormState; set: FormSet }) {
         <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200">
           추가 공제 입력 (선택)
         </h3>
+        <p className="text-[11px] text-gray-500 dark:text-gray-400">
+          ⓘ 자산 카드·상속인 구성에서 도출 가능한 값은 칸에 자동으로 채워집니다 (수정하면 입력값이 우선).
+        </p>
 
         {hasSpouse && (
-          <CurrencyInput
-            label="배우자 실제 상속액 (§19)"
-            value={form.spouseActualAmount}
-            onChange={(v) => set({ spouseActualAmount: v })}
-            hint="미입력 시 법정상속분으로 자동 산정 (최소 5억, 최대 30억 한도)"
-          />
+          <div className="space-y-2">
+            <CurrencyInput
+              label="배우자 실제 상속액 (§19)"
+              value={autoFillValue(form.spouseActualAmount, autos.spouse)}
+              onChange={(v) => set({ spouseActualAmount: v })}
+              hint="협의분할 입력 시 배우자 배분액에서 자동 도출. 실제 상속액이 법정상속분보다 적을 때만 직접 입력 (최소 5억·최대 30억)."
+            />
+            <AutoSuggestBadge
+              suggestion={autos.spouse}
+              currentValue={autoFillValue(form.spouseActualAmount, autos.spouse)}
+              onApply={(v) => set({ spouseActualAmount: v })}
+              label="배우자 실제 상속액"
+            />
+          </div>
         )}
 
-        <CurrencyInput
-          label="순 금융재산 (§22 금융재산공제용)"
-          value={form.netFinancialAssets}
-          onChange={(v) => set({ netFinancialAssets: v })}
-          hint="예금·펀드·채권 등 — 20% 공제, 최대 2억"
-          placeholder="없으면 빈칸"
-        />
+        <div className="space-y-2">
+          <CurrencyInput
+            label="순 금융재산 (§22 금융재산공제용)"
+            value={autoFillValue(form.netFinancialAssets, autos.netFin)}
+            onChange={(v) => set({ netFinancialAssets: v })}
+            hint="예금·펀드·채권 등 — 자산 카드의 금융재산에서 자동 도출. 20% 공제, 최대 2억."
+            placeholder="없으면 빈칸"
+          />
+          <AutoSuggestBadge
+            suggestion={autos.netFin}
+            currentValue={autoFillValue(form.netFinancialAssets, autos.netFin)}
+            onApply={(v) => set({ netFinancialAssets: v })}
+            label="순 금융재산"
+          />
+        </div>
 
-        <CurrencyInput
-          label="동거주택 공시가격 (§23의2)"
-          value={form.cohabitHouseStdPrice}
-          onChange={(v) => set({ cohabitHouseStdPrice: v })}
-          hint="10년 이상 동거 + 무주택 자녀 상속 — 공시가 80%, 최대 6억"
-          placeholder="없으면 빈칸"
-        />
+        <div className="space-y-2">
+          <CurrencyInput
+            label="동거주택 공시가격 (§23의2)"
+            value={autoFillValue(form.cohabitHouseStdPrice, autos.cohabit)}
+            onChange={(v) => set({ cohabitHouseStdPrice: v })}
+            hint="자산 카드에서 주택을 '동거주택'으로 체크하면 기준시가가 자동 도출됩니다. 공시가 100%(2020.1.1.~)·이전 80%, 담보채무 차감 후 최대 6억."
+            placeholder="자산 카드 동거주택 체크 또는 직접 입력"
+          />
+          <AutoSuggestBadge
+            suggestion={autos.cohabit}
+            currentValue={autoFillValue(form.cohabitHouseStdPrice, autos.cohabit)}
+            onApply={(v) => set({ cohabitHouseStdPrice: v })}
+            label="동거주택 공시가격"
+          />
+        </div>
 
         <CurrencyInput
           label="동거주택공제 직접 입력 (Phase E)"
@@ -387,13 +439,21 @@ export function Step4({ form, set }: { form: FormState; set: FormSet }) {
           placeholder="없으면 빈칸"
         />
 
-        <CurrencyInput
-          label="영농상속재산가액 (§18의3)"
-          value={form.farmingAssetValue}
-          onChange={(v) => set({ farmingAssetValue: v })}
-          hint="농지·초지·산림지·어선·어업권·농어업용 건축물·염전 등(시행령 §16⑤) — 최대 30억"
-          placeholder="없으면 빈칸"
-        />
+        <div className="space-y-2">
+          <CurrencyInput
+            label="영농상속재산가액 (§18의3)"
+            value={autoFillValue(form.farmingAssetValue, autos.farming)}
+            onChange={(v) => set({ farmingAssetValue: v })}
+            hint="자산 카드에서 농지·초지·어선 등으로 분류하면 자동 도출(시행령 §16⑤). 최대 30억."
+            placeholder="없으면 빈칸"
+          />
+          <AutoSuggestBadge
+            suggestion={autos.farming}
+            currentValue={autoFillValue(form.farmingAssetValue, autos.farming)}
+            onApply={(v) => set({ farmingAssetValue: v })}
+            label="영농상속재산가액"
+          />
+        </div>
 
         {/* ── 가업상속공제 §18의2 ── */}
         <div className="space-y-3 border-t border-amber-100 dark:border-amber-900 pt-3">
