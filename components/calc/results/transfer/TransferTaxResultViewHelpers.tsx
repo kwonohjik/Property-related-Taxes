@@ -10,27 +10,8 @@
 import { cn } from "@/lib/utils";
 
 // ── 인쇄 헬퍼 ──────────────────────────────────────────────────
-
-/** 분리 인쇄 트리거. */
-export function printScoped(
-  scope:
-    | "form-table"
-    | "full"
-    | "calculation"
-    | "phd"
-    | "split-detail"
-    | "steps"
-    | "detailed-statement",
-) {
-  if (typeof document === "undefined") return;
-  document.body.dataset.printScope = scope;
-  const cleanup = () => {
-    delete document.body.dataset.printScope;
-    window.removeEventListener("afterprint", cleanup);
-  };
-  window.addEventListener("afterprint", cleanup);
-  setTimeout(() => window.print(), 0);
-}
+// (PR-F4) printScoped 정의 제거 — 양도세 4 결과뷰(단일/다중/주식/겸용)가 PrintSelectionPanel로
+//   전면 통일되어 호출처 0(dead code). globals.css의 data-print-scope CSS 규칙도 함께 제거.
 
 /** 선택 항목 서버 PDF 다운로드 (PR-F1 PrintSelectionPanel onPrintPdf 위임). savedId 없거나 0건이면 no-op. */
 export async function downloadSelectedPdf(

@@ -186,15 +186,6 @@
   size: auto;
 }
 
-/* 신고서 양식만 인쇄(form-table scope)는 A4 가로 — 원본 별지 양식 방향 일치 */
-@page form-landscape {
-  size: A4 landscape;
-  margin: 10mm;
-}
-body[data-print-scope="form-table"] {
-  page: form-landscape;
-}
-
 @media print {
   /* 인쇄 불필요 UI 숨김 */
   .print\:hidden {
@@ -220,33 +211,5 @@ body[data-print-scope="form-table"] {
     border: 1px solid #ccc !important;
   }
 }
-/* 신고서 양식 표 분리 인쇄 — data-print-scope 토글 기반 */
-@media print {
-  /* form-table 모드: 표만 보이고 나머지 결과 화면 모두 숨김 */
-  body[data-print-scope="form-table"] [data-print-section="full"] > *:not([data-print-section="form-table"]) {
-    display: none !important;
-  }
-  /* form-table 모드에서도 표 자체는 항상 노출 */
-  body[data-print-scope="form-table"] [data-print-section="form-table"] {
-    display: block !important;
-    page-break-inside: auto;
-  }
-  /* full 모드: 기본 — 모든 섹션 표시 */
-
-  /* 계산 내역만 인쇄 */
-  body[data-print-scope="calculation"] [data-print-section="full"] > *:not([data-print-section="calculation"]) {
-    display: none !important;
-  }
-  /* 개별주택 환산만 인쇄 */
-  body[data-print-scope="phd"] [data-print-section="full"] > *:not([data-print-section="phd"]) {
-    display: none !important;
-  }
-  /* 토지/건물 분리만 인쇄 */
-  body[data-print-scope="split-detail"] [data-print-section="full"] > *:not([data-print-section="split-detail"]) {
-    display: none !important;
-  }
-  /* 계산 과정만 인쇄 */
-  body[data-print-scope="steps"] [data-print-section="full"] > *:not([data-print-section="steps"]) {
-    display: none !important;
-  }
-}
+/* (PR-F4) data-print-scope 토글 인쇄 블록 제거 — printScoped 전면 폐지·PrintSelectionPanel(PrintSection print:hidden)으로 통일.
+   양도세 단일/다중/주식/겸용 4 결과뷰가 모두 통일되어 data-print-scope 사용처 0. */

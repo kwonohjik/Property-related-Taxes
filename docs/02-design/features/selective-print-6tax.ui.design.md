@@ -144,6 +144,17 @@ function PrintSelectionPanel({ groups, selectedIds, availableIds, onChange, onPr
 - ⚠️ onPrintPdf 미전달 → "선택 항목 PDF" 버튼 숨김. savedId·downloadSelectedPdf·hooks·Step4·ResultPdfDocument 수정 **불요**(F1/F2와 결정적 차이). StockFilingFormTable onPrint 이미 optional+가드 → 미전달만.
 - CSS scope 규칙(globals.css)은 겸용(F4)이 공유하므로 F3에서 유지.
 
+### 2.8 겸용주택 양도세 (mixed-use) — `MixedUseResultCard.tsx`. 기존 자체 printScoped → PrintSelectionPanel 통일 (PR-F4, 마지막 사용처).
+| data-print-id | 라벨 | 그룹 | 렌더 가드 (실측) | screen | pdf |
+|---|---|---|---|---|---|
+| `calculation` | 분리계산 (안분·주택·상가·비사업용·합산세액) | 계산 내역 | 항상(①②③ ResultSection·합산세액·계산경로, ④는 nb 조건부) | ✓ | ✗ |
+| `filing-form` | 신고서 양식 표 (32행) | 신고서식 | 항상(FilingFormTable) | ✓ | ✗ |
+| `detailed-statement` | 계산결과 상세명세서 | 신고서식 | 항상(DetailedCalculationStatementCard) | ✓ | ✗ |
+- **3 leaf**(2그룹: 계산1·신고서식2). **pdf 채널 0** — ResultPdfDocument에 mixed-use 섹션 부재(taxType transfer는 calculation만 렌더, mixedUseDetail 미렌더). PR-2 거짓 선택 방지 → 전부 SCREEN, window.print.
+- MixedUseResultCard는 TransferTaxCalculator(:499 `result.mode==="mixed-use"`)에서 **독립 렌더** — TransferTaxResultView와 별개 경로. pre-2022-rejected는 에러 카드 조기 return(패널 없음, hook은 return 전 선언).
+- ⚠️ 자체 printScoped 정의(L16~25)+호출 2곳(form-table·full 버튼 div) 제거. data-print-section wrapper 원래 없음. useState/useMemo 추가(순수 컴포넌트였음).
+- ⚠️ **F4 = 마지막 printScoped 사용처** → globals.css `body[data-print-scope]` CSS 규칙(@page form-landscape 포함)·Helpers printScoped 정의(dead code)도 함께 제거.
+
 ## 3. 세목별 결과뷰 통합 패턴 (상속세 복제)
 
 각 결과뷰에:
@@ -340,6 +351,28 @@ const availablePrintIds = useMemo<Set<string>>(() => { /* §2 가드 1:1 */ }, [
 
 **E2E 생략**: PR-F1·F2·C~E 동일 — 제네릭 패널 PR-B1 E2E + anchor 7.
 
+## 7-11. PR-F4 갭 분석 (겸용주택 양도세 + CSS scope 정리 — 구현 완료)
+
+| 항목 | 설계 | 구현 | 판정 |
+|---|---|---|---|
+| `MIXED_USE_PRINT_SECTIONS` 3 leaf | §2.8 (계산1·신고서식2) | `mixed-use-print-sections.ts` 3 leaf 2그룹 | ✓ |
+| pdf 채널 | §2.8 **0종** | 전부 SCREEN — ResultPdfDocument에 mixed-use 섹션 부재(PR-2 거짓 선택 방지) | ✓ |
+| printScoped 제거 | §2.8 자체 정의 완전 제거 | 자체 printScoped 정의(L16~25)·호출 2곳(버튼 div) 제거(코드 잔존 0, 주석만). PrintSection 3/3 균형 | ✓ |
+| 결과뷰 통합 | §3 | 독립 렌더(TransferTaxCalculator:499) — 3 PrintSection + 패널 + useState/useMemo. onPrintPdf 미전달 | ✓ |
+| Helpers·Calculator·PDF | — | PDF 채널 0 → savedId·hooks·Calculator·ResultPdfDocument 수정 **불요** | ✓ |
+| **CSS scope 전면 제거** | F4=마지막 | globals.css `body[data-print-scope]` 토글 블록(L223~252)·`@page form-landscape`+`page` 규칙 제거. 일반 `@media print`(print:hidden)는 유지 | ✓ |
+| **Helpers printScoped 정의 제거** | dead code | `TransferTaxResultViewHelpers` printScoped export 제거(호출처 0 — F1~F3에서 import 전부 제거). tsc 0 확인 | ✓ |
+| 800줄 정책 | 강제 | 725줄 | ✓ |
+| anchor | §6 PD-mu | mixed-use 7(pdf 0종·selectPdf 항상 빈) + 전체 회귀 + tsc 0 | ✓ |
+
+**printScoped 전면 폐지 완료(시리즈 종결)**: 양도세 4 결과뷰(단일 F1·다중 F2·주식 F3·겸용 F4)가 모두 PrintSelectionPanel로 통일 → printScoped 코드 호출·정의·CSS 규칙 전부 0(주석만 잔존). data-print-scope 토글 메커니즘 완전 폐지.
+
+**data-print-section dead attribute(deviation·무해)**: 하위 컴포넌트(FilingFormTable·StockFilingFormTable·DetailedCalculationStatementCard·CarryoverScenarioBFilingCard·CarryoverComparisonCard·PreHousingDisclosureDetailSection·StockTaxpayerHeaderCard) 7곳에 `data-print-section` 속성 잔존. CSS scope 규칙 제거로 어떤 selector에도 미매칭 → 인쇄 무영향(dead attribute). PrintSection은 `data-print-id`로 동작(별개). F1~F3과 동일하게 하위 컴포넌트 미수정 — 후속 정리 가능(StockTaxpayerHeaderCard:10 주석도 stale).
+
+**pdf 채널 0(F3과 동일)**: mixedUseToFilingResult 어댑터로 화면은 FilingFormTable/DetailedStatement 재사용하나, 저장 시 원본 MixedUseGainBreakdown이라 ResultPdfDocument TransferSection(calculation만)이 렌더 못 함. 후속: mixed-use 서버 PDF 섹션 신규 시 pdf 승격 가능.
+
+**E2E 생략**: PR-F1~F3·C~E 동일 — 제네릭 패널 PR-B1 E2E + anchor 7.
+
 ## 8. 케이스 인벤토리 요약 (leaf·pdf 채널 수 — 검토 U1 반영)
 | 세목 | leaf | pdf 채널 | 별지 PDF |
 |---|---|---|---|
@@ -350,4 +383,6 @@ const availablePrintIds = useMemo<Set<string>>(() => { /* §2 가드 1:1 */ }, [
 | 양도(단일) | 5 | 1 (calculation = 계산 내역 대표) | 없음 — printScoped→PrintSelectionPanel 통일(F1). 다중/주식/겸용 F2~F4 |
 | 양도(다중) | 6 | 1 (summary = 다건 합산 대표) | 없음 — printScoped→PrintSelectionPanel 통일(F2). 주식/겸용 F3~F4 |
 | 양도(주식) | 3 | **0** (서버 PDF 섹션 부재 — 전부 SCREEN, window.print) | 없음 — printScoped→PrintSelectionPanel 통일(F3). 겸용 F4 |
+| 양도(겸용) | 3 | **0** (서버 PDF 섹션 부재 — 전부 SCREEN, window.print) | 없음 — printScoped→PrintSelectionPanel 통일(F4, 마지막). **CSS scope 규칙 전면 제거** |
 > pdf 채널 = ResultPdfDocument에서 **실제 분리 렌더 가능한 단위만**(거짓 선택 방지, PR-2 교훈). 취득·재산·종부 계산표는 단일 표라 대표 1노드.
+> **시리즈 종결(PR-A~F4)**: 6대 세목 + 양도세 4 결과뷰(단일·다중·주식·겸용) = 8 결과뷰 모두 PrintSelectionPanel 통일. printScoped·data-print-scope CSS 전면 폐지(dead `data-print-section` 속성만 무해 잔존). 다음: feature/selective-print-6tax → master 머지.

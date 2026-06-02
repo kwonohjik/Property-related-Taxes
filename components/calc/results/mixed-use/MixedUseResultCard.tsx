@@ -12,17 +12,13 @@ import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { FilingFormTable } from "@/components/calc/results/transfer/FilingFormTable";
 import { DetailedCalculationStatementCard } from "@/components/calc/results/transfer/DetailedCalculationStatementCard";
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
-
-function printScoped(scope: "form-table" | "full") {
-  if (typeof document === "undefined") return;
-  document.body.dataset.printScope = scope;
-  const cleanup = () => {
-    delete document.body.dataset.printScope;
-    window.removeEventListener("afterprint", cleanup);
-  };
-  window.addEventListener("afterprint", cleanup);
-  setTimeout(() => window.print(), 0);
-}
+import { useState, useMemo } from "react";
+import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPanel";
+import { PrintSection } from "@/components/calc/results/shared/PrintSection";
+import {
+  MIXED_USE_PRINT_SECTIONS,
+  type MixedUsePrintSectionId,
+} from "@/lib/print/mixed-use-print-sections";
 
 /** MixedUseGainBreakdown → TransferTaxResult 어댑터 (FilingFormTable 호환) */
 function mixedUseToFilingResult(b: MixedUseGainBreakdown): TransferTaxResult {
@@ -77,6 +73,16 @@ interface Props {
 }
 
 export function MixedUseResultCard({ breakdown, formData }: Props) {
+  // 출력 항목 선택 (PR-F4) — 기존 자체 printScoped("full"/"form-table") → PrintSelectionPanel 통일.
+  // ⚠️ pdf 채널 0(ResultPdfDocument에 mixed-use 섹션 부재) → onPrintPdf 미전달.
+  //    "선택 항목 인쇄"(window.print → 브라우저 PDF 저장)만 노출. 설계 §2.8.
+  const [selectedPrintIds, setSelectedPrintIds] = useState<Set<string>>(() => new Set());
+  // 현재 결과뷰에 실제 렌더되는 leaf id (3종 항상 — 본문·신고서·명세서 항상 렌더)
+  const availablePrintIds = useMemo<Set<MixedUsePrintSectionId>>(
+    () => new Set<MixedUsePrintSectionId>(["calculation", "filing-form", "detailed-statement"]),
+    [],
+  );
+
   if (breakdown.splitMode === "pre-2022-rejected") {
     return (
       <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
@@ -93,6 +99,16 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
 
   return (
     <div className="space-y-4">
+      {/* 출력 항목 선택 패널 (선택 항목만 인쇄 — 브라우저 PDF 저장) */}
+      <PrintSelectionPanel
+        allGroups={MIXED_USE_PRINT_SECTIONS}
+        selectedIds={selectedPrintIds}
+        availableIds={availablePrintIds}
+        onChange={setSelectedPrintIds}
+      />
+
+      {/* ── 분리계산 본문 (안분·주택·상가·비사업용·합산세액·계산경로) ── */}
+      <PrintSection id="calculation" selectedIds={selectedPrintIds} className="space-y-4">
       {/* 경고 */}
       {breakdown.warnings.length > 0 && (
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 space-y-1">
@@ -397,24 +413,10 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
 
       {/* 계산 경로 메타 (학습·검증용) */}
       <CalculationRouteCard route={breakdown.calculationRoute} />
+      </PrintSection>
 
-      {/* 신고서 양식 표 */}
-      <div className="flex justify-end gap-2 print:hidden">
-        <button
-          type="button"
-          onClick={() => printScoped("form-table")}
-          className="rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors"
-        >
-          🧾 신고서 양식 PDF
-        </button>
-        <button
-          type="button"
-          onClick={() => printScoped("full")}
-          className="rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors"
-        >
-          🖨️ 전체 PDF / 인쇄
-        </button>
-      </div>
+      {/* ── 신고서 양식 표 ── */}
+      <PrintSection id="filing-form" selectedIds={selectedPrintIds}>
       {(() => {
         // 겸용주택(propertyType="mixed-use-house")은 재개발과 배타적이므로
         // redevelopmentDetail이 항상 undefined → redev props 비활성. 일관성 차원에서 전달.
@@ -438,13 +440,17 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
           />
         );
       })()}
+      </PrintSection>
+
       {/* ── 계산결과 상세명세서 (겸용주택 모드) ── */}
       {/* 신고서 양식 32 항목별 산식·변수값·법령 노출 — mixedUseDetail은 단건 모드로 처리 */}
+      <PrintSection id="detailed-statement" selectedIds={selectedPrintIds}>
       <DetailedCalculationStatementCard
         result={mixedUseToFilingResult(breakdown)}
         formData={formData}
         asset={formData?.assets[0]}
       />
+      </PrintSection>
     </div>
   );
 }
