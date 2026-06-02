@@ -59,6 +59,9 @@ export function BesshiBuppyo2Section({
     priorGifts ?? [],
   );
 
+  // 상속인이 0명(전원 수유자·영리법인)이면 부표2 미표시
+  if (data.length === 0) return null;
+
   return (
     <section
       data-testid="buppyo2-root"

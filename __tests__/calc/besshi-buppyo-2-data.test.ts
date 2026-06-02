@@ -31,10 +31,33 @@ describe("부표 2 데이터 어댑터 (besshi-buppyo-2)", () => {
   const byId = (id: string) => data.find((d) => d.heirId === id)!;
   const perHeir = result.heirAllocationResult!.perHeir;
 
-  // ── N장 ──
-  it("B2-1: N장 = 상속인 수 (5장: 배우자·자2·손녀·법인)", () => {
-    expect(data.length).toBe(EXAMPLE_HEIRS.length);
-    expect(data.length).toBe(5);
+  // ── N장 ── (상속인만 — 비상속인 수유자·영리법인 제외)
+  it("B2-1: N장 = 상속인 수 (3장: 배우자·자2). 비상속인 손녀(legatee)·법인(corporate) 제외", () => {
+    expect(data.length).toBe(3);
+    expect(data.length).toBeLessThan(EXAMPLE_HEIRS.length); // 5인 중 2인 비상속인
+  });
+  it("NH-1: 비상속인(수유자·영리법인) 시트 미생성", () => {
+    expect(data.find((d) => d.heirId === HEIR_ID.granddaughter)).toBeUndefined();
+    expect(data.find((d) => d.heirId === HEIR_ID.corporate)).toBeUndefined();
+  });
+  it("NH-2: 상속인 시트 보존 (배우자·son·son2)", () => {
+    expect(data.find((d) => d.heirId === HEIR_ID.spouse)).toBeDefined();
+    expect(data.find((d) => d.heirId === HEIR_ID.son)).toBeDefined();
+    expect(data.find((d) => d.heirId === HEIR_ID.son2)).toBeDefined();
+  });
+  it("NH-3: ⑦ 실제상속지분율 분모 = 상속인만 (Σ⑦=1)", () => {
+    const sum = data.reduce((s, d) => s + d.sectionA.actualShareRatio, 0);
+    expect(sum).toBeCloseTo(1, 6);
+    // 배우자 = grossInheritance ÷ Σ상속인 gross (손녀·법인 제외 → 분모↓)
+    const spouseGross = perHeir[HEIR_ID.spouse]?.grossInheritance ?? 0;
+    const heirGrossSum = data.reduce(
+      (s, d) => s + (perHeir[d.heirId]?.grossInheritance ?? 0),
+      0,
+    );
+    expect(byId(HEIR_ID.spouse).sectionA.actualShareRatio).toBeCloseTo(
+      spouseGross / heirGrossSum,
+      6,
+    );
   });
 
   // ── AN-1 자기일관 ──
@@ -77,10 +100,13 @@ describe("부표 2 데이터 어댑터 (besshi-buppyo-2)", () => {
     );
     expect(sp.legalShareAmount).toBe(3_252_857_142);
   });
-  it("B2-6: C-3 수유자(legatee)·C-4 법인 → 법정상속지분율 공란(null)", () => {
-    expect(byId(HEIR_ID.granddaughter).sectionA.legalShareLabel).toBeNull();
-    expect(byId(HEIR_ID.granddaughter).sectionA.legalShareAmount).toBeNull();
-    expect(byId(HEIR_ID.corporate).sectionA.legalShareLabel).toBeNull();
+  it("B2-6: 생성된 시트는 모두 상속인 (수유자·영리법인 relation 부재)", () => {
+    const relById = new Map(EXAMPLE_HEIRS.map((h) => [h.id, h.relation]));
+    for (const d of data) {
+      const rel = relById.get(d.heirId);
+      expect(rel).not.toBe("legatee");
+      expect(rel).not.toBe("corporate");
+    }
   });
 
   // ── AN-2 나 섹션 필터 ──
@@ -103,11 +129,7 @@ describe("부표 2 데이터 어댑터 (besshi-buppyo-2)", () => {
   });
 
   // ── AN-2 나 사전증여 행 (doneeId 매칭) ──
-  it("B2-9: 나 사전증여 행 — 법인 donee = A22, 상속인 donee = A21", () => {
-    const corpGiftRows = byId(HEIR_ID.corporate).itemRows.filter(
-      (r) => r.kindCode === "A22",
-    );
-    expect(corpGiftRows.length).toBeGreaterThan(0); // 법인 사전증여 존재
+  it("B2-9: 나 사전증여 행 — 상속인 donee = A21 (배우자)", () => {
     const spouseGiftRows = byId(HEIR_ID.spouse).itemRows.filter(
       (r) => r.kindCode === "A21",
     );
@@ -208,18 +230,8 @@ describe("부표 2 데이터 어댑터 (besshi-buppyo-2)", () => {
       expect(d.sectionA.actualShareAmount).toBe(d.itemRowsTotal);
     }
   });
-  it("A-CORP: legatee·corporate — ⑥=null, ⑧=gross+presumed+gift", () => {
-    const gd = byId(HEIR_ID.granddaughter);
-    const corp = byId(HEIR_ID.corporate);
-    expect(gd.sectionA.legalShareAmount).toBeNull();
-    expect(corp.sectionA.legalShareAmount).toBeNull();
-    for (const d of [gd, corp]) {
-      const b = perHeir[d.heirId];
-      expect(d.sectionA.actualShareAmount).toBe(
-        (b?.grossInheritance ?? 0) +
-          (b?.presumedAmount ?? 0) +
-          d.sectionTotal.priorGift13,
-      );
-    }
+  it("A-CORP: legatee·corporate는 부표2 미생성 (상속인 아님)", () => {
+    expect(data.some((d) => d.heirId === HEIR_ID.granddaughter)).toBe(false);
+    expect(data.some((d) => d.heirId === HEIR_ID.corporate)).toBe(false);
   });
 });
