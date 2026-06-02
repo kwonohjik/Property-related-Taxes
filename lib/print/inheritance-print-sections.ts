@@ -8,7 +8,19 @@
  * 인쇄(print)에서만 print:hidden으로 제거 → 기존 화면 동작 회귀 0.
  */
 
-export type PrintChannel = "screen" | "pdf";
+import {
+  type PrintChannel,
+  type PrintSectionNode as GenericNode,
+  type PrintSectionGroup as GenericGroup,
+  type GroupCheckState,
+  flattenPrintSectionIds as flattenGeneric,
+  pdfEligibleIds as pdfEligibleGeneric,
+  selectPdfSections as selectPdfGeneric,
+  resolveGroupCheckState as resolveGroupGeneric,
+  resolvePrintVisibilityClass as resolveVisibilityGeneric,
+} from "@/lib/print/print-sections.types";
+
+export type { PrintChannel, GroupCheckState };
 
 /** 선택 가능 leaf 16종 (오타 방지·exact 매칭) */
 export type PrintSectionId =
@@ -30,25 +42,9 @@ export type PrintSectionId =
   | "installment-guide"
   | "warnings";
 
-export interface PrintSectionNode {
-  id: PrintSectionId;
-  label: string;
-  /** ["screen"] 기본, 별지(서버 PDF 대상)는 ["screen","pdf"] */
-  channel: PrintChannel[];
-}
-
-export type PrintSectionGroupId =
-  | "group:summary"
-  | "group:source"
-  | "group:forms"
-  | "group:valuation"
-  | "group:etc";
-
-export interface PrintSectionGroup {
-  id: PrintSectionGroupId;
-  label: string;
-  children: PrintSectionNode[];
-}
+/** 상속세 leaf로 좁힌 제네릭 타입 (shared 재사용) */
+export type PrintSectionNode = GenericNode<PrintSectionId>;
+export type PrintSectionGroup = GenericGroup<PrintSectionId>;
 
 const SCREEN: PrintChannel[] = ["screen"];
 const SCREEN_PDF: PrintChannel[] = ["screen", "pdf"];
@@ -111,20 +107,21 @@ export const INHERITANCE_PRINT_SECTIONS: PrintSectionGroup[] = [
   },
 ];
 
+// ── 헬퍼: shared 제네릭을 INHERITANCE_PRINT_SECTIONS에 바인딩한 래퍼 ──
+// (기존 시그니처·동작 100% 보존 → 상속세 호출부·anchor 무변경. PR-A 제네릭화)
+
 /** 모든 leaf id (선언 순서) */
 export function flattenPrintSectionIds(
   groups: PrintSectionGroup[] = INHERITANCE_PRINT_SECTIONS
 ): PrintSectionId[] {
-  return groups.flatMap((g) => g.children.map((c) => c.id));
+  return flattenGeneric(groups);
 }
 
 /** channel에 "pdf" 포함 leaf만 (별지 7종) */
 export function pdfEligibleIds(
   groups: PrintSectionGroup[] = INHERITANCE_PRINT_SECTIONS
 ): PrintSectionId[] {
-  return groups.flatMap((g) =>
-    g.children.filter((c) => c.channel.includes("pdf")).map((c) => c.id)
-  );
+  return pdfEligibleGeneric(groups);
 }
 
 /**
@@ -135,32 +132,24 @@ export function resolvePrintVisibilityClass(
   id: PrintSectionId,
   selectedIds: ReadonlySet<string>
 ): "" | "print:hidden" {
-  return selectedIds.has(id) ? "" : "print:hidden";
+  return resolveVisibilityGeneric(id, selectedIds);
 }
 
 /**
  * 서버 PDF에 포함할 섹션 (PR-2) — 선택 ∩ pdf 채널 ∩ (가용).
- * PrintSelectionPanel·route 공용 단일 헬퍼 (이중 정의 금지).
+ * 상속세 전용 래퍼 (groups=INHERITANCE 바인딩, 기존 2인자 시그니처 보존).
  */
 export function selectPdfSections(
   selectedIds: ReadonlySet<string>,
   availableIds?: ReadonlySet<string>
 ): PrintSectionId[] {
-  return pdfEligibleIds().filter(
-    (id) => selectedIds.has(id) && (!availableIds || availableIds.has(id))
-  );
+  return selectPdfGeneric(INHERITANCE_PRINT_SECTIONS, selectedIds, availableIds);
 }
 
 /** 그룹 체크 상태 (부모 체크박스 indeterminate 판정) */
-export type GroupCheckState = "all" | "partial" | "none";
-
 export function resolveGroupCheckState(
   group: PrintSectionGroup,
   selectedIds: ReadonlySet<string>
 ): GroupCheckState {
-  const total = group.children.length;
-  const selected = group.children.filter((c) => selectedIds.has(c.id)).length;
-  if (selected === 0) return "none";
-  if (selected === total) return "all";
-  return "partial";
+  return resolveGroupGeneric(group, selectedIds);
 }

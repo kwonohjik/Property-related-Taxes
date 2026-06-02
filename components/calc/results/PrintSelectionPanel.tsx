@@ -3,17 +3,16 @@
 import { useEffect, useMemo, useRef } from "react";
 import { Printer, FileDown } from "lucide-react";
 import {
-  INHERITANCE_PRINT_SECTIONS,
   resolveGroupCheckState,
   selectPdfSections,
   type PrintSectionGroup,
-  type PrintSectionId,
-} from "@/lib/print/inheritance-print-sections";
+} from "@/lib/print/print-sections.types";
 
 /**
- * 계산 결과 선택 출력 — 출력 항목 선택 패널 (화면 인쇄, PR-1)
+ * 계산 결과 선택 출력 — 출력 항목 선택 패널 (세목 무관, PR-A 제네릭화)
  *
- * 설계: docs/02-design/features/selective-print.design.md §5
+ * 설계: docs/02-design/features/selective-print-6tax.ui.design.md §1.3
+ * - `allGroups` props로 세목별 레지스트리 주입 (상속세 하드코딩 제거)
  * - 계층형 체크박스 트리(그룹=부모 indeterminate, leaf=자식)
  * - 기본 전체 미선택, "전체 선택"/"전체 해제" 단축, 선택 0건이면 인쇄 버튼 disabled
  * - 가용 노드(availableIds)만 표시 — 데이터 없는 서식 선택 방지
@@ -51,6 +50,7 @@ function IndeterminateCheckbox({
 }
 
 export function PrintSelectionPanel({
+  allGroups,
   selectedIds,
   availableIds,
   onChange,
@@ -58,12 +58,14 @@ export function PrintSelectionPanel({
   pdfReady = false,
   pdfBusy = false,
 }: {
-  selectedIds: Set<PrintSectionId>;
+  /** 세목별 출력 항목 레지스트리 (예: INHERITANCE_PRINT_SECTIONS) */
+  allGroups: PrintSectionGroup[];
+  selectedIds: Set<string>;
   /** 현재 결과뷰에 실제 렌더되는 leaf id (가용성) */
-  availableIds: ReadonlySet<PrintSectionId>;
-  onChange: (next: Set<PrintSectionId>) => void;
+  availableIds: ReadonlySet<string>;
+  onChange: (next: Set<string>) => void;
   /** 선택 항목 서버 PDF 다운로드 (PR-2). 미지정 시 PDF 버튼 숨김 */
-  onPrintPdf?: (pdfSections: PrintSectionId[]) => void;
+  onPrintPdf?: (pdfSections: string[]) => void;
   /** 로그인+저장 완료 — PDF 다운로드 가능 여부 */
   pdfReady?: boolean;
   pdfBusy?: boolean;
@@ -71,11 +73,13 @@ export function PrintSelectionPanel({
   // 가용 노드만 남긴 그룹 트리
   const groups = useMemo<PrintSectionGroup[]>(
     () =>
-      INHERITANCE_PRINT_SECTIONS.map((g) => ({
-        ...g,
-        children: g.children.filter((c) => availableIds.has(c.id)),
-      })).filter((g) => g.children.length > 0),
-    [availableIds]
+      allGroups
+        .map((g) => ({
+          ...g,
+          children: g.children.filter((c) => availableIds.has(c.id)),
+        }))
+        .filter((g) => g.children.length > 0),
+    [allGroups, availableIds]
   );
 
   const allAvailable = useMemo(
@@ -84,13 +88,13 @@ export function PrintSelectionPanel({
   );
   const selectedCount = allAvailable.filter((id) => selectedIds.has(id)).length;
 
-  // 서버 PDF에 실제 포함될 항목 (선택 ∩ pdf 채널 ∩ 가용) — 단일 헬퍼 (PR-2)
+  // 서버 PDF에 실제 포함될 항목 (선택 ∩ pdf 채널 ∩ 가용) — shared 단일 헬퍼 (groups 명시)
   const pdfSelected = useMemo(
-    () => selectPdfSections(selectedIds, availableIds),
-    [selectedIds, availableIds]
+    () => selectPdfSections(allGroups, selectedIds, availableIds),
+    [allGroups, selectedIds, availableIds]
   );
 
-  const toggleLeaf = (id: PrintSectionId) => {
+  const toggleLeaf = (id: string) => {
     const next = new Set(selectedIds);
     if (next.has(id)) next.delete(id);
     else next.add(id);

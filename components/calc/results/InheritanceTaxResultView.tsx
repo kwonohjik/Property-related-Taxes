@@ -33,7 +33,10 @@ import { SourceDataSummarySection } from "@/components/calc/results/source-summa
 import { calcInstallmentPayment } from "@/lib/tax-engine/credits/installment-payment";
 import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPanel";
 import { PrintSection } from "@/components/calc/results/shared/PrintSection";
-import type { PrintSectionId } from "@/lib/print/inheritance-print-sections";
+import {
+  INHERITANCE_PRINT_SECTIONS,
+  type PrintSectionId,
+} from "@/lib/print/inheritance-print-sections";
 import { DeductionBreakdownSection } from "./deduction-breakdown/DeductionBreakdownSection";
 import { AllocationBreakdownSection } from "./allocation-breakdown/AllocationBreakdownSection";
 import { expandToggleClass, expandToggleLabel } from "./shared/ExpandToggleButton";
@@ -172,7 +175,7 @@ export function InheritanceTaxResultView({
   const [pdfBusy, setPdfBusy] = useState(false);
 
   // 선택 항목 서버 PDF 다운로드 (PR-2). savedId(로그인+저장) 있을 때만 활성.
-  async function handlePrintPdf(pdfSections: PrintSectionId[]) {
+  async function handlePrintPdf(pdfSections: string[]) {
     if (!savedId || pdfSections.length === 0) return;
     setPdfBusy(true);
     try {
@@ -196,8 +199,8 @@ export function InheritanceTaxResultView({
     }
   }
 
-  // 선택 출력 — 기본 전체 미선택 (사용자가 필요한 항목만 추가)
-  const [selectedPrintIds, setSelectedPrintIds] = useState<Set<PrintSectionId>>(
+  // 선택 출력 — 기본 전체 미선택 (사용자가 필요한 항목만 추가). 제네릭 패널 정합 위해 string Set.
+  const [selectedPrintIds, setSelectedPrintIds] = useState<Set<string>>(
     () => new Set()
   );
 
@@ -251,6 +254,7 @@ export function InheritanceTaxResultView({
     <div className="space-y-5">
       {/* 출력 항목 선택 패널 (선택 항목만 인쇄·PDF) */}
       <PrintSelectionPanel
+        allGroups={INHERITANCE_PRINT_SECTIONS}
         selectedIds={selectedPrintIds}
         availableIds={availablePrintIds}
         onChange={setSelectedPrintIds}
