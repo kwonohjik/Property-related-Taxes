@@ -117,6 +117,40 @@ describe("시나리오 E — 초과분 안분 비사업용 토지 분할", () =>
 });
 
 // ============================================================
+// 시나리오 E-2 — 무한소수 비율 면적 직접 안분 (round 의존 제거 회귀 방어)
+// 토지 350㎡, 수평투영 90㎡, 수도권 상업 → 허용 270㎡, 초과 80㎡ (80/350 무한소수).
+// round 4자리 방식이면 사업용 양도가가 26,286원 어긋남 → 면적 직접 안분으로 차단.
+// ============================================================
+describe("시나리오 E-2 — 무한소수 비율 면적 직접 안분 (§104의3)", () => {
+  const out = buildGeneralBuildingAssetCards({
+    ...BASE_INPUT,
+    landArea: 350,
+    buildingFootprintArea: 90, // 허용 = 90 × 3 = 270㎡, 초과 80㎡
+  });
+  const biz = out.assetCards.find((c) => c.propertyId === "land_business")!;
+  const nbl = out.assetCards.find((c) => c.propertyId === "land_nbl")!;
+
+  it("nonBusinessRatio = 80/350 정밀 (round 4자리 미사용)", () => {
+    expect(out.nonBusinessRatio).toBeCloseTo(80 / 350, 10);
+  });
+
+  it("land_business 양도가 = 709,708,904 (면적 직접; round 방식 709,682,618 대비 +26,286)", () => {
+    expect(biz.transferPrice).toBe(709_708_904);
+  });
+
+  it("land_business 환산취득가 = 183,488,912 / 개산공제 = 22,680,000", () => {
+    expect(biz.acquisitionPrice).toBe(183_488_912);
+    expect(biz.expenses).toBe(22_680_000);
+  });
+
+  it("사업용 + 비사업용 = 전체 토지 (잔액 흡수로 합계 보존)", () => {
+    expect(biz.transferPrice + nbl.transferPrice).toBe(out.allocation.land);
+    expect(biz.acquisitionPrice + nbl.acquisitionPrice).toBe(out.acquisition.land);
+    expect(biz.expenses + nbl.expenses).toBe(out.estimatedDeduction.land);
+  });
+});
+
+// ============================================================
 // 시나리오 F — 무허가건축물 → 전체 비사업용
 // ============================================================
 describe("시나리오 F — 무허가건축물 전체 비사업용", () => {

@@ -17,6 +17,7 @@
 
 import { safeMultiplyThenDivide } from "./tax-utils";
 import { TRANSFER, ESTIMATED_DEDUCTION_RATE } from "./legal-codes";
+import { apportionLandByBusinessArea } from "./general-building-area-apportion";
 import { getLandFootprintMultiplier } from "./non-business-land/urban-area";
 import type { ZoneType } from "./non-business-land/types";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
@@ -41,6 +42,9 @@ export const ESTIMATED_DEDUCTION_RATE_LAND_BUILDING = ESTIMATED_DEDUCTION_RATE.L
  *    지원하려면 route helper·validate에서 이 율로 wiring해야 한다.
  */
 export const ESTIMATED_DEDUCTION_RATE_UNREGISTERED = ESTIMATED_DEDUCTION_RATE.UNREGISTERED;
+
+// 비사업용토지 면적 직접 안분 헬퍼 (§104의3) — 800줄 정책으로 sibling 분리. 하위호환 re-export.
+export { apportionLandByBusinessArea };
 
 // ============================================================
 // 공개 타입 (Task #3 — GeneralBuildingInput/Output)
@@ -586,22 +590,21 @@ export function buildGeneralBuildingAssetCards(
     isWithinNblRatio = input.landArea <= allowedLandArea;
   }
 
-  // 초과분 비율 (§104의3 — 초과분만 중과)
+  // 초과분 비율 (§104의3 — 초과분만 중과). 표시용 정밀 비율 (round 미사용 — 분할은 면적 직접).
   const nonBusinessArea = Math.max(0, input.landArea - allowedLandArea);
   const nonBusinessRatio = input.landArea > 0
-    ? Math.round((nonBusinessArea / input.landArea) * 10000) / 10000
+    ? nonBusinessArea / input.landArea
     : 0;
-  const businessRatio = 1 - nonBusinessRatio;
 
   // Step 5: 자산 카드 생성 (aggregate 엔진 위임용)
   // 초과분이 있으면 토지를 사업용·비사업용 2장으로 분할 (§104의3 초과분만 중과)
   const assetCards: AssetCardForAggregate[] = [];
 
   if (!isWithinNblRatio && nonBusinessRatio > 0) {
-    // 토지 카드 1: 사업용 (허용면적 비율)
-    const landBusinessTransfer = Math.floor(allocation.land * businessRatio);
-    const landBusinessAcq = Math.floor(acquisition.land * businessRatio);
-    const landBusinessExp = Math.floor(estimatedDeduction.land * businessRatio);
+    // 토지 카드 1: 사업용 (인정면적 직접 안분 — round 의존 제거)
+    const landBusinessTransfer = apportionLandByBusinessArea(allocation.land, allowedLandArea, input.landArea);
+    const landBusinessAcq = apportionLandByBusinessArea(acquisition.land, allowedLandArea, input.landArea);
+    const landBusinessExp = apportionLandByBusinessArea(estimatedDeduction.land, allowedLandArea, input.landArea);
     assetCards.push({
       propertyId: "land_business",
       propertyLabel: "토지-사업용(1001)",

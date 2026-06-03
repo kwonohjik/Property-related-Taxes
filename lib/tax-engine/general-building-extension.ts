@@ -24,6 +24,7 @@
  */
 
 import { safeMultiplyThenDivide } from "./tax-utils";
+import { apportionLandByBusinessArea } from "./general-building-area-apportion";
 import { getLandFootprintMultiplier } from "./non-business-land/urban-area";
 import type { ZoneType } from "./non-business-land/types";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
@@ -226,20 +227,19 @@ export function buildGeneralBuildingAssetCardsWithExtension(
   const nonBusinessArea = Math.max(0, input.landArea - allowedLandArea);
   const nonBusinessRatio =
     input.landArea > 0
-      ? Math.round((nonBusinessArea / input.landArea) * 10000) / 10000
+      ? nonBusinessArea / input.landArea
       : 0;
-  const businessRatio = 1 - nonBusinessRatio;
 
   // ── Step 4: 자산 카드 3장 생성 ────────────────────────────────────────
   // originUsedEstimated: 토지·건물1 카드에 적용 (원건물 모드에 따라 결정됨)
   // extensionUsedEstimated: 건물2 카드에 적용 (건물2 모드에 따라 결정됨)
   const assetCards: AssetCardForAggregate[] = [];
 
-  // 토지 카드 (비사업용 분할 포함)
+  // 토지 카드 (비사업용 분할 포함 — 인정면적 직접 안분, round 의존 제거)
   if (!isWithinNblRatio && nonBusinessRatio > 0) {
-    const landBusinessTransfer = Math.floor(landTransferPrice * businessRatio);
-    const landBusinessAcq = Math.floor(landAcq * businessRatio);
-    const landBusinessExp = Math.floor(landExp * businessRatio);
+    const landBusinessTransfer = apportionLandByBusinessArea(landTransferPrice, allowedLandArea, input.landArea);
+    const landBusinessAcq = apportionLandByBusinessArea(landAcq, allowedLandArea, input.landArea);
+    const landBusinessExp = apportionLandByBusinessArea(landExp, allowedLandArea, input.landArea);
     assetCards.push({
       propertyId: "land_business",
       propertyLabel: "토지-사업용(1001)",

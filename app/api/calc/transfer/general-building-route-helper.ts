@@ -16,6 +16,7 @@ import {
 } from "@/lib/tax-engine/transfer-tax-aggregate";
 import {
   buildGeneralBuildingAssetCards,
+  apportionLandByBusinessArea,
   type GeneralBuildingInput,
 } from "@/lib/tax-engine/general-building-valuation";
 import { getLandFootprintMultiplier } from "@/lib/tax-engine/non-business-land/urban-area";
@@ -498,18 +499,17 @@ export function calculateGeneralBuildingActualTransfer(
     const allowedArea = buildingFootprintArea * multiplier;
     isWithinNblRatio = landArea <= allowedArea;
     nonBusinessArea = Math.max(0, landArea - allowedArea);
-    nonBusinessRatio = landArea > 0
-      ? Math.round((nonBusinessArea / landArea) * 10000) / 10000
-      : 0;
+    // 표시용 정밀 비율 (round 미사용 — 분할은 면적 직접)
+    nonBusinessRatio = landArea > 0 ? nonBusinessArea / landArea : 0;
   }
 
-  // 토지 카드 생성 (초과 시 사업용·비사업용 분할)
+  // 토지 카드 생성 (초과 시 사업용·비사업용 분할 — 인정면적 직접 안분, round 의존 제거)
   const cards: AssetCardForAggregate[] = [];
   if (!isWithinNblRatio && nonBusinessRatio > 0) {
-    const businessRatio = 1 - nonBusinessRatio;
-    const landBizTransfer = Math.floor(landTransfer * businessRatio);
-    const landBizAcq = Math.floor(landAcq * businessRatio);
-    const landBizExp = Math.floor(landExp * businessRatio);
+    const businessArea = landArea - nonBusinessArea; // 사업용 인정면적 (무허가=0)
+    const landBizTransfer = apportionLandByBusinessArea(landTransfer, businessArea, landArea);
+    const landBizAcq = apportionLandByBusinessArea(landAcq, businessArea, landArea);
+    const landBizExp = apportionLandByBusinessArea(landExp, businessArea, landArea);
     cards.push({
       propertyId: "land_business", propertyLabel: "토지-사업용(1001)", propertyType: "land",
       transferPrice: landBizTransfer, acquisitionPrice: landBizAcq, expenses: landBizExp,
