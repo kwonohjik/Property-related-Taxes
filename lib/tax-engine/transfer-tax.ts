@@ -64,6 +64,48 @@ export type { TransferTaxAcquisitionOptions } from "./transfer-tax-acquisition-o
 import { applyFamilyBusinessCgtStep } from "./transfer-tax-family-business";
 export { parseRatesFromMap } from "./transfer-tax-helpers";
 export { calcTax } from "./transfer-tax-rate-calc";
+
+/**
+ * 결과 detail 필드 공통 빌더 — 조기 반환(비과세·손실)과 정상 반환의 detail 누락 방지.
+ *
+ * 각 detail은 해당 STEP 변수가 존재할 때만 채운다. 조기 반환 시점에 아직
+ * 선언되지 않은 변수(cbStep·splitDetail 등)는 호출측에서 ctx에 생략하면 undefined로 처리된다.
+ */
+function buildTransferResultDetails(ctx: {
+  multiHouseSurchargeResult?: MultiHouseSurchargeResult;
+  nonBusinessLandJudgment?: NonBusinessLandJudgment;
+  pre1990LandResult?: Pre1990LandValuationResult;
+  carryoverDetail?: CarryoverTaxationDetail;
+  inheritedAcquisitionStep?: InheritedAcquisitionStepResult;
+  cbStep?: CommercialBuildingStepResult;
+  splitDetail?: TransferTaxResult["splitDetail"];
+}): Pick<
+  TransferTaxResult,
+  | "multiHouseSurchargeDetail"
+  | "nonBusinessLandJudgmentDetail"
+  | "pre1990LandValuationDetail"
+  | "carryoverTaxationDetail"
+  | "inheritedAcquisitionDetail"
+  | "inheritedHouseValuationDetail"
+  | "commercialBuildingValuationDetail"
+  | "splitDetail"
+  | "preHousingDisclosureDetail"
+> {
+  return {
+    multiHouseSurchargeDetail: ctx.multiHouseSurchargeResult
+      ? buildMultiHouseSurchargeDetail(ctx.multiHouseSurchargeResult)
+      : undefined,
+    nonBusinessLandJudgmentDetail: ctx.nonBusinessLandJudgment,
+    pre1990LandValuationDetail: ctx.pre1990LandResult,
+    carryoverTaxationDetail: ctx.carryoverDetail,
+    inheritedAcquisitionDetail: ctx.inheritedAcquisitionStep?.result,
+    inheritedHouseValuationDetail: ctx.inheritedAcquisitionStep?.houseValuationResult,
+    commercialBuildingValuationDetail: ctx.cbStep?.detail,
+    splitDetail: ctx.splitDetail ?? undefined,
+    preHousingDisclosureDetail: ctx.splitDetail?.preHousingDisclosureDetail,
+  };
+}
+
 export function calculateTransferTax(
   rawInput: TransferTaxInput,
   rates: TaxRatesMap,
@@ -278,8 +320,13 @@ export function calculateTransferTax(
       localIncomeTax: 0,
       totalTax: 0,
       steps,
-      pre1990LandValuationDetail: pre1990LandResult,
-      carryoverTaxationDetail: carryoverDetail,
+      ...buildTransferResultDetails({
+        multiHouseSurchargeResult,
+        nonBusinessLandJudgment,
+        pre1990LandResult,
+        carryoverDetail,
+        inheritedAcquisitionStep,
+      }),
     };
   }
 
@@ -393,8 +440,15 @@ export function calculateTransferTax(
       localIncomeTax: lit0,
       totalTax: pt0 + lit0,
       steps,
-      splitDetail: splitDetail ?? undefined,
-      preHousingDisclosureDetail: splitDetail?.preHousingDisclosureDetail,
+      ...buildTransferResultDetails({
+        multiHouseSurchargeResult,
+        nonBusinessLandJudgment,
+        pre1990LandResult,
+        carryoverDetail,
+        inheritedAcquisitionStep,
+        cbStep,
+        splitDetail,
+      }),
     };
   }
 
@@ -450,15 +504,18 @@ export function calculateTransferTax(
   // 중과세 여부 판단 (장기보유공제·세액 결정에 공통 사용)
   // houses[] 제공 시: determineMultiHouseSurcharge 결과 사용
   // 미제공 시: householdHousingCount + isRegulatedArea 플래그 기반 (하위 호환)
+  // 입력 참조는 effectiveInput으로 통일 — 최종 파생 입력(carryover·부담부·NBL·상업용 반영).
+  // 현재 8필드(propertyType·지역·주택수·1주택·거주·기본공제)는 파생 STEP이 불변이라 동치이나,
+  // 향후 파생 STEP이 주택수·지역을 바꿔도 silent 오류가 없도록 effectiveInput 고정.
   const isSurchargeCase = multiHouseSurchargeResult
     ? multiHouseSurchargeResult.surchargeType !== "none"
-    : (input.propertyType === "housing" || input.propertyType === "right_to_move_in" || input.propertyType === "presale_right") &&
-      input.isRegulatedArea &&
-      input.householdHousingCount >= 2;
+    : (effectiveInput.propertyType === "housing" || effectiveInput.propertyType === "right_to_move_in" || effectiveInput.propertyType === "presale_right") &&
+      effectiveInput.isRegulatedArea &&
+      effectiveInput.householdHousingCount >= 2;
 
   const effectiveHouseCount = multiHouseSurchargeResult
     ? multiHouseSurchargeResult.effectiveHouseCount
-    : input.householdHousingCount;
+    : effectiveInput.householdHousingCount;
   const surchargeTypeKey = effectiveHouseCount >= 3 ? "multi_house_3plus" : "multi_house_2";
   const suspendedResult = multiHouseSurchargeResult
     ? multiHouseSurchargeResult.isSurchargeSuspended
@@ -473,10 +530,10 @@ export function calculateTransferTax(
     ? `보유기간 ${holdingPeriod.years}년 ${holdingPeriod.months}개월`
     : "";
   // 1세대1주택 특례 여부에 따라 계산식 분리 표시
-  const residenceYearsForStep = Math.floor(input.residencePeriodMonths / 12);
+  const residenceYearsForStep = Math.floor(effectiveInput.residencePeriodMonths / 12);
   const isOneHouseSpecial =
-    input.isOneHousehold &&
-    input.householdHousingCount === 1 &&
+    effectiveInput.isOneHousehold &&
+    effectiveInput.householdHousingCount === 1 &&
     residenceYearsForStep >= 2 &&
     longTermHoldingDeduction > 0;
   const lthdFormulaRate = isOneHouseSpecial
@@ -586,19 +643,19 @@ export function calculateTransferTax(
   }
 
   // STEP 5: 기본공제 (aggregate 엔진에서 호출 시 skipBasicDeduction=true로 스킵)
-  const basicDeduction = input.skipBasicDeduction
+  const basicDeduction = effectiveInput.skipBasicDeduction
     ? 0
     : calcBasicDeduction(
         taxableGain,
         longTermHoldingDeduction,
-        input.annualBasicDeductionUsed,
-        input.isUnregistered,
+        effectiveInput.annualBasicDeductionUsed,
+        effectiveInput.isUnregistered,
         parsedRates.basicDeductionRules,
       );
-  if (!input.skipBasicDeduction) {
+  if (!effectiveInput.skipBasicDeduction) {
     steps.push({
       label: "기본공제",
-      formula: `연 한도 ${parsedRates.basicDeductionRules.annualLimit.toLocaleString()} - 기사용 ${input.annualBasicDeductionUsed.toLocaleString()}`,
+      formula: `연 한도 ${parsedRates.basicDeductionRules.annualLimit.toLocaleString()} - 기사용 ${effectiveInput.annualBasicDeductionUsed.toLocaleString()}`,
       amount: basicDeduction,
       legalBasis: TRANSFER.BASIC_DEDUCTION,
     });
@@ -696,21 +753,21 @@ export function calculateTransferTax(
     localIncomeTax,
     totalTax,
     steps,
-    multiHouseSurchargeDetail: multiHouseSurchargeResult ? buildMultiHouseSurchargeDetail(multiHouseSurchargeResult) : undefined,
-    nonBusinessLandJudgmentDetail: nonBusinessLandJudgment,
+    ...buildTransferResultDetails({
+      multiHouseSurchargeResult,
+      nonBusinessLandJudgment,
+      pre1990LandResult,
+      carryoverDetail,
+      inheritedAcquisitionStep,
+      cbStep,
+      splitDetail,
+    }),
     rentalReductionDetail,
     newHousingReductionDetail,
     publicExpropriationDetail,
     selfFarmingReductionDetail,
     penaltyDetail,
-    pre1990LandValuationDetail: pre1990LandResult,
-    splitDetail: splitDetail ?? undefined,
-    preHousingDisclosureDetail: splitDetail?.preHousingDisclosureDetail,
-    inheritedAcquisitionDetail: inheritedAcquisitionStep?.result,
-    inheritedHouseValuationDetail: inheritedAcquisitionStep?.houseValuationResult,
-    carryoverTaxationDetail: carryoverDetail,
     new993Detail: new993FinalResult,
-    commercialBuildingValuationDetail: cbStep?.detail,
     transferBurdenedGiftBreakdown,
   };
 }
