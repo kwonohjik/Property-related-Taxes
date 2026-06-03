@@ -637,3 +637,5 @@ describe("§28① 단서 — 과세가액 5억 이하 증여세액공제 배제 
     expect(result.totalCredit).toBe(300_000);
   });
 });
+// M-9 §28 cutoff anchor는 파일 크기 정책상 분리:
+// __tests__/tax-engine/inheritance/section28-gift-credit-cutoff.test.ts

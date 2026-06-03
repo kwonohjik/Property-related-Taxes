@@ -11,8 +11,8 @@
  * 결정세액 = max(0, 산출세액 + 세대생략할증 - totalCredit)
  */
 
-import { differenceInYears } from "date-fns";
 import { TAX_CREDIT, GIFT as GIFT_LAW } from "./legal-codes";
+import { isWithin13Cutoff } from "./inheritance-gift-common";
 import type {
   CalculationStep,
   InheritanceTaxCreditInput,
@@ -205,15 +205,12 @@ export function calcInheritanceTaxCredits(
   const appliedLaws: Set<string> = new Set();
 
   // 1. 증여세액공제 (§28)
-  // §28은 §13에 따라 과세가액에 합산된 증여재산에 대해서만 적용됨.
-  // deathDate가 제공된 경우 §13 합산 기간(상속인 10년, 비상속인 5년) 이내 증여만 필터링.
+  // §28①: "제13조에 따라 상속재산에 가산한 증여재산에 대한 증여세액" — §13 기준이 단일 진실.
+  // isWithin13Cutoff(inheritance-gift-common.ts)를 재사용하여 §13 합산 집합 == §28 eligible 집합
+  // 보장. 일(日) 단위 비교: boundary = subYears(deathDate, limitYears), 경계일 포함.
   const allPriorGifts = creditInput.priorGifts ?? [];
   const eligiblePriorGifts = deathDate
-    ? allPriorGifts.filter((gift) => {
-        const elapsed = differenceInYears(new Date(deathDate), new Date(gift.giftDate));
-        const limitYears = gift.isHeir ? 10 : 5;
-        return elapsed <= limitYears;
-      })
+    ? allPriorGifts.filter((gift) => isWithin13Cutoff(gift, deathDate))
     : allPriorGifts;
 
   const { creditAmount: giftTaxCredit, breakdown: giftBreakdown } =
