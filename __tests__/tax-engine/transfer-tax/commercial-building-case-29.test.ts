@@ -77,19 +77,19 @@ describe("유닛: calcStdPriceSum (소령 §164①)", () => {
     const sum = calcStdPriceSum(
       LAND_PRICE_AT_ACQ,    // 3,978,096
       LAND_AREA,            // 12.57
-      BUILDING_STD_AT_ACQ,  // 69,602,659.28 (총액)
+      BUILDING_STD_AT_ACQ,  // 69,602,660 (총액, 원 단위 정수)
     );
-    // 3,978,096 × 12.57 + 69,602,659.28 = 119,607,326
-    expect(Math.round(sum)).toBe(COMBINED_STD_AT_ACQ);
+    // INT(3,978,096 × 12.57) + 69,602,660 = 50,004,666 + 69,602,660 = 119,607,326
+    expect(sum).toBe(COMBINED_STD_AT_ACQ);
   });
 
   it("C-01-유닛1b: 최초고시시 기준시가합 = 208,560,000", () => {
     const sumF = calcStdPriceSum(
       LAND_PRICE_AT_FIRST,    // 11,060,632
       LAND_AREA,              // 12.57
-      BUILDING_STD_AT_FIRST,  // 69,527,855.76 (총액)
+      BUILDING_STD_AT_FIRST,  // 69,527,856 (총액, 원 단위 정수)
     );
-    expect(Math.round(sumF)).toBe(COMBINED_STD_AT_FIRST); // 208,560,000
+    expect(sumF).toBe(COMBINED_STD_AT_FIRST); // 208,560,000
   });
 });
 
@@ -131,11 +131,11 @@ describe("C-01: 호별고시 전 취득 — calculateCommercialBuildingValuation
     expect(result.estimatedDeductionTotal).toBe(LUMP_SUM_DEDUCTION);
   });
 
-  it("C-01-11: 환산취득가 토지분 = 56,504,756", () => {
+  it("C-01-11: 환산취득가 토지분 = 56,504,755 (floor 정합)", () => {
     expect(result.estimatedAcquisitionLand).toBe(ESTIMATED_ACQ_LAND);
   });
 
-  it("C-01-12: 환산취득가 건물분 = 78,650,285 (= 합계 − 토지분)", () => {
+  it("C-01-12: 환산취득가 건물분 = 78,650,286 (= 합계 − 토지분)", () => {
     expect(result.estimatedAcquisitionBuilding).toBe(ESTIMATED_ACQ_BUILDING);
   });
 

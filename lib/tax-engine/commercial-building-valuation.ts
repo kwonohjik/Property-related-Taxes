@@ -16,7 +16,8 @@
  */
 
 import { applyRate, safeMultiplyThenDivide } from "./tax-utils";
-import { TRANSFER } from "./legal-codes";
+import { TRANSFER, ESTIMATED_DEDUCTION_RATE } from "./legal-codes";
+import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import type {
   CommercialBuildingValuationInput,
   CommercialBuildingValuationResult,
@@ -44,14 +45,18 @@ export type {
  * @param landPricePerSqm    개별공시지가 (원/㎡)
  * @param landArea           대지면적 (㎡)
  * @param buildingStdPriceTotal  건물 기준시가 총액 (원) — 외부에서 면적·보정계수 반영
- * @returns 기준시가합 (원, 부동소수점 — 정수 전제 필요 시 호출측에서 floor)
+ * @returns 기준시가합 (원, 정수) — 토지분 `개공지 × 면적`은 INT 절사 후 합산.
+ *
+ * ⚠️ floor 정합: 토지·건물 각 기준시가를 원 단위로 정수화한 뒤 합산한다.
+ *    소수 분모가 safeMultiplyThenDivide의 BigInt/비-BigInt 경로에서 달리 처리되는
+ *    1원 불일치(고액 양도 시 분자 MAX_SAFE 초과)를 구조적으로 차단.
  */
 export function calcStdPriceSum(
   landPricePerSqm: number,
   landArea: number,
   buildingStdPriceTotal: number,
 ): number {
-  return landPricePerSqm * landArea + buildingStdPriceTotal;
+  return Math.floor(landPricePerSqm * landArea) + Math.floor(buildingStdPriceTotal);
 }
 
 /**
@@ -142,8 +147,8 @@ export function calculateCommercialBuildingValuation(
   // ── 공통: 연면적 ──
   const floorAreaTotal = input.exclusiveArea + input.commonArea;
 
-  // ── 공통: 양도시 호별총액 ──
-  const unitPriceTotalAtTransfer = input.unitPriceAtTransfer * floorAreaTotal;
+  // ── 공통: 양도시 호별총액 (floor 정합 — 원 단위 정수) ──
+  const unitPriceTotalAtTransfer = Math.floor(input.unitPriceAtTransfer * floorAreaTotal);
 
   if (input.isPreDisclosure) {
     return _calcPreDisclosure(input, transferPrice, floorAreaTotal, unitPriceTotalAtTransfer);
@@ -174,7 +179,8 @@ function _calcPreDisclosure(
     input.landPriceAtAcquisition === undefined ||
     input.landPriceAtFirstDisclosure === undefined
   ) {
-    throw new Error(
+    throw new TaxCalculationError(
+      TaxErrorCode.INVALID_INPUT,
       `[commercial-building] C-01 경로: 필수 입력값 누락. ` +
       `unitPriceAtFirstDisclosure·buildingStdPriceAtAcquisition·buildingStdPriceAtFirstDisclosure·` +
       `landPriceAtAcquisition·landPriceAtFirstDisclosure 모두 필수. ` +
@@ -182,17 +188,18 @@ function _calcPreDisclosure(
     );
   }
 
-  // ── Step 1: 최초고시 호별총액 ──
-  const unitPriceTotalAtFirst = input.unitPriceAtFirstDisclosure * floorAreaTotal;
+  // ── Step 1: 최초고시 호별총액 (floor 정합 — 원 단위 정수) ──
+  const unitPriceTotalAtFirst = Math.floor(input.unitPriceAtFirstDisclosure * floorAreaTotal);
 
   // ── Step 2: 3시점 기준시가합 (소령 §164①) ──
-  // 토지: ㎡당 개별공시지가 × 대지면적 / 건물: 외부에서 면적 곱한 총액
-  const landStdAtAcq    = input.landPriceAtAcquisition * input.landArea;
-  const buildingStdAtAcq = input.buildingStdPriceAtAcquisition;
+  // 토지: ㎡당 개별공시지가 × 대지면적 (INT 절사) / 건물: 외부에서 면적 곱한 총액 (INT)
+  // floor 정합: 각 기준시가를 원 단위 정수화 → 합·안분 분모의 BigInt 경로 일치 보장.
+  const landStdAtAcq    = Math.floor(input.landPriceAtAcquisition * input.landArea);
+  const buildingStdAtAcq = Math.floor(input.buildingStdPriceAtAcquisition);
   const combinedStdAtAcq = landStdAtAcq + buildingStdAtAcq;
 
-  const landStdAtFirst    = input.landPriceAtFirstDisclosure * input.landArea;
-  const buildingStdAtFirst = input.buildingStdPriceAtFirstDisclosure;
+  const landStdAtFirst    = Math.floor(input.landPriceAtFirstDisclosure * input.landArea);
+  const buildingStdAtFirst = Math.floor(input.buildingStdPriceAtFirstDisclosure);
   const combinedStdAtFirst = landStdAtFirst + buildingStdAtFirst;
 
   // 양도시 기준시가합 (선택 입력 — 신고서 표시용)
@@ -200,8 +207,8 @@ function _calcPreDisclosure(
   let buildingStdAtTransfer: number | undefined;
   let combinedStdAtTransfer: number | undefined;
   if (input.landPriceAtTransfer !== undefined && input.buildingStdPriceAtTransfer !== undefined) {
-    landStdAtTransfer    = input.landPriceAtTransfer * input.landArea;
-    buildingStdAtTransfer = input.buildingStdPriceAtTransfer;
+    landStdAtTransfer    = Math.floor(input.landPriceAtTransfer * input.landArea);
+    buildingStdAtTransfer = Math.floor(input.buildingStdPriceAtTransfer);
     combinedStdAtTransfer = landStdAtTransfer + buildingStdAtTransfer;
   }
 
@@ -232,7 +239,7 @@ function _calcPreDisclosure(
   // ── Step 6: 개산공제 — §97②2호 + §163⑥ ──
   // 취득당시의 기준시가(P_A) × 3%
   // 개산공제 총액 = INT(P_A × 0.03)
-  const estimatedDeductionTotal = applyRate(estimatedBasisAtAcq, 0.03);
+  const estimatedDeductionTotal = applyRate(estimatedBasisAtAcq, ESTIMATED_DEDUCTION_RATE.LAND_BUILDING);
 
   // 토지/건물 분리 (내부 표시용 — 합계와 1원 차이 허용)
   const landDeductionRaw = combinedStdAtAcq > 0
@@ -276,14 +283,15 @@ function _calcPostDisclosure(
 ): CommercialBuildingValuationResult {
   // C-02: 취득시 호별고시가 필수
   if (input.unitPriceAtAcquisition === undefined) {
-    throw new Error(
+    throw new TaxCalculationError(
+      TaxErrorCode.INVALID_INPUT,
       `[commercial-building] C-02 경로: unitPriceAtAcquisition (취득시 ㎡당 호별고시가) 필수. ` +
       `법령: ${TRANSFER.COMMERCIAL_BUILDING_ESTIMATED_ACQ}`,
     );
   }
 
-  // 취득시 호별총액
-  const unitTotalAtAcq = input.unitPriceAtAcquisition * floorAreaTotal;
+  // 취득시 호별총액 (floor 정합 — 원 단위 정수)
+  const unitTotalAtAcq = Math.floor(input.unitPriceAtAcquisition * floorAreaTotal);
 
   // ── 환산취득가 합계 ──
   // INT( 양도가액 × 취득시호별총액 / 양도시호별총액 )
@@ -304,8 +312,8 @@ function _calcPostDisclosure(
     input.landPriceAtAcquisition !== undefined &&
     input.buildingStdPriceAtAcquisition !== undefined
   ) {
-    landStdAtAcq    = input.landPriceAtAcquisition * input.landArea;
-    buildingStdAtAcq = input.buildingStdPriceAtAcquisition;
+    landStdAtAcq    = Math.floor(input.landPriceAtAcquisition * input.landArea);
+    buildingStdAtAcq = Math.floor(input.buildingStdPriceAtAcquisition);
     combinedStdAtAcq = landStdAtAcq + buildingStdAtAcq;
     const split = splitEstimatedAcquisitionByLandBuilding(
       estimatedAcquisitionTotal,
@@ -317,7 +325,7 @@ function _calcPostDisclosure(
   }
 
   // ── 개산공제: 취득시 호별총액 × 3% ──
-  const estimatedDeductionTotal = applyRate(unitTotalAtAcq, 0.03);
+  const estimatedDeductionTotal = applyRate(unitTotalAtAcq, ESTIMATED_DEDUCTION_RATE.LAND_BUILDING);
 
   // 토지/건물 분리 (기준시가합 있을 때만)
   let estimatedDeductionLand = 0;
@@ -333,8 +341,8 @@ function _calcPostDisclosure(
   let buildingStdAtTransfer: number | undefined;
   let combinedStdAtTransfer: number | undefined;
   if (input.landPriceAtTransfer !== undefined && input.buildingStdPriceAtTransfer !== undefined) {
-    landStdAtTransfer    = input.landPriceAtTransfer * input.landArea;
-    buildingStdAtTransfer = input.buildingStdPriceAtTransfer;
+    landStdAtTransfer    = Math.floor(input.landPriceAtTransfer * input.landArea);
+    buildingStdAtTransfer = Math.floor(input.buildingStdPriceAtTransfer);
     combinedStdAtTransfer = landStdAtTransfer + buildingStdAtTransfer;
   }
 

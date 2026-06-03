@@ -16,7 +16,7 @@
  */
 
 import { safeMultiplyThenDivide } from "./tax-utils";
-import { TRANSFER } from "./legal-codes";
+import { TRANSFER, ESTIMATED_DEDUCTION_RATE } from "./legal-codes";
 import { getLandFootprintMultiplier } from "./non-business-land/urban-area";
 import type { ZoneType } from "./non-business-land/types";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
@@ -28,11 +28,19 @@ import { applyConvertedHousingPriceOverride } from "./general-building-converted
 // 개산공제율 상수 (시행령 §163 ⑥)
 // ============================================================
 
-/** 등기 자산(토지·일반건물·주택·오피스텔 등) 개산공제율 — 시행령 §163 ⑥ */
-export const ESTIMATED_DEDUCTION_RATE_LAND_BUILDING = 0.03 as const;
+/**
+ * 등기 자산(토지·일반건물·주택·오피스텔 등) 개산공제율 — 시행령 §163 ⑥.
+ * SSOT: legal-codes `ESTIMATED_DEDUCTION_RATE.LAND_BUILDING` (상가 엔진과 공유).
+ */
+export const ESTIMATED_DEDUCTION_RATE_LAND_BUILDING = ESTIMATED_DEDUCTION_RATE.LAND_BUILDING;
 
-/** 미등기 자산 개산공제율 — 시행령 §163 ⑥ */
-export const ESTIMATED_DEDUCTION_RATE_UNREGISTERED = 0.003 as const;
+/**
+ * 미등기양도자산 개산공제율 — 시행령 §163 ⑥.
+ * ⚠️ 현재 미사용: 일반건물·상가 환산 경로는 등기 자산 전제(3% 고정)이며,
+ *    route helper가 `estimatedDeductionRate: 0.03`을 주입한다. 미등기양도자산을
+ *    지원하려면 route helper·validate에서 이 율로 wiring해야 한다.
+ */
+export const ESTIMATED_DEDUCTION_RATE_UNREGISTERED = ESTIMATED_DEDUCTION_RATE.UNREGISTERED;
 
 // ============================================================
 // 공개 타입 (Task #3 — GeneralBuildingInput/Output)
