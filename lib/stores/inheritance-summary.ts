@@ -26,6 +26,7 @@ import {
   deriveCollateralDebts,
   sumCollateralDebt,
 } from "@/lib/tax-engine/inheritance-collateral-debt";
+import { FUNERAL_MIN } from "@/lib/tax-engine/inheritance-gift-common";
 
 // ────────────────────────────────────────────────────
 // 입력 — InheritanceTaxForm.shared 의 FormState 부분 집합
@@ -155,12 +156,11 @@ export function computeInheritanceSummary(
     funeralApplied =
       Math.min(funeralMeal, 10_000_000) + Math.min(funeralBongan, 5_000_000);
   } else {
-    // legacy 경로
+    // legacy 경로 — 엔진 calcFuneralExpenseDeduction과 동일 FUNERAL_MIN(500만) 최소 보장 적용
     totalDebts = parseAmountRaw(form.debts);
     const funeralRaw = parseAmountRaw(form.funeralExpense);
-    funeralApplied = form.funeralIncludesBongan
-      ? Math.min(funeralRaw, 15_000_000)
-      : Math.min(funeralRaw, 10_000_000);
+    const funeralMaxLimit = form.funeralIncludesBongan ? 15_000_000 : 10_000_000;
+    funeralApplied = Math.max(Math.min(funeralRaw, funeralMaxLimit), FUNERAL_MIN);
   }
 
   // ── B6: 파생 담보채무 합산 (§14 자동공제) — 사이드바 totalDebts 포함 (설계 §3-4) ──

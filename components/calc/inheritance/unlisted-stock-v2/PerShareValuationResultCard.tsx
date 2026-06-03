@@ -74,14 +74,14 @@ export function PerShareValuationResultCard({ input, sectionNum = 11 }: PerShare
           >
             영업권 가중평균 순손익액: §59③ 추정이익 기준 — 추정이익 평균가액{" "}
             {fmt(result.estimatedProfitResult.estimatedProfitAverage)}원 × 발행주식총수{" "}
-            {fmt(result.netAssetTotal > 0 ? Math.round(result.netAssetTotal / result.netAssetPerShare) : 0)}주
+            {fmt(input.totalShares)}주
           </p>
         )}
         <ResultRow
           cellNum="④"
           label="1주당 순자산가치"
           value={`${fmt(result.netAssetPerShare)}원`}
-          hint={`= ${fmt(result.netAssetTotal)}원 ÷ ${fmt(result.netAssetTotal > 0 ? Math.round(result.netAssetTotal / result.netAssetPerShare) : 0)}주 (발행주식총수)`}
+          hint={`= ${fmt(result.netAssetTotal)}원 ÷ ${fmt(input.totalShares)}주 (발행주식총수)`}
           law="상증령 §54 ②"
         />
         <ResultRow

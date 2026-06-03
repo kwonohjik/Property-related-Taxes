@@ -20,6 +20,7 @@ import type {
   FarmingInheritanceInput,
 } from "@/lib/tax-engine/types/inheritance-farming.types";
 import type { Heir } from "@/lib/tax-engine/types/inheritance-gift.types";
+import { heirShortLabel } from "@/components/calc/inheritance/HeirAllocationInput";
 
 export interface HeirAssessmentCardProps {
   farming: FarmingInheritanceInput;
@@ -53,8 +54,7 @@ export function HeirAssessmentCard({
     >
       <div className="flex items-center justify-between">
         <p className="text-xs font-semibold">
-          {heir.name || `${heir.relation} ${heir.id}`}{" "}
-          <span className="text-[10px] text-gray-500">({heir.relation})</span>
+          {heirShortLabel(heir)}
         </p>
         <span
           className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${

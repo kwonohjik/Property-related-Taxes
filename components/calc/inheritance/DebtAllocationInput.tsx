@@ -24,7 +24,7 @@ import type {
 import { CurrencyInput, parseAmount, formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { DateInput } from "@/components/ui/date-input";
-import { HeirAllocationInput } from "./HeirAllocationInput";
+import { HeirAllocationInput, heirShortLabel } from "./HeirAllocationInput";
 
 interface DebtAllocationInputProps {
   items: DebtItem[];
@@ -166,7 +166,9 @@ export function DebtAllocationInput({
                   ? d.heirAllocations
                       .map((a) => {
                         const h = heirs.find((h) => h.id === a.heirId);
-                        return `${h?.name ?? a.heirId} ${formatKRW(a.amount)}`;
+                        // feedback_no_internal_id_in_result: id 대신 관계 라벨 fallback
+                        const label = h ? heirShortLabel(h) : "상속인";
+                        return `${label} ${formatKRW(a.amount)}`;
                       })
                       .join(" · ")
                   : "법정상속분";

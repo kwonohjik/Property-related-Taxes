@@ -117,17 +117,18 @@ function evaluateSingleExemption(
       // 초과분은 과세, 한도 내 금액만 비과세
       taxableOverflow = item.excessStockAmount;
       exemptAmount = Math.max(0, item.claimedAmount - taxableOverflow);
-      breakdown.push({ label: "공익법인 출연재산 비과세 (5% 한도 내)", amount: exemptAmount, lawRef: EXEMPTION.PUBLIC_INTEREST });
+      breakdown.push({ label: "공익법인 출연재산 비과세 (한도 이내)", amount: exemptAmount, lawRef: EXEMPTION.PUBLIC_INTEREST });
       breakdown.push({
-        label: `동족주식 5% 초과분 — 상속세 과세 (${EXEMPTION.INH_RELATED_STOCK})`,
+        // §16②2호 본칙 10% (가목 20%·나목/다목 5% 예외). 임계는 사용자 직접 입력값 기준.
+        label: `동족주식 한도 초과분 — 상속세 과세 (${EXEMPTION.INH_RELATED_STOCK})`,
         amount: taxableOverflow,
         lawRef: EXEMPTION.PUBLIC_INTEREST,
         note: `초과분 ${taxableOverflow.toLocaleString()}원은 상속재산 합산 과세`,
       });
-      warnings.push(`공익법인 동족주식 5% 초과 보유 — 초과분 ${taxableOverflow.toLocaleString()} 상속세 과세 (${EXEMPTION.INH_RELATED_STOCK})`);
+      warnings.push(`공익법인 동족주식 한도 초과 보유 — 초과분 ${taxableOverflow.toLocaleString()} 상속세 과세 (${EXEMPTION.INH_RELATED_STOCK})`);
     } else if (item.relatedStockExceeded) {
       // 초과 여부는 알지만 금액 미입력 시 경고만
-      warnings.push(`공익법인 동족주식 5% 초과 보유 확인됨 — 초과분 금액 입력 필요 (${EXEMPTION.INH_RELATED_STOCK})`);
+      warnings.push(`공익법인 동족주식 한도 초과 보유 확인됨 — 초과분 금액 입력 필요 (${EXEMPTION.INH_RELATED_STOCK})`);
       exemptAmount = item.claimedAmount;
       breakdown.push({ label: "공익법인 출연재산 비과세 (초과분 금액 미입력)", amount: exemptAmount, lawRef: EXEMPTION.PUBLIC_INTEREST });
     } else {

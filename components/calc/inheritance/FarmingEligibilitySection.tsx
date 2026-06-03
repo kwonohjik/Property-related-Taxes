@@ -38,6 +38,7 @@ import type { FarmingHeirAssessment } from "@/lib/tax-engine/types/inheritance-f
 import type { FarmingInheritanceInput } from "@/lib/tax-engine/types/inheritance-farming.types";
 import type { EstateItem, Heir } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { extractSigunguCodeFromPnu } from "@/lib/geo/pnu-sigungu";
+import { heirShortLabel } from "@/components/calc/inheritance/HeirAllocationInput";
 
 /** AddressSearch onChange → LatLng + Address 동시 영속화 */
 function ResidenceAddressField({
@@ -512,7 +513,7 @@ export function FarmingEligibilitySection({
                     key={h.id}
                     tone="violet"
                     size="sm"
-                    title={h.name || `${h.relation} ${h.id}`}
+                    title={heirShortLabel(h)}
                     description={`관계: ${h.relation}`}
                     checked={checked}
                     onCheckedChange={(v) => {

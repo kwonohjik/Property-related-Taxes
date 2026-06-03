@@ -407,8 +407,8 @@ export function aggregatePriorGiftsForGift(
 // 장례비 공제 계산 (§14 ③)
 // ============================================================
 
-/** 장례비 최소값 (증빙 없어도 인정): 500만원 */
-const FUNERAL_MIN = 5_000_000;
+/** 장례비 최소값 (증빙 없어도 인정): 500만원 — single-source-engine-helper (사이드바 추정에서도 import) */
+export const FUNERAL_MIN = 5_000_000;
 
 /** 장례비 일반(식대) 한도: 1,000만원 (상증법 시행령 §9 ①) */
 export const FUNERAL_GENERAL_MAX = 10_000_000;
