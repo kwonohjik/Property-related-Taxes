@@ -85,7 +85,10 @@ export function computeGenerationSkipSurcharge(
   }
 
   // ── 분모 = 상속세 과세가액 − 영리법인 사전증여 (PDF 책 1864) ──────
-  const nonHeirNonLegateeGifts = (preGifts ?? []).reduce(
+  // §27 본칙: "제13조에 따라 상속재산에 가산한 증여재산" — cutoff 내 분만.
+  // taxableEstateValue는 cutoffFilteredGifts 기준으로 산출되므로 분모도 동일 기준으로 정합.
+  // M-4 수정: preGifts(raw) → cutoffFilteredGifts(§13 cutoff 내 분만) 적용.
+  const nonHeirNonLegateeGifts = (cutoffFilteredGifts ?? []).reduce(
     (sum, g) => sum + (g.beneficiaryType === "corporate" ? g.giftAmount : 0),
     0,
   );

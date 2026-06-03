@@ -8,7 +8,7 @@
  * - 1000원 미만 절사 (과세표준)
  */
 
-import { differenceInYears } from "date-fns";
+import { differenceInYears, isBefore, subYears } from "date-fns";
 import { INH, GIFT } from "./legal-codes";
 import { applyRate, calculateProgressiveTax, truncateToThousand } from "./tax-utils";
 import type {
@@ -313,10 +313,25 @@ export function calcGiftGenerationSkipSurchargeWithLimit(
  * @param deathDate 상속개시일 (ISO date)
  * @returns true: 합산 대상 / false: cutoff (도과)
  */
+/**
+ * §13 cutoff 판정 — **일(日) 단위** 비교.
+ *
+ * 상증법 §13①: "상속개시일 전 N년 이내" = 증여일 >= subYears(deathDate, N)
+ * 민법 §160②: 기간 종료일 = 기산일에 해당하는 날의 전일.
+ * boundary = subYears(deathDate, limitYears) 가 경계 기산일에 해당하는 날.
+ * 증여일이 boundary 당일이면 포함(§13의 "이내"), 전날이면 제외.
+ *
+ * 수정 이력: differenceInYears(만 연수 절사) → !isBefore(giftDate, boundary)
+ *   - 구버전: elapsedYears <= limitYears — 경계일 1~364일 이전 도과분까지 포함하는 버그
+ *   - 신버전: 일(日) 단위 — deathDate=2026-05-21, limit=5 → boundary=2021-05-21
+ *            giftDate=2021-05-21 → 포함 / giftDate=2021-05-20 → 제외
+ */
 export function isWithin13Cutoff(gift: PriorGift, deathDate: string): boolean {
-  const elapsedYears = differenceInYears(new Date(deathDate), new Date(gift.giftDate));
+  const giftDate = new Date(gift.giftDate);
   const limitYears = gift.isHeir ? 10 : 5;
-  return elapsedYears <= limitYears;
+  const boundary = subYears(new Date(deathDate), limitYears);
+  // !isBefore === giftDate >= boundary (경계 포함)
+  return !isBefore(giftDate, boundary);
 }
 
 /**
@@ -364,14 +379,17 @@ export function aggregatePriorGiftsForGift(
   giftDate: string,
 ): { totalAmount: number; totalTaxPaid: number; breakdown: CalculationStep[] } {
   const current = new Date(giftDate);
+  // §47②: "해당 증여일 전 10년 이내" — 일(日) 단위 비교.
+  // boundary = subYears(증여일, 10). 이전 증여일이 boundary 이상이면 포함.
+  // 수정 이력: elapsedYears > 10(만 연수 절사 버그) → isBefore(giftDate, boundary)(일 단위).
+  const boundary47 = subYears(current, 10);
   const breakdown: CalculationStep[] = [];
   let totalAmount = 0;
   let totalTaxPaid = 0;
 
   for (const gift of priorGifts) {
-    // differenceInYears: 정확한 만 연수 계산 (365.25 근사 오류 방지)
-    const elapsedYears = differenceInYears(current, new Date(gift.giftDate));
-    if (elapsedYears > 10) continue;
+    // 증여일이 boundary보다 이전이면 도과(10년 초과) → 제외
+    if (isBefore(new Date(gift.giftDate), boundary47)) continue;
 
     totalAmount += gift.giftAmount;
     totalTaxPaid += gift.giftTaxPaid;

@@ -283,15 +283,16 @@ export function calcInheritanceTax(
   if (wantsAutoSpouseLegalShare) {
     const spouseHeir = input.heirs.find((h) => h.relation === "spouse");
     if (spouseHeir) {
-      // 상속인 사전증여 가산가액 (영리법인·legatee 제외)
-      const heirGiftAmount = (preGifts ?? []).reduce(
+      // 상속인 사전증여 가산가액 (영리법인·legatee 제외) — §13 cutoff 내 분만 합산 (M-1 수정)
+      // STEP4.5의 cutoffFilteredGifts와 동일 기준 적용 → STEP4 과세가액 가산분과 정합.
+      const heirGiftAmount = (cutoffFilteredGifts ?? []).reduce(
         (s, g) => s + (g.beneficiaryType === "heir" || (g.beneficiaryType === undefined && g.isHeir) ? g.giftAmount : 0),
         0,
       );
-      // 배우자 사전증여 과세표준
-      // 배우자 사전증여 과세표준 — giftTaxBase 명시 우선, 미설정 시 (giftAmount − §53 관계공제) 자동 도출.
+      // 배우자 사전증여 과세표준 — §13 cutoff 내 분만 합산 (M-1 수정)
+      // giftTaxBase 명시 우선, 미설정 시 (giftAmount − §53 관계공제) 자동 도출.
       // (상속세 모드엔 giftTaxBase 입력 UI 없어 가액 fallback 시 과대 차감되던 버그 차단. 배우자 760m → 160m)
-      const spouseGiftTaxBase = (preGifts ?? []).reduce((s, g) => {
+      const spouseGiftTaxBase = (cutoffFilteredGifts ?? []).reduce((s, g) => {
         if (g.doneeId !== spouseHeir.id) return s;
         if (g.giftTaxBase !== undefined) return s + g.giftTaxBase;
         if (!g.doneeRelation) return s + g.giftAmount;

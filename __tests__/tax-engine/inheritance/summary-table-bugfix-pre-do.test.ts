@@ -308,13 +308,18 @@ describe("AN-5: §13 도과 증여 제외 — ② total = priorGiftAggregated (�
    * 상속인(isHeir=true) 증여: 10년 초과(도과) + 10년 이내(유효)
    * 비상속인(isHeir=false) 증여: 5년 초과(도과) + 5년 이내(유효)
    *
-   * isWithin13Cutoff: elapsedYears <= limitYears(10 or 5)
-   *   - 상속인 2014-12-31 증여: differenceInYears(2026-01-01, 2014-12-31) = 11년 → 도과
-   *   - 상속인 2016-02-01 증여: differenceInYears(2026-01-01, 2016-02-01) = 9년 → 유효
-   *   - 비상속인 2020-06-01 증여: differenceInYears(2026-01-01, 2020-06-01) = 5년 → 유효(=5)
-   *   - 비상속인 2019-12-31 증여: differenceInYears(2026-01-01, 2019-12-31) = 6년 → 도과
+   * §13 일(日) 단위 cutoff — boundary = subYears(deathDate, limitYears):
+   *   - 상속인 2014-12-31: boundary=2016-01-01 → 2014-12-31 < 2016-01-01 → 도과
+   *   - 상속인 2016-02-01: boundary=2016-01-01 → 2016-02-01 >= 2016-01-01 → 유효
+   *   - 비상속인 2021-06-01: boundary=2021-01-01 → 2021-06-01 >= 2021-01-01 → 유효
+   *   - 비상속인 2019-12-31: boundary=2021-01-01 → 2019-12-31 < 2021-01-01 → 도과
    *
-   * doneeId 지정 + cutoff 2-C 수정 후:
+   * 재산정 이력: 비상속인 유효 증여일을 2020-06-01→2021-06-01로 수정.
+   *   - 구버전 2020-06-01: differenceInYears()=5 → 5<=5=포함(버그).
+   *   - 법령 기준: boundary=2021-01-01, 2020-06-01 < 2021-01-01 → 실제 도과.
+   *   - 신버전 일(日) 단위: 2021-06-01 >= 2021-01-01 → 포함(정합).
+   *
+   * doneeId 지정 + cutoff 필터 적용:
    *   - priorGiftAggregated = 유효분만 합산
    *   - calcHeirAllocation도 유효분만 수신 → 인별 priorGiftAmount = 유효분
    *   - ② total = priorGiftAggregated (도과분 제외)
@@ -322,7 +327,7 @@ describe("AN-5: §13 도과 증여 제외 — ② total = priorGiftAggregated (�
 
   const priorGifts: PriorGift[] = [
     {
-      // 상속인 도과 (11년) — 합산 제외
+      // 상속인 도과 (11년, 2014-12-31 < boundary=2016-01-01) — 합산 제외
       giftDate: "2014-12-31",
       isHeir: true,
       giftAmount: 300_000_000, // 도과분
@@ -331,7 +336,7 @@ describe("AN-5: §13 도과 증여 제외 — ② total = priorGiftAggregated (�
       beneficiaryType: "heir",
     },
     {
-      // 상속인 유효 (9년)
+      // 상속인 유효 (2016-02-01 >= boundary=2016-01-01)
       giftDate: "2016-02-01",
       isHeir: true,
       giftAmount: 500_000_000, // 유효분
@@ -340,8 +345,8 @@ describe("AN-5: §13 도과 증여 제외 — ② total = priorGiftAggregated (�
       beneficiaryType: "heir",
     },
     {
-      // 비상속인 유효 (=5년, 포함)
-      giftDate: "2020-06-01",
+      // 비상속인 유효 (2021-06-01 >= boundary=2021-01-01, 약 4.6년)
+      giftDate: "2021-06-01",
       isHeir: false,
       giftAmount: 200_000_000,
       giftTaxPaid: 0,
@@ -349,7 +354,7 @@ describe("AN-5: §13 도과 증여 제외 — ② total = priorGiftAggregated (�
       beneficiaryType: "heir",
     },
     {
-      // 비상속인 도과 (6년)
+      // 비상속인 도과 (2019-12-31 < boundary=2021-01-01, 약 6년)
       giftDate: "2019-12-31",
       isHeir: false,
       giftAmount: 400_000_000, // 도과분
@@ -366,7 +371,7 @@ describe("AN-5: §13 도과 증여 제외 — ② total = priorGiftAggregated (�
     }),
   );
 
-  // 유효 합산: 500M(상속인) + 200M(비상속인) = 700M
+  // 유효 합산: 500M(상속인 2016-02-01) + 200M(비상속인 2021-06-01) = 700M
   const expectedAggregated = 500_000_000 + 200_000_000;
 
   const summaryRows = buildSummaryTable(r, HEIRS_2);
@@ -376,13 +381,13 @@ describe("AN-5: §13 도과 증여 제외 — ② total = priorGiftAggregated (�
     expect(r.priorGiftAggregated).toBe(expectedAggregated);
   });
 
-  it("② total = priorGiftAggregated = 700M (수정 전 RED: 도과분 포함)", () => {
+  it("② total = priorGiftAggregated = 700M (도과분 제외 확인)", () => {
     const rowTotal = row2?.total ?? 0;
     expect(rowTotal).toBe(expectedAggregated);
   });
 
-  it("② Σ 인별 = priorGiftAggregated (cutoff 2-C 적용 후 인별도 도과분 제외)", () => {
-    // 2-C 수정 후: calcHeirAllocation이 cutoff-filtered 증여만 수신
+  it("② Σ 인별 = priorGiftAggregated (cutoff 필터 적용 후 인별도 도과분 제외)", () => {
+    // cutoffFilteredGifts만 calcHeirAllocation 전달 → 유효분(700M)만 배부
     // h2(자녀): 유효 500M만 / h1(배우자): 유효 200M만
     const perHeir = r.heirAllocationResult?.perHeir ?? {};
     const sumPerHeir = Object.values(perHeir).reduce(
@@ -392,16 +397,16 @@ describe("AN-5: §13 도과 증여 제외 — ② total = priorGiftAggregated (�
     expect(sumPerHeir).toBe(expectedAggregated);
   });
 
-  it("인별 ④ 과다 계상 없음 — Σ priorGiftAmount ≤ priorGiftAggregated (도과분 미포함 증명)", () => {
+  it("인별 ④ 과다 계상 없음 — Σ priorGiftAmount = priorGiftAggregated (도과분 미포함 증명)", () => {
     // 도과분(도과 상속인 300M + 도과 비상속인 400M = 700M)이 포함되면
     // Σ perHeir.priorGiftAmount = 1,400M > priorGiftAggregated(700M) → 과다
-    // 2-C 수정 후: cutoffFilteredGifts만 calcHeirAllocation 전달 → 유효분(700M)만 배부
+    // cutoffFilteredGifts만 calcHeirAllocation 전달 → 유효분(700M)만 배부
     const perHeir = r.heirAllocationResult?.perHeir ?? {};
     const sumPerHeirGift = Object.values(perHeir).reduce(
       (s, h) => s + (h?.priorGiftAmount ?? 0),
       0,
     );
-    // 유효분 합계(700M)와 동일 — 도과분(700M) 과다 계상 없음
+    // 유효분 합계(700M)와 동일 — 도과분 과다 계상 없음
     expect(sumPerHeirGift).toBe(expectedAggregated);
     // priorGiftAggregated와 동일 (cutoff 집합 일치)
     expect(sumPerHeirGift).toBe(r.priorGiftAggregated);
