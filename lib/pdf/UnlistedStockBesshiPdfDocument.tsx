@@ -241,9 +241,14 @@ function Page2NetAsset({
       <View style={[s.tableRow, s.groupRow]}>
         <Text style={{ ...s.cellLabel, flex: 0, width: "100%", padding: 3 }}>{BESSHI_P2_SECTION4.liabilityGroup}</Text>
       </View>
-      {BESSHI_P2_LIABILITY_ROWS.map((r) => (
-        <P2Row key={r.cellNum} cellNum={r.cellNum} label={r.label} amount={eff[r.field]} refText={r.ref} />
-      ))}
+      {BESSHI_P2_LIABILITY_ROWS.map((r) => {
+        const amount = eff[r.field] ?? 0;
+        // 보험준비금(cellNum="*")은 값이 0이면 PDF 행 생략 (비보험사 불필요 행 방지)
+        if (r.cellNum === "*" && amount === 0) return null;
+        return (
+          <P2Row key={`${r.cellNum}-${r.field}`} cellNum={r.cellNum} label={r.label} amount={amount} refText={r.ref} />
+        );
+      })}
       <P2Row cellNum="⑲" label={BESSHI_P2_SECTION4.liabilitySubtotalFormula} amount={liabilitySubtotal} variant="emphasized" />
 
       {/* 다·라·마 */}

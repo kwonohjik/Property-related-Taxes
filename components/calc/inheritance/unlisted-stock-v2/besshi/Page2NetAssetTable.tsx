@@ -56,7 +56,7 @@ export function Page2NetAssetTable({ raw, netAssetTotal, goodwillFinal }: Page2N
             </td>
           </tr>
           {BESSHI_P2_ASSET_ROWS.map((row) => (
-            <NetAssetTr key={row.cellNum} cellNum={row.cellNum} label={row.label} amount={eff[row.field]} refText={row.ref} testid={row.cellNum} />
+            <NetAssetTr key={row.cellNum} cellNum={row.cellNum} label={row.label} amount={eff[row.field] ?? 0} refText={row.ref} testid={row.cellNum} />
           ))}
           <NetAssetTr cellNum="⑧" label={BESSHI_P2_SECTION4.assetSubtotalFormula} amount={assetSubtotal} testid="⑧" emphasis />
 
@@ -66,9 +66,23 @@ export function Page2NetAssetTable({ raw, netAssetTotal, goodwillFinal }: Page2N
               {BESSHI_P2_SECTION4.liabilityGroup}
             </td>
           </tr>
-          {BESSHI_P2_LIABILITY_ROWS.map((row) => (
-            <NetAssetTr key={row.cellNum} cellNum={row.cellNum} label={row.label} amount={eff[row.field]} refText={row.ref} testid={row.cellNum} />
-          ))}
+          {BESSHI_P2_LIABILITY_ROWS.map((row) => {
+            const amount = eff[row.field] ?? 0;
+            // 보험준비금(cellNum="*")은 값이 0이면 별지 표시 생략 (비보험사 불필요 행 방지)
+            if (row.cellNum === "*" && amount === 0) return null;
+            // testid: 기존 행은 cellNum(앵커 보존), 보험준비금 행은 field(중복 방지)
+            const testid = row.cellNum === "*" ? row.field : row.cellNum;
+            return (
+              <NetAssetTr
+                key={`${row.cellNum}-${row.field}`}
+                cellNum={row.cellNum}
+                label={row.label}
+                amount={amount}
+                refText={row.ref}
+                testid={testid}
+              />
+            );
+          })}
           <NetAssetTr cellNum="⑲" label={BESSHI_P2_SECTION4.liabilitySubtotalFormula} amount={liabilitySubtotal} testid="⑲" emphasis />
 
           {/* 다·라·마 */}

@@ -21,6 +21,11 @@ import { UnlistedStockBesshiPdfDocument } from "@/lib/pdf/UnlistedStockBesshiPdf
 import { evaluateUnlistedStockV2 } from "@/lib/tax-engine/property-valuation/unlisted-orchestrator";
 import { calcNetAssetTotal } from "@/lib/tax-engine/property-valuation/net-asset-calc";
 import { withResolvedEvaluationDelta } from "@/lib/tax-engine/property-valuation/evaluation-delta";
+import {
+  sumNetAssetRows,
+  BESSHI_P2_ASSET_ROWS,
+  BESSHI_P2_LIABILITY_ROWS,
+} from "@/components/calc/inheritance/unlisted-stock-v2/besshi/besshi-form-constants";
 import type {
   EvaluationDeltaRow,
 } from "@/lib/tax-engine/property-valuation/evaluation-delta";
@@ -222,5 +227,108 @@ describe("[AN-6] PDF 제2쪽 행 단위 평가차액 ② 보정 (스크린샷 �
   // ↓ Pre-Do RED: 보정 전 PDF는 ②=0, ⑧=1,000,000,000(=①)만 표시 → 1,070,000,000 부재로 RED
   it("PDF ⑧ 자산총액 소계 = 1,070,000,000 (보정 ② 반영)", () => {
     expect(text).toContain("1,070,000,000");
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────
+// M-6 Pre-Do anchor — 보험준비금 3필드 ⑲ 자기모순 증명 + 수정 후 자기일관 고정
+//
+// 보험사 시나리오:
+//   ① 자산 = 5,000,000,000
+//   ⑨ 부채 = 1,000,000,000
+//   insuranceReservePolicy   = 300,000,000  (보험계약준비금)
+//   insuranceExtraordinaryReserve = 200,000,000  (비상위험준비금)
+//   insuranceSurrenderReserve = 100,000,000  (해약환급금준비금)
+//   보험준비금 합계 = 600,000,000
+//
+// 엔진 기대값 (net-asset-calc.ts §17의2 4호 나·다):
+//   totalLiabilities = 1,000,000,000 + 600,000,000 = 1,600,000,000
+//   netAssetBeforeGoodwill = 5,000,000,000 − 1,600,000,000 = 3,400,000,000
+//
+// 수정 전(BESSHI_P2_LIABILITY_ROWS에 보험준비금 없음):
+//   ⑲ 표시 = 1,000,000,000 (⑨만)
+//   다 표시 = 4,000,000,000 (⑧ − 보험준비금 누락 ⑲)
+//   마(=엔진 netAssetTotal) = 3,400,000,000
+//   → 다 ≠ 마 − 라(=0) 자기모순
+//
+// 수정 후:
+//   ⑲ 표시 = 1,600,000,000 (보험준비금 포함)
+//   다 표시 = 3,400,000,000 = 엔진 netAssetBeforeGoodwill
+//   다 + 라(0) = 마(3,400,000,000) 자기일관 성립
+//
+// 비보험사 회귀(보험준비금 0): 기존 케이스 동일값 불변
+// ─────────────────────────────────────────────────────────────────
+const m6InsuranceInput: UnlistedStockValuationInput = {
+  ...an1Input,
+  corpName: "M6보험사",
+  netAssetValueRaw: {
+    bsTotalAssets: 5_000_000_000,
+    assetValuationDelta: 0,
+    corpTaxReservedAmount: 0,
+    paidInCapitalIncrease: 0,
+    otherEarnedRights: 0,
+    prepaidExpenses: 0,
+    preGiftRetainedEarnings: 0,
+    bsTotalLiabilities: 1_000_000_000,
+    corporateTaxPayable: 0,
+    farmingSurtax: 0,
+    localIncomeTax: 0,
+    dividendPayable: 0,
+    retirementProvision: 0,
+    otherProvision: 0,
+    reserveExcluded: 0,
+    allowanceExcluded: 0,
+    deferredTaxAdjustment: 0,
+    insuranceReservePolicy: 300_000_000,
+    insuranceExtraordinaryReserve: 200_000_000,
+    insuranceSurrenderReserve: 100_000_000,
+  },
+};
+
+describe("[M-6 Pre-Do] 보험준비금 ⑲ 자기모순 → 수정 후 자기일관 (화면 sumNetAssetRows 단일출처)", () => {
+  // 엔진 계산값 (항상 올바름)
+  const engineNet = calcNetAssetTotal(m6InsuranceInput.netAssetValueRaw);
+
+  it("엔진 검산: totalLiabilities = 1,600,000,000 (⑨+보험준비금 합계 600M)", () => {
+    expect(engineNet.totalLiabilities).toBe(1_600_000_000);
+  });
+  it("엔진 검산: netAssetBeforeGoodwill = 3,400,000,000 (5000M − 1600M)", () => {
+    expect(engineNet.netAssetBeforeGoodwill).toBe(3_400_000_000);
+  });
+
+  // 수정 후 자기일관 — sumNetAssetRows(BESSHI_P2_LIABILITY_ROWS) = 엔진 totalLiabilities
+  // 이 테스트는 수정 전 RED, 수정 후 GREEN
+  it("[수정 후 GREEN] sumNetAssetRows(BESSHI_P2_LIABILITY_ROWS) + 보험준비금 = 1,600,000,000 (⑲ = 엔진 totalLiabilities)", () => {
+    const eff = withResolvedEvaluationDelta(m6InsuranceInput.netAssetValueRaw);
+    const liabilitySubtotal = sumNetAssetRows(BESSHI_P2_LIABILITY_ROWS, eff);
+    expect(liabilitySubtotal).toBe(engineNet.totalLiabilities);
+  });
+
+  it("[수정 후 GREEN] 다(=⑧−⑲, sumNetAssetRows 경로) = 엔진 netAssetBeforeGoodwill 3,400,000,000", () => {
+    const eff = withResolvedEvaluationDelta(m6InsuranceInput.netAssetValueRaw);
+    const assetSubtotal = sumNetAssetRows(BESSHI_P2_ASSET_ROWS, eff);
+    const liabilitySubtotal = sumNetAssetRows(BESSHI_P2_LIABILITY_ROWS, eff);
+    const preGoodwill = assetSubtotal - liabilitySubtotal;
+    expect(preGoodwill).toBe(engineNet.netAssetBeforeGoodwill);
+  });
+
+  it("[수정 후 GREEN] 마 = 다 + 라(영업권0) 자기일관 — 마 − 다 = 0", () => {
+    // 영업권 0(순손익 0 입력) → 마 = 다
+    const result = evaluateUnlistedStockV2(m6InsuranceInput);
+    const eff = withResolvedEvaluationDelta(m6InsuranceInput.netAssetValueRaw);
+    const preGoodwill = sumNetAssetRows(BESSHI_P2_ASSET_ROWS, eff) - sumNetAssetRows(BESSHI_P2_LIABILITY_ROWS, eff);
+    const goodwill = result.goodwillCalculation.goodwillFinal;
+    // 마 = 다 + 라 자기일관
+    expect(result.netAssetTotal).toBe(preGoodwill + goodwill);
+  });
+});
+
+describe("[M-6] 비보험사 회귀 — 보험준비금 0 시 기존값 불변", () => {
+  // an1Input: insuranceReservePolicy 없음 (undefined → 0 처리)
+  it("비보험사: sumNetAssetRows(BESSHI_P2_LIABILITY_ROWS) = 350,000,000 (⑨300M + ⑮50M)", () => {
+    const eff = withResolvedEvaluationDelta(an1Input.netAssetValueRaw);
+    const liabilitySubtotal = sumNetAssetRows(BESSHI_P2_LIABILITY_ROWS, eff);
+    // 비보험사: 기존 AN-1 엔진값과 일치
+    expect(liabilitySubtotal).toBe(350_000_000);
   });
 });

@@ -6,6 +6,12 @@
  *
  * Plan: docs/00-pm/inheritance-besshi-pdf-2025-revision-parity.plan.md §2.1 (C2)
  * 법령: 상증령 §54④ (순자산가치 단독 평가 사유) · 상증법 §63③ (최대주주 할증)
+ *
+ * M-6 수정 (2026-06-04):
+ *   BESSHI_P2_LIABILITY_ROWS에 보험준비금 3필드 가산 추가.
+ *   공식 양식 ⑨~⑱에 전용 행 번호 없음(§17의2 4호 단서 나·다) → ⑮ 아래 가산 항목으로 흡수.
+ *   sumNetAssetRows(BESSHI_P2_LIABILITY_ROWS) = 엔진 calcNetAssetTotal.totalLiabilities 정합.
+ *   보험사 입력 시 다(⑧−⑲) = 엔진 netAssetBeforeGoodwill → 마(다+라) 자기일관 성립.
  */
 
 import type {
@@ -74,13 +80,21 @@ export const BESSHI_P1_SECTION3 = {
 //   ⑲ 소계 = ⑨+⑩+⑪+⑫+⑬+⑭+⑮ − ⑯ − ⑰ − ⑱  (2025.07.10 양식)
 // ─────────────────────────────────────────────────────────────────
 
-/** 순자산가액 행이 참조하는 raw 숫자 필드 (배열·메타 필드 제외) */
+/**
+ * 순자산가액 행이 참조하는 raw 숫자 필드 (배열·메타 필드 제외).
+ *
+ * M-6: 보험준비금 3필드 추가 — §17의2 4호 단서 나목(법인세법 §30·§31)·다목(법인세법 §32).
+ *   공식 양식에 전용 행 번호 없음 → BESSHI_P2_LIABILITY_ROWS에 가산 항목으로 흡수.
+ *   sumNetAssetRows 함수의 raw 파라미터 타입이 자동 확장됨.
+ */
 export type NetAssetNumericField =
   | "bsTotalAssets" | "assetValuationDelta" | "corpTaxReservedAmount"
   | "paidInCapitalIncrease" | "otherEarnedRights" | "prepaidExpenses" | "preGiftRetainedEarnings"
   | "bsTotalLiabilities" | "corporateTaxPayable" | "farmingSurtax" | "localIncomeTax"
   | "dividendPayable" | "retirementProvision" | "otherProvision"
-  | "reserveExcluded" | "allowanceExcluded" | "deferredTaxAdjustment";
+  | "reserveExcluded" | "allowanceExcluded" | "deferredTaxAdjustment"
+  /** M-6: 보험준비금 3필드 (§17의2 4호 단서 나·다 — 보험사만 해당, 미해당 시 undefined→0) */
+  | "insuranceReservePolicy" | "insuranceExtraordinaryReserve" | "insuranceSurrenderReserve";
 
 export interface NetAssetRowDef {
   cellNum: string;
@@ -105,7 +119,15 @@ export const BESSHI_P2_ASSET_ROWS: NetAssetRowDef[] = [
   { cellNum: "⑦", field: "preGiftRetainedEarnings", label: "증자일 전의 잉여금의 유보액", isSubtract: true },
 ];
 
-/** 나. 부채총액 ⑨~⑱ (⑮ 가산) */
+/**
+ * 나. 부채총액 ⑨~⑱ (⑮ 가산) + 보험준비금 3항목 (M-6 추가)
+ *
+ * 보험준비금 (§17의2 4호 단서 나·다목):
+ *   공식 양식(2025.07.10)에 전용 행 번호 없음 → ⑲ 소계 가산 항목으로 흡수.
+ *   비보험사(undefined)는 sumNetAssetRows에서 0 처리 → 기존값 불변.
+ *   엔진 calcNetAssetTotal(totalLiabilities) = sumNetAssetRows(BESSHI_P2_LIABILITY_ROWS) 정합.
+ *   라벨은 §17의2 4호 단서 나목·다목 법령 문구 기반 (추정 금지).
+ */
 export const BESSHI_P2_LIABILITY_ROWS: NetAssetRowDef[] = [
   { cellNum: "⑨", field: "bsTotalLiabilities", label: "재무상태표상의 부채액" },
   { cellNum: "⑩", field: "corporateTaxPayable", label: "법인세" },
@@ -117,6 +139,14 @@ export const BESSHI_P2_LIABILITY_ROWS: NetAssetRowDef[] = [
   { cellNum: "⑯", field: "reserveExcluded", label: "제준비금", isSubtract: true },
   { cellNum: "⑰", field: "allowanceExcluded", label: "제충당금", isSubtract: true },
   { cellNum: "⑱", field: "deferredTaxAdjustment", label: "기타(이연법인세대 등)", isSubtract: true },
+  /**
+   * 보험준비금 — §17의2 4호 단서 나목(법인세법 §30·§31)·다목(법인세법 §32)
+   * 공식 양식에 행 번호 미부여 → ⑲ 소계 직산 가산. 비보험사(undefined)는 0.
+   * 라벨에 법령 근거 명시 (양식 미부여 사실 포함).
+   */
+  { cellNum: "*", field: "insuranceReservePolicy", label: "책임준비금 (§17의2 4호 단서 나·다 / 보험사 한정)" },
+  { cellNum: "*", field: "insuranceExtraordinaryReserve", label: "비상위험준비금 (§17의2 4호 단서 나·다 / 보험사 한정)" },
+  { cellNum: "*", field: "insuranceSurrenderReserve", label: "해약환급금준비금 (§17의2 4호 단서 다 / 보험회사 한정)" },
 ];
 
 /** 제2쪽 헤더·소계·다·라·마 라벨 (공식 2025.07.10 문구) */
@@ -142,12 +172,16 @@ export const BESSHI_P2_SECTION4 = {
 /**
  * 순자산가액 행 합계 — isSubtract면 차감, 그 외 가산.
  * 화면·PDF·엔진(`net-asset-calc`) 부호를 단일 정의로 일치 (⑮ 가산 드리프트 방지).
+ *
+ * M-6: raw 타입을 `Partial<Record<NetAssetNumericField, number>>` 허용으로 확장.
+ *   보험준비금 3필드가 UnlistedNetAssetCalculation에서 optional이므로 undefined는 0 처리.
+ *   비보험사 케이스에서 기존값 불변.
  */
 export function sumNetAssetRows(
   rows: NetAssetRowDef[],
-  raw: Record<NetAssetNumericField, number>,
+  raw: Partial<Record<NetAssetNumericField, number>>,
 ): number {
-  return rows.reduce((acc, r) => acc + (r.isSubtract ? -raw[r.field] : raw[r.field]), 0);
+  return rows.reduce((acc, r) => acc + (r.isSubtract ? -(raw[r.field] ?? 0) : (raw[r.field] ?? 0)), 0);
 }
 
 // ─────────────────────────────────────────────────────────────────
