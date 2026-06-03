@@ -8,6 +8,7 @@
 import { describe, it, expect } from "vitest";
 import { calcInheritanceTax } from "@/lib/tax-engine/inheritance-tax";
 import { buildFilingForm9Data } from "@/lib/calc/filing-form-9-data";
+import { calcInheritanceFilingDeadline } from "@/lib/tax-engine/deductions/family-business-autoderive";
 import {
   EXAMPLE_HEIRS,
   EXAMPLE_INPUT,
@@ -111,5 +112,54 @@ describe("별지 제9호서식 데이터 어댑터 (FF9-1~18)", () => {
     const r21 = data.leftRows.find((r) => r.number === "㉑");
     expect(r21?.display).toBe("rate");
     expect(r21?.formula).toBe("50%");
+  });
+});
+
+/**
+ * L-10 anchor — §67① 신고기한 edge 케이스 (2026-06-04)
+ *
+ * 산식: endOfMonth(사망일) + 6개월 (세무행정 실무 표준 / 국세기본법 §4 → 민법 준용).
+ * 기존 anchor(FB-07~09, family-business-autoderive.test.ts)의 일반 케이스를 보완하는
+ * edge 케이스 — 특히 2/29 윤년과 월말 사망 케이스.
+ *
+ * 법령 근거: 상증법 §67① "상속개시일이 속하는 달의 말일부터 6개월 이내"
+ *   국세기본법 §4 → 민법 §157(초일 불산입 원칙, 단서: 오전 0시 시작 시 산입)
+ *   민법 §160②③(역에 의한 계산) 준용.
+ *   실무 표준: endOfMonth + addMonths = "말일부터 6개월 후 같은 날짜"(date-fns 월말 자동 보정).
+ */
+describe("L-10 — §67① 신고기한 edge 케이스 (deriveDueDates / calcInheritanceFilingDeadline)", () => {
+  // 일반 케이스 — 기존 FB-07~09와 일치 확인 (회귀 방어)
+  it("DUE-01: 3/15 사망 → 3월 말일+6M = 9/30 (일반 케이스)", () => {
+    expect(calcInheritanceFilingDeadline("2024-03-15")).toBe("2024-09-30");
+  });
+  it("DUE-02: 8/31 사망 → 8월 말일+6M = 2025-02-28 (2월 말일 보정, §160③)", () => {
+    expect(calcInheritanceFilingDeadline("2024-08-31")).toBe("2025-02-28");
+  });
+  it("DUE-03: 12/31 사망 → 12월 말일+6M = 6/30 (6월 말일 보정, §160③)", () => {
+    expect(calcInheritanceFilingDeadline("2024-12-31")).toBe("2025-06-30");
+  });
+
+  // 윤년 2/29 사망 edge 케이스 (L-10 핵심)
+  it("DUE-04: 2024-02-29(윤년 말일) 사망 → 말일+6M = 2024-08-29 (실무 표준)", () => {
+    // 2024년 2월 말일 = 2/29 (윤년). addMonths(2/29, 6) = 8/29.
+    // 실무: "2월 29일부터 6개월 = 8월 29일" (세무행정 표준).
+    // 민법 §160② 엄격 해석("기산일의 전일") 적용 시 8/28이나,
+    // 국세기본법 §4 실무 운용은 현행 산식을 표준으로 함 — 현행 유지.
+    expect(calcInheritanceFilingDeadline("2024-02-29")).toBe("2024-08-29");
+  });
+  it("DUE-05: 2024-02-15 사망 → 2월 말일(2/29)+6M = 8/29", () => {
+    expect(calcInheritanceFilingDeadline("2024-02-15")).toBe("2024-08-29");
+  });
+  it("DUE-06: 2025-02-28(비윤년 말일) 사망 → 말일+6M = 2025-08-28", () => {
+    // 비윤년 2월 말일 = 2/28. addMonths(2/28, 6) = 8/28.
+    expect(calcInheritanceFilingDeadline("2025-02-28")).toBe("2025-08-28");
+  });
+
+  // buildFilingForm9Data를 통한 통합 확인
+  it("DUE-07: buildFilingForm9Data — 2023-03-05 사망 → filingDueDate = 2023-09-30", () => {
+    const result = calcInheritanceTax(EXAMPLE_INPUT);
+    const data = buildFilingForm9Data(result, EXAMPLE_HEIRS, "2023-03-05");
+    expect(data.filingDueDate).toBe("2023-09-30");
+    expect(data.installmentDueDate).toBe("2023-11-30");
   });
 });

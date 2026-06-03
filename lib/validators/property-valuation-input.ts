@@ -645,6 +645,13 @@ export const inheritanceDeductionInputSchema = z.object({
   farming: farmingInheritanceInputSchema.optional(),
   // 가업상속공제 정밀화 (2026-05-21, 상증법 §18의2 + 상증령 §15)
   familyBusiness: familyBusinessInheritanceInputSchema.optional(),
+  // ⑫ 동기화: InheritanceDeductionInput.deathDate와 동일 선언 — 미선언 시 Zod strip됨.
+  // 오케스트레이터(inheritance-tax.ts)가 input.deathDate로 재주입하므로 현재는 기능 무해이나,
+  // schema 통과 후 deductionInput에 deathDate가 보존되어야 하는 경우(단독 호출 등)에 대비.
+  deathDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD 형식")
+    .optional(),
 });
 
 // ============================================================

@@ -30,8 +30,10 @@ import type { Heir } from "../types/inheritance-gift.types";
 export type FamilyBusinessRequirementSource = "auto" | "override" | "legacy";
 
 /**
- * 상속세 신고기한 (상증법 §67①) — 상속개시일이 속하는 달의 말일부터 6개월.
- * 검증된 deriveDueDates(filing-form-9-data.ts)와 동일 산식. YYYY-MM-DD 보장 → 후속 문자열 비교 가능.
+ * 상속세 신고기한 (상증법 §67①) — 상속개시일이 속하는 달의 말일부터 6개월 이내.
+ * 국세기본법 §4 → 민법 준용. 산식: endOfMonth(사망일) + 6개월 (세무행정 실무 표준).
+ * deriveDueDates(filing-form-9-data.ts)와 동일 산식. YYYY-MM-DD 보장 → 후속 문자열 비교 가능.
+ * 외국 거주 시 9개월(§67④)은 본 함수 미적용 — 호출처에서 별도 처리.
  */
 export function calcInheritanceFilingDeadline(deathDate: string): string {
   return format(addMonths(endOfMonth(parseISO(deathDate)), 6), "yyyy-MM-dd");

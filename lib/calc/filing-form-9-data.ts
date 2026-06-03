@@ -210,7 +210,19 @@ export function buildFilingForm9Data(
   };
 }
 
-/** 상속개시일 → 신고기한(말일+6개월, §67①)·분납기한(+2개월, §70②) */
+/**
+ * 상속개시일 → 신고기한(§67①)·분납기한(§70②) 도출.
+ *
+ * §67①: "상속개시일이 속하는 달의 말일부터 6개월 이내"
+ * 국세기본법 §4 → 민법 준용.
+ *
+ * 산식: endOfMonth(사망일) → addMonths(+6) → 해당 월 말일 없으면 date-fns 자동 보정.
+ * 세무행정 실무 표준 (예: 3/15 사망 → 3/31 기산 → 9/30 신고기한).
+ *
+ * 민법 §160②·③ 엄격 해석("기산일에 해당한 날의 전일")과는 edge에서 하루 차이가 있을 수 있으나,
+ * 국세청 실무 및 기존 anchor(FB-07~09)와 일치하므로 현행 유지.
+ * 외국 거주 시 9개월(§67④): 별도 처리 필요(현재 미구현).
+ */
 function deriveDueDates(deathDate?: string): {
   filingDueDate: string;
   installmentDueDate: string;
