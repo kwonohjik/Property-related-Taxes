@@ -17,9 +17,19 @@ const bracketSchema = z.object({
 
 export type TaxBracketData = z.infer<typeof bracketSchema>;
 
-export const progressiveRateSchema = z.object({
-  brackets: z.array(bracketSchema).min(1),
-});
+export const progressiveRateSchema = z
+  .object({
+    brackets: z.array(bracketSchema).min(1),
+  })
+  .transform((data) => ({
+    ...data,
+    // bracket 순회 첫 매칭(taxBase <= max)이 정확하려면 max 오름차순 필수.
+    // calculateProgressiveTax(tax-utils)·calcTax의 brackets.find가 이 정렬을 가정하므로,
+    // 파싱 시점에 1회 정렬해 DB seed 오입력 시의 silent 세액 오류를 차단한다.
+    brackets: [...data.brackets].sort(
+      (a, b) => (a.max ?? Infinity) - (b.max ?? Infinity),
+    ),
+  }));
 
 export type ProgressiveRateData = z.infer<typeof progressiveRateSchema>;
 

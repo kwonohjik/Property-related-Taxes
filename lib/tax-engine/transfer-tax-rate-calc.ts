@@ -119,6 +119,25 @@ interface CalcTaxResult {
   shortTermNote?: string;
 }
 
+/**
+ * 누진세율 산출세액 + 적용구간(표시용 baseRate·deduction)을 일괄 계산.
+ *
+ * brackets는 max 오름차순 정렬 전제 (progressiveRateSchema transform이 보장).
+ * calcTax의 T-1.5·T-2·T-2.5·T-3·T-4 5개 분기가 공유 — 중복 제거 + 정렬 가정 단일화.
+ */
+function computeBracketBreakdown(
+  taxBase: number,
+  brackets: ParsedRates["brackets"],
+): { progressiveTax: number; baseRate: number; deduction: number } {
+  const progressiveTax = calculateProgressiveTax(taxBase, brackets);
+  const bracket = brackets.find((b) => taxBase <= (b.max ?? Infinity));
+  return {
+    progressiveTax,
+    baseRate: bracket?.rate ?? brackets[brackets.length - 1].rate,
+    deduction: bracket?.deduction ?? 0,
+  };
+}
+
 export function calcTax(
   taxBase: number,
   parsedRates: ParsedRates,
@@ -182,13 +201,11 @@ export function calcTax(
     if (resolution.applied) {
       if (resolution.manualProgressive) {
         // 누진세율 강제 (수동 또는 주택 2년 이상 보유 포괄적 일체과세)
-        const progressiveTax = calculateProgressiveTax(taxBase, brackets);
-        const bracket = brackets.find((b) => taxBase <= (b.max ?? Infinity));
-        const baseRate = bracket?.rate ?? brackets[brackets.length - 1].rate;
+        const { progressiveTax, baseRate, deduction } = computeBracketBreakdown(taxBase, brackets);
         return {
           calculatedTax: progressiveTax,
           appliedRate: baseRate,
-          progressiveDeduction: bracket?.deduction ?? 0,
+          progressiveDeduction: deduction,
           surchargeSuspended: false,
           shortTermNote: resolution.appliedReason
             ? `부수토지 일체과세(§89①3호·영§154⑦): 누진세율`
@@ -262,9 +279,7 @@ export function calcTax(
   // T-2: 비사업용 토지 누진 + 10%p (§104①8호)
   if (input.isNonBusinessLand && surchargeRates.non_business_land) {
     const additionalRate = surchargeRates.non_business_land.additionalRate;
-    const progressiveTax = calculateProgressiveTax(taxBase, brackets);
-    const bracket = brackets.find((b) => taxBase <= (b.max ?? Infinity));
-    const baseRate = bracket?.rate ?? brackets[brackets.length - 1].rate;
+    const { progressiveTax, baseRate, deduction } = computeBracketBreakdown(taxBase, brackets);
     const surchargeAmount = applyRate(taxBase, additionalRate);
     const nblTax = progressiveTax + surchargeAmount;
 
@@ -292,7 +307,7 @@ export function calcTax(
       surchargeType: "non_business_land",
       surchargeRate: roundRate(additionalRate),
       appliedRate: roundRate(baseRate + additionalRate),
-      progressiveDeduction: bracket?.deduction ?? 0,
+      progressiveDeduction: deduction,
       surchargeSuspended: false,
     };
   }
@@ -330,9 +345,7 @@ export function calcTax(
         : surchargeRates.multi_house_2;
       if (surchargeInfoST) {
         const additionalRateST = surchargeInfoST.additionalRate;
-        const progressiveTaxST = calculateProgressiveTax(taxBase, brackets);
-        const bracketST = brackets.find((b) => taxBase <= (b.max ?? Infinity));
-        const baseRateST = bracketST?.rate ?? brackets[brackets.length - 1].rate;
+        const { progressiveTax: progressiveTaxST, baseRate: baseRateST, deduction: deductionST } = computeBracketBreakdown(taxBase, brackets);
         const surchargeTaxST = progressiveTaxST + applyRate(taxBase, additionalRateST);
         if (surchargeTaxST > shortTermTax) {
           return {
@@ -340,7 +353,7 @@ export function calcTax(
             surchargeType: effectiveSurchargeType,
             surchargeRate: roundRate(additionalRateST),
             appliedRate: roundRate(baseRateST + additionalRateST),
-            progressiveDeduction: bracketST?.deduction ?? 0,
+            progressiveDeduction: deductionST,
             surchargeSuspended: false,
             shortTermNote,
           };
@@ -364,30 +377,26 @@ export function calcTax(
 
     if (surchargeInfo) {
       const additionalRate = surchargeInfo.additionalRate;
-      const progressiveTax = calculateProgressiveTax(taxBase, brackets);
-      const bracket = brackets.find((b) => taxBase <= (b.max ?? Infinity));
-      const baseRate = bracket?.rate ?? brackets[brackets.length - 1].rate;
+      const { progressiveTax, baseRate, deduction } = computeBracketBreakdown(taxBase, brackets);
       const surchargeAmount = applyRate(taxBase, additionalRate);
       return {
         calculatedTax: progressiveTax + surchargeAmount,
         surchargeType: effectiveSurchargeType,
         surchargeRate: roundRate(additionalRate),
         appliedRate: roundRate(baseRate + additionalRate),
-        progressiveDeduction: bracket?.deduction ?? 0,
+        progressiveDeduction: deduction,
         surchargeSuspended: false,
       };
     }
   }
 
   // T-4: 일반 누진세율
-  const progressiveTax = calculateProgressiveTax(taxBase, brackets);
-  const bracket = brackets.find((b) => taxBase <= (b.max ?? Infinity));
-  const baseRate = bracket?.rate ?? brackets[brackets.length - 1].rate;
+  const { progressiveTax, baseRate, deduction } = computeBracketBreakdown(taxBase, brackets);
 
   return {
     calculatedTax: progressiveTax,
     appliedRate: baseRate,
-    progressiveDeduction: bracket?.deduction ?? 0,
+    progressiveDeduction: deduction,
     surchargeSuspended: suspended,
   };
 }
