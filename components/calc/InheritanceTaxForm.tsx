@@ -53,12 +53,14 @@ import {
   suggestFarmingAssetValue,
   deriveCohabitHouseStdPrice,
 } from "@/lib/calc/inheritance-deduction-suggest";
+import { resolveFamilyBusinessHeirId } from "@/lib/tax-engine/deductions/family-business";
 import {
   type FormState,
   INITIAL_FORM,
   STEPS,
   pruneOrphanHeirReferences,
 } from "@/components/calc/inheritance/shared";
+import { normalizeRestoredFormDates } from "@/components/calc/inheritance/normalize-restored-form-dates";
 import {
   Step0,
   Step1,
@@ -207,9 +209,13 @@ export function InheritanceTaxForm() {
     sessionStorage.removeItem("inheritanceTaxResumeInput");
     try {
       const parsed = JSON.parse(raw) as Partial<FormState>;
+      // H-5: JSON.parse 후 Date 필드가 ISO 문자열로 역직렬화됨.
+      // normalizeRestoredFormDates로 V2 비상장주식의 Date 필드를 Date 객체로 복원.
+      // (validateUnlistedStockV2의 instanceof Date 검사가 string에서 false → 진행 불가 버그 방지)
+      const normalized = normalizeRestoredFormDates(parsed);
       // 저장된 이력에 삭제된 상속인을 참조하는 고아 협의분할·doneeId가 남아 있을 수
       // 있으므로 복원 직후 정리(연쇄 삭제 미적용 시기에 저장된 레코드 healing).
-      setForm((prev) => pruneOrphanHeirReferences({ ...prev, ...parsed }));
+      setForm((prev) => pruneOrphanHeirReferences({ ...prev, ...normalized }));
       setStep(0);
     } catch {
       // JSON 파싱 실패 시 무시 (빈 폼 유지)
@@ -340,13 +346,21 @@ export function InheritanceTaxForm() {
       cohabitDirectAmount: parseAmount(form.cohabitDirectAmount) || undefined,
       legateeAmountNonHeir: autoOrManual(form.legateeAmountNonHeir, legateeAuto),
       priorGiftDeductionTotal: parseAmount(form.priorGiftDeductionTotal) || undefined,
+      disasterLossDeduction: parseAmount(form.disasterLossDeduction) || undefined,
       deathDate: form.deathDate || undefined,
       // 영농상속공제 정밀화 (2026-05-21, §18의3 + 시행령 §16)
       // form.farming: undefined(legacy) | FarmingInheritanceInput(활성)
       farming: form.farming,
       // 가업상속공제 요건 입력 (2026-05-21, §18의2 + 상증령 §15)
       // form.familyBusiness: undefined(legacy) | FamilyBusinessInheritanceInput(활성)
-      familyBusiness: form.familyBusiness,
+      // H-3 fix: heirId=undefined 시 자연인 1명이면 자동선택 fallback (resolveFamilyBusinessHeirId).
+      //   UI display fallback(FamilyBusinessHeirSelector effectiveHeirId)과 동일 규칙 — 3중 패턴.
+      familyBusiness: form.familyBusiness
+        ? {
+            ...form.familyBusiness,
+            heirId: resolveFamilyBusinessHeirId(form.heirs, form.familyBusiness.heirId),
+          }
+        : undefined,
     };
     // 영리법인 §3의2② 산출세액 상당액 진입 fallback (phase2-후속): cgct 미설정 + 가액 → autoCompute.
     // 표시 fallback(GiftRowEditor)과 동일 산식 — mirror 3중 single-source. store는 불변(엔진 전달용 정제).

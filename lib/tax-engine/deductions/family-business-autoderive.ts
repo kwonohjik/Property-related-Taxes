@@ -24,6 +24,7 @@ import {
 } from "date-fns";
 
 import type { FamilyBusinessInheritanceInput } from "../types/inheritance-gift.types";
+import type { Heir } from "../types/inheritance-gift.types";
 
 /** 자동판정 출처 (UI 표시·source 메타) */
 export type FamilyBusinessRequirementSource = "auto" | "override" | "legacy";
@@ -171,6 +172,29 @@ export function deriveFBDecedentCEO(
     satisfiedAlternative: alt1 ? 1 : alt3 ? 3 : null,
     ratioPercent: (ceoDaysOp / operatingDays) * 100,
   };
+}
+
+/**
+ * 가업상속인 heirId 결정 헬퍼 — UI display fallback과 동일 규칙을 API 변환·엔진 조립·validate에서 공유.
+ *
+ * 규칙:
+ *   1. explicitHeirId 있으면 그대로 반환
+ *   2. naturalHeirs(relation !== "corporate") 가 정확히 1명이면 자동선택
+ *   3. 그 외 undefined (미선택)
+ *
+ * 정책: feedback_useeffect_store_mirror_forbidden — store 미러링 금지. 조립 시점에 fallback 적용.
+ *
+ * @param heirs          InheritanceTaxInput.heirs 전체 (corporate 포함)
+ * @param explicitHeirId FamilyBusinessInheritanceInput.heirId (store 값, undefined 가능)
+ */
+export function resolveFamilyBusinessHeirId(
+  heirs: Pick<Heir, "id" | "relation">[],
+  explicitHeirId: string | undefined,
+): string | undefined {
+  if (explicitHeirId) return explicitHeirId;
+  const naturalHeirs = heirs.filter((h) => h.relation !== "corporate");
+  if (naturalHeirs.length === 1) return naturalHeirs[0].id;
+  return undefined;
 }
 
 /** resolveFamilyBusinessRequirements 반환 */

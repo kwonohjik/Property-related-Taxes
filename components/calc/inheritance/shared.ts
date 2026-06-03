@@ -50,6 +50,8 @@ export interface FormState {
   cohabitDirectAmount: string;
   legateeAmountNonHeir: string;
   priorGiftDeductionTotal: string;
+  /** 재해손실공제 (§24 종합한도 분자 보정) — §54 재해로 멸실·훼손된 상속재산 손실액 */
+  disasterLossDeduction: string;
   // 영농상속공제 정밀화 (2026-05-21, §18의3 + 시행령 §16)
   // 3-state: undefined (legacy 모드) / 객체 (활성화) — feedback_three_state_optional_mode_toggle
   farming?: FarmingInheritanceInput;
@@ -97,6 +99,7 @@ export const INITIAL_FORM: FormState = {
   cohabitDirectAmount: "",
   legateeAmountNonHeir: "",
   priorGiftDeductionTotal: "",
+  disasterLossDeduction: "",
   farming: undefined,
   familyBusiness: undefined,
   isGenerationSkip: false,

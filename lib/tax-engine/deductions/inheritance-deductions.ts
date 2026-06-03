@@ -35,6 +35,7 @@ import {
   calcFamilyBusinessDeductionLegacy,
   calcFamilyBusinessDeductionPhase2,
   resolveFamilyBusinessRequirements,
+  resolveFamilyBusinessHeirId,
 } from "./family-business";
 import {
   calcPersonalDeductions,
@@ -652,8 +653,14 @@ export function calcInheritanceDeductions(
     if (input.familyBusiness) {
       // 요건 자동판정(Phase 1): 가업상속인 birthDate를 heirs[heirId]에서 도출(없으면 familyBusiness.heirBirthDate).
       //   heirs·baseDate(상속개시일) 모두 스코프 내 → 스레딩 불필요. (eligibility-autoderive.engine.design.md)
+      //   H-3 fix: heirId가 undefined일 때 자연인 1명이면 자동선택 fallback (resolveFamilyBusinessHeirId).
+      //   UI display fallback(FamilyBusinessHeirSelector effectiveHeirId)과 동일 규칙 — 3중 패턴.
+      const resolvedHeirId = resolveFamilyBusinessHeirId(
+        input.heirs,
+        input.familyBusiness.heirId,
+      );
       const heirBirthDate =
-        input.heirs.find((h) => h.id === input.familyBusiness!.heirId)?.birthDate ??
+        input.heirs.find((h) => h.id === resolvedHeirId)?.birthDate ??
         input.familyBusiness.heirBirthDate;
       const resolved = resolveFamilyBusinessRequirements(
         input.familyBusiness,

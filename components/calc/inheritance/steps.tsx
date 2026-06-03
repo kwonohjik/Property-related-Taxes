@@ -529,6 +529,14 @@ export function Step4({
           placeholder="없으면 빈칸"
         />
 
+        <CurrencyInput
+          label="재해손실공제 (§24 종합한도 분자 보정)"
+          value={form.disasterLossDeduction}
+          onChange={(v) => set({ disasterLossDeduction: v })}
+          hint="재해로 멸실·훼손된 상속재산 손실액(§54 재해손실공제액) — §24 종합한도 분자에서 사전증여 합산가액과 함께 차감됩니다."
+          placeholder="없으면 빈칸"
+        />
+
       </div>
 
       {/* ─── 세액공제 (구 Step 5 통합) ─── */}

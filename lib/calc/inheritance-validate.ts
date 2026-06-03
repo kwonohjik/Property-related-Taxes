@@ -19,6 +19,8 @@ import type {
 } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { deriveCollateralDebts } from "@/lib/tax-engine/inheritance-collateral-debt";
 import { resolveEngineValuatedAmount } from "@/lib/tax-engine/property-valuation";
+import { checkCorporateGiftRule } from "@/lib/calc/prior-gift-corporate-rule";
+import { toOptionalDate } from "@/lib/api/date-coerce";
 
 // ────────────────────────────────────────────────────
 // 단일 자산 — heirAllocations 합계 검증
@@ -153,24 +155,17 @@ export function validatePresumedItem(
 // PriorGift — 영리법인 corporateGiftComputedTax 필수
 // ────────────────────────────────────────────────────
 
+/**
+ * 사전증여 개별 항목 검증.
+ *
+ * 영리법인 규칙은 checkCorporateGiftRule (prior-gift-corporate-rule.ts) 단일진실.
+ * Zod superRefine(⑨)도 동일 헬퍼를 사용하므로 client/API 경로가 동일하게 차단된다.
+ */
 export function validatePriorGift(gift: PriorGift): string | null {
-  if (gift.beneficiaryType === "corporate") {
-    // 상증법 §13①2호 — 영리법인은 상속인 아닌 자에 해당. isHeir=true 동시 입력 차단.
-    // UI 상태머신이 corporate ON 시 isHeir=false 강제하지만, API 직접 호출 차단용 정책 강화.
-    if (gift.isHeir) {
-      return `영리법인 사전증여 ${gift.giftDate} — beneficiaryType="corporate"는 isHeir=false여야 합니다 (§13①2호: 상속인 아닌 자 5년).`;
-    }
-    if (!gift.corporateGiftComputedTax || gift.corporateGiftComputedTax <= 0) {
-      return `영리법인 사전증여 ${gift.giftDate} — corporateGiftComputedTax(증여세 산출세액)는 필수입니다.`;
-    }
-    // §28 증여세액공제 중복 방지 — 영리법인은 §4의2③ 비과세이므로 giftTaxPaid는 0이어야 함.
-    if (gift.giftTaxPaid > 0) {
-      return `영리법인 사전증여 ${gift.giftDate} — giftTaxPaid는 0이어야 합니다 (§4의2③ 비과세, §3의2②로 별도 공제).`;
-    }
-    if (!gift.doneeId) {
-      return `영리법인 사전증여 ${gift.giftDate} — doneeId(수증자 Heir.id) 필수.`;
-    }
-  }
+  // 영리법인 필수요건 — 공유 헬퍼 위임 (§13①2호 · §4의2③ · §3의2②)
+  const corpError = checkCorporateGiftRule(gift);
+  if (corpError !== null) return corpError;
+
   // beneficiaryType 미설정 시 legacy isHeir 사용 (자동 추론)
   return null;
 }
@@ -406,26 +401,29 @@ export function validateUnlistedStockV2(
 
   // evaluationDate fallback — 미입력 시 ctx.evaluationDateFallback(상속개시일/증여일) 사용
   // UI display fallback과 동일 fallback 인식: CLAUDE.md ⑧ 정책
-  let effectiveEvaluationDate: Date | undefined = v2.evaluationDate;
+  // toOptionalDate: string ISO → Date 정규화 (sessionStorage 복원 후 string 안전 처리, H-5)
+  let effectiveEvaluationDate: Date | undefined = toOptionalDate(v2.evaluationDate);
   if (!effectiveEvaluationDate && ctx?.evaluationDateFallback) {
-    const fb = new Date(ctx.evaluationDateFallback);
-    if (!isNaN(fb.getTime())) effectiveEvaluationDate = fb;
+    effectiveEvaluationDate = toOptionalDate(ctx.evaluationDateFallback);
   }
 
   // ① 사업연도 종료일 3개 각각 유효 Date 필수 (순서 비교 전 존재 확인)
+  // toOptionalDate: instanceof Date 대신 사용 — sessionStorage 복원 후 string ISO도 안전 처리 (H-5 2차 방어)
   const YEAR_LABEL = ["1년전", "2년전", "3년전"];
+  const resolvedFiscalEndDates: Date[] = [];
   for (let i = 0; i < 3; i++) {
-    const endDate = v2.fiscalYears[i]?.fiscalYearEndDate;
-    if (!endDate || !(endDate instanceof Date) || isNaN(endDate.getTime())) {
+    const endDate = toOptionalDate(v2.fiscalYears[i]?.fiscalYearEndDate);
+    if (!endDate) {
       return `비상장주식 "${item.name}" — ${YEAR_LABEL[i]} 사업연도 종료일을 입력해야 합니다. (§56⑤·환산주식수 계산에 필요)`;
     }
+    resolvedFiscalEndDates.push(endDate);
   }
 
-  // ② 사업연도 종료일 순서
-  if (v2.fiscalYears[0].fiscalYearEndDate <= v2.fiscalYears[1].fiscalYearEndDate) {
+  // ② 사업연도 종료일 순서 (resolvedFiscalEndDates 사용 — Date 객체 보장)
+  if (resolvedFiscalEndDates[0] <= resolvedFiscalEndDates[1]) {
     return `비상장주식 "${item.name}" — 2년전 사업연도 종료일은 1년전보다 이전이어야 합니다.`;
   }
-  if (v2.fiscalYears[1].fiscalYearEndDate <= v2.fiscalYears[2].fiscalYearEndDate) {
+  if (resolvedFiscalEndDates[1] <= resolvedFiscalEndDates[2]) {
     return `비상장주식 "${item.name}" — 3년전 사업연도 종료일은 2년전보다 이전이어야 합니다.`;
   }
 
@@ -435,7 +433,9 @@ export function validateUnlistedStockV2(
   }
 
   // ④ 평가기준일 < 사업개시일 (effectiveEvaluationDate: v2.evaluationDate || ctx fallback)
-  if (effectiveEvaluationDate && effectiveEvaluationDate < v2.businessStartDate) {
+  // toOptionalDate: string ISO → Date 정규화 (H-5 2차 방어)
+  const effectiveBusinessStartDate = toOptionalDate(v2.businessStartDate);
+  if (effectiveEvaluationDate && effectiveBusinessStartDate && effectiveEvaluationDate < effectiveBusinessStartDate) {
     return `비상장주식 "${item.name}" — 평가기준일은 사업개시일 이후여야 합니다.`;
   }
 
@@ -447,7 +447,9 @@ export function validateUnlistedStockV2(
       c.changeType === "free_issue" ? "무상증자" : "유상감자";
 
     // 변동일 미입력/invalid 차단
-    if (!c.changeDate || !(c.changeDate instanceof Date) || isNaN(c.changeDate.getTime())) {
+    // toOptionalDate: string ISO → Date 정규화 (H-5 2차 방어 — instanceof Date 대체)
+    const resolvedChangeDate = toOptionalDate(c.changeDate);
+    if (!resolvedChangeDate) {
       return `비상장주식 "${item.name}" — ${typeLabel}(${i + 1}번째) 변동일을 입력해야 합니다.`;
     }
 
@@ -457,7 +459,7 @@ export function validateUnlistedStockV2(
     }
 
     // 변동일 > 평가기준일 차단 (effectiveEvaluationDate 사용)
-    if (effectiveEvaluationDate && c.changeDate > effectiveEvaluationDate) {
+    if (effectiveEvaluationDate && resolvedChangeDate > effectiveEvaluationDate) {
       return `비상장주식 "${item.name}" — 자본금 변동일(${i + 1}번째)은 평가기준일 이전이어야 합니다.`;
     }
 

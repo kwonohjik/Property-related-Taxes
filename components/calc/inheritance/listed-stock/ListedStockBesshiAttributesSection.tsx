@@ -96,12 +96,18 @@ export function ListedStockBesshiAttributesSection({ item, onUpdate }: Props) {
   // §63③ 할증 — isMaxShareholder true 일 때 ON
   const isMaxShareholder = item.isMaxShareholder ?? false;
 
-  // §63②3호 모드
-  const unlistedMode: "none" | "capital_increase" | "merger" = item.capitalIncreaseDate
-    ? "capital_increase"
-    : item.mergerDate
-      ? "merger"
-      : "none";
+  // §63②3호 모드 — H-2 데드락 수정 (feedback_store_default_vs_ui_display_fallback)
+  // unlistedShareMode(명시 필드)를 단일 진실로 읽음.
+  // undefined = 레거시 저장 케이스: 날짜 존재로 1회 유도(③ normalize 마이그레이션 호환).
+  // 이후 동작은 명시 필드 기준 — 날짜 파생 금지.
+  const unlistedMode: "none" | "capital_increase" | "merger" =
+    item.unlistedShareMode !== undefined
+      ? item.unlistedShareMode
+      : item.capitalIncreaseDate
+        ? "capital_increase"
+        : item.mergerDate
+          ? "merger"
+          : "none";
 
   return (
     <div className="space-y-3">
@@ -221,8 +227,11 @@ export function ListedStockBesshiAttributesSection({ item, onUpdate }: Props) {
           name={`unlisted-share-mode-${item.id}`}
           value={unlistedMode}
           onChange={(v) => {
+            // H-2 수정: unlistedShareMode(명시 선택 상태)를 먼저 set — 데드락 원인 제거.
+            // onChange 직후 렌더에서 unlistedShareMode를 읽어 패널을 유지함.
             if (v === "none") {
               set({
+                unlistedShareMode: "none",
                 isCapitalIncreaseUnlistedShare: undefined,
                 capitalIncreaseDate: undefined,
                 mergerDate: undefined,
@@ -232,13 +241,17 @@ export function ListedStockBesshiAttributesSection({ item, onUpdate }: Props) {
               });
             } else if (v === "capital_increase") {
               set({
+                unlistedShareMode: "capital_increase",
                 isCapitalIncreaseUnlistedShare: true,
                 mergerDate: undefined,
+                // capitalIncreaseDate 는 사용자가 패널 DateInput에서 별도 입력
               });
             } else if (v === "merger") {
               set({
+                unlistedShareMode: "merger",
                 isCapitalIncreaseUnlistedShare: true,
                 capitalIncreaseDate: undefined,
+                // mergerDate 는 사용자가 패널 DateInput에서 별도 입력
               });
             }
           }}

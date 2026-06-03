@@ -4,6 +4,7 @@
  */
 import { z } from "zod";
 import { unlistedStockDataSchema } from "./property-valuation-input-unlisted-data";
+import { checkCorporateGiftRule } from "@/lib/calc/prior-gift-corporate-rule";
 
 // 가업상속공제 스키마 — 800줄 정책으로 sibling 분리(2026-06-02)
 import { familyBusinessInheritanceInputSchema } from "./family-business-inheritance-schema";
@@ -161,6 +162,8 @@ export const listedStockItemSchema = baseItemSchema.extend({
   isCapitalIncreaseUnlistedShare: z.boolean().optional(),
   listedStockDividendDifference: z.number().nonnegative().optional(),
   dividendBaseDateSameAsListed: z.boolean().optional(),
+  // H-2 UI 선택 상태 단일 진실 — 라디오 value·패널 게이트 출처 (⑨⑩⑫ strip 방지)
+  unlistedShareMode: z.enum(["none", "capital_increase", "merger"]).optional(),
 
   // ============================================================
   // 평가조서(갑·을) 재현 — 13 입력 + 1 캐시
@@ -348,54 +351,68 @@ export const giftDonorRelationSchema = z.enum([
   "other",
 ]);
 
-export const priorGiftSchema = z.object({
-  giftDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD 형식"),
-  isHeir: z.boolean().optional(),
-  giftAmount: z.number().nonnegative(),
-  giftTaxPaid: z.number().nonnegative(),
-  giftTaxBase: z.number().nonnegative().optional(),
-  doneeRelation: z
-    .enum([
-      "spouse",
-      "lineal_ascendant_adult",
-      "lineal_ascendant_minor",
-      "lineal_descendant",
-      "other_relative",
-    ])
-    .optional(),
-  // Phase A: 동일인 §47 합산 + §58/§57 한도 산식용
-  donor: giftDonorRelationSchema.optional(),
-  computedTax: z.number().nonnegative().optional(),
-  additionalGenerationSkipSurcharge: z.number().nonnegative().optional(),
-  wasGenerationSkip: z.boolean().optional(),
-  // 종합사례 PDF 확장 — 상속인별 배부·영리법인 면제
-  doneeId: z.string().min(1).optional(),
-  beneficiaryType: z.enum(["heir", "legatee", "corporate"]).optional(),
-  corporateGiftComputedTax: z.number().nonnegative().optional(),
-  // UI 메타 (이력 조회 출처) — 엔진 무시. buildInput에서 strip(④) 누락 안전망(⑨).
-  sourceCalculationId: z.string().optional(),
-  // 신고서 부표 1 표시 메타 (2026-05-20) — 엔진 무관
-  // PR 3 (2026-05-22): real_estate_individual_house · officetel · acquisition_right 신규 + isAttachedLandToBuilding
-  propertyCategory: z
-    .enum([
-      "cash",
-      "real_estate_land",
-      "real_estate_individual_house",
-      "real_estate_apartment",
-      "real_estate_officetel",
-      "real_estate_building",
-      "real_estate_acquisition_right",
-      "listed_stock",
-      "unlisted_stock",
-      "financial",
-      "deposit",
-      "other",
-    ])
-    .optional(),
-  propertyName: z.string().optional(),
-  propertyLocation: z.string().optional(),
-  isAttachedLandToBuilding: z.boolean().optional(),
-});
+export const priorGiftSchema = z
+  .object({
+    giftDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD 형식"),
+    isHeir: z.boolean().optional(),
+    giftAmount: z.number().nonnegative(),
+    giftTaxPaid: z.number().nonnegative(),
+    giftTaxBase: z.number().nonnegative().optional(),
+    doneeRelation: z
+      .enum([
+        "spouse",
+        "lineal_ascendant_adult",
+        "lineal_ascendant_minor",
+        "lineal_descendant",
+        "other_relative",
+      ])
+      .optional(),
+    // Phase A: 동일인 §47 합산 + §58/§57 한도 산식용
+    donor: giftDonorRelationSchema.optional(),
+    computedTax: z.number().nonnegative().optional(),
+    additionalGenerationSkipSurcharge: z.number().nonnegative().optional(),
+    wasGenerationSkip: z.boolean().optional(),
+    // 종합사례 PDF 확장 — 상속인별 배부·영리법인 면제
+    doneeId: z.string().min(1).optional(),
+    beneficiaryType: z.enum(["heir", "legatee", "corporate"]).optional(),
+    corporateGiftComputedTax: z.number().nonnegative().optional(),
+    // UI 메타 (이력 조회 출처) — 엔진 무시. buildInput에서 strip(④) 누락 안전망(⑨).
+    sourceCalculationId: z.string().optional(),
+    // 신고서 부표 1 표시 메타 (2026-05-20) — 엔진 무관
+    // PR 3 (2026-05-22): real_estate_individual_house · officetel · acquisition_right 신규 + isAttachedLandToBuilding
+    propertyCategory: z
+      .enum([
+        "cash",
+        "real_estate_land",
+        "real_estate_individual_house",
+        "real_estate_apartment",
+        "real_estate_officetel",
+        "real_estate_building",
+        "real_estate_acquisition_right",
+        "listed_stock",
+        "unlisted_stock",
+        "financial",
+        "deposit",
+        "other",
+      ])
+      .optional(),
+    propertyName: z.string().optional(),
+    propertyLocation: z.string().optional(),
+    isAttachedLandToBuilding: z.boolean().optional(),
+  })
+  .superRefine((data, ctx) => {
+    // 영리법인 사전증여 필수요건 (동기화 지점 ⑨)
+    // 공유 헬퍼 checkCorporateGiftRule 단일진실 — client validatePriorGift(⑧)와 동일 규칙
+    // 법령 근거: §13①2호(상속인 아닌 자) · §4의2③(법인세 부과 시 증여세 미부과) · §3의2②(면제 한도)
+    const corpError = checkCorporateGiftRule(data);
+    if (corpError !== null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: corpError,
+        path: ["corporateGiftComputedTax"],
+      });
+    }
+  });
 
 // ============================================================
 // 비과세 항목 스키마 — ExemptionCheckedItem[] 기반 (§11·§12·§46·§46의2)

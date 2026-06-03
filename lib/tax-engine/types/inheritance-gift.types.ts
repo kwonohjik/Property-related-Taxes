@@ -99,6 +99,22 @@ export interface EstateItem extends EstateLocationFields {
    * "증자 신주(미상장) 보유 수"로 의미 전환.
    */
   isCapitalIncreaseUnlistedShare?: boolean;
+  /**
+   * §63②3호 미상장 신주 모드 — UI 선택 상태 단일 진실 필드 (H-2 데드락 수정).
+   *
+   * 라디오 value·패널 가시성 게이트·엔진 플래그(`isCapitalIncreaseUnlistedShare`)의
+   * 단일 출처. 날짜 존재 여부에서 파생하지 않음(데드락 원인 제거).
+   *
+   * - "none": 해당없음 (기본, 일반 상장주식)
+   * - "capital_increase": 증자 신주(미상장) — capitalIncreaseDate 별도 입력
+   * - "merger": 합병 신주(미상장) — mergerDate 별도 입력
+   * - undefined: 레거시 호환 — 로드 시 capitalIncreaseDate/mergerDate 존재로 1회 유도
+   *
+   * onChange: 'none' 선택 시 관련 플래그·날짜 초기화.
+   *           'capital_increase'/'merger' 선택 시 isCapitalIncreaseUnlistedShare=true + 반대측 날짜 초기화.
+   * 엔진은 isCapitalIncreaseUnlistedShare 플래그만 소비 — 본 필드는 UI 메타.
+   */
+  unlistedShareMode?: "none" | "capital_increase" | "merger";
   /** §63②3호 배당차액 (원/주, 직접 입력 — 시행규칙 §18② / 산식 박스 L-1) */
   listedStockDividendDifference?: number;
   /** §18② 단서: 정관상 신주의 배당기산일을 기존 상장주식과 동일하게 정함 → 배당차액 0 */

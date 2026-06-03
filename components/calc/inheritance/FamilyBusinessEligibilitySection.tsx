@@ -43,6 +43,7 @@ import { DateInput } from "@/components/ui/date-input";
 import {
   evaluateFamilyBusinessEligibility,
   familyBusinessCap,
+  resolveFamilyBusinessHeirId,
   suggestFBOperatingYears,
 } from "@/lib/tax-engine/deductions/family-business";
 import type { FamilyBusinessInheritanceInput } from "@/lib/tax-engine/types/inheritance-family-business.types";
@@ -178,9 +179,12 @@ export function FamilyBusinessEligibilitySection({
   }, [familyBusiness, deathDate]);
 
   // 선택된 Heir의 birthDate (섹션④에 전달)
+  // H-3 fix: heirId=undefined 시 자연인 1명이면 resolveFamilyBusinessHeirId로 fallback (UI display fallback 3중 패턴)
   const selectedHeirBirthDate = useMemo(() => {
-    if (!familyBusiness?.heirId || !heirs) return undefined;
-    return heirs.find((h) => h.id === familyBusiness.heirId)?.birthDate;
+    if (!heirs) return undefined;
+    const resolvedHeirId = resolveFamilyBusinessHeirId(heirs, familyBusiness?.heirId);
+    if (!resolvedHeirId) return undefined;
+    return heirs.find((h) => h.id === resolvedHeirId)?.birthDate;
   }, [familyBusiness, heirs]);
 
   const handleToggleOn = () => onChange({ ...EMPTY_FB });
