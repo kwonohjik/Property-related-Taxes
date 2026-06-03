@@ -25,10 +25,12 @@ export function GenerationSkipFormulaRows({
 
   return (
     <div data-testid="generation-skip-formula-rows">
-      {/* §27 공통 산식 설명 */}
+      {/* §27 공통 산식 설명 — prorationActive 분기 */}
       <div className="px-3 py-2 text-[11px] text-rose-700/80 dark:text-rose-300/80 bg-rose-50/60 dark:bg-rose-950/20 border-b border-border">
         <span className="font-semibold">§27 산식 </span>
-        할증 = 산출세액 × (유증·상속분 + §13 내 사전증여) ÷ 과세가액 × 할증율(30% / 미성년+20억초과 40%)
+        {detail.prorationActive
+          ? "할증 = 산출세액 × (유증·상속분 + §13 내 사전증여) ÷ 과세가액 × 할증율(30% / 미성년+20억초과 40%)"
+          : "할증 = 산출세액 × 할증율(30% / 미성년+20억초과 40%) — 전부 할증 경로"}
       </div>
 
       <div className="divide-y divide-border">
@@ -48,12 +50,23 @@ export function GenerationSkipFormulaRows({
                 label={`${prefix}${name} 유증분 할증 (${tag})`}
                 value={formatKRW(row.surcharge)}
               />
-              <DetailRow
-                label={`= 산출세액 ${formatKRW(detail.computedTax)} × (${formatKRW(row.numerator)} ÷ ${formatKRW(detail.denominator)}) × ${ratePct}%`}
-                value=""
-                indent
-                muted
-              />
+              {detail.prorationActive ? (
+                /* 안분 경로: numerator ÷ denominator 적용 */
+                <DetailRow
+                  label={`= 산출세액 ${formatKRW(detail.computedTax)} × (${formatKRW(row.numerator)} ÷ ${formatKRW(detail.denominator)}) × ${ratePct}%`}
+                  value=""
+                  indent
+                  muted
+                />
+              ) : (
+                /* 레거시 경로: 전액 할증(안분 미적용) — 분모 미표시로 역검증 불일치 방지 */
+                <DetailRow
+                  label={`= 산출세액 ${formatKRW(detail.computedTax)} × ${ratePct}% (전부 할증, 안분 미적용)`}
+                  value=""
+                  indent
+                  muted
+                />
+              )}
             </Fragment>
           );
         })}

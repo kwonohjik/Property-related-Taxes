@@ -410,8 +410,19 @@ export function calcHeirAllocation(
       pi.heirAllocations?.reduce((s, a) => s + a.amount, 0) ?? 0;
     if (pi.heirAllocations && pi.heirAllocations.length > 0 && totalAlloc > 0) {
       // 협의분할 입력 — 개별 비율 안분 (사용자 명시 분배. 통상 added == totalAlloc)
-      for (const alloc of pi.heirAllocations) {
-        const share = Math.floor((added * alloc.amount) / totalAlloc);
+      // L-2 수정: 마지막 항목에 잔액 흡수 (feedback_floor_residual_absorption)
+      //   added != totalAlloc 시 각 항목 독립 floor → Σshare < added 최대 (n-1)원.
+      //   마지막 alloc에서 앞 항목 floor 합을 뺀 잔액을 배분하여 Σ == added 보장.
+      //   통상 케이스(added == totalAlloc)에선 마지막 항목도 동일 floor 값 → 결과 불변.
+      let allocatedSum = 0;
+      const allocs = pi.heirAllocations;
+      for (let ai = 0; ai < allocs.length; ai++) {
+        const alloc = allocs[ai];
+        const isLast = ai === allocs.length - 1;
+        const share = isLast
+          ? added - allocatedSum  // 잔액 흡수 — Σ == added 보장
+          : Math.floor((added * alloc.amount) / totalAlloc);
+        allocatedSum += share;
         presumedByHeir.set(
           alloc.heirId,
           (presumedByHeir.get(alloc.heirId) ?? 0) + share,

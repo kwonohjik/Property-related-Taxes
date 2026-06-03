@@ -129,9 +129,10 @@ export function computeGenerationSkipSurcharge(
     const totalSurcharge = rows.reduce((s, r) => s + r.surcharge, 0);
     generationSkipSurcharge = totalSurcharge;
     perHeirSurcharge = perHeirMap;
+    // prorationActive: true — per-heir 경로. 산식 = computedTax × numerator × rate / denominator
     generationSkipDetail =
       rows.length > 0
-        ? { denominator: adjustedDenominator, computedTax, rows, total: totalSurcharge }
+        ? { denominator: adjustedDenominator, computedTax, rows, total: totalSurcharge, prorationActive: true }
         : null;
 
     if (totalSurcharge > 0) {
@@ -170,6 +171,10 @@ export function computeGenerationSkipSurcharge(
     }
 
     // 레거시: 할증이 있으면 rows 1행으로 표시 (결과 카드 공통)
+    // L-3: prorationActive=false — 레거시 경로는 applyRate(computedTax, rate) 전액 할증.
+    //   generationSkipAssetAmount 입력 여부에 관계없이 분모(adjustedDenominator)를
+    //   산식에 사용하지 않음. 결과 카드(GenerationSkipFormulaRows)는 이 플래그로
+    //   "전액 할증(안분 미적용)" 표시로 분기해야 함.
     if (generationSkipSurcharge > 0) {
       const surchargeRate =
         (input.isMinorHeir ?? false) &&
@@ -190,6 +195,7 @@ export function computeGenerationSkipSurcharge(
           },
         ],
         total: generationSkipSurcharge,
+        prorationActive: false,
       };
     }
   }

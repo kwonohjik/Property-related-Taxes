@@ -334,9 +334,14 @@ export function calcInheritanceTax(
       const numeratorCorrected = numerator + funeralAmount;
 
       // I-2 배우자 법정지분 비율 (민법 §1009) — 직계비속 우선, 없으면 직계존속. 수유자·법인 제외.
-      const childCount = input.heirs.filter((h) => h.relation === "child").length;
+      // L-1 수정: 상속포기(isHeir===false)는 민법 §1042·§1043상 처음부터 상속인이 아님
+      //   → computeLegalShares와 동일한 isHeir!==false 필터로 dual-truth 해소.
+      //   현재 UI에 상속포기 토글 없어 정상 입력 흐름에서는 결과 불변.
+      const childCount = input.heirs.filter(
+        (h) => h.relation === "child" && h.isHeir !== false,
+      ).length;
       const ascendantCount = input.heirs.filter(
-        (h) => h.relation === "lineal_ascendant",
+        (h) => h.relation === "lineal_ascendant" && h.isHeir !== false,
       ).length;
       const coheirCount = childCount > 0 ? childCount : ascendantCount;
       const spouseRatio = 1.5 / (1.5 + coheirCount);

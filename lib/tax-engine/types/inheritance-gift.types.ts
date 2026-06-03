@@ -522,6 +522,13 @@ export interface InheritanceGenerationSkipDetail {
   rows: InheritanceGenerationSkipHeirRow[];
   /** Σ surcharge */
   total: number;
+  /**
+   * L-3: 안분 산식(분자÷분모) 실제 적용 여부.
+   * true  = per-heir 경로 — rows[i].surcharge = computedTax × numerator × rate / denominator
+   * false = 레거시 경로 — surcharge = applyRate(computedTax, rate) 전액 할증 (분모 미사용)
+   * 결과 카드(GenerationSkipFormulaRows)가 이 플래그로 산식 표시를 분기해야 함.
+   */
+  prorationActive: boolean;
 }
 
 // ============================================================
