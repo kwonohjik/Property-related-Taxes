@@ -15,8 +15,24 @@ export interface InheritanceTaxCreditInput {
   foreignTaxPaid?: number;
   /** 단기재상속 — 피상속인이 상속받은 날로부터 경과 연수 */
   shortTermReinheritYears?: number;
-  /** 단기재상속 — 당시 상속세 납부액 */
+  /** 단기재상속 — 당시 상속세 납부액 (전의 상속세산출세액 기준) */
   shortTermReinheritTaxPaid?: number;
+  /**
+   * 단기재상속 — 재상속분의 재산가액 (§30②1호 안분 분수 분자).
+   * 전(前) 상속재산 중 이번 상속에서 다시 상속되는 재산의 가액.
+   *
+   * 법령근거: 상증법 §30②1호 (대수적 약분 후 분자).
+   * optional: 미입력 시 전부 재상속(분수=1) 가정으로 fallback.
+   */
+  shortTermReinheritAssetValue?: number;
+  /**
+   * 단기재상속 — 전의 상속재산가액 (§30②1호 안분 분수 분모).
+   * 이전 상속 시 전체 상속재산의 가액.
+   *
+   * 법령근거: 상증법 §30②1호 (대수적 약분 후 분모).
+   * optional: 미입력 또는 0 시 전부 재상속(분수=1) 가정으로 fallback.
+   */
+  shortTermReinheritPriorEstateValue?: number;
   /** 법정신고기한 내 신고 여부 (§69 3% 공제) */
   isFiledOnTime: boolean;
 }

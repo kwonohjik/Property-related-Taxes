@@ -95,6 +95,83 @@ describe("단기재상속세액공제 — §30", () => {
     });
     expect(result.creditAmount).toBe(0);
   });
+
+  // ── Pre-Do anchor: M-3 §30②1호 안분 분수 수정 ─────────────────
+  // 약분 검증: §30②1호 = 전의 산출세액 × (재상속분가액 × 전의과세가액/전의상속재산가액) ÷ 전의과세가액
+  //           = 전의 산출세액 × 재상속분가액 / 전의상속재산가액 (전의과세가액 상쇄)
+  // → 공제액 = floor(전의산출세액 × 재상속분가액 / 전의상속재산가액) × 공제율
+
+  it("[C7b] PRE-DO BUGGY — 부분재상속(3/10억): 현재는 전액×공제율로 과대산정됨", () => {
+    // 전(前) 산출세액 1억, 전 상속재산 10억, 재상속분 3억, 경과 3년(80%)
+    // 정정 후 공제액: floor(1억 × 3억/10억) × 80% = floor(30,000,000 × 0.8) = 24,000,000
+    // 현재 buggy:   floor(1억 × 80%) = 80,000,000 (과대)
+    const result = calcShortTermReinheritCredit({
+      priorTaxPaid: 100_000_000,
+      elapsedYears: 3,
+      currentComputedTax: 200_000_000,
+      shortTermReinheritAssetValue: 300_000_000,       // 재상속분 재산가액 (분자)
+      shortTermReinheritPriorEstateValue: 1_000_000_000, // 전의 상속재산가액 (분모)
+    });
+    // 수정 후 정합값
+    expect(result.creditAmount).toBe(24_000_000);
+    expect(result.prorationApplied).toBe(true);
+  });
+
+  it("[C7c] 전부재상속 fallback — 신규 필드 미입력 시 분수=1 (하위호환)", () => {
+    // 신규 필드 없음 → 전부 재상속 가정(기존 동작 유지)
+    // 공제액 = 1억 × 60% = 60,000,000 (C7과 동일)
+    const result = calcShortTermReinheritCredit({
+      priorTaxPaid: 100_000_000,
+      elapsedYears: 5,
+      currentComputedTax: 200_000_000,
+    });
+    expect(result.creditAmount).toBe(60_000_000);
+    expect(result.prorationApplied).toBe(false); // 안분 미적용 echo
+  });
+
+  it("[C7d] 분자=분모(전부재상속 명시) — 분수=1로 동작", () => {
+    // 재상속분 = 전 상속재산 (전부 재상속)
+    // 공제액 = floor(1억 × 5억/5억) × 60% = floor(1억) × 60% = 60,000,000
+    const result = calcShortTermReinheritCredit({
+      priorTaxPaid: 100_000_000,
+      elapsedYears: 5,
+      currentComputedTax: 200_000_000,
+      shortTermReinheritAssetValue: 500_000_000,       // 분자 = 분모
+      shortTermReinheritPriorEstateValue: 500_000_000, // 분모
+    });
+    expect(result.creditAmount).toBe(60_000_000);
+    expect(result.prorationApplied).toBe(true);
+  });
+
+  it("[C7e] 분모=0 가드 — 분수 미적용 fallback", () => {
+    // 분모 0 → ZeroDivision 방어, fallback=전부재상속
+    const result = calcShortTermReinheritCredit({
+      priorTaxPaid: 100_000_000,
+      elapsedYears: 5,
+      currentComputedTax: 200_000_000,
+      shortTermReinheritAssetValue: 300_000_000,
+      shortTermReinheritPriorEstateValue: 0, // 분모 0
+    });
+    // fallback: 분수 미적용(=1) → 1억 × 60% = 60,000,000
+    expect(result.creditAmount).toBe(60_000_000);
+    expect(result.prorationApplied).toBe(false);
+  });
+
+  it("[C7f] 대형 금액 BigInt 정밀도 — 부분재상속(50억/200억), 경과 2년(90%)", () => {
+    // 전 산출세액 30억, 전 상속재산 200억, 재상속분 50억, 경과 2년(90%)
+    // 안분 기준: safeMultiplyThenDivide(30억, 50억, 200억)
+    //          = 3_000_000_000 × 5_000_000_000 / 20_000_000_000 = 750_000_000
+    // 공제액: floor(750_000_000 × 0.9) = 675,000,000
+    const result = calcShortTermReinheritCredit({
+      priorTaxPaid: 3_000_000_000,
+      elapsedYears: 2,
+      currentComputedTax: 10_000_000_000,
+      shortTermReinheritAssetValue: 5_000_000_000,
+      shortTermReinheritPriorEstateValue: 20_000_000_000,
+    });
+    expect(result.creditAmount).toBe(675_000_000);
+    expect(result.prorationApplied).toBe(true);
+  });
 });
 
 // ============================================================

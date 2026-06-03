@@ -70,6 +70,18 @@ export interface FormState {
   foreignTaxPaid: string;
   shortTermReinheritYears: string;
   shortTermReinheritTaxPaid: string;
+  /**
+   * §30②1호 안분 분수 분자 — 재상속분의 재산가액.
+   * 전(前) 상속재산 중 이번 상속에서 다시 상속되는 재산의 가액.
+   * 미입력 시 엔진이 전부재상속(분수=1) fallback 처리 — 자동 안분 금지.
+   */
+  shortTermReinheritAssetValue: string;
+  /**
+   * §30②1호 안분 분수 분모 — 전의 상속재산가액.
+   * 이전 상속 시 전체 상속재산의 가액(과세가액이 아닌 상속재산가액).
+   * 미입력 시 엔진이 전부재상속(분수=1) fallback 처리 — 자동 안분 금지.
+   */
+  shortTermReinheritPriorEstateValue: string;
 }
 
 export type FormSet = (p: Partial<FormState>) => void;
@@ -109,6 +121,8 @@ export const INITIAL_FORM: FormState = {
   foreignTaxPaid: "",
   shortTermReinheritYears: "",
   shortTermReinheritTaxPaid: "",
+  shortTermReinheritAssetValue: "",
+  shortTermReinheritPriorEstateValue: "",
 };
 
 export const STEPS = [

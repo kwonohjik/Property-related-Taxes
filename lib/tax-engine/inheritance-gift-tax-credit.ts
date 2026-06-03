@@ -253,6 +253,9 @@ export function calcInheritanceTaxCredits(
       priorTaxPaid: creditInput.shortTermReinheritTaxPaid,
       elapsedYears: creditInput.shortTermReinheritYears,
       currentComputedTax: totalComputedTax, // §30 ② 한도: 원래 산출세액 기준
+      // §30②1호 안분 분수 — optional, 미입력 시 전부재상속(분수=1) fallback
+      shortTermReinheritAssetValue: creditInput.shortTermReinheritAssetValue,
+      shortTermReinheritPriorEstateValue: creditInput.shortTermReinheritPriorEstateValue,
     });
     // 선행 공제 차감 후 잔액을 초과하지 않도록 클램핑
     shortTermReinheritCredit = Math.min(shortTermResult.creditAmount, remainingTax);

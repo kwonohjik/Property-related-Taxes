@@ -373,6 +373,10 @@ export function InheritanceTaxForm() {
         : undefined,
       shortTermReinheritTaxPaid:
         parseAmount(form.shortTermReinheritTaxPaid) || undefined,
+      shortTermReinheritAssetValue:
+        parseAmount(form.shortTermReinheritAssetValue) || undefined,
+      shortTermReinheritPriorEstateValue:
+        parseAmount(form.shortTermReinheritPriorEstateValue) || undefined,
       isFiledOnTime: form.isFiledOnTime,
     };
     // 종합사례 PDF — debtItems 입력 시 legacy debts·funeralExpense는 0으로 (엔진 분기 통일)

@@ -324,6 +324,30 @@ export function validateInheritanceTaxInput(
   );
   if (refErrs.length > 0) return refErrs[0];
 
+  // §30②1호 안분 교차검증 — 자동 안분 fallback 금지 (feedback_no_silent_apportion_fallback)
+  // 두 필드 중 한쪽만 입력 시 차단: 분자만·분모 미입력이면 전부재상속 가정이 아닌 침묵 오류 위험.
+  // 허용: 둘 다 미입력(→ 엔진 fallback=전부재상속) / 둘 다 입력(→ 엔진 안분 적용)
+  const shortTermCreditInput = input.creditInput;
+  if (shortTermCreditInput) {
+    const hasAsset = shortTermCreditInput.shortTermReinheritAssetValue != null &&
+      shortTermCreditInput.shortTermReinheritAssetValue > 0;
+    const hasPrior = shortTermCreditInput.shortTermReinheritPriorEstateValue != null &&
+      shortTermCreditInput.shortTermReinheritPriorEstateValue > 0;
+    if (hasAsset && !hasPrior) {
+      return "단기재상속 §30②1호 안분: 재상속분 재산가액을 입력한 경우 전의 상속재산가액도 함께 입력해야 합니다.";
+    }
+    if (!hasAsset && hasPrior) {
+      return "단기재상속 §30②1호 안분: 전의 상속재산가액을 입력한 경우 재상속분 재산가액도 함께 입력해야 합니다.";
+    }
+    if (hasAsset && hasPrior) {
+      const numerator = shortTermCreditInput.shortTermReinheritAssetValue!;
+      const denominator = shortTermCreditInput.shortTermReinheritPriorEstateValue!;
+      if (numerator > denominator) {
+        return "단기재상속 §30②1호: 재상속분 재산가액(분자)이 전의 상속재산가액(분모)을 초과할 수 없습니다.";
+      }
+    }
+  }
+
   return null;
 }
 

@@ -673,6 +673,10 @@ export const inheritanceTaxCreditInputSchema = z.object({
   foreignTaxPaid: z.number().nonnegative().optional(),
   shortTermReinheritYears: z.number().int().min(0).max(10).optional(),
   shortTermReinheritTaxPaid: z.number().nonnegative().optional(),
+  // §30②1호 안분 입력 — optional. 미입력 시 엔진이 전부재상속(분수=1) fallback.
+  // ⑫ 동기화 지점: 누락 시 Zod strip → 엔진 미도달 침묵 오류 차단.
+  shortTermReinheritAssetValue: z.number().int().nonnegative().optional(),
+  shortTermReinheritPriorEstateValue: z.number().int().nonnegative().optional(),
   isFiledOnTime: z.boolean(),
 });
 

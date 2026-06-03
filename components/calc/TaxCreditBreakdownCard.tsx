@@ -14,6 +14,7 @@ import { useState } from "react";
 import type {
   TaxCreditResult,
   PriorGiftCreditDetail,
+  CalculationStep,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 
@@ -69,6 +70,79 @@ function buildSection28Formula(
       )}
       <div className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">
         ※ 산출세액은 세대생략 할증 전 금액
+      </div>
+    </>
+  );
+}
+
+// ============================================================
+// §30 단기재상속 산식 빌더 (breakdown에서 §30 항목 추출)
+//
+// ShortTermReinheritResult.breakdown이 TaxCreditResult.breakdown에 포함됨.
+// lawRef="상증법 §30" 항목 추출 → 안분 여부를 label 텍스트로 감지.
+// prorationApplied=true 케이스: "재상속분 안분 (...)" 라벨 포함 시 안분 산식 표시.
+// ============================================================
+
+function buildSection30Formula(breakdown: CalculationStep[]): React.ReactNode | undefined {
+  // §30 lawRef 항목만 추출 (순서 유지)
+  const steps = breakdown.filter((s) => s.lawRef === "상증법 §30");
+  if (steps.length === 0) return undefined;
+
+  // 안분 적용 여부 감지: "재상속분 안분" 라벨 포함 항목 존재 여부
+  const prorationStep = steps.find((s) => s.label.includes("재상속분 안분"));
+  const priorTaxStep = steps.find((s) => s.label === "이전 상속세 납부세액");
+  const rateStep = steps.find((s) => s.label.includes("단기재상속 공제율"));
+  const limitStep = steps.find((s) => s.label?.includes("당해 산출세액 한도"));
+
+  return (
+    <>
+      {prorationStep ? (
+        <>
+          <div>
+            단기재상속공제 = 전의 산출세액 × (재상속분 재산가액 ÷ 전의 상속재산가액) × 공제율
+          </div>
+          <div className="flex flex-wrap items-baseline gap-x-1 text-gray-500 dark:text-gray-400 mt-1">
+            전의 산출세액 = <Amt val={priorTaxStep?.amount ?? 0} />
+          </div>
+          <div className="flex flex-wrap items-baseline gap-x-1 text-gray-500 dark:text-gray-400">
+            안분 후 기준 세액 = <Amt val={prorationStep.amount} />
+            <span className="text-[10px] text-gray-400">({prorationStep.label.replace(" — §30②1호", "")})</span>
+          </div>
+          {rateStep && (
+            <div className="flex flex-wrap items-baseline gap-x-1">
+              공제율 적용 후 = <Amt val={rateStep.amount} />
+              <span className="text-[10px] text-gray-400">({rateStep.label.split(" (")[1]?.replace(")", "")})</span>
+            </div>
+          )}
+        </>
+      ) : (
+        <>
+          <div>
+            단기재상속공제 = 전의 상속세 산출세액 × 공제율 (전부 재상속 가정 — 안분 미적용)
+          </div>
+          {priorTaxStep && (
+            <div className="flex flex-wrap items-baseline gap-x-1 text-gray-500 dark:text-gray-400 mt-1">
+              전의 산출세액 = <Amt val={priorTaxStep.amount} />
+            </div>
+          )}
+          {rateStep && (
+            <div className="flex flex-wrap items-baseline gap-x-1">
+              공제율 적용 후 = <Amt val={rateStep.amount} />
+            </div>
+          )}
+          <div className="text-[10px] text-amber-600 dark:text-amber-400 mt-1">
+            ※ 재상속분 재산가액·전의 상속재산가액을 입력하면 §30②1호 안분이 적용됩니다
+          </div>
+        </>
+      )}
+      {limitStep && (
+        <div className="flex flex-wrap items-baseline gap-x-1 text-rose-600 dark:text-rose-400 mt-1">
+          당해 산출세액 한도 적용: <Amt val={limitStep.amount} />
+          <span className="text-[10px] text-gray-400 ml-1">({limitStep.note})</span>
+        </div>
+      )}
+      <div className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">
+        ※ 상증법 §30②1호 — 부분 재상속 시 「재상속분 재산가액 ÷ 전의 상속재산가액」으로 안분
       </div>
     </>
   );
@@ -242,6 +316,12 @@ export function TaxCreditBreakdownCard({
       ? buildSection28Formula(priorGiftCreditDetail, computedTax)
       : undefined;
 
+  // §30 단기재상속 산식: breakdown에서 §30 항목 추출 (shortTermReinheritCredit > 0 시만)
+  const section30Formula =
+    credit.shortTermReinheritCredit > 0
+      ? buildSection30Formula(credit.breakdown)
+      : undefined;
+
   // §69 산식 활성 조건: echo 두 필드 모두 존재 시 (상속세·증여세 모두 반환 — PR1)
   const section69Formula =
     credit.filingCreditBase !== undefined &&
@@ -283,6 +363,7 @@ export function TaxCreditBreakdownCard({
           label="단기재상속공제"
           amount={credit.shortTermReinheritCredit}
           lawRef="§30"
+          formula={section30Formula}
         />
         <CreditRow
           label="신고세액공제 (3%)"
