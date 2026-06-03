@@ -10,8 +10,12 @@ import {
   autoComputePriorGiftTax,
   applyCorporateGiftTaxFallback,
 } from "@/lib/calc/prior-gift-auto-tax";
-import { validatePriorGift } from "@/lib/calc/inheritance-validate";
-import type { PriorGift } from "@/lib/tax-engine/types/inheritance-gift.types";
+import {
+  validatePriorGift,
+  validateCollateralDebtOptIn,
+  validateEstateItemAllocations,
+} from "@/lib/calc/inheritance-validate";
+import type { PriorGift, EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 
 describe("autoComputePriorGiftTax — 단순 1건 독립 (§53 공제 + §56 세율)", () => {
   it("P1: 배우자 760m → 22,000,000 (이미지26 — 760m−600m=160m 과표)", () => {
@@ -116,5 +120,42 @@ describe("applyCorporateGiftTaxFallback — 진입 fallback (기존 데이터 cg
   it("A8b: fallback 전 cgct=0 영리법인 → validatePriorGift 차단 (fallback 필요성 입증)", () => {
     const err = validatePriorGift(corpGift({ corporateGiftComputedTax: 0, doneeId: "corp-1" }));
     expect(err).toContain("corporateGiftComputedTax");
+  });
+
+  // ───── L-15 확인 결과: 다른 fallback 경로 모순 부재 ─────────────────────────────
+  // inheritance-validate.ts 정독 결과, corporate 외 fallback 경로에서
+  // "UI 통과 ↔ validate 차단" 모순이 없음을 확인함 (2026-06-04):
+  //
+  // 1) deductSecuredClaimAsDebt: validate가 UI와 동일 조건(토글=true + 담보=0)으로만 차단 — 정합.
+  // 2) heirAllocations 부분입력: 길이=0이면 validate도 null 반환 — UI display fallback 없음, 정합.
+  // 3) funeral DebtItem: validate도 funeral이면 null 반환 — UI display 동일 — 정합.
+  // 4) validateUnlistedStockV2: ctx.evaluationDateFallback=deathDate 사용 — UI fallback과 동일 — 정합.
+  //
+  // → 추가 anchor 불필요. 현재 A8/A8b가 유일한 실효 모순 경로를 커버.
+});
+
+// ───── 확인 메모 (L-15) — 비corporate fallback validate 정합 smoke ─────────────
+describe("validate fallback 정합 smoke — corporate 외 경로 모순 없음 (L-15 확인)", () => {
+  // deductSecuredClaimAsDebt=false 케이스 → validateCollateralDebtOptIn pass (no-op)
+  it("L15-V1: deductSecuredClaimAsDebt 미설정 자산 → validateCollateralDebtOptIn null (모순 없음)", () => {
+    const item: EstateItem = {
+      id: "e-1",
+      category: "real_estate_apartment",
+      name: "아파트",
+      marketValue: 500_000_000,
+      // deductSecuredClaimAsDebt 미설정 → UI에서도 토글 OFF → validate null
+    };
+    expect(validateCollateralDebtOptIn(item)).toBeNull();
+  });
+
+  it("L15-V2: heirAllocations 빈 배열 → validateEstateItemAllocations null (미입력 허용 정합)", () => {
+    const item: EstateItem = {
+      id: "e-2",
+      category: "financial",
+      name: "예금",
+      marketValue: 100_000_000,
+      heirAllocations: [], // 빈 배열 = UI 미입력 → validate도 null
+    };
+    expect(validateEstateItemAllocations(item)).toBeNull();
   });
 });

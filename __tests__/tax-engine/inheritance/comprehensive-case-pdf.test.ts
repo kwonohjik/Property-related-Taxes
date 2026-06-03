@@ -448,21 +448,25 @@ describe("상속세 종합사례 PDF — 통합 anchor", () => {
       expect(limitLine?.amount).toBe(5_965_000_000);
     });
 
-    it("J-04c §24 한도 발동 케이스 — rawTotal 6,500M > 한도 5,965M → 한도 5,965M 적용", async () => {
-      // 배우자공제를 인위적으로 늘려서 한도 초과 시뮬
+    it("J-04c §24 한도 미발동 확인 — 배우자 cap 30억이 1차 차단하여 rawTotal=4,800M < 한도 5,965M", () => {
+      // 배우자 spouseLegalShareOverride=100억 → 배우자공제 max cap 30억 적용
+      // rawTotal = 일괄 500 + 배우자 cap 30억 + 금융 200 + 동거 600 + 가업 500 = 4,800M
+      // ceiling = 8,775M − 500M(legatee) − max(0, 2,960M − 650M) = 5,965M
+      // 4,800M < 5,965M → §24 한도 발동 없음 (wasCapped=false)
+      // 실제 §24 한도 발동은 J-04d 담당 — 본 케이스는 미발동 경로 고정
       const input = {
         ...EXAMPLE_INPUT,
         deductionInput: {
           ...EXAMPLE_INPUT.deductionInput,
-          spouseLegalShareOverride: 10_000_000_000, // 100억으로 cap
-          spouseActualAmount: 4_700_000_000, // 47억 실제 상속 (cap 30억 적용)
+          spouseLegalShareOverride: 10_000_000_000, // 100억 → cap 30억 적용
+          spouseActualAmount: 4_700_000_000,
         },
       };
       const result = calcInheritanceTax(input);
-      // rawTotal = 일괄 500 + 배우자 max 30억 + 금융 200 + 동거 600 + 가업 500 = 4,800M
-      // 한도 5,965M 이내 → 미발동 (배우자공제 30억 cap이 1차 차단)
-      // 한도 발동을 위해선 더 큰 입력 필요 — 본 anchor는 산식 적용 검증용
-      expect(result.totalDeduction).toBeLessThanOrEqual(5_965_000_000);
+      expect(result.totalDeduction).toBe(4_800_000_000);
+      expect(result.deductionDetail?.deductionLimitDetail?.wasCapped).toBe(false);
+      expect(result.deductionDetail?.deductionLimitDetail?.ceiling).toBe(5_965_000_000);
+      expect(result.deductionDetail?.deductionLimitDetail?.rawTotalDeduction).toBe(4_800_000_000);
     });
 
     it("J-05 세대생략 수유자 0명 → 할증 0", () => {

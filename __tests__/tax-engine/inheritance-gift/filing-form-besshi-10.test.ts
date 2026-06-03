@@ -162,6 +162,50 @@ describe("별지 제10호서식 — PDF 사례 1 C1-3 anchor", () => {
   });
 
   // ──────────────────────────────────────────────
+  // 산식 자기일관성 실효화 케이스 (B10-SC5)
+  // SC3 실효: 세대생략 할증이 있으면 ㉝ = 12,000,000 (비-0) → ㉞ = ㉜ + ㉝ 회귀 실효
+  // SC1·SC2·SC4의 ⑲⑳㉑㉒㉘㉙㉟㊱㊷㊸㊹는 현 엔진이 항상 0으로 고정(별도 입력 경로 없음)
+  // → 해당 항들의 SC 중간 회귀는 엔진 변경 없이 테스트로 실효화 불가 (프로덕션 코드 수정 금지 정책)
+  // → SC3만 본 케이스로 실효화 / SC1·SC2·SC4는 기존 trivial anchor 유지
+  // ──────────────────────────────────────────────
+  describe("B10-SC5 세대생략 할증 케이스 — SC3 실효화 (㉝ 비-0)", () => {
+    // E14 케이스: 직계비속 3억, 세대생략(성인), 신고세액공제 있음
+    // ㉜ = 40,000,000 / ㉝ = 12,000,000(비-0) / ㉞ = 52,000,000
+    const inputSkip: GiftTaxInput = {
+      giftDate: "2025-01-01",
+      donorRelation: "lineal_descendant",
+      donor: "grandparent",
+      giftItems: [
+        { id: "sc5-1", category: "financial", name: "예금", marketValue: 300_000_000 },
+      ],
+      priorGiftsWithin10Years: [],
+      isGenerationSkip: true,
+      isMinorDonee: false,
+      deductionInput: { donorRelation: "lineal_descendant" },
+      creditInput: { isFiledOnTime: true },
+    };
+    const resultSkip = calcGiftTax(inputSkip);
+    const rowsSkip = resultSkip.besshi10Rows;
+
+    it("B10-SC5a: ㉝ 세대생략가산세 = 12,000,000 (비-0 — SC3 실효 근거)", () => {
+      expect(findRow(rowsSkip, "㉝")?.amount).toBe(12_000_000);
+    });
+
+    it("B10-SC5b: SC3 실효 — ㉞ = ㉜ + ㉝ = 40M + 12M = 52M", () => {
+      const lhs = findRow(rowsSkip, "㉞")!.amount;
+      const rhs =
+        findRow(rowsSkip, "㉜")!.amount + findRow(rowsSkip, "㉝")!.amount;
+      expect(lhs).toBe(rhs);
+      expect(lhs).toBe(52_000_000); // 항등식이면서 값도 고정 (double-lock)
+    });
+
+    it("B10-SC5c: ㊺ 자진납부 = 50,440,000 (산출세액계 − 세액공제)", () => {
+      // 결정세액 = 52M − 신고공제 floor(52M×0.03=1,560,000) = 50,440,000
+      expect(findRow(rowsSkip, "㊺")?.amount).toBe(50_440_000);
+    });
+  });
+
+  // ──────────────────────────────────────────────
   // 구조 anchor
   // ──────────────────────────────────────────────
   it("좌측 컬럼 20행 (⑰~㊱)", () => {

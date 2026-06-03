@@ -86,12 +86,15 @@ describe("Pre-Do — 상속인별 상속세부담액 집계 표 (이미지 8)", 
       expect(perHeir[HEIR_ID.granddaughter]?.finalTax).toBe(95_462_086);
     });
 
-    it("AN-17: Σ ⑮ 1,033,760,232 (1원 toleranc)", () => {
+    it("AN-17: Σ ⑮ 1,033,760,232 (exact — T10 잔액 흡수 단일 floor, 결정값)", () => {
+      // K-05에서 result.finalTax === Σ perHeir.finalTax exact가 보장됨.
+      // 장남 absorber +1원(276,593,380)을 포함해도 합계는 정확히 1,033,760,232.
+      // 5원 tolerance는 per-heir floor 잔액 drift를 놓치므로 toBe로 고정.
       const sum = Object.values(perHeir).reduce(
         (s, h) => s + (h?.finalTax ?? 0),
         0,
       );
-      expect(Math.abs(sum - 1_033_760_232)).toBeLessThanOrEqual(5);
+      expect(sum).toBe(1_033_760_232);
     });
   });
 
