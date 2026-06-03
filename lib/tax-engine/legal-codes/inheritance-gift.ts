@@ -201,6 +201,18 @@ export const EXEMPTION = {
 export const TAX_CREDIT = {
   /** 상증법 §28 — 증여세액공제 (10년 이내 증여재산 합산 시) */
   GIFT_TAX_CREDIT:     "상증법 §28",
+  /**
+   * 상증법 §28 ① 단서 — 증여세액공제 전면 배제 임계 (상속세 과세가액 5억 이하)
+   *
+   * "다만, … 상속세 과세가액이 5억원 이하인 경우에는 그러하지 아니하다"
+   * → taxableEstateValue ≤ GIFT_TAX_CREDIT_EXCLUSION_THRESHOLD 이면 §28 공제 전면 0.
+   *
+   * ※ §24 제3호 단서(SECTION24_GIFT_DEDUCTION_THRESHOLD, inheritance-deductions.ts)와
+   *    동일 임계값(5억)이지만 적용 조문·목적이 다르므로 별개 상수로 관리.
+   * ※ 같은 단서 전단(국기법 §26의2④⑤ 기간만료 배제)은 별도 후속 과제.
+   *   TODO: 국기법 §26의2④⑤ 기간만료로 증여세 부과 불가한 경우 배제 (후속 구현)
+   */
+  GIFT_TAX_CREDIT_EXCLUSION_THRESHOLD: 500_000_000,
   /** 상증법 §29 — 외국납부세액공제 (상속) */
   INH_FOREIGN:         "상증법 §29",
   /** 상증법 §30 — 단기재상속세액공제 (1~10년 100%→10% 차등) */

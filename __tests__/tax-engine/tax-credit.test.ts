@@ -225,6 +225,10 @@ describe("조특법 과세특례", () => {
 describe("세액공제 통합 — 적용 순서", () => {
   it("[C23] 상속세: 증여세액공제 → 신고세액공제 순으로 적용", () => {
     // 산출세액 1억, 사전증여세 납부 1천만, 기한 내 신고
+    // 과세가액 6억(>5억) — §28① 단서 미적용 (정상 공제 케이스).
+    // taxBase=5억 명시: ratioLimit = floor(50M×100M/500M) = 10M → credit = min(10M,10M) = 10M
+    // ※ 구 taxableEstateValue=5억 → §28① 단서(≤5억→배제) 적용으로 credit=0이 되므로
+    //    과세가액을 6억(>5억)으로 조정하고 taxBase=5억으로 분모 고정 (M-2 법령 정합 재산정)
     const result = calcInheritanceTaxCredits({
       creditInput: {
         priorGifts: [
@@ -239,11 +243,12 @@ describe("세액공제 통합 — 적용 순서", () => {
       },
       computedTax: 100_000_000,
       generationSkipSurcharge: 0,
-      taxableEstateValue: 500_000_000,
+      taxableEstateValue: 600_000_000, // 6억(>5억) — §28① 단서 미적용
+      taxBase: 500_000_000,            // 과세표준 5억 (안분 분모 명시)
       deathDate: "2025-01-01", // 2020-01-01 → 5년, 상속인(isHeir=true) 10년 이내 → 포함
     });
 
-    // 1. 증여세액공제: 10,000,000
+    // 1. 증여세액공제: ratioLimit = floor(50M × 100M / 500M) = 10,000,000 → credit = 10,000,000
     expect(result.giftTaxCredit).toBe(10_000_000);
     // 2. 외국납부: 0
     expect(result.foreignTaxCredit).toBe(0);
@@ -420,5 +425,138 @@ describe("공통 유틸 — §13 사전증여 합산", () => {
       "2025-06-01", // 15년 경과
     );
     expect(totalAmount).toBe(0);
+  });
+});
+
+// ============================================================
+// 7. §28① 단서 — 과세가액 5억 이하 증여세액공제 전면 배제 (M-2)
+// ============================================================
+
+describe("§28① 단서 — 과세가액 5억 이하 증여세액공제 배제 (M-2)", () => {
+  /**
+   * [Pre-Do anchor] 결함 발동 케이스:
+   *   과세가액 4억(≤5억) + 비상속인 수유자 3억 유증으로 §24 ceiling 1억 →
+   *   과세표준 1억(>0), 산출세액 1,000만, giftTaxPaid 500만.
+   *   §28① 단서 미구현 현행: credit=5,000,000(과소결정세액).
+   *   수정 후 올바른 값: credit=0 (과세가액 ≤5억 → 전면 배제).
+   *
+   * 수치 근거:
+   *   ratioLimit(안분) = floor(50_000_000 × 10_000_000 / 100_000_000) = 5,000,000
+   *   현행 credit = min(5_000_000, 5_000_000) = 5,000,000  ← 잘못됨
+   *   §28① 단서 적용 후 credit = 0
+   */
+  it("[M2-BUG] 과세가액 4억(≤5억) + giftTaxPaid 500만 → 현행 credit=5,000,000 (버그 확인용 Pre-Do anchor)", () => {
+    const result = calcGiftTaxCredit(
+      [
+        {
+          giftDate: "2020-01-01",
+          isHeir: true,
+          giftAmount: 50_000_000,
+          giftTaxPaid: 5_000_000,
+        },
+      ],
+      10_000_000,   // computedTax (산출세액)
+      100_000_000,  // taxBase (과세표준)
+      400_000_000,  // taxableEstateValue = 4억 (≤5억 → §28① 단서 대상)
+    );
+    // §28① 단서 미구현 전(현행): 5,000,000 → 수정 후: 0
+    // 이 테스트는 수정 전 FAIL, 수정 후 PASS 되어야 함 (Pre-Do anchor)
+    expect(result.creditAmount).toBe(0); // §28① 단서: 과세가액 ≤5억 → 전면 배제
+  });
+
+  it("[M2-FIX-1] 과세가액 정확히 5억(경계) → 배제 적용 (≤5억)", () => {
+    // 과세가액 = 5억 정확히 → 단서 적용 → credit = 0
+    const result = calcGiftTaxCredit(
+      [
+        {
+          giftDate: "2020-01-01",
+          isHeir: true,
+          giftAmount: 50_000_000,
+          giftTaxPaid: 5_000_000,
+        },
+      ],
+      10_000_000,   // computedTax
+      100_000_000,  // taxBase
+      500_000_000,  // taxableEstateValue = 정확히 5억 → 배제
+    );
+    expect(result.creditAmount).toBe(0); // ≤5억: 단서 적용
+  });
+
+  it("[M2-FIX-2] 과세가액 5억+1원(경계 초과) → 정상 공제 (>5억)", () => {
+    // 과세가액 = 500_000_001 → 단서 미적용 → 정상 공제
+    // ratioLimit = floor(50M × 10M / 100M) = 5_000_000
+    // credit = min(5_000_000, 5_000_000) = 5_000_000
+    const result = calcGiftTaxCredit(
+      [
+        {
+          giftDate: "2020-01-01",
+          isHeir: true,
+          giftAmount: 50_000_000,
+          giftTaxPaid: 5_000_000,
+        },
+      ],
+      10_000_000,   // computedTax
+      100_000_000,  // taxBase
+      500_000_001,  // taxableEstateValue = 5억+1 → 배제 없음
+    );
+    expect(result.creditAmount).toBe(5_000_000); // 정상 공제
+  });
+
+  it("[M2-FIX-3] 자기상쇄 통상 케이스: 과세가액 6억 + §21 일괄공제 5억 → 과세표준 0·산출세액 0 → credit 0", () => {
+    // 통상 과세가액 ≤5억 케이스는 §21(5억)로 과세표준=0 → 산출세액=0 → credit=0 (자기상쇄)
+    // 이 케이스는 과세가액 6억(>5억)이므로 단서 미적용, 산출세액 0이면 ratioLimit=0 → credit=0
+    const result = calcGiftTaxCredit(
+      [
+        {
+          giftDate: "2020-01-01",
+          isHeir: true,
+          giftAmount: 50_000_000,
+          giftTaxPaid: 3_000_000,
+        },
+      ],
+      0,            // computedTax = 0 (과세표준 0 → 산출세액 0)
+      0,            // taxBase = 0
+      600_000_000,  // taxableEstateValue = 6억 (>5억, 단서 미적용이나 산출세액 0)
+    );
+    // ratioLimit = 0 → credit = 0 (자기상쇄 — §28① 단서 무관하게 결과 동일)
+    expect(result.creditAmount).toBe(0);
+  });
+
+  it("[M2-FIX-4] 과세가액 4억, 사전증여 없음 → credit 0 (단서 무관)", () => {
+    // priorGifts 없으면 totalGiftTaxPaid=0 → 기존 early-return → credit 0
+    const result = calcGiftTaxCredit(
+      [],
+      10_000_000,
+      100_000_000,
+      400_000_000,
+    );
+    expect(result.creditAmount).toBe(0);
+  });
+
+  it("[M2-INTEGRATION] 통합 — 과세가액 4억 + 사전증여 500만 → calcInheritanceTaxCredits giftTaxCredit=0", () => {
+    // calcInheritanceTaxCredits 통합 경로에서도 5억 배제 적용 확인
+    const result = calcInheritanceTaxCredits({
+      creditInput: {
+        priorGifts: [
+          {
+            giftDate: "2020-01-01",
+            isHeir: true,
+            giftAmount: 50_000_000,
+            giftTaxPaid: 5_000_000,
+          },
+        ],
+        isFiledOnTime: true,
+      },
+      computedTax: 10_000_000,
+      generationSkipSurcharge: 0,
+      taxableEstateValue: 400_000_000, // 4억 ≤5억 → §28① 단서
+      taxBase: 100_000_000,
+      deathDate: "2025-01-01",
+    });
+    // §28① 단서: credit = 0
+    expect(result.giftTaxCredit).toBe(0);
+    // 신고세액공제 기준: 10M − 0 = 10M → 10M × 3% = 300,000
+    expect(result.filingCredit).toBe(300_000);
+    expect(result.totalCredit).toBe(300_000);
   });
 });

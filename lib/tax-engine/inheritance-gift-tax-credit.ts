@@ -45,10 +45,15 @@ import {
  * → 상증법 §28 ①: 분모는 "상속세 과세표준", 분자는 "가산된 증여재산에 대한 과세표준"
  * → taxBase(과세표준) 미제공 시 taxableEstateValue(과세가액)로 fallback
  *
+ * §28 ① 단서 — 과세가액 5억 이하 전면 배제:
+ * "다만, … 상속세 과세가액이 5억원 이하인 경우에는 그러하지 아니하다"
+ * → taxableEstateValue ≤ TAX_CREDIT.GIFT_TAX_CREDIT_EXCLUSION_THRESHOLD(5억)이면 공제 0.
+ * (국기법 §26의2④⑤ 기간만료 배제 조항은 별도 후속 — TODO 주석 참조)
+ *
  * @param priorGifts §13 기간 필터 적용 후 사전증여 내역
  * @param computedTax 상속세 산출세액 (세대생략 할증 포함)
  * @param taxBase 상속세 과세표준 (§28 ① 안분 분모, 법령 준수)
- * @param taxableEstateValue 상속세 과세가액 (taxBase 미제공 시 fallback용)
+ * @param taxableEstateValue 상속세 과세가액 (taxBase 미제공 시 fallback용 + §28① 단서 임계 비교)
  */
 export function calcGiftTaxCredit(
   priorGifts: PriorGift[],
@@ -56,6 +61,27 @@ export function calcGiftTaxCredit(
   taxBase: number,
   taxableEstateValue?: number,
 ): { creditAmount: number; breakdown: CalculationStep[] } {
+  // §28 ① 단서: 상속세 과세가액 ≤ 5억이면 증여세액공제 전면 배제
+  // taxableEstateValue 미제공(undefined) 시 단서 미적용(보수적 처리 — 과대공제 방향)
+  if (
+    taxableEstateValue !== undefined &&
+    taxableEstateValue <= TAX_CREDIT.GIFT_TAX_CREDIT_EXCLUSION_THRESHOLD
+  ) {
+    return {
+      creditAmount: 0,
+      breakdown: [
+        {
+          label:
+            `증여세액공제 배제 — 상속세 과세가액(${taxableEstateValue.toLocaleString()}) ≤ 5억원 (${TAX_CREDIT.GIFT_TAX_CREDIT} ① 단서)`,
+          amount: 0,
+          lawRef: TAX_CREDIT.GIFT_TAX_CREDIT,
+          note:
+            "상증법 §28① 단서: 과세가액 5억원 이하이면 증여세액공제 적용하지 아니함",
+        },
+      ],
+    };
+  }
+
   const totalGiftTaxPaid = priorGifts.reduce(
     (sum, g) => sum + g.giftTaxPaid,
     0,
