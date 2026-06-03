@@ -30,29 +30,63 @@ interface PresumedInheritanceInputProps {
   onChange: (items: PresumedInheritanceItem[]) => void;
 }
 
+/**
+ * 카테고리별 정적 스타일 매핑 — Tailwind dynamic class purge 차단 (feedback_tailwind_static_tone_mapping).
+ * `border-${meta.tone}-300` 같은 동적 보간은 JIT가 인식 못해 production에서 색상 누락 위험.
+ * DebtAllocationInput.CATEGORY_STYLES 패턴 동일 적용.
+ */
 const CATEGORY_META: Record<
   PresumedCategory,
-  { label: string; hint: string; tone: string }
+  {
+    label: string;
+    hint: string;
+    /** 버튼 활성 상태 클래스 (disabled 아닐 때) */
+    buttonClass: string;
+    /** 카드 border + 배경 클래스 */
+    cardClass: string;
+    /** 칩(레이블 badge) 클래스 */
+    chipClass: string;
+  }
 > = {
   real_estate: {
     label: "부동산 및 부동산권리 처분",
     hint: "토지·건물·아파트 등 부동산 및 권리의 처분금액",
-    tone: "amber",
+    buttonClass:
+      "border-amber-300 bg-amber-50/60 text-amber-700 hover:bg-amber-100 dark:bg-amber-950/30 dark:text-amber-300 dark:hover:bg-amber-900/40",
+    cardClass:
+      "border-amber-200 dark:border-amber-900 bg-amber-50/30 dark:bg-amber-950/20",
+    chipClass:
+      "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
   },
   deposit: {
     label: "예금 인출액",
     hint: "예금·적금 등의 인출금액 (사용처 미입증 부분)",
-    tone: "sky",
+    buttonClass:
+      "border-sky-300 bg-sky-50/60 text-sky-700 hover:bg-sky-100 dark:bg-sky-950/30 dark:text-sky-300 dark:hover:bg-sky-900/40",
+    cardClass:
+      "border-sky-200 dark:border-sky-900 bg-sky-50/30 dark:bg-sky-950/20",
+    chipClass:
+      "bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300",
   },
   other_asset: {
     label: "기타재산 처분",
     hint: "영업권·유가증권·회원권 등 기타재산의 처분금액",
-    tone: "violet",
+    buttonClass:
+      "border-violet-300 bg-violet-50/60 text-violet-700 hover:bg-violet-100 dark:bg-violet-950/30 dark:text-violet-300 dark:hover:bg-violet-900/40",
+    cardClass:
+      "border-violet-200 dark:border-violet-900 bg-violet-50/30 dark:bg-violet-950/20",
+    chipClass:
+      "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300",
   },
   financial_debt: {
     label: "금융기관 채무 부담",
     hint: "은행·금융기관에서 부담한 채무액 (사용처 미입증 부분)",
-    tone: "rose",
+    buttonClass:
+      "border-rose-300 bg-rose-50/60 text-rose-700 hover:bg-rose-100 dark:bg-rose-950/30 dark:text-rose-300 dark:hover:bg-rose-900/40",
+    cardClass:
+      "border-rose-200 dark:border-rose-900 bg-rose-50/30 dark:bg-rose-950/20",
+    chipClass:
+      "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300",
   },
 };
 
@@ -109,7 +143,7 @@ export function PresumedInheritanceInput({
               className={`text-xs px-2.5 py-1.5 rounded border ${
                 exists
                   ? "opacity-40 cursor-not-allowed border-border text-muted-foreground"
-                  : `border-${meta.tone}-300 bg-${meta.tone}-50/60 dark:bg-${meta.tone}-950/30 text-${meta.tone}-700 dark:text-${meta.tone}-300 hover:bg-${meta.tone}-100 dark:hover:bg-${meta.tone}-900/40`
+                  : meta.buttonClass
               }`}
             >
               {exists ? "✓ " : "+ "}
@@ -133,12 +167,12 @@ export function PresumedInheritanceInput({
             return (
               <div
                 key={it.id}
-                className={`rounded-md border border-${meta.tone}-200 dark:border-${meta.tone}-900 bg-${meta.tone}-50/30 dark:bg-${meta.tone}-950/20 p-3 space-y-2`}
+                className={`rounded-md border p-3 space-y-2 ${meta.cardClass}`}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span
-                      className={`text-xs px-2 py-0.5 rounded-full bg-${meta.tone}-100 dark:bg-${meta.tone}-900/40 text-${meta.tone}-700 dark:text-${meta.tone}-300 font-semibold`}
+                      className={`text-xs px-2 py-0.5 rounded-full font-semibold ${meta.chipClass}`}
                     >
                       {meta.label}
                     </span>
