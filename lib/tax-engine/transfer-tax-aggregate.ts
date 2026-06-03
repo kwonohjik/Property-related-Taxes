@@ -157,7 +157,7 @@ export function calculateTransferTaxAggregate(
   const availableThisCalc = Math.max(0, annualLimit - input.annualBasicDeductionUsed);
 
   const eligibleForBasic = assetRecords
-    .map((r, idx) => ({ idx, rateGroup: r.rateGroup, income: incomeAfterOffset[idx], isExempt: r.result.isExempt, transferDate: r.item.transferDate }))
+    .map((r, idx) => ({ idx, rateGroup: r.rateGroup, income: incomeAfterOffset[idx], isExempt: r.result.isExempt, transferDate: r.item.transferDate, rate: r.result.appliedRate }))
     .filter((r) => !r.isExempt && r.rateGroup !== "unregistered" && r.income > 0);
 
   const allocation = allocateBasicDeduction(

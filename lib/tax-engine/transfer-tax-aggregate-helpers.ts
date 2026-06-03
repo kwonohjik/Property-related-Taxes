@@ -256,7 +256,7 @@ export function offsetLosses(records: AssetRecord[]): LossOffsetOutput {
 // ============================================================
 
 export function allocateBasicDeduction(
-  eligible: { idx: number; rateGroup: RateGroup; income: number; transferDate: Date }[],
+  eligible: { idx: number; rateGroup: RateGroup; income: number; transferDate: Date; rate: number }[],
   available: number,
   strategy: "MAX_BENEFIT" | "FIRST" | "EARLIEST_TRANSFER",
 ): { idx: number; amount: number }[] {
@@ -278,6 +278,10 @@ export function allocateBasicDeduction(
     sorted = [...eligible].sort((a, b) => {
       const dg = (groupPriority[b.rateGroup] ?? 0) - (groupPriority[a.rateGroup] ?? 0);
       if (dg !== 0) return dg;
+      // 동일 그룹 내: 적용세율 높은 자산에 기본공제 우선 배분 (세액 절감 최대 = MAX_BENEFIT).
+      // short_term 그룹에 1년 미만 50% + 1~2년 40%가 섞인 경우 등 순서 의존 제거.
+      const dr = b.rate - a.rate;
+      if (dr !== 0) return dr;
       return b.income - a.income;
     });
   }
@@ -314,6 +318,7 @@ export function aggregateByGroup(
   });
 
   const out: GroupTaxResult[] = [];
+  const parsedRates = parseRatesFromMap(rates);
   for (const [group, idxList] of groupMap) {
     const groupGrossGain = idxList
       .filter((i) => records[i].income > 0)
@@ -325,10 +330,45 @@ export function aggregateByGroup(
     const groupBasicDeduction = idxList.reduce((s, i) => s + allocatedBasic[i], 0);
     const groupTaxBase = Math.max(0, groupIncomeAmount - groupBasicDeduction);
 
-    const repIdx = idxList[0];
-    const rep = records[repIdx];
-    const parsedRates = parseRatesFromMap(rates);
-    const taxResult = calcTax(groupTaxBase, parsedRates, rep.singleInput);
+    let groupCalculatedTax: number;
+    let appliedRate: number;
+    let surchargeRate: number | undefined;
+    let progressiveDeduction: number;
+
+    if (group === "short_term") {
+      // §104⑤2호 — 단기 단일세율은 호(1년 미만 50%/70%, 1~2년 40%/60%)별로 다를 수 있다.
+      // 자산별 과세표준(= max(0, incomeAfterOffset[i] - allocatedBasic[i])) × 자산별 세율로 산출세액 계산.
+      // calcTax를 자산 입력으로 재호출하여 §104①후단(비사업용+단기 큰 세액) 분기까지 정확히 반영.
+      const perAsset = idxList.map((i) => {
+        const assetTaxBase = Math.max(0, incomeAfterOffset[i] - allocatedBasic[i]);
+        const tr = calcTax(assetTaxBase, parsedRates, records[i].singleInput);
+        return { rate: tr.appliedRate, tax: tr.calculatedTax };
+      });
+      const uniformRate = perAsset.every((p) => p.rate === perAsset[0].rate);
+      if (uniformRate) {
+        // 동일 세율(예: 일괄양도 일체과세 70% — 사례 28)은 합산 과세표준 × 세율로 1회 floor.
+        // 자산별 floor 합산은 floor 횟수 차이로 ±N원 오차가 나므로 동일 세율은 기존 합산 방식 유지.
+        const tr = calcTax(groupTaxBase, parsedRates, records[idxList[0]].singleInput);
+        groupCalculatedTax = tr.calculatedTax;
+        appliedRate = tr.appliedRate;
+      } else {
+        // 세율 혼재(50%+40% 등) — 그룹 합산 후 대표세율 1개 적용은 순서 의존·세액 오류.
+        // §104⑤2호에 따라 자산별 산출세액의 합으로 계산.
+        groupCalculatedTax = perAsset.reduce((s, p) => s + p.tax, 0);
+        appliedRate = Math.max(...perAsset.map((p) => p.rate)); // 표시용 최고세율
+      }
+      surchargeRate = undefined;
+      progressiveDeduction = 0;
+    } else {
+      // 누진세율 호(progressive·multi_house_surcharge·non_business_land) 및 미등기 단일 70%는
+      // 동일 호 합산이 정확하므로 그룹 합산 과세표준에 대표 세율을 적용한다.
+      const rep = records[idxList[0]];
+      const taxResult = calcTax(groupTaxBase, parsedRates, rep.singleInput);
+      groupCalculatedTax = taxResult.calculatedTax;
+      appliedRate = taxResult.appliedRate;
+      surchargeRate = taxResult.surchargeRate;
+      progressiveDeduction = taxResult.progressiveDeduction;
+    }
 
     out.push({
       group,
@@ -338,10 +378,10 @@ export function aggregateByGroup(
       groupIncomeAmount,
       groupBasicDeduction,
       groupTaxBase,
-      groupCalculatedTax: taxResult.calculatedTax,
-      appliedRate: taxResult.appliedRate,
-      surchargeRate: taxResult.surchargeRate,
-      progressiveDeduction: taxResult.progressiveDeduction,
+      groupCalculatedTax,
+      appliedRate,
+      surchargeRate,
+      progressiveDeduction,
     });
   }
 

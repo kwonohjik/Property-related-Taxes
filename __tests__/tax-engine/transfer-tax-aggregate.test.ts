@@ -644,3 +644,61 @@ describe("T-M16: 비교과세 §104⑤ 인용 정정 (A 회귀)", () => {
     expect(compStep!.legalBasis).toBe("소득세법 §104⑤");
   });
 });
+
+// ============================================================
+// T-M17: short_term 그룹 세율 혼재 §104⑤2호 (B 회귀)
+// 1년 미만(50%) + 1~2년(40%) 단기 자산이 같은 short_term 그룹에 섞일 때,
+// 그룹 합산 후 대표세율 1개를 적용하면 안 되고(과거 버그: 순서 의존 29,750,000원 차이),
+// 자산별 과세표준 × 자산별 세율의 합으로 계산해야 한다.
+// 기본공제(MAX_BENEFIT)는 세율 높은 자산에 배분 → 순서 무관.
+// ============================================================
+
+describe("T-M17: short_term 세율 혼재 §104⑤2호 (B 회귀)", () => {
+  const land = (id: string, acqDate: string): TransferTaxItemInput =>
+    makeItem(id, id, {
+      propertyType: "land",
+      transferPrice: 300_000_000,
+      acquisitionPrice: 150_000_000, // 차익 1.5억
+      acquisitionDate: new Date(acqDate),
+      transferDate: new Date("2024-06-01"),
+      isOneHousehold: false,
+      householdHousingCount: 0,
+      residencePeriodMonths: 0,
+    });
+  const A50 = land("A50", "2024-01-01"); // 5개월 → 50%
+  const B40 = land("B40", "2023-01-01"); // 1년5개월 → 40%
+
+  it("자산별 세율 합 = 133,750,000 (대표세율 일괄 적용 아님)", () => {
+    // 50%자산 과표 147,500,000(기본공제 250만)×50% = 73,750,000
+    // 40%자산 과표 150,000,000×40% = 60,000,000 → 합 133,750,000
+    const r = calculateTransferTaxAggregate(
+      { taxYear: 2024, properties: [A50, B40], annualBasicDeductionUsed: 0 },
+      mockRates,
+    );
+    expect(r.calculatedTaxByGroups).toBe(133_750_000);
+    expect(r.calculatedTax).toBe(133_750_000);
+  });
+
+  it("입력 순서 무관 — [50,40] === [40,50]", () => {
+    const r1 = calculateTransferTaxAggregate(
+      { taxYear: 2024, properties: [A50, B40], annualBasicDeductionUsed: 0 },
+      mockRates,
+    );
+    const r2 = calculateTransferTaxAggregate(
+      { taxYear: 2024, properties: [B40, A50], annualBasicDeductionUsed: 0 },
+      mockRates,
+    );
+    expect(r1.calculatedTax).toBe(r2.calculatedTax);
+    expect(r2.calculatedTax).toBe(133_750_000);
+  });
+
+  it("동일 세율(50%+50%)은 기존과 동일 (합산 = 자산별 합)", () => {
+    const A50b = land("A50b", "2024-02-01"); // 4개월 → 50%
+    const r = calculateTransferTaxAggregate(
+      { taxYear: 2024, properties: [A50, A50b], annualBasicDeductionUsed: 0 },
+      mockRates,
+    );
+    // 합산 과표 297,500,000 × 50% = 148,750,000 (동일 세율이므로 합산=자산별합)
+    expect(r.calculatedTaxByGroups).toBe(148_750_000);
+  });
+});
