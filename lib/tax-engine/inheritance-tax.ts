@@ -51,6 +51,8 @@ import {
 } from "./inheritance-gift-common";
 import { calcInheritanceTaxCredits } from "./inheritance-gift-tax-credit";
 import { buildFamilyBusinessPostMgmtMeta } from "./credits/family-business-postmgmt-orchestrator";
+import { computeTaxIfNoFamilyBusinessDeduction } from "./deductions/family-business-200pct-guard";
+import { deriveFamilyBusinessValue } from "./deductions/family-business";
 import { evaluatePresumedInheritance } from "./presumed-inheritance";
 import { calcCorporateExemption } from "./inheritance-corporate-exemption";
 import { calcHeirAllocation } from "./inheritance-allocation";
@@ -418,36 +420,62 @@ export function calcInheritanceTax(
     collateralDebts,
   );
 
+  // override가 명시되어 있으면 그대로, 없으면 자동 계산값 사용
+  const resolvedSpouseLegalShareOverride =
+    input.deductionInput.spouseLegalShareOverride ?? computedSpouseLegalShare;
+  // Phase D §24 — 한도 분자 보정 정보 (PASS1·PASS2 공유)
+  const deductionLimitParams = {
+    totalPriorGiftAmount: priorGiftAggregated,
+    // §24 3호 증여재산공제: 명시 입력 우선(override), 미입력 시 사전증여 내역(§53 관계/giftTaxBase)에서 자동 도출.
+    priorGiftDeductionTotal:
+      input.deductionInput.priorGiftDeductionTotal ??
+      computePriorGiftDeductionForLimit(preGifts, input.deathDate),
+    legateeAmountNonHeir: input.deductionInput.legateeAmountNonHeir ?? 0,
+    disasterLossDeduction: input.deductionInput.disasterLossDeduction ?? 0,
+  };
+
+  // ─────────────────────────────────────────────
+  // E5 2-pass — §18의2② 중견기업 200% 가드용 taxIfNoFBD 실산정
+  //   PASS1: 가업상속공제 제외 산출세액 → §3의2 가업상속인 안분 (상증령 §15⑦).
+  //   중견기업(medium) 가업상속공제 경로에서만 발동 (그 외 0 → 가드 비활성, 회귀 0).
+  // ─────────────────────────────────────────────
+  let taxIfNoFBD = 0;
+  const fbInput = input.deductionInput.familyBusiness;
+  if (fbInput?.enterpriseSize === "medium") {
+    const familyBusinessGross =
+      input.deductionInput.familyBusinessValue ??
+      deriveFamilyBusinessValue(input.estateItems, input.deathDate);
+    const otherEstateNet = Math.max(
+      0,
+      (fbInput.heirOtherEstateValue ?? 0) - (fbInput.heirDebt ?? 0),
+    );
+    taxIfNoFBD = computeTaxIfNoFamilyBusinessDeduction({
+      deductionInput: input.deductionInput,
+      deathDate: input.deathDate,
+      spouseLegalShareOverride: resolvedSpouseLegalShareOverride,
+      taxableEstateValue,
+      priorGiftToHeirTotal: heirOnlyGifts,
+      limitParams: deductionLimitParams,
+      estateItems: input.estateItems,
+      brackets,
+      familyBusinessGross,
+      otherEstateNet,
+    }).taxIfNoFBD;
+  }
+
+  // PASS2 — 가업상속공제 적용 (taxIfNoFBD 주입)
   const deductionResult = calcInheritanceDeductions(
     {
       ...input.deductionInput,
       deathDate: input.deathDate,
-      // override가 명시되어 있으면 그대로, 없으면 자동 계산값 사용
-      spouseLegalShareOverride:
-        input.deductionInput.spouseLegalShareOverride ?? computedSpouseLegalShare,
+      spouseLegalShareOverride: resolvedSpouseLegalShareOverride,
     },
     taxableEstateValue,
     heirOnlyGifts,
-    // Phase D §24 — 한도 분자 보정 정보 (영리법인 포함 모든 사전증여 + 증여공제 + 상속외자유증)
-    {
-      totalPriorGiftAmount: priorGiftAggregated,
-      // §24 3호 증여재산공제: 명시 입력 우선(override), 미입력 시 사전증여 내역(§53 관계/giftTaxBase)에서 자동 도출.
-      // 배우자 법정상속분 분자와 동일 산식 — 수동 미입력 시 0으로 누락되던 dual-truth 차단.
-      priorGiftDeductionTotal:
-        input.deductionInput.priorGiftDeductionTotal ??
-        computePriorGiftDeductionForLimit(
-          preGifts,
-          input.deathDate,
-        ),
-      legateeAmountNonHeir: input.deductionInput.legateeAmountNonHeir ?? 0,
-      disasterLossDeduction: input.deductionInput.disasterLossDeduction ?? 0,
-    },
-    // 가업상속공제 보조 입력 (2026-05-21 §18의2 정밀화)
-    //   - estateItems: familyBusinessCategory 자동 합산용
-    //   - taxIfNoFBD: §18의2② 200% 가드 산정용 (Phase F+ 정밀화 예정, 본 PR은 0 fallback)
+    deductionLimitParams,
     {
       estateItems: input.estateItems,
-      taxIfNoFBD: 0,
+      taxIfNoFBD,
     },
   );
 
