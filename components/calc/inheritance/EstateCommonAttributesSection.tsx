@@ -78,6 +78,8 @@ export interface EstateCommonAttributesSectionProps {
    *  비상장 정식: evaluateUnlistedStockV2().totalValuation)
    */
   effectiveValuation: number;
+  /** 상속개시일 — 법인 과다현금 비율·제외 단서 시기 판정 (CorporateNonBusinessAssetsSection) */
+  deathDate?: string;
 }
 
 // ============================================================
@@ -90,6 +92,7 @@ export function EstateCommonAttributesSection({
   mode,
   heirs,
   effectiveValuation,
+  deathDate,
 }: EstateCommonAttributesSectionProps) {
   // gift 모드이면 전체 비노출 (C-6/C-7)
   if (mode !== "inheritance") return null;
@@ -100,6 +103,7 @@ export function EstateCommonAttributesSection({
       onUpdate={onUpdate}
       heirs={heirs}
       effectiveValuation={effectiveValuation}
+      deathDate={deathDate}
     />
   );
 }
@@ -110,6 +114,7 @@ interface InnerProps {
   onUpdate: (updated: EstateItem) => void;
   heirs?: Heir[];
   effectiveValuation: number;
+  deathDate?: string;
 }
 
 function EstateCommonAttributesSectionInner({
@@ -117,6 +122,7 @@ function EstateCommonAttributesSectionInner({
   onUpdate,
   heirs,
   effectiveValuation,
+  deathDate,
 }: InnerProps) {
   const visibility = useMemo(() => resolveAssetToggleVisibility(item), [item]);
   const hiddenExpandableCount = countHiddenExpandable(visibility);
@@ -160,7 +166,7 @@ function EstateCommonAttributesSectionInner({
       )}
 
       {/* 법인 사업무관자산 차감 (§15⑤2호 + §16⑤2호) */}
-      <CorporateNonBusinessAssetsSection item={item} onUpdate={onUpdate} />
+      <CorporateNonBusinessAssetsSection item={item} onUpdate={onUpdate} deathDate={deathDate} />
 
       {/* §22 금융재산공제 — 카테고리별 자동 노출 */}
       {visibility.financialDeduction === "default" && (

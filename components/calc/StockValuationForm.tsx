@@ -299,6 +299,7 @@ function ListedStockEditor({
         mode={mode}
         heirs={heirs}
         effectiveValuation={totalValue}
+        deathDate={valuationDate}
       />
     </div>
   );
@@ -456,6 +457,7 @@ function UnlistedStockCard({
         mode={mode}
         heirs={heirs}
         effectiveValuation={effectiveValuation}
+        deathDate={valuationDate}
       />
     </div>
   );

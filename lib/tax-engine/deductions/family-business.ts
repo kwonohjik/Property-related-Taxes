@@ -236,13 +236,16 @@ export function evaluateFamilyBusinessEligibility(
  * (J-1) raw 평가액 = resolveEstateItemValue — §60 평가 우선순위(시가→감정가→기준시가→비상장 V2).
  *   marketValue 외(감정가·기준시가·V2)로 평가한 가업자산이 0으로 누락되던 갭 해소. gross(차감 전) 반환.
  */
-export function deriveFamilyBusinessValue(estateItems: EstateItem[] | undefined): number {
+export function deriveFamilyBusinessValue(
+  estateItems: EstateItem[] | undefined,
+  deathDate?: string,
+): number {
   if (!estateItems) return 0;
   return estateItems
     .filter((item) => item.familyBusinessCategory !== undefined)
     .reduce((sum, item) => {
       const raw = resolveEstateItemValue(item);
-      // §15⑤2호 — 법인주식 + 총자산 입력 시 사업무관자산 차감
+      // §15⑤2호 — 법인주식 + 총자산 입력 시 사업무관자산 차감 (과다현금 자동산정·제외 단서는 deathDate 시기별)
       if (item.familyBusinessCategory === "corporate_stock" && item.corporateTotalAssets) {
         return (
           sum +
@@ -250,6 +253,7 @@ export function deriveFamilyBusinessValue(estateItems: EstateItem[] | undefined)
             raw,
             item.corporateTotalAssets,
             item.corporateNonBusinessAssets,
+            deathDate,
           ).adjustedValue
         );
       }
@@ -332,7 +336,7 @@ export function calcFamilyBusinessDeductionPhase2(args: {
     : 0;
 
   // 4) 가액 결정 (manual > auto)
-  const autoDerivedValue = deriveFamilyBusinessValue(estateItems);
+  const autoDerivedValue = deriveFamilyBusinessValue(estateItems, input.deathDate);
   const manualValue = familyBusinessValueOverride;
   const finalValue = manualValue ?? autoDerivedValue;
 

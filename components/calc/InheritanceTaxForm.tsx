@@ -325,10 +325,10 @@ export function InheritanceTaxForm() {
       spouse: suggestSpouseActualAmount(autoAllItems, form.heirs, form.debtItems),
       netFin: suggestNetFinancialAssets(autoAllItems, form.debtItems),
       cohabit: deriveCohabitHouseStdPrice(autoAllItems, form.heirs),
-      farming: suggestFarmingAssetValue(autoAllItems, form.farming),
+      farming: suggestFarmingAssetValue(autoAllItems, form.farming, form.deathDate),
       legatee: suggestLegateeAmountNonHeir(autoAllItems, form.heirs),
     }),
-    [autoAllItems, form.heirs, form.debtItems, form.farming],
+    [autoAllItems, form.heirs, form.debtItems, form.farming, form.deathDate],
   );
 
   const buildInput = (): InheritanceTaxInput => {

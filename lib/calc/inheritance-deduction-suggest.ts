@@ -78,7 +78,7 @@ export function getValuatedAmount(item: EstateItem): number {
  * corporate_stock 자산은 사업무관자산 차감 후 가액 반환 (PR-C F-8).
  * 시행령 §15⑤2호 + §16⑤2호 공통. 미입력 시 raw value.
  */
-function getCorporateAdjustedAmount(item: EstateItem): number {
+function getCorporateAdjustedAmount(item: EstateItem, deathDate?: string): number {
   const raw = getValuatedAmount(item);
   const isCorporateStock =
     item.farmingCategory === "corporate_stock" ||
@@ -89,6 +89,7 @@ function getCorporateAdjustedAmount(item: EstateItem): number {
     raw,
     item.corporateTotalAssets,
     item.corporateNonBusinessAssets,
+    deathDate,
   ).adjustedValue;
 }
 
@@ -241,6 +242,7 @@ export function suggestPriorGiftDeductionTotal(
 
 export function suggestFamilyBusinessValue(
   estateItems: EstateItem[],
+  deathDate?: string,
 ): DeductionSuggestion {
   const eligible = estateItems.filter((i) => i.isFamilyBusinessAsset === true);
   if (eligible.length === 0) {
@@ -251,12 +253,12 @@ export function suggestFamilyBusinessValue(
       isApplicable: false,
     };
   }
-  const value = eligible.reduce((sum, i) => sum + getCorporateAdjustedAmount(i), 0);
+  const value = eligible.reduce((sum, i) => sum + getCorporateAdjustedAmount(i, deathDate), 0);
   return {
     value,
     reason: "isFamilyBusinessAsset=true 자산 합산 (corporate_stock는 사업무관자산 차감)",
     breakdown: eligible.map((i) => {
-      const adj = getCorporateAdjustedAmount(i);
+      const adj = getCorporateAdjustedAmount(i, deathDate);
       const raw = getValuatedAmount(i);
       const note = adj !== raw ? ` (사업무관자산 차감 / 평가 ${formatKrw(raw)}원)` : "";
       return `${i.name}: ${formatKrw(adj)}원${note}`;
@@ -342,6 +344,7 @@ const FARMING_CATEGORY_LABEL: Record<NonNullable<EstateItem["farmingCategory"]>,
 export function suggestFarmingAssetValue(
   estateItems: EstateItem[],
   farming?: { qualifiedHeirIds?: string[] },
+  deathDate?: string,
 ): DeductionSuggestion {
   const eligible = estateItems.filter((i) => {
     if (i.farmingCategory === undefined) return false;
@@ -369,7 +372,7 @@ export function suggestFarmingAssetValue(
   let totalMortgage = 0;
   const breakdown: string[] = [];
   for (const item of eligible) {
-    const fullValue = getCorporateAdjustedAmount(item);
+    const fullValue = getCorporateAdjustedAmount(item, deathDate);
     let itemValue = fullValue;
     let itemMortgage = item.mortgageAmount ?? 0;
 
