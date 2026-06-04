@@ -2,10 +2,10 @@
  * 영농상속공제 법령정합 보완 — 연도별 한도(G1) + 담보 시행시기(G3) + 2년영농(G4) + 총수입 라벨(G2) anchor
  *
  * 설계: docs/02-design/features/inheritance-farming-deduction-enhancement.engine.design.md
- * 한도 출처 (KoreanLaw 1차 검증 완료, 2026-06-04 — 조세심판원 적용조문 축자 인용):
+ * 한도 출처 (KoreanLaw 1차 검증 완료, 2026-06-04 — 조세심판원 축자인용 + 신구대조표):
  *   2억=조심2010중2776(2007.2.21) · 5억=조심2014중4319(2012.2.20)·2017중4714(2013.11.8)
- *   15억=조심2019중4355(2018.1.9) · 30억=법률 제19195호 §18의3①(2023.1.1, MST 247439 신설조문)
- *   "20억" 구간 부재 확정 (2→5→15→30). 상세 근거: lib/tax-engine/data/farming-deduction-limit.ts 주석.
+ *   15억=조심2019중4355(2018.1.9)·2023부7501(2021.6.3) · 20억=법률 제18591호(2022.1.1)·조심2024중3710(2022.6.7)
+ *   30억=법률 제19195호 §18의3①(2023.1.1, MST 247439). 5단계(2/5/15/20/30) — 상세: data/farming-deduction-limit.ts.
  */
 
 import { describe, expect, it } from "vitest";
@@ -46,9 +46,13 @@ function farmItem(over: Partial<EstateItem> = {}): EstateItem {
 // ============================================================
 
 describe("G1 resolveFarmingDeductionLimit — 상속개시 연도별 한도 경계", () => {
-  it("2023-01-01 → 30억 / 2022-12-31 → 15억", () => {
+  it("2023-01-01 → 30억 / 2022-12-31 → 20억 (2022년 20억 구간)", () => {
     expect(resolveFarmingDeductionLimit("2023-01-01")).toBe(3_000_000_000);
-    expect(resolveFarmingDeductionLimit("2022-12-31")).toBe(1_500_000_000);
+    expect(resolveFarmingDeductionLimit("2022-12-31")).toBe(2_000_000_000);
+  });
+  it("2022-01-01 → 20억 / 2021-12-31 → 15억 (법률 제18591호 경계)", () => {
+    expect(resolveFarmingDeductionLimit("2022-01-01")).toBe(2_000_000_000);
+    expect(resolveFarmingDeductionLimit("2021-12-31")).toBe(1_500_000_000);
   });
   it("2016-01-01 → 15억 / 2015-12-31 → 5억", () => {
     expect(resolveFarmingDeductionLimit("2016-01-01")).toBe(1_500_000_000);
@@ -67,8 +71,11 @@ describe("G1 resolveFarmingDeductionLimit — 상속개시 연도별 한도 경�
     // 조심2014중4319 (2012.2.20) · 조심2017중4714 (2013.11.8) — "5억원을 한도로 한다"
     expect(resolveFarmingDeductionLimit("2012-02-20")).toBe(500_000_000);
     expect(resolveFarmingDeductionLimit("2013-11-08")).toBe(500_000_000);
-    // 조심2019중4355 (2018.1.9) — "15억원을 한도로 한다"
+    // 조심2019중4355 (2018.1.9) · 조심2023부7501 (2021.6.3) — "15억원을 한도로 한다"
     expect(resolveFarmingDeductionLimit("2018-01-09")).toBe(1_500_000_000);
+    expect(resolveFarmingDeductionLimit("2021-06-03")).toBe(1_500_000_000);
+    // 조심2024중3710 (2022.6.7) — "20억원을 한도로 한다" (법률 제18591호로 15억→20억)
+    expect(resolveFarmingDeductionLimit("2022-06-07")).toBe(2_000_000_000);
   });
 });
 
