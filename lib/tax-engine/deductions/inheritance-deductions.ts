@@ -618,6 +618,7 @@ export function calcInheritanceDeductions(
     input.farmingAssetValue ?? 0,
     input.farming,
     familyBusinessAux?.estateItems,
+    input.deathDate,
   );
   const farmingDeduction = farmingResult.deduction;
   const farmingDetail = farmingResult.detail;

@@ -303,6 +303,24 @@ export interface EstateItem extends EstateLocationFields {
   corporateNonBusinessAssets?: CorporateNonBusinessAssets;
   /** 법인 총자산 (사업무관자산 비율 분모). 미입력 시 차감 미적용 (legacy). */
   corporateTotalAssets?: number;
+  /**
+   * 영농상속재산 — 피상속인이 상속개시일 2년 전부터 영농에 사용 (§16⑤1호 본문).
+   * undefined=충족 가정(legacy 호환), false=미충족 → suggestFarmingAssetValue에서 제외.
+   *
+   * farmingUseStartDate 입력 시 자동판정 우선, 미입력 시 본 필드 수동 fallback.
+   */
+  farmingUsedTwoYears?: boolean;
+  /**
+   * 영농 사용 개시일 (YYYY-MM-DD, §16⑤1호 — "상속개시일 2년 전부터 영농에 사용한 자산").
+   *
+   * 판정 기준: 취득일이 아닌 실제 영농 사용 시작일 (조심2014중4319: 상속개시 2년 이내 취득·사용
+   * 농지는 §16⑤1호 미충족). 자동판정: farmingUseStartDate <= twoYearsBefore(deathDate)이면 충족.
+   *
+   * 우선순위: farmingUseStartDate(자동) > farmingUsedTwoYears(수동 boolean fallback).
+   * string 비교 YYYY-MM-DD — Date 변환 금지 ([[feedback_api_date_serialize]]).
+   * 2/29 edge는 드물어 무시 (주석).
+   */
+  farmingUseStartDate?: string;
 
   // 위치 필드(좌표·주소·시·군·구 코드)는 EstateLocationFields mixin — 본 인터페이스에 직접 정의 안 함
 }

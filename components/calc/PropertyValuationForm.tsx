@@ -240,6 +240,7 @@ function ItemEditor({ item, index, onUpdate, onRemove, mode, heirs, valuationDat
         onUpdate={onUpdate}
         heirs={heirs}
         onClose={() => setInlineExpandedKey(null)}
+        deathDate={valuationDate}
       />
 
       {/* ─────────────────────────────────────────────────────────
@@ -252,6 +253,7 @@ function ItemEditor({ item, index, onUpdate, onRemove, mode, heirs, valuationDat
           item={item}
           onUpdate={onUpdate}
           showSecuredClaimSubFields={showCollateralDeductToggle}
+          deathDate={valuationDate}
         />
       )}
     </div>

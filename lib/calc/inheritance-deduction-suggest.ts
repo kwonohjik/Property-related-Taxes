@@ -335,6 +335,21 @@ const FARMING_CATEGORY_LABEL: Record<NonNullable<EstateItem["farmingCategory"]>,
 };
 
 /**
+ * 상속개시일 기준 "2년 전" 날짜 문자열 반환 (§16⑤1호 자동판정 전용).
+ *
+ * string 조작만 사용 — Date·parseISO·new Date 금지 ([[feedback_api_date_serialize]]).
+ * 윤년 2/29 edge(2024-02-29 → 2022-02-29): 드물어 무시 (실무상 2/28 또는 3/1로 보정 필요 시
+ * 사용자가 수동 입력하면 됨 — 자동판정은 근사값으로 충분).
+ *
+ * @param deathDate YYYY-MM-DD 상속개시일
+ * @returns YYYY-MM-DD (연도만 -2)
+ */
+export function twoYearsBefore(deathDate: string): string {
+  const [y, m, d] = deathDate.split("-");
+  return `${Number(y) - 2}-${m}-${d}`;
+}
+
+/**
  * 영농상속재산가액 자동 도출 (§18의3 + 시행령 §16⑤).
  * - estateItems 중 farmingCategory 지정된 자산 합
  * - §16⑤ 단서 — 담보채무(mortgageAmount) 차감
@@ -346,23 +361,62 @@ export function suggestFarmingAssetValue(
   farming?: { qualifiedHeirIds?: string[] },
   deathDate?: string,
 ): DeductionSuggestion {
+  // D4: §16⑤1호 2년 영농사용 판정 헬퍼 — 자동판정(farmingUseStartDate) 우선, 수동 boolean fallback
+  // KoreanLaw 검증 2026-06-04: "상속개시일 2년 전부터 영농에 사용한 자산" (취득일 기준 아님 — 조심2014중4319)
+  const twoYearsBeforeDate = deathDate ? twoYearsBefore(deathDate) : undefined;
+  const isFarmingTwoYearMet = (i: EstateItem): boolean => {
+    if (i.farmingUseStartDate !== undefined && twoYearsBeforeDate !== undefined) {
+      // 자동판정: 영농 사용 개시일이 "2년 전" 이전이면 충족 (string 비교 YYYY-MM-DD)
+      return i.farmingUseStartDate <= twoYearsBeforeDate;
+    }
+    // fallback: 수동 boolean (farmingUseStartDate 미입력 시)
+    // undefined=충족 가정(legacy 호환), false=제외
+    return i.farmingUsedTwoYears !== false;
+  };
+
   const eligible = estateItems.filter((i) => {
     if (i.farmingCategory === undefined) return false;
     // PR-RE-1: §16⑤마목 단서 — 마을어업·협동양식업 면허 제외
     if (i.farmingCategory === "fishing_right" && i.fishingLicenseExcluded === true) {
       return false;
     }
+    // D4: §16⑤1호 본문 — 자동판정(farmingUseStartDate) 우선, 수동 fallback
+    if (!isFarmingTwoYearMet(i)) return false;
     return true;
   });
   const excludedFishing = estateItems.filter(
     (i) => i.farmingCategory === "fishing_right" && i.fishingLicenseExcluded === true,
   );
+  const excludedTwoYear = estateItems.filter(
+    (i) => i.farmingCategory !== undefined && !isFarmingTwoYearMet(i),
+  );
+  // G3: §16⑤1호 담보채무 차감 — 2026.2.27 이후 상속분부터 (시행령 부칙5). string 비교, deathDate undefined=차감(legacy)
+  const applyMortgage = deathDate === undefined || deathDate >= "2026-02-27";
   if (eligible.length === 0) {
+    // 자동판정 제외 or 수동 제외된 경우에도 notes 안내 생성
+    const earlyNotes: string[] = [];
+    if (excludedTwoYear.length > 0) {
+      const autoExcluded = excludedTwoYear.filter(
+        (i) => i.farmingUseStartDate !== undefined && twoYearsBeforeDate !== undefined,
+      );
+      const manualExcluded = excludedTwoYear.length - autoExcluded.length;
+      if (autoExcluded.length > 0) {
+        earlyNotes.push(
+          `ℹ️ 영농 사용 개시일이 상속개시 2년 이내인 자산 ${autoExcluded.length}건 제외 (§16⑤1호 자동판정)`,
+        );
+      }
+      if (manualExcluded > 0) {
+        earlyNotes.push(
+          `ℹ️ '상속개시일 2년 전부터 영농 사용' 미충족 ${manualExcluded}건 제외 (§16⑤1호, 수동 설정)`,
+        );
+      }
+    }
     return {
       value: 0,
-      reason: "영농 자산 미지정",
+      reason: earlyNotes.length > 0 ? "영농 자산 미지정 (2년 미충족 제외)" : "영농 자산 미지정",
       breakdown: [],
       isApplicable: false,
+      notes: earlyNotes.length > 0 ? earlyNotes : undefined,
     };
   }
   const qualifiedIds = farming?.qualifiedHeirIds;
@@ -374,7 +428,7 @@ export function suggestFarmingAssetValue(
   for (const item of eligible) {
     const fullValue = getCorporateAdjustedAmount(item, deathDate);
     let itemValue = fullValue;
-    let itemMortgage = item.mortgageAmount ?? 0;
+    let itemMortgage = applyMortgage ? (item.mortgageAmount ?? 0) : 0;
 
     if (useAllocation && item.heirAllocations && item.heirAllocations.length > 0) {
       // 자격자 분배분만 합산 (§16⑤ 본문)
@@ -415,6 +469,27 @@ export function suggestFarmingAssetValue(
   if (excludedFishing.length > 0) {
     notes.push(
       `ℹ️ 마을어업·협동양식업 면허 ${excludedFishing.length}건 제외 (§16⑤마목 단서)`,
+    );
+  }
+  if (excludedTwoYear.length > 0) {
+    const autoExcluded = excludedTwoYear.filter(
+      (i) => i.farmingUseStartDate !== undefined && twoYearsBeforeDate !== undefined,
+    );
+    const manualExcluded = excludedTwoYear.length - autoExcluded.length;
+    if (autoExcluded.length > 0) {
+      notes.push(
+        `ℹ️ 영농 사용 개시일이 상속개시 2년 이내인 자산 ${autoExcluded.length}건 제외 (§16⑤1호 자동판정)`,
+      );
+    }
+    if (manualExcluded > 0) {
+      notes.push(
+        `ℹ️ '상속개시일 2년 전부터 영농 사용' 미충족 ${manualExcluded}건 제외 (§16⑤1호, 수동 설정)`,
+      );
+    }
+  }
+  if (!applyMortgage) {
+    notes.push(
+      "ℹ️ 2026.2.27 이전 상속 — 담보채무 차감 비적용 (시행령 부칙5). 직접 입력 시 차감 후 금액 입력",
     );
   }
   return {
