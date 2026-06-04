@@ -119,6 +119,7 @@ function isEmptyFarming(f: FarmingInheritanceInput): boolean {
     f.heirCorporateOfficer === undefined &&
     f.isDesignatedSuccessor === undefined &&
     f.hasDisqualifyingIncome === undefined &&
+    f.hasDisqualifyingGrossReceipt === undefined &&
     f.hasTaxFraudConviction === undefined &&
     f.isSecondaryAfterFarmingInheritance === undefined &&
     f.qualifiedHeirIds === undefined &&
@@ -368,11 +369,21 @@ export function FarmingEligibilitySection({
             <ToggleCard
               tone="rose"
               size="sm"
-              title="사업소득+총급여 3,700만(1호) 또는 총수입금액 기준(2호) 이상 과세기간 (§16⑭)"
-              description="피상속인 또는 상속인 — 영농소득·부동산임대·농어가부업 제외. 2호 총수입금액 §208⑤2호 복식부기 기준(농업 3억 등, 2026.2.27 신설). 후계자 트랙에도 적용"
+              title="사업소득금액+총급여 3,700만원 이상 과세기간 (§16⑭1호)"
+              description="피상속인 또는 상속인 — 영농소득·부동산임대소득·농어가부업소득 제외. 후계자 트랙에도 적용"
               checked={farming.hasDisqualifyingIncome ?? false}
               onCheckedChange={(v) =>
                 update({ hasDisqualifyingIncome: v ? true : undefined })
+              }
+            />
+            <ToggleCard
+              tone="rose"
+              size="sm"
+              title="총수입금액 기준 이상 과세기간 (§16⑭2호)"
+              description="소령 §208⑤2호 복식부기 기준(농업·임업·어업 3억 등) 이상 — 부동산임대업·농어가부업소득 제외. 2026.2.27 신설. 후계자 트랙에도 적용"
+              checked={farming.hasDisqualifyingGrossReceipt ?? false}
+              onCheckedChange={(v) =>
+                update({ hasDisqualifyingGrossReceipt: v ? true : undefined })
               }
             />
             <ToggleCard
@@ -426,6 +437,7 @@ export function FarmingEligibilitySection({
                       heirCorporateOfficer: farming.heirCorporateOfficer,
                       isDesignatedSuccessor: farming.isDesignatedSuccessor,
                       hasDisqualifyingIncome: farming.hasDisqualifyingIncome,
+                      hasDisqualifyingGrossReceipt: farming.hasDisqualifyingGrossReceipt,
                     }));
                     update({ heirAssessments: defaults, qualifiedHeirIds: undefined });
                   } else {

@@ -10,10 +10,18 @@
  *   - financial/cash/deposit: 컴포넌트 자체 미렌더
  *   - real_estate_* / other: corporate_stock만 disabled
  *   - listed_stock / unlisted_stock: corporate_stock만 활성 (나머지 disabled)
+ *
+ * D-4 (2026-06-04):
+ *   - farmingUseStartDate DateInput 추가 (§16⑤1호 2년 요건 자동판정)
+ *   - twoYearsBefore() 사용, deathDate prop으로 자동판정 배지 노출
+ *   - farmingUseStartDate 입력 시 farmingUsedTwoYears ToggleCard 대체 (하위호환 유지)
  */
 
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { DateInput } from "@/components/ui/date-input";
+import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import { twoYearsBefore } from "@/lib/calc/inheritance-deduction-suggest";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 
 type FarmingCategory = NonNullable<EstateItem["farmingCategory"]>;
@@ -44,11 +52,17 @@ function getDefaultFarmingCategory(
 export interface FarmingCategorySectionProps {
   item: EstateItem;
   onUpdate: (updated: EstateItem) => void;
+  /**
+   * 상속개시일 (YYYY-MM-DD) — farmingUseStartDate 입력 시 §16⑤1호 2년 요건 자동판정 배지에 사용.
+   * 미전달 시 자동판정 배지 표시 불가 → 수동 토글(farmingUsedTwoYears)만 노출.
+   */
+  deathDate?: string;
 }
 
 export function FarmingCategorySection({
   item,
   onUpdate,
+  deathDate,
 }: FarmingCategorySectionProps) {
   // FC-11: 금융·현금은 영농 자산 불가 — 컴포넌트 자체 미렌더
   if (
@@ -120,20 +134,61 @@ export function FarmingCategorySection({
           <p className="text-[10px] text-emerald-700 dark:text-emerald-300 bg-emerald-100/60 dark:bg-emerald-900/30 rounded p-2">
             ⓘ {FARMING_CATEGORY_OPTIONS.find((o) => o.value === item.farmingCategory)?.description}
           </p>
-          <ToggleCard
-            tone={item.farmingUsedTwoYears === false ? "rose" : "emerald"}
-            size="sm"
-            title="상속개시일 2년 전부터 영농 사용 (§16⑤1호)"
-            description={
-              item.farmingUsedTwoYears === false
-                ? "미충족 — 본 자산은 영농상속재산가액에서 제외됩니다 (피상속인 2년 전부터 영농 사용 요건)"
-                : "피상속인이 상속개시일 2년 전부터 영농에 사용한 자산만 영농상속재산. 끄면 제외."
-            }
-            checked={item.farmingUsedTwoYears !== false}
-            onCheckedChange={(v) =>
-              onUpdate({ ...item, farmingUsedTwoYears: v ? undefined : false })
-            }
-          />
+          {/* D-4: §16⑤1호 영농 사용 개시일 + 자동판정 배지 */}
+          <FieldCard
+            label="영농 사용 개시일 (§16⑤1호)"
+            hint="취득일이 아닌 실제 영농 사용 시작일. 입력 시 상속개시일 2년 요건 자동 판정"
+          >
+            <DateInput
+              value={item.farmingUseStartDate ?? ""}
+              onChange={(v) =>
+                onUpdate({ ...item, farmingUseStartDate: v || undefined })
+              }
+            />
+          </FieldCard>
+          {/* 자동판정 배지 — farmingUseStartDate 입력 시 표시 */}
+          {item.farmingUseStartDate ? (
+            deathDate ? (
+              item.farmingUseStartDate <= twoYearsBefore(deathDate) ? (
+                <div className="rounded-md border border-emerald-300 bg-emerald-50 dark:bg-emerald-950/30 dark:border-emerald-800 p-2">
+                  <p className="text-[11px] font-semibold text-emerald-800 dark:text-emerald-200">
+                    ✓ 2년 요건 충족 — 본 자산은 영농상속재산가액에 포함됩니다 (§16⑤1호)
+                  </p>
+                </div>
+              ) : (
+                <div className="rounded-md border border-rose-300 bg-rose-50 dark:bg-rose-950/30 dark:border-rose-800 p-2">
+                  <p className="text-[11px] font-semibold text-rose-800 dark:text-rose-200">
+                    ✗ 2년 미충족 — 본 자산은 영농상속재산가액에서 제외됩니다 (§16⑤1호)
+                  </p>
+                  <p className="text-[10px] text-rose-700 dark:text-rose-300 mt-0.5">
+                    상속개시일 2년 전({twoYearsBefore(deathDate)}) 이후 영농 사용 시작
+                  </p>
+                </div>
+              )
+            ) : (
+              <div className="rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 p-2">
+                <p className="text-[11px] font-semibold text-amber-800 dark:text-amber-200">
+                  ⓘ 상속개시일(Step0)을 입력하면 2년 요건 자동 판정됩니다
+                </p>
+              </div>
+            )
+          ) : (
+            /* farmingUseStartDate 미입력 시 수동 ToggleCard fallback (하위호환) */
+            <ToggleCard
+              tone={item.farmingUsedTwoYears === false ? "rose" : "emerald"}
+              size="sm"
+              title="상속개시일 2년 전부터 영농 사용 (§16⑤1호) — 수동 설정"
+              description={
+                item.farmingUsedTwoYears === false
+                  ? "미충족 — 본 자산은 영농상속재산가액에서 제외됩니다. 영농 사용 개시일 입력 시 자동 판정으로 전환됩니다."
+                  : "피상속인이 상속개시일 2년 전부터 영농에 사용한 자산만 영농상속재산. 끄면 제외. 영농 사용 개시일 입력 시 자동 판정으로 전환됩니다."
+              }
+              checked={item.farmingUsedTwoYears !== false}
+              onCheckedChange={(v) =>
+                onUpdate({ ...item, farmingUsedTwoYears: v ? undefined : false })
+              }
+            />
+          )}
           {item.farmingCategory === "fishing_right" && (
             <ToggleCard
               tone="rose"

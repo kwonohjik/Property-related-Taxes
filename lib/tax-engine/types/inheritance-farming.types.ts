@@ -45,8 +45,17 @@ export interface FarmingInheritanceInput {
   isDesignatedSuccessor?: boolean;
 
   // ─ 영농 부정 §16⑭ (피상속인·상속인 모두 적용, 후계자 트랙 포함) ─
-  /** 사업소득+총급여 3,700만 이상 과세기간 존재 */
+  /**
+   * §16⑭1호 — 사업소득금액+총급여 3,700만 이상 과세기간 존재.
+   * (2026.2.27 신설 §16⑭2호 분리 전 통합 필드였으나 이제 1호 전용으로 의미 축소)
+   */
   hasDisqualifyingIncome?: boolean;
+  /**
+   * §16⑭2호 — 소득세법 §24①에 따른 사업소득 총수입금액이 소령 §208⑤2호 각 목 기준 이상인 과세기간
+   * (2026.2.27 신설 — 농업·임업·어업·부동산임대업·농어가부업소득 제외).
+   * true 시 해당 과세기간 영농 미종사로 판정. 1호(hasDisqualifyingIncome)와 OR 결합.
+   */
+  hasDisqualifyingGrossReceipt?: boolean;
 
   // ─ 조세포탈·회계부정 §18의3⑥ + 시행령 §15⑲ ─
   /** 형 확정 — true 시 공제 배제 (1호 결정 전 케이스 단순화. 2호 사후 추징은 F-7) */
@@ -163,8 +172,16 @@ export interface FarmingHeirAssessment {
   heirCorporateOfficer?: boolean;
   /** 후계자 트랙 (재정경제부령) — 상속인 단위. true 시 18세·2년·거주 면제 */
   isDesignatedSuccessor?: boolean;
-  /** §16⑭ 결격소득 — 상속인 단위 ("피상속인 또는 상속인" OR 분리 평가) */
+  /**
+   * §16⑭1호 결격소득 — 상속인 단위 (사업소득금액+총급여 3,700만 이상)
+   * "피상속인 또는 상속인" OR 분리 평가.
+   */
   hasDisqualifyingIncome?: boolean;
+  /**
+   * §16⑭2호 결격 총수입금액 — 상속인 단위 (소령 §208⑤2호 기준 이상, 2026.2.27 신설).
+   * hasDisqualifyingIncome과 OR 결합.
+   */
+  hasDisqualifyingGrossReceipt?: boolean;
 }
 
 /** 영농상속공제 한도 — §18의3① 30억 */

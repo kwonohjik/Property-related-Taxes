@@ -33,7 +33,14 @@
 | FM-3 | deathDate=undefined → 차감 8억(legacy 보존) | 하위호환 | 자체 | ☐ |
 | FU-1 | farmingUsedTwoYears=false 자산 → suggest 합산 제외 | §16⑤1호 | 자체 | ☐ |
 | FU-2 | farmingUsedTwoYears 미입력(default) → 합산 | 하위호환 | 자체 | ☐ |
-| FG-1 | hasDisqualifyingIncome=true → 공제 0 + reason "§16⑭ 1호 또는 2호" | §16⑭ | reason 문자열 | ☐ |
+| FG-1 | hasDisqualifyingIncome=true → 공제 0 + reason "§16⑭1호" | §16⑭1호 | reason 문자열 | ✅ |
+| **FG-2** | hasDisqualifyingGrossReceipt=true 단독 (hasDisqualifyingIncome=false) → 공제 0 + reason "§16⑭2호" | §16⑭2호 (KoreanLaw 검증 2026-06-04) | farming-deduction.test.ts | ☐ |
+| **FG-3** | hasDisqualifyingIncome=false + hasDisqualifyingGrossReceipt=false → 정상 공제 | §16⑭ 미해당 | farming-deduction.test.ts | ☐ |
+| **FG-heir** | heirAssessment.hasDisqualifyingGrossReceipt=true → 해당 heir 결격 | §16⑭2호 heir 단위 | farming-deduction.test.ts | ☐ |
+| **FU-자동충족** | farmingUseStartDate = deathDate 3년 전 → twoYearsBefore 충족 → suggest 합산 | §16⑤1호 (조심2014중4319) | farming-limit-and-mortgage.test.ts | ☐ |
+| **FU-자동제외** | farmingUseStartDate = deathDate 1년 전 → twoYearsBefore 미충족 → suggest 제외 | §16⑤1호 | farming-limit-and-mortgage.test.ts | ☐ |
+| **FU-fallback** | farmingUseStartDate 미입력 + farmingUsedTwoYears=false → 수동 fallback 제외 | §16⑤1호 하위호환 | farming-limit-and-mortgage.test.ts | ☐ |
+| **FU-혼합** | 자산 2건: 1건 자동충족(3년전) + 1건 자동제외(1년전) → 1건만 합산 | §16⑤1호 복합 | farming-limit-and-mortgage.test.ts | ☐ |
 | FD-회귀 | 기존 FD-1~21·FH-1~6·E-1~7 GREEN (deathDate 미전달 경로) | 회귀 | 기존 | ☐ |
 | INT-1 | deathDate 2020 + 영농 18억(저당1억 미차감) + 일괄공제 → 한도 15억 적용 산출세액 원단위 | 파이프라인 | 자체 통합 | ☐ |
 
@@ -158,10 +165,112 @@ reasons.push("§16⑭ — 사업소득금액+총급여 3,700만(1호) 또는 총
 - legacy 회귀: FD-1~21·FH-1~6·E-1~7·FP-1~10 + `deathDate` 미전달 경로 GREEN.
 - `npm test` 전체 (영농 14건 기구현 — 광범 회귀).
 
+## D-3 알고리즘 — §16⑭2호 hasDisqualifyingGrossReceipt (후속 구현 2026-06-04)
+
+### 법령 근거 (KoreanLaw MCP 직접 확인)
+
+- **상증령 §16⑭2호** (mst 283637, 시행 2026.2.27): "해당 피상속인 또는 상속인의 소득세법 §24①에 따른 사업소득 총수입금액(농업·임업·어업·부동산임대업·농어가부업소득 제외)이 소령 §208⑤2호 각 목 기준 이상인 과세기간"
+  - 가목(농업·광업·도매업 등): 3억원 / 나목(제조업·음식점업 등): 1.5억원 / 다목(부동산임대업·교육서비스업 등): 7,500만원
+- §16⑭1호와 **OR 결합** — 하나라도 해당 시 해당 과세기간 영농 미종사
+
+### 타입 변경
+
+```typescript
+// FarmingInheritanceInput — hasDisqualifyingIncome 1호 전용, hasDisqualifyingGrossReceipt 2호 신규
+hasDisqualifyingIncome?: boolean;       // §16⑭1호: 사업소득금액+총급여 3,700만 이상
+hasDisqualifyingGrossReceipt?: boolean; // §16⑭2호: 사업소득 총수입금액 소령§208⑤2호 이상 (2026.2.27)
+
+// FarmingHeirAssessment — 상속인 단위 동일 추가
+hasDisqualifyingGrossReceipt?: boolean;
+```
+
+### reason 분기 (evaluateFarmingEligibility)
+
+```
+disq1 && disq2 → §16⑭1호 reason + §16⑭2호 reason (2건 push)
+disq1 only    → §16⑭1호 reason (1건)
+disq2 only    → §16⑭2호 reason (1건)
+둘 다 false   → push 없음
+```
+
+### 14동기점 엔진측 처리
+
+| 지점 | 처리 | 비고 |
+|---|---|---|
+| ①폼타입 | `FarmingInheritanceInput` 추가 | D3-T1 |
+| ②initial | `undefined` (optional, 초기값 불필요) | UI 시니어 ⑤ |
+| ③normalize | `undefined` → 미결격 가정 (legacy 호환) | UI 시니어 ⑤ |
+| ④API변환 | `deductionInput.farming` 통째 전달 → 자동 포함 | callInheritanceTaxAPI 확인 |
+| ⑤⑥⑦ | UI 시니어 인계 | ToggleCard/결과 카드 |
+| ⑧validation | optional boolean — 미입력=false, 별도 검증 불필요 | Zod 통과 |
+| ⑨Zod메인 | farmingInputSchema.hasDisqualifyingGrossReceipt 추가 | D3-T5 |
+| ⑩Zod컴패니언 | heirAssessments 내부 객체 추가 | D3-T6 |
+| ⑫Zod입력객체 | farmingInputSchema 변경으로 자동 반영 | - |
+| ⑬body spread | `deductionInput` 통째 → farming 내부 필드 자동 도달 | 확인 완료 |
+| ⑭route매핑 | `parsedData.deductionInput` cast → 자동 | - |
+
+---
+
+## D-4 알고리즘 — §16⑤1호 farmingUseStartDate 자동판정 (후속 구현 2026-06-04)
+
+### 법령 근거 (KoreanLaw MCP 직접 확인)
+
+- **상증령 §16⑤1호** (mst 283637): "피상속인이 **상속개시일 2년 전부터 영농에 사용한** 자산의 가액에서 해당 자산에 담보된 채무액을 뺀 가액"
+- 판정 기준 = **취득일이 아닌 영농 사용 개시일** (조심2014중4319: 상속개시 2년 이내 취득·사용 농지는 대상 아님)
+
+### twoYearsBefore 헬퍼
+
+```typescript
+// lib/calc/inheritance-deduction-suggest.ts
+export function twoYearsBefore(deathDate: string): string {
+  const [y, m, d] = deathDate.split("-");
+  return `${Number(y) - 2}-${m}-${d}`;
+  // 2/29 edge는 드물어 무시 — 수동 입력으로 보완
+}
+```
+
+string 조작만 — Date·parseISO·new Date 금지 ([[feedback_api_date_serialize]])
+
+### 자동판정 로직 (isFarmingTwoYearMet)
+
+```
+farmingUseStartDate !== undefined && deathDate !== undefined:
+  → farmingUseStartDate <= twoYearsBefore(deathDate) ? 충족 : 제외 (자동)
+farmingUseStartDate === undefined (fallback):
+  → farmingUsedTwoYears !== false (수동 boolean, legacy)
+```
+
+우선순위: farmingUseStartDate(자동) > farmingUsedTwoYears(수동)
+
+### Silent fallback 검토
+
+| 후보 | 처리 |
+|---|---|
+| farmingUseStartDate 미입력 → farmingUsedTwoYears fallback | **허용** (자동 안분 아님 — 수동 플래그 그대로 사용) |
+| deathDate 미입력 → 자동판정 비활성 | **허용** (twoYearsBeforeDate=undefined → fallback 경로) |
+
+### 14동기점 엔진측 처리
+
+| 지점 | 처리 | 비고 |
+|---|---|---|
+| ①폼타입 | `EstateItem.farmingUseStartDate?: string` 추가 | D4-T1 |
+| ②initial | `undefined` (optional) | UI 시니어 ⑤ |
+| ③normalize | `undefined` → 자동판정 비활성 → fallback | UI 시니어 ⑤ |
+| ④API변환 | `estateItems` 통째 spread → 자동 포함 | 확인 완료 |
+| ⑤⑥⑦ | UI 시니어 인계 | DateInput + 자동판정 표시 배지 |
+| ⑧validation | YYYY-MM-DD regex 검증 (Zod) | D4-T4 |
+| ⑨Zod메인 | baseItemSchema.farmingUseStartDate 추가 | D4-T4 |
+| ⑫Zod입력객체 | baseItemSchema 변경으로 자동 반영 | - |
+| ⑬body spread | `estateItems` 통째 → 자동 도달 | 확인 완료 |
+| ⑭route매핑 | `parsedData.estateItems` cast → 자동 | - |
+
+---
+
 ## UI 통합 위임 (inheritance-gift-tax-ui-senior — 상세 `.ui.design.md`)
 
 - ⑤ `InheritanceTaxForm.tsx` `autos.farming` useMemo에서 `suggestFarmingAssetValue(estateItems, farming, form.deathDate)` **deathDate 전달**(R8 — steps.tsx는 autos prop 수신만).
 - ⑤ `FarmingCategorySection.tsx`: 2년영농 ToggleCard(default ON) + 건폐율·5년조림 안내 강화.
-- ⑤ `FarmingEligibilitySection.tsx`: §16⑭ 라벨 "1호 또는 2호" 확장.
+- ⑤ `FarmingEligibilitySection.tsx`: §16⑭ 라벨 분리 — 1호 체크박스(hasDisqualifyingIncome) + 2호 체크박스(hasDisqualifyingGrossReceipt, 2026.2.27 신설 배지).
+- ⑤ `FarmingCategorySection.tsx` 자산 카드: `farmingUseStartDate` DateInput + 자동판정 결과 표시 배지 (충족/미충족/deathDate 미입력 시 비활성).
 - ⑦ `FarmingDeductionDetailCard.tsx`: `appliedLimit` echo("적용 한도 N억 — 상속개시 연도 기준") + 담보 시행시기는 Step4 suggest 배지 breakdown 안내.
 - ⑧ validate: farming 음수·직접입력 안내(R4).

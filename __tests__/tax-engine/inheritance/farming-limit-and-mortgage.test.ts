@@ -12,7 +12,7 @@ import { describe, expect, it } from "vitest";
 
 import { calcFarmingDeduction } from "@/lib/tax-engine/deductions/inheritance-deductions";
 import { resolveFarmingDeductionLimit } from "@/lib/tax-engine/data/farming-deduction-limit";
-import { suggestFarmingAssetValue } from "@/lib/calc/inheritance-deduction-suggest";
+import { suggestFarmingAssetValue, twoYearsBefore } from "@/lib/calc/inheritance-deduction-suggest";
 import type { FarmingInheritanceInput } from "@/lib/tax-engine/types/inheritance-farming.types";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 
@@ -184,15 +184,95 @@ describe("G4 2년 영농사용 필터 — §16⑤1호 본문", () => {
 // G2 — 총수입금액 라벨 (numeric 무영향, reason 문자열만)
 // ============================================================
 
-describe("G2 §16⑭ 총수입금액 라벨 — numeric 무영향", () => {
-  it("FG-1: hasDisqualifyingIncome=true → 공제 0 + reason '1호 또는 2호'", () => {
+describe("G2 §16⑭ 총수입금액 라벨 — numeric 무영향 (D-3 후 1호/2호 분리)", () => {
+  it("FG-1: hasDisqualifyingIncome=true (1호) → 공제 0 + reason §16⑭1호 포함", () => {
+    // D-3 이후: 1호만 true → §16⑭1호 reason만 push
     const r = calcFarmingDeduction(
       1_000_000_000,
       personalOk({ hasDisqualifyingIncome: true }),
     );
     expect(r.deduction).toBe(0);
-    expect(
-      r.detail.ineligibleReasons.some((s) => s.includes("1호") && s.includes("2호")),
-    ).toBe(true);
+    expect(r.detail.ineligibleReasons.some((s) => s.includes("§16⑭1호"))).toBe(true);
+  });
+});
+
+// ============================================================
+// D-4 — farmingUseStartDate 자동판정 (§16⑤1호 취득일≠사용개시일)
+// KoreanLaw 검증: 상증령 §16⑤1호 (mst 283637, 2026-06-04)
+// 조심2014중4319: 상속개시 2년 이내 취득·사용 농지 = 미충족
+// ============================================================
+
+describe("D-4 farmingUseStartDate 자동판정 — §16⑤1호 영농사용개시일", () => {
+  it("FU-자동충족: farmingUseStartDate=deathDate 3년전 → twoYearsBefore 충족 → suggest 합산", () => {
+    // deathDate=2026-06-01, farmingUseStartDate=2023-06-01(3년전) → twoYearsBefore=2024-06-01
+    // 2023-06-01 <= 2024-06-01 → 충족
+    const r = suggestFarmingAssetValue(
+      [farmItem({ farmingUseStartDate: "2023-06-01" })],
+      undefined,
+      "2026-06-01",
+    );
+    expect(r.value).toBe(1_000_000_000);
+    expect(r.isApplicable).toBe(true);
+  });
+
+  it("FU-자동제외: farmingUseStartDate=deathDate 1년전 → twoYearsBefore 미충족 → 제외", () => {
+    // deathDate=2026-06-01, farmingUseStartDate=2025-06-01(1년전) → twoYearsBefore=2024-06-01
+    // 2025-06-01 > 2024-06-01 → 미충족
+    const r = suggestFarmingAssetValue(
+      [farmItem({ farmingUseStartDate: "2025-06-01" })],
+      undefined,
+      "2026-06-01",
+    );
+    expect(r.value).toBe(0);
+    expect(r.isApplicable).toBe(false);
+    // notes에 자동판정 제외 안내 포함
+    expect(r.notes?.some((s) => s.includes("자동판정"))).toBe(true);
+  });
+
+  it("FU-경계: farmingUseStartDate = twoYearsBefore(deathDate) 정확히 → 충족 (이하 조건)", () => {
+    // deathDate=2026-06-01, twoYearsBefore=2024-06-01, farmingUseStartDate=2024-06-01 → 정확히 같음 → 충족
+    const r = suggestFarmingAssetValue(
+      [farmItem({ farmingUseStartDate: "2024-06-01" })],
+      undefined,
+      "2026-06-01",
+    );
+    expect(r.value).toBe(1_000_000_000);
+  });
+
+  it("FU-fallback: farmingUseStartDate 미입력 + farmingUsedTwoYears=false → 수동 fallback 제외", () => {
+    // farmingUseStartDate 없음 → twoYearsBefore 자동판정 비활성 → farmingUsedTwoYears=false fallback
+    const r = suggestFarmingAssetValue(
+      [farmItem({ farmingUsedTwoYears: false })],
+      undefined,
+      "2026-06-01",
+    );
+    expect(r.value).toBe(0);
+    expect(r.isApplicable).toBe(false);
+  });
+
+  it("FU-혼합: 자산 2건 — 1건 자동충족(3년전) + 1건 자동제외(1년전) → 충족 1건만 합산", () => {
+    // f1: farmingUseStartDate=2023-01-01(3년전) → 충족(1억)
+    // f2: farmingUseStartDate=2025-06-01(1년전) → 제외(5억)
+    const r = suggestFarmingAssetValue(
+      [
+        farmItem({ id: "f1", marketValue: 1_000_000_000, farmingUseStartDate: "2023-01-01" }),
+        farmItem({ id: "f2", marketValue: 500_000_000, farmingUseStartDate: "2025-06-01" }),
+      ],
+      undefined,
+      "2026-06-01",
+    );
+    expect(r.value).toBe(1_000_000_000);
+    expect(r.isApplicable).toBe(true);
+  });
+
+  it("FU-deathDate미입력: farmingUseStartDate 있어도 deathDate 없으면 자동판정 비활성 → fallback", () => {
+    // deathDate 없음 → twoYearsBeforeDate=undefined → 자동판정 skip → farmingUsedTwoYears fallback
+    // farmingUsedTwoYears=undefined → 충족 가정(legacy)
+    const r = suggestFarmingAssetValue(
+      [farmItem({ farmingUseStartDate: "2025-01-01" })],
+      undefined,
+      // deathDate 미전달
+    );
+    expect(r.value).toBe(1_000_000_000);  // fallback → undefined=충족 가정
   });
 });
