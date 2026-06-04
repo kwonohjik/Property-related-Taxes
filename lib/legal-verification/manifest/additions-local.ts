@@ -26,8 +26,7 @@ export const LOCAL_ADDITIONS: VerificationRule[] = [
     keywords: ["사실상 취득", "과점주주", "부담부", "지목을 사실상 변경"],
     keywordMode: "ALL",
   },
-  // ⚠️ 지방세법 §7의2 (acquisition.ts DEEMED_ACQUISITION, 간주취득)는 현행 지방세법에 부재
-  //    (간주취득은 §7로 통합 추정) → coverage.ts KNOWN_ABSENT_ARTICLES 로 분리. 현행 조문 확정 후 정정 필요.
+  // 간주취득(구 "지방세법 §7의2" 인용)은 현행 §7로 통합 → ACQUISITION.TAXPAYER(§7)가 검증 커버.
   {
     id: "ACQUISITION.NON_TAXABLE",
     citation: "지방세법 §9",
@@ -108,8 +107,7 @@ export const LOCAL_ADDITIONS: VerificationRule[] = [
     keywords: ["재산세 과세기준일 현재", "사실상 소유하고 있는 자", "납부할 의무", "수탁자"],
     keywordMode: "ALL",
   },
-  // ⚠️ 지방세법 §107의2 (property.ts TAXPAYER_TRUSTEE, 신탁재산 납세의무자)는 현행 지방세법에 부재
-  //    → coverage.ts KNOWN_ABSENT_ARTICLES 로 분리. 현행 조문 확정 후 정정 필요.
+  // 신탁재산 납세의무자(구 "지방세법 §107의2" 인용)는 현행 §107②5호 → PROPERTY.TAXPAYER(§107)가 검증 커버.
   {
     id: "PROPERTY.NON_TAXABLE",
     citation: "지방세법 §109",

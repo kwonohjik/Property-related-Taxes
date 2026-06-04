@@ -112,10 +112,10 @@ export function finalizeStockTax(
   // PR-3 범위 외: 납부지연가산세 (국세기본법 §47조의4) — placeholder
   const latePaymentPenalty = 0;
 
-  // STEP 11: 전자신고 세액공제 §52의2
+  // STEP 11: 전자신고 세액공제 (조특법 §104의8)
   const electronicFilingCredit = calcElectronicFilingCredit(isElectronicFiling, calculatedTax);
   if (electronicFilingCredit > 0) {
-    appliedRules.push(STOCK.SECTION_52_2_ELECTRONIC_CREDIT);
+    appliedRules.push(STOCK.ELECTRONIC_FILING_CREDIT);
   }
 
   // 최종세액 = 산출세액 + 가산세 − 세액공제

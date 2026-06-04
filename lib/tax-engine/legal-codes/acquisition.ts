@@ -15,8 +15,8 @@ export const ACQUISITION = {
   DEFINITION:           "지방세법 §6①",
   /** 지방세법 §7 — 과세 대상 물건 8종 열거 */
   TAXABLE_OBJECTS:      "지방세법 §7",
-  /** 지방세법 §7의2 — 간주취득 (과점주주·지목변경·개수) */
-  DEEMED_ACQUISITION:   "지방세법 §7의2",
+  /** 지방세법 §7④⑤ — 간주취득 (지목변경·과점주주). 현행은 §7로 통합(§7의2 폐지) */
+  DEEMED_ACQUISITION:   "지방세법 §7",
   /** 지방세법 §9 — 비과세 (국가·신탁반환·묘지 등) */
   NON_TAXABLE:          "지방세법 §9",
 

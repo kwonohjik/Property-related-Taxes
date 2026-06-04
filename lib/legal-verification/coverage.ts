@@ -20,15 +20,13 @@ const KNOWN_ABBRS = new Set(Object.keys(LAW_ALIAS));
 
 /**
  * legal-codes가 인용하지만 현행 법령에 조문이 부재하는 키(법령명 + 조).
- * 검증 도구·에이전트 두 독립 소스가 "조문 부재"로 일치 확인한 항목.
+ * 검증 도구·에이전트 두 독립 소스가 "조문 부재"로 일치 확인한 항목을 넣는다.
  * 자동 검증 대상에서 분리하되 "인용 점검 필요"로 별도 노출한다(갭 은폐 금지).
- * → legal-codes 인용의 현행 조문 확정 후 정정 시 이 목록에서 제거.
+ *
+ * 현재 비어 있음 — 과거 3건(소득세법 §52의2·지방세법 §7의2·§107의2)은
+ * KoreanLaw 실측으로 현행 조문(조특법 §104의8·지방세법 §7·§107②5호)을 확정해 정정 완료.
  */
-export const KNOWN_ABSENT_ARTICLES = new Set<string>([
-  "소득세법 제52조의2", // stock.ts SECTION_52_2_ELECTRONIC_CREDIT (전자신고 세액공제)
-  "지방세법 제7조의2", // acquisition.ts DEEMED_ACQUISITION (간주취득 — §7 통합 추정)
-  "지방세법 제107조의2", // property.ts TAXPAYER_TRUSTEE (신탁재산 납세의무자)
-]);
+export const KNOWN_ABSENT_ARTICLES = new Set<string>([]);
 
 /** 문자열이 알려진 법령 조문 인용인지 판정 */
 export function isLegalCitation(s: string): boolean {

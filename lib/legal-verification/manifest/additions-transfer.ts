@@ -14,9 +14,6 @@ export const TRANSFER_ADDITIONS: VerificationRule[] = [
     keywords: ["배당소득", "의제배당", "잉여금의 배당 또는 분배금", "수익분배의 성격"],
     keywordMode: "ALL",
   },
-  // ⚠️ 소득세법 §52의2 (stock.ts SECTION_52_2_ELECTRONIC_CREDIT, 전자신고 세액공제)는
-  //    현행 소득세법에 조문 부재로 검증 불가 → coverage.ts KNOWN_ABSENT_ARTICLES 로 분리.
-  //    legal-codes 인용의 현행 조문 확정 후 정정 필요(추정 금지).
   {
     id: "TRANSFER.DEFINITIONS",
     citation: "소득세법 §88",
@@ -317,6 +314,13 @@ export const TRANSFER_ADDITIONS: VerificationRule[] = [
     id: "SPECIAL.MULTILATERAL_TRADING_STOCK",
     citation: "조특법 §104의4",
     keywords: ["다자간매매체결회사", "증권시장에서 거래되는 것으로 보아"],
+    keywordMode: "ALL",
+  },
+  {
+    // stock.ts ELECTRONIC_FILING_CREDIT (구 "소득세법 §52의2" 인용 정정분)
+    id: "SPECIAL.ELECTRONIC_FILING_CREDIT",
+    citation: "조특법 §104의8",
+    keywords: ["전자신고", "양도소득세 또는 법인세", "공제"],
     keywordMode: "ALL",
   },
   {
