@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { VERIFICATION_MANIFEST } from "@/lib/legal-verification/verifier-manifest";
 
 type VerifyStatus = "PASS" | "FAIL" | "ERROR";
 
@@ -70,7 +71,7 @@ export function LegalVerifyPanel() {
         <div>
           <h3 className="text-sm font-semibold">법령 조문 자동 검증</h3>
           <p className="text-xs text-muted-foreground mt-0.5">
-            법제처 Open API — {35}개 조문 키워드 일치 여부 확인
+            법제처 Open API — {VERIFICATION_MANIFEST.length}개 조문 키워드 일치 여부 확인
           </p>
         </div>
         <button

@@ -23,7 +23,7 @@ export interface ParsedCitation {
 }
 
 // ── 약칭 → 정규 법령명 매핑 ──────────────────────────────────────────────
-const LAW_ALIAS: Record<string, string> = {
+export const LAW_ALIAS: Record<string, string> = {
   "소득세법":            "소득세법",
   "상증법":              "상속세 및 증여세법",
   "지방세법":            "지방세법",

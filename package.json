@@ -21,6 +21,7 @@
     "seed:tax-rates:historical": "tsx --env-file=.env.local scripts/seed-transfer-tax-rates-historical.ts",
     "verify:legal": "tsx --env-file=.env.local scripts/verify-legal-codes.ts",
     "verify:legal:refresh": "tsx --env-file=.env.local scripts/verify-legal-codes.ts --clear",
+    "check:legal-coverage": "tsx scripts/check-legal-coverage.ts",
     "build:sigungu": "tsx scripts/parse-koedb-txt.ts",
     "build:adjacency": "tsx scripts/build-adjacency-matrix.ts",
     "build:admin-data": "tsx scripts/download-admin-data.ts",
