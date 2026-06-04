@@ -70,18 +70,28 @@ export interface FormState {
   foreignTaxPaid: string;
   /** 국외 상속재산 과세표준 (§29/상증령 §21① 한도식 분자) */
   foreignInheritanceTaxBase: string;
+  /**
+   * §30 1차(전의) 상속개시일 — banding 자동 도출 (2차 = deathDate).
+   * 입력 시 경과 구간·공제율 자동 계산. 현 수동 연수 입력(shortTermReinheritYears) 대체.
+   */
+  shortTermReinheritPriorDeathDate: string;
+  /**
+   * §30 재상속분 재산 배열 (재산별 구분 — 집행 30-22-1②).
+   * value = 1차 상속 당시 가액(문자열, 2차 평가액 아님).
+   */
+  shortTermReinheritAssets: { name: string; value: string }[];
+  /** @deprecated shortTermReinheritPriorDeathDate 자동 banding 대체 — 수동 구간 fallback */
   shortTermReinheritYears: string;
+  /** §30 전의 상속세 산출세액 (1차 전체, 결정세액 아님) */
   shortTermReinheritTaxPaid: string;
   /**
-   * §30②1호 안분 분수 분자 — 재상속분의 재산가액.
-   * 전(前) 상속재산 중 이번 상속에서 다시 상속되는 재산의 가액.
+   * §30②1호 legacy 단일 분자 — 재상속분의 재산가액.
    * 미입력 시 엔진이 전부재상속(분수=1) fallback 처리 — 자동 안분 금지.
    */
   shortTermReinheritAssetValue: string;
   /**
-   * §30②1호 안분 분수 분모 — 전의 상속재산가액.
-   * 이전 상속 시 전체 상속재산의 가액(과세가액이 아닌 상속재산가액).
-   * 미입력 시 엔진이 전부재상속(분수=1) fallback 처리 — 자동 안분 금지.
+   * §30②1호 분모 — 전의 상속재산가액 = 1차 총상속재산(채무공제 전, 과세가액 아님).
+   * 미입력 시 엔진이 전부재상속(분수=1) fallback 처리.
    */
   shortTermReinheritPriorEstateValue: string;
 
@@ -134,6 +144,8 @@ export const INITIAL_FORM: FormState = {
   isFiledOnTime: true,
   foreignTaxPaid: "",
   foreignInheritanceTaxBase: "",
+  shortTermReinheritPriorDeathDate: "",
+  shortTermReinheritAssets: [],
   shortTermReinheritYears: "",
   shortTermReinheritTaxPaid: "",
   shortTermReinheritAssetValue: "",

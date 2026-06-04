@@ -4,6 +4,7 @@ import { describe, it, expect } from "vitest";
 import {
   getShortTermReinheritRate,
   calcShortTermReinheritCredit,
+  deriveShortTermReinheritBand,
 } from "@/lib/tax-engine/credits/short-term-reinheritance";
 
 // ── 외국납부세액 ───────────────────────────────────────────────
@@ -171,6 +172,99 @@ describe("단기재상속세액공제 — §30", () => {
     });
     expect(result.creditAmount).toBe(675_000_000);
     expect(result.prorationApplied).toBe(true);
+  });
+});
+
+// ============================================================
+// 1-B. 단기재상속 공제율 구간 자동 도출 (deriveShortTermReinheritBand §30②2호)
+// ============================================================
+
+describe("단기재상속 공제율 구간 자동 도출 — deriveShortTermReinheritBand", () => {
+  it("[R-1] 정확히 2년 → band 2 (2년 이내 90%)", () => {
+    expect(deriveShortTermReinheritBand("2020-07-05", "2022-07-05")).toBe(2);
+    expect(getShortTermReinheritRate(2)).toBe(0.9);
+  });
+  it("[R-1b] 2년+1일 → band 3 (3년 이내 80%)", () => {
+    expect(deriveShortTermReinheritBand("2020-07-05", "2022-07-06")).toBe(3);
+    expect(getShortTermReinheritRate(3)).toBe(0.8);
+  });
+  it("[R-2] 교재 사례 2020.7.5→2022.10.10 (2년3개월) → band 3 (80%)", () => {
+    expect(deriveShortTermReinheritBand("2020-07-05", "2022-10-10")).toBe(3);
+  });
+  it("[R-3] 10년+1일 → band 11 (10년 초과 → 0%)", () => {
+    expect(deriveShortTermReinheritBand("2010-07-05", "2020-07-06")).toBe(11);
+    expect(getShortTermReinheritRate(11)).toBe(0);
+  });
+  it("[R-4] 동일일(부부 동시사망) → band 0 (100%)", () => {
+    expect(deriveShortTermReinheritBand("2020-07-05", "2020-07-05")).toBe(0);
+    expect(getShortTermReinheritRate(0)).toBe(1.0);
+  });
+  it("[R-1y] 정확히 1년 → band 1 (100%)", () => {
+    expect(deriveShortTermReinheritBand("2020-07-05", "2021-07-05")).toBe(1);
+  });
+});
+
+// ============================================================
+// 1-C. 재산별 구분 계산 (교재 p.468~469 사례 — floor 일관)
+// ============================================================
+
+describe("단기재상속 재산별 구분 계산 — §30②1호·집행 30-22-1②", () => {
+  const PRIOR_TAX = 440_000_000; // 전의 산출세액(1차 전체)
+  const PRIOR_ESTATE = 4_300_000_000; // 전의 상속재산가액(채무공제 전)
+  const ASSETS = [
+    { name: "비상장주식", priorValue: 1_300_000_000 },
+    { name: "토지1", priorValue: 700_000_000 },
+    { name: "토지2", priorValue: 490_000_000 },
+  ];
+
+  it("[R-5] 재산별 3건 합산 → 203,832,555 (floor; 교재 round 203,832,558 Δ3)", () => {
+    const r = calcShortTermReinheritCredit({
+      priorTaxPaid: PRIOR_TAX,
+      elapsedYears: 3, // 80%
+      currentComputedTax: 704_000_000,
+      assets: ASSETS,
+      shortTermReinheritPriorEstateValue: PRIOR_ESTATE,
+    });
+    expect(r.creditAmount).toBe(203_832_555);
+    expect(r.prorationApplied).toBe(true);
+    expect(r.perAsset).toHaveLength(3);
+    expect(r.band).toBe(3);
+    expect(r.creditRate).toBe(0.8);
+  });
+
+  it("[R-6] 재산별 개별 공제세액 (floor; 교재 round 자산당 +1)", () => {
+    const r = calcShortTermReinheritCredit({
+      priorTaxPaid: PRIOR_TAX,
+      elapsedYears: 3,
+      currentComputedTax: 704_000_000,
+      assets: ASSETS,
+      shortTermReinheritPriorEstateValue: PRIOR_ESTATE,
+    });
+    expect(r.perAsset[0]).toMatchObject({ name: "비상장주식", base: 133_023_255, credit: 106_418_604 });
+    expect(r.perAsset[1]).toMatchObject({ name: "토지1", base: 71_627_906, credit: 57_302_324 });
+    expect(r.perAsset[2]).toMatchObject({ name: "토지2", base: 50_139_534, credit: 40_111_627 });
+  });
+
+  it("[R-9] §30② 보조 한도 — 합이 당해 산출세액 초과 시 클램핑", () => {
+    const r = calcShortTermReinheritCredit({
+      priorTaxPaid: PRIOR_TAX,
+      elapsedYears: 3,
+      currentComputedTax: 100_000_000, // 한도 < 합(203M)
+      assets: ASSETS,
+      shortTermReinheritPriorEstateValue: PRIOR_ESTATE,
+    });
+    expect(r.creditAmount).toBe(100_000_000);
+  });
+
+  it("[R-asset-name] 명칭 미입력 시 fallback '재상속재산 N'", () => {
+    const r = calcShortTermReinheritCredit({
+      priorTaxPaid: PRIOR_TAX,
+      elapsedYears: 1,
+      currentComputedTax: 704_000_000,
+      assets: [{ priorValue: 1_000_000_000 }],
+      shortTermReinheritPriorEstateValue: PRIOR_ESTATE,
+    });
+    expect(r.perAsset[0].name).toBe("재상속재산 1");
   });
 });
 
@@ -374,6 +468,39 @@ describe("세액공제 통합 — 적용 순서", () => {
     ).toBe(result.filingCreditBase);
     // 신고세액공제: 70M × 3% = 2,100,000
     expect(result.filingCredit).toBe(2_100_000);
+  });
+
+  it("[R-10] 상속세 §30 재산별 자동 banding + echo (교재 2020.7.5→2022.10.10)", () => {
+    const result = calcInheritanceTaxCredits({
+      creditInput: {
+        shortTermReinheritPriorDeathDate: "2020-07-05",
+        shortTermReinheritTaxPaid: 440_000_000,
+        shortTermReinheritPriorEstateValue: 4_300_000_000,
+        shortTermReinheritAssets: [
+          { name: "비상장주식", priorValue: 1_300_000_000 },
+          { name: "토지1", priorValue: 700_000_000 },
+          { name: "토지2", priorValue: 490_000_000 },
+        ],
+        isFiledOnTime: true,
+      },
+      computedTax: 704_000_000, // 2차 산출세액
+      generationSkipSurcharge: 0,
+      taxableEstateValue: 2_660_000_000,
+      deathDate: "2022-10-10", // 2020-07-05 → band 3 (80%)
+    });
+
+    // 재산별 floor 합 = 203,832,555 (한도 704M 내 — §30③ 미클램핑)
+    expect(result.shortTermReinheritCredit).toBe(203_832_555);
+    expect(result.shortTermReinheritDetail).toBeDefined();
+    expect(result.shortTermReinheritDetail!.band).toBe(3);
+    expect(result.shortTermReinheritDetail!.creditRate).toBe(0.8);
+    expect(result.shortTermReinheritDetail!.perAsset).toHaveLength(3);
+    expect(result.shortTermReinheritDetail!.creditAmount).toBe(203_832_555);
+    expect(result.shortTermReinheritDetail!.limit).toBe(704_000_000);
+    // 신고세액공제: (704M − 203,832,555) × 3%
+    expect(result.filingCredit).toBe(
+      Math.floor((704_000_000 - 203_832_555) * 0.03),
+    );
   });
 
   it("[C24] 증여세: 기한 내 신고 3% 공제 단독", () => {

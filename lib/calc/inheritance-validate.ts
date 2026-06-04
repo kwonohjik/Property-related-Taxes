@@ -324,26 +324,60 @@ export function validateInheritanceTaxInput(
   );
   if (refErrs.length > 0) return refErrs[0];
 
-  // §30②1호 안분 교차검증 — 자동 안분 fallback 금지 (feedback_no_silent_apportion_fallback)
-  // 두 필드 중 한쪽만 입력 시 차단: 분자만·분모 미입력이면 전부재상속 가정이 아닌 침묵 오류 위험.
-  // 허용: 둘 다 미입력(→ 엔진 fallback=전부재상속) / 둘 다 입력(→ 엔진 안분 적용)
+  // §30 단기재상속 교차검증 — 자동 안분 fallback 금지 (feedback_no_silent_apportion_fallback)
+  // 신규 재산별 배열 모델 + legacy 단일 분수 모델 모두 처리.
   const shortTermCreditInput = input.creditInput;
   if (shortTermCreditInput) {
-    const hasAsset = shortTermCreditInput.shortTermReinheritAssetValue != null &&
+    const assets = shortTermCreditInput.shortTermReinheritAssets;
+    const priorDeath = shortTermCreditInput.shortTermReinheritPriorDeathDate;
+    const priorEstate = shortTermCreditInput.shortTermReinheritPriorEstateValue;
+    const hasArrayAssets = assets != null && assets.length > 0;
+    const hasLegacyAsset =
+      shortTermCreditInput.shortTermReinheritAssetValue != null &&
       shortTermCreditInput.shortTermReinheritAssetValue > 0;
-    const hasPrior = shortTermCreditInput.shortTermReinheritPriorEstateValue != null &&
-      shortTermCreditInput.shortTermReinheritPriorEstateValue > 0;
-    if (hasAsset && !hasPrior) {
-      return "단기재상속 §30②1호 안분: 재상속분 재산가액을 입력한 경우 전의 상속재산가액도 함께 입력해야 합니다.";
+    const hasPrior = priorEstate != null && priorEstate > 0;
+
+    // 1차(전의) 상속개시일 ≤ 2차 상속개시일
+    if (priorDeath && input.deathDate && priorDeath > input.deathDate) {
+      return "단기재상속 §30: 1차(전의) 상속개시일은 상속개시일보다 이후일 수 없습니다.";
     }
-    if (!hasAsset && hasPrior) {
-      return "단기재상속 §30②1호 안분: 전의 상속재산가액을 입력한 경우 재상속분 재산가액도 함께 입력해야 합니다.";
-    }
-    if (hasAsset && hasPrior) {
-      const numerator = shortTermCreditInput.shortTermReinheritAssetValue!;
-      const denominator = shortTermCreditInput.shortTermReinheritPriorEstateValue!;
-      if (numerator > denominator) {
-        return "단기재상속 §30②1호: 재상속분 재산가액(분자)이 전의 상속재산가액(분모)을 초과할 수 없습니다.";
+
+    if (hasArrayAssets) {
+      // ── 재산별 배열 모델 (집행 30-22-1②) ──
+      if (!hasPrior) {
+        return "단기재상속 §30: 재상속분 재산을 입력한 경우 전의 상속재산가액(분모)을 입력해야 합니다.";
+      }
+      if (
+        shortTermCreditInput.shortTermReinheritTaxPaid == null ||
+        shortTermCreditInput.shortTermReinheritTaxPaid <= 0
+      ) {
+        return "단기재상속 §30: 재상속분 재산을 입력한 경우 전의 상속세 산출세액을 입력해야 합니다.";
+      }
+      let sum = 0;
+      for (const a of assets!) {
+        // 각 재산 priorValue ≤ 전의 상속재산가액 (비율≤1, 집행 30-22-1③)
+        if (a.priorValue > priorEstate!) {
+          return `단기재상속 §30: 재상속분 재산 "${a.name ?? ""}" 가액이 전의 상속재산가액을 초과할 수 없습니다.`;
+        }
+        sum += a.priorValue;
+      }
+      // Σ priorValue ≤ 전의 상속재산가액 (재상속분 합 ≤ 전상속재산)
+      if (sum > priorEstate!) {
+        return "단기재상속 §30: 재상속분 재산가액 합계가 전의 상속재산가액을 초과할 수 없습니다.";
+      }
+    } else if (hasLegacyAsset || hasPrior) {
+      // ── legacy 단일 분수 모델 (§30②1호) — 분자·분모 동반 입력 강제 ──
+      if (hasLegacyAsset && !hasPrior) {
+        return "단기재상속 §30②1호 안분: 재상속분 재산가액을 입력한 경우 전의 상속재산가액도 함께 입력해야 합니다.";
+      }
+      if (!hasLegacyAsset && hasPrior) {
+        return "단기재상속 §30②1호 안분: 전의 상속재산가액을 입력한 경우 재상속분 재산가액도 함께 입력해야 합니다.";
+      }
+      if (hasLegacyAsset && hasPrior) {
+        const numerator = shortTermCreditInput.shortTermReinheritAssetValue!;
+        if (numerator > priorEstate!) {
+          return "단기재상속 §30②1호: 재상속분 재산가액(분자)이 전의 상속재산가액(분모)을 초과할 수 없습니다.";
+        }
       }
     }
   }

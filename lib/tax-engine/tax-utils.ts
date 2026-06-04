@@ -227,19 +227,6 @@ export function calcDisabledPersonalDeduction(
 }
 
 /**
- * 단기재상속 경과 연수 계산 (상증법 §30)
- * 이전 상속개시일 ~ 현재 상속개시일의 경과 연수 (정수, 올림 아닌 버림)
- */
-export function calcShortTermReinheritYears(
-  prevDeathDate: string,
-  currentDeathDate: string,
-): number {
-  const prev = new Date(prevDeathDate);
-  const current = new Date(currentDeathDate);
-  return differenceInYears(current, prev);
-}
-
-/**
  * 평가기간 필터 — 상증법 §60 ② 기준
  * 상속: 상속개시일 전후 6개월 이내
  * 증여: 증여일 전 6개월 ~ 후 3개월

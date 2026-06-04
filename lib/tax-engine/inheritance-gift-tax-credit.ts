@@ -23,6 +23,7 @@ import type {
 } from "./types/inheritance-gift.types";
 import {
   calcShortTermReinheritCredit,
+  deriveShortTermReinheritBand,
 } from "./credits/short-term-reinheritance";
 import {
   calcForeignTaxCredit,
@@ -248,24 +249,44 @@ export function calcInheritanceTaxCredits(
 
   // 3. 단기재상속세액공제 (§30)
   // §30 ② 한도는 "당해 상속세 산출세액" 기준 → totalComputedTax(원본)를 한도로 전달하고,
-  // 실제 공제 적용은 remainingTax를 초과하지 않도록 별도 클램핑.
+  // 실제 공제 적용(§30③)은 remainingTax(산출 − §28 − §29)를 초과하지 않도록 클램핑.
+  // band: 1차·2차 상속개시일 자동 도출(올림) 우선, 부재 시 legacy shortTermReinheritYears(수동).
   let shortTermReinheritCredit = 0;
+  let shortTermReinheritDetail: TaxCreditResult["shortTermReinheritDetail"] = undefined;
+  const stPriorDeath = creditInput.shortTermReinheritPriorDeathDate;
+  const stBand =
+    stPriorDeath && deathDate
+      ? deriveShortTermReinheritBand(stPriorDeath, deathDate)
+      : creditInput.shortTermReinheritYears;
   if (
-    creditInput.shortTermReinheritYears !== undefined &&
+    stBand !== undefined &&
     creditInput.shortTermReinheritTaxPaid !== undefined
   ) {
     const shortTermResult = calcShortTermReinheritCredit({
       priorTaxPaid: creditInput.shortTermReinheritTaxPaid,
-      elapsedYears: creditInput.shortTermReinheritYears,
-      currentComputedTax: totalComputedTax, // §30 ② 한도: 원래 산출세액 기준
-      // §30②1호 안분 분수 — optional, 미입력 시 전부재상속(분수=1) fallback
+      elapsedYears: stBand,
+      currentComputedTax: totalComputedTax, // §30 ② 보조 한도
+      // 재산별 구분(집행 30-22-1②) — assets 우선, 미입력 시 legacy 단일 분자 / 전부재상속 fallback
+      assets: creditInput.shortTermReinheritAssets,
       shortTermReinheritAssetValue: creditInput.shortTermReinheritAssetValue,
       shortTermReinheritPriorEstateValue: creditInput.shortTermReinheritPriorEstateValue,
     });
-    // 선행 공제 차감 후 잔액을 초과하지 않도록 클램핑
+    // §30③ — 선행 공제 차감 후 잔액(remainingTax)을 초과하지 않도록 클램핑
     shortTermReinheritCredit = Math.min(shortTermResult.creditAmount, remainingTax);
     allBreakdown.push(...shortTermResult.breakdown);
-    if (shortTermReinheritCredit > 0) appliedLaws.add(TAX_CREDIT.SHORT_TERM_REINH);
+    if (shortTermReinheritCredit > 0) {
+      appliedLaws.add(TAX_CREDIT.SHORT_TERM_REINH);
+      // echo: 결과뷰 재산별 표 (limit = §30③ 한도 = §30 적용 직전 remainingTax)
+      shortTermReinheritDetail = {
+        band: shortTermResult.band,
+        creditRate: shortTermResult.creditRate,
+        priorComputedTax: creditInput.shortTermReinheritTaxPaid,
+        priorEstateValue: creditInput.shortTermReinheritPriorEstateValue ?? 0,
+        perAsset: shortTermResult.perAsset,
+        creditAmount: shortTermResult.perAsset.reduce((s, p) => s + p.credit, 0),
+        limit: remainingTax,
+      };
+    }
     remainingTax -= shortTermReinheritCredit;
   }
 
@@ -303,6 +324,8 @@ export function calcInheritanceTaxCredits(
     filingCreditBase: filingCreditBaseAmount,
     totalComputedTaxWithSurcharge: totalComputedTax,
     foreignCreditDetail,
+    // §30 재산별 표 echo (결과뷰 TaxCreditBreakdownCard)
+    shortTermReinheritDetail,
   };
 }
 

@@ -20,6 +20,7 @@ import { PresumedInheritanceInput } from "./PresumedInheritanceInput";
 import { DebtAllocationInput } from "./DebtAllocationInput";
 import { FamilyBusinessEligibilitySection } from "./FamilyBusinessEligibilitySection";
 import { InstallmentInputSection } from "./InstallmentInputSection";
+import { ShortTermReinheritSection } from "./ShortTermReinheritSection";
 import {
   Dialog,
   DialogContent,
@@ -596,85 +597,8 @@ export function Step4({
         </FieldCard>
       </div>
 
-      {/* 단기재상속공제 섹션 (§30) */}
-      <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-3">
-        <div className="flex items-center gap-2">
-          <p className="text-xs font-semibold text-sky-700">단기재상속공제 (§30)</p>
-        </div>
-        <p className="text-xs text-gray-500 dark:text-gray-400">
-          피상속인이 10년 이내에 상속받은 재산이 있는 경우 전의 상속세 산출세액의 일부를 공제합니다.
-          일부만 재상속된 경우 재상속분 재산가액과 전의 상속재산가액을 추가로 입력하면 안분 계산이 적용됩니다.
-        </p>
-
-        {/* 전 상속 경과 연수 */}
-        <div className="space-y-1">
-          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
-            전(前) 상속 경과 연수
-          </label>
-          <input
-            type="text"
-            inputMode="numeric"
-            value={form.shortTermReinheritYears}
-            onChange={(e) =>
-              set({ shortTermReinheritYears: e.target.value.replace(/\D/g, "") })
-            }
-            className="w-32 rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          />
-          <p className="text-xs text-gray-400 dark:text-gray-500">
-            이전 상속개시일부터 현재 상속개시일까지 경과 연수 (0~10 정수)
-          </p>
-        </div>
-
-        {form.shortTermReinheritYears && (
-          <div className="space-y-3">
-            {/* §30: "전의 상속세 산출세액" — 납부세액(결정세액) 아님 */}
-            <FieldCard
-              label="전의 상속세 산출세액"
-              hint="§30①: 이전 상속 당시의 상속세 산출세액(결정세액이 아닌 산출세액). 안분 적용 전 기준 금액."
-            >
-              <CurrencyInput
-                label="전의 상속세 산출세액"
-                hideLabel
-                value={form.shortTermReinheritTaxPaid}
-                onChange={(v) => set({ shortTermReinheritTaxPaid: v })}
-              />
-            </FieldCard>
-
-            {/* §30②1호 안분: 부분 재상속인 경우에만 입력 — 전부 재상속 시 미입력 */}
-            <div className="rounded-md border border-sky-100 bg-white/60 p-2.5 space-y-2">
-              <p className="text-[11px] font-semibold text-sky-700">
-                §30②1호 안분 입력 (부분 재상속인 경우만)
-              </p>
-              <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                전부 재상속이면 아래 두 칸을 비워 두면 됩니다. 엔진이 분수=1로 처리합니다.
-                부분 재상속이면 두 칸 모두 입력해야 합니다.
-              </p>
-              <FieldCard
-                label="재상속분 재산가액"
-                hint="§30②1호 안분 분수의 분자 — 전의 상속재산 중 이번 상속에서 다시 상속되는 재산의 가액"
-              >
-                <CurrencyInput
-                  label="재상속분 재산가액"
-                  hideLabel
-                  value={form.shortTermReinheritAssetValue}
-                  onChange={(v) => set({ shortTermReinheritAssetValue: v })}
-                />
-              </FieldCard>
-              <FieldCard
-                label="전의 상속재산가액"
-                hint="§30②1호 안분 분수의 분모 — 이전 상속 당시 전체 상속재산가액(과세가액 아닌 상속재산가액)"
-              >
-                <CurrencyInput
-                  label="전의 상속재산가액"
-                  hideLabel
-                  value={form.shortTermReinheritPriorEstateValue}
-                  onChange={(v) => set({ shortTermReinheritPriorEstateValue: v })}
-                />
-              </FieldCard>
-            </div>
-          </div>
-        )}
-      </div>
+      {/* 단기재상속공제 섹션 (§30) — 재산별 구분 (집행 30-22-1②) */}
+      <ShortTermReinheritSection form={form} set={set} />
 
       <InstallmentInputSection form={form} set={set} />
       </div>
