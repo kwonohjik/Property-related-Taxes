@@ -39,15 +39,18 @@ describe("resolveAssetToggleVisibility — 8-1 기본 매트릭스", () => {
   test.each<[AssetCategory, AssetToggleVisibility]>([
     [
       "real_estate_land",
-      { farming: "default", familyBusiness: "default", financialDeduction: "hidden_expandable", deemedRetirementOption: "hidden" },
+      // §19① 부동산 미열거, 해석례 없음 → financialDeduction hidden_permanent (정밀화 2026-06-05)
+      { farming: "default", familyBusiness: "default", financialDeduction: "hidden_permanent", deemedRetirementOption: "hidden" },
     ],
     [
       "real_estate_building",
-      { farming: "default", familyBusiness: "default", financialDeduction: "hidden_expandable", deemedRetirementOption: "hidden" },
+      // §19① 부동산 미열거, 해석례 없음 → financialDeduction hidden_permanent (정밀화 2026-06-05)
+      { farming: "default", familyBusiness: "default", financialDeduction: "hidden_permanent", deemedRetirementOption: "hidden" },
     ],
     [
       "real_estate_apartment",
-      { farming: "hidden_permanent", familyBusiness: "hidden_expandable", financialDeduction: "hidden_expandable", deemedRetirementOption: "hidden" },
+      // §19① 부동산 미열거, 해석례 없음 → financialDeduction hidden_permanent (정밀화 2026-06-05)
+      { farming: "hidden_permanent", familyBusiness: "hidden_expandable", financialDeduction: "hidden_permanent", deemedRetirementOption: "hidden" },
     ],
     [
       "cash",
@@ -71,7 +74,8 @@ describe("resolveAssetToggleVisibility — 8-1 기본 매트릭스", () => {
     ],
     [
       "other",
-      { farming: "default", familyBusiness: "default", financialDeduction: "hidden_expandable", deemedRetirementOption: "visible" },
+      // 현금성 노이즈 제거 → farming·familyBusiness hidden_expandable (정밀화 2026-06-05)
+      { farming: "hidden_expandable", familyBusiness: "hidden_expandable", financialDeduction: "hidden_expandable", deemedRetirementOption: "visible" },
     ],
   ])("%s 카테고리", (category, expected) => {
     expect(resolveAssetToggleVisibility(makeItem(category))).toEqual(expected);
@@ -208,10 +212,10 @@ describe("resolveAssetToggleVisibility — 회귀 보호", () => {
 
   test("deemedCategory='retirement' → financialDeduction은 매트릭스 그대로 (retirement는 §22 false)", () => {
     // retirement는 resolveFinancialEligibility=false → 활성 우선 미발동
-    // real_estate_land 매트릭스: financialDeduction = hidden_expandable
+    // real_estate_land 매트릭스: financialDeduction = hidden_permanent (§19① 부동산 미열거, 정밀화 2026-06-05)
     const item = makeItem("real_estate_land", { deemedCategory: "retirement" });
     const result = resolveAssetToggleVisibility(item);
-    expect(result.financialDeduction).toBe("hidden_expandable");
+    expect(result.financialDeduction).toBe("hidden_permanent");
     expect(result.deemedRetirementOption).toBe("visible"); // 활성 우선 발동
   });
 
@@ -289,16 +293,19 @@ describe("resolveAssetToggleVisibility — §22 Phase 1 주식 법령 override �
 
 describe("countHiddenExpandable — 펼침 카운트", () => {
   test.each<[AssetCategory, number]>([
-    ["real_estate_land", 1], // §22만
-    ["real_estate_building", 1], // §22만
-    ["real_estate_apartment", 2], // 가업 + §22 (영농은 hidden_perm)
+    // financialDeduction hidden_permanent(§19① 부동산 미열거) → countHiddenExpandable 0 (정밀화 2026-06-05)
+    ["real_estate_land", 0],
+    ["real_estate_building", 0],
+    // familyBusiness hidden_expandable 유지, financialDeduction hidden_permanent → 펼침 1
+    ["real_estate_apartment", 1], // 가업만 (영농·§22 모두 hidden_perm)
     ["cash", 0], // 모두 hidden_perm — 펼침 링크 미노출
     ["financial", 0], // §22는 default(활성 우선), 가업도 hidden_permanent로 정정 → 펼침 0 (2026-05-29)
     // §22 법령 override: listed_stock·unlisted_stock financialDeduction → hidden_permanent
     // hidden_permanent는 countHiddenExpandable 집계 대상 아님 → 카운트 불변(0)
     ["listed_stock", 0],
     ["unlisted_stock", 0],
-    ["other", 1], // §22만
+    // farming+familyBusiness+financialDeduction 모두 hidden_expandable (정밀화 2026-06-05)
+    ["other", 3],
   ])("%s 카테고리 → 펼침 카운트 %i", (category, expected) => {
     const visibility = resolveAssetToggleVisibility(makeItem(category));
     expect(countHiddenExpandable(visibility)).toBe(expected);
@@ -307,5 +314,47 @@ describe("countHiddenExpandable — 펼침 카운트", () => {
   test("deposit 카테고리 → 펼침 카운트 1 (PR2: §22 hidden_expandable, farming·familyBusiness hidden_perm)", () => {
     const visibility = resolveAssetToggleVisibility(makeItem("deposit"));
     expect(countHiddenExpandable(visibility)).toBe(1);
+  });
+});
+
+// ============================================================
+// AT-P 정밀화 보호 anchor (2026-06-05)
+// ============================================================
+
+describe("resolveAssetToggleVisibility — AT-P 정밀화 보호 anchor", () => {
+  // AT-P1: 부동산 + deemedCategory="trust" → financialDeduction default (신탁 override 보존)
+  //   MATRIX는 hidden_permanent이지만 신탁 override가 우선 → default 승격
+  test("AT-P1: real_estate_land + deemedCategory='trust' → financialDeduction default (신탁 override)", () => {
+    const item = makeItem("real_estate_land", { deemedCategory: "trust" });
+    expect(resolveAssetToggleVisibility(item).financialDeduction).toBe("default");
+  });
+
+  test("AT-P1b: real_estate_apartment + deemedCategory='trust' → financialDeduction default (신탁 override)", () => {
+    const item = makeItem("real_estate_apartment", { deemedCategory: "trust" });
+    expect(resolveAssetToggleVisibility(item).financialDeduction).toBe("default");
+  });
+
+  // AT-P2: 부동산 + isFinancialAssetForDeduction=true → financialDeduction default (활성 우선)
+  //   MATRIX hidden_permanent 이지만 활성 우선이 override → default 승격
+  test("AT-P2: real_estate_land + isFinancialAssetForDeduction=true → financialDeduction default (활성 우선)", () => {
+    const item = makeItem("real_estate_land", { isFinancialAssetForDeduction: true });
+    expect(resolveAssetToggleVisibility(item).financialDeduction).toBe("default");
+  });
+
+  test("AT-P2b: real_estate_building + isFinancialAssetForDeduction=true → default (활성 우선)", () => {
+    const item = makeItem("real_estate_building", { isFinancialAssetForDeduction: true });
+    expect(resolveAssetToggleVisibility(item).financialDeduction).toBe("default");
+  });
+
+  // AT-P3: other + farmingCategory 설정 → farming default (활성 우선, 어선 edge)
+  //   MATRIX hidden_expandable → 활성 우선 → default 승격
+  test("AT-P3: other + farmingCategory='fishing_vessel' → farming default (활성 우선, 어선 edge)", () => {
+    const item = makeItem("other", { farmingCategory: "fishing_vessel" });
+    expect(resolveAssetToggleVisibility(item).farming).toBe("default");
+  });
+
+  test("AT-P3b: other + familyBusinessCategory 설정 → familyBusiness default (활성 우선)", () => {
+    const item = makeItem("other", { familyBusinessCategory: "business_real_estate" });
+    expect(resolveAssetToggleVisibility(item).familyBusiness).toBe("default");
   });
 });

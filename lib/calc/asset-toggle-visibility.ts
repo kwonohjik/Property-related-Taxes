@@ -47,19 +47,22 @@ const MATRIX: Record<AssetCategory, AssetToggleVisibility> = {
   real_estate_land: {
     farming: "default",
     familyBusiness: "default",
-    financialDeduction: "hidden_expandable",
+    // §19① 금융회사등 취급 한정 — 부동산 미열거, 해석례 없음 (정밀화 2026-06-05)
+    financialDeduction: "hidden_permanent",
     deemedRetirementOption: "hidden",
   },
   real_estate_building: {
     farming: "default",
     familyBusiness: "default",
-    financialDeduction: "hidden_expandable",
+    // §19① 금융회사등 취급 한정 — 부동산 미열거, 해석례 없음 (정밀화 2026-06-05)
+    financialDeduction: "hidden_permanent",
     deemedRetirementOption: "hidden",
   },
   real_estate_apartment: {
     farming: "hidden_permanent", // §16⑤ 농업용 건축물 미해당 (검증 정정)
     familyBusiness: "hidden_expandable", // §15⑤2호 나목 단서 (임직원 무상임대) 예외
-    financialDeduction: "hidden_expandable",
+    // §19① 금융회사등 취급 한정 — 부동산 미열거, 해석례 없음 (정밀화 2026-06-05)
+    financialDeduction: "hidden_permanent",
     deemedRetirementOption: "hidden",
   },
   cash: {
@@ -93,8 +96,10 @@ const MATRIX: Record<AssetCategory, AssetToggleVisibility> = {
     deemedRetirementOption: "visible",
   },
   other: {
-    farming: "default", // §16⑤ 라·마목 어선·어업권·양식업권
-    familyBusiness: "default",
+    // §16⑤ 라·마목 어선·어업권·양식업권 — 현금성 노이즈 제거, 추가옵션·활성우선으로 접근 (정밀화 2026-06-05)
+    farming: "hidden_expandable",
+    // §15⑤ — 현금성 노이즈 제거, 추가옵션·활성우선으로 접근 (정밀화 2026-06-05)
+    familyBusiness: "hidden_expandable",
     financialDeduction: "hidden_expandable",
     deemedRetirementOption: "visible",
   },

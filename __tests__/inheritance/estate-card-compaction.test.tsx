@@ -336,3 +336,78 @@ describe("chip-major-shareholder — 상장·V1 simple 노출, V2 formal 비노�
     expect(chip?.isExpandable).toBe(false);
   });
 });
+
+// ============================================================
+// CC — chip-config 시맨틱 정정 anchor (2026-06-05)
+//   §3-1: resolveChips는 visibility === "default" 만 칩 행에 노출
+//   hidden_expandable → 칩 행 미포함 (추가옵션 패널 전용)
+// ============================================================
+
+describe("CC — chip-config 시맨틱 정정 (hidden_expandable 칩 행 미포함)", () => {
+  // CC-1: hidden_expandable → resolveChips 결과에 칩 미포함
+  it("CC-1a: other 카테고리(farming=hidden_expandable) → farming 칩 미포함", () => {
+    // other 기본: farming=hidden_expandable (정밀화 2026-06-05)
+    const item = makeItem({ category: "other" });
+    const chips = resolveChips({ item, mode: "inheritance", heirsCount: 0 });
+    expect(chips.map((c) => c.key)).not.toContain("farming");
+  });
+
+  it("CC-1b: other 카테고리(familyBusiness=hidden_expandable) → family-business 칩 미포함", () => {
+    const item = makeItem({ category: "other" });
+    const chips = resolveChips({ item, mode: "inheritance", heirsCount: 0 });
+    expect(chips.map((c) => c.key)).not.toContain("family-business");
+  });
+
+  it("CC-1c: real_estate_apartment(familyBusiness=hidden_expandable) → family-business 칩 미포함", () => {
+    const item = makeItem({ category: "real_estate_apartment" });
+    const chips = resolveChips({ item, mode: "inheritance", heirsCount: 0 });
+    expect(chips.map((c) => c.key)).not.toContain("family-business");
+  });
+
+  it("CC-1d: deposit(financialDeduction=hidden_expandable) → section22 칩 미포함", () => {
+    const item = makeItem({ category: "deposit" });
+    const chips = resolveChips({ item, mode: "inheritance", heirsCount: 0 });
+    expect(chips.map((c) => c.key)).not.toContain("section22");
+  });
+
+  it("CC-1e: real_estate_land(financialDeduction=hidden_permanent) → section22 칩 미포함", () => {
+    const item = makeItem({ category: "real_estate_land" });
+    const chips = resolveChips({ item, mode: "inheritance", heirsCount: 0 });
+    expect(chips.map((c) => c.key)).not.toContain("section22");
+  });
+
+  // CC-2: default → 칩 포함 (land/building farming/familyBusiness)
+  it("CC-2a: real_estate_land(farming=default) → farming 칩 포함", () => {
+    const item = makeItem({ category: "real_estate_land" });
+    const chips = resolveChips({ item, mode: "inheritance", heirsCount: 0 });
+    expect(chips.map((c) => c.key)).toContain("farming");
+  });
+
+  it("CC-2b: real_estate_building(familyBusiness=default) → family-business 칩 포함", () => {
+    const item = makeItem({ category: "real_estate_building" });
+    const chips = resolveChips({ item, mode: "inheritance", heirsCount: 0 });
+    expect(chips.map((c) => c.key)).toContain("family-business");
+  });
+
+  it("CC-2c: financial(financialDeduction=default) → section22 칩 포함 (기존 회귀 보호)", () => {
+    const item = makeItem({ category: "financial" });
+    const chips = resolveChips({ item, mode: "inheritance", heirsCount: 0 });
+    expect(chips.map((c) => c.key)).toContain("section22");
+  });
+
+  // CC-3: other + farmingCategory 설정 → farming 칩 포함 (활성 우선 → default 승격)
+  it("CC-3: other + farmingCategory='fishing_vessel' → farming 칩 포함 (활성 우선 승격)", () => {
+    const item = makeItem({ category: "other", farmingCategory: "fishing_vessel" });
+    const chips = resolveChips({ item, mode: "inheritance", heirsCount: 0 });
+    expect(chips.map((c) => c.key)).toContain("farming");
+  });
+
+  it("CC-3b: other + familyBusinessCategory 설정 → family-business 칩 포함 (활성 우선 승격)", () => {
+    const item = makeItem({
+      category: "other",
+      familyBusinessCategory: "business_real_estate",
+    });
+    const chips = resolveChips({ item, mode: "inheritance", heirsCount: 0 });
+    expect(chips.map((c) => c.key)).toContain("family-business");
+  });
+});

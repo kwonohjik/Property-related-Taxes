@@ -142,8 +142,10 @@ export function resolveChips({ item, mode, heirsCount, showMajorShareholderChip 
     tooltip: "간주상속재산 분류 (§8·§9·§10) — 클릭하여 변경",
   });
 
-  // 3. chip-section22 (visibility !== hidden_permanent · cash 자동 제외)
-  if (visibility.financialDeduction !== "hidden_permanent") {
+  // 3. chip-section22 — 칩 행은 "default" 만 노출
+  //   hidden_expandable = 추가옵션 패널 전용 (§3-1 시맨틱 정정 2026-06-05)
+  //   hidden_permanent  = 완전 숨김
+  if (visibility.financialDeduction === "default") {
     const eligible = resolveFinancialEligibility(item);
     const defaultEligible = getCategoryDefaultEligibility(item);
     const isUserOverride =
@@ -195,8 +197,8 @@ export function resolveChips({ item, mode, heirsCount, showMajorShareholderChip 
     }
   }
 
-  // 5. chip-farming
-  if (visibility.farming !== "hidden_permanent") {
+  // 5. chip-farming — 칩 행은 "default" 만 노출 (§3-1 시맨틱 정정 2026-06-05)
+  if (visibility.farming === "default") {
     chips.push({
       key: "farming",
       label: "영농 §16⑤",
@@ -208,12 +210,12 @@ export function resolveChips({ item, mode, heirsCount, showMajorShareholderChip 
     });
   }
 
-  // 6. chip-family-business
+  // 6. chip-family-business — 칩 행은 "default" 만 노출 (§3-1 시맨틱 정정 2026-06-05)
   //   카테고리 가드: 활성 우선(resolveAssetToggleVisibility)이 familyBusiness를 default로
   //   승격해도, 가업 분류 입력 불가 카테고리(financial·cash·deposit)는 칩 원천 차단.
   //   FamilyBusinessCategorySection 렌더 가드와 단일 진실 → 빈 패널 버그 방지.
   if (
-    visibility.familyBusiness !== "hidden_permanent" &&
+    visibility.familyBusiness === "default" &&
     !FAMILY_BUSINESS_INELIGIBLE_CATEGORIES.includes(item.category)
   ) {
     chips.push({
