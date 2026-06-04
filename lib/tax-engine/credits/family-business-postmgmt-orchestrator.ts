@@ -192,6 +192,7 @@ export function buildFamilyBusinessPostMgmtMeta(args: {
 
   return {
     appliedDeduction: familyBusinessDetail.deduction,
+    deathDate,
     filingDeadline: calcInheritanceFilingDeadline(deathDate),
     ofzExemptionActive: familyBusinessDetail.ofzExemptionActive ?? false,
     usedDirectInput: familyBusinessDetail.usedDirectInput,

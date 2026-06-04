@@ -305,6 +305,7 @@ describe("PHF-META — 사후관리 메타 빌더", () => {
     });
     expect(meta).toBeDefined();
     expect(meta?.appliedDeduction).toBe(20_000_000_000);
+    expect(meta?.deathDate).toBe("2026-01-15");
     expect(meta?.ofzExemptionActive).toBe(true);
     expect(meta?.usedDirectInput).toBe(false);
     // PHF-META-3: 신고기한 = endOfMonth(2026-01-15) + 6개월 = 2026-07-31

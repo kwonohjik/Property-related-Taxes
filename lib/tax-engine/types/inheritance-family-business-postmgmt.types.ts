@@ -20,6 +20,8 @@ export type PostMgmtAssetType = "land" | "building" | "stock" | "other";
 export interface FamilyBusinessPostMgmtMeta {
   /** 가업상속공제 적용액 (추징 원금) */
   appliedDeduction: number;
+  /** 상속개시일(사망일) — 사후관리 5년 가드 prefill, YYYY-MM-DD */
+  deathDate: string;
   /** 상속세 신고기한 — 상증법 §67 (사망일이 속하는 달 말일 + 6개월), YYYY-MM-DD */
   filingDeadline: string;
   /** OFZ 특례 활성 (§15㉕ → §15⑪1호·2호 사후관리 면제 사전 정보) */
