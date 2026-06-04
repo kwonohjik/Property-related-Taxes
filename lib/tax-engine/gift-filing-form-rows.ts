@@ -26,6 +26,18 @@ export interface FilingFormRowsInput {
   reportingCredit: number;            // ⑪ or ⑰
   finalTax: number;                   // ⑫ or ⑱
   hasPriorGifts: boolean;
+  /**
+   * 신고세액공제 산정 기준 금액 (§69).
+   * = 산출세액합계 − §58 기납부세액공제 − §59 외국납부세액공제 − 특례 공제.
+   * formula 표시에서 "신고세액공제 대상금액 × 3%"의 기준으로 사용.
+   * 미전달 시 종전 formula(⑬−⑯ 또는 ⑦−⑩) 유지.
+   */
+  filingCreditBase?: number;
+  /**
+   * §59 외국납부세액공제액.
+   * filingCreditBase가 전달된 경우 formula에 반영.
+   */
+  foreignTaxCredit?: number;
 }
 
 export function buildFilingFormRows(input: FilingFormRowsInput): FilingFormRow[] {
@@ -42,7 +54,24 @@ export function buildFilingFormRows(input: FilingFormRowsInput): FilingFormRow[]
     reportingCredit,
     finalTax,
     hasPriorGifts,
+    filingCreditBase,
+    foreignTaxCredit,
   } = input;
+
+  // §69 신고세액공제 formula 문자열 빌드.
+  // filingCreditBase가 전달된 경우: "신고세액공제 대상금액 × 3%" 풀어쓰기로 base를 echo.
+  // 외국납부세액 > 0 이면 차감 단계를 formula에 포함 (표시 정합 — feedback_detailed_statement_formula_sync).
+  function buildFilingCreditFormula(baseRow: string): string {
+    if (filingCreditBase !== undefined) {
+      const hasForeign = (foreignTaxCredit ?? 0) > 0;
+      if (hasForeign) {
+        return `(${baseRow} − §59 외국납부세액) × 3%`;
+      }
+      return `${baseRow} × 3%`;
+    }
+    // filingCreditBase 미전달 시 종전 formula
+    return baseRow;
+  }
 
   const rows: FilingFormRow[] = [];
   const useEighteen = generationSkipDetail !== null;
@@ -177,7 +206,10 @@ export function buildFilingFormRows(input: FilingFormRowsInput): FilingFormRow[]
       label: "신고세액공제",
       amount: reportingCredit,
       display: "amount",
-      formula: "(⑬ − ⑯) × 3%",
+      // §69 formula: 외국납부(§59) 차감 후 남은 세액의 3%.
+      // filingCreditBase echo 시 "신고세액공제 대상금액 × 3%"로 풀어쓰기.
+      // 외국납부 > 0이면 차감 단계 명시 (§59 표시 정합).
+      formula: buildFilingCreditFormula("⑬ − ⑯"),
     });
     rows.push({
       number: "⑱",
@@ -215,7 +247,8 @@ export function buildFilingFormRows(input: FilingFormRowsInput): FilingFormRow[]
       label: "신고세액공제",
       amount: reportingCredit,
       display: "amount",
-      formula: "(⑦ − ⑩) × 3%",
+      // §69 formula: 외국납부(§59) 차감 후 남은 세액의 3%.
+      formula: buildFilingCreditFormula("⑦ − ⑩"),
     });
     rows.push({
       number: "⑫",

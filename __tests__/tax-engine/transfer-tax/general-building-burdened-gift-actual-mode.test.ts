@@ -105,7 +105,8 @@ describe("부담부증여 + 일반건물 실거래가 모드 — §159①1호 �
     const land = result.apportionment.apportioned.find(a => a.assetKind === "land");
     const building = result.apportionment.apportioned.find(a => a.assetKind === "building");
     expect(land?.allocatedSalePrice).toBe(3_816_625_253);
-    expect(building?.allocatedSalePrice).toBe(303_374_746); // building = total - land (BigInt 안분 차이 1원)
+    // G-H2 fix: 잔액 흡수(building = B − land) 적용 → 합 = B(채무액) 보장. +1원.
+    expect(building?.allocatedSalePrice).toBe(303_374_747);
   });
 
   it("§159①1호 단서 — 사용자 입력 실거래가(2.5B) 무시, 취득시 기준시가 기반 환산", () => {
@@ -223,9 +224,10 @@ describe("증여시 건물 기준시가 분리 — Excel D9·E9 정확 일치", 
     );
     const land = result.apportionment.apportioned.find(a => a.assetKind === "land");
     const building = result.apportionment.apportioned.find(a => a.assetKind === "building");
-    // 분모 = land 7,948,985,000 + buildingStdPriceAtTransfer 631,846,500 = 8,580,831,500 (Excel C31)
+    // 분모 = supplementary = land 7,948,985,000 + buildingStdPriceAtTransfer 631,846,500 = 8,580,831,500 (Excel C31)
+    // G-H2 fix: 잔액 흡수(building = B − land) 적용 → 합 = B 보장. +1원.
     expect(land?.allocatedSalePrice).toBe(3_816_625_253);
-    expect(building?.allocatedSalePrice).toBe(303_374_746);
+    expect(building?.allocatedSalePrice).toBe(303_374_747);
   });
 });
 

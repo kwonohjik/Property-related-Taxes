@@ -91,21 +91,47 @@ export function calcRelationDeduction(
 }
 
 /**
- * 혼인·출산 증여재산공제 (§53의2)
- * 기존 관계별 공제와 합산 시 최대 1억원 (별도 한도)
+ * §53의2 적용 대상 관계 판정
  *
+ * §53의2①②는 "직계존속으로부터" 증여받은 경우에만 적용.
+ * 배우자·직계비속·기타친족 증여는 비적격.
+ */
+function isMarriageBirthEligibleRelation(relation: DonorRelation): boolean {
+  return relation === "lineal_ascendant_adult" || relation === "lineal_ascendant_minor";
+}
+
+/**
+ * 혼인·출산 증여재산공제 (§53의2)
+ *
+ * 적용 요건:
+ *   - 증여자가 직계존속이어야 함 (§53의2① "직계존속으로부터" 명문)
+ *   - 혼인·출산 합산 통합한도 1억원 (§53의2③)
+ *   - §53 관계공제와 별도 적용 (별개 한도)
+ *
+ * @param donorRelation   증여자-수증자 관계 — 직계존속일 때만 적용
+ * @param grossGiftValue  합산 증여재산가액 (과세가액 상한 캡 적용용)
  * @param marriageExemption 혼인공제 금액 (≤ 1억)
- * @param birthExemption 출산공제 금액 (≤ 1억)
+ * @param birthExemption    출산공제 금액 (≤ 1억)
  */
 export function calcMarriageBirthDeduction(
+  donorRelation: DonorRelation,
+  grossGiftValue: number,
   marriageExemption?: number,
   birthExemption?: number,
 ): { deduction: number; breakdown: CalculationStep[] } {
+  // §53의2 게이트: 직계존속 증여가 아니면 공제 불가
+  if (!isMarriageBirthEligibleRelation(donorRelation)) {
+    return { deduction: 0, breakdown: [] };
+  }
+
   const marriage = Math.max(0, Math.min(marriageExemption ?? 0, MARRIAGE_BIRTH_MAX));
   const birth = Math.max(0, Math.min(birthExemption ?? 0, MARRIAGE_BIRTH_MAX));
 
-  // 혼인 + 출산 합산 최대 1억
-  const deduction = Math.min(marriage + birth, MARRIAGE_BIRTH_MAX);
+  // 혼인 + 출산 합산 최대 1억 (§53의2③)
+  const combinedMax = Math.min(marriage + birth, MARRIAGE_BIRTH_MAX);
+
+  // 합산 증여재산가액 상한 캡 — totalDeduction이 과세가액 초과 방지
+  const deduction = Math.min(combinedMax, Math.max(0, grossGiftValue));
 
   if (deduction <= 0) {
     return { deduction: 0, breakdown: [] };
@@ -121,7 +147,7 @@ export function calcMarriageBirthDeduction(
         ? [{ label: "출산 증여재산공제", amount: birth, lawRef: GIFT.MARRIAGE_DEDUCTION }]
         : []),
       {
-        label: "혼인·출산 공제 합계 (최대 1억)",
+        label: "혼인·출산 공제 합계 (최대 1억, 직계존속 한정)",
         amount: deduction,
         lawRef: GIFT.MARRIAGE_DEDUCTION,
       },
@@ -161,9 +187,17 @@ export function calcGiftDeductions(
   );
 
   const { deduction: marriageBirthDeduction, breakdown: mbBreakdown } =
-    calcMarriageBirthDeduction(input.marriageExemption, input.birthExemption);
+    calcMarriageBirthDeduction(
+      input.donorRelation,
+      grossGiftValue,
+      input.marriageExemption,
+      input.birthExemption,
+    );
 
-  const totalDeduction = relationDeduction + marriageBirthDeduction;
+  // 합계가 합산 증여재산가액을 초과하지 않도록 캡 적용
+  // (관계공제 + 혼인·출산공제 각각 캡이 있어도, 합산 시 초과 가능)
+  const rawTotal = relationDeduction + marriageBirthDeduction;
+  const totalDeduction = Math.min(rawTotal, Math.max(0, grossGiftValue));
 
   return {
     relationDeduction,
@@ -204,9 +238,9 @@ export function aggregateGiftWithin10Years(
 function getDonorRelationLabel(relation: DonorRelation): string {
   const labels: Record<DonorRelation, string> = {
     spouse: "배우자",
-    lineal_ascendant_adult: "직계존속(성년)",
-    lineal_ascendant_minor: "직계존속(미성년)",
-    lineal_descendant: "직계비속",
+    lineal_ascendant_adult: "직계존속(성년 수증자)",
+    lineal_ascendant_minor: "직계존속(미성년 수증자)",
+    lineal_descendant: "직계비속(성년 수증자)",
     other_relative: "기타친족",
   };
   return labels[relation];

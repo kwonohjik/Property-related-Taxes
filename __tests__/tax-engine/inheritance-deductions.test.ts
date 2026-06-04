@@ -356,13 +356,14 @@ describe("증여재산공제 (§53·§53의2)", () => {
     expect(result.relationDeduction).toBe(10_000_000);
   });
 
-  it("[D26] 혼인·출산 공제: 혼인5천 + 출산5천 = 1억 (한도 내)", () => {
-    const result = calcMarriageBirthDeduction(50_000_000, 50_000_000);
+  it("[D26] 혼인·출산 공제: 직계존속(성년) + 혼인5천 + 출산5천 = 1억 (한도 내)", () => {
+    // §53의2: 직계존속으로부터 증여받아야 적용
+    const result = calcMarriageBirthDeduction("lineal_ascendant_adult", 500_000_000, 50_000_000, 50_000_000);
     expect(result.deduction).toBe(100_000_000);
   });
 
-  it("[D27] 혼인·출산 공제: 합산 1억 초과분 절사", () => {
-    const result = calcMarriageBirthDeduction(80_000_000, 80_000_000);
+  it("[D27] 혼인·출산 공제: 직계존속(성년) + 합산 1억 초과분 절사", () => {
+    const result = calcMarriageBirthDeduction("lineal_ascendant_adult", 500_000_000, 80_000_000, 80_000_000);
     expect(result.deduction).toBe(100_000_000);
   });
 

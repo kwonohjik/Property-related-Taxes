@@ -29,6 +29,7 @@ import type {
   BurdenedGiftInfo,
   TransferBurdenedGiftBreakdown,
 } from "./types/transfer-burdened-gift.types";
+import { format } from "date-fns";
 
 // ============================================================
 // 상증법 §60~§66 Max 평가 산정
@@ -212,16 +213,43 @@ export function buildBurdenedGiftBreakdown(params: {
   // STEP 2: 채무비율 — 분모는 증여재산 평가액(giftValuation.max). Excel 정합.
   const { assumedDebtAmount, debtRatio } = computeDebtRatio(info, giftValuation.max);
 
-  // STEP 3: 자산별 양도가액 안분 (시가 모드일 때 자산별 시가 분리값이 없으면 기준시가 비율로 안분)
-  //   - 기준시가 모드: 자산별 기준시가 × 채무비율
-  //   - 시가 모드: 양도시 marketValue 전체 × (자산별 기준시가 / 전체 기준시가) × 채무비율 ≡
-  //                자산별 기준시가 × marketValueAtTransfer / 전체 기준시가 × 채무비율
-  //                실용적으로 기준시가 비율을 자산별 시가 분리값 추정에 사용 (Phase 1).
+  // STEP 3: 자산별 양도가액 안분 (소령 §159 ① 2호)
+  //
+  // §159①2호: 자산별 양도가액 = A(자산별 §60~§66 평가가액) × B(채무액) / C(증여가액)
+  // 자산별 합 = (A_land + A_building) × B/C = C × B/C = B 이어야 함.
+  //
+  // [기준시가 모드 — sangjeungbeop_standard]
+  //   mortgage/rental이 선택될 때 C(max) > supplementary(토지+건물 기준시가 합).
+  //   A_land = max × (landStd / supplementary), A_building = max × (buildingStd / supplementary).
+  //   → 자산별 양도가액 = (max × 자산Std / supplementary) × B / max = 자산Std × B / supplementary.
+  //   결론: 분자는 자산별 기준시가, 분모는 supplementary(= 기준시가 합) — max가 아님.
+  //   이로써 합 = B 보장.
+  //
+  //   정수 안분: land = safeMultiplyThenDivide(B, landStd, supplementary),
+  //             building = B − land  (floor 잔액 흡수 — feedback_floor_residual_absorption).
+  //
+  // [시가 모드 — sangjeungbeop_market]
+  //   A_land + A_building = marketTotal. C = max ≈ marketTotal (시가 선택 시).
+  //   기준시가 비율로 marketTotal 안분 후 분모는 marketTotal — 합 = B 유지.
   let landSangjeungbeopValue: number;
   let buildingSangjeungbeopValue: number;
+  let landTransferPrice: number;
+  let buildingTransferPrice: number;
+
   if (info.valuationMode === "sangjeungbeop_standard") {
     landSangjeungbeopValue = landStdPriceAtTransfer;
     buildingSangjeungbeopValue = buildingStdPriceAtTransfer;
+    // 분모 = supplementary (기준시가 합). 합 = B 보장.
+    // supplementary = 0 방어 (토지+건물 기준시가 모두 0이면 채무비율도 0 → transferPrice = 0).
+    const transferDenominator = sangjeungbeopValuation.supplementary;
+    if (transferDenominator === 0 || assumedDebtAmount === 0) {
+      landTransferPrice = 0;
+      buildingTransferPrice = 0;
+    } else {
+      // floor 안분 + 잔액 흡수: 토지 먼저 floor, 건물은 잔액(합이 정확히 B).
+      landTransferPrice = safeMultiplyThenDivide(landStdPriceAtTransfer, assumedDebtAmount, transferDenominator);
+      buildingTransferPrice = assumedDebtAmount - landTransferPrice;
+    }
   } else {
     // 시가 모드: 자산별 시가 분리 입력은 v2. Phase 1은 기준시가 비율로 시가 안분.
     const totalStd = landStdPriceAtTransfer + buildingStdPriceAtTransfer;
@@ -229,18 +257,15 @@ export function buildBurdenedGiftBreakdown(params: {
     landSangjeungbeopValue =
       totalStd === 0 ? 0 : safeMultiplyThenDivide(marketTotal, landStdPriceAtTransfer, totalStd);
     buildingSangjeungbeopValue = marketTotal - landSangjeungbeopValue;
+    // 시가 모드: 분모는 marketTotal (= 자산 평가가액 합). 합 = B 보장.
+    if (marketTotal === 0 || assumedDebtAmount === 0) {
+      landTransferPrice = 0;
+      buildingTransferPrice = 0;
+    } else {
+      landTransferPrice = apportionTransferPrice(landSangjeungbeopValue, assumedDebtAmount, marketTotal);
+      buildingTransferPrice = assumedDebtAmount - landTransferPrice;
+    }
   }
-
-  const landTransferPrice = apportionTransferPrice(
-    landSangjeungbeopValue,
-    assumedDebtAmount,
-    sangjeungbeopValuation.max,
-  );
-  const buildingTransferPrice = apportionTransferPrice(
-    buildingSangjeungbeopValue,
-    assumedDebtAmount,
-    sangjeungbeopValuation.max,
-  );
 
   // STEP 4: 자산별 취득가액 안분 (소령 §159 ① 1호 A 괄호 — 기준시가 모드에서는 취득가도 기준시가)
   //   분모는 증여재산 평가액(giftValuation.max) — 양도세 분모와 분리 (Excel 정합).
@@ -282,7 +307,9 @@ export function buildBurdenedGiftBreakdown(params: {
   let giftTaxSummary: TransferBurdenedGiftBreakdown["giftTax"];
   if (params.giftDate && gratuitousPortion > 0) {
     const donorRelation = info.donorRelation ?? "lineal_descendant";
-    const giftDateStr = params.giftDate.toISOString().split("T")[0];
+    // G-M9 수정: toISOString()은 UTC 변환으로 KST 자정 → 전날로 롤백.
+    // date-fns format()은 로컬 시간 기준 포맷 → 로컬 날짜 보존.
+    const giftDateStr = format(params.giftDate, "yyyy-MM-dd");
     // Phase A: donor 매핑 (DonorRelation → GiftDonorRelation)
     //   donorRelation은 수증자 관점, donor는 증여자 관점.
     //   부담부증여 일반 시나리오: 증여자가 부모인 경우 "father" (단순화, 양친 구분 후속 PR).
@@ -317,12 +344,17 @@ export function buildBurdenedGiftBreakdown(params: {
       // PR3: computedTax·giftTaxBase를 전달해야 aggregatePriorGiftsForGift가 §58 Phase A
       //      안분 한도(floor(금번 산출세액 × 직전 과세표준 / 합산 과세표준))를 산출한다.
       //      미전달(undefined) 시 priorAggregation 0 → §58 미적용(공제 누락) — validation에서 입력 강제.
+      // LOW — donor 강제 매핑 확인 결과:
+      // BurdenedGiftInfo.priorGiftsWithin10Years 입력 모델에 donor 필드가 없으므로
+      // 구조적으로 단일 증여자(현재 부담부증여 증여자)만 허용하는 설계.
+      // 모든 prior를 현재 giftDonor 그룹으로 매핑하는 것이 설계 의도와 일치.
+      // 다른 그룹 prior 표현이 필요하면 BurdenedGiftInfo에 donor 필드 추가 후 v2에서 확장.
       priorGiftsWithin10Years: (info.priorGiftsWithin10Years ?? []).map((p) => ({
         giftDate: p.giftDate,
         isHeir: false, // 증여세 §47 합산에서는 isHeir 무관 (상속세 §13 전용 필드)
         giftAmount: p.giftAmount,
         giftTaxPaid: p.giftTaxPaid,
-        donor: giftDonor, // 그룹 일치 자동 매핑
+        donor: giftDonor, // 단일 증여자 설계 — 입력모델(BurdenedGiftInfo)에 donor 필드 없음
         computedTax: p.computedTax,  // §58① 증여 당시 산출세액 (한도 분자·공제 대상)
         giftTaxBase: p.giftTaxBase,  // §58 한도 분자 = 가산 증여재산 과세표준
       })),

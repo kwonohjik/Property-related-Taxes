@@ -114,12 +114,15 @@ describe("사례 34 — 부담부증여 헬퍼 단위 테스트", () => {
       buildingStdPriceAtAcquisition: BUILDING_STD_ACQUISITION,
       info: burdenedGiftInfo,
     });
-    // 자산-수준 양도가액 (소령 §159 ① 2호) — 엔진은 상증법 max(8,578,295,360)를 분모로 사용.
+    // 자산-수준 양도가액 (소령 §159 ① 2호).
+    // G-H2 수정: 분모를 supplementary(기준시가 합)로 변경하여 합 = B(채무액) 보장.
+    // floor 잔액 흡수 패턴: land = floor(B × landStd / supplementary), building = B − land.
     // ⚠️ Excel/PDF anchor는 소법 보충적평가 합계(8,580,831,500)를 per-asset 분모로 사용하므로
     //    asset-level transferPrice는 Excel(3,816,625,253)과 약 1.1M 차이가 있다.
     //    합계(transferGain·calculatedTax·localIncomeTax)는 1원 이내로 일치 — Phase 1 strict §159 채택.
+    // 사례 34는 supplementary 모드(max = supplementary) → 수정 후 건물에 +1원 잔액 흡수.
     expect(b.perAsset.land.transferPrice).toBe(3_817_753_624);
-    expect(b.perAsset.building.transferPrice).toBe(302_246_375);
+    expect(b.perAsset.building.transferPrice).toBe(302_246_376); // G-H2 fix: 잔액 흡수(+1원, 합=B 보장)
     // 자산-수준 취득가액 (소령 §159 ① 1호 A 괄호) — Excel D9·E9 1원 이내 일치
     expect(b.perAsset.land.acquisitionPrice).toBe(1_308_417_573);
     expect(b.perAsset.building.acquisitionPrice).toBe(203_866_249);
@@ -142,11 +145,13 @@ describe("사례 34 — 통합 anchor (PDF p.534·537·538)", () => {
     const input = makeCase34Input();
     const result = calculateTransferTax(input, rates);
 
-    // 합계 — 양도차익 (BigInt per-asset truncation 누적으로 PDF anchor와 2원 차이)
-    expect(result.transferGain).toBe(2_562_347_663);
+    // 합계 — 양도차익.
+    // G-H2 fix: 건물 양도가액 +1원(잔액 흡수로 합=B 보장) → transferGain +1원. 법령 정합 우선.
+    expect(result.transferGain).toBe(2_562_347_664);
     // 장특공 (24년 보유 → 표1 30%) — Excel anchor 일치
     expect(result.longTermHoldingRate).toBe(0.30);
-    expect(result.longTermHoldingDeduction).toBe(768_704_298);
+    // G-H2 fix: transferGain +1원 → longTermHoldingDeduction +1원 (floor(2,562,347,664 × 0.30))
+    expect(result.longTermHoldingDeduction).toBe(768_704_299);
     // 과세표준 = 양도소득금액 − 기본공제(250만)
     expect(result.taxBase).toBe(1_791_143_365);
     // 산출세액 (§55 누진세율 1,000,000,000 초과 45% + 누진공제 65,940,000)

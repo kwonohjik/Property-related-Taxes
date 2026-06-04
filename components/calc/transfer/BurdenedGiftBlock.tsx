@@ -41,21 +41,25 @@ const VALUATION_MODE_OPTIONS = [
 ] as const;
 
 // Phase 3: 증여자-수증자 관계 (상증법 §53 증여재산공제)
+// 주의: enum 값 의미
+//   lineal_descendant       = 수증자가 직계비속(성년) — 증여자가 직계비속(자녀→부모 방향) (§53③)
+//   lineal_ascendant_adult  = 증여자가 직계존속, 수증자 성년 (§53② 본문)
+//   lineal_ascendant_minor  = 증여자가 직계존속, 수증자 미성년 (§53② 단서)
 const DONOR_RELATION_OPTIONS = [
   {
     value: "lineal_descendant",
-    label: "직계비속 (성년)",
-    description: "자녀·손자녀(성년) — 증여재산공제 5천만 원 (사례 34 기본)",
+    label: "직계비속 (성년 수증자)",
+    description: "수증자가 성년 직계비속(자녀·손자녀) — 증여재산공제 5천만 원",
   },
   {
     value: "lineal_ascendant_minor",
-    label: "직계비속 (미성년)",
-    description: "미성년 자녀·손자녀 — 증여재산공제 2천만 원",
+    label: "직계존속 (미성년 수증자)",
+    description: "증여자가 직계존속, 수증자가 미성년 — 증여재산공제 2천만 원 (§53② 단서)",
   },
   {
     value: "lineal_ascendant_adult",
-    label: "직계존속",
-    description: "부모·조부모 등 — 증여재산공제 5천만 원",
+    label: "직계존속 (성년 수증자)",
+    description: "증여자가 직계존속(부모·조부모), 수증자 성년 — 증여재산공제 5천만 원 (§53② 본문)",
   },
   {
     value: "spouse",

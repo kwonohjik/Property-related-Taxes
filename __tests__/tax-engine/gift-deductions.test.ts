@@ -109,42 +109,76 @@ describe("관계별 증여재산공제 — calcRelationDeduction (§53)", () => 
 // ============================================================
 
 describe("혼인·출산 증여재산공제 — calcMarriageBirthDeduction (§53의2)", () => {
-  it("[G11] 혼인공제 1억 단독 적용", () => {
-    const { deduction } = calcMarriageBirthDeduction(100_000_000, 0);
+  // §53의2: 직계존속으로부터 증여받은 경우에만 적용 (명문)
+  const ELIGIBLE_ADULT = "lineal_ascendant_adult" as const;
+  const ELIGIBLE_MINOR = "lineal_ascendant_minor" as const;
+  const LARGE_GIFT = 500_000_000; // 공제 한도보다 충분히 큰 증여가액
+
+  it("[G11] 직계존속(성년) + 혼인공제 1억 단독 적용", () => {
+    const { deduction } = calcMarriageBirthDeduction(ELIGIBLE_ADULT, LARGE_GIFT, 100_000_000, 0);
     expect(deduction).toBe(100_000_000);
   });
 
-  it("[G12] 출산공제 1억 단독 적용", () => {
-    const { deduction } = calcMarriageBirthDeduction(0, 100_000_000);
+  it("[G12] 직계존속(성년) + 출산공제 1억 단독 적용", () => {
+    const { deduction } = calcMarriageBirthDeduction(ELIGIBLE_ADULT, LARGE_GIFT, 0, 100_000_000);
     expect(deduction).toBe(100_000_000);
   });
 
-  it("[G13] 혼인+출산 합산 최대 1억 한도", () => {
+  it("[G13] 직계존속(성년) + 혼인+출산 합산 최대 1억 한도", () => {
     // 혼인 8천만 + 출산 5천만 = 1.3억 → 1억으로 캡
-    const { deduction } = calcMarriageBirthDeduction(80_000_000, 50_000_000);
+    const { deduction } = calcMarriageBirthDeduction(ELIGIBLE_ADULT, LARGE_GIFT, 80_000_000, 50_000_000);
     expect(deduction).toBe(100_000_000);
   });
 
-  it("[G14] 혼인 4천만 + 출산 4천만 = 8천만 (합산이 1억 미만)", () => {
-    const { deduction } = calcMarriageBirthDeduction(40_000_000, 40_000_000);
+  it("[G14] 직계존속(성년) + 혼인 4천만 + 출산 4천만 = 8천만 (합산이 1억 미만)", () => {
+    const { deduction } = calcMarriageBirthDeduction(ELIGIBLE_ADULT, LARGE_GIFT, 40_000_000, 40_000_000);
     expect(deduction).toBe(80_000_000);
   });
 
-  it("[G15] 모두 0 → deduction 0, breakdown 빈 배열", () => {
-    const { deduction, breakdown } = calcMarriageBirthDeduction(0, 0);
+  it("[G15] 직계존속(성년) + 모두 0 → deduction 0, breakdown 빈 배열", () => {
+    const { deduction, breakdown } = calcMarriageBirthDeduction(ELIGIBLE_ADULT, LARGE_GIFT, 0, 0);
     expect(deduction).toBe(0);
     expect(breakdown).toHaveLength(0);
   });
 
-  it("[G16] undefined 입력 → 0으로 처리", () => {
-    const { deduction } = calcMarriageBirthDeduction(undefined, undefined);
+  it("[G16] 직계존속(성년) + undefined 입력 → 0으로 처리", () => {
+    const { deduction } = calcMarriageBirthDeduction(ELIGIBLE_ADULT, LARGE_GIFT, undefined, undefined);
     expect(deduction).toBe(0);
   });
 
-  it("[G17] 혼인공제 1억 초과 입력 → 1억으로 캡", () => {
+  it("[G17] 직계존속(성년) + 혼인공제 1억 초과 입력 → 1억으로 캡", () => {
     // 각 항목도 개별 1억 한도 적용
-    const { deduction } = calcMarriageBirthDeduction(120_000_000, 0);
+    const { deduction } = calcMarriageBirthDeduction(ELIGIBLE_ADULT, LARGE_GIFT, 120_000_000, 0);
     expect(deduction).toBe(100_000_000);
+  });
+
+  it("[G11b] 직계존속(미성년 수증자) + 혼인공제 적용 가능 (§53의2 직계존속 적용)", () => {
+    // lineal_ascendant_minor = 증여자 직계존속, 수증자 미성년 → §53의2 적용 대상
+    const { deduction } = calcMarriageBirthDeduction(ELIGIBLE_MINOR, LARGE_GIFT, 100_000_000, 0);
+    expect(deduction).toBe(100_000_000);
+  });
+
+  it("[G11c] 배우자 증여 + 혼인공제 → §53의2 비적격, 공제 0 (게이트 차단)", () => {
+    // §53의2①: "직계존속으로부터" 명문 — 배우자 증여는 비적격
+    const { deduction, breakdown } = calcMarriageBirthDeduction("spouse", LARGE_GIFT, 100_000_000, 0);
+    expect(deduction).toBe(0);
+    expect(breakdown).toHaveLength(0);
+  });
+
+  it("[G11d] 직계비속 증여 + 혼인공제 → §53의2 비적격, 공제 0", () => {
+    const { deduction } = calcMarriageBirthDeduction("lineal_descendant", LARGE_GIFT, 100_000_000, 0);
+    expect(deduction).toBe(0);
+  });
+
+  it("[G11e] 기타친족 증여 + 혼인공제 → §53의2 비적격, 공제 0", () => {
+    const { deduction } = calcMarriageBirthDeduction("other_relative", LARGE_GIFT, 100_000_000, 0);
+    expect(deduction).toBe(0);
+  });
+
+  it("[G11f] 직계존속(성년) + 혼인공제 1억, 증여가액이 5천만 → 공제 5천만으로 캡", () => {
+    // grossGiftValue=5천만 < 혼인공제 1억 → 증여가액 한도 적용
+    const { deduction } = calcMarriageBirthDeduction(ELIGIBLE_ADULT, 50_000_000, 100_000_000, 0);
+    expect(deduction).toBe(50_000_000);
   });
 });
 
@@ -153,17 +187,44 @@ describe("혼인·출산 증여재산공제 — calcMarriageBirthDeduction (§53
 // ============================================================
 
 describe("통합 증여재산공제 — calcGiftDeductions", () => {
-  it("[G18] 배우자 + 혼인공제 통합", () => {
+  it("[G18] 배우자 + 혼인공제 — §53의2 비적격(직계존속 아님) → 혼인공제 0, 관계공제만", () => {
+    // §53의2①: "직계존속으로부터" 명문 — 배우자는 §53의2 비적격
+    // 법령 정합 재산정: 관계공제 6억(§53①), 혼인공제 0(§53의2 비적격)
     const input: GiftDeductionInput = {
       donorRelation: "spouse",
       priorUsedDeduction: 0,
       marriageExemption: 100_000_000,
     };
     const result = calcGiftDeductions(input, 700_000_000);
-    // 관계공제 6억 + 혼인공제 1억 = 7억
-    expect(result.relationDeduction).toBe(600_000_000);
-    expect(result.marriageBirthDeduction).toBe(100_000_000);
-    expect(result.totalDeduction).toBe(700_000_000);
+    expect(result.relationDeduction).toBe(600_000_000); // §53① 배우자 6억
+    expect(result.marriageBirthDeduction).toBe(0);       // §53의2 비적격
+    expect(result.totalDeduction).toBe(600_000_000);
+  });
+
+  it("[G18a] 직계존속(성년) + 혼인공제 — §53의2 정상 적용 → 관계공제 5천만 + 혼인공제 1억", () => {
+    // §53의2①: 직계존속으로부터 → 적격. 관계공제 5천만 + 혼인공제 1억 = 1.5억
+    const input: GiftDeductionInput = {
+      donorRelation: "lineal_ascendant_adult",
+      priorUsedDeduction: 0,
+      marriageExemption: 100_000_000,
+    };
+    const result = calcGiftDeductions(input, 200_000_000);
+    expect(result.relationDeduction).toBe(50_000_000);    // §53② 직계존속 5천만
+    expect(result.marriageBirthDeduction).toBe(100_000_000); // §53의2① 혼인공제 1억
+    expect(result.totalDeduction).toBe(150_000_000);     // 합계 1.5억 (grossGiftValue 2억 이상이므로 캡 미적용)
+  });
+
+  it("[G18b] 직계존속(성년) + 혼인공제 + 증여가액 1.2억 → totalDeduction 1.2억으로 캡", () => {
+    // grossGiftValue=1.2억, 관계공제 5천만 + 혼인공제 1억 = 1.5억 > 1.2억
+    // → totalDeduction = min(1.5억, 1.2억) = 1.2억
+    const input: GiftDeductionInput = {
+      donorRelation: "lineal_ascendant_adult",
+      priorUsedDeduction: 0,
+      marriageExemption: 100_000_000,
+    };
+    const result = calcGiftDeductions(input, 120_000_000);
+    expect(result.totalDeduction).toBe(120_000_000); // 증여가액 한도 캡
+    expect(result.totalDeduction).toBeLessThanOrEqual(120_000_000);
   });
 
   it("[G19] 직계존속 성년 기본 케이스 (혼인공제 없음)", () => {

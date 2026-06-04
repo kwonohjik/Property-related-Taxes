@@ -20,9 +20,9 @@ const SELECTED_LABEL: Record<string, string> = {
 
 const RELATION_LABEL: Record<string, string> = {
   spouse: "배우자",
-  lineal_descendant: "직계비속",
-  lineal_ascendant_adult: "직계존속",
-  lineal_ascendant_minor: "직계존속(미성년)",
+  lineal_descendant: "직계비속(성년 수증자)",
+  lineal_ascendant_adult: "직계존속(성년 수증자)",
+  lineal_ascendant_minor: "직계존속(미성년 수증자)",
   other_relative: "기타 친족",
 };
 
