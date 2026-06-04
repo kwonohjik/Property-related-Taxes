@@ -184,6 +184,19 @@ function validateStep(step: number, form: FormState): string | null {
       }
     }
   }
+  if (step === 4) {
+    // 연부연납 (§71·§72) — 활성 시 희망기간·미래율 검증
+    if (form.installmentEnabled) {
+      const years = parseInt(form.installmentYears, 10);
+      if (!Number.isFinite(years) || years < 1 || years > 10) {
+        return "연부연납 희망 기간은 1~10년(일반분 상한, §71②1나)으로 입력하세요.";
+      }
+      const rate = parseFloat(form.installmentFutureRate);
+      if (!Number.isFinite(rate) || rate < 0) {
+        return "연부연납 미래 회차 가산율은 0 이상으로 입력하세요.";
+      }
+    }
+  }
   return null;
 }
 
@@ -465,6 +478,11 @@ export function InheritanceTaxForm() {
           decedentName={form.decedentName}
           decedentResidentNumber={form.decedentResidentNumber}
           savedId={autoSave.savedId ?? undefined}
+          installmentEnabled={form.installmentEnabled}
+          installmentYears={form.installmentYears}
+          installmentFamilyBusiness={form.installmentFamilyBusiness}
+          installmentFbMode={form.installmentFbMode}
+          installmentFutureRate={form.installmentFutureRate}
         />
         <div className="flex justify-end">
           <SaveButton variant="primary" onSave={handleManualSaveForForm} />

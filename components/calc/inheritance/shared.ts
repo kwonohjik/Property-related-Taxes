@@ -82,6 +82,18 @@ export interface FormState {
    * 미입력 시 엔진이 전부재상속(분수=1) fallback 처리 — 자동 안분 금지.
    */
   shortTermReinheritPriorEstateValue: string;
+
+  // 연부연납 (Step4 끝, 상증법 §71·§72) — 결정세액 미영향 투영 입력
+  /** 연부연납 신청 여부 */
+  installmentEnabled: boolean;
+  /** 희망 연부연납 기간(년) — 일반분 상한 ≤10 (§71②1나) */
+  installmentYears: string;
+  /** 가업상속재산 포함 여부 (§71②1가·§68②) */
+  installmentFamilyBusiness: boolean;
+  /** 가업상속 납부방식: straight20(20년 균등) / grace10(10년 거치+10년) */
+  installmentFbMode: "straight20" | "grace10";
+  /** 미래 회차 가산율(연 %, 기본 3.1) — 과거 회차는 고시 연혁율 자동 (§69) */
+  installmentFutureRate: string;
 }
 
 export type FormSet = (p: Partial<FormState>) => void;
@@ -123,6 +135,13 @@ export const INITIAL_FORM: FormState = {
   shortTermReinheritTaxPaid: "",
   shortTermReinheritAssetValue: "",
   shortTermReinheritPriorEstateValue: "",
+
+  // 연부연납 기본값 (§71·§72)
+  installmentEnabled: false,
+  installmentYears: "5",
+  installmentFamilyBusiness: false,
+  installmentFbMode: "straight20",
+  installmentFutureRate: "3.1",
 };
 
 export const STEPS = [

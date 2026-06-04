@@ -19,6 +19,7 @@ import { HeirComposition } from "@/components/calc/HeirComposition";
 import { PresumedInheritanceInput } from "./PresumedInheritanceInput";
 import { DebtAllocationInput } from "./DebtAllocationInput";
 import { FamilyBusinessEligibilitySection } from "./FamilyBusinessEligibilitySection";
+import { InstallmentInputSection } from "./InstallmentInputSection";
 import {
   Dialog,
   DialogContent,
@@ -649,6 +650,8 @@ export function Step4({
           </div>
         )}
       </div>
+
+      <InstallmentInputSection form={form} set={set} />
       </div>
     </div>
   );

@@ -30,7 +30,8 @@ import { DebtAllocationResultCard } from "@/components/calc/results/DebtAllocati
 import { UnlistedStockBesshiResultSection } from "@/components/calc/results/UnlistedStockBesshiResultSection";
 import { ListedStockBesshiResultSection } from "@/components/calc/results/ListedStockBesshiResultSection";
 import { SourceDataSummarySection } from "@/components/calc/results/source-summary/SourceDataSummarySection";
-import { calcInstallmentPayment } from "@/lib/tax-engine/credits/installment-payment";
+import { isInstallmentEligible } from "@/lib/tax-engine/credits/installment-payment";
+import { InstallmentScheduleCard } from "./installment/InstallmentScheduleCard";
 import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPanel";
 import { PrintSection } from "@/components/calc/results/shared/PrintSection";
 import {
@@ -44,41 +45,6 @@ import { expandToggleClass, expandToggleLabel } from "./shared/ExpandToggleButto
 export { Row, formatBillion, LawBadge } from "./deduction-breakdown/shared";
 // re-export 보존 — FarmingDeductionDetailRow (farming-section.test.tsx 사용)
 export { FarmingDeductionDetailRow } from "./deduction-breakdown/FarmingDeductionDetailRowExport";
-
-// ============================================================
-// 연부연납 안내
-// ============================================================
-
-function InstallmentGuide({ finalTax }: { finalTax: number }) {
-  const result = calcInstallmentPayment({ finalTax });
-  if (!result.eligible) return null;
-
-  return (
-    <div className="border border-amber-200 dark:border-amber-700 rounded-xl overflow-hidden">
-      <div className="bg-amber-50 dark:bg-amber-900/20 px-4 py-3">
-        <h4 className="text-sm font-medium text-amber-800 dark:text-amber-200">
-          연부연납 안내 (상증법 §71)
-        </h4>
-        <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
-          결정세액 2천만원 초과 시 최대 5년 분할납부 가능
-        </p>
-      </div>
-      <div className="p-3 text-xs space-y-1.5 text-gray-600 dark:text-gray-300">
-        <div className="flex justify-between">
-          <span>허가 즉시 납부</span>
-          <span className="font-medium">{formatKRW(result.initialPayment)}</span>
-        </div>
-        <div className="flex justify-between">
-          <span>연간 납부 원금 ({result.appliedYears}회)</span>
-          <span className="font-medium">{formatKRW(result.annualPrincipal)}</span>
-        </div>
-        <p className="text-amber-600 dark:text-amber-400 mt-1">
-          ※ 이자 상당액(연 1.8% 기준) 별도 납부 — 세무사 확인 권장
-        </p>
-      </div>
-    </div>
-  );
-}
 
 // ============================================================
 // 과세 요약 Row
@@ -158,6 +124,12 @@ interface Props {
   decedentResidentNumber?: string;
   /** 저장된 계산 id — 서버 PDF 선택 출력(PR-2)용. 미저장/비로그인 시 undefined */
   savedId?: string;
+  /** 연부연납 입력 (Step4, §71·§72) — 결정세액 미영향 투영 */
+  installmentEnabled?: boolean;
+  installmentYears?: string;
+  installmentFamilyBusiness?: boolean;
+  installmentFbMode?: "straight20" | "grace10";
+  installmentFutureRate?: string;
 }
 
 export function InheritanceTaxResultView({
@@ -176,6 +148,11 @@ export function InheritanceTaxResultView({
   decedentName,
   decedentResidentNumber,
   savedId,
+  installmentEnabled = false,
+  installmentYears = "5",
+  installmentFamilyBusiness = false,
+  installmentFbMode = "straight20",
+  installmentFutureRate = "3.1",
 }: Props) {
   const [showValuation, setShowValuation] = useState(false);
   const [pdfBusy, setPdfBusy] = useState(false);
@@ -241,8 +218,7 @@ export function InheritanceTaxResultView({
       )
     )
       s.add("listed-stock-besshi");
-    if (calcInstallmentPayment({ finalTax: result.finalTax }).eligible)
-      s.add("installment-guide");
+    if (isInstallmentEligible(result.finalTax)) s.add("installment-guide");
     if (result.warnings.length > 0) s.add("warnings");
     return s;
   }, [result, heirs, debtItems, estateItems, priorGifts, deathDate]);
@@ -562,9 +538,17 @@ export function InheritanceTaxResultView({
         </PrintSection>
       )}
 
-      {/* 연부연납 안내 */}
+      {/* 연부연납 일정표 (§71·§72) */}
       <PrintSection id="installment-guide" selectedIds={selectedPrintIds}>
-        <InstallmentGuide finalTax={result.finalTax} />
+        <InstallmentScheduleCard
+          result={result}
+          deathDate={deathDate}
+          enabled={installmentEnabled}
+          years={installmentYears}
+          familyBusiness={installmentFamilyBusiness}
+          fbMode={installmentFbMode}
+          futureRate={installmentFutureRate}
+        />
       </PrintSection>
 
       {/* 경고 메시지 */}
