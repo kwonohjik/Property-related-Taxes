@@ -135,6 +135,11 @@ const baseItemSchema = z.object({
     })
     .optional(),
   corporateTotalAssets: z.number().nonnegative().optional(),
+  // 영농 2년 사용 (G4, §16⑤1호) — false=제외, undefined=충족 가정
+  farmingUsedTwoYears: z.boolean().optional(),
+  // D4: 영농 사용 개시일 (D-4, §16⑤1호 자동판정, 2026-06-04) — YYYY-MM-DD string, Date 변환 금지
+  // farmingUseStartDate 입력 시 deathDate 대비 자동판정, 미입력 시 farmingUsedTwoYears fallback
+  farmingUseStartDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD 형식").optional(),
 });
 
 export const landItemSchema = baseItemSchema.extend({
@@ -540,7 +545,10 @@ export const farmingInheritanceInputSchema = z.object({
   decedentEarlyDeath: z.boolean().optional(),
   heirCorporateOfficer: z.boolean().optional(),
   isDesignatedSuccessor: z.boolean().optional(),
+  // §16⑭1호 — 사업소득금액+총급여 3,700만 이상 (1호 전용으로 의미 축소, D-3 2026-06-04)
   hasDisqualifyingIncome: z.boolean().optional(),
+  // §16⑭2호 — 사업소득 총수입금액 소령§208⑤2호 기준 이상 (2026.2.27 신설)
+  hasDisqualifyingGrossReceipt: z.boolean().optional(),
   hasTaxFraudConviction: z.boolean().optional(),
   // §16② 단서 (F-9, 2026-05-21) — corporate 전용
   isSecondaryAfterFarmingInheritance: z.boolean().optional(),
@@ -554,7 +562,10 @@ export const farmingInheritanceInputSchema = z.object({
         heirResidenceMet: z.boolean(),
         heirCorporateOfficer: z.boolean().optional(),
         isDesignatedSuccessor: z.boolean().optional(),
+        // §16⑭1호 — 상속인 단위
         hasDisqualifyingIncome: z.boolean().optional(),
+        // §16⑭2호 — 상속인 단위 (2026.2.27 신설)
+        hasDisqualifyingGrossReceipt: z.boolean().optional(),
       }),
     )
     .optional(),

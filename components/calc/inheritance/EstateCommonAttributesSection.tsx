@@ -78,6 +78,11 @@ export interface EstateCommonAttributesSectionProps {
    *  비상장 정식: evaluateUnlistedStockV2().totalValuation)
    */
   effectiveValuation: number;
+  /**
+   * D-4: 상속개시일 — FarmingCategorySection §16⑤1호 2년 요건 자동판정 배지용.
+   * 미전달 시 수동 ToggleCard fallback.
+   */
+  deathDate?: string;
 }
 
 // ============================================================
@@ -90,6 +95,7 @@ export function EstateCommonAttributesSection({
   mode,
   heirs,
   effectiveValuation,
+  deathDate,
 }: EstateCommonAttributesSectionProps) {
   // gift 모드이면 전체 비노출 (C-6/C-7)
   if (mode !== "inheritance") return null;
@@ -100,6 +106,7 @@ export function EstateCommonAttributesSection({
       onUpdate={onUpdate}
       heirs={heirs}
       effectiveValuation={effectiveValuation}
+      deathDate={deathDate}
     />
   );
 }
@@ -110,6 +117,7 @@ interface InnerProps {
   onUpdate: (updated: EstateItem) => void;
   heirs?: Heir[];
   effectiveValuation: number;
+  deathDate?: string;
 }
 
 function EstateCommonAttributesSectionInner({
@@ -117,6 +125,7 @@ function EstateCommonAttributesSectionInner({
   onUpdate,
   heirs,
   effectiveValuation,
+  deathDate,
 }: InnerProps) {
   const visibility = useMemo(() => resolveAssetToggleVisibility(item), [item]);
   const hiddenExpandableCount = countHiddenExpandable(visibility);
@@ -151,7 +160,7 @@ function EstateCommonAttributesSectionInner({
 
       {/* 영농상속 자산 분류 — 카테고리별 자동 노출 */}
       {visibility.farming === "default" && (
-        <FarmingCategorySection item={item} onUpdate={onUpdate} />
+        <FarmingCategorySection item={item} onUpdate={onUpdate} deathDate={deathDate} />
       )}
 
       {/* 가업상속 자산 분류 — 카테고리별 자동 노출 */}

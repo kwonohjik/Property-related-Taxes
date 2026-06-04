@@ -16,7 +16,7 @@ import type {
   FarmingHeirAssessment,
   FarmingInheritanceInput,
 } from "../types/inheritance-farming.types";
-import { FARMING_MAX } from "../types/inheritance-farming.types";
+import { resolveFarmingDeductionLimit } from "../data/farming-deduction-limit";
 import { checkFarmingResidenceCompliance } from "@/lib/calc/farming-residence-check";
 import { getAdjacentSigunguCodes } from "@/lib/geo/administrative-district-adjacency";
 
@@ -63,11 +63,28 @@ export function evaluateFarmingEligibility(
     return { eligible: false, reasons };
   }
 
-  // 2. §16⑭ 영농 부정 — 피상속인·상속인·후계자 모두 적용
-  if (input.hasDisqualifyingIncome) {
-    reasons.push(
-      "§16⑭ — 사업소득+총급여 3,700만 이상 과세기간 존재 (직접 종사 부정)",
-    );
+  // 2. §16⑭ 영농 부정 — 피상속인·상속인·후계자 모두 적용 (1호·2호 OR 결합)
+  // KoreanLaw 검증 2026-06-04: §16⑭1호 = 사업소득금액+총급여 3,700만 이상
+  //                             §16⑭2호 = 사업소득 총수입금액 소령§208⑤2호 기준 이상 (2026.2.27 신설)
+  const disq1 = input.hasDisqualifyingIncome === true;
+  const disq2 = input.hasDisqualifyingGrossReceipt === true;
+  if (disq1 || disq2) {
+    if (disq1 && disq2) {
+      reasons.push(
+        "§16⑭1호 — 사업소득금액+총급여 3,700만원 이상 과세기간 (직접 종사 부정)",
+      );
+      reasons.push(
+        "§16⑭2호 — 사업소득 총수입금액 소령§208⑤2호 기준 이상 과세기간 (직접 종사 부정, 2026.2.27 신설)",
+      );
+    } else if (disq1) {
+      reasons.push(
+        "§16⑭1호 — 사업소득금액+총급여 3,700만원 이상 과세기간 (직접 종사 부정)",
+      );
+    } else {
+      reasons.push(
+        "§16⑭2호 — 사업소득 총수입금액 소령§208⑤2호 기준 이상 과세기간 (직접 종사 부정, 2026.2.27 신설)",
+      );
+    }
   }
 
   // 3. 피상속인 요건 §16②
@@ -137,7 +154,10 @@ export function evaluateFarmingEligibilityForHeir(
   // — heir.isDesignatedSuccessor·heir.heirIsAdult·heirTwoYearFarming·heirResidenceMet·heirCorporateOfficer로 §16③ 평가 분리
   const heirInput: FarmingInheritanceInput = {
     ...input,
+    // §16⑭1호 — 상속인 단위 결격소득
     hasDisqualifyingIncome: assessment.hasDisqualifyingIncome,
+    // §16⑭2호 — 상속인 단위 결격 총수입금액 (2026.2.27 신설)
+    hasDisqualifyingGrossReceipt: assessment.hasDisqualifyingGrossReceipt,
     heirIsAdult: assessment.heirIsAdult,
     heirTwoYearFarming: assessment.heirTwoYearFarming,
     heirResidenceMet: assessment.heirResidenceMet,
@@ -196,6 +216,7 @@ export function calcFarmingDeduction(
   farmingAssetValue: number,
   farming?: FarmingInheritanceInput,
   estateItems?: EstateItem[],
+  deathDate?: string,
 ): {
   deduction: number;
   breakdown: CalculationStep[];
@@ -206,6 +227,8 @@ export function calcFarmingDeduction(
     : { eligible: true, reasons: [] };
   const evaluated = farming !== undefined;
   const safeAssetValue = Math.max(0, farmingAssetValue);
+  // G1: 상속개시 연도별 한도 (§18의3① + 부칙) — string 비교, deathDate undefined=현행 30억
+  const limit = resolveFarmingDeductionLimit(deathDate);
 
   // 부록 A — heirAssessments 입력 시 자격자 N명 / 전체 M명 메타 계산
   const totalHeirCount = farming?.heirAssessments?.length;
@@ -253,6 +276,7 @@ export function calcFarmingDeduction(
         ineligibleReasons: evalResult.reasons,
         appliedAssetValue: safeAssetValue,
         cappedDeduction: 0,
+        appliedLimit: limit,
         qualifiedHeirCount,
         totalHeirCount,
         residence,
@@ -270,6 +294,7 @@ export function calcFarmingDeduction(
         ineligibleReasons: [],
         appliedAssetValue: 0,
         cappedDeduction: 0,
+        appliedLimit: limit,
         qualifiedHeirCount,
         totalHeirCount,
         residence,
@@ -277,13 +302,13 @@ export function calcFarmingDeduction(
     };
   }
 
-  const capped = Math.min(safeAssetValue, FARMING_MAX);
+  const capped = Math.min(safeAssetValue, limit);
   return {
     deduction: capped,
     breakdown: [
       { label: "영농자산가액", amount: safeAssetValue },
       {
-        label: "영농상속공제 (최대 30억)",
+        label: `영농상속공제 (한도 ${(limit / 100_000_000).toLocaleString("ko-KR")}억)`,
         amount: capped,
         lawRef: INH.FARMING_DEDUCTION,
       },
@@ -294,6 +319,7 @@ export function calcFarmingDeduction(
       ineligibleReasons: [],
       appliedAssetValue: safeAssetValue,
       cappedDeduction: capped,
+      appliedLimit: limit,
       qualifiedHeirCount,
       totalHeirCount,
       residence,

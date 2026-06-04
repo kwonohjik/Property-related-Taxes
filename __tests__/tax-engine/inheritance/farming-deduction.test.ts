@@ -600,3 +600,76 @@ describe("calcFarmingDeduction — residence echo (옵션 C 산식 근거)", () 
     // decedent 1165(서초) ↔ asset 1168(강남) → adjacent_district 매칭 예상
   });
 });
+
+// ============================================================
+// FG-2 ~ FG-heir: §16⑭2호 hasDisqualifyingGrossReceipt (D-3, 2026-06-04)
+// KoreanLaw 검증: 상증령 §16⑭2호 (mst 283637, 시행 2026.2.27) —
+//   사업소득 총수입금액 소령§208⑤2호 기준 이상 과세기간 → 영농 미종사
+// ============================================================
+
+describe("§16⑭2호 hasDisqualifyingGrossReceipt — D-3 2호 결격 분리", () => {
+  it("FG-2: hasDisqualifyingGrossReceipt=true (1호 false) → 공제 0 + §16⑭2호 reason", () => {
+    const r = calcFarmingDeduction(
+      1_000_000_000,
+      personalOk({
+        hasDisqualifyingIncome: false,
+        hasDisqualifyingGrossReceipt: true,
+      }),
+    );
+    expect(r.deduction).toBe(0);
+    expect(r.detail.eligible).toBe(false);
+    // reason에 §16⑭2호 포함, §16⑭1호 미포함
+    expect(r.detail.ineligibleReasons.some((s) => s.includes("§16⑭2호"))).toBe(true);
+    expect(r.detail.ineligibleReasons.some((s) => s.includes("§16⑭1호"))).toBe(false);
+  });
+
+  it("FG-3: 1호·2호 둘 다 false → 정상 공제 (결격 없음)", () => {
+    const r = calcFarmingDeduction(
+      1_000_000_000,
+      personalOk({
+        hasDisqualifyingIncome: false,
+        hasDisqualifyingGrossReceipt: false,
+      }),
+    );
+    expect(r.deduction).toBe(1_000_000_000);
+    expect(r.detail.eligible).toBe(true);
+    expect(r.detail.ineligibleReasons.length).toBe(0);
+  });
+
+  it("FG-4: 1호·2호 둘 다 true → reason 2건 push (각각)", () => {
+    const r = calcFarmingDeduction(
+      1_000_000_000,
+      personalOk({
+        hasDisqualifyingIncome: true,
+        hasDisqualifyingGrossReceipt: true,
+      }),
+    );
+    expect(r.deduction).toBe(0);
+    expect(r.detail.ineligibleReasons.some((s) => s.includes("§16⑭1호"))).toBe(true);
+    expect(r.detail.ineligibleReasons.some((s) => s.includes("§16⑭2호"))).toBe(true);
+    // 1호·2호 이유가 별도 push되어 2건 이상
+    const disqReasons = r.detail.ineligibleReasons.filter((s) => s.includes("§16⑭"));
+    expect(disqReasons.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("FG-heir: heirAssessment.hasDisqualifyingGrossReceipt=true → 해당 heir 결격 (2호 단독)", () => {
+    // 폼-수준 1호·2호 모두 false, heir h1만 2호 결격
+    const farming = personalOk({
+      hasDisqualifyingIncome: false,
+      hasDisqualifyingGrossReceipt: false,
+      heirAssessments: [
+        {
+          heirId: "h1",
+          heirIsAdult: true,
+          heirTwoYearFarming: true,
+          heirResidenceMet: true,
+          hasDisqualifyingIncome: false,
+          hasDisqualifyingGrossReceipt: true,  // §16⑭2호 결격
+        },
+      ],
+    });
+    // deriveQualifiedHeirIds: h1 §16⑭2호 결격 → qualified 0명
+    const ids = deriveQualifiedHeirIds(farming);
+    expect(ids).toEqual([]);
+  });
+});

@@ -46,6 +46,11 @@ export interface EstateItemAdvancedPanelProps {
    * 기본 false — backwards-compat.
    */
   showSection22Override?: boolean;
+  /**
+   * D-4: 상속개시일 — FarmingCategorySection §16⑤1호 2년 요건 자동판정 배지용.
+   * 미전달 시 수동 ToggleCard fallback.
+   */
+  deathDate?: string;
 }
 
 export function EstateItemAdvancedPanel({
@@ -54,6 +59,7 @@ export function EstateItemAdvancedPanel({
   onUpdate,
   showSecuredClaimSubFields,
   showSection22Override = false,
+  deathDate,
 }: EstateItemAdvancedPanelProps) {
   const cat = item.category as AssetCategory;
   const visibility = resolveAssetToggleVisibility(item);
@@ -125,7 +131,7 @@ export function EstateItemAdvancedPanel({
               {hiddenItems.includes("farming") && (
                 <div>
                   <HintBadge tone="amber">영농상속 자산 (시행령 §16⑤)</HintBadge>
-                  <FarmingCategorySection item={item} onUpdate={onUpdate} />
+                  <FarmingCategorySection item={item} onUpdate={onUpdate} deathDate={deathDate} />
                 </div>
               )}
               {hiddenItems.includes("familyBusiness") && (

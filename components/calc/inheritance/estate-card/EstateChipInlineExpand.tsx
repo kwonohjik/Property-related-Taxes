@@ -33,6 +33,11 @@ export interface EstateChipInlineExpandProps {
    * 미전달 시 computeEffectiveValuation(item) fallback (현재 동작 — backwards-compat).
    */
   effectiveValuation?: number;
+  /**
+   * D-4: 상속개시일 — FarmingCategorySection §16⑤1호 2년 요건 자동판정 배지용.
+   * 미전달 시 수동 ToggleCard fallback.
+   */
+  deathDate?: string;
 }
 
 const PANEL_TITLE: Record<ChipKey, string> = {
@@ -65,6 +70,7 @@ export function EstateChipInlineExpand({
   heirs,
   onClose,
   effectiveValuation,
+  deathDate,
 }: EstateChipInlineExpandProps) {
   if (!expandedKey) return null;
   if (
@@ -119,7 +125,7 @@ export function EstateChipInlineExpand({
           />
         )}
         {expandedKey === "farming" && (
-          <FarmingCategorySection item={item} onUpdate={onUpdate} />
+          <FarmingCategorySection item={item} onUpdate={onUpdate} deathDate={deathDate} />
         )}
         {expandedKey === "family-business" && (
           <FamilyBusinessCategorySection item={item} onUpdate={onUpdate} />
