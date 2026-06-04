@@ -22,15 +22,9 @@ import { runGiftManualSave, formatGiftSaveMessage } from "@/components/calc/gift
 import { GiftTaxResultView } from "@/components/calc/results/GiftTaxResultView";
 import { useAutoSaveCalculation } from "@/lib/storage/use-auto-save-calculation";
 import { useProfessionalStore } from "@/lib/stores/professional-store";
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
-import type {
-  GiftTaxInput,
-  GiftTaxResult,
-  GiftDeductionInput,
-  GiftTaxCreditInput,
-} from "@/lib/tax-engine/types/inheritance-gift.types";
-import { resolveActiveUnlistedValuation } from "@/lib/calc/unlisted-valuation-mode";
+import type { GiftTaxResult } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { normalizeRestoredFormDates } from "@/components/calc/inheritance/normalize-restored-form-dates";
+import { buildGiftTaxInput } from "@/lib/calc/gift-api";
 import {
   type FormState,
   INITIAL_FORM,
@@ -124,44 +118,6 @@ export function GiftTaxForm() {
     }
   };
 
-  const buildInput = (): GiftTaxInput => {
-    // 비상장주식 모드 strip — simple 모드인데 V2가 잔존하는 경우 엔진 전달 전 제거 (PR-3)
-    const allItems = [...form.giftItems, ...form.stockItems].map(
-      resolveActiveUnlistedValuation,
-    );
-    const deductionInput: GiftDeductionInput = {
-      donorRelation: form.donorRelation,
-      marriageExemption: parseAmount(form.marriageExemption) || undefined,
-      birthExemption: parseAmount(form.birthExemption) || undefined,
-      priorUsedDeduction: parseAmount(form.priorUsedDeduction) || undefined,
-    };
-    const creditInput: GiftTaxCreditInput = {
-      foreignTaxPaid: parseAmount(form.foreignTaxPaid) || undefined,
-      isFiledOnTime: form.isFiledOnTime,
-      specialTreatment: form.specialTreatment || undefined,
-      // G-M7: startupInvestmentCompleted buildInput 매핑 (④ API 변환 지점)
-      startupInvestmentCompleted:
-        form.specialTreatment === "startup"
-          ? form.startupInvestmentCompleted
-          : undefined,
-    };
-    return {
-      giftDate: form.giftDate,
-      donorRelation: form.donorRelation,
-      donor: form.donor, // Phase A: 사용자 선택값 직접 사용 (미러링 금지)
-      giftItems: allItems,
-      exemptions: form.exemptionItems.length > 0 ? form.exemptionItems : undefined,
-      // sourceCalculationId(UI 메타)는 엔진 입력에서 strip (지점 ④)
-      priorGiftsWithin10Years: form.priorGifts.map(({ sourceCalculationId: _src, ...rest }) => rest),
-      // G-M2b: isGenerationSkip을 donor === "grandparent"로 자동 파생
-      // (엔진은 donor 그룹으로 §57 판정하나 타입 required boolean이므로 값 채움)
-      isGenerationSkip: form.donor === "grandparent",
-      isMinorDonee: form.isMinorDonee,
-      deductionInput,
-      creditInput,
-    };
-  };
-
   const handleCalculate = async () => {
     setLoading(true);
     setError(null);
@@ -169,7 +125,7 @@ export function GiftTaxForm() {
       const res = await fetch("/api/calc/gift", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(buildInput()),
+        body: JSON.stringify(buildGiftTaxInput(form)),
       });
       const data = await res.json();
       if (!res.ok || !data.success) {

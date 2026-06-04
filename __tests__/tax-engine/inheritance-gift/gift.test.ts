@@ -93,6 +93,21 @@ describe("증여세 메인 엔진 — calcGiftTax()", () => {
      * 산출세액 = floor(8천만 × 0.1) = 8,000,000
      * 신고공제 = floor(8M × 0.03) = 240,000
      * 결정세액 = 7,760,000
+     *
+     * [책임 경계 주석 — LOW E13]
+     * deductionInput.priorUsedDeduction(40_000_000)은 priorGiftsWithin10Years의
+     * giftAmount(40_000_000)와 함께 수동으로 입력되어 있음.
+     *
+     * 이 테스트에서 두 값을 수동으로 일치시킨 이유:
+     *   - 엔진(calcGiftTax)은 priorUsedDeduction을 입력값 그대로 신뢰함
+     *     (자동 도출 없음 — 변환 계층 책임).
+     *   - 변환 계층(buildInput)이 priorGiftsWithin10Years로부터
+     *     priorUsedDeduction을 자동 산출해야 함.
+     *   - 두 값의 일관성 검증은 lib/calc anchor 책임 (G-H3 커버 대상).
+     *
+     * 결론: 엔진 단위 테스트(E13)는 "주어진 priorUsedDeduction 값이 정확히
+     * 공제에 반영되는가"를 검증하고, "priorUsedDeduction이 올바르게 도출되는가"는
+     * 변환 계층 통합 테스트(__tests__/lib/calc/)에서 검증.
      */
     const input: GiftTaxInput = {
       giftDate: "2025-06-01",
@@ -112,7 +127,7 @@ describe("증여세 메인 엔진 — calcGiftTax()", () => {
       isMinorDonee: false,
       deductionInput: {
         donorRelation: "lineal_descendant",
-        priorUsedDeduction: 40_000_000, // 기사용 공제
+        priorUsedDeduction: 40_000_000, // 기사용 공제 — 변환 계층이 priorGiftsWithin10Years에서 도출해야 함
       },
       creditInput: { isFiledOnTime: true },
     };
