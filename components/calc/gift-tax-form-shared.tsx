@@ -1,0 +1,553 @@
+"use client";
+
+/**
+ * gift-tax-form-shared.tsx
+ *
+ * GiftTaxForm 공유 타입·상수·헬퍼·Step 컴포넌트 (800줄 정책 분리).
+ * GiftTaxForm.tsx 오케스트레이터가 import.
+ */
+
+import type {
+  EstateItem,
+  PriorGift,
+  DonorRelation,
+  GiftDonorRelation,
+} from "@/lib/tax-engine/types/inheritance-gift.types";
+import type { ExemptionCheckedItem } from "@/lib/tax-engine/exemption-evaluator";
+import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
+import { DateInput } from "@/components/ui/date-input";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { PropertyValuationForm } from "@/components/calc/PropertyValuationForm";
+import { StockValuationForm } from "@/components/calc/StockValuationForm";
+import { ExemptionChecklist } from "@/components/calc/exemption/ExemptionChecklist";
+import { PriorGiftInput } from "@/components/calc/PriorGiftInput";
+
+// ============================================================
+// 폼 상태 타입
+// ============================================================
+
+export interface FormState {
+  // Step 0
+  giftDate: string;
+  donorRelation: DonorRelation;
+  /** Phase A: 증여자 관계 (동일인 §47 합산 그룹화 + §57 적용 판정) */
+  donor: GiftDonorRelation;
+  /** G-M2b: isGenerationSkip은 buildInput에서 donor 파생으로 자동 설정됨.
+   *  UI 토글 제거됨 — donor=grandparent이면 엔진에서 세대생략 적용.
+   *  이 필드는 예외 케이스(manually override)를 위해 FormState에 보존하나
+   *  buildInput에서 donor === "grandparent"로 덮어씀.
+   */
+  isGenerationSkip: boolean;
+  isMinorDonee: boolean;
+  // Step 1
+  giftItems: EstateItem[];
+  stockItems: EstateItem[];
+  // Step 2
+  exemptionItems: ExemptionCheckedItem[];
+  priorGifts: PriorGift[];
+  // Step 3
+  marriageExemption: string;
+  birthExemption: string;
+  priorUsedDeduction: string;
+  isFiledOnTime: boolean;
+  foreignTaxPaid: string;
+  specialTreatment: "" | "startup" | "family_business";
+  /** 창업자금 §30의5④ — 투자 완료 여부 (startup 선택 시 노출) */
+  startupInvestmentCompleted: boolean;
+}
+
+export const INITIAL_FORM: FormState = {
+  giftDate: "",
+  donorRelation: "lineal_ascendant_adult",
+  donor: "father",
+  isGenerationSkip: false,
+  isMinorDonee: false,
+  giftItems: [],
+  stockItems: [],
+  exemptionItems: [],
+  priorGifts: [],
+  marriageExemption: "",
+  birthExemption: "",
+  priorUsedDeduction: "",
+  isFiledOnTime: true,
+  foreignTaxPaid: "",
+  specialTreatment: "",
+  startupInvestmentCompleted: false,
+};
+
+export const STEPS = ["증여 정보", "증여재산", "비과세·합산", "공제·세액공제"];
+
+// ============================================================
+// 관계 레이블
+// ============================================================
+
+export const RELATION_LABELS: Record<DonorRelation, string> = {
+  spouse: "배우자 (6억 공제)",
+  lineal_ascendant_adult: "직계존속 — 성인 수증자 (5천만원)",
+  lineal_ascendant_minor: "직계존속 — 미성년 수증자 (2천만원)",
+  lineal_descendant: "직계비속 (5천만원)",
+  other_relative: "기타 친족 (1천만원)",
+};
+
+// Phase A: 증여자 관계 (8 enum / 7 그룹) — UI 셀렉트 옵션
+export const DONOR_LABELS: Record<GiftDonorRelation, string> = {
+  father: "부",
+  mother: "모",
+  grandparent: "조부모",
+  spouse: "배우자",
+  lineal_descendant: "직계비속",
+  sibling: "형제자매",
+  other_relative: "기타친족",
+  other: "기타",
+};
+
+export const DONOR_OPTIONS: GiftDonorRelation[] = [
+  "father",
+  "mother",
+  "grandparent",
+  "spouse",
+  "lineal_descendant",
+  "sibling",
+  "other_relative",
+  "other",
+];
+
+/**
+ * G-M3: donor 선택 시 donorRelation 자동 도출 (단일 진실화)
+ *
+ * 매핑 기준:
+ * - father/mother/grandparent → lineal_ascendant_adult (기본)
+ *   isMinorDonee=true 이면 lineal_ascendant_minor (2천만원 공제)
+ * - spouse → spouse
+ * - lineal_descendant → lineal_descendant
+ * - sibling/other_relative/other → other_relative
+ */
+export function deriveDonorRelation(
+  donor: GiftDonorRelation,
+  isMinorDonee: boolean,
+): DonorRelation {
+  switch (donor) {
+    case "father":
+    case "mother":
+    case "grandparent":
+      return isMinorDonee ? "lineal_ascendant_minor" : "lineal_ascendant_adult";
+    case "spouse":
+      return "spouse";
+    case "lineal_descendant":
+      return "lineal_descendant";
+    case "sibling":
+    case "other_relative":
+    case "other":
+      return "other_relative";
+  }
+}
+
+// ============================================================
+// API 에러 상세화 — Zod issues → 한국어 라벨 + 메시지
+// ============================================================
+
+const GIFT_FIELD_LABELS: Record<string, string> = {
+  giftDate: "증여일",
+  reportDate: "신고일",
+  donor: "증여자",
+  recipient: "수증자",
+  isGenerationSkip: "세대생략 증여 여부",
+  isMinor: "수증자 미성년 여부",
+  estateItems: "증여재산",
+  category: "재산 종류",
+  name: "자산 명칭",
+  marketValue: "시가",
+  standardPrice: "기준시가/공시가격",
+  appraisedValue: "감정평가액",
+  listedStockAvgPrice: "상장주식 평균종가",
+  listedStockShares: "상장주식 수량",
+  listedStockCode: "상장주식 종목코드",
+  leaseDeposit: "임대보증금",
+  mortgageAmount: "저당권 설정액",
+  marriageDeduction: "혼인공제",
+  childbirthDeduction: "출산공제",
+  prior10YearDeductionsUsed: "10년 내 기사용 증여재산공제",
+  foreignTaxPaid: "외국납부세액",
+  specialTaxRegime: "조특법 과세특례",
+  priorGifts: "사전증여",
+  giftAmount: "사전증여 금액",
+  giftTaxBase: "그 회차 합산과세표준 ⑤",
+  computedTax: "그 회차 산출세액 ⑦",
+  filedWithinDeadline: "법정신고기한 내 신고",
+};
+
+interface ApiIssue {
+  path: string[];
+  message: string;
+  code?: string;
+}
+
+function labelForPath(path: string[]): string {
+  if (path.length === 0) return "입력";
+  const parts: string[] = [];
+  for (const seg of path) {
+    if (/^\d+$/.test(seg)) {
+      parts.push(`${Number(seg) + 1}번`);
+    } else {
+      parts.push(GIFT_FIELD_LABELS[seg] ?? seg);
+    }
+  }
+  return parts.join(" › ");
+}
+
+export function formatGiftApiError(data: { error?: string; issues?: ApiIssue[] }): string {
+  if (Array.isArray(data.issues) && data.issues.length > 0) {
+    const lines = data.issues.slice(0, 8).map((iss) => {
+      const label = labelForPath(iss.path);
+      return `• ${label}: ${iss.message}`;
+    });
+    const more = data.issues.length > 8 ? `\n(외 ${data.issues.length - 8}건)` : "";
+    return `${data.error ?? "입력값이 올바르지 않습니다."}\n${lines.join("\n")}${more}`;
+  }
+  return data.error ?? "계산 중 오류가 발생했습니다.";
+}
+
+// ============================================================
+// 단계별 유효성 검사
+// ============================================================
+
+import { isSameDonorGroup } from "@/lib/tax-engine/gift-prior-aggregation";
+
+/**
+ * G-M4: 동일그룹 판정을 isSameDonorGroup 엔진 헬퍼로 재사용.
+ * 기존 하드코딩 (A=부/모, B=조부모) → 전 그룹 자동 적용.
+ */
+export function validateStep(step: number, form: FormState): string | null {
+  if (step === 0) {
+    if (!form.giftDate) return "증여일을 입력하세요.";
+    if (!form.donor) return "증여자를 선택하세요.";
+  }
+  if (step === 1) {
+    if (form.giftItems.length + form.stockItems.length === 0) {
+      return "증여재산을 1개 이상 입력하세요.";
+    }
+    const allItems = [...form.giftItems, ...form.stockItems];
+    // cash·financial·deposit은 위치 기반 자산이 아니므로 자산명 선택 입력
+    const needsName = allItems.filter(
+      (it) => it.category !== "cash" && it.category !== "financial" && it.category !== "deposit"
+    );
+    if (needsName.some((it) => !it.name.trim())) {
+      return "모든 증여재산에 자산명을 입력하세요.";
+    }
+  }
+  if (step === 2) {
+    // 사전증여 입력 시 동일인 그룹·⑤·⑦ 필수 (UI ↔ validate 모순 방지)
+    // G-M4: isSameDonorGroup 엔진 헬퍼 재사용 — 그룹 C~G 포함 전수 적용
+    for (let i = 0; i < form.priorGifts.length; i++) {
+      const p = form.priorGifts[i];
+      if (p.giftAmount > 0) {
+        if (!p.donor) {
+          return `사전증여 ${i + 1}: 증여자를 선택하세요 (§47 합산 그룹 판정).`;
+        }
+        // 동일 그룹 priorGift이면 §58 한도 산식용으로 ⑤·⑦ 필수
+        // (다른 그룹은 자동 무시되므로 검증 제외)
+        if (isSameDonorGroup(p.donor, form.donor)) {
+          if (!p.giftTaxBase || p.giftTaxBase <= 0) {
+            return `사전증여 ${i + 1}: 동일인 합산 — 그 회차 합산과세표준 ⑤을 입력하세요.`;
+          }
+          if (!p.computedTax || p.computedTax <= 0) {
+            return `사전증여 ${i + 1}: 동일인 합산 — 그 회차 산출세액 ⑦을 입력하세요.`;
+          }
+          if (p.wasGenerationSkip && !p.additionalGenerationSkipSurcharge) {
+            return `사전증여 ${i + 1}: 세대생략 회차이면 추가 할증세액 ⑫를 입력하세요.`;
+          }
+        }
+      }
+    }
+  }
+  return null;
+}
+
+// ============================================================
+// Step 0 — 증여 기본 정보
+// ============================================================
+
+export function Step0({
+  form,
+  set,
+}: {
+  form: FormState;
+  set: (p: Partial<FormState>) => void;
+}) {
+  return (
+    <div className="space-y-5">
+      <p className="text-sm text-muted-foreground">
+        증여의 기본 정보를 입력하세요.
+      </p>
+
+      <div className="space-y-1.5">
+        <label className="block text-sm font-medium">
+          증여일 <span className="text-destructive">*</span>
+        </label>
+        <DateInput
+          value={form.giftDate}
+          onChange={(v) => set({ giftDate: v })}
+        />
+        <p className="text-xs text-muted-foreground">
+          신고기한(3개월) · 10년 합산 기준일
+        </p>
+      </div>
+
+      {/* Phase A: 증여자 (donor) — §47 합산 그룹 + §57 적용 판정
+          G-M3: donor 변경 시 donorRelation 자동 도출 (단일 진실화) */}
+      <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-2">
+        <div className="flex items-center gap-2">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-[10px] font-bold text-violet-800 select-none">
+            §47
+          </span>
+          <p className="text-xs font-semibold text-violet-700">
+            증여자 (동일인 합산 그룹 + §57 적용 판정)
+          </p>
+        </div>
+        <select
+          value={form.donor}
+          onChange={(e) => {
+            const newDonor = e.target.value as GiftDonorRelation;
+            // G-M3: donorRelation 자동 도출 — 혼인·출산 공제 초기화(직계존속 외)
+            const newDonorRelation = deriveDonorRelation(newDonor, form.isMinorDonee);
+            const isAscendant =
+              newDonorRelation === "lineal_ascendant_adult" ||
+              newDonorRelation === "lineal_ascendant_minor";
+            set({
+              donor: newDonor,
+              donorRelation: newDonorRelation,
+              ...(!isAscendant ? { marriageExemption: "", birthExemption: "" } : {}),
+            });
+          }}
+          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          {DONOR_OPTIONS.map((d) => (
+            <option key={d} value={d}>
+              {DONOR_LABELS[d]}
+            </option>
+          ))}
+        </select>
+        {/* G-M2b: 세대생략 §57은 donor=grandparent이면 자동 적용됨을 안내 */}
+        {form.donor === "grandparent" && (
+          <p className="text-[11px] text-rose-700 bg-rose-50/70 rounded px-2 py-1">
+            조부모→손자녀 증여 — 세대생략 §57 할증 30% (또는 미성년+20억 초과 시 40%) 자동 적용됩니다.
+          </p>
+        )}
+        {(form.donor === "father" || form.donor === "mother") && (
+          <p className="text-[11px] text-violet-600">
+            부·모는 §47② 동일인. 다른 한쪽의 사전증여도 합산 대상입니다.
+          </p>
+        )}
+        {/* 자동 도출된 공제 관계 표시 */}
+        <p className="text-[11px] text-violet-500">
+          공제 관계 자동 설정: <strong>{RELATION_LABELS[form.donorRelation]}</strong>
+        </p>
+      </div>
+
+      {/* G-M2: isMinorDonee — donor=grandparent 포함 직계존속 전체에서 항상 노출
+          (§57 40% 판정: isMinorDonee AND grossGiftValue > 20억) */}
+      {(form.donor === "father" ||
+        form.donor === "mother" ||
+        form.donor === "grandparent") && (
+        <ToggleCard
+          tone="violet"
+          title="수증자 미성년자 (§57 ② 40% 할증 판정)"
+          description="수증자가 미성년자이고 세대생략 증여재산가액이 20억을 초과하면 30% 대신 40% 할증 적용"
+          checked={form.isMinorDonee}
+          onCheckedChange={(v) => {
+            // G-M3: isMinorDonee 변경 시 donorRelation 재도출 (직계존속 성인↔미성년 전환)
+            const newDonorRelation = deriveDonorRelation(form.donor, v);
+            set({ isMinorDonee: v, donorRelation: newDonorRelation });
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+// ============================================================
+// Step 1 — 증여재산 평가
+// ============================================================
+
+export function Step1({
+  form,
+  set,
+}: {
+  form: FormState;
+  set: (p: Partial<FormState>) => void;
+}) {
+  return (
+    <div className="space-y-6">
+      <p className="text-sm text-muted-foreground">
+        증여하는 재산을 모두 입력하세요.
+      </p>
+      <PropertyValuationForm
+        items={form.giftItems}
+        onChange={(items) => set({ giftItems: items })}
+        mode="gift"
+        valuationDate={form.giftDate}
+      />
+      <div className="border-t border-dashed border-gray-200 dark:border-gray-700 pt-4">
+        <StockValuationForm
+          items={form.stockItems}
+          onChange={(items) => set({ stockItems: items })}
+          mode="gift"
+          valuationDate={form.giftDate}
+        />
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// Step 2 — 비과세·사전증여
+// ============================================================
+
+export function Step2({
+  form,
+  set,
+  activeClientId,
+}: {
+  form: FormState;
+  set: (p: Partial<FormState>) => void;
+  activeClientId: string | null;
+}) {
+  return (
+    <div className="space-y-6">
+      <ExemptionChecklist
+        category="gift"
+        value={form.exemptionItems}
+        onChange={(items) => set({ exemptionItems: items })}
+      />
+      <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+        <PriorGiftInput
+          gifts={form.priorGifts}
+          onChange={(gifts) => set({ priorGifts: gifts })}
+          mode="gift"
+          currentGiftDate={form.giftDate}
+          currentDonor={form.donor}
+          currentClientId={activeClientId}
+        />
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// Step 3 — 공제·세액공제
+// ============================================================
+
+export function Step3({
+  form,
+  set,
+}: {
+  form: FormState;
+  set: (p: Partial<FormState>) => void;
+}) {
+  return (
+    <div className="space-y-5">
+      <p className="text-sm text-muted-foreground">
+        공제 항목을 입력하면 납부세액이 줄어듭니다.
+      </p>
+
+      {/* 혼인·출산 공제 */}
+      {(form.donorRelation === "lineal_ascendant_adult" || form.donorRelation === "lineal_ascendant_minor") && (
+        <div className="border rounded-lg p-4 space-y-3">
+          <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+            혼인·출산 공제 (§53의2, 최대 각 1억)
+          </h4>
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            직계존속으로부터 증여 시 적용. 혼인신고일 전후 2년 이내 / 자녀 출생일로부터 2년 이내 증여분. 합산 1억 한도.
+          </p>
+          <CurrencyInput
+            label="혼인공제"
+            value={form.marriageExemption}
+            onChange={(v) => set({ marriageExemption: v })}
+            hint="최대 1억원"
+            placeholder="없으면 빈칸"
+          />
+          <CurrencyInput
+            label="출산공제"
+            value={form.birthExemption}
+            onChange={(v) => set({ birthExemption: v })}
+            hint="최대 1억원"
+            placeholder="없으면 빈칸"
+          />
+        </div>
+      )}
+
+      {/* 기사용 공제 */}
+      <CurrencyInput
+        label="10년 내 기사용 증여재산공제 합계"
+        value={form.priorUsedDeduction}
+        onChange={(v) => set({ priorUsedDeduction: v })}
+        hint="동일 관계(그룹)에서 10년 이내 이미 공제받은 합계"
+        placeholder="없으면 빈칸"
+      />
+
+      {/* 신고세액공제 */}
+      <ToggleCard
+        tone="violet"
+        title="법정신고기한 내 신고 (§69 신고세액공제 3%)"
+        description="증여일로부터 3개월 이내 신고 시 산출세액의 3% 공제"
+        checked={form.isFiledOnTime}
+        onCheckedChange={(v) => set({ isFiledOnTime: v })}
+      />
+
+      {/* 외국납부세액 */}
+      <CurrencyInput
+        label="외국납부세액 (§59)"
+        value={form.foreignTaxPaid}
+        onChange={(v) => set({ foreignTaxPaid: v })}
+        hint="해외 소재 증여재산에 대해 납부한 외국 세액"
+        placeholder="없으면 빈칸"
+      />
+
+      {/* 조특법 과세특례 */}
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">
+          조특법 과세특례 (창업·가업)
+        </label>
+        <div className="space-y-2">
+          {(
+            [
+              { val: "", label: "해당 없음" },
+              { val: "startup", label: "창업자금 증여세 과세특례 (§30의5)" },
+              { val: "family_business", label: "가업승계 증여세 과세특례 (§30의6)" },
+            ] as const
+          ).map(({ val, label }) => (
+            <button
+              key={val}
+              type="button"
+              onClick={() =>
+                set({
+                  specialTreatment: val,
+                  // startup이 아니면 startupInvestmentCompleted 초기화
+                  ...(val !== "startup" ? { startupInvestmentCompleted: false } : {}),
+                })
+              }
+              className={`w-full text-left rounded-lg border px-3 py-2 text-sm transition-colors ${
+                form.specialTreatment === val
+                  ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20"
+                  : "border-border hover:border-muted-foreground/50"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* G-M7: 창업자금 투자 완료 여부 (§30의5④) — startup 선택 시 노출 */}
+      {form.specialTreatment === "startup" && (
+        <ToggleCard
+          tone="emerald"
+          title="창업자금 투자 완료 (§30의5④)"
+          description="증여일로부터 2년 이내 창업법인 설립 및 투자 완료 여부. 미완료 시 과세특례 미적용."
+          checked={form.startupInvestmentCompleted}
+          onCheckedChange={(v) => set({ startupInvestmentCompleted: v })}
+        />
+      )}
+    </div>
+  );
+}
