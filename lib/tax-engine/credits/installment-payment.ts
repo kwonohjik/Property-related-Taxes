@@ -362,7 +362,12 @@ function calcSurcharge(
  * 한 세그먼트의 회차별 원금·base 생성.
  * @param segTax     세그먼트 대상금액
  * @param years      연부연납 기간(N) — 회차 0..N (총 N+1회)
- * @param graceYears 거치 기간(가업 모드 B). 0이면 균등. >0이면 회차 0..graceYears 원금 0(가산금만), 이후 균등.
+ * @param graceYears 거치 기간(가업 모드 B). 0이면 균등.
+ *   >0이면 §71②1가·§68①1호: 거치 회차 0..graceYears-1 원금 0(가산금만),
+ *   "허가 후 graceYears년이 되는 날"(회차 graceYears)부터 원금 분할.
+ *   매년 원금 = 대상 / (연부연납기간+1) = 대상 / (years-graceYears+1).
+ *   ⚠️ 거치기간 가산금은 실무(매년 이자 납부) 기준으로 계상. §72 본문(처음 분할납부세액에
+ *      신고기한~첫 납부 일수 합산) 문리해석과 다를 수 있어 세무사 확인 필요(확인필요①).
  */
 function buildSegment(
   segTax: number,
@@ -392,18 +397,21 @@ function buildSegment(
     return rows;
   }
 
-  // 거치(모드 B): 회차 0..graceYears 원금 0(가산금만, base=segTax 전액),
-  // 회차 graceYears+1..years 원금 균등(잔액 흡수), 가산금 base 차감
-  const payYears = years - graceYears; // 납부 회수
-  const per = payYears > 0 ? Math.floor(segTax / payYears) : segTax;
+  // 거치(모드 B, §68①1호): 거치 회차 0..graceYears-1 원금 0(가산금만, base=segTax 전액),
+  // "허가 후 graceYears년이 되는 날"(회차 graceYears)부터 원금 분할.
+  // 원금 분할 회수 = years−graceYears+1 (anchor 포함 = §68① "+1"). 매년 = 대상/(분할회수).
+  const principalCount = years - graceYears + 1; // 예: 20-10+1 = 11
+  const per = principalCount > 0 ? Math.floor(segTax / principalCount) : segTax;
   let paid = 0;
   for (let k = 0; k <= years; k++) {
     const dueDate = addYears(filingDeadline, k);
     const prevDue = k <= 1 ? filingDeadline : addYears(filingDeadline, k - 1);
     let principal = 0;
-    if (k > graceYears) {
-      principal = k < years ? per : segTax - per * (payYears - 1);
+    if (k >= graceYears) {
+      // 거치 후 첫 원금 회차(k=graceYears)부터. 마지막 회차(k=years)는 잔액 흡수.
+      principal = k < years ? per : segTax - per * (principalCount - 1);
     }
+    // 가산금 base: 거치기간(원금 0)에도 매년 잔액(=segTax) × 율 이자 계상(실무 기준).
     const base = k === 0 ? 0 : segTax - paid;
     rows.push({ installmentNo: k, dueDate, principal, base, prevDue });
     if (k >= 1) paid += principal;
@@ -500,6 +508,11 @@ export function calcInstallmentSchedule(
     const grace =
       familyBusiness?.mode === "grace10" ? FB_INSTALLMENT_GRACE_YEARS : 0;
     fbSeg = buildSegment(fbTax, FB_INSTALLMENT_MAX_YEARS, filingDeadline, grace);
+    if (grace > 0) {
+      notes.push(
+        "가업상속 10년 거치 방식 — 거치기간(1~10년차) 가산금은 매년 이자 납부 기준으로 계상했습니다. §72 본문(처음 분할납부세액에 신고기한~첫 납부 일수 합산) 문리해석과 다를 수 있어 세무사 확인을 권장합니다.",
+      );
+    }
   }
 
   // ── 연도(회차) 기준 병합 + 가산금 계산 ────────────────────────────

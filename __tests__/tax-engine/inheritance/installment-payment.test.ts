@@ -202,6 +202,60 @@ describe("연부연납 — 가업상속 (§68②, 모드 A straight20)", () => {
   });
 });
 
+describe("연부연납 — 가업상속 모드 B (grace10, §68①1호)", () => {
+  // 가업비율 100% → 전액 가업분, 10년 거치 + 11회 분할(/11) 검증
+  const grace = {
+    finalTax: 1_100_000_000,
+    filingDeadline: new Date("2025-06-30"),
+    requestedYears: 10,
+    futureSurchargeRate: 0.031,
+    today: new Date("2010-01-01"), // 모든 회차 미래 → futureRate 3.1% 고정
+    familyBusiness: {
+      familyBusinessValue: 1_100_000_000,
+      familyBusinessDeduction: 0,
+      grossEstateValue: 1_100_000_000, // 비율 100% → fbTax = finalTax
+      mode: "grace10" as const,
+    },
+  };
+
+  it("INS-12 거치 0~9년차 원금 0, 첫 원금 10년차, 매년 = 대상/11", () => {
+    const r = calcInstallmentSchedule(grace);
+    const fb = r.rows.filter((x) => x.segment === "family_business");
+
+    // 거치: 회차 0~9 원금 0
+    for (let k = 0; k <= 9; k++) {
+      expect(fb.find((x) => x.installmentNo === k)!.principal).toBe(0);
+    }
+    // 첫 원금 = 회차 10 (허가 후 10년이 되는 날, §71②1가)
+    const per = Math.floor(1_100_000_000 / 11); // = 100,000,000
+    expect(fb.find((x) => x.installmentNo === 10)!.principal).toBe(per);
+    // 마지막 회차 20, 원금 분할 11회(10~20)
+    expect(fb.find((x) => x.installmentNo === 20)!.principal).toBe(
+      1_100_000_000 - per * 10,
+    );
+    // 원금 합계 = 가업분세액 전액
+    const sumFb = fb.reduce((a, x) => a + x.principal, 0);
+    expect(sumFb).toBe(1_100_000_000);
+  });
+
+  it("INS-13 거치기간에도 가산금(이자) 매년 계상 (실무 기준)", () => {
+    const r = calcInstallmentSchedule(grace);
+    const fb = r.rows.filter((x) => x.segment === "family_business");
+    // 거치 회차(예: 5년차) — 원금 0 이지만 가산금 > 0 (잔액 전액 × 율)
+    const grace5 = fb.find((x) => x.installmentNo === 5)!;
+    expect(grace5.principal).toBe(0);
+    expect(grace5.surcharge).toBeGreaterThan(0);
+    // 5년차 가산금 = 1.1억×... 전액(11억) × 3.1% (단일 율 구간, 미래)
+    expect(grace5.surcharge).toBe(Math.floor(1_100_000_000 * 0.031));
+  });
+
+  it("INS-14 최대 회차 20 (거치 10 + 납부 11회 = 20년차까지)", () => {
+    const r = calcInstallmentSchedule(grace);
+    const maxNo = Math.max(...r.rows.map((x) => x.installmentNo));
+    expect(maxNo).toBe(20);
+  });
+});
+
 describe("연부연납 — 기존 calcInstallmentPayment(증여세 공용) 보존 회귀", () => {
   it("증여세 5년 경로 시그니처·동작 유지", async () => {
     const { calcInstallmentPayment } = await import(
