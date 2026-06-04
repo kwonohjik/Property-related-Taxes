@@ -2,8 +2,10 @@
  * 영농상속공제 법령정합 보완 — 연도별 한도(G1) + 담보 시행시기(G3) + 2년영농(G4) + 총수입 라벨(G2) anchor
  *
  * 설계: docs/02-design/features/inheritance-farming-deduction-enhancement.engine.design.md
- * 한도 출처: KoreanLaw time-travel(§18의3① 30억 2023.1.1 신설, MST 247439) + 교재「상속·증여세 2026」p.299 (2/5/15/30)
- *   ※과거 시행일 경계는 교재 기준 — 연혁법령 mst NOT_FOUND. 후속 부칙 직접확정 시 재검토.
+ * 한도 출처 (KoreanLaw 1차 검증 완료, 2026-06-04 — 조세심판원 적용조문 축자 인용):
+ *   2억=조심2010중2776(2007.2.21) · 5억=조심2014중4319(2012.2.20)·2017중4714(2013.11.8)
+ *   15억=조심2019중4355(2018.1.9) · 30억=법률 제19195호 §18의3①(2023.1.1, MST 247439 신설조문)
+ *   "20억" 구간 부재 확정 (2→5→15→30). 상세 근거: lib/tax-engine/data/farming-deduction-limit.ts 주석.
  */
 
 import { describe, expect, it } from "vitest";
@@ -58,6 +60,15 @@ describe("G1 resolveFarmingDeductionLimit — 상속개시 연도별 한도 경�
   });
   it("undefined → 30억 (legacy 현행)", () => {
     expect(resolveFarmingDeductionLimit()).toBe(3_000_000_000);
+  });
+  it("조세심판원 축자인용 실측 — 실제 재결례 상속개시일 → 한도", () => {
+    // 조심2010중2776 (상속개시 2007.2.21) — §18②2호 "2억원을 한도로 한다"
+    expect(resolveFarmingDeductionLimit("2007-02-21")).toBe(200_000_000);
+    // 조심2014중4319 (2012.2.20) · 조심2017중4714 (2013.11.8) — "5억원을 한도로 한다"
+    expect(resolveFarmingDeductionLimit("2012-02-20")).toBe(500_000_000);
+    expect(resolveFarmingDeductionLimit("2013-11-08")).toBe(500_000_000);
+    // 조심2019중4355 (2018.1.9) — "15억원을 한도로 한다"
+    expect(resolveFarmingDeductionLimit("2018-01-09")).toBe(1_500_000_000);
   });
 });
 
