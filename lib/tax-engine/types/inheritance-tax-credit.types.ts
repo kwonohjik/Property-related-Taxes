@@ -7,6 +7,30 @@
 
 import type { CalculationStep, PriorGift } from "./inheritance-gift.types";
 
+/**
+ * §30 재상속분 재산 1건 (재산별 구분 계산 입력 — 집행기준 30-22-1 ②).
+ */
+export interface ShortTermReinheritAsset {
+  /** 표시·결과 echo용 명칭 (비상장주식·토지1 등). 미입력 시 "재상속재산 N". */
+  name?: string;
+  /**
+   * 재상속분의 재산가액 = 1차(전의) 상속 당시 가액 (§30③, 2002.12.18 개정). §30②1호 분자.
+   * 2차 평가액 아님.
+   */
+  priorValue: number;
+}
+
+/** 재산별 단기재상속 공제 1행 (결과 표 echo) */
+export interface ShortTermReinheritPerAsset {
+  name: string;
+  /** 재상속분 재산가액(1차 당시) */
+  priorValue: number;
+  /** floor(전의 산출세액 × priorValue / 전의 상속재산가액) */
+  base: number;
+  /** floor(base × 공제율) */
+  credit: number;
+}
+
 /** 상속세 세액공제 입력 */
 export interface InheritanceTaxCreditInput {
   /** 증여세액공제 (§28) — 사전증여별 납부세액 (PriorGift에서 자동 계산) */
@@ -20,26 +44,37 @@ export interface InheritanceTaxCreditInput {
    * 분모(전체 과세표준)는 엔진이 taxBase로 자동 주입.
    */
   foreignInheritanceTaxBase?: number;
-  /** 단기재상속 — 피상속인이 상속받은 날로부터 경과 연수 */
-  shortTermReinheritYears?: number;
-  /** 단기재상속 — 당시 상속세 납부액 (전의 상속세산출세액 기준) */
+  /**
+   * 단기재상속 — 1차(전의) 상속개시일 ISO(YYYY-MM-DD). [신규]
+   * 2차 = InheritanceTaxInput.deathDate. 두 날짜로 공제율 구간을 자동 도출
+   * (deriveShortTermReinheritBand — 올림 banding). 미입력 시 legacy shortTermReinheritYears fallback.
+   */
+  shortTermReinheritPriorDeathDate?: string;
+  /**
+   * 단기재상속 — 재상속분 재산 배열 (재산별 구분 — 집행기준 30-22-1 ②). [신규]
+   * 1건+ 입력 시 재산별 floor 계산·합산. 미입력 시 legacy lump(shortTermReinheritAssetValue) fallback.
+   */
+  shortTermReinheritAssets?: ShortTermReinheritAsset[];
+  /**
+   * 단기재상속 — 전의 상속세 **산출세액** (§30②1호 계수, 1차 상속 **전체**).
+   * 필드명은 "TaxPaid"이나 의미는 산출세액(결정·납부세액·특정 상속인 몫 아님).
+   */
   shortTermReinheritTaxPaid?: number;
   /**
-   * 단기재상속 — 재상속분의 재산가액 (§30②1호 안분 분수 분자).
-   * 전(前) 상속재산 중 이번 상속에서 다시 상속되는 재산의 가액.
-   *
-   * 법령근거: 상증법 §30②1호 (대수적 약분 후 분자).
-   * optional: 미입력 시 전부 재상속(분수=1) 가정으로 fallback.
-   */
-  shortTermReinheritAssetValue?: number;
-  /**
-   * 단기재상속 — 전의 상속재산가액 (§30②1호 안분 분수 분모).
-   * 이전 상속 시 전체 상속재산의 가액.
-   *
-   * 법령근거: 상증법 §30②1호 (대수적 약분 후 분모).
-   * optional: 미입력 또는 0 시 전부 재상속(분수=1) 가정으로 fallback.
+   * 단기재상속 — 전의 상속재산가액 = 1차 **총상속재산(채무공제 전)** (§30②1호 분모).
+   * 과세가액 아님. 미입력/0 시 전부재상속(분수=1) fallback.
    */
   shortTermReinheritPriorEstateValue?: number;
+  /**
+   * @deprecated shortTermReinheritPriorDeathDate + deathDate 자동 banding 권장.
+   * priorDeathDate 부재 시 수동 band(공제율 구간 정수) fallback.
+   */
+  shortTermReinheritYears?: number;
+  /**
+   * @deprecated shortTermReinheritAssets 권장. 단일 분자(전부재상속 lump fallback).
+   * 법령근거: 상증법 §30②1호 (대수적 약분 후 분자).
+   */
+  shortTermReinheritAssetValue?: number;
   /** 법정신고기한 내 신고 여부 (§69 3% 공제) */
   isFiledOnTime: boolean;
 }
@@ -94,5 +129,25 @@ export interface TaxCreditResult {
     overallTaxBase: number;
     creditLimit: number;
     creditAmount: number;
+  };
+  /**
+   * §30 단기재상속 재산별 표 echo (상속세 + assets 입력 시). 결과뷰 TaxCreditBreakdownCard 렌더용.
+   * 미적용·legacy lump 미입력 시 undefined.
+   */
+  shortTermReinheritDetail?: {
+    /** 적용 공제율 구간 (deriveShortTermReinheritBand 결과) */
+    band: number;
+    /** 공제율 (0.0~1.0) */
+    creditRate: number;
+    /** 전의 상속세 산출세액(echo) */
+    priorComputedTax: number;
+    /** 전의 상속재산가액(채무공제 전, echo) */
+    priorEstateValue: number;
+    /** 재산별 표 (legacy lump = 1행) */
+    perAsset: ShortTermReinheritPerAsset[];
+    /** Σ per-asset.credit (§30③ 한도 적용 전) */
+    creditAmount: number;
+    /** §30③ 한도(= 산출세액 − §28 − §29, orchestrator remainingTax) */
+    limit: number;
   };
 }

@@ -384,6 +384,19 @@ export function InheritanceTaxForm() {
       foreignTaxPaid: parseAmount(form.foreignTaxPaid) || undefined,
       foreignInheritanceTaxBase:
         parseAmount(form.foreignInheritanceTaxBase) || undefined,
+      // §30 banding 자동 도출 — 1차 상속개시일 (2차 = deathDate)
+      shortTermReinheritPriorDeathDate:
+        form.shortTermReinheritPriorDeathDate || undefined,
+      // §30 재상속분 재산 배열 — 빈 행/0가액 제외 (검토 #4-12)
+      shortTermReinheritAssets: (() => {
+        const rows = form.shortTermReinheritAssets
+          .map((a) => ({
+            name: a.name.trim() || undefined,
+            priorValue: parseAmount(a.value),
+          }))
+          .filter((a) => a.priorValue > 0);
+        return rows.length > 0 ? rows : undefined;
+      })(),
       shortTermReinheritYears: form.shortTermReinheritYears
         ? parseInt(form.shortTermReinheritYears, 10)
         : undefined,

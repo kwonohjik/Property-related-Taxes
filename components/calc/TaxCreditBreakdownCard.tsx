@@ -134,67 +134,94 @@ function buildSection29Formula(
 // prorationApplied=true 케이스: "재상속분 안분 (...)" 라벨 포함 시 안분 산식 표시.
 // ============================================================
 
-function buildSection30Formula(breakdown: CalculationStep[]): React.ReactNode | undefined {
-  // §30 lawRef 항목만 추출 (순서 유지)
+function buildSection30Formula(
+  detail: TaxCreditResult["shortTermReinheritDetail"],
+  breakdown: CalculationStep[],
+): React.ReactNode | undefined {
+  // 구조화 echo 우선 — 재산별 표 (집행 30-22-1②)
+  if (detail && detail.perAsset.length > 0) {
+    const {
+      band,
+      creditRate,
+      priorComputedTax,
+      priorEstateValue,
+      perAsset,
+      creditAmount,
+      limit,
+    } = detail;
+    const priorSum = perAsset.reduce((s, p) => s + p.priorValue, 0);
+    return (
+      <>
+        <div>
+          단기재상속공제 = 전의 산출세액 × (재상속분 재산가액 ÷ 전의 상속재산가액) × 공제율
+        </div>
+        <div className="text-gray-500 dark:text-gray-400 mt-1">
+          경과 구간 {band}년 이내 → 공제율 {(creditRate * 100).toFixed(0)}% · 전의 산출세액{" "}
+          <Amt val={priorComputedTax} /> ÷ 전의 상속재산가액 <Amt val={priorEstateValue} />
+        </div>
+        <table className="mt-1 w-full text-[11px]">
+          <thead>
+            <tr className="text-gray-400">
+              <th className="text-left font-normal">재산</th>
+              <th className="text-right font-normal">재상속분(1차가)</th>
+              <th className="text-right font-normal">기준액</th>
+              <th className="text-right font-normal">공제세액</th>
+            </tr>
+          </thead>
+          <tbody>
+            {perAsset.map((p, i) => (
+              <tr key={i}>
+                <td className="text-left">{p.name}</td>
+                <td className="text-right font-mono tabular-nums">{p.priorValue.toLocaleString()}</td>
+                <td className="text-right font-mono tabular-nums">{p.base.toLocaleString()}</td>
+                <td className="text-right font-mono tabular-nums">{p.credit.toLocaleString()}</td>
+              </tr>
+            ))}
+            <tr className="border-t border-gray-200 dark:border-gray-700 font-semibold">
+              <td className="text-left">합계</td>
+              <td className="text-right font-mono tabular-nums">{priorSum.toLocaleString()}</td>
+              <td></td>
+              <td className="text-right font-mono tabular-nums">{creditAmount.toLocaleString()}</td>
+            </tr>
+          </tbody>
+        </table>
+        <div className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">
+          §30③ 한도(산출세액 − §28 − §29) <Amt val={limit} />{" "}
+          {creditAmount <= limit ? "≥ 공제액 → 전액 공제" : "→ 한도까지 공제"}
+        </div>
+        <div className="text-[10px] text-gray-400 dark:text-gray-500">
+          ※ 상증법 §30②1호·집행 30-22-1② — 재산별 구분 계산 (원 단위 floor)
+        </div>
+      </>
+    );
+  }
+
+  // legacy fallback — breakdown label-parse (구 저장 결과 호환)
   const steps = breakdown.filter((s) => s.lawRef === "상증법 §30");
   if (steps.length === 0) return undefined;
-
-  // 안분 적용 여부 감지: "재상속분 안분" 라벨 포함 항목 존재 여부
-  const prorationStep = steps.find((s) => s.label.includes("재상속분 안분"));
-  const priorTaxStep = steps.find((s) => s.label === "이전 상속세 납부세액");
+  const priorTaxStep = steps.find(
+    (s) => s.label.includes("산출세액") || s.label.includes("납부세액"),
+  );
   const rateStep = steps.find((s) => s.label.includes("단기재상속 공제율"));
   const limitStep = steps.find((s) => s.label?.includes("당해 산출세액 한도"));
-
   return (
     <>
-      {prorationStep ? (
-        <>
-          <div>
-            단기재상속공제 = 전의 산출세액 × (재상속분 재산가액 ÷ 전의 상속재산가액) × 공제율
-          </div>
-          <div className="flex flex-wrap items-baseline gap-x-1 text-gray-500 dark:text-gray-400 mt-1">
-            전의 산출세액 = <Amt val={priorTaxStep?.amount ?? 0} />
-          </div>
-          <div className="flex flex-wrap items-baseline gap-x-1 text-gray-500 dark:text-gray-400">
-            안분 후 기준 세액 = <Amt val={prorationStep.amount} />
-            <span className="text-[10px] text-gray-400">({prorationStep.label.replace(" — §30②1호", "")})</span>
-          </div>
-          {rateStep && (
-            <div className="flex flex-wrap items-baseline gap-x-1">
-              공제율 적용 후 = <Amt val={rateStep.amount} />
-              <span className="text-[10px] text-gray-400">({rateStep.label.split(" (")[1]?.replace(")", "")})</span>
-            </div>
-          )}
-        </>
-      ) : (
-        <>
-          <div>
-            단기재상속공제 = 전의 상속세 산출세액 × 공제율 (전부 재상속 가정 — 안분 미적용)
-          </div>
-          {priorTaxStep && (
-            <div className="flex flex-wrap items-baseline gap-x-1 text-gray-500 dark:text-gray-400 mt-1">
-              전의 산출세액 = <Amt val={priorTaxStep.amount} />
-            </div>
-          )}
-          {rateStep && (
-            <div className="flex flex-wrap items-baseline gap-x-1">
-              공제율 적용 후 = <Amt val={rateStep.amount} />
-            </div>
-          )}
-          <div className="text-[10px] text-amber-600 dark:text-amber-400 mt-1">
-            ※ 재상속분 재산가액·전의 상속재산가액을 입력하면 §30②1호 안분이 적용됩니다
-          </div>
-        </>
+      <div>단기재상속공제 = 전의 상속세 산출세액 × 공제율</div>
+      {priorTaxStep && (
+        <div className="flex flex-wrap items-baseline gap-x-1 text-gray-500 dark:text-gray-400 mt-1">
+          전의 산출세액 = <Amt val={priorTaxStep.amount} />
+        </div>
+      )}
+      {rateStep && (
+        <div className="flex flex-wrap items-baseline gap-x-1">
+          공제율 적용 후 = <Amt val={rateStep.amount} />
+        </div>
       )}
       {limitStep && (
         <div className="flex flex-wrap items-baseline gap-x-1 text-rose-600 dark:text-rose-400 mt-1">
           당해 산출세액 한도 적용: <Amt val={limitStep.amount} />
-          <span className="text-[10px] text-gray-400 ml-1">({limitStep.note})</span>
         </div>
       )}
-      <div className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">
-        ※ 상증법 §30②1호 — 부분 재상속 시 「재상속분 재산가액 ÷ 전의 상속재산가액」으로 안분
-      </div>
     </>
   );
 }
@@ -372,10 +399,10 @@ export function TaxCreditBreakdownCard({
     ? buildSection29Formula(credit.foreignCreditDetail)
     : undefined;
 
-  // §30 단기재상속 산식: breakdown에서 §30 항목 추출 (shortTermReinheritCredit > 0 시만)
+  // §30 단기재상속 산식: 구조화 echo(재산별 표) 우선, 없으면 breakdown label-parse fallback
   const section30Formula =
     credit.shortTermReinheritCredit > 0
-      ? buildSection30Formula(credit.breakdown)
+      ? buildSection30Formula(credit.shortTermReinheritDetail, credit.breakdown)
       : undefined;
 
   // §69 산식 활성 조건: echo 두 필드 모두 존재 시 (상속세·증여세 모두 반환 — PR1)

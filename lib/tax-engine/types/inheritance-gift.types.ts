@@ -947,11 +947,15 @@ import type {
   InheritanceTaxCreditInput,
   GiftTaxCreditInput,
   TaxCreditResult,
+  ShortTermReinheritAsset,
+  ShortTermReinheritPerAsset,
 } from "./inheritance-tax-credit.types";
 export type {
   InheritanceTaxCreditInput,
   GiftTaxCreditInput,
   TaxCreditResult,
+  ShortTermReinheritAsset,
+  ShortTermReinheritPerAsset,
 };
 
 // ============================================================
