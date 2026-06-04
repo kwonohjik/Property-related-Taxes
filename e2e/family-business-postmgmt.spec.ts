@@ -53,4 +53,12 @@ test.describe("가업상속공제 사후관리 시뮬레이터", () => {
     await expect(result).toBeVisible();
     await expect(result).toContainText("outside_five_year_period");
   });
+
+  test("PR-5: cgt querystring → 양도소득세 환원 공제(§18의2⑩) prefill", async ({ page }) => {
+    // 양도세 결과뷰 링크에서 넘어온 §18의2⑩ creditAmount 5억
+    await page.goto(`${PREFILL}&cgt=500000000`);
+    // §18의2⑩ 환원 공제 안내 라벨 노출 + 입력칸에 5억 prefill
+    await expect(page.getByText("양도소득세 환원 공제 (§18의2⑩, 선택)")).toBeVisible();
+    await expect(page.locator('input[value="500,000,000"]')).toBeVisible();
+  });
 });

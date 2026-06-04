@@ -116,7 +116,8 @@ function FamilyBusinessPostMgmtPageInner() {
   const [filingDeadline, setFilingDeadline] = useState(searchParams.get("filingDeadline") ?? "");
   const [ofzExemptionActive, setOfzExemptionActive] = useState(searchParams.get("ofz") === "1");
   const [usedDirectInput, setUsedDirectInput] = useState(searchParams.get("direct") === "1");
-  const [cgtCreditAmount, setCgtCreditAmount] = useState("");
+  // cgt — 양도세 환원 공제(§18의2⑩). 양도세 결과뷰에서 creditAmount prefill (PR-5 연동)
+  const [cgtCreditAmount, setCgtCreditAmount] = useState(searchParams.get("cgt") ?? "");
   const [interestRate, setInterestRate] = useState("0.022");
 
   const [violations, setViolations] = useState<ViolationRow[]>([emptyViolation()]);

@@ -18,6 +18,7 @@
  *   - print:block 자동 펼침
  */
 
+import Link from "next/link";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import type { FamilyBusinessCgtDetail } from "@/lib/tax-engine/transfer-tax-family-business";
 
@@ -153,6 +154,23 @@ export function FamilyBusinessImputedComparisonCard({ detail }: Props) {
             소법 §97의2④ 본문에 따라 의제 산식을 강제 적용하되,
             차액({formatKRW(creditAmount)})을 §18의2⑩ 상속세 상당액 공제로 차감합니다.
           </p>
+        </div>
+      )}
+
+      {/* 사후관리 추징 연동 (§18의2⑩) — creditAmount를 시뮬레이터에 prefill (PR-5) */}
+      {creditAmount > 0 && (
+        <div className="rounded-md border border-emerald-300 bg-emerald-50/60 px-3 py-2 text-xs text-emerald-800 space-y-1">
+          <p className="font-semibold">가업상속 사후관리 추징과 연동 (§18의2⑩)</p>
+          <p>
+            이 양도세 상당액 {formatKRW(creditAmount)}은 가업상속공제 사후관리 추징세액에서
+            양도세 환원 공제로 차감됩니다.
+          </p>
+          <Link
+            href={`/calc/family-business-postmgmt?cgt=${creditAmount}`}
+            className="inline-block font-medium text-emerald-700 underline underline-offset-2 hover:text-emerald-900"
+          >
+            가업상속 사후관리 시뮬레이터에서 추징세액 계산 →
+          </Link>
         </div>
       )}
 

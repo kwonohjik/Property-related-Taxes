@@ -320,6 +320,69 @@ describe("FB-CGT-FULL-1: calculateTransferTax 2회 호출 통합 시나리오", 
     // creditAmount > 0 예상
     expect(result.familyBusinessDetail!.creditAmount).toBeGreaterThan(0);
   });
+
+  /**
+   * FB-CGT-SSOT: §18의2⑩ creditAmount single-source (PR-5)
+   *   buildFamilyBusinessCgtDetail이 credits/calcFamilyBusinessCgtCredit 재사용 →
+   *   creditAmount = max(0, 의제 − 일반) 동일 + creditBreakdown 3행 첨부.
+   */
+  it("FB-CGT-SSOT: creditAmount = max(0, 의제−일반) + creditBreakdown(single-source) 첨부", () => {
+    const input = baseTransferInput({
+      propertyType: "housing",
+      transferPrice: 600_000_000,
+      acquisitionPrice: 500_000_000,
+      acquisitionDate: new Date("2015-01-01"),
+      transferDate: new Date("2026-01-01"),
+      isOneHousehold: false,
+      householdHousingCount: 0,
+      expenses: 0,
+      reductions: [],
+      annualBasicDeductionUsed: 0,
+      familyBusinessInheritance: {
+        decedentAcquisitionPrice: 500_000_000,
+        inheritanceMarketValue: 100_000_000,
+        fbDeductionAppliedRate: 0.8,
+        inheritanceDate: "2020-01-01",
+      },
+    });
+    const d = calculateTransferTax(input, MOCK_RATES).familyBusinessDetail!;
+    // single-source 산식 일치 — creditAmount = max(0, 의제 − 일반)
+    expect(d.creditAmount).toBe(Math.max(0, d.cgtUnderSection97_2_4 - d.cgtUnderSection97));
+    // credits/ 헬퍼 breakdown 3행 첨부 (의제세액·일반세액·공제액)
+    expect(d.creditBreakdown).toBeDefined();
+    expect(d.creditBreakdown!.length).toBe(3);
+    expect(d.creditBreakdown![0].amount).toBe(d.cgtUnderSection97_2_4);
+    expect(d.creditBreakdown![1].amount).toBe(d.cgtUnderSection97);
+    expect(d.creditBreakdown![2].amount).toBe(d.creditAmount);
+    expect(d.creditBreakdown![2].lawRef).toBe("상증법 §18의2⑩");
+  });
+
+  /**
+   * FB-CGT-SSOT-NEG: 의제 ≤ 일반 → creditAmount 0 (음수 가드 single-source)
+   */
+  it("FB-CGT-SSOT-NEG: 의제 취득가 > 상속평가(의제세액 낮음) → creditAmount 0", () => {
+    const input = baseTransferInput({
+      propertyType: "housing",
+      transferPrice: 600_000_000,
+      acquisitionPrice: 100_000_000,
+      acquisitionDate: new Date("2015-01-01"),
+      transferDate: new Date("2026-01-01"),
+      isOneHousehold: false,
+      householdHousingCount: 0,
+      expenses: 0,
+      reductions: [],
+      annualBasicDeductionUsed: 0,
+      familyBusinessInheritance: {
+        decedentAcquisitionPrice: 100_000_000, // 낮은 피상속인 취득가 → 의제세액 ≤ 일반
+        inheritanceMarketValue: 500_000_000,
+        fbDeductionAppliedRate: 0.2,
+        inheritanceDate: "2020-01-01",
+      },
+    });
+    const d = calculateTransferTax(input, MOCK_RATES).familyBusinessDetail!;
+    expect(d.creditAmount).toBe(0); // 음수 가드
+    expect(d.creditBreakdown![2].amount).toBe(0);
+  });
 });
 
 // ─────────────────────────────────────────────────────
