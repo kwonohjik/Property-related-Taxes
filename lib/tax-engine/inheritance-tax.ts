@@ -71,7 +71,7 @@ import type { TaxBracket } from "./types";
 export interface InheritanceTaxEngineOptions {
   /** §26 누진세율 구간 (DB에서 로드; 기본값 사용 시 undefined) */
   brackets?: TaxBracket[];
-  /** 국외재산 비율 (외국납부세액공제 한도 계산용) */
+  /** @deprecated 도달 불가 — 미사용. §29 한도는 creditInput.foreignInheritanceTaxBase + 엔진 taxBase로 계산. */
   foreignPropertyRatio?: number;
 }
 

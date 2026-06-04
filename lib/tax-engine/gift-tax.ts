@@ -53,6 +53,7 @@ const TAX_BASE_MIN = 500_000;
 
 export interface GiftTaxEngineOptions {
   brackets?: TaxBracket[];
+  /** @deprecated 도달 불가 — 미사용 (gift §59 한도 미적용). */
   foreignPropertyRatio?: number;
 }
 

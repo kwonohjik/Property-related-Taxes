@@ -11,8 +11,15 @@ import type { CalculationStep, PriorGift } from "./inheritance-gift.types";
 export interface InheritanceTaxCreditInput {
   /** 증여세액공제 (§28) — 사전증여별 납부세액 (PriorGift에서 자동 계산) */
   priorGifts?: PriorGift[];
-  /** 외국납부세액 (§29) */
+  /** 외국납부세액 (§29) — 외국 법령에 따라 부과된 상속세액 (한도 비교 대상 ②) */
   foreignTaxPaid?: number;
+  /**
+   * 국외 상속재산 과세표준 (§29 / 상증령 §21① 한도식 분자 ①).
+   * 외국에서 상속세가 부과된 상속재산의 과세표준.
+   * 미입력/0 → 한도 0 → 공제 0 (한도 조건 미충족, 자동 안분 아님).
+   * 분모(전체 과세표준)는 엔진이 taxBase로 자동 주입.
+   */
+  foreignInheritanceTaxBase?: number;
   /** 단기재상속 — 피상속인이 상속받은 날로부터 경과 연수 */
   shortTermReinheritYears?: number;
   /** 단기재상속 — 당시 상속세 납부액 (전의 상속세산출세액 기준) */
@@ -75,4 +82,17 @@ export interface TaxCreditResult {
    * 상속세 호출에는 현재 echo 미적용 → undefined 가능.
    */
   totalComputedTaxWithSurcharge?: number;
+  /**
+   * §29 외국납부세액공제 산식 표시용 echo (상증령 §21① 점유비 한도 적용 시 — inheritance).
+   * `creditLimit` = 한도① = floor(computedTax × 국외과표 ÷ 전체과표),
+   * `creditAmount` = 잔액 클램핑 후 최종 공제액. gift(§59)·미적용 시 undefined.
+   */
+  foreignCreditDetail?: {
+    computedTax: number;
+    foreignTaxPaid: number;
+    foreignInheritanceTaxBase: number;
+    overallTaxBase: number;
+    creditLimit: number;
+    creditAmount: number;
+  };
 }

@@ -76,6 +76,57 @@ function buildSection28Formula(
 }
 
 // ============================================================
+// §29 외국납부세액공제 산식 빌더 (foreignCreditDetail)
+//   상증령 §21①: 공제 = Min( 산출세액 × (국외 과세표준 ÷ 상속세 과세표준) , 외국 부과세액 )
+// ============================================================
+
+function buildSection29Formula(
+  detail: NonNullable<TaxCreditResult["foreignCreditDetail"]>,
+): React.ReactNode {
+  const {
+    computedTax,
+    foreignTaxPaid,
+    foreignInheritanceTaxBase,
+    overallTaxBase,
+    creditLimit,
+    creditAmount,
+  } = detail;
+
+  return (
+    <>
+      <div>외국납부세액공제 = Min(한도, 외국에서 납부한 상속세액)</div>
+      <div className="flex flex-wrap items-baseline gap-x-1">
+        = Min(<Amt val={creditLimit} />, <Amt val={foreignTaxPaid} />) ={" "}
+        <span className="font-semibold"><Amt val={creditAmount} /></span>
+      </div>
+      {overallTaxBase > 0 ? (
+        <>
+          <div className="text-gray-500 dark:text-gray-400 mt-1">
+            한도 = 상속세 산출세액 × (국외 상속재산 과세표준 ÷ 상속세 과세표준)
+          </div>
+          <div className="flex flex-wrap items-baseline gap-x-1 text-gray-500 dark:text-gray-400">
+            = <Amt val={computedTax} /> × (<Amt val={foreignInheritanceTaxBase} /> ÷{" "}
+            <Amt val={overallTaxBase} />) = <Amt val={creditLimit} />
+          </div>
+        </>
+      ) : (
+        <div className="text-rose-600 dark:text-rose-400">
+          상속세 과세표준이 0이므로 한도 0
+        </div>
+      )}
+      {creditAmount < Math.min(creditLimit, foreignTaxPaid) && (
+        <div className="text-[10px] text-amber-600 dark:text-amber-400 mt-1">
+          ※ 선행 공제(증여세액공제 §28) 차감 후 잔액 한도로 축소됨
+        </div>
+      )}
+      <div className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">
+        ※ 상증령 §21① — 산출세액은 세액공제 차감 전 금액 기준
+      </div>
+    </>
+  );
+}
+
+// ============================================================
 // §30 단기재상속 산식 빌더 (breakdown에서 §30 항목 추출)
 //
 // ShortTermReinheritResult.breakdown이 TaxCreditResult.breakdown에 포함됨.
@@ -316,6 +367,11 @@ export function TaxCreditBreakdownCard({
       ? buildSection28Formula(priorGiftCreditDetail, computedTax)
       : undefined;
 
+  // §29 외국납부세액공제 산식: foreignCreditDetail echo (상증령 §21① 점유비 한도 적용 시)
+  const section29Formula = credit.foreignCreditDetail
+    ? buildSection29Formula(credit.foreignCreditDetail)
+    : undefined;
+
   // §30 단기재상속 산식: breakdown에서 §30 항목 추출 (shortTermReinheritCredit > 0 시만)
   const section30Formula =
     credit.shortTermReinheritCredit > 0
@@ -358,6 +414,7 @@ export function TaxCreditBreakdownCard({
           label="외국납부세액공제"
           amount={credit.foreignTaxCredit}
           lawRef="§29 / §59"
+          formula={section29Formula}
         />
         <CreditRow
           label="단기재상속공제"
