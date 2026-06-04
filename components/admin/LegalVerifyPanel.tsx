@@ -36,6 +36,7 @@ interface CoverageResponse {
   uncoveredCount: number;
   coverageRate: number;
   byLaw: UncoveredLawGroup[];
+  absent: string[];
   error?: string;
 }
 
@@ -86,7 +87,7 @@ export function LegalVerifyPanel() {
     } catch {
       setCovData({
         error: "네트워크 오류",
-        totalArticles: 0, verifiedArticles: 0, uncoveredCount: 0, coverageRate: 0, byLaw: [],
+        totalArticles: 0, verifiedArticles: 0, uncoveredCount: 0, coverageRate: 0, byLaw: [], absent: [],
       });
     } finally {
       setCovLoading(false);
@@ -138,7 +139,14 @@ export function LegalVerifyPanel() {
             📊 검증 커버리지 {(covData.coverageRate * 100).toFixed(1)}% — 인용 조문{" "}
             {covData.totalArticles}개 중 검증 {covData.verifiedArticles}개 · 미검증{" "}
             {covData.uncoveredCount}개
+            {covData.absent.length > 0 && ` · 현행부재 ${covData.absent.length}개`}
           </div>
+
+          {covData.absent.length > 0 && (
+            <div className="mt-2 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+              ⚠️ 현행 부재 조문(인용 점검 필요): {covData.absent.join(", ")}
+            </div>
+          )}
 
           {covData.uncoveredCount > 0 && (
             <>

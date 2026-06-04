@@ -18,6 +18,18 @@ import { VERIFICATION_MANIFEST } from "./verifier-manifest";
 /** 알려진 법령 약칭/정규명 집합 — 비인용 문자열을 걸러내는 화이트리스트 */
 const KNOWN_ABBRS = new Set(Object.keys(LAW_ALIAS));
 
+/**
+ * legal-codes가 인용하지만 현행 법령에 조문이 부재하는 키(법령명 + 조).
+ * 검증 도구·에이전트 두 독립 소스가 "조문 부재"로 일치 확인한 항목.
+ * 자동 검증 대상에서 분리하되 "인용 점검 필요"로 별도 노출한다(갭 은폐 금지).
+ * → legal-codes 인용의 현행 조문 확정 후 정정 시 이 목록에서 제거.
+ */
+export const KNOWN_ABSENT_ARTICLES = new Set<string>([
+  "소득세법 제52조의2", // stock.ts SECTION_52_2_ELECTRONIC_CREDIT (전자신고 세액공제)
+  "지방세법 제7조의2", // acquisition.ts DEEMED_ACQUISITION (간주취득 — §7 통합 추정)
+  "지방세법 제107조의2", // property.ts TAXPAYER_TRUSTEE (신탁재산 납세의무자)
+]);
+
 /** 문자열이 알려진 법령 조문 인용인지 판정 */
 export function isLegalCitation(s: string): boolean {
   const p = parseCitation(s);
@@ -40,14 +52,17 @@ export interface CoverageGap {
   totalArticles: number;
   /** manifest가 검증하는 조문 수 */
   verifiedArticles: number;
-  /** 검증되지 않는 조문 키 목록 (가나다 정렬) */
+  /** 검증되지 않는 조문 키 목록 (현행 부재 제외, 가나다 정렬) */
   uncovered: string[];
-  /** 커버리지 비율 (0~1) */
+  /** 현행 법령에 조문이 부재해 검증 불가한 키 (인용 점검 필요) */
+  absent: string[];
+  /** 커버리지 비율 (0~1) — 현행 부재 조문은 모수에서 제외 */
   coverageRate: number;
 }
 
 /**
  * legal-codes에서 수집한 인용 배열을 받아 manifest 대비 커버리지 갭을 계산한다.
+ * 현행 부재 조문(KNOWN_ABSENT_ARTICLES)은 검증 모수에서 분리해 별도 보고한다.
  */
 export function computeCoverageGap(citedCitations: string[]): CoverageGap {
   const manifestKeys = new Set(
@@ -59,17 +74,24 @@ export function computeCoverageGap(citedCitations: string[]): CoverageGap {
     citedCitations.map(articleKey).filter((k): k is string => k !== null),
   );
 
-  const uncovered = [...citedKeys]
-    .filter((k) => !manifestKeys.has(k))
+  const absent = [...citedKeys]
+    .filter((k) => KNOWN_ABSENT_ARTICLES.has(k))
     .sort((a, b) => a.localeCompare(b, "ko"));
 
-  const verifiedArticles = citedKeys.size - uncovered.length;
+  const uncovered = [...citedKeys]
+    .filter((k) => !manifestKeys.has(k) && !KNOWN_ABSENT_ARTICLES.has(k))
+    .sort((a, b) => a.localeCompare(b, "ko"));
+
+  // 검증 모수 = 전체 인용 조문 − 현행 부재 조문
+  const verifiableTotal = citedKeys.size - absent.length;
+  const verifiedArticles = verifiableTotal - uncovered.length;
 
   return {
     totalArticles: citedKeys.size,
     verifiedArticles,
     uncovered,
-    coverageRate: citedKeys.size ? verifiedArticles / citedKeys.size : 1,
+    absent,
+    coverageRate: verifiableTotal ? verifiedArticles / verifiableTotal : 1,
   };
 }
 

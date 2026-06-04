@@ -34,13 +34,19 @@ function main() {
   const gap = computeCoverageGap(collectCitedCitations());
 
   const pct = (gap.coverageRate * 100).toFixed(1);
+  const verifiable = gap.totalArticles - gap.absent.length;
   console.log(
-    `인용 조문 ${gap.totalArticles}개 중 검증 ${gap.verifiedArticles}개 ` +
-      `(커버리지 ${pct}%) — 미검증 ${gap.uncovered.length}개\n`,
+    `인용 조문 ${gap.totalArticles}개 (검증대상 ${verifiable}개 + 현행부재 ${gap.absent.length}개)\n` +
+      `검증 ${gap.verifiedArticles}개 / 검증대상 ${verifiable}개 (커버리지 ${pct}%) — 미검증 ${gap.uncovered.length}개\n`,
   );
 
+  if (gap.absent.length > 0) {
+    console.log("\x1b[33m현행 부재 조문 (legal-codes 인용 점검 필요 — 검증 모수 제외):\x1b[0m");
+    console.log(`  ${gap.absent.join(", ")}\n`);
+  }
+
   if (gap.uncovered.length === 0) {
-    console.log("\x1b[32m→ 인용한 모든 조문이 검증 매니페스트에 포함되어 있습니다.\x1b[0m\n");
+    console.log("\x1b[32m→ 검증 가능한 모든 조문이 검증 매니페스트에 포함되어 있습니다.\x1b[0m\n");
     return;
   }
 

@@ -1,34 +1,29 @@
 /**
- * 법령 조문 자동 검증 — 규칙 타입 + 매니페스트 (순수 데이터)
+ * 법령 조문 자동 검증 — 매니페스트 (순수 데이터)
  *
  * 서버 전용 의존(fs 등)이 없어 client·server 양쪽에서 안전하게 import 가능.
  * verifier.ts가 이 파일을 re-export하므로 기존 import 사이트는 변경 불필요.
  * 검증 로직(verifyRule/verifyAll)은 verifier.ts에 있다.
+ *
+ * 규칙 타입은 verifier-types.ts, 세목별 추가분은 manifest/additions-*.ts 에 있다.
+ * (legal-codes 인용을 전수 커버 — `npm run check:legal-coverage` 로 갭 확인)
  */
 
-// ── 검증 규칙 타입 ─────────────────────────────────────────────────────────
+import type { VerificationRule } from "./verifier-types";
+import { TRANSFER_ADDITIONS } from "./manifest/additions-transfer";
+import { INHERITANCE_ADDITIONS } from "./manifest/additions-inheritance";
+import { LOCAL_ADDITIONS } from "./manifest/additions-local";
+import { COMPREHENSIVE_ADDITIONS } from "./manifest/additions-comprehensive";
+import { COMMON_ADDITIONS } from "./manifest/additions-common";
 
-export interface VerificationRule {
-  /** legal-codes.ts 내 상수 경로 (가독성용) */
-  id: string;
-  /** 상수가 담고 있는 법령 인용 문자열 */
-  citation: string;
-  /**
-   * 조문 본문에 반드시 포함되어야 할 키워드 목록.
-   * ALL 모드(기본): 모두 포함돼야 통과.
-   * ANY 모드: 하나라도 포함되면 통과.
-   */
-  keywords: string[];
-  keywordMode?: "ALL" | "ANY";
-  /** 조문 본문에 없어야 할 키워드 (삭제 확인 등) */
-  forbiddenKeywords?: string[];
-}
+// 기존 import 사이트(verifier.ts 등) 호환을 위해 타입 re-export
+export type { VerificationRule };
 
-// ── 검증 규칙 매니페스트 ──────────────────────────────────────────────────
+// ── 검증 규칙 매니페스트 (핵심 43건 — 세목별 대표 조문) ────────────────────
 // legal-codes.ts의 상수값 변경 시 이 목록도 함께 업데이트한다.
 // 키워드는 강학상 용어가 아닌 "법제처 조문의 실제 법문 표현"이어야 한다.
 
-export const VERIFICATION_MANIFEST: VerificationRule[] = [
+const BASE_MANIFEST: VerificationRule[] = [
   // ── 양도소득세 ────────────────────────────────────────────────────
   {
     id: "TRANSFER.ONE_HOUSE_EXEMPT",
@@ -272,4 +267,17 @@ export const VERIFICATION_MANIFEST: VerificationRule[] = [
     citation: "지방세특례제한법 §36의3",
     keywords: ["생애최초", "12억원", "취득"],
   },
+];
+
+/**
+ * 전체 검증 매니페스트 = 핵심 43건 + 세목별 KoreanLaw 실측 추가분.
+ * legal-codes가 인용하는 조문을 전수 검증 대상으로 포함한다.
+ */
+export const VERIFICATION_MANIFEST: VerificationRule[] = [
+  ...BASE_MANIFEST,
+  ...TRANSFER_ADDITIONS,
+  ...INHERITANCE_ADDITIONS,
+  ...LOCAL_ADDITIONS,
+  ...COMPREHENSIVE_ADDITIONS,
+  ...COMMON_ADDITIONS,
 ];

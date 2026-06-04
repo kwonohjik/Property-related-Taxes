@@ -23,5 +23,6 @@ export async function GET() {
     uncoveredCount: gap.uncovered.length,
     coverageRate: gap.coverageRate,
     byLaw,
+    absent: gap.absent,
   });
 }
