@@ -17,20 +17,18 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { useState, useMemo } from "react";
 import { differenceInYears } from "date-fns";
 import { CorporateHeirFields } from "@/components/calc/inheritance/CorporateHeirFields";
+import {
+  HEIR_RELATION_LABELS,
+  HEIR_RELATIONS,
+  SPECIAL_RELATIONS,
+} from "@/components/calc/inheritance/heir-relation-meta";
 
 // ============================================================
-// 관계 메타
+// 관계 메타 (라벨은 공유 모듈에서 import)
 // ============================================================
 
-const RELATION_LABELS: Record<HeirRelation, string> = {
-  spouse: "배우자",
-  child: "자녀",
-  lineal_ascendant: "직계존속 (부모·조부모)",
-  sibling: "형제자매",
-  other: "기타",
-  legatee: "수유자",
-  corporate: "법인",
-};
+// HeirComposition 전용 로컬 상수 (heir-relation-meta에 없는 것들)
+const RELATION_LABELS = HEIR_RELATION_LABELS;
 
 const RELATION_ICONS: Record<HeirRelation, string> = {
   spouse: "💑",
@@ -51,17 +49,6 @@ const RELATION_HINTS: Record<HeirRelation, string> = {
   legatee: "유증받은 수유자 (법정상속인 외) — 상속인 외 유증액 자동 집계 (§19·§24)",
   corporate: "법인 수유자",
 };
-
-const HEIR_RELATIONS: HeirRelation[] = [
-  "spouse",
-  "child",
-  "lineal_ascendant",
-  "sibling",
-  "other",
-];
-
-// 상속인 외 — 수유자(legatee, 유증)·영리법인(corporate). §19·§24 상속인 외 유증액 · §3의2② 부표 5.
-const SPECIAL_RELATIONS: HeirRelation[] = ["legatee", "corporate"];
 
 // ============================================================
 // 관계 변경 시 정합성 정리
@@ -129,11 +116,13 @@ interface HeirEditorProps {
   heir: Heir;
   index: number;
   deathDate?: string;
+  /** 상속인 목록 전체 — CorporateHeirFields ⑦ 드롭다운 자동채움용 */
+  allHeirs: Heir[];
   onUpdate: (updated: Heir) => void;
   onRemove: () => void;
 }
 
-function HeirEditor({ heir, index, deathDate, onUpdate, onRemove }: HeirEditorProps) {
+function HeirEditor({ heir, index, deathDate, allHeirs, onUpdate, onRemove }: HeirEditorProps) {
   const set = (patch: Partial<Heir>) => onUpdate({ ...heir, ...patch });
   const [changingRelation, setChangingRelation] = useState(false);
 
@@ -380,7 +369,7 @@ function HeirEditor({ heir, index, deathDate, onUpdate, onRemove }: HeirEditorPr
 
       {/* 영리법인 전용 — 부표 5 ②③ + 주주 명세 (비영리법인은 미표시) */}
       {isCorporate && heir.isForProfit !== false && (
-        <CorporateHeirFields heir={heir} set={set} />
+        <CorporateHeirFields heir={heir} set={set} allHeirs={allHeirs} />
       )}
     </div>
   );
@@ -552,6 +541,7 @@ export function HeirComposition({ heirs, onChange, deathDate }: HeirCompositionP
               heir={heir}
               index={i}
               deathDate={deathDate}
+              allHeirs={heirs}
               onUpdate={(updated) => handleUpdate(i, updated)}
               onRemove={() => handleRemove(i)}
             />

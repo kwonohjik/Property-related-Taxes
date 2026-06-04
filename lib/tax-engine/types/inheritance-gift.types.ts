@@ -669,6 +669,12 @@ export interface ShareholderInfo {
     | "heir_spouse"
     | "lineal_descendant_of_heir"
     | "spouse_of_lineal_descendant";
+  /**
+   * ⑦에서 "입력된 상속인"을 선택한 경우 그 Heir.id.
+   * 미설정 = 기타 관계(수동 입력).
+   * 엔진 미사용 — 신고서 표시·연결 추적 전용.
+   */
+  heirRef?: string;
   /** 부표 5 ⑧ 성명 */
   name: string;
   /** 부표 5 ⑨ 주민등록번호 (옵션 — 신고서 표시용) */

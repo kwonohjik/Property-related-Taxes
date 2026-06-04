@@ -239,7 +239,7 @@ export function CorporateExemptionSection({
                 </tr>
               </thead>
               <tbody>
-                {renderShareholderRows(perCorporateBreakdown, heirById)}
+                {renderShareholderRows(perCorporateBreakdown, heirById, heirs ?? [])}
               </tbody>
             </table>
           </div>
@@ -258,6 +258,7 @@ export function CorporateExemptionSection({
 function renderShareholderRows(
   perCorporateBreakdown: PerCorporateExemptionDetail[],
   heirById: Map<string, Heir>,
+  allHeirs: Heir[],
 ) {
   const rows: React.ReactElement[] = [];
 
@@ -283,6 +284,11 @@ function renderShareholderRows(
 
     detail.shareholderPayments.forEach((payment) => {
       const sh = shareholders.find((s) => s.id === payment.shareholderId);
+      // ⑦ 결과 live-derive: heirRef 연결된 상속인 이름 수정 시 자동 반영
+      const linkedHeir = sh?.heirRef ? heirById.get(sh.heirRef) : undefined;
+      const displayName = linkedHeir?.name?.trim() || sh?.name || "—";
+      const displayRrn = linkedHeir?.residentNumber ?? sh?.residentNumber;
+
       rows.push(
         <tr
           key={`${detail.corporateId}-${payment.shareholderId}`}
@@ -292,9 +298,9 @@ function renderShareholderRows(
           <td className="px-3 py-2 text-[10px]">
             {sh ? SHAREHOLDER_RELATION_LABEL[sh.relation] : "—"}
           </td>
-          <td className="px-3 py-2">{sh?.name ?? "—"}</td>
+          <td className="px-3 py-2">{displayName}</td>
           <td className="px-3 py-2 font-mono text-[10px]">
-            {sh?.residentNumber ?? "—"}
+            {displayRrn ?? "—"}
           </td>
           <td className="px-3 py-2 text-right font-mono">
             {(payment.shareRatio * 100).toFixed(2)}%

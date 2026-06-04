@@ -493,6 +493,10 @@ export const heirSchema = z.object({
           "lineal_descendant_of_heir",
           "spouse_of_lineal_descendant",
         ]),
+        // ⑦ 드롭다운에서 "입력된 상속인" 선택 시 해당 Heir.id 참조.
+        // 미설정 = 기타 관계(수동 입력). 엔진 미사용 — 신고서 표시 전용.
+        // ⚠️ z.object 침묵 strip 방지 (feedback_api_zod_schema_sync 14지점 ⑧).
+        heirRef: z.string().optional(),
         name: z.string().min(1),
         residentNumber: z.string().optional(),
         shareRatio: z.number().min(0).max(1),
