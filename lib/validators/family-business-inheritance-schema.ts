@@ -28,6 +28,16 @@ export const familyBusinessInheritanceInputSchema = z.object({
   spouseFulfillsRequirements: z.boolean().optional(),
   heirOtherEstateValue: z.number().nonnegative().optional(),
   heirDebt: z.number().nonnegative().optional(),
+  // 복수가업 순차공제 (상증령 §15④ + 상증칙 §5 — PR-4). z.object strip 방지 (14지점 ⑫)
+  additionalFamilyBusinesses: z
+    .array(
+      z.object({
+        operatingYears: z.number().int().nonnegative(),
+        businessValue: z.number().nonnegative(),
+        label: z.string().optional(),
+      }),
+    )
+    .optional(),
   unrelatedAssetsAcknowledged: z.boolean(),
   postManagementAcknowledged: z.boolean(),
   // 기회발전특구 특례 (상증령 §15㉕, 2026-05-21 추가)

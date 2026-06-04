@@ -112,8 +112,30 @@ export function FamilyBusinessDetailCard({ detail, triggerLabel, triggerValue, h
             </div>
           )}
 
-          {/* 자격 충족 — 한도표 + 공제액 */}
-          {detail.eligible && !detail.usedDirectInput && (
+          {/* 복수가업 순차공제 (상증령 §15④ · 상증칙 §5) */}
+          {detail.eligible && !detail.usedDirectInput && detail.multipleBusinessDetail && (
+            <DetailTable>
+              <div className="px-3 py-1 text-[11px] font-semibold text-muted-foreground bg-muted/30">
+                복수가업 순차공제 (상증령 §15④ · 상증칙 §5) — 총한도{" "}
+                {formatBillion(detail.multipleBusinessDetail.totalCap)}
+              </div>
+              {detail.multipleBusinessDetail.lineItems.map((li) => (
+                <DetailRow
+                  key={li.order}
+                  label={`${li.order}순위 ${li.label ?? `영위 ${li.operatingYears}년`} — Min(잔여 ${formatBillion(li.remainingTotalCapBefore)}, 가액 ${formatKRW(li.value)}, 개별한도 ${formatBillion(li.individualCap)})`}
+                  value={formatKRW(li.deduction)}
+                />
+              ))}
+              <SubTotalRow
+                label="복수가업 공제 합계"
+                value={formatKRW(detail.multipleBusinessDetail.totalDeduction)}
+                tone="blue"
+              />
+            </DetailTable>
+          )}
+
+          {/* 자격 충족 — 단일 가업 한도표 + 공제액 */}
+          {detail.eligible && !detail.usedDirectInput && !detail.multipleBusinessDetail && (
             <DetailTable>
               <div className="px-3 py-1 text-[11px] font-semibold text-muted-foreground bg-muted/30">
                 영위 연수별 한도 (§18의2 ①)

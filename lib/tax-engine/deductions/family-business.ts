@@ -20,6 +20,8 @@ import type {
   FamilyBusinessIneligibleReason,
   FamilyBusinessInheritanceInput,
   FamilyBusinessMediumGuard,
+  FamilyBusinessUnit,
+  MultipleFamilyBusinessResult,
 } from "../types/inheritance-gift.types";
 import {
   FAMILY_BUSINESS_CAP_10Y,
@@ -90,6 +92,56 @@ export function familyBusinessCap(
   if (operatingYears >= 30) return FAMILY_BUSINESS_CAP_30Y;
   if (operatingYears >= 20) return FAMILY_BUSINESS_CAP_20Y;
   return FAMILY_BUSINESS_CAP_10Y;
+}
+
+/**
+ * 복수가업 순차공제 (상증령 §15④ + 상증칙 §5, 2016.2.5.~ / PDF 378·379p — PR-4).
+ *
+ * 피상속인이 둘 이상의 독립된 가업을 영위한 경우:
+ *   - **총한도** = 계속경영기간이 가장 긴 기업의 한도 (상증칙 §5 전단)
+ *   - **순서** = 영위연수 내림차순 (긴 기업의 가업상속재산가액부터 순차 공제, 상증칙 §5 후단)
+ *   - 각 기업 공제 = Min(잔여 총한도, 가업상속재산가액, 영위연수별 개별한도)  ← PDF 379p 표
+ *   - 합계 ≤ 총한도
+ *
+ * deathDate 시기별 한도는 familyBusinessCap 재사용 (개정연혁 자동 반영, 회귀 0).
+ * 정수 연산 — 입력 가액·한도 모두 원(정수), Min/뺄셈만 사용 (floor 불필요).
+ *
+ * [[single-source-engine-helper]] UI·결과카드·anchor 모두 본 헬퍼 import 강제.
+ */
+export function calcMultipleFamilyBusinessDeduction(
+  units: FamilyBusinessUnit[],
+  deathDate?: string,
+): MultipleFamilyBusinessResult {
+  // 영위연수 내림차순 안정 정렬 (동률이면 입력 순 유지)
+  const sorted = units
+    .map((u, i) => ({ u, i }))
+    .sort((a, b) => b.u.operatingYears - a.u.operatingYears || a.i - b.i)
+    .map(({ u }) => u);
+
+  // 총한도 = 가장 긴 기업의 한도 (상증칙 §5)
+  const longestYears = sorted.length > 0 ? sorted[0].operatingYears : 0;
+  const totalCap = familyBusinessCap(longestYears, deathDate);
+
+  let remaining: number = totalCap;
+  const lineItems = sorted.map((u, idx) => {
+    const individualCap = familyBusinessCap(u.operatingYears, deathDate);
+    const remainingTotalCapBefore = remaining;
+    const value = Math.max(0, u.value);
+    const deduction = Math.max(0, Math.min(remainingTotalCapBefore, value, individualCap));
+    remaining -= deduction;
+    return {
+      order: idx + 1,
+      operatingYears: u.operatingYears,
+      value: u.value,
+      individualCap,
+      remainingTotalCapBefore,
+      deduction,
+      label: u.label,
+    };
+  });
+
+  const totalDeduction = lineItems.reduce((sum, li) => sum + li.deduction, 0);
+  return { totalCap, lineItems, totalDeduction };
 }
 
 /**
@@ -184,13 +236,16 @@ export function evaluateFamilyBusinessEligibility(
  * (J-1) raw 평가액 = resolveEstateItemValue — §60 평가 우선순위(시가→감정가→기준시가→비상장 V2).
  *   marketValue 외(감정가·기준시가·V2)로 평가한 가업자산이 0으로 누락되던 갭 해소. gross(차감 전) 반환.
  */
-export function deriveFamilyBusinessValue(estateItems: EstateItem[] | undefined): number {
+export function deriveFamilyBusinessValue(
+  estateItems: EstateItem[] | undefined,
+  deathDate?: string,
+): number {
   if (!estateItems) return 0;
   return estateItems
     .filter((item) => item.familyBusinessCategory !== undefined)
     .reduce((sum, item) => {
       const raw = resolveEstateItemValue(item);
-      // §15⑤2호 — 법인주식 + 총자산 입력 시 사업무관자산 차감
+      // §15⑤2호 — 법인주식 + 총자산 입력 시 사업무관자산 차감 (과다현금 자동산정·제외 단서는 deathDate 시기별)
       if (item.familyBusinessCategory === "corporate_stock" && item.corporateTotalAssets) {
         return (
           sum +
@@ -198,6 +253,7 @@ export function deriveFamilyBusinessValue(estateItems: EstateItem[] | undefined)
             raw,
             item.corporateTotalAssets,
             item.corporateNonBusinessAssets,
+            deathDate,
           ).adjustedValue
         );
       }
@@ -280,26 +336,56 @@ export function calcFamilyBusinessDeductionPhase2(args: {
     : 0;
 
   // 4) 가액 결정 (manual > auto)
-  const autoDerivedValue = deriveFamilyBusinessValue(estateItems);
+  const autoDerivedValue = deriveFamilyBusinessValue(estateItems, input.deathDate);
   const manualValue = familyBusinessValueOverride;
   const finalValue = manualValue ?? autoDerivedValue;
 
-  // 5) 공제액
-  const deduction = cap > 0 ? Math.min(finalValue, cap) : 0;
+  // 4-1) 복수가업 순차공제 (상증령 §15④ + 상증칙 §5) — 추가 가업 입력 + 자격 충족 시
+  //   주 가업(operatingYears + finalValue) + 추가 가업을 units로 모아 순차 공제.
+  const additional = input.additionalFamilyBusinesses ?? [];
+  const hasMultiple = finalEligible && additional.length > 0;
+  let multipleBusinessDetail: MultipleFamilyBusinessResult | undefined;
+  if (hasMultiple) {
+    const units: FamilyBusinessUnit[] = [
+      { operatingYears: input.operatingYears, value: finalValue, label: "주 가업" },
+      ...additional.map((b) => ({
+        operatingYears: b.operatingYears,
+        value: b.businessValue,
+        label: b.label,
+      })),
+    ];
+    multipleBusinessDetail = calcMultipleFamilyBusinessDeduction(units, input.deathDate);
+  }
 
-  // 5-1) 적용률 (소령 §163의2③ — Track 2/4 prefill)
-  const appliedRate = finalValue > 0 ? deduction / finalValue : 0;
+  // 5) 공제액 — 복수가업이면 순차 합계, 단일이면 Min(가액, 한도)
+  const deduction = multipleBusinessDetail
+    ? multipleBusinessDetail.totalDeduction
+    : cap > 0
+      ? Math.min(finalValue, cap)
+      : 0;
+
+  // 5-0) 결과 표시용 한도·가액 — 복수가업: 총한도 / 전체 가업가액 합
+  const effectiveCap: FamilyBusinessCap = multipleBusinessDetail
+    ? multipleBusinessDetail.totalCap
+    : cap;
+  const effectiveFinalValue = multipleBusinessDetail
+    ? multipleBusinessDetail.lineItems.reduce((s, li) => s + li.value, 0)
+    : finalValue;
+
+  // 5-1) 적용률 (소령 §163의2③ — Track 2/4 prefill). 복수가업은 전체 가업가액 합 기준 통일 산식.
+  const appliedRate = effectiveFinalValue > 0 ? deduction / effectiveFinalValue : 0;
 
   // 6) breakdown
   const breakdown = buildPhase2Breakdown({
     operatingYears: input.operatingYears,
     autoDerivedValue,
     manualValue,
-    cap,
+    cap: effectiveCap,
     deduction,
     guard,
     finalEligible,
     lawRef,
+    multipleBusinessDetail,
   });
 
   return {
@@ -307,15 +393,16 @@ export function calcFamilyBusinessDeductionPhase2(args: {
     detail: {
       eligible: finalEligible,
       ineligibleReasons: reasons.length > 0 ? reasons : undefined,
-      appliedCap: cap,
+      appliedCap: effectiveCap,
       operatingYears: input.operatingYears,
       autoDerivedValue,
       manualValue,
-      finalValue,
+      finalValue: effectiveFinalValue,
       deduction,
       appliedRate,
       usedDirectInput: false,
       mediumGuard: guard,
+      multipleBusinessDetail,
       ofzExemptionActive: ofzExemptionActive || undefined,
       resolvedRequirements: resolvedMeta,
       breakdown,
@@ -416,8 +503,9 @@ function buildPhase2Breakdown(args: {
   guard: FamilyBusinessMediumGuard | undefined;
   finalEligible: boolean;
   lawRef: string;
+  multipleBusinessDetail?: MultipleFamilyBusinessResult;
 }) {
-  const { operatingYears, autoDerivedValue, manualValue, cap, deduction, guard, finalEligible, lawRef } = args;
+  const { operatingYears, autoDerivedValue, manualValue, cap, deduction, guard, finalEligible, lawRef, multipleBusinessDetail } = args;
   const steps: Array<{ label: string; amount: number; lawRef?: string }> = [];
 
   if (autoDerivedValue > 0) {
@@ -426,6 +514,27 @@ function buildPhase2Breakdown(args: {
   if (manualValue !== undefined) {
     steps.push({ label: "가업상속재산가액 (사용자 override)", amount: manualValue });
   }
+
+  // 복수가업 순차공제 (상증령 §15④ + 상증칙 §5) — 기업별 명세
+  if (multipleBusinessDetail) {
+    steps.push({
+      label: `복수가업 총한도 (가장 긴 기업 → ${formatBillion(multipleBusinessDetail.totalCap)})`,
+      amount: multipleBusinessDetail.totalCap,
+      lawRef: "상증령 §15④ · 상증칙 §5",
+    });
+    for (const li of multipleBusinessDetail.lineItems) {
+      steps.push({
+        label: `${li.order}순위 ${li.label ?? `영위 ${li.operatingYears}년`} — Min(잔여 ${formatBillion(li.remainingTotalCapBefore)}, 가액 ${formatBillion(li.value)}, 개별한도 ${formatBillion(li.individualCap)})`,
+        amount: li.deduction,
+      });
+    }
+    steps.push({
+      label: finalEligible ? "복수가업 공제 합계" : "가업상속공제 — 자격 미충족",
+      amount: deduction,
+    });
+    return steps;
+  }
+
   steps.push({
     label: `가업상속공제 한도 (영위 ${operatingYears}년 → ${formatBillion(cap)})`,
     amount: cap,

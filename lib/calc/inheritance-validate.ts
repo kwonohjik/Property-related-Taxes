@@ -87,6 +87,37 @@ export function validateFamilyBusinessDates(
 }
 
 /**
+ * ⑧ 복수가업 순차공제 추가 가업 입력 정합성 검증 (상증령 §15④ + 상증칙 §5 — PR-4).
+ *
+ * 자동 안분 fallback 금지 — 추가 가업을 등록했으면 영위연수·가업가액을 명시 입력해야 함.
+ * - 가업가액 입력 + 영위 10년 미만 → 가업 아님 (상증법 §18의2① 가업 정의) → 차단
+ * - 영위연수 입력 + 가업가액 0 → 미입력 항목 (계산 0 기여) → 차단
+ */
+export function validateAdditionalFamilyBusinesses(
+  fb:
+    | {
+        additionalFamilyBusinesses?: Array<{
+          operatingYears: number;
+          businessValue: number;
+          label?: string;
+        }>;
+      }
+    | undefined,
+): string | null {
+  if (!fb?.additionalFamilyBusinesses) return null;
+  for (const [i, b] of fb.additionalFamilyBusinesses.entries()) {
+    const name = b.label?.trim() || `추가 가업 ${i + 1}`;
+    if (b.businessValue > 0 && b.operatingYears < 10) {
+      return `${name} — 영위 10년 미만은 가업이 아닙니다 (상증법 §18의2① 가업 정의). 영위연수를 확인하세요.`;
+    }
+    if (b.operatingYears >= 10 && b.businessValue <= 0) {
+      return `${name} — 가업상속재산가액을 입력하세요. (미사용 시 추가 가업 항목을 삭제)`;
+    }
+  }
+  return null;
+}
+
+/**
  * 자산의 heirAllocations 합이 평가액과 일치하는지 검증.
  * 자동 안분 fallback 금지 — 사용자 명시 입력 강제.
  *
@@ -290,6 +321,9 @@ export function validateInheritanceTaxInput(
     input.deathDate,
   );
   if (fbDateErr) return fbDateErr;
+  // 복수가업 추가 가업 입력 정합성 (PR-4, 상증령 §15④)
+  const fbMultiErr = validateAdditionalFamilyBusinesses(input.deductionInput?.familyBusiness);
+  if (fbMultiErr) return fbMultiErr;
   if (input.debtItems) {
     for (const di of input.debtItems) {
       const e = validateDebtItemAllocations(di);

@@ -132,6 +132,11 @@ const baseItemSchema = z.object({
       externalLoans: z.number().nonnegative().optional(),
       excessCash: z.number().nonnegative().optional(),
       nonOperatingFinancial: z.number().nonnegative().optional(),
+      // PR-3-b — 과다현금 자동산정 + 나·다목 제외 단서 (strip 방지)
+      currentCash: z.number().nonnegative().optional(),
+      cashByYearEnd: z.array(z.number().nonnegative()).optional(),
+      rentedRealEstateExclusion: z.number().nonnegative().optional(),
+      externalLoansExclusion: z.number().nonnegative().optional(),
     })
     .optional(),
   corporateTotalAssets: z.number().nonnegative().optional(),

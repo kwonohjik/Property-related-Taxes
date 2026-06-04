@@ -79,8 +79,9 @@ export interface EstateCommonAttributesSectionProps {
    */
   effectiveValuation: number;
   /**
-   * D-4: 상속개시일 — FarmingCategorySection §16⑤1호 2년 요건 자동판정 배지용.
-   * 미전달 시 수동 ToggleCard fallback.
+   * 상속개시일 — 다용도:
+   *   (1) 법인 과다현금 비율·제외 단서 시기 판정 (CorporateNonBusinessAssetsSection, PR-3-b)
+   *   (2) FarmingCategorySection §16⑤1호 2년 요건 자동판정 배지 (D-4, 미전달 시 수동 fallback)
    */
   deathDate?: string;
 }
@@ -169,7 +170,7 @@ function EstateCommonAttributesSectionInner({
       )}
 
       {/* 법인 사업무관자산 차감 (§15⑤2호 + §16⑤2호) */}
-      <CorporateNonBusinessAssetsSection item={item} onUpdate={onUpdate} />
+      <CorporateNonBusinessAssetsSection item={item} onUpdate={onUpdate} deathDate={deathDate} />
 
       {/* §22 금융재산공제 — 카테고리별 자동 노출 */}
       {visibility.financialDeduction === "default" && (

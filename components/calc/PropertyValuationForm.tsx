@@ -226,7 +226,7 @@ function ItemEditor({ item, index, onUpdate, onRemove, mode, heirs, valuationDat
 
       {/* 법인 사업무관자산 차감 (§15⑤2호 + §16⑤2호) — corporate_stock 자산만 (PropertyValuationForm은 주식 미처리이나 안전상 보존) */}
       {mode === "inheritance" && (
-        <CorporateNonBusinessAssetsSection item={item} onUpdate={onUpdate} />
+        <CorporateNonBusinessAssetsSection item={item} onUpdate={onUpdate} deathDate={valuationDate} />
       )}
 
       {/* ─────────────────────────────────────────────────────────

@@ -23,6 +23,8 @@ import { applyRate } from "./tax-utils";
 import type { TransferTaxInput, TransferTaxResult } from "./types/transfer.types";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import type { TransferTaxAcquisitionOptions } from "./transfer-tax-acquisition-override";
+import { calcFamilyBusinessCgtCredit } from "./credits/family-business-cgt-credit";
+import { INH } from "./legal-codes";
 
 /** calculateTransferTax 함수 시그니처 (재귀 주입용 — 순환 import 차단) */
 type CalcFn = (
@@ -115,6 +117,11 @@ export interface FamilyBusinessCgtDetail {
    * 상속개시일 현재 자산 평가액 echo (UI 산식 표시용)
    */
   inheritanceMarketValue: number;
+  /**
+   * §18의2⑩ 공제 산식 breakdown (single-source: credits/calcFamilyBusinessCgtCredit).
+   * 의제세액·일반세액·공제액 3행. UI 결과 카드 표시용.
+   */
+  creditBreakdown?: Array<{ label: string; amount: number; lawRef?: string }>;
 }
 
 // ─── 핵심 헬퍼 함수 ──────────────────────────────────────────
@@ -174,17 +181,22 @@ export function buildFamilyBusinessCgtDetail(
   regularCgt: number,
   imputedAcquisitionPrice: number,
 ): FamilyBusinessCgtDetail {
-  // §18의2⑩ 단서: 공제액 음수 불가 — max(0, 의제 − 일반)
-  const creditAmount = Math.max(0, imputedCgt - regularCgt);
+  // §18의2⑩ single-source — credits/calcFamilyBusinessCgtCredit (산식·음수0 가드·breakdown 단일 진실).
+  //   creditAmount = max(0, 의제 §97의2④ − 일반 §97). transfer·inheritance 도메인 동일 헬퍼 공유.
+  const cgtCredit = calcFamilyBusinessCgtCredit(
+    { cgtUnderSection97_2_4: imputedCgt, cgtUnderSection97: regularCgt },
+    INH.FAMILY_BUSINESS_CGT_CREDIT,
+  );
 
   return {
     imputedAcquisitionPrice,
     cgtUnderSection97_2_4: imputedCgt,
     cgtUnderSection97: regularCgt,
-    creditAmount,
+    creditAmount: cgtCredit.creditAmount,
     appliedRate: fb.fbDeductionAppliedRate,
     decedentAcquisitionPrice: fb.decedentAcquisitionPrice,
     inheritanceMarketValue: fb.inheritanceMarketValue,
+    creditBreakdown: cgtCredit.breakdown,
   };
 }
 
