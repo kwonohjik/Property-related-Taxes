@@ -111,7 +111,21 @@ function clipDays(ps: string, pe: string, lo: string, hi: string): number {
 }
 
 /**
+ * §15③1호가 지분 임계 — 상속개시일 시기별 (개정연혁, 계획서 §5-6 / PDF 382p).
+ *   2023.1.1.~ : 비상장 40% / 상장 20%
+ *   2011.1.1.~2022.12.31 : 비상장 50% / 상장 30%
+ *   2010.12.31 이전 : 비상장 50% / 상장 40%
+ * deathDate YYYY-MM-DD 사전순 비교.
+ */
+export function getShareThresholdByDate(deathDate: string, isListed: boolean): number {
+  if (deathDate >= "2023-01-01") return isListed ? 0.2 : 0.4;
+  if (deathDate >= "2011-01-01") return isListed ? 0.3 : 0.5;
+  return isListed ? 0.4 : 0.5; // 2010.12.31 이전
+}
+
+/**
  * §15③1호가 — 최대주주등 지분 40%(상장 20%) 이상 × 10년 이상 계속 보유 (corporate).
+ * 임계는 상속개시일 시기별(getShareThresholdByDate, 계획 §5-6).
  * ⚠️ "계속 보유"(매도·재취득 없음)는 자동 불가 → UI 경고 + override. 미입력 시 false(보수적).
  */
 export function deriveFBDecedentShareholding(
@@ -121,7 +135,7 @@ export function deriveFBDecedentShareholding(
   isListed: boolean,
 ): boolean {
   if (shareRatioNum == null || !acquiredDate) return false;
-  const threshold = isListed ? 0.2 : 0.4;
+  const threshold = getShareThresholdByDate(deathDate, isListed);
   return (
     shareRatioNum >= threshold &&
     differenceInYears(parseISO(deathDate), parseISO(acquiredDate)) >= 10
@@ -343,6 +357,8 @@ export function resolveFamilyBusinessRequirements(
   return {
     resolvedInput: {
       ...input,
+      // 상속개시일 단일 소스 — 한도 개정연혁(familyBusinessCap)·신고기한 일관성 (계획서 §5-6)
+      deathDate: input.deathDate ?? deathDate,
       heirIsAdult,
       heirTwoYearEngagement,
       heirOfficerByFilingDeadline,

@@ -166,12 +166,19 @@ export function FamilyBusinessDetailCard({ detail, triggerLabel, triggerValue, h
           {detail.mediumGuard && (
             <div className="mx-4 mb-2 rounded-md border border-sky-200 bg-sky-50/60 dark:bg-sky-950/20 dark:border-sky-800 p-2 text-[10px] text-sky-800 dark:text-sky-300">
               <p className="font-semibold mb-1">§18의2② 200% 가드 (중견기업)</p>
-              <ul className="space-y-0.5 list-disc pl-4">
-                <li>미공제 산출세액: {formatKRW(detail.mediumGuard.taxIfNoFBD)}</li>
-                <li>200% 상한: {formatKRW(detail.mediumGuard.cap200pct)}</li>
-                <li>가업외 상속재산 net: {formatKRW(detail.mediumGuard.otherEstateNet)}</li>
-                <li>판정: {detail.mediumGuard.exceeded ? "초과 → 공제 배제" : "통과"}</li>
-              </ul>
+              {detail.mediumGuard.active === false ? (
+                <p>
+                  미공제 산출세액 미연동 — 200% 비교 보류, 공제 유지(가업외 상속재산 net{" "}
+                  {formatKRW(detail.mediumGuard.otherEstateNet)}).
+                </p>
+              ) : (
+                <ul className="space-y-0.5 list-disc pl-4">
+                  <li>미공제 산출세액: {formatKRW(detail.mediumGuard.taxIfNoFBD)}</li>
+                  <li>200% 상한: {formatKRW(detail.mediumGuard.cap200pct)}</li>
+                  <li>가업외 상속재산 net: {formatKRW(detail.mediumGuard.otherEstateNet)}</li>
+                  <li>판정: {detail.mediumGuard.exceeded ? "초과 → 공제 배제" : "통과"}</li>
+                </ul>
+              )}
             </div>
           )}
 

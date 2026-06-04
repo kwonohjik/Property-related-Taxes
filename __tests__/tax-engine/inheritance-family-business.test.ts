@@ -21,6 +21,7 @@ import {
   deriveFamilyBusinessValue,
   evaluateFamilyBusinessEligibility,
   familyBusinessCap,
+  getMediumRevenueThresholdByDate,
 } from "@/lib/tax-engine/deductions/family-business";
 import type {
   EstateItem,
@@ -626,5 +627,104 @@ describe("FB-APPLIED-RATE — 가업상속공제 적용률 (소령 §163의2③)
     const r = calcFamilyBusinessDeductionLegacy(0, 15, INH.FAMILY_BUSINESS_DEDUCTION);
     expect(r.deduction).toBe(0);
     expect(r.detail.appliedRate).toBe(0);
+  });
+});
+
+// ============================================================
+// 갭 보완 anchor (gap-supplement.plan §5-1 안전장치 + §5-6 개정연혁)
+//   계획서: docs/00-pm/inheritance-family-business-gap-supplement.plan.md
+// ============================================================
+
+describe("FB-GUARD-200 — §18의2② taxIfNoFBD 미연동 안전장치 (계획 §5-1)", () => {
+  it("FB-GUARD-200-3: medium + taxIfNoFBD=0(미연동) → 가드 비활성(active=false)·미배제(공제 유지)", () => {
+    const fb = buildPassingFB({
+      enterpriseSize: "medium",
+      averageRevenue3Y: 400_000_000_000,
+      heirOtherEstateValue: 8_000_000_000, // 80억 (정상 입력)
+      heirDebt: 0,
+    });
+    // taxIfNoFBD=0 → cap200pct=0이지만 안전장치로 exceeded=false (오배제 차단)
+    const guard = check200PercentGuard(fb, 0);
+    expect(guard?.active).toBe(false);
+    expect(guard?.exceeded).toBe(false);
+    expect(guard?.otherEstateNet).toBe(8_000_000_000);
+
+    const r = calcFamilyBusinessDeductionPhase2({
+      input: fb,
+      estateItems: undefined,
+      familyBusinessValueOverride: 10_000_000_000,
+      taxIfNoFBD: 0, // orchestrator 현행 fallback
+      lawRef: INH.FAMILY_BUSINESS_DEDUCTION,
+    });
+    expect(r.detail.eligible).toBe(true); // 오배제 차단 — 정상 입력 보호
+    expect(r.detail.ineligibleReasons).toBeUndefined();
+    expect(r.deduction).toBe(10_000_000_000);
+  });
+
+  it("FB-GUARD-200-active: taxIfNoFBD>0이면 active=true (정상 비교)", () => {
+    const guard = check200PercentGuard(
+      buildPassingFB({ enterpriseSize: "medium", heirOtherEstateValue: 1_000_000_000 }),
+      3_000_000_000,
+    );
+    expect(guard?.active).toBe(true);
+    expect(guard?.cap200pct).toBe(6_000_000_000);
+  });
+});
+
+describe("FB-CAP-HIST — §18의2① 한도 개정연혁 (계획 §5-6)", () => {
+  it("FB-CAP-HIST-default: deathDate 미입력 → 현행(300/400/600)", () => {
+    expect(familyBusinessCap(15)).toBe(30_000_000_000);
+    expect(familyBusinessCap(25)).toBe(40_000_000_000);
+    expect(familyBusinessCap(35)).toBe(60_000_000_000);
+  });
+  it("FB-CAP-HIST-2024: 2023.1.1.~ → 현행(300/400/600)", () => {
+    expect(familyBusinessCap(15, "2024-03-01")).toBe(30_000_000_000);
+    expect(familyBusinessCap(25, "2024-03-01")).toBe(40_000_000_000);
+    expect(familyBusinessCap(35, "2024-03-01")).toBe(60_000_000_000);
+  });
+  it("FB-CAP-HIST-2020: 2018~2022본 (200/300/500, 20년 경계)", () => {
+    expect(familyBusinessCap(15, "2020-06-01")).toBe(20_000_000_000); // 10~20 200억
+    expect(familyBusinessCap(25, "2020-06-01")).toBe(30_000_000_000); // 20~30 300억
+    expect(familyBusinessCap(35, "2020-06-01")).toBe(50_000_000_000); // 30+ 500억
+  });
+  it("FB-CAP-HIST-2016: 2014~2017본 (200/300/500, 15년 경계)", () => {
+    expect(familyBusinessCap(14, "2016-06-01")).toBe(20_000_000_000); // 10~15 200억
+    expect(familyBusinessCap(15, "2016-06-01")).toBe(30_000_000_000); // 15~20 300억 (경계 다름!)
+    expect(familyBusinessCap(20, "2016-06-01")).toBe(50_000_000_000); // 20+ 500억
+  });
+  it("FB-CAP-HIST-boundary: 시기 경계 — 2022-12-31 vs 2023-01-01", () => {
+    expect(familyBusinessCap(35, "2022-12-31")).toBe(50_000_000_000); // 2018~2022본 500억
+    expect(familyBusinessCap(35, "2023-01-01")).toBe(60_000_000_000); // 현행 600억
+  });
+  it("FB-CAP-HIST-pre2014: 2014 이전 → 현행 fallback(회귀 0)", () => {
+    expect(familyBusinessCap(15, "2010-01-01")).toBe(30_000_000_000);
+  });
+  it("FB-CAP-HIST-below10: 영위 10년 미만 → 0 (시기 무관)", () => {
+    expect(familyBusinessCap(9, "2020-06-01")).toBe(0);
+    expect(familyBusinessCap(9, "2016-06-01")).toBe(0);
+  });
+});
+
+describe("FB-REV-HIST — §15②3 중견 매출 임계 개정연혁 (계획 §5-6)", () => {
+  it("FB-REV-HIST-table: deathDate별 임계", () => {
+    expect(getMediumRevenueThresholdByDate(undefined)).toBe(500_000_000_000); // 현행 5천억
+    expect(getMediumRevenueThresholdByDate("2024-01-01")).toBe(500_000_000_000); // 5천억
+    expect(getMediumRevenueThresholdByDate("2022-06-01")).toBe(400_000_000_000); // 4천억
+    expect(getMediumRevenueThresholdByDate("2020-06-01")).toBe(300_000_000_000); // 3천억
+    expect(getMediumRevenueThresholdByDate("2013-06-01")).toBe(200_000_000_000); // 2천억
+    expect(getMediumRevenueThresholdByDate("2012-06-01")).toBe(150_000_000_000); // 1500억
+    expect(getMediumRevenueThresholdByDate("2009-01-01")).toBe(500_000_000_000); // 2011 이전 fallback
+  });
+  it("FB-REV-HIST-elig: medium 매출 3500억 — 2020 상속 부적격, 2024 상속 적격", () => {
+    // 2020 상속: 임계 3천억 → 3500억 >= 3천억 → enterprise_size_exceeded
+    const r2020 = evaluateFamilyBusinessEligibility(
+      buildPassingFB({ enterpriseSize: "medium", averageRevenue3Y: 350_000_000_000, deathDate: "2020-06-01" }),
+    );
+    expect(r2020.reasons).toContain("enterprise_size_exceeded");
+    // 2024 상속: 임계 5천억 → 3500억 < 5천억 → 통과
+    const r2024 = evaluateFamilyBusinessEligibility(
+      buildPassingFB({ enterpriseSize: "medium", averageRevenue3Y: 350_000_000_000, deathDate: "2024-06-01" }),
+    );
+    expect(r2024.reasons).not.toContain("enterprise_size_exceeded");
   });
 });

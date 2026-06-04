@@ -42,27 +42,71 @@ export {
   resolveFamilyBusinessRequirements,
   resolveFamilyBusinessHeirId,
   deriveFBDecedentShareholding,
+  getShareThresholdByDate,
   deriveFBDecedentCEO,
 } from "./family-business-autoderive";
 
+/** 개정연혁 한도 상수 (계획서 §5-6, PDF 378·381p) */
+const FB_CAP_200: FamilyBusinessCap = 20_000_000_000; // 200억
+const FB_CAP_300: FamilyBusinessCap = 30_000_000_000; // 300억
+const FB_CAP_500: FamilyBusinessCap = 50_000_000_000; // 500억
+
 /**
- * 영위 연수별 한도 (상증법 §18의2① 각 호).
+ * 영위 연수별 한도 (상증법 §18의2① 각 호 + 개정연혁, 계획서 §5-6).
  *
- * - undefined → 600억 fallback (legacy 단일 캡 / Phase E 직접입력 모드)
- * - 30년+ → 600억 (3호)
- * - 20~30 → 400억 (2호)
- * - 10~20 → 300억 (1호)
+ * deathDate(상속개시일) 미입력 시 **현행(2023.1.1.~)** 기본 — 기존 동작 100% 보존(회귀 0).
+ *   - 2023.1.1.~ : 10~20 300억 / 20~30 400억 / 30+ 600억
+ *   - 2018.1.1.~2022.12.31 : 10~20 200억 / 20~30 300억 / 30+ 500억
+ *   - 2014.1.1.~2017.12.31 : 10~15 200억 / 15~20 300억 / 20+ 500억 (구간 경계 다름)
+ *   - 2014.1.1. 이전 : 미모델 → 현행 fallback (회귀 0)
+ * - undefined operatingYears → 600억 fallback (legacy 단일 캡 / Phase E 직접입력 모드)
  * - 10년 미만 → 0 (자격 미충족)
  *
- * [[single-source-engine-helper]] [[feedback_ui_engine_dual_truth_avoidance]]
+ * [[single-source-engine-helper]] [[feedback_ui_engine_dual_truth_avoidance]] [[feedback_historical_tax_tables]]
  * UI 미리보기·결과 카드·anchor 모두 본 헬퍼 import 강제. UI 자체 함수 금지.
  */
-export function familyBusinessCap(operatingYears: number | undefined): FamilyBusinessCap {
+export function familyBusinessCap(
+  operatingYears: number | undefined,
+  deathDate?: string,
+): FamilyBusinessCap {
   if (operatingYears == null) return FAMILY_BUSINESS_CAP_30Y;
+  if (operatingYears < 10) return 0;
+
+  // 시기별 한도 (deathDate YYYY-MM-DD 사전순 비교)
+  if (deathDate && deathDate >= "2018-01-01" && deathDate < "2023-01-01") {
+    // 2018.1.1.~2022.12.31
+    if (operatingYears >= 30) return FB_CAP_500;
+    if (operatingYears >= 20) return FB_CAP_300;
+    return FB_CAP_200;
+  }
+  if (deathDate && deathDate >= "2014-01-01" && deathDate < "2018-01-01") {
+    // 2014.1.1.~2017.12.31 (15년 경계)
+    if (operatingYears >= 20) return FB_CAP_500;
+    if (operatingYears >= 15) return FB_CAP_300;
+    return FB_CAP_200;
+  }
+
+  // 현행 (2023.1.1.~) — deathDate 미입력·2014 이전 default
   if (operatingYears >= 30) return FAMILY_BUSINESS_CAP_30Y;
   if (operatingYears >= 20) return FAMILY_BUSINESS_CAP_20Y;
-  if (operatingYears >= 10) return FAMILY_BUSINESS_CAP_10Y;
-  return 0;
+  return FAMILY_BUSINESS_CAP_10Y;
+}
+
+/**
+ * 중견기업 매출 임계 — 상속개시일 시기별 (상증령 §15②3 개정연혁, 계획서 §5-6 / PDF 367p).
+ *
+ * deathDate 미입력·2011 이전 → 현행 5천억 fallback (회귀 0).
+ *   2023.1.1.~ 5천억 / 2022 4천억 / 2014~2021 3천억 / 2013 2천억 / 2011~2012 1500억.
+ * (중소기업 자산총액 5천억(§15①3)은 별도 — 본 헬퍼는 중견 매출 전용.)
+ */
+export function getMediumRevenueThresholdByDate(deathDate?: string): number {
+  if (!deathDate) return FAMILY_BUSINESS_SCALE_THRESHOLD;
+  if (deathDate >= "2023-01-01") return 500_000_000_000; // 5천억
+  if (deathDate >= "2022-01-01") return 400_000_000_000; // 4천억
+  if (deathDate >= "2014-01-01") return 300_000_000_000; // 3천억
+  if (deathDate >= "2013-01-01") return 200_000_000_000; // 2천억
+  if (deathDate >= "2011-01-01") return 150_000_000_000; // 1500억
+  return FAMILY_BUSINESS_SCALE_THRESHOLD; // 2011 이전 미모델 → 현행 fallback
 }
 
 /**
@@ -91,13 +135,15 @@ export function evaluateFamilyBusinessEligibility(
   // 상증령 §15①1·②1 별표 업종
   if (!input.isEligibleIndustry) reasons.push("industry_not_eligible");
 
-  // 상증령 §15①3·②3 기업 규모 5천억 미만
+  // 상증령 §15①3·②3 기업 규모
   if (input.enterpriseSize === "sme") {
+    // 중소기업 — 자산총액 5천억 미만 (§15①3, 현행)
     if ((input.totalAssets ?? 0) >= FAMILY_BUSINESS_SCALE_THRESHOLD) {
       reasons.push("enterprise_size_exceeded");
     }
   } else {
-    if ((input.averageRevenue3Y ?? 0) >= FAMILY_BUSINESS_SCALE_THRESHOLD) {
+    // 중견기업 — 직전 3년 매출 평균 임계 (§15②3, 개정연혁 시기별: 계획서 §5-6)
+    if ((input.averageRevenue3Y ?? 0) >= getMediumRevenueThresholdByDate(input.deathDate)) {
       reasons.push("enterprise_size_exceeded");
     }
   }
@@ -173,13 +219,22 @@ export function check200PercentGuard(
   taxIfNoFBD: number,
 ): FamilyBusinessMediumGuard | undefined {
   if (input.enterpriseSize !== "medium") return undefined;
-  const cap200pct = taxIfNoFBD * FAMILY_BUSINESS_OTHER_ESTATE_RATIO;
   const otherEstateNet = Math.max(0, (input.heirOtherEstateValue ?? 0) - (input.heirDebt ?? 0));
+
+  // 안전장치 (계획서 §5-1): taxIfNoFBD가 orchestrator에서 미연동(≤0)이면 200% 비교가 무의미
+  //   (cap200pct = 0 → otherEstateNet>0인 정상 입력이 전부 exceeded=true로 오배제됨).
+  //   → 가드 비활성(active:false, exceeded 강제 false). 실연동(2-pass) 전까지 정상 입력 보호.
+  if (taxIfNoFBD <= 0) {
+    return { taxIfNoFBD, cap200pct: 0, otherEstateNet, exceeded: false, active: false };
+  }
+
+  const cap200pct = taxIfNoFBD * FAMILY_BUSINESS_OTHER_ESTATE_RATIO;
   return {
     taxIfNoFBD,
     cap200pct,
     otherEstateNet,
     exceeded: otherEstateNet > cap200pct,
+    active: true,
   };
 }
 
@@ -220,7 +275,9 @@ export function calcFamilyBusinessDeductionPhase2(args: {
 
   // 3) 자격 충족 시 한도 결정, 미충족 시 0
   const finalEligible = reasons.length === 0;
-  const cap: FamilyBusinessCap = finalEligible ? familyBusinessCap(input.operatingYears) : 0;
+  const cap: FamilyBusinessCap = finalEligible
+    ? familyBusinessCap(input.operatingYears, input.deathDate)
+    : 0;
 
   // 4) 가액 결정 (manual > auto)
   const autoDerivedValue = deriveFamilyBusinessValue(estateItems);
@@ -302,6 +359,7 @@ export function calcFamilyBusinessDeductionLegacy(
   familyBusinessValue: number,
   operatingYears: number | undefined,
   lawRef: string,
+  deathDate?: string,
 ): Phase2FamilyBusinessResult {
   if (familyBusinessValue <= 0) {
     return {
@@ -318,7 +376,7 @@ export function calcFamilyBusinessDeductionLegacy(
       },
     };
   }
-  const cap = familyBusinessCap(operatingYears);
+  const cap = familyBusinessCap(operatingYears, deathDate);
   const deduction = Math.min(familyBusinessValue, cap);
   const appliedRate = familyBusinessValue > 0 ? deduction / familyBusinessValue : 0;
   return {

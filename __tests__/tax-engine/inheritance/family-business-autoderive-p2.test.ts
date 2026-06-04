@@ -10,6 +10,7 @@ import { describe, it, expect } from "vitest";
 import {
   deriveFBDecedentShareholding,
   deriveFBDecedentCEO,
+  getShareThresholdByDate,
   resolveFamilyBusinessRequirements,
 } from "@/lib/tax-engine/deductions/family-business-autoderive";
 import type { FamilyBusinessInheritanceInput } from "@/lib/tax-engine/types/inheritance-gift.types";
@@ -138,5 +139,34 @@ describe("resolve 6요건 확장 — 피상속인 요건", () => {
     expect(r.source.decedentMajorShareholdingMet).toBe("legacy");
     expect(r.resolvedInput.decedentCEORequirementMet).toBe(true);
     expect(r.source.decedentCEORequirementMet).toBe("legacy");
+  });
+});
+
+describe("FB-SHARE-HIST — §15③1호가 지분 임계 개정연혁 (계획 §5-6)", () => {
+  it("getShareThresholdByDate: 시기별 임계", () => {
+    // 2023.1.1.~ 비상장 40% / 상장 20%
+    expect(getShareThresholdByDate("2024-01-01", false)).toBe(0.4);
+    expect(getShareThresholdByDate("2024-01-01", true)).toBe(0.2);
+    // 2011~2022 비상장 50% / 상장 30%
+    expect(getShareThresholdByDate("2020-06-01", false)).toBe(0.5);
+    expect(getShareThresholdByDate("2020-06-01", true)).toBe(0.3);
+    // 2010.12.31 이전 비상장 50% / 상장 40%
+    expect(getShareThresholdByDate("2009-01-01", false)).toBe(0.5);
+    expect(getShareThresholdByDate("2009-01-01", true)).toBe(0.4);
+  });
+  it("경계: 2022-12-31 vs 2023-01-01 (비상장)", () => {
+    expect(getShareThresholdByDate("2022-12-31", false)).toBe(0.5);
+    expect(getShareThresholdByDate("2023-01-01", false)).toBe(0.4);
+  });
+  it("deriveFBDecedentShareholding: 2020 상속 비상장 40% → 미충족(당시 50% 기준)", () => {
+    // 2024 상속(현행 40%)이면 충족이지만 2020 상속이면 50% 기준이라 미충족
+    expect(deriveFBDecedentShareholding(0.4, "2008-01-01", "2020-06-01", false)).toBe(false);
+    expect(deriveFBDecedentShareholding(0.5, "2008-01-01", "2020-06-01", false)).toBe(true);
+    // 동일 지분율이 현행(2024) 상속이면 충족
+    expect(deriveFBDecedentShareholding(0.4, "2008-01-01", "2024-06-01", false)).toBe(true);
+  });
+  it("deriveFBDecedentShareholding: 2020 상속 상장 25% → 미충족(당시 30% 기준), 현행이면 충족", () => {
+    expect(deriveFBDecedentShareholding(0.25, "2008-01-01", "2020-06-01", true)).toBe(false);
+    expect(deriveFBDecedentShareholding(0.25, "2008-01-01", "2024-06-01", true)).toBe(true);
   });
 });
