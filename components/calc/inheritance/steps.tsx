@@ -469,6 +469,7 @@ export function Step4({
             onChange={(v) => set({ familyBusiness: v })}
             deathDate={form.deathDate}
             heirs={form.heirs}
+            mainBusinessValue={parseAmount(form.familyBusinessValue)}
           />
 
           <div className="space-y-2">

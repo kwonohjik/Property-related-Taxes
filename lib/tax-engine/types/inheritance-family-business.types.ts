@@ -118,6 +118,22 @@ export interface FamilyBusinessInheritanceInput {
    */
   spouseFulfillsRequirements?: boolean;
 
+  // ─ 복수가업 순차공제 (상증령 §15④ + 상증칙 §5, 2016.2.5.~) ─
+  /**
+   * 추가 가업 목록 — 피상속인이 둘 이상의 독립된 가업을 영위한 경우 (PR-4).
+   * 주 가업(본 객체의 operatingYears + 가업가액)에 더해 영위연수·가업상속재산가액만 입력.
+   * 각 추가 가업은 §15③ 요건을 충족함을 전제(요건 개별 판정은 후속). 미입력·빈 배열 = 단일 가업(기존 동작).
+   * 총한도 = 가장 긴 기업 한도, 영위연수 내림차순 순차 공제 (상증칙 §5).
+   */
+  additionalFamilyBusinesses?: Array<{
+    /** 추가 가업 영위 연수 (개별한도 결정). */
+    operatingYears: number;
+    /** 추가 가업의 가업상속재산가액 (원, 사업무관자산 차감 후). */
+    businessValue: number;
+    /** 표시용 라벨 (예: "B 제조법인"). 계산 미사용. */
+    label?: string;
+  }>;
+
   // ─ §18의2② 중견기업 외 상속재산 비율 가드 (200%) ─
   /** 가업상속인의 가업상속재산 외 상속재산 가액 (원) — 200% 가드 산정용. */
   heirOtherEstateValue?: number;
@@ -203,6 +219,50 @@ export type FamilyBusinessCap =
   | 60_000_000_000;
 
 /**
+ * 복수가업 순차공제 단위 (상증칙 §5 — PR-4).
+ * 주 가업 + 추가 가업을 동일 형태로 모아 순차 공제.
+ */
+export interface FamilyBusinessUnit {
+  /** 영위 연수 (개별한도·순서 결정) */
+  operatingYears: number;
+  /** 가업상속재산가액 (원, 사업무관자산 차감 후) */
+  value: number;
+  /** 표시용 라벨 */
+  label?: string;
+}
+
+/** 복수가업 순차공제 명세 행 (영위연수 내림차순 1행 = 1기업) */
+export interface MultipleFamilyBusinessLineItem {
+  /** 공제 순서 (1부터, 영위연수 긴 순) */
+  order: number;
+  operatingYears: number;
+  /** 가업상속재산가액 */
+  value: number;
+  /** 영위연수별 개별한도 (familyBusinessCap) */
+  individualCap: FamilyBusinessCap;
+  /** 차감 전 잔여 총한도 (해당 행 진입 시점) */
+  remainingTotalCapBefore: number;
+  /** 공제액 = Min(잔여 총한도, 가업가액, 개별한도) */
+  deduction: number;
+  label?: string;
+}
+
+/**
+ * 복수가업 순차공제 결과 (상증령 §15④ + 상증칙 §5).
+ *   - totalCap = 가장 긴 기업의 한도 (총한도)
+ *   - 영위연수 내림차순으로 잔여 총한도를 차감하며 순차 공제
+ *   - totalDeduction ≤ totalCap
+ */
+export interface MultipleFamilyBusinessResult {
+  /** 총한도 (가장 긴 기업의 한도) */
+  totalCap: FamilyBusinessCap;
+  /** 기업별 명세 (영위연수 내림차순) */
+  lineItems: MultipleFamilyBusinessLineItem[];
+  /** 공제 합계 (≤ totalCap) */
+  totalDeduction: number;
+}
+
+/**
  * §18의2② 200% 가드 메타 (중견기업 한정 — enterpriseSize === "medium"일 때만 산정).
  */
 export interface FamilyBusinessMediumGuard {
@@ -254,6 +314,12 @@ export interface FamilyBusinessDeductionDetail {
   usedDirectInput: boolean;
   /** 200% 가드 산정 메타 (중견기업 한정) */
   mediumGuard?: FamilyBusinessMediumGuard;
+  /**
+   * 복수가업 순차공제 명세 (상증령 §15④ + 상증칙 §5 — PR-4).
+   * additionalFamilyBusinesses 입력 시에만 존재. 단일 가업이면 undefined.
+   * 이 경우 deduction = totalDeduction, appliedCap = totalCap, finalValue = 전체 가업가액 합.
+   */
+  multipleBusinessDetail?: MultipleFamilyBusinessResult;
   /**
    * 기회발전특구 특례 활성 여부 (상증령 §15㉕).
    * true 시 heirCEOWithinTwoYears 요건 면제 적용. UI 결과 카드에 emerald tone 안내.

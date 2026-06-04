@@ -853,7 +853,7 @@ import type {
   DeductionLimitCeilingDetail,
 } from "./inheritance-deduction-detail.types";
 export type { FarmingInheritanceInput, FarmingDeductionDetail, FarmingEligibilityResult } from "./inheritance-farming.types";
-export type { FamilyBusinessCategory, FamilyBusinessInheritanceInput, FamilyBusinessIneligibleReason, FamilyBusinessDeductionDetail, FamilyBusinessCap, FamilyBusinessMediumGuard } from "./inheritance-family-business.types";
+export type { FamilyBusinessCategory, FamilyBusinessInheritanceInput, FamilyBusinessIneligibleReason, FamilyBusinessDeductionDetail, FamilyBusinessCap, FamilyBusinessMediumGuard, FamilyBusinessUnit, MultipleFamilyBusinessLineItem, MultipleFamilyBusinessResult } from "./inheritance-family-business.types";
 export type {
   FamilyBusinessPostMgmtMeta,
   FamilyBusinessPostMgmtInput,

@@ -51,6 +51,7 @@ import type { Heir } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { FamilyBusinessHeirSelector } from "./family-business/FamilyBusinessHeirSelector";
 import { FbHeirRequirementsSection } from "./family-business/FbHeirRequirementsSection";
 import { FbDecedentRequirementsSection } from "./family-business/FbDecedentRequirementsSection";
+import { FbAdditionalBusinessesSection } from "./family-business/FbAdditionalBusinessesSection";
 
 // 빈 FamilyBusinessInheritanceInput — ON 토글 시 초기화
 const EMPTY_FB: FamilyBusinessInheritanceInput = {
@@ -141,6 +142,8 @@ export interface FamilyBusinessEligibilitySectionProps {
   deathDate?: string;
   /** 상속인 목록 — 가업상속인 선택 RadioCardGroup용 */
   heirs?: Heir[];
+  /** 주 가업 가업상속재산가액 (원) — 복수가업 순차공제 미리보기용 (form.familyBusinessValue) */
+  mainBusinessValue?: number;
 }
 
 export function FamilyBusinessEligibilitySection({
@@ -148,6 +151,7 @@ export function FamilyBusinessEligibilitySection({
   onChange,
   deathDate,
   heirs,
+  mainBusinessValue,
 }: FamilyBusinessEligibilitySectionProps) {
   const isActive = familyBusiness !== undefined;
   const [discardOpen, setDiscardOpen] = useState(false);
@@ -542,6 +546,15 @@ export function FamilyBusinessEligibilitySection({
               </div>
             )
           )}
+
+          {/* 복수가업 순차공제 (상증령 §15④ · 상증칙 §5 — PR-4) */}
+          <FbAdditionalBusinessesSection
+            value={familyBusiness.additionalFamilyBusinesses}
+            onChange={(v) => update({ additionalFamilyBusinesses: v })}
+            mainOperatingYears={familyBusiness.operatingYears}
+            mainValue={mainBusinessValue ?? 0}
+            deathDate={deathDate}
+          />
         </div>
       )}
 
