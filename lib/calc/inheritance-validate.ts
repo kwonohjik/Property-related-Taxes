@@ -348,6 +348,22 @@ export function validateInheritanceTaxInput(
     }
   }
 
+  // §29 외국납부세액공제 교차검증 (상증령 §21①)
+  const foreignCreditInput = input.creditInput;
+  if (foreignCreditInput) {
+    const base = foreignCreditInput.foreignInheritanceTaxBase;
+    const paid = foreignCreditInput.foreignTaxPaid;
+    // V-29-2: 음수 차단 (Zod nonnegative 동기화)
+    if (base != null && base < 0) {
+      return "외국납부세액공제 §29: 국외 상속재산 과세표준은 0 이상이어야 합니다.";
+    }
+    // V-29-3: 과세표준만 입력 + 외국납부세액 미입력 → 무의미 입력 차단
+    // (역방향 — 외국세액만 입력·과표 미입력 → 한도 0으로 공제 0, UI hint 안내. 차단 안 함)
+    if (base != null && base > 0 && (paid == null || paid <= 0)) {
+      return "외국납부세액공제 §29: 국외 상속재산 과세표준을 입력하려면 외국에서 납부한 상속세액도 입력해야 합니다.";
+    }
+  }
+
   return null;
 }
 

@@ -104,6 +104,7 @@ const INHERITANCE_FIELD_LABELS: Record<string, string> = {
   farmlandDeduction: "영농상속공제",
   shortTermRedeemDeduction: "단기재상속공제",
   foreignTaxPaid: "외국납부세액",
+  foreignInheritanceTaxBase: "국외 상속재산 과세표준",
   filedWithinDeadline: "법정신고기한 내 신고",
   priorGiftsTotal: "10년 내 사전증여 합계",
   generationSkipAssetAmount: "세대생략 상속재산",
@@ -381,6 +382,8 @@ export function InheritanceTaxForm() {
     const creditInput: InheritanceTaxCreditInput = {
       priorGifts: normalizedPriorGifts,
       foreignTaxPaid: parseAmount(form.foreignTaxPaid) || undefined,
+      foreignInheritanceTaxBase:
+        parseAmount(form.foreignInheritanceTaxBase) || undefined,
       shortTermReinheritYears: form.shortTermReinheritYears
         ? parseInt(form.shortTermReinheritYears, 10)
         : undefined,

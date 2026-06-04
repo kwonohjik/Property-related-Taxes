@@ -152,7 +152,7 @@ export interface InheritanceTaxCreditParams {
   computedTax: number;
   /** 세대생략 할증액 */
   generationSkipSurcharge: number;
-  /** 국외재산 비율 (0~1, 외국납부세액공제 한도용) */
+  /** @deprecated 도달 불가 — 미사용. §29 한도는 creditInput.foreignInheritanceTaxBase + taxBase로 계산. */
   foreignPropertyRatio?: number;
   /** 상속세 과세가액 (§28 ① 안분 한도 fallback용) */
   taxableEstateValue: number;
@@ -187,7 +187,6 @@ export function calcInheritanceTaxCredits(
     creditInput,
     computedTax,
     generationSkipSurcharge,
-    foreignPropertyRatio,
     taxableEstateValue,
     taxBase,
     deathDate,
@@ -226,16 +225,24 @@ export function calcInheritanceTaxCredits(
 
   let remainingTax = totalComputedTax - giftTaxCredit;
 
-  // 2. 외국납부세액공제 (§29)
+  // 2. 외국납부세액공제 (§29 / 상증령 §21①)
+  // 한도 = totalComputedTax(원 산출세액, §28 차감 前) × (국외 과세표준 ÷ 전체 과세표준).
+  // 실제 공제는 §28 차감 후 잔액(remainingTax)을 초과하지 않도록 클램핑 (§30 패턴).
   const foreignResult = calcForeignTaxCredit({
     foreignTaxPaid: creditInput.foreignTaxPaid ?? 0,
-    computedTax: remainingTax,
-    foreignPropertyRatio,
+    computedTax: totalComputedTax,
+    foreignInheritanceTaxBase: creditInput.foreignInheritanceTaxBase,
+    overallTaxBase: taxBase ?? 0,
     mode: "inheritance",
   });
-  const foreignTaxCredit = foreignResult.creditAmount;
+  const foreignTaxCredit = Math.min(foreignResult.creditAmount, remainingTax);
   allBreakdown.push(...foreignResult.breakdown);
   if (foreignTaxCredit > 0) appliedLaws.add(TAX_CREDIT.INH_FOREIGN);
+
+  // §29 산식 표시용 echo — 잔액 클램핑 후 최종 공제액으로 조립 (P1·P3)
+  const foreignCreditDetail = foreignResult.detail
+    ? { ...foreignResult.detail, creditAmount: foreignTaxCredit }
+    : undefined;
 
   remainingTax -= foreignTaxCredit;
 
@@ -295,6 +302,7 @@ export function calcInheritanceTaxCredits(
     // taxBeforeFilingCredit와 동일). 증여세 경로와 달리 단기재상속공제(§30)까지 반영됨.
     filingCreditBase: filingCreditBaseAmount,
     totalComputedTaxWithSurcharge: totalComputedTax,
+    foreignCreditDetail,
   };
 }
 
@@ -308,7 +316,7 @@ export interface GiftTaxCreditParams {
   computedTax: number;
   /** 세대생략 할증액 */
   generationSkipSurcharge: number;
-  /** 국외재산 비율 */
+  /** @deprecated 도달 불가 — 미사용 (gift §59 한도 미적용). */
   foreignPropertyRatio?: number;
   /** 증여재산가액 (특례 절감액 계산용) */
   giftAmount?: number;
@@ -346,7 +354,6 @@ export function calcGiftTaxCredits(params: GiftTaxCreditParams): TaxCreditResult
     creditInput,
     computedTax,
     generationSkipSurcharge,
-    foreignPropertyRatio,
     giftAmount = 0,
     priorGiftTaxPaid = 0,
     priorGiftComputedTax = 0,
@@ -405,7 +412,6 @@ export function calcGiftTaxCredits(params: GiftTaxCreditParams): TaxCreditResult
   const foreignResult = calcForeignTaxCredit({
     foreignTaxPaid: creditInput.foreignTaxPaid ?? 0,
     computedTax: totalComputedTax,
-    foreignPropertyRatio,
     mode: "gift",
   });
   const foreignTaxCredit = foreignResult.creditAmount;

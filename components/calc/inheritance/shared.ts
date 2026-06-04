@@ -68,6 +68,8 @@ export interface FormState {
   generationSkipAssetAmount: string;
   isFiledOnTime: boolean;
   foreignTaxPaid: string;
+  /** 국외 상속재산 과세표준 (§29/상증령 §21① 한도식 분자) */
+  foreignInheritanceTaxBase: string;
   shortTermReinheritYears: string;
   shortTermReinheritTaxPaid: string;
   /**
@@ -131,6 +133,7 @@ export const INITIAL_FORM: FormState = {
   generationSkipAssetAmount: "",
   isFiledOnTime: true,
   foreignTaxPaid: "",
+  foreignInheritanceTaxBase: "",
   shortTermReinheritYears: "",
   shortTermReinheritTaxPaid: "",
   shortTermReinheritAssetValue: "",

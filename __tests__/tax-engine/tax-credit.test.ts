@@ -197,14 +197,15 @@ describe("외국납부세액공제 — §29·§59", () => {
     expect(result.creditAmount).toBe(100_000_000);
   });
 
-  it("[C12] 국외재산 비율 50% → 한도 = 산출세액 × 50%", () => {
+  it("[C12] 국외 과세표준 점유비 → 한도 = 산출세액 × (국외과표 ÷ 전체과표) (상증령 §21①)", () => {
     const result = calcForeignTaxCredit({
       foreignTaxPaid: 80_000_000,
       computedTax: 100_000_000,
-      foreignPropertyRatio: 0.5,
+      foreignInheritanceTaxBase: 50_000_000,
+      overallTaxBase: 100_000_000,
       mode: "inheritance",
     });
-    // 한도 = 100M × 0.5 = 50M → min(80M, 50M) = 50M
+    // 한도 = 100M × (50M ÷ 100M) = 50M → min(80M, 50M) = 50M
     expect(result.creditAmount).toBe(50_000_000);
   });
 

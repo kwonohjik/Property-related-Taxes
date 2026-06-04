@@ -563,13 +563,38 @@ export function Step4({
         onCheckedChange={(v) => set({ isFiledOnTime: v })}
       />
 
-      <CurrencyInput
-        label="외국납부세액 (§29)"
-        value={form.foreignTaxPaid}
-        onChange={(v) => set({ foreignTaxPaid: v })}
-        hint="해외 소재 상속재산에 대해 납부한 외국 세액"
-        placeholder="없으면 빈칸"
-      />
+      {/* 외국납부세액공제 섹션 (§29 / 상증령 §21①) */}
+      <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-3">
+        <div className="flex items-center gap-2">
+          <p className="text-xs font-semibold text-violet-700">외국납부세액공제 (§29)</p>
+        </div>
+        <p className="text-xs text-gray-500 dark:text-gray-400">
+          해외 소재 상속재산에 외국 법령에 따라 부과된 상속세를 공제합니다. 한도는
+          산출세액 × (국외 상속재산 과세표준 ÷ 상속세 과세표준)으로 계산됩니다 (상증령 §21①).
+        </p>
+        <FieldCard
+          label="외국에서 납부한 상속세액"
+          hint="외국 법령에 따라 부과된 상속세액 (한도 비교 대상). 없으면 빈칸."
+        >
+          <CurrencyInput
+            label="외국에서 납부한 상속세액"
+            hideLabel
+            value={form.foreignTaxPaid}
+            onChange={(v) => set({ foreignTaxPaid: v })}
+          />
+        </FieldCard>
+        <FieldCard
+          label="국외 상속재산 과세표준"
+          hint="외국에서 상속세가 부과된 상속재산의 과세표준 (한도식 분자). 미입력 시 외국납부세액공제가 적용되지 않습니다. 전체 상속세 과세표준(분모)은 자동 계산됩니다."
+        >
+          <CurrencyInput
+            label="국외 상속재산 과세표준"
+            hideLabel
+            value={form.foreignInheritanceTaxBase}
+            onChange={(v) => set({ foreignInheritanceTaxBase: v })}
+          />
+        </FieldCard>
+      </div>
 
       {/* 단기재상속공제 섹션 (§30) */}
       <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-3">

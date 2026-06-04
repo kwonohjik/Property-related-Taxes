@@ -680,6 +680,8 @@ export const giftDeductionInputSchema = z.object({
 export const inheritanceTaxCreditInputSchema = z.object({
   priorGifts: z.array(priorGiftSchema).optional(),
   foreignTaxPaid: z.number().nonnegative().optional(),
+  // §29/상증령 §21① 한도식 분자 — 국외 상속재산 과세표준. ⑫ 동기화 지점.
+  foreignInheritanceTaxBase: z.number().nonnegative().optional(),
   shortTermReinheritYears: z.number().int().min(0).max(10).optional(),
   shortTermReinheritTaxPaid: z.number().nonnegative().optional(),
   // §30②1호 안분 입력 — optional. 미입력 시 엔진이 전부재상속(분수=1) fallback.

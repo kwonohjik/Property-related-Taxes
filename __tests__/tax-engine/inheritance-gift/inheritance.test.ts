@@ -293,10 +293,12 @@ describe("상속세 메인 엔진 — calcInheritanceTax()", () => {
       creditInput: {
         isFiledOnTime: false, // 신고공제 제외로 단순화
         foreignTaxPaid: 30_000_000,
+        // §29/상증령 §21① — 국외 상속재산 과세표준(한도식 분자). 전체 과세표준 이상 → 한도 = 산출세액 전액.
+        foreignInheritanceTaxBase: 1_000_000_000,
       },
     };
     const result = calcInheritanceTax(input);
-    // 산출세액 88M, 외국납부 30M → 잔여 58M
+    // 산출세액 88M, 외국납부 30M(한도 ≥ 산출세액) → 잔여 58M
     expect(result.creditDetail.foreignTaxCredit).toBe(30_000_000);
     expect(result.finalTax).toBe(58_000_000);
   });

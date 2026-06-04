@@ -223,6 +223,8 @@ export const TAX_CREDIT = {
   GIFT_TAX_CREDIT_EXCLUSION_THRESHOLD: 500_000_000,
   /** 상증법 §29 — 외국납부세액공제 (상속) */
   INH_FOREIGN:         "상증법 §29",
+  /** 상증령 §21① — 외국납부세액공제 한도 계산식 (과세표준 점유비) */
+  INH_FOREIGN_LIMIT:   "상증령 §21①",
   /** 상증법 §30 — 단기재상속세액공제 (1~10년 100%→10% 차등) */
   SHORT_TERM_REINH:    "상증법 §30",
   /** 상증법 §59 — 외국납부세액공제 (증여) */

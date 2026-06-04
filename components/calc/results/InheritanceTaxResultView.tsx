@@ -40,6 +40,7 @@ import {
 } from "@/lib/print/inheritance-print-sections";
 import { DeductionBreakdownSection } from "./deduction-breakdown/DeductionBreakdownSection";
 import { AllocationBreakdownSection } from "./allocation-breakdown/AllocationBreakdownSection";
+import { TaxCreditBreakdownCard } from "@/components/calc/TaxCreditBreakdownCard";
 import { expandToggleClass, expandToggleLabel } from "./shared/ExpandToggleButton";
 // re-export 보존 — shared.tsx 에서 실제 구현
 export { Row, formatBillion, LawBadge } from "./deduction-breakdown/shared";
@@ -335,7 +336,19 @@ export function InheritanceTaxResultView({
       </div>
       </PrintSection>
 
-      {/* 세액공제 상세: 결정세액 카드 요약 + AllocationBreakdownSection ⑩·⑫ 로 노출 (별도 카드 숨김) */}
+      {/* 세액공제 상세 — §29·§30·§69 산출근거 ▼펼침 (§28 증여세액공제는 AllocationBreakdownSection이 담당) */}
+      {result.totalTaxCredit > 0 && (
+        <PrintSection id="tax-credit" selectedIds={selectedPrintIds}>
+          <TaxCreditBreakdownCard
+            credit={result.creditDetail}
+            taxBeforeCredit={
+              result.creditDetail.totalComputedTaxWithSurcharge ?? result.computedTax
+            }
+            computedTax={result.computedTax}
+            corporateExemption={result.corporateExemption?.amount ?? 0}
+          />
+        </PrintSection>
+      )}
 
       {/* §27 세대생략 할증 산식: ⑧ 세대생략 가산액 펼침 내부로 통합 (AllocationBreakdownSection) */}
 
