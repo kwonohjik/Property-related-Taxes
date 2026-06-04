@@ -3,7 +3,7 @@
  *
  * 책임:
  *   1. IndexedDB의 증여세 이력(CalculationRecord[])에서 §47 합산 후보를 추출
- *   2. 엔진 헬퍼(isSameDonorGroup·differenceInYears)를 single source of truth로 재사용
+ *   2. 엔진 헬퍼(isSameDonorGroup)·§47 일 단위 cutoff를 single source of truth로 재사용
  *   3. PriorGiftCandidate → PriorGift 변환
  *
  * 정책:
@@ -16,7 +16,7 @@
  * Plan:   docs/00-pm/gift-tax-prior-gift-history-lookup.plan.md
  */
 
-import { differenceInYears } from "date-fns";
+import { isBefore, subYears } from "date-fns";
 import type {
   DonorRelation,
   GiftDonorRelation,
@@ -121,7 +121,7 @@ function isValidDonor(v: unknown): v is GiftDonorRelation {
  *   4. donor 누락 또는 비-enum → warnings.donor_missing
  *   5. result.taxBase/computedTax/grossGiftValue 누락 → warnings.result_missing
  *   6. priorDate >= current → warnings.future_date (sanity)
- *   7. differenceInYears > 10 → warnings.exceed_10y
+ *   7. §47 일 단위 cutoff 초과(isBefore(priorDate, subYears(current, 10))) → warnings.exceed_10y
  *   8. 위 모두 통과 → candidates.push
  *
  * 정렬: giftDate desc → createdAt desc
@@ -208,7 +208,7 @@ export function filterPriorGiftCandidates(
       continue;
     }
 
-    if (differenceInYears(current, priorDate) > 10) {
+    if (isBefore(priorDate, subYears(current, 10))) {
       warnings.push({
         calculationId: record.id,
         reason: "exceed_10y",
@@ -426,7 +426,7 @@ export function filterInheritancePriorGiftCandidates(
       continue;
     }
 
-    if (differenceInYears(current, priorDate) > 10) {
+    if (isBefore(priorDate, subYears(current, 10))) {
       warnings.push({
         calculationId: record.id,
         reason: "exceed_10y",

@@ -2,6 +2,21 @@
 
 > 멀티 에이전트 워크플로(15영역 병렬 리뷰 → 적대적 검증) 산출물. 엔진+UI+테스트.
 > 결과: 제기 46 → **확정 31** (반증 기각 15). HIGH 9 · MEDIUM 12 · LOW 10.
+
+## 해결 현황 (2026-06-04 — 확정 31건 전건 수정·푸시 완료)
+
+| 그룹 | 상태 |
+|---|---|
+| **HIGH** | G-H1✅(§47 cutoff 회귀) G-H2✅(§159 양도가액) G-H3✅(buildInput 추출+테스트) G-H4✅(buildBurdenedGiftInfo 테스트) + §47 중복검출 5건 동일 근본(G-H1) |
+| **MEDIUM** | G-M1✅(함수 단일화) M2✅(isMinorDonee) M3✅(donor→donorRelation) M4✅(isSameDonorGroup) M5✅(라벨) M6✅(giftDate) M7✅(startup) M8✅(복원 Date) M9✅(toISOString) M10✅(anchor 재배선) M11✅(§47 경계) M12✅(route 가드) |
+| **LOW** | §69 formula✅·이력모달 boundary✅(prior-gift-lookup 일단위)·isGenerationSkip✅(donor 파생)·creditLimit BigInt✅·priorGifts donor✅(주석)·§53의2 게이트✅·입도 anchor✅·G18✅·E13✅·§53fallback✅ |
+
+**핵심**: G-H1은 §13 일단위 수정(`184c709`)이 **증여 실행경로(`gift-prior-aggregation.ts` 3-arg)를 누락한 회귀** — 6개 영역 중복검출. 도과 사전증여 1건으로 finalTax 7,760만 vs 1.0185억 과대였음.
+
+**커밋**(master): `e75abd8`(docs)→`f53bb0f`(§47 cutoff)→`2724540`(§159·§53의2·라벨·§69)→`cf0021d`(GiftTaxForm UI 6건)→`c4`(테스트 가드)→이력모달+docs. 최종 6,378 PASS·tsc 0.
+
+---
+> (이하 원본 리뷰 상세)
 > 검증 표기: `[N/N]`=refuter 코드/probe 재확인 확정. `[미검증]`=refuter StructuredOutput 실패 자동보존(정적 사실 위주, 적용 전 확인 권장).
 
 ## ⚠️ 최우선 — §47 cutoff 회귀 (상속세 §13 수정이 증여 경로 누락)
