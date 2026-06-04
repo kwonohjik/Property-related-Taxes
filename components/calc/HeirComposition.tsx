@@ -159,7 +159,7 @@ function HeirEditor({ heir, index, deathDate, allHeirs, onUpdate, onRemove }: He
         <div className="flex items-center gap-2">
           <span className="text-lg">{RELATION_ICONS[heir.relation]}</span>
           <span className="font-semibold text-sm text-gray-700 dark:text-gray-200">
-            {RELATION_LABELS[heir.relation]} {index + 1}
+            {index + 1}. {RELATION_LABELS[heir.relation]}
           </span>
         </div>
         <div className="flex items-center gap-1">
