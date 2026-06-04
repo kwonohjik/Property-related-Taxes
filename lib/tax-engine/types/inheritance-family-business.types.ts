@@ -187,13 +187,20 @@ export type FamilyBusinessIneligibleReason =
   | "tax_fraud_conviction";              // §18의2⑧1호 (short-circuit)
 
 /**
- * 가업상속공제 한도 (상증법 §18의2① 각 호).
+ * 가업상속공제 한도 (상증법 §18의2① 각 호 + 개정연혁).
  *   0: 자격 미충족 또는 10년 미만
- *   300억: 10~20년 (1호)
- *   400억: 20~30년 (2호)
- *   600억: 30년+ (3호)
+ *   현행(2023.1.1.~): 300억(10~20) / 400억(20~30) / 600억(30+)
+ *   개정연혁(deathDate 시기별): 200억·500억 추가 (2014~2017·2018~2022본)
+ *     - 2018~2022: 200억(10~20) / 300억(20~30) / 500억(30+)
+ *     - 2014~2017: 200억(10~15) / 300억(15~20) / 500억(20+)
  */
-export type FamilyBusinessCap = 0 | 30_000_000_000 | 40_000_000_000 | 60_000_000_000;
+export type FamilyBusinessCap =
+  | 0
+  | 20_000_000_000
+  | 30_000_000_000
+  | 40_000_000_000
+  | 50_000_000_000
+  | 60_000_000_000;
 
 /**
  * §18의2② 200% 가드 메타 (중견기업 한정 — enterpriseSize === "medium"일 때만 산정).
@@ -207,6 +214,12 @@ export interface FamilyBusinessMediumGuard {
   otherEstateNet: number;
   /** otherEstateNet > cap200pct → 공제 배제 */
   exceeded: boolean;
+  /**
+   * 가드 평가 활성 여부 (안전장치, 계획서 §5-1).
+   * taxIfNoFBD ≤ 0(orchestrator 미연동·미산정)이면 false → exceeded 강제 false(오배제 차단).
+   * true일 때만 200% 비교가 유효. UI는 false 시 "미평가" 안내.
+   */
+  active: boolean;
 }
 
 /**

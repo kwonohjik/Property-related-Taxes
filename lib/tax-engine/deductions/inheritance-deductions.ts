@@ -93,9 +93,6 @@ function cohabitShareRate(deathDate?: string): number {
 /** 동거주택공제 최댓값 (§23의2): 6억원 */
 const COHABIT_MAX = 600_000_000;
 
-/** 가업상속공제 최댓값 (§18의2): 600억원 (10년 이상 영위) */
-const FAMILY_BUSINESS_MAX_10Y = 60_000_000_000;
-
 // ============================================================
 // 개별 공제 계산 함수
 // ============================================================
@@ -340,26 +337,10 @@ export function calcCohabitationDeduction(
   };
 }
 
-/**
- * 가업상속공제 (§18의2)
- * 최대 600억 (10년 이상 영위 기준)
- * ※ 가업상속공제 적용 시 배우자공제는 제한 있음 — 단순화하여 한도만 적용
- */
-export function calcFamilyBusinessDeduction(
-  familyBusinessValue: number,
-): { deduction: number; breakdown: CalculationStep[] } {
-  if (familyBusinessValue <= 0) {
-    return { deduction: 0, breakdown: [] };
-  }
-  const deduction = Math.min(familyBusinessValue, FAMILY_BUSINESS_MAX_10Y);
-  return {
-    deduction,
-    breakdown: [
-      { label: "가업상속재산가액", amount: familyBusinessValue },
-      { label: "가업상속공제 (최대 600억)", amount: deduction, lawRef: INH.FAMILY_BUSINESS_DEDUCTION },
-    ],
-  };
-}
+// 가업상속공제 계산은 family-business.ts 의 calcFamilyBusinessDeductionPhase2 /
+// calcFamilyBusinessDeductionDirect / calcFamilyBusinessDeductionLegacy 로 일원화됨
+// (구 calcFamilyBusinessDeduction 단일 600억 함수 + FAMILY_BUSINESS_MAX_10Y 상수는
+//  배우자공제 중복적용 정합·개정연혁 한도 정밀화로 삭제 — 계획서 §5-9 dead-code 정리).
 
 // ============================================================
 // §24 종합한도
@@ -680,6 +661,7 @@ export function calcInheritanceDeductions(
       input.familyBusinessValue ?? 0,
       input.familyBusinessYears,
       INH.FAMILY_BUSINESS_DEDUCTION,
+      input.deathDate, // 개정연혁 한도 (계획서 §5-6) — 미입력 시 현행본
     );
   })();
   const familyBusinessDeduction = bizPhaseResult.deduction;
