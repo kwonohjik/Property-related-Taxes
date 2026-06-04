@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { VERIFICATION_MANIFEST } from "@/lib/legal-verification/verifier-manifest";
+import type { UncoveredLawGroup } from "@/lib/legal-verification/coverage";
 
 type VerifyStatus = "PASS" | "FAIL" | "ERROR";
 
@@ -29,6 +30,15 @@ interface VerifyResponse {
   error?: string;
 }
 
+interface CoverageResponse {
+  totalArticles: number;
+  verifiedArticles: number;
+  uncoveredCount: number;
+  coverageRate: number;
+  byLaw: UncoveredLawGroup[];
+  error?: string;
+}
+
 const STATUS_STYLE: Record<VerifyStatus, string> = {
   PASS:  "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300",
   FAIL:  "bg-red-100  text-red-800  dark:bg-red-900/40  dark:text-red-300",
@@ -46,6 +56,10 @@ export function LegalVerifyPanel() {
   const [data, setData]           = useState<VerifyResponse | null>(null);
   const [expanded, setExpanded]   = useState(false);
 
+  const [covLoading, setCovLoading]   = useState(false);
+  const [covData, setCovData]         = useState<CoverageResponse | null>(null);
+  const [covExpanded, setCovExpanded] = useState(false);
+
   async function runVerify() {
     setLoading(true);
     setData(null);
@@ -58,6 +72,24 @@ export function LegalVerifyPanel() {
       setData({ error: "네트워크 오류", summary: { total:0, pass:0, fail:0, error:0, elapsed:"0" }, results: [] });
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function runCoverage() {
+    setCovLoading(true);
+    setCovData(null);
+    try {
+      const res = await fetch("/api/admin/legal-coverage");
+      const json: CoverageResponse = await res.json();
+      setCovData(json);
+      setCovExpanded(true);
+    } catch {
+      setCovData({
+        error: "네트워크 오류",
+        totalArticles: 0, verifiedArticles: 0, uncoveredCount: 0, coverageRate: 0, byLaw: [],
+      });
+    } finally {
+      setCovLoading(false);
     }
   }
 
@@ -74,14 +106,72 @@ export function LegalVerifyPanel() {
             법제처 Open API — {VERIFICATION_MANIFEST.length}개 조문 키워드 일치 여부 확인
           </p>
         </div>
-        <button
-          onClick={runVerify}
-          disabled={loading}
-          className="shrink-0 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition hover:bg-primary/90 disabled:opacity-50"
-        >
-          {loading ? "검증 중…" : "검증 실행"}
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            onClick={runCoverage}
+            disabled={covLoading}
+            className="rounded-md border bg-background px-3 py-1.5 text-xs font-medium transition hover:bg-accent disabled:opacity-50"
+          >
+            {covLoading ? "점검 중…" : "커버리지 점검"}
+          </button>
+          <button
+            onClick={runVerify}
+            disabled={loading}
+            className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition hover:bg-primary/90 disabled:opacity-50"
+          >
+            {loading ? "검증 중…" : "검증 실행"}
+          </button>
+        </div>
       </div>
+
+      {/* 커버리지 점검 결과 */}
+      {covLoading && (
+        <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
+          <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          legal-codes 인용 ↔ 검증 매니페스트 대조 중…
+        </div>
+      )}
+
+      {covData && !covData.error && (
+        <div className="mt-3">
+          <div className="rounded-md bg-sky-100 px-3 py-2 text-xs font-medium text-sky-800 dark:bg-sky-900/40 dark:text-sky-300">
+            📊 검증 커버리지 {(covData.coverageRate * 100).toFixed(1)}% — 인용 조문{" "}
+            {covData.totalArticles}개 중 검증 {covData.verifiedArticles}개 · 미검증{" "}
+            {covData.uncoveredCount}개
+          </div>
+
+          {covData.uncoveredCount > 0 && (
+            <>
+              <button
+                onClick={() => setCovExpanded((v) => !v)}
+                className="mt-2 text-xs text-muted-foreground hover:text-foreground transition"
+              >
+                {covExpanded ? "▲ 미검증 조문 접기" : "▼ 미검증 조문 보기"}
+              </button>
+
+              {covExpanded && (
+                <div className="mt-2 max-h-72 space-y-2 overflow-y-auto rounded border p-3 text-xs">
+                  {covData.byLaw.map((g) => (
+                    <div key={g.law}>
+                      <div className="font-medium">
+                        {g.law}{" "}
+                        <span className="text-muted-foreground">({g.articles.length})</span>
+                      </div>
+                      <div className="mt-0.5 font-mono text-muted-foreground">
+                        {g.articles.join(", ")}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
+      {covData?.error && (
+        <p className="mt-3 text-xs text-red-600 dark:text-red-400">{covData.error}</p>
+      )}
 
       {/* 로딩 */}
       {loading && (

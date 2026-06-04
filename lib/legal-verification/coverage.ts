@@ -72,3 +72,28 @@ export function computeCoverageGap(citedCitations: string[]): CoverageGap {
     coverageRate: citedKeys.size ? verifiedArticles / citedKeys.size : 1,
   };
 }
+
+export interface UncoveredLawGroup {
+  /** 법령명 (예: "상속세 및 증여세법") */
+  law: string;
+  /** 미검증 조문 번호 목록 (예: ["제11조", "제18조의2"]) */
+  articles: string[];
+}
+
+/**
+ * 미검증 조문 키 목록("법령명 제N조[의M]")을 법령명별로 그룹핑한다.
+ * 법령명은 가나다 정렬, 조문은 입력 순서를 유지한다(computeCoverageGap이 이미 정렬).
+ */
+export function groupUncoveredByLaw(uncovered: string[]): UncoveredLawGroup[] {
+  const byLaw = new Map<string, string[]>();
+  for (const key of uncovered) {
+    const m = key.match(/^(.*?)\s(제\d+조(?:의\d+)?)$/);
+    const law = m ? m[1] : key;
+    const article = m ? m[2] : key;
+    if (!byLaw.has(law)) byLaw.set(law, []);
+    byLaw.get(law)!.push(article);
+  }
+  return [...byLaw.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0], "ko"))
+    .map(([law, articles]) => ({ law, articles }));
+}
