@@ -81,6 +81,32 @@ test.describe("연부연납 일정표 (§71·§72)", () => {
     expect(await rows.count()).toBeGreaterThanOrEqual(6);
   });
 
+  test("INST-E2E-3: 비거주자 → 신고기한 9개월 안내(§67④) 노출", async ({ page }) => {
+    test.setTimeout(90_000);
+
+    // Step0: 비거주자 선택 + 자녀
+    await page.goto("/calc/inheritance-tax");
+    await page.getByLabel("연도").first().fill("2024");
+    await page.getByLabel("월").first().fill("6");
+    await page.getByLabel("일").first().fill("10");
+    await page.getByRole("button", { name: /비거주자/ }).click();
+    await page.getByRole("button", { name: /상속인 추가/ }).click();
+    await page.getByText("자녀", { exact: true }).click();
+    await page.getByRole("button", { name: /^다음/ }).click(); // → Step1
+
+    await addLandAsset(page);
+    await gotoStep4(page);
+
+    await page.getByText("연부연납 신청 (상증법 §71)").click(); // ON
+    await page.getByRole("button", { name: /계산하기/ }).click();
+    await expect(page.getByText("상속세 결정세액")).toBeVisible({ timeout: 20_000 });
+
+    // 9개월 안내 노출
+    await expect(
+      page.getByTestId("installment-schedule-card").getByText(/비거주자.*9개월/),
+    ).toBeVisible();
+  });
+
   test("INST-E2E-2: 토글 OFF → 적격 안내 카드만(상세 표 없음)", async ({ page }) => {
     test.setTimeout(90_000);
 

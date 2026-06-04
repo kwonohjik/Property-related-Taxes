@@ -256,6 +256,33 @@ describe("연부연납 — 가업상속 모드 B (grace10, §68①1호)", () => 
   });
 });
 
+describe("연부연납 — 가산율 연혁 + 신고기한 9개월(§67④)", () => {
+  it("INS-15 현행 가산율 = 연 3.1% (국기칙 §19의3, 2025.3.21~)", () => {
+    // 단일 율 구간(2025.3.21~)·미래 회차로 3.1% 적용 확인
+    const r = calcInstallmentSchedule({
+      finalTax: 100_000_000,
+      filingDeadline: new Date("2026-06-30"),
+      requestedYears: 1,
+      today: new Date("2030-01-01"),
+      // futureSurchargeRate 미지정 → CURRENT_SURCHARGE_RATE(0.031) 기본
+    });
+    expect(CURRENT_SURCHARGE_RATE).toBe(0.031);
+    expect(findRow(r.rows, 1)!.surcharge).toBe(Math.floor(50_000_000 * 0.031));
+  });
+
+  it("INS-16 비거주자 신고기한 9개월 — filingDeadline 주입(말일+9개월)", () => {
+    // 카드가 §67④로 9개월 산정한 filingDeadline을 엔진에 주입 → 회차0 = 그 일자
+    const deadline9 = new Date("2025-03-31"); // 사망 2024-06 → 말일 2024-06-30 +9월 = 2025-03-31
+    const r = calcInstallmentSchedule({
+      finalTax: 600_000_000,
+      filingDeadline: deadline9,
+      requestedYears: 5,
+      today: new Date("2024-01-01"),
+    });
+    expect(findRow(r.rows, 0)!.dueDate.getTime()).toBe(deadline9.getTime());
+  });
+});
+
 describe("연부연납 — 기존 calcInstallmentPayment(증여세 공용) 보존 회귀", () => {
   it("증여세 5년 경로 시그니처·동작 유지", async () => {
     const { calcInstallmentPayment } = await import(

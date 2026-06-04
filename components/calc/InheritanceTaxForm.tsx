@@ -483,6 +483,7 @@ export function InheritanceTaxForm() {
           installmentFamilyBusiness={form.installmentFamilyBusiness}
           installmentFbMode={form.installmentFbMode}
           installmentFutureRate={form.installmentFutureRate}
+          decedentType={form.decedentType}
         />
         <div className="flex justify-end">
           <SaveButton variant="primary" onSave={handleManualSaveForForm} />

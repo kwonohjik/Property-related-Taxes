@@ -130,6 +130,8 @@ interface Props {
   installmentFamilyBusiness?: boolean;
   installmentFbMode?: "straight20" | "grace10";
   installmentFutureRate?: string;
+  /** 거주자/비거주자 — 연부연납 신고기한 6/9개월 산정 (§67④) */
+  decedentType?: "resident" | "non_resident";
 }
 
 export function InheritanceTaxResultView({
@@ -153,6 +155,7 @@ export function InheritanceTaxResultView({
   installmentFamilyBusiness = false,
   installmentFbMode = "straight20",
   installmentFutureRate = "3.1",
+  decedentType = "resident",
 }: Props) {
   const [showValuation, setShowValuation] = useState(false);
   const [pdfBusy, setPdfBusy] = useState(false);
@@ -548,6 +551,7 @@ export function InheritanceTaxResultView({
           familyBusiness={installmentFamilyBusiness}
           fbMode={installmentFbMode}
           futureRate={installmentFutureRate}
+          decedentType={decedentType}
         />
       </PrintSection>
 

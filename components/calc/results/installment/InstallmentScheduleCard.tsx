@@ -24,6 +24,8 @@ export interface InstallmentScheduleCardProps {
   result: InheritanceTaxResult;
   /** 상속개시일(ISO) — 신고기한 산정 (§67① 말일+6개월) */
   deathDate?: string;
+  /** 거주자/비거주자 — 비거주자(외국 주소)는 신고기한 9개월 (§67④) */
+  decedentType?: "resident" | "non_resident";
   enabled: boolean;
   /** 희망 연부연납 기간(년, 문자열) */
   years: string;
@@ -40,6 +42,7 @@ const amountCell = "text-right font-mono tabular-nums whitespace-nowrap";
 export function InstallmentScheduleCard({
   result,
   deathDate,
+  decedentType = "resident",
   enabled,
   years,
   familyBusiness,
@@ -75,10 +78,11 @@ export function InstallmentScheduleCard({
   const reqYears = parseInt(years, 10) || 5;
   const futureRateDecimal = (parseFloat(futureRate) || CURRENT_SURCHARGE_RATE * 100) / 100;
 
-  // 신고기한 = 상속개시일이 속하는 달의 말일부터 6개월 (§67①)
+  // 신고기한 = 상속개시일이 속하는 달의 말일부터 6개월(거주자) / 9개월(비거주자, §67④)
+  const filingMonths = decedentType === "non_resident" ? 9 : 6;
   const filingDeadline = deathDate
-    ? addMonths(endOfMonth(new Date(deathDate)), 6)
-    : addMonths(endOfMonth(new Date()), 6);
+    ? addMonths(endOfMonth(new Date(deathDate)), filingMonths)
+    : addMonths(endOfMonth(new Date()), filingMonths);
 
   const fbValue = result.deductionDetail.familyBusinessDetail?.finalValue ?? 0;
   const useFb = familyBusiness && fbValue > 0;
@@ -211,6 +215,9 @@ export function InstallmentScheduleCard({
 
       {/* 주석 */}
       <div className="space-y-1 border-t border-amber-100 p-3 text-[11px] text-amber-700 dark:border-amber-800 dark:text-amber-300">
+        {decedentType === "non_resident" && (
+          <p>※ 비거주자 — 신고기한을 상속개시월 말일부터 9개월로 산정했습니다(§67④).</p>
+        )}
         {schedule.notes.map((n, i) => (
           <p key={i}>※ {n}</p>
         ))}

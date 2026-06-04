@@ -513,6 +513,17 @@ export function calcInstallmentSchedule(
         "가업상속 10년 거치 방식 — 거치기간(1~10년차) 가산금은 매년 이자 납부 기준으로 계상했습니다. §72 본문(처음 분할납부세액에 신고기한~첫 납부 일수 합산) 문리해석과 다를 수 있어 세무사 확인을 권장합니다.",
       );
     }
+    // §68① 단서: 매년 납부금액 1천만원 초과 요건은 각 호(일반분·가업분)별 적용.
+    // 가업분 1회 분할세액이 1천만원 이하이면 경고(가업분 기간은 법정 고정 — 자동 단축 안 함).
+    const fbPerInstallment = fbSeg
+      .map((s) => s.principal)
+      .filter((p) => p > 0)
+      .reduce((min, p) => Math.min(min, p), Number.POSITIVE_INFINITY);
+    if (Number.isFinite(fbPerInstallment) && fbPerInstallment <= MIN_PER_INSTALLMENT) {
+      notes.push(
+        "가업상속분 1회 분할세액이 1천만원 이하 — §68① 단서(각 회분 1천만원 초과) 요건을 충족하지 못할 수 있습니다(세무사 확인 권장).",
+      );
+    }
   }
 
   // ── 연도(회차) 기준 병합 + 가산금 계산 ────────────────────────────
