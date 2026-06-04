@@ -368,8 +368,8 @@ export function FarmingEligibilitySection({
             <ToggleCard
               tone="rose"
               size="sm"
-              title="사업소득+총급여 3,700만 이상 과세기간 존재 (§16⑭)"
-              description="피상속인 또는 상속인 — 영농소득·부동산임대·농어가부업 제외 (후계자 트랙에도 적용)"
+              title="사업소득+총급여 3,700만(1호) 또는 총수입금액 기준(2호) 이상 과세기간 (§16⑭)"
+              description="피상속인 또는 상속인 — 영농소득·부동산임대·농어가부업 제외. 2호 총수입금액 §208⑤2호 복식부기 기준(농업 3억 등, 2026.2.27 신설). 후계자 트랙에도 적용"
               checked={farming.hasDisqualifyingIncome ?? false}
               onCheckedChange={(v) =>
                 update({ hasDisqualifyingIncome: v ? true : undefined })

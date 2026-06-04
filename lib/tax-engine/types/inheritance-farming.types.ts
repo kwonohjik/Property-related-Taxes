@@ -112,8 +112,14 @@ export interface FarmingDeductionDetail {
   ineligibleReasons: string[];
   /** 엔진이 받은 farmingAssetValue (사용자 명시 또는 UI suggest 결과 후 store에 저장된 값) */
   appliedAssetValue: number;
-  /** 30억 한도 적용 후 최종 공제액 = Math.min(appliedAssetValue, FARMING_MAX). eligible=false 시 0 */
+  /** 한도 적용 후 최종 공제액 = Math.min(appliedAssetValue, appliedLimit). eligible=false 시 0 */
   cappedDeduction: number;
+  /**
+   * 적용 한도 (상속개시 연도별, §18의3① + 부칙) — resolveFarmingDeductionLimit(deathDate). 결과 카드 echo.
+   * optional — 엔진(calcFarmingDeduction)은 반환 3곳 모두 항상 채우나, legacy detail mock 호환을 위해 optional.
+   * 결과 카드는 `detail.appliedLimit || 3_000_000_000` fallback 처리.
+   */
+  appliedLimit?: number;
   /** 부록 A — heirAssessments 입력 시 자동 도출된 자격자 ID 수 (undefined 시 부록 A 미사용) */
   qualifiedHeirCount?: number;
   /** 부록 A — heirAssessments 입력 시 전체 평가 대상 heir 수 */

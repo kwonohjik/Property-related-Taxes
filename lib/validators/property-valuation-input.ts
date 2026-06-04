@@ -135,6 +135,8 @@ const baseItemSchema = z.object({
     })
     .optional(),
   corporateTotalAssets: z.number().nonnegative().optional(),
+  // 영농 2년 사용 (G4, §16⑤1호) — false=제외, undefined=충족 가정
+  farmingUsedTwoYears: z.boolean().optional(),
 });
 
 export const landItemSchema = baseItemSchema.extend({

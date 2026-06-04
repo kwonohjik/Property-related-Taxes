@@ -342,6 +342,7 @@ const FARMING_CATEGORY_LABEL: Record<NonNullable<EstateItem["farmingCategory"]>,
 export function suggestFarmingAssetValue(
   estateItems: EstateItem[],
   farming?: { qualifiedHeirIds?: string[] },
+  deathDate?: string,
 ): DeductionSuggestion {
   const eligible = estateItems.filter((i) => {
     if (i.farmingCategory === undefined) return false;
@@ -349,11 +350,18 @@ export function suggestFarmingAssetValue(
     if (i.farmingCategory === "fishing_right" && i.fishingLicenseExcluded === true) {
       return false;
     }
+    // G4: §16⑤1호 본문 — 상속개시일 2년 전부터 영농 사용 (undefined=충족 가정, false=제외)
+    if (i.farmingUsedTwoYears === false) return false;
     return true;
   });
   const excludedFishing = estateItems.filter(
     (i) => i.farmingCategory === "fishing_right" && i.fishingLicenseExcluded === true,
   );
+  const excludedTwoYear = estateItems.filter(
+    (i) => i.farmingCategory !== undefined && i.farmingUsedTwoYears === false,
+  );
+  // G3: §16⑤1호 담보채무 차감 — 2026.2.27 이후 상속분부터 (시행령 부칙5). string 비교, deathDate undefined=차감(legacy)
+  const applyMortgage = deathDate === undefined || deathDate >= "2026-02-27";
   if (eligible.length === 0) {
     return {
       value: 0,
@@ -371,7 +379,7 @@ export function suggestFarmingAssetValue(
   for (const item of eligible) {
     const fullValue = getCorporateAdjustedAmount(item);
     let itemValue = fullValue;
-    let itemMortgage = item.mortgageAmount ?? 0;
+    let itemMortgage = applyMortgage ? (item.mortgageAmount ?? 0) : 0;
 
     if (useAllocation && item.heirAllocations && item.heirAllocations.length > 0) {
       // 자격자 분배분만 합산 (§16⑤ 본문)
@@ -412,6 +420,16 @@ export function suggestFarmingAssetValue(
   if (excludedFishing.length > 0) {
     notes.push(
       `ℹ️ 마을어업·협동양식업 면허 ${excludedFishing.length}건 제외 (§16⑤마목 단서)`,
+    );
+  }
+  if (excludedTwoYear.length > 0) {
+    notes.push(
+      `ℹ️ '상속개시일 2년 전부터 영농 사용' 미충족 ${excludedTwoYear.length}건 제외 (§16⑤1호)`,
+    );
+  }
+  if (!applyMortgage) {
+    notes.push(
+      "ℹ️ 2026.2.27 이전 상속 — 담보채무 차감 비적용 (시행령 부칙5). 직접 입력 시 차감 후 금액 입력",
     );
   }
   return {

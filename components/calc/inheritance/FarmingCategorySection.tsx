@@ -120,6 +120,20 @@ export function FarmingCategorySection({
           <p className="text-[10px] text-emerald-700 dark:text-emerald-300 bg-emerald-100/60 dark:bg-emerald-900/30 rounded p-2">
             ⓘ {FARMING_CATEGORY_OPTIONS.find((o) => o.value === item.farmingCategory)?.description}
           </p>
+          <ToggleCard
+            tone={item.farmingUsedTwoYears === false ? "rose" : "emerald"}
+            size="sm"
+            title="상속개시일 2년 전부터 영농 사용 (§16⑤1호)"
+            description={
+              item.farmingUsedTwoYears === false
+                ? "미충족 — 본 자산은 영농상속재산가액에서 제외됩니다 (피상속인 2년 전부터 영농 사용 요건)"
+                : "피상속인이 상속개시일 2년 전부터 영농에 사용한 자산만 영농상속재산. 끄면 제외."
+            }
+            checked={item.farmingUsedTwoYears !== false}
+            onCheckedChange={(v) =>
+              onUpdate({ ...item, farmingUsedTwoYears: v ? undefined : false })
+            }
+          />
           {item.farmingCategory === "fishing_right" && (
             <ToggleCard
               tone="rose"

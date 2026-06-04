@@ -65,12 +65,14 @@ function FarmingDetailContent({ detail }: { detail: FarmingDeductionDetail }) {
     );
   }
 
-  const capped = detail.appliedAssetValue > 3_000_000_000;
+  const limit = detail.appliedLimit || 3_000_000_000;
+  const capped = detail.appliedAssetValue > limit;
   return (
     <div className="mx-4 my-2 space-y-1">
       <div className="text-[11px] text-gray-600 dark:text-gray-400">
         ⓘ 영농자산 {formatKRW(detail.appliedAssetValue)}
-        {capped && ` (30억 한도 적용 → ${formatKRW(detail.cappedDeduction)})`}
+        {` · 적용 한도 ${(limit / 100_000_000).toLocaleString("ko-KR")}억 (상속개시 연도 기준)`}
+        {capped && ` → 한도 적용 ${formatKRW(detail.cappedDeduction)}`}
       </div>
       {detail.qualifiedHeirCount !== undefined && detail.totalHeirCount !== undefined && (
         <div className="text-[10px] text-violet-700 dark:text-violet-300 bg-violet-50 dark:bg-violet-950/30 rounded p-2">

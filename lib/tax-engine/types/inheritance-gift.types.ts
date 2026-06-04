@@ -303,6 +303,11 @@ export interface EstateItem extends EstateLocationFields {
   corporateNonBusinessAssets?: CorporateNonBusinessAssets;
   /** 법인 총자산 (사업무관자산 비율 분모). 미입력 시 차감 미적용 (legacy). */
   corporateTotalAssets?: number;
+  /**
+   * 영농상속재산 — 피상속인이 상속개시일 2년 전부터 영농에 사용 (§16⑤1호 본문).
+   * undefined=충족 가정(legacy 호환), false=미충족 → suggestFarmingAssetValue에서 제외.
+   */
+  farmingUsedTwoYears?: boolean;
 
   // 위치 필드(좌표·주소·시·군·구 코드)는 EstateLocationFields mixin — 본 인터페이스에 직접 정의 안 함
 }
