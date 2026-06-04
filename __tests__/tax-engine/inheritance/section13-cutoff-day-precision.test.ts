@@ -22,8 +22,8 @@ import { describe, it, expect } from "vitest";
 import { calcInheritanceTax } from "@/lib/tax-engine/inheritance-tax";
 import {
   isWithin13Cutoff,
-  aggregatePriorGiftsForGift,
 } from "@/lib/tax-engine/inheritance-gift-common";
+import { aggregatePriorGiftsForGift } from "@/lib/tax-engine/gift-prior-aggregation";
 import type {
   InheritanceTaxInput,
   Heir,
@@ -83,29 +83,32 @@ describe("(A) H-1: isWithin13Cutoff — 일(日) 단위 경계 정합", () => {
 
 // ────────────────────────────────────────────────────────────
 // (A) H-1 §47 경로: aggregatePriorGiftsForGift 일 단위 경계
+// 재배선: 2-arg(inheritance-gift-common) → 3-arg(gift-prior-aggregation) 실제 증여 경로
 // ────────────────────────────────────────────────────────────
-describe("(A) H-1: aggregatePriorGiftsForGift §47 — 일(日) 단위 경계 정합", () => {
+describe("(A) H-1: aggregatePriorGiftsForGift §47 — 일(日) 단위 경계 정합 [3-arg, 실제 경로]", () => {
   /**
    * giftDate(현재 증여일) = 2026-05-21
    * boundary = subYears(2026-05-21, 10) = 2016-05-21
    * 이전 증여일 2016-05-21 → 포함 / 2016-05-20 → 제외
+   *
+   * 3-arg 재배선: donor="father", currentDonor="father" → 동일 그룹(A) → 그룹 필터 통과
    */
-  it("CUTOFF-A5: §47 10년 경계일(2016-05-21) 이전증여 → 포함", () => {
+  it("CUTOFF-A5: §47 10년 경계일(2016-05-21) 이전증여 → 포함 [3-arg 실제 경로]", () => {
     const priorGifts: PriorGift[] = [
-      { giftDate: "2016-05-21", isHeir: false, giftAmount: 200_000_000, giftTaxPaid: 0 },
+      { giftDate: "2016-05-21", isHeir: false, giftAmount: 200_000_000, giftTaxPaid: 0, donor: "father" },
     ];
-    const result = aggregatePriorGiftsForGift(priorGifts, "2026-05-21");
+    const result = aggregatePriorGiftsForGift(priorGifts, "2026-05-21", "father");
     expect(result.totalAmount).toBe(200_000_000);
   });
 
-  it("CUTOFF-A6: §47 10년 경계일 전일(2016-05-20) 이전증여 → 제외 (일 단위 정합)", () => {
-    // 구버전: differenceInYears()=10 → 10>10=false → 포함(버그)
-    // 신버전: isBefore(2016-05-20, 2016-05-21)=true → 제외(정합)
+  it("CUTOFF-A6: §47 10년 경계일 전일(2016-05-20) 이전증여 → 제외 (일 단위 정합) [3-arg 실제 경로]", () => {
+    // 구버전(bug): differenceInYears()=10 → 10>10=false → 포함(버그)
+    // 신버전(fix): isBefore(2016-05-20, 2016-05-21)=true → 제외(정합)
     const priorGifts: PriorGift[] = [
-      { giftDate: "2016-05-20", isHeir: false, giftAmount: 300_000_000, giftTaxPaid: 0 },
-      { giftDate: "2016-05-21", isHeir: false, giftAmount: 200_000_000, giftTaxPaid: 0 },
+      { giftDate: "2016-05-20", isHeir: false, giftAmount: 300_000_000, giftTaxPaid: 0, donor: "father" },
+      { giftDate: "2016-05-21", isHeir: false, giftAmount: 200_000_000, giftTaxPaid: 0, donor: "father" },
     ];
-    const result = aggregatePriorGiftsForGift(priorGifts, "2026-05-21");
+    const result = aggregatePriorGiftsForGift(priorGifts, "2026-05-21", "father");
     // 2016-05-20 제외, 2016-05-21 포함 → 200M만
     expect(result.totalAmount).toBe(200_000_000);
   });

@@ -35,6 +35,7 @@ import {
   aggregatePriorGiftsForGift,
   getDonorGroup,
 } from "./gift-prior-aggregation";
+import { safeMultiplyThenDivide } from "./tax-utils";
 import { calcGiftTaxCredits } from "./inheritance-gift-tax-credit";
 import { buildFilingFormRows } from "./gift-filing-form-rows";
 import { buildBesshi10Rows } from "./gift-tax-filing-form-besshi10";
@@ -221,9 +222,7 @@ export function calcGiftTax(
           creditLimit:
             taxBase === 0
               ? 0
-              : Math.floor(
-                  (computedTax * priorAggregation.priorAddedTaxBase) / taxBase,
-                ),
+              : safeMultiplyThenDivide(computedTax, priorAggregation.priorAddedTaxBase, taxBase),
           priorPaidCredit: creditResult.giftTaxCredit,
         }
       : null;
@@ -245,6 +244,9 @@ export function calcGiftTax(
     reportingCredit: creditResult.filingCredit,
     finalTax,
     hasPriorGifts: priorAggregation.matchedPriorGifts.length > 0,
+    // §69 formula 표시 정합 — 외국납부(§59) 차감 후 기준액 echo
+    filingCreditBase: creditResult.filingCreditBase,
+    foreignTaxCredit: creditResult.foreignTaxCredit,
   });
 
   const partialResult = {

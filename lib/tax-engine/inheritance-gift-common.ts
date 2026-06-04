@@ -368,41 +368,6 @@ export function aggregatePriorGiftsForInheritance(
   return { totalAmount, breakdown };
 }
 
-/**
- * 증여세 과세가액 합산: 증여일 전 10년 이내 동일인 사전증여 (§47)
- *
- * @param priorGifts 10년 이내 동일인 증여 내역
- * @param giftDate 현재 증여일 (ISO date)
- */
-export function aggregatePriorGiftsForGift(
-  priorGifts: PriorGift[],
-  giftDate: string,
-): { totalAmount: number; totalTaxPaid: number; breakdown: CalculationStep[] } {
-  const current = new Date(giftDate);
-  // §47②: "해당 증여일 전 10년 이내" — 일(日) 단위 비교.
-  // boundary = subYears(증여일, 10). 이전 증여일이 boundary 이상이면 포함.
-  // 수정 이력: elapsedYears > 10(만 연수 절사 버그) → isBefore(giftDate, boundary)(일 단위).
-  const boundary47 = subYears(current, 10);
-  const breakdown: CalculationStep[] = [];
-  let totalAmount = 0;
-  let totalTaxPaid = 0;
-
-  for (const gift of priorGifts) {
-    // 증여일이 boundary보다 이전이면 도과(10년 초과) → 제외
-    if (isBefore(new Date(gift.giftDate), boundary47)) continue;
-
-    totalAmount += gift.giftAmount;
-    totalTaxPaid += gift.giftTaxPaid;
-    breakdown.push({
-      label: `기증여 합산 (${gift.giftDate})`,
-      amount: gift.giftAmount,
-      lawRef: GIFT.TAXABLE_VALUE,
-    });
-  }
-
-  return { totalAmount, totalTaxPaid, breakdown };
-}
-
 // ============================================================
 // 장례비 공제 계산 (§14 ③)
 // ============================================================

@@ -15,7 +15,7 @@
  * Pure function. DB 호출 없음. UI display 책임 없음.
  */
 
-import { differenceInYears } from "date-fns";
+import { isBefore, subYears } from "date-fns";
 import { GIFT } from "./legal-codes";
 import type {
   GiftDonorRelation,
@@ -105,12 +105,16 @@ export function aggregatePriorGiftsForGift(
   currentDonor: GiftDonorRelation,
 ): PriorAggregationResult {
   const current = new Date(giftDate);
+  // §47②: "해당 증여일 전 10년 이내에 동일인으로부터 받은 증여재산가액"
+  // boundary = subYears(증여일, 10). 경계일 당일 포함, 전일 제외 (민법 §160②).
+  // 수정: differenceInYears(만 연수 절사 버그) → isBefore(일 단위, 경계일 전일 제외).
+  const boundary47 = subYears(current, 10);
   const matched: PriorGift[] = [];
   const warnings: string[] = [];
 
   for (const gift of priorGifts) {
-    const elapsedYears = differenceInYears(current, new Date(gift.giftDate));
-    if (elapsedYears > 10) continue;
+    // 사전증여일이 boundary보다 이전이면 도과(10년 초과) → 제외
+    if (isBefore(new Date(gift.giftDate), boundary47)) continue;
 
     if (!gift.donor) {
       warnings.push(

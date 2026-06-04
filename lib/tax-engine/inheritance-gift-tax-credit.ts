@@ -13,6 +13,7 @@
 
 import { TAX_CREDIT, GIFT as GIFT_LAW } from "./legal-codes";
 import { isWithin13Cutoff } from "./inheritance-gift-common";
+import { safeMultiplyThenDivide } from "./tax-utils";
 import type {
   CalculationStep,
   InheritanceTaxCreditInput,
@@ -372,9 +373,7 @@ export function calcGiftTaxCredits(params: GiftTaxCreditParams): TaxCreditResult
     priorGiftComputedTax > 0 && aggregatedTaxBase > 0 && priorGiftAddedTaxBase > 0;
 
   if (usePhaseAFormula) {
-    const limit58 = Math.floor(
-      (computedTax * priorGiftAddedTaxBase) / aggregatedTaxBase,
-    );
+    const limit58 = safeMultiplyThenDivide(computedTax, priorGiftAddedTaxBase, aggregatedTaxBase);
     priorPaidCredit = Math.min(priorGiftComputedTax, limit58);
     allBreakdown.push({
       label: `§58 ① 한도 — ⑦ × ⑤_prior / ⑤`,
