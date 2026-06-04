@@ -50,6 +50,7 @@ import {
   calcFuneralExpenseDeduction,
 } from "./inheritance-gift-common";
 import { calcInheritanceTaxCredits } from "./inheritance-gift-tax-credit";
+import { buildFamilyBusinessPostMgmtMeta } from "./credits/family-business-postmgmt-orchestrator";
 import { evaluatePresumedInheritance } from "./presumed-inheritance";
 import { calcCorporateExemption } from "./inheritance-corporate-exemption";
 import { calcHeirAllocation } from "./inheritance-allocation";
@@ -726,6 +727,14 @@ export function calcInheritanceTax(
       }
     : undefined;
 
+  // 가업상속공제 사후관리 트래킹 메타 (PR-2) — 가업공제 > 0 시 prefill 소스 set (계산 영향 0)
+  const familyBusinessPostMgmtMeta = buildFamilyBusinessPostMgmtMeta({
+    familyBusinessDeduction: deductionResult.familyBusinessDeduction,
+    familyBusinessDetail: deductionResult.familyBusinessDetail,
+    estateItems: input.estateItems,
+    deathDate: input.deathDate,
+  });
+
   return {
     grossEstateValue,
     exemptAmount,
@@ -744,6 +753,7 @@ export function calcInheritanceTax(
     deductionDetail: deductionResult,
     creditDetail: creditResult,
     valuationResults,
+    familyBusinessPostMgmtMeta,
     breakdown: allBreakdown,
     appliedLaws: Array.from(allLaws),
     warnings: allWarnings,

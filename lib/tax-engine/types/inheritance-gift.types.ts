@@ -842,6 +842,7 @@ export interface InheritanceDeductionInput {
 // 분리 타입 barrel (800줄 정책)
 import type { FarmingInheritanceInput, FarmingDeductionDetail } from "./inheritance-farming.types";
 import type { FamilyBusinessCategory, FamilyBusinessInheritanceInput, FamilyBusinessDeductionDetail } from "./inheritance-family-business.types";
+import type { FamilyBusinessPostMgmtMeta } from "./inheritance-family-business-postmgmt.types";
 import type { CorporateNonBusinessAssets } from "./inheritance-corporate-non-business.types";
 import type { EstateLocationFields } from "./inheritance-asset-location.types";
 import type {
@@ -853,6 +854,21 @@ import type {
 } from "./inheritance-deduction-detail.types";
 export type { FarmingInheritanceInput, FarmingDeductionDetail, FarmingEligibilityResult } from "./inheritance-farming.types";
 export type { FamilyBusinessCategory, FamilyBusinessInheritanceInput, FamilyBusinessIneligibleReason, FamilyBusinessDeductionDetail, FamilyBusinessCap, FamilyBusinessMediumGuard } from "./inheritance-family-business.types";
+export type {
+  FamilyBusinessPostMgmtMeta,
+  FamilyBusinessPostMgmtInput,
+  FamilyBusinessPostMgmtResult,
+  PostMgmtViolationDetail,
+  PostMgmtEmploymentResult,
+  ViolationEvent,
+  JustifiableReasonEvent,
+  JustifiableReasonCode,
+  CessationSubType,
+  EmploymentTracking,
+  MonthlyEmploymentData,
+  PostMgmtAssetType,
+  AmendmentReturnData,
+} from "./inheritance-family-business-postmgmt.types";
 export type { CorporateNonBusinessAssets, CorporateStockAdjustedResult } from "./inheritance-corporate-non-business.types";
 export type { LatLng, EstateAddress } from "./inheritance-asset-location.types";
 export type {
@@ -1047,6 +1063,12 @@ export interface InheritanceTaxResult extends TaxResultMeta {
   deductionDetail: InheritanceDeductionResult;
   creditDetail: TaxCreditResult;
   valuationResults: PropertyValuationResult[];
+  /**
+   * 가업상속공제 사후관리 트래킹 메타 (PR-2 — 계획 §2-1).
+   * 가업상속공제 > 0 시에만 채워짐(직접입력 포함). 사후관리 시뮬레이터 prefill 소스.
+   * 계산 영향 0 (echo·prefill 전용).
+   */
+  familyBusinessPostMgmtMeta?: FamilyBusinessPostMgmtMeta;
 
   // ===== 종합사례 PDF 확장 (Design §2-5) =====
   /** 추정상속재산 §15 결과 */
