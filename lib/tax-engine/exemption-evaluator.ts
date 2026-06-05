@@ -17,25 +17,12 @@ import type {
   ExemptionInput,
   ExemptionResult,
   ExemptionCheckedItem,
+  ExemptionItemResult,
 } from "./types/inheritance-gift.types";
 
-// ExemptionCheckedItem은 types/inheritance-gift.types.ts에 정의됨
-// 하위 호환을 위해 re-export
-export type { ExemptionCheckedItem };
-
-
-/** 비과세 평가 상세 결과 (항목별) */
-export interface ExemptionItemResult {
-  ruleId: string;
-  ruleName: string;
-  claimedAmount: number;
-  /** 실제 인정된 비과세 금액 */
-  exemptAmount: number;
-  /** 한도 초과로 일반 과세되는 금액 */
-  taxableOverflow: number;
-  breakdown: CalculationStep[];
-  warnings: string[];
-}
+// ExemptionCheckedItem·ExemptionItemResult는 types/inheritance-exemption.types.ts에 정의됨
+// (D-8 순환 의존 회피: evaluator→types 단방향). 하위 호환 위해 re-export.
+export type { ExemptionCheckedItem, ExemptionItemResult };
 
 // ============================================================
 // 항목별 비과세 계산
@@ -56,36 +43,50 @@ function evaluateSingleExemption(
   let taxableOverflow = 0;
   const breakdown: CalculationStep[] = [];
 
-  // === 금양임야: 600평(1,983㎡) 초과분 과세 ===
+  // === 금양임야: 9,900㎡ 초과분 면적 안분 과세 (상증령 §8③1호) ===
   if (rule.id === "inh_forest_burial") {
-    const limitM2 = rule.limitAreaM2 ?? 1983;
-    const claimedM2 = item.areaM2 ?? 0;
+    const limitM2 = rule.limitAreaM2 ?? EXEMPTION.GRAVE_FOREST_LIMIT_M2;
+    const claimedM2 = item.claimedAreaM2 ?? item.areaM2 ?? 0;
     if (claimedM2 > limitM2) {
       const exemptRatio = limitM2 / claimedM2;
       exemptAmount = Math.floor(item.claimedAmount * exemptRatio);
       taxableOverflow = item.claimedAmount - exemptAmount;
-      warnings.push(`금양임야 면적 ${claimedM2}㎡ 중 ${limitM2}㎡(600평)만 비과세, 초과분 ${taxableOverflow.toLocaleString()} 과세`);
+      warnings.push(`금양임야 면적 ${claimedM2}㎡ 중 ${limitM2}㎡(9,900㎡ 한도)만 비과세, 초과분 ${taxableOverflow.toLocaleString()} 과세 (상증령 §8③1호)`);
     } else {
       exemptAmount = item.claimedAmount;
     }
-    breakdown.push({ label: `금양임야 비과세 (${Math.min(claimedM2, limitM2)}㎡)`, amount: exemptAmount, lawRef: EXEMPTION.INH_NONTAXABLE });
-    if (taxableOverflow > 0) breakdown.push({ label: "초과 면적 과세", amount: taxableOverflow });
+    breakdown.push({ label: `금양임야 비과세 (${Math.min(claimedM2, limitM2)}㎡)`, amount: exemptAmount, lawRef: EXEMPTION.GRAVE_FOREST_AREA });
+    if (taxableOverflow > 0) breakdown.push({ label: "금양임야 초과 면적 과세", amount: taxableOverflow });
     return { ...base, exemptAmount, taxableOverflow, breakdown, warnings };
   }
 
-  // === 묘토: 1,200평(3,966㎡) 초과분 과세 ===
+  // === 묘토: 1,980㎡ 초과분 면적 안분 과세 (상증령 §8③2호) ===
   if (rule.id === "inh_grave_land") {
-    const limitM2 = rule.limitAreaM2 ?? 3966;
-    const claimedM2 = item.areaM2 ?? 0;
+    const limitM2 = rule.limitAreaM2 ?? EXEMPTION.GRAVE_LAND_LIMIT_M2;
+    const claimedM2 = item.claimedAreaM2 ?? item.areaM2 ?? 0;
     if (claimedM2 > limitM2) {
       const exemptRatio = limitM2 / claimedM2;
       exemptAmount = Math.floor(item.claimedAmount * exemptRatio);
       taxableOverflow = item.claimedAmount - exemptAmount;
-      warnings.push(`묘토 면적 ${claimedM2}㎡ 중 ${limitM2}㎡(1,200평)만 비과세`);
+      warnings.push(`묘토 면적 ${claimedM2}㎡ 중 ${limitM2}㎡(1,980㎡ 한도)만 비과세, 초과분 ${taxableOverflow.toLocaleString()} 과세 (상증령 §8③2호)`);
     } else {
       exemptAmount = item.claimedAmount;
     }
-    breakdown.push({ label: `묘토 비과세 (${Math.min(claimedM2, limitM2)}㎡)`, amount: exemptAmount, lawRef: EXEMPTION.INH_NONTAXABLE });
+    breakdown.push({ label: `묘토 비과세 (${Math.min(claimedM2, limitM2)}㎡)`, amount: exemptAmount, lawRef: EXEMPTION.GRAVE_LAND_AREA });
+    if (taxableOverflow > 0) breakdown.push({ label: "묘토 초과 면적 과세", amount: taxableOverflow });
+    return { ...base, exemptAmount, taxableOverflow, breakdown, warnings };
+  }
+
+  // === 족보·제구: 1천만원 한도 (상증령 §8③3호) — social_norm 일반 분기보다 앞 (R1-3 fallthrough 방지) ===
+  if (rule.id === "inh_ritual_items") {
+    const limit = rule.limitAmount ?? EXEMPTION.RITUAL_AMOUNT_LIMIT;
+    exemptAmount = Math.min(item.claimedAmount, limit);
+    taxableOverflow = item.claimedAmount - exemptAmount;
+    breakdown.push({ label: `족보·제구 비과세 (1천만원 한도)`, amount: exemptAmount, lawRef: EXEMPTION.GRAVE_RITUAL });
+    if (taxableOverflow > 0) {
+      breakdown.push({ label: "족보·제구 1천만원 초과 과세", amount: taxableOverflow });
+      warnings.push(`족보·제구 1천만원 한도 초과분 ${taxableOverflow.toLocaleString()} 과세 (상증령 §8③3호 단서)`);
+    }
     return { ...base, exemptAmount, taxableOverflow, breakdown, warnings };
   }
 
@@ -177,6 +178,48 @@ export function validateMarriageExemptionOnce(
 }
 
 // ============================================================
+// 금양임야+묘토 합산 2억원 한도 (상증령 §8③ 단서)
+// ============================================================
+
+/**
+ * 금양임야(inh_forest_burial)+묘토(inh_grave_land) 비과세액 합산이 2억원 초과 시
+ * 비율 안분으로 2억원까지만 인정. floor 잔액은 묘토에 흡수(합계 정확히 2억).
+ * itemResults를 in-place 수정 (exemptAmount·taxableOverflow·warnings).
+ */
+function applyGraveGroupCap(itemResults: ExemptionItemResult[]): void {
+  const forestIdx = itemResults.findIndex((r) => r.ruleId === "inh_forest_burial");
+  const graveIdx = itemResults.findIndex((r) => r.ruleId === "inh_grave_land");
+  if (forestIdx === -1 && graveIdx === -1) return;
+
+  const forestExempt = forestIdx >= 0 ? itemResults[forestIdx].exemptAmount : 0;
+  const graveExempt = graveIdx >= 0 ? itemResults[graveIdx].exemptAmount : 0;
+  const groupSum = forestExempt + graveExempt;
+  const LIMIT = EXEMPTION.GRAVE_GROUP_AMOUNT_LIMIT;
+  if (groupSum <= LIMIT) return;
+
+  // 비율 안분 (정수 floor) — 잔액은 묘토 흡수 (합계 정확히 2억)
+  const cappedForest = forestIdx >= 0 ? Math.floor((LIMIT * forestExempt) / groupSum) : 0;
+  const cappedGrave = LIMIT - cappedForest;
+
+  if (forestIdx >= 0) {
+    const prev = itemResults[forestIdx].exemptAmount;
+    itemResults[forestIdx].taxableOverflow += prev - cappedForest;
+    itemResults[forestIdx].exemptAmount = cappedForest;
+    itemResults[forestIdx].warnings.push(
+      `금양임야·묘토 합산 2억원 한도 초과 — 금양임야 비과세 ${cappedForest.toLocaleString()}원으로 조정 (상증령 §8③ 단서)`,
+    );
+  }
+  if (graveIdx >= 0) {
+    const prev = itemResults[graveIdx].exemptAmount;
+    itemResults[graveIdx].taxableOverflow += prev - cappedGrave;
+    itemResults[graveIdx].exemptAmount = cappedGrave;
+    itemResults[graveIdx].warnings.push(
+      `금양임야·묘토 합산 2억원 한도 초과 — 묘토 비과세 ${cappedGrave.toLocaleString()}원으로 조정 (상증령 §8③ 단서)`,
+    );
+  }
+}
+
+// ============================================================
 // 통합 비과세 평가
 // ============================================================
 
@@ -211,6 +254,9 @@ export function evaluateExemptions(
 
   // 혼인·출산공제(§53의2) 1회 검증은 gift-deductions.ts에서 처리
   // (§53의2는 비과세가 아닌 공제 항목 — GIFT_EXEMPTION_RULES에 없음)
+
+  // 금양임야+묘토 합산 2억원 한도 (상증령 §8③ 단서) — cross-item 클램프
+  applyGraveGroupCap(itemResults);
 
   const totalExemptAmount = itemResults.reduce((s, r) => s + r.exemptAmount, 0);
 

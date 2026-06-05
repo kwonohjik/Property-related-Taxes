@@ -26,6 +26,7 @@ import { BesshiBuppyo2Section } from "@/components/calc/inheritance/besshi-buppy
 import { DeductionBesshiFormsSection } from "@/components/calc/inheritance/deduction-besshi";
 import { InheritanceFilingFormTable } from "@/components/calc/results/InheritanceFilingFormTable";
 import { CorporateExemptionSection } from "@/components/calc/results/CorporateExemptionSection";
+import { ExemptionSummaryCard } from "@/components/calc/exemption/ExemptionSummaryCard";
 import { DebtAllocationResultCard } from "@/components/calc/results/DebtAllocationResultCard";
 import { UnlistedStockBesshiResultSection } from "@/components/calc/results/UnlistedStockBesshiResultSection";
 import { ListedStockBesshiResultSection } from "@/components/calc/results/ListedStockBesshiResultSection";
@@ -200,6 +201,8 @@ export function InheritanceTaxResultView({
     const items = estateItems ?? [];
     s.add("core-result");
     s.add("tax-summary");
+    if (result.exemptionDetail && result.exemptionDetail.itemResults.length > 0)
+      s.add("exemption-detail");
     if (hasAlloc) s.add("heir-allocation-summary");
     s.add("deduction-breakdown");
     if (hasAlloc) s.add("allocation-breakdown");
@@ -417,6 +420,16 @@ export function InheritanceTaxResultView({
           <CorporateExemptionSection
             corporateExemption={result.corporateExemption}
             heirs={heirs}
+          />
+        </PrintSection>
+      )}
+
+      {/* 비과세 적용 내역 (금양임야·묘토 면적/금액 한도·족보 — 상증령 §8③) */}
+      {result.exemptionDetail && result.exemptionDetail.itemResults.length > 0 && (
+        <PrintSection id="exemption-detail" selectedIds={selectedPrintIds}>
+          <ExemptionSummaryCard
+            result={result.exemptionDetail}
+            itemResults={result.exemptionDetail.itemResults}
           />
         </PrintSection>
       )}
