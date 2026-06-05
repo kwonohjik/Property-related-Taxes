@@ -41,6 +41,7 @@ import {
   computePriorGiftDeductionForLimit,
 } from "./deductions/inheritance-deductions";
 import { calcRelationDeduction } from "./deductions/gift-deductions";
+import { calcAppraisalFeeDeduction } from "./deductions/appraisal-fee-deduction";
 import {
   DEFAULT_INHERITANCE_GIFT_BRACKETS,
   calcInheritanceGiftTax,
@@ -496,8 +497,28 @@ export function calcInheritanceTax(
 
   // ─────────────────────────────────────────────
   // STEP 7: 과세표준 (상증법 §25 — 절사 규정 없음, 원 단위)
+  //   §25①2호 감정평가수수료 공제 차감 (시행령 §20의3)
   // ─────────────────────────────────────────────
-  const taxBase = Math.max(0, taxableEstateValue - totalDeduction);
+  const hasAppraisalValuation = input.estateItems.some(
+    (i) => i.valuationMethod === "appraisal",
+  );
+  const appraisalFee = calcAppraisalFeeDeduction(input.appraisalFee, {
+    hasAppraisalValuation,
+    taxType: "inheritance",
+  });
+  const taxBase = Math.max(
+    0,
+    taxableEstateValue - totalDeduction - appraisalFee.total,
+  );
+
+  if (appraisalFee.total > 0) {
+    allBreakdown.push({
+      label: "감정평가수수료 공제",
+      amount: -appraisalFee.total,
+      lawRef: INH.APPRAISAL_FEE,
+    });
+    allLaws.add(INH.APPRAISAL_FEE);
+  }
 
   allBreakdown.push({
     label: "과세표준",
@@ -771,6 +792,8 @@ export function calcInheritanceTax(
     taxableEstateValue,
     totalDeduction,
     taxBase,
+    appraisalFeeDeduction: appraisalFee.total,
+    appraisalFeeDetail: appraisalFee,
     computedTax,
     computedTaxAppliedRate,
     computedTaxProgressiveDeduction,

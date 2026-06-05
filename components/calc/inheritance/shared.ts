@@ -12,8 +12,10 @@ import type {
 import type { FarmingInheritanceInput } from "@/lib/tax-engine/types/inheritance-farming.types";
 import type { FamilyBusinessInheritanceInput } from "@/lib/tax-engine/types/inheritance-family-business.types";
 import type { ExemptionCheckedItem } from "@/lib/tax-engine/exemption-evaluator";
+import type { AppraisalFeeFormFields } from "@/lib/calc/appraisal-fee-form";
+import { INITIAL_APPRAISAL_FEE_FIELDS } from "@/lib/calc/appraisal-fee-form";
 
-export interface FormState {
+export interface FormState extends AppraisalFeeFormFields {
   // Step 0
   decedentName: string;
   decedentResidentNumber: string;
@@ -157,6 +159,7 @@ export const INITIAL_FORM: FormState = {
   installmentFamilyBusiness: false,
   installmentFbMode: "straight20",
   installmentFutureRate: "3.1",
+  ...INITIAL_APPRAISAL_FEE_FIELDS,
 };
 
 export const STEPS = [

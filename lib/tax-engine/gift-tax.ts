@@ -26,6 +26,7 @@ import type {
 import { evaluateAllEstateItems } from "./property-valuation";
 import { evaluateExemptions } from "./exemption-evaluator";
 import { calcGiftDeductions } from "./deductions/gift-deductions";
+import { calcAppraisalFeeDeduction } from "./deductions/appraisal-fee-deduction";
 import {
   DEFAULT_INHERITANCE_GIFT_BRACKETS,
   calcInheritanceGiftTax,
@@ -130,10 +131,28 @@ export function calcGiftTax(
   for (const law of deductionResult.appliedLaws) allLaws.add(law);
 
   // ─────────────────────────────────────────────
-  // STEP 5: 과세표준 ⑤ (§55 ②)
+  // STEP 5: 과세표준 ⑤ (§55 ② — §55① 감정평가수수료 차감, 시행령 §46의2 → §20의3 준용)
   // ─────────────────────────────────────────────
-  const rawTaxBase = Math.max(0, aggregatedGiftValue - totalDeduction);
+  const hasAppraisalValuation = input.giftItems.some(
+    (i) => i.valuationMethod === "appraisal",
+  );
+  const appraisalFee = calcAppraisalFeeDeduction(input.appraisalFee, {
+    hasAppraisalValuation,
+    taxType: "gift",
+  });
+  const rawTaxBase = Math.max(
+    0,
+    aggregatedGiftValue - totalDeduction - appraisalFee.total,
+  );
   const taxBase = rawTaxBase < TAX_BASE_MIN ? 0 : rawTaxBase;
+  if (appraisalFee.total > 0) {
+    allBreakdown.push({
+      label: "감정평가수수료 공제",
+      amount: -appraisalFee.total,
+      lawRef: GIFT_LAW.APPRAISAL_FEE,
+    });
+    allLaws.add(GIFT_LAW.APPRAISAL_FEE);
+  }
   allBreakdown.push({
     label: "증여세 과세표준 ⑤",
     amount: taxBase,
@@ -279,7 +298,8 @@ export function calcGiftTax(
     disabledTrustExclusion: 0,
     debtAssumed: 0,
     disasterLossDeduction: 0,
-    appraisalFeeDeduction: 0,
+    appraisalFeeDeduction: appraisalFee.total,
+    appraisalFeeDetail: appraisalFee,
     interestEquivalent: 0,
     museumDeferredTax: 0,
     underreportPenalty: 0,

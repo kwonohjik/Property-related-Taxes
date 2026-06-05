@@ -14,6 +14,7 @@ import type {
   GiftDonorRelation,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { ExemptionCheckedItem } from "@/lib/tax-engine/exemption-evaluator";
+import type { AppraisalFeeFormFields } from "@/lib/calc/appraisal-fee-form";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
@@ -21,12 +22,14 @@ import { PropertyValuationForm } from "@/components/calc/PropertyValuationForm";
 import { StockValuationForm } from "@/components/calc/StockValuationForm";
 import { ExemptionChecklist } from "@/components/calc/exemption/ExemptionChecklist";
 import { PriorGiftInput } from "@/components/calc/PriorGiftInput";
+import { AppraisalFeeSection } from "@/components/calc/deductions/AppraisalFeeSection";
+import { INITIAL_APPRAISAL_FEE_FIELDS } from "@/lib/calc/appraisal-fee-form";
 
 // ============================================================
 // 폼 상태 타입
 // ============================================================
 
-export interface FormState {
+export interface FormState extends AppraisalFeeFormFields {
   // Step 0
   giftDate: string;
   donorRelation: DonorRelation;
@@ -73,6 +76,7 @@ export const INITIAL_FORM: FormState = {
   foreignTaxPaid: "",
   specialTreatment: "",
   startupInvestmentCompleted: false,
+  ...INITIAL_APPRAISAL_FEE_FIELDS,
 };
 
 export const STEPS = ["증여 정보", "증여재산", "비과세·합산", "공제·세액공제"];
@@ -483,6 +487,15 @@ export function Step3({
         onChange={(v) => set({ priorUsedDeduction: v })}
         hint="동일 관계(그룹)에서 10년 이내 이미 공제받은 합계"
         placeholder="없으면 빈칸"
+      />
+
+      <AppraisalFeeSection
+        taxType="gift"
+        value={form}
+        onChange={set}
+        hasAppraisalAsset={[...form.giftItems, ...form.stockItems].some(
+          (i) => i.valuationMethod === "appraisal",
+        )}
       />
 
       {/* 신고세액공제 */}

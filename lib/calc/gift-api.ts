@@ -9,6 +9,7 @@
 
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { resolveActiveUnlistedValuation } from "@/lib/calc/unlisted-valuation-mode";
+import { buildAppraisalFee } from "@/lib/calc/appraisal-fee-form";
 import { deriveDonorRelation } from "@/components/calc/gift-tax-form-shared";
 import type {
   GiftTaxInput,
@@ -73,5 +74,7 @@ export function buildGiftTaxInput(form: FormState): GiftTaxInput {
     isMinorDonee: form.isMinorDonee,
     deductionInput,
     creditInput,
+    // 감정평가수수료 공제 (§55①·시행령 §46의2 → §20의3 준용)
+    appraisalFee: buildAppraisalFee(form),
   };
 }

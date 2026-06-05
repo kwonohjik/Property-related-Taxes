@@ -386,6 +386,14 @@ export function GiftTaxResultView({
             sub
             deduction
           />
+          {(result.appraisalFeeDeduction ?? 0) > 0 && (
+            <Row
+              label="감정평가수수료 공제"
+              value={`- ${formatKRW(result.appraisalFeeDeduction ?? 0)}`}
+              sub
+              deduction
+            />
+          )}
           <Row label="과세표준" value={formatKRW(result.taxBase)} highlight />
           <Row label="산출세액 (누진세율)" value={formatKRW(result.computedTax)} />
           {result.generationSkipSurcharge > 0 && (

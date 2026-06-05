@@ -99,7 +99,7 @@ export function buildFilingForm9Data(
   // ── 좌측 계산값 (result 직접) ──
   const b17 = result.taxableEstateValue;
   const b18 = result.totalDeduction;
-  const b19 = 0; // ⑲ 감정평가수수료 — 현 상속세 result 미보유(이미지1 공란)
+  const b19 = result.appraisalFeeDeduction ?? 0; // ⑲ 감정평가수수료 (§25①2호·시행령 §20의3)
   const b20 = result.taxBase;
   const b21Rate = result.computedTaxAppliedRate ?? 0; // 0.5
   const b22 = result.computedTax;

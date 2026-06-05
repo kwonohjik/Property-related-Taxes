@@ -28,6 +28,7 @@ import { buildGiftTaxInput } from "@/lib/calc/gift-api";
 import type { FormState } from "@/components/calc/gift-tax-form-shared";
 import type { PriorGift } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { ExemptionCheckedItem } from "@/lib/tax-engine/exemption-evaluator";
+import { INITIAL_APPRAISAL_FEE_FIELDS } from "@/lib/calc/appraisal-fee-form";
 
 // ============================================================
 // 기본 폼 상태 팩토리
@@ -51,6 +52,7 @@ function makeForm(overrides: Partial<FormState> = {}): FormState {
     foreignTaxPaid: "",
     specialTreatment: "",
     startupInvestmentCompleted: false,
+    ...INITIAL_APPRAISAL_FEE_FIELDS,
     ...overrides,
   };
 }

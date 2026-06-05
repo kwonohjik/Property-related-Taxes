@@ -309,6 +309,14 @@ export function InheritanceTaxResultView({
           )}
           <SummaryRow label="상속세 과세가액" value={formatKRW(result.taxableEstateValue)} highlight />
           <SummaryRow label="상속공제 합계" value={`- ${formatKRW(result.totalDeduction)}`} sub deduction />
+          {(result.appraisalFeeDeduction ?? 0) > 0 && (
+            <SummaryRow
+              label="감정평가수수료 공제"
+              value={`- ${formatKRW(result.appraisalFeeDeduction ?? 0)}`}
+              sub
+              deduction
+            />
+          )}
           <SummaryRow label="과세표준" value={formatKRW(result.taxBase)} highlight />
           <SummaryRow label="산출세액 (누진세율)" value={formatKRW(result.computedTax)} />
           {result.generationSkipSurcharge > 0 && (

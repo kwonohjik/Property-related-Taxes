@@ -86,6 +86,8 @@ export async function callInheritanceTaxAPI(
     isGenerationSkip: input.isGenerationSkip,
     isMinorHeir: input.isMinorHeir,
     generationSkipAssetAmount: input.generationSkipAssetAmount,
+    // 감정평가수수료 공제 (§25①2호·§20의3) — ⑬ body 명시 (누락 시 침묵 strip)
+    appraisalFee: input.appraisalFee,
   };
 
   const res = await fetch("/api/calc/inheritance", {

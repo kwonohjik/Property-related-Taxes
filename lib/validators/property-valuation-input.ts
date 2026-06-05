@@ -726,6 +726,18 @@ export const giftTaxCreditInputSchema = z.object({
 });
 
 // ============================================================
+// 감정평가수수료 공제 스키마 (상속 §20의3 / 증여 §46의2 준용 — 공용)
+// ============================================================
+
+export const appraisalFeeSchema = z.object({
+  realEstateAppraisalFee: z.number().nonnegative().optional(),
+  unlistedStockAppraisalFee: z.number().nonnegative().optional(),
+  unlistedTargetCount: z.number().int().positive().optional(),
+  unlistedAgencyCount: z.number().int().positive().optional(),
+  tangibleAppraisalFee: z.number().nonnegative().optional(),
+});
+
+// ============================================================
 // 상속세 전체 입력 스키마
 // ============================================================
 
@@ -756,6 +768,7 @@ export const inheritanceTaxInputSchema = z.object({
   isGenerationSkip: z.boolean().optional(),
   isMinorHeir: z.boolean().optional(),
   generationSkipAssetAmount: z.number().nonnegative().optional(),
+  appraisalFee: appraisalFeeSchema.optional(),
 });
 
 export type InheritanceTaxInputSchema = z.infer<typeof inheritanceTaxInputSchema>;
@@ -783,6 +796,7 @@ export const giftTaxInputSchema = z.object({
   deductionInput: giftDeductionInputSchema,
   creditInput: giftTaxCreditInputSchema,
   valuationBaseDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  appraisalFee: appraisalFeeSchema.optional(),
 });
 
 export type GiftTaxInputSchema = z.infer<typeof giftTaxInputSchema>;

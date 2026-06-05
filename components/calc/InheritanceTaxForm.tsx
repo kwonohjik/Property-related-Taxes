@@ -45,6 +45,7 @@ import {
   validateUnlistedStockV2,
 } from "@/lib/calc/inheritance-validate";
 import { resolveActiveUnlistedValuation } from "@/lib/calc/unlisted-valuation-mode";
+import { buildAppraisalFee } from "@/lib/calc/appraisal-fee-form";
 import { applyCorporateGiftTaxFallback } from "@/lib/calc/prior-gift-auto-tax";
 import {
   suggestSpouseActualAmount,
@@ -431,6 +432,8 @@ export function InheritanceTaxForm() {
         form.isGenerationSkip && form.generationSkipAssetAmount
           ? parseAmount(form.generationSkipAssetAmount) || undefined
           : undefined,
+      // 감정평가수수료 공제 (§25①2호·시행령 §20의3)
+      appraisalFee: buildAppraisalFee(form),
     };
   };
 

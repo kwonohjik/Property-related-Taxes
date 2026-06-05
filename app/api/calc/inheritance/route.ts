@@ -87,6 +87,8 @@ export async function POST(req: NextRequest) {
     isGenerationSkip: parsedData.isGenerationSkip,
     isMinorHeir: parsedData.isMinorHeir,
     generationSkipAssetAmount: parsedData.generationSkipAssetAmount,
+    // 감정평가수수료 공제 (§25①2호·§20의3) — ⑭ route 명시 매핑 (누락 시 Zod 통과해도 엔진 미도달)
+    appraisalFee: parsedData.appraisalFee,
   };
 
   // ─────────────────────────────────────────────

@@ -1041,6 +1041,8 @@ export interface InheritanceTaxInput {
   generationSkipAssetAmount?: number;
   /** 평가기준일 (기본: 상속개시일) */
   valuationBaseDate?: string;
+  /** 감정평가수수료 입력 (§25①2호·시행령 §20의3) */
+  appraisalFee?: AppraisalFeeInput;
 }
 
 /** 상속세 계산 결과 전체 */
@@ -1133,6 +1135,10 @@ export interface InheritanceTaxResult extends TaxResultMeta {
     /** ㉠ 과세제외 재산 전체 합 (비과세 + 과세가액불산입) */
     totalExcludedFromTaxation: number;
   };
+  /** 감정평가수수료 공제액 (별지9호 ⑲) — §25①2호·시행령 §20의3 */
+  appraisalFeeDeduction?: number;
+  /** 감정평가수수료 호별 내역·경고 (결과 ▼펼침) */
+  appraisalFeeDetail?: AppraisalFeeResult;
 }
 
 /**
@@ -1150,6 +1156,39 @@ export interface DerivedCollateralDebt {
   financialDebtAmount: number;
   /** 연결 자산 분배를 담보채무액 비율로 환산한 상속인별 분배 (합 = amount). 미분배 시 undefined */
   heirAllocations?: HeirAllocation[];
+}
+
+/**
+ * 감정평가수수료 입력 (상증령 §20의3 / 증여 §46의2 준용 — 상속·증여 공용).
+ * §20의3③ 한도: 1호 부동산·3호 유형재산 각 500만, 2호 비상장 = 1천만 × 법인수 × 기관수.
+ */
+export interface AppraisalFeeInput {
+  /** §20의3①1호 — 부동산 등 감정평가법인 수수료 (500만 한도, 감정가액 신고 시만 §20의3②) */
+  realEstateAppraisalFee?: number;
+  /** §20의3①2호 — 비상장주식 등 신용평가전문기관 수수료 (1천만 × 법인수 × 기관수 한도) */
+  unlistedStockAppraisalFee?: number;
+  /** §20의3③ 2호 한도 산정 — 평가대상 법인 수 (미입력 1) */
+  unlistedTargetCount?: number;
+  /** §20의3③ 2호 한도 산정 — 신용평가전문기관 수 (미입력 1) */
+  unlistedAgencyCount?: number;
+  /** §20의3①3호 — 서화·골동품 등 유형재산 감정수수료 (500만 한도) */
+  tangibleAppraisalFee?: number;
+}
+
+/** 감정평가수수료 호별 한도 적용 내역 (결과 ▼펼침용) */
+export interface AppraisalFeeBreakdownItem {
+  label: string;
+  amount: number;
+  lawRef: string;
+}
+
+/** 감정평가수수료 계산 결과 (공유 모듈 calcAppraisalFeeDeduction 반환) */
+export interface AppraisalFeeResult {
+  /** 호별 한도 적용 후 합계 */
+  total: number;
+  breakdown: AppraisalFeeBreakdownItem[];
+  /** 1호 감정가 미신고(§20의3②)·입증서류(§20의3④) 안내 */
+  warnings: string[];
 }
 
 /** 증여세 계산 입력 전체 */
@@ -1176,6 +1215,8 @@ export interface GiftTaxInput {
   creditInput: GiftTaxCreditInput;
   /** 평가기준일 (기본: 증여일) */
   valuationBaseDate?: string;
+  /** 감정평가수수료 입력 (§55①·시행령 §46의2 → §20의3 준용) */
+  appraisalFee?: AppraisalFeeInput;
 }
 
 /** 증여세 계산 결과 전체 */
@@ -1225,6 +1266,7 @@ export interface GiftTaxResult extends TaxResultMeta {
   debtAssumed?: number;              // ㉒ §47 채무액 (부담부증여 — 본 PR 범위 외)
   disasterLossDeduction?: number;    // ㉘ §54 재해손실공제
   appraisalFeeDeduction?: number;    // ㉙ 감정평가수수료 (500만원 한도)
+  appraisalFeeDetail?: AppraisalFeeResult;  // 호별 내역·경고 (결과 ▼펼침)
   interestEquivalent?: number;       // ㉟ 이자상당액
   museumDeferredTax?: number;        // ㊱ §75 박물관자료 등 징수유예세액
   underreportPenalty?: number;       // ㊷ 국기법 §47의2·§47의3
