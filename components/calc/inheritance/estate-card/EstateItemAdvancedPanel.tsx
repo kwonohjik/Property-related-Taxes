@@ -21,13 +21,17 @@ import { EstimatedValuePreview } from "@/components/calc/property-valuation-prev
 import { FinancialDeductionChip } from "@/components/calc/inheritance/FinancialDeductionChip";
 import { FarmingCategorySection } from "@/components/calc/inheritance/FarmingCategorySection";
 import { FamilyBusinessCategorySection } from "@/components/calc/inheritance/FamilyBusinessCategorySection";
+import { CulturalHeritageSection } from "@/components/calc/inheritance/CulturalHeritageSection";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import {
   HintBadge,
   getFamilyBusinessHint,
   getFinancialDeductionHint,
 } from "@/components/calc/inheritance/AssetToggleHints";
-import { resolveAssetToggleVisibility } from "@/lib/calc/asset-toggle-visibility";
+import {
+  resolveAssetToggleVisibility,
+  resolveCulturalHeritageVisibility,
+} from "@/lib/calc/asset-toggle-visibility";
 import { EstateValuationMetaSection } from "./EstateValuationMetaSection";
 import type {
   EstateItem,
@@ -63,6 +67,7 @@ export function EstateItemAdvancedPanel({
 }: EstateItemAdvancedPanelProps) {
   const cat = item.category as AssetCategory;
   const visibility = resolveAssetToggleVisibility(item);
+  const chVisibility = resolveCulturalHeritageVisibility(item);
   const [showHiddenExpandable, setShowHiddenExpandable] = useState(false);
 
   const set = (patch: Partial<EstateItem>) => onUpdate({ ...item, ...patch });
@@ -94,6 +99,13 @@ export function EstateItemAdvancedPanel({
 
       {/* 상속개시자료 요약 4표 — Table A 비고/수량 (2026-05-28) */}
       <EstateValuationMetaSection item={item} onUpdate={onUpdate} />
+
+      {/* §74 지정문화유산 등 징수유예 (상증법 §74) — 부동산·기타 노출, 주식·금융 제외 */}
+      {chVisibility !== "hidden_permanent" && (
+        <div className="border-t border-slate-200 dark:border-slate-700 pt-2">
+          <CulturalHeritageSection item={item} onUpdate={onUpdate} />
+        </div>
+      )}
 
       {/* §22 기본값 되돌리기 (사용자 지정 상태일 때 — visibility=default)
        *  Phase 2 INT-8: showSection22Override=true 시 hidden_permanent에서도 노출 */}

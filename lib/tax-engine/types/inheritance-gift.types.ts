@@ -297,6 +297,19 @@ export interface EstateItem extends EstateLocationFields {
    */
   fishingLicenseExcluded?: boolean;
 
+  // ===== §74 지정문화유산 등 징수유예 (상증법 §74 / 상증령 §76①) =====
+  /**
+   * §74①각호 지정문화유산 분류. undefined=해당 없음.
+   * 담보 면제(§74⑤): "designated"·"natural_monument"만 가능.
+   * 2호 박물관자료: 사립은 공익법인등만(UI 안내, 엔진은 type 신뢰).
+   * 징수유예세액 = 산출세액 × (해당 재산가액 ÷ 상속재산[§13 가산증여 포함]) — 비례 방식(조심 940708).
+   */
+  culturalHeritageType?:
+    | "heritage_data"      // 1호 문화유산자료등
+    | "museum"             // 2호 박물관자료등
+    | "designated"         // 3호 국가지정문화유산등 (담보 면제)
+    | "natural_monument";  // 4호 천연기념물등       (담보 면제)
+
   /** 가업상속 자산 분류 (상증령 §15⑤). farmingCategory 동시 선택 시 validate 차단 (asset_dual_category_conflict). 타입: inheritance-family-business.types.ts */
   familyBusinessCategory?: FamilyBusinessCategory;
   /** 법인 영농·가업상속 주식 사업무관자산 (시행령 §15⑤2호 + §16⑤2호). corporate_stock일 때만 의미. 타입: inheritance-corporate-non-business.types.ts */
@@ -1139,6 +1152,10 @@ export interface InheritanceTaxResult extends TaxResultMeta {
   appraisalFeeDeduction?: number;
   /** 감정평가수수료 호별 내역·경고 (결과 ▼펼침) */
   appraisalFeeDetail?: AppraisalFeeResult;
+  /** §74 징수유예세액 (별지9호 ㉖) — echo, finalTax(결정세액) 불변. 별지9호 ㊳에서 차감 */
+  culturalHeritageDeferredTax?: number;
+  /** §74 징수유예 상세 (결과 카드 ▼펼침) */
+  culturalHeritageDeferralDetail?: CulturalHeritageDeferralDetail;
 }
 
 /**
@@ -1180,6 +1197,29 @@ export interface AppraisalFeeBreakdownItem {
   label: string;
   amount: number;
   lawRef: string;
+}
+
+/** §74 징수유예 상세 (상증령 §76① — 결과 카드 ▼펼침용. echo 전용) */
+export interface CulturalHeritageDeferralDetail {
+  /** §76① 분자: §74①각호 재산 평가액 합 */
+  qualifyingAssetValue: number;
+  /** §76① 분모: grossEstateValue + priorGiftAggregated (§15 추정상속재산 제외) */
+  totalEstateWithPriorGifts: number;
+  /** 분자 ÷ 분모 (표시용) */
+  deferralRatio: number;
+  /** = computedTax (§26 산출세액, §27 할증 전) */
+  computedTaxBase: number;
+  items: {
+    estateItemId: string;
+    itemName: string;
+    heritageType: "heritage_data" | "museum" | "designated" | "natural_monument";
+    valuatedAmount: number;
+    /** §74⑤ 담보 면제 가능 (designated·natural_monument만 true) */
+    collateralExemptible: boolean;
+  }[];
+  /** 3·4호만 있으면 true */
+  hasCollateralExemption: boolean;
+  warnings: string[];
 }
 
 /** 감정평가수수료 계산 결과 (공유 모듈 calcAppraisalFeeDeduction 반환) */

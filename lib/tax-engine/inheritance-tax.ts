@@ -42,6 +42,7 @@ import {
 } from "./deductions/inheritance-deductions";
 import { calcRelationDeduction } from "./deductions/gift-deductions";
 import { calcAppraisalFeeDeduction } from "./deductions/appraisal-fee-deduction";
+import { calcCulturalHeritageDeferral } from "./inheritance-cultural-heritage-deferral";
 import {
   DEFAULT_INHERITANCE_GIFT_BRACKETS,
   calcInheritanceGiftTax,
@@ -784,6 +785,20 @@ export function calcInheritanceTax(
     deathDate: input.deathDate,
   });
 
+  // STEP 12.5: §74 지정문화유산 등 징수유예 (상증령 §76① 비례 방식) — appended.
+  //   finalTax(결정세액) 불변 — echo 필드로만 반환. 별지9호 ㉖ 표시 + ㊳(납부세액)에서만 차감.
+  const culturalHeritageDeferral = calcCulturalHeritageDeferral({
+    estateItems: input.estateItems,
+    valuatedAmountById,
+    computedTax,
+    grossEstateValue,
+    priorGiftAggregated,
+  });
+  if (culturalHeritageDeferral.lawApplied) {
+    allBreakdown.push(...culturalHeritageDeferral.breakdown);
+    allLaws.add(INH.CULTURAL_HERITAGE_DEFERRAL);
+  }
+
   return {
     grossEstateValue,
     exemptAmount,
@@ -816,5 +831,8 @@ export function calcInheritanceTax(
     collateralDebtDetail: collateralDebts.length > 0 ? collateralDebts : undefined,
     // Phase B5 echo
     summaryTable,
+    // §74 징수유예 (echo — finalTax 불변, 별지9호 ㉖·㊳)
+    culturalHeritageDeferredTax: culturalHeritageDeferral.deferredTax,
+    culturalHeritageDeferralDetail: culturalHeritageDeferral.detail ?? undefined,
   };
 }

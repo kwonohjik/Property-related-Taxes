@@ -32,6 +32,7 @@ import { ListedStockBesshiResultSection } from "@/components/calc/results/Listed
 import { SourceDataSummarySection } from "@/components/calc/results/source-summary/SourceDataSummarySection";
 import { isInstallmentEligible } from "@/lib/tax-engine/credits/installment-payment";
 import { InstallmentScheduleCard } from "./installment/InstallmentScheduleCard";
+import { CulturalHeritageDeferralCard } from "./inheritance/CulturalHeritageDeferralCard";
 import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPanel";
 import { PrintSection } from "@/components/calc/results/shared/PrintSection";
 import {
@@ -340,9 +341,31 @@ export function InheritanceTaxResultView({
             />
           )}
           <SummaryRow label="결정세액" value={formatKRW(result.finalTax)} highlight />
+          {(result.culturalHeritageDeferredTax ?? 0) > 0 && (
+            <>
+              <SummaryRow
+                label="문화유산 등 징수유예 (§74)"
+                value={`- ${formatKRW(result.culturalHeritageDeferredTax ?? 0)}`}
+                sub
+                deduction
+              />
+              <SummaryRow
+                label="납부할세액 (징수유예 차감)"
+                value={formatKRW(result.finalTax - (result.culturalHeritageDeferredTax ?? 0))}
+                highlight
+              />
+            </>
+          )}
         </div>
       </div>
       </PrintSection>
+
+      {/* §74 지정문화유산 등 징수유예 */}
+      {(result.culturalHeritageDeferredTax ?? 0) > 0 && (
+        <PrintSection id="cultural-heritage-deferral" selectedIds={selectedPrintIds}>
+          <CulturalHeritageDeferralCard result={result} />
+        </PrintSection>
+      )}
 
       {/* 세액공제 상세 — §29·§30·§69 산출근거 ▼펼침 (§28 증여세액공제는 AllocationBreakdownSection이 담당) */}
       {result.totalTaxCredit > 0 && (

@@ -194,3 +194,33 @@ export function countHiddenExpandable(
   if (visibility.financialDeduction === "hidden_expandable") count += 1;
   return count;
 }
+
+// ============================================================
+// §74 지정문화유산 등 징수유예 토글 노출 (상증법 §74)
+//   resolveAssetToggleVisibility(4-dimension)와 독립 — §74 대상은 실물 재산(부동산·기타)
+//   한정이므로 자산 category 기반 별도 판정. ToggleVisibility 타입만 재사용(회귀 0).
+// ============================================================
+
+/** §74 대상은 부동산·기타재산 한정. 주식·금융·현금은 미대상(hidden_permanent). */
+const CULTURAL_HERITAGE_VISIBILITY: Record<AssetCategory, ToggleVisibility> = {
+  real_estate_land: "default",        // 토지 (한옥·보호구역 토지)
+  real_estate_building: "default",    // 건물 (지정문화유산 건축물)
+  real_estate_apartment: "hidden_expandable", // 아파트 문화유산 드묾 — 확장 노출
+  cash: "hidden_permanent",
+  financial: "hidden_permanent",
+  deposit: "hidden_permanent",
+  listed_stock: "hidden_permanent",
+  unlisted_stock: "hidden_permanent",
+  other: "hidden_expandable",          // 동산(서화·골동품 등) — 확장 노출
+};
+
+/**
+ * §74 지정문화유산 토글 노출 판정 (자산 category 기반).
+ * 활성 우선: 이미 culturalHeritageType 선택 시 항상 default(회귀 0).
+ */
+export function resolveCulturalHeritageVisibility(
+  item: EstateItem,
+): ToggleVisibility {
+  if (item.culturalHeritageType !== undefined) return "default";
+  return CULTURAL_HERITAGE_VISIBILITY[item.category];
+}

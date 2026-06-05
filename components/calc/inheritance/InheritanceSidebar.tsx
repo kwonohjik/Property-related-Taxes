@@ -114,7 +114,7 @@ export function InheritanceSidebar({
           />
         )}
 
-        {/* ④ 자진납부세액 */}
+        {/* ④ 자진납부세액 (결정세액) */}
         {summary.estimatedTax !== null && (
           <Row
             label="④ 자진납부세액"
@@ -122,6 +122,23 @@ export function InheritanceSidebar({
             highlight
             tone="primary"
           />
+        )}
+
+        {/* §74 징수유예 — 결정세액에서 차감하여 납부세액 표시 */}
+        {result && (result.culturalHeritageDeferredTax ?? 0) > 0 && (
+          <>
+            <Row
+              label="징수유예액 (§74)"
+              value={`- ${formatKRW(result.culturalHeritageDeferredTax ?? 0)}`}
+              tone="sub"
+            />
+            <Row
+              label="납부할세액"
+              value={formatKRW(result.finalTax - (result.culturalHeritageDeferredTax ?? 0))}
+              highlight
+              tone="primary"
+            />
+          </>
         )}
 
         {/* 결과 미도착 안내 */}

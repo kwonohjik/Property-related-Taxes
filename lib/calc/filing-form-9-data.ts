@@ -113,11 +113,13 @@ export function buildFilingForm9Data(
 
   // ── 우측 (V-2: ㉟ 면제세액 = 0, corporate 면제는 ㉙에 표시) ──
   const b35 = 0; // 면제세액 — 이중계상 방지
-  const b43 = result.finalTax; // ㊳ = ㉔ − ㉗
+  // ㉖ §74 징수유예세액 — 납부세액(㊳)에서 차감(결정세액 finalTax는 불변, 재결례 940708)
+  const b26 = result.culturalHeritageDeferredTax ?? 0;
+  const b43 = result.finalTax - b26; // ㊳ = ㉔ + ㉕ − ㉖ − ㉗
 
   const values: Record<string, number> = {
     "⑰": b17, "⑱": b18, "⑲": b19, "⑳": b20, "㉑": b21Rate,
-    "㉒": b22, "㉓": b23, "㉔": b24, "㉕": 0, "㉖": 0,
+    "㉒": b22, "㉓": b23, "㉔": b24, "㉕": 0, "㉖": b26,
     "㉗": b27, "㉘": b28, "㉙": b29, "㉚": 0, "㉛": 0, "㉜": 0, "㉝": b33, "㉞": 0,
     "㉟": b35, "㊱": 0, "㊲": 0, "㊳": b43,
   };
@@ -141,7 +143,7 @@ export function buildFilingForm9Data(
     amtRow("㉓", b23, "left", { lawRef: FF9_LAW_REFS["㉓"] }),
     amtRow("㉔", b24, "left", { forceAmount: true }),
     amtRow("㉕", 0, "left"),
-    amtRow("㉖", 0, "left"),
+    amtRow("㉖", b26, "left"),
     amtRow("㉗", b27, "left", { forceAmount: true }),
     amtRow("㉘", b28, "left"),
     amtRow("㉙", b29, "left"),

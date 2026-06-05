@@ -145,6 +145,10 @@ const baseItemSchema = z.object({
   // D4: 영농 사용 개시일 (D-4, §16⑤1호 자동판정, 2026-06-04) — YYYY-MM-DD string, Date 변환 금지
   // farmingUseStartDate 입력 시 deathDate 대비 자동판정, 미입력 시 farmingUsedTwoYears fallback
   farmingUseStartDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD 형식").optional(),
+  // §74 지정문화유산 등 징수유예 (상증법 §74 / 상증령 §76①) — base 공통(전 variant 전파)
+  culturalHeritageType: z
+    .enum(["heritage_data", "museum", "designated", "natural_monument"])
+    .optional(),
 });
 
 export const landItemSchema = baseItemSchema.extend({
