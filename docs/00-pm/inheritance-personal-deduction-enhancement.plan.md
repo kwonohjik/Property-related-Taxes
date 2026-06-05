@@ -1,6 +1,7 @@
 # 상속세 「그 밖의 인적공제」(§20) 보완 계획서
 
 - **작성일**: 2026-06-05
+- **진행 상태**: P0+P2 **완료**(PR #26, `d062db4`, 6587 PASS) — 미성년 19세·연로자 배우자/자녀 배제·장애인 성별 기대여명·`PersonalDeductionDetail` echo. **P1 동거가족(G4·G5) 착수**(본 정정 + 별도 설계서 `inheritance-cohabitant-dependent.{engine,ui}.design.md`). 아래 §2.1 파일지도의 "gender 없음·`calcDisabledPersonalDeduction` dead·결과뷰 단일줄"은 P0+P2로 모두 해소됨(당시 분석 기록 — 실측 시 §615 gender 존재·§214 제거 주석·`PersonalDeductionDetailCard` 추가 확인).
 - **worktree / branch**: `personal-deduction-enhancement` / `worktree-personal-deduction-enhancement` (master 기준 신규 생성)
 - **대상 세목**: 상속세 (gift·기타 세목 무관 — §20은 상속 전용)
 - **학습 자료**: `~/Documents/기타인적공제.pdf` (「상속증여세 2026」 교재 p.329~337) + KoreanLaw MCP 본문 검증
@@ -56,7 +57,7 @@
 
 - **§18①** 동거가족 = 상속개시일 현재 피상속인이 **사실상 부양**하는 **직계존비속(배우자의 직계존속 포함)·형제자매**. (포함: 부양 손자·부모·조부모·장인·장모·형제자매 / 불포함: 처남·처제·시동생)
 - **§18②** 태아 공제 — 과세표준신고 시 임신 확인 서류 제출.
-- **§18③** 장애인 = 「소득세법 시행령」 §107① 각 호 (장애인복지법 장애인 / 국가유공자 상이자 / 항시 치료 중증환자).
+- **§18③** 장애인 = 「소득세법 시행령」 §107① 각 호 (장애인복지법 장애인 / 국가유공자 상이자 / 항시 치료 중증환자). **동거가족 장애인도 동일 기준** (§20①4호 "상속인 **및 동거가족** 중 장애인" → P1 `cohabitantDependents.isDisabled`에 동일 적용, P-7).
 - **§18④** 장애인증명서 제출 (상이자증명·장애인등록증으로 갈음 가능).
 
 ### 1.4 기대여명(통계청 2023 생명표, 2024.12 발표) — PDF p.333~334
@@ -141,14 +142,16 @@
 - 현행: `calcPersonalDeductions(input.heirs, …)` — `heirs[]`만 계산. 비상속인 동거가족 입력경로 없음. `isCohabitant`는 §23의2 동거주택공제(자녀)에만 사용(`HeirComposition.tsx:343-351`) — 인적공제 동거가족 의미 아님.
 - 영향: 비상속인 부양가족(부양 손자·부모·형제) 공제 누락. (heirs[]에 이미 있는 동거가족은 현재도 동작 → 갭은 **비상속인** 한정 → 상대적 저빈도)
 - 수정 옵션(설계 결정 — 별도 설계서에서 **옵션 B 확정**):
-  - **(A)** Heir에 `isCohabitantDependent?: boolean` + `isHeir:false` — **실측 결과 오염 확정**: `calcLegalShareRatios`(tax-utils.ts:177)에 `isHeir` 필터 부재 → 배우자 법정상속분·§21② 판정 오염. 채택 안 함.
-  - **(B) 채택**: 별도 `cohabitantDependents[]` 입력 신설 (heirs[] 무변경 = 오염 0, `calcPersonalDeductions` 시그니처 1건만 변경). G5 legatee 제외도 동시 해결.
+  - **(A)** Heir에 `isCohabitantDependent?: boolean` + `isHeir:false` — **실측 결과 오염 확정**: `calcLegalShareRatios`(tax-utils.ts:177-193, 실측)에 `isHeir`·legatee 필터 부재 → 모든 heirs를 무필터 순회(`unit = relation==="spouse"?1.5:1`)하므로 isHeir:false 동거가족 혼입 시 배우자 법정상속분 비율·§21② 판정(`inheritance-deductions.ts:550~554`) 오염. 채택 안 함.
+  - **(B) 채택**: 별도 `cohabitantDependents[]` 입력 신설 (heirs[] 무변경 = 오염 0). 수정 범위 = ① `calcPersonalDeductions` 시그니처 3-arg + ② **호출부 `inheritance-deductions.ts:539` 3-arg 전달**(실측: 현행 2-arg `(input.heirs, baseDate)` — 무변경 시 동거가족 미반영, P-2). G5 legatee 제외도 동시 해결.
+  - **정규화 어댑터(P-3)**: `CohabitantDependent.relation`은 `lineal_ascendant | lineal_descendant | sibling`. 이 중 `lineal_descendant`(손자·손녀)는 HeirRelation(실측 591-599)에 **없음** → calc 함수(`Heir[]` 인자)에 직접 전달 시 타입 불일치. `calcPersonalDeductions` 내부에서 `CohabitantDependent → Heir` 정규화 후 합산. relation 매핑: `lineal_descendant→"other"`(자녀공제·연로자 child제외 회피), `lineal_ascendant→"lineal_ascendant"`, `sibling→"sibling"`. 결과 표시 구분용 `isCohabitantDependent` 마커 동반.
   - 진행: P0+P2 완료 후 별도 설계서 `inheritance-cohabitant-dependent.engine.design.md`로.
 
 **G5. 인적공제 대상에 legatee/corporate over-inclusion**
 - 현행: `calcMinorDeduction`·`calcDisabledDeduction`이 **모든 heirs**(legatee·corporate 포함) 순회. 수유자(비상속인·비동거가족)는 인적공제 대상 아님.
 - 영향: 동거가족 아닌 미성년 수유자(예: 손녀 legatee)에 미성년·장애공제 오적용 가능.
-- 수정: 대상 = 상속인(`isHeir!==false` & relation∈상속인) + 동거가족. G4와 함께 설계 — 옵션 B에서 `calcPersonalDeductions`가 legatee·corporate 필터. 케이스 CD-3 (별도 설계서 `inheritance-cohabitant-dependent.engine.design.md`).
+- 수정: 대상 = 상속인(`relation !== "legatee" && !== "corporate"` — `inheritance-deductions.ts:551` realHeirs와 동일 패턴) + 동거가족. 옵션 B에서 `calcPersonalDeductions`가 legatee·corporate 필터. 케이스 CD-3.
+- **회귀 점검(P-5)**: 현행 `calcPersonalDeductions`는 무필터 → legatee/corporate heir에 `birthDate`·`isDisabled`가 있으면 현재 인적공제 적용 중. 필터 추가 시 그 공제가 제거되므로 기존 legatee 포함 테스트(`comprehensive-case-pdf.test.ts`·`asset-heir-allocation-anchor.test.ts` 등) 기대값 영향 점검 필수. (실측: comprehensive-case-pdf의 legatee 500M은 §24 한도 분자 차감(`legateeAmountNonHeir`)에만 사용 — 인적공제 미수령 추정이나 heirs 정의 확인 후 단정.)
 
 ### 🟡 P2 — 정합성·표시·엣지
 
@@ -179,7 +182,9 @@
 | C6 | 장애인 성년자녀(남40) | child, 1985생, 남, 장애 | 5천만 | 0 | 0 | **4.2억** | 4.7억 | G3 성별(남42), 1호+4호 |
 | C7 | 장애인 성년자녀(여40) | child, 1985생, 여, 장애 | 5천만 | 0 | 0 | **4.8억** | 5.3억 | G3 성별(여48) |
 | C8 | 장애 배우자(여50) | spouse, 1975생, 여, 장애 | 0 | 0 | 0 | **3.8억** | 3.8억 | G3 4호+§19 합산 (여50 raw 37.6→ceil 38, PDF p.333) |
-| C9 | 미성년+장애 손자(남5) | 동거가족, 2017-03-04생, 남, 장애 | 0 | 1.4억 | 0 | **7.6억** | 9억 | G4 동거가족(P1), 2호+4호 |
+| C9 | 미성년+장애 손자(남5) | 동거가족 `lineal_descendant`, 2017-03-04생, 남, 장애 | 0 | 1.4억 | 0 | **7.6억** | 9억 | G4 동거가족(P1), 2호+4호 |
+| C9b | 동거가족 장인(배우자 직계존속) 66세 | 동거가족 `lineal_ascendant`, 1959생 | 0 | 0 | **5천만** | 0 | 5천만 | G4 동거가족 연로자(3호), 시령 §18① "배우자의 직계존속 포함" (P-9) |
+| C9c | legatee 손녀 미성년(만10세) | `legatee`, 2015생 (동거가족 아님) | 0 | **0** | 0 | 0 | 0 | G5 — legatee는 인적공제 대상 외(CD-3) |
 | C10 | PDF 종합사례 (손자2) | C9 + 손자(1년7개월) | 0 | 3.2억 | 0 | 7.6억 | **10.8억** | 통합 anchor (§1.5) |
 | C11 | 무신고 | — | — | — | — | — | 일괄 5억 | §21① 단서 (기존 동작) |
 | C12 | 배우자 단독상속 | spouse 단독 | — | — | — | — | 기초2억+인적 | §21② (기존 동작, `lumpSumExcludedBySpouseSoleHeir`) |
@@ -205,11 +210,16 @@
 6. `PersonalDeductionDetail` 타입(자녀 count/미성년 perHeir[연령·산식]/연로자 count/장애인 perHeir[gender·기대여명]) + `InheritanceDeductionResult`에 optional echo.
 7. 결과뷰 ▼펼침 (`DeductionBreakdownSection` 또는 신규 카드).
 
-### Phase 3 — 테스트 정정 (G8) + 통합 anchor
-8. inheritance-deductions.test.ts D3·D3-bis·D4·D7·D8 법령값 재산정 + C3·C4·C6·C7·C9·C10 신규.
+### Phase 3 — 테스트 정정 (G8) + 통합 anchor (P0+P2 트랙 — 완료)
+8. inheritance-deductions.test.ts D3·D3-bis·D4·D7·D8 법령값 재산정 + C1·C3·C4·C6·C7·D4-b·D4-c 신규. (**C9·C9b·C9c·C10은 동거가족/legatee = Phase 4(P1)로 이동** — P-1. P0+P2 테스트에 C9·C10 부재 실측 확인.)
 
-### Phase 4 — P1 동거가족 (G4·G5) — 후속 트랙 (별도 설계서)
-9. **옵션 B 확정** (별도 `cohabitantDependents[]` 배열). 근거(실측): `calcLegalShareRatios`(tax-utils.ts:177)에 `isHeir` 필터 부재 → 옵션 A는 배우자 법정상속분·§21② 판정 오염. 옵션 B는 heirs[] 무변경. 설계서 `inheritance-cohabitant-dependent.engine.design.md`. **P0+P2 완료 후** 진행.
+### Phase 4 — P1 동거가족 (G4·G5) — **본 트랙** (별도 설계서 `inheritance-cohabitant-dependent.{engine,ui}.design.md`)
+9. **옵션 B 확정** (별도 `cohabitantDependents[]` 배열). 근거(실측): `calcLegalShareRatios`(tax-utils.ts:177-193)에 `isHeir`·legatee 필터 부재 → 옵션 A는 배우자 법정상속분·§21② 판정 오염. 옵션 B는 heirs[] 무변경. **P0+P2 완료(PR#26)로 선행조건 충족 — 착수.**
+   - **9-1** `CohabitantDependent` 타입 + `InheritanceDeductionInput.cohabitantDependents?` 추가 (`types/inheritance-gift.types.ts`). `PersonalDeductionDetail.{minor,disabled}PerHeir`에 `isCohabitant?: boolean` 마커 추가 — 정규화 어댑터가 부여 → ⑦ 결과 구분 표시 (R-4).
+   - **9-2** `calcPersonalDeductions` 3-arg(`heirs, baseDate, cohabitantDependents?`) + 정규화 어댑터(relation 매핑) + G5 legatee/corporate 필터.
+   - **9-3** 호출부 `inheritance-deductions.ts:539` 3-arg 전달(`input.cohabitantDependents`). baseDate(`input.deathDate`, §20 상속개시일 현재)는 동거가족에도 동일 적용 (P-10).
+   - **9-4** anchor CD-1~5 + C9·C9b·C9c·C10(동거가족/legatee) 신규.
+   - **9-5** 14지점: ⑫ Zod `inheritanceDeductionInputSchema`(property-valuation-input.ts:657)에 `cohabitantDependents` 배열 추가(누락 시 침묵 strip), ④/⑬/⑭ deductionInput spread·cast 자동, ⑤ UI 입력, ⑦ 결과 구분 표시, ⑧ validation(장애+gender 미입력 차단).
 
 ### 동기화 지점 매핑 (gender 신규 필드 기준)
 
@@ -228,6 +238,23 @@
 
 > ⑫가 핵심 위험 지점 (heir Zod 명시 필드 — gender 미추가 시 침묵 strip → 엔진 미도달).
 
+#### 동기화 지점 매핑 (P1 `cohabitantDependents` 신규 배열, P-8)
+
+| 지점 | 위치 | 작업 |
+|---|---|---|
+| ① 폼 상태 | inheritance form `cohabitantDependents` | 신규 배열 필드 (3-state: undefined/[]/[...]) |
+| ② initial | form factory | `cohabitantDependents: undefined` (OFF) |
+| ③ normalize | sessionStorage 호환 | optional |
+| ④ API 변환 | `inheritance-api.ts:82` deductionInput | **spread 자동** ✅ (form→deductionInput 매핑만 확인) |
+| ⑤ UI 위젯 | Step 0 HeirComposition 하단 별도 카드 **후보**(UI 설계서 확정) | 동거가족 추가 — relation·birthDate·gender·isDisabled |
+| ⑥ 사이드바 | 인적공제 합계 | 동거가족 포함 시 갱신 |
+| ⑦ 결과 카드 | `PersonalDeductionDetailCard` | 동거가족 행 구분 표시(`isCohabitant` 마커) |
+| ⑧ validation | `inheritance-validate.ts` | relation 필수 + 장애 시 gender 미입력 차단 |
+| ⑫ Zod | `property-valuation-input.ts:657` `inheritanceDeductionInputSchema` | `cohabitantDependents: z.array(...).optional()` **(필수 — strip 방지)** |
+| ⑬⑭ route | `route.ts:83` deductionInput cast | **spread/cast 자동** ✅ |
+
+> P1 신규 배열은 `deductionInput` **하위**라 ④⑬⑭가 통째 spread/cast로 자동 — heir gender(top-level `heirs[]`)와 달리 route 명시 매핑 불필요. **⑫·⑤·⑦·⑧이 핵심 작업 지점.**
+
 ---
 
 ## 6. Pre-Do anchor (법령 정합 기대값 — Do 착수 전 실패 확보)
@@ -244,6 +271,18 @@ calcElderDeduction([spouse66]).totalDeduction === 0         // 현행 50,000,000
 getLifeExpectancyByGender("male", 40) === 42                // 현행 44, 성별 불가 (G3)
 ```
 
+### P1 동거가족 Pre-Do anchor (Phase 4 착수 전 — 현행 미반영 실패 확보, R-1)
+
+```ts
+// C9: 동거가족 손자 남5세 장애 (2017-03-04생, 상속 2023-01-01) — cohabitantDependents 신규 3rd 인자
+calcPersonalDeductions([], "2023-01-01", [grandsonDisabled5]).minorDeduction === 140_000_000    // (19−5)×1천만
+calcPersonalDeductions([], "2023-01-01", [grandsonDisabled5]).disabledDeduction === 760_000_000 // 남5세 기대여명 76×1천만
+calcPersonalDeductions([], "2023-01-01", [grandsonDisabled5]).total === 900_000_000              // 자녀공제 0 (손자≠자녀)
+// C9c: legatee 손녀 미성년 → 인적공제 대상 외 (G5)
+calcPersonalDeductions([legateeGirl10], "2025-01-01").minorDeduction === 0                       // 현행: legatee 미필터 → 90,000,000 (G5 오적용)
+```
+> P1 anchor는 `cohabitantDependents` 3rd 인자·정규화·G5 필터 구현 전엔 컴파일 불가/실패 → Do 착수 신호. (`pre-do-cohabitant-dependent.test.ts` throwaway.)
+
 ---
 
 ## 7. 회귀·검증 계획
@@ -255,6 +294,7 @@ getLifeExpectancyByGender("male", 40) === 42                // 현행 44, 성별
 5. **E2E** (`feedback_browser_verify_with_playwright`): `e2e/inheritance-personal-deduction.spec.ts` — 미성년·연로(65세 자녀)·장애(성별) 입력→결과 검증. (worktree `E2E_PORT=3100`)
 6. **회귀 0 허용** — 세법 정확성 핵심. (단, D3·D4·D7·D8은 **법령 정합으로 의도적 변경** — 회귀 아님, 정정)
 7. **Pre-Do 파일 처분**: `pre-do-personal-deduction.test.ts`는 throwaway — Do 완료 후 삭제하고 C1·C3·C4·C6을 `inheritance-deductions.test.ts`로 이관(`getLifeExpectancyByGender`). (`getLifeExpectancy` 제거로 미이관 시 컴파일 불가.)
+8. **P1 검증 (Phase 4, R-2)**: `calcPersonalDeductions` 3-arg anchor(C9·C9b·C9c·C10)를 `inheritance-deductions.test.ts`에 추가 + `cohabitantDependents` 14지점(타입·Zod·UI·validation·결과). E2E `e2e/inheritance-cohabitant-dependent.spec.ts`(동거가족 손자 입력→9억, `E2E_PORT=3100`). **legatee 회귀(P-5)** `npm test` 전수 — G5 필터가 기존 legatee 포함 케이스에 미치는 영향 0 확인.
 
 ---
 

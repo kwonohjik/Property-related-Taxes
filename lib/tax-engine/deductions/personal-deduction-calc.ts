@@ -18,7 +18,11 @@
 import { differenceInYears } from "date-fns";
 import { INH } from "../legal-codes";
 import { TaxCalculationError, TaxErrorCode } from "../tax-errors";
-import type { CalculationStep, Heir } from "../types/inheritance-gift.types";
+import type {
+  CalculationStep,
+  Heir,
+  CohabitantDependent,
+} from "../types/inheritance-gift.types";
 import type { PersonalDeductionDetail } from "../types/inheritance-deduction-detail.types";
 import { calcMinorPersonalDeduction } from "../tax-utils";
 import { getLifeExpectancyByGender } from "../data/life-expectancy-2023";
@@ -302,14 +306,49 @@ export interface PersonalDeductionSummary {
   detail: PersonalDeductionDetail;
 }
 
+/**
+ * CohabitantDependent → Heir 정규화 (P1 — 시령 §18① 동거가족).
+ * lineal_descendant(손자녀)는 HeirRelation에 없어 "other"로 매핑
+ *   (자녀공제·연로자 child제외 회피 — 동거가족 손자녀는 자녀 아님).
+ * lineal_ascendant·sibling은 HeirRelation에 존재 → 그대로.
+ */
+function toPersonalHeir(d: CohabitantDependent): Heir {
+  return {
+    id: d.id,
+    name: d.name,
+    birthDate: d.birthDate,
+    isDisabled: d.isDisabled,
+    gender: d.gender,
+    relation: d.relation === "lineal_descendant" ? "other" : d.relation,
+  };
+}
+
+/**
+ * 인적공제 4종 합산 (§20).
+ * 대상 = 상속인(legatee·corporate 제외, G5) + 동거가족(시령§18①, 옵션 B).
+ *
+ * @param heirs 상속인 목록 (legatee·corporate 포함 — 내부에서 필터)
+ * @param baseDate 상속개시일 (YYYY-MM-DD) — 상속인·동거가족 공통 나이 기준일
+ * @param cohabitantDependents 비상속인 동거가족 (P1)
+ */
 export function calcPersonalDeductions(
   heirs: Heir[],
   baseDate: string,
+  cohabitantDependents?: CohabitantDependent[],
 ): PersonalDeductionSummary {
-  const child = calcChildrenDeduction(heirs);
-  const minor = calcMinorDeduction(heirs, baseDate);
-  const elder = calcElderDeduction(heirs, baseDate);
-  const disabled = calcDisabledDeduction(heirs, baseDate);
+  // G5: 수유자(legatee)·영리법인(corporate)은 인적공제 대상 아님 (inheritance-deductions.ts:551 realHeirs와 동일 패턴)
+  const activeHeirs = heirs.filter(
+    (h) => h.relation !== "legatee" && h.relation !== "corporate",
+  );
+  // 동거가족 정규화 (시령 §18①) — 인적공제 대상에 합산
+  const normalized = (cohabitantDependents ?? []).map(toPersonalHeir);
+  const cohabitantIds = new Set(normalized.map((d) => d.id));
+  const targets = [...activeHeirs, ...normalized];
+
+  const child = calcChildrenDeduction(targets);
+  const minor = calcMinorDeduction(targets, baseDate);
+  const elder = calcElderDeduction(targets, baseDate);
+  const disabled = calcDisabledDeduction(targets, baseDate);
 
   const total =
     child.totalDeduction +
@@ -326,6 +365,7 @@ export function calcPersonalDeductions(
       age: r.age,
       remainingYears: r.remainingYears,
       deduction: r.deduction,
+      isCohabitant: cohabitantIds.has(r.heirId),
     })),
     minorDeduction: minor.totalDeduction,
     elderCount: elder.count,
@@ -337,6 +377,7 @@ export function calcPersonalDeductions(
       age: r.age,
       lifeExpectancy: r.lifeExpectancy,
       deduction: r.deduction,
+      isCohabitant: cohabitantIds.has(r.heirId),
     })),
     disabledDeduction: disabled.totalDeduction,
     total,

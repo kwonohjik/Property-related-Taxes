@@ -8,6 +8,7 @@ import type {
   PriorGift,
   PresumedInheritanceItem,
   DebtItem,
+  CohabitantDependent,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { FarmingInheritanceInput } from "@/lib/tax-engine/types/inheritance-farming.types";
 import type { FamilyBusinessInheritanceInput } from "@/lib/tax-engine/types/inheritance-family-business.types";
@@ -41,6 +42,13 @@ export interface FormState extends AppraisalFeeFormFields {
   priorGifts: PriorGift[];
   // Step 4
   heirs: Heir[];
+  /**
+   * 동거가족 인적공제 (§20 P1 — 시령 §18①). 비상속인 부양 직계존비속·형제자매. 3-state.
+   * - undefined: OFF (미입력)
+   * - []: ON 진입, 빈 상태
+   * - [{...}]: ON 데이터 있음
+   */
+  cohabitantDependents: CohabitantDependent[] | undefined;
   spouseActualAmount: string;
   netFinancialAssets: string;
   cohabitHouseStdPrice: string;
@@ -127,6 +135,7 @@ export const INITIAL_FORM: FormState = {
   debtItems: undefined,
   priorGifts: [],
   heirs: [],
+  cohabitantDependents: undefined,
   spouseActualAmount: "",
   netFinancialAssets: "",
   cohabitHouseStdPrice: "",

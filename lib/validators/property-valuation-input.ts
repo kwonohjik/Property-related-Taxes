@@ -681,6 +681,22 @@ export const inheritanceDeductionInputSchema = z.object({
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD 형식")
     .optional(),
+  // ⑫ 동기화 (2026-06-05, §20 P1 동거가족): 미선언 시 z.object 침묵 strip → 엔진 미도달.
+  cohabitantDependents: z
+    .array(
+      z.object({
+        id: z.string(),
+        name: z.string().optional(),
+        birthDate: z
+          .string()
+          .regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD 형식")
+          .optional(),
+        isDisabled: z.boolean().optional(),
+        gender: z.enum(["male", "female"]).optional(),
+        relation: z.enum(["lineal_ascendant", "lineal_descendant", "sibling"]),
+      }),
+    )
+    .optional(),
 });
 
 // ============================================================

@@ -48,14 +48,21 @@ export function PersonalDeductionDetailCard({
           )}
 
           {/* ② 미성년자공제 (§20①2호) — per-heir */}
-          {detail.minorPerHeir.map((r, i) => (
-            <DetailRow
-              key={`minor-${i}`}
-              indent
-              label={`${r.name?.trim() || "미성년 상속인"} (만 ${r.age}세): (19 − ${r.age})년 × 1,000만원`}
-              value={formatKRW(r.deduction)}
-            />
-          ))}
+          {detail.minorPerHeir.map((r, i) => {
+            const who = r.name?.trim()
+              ? `${r.name.trim()}${r.isCohabitant ? " (동거가족)" : ""}`
+              : r.isCohabitant
+                ? "동거가족"
+                : "미성년 상속인";
+            return (
+              <DetailRow
+                key={`minor-${i}`}
+                indent
+                label={`${who} (만 ${r.age}세): (19 − ${r.age})년 × 1,000만원`}
+                value={formatKRW(r.deduction)}
+              />
+            );
+          })}
           {detail.minorPerHeir.length > 0 && (
             <SubTotalRow
               label="미성년자공제 합계"
@@ -72,20 +79,27 @@ export function PersonalDeductionDetailCard({
           )}
 
           {/* ④ 장애인공제 (§20①4호) — per-heir */}
-          {detail.disabledPerHeir.map((r, i) => (
-            <DetailRow
-              key={`disabled-${i}`}
-              indent
-              label={`${r.name?.trim() || "장애인 상속인"}: ${
-                r.gender === "male"
-                  ? "남성"
-                  : r.gender === "female"
-                    ? "여성"
-                    : "성별 미입력"
-              } 만 ${r.age}세 기대여명 ${r.lifeExpectancy}년 × 1,000만원`}
-              value={formatKRW(r.deduction)}
-            />
-          ))}
+          {detail.disabledPerHeir.map((r, i) => {
+            const who = r.name?.trim()
+              ? `${r.name.trim()}${r.isCohabitant ? " (동거가족)" : ""}`
+              : r.isCohabitant
+                ? "동거가족"
+                : "장애인 상속인";
+            const genderLabel =
+              r.gender === "male"
+                ? "남성"
+                : r.gender === "female"
+                  ? "여성"
+                  : "성별 미입력";
+            return (
+              <DetailRow
+                key={`disabled-${i}`}
+                indent
+                label={`${who}: ${genderLabel} 만 ${r.age}세 기대여명 ${r.lifeExpectancy}년 × 1,000만원`}
+                value={formatKRW(r.deduction)}
+              />
+            );
+          })}
           {detail.disabledPerHeir.length > 0 && (
             <SubTotalRow
               label="장애인공제 합계"

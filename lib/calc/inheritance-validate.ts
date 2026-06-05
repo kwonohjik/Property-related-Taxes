@@ -313,6 +313,14 @@ export function validateInheritanceTaxInput(
     }
   }
 
+  // ⑧ 동거가족(§20 P1, 시령 §18①) 장애인도 동일 — 성별 필수 (자동추정 금지)
+  for (const dep of input.deductionInput?.cohabitantDependents ?? []) {
+    if (dep.isDisabled === true && !dep.gender) {
+      const who = dep.name?.trim() || "동거가족";
+      return `${who}의 성별을 입력하세요. (장애인공제 §20①4호 — 성별·연령별 기대여명 기준)`;
+    }
+  }
+
   for (const item of input.estateItems) {
     const e = validateEstateItemAllocations(item);
     if (e) return e;

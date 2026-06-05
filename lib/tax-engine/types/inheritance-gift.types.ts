@@ -675,6 +675,29 @@ export interface Heir {
 }
 
 /**
+ * 동거가족 (시행령 §18① — 상속개시일 현재 피상속인이 사실상 부양하는
+ * 직계존비속(배우자의 직계존속 포함)·형제자매). 상속인이 아닌 부양가족.
+ * §20①2~4호 미성년·연로자·장애인공제 대상 (자녀공제 §20①1호는 제외).
+ * P1 — 별도 배열(옵션 B): heirs[] 무변경, calcPersonalDeductions 3rd 인자.
+ */
+export interface CohabitantDependent {
+  id: string;
+  name?: string;
+  /** YYYY-MM-DD — 미성년·연로자 판정 (상속개시일 현재 만 나이) */
+  birthDate?: string;
+  isDisabled?: boolean;
+  /** 장애인(isDisabled) 시 필수 — §20①4호 성별·연령별 기대여명 */
+  gender?: "male" | "female";
+  /**
+   * 시령 §18① 제한: 직계존비속(배우자의 직계존속 포함)·형제자매.
+   * - lineal_ascendant: 부·모·조부모·장인·장모(배우자 직계존속 포함)
+   * - lineal_descendant: 손자·손녀 (HeirRelation엔 없는 신규 값 — 본 타입 전용)
+   * - sibling: 형제자매
+   */
+  relation: "lineal_ascendant" | "lineal_descendant" | "sibling";
+}
+
+/**
  * PR 2 — 영리법인 주주 명세 (부표 5 나. 표).
  *
  * §3의2② 본문: "그 영리법인의 주주 또는 출자자 중 상속인, 상속인의 배우자,
@@ -886,6 +909,13 @@ export interface InheritanceDeductionInput {
    * EstateItem 자동 합산은 orchestrator에서 InheritanceTaxInput.estateItems 직접 사용.
    */
   familyBusiness?: FamilyBusinessInheritanceInput;
+
+  // ===== 동거가족 인적공제 (2026-06-05, §20 P1 — 시령 §18①) =====
+  /**
+   * 비상속인 동거가족(부양 직계존비속·형제자매) — §20①2~4호 미성년·연로자·장애인공제 대상.
+   * 옵션 B: heirs[]와 별도 배열(법정상속분·§21② 오염 0). calcPersonalDeductions 3rd 인자로 전달.
+   */
+  cohabitantDependents?: CohabitantDependent[];
 }
 
 // 분리 타입 barrel (800줄 정책)

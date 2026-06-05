@@ -24,7 +24,10 @@ import {
   calcGiftDeductions,
 } from "@/lib/tax-engine/deductions/gift-deductions";
 import { optimizeDeductionMethod } from "@/lib/tax-engine/deductions/deduction-optimizer";
-import type { Heir } from "@/lib/tax-engine/types/inheritance-gift.types";
+import type {
+  Heir,
+  CohabitantDependent,
+} from "@/lib/tax-engine/types/inheritance-gift.types";
 
 // ============================================================
 // 헬퍼: 상속인 목록 생성
@@ -186,6 +189,94 @@ describe("인적공제 4종 (§20)", () => {
 // ============================================================
 // 2. 상속공제 7종 + §24 한도
 // ============================================================
+
+describe("동거가족 인적공제 (§20 P1, 시령 §18①)", () => {
+  it("[CD-1] 동거가족 손자 남5세 장애 → 미성년 1.4억 + 장애 7.6억 = 9억", () => {
+    const grandson: CohabitantDependent = {
+      id: "cd-1",
+      name: "김일",
+      relation: "lineal_descendant",
+      birthDate: "2017-03-04",
+      isDisabled: true,
+      gender: "male",
+    };
+    const r = calcPersonalDeductions([], "2023-01-01", [grandson]);
+    expect(r.minorDeduction).toBe(140_000_000); // (19−5)×1천만
+    expect(r.disabledDeduction).toBe(760_000_000); // 남5세 기대여명 76×1천만
+    expect(r.total).toBe(900_000_000); // 자녀공제 0 (손자≠자녀)
+  });
+
+  it("[CD-2] 동거가족 장인(배우자 직계존속) 66세 → 연로자 5천만 (시령§18① '배우자의 직계존속 포함')", () => {
+    const fatherInLaw: CohabitantDependent = {
+      id: "cd-2",
+      relation: "lineal_ascendant",
+      birthDate: "1959-01-01",
+    };
+    const r = calcPersonalDeductions([], "2025-01-01", [fatherInLaw]);
+    expect(r.elderDeduction).toBe(50_000_000);
+    expect(r.total).toBe(50_000_000);
+  });
+
+  it("[CD-3] legatee 손녀 미성년(만10세) → 인적공제 0 (G5 — legatee 대상 외)", () => {
+    const legatee: Heir = {
+      id: "leg-1",
+      relation: "legatee",
+      name: "손녀",
+      birthDate: "2015-01-01",
+    };
+    const r = calcPersonalDeductions([legatee], "2025-01-01");
+    expect(r.minorDeduction).toBe(0);
+    expect(r.total).toBe(0);
+  });
+
+  it("[CD-4] 동거가족 형제 만20세 → 미성년 0 (§20①2호 19세 경계)", () => {
+    const sibling: CohabitantDependent = {
+      id: "cd-4",
+      relation: "sibling",
+      birthDate: "2005-01-01",
+    };
+    const r = calcPersonalDeductions([], "2025-01-01", [sibling]);
+    expect(r.minorDeduction).toBe(0);
+    expect(r.total).toBe(0);
+  });
+
+  it("[CD-5] 동거가족(형제66)+상속인(직계존속66) → 연로자 각각 카운트 1억", () => {
+    const heir: Heir = {
+      id: "h-1",
+      relation: "lineal_ascendant",
+      birthDate: "1959-01-01",
+    };
+    const dep: CohabitantDependent = {
+      id: "cd-5",
+      relation: "sibling",
+      birthDate: "1959-01-01",
+    };
+    const r = calcPersonalDeductions([heir], "2025-01-01", [dep]);
+    expect(r.elderDeduction).toBe(100_000_000); // 2명 × 5천만
+    expect(r.total).toBe(100_000_000);
+  });
+
+  it("[CD-6] PDF 종합사례: 동거가족 손자2 (장애 남5세 + 1세) → 10.8억", () => {
+    const g1: CohabitantDependent = {
+      id: "g-1",
+      name: "김일",
+      relation: "lineal_descendant",
+      birthDate: "2017-03-04",
+      isDisabled: true,
+      gender: "male",
+    };
+    const g2: CohabitantDependent = {
+      id: "g-2",
+      name: "김이",
+      relation: "lineal_descendant",
+      birthDate: "2021-05-05",
+    };
+    const r = calcPersonalDeductions([], "2023-01-01", [g1, g2]);
+    expect(r.minorDeduction).toBe(320_000_000); // 1.4억(손자1) + 1.8억(손자2)
+    expect(r.disabledDeduction).toBe(760_000_000); // 손자1 장애
+    expect(r.total).toBe(1_080_000_000);
+  });
+});
 
 describe("상속공제 7종 + §24 종합한도", () => {
   it("[D10] 기초공제: 항상 2억", () => {

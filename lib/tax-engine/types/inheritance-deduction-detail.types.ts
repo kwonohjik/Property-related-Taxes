@@ -263,6 +263,7 @@ export interface PersonalDeductionDetail {
     age: number; // 만 나이 (floor)
     remainingYears: number; // 19 − age (§20③ 올림 반영)
     deduction: number; // remainingYears × 1,000만원
+    isCohabitant?: boolean; // 동거가족(시령§18①) 여부 — 결과 화면 [동거가족] 구분 (P1)
   }>;
   minorDeduction: number; // minorPerHeir 합계
 
@@ -278,6 +279,7 @@ export interface PersonalDeductionDetail {
     age: number; // 만 나이 (floor)
     lifeExpectancy: number; // 성별·연령별 기대여명 (Math.ceil, §20③)
     deduction: number; // lifeExpectancy × 1,000만원
+    isCohabitant?: boolean; // 동거가족(시령§18①) 여부 — 결과 화면 [동거가족] 구분 (P1)
   }>;
   disabledDeduction: number; // disabledPerHeir 합계
 
