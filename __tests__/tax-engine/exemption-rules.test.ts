@@ -19,8 +19,8 @@ import {
 // ============================================================
 
 describe("비과세 룰 데이터 무결성", () => {
-  it("[N1] 상속세 비과세 룰 8종 등록", () => {
-    expect(INHERITANCE_EXEMPTION_RULES.length).toBe(8);
+  it("[N1] 상속세 비과세 룰 9종 등록 (공익신탁 §17 추가 2026-06-05)", () => {
+    expect(INHERITANCE_EXEMPTION_RULES.length).toBe(9);
   });
 
   it("[N2] 증여세 비과세 룰 8종 등록", () => {
@@ -180,6 +180,31 @@ describe("비과세 평가기 — 핵심 케이스", () => {
     // grossEstateValue = 3억 → 비과세 5억이어도 3억으로 절사
     const result = evaluateExemptions(items, 300_000_000);
     expect(result.totalExemptAmount).toBe(300_000_000);
+  });
+
+  it("[N17] 공익신탁 §17 룰 등록 + lawRef + unlimited (과세가액 불산입)", () => {
+    const rule = findExemptionRuleById("inh_public_trust");
+    expect(rule).toBeDefined();
+    expect(rule?.category).toBe("inheritance");
+    expect(rule?.lawRef).toBe("상증법 §17");
+    expect(rule?.limitType).toBe("unlimited");
+    // 상속 카테고리 조회에 포함
+    expect(
+      getExemptionRulesByCategory("inheritance").some((r) => r.id === "inh_public_trust"),
+    ).toBe(true);
+  });
+
+  it("[N18] 공익신탁 §17 — 전액 불산입 + 사후관리 경고", () => {
+    const items: ExemptionCheckedItem[] = [
+      { ruleId: "inh_public_trust", claimedAmount: 500_000_000 },
+    ];
+    const result = evaluateExemptions(items, 2_000_000_000);
+    expect(result.itemResults[0].exemptAmount).toBe(500_000_000);
+    expect(result.itemResults[0].taxableOverflow).toBe(0);
+    // riskNote(§17② 시행령 위임 요건) 경고 포함
+    expect(
+      result.itemResults[0].warnings.some((w) => w.includes("공익신탁")),
+    ).toBe(true);
   });
 
   it("[N16] ExemptionInput → CheckedItems 변환", () => {

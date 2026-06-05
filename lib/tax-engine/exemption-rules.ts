@@ -177,6 +177,27 @@ export const INHERITANCE_EXEMPTION_RULES: ExemptionRule[] = [
     ],
   },
   {
+    id: "inh_public_trust",
+    category: "inheritance",
+    name: "공익신탁 출연 재산",
+    lawRef: EXEMPTION.PUBLIC_TRUST, // §17
+    description:
+      "「공익신탁법」에 따른 공익신탁(종교·자선·학술 등)을 통해 공익법인등에 출연하는 재산 (§17) — 과세가액 불산입",
+    limitType: "unlimited",
+    riskLevel: "medium",
+    riskNote:
+      "공익신탁의 범위·운영·출연시기 요건(§17② 시행령 위임) 미충족 시 불산입 배제. 공익 외 사용·신탁 종료 시 사후관리 대상",
+    requirements: [
+      "「공익신탁법」에 따른 공익신탁일 것",
+      "종교·자선·학술 또는 그 밖의 공익을 목적으로 할 것",
+      "공익신탁을 통하여 공익법인등에 출연하는 재산일 것",
+    ],
+    exclusions: [
+      "「공익신탁법」상 공익신탁이 아닌 신탁",
+      "공익 외 목적 신탁",
+    ],
+  },
+  {
     id: "inh_disaster_relief",
     category: "inheritance",
     name: "이재구호금품·치료비",
