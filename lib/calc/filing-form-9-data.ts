@@ -115,7 +115,8 @@ export function buildFilingForm9Data(
   const b35 = 0; // 면제세액 — 이중계상 방지
   // ㉖ §74 징수유예세액 — 납부세액(㊳)에서 차감(결정세액 finalTax는 불변, 재결례 940708)
   const b26 = result.culturalHeritageDeferredTax ?? 0;
-  const b43 = result.finalTax - b26; // ㊳ = ㉔ + ㉕ − ㉖ − ㉗
+  // ㊳ = max(0, ㉔ + ㉕ − ㉖ − ㉗) — 징수유예(산출세액 기준) > 결정세액 시 음수 방지(납부세액 0 하한)
+  const b43 = Math.max(0, result.finalTax - b26);
 
   const values: Record<string, number> = {
     "⑰": b17, "⑱": b18, "⑲": b19, "⑳": b20, "㉑": b21Rate,

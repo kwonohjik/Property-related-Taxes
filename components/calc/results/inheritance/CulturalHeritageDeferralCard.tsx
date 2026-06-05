@@ -43,7 +43,7 @@ export function CulturalHeritageDeferralCard({ result }: { result: InheritanceTa
   const detail = result.culturalHeritageDeferralDetail;
   const deferred = result.culturalHeritageDeferredTax ?? 0;
   if (!detail || deferred <= 0) return null;
-  const payable = result.finalTax - deferred;
+  const payable = Math.max(0, result.finalTax - deferred); // 납부세액 0 하한(징수유예 > 결정세액 edge)
 
   return (
     <div className="rounded-xl border border-emerald-200 bg-emerald-50/40 p-4 dark:border-emerald-800 dark:bg-emerald-950/30">
