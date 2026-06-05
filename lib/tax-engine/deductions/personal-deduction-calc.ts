@@ -1,76 +1,52 @@
 /**
- * 상속세 인적공제 계산 (상증법 §20)
+ * 상속세 「그 밖의 인적공제」 계산 (상증법 §20)
  *
- * 4종 인적공제:
- *   ① 자녀공제   — 1인당 5,000만원 (§20 ①1호)
- *   ② 미성년자공제 — (20세 - 연령) × 1,000만원 (§20 ①2호)
- *   ③ 연로자공제 — 65세 이상 1인당 5,000만원 (§20 ①3호)
- *   ④ 장애인공제 — 기대여명(년) × 1,000만원 (§20 ①4호)
+ * 4종 인적공제 (§20①):
+ *   ① 자녀공제   — 1인당 5,000만원 (1호, 태아 포함)
+ *   ② 미성년자공제 — (19 − 연령) × 1,000만원 (2호, 태아 포함)
+ *   ③ 연로자공제 — 65세 이상 1인당 5,000만원 (3호, 배우자·자녀 제외)
+ *   ④ 장애인공제 — 성별·연령별 기대여명 × 1,000만원 (4호)
  *
- * 중복 적용 가능 (§20 ②):
- *   자녀 + 미성년자, 연로자 + 장애인 등 중복 계산 허용.
- *   단, 동일인에 대해 같은 조항 중복 불가.
+ * 중복공제(상호배제) — §20① 후단:
+ *   1호(자녀) + 2호(미성년) 합산 가능 / 4호(장애인) + 1·2·3호·§19 합산 가능.
+ *   그 외 불가 → 연로자(3호)는 배우자공제·자녀공제와 합산 불가(대상 제외).
+ * §20③: 2호·4호 적용 시 1년 미만의 기간은 1년으로 한다.
+ *
+ * 법령 근거: 상증법 §20 (mst 276123, 시행 2026-01-02) — KoreanLaw 본문 축자 확인.
  */
 
 import { differenceInYears } from "date-fns";
 import { INH } from "../legal-codes";
+import { TaxCalculationError, TaxErrorCode } from "../tax-errors";
 import type { CalculationStep, Heir } from "../types/inheritance-gift.types";
-import { calcMinorPersonalDeduction, calcDisabledPersonalDeduction } from "../tax-utils";
+import type { PersonalDeductionDetail } from "../types/inheritance-deduction-detail.types";
+import { calcMinorPersonalDeduction } from "../tax-utils";
+import { getLifeExpectancyByGender } from "../data/life-expectancy-2023";
+
+// 성별·연령별 기대여명 헬퍼 재노출 (단일 출처 — data/life-expectancy-2023.ts)
+export { getLifeExpectancyByGender } from "../data/life-expectancy-2023";
 
 // ============================================================
 // 단가 상수
 // ============================================================
 
-/** 자녀공제 1인당 (§20 ①1호): 5,000만원 */
+/** 자녀공제 1인당 (§20①1호): 5,000만원 */
 const CHILD_DEDUCTION_PER_PERSON = 50_000_000;
 
-/** 연로자공제 1인당 (§20 ①3호): 5,000만원 */
+/** 연로자공제 1인당 (§20①3호): 5,000만원 */
 const ELDER_DEDUCTION_PER_PERSON = 50_000_000;
 
 /** 연로자 기준 나이: 65세 이상 */
 const ELDER_AGE_THRESHOLD = 65;
 
-/** 미성년자·장애인 공제 단가 (§20 ①2호·4호): 1,000만원/년 */
+/** 미성년자·장애인 공제 단가 (§20①2호·4호): 1,000만원/년 */
 const PER_YEAR_DEDUCTION = 10_000_000;
 
-// ============================================================
-// 2024 통계청 생명표 기반 기대여명 테이블 (만 나이 → 기대여명 년)
-// 출처: 통계청 「2023년 생명표」(2024년 고시)
-// ============================================================
-
-const LIFE_EXPECTANCY_TABLE: Record<number, number> = {
-  0: 84, 1: 83, 2: 82, 3: 81, 4: 80,
-  5: 79, 6: 78, 7: 77, 8: 76, 9: 75,
-  10: 74, 11: 73, 12: 72, 13: 71, 14: 70,
-  15: 69, 16: 68, 17: 67, 18: 66, 19: 65,
-  20: 64, 21: 63, 22: 62, 23: 61, 24: 60,
-  25: 59, 26: 58, 27: 57, 28: 56, 29: 55,
-  30: 54, 31: 53, 32: 52, 33: 51, 34: 50,
-  35: 49, 36: 48, 37: 47, 38: 46, 39: 45,
-  40: 44, 41: 43, 42: 42, 43: 41, 44: 40,
-  45: 39, 46: 38, 47: 37, 48: 36, 49: 35,
-  50: 34, 51: 33, 52: 32, 53: 31, 54: 30,
-  55: 29, 56: 28, 57: 27, 58: 26, 59: 25,
-  60: 24, 61: 23, 62: 22, 63: 21, 64: 20,
-  65: 20, 66: 19, 67: 18, 68: 17, 69: 16,
-  70: 16, 71: 15, 72: 14, 73: 13, 74: 13,
-  75: 12, 76: 11, 77: 11, 78: 10, 79: 9,
-  80: 9, 81: 8, 82: 8, 83: 7, 84: 6,
-  85: 6, 86: 5, 87: 5, 88: 4, 89: 4,
-  90: 4,
-};
-
-/**
- * 기대여명 조회 (통계청 생명표)
- * 90세 이상은 4년, 테이블 미존재 나이는 linear interpolation 대신 최근 값 사용
- */
-export function getLifeExpectancy(ageAtDeath: number): number {
-  const age = Math.max(0, Math.min(90, Math.floor(ageAtDeath)));
-  return LIFE_EXPECTANCY_TABLE[age] ?? 4;
-}
+/** 미성년자 연령 기준 (§20①2호 "19세가 될 때까지", 민법 §4 성년 19세) */
+const MINOR_AGE_LIMIT = 19;
 
 // ============================================================
-// ① 자녀공제 (§20 ①1호)
+// ① 자녀공제 (§20①1호)
 // ============================================================
 
 export interface ChildDeductionResult {
@@ -82,10 +58,14 @@ export interface ChildDeductionResult {
 
 /**
  * 자녀공제: 1인당 5,000만원 × 자녀 수
- * 자녀 = 직계비속 (child) 관계 상속인
+ * 자녀 = 직계비속(child) 관계 상속인 + 태아(isFetus, 2023.1.1.~ §20①1호).
+ * (계모자·적모서자 관계자는 자녀공제 대상 아님 — PDF 해석사례 재삼46014-100. 현재 relation 구분
+ *  없이 child 카운트 유지: 입력 UI에 계모자/적모서자 관계가 없어 오인 위험 낮음.)
  */
 export function calcChildrenDeduction(heirs: Heir[]): ChildDeductionResult {
-  const children = heirs.filter((h) => h.relation === "child");
+  const children = heirs.filter(
+    (h) => h.relation === "child" || h.isFetus === true,
+  );
   const count = children.length;
   const totalDeduction = count * CHILD_DEDUCTION_PER_PERSON;
 
@@ -104,19 +84,26 @@ export function calcChildrenDeduction(heirs: Heir[]): ChildDeductionResult {
 }
 
 // ============================================================
-// ② 미성년자공제 (§20 ①2호)
+// ② 미성년자공제 (§20①2호)
 // ============================================================
 
 export interface MinorDeductionResult {
-  perHeir: { heirId: string; age: number; deduction: number }[];
+  perHeir: {
+    heirId: string;
+    name?: string;
+    age: number;
+    remainingYears: number;
+    deduction: number;
+  }[];
   totalDeduction: number;
   breakdown: CalculationStep[];
   appliedLaws: string[];
 }
 
 /**
- * 미성년자공제: (20 - 연령) × 1,000만원
- * 대상: 상속인 중 20세 미만인 자 (상속개시일 기준 만 나이)
+ * 미성년자공제: (19 − 연령) × 1,000만원
+ * 대상: 상속인(배우자 제외) 및 동거가족 중 19세 미만 + 태아(만 0세 간주).
+ * §20③ "1년 미만 1년" → calcMinorPersonalDeduction의 floor 산식이 자동 충족.
  *
  * @param heirs 상속인 목록
  * @param baseDate 상속개시일 (YYYY-MM-DD)
@@ -128,13 +115,32 @@ export function calcMinorDeduction(
   const perHeir: MinorDeductionResult["perHeir"] = [];
 
   for (const heir of heirs) {
-    if (!heir.birthDate) continue;
-    const deduction = calcMinorPersonalDeduction(heir.birthDate, baseDate);
-    if (deduction > 0) {
-      // differenceInYears: 생일 도달 여부를 반영한 정확한 만 나이 (공제액 산정과 동일 기준)
-      const age = differenceInYears(new Date(baseDate), new Date(heir.birthDate));
-      perHeir.push({ heirId: heir.id, age, deduction });
+    // 배우자는 미성년자공제 대상 제외 (§20①2호 "상속인(배우자는 제외한다)")
+    if (heir.relation === "spouse") continue;
+
+    let age: number;
+    let deduction: number;
+
+    if (heir.isFetus === true) {
+      // 태아 = 출생 전 → 만 0세 간주 (§20①2호 태아 포함) → (19−0)×1천만 = 1.9억
+      age = 0;
+      deduction = MINOR_AGE_LIMIT * PER_YEAR_DEDUCTION;
+    } else if (heir.birthDate) {
+      deduction = calcMinorPersonalDeduction(heir.birthDate, baseDate);
+      if (deduction <= 0) continue;
+      // differenceInYears: 공제액 산정과 동일 기준의 만 나이
+      age = differenceInYears(new Date(baseDate), new Date(heir.birthDate));
+    } else {
+      continue;
     }
+
+    perHeir.push({
+      heirId: heir.id,
+      name: heir.name,
+      age,
+      remainingYears: deduction / PER_YEAR_DEDUCTION,
+      deduction,
+    });
   }
 
   const totalDeduction = perHeir.reduce((s, r) => s + r.deduction, 0);
@@ -143,7 +149,7 @@ export function calcMinorDeduction(
     perHeir,
     totalDeduction,
     breakdown: perHeir.map((r) => ({
-      label: `미성년자공제 (만${r.age}세): (20-${r.age}) × 1,000만원`,
+      label: `미성년자공제 (만${r.age}세): (19-${r.age})년 × 1,000만원`,
       amount: r.deduction,
       lawRef: INH.PERSONAL_DEDUCTION,
     })),
@@ -152,7 +158,7 @@ export function calcMinorDeduction(
 }
 
 // ============================================================
-// ③ 연로자공제 (§20 ①3호)
+// ③ 연로자공제 (§20①3호)
 // ============================================================
 
 export interface ElderDeductionResult {
@@ -163,7 +169,10 @@ export interface ElderDeductionResult {
 }
 
 /**
- * 연로자공제: 65세 이상 상속인 1인당 5,000만원
+ * 연로자공제: 65세 이상 1인당 5,000만원
+ * 대상: 상속인(배우자 제외) 및 동거가족 중 65세 이상.
+ *   §20①3호 "상속인(배우자는 제외한다)" + §20① 후단(1호↔3호 합산 불가)
+ *   → 배우자(spouse)·자녀(child)는 연로자공제 대상에서 제외.
  *
  * @param heirs 상속인 목록
  * @param baseDate 상속개시일 (YYYY-MM-DD)
@@ -176,7 +185,8 @@ export function calcElderDeduction(
 
   const elderHeirs = heirs.filter((h) => {
     if (!h.birthDate) return false;
-    // differenceInYears: 생일 도달 여부를 반영한 정확한 만 나이
+    // §20①3호 배우자 제외 + §20① 후단(자녀공제와 합산 불가) → 자녀 제외
+    if (h.relation === "spouse" || h.relation === "child") return false;
     const age = differenceInYears(base, new Date(h.birthDate));
     return age >= ELDER_AGE_THRESHOLD;
   });
@@ -189,7 +199,7 @@ export function calcElderDeduction(
     totalDeduction,
     breakdown: [
       {
-        label: `연로자공제 ${count}명 × 5,000만원 (65세 이상)`,
+        label: `연로자공제 ${count}명 × 5,000만원 (65세 이상, 배우자·자녀 제외)`,
         amount: totalDeduction,
         lawRef: INH.PERSONAL_DEDUCTION,
       },
@@ -199,19 +209,28 @@ export function calcElderDeduction(
 }
 
 // ============================================================
-// ④ 장애인공제 (§20 ①4호)
+// ④ 장애인공제 (§20①4호)
 // ============================================================
 
 export interface DisabledDeductionResult {
-  perHeir: { heirId: string; lifeExpectancy: number; deduction: number }[];
+  perHeir: {
+    heirId: string;
+    name?: string;
+    gender: "male" | "female" | undefined;
+    age: number;
+    lifeExpectancy: number;
+    deduction: number;
+  }[];
   totalDeduction: number;
   breakdown: CalculationStep[];
   appliedLaws: string[];
 }
 
 /**
- * 장애인공제: 기대여명(년) × 1,000만원
- * 기대여명: 통계청 생명표 기준 (getLifeExpectancy)
+ * 장애인공제: 성별·연령별 기대여명(년) × 1,000만원 (§20①4호)
+ * 대상: 상속인 및 동거가족 중 장애인 (배우자 포함 — 4호+§19 합산 가능).
+ * 기대여명: 통계청 2023 생명표 (getLifeExpectancyByGender, Math.ceil 올림 §20③).
+ * 성별 미입력 시 계산 불가 → TaxCalculationError (1차 게이트는 validation ⑧, 자동추정 금지).
  *
  * @param heirs 상속인 목록
  * @param baseDate 상속개시일 (YYYY-MM-DD)
@@ -226,18 +245,29 @@ export function calcDisabledDeduction(
   for (const heir of heirs) {
     if (!heir.isDisabled) continue;
 
-    let lifeExpectancy: number;
+    let age = 0;
+    let lifeExpectancy = 0;
     if (heir.birthDate) {
-      // differenceInYears: 생일 도달 여부를 반영한 정확한 만 나이
-      const age = differenceInYears(base, new Date(heir.birthDate));
-      lifeExpectancy = getLifeExpectancy(age);
-    } else {
-      // 생년월일 미입력 시 기대여명 0으로 처리
-      lifeExpectancy = 0;
+      age = differenceInYears(base, new Date(heir.birthDate));
+      if (!heir.gender) {
+        // §20①4호 "성별·연령별 기대여명" — 성별 없으면 표 조회 불가 (자동추정 금지).
+        throw new TaxCalculationError(
+          TaxErrorCode.INVALID_INPUT,
+          "장애인공제(§20①4호): 상속인 성별 미입력 — 성별·연령별 기대여명 산정 불가.",
+        );
+      }
+      lifeExpectancy = getLifeExpectancyByGender(heir.gender, age);
     }
 
     const deduction = lifeExpectancy * PER_YEAR_DEDUCTION;
-    perHeir.push({ heirId: heir.id, lifeExpectancy, deduction });
+    perHeir.push({
+      heirId: heir.id,
+      name: heir.name,
+      gender: heir.gender,
+      age,
+      lifeExpectancy,
+      deduction,
+    });
   }
 
   const totalDeduction = perHeir.reduce((s, r) => s + r.deduction, 0);
@@ -246,7 +276,9 @@ export function calcDisabledDeduction(
     perHeir,
     totalDeduction,
     breakdown: perHeir.map((r) => ({
-      label: `장애인공제: 기대여명 ${r.lifeExpectancy}년 × 1,000만원`,
+      label: `장애인공제 (${
+        r.gender === "male" ? "남" : r.gender === "female" ? "여" : "-"
+      } 만${r.age}세): 기대여명 ${r.lifeExpectancy}년 × 1,000만원`,
       amount: r.deduction,
       lawRef: INH.PERSONAL_DEDUCTION,
     })),
@@ -255,7 +287,7 @@ export function calcDisabledDeduction(
 }
 
 // ============================================================
-// 인적공제 합계 (4종 합산)
+// 인적공제 합계 (4종 합산) + PersonalDeductionDetail echo (G7)
 // ============================================================
 
 export interface PersonalDeductionSummary {
@@ -266,6 +298,8 @@ export interface PersonalDeductionSummary {
   total: number;
   breakdown: CalculationStep[];
   appliedLaws: string[];
+  /** G7 — 결과 화면 4종 분해 표시용 echo (엔진 산식 변경 0) */
+  detail: PersonalDeductionDetail;
 }
 
 export function calcPersonalDeductions(
@@ -283,6 +317,31 @@ export function calcPersonalDeductions(
     elder.totalDeduction +
     disabled.totalDeduction;
 
+  const detail: PersonalDeductionDetail = {
+    childCount: child.count,
+    childDeduction: child.totalDeduction,
+    minorPerHeir: minor.perHeir.map((r) => ({
+      heirId: r.heirId,
+      name: r.name,
+      age: r.age,
+      remainingYears: r.remainingYears,
+      deduction: r.deduction,
+    })),
+    minorDeduction: minor.totalDeduction,
+    elderCount: elder.count,
+    elderDeduction: elder.totalDeduction,
+    disabledPerHeir: disabled.perHeir.map((r) => ({
+      heirId: r.heirId,
+      name: r.name,
+      gender: r.gender,
+      age: r.age,
+      lifeExpectancy: r.lifeExpectancy,
+      deduction: r.deduction,
+    })),
+    disabledDeduction: disabled.totalDeduction,
+    total,
+  };
+
   return {
     childDeduction: child.totalDeduction,
     minorDeduction: minor.totalDeduction,
@@ -297,5 +356,6 @@ export function calcPersonalDeductions(
       { label: "인적공제 합계", amount: total, lawRef: INH.PERSONAL_DEDUCTION },
     ],
     appliedLaws: [INH.PERSONAL_DEDUCTION],
+    detail,
   };
 }

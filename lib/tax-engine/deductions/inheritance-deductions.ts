@@ -759,5 +759,7 @@ export function calcInheritanceDeductions(
     cohabitDeductionDetail,
     deductionLimitDetail: ceilingDetail,
     rawTotalDeduction: rawTotal,
+    // G7 — §20 인적공제 4종 분해 echo (결과 화면 펼침용)
+    personalDeductionDetail: personalResult.detail,
   };
 }

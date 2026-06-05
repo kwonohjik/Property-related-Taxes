@@ -24,6 +24,7 @@ import { CohabitDeductionDetailCard } from "./CohabitDeductionDetailCard";
 import { FamilyBusinessDetailCard } from "./FamilyBusinessDetailCard";
 import { FarmingDeductionDetailCard } from "./FarmingDeductionDetailCard";
 import { DeductionLimitDetailCard } from "./DeductionLimitDetailCard";
+import { PersonalDeductionDetailCard } from "./PersonalDeductionDetailCard";
 import {
   isSection22MajorShareholderExcluded,
 } from "@/lib/calc/financial-deduction-resolver";
@@ -81,9 +82,10 @@ export function DeductionBreakdownSection({ result, estateItems, debtItems, heir
                 triggerLabel="기초공제 (§18)"
                 triggerValue={formatKRW(dd.basicDeduction)}
               />
-              <Row
-                label="인적공제 합계 (§20)"
-                value={formatKRW(dd.personalDeductionTotal)}
+              <PersonalDeductionDetailCard
+                detail={dd.personalDeductionDetail}
+                triggerLabel="인적공제 합계 (§20)"
+                triggerValue={formatKRW(dd.personalDeductionTotal)}
               />
             </>
           )}
