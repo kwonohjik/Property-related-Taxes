@@ -27,6 +27,7 @@ import { evaluateAllEstateItems } from "./property-valuation";
 import { evaluateExemptions } from "./exemption-evaluator";
 import { calcGiftDeductions } from "./deductions/gift-deductions";
 import { calcAppraisalFeeDeduction } from "./deductions/appraisal-fee-deduction";
+import { calcInstallmentSplit } from "./credits/installment-split";
 import {
   DEFAULT_INHERITANCE_GIFT_BRACKETS,
   calcInheritanceGiftTax,
@@ -269,6 +270,14 @@ export function calcGiftTax(
     foreignTaxCredit: creditResult.foreignTaxCredit,
   });
 
+  // 분납 (§70②) — finalTax 산출 후 내부 계산 (순환 회피). 별지10호 ㊼ cashDeferred echo.
+  const installmentSplit = calcInstallmentSplit({
+    payableTax: finalTax,
+    applyInstallmentSplit: input.applyInstallmentSplit ?? false,
+    requestedSplitAmount: input.requestedSplitAmount,
+    applyLongTermInstallment: false, // 증여 연부연납 미구현 → 배타 대상 없음
+  });
+
   const partialResult = {
     grossGiftValue,
     exemptAmount,
@@ -306,7 +315,7 @@ export function calcGiftTax(
     latePaymentPenalty: 0,
     publicInterestPenalty: 0,
     installmentPayment: 0,
-    cashDeferred: 0,
+    cashDeferred: installmentSplit.splitAmount, // §70② 분납 (별지10호 ㊼)
   };
 
   const besshi10Rows = buildBesshi10Rows(input, partialResult, brackets);

@@ -1257,6 +1257,10 @@ export interface GiftTaxInput {
   valuationBaseDate?: string;
   /** 감정평가수수료 입력 (§55①·시행령 §46의2 → §20의3 준용) */
   appraisalFee?: AppraisalFeeInput;
+  /** 분납 신청 여부 (§70②) — 결정세액 1천만 초과 시 별지10호 ㊼ 연동 */
+  applyInstallmentSplit?: boolean;
+  /** 분납 희망액 (§70② "이하" 범위 — 미입력 시 최대 분납액) */
+  requestedSplitAmount?: number;
 }
 
 /** 증여세 계산 결과 전체 */

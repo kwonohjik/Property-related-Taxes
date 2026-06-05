@@ -108,6 +108,12 @@ export interface FormState extends AppraisalFeeFormFields {
   installmentFbMode: "straight20" | "grace10";
   /** 미래 회차 가산율(연 %, 기본 3.1) — 과거 회차는 고시 연혁율 자동 (§69) */
   installmentFutureRate: string;
+
+  // 분납 (Step4 끝, 상증법 §70②) — 연부연납과 배타. 결정세액 미영향 투영 입력.
+  /** 분납 신청 여부 */
+  splitPaymentEnabled: boolean;
+  /** 분납 희망액 (원, 빈 문자열 허용 — 미입력 시 최대 분납액) */
+  splitPaymentAmount: string;
 }
 
 export type FormSet = (p: Partial<FormState>) => void;
@@ -159,6 +165,9 @@ export const INITIAL_FORM: FormState = {
   installmentFamilyBusiness: false,
   installmentFbMode: "straight20",
   installmentFutureRate: "3.1",
+  // 분납 기본값 (§70②)
+  splitPaymentEnabled: false,
+  splitPaymentAmount: "",
   ...INITIAL_APPRAISAL_FEE_FIELDS,
 };
 

@@ -35,6 +35,7 @@ const ALL_LEAVES: PrintSectionId[] = [
   "unlisted-stock-besshi",
   "listed-stock-besshi",
   "installment-guide",
+  "split-payment",
   "warnings",
 ];
 
@@ -68,8 +69,8 @@ describe("선택 출력 레지스트리 — Pre-Do anchor", () => {
     }
   });
 
-  // PD-3: 트리 평탄화 = 18 leaf, 유니크, group: 접두 없음
-  it("PD-3: flattenPrintSectionIds는 18개 유니크 leaf, group: 접두 없음", () => {
+  // PD-3: 트리 평탄화 = 19 leaf, 유니크, group: 접두 없음
+  it("PD-3: flattenPrintSectionIds는 19개 유니크 leaf, group: 접두 없음", () => {
     const ids = flattenPrintSectionIds();
     expect(ids).toHaveLength(ALL_LEAVES.length);
     expect(new Set(ids).size).toBe(ids.length); // 유니크
