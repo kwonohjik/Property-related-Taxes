@@ -30,8 +30,6 @@ export interface ExemptionCheckedItem {
   claimedAreaM2?: number;
   /** @deprecated claimedAreaM2 사용 권장 */
   areaM2?: number;
-  /** 문화재 지정 취소 여부 (§12 1호 단서 — 취소 시 추징) */
-  culturalDesignationRevoked?: boolean;
 }
 
 /**
@@ -41,12 +39,10 @@ export interface ExemptionCheckedItem {
 export interface ExemptionInput {
   /** 전사자 해당 여부 (§11) */
   isWarHero?: boolean;
-  /** 국가 기증 재산 금액 (§12①) */
+  /** 국가·지자체·공공단체 유증 재산 금액 (§12 1호) */
   donatedToState?: number;
-  /** 제사용 재산 (§12②) */
+  /** 제사용 재산 — 족보·제구 (§12 3호, 민법 §1008의3) */
   ceremonialProperty?: number;
-  /** 문화재 자산 (§12③) */
-  culturalProperty?: number;
   /** 비과세 증여 — 사회통념상 금품·학자금·치료비 등 (§46) */
   socialNormGifts?: number;
   /** 공익법인 출연재산 (§46의2) */

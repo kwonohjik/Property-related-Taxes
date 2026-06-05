@@ -1,15 +1,18 @@
 /**
- * 상속세·증여세 비과세 룰 정의 (상증법 §11·§12·§46·§46의2)
+ * 상속세·증여세 비과세·과세가액 불산입 룰 정의
+ * (상속: 상증법 §12·§16·§17 / 증여: §46·§46의2)
  *
- * 상속세 비과세 8종 (§11·§12):
- *   1. 국가·지자체 유증 재산 (§11 ①)
- *   2. 문화재 및 보호구역 토지 (§12 1호)
- *   3. 금양임야 (§12 2호) — 600평 한도
- *   4. 묘토 (§12 2호) — 1,200평 한도
- *   5. 족보·제구 (§12 3호)
- *   6. 공익법인 출연 재산 (§12 4호·§16) — 동족주식 한도 주의
- *   7. 이재구호금품·치료비 (§12 6호)
- *   8. 정당 유증 재산 (§12 7호)
+ * 상속세 비과세·과세가액 불산입 8종:
+ *   1. 국가·지자체·공공단체 유증 재산 (§12 1호, 상증령 §8①)
+ *   2. 금양임야 (§12 3호 — 민법 §1008의3·상증령 §8③1호) — 면적 한도
+ *   3. 묘토 (§12 3호 — 상증령 §8③2호) — 면적 한도
+ *   4. 족보·제구 (§12 3호 — 상증령 §8③3호)
+ *   5. 공익법인 출연 재산 (§16 과세가액 불산입) — 동족주식 한도 주의
+ *   6. 공익신탁 출연 재산 (§17 과세가액 불산입)
+ *   7. 이재구호금품·치료비 (§12 6호 — 상증령 §8⑤)
+ *   8. 정당 유증 재산 (§12 4호)
+ *
+ *   ※ 문화유산은 §12 비과세 대상 아님 (구 §12 2호 삭제) — 상증법 §74 징수유예로 처리
  *
  * 증여세 비과세 8종 (§46·§46의2):
  *   1. 생활비·교육비·치료비 (§46 5호)
@@ -72,7 +75,7 @@ export const INHERITANCE_EXEMPTION_RULES: ExemptionRule[] = [
     id: "inh_state_bequest",
     category: "inheritance",
     name: "국가·지자체 유증 재산",
-    lawRef: EXEMPTION.INH_NONTAXABLE, // §12 ①
+    lawRef: EXEMPTION.INH_NONTAXABLE, // §12 1호 (상증령 §8①)
     description: "유언으로 국가·지방자치단체·법정기부금 단체에 귀속되는 재산",
     limitType: "unlimited",
     riskLevel: "low",
@@ -86,24 +89,8 @@ export const INHERITANCE_EXEMPTION_RULES: ExemptionRule[] = [
       "사실상 가족에게 귀속되는 형식적 유증",
     ],
   },
-  {
-    id: "inh_cultural_property",
-    category: "inheritance",
-    name: "국가·시도 지정 문화재",
-    lawRef: EXEMPTION.INH_NONTAXABLE,
-    description: "문화재보호법에 따라 지정된 문화재 및 보호구역 내 토지",
-    limitType: "unlimited",
-    riskLevel: "high",
-    riskNote: "지정 취소 후 5년 이내 양도 시 상속세 추징 (§12 1호 단서)",
-    requirements: [
-      "문화재보호법에 따라 국가 또는 시도 지정 문화재",
-      "지정 상태가 상속개시일 현재 유효",
-    ],
-    exclusions: [
-      "지정 취소된 문화재",
-      "지정 예정 또는 등록 문화재(지정 아닌 경우)",
-    ],
-  },
+  // ※ 문화유산(구 §12 2호)은 2008.1.1. 삭제 — 현행법상 상속세 비과세 대상 아님.
+  //    지정문화유산·국가등록문화유산 등은 §74 징수유예로 처리(inheritance-cultural-heritage-deferral.ts).
   {
     id: "inh_forest_burial",
     category: "inheritance",
@@ -161,7 +148,7 @@ export const INHERITANCE_EXEMPTION_RULES: ExemptionRule[] = [
     category: "inheritance",
     name: "공익법인 출연 재산",
     lawRef: EXEMPTION.PUBLIC_INTEREST,
-    description: "공익법인(사회복지·학교·의료법인 등)에 출연한 재산 (§12 4호·§16)",
+    description: "공익법인(사회복지·학교·의료법인 등)에 출연한 재산 (§16 과세가액 불산입)",
     limitType: "unlimited",
     riskLevel: "high",
     riskNote: "동족기업 주식 5% 초과 보유 시 초과분 과세; 3년 내 공익 외 사용 시 추징 (§48)",
@@ -216,7 +203,7 @@ export const INHERITANCE_EXEMPTION_RULES: ExemptionRule[] = [
     category: "inheritance",
     name: "정당 유증 재산",
     lawRef: EXEMPTION.INH_NONTAXABLE,
-    description: "정치자금법상 정당에 유증된 재산 (§12 7호)",
+    description: "정치자금법상 정당에 유증된 재산 (§12 4호)",
     limitType: "unlimited",
     riskLevel: "none",
     requirements: ["정치자금법상 적법한 정당에 유증"],

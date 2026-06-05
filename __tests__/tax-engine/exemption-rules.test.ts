@@ -19,8 +19,8 @@ import {
 // ============================================================
 
 describe("비과세 룰 데이터 무결성", () => {
-  it("[N1] 상속세 비과세 룰 9종 등록 (공익신탁 §17 추가 2026-06-05)", () => {
-    expect(INHERITANCE_EXEMPTION_RULES.length).toBe(9);
+  it("[N1] 상속세 비과세·과세가액 불산입 룰 8종 (문화재 §12 2호 삭제 정정 2026-06-05)", () => {
+    expect(INHERITANCE_EXEMPTION_RULES.length).toBe(8);
   });
 
   it("[N2] 증여세 비과세 룰 8종 등록", () => {
@@ -62,31 +62,21 @@ describe("비과세 룰 데이터 무결성", () => {
 // ============================================================
 
 describe("비과세 평가기 — 핵심 케이스", () => {
-  it("[N8] 문화재 지정 취소 시 비과세 0 + 경고", () => {
-    const items: ExemptionCheckedItem[] = [
-      {
-        ruleId: "inh_cultural_property",
-        claimedAmount: 300_000_000,
-        culturalDesignationRevoked: true,
-      },
-    ];
-    const result = evaluateExemptions(items, 1_000_000_000);
-    expect(result.totalExemptAmount).toBe(0);
-    expect(result.itemResults[0].taxableOverflow).toBe(300_000_000);
-    expect(result.itemResults[0].warnings.some((w) => w.includes("지정 취소"))).toBe(true);
+  it("[N8] 문화재 비과세 룰 제거 — §12 2호 삭제·§74 징수유예 (2026-06-05)", () => {
+    // 현행 상증법 §12에 문화재 비과세 호 없음(구 2호 삭제, KoreanLaw 검증).
+    // 문화유산은 비과세가 아니라 §74 징수유예로 처리(inheritance-cultural-heritage-deferral.ts).
+    expect(findExemptionRuleById("inh_cultural_property")).toBeUndefined();
+    expect(
+      getExemptionRulesByCategory("inheritance").some((r) => r.name.includes("문화재")),
+    ).toBe(false);
   });
 
-  it("[N9] 문화재 정상 지정 — 전액 비과세", () => {
-    const items: ExemptionCheckedItem[] = [
-      {
-        ruleId: "inh_cultural_property",
-        claimedAmount: 500_000_000,
-        culturalDesignationRevoked: false,
-      },
-    ];
-    const result = evaluateExemptions(items, 2_000_000_000);
-    expect(result.totalExemptAmount).toBe(500_000_000);
-    expect(result.itemResults[0].taxableOverflow).toBe(0);
+  it("[N9] §12 비과세 룰 조문 정합성 — 국가유증 1호·제사용 3호·정당 4호", () => {
+    // lawRef 라벨은 "상증법 §12" 단일, 호수는 주석으로 정합화(KoreanLaw 검증)
+    expect(findExemptionRuleById("inh_state_bequest")?.lawRef).toBe("상증법 §12");
+    expect(findExemptionRuleById("inh_forest_burial")?.lawRef).toBe("상증법 §12");
+    expect(findExemptionRuleById("inh_grave_land")?.lawRef).toBe("상증법 §12");
+    expect(findExemptionRuleById("inh_political_party")?.lawRef).toBe("상증법 §12");
   });
 
   it("[N10] 금양임야 600평(1,983㎡) 초과 분할 과세", () => {
@@ -211,13 +201,10 @@ describe("비과세 평가기 — 핵심 케이스", () => {
     const input = {
       donatedToState: 100_000_000,
       ceremonialProperty: 5_000_000,
-      culturalProperty: 0,
     };
     const items = convertInheritanceExemptionInput(input);
     expect(items.length).toBe(2);
     expect(items.find((i) => i.ruleId === "inh_state_bequest")?.claimedAmount).toBe(100_000_000);
     expect(items.find((i) => i.ruleId === "inh_ritual_items")?.claimedAmount).toBe(5_000_000);
-    // culturalProperty=0 이므로 포함 안 됨
-    expect(items.find((i) => i.ruleId === "inh_cultural_property")).toBeUndefined();
   });
 });

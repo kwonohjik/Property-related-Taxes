@@ -449,7 +449,6 @@ export const exemptionInputSchema = z.object({
   isWarHero: z.boolean().optional(),
   donatedToState: z.number().nonnegative().optional(),
   ceremonialProperty: z.number().nonnegative().optional(),
-  culturalProperty: z.number().nonnegative().optional(),
   socialNormGifts: z.number().nonnegative().optional(),
   publicInterestContribution: z.number().nonnegative().optional(),
 });

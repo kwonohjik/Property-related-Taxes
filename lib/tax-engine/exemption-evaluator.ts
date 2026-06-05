@@ -56,28 +56,6 @@ function evaluateSingleExemption(
   let taxableOverflow = 0;
   const breakdown: CalculationStep[] = [];
 
-  // === 문화재: 지정 취소 시 과세 ===
-  if (rule.id === "inh_cultural_property") {
-    if (item.culturalDesignationRevoked) {
-      warnings.push(`문화재 지정 취소 — 상속세 추징 대상 (${EXEMPTION.INH_NONTAXABLE} 1호 단서)`);
-      exemptAmount = 0;
-      taxableOverflow = item.claimedAmount;
-      breakdown.push({
-        label: "문화재 지정 취소 — 비과세 불인정",
-        amount: 0,
-        lawRef: EXEMPTION.INH_NONTAXABLE,
-      });
-    } else {
-      exemptAmount = item.claimedAmount;
-      breakdown.push({
-        label: "국가·시도 지정 문화재 비과세",
-        amount: exemptAmount,
-        lawRef: EXEMPTION.INH_NONTAXABLE,
-      });
-    }
-    return { ...base, exemptAmount, taxableOverflow, breakdown, warnings };
-  }
-
   // === 금양임야: 600평(1,983㎡) 초과분 과세 ===
   if (rule.id === "inh_forest_burial") {
     const limitM2 = rule.limitAreaM2 ?? 1983;
@@ -274,9 +252,6 @@ export function convertInheritanceExemptionInput(
   }
   if (input.ceremonialProperty && input.ceremonialProperty > 0) {
     items.push({ ruleId: "inh_ritual_items", claimedAmount: input.ceremonialProperty });
-  }
-  if (input.culturalProperty && input.culturalProperty > 0) {
-    items.push({ ruleId: "inh_cultural_property", claimedAmount: input.culturalProperty });
   }
   if (input.publicInterestContribution && input.publicInterestContribution > 0) {
     items.push({ ruleId: "inh_public_interest", claimedAmount: input.publicInterestContribution });
