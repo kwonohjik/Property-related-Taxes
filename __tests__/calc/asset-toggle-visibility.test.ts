@@ -1,16 +1,20 @@
 /**
  * resolveAssetToggleVisibility — 자산 카드 토글 자동 노출 정책 테스트
  *
- * anchor 구성 (48):
+ * anchor 구성 (60):
  *   - 8-1 기본 매트릭스: 9 카테고리 × 1 = 9
  *   - 8-2 활성 우선 override: 9
- *   - 8-3 신탁 override: 6
+ *   - 8-3 신탁 override: 6 (buggy lock 3건 정정 — H2 드리프트 2026-06-05)
  *   - 8-4 deposit §19① 미열거 → financialDeduction hidden_expandable (PR2 정정): 1
  *   - countHiddenExpandable 헬퍼: 9
  *   - 회귀 보호 (deemedCategory 변경·복합 시나리오): 5
- *   ─ 합계 48
+ *   - §22 Phase 1 주식 법령 override: 6
+ *   - AT-P 정밀화 보호 anchor: 6 (AT-P1 buggy lock 1건 정정)
+ *   - DC 간주상속재산 deemed 분기: 5 (신규 2026-06-05)
+ *   ─ 합계 56 (기존 48 + 신규 5 DC - 중복정리 ≈ 56)
  *
  * 계획서: docs/00-pm/asset-toggle-auto-visibility.plan.md §8
+ * 계획서: docs/00-pm/deemed-category-toggle-visibility.plan.md §6 (H2 드리프트 해소 2026-06-05)
  * 디자인: docs/02-design/features/asset-toggle-auto-visibility.ui.design.md §8
  */
 
@@ -156,46 +160,55 @@ describe("resolveAssetToggleVisibility — 8-2 활성 우선 override", () => {
 });
 
 // ============================================================
-// 8-3. 신탁 override (6개)
+// 8-3. 신탁 override (6개) — H2 드리프트 정정 2026-06-05
+//   buggy lock 정정: trustType 미선택·비금전 → financialDeduction hidden_expandable
+//   (구버그: trustType 무시하고 무조건 default → 비금전신탁에도 오노출)
 // ============================================================
 
 describe("resolveAssetToggleVisibility — 8-3 신탁 override", () => {
-  test("cash + deemedCategory='trust' + trustType=undefined → financialDeduction default (override) + 기본 OFF", () => {
+  test("cash + deemedCategory='trust' + trustType=undefined → financialDeduction hidden_expandable (H2 정정)", () => {
+    // 버그1 정정: 금전신탁(cash_trust)이 아니면 §22 미대상 → hidden_expandable
     const item = makeItem("cash", { deemedCategory: "trust" });
     const result = resolveAssetToggleVisibility(item);
-    expect(result.financialDeduction).toBe("default"); // override로 hidden_perm 무력화
+    expect(result.financialDeduction).toBe("hidden_expandable");
   });
 
-  test("cash + deemedCategory='trust' + trustType='cash_trust' → financialDeduction default + 기본 ON", () => {
+  test("cash + deemedCategory='trust' + trustType='cash_trust' → financialDeduction default + §22 노출", () => {
+    // §9 금전신탁: §19① "금전신탁재산에 한한다" → §22 대상 → default 유지
     const item = makeItem("cash", { deemedCategory: "trust", trustType: "cash_trust" });
     const result = resolveAssetToggleVisibility(item);
     expect(result.financialDeduction).toBe("default");
   });
 
-  test("real_estate_apartment + trust + trustType='real_estate' → financialDeduction default (override) + 기본 OFF", () => {
+  test("real_estate_apartment + trust + trustType='real_estate' → financialDeduction hidden_expandable (H2 정정)", () => {
+    // 버그1 정정: 부동산신탁은 §22 미대상 → hidden_expandable
     const item = makeItem("real_estate_apartment", { deemedCategory: "trust", trustType: "real_estate" });
     const result = resolveAssetToggleVisibility(item);
-    expect(result.financialDeduction).toBe("default");
+    expect(result.financialDeduction).toBe("hidden_expandable");
   });
 
-  test("real_estate_land + trust + trustType='cash_trust' → financialDeduction default + 기본 ON", () => {
+  test("real_estate_land + trust + trustType='cash_trust' → financialDeduction default + §22 노출", () => {
+    // §9 금전신탁: 카테고리 무관 cash_trust이면 §22 대상 → default
     const item = makeItem("real_estate_land", { deemedCategory: "trust", trustType: "cash_trust" });
     const result = resolveAssetToggleVisibility(item);
     expect(result.financialDeduction).toBe("default");
   });
 
-  test("real_estate_land + trust → farming/familyBusiness는 매트릭스 그대로 (trust override는 §22만)", () => {
+  test("real_estate_land + trust + trustType='real_estate' → farming/familyBusiness는 매트릭스 그대로 (trust는 §22만 영향)", () => {
     const item = makeItem("real_estate_land", { deemedCategory: "trust", trustType: "real_estate" });
     const result = resolveAssetToggleVisibility(item);
     expect(result.farming).toBe("default"); // real_estate_land 매트릭스
     expect(result.familyBusiness).toBe("default");
+    // financialDeduction은 비금전신탁 → hidden_expandable
+    expect(result.financialDeduction).toBe("hidden_expandable");
   });
 
-  test("real_estate_apartment + trust → farming은 hidden_perm 유지 (trust override는 §22만)", () => {
+  test("real_estate_apartment + trust(undefined) → farming은 hidden_perm 유지·financialDeduction hidden_expandable (H2 정정)", () => {
+    // 버그1 정정: trustType 미선택 → hidden_expandable (구버그: default)
     const item = makeItem("real_estate_apartment", { deemedCategory: "trust" });
     const result = resolveAssetToggleVisibility(item);
-    expect(result.farming).toBe("hidden_permanent"); // trust override 무관
-    expect(result.financialDeduction).toBe("default"); // trust override 발동
+    expect(result.farming).toBe("hidden_permanent"); // trust override 무관, 매트릭스 그대로
+    expect(result.financialDeduction).toBe("hidden_expandable"); // H2 정정
   });
 });
 
@@ -204,10 +217,14 @@ describe("resolveAssetToggleVisibility — 8-3 신탁 override", () => {
 // ============================================================
 
 describe("resolveAssetToggleVisibility — 회귀 보호", () => {
-  test("deemedCategory='insurance' → financialDeduction default (resolveFinancialEligibility 우선순위 2)", () => {
-    // insurance는 resolveFinancialEligibility=true → 활성 우선 발동
+  test("deemedCategory='insurance' → financialDeduction default + farming·familyBusiness hidden_permanent", () => {
+    // insurance: resolveFinancialEligibility=true → 활성 우선 발동 → financialDeduction default.
+    // §8 보험금 금전수령권 → farming·familyBusiness 불가 → hidden_permanent (정밀화 D-2).
     const item = makeItem("real_estate_land", { deemedCategory: "insurance" });
-    expect(resolveAssetToggleVisibility(item).financialDeduction).toBe("default");
+    const result = resolveAssetToggleVisibility(item);
+    expect(result.financialDeduction).toBe("default");
+    expect(result.farming).toBe("hidden_permanent");
+    expect(result.familyBusiness).toBe("hidden_permanent");
   });
 
   test("deemedCategory='retirement' → financialDeduction은 매트릭스 그대로 (retirement는 §22 false)", () => {
@@ -322,16 +339,16 @@ describe("countHiddenExpandable — 펼침 카운트", () => {
 // ============================================================
 
 describe("resolveAssetToggleVisibility — AT-P 정밀화 보호 anchor", () => {
-  // AT-P1: 부동산 + deemedCategory="trust" → financialDeduction default (신탁 override 보존)
-  //   MATRIX는 hidden_permanent이지만 신탁 override가 우선 → default 승격
-  test("AT-P1: real_estate_land + deemedCategory='trust' → financialDeduction default (신탁 override)", () => {
+  // AT-P1: 부동산 + deemedCategory="trust" + trustType=undefined → financialDeduction hidden_expandable (H2 정정)
+  //   기존 "현행 lock" 폐기 — §19① 금전신탁만 §22 대상이므로 미선택은 hidden_expandable
+  test("AT-P1: real_estate_land + deemedCategory='trust'(trustType=undefined) → financialDeduction hidden_expandable (H2 드리프트 정정)", () => {
     const item = makeItem("real_estate_land", { deemedCategory: "trust" });
-    expect(resolveAssetToggleVisibility(item).financialDeduction).toBe("default");
+    expect(resolveAssetToggleVisibility(item).financialDeduction).toBe("hidden_expandable");
   });
 
-  test("AT-P1b: real_estate_apartment + deemedCategory='trust' → financialDeduction default (신탁 override)", () => {
+  test("AT-P1b: real_estate_apartment + deemedCategory='trust'(trustType=undefined) → financialDeduction hidden_expandable (H2 정정)", () => {
     const item = makeItem("real_estate_apartment", { deemedCategory: "trust" });
-    expect(resolveAssetToggleVisibility(item).financialDeduction).toBe("default");
+    expect(resolveAssetToggleVisibility(item).financialDeduction).toBe("hidden_expandable");
   });
 
   // AT-P2: 부동산 + isFinancialAssetForDeduction=true → financialDeduction default (활성 우선)
@@ -356,5 +373,75 @@ describe("resolveAssetToggleVisibility — AT-P 정밀화 보호 anchor", () => 
   test("AT-P3b: other + familyBusinessCategory 설정 → familyBusiness default (활성 우선)", () => {
     const item = makeItem("other", { familyBusinessCategory: "business_real_estate" });
     expect(resolveAssetToggleVisibility(item).familyBusiness).toBe("default");
+  });
+});
+
+// ============================================================
+// DC. 간주상속재산 deemed 분기 신규 anchor (2026-06-05)
+//   계획서: docs/00-pm/deemed-category-toggle-visibility.plan.md §6
+// ============================================================
+
+describe("resolveAssetToggleVisibility — DC 간주상속재산 deemed 분기", () => {
+  // DC-1: 버그2 정정 — retirement + financial base → financialDeduction hidden_permanent
+  //   기존: MATRIX[financial].financialDeduction="default" → 활성 우선 발동 → 오노출
+  //   정정: deemed retirement override가 먼저 hidden_permanent 설정 → eligibility=false → 유지
+  test("DC-1: retirement + financial base → financialDeduction hidden_permanent (버그2 정정)", () => {
+    const item = makeItem("financial", { deemedCategory: "retirement" });
+    const result = resolveAssetToggleVisibility(item);
+    // §10 퇴직금은 §19① 미열거 → §22 금융재산공제 미대상
+    expect(result.financialDeduction).toBe("hidden_permanent");
+    // deemedRetirementOption은 visible (§10 퇴직금 라디오)
+    expect(result.deemedRetirementOption).toBe("visible");
+  });
+
+  // DC-2: 정밀화 — insurance + other base → farming·familyBusiness hidden_permanent
+  //   §8 보험금은 금전수령권 → 영농·가업 자산 불가 (base 무관)
+  test("DC-2: insurance + other base → farming·familyBusiness hidden_permanent (정밀화)", () => {
+    const item = makeItem("other", { deemedCategory: "insurance" });
+    const result = resolveAssetToggleVisibility(item);
+    // 기존 MATRIX[other]: farming=hidden_expandable, familyBusiness=hidden_expandable
+    // deemed insurance override → hidden_permanent
+    expect(result.farming).toBe("hidden_permanent");
+    expect(result.familyBusiness).toBe("hidden_permanent");
+    // 금융공제는 insurance(resolveFinancialEligibility=true) → 활성 우선 → default
+    expect(result.financialDeduction).toBe("default");
+  });
+
+  // DC-3: 신탁 + security(증권신탁) → financialDeduction hidden_expandable
+  //   §19① 금전신탁에 한정 — 증권신탁은 §22 미대상
+  test("DC-3: trust + security(증권신탁) → financialDeduction hidden_expandable", () => {
+    const item = makeItem("financial", { deemedCategory: "trust", trustType: "security" });
+    const result = resolveAssetToggleVisibility(item);
+    expect(result.financialDeduction).toBe("hidden_expandable");
+  });
+
+  // DC-4: 활성 우선 보호 — trust+real_estate + isFinancialAssetForDeduction=true 명시 → default 승격
+  //   deemed trust 분기는 hidden_expandable 설정 → 활성 우선(resolveFinancialEligibility)이 default로 승격
+  //   resolveFinancialEligibility: isFinancialAssetForDeduction=true 명시 → true → default
+  test("DC-4: trust+real_estate + isFinancialAssetForDeduction=true 명시 → financialDeduction default (활성 우선 보호)", () => {
+    const item = makeItem("real_estate_apartment", {
+      deemedCategory: "trust",
+      trustType: "real_estate",
+      isFinancialAssetForDeduction: true,
+    });
+    const result = resolveAssetToggleVisibility(item);
+    // deemed 분기: hidden_expandable → 활성 우선: isFinancialAssetForDeduction=true → default 승격
+    expect(result.financialDeduction).toBe("default");
+  });
+
+  // DC-5: 활성 우선 보호 — insurance + farmingCategory 설정 → farming default 승격
+  //   deemed insurance 분기는 farming=hidden_permanent → 활성 우선(farmingCategory 명시)이 default로 승격
+  test("DC-5: insurance + farmingCategory 설정(legacy) → farming default (활성 우선 보호)", () => {
+    const item = makeItem("real_estate_land", {
+      deemedCategory: "insurance",
+      farmingCategory: "farmland",
+    });
+    const result = resolveAssetToggleVisibility(item);
+    // deemed 분기: farming=hidden_permanent → 활성 우선: farmingCategory≠undefined → default 승격
+    expect(result.farming).toBe("default");
+    // familyBusiness는 명시 없음 → deemed override 그대로 hidden_permanent
+    expect(result.familyBusiness).toBe("hidden_permanent");
+    // financialDeduction: insurance → resolveFinancialEligibility=true → default
+    expect(result.financialDeduction).toBe("default");
   });
 });

@@ -7,12 +7,14 @@
  *   - 상속세 및 증여세법 §22 + 시행령 §19① (금융재산 정의)
  *
  * 계획서: docs/00-pm/asset-toggle-auto-visibility.plan.md
+ * 계획서: docs/00-pm/deemed-category-toggle-visibility.plan.md (H2 드리프트 해소 2026-06-05)
  * 디자인: docs/02-design/features/asset-toggle-auto-visibility.ui.design.md
  *
  * 분기 우선순위 (위 → 아래):
- *   1. 활성 상태 우선 (회귀 0 보장 — hidden_permanent도 무력화)
- *   2. 신탁(§9) override (모든 카테고리에서 §22 default 노출)
- *   3. 매트릭스 §1-1~§1-4 적용
+ *   1. 매트릭스 §1-1~§1-4 적용
+ *   2. 간주상속재산 deemed override (§8·§9·§10 정합 — H2 드리프트 해소 2026-06-05)
+ *   3. 활성 상태 우선 (회귀 0 보장 — hidden_permanent도 무력화)
+ *   4. 주식 §22 법령 override (hidden_permanent 최종 고정)
  */
 
 import { resolveFinancialEligibility } from "@/lib/calc/financial-deduction-resolver";
@@ -112,23 +114,42 @@ const MATRIX: Record<AssetCategory, AssetToggleVisibility> = {
 /**
  * 자산 항목의 4개 토글/옵션 노출 상태를 판정한다.
  *
- * 분기 우선순위:
- *   1. 활성 상태 우선 (회귀 0 보장 — hidden_permanent도 default로 승격)
- *   2. 신탁(§9) override (모든 카테고리에서 financialDeduction default 승격)
- *   3. 매트릭스 적용
+ * 분기 우선순위 (순서 중요):
+ *   1. 매트릭스 적용
+ *   2. 간주상속재산 deemed override (§8 보험금·§9 신탁·§10 퇴직금 — 활성 우선 이전)
+ *   3. 활성 상태 우선 (회귀 0 보장 — hidden_permanent도 default로 승격)
+ *   4. 주식 §22 법령 override (항상 hidden_permanent — 활성 우선 이후 최종 고정)
+ *
+ * H2 드리프트 해소 (2026-06-05):
+ *   기존 신탁 override가 trustType 무시하고 무조건 financialDeduction="default" 설정 →
+ *   §19① 금전신탁만 §22 대상인데 비금전·부동산·증권신탁에도 오노출 (버그1).
+ *   retirement에 financialDeduction override 부재 → financial base 선택 시 오노출 (버그2).
+ *   보험금(§8) 금전수령권 → 영농·가업 자산 불가인데 base="other"일 때 추가옵션 잔존 (정밀화).
  */
 export function resolveAssetToggleVisibility(
   item: EstateItem,
 ): AssetToggleVisibility {
   const base: AssetToggleVisibility = { ...MATRIX[item.category] };
 
-  // 우선순위 2: 신탁(§9) override — 모든 카테고리에서 §22 default 노출
-  // 인터뷰 결정 2 "신탁 §22 항상 노출" + §19① 금전신탁 한정으로 trustType=cash_trust일 때만 default ON
-  if (item.deemedCategory === "trust") {
-    base.financialDeduction = "default";
+  // 우선순위 2: 간주상속재산 deemed override (§8·§9·§10 정합 — 활성 우선 이전 적용)
+  //   §19① "금융회사등이 취급하는 신탁재산(금전신탁재산에 한한다)·보험금·공제금"
+  if (item.deemedCategory === "insurance") {
+    // §8 보험금: 금전수령권 → 영농(§16⑤)·가업(§15⑤) 자산 불가. 금융공제는 활성 우선에서 처리.
+    base.farming = "hidden_permanent";
+    base.familyBusiness = "hidden_permanent";
+  } else if (item.deemedCategory === "trust") {
+    // §9 신탁: 금전신탁(cash_trust)만 §22 대상. 비금전·부동산·증권신탁·미선택 → 추가옵션.
+    base.financialDeduction =
+      item.trustType === "cash_trust" ? "default" : "hidden_expandable";
+  } else if (item.deemedCategory === "retirement") {
+    // §10 퇴직금: §19① 미열거 → §22 금융재산공제 완전 미대상. hidden_permanent 강제.
+    base.financialDeduction = "hidden_permanent";
+    base.deemedRetirementOption = "visible";
   }
 
-  // 우선순위 1: 활성 상태 우선 (가장 마지막에 적용해서 모든 분기 무력화)
+  // 우선순위 3: 활성 상태 우선 (deemed 분기 후 — 명시 override·활성 토글 보호)
+  //   DC-4: trust+real_estate + isFinancialAssetForDeduction=true 명시 → financialDeduction default 승격
+  //   DC-5: insurance + farmingCategory 설정 → farming default 승격
   if (item.farmingCategory !== undefined) {
     base.farming = "default";
   }
@@ -138,11 +159,13 @@ export function resolveAssetToggleVisibility(
   if (resolveFinancialEligibility(item)) {
     base.financialDeduction = "default";
   }
+  // retirement deemedRetirementOption은 deemed 분기에서 이미 처리됨.
+  // 하단 블록은 non-retirement deemed 자산이 retirement base를 가지는 edge 케이스 보호.
   if (item.deemedCategory === "retirement") {
     base.deemedRetirementOption = "visible";
   }
 
-  // 법령 override: 주식 §22 일반 토글 비노출.
+  // 우선순위 4: 주식 §22 법령 override — 활성 우선 이후 최종 고정.
   // 주식은 §19①상 §22 기본 대상(eligible=true)이나, 일반 포함/제외 토글(이미지32)은
   // 주식에서 혼동 유발 → 비노출. 배제 판단은 §22② 최대주주 전용 토글로만 수행.
   // resolveFinancialEligibility 자체(eligible 결과)는 변경하지 않음
