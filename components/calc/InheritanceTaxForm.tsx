@@ -198,6 +198,10 @@ function validateStep(step: number, form: FormState): string | null {
         return "연부연납 미래 회차 가산율은 0 이상으로 입력하세요.";
       }
     }
+    // R-1 분납·연부연납 배타 (§70② 단서) — UI disabled 1차 차단 + 방어
+    if (form.splitPaymentEnabled && form.installmentEnabled) {
+      return "연부연납(§71)과 분납(§70②)은 동시에 신청할 수 없습니다. 하나만 선택하세요.";
+    }
   }
   return null;
 }
@@ -504,6 +508,8 @@ export function InheritanceTaxForm() {
           installmentFamilyBusiness={form.installmentFamilyBusiness}
           installmentFbMode={form.installmentFbMode}
           installmentFutureRate={form.installmentFutureRate}
+          splitPaymentEnabled={form.splitPaymentEnabled}
+          splitPaymentAmount={form.splitPaymentAmount}
           decedentType={form.decedentType}
         />
         <div className="flex justify-end">

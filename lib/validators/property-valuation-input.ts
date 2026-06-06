@@ -820,6 +820,9 @@ export const giftTaxInputSchema = z.object({
   creditInput: giftTaxCreditInputSchema,
   valuationBaseDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   appraisalFee: appraisalFeeSchema.optional(),
+  // 분납 (§70②) — 별지10호 ㊼ 연동
+  applyInstallmentSplit: z.boolean().optional(),
+  requestedSplitAmount: z.number().nonnegative().optional(),
 });
 
 export type GiftTaxInputSchema = z.infer<typeof giftTaxInputSchema>;

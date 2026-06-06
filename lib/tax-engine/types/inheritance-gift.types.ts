@@ -437,8 +437,9 @@ import type {
   ExemptionCheckedItem,
   ExemptionInput,
   ExemptionResult,
+  ExemptionItemResult,
 } from "./inheritance-exemption.types";
-export type { ExemptionCheckedItem, ExemptionInput, ExemptionResult };
+export type { ExemptionCheckedItem, ExemptionInput, ExemptionResult, ExemptionItemResult };
 
 // ============================================================
 // 사전증여 내역 (상증법 §13·§47)
@@ -1110,6 +1111,8 @@ export interface InheritanceTaxResult extends TaxResultMeta {
   grossEstateValue: number;
   /** 비과세 차감액 */
   exemptAmount: number;
+  /** 비과세 항목별 상세 (결과 카드 ExemptionSummaryCard용) — evaluateExemptions 반환 전체 echo */
+  exemptionDetail?: ExemptionResult & { itemResults: ExemptionItemResult[] };
   /** 장례·채무 차감 */
   deductedBeforeAggregation: number;
   /** 사전증여재산 합산 */
@@ -1303,6 +1306,10 @@ export interface GiftTaxInput {
   valuationBaseDate?: string;
   /** 감정평가수수료 입력 (§55①·시행령 §46의2 → §20의3 준용) */
   appraisalFee?: AppraisalFeeInput;
+  /** 분납 신청 여부 (§70②) — 결정세액 1천만 초과 시 별지10호 ㊼ 연동 */
+  applyInstallmentSplit?: boolean;
+  /** 분납 희망액 (§70② "이하" 범위 — 미입력 시 최대 분납액) */
+  requestedSplitAmount?: number;
 }
 
 /** 증여세 계산 결과 전체 */

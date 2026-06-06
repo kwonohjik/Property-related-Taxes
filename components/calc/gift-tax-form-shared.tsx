@@ -18,6 +18,7 @@ import type { AppraisalFeeFormFields } from "@/lib/calc/appraisal-fee-form";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { PropertyValuationForm } from "@/components/calc/PropertyValuationForm";
 import { StockValuationForm } from "@/components/calc/StockValuationForm";
 import { ExemptionChecklist } from "@/components/calc/exemption/ExemptionChecklist";
@@ -57,6 +58,11 @@ export interface FormState extends AppraisalFeeFormFields {
   specialTreatment: "" | "startup" | "family_business";
   /** 창업자금 §30의5④ — 투자 완료 여부 (startup 선택 시 노출) */
   startupInvestmentCompleted: boolean;
+  // 분납 (Step3 끝, 상증법 §70②) — 결정세액 미영향 투영, 별지10호 ㊼ 연동
+  /** 분납 신청 여부 */
+  splitPaymentEnabled: boolean;
+  /** 분납 희망액 (원, 빈 문자열 허용 — 미입력 시 최대 분납액) */
+  splitPaymentAmount: string;
 }
 
 export const INITIAL_FORM: FormState = {
@@ -76,6 +82,8 @@ export const INITIAL_FORM: FormState = {
   foreignTaxPaid: "",
   specialTreatment: "",
   startupInvestmentCompleted: false,
+  splitPaymentEnabled: false,
+  splitPaymentAmount: "",
   ...INITIAL_APPRAISAL_FEE_FIELDS,
 };
 
@@ -561,6 +569,29 @@ export function Step3({
           onCheckedChange={(v) => set({ startupInvestmentCompleted: v })}
         />
       )}
+
+      {/* 분납 신청 (상증법 §70②) */}
+      <ToggleCard
+        tone="sky"
+        title="분납 신청 (상증법 §70②)"
+        description="결정세액 1천만원 초과 시 신고기한 경과 후 2개월 이내 분할납부. 1천만~2천만은 1천만 초과분, 2천만 초과는 50% 이하를 분납할 수 있습니다."
+        checked={form.splitPaymentEnabled}
+        onCheckedChange={(v) => set({ splitPaymentEnabled: v })}
+      >
+        <div className="space-y-3 pt-1">
+          <FieldCard
+            label="분납 희망액"
+            hint="§70② 한도(2천만 이하→1천만 초과분 / 2천만 초과→50%) 이내에서 입력하세요. 비워두면 결과 화면에서 최대 분납액으로 안내합니다."
+          >
+            <CurrencyInput
+              label="분납 희망액"
+              hideLabel
+              value={form.splitPaymentAmount}
+              onChange={(v) => set({ splitPaymentAmount: v })}
+            />
+          </FieldCard>
+        </div>
+      </ToggleCard>
     </div>
   );
 }

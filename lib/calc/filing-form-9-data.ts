@@ -91,6 +91,8 @@ export function buildFilingForm9Data(
   deathDateInput?: string,
   decedentName?: string,
   decedentResidentNumber?: string,
+  /** ㊶ 분납액 (§70②) — 미입력 시 0 (display dash) */
+  splitPaymentAmount?: number,
 ): FilingForm9Data {
   const summary = buildSummaryTable(result, heirs);
   const rowTotal = (rowId: string): number =>
@@ -171,8 +173,8 @@ export function buildFilingForm9Data(
     {
       number: "㊶",
       label: FF9_CALC_LABELS["㊶"],
-      amount: 0,
-      display: "dash",
+      amount: splitPaymentAmount ?? 0,
+      display: splitPaymentAmount && splitPaymentAmount > 0 ? "amount" : "dash",
       formula: dueDates.installmentDueDate ? `분납기한 ${dueDates.installmentDueDate}` : undefined,
       column: "right",
     },

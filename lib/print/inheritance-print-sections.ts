@@ -26,6 +26,7 @@ export type { PrintChannel, GroupCheckState };
 export type PrintSectionId =
   | "core-result"
   | "tax-summary"
+  | "exemption-detail"
   | "cultural-heritage-deferral"
   | "heir-allocation-summary"
   | "deduction-breakdown"
@@ -41,6 +42,7 @@ export type PrintSectionId =
   | "unlisted-stock-besshi"
   | "listed-stock-besshi"
   | "installment-guide"
+  | "split-payment"
   | "warnings";
 
 /** 상속세 leaf로 좁힌 제네릭 타입 (shared 재사용) */
@@ -59,6 +61,7 @@ export const INHERITANCE_PRINT_SECTIONS: PrintSectionGroup[] = [
       { id: "core-result", label: "핵심 결과 (결정세액)", channel: SCREEN },
       // 서버 PDF(PR-2): 현존 ResultPdfDocument 상속세 섹션으로 표현 가능 → pdf 채널
       { id: "tax-summary", label: "상속세 과세 요약", channel: SCREEN_PDF },
+      { id: "exemption-detail", label: "비과세 적용 내역 (금양임야·묘토·족보)", channel: SCREEN },
       { id: "cultural-heritage-deferral", label: "문화유산 등 징수유예 (§74)", channel: SCREEN },
       { id: "heir-allocation-summary", label: "상속인별 상속세부담액 집계", channel: SCREEN_PDF },
       { id: "deduction-breakdown", label: "상속공제 상세 내역", channel: SCREEN },
@@ -104,6 +107,7 @@ export const INHERITANCE_PRINT_SECTIONS: PrintSectionGroup[] = [
     label: "기타",
     children: [
       { id: "installment-guide", label: "연부연납 안내", channel: SCREEN },
+      { id: "split-payment", label: "분납 안내 (§70②)", channel: SCREEN },
       { id: "warnings", label: "주의 사항", channel: SCREEN },
     ],
   },

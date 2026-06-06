@@ -26,12 +26,17 @@ import { BesshiBuppyo2Section } from "@/components/calc/inheritance/besshi-buppy
 import { DeductionBesshiFormsSection } from "@/components/calc/inheritance/deduction-besshi";
 import { InheritanceFilingFormTable } from "@/components/calc/results/InheritanceFilingFormTable";
 import { CorporateExemptionSection } from "@/components/calc/results/CorporateExemptionSection";
+import { ExemptionSummaryCard } from "@/components/calc/exemption/ExemptionSummaryCard";
 import { DebtAllocationResultCard } from "@/components/calc/results/DebtAllocationResultCard";
 import { UnlistedStockBesshiResultSection } from "@/components/calc/results/UnlistedStockBesshiResultSection";
 import { ListedStockBesshiResultSection } from "@/components/calc/results/ListedStockBesshiResultSection";
 import { SourceDataSummarySection } from "@/components/calc/results/source-summary/SourceDataSummarySection";
+import { addMonths, endOfMonth, format } from "date-fns";
 import { isInstallmentEligible } from "@/lib/tax-engine/credits/installment-payment";
+import { isInstallmentSplitEligible } from "@/lib/tax-engine/credits/installment-split";
+import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { InstallmentScheduleCard } from "./installment/InstallmentScheduleCard";
+import { SplitPaymentCard } from "./installment/SplitPaymentCard";
 import { CulturalHeritageDeferralCard } from "./inheritance/CulturalHeritageDeferralCard";
 import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPanel";
 import { PrintSection } from "@/components/calc/results/shared/PrintSection";
@@ -132,6 +137,9 @@ interface Props {
   installmentFamilyBusiness?: boolean;
   installmentFbMode?: "straight20" | "grace10";
   installmentFutureRate?: string;
+  /** 분납 입력 (Step4, §70②) — 연부연납과 배타. 결정세액 미영향 투영 */
+  splitPaymentEnabled?: boolean;
+  splitPaymentAmount?: string;
   /** 거주자/비거주자 — 연부연납 신고기한 6/9개월 산정 (§67④) */
   decedentType?: "resident" | "non_resident";
 }
@@ -157,6 +165,8 @@ export function InheritanceTaxResultView({
   installmentFamilyBusiness = false,
   installmentFbMode = "straight20",
   installmentFutureRate = "3.1",
+  splitPaymentEnabled = false,
+  splitPaymentAmount = "",
   decedentType = "resident",
 }: Props) {
   const [showValuation, setShowValuation] = useState(false);
@@ -200,6 +210,8 @@ export function InheritanceTaxResultView({
     const items = estateItems ?? [];
     s.add("core-result");
     s.add("tax-summary");
+    if (result.exemptionDetail && result.exemptionDetail.itemResults.length > 0)
+      s.add("exemption-detail");
     if (hasAlloc) s.add("heir-allocation-summary");
     s.add("deduction-breakdown");
     if (hasAlloc) s.add("allocation-breakdown");
@@ -224,9 +236,24 @@ export function InheritanceTaxResultView({
     )
       s.add("listed-stock-besshi");
     if (isInstallmentEligible(result.finalTax)) s.add("installment-guide");
+    if (isInstallmentSplitEligible(result.finalTax) && !installmentEnabled)
+      s.add("split-payment");
     if (result.warnings.length > 0) s.add("warnings");
     return s;
-  }, [result, heirs, debtItems, estateItems, priorGifts, deathDate]);
+  }, [result, heirs, debtItems, estateItems, priorGifts, deathDate, installmentEnabled]);
+
+  // 분납기한 (§70② — 신고기한 §67① 말일+6개월 + 2개월). deathDate 없으면 undefined.
+  const splitDueDates = useMemo(() => {
+    if (!deathDate) return undefined;
+    const base = new Date(deathDate);
+    if (isNaN(base.getTime())) return undefined;
+    const filing = addMonths(endOfMonth(base), 6);
+    const installment = addMonths(filing, 2);
+    return {
+      filing: format(filing, "yyyy-MM-dd"),
+      installment: format(installment, "yyyy-MM-dd"),
+    };
+  }, [deathDate]);
 
   // 재산 평가 내역 표시명 — 자산 id → name(있으면) 또는 카테고리 한글 라벨 (내부 id 노출 방지)
   const assetNameById = useMemo(() => {
@@ -421,6 +448,16 @@ export function InheritanceTaxResultView({
         </PrintSection>
       )}
 
+      {/* 비과세 적용 내역 (금양임야·묘토 면적/금액 한도·족보 — 상증령 §8③) */}
+      {result.exemptionDetail && result.exemptionDetail.itemResults.length > 0 && (
+        <PrintSection id="exemption-detail" selectedIds={selectedPrintIds}>
+          <ExemptionSummaryCard
+            result={result.exemptionDetail}
+            itemResults={result.exemptionDetail.itemResults}
+          />
+        </PrintSection>
+      )}
+
       {/* 채무·공과·장례비 협의분할 결과 카드 */}
       {result.heirAllocationResult &&
         debtItems !== undefined &&
@@ -471,6 +508,11 @@ export function InheritanceTaxResultView({
             deathDate={deathDate}
             decedentName={decedentName}
             decedentResidentNumber={decedentResidentNumber}
+            splitPaymentAmount={
+              !installmentEnabled && splitPaymentEnabled && splitPaymentAmount
+                ? parseAmount(splitPaymentAmount)
+                : undefined
+            }
           />
         </PrintSection>
       )}
@@ -617,6 +659,21 @@ export function InheritanceTaxResultView({
           decedentType={decedentType}
         />
       </PrintSection>
+
+      {/* 분납 일정 (§70②) — 연부연납과 배타 */}
+      {!installmentEnabled && (
+        <PrintSection id="split-payment" selectedIds={selectedPrintIds}>
+          <SplitPaymentCard
+            finalTax={result.finalTax}
+            filingDeadline={splitDueDates?.filing}
+            installmentDueDate={splitDueDates?.installment}
+            splitPaymentEnabled={splitPaymentEnabled}
+            splitPaymentAmount={
+              splitPaymentAmount ? parseAmount(splitPaymentAmount) : undefined
+            }
+          />
+        </PrintSection>
+      )}
 
       {/* 경고 메시지 */}
       {result.warnings.length > 0 && (

@@ -38,6 +38,7 @@ export type GiftPrintSectionId =
   | "unlisted-stock-besshi"
   | "listed-stock-besshi"
   | "installment"
+  | "split-payment"
   | "warnings";
 
 /** 증여세 leaf로 좁힌 제네릭 타입 (shared 재사용) */
@@ -91,6 +92,7 @@ export const GIFT_PRINT_SECTIONS: GiftPrintSectionGroup[] = [
     label: "기타",
     children: [
       { id: "installment", label: "연부연납 안내", channel: SCREEN },
+      { id: "split-payment", label: "분납 안내 (§70②)", channel: SCREEN },
       { id: "warnings", label: "주의 사항", channel: SCREEN },
     ],
   },

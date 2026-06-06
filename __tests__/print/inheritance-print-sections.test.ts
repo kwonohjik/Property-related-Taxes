@@ -16,10 +16,11 @@ import {
   type PrintSectionId,
 } from "@/lib/print/inheritance-print-sections";
 
-// 설계 §1·§2 기준 leaf 18종 (§74 징수유예 추가. 부표3·별지5·별지1은 화면 단일 카드 → deduction-besshi 1 leaf 통합)
+// 설계 §1·§2 기준 leaf 19종 (§74 징수유예 + 비과세 내역 exemption-detail 추가. 부표3·별지5·별지1은 화면 단일 카드 → deduction-besshi 1 leaf 통합)
 const ALL_LEAVES: PrintSectionId[] = [
   "core-result",
   "tax-summary",
+  "exemption-detail",
   "cultural-heritage-deferral",
   "heir-allocation-summary",
   "deduction-breakdown",
@@ -35,6 +36,7 @@ const ALL_LEAVES: PrintSectionId[] = [
   "unlisted-stock-besshi",
   "listed-stock-besshi",
   "installment-guide",
+  "split-payment",
   "warnings",
 ];
 
@@ -68,8 +70,8 @@ describe("선택 출력 레지스트리 — Pre-Do anchor", () => {
     }
   });
 
-  // PD-3: 트리 평탄화 = 18 leaf, 유니크, group: 접두 없음
-  it("PD-3: flattenPrintSectionIds는 18개 유니크 leaf, group: 접두 없음", () => {
+  // PD-3: 트리 평탄화 = 19 leaf, 유니크, group: 접두 없음
+  it("PD-3: flattenPrintSectionIds는 19개 유니크 leaf, group: 접두 없음", () => {
     const ids = flattenPrintSectionIds();
     expect(ids).toHaveLength(ALL_LEAVES.length);
     expect(new Set(ids).size).toBe(ids.length); // 유니크

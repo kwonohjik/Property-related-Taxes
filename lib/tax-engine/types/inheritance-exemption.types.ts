@@ -55,3 +55,19 @@ export interface ExemptionResult {
   breakdown: CalculationStep[];
   appliedLaws: string[];
 }
+
+/**
+ * 비과세 평가 상세 결과 (항목별).
+ * D-8: 순환 의존 회피를 위해 exemption-evaluator.ts에서 이곳으로 이동(evaluator는 re-export로 하위호환).
+ */
+export interface ExemptionItemResult {
+  ruleId: string;
+  ruleName: string;
+  claimedAmount: number;
+  /** 실제 인정된 비과세 금액 */
+  exemptAmount: number;
+  /** 한도 초과로 일반 과세되는 금액 */
+  taxableOverflow: number;
+  breakdown: CalculationStep[];
+  warnings: string[];
+}

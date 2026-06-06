@@ -18,6 +18,10 @@ import { UnlistedStockBesshiResultSection } from "@/components/calc/results/Unli
 import { ListedStockBesshiResultSection } from "@/components/calc/results/ListedStockBesshiResultSection";
 import { HorizontalScrollContainer } from "@/components/calc/shared/HorizontalScrollContainer";
 import { calcInstallmentPayment } from "@/lib/tax-engine/credits/installment-payment";
+import { isInstallmentSplitEligible } from "@/lib/tax-engine/credits/installment-split";
+import { SplitPaymentCard } from "@/components/calc/results/installment/SplitPaymentCard";
+import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { addMonths, format } from "date-fns";
 import { SaveButton } from "@/components/calc/shared/SaveButton";
 import { SaveToast, type SaveToastMessage } from "@/components/calc/shared/SaveToast";
 import { formatGiftSaveMessage } from "@/components/calc/gift-tax-save-handler";
@@ -161,6 +165,9 @@ interface Props {
   }>;
   /** 저장된 계산 id — 서버 PDF 선택 출력(PR-B1)용. 미저장/비로그인 시 undefined */
   savedId?: string;
+  /** 분납 입력 (Step3, §70②) — 결정세액 미영향 투영 */
+  splitPaymentEnabled?: boolean;
+  splitPaymentAmount?: string;
 }
 
 export function GiftTaxResultView({
@@ -175,6 +182,8 @@ export function GiftTaxResultView({
   priorGifts = [],
   giftDate,
   savedId,
+  splitPaymentEnabled = false,
+  splitPaymentAmount = "",
 }: Props) {
   const [showValuation, setShowValuation] = useState(false);
   const [pdfBusy, setPdfBusy] = useState(false);
@@ -256,9 +265,23 @@ export function GiftTaxResultView({
         .eligible
     )
       s.add("installment");
+    if (isInstallmentSplitEligible(result.finalTax)) s.add("split-payment");
     if (result.warnings.length > 0) s.add("warnings");
     return s;
   }, [result, estateItems, priorGifts]);
+
+  // 분납기한 (§70② — 증여 신고기한 §68① 증여일+3개월 + 2개월). giftDate 없으면 undefined.
+  const giftDueDates = useMemo(() => {
+    if (!giftDate) return undefined;
+    const base = new Date(giftDate);
+    if (isNaN(base.getTime())) return undefined;
+    const filing = addMonths(base, 3);
+    const installment = addMonths(filing, 2);
+    return {
+      filing: format(filing, "yyyy-MM-dd"),
+      installment: format(installment, "yyyy-MM-dd"),
+    };
+  }, [giftDate]);
 
   return (
     <div className="space-y-5">
@@ -515,6 +538,19 @@ export function GiftTaxResultView({
       {/* 연부연납 안내 */}
       <PrintSection id="installment" selectedIds={selectedPrintIds}>
         <InstallmentGuide finalTax={result.finalTax} />
+      </PrintSection>
+
+      {/* 분납 일정 (§70②) — 증여는 연부연납 입력 없음 (applyLongTermInstallment 생략) */}
+      <PrintSection id="split-payment" selectedIds={selectedPrintIds}>
+        <SplitPaymentCard
+          finalTax={result.finalTax}
+          filingDeadline={giftDueDates?.filing}
+          installmentDueDate={giftDueDates?.installment}
+          splitPaymentEnabled={splitPaymentEnabled}
+          splitPaymentAmount={
+            splitPaymentAmount ? parseAmount(splitPaymentAmount) : undefined
+          }
+        />
       </PrintSection>
 
       {/* 경고 */}
