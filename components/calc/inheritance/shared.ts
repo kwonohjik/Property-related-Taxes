@@ -77,6 +77,8 @@ export interface FormState extends AppraisalFeeFormFields {
   isMinorHeir: boolean;
   generationSkipAssetAmount: string;
   isFiledOnTime: boolean;
+  /** §21① 단서 — 완전 무신고 여부 (true면 일괄공제 5억 고정). 신고상태 라디오 "무신고" 선택 시 set. */
+  isUnfiled: boolean;
   foreignTaxPaid: string;
   /** 국외 상속재산 과세표준 (§29/상증령 §21① 한도식 분자) */
   foreignInheritanceTaxBase: string;
@@ -167,6 +169,7 @@ export const INITIAL_FORM: FormState = {
   isMinorHeir: false,
   generationSkipAssetAmount: "",
   isFiledOnTime: true,
+  isUnfiled: false,
   foreignTaxPaid: "",
   foreignInheritanceTaxBase: "",
   shortTermReinheritPriorDeathDate: "",

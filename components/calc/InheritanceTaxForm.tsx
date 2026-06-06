@@ -391,6 +391,8 @@ export function InheritanceTaxForm() {
             heirId: resolveFamilyBusinessHeirId(form.heirs, form.familyBusiness.heirId),
           }
         : undefined,
+      // §21① 단서 — 완전 무신고 시 일괄공제 5억 고정 (2026-06-07)
+      isUnfiled: form.isUnfiled || undefined,
     };
     // 영리법인 §3의2② 산출세액 상당액 진입 fallback (phase2-후속): cgct 미설정 + 가액 → autoCompute.
     // 표시 fallback(GiftRowEditor)과 동일 산식 — mirror 3중 single-source. store는 불변(엔진 전달용 정제).
