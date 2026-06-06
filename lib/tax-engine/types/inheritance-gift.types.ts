@@ -476,6 +476,14 @@ export type DonorGroup = "A" | "B" | "C" | "D" | "E" | "F" | "G";
 // PriorGift·GiftPriorPropertyCategory·EstatePropertyKindCode — sibling 파일로 분리 (800줄 정책, 2026-05-22)
 import type { PriorGift } from "./inheritance-prior-gift.types";
 export type { PriorGift, GiftPriorPropertyCategory, EstatePropertyKindCode } from "./inheritance-prior-gift.types";
+// 물납 §73 타입 — sibling 파일로 분리 (800줄 정책)
+export type {
+  PaymentInKindAssets,
+  PaymentInKindInput,
+  PaymentInKindRequirement,
+  FillOrderStep,
+  PaymentInKindResult,
+} from "./inheritance-payment-in-kind.types";
 
 // ============================================================
 // §57 할증 한도 detail (사례 2 PDF 표 ⑧⑨⑩⑪⑫⑬ 재현용)
@@ -1117,6 +1125,8 @@ export interface InheritanceTaxResult extends TaxResultMeta {
   deductedBeforeAggregation: number;
   /** 사전증여재산 합산 */
   priorGiftAggregated: number;
+  /** 상속인·수유자 사전증여 §13 (= heirOnlyGifts) — 물납 §73①1호 분모 echo, 계산 불변 */
+  priorGiftToHeirTotal?: number;
   /** 상속세 과세가액 */
   taxableEstateValue: number;
   /** 공제 합계 (§24 한도 적용 후) */

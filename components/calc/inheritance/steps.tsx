@@ -21,6 +21,7 @@ import { PresumedInheritanceInput } from "./PresumedInheritanceInput";
 import { DebtAllocationInput } from "./DebtAllocationInput";
 import { FamilyBusinessEligibilitySection } from "./FamilyBusinessEligibilitySection";
 import { InstallmentInputSection } from "./InstallmentInputSection";
+import { PaymentInKindInputSection } from "./PaymentInKindInputSection";
 import { ShortTermReinheritSection } from "./ShortTermReinheritSection";
 import {
   Dialog,
@@ -619,6 +620,8 @@ export function Step4({
       <ShortTermReinheritSection form={form} set={set} />
 
       <InstallmentInputSection form={form} set={set} />
+
+      <PaymentInKindInputSection form={form} set={set} />
       </div>
     </div>
   );

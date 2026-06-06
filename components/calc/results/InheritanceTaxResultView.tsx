@@ -36,6 +36,11 @@ import { isInstallmentEligible } from "@/lib/tax-engine/credits/installment-paym
 import { isInstallmentSplitEligible } from "@/lib/tax-engine/credits/installment-split";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { InstallmentScheduleCard } from "./installment/InstallmentScheduleCard";
+import { PaymentInKindCard } from "./payment-in-kind/PaymentInKindCard";
+import {
+  calcPaymentInKindAssessment,
+  derivePaymentInKindAssets,
+} from "@/lib/tax-engine/credits/payment-in-kind";
 import { SplitPaymentCard } from "./installment/SplitPaymentCard";
 import { CulturalHeritageDeferralCard } from "./inheritance/CulturalHeritageDeferralCard";
 import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPanel";
@@ -140,6 +145,10 @@ interface Props {
   /** 분납 입력 (Step4, §70②) — 연부연납과 배타. 결정세액 미영향 투영 */
   splitPaymentEnabled?: boolean;
   splitPaymentAmount?: string;
+  /** 물납 입력 (Step4, §73) — 결정세액 미영향 투영 */
+  paymentInKindEnabled?: boolean;
+  paymentInKindIneligibleAmount?: string;
+  paymentInKindRequestedAmount?: string;
   /** 거주자/비거주자 — 연부연납 신고기한 6/9개월 산정 (§67④) */
   decedentType?: "resident" | "non_resident";
 }
@@ -167,6 +176,9 @@ export function InheritanceTaxResultView({
   installmentFutureRate = "3.1",
   splitPaymentEnabled = false,
   splitPaymentAmount = "",
+  paymentInKindEnabled = false,
+  paymentInKindIneligibleAmount = "",
+  paymentInKindRequestedAmount = "",
   decedentType = "resident",
 }: Props) {
   const [showValuation, setShowValuation] = useState(false);
@@ -238,9 +250,38 @@ export function InheritanceTaxResultView({
     if (isInstallmentEligible(result.finalTax)) s.add("installment-guide");
     if (isInstallmentSplitEligible(result.finalTax) && !installmentEnabled)
       s.add("split-payment");
+    if (paymentInKindEnabled) s.add("payment-in-kind");
     if (result.warnings.length > 0) s.add("warnings");
     return s;
-  }, [result, heirs, debtItems, estateItems, priorGifts, deathDate, installmentEnabled]);
+  }, [result, heirs, debtItems, estateItems, priorGifts, deathDate, installmentEnabled, paymentInKindEnabled]);
+
+  // 별지9호 ㊵ 물납액 (§73) — min(희망액, 허용한도). 화면 카드와 동일 엔진(단일 진실)
+  const paymentInKindFilingAmount = useMemo(() => {
+    if (!paymentInKindEnabled) return undefined;
+    const assets = derivePaymentInKindAssets(
+      estateItems ?? [],
+      result,
+      parseAmount(paymentInKindIneligibleAmount),
+    );
+    const d = calcPaymentInKindAssessment({
+      finalTax: result.finalTax,
+      grossEstateValue: result.grossEstateValue,
+      exemptAmount: result.exemptAmount,
+      priorGiftToHeirTotal: result.priorGiftToHeirTotal ?? 0,
+      taxableEstateValue: result.taxableEstateValue,
+      assets,
+      requestedAmount: paymentInKindRequestedAmount
+        ? parseAmount(paymentInKindRequestedAmount)
+        : undefined,
+    });
+    return d.acceptedRequest ?? d.allowedLimit;
+  }, [
+    paymentInKindEnabled,
+    estateItems,
+    result,
+    paymentInKindIneligibleAmount,
+    paymentInKindRequestedAmount,
+  ]);
 
   // 분납기한 (§70② — 신고기한 §67① 말일+6개월 + 2개월). deathDate 없으면 undefined.
   const splitDueDates = useMemo(() => {
@@ -513,6 +554,7 @@ export function InheritanceTaxResultView({
                 ? parseAmount(splitPaymentAmount)
                 : undefined
             }
+            paymentInKindAmount={paymentInKindFilingAmount}
           />
         </PrintSection>
       )}
@@ -670,6 +712,24 @@ export function InheritanceTaxResultView({
             splitPaymentEnabled={splitPaymentEnabled}
             splitPaymentAmount={
               splitPaymentAmount ? parseAmount(splitPaymentAmount) : undefined
+            }
+          />
+        </PrintSection>
+      )}
+
+      {/* 물납 안내 (§73) */}
+      {paymentInKindEnabled && (
+        <PrintSection id="payment-in-kind" selectedIds={selectedPrintIds}>
+          <PaymentInKindCard
+            result={result}
+            estateItems={estateItems ?? []}
+            decedentType={decedentType}
+            enabled={paymentInKindEnabled}
+            ineligibleAmount={parseAmount(paymentInKindIneligibleAmount)}
+            requestedAmount={
+              paymentInKindRequestedAmount
+                ? parseAmount(paymentInKindRequestedAmount)
+                : undefined
             }
           />
         </PrintSection>

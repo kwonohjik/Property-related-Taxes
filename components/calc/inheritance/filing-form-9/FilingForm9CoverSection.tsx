@@ -56,6 +56,8 @@ interface Props {
   decedentResidentNumber?: string;
   /** ㊶ 분납액 (§70②) — 미입력 시 0 */
   splitPaymentAmount?: number;
+  /** ㊵ 물납액 (§73) — min(희망액, 허용한도). 미입력 시 0 */
+  paymentInKindAmount?: number;
 }
 
 const HEAD = "border border-black p-1.5 bg-gray-100 dark:bg-gray-800 text-[11px] font-medium align-middle";
@@ -72,12 +74,13 @@ export function FilingForm9CoverSection({
   decedentName,
   decedentResidentNumber,
   splitPaymentAmount,
+  paymentInKindAmount,
 }: Props) {
   const [open, setOpen] = useState(false);
 
   if (!result.heirAllocationResult || !heirs || heirs.length === 0) return null;
 
-  const data = buildFilingForm9Data(result, heirs, deathDate, decedentName, decedentResidentNumber, splitPaymentAmount);
+  const data = buildFilingForm9Data(result, heirs, deathDate, decedentName, decedentResidentNumber, splitPaymentAmount, paymentInKindAmount);
 
   return (
     <section

@@ -273,6 +273,10 @@ export const TAX_CREDIT = {
   INSTALLMENT_SURCHARGE: "상증법 §72",
   /** 상증법 §73 — 물납 */
   PAYMENT_IN_KIND:     "상증법 §73",
+  /** 상증령 §73① — 물납신청의 범위 (허용한도 min 산식) */
+  PAYMENT_IN_KIND_LIMIT: "상증령 §73①",
+  /** 상증령 §74② — 물납 충당재산의 충당순서 (6단계) */
+  PAYMENT_IN_KIND_FILL_ORDER: "상증령 §74②",
   /** 조특법 §30의5 — 창업자금 증여세 과세특례 (5억 공제·10%/20%) */
   STARTUP_FUND:        "조특법 §30의5",
   /** 조특법 §30의6 — 가업승계 증여세 과세특례 (10억 공제·60억까지 10%) */
