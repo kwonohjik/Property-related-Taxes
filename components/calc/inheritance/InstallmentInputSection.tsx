@@ -12,6 +12,7 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
+import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import {
   Select,
   SelectContent,
@@ -32,12 +33,39 @@ export function InstallmentInputSection({
 }) {
   return (
     <div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-3">
+      {/* 분납 (§70②) — 연부연납과 배타 */}
+      <ToggleCard
+        tone="sky"
+        title="분납 신청 (상증법 §70②)"
+        description="결정세액 1천만원 초과 시 신고기한 경과 후 2개월 이내 분할납부. 1천만~2천만은 1천만 초과분, 2천만 초과는 50% 이하를 분납할 수 있습니다."
+        checked={form.splitPaymentEnabled}
+        onCheckedChange={(v) => set({ splitPaymentEnabled: v })}
+        disabled={form.installmentEnabled}
+        disabledReason="연부연납(§71) 신청 중에는 분납을 신청할 수 없습니다 (§70② 단서)."
+      >
+        <div className="space-y-3 pt-1">
+          <FieldCard
+            label="분납 희망액"
+            hint="§70② 한도(2천만 이하→1천만 초과분 / 2천만 초과→50%) 이내에서 입력하세요. 비워두면 결과 화면에서 최대 분납액으로 안내합니다."
+          >
+            <CurrencyInput
+              label="분납 희망액"
+              hideLabel
+              value={form.splitPaymentAmount}
+              onChange={(v) => set({ splitPaymentAmount: v })}
+            />
+          </FieldCard>
+        </div>
+      </ToggleCard>
+
       <ToggleCard
         tone="amber"
         title="연부연납 신청 (상증법 §71)"
         description="결정세액 2천만원 초과 시 분할납부 — 일반 10년 / 가업상속 20년. 결과 화면에 회차별 일정표(일자·원금·가산금·합계)가 표시됩니다."
         checked={form.installmentEnabled}
         onCheckedChange={(v) => set({ installmentEnabled: v })}
+        disabled={form.splitPaymentEnabled}
+        disabledReason="분납(§70②) 신청 중에는 연부연납을 신청할 수 없습니다 (§70② 단서)."
       >
         <div className="space-y-3 pt-1">
           {/* 희망 연부연납 기간 (일반분 ≤10, §71②1나) */}

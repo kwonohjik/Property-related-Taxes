@@ -42,6 +42,7 @@ export type PrintSectionId =
   | "unlisted-stock-besshi"
   | "listed-stock-besshi"
   | "installment-guide"
+  | "split-payment"
   | "warnings";
 
 /** 상속세 leaf로 좁힌 제네릭 타입 (shared 재사용) */
@@ -106,6 +107,7 @@ export const INHERITANCE_PRINT_SECTIONS: PrintSectionGroup[] = [
     label: "기타",
     children: [
       { id: "installment-guide", label: "연부연납 안내", channel: SCREEN },
+      { id: "split-payment", label: "분납 안내 (§70②)", channel: SCREEN },
       { id: "warnings", label: "주의 사항", channel: SCREEN },
     ],
   },

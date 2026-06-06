@@ -76,5 +76,10 @@ export function buildGiftTaxInput(form: FormState): GiftTaxInput {
     creditInput,
     // 감정평가수수료 공제 (§55①·시행령 §46의2 → §20의3 준용)
     appraisalFee: buildAppraisalFee(form),
+    // 분납 (§70②) — 별지10호 ㊼. 엔진이 finalTax로 calcInstallmentSplit 후 cashDeferred echo
+    applyInstallmentSplit: form.splitPaymentEnabled,
+    requestedSplitAmount: form.splitPaymentAmount
+      ? parseAmount(form.splitPaymentAmount)
+      : undefined,
   };
 }

@@ -195,6 +195,8 @@ export function GiftTaxForm() {
           propertyName: pg.propertyName,
           propertyLocation: pg.propertyLocation,
         }))}
+        splitPaymentEnabled={form.splitPaymentEnabled}
+        splitPaymentAmount={form.splitPaymentAmount}
       />
     );
   }

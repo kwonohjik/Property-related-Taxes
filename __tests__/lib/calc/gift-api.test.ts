@@ -52,6 +52,8 @@ function makeForm(overrides: Partial<FormState> = {}): FormState {
     foreignTaxPaid: "",
     specialTreatment: "",
     startupInvestmentCompleted: false,
+    splitPaymentEnabled: false,
+    splitPaymentAmount: "",
     ...INITIAL_APPRAISAL_FEE_FIELDS,
     ...overrides,
   };
