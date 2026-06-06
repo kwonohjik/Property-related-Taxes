@@ -83,6 +83,7 @@ export function CohabitantDependentSection({
           return (
             <div
               key={d.id}
+              data-testid={`cohabitant-editor-${i}`}
               className="rounded-md border border-sky-200 bg-white/60 dark:border-sky-800 dark:bg-sky-950/30 p-3 space-y-2"
             >
               <div className="flex items-center justify-between">
