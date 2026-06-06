@@ -67,11 +67,16 @@ export function DeductionBreakdownSection({ result, estateItems, debtItems, heir
         <div className="divide-y divide-border text-xs">
           {/* ① 일괄공제 또는 기초+인적 */}
           {dd.chosenMethod === "lump_sum" ? (
-            <LumpSumDetailCard
-              detail={dd.lumpSumComparisonDetail}
-              triggerLabel="일괄공제 (§21)"
-              triggerValue={formatKRW(dd.lumpSumDeduction)}
-            />
+            <>
+              {dd.lumpSumForcedByUnfiled && (
+                <Row label="ⓘ 무신고 — 일괄공제 5억 고정 (§21① 단서)" value="5억 한정" />
+              )}
+              <LumpSumDetailCard
+                detail={dd.lumpSumComparisonDetail}
+                triggerLabel="일괄공제 (§21)"
+                triggerValue={formatKRW(dd.lumpSumDeduction)}
+              />
+            </>
           ) : (
             <>
               {dd.lumpSumExcludedBySpouseSoleHeir && (

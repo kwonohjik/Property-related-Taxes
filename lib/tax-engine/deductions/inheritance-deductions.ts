@@ -556,11 +556,18 @@ export function calcInheritanceDeductions(
   );
   const isSpouseSoleHeir =
     realHeirs.length > 0 && realHeirs.every((h) => h.relation === "spouse");
+  // §21① 단서: 정기신고(§67)·기한후신고(국기법 §45의3) 모두 없는 완전 무신고 시 일괄공제 5억 고정.
+  //   (기초+인적이 5억을 초과해도 5억만. 기한후신고는 단서 미해당 → 본문 max 유지.)
+  //   우선순위 §21②(배우자단독) > §21①단서(무신고) > 본문 max. KoreanLaw mst 276123 §21①.
+  const isUnfiled = input.isUnfiled === true;
   const chosenMethod: "lump_sum" | "itemized" = isSpouseSoleHeir
-    ? "itemized"
-    : LUMP_SUM_DEDUCTION >= itemizedTotal
-      ? "lump_sum"
-      : "itemized";
+    ? "itemized" // §21② 최우선 — 일괄공제(단서 5억 포함) 배제
+    : isUnfiled
+      ? "lump_sum" // §21① 단서 — 무신고 5억 고정
+      : LUMP_SUM_DEDUCTION >= itemizedTotal
+        ? "lump_sum" // 본문 max
+        : "itemized";
+  const lumpSumForcedByUnfiled = !isSpouseSoleHeir && isUnfiled;
   const chosenBasicPersonal =
     chosenMethod === "lump_sum" ? LUMP_SUM_DEDUCTION : itemizedTotal;
 
@@ -573,6 +580,7 @@ export function calcInheritanceDeductions(
     selectedAmount: chosenBasicPersonal,
     selectedMethod: chosenMethod,
     spouseSoleHeirExclusion: isSpouseSoleHeir,
+    forcedByUnfiled: lumpSumForcedByUnfiled,
   };
 
   // ⑤ 금융재산공제
@@ -694,7 +702,7 @@ export function calcInheritanceDeductions(
   // breakdown 구성
   const breakdown: CalculationStep[] = [
     ...(chosenMethod === "lump_sum"
-      ? [{ label: `일괄공제 (${INH.LUMP_SUM})`, amount: LUMP_SUM_DEDUCTION, lawRef: INH.LUMP_SUM }]
+      ? [{ label: lumpSumForcedByUnfiled ? `일괄공제 — 무신고 5억 고정 (${INH.LUMP_SUM} 단서)` : `일괄공제 (${INH.LUMP_SUM})`, amount: LUMP_SUM_DEDUCTION, lawRef: INH.LUMP_SUM }]
       : [
           { label: `기초공제 (${INH.BASIC_DEDUCTION})`, amount: basicDeduction, lawRef: INH.BASIC_DEDUCTION },
           ...personalResult.breakdown.slice(0, -1), // 합계 행 제외
@@ -744,6 +752,7 @@ export function calcInheritanceDeductions(
     totalDeduction: limitedDeduction,
     chosenMethod,
     lumpSumExcludedBySpouseSoleHeir: isSpouseSoleHeir,
+    lumpSumForcedByUnfiled,
     breakdown,
     appliedLaws: [
       INH.BASIC_DEDUCTION,

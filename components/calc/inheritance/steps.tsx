@@ -11,6 +11,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { PropertyValuationForm } from "@/components/calc/PropertyValuationForm";
 import { StockValuationForm } from "@/components/calc/StockValuationForm";
 import { ExemptionChecklist } from "@/components/calc/exemption/ExemptionChecklist";
@@ -575,13 +576,44 @@ export function Step4({
         </div>
       )}
 
-      <ToggleCard
-        tone="violet"
-        title="법정신고기한 내 신고 (§69 신고세액공제 3%)"
-        description="상속개시일로부터 6개월 이내 신고 시 산출세액의 3% 공제"
-        checked={form.isFiledOnTime}
-        onCheckedChange={(v) => set({ isFiledOnTime: v })}
-      />
+      {/* 신고 상태 — §69 신고세액공제 + §21① 단서(무신고 일괄공제 5억 고정) */}
+      <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-2">
+        <p className="text-xs font-semibold text-violet-700">
+          신고 상태 (§67 · §69 신고세액공제 · §21① 일괄공제)
+        </p>
+        <RadioCardGroup
+          name="filing-status"
+          tone="violet"
+          value={
+            form.isUnfiled ? "none" : form.isFiledOnTime ? "on_time" : "late"
+          }
+          onChange={(v) => {
+            if (v === "on_time") set({ isFiledOnTime: true, isUnfiled: false });
+            else if (v === "late") set({ isFiledOnTime: false, isUnfiled: false });
+            else set({ isFiledOnTime: false, isUnfiled: true });
+          }}
+          options={[
+            {
+              value: "on_time",
+              label: "법정기한 내 신고 (정기신고)",
+              description:
+                "상속개시일로부터 6개월 이내 신고 — 신고세액공제 3% 적용 · 일괄공제 max(기초+인적, 5억)",
+            },
+            {
+              value: "late",
+              label: "기한후신고 (국세기본법 §45의3)",
+              description:
+                "법정기한 경과 후 신고 — 신고세액공제 미적용 · 일괄공제 max 적용 (단서 미해당)",
+            },
+            {
+              value: "none",
+              label: "무신고",
+              description:
+                "정기·기한후신고 모두 없음 — 신고세액공제 미적용 · 일괄공제 5억 고정 (§21① 단서)",
+            },
+          ]}
+        />
+      </div>
 
       {/* 외국납부세액공제 섹션 (§29 / 상증령 §21①) */}
       <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-3">

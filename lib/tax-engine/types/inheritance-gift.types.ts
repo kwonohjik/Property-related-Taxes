@@ -925,6 +925,14 @@ export interface InheritanceDeductionInput {
    * 옵션 B: heirs[]와 별도 배열(법정상속분·§21② 오염 0). calcPersonalDeductions 3rd 인자로 전달.
    */
   cohabitantDependents?: CohabitantDependent[];
+
+  // ===== §21① 단서 무신고 일괄공제 5억 고정 (2026-06-07, 계획 inheritance-numeric-gaps §1) =====
+  /**
+   * 완전 무신고(§67 정기신고·국기법 §45의3 기한후신고 모두 없음) 여부.
+   * true면 §21① 단서로 일괄공제 5억 고정(기초+인적이 5억 초과해도 5억). 미입력=정기신고 간주(false).
+   * ★ Pre-Do stub (2026-06-07): 타입만 추가, 엔진 분기 미구현 — anchor 실패 확보용.
+   */
+  isUnfiled?: boolean;
 }
 
 // 분리 타입 barrel (800줄 정책)
@@ -994,6 +1002,8 @@ export interface InheritanceDeductionResult {
   chosenMethod: "lump_sum" | "itemized";
   /** §21② 배우자 단독상속 → 일괄공제 배제 여부 (true면 chosenMethod="itemized" 강제) */
   lumpSumExcludedBySpouseSoleHeir?: boolean;
+  /** §21① 단서 — 무신고로 일괄공제 5억 고정 여부 (★ Pre-Do stub 2026-06-07, 엔진 미구현) */
+  lumpSumForcedByUnfiled?: boolean;
   breakdown: CalculationStep[];
   appliedLaws: string[];
   // ── 계산 근거 detail (2026-05-31 신설) ──────────────────────────

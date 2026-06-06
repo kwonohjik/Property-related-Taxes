@@ -32,6 +32,8 @@ export interface LumpSumComparisonDetail {
   selectedMethod: "lump_sum" | "itemized";
   /** §21② 배우자 단독상속으로 일괄공제 배제 여부 */
   spouseSoleHeirExclusion: boolean;
+  /** §21① 단서 — 무신고로 일괄공제 5억 고정 여부 (2026-06-07) */
+  forcedByUnfiled?: boolean;
 }
 
 // ============================================================

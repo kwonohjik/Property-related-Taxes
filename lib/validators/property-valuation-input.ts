@@ -697,6 +697,9 @@ export const inheritanceDeductionInputSchema = z.object({
       }),
     )
     .optional(),
+  // ⑫ 동기화 (2026-06-07, §21① 단서): 미선언 시 z.object 침묵 strip → 엔진 미도달.
+  //   완전 무신고 시 일괄공제 5억 고정. 라디오 입력이라 모순 불가(별도 validate 차단 불요).
+  isUnfiled: z.boolean().optional(),
 });
 
 // ============================================================
