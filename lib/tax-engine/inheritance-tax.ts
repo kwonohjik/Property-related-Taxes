@@ -746,6 +746,9 @@ export function calcInheritanceTax(
     (sum, g) => sum + (g.beneficiaryType === "corporate" ? (g.giftTaxBase ?? g.giftAmount) : 0),
     0,
   );
+  // ⑩b 합계열 — PDF 표8 기준 ⑨ 산출세액 소계(할증 포함) × 영리법인 과세표준 / 과세표준.
+  //   ★ GAP-1 보류(2026-06-07): perHeir corpLimit(할증 미포함)와 불일치하나, 기존 anchor
+  //   AN-8·A4-6이 PDF 표8 합계=할증 포함(277,943,123)을 명시 anchor → PDF 원본 확인 전 변경 보류.
   const corporateExemptionLimitDisplay =
     corporateGiftTaxBaseForSummary > 0 && taxBase > 0
       ? Math.floor(
