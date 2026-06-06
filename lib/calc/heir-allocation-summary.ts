@@ -463,7 +463,13 @@ export function buildSummaryTable(
       sorted,
       (h) =>
         h.relation === "corporate"
-          ? result.corporateExemption?.amount ?? 0
+          ? // GAP-2: 다수 영리법인 시 법인별 안분 면제액(perCorporateBreakdown).
+            //   단일/누락 시 전체 면제액 fallback(회귀 보존). 화면·PDF 단일 소스.
+            result.corporateExemption?.perCorporateBreakdown?.find(
+              (c) => c.corporateId === h.id,
+            )?.exemptionAmount ??
+            result.corporateExemption?.amount ??
+            0
           : null,
       ["corporate"],
     ),
