@@ -193,9 +193,11 @@ export function calcLegalShareRatios(heirs: Heir[]): Map<string, number> {
 }
 
 /**
- * 미성년자 인적공제액 계산 (상증법 §20 ①2호)
- * 공식: (20 - 연령) × 10,000,000 (원 미만 절사)
- * 20세 미만인 경우에만 적용. 연령은 만 나이.
+ * 미성년자 인적공제액 계산 (상증법 §20①2호)
+ * 공식: (19 − 연령) × 10,000,000 — "19세가 될 때까지의 연수" (민법 §4 성년 19세)
+ * §20③ "1년 미만의 기간은 1년으로 한다" → differenceInYears(만나이 floor) 산식이 자동 충족
+ *   (예: 만 5년 9개월 → floor 5 → 19−5=14, 잔여 13.25년의 올림과 동치).
+ * 19세 미만인 경우에만 적용. 연령은 만 나이.
  */
 export function calcMinorPersonalDeduction(
   birthDate: string,
@@ -205,26 +207,13 @@ export function calcMinorPersonalDeduction(
   const base = new Date(baseDate);
   // differenceInYears: 생일이 기준일 이후면 완성된 연도 수에서 1을 뺌 → 정확한 만 나이
   const age = differenceInYears(base, birth);
-  if (age >= 20) return 0;
-  return Math.max(0, 20 - age) * 10_000_000;
+  if (age >= 19) return 0;
+  return Math.max(0, 19 - age) * 10_000_000;
 }
 
-/**
- * 장애인 인적공제액 계산 (상증법 §20 ①4호)
- * 공식: 기대여명(년) × 10,000,000 (원 미만 절사)
- * 기대여명은 통계청 생명표 기준 — 단순화 버전: (78 - 현재나이) 사용
- */
-export function calcDisabledPersonalDeduction(
-  birthDate: string,
-  baseDate: string,
-): number {
-  const birth = new Date(birthDate);
-  const base = new Date(baseDate);
-  // differenceInYears: 정확한 만 나이 계산 (생일 이후 여부 반영)
-  const age = differenceInYears(base, birth);
-  const lifeExpectancy = Math.max(0, 78 - age); // 78세 기대여명 단순 적용
-  return lifeExpectancy * 10_000_000;
-}
+// calcDisabledPersonalDeduction (78−age 단순식) 제거 (2026-06-05, G3-c) —
+// 장애인공제는 personal-deduction-calc.ts의 calcDisabledDeduction
+// (성별·연령별 2023 생명표 getLifeExpectancyByGender)로 일원화.
 
 /**
  * 평가기간 필터 — 상증법 §60 ② 기준

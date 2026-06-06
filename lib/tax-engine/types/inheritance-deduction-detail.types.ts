@@ -241,3 +241,47 @@ export interface DeductionLimitCeilingDetail {
   /** 최종 적용 공제액 = min(rawTotalDeduction, ceiling) */
   limitedDeduction: number;
 }
+
+// ============================================================
+// ② §20 그 밖의 인적공제 4종 (자녀·미성년·연로자·장애인)
+// ============================================================
+
+/**
+ * §20 그 밖의 인적공제 4종 계산 근거 detail (G7 — echo 패턴, 엔진 산식 변경 0).
+ * 엔진이 calcPersonalDeductions에서 이미 계산한 값을 result에 구조화하여 노출.
+ * flat 구조 (UI 소비 계약 일치). 산식 문자열은 UI가 한국어로 조립.
+ */
+export interface PersonalDeductionDetail {
+  /** ① 자녀공제 (§20①1호) */
+  childCount: number;
+  childDeduction: number; // childCount × 5,000만원
+
+  /** ② 미성년자공제 (§20①2호) */
+  minorPerHeir: Array<{
+    heirId: string;
+    name?: string; // 표시용 (id 직접 노출 금지)
+    age: number; // 만 나이 (floor)
+    remainingYears: number; // 19 − age (§20③ 올림 반영)
+    deduction: number; // remainingYears × 1,000만원
+    isCohabitant?: boolean; // 동거가족(시령§18①) 여부 — 결과 화면 [동거가족] 구분 (P1)
+  }>;
+  minorDeduction: number; // minorPerHeir 합계
+
+  /** ③ 연로자공제 (§20①3호, 배우자·자녀 제외) */
+  elderCount: number;
+  elderDeduction: number; // elderCount × 5,000만원
+
+  /** ④ 장애인공제 (§20①4호) */
+  disabledPerHeir: Array<{
+    heirId: string;
+    name?: string;
+    gender: "male" | "female" | undefined;
+    age: number; // 만 나이 (floor)
+    lifeExpectancy: number; // 성별·연령별 기대여명 (Math.ceil, §20③)
+    deduction: number; // lifeExpectancy × 1,000만원
+    isCohabitant?: boolean; // 동거가족(시령§18①) 여부 — 결과 화면 [동거가족] 구분 (P1)
+  }>;
+  disabledDeduction: number; // disabledPerHeir 합계
+
+  total: number; // 4종 합계
+}

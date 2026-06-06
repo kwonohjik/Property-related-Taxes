@@ -326,6 +326,22 @@ export function validateInheritanceTaxInput(
   if (input.heirs.length === 0)
     return "상속인·수유자를 1명 이상 등록하세요. (협의분할·법정상속분 안분의 기준)";
 
+  // ⑧ 장애인공제(§20①4호)는 성별·연령별 기대여명 필요 → 장애인 heir 성별 필수 (자동추정 금지)
+  for (const heir of input.heirs) {
+    if (heir.isDisabled === true && !heir.gender) {
+      const who = heir.name?.trim() || "장애인 상속인";
+      return `${who}의 성별을 입력하세요. (장애인공제 §20①4호 — 성별·연령별 기대여명 기준)`;
+    }
+  }
+
+  // ⑧ 동거가족(§20 P1, 시령 §18①) 장애인도 동일 — 성별 필수 (자동추정 금지)
+  for (const dep of input.deductionInput?.cohabitantDependents ?? []) {
+    if (dep.isDisabled === true && !dep.gender) {
+      const who = dep.name?.trim() || "동거가족";
+      return `${who}의 성별을 입력하세요. (장애인공제 §20①4호 — 성별·연령별 기대여명 기준)`;
+    }
+  }
+
   // 금양임야·묘토 비과세 면적 입력 검증 (상증령 §8③)
   const exemptAreaErr = validateExemptionAreaInput(input.exemptions);
   if (exemptAreaErr) return exemptAreaErr;

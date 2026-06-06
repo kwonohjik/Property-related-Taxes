@@ -473,6 +473,10 @@ export const heirSchema = z.object({
   residentNumber: z.string().optional(), // 신고서 인적사항 칸(식별정보, 계산 미사용)·strip 방지
   birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD 형식").optional(),
   isDisabled: z.boolean().optional(),
+  /** §20①4호 장애인공제 성별·연령별 기대여명 (⑫ — 누락 시 침묵 strip 방지) */
+  gender: z.enum(["male", "female"]).optional(),
+  /** §20①1호·2호 태아 포함 (2023.1.1.~) — ⑫ strip 방지 */
+  isFetus: z.boolean().optional(),
   // actualShareRatio 제거 (2026-05-26) — 협의분할 자산별 일원화. 기존 저장값은 Zod strip으로 자동 제거.
   isCohabitant: z.boolean().optional(),
   // 종합사례 PDF 확장
@@ -676,6 +680,22 @@ export const inheritanceDeductionInputSchema = z.object({
   deathDate: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD 형식")
+    .optional(),
+  // ⑫ 동기화 (2026-06-05, §20 P1 동거가족): 미선언 시 z.object 침묵 strip → 엔진 미도달.
+  cohabitantDependents: z
+    .array(
+      z.object({
+        id: z.string(),
+        name: z.string().optional(),
+        birthDate: z
+          .string()
+          .regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD 형식")
+          .optional(),
+        isDisabled: z.boolean().optional(),
+        gender: z.enum(["male", "female"]).optional(),
+        relation: z.enum(["lineal_ascendant", "lineal_descendant", "sibling"]),
+      }),
+    )
     .optional(),
 });
 

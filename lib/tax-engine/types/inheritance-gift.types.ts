@@ -609,6 +609,18 @@ export interface Heir {
   birthDate?: string;
   isDisabled?: boolean;
   /**
+   * 성별 — 장애인공제(§20①4호) 성별·연령별 기대여명 계산용.
+   * 장애인(isDisabled===true) 시 필수. 미입력 시 validation 차단 (자동추정 금지).
+   * 미성년자·연로자공제는 성별 불필요.
+   */
+  gender?: "male" | "female";
+  /**
+   * 태아 여부 — §20①1호·2호 "태아를 포함한다" (2023.1.1.~).
+   * 자녀공제(1호): count 포함. 미성년자공제(2호): 만 0세 간주 → (19−0)×1천만=1.9억.
+   * 시행령 §18② 신고기한 내 임신 확인 서류 제출 요건.
+   */
+  isFetus?: boolean;
+  /**
    * @deprecated 2026-05-26 — 전역 협의분할 비율 폐지. 협의분할은 자산별 `heirAllocations`로 일원화,
    * 미입력 자산은 법정상속분 자동 배분(`inheritance-legal-share.ts`). 엔진 미사용 —
    * sessionStorage 기존 데이터 호환을 위해 타입만 잔류(validator/UI 제거됨).
@@ -661,6 +673,29 @@ export interface Heir {
    * 합 ≤ 1.0 (외부 주주 — 상속인 아닌 자 — 보유분은 명세 제외, validate 미차단)
    */
   shareholders?: ShareholderInfo[];
+}
+
+/**
+ * 동거가족 (시행령 §18① — 상속개시일 현재 피상속인이 사실상 부양하는
+ * 직계존비속(배우자의 직계존속 포함)·형제자매). 상속인이 아닌 부양가족.
+ * §20①2~4호 미성년·연로자·장애인공제 대상 (자녀공제 §20①1호는 제외).
+ * P1 — 별도 배열(옵션 B): heirs[] 무변경, calcPersonalDeductions 3rd 인자.
+ */
+export interface CohabitantDependent {
+  id: string;
+  name?: string;
+  /** YYYY-MM-DD — 미성년·연로자 판정 (상속개시일 현재 만 나이) */
+  birthDate?: string;
+  isDisabled?: boolean;
+  /** 장애인(isDisabled) 시 필수 — §20①4호 성별·연령별 기대여명 */
+  gender?: "male" | "female";
+  /**
+   * 시령 §18① 제한: 직계존비속(배우자의 직계존속 포함)·형제자매.
+   * - lineal_ascendant: 부·모·조부모·장인·장모(배우자 직계존속 포함)
+   * - lineal_descendant: 손자·손녀 (HeirRelation엔 없는 신규 값 — 본 타입 전용)
+   * - sibling: 형제자매
+   */
+  relation: "lineal_ascendant" | "lineal_descendant" | "sibling";
 }
 
 /**
@@ -875,6 +910,13 @@ export interface InheritanceDeductionInput {
    * EstateItem 자동 합산은 orchestrator에서 InheritanceTaxInput.estateItems 직접 사용.
    */
   familyBusiness?: FamilyBusinessInheritanceInput;
+
+  // ===== 동거가족 인적공제 (2026-06-05, §20 P1 — 시령 §18①) =====
+  /**
+   * 비상속인 동거가족(부양 직계존비속·형제자매) — §20①2~4호 미성년·연로자·장애인공제 대상.
+   * 옵션 B: heirs[]와 별도 배열(법정상속분·§21② 오염 0). calcPersonalDeductions 3rd 인자로 전달.
+   */
+  cohabitantDependents?: CohabitantDependent[];
 }
 
 // 분리 타입 barrel (800줄 정책)
@@ -889,6 +931,7 @@ import type {
   FinancialDeductionDetail,
   CohabitDeductionDetail,
   DeductionLimitCeilingDetail,
+  PersonalDeductionDetail,
 } from "./inheritance-deduction-detail.types";
 export type { FarmingInheritanceInput, FarmingDeductionDetail, FarmingEligibilityResult } from "./inheritance-farming.types";
 export type { FamilyBusinessCategory, FamilyBusinessInheritanceInput, FamilyBusinessIneligibleReason, FamilyBusinessDeductionDetail, FamilyBusinessCap, FamilyBusinessMediumGuard, FamilyBusinessUnit, MultipleFamilyBusinessLineItem, MultipleFamilyBusinessResult } from "./inheritance-family-business.types";
@@ -918,6 +961,7 @@ export type {
   FinancialDeductionDetail,
   CohabitDeductionDetail,
   DeductionLimitCeilingDetail,
+  PersonalDeductionDetail,
 } from "./inheritance-deduction-detail.types";
 export { FARMING_MAX } from "./inheritance-farming.types";
 export { FAMILY_BUSINESS_CAP_10Y, FAMILY_BUSINESS_CAP_20Y, FAMILY_BUSINESS_CAP_30Y, FAMILY_BUSINESS_SCALE_THRESHOLD, FAMILY_BUSINESS_OTHER_ESTATE_RATIO } from "./inheritance-family-business.types";
@@ -957,6 +1001,8 @@ export interface InheritanceDeductionResult {
   deductionLimitDetail?: DeductionLimitCeilingDetail;
   /** §24 한도 적용 전 공제 합계 (rawTotal — UI 표시용) */
   rawTotalDeduction?: number;
+  /** ② §20 그 밖의 인적공제 4종 계산 근거 detail (G7 echo) */
+  personalDeductionDetail?: PersonalDeductionDetail;
 }
 
 // ============================================================

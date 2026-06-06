@@ -536,7 +536,11 @@ export function calcInheritanceDeductions(
   const spouseDeduction = spouseResult.deduction;
 
   // ③ 인적공제 (4종 합산)
-  const personalResult = calcPersonalDeductions(input.heirs, baseDate);
+  const personalResult = calcPersonalDeductions(
+    input.heirs,
+    baseDate,
+    input.cohabitantDependents,
+  );
   const personalDeductionTotal = personalResult.total;
 
   // ④ 일괄공제 vs 기초+인적 — §21① "큰 금액으로 공제받을 수 있다" 자동 적용.
@@ -759,5 +763,7 @@ export function calcInheritanceDeductions(
     cohabitDeductionDetail,
     deductionLimitDetail: ceilingDetail,
     rawTotalDeduction: rawTotal,
+    // G7 — §20 인적공제 4종 분해 echo (결과 화면 펼침용)
+    personalDeductionDetail: personalResult.detail,
   };
 }

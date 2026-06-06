@@ -14,6 +14,7 @@ import type {
 } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { useState, useMemo } from "react";
 import { differenceInYears } from "date-fns";
 import { CorporateHeirFields } from "@/components/calc/inheritance/CorporateHeirFields";
@@ -333,10 +334,35 @@ function HeirEditor({ heir, index, deathDate, allHeirs, onUpdate, onRemove }: He
         <ToggleCard
           tone="violet"
           title="장애인"
-          description="기대여명(년) × 1,000만원 추가 인적공제 (§20②, 2024 생명표 기준)"
+          description="성별·연령별 기대여명(년) × 1,000만원 추가 인적공제 (§20①4호, 2023 생명표)"
           checked={heir.isDisabled ?? false}
-          onCheckedChange={(v) => set({ isDisabled: v })}
+          onCheckedChange={(v) => set({ isDisabled: v, gender: v ? heir.gender : undefined })}
         />
+      )}
+
+      {/* 장애인 성별 — 장애인 ON 시에만 노출 (§20①4호 성별·연령별 기대여명) */}
+      {!isCorporate && heir.isDisabled === true && (
+        <div className="ml-4 mt-1 rounded-lg border border-violet-200 bg-violet-50/40 dark:border-violet-700 dark:bg-violet-900/20 p-3 space-y-1.5">
+          <p className="text-xs font-semibold text-violet-700 dark:text-violet-300">
+            장애인 성별 (§20①4호 — 성별·연령별 기대여명 기준)
+          </p>
+          <RadioCardGroup
+            name={`gender-${heir.id}`}
+            tone="violet"
+            layout="inline"
+            value={heir.gender ?? ""}
+            onChange={(v) => set({ gender: v })}
+            options={[
+              { value: "male", label: "남성" },
+              { value: "female", label: "여성" },
+            ]}
+          />
+          {!heir.gender && (
+            <p className="text-[11px] text-violet-600 dark:text-violet-400">
+              성별을 선택해야 장애인공제 기대여명을 계산합니다.
+            </p>
+          )}
+        </div>
       )}
 
       {/* 동거주택 요건 (자녀) */}

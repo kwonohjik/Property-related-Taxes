@@ -351,6 +351,8 @@ export function InheritanceTaxForm() {
     const legateeAuto = autos.legatee.value;
     const deductionInput: InheritanceDeductionInput = {
       heirs: form.heirs,
+      // §20 P1 동거가족 — 별도 배열(옵션 B). inheritance-api.ts:82 deductionInput spread 자동.
+      cohabitantDependents: form.cohabitantDependents,
       spouseActualAmount: autoOrManual(form.spouseActualAmount, spouseAuto),
       netFinancialAssets: autoOrManual(form.netFinancialAssets, netFinAuto),
       cohabitHouseStdPrice: autoOrManual(form.cohabitHouseStdPrice, autos.cohabit.value),
