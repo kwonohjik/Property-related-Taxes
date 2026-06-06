@@ -37,6 +37,7 @@ const ALL_LEAVES: PrintSectionId[] = [
   "listed-stock-besshi",
   "installment-guide",
   "split-payment",
+  "payment-in-kind",
   "warnings",
 ];
 

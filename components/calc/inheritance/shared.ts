@@ -122,6 +122,14 @@ export interface FormState extends AppraisalFeeFormFields {
   splitPaymentEnabled: boolean;
   /** 분납 희망액 (원, 빈 문자열 허용 — 미입력 시 최대 분납액) */
   splitPaymentAmount: string;
+
+  // 물납 (Step4 끝, 상증법 §73) — 연부연납과 병행 가능. 결정세액 미영향 투영 입력.
+  /** 물납 신청 여부 */
+  paymentInKindEnabled: boolean;
+  /** 관리·처분 부적당 제외액 (원, §71·§73③) */
+  paymentInKindIneligibleAmount: string;
+  /** 희망 물납액 (원, 빈 문자열 허용 — 미입력 시 허용한도 안내) */
+  paymentInKindRequestedAmount: string;
 }
 
 export type FormSet = (p: Partial<FormState>) => void;
@@ -177,6 +185,10 @@ export const INITIAL_FORM: FormState = {
   // 분납 기본값 (§70②)
   splitPaymentEnabled: false,
   splitPaymentAmount: "",
+  // 물납 기본값 (§73)
+  paymentInKindEnabled: false,
+  paymentInKindIneligibleAmount: "",
+  paymentInKindRequestedAmount: "",
   ...INITIAL_APPRAISAL_FEE_FIELDS,
 };
 

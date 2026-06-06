@@ -202,6 +202,15 @@ function validateStep(step: number, form: FormState): string | null {
     if (form.splitPaymentEnabled && form.installmentEnabled) {
       return "연부연납(§71)과 분납(§70②)은 동시에 신청할 수 없습니다. 하나만 선택하세요.";
     }
+    // 물납 (§73) — 활성 시 보정액·희망액 음수 차단(빈 문자열 허용, 허용한도 초과는 경고만)
+    if (form.paymentInKindEnabled) {
+      if (
+        parseAmount(form.paymentInKindIneligibleAmount) < 0 ||
+        parseAmount(form.paymentInKindRequestedAmount) < 0
+      ) {
+        return "물납 관리·처분 부적당 제외액·희망 물납액은 0 이상으로 입력하세요.";
+      }
+    }
   }
   return null;
 }
@@ -510,6 +519,9 @@ export function InheritanceTaxForm() {
           installmentFutureRate={form.installmentFutureRate}
           splitPaymentEnabled={form.splitPaymentEnabled}
           splitPaymentAmount={form.splitPaymentAmount}
+          paymentInKindEnabled={form.paymentInKindEnabled}
+          paymentInKindIneligibleAmount={form.paymentInKindIneligibleAmount}
+          paymentInKindRequestedAmount={form.paymentInKindRequestedAmount}
           decedentType={form.decedentType}
         />
         <div className="flex justify-end">

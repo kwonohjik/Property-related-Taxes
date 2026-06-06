@@ -93,6 +93,8 @@ export function buildFilingForm9Data(
   decedentResidentNumber?: string,
   /** ㊶ 분납액 (§70②) — 미입력 시 0 (display dash) */
   splitPaymentAmount?: number,
+  /** ㊵ 물납액 (§73) — min(희망액, 허용한도). 미입력 시 0 (display dash) */
+  paymentInKindAmount?: number,
 ): FilingForm9Data {
   const summary = buildSummaryTable(result, heirs);
   const rowTotal = (rowId: string): number =>
@@ -169,7 +171,7 @@ export function buildFilingForm9Data(
     amtRow("㊳", b43, "right", { forceAmount: true }),
     headerRow(FF9_CALC_LABELS.paymentMethodTitle, "right"),
     amtRow("㊴", 0, "right"),
-    amtRow("㊵", 0, "right"),
+    amtRow("㊵", paymentInKindAmount ?? 0, "right"),
     {
       number: "㊶",
       label: FF9_CALC_LABELS["㊶"],

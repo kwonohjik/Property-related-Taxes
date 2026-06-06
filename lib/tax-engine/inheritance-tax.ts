@@ -806,6 +806,7 @@ export function calcInheritanceTax(
     exemptionDetail,
     deductedBeforeAggregation,
     priorGiftAggregated,
+    priorGiftToHeirTotal: heirOnlyGifts, // 물납 §73①1호 분모 echo (계산 불변)
     taxableEstateValue,
     totalDeduction,
     taxBase,
