@@ -437,8 +437,9 @@ import type {
   ExemptionCheckedItem,
   ExemptionInput,
   ExemptionResult,
+  ExemptionItemResult,
 } from "./inheritance-exemption.types";
-export type { ExemptionCheckedItem, ExemptionInput, ExemptionResult };
+export type { ExemptionCheckedItem, ExemptionInput, ExemptionResult, ExemptionItemResult };
 
 // ============================================================
 // 사전증여 내역 (상증법 §13·§47)
@@ -1064,6 +1065,8 @@ export interface InheritanceTaxResult extends TaxResultMeta {
   grossEstateValue: number;
   /** 비과세 차감액 */
   exemptAmount: number;
+  /** 비과세 항목별 상세 (결과 카드 ExemptionSummaryCard용) — evaluateExemptions 반환 전체 echo */
+  exemptionDetail?: ExemptionResult & { itemResults: ExemptionItemResult[] };
   /** 장례·채무 차감 */
   deductedBeforeAggregation: number;
   /** 사전증여재산 합산 */

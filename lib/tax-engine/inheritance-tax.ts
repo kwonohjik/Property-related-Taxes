@@ -133,11 +133,12 @@ export function calcInheritanceTax(
   // STEP 2: 비과세 차감
   // ─────────────────────────────────────────────
   let exemptAmount = 0;
+  let exemptionDetail: ReturnType<typeof evaluateExemptions> | undefined;
   if (input.exemptions && input.exemptions.length > 0) {
-    const { totalExemptAmount, breakdown: exemptBreakdown } =
-      evaluateExemptions(input.exemptions, grossEstateValue);
-    exemptAmount = totalExemptAmount;
-    allBreakdown.push(...exemptBreakdown);
+    const exemptResult = evaluateExemptions(input.exemptions, grossEstateValue);
+    exemptAmount = exemptResult.totalExemptAmount;
+    allBreakdown.push(...exemptResult.breakdown);
+    exemptionDetail = exemptResult;
   }
 
   // ─────────────────────────────────────────────
@@ -802,6 +803,7 @@ export function calcInheritanceTax(
   return {
     grossEstateValue,
     exemptAmount,
+    exemptionDetail,
     deductedBeforeAggregation,
     priorGiftAggregated,
     taxableEstateValue,
