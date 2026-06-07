@@ -49,18 +49,38 @@ interface Props {
 // 메인 컴포넌트
 // ============================================================
 
+// ============================================================
+// isExcluded 배지 라벨
+// ============================================================
+
+const EXCLUSION_REASON_LABEL: Record<"one_plus_one_right" | "sale_right", string> = {
+  one_plus_one_right: "1+1 입주권 미적용",
+  sale_right: "분양권 미적용",
+};
+
 export function CohabitDeductionDetailCard({ detail, triggerLabel, triggerValue }: Props) {
   const [open, setOpen] = useState(false);
 
   const cy = detail?.cohabitYears;
+  const isExcluded = detail?.isExcluded === true;
+  const exclusionReason = detail?.exclusionReason;
 
   return (
     <>
       <div className="flex items-center justify-between px-4 py-2.5">
         <span className="text-sm">{triggerLabel}</span>
         <span className="flex items-center gap-1">
+          {/* isExcluded 미적용 배지 (1+1 입주권 / 분양권) */}
+          {isExcluded && exclusionReason && (
+            <span
+              className="text-[10px] font-semibold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/30 border border-rose-200 dark:border-rose-700 rounded px-1.5 py-0.5"
+              data-testid="cohabit-excluded-badge"
+            >
+              {EXCLUSION_REASON_LABEL[exclusionReason]}
+            </span>
+          )}
           {/* meetsRequirement=false 경고 배지 */}
-          {cy && !cy.meetsRequirement && (
+          {!isExcluded && cy && !cy.meetsRequirement && (
             <span
               className="text-[10px] font-semibold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/30 border border-rose-200 dark:border-rose-700 rounded px-1.5 py-0.5"
               data-testid="cohabit-years-warning-badge"
@@ -69,7 +89,7 @@ export function CohabitDeductionDetailCard({ detail, triggerLabel, triggerValue 
             </span>
           )}
           {/* hasOverseasGradWarning 배지 */}
-          {cy?.hasOverseasGradWarning && (
+          {!isExcluded && cy?.hasOverseasGradWarning && (
             <span
               className="text-[10px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 rounded px-1.5 py-0.5"
               data-testid="cohabit-overseas-warning-badge"
@@ -82,7 +102,18 @@ export function CohabitDeductionDetailCard({ detail, triggerLabel, triggerValue 
         </span>
       </div>
 
-      {open && detail && (
+      {/* 미적용 상세 — isExcluded=true 시 산식 대신 사유 행만 표시 */}
+      {open && detail && isExcluded && (
+        <DetailTable>
+          <DetailRow
+            label={`선택 자산 종류(${exclusionReason ? EXCLUSION_REASON_LABEL[exclusionReason] : "미적용"})는 §23의2 동거주택 상속공제 대상이 아닙니다.`}
+            value="공제 0"
+            muted
+          />
+        </DetailTable>
+      )}
+
+      {open && detail && !isExcluded && (
         <DetailTable>
           {/* Phase 2: G3 동거연수 echo */}
           {cy && (

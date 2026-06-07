@@ -26,12 +26,57 @@ import {
 import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import {
+  RadioCardGroup,
+  type RadioCardOption,
+} from "@/components/calc/inputs/RadioCardGroup";
+import {
   isFishingAsset,
   makePatcher,
   resolvePropertyKind,
 } from "./EstateBodyHelpers";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { VariantBodyProps } from "./types";
+
+// ============================================================
+// §23의2 자산 유형 옵션 — 정적 정의 (Tailwind JIT purge 안전)
+// ============================================================
+
+type CohabitHouseRightType = "house" | "single_redev_right" | "one_plus_one_right" | "sale_right";
+
+const COHABIT_RIGHT_OPTIONS: RadioCardOption<CohabitHouseRightType>[] = [
+  {
+    value: "house",
+    label: "일반주택 (공제 적용)",
+  },
+  {
+    value: "single_redev_right",
+    label: "1세대1주택 단일 조합원입주권 (적용 가능 — 확인 필요)",
+    hint: (
+      <span className="text-amber-700 dark:text-amber-400">
+        멸실 후 입주권 외 다른 주택 없는 경우 적용 가능성 있음 (재산세제과-237).
+        사례별 세무사 확인 권장.
+      </span>
+    ),
+  },
+  {
+    value: "one_plus_one_right",
+    label: "1+1 조합원입주권 (미적용)",
+    hint: (
+      <span className="text-rose-700 dark:text-rose-400">
+        1+1 입주권은 §23의2 동거주택 상속공제 미적용 (조심 2021중6665 등). 공제 0 처리.
+      </span>
+    ),
+  },
+  {
+    value: "sale_right",
+    label: "분양권 (미적용)",
+    hint: (
+      <span className="text-rose-700 dark:text-rose-400">
+        분양권은 §23의2① 주택에 해당하지 않아 미적용. 공제 0 처리.
+      </span>
+    ),
+  },
+];
 
 const PRIORITY_HINT: Record<
   "real_estate_land" | "real_estate_building" | "real_estate_apartment",
@@ -393,10 +438,41 @@ function RealEstateAdvancedFields({
             title="동거주택 공제 대상 (§23의2)"
             description="10년 이상 동거·무주택 자녀가 상속받는 주택 — 위 기준시가가 §23의2 공제에 자동 사용됩니다 (담보채무 차감 후 100%, 최대 6억)."
             checked={item.isCohabitantHouse ?? false}
-            onCheckedChange={(v) => set({ isCohabitantHouse: v || undefined })}
+            onCheckedChange={(v) =>
+              set({
+                isCohabitantHouse: v || undefined,
+                // OFF 시 자산 유형 초기화
+                cohabitHouseRightType: v ? item.cohabitHouseRightType : undefined,
+              })
+            }
             disabled={!hasCohabitantChild}
             disabledReason="상속인 구성(Step 0)에서 자녀의 동거(isCohabitant) 여부를 먼저 설정하세요."
-          />
+          >
+            {/* §23의2 자산 유형 선택 — 1+1·분양권 미적용 게이트 (CV-1: 미선택 경고) */}
+            <div className="pt-1" data-testid={`cohabit-right-type-${item.id}`}>
+              <p className="text-xs font-semibold text-violet-700 dark:text-violet-300 mb-2">
+                자산 유형 선택 (§23의2 적용 여부)
+              </p>
+              <RadioCardGroup<CohabitHouseRightType>
+                name={`cohabitHouseRightType-${item.id}`}
+                options={COHABIT_RIGHT_OPTIONS}
+                value={item.cohabitHouseRightType ?? ""}
+                onChange={(v) => set({ cohabitHouseRightType: v })}
+                tone="violet"
+                layout="stack"
+              />
+              {/* 미적용 유형 선택 시 rose 안내 */}
+              {(item.cohabitHouseRightType === "one_plus_one_right" ||
+                item.cohabitHouseRightType === "sale_right") && (
+                <div
+                  className="mt-2 rounded-md border border-rose-200 bg-rose-50/70 dark:border-rose-700 dark:bg-rose-900/20 px-3 py-2 text-xs text-rose-700 dark:text-rose-300"
+                  data-testid={`cohabit-excluded-notice-${item.id}`}
+                >
+                  선택 자산 종류는 §23의2 동거주택 상속공제 미적용입니다. 공제 0 처리됩니다.
+                </div>
+              )}
+            </div>
+          </ToggleCard>
         </div>
       )}
     </ToggleCard>

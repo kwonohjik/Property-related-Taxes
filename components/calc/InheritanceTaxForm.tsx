@@ -45,6 +45,7 @@ import {
 import {
   validateInheritanceTaxInput,
   validateUnlistedStockV2,
+  warnCohabitHouseRightType,
 } from "@/lib/calc/inheritance-validate";
 import { resolveActiveUnlistedValuation } from "@/lib/calc/unlisted-valuation-mode";
 import { buildAppraisalFee } from "@/lib/calc/appraisal-fee-form";
@@ -225,6 +226,7 @@ export function InheritanceTaxForm() {
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<FormState>(INITIAL_FORM);
   const [error, setError] = useState<string | null>(null);
+  const [warnings, setWarnings] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<InheritanceTaxResult | null>(null);
 
@@ -484,6 +486,7 @@ export function InheritanceTaxForm() {
   const handleCalculate = async () => {
     setLoading(true);
     setError(null);
+    setWarnings([]);
     try {
       const input = buildInput();
       // 클라이언트 전체 검증 — API 왕복 전 1차 차단 (지점 ⑧)
@@ -493,6 +496,13 @@ export function InheritanceTaxForm() {
         setLoading(false);
         return;
       }
+      // CV-1·CV-3 동거주택 자산 유형 경고 (비차단 — 계산 계속)
+      const cohabitWarns = warnCohabitHouseRightType(
+        form.estateItems,
+        form.cohabitHouseStdPrice,
+        form.cohabitDirectAmount,
+      );
+      if (cohabitWarns.length > 0) setWarnings(cohabitWarns);
       // lib/calc/inheritance-api 단일 진입점 — body spread 신규 필드 누락 차단 (지점 ④⑬)
       const res = await callInheritanceTaxAPI(input);
       if (!res.ok || !("success" in res.data) || !res.data.success) {
@@ -517,6 +527,7 @@ export function InheritanceTaxForm() {
     setResult(null);
     setStep(0);
     setError(null);
+    setWarnings([]);
   };
 
   // 결과 화면
@@ -614,6 +625,18 @@ export function InheritanceTaxForm() {
       {error && (
         <div className="rounded-md bg-destructive/10 border border-destructive/30 px-4 py-2.5 text-sm text-destructive whitespace-pre-line">
           {error}
+        </div>
+      )}
+
+      {/* CV-1·CV-3 비차단 경고 — 계산은 계속 진행 */}
+      {warnings.length > 0 && (
+        <div
+          className="rounded-md border border-amber-200 bg-amber-50/70 dark:border-amber-700 dark:bg-amber-900/20 px-4 py-2.5 text-sm text-amber-800 dark:text-amber-200 space-y-1"
+          data-testid="cohabit-right-type-warnings"
+        >
+          {warnings.map((w, i) => (
+            <p key={i}>⚠ {w}</p>
+          ))}
         </div>
       )}
 

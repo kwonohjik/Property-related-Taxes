@@ -243,12 +243,11 @@ export function CohabitRequirementBlock({
         </div>
       )}
 
-      {/* G6 겸용주택·오피스텔 적용 범위 안내 */}
+      {/* G6 겸용주택·오피스텔 적용 범위 안내 (조합원입주권·분양권은 자산 카드 RadioCardGroup으로 대체) */}
       <div className="rounded-md border border-sky-200 bg-sky-50/40 dark:border-sky-700 dark:bg-sky-900/20 p-2.5 text-[10px] text-sky-700 dark:text-sky-300 space-y-0.5">
         <p className="font-semibold">§23의2 적용 범위 안내 (G6)</p>
         <p>• 겸용주택: 주택 면적이 주택 외 면적보다 큰 경우 전부 주택으로 봄</p>
         <p>• 상시주거용 오피스텔: 실제 주거 사용 확인 시 적용 가능</p>
-        <p>• 조합원입주권: 원칙적으로 동거주택 상속공제 미적용</p>
       </div>
     </div>
   );

@@ -719,3 +719,47 @@ export function validateUnlistedStockV2(
 
   return null;
 }
+
+// ────────────────────────────────────────────────────
+// CV-1·CV-3 동거주택 자산 유형 경고 (비차단)
+// ────────────────────────────────────────────────────
+
+/**
+ * CV-1: isCohabitantHouse=true 자산에 cohabitHouseRightType 미선택 → 경고(차단 아님).
+ * CV-3: cohabitHouseRightType ∈ {one_plus_one_right, sale_right} + 공제 금액 입력 → 경고.
+ * 설계 §23의2 EN-3(B): fallback 없음, 미선택=경고·undefined → 엔진 적용(house 동일 처리).
+ */
+export function warnCohabitHouseRightType(
+  estateItems: EstateItem[],
+  cohabitHouseStdPrice: string | undefined,
+  cohabitDirectAmount: string | undefined,
+): string[] {
+  const warnings: string[] = [];
+
+  const cohabitItems = estateItems.filter((i) => i.isCohabitantHouse === true);
+  for (const item of cohabitItems) {
+    const rightType = item.cohabitHouseRightType;
+    const name = item.name?.trim() || "동거주택 자산";
+
+    // CV-1: 유형 미선택
+    if (!rightType) {
+      warnings.push(
+        `"${name}"의 §23의2 자산 유형(일반주택·입주권·분양권)을 선택하지 않았습니다. ` +
+          `미선택 시 일반주택(공제 적용)으로 계산됩니다.`,
+      );
+    }
+
+    // CV-3: 미적용 유형인데 공제 금액 입력
+    if (
+      (rightType === "one_plus_one_right" || rightType === "sale_right") &&
+      (Number(cohabitHouseStdPrice) > 0 || Number(cohabitDirectAmount) > 0)
+    ) {
+      warnings.push(
+        `"${name}"은 §23의2 미적용 자산이므로 동거주택공제는 0으로 처리됩니다. ` +
+          `공제 금액 입력란은 무시됩니다.`,
+      );
+    }
+  }
+
+  return warnings;
+}
