@@ -104,7 +104,7 @@ export interface Buppyo3DeductionValues {
   farming: number; // ㉕
   spouse: number; // ㉖
   financial: number; // ㉗
-  disaster: number; // ㉘ §24 한도보정 입력값 echo
+  disaster: number; // ㉘ §23 상속세 재해손실공제 (casualtyLossDeduction)
   cohabit: number; // ㉙
   ceiling: number | null; // ㉚
   total: number; // ㉛
@@ -179,7 +179,7 @@ export function buildBuppyo3Data(
     farming: d.farmingDeduction,
     spouse: d.spouseDeduction,
     financial: d.financialDeduction,
-    disaster: lim?.disasterLossDeduction ?? 0,
+    disaster: d.casualtyLossDeduction ?? 0, // ㉘ §23 상속세 재해손실공제 (§54 lim.disasterLossDeduction와 별개)
     cohabit: d.cohabitationDeduction,
     ceiling: lim?.ceiling ?? null,
     total: d.totalDeduction,

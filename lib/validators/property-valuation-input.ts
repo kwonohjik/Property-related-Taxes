@@ -8,6 +8,19 @@ import { checkCorporateGiftRule } from "@/lib/calc/prior-gift-corporate-rule";
 
 // 가업상속공제 스키마 — 800줄 정책으로 sibling 분리(2026-06-02)
 import { familyBusinessInheritanceInputSchema } from "./family-business-inheritance-schema";
+// 영농상속공제 사후관리 스키마 — 800줄 정책으로 sibling 분리(2026-06-07)
+import {
+  farmingPostMgmtInputSchema,
+  type FarmingPostMgmtInputSchema,
+} from "./farming-post-mgmt-input-schema";
+export { farmingPostMgmtInputSchema, type FarmingPostMgmtInputSchema };
+// 증여공제·감정수수료 보조 스키마 — 800줄 정책으로 sibling 분리(2026-06-07)
+import {
+  giftDeductionInputSchema,
+  giftTaxCreditInputSchema,
+  appraisalFeeSchema,
+} from "./gift-aux-schemas";
+export { giftDeductionInputSchema, giftTaxCreditInputSchema, appraisalFeeSchema };
 
 // ============================================================
 // 비상장주식 평가 데이터 스키마 — property-valuation-input-unlisted-data.ts로 분리(800줄).
@@ -619,37 +632,6 @@ export const farmingInheritanceInputSchema = z.object({
   heirForestManageableArea: z.boolean().optional(),
 });
 
-/**
- * 영농상속공제 사후관리 추징 입력 스키마 (F-7, §18의3④⑥ + 시행령 §16⑥⑦⑧)
- */
-export const farmingPostMgmtInputSchema = z.object({
-  violation: z.enum([
-    "asset_disposed",
-    "farming_ceased",
-    "tax_fraud_conviction",
-    "accounting_fraud",
-  ]),
-  violationDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD 형식"),
-  filingDeadline: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD 형식"),
-  determinedTax: z.number().nonnegative(),
-  interestRate: z.number().min(0).max(1, "이자율은 소수(0~1) 형식 — 예: 0.029"),
-  /** §16⑥ 정당사유 — violation ∈ {asset_disposed, farming_ceased}에만 적용 */
-  justifiedReason: z
-    .enum([
-      "heir_death",
-      "overseas_relocation",
-      "expropriation",
-      "government_transfer",
-      "land_exchange",
-      "corporate_stock_disposal",
-      "other_similar",
-    ])
-    .optional(),
-  maintainsMajorShareholder: z.boolean().optional(),
-});
-
-export type FarmingPostMgmtInputSchema = z.infer<typeof farmingPostMgmtInputSchema>;
-
 /** 가업상속공제 자격 입력 스키마 (2026-05-21, 상증법 §18의2 + 상증령 §15) */
 // 가업상속공제 스키마 — sibling(family-business-inheritance-schema.ts) 정의. 재수출로 외부 import 호환.
 export { familyBusinessInheritanceInputSchema };
@@ -700,23 +682,23 @@ export const inheritanceDeductionInputSchema = z.object({
   // ⑫ 동기화 (2026-06-07, §21① 단서): 미선언 시 z.object 침묵 strip → 엔진 미도달.
   //   완전 무신고 시 일괄공제 5억 고정. 라디오 입력이라 모순 불가(별도 validate 차단 불요).
   isUnfiled: z.boolean().optional(),
-});
-
-// ============================================================
-// 증여공제 입력 스키마
-// ============================================================
-
-export const giftDeductionInputSchema = z.object({
-  donorRelation: z.enum([
-    "spouse",
-    "lineal_ascendant_adult",
-    "lineal_ascendant_minor",
-    "lineal_descendant",
-    "other_relative",
-  ]),
-  marriageExemption: z.number().min(0).max(100_000_000).optional(),
-  birthExemption: z.number().min(0).max(100_000_000).optional(),
-  priorUsedDeduction: z.number().nonnegative().optional(),
+  // ⑨⑫ 동기화 (2026-06-07, §23 재해손실공제): 미선언 시 z.object 침묵 strip → 엔진 미도달.
+  //   enum은 CasualtyLossInput.disasterType과 정확히 일치 (enum-verification-before-mapping).
+  //   lossValue nonnegative — validate ⑧에서 >0 추가 차단 (API max(0,…) fallback 3중 패턴).
+  casualtyLoss: z
+    .object({
+      lossValue: z.number().nonnegative(),
+      compensatedValue: z.number().nonnegative().optional(),
+      disasterType: z
+        .enum(["fire", "collapse", "explosion", "environmental", "natural", "other"])
+        .optional(),
+      disasterDate: z
+        .string()
+        .regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD 형식")
+        .optional(),
+      isWithinFilingDeadline: z.boolean().optional(),
+    })
+    .optional(),
 });
 
 // ============================================================
@@ -742,25 +724,6 @@ export const inheritanceTaxCreditInputSchema = z.object({
   shortTermReinheritAssetValue: z.number().int().nonnegative().optional(),
   shortTermReinheritPriorEstateValue: z.number().int().nonnegative().optional(),
   isFiledOnTime: z.boolean(),
-});
-
-export const giftTaxCreditInputSchema = z.object({
-  foreignTaxPaid: z.number().nonnegative().optional(),
-  isFiledOnTime: z.boolean(),
-  specialTreatment: z.enum(["startup", "family_business"]).optional(),
-  startupInvestmentCompleted: z.boolean().optional(),
-});
-
-// ============================================================
-// 감정평가수수료 공제 스키마 (상속 §20의3 / 증여 §46의2 준용 — 공용)
-// ============================================================
-
-export const appraisalFeeSchema = z.object({
-  realEstateAppraisalFee: z.number().nonnegative().optional(),
-  unlistedStockAppraisalFee: z.number().nonnegative().optional(),
-  unlistedTargetCount: z.number().int().positive().optional(),
-  unlistedAgencyCount: z.number().int().positive().optional(),
-  tangibleAppraisalFee: z.number().nonnegative().optional(),
 });
 
 // ============================================================

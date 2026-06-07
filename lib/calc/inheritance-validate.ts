@@ -22,6 +22,7 @@ import { deriveCollateralDebts } from "@/lib/tax-engine/inheritance-collateral-d
 import { resolveEngineValuatedAmount } from "@/lib/tax-engine/property-valuation";
 import { checkCorporateGiftRule } from "@/lib/calc/prior-gift-corporate-rule";
 import { toOptionalDate } from "@/lib/api/date-coerce";
+import { endOfMonth, addMonths, format } from "date-fns";
 
 // ────────────────────────────────────────────────────
 // 단일 자산 — heirAllocations 합계 검증
@@ -470,6 +471,39 @@ export function validateInheritanceTaxInput(
     // (역방향 — 외국세액만 입력·과표 미입력 → 한도 0으로 공제 0, UI hint 안내. 차단 안 함)
     if (base != null && base > 0 && (paid == null || paid <= 0)) {
       return "외국납부세액공제 §29: 국외 상속재산 과세표준을 입력하려면 외국에서 납부한 상속세액도 입력해야 합니다.";
+    }
+  }
+
+  // ⑧ §23 재해손실공제 검증 (2026-06-07)
+  // 3중 패턴: API max(0,loss−comp) fallback ↔ validate 동일 fallback (UI 통과 ↔ validate 차단 모순 금지)
+  const casualtyLoss = input.deductionInput?.casualtyLoss;
+  if (casualtyLoss !== undefined) {
+    // 1. 재해손실재산가액 필수, 0 초과
+    if (!casualtyLoss.lossValue || casualtyLoss.lossValue <= 0) {
+      return "재해손실재산가액을 입력하세요. (§23 재해손실공제)";
+    }
+    // 2. 재난 발생일 필수
+    if (!casualtyLoss.disasterDate) {
+      return "재난 발생일을 입력하세요. (§23 재해손실공제)";
+    }
+    // 3. 재난 발생일 ≥ 상속개시일 (하한 — §23: 상속개시 후 재해)
+    if (input.deathDate && casualtyLoss.disasterDate < input.deathDate) {
+      return "재난은 상속개시일 이후 발생해야 합니다. (§23 — 상속개시 후 신고기한 이내)";
+    }
+    // 4. 재난 발생일 ≤ 신고기한(상속개시월 말일 + 6개월) (상한)
+    if (input.deathDate) {
+      const deathDateObj = toOptionalDate(input.deathDate);
+      if (deathDateObj) {
+        const filingDeadline = format(addMonths(endOfMonth(deathDateObj), 6), "yyyy-MM-dd");
+        if (casualtyLoss.disasterDate > filingDeadline) {
+          return `§23 요건: 신고기한(${filingDeadline}) 이내 발생한 재난이어야 합니다.`;
+        }
+      }
+    }
+    // 5. 보전가능금액 > 손실재산가액 차단 (전액보전=0은 허용 — max(0,…) fallback과 동기화)
+    const compensated = casualtyLoss.compensatedValue ?? 0;
+    if (compensated > casualtyLoss.lossValue) {
+      return "보전가능금액이 재해손실재산가액을 초과합니다. 보전가능금액은 손실액 이하여야 합니다.";
     }
   }
 

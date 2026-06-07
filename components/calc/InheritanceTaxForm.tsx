@@ -377,6 +377,16 @@ export function InheritanceTaxForm() {
       legateeAmountNonHeir: autoOrManual(form.legateeAmountNonHeir, legateeAuto),
       priorGiftDeductionTotal: parseAmount(form.priorGiftDeductionTotal) || undefined,
       disasterLossDeduction: parseAmount(form.disasterLossDeduction) || undefined,
+      // ④⑬ §23 재해손실공제 — 토글 OFF → undefined (3-state, feedback_three_state_optional_mode_toggle)
+      // API max(0,loss−comp) fallback은 엔진이 처리 (⑧ validate와 동일 로직 3중 패턴)
+      casualtyLoss: form.casualtyLossEnabled
+        ? {
+            lossValue: parseAmount(form.casualtyLossValue),
+            compensatedValue: parseAmount(form.casualtyLossCompensated) || undefined,
+            disasterType: form.casualtyLossType || undefined,
+            disasterDate: form.casualtyLossDate || undefined,
+          }
+        : undefined,
       deathDate: form.deathDate || undefined,
       // 영농상속공제 정밀화 (2026-05-21, §18의3 + 시행령 §16)
       // form.farming: undefined(legacy) | FarmingInheritanceInput(활성)

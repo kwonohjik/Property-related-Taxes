@@ -14,21 +14,16 @@ import { INH } from "../legal-codes";
 import { applyRate } from "../tax-utils";
 import type {
   CalculationStep,
-  DonorRelation,
   EstateItem,
   Heir,
   InheritanceDeductionInput,
   InheritanceDeductionResult,
-  PriorGift,
 } from "../types/inheritance-gift.types";
-import { calcRelationDeduction } from "./gift-deductions";
-import { isWithin13Cutoff } from "../inheritance-gift-common";
 import type {
   LumpSumComparisonDetail,
   SpouseDeductionDetail,
   FinancialDeductionDetail,
   CohabitDeductionDetail,
-  DeductionLimitCeilingDetail,
 } from "../types/inheritance-deduction-detail.types";
 import {
   calcFamilyBusinessDeductionDirect,
@@ -356,146 +351,15 @@ export function calcCohabitationDeduction(
 //  배우자공제 중복적용 정합·개정연혁 한도 정밀화로 삭제 — 계획서 §5-9 dead-code 정리).
 
 // ============================================================
-// §24 종합한도
+// §24 종합한도 — 800줄 정책으로 inheritance-deduction-limit.ts 분리 (re-export 보존)
 // ============================================================
 
-/**
- * §24 종합한도 계산 (Phase D — PDF 책 1864 표 산식)
- *
- * 한도 = 상속세 과세가액
- *      − 상속인 외 자에게 유증한 금액
- *      − [모든 사전증여 가산가액 (영리법인·legatee 포함) − (증여재산공제 + 신고기한내 재해손실공제)]
- *
- * legacy 호출 (priorGiftToHeirTotal만 제공): 분자 = taxableEstateValue − priorGiftToHeirTotal
- *
- * E4: ceilingDetail: DeductionLimitCeilingDetail 반환 추가.
- *
- * @param rawTotalDeduction 공제 합계 (한도 적용 전)
- * @param taxableEstateValue 상속세 과세가액
- * @param priorGiftToHeirTotal 상속인 사전증여 가산가액 (legacy fallback용)
- * @param params Phase D 보정 입력 — totalPriorGiftAmount(모든 수증자) + priorGiftDeductionTotal + legateeAmountNonHeir + disasterLossDeduction
- */
-export function applyDeductionLimit(
-  rawTotalDeduction: number,
-  taxableEstateValue: number,
-  priorGiftToHeirTotal: number,
-  params?: {
-    totalPriorGiftAmount?: number;
-    priorGiftDeductionTotal?: number;
-    legateeAmountNonHeir?: number;
-    disasterLossDeduction?: number;
-  },
-): {
-  limitedDeduction: number;
-  ceiling: number;
-  wasCapped: boolean;
-  ceilingDetail: DeductionLimitCeilingDetail;
-} {
-  let ceiling: number;
-  let legateeNonHeir: number;
-  let totalGift: number;
-  let giftDeductions: number;
-  let netPriorGiftDeducted: number;
-
-  if (params && params.totalPriorGiftAmount !== undefined) {
-    // Phase D 정확 산식
-    totalGift = params.totalPriorGiftAmount;
-    giftDeductions =
-      (params.priorGiftDeductionTotal ?? 0) +
-      (params.disasterLossDeduction ?? 0);
-    legateeNonHeir = params.legateeAmountNonHeir ?? 0;
-    // §24 단서: 제3호(사전증여 가산가액)는 상속세 과세가액 5억원 초과 시에만 차감.
-    // (1·2호 유증·포기는 단서 무관 — 항상 차감.)
-    netPriorGiftDeducted =
-      taxableEstateValue > SECTION24_GIFT_DEDUCTION_THRESHOLD
-        ? Math.max(0, totalGift - giftDeductions)
-        : 0;
-    ceiling = Math.max(0, taxableEstateValue - legateeNonHeir - netPriorGiftDeducted);
-  } else {
-    // legacy fallback
-    totalGift = priorGiftToHeirTotal;
-    giftDeductions = 0;
-    legateeNonHeir = 0;
-    netPriorGiftDeducted = priorGiftToHeirTotal;
-    ceiling = Math.max(0, taxableEstateValue - priorGiftToHeirTotal);
-  }
-
-  const limitedDeduction = Math.min(rawTotalDeduction, ceiling);
-  const wasCapped = rawTotalDeduction > ceiling;
-
-  const ceilingDetail: DeductionLimitCeilingDetail = {
-    taxableEstateValue,
-    legateeAmountNonHeir: legateeNonHeir,
-    heirWaiverAmount: 0, // §24 ②호 미구현 — 항상 0
-    totalPriorGiftAmount: totalGift,
-    priorGiftDeductionTotal: params?.priorGiftDeductionTotal ?? 0,
-    disasterLossDeduction: params?.disasterLossDeduction ?? 0,
-    netPriorGiftDeducted,
-    ceiling,
-    rawTotalDeduction,
-    wasCapped,
-    limitedDeduction,
-  };
-
-  return { limitedDeduction, ceiling, wasCapped, ceilingDetail };
-}
-
-// ============================================================
-// §24 사전증여 증여재산공제 자동 도출 (§24 3호 — §53·§53의2·§54 공제 차감)
-// ============================================================
-
-/** §24 단서 — 제3호(사전증여 가산가액)는 상속세 과세가액이 이 금액을 초과할 때만 차감 (KoreanLaw mst 276123). */
-export const SECTION24_GIFT_DEDUCTION_THRESHOLD = 500_000_000;
-
-/**
- * §24 3호: 상속세 과세가액에서 차감할 「가산 증여재산가액 − 증여재산공제(§53·§53의2·§54)」 중
- * **증여재산공제 합계**를 사전증여 내역에서 자동 도출한다.
- *
- * 배우자 법정상속분 분자(inheritance-tax.ts:263~)와 동일한 건별 우선순위:
- *   1. giftTaxBase 명시 → max(0, giftAmount − giftTaxBase)  (그 증여의 실제 공제 실액)
- *   2. giftTaxBase 없고 doneeRelation 있음 → 관계별 그룹 합산 후 calcRelationDeduction (§53 관계한도 1회)
- *   3. 둘 다 없음 → 0 (보수적 — 화면에 안 보이는 미입력 건의 과대공제 차단)
- *
- * §13 cutoff(상속인 10년·비상속인 5년) 통과 건만 — totalPriorGiftAmount(가산가액)와 동일 모집단.
- * 영리법인 사전증여는 통상 giftTaxBase=giftAmount → 공제 0 (정합).
- *
- * 수동 입력(deductionInput.priorGiftDeductionTotal)이 명시되면 호출측에서 그 값을 우선(override).
- *
- * @param preGifts 사전증여 내역
- * @param deathDate 상속개시일 (§13 cutoff 판정)
- */
-export function computePriorGiftDeductionForLimit(
-  preGifts: PriorGift[] | undefined,
-  deathDate: string,
-): number {
-  if (!preGifts || preGifts.length === 0) return 0;
-
-  let explicitTotal = 0; // giftTaxBase 명시 건의 공제 합
-  const relationSums = new Map<DonorRelation, number>(); // 관계별 gross 합 (giftTaxBase 미명시 건)
-
-  for (const g of preGifts) {
-    if (!isWithin13Cutoff(g, deathDate)) continue;
-    if (g.giftTaxBase !== undefined) {
-      explicitTotal += Math.max(0, g.giftAmount - g.giftTaxBase);
-    } else if (g.doneeRelation) {
-      relationSums.set(
-        g.doneeRelation,
-        (relationSums.get(g.doneeRelation) ?? 0) + g.giftAmount,
-      );
-    }
-    // 둘 다 미입력 → 공제 0 (보수적)
-  }
-
-  let groupedTotal = 0;
-  for (const [rel, sum] of relationSums.entries()) {
-    groupedTotal += calcRelationDeduction(
-      { donorRelation: rel, priorUsedDeduction: 0 },
-      sum,
-    ).relationDeduction;
-  }
-
-  return explicitTotal + groupedTotal;
-}
+export {
+  applyDeductionLimit,
+  SECTION24_GIFT_DEDUCTION_THRESHOLD,
+  computePriorGiftDeductionForLimit,
+} from "./inheritance-deduction-limit";
+import { applyDeductionLimit } from "./inheritance-deduction-limit";
 
 // ============================================================
 // 통합 공제 계산 (7종 + §24 한도)
@@ -505,6 +369,8 @@ export function computePriorGiftDeductionForLimit(
 import {
   calcFarmingDeduction as _calcFarmingDeduction,
 } from "./inheritance-farming-deduction";
+// §23 재해손실공제 (상속세 — §54 증여세 disasterLossDeduction과 별개)
+import { calcCasualtyLossDeduction } from "./casualty-loss-deduction";
 
 /**
  * 상속공제 전체 계산
@@ -696,11 +562,16 @@ export function calcInheritanceDeductions(
   const familyBusinessDetail = bizPhaseResult.detail;
   const bizResult = { deduction: familyBusinessDeduction, breakdown: bizPhaseResult.detail.breakdown };
 
+  // §23 재해손실공제 (상속공제 7종 중 하나 — §23의2 동거주택 앞, 조문 순서)
+  const casualtyResult = calcCasualtyLossDeduction(input.casualtyLoss, baseDate);
+  const casualtyLossDeduction = casualtyResult.deduction;
+
   // 배우자 + 기초/일괄 + 나머지 합계
   const rawTotal =
     spouseDeduction +
     chosenBasicPersonal +
     financialDeduction +
+    casualtyLossDeduction +
     cohabitationDeduction +
     farmingDeduction +
     familyBusinessDeduction;
@@ -724,6 +595,9 @@ export function calcInheritanceDeductions(
         ]),
     ...spouseResult.breakdown,
     ...financialResult.breakdown,
+    ...(casualtyLossDeduction > 0
+      ? [{ label: `재해손실공제 (${INH.DISASTER_DEDUCTION})`, amount: casualtyLossDeduction, lawRef: INH.DISASTER_DEDUCTION }]
+      : []),
     ...cohabitResult.breakdown,
     ...farmingResult.breakdown,
     ...bizResult.breakdown,
@@ -759,6 +633,8 @@ export function calcInheritanceDeductions(
       chosenMethod === "itemized" ? personalDeductionTotal : 0,
     lumpSumDeduction: chosenMethod === "lump_sum" ? LUMP_SUM_DEDUCTION : 0,
     financialDeduction,
+    casualtyLossDeduction,
+    casualtyLossDeductionDetail: casualtyResult.detail,
     cohabitationDeduction,
     farmingDeduction,
     farmingDetail,
@@ -775,6 +651,7 @@ export function calcInheritanceDeductions(
       INH.PERSONAL_DEDUCTION,
       INH.LUMP_SUM,
       INH.FINANCIAL_DEDUCTION,
+      ...(casualtyLossDeduction > 0 ? [INH.DISASTER_DEDUCTION] : []),
       INH.COHABIT_DEDUCTION,
       INH.FARMING_DEDUCTION,
       INH.FAMILY_BUSINESS_DEDUCTION,

@@ -135,6 +135,31 @@ export function DeductionBreakdownSection({ result, estateItems, debtItems, heir
             />
           )}
 
+          {/* 재해손실공제 §23 (상속세 — §54 §24③ 분자 보정과 별개) */}
+          {dd.casualtyLossDeduction > 0 && (
+            <div data-testid="casualty-loss-deduction-row">
+              <Row
+                label="재해손실공제 (§23)"
+                value={formatKRW(dd.casualtyLossDeduction)}
+              />
+              {dd.casualtyLossDeductionDetail && (
+                <>
+                  <Row
+                    sub
+                    label="재해손실재산가액"
+                    value={formatKRW(dd.casualtyLossDeductionDetail.lossValue)}
+                  />
+                  <Row
+                    sub
+                    deduction
+                    label="− 보전가능금액 (보험금·구상권)"
+                    value={`− ${formatKRW(dd.casualtyLossDeductionDetail.compensatedValue)}`}
+                  />
+                </>
+              )}
+            </div>
+          )}
+
           {/* ⑤ 동거주택공제 */}
           {dd.cohabitationDeduction > 0 && (
             <CohabitDeductionDetailCard
