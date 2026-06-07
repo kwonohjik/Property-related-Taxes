@@ -223,4 +223,28 @@ export const INHERITANCE_ADDITIONS: VerificationRule[] = [
     keywords: ["물납", "부동산과 유가증권", "해당 상속재산가액의 2분의 1을 초과", "상속세 납부세액이 2천만원을 초과"],
     keywordMode: "ALL",
   },
+  {
+    id: "INH.PUBLIC_TRUST",
+    citation: "상증법 §17",
+    keywords: ["「공익신탁법」에 따른 공익신탁", "공익법인등에 출연하는 재산의 가액", "상속세 과세가액에 산입하지 아니한다"],
+    keywordMode: "ALL",
+  },
+  {
+    id: "INH.APPRAISAL_FEE",
+    citation: "상증법 §25",
+    keywords: ["상속세의 과세표준은 제13조에 따른 상속세 과세가액에서", "상속재산의 감정평가 수수료", "과세표준이 50만원 미만이면 상속세를 부과하지 아니한다"],
+    keywordMode: "ALL",
+  },
+  {
+    id: "INH.SPLIT_PAYMENT",
+    citation: "상증법 §70",
+    keywords: ["각 신고기한까지 각 산출세액에서", "납부할 금액이 1천만원을 초과하는 경우", "납부기한이 지난 후 2개월 이내에 분할납부"],
+    keywordMode: "ALL",
+  },
+  {
+    id: "INH.CULTURAL_HERITAGE_DEFERRAL",
+    citation: "상증법 §74",
+    keywords: ["상당하는 상속세액의 징수를 유예한다", "박물관자료 또는 미술관자료", "유상으로 양도하거나", "징수유예한 상속세를 징수하여야 한다"],
+    keywordMode: "ALL",
+  },
 ];
