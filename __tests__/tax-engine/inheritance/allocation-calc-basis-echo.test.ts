@@ -76,11 +76,13 @@ describe("배부 계산 근거 echo (종합사례)", () => {
   });
 
   // ── A4-6: ⑩ 영리법인 증여세액공제 ──
-  it("A4-6: ⑩a 150M · ⑩b 영리법인 272,874,251 · 합계 277,943,123 · ⑩c 150M", () => {
+  // GAP-1 2026-06-07: 합계열 할증 제거(법령 정합) → 영리법인 1개라 합계 == perHeir(272,874,251).
+  //   구 anchor 합계 277,943,123(할증 포함)은 상증령 §3① 근거 없어 정정(사용자 결정 "법령 정합").
+  it("A4-6: ⑩a 150M · ⑩b 영리법인 272,874,251 · 합계 272,874,251 · ⑩c 150M", () => {
     const co = ph[HEIR_ID.corporate];
     expect(co.priorGiftComputedTax).toBe(150_000_000);
     expect(co.priorGiftCreditLimit).toBe(272_874_251);
-    expect(st.corporateExemptionLimitDisplay).toBe(277_943_123);
+    expect(st.corporateExemptionLimitDisplay).toBe(272_874_251);
     expect(r.corporateExemption?.amount).toBe(150_000_000);
     // R4 역산: 영리법인 과세표준 = taxBase − computedTaxShareDenominator
     expect(r.taxBase - a.computedTaxShareDenominator).toBe(700_000_000);

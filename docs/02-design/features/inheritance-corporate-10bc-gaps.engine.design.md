@@ -36,16 +36,16 @@
 
 ## 엔진 변경 (input/result 타입 무변경)
 
-### GAP-1: 합계열 할증 제거 — 🚫 BLOCKER 보류 (2026-06-07)
+### GAP-1: 합계열 할증 제거 — ✅ 완료 (2026-06-07, 법령 정합)
 
 ```ts
-// 제안: ((computedTax + generationSkipSurcharge) * base) / taxBase  →  (computedTax * base) / taxBase
+// ((computedTax + generationSkipSurcharge) * base) / taxBase  →  (computedTax * base) / taxBase
 ```
-→ perHeir `corpLimit`(할증 미포함)와 단일화 의도. **그러나 Do 중 회귀 발견으로 보류**:
-- 기존 anchor **AN-8**(`heir-allocation-summary-table.test.ts`)·**A4-6**(`allocation-calc-basis-echo.test.ts`)이 PDF 책 1866 표8 **합계열 = 할증 포함 277,943,123**을 명시 anchor([[feedback_pdf_example_test_anchoring]] 신뢰 대상).
-- A4-6은 "⑩b 영리법인 272,874,251(할증 미포함) · **합계 277,943,123**(할증 포함)"을 **둘 다** 의도적으로 기록 → 작성자가 PDF에서 "영리법인열 ≠ 합계열"을 보았을 가능성.
-- 법령 논리(영리법인 §27 할증 무관)는 할증 미포함을 지지하나, **PDF 책 1866 표8 원본의 ⑩b 합계 실제값(272,874,251 vs 277,943,123) 확인 없이는 단정 불가**.
-- → **GAP-1 엔진 변경 롤백(원복)**. PDF 원본/사용자 판단 확보 후 재개. CORP-10B anchor도 보류.
+→ perHeir `corpLimit`(할증 미포함)와 단일화. **확정 경위**:
+- 1차 Do에서 할증 제거 시 anchor AN-8·A4-6(PDF 표8 합계=할증포함 277,943,123)과 충돌 → 일단 롤백(BLOCKER).
+- **KoreanLaw 상증령 §3①(mst283637) 실측**: 영리법인 면제 비율 = 상속세 과세표준 상당액 비율, **§27 세대생략 할증 근거 전혀 없음**. 영리법인은 자연인 세대 개념 부재로 할증 대상 아님.
+- 사용자 결정 "법령 정합" → 합계열 할증 제거 + **AN-8·A4-6를 272,874,251로 재산정**(구 277,943,123은 ⑨소계 할증포함 기계곱). [[feedback_anchor_correction_legal_priority]].
+- anchor CORP-10B-1·2(`corporate-10bc-gaps.test.ts`), AN-8·A4-6 재산정, 전체 6640 PASS.
 
 ### GAP-2: result 무변경 — 데이터 기존재
 

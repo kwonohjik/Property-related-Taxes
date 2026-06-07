@@ -1,9 +1,8 @@
 /**
  * 상속세 영리법인 배부 표 ⑩b·⑩c numeric 갭
  *
- * GAP-1: ⑩b 공제 한도 합계열(corporateExemptionLimitDisplay)이 세대생략 할증을 포함 →
- *        영리법인열(corpLimit, 할증 미포함)과 불일치. 영리법인은 §27 할증 무관(세대 개념 없음).
- *        → 합계열도 할증 미포함이어야 함 (PDF 책 1866 정합).
+ * GAP-1: ⑩b 공제 한도 합계열(corporateExemptionLimitDisplay) 할증 미포함(법령 정합, 2026-06-07 확정).
+ *        영리법인은 §27 할증 무관(상증령 §3① 면제 비율에 할증 근거 없음) → 합계열 == perHeir corpLimit.
  * GAP-2: ⑩c 공제할 증여세액 perHeir가 모든 corporate 행에 corporateExemption.amount(전체) 중복 →
  *        다수 영리법인 시 법인별 perCorporateBreakdown.exemptionAmount로 분리해야 함.
  *
@@ -27,6 +26,14 @@ const CHILD: Heir = {
   name: "자녀",
   birthDate: "1970-01-01",
   isHeir: true,
+};
+const GRANDDAUGHTER: Heir = {
+  id: "gd",
+  relation: "legatee",
+  name: "손녀",
+  birthDate: "1995-01-01",
+  isHeir: false,
+  isGenerationSkipBeneficiary: true, // 세대생략 할증 발생
 };
 const corp = (id: string): Heir => ({
   id,
@@ -65,13 +72,65 @@ function baseInput(over: Partial<InheritanceTaxInput> = {}): InheritanceTaxInput
   };
 }
 
-// ──────────────────────────────────────────────────────────────────
-// GAP-1 (⑩b 합계열 할증) — BLOCKER 보류 (2026-06-07)
-//   합계열 corporateExemptionLimitDisplay(할증 포함) ≠ perHeir corpLimit(할증 미포함).
-//   영리법인 §27 할증 무관(법령 논리)은 미포함을 지지하나, 기존 anchor AN-8·A4-6이
-//   PDF 책 1866 표8 합계=할증 포함(277,943,123)을 명시 anchor([[feedback_pdf_example_test_anchoring]]).
-//   두 PDF 해석 모순 → 원본 확인/사용자 판단 필요. CORP-10B anchor는 PDF 확정 후 추가.
-// ──────────────────────────────────────────────────────────────────
+// GAP-1 (⑩b 합계열 할증) — 법령 정합 확정 (2026-06-07 사용자 결정)
+//   상증령 §3①(mst283637) 영리법인 면제 비율에 §27 세대생략 할증 근거 없음 → 할증 미포함.
+//   합계열 corporateExemptionLimitDisplay == perHeir corpLimit. (구 anchor AN-8·A4-6의
+//   PDF 표8 합계=할증포함 277,943,123은 ⑨소계 기계곱 → 272,874,251로 재산정.)
+describe("CORP-10B §3의2② ⑩b 공제 한도 합계열 할증 미포함(법령 정합)", () => {
+  it("CORP-10B-1: 세대생략 할증 + 영리법인 1개 → 합계열 == perHeir(할증 미포함)", () => {
+    const heirs = [CHILD, GRANDDAUGHTER, corp("corp1")];
+    const result = calcInheritanceTax(
+      baseInput({
+        heirs,
+        deductionInput: { heirs, deathDate: "2026-05-21" },
+        estateItems: [
+          {
+            id: "e1",
+            category: "cash",
+            name: "현금",
+            marketValue: 10_000_000_000,
+            heirAllocations: [
+              { heirId: "child1", amount: 9_500_000_000 },
+              { heirId: "gd", amount: 500_000_000 },
+            ],
+          },
+        ],
+        preGiftsWithin10Years: [corpGift("corp1", 700_000_000, 150_000_000)],
+        creditInput: {
+          isFiledOnTime: true,
+          priorGifts: [corpGift("corp1", 700_000_000, 150_000_000)],
+        },
+      }),
+    );
+    // 세대생략 할증 발생 전제
+    expect(result.generationSkipSurcharge).toBeGreaterThan(0);
+    // 합계열(할증 미포함) == 영리법인열 — 단일 영리법인이라 정확 일치
+    const totalLimit = result.summaryTable?.corporateExemptionLimitDisplay ?? 0;
+    const perHeirLimit =
+      result.heirAllocationResult?.perHeir["corp1"]?.priorGiftCreditLimit ?? 0;
+    expect(totalLimit).toBe(perHeirLimit);
+  });
+
+  it("CORP-10B-2 (회귀): 할증 0 + 영리법인 1개 → 합계열 == perHeir", () => {
+    const heirs = [CHILD, corp("corp1")];
+    const result = calcInheritanceTax(
+      baseInput({
+        heirs,
+        deductionInput: { heirs, deathDate: "2026-05-21" },
+        preGiftsWithin10Years: [corpGift("corp1", 700_000_000, 150_000_000)],
+        creditInput: {
+          isFiledOnTime: true,
+          priorGifts: [corpGift("corp1", 700_000_000, 150_000_000)],
+        },
+      }),
+    );
+    expect(result.generationSkipSurcharge ?? 0).toBe(0);
+    const totalLimit = result.summaryTable?.corporateExemptionLimitDisplay ?? 0;
+    const perHeirLimit =
+      result.heirAllocationResult?.perHeir["corp1"]?.priorGiftCreditLimit ?? 0;
+    expect(totalLimit).toBe(perHeirLimit);
+  });
+});
 
 describe("CORP-10C §3의2② ⑩c 공제할 증여세액 perHeir 법인별 분리", () => {
   function tenC(result: ReturnType<typeof calcInheritanceTax>, heirs: Heir[]) {
