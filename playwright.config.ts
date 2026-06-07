@@ -19,7 +19,9 @@ export default defineConfig({
   testMatch: "**/*.spec.ts",
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 1 : 0,
+  // 로컬·CI 모두 retries 1 — 타이밍 flaky(병렬 토스트/애니메이션 레이스) 1회 흡수.
+  // 실제 실패는 재시도해도 실패(결정적) → flaky와 구분됨. (2026-06-08)
+  retries: 1,
   reporter: [["list"], ["html", { outputFolder: "e2e/_artifacts/report", open: "never" }]],
   outputDir: "e2e/_artifacts/test-results",
   use: {
