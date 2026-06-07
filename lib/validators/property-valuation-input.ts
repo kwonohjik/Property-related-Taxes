@@ -432,8 +432,35 @@ export const heirSchema = z.object({
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD 형식")
     .optional(),
-  // cohabitExcludedYears: §23의2② 부득이 사유 제외 연수. 미입력=0처리. nonnegative.
+  // cohabitExcludedYears: §23의2② 부득이 사유 제외 연수 (legacy — Phase 4에서 cohabitReasons로 대체).
+  // @deprecated: 역직렬화 호환을 위해 잔류. 신규 입력 UI에서는 cohabitReasons 사용.
   cohabitExcludedYears: z.number().nonnegative().optional(),
+  // Phase 4 (2026-06-07) — §23의2② 부득이사유 구조화 배열 ⑨⑫
+  // startDate < endDate 는 superRefine에서 검증. 빈 배열 허용 (사유 없음).
+  cohabitReasons: z
+    .array(
+      z.object({
+        type: z.enum([
+          "conscription",
+          "schooling",
+          "work",
+          "medical",
+          "reconstruction_lease",
+          "overseas_grad",
+        ]),
+        startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD 형식"),
+        endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD 형식"),
+      }).superRefine((reason, ctx) => {
+        if (reason.startDate >= reason.endDate) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["endDate"],
+            message: `부득이사유 종료일(${reason.endDate})은 시작일(${reason.startDate})보다 늦어야 합니다.`,
+          });
+        }
+      }),
+    )
+    .optional(),
   // donee-phase2 — 영리법인 여부 (corporate Heir, §3의2② 적용 판정). ⚠️ z.object 침묵 strip 방지.
   isForProfit: z.boolean().optional(),
   corporateGiftComputedTax: z.number().nonnegative().optional(),

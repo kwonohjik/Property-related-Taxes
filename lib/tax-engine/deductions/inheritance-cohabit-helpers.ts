@@ -1,5 +1,5 @@
 /**
- * §23의2 동거주택상속공제 헬퍼 — Phase 2~3 (2026-06-07)
+ * §23의2 동거주택상속공제 헬퍼 — Phase 2~4 (2026-06-07)
  *
  * 800줄 정책에 따라 inheritance-deductions.ts에서 분리.
  * inheritance-deductions.ts가 re-export → 외부 import 경로 무변경.
@@ -7,11 +7,21 @@
  * 법령: 상증법 §23의2 + 소득세 시행령 §154⑦
  *   G5: 대상 상속인 범위 (2022.1.1. 개정 — 대습배우자 포함)
  *   G3: 동거연수 계산 (미성년 제외 2016.1.1.~ 시행)
+ *   G3-R: 부득이사유 자동산입 (Phase 4 — §23의2② + 상증령 §20의2 + 시행규칙 §9의2)
  *   G4: 주택부수토지 면적한도 차감 (소득세 시행령 §154⑦ 배율)
  */
 
-import { differenceInYears } from "date-fns";
-import type { AncillaryLandRegion, Heir } from "../types/inheritance-gift.types";
+import { differenceInCalendarDays, differenceInYears } from "date-fns";
+import type {
+  AncillaryLandRegion,
+  CohabitReason,
+  CohabitReasonType,
+  Heir,
+} from "../types/inheritance-gift.types";
+import type {
+  CohabitReasonBreakdown,
+  CohabitYearsResult,
+} from "../types/inheritance-deduction-detail.types";
 
 // ============================================================
 // G5: §23의2①1호 대상 상속인 적격성 판정
@@ -58,79 +68,266 @@ export function isCohabitDeductionEligibleRelation(
 }
 
 // ============================================================
-// G3: §23의2①1호 동거연수 계산
+// G3+G3-R: §23의2①1호 동거연수 계산 (Phase 2~4 통합)
 // ============================================================
 
+// ─── G3-R 상수: 사유 유형 → 법적 효과 매핑 ─────────────────
 /**
- * §23의2①1호 동거연수 계산.
+ * §23의2② + 상증령 §20의2② + 시행규칙 §9의2 법적 효과 매핑.
+ *
+ * excluded:       §23의2② 본문 — 계속 동거 인정, 동거기간 차감
+ * included:       해석례상 차감 배제(재건축 전세) — rawYears에 그대로 포함
+ * not_recognized: 법정 사유 미해당(국외 대학원) — 차감 없음 + 계속성 경고
+ */
+const REASON_EFFECT_MAP: Record<
+  CohabitReasonType,
+  "excluded" | "included" | "not_recognized"
+> = {
+  conscription: "excluded",         // §20의2②1호
+  schooling: "excluded",            // 시행규칙 §9의2①1호
+  work: "excluded",                 // 시행규칙 §9의2①2호
+  medical: "excluded",              // 시행규칙 §9의2①3호 (1년 이상 요건 별도 검증)
+  reconstruction_lease: "included", // 해석례 미확인(교재 재산-248)
+  overseas_grad: "not_recognized",  // 시행규칙 §9의2①1호 적용 불가(국내 학교 한정)
+};
+
+// ─── 내부 헬퍼: effectiveStart 계산 ─────────────────────────
+/**
+ * 동거기간 산정 유효 시작일 계산.
+ * 2016.1.1.~ 미성년 제외 규정 적용.
+ *
+ * @returns { effectiveStart: Date, minorYearsDeducted: number, effectiveStartStr: string }
+ */
+function calcEffectiveStart(
+  cohabitStartDate: string,
+  deathDate: string,
+  birthDate: string | undefined,
+): { effectiveStart: Date; minorYearsDeducted: number; effectiveStartStr: string } {
+  const startD = new Date(cohabitStartDate);
+  let effectiveStart = startD;
+  let minorYearsDeducted = 0;
+
+  if (deathDate >= "2016-01-01" && birthDate) {
+    // 만 19세 도달일 = birthDate + 19년 (date-fns 생일 기념일 기반)
+    const birthD = new Date(birthDate);
+    const adultD = new Date(birthD);
+    adultD.setFullYear(adultD.getFullYear() + 19);
+
+    if (adultD > startD) {
+      effectiveStart = adultD;
+    }
+
+    if (effectiveStart > startD) {
+      minorYearsDeducted = differenceInYears(effectiveStart, startD);
+    }
+  }
+
+  // effectiveStartStr: YYYY-MM-DD 형식으로 변환
+  const effectiveStartStr = effectiveStart.toISOString().slice(0, 10);
+
+  return { effectiveStart, minorYearsDeducted, effectiveStartStr };
+}
+
+// ─── 내부 헬퍼: EXCLUDED 구간 union merge 후 총일수 합산 ──────
+/**
+ * EXCLUDED 효과를 가진 breakdown 항목들의 clampedStartDate~clampedEndDate 구간을
+ * union merge 하여 이중 차감 없이 총일수를 반환한다.
+ *
+ * 정렬 후 인접/겹침 구간을 확장하는 표준 interval merge 알고리즘 사용.
+ * 합산 후 1회 floor(totalDays/365.25) — 각각 변환 후 합산 금지 (floor 오차 누적).
+ */
+function mergeAndSumExcludedDays(breakdown: CohabitReasonBreakdown[]): number {
+  const excluded = breakdown
+    .filter((b) => b.effect === "excluded" && b.clampedDays > 0)
+    .map((b) => ({ start: b.clampedStartDate, end: b.clampedEndDate }))
+    .sort((a, b) => a.start.localeCompare(b.start));
+
+  if (excluded.length === 0) return 0;
+
+  // 인접/겹침 구간 union merge
+  const merged: { start: string; end: string }[] = [excluded[0]];
+  for (let i = 1; i < excluded.length; i++) {
+    const cur = excluded[i];
+    const prev = merged[merged.length - 1];
+    if (cur.start <= prev.end) {
+      // 겹침 또는 인접 → end를 더 큰 값으로 확장
+      if (cur.end > prev.end) prev.end = cur.end;
+    } else {
+      merged.push(cur);
+    }
+  }
+
+  return merged.reduce(
+    (sum, iv) =>
+      sum + differenceInCalendarDays(new Date(iv.end), new Date(iv.start)),
+    0,
+  );
+}
+
+/**
+ * §23의2①1호 동거연수 계산 v2 — 부득이사유 자동산입.
  *
  * 법령 근거:
  *   - §23의2①1호: "상속개시일부터 소급하여 10년 이상(상속인이 미성년자인 기간은 제외한다)"
  *   - 미성년 제외 규정: 2016.1.1.~ 시행 (교재 §1-2 명시)
  *   - 민법 §4: 만 19세 이상이 성인
  *   - §23의2②: 부득이한 사유(상증령 §20의2) 기간은 계속 동거로 인정하되 동거기간 산입 안 함
+ *   - 상증령 §20의2②: 호별 사유 (KoreanLaw MST 283637 실측)
+ *   - 시행규칙 §9의2: 취학·근무·질병 구체화 (KoreanLaw MST 284609 실측)
  *
  * 정밀 연산:
- *   - date-fns differenceInYears 사용 (생일 기념일 기반 — 프로젝트 표준)
- *   - effectiveStart = max(cohabitStartDate, adultDate) — 성인 전 동거기간은 제외
- *   - rawYears = differenceInYears(deathDate, effectiveStart) (소수점 버림)
- *   - effectiveYears = rawYears - excludedYears
- *   - birthDate 미입력 시 minorYearsDeducted=0 (자동 추정 금지)
- *   - deathDate < 2016-01-01 시 미성년 제외 규정 자체 없음 → minorYearsDeducted=0
+ *   - effectiveStart = max(cohabitStartDate, adultDate) — 미성년 이중차감 자동 방지
+ *   - rawYears = differenceInYears(deathDate, effectiveStart)
+ *   - EXCLUDED 구간: union merge 후 합산 → floor(totalDays/365.25)
+ *   - effectiveYears = max(0, rawYears − reasonExcludedYears)
  *
  * @param cohabitStartDate 동거 시작일 (YYYY-MM-DD)
- * @param deathDate 상속개시일 (YYYY-MM-DD)
- * @param birthDate 상속인 생년월일 (YYYY-MM-DD, optional)
- * @param excludedYears §23의2② 부득이 사유 제외 연수 (미입력 시 0)
+ * @param deathDate        상속개시일 (YYYY-MM-DD)
+ * @param birthDate        상속인 생년월일 (optional — 미성년 제외, 2016.1.1.~)
+ * @param reasons          부득이한 사유 배열. undefined=사유 없음→legacy fallback. []=사유 없음.
+ * @param excludedYearsLegacy Phase 2 수동값. reasons===undefined 일 때만 사용.
  */
 export function calcCohabitYears(
   cohabitStartDate: string,
   deathDate: string,
   birthDate: string | undefined,
-  excludedYears: number,
-): {
-  rawYears: number;
-  minorYearsDeducted: number;
-  effectiveYears: number;
-  meetsRequirement: boolean;
-} {
+  reasons: CohabitReason[] | undefined,
+  excludedYearsLegacy: number,
+): CohabitYearsResult {
+  // 1. 미성년 제외 → effectiveStart 계산 (Phase 2 로직 동일)
+  const { effectiveStart, minorYearsDeducted, effectiveStartStr } =
+    calcEffectiveStart(cohabitStartDate, deathDate, birthDate);
+
   const deathD = new Date(deathDate);
-  const startD = new Date(cohabitStartDate);
 
-  // 미성년 기간 제외 (2016.1.1.~ 시행)
-  let effectiveStart = startD;
-  let minorYearsDeducted = 0;
-
-  if (deathDate >= "2016-01-01" && birthDate) {
-    // 만 19세 도달일 = birthDate + 19년 (date-fns: 생일 기념일 기반)
-    const birthD = new Date(birthDate);
-    const adultD = new Date(birthD);
-    adultD.setFullYear(adultD.getFullYear() + 19);
-
-    if (adultD > startD) {
-      // 성인 도달일이 동거 시작일보다 늦으면 성인 이후부터 계산
-      effectiveStart = adultD;
-    }
-
-    // minorYearsDeducted: effectiveStart가 startD보다 늦어진 경우 그 차이
-    if (effectiveStart > startD) {
-      minorYearsDeducted = differenceInYears(effectiveStart, startD);
-    }
-  }
-
-  // rawYears: effectiveStart → deathDate 연수 (소수점 버림)
+  // 2. rawYears (effectiveStart 기준 — 미성년 이미 제외)
   const rawYears =
     effectiveStart <= deathD
       ? differenceInYears(deathD, effectiveStart)
       : 0;
 
-  const effectiveYears = Math.max(0, rawYears - excludedYears);
+  // 3. reasons===undefined → legacy fallback
+  if (reasons === undefined) {
+    const effectiveYears = Math.max(0, rawYears - excludedYearsLegacy);
+    return {
+      rawYears,
+      minorYearsDeducted,
+      effectiveYears,
+      meetsRequirement: effectiveYears >= 10,
+      reasonBreakdown: [],
+      reasonExcludedYears: excludedYearsLegacy,
+      hasOverseasGradWarning: false,
+      hasReconstructionLeaseNote: false,
+      hasMedicalUnder1YWarning: false,
+      usedLegacyFallback: excludedYearsLegacy > 0,
+    };
+  }
+
+  // 4. 사유 배열 처리 — 각 사유를 분류하고 clamp 적용
+  const breakdown: CohabitReasonBreakdown[] = [];
+  let hasOverseasGradWarning = false;
+  let hasReconstructionLeaseNote = false;
+  let hasMedicalUnder1YWarning = false;
+
+  for (const reason of reasons) {
+    const effect = REASON_EFFECT_MAP[reason.type];
+
+    // clamp: effectiveStart~deathDate 구간 내 제한 (미성년 이중차감 자동 방지)
+    const clampedStartStr =
+      reason.startDate > effectiveStartStr ? reason.startDate : effectiveStartStr;
+    const clampedEndStr =
+      reason.endDate < deathDate ? reason.endDate : deathDate;
+
+    // clamp 후 유효 일수
+    const rawClampedDays =
+      clampedStartStr < clampedEndStr
+        ? differenceInCalendarDays(
+            new Date(clampedEndStr),
+            new Date(clampedStartStr),
+          )
+        : 0;
+
+    if (effect === "excluded") {
+      // §9의2①3호: medical 1년 미만 → 차감 없음 + MEDICAL_UNDER_1Y 경고
+      if (reason.type === "medical") {
+        const totalDays = differenceInCalendarDays(
+          new Date(reason.endDate),
+          new Date(reason.startDate),
+        );
+        if (totalDays < 365) {
+          hasMedicalUnder1YWarning = true;
+          breakdown.push({
+            type: reason.type,
+            inputStartDate: reason.startDate,
+            inputEndDate: reason.endDate,
+            clampedStartDate: clampedStartStr,
+            clampedEndDate: clampedEndStr,
+            clampedDays: 0, // 1년 미만 → 차감 없음
+            effect: "excluded",
+            warningCode: "MEDICAL_UNDER_1Y",
+          });
+          continue;
+        }
+      }
+
+      breakdown.push({
+        type: reason.type,
+        inputStartDate: reason.startDate,
+        inputEndDate: reason.endDate,
+        clampedStartDate: clampedStartStr,
+        clampedEndDate: clampedEndStr,
+        clampedDays: rawClampedDays,
+        effect: "excluded",
+      });
+    } else if (effect === "included") {
+      // reconstruction_lease: 차감 없음 + RECONSTRUCTION_UNVERIFIED 경고
+      hasReconstructionLeaseNote = true;
+      breakdown.push({
+        type: reason.type,
+        inputStartDate: reason.startDate,
+        inputEndDate: reason.endDate,
+        clampedStartDate: clampedStartStr,
+        clampedEndDate: clampedEndStr,
+        clampedDays: 0, // INCLUDED → 차감 없음
+        effect: "included",
+        warningCode: "RECONSTRUCTION_UNVERIFIED",
+      });
+    } else {
+      // not_recognized: overseas_grad — 차감 없음 + OVERSEAS_GRAD_CONTINUITY 경고
+      hasOverseasGradWarning = true;
+      breakdown.push({
+        type: reason.type,
+        inputStartDate: reason.startDate,
+        inputEndDate: reason.endDate,
+        clampedStartDate: clampedStartStr,
+        clampedEndDate: clampedEndStr,
+        clampedDays: 0, // NOT_RECOGNIZED → 차감 없음
+        effect: "not_recognized",
+        warningCode: "OVERSEAS_GRAD_CONTINUITY",
+      });
+    }
+  }
+
+  // 5. EXCLUDED 구간 union merge → 이중차감 방지
+  const totalExcludedDays = mergeAndSumExcludedDays(breakdown);
+
+  // 6. 연 단위 변환 (합산 후 1회 — 각각 변환 후 합산 금지: floor 오차 누적)
+  const reasonExcludedYears = Math.floor(totalExcludedDays / 365.25);
+
+  // 7. effectiveYears (rawYears에 미성년 이미 제외됨 — 이중차감 없음)
+  const effectiveYears = Math.max(0, rawYears - reasonExcludedYears);
 
   return {
     rawYears,
     minorYearsDeducted,
     effectiveYears,
     meetsRequirement: effectiveYears >= 10,
+    reasonBreakdown: breakdown,
+    reasonExcludedYears,
+    hasOverseasGradWarning,
+    hasReconstructionLeaseNote,
+    hasMedicalUnder1YWarning,
+    usedLegacyFallback: false,
   };
 }
 

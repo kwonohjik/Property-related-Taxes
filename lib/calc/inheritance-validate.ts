@@ -346,6 +346,18 @@ export function validateInheritanceTaxInput(
       const who = heir.name?.trim() || "장애인 상속인";
       return `${who}의 성별을 입력하세요. (장애인공제 §20①4호 — 성별·연령별 기대여명 기준)`;
     }
+
+    // ⑧ Phase 4: §23의2② 부득이사유 날짜 정합성 검증 (비차단 경고 사유는 엔진 처리)
+    if (heir.cohabitReasons && heir.cohabitReasons.length > 0) {
+      const who = heir.name?.trim() || "동거 상속인";
+      for (const reason of heir.cohabitReasons) {
+        if (reason.startDate >= reason.endDate) {
+          return `${who}의 부득이사유 종료일(${reason.endDate})은 시작일(${reason.startDate})보다 늦어야 합니다.`;
+        }
+        // endDate가 deathDate보다 늦으면 경고 (비차단 — clamp 처리되므로 validation 차단 안 함)
+        // overseas_grad·medical 1년 미만 경고는 엔진이 hasMedicalUnder1YWarning 등으로 처리
+      }
+    }
   }
 
   // ⑧ 동거가족(§20 P1, 시령 §18①) 장애인도 동일 — 성별 필수 (자동추정 금지)

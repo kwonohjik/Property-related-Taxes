@@ -598,6 +598,48 @@ export interface FilingFormRow {
 }
 
 // ============================================================
+// §23의2② 부득이사유 타입 (Phase 4 — 2026-06-07)
+// ============================================================
+
+/**
+ * §23의2② + 상증령 §20의2② + 시행규칙 §9의2 부득이한 사유 유형.
+ *
+ * 법령 근거 (KoreanLaw MST 283637·284609 실측):
+ *   conscription:          §20의2②1호 직접 열거 (징집)
+ *   schooling:             §20의2②2호 + 시행규칙 §9의2①1호 (고교·대학·국내대학원; 초·중학교 제외)
+ *   work:                  §20의2②2호 + 시행규칙 §9의2①2호 (근무상 형편)
+ *   medical:               §20의2②2호 + 시행규칙 §9의2①3호 (1년 이상 질병 요양)
+ *   reconstruction_lease:  해석례 미확인(교재 재산-248 근거) → INCLUDED(차감 없음) + UI amber 경고
+ *   overseas_grad:         시행규칙 §9의2①1호 적용 불가(국내 고등교육법 학교 한정) → NOT_RECOGNIZED + 계속성 경고
+ *
+ * 효과 분류:
+ *   EXCLUDED (conscription·schooling·work·medical): §23의2② 본문 — 계속 동거 인정, 동거기간 차감
+ *   INCLUDED (reconstruction_lease): 해석례상 차감 배제 — rawYears에 그대로 포함
+ *   NOT_RECOGNIZED (overseas_grad): 법정 사유 미해당 — 차감 없음 + 계속성 단절 경고
+ */
+export type CohabitReasonType =
+  | "conscription"         // 징집 (§20의2②1호) → EXCLUDED
+  | "schooling"            // 취학 — 고교·대학·국내대학원 (시행규칙 §9의2①1호) → EXCLUDED
+  | "work"                 // 근무상 형편 (시행규칙 §9의2①2호) → EXCLUDED
+  | "medical"              // 질병 요양 1년 이상 (시행규칙 §9의2①3호) → EXCLUDED
+  | "reconstruction_lease" // 재건축 전세 — 해석례 미확인(교재 근거) → INCLUDED
+  | "overseas_grad";       // 국외 대학원 — 법정 사유 미해당 → NOT_RECOGNIZED
+
+/**
+ * §23의2② 부득이한 사유 1건.
+ *
+ * 입력 규칙:
+ *   - startDate·endDate: YYYY-MM-DD (ISO date string)
+ *   - startDate < endDate 검증은 Zod에서 .superRefine() 처리
+ *   - 기간이 동거기간(cohabitStartDate~deathDate) 밖이면 엔진이 clamp 처리
+ */
+export interface CohabitReason {
+  type: CohabitReasonType;
+  startDate: string; // YYYY-MM-DD
+  endDate: string;   // YYYY-MM-DD
+}
+
+// ============================================================
 // 상속인 정보
 // ============================================================
 
@@ -706,10 +748,25 @@ export interface Heir {
   /**
    * §23의2② + 상증령 §20의2 부득이한 사유(징집·취학·근무상 형편·질병 요양)로 동거에서 제외할 연수.
    * 해당 기간은 계속 동거로 인정되나 동거기간에는 산입하지 아니함.
-   * - 미입력 시 0으로 처리 (제외 연수 없음 = 기본값, 납세자 유리 방향이나 사유 판단은 세무사 영역).
-   * - DecimalInput(소수점 허용).
+   *
+   * @deprecated Phase 4에서 cohabitReasons(구조화 배열)로 대체. 역직렬화 호환을 위해 타입에 잔류.
+   *  신규 입력 UI에서는 숨김. 엔진: cohabitReasons가 존재하면 cohabitReasons 우선,
+   *  undefined이면 이 필드 fallback.
    */
   cohabitExcludedYears?: number;
+
+  // ===== Phase 4 (2026-06-07) — §23의2② 부득이사유 구조화 배열 =====
+  /**
+   * §23의2② 부득이한 사유 배열 (Phase 4 신규).
+   *
+   * - undefined: 사유 미입력 → cohabitExcludedYears(legacy) fallback 또는 차감 없음.
+   * - []:        사유 없음 → excludedYears=0.
+   * - [...]:     사유 입력됨 → 유형별 자동 집계.
+   *
+   * 법령 근거 (KoreanLaw MST 283637·284609 실측):
+   *   CohabitReasonType 참조.
+   */
+  cohabitReasons?: CohabitReason[];
 }
 
 /**

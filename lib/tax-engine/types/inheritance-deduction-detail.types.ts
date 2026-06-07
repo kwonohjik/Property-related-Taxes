@@ -9,6 +9,67 @@
  * 규칙: 모든 중간값은 엔진이 이미 계산 — 신규 계산 없이 result detail 노출만.
  */
 
+import type { CohabitReasonType } from "./inheritance-gift.types";
+
+// ============================================================
+// §23의2② 부득이사유 계산 결과 타입 (Phase 4 — 2026-06-07)
+// ============================================================
+
+/**
+ * 부득이사유 1건의 계산 breakdown.
+ * calcCohabitYears가 생성하고 CohabitYearsResult.reasonBreakdown에 담긴다.
+ */
+export interface CohabitReasonBreakdown {
+  type: CohabitReasonType;
+  inputStartDate: string;        // 사용자 입력 시작일 (YYYY-MM-DD)
+  inputEndDate: string;          // 사용자 입력 종료일 (YYYY-MM-DD)
+  clampedStartDate: string;      // effectiveStart~deathDate 구간 clamp 후 시작일
+  clampedEndDate: string;        // clamp 후 종료일
+  clampedDays: number;           // clamp 후 일수 (0이면 차감 없음)
+  /** 법적 효과:
+   *   excluded      = §23의2② 본문 차감 대상 (conscription·schooling·work·medical)
+   *   included      = 해석례상 차감 배제 — rawYears에 그대로 포함 (reconstruction_lease)
+   *   not_recognized = 법정 사유 미해당 — 차감 없음 (overseas_grad)
+   */
+  effect: "excluded" | "included" | "not_recognized";
+  warningCode?: "MEDICAL_UNDER_1Y" | "OVERSEAS_GRAD_CONTINUITY" | "RECONSTRUCTION_UNVERIFIED";
+}
+
+/**
+ * §23의2①1호 동거연수 계산 결과 v2 (Phase 4).
+ *
+ * Phase 2 호환 4개 필드 유지 + Phase 4 신규 필드 추가.
+ * CohabitDeductionDetail.cohabitYears 타입으로 사용.
+ */
+export interface CohabitYearsResult {
+  // ===== Phase 2 호환 필드 (유지) =====
+  /** effectiveStart → deathDate 연수 (date-fns differenceInYears, 소수점 버림) */
+  rawYears: number;
+  /** 미성년 기간 제외 연수 — echo용 (rawYears 산정에 이미 반영됨, 이중차감 아님) */
+  minorYearsDeducted: number;
+  /** rawYears − reasonExcludedYears (≥0). 동거공제 10년 요건 판정 기준. */
+  effectiveYears: number;
+  /** effectiveYears >= 10 (경고 표시용 — 자동 차단 아님) */
+  meetsRequirement: boolean;
+
+  // ===== Phase 4 신규 필드 =====
+  /** 사유별 breakdown 배열 (reasons=undefined 시 []) */
+  reasonBreakdown: CohabitReasonBreakdown[];
+  /**
+   * EXCLUDED 구간 union merge 후 floor(totalDays / 365.25).
+   * reasons=undefined(legacy fallback)이면 cohabitExcludedYears 값을 그대로 사용.
+   */
+  reasonExcludedYears: number;
+  /** overseas_grad(국외 대학원) 입력 시 true — 계속성 단절 경고 표시용 */
+  hasOverseasGradWarning: boolean;
+  /** reconstruction_lease(재건축 전세) 입력 시 true — 해석례 미확인 amber 경고 표시용 */
+  hasReconstructionLeaseNote: boolean;
+  /** medical 기간이 365일 미만인 항목 존재 시 true — 1년 미만 경고 표시용 */
+  hasMedicalUnder1YWarning: boolean;
+  /** cohabitReasons=undefined → cohabitExcludedYears legacy 경로 사용 여부 */
+  usedLegacyFallback: boolean;
+}
+
 // ============================================================
 // ① 일괄공제 vs 항목별 공제 비교 (§21)
 // ============================================================
@@ -202,22 +263,16 @@ export interface CohabitDeductionDetail {
   /** 최종 공제액 = min(rawDeduction, cap) */
   cappedDeduction: number;
 
-  // ===== Phase 2 (2026-06-07) — G3 동거기간 검증 echo =====
+  // ===== Phase 2+4 (2026-06-07) — G3 동거기간 검증 echo =====
   /**
    * §23의2①1호 동거연수 계산 결과.
    * Heir.cohabitStartDate가 입력된 경우만 존재. 미입력 시 undefined.
    *
-   * - rawYears: floor(deathDate − effectiveStart) 연수 (미성년 제외 전)
-   * - minorYearsDeducted: 미성년 기간 제외 연수 (2016.1.1.~ 시행, birthDate 기반)
-   * - effectiveYears: rawYears − minorYearsDeducted − excludedYears
-   * - meetsRequirement: effectiveYears >= 10 (경고 표시용 — 자동 차단 아님)
+   * Phase 4에서 CohabitYearsResult로 타입 교체:
+   *   기존 4개 필드(rawYears·minorYearsDeducted·effectiveYears·meetsRequirement) 유지 +
+   *   신규 필드(reasonBreakdown·reasonExcludedYears·경고 3종·usedLegacyFallback) 추가.
    */
-  cohabitYears?: {
-    rawYears: number;
-    minorYearsDeducted: number;
-    effectiveYears: number;
-    meetsRequirement: boolean;
-  };
+  cohabitYears?: CohabitYearsResult;
 
   // ===== Phase 3 (2026-06-07) — G4 주택부수토지 면적한도 차감 echo =====
   /**

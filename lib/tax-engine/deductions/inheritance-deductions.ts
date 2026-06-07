@@ -501,7 +501,8 @@ export function calcInheritanceDeductions(
       cohabitingHeir.cohabitStartDate,
       baseDate,
       cohabitingHeir.birthDate,
-      cohabitingHeir.cohabitExcludedYears ?? 0,
+      cohabitingHeir.cohabitReasons,           // Phase 4: 구조화 배열 (undefined=legacy fallback)
+      cohabitingHeir.cohabitExcludedYears ?? 0, // Phase 2 legacy (reasons===undefined 시 사용)
     );
     cohabitYearsEcho = yearsResult;
     // meetsRequirement는 result.cohabitDeductionDetail.cohabitYears에 echo.

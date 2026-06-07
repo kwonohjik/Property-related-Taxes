@@ -46,6 +46,7 @@ export function CohabitRequirementBlock({
         cohabitStartDate,
         deathDate,
         birthDate,
+        undefined,                  // reasons=undefined → legacy fallback (UI는 5⑦ 별도 작업)
         cohabitExcludedYears ?? 0,
       );
     } catch {
