@@ -21,6 +21,7 @@ import type {
 import { deriveCollateralDebts } from "@/lib/tax-engine/inheritance-collateral-debt";
 import { resolveEngineValuatedAmount } from "@/lib/tax-engine/property-valuation";
 import { checkCorporateGiftRule } from "@/lib/calc/prior-gift-corporate-rule";
+import { checkMarriageBirthGiftRule } from "@/lib/calc/prior-gift-marriage-birth-rule";
 import { toOptionalDate } from "@/lib/api/date-coerce";
 import { endOfMonth, addMonths, format } from "date-fns";
 
@@ -198,6 +199,10 @@ export function validatePriorGift(gift: PriorGift): string | null {
   // 영리법인 필수요건 — 공유 헬퍼 위임 (§13①2호 · §4의2③ · §3의2②)
   const corpError = checkCorporateGiftRule(gift);
   if (corpError !== null) return corpError;
+
+  // §53의2 혼인·출산 — 단일진실 헬퍼 (Zod priorGiftSchema와 공용)
+  const mbError = checkMarriageBirthGiftRule(gift);
+  if (mbError !== null) return mbError;
 
   // beneficiaryType 미설정 시 legacy isHeir 사용 (자동 추론)
   return null;

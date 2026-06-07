@@ -138,6 +138,12 @@ export function computePriorGiftDeductionForLimit(
         g.doneeRelation,
         (relationSums.get(g.doneeRelation) ?? 0) + g.giftAmount,
       );
+      // §53의2 (직계존속 혼인·출산) — branch 2(giftTaxBase 미설정)에서만 가산.
+      // branch 1(giftTaxBase 명시)은 과세표준에 이미 반영 → 무시(이중차감 금지).
+      // per-gift 1억 캡: §53의2③ 수증자별 통합한도 방어 (정상 입력 시 실액 ≤ 1억).
+      if (g.marriageBirthDeduction && g.marriageBirthDeduction > 0) {
+        explicitTotal += Math.min(g.marriageBirthDeduction, 100_000_000);
+      }
     }
     // 둘 다 미입력 → 공제 0 (보수적)
   }

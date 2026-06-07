@@ -38,6 +38,7 @@ import {
   deriveDoneeRelationFromHeir,
 } from "@/lib/calc/prior-gift-donee-derive";
 import { autoComputePriorGiftTax } from "@/lib/calc/prior-gift-auto-tax";
+import { isInheritancePriorGiftMarriageBirthEligible } from "@/lib/calc/prior-gift-marriage-birth-rule";
 
 // ============================================================
 // 수증자 select 헬퍼 — 파생 로직은 lib/calc/prior-gift-donee-derive.ts 단일 진실
@@ -341,6 +342,42 @@ export function GiftRowEditor({
         required
         hint="증여 당시 평가액 (시가 기준)"
       />
+
+      {/* §53의2 혼인·출산 증여재산공제 — 상속세 모드 + 피상속인의 직계비속(자녀 등)만 노출 (2026-06-07)
+       * 게이트: showIsHeir(상속세) AND doneeRelation===lineal_descendant (피상속인 관점 — 수증자가 피상속인의 직계비속)
+       * 자녀가 피상속인(=자녀의 직계존속)으로부터 받은 사전증여가 §53의2 주 케이스.
+       * giftTaxBase 입력 건은 §53의2 이미 반영 → 위젯 숨김 + 안내 표시 */}
+      {showIsHeir &&
+        isInheritancePriorGiftMarriageBirthEligible(gift.doneeRelation) && (
+          <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-[10px] font-bold text-sky-800 select-none">
+                §53의2
+              </span>
+              <p className="text-xs font-semibold text-sky-700">
+                혼인·출산 증여재산공제 (직계존속 한정)
+              </p>
+            </div>
+            {gift.giftTaxBase != null ? (
+              <p className="text-[11px] text-sky-600 dark:text-sky-400">
+                ⓘ 과세표준을 직접 입력한 경우 §53의2는 이미 반영된 것으로 간주합니다.
+              </p>
+            ) : (
+              <CurrencyInput
+                label="§53의2 적용액 (혼인·출산 합산 최대 1억)"
+                value={
+                  gift.marriageBirthDeduction && gift.marriageBirthDeduction > 0
+                    ? String(gift.marriageBirthDeduction)
+                    : ""
+                }
+                onChange={(v) =>
+                  set({ marriageBirthDeduction: parseAmount(v) || undefined })
+                }
+                hint="직계존속으로부터 혼인일 전후 2년 / 출생·입양 2년 내 증여에 적용된 §53의2 공제액. 합산 1억 한도."
+              />
+            )}
+          </div>
+        )}
 
       {/* 세액 입력란 — 자동계산(수정 가능). 영리법인은 §3의2② 산출세액 상당액, 그 외는 기납부 증여세.
        * userTouchedTax 미터치 시 giftAmount·doneeRelation 변경마다 자동 재계산. 수동 수정 시 고정.

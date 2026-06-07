@@ -96,7 +96,7 @@ export function calcRelationDeduction(
  * §53의2①②는 "직계존속으로부터" 증여받은 경우에만 적용.
  * 배우자·직계비속·기타친족 증여는 비적격.
  */
-function isMarriageBirthEligibleRelation(relation: DonorRelation): boolean {
+export function isMarriageBirthEligibleRelation(relation: DonorRelation): boolean {
   return relation === "lineal_ascendant_adult" || relation === "lineal_ascendant_minor";
 }
 
