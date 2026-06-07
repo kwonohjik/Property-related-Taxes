@@ -83,15 +83,23 @@ const FINANCIAL_MID_FIXED = 20_000_000;
 const FINANCIAL_OVER_RATE = 0.20;
 
 /**
- * 동거주택공제 공제율 (§23의2): 2019.12.31. 개정(2020.1.1. 시행)으로 80%→100%.
- * KoreanLaw 검증(mst 276123 §23의2①): "담보된 피상속인 채무액을 뺀 가액의 100분의 100", 한도 6억.
+ * 동거주택공제 율·한도 (§23의2① + 개정연혁, PDF 상속증여세 2026 p.351 "Min(㉮율, ㉯한도)").
+ * KoreanLaw 검증(mst 276123 §23의2①): "담보된 피상속인 채무액을 뺀 가액"에 율을 적용, 한도 적용.
+ *
+ *   ~2008.12.31:          제도 부재 (0 / 0)  — 2009.1.1. 최초 상속분부터 적용
+ *   2009.1.1.~2015.12.31:  40% / 5억
+ *   2016.1.1.~2019.12.31:  80% / 5억
+ *   2020.1.1.~:           100% / 6억
+ *
+ * string(YYYY-MM-DD) 비교 — cohabitShareRate 기존 패턴 일관, Date 변환 금지.
  */
-function cohabitShareRate(deathDate?: string): number {
-  return (deathDate ?? "9999-12-31") >= "2020-01-01" ? 1.0 : 0.8;
+function cohabitRateAndCap(deathDate?: string): { rate: number; cap: number } {
+  const d = deathDate ?? "9999-12-31";
+  if (d >= "2020-01-01") return { rate: 1.0, cap: 600_000_000 };
+  if (d >= "2016-01-01") return { rate: 0.8, cap: 500_000_000 };
+  if (d >= "2009-01-01") return { rate: 0.4, cap: 500_000_000 };
+  return { rate: 0, cap: 0 }; // 2009.1.1. 이전 상속 — 동거주택 상속공제 제도 부재
 }
-
-/** 동거주택공제 최댓값 (§23의2): 6억원 */
-const COHABIT_MAX = 600_000_000;
 
 // ============================================================
 // 개별 공제 계산 함수
@@ -284,54 +292,59 @@ export function calcCohabitationDeduction(
   breakdown: CalculationStep[];
   detail: CohabitDeductionDetail;
 } {
-  // §23의2① 담보된 피상속인 채무액을 뺀 가액
-  const base = Math.max(0, cohabitHouseStdPrice - securedDebt);
+  // §23의2① 상속개시일 기준 율·한도
+  const { rate, cap } = cohabitRateAndCap(deathDate);
+  // 담보채무 차감 개정(법률 제14388호, 2016.12.20.) — 2017.1.1. 이후 상속분부터 적용 (부칙2).
+  // KoreanLaw time_travel(20160101↔20170101) 검증: 2017 시행본에 "담보된 피상속인의 채무액을 뺀 가액" 문구 신설.
+  // string(YYYY-MM-DD) 비교, deathDate undefined=차감(legacy) — §16⑤ G3 패턴 일관.
+  const applySecuredDebt = deathDate === undefined || deathDate >= "2017-01-01";
+  const effectiveSecuredDebt = applySecuredDebt ? securedDebt : 0;
+  const base = Math.max(0, cohabitHouseStdPrice - effectiveSecuredDebt);
   if (base <= 0) {
     return {
       deduction: 0,
       breakdown: [],
       detail: {
         housingValue: cohabitHouseStdPrice,
-        securedDebt,
+        securedDebt: effectiveSecuredDebt,
         base: 0,
-        rate: cohabitShareRate(deathDate),
+        rate,
         rawDeduction: 0,
-        cap: COHABIT_MAX,
+        cap,
         cappedDeduction: 0,
       },
     };
   }
 
-  const rate = cohabitShareRate(deathDate);
   const rawDeduction = applyRate(base, rate);
-  const cappedDeduction = Math.min(rawDeduction, COHABIT_MAX);
+  const cappedDeduction = Math.min(rawDeduction, cap);
 
   return {
     deduction: cappedDeduction,
     breakdown: [
       { label: "동거주택 공시가격", amount: cohabitHouseStdPrice },
-      ...(securedDebt > 0
+      ...(effectiveSecuredDebt > 0
         ? [
             {
               label: "− 담보된 피상속인 채무 (§23의2①)",
-              amount: -securedDebt,
+              amount: -effectiveSecuredDebt,
               lawRef: INH.COHABIT_DEDUCTION,
             },
           ]
         : []),
       {
-        label: `동거주택공제 (${Math.round(rate * 100)}%, 최대 6억)`,
+        label: `동거주택공제 (${Math.round(rate * 100)}%, 최대 ${cap / 100_000_000}억)`,
         amount: cappedDeduction,
         lawRef: INH.COHABIT_DEDUCTION,
       },
     ],
     detail: {
       housingValue: cohabitHouseStdPrice,
-      securedDebt,
+      securedDebt: effectiveSecuredDebt,
       base,
       rate,
       rawDeduction,
-      cap: COHABIT_MAX,
+      cap,
       cappedDeduction,
     },
   };
@@ -591,12 +604,14 @@ export function calcInheritanceDeductions(
   let cohabitDeductionDetail: CohabitDeductionDetail;
   let cohabitResult: { deduction: number; breakdown: CalculationStep[] };
   if (input.cohabitDirectAmount !== undefined && input.cohabitDirectAmount > 0) {
-    const capped = Math.min(input.cohabitDirectAmount, 600_000_000);
+    // directAmount 모드: 사용자가 율·차감 적용한 최종액 입력 → rate 미적용, 상속개시일 기준 한도만 적용.
+    const { cap } = cohabitRateAndCap(baseDate);
+    const capped = Math.min(input.cohabitDirectAmount, cap);
     cohabitResult = {
       deduction: capped,
       breakdown: [
         {
-          label: "동거주택공제 (직접 입력, 한도 6억)",
+          label: `동거주택공제 (직접 입력, 한도 ${cap / 100_000_000}억)`,
           amount: capped,
           lawRef: INH.COHABIT_DEDUCTION,
         },
@@ -609,7 +624,7 @@ export function calcInheritanceDeductions(
       base: input.cohabitDirectAmount,
       rate: 1.0,
       rawDeduction: input.cohabitDirectAmount,
-      cap: COHABIT_MAX,
+      cap,
       cappedDeduction: capped,
     };
   } else {

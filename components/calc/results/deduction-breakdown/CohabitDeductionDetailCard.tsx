@@ -49,16 +49,16 @@ export function CohabitDeductionDetailCard({ detail, triggerLabel, triggerValue 
             value={formatKRW(detail.base)}
           />
           <DetailRow
-            label={`공제율 ${(detail.rate * 100).toFixed(0)}% (2020.1.1. 이후: 100%)`}
+            label={`공제율 ${(detail.rate * 100).toFixed(0)}%`}
             value={formatKRW(detail.rawDeduction)}
           />
           <DetailRow
-            label="6억 최고한도"
+            label={`${(detail.cap / 100_000_000).toFixed(0)}억 최고한도`}
             value={formatKRW(detail.cap)}
             muted
           />
           <SubTotalRow
-            label={`Min(공시가격 × ${(detail.rate * 100).toFixed(0)}%, 6억)`}
+            label={`Min(공시가격 × ${(detail.rate * 100).toFixed(0)}%, ${(detail.cap / 100_000_000).toFixed(0)}억)`}
             value={formatKRW(detail.cappedDeduction)}
             tone="blue"
           />
