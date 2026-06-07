@@ -17,18 +17,25 @@
  *     (deriveDoneeRelationFromHeir swap은 신고서 표시·§13을 깨뜨리므로 채택하지 않음.)
  */
 import type { DonorRelation } from "@/lib/tax-engine/types/inheritance-gift.types";
+import { isMarriageBirthEligibleRelation } from "@/lib/tax-engine/deductions/gift-deductions";
+import { toGiftDeductionDonorRelation } from "@/lib/calc/prior-gift-deduction-perspective";
 
 /** §53의2 한도 (혼인+출산 합산) */
 const MARRIAGE_BIRTH_MAX = 100_000_000;
 
 /**
- * 상속세 사전증여에서 §53의2 적격 수증자 관계 판정 (피상속인 관점).
- * 수증자(상속인)가 피상속인의 직계비속(자녀 등) → 피상속인이 그의 직계존속 → §53의2 적격.
+ * 상속세 사전증여에서 §53의2 적격 수증자 관계 판정.
+ * doneeRelation(피상속인 관점)을 수증자 관점으로 변환 후 §53의2 표준 게이트
+ * (isMarriageBirthEligibleRelation — 직계존속) 적용. (C: 도메인-aware 게이트 → perspective 경유)
+ *   자녀(lineal_descendant) → 변환 후 직계존속 → 적격. 미성년 여부는 §53의2 적격성에 무영향.
  */
 export function isInheritancePriorGiftMarriageBirthEligible(
   doneeRelation: DonorRelation | undefined,
 ): boolean {
-  return doneeRelation === "lineal_descendant";
+  if (!doneeRelation) return false;
+  return isMarriageBirthEligibleRelation(
+    toGiftDeductionDonorRelation(doneeRelation, false),
+  );
 }
 
 /**

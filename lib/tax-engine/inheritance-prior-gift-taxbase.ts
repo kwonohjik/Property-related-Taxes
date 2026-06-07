@@ -24,6 +24,11 @@
 import { calcRelationDeduction } from "./deductions/gift-deductions";
 // 엔진→lib/calc import (선례: inheritance-farming-deduction.ts:20). derive는 types만 의존 → 순환 없음.
 import { deriveDoneeRelationFromHeir } from "@/lib/calc/prior-gift-donee-derive";
+import { makeMarriageBirthCapper } from "@/lib/calc/prior-gift-marriage-birth-cap";
+import {
+  toGiftDeductionDonorRelation,
+  isDoneeMinorAtGift,
+} from "@/lib/calc/prior-gift-deduction-perspective";
 import type {
   PriorGift,
   Heir,
@@ -46,13 +51,30 @@ export function derivePriorGiftTaxBase(
   const relById = new Map<string, Heir["relation"]>(
     heirs.map((h) => [h.id, h.relation]),
   );
+  // [C] 미성년 도출용 birthDate 맵 — §53 직계존속 미성년 2천 분기.
+  const birthDateById = new Map<string, string | undefined>(
+    heirs.map((h) => [h.id, h.birthDate]),
+  );
 
-  // 관계 도출: ② doneeRelation 우선, ③ doneeId→relation. legatee·corporate·orphan → undefined.
+  // 관계 도출 (피상속인 관점): ② doneeRelation 우선, ③ doneeId→relation. legatee·corporate·orphan → undefined.
   const resolveRel = (g: PriorGift): DonorRelation | undefined => {
     if (g.doneeRelation) return g.doneeRelation;
     if (!g.doneeId) return undefined;
     const r = relById.get(g.doneeId);
     return r ? deriveDoneeRelationFromHeir(r) : undefined;
+  };
+
+  // [C] §53/§53의2 공제 관계 (수증자 관점) — doneeRelation(피상속인 관점)을 변환.
+  //   doneeRelation 자체는 불변(신고서 표시 보존). 증여 당시 미성년이면 직계존속 2천 분기.
+  const resolveDeductionRel = (g: PriorGift): DonorRelation | undefined => {
+    const rel = resolveRel(g);
+    if (!rel) return undefined;
+    const minor = isDoneeMinorAtGift({
+      giftDate: g.giftDate,
+      birthDate: g.doneeId ? birthDateById.get(g.doneeId) : undefined,
+      doneeWasMinorAtGift: g.doneeWasMinorAtGift,
+    });
+    return toGiftDeductionDonorRelation(rel, minor);
   };
 
   // doneeId 단위 gross 합산 — giftTaxBase 미명시 & 관계 도출 가능 건만 (§53 통산 1회 대상).
@@ -76,7 +98,9 @@ export function derivePriorGiftTaxBase(
     if (g.giftTaxBase !== undefined) return;
     const key = resolveKey(g, i);
     if (!key || dedByDonee.has(key)) return; // 이미 처리된 키 건너뜀
-    const rel = resolveRel(g);
+    // [C] 수증자 관점 + 미성년 변환된 관계로 §53 한도 적용 (피상속인 관점 직접 사용 금지).
+    //   미성년 여부는 키의 대표 건(첫 처리 건) giftDate 기준 (v1 — 동일 수증자 혼합연령 다건은 후속).
+    const rel = resolveDeductionRel(g);
     if (!rel) return;
     const gross = grossByDonee.get(key) ?? 0;
     dedByDonee.set(
@@ -94,6 +118,9 @@ export function derivePriorGiftTaxBase(
     const key = resolveKey(g, i);
     if (key && grossByDonee.has(key)) lastIndexByDonee.set(key, i);
   });
+
+  // §53의2③ 수증자별 합산 1억 캡 — branch 2(자동 도출) 건만 take (early-return 건 미호출, 순서 보존).
+  const mbCapper = makeMarriageBirthCapper();
 
   return gifts.map((g, i) => {
     if (g.giftTaxBase !== undefined) return g; // ① 보존
@@ -117,8 +144,8 @@ export function derivePriorGiftTaxBase(
     }
 
     // §53의2(혼인·출산) — branch 2(giftTaxBase 미설정) 자동 도출 시 추가 차감.
-    // per-gift 1억 캡: §53의2③ 방어.
-    const mbDed = Math.min(g.marriageBirthDeduction ?? 0, 100_000_000);
+    // 수증자별 합산 1억 캡: §53의2③ (capper.take — doneeId 기준 누적).
+    const mbDed = mbCapper.take(g);
     return { ...g, giftTaxBase: Math.max(0, g.giftAmount - allocatedDed - mbDed) };
   });
 }

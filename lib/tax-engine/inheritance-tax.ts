@@ -61,6 +61,7 @@ import { calcHeirAllocation } from "./inheritance-allocation";
 import { reconcileSummaryWithAllocation } from "./inheritance-summary-reconcile";
 import { computeGenerationSkipSurcharge } from "./inheritance-generation-skip";
 import { derivePriorGiftTaxBase } from "./inheritance-prior-gift-taxbase";
+import { makeMarriageBirthCapper } from "@/lib/calc/prior-gift-marriage-birth-cap";
 import { buildSummaryCategory } from "./inheritance-asset-category";
 import { computeLegalShares } from "./inheritance-legal-share";
 import { deriveCollateralDebts } from "./inheritance-collateral-debt";
@@ -298,6 +299,8 @@ export function calcInheritanceTax(
       // 배우자 사전증여 과세표준 — §13 cutoff 내 분만 합산 (M-1 수정)
       // giftTaxBase 명시 우선, 미설정 시 (giftAmount − §53 관계공제) 자동 도출.
       // (상속세 모드엔 giftTaxBase 입력 UI 없어 가액 fallback 시 과대 차감되던 버그 차단. 배우자 760m → 160m)
+      // §53의2③ 수증자별 합산 1억 캡 — spouse doneeId 기준 누적(캡 독립이라 다른 호출처와 정합).
+      const spouseMbCapper = makeMarriageBirthCapper();
       const spouseGiftTaxBase = (cutoffFilteredGifts ?? []).reduce((s, g) => {
         if (g.doneeId !== spouseHeir.id) return s;
         if (g.giftTaxBase !== undefined) return s + g.giftTaxBase;
@@ -308,8 +311,8 @@ export function calcInheritanceTax(
         ).relationDeduction;
         // §53의2 (직계존속 혼인·출산) — branch 2(giftTaxBase 미설정)에서만 적용.
         // branch 1(giftTaxBase 명시)은 과세표준에 이미 반영 → 무시(이중차감 금지).
-        // per-gift 1억 캡: §53의2③ 방어.
-        const mbDed = Math.min(g.marriageBirthDeduction ?? 0, 100_000_000);
+        // 수증자별 합산 1억 캡: §53의2③ (capper.take — doneeId 기준 누적).
+        const mbDed = spouseMbCapper.take(g);
         return s + Math.max(0, g.giftAmount - ded - mbDed);
       }, 0);
       // 총상속재산 = grossEstateValue(본래+간주) + presumedTotal

@@ -5,6 +5,8 @@
  *
  * PriorGiftInput.tsx 800줄 분할 (PR Z, 2026-05-22).
  * 2-B (2026-05-29): 수증자(Heir) select 추가 — doneeId + isHeir 동시 동기화.
+ * [B+C] 2026-06-07: 과세표준 산정 방식(B)·증여 당시 미성년 토글(C) 추가.
+ *   sub-components: GiftTaxBaseModeBlock, MinorAtGiftToggleBlock (800줄 정책 준수).
  */
 
 import { useState } from "react";
@@ -39,6 +41,8 @@ import {
 } from "@/lib/calc/prior-gift-donee-derive";
 import { autoComputePriorGiftTax } from "@/lib/calc/prior-gift-auto-tax";
 import { isInheritancePriorGiftMarriageBirthEligible } from "@/lib/calc/prior-gift-marriage-birth-rule";
+import { GiftTaxBaseModeBlock } from "@/components/calc/prior-gift/GiftTaxBaseModeBlock";
+import { MinorAtGiftToggleBlock } from "@/components/calc/prior-gift/MinorAtGiftToggleBlock";
 
 // ============================================================
 // 수증자 select 헬퍼 — 파생 로직은 lib/calc/prior-gift-donee-derive.ts 단일 진실
@@ -343,6 +347,34 @@ export function GiftRowEditor({
         hint="증여 당시 평가액 (시가 기준)"
       />
 
+      {/* [B] 과세표준 산정 방식 — 상속세 모드(showIsHeir) 전용.
+       * 위치: 증여가액 다음, §53의2 직전 (§53 도출 직전 = 계산 로직 순서).
+       * auto 복귀 시 marriageBirthDeduction 보존(초기화 금지). */}
+      {showIsHeir && !isCorporate && (
+        <GiftTaxBaseModeBlock
+          gift={gift}
+          set={set}
+          groupName={`priorGiftTaxBaseInputMode-${index}`}
+        />
+      )}
+
+      {/* [C] 증여 당시 미성년 토글 — 상속세 모드 + 자녀(lineal_descendant) 수증 시.
+       * birthDate 있으면 자동 판정 안내만 표시, 없으면 토글.
+       * doneeRelation=lineal_descendant: 피상속인 관점 자녀 = §53 직계존속 공제 대상.
+       * 영리법인·증여세 모드는 미적용. */}
+      {showIsHeir &&
+        !isCorporate &&
+        gift.doneeRelation === "lineal_descendant" && (() => {
+          const matchedHeir = (heirs ?? []).find((h) => h.id === gift.doneeId);
+          return (
+            <MinorAtGiftToggleBlock
+              gift={gift}
+              set={set}
+              heirBirthDate={matchedHeir?.birthDate}
+            />
+          );
+        })()}
+
       {/* §53의2 혼인·출산 증여재산공제 — 상속세 모드 + 피상속인의 직계비속(자녀 등)만 노출 (2026-06-07)
        * 게이트: showIsHeir(상속세) AND doneeRelation===lineal_descendant (피상속인 관점 — 수증자가 피상속인의 직계비속)
        * 자녀가 피상속인(=자녀의 직계존속)으로부터 받은 사전증여가 §53의2 주 케이스.
@@ -376,6 +408,15 @@ export function GiftRowEditor({
                 hint="직계존속으로부터 혼인일 전후 2년 / 출생·입양 2년 내 증여에 적용된 §53의2 공제액. 합산 1억 한도."
               />
             )}
+            {/* MBC-07 — 수동 경로(doneeId 없음)는 동일 수증자 합산 1억 캡 보장 불가 안내 */}
+            {!gift.doneeId &&
+              gift.marriageBirthDeduction != null &&
+              gift.marriageBirthDeduction > 0 && (
+                <p className="text-[11px] text-sky-600 dark:text-sky-400">
+                  ⓘ 동일 수증자에게 혼인·출산을 여러 건 입력할 때는 위 <strong>수증자 선택</strong>으로
+                  지정하세요. 수증자를 지정하지 않으면 합산 1억 한도가 건별로 적용됩니다(§53의2③).
+                </p>
+              )}
           </div>
         )}
 

@@ -14,6 +14,7 @@ import type { DonorRelation, PriorGift } from "../types/inheritance-gift.types";
 import type { DeductionLimitCeilingDetail } from "../types/inheritance-deduction-detail.types";
 import { calcRelationDeduction } from "./gift-deductions";
 import { isWithin13Cutoff } from "../inheritance-gift-common";
+import { makeMarriageBirthCapper } from "@/lib/calc/prior-gift-marriage-birth-cap";
 
 /**
  * §24 종합한도 계산 (Phase D — PDF 책 1864 표 산식)
@@ -128,6 +129,8 @@ export function computePriorGiftDeductionForLimit(
 
   let explicitTotal = 0; // giftTaxBase 명시 건의 공제 합
   const relationSums = new Map<DonorRelation, number>(); // 관계별 gross 합 (giftTaxBase 미명시 건)
+  // §53의2③ 수증자별 합산 1억 캡 (per-gift → per-donee). branch 2에서만 take.
+  const mbCapper = makeMarriageBirthCapper();
 
   for (const g of preGifts) {
     if (!isWithin13Cutoff(g, deathDate)) continue;
@@ -140,10 +143,8 @@ export function computePriorGiftDeductionForLimit(
       );
       // §53의2 (직계존속 혼인·출산) — branch 2(giftTaxBase 미설정)에서만 가산.
       // branch 1(giftTaxBase 명시)은 과세표준에 이미 반영 → 무시(이중차감 금지).
-      // per-gift 1억 캡: §53의2③ 수증자별 통합한도 방어 (정상 입력 시 실액 ≤ 1억).
-      if (g.marriageBirthDeduction && g.marriageBirthDeduction > 0) {
-        explicitTotal += Math.min(g.marriageBirthDeduction, 100_000_000);
-      }
+      // 수증자별 합산 1억 캡: §53의2③ 통합한도 (capper.take — doneeId 기준 누적).
+      explicitTotal += mbCapper.take(g);
     }
     // 둘 다 미입력 → 공제 0 (보수적)
   }
