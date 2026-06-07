@@ -19,7 +19,7 @@ import {
   type TransferTaxItemInput,
 } from "@/lib/tax-engine/transfer-tax-aggregate";
 import { TaxCalculationError, TaxErrorCode } from "@/lib/tax-engine/tax-errors";
-import { checkRateLimit, getClientIp } from "@/lib/api/rate-limit";
+import { checkRateLimit, getClientIp, shouldBypassRateLimit } from "@/lib/api/rate-limit";
 import { multiInputSchema } from "@/lib/api/transfer-tax-schema";
 import type { TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
 import type { TransferReduction } from "@/lib/tax-engine/types/transfer.types";
@@ -27,7 +27,7 @@ import type { TransferReduction } from "@/lib/tax-engine/types/transfer.types";
 export async function POST(request: NextRequest) {
   // Rate Limiting — 분당 15회 (단건 30회의 절반)
   const ip = getClientIp(request);
-  const rl = checkRateLimit(`transfer-multi:${ip}`, { limit: 15, windowMs: 60_000 });
+  const rl = checkRateLimit(`transfer-multi:${ip}`, { limit: 15, windowMs: 60_000, bypass: shouldBypassRateLimit(request) });
   if (!rl.allowed) {
     return NextResponse.json(
       { error: { code: "RATE_LIMITED", message: "요청이 너무 많습니다. 잠시 후 다시 시도해 주세요." } },

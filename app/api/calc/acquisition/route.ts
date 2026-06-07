@@ -9,7 +9,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { TaxCalculationError } from "@/lib/tax-engine/tax-errors";
-import { checkRateLimit, getClientIp } from "@/lib/api/rate-limit";
+import { checkRateLimit, getClientIp, shouldBypassRateLimit } from "@/lib/api/rate-limit";
 import { acquisitionTaxInputSchema } from "@/lib/validators/acquisition-input";
 import { calcAcquisitionTax } from "@/lib/tax-engine/acquisition-tax";
 import type { AcquisitionTaxInput } from "@/lib/tax-engine/types/acquisition.types";
@@ -19,7 +19,11 @@ export async function POST(req: NextRequest) {
   // 1. Rate Limiting
   // ─────────────────────────────────────────────
   const ip = getClientIp(req);
-  const rateLimitResult = await checkRateLimit(`acquisition:${ip}`, { limit: 30, windowMs: 60_000 });
+  const rateLimitResult = await checkRateLimit(`acquisition:${ip}`, {
+    limit: 30,
+    windowMs: 60_000,
+    bypass: shouldBypassRateLimit(req),
+  });
   if (!rateLimitResult.allowed) {
     return NextResponse.json(
       { error: { code: "RATE_LIMIT_EXCEEDED", message: "요청이 너무 많습니다. 잠시 후 다시 시도하세요." } },

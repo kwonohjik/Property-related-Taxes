@@ -18,51 +18,46 @@
  */
 
 import { test, expect, type Page } from "@playwright/test";
+import {
+  fillDateAndVerify,
+  addLandAsset as addLandAssetShared,
+  fillAndVerify,
+  nextSteps,
+  calcAndWaitResult,
+} from "./_helpers/tax-flow";
 
 // ============================================================
-// 공용 헬퍼
+// 시나리오 헬퍼 (공용 프리미티브 e2e/_helpers/tax-flow.ts 위임)
 // ============================================================
 
 /** Step0: 상속개시일 + 자녀 1명 + Step1 이동 */
 async function gotoStep0WithChild(page: Page) {
   await page.goto("/calc/inheritance-tax");
 
-  // 상속개시일 2024-06-10
-  await page.getByLabel("연도").first().fill("2024");
-  await page.getByLabel("월").first().fill("6");
-  await page.getByLabel("일").first().fill("10");
-  // 병렬 경합 시 날짜 미커밋 방지(견고화)
-  await expect(page.getByLabel("연도").first()).toHaveValue("2024");
+  // 상속개시일 2024-06-10 (값 커밋 검증 포함 — 병렬 경합 미커밋 방지)
+  await fillDateAndVerify(page, { year: "2024", month: "6", day: "10" });
 
   // 자녀 1명 추가
   await page.getByRole("button", { name: /상속인 추가/ }).click();
   await page.getByText("자녀", { exact: true }).click();
 
   // Step1(상속재산)으로 이동
-  await page.getByRole("button", { name: /^다음/ }).click();
+  await nextSteps(page, 1);
 }
 
 /** Step1: 토지 자산 추가 (3억 평가액) */
 async function addLandAsset(page: Page) {
-  await page.getByRole("button", { name: /상속재산 추가/ }).click();
-  await page.getByRole("button", { name: /토지/ }).first().click();
-  const areaInput = page.getByPlaceholder("면적 입력");
-  const priceInput = page.getByPlaceholder("공시지가 단가");
-  await areaInput.fill("300");
-  await priceInput.fill("1000000");
-  // 병렬 CPU 경합 시 fill 미커밋 방지 — 값 커밋 검증(견고화). 빈 필드로 계산 진행 차단.
-  await expect(areaInput).toHaveValue(/300/);
-  await expect(priceInput).toHaveValue(/1[,.]?000[,.]?000/);
+  await addLandAssetShared(page, { area: "300", unitPrice: "1000000" });
 }
 
 /** Step1 → Step2(비과세) 이동 */
 async function proceedToStep2(page: Page) {
-  await page.getByRole("button", { name: /^다음/ }).click();
+  await nextSteps(page, 1);
 }
 
 /** Step2 → Step3(사전증여) 이동 */
 async function proceedToStep3(page: Page) {
-  await page.getByRole("button", { name: /^다음/ }).click();
+  await nextSteps(page, 1);
 }
 
 /** Step3: 사전증여 1건 추가 + 금액 입력 */
@@ -72,41 +67,25 @@ async function addPriorGift(page: Page) {
   // 사전증여 카드 컨테이너 (마지막 추가된 것)
   const giftCard = page.locator(".border.rounded-lg.p-4").last();
 
-  // 증여일 2020-01-01
-  await giftCard.getByLabel("연도").fill("2020");
-  await giftCard.getByLabel("월").fill("1");
-  await giftCard.getByLabel("일").fill("1");
+  // 증여일 2020-01-01 (카드 scope — 값 커밋 검증 포함)
+  await fillDateAndVerify(
+    page,
+    { year: "2020", month: "1", day: "1" },
+    { scope: giftCard },
+  );
 
-  // 증여재산가액 입력 — CurrencyInput label="증여재산가액"
-  // CurrencyInput은 aria-labelledby 또는 label 연결로 접근
+  // 증여재산가액 입력 — CurrencyInput placeholder="금액 입력"
   const giftAmountInput = giftCard.getByPlaceholder("금액 입력").first();
-  await giftAmountInput.fill("500000000");
+  await fillAndVerify(giftAmountInput, "500000000");
   await giftAmountInput.press("Tab");
-  // 병렬 경합 시 미커밋 방지 — 증여일 연도·증여액 커밋 검증(견고화).
-  await expect(giftCard.getByLabel("연도")).toHaveValue("2020");
-  await expect(giftAmountInput).toHaveValue(/500[,.]?000[,.]?000/);
 }
 
 /** Step3 → Step4(공제) → 계산하기 → 결과 대기 */
 async function proceedToResult(page: Page) {
   // Step4(공제·세액공제)
-  await page.getByRole("button", { name: /^다음/ }).click();
-  // 계산 API 응답을 명시적으로 대기 — 병렬 CPU 경합 시 렌더 타이밍 의존 제거(견고화).
-  const calcResponse = page.waitForResponse(
-    (r) =>
-      r.url().includes("/api/calc/inheritance") &&
-      r.request().method() === "POST",
-    { timeout: 30_000 },
-  );
-  await page.getByRole("button", { name: /계산하기/ }).click();
-  const resp = await calcResponse;
-  // 계산 API가 에러(폼 검증 실패 등)면 결과가 안 뜨므로 명확히 표면화(견고화·진단)
-  expect(
-    resp.ok(),
-    `계산 API 비정상 응답 ${resp.status()} — 폼 입력 누락/검증 실패 의심`,
-  ).toBe(true);
-  // 결과 화면 로드 대기 (API 응답 후 — 경합 여유 30s)
-  await expect(page.getByText("상속세 결정세액")).toBeVisible({ timeout: 30_000 });
+  await nextSteps(page, 1);
+  // 계산 API 응답 명시 대기 + ok 가드 + 결과 노출 (병렬 경합 타이밍 의존 제거)
+  await calcAndWaitResult(page);
 }
 
 // ============================================================

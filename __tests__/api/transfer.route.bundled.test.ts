@@ -43,6 +43,7 @@ vi.mock("@/lib/api/rate-limit", () => ({
     resetAt: Date.now() + 60_000,
   }),
   getClientIp: vi.fn().mockReturnValue("127.0.0.1"),
+  shouldBypassRateLimit: vi.fn().mockReturnValue(false),
 }));
 
 // vi.mock 호이스팅 이후 static import

@@ -12,15 +12,14 @@
  */
 
 import { test, expect, type Page } from "@playwright/test";
+import { fillDateAndVerify, nextSteps } from "./_helpers/tax-flow";
 
 async function gotoStep0AndFillDeathDate(page: Page, year: string, month: string, day: string) {
   await page.goto("/calc/inheritance-tax");
-  await page.getByLabel("연도").first().fill(year);
-  await page.getByLabel("월").first().fill(month);
-  await page.getByLabel("일").first().fill(day);
+  await fillDateAndVerify(page, { year, month, day });
   await page.getByRole("button", { name: /상속인 추가/ }).click();
   await page.getByText("자녀", { exact: true }).click();
-  await page.getByRole("button", { name: /^다음/ }).click();
+  await nextSteps(page, 1);
 }
 
 async function openUnlistedV1SimpleCard(page: Page) {

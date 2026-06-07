@@ -12,30 +12,29 @@
  * 정책: [[feedback_browser_verify_with_playwright]]
  */
 import { test, expect, type Page } from "@playwright/test";
+import {
+  fillDateAndVerify,
+  addLandAsset as addLandAssetShared,
+  nextSteps,
+  calcAndWaitResult,
+} from "./_helpers/tax-flow";
 
 async function fillStep0WithSevenChildren(page: Page) {
   await page.goto("/calc/inheritance-tax");
-  await page.getByLabel("연도").first().fill("2024");
-  await page.getByLabel("월").first().fill("6");
-  await page.getByLabel("일").first().fill("10");
+  await fillDateAndVerify(page, { year: "2024", month: "6", day: "10" });
   for (let i = 0; i < 7; i++) {
     await page.getByRole("button", { name: /상속인 추가/ }).click();
     await page.getByText("자녀", { exact: true }).last().click();
   }
-  await page.getByRole("button", { name: /^다음/ }).click(); // → Step1
+  await nextSteps(page, 1); // → Step1
 }
 
 async function addLandAsset(page: Page) {
-  await page.getByRole("button", { name: /상속재산 추가/ }).click();
-  await page.getByRole("button", { name: /토지/ }).first().click();
-  await page.getByPlaceholder("면적 입력").fill("600");
-  await page.getByPlaceholder("공시지가 단가").fill("10000000");
+  await addLandAssetShared(page, { area: "600", unitPrice: "10000000" });
 }
 
 async function gotoStep4(page: Page) {
-  await page.getByRole("button", { name: /^다음/ }).click(); // → Step2
-  await page.getByRole("button", { name: /^다음/ }).click(); // → Step3
-  await page.getByRole("button", { name: /^다음/ }).click(); // → Step4
+  await nextSteps(page, 3); // Step1 → Step2 → Step3 → Step4
 }
 
 test.describe("§21① 단서 무신고 일괄공제", () => {
@@ -52,7 +51,7 @@ test.describe("§21① 단서 무신고 일괄공제", () => {
     ).toBeVisible();
     await page.getByText("무신고", { exact: true }).click();
 
-    await page.getByRole("button", { name: /계산하기/ }).click();
+    await calcAndWaitResult(page);
 
     // 결과 — 공제 상세 펼침 후 단서 Row 확인
     await page.getByRole("button", { name: /상속공제 상세 내역/ }).click();
@@ -69,7 +68,7 @@ test.describe("§21① 단서 무신고 일괄공제", () => {
     await gotoStep4(page);
 
     // 기본 정기신고 그대로 계산
-    await page.getByRole("button", { name: /계산하기/ }).click();
+    await calcAndWaitResult(page);
 
     // 공제 상세 펼친 후에도 단서 Row 없음
     await page.getByRole("button", { name: /상속공제 상세 내역/ }).click();

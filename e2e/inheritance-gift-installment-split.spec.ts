@@ -16,48 +16,46 @@
  * 정책: [[feedback_browser_verify_with_playwright]] · worktree E2E_PORT=3100
  */
 import { test, expect, type Page } from "@playwright/test";
+import {
+  fillDateAndVerify,
+  addLandAsset,
+  nextSteps,
+  calcAndWaitResult,
+} from "./_helpers/tax-flow";
 
 // ── 상속 ─────────────────────────────────────────────────────────
 async function inhStep0(page: Page, opts: { nonResident?: boolean } = {}) {
   await page.goto("/calc/inheritance-tax");
-  await page.getByLabel("연도").first().fill("2024");
-  await page.getByLabel("월").first().fill("6");
-  await page.getByLabel("일").first().fill("10");
+  await fillDateAndVerify(page, { year: "2024", month: "6", day: "10" });
   if (opts.nonResident) {
     await page.getByRole("button", { name: /비거주자/ }).click();
   }
   await page.getByRole("button", { name: /상속인 추가/ }).click();
   await page.getByText("자녀", { exact: true }).click();
-  await page.getByRole("button", { name: /^다음/ }).click(); // → Step1
+  await nextSteps(page, 1); // → Step1
 }
 
 async function inhAddLand(page: Page, unitPrice: string) {
-  await page.getByRole("button", { name: /상속재산 추가/ }).click();
-  await page.getByRole("button", { name: /토지/ }).first().click();
-  await page.getByPlaceholder("면적 입력").fill("300");
-  await page.getByPlaceholder("공시지가 단가").fill(unitPrice);
+  await addLandAsset(page, { area: "300", unitPrice });
 }
 
 async function inhGotoStep4(page: Page) {
-  await page.getByRole("button", { name: /^다음/ }).click(); // → Step2
-  await page.getByRole("button", { name: /^다음/ }).click(); // → Step3
-  await page.getByRole("button", { name: /^다음/ }).click(); // → Step4
+  await nextSteps(page, 3); // Step1 → Step2 → Step3 → Step4
 }
 
 // ── 증여 ─────────────────────────────────────────────────────────
 async function giftStep0(page: Page) {
   await page.goto("/calc/gift-tax");
-  await page.getByLabel("연도").first().fill("2024");
-  await page.getByLabel("월").first().fill("6");
-  await page.getByLabel("일").first().fill("10");
-  await page.getByRole("button", { name: /^다음/ }).click(); // → Step1
+  await fillDateAndVerify(page, { year: "2024", month: "6", day: "10" });
+  await nextSteps(page, 1); // → Step1
 }
 
 async function giftAddLand(page: Page) {
-  await page.getByRole("button", { name: /증여재산 추가/ }).click();
-  await page.getByRole("button", { name: /토지/ }).first().click();
-  await page.getByPlaceholder("면적 입력").fill("300");
-  await page.getByPlaceholder("공시지가 단가").fill("1000000");
+  await addLandAsset(page, {
+    area: "300",
+    unitPrice: "1000000",
+    addButtonName: /증여재산 추가/,
+  });
   await page.getByPlaceholder(/본가 토지/).fill("본가 토지");
 }
 
@@ -74,8 +72,7 @@ test.describe("분납 §70② (상속·증여)", () => {
     await toggle.click();
     await expect(page.getByText("분납 희망액")).toBeVisible();
 
-    await page.getByRole("button", { name: /계산하기/ }).click();
-    await expect(page.getByText("상속세 결정세액")).toBeVisible({ timeout: 20_000 });
+    await calcAndWaitResult(page);
 
     // 분납 일정 카드 — 1차/2차
     const card = page.getByTestId("split-payment-card");
@@ -107,8 +104,7 @@ test.describe("분납 §70② (상속·증여)", () => {
     await inhGotoStep4(page);
 
     // 분납 OFF 그대로 계산
-    await page.getByRole("button", { name: /계산하기/ }).click();
-    await expect(page.getByText("상속세 결정세액")).toBeVisible({ timeout: 20_000 });
+    await calcAndWaitResult(page);
 
     const card = page.getByTestId("split-payment-card");
     await expect(card).toBeVisible();
@@ -124,8 +120,7 @@ test.describe("분납 §70② (상속·증여)", () => {
     await inhAddLand(page, "1000000"); // 3억 → 일괄공제 5억 → 과세표준 0 → 결정세액 0
     await inhGotoStep4(page);
 
-    await page.getByRole("button", { name: /계산하기/ }).click();
-    await expect(page.getByText("상속세 결정세액")).toBeVisible({ timeout: 20_000 });
+    await calcAndWaitResult(page);
 
     await expect(page.getByTestId("split-payment-card")).toHaveCount(0);
   });
@@ -136,8 +131,7 @@ test.describe("분납 §70② (상속·증여)", () => {
     test.setTimeout(90_000);
     await giftStep0(page);
     await giftAddLand(page); // 3억 → 증여공제 5천만 → 결정세액 >1천만
-    await page.getByRole("button", { name: /^다음/ }).click(); // Step1→2
-    await page.getByRole("button", { name: /^다음/ }).click(); // Step2→3
+    await nextSteps(page, 2); // Step1→2→3
 
     // Step3 끝 분납 토글 ON
     const toggle = page.getByText("분납 신청 (상증법 §70②)");
@@ -145,8 +139,7 @@ test.describe("분납 §70② (상속·증여)", () => {
     await toggle.click();
     await expect(page.getByText("분납 희망액")).toBeVisible();
 
-    await page.getByRole("button", { name: /계산하기/ }).click();
-    await expect(page.getByText("증여세 결정세액")).toBeVisible({ timeout: 20_000 });
+    await calcAndWaitResult(page, { taxType: "gift" });
 
     // 분납 일정 카드
     const card = page.getByTestId("split-payment-card");
