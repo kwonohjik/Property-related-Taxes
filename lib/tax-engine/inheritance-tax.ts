@@ -746,16 +746,14 @@ export function calcInheritanceTax(
     (sum, g) => sum + (g.beneficiaryType === "corporate" ? (g.giftTaxBase ?? g.giftAmount) : 0),
     0,
   );
-  // ⑩b 합계열 — PDF 표8 기준 ⑨ 산출세액 소계(할증 포함) × 영리법인 과세표준 / 과세표준.
-  //   ★ GAP-1 보류(2026-06-07): perHeir corpLimit(할증 미포함)와 불일치하나, 기존 anchor
-  //   AN-8·A4-6이 PDF 표8 합계=할증 포함(277,943,123)을 명시 anchor → PDF 원본 확인 전 변경 보류.
+  // ⑩b 합계열 — §3의2② 영리법인 면제 한도 = floor(산출세액 × 영리법인 과세표준 / 상속세 과세표준).
+  //   영리법인은 §27 세대생략 할증 무관(상증령 §3① 면제 비율 산식에 할증 근거 없음, 세대 개념 부재).
+  //   → generationSkipSurcharge 미포함 = perHeir corpLimit(inheritance-allocation.ts:492)와 단일화.
+  //   (GAP-1 2026-06-07: 기존 PDF 표8 재현 anchor가 ⑨소계 할증포함을 곱한 277,943,123이었으나,
+  //    사용자 결정 "법령 정합" → 할증 미포함 272,874,251로 정정. KoreanLaw 상증령 §3① mst283637.)
   const corporateExemptionLimitDisplay =
     corporateGiftTaxBaseForSummary > 0 && taxBase > 0
-      ? Math.floor(
-          ((computedTax + generationSkipSurcharge) *
-            corporateGiftTaxBaseForSummary) /
-            taxBase,
-        )
+      ? Math.floor((computedTax * corporateGiftTaxBaseForSummary) / taxBase)
       : 0;
   const categoryTotals = (() => {
     const t = { financial: 0, realEstate: 0, stock: 0, other: 0 };

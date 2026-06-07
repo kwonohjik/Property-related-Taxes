@@ -20,7 +20,7 @@
 
 ---
 
-> 🚫 **GAP-1 BLOCKER 보류 (2026-06-07 Do 중 발견)**: 합계열 할증 제거 시 기존 anchor AN-8·A4-6(PDF 책 1866 표8 합계 = 할증 포함 277,943,123 명시)이 깨짐. PDF 원본의 ⑩b 합계 실제값(272,874,251 미포함 vs 277,943,123 포함) 확인 또는 사용자 판단 필요 → GAP-1 롤백, **GAP-2만 구현·머지**. [[feedback_numeric_impact_verify_before_bug_claim]] (버그 과대주장 금지 — PDF 미확인 단정 회피).
+> ✅ **GAP-1 완료 (2026-06-07, 법령 정합)**: 1차 Do에서 할증 제거 시 anchor AN-8·A4-6(PDF 표8 합계=할증포함 277,943,123)과 충돌 → BLOCKER 롤백. 이후 **KoreanLaw 상증령 §3①(mst283637) 실측 — 영리법인 면제 비율에 §27 할증 근거 전혀 없음** 확인 + 사용자 결정 "법령 정합" → 합계열 할증 제거(`computedTax`만), AN-8·A4-6를 272,874,251로 재산정(perHeir corpLimit와 일치). anchor CORP-10B-1·2·6640 PASS. [[feedback_anchor_correction_legal_priority]] (PDF 재현 anchor가 법령과 충돌 시 법령 정합 우선).
 
 ## §1. GAP-1 — ⑩b 공제 한도 합계열 ↔ 영리법인열 할증 불일치 (🚫 보류)
 
@@ -127,7 +127,7 @@ perHeir: buildPerHeir(sorted,
 
 ## 범위 외 후속 (본 계획 제외)
 
-- `distributePerCorporate`(`inheritance-corporate-exemption.ts:164`) 다수 영리법인 floor 안분 **잔액 미흡수** → Σ exemptionAmount < totalExemption 가능(±법인수 원). [[feedback_floor_residual_absorption]] 적용 대상이나 GAP-2(perHeir 중복 해소)와 별개 — 별도 후속.
+- ~~`distributePerCorporate`(`inheritance-corporate-exemption.ts:164`) 다수 영리법인 floor 안분 **잔액 미흡수**~~ → **완료 ✅ (2026-06-07)**: 누적+마지막 법인 잔액 흡수로 Σ exemptionAmount == totalExemption. [[feedback_floor_residual_absorption]]. anchor CORP-FLOOR-1·2·3·6638 PASS. (feature/inheritance-corporate-floor-residual)
 
 ---
 

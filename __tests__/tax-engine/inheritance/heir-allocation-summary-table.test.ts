@@ -122,10 +122,13 @@ describe("Pre-Do — 상속인별 상속세부담액 집계 표 (이미지 8)", 
       );
     });
 
-    it("AN-8: ⑩b 합계행 corporateExemptionLimitDisplay 277,943,123", () => {
-      // PDF 표8 ⑩b 합계: ⑨ 산출세액 소계(1,657,732,198) × 700M / 4,175M (할증 포함)
+    it("AN-8: ⑩b 합계행 corporateExemptionLimitDisplay 272,874,251 (할증 미포함, 법령 정합)", () => {
+      // §3의2② 면제 한도 = 산출세액(할증 미포함) × 700M / 4,175M.
+      //   floor(1,627,500,000 × 700M / 4,175M) = 272,874,251. AN-9(perHeir corpLimit)와 일치.
+      //   (GAP-1 2026-06-07: 구 anchor 277,943,123은 ⑨소계 할증포함 곱한 값 → 사용자 결정
+      //    "법령 정합"으로 정정. 상증령 §3① 영리법인 면제 비율에 §27 할증 근거 없음.)
       expect(result.summaryTable?.corporateExemptionLimitDisplay).toBe(
-        277_943_123,
+        272_874_251,
       );
     });
 
