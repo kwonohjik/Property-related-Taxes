@@ -23,6 +23,8 @@ import {
   HEIR_RELATIONS,
   SPECIAL_RELATIONS,
 } from "@/components/calc/inheritance/heir-relation-meta";
+import { isCohabitDeductionEligibleRelation } from "@/lib/tax-engine/deductions/inheritance-cohabit-helpers";
+import { CohabitRequirementBlock } from "@/components/calc/inheritance/CohabitRequirementBlock";
 
 // ============================================================
 // 관계 메타 (라벨은 공유 모듈에서 import)
@@ -96,8 +98,13 @@ export function changeHeirRelation(heir: Heir, newRelation: HeirRelation): Heir 
     next.businessRegistrationNumber = undefined;
     next.businessAddress = undefined;
     next.corporateGiftComputedTax = undefined;
-    // 동거주택(§23의2)은 자녀 전용
-    if (newRelation !== "child") next.isCohabitant = undefined;
+    // 동거주택(§23의2): G5 적격 관계 외(legatee-순수세대생략·child·대습배우자other)면 해제
+    // 관계 변경 후 next를 기반으로 판정 (deathDate 미전달 = "9999-12-31" → 2022 이후로 처리)
+    if (!isCohabitDeductionEligibleRelation(next, undefined)) {
+      next.isCohabitant = undefined;
+      next.cohabitStartDate = undefined;
+      next.cohabitExcludedYears = undefined;
+    }
     // 세대생략 체크는 legatee 전용 — legatee 외로 변경 시 제거
     if (newRelation !== "legatee") {
       next.isGenerationSkipBeneficiary = undefined;
@@ -136,7 +143,9 @@ function HeirEditor({ heir, index, deathDate, allHeirs, onUpdate, onRemove }: He
     heir.relation === "lineal_ascendant" ||
     heir.relation === "sibling" ||
     isLegatee;
-  const showCohabitant = heir.relation === "child";
+  // Phase 2 G5: 엔진 헬퍼로 §23의2①1호 적격 관계 판정
+  // (직계비속 자녀·세대생략 손자녀 + 2022~ 대습배우자 other+isSubstituteInheritance)
+  const showCohabitant = isCohabitDeductionEligibleRelation(heir, deathDate);
   const isCorporate = heir.relation === "corporate";
 
   // B-3 미성년 자동 판정 — birthDate + deathDate 있을 때만
@@ -380,15 +389,45 @@ function HeirEditor({ heir, index, deathDate, allHeirs, onUpdate, onRemove }: He
         </div>
       )}
 
-      {/* 동거주택 요건 (자녀) */}
+      {/* 동거주택 요건 (G5 적격 관계: 자녀·세대생략 손자녀·2022~ 대습배우자) */}
       {showCohabitant && (
-        <ToggleCard
-          tone="violet"
-          title="동거주택 상속공제 해당"
-          description="피상속인·상속인 10년 이상 동거, 무주택자 요건 등 (§23의2) — 공시가격의 80%, 최대 6억"
-          checked={heir.isCohabitant ?? false}
-          onCheckedChange={(v) => set({ isCohabitant: v })}
-        />
+        <>
+          <ToggleCard
+            tone="violet"
+            title="동거주택 상속공제 해당 (§23의2)"
+            description={
+              deathDate && deathDate >= "2020-01-01"
+                ? "피상속인·상속인 10년 이상 동거, 무주택자 요건 등 — 공시가격의 100%, 최대 6억 (2020~)"
+                : deathDate && deathDate >= "2009-01-01"
+                ? "피상속인·상속인 10년 이상 동거, 무주택자 요건 등 — 공시가격의 80%, 최대 5억 (~2019)"
+                : "피상속인·상속인 10년 이상 동거, 무주택자 요건 등 (§23의2)"
+            }
+            checked={heir.isCohabitant ?? false}
+            onCheckedChange={(v) =>
+              set({
+                isCohabitant: v,
+                cohabitStartDate: v ? heir.cohabitStartDate : undefined,
+                cohabitExcludedYears: v ? heir.cohabitExcludedYears : undefined,
+              })
+            }
+          />
+
+          {/* G3 동거기간 입력 블록 — isCohabitant ON 시만 노출 */}
+          {heir.isCohabitant && (
+            <CohabitRequirementBlock
+              cohabitStartDate={heir.cohabitStartDate}
+              cohabitExcludedYears={heir.cohabitExcludedYears}
+              birthDate={heir.birthDate}
+              deathDate={deathDate}
+              onChange={(patch) =>
+                set({
+                  cohabitStartDate: patch.cohabitStartDate,
+                  cohabitExcludedYears: patch.cohabitExcludedYears,
+                })
+              }
+            />
+          )}
+        </>
       )}
 
       {/* 협의분할은 각 자산 카드에서 입력 — 전역 비율 필드(actualShareRatio) 폐지 (2026-05-26).

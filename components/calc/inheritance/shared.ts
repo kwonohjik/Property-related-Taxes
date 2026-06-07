@@ -3,6 +3,7 @@
  */
 
 import type {
+  AncillaryLandRegion,
   EstateItem,
   Heir,
   PriorGift,
@@ -144,6 +145,24 @@ export interface FormState extends AppraisalFeeFormFields {
   paymentInKindIneligibleAmount: string;
   /** 희망 물납액 (원, 빈 문자열 허용 — 미입력 시 허용한도 안내) */
   paymentInKindRequestedAmount: string;
+
+  // §23의2① 주택부수토지 면적한도 차감 (Phase 3, G4) — DecimalInput
+  /**
+   * 부수토지 실제 면적 (㎡). 단독주택 대형토지 전용.
+   * 아파트·공동주택가격에는 부수토지 포함 → 입력 생략(차감 없음).
+   * buildingFootprintArea·ancillaryLandRegion과 함께 전부 또는 전무 입력.
+   */
+  ancillaryLandArea: string;
+  /**
+   * 건물 정착 면적 (㎡). 소득세 시행령 §154⑦ 한도 산식의 기준 면적.
+   * ancillaryLandArea·ancillaryLandRegion과 함께 전부 또는 전무 입력.
+   */
+  buildingFootprintArea: string;
+  /**
+   * 주택부수토지 지역 구분 (소득세 시행령 §154⑦ 배율 선택).
+   * ancillaryLandArea·buildingFootprintArea와 함께 전부 또는 전무 입력.
+   */
+  ancillaryLandRegion: AncillaryLandRegion | "";
 }
 
 export type FormSet = (p: Partial<FormState>) => void;
@@ -210,6 +229,10 @@ export const INITIAL_FORM: FormState = {
   paymentInKindEnabled: false,
   paymentInKindIneligibleAmount: "",
   paymentInKindRequestedAmount: "",
+  // §23의2① 주택부수토지 면적한도 차감 (Phase 3, G4)
+  ancillaryLandArea: "",
+  buildingFootprintArea: "",
+  ancillaryLandRegion: "",
   ...INITIAL_APPRAISAL_FEE_FIELDS,
 };
 

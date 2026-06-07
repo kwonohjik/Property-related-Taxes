@@ -37,6 +37,7 @@ import { AutoSuggestBadge } from "./AutoSuggestBadge";
 import type { DeductionSuggestion } from "@/lib/calc/inheritance-deduction-suggest";
 import type { FormState, FormSet } from "./shared";
 import { AppraisalFeeSection } from "@/components/calc/deductions/AppraisalFeeSection";
+import { CohabitAncillaryLandBlock } from "./CohabitAncillaryLandBlock";
 
 /** Step4 추가공제 자동 도출값 — InheritanceTaxForm useMemo에서 계산해 prop 전달(3중 일치). */
 export type Step4Autos = {
@@ -450,6 +451,14 @@ export function Step4({
           onChange={(v) => set({ cohabitDirectAmount: v })}
           hint="요건 판정 생략 모드 — 입력값 그대로 적용 (한도 6억 유지). 공시가격 입력보다 우선."
           placeholder="없으면 빈칸"
+        />
+
+        {/* G4 §23의2① 주택부수토지 면적한도 차감 — 단독주택 대형토지 전용 */}
+        <CohabitAncillaryLandBlock
+          ancillaryLandArea={form.ancillaryLandArea}
+          buildingFootprintArea={form.buildingFootprintArea}
+          ancillaryLandRegion={form.ancillaryLandRegion}
+          onChange={(patch) => set(patch)}
         />
 
         <div className="space-y-2">
