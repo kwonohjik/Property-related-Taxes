@@ -13,25 +13,24 @@
  */
 
 import { test, expect, type Page } from "@playwright/test";
+import {
+  fillDateAndVerify,
+  addLandAsset,
+  nextSteps,
+  calcAndWaitResult,
+} from "./_helpers/tax-flow";
 
 /** Step0(상속개시일 2024-06-10 + 자녀1) → Step1(토지 30억) → Step4(세액공제) */
 async function gotoStep4WithLand(page: Page) {
   await page.goto("/calc/inheritance-tax");
-  await page.getByLabel("연도").first().fill("2024");
-  await page.getByLabel("월").first().fill("6");
-  await page.getByLabel("일").first().fill("10");
+  await fillDateAndVerify(page, { year: "2024", month: "6", day: "10" });
 
   await page.getByRole("button", { name: /상속인 추가/ }).click();
   await page.getByText("자녀", { exact: true }).click();
   await page.getByRole("button", { name: /^다음/ }).click(); // → Step1
 
-  await page.getByRole("button", { name: /상속재산 추가/ }).click();
-  await page.getByRole("button", { name: /토지/ }).first().click();
-  await page.getByPlaceholder("면적 입력").fill("300");
-  await page.getByPlaceholder("공시지가 단가").fill("10000000");
-  await page.getByRole("button", { name: /^다음/ }).click(); // → Step2
-  await page.getByRole("button", { name: /^다음/ }).click(); // → Step3
-  await page.getByRole("button", { name: /^다음/ }).click(); // → Step4
+  await addLandAsset(page, { area: "300", unitPrice: "10000000" });
+  await nextSteps(page, 3); // → Step2 → Step3 → Step4
 }
 
 test.describe("외국납부세액공제 §29 — 결과 ▼펼침 산식", () => {
@@ -47,8 +46,7 @@ test.describe("외국납부세액공제 §29 — 결과 ▼펼침 산식", () =>
     await page.getByLabel("외국에서 납부한 상속세액").fill("100000000");
     await page.getByLabel("국외 상속재산 과세표준").fill("500000000");
 
-    await page.getByRole("button", { name: /계산하기/ }).click();
-    await expect(page.getByText("상속세 결정세액")).toBeVisible({ timeout: 20_000 });
+    await calcAndWaitResult(page);
 
     // 세액공제 내역 카드에 "외국납부세액공제" 행 노출 (입력 섹션 "외국납부세액공제 (§29)"와 exact로 구분)
     await expect(

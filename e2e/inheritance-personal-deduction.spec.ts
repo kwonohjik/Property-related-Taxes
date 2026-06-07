@@ -13,6 +13,12 @@
  */
 
 import { test, expect, type Page } from "@playwright/test";
+import {
+  fillDateAndVerify,
+  addLandAsset as addLandAssetHelper,
+  nextSteps,
+  calcAndWaitResult,
+} from "./_helpers/tax-flow";
 
 // ============================================================
 // 헬퍼
@@ -20,9 +26,7 @@ import { test, expect, type Page } from "@playwright/test";
 
 async function gotoStep0(page: Page, [y, m, d]: [string, string, string]) {
   await page.goto("/calc/inheritance-tax");
-  await page.getByLabel("연도").first().fill(y);
-  await page.getByLabel("월").first().fill(m);
-  await page.getByLabel("일").first().fill(d);
+  await fillDateAndVerify(page, { year: y, month: m, day: d });
 }
 
 async function addChild(page: Page) {
@@ -37,26 +41,18 @@ async function setHeirBirthDate(
   [y, m, d]: [string, string, string],
 ) {
   const editor = page.getByTestId(`heir-editor-${index}`);
-  await editor.getByLabel("연도").fill(y);
-  await editor.getByLabel("월").fill(m);
-  await editor.getByLabel("일").fill(d);
+  await fillDateAndVerify(page, { year: y, month: m, day: d }, { scope: editor });
 }
 
 /** 토지(공시지가 1,000,000원/㎡ × 300㎡ = 3억) 추가 */
 async function addLandAsset(page: Page) {
-  await page.getByRole("button", { name: /상속재산 추가/ }).click();
-  await page.getByRole("button", { name: /토지/ }).first().click();
-  await page.getByPlaceholder("면적 입력").fill("300");
-  await page.getByPlaceholder("공시지가 단가").fill("1000000");
+  await addLandAssetHelper(page, { area: "300", unitPrice: "1000000" });
 }
 
 /** Step1→2→3→4 → 계산하기 → 결과 대기 */
 async function proceedToResult(page: Page) {
-  await page.getByRole("button", { name: /^다음/ }).click(); // Step1→2
-  await page.getByRole("button", { name: /^다음/ }).click(); // 2→3
-  await page.getByRole("button", { name: /^다음/ }).click(); // 3→4
-  await page.getByRole("button", { name: /계산하기/ }).click();
-  await expect(page.getByText("상속세 결정세액")).toBeVisible({ timeout: 20_000 });
+  await nextSteps(page, 3); // Step1→2→3→4
+  await calcAndWaitResult(page);
 }
 
 /** 상속공제 상세 내역 펼침 + 모든 detail 카드 ▼ 펼치기 */
@@ -149,9 +145,7 @@ test.describe("상속세 그 밖의 인적공제 §20 (P0+P2)", () => {
 
     await page.getByRole("button", { name: /^다음/ }).click(); // Step0→1
     await addLandAsset(page);
-    await page.getByRole("button", { name: /^다음/ }).click(); // 1→2
-    await page.getByRole("button", { name: /^다음/ }).click(); // 2→3
-    await page.getByRole("button", { name: /^다음/ }).click(); // 3→4
+    await nextSteps(page, 3); // 1→2→3→4
     await page.getByRole("button", { name: /계산하기/ }).click();
 
     // 검증 오류 노출 + 결과 미표시 (차단)

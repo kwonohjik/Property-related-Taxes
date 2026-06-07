@@ -11,25 +11,24 @@
  */
 
 import { test, expect, type Page } from "@playwright/test";
+import {
+  fillDateAndVerify,
+  addLandAsset,
+  nextSteps,
+  calcAndWaitResult,
+} from "./_helpers/tax-flow";
 
 /** 상속 Step0(2024-06-10 + 자녀1) → Step1(토지 30억) → 다음×3 → Step4 */
 async function gotoInheritanceStep4(page: Page) {
   await page.goto("/calc/inheritance-tax");
-  await page.getByLabel("연도").first().fill("2024");
-  await page.getByLabel("월").first().fill("6");
-  await page.getByLabel("일").first().fill("10");
+  await fillDateAndVerify(page, { year: "2024", month: "6", day: "10" });
 
   await page.getByRole("button", { name: /상속인 추가/ }).click();
   await page.getByText("자녀", { exact: true }).click();
   await page.getByRole("button", { name: /^다음/ }).click(); // → Step1
 
-  await page.getByRole("button", { name: /상속재산 추가/ }).click();
-  await page.getByRole("button", { name: /토지/ }).first().click();
-  await page.getByPlaceholder("면적 입력").fill("300");
-  await page.getByPlaceholder("공시지가 단가").fill("10000000");
-  await page.getByRole("button", { name: /^다음/ }).click(); // → Step2
-  await page.getByRole("button", { name: /^다음/ }).click(); // → Step3
-  await page.getByRole("button", { name: /^다음/ }).click(); // → Step4
+  await addLandAsset(page, { area: "300", unitPrice: "10000000" });
+  await nextSteps(page, 3); // → Step2 → Step3 → Step4
 }
 
 test.describe("감정평가수수료 공제 — UI", () => {
@@ -62,11 +61,7 @@ test.describe("감정평가수수료 공제 — UI", () => {
       .filter({ hasText: "감정평가수수료 공제 (§25①2호·시행령 §20의3)" })
       .last();
     await feeSection.getByRole("textbox").nth(4).fill("7000000");
-    await page.getByRole("button", { name: /계산하기/ }).click();
-
-    await expect(page.getByText("상속세 결정세액")).toBeVisible({
-      timeout: 20_000,
-    });
+    await calcAndWaitResult(page);
     // 과세표준 CalculationStep 차감 행 (입력 섹션은 결과 화면에서 미표시 → exact 매칭)
     await expect(
       page.getByText("감정평가수수료 공제", { exact: true }),
@@ -79,16 +74,13 @@ test.describe("감정평가수수료 공제 — UI", () => {
     test.setTimeout(90_000);
     await page.goto("/calc/gift-tax");
     // Step0 증여일 + 증여자(기본 父) → 다음
-    await page.getByLabel("연도").first().fill("2024");
-    await page.getByLabel("월").first().fill("6");
-    await page.getByLabel("일").first().fill("10");
+    await fillDateAndVerify(page, { year: "2024", month: "6", day: "10" });
     await page.getByRole("button", { name: /^다음/ }).click(); // → Step1
 
     // Step1 증여재산 — 현금 1건
     await page.getByRole("button", { name: /증여재산 추가|재산 추가/ }).first().click();
     await page.getByRole("button", { name: /현금/ }).first().click();
-    await page.getByRole("button", { name: /^다음/ }).click(); // → Step2
-    await page.getByRole("button", { name: /^다음/ }).click(); // → Step3
+    await nextSteps(page, 2); // → Step2 → Step3
 
     await expect(
       page.getByText("감정평가수수료 공제 (§55①·시행령 §46의2)"),

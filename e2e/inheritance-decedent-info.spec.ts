@@ -12,6 +12,12 @@
  */
 
 import { test, expect } from "@playwright/test";
+import {
+  fillDateAndVerify,
+  addLandAsset,
+  nextSteps,
+  calcAndWaitResult,
+} from "./_helpers/tax-flow";
 
 test.describe("피상속인 인적사항 Step1 입력 → 신고서 반영", () => {
   test(
@@ -26,9 +32,7 @@ test.describe("피상속인 인적사항 Step1 입력 → 신고서 반영", () 
       await page.getByPlaceholder("앞 6자리-뒤 7자리").fill("350505-1234567");
 
       // 상속개시일
-      await page.getByLabel("연도").first().fill("2024");
-      await page.getByLabel("월").first().fill("6");
-      await page.getByLabel("일").first().fill("10");
+      await fillDateAndVerify(page, { year: "2024", month: "6", day: "10" });
 
       // 자녀 1명 + 주민등록번호 입력
       await page.getByRole("button", { name: /상속인 추가/ }).click();
@@ -37,17 +41,11 @@ test.describe("피상속인 인적사항 Step1 입력 → 신고서 반영", () 
 
       // Step1(상속재산) → 토지
       await page.getByRole("button", { name: /^다음/ }).click();
-      await page.getByRole("button", { name: /상속재산 추가/ }).click();
-      await page.getByRole("button", { name: /토지/ }).first().click();
-      await page.getByPlaceholder("면적 입력").fill("300");
-      await page.getByPlaceholder("공시지가 단가").fill("1000000");
+      await addLandAsset(page, { area: "300", unitPrice: "1000000" });
 
       // Step2 → Step3 → Step4 → 계산
-      await page.getByRole("button", { name: /^다음/ }).click();
-      await page.getByRole("button", { name: /^다음/ }).click();
-      await page.getByRole("button", { name: /^다음/ }).click();
-      await page.getByRole("button", { name: /계산하기/ }).click();
-      await expect(page.getByText("상속세 결정세액")).toBeVisible({ timeout: 15_000 });
+      await nextSteps(page, 3);
+      await calcAndWaitResult(page);
 
       // ── 검증: 별지 제9호서식 ⑦ 피상속인 성명 · ⑧ 주민등록번호 (hidden 상태에서도 텍스트 존재) ──
       await expect(page.getByTestId("ff9-⑦")).toHaveText("홍길동");

@@ -9,13 +9,16 @@
  * UI 설계:  docs/02-design/features/inheritance-cohabit-deduction.ui.design.md
  */
 import { test, expect, type Page } from "@playwright/test";
+import {
+  fillDateAndVerify,
+  nextSteps,
+  calcAndWaitResult,
+} from "./_helpers/tax-flow";
 
 /** Step0: 상속개시일(year) + 동거 자녀 1명 → Step1: 아파트 8억 + 동거주택 체크 → 계산 → 공제 상세 펼침 */
 async function calcWithCohabitHouse(page: Page, year: string) {
   await page.goto("/calc/inheritance-tax");
-  await page.getByLabel("연도").first().fill(year);
-  await page.getByLabel("월").first().fill("6");
-  await page.getByLabel("일").first().fill("1");
+  await fillDateAndVerify(page, { year, month: "6", day: "1" });
 
   await page.getByRole("button", { name: /상속인 추가/ }).click();
   await page.getByText("자녀", { exact: true }).click();
@@ -34,11 +37,9 @@ async function calcWithCohabitHouse(page: Page, year: string) {
   await page.getByText("동거주택 공제 대상 (§23의2)").click();
 
   // Step1 → 2 → 3 → 4
-  for (let i = 0; i < 3; i++) {
-    await page.getByRole("button", { name: /^다음/ }).click();
-  }
+  await nextSteps(page, 3);
 
-  await page.getByRole("button", { name: /계산하기/ }).click();
+  await calcAndWaitResult(page);
 
   // 결과 — 상속공제 상세 내역 펼침 → 동거주택 공제 카드 펼침
   await page.getByRole("button", { name: /상속공제 상세 내역/ }).click();

@@ -11,32 +11,35 @@
  */
 
 import { test, expect, type Page } from "@playwright/test";
+import {
+  addLandAsset,
+  calcAndWaitResult,
+  fillDateAndVerify,
+  nextSteps,
+} from "./_helpers/tax-flow";
 
 /** Step0: 증여일 (관계는 기본값 직계존속-성인) → 다음 */
 async function fillStep0(page: Page) {
   await page.goto("/calc/gift-tax");
-  await page.getByLabel("연도").first().fill("2024");
-  await page.getByLabel("월").first().fill("6");
-  await page.getByLabel("일").first().fill("10");
+  await fillDateAndVerify(page, { year: "2024", month: "6", day: "10" });
   await page.getByRole("button", { name: /^다음/ }).click();
 }
 
 /** Step1: 토지(공시지가 1,000,000원/㎡ × 300㎡) + 자산명(증여세 §validateStep Step1 필수) */
-async function addLandAsset(page: Page) {
-  await page.getByRole("button", { name: /증여재산 추가/ }).click();
-  await page.getByRole("button", { name: /토지/ }).first().click();
-  await page.getByPlaceholder("면적 입력").fill("300");
-  await page.getByPlaceholder("공시지가 단가").fill("1000000");
+async function addGiftLandAsset(page: Page) {
+  await addLandAsset(page, {
+    area: "300",
+    unitPrice: "1000000",
+    addButtonName: /증여재산 추가/,
+  });
   // 토지는 자산명 필수(cash·financial·deposit만 면제) — 별칭으로 충족
   await page.getByPlaceholder(/본가 토지/).fill("본가 토지");
 }
 
 /** Step2→3→계산 → 결과 대기 (증여세 4단계 마법사) */
 async function proceedToResult(page: Page) {
-  await page.getByRole("button", { name: /^다음/ }).click(); // Step1→2
-  await page.getByRole("button", { name: /^다음/ }).click(); // Step2→3
-  await page.getByRole("button", { name: /계산하기/ }).click();
-  await expect(page.getByText("증여세 결정세액")).toBeVisible({ timeout: 20_000 });
+  await nextSteps(page, 2); // Step1→2→3
+  await calcAndWaitResult(page, { taxType: "gift" });
 }
 
 test.describe("계산 결과 선택 출력 (증여세) — 화면 인쇄", () => {
@@ -46,7 +49,7 @@ test.describe("계산 결과 선택 출력 (증여세) — 화면 인쇄", () =>
     test.setTimeout(90_000);
 
     await fillStep0(page);
-    await addLandAsset(page);
+    await addGiftLandAsset(page);
     await proceedToResult(page);
 
     // SP-gift-1: 선택 패널 노출 + 기본 전체 미선택 → 인쇄 버튼 disabled

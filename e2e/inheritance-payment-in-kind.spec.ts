@@ -12,28 +12,27 @@
  * 정책: [[feedback_browser_verify_with_playwright]]
  */
 import { test, expect, type Page } from "@playwright/test";
+import {
+  fillDateAndVerify,
+  addLandAsset as addLandAssetHelper,
+  nextSteps,
+  calcAndWaitResult,
+} from "./_helpers/tax-flow";
 
 async function fillStep0WithChild(page: Page) {
   await page.goto("/calc/inheritance-tax");
-  await page.getByLabel("연도").first().fill("2024");
-  await page.getByLabel("월").first().fill("6");
-  await page.getByLabel("일").first().fill("10");
+  await fillDateAndVerify(page, { year: "2024", month: "6", day: "10" });
   await page.getByRole("button", { name: /상속인 추가/ }).click();
   await page.getByText("자녀", { exact: true }).click();
   await page.getByRole("button", { name: /^다음/ }).click(); // → Step1
 }
 
 async function addLandAsset(page: Page) {
-  await page.getByRole("button", { name: /상속재산 추가/ }).click();
-  await page.getByRole("button", { name: /토지/ }).first().click();
-  await page.getByPlaceholder("면적 입력").fill("300");
-  await page.getByPlaceholder("공시지가 단가").fill("10000000");
+  await addLandAssetHelper(page, { area: "300", unitPrice: "10000000" });
 }
 
 async function gotoStep4(page: Page) {
-  await page.getByRole("button", { name: /^다음/ }).click(); // → Step2
-  await page.getByRole("button", { name: /^다음/ }).click(); // → Step3
-  await page.getByRole("button", { name: /^다음/ }).click(); // → Step4
+  await nextSteps(page, 3); // → Step2 → Step3 → Step4
 }
 
 test.describe("물납 (§73)", () => {
@@ -55,7 +54,7 @@ test.describe("물납 (§73)", () => {
     await expect(page.getByText("관리·처분 부적당 제외액")).toBeVisible();
 
     // 계산 → 결과
-    await page.getByRole("button", { name: /계산하기/ }).click();
+    await calcAndWaitResult(page);
 
     // 물납 안내 카드 — 요건 충족 + 허용한도 + 충당순서
     await expect(page.getByText("물납 안내 (상증법 §73)")).toBeVisible();
@@ -74,7 +73,7 @@ test.describe("물납 (§73)", () => {
     await gotoStep4(page);
 
     // 물납 토글 켜지 않고 바로 계산
-    await page.getByRole("button", { name: /계산하기/ }).click();
+    await calcAndWaitResult(page);
 
     // 결과 화면 진입(연부연납 안내는 적격이라 표시) — 물납 카드만 없음
     await expect(page.getByText("연부연납 안내 (상증법 §71)")).toBeVisible();

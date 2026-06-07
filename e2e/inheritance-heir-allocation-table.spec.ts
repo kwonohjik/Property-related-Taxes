@@ -34,6 +34,12 @@
  */
 
 import { test, expect, type Page } from "@playwright/test";
+import {
+  fillDateAndVerify,
+  addLandAsset as addLandAssetHelper,
+  nextSteps,
+  calcAndWaitResult,
+} from "./_helpers/tax-flow";
 
 // ============================================================
 // 공용 헬퍼
@@ -51,9 +57,7 @@ async function gotoStep0AndAddChildren(page: Page, childCount: number) {
   await page.goto("/calc/inheritance-tax");
 
   // 상속개시일
-  await page.getByLabel("연도").first().fill("2024");
-  await page.getByLabel("월").first().fill("6");
-  await page.getByLabel("일").first().fill("10");
+  await fillDateAndVerify(page, { year: "2024", month: "6", day: "10" });
 
   // 자녀 N명 추가
   for (let i = 0; i < childCount; i++) {
@@ -67,26 +71,16 @@ async function gotoStep0AndAddChildren(page: Page, childCount: number) {
 
 /** Step1: 토지 카드 추가 후 면적·공시지가 입력 */
 async function addLandAsset(page: Page) {
-  await page.getByRole("button", { name: /상속재산 추가/ }).click();
-  await page.getByRole("button", { name: /토지/ }).first().click();
-
   // 면적 300㎡ × 공시지가 1,000,000원/㎡ = 3억 평가액
-  await page.getByPlaceholder("면적 입력").fill("300");
-  await page.getByPlaceholder("공시지가 단가").fill("1000000");
+  await addLandAssetHelper(page, { area: "300", unitPrice: "1000000" });
 }
 
 /** Step1 → Step2 → Step3 → Step4 → 계산하기 → 결과 화면 대기 */
 async function proceedToResult(page: Page) {
-  // Step2(비과세·장례비)
-  await page.getByRole("button", { name: /^다음/ }).click();
-  // Step3(사전증여)
-  await page.getByRole("button", { name: /^다음/ }).click();
-  // Step4(공제·세액공제)
-  await page.getByRole("button", { name: /^다음/ }).click();
-  // 계산하기
-  await page.getByRole("button", { name: /계산하기/ }).click();
-  // 결과 화면 로드 대기
-  await expect(page.getByText("상속세 결정세액")).toBeVisible({ timeout: 15_000 });
+  // Step2(비과세·장례비) → Step3(사전증여) → Step4(공제·세액공제)
+  await nextSteps(page, 3);
+  // 계산하기 + 결과 화면 로드 대기
+  await calcAndWaitResult(page);
 }
 
 // ============================================================
