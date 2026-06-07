@@ -157,11 +157,18 @@ function distributePerCorporate(
 ): PerCorporateExemptionDetail[] {
   if (totalTaxBase <= 0) return [];
 
-  return inputs.map((inp) => {
+  // floor 안분 잔액 흡수 ([[feedback_floor_residual_absorption]]): 앞 법인은 floor,
+  //   마지막 법인이 (totalExemption − 앞 법인 합)을 흡수 → Σ exemptionAmount == totalExemption.
+  let allocated = 0;
+  return inputs.map((inp, idx) => {
+    const isLast = idx === inputs.length - 1;
     const exemptionAmount =
       inputs.length === 1
         ? totalExemption
-        : Math.floor((totalExemption * inp.taxBase) / totalTaxBase);
+        : isLast
+          ? totalExemption - allocated // 마지막 법인 잔액 흡수
+          : Math.floor((totalExemption * inp.taxBase) / totalTaxBase);
+    allocated += exemptionAmount;
     const tenPercentBaseline = Math.floor(inp.inheritedAmount * 0.1);
     const residualForShareholders = Math.max(
       0,

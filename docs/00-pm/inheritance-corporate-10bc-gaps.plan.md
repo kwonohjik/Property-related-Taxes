@@ -127,7 +127,7 @@ perHeir: buildPerHeir(sorted,
 
 ## 범위 외 후속 (본 계획 제외)
 
-- `distributePerCorporate`(`inheritance-corporate-exemption.ts:164`) 다수 영리법인 floor 안분 **잔액 미흡수** → Σ exemptionAmount < totalExemption 가능(±법인수 원). [[feedback_floor_residual_absorption]] 적용 대상이나 GAP-2(perHeir 중복 해소)와 별개 — 별도 후속.
+- ~~`distributePerCorporate`(`inheritance-corporate-exemption.ts:164`) 다수 영리법인 floor 안분 **잔액 미흡수**~~ → **완료 ✅ (2026-06-07)**: 누적+마지막 법인 잔액 흡수로 Σ exemptionAmount == totalExemption. [[feedback_floor_residual_absorption]]. anchor CORP-FLOOR-1·2·3·6638 PASS. (feature/inheritance-corporate-floor-residual)
 
 ---
 
