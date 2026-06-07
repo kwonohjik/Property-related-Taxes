@@ -317,6 +317,24 @@ describe("PHF-META — 사후관리 메타 빌더", () => {
     ]);
   });
 
+  it("PHF-META-VAL: marketValue 없는 가업자산 → value = resolveEstateItemValue 평가액 (J-1)", () => {
+    // 비상장주식·부동산은 marketValue 없이 감정가(appraisedValue)·기준시가(standardPrice)로 평가.
+    //   기존 i.marketValue ?? 0 → value=0 버그. resolveEstateItemValue로 통일.
+    const itemsNoMarket = [
+      { id: "b1", category: "real_estate_land", name: "공장부지", appraisedValue: 5_000_000_000, familyBusinessCategory: "business_real_estate" },
+      { id: "b2", category: "real_estate_building", name: "공장", standardPrice: 3_000_000_000, familyBusinessCategory: "business_real_estate" },
+    ] as unknown as EstateItem[];
+    const meta = buildFamilyBusinessPostMgmtMeta({
+      familyBusinessDeduction: 20_000_000_000,
+      familyBusinessDetail: detail,
+      estateItems: itemsNoMarket,
+      deathDate: "2026-01-15",
+    });
+    // 현재(버그): [{value:0},{value:0}]. 수정 후: 감정가·기준시가 평가액.
+    expect(meta?.inheritedAssets[0].value).toBe(5_000_000_000);
+    expect(meta?.inheritedAssets[1].value).toBe(3_000_000_000);
+  });
+
   it("PHF-META-2: 가업공제 0 → undefined", () => {
     expect(buildFamilyBusinessPostMgmtMeta({
       familyBusinessDeduction: 0,

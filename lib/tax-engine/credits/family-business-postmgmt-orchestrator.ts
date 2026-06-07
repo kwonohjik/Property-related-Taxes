@@ -12,6 +12,7 @@
 import { addMonths, addYears, differenceInDays, endOfMonth, format, parseISO } from "date-fns";
 
 import { INH } from "../legal-codes";
+import { resolveEstateItemValue } from "../valuation/resolve-estate-item-value";
 import type { AssetCategory } from "../types/inheritance-gift.types";
 import type { EstateItem, FamilyBusinessDeductionDetail } from "../types/inheritance-gift.types";
 import type {
@@ -200,7 +201,9 @@ export function buildFamilyBusinessPostMgmtMeta(args: {
       .filter((i) => i.familyBusinessCategory !== undefined)
       .map((i) => ({
         id: i.id,
-        value: i.marketValue ?? 0,
+        // J-1: §60 평가 우선순위(시가→감정가→기준시가→주식 보충평가) 통일.
+        //   marketValue 직접 사용 시 비상장주식 V2·부동산(감정가·기준시가)은 value=0 누락.
+        value: resolveEstateItemValue(i),
         type: mapEstateItemToPostMgmtType(i.category),
       })),
   };
