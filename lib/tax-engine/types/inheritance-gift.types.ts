@@ -693,6 +693,23 @@ export interface Heir {
    * 합 ≤ 1.0 (외부 주주 — 상속인 아닌 자 — 보유분은 명세 제외, validate 미차단)
    */
   shareholders?: ShareholderInfo[];
+
+  // ===== Phase 2 (2026-06-07) — §23의2①1호 동거기간 검증 =====
+  /**
+   * §23의2①1호 동거 시작일 (ISO date, YYYY-MM-DD).
+   * - 입력 시: 엔진이 deathDate와의 차이로 동거연수 계산, result.cohabitDeductionDetail.cohabitYears에 echo.
+   * - 미입력 시: 동거기간 자동 검증 생략 — isCohabitant 체크박스(사용자 확인) 신뢰.
+   *   (자동 안분 fallback 금지 정책 부합 — validation 오류 아님)
+   */
+  cohabitStartDate?: string;
+
+  /**
+   * §23의2② + 상증령 §20의2 부득이한 사유(징집·취학·근무상 형편·질병 요양)로 동거에서 제외할 연수.
+   * 해당 기간은 계속 동거로 인정되나 동거기간에는 산입하지 아니함.
+   * - 미입력 시 0으로 처리 (제외 연수 없음 = 기본값, 납세자 유리 방향이나 사유 판단은 세무사 영역).
+   * - DecimalInput(소수점 허용).
+   */
+  cohabitExcludedYears?: number;
 }
 
 /**
@@ -892,6 +909,23 @@ export interface CasualtyLossInput {
 }
 
 // ============================================================
+// §23의2① 주택부수토지 지역 구분 (G4 Phase 3)
+// ============================================================
+
+/**
+ * 주택부수토지 지역 구분 — 소득세 시행령 §154⑦ 배율 결정.
+ * - metro_residential_commercial_industrial: 수도권 주거·상업·공업지역 → 3배
+ * - metro_green: 수도권 녹지지역 → 5배
+ * - non_metro: 수도권 밖 도시지역 → 5배
+ * - other: 그 밖의 토지 → 10배
+ */
+export type AncillaryLandRegion =
+  | "metro_residential_commercial_industrial"
+  | "metro_green"
+  | "non_metro"
+  | "other";
+
+// ============================================================
 // 상속공제 입력 (inheritance-deductions.ts)
 // ============================================================
 
@@ -980,6 +1014,34 @@ export interface InheritanceDeductionInput {
    * ★ Pre-Do stub (2026-06-07): 타입만 추가, 엔진 분기 미구현 — anchor 실패 확보용.
    */
   isUnfiled?: boolean;
+
+  // ===== Phase 3 (2026-06-07) — G4 §23의2① 주택부수토지 면적한도 =====
+  /**
+   * §23의2①(소득세법 §89①3호 준용) 주택부수토지 실제 면적 (㎡).
+   * - 아파트·공동주택가격은 부수토지 포함이므로 입력 불필요.
+   * - 단독주택 대형토지를 별도 EstateItem으로 분리 입력할 때만 면적 초과분 차감이 필요.
+   * - 미입력 시 차감 없음 (자동 안분 fallback 금지 정책 부합).
+   * - ancillaryLandArea·buildingFootprintArea·ancillaryLandRegion 세 필드 전부 또는 전무 입력.
+   *   일부만 입력 시 validation ⑧에서 차단.
+   */
+  ancillaryLandArea?: number;
+
+  /**
+   * 건물 정착 면적 (㎡) — 소득세 시행령 §154⑦ 배율 계산의 분모.
+   * "건물이 정착된 면적에 지역별로 대통령령으로 정하는 배율을 곱하여 산정한 면적".
+   * ancillaryLandArea·ancillaryLandRegion과 함께 전부 입력 또는 전부 미입력.
+   */
+  buildingFootprintArea?: number;
+
+  /**
+   * 주택부수토지 지역 구분 — 소득세 시행령 §154⑦ 배율 결정.
+   * - metro_residential_commercial_industrial: 수도권 주거·상업·공업지역 → 3배 (§154⑦1호가)
+   * - metro_green: 수도권 녹지지역 → 5배 (§154⑦1호나)
+   * - non_metro: 수도권 밖 도시지역 → 5배 (§154⑦1호다)
+   * - other: 그 밖의 토지 → 10배 (§154⑦2호)
+   * ancillaryLandArea·buildingFootprintArea와 함께 전부 입력 또는 전부 미입력.
+   */
+  ancillaryLandRegion?: AncillaryLandRegion;
 }
 
 // 분리 타입 barrel (800줄 정책)

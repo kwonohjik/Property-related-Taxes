@@ -520,6 +520,19 @@ export function validateInheritanceTaxInput(
     }
   }
 
+  // ⑧ G4 §23의2① 주택부수토지 면적한도 — 3필드 partial 입력 차단 (전부 또는 전무)
+  // 자동 안분 fallback 금지: 미입력=차감 없음이므로, 일부만 입력 시 의도 불명확 → 오류 차단
+  {
+    const di = input.deductionInput;
+    const hasArea = di?.ancillaryLandArea !== undefined;
+    const hasFootprint = di?.buildingFootprintArea !== undefined;
+    const hasRegion = di?.ancillaryLandRegion !== undefined;
+    const filledCount = [hasArea, hasFootprint, hasRegion].filter(Boolean).length;
+    if (filledCount > 0 && filledCount < 3) {
+      return "주택부수토지 면적한도(§23의2①): 부수토지 면적·건물 정착 면적·지역 구분 세 항목을 모두 입력하거나 모두 비워야 합니다.";
+    }
+  }
+
   return null;
 }
 

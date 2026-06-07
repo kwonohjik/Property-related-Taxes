@@ -515,9 +515,13 @@ export interface CohabitHouseCandidate {
 
 export interface CohabitHouseCandidates {
   candidates: CohabitHouseCandidate[];
-  /** 자녀 중 isCohabitant=true 인 상속인이 있는지 */
+  /**
+   * isCohabitant=true 인 상속인이 있는지.
+   * Phase 2 (2026-06-07): 관계 필터 제거 — showCohabitant(UI)가 적격성 담당.
+   * 하위 호환을 위해 필드명 hasCohabitantChild 유지.
+   */
   hasCohabitantChild: boolean;
-  /** 도출 가능 여부 — 후보 1건 이상 + 동거 자녀 존재 */
+  /** 도출 가능 여부 — 후보 1건 이상 + 동거 상속인 존재 */
   isApplicable: boolean;
 }
 
@@ -525,14 +529,15 @@ export interface CohabitHouseCandidates {
  * 동거주택 §23의2 후보 자산 도출.
  * - 주택 카테고리(real_estate_apartment·real_estate_building)
  * - standardPrice 1원 이상
- * - 자녀 상속인 중 isCohabitant=true 존재
+ * - isCohabitant=true 상속인 존재 (관계 필터 없음 — UI showCohabitant가 적격성 담당)
  */
 export function suggestCohabitHouseCandidates(
   estateItems: EstateItem[],
   heirs: Heir[],
 ): CohabitHouseCandidates {
+  // Phase 2: 관계 필터 제거 → isCohabitant=true 전체 (G5 손자녀·대습배우자 포함)
   const hasCohabitantChild = heirs.some(
-    (h) => h.relation === "child" && h.isCohabitant === true,
+    (h) => h.isCohabitant === true,
   );
   const candidates: CohabitHouseCandidate[] = [];
   for (const item of estateItems) {
@@ -572,15 +577,16 @@ export function suggestCohabitHouseCandidates(
  *   ★ E-1: §23의2① 담보채무 차감은 엔진 calcCohabitationDeduction(deductions.ts:294)이 단일 수행.
  *   derive가 또 빼면 이중차감(5억·저당1억 → 공제 3억, 정답 4억).
  * - 담보채무 = 저당 등 담보권 설정 채무만(KoreanLaw §23의2① mst 276123 검증). 일반 임대보증금(무담보) 제외.
- * - heirs: 동거 자녀(relation==="child" && isCohabitant) 보조 안내.
+ * - heirs: isCohabitant=true 상속인 존재 여부 안내 (관계 무관 — UI showCohabitant 적격성 담당).
  */
 export function deriveCohabitHouseStdPrice(
   estateItems: EstateItem[],
   heirs: Heir[],
 ): DeductionSuggestion & { securedDebt: number } {
   const houses = estateItems.filter((i) => i.isCohabitantHouse === true);
+  // Phase 2: 관계 필터 제거 → isCohabitant=true 전체
   const hasCohabitantChild = heirs.some(
-    (h) => h.relation === "child" && h.isCohabitant === true,
+    (h) => h.isCohabitant === true,
   );
 
   if (houses.length === 0) {

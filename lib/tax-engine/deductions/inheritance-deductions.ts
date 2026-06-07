@@ -36,6 +36,10 @@ import {
   calcPersonalDeductions,
 } from "./personal-deduction-calc";
 import { calcLegalShareRatios } from "../tax-utils";
+import {
+  calcCohabitYears,
+  applyAncillaryLandLimit,
+} from "./inheritance-cohabit-helpers";
 
 // 영농 관련 함수 re-export (분리된 모듈 — 외부 import 경로 무변경)
 export {
@@ -95,6 +99,15 @@ function cohabitRateAndCap(deathDate?: string): { rate: number; cap: number } {
   if (d >= "2009-01-01") return { rate: 0.4, cap: 500_000_000 };
   return { rate: 0, cap: 0 }; // 2009.1.1. 이전 상속 — 동거주택 상속공제 제도 부재
 }
+
+// ============================================================
+// G5·G3·G4 헬퍼 re-export (800줄 정책 — inheritance-cohabit-helpers.ts 분리)
+// ============================================================
+export {
+  isCohabitDeductionEligibleRelation,
+  calcCohabitYears,
+  applyAncillaryLandLimit,
+} from "./inheritance-cohabit-helpers";
 
 // ============================================================
 // 개별 공제 계산 함수
@@ -273,15 +286,20 @@ export function calcFinancialDeduction(netFinancialAssets: number): {
 
 /**
  * 동거주택 상속공제 (§23의2)
- * 공제액 = 주택 공시가격 × 80% 또는 100%, 최대 6억
+ * 공제액 = 주택 공시가격 × 율(시기별), 최대 한도(시기별)
  * (요건 확인은 UI에서 체크박스로 처리, 여기서는 금액만 계산)
  *
- * E3: detail: CohabitDeductionDetail 반환 추가.
+ * Phase 2 (2026-06-07): G3 동거연수 echo, G4 면적한도 차감 echo 추가.
+ *   - cohabitYearsEcho: calcCohabitYears 계산 결과 (cohabitStartDate 입력 시)
+ *   - ancillaryLandLimitReduction: applyAncillaryLandLimit 차감액 (G4 입력 시)
+ *   두 필드 모두 undefined 허용 (미입력 시 기존 동작 무변경)
  */
 export function calcCohabitationDeduction(
   cohabitHouseStdPrice: number,
   securedDebt = 0,
   deathDate?: string,
+  cohabitYearsEcho?: CohabitDeductionDetail["cohabitYears"],
+  ancillaryLandLimitReduction?: number,
 ): {
   deduction: number;
   breakdown: CalculationStep[];
@@ -307,6 +325,8 @@ export function calcCohabitationDeduction(
         rawDeduction: 0,
         cap,
         cappedDeduction: 0,
+        cohabitYears: cohabitYearsEcho,
+        ancillaryLandLimitReduction,
       },
     };
   }
@@ -341,6 +361,8 @@ export function calcCohabitationDeduction(
       rawDeduction,
       cap,
       cappedDeduction,
+      cohabitYears: cohabitYearsEcho,
+      ancillaryLandLimitReduction,
     },
   };
 }
@@ -467,10 +489,46 @@ export function calcInheritanceDeductions(
   const financialDeduction = financialResult.deduction;
 
   // ⑥ 동거주택공제 (Phase E: 직접 입력 모드)
+
+  // G3: §23의2①1호 동거연수 echo 계산 — isCohabitant=true 상속인 중 cohabitStartDate 입력자 우선
+  // (복수 동거 상속인 중 첫 번째 입력값 사용 — 실무상 단일 상속인이 대부분)
+  const cohabitingHeir = input.heirs.find(
+    (h) => h.isCohabitant === true && h.cohabitStartDate !== undefined,
+  );
+  let cohabitYearsEcho: CohabitDeductionDetail["cohabitYears"] | undefined;
+  if (cohabitingHeir?.cohabitStartDate && baseDate) {
+    const yearsResult = calcCohabitYears(
+      cohabitingHeir.cohabitStartDate,
+      baseDate,
+      cohabitingHeir.birthDate,
+      cohabitingHeir.cohabitExcludedYears ?? 0,
+    );
+    cohabitYearsEcho = yearsResult;
+    // meetsRequirement는 result.cohabitDeductionDetail.cohabitYears에 echo.
+    // orchestrator(inheritance-tax.ts)가 meetsRequirement=false 시 warnings에 추가.
+    // (이 함수는 warnings 미보유 — orchestrator 담당)
+  }
+
+  // G4: §23의2① 주택부수토지 면적한도 차감 — InheritanceDeductionInput 3필드 전부 입력 시
+  // 미입력 시 차감 없음 (자동 안분 fallback 금지 정책)
+  const ancillaryLimitResult = applyAncillaryLandLimit(
+    input.buildingFootprintArea,
+    input.ancillaryLandArea,
+    input.ancillaryLandRegion,
+    input.cohabitHouseStdPrice ?? 0,
+  );
+  // G4 차감 후 실질 공시가격 (directAmount 모드는 사용자가 이미 반영한 금액이므로 적용 안 함)
+  const adjustedCohabitHouseStdPrice = ancillaryLimitResult.adjustedHousePrice;
+  const ancillaryLandLimitReduction =
+    ancillaryLimitResult.limitReductionAmount > 0
+      ? ancillaryLimitResult.limitReductionAmount
+      : undefined;
+
   let cohabitDeductionDetail: CohabitDeductionDetail;
   let cohabitResult: { deduction: number; breakdown: CalculationStep[] };
   if (input.cohabitDirectAmount !== undefined && input.cohabitDirectAmount > 0) {
     // directAmount 모드: 사용자가 율·차감 적용한 최종액 입력 → rate 미적용, 상속개시일 기준 한도만 적용.
+    // G4: directAmount는 사용자가 이미 면적한도를 반영한 금액으로 간주 — 추가 차감 없음.
     const { cap } = cohabitRateAndCap(baseDate);
     const capped = Math.min(input.cohabitDirectAmount, cap);
     cohabitResult = {
@@ -492,14 +550,18 @@ export function calcInheritanceDeductions(
       rawDeduction: input.cohabitDirectAmount,
       cap,
       cappedDeduction: capped,
+      cohabitYears: cohabitYearsEcho,
+      // directAmount 모드에서는 G4 차감이 이미 사용자 입력에 포함된 것으로 간주
     };
   } else {
     // §23의2① 담보채무(저당) 차감 — buildInput이 deriveCohabitHouseStdPrice로 cohabitSecuredDebt 주입.
-    // cohabitHouseStdPrice는 gross(공시가격), securedDebt는 본 함수가 단일 차감(deductions.ts:294). deathDate로 80%/100% historical 분기.
+    // G4 차감 후 adjustedCohabitHouseStdPrice 사용 (미입력 시 원가 그대로).
     const cohabitFull = calcCohabitationDeduction(
-      input.cohabitHouseStdPrice ?? 0,
+      adjustedCohabitHouseStdPrice,
       input.cohabitSecuredDebt ?? 0,
       baseDate,
+      cohabitYearsEcho,
+      ancillaryLandLimitReduction,
     );
     cohabitResult = { deduction: cohabitFull.deduction, breakdown: cohabitFull.breakdown };
     cohabitDeductionDetail = cohabitFull.detail;

@@ -504,6 +504,14 @@ export function calcInheritanceTax(
   allBreakdown.push(...deductionResult.breakdown);
   for (const law of deductionResult.appliedLaws) allLaws.add(law);
 
+  // G3 경고: §23의2①1호 동거연수 10년 요건 미달 (비차단 — feedback_no_silent_apportion_fallback)
+  const cohabitYearsResult = deductionResult.cohabitDeductionDetail?.cohabitYears;
+  if (cohabitYearsResult && !cohabitYearsResult.meetsRequirement) {
+    allWarnings.push(
+      `동거연수 ${cohabitYearsResult.effectiveYears}년 — §23의2①1호 10년 요건 미달 가능성. 실제 동거기간을 확인하세요.`,
+    );
+  }
+
   // ─────────────────────────────────────────────
   // STEP 7: 과세표준 (상증법 §25 — 절사 규정 없음, 원 단위)
   //   §25①2호 감정평가수수료 공제 차감 (시행령 §20의3)

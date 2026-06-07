@@ -426,6 +426,14 @@ export const heirSchema = z.object({
   isSubstituteInheritance: z.boolean().optional(),
   // B-7 (2026-06-01) — §27 미성년 3-state override. undefined=자동(birthDate), true/false=수동.
   isMinorOverride: z.boolean().optional(),
+  // Phase 2 (2026-06-07) — §23의2①1호 동거기간 검증. ⑫ 미선언 시 z.object 침묵 strip → 엔진 미도달.
+  // cohabitStartDate: 미입력=검증 생략(isCohabitant 체크박스 신뢰). validation 오류 아님.
+  cohabitStartDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD 형식")
+    .optional(),
+  // cohabitExcludedYears: §23의2② 부득이 사유 제외 연수. 미입력=0처리. nonnegative.
+  cohabitExcludedYears: z.number().nonnegative().optional(),
   // donee-phase2 — 영리법인 여부 (corporate Heir, §3의2② 적용 판정). ⚠️ z.object 침묵 strip 방지.
   isForProfit: z.boolean().optional(),
   corporateGiftComputedTax: z.number().nonnegative().optional(),
@@ -627,6 +635,21 @@ export const inheritanceDeductionInputSchema = z.object({
         .optional(),
       isWithinFilingDeadline: z.boolean().optional(),
     })
+    .optional(),
+  // ⑨⑫ 동기화 (2026-06-07, G4 §23의2① 주택부수토지 면적한도 Phase 3).
+  // 세 필드 전부 또는 전무 — validate ⑧에서 partial 입력 차단.
+  // ancillaryLandArea: 부수토지 실제 면적(㎡). 미입력=차감 없음(자동 안분 fallback 금지).
+  ancillaryLandArea: z.number().nonnegative().optional(),
+  // buildingFootprintArea: 건물 정착 면적(㎡). 소득세 시행령 §154⑦ 배율 계산 분모.
+  buildingFootprintArea: z.number().nonnegative().optional(),
+  // ancillaryLandRegion: 지역 구분 4종 enum (소득세 시행령 §154⑦ 4호).
+  ancillaryLandRegion: z
+    .enum([
+      "metro_residential_commercial_industrial",
+      "metro_green",
+      "non_metro",
+      "other",
+    ])
     .optional(),
 });
 

@@ -197,10 +197,35 @@ export interface CohabitDeductionDetail {
   rate: number;
   /** 한도 적용 전 raw = floor(base × rate) */
   rawDeduction: number;
-  /** 6억원 최고한도 */
+  /** 최고한도 (연혁: 5억원 2009~2019 / 6억원 2020~) */
   cap: number;
   /** 최종 공제액 = min(rawDeduction, cap) */
   cappedDeduction: number;
+
+  // ===== Phase 2 (2026-06-07) — G3 동거기간 검증 echo =====
+  /**
+   * §23의2①1호 동거연수 계산 결과.
+   * Heir.cohabitStartDate가 입력된 경우만 존재. 미입력 시 undefined.
+   *
+   * - rawYears: floor(deathDate − effectiveStart) 연수 (미성년 제외 전)
+   * - minorYearsDeducted: 미성년 기간 제외 연수 (2016.1.1.~ 시행, birthDate 기반)
+   * - effectiveYears: rawYears − minorYearsDeducted − excludedYears
+   * - meetsRequirement: effectiveYears >= 10 (경고 표시용 — 자동 차단 아님)
+   */
+  cohabitYears?: {
+    rawYears: number;
+    minorYearsDeducted: number;
+    effectiveYears: number;
+    meetsRequirement: boolean;
+  };
+
+  // ===== Phase 3 (2026-06-07) — G4 주택부수토지 면적한도 차감 echo =====
+  /**
+   * §23의2① 주택부수토지(소득세 시령 §154⑦ 배율) 초과분 차감액.
+   * ancillaryLandArea·buildingFootprintArea·ancillaryLandRegion 모두 입력된 경우만 존재.
+   * 미입력(아파트·공동주택 등) 또는 초과 없음 시 undefined.
+   */
+  ancillaryLandLimitReduction?: number;
 }
 
 // ============================================================
