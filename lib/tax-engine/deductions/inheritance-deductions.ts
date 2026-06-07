@@ -39,6 +39,7 @@ import { calcLegalShareRatios } from "../tax-utils";
 import {
   calcCohabitYears,
   applyAncillaryLandLimit,
+  isCohabitDeductionApplicableHouse,
 } from "./inheritance-cohabit-helpers";
 
 // 영농 관련 함수 re-export (분리된 모듈 — 외부 import 경로 무변경)
@@ -532,7 +533,35 @@ export function calcInheritanceDeductions(
 
   let cohabitDeductionDetail: CohabitDeductionDetail;
   let cohabitResult: { deduction: number; breakdown: CalculationStep[] };
-  if (input.cohabitDirectAmount !== undefined && input.cohabitDirectAmount > 0) {
+  // §23의2 자산유형 미적용 게이트 — 1+1 입주권·분양권 (조심 2021중6665 / §23의2① 주택 문언).
+  // ★엔진 단일 게이트: general·directAmount 양 경로 진입 직전 차단 (lib/calc 사각지대 회피).
+  const cohabitGate = isCohabitDeductionApplicableHouse(input.cohabitHouseRightType);
+  if (!cohabitGate.applicable) {
+    cohabitResult = {
+      deduction: 0,
+      breakdown: [
+        {
+          label: `동거주택공제 미적용 — ${cohabitGate.reason}`,
+          amount: 0,
+          lawRef: INH.COHABIT_DEDUCTION,
+        },
+      ],
+    };
+    cohabitDeductionDetail = {
+      housingValue: adjustedCohabitHouseStdPrice,
+      securedDebt: 0,
+      base: 0,
+      rate: 0,
+      rawDeduction: 0,
+      cap: 0,
+      cappedDeduction: 0,
+      cohabitYears: cohabitYearsEcho,
+      isExcluded: true,
+      exclusionReason: input.cohabitHouseRightType as
+        | "one_plus_one_right"
+        | "sale_right",
+    };
+  } else if (input.cohabitDirectAmount !== undefined && input.cohabitDirectAmount > 0) {
     // directAmount 모드: 사용자가 율·차감 적용한 최종액 입력 → rate 미적용, 상속개시일 기준 한도만 적용.
     // G4: directAmount는 사용자가 이미 면적한도를 반영한 금액으로 간주 — 추가 차감 없음.
     const { cap } = cohabitRateAndCap(baseDate);

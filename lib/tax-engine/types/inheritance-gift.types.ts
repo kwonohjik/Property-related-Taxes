@@ -221,6 +221,17 @@ export interface EstateItem extends EstateLocationFields {
    * cohabitHouseStdPrice·cohabitSecuredDebt로 도출. 복수 지정은 자동도출 포기(isApplicable=false).
    */
   isCohabitantHouse?: boolean;
+  /**
+   * §23의2 동거주택 자산 유형 구분 (폼·UI용).
+   * isCohabitantHouse=true 시 함께 지정.
+   *
+   * - "house":              일반 주택 (기본값, undefined=house 동일 취급)
+   * - "single_redev_right": 1세대1주택 멸실 취득 단일 조합원입주권 → 적용
+   *                         (재산세제과-230·237, NTS[113036] V-1 확정)
+   * - "one_plus_one_right":  1주택→2입주권 재개발 → 미적용 (조심 2021중6665)
+   * - "sale_right":          주택분양권 → 미적용 (§23의2① "주택" 문언)
+   */
+  cohabitHouseRightType?: "house" | "single_redev_right" | "one_plus_one_right" | "sale_right";
 
   // ===== 상속개시자료 요약 4표 — Table A 비고/수량 열 (2026-05-28) =====
   /**
@@ -1021,6 +1032,17 @@ export interface InheritanceDeductionInput {
    * 제공 시 80% 산정 생략하고 입력값 그대로 적용 (한도 6억은 유지).
    */
   cohabitDirectAmount?: number;
+  /**
+   * §23의2 동거주택 자산 유형 (엔진 게이트용).
+   * deriveCohabitHouseStdPrice가 EstateItem.cohabitHouseRightType을 전달.
+   * general 경로(:cohabitHouseStdPrice)·directAmount 경로 양쪽에서 게이트 적용.
+   *
+   * - "house" | "single_redev_right" | undefined → applicable=true (적용)
+   * - "one_plus_one_right" | "sale_right" → applicable=false (미적용, cappedDeduction=0)
+   *
+   * 법령: §23의2① (mst=276123), 조심 2021중6665 (id=34000), 재산세제과-230·237
+   */
+  cohabitHouseRightType?: "house" | "single_redev_right" | "one_plus_one_right" | "sale_right";
   /**
    * §19 배우자 법정상속분 직접 입력 (Phase D).
    * 제공 시 calcSpouseDeduction이 법정상속분 자동 산정 대신 입력값 사용.

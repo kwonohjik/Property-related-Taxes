@@ -368,6 +368,9 @@ export function InheritanceTaxForm() {
       netFinancialAssets: autoOrManual(form.netFinancialAssets, netFinAuto),
       cohabitHouseStdPrice: autoOrManual(form.cohabitHouseStdPrice, autos.cohabit.value),
       cohabitSecuredDebt: autos.cohabit.securedDebt || undefined,
+      // §23의2 자산유형(입주권·분양권) — 미적용 게이트(엔진). 동거주택 단일 자산에서 도출.
+      cohabitHouseRightType: form.estateItems.find((i) => i.isCohabitantHouse === true)
+        ?.cohabitHouseRightType,
       farmingAssetValue: autoOrManual(form.farmingAssetValue, autos.farming.value),
       familyBusinessValue: parseAmount(form.familyBusinessValue) || undefined,
       familyBusinessYears: form.familyBusinessYears

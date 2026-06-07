@@ -283,6 +283,22 @@ export interface CohabitDeductionDetail {
    * - 미입력(아파트·공동주택 등): undefined.
    */
   ancillaryLandLimitReduction?: number;
+
+  // ===== §23의2 입주권·분양권 미적용 게이트 echo =====
+  /**
+   * true: cohabitHouseRightType이 one_plus_one_right 또는 sale_right → 공제 미적용, cappedDeduction=0.
+   * false/undefined: 적용 (house·single_redev_right·undefined).
+   *
+   * 법령: §23의2① (mst=276123), 조심 2021중6665 (id=34000)
+   */
+  isExcluded?: boolean;
+  /**
+   * 미적용 사유 (확정 2종만).
+   * - "one_plus_one_right": 1+1 조합원입주권 (조심 2021중6665)
+   * - "sale_right":         분양권 (§23의2① "주택" 문언)
+   * single_redev_right은 적용이므로 여기 포함 안 됨.
+   */
+  exclusionReason?: "one_plus_one_right" | "sale_right";
 }
 
 // ============================================================

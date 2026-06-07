@@ -17,6 +17,7 @@ import type {
   CohabitReason,
   CohabitReasonType,
   Heir,
+  InheritanceDeductionInput,
 } from "../types/inheritance-gift.types";
 import type {
   CohabitReasonBreakdown,
@@ -26,6 +27,48 @@ import type {
 // ============================================================
 // G5: §23의2①1호 대상 상속인 적격성 판정
 // ============================================================
+
+// ============================================================
+// G6-RIGHT: §23의2 자산 유형(조합원입주권·분양권) 적용 가능 여부 판정
+// ============================================================
+
+/**
+ * §23의2 동거주택공제 — 자산 유형(cohabitHouseRightType)별 적용 가능 여부.
+ *
+ * 법령 근거:
+ *   - house / single_redev_right / undefined → 적용
+ *       · single_redev_right: 기재부 재산세제과-230(2012.3.22)·재산세제과-237(2012.6.25, NTS113036)
+ *         — 1세대1주택 멸실로 취득한 (단일) 입주권 + 다른 주택 無 시 1세대1주택 요건 충족·적용
+ *         (조심 2017서2253·2021중6665 결정문 전문 축자 인용으로 원문 확보)
+ *       · undefined: 레거시(house 간주) — 회귀 0 (validation CV-1 경고로 명시 선택 유도)
+ *   - one_plus_one_right → 미적용 (조심 2021중6665·서면-2020-상속증여-5940: 2입주권=1세대1주택 미충족)
+ *   - sale_right → 미적용 (§23의2① "주택" 문언상 분양권은 대상 자산 아님)
+ *
+ * @param rightType InheritanceDeductionInput.cohabitHouseRightType
+ * @returns { applicable; reason }
+ */
+export function isCohabitDeductionApplicableHouse(
+  rightType: InheritanceDeductionInput["cohabitHouseRightType"],
+): { applicable: boolean; reason: string } {
+  switch (rightType) {
+    case "one_plus_one_right":
+      return {
+        applicable: false,
+        reason:
+          "1주택이 2개 조합원입주권으로 전환 — §23의2① 1세대1주택 요건 미충족 (조심 2021중6665)",
+      };
+    case "sale_right":
+      return {
+        applicable: false,
+        reason: "분양권은 §23의2① '주택'에 해당하지 않음 — 동거주택 상속공제 대상 아님",
+      };
+    case "single_redev_right":
+    case "house":
+    case undefined:
+    default:
+      return { applicable: true, reason: "" };
+  }
+}
 
 /**
  * §23의2①1호 동거주택공제 대상 상속인 적격성 판정.
