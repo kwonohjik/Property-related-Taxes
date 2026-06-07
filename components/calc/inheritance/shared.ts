@@ -62,6 +62,18 @@ export interface FormState extends AppraisalFeeFormFields {
   priorGiftDeductionTotal: string;
   /** 재해손실공제 (§24 종합한도 분자 보정) — §54 재해로 멸실·훼손된 상속재산 손실액 */
   disasterLossDeduction: string;
+
+  // §23 재해손실공제 (신규, 2026-06-07) — 상속세 과세가액 직접 공제
+  /** §23 재해손실공제 신청 여부 (토글 ON/OFF) */
+  casualtyLossEnabled: boolean;
+  /** §23 재해손실재산가액 (원) */
+  casualtyLossValue: string;
+  /** §23 보전가능금액 (보험금·구상권) */
+  casualtyLossCompensated: string;
+  /** §23 재난 종류 (상증령 §20①) */
+  casualtyLossType: "fire" | "collapse" | "explosion" | "environmental" | "natural" | "other";
+  /** §23 재난 발생일 (YYYY-MM-DD) */
+  casualtyLossDate: string;
   // 영농상속공제 정밀화 (2026-05-21, §18의3 + 시행령 §16)
   // 3-state: undefined (legacy 모드) / 객체 (활성화) — feedback_three_state_optional_mode_toggle
   farming?: FarmingInheritanceInput;
@@ -163,6 +175,12 @@ export const INITIAL_FORM: FormState = {
   legateeAmountNonHeir: "",
   priorGiftDeductionTotal: "",
   disasterLossDeduction: "",
+  // §23 재해손실공제 초기값
+  casualtyLossEnabled: false,
+  casualtyLossValue: "",
+  casualtyLossCompensated: "",
+  casualtyLossType: "fire",
+  casualtyLossDate: "",
   farming: undefined,
   familyBusiness: undefined,
   isGenerationSkip: false,

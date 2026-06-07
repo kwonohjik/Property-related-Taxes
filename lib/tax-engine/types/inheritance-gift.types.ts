@@ -852,6 +852,34 @@ export type {
 };
 
 // ============================================================
+// §23 재해손실공제 입력 타입 (상증법 §23 + 상증령 §20)
+// ============================================================
+
+/**
+ * §23 재해손실공제 입력 (상증법 §23 + 상증령 §20).
+ * ⚠️ §24③ 분자 보정용 disasterLossDeduction(§54 증여세 재해손실)과 완전히 별개.
+ */
+export interface CasualtyLossInput {
+  /** 재해손실 상속재산 가액 (상증령 §20②) — 원 단위 정수 */
+  lossValue: number;
+  /** 보전 가능 금액 (보험금 + 구상권, §23① 단서) — 미입력 시 0 처리 */
+  compensatedValue?: number;
+  /**
+   * 재난 종류 (상증령 §20① — 신고서·표시용, 산식 무영향).
+   * fire=화재 / collapse=붕괴 / explosion=폭발 / environmental=환경오염 / natural=자연재해 / other=기타
+   */
+  disasterType?: "fire" | "collapse" | "explosion" | "environmental" | "natural" | "other";
+  /** 재난 발생일 (YYYY-MM-DD) — §67 신고기한 내 발생 검증용. string 비교, Date 직접변환 금지. */
+  disasterDate?: string;
+  /**
+   * §67 신고기한 내 발생 override.
+   * undefined: 자동/미정 → 기한 내 가정 (입력 강제는 validate ⑧ 담당).
+   * true·false: 명시 override (기존 isFiledOnTime 패턴 일관).
+   */
+  isWithinFilingDeadline?: boolean;
+}
+
+// ============================================================
 // 상속공제 입력 (inheritance-deductions.ts)
 // ============================================================
 
@@ -904,6 +932,13 @@ export interface InheritanceDeductionInput {
   /** 신고기한 내 재해손실공제 (§24 분자 보정용) */
   disasterLossDeduction?: number;
 
+  // ===== §23 재해손실공제 (2026-06-07, 상증법 §23 + 상증령 §20) =====
+  /**
+   * §23 재해손실공제 입력. 미제공 시 공제 0.
+   * ⚠️ 기존 disasterLossDeduction(§24③ 분자 보정/§54용)과 완전히 별개 — 명칭 혼동 금지.
+   */
+  casualtyLoss?: CasualtyLossInput;
+
   // ===== 영농상속공제 정밀화 (2026-05-21, §18의3 + 시행령 §16) =====
   /**
    * 영농상속 자격·요건 입력. 미제공 시 legacy 호환 (evaluated=false, eligible=true 가정).
@@ -948,6 +983,7 @@ import type {
   CohabitDeductionDetail,
   DeductionLimitCeilingDetail,
   PersonalDeductionDetail,
+  CasualtyLossDeductionDetail,
 } from "./inheritance-deduction-detail.types";
 export type { FarmingInheritanceInput, FarmingDeductionDetail, FarmingEligibilityResult } from "./inheritance-farming.types";
 export type { FamilyBusinessCategory, FamilyBusinessInheritanceInput, FamilyBusinessIneligibleReason, FamilyBusinessDeductionDetail, FamilyBusinessCap, FamilyBusinessMediumGuard, FamilyBusinessUnit, MultipleFamilyBusinessLineItem, MultipleFamilyBusinessResult } from "./inheritance-family-business.types";
@@ -978,6 +1014,7 @@ export type {
   CohabitDeductionDetail,
   DeductionLimitCeilingDetail,
   PersonalDeductionDetail,
+  CasualtyLossDeductionDetail,
 } from "./inheritance-deduction-detail.types";
 export { FARMING_MAX } from "./inheritance-farming.types";
 export { FAMILY_BUSINESS_CAP_10Y, FAMILY_BUSINESS_CAP_20Y, FAMILY_BUSINESS_CAP_30Y, FAMILY_BUSINESS_SCALE_THRESHOLD, FAMILY_BUSINESS_OTHER_ESTATE_RATIO } from "./inheritance-family-business.types";
@@ -1021,6 +1058,10 @@ export interface InheritanceDeductionResult {
   rawTotalDeduction?: number;
   /** ② §20 그 밖의 인적공제 4종 계산 근거 detail (G7 echo) */
   personalDeductionDetail?: PersonalDeductionDetail;
+  /** §23 재해손실공제 공제액 (top-level — 부표3 ㉘ 데이터 소스, deductionDetail 경유) */
+  casualtyLossDeduction: number;
+  /** §23 재해손실공제 계산 근거 detail */
+  casualtyLossDeductionDetail?: CasualtyLossDeductionDetail;
 }
 
 // ============================================================

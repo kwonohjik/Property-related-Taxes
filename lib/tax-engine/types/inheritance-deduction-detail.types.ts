@@ -287,3 +287,28 @@ export interface PersonalDeductionDetail {
 
   total: number; // 4종 합계
 }
+
+// ============================================================
+// ⑦ §23 재해손실공제 detail (상증법 §23 + 상증령 §20)
+// ============================================================
+
+import type { CasualtyLossInput } from "./inheritance-gift.types";
+
+/**
+ * §23 재해손실공제 계산 근거 detail.
+ * ⚠️ DeductionLimitCeilingDetail.disasterLossDeduction(§54 §24③ 분자값)과 별개 구조체.
+ */
+export interface CasualtyLossDeductionDetail {
+  /** 재난 손실 상속재산 가액 (상증령 §20②) */
+  lossValue: number;
+  /** 보전 가능 금액 (보험금+구상권, §23① 단서) */
+  compensatedValue: number;
+  /** §23 공제액 = max(0, lossValue − compensatedValue) */
+  netDeduction: number;
+  /** §67 신고기한 내 발생 여부 */
+  isWithinFilingDeadline: boolean;
+  /** 재난 종류 (상증령 §20①) */
+  disasterType?: CasualtyLossInput["disasterType"];
+  /** 재난 발생일 (YYYY-MM-DD) */
+  disasterDate?: string;
+}
