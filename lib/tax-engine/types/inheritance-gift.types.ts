@@ -546,6 +546,11 @@ export interface InheritanceGenerationSkipHeirRow {
   isMinor: boolean;
   /** floor(computedTax × numerator × rate / denominator) — 개별 단일 floor */
   surcharge: number;
+  /**
+   * §27 단서 대습상속 배제 행 — true 시 rate=0·surcharge=0.
+   * 결과 카드(GenerationSkipFormulaRows)가 "0%" 대신 "대습상속 §27 단서 배제" 전용 표시로 분기.
+   */
+  excludedBySubstitution?: boolean;
 }
 
 /**
@@ -646,6 +651,13 @@ export interface Heir {
   isForProfit?: boolean;
   /** 세대생략 수유자(직계비속 손자녀) — §27 ② 30%/40% 할증 대상 */
   isGenerationSkipBeneficiary?: boolean;
+  /**
+   * 민법 §1001 대습상속 여부 — 상증법 §27 단서(세대생략 할증 배제).
+   * isGenerationSkipBeneficiary(직계비속 세대생략)이면서 대습상속(부모 사망·결격으로 갈음 상속)인 경우 true
+   * → §27 할증 전액 배제(30%·40% 모두). 자동 판정 불가 → 사용자 명시.
+   * v1: 직계비속 대습(§1001)·배우자 대습(§1003②) 미구분 — generic 1플래그가 양자 포괄.
+   */
+  isSubstituteInheritance?: boolean;
   /**
    * §27 미성년 여부 수동 override (3-state).
    * - undefined: birthDate 기반 자동 판정 (differenceInYears(deathDate, birthDate) < 19, 민법 §4)

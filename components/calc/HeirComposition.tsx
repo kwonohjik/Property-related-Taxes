@@ -88,6 +88,7 @@ export function changeHeirRelation(heir: Heir, newRelation: HeirRelation): Heir 
     next.isCohabitant = undefined;
     next.isGenerationSkipBeneficiary = undefined;
     next.isMinorOverride = undefined;
+    next.isSubstituteInheritance = undefined;
   } else {
     // 자연인 — 법인 전용 필드 제거
     next.isForProfit = undefined;
@@ -101,6 +102,7 @@ export function changeHeirRelation(heir: Heir, newRelation: HeirRelation): Heir 
     if (newRelation !== "legatee") {
       next.isGenerationSkipBeneficiary = undefined;
       next.isMinorOverride = undefined;
+      next.isSubstituteInheritance = undefined;
     }
     // 생년월일 UI 비대상 관계면 제거 (보이지 않는 데이터의 공제 영향 차단)
     if (!showBirthDate) next.birthDate = undefined;
@@ -271,9 +273,22 @@ function HeirEditor({ heir, index, deathDate, allHeirs, onUpdate, onRemove }: He
               set({
                 isGenerationSkipBeneficiary: v || undefined,
                 isMinorOverride: v ? heir.isMinorOverride : undefined,
+                // gen-skip OFF 시 대습 플래그 정리(stale 방지)
+                isSubstituteInheritance: v ? heir.isSubstituteInheritance : undefined,
               })
             }
           />
+
+          {/* §27 단서 — 대습상속 할증 배제 (gen-skip ON일 때만) */}
+          {heir.isGenerationSkipBeneficiary && (
+            <ToggleCard
+              tone="rose"
+              title="대습상속 (민법 §1001) — §27 할증 배제"
+              description="손자녀가 사망·결격된 부모(피상속인의 자녀)를 갈음하여 상속하는 경우. ON 시 세대생략 할증(30%·40%) 전액 배제."
+              checked={heir.isSubstituteInheritance ?? false}
+              onCheckedChange={(v) => set({ isSubstituteInheritance: v || undefined })}
+            />
+          )}
 
           {/* 미성년 3-state override — 세대생략 ON + birthDate 입력 시만 표시 */}
           {heir.isGenerationSkipBeneficiary && heir.birthDate && autoIsMinor !== null && (

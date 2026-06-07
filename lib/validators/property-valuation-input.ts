@@ -422,6 +422,8 @@ export const heirSchema = z.object({
   // 종합사례 PDF 확장
   isHeir: z.boolean().optional(),
   isGenerationSkipBeneficiary: z.boolean().optional(),
+  // §27 단서 — 민법 §1001 대습상속 할증 배제 (2026-06-07)
+  isSubstituteInheritance: z.boolean().optional(),
   // B-7 (2026-06-01) — §27 미성년 3-state override. undefined=자동(birthDate), true/false=수동.
   isMinorOverride: z.boolean().optional(),
   // donee-phase2 — 영리법인 여부 (corporate Heir, §3의2② 적용 판정). ⚠️ z.object 침묵 strip 방지.
