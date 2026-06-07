@@ -129,5 +129,9 @@ export function makeEmptyGift(): PriorGift {
     giftTaxPaid: 0,
     sourceCalculationId: undefined,
     marriageBirthDeduction: undefined,
+    // [B] 과세표준 산정 방식 (UI 메타 — 엔진 무시, giftTaxBase 유무로 branch)
+    priorGiftTaxBaseInputMode: undefined,
+    // [C] 증여 당시 미성년 여부 (birthDate 미입력 시 fallback 토글)
+    doneeWasMinorAtGift: undefined,
   };
 }

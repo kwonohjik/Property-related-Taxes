@@ -70,6 +70,10 @@ export const priorGiftSchema = z
     isAttachedLandToBuilding: z.boolean().optional(),
     // §53의2 혼인·출산 증여재산공제 — 직계존속 giftTaxBase 미설정 분기에서 §24·§19 분자 차감용 (2026-06-07)
     marriageBirthDeduction: z.number().nonnegative().optional(),
+    // [C] 증여 당시 수증자 미성년 여부 — §53 직계존속 미성년 2천 분기 (birthDate 미입력 시 fallback)
+    doneeWasMinorAtGift: z.boolean().optional(),
+    // [B] 상속세 모드 과세표준 산정 방식 (UI 메타 — 엔진 무시, giftTaxBase 유무로 branch)
+    priorGiftTaxBaseInputMode: z.enum(["auto", "manual"]).optional(),
   })
   .superRefine((data, ctx) => {
     // 영리법인 사전증여 필수요건 (동기화 지점 ⑨)

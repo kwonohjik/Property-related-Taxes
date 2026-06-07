@@ -204,6 +204,14 @@ export function validatePriorGift(gift: PriorGift): string | null {
   const mbError = checkMarriageBirthGiftRule(gift);
   if (mbError !== null) return mbError;
 
+  // [B] 직접 입력 모드 — giftTaxBase 미입력 차단 (자동 안분 fallback 금지 정책)
+  if (
+    gift.priorGiftTaxBaseInputMode === "manual" &&
+    (gift.giftTaxBase == null || gift.giftTaxBase < 0)
+  ) {
+    return "직접 입력 모드: 증여 과세표준을 입력하세요 (증여세 신고서 과세표준 ⑤).";
+  }
+
   // beneficiaryType 미설정 시 legacy isHeir 사용 (자동 추론)
   return null;
 }

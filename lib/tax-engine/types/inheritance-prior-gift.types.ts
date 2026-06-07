@@ -79,6 +79,19 @@ export interface PriorGift {
    * 값은 증여 시점에 §53의2③ 1억 캡이 적용된 실액. 엔진 내부에서 추가로 per-gift 캡 적용.
    */
   marriageBirthDeduction?: number;
+  /**
+   * [C] 증여 당시 수증자(상속인) 만 19세 미만 여부 — birthDate 미입력 시 fallback 토글.
+   * §53 직계존속 공제 미성년 2천(성년 5천) 분기용. birthDate + giftDate가 있으면 자동 도출 우선.
+   * doneeRelation(피상속인 관점, 자녀=lineal_descendant)을 수증자 관점 직계존속으로 변환할 때만 영향.
+   */
+  doneeWasMinorAtGift?: boolean;
+  /**
+   * [B] 상속세 모드 과세표준 산정 방식 — UI 메타(엔진 무시, giftTaxBase 유무로만 branch).
+   *   - undefined·"auto": §53 관계공제 자동 도출 (derivePriorGiftTaxBase).
+   *   - "manual": giftTaxBase 직접 입력(증여세 신고서 과세표준). manual인데 giftTaxBase 미입력 = validation 차단.
+   * 3-state 모드 토글 — giftTaxBase 유무에서 derive 금지(빈 입력 중 auto 오판). 명시 플래그로 구분.
+   */
+  priorGiftTaxBaseInputMode?: "auto" | "manual";
 }
 
 /**

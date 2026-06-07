@@ -243,6 +243,18 @@ function renderGiftRow(
           : isCorporate
             ? "🏢 §13①2호 · §3의2② 면제"
             : ""}
+        {/* [B] 과세표준 출처 라벨 — manual 직접 입력 vs auto §53 도출 */}
+        {!isCorporate && !dimmed && (
+          gift.giftTaxBase != null ? (
+            <span className="ml-1 inline-block bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 rounded px-1">
+              직접 입력 과세표준
+            </span>
+          ) : (
+            <span className="ml-1 inline-block bg-gray-100 dark:bg-gray-800 text-gray-500 rounded px-1">
+              자동 도출(§53)
+            </span>
+          )
+        )}
       </td>
     </tr>
   );
