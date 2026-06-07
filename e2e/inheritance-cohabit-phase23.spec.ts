@@ -157,3 +157,81 @@ test.describe("G4 — 부수토지 면적한도 입력 블록", () => {
     await expect(page.getByTestId("ancillary-land-partial-warning")).not.toBeVisible();
   });
 });
+
+// ─────────────────────────────────────────────
+// Phase 4 — §23의2② 부득이 사유 배열 입력 위젯
+// ─────────────────────────────────────────────
+
+test.describe("Phase 4 — §23의2② 부득이 사유 배열 입력", () => {
+  test("E2E-P4-1: 사유 없음 → 토글 ON → 사유 추가 버튼 노출", async ({ page }) => {
+    await setupStep0WithCohabitChild(page);
+
+    // 동거 시작일 입력 (기본 세팅)
+    const startWrapper = page.getByTestId("cohabit-start-date-input");
+    await startWrapper.getByLabel("연도").fill("2010");
+    await startWrapper.getByLabel("월").fill("1");
+    await startWrapper.getByLabel("일").fill("1");
+
+    // 초기 상태: 사유 토글 OFF → 사유 추가 버튼 미노출
+    await expect(page.getByTestId("cohabit-reason-add-button")).not.toBeVisible();
+
+    // 부득이 사유 있음 토글 ON
+    await page.getByText("부득이한 사유 있음").click();
+
+    // 토글 ON 후: 사유 추가 버튼 노출
+    await expect(page.getByTestId("cohabit-reason-add-button")).toBeVisible();
+    // 빈 배열 안내 텍스트
+    await expect(page.getByText("사유 행이 없습니다")).toBeVisible();
+  });
+
+  test("E2E-P4-2: 징집 사유 추가 → 제외(−) 배지 표시", async ({ page }) => {
+    await setupStep0WithCohabitChild(page);
+
+    // 부득이 사유 토글 ON
+    await page.getByText("부득이한 사유 있음").click();
+
+    // 사유 추가
+    await page.getByTestId("cohabit-reason-add-button").click();
+
+    // 첫 번째 행 노출 확인
+    await expect(page.getByTestId("cohabit-reason-row-0")).toBeVisible();
+
+    // 기본값 conscription → 효과 배지 "제외(−)"
+    await expect(page.getByTestId("cohabit-reason-effect-badge-0")).toContainText("제외");
+  });
+
+  test("E2E-P4-3: 국외대학원 선택 시 경고 텍스트 표시", async ({ page }) => {
+    await setupStep0WithCohabitChild(page);
+
+    // 부득이 사유 토글 ON + 사유 추가
+    await page.getByText("부득이한 사유 있음").click();
+    await page.getByTestId("cohabit-reason-add-button").click();
+
+    // 유형 Select에서 overseas_grad 선택
+    await page.getByTestId("cohabit-reason-type-select-0").click();
+    await page.getByText("국외 대학원 — 불인정").click();
+
+    // 경고 텍스트 노출
+    await expect(page.getByTestId("cohabit-reason-overseas-warning-0")).toBeVisible();
+    await expect(page.getByText("부득이한 사유에 해당하지 않습니다")).toBeVisible();
+  });
+
+  test("E2E-P4-4: 사유 삭제 → 행 제거됨", async ({ page }) => {
+    await setupStep0WithCohabitChild(page);
+
+    // 부득이 사유 토글 ON + 사유 추가
+    await page.getByText("부득이한 사유 있음").click();
+    await page.getByTestId("cohabit-reason-add-button").click();
+
+    // 행 존재 확인
+    await expect(page.getByTestId("cohabit-reason-row-0")).toBeVisible();
+
+    // 삭제 버튼 클릭
+    await page.getByTestId("cohabit-reason-remove-0").click();
+
+    // 행 제거 확인
+    await expect(page.getByTestId("cohabit-reason-row-0")).not.toBeVisible();
+    // 빈 안내 텍스트 재노출
+    await expect(page.getByText("사유 행이 없습니다")).toBeVisible();
+  });
+});

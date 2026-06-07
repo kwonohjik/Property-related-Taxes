@@ -742,3 +742,8 @@ const hasCohabitantEligibleHeir = heirs.some(
 - [ ] G8: 신고서 컴포넌트 (UI 시니어 주담당) + 엔진 echo 필드 전부 포함
 - [ ] 14지점 전수 동기화
 - [ ] `npm test` 전체 통과
+
+---
+
+> **Phase 4 (부득이사유 자동산입) 설계는 분리 파일 참조 (800줄 정책)**:
+> [`inheritance-cohabit-reason-auto.engine.design.md`](./inheritance-cohabit-reason-auto.engine.design.md)

@@ -1,12 +1,13 @@
 "use client";
 
 /**
- * CohabitRequirementBlock — §23의2①1호 동거기간 입력 블록 (Phase 2, G3)
+ * CohabitRequirementBlock — §23의2①1호 동거기간 입력 블록 (Phase 4, G3)
  *
  * 동거주택 ToggleCard ON 시 노출.
  * - cohabitStartDate: 동거 시작일 (DateInput)
- * - cohabitExcludedYears: §23의2② 부득이 사유 제외 연수 (DecimalInput, 선택)
- * - 동거연수 미리보기 (useMemo — calcCohabitYears 순수 함수, useEffect 금지)
+ * - cohabitReasons: §23의2② 부득이 사유 배열 (CohabitReasonList, Phase 4 신규)
+ *   → cohabitExcludedYears(DecimalInput, @deprecated Phase 2)는 숨김 처리
+ * - 동거연수 미리보기 (useMemo — calcCohabitYears 5인수, useEffect 금지)
  * - 10년 미만 rose/amber 경고 배지 (자동 배제 아님, 검증용)
  *
  * G6 겸용주택·오피스텔 적용 범위 hint 포함.
@@ -16,43 +17,60 @@
 
 import { useMemo } from "react";
 import { DateInput } from "@/components/ui/date-input";
-import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { CohabitReasonList } from "./CohabitReasonList";
 import { calcCohabitYears } from "@/lib/tax-engine/deductions/inheritance-cohabit-helpers";
+import type { CohabitReason } from "@/lib/tax-engine/types/inheritance-gift.types";
+import type { CohabitYearsResult } from "@/lib/tax-engine/types/inheritance-deduction-detail.types";
 
 interface CohabitRequirementBlockProps {
   /** Heir.cohabitStartDate */
   cohabitStartDate: string | undefined;
-  /** Heir.cohabitExcludedYears */
+  /**
+   * Heir.cohabitReasons — 3-state Optional:
+   *   undefined = 사유 미입력(legacy fallback)
+   *   []        = 사유 활성, 빈 목록
+   *   [...]     = 사유 데이터
+   */
+  cohabitReasons: CohabitReason[] | undefined;
+  /** Heir.cohabitExcludedYears (@deprecated — legacy fallback 전달 전용, UI 입력 불가) */
   cohabitExcludedYears: number | undefined;
   /** 상속인 생년월일 (미성년 기간 제외 판정용) */
   birthDate: string | undefined;
   /** 상속개시일 (연수 계산 기준일) */
   deathDate: string | undefined;
-  onChange: (patch: { cohabitStartDate?: string; cohabitExcludedYears?: number }) => void;
+  onChange: (patch: {
+    cohabitStartDate?: string;
+    cohabitReasons?: CohabitReason[] | undefined;
+  }) => void;
 }
 
 export function CohabitRequirementBlock({
   cohabitStartDate,
+  cohabitReasons,
   cohabitExcludedYears,
   birthDate,
   deathDate,
   onChange,
 }: CohabitRequirementBlockProps) {
-  // 동거연수 미리보기 — calcCohabitYears 순수 계산 (useEffect → store 미러링 금지)
-  const preview = useMemo(() => {
+  // 부득이 사유 토글 ON 여부: cohabitReasons !== undefined
+  const hasReasonMode = cohabitReasons !== undefined;
+
+  // 동거연수 미리보기 — calcCohabitYears 5인수 (useEffect → store 미러링 금지)
+  const preview: CohabitYearsResult | null = useMemo(() => {
     if (!cohabitStartDate || !deathDate) return null;
     try {
       return calcCohabitYears(
         cohabitStartDate,
         deathDate,
         birthDate,
-        undefined,                  // reasons=undefined → legacy fallback (UI는 5⑦ 별도 작업)
-        cohabitExcludedYears ?? 0,
+        cohabitReasons,                    // Phase 4: reasons 배열 전달
+        cohabitExcludedYears ?? 0,         // legacy fallback (reasons===undefined 시만 사용)
       );
     } catch {
       return null;
     }
-  }, [cohabitStartDate, deathDate, birthDate, cohabitExcludedYears]);
+  }, [cohabitStartDate, deathDate, birthDate, cohabitReasons, cohabitExcludedYears]);
 
   return (
     <div
@@ -85,24 +103,48 @@ export function CohabitRequirementBlock({
         />
       </div>
 
-      {/* 부득이 사유 제외 연수 */}
-      <div className="space-y-1">
-        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
-          §23의2② 부득이 사유 제외 연수 <span className="text-gray-400 font-normal">(선택)</span>
-        </label>
-        <DecimalInput
-          value={cohabitExcludedYears !== undefined ? String(cohabitExcludedYears) : ""}
-          onChange={(v) => {
-            const parsed = parseDecimal(v);
-            onChange({ cohabitExcludedYears: parsed > 0 ? parsed : undefined });
+      {/* §23의2② 부득이 사유 — Phase 4: 3-state 토글 + 배열 입력 */}
+      <div className="space-y-2">
+        <ToggleCard
+          tone="violet"
+          size="sm"
+          title="§23의2② 부득이한 사유 있음"
+          description="징집·취학·근무상 형편·질병 요양(1년 이상)으로 불가피하게 동거하지 못한 기간을 구조화 입력"
+          checked={hasReasonMode}
+          onCheckedChange={(v) => {
+            if (v) {
+              // ON: 활성 빈 배열로 전환 (3-state: [] = 활성 빈)
+              onChange({ cohabitReasons: [] });
+            } else {
+              // OFF: undefined로 복귀 (legacy fallback 경로)
+              onChange({ cohabitReasons: undefined });
+            }
           }}
-          placeholder="없으면 빈칸"
-          data-testid="cohabit-excluded-years-input"
+          data-testid="cohabit-reasons-toggle"
         />
-        <p className="text-[10px] text-violet-500 dark:text-violet-400">
-          징집·취학·근무상 형편·질병 요양(상증령 §20의2)으로 동거하지 못한 기간은 계속 동거로 인정되나
-          동거기간에는 산입하지 않습니다.
-        </p>
+
+        {hasReasonMode && (
+          <CohabitReasonList
+            reasons={cohabitReasons!}
+            onChange={(reasons) => onChange({ cohabitReasons: reasons })}
+          />
+        )}
+
+        {/* @deprecated cohabitExcludedYears — 구 이력 값이 있을 때만 안내 표시 */}
+        {!hasReasonMode && (cohabitExcludedYears ?? 0) > 0 && (
+          <div className="rounded border border-amber-200 bg-amber-50/60 dark:border-amber-700 dark:bg-amber-900/20 px-2 py-1.5 text-[10px] text-amber-700 dark:text-amber-300">
+            이전에 입력한 제외 연수({cohabitExcludedYears}년)가 있습니다.
+            정확한 계산을 위해 위 &ldquo;부득이한 사유 있음&rdquo; 토글을 켜서 사유별로 입력해주세요.
+          </div>
+        )}
+
+        {!hasReasonMode && (cohabitExcludedYears ?? 0) === 0 && (
+          <p className="text-[10px] text-violet-500 dark:text-violet-400">
+            징집·취학·근무상 형편·질병 요양(상증령 §20의2)으로 동거하지 못한 기간은 계속
+            동거로 인정되나 동거기간에는 산입하지 않습니다. 해당 사유가 있으면 위 토글을 켜서
+            입력하세요.
+          </p>
+        )}
       </div>
 
       {/* 동거 시작일 미입력 안내 hint (계산 차단 아님 — 안내만) */}
@@ -147,12 +189,15 @@ export function CohabitRequirementBlock({
                 </span>
               )}
             </p>
-            {(cohabitExcludedYears ?? 0) > 0 && (
+            {preview.reasonExcludedYears > 0 && (
               <p>
-                부득이 제외:{" "}
+                부득이 사유 제외:{" "}
                 <span className="text-amber-600 dark:text-amber-400">
-                  {cohabitExcludedYears}년 제외
+                  {preview.reasonExcludedYears}년 제외
                 </span>
+                {preview.usedLegacyFallback && (
+                  <span className="text-gray-400"> (수동 입력값 사용)</span>
+                )}
               </p>
             )}
             <p>
@@ -168,6 +213,27 @@ export function CohabitRequirementBlock({
               </strong>
             </p>
           </div>
+
+          {/* 경고 3종 */}
+          {preview.hasOverseasGradWarning && (
+            <p className="text-amber-600 dark:text-amber-400 text-[10px]">
+              ⚠ 국외 대학원 기간은 부득이한 사유에 해당하지 않습니다(재조세-434). 동거
+              계속성 단절로 공제 전체가 부인될 수 있습니다.
+            </p>
+          )}
+          {preview.hasMedicalUnder1YWarning && (
+            <p className="text-amber-600 dark:text-amber-400 text-[10px]">
+              ⚠ 1년(365일) 미만 질병 요양은 부득이한 사유로 인정되지 않습니다(시행규칙
+              §9의2①3호).
+            </p>
+          )}
+          {preview.hasReconstructionLeaseNote && (
+            <p className="text-emerald-600 dark:text-emerald-400 text-[10px]">
+              재건축 전세 기간은 동거기간에 산입됩니다(국세청 재산-248). 해석례이므로 세무사
+              확인을 권장합니다.
+            </p>
+          )}
+
           {!preview.meetsRequirement && (
             <p className="text-rose-600 dark:text-rose-400 text-[10px]">
               동거기간이 10년 미만입니다. 요건 충족 여부를 세무사와 확인하시기 바랍니다.

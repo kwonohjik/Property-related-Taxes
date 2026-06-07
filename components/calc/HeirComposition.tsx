@@ -104,6 +104,7 @@ export function changeHeirRelation(heir: Heir, newRelation: HeirRelation): Heir 
       next.isCohabitant = undefined;
       next.cohabitStartDate = undefined;
       next.cohabitExcludedYears = undefined;
+      next.cohabitReasons = undefined;
     }
     // 세대생략 체크는 legatee 전용 — legatee 외로 변경 시 제거
     if (newRelation !== "legatee") {
@@ -408,6 +409,7 @@ function HeirEditor({ heir, index, deathDate, allHeirs, onUpdate, onRemove }: He
                 isCohabitant: v,
                 cohabitStartDate: v ? heir.cohabitStartDate : undefined,
                 cohabitExcludedYears: v ? heir.cohabitExcludedYears : undefined,
+                cohabitReasons: v ? heir.cohabitReasons : undefined,
               })
             }
           />
@@ -416,13 +418,14 @@ function HeirEditor({ heir, index, deathDate, allHeirs, onUpdate, onRemove }: He
           {heir.isCohabitant && (
             <CohabitRequirementBlock
               cohabitStartDate={heir.cohabitStartDate}
+              cohabitReasons={heir.cohabitReasons}
               cohabitExcludedYears={heir.cohabitExcludedYears}
               birthDate={heir.birthDate}
               deathDate={deathDate}
               onChange={(patch) =>
                 set({
                   cohabitStartDate: patch.cohabitStartDate,
-                  cohabitExcludedYears: patch.cohabitExcludedYears,
+                  cohabitReasons: patch.cohabitReasons,
                 })
               }
             />

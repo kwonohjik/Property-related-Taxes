@@ -6,18 +6,48 @@
  *
  * Phase 2 (2026-06-07): cohabitYears echo 표시 + meetsRequirement=false 경고
  * Phase 3 (2026-06-07): ancillaryLandLimitReduction 표시 (>0 차감 / =0 한도 이내)
+ * Phase 4 (2026-06-07): reasonBreakdown 내역 표 + 경고 배지 3종 + usedLegacyFallback 안내
  */
 
 import { useState } from "react";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import type { CohabitDeductionDetail } from "@/lib/tax-engine/types/inheritance-deduction-detail.types";
+import type { CohabitReasonType } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { DetailTable, DetailRow, SubTotalRow, ExpandButton } from "./shared";
+
+// ============================================================
+// 사유 유형 한국어 라벨 (결과 카드 전용 — CohabitReasonList와 동일 정의)
+// ============================================================
+
+const REASON_LABEL: Record<CohabitReasonType, string> = {
+  conscription: "징집·소집",
+  schooling: "취학 (고교·국내대학)",
+  work: "근무상 형편",
+  medical: "질병 요양 1년 이상",
+  reconstruction_lease: "재건축 전세 (산입)",
+  overseas_grad: "국외 대학원 (불인정)",
+};
+
+const EFFECT_LABEL: Record<"excluded" | "included" | "not_recognized", string> = {
+  excluded: "제외(−)",
+  included: "산입(+)",
+  not_recognized: "불인정",
+};
+
+
+// ============================================================
+// Props
+// ============================================================
 
 interface Props {
   detail?: CohabitDeductionDetail;
   triggerLabel: string;
   triggerValue: string;
 }
+
+// ============================================================
+// 메인 컴포넌트
+// ============================================================
 
 export function CohabitDeductionDetailCard({ detail, triggerLabel, triggerValue }: Props) {
   const [open, setOpen] = useState(false);
@@ -36,6 +66,15 @@ export function CohabitDeductionDetailCard({ detail, triggerLabel, triggerValue 
               data-testid="cohabit-years-warning-badge"
             >
               동거 {cy.effectiveYears}년 (10년 미달)
+            </span>
+          )}
+          {/* hasOverseasGradWarning 배지 */}
+          {cy?.hasOverseasGradWarning && (
+            <span
+              className="text-[10px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 rounded px-1.5 py-0.5"
+              data-testid="cohabit-overseas-warning-badge"
+            >
+              국외대학원 불인정
             </span>
           )}
           <span className="font-mono text-sm">{triggerValue}</span>
@@ -61,14 +100,85 @@ export function CohabitDeductionDetailCard({ detail, triggerLabel, triggerValue 
                   deduction
                 />
               )}
+
+              {/* Phase 4: reasonBreakdown 내역 표 */}
+              {cy.reasonBreakdown.length > 0 && (
+                <>
+                  <DetailRow
+                    label="§23의2② 부득이한 사유 내역"
+                    value=""
+                    muted
+                  />
+                  {cy.reasonBreakdown.map((rb, i) => {
+                    const daysLabel =
+                      rb.clampedDays > 0
+                        ? `${rb.clampedDays}일`
+                        : "동거기간 외";
+                    return (
+                      <DetailRow
+                        key={i}
+                        label={`  ${REASON_LABEL[rb.type]} (${rb.inputStartDate} ~ ${rb.inputEndDate})`}
+                        value={`${EFFECT_LABEL[rb.effect]} ${daysLabel}`}
+                        indent
+                        muted
+                      />
+                    );
+                  })}
+                </>
+              )}
+
+              {cy.reasonExcludedYears > 0 && (
+                <DetailRow
+                  label={
+                    cy.usedLegacyFallback
+                      ? "(−) 부득이 사유 제외 (수동 입력값)"
+                      : "(−) §23의2② 부득이 사유 제외 합계"
+                  }
+                  value={`− ${cy.reasonExcludedYears}년`}
+                  indent
+                  muted
+                  deduction
+                />
+              )}
+
               <SubTotalRow
                 label="유효 동거연수"
                 value={`${cy.effectiveYears}년`}
                 tone={cy.meetsRequirement ? "blue" : "amber"}
               />
+
+              {/* 경고 3종 */}
               {!cy.meetsRequirement && (
                 <DetailRow
                   label="⚠ 10년 미달 — 요건 충족 여부 확인 필요"
+                  value=""
+                  muted
+                />
+              )}
+              {cy.hasOverseasGradWarning && (
+                <DetailRow
+                  label="⚠ 국외 대학원은 부득이한 사유 미해당 (재조세-434) — 계속성 단절 주의"
+                  value=""
+                  muted
+                />
+              )}
+              {cy.hasMedicalUnder1YWarning && (
+                <DetailRow
+                  label="⚠ 1년 미만 질병 요양은 인정 제외 (시행규칙 §9의2①3호)"
+                  value=""
+                  muted
+                />
+              )}
+              {cy.hasReconstructionLeaseNote && (
+                <DetailRow
+                  label="재건축 전세 기간 동거기간 산입 (국세청 재산-248)"
+                  value=""
+                  muted
+                />
+              )}
+              {cy.usedLegacyFallback && (
+                <DetailRow
+                  label="(참고) 구 수동 입력값 사용 — 사유별 입력으로 갱신 권장"
                   value=""
                   muted
                 />

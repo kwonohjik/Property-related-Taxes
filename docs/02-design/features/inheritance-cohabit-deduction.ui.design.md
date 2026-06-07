@@ -738,3 +738,620 @@ deathDate 미입력 시 fallback: 최신 연혁(2022~) 기준 적용 (가장 넓
 | KoreanLaw 검증 | Do 단계 전 | 별지 서식 번호·칸 구성 + §23의2 연혁 재확인 |
 
 **순서**: 엔진 시니어 EN-1~6 결정 → UI 시니어 ⑤ 위젯 구현 → ①④⑫ 동기화 → ⑦ 결과 카드 → G8 별지 서식 → ⑧ validation → anchor + E2E.
+
+---
+
+---
+
+# Phase 4 UI 설계 — 부득이사유 자동산입 (구조화 사유 배열 입력)
+
+> 추가 작성: 2026-06-07
+> 범위: 현행 `cohabitExcludedYears`(단일 숫자 수동 입력) → `cohabitReasons` 배열(구조화 사유 + 자동 계산)으로 대체
+> 사용자 확정 범위: "구조화 사유 배열 + 자동 판정(완전)"
+> Phase 2~3 디자인 문서(§4-2, §12, §13, §15)와 연결됨
+
+---
+
+## P4-0. 현행 기준점 실측 (Design 단계 확인)
+
+| 파일 | 줄수 | 관련 부분 |
+|---|---|---|
+| `CohabitRequirementBlock.tsx` | **188줄** | `cohabitExcludedYears` DecimalInput (:92~105), `calcCohabitYears(…, cohabitExcludedYears ?? 0)` (:48) |
+| `HeirComposition.tsx` | **658줄** | ToggleCard onCheckedChange (:408~411), CohabitRequirementBlock 호출 (:416~429) |
+| `lib/validators/property-valuation-input.ts` | — | `heirSchema.cohabitExcludedYears: z.number().nonnegative().optional()` (:436) |
+| `Heir` 타입 | — | `cohabitExcludedYears?: number` (`inheritance-gift.types.ts:712`) |
+| `calcCohabitYears` 시그니처 | — | `(cohabitStartDate, deathDate, birthDate, excludedYears: number)` → `{ rawYears, minorYearsDeducted, effectiveYears, meetsRequirement }` |
+
+**엔진 계약 (Do 전 확인 필수)**:
+- `calcCohabitYears` 4번째 인자 `excludedYears: number` 는 **합산된 단일 숫자**다. 배열에서 자동 합산 후 전달하는 방식으로 UI 어댑터를 작성하면 엔진 시그니처 무변경으로 동작 가능하다.
+- 단, 엔진 시니어가 `cohabitReasons` 배열 자체를 `Heir` 타입에 추가해 엔진 내부에서 직접 소비할 경우 시그니처가 변경될 수 있다 → **EN-7 확인 필수(하단)**.
+
+---
+
+## P4-1. 사유 유형 enum — `CohabitReasonType` (가정값, 엔진 시니어 확정 필요)
+
+현행 법령 근거:
+- **§23의2②** + **상증령 §20의2①** 1~4호: 동거로 인정하되 동거기간 **미산입**(제외−)
+  - 1호 징집 (`conscription`)
+  - 2호 취학 (초·중등교육법 해당 학교 제외, 대학교 이상만) (`study`)
+  - 3호 근무상 형편 (`work_transfer`)
+  - 4호 1년 이상 질병 요양 (`medical_care`)
+- **§23의2①** 본문 "10년 이상 1세대를 구성" — 재건축 전세 기간은 **산입**(+): 과세당국 예규(재산-575 계열)에서 1세대 구성 연속으로 인정하는 사유
+  - 재건축·재개발 세입자 기간 (`reconstruction_tenant`) — 산입(+)
+- **국외 대학원** (`overseas_graduate`) — 상증령 §20의2①2호 "취학"에서 초·중등 제외이지만 국외 대학원은 별도 유권해석(재조세-434)으로 **부득이 사유 불인정** → 경고만 표시
+
+**가정 `CohabitReasonType` enum** (엔진 시니어 확정 전 UI 가정):
+
+```typescript
+// 가정 필드명 — 엔진 시니어가 다른 이름으로 정할 경우 Do에서 교체
+export type CohabitReasonType =
+  | "conscription"          // §20의2①1호 — 징집 (제외−)
+  | "study"                 // §20의2①2호 — 취학(대학교 이상) (제외−)
+  | "work_transfer"         // §20의2①3호 — 근무상 형편 (제외−)
+  | "medical_care"          // §20의2①4호 — 질병 요양 1년 이상 (제외−)
+  | "reconstruction_tenant" // 재건축·재개발 세입자 (산입+, 과세당국 예규)
+  | "overseas_graduate";    // 국외 대학원 (불인정·경고 amber — 재조세-434)
+```
+
+**산입/제외 분류표**:
+
+| `CohabitReasonType` | 효과 | 법령 근거 | UI tone |
+|---|---|---|---|
+| `conscription` | 제외 − | §20의2①1호 | rose (경감) |
+| `study` | 제외 − | §20의2①2호 | rose |
+| `work_transfer` | 제외 − | §20의2①3호 | rose |
+| `medical_care` | 제외 − | §20의2①4호 | rose |
+| `reconstruction_tenant` | 산입 + | 예규 (재산-575 계열) | emerald (가산) |
+| `overseas_graduate` | 불인정·경고 | 재조세-434 | amber (경고) |
+
+**`overseas_graduate`는 제외/산입 어느 쪽도 아님** — 입력 허용 후 사유 행에 amber 경고 표시. 연수 계산에는 반영하지 않는다(0 기여). 사용자에게 "부득이 사유 불인정 (재조세-434)" 경고를 노출하는 것으로 충분.
+
+---
+
+## P4-2. 사유 배열 타입 `CohabitReason` (가정값)
+
+```typescript
+// lib/tax-engine/types/inheritance-gift.types.ts — Heir 내부 또는 별도 export
+// 가정 타입 — 엔진 시니어 확정 후 교체
+
+export interface CohabitReason {
+  /** 클라이언트 side uuid (행 삭제·키 안정화용) */
+  id: string;
+  /** 사유 유형 */
+  type: CohabitReasonType;
+  /** 기간 시작일 (YYYY-MM-DD) */
+  startDate: string;
+  /** 기간 종료일 (YYYY-MM-DD) */
+  endDate: string;
+}
+
+// Heir 타입 확장 — 신규 필드
+interface Heir {
+  // ... 기존 필드 ...
+
+  /**
+   * Phase 4 — 구조화 부득이 사유 배열.
+   * - undefined: 배열 입력 비활성 (3-state OFF)
+   * - []: 배열 활성이나 행 없음 (3-state ON 빈)
+   * - [...]: 사유 행 존재 (3-state ON 데이터)
+   *
+   * cohabitExcludedYears와 공존 불가 — Phase 4 전환 후 cohabitExcludedYears는 폐지.
+   * cohabitReasons가 존재할 때 elapsedExcludedYears는 배열에서 자동 계산.
+   */
+  cohabitReasons?: CohabitReason[];
+}
+```
+
+**3-state Optional 패턴** (`feedback_three_state_optional_mode_toggle`):
+- `undefined`: 배열 UI 비활성 (토글 OFF)
+- `[]`: 토글 ON이나 행 없음 (추가 전)
+- `[{...}, ...]`: 사유 행 존재
+
+**폐지 필드**: `cohabitExcludedYears?: number` — Phase 4 구현 후 Heir 타입에서 deprecated 처리(삭제는 마이그레이션 후). Zod 스키마에서는 sessionStorage 복원 호환을 위해 임시 유지 후 normalize에서 배열로 변환.
+
+---
+
+## P4-3. 신규 FormData 동기화 지점 (①②③)
+
+### ① 폼 상태 타입
+
+변경 파일: `lib/tax-engine/types/inheritance-gift.types.ts` (엔진 시니어 담당) + `components/calc/inheritance/shared.ts`(FormData 반영, UI 시니어 담당).
+
+`CohabitReason` / `CohabitReasonType` 은 엔진 타입에서 정의 → UI는 import해 사용.
+
+### ② initial value
+
+```typescript
+// Heir 생성 시 cohabitReasons는 undefined (3-state OFF 기본값)
+// heirs 배열 신규 항목 추가 시 cohabitReasons 필드 불포함 → 자동 undefined
+// INITIAL_FORM 자체 변경 불필요 (Heir factory 없음, optional 자동)
+```
+
+### ③ normalize fallback (sessionStorage 복원 호환)
+
+`normalize-restored-form-dates.ts`에 추가:
+
+```typescript
+// Phase 4 마이그레이션: cohabitExcludedYears(숫자)가 있고 cohabitReasons가 없으면
+// cohabitReasons=undefined로 유지 (배열 비활성). 기존 데이터 자동 파기 금지.
+// → 사용자가 수동으로 배열 UI를 사용하기 전까지 단일 숫자 유지 허용 (EN-8 확인 필요).
+
+// cohabitReasons 배열 내 날짜 필드는 string 유지 (date-coerce.ts는 route handler 전용).
+if (heir.cohabitReasons) {
+  heir.cohabitReasons = heir.cohabitReasons.map((r) => ({
+    ...r,
+    startDate: String(r.startDate ?? ""),
+    endDate: String(r.endDate ?? ""),
+  }));
+}
+```
+
+---
+
+## P4-4. API 변환 (④) — Zod 스키마 확장
+
+`lib/validators/property-valuation-input.ts` `heirSchema` 에 추가 (⑫ Zod 입력 객체):
+
+```typescript
+// CohabitReasonType enum — 엔진 확정 후 값 교체
+const cohabitReasonTypeSchema = z.enum([
+  "conscription",
+  "study",
+  "work_transfer",
+  "medical_care",
+  "reconstruction_tenant",
+  "overseas_graduate",
+]);
+
+const cohabitReasonSchema = z.object({
+  id: z.string(),
+  type: cohabitReasonTypeSchema,
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD 형식"),
+  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD 형식"),
+});
+
+// heirSchema 내부 (기존 cohabitExcludedYears 아래에 추가)
+cohabitReasons: z.array(cohabitReasonSchema).optional(),
+```
+
+**⑬ body spread**: `heirs` 전체가 `InheritanceTaxInput["heirs"]`로 cast → `Heir.cohabitReasons` 타입 추가 후 자동 포함.
+**⑭ Route handler 매핑**: heirs cast 방식 유지 → 별도 명시 매핑 불필요. 단, 엔진이 `cohabitReasons`를 직접 소비하는 경우 route handler에서 `toDate` 변환 불필요(string 전달).
+
+---
+
+## P4-5. UI 입력 위젯 (⑤) — 컴포넌트 구조
+
+### P4-5-1. 변경 요약
+
+| 현행 | Phase 4 변경 |
+|---|---|
+| `CohabitRequirementBlock.tsx` 내 `DecimalInput(cohabitExcludedYears)` 1행 | `CohabitReasonList.tsx` 별도 컴포넌트로 분리 + 현행 DecimalInput 행 삭제 |
+| `calcCohabitYears(…, cohabitExcludedYears ?? 0)` | `calcCohabitYears(…, sumExcludedYears(cohabitReasons ?? []))` |
+| `HeirComposition.tsx` `set({ cohabitExcludedYears: … })` | `set({ cohabitReasons: … })` |
+
+### P4-5-2. 신규 컴포넌트 `CohabitReasonList.tsx`
+
+**파일**: `components/calc/inheritance/CohabitReasonList.tsx` (800줄 정책 — 별도 파일 분리)
+**예상 줄수**: ~200줄
+
+**Props 시그니처**:
+
+```typescript
+interface CohabitReasonListProps {
+  /** 3-state: undefined=비활성/[]=빈/[...]=데이터 */
+  reasons: CohabitReason[] | undefined;
+  /** 상속개시일 — 행별 유효기간 검증용 */
+  deathDate: string | undefined;
+  /** 동거시작일 — 행별 유효기간 검증용 */
+  cohabitStartDate: string | undefined;
+  onChange: (reasons: CohabitReason[] | undefined) => void;
+}
+```
+
+**컴포넌트 내부 레이아웃**:
+
+```
+[ToggleCard tone="rose" title="부득이 사유 기간 입력"]    ← 비활성/활성 토글
+  ├─ [ON 시 노출]
+  │   ├─ 안내 텍스트 (§23의2② + §20의2①1~4호 요약)
+  │   ├─ 사유 행 목록 (reasons.map → CohabitReasonRow)
+  │   └─ [행 추가 버튼] (+ 사유 추가)
+  └─ [OFF 시] 비활성 상태 표시 (tone 유지 — ToggleCard 기본 동작)
+```
+
+**토글 ON/OFF 처리** (3-state, `feedback_three_state_optional_mode_toggle` 준수):
+
+```typescript
+// ON: undefined → [] (배열 활성, 빈 상태)
+// OFF: 배열 → undefined (데이터 폐기)
+onCheckedChange={(v) => onChange(v ? (reasons ?? []) : undefined)}
+```
+
+**데이터 폐기 확인**: 단순 행 삭제는 confirm 불요(되돌릴 수 없으나 데이터 적고 즉시 재입력 가능). 배열 전체 비활성(OFF)으로 기존 행이 1개 이상일 경우는 `feedback_dialog_data_discard_confirm` 적용 권장 — Do 단계에서 UX 재검토.
+
+### P4-5-3. 사유 행 컴포넌트 `CohabitReasonRow`
+
+**인라인 또는 별도 파일**: `CohabitReasonList.tsx` 내부에 `function CohabitReasonRow`로 정의 (줄수 허용 범위 내).
+
+**행 레이아웃** (각 행):
+
+```
+[사유유형 Select]  [시작일 DateInput]  [종료일 DateInput]  [삭제 버튼 rose-600]
+[효과 배지]        [기간 자동 계산]
+```
+
+**사유 유형 선택**: `RadioCardGroup` 대신 `Select`(드롭다운) 사용 — 6개 옵션이고 행 내에 인라인으로 배치되어 RadioCardGroup이 공간을 과점하기 때문. `SelectTrigger` + 명시 라벨 필수(SelectValue 단독 금지 — `feedback_select_component`).
+
+```typescript
+// Select 옵션 (정적 배열 — Tailwind dynamic 금지)
+const REASON_OPTIONS: { value: CohabitReasonType; label: string; effectLabel: string; effectTone: "rose" | "emerald" | "amber" }[] = [
+  { value: "conscription",          label: "징집",                effectLabel: "제외 −", effectTone: "rose" },
+  { value: "study",                 label: "취학 (대학교 이상)",   effectLabel: "제외 −", effectTone: "rose" },
+  { value: "work_transfer",         label: "근무상 형편",          effectLabel: "제외 −", effectTone: "rose" },
+  { value: "medical_care",          label: "질병 요양 (1년 이상)", effectLabel: "제외 −", effectTone: "rose" },
+  { value: "reconstruction_tenant", label: "재건축·재개발 세입자", effectLabel: "산입 +", effectTone: "emerald" },
+  { value: "overseas_graduate",     label: "국외 대학원",          effectLabel: "경고",   effectTone: "amber" },
+];
+```
+
+**효과 배지 정적 tone 매핑** (`feedback_tailwind_static_tone_mapping` — dynamic 금지):
+
+```typescript
+// Tailwind dynamic class 금지 — 정적 Record 사용
+const EFFECT_BADGE_CLASSES: Record<"rose" | "emerald" | "amber", string> = {
+  rose:    "bg-rose-100 text-rose-700 border border-rose-200",
+  emerald: "bg-emerald-100 text-emerald-700 border border-emerald-200",
+  amber:   "bg-amber-100 text-amber-700 border border-amber-200",
+};
+// 사용: EFFECT_BADGE_CLASSES[option.effectTone]
+```
+
+**`overseas_graduate` 경고 표시**:
+
+```tsx
+{row.type === "overseas_graduate" && (
+  <div className="rounded-md border border-amber-200 bg-amber-50/60 px-3 py-2 text-[11px] text-amber-700">
+    국외 대학원은 부득이 사유 불인정 — 재조세-434. 이 기간은 제외 연수에 산입되지 않습니다.
+    연수 계산에 영향을 주지 않으며, 경고 기록 목적으로만 입력됩니다.
+  </div>
+)}
+```
+
+**행 삭제 버튼**:
+
+```tsx
+<button
+  type="button"
+  onClick={() => onDelete(row.id)}
+  className="text-rose-600 hover:text-rose-800 text-xs font-medium"
+  aria-label="사유 행 삭제"
+>
+  삭제
+</button>
+```
+
+### P4-5-4. 기간 합산 헬퍼 `sumExcludedYears`
+
+`CohabitReasonList.tsx` 내부에 정의하거나 `CohabitRequirementBlock.tsx`에 export:
+
+```typescript
+import { differenceInYears } from "date-fns";
+
+/**
+ * cohabitReasons 배열에서 제외 연수 합산.
+ * - overseas_graduate: 0 기여 (불인정 경고만)
+ * - reconstruction_tenant: 0 기여 (산입은 별도 경로 — EN-7 확인)
+ * - 나머지 4종: differenceInYears(endDate, startDate) 합산 (소수점 버림)
+ *
+ * ★ 주의: 산입 사유(reconstruction_tenant)의 처리 방식은 EN-7에서 엔진 시니어 확정 필요.
+ *   - 옵션A: UI에서 산입 기간을 별도 합산해 calcCohabitYears에 추가 인자로 전달
+ *   - 옵션B: 엔진이 cohabitReasons 배열 직접 소비 → calcCohabitYears 시그니처 변경
+ *
+ * 현재 설계: 옵션A 가정 (엔진 시그니처 무변경)
+ */
+export function sumExcludedYears(reasons: CohabitReason[]): number {
+  const EXCLUDED_TYPES: CohabitReasonType[] = [
+    "conscription", "study", "work_transfer", "medical_care",
+  ];
+  return reasons
+    .filter((r) => EXCLUDED_TYPES.includes(r.type) && r.startDate && r.endDate)
+    .reduce((sum, r) => {
+      const years = differenceInYears(new Date(r.endDate), new Date(r.startDate));
+      return sum + Math.max(0, years);
+    }, 0);
+}
+```
+
+### P4-5-5. `CohabitRequirementBlock.tsx` 변경 (⑤ 핵심)
+
+**현행 188줄 → 예상 ~150줄** (DecimalInput 행 삭제, CohabitReasonList import 추가):
+
+```typescript
+// 변경 전 (삭제 대상)
+import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
+// → 삭제
+
+// 변경 후 (추가)
+import { CohabitReasonList, sumExcludedYears } from "./CohabitReasonList";
+
+// Props 변경
+interface CohabitRequirementBlockProps {
+  cohabitStartDate: string | undefined;
+  // cohabitExcludedYears: number | undefined;  ← 폐지
+  cohabitReasons: CohabitReason[] | undefined;   // ← 신규 (3-state)
+  birthDate: string | undefined;
+  deathDate: string | undefined;
+  onChange: (patch: {
+    cohabitStartDate?: string;
+    cohabitReasons?: CohabitReason[] | undefined;
+    // cohabitExcludedYears는 더 이상 patch에 포함하지 않음
+  }) => void;
+}
+
+// useMemo preview 변경
+const preview = useMemo(() => {
+  if (!cohabitStartDate || !deathDate) return null;
+  try {
+    const excluded = sumExcludedYears(cohabitReasons ?? []);
+    return calcCohabitYears(cohabitStartDate, deathDate, birthDate, excluded);
+  } catch {
+    return null;
+  }
+}, [cohabitStartDate, deathDate, birthDate, cohabitReasons]);
+
+// JSX: DecimalInput 행 삭제 → CohabitReasonList 렌더
+// <DecimalInput ... /> 블록 전체 삭제
+// 대신:
+<CohabitReasonList
+  reasons={cohabitReasons}
+  deathDate={deathDate}
+  cohabitStartDate={cohabitStartDate}
+  onChange={(r) => onChange({ cohabitReasons: r })}
+/>
+```
+
+### P4-5-6. `HeirComposition.tsx` 변경 (최소화)
+
+현행 658줄 → 예상 ~660줄 (+2줄: `cohabitExcludedYears` 제거 / `cohabitReasons` 추가):
+
+```typescript
+// 변경 전 (:106)
+next.cohabitExcludedYears = undefined;
+// 변경 후
+next.cohabitReasons = undefined;
+
+// 변경 전 (:408~411) ToggleCard onCheckedChange
+isCohabitant: v,
+cohabitStartDate: v ? heir.cohabitStartDate : undefined,
+cohabitExcludedYears: v ? heir.cohabitExcludedYears : undefined,
+// 변경 후
+isCohabitant: v,
+cohabitStartDate: v ? heir.cohabitStartDate : undefined,
+cohabitReasons: v ? heir.cohabitReasons : undefined,
+
+// 변경 전 (:417~428) CohabitRequirementBlock props
+cohabitExcludedYears={heir.cohabitExcludedYears}
+onChange={(patch) => set({ cohabitStartDate: patch.cohabitStartDate, cohabitExcludedYears: patch.cohabitExcludedYears })}
+// 변경 후
+cohabitReasons={heir.cohabitReasons}
+onChange={(patch) => set({ cohabitStartDate: patch.cohabitStartDate, cohabitReasons: patch.cohabitReasons })}
+```
+
+**800줄 정책**: HeirComposition.tsx 현재 658줄. 변경 후 ~660줄 → 안전. CohabitReasonList를 별도 파일로 완전 분리했기 때문에 인라인 증가 없음.
+
+---
+
+## P4-6. 사이드바 합계 (⑥)
+
+동거주택공제는 기존과 동일하게 사이드바 합계 미표시. 사유 배열 입력은 사이드바에 영향 없음.
+
+---
+
+## P4-7. 결과 카드 (⑦) — 사유 내역 표시
+
+### P4-7-1. 사유별 내역 표시 설계
+
+`CohabitDeductionDetailCard.tsx`에 사유 내역 표시 추가 여부 검토:
+
+- **옵션 A**: `CohabitDeductionDetail.cohabitYears` (현행 존재)에서 `effectiveYears`를 표시하는 것으로 충분. 사유별 상세는 결과 카드에 미표시.
+- **옵션 B**: 엔진이 `CohabitDeductionDetail`에 사유별 내역(`reasonBreakdown?: Array<{type, years, effect}>`)을 echo → 결과 카드에 ▼ 토글로 표시.
+
+**현재 설계 결정: 옵션 A** (기존 `cohabitYears.effectiveYears` 표시로 충분). 이유:
+- 현행 `CohabitDeductionDetailCard`가 이미 `detail.cohabitYears.effectiveYears`와 10년 미달 경고를 표시한다 (Phase 2~3 설계에서 구현).
+- 사유 배열 상세는 입력 화면에서 행별 배지로 이미 확인 가능하다.
+- 결과 카드에 사유 내역까지 echo하려면 엔진 타입 확장(EN-9)이 필요 — Phase 4 기본 범위 외.
+
+**Phase 4 기본 구현**: 결과 카드 변경 없음. `CohabitDeductionDetailCard`는 기존 `cohabitYears.effectiveYears` 표시 유지.
+
+**Phase 4 확장(선택)**: EN-9 결정 후 `reasonBreakdown` echo 표시 추가 가능.
+
+---
+
+## P4-8. Validation (⑧) — 신규 검증 규칙
+
+`lib/calc/inheritance-validate.ts` 에 추가:
+
+```typescript
+for (const heir of input.heirs ?? []) {
+  if (heir.isCohabitant && heir.cohabitReasons) {
+    for (const reason of heir.cohabitReasons) {
+
+      // V-1: 시작일 < 종료일 검증
+      if (reason.startDate && reason.endDate && reason.startDate >= reason.endDate) {
+        errors.push({
+          field: `heirs[${heir.id}].cohabitReasons[${reason.id}]`,
+          message: `부득이 사유 기간 오류: 종료일(${reason.endDate})이 시작일(${reason.startDate})보다 앞서거나 같습니다.`,
+        });
+      }
+
+      // V-2: 사유 기간이 동거기간 내에 있는지 (경고 — 차단 아님)
+      if (heir.cohabitStartDate && input.deathDate) {
+        if (reason.startDate < heir.cohabitStartDate || reason.endDate > input.deathDate) {
+          warnings.push({
+            field: `heirs[${heir.id}].cohabitReasons[${reason.id}]`,
+            message: `부득이 사유 기간(${reason.startDate}~${reason.endDate})이 동거기간(${heir.cohabitStartDate}~${input.deathDate}) 범위를 벗어납니다.`,
+            level: "warning",
+          });
+        }
+      }
+
+      // V-3: overseas_graduate 경고 (경고 — 차단 아님)
+      if (reason.type === "overseas_graduate") {
+        warnings.push({
+          field: `heirs[${heir.id}].cohabitReasons[${reason.id}]`,
+          message: "국외 대학원은 부득이 사유 불인정 (재조세-434). 제외 연수에 산입되지 않습니다.",
+          level: "warning",
+        });
+      }
+
+      // V-4: medical_care — 1년 미만 경고 (§20의2①4호 "1년 이상" 요건)
+      if (reason.type === "medical_care" && reason.startDate && reason.endDate) {
+        const { differenceInYears } = await import("date-fns"); // 실제 구현 시 정적 import
+        if (differenceInYears(new Date(reason.endDate), new Date(reason.startDate)) < 1) {
+          warnings.push({
+            field: `heirs[${heir.id}].cohabitReasons[${reason.id}]`,
+            message: "질병 요양은 1년 이상인 경우에만 부득이 사유로 인정됩니다 (§20의2①4호).",
+            level: "warning",
+          });
+        }
+      }
+    }
+  }
+
+  // V-5: cohabitExcludedYears(구형)와 cohabitReasons(신형) 동시 입력 경고
+  if (heir.isCohabitant && heir.cohabitExcludedYears !== undefined && heir.cohabitReasons !== undefined) {
+    warnings.push({
+      field: `heirs[${heir.id}].cohabitExcludedYears`,
+      message: "부득이 사유 배열과 직접 입력 연수가 동시에 존재합니다. 배열 입력값을 우선 사용합니다.",
+      level: "warning",
+    });
+  }
+}
+```
+
+**우선순위 규칙** (V-5 fallback): `cohabitReasons` 배열이 존재하면 배열에서 계산한 `sumExcludedYears`를 사용. `cohabitExcludedYears`는 무시. API 변환·validate 모두 동일 우선순위 적용 (⑧ 정책 준수 — UI/API/validate 일관성).
+
+---
+
+## P4-9. 마이그레이션 (기존 데이터 호환)
+
+### sessionStorage 복원 시
+
+`normalize-restored-form-dates.ts`:
+
+```typescript
+// 기존 cohabitExcludedYears 숫자값이 있는 경우
+// → cohabitReasons가 없으면 cohabitExcludedYears 그대로 유지
+// → cohabitReasons가 있으면 cohabitExcludedYears 무시 (V-5 경고 방지를 위해 undefined 처리)
+if (heir.cohabitReasons !== undefined && heir.cohabitExcludedYears !== undefined) {
+  heir = { ...heir, cohabitExcludedYears: undefined };
+}
+```
+
+**자동 변환 금지**: 기존 `cohabitExcludedYears` 숫자를 자동으로 `cohabitReasons` 배열로 변환하지 않는다 — 어떤 사유 유형인지 알 수 없으므로 자동 안분 fallback 금지 정책 위반이 된다. 사용자가 새 UI를 통해 직접 입력해야 한다.
+
+---
+
+## P4-10. 14개 동기화 지점 — Phase 4 영향 매핑
+
+| # | 지점 | 영향 | 설명 |
+|---|---|---|---|
+| ① 폼 상태 | O | `Heir.cohabitReasons?: CohabitReason[]` 추가 / `cohabitExcludedYears` deprecated | 엔진 타입 확장 후 FormData 동기화 |
+| ② initial | — | optional 자동 (undefined 기본값) | Heir factory 없음 |
+| ③ normalize | O | sessionStorage 복원 시 날짜 string 유지 + 신구 공존 해소 | normalize-restored-form-dates.ts |
+| ④ API 변환 | — | heirs spread 자동 포함 (Zod 스키마 추가 필수) | cast 방식 유지 |
+| ⑤ UI 위젯 | **O 주요** | CohabitReasonList 신규 + CohabitRequirementBlock props 변경 + HeirComposition 연결 | 본 Phase 핵심 |
+| ⑥ 사이드바 | — | 변경 없음 | |
+| ⑦ 결과 카드 | △ | 기본: 변경 없음. 확장(EN-9): reasonBreakdown echo 표시 | Phase 4 기본 범위 외 |
+| ⑧ Validation | O | V-1~5 규칙 추가 (시작<종료·범위·overseas_graduate·medical_care 1년·신구 공존) | |
+| ⑨ Zod enum(메인) | O | `cohabitReasonTypeSchema` 추가 | heirSchema 내부 |
+| ⑩ Zod enum(컴패니언) | — | 해당 없음 | |
+| ⑪ acqDate fallback | — | 해당 없음 | |
+| ⑫ Zod 입력 객체 | **O** | `cohabitReasonSchema` + `heirSchema.cohabitReasons` 추가 | TS 미감지 — 수동 점검 필수 |
+| ⑬ body spread | — | heirs cast 방식 → 자동 포함 | |
+| ⑭ Route handler 매핑 | — | heirs cast 방식 유지 (string 날짜 그대로 전달) | |
+
+**⑫⑬⑭ 주의**: TS 미감지 침묵 strip 위험. `heirSchema`에 `cohabitReasons` 추가와 `Heir` 타입 `cohabitReasons` 추가가 반드시 동시에 이루어져야 함.
+
+---
+
+## P4-11. 800줄 정책 준수 계획 (Phase 4)
+
+| 파일 | 현재 줄수 | Phase 4 변경 | 예상 줄수 | 대응 |
+|---|---|---|---|---|
+| `CohabitRequirementBlock.tsx` | 188줄 | DecimalInput 행 삭제(~15줄) + CohabitReasonList import(1줄) + JSX 교체(~10줄) | ~175줄 | 안전 |
+| `CohabitReasonList.tsx` | 신규 | CohabitReasonList + CohabitReasonRow + sumExcludedYears | ~200줄 | 분리 컴포넌트 |
+| `HeirComposition.tsx` | 658줄 | prop 교체 2~3줄 + import 추가 없음 | ~660줄 | 안전 |
+| `lib/validators/property-valuation-input.ts` | — | cohabitReasonSchema + cohabitReasons 추가 ~20줄 | 기존 + 20줄 | 확인 필요 |
+| `inheritance-validate.ts` | — | V-1~5 ~40줄 | 기존 + 40줄 | 확인 필요 |
+
+---
+
+## P4-12. 노출 조건 매트릭스 (CohabitReasonList 노출)
+
+| 조건 | CohabitReasonList 노출 여부 |
+|---|---|
+| `heir.isCohabitant === false` 또는 `undefined` | 미노출 (부모 CohabitRequirementBlock 전체 미노출) |
+| `heir.isCohabitant === true` + `cohabitStartDate` 없음 | 노출 (동거시작일 없어도 사유 배열 입력 허용) |
+| `heir.isCohabitant === true` + `cohabitStartDate` 있음 | 노출 + 미리보기 자동 업데이트 |
+| `cohabitReasons === undefined` | CohabitReasonList 토글 OFF 상태 |
+| `cohabitReasons === []` | CohabitReasonList 토글 ON + 행 없음 |
+| `cohabitReasons.length > 0` | CohabitReasonList 토글 ON + 행 목록 표시 |
+
+---
+
+## P4-13. E2E 시나리오 (Phase 4 추가)
+
+| ID | 시나리오 | 기대 |
+|---|---|---|
+| E2E-P4-1 | 동거주택 ON + 사유 배열 토글 OFF → 계산 | cohabitReasons=undefined, 제외 연수 0으로 처리 |
+| E2E-P4-2 | 징집 사유 추가 (2015-01-01~2017-01-01) + 동거시작일 2010-01-01 + 상속개시일 2025-01-01 | 제외 2년, effectiveYears = 13년, meetsRequirement = true |
+| E2E-P4-3 | 취학 사유 추가 (2018-01-01~2022-01-01) + 동거시작일 2010-01-01 + 상속개시일 2025-01-01 | 제외 4년, effectiveYears = 11년, meetsRequirement = true |
+| E2E-P4-4 | 국외 대학원 사유 추가 | amber 경고 배지 표시 + effectiveYears 변화 없음 |
+| E2E-P4-5 | 재건축 세입자 산입 사유 추가 (EN-7 결정 후) | 산입 기간 별도 표시 + effectiveYears 영향 (엔진 계약 확정 후) |
+| E2E-P4-6 | 시작일 ≥ 종료일 입력 | V-1 오류 표시 |
+| E2E-P4-7 | 질병 요양 1년 미만 | V-4 경고 표시 |
+| E2E-P4-8 | 사유 배열 비활성(OFF) + 기존 행 3개 존재 | 데이터 폐기 확인 또는 undefined 처리 (Do 단계 UX 결정) |
+
+---
+
+## P4-14. 엔진 시니어 확인 사항 (EN-7~EN-9, Do 진입 전 필수)
+
+| # | 질문 | 영향 |
+|---|---|---|
+| EN-7 | `calcCohabitYears` 시그니처를 유지하고 UI에서 `sumExcludedYears(배열) → 숫자` 합산 후 전달(옵션A)할지, 엔진이 `cohabitReasons` 배열을 직접 소비하도록 시그니처를 변경(옵션B)할지 | 옵션A: UI 어댑터만, 엔진 무변경. 옵션B: `Heir.cohabitReasons` 엔진 타입 추가 + 시그니처 변경 → ①④⑫⑭ 추가 동기화 |
+| EN-8 | `cohabitExcludedYears` Heir 타입 필드를 즉시 제거할지, deprecated 유지 후 다음 버전에서 제거할지 (sessionStorage 호환) | deprecated 유지 권장 — Zod에서도 optional 유지 |
+| EN-9 | `CohabitDeductionDetail`에 `reasonBreakdown?: Array<{type: CohabitReasonType; startDate: string; endDate: string; years: number; effect: "excluded" | "included" | "none"}>` echo 필드 추가 여부 | ⑦ 결과 카드 사유별 상세 표시 가능 여부 (Phase 4 기본 범위 외 — 옵션) |
+| EN-10 | `reconstruction_tenant`(재건축 세입자 산입) 처리 방식: UI에서 산입 기간을 별도 합산해 `addedYears` 파라미터로 전달할지, 엔진이 유형별로 직접 분기할지 | `sumExcludedYears`에서 산입 유형 처리 방식 결정 |
+
+---
+
+## P4-15. 가정 필드명 목록 (Phase 4 추가분)
+
+본 설계에서 UI가 **가정**한 필드명 — 엔진 시니어가 다른 이름으로 정할 경우 Do 단계에서 교체:
+
+| UI 가정 필드명 | 위치 | 설명 |
+|---|---|---|
+| `CohabitReasonType` | `inheritance-gift.types.ts` | 사유 유형 enum (6종) |
+| `CohabitReason` | 동상 | 사유 행 인터페이스 (`{id, type, startDate, endDate}`) |
+| `Heir.cohabitReasons` | 동상 | 사유 배열 optional 필드 |
+| `CohabitDeductionDetail.reasonBreakdown` | `inheritance-deduction-detail.types.ts` | 사유별 echo (EN-9, 선택) |
+
+---
+
+## P4-16. 작업 분담 (Phase 4)
+
+| 역할 | 담당 | 작업 |
+|---|---|---|
+| 엔진 시니어 | `inheritance-gift-tax-senior` | EN-7~10 결정 + `CohabitReasonType` / `CohabitReason` 타입 정의 + 엔진 소비 방식(옵션A or B) 확정 |
+| UI 시니어 | `inheritance-gift-tax-ui-senior` (본 에이전트) | 엔진 시니어 EN-7~10 결정 수령 후 ①②③⑤⑧⑨⑫ + `CohabitReasonList.tsx` 신규 + `CohabitRequirementBlock.tsx` 변경 + `HeirComposition.tsx` 최소 변경 |
+
+**시퀀셜 순서** (Do 단계):
+1. 엔진 시니어 EN-7~10 결정 (타입 정의 + 시그니처 확정)
+2. UI 시니어 ⑫ Zod 스키마 (`cohabitReasonSchema`)
+3. UI 시니어 ① 타입 동기화 (`Heir.cohabitReasons`)
+4. UI 시니어 ⑤ `CohabitReasonList.tsx` 신규 작성 + `CohabitRequirementBlock.tsx` 교체 + `HeirComposition.tsx` 연결
+5. UI 시니어 ⑧ Validation (V-1~5)
+6. UI 시니어 ③ normalize + ⑦ 결과 카드 (기본: 무변경)
+7. anchor + E2E (E2E-P4-1~8)
+8. `npx tsc --noEmit` + `npx vitest run __tests__/tax-engine/inheritance-tax/`
