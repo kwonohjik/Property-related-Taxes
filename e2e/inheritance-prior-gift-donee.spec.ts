@@ -31,6 +31,8 @@ async function gotoStep0WithChild(page: Page) {
   await page.getByLabel("연도").first().fill("2024");
   await page.getByLabel("월").first().fill("6");
   await page.getByLabel("일").first().fill("10");
+  // 병렬 경합 시 날짜 미커밋 방지(견고화)
+  await expect(page.getByLabel("연도").first()).toHaveValue("2024");
 
   // 자녀 1명 추가
   await page.getByRole("button", { name: /상속인 추가/ }).click();
@@ -44,8 +46,13 @@ async function gotoStep0WithChild(page: Page) {
 async function addLandAsset(page: Page) {
   await page.getByRole("button", { name: /상속재산 추가/ }).click();
   await page.getByRole("button", { name: /토지/ }).first().click();
-  await page.getByPlaceholder("면적 입력").fill("300");
-  await page.getByPlaceholder("공시지가 단가").fill("1000000");
+  const areaInput = page.getByPlaceholder("면적 입력");
+  const priceInput = page.getByPlaceholder("공시지가 단가");
+  await areaInput.fill("300");
+  await priceInput.fill("1000000");
+  // 병렬 CPU 경합 시 fill 미커밋 방지 — 값 커밋 검증(견고화). 빈 필드로 계산 진행 차단.
+  await expect(areaInput).toHaveValue(/300/);
+  await expect(priceInput).toHaveValue(/1[,.]?000[,.]?000/);
 }
 
 /** Step1 → Step2(비과세) 이동 */
@@ -75,16 +82,31 @@ async function addPriorGift(page: Page) {
   const giftAmountInput = giftCard.getByPlaceholder("금액 입력").first();
   await giftAmountInput.fill("500000000");
   await giftAmountInput.press("Tab");
+  // 병렬 경합 시 미커밋 방지 — 증여일 연도·증여액 커밋 검증(견고화).
+  await expect(giftCard.getByLabel("연도")).toHaveValue("2020");
+  await expect(giftAmountInput).toHaveValue(/500[,.]?000[,.]?000/);
 }
 
 /** Step3 → Step4(공제) → 계산하기 → 결과 대기 */
 async function proceedToResult(page: Page) {
   // Step4(공제·세액공제)
   await page.getByRole("button", { name: /^다음/ }).click();
-  // 계산하기
+  // 계산 API 응답을 명시적으로 대기 — 병렬 CPU 경합 시 렌더 타이밍 의존 제거(견고화).
+  const calcResponse = page.waitForResponse(
+    (r) =>
+      r.url().includes("/api/calc/inheritance") &&
+      r.request().method() === "POST",
+    { timeout: 30_000 },
+  );
   await page.getByRole("button", { name: /계산하기/ }).click();
-  // 결과 화면 로드 대기
-  await expect(page.getByText("상속세 결정세액")).toBeVisible({ timeout: 15_000 });
+  const resp = await calcResponse;
+  // 계산 API가 에러(폼 검증 실패 등)면 결과가 안 뜨므로 명확히 표면화(견고화·진단)
+  expect(
+    resp.ok(),
+    `계산 API 비정상 응답 ${resp.status()} — 폼 입력 누락/검증 실패 의심`,
+  ).toBe(true);
+  // 결과 화면 로드 대기 (API 응답 후 — 경합 여유 30s)
+  await expect(page.getByText("상속세 결정세액")).toBeVisible({ timeout: 30_000 });
 }
 
 // ============================================================
@@ -239,9 +261,11 @@ test.describe("사전증여 수증자 select — 인별 배부 검증 (2-B)", ()
       await proceedToResult(page);
 
       // 자동저장(IndexedDB) 완료 토스트가 뜰 시간 확보 — 루프는 saved 직후 발동
+      // 병렬 CPU 경합 시 autosave 지연 → timeout 15s로 상향(견고화)
       await expect(page.getByText(/자동 저장|이력|갱신/).first()).toBeVisible({
-        timeout: 10_000,
+        timeout: 15_000,
       });
+      // 루프 발동 감지 윈도우 (loop는 saved 직후 즉시·연속 발동 — 2s면 충분)
       await page.waitForTimeout(2_000);
 
       // 무한 렌더 루프(Maximum update depth) 콘솔 에러가 없어야 함
