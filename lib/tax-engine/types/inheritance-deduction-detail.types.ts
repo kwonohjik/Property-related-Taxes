@@ -222,8 +222,10 @@ export interface CohabitDeductionDetail {
   // ===== Phase 3 (2026-06-07) — G4 주택부수토지 면적한도 차감 echo =====
   /**
    * §23의2① 주택부수토지(소득세 시령 §154⑦ 배율) 초과분 차감액.
-   * ancillaryLandArea·buildingFootprintArea·ancillaryLandRegion 모두 입력된 경우만 존재.
-   * 미입력(아파트·공동주택 등) 또는 초과 없음 시 undefined.
+   * - ancillaryLandArea·buildingFootprintArea·ancillaryLandRegion 모두 입력된 경우만 존재 (undefined = G4 미사용).
+   * - 0: 3필드 모두 입력됐으나 면적 한도 이내 (차감 없음).
+   * - >0: 초과분 차감액.
+   * - 미입력(아파트·공동주택 등): undefined.
    */
   ancillaryLandLimitReduction?: number;
 }

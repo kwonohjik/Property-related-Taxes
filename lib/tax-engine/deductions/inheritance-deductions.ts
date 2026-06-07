@@ -519,10 +519,15 @@ export function calcInheritanceDeductions(
   );
   // G4 차감 후 실질 공시가격 (directAmount 모드는 사용자가 이미 반영한 금액이므로 적용 안 함)
   const adjustedCohabitHouseStdPrice = ancillaryLimitResult.adjustedHousePrice;
-  const ancillaryLandLimitReduction =
-    ancillaryLimitResult.limitReductionAmount > 0
-      ? ancillaryLimitResult.limitReductionAmount
-      : undefined;
+  // G4 사용 여부: 3필드 전부 입력 시에만 number(0 포함), 미입력 시 undefined
+  // 0 = 한도 이내(차감 없음), >0 = 초과 차감액, undefined = G4 미사용
+  const g4Used =
+    input.ancillaryLandArea !== undefined &&
+    input.buildingFootprintArea !== undefined &&
+    input.ancillaryLandRegion !== undefined;
+  const ancillaryLandLimitReduction = g4Used
+    ? ancillaryLimitResult.limitReductionAmount
+    : undefined;
 
   let cohabitDeductionDetail: CohabitDeductionDetail;
   let cohabitResult: { deduction: number; breakdown: CalculationStep[] };

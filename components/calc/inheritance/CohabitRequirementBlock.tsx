@@ -104,6 +104,17 @@ export function CohabitRequirementBlock({
         </p>
       </div>
 
+      {/* 동거 시작일 미입력 안내 hint (계산 차단 아님 — 안내만) */}
+      {!cohabitStartDate && (
+        <div
+          className="rounded-md border border-amber-200 bg-amber-50/60 dark:border-amber-700 dark:bg-amber-900/20 p-2.5 text-[11px] text-amber-700 dark:text-amber-300"
+          data-testid="cohabit-start-date-missing-hint"
+        >
+          동거 시작일을 입력하지 않으면 동거 10년 요건이 확인되지 않습니다.
+          입력하지 않아도 계산은 진행되며, 최종 판단은 신고 시 결정됩니다.
+        </div>
+      )}
+
       {/* 동거연수 미리보기 */}
       {preview && (
         <div

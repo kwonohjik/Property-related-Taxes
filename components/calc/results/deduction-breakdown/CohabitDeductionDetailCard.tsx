@@ -5,7 +5,7 @@
  * 소비: result.deductionDetail.cohabitDeductionDetail
  *
  * Phase 2 (2026-06-07): cohabitYears echo 표시 + meetsRequirement=false 경고
- * Phase 3 (2026-06-07): ancillaryLandLimitReduction 표시 (>0 시)
+ * Phase 3 (2026-06-07): ancillaryLandLimitReduction 표시 (>0 차감 / =0 한도 이내)
  */
 
 import { useState } from "react";
@@ -80,7 +80,7 @@ export function CohabitDeductionDetailCard({ detail, triggerLabel, triggerValue 
             label="동거주택 공시가격 (평가액)"
             value={formatKRW(detail.housingValue)}
           />
-          {/* Phase 3: G4 부수토지 면적한도 차감 */}
+          {/* Phase 3: G4 부수토지 면적한도 — 초과 차감 또는 한도 이내(차감 없음) */}
           {detail.ancillaryLandLimitReduction !== undefined &&
             detail.ancillaryLandLimitReduction > 0 && (
               <DetailRow
@@ -91,6 +91,14 @@ export function CohabitDeductionDetailCard({ detail, triggerLabel, triggerValue 
                 deduction
               />
             )}
+          {detail.ancillaryLandLimitReduction === 0 && (
+            <DetailRow
+              label="주택부수토지 면적 한도 이내 (소득세 시행령 §154⑦)"
+              value="차감 없음"
+              indent
+              muted
+            />
+          )}
           {detail.securedDebt > 0 && (
             <DetailRow
               label="(−) 담보된 피상속인 채무 (§23의2 ①)"
