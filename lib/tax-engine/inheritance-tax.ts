@@ -306,7 +306,11 @@ export function calcInheritanceTax(
           { donorRelation: g.doneeRelation, priorUsedDeduction: 0 },
           g.giftAmount,
         ).relationDeduction;
-        return s + Math.max(0, g.giftAmount - ded);
+        // §53의2 (직계존속 혼인·출산) — branch 2(giftTaxBase 미설정)에서만 적용.
+        // branch 1(giftTaxBase 명시)은 과세표준에 이미 반영 → 무시(이중차감 금지).
+        // per-gift 1억 캡: §53의2③ 방어.
+        const mbDed = Math.min(g.marriageBirthDeduction ?? 0, 100_000_000);
+        return s + Math.max(0, g.giftAmount - ded - mbDed);
       }, 0);
       // 총상속재산 = grossEstateValue(본래+간주) + presumedTotal
       // 상속외자유증·재해손실은 deductionInput에서

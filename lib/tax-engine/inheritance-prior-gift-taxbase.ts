@@ -116,6 +116,9 @@ export function derivePriorGiftTaxBase(
       );
     }
 
-    return { ...g, giftTaxBase: Math.max(0, g.giftAmount - allocatedDed) };
+    // §53의2(혼인·출산) — branch 2(giftTaxBase 미설정) 자동 도출 시 추가 차감.
+    // per-gift 1억 캡: §53의2③ 방어.
+    const mbDed = Math.min(g.marriageBirthDeduction ?? 0, 100_000_000);
+    return { ...g, giftTaxBase: Math.max(0, g.giftAmount - allocatedDed - mbDed) };
   });
 }

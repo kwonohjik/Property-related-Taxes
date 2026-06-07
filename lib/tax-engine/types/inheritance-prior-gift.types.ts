@@ -71,6 +71,14 @@ export interface PriorGift {
    *   undefined → 부표 02/03 (구분 미지정, legacy 호환)
    */
   isAttachedLandToBuilding?: boolean;
+
+  /**
+   * 그 사전증여에 적용된 §53의2 혼인·출산 증여재산공제액 (직계존속, 통합 1억 한도).
+   * §24③·§19 분자에서 giftTaxBase 미설정 분기(branch 2)에서만 사용.
+   * giftTaxBase 명시 시 과세표준에 이미 반영되어 있으므로 무시 — 이중차감 방지.
+   * 값은 증여 시점에 §53의2③ 1억 캡이 적용된 실액. 엔진 내부에서 추가로 per-gift 캡 적용.
+   */
+  marriageBirthDeduction?: number;
 }
 
 /**

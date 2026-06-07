@@ -128,5 +128,6 @@ export function makeEmptyGift(): PriorGift {
     giftAmount: 0,
     giftTaxPaid: 0,
     sourceCalculationId: undefined,
+    marriageBirthDeduction: undefined,
   };
 }

@@ -428,6 +428,8 @@ export const priorGiftSchema = z
     propertyName: z.string().optional(),
     propertyLocation: z.string().optional(),
     isAttachedLandToBuilding: z.boolean().optional(),
+    // §53의2 혼인·출산 증여재산공제 — 직계존속 giftTaxBase 미설정 분기에서 §24·§19 분자 차감용 (2026-06-07)
+    marriageBirthDeduction: z.number().nonnegative().optional(),
   })
   .superRefine((data, ctx) => {
     // 영리법인 사전증여 필수요건 (동기화 지점 ⑨)
