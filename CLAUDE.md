@@ -6,9 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **KoreanTaxCalc** — 한국 부동산 6대 세금 자동계산 웹 앱 (양도·상속·증여·취득·재산·종합부동산세).
 
-- 구현 현황: 6대 세목(양도·상속·증여·취득·재산·종부) + 주식양도세 전부 엔진·UI·API·결과뷰·테스트 구현 완료. 계산 결과 선택 출력 공통화(8 결과뷰, 2026-06). 상속·증여세는 별지 서식(별지9호·부표2·부표3·부표5 등) PDF 재현까지 확장.
-- 최근 완료 작업 이력: [`docs/00-pm/recent-completions.md`](docs/00-pm/recent-completions.md). 초기 계획(현황과 차이 큼 — Next.js 16·6세목 완료 등 미반영): [`docs/00-pm/korean-tax-calc.roadmap.md`](docs/00-pm/korean-tax-calc.roadmap.md).
-- 양도세 감면 23개 조문 확장: `lib/tax-engine/transfer-reductions/` 골격 + §99의3 완료, 나머지 조문 후속 대기 (계획: `docs/00-pm/transfer-reduction-expansion.plan.md`).
+- 구현 현황: 6대 세목 + 주식양도세 전부 엔진·UI·API·결과뷰·테스트 완료. 계산 결과 선택 출력 공통화(8 결과뷰). 상속·증여세는 별지 서식(별지9호·부표2·3·5 등) PDF 재현까지 확장.
+- 최근 완료 이력: [`docs/00-pm/recent-completions.md`](docs/00-pm/recent-completions.md). (초기 로드맵은 현황과 차이 큼 — Next.js 16·6세목 완료 미반영.)
+- 양도세 감면 23개 조문 확장: `lib/tax-engine/transfer-reductions/` 골격 + §99의3 완료, 나머지 후속 대기.
 
 ## ⚠️ Next.js 16 주의사항
 
@@ -29,27 +29,28 @@ npm test                      # vitest 전체 (1회)
 npm run test:watch            # vitest 감시 모드
 npx vitest run <path>         # 단일 파일/디렉터리
 npx vitest run -t "T-01"      # 이름 패턴
+npx playwright test <spec>    # E2E 단일 스펙 (비-worktree는 E2E_PORT 생략, 기본 3000)
 npx shadcn@latest add <name>  # shadcn/ui 컴포넌트 추가
 
 # 데이터·법령 (.env.local 필요)
 npm run seed:tax-rates        # Supabase tax_rates 시딩
-npm run verify:legal          # 법령 조문 상수 검증
-npm run verify:legal:refresh  # 캐시 무효화 후 재검증
+npm run verify:legal          # 법령 조문 상수 검증 (:refresh = 캐시 무효화 후)
 ```
 
 **자동 게이트**: husky pre-commit(lint-staged) + pre-push(typecheck + test) + GitHub Actions.
 
-**ESLint --fix 함정**: pre-commit lint-staged의 `eslint --fix`가 미사용 import 라인 정리 시 **같은 라인의 사용 중인 named export까지 함께 제거**할 수 있다 (예: `import { CurrencyInput, parseAmount }`에서 CurrencyInput만 미사용일 때 parseAmount도 제거 → TS2304). 회피: 신규 import는 한 라인에 한 named만 두거나, 별도 라인으로 분리. pre-push의 `tsc --noEmit`이 잡아주지만 별도 fix 커밋 1개가 추가됨.
+**ESLint --fix 함정**: pre-commit lint-staged의 `eslint --fix`가 미사용 import 정리 시 **같은 라인의 사용 중인 named export까지 제거**할 수 있다 (`import { CurrencyInput, parseAmount }`에서 CurrencyInput만 미사용 → parseAmount도 제거 → TS2304). 회피: 신규 import는 한 라인에 한 named만. pre-push `tsc`가 잡지만 fix 커밋 1개 추가됨.
 
 ## Tech Stack
 
-Next.js 16 (App Router, React 19, Turbopack) + TS strict / shadcn(BaseUI) + Tailwind v4 + zustand / Next Route Handlers + Server Actions (`actions/calculations.ts`) / Supabase (Auth + Postgres) / vitest + jsdom + RTL / Sentry (`tax_type`·`request_id` 태그).
+Next.js 16 (App Router, React 19, Turbopack) + TS strict / shadcn(BaseUI) + Tailwind v4 + zustand / Next Route Handlers + Server Actions (`actions/calculations.ts`) / Supabase (Auth + Postgres) / vitest + jsdom + RTL / Playwright E2E / Sentry (`tax_type`·`request_id` 태그).
 
 ## Architecture — 2-Layer Tax Engine
 
 ```
 Layer 1: Orchestrator (app/api/calc/{tax-type}/route.ts)
   → Rate limiting (lib/api/rate-limit.ts) IP당 분당 30회
+    · 테스트 우회: shouldBypassRateLimit(req) — prod NODE_ENV는 항상 false
   → Zod 검증 (discriminatedUnion 감면 스키마)
   → preloadTaxRates() Supabase RPC 일괄 로드
   → Pure Engine 호출 (세율 데이터 매개변수 전달)
@@ -59,8 +60,7 @@ Layer 2: Pure Engine (lib/tax-engine/*.ts)
   → DB 직접 호출 없음, 순수 함수
   → 단방향 의존만 허용: comprehensive → property (역방향 금지)
   → 감면 라우터: lib/tax-engine/transfer-reductions/ (23개 조문)
-  → 양도세 4-파일 분할: transfer-tax.ts + transfer-tax-helpers.ts
-    + transfer-tax-rate-calc.ts + transfer-tax-finalize.ts
+  → 양도세 4-파일 분할: transfer-tax.ts + -helpers.ts + -rate-calc.ts + -finalize.ts
   → 환산: commercial-building-valuation.ts / general-building-valuation.ts
 
 lib/calc/ — 클라이언트↔API 변환 (14개 동기화 지점 ④⑧ 담당)
@@ -102,64 +102,15 @@ lib/calc/ — 클라이언트↔API 변환 (14개 동기화 지점 ④⑧ 담당
 
 **로컬 저장소**: IndexedDB(Dexie). 비로그인 sessionStorage 보존→로그인 후 마이그레이션. zustand `result`는 partialize 제외. Store 마이그: `lib/stores/calc-wizard-migration.ts`. 상세: [lib/storage/CLAUDE.md](lib/storage/CLAUDE.md).
 
-## 법령 리서치 (`/law`)
+**법령 리서치 (`/law`)**: 법제처 Open API 직접 호출(`KOREAN_LAW_OC`). Routes `app/api/law/{search-law,law-text,search-decisions,decision-text,annexes,chain}/route.ts`. Client barrel `lib/korean-law/client.ts`(5파일). 별칭 52종 `aliases.ts`. 캐시 `.legal-cache/` 7일 TTL.
 
-법제처 Open API 직접 호출. 환경변수 `KOREAN_LAW_OC`.
-
-- Routes: `app/api/law/{search-law,law-text,search-decisions,decision-text,annexes,chain}/route.ts`
-- Client barrel: `lib/korean-law/client.ts` (5파일 분할).
-- 별칭 52종: `lib/korean-law/aliases.ts`. 캐시 `.legal-cache/` 7일 TTL.
-
-## 키움증권 OpenAPI 자동조회 (`lib/kiwoom/`)
-
-주식 시세 자동조회 인프라 — 양도세·상속세·증여세 공용. 환경변수 `KIWOOM_APP_KEY`·`KIWOOM_APP_SECRET`·`KIWOOM_ENV=mock|prod`.
-
-- **시장 커버리지**: KOSPI 2,452 + KOSDAQ 1,823 + KONEX 109 = 4,384 종목 (ka10099 `mrkt_tp=0/10/50`)
-- **자동조회 4종 시점**:
-  - §99①3 양도일 직전 1개월 — `/api/kiwoom/transfer-1month`
-  - §165⑤ 상장 후 1개월 (사례 48) — `/api/kiwoom/post-listing-1month`
-  - §63①1가목 평가기준일 전후 2개월 (상속·증여) — `/api/kiwoom/valuation-2month`
-  - 단건 (대주주 시총 §157①) — `/api/kiwoom/daily-close`
-- **종목명 typeahead**: `/api/kiwoom/search-by-name` (마스터 4,384 종목 부분 일치)
-- **인프라**: `auth.ts`(OAuth2 24h 토큰 캐시) · `client.ts`(token bucket 초당 3건 + 지수 백오프) · `dedup.ts`(in-flight Map) · `cache.ts`(일별 종가 영구 + 메타 5분 TTL) · `stock-master.ts`(KOSPI+KOSDAQ+KONEX 24h prefetch)
-- **법률 정확성**: "이전·이후" = **포함** / "전·후" = 미포함 (사용자 검증). `buildOneMonthBeforeSlots`는 양도일 포함, anchor 토·일 시프트 적용.
-- **자동 fallback 금지**: 거래정지(상증령 §52의2③)·휴장일(§52의2④)·IPO 미만은 모두 사용자 안내, 자동 보정 0건.
-- **검증 UX 표준 패턴**: 자동조회 결과 카드에 (a) 산식 명시 (합계 ÷ 거래일 = 평균) (b) **▼ 일자별 종가 상세 보기 (검증용)** 토글 (c) F-12 출처 라벨 `🔍 키움 자동조회 YYYY-MM-DD HH:MM KST` (`KiwoomFetchSourceBadge`).
-- **KONEX 종목코드 영문자 포함** (예: `0070X0`): Zod `^[0-9A-Z]{6}$` + SecurityMetadataBlock `toUpperCase()`.
-- **법령 인용 정정 이력** (KoreanLaw MCP 검증):
-  - 1개월 평균 분모 인용 §163⑨ → **§99①3 · 시행령 §165③ 준용** (D-1)
-  - 환산취득가 산식 본칙 §163⑨ → **시령 §176의2②1호** (D-2)
-  - §163⑨은 상속·증여 자산 평가가액 조항으로 무관 — 추정 인용 금지 정책 강제
-- **UI 컴포넌트**: `KiwoomAutoFetchButton`(양도일), `KiwoomPostListingAutoFetchButton`(상장 후), `KiwoomValuationAutoFetchButton`(상속·증여), `KiwoomMarketCapHelper`(시총), `KiwoomStockNameAutocomplete`(typeahead), `KiwoomFetchSourceBadge`(출처)
-- **테스트**: `__tests__/kiwoom/` (40 anchor) — calendar·averages·market-mapping·dedup·stock-master·daily-close·post-listing·integration
+**키움 OpenAPI 자동조회**: 주식 시세 자동조회(양도·상속·증여 공용). 시점 4종·인프라·법령 인용 정정: [lib/kiwoom/CLAUDE.md](lib/kiwoom/CLAUDE.md).
 
 ## 새 기능 추가 워크플로 (강제)
 
-### 에이전트
+엔진+UI 시니어를 **Plan 단계부터 단일 메시지로 병렬 호출**(한쪽 단독 보고 금지) → **Do는 시퀀셜**(엔진이 타입·헬퍼·anchor 선처리 → UI가 ⑤⑥⑦ 담당) → Check는 `ui-engine-sync-checker`(14지점) + `bkit:gap-detector`(matchRate). 에이전트 목록·PDCA 5단계·E2E 표준 상세: [docs/00-pm/feature-workflow.md](docs/00-pm/feature-workflow.md).
 
-엔진/UI 시니어는 **Plan 단계부터 병렬 참여**(Agent tool 단일 메시지). 한쪽만 단독 보고 금지.
-
-- 엔진: `transfer-tax-senior` / `acquisition-tax-senior` / `property-tax-senior` / `comprehensive-tax-senior` / `inheritance-gift-tax-senior` (+세목별 서브)
-- UI: `{transfer|acquisition|property|comprehensive|inheritance-gift}-tax-ui-senior`
-- QA: `tax-qa-lead` (6대 세목 병렬), `ui-engine-sync-checker` (read-only)
-
-**Plan 병렬 / Do 시퀀셜 위임 패턴** (사례 36 검증):
-1. Plan/Design — 엔진+UI 시니어 단일 메시지 동시 호출
-2. **Do — 시퀀셜**: 엔진 시니어가 ①②③④⑧⑨⑫⑭ 선처리(타입·헬퍼·anchor) → UI 시니어가 결과 받아 ⑤⑥⑦만 담당 → ④/⑬ 충돌 회피
-3. Check — `ui-engine-sync-checker` (14지점 read-only) → `bkit:gap-detector` (계획-구현 matchRate)
-4. UI 시니어 단독 작업 중 자주 중단되는 5가지(800줄·14지점·TS 연쇄·plan mode 상속·복잡 컴포넌트) → memory `feedback_pdca_session_efficiency` 6가지 사전 적용
-
-### 검증 기준 (Plan·Design·Check·갭분석·검토 산출물 — 강제)
-
-계획·설계·분석·검토 문서의 모든 주장은 **추정 금지**. 인용한 file:line은 실제 파일로, 동작·수치는 throwaway probe/anchor 실측으로 검증 후 단정한다. "현행 일치 예상"·"아마"·미확인 인용 금지. 미검증 항목은 "확인 필요"로 명시. (세부 사례: memory `feedback_pre_anchor_verification` · `feedback_numeric_impact_verify_before_bug_claim` · `feedback_korean_law_citation_verify`)
-
-### PDCA 5단계
-
-1. **PM/Plan**: 법령 근거. 엔진+UI 시니어 동시 호출. 신규 세목 UI 첫 진입 시 `docs/02-design/features/_new-tax-ui-kickoff.checklist.md`.
-2. **Design**: `_template.engine.design.md` 복사. **케이스 인벤토리 표 행≥1 필수** — 비면 Do 진입 금지.
-3. **Do**: 엔진 = 엔진+anchor. UI = 14개 동기화 지점. 디자인 갱신 없이 우회 금지.
-4. **Check**: `ui-engine-sync-checker` + QA + 브라우저 수동 확인.
-5. **Act**: 회귀 후속 + 디자인 환류. 상태: `.bkit/state/pdca-status.json`.
+**검증 기준 (강제)**: 계획·설계·분석·검토 문서의 모든 주장은 **추정 금지**. 인용 file:line은 실제 파일로, 동작·수치는 throwaway probe/anchor 실측으로 검증 후 단정. "현행 일치 예상"·"아마"·미확인 인용 금지. 미검증은 "확인 필요" 명시. (memory `feedback_pre_anchor_verification` · `feedback_numeric_impact_verify_before_bug_claim` · `feedback_korean_law_citation_verify`)
 
 ### Definition of Done — 14개 동기화 지점
 
@@ -190,8 +141,9 @@ lib/calc/ — 클라이언트↔API 변환 (14개 동기화 지점 ④⑧ 담당
 | UI 마법사 (StepWizard·공용·14지점 상세) | [components/calc/CLAUDE.md](components/calc/CLAUDE.md) |
 | 테스트 (Mock·시나리오 분할·anchor) | [__tests__/tax-engine/CLAUDE.md](__tests__/tax-engine/CLAUDE.md) |
 | 로컬 저장소 (Dexie·resultData·Supabase 전환) | [lib/storage/CLAUDE.md](lib/storage/CLAUDE.md) |
+| 키움 자동조회 (시점·인프라·법령) | [lib/kiwoom/CLAUDE.md](lib/kiwoom/CLAUDE.md) |
+| 새 기능 워크플로 (에이전트·PDCA·E2E 상세) | [docs/00-pm/feature-workflow.md](docs/00-pm/feature-workflow.md) |
 | PRD / Roadmap | `docs/00-pm/korean-tax-calc.{prd,roadmap}.md` |
 | Engine / DB / UI Design | `docs/02-design/features/korean-tax-calc-{engine,db-schema,ui}.design.md` |
-| 신규 기능 템플릿 | `docs/02-design/features/_template.engine.design.md` |
-| 신규 세목 UI 킥오프 | `docs/02-design/features/_new-tax-ui-kickoff.checklist.md` |
+| 신규 기능 템플릿 / 세목 UI 킥오프 | `docs/02-design/features/_template.engine.design.md` · `_new-tax-ui-kickoff.checklist.md` |
 | 최근 완료 이력 | [docs/00-pm/recent-completions.md](docs/00-pm/recent-completions.md) |
