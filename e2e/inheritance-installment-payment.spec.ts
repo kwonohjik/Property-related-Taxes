@@ -13,29 +13,28 @@
  * 정책: [[feedback_browser_verify_with_playwright]]
  */
 import { test, expect, type Page } from "@playwright/test";
+import {
+  fillDateAndVerify,
+  addLandAsset as addLandAssetHelper,
+  nextSteps,
+  calcAndWaitResult,
+} from "./_helpers/tax-flow";
 
 async function fillStep0WithChild(page: Page) {
   await page.goto("/calc/inheritance-tax");
-  await page.getByLabel("연도").first().fill("2024");
-  await page.getByLabel("월").first().fill("6");
-  await page.getByLabel("일").first().fill("10");
+  await fillDateAndVerify(page, { year: "2024", month: "6", day: "10" });
   await page.getByRole("button", { name: /상속인 추가/ }).click();
   await page.getByText("자녀", { exact: true }).click();
   await page.getByRole("button", { name: /^다음/ }).click(); // → Step1
 }
 
 async function addLandAsset(page: Page) {
-  await page.getByRole("button", { name: /상속재산 추가/ }).click();
-  await page.getByRole("button", { name: /토지/ }).first().click();
-  await page.getByPlaceholder("면적 입력").fill("300");
-  await page.getByPlaceholder("공시지가 단가").fill("10000000");
+  await addLandAssetHelper(page, { area: "300", unitPrice: "10000000" });
 }
 
 /** Step1 → Step4(공제·세액공제)로 이동 (계산 전) */
 async function gotoStep4(page: Page) {
-  await page.getByRole("button", { name: /^다음/ }).click(); // → Step2
-  await page.getByRole("button", { name: /^다음/ }).click(); // → Step3
-  await page.getByRole("button", { name: /^다음/ }).click(); // → Step4
+  await nextSteps(page, 3); // → Step2 → Step3 → Step4
 }
 
 test.describe("연부연납 일정표 (§71·§72)", () => {
@@ -57,8 +56,7 @@ test.describe("연부연납 일정표 (§71·§72)", () => {
     await expect(page.getByText("희망 연부연납 기간")).toBeVisible();
 
     // 계산하기 → 결과
-    await page.getByRole("button", { name: /계산하기/ }).click();
-    await expect(page.getByText("상속세 결정세액")).toBeVisible({ timeout: 20_000 });
+    await calcAndWaitResult(page);
 
     // 일정표 카드 + 표 노출
     const card = page.getByTestId("installment-schedule-card");
@@ -86,9 +84,7 @@ test.describe("연부연납 일정표 (§71·§72)", () => {
 
     // Step0: 비거주자 선택 + 자녀
     await page.goto("/calc/inheritance-tax");
-    await page.getByLabel("연도").first().fill("2024");
-    await page.getByLabel("월").first().fill("6");
-    await page.getByLabel("일").first().fill("10");
+    await fillDateAndVerify(page, { year: "2024", month: "6", day: "10" });
     await page.getByRole("button", { name: /비거주자/ }).click();
     await page.getByRole("button", { name: /상속인 추가/ }).click();
     await page.getByText("자녀", { exact: true }).click();
@@ -98,8 +94,7 @@ test.describe("연부연납 일정표 (§71·§72)", () => {
     await gotoStep4(page);
 
     await page.getByText("연부연납 신청 (상증법 §71)").click(); // ON
-    await page.getByRole("button", { name: /계산하기/ }).click();
-    await expect(page.getByText("상속세 결정세액")).toBeVisible({ timeout: 20_000 });
+    await calcAndWaitResult(page);
 
     // 9개월 안내 노출
     await expect(
@@ -115,8 +110,7 @@ test.describe("연부연납 일정표 (§71·§72)", () => {
     await gotoStep4(page);
 
     // 토글 OFF 상태 그대로 계산
-    await page.getByRole("button", { name: /계산하기/ }).click();
-    await expect(page.getByText("상속세 결정세액")).toBeVisible({ timeout: 20_000 });
+    await calcAndWaitResult(page);
 
     // 적격 안내 문구 노출, 상세 표는 없음
     await expect(page.getByText("연부연납 안내 (상증법 §71)")).toBeVisible();

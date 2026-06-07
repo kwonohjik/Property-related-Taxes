@@ -7,15 +7,19 @@
  * 정책: [[feedback_browser_verify_with_playwright]] · "알 수 없는 문자열 출력 금지"
  */
 import { test, expect } from "@playwright/test";
+import {
+  addLandAsset,
+  calcAndWaitResult,
+  fillDateAndVerify,
+  nextSteps,
+} from "./_helpers/tax-flow";
 
 test("재산 평가 내역 — 이름 미입력 자산은 카테고리 라벨, 내부 id(prop-/stock-) 미노출", async ({
   page,
 }) => {
   test.setTimeout(90_000);
   await page.goto("/calc/inheritance-tax");
-  await page.getByLabel("연도").first().fill("2024");
-  await page.getByLabel("월").first().fill("6");
-  await page.getByLabel("일").first().fill("10");
+  await fillDateAndVerify(page, { year: "2024", month: "6", day: "10" });
 
   // 자녀 1명
   await page.getByRole("button", { name: /상속인 추가/ }).click();
@@ -23,17 +27,11 @@ test("재산 평가 내역 — 이름 미입력 자산은 카테고리 라벨, �
   await page.getByRole("button", { name: /^다음/ }).click();
 
   // 토지 추가 (이름 미입력)
-  await page.getByRole("button", { name: /상속재산 추가/ }).click();
-  await page.getByRole("button", { name: /토지/ }).first().click();
-  await page.getByPlaceholder("면적 입력").fill("300");
-  await page.getByPlaceholder("공시지가 단가").fill("1000000");
+  await addLandAsset(page, { area: "300", unitPrice: "1000000" });
 
   // 결과까지
-  await page.getByRole("button", { name: /^다음/ }).click();
-  await page.getByRole("button", { name: /^다음/ }).click();
-  await page.getByRole("button", { name: /^다음/ }).click();
-  await page.getByRole("button", { name: /계산하기/ }).click();
-  await expect(page.getByText("상속세 결정세액")).toBeVisible({ timeout: 20_000 });
+  await nextSteps(page, 3);
+  await calcAndWaitResult(page);
 
   // 재산 평가 내역 펼침
   await page.getByRole("button", { name: /재산 평가 내역/ }).click();

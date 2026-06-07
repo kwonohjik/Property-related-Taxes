@@ -16,13 +16,17 @@
  */
 
 import { test, expect, type Page } from "@playwright/test";
+import {
+  fillDateAndVerify,
+  addLandAsset,
+  nextSteps,
+  calcAndWaitResult,
+} from "./_helpers/tax-flow";
 
 /** Step0: 상속개시일 2024-06-10 + 자녀1 + 영리법인 → Step1 */
 async function gotoStep0(page: Page) {
   await page.goto("/calc/inheritance-tax");
-  await page.getByLabel("연도").first().fill("2024");
-  await page.getByLabel("월").first().fill("6");
-  await page.getByLabel("일").first().fill("10");
+  await fillDateAndVerify(page, { year: "2024", month: "6", day: "10" });
 
   await page.getByRole("button", { name: /상속인 추가/ }).click();
   await page.getByText("자녀", { exact: true }).click();
@@ -35,21 +39,19 @@ async function gotoStep0(page: Page) {
 /** Step1: 토지 30억 → Step3(사전증여)
  *  (산출세액 ≫ 영리법인 면제여야 §69 신고세액공제 기준 > 0 → 신고세액공제 행 렌더) */
 async function addLandAndGotoStep3(page: Page) {
-  await page.getByRole("button", { name: /상속재산 추가/ }).click();
-  await page.getByRole("button", { name: /토지/ }).first().click();
-  await page.getByPlaceholder("면적 입력").fill("300");
-  await page.getByPlaceholder("공시지가 단가").fill("10000000");
-  await page.getByRole("button", { name: /^다음/ }).click(); // Step2
-  await page.getByRole("button", { name: /^다음/ }).click(); // Step3
+  await addLandAsset(page, { area: "300", unitPrice: "10000000" });
+  await nextSteps(page, 2); // Step2 → Step3
 }
 
 /** Step3: 영리법인 사전증여 7억 추가 */
 async function addCorporatePriorGift(page: Page) {
   await page.getByRole("button", { name: /사전증여 추가/ }).click();
   const giftCard = page.locator(".border.rounded-lg.p-4").last();
-  await giftCard.getByLabel("연도").fill("2021");
-  await giftCard.getByLabel("월").fill("8");
-  await giftCard.getByLabel("일").fill("10");
+  await fillDateAndVerify(
+    page,
+    { year: "2021", month: "8", day: "10" },
+    { scope: giftCard },
+  );
   const amountInput = giftCard.getByPlaceholder("금액 입력").first();
   await amountInput.fill("700000000");
   await amountInput.press("Tab");
@@ -63,8 +65,7 @@ async function addCorporatePriorGift(page: Page) {
 /** Step4 → 계산하기 → 결과 대기 */
 async function gotoResult(page: Page) {
   await page.getByRole("button", { name: /^다음/ }).click(); // Step4
-  await page.getByRole("button", { name: /계산하기/ }).click();
-  await expect(page.getByText("상속세 결정세액")).toBeVisible({ timeout: 20_000 });
+  await calcAndWaitResult(page);
 }
 
 test.describe("영리법인 면제 요약 반영 + §69 산식 정합", () => {

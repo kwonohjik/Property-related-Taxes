@@ -12,6 +12,12 @@
  */
 
 import { test, expect, type Page } from "@playwright/test";
+import {
+  fillDateAndVerify,
+  addLandAsset,
+  nextSteps,
+  calcAndWaitResult,
+} from "./_helpers/tax-flow";
 
 // ============================================================
 // 헬퍼 (inheritance-personal-deduction.spec.ts 패턴 차용)
@@ -19,9 +25,7 @@ import { test, expect, type Page } from "@playwright/test";
 
 async function gotoStep0(page: Page, [y, m, d]: [string, string, string]) {
   await page.goto("/calc/inheritance-tax");
-  await page.getByLabel("연도").first().fill(y);
-  await page.getByLabel("월").first().fill(m);
-  await page.getByLabel("일").first().fill(d);
+  await fillDateAndVerify(page, { year: y, month: m, day: d });
 }
 
 async function addChild(page: Page) {
@@ -33,20 +37,9 @@ async function addCohabitant(page: Page) {
   await page.getByRole("button", { name: /동거가족 추가/ }).click();
 }
 
-/** 토지(공시지가 10,000,000원/㎡ × 300㎡ = 30억) 추가 */
-async function addLandAsset(page: Page) {
-  await page.getByRole("button", { name: /상속재산 추가/ }).click();
-  await page.getByRole("button", { name: /토지/ }).first().click();
-  await page.getByPlaceholder("면적 입력").fill("300");
-  await page.getByPlaceholder("공시지가 단가").fill("10000000");
-}
-
 async function proceedToResult(page: Page) {
-  await page.getByRole("button", { name: /^다음/ }).click(); // 1→2
-  await page.getByRole("button", { name: /^다음/ }).click(); // 2→3
-  await page.getByRole("button", { name: /^다음/ }).click(); // 3→4
-  await page.getByRole("button", { name: /계산하기/ }).click();
-  await expect(page.getByText("상속세 결정세액")).toBeVisible({ timeout: 20_000 });
+  await nextSteps(page, 3); // 1→2→3→4
+  await calcAndWaitResult(page);
 }
 
 async function openAndExpandAll(page: Page) {
@@ -79,14 +72,16 @@ test.describe("상속세 동거가족 인적공제 §20 P1", () => {
     // 동거가족 손자 (관계 기본 직계비속) 추가
     await addCohabitant(page);
     const dep = page.getByTestId("cohabitant-editor-0");
-    await dep.getByLabel("연도").fill("2017");
-    await dep.getByLabel("월").fill("3");
-    await dep.getByLabel("일").fill("4"); // 2023-01-01 기준 만 5세
+    await fillDateAndVerify(
+      page,
+      { year: "2017", month: "3", day: "4" }, // 2023-01-01 기준 만 5세
+      { scope: dep },
+    );
     await dep.getByText("장애인", { exact: true }).click();
     await dep.getByText("남성", { exact: true }).click();
 
     await page.getByRole("button", { name: /^다음/ }).click(); // Step0→1
-    await addLandAsset(page); // 토지 30억 → 인적공제 9억 의미
+    await addLandAsset(page, { area: "300", unitPrice: "10000000" }); // 토지 30억 → 인적공제 9억 의미
     await proceedToResult(page);
 
     const section = await openAndExpandAll(page);
@@ -149,16 +144,16 @@ test.describe("상속세 동거가족 인적공제 §20 P1", () => {
 
     await addCohabitant(page);
     const dep = page.getByTestId("cohabitant-editor-0");
-    await dep.getByLabel("연도").fill("2010");
-    await dep.getByLabel("월").fill("1");
-    await dep.getByLabel("일").fill("1"); // 만 15세 미성년
+    await fillDateAndVerify(
+      page,
+      { year: "2010", month: "1", day: "1" }, // 만 15세 미성년
+      { scope: dep },
+    );
     await dep.getByText("장애인", { exact: true }).click(); // 성별 미선택
 
     await page.getByRole("button", { name: /^다음/ }).click(); // Step0→1
-    await addLandAsset(page);
-    await page.getByRole("button", { name: /^다음/ }).click(); // 1→2
-    await page.getByRole("button", { name: /^다음/ }).click(); // 2→3
-    await page.getByRole("button", { name: /^다음/ }).click(); // 3→4
+    await addLandAsset(page, { area: "300", unitPrice: "10000000" });
+    await nextSteps(page, 3); // 1→2→3→4
     await page.getByRole("button", { name: /계산하기/ }).click();
 
     // 검증 오류 + 결과 미표시 (차단)

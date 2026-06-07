@@ -10,20 +10,21 @@
  */
 
 import { test, expect, type Page } from "@playwright/test";
+import {
+  fillDateAndVerify,
+  addLandAsset,
+  nextSteps,
+  calcAndWaitResult,
+} from "./_helpers/tax-flow";
 
 /** 상속 Step1: 2024-06-10 + 자녀1 → 토지 30억(300㎡ × 1천만/㎡) */
 async function gotoStep1WithLand(page: Page) {
   await page.goto("/calc/inheritance-tax");
-  await page.getByLabel("연도").first().fill("2024");
-  await page.getByLabel("월").first().fill("6");
-  await page.getByLabel("일").first().fill("10");
+  await fillDateAndVerify(page, { year: "2024", month: "6", day: "10" });
   await page.getByRole("button", { name: /상속인 추가/ }).click();
   await page.getByText("자녀", { exact: true }).click();
   await page.getByRole("button", { name: /^다음/ }).click(); // → Step1
-  await page.getByRole("button", { name: /상속재산 추가/ }).click();
-  await page.getByRole("button", { name: /토지/ }).first().click();
-  await page.getByPlaceholder("면적 입력").fill("300");
-  await page.getByPlaceholder("공시지가 단가").fill("10000000");
+  await addLandAsset(page, { area: "300", unitPrice: "10000000" });
 }
 
 /** 자산카드 ⚙️ 고급 옵션 열고 §74 토글 ON (기본 3호 designated) */
@@ -58,12 +59,8 @@ test.describe("§74 지정문화유산 등 징수유예 — UI", () => {
     await gotoStep1WithLand(page);
     await enableHeritageToggle(page);
 
-    await page.getByRole("button", { name: /^다음/ }).click(); // → Step2
-    await page.getByRole("button", { name: /^다음/ }).click(); // → Step3
-    await page.getByRole("button", { name: /^다음/ }).click(); // → Step4
-    await page.getByRole("button", { name: /계산하기/ }).click();
-
-    await expect(page.getByText("상속세 결정세액")).toBeVisible({ timeout: 20_000 });
+    await nextSteps(page, 3); // → Step2 → Step3 → Step4
+    await calcAndWaitResult(page);
     // 징수유예 결과 카드 (상증령 §76① 산식)
     await expect(page.getByText("문화유산 등 징수유예 (상증법 §74)")).toBeVisible();
     await expect(page.getByText("= 징수유예세액 (별지9호 ㉖)")).toBeVisible();

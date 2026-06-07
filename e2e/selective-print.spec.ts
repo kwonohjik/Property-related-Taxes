@@ -11,33 +11,26 @@
  */
 
 import { test, expect, type Page } from "@playwright/test";
+import {
+  addLandAsset,
+  calcAndWaitResult,
+  fillDateAndVerify,
+  nextSteps,
+} from "./_helpers/tax-flow";
 
 /** Step0: 상속개시일 + 자녀 1명 → 다음 */
 async function fillStep0WithChild(page: Page) {
   await page.goto("/calc/inheritance-tax");
-  await page.getByLabel("연도").first().fill("2024");
-  await page.getByLabel("월").first().fill("6");
-  await page.getByLabel("일").first().fill("10");
+  await fillDateAndVerify(page, { year: "2024", month: "6", day: "10" });
   await page.getByRole("button", { name: /상속인 추가/ }).click();
   await page.getByText("자녀", { exact: true }).click();
   await page.getByRole("button", { name: /^다음/ }).click();
 }
 
-/** Step1: 토지(공시지가 1,000,000원/㎡ × 300㎡) */
-async function addLandAsset(page: Page) {
-  await page.getByRole("button", { name: /상속재산 추가/ }).click();
-  await page.getByRole("button", { name: /토지/ }).first().click();
-  await page.getByPlaceholder("면적 입력").fill("300");
-  await page.getByPlaceholder("공시지가 단가").fill("1000000");
-}
-
 /** Step2→3→4→계산 → 결과 대기 */
 async function proceedToResult(page: Page) {
-  await page.getByRole("button", { name: /^다음/ }).click();
-  await page.getByRole("button", { name: /^다음/ }).click();
-  await page.getByRole("button", { name: /^다음/ }).click();
-  await page.getByRole("button", { name: /계산하기/ }).click();
-  await expect(page.getByText("상속세 결정세액")).toBeVisible({ timeout: 20_000 });
+  await nextSteps(page, 3);
+  await calcAndWaitResult(page);
 }
 
 test.describe("계산 결과 선택 출력 — 화면 인쇄", () => {
@@ -45,7 +38,7 @@ test.describe("계산 결과 선택 출력 — 화면 인쇄", () => {
     test.setTimeout(90_000);
 
     await fillStep0WithChild(page);
-    await addLandAsset(page);
+    await addLandAsset(page, { area: "300", unitPrice: "1000000" });
     await proceedToResult(page);
 
     // SP-1: 선택 패널 노출 + 기본 전체 미선택 → 인쇄 버튼 disabled

@@ -19,13 +19,12 @@
  */
 
 import { test, expect, type Page } from "@playwright/test";
+import { fillDateAndVerify, nextSteps, calcAndWaitResult } from "./_helpers/tax-flow";
 
 /** Step0: 상속개시일 + 자녀 1명 → Step1 */
 async function gotoStep0(page: Page) {
   await page.goto("/calc/inheritance-tax");
-  await page.getByLabel("연도").first().fill("2026");
-  await page.getByLabel("월").first().fill("1");
-  await page.getByLabel("일").first().fill("10");
+  await fillDateAndVerify(page, { year: "2026", month: "1", day: "10" });
   await page.getByRole("button", { name: /상속인 추가/ }).click();
   await page.getByText("자녀", { exact: true }).click();
   await page.getByRole("button", { name: /^다음/ }).click();
@@ -78,13 +77,8 @@ test.describe("비상장 간편 주식 — grossEstate 배선 + 협의분할 토
     expect(Number(previewDigits)).toBeGreaterThan(0);
 
     // Step1 → Step2 → Step3 → Step4 (다음 3회) → 계산하기
-    for (let i = 0; i < 3; i++) {
-      await page.getByRole("button", { name: /^다음/ }).click();
-    }
-    await page.getByRole("button", { name: /계산하기/ }).click();
-
-    // 결과 로드
-    await expect(page.getByText("상속세 결정세액")).toBeVisible({ timeout: 15_000 });
+    await nextSteps(page, 3);
+    await calcAndWaitResult(page);
 
     // 상속재산 평가액 = 미리보기 총 평가액 (grossEstate에 주식 반영 — 이전 버그: 0)
     const grossRow = page.getByText("상속재산 평가액", { exact: true }).locator("xpath=following-sibling::*[1]");

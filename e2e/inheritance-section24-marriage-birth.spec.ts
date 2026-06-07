@@ -10,15 +10,14 @@
  * UI 설계:  docs/02-design/features/inheritance-section24-marriage-birth-deduction.ui.design.md
  */
 import { test, expect } from "@playwright/test";
+import { fillDateAndVerify, calcAndWaitResult } from "./_helpers/tax-flow";
 
 test.describe("상속세 §53의2 혼인·출산 증여재산공제", () => {
   test("E2E-1: 자녀 수증자 사전증여 → §53의2 위젯 노출 + 입력 + 계산", async ({ page }) => {
     await page.goto("/calc/inheritance-tax");
 
     // Step0: 상속개시일 2024-6-1 + 자녀 1명
-    await page.getByLabel("연도").first().fill("2024");
-    await page.getByLabel("월").first().fill("6");
-    await page.getByLabel("일").first().fill("1");
+    await fillDateAndVerify(page, { year: "2024", month: "6", day: "1" });
     await page.getByRole("button", { name: /상속인 추가/ }).click();
     await page.getByText("자녀", { exact: true }).click();
     await page.getByRole("button", { name: /^다음/ }).click(); // → Step1
@@ -56,7 +55,7 @@ test.describe("상속세 §53의2 혼인·출산 증여재산공제", () => {
 
     // 계산 진행 (Step3→4→계산)
     await page.getByRole("button", { name: /^다음/ }).click(); // → Step4
-    await page.getByRole("button", { name: /계산하기/ }).click();
+    await calcAndWaitResult(page);
 
     // 결과 페이지 도달 (상속공제 상세 내역 버튼 존재)
     await expect(page.getByRole("button", { name: /상속공제 상세 내역/ })).toBeVisible();
