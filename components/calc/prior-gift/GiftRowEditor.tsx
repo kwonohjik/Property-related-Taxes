@@ -38,7 +38,7 @@ import {
   deriveDoneeRelationFromHeir,
 } from "@/lib/calc/prior-gift-donee-derive";
 import { autoComputePriorGiftTax } from "@/lib/calc/prior-gift-auto-tax";
-import { isMarriageBirthEligibleRelation } from "@/lib/tax-engine/deductions/gift-deductions";
+import { isInheritancePriorGiftMarriageBirthEligible } from "@/lib/calc/prior-gift-marriage-birth-rule";
 
 // ============================================================
 // 수증자 select 헬퍼 — 파생 로직은 lib/calc/prior-gift-donee-derive.ts 단일 진실
@@ -343,11 +343,12 @@ export function GiftRowEditor({
         hint="증여 당시 평가액 (시가 기준)"
       />
 
-      {/* §53의2 혼인·출산 증여재산공제 — 직계존속 AND giftTaxBase 미설정 건만 노출 (2026-06-07)
-       * 게이트: isMarriageBirthEligibleRelation(doneeRelation) AND !giftTaxBase
+      {/* §53의2 혼인·출산 증여재산공제 — 상속세 모드 + 피상속인의 직계비속(자녀 등)만 노출 (2026-06-07)
+       * 게이트: showIsHeir(상속세) AND doneeRelation===lineal_descendant (피상속인 관점 — 수증자가 피상속인의 직계비속)
+       * 자녀가 피상속인(=자녀의 직계존속)으로부터 받은 사전증여가 §53의2 주 케이스.
        * giftTaxBase 입력 건은 §53의2 이미 반영 → 위젯 숨김 + 안내 표시 */}
-      {gift.doneeRelation &&
-        isMarriageBirthEligibleRelation(gift.doneeRelation) && (
+      {showIsHeir &&
+        isInheritancePriorGiftMarriageBirthEligible(gift.doneeRelation) && (
           <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2">
             <div className="flex items-center gap-2">
               <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-[10px] font-bold text-sky-800 select-none">

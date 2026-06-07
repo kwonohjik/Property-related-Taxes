@@ -164,6 +164,15 @@ return s + Math.max(0, g.giftAmount - ded - mbDed);
 
 ---
 
+## 8.5 Check 환류 (2026-06-07) — 도메인-aware §53의2 게이트
+
+Check(E2E 설계) 중 **reachability 결함 발견·정정**:
+- 초안은 §53의2 게이트로 gift-deductions `isMarriageBirthEligibleRelation`(수증자 관점 `lineal_ascendant`)을 재사용했으나, 상속 사전증여의 `doneeRelation`은 **피상속인 관점**(deriveDoneeRelationFromHeir: 자녀→`lineal_descendant`)이라 **주 케이스(자녀 혼인증여) UI 차단**됨 (probe 실증).
+- `deriveDoneeRelationFromHeir` swap(옵션 A)은 신고서 양식 표시(`InheritanceFilingFormTable.tsx:193`)·§13을 깨뜨려 기각.
+- **채택: 도메인-aware 게이트** — 상속세 §53의2 적격 = 수증자(상속인)가 피상속인의 직계비속 = `doneeRelation === "lineal_descendant"`. 신규 헬퍼 `isInheritancePriorGiftMarriageBirthEligible`(`prior-gift-marriage-birth-rule.ts`). 위젯 게이트 `showIsHeir && lineal_descendant`, validation·Zod 동일.
+- 부수: 단일진실 헬퍼 `checkMarriageBirthGiftRule`(validate ⑧ + Zod ⑨ 공용) + `priorGiftSchema` sibling 분리(`prior-gift-schema.ts`, 800줄). E2E `inheritance-section24-marriage-birth.spec.ts` GREEN.
+- §19 배우자 분자 mbDed는 **방어적 유지**(배우자는 피상속인의 직계존속이 될 수 없어 실무상 미발생).
+
 ## 9. 범위 밖 (후속)
 
 - 상속세 모드 `giftTaxBase`(증여세 과세표준) 직접 입력 UI — 전체 공제 정밀화(별도)

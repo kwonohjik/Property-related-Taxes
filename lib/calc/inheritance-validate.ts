@@ -21,7 +21,7 @@ import type {
 import { deriveCollateralDebts } from "@/lib/tax-engine/inheritance-collateral-debt";
 import { resolveEngineValuatedAmount } from "@/lib/tax-engine/property-valuation";
 import { checkCorporateGiftRule } from "@/lib/calc/prior-gift-corporate-rule";
-import { isMarriageBirthEligibleRelation } from "@/lib/tax-engine/deductions/gift-deductions";
+import { checkMarriageBirthGiftRule } from "@/lib/calc/prior-gift-marriage-birth-rule";
 import { toOptionalDate } from "@/lib/api/date-coerce";
 import { endOfMonth, addMonths, format } from "date-fns";
 
@@ -200,24 +200,9 @@ export function validatePriorGift(gift: PriorGift): string | null {
   const corpError = checkCorporateGiftRule(gift);
   if (corpError !== null) return corpError;
 
-  // §53의2 혼인·출산 증여재산공제 검증 (2026-06-07)
-  if (gift.marriageBirthDeduction != null) {
-    // (a) 1억 한도 초과 차단
-    if (gift.marriageBirthDeduction > 100_000_000) {
-      return "§53의2 혼인·출산 증여재산공제는 합산 최대 1억원입니다.";
-    }
-    // (b) 비직계존속 입력 차단
-    if (
-      gift.doneeRelation == null ||
-      !isMarriageBirthEligibleRelation(gift.doneeRelation)
-    ) {
-      return "§53의2는 직계존속으로부터 받은 증여에만 적용됩니다.";
-    }
-    // (c) giftTaxBase 동시 입력 시 §53의2 무시 안내 (차단 아님 — 경고만)
-    // Note: 엔진은 giftTaxBase 명시 분기에서 marriageBirthDeduction을 무시 (이중차감 방지).
-    // 이 경우 UI가 이미 "과세표준 직접 입력 시 §53의2 포함 이미 반영" 안내를 표시하므로
-    // validation 경고는 별도 메시지로 제공하지 않음 (UI 안내로 충분, 차단 불필요).
-  }
+  // §53의2 혼인·출산 — 단일진실 헬퍼 (Zod priorGiftSchema와 공용)
+  const mbError = checkMarriageBirthGiftRule(gift);
+  if (mbError !== null) return mbError;
 
   // beneficiaryType 미설정 시 legacy isHeir 사용 (자동 추론)
   return null;
