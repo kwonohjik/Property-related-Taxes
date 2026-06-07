@@ -5,6 +5,21 @@
 import type { Buppyo3DeductionValues } from "@/lib/calc/deduction-besshi-data";
 
 export const PAPER_FOOTER = "210mm×297mm[백상지 80g/㎡]";
+
+/**
+ * 별지 제6호의2서식 ④ 예외유형 범례 (작성방법 §④).
+ * 화면 캡션 및 인쇄 공란 안내용.
+ */
+export const B6_2_EXCEPTION_TYPES = [
+  "① 일시적 2주택",
+  "② 혼인합가주택",
+  "③ 문화재주택",
+  "④ 이농주택",
+  "⑤ 귀농주택",
+  "⑥ 동거봉양",
+  "⑦ 피상속인 혼인 합가주택",
+  "⑧ 공동상속주택 소수지분 소유",
+] as const;
 export const HANDWRITE_NOTE =
   "※ 식별정보(주민등록번호·주소·계좌번호·사업자등록번호 등)는 자동 산출되지 않습니다 — 인쇄 후 수기 작성.";
 
