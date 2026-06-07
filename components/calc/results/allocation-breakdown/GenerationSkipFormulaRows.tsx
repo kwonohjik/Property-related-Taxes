@@ -36,6 +36,24 @@ export function GenerationSkipFormulaRows({
       <div className="divide-y divide-border">
         {detail.rows.map((row, i) => {
           const name = row.heirName?.trim() || LEGATEE_LABEL;
+          const prefix = multi ? `${i + 1}. ` : "";
+          // §27 단서 대습상속 배제 행 — "0%" 오표시 방지, 전용 표시
+          if (row.excludedBySubstitution) {
+            return (
+              <Fragment key={row.heirId}>
+                <DetailRow
+                  label={`${prefix}${name} — 대습상속(민법 §1001) §27 단서 배제`}
+                  value={formatKRW(0)}
+                />
+                <DetailRow
+                  label="= 세대생략 할증 미적용 (직계비속이나 대습상속)"
+                  value=""
+                  indent
+                  muted
+                />
+              </Fragment>
+            );
+          }
           const ratePct = (row.rate * 100).toFixed(0);
           const higher = row.rate === 0.4;
           const tag = higher
@@ -43,7 +61,6 @@ export function GenerationSkipFormulaRows({
             : row.isMinor
               ? `${ratePct}%, 미성년`
               : `${ratePct}%`;
-          const prefix = multi ? `${i + 1}. ` : "";
           return (
             <Fragment key={row.heirId}>
               <DetailRow

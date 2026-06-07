@@ -112,6 +112,23 @@ export function computeGenerationSkipSurcharge(
         (amountByDoneeForGenSkip?.get(heir.id) ?? 0);
 
       const isMinor = resolveMinorBeneficiary(heir, input.deathDate);
+
+      // §27 단서: 「민법」 §1001 대습상속 → 할증 전액 배제(30%·40% 모두).
+      // numerator·isMinor 산출 직후 배치(표시용 echo 유지). 본문 미적용.
+      if (heir.isSubstituteInheritance) {
+        rows.push({
+          heirId: heir.id,
+          heirName: heir.name,
+          numerator,
+          rate: 0,
+          isMinor,
+          surcharge: 0,
+          excludedBySubstitution: true,
+        });
+        perHeirMap[heir.id] = 0;
+        continue;
+      }
+
       // §27②: 미성년 + 개인재산 20억 초과 → 40%, 그 외 30%
       const rate =
         isMinor && numerator > MINOR_SURCHARGE_THRESHOLD ? 0.4 : 0.3;
@@ -127,6 +144,7 @@ export function computeGenerationSkipSurcharge(
     }
 
     const totalSurcharge = rows.reduce((s, r) => s + r.surcharge, 0);
+    const hasExcluded = rows.some((r) => r.excludedBySubstitution);
     generationSkipSurcharge = totalSurcharge;
     perHeirSurcharge = perHeirMap;
     // prorationActive: true — per-heir 경로. 산식 = computedTax × numerator × rate / denominator
@@ -135,15 +153,17 @@ export function computeGenerationSkipSurcharge(
         ? { denominator: adjustedDenominator, computedTax, rows, total: totalSurcharge, prorationActive: true }
         : null;
 
-    if (totalSurcharge > 0) {
+    // 전원 대습(totalSurcharge 0)이어도 hasExcluded면 안내 step push (§27 단서 배제 노출)
+    if (totalSurcharge > 0 || hasExcluded) {
       breakdown.push({
         label: "세대생략 할증 (§27 per-heir)",
         amount: totalSurcharge,
         lawRef: INH.GENERATION_SKIP,
         note: rows
-          .map(
-            (r) =>
-              `${r.heirName ?? r.heirId}: ${r.numerator.toLocaleString()} × ${r.rate * 100}% / ${adjustedDenominator.toLocaleString()} = ${r.surcharge.toLocaleString()}`,
+          .map((r) =>
+            r.excludedBySubstitution
+              ? `${r.heirName ?? r.heirId}: 대습상속(민법§1001) §27 단서 배제`
+              : `${r.heirName ?? r.heirId}: ${r.numerator.toLocaleString()} × ${r.rate * 100}% / ${adjustedDenominator.toLocaleString()} = ${r.surcharge.toLocaleString()}`,
           )
           .join("; "),
       });
