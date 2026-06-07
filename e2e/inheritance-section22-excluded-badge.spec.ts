@@ -18,6 +18,12 @@
  */
 
 import { test, expect, type Page } from "@playwright/test";
+import {
+  fillDateAndVerify,
+  fillAndVerify,
+  nextSteps,
+  calcAndWaitResult,
+} from "./_helpers/tax-flow";
 
 /**
  * Step0(피상속인·상속인) 입력 후 Step1(상속재산)으로 이동.
@@ -26,41 +32,33 @@ import { test, expect, type Page } from "@playwright/test";
 async function gotoStep1WithListedStock(page: Page) {
   await page.goto("/calc/inheritance-tax");
 
-  // Step0: 상속개시일
-  await page.getByLabel("연도").first().fill("2024");
-  await page.getByLabel("월").first().fill("6");
-  await page.getByLabel("일").first().fill("10");
+  // Step0: 상속개시일 (값 커밋 검증)
+  await fillDateAndVerify(page, { year: "2024", month: "6", day: "10" });
 
   // 상속인(자녀) 추가
   await page.getByRole("button", { name: /상속인 추가/ }).click();
   await page.getByText("자녀", { exact: true }).click();
 
   // Step1(상속재산) 이동
-  await page.getByRole("button", { name: /^다음/ }).click();
+  await nextSteps(page, 1);
 
   // 상장주식 카드 추가
   await page.getByRole("button", { name: /주식·지분 추가/ }).click();
   await page.getByText("상장주식", { exact: true }).click();
 
-  // 최소 평가액 입력: 주당 평균가 100,000 × 수량 100 = 10,000,000
-  await page.getByPlaceholder("주당 순손익 입력 (원)").fill("100000");
-  await page.getByPlaceholder("주식 수 입력").fill("100");
+  // 최소 평가액 입력: 주당 평균가 100,000 × 수량 100 = 10,000,000 (값 커밋 검증)
+  await fillAndVerify(page.getByPlaceholder("주당 순손익 입력 (원)"), "100000");
+  await fillAndVerify(page.getByPlaceholder("주식 수 입력"), "100");
 }
 
 /**
  * Step1 → Step2 → Step3 → Step4(공제) → "계산하기" → 결과 화면 대기
  */
 async function proceedToResult(page: Page) {
-  // Step2(비과세·장례비)
-  await page.getByRole("button", { name: /^다음/ }).click();
-  // Step3(사전증여)
-  await page.getByRole("button", { name: /^다음/ }).click();
-  // Step4(공제·세액공제)
-  await page.getByRole("button", { name: /^다음/ }).click();
-  // 계산하기
-  await page.getByRole("button", { name: /계산하기/ }).click();
-  // 결과 화면 로드 대기
-  await expect(page.getByText("상속세 결정세액")).toBeVisible({ timeout: 15_000 });
+  // Step2(비과세·장례비) → Step3(사전증여) → Step4(공제·세액공제)
+  await nextSteps(page, 3);
+  // 계산 API 응답 명시 대기 + 결과 노출
+  await calcAndWaitResult(page);
 }
 
 /**

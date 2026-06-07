@@ -22,7 +22,7 @@ import {
   foreignStockInputSchema,
 } from "@/lib/api/stock-transfer-tax-schema";
 import { coerceDates } from "@/lib/api/date-coerce";
-import { checkRateLimit, getClientIp } from "@/lib/api/rate-limit";
+import { checkRateLimit, getClientIp, shouldBypassRateLimit } from "@/lib/api/rate-limit";
 import type { StockTransferInput } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
 import type { ExitTaxInput, ExitTaxHolding } from "@/lib/tax-engine/stock-transfer/types/exit-tax.types";
 import { exitTaxInputSchema } from "@/lib/api/stock-transfer-tax-schema";
@@ -55,7 +55,9 @@ const STOCK_DATE_FIELDS = [
 export async function POST(req: NextRequest) {
   // Rate limit (분당 30회)
   const ip = getClientIp(req);
-  const rateLimitResult = await checkRateLimit(ip);
+  const rateLimitResult = await checkRateLimit(ip, {
+    bypass: shouldBypassRateLimit(req),
+  });
   if (!rateLimitResult.allowed) {
     return NextResponse.json(
       { error: "Too many requests" },

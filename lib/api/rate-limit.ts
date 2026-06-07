@@ -14,6 +14,12 @@ interface RateLimitOptions {
   limit?: number;
   /** 윈도우 크기 ms (default: 60_000 = 1분) */
   windowMs?: number;
+  /**
+   * true면 카운트 없이 즉시 허용한다 (E2E 테스트 전용 우회).
+   * 호출부는 반드시 `shouldBypassRateLimit(req)`로만 이 값을 채우며,
+   * 그 함수는 프로덕션에서 항상 false를 반환한다(보안 불변식).
+   */
+  bypass?: boolean;
 }
 
 interface RateLimitResult {
@@ -49,9 +55,15 @@ export function checkRateLimit(
   key: string,
   options: RateLimitOptions = {},
 ): RateLimitResult {
-  const { limit = 30, windowMs = 60_000 } = options;
+  const { limit = 30, windowMs = 60_000, bypass = false } = options;
   const now = Date.now();
   const cutoff = now - windowMs;
+
+  // E2E 테스트 우회 — 카운트·store 미접촉으로 즉시 허용.
+  // bypass는 shouldBypassRateLimit()(프로덕션 항상 false)로만 채워진다.
+  if (bypass) {
+    return { allowed: true, limit, remaining: limit, resetAt: now + windowMs };
+  }
 
   maybeCleanup(windowMs);
 
@@ -85,4 +97,23 @@ export function getClientIp(request: { headers: { get: (key: string) => string |
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
     "unknown"
   );
+}
+
+/** E2E 테스트 우회 헤더 — Playwright `use.extraHTTPHeaders`로 전송 */
+export const RATE_LIMIT_BYPASS_HEADER = "x-e2e-rate-limit-bypass";
+
+/**
+ * 요청이 rate limit을 우회해야 하는지 판정.
+ *
+ * 병렬 E2E는 클라이언트 IP 헤더가 없어 전 요청이 단일 키("unknown")로 묶이고,
+ * 30회/분 버킷을 스위트 전체가 공유해 429가 발생한다. 이를 풀기 위한 테스트 전용 우회.
+ *
+ * **보안 불변식**: 프로덕션(NODE_ENV==="production")에서는 헤더가 있어도 항상 false.
+ * 일반 브라우저/사용자는 이 헤더를 보내지 않으므로 개발·운영 수동 사용에는 영향이 없다.
+ */
+export function shouldBypassRateLimit(request: {
+  headers: { get: (key: string) => string | null };
+}): boolean {
+  if (process.env.NODE_ENV === "production") return false;
+  return request.headers.get(RATE_LIMIT_BYPASS_HEADER) === "1";
 }

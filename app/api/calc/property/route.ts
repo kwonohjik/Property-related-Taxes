@@ -9,7 +9,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { TaxCalculationError } from "@/lib/tax-engine/tax-errors";
-import { checkRateLimit, getClientIp } from "@/lib/api/rate-limit";
+import { checkRateLimit, getClientIp, shouldBypassRateLimit } from "@/lib/api/rate-limit";
 import { propertyTaxInputSchema } from "@/lib/validators/property-input";
 import { calculatePropertyTax } from "@/lib/tax-engine/property-tax";
 import { preloadTaxRates } from "@/lib/db/tax-rates";
@@ -25,6 +25,7 @@ export async function POST(req: NextRequest) {
   const rateLimitResult = await checkRateLimit(`property:${ip}`, {
     limit: 30,
     windowMs: 60_000,
+    bypass: shouldBypassRateLimit(req),
   });
   if (!rateLimitResult.allowed) {
     return NextResponse.json(

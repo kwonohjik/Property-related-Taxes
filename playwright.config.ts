@@ -28,6 +28,10 @@ export default defineConfig({
     baseURL: BASE_URL,
     trace: "on-first-retry",
     screenshot: "only-on-failure",
+    // 병렬 E2E는 클라이언트 IP 헤더가 없어 전 요청이 단일 "unknown" 버킷(30회/분)을
+    // 공유 → 429 flaky. 이 헤더로 calc API rate limit을 우회한다.
+    // shouldBypassRateLimit()는 프로덕션에서 헤더가 있어도 항상 무시(보안 불변식).
+    extraHTTPHeaders: { "x-e2e-rate-limit-bypass": "1" },
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
