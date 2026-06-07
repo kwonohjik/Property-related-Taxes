@@ -23,7 +23,6 @@ import {
   isBelowMinTaxBase,
   calcGiftDeductions,
 } from "@/lib/tax-engine/deductions/gift-deductions";
-import { optimizeDeductionMethod } from "@/lib/tax-engine/deductions/deduction-optimizer";
 import type {
   Heir,
   CohabitantDependent,
@@ -511,58 +510,6 @@ describe("증여재산공제 (§53·§53의2)", () => {
   });
 });
 
-// ============================================================
-// 4. 일괄 vs 항목별 자동 선택 (deduction-optimizer.ts)
-// ============================================================
-
-describe("일괄 vs 항목별 공제 자동 선택 (§21)", () => {
-  it("[D30] 인적공제 없으면 일괄(5억) > 기초(2억) → 일괄 선택", () => {
-    const heirs: Heir[] = [makeHeir({ id: "sp", relation: "spouse" })];
-    const result = optimizeDeductionMethod(heirs, "2025-01-01");
-    expect(result.chosenMethod).toBe("lump_sum");
-    expect(result.chosenAmount).toBe(500_000_000);
-  });
-
-  it("[D31] 항목별 > 일괄 → 항목별 선택", () => {
-    const heirs: Heir[] = [
-      makeHeir({ id: "c1", relation: "child" }),
-      makeHeir({ id: "c2", relation: "child" }),
-      makeHeir({ id: "c3", relation: "child" }),
-      makeHeir({ id: "c4", relation: "child" }),
-      makeHeir({ id: "c5", relation: "child" }),
-    ];
-    // 기초 2억 + 자녀5명×5천 = 2억+2.5억 = 4.5억 < 5억? → 일괄
-    // 아래처럼 확인 필요
-    const result = optimizeDeductionMethod(heirs, "2025-01-01");
-    // 자녀5명: 2.5억 + 기초2억 = 4.5억 < 5억 → 일괄
-    expect(result.chosenMethod).toBe("lump_sum");
-  });
-
-  it("[D32] 자녀 7명이면 항목별(기초2억+자녀3.5억) > 일괄5억 → 항목별", () => {
-    const heirs: Heir[] = Array.from({ length: 7 }, (_, i) =>
-      makeHeir({ id: `c${i}`, relation: "child" }),
-    );
-    const result = optimizeDeductionMethod(heirs, "2025-01-01");
-    // 기초2억 + 7명×5천 = 2억+3.5억 = 5.5억 > 5억 → 항목별
-    expect(result.chosenMethod).toBe("itemized");
-    expect(result.chosenAmount).toBe(550_000_000);
-  });
-
-  it("[D33] 동률(항목별=5억)이면 일괄 선택 (정책)", () => {
-    // 기초2억 + 인적3억 = 5억 = 일괄공제
-    // 자녀 6명: 3억 + 기초2억 = 5억
-    const heirs: Heir[] = Array.from({ length: 6 }, (_, i) =>
-      makeHeir({ id: `c${i}`, relation: "child" }),
-    );
-    const result = optimizeDeductionMethod(heirs, "2025-01-01");
-    expect(result.chosenMethod).toBe("lump_sum");
-    expect(result.reason).toContain("동률");
-  });
-
-  it("[D34] 가업상속공제 시 일괄 강제 선택해도 항목별로 변환", () => {
-    const heirs: Heir[] = [makeHeir({ id: "c1", relation: "child" })];
-    const result = optimizeDeductionMethod(heirs, "2025-01-01", "lump_sum", true);
-    expect(result.chosenMethod).toBe("itemized");
-    expect(result.reason).toContain("가업·영농");
-  });
-});
+// 일괄 vs 항목별 자동 선택(§21)은 calcInheritanceDeductions 인라인(546~576)으로 통합됨.
+//   기존 deduction-optimizer.ts(optimizeDeductionMethod)는 엔진 미사용 dead code로 제거(2026-06-07).
+//   해당 동작은 CI-LS(spouse-deduction-fix.test.ts)·SEC21P(section21-unfiled-proviso.test.ts)가 커버.
