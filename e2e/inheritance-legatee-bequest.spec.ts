@@ -30,7 +30,7 @@ test("수유자(legatee) 추가 버튼 노출 + 추가 (상속인 외 유증 입
     timeout: 5_000,
   });
 
-  // 수유자 추가 → HeirEditor 헤더 "수유자 N" (배우자0+자녀1+수유자2 → index+1)
+  // 수유자 추가 → HeirEditor 헤더 "N. 수유자" 형식 (index+1 + ". " + 관계 라벨)
   await page.getByText("수유자", { exact: true }).click();
-  await expect(page.getByText(/수유자 \d/).first()).toBeVisible({ timeout: 5_000 });
+  await expect(page.getByText(/\d\. 수유자/).first()).toBeVisible({ timeout: 5_000 });
 });

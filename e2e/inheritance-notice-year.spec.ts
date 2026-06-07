@@ -70,11 +70,15 @@ test.describe("상속세 기준시가 공시연도 자동 선택", () => {
 
     // §66·§63 — 담보채권액(1천만 < 평가액)을 입력해도 평가액에서 차감되지 않고(MAX),
     // 채무는 부채 명세 별도 공제 안내가 표시되어야 함
+    // 저당권은 advanced ToggleCard(시가·감정가·임대보증금·저당권 입력) 안에 있음 — 먼저 열기
+    await page.getByText("시가·감정가·임대보증금·저당권 입력").click();
     const mortgageInput = page
       .getByText("저당권 등에 의해 담보된 채권액", { exact: true })
-      .locator("xpath=following-sibling::div/input");
+      .locator("xpath=ancestor::div[@data-slot='field-card']//input");
     await mortgageInput.fill("10000000");
-    await expect(page.getByText("부채 명세 별도 공제")).toBeVisible();
+    // §66 MAX 동작: 담보채권액(1천만) < 평가액(2억1천만) → 차감 없이 평가액 유지
+    // hint 텍스트로 §66 설명 노출 확인 (부동산 카드에 preview 없음 — hint로 대체)
+    await expect(page.getByText(/§66.*평가액이 더 크면 평가액으로 평가/)).toBeVisible();
     await expect(page.getByText("21,080,000").first()).toBeVisible(); // 차감 없이 유지
   });
 

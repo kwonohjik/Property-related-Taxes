@@ -18,9 +18,8 @@ async function gotoGiftAptCard(page: Page, year: string, month: string, day: str
   await page.getByLabel("월").first().fill(month);
   await page.getByLabel("일").first().fill(day);
 
-  // 증여자와 수증자의 관계 (button)
-  await page.getByRole("button", { name: /직계존속.*성인/ }).click();
   // 증여자(donor §47) native select — 명시 선택 (validateStep: form.donor 필수)
+  // donorRelation은 donor select에서 자동 도출 (G-M3) — 별도 RadioCardGroup 없음
   await page.locator("select").first().selectOption({ index: 1 });
 
   // 증여재산 단계로

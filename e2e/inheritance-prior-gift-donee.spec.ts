@@ -129,13 +129,12 @@ test.describe("사전증여 수증자 select — 인별 배부 검증 (2-B)", ()
       // 옵션 중 "선택 안 함" 외 첫 번째 option 선택 (자녀)
       await doneeSelect.selectOption({ index: 1 });
 
-      // "수증자 지정됨" disabledReason 문구 — 토글 자동 동기화 확인
-      await expect(page.getByText(/수증자 지정됨/)).toBeVisible();
-
-      // 수증자 지정 확인 문구 (select 아래 hint 문구)
+      // doneeId 선택 시 gift-donee-summary 배지 표시 (실제 구현: disabled가 아닌 조건부 숨김)
+      await expect(page.getByTestId("gift-donee-summary")).toBeVisible();
+      // "수증자를 지정하면..." 미선택 안내 사라짐
       await expect(page.getByText(/수증자를 지정하면/)).toHaveCount(0);
-      // "✓ 상속인 여부가 수증자 관계에서 자동 결정됩니다." 문구 (select hint)
-      await expect(page.getByText("✓ 상속인 여부가 수증자 관계에서 자동 결정됩니다.")).toBeVisible();
+      // isHeir 토글 자체가 숨겨짐 (doneeId 지정 시 !gift.doneeId 조건으로 숨김)
+      await expect(page.getByText("상속인에게 증여")).toHaveCount(0);
     },
   );
 
@@ -155,15 +154,15 @@ test.describe("사전증여 수증자 select — 인별 배부 검증 (2-B)", ()
 
       // 수증자 지정
       await doneeSelect.selectOption({ index: 1 });
-      await expect(page.getByText(/수증자 지정됨/)).toBeVisible();
+      await expect(page.getByTestId("gift-donee-summary")).toBeVisible();
 
       // 다시 "선택 안 함"으로 변경
       await doneeSelect.selectOption({ index: 0 });
 
       // 안내 문구 재표시 (미지정 상태)
       await expect(page.getByText(/수증자를 지정하면/)).toBeVisible();
-      // "수증자 지정됨" 사라짐
-      await expect(page.getByText(/수증자 지정됨/)).toHaveCount(0);
+      // gift-donee-summary 배지 사라짐
+      await expect(page.getByTestId("gift-donee-summary")).toHaveCount(0);
     },
   );
 

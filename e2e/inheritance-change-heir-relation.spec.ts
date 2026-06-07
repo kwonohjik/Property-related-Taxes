@@ -24,10 +24,10 @@ test("CHR-1: 기타 → 수유자 종류 변경 (삭제·재추가 없이 교정
   test.setTimeout(90_000);
   await fillStep0(page);
 
-  // 기타(other) 1명 추가 → 헤더 "기타 1"
+  // 기타(other) 1명 추가 → 헤더 "1. 기타 법정상속인..." 형식
   await page.getByRole("button", { name: /상속인 추가/ }).click();
   await page.getByText("기타", { exact: true }).click();
-  await expect(page.getByText(/기타 \d/).first()).toBeVisible();
+  await expect(page.getByText(/\d\. 기타/).first()).toBeVisible();
 
   // 종류 변경 버튼 → 관계 선택 그리드 펼침
   await page.getByTestId("heir-change-relation-0").click();
@@ -37,9 +37,9 @@ test("CHR-1: 기타 → 수유자 종류 변경 (삭제·재추가 없이 교정
   // 현재 관계(기타)에 "현재" 배지 노출
   await expect(picker.getByText("현재")).toBeVisible();
 
-  // 수유자 선택 → 헤더 "수유자 N"으로 변경 + 그리드 닫힘
+  // 수유자 선택 → 헤더 "N. 수유자"로 변경 + 그리드 닫힘
   await picker.getByText("수유자", { exact: true }).click();
-  await expect(page.getByText(/수유자 \d/).first()).toBeVisible();
+  await expect(page.getByText(/\d\. 수유자/).first()).toBeVisible();
   await expect(picker).not.toBeVisible();
 });
 
@@ -61,7 +61,7 @@ test("CHR-2: 법인 → 자녀 종류 변경 (법인 전용 UI 제거, 자연인
     .getByText("자녀", { exact: true })
     .click();
 
-  // 법인 전용 UI 제거 + 헤더 "자녀 N"
+  // 법인 전용 UI 제거 + 헤더 "N. 자녀"
   await expect(page.getByTestId("heir-is-for-profit")).not.toBeVisible();
-  await expect(page.getByText(/자녀 \d/).first()).toBeVisible();
+  await expect(page.getByText(/\d\. 자녀/).first()).toBeVisible();
 });

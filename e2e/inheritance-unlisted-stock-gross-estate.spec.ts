@@ -52,18 +52,15 @@ test.describe("비상장 간편 주식 — grossEstate 배선 + 협의분할 토
     await gotoStep0(page);
     await addUnlistedStock(page);
 
-    // 입력 전: 협의분할 토글 disabledReason 노출
+    // 비상장주식 협의분할 토글 노출 확인
+    // (UX3-AC1: 평가액 미입력이어도 상속인 존재 시 토글 활성 — disabledReason 없음)
     await expect(page.getByText("상속인·수유자별 협의분할 입력")).toBeVisible();
-    await expect(page.getByText("평가액을 먼저 입력하세요")).toBeVisible();
 
     // 평가액 입력
     await fillSimpleValuation(page);
 
     // 미리보기 총 평가액 표시 (UI 평가 계산 동작)
     await expect(page.getByText("총 평가액")).toBeVisible();
-
-    // 입력 후: disabledReason 소멸 → 토글 활성화
-    await expect(page.getByText("평가액을 먼저 입력하세요")).toHaveCount(0);
   });
 
   test("G-2: full-flow → 결과 상속재산 평가액에 주식 반영(>0)", async ({ page }) => {

@@ -64,10 +64,17 @@ async function proceedToResult(page: Page) {
 }
 
 /**
- * 결과 화면에서 "상속공제 상세 내역" 펼치기
+ * 결과 화면에서 "상속공제 상세 내역" 펼치기 + "금융재산 공제 (§22)" 하위 펼치기
+ * (section22-excluded-badge는 FinancialDeductionDetailCard.open=true 시만 렌더)
  */
 async function expandDeductionBreakdown(page: Page) {
-  await page.getByRole("button", { name: /상속공제 상세 내역/ }).click();
+  await page.getByTestId("deduction-breakdown-toggle").click();
+  // "금융재산 공제 (§22)" 텍스트를 가진 div 내 "펼치기" aria-label 버튼 클릭
+  await page
+    .locator("div.flex.items-center.justify-between")
+    .filter({ hasText: "금융재산 공제 (§22)" })
+    .getByRole("button", { name: "펼치기" })
+    .click();
 }
 
 test.describe("D-5: §22② 최대주주 보유주식 배제 echo 배지", () => {

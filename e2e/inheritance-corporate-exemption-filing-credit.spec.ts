@@ -114,7 +114,15 @@ test.describe("영리법인 면제 요약 반영 + §69 산식 정합", () => {
     // 구 분리 인라인 카드 제목 제거 확인
     await expect(page.getByText(/영리법인 사전증여 면제/)).toHaveCount(0);
 
-    // 면제 산출 요약(차감) 상시 노출
+    // 면제 산출 요약(차감) — 헤더 ExpandToggleButton 클릭 후 펼침 확인
+    // (summaryOpen 기본값 false → 토글 후 visible)
+    // 영리법인 면제 섹션 전체 컨테이너를 testid 없이 filter로 범위 한정
+    const corpSection = page
+      .locator("div.rounded-lg")
+      .filter({ hasText: "영리법인 상속세 면제 (§3의2②)" })
+      .first();
+    // 첫 번째 ▼ 펼치기 버튼 = summaryOpen 토글
+    await corpSection.getByRole("button", { name: /펼치기/ }).first().click();
     await expect(page.getByText(/상속세 산출세액에서 차감/)).toBeVisible();
 
     // 부표 5 펼침 → 가. 표 노출 (부표1 보조명세에도 동일 토글 존재 → 부표5 헤더 부모로 스코프)

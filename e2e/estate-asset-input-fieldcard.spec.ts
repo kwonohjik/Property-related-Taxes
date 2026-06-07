@@ -42,23 +42,27 @@ test.describe("부동산 자산 카드 — FieldCard + 섹션 스타일", () => 
     // 섹션 헤더
     await expect(page.getByText("평가액 입력").first()).toBeVisible();
 
-    // FieldCard(data-slot="field-card") 다수 — 자산명·별칭·시가·감정·기준시가·저당 등
+    // FieldCard(data-slot="field-card") — 기본 노출(자산명·별칭·개별공시지가) 3개 이상
+    // (2026-05-29 §8a75d27: 시가·감정가는 advanced 토글 뒤로 이동 — 기본 노출에서 제거됨)
     await expect(
       page.locator('[data-slot="field-card"]').first(),
     ).toBeVisible();
     expect(
       await page.locator('[data-slot="field-card"]').count(),
-    ).toBeGreaterThanOrEqual(5);
+    ).toBeGreaterThanOrEqual(3);
 
-    // 주요 라벨 (FieldCard label) — exact로 hint/서브타이틀 중복 매칭 회피
-    await expect(
-      page.getByText("시가 (매매·수용·경매가액)", { exact: true }),
-    ).toBeVisible();
-    await expect(page.getByText("감정평가액", { exact: true })).toBeVisible();
+    // 기본 노출 라벨 확인
     await expect(page.getByText("별칭", { exact: true })).toBeVisible();
     await expect(
       page.getByText("개별공시지가 (면적 포함 합산)", { exact: true }),
     ).toBeVisible();
+
+    // 시가·감정평가액은 advanced 토글 ON 후 노출 (2026-05-29 UX3-Issue3)
+    await page.getByText("시가·감정가·임대보증금·저당권 입력").click();
+    await expect(
+      page.getByText("시가 (매매·수용·경매가액)", { exact: true }),
+    ).toBeVisible();
+    await expect(page.getByText("감정평가액", { exact: true })).toBeVisible();
   });
 });
 

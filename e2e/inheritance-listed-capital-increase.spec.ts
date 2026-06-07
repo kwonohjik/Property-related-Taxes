@@ -65,7 +65,9 @@ test.describe("PR-L3: §63②3호 상장법인 증자 신주(미상장)", () => 
     // 배당차액 입력 (토글 ON 후 노출된 CurrencyInput — 콤마 입력란)
     await page.getByText("배당차액 (원/주)").click();
     await page.locator('input[inputmode="numeric"]').last().fill("3000");
-    await expect(page.getByText("(50,000 − 3,000) × 100주")).toBeVisible();
+    // 실제 앱 산식: perShareFormula = "50,000 − 3,000 = 47,000", totalFormula = "47,000 × 100주"
+    await expect(page.getByTestId("ls-preview-per-share-formula")).toContainText("50,000 − 3,000");
+    await expect(page.getByTestId("ls-preview-total-formula")).toContainText("47,000 × 100주");
     await expect(page.getByText("§63②3호 평가액")).toBeVisible();
   });
 
@@ -75,9 +77,9 @@ test.describe("PR-L3: §63②3호 상장법인 증자 신주(미상장)", () => 
     await openListedStockCard(page);
     await fillBase(page);
     await page.getByText(TOGGLE_TITLE).click();
-    // 단서 토글 ON
+    // 단서 토글 ON (배당기산일 동일 → 배당차액 차감 없음)
     await page.getByText(/배당기산일을 기존 상장주식과 동일/).click();
-    // 차감 0 → (50,000 − 0) × 100주
-    await expect(page.getByText("(50,000 − 0) × 100주")).toBeVisible();
+    // sameBaseDate=true → perShareFormula = "50,000" (차감 0), totalFormula = "50,000 × 100주"
+    await expect(page.getByTestId("ls-preview-total-formula")).toContainText("50,000 × 100주");
   });
 });

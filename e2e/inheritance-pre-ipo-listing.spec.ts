@@ -32,7 +32,7 @@ async function gotoGiftV2Formal(page: Page) {
   await page.getByLabel("연도").first().fill("2026");
   await page.getByLabel("월").first().fill("5");
   await page.getByLabel("일").first().fill("15");
-  await page.getByRole("button", { name: /직계존속.*성인/ }).click();
+  // donorRelation은 donor select에서 자동 도출 (G-M3) — 별도 RadioCardGroup 없음
   await page.locator("select").first().selectOption({ index: 1 });
   await page.getByRole("button", { name: /^다음/ }).click();
   await page.getByRole("button", { name: /주식·지분 추가/ }).click();

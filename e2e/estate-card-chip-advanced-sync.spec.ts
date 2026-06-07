@@ -60,19 +60,20 @@ test.describe("PR-G S-1: 헤더 칩 ↔ ⚙️ 패널 상태 동기", () => {
     test.setTimeout(60_000);
     await gotoStep1WithFinancialCard(page);
 
-    // 분류 칩 — 기본 "일반"
+    // 분류 칩 — 기본 "일반" (estate-chip-classification-{itemId})
     const classChip = page.locator('[data-testid^="estate-chip-classification-"]').first();
     await expect(classChip).toContainText("일반");
 
-    // 클릭 → 인라인 펼침
-    await classChip.click();
-
-    // 인라인 패널 노출 (testid prefix)
+    // 인라인 패널 — 이미 열려 있으면 열지 않음, 닫혀 있으면 칩 클릭으로 열기
     const inlinePanel = page.locator('[data-testid^="estate-inline-expand-classification-"]').first();
+    const isPanelVisible = await inlinePanel.isVisible().catch(() => false);
+    if (!isPanelVisible) {
+      await classChip.click();
+    }
     await expect(inlinePanel).toBeVisible();
 
-    // 보험금 라디오 선택 — DeemedCategorySection 내부 testid
-    await page.locator('[data-testid^="estate-item-deemed-category-insurance-"]').first().click();
+    // 보험금 라디오 선택 — DeemedCategorySection 내부 (RadioCardGroup, testid 없음 → role="radio")
+    await page.getByRole("radio", { name: "보험금 (§8)" }).click();
 
     // 칩 라벨 갱신
     await expect(classChip).toContainText("보험금 §8");
@@ -86,9 +87,10 @@ test.describe("PR-G S-1: 헤더 칩 ↔ ⚙️ 패널 상태 동기", () => {
     const advancedToggle = page.locator('[data-testid^="estate-advanced-panel-toggle-"]').first();
     await expect(advancedToggle).toBeVisible();
 
-    // 클릭 전 ⚙️ 패널 미노출
+    // 클릭 전 ⚙️ 패널 미노출 — id^="estate-advanced-panel-" 로 패널 DOM 부재 확인
+    // (data-testid 패턴은 toggle 버튼도 매칭되므로 id 속성으로 구분)
     await expect(
-      page.locator('[data-testid^="estate-advanced-panel-"][data-testid*="panel-"]'),
+      page.locator('[id^="estate-advanced-panel-"]'),
     ).toHaveCount(0);
 
     // 클릭

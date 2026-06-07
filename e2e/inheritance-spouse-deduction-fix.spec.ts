@@ -100,7 +100,8 @@ test("§21② 배우자 단독상속 → 일괄공제 배제 안내 노출", asy
   await expect(page.getByText("상속세 결정세액")).toBeVisible({ timeout: 15_000 });
 
   // 상속공제 상세 내역 펼침 → §21② 배제 안내 + 일괄공제 Row 없음
-  await page.getByText("상속공제 상세 내역").click();
+  // strict-mode-violation 방지: print-panel 숨김 복사본 제외, testid로 한정
+  await page.getByTestId("deduction-breakdown-toggle").click();
   await expect(page.getByText(/배우자 단독상속 — 일괄공제 배제/)).toBeVisible({
     timeout: 5_000,
   });
