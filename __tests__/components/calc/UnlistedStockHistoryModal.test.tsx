@@ -14,7 +14,7 @@
  */
 
 import { describe, it, expect, afterEach, vi } from "vitest";
-import { render, screen, fireEvent, cleanup } from "@testing-library/react";
+import { render, screen, fireEvent, cleanup, waitFor } from "@testing-library/react";
 import { UnlistedStockHistoryModal } from "@/components/calc/inheritance/unlisted-stock-v2/UnlistedStockHistoryModal";
 import type { UnlistedStockCandidate } from "@/lib/calc/unlisted-stock-valuation-lookup";
 import type { UnlistedStockValuationInput } from "@/lib/tax-engine/types/unlisted-stock-valuation.types";
@@ -165,7 +165,7 @@ describe("[H-17] 후보 카드 클릭 → onSelect + 모달 close", () => {
       />,
     );
     await screen.findByTestId("same-corp-section");
-    const card = screen.getByTestId("candidate-card-rec-1-item-1");
+    const card = await screen.findByTestId("candidate-card-rec-1-item-1");
     fireEvent.click(card);
     expect(onSelect).toHaveBeenCalledTimes(1);
     // partial input에 법인 정보 포함, evaluationDate·ownedShares·isMaxShareholder 미포함
@@ -199,11 +199,11 @@ describe("[H-18·H-19·H-20] UnlistedStockV2Card 통합 — sourceCalculationId 
     fireEvent.click(screen.getByTestId("open-unlisted-stock-history-modal"));
     await screen.findByTestId("same-corp-section");
     // 후보 카드 클릭 → onSelect 호출
-    fireEvent.click(screen.getByTestId("candidate-card-rec-1-item-1"));
+    fireEvent.click(await screen.findByTestId("candidate-card-rec-1-item-1"));
     // onChange 호출 후 input 갱신 — rerender로 반영
     rerender(<UnlistedStockV2Card input={currentInput} onChange={handleChange} />);
     // sourceCalculationId 배지 표시
-    expect(screen.getByTestId("source-calculation-id-badge")).toBeInTheDocument();
+    expect(await screen.findByTestId("source-calculation-id-badge")).toBeInTheDocument();
   });
 
   it("H-19: corpName 수정 시 sourceCalculationId 배지 제거 (mirror-pattern)", async () => {
@@ -220,16 +220,18 @@ describe("[H-18·H-19·H-20] UnlistedStockV2Card 통합 — sourceCalculationId 
     // 이력 조회 → 선택
     fireEvent.click(screen.getByTestId("open-unlisted-stock-history-modal"));
     await screen.findByTestId("same-corp-section");
-    fireEvent.click(screen.getByTestId("candidate-card-rec-1-item-1"));
+    fireEvent.click(await screen.findByTestId("candidate-card-rec-1-item-1"));
     rerender(<UnlistedStockV2Card input={currentInput} onChange={handleChange} />);
-    expect(screen.getByTestId("source-calculation-id-badge")).toBeInTheDocument();
+    expect(await screen.findByTestId("source-calculation-id-badge")).toBeInTheDocument();
 
     // UI 통한 corpName 변경 (CorporateInfoSection의 unlisted-v2-corp-name input)
     // wrappedOnChange 트리거 → sourceCalculationId 자동 제거
     const corpNameInput = screen.getByTestId("unlisted-v2-corp-name");
     fireEvent.change(corpNameInput, { target: { value: "다른법인" } });
     rerender(<UnlistedStockV2Card input={currentInput} onChange={handleChange} />);
-    expect(screen.queryByTestId("source-calculation-id-badge")).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.queryByTestId("source-calculation-id-badge")).not.toBeInTheDocument(),
+    );
   });
 
   it("H-20: Q1 B안 — evaluationDate·ownedShares·isMaxShareholder는 사용자 입력 보존", async () => {
@@ -251,7 +253,7 @@ describe("[H-18·H-19·H-20] UnlistedStockV2Card 통합 — sourceCalculationId 
     // 이력 조회 → 선택
     fireEvent.click(screen.getByTestId("open-unlisted-stock-history-modal"));
     await screen.findByTestId("same-corp-section");
-    fireEvent.click(screen.getByTestId("candidate-card-rec-1-item-1"));
+    fireEvent.click(await screen.findByTestId("candidate-card-rec-1-item-1"));
 
     // 호출된 onChange의 args 검증
     const lastCall = handleChange.mock.calls[handleChange.mock.calls.length - 1][0];
