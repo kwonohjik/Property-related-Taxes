@@ -23,6 +23,7 @@ async function inputAndCalculate(page: Page) {
   // 자녀 1명
   await page.getByRole("button", { name: /상속인 추가/ }).click();
   await page.getByText("자녀", { exact: true }).click();
+  await page.getByPlaceholder("앞 6자리-뒤 7자리").last().fill("700101-1000000");
   // Step1 상속재산
   await page.getByRole("button", { name: /^다음/ }).click();
   await page.getByRole("button", { name: /상속재산 추가/ }).click();

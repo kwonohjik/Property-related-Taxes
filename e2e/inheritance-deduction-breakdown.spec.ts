@@ -37,11 +37,13 @@ async function fillStep0WithSpouseAndChildren(page: Page) {
   // 배우자 추가
   await page.getByRole("button", { name: /상속인 추가/ }).click();
   await page.getByText("배우자", { exact: true }).click();
+  await page.getByPlaceholder("앞 6자리-뒤 7자리").last().fill("700101-1000000");
 
   // 자녀 2명 추가
   for (let i = 0; i < 2; i++) {
     await page.getByRole("button", { name: /상속인 추가/ }).click();
     await page.getByText("자녀", { exact: true }).click();
+    await page.getByPlaceholder("앞 6자리-뒤 7자리").last().fill("700101-1000000");
   }
 
   await page.getByRole("button", { name: /^다음/ }).click();
@@ -55,6 +57,7 @@ async function fillStep0WithChild(page: Page) {
 
   await page.getByRole("button", { name: /상속인 추가/ }).click();
   await page.getByText("자녀", { exact: true }).click();
+  await page.getByPlaceholder("앞 6자리-뒤 7자리").last().fill("700101-1000000");
 
   await page.getByRole("button", { name: /^다음/ }).click();
 }

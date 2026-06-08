@@ -38,6 +38,7 @@ async function gotoStep1WithListedStock(page: Page) {
   // 상속인(자녀) 추가
   await page.getByRole("button", { name: /상속인 추가/ }).click();
   await page.getByText("자녀", { exact: true }).click();
+  await page.getByPlaceholder("앞 6자리-뒤 7자리").last().fill("700101-1000000");
 
   // Step1(상속재산) 이동
   await nextSteps(page, 1);

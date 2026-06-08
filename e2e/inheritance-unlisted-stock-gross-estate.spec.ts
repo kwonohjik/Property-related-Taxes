@@ -27,6 +27,7 @@ async function gotoStep0(page: Page) {
   await fillDateAndVerify(page, { year: "2026", month: "1", day: "10" });
   await page.getByRole("button", { name: /상속인 추가/ }).click();
   await page.getByText("자녀", { exact: true }).click();
+  await page.getByPlaceholder("앞 6자리-뒤 7자리").last().fill("700101-1000000");
   await page.getByRole("button", { name: /^다음/ }).click();
 }
 

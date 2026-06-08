@@ -22,6 +22,7 @@ async function gotoV2FormalValuationCard(page: Page) {
 
   await page.getByRole("button", { name: /상속인 추가/ }).click();
   await page.getByText("자녀", { exact: true }).click();
+  await page.getByPlaceholder("앞 6자리-뒤 7자리").last().fill("700101-1000000");
   await page.getByRole("button", { name: /^다음/ }).click();
 
   await page.getByRole("button", { name: /주식·지분 추가/ }).click();

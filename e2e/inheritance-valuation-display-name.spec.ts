@@ -24,6 +24,7 @@ test("재산 평가 내역 — 이름 미입력 자산은 카테고리 라벨, �
   // 자녀 1명
   await page.getByRole("button", { name: /상속인 추가/ }).click();
   await page.getByText("자녀", { exact: true }).click();
+  await page.getByPlaceholder("앞 6자리-뒤 7자리").last().fill("700101-1000000");
   await page.getByRole("button", { name: /^다음/ }).click();
 
   // 토지 추가 (이름 미입력)
