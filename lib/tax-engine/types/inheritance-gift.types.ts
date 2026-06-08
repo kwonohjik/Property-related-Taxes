@@ -195,6 +195,10 @@ export interface EstateItem extends EstateLocationFields {
   leaseDeposit?: number;
   /** 저당권 설정 여부 */
   mortgageAmount?: number;
+  /** 월 임대료 (원) — §61⑤·시행규칙 §15의2 임대료환산가액=(월세×12÷0.12)+임대보증금. 보충평가(standard_price) 시만 비교. */
+  monthlyRent?: number;
+  /** 신용보증기관 보증액 (원) — 시행령 §63② 저당 담보채권액에서 차감(§66 1호 한정, 음수 가드). */
+  creditGuaranteeAmount?: number;
 
   // ===== 담보채무 §14 자동 반영 (collateral-debt-auto-deduction) =====
   /**

@@ -78,6 +78,8 @@ const baseItemSchema = z.object({
   quantityCount: z.number().nonnegative().optional(),
   mortgageAmount: z.number().nonnegative().optional(),
   leaseDeposit: z.number().nonnegative().optional(),
+  monthlyRent: z.number().nonnegative().optional(), // §61⑤ 임대료환산
+  creditGuaranteeAmount: z.number().nonnegative().optional(), // §63② 신용보증 차감
   // 담보채무 §14 자동공제 (collateral-debt-auto-deduction)
   deductSecuredClaimAsDebt: z.boolean().optional(),
   securedClaimIsFinancialDebt: z.boolean().optional(),

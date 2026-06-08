@@ -417,6 +417,24 @@ function CollateralLeaseFields({
         </FieldCard>
       )}
 
+      {/* 월 임대료 (§61⑤ 임대료환산 — 주택만, D-UI1) */}
+      {showLeaseDeposit && (
+        <FieldCard
+          label="월 임대료 (원)"
+          unit="원"
+          hint="임대 부동산 §61⑤ — (월세×12÷12%)+임대보증금이 보충평가(공시지가)보다 크면 평가액으로 채택"
+        >
+          <CurrencyInput
+            label="월 임대료 (원)"
+            value={item.monthlyRent != null ? String(item.monthlyRent) : ""}
+            onChange={(v) => set({ monthlyRent: parseAmount(v) || undefined })}
+            placeholder="없으면 빈칸"
+            hideLabel
+            hideUnit
+          />
+        </FieldCard>
+      )}
+
       {/* 저당권 */}
       <FieldCard
         label="저당권 등에 의해 담보된 채권액"
@@ -430,6 +448,23 @@ function CollateralLeaseFields({
           placeholder="없으면 빈칸"
           hideLabel
           hideUnit
+        />
+      </FieldCard>
+
+      {/* 신용보증기관 보증액 (§63② 차감 — 저당0 시 disabled, D-UI2) */}
+      <FieldCard
+        label="신용보증기관 보증액 (원)"
+        unit="원"
+        hint="신용보증기금 등이 보증한 금액 — 저당 담보채권액에서 차감 (§63②, §66 1호 저당분 한정). 저당권 입력 시에만 적용."
+      >
+        <CurrencyInput
+          label="신용보증기관 보증액 (원)"
+          value={item.creditGuaranteeAmount != null ? String(item.creditGuaranteeAmount) : ""}
+          onChange={(v) => set({ creditGuaranteeAmount: parseAmount(v) || undefined })}
+          placeholder="없으면 빈칸"
+          hideLabel
+          hideUnit
+          disabled={(item.mortgageAmount ?? 0) === 0}
         />
       </FieldCard>
 

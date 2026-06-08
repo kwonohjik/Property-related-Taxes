@@ -148,4 +148,41 @@ describe("[VAC·CL] EstateBodyRealEstate 평가 아코디언 + 담보·임대 �
       screen.queryByText(/이 담보채무를 §14 부채로 자동 공제/),
     ).toBeNull();
   });
+
+  // §66 ㉱·㉲ 신규 칸 (2026-06-08)
+  it("CL-3: apartment → 월 임대료 칸 노출 (§61⑤)", () => {
+    render(
+      <EstateBodyRealEstate
+        item={makeRealEstateItem()}
+        onUpdate={vi.fn()}
+        showCollateralDeductToggle={false}
+        mode="inheritance"
+      />,
+    );
+    expect(screen.queryByText(/월 임대료/)).not.toBeNull();
+  });
+
+  it("CL-4: land → 월 임대료 칸 비노출 (주택 한정 D-UI1)", () => {
+    render(
+      <EstateBodyRealEstate
+        item={makeRealEstateItem({ category: "real_estate_land" })}
+        onUpdate={vi.fn()}
+        showCollateralDeductToggle={false}
+        mode="inheritance"
+      />,
+    );
+    expect(screen.queryByText(/월 임대료/)).toBeNull();
+  });
+
+  it("CL-5: 신용보증기관 보증액 칸 상시 노출 (§63②)", () => {
+    render(
+      <EstateBodyRealEstate
+        item={makeRealEstateItem({ category: "real_estate_land" })}
+        onUpdate={vi.fn()}
+        showCollateralDeductToggle={false}
+        mode="inheritance"
+      />,
+    );
+    expect(screen.queryByText(/신용보증기관 보증액/)).not.toBeNull();
+  });
 });
