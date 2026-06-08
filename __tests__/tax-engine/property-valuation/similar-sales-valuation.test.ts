@@ -4,6 +4,7 @@ import {
   resolveValuationMethod,
 } from "@/lib/tax-engine/property-valuation";
 import { computeEffectiveValuation } from "@/lib/calc/estate-item-valuation";
+import { resolveValuationLabel } from "@/components/calc/results/source-summary/source-summary-helpers";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 
 /**
@@ -83,5 +84,52 @@ describe("매매사례가액 + 평가방식 도출 (§60·시행령 §49②④)"
     const item = land({});
     expect(resolveValuationMethod(item)).toBe("standard_price");
     expect(evaluateLand(item).valuatedAmount).toBe(0);
+  });
+});
+
+describe("주식 비고 열 라벨 (D-7) — resolveValuationLabel", () => {
+  it("[VM-STOCK-LABEL-01] 상장주식(4필드 미입력) → 비고 '시가' (2개월 평균)", () => {
+    const item = {
+      id: "s1",
+      name: "삼성전자",
+      category: "listed_stock",
+      listedStockAvgPrice: 70_000,
+      listedStockShares: 100,
+    } as EstateItem;
+    expect(resolveValuationLabel(item)).toBe("시가");
+  });
+
+  it("[VM-STOCK-LABEL-02] 비상장주식 → 비고 '보충적 평가' (§63 순손익·순자산)", () => {
+    const item = { id: "s2", name: "비상장(주)", category: "unlisted_stock" } as EstateItem;
+    expect(resolveValuationLabel(item)).toBe("보충적 평가");
+  });
+
+  it("[VM-STOCK-LABEL-03] 명시 valuationMethod 우선 (레거시 데이터 보존)", () => {
+    const item = {
+      id: "s3",
+      name: "비상장(주)",
+      category: "unlisted_stock",
+      valuationMethod: "appraisal",
+    } as EstateItem;
+    expect(resolveValuationLabel(item)).toBe("감정가액");
+  });
+
+  it("[VM-STOCK-LABEL-04] 부동산 회귀 — 시가 입력 → '시가', 매매사례 → '매매사례가액'", () => {
+    expect(
+      resolveValuationLabel({
+        id: "r1",
+        name: "토지",
+        category: "real_estate_land",
+        marketValue: 200_000_000,
+      } as EstateItem),
+    ).toBe("시가");
+    expect(
+      resolveValuationLabel({
+        id: "r2",
+        name: "토지2",
+        category: "real_estate_land",
+        similarSalesValue: 190_000_000,
+      } as EstateItem),
+    ).toBe("매매사례가액");
   });
 });

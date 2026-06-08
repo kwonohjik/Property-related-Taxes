@@ -32,8 +32,14 @@ export function resolveValuation(item: EstateItem): number {
 // ============================================================
 
 export function resolveValuationLabel(item: EstateItem): string {
-  // 도출 단일화 (라디오 삭제 2026-06-08): 명시 valuationMethod 우선, 없으면 입력 금액에서 도출(§49②④).
-  return VALUATION_METHOD_LABEL[item.valuationMethod ?? resolveValuationMethod(item)];
+  // 명시 valuationMethod 우선 (수동 override·레거시 데이터 보존)
+  if (item.valuationMethod) return VALUATION_METHOD_LABEL[item.valuationMethod];
+  // 주식(D-7): marketValue 등 4필드 미입력 시 §63 평가 — 도출(standard_price="기준시가")은 부정확.
+  //   상장 = 전후 2개월 종가 평균(시가 성격) / 비상장 = 순손익·순자산 보충평가.
+  if (item.category === "listed_stock") return "시가";
+  if (item.category === "unlisted_stock") return "보충적 평가";
+  // 부동산 등: 입력 금액에서 도출(§49②④) — market>appraised>similar>standard.
+  return VALUATION_METHOD_LABEL[resolveValuationMethod(item)];
 }
 
 // ============================================================
