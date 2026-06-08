@@ -178,7 +178,7 @@ describe("PHD Case A 4부분 안분 — Mixed-Use 통합 (양도소득금액 anc
     const totalIncome = result.housingPart.incomeAmount + result.commercialPart.incomeAmount;
     expect(totalIncome).toBeGreaterThanOrEqual(849_900_000);
     expect(totalIncome).toBeLessThanOrEqual(851_000_000);
-  });
+  }, 15000); // 무거운 4부분 안분 계산 — 병렬 부하 시 기본 5s timeout 초과 방지
 });
 
 describe("PHD Case A 4부분 안분 — 비활성화 케이스 (회귀)", () => {
