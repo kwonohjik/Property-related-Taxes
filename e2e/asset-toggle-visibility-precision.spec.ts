@@ -51,7 +51,7 @@ test.describe("자산 토글 자동 노출 정밀화", () => {
   }) => {
     test.setTimeout(60_000);
     await gotoStep1WithChild(page);
-    await addAssetByType(page, "아파트·공동주택");
+    await addAssetByType(page, /주택/);
 
     // §19① 부동산 금융재산 불가 → 칩 행에 금융공제 칩 없음
     await expect(

@@ -26,9 +26,9 @@ async function setupAptCard(page: Page, opts: { cohabitChild: boolean }) {
 
   await page.getByRole("button", { name: /^다음/ }).click();
 
-  // 상속재산 추가 → 아파트·공동주택, 기준시가 총액 6억 직접 입력
+  // 상속재산 추가 → 주택, 기준시가 총액 6억 직접 입력
   await page.getByRole("button", { name: /상속재산 추가/ }).click();
-  await page.getByRole("button", { name: /아파트.*공동주택/ }).click();
+  await page.getByRole("button", { name: /주택/ }).click();
   await page.getByPlaceholder("금액 입력").first().fill("600000000");
 
   // advanced 토글 열기 (동거주택 체크는 advanced 안쪽)

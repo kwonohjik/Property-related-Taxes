@@ -83,8 +83,9 @@ const PRIORITY_HINT: Record<
   string
 > = {
   real_estate_land: "시가 → 감정가 → 개별공시지가 순으로 적용 (상증법 §61①)",
-  real_estate_building: "시가 → 감정가 → 개별주택가격·기준시가 순 (상증법 §61①)",
-  real_estate_apartment: "시가 → 감정가 → 공동주택 기준시가 순 (상증법 §61①)",
+  real_estate_building: "시가 → 감정가 → 건물 기준시가 순 (상업용·기타 건물, 상증법 §61①)",
+  real_estate_apartment:
+    "시가 → 감정가 → 주택 기준시가(공동주택가격·개별주택가격) 순 (상증법 §61①)",
 };
 
 const SUBTITLE: Record<
@@ -92,8 +93,9 @@ const SUBTITLE: Record<
   string
 > = {
   real_estate_land: "소재지 · 시가 · 감정가 · 개별공시지가 — 상증법 §60~66",
-  real_estate_building: "소재지 · 시가 · 감정가 · 기준시가 — 상증법 §60~66",
-  real_estate_apartment: "소재지 · 시가 · 감정가 · 공동주택 기준시가 — 상증법 §60~66",
+  real_estate_building: "상업용 건물 · 시가 · 감정가 · 건물 기준시가 — 상증법 §60~66",
+  real_estate_apartment:
+    "주택(아파트·공동·단독) · 시가 · 감정가 · 주택 기준시가 — 상증법 §60~66",
 };
 
 const TEXT_INPUT_CLASS =

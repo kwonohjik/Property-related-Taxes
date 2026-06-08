@@ -64,10 +64,13 @@ export { computeEffectiveValuation } from "@/lib/calc/estate-item-valuation";
 
 type SupportedCategory = Exclude<AssetCategory, "listed_stock" | "unlisted_stock">;
 
+// real_estate_apartment 키는 "주택"(아파트·공동주택·단독주택)을 의미 — 식별자(apartment)와
+// 표시명(주택)이 다른 것은 키 유지(마이그레이션 회피) 결정에 따른 것. 평가 위젯은 단독주택도
+// 동일(주택공시가격 계열). real_estate_building 은 상업용·기타 건물 전용.
 const CATEGORY_LABELS: Record<SupportedCategory, string> = {
   real_estate_land: "토지",
-  real_estate_building: "건물 (단독주택·상업용)",
-  real_estate_apartment: "아파트·공동주택",
+  real_estate_building: "상업용 건물",
+  real_estate_apartment: "주택",
   cash: "현금",
   financial: "예금·펀드·채권·공제금",
   deposit: "전세보증금 반환채권",
@@ -76,8 +79,8 @@ const CATEGORY_LABELS: Record<SupportedCategory, string> = {
 
 const CATEGORY_ICONS: Record<SupportedCategory, string> = {
   real_estate_land: "🏔",
-  real_estate_building: "🏠",
-  real_estate_apartment: "🏢",
+  real_estate_building: "🏢",
+  real_estate_apartment: "🏠",
   cash: "💵",
   financial: "🏦",
   deposit: "🔑",
@@ -289,10 +292,10 @@ function CategoryButton({ category, onAdd }: CategoryButtonProps) {
     <button
       type="button"
       onClick={() => onAdd(category)}
-      className="flex flex-col items-center gap-1 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors text-xs"
+      className="flex items-center gap-2 px-3 py-2 rounded-md border border-gray-200 dark:border-gray-700 hover:border-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors text-sm"
     >
-      <span className="text-xl">{CATEGORY_ICONS[category]}</span>
-      <span className="text-gray-600 dark:text-gray-300 text-center leading-tight">
+      <span className="text-base leading-none">{CATEGORY_ICONS[category]}</span>
+      <span className="text-gray-700 dark:text-gray-300 leading-tight">
         {CATEGORY_LABELS[category]}
       </span>
     </button>
@@ -313,6 +316,8 @@ export interface PropertyValuationFormProps {
   heirs?: Heir[];
   /** 평가기준일 (상속개시일·증여일) — 기준시가 공시연도 기본값 계산용 */
   valuationDate?: string;
+  /** 헤더(제목·설명·개수 배지) 숨김 — 외부 접기 래퍼가 헤더를 담당할 때 사용 */
+  hideHeader?: boolean;
 }
 
 let _nextId = 1;
@@ -327,6 +332,7 @@ export function PropertyValuationForm({
   mode = "inheritance",
   heirs,
   valuationDate,
+  hideHeader = false,
 }: PropertyValuationFormProps) {
   const [showAddPanel, setShowAddPanel] = useState(false);
   // 자산 추가 시 미리 선택할 간주상속재산 분류 (상속세 모드 전용)
@@ -371,19 +377,21 @@ export function PropertyValuationForm({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200">
-            {modeLabel}재산 목록
-          </h3>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-            주식·지분은 아래 <span className="text-indigo-600 dark:text-indigo-400">주식평가</span> 섹션에 별도 입력
-          </p>
+      {!hideHeader && (
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+              {modeLabel}재산 목록
+            </h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+              주식·지분은 아래 <span className="text-indigo-600 dark:text-indigo-400">주식평가</span> 섹션에 별도 입력
+            </p>
+          </div>
+          {items.length > 0 && (
+            <span className="text-xs text-gray-400">{items.length}개 입력됨</span>
+          )}
         </div>
-        {items.length > 0 && (
-          <span className="text-xs text-gray-400">{items.length}개 입력됨</span>
-        )}
-      </div>
+      )}
 
       {/* 자산 목록 */}
       {items.length > 0 && (

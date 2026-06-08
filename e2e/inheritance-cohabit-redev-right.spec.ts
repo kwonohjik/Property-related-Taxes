@@ -35,7 +35,7 @@ async function setupCohabitApartmentWithChild(page: Page) {
 
   // 아파트 추가
   await page.getByRole("button", { name: /상속재산 추가/ }).click();
-  await page.getByRole("button", { name: /아파트.*공동주택/ }).click();
+  await page.getByRole("button", { name: /주택/ }).click();
 
   // 기준시가 입력
   await page.locator('[placeholder="금액 입력"]').first().fill("800000000");

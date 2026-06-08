@@ -24,9 +24,9 @@ async function gotoEstateAptCard(page: Page, year: string, month: string, day: s
   // 상속재산 단계로
   await page.getByRole("button", { name: /^다음/ }).click();
 
-  // 상속재산 추가 → 아파트·공동주택
+  // 상속재산 추가 → 주택
   await page.getByRole("button", { name: /상속재산 추가/ }).click();
-  await page.getByRole("button", { name: /아파트.*공동주택/ }).click();
+  await page.getByRole("button", { name: /주택/ }).click();
 }
 
 /** 기준시가 연도 select (공시가격 조회 버튼과 같은 행) */
