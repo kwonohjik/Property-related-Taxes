@@ -68,7 +68,7 @@ function resolveValuationAmount(item: EstateItem): { amount: number; method: Val
 }
 ```
 
-- 주석 L5-7 갱신: "1순위 시가(매매·감정 동순위, 매매 tie-break) / 2순위 유사매매사례(§49④) / 3순위 보충평가" + §49② "가장 가까운 날" 미반영 한계 명시.
+- 주석 L5-7 갱신: "1순위 시가(매매·감정 동순위, 매매 tie-break) / 2순위 유사매매사례(§49④) / 3순위 보충평가". §49② "가장 가까운 날"은 사용자가 해당 가액을 직접 입력(엔진 날짜계산 불요) — 완결.
 - §66 `applyCollateralFloor`(L71~) 무변경 — amount 기준 max라 자동 반영(EV-C10).
 
 ### 3-2. dual-truth 4헬퍼 동기화 (계획 §15)
@@ -143,6 +143,6 @@ export function resolveValuationLabel(item: EstateItem): string {
 ## 7. 회귀/리스크
 
 - gift `estateItemSchema` 공유 → similar 추가 시 양 세목 동시 반영.
-- §49② "가장 가까운 날" 미반영(평가일 입력 없음) — 한계 동결, market tie-break.
+- §49② "가장 가까운 날" — ✅ 완결: 사용자가 평가기준일에 가장 가까운 시가/매매사례가액을 해당 칸에 직접 입력. 엔진은 단일 채택 가액을 받으므로 날짜 비교·평균 불요. market tie-break는 동순위(매매·감정) 단순화로 유지.
 - valuationMethod 필드 잔존(D-5) → 기존 데이터 무손실.
 - **비대칭 무해(STEP8 #14)**: `similarSalesValue`는 baseItemSchema 공통이라 전 카테고리 Zod 허용. UI 아코디언은 부동산(land/apt/building)만 노출. cash·financial·deposit·주식은 엔진 평가 경로(`evaluateLand` 등 부동산 전용 / `computeStockValuation` / deposit 분기)에서 similar 미참조 → 입력돼도 무시(무해). UI/Zod optional 비대칭 무모순.
