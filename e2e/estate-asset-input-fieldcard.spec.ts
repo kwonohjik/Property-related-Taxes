@@ -42,8 +42,7 @@ test.describe("부동산 자산 카드 — FieldCard + 섹션 스타일", () => 
     // 섹션 헤더
     await expect(page.getByText("평가액 입력").first()).toBeVisible();
 
-    // FieldCard(data-slot="field-card") — 기본 노출(자산명·별칭·개별공시지가) 3개 이상
-    // (2026-05-29 §8a75d27: 시가·감정가는 advanced 토글 뒤로 이동 — 기본 노출에서 제거됨)
+    // FieldCard(data-slot="field-card") — 기본 노출(자산명·별칭·보충적 평가방법) 3개 이상
     await expect(
       page.locator('[data-slot="field-card"]').first(),
     ).toBeVisible();
@@ -51,18 +50,20 @@ test.describe("부동산 자산 카드 — FieldCard + 섹션 스타일", () => 
       await page.locator('[data-slot="field-card"]').count(),
     ).toBeGreaterThanOrEqual(3);
 
-    // 기본 노출 라벨 확인
+    // 기본 노출 라벨 확인 — 보충적 평가방법(라벨 변경 2026-06-08 D-2)
     await expect(page.getByText("별칭", { exact: true })).toBeVisible();
     await expect(
-      page.getByText("개별공시지가 (면적 포함 합산)", { exact: true }),
+      page.getByText("보충적 평가방법 (토지: 개별공시지가, 면적 포함 합산)", { exact: true }),
     ).toBeVisible();
 
-    // 시가·감정평가액은 advanced 토글 ON 후 노출 (2026-05-29 UX3-Issue3)
-    await page.getByText("시가·감정가·임대보증금·저당권 입력").click();
+    // 시가·감정가액·매매사례가액 아코디언 헤더는 항상 노출 (2026-06-08 아코디언 전환)
     await expect(
       page.getByText("시가 (매매·수용·경매가액)", { exact: true }),
     ).toBeVisible();
     await expect(page.getByText("감정평가액", { exact: true })).toBeVisible();
+    await expect(
+      page.getByText("매매사례가액 (유사매매사례)", { exact: true }),
+    ).toBeVisible();
   });
 });
 

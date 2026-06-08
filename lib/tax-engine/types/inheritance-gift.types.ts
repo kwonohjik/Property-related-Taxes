@@ -88,6 +88,8 @@ export interface EstateItem extends EstateLocationFields {
   standardPrice?: number;
   /** 감정평가액 */
   appraisedValue?: number;
+  /** 유사매매사례가액 (상증법 시행령 §49①·④ — "시가로 본다"). market·appraised 존재 시 §49② 단서로 배제(if-chain 자연 후순위). */
+  similarSalesValue?: number;
   /** 상장주식: 전후 2개월 일평균 종가 */
   listedStockAvgPrice?: number;
   listedStockShares?: number;
@@ -193,6 +195,10 @@ export interface EstateItem extends EstateLocationFields {
   leaseDeposit?: number;
   /** 저당권 설정 여부 */
   mortgageAmount?: number;
+  /** 월 임대료 (원) — §61⑤·시행규칙 §15의2 임대료환산가액=(월세×12÷0.12)+임대보증금. 보충평가(standard_price) 시만 비교. */
+  monthlyRent?: number;
+  /** 신용보증기관 보증액 (원) — 시행령 §63② 저당 담보채권액에서 차감(§66 1호 한정, 음수 가드). */
+  creditGuaranteeAmount?: number;
 
   // ===== 담보채무 §14 자동 반영 (collateral-debt-auto-deduction) =====
   /**
@@ -236,7 +242,9 @@ export interface EstateItem extends EstateLocationFields {
   // ===== 상속개시자료 요약 4표 — Table A 비고/수량 열 (2026-05-28) =====
   /**
    * 평가방식 enum — 결과뷰 Table A 비고 열 단일 도출. 기존 `ValuationMethod` 타입 재사용.
-   * undefined 시 fallback 우선순위: marketValue→"시가" / appraisedValue→"감정가액" / standardPrice→"기준시가".
+   * 2026-06-08: UI 라디오 삭제. 잔존=하위호환·수동 override 여지(D-5).
+   * 소비처는 `item.valuationMethod ?? resolveValuationMethod(item)` 패턴(명시 우선, 없으면 입력 금액에서 도출).
+   * 도출 우선순위(§49②④): marketValue→"시가" / appraisedValue→"감정가액" / similarSalesValue→"매매사례가액" / standardPrice→"기준시가".
    */
   valuationMethod?: ValuationMethod;
   /** 부동산 면적 (㎡) — Table A "수량(면적)" 열 표시용. 미입력 시 Σ(heirAllocations.areaM2) fallback. */

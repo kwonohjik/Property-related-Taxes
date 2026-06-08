@@ -23,7 +23,7 @@ import type {
   CalculationStep,
 } from "./types/inheritance-gift.types";
 
-import { evaluateAllEstateItems } from "./property-valuation";
+import { evaluateAllEstateItems, resolveValuationMethod } from "./property-valuation";
 import { evaluateExemptions } from "./exemption-evaluator";
 import { calcGiftDeductions } from "./deductions/gift-deductions";
 import { calcAppraisalFeeDeduction } from "./deductions/appraisal-fee-deduction";
@@ -135,7 +135,7 @@ export function calcGiftTax(
   // STEP 5: 과세표준 ⑤ (§55 ② — §55① 감정평가수수료 차감, 시행령 §46의2 → §20의3 준용)
   // ─────────────────────────────────────────────
   const hasAppraisalValuation = input.giftItems.some(
-    (i) => i.valuationMethod === "appraisal",
+    (i) => (i.valuationMethod ?? resolveValuationMethod(i)) === "appraisal",
   );
   const appraisalFee = calcAppraisalFeeDeduction(input.appraisalFee, {
     hasAppraisalValuation,

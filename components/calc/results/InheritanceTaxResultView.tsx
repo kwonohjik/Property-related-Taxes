@@ -99,8 +99,8 @@ function SummaryRow({
  */
 const ASSET_CATEGORY_LABELS: Record<EstateItem["category"], string> = {
   real_estate_land: "토지",
-  real_estate_building: "단독주택·건물",
-  real_estate_apartment: "아파트·공동주택",
+  real_estate_building: "상업용 건물",
+  real_estate_apartment: "주택",
   listed_stock: "상장주식",
   unlisted_stock: "비상장주식",
   cash: "현금",

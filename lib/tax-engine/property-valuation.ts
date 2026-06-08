@@ -15,6 +15,7 @@ import type {
   EstateItem,
   PropertyValuationResult,
   ValuationMethod,
+  CalculationStep,
 } from "./types/inheritance-gift.types";
 import { evaluateUnlistedStockV2 } from "./property-valuation/unlisted-orchestrator";
 // listed_stock / V1 간편 비상장(unlistedStockData) 평가 단일 진실.
@@ -46,40 +47,97 @@ export function convertLeaseToValue(depositAmount: number): number {
 // ============================================================
 
 /**
- * 시가 우선 원칙으로 평가액 및 방법 결정 (§60)
- * 시가 → 보충적 평가 순
+ * 평가방식 단일 도출 (§60·시행령 §49②④) — 입력 금액에서 평가방법 파생.
+ * 우선순위: 시가(매매·수용·경매) > 감정가 > 유사매매사례가액 > 보충적 평가.
+ *   - market·appraised(해당 재산 직접 시가)는 §49①상 동순위이나, 본 엔진은 매매 우선 tie-break(D-4).
+ *     §49② "평가기준일에 가장 가까운 날" 규칙은 평가일 입력 부재로 미반영(설계 동결 한계).
+ *   - similar_sales(유사매매사례)는 §49④ "시가로 본다"이나 §49② 단서로 해당 재산 시가 있으면 배제
+ *     → if-chain상 market/appraised에서 먼저 return되어 자연 후순위.
+ * UI 평가방식 라디오 삭제(2026-06-08) 후 valuationMethod·부표2코드·감정수수료 판정의 단일 진실.
+ */
+export function resolveValuationMethod(item: EstateItem): ValuationMethod {
+  if (item.marketValue != null && item.marketValue > 0) return "market_value";
+  if (item.appraisedValue != null && item.appraisedValue > 0) return "appraisal";
+  if (item.similarSalesValue != null && item.similarSalesValue > 0) return "similar_sales";
+  if (item.standardPrice != null && item.standardPrice > 0) return "standard_price";
+  return "standard_price";
+}
+
+/**
+ * 시가 우선 원칙으로 평가액 및 방법 결정 (§60) — resolveValuationMethod 단일 진실 사용.
  */
 function resolveValuationAmount(item: EstateItem): {
   amount: number;
   method: ValuationMethod;
 } {
-  // 1순위: 시가 (직접 입력)
-  if (item.marketValue != null && item.marketValue > 0) {
-    return { amount: item.marketValue, method: "market_value" };
-  }
-  // 2순위: 감정평가액
-  if (item.appraisedValue != null && item.appraisedValue > 0) {
-    return { amount: item.appraisedValue, method: "appraisal" };
-  }
-  // 3순위: 보충적 평가 (개별공시지가·기준시가)
-  if (item.standardPrice != null && item.standardPrice > 0) {
-    return { amount: item.standardPrice, method: "standard_price" };
-  }
-  return { amount: 0, method: "standard_price" };
+  const method = resolveValuationMethod(item);
+  const amount =
+    method === "market_value"
+      ? (item.marketValue ?? 0)
+      : method === "appraisal"
+        ? (item.appraisedValue ?? 0)
+        : method === "similar_sales"
+          ? (item.similarSalesValue ?? 0)
+          : (item.standardPrice ?? 0);
+  return { amount, method };
+}
+
+/**
+ * §61⑤·시행령 §50⑦·시행규칙 §15의2 — 임대 부동산 임대료환산가액.
+ * 환산가액 = (월 임대료 × 12 ÷ 12%) + 임대보증금. 월세 미입력 시 0(미적용).
+ * convertLeaseToValue(보증금 자본환원 별도 용도)와 다른 산식 — 혼동 금지.
+ */
+function calcRentalConversionValue(item: EstateItem): number {
+  const monthly = item.monthlyRent ?? 0;
+  if (monthly <= 0) return 0;
+  return Math.floor((monthly * 12) / LEASE_CONVERSION_RATE) + (item.leaseDeposit ?? 0);
 }
 
 /**
  * §66·시행령 §63 — 저당권 등이 설정된 재산 평가 특례.
- * §60 평가액과 "그 재산이 담보하는 채권액"(§63② — 저당+전세/임대보증금 합산) 중 **큰 금액**(MAX).
- * 차감이 아니라 하한이다. 담보채무 자체는 별도로 §14 부채로 공제한다(Phase 2 자동반영 전까지 수동).
+ * §60 평가액(보충평가 시 §61⑤ 임대료환산가액과 MAX) 과 "그 재산이 담보하는 채권액"
+ * (§63② — 저당[신용보증액 차감] + 전세/임대보증금 합산) 중 **큰 금액**(MAX). 차감이 아니라 하한.
+ *   - ㉱ 임대료환산: method==="standard_price"(보충평가) 케이스만 (§61⑤은 §61①~④ 보충평가와 비교).
+ *   - ㉲ 신용보증 차감: 저당분(§66 1호)에서만, 음수 가드 (시행령 §63②).
+ * 담보채무 자체는 별도로 §14 부채로 공제한다.
  */
 function applyCollateralFloor(
   amount: number,
   item: EstateItem,
-): { valuatedAmount: number; securedClaim: number; raised: boolean } {
-  const securedClaim = (item.mortgageAmount ?? 0) + (item.leaseDeposit ?? 0);
-  const valuatedAmount = Math.max(amount, securedClaim);
-  return { valuatedAmount, securedClaim, raised: valuatedAmount > amount };
+  method: ValuationMethod,
+): { valuatedAmount: number; securedClaim: number; raised: boolean; rentalRaised: boolean } {
+  // ㉱ 임대료환산가액 — 보충평가 케이스만 (§61⑤)
+  let baseAmount = amount;
+  let rentalRaised = false;
+  if (method === "standard_price") {
+    const rentalValue = calcRentalConversionValue(item);
+    if (rentalValue > amount) {
+      baseAmount = rentalValue;
+      rentalRaised = true;
+    }
+  }
+  // ㉲ 신용보증 차감 — 저당분(§66 1호)만, 음수 가드 (§63②)
+  const mortgageNet = Math.max(0, (item.mortgageAmount ?? 0) - (item.creditGuaranteeAmount ?? 0));
+  const securedClaim = mortgageNet + (item.leaseDeposit ?? 0);
+  const valuatedAmount = Math.max(baseAmount, securedClaim);
+  return { valuatedAmount, securedClaim, raised: valuatedAmount > baseAmount, rentalRaised };
+}
+
+/** §61⑤ 임대료환산·§63② 신용보증 차감 breakdown 행 (4 평가 함수 공통, raised 행 앞에 삽입) */
+function extraCollateralRows(
+  item: EstateItem,
+  valuatedAmount: number,
+  rentalRaised: boolean,
+): CalculationStep[] {
+  const rows: CalculationStep[] = [];
+  if (rentalRaised) {
+    rows.push({ label: "§61⑤ 임대료환산가액 적용", amount: valuatedAmount, lawRef: VALUATION.RENTAL_CONVERSION });
+  }
+  const cg = item.creditGuaranteeAmount ?? 0;
+  if (cg > 0) {
+    rows.push({ label: "§63② 신용보증기관 보증액 차감", amount: -cg, lawRef: VALUATION.COLLATERAL_SPECIAL });
+  }
+  return rows;
 }
 
 /** 담보채무는 평가에서 차감하지 않으므로 채무공제(§14) 입력을 안내 (Phase 1 — 자동반영 전) */
@@ -99,7 +157,7 @@ export function evaluateLand(item: EstateItem): PropertyValuationResult {
   }
 
   const { amount, method } = resolveValuationAmount(item);
-  const { valuatedAmount, securedClaim, raised } = applyCollateralFloor(amount, item);
+  const { valuatedAmount, securedClaim, raised, rentalRaised } = applyCollateralFloor(amount, item, method);
 
   return {
     estateItemId: item.id,
@@ -107,6 +165,7 @@ export function evaluateLand(item: EstateItem): PropertyValuationResult {
     valuatedAmount,
     breakdown: [
       { label: "토지 평가액", amount, lawRef: VALUATION.REAL_ESTATE_SUPP },
+      ...extraCollateralRows(item, valuatedAmount, rentalRaised),
       ...(raised
         ? [{ label: "§66 담보채권액 하한 적용", amount: valuatedAmount, lawRef: VALUATION.COLLATERAL_SPECIAL }]
         : []),
@@ -132,7 +191,7 @@ export function evaluateApartment(item: EstateItem): PropertyValuationResult {
   }
 
   const { amount, method } = resolveValuationAmount(item);
-  const { valuatedAmount, securedClaim, raised } = applyCollateralFloor(amount, item);
+  const { valuatedAmount, securedClaim, raised, rentalRaised } = applyCollateralFloor(amount, item, method);
 
   const warnings: string[] = [];
   if (method === "standard_price") {
@@ -148,6 +207,7 @@ export function evaluateApartment(item: EstateItem): PropertyValuationResult {
     valuatedAmount,
     breakdown: [
       { label: "아파트 평가액", amount, lawRef: VALUATION.PRINCIPLE },
+      ...extraCollateralRows(item, valuatedAmount, rentalRaised),
       ...(raised
         ? [{ label: "§66·§63② 담보채권액(저당+임대보증금) 하한 적용", amount: valuatedAmount, lawRef: VALUATION.COLLATERAL_SPECIAL }]
         : []),
@@ -170,7 +230,7 @@ export function evaluateDetachedHouse(item: EstateItem): PropertyValuationResult
   }
 
   const { amount, method } = resolveValuationAmount(item);
-  const { valuatedAmount, securedClaim, raised } = applyCollateralFloor(amount, item);
+  const { valuatedAmount, securedClaim, raised, rentalRaised } = applyCollateralFloor(amount, item, method);
 
   return {
     estateItemId: item.id,
@@ -178,6 +238,7 @@ export function evaluateDetachedHouse(item: EstateItem): PropertyValuationResult
     valuatedAmount,
     breakdown: [
       { label: "단독주택 평가액", amount, lawRef: VALUATION.REAL_ESTATE_SUPP },
+      ...extraCollateralRows(item, valuatedAmount, rentalRaised),
       ...(raised
         ? [{ label: "§66·§63② 담보채권액(저당+임대보증금) 하한 적용", amount: valuatedAmount, lawRef: VALUATION.COLLATERAL_SPECIAL }]
         : []),
@@ -202,7 +263,7 @@ export function evaluateBuilding(item: EstateItem): PropertyValuationResult {
     );
   }
   const { amount, method } = resolveValuationAmount(item);
-  const { valuatedAmount, securedClaim, raised } = applyCollateralFloor(amount, item);
+  const { valuatedAmount, securedClaim, raised, rentalRaised } = applyCollateralFloor(amount, item, method);
 
   return {
     estateItemId: item.id,
@@ -210,6 +271,7 @@ export function evaluateBuilding(item: EstateItem): PropertyValuationResult {
     valuatedAmount,
     breakdown: [
       { label: "건물 평가액", amount, lawRef: VALUATION.REAL_ESTATE_SUPP },
+      ...extraCollateralRows(item, valuatedAmount, rentalRaised),
       ...(raised
         ? [{ label: "§66 담보채권액 하한 적용", amount: valuatedAmount, lawRef: VALUATION.COLLATERAL_SPECIAL }]
         : []),

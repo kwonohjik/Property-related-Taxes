@@ -24,6 +24,7 @@ import { StockValuationForm } from "@/components/calc/StockValuationForm";
 import { ExemptionChecklist } from "@/components/calc/exemption/ExemptionChecklist";
 import { PriorGiftInput } from "@/components/calc/PriorGiftInput";
 import { AppraisalFeeSection } from "@/components/calc/deductions/AppraisalFeeSection";
+import { resolveValuationMethod } from "@/lib/tax-engine/property-valuation";
 import { INITIAL_APPRAISAL_FEE_FIELDS } from "@/lib/calc/appraisal-fee-form";
 
 // ============================================================
@@ -502,7 +503,7 @@ export function Step3({
         value={form}
         onChange={set}
         hasAppraisalAsset={[...form.giftItems, ...form.stockItems].some(
-          (i) => i.valuationMethod === "appraisal",
+          (i) => (i.valuationMethod ?? resolveValuationMethod(i)) === "appraisal",
         )}
       />
 

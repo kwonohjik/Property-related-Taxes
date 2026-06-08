@@ -13,7 +13,7 @@ import {
   VALUATION_METHOD_LABEL,
   type EstateGroupKey,
 } from "./source-summary-constants";
-import { resolveEngineValuatedAmount } from "@/lib/tax-engine/property-valuation";
+import { resolveEngineValuatedAmount, resolveValuationMethod } from "@/lib/tax-engine/property-valuation";
 
 // ============================================================
 // 평가금액 도출 — Table A 평가금액 열
@@ -32,11 +32,14 @@ export function resolveValuation(item: EstateItem): number {
 // ============================================================
 
 export function resolveValuationLabel(item: EstateItem): string {
+  // 명시 valuationMethod 우선 (수동 override·레거시 데이터 보존)
   if (item.valuationMethod) return VALUATION_METHOD_LABEL[item.valuationMethod];
-  if (item.marketValue && item.marketValue > 0) return "시가";
-  if (item.appraisedValue && item.appraisedValue > 0) return "감정가액";
-  if (item.standardPrice && item.standardPrice > 0) return "기준시가";
-  return "-";
+  // 주식(D-7): marketValue 등 4필드 미입력 시 §63 평가 — 도출(standard_price="기준시가")은 부정확.
+  //   상장 = 전후 2개월 종가 평균(시가 성격) / 비상장 = 순손익·순자산 보충평가.
+  if (item.category === "listed_stock") return "시가";
+  if (item.category === "unlisted_stock") return "보충적 평가";
+  // 부동산 등: 입력 금액에서 도출(§49②④) — market>appraised>similar>standard.
+  return VALUATION_METHOD_LABEL[resolveValuationMethod(item)];
 }
 
 // ============================================================

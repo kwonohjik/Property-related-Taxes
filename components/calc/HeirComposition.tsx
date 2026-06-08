@@ -25,6 +25,7 @@ import {
 } from "@/components/calc/inheritance/heir-relation-meta";
 import { isCohabitDeductionEligibleRelation } from "@/lib/tax-engine/deductions/inheritance-cohabit-helpers";
 import { CohabitRequirementBlock } from "@/components/calc/inheritance/CohabitRequirementBlock";
+import { parseResidentNumber } from "@/lib/calc/resident-number";
 
 // ============================================================
 // 관계 메타 (라벨은 공유 모듈에서 import)
@@ -41,16 +42,6 @@ const RELATION_ICONS: Record<HeirRelation, string> = {
   other: "👤",
   legatee: "📜",
   corporate: "🏢",
-};
-
-const RELATION_HINTS: Record<HeirRelation, string> = {
-  spouse: "배우자 공제 최소 5억 ~ 최대 30억 (§19)",
-  child: "1인당 5,000만원 인적공제. 미성년자는 추가 공제 (§20)",
-  lineal_ascendant: "1인당 5,000만원 인적공제. 만 65세 이상 추가 공제 (§20)",
-  sibling: "기타 인적공제 (상속 우선순위 낮음)",
-  other: "기타 법정상속인 (4촌 이내 방계혈족 등) — 법정상속분 배분 대상",
-  legatee: "유증받은 수유자 (법정상속인 외) — 상속인 외 유증액 자동 집계 (§19·§24)",
-  corporate: "법인 수유자",
 };
 
 // ============================================================
@@ -84,7 +75,9 @@ export function changeHeirRelation(heir: Heir, newRelation: HeirRelation): Heir 
     newRelation === "legatee";
 
   if (newRelation === "corporate") {
-    // 법인 — 자연인 전용 필드 제거
+    // 법인 — 자연인 전용 필드 제거 (주민번호는 사업자등록번호로 대체)
+    next.residentNumber = undefined;
+    next.gender = undefined;
     next.birthDate = undefined;
     next.isDisabled = undefined;
     next.isCohabitant = undefined;
@@ -148,6 +141,32 @@ function HeirEditor({ heir, index, deathDate, allHeirs, onUpdate, onRemove }: He
   // (직계비속 자녀·세대생략 손자녀 + 2022~ 대습배우자 other+isSubstituteInheritance)
   const showCohabitant = isCohabitDeductionEligibleRelation(heir, deathDate);
   const isCorporate = heir.relation === "corporate";
+
+  // 주민번호 앞 7자리 → 생년월일·성별 도출 (단일 출처).
+  // 도출 성공 시 birthDate·gender 직접입력 필드를 숨기고 자동값을 사용한다.
+  const parsedRrn = useMemo(
+    () => parseResidentNumber(heir.residentNumber ?? ""),
+    [heir.residentNumber],
+  );
+
+  // 주민번호로 생년월일이 도출되었는지 (직접입력 fallback 노출 판단)
+  const hasDerivedBirthDate = parsedRrn !== null;
+
+  // 주민번호 입력 처리 — 파싱 성공 시 birthDate·gender 동시 set, 실패 시 번호만 보존
+  const setResidentNumber = (raw: string) => {
+    const value = raw || undefined;
+    const parsed = raw ? parseResidentNumber(raw) : null;
+    if (parsed) {
+      set({
+        residentNumber: value,
+        birthDate: parsed.birthDate,
+        gender: parsed.gender,
+      });
+    } else {
+      // 파싱 불가(외국인 등록번호·미완성 입력 등) — 번호만 저장, 생년월일은 직접입력 fallback
+      set({ residentNumber: value });
+    }
+  };
 
   // B-3 미성년 자동 판정 — birthDate + deathDate 있을 때만
   const autoIsMinor = useMemo(() => {
@@ -215,11 +234,6 @@ function HeirEditor({ heir, index, deathDate, allHeirs, onUpdate, onRemove }: He
         </div>
       )}
 
-      {/* 공제 안내 */}
-      <p className="text-xs text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 rounded px-3 py-2">
-        ℹ️ {RELATION_HINTS[heir.relation]}
-      </p>
-
       {/* 이름 (선택) */}
       <div className="space-y-1">
         <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
@@ -234,23 +248,39 @@ function HeirEditor({ heir, index, deathDate, allHeirs, onUpdate, onRemove }: He
         />
       </div>
 
-      {/* 주민등록번호 (선택) — 신고서 인적사항 칸 */}
-      <div className="space-y-1">
-        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
-          주민등록번호 (선택)
-        </label>
-        <input
-          type="text"
-          inputMode="numeric"
-          value={heir.residentNumber ?? ""}
-          onChange={(e) => set({ residentNumber: e.target.value || undefined })}
-          placeholder="앞 6자리-뒤 7자리"
-          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-mono focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        />
-      </div>
+      {/* 주민등록번호 (필수, 법인 제외) — 앞 6자리에서 생년월일·성별 자동 도출 */}
+      {!isCorporate && (
+        <div className="space-y-1">
+          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
+            주민등록번호 <span className="text-rose-600">(필수)</span>
+          </label>
+          <input
+            type="text"
+            inputMode="numeric"
+            value={heir.residentNumber ?? ""}
+            onChange={(e) => setResidentNumber(e.target.value)}
+            placeholder="앞 6자리-뒤 7자리"
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-mono focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          />
+          {hasDerivedBirthDate ? (
+            <p className="text-[11px] text-emerald-600 dark:text-emerald-400">
+              생년월일 <strong>{parsedRrn!.birthDate}</strong> ·{" "}
+              {parsedRrn!.gender === "male" ? "남성" : "여성"} 자동 도출 (미성년·연로자·장애인
+              공제 판정에 사용)
+            </p>
+          ) : (
+            heir.residentNumber && (
+              <p className="text-[11px] text-amber-600 dark:text-amber-400">
+                생년월일을 도출할 수 없습니다. 앞 7자리를 확인하거나, 아래에서 생년월일을 직접
+                입력하세요.
+              </p>
+            )
+          )}
+        </div>
+      )}
 
-      {/* 생년월일 */}
-      {showBirthDate && (
+      {/* 생년월일 — 주민번호로 도출되지 않은 경우의 보조입력 (외국인 등록번호·미완성 등) */}
+      {showBirthDate && !hasDerivedBirthDate && (
         <div className="space-y-1">
           <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
             생년월일{" "}
@@ -354,14 +384,14 @@ function HeirEditor({ heir, index, deathDate, allHeirs, onUpdate, onRemove }: He
         </>
       )}
 
-      {/* 장애인 여부 — 자연인 전용 */}
+      {/* 장애인 여부 — 자연인 전용. 성별은 주민번호 도출값(우선) 또는 라디오(fallback)로 관리 */}
       {!isCorporate && (
         <ToggleCard
           tone="violet"
           title="장애인"
           description="성별·연령별 기대여명(년) × 1,000만원 추가 인적공제 (§20①4호, 2023 생명표)"
           checked={heir.isDisabled ?? false}
-          onCheckedChange={(v) => set({ isDisabled: v, gender: v ? heir.gender : undefined })}
+          onCheckedChange={(v) => set({ isDisabled: v })}
         />
       )}
 
@@ -371,21 +401,30 @@ function HeirEditor({ heir, index, deathDate, allHeirs, onUpdate, onRemove }: He
           <p className="text-xs font-semibold text-violet-700 dark:text-violet-300">
             장애인 성별 (§20①4호 — 성별·연령별 기대여명 기준)
           </p>
-          <RadioCardGroup
-            name={`gender-${heir.id}`}
-            tone="violet"
-            layout="inline"
-            value={heir.gender ?? ""}
-            onChange={(v) => set({ gender: v })}
-            options={[
-              { value: "male", label: "남성" },
-              { value: "female", label: "여성" },
-            ]}
-          />
-          {!heir.gender && (
-            <p className="text-[11px] text-violet-600 dark:text-violet-400">
-              성별을 선택해야 장애인공제 기대여명을 계산합니다.
+          {parsedRrn ? (
+            <p className="text-[11px] text-emerald-600 dark:text-emerald-400">
+              주민등록번호에서 자동 도출:{" "}
+              <strong>{parsedRrn.gender === "male" ? "남성" : "여성"}</strong>
             </p>
+          ) : (
+            <>
+              <RadioCardGroup
+                name={`gender-${heir.id}`}
+                tone="violet"
+                layout="inline"
+                value={heir.gender ?? ""}
+                onChange={(v) => set({ gender: v })}
+                options={[
+                  { value: "male", label: "남성" },
+                  { value: "female", label: "여성" },
+                ]}
+              />
+              {!heir.gender && (
+                <p className="text-[11px] text-violet-600 dark:text-violet-400">
+                  성별을 선택해야 장애인공제 기대여명을 계산합니다.
+                </p>
+              )}
+            </>
           )}
         </div>
       )}

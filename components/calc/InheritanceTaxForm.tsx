@@ -640,24 +640,26 @@ export function InheritanceTaxForm() {
         </div>
       )}
 
-      <div className="flex gap-3">
+      <div className="flex items-center justify-between gap-2">
         <button
           type="button"
           onClick={handleBack}
-          className="flex-1 rounded-md border border-border py-2.5 text-sm font-medium hover:bg-muted transition-colors"
+          className="inline-flex items-center gap-1 rounded-md border border-border px-5 py-2 text-sm font-medium hover:bg-muted transition-colors"
         >
           <ChevronLeft className="w-4 h-4" />
           {step === 0 ? "홈으로" : "이전"}
         </button>
-        <button
-          type="button"
-          onClick={handleNext}
-          disabled={loading}
-          className="flex-1 rounded-md bg-primary text-primary-foreground py-2.5 text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
-        >
-          {loading ? "계산 중..." : isLastStep ? "계산하기" : "다음 →"}
-        </button>
-        <SaveButton variant="primary" onSave={handleManualSaveForForm} disabled={isEmpty} disabledReason="한 가지 이상 입력 후 저장해주세요." />
+        <div className="flex items-center gap-2">
+          <SaveButton variant="primary" onSave={handleManualSaveForForm} disabled={isEmpty} disabledReason="한 가지 이상 입력 후 저장해주세요." />
+          <button
+            type="button"
+            onClick={handleNext}
+            disabled={loading}
+            className="inline-flex items-center justify-center rounded-md bg-primary text-primary-foreground px-6 py-2 text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+          >
+            {loading ? "계산 중..." : isLastStep ? "계산하기" : "다음 →"}
+          </button>
+        </div>
       </div>
       <SaveToast message={saveMessage} onClose={() => setSaveMessage(null)} />
     </div>

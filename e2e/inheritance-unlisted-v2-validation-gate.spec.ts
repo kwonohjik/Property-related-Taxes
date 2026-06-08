@@ -20,6 +20,7 @@ async function gotoV2FormalValuationCard(page: Page) {
 
   await page.getByRole("button", { name: /상속인 추가/ }).click();
   await page.getByText("자녀", { exact: true }).click();
+  await page.getByPlaceholder("앞 6자리-뒤 7자리").last().fill("700101-1000000");
   await page.getByRole("button", { name: /^다음/ }).click();
 
   // Step1: 비상장주식 V2 카드 열기

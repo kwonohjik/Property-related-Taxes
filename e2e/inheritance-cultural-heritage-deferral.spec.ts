@@ -23,6 +23,7 @@ async function gotoStep1WithLand(page: Page) {
   await fillDateAndVerify(page, { year: "2024", month: "6", day: "10" });
   await page.getByRole("button", { name: /상속인 추가/ }).click();
   await page.getByText("자녀", { exact: true }).click();
+  await page.getByPlaceholder("앞 6자리-뒤 7자리").last().fill("700101-1000000");
   await page.getByRole("button", { name: /^다음/ }).click(); // → Step1
   await addLandAsset(page, { area: "300", unitPrice: "10000000" });
 }

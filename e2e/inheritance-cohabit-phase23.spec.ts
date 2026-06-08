@@ -36,9 +36,8 @@ async function goToStep4WithCohabitChild(page: Page) {
   await page.getByRole("button", { name: /^다음/ }).click();
   // Step1: 아파트 추가 + 동거주택 체크
   await page.getByRole("button", { name: /상속재산 추가/ }).click();
-  await page.getByRole("button", { name: /아파트.*공동주택/ }).click();
+  await page.getByRole("button", { name: /주택/ }).click();
   await page.getByPlaceholder("금액 입력").first().fill("800000000");
-  await page.getByText("시가·감정가·임대보증금·저당권 입력").click();
   await page.getByText("동거주택 공제 대상 (§23의2)").click();
   // → Step2 → Step3 → Step4
   for (let i = 0; i < 3; i++) {

@@ -115,6 +115,29 @@ function parseAmountRaw(s: string): number {
 }
 
 // ────────────────────────────────────────────────────
+// 그룹별 합계 헬퍼 (상속재산 단계 접기 헤더 요약용)
+// computeInheritanceSummary와 동일 valuation 로직 공유 — 드리프트 방지
+// ────────────────────────────────────────────────────
+
+/**
+ * EstateItem 배열(상속재산 목록·주식/지분 목록 각각)의 평가액 합계.
+ * 비상장주식 모드 strip(resolveActiveUnlistedValuation) 후 estimateAssetValue 합산.
+ */
+export function sumEstateItemsValuation(
+  items: EstateItem[],
+  valuationDate?: string,
+): number {
+  return items
+    .map(resolveActiveUnlistedValuation)
+    .reduce((s, it) => s + estimateAssetValue(it, valuationDate), 0);
+}
+
+/** 추정상속재산(§15) 항목 배열의 가산액 합계. */
+export function sumPresumedItems(items: PresumedInheritanceItem[]): number {
+  return items.reduce((s, it) => s + evaluatePresumedItem(it).addedAmount, 0);
+}
+
+// ────────────────────────────────────────────────────
 // 메인 selector
 // ────────────────────────────────────────────────────
 
@@ -124,19 +147,13 @@ export function computeInheritanceSummary(
 ): InheritanceSummary {
   // ── ① 본래상속재산 추정 ──
   // 비상장주식 모드 strip — simple 모드인데 V2가 잔존해도 평가 제외 (PR-3)
-  const allEstateItems = [...form.estateItems, ...form.stockItems].map(
-    resolveActiveUnlistedValuation,
-  );
-  const estateValueRaw = allEstateItems.reduce(
-    (s, it) => s + estimateAssetValue(it, form.valuationDate),
-    0,
-  );
+  // (그룹별 헬퍼 sumEstateItemsValuation 재사용 — 접기 헤더 요약과 단일 출처)
+  const estateValueRaw =
+    sumEstateItemsValuation(form.estateItems, form.valuationDate) +
+    sumEstateItemsValuation(form.stockItems, form.valuationDate);
 
   // ── 추정상속재산 §15 가산 ──
-  const presumedAdded = form.presumedItems.reduce(
-    (s, it) => s + evaluatePresumedItem(it).addedAmount,
-    0,
-  );
+  const presumedAdded = sumPresumedItems(form.presumedItems);
 
   // ── 채무·공과·장례 ──
   let totalDebts = 0;

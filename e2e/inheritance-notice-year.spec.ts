@@ -24,9 +24,9 @@ async function gotoEstateAptCard(page: Page, year: string, month: string, day: s
   // 상속재산 단계로
   await page.getByRole("button", { name: /^다음/ }).click();
 
-  // 상속재산 추가 → 아파트·공동주택
+  // 상속재산 추가 → 주택
   await page.getByRole("button", { name: /상속재산 추가/ }).click();
-  await page.getByRole("button", { name: /아파트.*공동주택/ }).click();
+  await page.getByRole("button", { name: /주택/ }).click();
 }
 
 /** 기준시가 연도 select (공시가격 조회 버튼과 같은 행) */
@@ -70,8 +70,7 @@ test.describe("상속세 기준시가 공시연도 자동 선택", () => {
 
     // §66·§63 — 담보채권액(1천만 < 평가액)을 입력해도 평가액에서 차감되지 않고(MAX),
     // 채무는 부채 명세 별도 공제 안내가 표시되어야 함
-    // 저당권은 advanced ToggleCard(시가·감정가·임대보증금·저당권 입력) 안에 있음 — 먼저 열기
-    await page.getByText("시가·감정가·임대보증금·저당권 입력").click();
+    // 저당권은 담보·임대 섹션에 상시 노출 (2026-06-08 아코디언 전환)
     const mortgageInput = page
       .getByText("저당권 등에 의해 담보된 채권액", { exact: true })
       .locator("xpath=ancestor::div[@data-slot='field-card']//input");

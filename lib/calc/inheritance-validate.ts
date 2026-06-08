@@ -23,6 +23,10 @@ import { resolveEngineValuatedAmount } from "@/lib/tax-engine/property-valuation
 import { checkCorporateGiftRule } from "@/lib/calc/prior-gift-corporate-rule";
 import { checkMarriageBirthGiftRule } from "@/lib/calc/prior-gift-marriage-birth-rule";
 import { toOptionalDate } from "@/lib/api/date-coerce";
+import {
+  parseResidentNumber,
+  isCompleteResidentNumber,
+} from "@/lib/calc/resident-number";
 import { endOfMonth, addMonths, format } from "date-fns";
 
 // ────────────────────────────────────────────────────
@@ -339,6 +343,23 @@ export function validateInheritanceTaxInput(
   if (input.estateItems.length === 0) return "상속재산을 1개 이상 입력하세요.";
   if (input.heirs.length === 0)
     return "상속인·수유자를 1명 이상 등록하세요. (협의분할·법정상속분 안분의 기준)";
+
+  // ⑧ 주민등록번호 필수 (자연인 전 관계, 법인 제외) — 앞 6자리에서 생년월일·성별 도출
+  //    (계획서 의견1: 13자리 입력 받되 앞 7자리만 파싱, 뒷자리 체크섬 미검증)
+  for (const heir of input.heirs) {
+    if (heir.relation === "corporate") continue;
+    const who = heir.name?.trim() || "상속인";
+    if (!heir.residentNumber) {
+      // 외국인 등록번호 등으로 주민번호가 없으면 생년월일 직접입력을 허용 (fallback)
+      if (!heir.birthDate) {
+        return `${who}의 주민등록번호를 입력하세요. (생년월일·성별 자동 도출 — 미입력 시 생년월일 직접 입력)`;
+      }
+    } else if (!isCompleteResidentNumber(heir.residentNumber)) {
+      return `${who}의 주민등록번호 형식이 올바르지 않습니다. (13자리 숫자)`;
+    } else if (!parseResidentNumber(heir.residentNumber) && !heir.birthDate) {
+      return `${who}의 주민등록번호 앞자리에서 생년월일을 도출할 수 없습니다. 앞 7자리를 확인하거나 생년월일을 직접 입력하세요.`;
+    }
+  }
 
   // ⑧ 장애인공제(§20①4호)는 성별·연령별 기대여명 필요 → 장애인 heir 성별 필수 (자동추정 금지)
   for (const heir of input.heirs) {

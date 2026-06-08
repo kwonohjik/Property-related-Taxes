@@ -26,13 +26,12 @@ async function setupAptCard(page: Page, opts: { cohabitChild: boolean }) {
 
   await page.getByRole("button", { name: /^다음/ }).click();
 
-  // 상속재산 추가 → 아파트·공동주택, 기준시가 총액 6억 직접 입력
+  // 상속재산 추가 → 주택, 기준시가 총액 6억 직접 입력
   await page.getByRole("button", { name: /상속재산 추가/ }).click();
-  await page.getByRole("button", { name: /아파트.*공동주택/ }).click();
+  await page.getByRole("button", { name: /주택/ }).click();
   await page.getByPlaceholder("금액 입력").first().fill("600000000");
 
-  // advanced 토글 열기 (동거주택 체크는 advanced 안쪽)
-  await page.getByText("시가·감정가·임대보증금·저당권 입력").click();
+  // 담보·임대 섹션은 상시 노출 (2026-06-08 아코디언 전환) — 별도 열기 불요
 }
 
 test.describe("§23의2 동거주택 자동채움", () => {

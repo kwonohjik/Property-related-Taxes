@@ -25,6 +25,7 @@ async function fillStep0WithSevenChildren(page: Page) {
   for (let i = 0; i < 7; i++) {
     await page.getByRole("button", { name: /상속인 추가/ }).click();
     await page.getByText("자녀", { exact: true }).last().click();
+    await page.getByPlaceholder("앞 6자리-뒤 7자리").last().fill("700101-1000000");
   }
   await nextSteps(page, 1); // → Step1
 }

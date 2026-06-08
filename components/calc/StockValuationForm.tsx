@@ -529,6 +529,8 @@ export interface StockValuationFormProps {
   valuationDate?: string;
   /** 협의분할 분배 후보 — inheritance 모드에서 필수 */
   heirs?: Heir[];
+  /** 헤더(제목·설명·개수 배지) 숨김 — 외부 접기 래퍼가 헤더를 담당할 때 사용 */
+  hideHeader?: boolean;
 }
 
 let _nextStockId = 1;
@@ -542,6 +544,7 @@ export function StockValuationForm({
   mode = "inheritance",
   valuationDate,
   heirs,
+  hideHeader = false,
 }: StockValuationFormProps) {
   // 부동산과다보유법인 여부는 unlistedStockData.isRealEstateHeavy(store)에 저장 — heavyMap local state 폐지.
   const [showAddPanel, setShowAddPanel] = useState(false);
@@ -583,19 +586,21 @@ export function StockValuationForm({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200">
-            주식·지분 목록
-          </h3>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-            상장주식과 비상장주식을 구분하여 입력하세요
-          </p>
+      {!hideHeader && (
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+              주식·지분 목록
+            </h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+              상장주식과 비상장주식을 구분하여 입력하세요
+            </p>
+          </div>
+          {items.length > 0 && (
+            <span className="text-xs text-gray-400">{items.length}개 입력됨</span>
+          )}
         </div>
-        {items.length > 0 && (
-          <span className="text-xs text-gray-400">{items.length}개 입력됨</span>
-        )}
-      </div>
+      )}
 
       {/* 상장주식 목록 */}
       {listedItems.length > 0 && (

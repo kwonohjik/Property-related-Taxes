@@ -27,6 +27,9 @@ export function EstimatedValuePreview({ item }: { item: EstateItem }) {
   } else if (item.appraisedValue && item.appraisedValue > 0) {
     base = item.appraisedValue;
     method = "appraisal";
+  } else if (item.similarSalesValue && item.similarSalesValue > 0) {
+    base = item.similarSalesValue;
+    method = "similar_sales";
   } else if (item.standardPrice && item.standardPrice > 0) {
     base = item.standardPrice;
     method = "standard_price";
@@ -91,6 +94,8 @@ export function TotalEstimatedValue({ items }: { items: EstateItem[] }) {
       base = item.marketValue;
     } else if (item.appraisedValue && item.appraisedValue > 0) {
       base = item.appraisedValue;
+    } else if (item.similarSalesValue && item.similarSalesValue > 0) {
+      base = item.similarSalesValue;
     } else if (item.standardPrice && item.standardPrice > 0) {
       base = item.standardPrice;
     }

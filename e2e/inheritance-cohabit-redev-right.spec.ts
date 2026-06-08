@@ -35,15 +35,12 @@ async function setupCohabitApartmentWithChild(page: Page) {
 
   // 아파트 추가
   await page.getByRole("button", { name: /상속재산 추가/ }).click();
-  await page.getByRole("button", { name: /아파트.*공동주택/ }).click();
+  await page.getByRole("button", { name: /주택/ }).click();
 
   // 기준시가 입력
   await page.locator('[placeholder="금액 입력"]').first().fill("800000000");
 
-  // advanced 토글 열기
-  await page.getByText("시가·감정가·임대보증금·저당권 입력").click();
-
-  // 동거주택 공제 대상 토글 ON
+  // 담보·임대 섹션 상시 노출 (2026-06-08 아코디언 전환) — 동거주택 공제 대상 토글 ON
   await page.getByText("동거주택 공제 대상 (§23의2)").click();
 
   // RadioCardGroup이 노출되는지 확인 (자산 유형 선택 섹션)

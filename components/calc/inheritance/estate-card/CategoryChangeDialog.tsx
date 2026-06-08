@@ -32,8 +32,8 @@ import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 
 const CATEGORY_LABELS: Record<SupportedCategory, string> = {
   real_estate_land: "토지",
-  real_estate_building: "단독주택·건물",
-  real_estate_apartment: "아파트·공동주택",
+  real_estate_building: "상업용 건물",
+  real_estate_apartment: "주택",
   cash: "현금",
   financial: "예금·펀드·채권·공제금",
   deposit: "전세보증금 반환채권 (상속세 전용)",

@@ -22,9 +22,11 @@ async function gotoStep1SpouseChild(page: Page) {
   // 배우자 추가 (추가 시 패널 닫힘)
   await page.getByRole("button", { name: /상속인 추가/ }).click();
   await page.getByText("배우자", { exact: true }).click();
+  await page.getByPlaceholder("앞 6자리-뒤 7자리").last().fill("700101-1000000");
   // 자녀 추가 (패널 재오픈)
   await page.getByRole("button", { name: /상속인 추가/ }).click();
   await page.getByText("자녀", { exact: true }).click();
+  await page.getByPlaceholder("앞 6자리-뒤 7자리").last().fill("700101-1000000");
   await nextSteps(page, 1);
 }
 
@@ -75,6 +77,7 @@ test("§21② 배우자 단독상속 → 일괄공제 배제 안내 노출", asy
   // 배우자만 상속인 (자녀 미추가 → 배우자 단독상속)
   await page.getByRole("button", { name: /상속인 추가/ }).click();
   await page.getByText("배우자", { exact: true }).click();
+  await page.getByPlaceholder("앞 6자리-뒤 7자리").last().fill("700101-1000000");
   await nextSteps(page, 1);
 
   // 토지 20억
