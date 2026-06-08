@@ -13,7 +13,7 @@ import {
   VALUATION_METHOD_LABEL,
   type EstateGroupKey,
 } from "./source-summary-constants";
-import { resolveEngineValuatedAmount } from "@/lib/tax-engine/property-valuation";
+import { resolveEngineValuatedAmount, resolveValuationMethod } from "@/lib/tax-engine/property-valuation";
 
 // ============================================================
 // 평가금액 도출 — Table A 평가금액 열
@@ -32,11 +32,8 @@ export function resolveValuation(item: EstateItem): number {
 // ============================================================
 
 export function resolveValuationLabel(item: EstateItem): string {
-  if (item.valuationMethod) return VALUATION_METHOD_LABEL[item.valuationMethod];
-  if (item.marketValue && item.marketValue > 0) return "시가";
-  if (item.appraisedValue && item.appraisedValue > 0) return "감정가액";
-  if (item.standardPrice && item.standardPrice > 0) return "기준시가";
-  return "-";
+  // 도출 단일화 (라디오 삭제 2026-06-08): 명시 valuationMethod 우선, 없으면 입력 금액에서 도출(§49②④).
+  return VALUATION_METHOD_LABEL[item.valuationMethod ?? resolveValuationMethod(item)];
 }
 
 // ============================================================

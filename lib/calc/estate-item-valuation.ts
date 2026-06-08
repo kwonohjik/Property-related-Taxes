@@ -24,10 +24,11 @@ export function computeEffectiveValuation(item: EstateItem): number {
   if (item.category === "deposit") {
     return item.leaseDeposit ?? 0;
   }
-  // 명시 평가액(§60 시가 우선) — 시가 → 감정가 → 기준시가 (??chain: 0도 그대로 반환하여 기존 동작 보존)
+  // 명시 평가액(§60 시가 우선) — 시가 → 감정가 → 매매사례가(§49④) → 기준시가 (??chain: 0도 그대로 반환하여 기존 동작 보존)
   const explicit =
     item.marketValue ??
     item.appraisedValue ??
+    item.similarSalesValue ??
     item.standardPrice;
   if (explicit !== undefined && explicit !== null) {
     return explicit;

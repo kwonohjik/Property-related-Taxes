@@ -46,26 +46,39 @@ export function convertLeaseToValue(depositAmount: number): number {
 // ============================================================
 
 /**
- * 시가 우선 원칙으로 평가액 및 방법 결정 (§60)
- * 시가 → 보충적 평가 순
+ * 평가방식 단일 도출 (§60·시행령 §49②④) — 입력 금액에서 평가방법 파생.
+ * 우선순위: 시가(매매·수용·경매) > 감정가 > 유사매매사례가액 > 보충적 평가.
+ *   - market·appraised(해당 재산 직접 시가)는 §49①상 동순위이나, 본 엔진은 매매 우선 tie-break(D-4).
+ *     §49② "평가기준일에 가장 가까운 날" 규칙은 평가일 입력 부재로 미반영(설계 동결 한계).
+ *   - similar_sales(유사매매사례)는 §49④ "시가로 본다"이나 §49② 단서로 해당 재산 시가 있으면 배제
+ *     → if-chain상 market/appraised에서 먼저 return되어 자연 후순위.
+ * UI 평가방식 라디오 삭제(2026-06-08) 후 valuationMethod·부표2코드·감정수수료 판정의 단일 진실.
+ */
+export function resolveValuationMethod(item: EstateItem): ValuationMethod {
+  if (item.marketValue != null && item.marketValue > 0) return "market_value";
+  if (item.appraisedValue != null && item.appraisedValue > 0) return "appraisal";
+  if (item.similarSalesValue != null && item.similarSalesValue > 0) return "similar_sales";
+  if (item.standardPrice != null && item.standardPrice > 0) return "standard_price";
+  return "standard_price";
+}
+
+/**
+ * 시가 우선 원칙으로 평가액 및 방법 결정 (§60) — resolveValuationMethod 단일 진실 사용.
  */
 function resolveValuationAmount(item: EstateItem): {
   amount: number;
   method: ValuationMethod;
 } {
-  // 1순위: 시가 (직접 입력)
-  if (item.marketValue != null && item.marketValue > 0) {
-    return { amount: item.marketValue, method: "market_value" };
-  }
-  // 2순위: 감정평가액
-  if (item.appraisedValue != null && item.appraisedValue > 0) {
-    return { amount: item.appraisedValue, method: "appraisal" };
-  }
-  // 3순위: 보충적 평가 (개별공시지가·기준시가)
-  if (item.standardPrice != null && item.standardPrice > 0) {
-    return { amount: item.standardPrice, method: "standard_price" };
-  }
-  return { amount: 0, method: "standard_price" };
+  const method = resolveValuationMethod(item);
+  const amount =
+    method === "market_value"
+      ? (item.marketValue ?? 0)
+      : method === "appraisal"
+        ? (item.appraisedValue ?? 0)
+        : method === "similar_sales"
+          ? (item.similarSalesValue ?? 0)
+          : (item.standardPrice ?? 0);
+  return { amount, method };
 }
 
 /**

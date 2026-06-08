@@ -1,24 +1,24 @@
 /**
- * estate-body-realestate-advanced — Issue 3 Pre-Do anchor
+ * estate-body-realestate-advanced — 평가 아코디언 + 담보·임대 상시 (2026-06-08 재편)
  *
- * Plan: docs/02-design/features/estate-card-input-ux-3fix.plan.md (v2)
+ * Plan: docs/02-design/features/inheritance-real-estate-valuation-accordion.{plan,ui.design}.md
+ *
+ * 구조 변경(D-1·D-3·D-6 안 가):
+ *   - 시가·감정가액·매매사례가액 = 아코디언 3 (각 ToggleCard, 값>0 자동 펼침)
+ *   - 임대보증금·저당권·§14·§23의2 = CollateralLeaseFields 상시 노출 (평가방식과 직교)
  *
  * 검증:
- *   AC-10 빈 자산 카드 → 시가·감정가·임대보증금·저당권 input 비노출 (advanced OFF)
- *   AC-11 advanced 토글 ON → 4개 input 노출
- *   AC-12 시가 입력 후 advanced OFF 클릭 → store(item.marketValue) 보존 (비파괴)
- *   AC-13 marketValue 사전 세팅 → mount 시 자동 ON
- *   AC-15 mortgageAmount > 0 + showCollateralDeductToggle=true → §14 토글 advanced 안쪽
- *   AC-16 advanced OFF → §14 토글도 함께 숨김 (외곽 표시 0)
- *
- * 현행 코드 기준 RED 예상:
- *   - AC-10·11·13: advanced 토글 자체가 없음 → RED (4개 input 항상 노출)
- *   - AC-15·16: §14 토글이 EstateBodySection 외부 sibling으로 항상 표시 → RED
- *   - AC-12: 비파괴는 advanced 토글 OFF 시 input umount만 → store 변경 0
+ *   VAC-1  아코디언 헤더(switch) 3개 항상 노출 (시가·감정가액·매매사례가액)
+ *   VAC-2  저당권은 상시 노출 (값 0이어도)
+ *   VAC-3  임대보증금: apartment 상시 노출 / land 비노출
+ *   VAC-4  marketValue 사전 세팅 → 시가 아코디언 자동 펼침 (input 값 노출)
+ *   VAC-5  similarSalesValue 사전 세팅 → 매매사례 아코디언 자동 펼침
+ *   CL-1   showCollateralDeductToggle=true → §14 토글 상시 노출
+ *   CL-2   showCollateralDeductToggle=false → §14 토글 미노출
  */
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen, fireEvent } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 
 import { EstateBodyRealEstate } from "@/components/calc/inheritance/estate-card/variants/EstateBodyRealEstate";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
@@ -34,23 +34,8 @@ function makeRealEstateItem(over: Partial<EstateItem> = {}): EstateItem {
   } as EstateItem;
 }
 
-/** advanced 토글 안 4개 input 노출 여부를 라벨 텍스트로 확인 */
-function advancedFieldsVisible(): {
-  market: boolean;
-  appraised: boolean;
-  lease: boolean;
-  mortgage: boolean;
-} {
-  return {
-    market: screen.queryByText(/시가 \(매매·수용·경매가액\)/) !== null,
-    appraised: screen.queryByText(/^감정평가액$/) !== null,
-    lease: screen.queryByText(/임대보증금 \(세입자 있는 경우\)/) !== null,
-    mortgage: screen.queryByText(/저당권 등에 의해 담보된 채권액/) !== null,
-  };
-}
-
-describe("[UX3-AC10..16] EstateBodyRealEstate advanced 토글", () => {
-  it("AC-10: 빈 자산 카드 → 시가·감정가·임대보증금·저당권 모두 비노출", () => {
+describe("[VAC·CL] EstateBodyRealEstate 평가 아코디언 + 담보·임대 상시", () => {
+  it("VAC-1: 시가·감정가액·매매사례가액 아코디언 헤더(switch) 3개 항상 노출", () => {
     render(
       <EstateBodyRealEstate
         item={makeRealEstateItem()}
@@ -59,14 +44,16 @@ describe("[UX3-AC10..16] EstateBodyRealEstate advanced 토글", () => {
         mode="inheritance"
       />,
     );
-    const v = advancedFieldsVisible();
-    expect(v.market).toBe(false);
-    expect(v.appraised).toBe(false);
-    expect(v.lease).toBe(false);
-    expect(v.mortgage).toBe(false);
+    expect(
+      screen.getByRole("switch", { name: /시가 \(매매·수용·경매가액\)/ }),
+    ).toBeTruthy();
+    expect(screen.getByRole("switch", { name: /감정평가액/ })).toBeTruthy();
+    expect(
+      screen.getByRole("switch", { name: /매매사례가액 \(유사매매사례\)/ }),
+    ).toBeTruthy();
   });
 
-  it("AC-11: advanced 토글 ON → 4개 input 노출", () => {
+  it("VAC-2: 저당권은 상시 노출 (값 0이어도)", () => {
     render(
       <EstateBodyRealEstate
         item={makeRealEstateItem()}
@@ -75,47 +62,26 @@ describe("[UX3-AC10..16] EstateBodyRealEstate advanced 토글", () => {
         mode="inheritance"
       />,
     );
-    // advanced 토글 — title "시가·감정가·임대보증금·저당권 입력"
-    const advancedToggle = screen.getByRole("switch", {
-      name: /시가·감정가·임대보증금·저당권 입력/,
-    });
-    fireEvent.click(advancedToggle);
-    const v = advancedFieldsVisible();
-    expect(v.market).toBe(true);
-    expect(v.appraised).toBe(true);
-    expect(v.lease).toBe(true); // apartment이므로 노출
-    expect(v.mortgage).toBe(true);
+    expect(
+      screen.queryByText(/저당권 등에 의해 담보된 채권액/),
+    ).not.toBeNull();
   });
 
-  it("AC-13: marketValue 사전 세팅 → 자동 ON", () => {
+  it("VAC-3a: apartment → 임대보증금 상시 노출", () => {
     render(
       <EstateBodyRealEstate
-        item={makeRealEstateItem({ marketValue: 1_000_000 })}
+        item={makeRealEstateItem()}
         onUpdate={vi.fn()}
         showCollateralDeductToggle={false}
         mode="inheritance"
       />,
     );
-    const v = advancedFieldsVisible();
-    expect(v.market).toBe(true);
-    expect(v.appraised).toBe(true);
-    expect(v.lease).toBe(true);
-    expect(v.mortgage).toBe(true);
+    expect(
+      screen.queryByText(/임대보증금 \(세입자 있는 경우\)/),
+    ).not.toBeNull();
   });
 
-  it("AC-13b: appraisedValue·leaseDeposit·mortgageAmount 중 하나만 있어도 자동 ON", () => {
-    render(
-      <EstateBodyRealEstate
-        item={makeRealEstateItem({ mortgageAmount: 500_000 })}
-        onUpdate={vi.fn()}
-        showCollateralDeductToggle={false}
-        mode="inheritance"
-      />,
-    );
-    expect(advancedFieldsVisible().mortgage).toBe(true);
-  });
-
-  it("AC-14: real_estate_land → 임대보증금 advanced 펼침에서도 비노출", () => {
+  it("VAC-3b: land → 임대보증금 비노출", () => {
     render(
       <EstateBodyRealEstate
         item={makeRealEstateItem({ category: "real_estate_land" })}
@@ -124,15 +90,38 @@ describe("[UX3-AC10..16] EstateBodyRealEstate advanced 토글", () => {
         mode="inheritance"
       />,
     );
-    // advanced ON
-    fireEvent.click(
-      screen.getByRole("switch", { name: /시가·감정가·임대보증금·저당권 입력/ }),
-    );
-    expect(advancedFieldsVisible().market).toBe(true);
-    expect(advancedFieldsVisible().lease).toBe(false); // land 카테고리이므로 비노출
+    expect(screen.queryByText(/임대보증금 \(세입자 있는 경우\)/)).toBeNull();
   });
 
-  it("AC-15: mortgageAmount > 0 + showCollateralDeductToggle=true + advanced ON → §14 토글 노출", () => {
+  it("VAC-4: marketValue 사전 세팅 → 시가 아코디언 자동 펼침 (input 값 노출)", () => {
+    render(
+      <EstateBodyRealEstate
+        item={makeRealEstateItem({ marketValue: 1_000_000 })}
+        onUpdate={vi.fn()}
+        showCollateralDeductToggle={false}
+        mode="inheritance"
+      />,
+    );
+    // 자동 펼침 → CurrencyInput display "1,000,000"
+    expect(screen.getAllByDisplayValue("1,000,000").length).toBeGreaterThan(0);
+  });
+
+  it("VAC-5: similarSalesValue 사전 세팅 → 매매사례 아코디언 자동 펼침", () => {
+    render(
+      <EstateBodyRealEstate
+        item={makeRealEstateItem({ similarSalesValue: 2_000_000 })}
+        onUpdate={vi.fn()}
+        showCollateralDeductToggle={false}
+        mode="inheritance"
+      />,
+    );
+    expect(screen.getAllByDisplayValue("2,000,000").length).toBeGreaterThan(0);
+    expect(
+      screen.getByRole("switch", { name: /매매사례가액 \(유사매매사례\)/ }),
+    ).toBeTruthy();
+  });
+
+  it("CL-1: showCollateralDeductToggle=true → §14 토글 상시 노출", () => {
     render(
       <EstateBodyRealEstate
         item={makeRealEstateItem({ mortgageAmount: 500_000 })}
@@ -141,19 +130,17 @@ describe("[UX3-AC10..16] EstateBodyRealEstate advanced 토글", () => {
         mode="inheritance"
       />,
     );
-    // mortgageAmount > 0이므로 advanced 자동 ON 상태 — §14 토글이 advanced 안쪽에 있어야 함
     expect(
       screen.queryByText(/이 담보채무를 §14 부채로 자동 공제/),
     ).not.toBeNull();
   });
 
-  it("AC-16: advanced OFF → §14 토글도 함께 숨김 (외곽 노출 0)", () => {
-    // 빈 자산이지만 showCollateralDeductToggle=true로 강제 — 외곽에 §14 토글 노출되면 안 됨
+  it("CL-2: showCollateralDeductToggle=false → §14 토글 미노출", () => {
     render(
       <EstateBodyRealEstate
-        item={makeRealEstateItem()} // 모든 값 0 → advanced OFF
+        item={makeRealEstateItem({ mortgageAmount: 500_000 })}
         onUpdate={vi.fn()}
-        showCollateralDeductToggle={true}
+        showCollateralDeductToggle={false}
         mode="inheritance"
       />,
     );

@@ -34,6 +34,7 @@ import { AutoSuggestBadge } from "./AutoSuggestBadge";
 import type { DeductionSuggestion } from "@/lib/calc/inheritance-deduction-suggest";
 import type { FormState, FormSet } from "./shared";
 import { AppraisalFeeSection } from "@/components/calc/deductions/AppraisalFeeSection";
+import { resolveValuationMethod } from "@/lib/tax-engine/property-valuation";
 import { CohabitAncillaryLandBlock } from "./CohabitAncillaryLandBlock";
 
 /** Step4 추가공제 자동 도출값 — InheritanceTaxForm useMemo에서 계산해 prop 전달(3중 일치). */
@@ -525,7 +526,7 @@ export function Step4({
           value={form}
           onChange={set}
           hasAppraisalAsset={form.estateItems.some(
-            (i) => i.valuationMethod === "appraisal",
+            (i) => (i.valuationMethod ?? resolveValuationMethod(i)) === "appraisal",
           )}
         />
 

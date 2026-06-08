@@ -1,18 +1,20 @@
 "use client";
 
 /**
- * 상속개시자료 요약 4표 — Table A 신규 입력 위젯 (지점 ⑤).
+ * 상속개시자료 요약 4표 — Table A 수량·면적 입력 위젯 (지점 ⑤).
  *
- * 3종 신규 필드:
- *   - valuationMethod (RadioCardGroup 5종: 자동 + 4 enum)
- *   - areaSqm        (조건부: real_estate_*)
+ * 2026-06-08: 평가방식 라디오 삭제. 평가방식(Table A 비고 열)은 입력 금액에서
+ * 자동 도출(property-valuation.ts resolveValuationMethod) → 별도 입력 불요(중복 제거).
+ *
+ * 남은 입력:
+ *   - areaSqm        (조건부: real_estate_*)  — Table A "수량(면적)" 열
  *   - quantityCount  (조건부: category==="other")
+ * 빈 섹션 가드: 부동산·기타자산 외 카테고리(cash·financial·deposit·주식)는 섹션 미렌더.
  *
- * 디자인: docs/02-design/features/inheritance-source-data-summary.ui.design.md §3-1
+ * 디자인: docs/02-design/features/inheritance-real-estate-valuation-accordion.ui.design.md §3
  */
 
-import type { EstateItem, ValuationMethod } from "@/lib/tax-engine/types/inheritance-gift.types";
-import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { isRealEstateCategory } from "@/components/calc/results/source-summary/source-summary-constants";
 
@@ -21,16 +23,6 @@ interface Props {
   onUpdate: (updated: EstateItem) => void;
 }
 
-type AutoOrMethod = "auto" | Extract<ValuationMethod, "market_value" | "similar_sales" | "standard_price" | "appraisal">;
-
-const VALUATION_OPTIONS: Array<{ value: AutoOrMethod; label: string; description?: string }> = [
-  { value: "auto", label: "자동", description: "입력된 가액에서 추론" },
-  { value: "market_value", label: "시가", description: "매매·감정·수용·경매" },
-  { value: "similar_sales", label: "매매사례가", description: "시행령 §49①5호" },
-  { value: "standard_price", label: "기준시가", description: "보충적 평가" },
-  { value: "appraisal", label: "감정가액", description: "감정평가서" },
-];
-
 export function EstateValuationMetaSection({ item, onUpdate }: Props) {
   const cat = item.category;
   const showArea = isRealEstateCategory(cat);
@@ -38,7 +30,8 @@ export function EstateValuationMetaSection({ item, onUpdate }: Props) {
 
   const set = (patch: Partial<EstateItem>) => onUpdate({ ...item, ...patch });
 
-  const currentMethod: AutoOrMethod = (item.valuationMethod as AutoOrMethod) ?? "auto";
+  // 빈 섹션 가드 — 입력 필드가 없는 카테고리는 렌더하지 않음 (라디오 삭제 후 면적/수량만 남음).
+  if (!showArea && !showQuantity) return null;
 
   return (
     <div className="space-y-3 rounded-md border border-emerald-200 bg-emerald-50/40 p-3">
@@ -47,25 +40,8 @@ export function EstateValuationMetaSection({ item, onUpdate }: Props) {
           §
         </span>
         <p className="text-xs font-semibold text-emerald-700">
-          평가방식·수량 (상속개시자료 요약 표시용)
+          수량·면적 (상속개시자료 요약 표시용)
         </p>
-      </div>
-
-      <div>
-        <p className="mb-1 text-xs font-medium text-slate-600">평가방식 (Table A 비고 열)</p>
-        <RadioCardGroup
-          name={`valuation-method-${item.id}`}
-          value={currentMethod}
-          onChange={(v) =>
-            set({
-              valuationMethod:
-                v === "auto" ? undefined : (v as ValuationMethod),
-            })
-          }
-          options={VALUATION_OPTIONS}
-          layout="inline"
-          tone="emerald"
-        />
       </div>
 
       {showArea && (
@@ -75,9 +51,7 @@ export function EstateValuationMetaSection({ item, onUpdate }: Props) {
           </p>
           <DecimalInput
             value={item.areaSqm !== undefined ? String(item.areaSqm) : ""}
-            onChange={(v) =>
-              set({ areaSqm: parseDecimal(v) || undefined })
-            }
+            onChange={(v) => set({ areaSqm: parseDecimal(v) || undefined })}
             placeholder="자산 전체 면적"
           />
         </div>
@@ -88,9 +62,7 @@ export function EstateValuationMetaSection({ item, onUpdate }: Props) {
           <p className="mb-1 text-xs font-medium text-slate-600">수량 (점)</p>
           <DecimalInput
             value={item.quantityCount !== undefined ? String(item.quantityCount) : ""}
-            onChange={(v) =>
-              set({ quantityCount: parseDecimal(v) || undefined })
-            }
+            onChange={(v) => set({ quantityCount: parseDecimal(v) || undefined })}
             placeholder="기타자산 수량"
           />
         </div>

@@ -61,6 +61,7 @@ const baseItemSchema = z.object({
   name: z.string(),
   marketValue: z.number().nonnegative().optional(),
   appraisedValue: z.number().nonnegative().optional(),
+  similarSalesValue: z.number().nonnegative().optional(), // 유사매매사례가액 (시행령 §49④) — baseItemSchema 추가 → 9멤버 .extend 전파
   standardPrice: z.number().nonnegative().optional(),
   // 상속개시자료 요약 4표 (2026-05-28) — Table A 비고/수량 열
   valuationMethod: z

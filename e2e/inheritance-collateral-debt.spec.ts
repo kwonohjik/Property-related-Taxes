@@ -29,8 +29,7 @@ test.describe("담보채무 §14 자동공제 토글 ON → 자동노출", () =>
     await page.getByPlaceholder("면적 입력").fill("200");
     await page.getByPlaceholder("공시지가 단가").fill("1000000");
 
-    // 저당권 ToggleCard 열기 (기본값: 값 없으면 접힘)
-    await page.getByText("시가·감정가·임대보증금·저당권 입력").click();
+    // 저당권은 담보·임대 섹션 상시 노출 (2026-06-08 아코디언 전환)
 
     // 저당권 담보채권액 5천만
     const mortgageInput = page
@@ -64,8 +63,7 @@ test.describe("담보채무 §14 자동공제 토글 ON → 자동노출", () =>
     await gotoEstateLandCard(page);
     await page.getByPlaceholder("면적 입력").fill("200");
     await page.getByPlaceholder("공시지가 단가").fill("1000000");
-    // 저당권 ToggleCard 열기 (기본값: 값 없으면 접힘)
-    await page.getByText("시가·감정가·임대보증금·저당권 입력").click();
+    // 저당권은 담보·임대 섹션 상시 노출 (2026-06-08 아코디언 전환)
     const mortgageInput = page
       .getByText("저당권 등에 의해 담보된 채권액", { exact: true })
       .locator("xpath=ancestor::div[@data-slot='field-card']//input");

@@ -32,7 +32,7 @@ import type {
 } from "./types/inheritance-deduction-detail.types";
 import { resolveEstateItemValue } from "./valuation/resolve-estate-item-value";
 
-import { evaluateAllEstateItems } from "./property-valuation";
+import { evaluateAllEstateItems, resolveValuationMethod } from "./property-valuation";
 import {
   evaluateExemptions,
 } from "./exemption-evaluator";
@@ -517,7 +517,7 @@ export function calcInheritanceTax(
   //   §25①2호 감정평가수수료 공제 차감 (시행령 §20의3)
   // ─────────────────────────────────────────────
   const hasAppraisalValuation = input.estateItems.some(
-    (i) => i.valuationMethod === "appraisal",
+    (i) => (i.valuationMethod ?? resolveValuationMethod(i)) === "appraisal",
   );
   const appraisalFee = calcAppraisalFeeDeduction(input.appraisalFee, {
     hasAppraisalValuation,

@@ -82,10 +82,20 @@ const PRIORITY_HINT: Record<
   "real_estate_land" | "real_estate_building" | "real_estate_apartment",
   string
 > = {
-  real_estate_land: "시가 → 감정가 → 개별공시지가 순으로 적용 (상증법 §61①)",
-  real_estate_building: "시가 → 감정가 → 건물 기준시가 순 (상업용·기타 건물, 상증법 §61①)",
+  real_estate_land: "시가 → 감정가 → 매매사례가 → 개별공시지가 순 (상증법 §60·시행령 §49②④)",
+  real_estate_building: "시가 → 감정가 → 매매사례가 → 건물 기준시가 순 (상증법 §60·시행령 §49②④)",
   real_estate_apartment:
-    "시가 → 감정가 → 주택 기준시가(공동주택가격·개별주택가격) 순 (상증법 §61①)",
+    "시가 → 감정가 → 매매사례가 → 주택 기준시가(공동·개별주택가격) 순 (상증법 §60·시행령 §49②④)",
+};
+
+// 보충적 평가방법 라벨 (D-2) — 물건별 법정 용어 병기
+const SUPPLEMENTARY_LABEL: Record<
+  "real_estate_land" | "real_estate_building" | "real_estate_apartment",
+  string
+> = {
+  real_estate_land: "보충적 평가방법 (토지: 개별공시지가, 면적 포함 합산)",
+  real_estate_building: "보충적 평가방법 (건물: 기준시가)",
+  real_estate_apartment: "보충적 평가방법 (주택: 공동·개별주택가격)",
 };
 
 const SUBTITLE: Record<
@@ -223,13 +233,13 @@ export function EstateBodyRealEstate({
         ℹ️ {PRIORITY_HINT[cat]}
       </p>
 
-      {/* [UX3-Issue3] 시가·감정가는 RealEstateAdvancedFields(advanced 토글)로 이동.
-          기준시가는 대표 평가액으로 항상 노출 유지. */}
+      {/* 평가액 입력 — 시가·감정가액·매매사례가액 아코디언 (D-6 안 가: 보충평가 위, 우선순위 순) */}
+      <ValuationAccordionFields item={item} set={set} />
 
-      {/* 보충적 평가 (StandardPriceInput) — 복합 위젯이라 children으로 직접 배치 */}
+      {/* 보충적 평가 (StandardPriceInput) — 상시 노출, 우선순위 최후 (D-2 라벨) */}
       <FieldCard
-        label={cat === "real_estate_land" ? "개별공시지가 (면적 포함 합산)" : "기준시가"}
-        hint="시가·감정가 모두 없을 때 최종 적용"
+        label={SUPPLEMENTARY_LABEL[cat]}
+        hint="시가·감정가·매매사례가 모두 없을 때 최종 적용"
       >
         <div className="space-y-2">
           {!addrValue.jibun && (
@@ -256,10 +266,8 @@ export function EstateBodyRealEstate({
 
       </EstateBodySection>
 
-      {/* [UX3-Issue3] 시가·감정가·임대보증금·저당권 advanced 토글
-          기본 노출은 기준시가만, 시가/감정가/임대보증금/저당권은 토글 ON 시 펼침.
-          기존 데이터 있으면 자동 ON (비파괴). §14 자동공제 토글도 children 안쪽으로 이동. */}
-      <RealEstateAdvancedFields
+      {/* 담보·임대 (§66 하한·§14 공제·§23의2) — 평가방식과 직교, 상시 노출 (D-3) */}
+      <CollateralLeaseFields
         item={item}
         set={set}
         showLeaseDeposit={showLeaseDeposit}
@@ -286,36 +294,38 @@ interface RealEstateAdvancedFieldsProps {
   hasCohabitantChild: boolean;
 }
 
-function RealEstateAdvancedFields({
+// ============================================================
+// ValuationAccordionFields — 시가·감정가액·매매사례가액 아코디언 (D-1·D-6 안 가)
+//   각 필드 ToggleCard(card·emerald). 값>0이면 초기 펼침(비파괴). 평가방식 라디오 대체.
+//   엔진 우선순위(resolveValuationMethod): market > appraised > similar > standard.
+// ============================================================
+
+function ValuationAccordionFields({
   item,
   set,
-  showLeaseDeposit,
-  showCollateralDeductToggle,
-  showCohabitToggle,
-  hasCohabitantChild,
-}: RealEstateAdvancedFieldsProps) {
-  // [UX3-AC13] mount 1회만 평가 — Shell collapse는 outer hidden이라 EstateBody는 unmount 안 됨.
-  // 사용자가 OFF로 닫아도 store 값은 보존(비파괴) — 재 ON 시 그대로 노출.
-  const hasAdvancedValue =
-    (item.marketValue ?? 0) > 0 ||
-    (item.appraisedValue ?? 0) > 0 ||
-    (item.leaseDeposit ?? 0) > 0 ||
-    (item.mortgageAmount ?? 0) > 0;
-  const [advancedOpen, setAdvancedOpen] = useState(hasAdvancedValue);
+}: {
+  item: EstateItem;
+  set: (patch: Partial<EstateItem>) => void;
+}) {
+  // 필드별 초기 펼침 (값>0이면 ON) — mount 1회. OFF로 닫아도 store 값 보존(비파괴).
+  const [marketOpen, setMarketOpen] = useState((item.marketValue ?? 0) > 0);
+  const [appraisedOpen, setAppraisedOpen] = useState((item.appraisedValue ?? 0) > 0);
+  const [similarOpen, setSimilarOpen] = useState((item.similarSalesValue ?? 0) > 0);
 
   return (
-    <ToggleCard
-      tone="amber"
-      title="시가·감정가·임대보증금·저당권 입력"
-      description="해당 사항이 있는 경우에만 ON — 시가·감정가가 있으면 기준시가보다 우선 적용됩니다 (상증법 §60①)"
-      checked={advancedOpen}
-      onCheckedChange={setAdvancedOpen}
-    >
-      {/* 시가 */}
-      <FieldCard
-        label="시가 (매매·수용·경매가액)"
-        unit="원"
-        hint="평가기간(±6개월) 내 실거래가"
+    <div className="space-y-2">
+      <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+        평가액 입력 (해당 항목만 펼쳐 입력 — 시가가 있으면 우선 적용)
+      </p>
+
+      {/* 시가 — 1순위 */}
+      <ToggleCard
+        tone="emerald"
+        size="sm"
+        title="시가 (매매·수용·경매가액)"
+        description="평가기간(±6개월) 내 실거래가 — 1순위 (상증법 §60①·시행령 §49①)"
+        checked={marketOpen}
+        onCheckedChange={setMarketOpen}
       >
         <CurrencyInput
           label="시가 (매매·수용·경매가액)"
@@ -323,15 +333,17 @@ function RealEstateAdvancedFields({
           onChange={(v) => set({ marketValue: parseAmount(v) || undefined })}
           placeholder="없으면 빈칸"
           hideLabel
-          hideUnit
         />
-      </FieldCard>
+      </ToggleCard>
 
       {/* 감정평가액 */}
-      <FieldCard
-        label="감정평가액"
-        unit="원"
-        hint="감정평가법인 감정가 (시가 없을 때 2순위)"
+      <ToggleCard
+        tone="emerald"
+        size="sm"
+        title="감정평가액"
+        description="감정평가법인 감정가 — 시가 없을 때 적용 (시행령 §49①2호)"
+        checked={appraisedOpen}
+        onCheckedChange={setAppraisedOpen}
       >
         <CurrencyInput
           label="감정평가액"
@@ -339,9 +351,53 @@ function RealEstateAdvancedFields({
           onChange={(v) => set({ appraisedValue: parseAmount(v) || undefined })}
           placeholder="없으면 빈칸"
           hideLabel
-          hideUnit
         />
-      </FieldCard>
+      </ToggleCard>
+
+      {/* 매매사례가액 (신규) — 시행령 §49④ */}
+      <ToggleCard
+        tone="emerald"
+        size="sm"
+        title="매매사례가액 (유사매매사례)"
+        description="면적·용도·기준시가 유사한 다른 재산 매매가 (시행령 §49④). 해당 재산 시가·감정가 있으면 미적용(§49② 단서)."
+        checked={similarOpen}
+        onCheckedChange={setSimilarOpen}
+      >
+        <CurrencyInput
+          label="매매사례가액 (유사매매사례)"
+          value={item.similarSalesValue != null ? String(item.similarSalesValue) : ""}
+          onChange={(v) => set({ similarSalesValue: parseAmount(v) || undefined })}
+          placeholder="없으면 빈칸"
+          hideLabel
+        />
+      </ToggleCard>
+    </div>
+  );
+}
+
+// ============================================================
+// CollateralLeaseFields — 담보·임대 (§66 평가 하한 · §14 채무공제 · §23의2) 상시 노출 (D-3)
+//   평가방식과 직교 — 평가액이 무엇이든 §66 비교·§14 공제는 별개 축.
+// ============================================================
+
+function CollateralLeaseFields({
+  item,
+  set,
+  showLeaseDeposit,
+  showCollateralDeductToggle,
+  showCohabitToggle,
+  hasCohabitantChild,
+}: RealEstateAdvancedFieldsProps) {
+  return (
+    <div className="rounded-lg border border-amber-200 bg-amber-50/40 dark:border-amber-700 dark:bg-amber-900/10 p-3 space-y-2">
+      <div className="flex items-center gap-2">
+        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-[10px] font-bold text-amber-800 select-none">
+          §
+        </span>
+        <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">
+          담보·임대 (§66 평가 하한 · §14 채무공제)
+        </p>
+      </div>
 
       {/* 임대보증금 (apartment·building만 — land 미노출 [UV2-1]) */}
       {showLeaseDeposit && (
@@ -377,8 +433,7 @@ function RealEstateAdvancedFields({
         />
       </FieldCard>
 
-      {/* §14 자동공제 토글 — [UX3-AC15·16] advanced children 안쪽으로 이동.
-          OFF 시 함께 숨김으로 사용자 혼란(외곽 표시) 차단. */}
+      {/* §14 자동공제 토글 */}
       {showCollateralDeductToggle && (
         <ToggleCard
           tone="amber"
@@ -477,6 +532,6 @@ function RealEstateAdvancedFields({
           </ToggleCard>
         </div>
       )}
-    </ToggleCard>
+    </div>
   );
 }

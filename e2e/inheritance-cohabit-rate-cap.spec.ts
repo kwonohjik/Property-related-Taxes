@@ -33,8 +33,7 @@ async function calcWithCohabitHouse(page: Page, year: string) {
   await page.getByRole("button", { name: /주택/ }).click();
   await page.getByPlaceholder("금액 입력").first().fill("800000000");
 
-  // advanced 토글 열고 동거주택 공제 대상 체크
-  await page.getByText("시가·감정가·임대보증금·저당권 입력").click();
+  // 동거주택 공제 대상 체크 (담보·임대 섹션 상시 노출 — 2026-06-08 아코디언 전환)
   await page.getByText("동거주택 공제 대상 (§23의2)").click();
 
   // Step1 → 2 → 3 → 4
