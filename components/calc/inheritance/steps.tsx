@@ -12,13 +12,10 @@ import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInp
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
-import { PropertyValuationForm } from "@/components/calc/PropertyValuationForm";
-import { StockValuationForm } from "@/components/calc/StockValuationForm";
 import { ExemptionChecklist } from "@/components/calc/exemption/ExemptionChecklist";
 import { PriorGiftInput } from "@/components/calc/PriorGiftInput";
 import { HeirComposition } from "@/components/calc/HeirComposition";
 import { CohabitantDependentSection } from "./CohabitantDependentSection";
-import { PresumedInheritanceInput } from "./PresumedInheritanceInput";
 import { DebtAllocationInput } from "./DebtAllocationInput";
 import { FamilyBusinessEligibilitySection } from "./FamilyBusinessEligibilitySection";
 import { InstallmentInputSection } from "./InstallmentInputSection";
@@ -168,50 +165,10 @@ export function Step0({
 
 // ============================================================
 // Step 1 — 상속재산 평가 + 추정상속재산 §15
+// (800줄 정책: Step1Estate.tsx로 분리, import 사이트 호환 위해 re-export)
 // ============================================================
 
-export function Step1({ form, set }: { form: FormState; set: FormSet }) {
-  return (
-    <div className="space-y-6">
-      <p className="text-sm text-muted-foreground">
-        상속재산을 모두 입력하세요. 주식은 아래 별도 섹션에 입력합니다.
-      </p>
-      <PropertyValuationForm
-        items={form.estateItems}
-        onChange={(items) => set({ estateItems: items })}
-        mode="inheritance"
-        heirs={form.heirs}
-        valuationDate={form.deathDate}
-      />
-      <div className="border-t border-dashed border-gray-200 dark:border-gray-700 pt-4">
-        <StockValuationForm
-          items={form.stockItems}
-          onChange={(items) => set({ stockItems: items })}
-          mode="inheritance"
-          valuationDate={form.deathDate}
-          heirs={form.heirs}
-        />
-      </div>
-
-      <div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-3">
-        <div>
-          <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200">
-            추정상속재산 §15
-          </h3>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            상속개시 전 2년 이내 처분·인출·차입 중 사용처가 객관적으로 불분명한 금액
-            (1년 이내 2억 OR 2년 이내 5억 임계).
-          </p>
-        </div>
-        <PresumedInheritanceInput
-          items={form.presumedItems}
-          heirs={form.heirs}
-          onChange={(items) => set({ presumedItems: items })}
-        />
-      </div>
-    </div>
-  );
-}
+export { Step1 } from "./Step1Estate";
 
 // ============================================================
 // Step 2 — 비과세·장례비·채무 (debtItems 협의분할 모드 추가)
