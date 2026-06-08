@@ -26,6 +26,7 @@ async function gotoExemptionStep(page: Page) {
     .first()
     .click();
   await page.getByRole("button", { name: /토지/ }).first().click();
+  await page.getByRole("switch", { name: /보충적 평가방법/ }).click();
   await page.getByPlaceholder("면적 입력").fill("100");
   await page.getByPlaceholder("공시지가 단가").fill("1000000");
 

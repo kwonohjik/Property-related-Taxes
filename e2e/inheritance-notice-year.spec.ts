@@ -27,6 +27,8 @@ async function gotoEstateAptCard(page: Page, year: string, month: string, day: s
   // 상속재산 추가 → 주택
   await page.getByRole("button", { name: /상속재산 추가/ }).click();
   await page.getByRole("button", { name: /주택/ }).click();
+  // 보충적 평가(주택 기준시가) 토글 ON — 공시연도 select·금액 입력 펼침 (2026-06-09 토글 전환)
+  await page.getByRole("switch", { name: /보충적 평가방법/ }).click();
 }
 
 /** 기준시가 연도 select (공시가격 조회 버튼과 같은 행) */
@@ -57,6 +59,8 @@ test.describe("상속세 기준시가 공시연도 자동 선택", () => {
     // 토지 자산 추가 (개별공시지가 = 단가×면적)
     await page.getByRole("button", { name: /상속재산 추가/ }).click();
     await page.getByRole("button", { name: /토지/ }).first().click();
+    // 보충적 평가(개별공시지가) 토글 ON — 면적·단가 입력 펼침 (2026-06-09 토글 전환)
+    await page.getByRole("switch", { name: /보충적 평가방법/ }).click();
 
     // 면적 입력 → 면적 칸에 표시되는가 (이전 버그: area prop 미전달로 갇힘)
     const areaInput = page.getByPlaceholder("면적 입력");
@@ -70,7 +74,8 @@ test.describe("상속세 기준시가 공시연도 자동 선택", () => {
 
     // §66·§63 — 담보채권액(1천만 < 평가액)을 입력해도 평가액에서 차감되지 않고(MAX),
     // 채무는 부채 명세 별도 공제 안내가 표시되어야 함
-    // 저당권은 담보·임대 섹션에 상시 노출 (2026-06-08 아코디언 전환)
+    // 담보·임대 섹션 토글 ON — 저당권 입력 펼침 (2026-06-09 토글 전환)
+    await page.getByRole("switch", { name: /담보·임대/ }).click();
     const mortgageInput = page
       .getByText("저당권 등에 의해 담보된 채권액", { exact: true })
       .locator("xpath=ancestor::div[@data-slot='field-card']//input");
@@ -105,6 +110,8 @@ test.describe("상속세 기준시가 공시연도 자동 선택", () => {
     await page.getByLabel("일").first().fill("1");
     await page.getByRole("button", { name: /^다음/ }).click();
 
+    // 스텝 재진입 시 보충적 평가 토글 로컬 state 초기화(OFF) → 재오픈 (2026-06-09 토글 전환)
+    await page.getByRole("switch", { name: /보충적 평가방법/ }).click();
     await expect(noticeYearSelect(page)).toHaveValue("2023");
   });
 });

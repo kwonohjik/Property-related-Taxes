@@ -29,9 +29,12 @@ async function setupAptCard(page: Page, opts: { cohabitChild: boolean }) {
   // 상속재산 추가 → 주택, 기준시가 총액 6억 직접 입력
   await page.getByRole("button", { name: /상속재산 추가/ }).click();
   await page.getByRole("button", { name: /주택/ }).click();
+  // 보충적 평가(주택 기준시가) 토글 ON — 금액 입력 펼침 (2026-06-09 토글 전환)
+  await page.getByRole("switch", { name: /보충적 평가방법/ }).click();
   await page.getByPlaceholder("금액 입력").first().fill("600000000");
 
-  // 담보·임대 섹션은 상시 노출 (2026-06-08 아코디언 전환) — 별도 열기 불요
+  // 담보·임대 섹션 토글 ON — §23의2 동거주택 공제 대상 토글 펼침 (2026-06-09 토글 전환)
+  await page.getByRole("switch", { name: /담보·임대/ }).click();
 }
 
 test.describe("§23의2 동거주택 자동채움", () => {

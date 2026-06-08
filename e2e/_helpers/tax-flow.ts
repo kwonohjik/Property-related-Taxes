@@ -85,6 +85,8 @@ export async function addLandAsset(
   const addButtonName = opts.addButtonName ?? /상속재산 추가/;
   await page.getByRole("button", { name: addButtonName }).click();
   await page.getByRole("button", { name: /토지/ }).first().click();
+  // 보충적 평가(개별공시지가) 토글 ON — 면적·단가 입력 펼침 (2026-06-09 토글 전환)
+  await page.getByRole("switch", { name: /보충적 평가방법/ }).click();
   const areaInput = page.getByPlaceholder("면적 입력");
   const priceInput = page.getByPlaceholder("공시지가 단가");
   await fillAndVerify(areaInput, opts.area);

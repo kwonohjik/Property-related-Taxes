@@ -40,6 +40,7 @@ async function gotoStep0WithChildAndCorporate(page: Page) {
 async function addLandAndGotoStep3(page: Page) {
   await page.getByRole("button", { name: /상속재산 추가/ }).click();
   await page.getByRole("button", { name: /토지/ }).first().click();
+  await page.getByRole("switch", { name: /보충적 평가방법/ }).click();
   await page.getByPlaceholder("면적 입력").fill("300");
   await page.getByPlaceholder("공시지가 단가").fill("1000000");
   // Step2(비과세) → Step3(사전증여)

@@ -37,7 +37,11 @@ async function goToStep4WithCohabitChild(page: Page) {
   // Step1: 아파트 추가 + 동거주택 체크
   await page.getByRole("button", { name: /상속재산 추가/ }).click();
   await page.getByRole("button", { name: /주택/ }).click();
+  // 보충적 평가(주택 기준시가) 토글 ON — 금액 입력 펼침 (2026-06-09 토글 전환)
+  await page.getByRole("switch", { name: /보충적 평가방법/ }).click();
   await page.getByPlaceholder("금액 입력").first().fill("800000000");
+  // 담보·임대 섹션 토글 ON → 동거주택 공제 대상 체크 (2026-06-09 토글 전환)
+  await page.getByRole("switch", { name: /담보·임대/ }).click();
   await page.getByText("동거주택 공제 대상 (§23의2)").click();
   // → Step2 → Step3 → Step4
   for (let i = 0; i < 3; i++) {
