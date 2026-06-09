@@ -110,11 +110,12 @@ export function changeHeirRelation(heir: Heir, newRelation: HeirRelation): Heir 
     if (!showBirthDate) next.birthDate = undefined;
   }
 
-  // 대습상속(§1001) 3필드는 "기타(other)" 전용 — 다른 관계로 변경 시 정리(stale 법정상속분 오염 차단)
+  // 대습상속(§1001) 필드는 "기타(other)" 전용 — 다른 관계로 변경 시 정리(stale 법정상속분 오염 차단)
   if (newRelation !== "other") {
     next.substituteGroupId = undefined;
     next.substituteForRelation = undefined;
     next.substituteRole = undefined;
+    next.substituteAncestorName = undefined;
   }
 
   return next;

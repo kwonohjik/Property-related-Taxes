@@ -33,17 +33,34 @@ export function SubstituteHeirPanel({
   set,
 }: SubstituteHeirPanelProps) {
   const substituteGroups = useMemo(() => {
-    const seen = new Map<string, { id: string; forRelation?: string }>();
+    const seen = new Map<
+      string,
+      { id: string; forRelation?: string; ancestorName?: string }
+    >();
     for (const h of allHeirs) {
-      if (h.substituteGroupId && !seen.has(h.substituteGroupId)) {
+      if (!h.substituteGroupId) continue;
+      const prev = seen.get(h.substituteGroupId);
+      if (!prev) {
         seen.set(h.substituteGroupId, {
           id: h.substituteGroupId,
           forRelation: h.substituteForRelation,
+          ancestorName: h.substituteAncestorName?.trim() || undefined,
         });
+      } else if (!prev.ancestorName && h.substituteAncestorName?.trim()) {
+        // 그룹 대표 성명 보강 (멤버 중 먼저 입력된 피대습자 성명)
+        prev.ancestorName = h.substituteAncestorName.trim();
       }
     }
     return Array.from(seen.values());
   }, [allHeirs]);
+
+  const groupLabel = (
+    g: { forRelation?: string; ancestorName?: string },
+    idx: number,
+  ): string =>
+    g.ancestorName
+      ? `故 ${g.ancestorName} 갈음 (사망 ${g.forRelation === "sibling" ? "형제자매" : "자녀"})`
+      : `대습 그룹 #${idx + 1} · 사망 ${g.forRelation === "sibling" ? "형제자매" : "자녀"}`;
 
   return (
     <ToggleCard
@@ -59,6 +76,7 @@ export function SubstituteHeirPanel({
                 substituteGroupId: undefined,
                 substituteForRelation: undefined,
                 substituteRole: undefined,
+                substituteAncestorName: undefined,
               },
         )
       }
@@ -85,6 +103,23 @@ export function SubstituteHeirPanel({
             />
           </div>
 
+          {/* 피대습자 성명 (선택, 표시 전용) — 그룹 라벨·신고서 표시 */}
+          <div className="space-y-1">
+            <label className="block text-[11px] font-medium text-rose-700 dark:text-rose-300">
+              피대습자(사망한 분) 성명 (선택)
+            </label>
+            <input
+              type="text"
+              value={heir.substituteAncestorName ?? ""}
+              onChange={(e) =>
+                set({ substituteAncestorName: e.target.value || undefined })
+              }
+              placeholder="사망한 자녀·형제의 성명"
+              data-testid={`heir-substitute-ancestor-${index}`}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+          </div>
+
           {/* ② 대습 그룹 — 같은 피대습자를 갈음하는 대습상속인끼리 묶음 */}
           <div className="space-y-1">
             <p className="text-[11px] font-medium text-rose-700 dark:text-rose-300">
@@ -95,18 +130,23 @@ export function SubstituteHeirPanel({
               tone="rose"
               layout="stack"
               value={heir.substituteGroupId}
-              onChange={(v) =>
+              onChange={(v) => {
+                if (v === "__new__") {
+                  set({ substituteGroupId: generateSubstituteGroupId() });
+                  return;
+                }
+                // 기존 그룹 선택 시 피대습자 성명도 그룹 대표값으로 공유
+                const g = substituteGroups.find((x) => x.id === v);
                 set({
-                  substituteGroupId:
-                    v === "__new__" ? generateSubstituteGroupId() : v,
-                })
-              }
+                  substituteGroupId: v,
+                  substituteAncestorName:
+                    g?.ancestorName ?? heir.substituteAncestorName,
+                });
+              }}
               options={[
                 ...substituteGroups.map((g, i) => ({
                   value: g.id,
-                  label: `대습 그룹 #${i + 1} · 사망 ${
-                    g.forRelation === "sibling" ? "형제자매" : "자녀"
-                  }`,
+                  label: groupLabel(g, i),
                 })),
                 { value: "__new__", label: "+ 새 대습 그룹" },
               ]}

@@ -438,6 +438,7 @@ export const heirSchema = z.object({
   substituteGroupId: z.string().optional(),
   substituteForRelation: z.enum(["child", "sibling"]).optional(),
   substituteRole: z.enum(["spouse", "descendant"]).optional(),
+  substituteAncestorName: z.string().optional(), // 피대습자 성명(표시 전용)
   // B-7 (2026-06-01) — §27 미성년 3-state override. undefined=자동(birthDate), true/false=수동.
   isMinorOverride: z.boolean().optional(),
   // Phase 2 (2026-06-07) — §23의2①1호 동거기간 검증. ⑫ 미선언 시 z.object 침묵 strip → 엔진 미도달.
