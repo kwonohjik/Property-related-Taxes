@@ -59,10 +59,13 @@ test.describe("연부연납 일정표 (§71·§72)", () => {
     // 계산하기 → 결과
     await calcAndWaitResult(page);
 
-    // 일정표 카드 + 표 노출
+    // 일정표 카드 — 기본 접힘, 헤더만 노출
     const card = page.getByTestId("installment-schedule-card");
     await expect(card).toBeVisible();
     await expect(page.getByText("연부연납 일정표 (상증법 §71·§72)")).toBeVisible();
+
+    // 펼치기 → 본문(표) 노출 (다른 섹션과 통일된 접힘/펼침)
+    await card.getByRole("button", { name: /펼치기/ }).click();
 
     const table = page.getByTestId("installment-schedule-table");
     await expect(table).toBeVisible();
@@ -98,10 +101,12 @@ test.describe("연부연납 일정표 (§71·§72)", () => {
     await page.getByText("연부연납 신청 (상증법 §71)").click(); // ON
     await calcAndWaitResult(page);
 
+    // 펼치기 → 본문(주석) 노출
+    const card = page.getByTestId("installment-schedule-card");
+    await card.getByRole("button", { name: /펼치기/ }).click();
+
     // 9개월 안내 노출
-    await expect(
-      page.getByTestId("installment-schedule-card").getByText(/비거주자.*9개월/),
-    ).toBeVisible();
+    await expect(card.getByText(/비거주자.*9개월/)).toBeVisible();
   });
 
   test("INST-E2E-2: 토글 OFF → 적격 안내 카드만(상세 표 없음)", async ({ page }) => {
