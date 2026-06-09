@@ -207,28 +207,46 @@ export function buildSummaryTable(
     perHeir: buildPerHeir(sorted, (h) => get(h.id)?.grossInheritance),
   });
 
-  // ㉠ 과세제외
+  // ㉠ 과세제외 분리 — 비과세(§11·§12) / 과세가액 불산입(§16·§17). rowNo 생략(원문자 충돌 회피).
+  const sumPerHeir = (getter: (p: (typeof perHeirEngine)[string]) => number | undefined) =>
+    Object.values(perHeirEngine).reduce((s, p) => s + (getter(p) ?? 0), 0);
+
   rows.push({
-    rowId: "row-a-excluded",
+    rowId: "row-a-nontaxable",
     groupId: "value",
-    rowNo: "㉠",
-    label: "과세제외 재산 (비과세 + 과세가액불산입)",
-    total: summary?.totalExcludedFromTaxation ?? null,
-    perHeir: buildPerHeir(sorted, (h) => get(h.id)?.excludedFromTaxation),
+    label: "비과세 재산 (§11·§12)",
+    total: sumPerHeir((p) => p?.nonTaxableShare) || null,
+    perHeir: buildPerHeir(sorted, (h) => get(h.id)?.nonTaxableShare),
+  });
+  rows.push({
+    rowId: "row-a-notincluded",
+    groupId: "value",
+    label: "과세가액 불산입 (§16·§17)",
+    total: sumPerHeir((p) => p?.notIncludedShare) || null,
+    perHeir: buildPerHeir(sorted, (h) => get(h.id)?.notIncludedShare),
   });
 
-  // ㉡ 채무·공과·장례비 공제
-  const debtTotal = Object.values(perHeirEngine).reduce(
-    (s, p) => s + (p?.debtShare ?? 0),
-    0,
-  );
+  // ㉡ 채무·공과·장례비 분리 — 채무(§14①3호) / 공과금(§14①1호) / 장례비(§14①2호). rowNo 생략.
   rows.push({
-    rowId: "row-b-debt",
+    rowId: "row-b-debt-principal",
     groupId: "value",
-    rowNo: "㉡",
-    label: "채무·공과·장례비 공제",
-    total: debtTotal || null,
-    perHeir: buildPerHeir(sorted, (h) => get(h.id)?.debtShare),
+    label: "채무 (§14①3호)",
+    total: sumPerHeir((p) => p?.debtPrincipalShare) || null,
+    perHeir: buildPerHeir(sorted, (h) => get(h.id)?.debtPrincipalShare),
+  });
+  rows.push({
+    rowId: "row-b-debt-publiccharge",
+    groupId: "value",
+    label: "공과금 (§14①1호)",
+    total: sumPerHeir((p) => p?.publicChargeShare) || null,
+    perHeir: buildPerHeir(sorted, (h) => get(h.id)?.publicChargeShare),
+  });
+  rows.push({
+    rowId: "row-b-debt-funeral",
+    groupId: "value",
+    label: "장례비 (§14①2호)",
+    total: sumPerHeir((p) => p?.funeralShare) || null,
+    perHeir: buildPerHeir(sorted, (h) => get(h.id)?.funeralShare),
   });
 
   // ② 사전증여
@@ -266,7 +284,8 @@ export function buildSummaryTable(
     rowId: "row-4-taxableEstate",
     groupId: "value",
     rowNo: "④",
-    label: "상속세 과세가액 (① − ㉠ − ㉡ + ② + ③)",
+    label:
+      "상속세 과세가액 (총상속재산 − 비과세 − 과세가액불산입 − 채무 − 공과금 − 장례비 + 사전증여 + 추정상속)",
     isHeaderGroup: true,
     total: result.taxableEstateValue ?? null,
     perHeir: buildPerHeir(sorted, (h) => get(h.id)?.taxableValueShare),
