@@ -26,25 +26,26 @@ import type {
   HeirAllocation,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { CurrencyInput, parseAmount, formatKRW } from "@/components/calc/inputs/CurrencyInput";
+import { isForProfitCorporate } from "@/lib/tax-engine/inheritance-gift-common";
 
-/** 협의분할 토글 활성 가능 여부 — corporate 제외 자연인 1명 이상 */
+/** 협의분할 토글 활성 가능 여부 — 영리법인 제외 분배대상(자연인·수유자·비영리법인) 1명 이상 */
 export function hasDistributableHeir(heirs: Heir[]): boolean {
-  return heirs.some((h) => h.relation !== "corporate");
+  return heirs.some((h) => !isForProfitCorporate(h));
 }
 
 /**
- * 협의분할 ON 전환 시 초기 배분 — 첫 자연인 상속인에게 전액 할당.
- * 자연인 상속인이 없으면 빈 배열(영리법인은 협의분할 대상 아님).
+ * 협의분할 ON 전환 시 초기 배분 — **빈 배열**(아무도 미선택).
+ * 이슈2: 종전 첫 자연인 전액 자동배정 제거. 사용자가 칩 선택 시 toggleHeir가 잔여(=전액) 자동입력.
+ * 인자(heirs·effectiveValuation)는 호출처 호환 위해 시그니처만 유지(미사용 — void 표시).
  * HeirAllocationToggleSection·handleChipClick(칩 클릭 자동 ON)에서 공용.
  */
 export function buildInitialHeirAllocations(
   heirs: Heir[],
-  effectiveValuation: number,
+  effectiveValuation?: number,
 ): HeirAllocation[] {
-  const firstHeir = heirs.find((h) => h.relation !== "corporate");
-  return firstHeir
-    ? [{ heirId: firstHeir.id, amount: effectiveValuation }]
-    : [];
+  void heirs;
+  void effectiveValuation;
+  return [];
 }
 
 interface HeirAllocationInputProps {
@@ -92,8 +93,8 @@ export function HeirAllocationInput({
   const matched = expectedTotal === 0 || sum === expectedTotal;
   const hasInput = allocs.length > 0;
 
-  // 영리법인은 상속받지 않으므로 분배 후보에서 제외
-  const distributableHeirs = heirs.filter((h) => h.relation !== "corporate");
+  // 영리법인(§3의2② 면제·별도 배부)만 분배 후보에서 제외 — 비영리법인은 수유자로 포함
+  const distributableHeirs = heirs.filter((h) => !isForProfitCorporate(h));
 
   const toggleHeir = (heir: Heir) => {
     if (allocs.find((a) => a.heirId === heir.id)) {
@@ -191,18 +192,21 @@ export function HeirAllocationInput({
         </p>
       )}
 
-      {/* 통합 행 — 상속인 전원 토글, 선택 시 금액·면적 인라인 (이름 1회) */}
-      <div className="space-y-1.5" data-testid="heir-allocation-rows">
+      {/* 2열 그리드 — 셀당 1명(이름 1회). 선택 시 금액·면적 입력칸을 칩 아래 수직 스택. */}
+      <div
+        className="grid grid-cols-1 sm:grid-cols-2 gap-2 items-start"
+        data-testid="heir-allocation-rows"
+      >
         {distributableHeirs.map((heir) => {
           const alloc = allocs.find((a) => a.heirId === heir.id);
           const selected = !!alloc;
           return (
-            <div key={heir.id} className="flex flex-wrap items-center gap-2">
+            <div key={heir.id} className="flex flex-col gap-1.5">
               <button
                 type="button"
                 aria-pressed={selected}
                 onClick={() => toggleHeir(heir)}
-                className={`text-xs px-2 py-1 rounded-full border transition-colors shrink-0 ${
+                className={`text-xs px-2 py-1 rounded-full border transition-colors shrink-0 self-start ${
                   selected
                     ? "bg-sky-200 dark:bg-sky-800 border-sky-400 text-sky-900 dark:text-sky-100"
                     : "bg-white dark:bg-slate-800 border-border text-muted-foreground hover:bg-muted"
@@ -212,7 +216,7 @@ export function HeirAllocationInput({
                 {heirShortLabel(heir)}
               </button>
               {selected && (
-                <div className="flex-1 min-w-[140px] max-w-[200px]">
+                <div className="w-full min-w-[140px]">
                   <CurrencyInput
                     label=""
                     value={alloc.amount > 0 ? String(alloc.amount) : ""}
@@ -236,7 +240,7 @@ export function HeirAllocationInput({
                         : parseFloat(e.target.value),
                     )
                   }
-                  className="w-24 shrink-0 px-2 py-1 text-xs rounded border border-border bg-background"
+                  className="w-full px-2 py-1 text-xs rounded border border-border bg-background"
                 />
               )}
             </div>

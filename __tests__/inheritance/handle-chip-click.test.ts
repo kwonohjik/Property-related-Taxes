@@ -183,7 +183,9 @@ describe("createChipClickHandler", () => {
 // ============================================================
 
 describe("createChipClickHandler — heir-allocation 자동 ON", () => {
-  it("펼치는 방향 + 자연인 상속인 + 평가액>0 → heirAllocations 자동 세팅(firstHeir 전액)", () => {
+  it("펼치는 방향 + 분배대상 상속인 → heirAllocations 빈 배열 자동 ON (이슈2: 전액 자동배정 제거)", () => {
+    // 변경(이슈2): 종전 firstHeir 전액 자동배정 → 빈 배열(아무도 미선택).
+    // 토글은 켜지되(heirAllocations=[]) 사용자가 칩 선택 시 전액 자동입력.
     const onUpdate = vi.fn();
     const setExpand = vi.fn();
     const handler = createChipClickHandler({
@@ -195,17 +197,15 @@ describe("createChipClickHandler — heir-allocation 자동 ON", () => {
     });
     handler(makeChip("heir-allocation"));
     expect(onUpdate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        heirAllocations: [{ heirId: "h1", amount: 1_100_000_000 }],
-      }),
+      expect.objectContaining({ heirAllocations: [] }),
     );
     expect(setExpand).toHaveBeenCalled();
   });
 
-  it("effectiveValuation 명시(주식 평균가×주식수) → 그 값으로 세팅 (computeEffectiveValuation 미사용)", () => {
+  it("effectiveValuation 명시 무관 → 빈 배열 자동 ON (이슈2: 전액 자동배정 제거)", () => {
     const onUpdate = vi.fn();
     const handler = createChipClickHandler({
-      item: makeItem({ marketValue: 999 }), // computeEffectiveValuation과 다른 값
+      item: makeItem({ marketValue: 999 }),
       onUpdate,
       setInlineExpandedKey: vi.fn(),
       heirs: [makeHeir({ id: "h2" })],
@@ -214,9 +214,7 @@ describe("createChipClickHandler — heir-allocation 자동 ON", () => {
     });
     handler(makeChip("heir-allocation"));
     expect(onUpdate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        heirAllocations: [{ heirId: "h2", amount: 5_000_000_000 }],
-      }),
+      expect.objectContaining({ heirAllocations: [] }),
     );
   });
 
@@ -253,10 +251,9 @@ describe("createChipClickHandler — heir-allocation 자동 ON", () => {
     expect(setExpand).toHaveBeenCalled();
   });
 
-  it("평가액 0 → 자동 ON (첫 자연인 amount:0 1행) [UX3-AC1 정정]", () => {
-    // 이전: eff > 0 가드로 자동 세팅 안 함.
-    // 변경(2026-05-29 UX3): 평가액 0이어도 자동 ON — 협의분할 패널을 평가액 입력 전 미리 열 수 있도록.
-    // amount:0 1행이 생성되어 Issue 2 잔여 자동 채움이 후속 평가액 입력 시점에 동작.
+  it("평가액 0 → 자동 ON (빈 배열) [이슈2]", () => {
+    // 평가액 0이어도 자동 ON — 협의분할 패널을 평가액 입력 전 미리 열 수 있도록.
+    // 이슈2: 빈 배열(아무도 미선택)로 ON. 사용자가 칩 선택 시 전액 자동입력.
     const onUpdate = vi.fn();
     const handler = createChipClickHandler({
       item: makeItem({ marketValue: undefined }), // computeEffectiveValuation=0
@@ -267,9 +264,7 @@ describe("createChipClickHandler — heir-allocation 자동 ON", () => {
     });
     handler(makeChip("heir-allocation"));
     expect(onUpdate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        heirAllocations: [{ heirId: "h1", amount: 0 }],
-      }),
+      expect.objectContaining({ heirAllocations: [] }),
     );
   });
 

@@ -20,7 +20,7 @@ import type {
   PriorGift,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { evaluatePresumedItem } from "@/lib/tax-engine/presumed-inheritance";
-import { evaluateUnlistedStockV2 } from "@/lib/tax-engine/property-valuation/unlisted-orchestrator";
+import { computeEffectiveValuation } from "@/lib/calc/estate-item-valuation";
 import { resolveActiveUnlistedValuation } from "@/lib/calc/unlisted-valuation-mode";
 import {
   deriveCollateralDebts,
@@ -73,39 +73,13 @@ export interface InheritanceSummary {
 // 헬퍼 — 자산 평가액 추정 (engine 호출 없이 입력값만으로)
 // ────────────────────────────────────────────────────
 
+/**
+ * 자산 평가액 — 엔진 단일 소스(computeEffectiveValuation)에 위임.
+ * 비상장 V1(unlistedStockData)·상장 §63 변형·deposit·similarSalesValue까지 엔진과 동일하게 반영.
+ * dual-truth 제거 ([[feedback_ui_engine_dual_truth_avoidance]]). valuationDate는 V2 evaluationDate fallback용.
+ */
 function estimateAssetValue(item: EstateItem, valuationDate?: string): number {
-  // V2 비상장주식 평가 우선 (Phase 5-C) — 입력 완성도 충분 시 자동 산정
-  if (item.category === "unlisted_stock" && item.unlistedStockValuationV2) {
-    let v2 = item.unlistedStockValuationV2;
-    // evaluationDate 미입력 시 valuationDate(상속개시일·증여일) fallback 주입
-    if (!v2.evaluationDate && valuationDate) {
-      const vd = new Date(valuationDate);
-      if (!isNaN(vd.getTime())) {
-        v2 = { ...v2, evaluationDate: vd };
-      }
-    }
-    if (v2.totalShares > 0 && v2.ownedShares > 0) {
-      try {
-        const result = evaluateUnlistedStockV2(v2);
-        if (result.totalValuation > 0) return result.totalValuation;
-      } catch {
-        // 평가 실패 시 marketValue·standardPrice 등으로 fallback
-      }
-    }
-  }
-  // marketValue 우선 → standardPrice → appraisedValue → listed*Shares
-  if (item.marketValue && item.marketValue > 0) return item.marketValue;
-  if (item.standardPrice && item.standardPrice > 0) return item.standardPrice;
-  if (item.appraisedValue && item.appraisedValue > 0) return item.appraisedValue;
-  if (
-    item.listedStockAvgPrice &&
-    item.listedStockShares &&
-    item.listedStockAvgPrice > 0 &&
-    item.listedStockShares > 0
-  ) {
-    return Math.floor(item.listedStockAvgPrice * item.listedStockShares);
-  }
-  return 0;
+  return computeEffectiveValuation(item, valuationDate);
 }
 
 function parseAmountRaw(s: string): number {
