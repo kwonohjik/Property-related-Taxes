@@ -34,6 +34,7 @@ const ALL_LEAVES: PrintSectionId[] = [
   "deduction-besshi",
   "valuation-detail",
   "unlisted-stock-besshi",
+  "unlisted-stock-simple",
   "listed-stock-besshi",
   "installment-guide",
   "split-payment",

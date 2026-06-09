@@ -28,13 +28,31 @@ import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
  *
  * 폼 state는 변경하지 않음. 반환값은 엔진/사이드바 전달용.
  */
+/** 비상장주식 활성 모드 판정 (레거시 fallback 포함) — 단일 source. */
+export function resolveUnlistedMode(item: EstateItem): "simple" | "formal" {
+  return (
+    item.unlistedValuationMode ??
+    (item.unlistedStockValuationV2 ? "formal" : "simple")
+  );
+}
+
+/**
+ * 간편평가(보충적) 비상장주식 여부 — 평가조서(간편) 출력 대상.
+ * category=unlisted_stock + 활성모드 simple + unlistedStockData(발행주식수 입력) 충족.
+ */
+export function isSimpleModeUnlisted(item: EstateItem): boolean {
+  return (
+    item.category === "unlisted_stock" &&
+    resolveUnlistedMode(item) === "simple" &&
+    (item.unlistedStockData?.totalShares ?? 0) > 0
+  );
+}
+
 export function resolveActiveUnlistedValuation(item: EstateItem): EstateItem {
   if (item.category !== "unlisted_stock") return item;
 
   // 모드 판정 (레거시 fallback 포함)
-  const mode: "simple" | "formal" =
-    item.unlistedValuationMode ??
-    (item.unlistedStockValuationV2 ? "formal" : "simple");
+  const mode: "simple" | "formal" = resolveUnlistedMode(item);
 
   if (mode === "simple") {
     // V2 strip — 새 객체 반환 (폼 state 원본은 변경하지 않음)

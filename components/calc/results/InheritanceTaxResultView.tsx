@@ -21,6 +21,7 @@ import { CorporateExemptionSection } from "@/components/calc/results/CorporateEx
 import { ExemptionSummaryCard } from "@/components/calc/exemption/ExemptionSummaryCard";
 import { DebtAllocationResultCard } from "@/components/calc/results/DebtAllocationResultCard";
 import { UnlistedStockBesshiResultSection } from "@/components/calc/results/UnlistedStockBesshiResultSection";
+import { UnlistedStockSimpleValuationSection } from "@/components/calc/results/UnlistedStockSimpleValuationSection";
 import { ListedStockBesshiResultSection } from "@/components/calc/results/ListedStockBesshiResultSection";
 import { SourceDataSummarySection } from "@/components/calc/results/source-summary/SourceDataSummarySection";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
@@ -524,6 +525,13 @@ export function InheritanceTaxResultView({
       {estateItems && (
         <PrintSection id="unlisted-stock-besshi" selectedIds={selectedPrintIds}>
           <UnlistedStockBesshiResultSection estateItems={estateItems} />
+        </PrintSection>
+      )}
+
+      {/* 비상장주식 평가조서 (간편평가 — 보충적 평가 자산) */}
+      {estateItems && (
+        <PrintSection id="unlisted-stock-simple" selectedIds={selectedPrintIds}>
+          <UnlistedStockSimpleValuationSection estateItems={estateItems} />
         </PrintSection>
       )}
 

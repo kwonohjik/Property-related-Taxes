@@ -40,6 +40,7 @@ export type PrintSectionId =
   | "deduction-besshi"
   | "valuation-detail"
   | "unlisted-stock-besshi"
+  | "unlisted-stock-simple"
   | "listed-stock-besshi"
   | "installment-guide"
   | "split-payment"
@@ -99,7 +100,8 @@ export const INHERITANCE_PRINT_SECTIONS: PrintSectionGroup[] = [
     children: [
       { id: "valuation-detail", label: "재산 평가 내역", channel: SCREEN },
       // PR-3b: ResultPdfDocument 통합 완료 → pdf 승격
-      { id: "unlisted-stock-besshi", label: "비상장주식 별지4 부표3", channel: SCREEN_PDF },
+      { id: "unlisted-stock-besshi", label: "비상장주식 별지4 부표3 (정식평가)", channel: SCREEN_PDF },
+      { id: "unlisted-stock-simple", label: "비상장주식 평가조서 (간편평가)", channel: SCREEN },
       { id: "listed-stock-besshi", label: "상장주식 평가조서 (갑·을)", channel: SCREEN_PDF },
     ],
   },
