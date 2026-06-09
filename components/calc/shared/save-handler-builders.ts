@@ -69,8 +69,10 @@ export function makeRunManualSave<F extends Record<string, unknown>>({
     const taxLawVersion = getTaxLawVersion(form) || now.split("T")[0];
     const title = generateTitle(taxType, inputData, now);
 
+    // 비즈니스 키 dedup — 키 있으면(상속·양도 등) 같은 대상 1건 update,
+    // 없으면(증여·종부) 내부에서 draft/content 폴백 + draft→final 승격(deleteDraftsByInput).
     if (!result) {
-      const { id, created } = await calculationRepository.saveDraftByContent({
+      const { id, created } = await calculationRepository.saveOrUpdateByBusinessKey({
         taxType,
         title,
         inputData,
@@ -82,8 +84,7 @@ export function makeRunManualSave<F extends Record<string, unknown>>({
       return { id, created, isDraft: true };
     }
 
-    await calculationRepository.deleteDraftsByInput(inputData, clientId, taxType);
-    const { id, created } = await calculationRepository.saveOrUpdateByContent({
+    const { id, created } = await calculationRepository.saveOrUpdateByBusinessKey({
       taxType,
       title,
       inputData,

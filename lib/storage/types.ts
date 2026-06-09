@@ -86,6 +86,14 @@ export interface CalculationRecord {
    * 인덱스 없음.
    */
   inputHash?: string;
+  /**
+   * 세목별 업무 식별 키 (business key) — `saveOrUpdateByBusinessKey`가 부여.
+   * 예: 상속세 `rrn:8001011000000` 또는 `nd:김코리아|2023.07.01`, 양도 `addr:서울..|2024.05.01`.
+   * 키가 같으면(같은 피상속인·물건) content 변화와 무관하게 1건을 update.
+   * 도출 불가 세목(증여·종부)·식별 미입력이면 undefined(content dedup 폴백).
+   * 인덱스 없음 — 200건 상한 내 in-memory scan.
+   */
+  businessKey?: string;
   createdAt: string;
   updatedAt: string;
 }

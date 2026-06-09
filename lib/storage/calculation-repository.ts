@@ -8,6 +8,7 @@ import {
   MAX_CALCULATIONS_PER_USER,
 } from "./types";
 import { computeContentHash, computeInputHash } from "./content-hash";
+import { extractBusinessKey } from "./business-key";
 
 export type CalculationSaveInput = Omit<
   CalculationRecord,
@@ -24,6 +25,18 @@ export interface CalculationRepository {
    * dedup 키: `(userId, taxType, clientId ?? null, contentHash)`
    */
   saveOrUpdateByContent(
+    input: CalculationSaveInput
+  ): Promise<{ id: string; created: boolean }>;
+
+  /**
+   * 세목 업무 식별 키(businessKey) 기반 dedup — 같은 대상(피상속인·물건·종목)은
+   * content 변화와 무관하게 1건을 update (중간 저장 중복 방지).
+   *
+   * - 키 도출 가능(상속·양도·취득·재산·주식, 식별 입력됨): 같은 키+clientId record를 update.
+   *   draft(빈 결과)는 기존 계산 결과를 덮어쓰지 않음(결과 보존 가드).
+   * - 키 도출 불가(증여·종부세, 또는 식별 미입력): content/draft dedup으로 폴백(무회귀).
+   */
+  saveOrUpdateByBusinessKey(
     input: CalculationSaveInput
   ): Promise<{ id: string; created: boolean }>;
 
@@ -141,6 +154,86 @@ export function createCalculationRepository(uid: UserId): CalculationRepository 
           userId: uid,
           contentHash: hash,
           inputHash,
+          createdAt: now,
+          updatedAt: now,
+        });
+      });
+      return { id, created: true };
+    },
+
+    async saveOrUpdateByBusinessKey(input) {
+      const key = extractBusinessKey(input.taxType, input.inputData);
+
+      // 키 도출 불가 → 현행 content/draft dedup으로 폴백 (무회귀)
+      if (!key) {
+        const hasResult =
+          input.resultData && Object.keys(input.resultData).length > 0;
+        if (hasResult) {
+          // 폴백 final — 기존 동작 보존: draft→final 자동 승격(동일 input draft 삭제)
+          await this.deleteDraftsByInput(
+            input.inputData,
+            input.clientId ?? null,
+            input.taxType
+          );
+          return this.saveOrUpdateByContent(input);
+        }
+        return this.saveDraftByContent(input);
+      }
+
+      const candidates = await db.calculations
+        .where("[userId+taxType+createdAt]")
+        .between(
+          [uid, input.taxType, Dexie.minKey],
+          [uid, input.taxType, Dexie.maxKey]
+        )
+        .toArray();
+      const targetClientId = input.clientId ?? null;
+      // 기존 content-dedup 레코드는 businessKey undefined → 매칭 안 됨(배포 전환: 첫 저장이 canonical 키 생성)
+      const existing = candidates.find(
+        (r) => r.businessKey === key && (r.clientId ?? null) === targetClientId
+      );
+
+      if (existing) {
+        const incoming = input.resultData ?? {};
+        const hasIncoming = Object.keys(incoming).length > 0;
+        // 결과 보존 가드: draft(빈 결과)는 기존 계산 결과를 덮어쓰지 않음
+        const nextResult = hasIncoming ? incoming : existing.resultData;
+        await db.calculations.update(existing.id, {
+          inputData: input.inputData,
+          resultData: nextResult,
+          title: input.title,
+          taxLawVersion: input.taxLawVersion,
+          linkedCalculationId: input.linkedCalculationId,
+          businessKey: key,
+          contentHash: await computeContentHash(input.inputData, nextResult),
+          inputHash: await computeInputHash(input.inputData),
+          updatedAt: new Date().toISOString(),
+        });
+        return { id: existing.id, created: false };
+      }
+
+      const id = crypto.randomUUID();
+      const now = new Date().toISOString();
+      const result = input.resultData ?? {};
+      // 해시는 트랜잭션 진입 전 계산 — Dexie tx 내 비-IndexedDB await는 PrematureCommit 유발
+      const newContentHash = await computeContentHash(input.inputData, result);
+      const newInputHash = await computeInputHash(input.inputData);
+      await db.transaction("rw", db.calculations, async () => {
+        const count = await db.calculations.where("userId").equals(uid).count();
+        if (count >= MAX_CALCULATIONS_PER_USER) {
+          const oldest = await db.calculations
+            .where("[userId+createdAt]")
+            .between([uid, Dexie.minKey], [uid, Dexie.maxKey])
+            .first();
+          if (oldest) await db.calculations.delete(oldest.id);
+        }
+        await db.calculations.add({
+          ...input,
+          id,
+          userId: uid,
+          businessKey: key,
+          contentHash: newContentHash,
+          inputHash: newInputHash,
           createdAt: now,
           updatedAt: now,
         });
