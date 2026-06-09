@@ -60,6 +60,7 @@ export function InheritanceTaxResultView({
   debtItems,
   estateItems,
   priorGifts,
+  exemptions,
   deathDate,
   presumedItems,
   familyBusinessInput,
@@ -417,6 +418,7 @@ export function InheritanceTaxResultView({
               heirs={heirs}
               estateItems={estateItems}
               priorGifts={priorGifts}
+              exemptions={exemptions}
               deathDate={deathDate}
             />
           </PrintSection>

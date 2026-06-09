@@ -169,11 +169,15 @@ describe("부표 2 데이터 어댑터 (besshi-buppyo-2)", () => {
     expect(cashRow!.valuationMethodCode).toBe("06");
   });
 
-  // ── 비과세·과세불산입 세부 3종 공란 (D-4) ──
-  it("B2-13: 비과세·과세가액불산입 세부 = null(공란)", () => {
+  // ── 비과세·과세불산입 세부 6항목 — fixture는 exemptions 미설정 → 전부 0 ──
+  it("B2-13: 비과세·과세가액불산입 6항목 = 0 (exemptions 미입력 fixture)", () => {
     for (const d of data) {
-      expect(d.sectionTotal.nonTaxableTotal).toBeNull();
-      expect(d.sectionTotal.exclusionTotal).toBeNull();
+      expect(d.sectionTotal.nonTaxableFarmland).toBe(0);
+      expect(d.sectionTotal.nonTaxablePublic).toBe(0);
+      expect(d.sectionTotal.nonTaxableOther).toBe(0);
+      expect(d.sectionTotal.exclusionPublicCorp).toBe(0);
+      expect(d.sectionTotal.exclusionPublicTrust).toBe(0);
+      expect(d.sectionTotal.exclusionOther).toBe(0);
     }
   });
 

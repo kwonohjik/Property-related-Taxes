@@ -18,6 +18,7 @@ import type {
   InheritanceTaxResult,
   EstateItem,
   PriorGift,
+  ExemptionCheckedItem,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { buildBuppyo2Data } from "@/lib/calc/besshi-buppyo-2-data";
 import { ExpandToggleButton } from "@/components/calc/results/shared/ExpandToggleButton";
@@ -37,6 +38,8 @@ interface Props {
   heirs?: Heir[];
   estateItems?: EstateItem[];
   priorGifts?: PriorGift[];
+  /** 비과세·과세가액불산입 입력 (⑲~㉔ 계 행 per-heir 기재용) */
+  exemptions?: ExemptionCheckedItem[];
   /** 상속개시일 (ISO) — PDF 파일명용 */
   deathDate?: string;
 }
@@ -46,6 +49,7 @@ export function BesshiBuppyo2Section({
   heirs,
   estateItems,
   priorGifts,
+  exemptions,
   deathDate,
 }: Props) {
   const [open, setOpen] = useState(false);
@@ -57,6 +61,7 @@ export function BesshiBuppyo2Section({
     heirs,
     estateItems ?? [],
     priorGifts ?? [],
+    exemptions ?? [],
   );
 
   // 상속인이 0명(전원 수유자·영리법인)이면 부표2 미표시

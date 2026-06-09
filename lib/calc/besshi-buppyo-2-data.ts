@@ -22,8 +22,14 @@ import type {
   AssetCategory,
   PropertyValuationResult,
   EstatePropertyKindCode,
+  ExemptionCheckedItem,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
-import { computeLegalShares } from "@/lib/tax-engine/inheritance-legal-share";
+import {
+  computeLegalShares,
+  distributeByLegalShares,
+} from "@/lib/tax-engine/inheritance-legal-share";
+import { scaleMapToTotal } from "@/lib/tax-engine/inheritance-allocation-deductions";
+import { findExemptionRuleById } from "@/lib/tax-engine/exemption-rules";
 import { sortHeirs, isStatutoryHeir } from "@/lib/calc/heir-allocation-summary";
 import { HEIR_RELATION_TO_DECLARANT_LABEL } from "@/lib/calc/filing-form-9-data";
 import {
@@ -46,6 +52,37 @@ const CATEGORY_LABEL_KO: Record<AssetCategory, string> = {
   deposit: "전세보증금",
   other: "기타재산",
 };
+
+/** 부표2 계 ⑲~㉔ 비과세·불산입 6항목 필드 키 */
+type ExemptField =
+  | "nonTaxableFarmland" // ⑲
+  | "nonTaxablePublic" // ⑳
+  | "nonTaxableOther" // ㉑
+  | "exclusionPublicCorp" // ㉒
+  | "exclusionPublicTrust" // ㉓
+  | "exclusionOther"; // ㉔
+
+/** 비과세/불산입 룰 id → 부표2 계 행 (exemption-rules.ts 룰 id 기준). 미등록은 treatment fallback. */
+const EXEMPT_RULE_TO_FIELD: Record<string, ExemptField> = {
+  inh_forest_burial: "nonTaxableFarmland", // 금양임야
+  inh_grave_land: "nonTaxableFarmland", // 묘토
+  inh_ritual_items: "nonTaxableFarmland", // 족보·제구
+  inh_state_bequest: "nonTaxablePublic", // 국가·지자체·공공단체 유증 §12 1호
+  inh_disaster_relief: "nonTaxableOther", // 이재구호금품 §12 6호
+  inh_political_party: "nonTaxableOther", // 정당 유증 §12 4호
+  inh_public_interest: "exclusionPublicCorp", // 공익법인 출연 §16
+  inh_public_trust: "exclusionPublicTrust", // 공익신탁 §17
+};
+
+/** 룰 id → 부표2 필드. 미등록 룰은 taxTreatment(§12 vs §16·§17)로 기타행 fallback. */
+function resolveExemptField(ruleId: string): ExemptField {
+  const mapped = EXEMPT_RULE_TO_FIELD[ruleId];
+  if (mapped) return mapped;
+  const rule = findExemptionRuleById(ruleId);
+  return rule?.taxTreatment === "not_included"
+    ? "exclusionOther"
+    : "nonTaxableOther";
+}
 
 /** 가. 상속인별 상속현황 */
 export interface Buppyo2SectionA {
@@ -83,10 +120,18 @@ export interface Buppyo2ItemRow {
 export interface Buppyo2SectionTotal {
   grossEstateValue: number;
   presumedAmount: number;
-  /** 비과세재산가액 세부 3종 미분리 → null(공란) */
-  nonTaxableTotal: number | null;
-  /** 과세가액불산입액 세부 3종 미분리 → null(공란) */
-  exclusionTotal: number | null;
+  /** ⑲ 금양임야 등 가액 (§12 3호 — 금양임야·묘토·족보·제구) per-heir 인정 비과세액 */
+  nonTaxableFarmland: number;
+  /** ⑳ 공공단체 유증 (§12 1호) */
+  nonTaxablePublic: number;
+  /** ㉑ 기타 비과세 (§11 전사자·§12 이재구호·정당 유증 등) */
+  nonTaxableOther: number;
+  /** ㉒ 공익법인 출연재산 가액 (§16 과세가액 불산입) */
+  exclusionPublicCorp: number;
+  /** ㉓ 공익신탁 재산가액 (§17 과세가액 불산입) */
+  exclusionPublicTrust: number;
+  /** ㉔ 기타 과세가액 불산입 */
+  exclusionOther: number;
   /** 가산증여재산 §13 (= A21 상속인 + A22 상속인 외) */
   priorGift13: number;
   /** 조특 §30의5 창업자금 (PriorGift 경로 없음 → 0) */
@@ -138,6 +183,7 @@ export function buildBuppyo2Data(
   heirs: Heir[],
   estateItems: EstateItem[],
   priorGifts: PriorGift[],
+  exemptions: ExemptionCheckedItem[] = [],
 ): Buppyo2HeirData[] {
   // 상속인만 — 비상속인(수유자·영리법인·isHeir===false)은 부표2 미작성 (시트·번호·⑦ 분모 모두 상속인 기준)
   const sorted = sortHeirs(heirs).filter(isStatutoryHeir);
@@ -147,6 +193,44 @@ export function buildBuppyo2Data(
 
   // 법정상속분 (legatee·corporate 제외)
   const legal = computeLegalShares(heirs);
+
+  // ── 비과세·과세가액불산입 per-heir·6항목 분해 (⑲~㉔) ──────────────
+  //   인정액 단일진실 = result.exemptionDetail.itemResults(exemptAmount), 룰 합산.
+  //   per-heir 귀속 = exemptions.heirAllocations(있으면) → scaleMapToTotal, 없으면 법정상속분.
+  const recognizedByRuleId = new Map<string, number>();
+  for (const r of result.exemptionDetail?.itemResults ?? []) {
+    recognizedByRuleId.set(
+      r.ruleId,
+      (recognizedByRuleId.get(r.ruleId) ?? 0) + r.exemptAmount,
+    );
+  }
+  // heirId → (field → 금액)
+  const exemptByHeir = new Map<string, Record<ExemptField, number>>();
+  const addExempt = (heirId: string, field: ExemptField, amt: number) => {
+    const cur =
+      exemptByHeir.get(heirId) ??
+      ({
+        nonTaxableFarmland: 0,
+        nonTaxablePublic: 0,
+        nonTaxableOther: 0,
+        exclusionPublicCorp: 0,
+        exclusionPublicTrust: 0,
+        exclusionOther: 0,
+      } as Record<ExemptField, number>);
+    cur[field] += amt;
+    exemptByHeir.set(heirId, cur);
+  };
+  for (const ex of exemptions) {
+    const recognized = recognizedByRuleId.get(ex.ruleId) ?? 0;
+    if (recognized <= 0) continue;
+    const field = resolveExemptField(ex.ruleId);
+    const raw =
+      ex.heirAllocations && ex.heirAllocations.length > 0
+        ? new Map(ex.heirAllocations.map((a) => [a.heirId, a.amount]))
+        : distributeByLegalShares(ex.claimedAmount, legal);
+    const scaled = scaleMapToTotal(raw, recognized);
+    for (const [heirId, v] of scaled) addExempt(heirId, field, v);
+  }
   const numeratorByHeir = new Map<string, number>();
   for (const s of legal.shares) numeratorByHeir.set(s.heirId, s.numerator);
 
@@ -258,15 +342,21 @@ export function buildBuppyo2Data(
     }
 
     // ── 계 섹션 ── (priorGift13·presumedAmount는 위에서 산출 — 단일 소스)
+    const ex = exemptByHeir.get(heir.id);
     const sectionTotal: Buppyo2SectionTotal = {
       grossEstateValue: grossInheritance,
       presumedAmount,
-      nonTaxableTotal: null,
-      exclusionTotal: null,
+      // ⑲~㉔ 비과세·불산입 6항목 (메모 행 — ㉘ 합계에 미차감, ⑰에 이미 포함)
+      nonTaxableFarmland: ex?.nonTaxableFarmland ?? 0,
+      nonTaxablePublic: ex?.nonTaxablePublic ?? 0,
+      nonTaxableOther: ex?.nonTaxableOther ?? 0,
+      exclusionPublicCorp: ex?.exclusionPublicCorp ?? 0,
+      exclusionPublicTrust: ex?.exclusionPublicTrust ?? 0,
+      exclusionOther: ex?.exclusionOther ?? 0,
       priorGift13,
       priorGift30_5: 0,
       priorGift30_6: 0,
-      // ㉘ 합계 = ⑰+⑱+㉕ (비과세·불산입 공란, 채무 행 없음 → 채무 미차감) = ⑧ 실제상속재산가액
+      // ㉘ 합계 = ⑰+⑱+㉕ (비과세·불산입은 ⑰에 포함된 메모 행 → 미차감) = ⑧ 실제상속재산가액
       total: grossInheritance + presumedAmount + priorGift13,
     };
 

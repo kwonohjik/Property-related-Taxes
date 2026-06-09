@@ -546,6 +546,7 @@ export function InheritanceTaxForm() {
           debtItems={form.debtItems}
           estateItems={[...form.estateItems, ...form.stockItems]}
           priorGifts={form.priorGifts}
+          exemptions={form.exemptionItems}
           deathDate={form.deathDate}
           presumedItems={form.presumedItems}
           familyBusinessInput={form.familyBusiness}
