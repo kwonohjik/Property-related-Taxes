@@ -30,6 +30,7 @@ const ALL_LEAVES: GiftPrintSectionId[] = [
   "filing-form-10",
   "valuation-form",
   "unlisted-stock-besshi",
+  "unlisted-stock-simple",
   "listed-stock-besshi",
   "installment",
   "split-payment",

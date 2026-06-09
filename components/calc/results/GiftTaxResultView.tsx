@@ -15,6 +15,8 @@ import { GenerationSkipSurchargeBreakdownCard } from "@/components/calc/results/
 import { GiftTaxFilingFormTable } from "@/components/calc/results/GiftTaxFilingFormTable";
 import { GiftTaxValuationFormTable } from "@/components/calc/results/GiftTaxValuationFormTable";
 import { UnlistedStockBesshiResultSection } from "@/components/calc/results/UnlistedStockBesshiResultSection";
+import { UnlistedStockSimpleValuationSection } from "@/components/calc/results/UnlistedStockSimpleValuationSection";
+import { isSimpleModeUnlisted } from "@/lib/calc/unlisted-valuation-mode";
 import { ListedStockBesshiResultSection } from "@/components/calc/results/ListedStockBesshiResultSection";
 import { HorizontalScrollContainer } from "@/components/calc/shared/HorizontalScrollContainer";
 import { calcInstallmentPayment } from "@/lib/tax-engine/credits/installment-payment";
@@ -251,6 +253,7 @@ export function GiftTaxResultView({
       s.add("filing-form-10");
     if (result.valuationResults.length > 0) s.add("valuation-form");
     if (items.some((it) => it.unlistedStockValuationV2)) s.add("unlisted-stock-besshi");
+    if (items.some(isSimpleModeUnlisted)) s.add("unlisted-stock-simple");
     if (
       items.some(
         (it) =>
@@ -525,6 +528,11 @@ export function GiftTaxResultView({
       {/* 비상장주식 별지 부표3 출력 (정식평가 V2 자산, R-6) */}
       <PrintSection id="unlisted-stock-besshi" selectedIds={selectedPrintIds}>
         <UnlistedStockBesshiResultSection estateItems={estateItems} />
+      </PrintSection>
+
+      {/* 비상장주식 평가조서 (간편평가 — 보충적 평가 자산) */}
+      <PrintSection id="unlisted-stock-simple" selectedIds={selectedPrintIds}>
+        <UnlistedStockSimpleValuationSection estateItems={estateItems} />
       </PrintSection>
 
       {/* 상장주식 평가조서(갑·을) 출력 — §63①1가·§63②3호·§63③ */}
