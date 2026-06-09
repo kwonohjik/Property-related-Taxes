@@ -65,14 +65,16 @@
 
 | 기존 | 신규 rowId | rowNo | 라벨 | groupId |
 |---|---|---|---|---|
-| ㉠ (분리) | `row-a-nontaxable` | — | 비과세 재산 (§11·§12) | value |
-| ㉠ (분리) | `row-a-notincluded` | — | 과세가액 불산입 (§16·§17) | value |
-| ㉡ (분리) | `row-b-debt-principal` | — | 채무 (§14①3호) | value |
-| ㉡ (분리) | `row-b-debt-publiccharge` | — | 공과금 (§14①1호) | value |
-| ㉡ (분리) | `row-b-debt-funeral` | — | 장례비 (§14①2호) | value |
+| ㉠ (분리) | `row-a-nontaxable` | ㉠ | 비과세 재산 (§11·§12) | value |
+| ㉠ (분리) | `row-a-notincluded` | ㉠ | 과세가액 불산입 (§16·§17) | value |
+| ㉡ (분리) | `row-b-debt-principal` | ㉡ | 채무 (§14①3호) | value |
+| ㉡ (분리) | `row-b-debt-publiccharge` | ㉡ | 공과금 (§14①1호) | value |
+| ㉡ (분리) | `row-b-debt-funeral` | ㉡ | 장례비 (§14①2호) | value |
 | ② | `row-2-priorGift` | ② | 사전증여재산 | value |
 | ③ | `row-3-presumed` | ③ | 추정상속재산 | value |
-| ④ | `row-4-taxableEstate` | ④ | **상속세 과세가액 (총상속재산 − 비과세 − 과세가액불산입 − 채무 − 공과금 − 장례비 + 사전증여 + 추정상속)** | value |
+| ④ | `row-4-taxableEstate` | ④ | **상속세 과세가액 (① − ㉠ − ㉡ + ② + ③)** | value |
+
+> 후속 결정(2026-06-09): 그룹 원문자 ㉠·㉡를 각 행마다 반복 표시. ⑥그룹 child ㉠㉡㉢과 중복되나 들여쓰기로 구분(사용자 승인). ④ 산식은 기호 표기로 복귀.
 
 > ①②③④ rowNo 불변. ④ 라벨만 기호("① − ㉠ − ㉡ + ② + ③")에서 명칭 풀어쓰기로 교체.
 > 분리 5행 rowNo 생략은 기존 자산 4분류 행(`row-asset-financial` 등 `summary.ts:184-192`)이 이미 rowNo 없이 label만 쓰는 선례와 정합.
