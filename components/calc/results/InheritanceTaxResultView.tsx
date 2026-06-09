@@ -584,24 +584,6 @@ export function InheritanceTaxResultView({
         </PrintSection>
       )}
 
-      {/* 경고 메시지 */}
-      {result.warnings.length > 0 && (
-        <PrintSection id="warnings" selectedIds={selectedPrintIds}>
-        <div className="border border-amber-200 dark:border-amber-700 rounded-xl p-4 space-y-2">
-          <h4 className="text-sm font-semibold text-amber-800 dark:text-amber-200">
-            주의 사항
-          </h4>
-          <ul className="space-y-1.5">
-            {result.warnings.map((w, i) => (
-              <li key={i} className="text-xs text-amber-700 dark:text-amber-400">
-                {w}
-              </li>
-            ))}
-          </ul>
-        </div>
-        </PrintSection>
-      )}
-
       {/* 근거 조문 배지 모음 숨김 — 각 카드·산식에 조문 링크가 이미 노출됨 */}
 
       {/* 로그인 유도 */}
