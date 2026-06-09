@@ -1,11 +1,11 @@
 /**
- * E2E: 상속인·수유자 구성 테이블 뷰 개편 검증
+ * E2E: 상속인·수유자 구성 테이블 뷰 + 편집 모달 검증
  *
  * 설계: docs/02-design/features/inheritance-heir-table-view.ui.design.md
  *
- * 시나리오:
- *   TV-1: 상속인 추가(종류→관계 2단계) → 테이블 표시 → 라디오 선택 → 편집 카드 로드 → 수정 반영 → 삭제 → 선택 해제
- *   TV-2: 대습상속인 추가 → 테이블 "대습상속인" 표시 + 편집 카드 SubstituteHeirPanel 토글 자동 ON 확인
+ * 모달 전환 후 시나리오:
+ *   TV-1: 상속인 추가(종류→관계 2단계) → 테이블 표시 → 행 클릭→모달 오픈 → 편집 반영 → 모달 닫기 → 삭제→모달 닫힘
+ *   TV-2: 대습상속인 추가 → 테이블 "대습상속인" 표시 + 모달 자동 오픈 + SubstituteHeirPanel 확인
  *   TV-3: 수유자 추가 → 테이블 "수유자" 종류 표시 확인
  *   TV-4: heirs 0명 → 테이블 미표시, "상속인 추가" 버튼만 확인
  *
@@ -13,6 +13,7 @@
  *   - [[feedback_browser_verify_with_playwright]] — spec 통과로 브라우저 확인 충족
  *   - data-testid 우선
  *   - 내부 id(heir-*) 테이블에 노출 없음 확인 (feedback_no_internal_id_in_result)
+ *   - 라디오 선택 패턴 제거 — 행 클릭 → 모달 오픈으로 전환 (사용자 확정)
  */
 
 import { test, expect, type Page } from "@playwright/test";
@@ -37,6 +38,14 @@ async function clickButtonContaining(page: Page, text: string) {
   await page.locator("button").filter({ hasText: text }).first().click();
 }
 
+/**
+ * 테이블 행 클릭 → 모달 오픈 헬퍼.
+ * role="button"인 tr 행을 testid로 찾아 클릭한다.
+ */
+async function clickHeirTableRow(page: Page, testId: string) {
+  await page.getByTestId(testId).click();
+}
+
 test.describe("TV-4: heirs 0명 — 테이블 미표시, 추가 버튼만", () => {
   test("heirs 없을 때 테이블 role=group 미표시", async ({ page }) => {
     test.setTimeout(60_000);
@@ -51,9 +60,9 @@ test.describe("TV-4: heirs 0명 — 테이블 미표시, 추가 버튼만", () =
   });
 });
 
-test.describe("TV-1: 상속인(자녀) 추가 2단계 → 테이블 → 편집 → 삭제", () => {
+test.describe("TV-1: 상속인(자녀) 추가 2단계 → 테이블 → 행 클릭 → 모달 편집 → 닫기 → 삭제", () => {
   test(
-    "자녀 추가 → 테이블 행 확인 → 라디오 선택 → 편집 카드 → 이름 수정 → 삭제",
+    "자녀 추가 → 테이블 행 확인 → 행 클릭 → 모달 오픈 → 이름 수정 → 닫기 → 테이블 반영 → 삭제 → 모달 닫힘",
     async ({ page }) => {
       test.setTimeout(90_000);
       await gotoStep0(page);
@@ -83,34 +92,43 @@ test.describe("TV-1: 상속인(자녀) 추가 2단계 → 테이블 → 편집 �
       // 테이블 행에 "자녀" 관계 텍스트 표시 확인
       await expect(table.getByText("자녀").first()).toBeVisible();
 
-      // 추가 직후 자동 선택(E-1) — 편집 카드가 자동으로 로드되어야 함
+      // 추가 직후 자동 선택(E-1) → 모달 자동 오픈 확인
       // HeirEditor는 data-testid="heir-editor-0"
-      await expect(page.getByTestId("heir-editor-0")).toBeVisible({ timeout: 3_000 });
+      await expect(page.getByTestId("heir-editor-0")).toBeVisible({ timeout: 5_000 });
 
-      // 편집 카드에서 이름 입력
+      // 편집 모달 헤더 "상속인 편집" 확인
+      await expect(page.getByRole("heading", { name: "상속인 편집" })).toBeVisible();
+
+      // 편집 모달에서 이름 입력
       const nameInput = page.getByTestId("heir-editor-0").getByPlaceholder("예: 홍길동");
       await nameInput.fill("홍길순");
       await expect(nameInput).toHaveValue("홍길순");
 
-      // 테이블에 이름 반영 확인
+      // 닫기 버튼 클릭 → 모달 닫힘
+      await page.getByRole("button", { name: "닫기" }).click();
+      await expect(page.getByTestId("heir-editor-0")).not.toBeVisible({ timeout: 3_000 });
+
+      // 테이블에 이름 반영 확인 (모달 닫아도 데이터 유지)
       await expect(table.getByText("홍길순")).toBeVisible();
 
       // 내부 heir-id가 셀 텍스트에 노출되지 않아야 함 (feedback_no_internal_id_in_result)
-      // data-testid 속성은 테스트용 허용, td 텍스트에만 미노출 확인
       const tdTexts = await table.locator("td").allTextContents();
       for (const text of tdTexts) {
         expect(text).not.toMatch(/^heir-\d+-\d+$/);
       }
 
-      // 라디오 클릭으로 선택 확인 (이미 선택된 상태이므로 checked)
-      const radioInput = table.getByRole("radio").first();
-      await expect(radioInput).toBeChecked();
+      // 라디오 컬럼 제거 확인 — 테이블 내 radio input 없음
+      await expect(table.getByRole("radio")).not.toBeAttached();
 
-      // 편집 카드 삭제 버튼 클릭
+      // 행 재클릭 → 모달 다시 오픈 (행 testid는 heir-table-row-${id} 동적 — role="button" tr로 선택)
+      await table.locator('tr[role="button"]').first().click();
+      await expect(page.getByTestId("heir-editor-0")).toBeVisible({ timeout: 3_000 });
+
+      // 편집 모달 내 삭제 버튼 클릭
       await page.getByTestId("heir-editor-0").getByRole("button", { name: "삭제" }).click();
 
-      // 삭제 후 선택 해제(E-2) — 편집 카드 사라짐
-      await expect(page.getByTestId("heir-editor-0")).not.toBeVisible();
+      // 삭제 후 모달 자동 닫힘(selectedHeirId=null) — 편집 카드 사라짐
+      await expect(page.getByTestId("heir-editor-0")).not.toBeVisible({ timeout: 3_000 });
 
       // 테이블도 사라짐 (heirs 0명)
       await expect(table).not.toBeVisible();
@@ -121,9 +139,9 @@ test.describe("TV-1: 상속인(자녀) 추가 2단계 → 테이블 → 편집 �
   );
 });
 
-test.describe("TV-2: 대습상속인 추가 → 테이블 + SubstituteHeirPanel 자동 ON", () => {
+test.describe("TV-2: 대습상속인 추가 → 테이블 + 모달 자동 오픈 + SubstituteHeirPanel", () => {
   test(
-    "대습상속인 선택 → 테이블 '대습상속인' 표시 + 편집 카드 SubstituteHeirPanel 토글 ON",
+    "대습상속인 선택 → 테이블 '대습상속인' 표시 + 모달 자동 오픈 + SubstituteHeirPanel 토글 ON",
     async ({ page }) => {
       test.setTimeout(90_000);
       await gotoStep0(page);
@@ -137,18 +155,24 @@ test.describe("TV-2: 대습상속인 추가 → 테이블 + SubstituteHeirPanel 
       await expect(table).toBeVisible({ timeout: 5_000 });
       await expect(table.getByText("대습상속인").first()).toBeVisible();
 
-      // 추가 직후 자동 선택(E-1) + 편집 카드 로드
+      // 추가 직후 자동 선택(E-1) + 모달 자동 오픈
       await expect(page.getByTestId("heir-editor-0")).toBeVisible({ timeout: 3_000 });
 
+      // 모달 헤더 확인
+      await expect(page.getByRole("heading", { name: "상속인 편집" })).toBeVisible();
+
       // SubstituteHeirPanel 토글이 자동 ON 상태 (substituteGroupId 발급됨)
-      // data-testid="heir-substitute-panel-0" 가 보이는지 확인
       await expect(page.getByTestId("heir-substitute-panel-0")).toBeVisible({ timeout: 3_000 });
+
+      // 닫기 버튼으로 모달 닫기
+      await page.getByRole("button", { name: "닫기" }).click();
+      await expect(page.getByTestId("heir-editor-0")).not.toBeVisible({ timeout: 3_000 });
     },
   );
 });
 
-test.describe("TV-3: 수유자 추가 → 테이블 '수유자' 종류 표시", () => {
-  test("수유자 선택 → 1단계에서 즉시 추가 → 테이블 '수유자' 표시", async ({ page }) => {
+test.describe("TV-3: 수유자 추가 → 테이블 '수유자' 종류 표시 + 모달 오픈", () => {
+  test("수유자 선택 → 1단계에서 즉시 추가 → 테이블 '수유자' 표시 + 모달 자동 오픈", async ({ page }) => {
     test.setTimeout(60_000);
     await gotoStep0(page);
 
@@ -163,13 +187,14 @@ test.describe("TV-3: 수유자 추가 → 테이블 '수유자' 종류 표시", 
     // "수유자" 종류 컬럼 텍스트 확인
     await expect(table.getByText("수유자").first()).toBeVisible();
 
-    // 편집 카드 자동 로드 확인
+    // 추가 직후 자동 선택(E-1) + 모달 자동 오픈 확인
     await expect(page.getByTestId("heir-editor-0")).toBeVisible({ timeout: 3_000 });
+    await expect(page.getByRole("heading", { name: "상속인 편집" })).toBeVisible();
   });
 });
 
 test.describe("TV-Extra: 관계 변경 버튼 텍스트", () => {
-  test("편집 카드 헤더의 버튼 텍스트가 '관계 변경'이어야 함 (정정 #7)", async ({ page }) => {
+  test("모달 내 편집 카드 헤더의 버튼 텍스트가 '관계 변경'이어야 함 (정정 #7)", async ({ page }) => {
     test.setTimeout(60_000);
     await gotoStep0(page);
 
@@ -178,12 +203,38 @@ test.describe("TV-Extra: 관계 변경 버튼 텍스트", () => {
     await clickButtonContaining(page, "상속인");
     await clickButtonContaining(page, "배우자");
 
-    // 편집 카드 로드 대기
+    // 편집 모달 로드 대기
     await expect(page.getByTestId("heir-editor-0")).toBeVisible({ timeout: 3_000 });
 
-    // "관계 변경" 버튼 확인 (기존 "종류 변경" 텍스트가 변경된 것)
+    // 모달 내 "관계 변경" 버튼 확인
     await expect(
       page.getByTestId("heir-change-relation-0"),
     ).toHaveText("관계 변경");
+  });
+});
+
+test.describe("TV-Modal: 모달 닫힘 후 재오픈", () => {
+  test("닫기 후 테이블 행 재클릭 → 모달 다시 오픈", async ({ page }) => {
+    test.setTimeout(60_000);
+    await gotoStep0(page);
+
+    // 배우자 추가
+    await clickAddHeir(page);
+    await clickButtonContaining(page, "상속인");
+    await clickButtonContaining(page, "배우자");
+
+    // 모달 자동 오픈
+    await expect(page.getByTestId("heir-editor-0")).toBeVisible({ timeout: 3_000 });
+
+    // 닫기
+    await page.getByRole("button", { name: "닫기" }).click();
+    await expect(page.getByTestId("heir-editor-0")).not.toBeVisible({ timeout: 3_000 });
+
+    // 테이블 행 재클릭 → 모달 다시 오픈
+    const table = page.locator('[role="group"][aria-label="상속인·수유자 목록"]');
+    const firstRow = table.locator("tr[role='button']").first();
+    await firstRow.click();
+    await expect(page.getByTestId("heir-editor-0")).toBeVisible({ timeout: 3_000 });
+    await expect(page.getByRole("heading", { name: "상속인 편집" })).toBeVisible();
   });
 });
