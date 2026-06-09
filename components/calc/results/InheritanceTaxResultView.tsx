@@ -5,18 +5,9 @@
  * 상속공제 상세 내역 섹션 → DeductionBreakdownSection 위임 (U1 분리)
  */
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { ChevronLeft } from "lucide-react";
-import type {
-  EstateItem,
-  InheritanceTaxResult,
-  Heir,
-  PriorGift,
-  DebtItem,
-  PresumedInheritanceItem,
-} from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { FarmingDeductionDetail } from "@/lib/tax-engine/types/inheritance-farming.types";
-import type { FamilyBusinessInheritanceInput } from "@/lib/tax-engine/types/inheritance-family-business.types";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { SummaryRow } from "./SummaryRow";
 import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
@@ -32,29 +23,20 @@ import { DebtAllocationResultCard } from "@/components/calc/results/DebtAllocati
 import { UnlistedStockBesshiResultSection } from "@/components/calc/results/UnlistedStockBesshiResultSection";
 import { ListedStockBesshiResultSection } from "@/components/calc/results/ListedStockBesshiResultSection";
 import { SourceDataSummarySection } from "@/components/calc/results/source-summary/SourceDataSummarySection";
-import { toCollateralDebtItems } from "@/lib/tax-engine/inheritance-collateral-debt";
-import { addMonths, endOfMonth, format } from "date-fns";
-import { isInstallmentEligible } from "@/lib/tax-engine/credits/installment-payment";
-import { isInstallmentSplitEligible } from "@/lib/tax-engine/credits/installment-split";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { InstallmentScheduleCard } from "./installment/InstallmentScheduleCard";
 import { PaymentInKindCard } from "./payment-in-kind/PaymentInKindCard";
-import {
-  calcPaymentInKindAssessment,
-  derivePaymentInKindAssets,
-} from "@/lib/tax-engine/credits/payment-in-kind";
 import { SplitPaymentCard } from "./installment/SplitPaymentCard";
 import { CulturalHeritageDeferralCard } from "./inheritance/CulturalHeritageDeferralCard";
 import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPanel";
 import { PrintSection } from "@/components/calc/results/shared/PrintSection";
-import {
-  INHERITANCE_PRINT_SECTIONS,
-  type PrintSectionId,
-} from "@/lib/print/inheritance-print-sections";
+import { INHERITANCE_PRINT_SECTIONS } from "@/lib/print/inheritance-print-sections";
 import { DeductionBreakdownSection } from "./deduction-breakdown/DeductionBreakdownSection";
 import { AllocationBreakdownSection } from "./allocation-breakdown/AllocationBreakdownSection";
 import { TaxCreditBreakdownCard } from "@/components/calc/TaxCreditBreakdownCard";
 import { expandToggleClass, expandToggleLabel } from "./shared/ExpandToggleButton";
+import { type InheritanceTaxResultViewProps } from "./InheritanceTaxResultView.types";
+import { useInheritanceResultDerived } from "./useInheritanceResultDerived";
 // re-export 보존 — shared.tsx 에서 실제 구현
 export { Row, formatBillion, LawBadge } from "./deduction-breakdown/shared";
 // re-export 보존 — FarmingDeductionDetailRow (farming-section.test.tsx 사용)
@@ -67,66 +49,6 @@ export { FarmingDeductionDetailRow } from "./deduction-breakdown/FarmingDeductio
 // ============================================================
 // 메인 컴포넌트
 // ============================================================
-
-/**
- * 재산 평가 내역 표시명 — 사용자가 자산 이름(name)을 비우면 내부 id(prop-…·stock-…) 대신
- * 카테고리 한글 라벨 표시. (출처: CategoryChangeDialog CATEGORY_LABELS + listed/unlisted_stock)
- */
-const ASSET_CATEGORY_LABELS: Record<EstateItem["category"], string> = {
-  real_estate_land: "토지",
-  real_estate_building: "상업용 건물",
-  real_estate_apartment: "주택",
-  listed_stock: "상장주식",
-  unlisted_stock: "비상장주식",
-  cash: "현금",
-  financial: "예금·펀드·채권·공제금",
-  deposit: "전세보증금 반환채권",
-  other: "기타 재산",
-};
-
-interface Props {
-  result: InheritanceTaxResult;
-  onReset: () => void;
-  onBack: () => void;
-  /** 1단계로 이동 (입력값 보존) */
-  onGoToFirst?: () => void;
-  showLoginPrompt?: boolean;
-  /** 상속인·수유자·영리법인 배열 — HeirAllocationSummaryTable 표시용 */
-  heirs?: Heir[];
-  /** 채무·공과·장례비 협의분할 항목 (방안 C — undefined: OFF 모드) */
-  debtItems?: DebtItem[];
-  /** 상속재산 입력 — §22 카운트 계산용 */
-  estateItems?: EstateItem[];
-  /** 사전증여 행별 명세 — InheritanceFilingFormTable 표시용 (Phase 3) */
-  priorGifts?: PriorGift[];
-  /** 상속개시일 (ISO date) — InheritanceFilingFormTable 13년 cutoff 분기용 */
-  deathDate?: string;
-  /** 추정상속재산 입력 — SourceDataSummarySection Table B용 (2026-05-28) */
-  presumedItems?: PresumedInheritanceItem[];
-  /** 가업상속 입력 — 별지 제1호서식(가업상속공제신고서) 나·다 칸용 */
-  familyBusinessInput?: FamilyBusinessInheritanceInput;
-  /** 피상속인 성명 — 각 신고서 인적사항 칸 (계산 미사용, 식별정보) */
-  decedentName?: string;
-  /** 피상속인 주민등록번호 — 각 신고서 인적사항 칸 */
-  decedentResidentNumber?: string;
-  /** 저장된 계산 id — 서버 PDF 선택 출력(PR-2)용. 미저장/비로그인 시 undefined */
-  savedId?: string;
-  /** 연부연납 입력 (Step4, §71·§72) — 결정세액 미영향 투영 */
-  installmentEnabled?: boolean;
-  installmentYears?: string;
-  installmentFamilyBusiness?: boolean;
-  installmentFbMode?: "straight20" | "grace10";
-  installmentFutureRate?: string;
-  /** 분납 입력 (Step4, §70②) — 연부연납과 배타. 결정세액 미영향 투영 */
-  splitPaymentEnabled?: boolean;
-  splitPaymentAmount?: string;
-  /** 물납 입력 (Step4, §73) — 결정세액 미영향 투영 */
-  paymentInKindEnabled?: boolean;
-  paymentInKindIneligibleAmount?: string;
-  paymentInKindRequestedAmount?: string;
-  /** 거주자/비거주자 — 연부연납 신고기한 6/9개월 산정 (§67④) */
-  decedentType?: "resident" | "non_resident";
-}
 
 export function InheritanceTaxResultView({
   result,
@@ -155,7 +77,7 @@ export function InheritanceTaxResultView({
   paymentInKindIneligibleAmount = "",
   paymentInKindRequestedAmount = "",
   decedentType = "resident",
-}: Props) {
+}: InheritanceTaxResultViewProps) {
   const [showValuation, setShowValuation] = useState(false);
   const [pdfBusy, setPdfBusy] = useState(false);
 
@@ -189,106 +111,26 @@ export function InheritanceTaxResultView({
     () => new Set()
   );
 
-  // 채무 표시(협의분할 카드·인쇄 선택)는 수동 debtItems 또는 §14 담보채무 자동도출분 중 하나만 있어도 노출
-  const hasDebtOrCollateral =
-    (debtItems?.length ?? 0) > 0 || (result.collateralDebtDetail?.length ?? 0) > 0;
-
-  // 현재 결과뷰에 실제 렌더되는 leaf id (각 섹션 렌더 가드와 1:1 — 설계 §1)
-  const availablePrintIds = useMemo<Set<PrintSectionId>>(() => {
-    const s = new Set<PrintSectionId>();
-    const hasHeirs = !!heirs && heirs.length > 0;
-    const hasAlloc = !!result.heirAllocationResult && hasHeirs;
-    const items = estateItems ?? [];
-    s.add("core-result");
-    s.add("tax-summary");
-    if (result.exemptionDetail && result.exemptionDetail.itemResults.length > 0)
-      s.add("exemption-detail");
-    if (hasAlloc) s.add("heir-allocation-summary");
-    s.add("deduction-breakdown");
-    if (hasAlloc) s.add("allocation-breakdown");
-    if (hasHeirs) s.add("source-data");
-    if (priorGifts && priorGifts.length > 0 && deathDate) s.add("prior-gift-filing");
-    if (result.corporateExemption && result.corporateExemption.amount > 0)
-      s.add("corporate-exemption");
-    if (hasAlloc && hasDebtOrCollateral) s.add("debt-allocation");
-    if (hasAlloc) s.add("filing-form-9");
-    if (hasAlloc && (items.length > 0 || (priorGifts?.length ?? 0) > 0))
-      s.add("besshi-buppyo-2");
-    if (result.deductionDetail) s.add("deduction-besshi");
-    s.add("valuation-detail");
-    if (items.some((it) => it.unlistedStockValuationV2)) s.add("unlisted-stock-besshi");
-    if (
-      items.some(
-        (it) =>
-          it.category === "listed_stock" &&
-          (it.listedStockAvgPrice ?? 0) > 0 &&
-          (it.listedStockShares ?? 0) > 0
-      )
-    )
-      s.add("listed-stock-besshi");
-    if (isInstallmentEligible(result.finalTax)) s.add("installment-guide");
-    if (isInstallmentSplitEligible(result.finalTax) && !installmentEnabled)
-      s.add("split-payment");
-    if (paymentInKindEnabled) s.add("payment-in-kind");
-    if (result.warnings.length > 0) s.add("warnings");
-    return s;
-  }, [result, heirs, estateItems, priorGifts, deathDate, installmentEnabled, paymentInKindEnabled, hasDebtOrCollateral]);
-
-  // 협의분할 표(3) 전용 — debtItems + §14 담보채무 merge (부표3·④카드 전달 금지: 이중 표시 방지)
-  const debtItemsWithCollateral = useMemo(
-    () => [...(debtItems ?? []), ...toCollateralDebtItems(result.collateralDebtDetail ?? [])],
-    [debtItems, result.collateralDebtDetail],
-  );
-
-  // 별지9호 ㊵ 물납액 (§73) — min(희망액, 허용한도). 화면 카드와 동일 엔진(단일 진실)
-  const paymentInKindFilingAmount = useMemo(() => {
-    if (!paymentInKindEnabled) return undefined;
-    const assets = derivePaymentInKindAssets(
-      estateItems ?? [],
-      result,
-      parseAmount(paymentInKindIneligibleAmount),
-    );
-    const d = calcPaymentInKindAssessment({
-      finalTax: result.finalTax,
-      grossEstateValue: result.grossEstateValue,
-      exemptAmount: result.exemptAmount,
-      priorGiftToHeirTotal: result.priorGiftToHeirTotal ?? 0,
-      taxableEstateValue: result.taxableEstateValue,
-      assets,
-      requestedAmount: paymentInKindRequestedAmount
-        ? parseAmount(paymentInKindRequestedAmount)
-        : undefined,
-    });
-    return d.acceptedRequest ?? d.allowedLimit;
-  }, [
-    paymentInKindEnabled,
-    estateItems,
+  // 파생 계산 로직 (순수 props 의존) — 800줄 정책에 따라 훅으로 분리
+  const {
+    hasDebtOrCollateral,
+    availablePrintIds,
+    debtItemsWithCollateral,
+    paymentInKindFilingAmount,
+    splitDueDates,
+    assetNameById,
+  } = useInheritanceResultDerived({
     result,
+    heirs,
+    debtItems,
+    estateItems,
+    priorGifts,
+    deathDate,
+    installmentEnabled,
+    paymentInKindEnabled,
     paymentInKindIneligibleAmount,
     paymentInKindRequestedAmount,
-  ]);
-
-  // 분납기한 (§70② — 신고기한 §67① 말일+6개월 + 2개월). deathDate 없으면 undefined.
-  const splitDueDates = useMemo(() => {
-    if (!deathDate) return undefined;
-    const base = new Date(deathDate);
-    if (isNaN(base.getTime())) return undefined;
-    const filing = addMonths(endOfMonth(base), 6);
-    const installment = addMonths(filing, 2);
-    return {
-      filing: format(filing, "yyyy-MM-dd"),
-      installment: format(installment, "yyyy-MM-dd"),
-    };
-  }, [deathDate]);
-
-  // 재산 평가 내역 표시명 — 자산 id → name(있으면) 또는 카테고리 한글 라벨 (내부 id 노출 방지)
-  const assetNameById = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const it of estateItems ?? []) {
-      map.set(it.id, it.name?.trim() || ASSET_CATEGORY_LABELS[it.category] || "재산");
-    }
-    return map;
-  }, [estateItems]);
+  });
 
   return (
     <div className="space-y-5">
