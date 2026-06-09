@@ -30,6 +30,18 @@ import type {
   Heir,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
 
+/**
+ * EstateCommonAttributesSection이 직렬 섹션(FarmingCategorySection·FamilyBusinessCategorySection·
+ * HeirAllocationToggleSection)으로도 렌더하는 칩 — 주식 헤더에서는 제외해 인라인 패널 ↔ 직렬 중복 방지(D-O1).
+ * 주식 헤더의 의도된 칩 집합은 estimated-value·classification·section22·major-shareholder·secured-claim
+ * (estate-stock-chips-header.test 기준). 부동산은 자체 헤더라 무관.
+ */
+const SERIAL_RENDERED_CHIPS: ReadonlySet<ChipKey> = new Set<ChipKey>([
+  "farming",
+  "family-business",
+  "heir-allocation",
+]);
+
 export interface EstateStockChipsHeaderProps {
   item: EstateItem;
   onUpdate: (updated: EstateItem) => void;
@@ -67,7 +79,7 @@ export function EstateStockChipsHeader({
         mode: "inheritance",
         heirsCount,
         showMajorShareholderChip,
-      }),
+      }).filter((c) => !SERIAL_RENDERED_CHIPS.has(c.key)),
     [item, heirsCount, showMajorShareholderChip],
   );
 

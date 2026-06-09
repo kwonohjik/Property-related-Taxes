@@ -22,6 +22,25 @@ import type { TaxBracket as TaxBracketBase } from "./types";
 import type { PriorAggregationResult } from "./gift-prior-aggregation";
 
 // ============================================================
+// 영리법인 수유자 판정 — UI·엔진 단일 진실
+// ============================================================
+
+/**
+ * 영리법인 수유자 판정 — `relation === "corporate"` AND `isForProfit !== false`.
+ *
+ * - 영리법인(undefined·true): §3의2② 상속세 면제·별도 배부 → 협의분할 제외·per-heir finalTax=0.
+ * - 비영리법인(false): 상속세 납세의무 → 협의분할 대상·수유자처럼 과세.
+ *
+ * UI(HeirAllocationInput)와 엔진(inheritance-allocation)이 공용해 dual-truth 방지.
+ * 기준: HeirComposition.tsx 영리법인 토글 `checked={isForProfit !== false}`(영리 기본 ON)과 일치.
+ */
+export function isForProfitCorporate(
+  h: Pick<Heir, "relation" | "isForProfit">,
+): boolean {
+  return h.relation === "corporate" && h.isForProfit !== false;
+}
+
+// ============================================================
 // §26 상속세·증여세 누진세율 구간 (법정 기본값)
 // DB에서 다른 세율을 로드하면 이 값을 대체해야 함
 // ============================================================

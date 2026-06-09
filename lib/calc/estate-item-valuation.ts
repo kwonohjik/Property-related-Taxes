@@ -20,7 +20,10 @@ import { computeStockValuation } from "@/lib/tax-engine/valuation/resolve-estate
  *   [[project_section22_major_shareholder_toggle]] Phase0 동일 패턴 — chip-config 칩 라벨도
  *   본 헬퍼를 거치므로 주식 평가액이 칩에 반영되도록 단일 진실 통과.
  */
-export function computeEffectiveValuation(item: EstateItem): number {
+export function computeEffectiveValuation(
+  item: EstateItem,
+  valuationDate?: string,
+): number {
   if (item.category === "deposit") {
     return item.leaseDeposit ?? 0;
   }
@@ -33,9 +36,9 @@ export function computeEffectiveValuation(item: EstateItem): number {
   if (explicit !== undefined && explicit !== null) {
     return explicit;
   }
-  // 주식 보충평가 (§63) — 상장 시세 평균·비상장 V1/V2
+  // 주식 보충평가 (§63) — 상장 시세 평균·비상장 V1/V2. valuationDate는 V2 evaluationDate fallback용.
   if (item.category === "listed_stock" || item.category === "unlisted_stock") {
-    return computeStockValuation(item);
+    return computeStockValuation(item, valuationDate);
   }
   return 0;
 }

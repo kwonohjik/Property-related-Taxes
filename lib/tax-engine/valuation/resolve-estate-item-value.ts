@@ -62,9 +62,11 @@ export function resolveUnlistedDisplayMode(item: EstateItem): "simple" | "formal
  * 정밀도: Math.floor는 엔진 내부에서 처리됨.
  *
  * @param item EstateItem (category: "listed_stock" | "unlisted_stock")
+ * @param valuationDate 평가기준일(상속개시일·증여일) — V2 evaluationDate 미입력 시 fallback 주입.
+ *   미전달 시 주입 안 함(기존 호출 동작 불변).
  * @returns 평가액 (원, 정수). 계산 불가 시 0.
  */
-export function computeStockValuation(item: EstateItem): number {
+export function computeStockValuation(item: EstateItem, valuationDate?: string): number {
   if (item.category === "listed_stock") {
     const avg = item.listedStockAvgPrice ?? 0;
     const shares = item.listedStockShares ?? 0;
@@ -91,7 +93,12 @@ export function computeStockValuation(item: EstateItem): number {
     const activeMode = resolveUnlistedDisplayMode(item);
 
     if (activeMode === "formal" && item.unlistedStockValuationV2) {
-      const v2 = item.unlistedStockValuationV2;
+      let v2 = item.unlistedStockValuationV2;
+      // V2 evaluationDate 미입력 시 valuationDate(상속개시일·증여일) fallback 주입
+      if (!v2.evaluationDate && valuationDate) {
+        const vd = new Date(valuationDate);
+        if (!isNaN(vd.getTime())) v2 = { ...v2, evaluationDate: vd };
+      }
       if (v2.totalShares > 0 && v2.ownedShares > 0) {
         try {
           const result = evaluateUnlistedStockV2(v2);

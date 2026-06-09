@@ -81,6 +81,25 @@ describe("EstateStockChipsHeader — chip-major-shareholder 노출 매트릭스"
     ).toBeInTheDocument();
   });
 
+  it("중복 방지: heirs 전달해도 farming·family-business·heir-allocation 칩 미노출 (직렬 섹션 단일 소스, D-O1)", () => {
+    render(
+      <EstateStockChipsHeader
+        item={makeStockItem()}
+        onUpdate={() => {}}
+        heirs={[{ id: "h1", relation: "child", name: "자녀" }]}
+        effectiveValuation={1_000_000_000}
+        showMajorShareholderChip={true}
+        icon="📈"
+        categoryLabel="상장주식"
+        index={0}
+      />,
+    );
+    // EstateCommonAttributesSection 직렬 섹션과 중복되는 칩은 헤더에서 제외 → 인라인 패널 중복 방지
+    expect(screen.queryByTestId("estate-chip-heir-allocation-stock-1")).toBeNull();
+    expect(screen.queryByTestId("estate-chip-farming-stock-1")).toBeNull();
+    expect(screen.queryByTestId("estate-chip-family-business-stock-1")).toBeNull();
+  });
+
   it("chip-section22 미노출 — listed_stock visibility=hidden_permanent", () => {
     render(
       <EstateStockChipsHeader

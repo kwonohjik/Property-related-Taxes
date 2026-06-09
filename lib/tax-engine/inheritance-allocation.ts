@@ -32,6 +32,7 @@ import {
   emptyCategoryBreakdown,
   type CategoryBreakdown,
 } from "./inheritance-asset-category";
+import { isForProfitCorporate } from "./inheritance-gift-common";
 import type {
   Heir,
   PriorGift,
@@ -463,7 +464,7 @@ export function calcHeirAllocation(
   // PDF 책 1864 ② 간접배부대상 = taxBase − 상속인 직접 − 영리법인 사전증여 과세표준
   let totalHeirDirectTaxBase = 0;
   for (const heir of heirs) {
-    if (heir.relation === "corporate") continue;
+    if (isForProfitCorporate(heir)) continue; // 영리법인만 제외 — 비영리법인은 집계 포함
     const heirGiftTaxBase = taxBaseByDonee.get(heir.id) ?? 0;
     totalHeirDirectTaxBase += heirGiftTaxBase;
   }
@@ -480,7 +481,7 @@ export function calcHeirAllocation(
   const perHeir: Record<string, HeirTaxBreakdown> = {};
 
   for (const heir of heirs) {
-    const isCorporate = heir.relation === "corporate";
+    const isCorporate = isForProfitCorporate(heir); // 영리법인만 면제 분기 — 비영리법인은 자연인(수유자) 과세
     const giftAmount = amountByDonee.get(heir.id) ?? 0;
     const giftTaxBase = taxBaseByDonee.get(heir.id) ?? 0;
 
@@ -623,7 +624,7 @@ export function calcHeirAllocation(
   //   최다 과세표준상당액(taxBaseShare) 비-corp 상속인에 잔차 흡수 → Σ indirect==indirectNumerator,
   //   Σ computedTaxShare==distributableTax 정확 보존. 흡수 상속인의 하류 필드 재계산.
   {
-    const nonCorp = heirs.filter((h) => h.relation !== "corporate" && perHeir[h.id]);
+    const nonCorp = heirs.filter((h) => !isForProfitCorporate(h) && perHeir[h.id]);
     if (nonCorp.length > 0 && indirectDenominator > 0 && computedTaxShareDenominator > 0) {
       const absorber = nonCorp.reduce((a, b) =>
         perHeir[b.id].taxBaseShare > perHeir[a.id].taxBaseShare ? b : a,
@@ -661,7 +662,7 @@ export function calcHeirAllocation(
 
   // Phase B4: categoryBreakdown · grossInheritance를 heir 분기에 후입력
   for (const heir of heirs) {
-    if (heir.relation === "corporate") continue;
+    if (isForProfitCorporate(heir)) continue; // 영리법인만 제외 — 비영리법인 후입력 포함
     const bd = categoryBreakdownByHeir.get(heir.id);
     if (bd && perHeir[heir.id]) {
       perHeir[heir.id].categoryBreakdown = bd;
