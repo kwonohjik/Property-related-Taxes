@@ -120,8 +120,8 @@ test.describe("TV-1: 상속인(자녀) 추가 2단계 → 테이블 → 행 클�
       // 라디오 컬럼 제거 확인 — 테이블 내 radio input 없음
       await expect(table.getByRole("radio")).not.toBeAttached();
 
-      // 행 재클릭 → 모달 다시 오픈
-      await page.getByTestId("heir-table-row").first().click();
+      // 행 재클릭 → 모달 다시 오픈 (행 testid는 heir-table-row-${id} 동적 — role="button" tr로 선택)
+      await table.locator('tr[role="button"]').first().click();
       await expect(page.getByTestId("heir-editor-0")).toBeVisible({ timeout: 3_000 });
 
       // 편집 모달 내 삭제 버튼 클릭
