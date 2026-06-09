@@ -33,6 +33,11 @@ import {
   type CategoryBreakdown,
 } from "./inheritance-asset-category";
 import { isForProfitCorporate } from "./inheritance-gift-common";
+import {
+  resolveAllocationsByHeir,
+  computeExemptByHeir,
+  computeDebtByHeirWithFuneralCap,
+} from "./inheritance-allocation-deductions";
 import type {
   Heir,
   PriorGift,
@@ -155,123 +160,6 @@ export interface HeirAllocationParams {
   recognizedExemptByRuleId?: Map<string, number>;
 }
 
-// ────────────────────────────────────────────────────
-// 헬퍼 — 자산-수준 분배 집계
-// ────────────────────────────────────────────────────
-
-/**
- * heir별 금액 집계 — `heirAllocations` 입력 자산은 그 합, **미입력(undefined/빈배열) 자산은
- * 법정상속분(`legalShares`)으로 자동 배분**. (계획 §2, 디자인 §2-3)
- * @param amountOf 미입력 자산의 배분 기준 금액(평가액·채무액)
- */
-function resolveAllocationsByHeir<T extends { heirAllocations?: HeirAllocation[] }>(
-  items: T[],
-  amountOf: (item: T) => number,
-  legalShares: LegalShareResult,
-): Map<string, number> {
-  const sums = new Map<string, number>();
-  for (const item of items) {
-    if (item.heirAllocations && item.heirAllocations.length > 0) {
-      // 협의분할 입력 — 그대로 합산 (합계검증은 validate에서)
-      for (const alloc of item.heirAllocations) {
-        sums.set(alloc.heirId, (sums.get(alloc.heirId) ?? 0) + alloc.amount);
-      }
-    } else {
-      // 미입력 — 법정상속분 자동 배분
-      const dist = distributeByLegalShares(amountOf(item), legalShares);
-      for (const [heirId, amt] of dist) {
-        sums.set(heirId, (sums.get(heirId) ?? 0) + amt);
-      }
-    }
-  }
-  return sums;
-}
-
-/**
- * Map<heirId, raw>을 목표 총액(target)으로 비율 환산 — 마지막 항목 잔액 흡수(Σ==target 보장).
- * `scaleAllocations`(inheritance-collateral-debt.ts)의 Map 버전. raw 합 0이면 빈 Map.
- */
-function scaleMapToTotal(
-  raw: Map<string, number>,
-  target: number,
-): Map<string, number> {
-  const out = new Map<string, number>();
-  const entries = [...raw.entries()].filter(([, v]) => v !== 0);
-  if (entries.length === 0 || target <= 0) return out;
-  const denom = entries.reduce((s, [, v]) => s + v, 0);
-  if (denom <= 0) return out;
-  let running = 0;
-  entries.forEach(([heirId, v], i) => {
-    const isLast = i === entries.length - 1;
-    const amt = isLast ? target - running : Math.floor((target * v) / denom);
-    running += amt;
-    out.set(heirId, amt);
-  });
-  return out;
-}
-
-/**
- * 비과세·과세가액 불산입 재산의 상속인별 차감액(exemptByHeir) 계산 (작업4, anchor A1 확정).
- *
- * 2단계 안분 — 분배 단위(claimedAmount) ≠ 차감 단위(인정 exemptAmount):
- *   1. claimedAmount 비율로 raw 분배(협의분할 입력) 또는 법정상속분(미입력)
- *   2. scaleMapToTotal(raw, 인정 exemptAmount)로 인정액 안분(잔액 흡수, Σ==인정액)
- * 한도초과(금양임야·족보 등)에서 claimedAmount ≠ exemptAmount이므로 단순 합산 불가.
- */
-function computeExemptByHeir(
-  exemptionItems: ExemptionCheckedItem[],
-  recognizedByRuleId: Map<string, number>,
-  legalShares: LegalShareResult,
-): Map<string, number> {
-  const out = new Map<string, number>();
-  for (const ex of exemptionItems) {
-    const recognized = recognizedByRuleId.get(ex.ruleId) ?? 0;
-    if (recognized <= 0) continue; // 인정액 0(사회통념 미입력 등) → 차감 없음
-    // 1단계: claimedAmount 분배 비율 raw
-    const raw =
-      ex.heirAllocations && ex.heirAllocations.length > 0
-        ? new Map(ex.heirAllocations.map((a) => [a.heirId, a.amount]))
-        : distributeByLegalShares(ex.claimedAmount, legalShares);
-    // 2단계: 인정액으로 환산(잔액 흡수)
-    const scaled = scaleMapToTotal(raw, recognized);
-    for (const [heirId, v] of scaled) {
-      out.set(heirId, (out.get(heirId) ?? 0) + v);
-    }
-  }
-  return out;
-}
-
-/**
- * T7 (R3): 장례비 §14 한도(식대 1천만·봉안 5백만) 적용 후 채무 인별 배부.
- * funeral을 식대/봉안 category별로 raw 분배 → capped 총액으로 비율 환산(잔액 흡수).
- * 비-funeral 채무는 그대로. Σ debtByHeir == deductedBeforeAggregation(엔진 STEP3 capped)와 정합.
- */
-function computeDebtByHeirWithFuneralCap(
-  debtItems: DebtItem[],
-  legalShares: LegalShareResult,
-): Map<string, number> {
-  const mealItems = debtItems.filter((d) => d.category === "funeral" && !d.isBongan);
-  const bonganItems = debtItems.filter((d) => d.category === "funeral" && d.isBongan);
-  const nonFuneralItems = debtItems.filter((d) => d.category !== "funeral");
-
-  const rawMeal = mealItems.reduce((s, d) => s + d.amount, 0);
-  const rawBongan = bonganItems.reduce((s, d) => s + d.amount, 0);
-  const cappedMeal = Math.min(rawMeal, 10_000_000);
-  const cappedBongan = Math.min(rawBongan, 5_000_000);
-
-  const nonFuneralByHeir = resolveAllocationsByHeir(nonFuneralItems, (it) => it.amount, legalShares);
-  const mealRawByHeir = resolveAllocationsByHeir(mealItems, (it) => it.amount, legalShares);
-  const bonganRawByHeir = resolveAllocationsByHeir(bonganItems, (it) => it.amount, legalShares);
-
-  // 한도 미초과면 capped==raw → scaleMapToTotal이 동일값 반환(잔차 0).
-  const mealByHeir = scaleMapToTotal(mealRawByHeir, cappedMeal);
-  const bonganByHeir = scaleMapToTotal(bonganRawByHeir, cappedBongan);
-
-  const merged = new Map<string, number>(nonFuneralByHeir);
-  for (const [heirId, amt] of mealByHeir) merged.set(heirId, (merged.get(heirId) ?? 0) + amt);
-  for (const [heirId, amt] of bonganByHeir) merged.set(heirId, (merged.get(heirId) ?? 0) + amt);
-  return merged;
-}
 
 /**
  * 사전증여 가액·과세표준을 상속인별로 합산 (doneeId 기준).
@@ -391,7 +279,8 @@ export function calcHeirAllocation(
   const legalShares = computeLegalShares(heirs);
 
   // 비과세·과세가액 불산입 상속인별 차감액 (작업4 — 후보② 별도 항 차감)
-  const exemptByHeir = computeExemptByHeir(
+  // ㉠ 분리: 비과세(§11·§12) / 과세가액 불산입(§16·§17) 2맵. exemptShare(합)는 heir 분기에서 재구성.
+  const { nonTaxableByHeir, notIncludedByHeir } = computeExemptByHeir(
     exemptionItems,
     recognizedExemptByRuleId,
     legalShares,
@@ -441,7 +330,10 @@ export function calcHeirAllocation(
   //   엔진 과세가액 차감(deductedBeforeAggregation)은 capped인데 per-heir debtShare가
   //   uncapped(it.amount)면 ㉡ 합계≠실제공제(18M 갭)·per-heir ④ 과다차감.
   //   funeral을 식대/봉안 category별로 raw 분배 → capped로 scaleAllocations(잔액 흡수)하여 병합.
-  const debtByHeir = computeDebtByHeirWithFuneralCap(debtItems, legalShares);
+  // ㉡ 분리: 채무(financial+personal) / 공과금(tax) / 장례비(funeral, capped) 3맵.
+  //   debtShare(합)는 heir 분기에서 재구성 → 기존 산식 불변.
+  const { debtPrincipalByHeir, publicChargeByHeir, funeralByHeir } =
+    computeDebtByHeirWithFuneralCap(debtItems, legalShares);
 
   // 추정상속재산 분배 — heirAllocations 입력 항목은 개별 비율 안분, 미입력 항목은 법정상속분.
   // ★ 미입력 항목이 여럿이면 added를 합산한 뒤 **1회만** distributeByLegalShares 적용.
@@ -567,8 +459,15 @@ export function calcHeirAllocation(
     // 13-2: 과세가액상당액 = 본래 + 추정 + 사전증여 − 채무 분담 − 비과세 차감(작업4)
     const directEstateAmount = estateByHeir.get(heir.id) ?? 0;
     const presumedAmount = presumedByHeir.get(heir.id) ?? 0;
-    const debtShare = debtByHeir.get(heir.id) ?? 0;
-    const exemptShare = exemptByHeir.get(heir.id) ?? 0;
+    // ㉡ 3분할 재구성 → debtShare(합) 불변
+    const debtPrincipalShare = debtPrincipalByHeir.get(heir.id) ?? 0;
+    const publicChargeShare = publicChargeByHeir.get(heir.id) ?? 0;
+    const funeralShare = funeralByHeir.get(heir.id) ?? 0;
+    const debtShare = debtPrincipalShare + publicChargeShare + funeralShare;
+    // ㉠ 2분할 재구성 → exemptShare(합) 불변
+    const nonTaxableShare = nonTaxableByHeir.get(heir.id) ?? 0;
+    const notIncludedShare = notIncludedByHeir.get(heir.id) ?? 0;
+    const exemptShare = nonTaxableShare + notIncludedShare;
     // 후보②(anchor A1): 별도 항 차감 + 음수 가드. exemptShare는 인정 비과세액의 상속인별 안분.
     const taxableValueShare = Math.max(
       0,
@@ -651,6 +550,12 @@ export function calcHeirAllocation(
       presumedAmount,
       debtShare,
       excludedFromTaxation: exemptShare, // ㉠ 과세제외 per-heir (작업4 — 죽은 필드 활성화)
+      // ㉠ 2행·㉡ 3행 분리 echo (합 필드 보존, 표시 전용)
+      nonTaxableShare,
+      notIncludedShare,
+      debtPrincipalShare,
+      publicChargeShare,
+      funeralShare,
       taxableValueShare,
       directTaxBaseShare,
       indirectTaxBaseShare,

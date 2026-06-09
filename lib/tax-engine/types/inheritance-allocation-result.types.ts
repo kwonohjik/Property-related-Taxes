@@ -81,6 +81,22 @@ export interface HeirTaxBreakdown {
    * corp는 비율 계산 대상이 아니므로 undefined (UI는 — 표시).
    */
   burdenRatio?: number;
+
+  // ============================================================
+  // 과세제외·채무 행 분리 echo — 집계표 ㉠ 2행·㉡ 3행 분리용 (산식 영향 0)
+  // 불변식: nonTaxableShare+notIncludedShare === excludedFromTaxation
+  //         debtPrincipalShare+publicChargeShare+funeralShare === debtShare
+  // ============================================================
+  /** 비과세(§11·§12, non_taxable treatment) 상속인별 차감 */
+  nonTaxableShare?: number;
+  /** 과세가액 불산입(§16·§17, not_included treatment) 상속인별 차감 */
+  notIncludedShare?: number;
+  /** 채무 §14①3호 (financial+personal category) 상속인별 분담 */
+  debtPrincipalShare?: number;
+  /** 공과금 §14①1호 (tax category) 상속인별 분담 */
+  publicChargeShare?: number;
+  /** 장례비 §14①2호 (funeral category, 한도 적용 후) 상속인별 분담 */
+  funeralShare?: number;
 }
 
 /**
