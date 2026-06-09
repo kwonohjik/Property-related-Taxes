@@ -742,6 +742,11 @@ export interface Heir {
    * "descendant"=피대습자의 직계비속(손자녀·조카).
    */
   substituteRole?: "spouse" | "descendant";
+  /**
+   * 피대습자(상속개시 전 사망·결격된 자녀·형제) 성명 — **표시 전용**(엔진 미사용).
+   * 같은 substituteGroupId 멤버가 공유. UI 그룹 라벨("故 {name} 갈음")·신고서 표시에만 사용.
+   */
+  substituteAncestorName?: string;
 
   /**
    * §27 미성년 여부 수동 override (3-state).

@@ -92,12 +92,17 @@ export function isCohabitDeductionEligibleRelation(
   const d = deathDate ?? "9999-12-31";
 
   // 직계비속: child(자녀) + legatee 세대생략 손자녀 (대습 플래그 없는 순수 세대생략)
-  // 전 기간 허용 (2009.1.1.~ §23의2 제도 도입 이후)
+  //   + 그룹키 모델 대습 손자녀(사망 자녀를 갈음한 직계비속 — §23의2①1호 "직계비속")
+  // 전 기간 허용 (2009.1.1.~ §23의2 제도 도입 이후). KoreanLaw §23의2①1호 검증(mst 276123).
+  // ※ 대습 조카(substituteForRelation="sibling")는 피상속인의 직계비속이 아니므로 제외.
   const isLinealDescendant =
     heir.relation === "child" ||
     (heir.relation === "legatee" &&
       heir.isGenerationSkipBeneficiary === true &&
-      heir.isSubstituteInheritance !== true);
+      heir.isSubstituteInheritance !== true) ||
+    (heir.substituteGroupId != null &&
+      heir.substituteRole === "descendant" &&
+      heir.substituteForRelation === "child");
 
   // 대습상속된 직계비속의 배우자: 2022.1.1.~ §23의2①1호 개정 (KoreanLaw time_travel 검증)
   // relation="other" + isSubstituteInheritance=true (계약 C2)

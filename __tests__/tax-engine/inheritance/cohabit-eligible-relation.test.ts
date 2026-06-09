@@ -144,4 +144,40 @@ describe("G5 §23의2①1호 적격 상속인 범위 — isCohabitDeductionEligi
     };
     expect(isCohabitDeductionEligibleRelation(heir, undefined)).toBe(true);
   });
+
+  // 후속: 그룹키 모델 대습 손자(직계비속) §23의2 적격 — KoreanLaw §23의2①1호 "직계비속"
+  it("G5-SUBST-GRANDCHILD 대습 손자(other+descendant+forRelation=child) → 직계비속 적격(전 기간)", () => {
+    const heir: Heir = {
+      id: "h16",
+      relation: "other",
+      substituteGroupId: "g1",
+      substituteForRelation: "child",
+      substituteRole: "descendant",
+    };
+    // 직계비속 — 2009~ 전 기간 (대습배우자 2022 게이트와 무관)
+    expect(isCohabitDeductionEligibleRelation(heir, "2015-05-01")).toBe(true);
+  });
+
+  it("G5-SUBST-NEPHEW 대습 조카(forRelation=sibling) → 피상속인 직계비속 아님 → 부적격", () => {
+    const heir: Heir = {
+      id: "h17",
+      relation: "other",
+      substituteGroupId: "g1",
+      substituteForRelation: "sibling",
+      substituteRole: "descendant",
+    };
+    expect(isCohabitDeductionEligibleRelation(heir, "2023-05-01")).toBe(false);
+  });
+
+  it("G5-SUBST-GROUP-SPOUSE 그룹키 며느리(role=spouse) → 2022~ 대습배우자 적격·이전 부적격", () => {
+    const heir: Heir = {
+      id: "h18",
+      relation: "other",
+      substituteGroupId: "g1",
+      substituteForRelation: "child",
+      substituteRole: "spouse",
+    };
+    expect(isCohabitDeductionEligibleRelation(heir, "2023-05-01")).toBe(true);
+    expect(isCohabitDeductionEligibleRelation(heir, "2020-05-01")).toBe(false);
+  });
 });
