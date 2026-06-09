@@ -149,18 +149,12 @@ export function buildSummaryTable(
     result.heirAllocationResult?.usedLegalShareFallback ?? false;
 
   const get = (id: string) => perHeirEngine[id];
-  const HEIR_ALL = (
-    [
-      "spouse",
-      "child",
-      "lineal_ascendant",
-      "sibling",
-      "other",
-      "legatee",
-      "corporate",
-    ] as Heir["relation"][]
-  );
-  const HEIR_NO_CORP = HEIR_ALL.filter((r) => r !== "corporate");
+  // 비납세의무자(§3의2① — 영리법인·후순위 비상속인 자연인, isTaxPayer===false) 셀은 null.
+  //   ⑪·⑫·*1~*5·소계·⑬⑭⑮ 공통 가드. 비상속인 없는 케이스는 모두 true → 동작 불변.
+  const payerOnly =
+    (accessor: (h: Heir) => number | null | undefined) =>
+    (h: Heir): number | null =>
+      perHeirEngine[h.id]?.isTaxPayer === false ? null : accessor(h) ?? null;
 
   // null 셀 헬퍼 — 합계행 (상속인 셀 모두 null)
   const headerOnly = (): Record<string, number | null> => {
@@ -304,13 +298,12 @@ export function buildSummaryTable(
     total: summary?.distributableTaxBase ?? null,
     perHeir: buildPerHeir(
       sorted,
-      (h) => {
+      payerOnly((h) => {
         const p = get(h.id);
         if (!p) return null;
         // 상속인별 *1 = 과세가액상당액 − 본인 사전증여가액
         return p.taxableValueShare - p.priorGiftAmount;
-      },
-      HEIR_NO_CORP,
+      }),
     ),
   });
 
@@ -323,8 +316,7 @@ export function buildSummaryTable(
     total: summary?.surchargeTargetTaxableValue ?? null,
     perHeir: buildPerHeir(
       sorted,
-      (h) => get(h.id)?.taxableValueShare,
-      HEIR_NO_CORP,
+      payerOnly((h) => get(h.id)?.taxableValueShare),
     ),
   });
 
@@ -398,7 +390,7 @@ export function buildSummaryTable(
     rowNo: "*3",
     label: "상속인등 과세표준상당액 (영리법인 제외)",
     total: summary?.distributableTaxBaseAfterGifts ?? null,
-    perHeir: buildPerHeir(sorted, (h) => get(h.id)?.taxBaseShare, HEIR_NO_CORP),
+    perHeir: buildPerHeir(sorted, payerOnly((h) => get(h.id)?.taxBaseShare)),
   });
 
   // ⑦ 산출세액
@@ -444,7 +436,18 @@ export function buildSummaryTable(
     perHeir: headerOnly(),
   });
 
-  // ⑩a/b/c (영리법인 행만)
+  // ⑩a/b/c — 상속인·수유자 외(영리법인 §3의2② + 비상속인 자연인 §28②본문) 증여세액공제.
+  //   isNonPayer = isTaxPayer===false (영리법인 ∪ 후순위 비상속인 자연인).
+  const isNonPayer = (id: string) => perHeirEngine[id]?.isTaxPayer === false;
+  // 비상속인 자연인 합 (corp는 nonHeirGiftCredit*=undefined → 0)
+  const nonPayerNaturalLimitSum = Object.values(perHeirEngine).reduce(
+    (s, p) => s + (p?.nonHeirGiftCreditLimit ?? 0),
+    0,
+  );
+  const nonPayerNaturalCreditSum = Object.values(perHeirEngine).reduce(
+    (s, p) => s + (p?.nonHeirGiftCredit ?? 0),
+    0,
+  );
   rows.push({
     rowId: "row-10a-corpGiftTax",
     groupId: "credit10",
@@ -452,17 +455,13 @@ export function buildSummaryTable(
     label: "증여세 산출세액",
     isGroupChild: true,
     total:
-      Object.entries(perHeirEngine).reduce(
-        (s, [id, p]) =>
-          s +
-          (sorted.find((h) => h.id === id)?.relation === "corporate"
-            ? p?.priorGiftComputedTax ?? 0
-            : 0),
+      Object.values(perHeirEngine).reduce(
+        (s, p) => (p?.isTaxPayer === false ? s + (p?.priorGiftComputedTax ?? 0) : s),
         0,
       ) || null,
-    perHeir: buildPerHeir(sorted, (h) => get(h.id)?.priorGiftComputedTax, [
-      "corporate",
-    ]),
+    perHeir: buildPerHeir(sorted, (h) =>
+      isNonPayer(h.id) ? get(h.id)?.priorGiftComputedTax : null,
+    ),
   });
   rows.push({
     rowId: "row-10b-corpLimit",
@@ -470,10 +469,15 @@ export function buildSummaryTable(
     rowNo: "b",
     label: "공제 한도",
     isGroupChild: true,
-    total: summary?.corporateExemptionLimitDisplay ?? null,
-    perHeir: buildPerHeir(sorted, (h) => get(h.id)?.priorGiftCreditLimit, [
-      "corporate",
-    ]),
+    total:
+      (summary?.corporateExemptionLimitDisplay ?? 0) + nonPayerNaturalLimitSum ||
+      null,
+    perHeir: buildPerHeir(sorted, (h) => {
+      const p = get(h.id);
+      if (p?.isTaxPayer !== false) return null;
+      // 자연인 비상속인 §28②본문 한도 / 영리법인 §3의2② 한도
+      return p.nonHeirGiftCreditLimit ?? p.priorGiftCreditLimit ?? null;
+    }),
   });
   rows.push({
     rowId: "row-10c-corpCredit",
@@ -481,31 +485,29 @@ export function buildSummaryTable(
     rowNo: "c",
     label: "공제할 증여세액 = Min(a, b)",
     isGroupChild: true,
-    total: result.corporateExemption?.amount ?? null,
-    perHeir: buildPerHeir(
-      sorted,
-      (h) =>
-        h.relation === "corporate"
-          ? // GAP-2: 다수 영리법인 시 법인별 안분 면제액(perCorporateBreakdown).
-            //   단일/누락 시 전체 면제액 fallback(회귀 보존). 화면·PDF 단일 소스.
-            result.corporateExemption?.perCorporateBreakdown?.find(
-              (c) => c.corporateId === h.id,
-            )?.exemptionAmount ??
-            result.corporateExemption?.amount ??
-            0
-          : null,
-      ["corporate"],
-    ),
+    total:
+      (result.corporateExemption?.amount ?? 0) + nonPayerNaturalCreditSum || null,
+    perHeir: buildPerHeir(sorted, (h) => {
+      const p = get(h.id);
+      if (p?.isTaxPayer !== false) return null;
+      if (h.relation === "corporate") {
+        // GAP-2: 다수 영리법인 시 법인별 안분 면제액(perCorporateBreakdown). 단일/누락 시 전체 fallback.
+        return (
+          result.corporateExemption?.perCorporateBreakdown?.find(
+            (c) => c.corporateId === h.id,
+          )?.exemptionAmount ??
+          result.corporateExemption?.amount ??
+          0
+        );
+      }
+      // 비상속인 자연인 §28②본문 공제액
+      return p.nonHeirGiftCredit ?? null;
+    }),
   });
 
-  // ⑪ 산출세액 배부
+  // ⑪ 산출세액 배부 — 비납세의무자(영리법인·비상속인 자연인) 제외
   const taxAllocTotal = Object.values(perHeirEngine).reduce(
-    (s, p, idx) => {
-      const heirId = Object.keys(perHeirEngine)[idx];
-      if (sorted.find((h) => h.id === heirId)?.relation === "corporate")
-        return s;
-      return s + (p?.computedTaxShare ?? 0);
-    },
+    (s, p) => (p?.isTaxPayer === false ? s : s + (p?.computedTaxShare ?? 0)),
     0,
   );
   rows.push({
@@ -514,7 +516,7 @@ export function buildSummaryTable(
     rowNo: "⑪",
     label: "상속인등 산출세액 배부",
     total: taxAllocTotal || null,
-    perHeir: buildPerHeir(sorted, (h) => get(h.id)?.computedTaxShare, HEIR_NO_CORP),
+    perHeir: buildPerHeir(sorted, payerOnly((h) => get(h.id)?.computedTaxShare)),
   });
 
   // *4 세대생략가산
@@ -526,8 +528,7 @@ export function buildSummaryTable(
     total: result.generationSkipSurcharge || null,
     perHeir: buildPerHeir(
       sorted,
-      (h) => get(h.id)?.generationSkipSurcharge,
-      HEIR_NO_CORP,
+      payerOnly((h) => get(h.id)?.generationSkipSurcharge),
     ),
   });
 
@@ -538,7 +539,7 @@ export function buildSummaryTable(
     rowNo: "*5",
     label: "상속인등 상속세부담 비율",
     total: 1.0,
-    perHeir: buildPerHeir(sorted, (h) => get(h.id)?.burdenRatio, HEIR_NO_CORP),
+    perHeir: buildPerHeir(sorted, payerOnly((h) => get(h.id)?.burdenRatio)),
   });
 
   // 소계
@@ -551,22 +552,21 @@ export function buildSummaryTable(
       taxAllocTotal + (result.generationSkipSurcharge ?? 0) || null,
     perHeir: buildPerHeir(
       sorted,
-      (h) => {
+      payerOnly((h) => {
         const p = get(h.id);
         if (!p) return null;
         return p.computedTaxShare + p.generationSkipSurcharge;
-      },
-      HEIR_NO_CORP,
+      }),
     ),
   });
 
-  // ⑫a/b/c (heir만)
+  // ⑫a/b/c (납세의무자만 — 영리법인·비상속인 자연인 제외)
   const sumByHeirNoCorp = (
     getter: (id: string) => number | undefined,
   ): number => {
     let s = 0;
     for (const h of sorted) {
-      if (h.relation === "corporate") continue;
+      if (perHeirEngine[h.id]?.isTaxPayer === false) continue;
       s += getter(h.id) ?? 0;
     }
     return s;
@@ -591,8 +591,7 @@ export function buildSummaryTable(
       sumByHeirNoCorp((id) => get(id)?.priorGiftComputedTax) || null,
     perHeir: buildPerHeir(
       sorted,
-      (h) => get(h.id)?.priorGiftComputedTax,
-      HEIR_NO_CORP,
+      payerOnly((h) => get(h.id)?.priorGiftComputedTax),
     ),
   });
   rows.push({
@@ -604,8 +603,7 @@ export function buildSummaryTable(
     total: sumByHeirNoCorp((id) => get(id)?.priorGiftCreditLimit) || null,
     perHeir: buildPerHeir(
       sorted,
-      (h) => get(h.id)?.priorGiftCreditLimit,
-      HEIR_NO_CORP,
+      payerOnly((h) => get(h.id)?.priorGiftCreditLimit),
     ),
   });
   rows.push({
@@ -615,7 +613,7 @@ export function buildSummaryTable(
     label: "사전증여세액공제 = Min(a, b)",
     isGroupChild: true,
     total: sumByHeirNoCorp((id) => get(id)?.priorGiftCredit) || null,
-    perHeir: buildPerHeir(sorted, (h) => get(h.id)?.priorGiftCredit, HEIR_NO_CORP),
+    perHeir: buildPerHeir(sorted, payerOnly((h) => get(h.id)?.priorGiftCredit)),
   });
 
   // ⑬ 차가감세액
@@ -625,7 +623,7 @@ export function buildSummaryTable(
     rowNo: "⑬",
     label: "차가감세액 (⑪ + *4 − ⑫c)",
     total: sumByHeirNoCorp((id) => get(id)?.preFilingCreditTax) || null,
-    perHeir: buildPerHeir(sorted, (h) => get(h.id)?.preFilingCreditTax, HEIR_NO_CORP),
+    perHeir: buildPerHeir(sorted, payerOnly((h) => get(h.id)?.preFilingCreditTax)),
   });
 
   // ⑭ 신고세액공제
@@ -635,7 +633,7 @@ export function buildSummaryTable(
     rowNo: "⑭",
     label: "신고세액공제 (⑬ × 0.03)",
     total: sumByHeirNoCorp((id) => get(id)?.filingCredit) || null,
-    perHeir: buildPerHeir(sorted, (h) => get(h.id)?.filingCredit, HEIR_NO_CORP),
+    perHeir: buildPerHeir(sorted, payerOnly((h) => get(h.id)?.filingCredit)),
   });
 
   // ⑮ 차감자진납부세액 (강조)
@@ -646,7 +644,7 @@ export function buildSummaryTable(
     label: "차감자진납부세액 (⑬ − ⑭)",
     isBoldFinal: true,
     total: sumByHeirNoCorp((id) => get(id)?.finalTax) || null,
-    perHeir: buildPerHeir(sorted, (h) => get(h.id)?.finalTax, HEIR_NO_CORP),
+    perHeir: buildPerHeir(sorted, payerOnly((h) => get(h.id)?.finalTax)),
   });
 
   return {

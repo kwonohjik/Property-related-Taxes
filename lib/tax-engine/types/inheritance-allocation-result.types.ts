@@ -97,6 +97,20 @@ export interface HeirTaxBreakdown {
   publicChargeShare?: number;
   /** 장례비 §14①2호 (funeral category, 한도 적용 후) 상속인별 분담 */
   funeralShare?: number;
+
+  // ============================================================
+  // 비상속인(상속인·수유자 외) 배부·공제 분리 echo (§3의2①·§28②)
+  // ============================================================
+  /**
+   * 상속세 납부의무자(§3의2① 상속인∪수유자) 여부.
+   * false: 영리법인 + 후순위 비상속인 자연인(며느리 등) — ⑪ 배부·⑫ 공제 제외.
+   * 표시 레이어(heir-allocation-summary)가 legalShares 없이 비상속인 식별하는 단일 소스.
+   */
+  isTaxPayer?: boolean;
+  /** ⑩ 비상속인 자연인 §28② 본문 증여세액공제 = Min(증여세 산출세액, 한도). 영리법인은 corporateExemption 별도. */
+  nonHeirGiftCredit?: number;
+  /** ⑩ 비상속인 자연인 §28② 본문 공제 한도 = floor(computedTax × giftTaxBase / taxBase) */
+  nonHeirGiftCreditLimit?: number;
 }
 
 /**
