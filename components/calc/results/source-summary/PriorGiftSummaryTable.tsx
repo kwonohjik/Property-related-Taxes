@@ -90,10 +90,10 @@ export function PriorGiftSummaryTable({ priorGifts }: Props) {
             <th className="border border-slate-200 px-2 py-1.5 text-center">증여일시</th>
             <th className="border border-slate-200 px-2 py-1.5 text-center">증여물건</th>
             <th className="border border-slate-200 px-2 py-1.5 text-center">세부내역</th>
-            <th className="border border-slate-200 px-2 py-1.5 text-right">증여재산가액</th>
-            <th className="border border-slate-200 px-2 py-1.5 text-right">증여재산공제</th>
-            <th className="border border-slate-200 px-2 py-1.5 text-right">증여세 과세표준</th>
-            <th className="border border-slate-200 px-2 py-1.5 text-right">증여세 산출세액</th>
+            <th className="border border-slate-200 px-2 py-1.5 text-right font-mono tabular-nums whitespace-nowrap">증여재산가액</th>
+            <th className="border border-slate-200 px-2 py-1.5 text-right font-mono tabular-nums whitespace-nowrap">증여재산공제</th>
+            <th className="border border-slate-200 px-2 py-1.5 text-right font-mono tabular-nums whitespace-nowrap">증여세 과세표준</th>
+            <th className="border border-slate-200 px-2 py-1.5 text-right font-mono tabular-nums whitespace-nowrap">증여세 산출세액</th>
             <th className="border border-slate-200 px-2 py-1.5 text-center">비고</th>
           </tr>
         </thead>
@@ -120,16 +120,16 @@ export function PriorGiftSummaryTable({ priorGifts }: Props) {
                 <td className="border border-slate-200 px-2 py-1.5">
                   {resolveDetailLabel(gift)}
                 </td>
-                <td className="border border-slate-200 px-2 py-1.5 text-right">
+                <td className="border border-slate-200 px-2 py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
                   {gift.giftAmount.toLocaleString()}
                 </td>
-                <td className="border border-slate-200 px-2 py-1.5 text-right">
+                <td className="border border-slate-200 px-2 py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
                   {formatCellOrDash(deduction)}
                 </td>
-                <td className="border border-slate-200 px-2 py-1.5 text-right">
+                <td className="border border-slate-200 px-2 py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
                   {formatCellOrDash(gift.giftTaxBase)}
                 </td>
-                <td className="border border-slate-200 px-2 py-1.5 text-right">
+                <td className="border border-slate-200 px-2 py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
                   {formatCellOrDash(gift.computedTax)}
                 </td>
                 <td className="border border-slate-200 px-2 py-1.5 text-center text-slate-600">
@@ -145,16 +145,16 @@ export function PriorGiftSummaryTable({ priorGifts }: Props) {
             >
               소계
             </td>
-            <td className="border border-slate-200 px-2 py-1.5 text-right">
+            <td className="border border-slate-200 px-2 py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
               {totalAmount.toLocaleString()}
             </td>
-            <td className="border border-slate-200 px-2 py-1.5 text-right">
+            <td className="border border-slate-200 px-2 py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
               {totalDeduction.toLocaleString()}
             </td>
-            <td className="border border-slate-200 px-2 py-1.5 text-right">
+            <td className="border border-slate-200 px-2 py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
               {totalBase.toLocaleString()}
             </td>
-            <td className="border border-slate-200 px-2 py-1.5 text-right">
+            <td className="border border-slate-200 px-2 py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
               {totalComputed.toLocaleString()}
             </td>
             <td className="border border-slate-200"></td>

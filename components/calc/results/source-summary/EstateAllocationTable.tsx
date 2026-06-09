@@ -82,11 +82,11 @@ export function EstateAllocationTable({
             <th className="border border-slate-200 px-2 py-1.5 text-center">재산분류</th>
             <th className="border border-slate-200 px-2 py-1.5 text-center">적요</th>
             <th className="border border-slate-200 px-2 py-1.5 text-center">수량(면적)</th>
-            <th className="border border-slate-200 px-2 py-1.5 text-right">평가금액</th>
+            <th className="border border-slate-200 px-2 py-1.5 text-right font-mono tabular-nums whitespace-nowrap">평가금액</th>
             {heirs.map((h) => (
               <th
                 key={h.id}
-                className="border border-slate-200 px-2 py-1.5 text-right"
+                className="border border-slate-200 px-2 py-1.5 text-right font-mono tabular-nums whitespace-nowrap"
               >
                 {h.name ?? h.relation}
               </th>
@@ -106,13 +106,13 @@ export function EstateAllocationTable({
             >
               상속재산 합계
             </td>
-            <td className="border border-slate-200 px-2 py-1.5 text-right">
+            <td className="border border-slate-200 px-2 py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
               {totalValuation.toLocaleString()}
             </td>
             {heirs.map((h) => (
               <td
                 key={h.id}
-                className="border border-slate-200 px-2 py-1.5 text-right"
+                className="border border-slate-200 px-2 py-1.5 text-right font-mono tabular-nums whitespace-nowrap"
               >
                 {formatCellOrDash(totalByHeir(h.id))}
               </td>
@@ -131,7 +131,7 @@ export function EstateAllocationTable({
                 >
                   부동산 처분 등
                 </td>
-                <td className="border border-slate-200 px-2 py-1.5 text-right">
+                <td className="border border-slate-200 px-2 py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
                   {presumedTotal.toLocaleString()}
                 </td>
                 <td
@@ -149,7 +149,7 @@ export function EstateAllocationTable({
                 >
                   상속재산 총계
                 </td>
-                <td className="border border-slate-200 px-2 py-1.5 text-right">
+                <td className="border border-slate-200 px-2 py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
                   {grandTotalValuation.toLocaleString()}
                 </td>
                 <td
@@ -183,13 +183,13 @@ function GroupRows({
           <td className="border border-slate-200 px-2 py-1.5 text-center">
             {formatQuantity(item)}
           </td>
-          <td className="border border-slate-200 px-2 py-1.5 text-right">
+          <td className="border border-slate-200 px-2 py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
             {resolveValuation(item).toLocaleString()}
           </td>
           {heirs.map((h) => (
             <td
               key={h.id}
-              className="border border-slate-200 px-2 py-1.5 text-right"
+              className="border border-slate-200 px-2 py-1.5 text-right font-mono tabular-nums whitespace-nowrap"
             >
               {formatCellOrDash(findAllocationAmount(item.heirAllocations, h.id))}
             </td>
@@ -207,13 +207,13 @@ function GroupRows({
         >
           {ESTATE_GROUP_LABEL[group.group]} 소계
         </td>
-        <td className="border border-slate-200 px-2 py-1.5 text-right">
+        <td className="border border-slate-200 px-2 py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
           {group.groupValuationTotal.toLocaleString()}
         </td>
         {heirs.map((h) => (
           <td
             key={h.id}
-            className="border border-slate-200 px-2 py-1.5 text-right"
+            className="border border-slate-200 px-2 py-1.5 text-right font-mono tabular-nums whitespace-nowrap"
           >
             {formatCellOrDash(sumAllocationByHeir(group.items, h.id))}
           </td>

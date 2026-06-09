@@ -73,23 +73,23 @@ export function PresumedInheritanceTable({
               <th className="border border-slate-200 px-2 py-1.5 text-center" colSpan={3}>
                 소명대상 금액
               </th>
-              <th className="border border-slate-200 px-2 py-1.5 text-right" rowSpan={2}>
+              <th className="border border-slate-200 px-2 py-1.5 text-right font-mono tabular-nums whitespace-nowrap" rowSpan={2}>
                 사용처 확인금액
               </th>
-              <th className="border border-slate-200 px-2 py-1.5 text-right" rowSpan={2}>
+              <th className="border border-slate-200 px-2 py-1.5 text-right font-mono tabular-nums whitespace-nowrap" rowSpan={2}>
                 소명비율(%)
               </th>
-              <th className="border border-slate-200 px-2 py-1.5 text-right" rowSpan={2}>
+              <th className="border border-slate-200 px-2 py-1.5 text-right font-mono tabular-nums whitespace-nowrap" rowSpan={2}>
                 기준금액
               </th>
-              <th className="border border-slate-200 px-2 py-1.5 text-right" rowSpan={2}>
+              <th className="border border-slate-200 px-2 py-1.5 text-right font-mono tabular-nums whitespace-nowrap" rowSpan={2}>
                 과세가액 산입액
               </th>
             </tr>
             <tr>
-              <th className="border border-slate-200 px-2 py-1.5 text-right">1년 이내</th>
-              <th className="border border-slate-200 px-2 py-1.5 text-right">2년 이내</th>
-              <th className="border border-slate-200 px-2 py-1.5 text-right">소계</th>
+              <th className="border border-slate-200 px-2 py-1.5 text-right font-mono tabular-nums whitespace-nowrap">1년 이내</th>
+              <th className="border border-slate-200 px-2 py-1.5 text-right font-mono tabular-nums whitespace-nowrap">2년 이내</th>
+              <th className="border border-slate-200 px-2 py-1.5 text-right font-mono tabular-nums whitespace-nowrap">소계</th>
             </tr>
           </thead>
           <tbody>
@@ -105,25 +105,25 @@ export function PresumedInheritanceTable({
                     {/* PresumedInheritanceItem에 name 없음 — category 라벨 fallback */}
                     {PRESUMED_CATEGORY_LABEL[item.category]}
                   </td>
-                  <td className="border border-slate-200 px-2 py-1.5 text-right">
+                  <td className="border border-slate-200 px-2 py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
                     {item.amountWithin1Y.toLocaleString()}
                   </td>
-                  <td className="border border-slate-200 px-2 py-1.5 text-right">
+                  <td className="border border-slate-200 px-2 py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
                     {item.amountWithin2Y.toLocaleString()}
                   </td>
-                  <td className="border border-slate-200 px-2 py-1.5 text-right">
+                  <td className="border border-slate-200 px-2 py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
                     {scrutiny.toLocaleString()}
                   </td>
-                  <td className="border border-slate-200 px-2 py-1.5 text-right">
+                  <td className="border border-slate-200 px-2 py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
                     {item.verifiedUseAmount.toLocaleString()}
                   </td>
-                  <td className="border border-slate-200 px-2 py-1.5 text-right">
+                  <td className="border border-slate-200 px-2 py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
                     {calcRatio(item.verifiedUseAmount, scrutiny)}
                   </td>
-                  <td className="border border-slate-200 px-2 py-1.5 text-right">
+                  <td className="border border-slate-200 px-2 py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
                     {(r?.baseDeduction ?? 0).toLocaleString()}
                   </td>
-                  <td className="border border-slate-200 px-2 py-1.5 text-right">
+                  <td className="border border-slate-200 px-2 py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
                     {(r?.addedAmount ?? 0).toLocaleString()}
                   </td>
                 </tr>
@@ -137,17 +137,17 @@ export function PresumedInheritanceTable({
                 합계
               </td>
               <td className="border border-slate-200" colSpan={2}></td>
-              <td className="border border-slate-200 px-2 py-1.5 text-right">
+              <td className="border border-slate-200 px-2 py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
                 {totalScrutiny.toLocaleString()}
               </td>
-              <td className="border border-slate-200 px-2 py-1.5 text-right">
+              <td className="border border-slate-200 px-2 py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
                 {totalVerified.toLocaleString()}
               </td>
               <td className="border border-slate-200"></td>
-              <td className="border border-slate-200 px-2 py-1.5 text-right">
+              <td className="border border-slate-200 px-2 py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
                 {totalBase.toLocaleString()}
               </td>
-              <td className="border border-slate-200 px-2 py-1.5 text-right">
+              <td className="border border-slate-200 px-2 py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
                 {totalAdded.toLocaleString()}
               </td>
             </tr>

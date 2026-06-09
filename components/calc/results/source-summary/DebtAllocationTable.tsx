@@ -74,11 +74,11 @@ export function DebtAllocationTable({ debtItems, heirs, deathDate }: Props) {
             <th className="border border-slate-200 px-2 py-1.5 text-center">구분</th>
             <th className="border border-slate-200 px-2 py-1.5 text-center">채권자 주소</th>
             <th className="border border-slate-200 px-2 py-1.5 text-center">채권자등</th>
-            <th className="border border-slate-200 px-2 py-1.5 text-right">금액</th>
+            <th className="border border-slate-200 px-2 py-1.5 text-right font-mono tabular-nums whitespace-nowrap">금액</th>
             {heirs.map((h) => (
               <th
                 key={h.id}
-                className="border border-slate-200 px-2 py-1.5 text-right"
+                className="border border-slate-200 px-2 py-1.5 text-right font-mono tabular-nums whitespace-nowrap"
               >
                 {h.name ?? h.relation}
               </th>
@@ -108,13 +108,13 @@ export function DebtAllocationTable({ debtItems, heirs, deathDate }: Props) {
             >
               합계
             </td>
-            <td className="border border-slate-200 px-2 py-1.5 text-right">
+            <td className="border border-slate-200 px-2 py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
               {totalAmount.toLocaleString()}
             </td>
             {heirs.map((h) => (
               <td
                 key={h.id}
-                className="border border-slate-200 px-2 py-1.5 text-right"
+                className="border border-slate-200 px-2 py-1.5 text-right font-mono tabular-nums whitespace-nowrap"
               >
                 {formatCellOrDash(totalByHeir(h.id))}
               </td>
@@ -149,13 +149,13 @@ function DebtGroupRows({
             {formatCellOrDash(item.creditorAddress)}
           </td>
           <td className="border border-slate-200 px-2 py-1.5">{item.name}</td>
-          <td className="border border-slate-200 px-2 py-1.5 text-right">
+          <td className="border border-slate-200 px-2 py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
             {item.amount.toLocaleString()}
           </td>
           {heirs.map((h) => (
             <td
               key={h.id}
-              className="border border-slate-200 px-2 py-1.5 text-right"
+              className="border border-slate-200 px-2 py-1.5 text-right font-mono tabular-nums whitespace-nowrap"
             >
               {formatCellOrDash(findAllocationAmount(item.heirAllocations, h.id))}
             </td>
@@ -172,13 +172,13 @@ function DebtGroupRows({
         >
           {DEBT_CATEGORY_LABEL[category]} 소계
         </td>
-        <td className="border border-slate-200 px-2 py-1.5 text-right">
+        <td className="border border-slate-200 px-2 py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
           {groupAmount.toLocaleString()}
         </td>
         {heirs.map((h) => (
           <td
             key={h.id}
-            className="border border-slate-200 px-2 py-1.5 text-right"
+            className="border border-slate-200 px-2 py-1.5 text-right font-mono tabular-nums whitespace-nowrap"
           >
             {formatCellOrDash(sumAllocationByHeir(items, h.id))}
           </td>
