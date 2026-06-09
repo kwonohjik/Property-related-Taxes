@@ -14,6 +14,7 @@ import type {
   PriorGift,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { toCollateralDebtItems } from "@/lib/tax-engine/inheritance-collateral-debt";
+import { isSimpleModeUnlisted } from "@/lib/calc/unlisted-valuation-mode";
 import { isInstallmentEligible } from "@/lib/tax-engine/credits/installment-payment";
 import { isInstallmentSplitEligible } from "@/lib/tax-engine/credits/installment-split";
 import {
@@ -76,6 +77,7 @@ export function useInheritanceResultDerived({
     if (result.deductionDetail) s.add("deduction-besshi");
     s.add("valuation-detail");
     if (items.some((it) => it.unlistedStockValuationV2)) s.add("unlisted-stock-besshi");
+    if (items.some(isSimpleModeUnlisted)) s.add("unlisted-stock-simple");
     if (
       items.some(
         (it) =>
