@@ -20,6 +20,7 @@
  *   />
  */
 
+import type { ReactNode } from "react";
 import type {
   Heir,
   HeirAllocation,
@@ -54,6 +55,13 @@ interface HeirAllocationInputProps {
   onChange: (next: HeirAllocation[] | undefined) => void;
   /** 분배 면적 입력 표시 여부 (자산-수준에서만 의미) */
   showAreaInput?: boolean;
+  /**
+   * 내부 헤더 텍스트. 기본 "협의분할 (상속인별 분배)".
+   * null이면 헤더 미표시 — 인라인 패널·ToggleCard 제목이 이미 맥락을 제공하는 경우.
+   */
+  heading?: ReactNode | null;
+  /** true면 sky 카드 테두리·배경·패딩 제거(평탄화) — 외곽 컨테이너가 이미 카드인 경우. */
+  flush?: boolean;
 }
 
 export function heirShortLabel(h: Heir): string {
@@ -76,6 +84,8 @@ export function HeirAllocationInput({
   heirs,
   onChange,
   showAreaInput = false,
+  heading = "협의분할 (상속인별 분배)",
+  flush = false,
 }: HeirAllocationInputProps) {
   const allocs = allocations ?? [];
   const sum = allocs.reduce((s, a) => s + a.amount, 0);
@@ -129,12 +139,22 @@ export function HeirAllocationInput({
   }
 
   return (
-    <div className="rounded-md border border-sky-200 bg-sky-50/40 dark:border-sky-900 dark:bg-sky-950/30 p-3 space-y-2">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold text-sky-700 dark:text-sky-300">
-            협의분할 (상속인별 분배)
-          </span>
+    <div
+      data-testid="heir-allocation-input"
+      className={
+        flush
+          ? "space-y-2"
+          : "rounded-md border border-sky-200 bg-sky-50/40 dark:border-sky-900 dark:bg-sky-950/30 p-3 space-y-2"
+      }
+    >
+      {/* 상단: (선택)헤더 + 합계 chip + 단독 자동입력 */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {heading && (
+            <span className="text-xs font-semibold text-sky-700 dark:text-sky-300">
+              {heading}
+            </span>
+          )}
           {hasInput && expectedTotal === 0 && (
             // [UX3-AC1] 평가액 미입력 — rose/emerald 평가 보류, 회색 안내
             <span className="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">
@@ -157,7 +177,7 @@ export function HeirAllocationInput({
           <button
             type="button"
             onClick={handleAutoFillSingle}
-            className="text-xs text-sky-700 dark:text-sky-300 underline"
+            className="text-xs text-sky-700 dark:text-sky-300 underline shrink-0"
           >
             단독 상속 자동 입력
           </button>
@@ -171,73 +191,58 @@ export function HeirAllocationInput({
         </p>
       )}
 
-      {/* 상속인 토글 칩 */}
-      <div className="flex flex-wrap gap-1.5">
+      {/* 통합 행 — 상속인 전원 토글, 선택 시 금액·면적 인라인 (이름 1회) */}
+      <div className="space-y-1.5" data-testid="heir-allocation-rows">
         {distributableHeirs.map((heir) => {
-          const selected = !!allocs.find((a) => a.heirId === heir.id);
+          const alloc = allocs.find((a) => a.heirId === heir.id);
+          const selected = !!alloc;
           return (
-            <button
-              key={heir.id}
-              type="button"
-              onClick={() => toggleHeir(heir)}
-              className={`text-xs px-2 py-1 rounded-full border transition-colors ${
-                selected
-                  ? "bg-sky-200 dark:bg-sky-800 border-sky-400 text-sky-900 dark:text-sky-100"
-                  : "bg-white dark:bg-slate-800 border-border text-muted-foreground hover:bg-muted"
-              }`}
-            >
-              {selected ? "✓ " : "+ "}
-              {heirShortLabel(heir)}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* 금액·면적 입력 */}
-      {hasInput && (
-        <div className="space-y-1.5">
-          {allocs.map((a) => {
-            const heir = heirs.find((h) => h.id === a.heirId);
-            if (!heir) return null;
-            return (
-              <div
-                key={a.heirId}
-                className="flex flex-wrap items-center gap-2"
+            <div key={heir.id} className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                aria-pressed={selected}
+                onClick={() => toggleHeir(heir)}
+                className={`text-xs px-2 py-1 rounded-full border transition-colors shrink-0 ${
+                  selected
+                    ? "bg-sky-200 dark:bg-sky-800 border-sky-400 text-sky-900 dark:text-sky-100"
+                    : "bg-white dark:bg-slate-800 border-border text-muted-foreground hover:bg-muted"
+                }`}
               >
-                <label className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
-                  {heirShortLabel(heir)}
-                </label>
+                {selected ? "✓ " : "+ "}
+                {heirShortLabel(heir)}
+              </button>
+              {selected && (
                 <div className="flex-1 min-w-[140px] max-w-[200px]">
                   <CurrencyInput
                     label=""
-                    value={a.amount > 0 ? String(a.amount) : ""}
-                    onChange={(v) => updateAmount(a.heirId, parseAmount(v))}
+                    value={alloc.amount > 0 ? String(alloc.amount) : ""}
+                    onChange={(v) => updateAmount(heir.id, parseAmount(v))}
                     placeholder="분배 금액"
                     hideUnit
                   />
                 </div>
-                {showAreaInput && (
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    placeholder="면적(㎡)"
-                    value={a.areaM2 ?? ""}
-                    onChange={(e) =>
-                      updateArea(
-                        a.heirId,
-                        e.target.value === ""
-                          ? undefined
-                          : parseFloat(e.target.value),
-                      )
-                    }
-                    className="w-24 shrink-0 px-2 py-1 text-xs rounded border border-border bg-background"
-                  />
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
+              )}
+              {selected && showAreaInput && (
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="면적(㎡)"
+                  value={alloc.areaM2 ?? ""}
+                  onChange={(e) =>
+                    updateArea(
+                      heir.id,
+                      e.target.value === ""
+                        ? undefined
+                        : parseFloat(e.target.value),
+                    )
+                  }
+                  className="w-24 shrink-0 px-2 py-1 text-xs rounded border border-border bg-background"
+                />
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
