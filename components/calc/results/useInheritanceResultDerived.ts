@@ -89,7 +89,7 @@ export function useInheritanceResultDerived({
     if (isInstallmentSplitEligible(result.finalTax) && !installmentEnabled)
       s.add("split-payment");
     if (paymentInKindEnabled) s.add("payment-in-kind");
-    if (result.warnings.length > 0) s.add("warnings");
+    // 주의 사항(warnings) 섹션 삭제 — 인쇄 선택 집합에서도 제외
     return s;
   }, [result, heirs, estateItems, priorGifts, deathDate, installmentEnabled, paymentInKindEnabled, hasDebtOrCollateral]);
 
