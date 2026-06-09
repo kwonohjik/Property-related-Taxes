@@ -113,6 +113,61 @@ describe("buildBuppyo3Data — 부표3 (가·나·다·라)", () => {
     expect(d.debtRows.length).toBe(1);
     expect(d.debtTotal).toBe(30_000_000);
   });
+
+  // ── §14 담보채무 자동도출분 「가. 채무」 표시 (설계 §6 A1~A4) ──
+  const withCollateral = (
+    deductionDetail: unknown,
+    collateral: { estateItemId: string; creditorName: string; amount: number; financialDebtAmount: number }[],
+  ): InheritanceTaxResult =>
+    ({ ...mkResult(deductionDetail), collateralDebtDetail: collateral }) as InheritanceTaxResult;
+
+  it("A1 담보만 입력(debtItems 빈) → 「가.채무」에 자동도출분 표시", () => {
+    const d = buildBuppyo3Data(
+      withCollateral(baseDeduction, [
+        { estateItemId: "e1", creditorName: "담보된 토지 담보채무", amount: 500_000_000, financialDebtAmount: 0 },
+      ]),
+      [],
+    );
+    expect(d.debtRows.length).toBe(1);
+    expect(d.debtRows[0].kindLabel).toBe("담보된 토지 담보채무");
+    expect(d.debtRows[0].amount).toBe(500_000_000);
+    expect(d.debtTotal).toBe(500_000_000);
+  });
+
+  it("A2 수동 financial + 담보 자동도출 합산", () => {
+    const d = buildBuppyo3Data(
+      withCollateral(baseDeduction, [
+        { estateItemId: "e1", creditorName: "담보된 토지 담보채무", amount: 500_000_000, financialDebtAmount: 0 },
+      ]),
+      [{ id: "d1", category: "financial", name: "은행대출", amount: 300_000_000 }],
+    );
+    expect(d.debtRows.length).toBe(2);
+    expect(d.debtTotal).toBe(800_000_000);
+  });
+
+  it("A3 legacy 회귀 — debtItems·담보 모두 없음 → legacy 행 유지", () => {
+    const d = buildBuppyo3Data(
+      withCollateral(baseDeduction, []),
+      undefined,
+      { funeralExpense: 0, funeralIncludesBongan: false, debts: 100_000_000 },
+    );
+    expect(d.debtRows.length).toBe(1);
+    expect(d.debtTotal).toBe(100_000_000);
+    expect(d.debtRows[0].kindLabel).toBe("채무·공과금");
+  });
+
+  it("A4 공과금(tax) + 담보 자동도출 — 가.채무엔 담보만, 나.공과금 불변", () => {
+    const d = buildBuppyo3Data(
+      withCollateral(baseDeduction, [
+        { estateItemId: "e1", creditorName: "담보된 토지 담보채무", amount: 500_000_000, financialDebtAmount: 0 },
+      ]),
+      [{ id: "d1", category: "tax", name: "재산세", amount: 25_000_000 }],
+    );
+    expect(d.debtRows.length).toBe(1);
+    expect(d.debtRows[0].amount).toBe(500_000_000);
+    expect(d.utilityRows.length).toBe(1);
+    expect(d.utilityTotal).toBe(25_000_000);
+  });
 });
 
 describe("buildBesshi5Data — 별지5호 (금융재산공제)", () => {
@@ -137,6 +192,58 @@ describe("buildBesshi5Data — 별지5호 (금융재산공제)", () => {
   });
   it("E-9 financialDeductionDetail 없음 → null (렌더 가드)", () => {
     expect(buildBesshi5Data(mkResult({ ...baseDeduction, financialDeduction: 0 }))).toBeNull();
+  });
+
+  // ── §14 담보 금융저당분 §22 「채무」 표시 (설계 §5 B5-A1~A3) ──
+  it("B5-A1 항목별 모드 — fdd.rows 담보 금융저당분이 debtRows에 포함 → 자기일관 ①−②=③", () => {
+    const estateItems = [
+      { id: "a1", category: "financial", name: "신한은행 예금", marketValue: 1_200_000_000 },
+    ] as unknown as Parameters<typeof buildBesshi5Data>[1];
+    const debtItems: DebtItem[] = [
+      { id: "d1", category: "financial", name: "은행대출", amount: 100_000_000 },
+    ];
+    const result = mk(
+      [
+        { label: "예금", amount: 1_200_000_000 },
+        { label: "금융채무", amount: 100_000_000 },
+        { label: "담보 금융저당", amount: 50_000_000 },
+      ],
+      1_050_000_000, // ③ netFinancial = 12억 − 1억 − 5천만
+      200_000_000,
+      200_000_000,
+    );
+    const b5 = buildBesshi5Data(result, estateItems, debtItems);
+    expect(b5!.assetTotal).toBe(1_200_000_000); // ① 저당분 무관(자산가치 불변)
+    expect(b5!.debtTotal).toBe(150_000_000); // ② 금융채무 1억 + 담보 금융저당 5천만
+    expect(b5!.debtRows.map((r) => r.kindLabel)).toContain("담보 금융저당");
+    expect(b5!.assetTotal - b5!.debtTotal).toBe(b5!.netFinancial); // 자기일관 ①−②=③
+  });
+
+  it("B5-A2 legacy 모드 — 담보 금융저당분이 assetRows 아닌 debtRows로 분류", () => {
+    const b5 = buildBesshi5Data(
+      mk(
+        [
+          { label: "예금", amount: 1_200_000_000 },
+          { label: "담보 금융저당", amount: 50_000_000 },
+        ],
+        1_150_000_000, // ③ = 12억 − 5천만
+        200_000_000,
+        200_000_000,
+      ),
+    );
+    expect(b5!.assetRows.map((r) => r.kindLabel)).not.toContain("담보 금융저당");
+    expect(b5!.debtRows.map((r) => r.kindLabel)).toContain("담보 금융저당");
+    expect(b5!.assetTotal).toBe(1_200_000_000); // ① 예금만
+    expect(b5!.debtTotal).toBe(50_000_000); // ② 담보 금융저당
+    expect(b5!.assetTotal - b5!.debtTotal).toBe(b5!.netFinancial); // ①−②=③
+  });
+
+  it("B5-A3 저당분 없음 → 회귀 (debtRows 불변)", () => {
+    const b5 = buildBesshi5Data(
+      mk([{ label: "예금", amount: 140_000_000 }, { label: "금융채무", amount: 20_000_000 }], 120_000_000, 24_000_000, 24_000_000),
+    );
+    expect(b5!.debtRows.length).toBe(1);
+    expect(b5!.debtRows[0].kindLabel).toBe("금융채무");
   });
   it("R-C1 rows label 분리: 자산 4종 / 채무 금융채무 1행", () => {
     const b5 = buildBesshi5Data(mk(

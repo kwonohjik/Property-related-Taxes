@@ -30,6 +30,8 @@ import {
   capFuneralRowAmounts,
   calcFuneralExpenseDeduction,
 } from "@/lib/tax-engine/inheritance-gift-common";
+import { toCollateralDebtItems } from "@/lib/tax-engine/inheritance-collateral-debt";
+import { COLLATERAL_FINANCIAL_DEBT_ROW_LABEL } from "@/lib/tax-engine/inheritance-tax-financial-rows";
 
 // ── 코드 매핑 (Record<EnumType,…> — enum 추가 시 컴파일러 누락 catch) ──
 export const DEBT_CATEGORY_LABEL: Record<DebtCategory, string> = {
@@ -61,7 +63,7 @@ export const UTILITY_TYPE_CODE_LABEL = [
 /** financialDeductionDetail.rows 금융채무 라벨 단일출처 (inheritance-tax.ts:457). 엔진 label 변경 시 동기화 */
 export const FINANCIAL_DEBT_ROW_LABEL = "금융채무";
 function isDebtLabel(label: string): boolean {
-  return label === FINANCIAL_DEBT_ROW_LABEL;
+  return label === FINANCIAL_DEBT_ROW_LABEL || label === COLLATERAL_FINANCIAL_DEBT_ROW_LABEL;
 }
 
 const sumAmount = (rows: { amount: number }[]): number =>
@@ -125,7 +127,10 @@ export function buildBuppyo3Data(
   debtItems: DebtItem[] | undefined,
   legacy?: { funeralExpense: number; funeralIncludesBongan: boolean; debts: number },
 ): Buppyo3Data {
-  const items = debtItems ?? [];
+  // §14 담보채무 자동도출분(result.collateralDebtDetail)을 「가. 채무」에 합산.
+  // 엔진이 협의분할 합산(inheritance-tax.ts:725)에 쓰는 동일 헬퍼 재사용(category="personal" → 가.채무 필터 통과).
+  const collateralItems = toCollateralDebtItems(result.collateralDebtDetail ?? []);
+  const items = [...(debtItems ?? []), ...collateralItems];
   const useLegacy = items.length === 0 && legacy != null;
 
   let debtRows: Buppyo3DebtRow[] = items
@@ -289,6 +294,11 @@ export function buildBesshi5Data(
         kindLabel: d.name.trim() || "금융채무",
         amount: d.amount,
       }));
+    // §14 담보 금융저당분(§22 순금융 차감) — 엔진 fdd.rows에서 읽어 ② 채무에 반영(③ netFinancial과 정합).
+    // estateItems 재계산 대신 fdd 사용 = §22② 최대주주 제외 적용 후 값 단일출처.
+    const collateralRow = fdd.rows.find((r) => r.label === COLLATERAL_FINANCIAL_DEBT_ROW_LABEL);
+    if (collateralRow && collateralRow.amount > 0)
+      debtRows.push({ kindLabel: COLLATERAL_FINANCIAL_DEBT_ROW_LABEL, amount: collateralRow.amount });
   } else {
     // legacy fallback — fdd.rows(종류별 집계)
     assetRows = fdd.rows

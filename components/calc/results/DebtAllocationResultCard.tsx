@@ -107,7 +107,8 @@ export function DebtAllocationResultCard({
       {/* 본문 ①②③④ — 기본 접힘, 인쇄 시 자동 펼침 */}
       <div className={`space-y-4 ${open ? "block" : "hidden print:block"}`}>
 
-      {/* ① 카테고리별 합계 — rose */}
+      {/* ① 카테고리별 합계 — rose. debtItems 없이 §14 담보채무만 있으면 0원 표 숨김(④ 섹션만 표시) */}
+      {totalInput > 0 && (
       <div className="rounded-md border border-rose-200 dark:border-rose-900 bg-white dark:bg-rose-950/10 p-3 space-y-1.5">
         <p className="text-xs font-semibold text-rose-700 dark:text-rose-300">
           ① 카테고리별 입력 합계
@@ -139,6 +140,7 @@ export function DebtAllocationResultCard({
           </div>
         </dl>
       </div>
+      )}
 
       {/* ② 장례비 한도 — emerald */}
       {totals.funeral > 0 && (
