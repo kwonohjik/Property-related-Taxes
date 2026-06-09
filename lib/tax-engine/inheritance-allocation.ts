@@ -32,7 +32,7 @@ import {
   emptyCategoryBreakdown,
   type CategoryBreakdown,
 } from "./inheritance-asset-category";
-import { isForProfitCorporate } from "./inheritance-gift-common";
+import { isForProfitCorporate, isInheritanceTaxPayer } from "./inheritance-gift-common";
 import {
   resolveAllocationsByHeir,
   computeExemptByHeir,
@@ -397,22 +397,42 @@ export function calcHeirAllocation(
   );
   const indirectDenominator = grossEstateWithGifts - totalPriorGiftAmount;
 
-  // 직접배부 합계 = Σ상속인 사전증여 과세표준 (영리법인 제외)
-  // PDF 책 1864 ② 간접배부대상 = taxBase − 상속인 직접 − 영리법인 사전증여 과세표준
+  // 비상속인(상속인·수유자 외) 자연인 집계 (§3의2①·§28② 본문) — 영리법인과 평행 처리.
+  //   후순위 other·인척(며느리 등 사전증여만)은 isInheritanceTaxPayer=false.
+  //   영리법인과 동일하게 분모·분자·distributableTax에서 제외 + §28②본문 공제(⑩).
+  const nonPayerNaturals = heirs.filter(
+    (h) => !isForProfitCorporate(h) && !isInheritanceTaxPayer(h, legalShares),
+  );
+  const nonPayerNaturalGiftTaxBase = nonPayerNaturals.reduce(
+    (s, h) => s + (taxBaseByDonee.get(h.id) ?? 0),
+    0,
+  );
+  // §28② 본문 공제 합 = Σ Min(증여세 산출세액, floor(computedTax × giftTaxBase / taxBase))
+  //   (§3의2② 영리법인 면제와 동일 산식 — inheritance-corporate-exemption.ts:102)
+  const nonPayerNaturalGiftCredit = nonPayerNaturals.reduce((s, h) => {
+    const gtb = taxBaseByDonee.get(h.id) ?? 0;
+    const giftTax = computedTaxByDonee.get(h.id) ?? 0;
+    const limit = taxBase > 0 && gtb > 0 ? Math.floor((computedTax * gtb) / taxBase) : 0;
+    return s + Math.min(giftTax, limit);
+  }, 0);
+
+  // 직접배부 합계 = Σ상속인 사전증여 과세표준 (영리법인 + 비상속인 자연인 제외)
+  // PDF 책 1864 ② 간접배부대상 = taxBase − 상속인 직접 − 비납세의무자 사전증여 과세표준
   let totalHeirDirectTaxBase = 0;
   for (const heir of heirs) {
-    if (isForProfitCorporate(heir)) continue; // 영리법인만 제외 — 비영리법인은 집계 포함
+    if (!isInheritanceTaxPayer(heir, legalShares)) continue; // 영리법인 + 비상속인 자연인 제외
     const heirGiftTaxBase = taxBaseByDonee.get(heir.id) ?? 0;
     totalHeirDirectTaxBase += heirGiftTaxBase;
   }
   const indirectNumerator =
-    taxBase - totalHeirDirectTaxBase - corporateGiftTaxBase;
+    taxBase - totalHeirDirectTaxBase - corporateGiftTaxBase - nonPayerNaturalGiftTaxBase;
 
-  // 13-12: 배부대상 산출세액 = computedTax − corporateExemption (할증 미포함)
-  const distributableTax = computedTax - corporateExemption;
+  // 13-12: 배부대상 산출세액 = computedTax − 영리법인 면제 − 비상속인 자연인 §28②본문 공제 (할증 미포함)
+  const distributableTax = computedTax - corporateExemption - nonPayerNaturalGiftCredit;
 
-  // 13-8: 산출세액상당액 분모 = taxBase − corporateGiftTaxBase
-  const computedTaxShareDenominator = taxBase - corporateGiftTaxBase;
+  // 13-8: 산출세액상당액 분모 = taxBase − 영리법인 − 비상속인 자연인 사전증여 과세표준
+  const computedTaxShareDenominator =
+    taxBase - corporateGiftTaxBase - nonPayerNaturalGiftTaxBase;
 
   // 상속인별 배부 계산 — Record (JSON-native, Map 직렬화 소실 방지)
   const perHeir: Record<string, HeirTaxBreakdown> = {};
@@ -452,6 +472,41 @@ export function calcHeirAllocation(
         priorGiftComputedTax:
           corporateComputedTaxByDonee.get(heir.id) ??
           (heir.corporateGiftComputedTax || 0), // ⑩a — PriorGift 단일 진실
+        isTaxPayer: false, // §3의2① 영리법인 납부의무 제외
+      };
+      continue;
+    }
+
+    // 비상속인 자연인 (후순위 other·인척 — 며느리 등 사전증여만): §3의2① 납부의무 없음.
+    //   ⑪ 산출세액 배부·⑫ 증여세액공제 제외. ⑩ §28② 본문 증여세액공제 echo (영리법인 §3의2②와 평행).
+    if (!isInheritanceTaxPayer(heir, legalShares)) {
+      const limit =
+        taxBase > 0 && giftTaxBase > 0
+          ? Math.floor((computedTax * giftTaxBase) / taxBase)
+          : 0;
+      const giftTax = computedTaxByDonee.get(heir.id) ?? 0;
+      perHeir[heir.id] = {
+        heirId: heir.id,
+        directEstateAmount: 0,
+        priorGiftAmount: giftAmount,
+        presumedAmount: 0,
+        debtShare: 0,
+        taxableValueShare: giftAmount, // 비상속인은 사전증여 가산분만
+        directTaxBaseShare: giftTaxBase, // ⑥ 직접배부 표시 echo (분모는 위에서 제외)
+        indirectTaxBaseShare: 0,
+        taxBaseShare: giftTaxBase,
+        computedTaxShare: 0, // ⑪ 배부 제외
+        generationSkipSurcharge: 0,
+        priorGiftCredit: 0, // ⑫ 제외
+        preFilingCreditTax: 0,
+        filingCredit: 0,
+        finalTax: 0,
+        categoryBreakdown: emptyCategoryBreakdown(),
+        grossInheritance: 0,
+        isTaxPayer: false,
+        nonHeirGiftCreditLimit: limit, // ⑩b §28②본문 한도
+        nonHeirGiftCredit: Math.min(giftTax, limit), // ⑩c = Min(증여세, 한도)
+        priorGiftComputedTax: giftTax, // ⑩a
       };
       continue;
     }
@@ -570,6 +625,7 @@ export function calcHeirAllocation(
       priorGiftCreditLimit: priorGiftCreditLimitForEcho, // ⑫b
       priorGiftComputedTax: giftTaxPaid, // ⑫a
       burdenRatio, // *5
+      isTaxPayer: true, // §3의2① 상속인·수유자 납부의무자
     };
   }
 

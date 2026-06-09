@@ -20,6 +20,7 @@ import type {
 } from "./types/inheritance-gift.types";
 import type { TaxBracket as TaxBracketBase } from "./types";
 import type { PriorAggregationResult } from "./gift-prior-aggregation";
+import type { LegalShareResult } from "./inheritance-legal-share";
 
 // ============================================================
 // 영리법인 수유자 판정 — UI·엔진 단일 진실
@@ -38,6 +39,33 @@ export function isForProfitCorporate(
   h: Pick<Heir, "relation" | "isForProfit">,
 ): boolean {
   return h.relation === "corporate" && h.isForProfit !== false;
+}
+
+/**
+ * 상속세 납부의무자 판정 (§3의2① — 상속인 또는 수유자).
+ *
+ * 민법 §1000 순위 자동판정: 실제 상속인 = `computeLegalShares.shares` 멤버
+ * (선순위 존재 시 후순위는 shares에서 제외 — 장례비 배분과 동일 단일진실).
+ * 수유자(legatee)는 법정상속분이 없어 shares에 없으나 유증으로 납세의무 → OR 포함.
+ * 영리법인은 §3의2① 단서로 납부의무 제외.
+ *
+ * 후순위 "기타(other)"·인척(며느리 등 사전증여만 받은 비상속인)은 false
+ * → ⑪ 산출세액 배부·⑫ 증여세액공제 대상에서 제외(§3의2①·§28② 후단).
+ * 그들의 사전증여세액공제는 §28② 본문으로 ⑩에서 처리.
+ *
+ * @param h 상속인·수유자 정보
+ * @param legalShares computeLegalShares 결과 (순위 자동판정 단일진실)
+ */
+export function isInheritanceTaxPayer(
+  h: Heir,
+  legalShares: LegalShareResult,
+): boolean {
+  if (isForProfitCorporate(h)) return false; // 영리법인 §3의2① 단서 제외
+  // 수유자(유증)·비영리법인은 재산을 받아 §3의2① 납세의무(법정상속분 없어 shares 비멤버).
+  if (h.relation === "legatee" || h.relation === "corporate") return true;
+  // 그 외 혈족·인척: 민법 §1000 순위상 실제 상속인(shares 멤버)만.
+  //   후순위 other·인척(며느리 등 사전증여만)은 shares 비멤버 → false.
+  return legalShares.shares.some((s) => s.heirId === h.id);
 }
 
 // ============================================================
