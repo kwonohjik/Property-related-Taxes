@@ -81,8 +81,8 @@ test.describe("항목2: 협의분할 칩 클릭 → 토글 자동 ON", () => {
       page.locator('[data-testid^="estate-inline-expand-heir-allocation-"]').first(),
     ).toBeVisible();
 
-    // 토글 자동 ON 증명: ToggleCard children(HeirAllocationInput)은 ON일 때만 렌더
-    await expect(page.getByText("협의분할 (상속인별 분배)")).toBeVisible();
+    // 토글 자동 ON 증명: HeirAllocationInput(children)은 ON일 때만 렌더 (2026-06-09 통합 행 — 내부 헤더 제거, testid로 검증)
+    await expect(page.getByTestId("heir-allocation-input")).toBeVisible();
 
     // 칩 라벨이 "협의분할"(mark on)로 갱신
     await expect(heirChip).toContainText("협의분할");

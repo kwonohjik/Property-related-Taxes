@@ -47,8 +47,8 @@ export function HeirAllocationToggleSection({
   return (
     <ToggleCard
       tone="violet"
-      title="상속인·수유자별 협의분할 입력"
-      description="OFF: 법정상속분(민법 §1009)으로 자동 안분 / ON: 상속인·수유자에게 직접 분배 (민법 §1013·§1073). 영리법인은 협의분할 대상이 아닙니다."
+      title="협의분할 직접 입력"
+      description="법정상속분(민법 §1009) 대신 상속인·수유자에게 직접 분배(민법 §1013·§1073) · 영리법인 제외"
       disabled={isDisabled}
       disabledReason={disabledReason}
       checked={!!item.heirAllocations}
@@ -67,6 +67,8 @@ export function HeirAllocationToggleSection({
         expectedTotal={effectiveValuation}
         heirs={heirs}
         onChange={(allocs) => onChange({ heirAllocations: allocs })}
+        heading={null}
+        flush
       />
     </ToggleCard>
   );

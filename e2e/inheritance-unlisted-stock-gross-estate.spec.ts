@@ -54,7 +54,7 @@ test.describe("비상장 간편 주식 — grossEstate 배선 + 협의분할 토
 
     // 비상장주식 협의분할 토글 노출 확인
     // (UX3-AC1: 평가액 미입력이어도 상속인 존재 시 토글 활성 — disabledReason 없음)
-    await expect(page.getByText("상속인·수유자별 협의분할 입력")).toBeVisible();
+    await expect(page.getByText("협의분할 직접 입력")).toBeVisible();
 
     // 평가액 입력
     await fillSimpleValuation(page);
