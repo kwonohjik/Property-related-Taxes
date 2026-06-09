@@ -191,7 +191,7 @@ export function HeirAllocationSummaryTable({
                   {row.label}
                 </th>
                 <td
-                  className="px-3 py-1.5 tabular-nums"
+                  className="px-3 py-1.5 font-mono tabular-nums whitespace-nowrap"
                   data-testid={`heir-summary-cell-total-${row.rowId}`}
                 >
                   {row.rowId === "row-s5-burdenRatio"
@@ -203,7 +203,7 @@ export function HeirAllocationSummaryTable({
                 {data.heirOrder.map((id) => (
                   <td
                     key={id}
-                    className="px-3 py-1.5 tabular-nums"
+                    className="px-3 py-1.5 font-mono tabular-nums whitespace-nowrap"
                     data-testid={`heir-summary-cell-${id}-${row.rowId}`}
                   >
                     {row.rowId === "row-s5-burdenRatio"
