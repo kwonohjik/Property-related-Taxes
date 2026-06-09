@@ -3,7 +3,8 @@
 /**
  * HeirTableView.tsx — 상속인·수유자 구성 요약 테이블
  *
- * 라디오 선택 → 하단 편집 카드(HeirEditor) 로드 구조의 테이블 파트.
+ * 행 전체 클릭 → onSelect(heir.id) → 모달 오픈 구조.
+ * 라디오 컬럼 제거. 맨 우측 "✎ 편집" 아이콘 힌트만 표시.
  * deriveHeirKind: isForProfitCorporate 단일 진실 (inheritance-gift-common import).
  * 미성년 배지: differenceInYears(deathDate, birthDate) < 19 (정정 #1, isMinorFromRrn 없음).
  *
@@ -122,7 +123,7 @@ function Badge({ text, tone }: { text: string; tone: string }) {
 }
 
 // ============================================================
-// HeirTableRow — 개별 행
+// HeirTableRow — 개별 행 (클릭 전체 → 편집 모달 오픈)
 // ============================================================
 
 interface HeirTableRowProps {
@@ -190,31 +191,30 @@ function HeirTableRow({ heir, isSelected, onSelect, deathDate }: HeirTableRowPro
   if (kind === "non_profit_corp") badges.push(<Badge key="nonProfit" text="비영리법인" tone="sky" />);
   if (isMinor) badges.push(<Badge key="minor" text="미성년" tone="rose" />);
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTableRowElement>) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      onSelect();
+    }
+  };
+
   return (
     <tr
+      role="button"
+      tabIndex={0}
       onClick={onSelect}
+      onKeyDown={handleKeyDown}
+      aria-label={`${nameDisplay} 편집`}
       className={
-        "cursor-pointer border-b border-gray-100 dark:border-gray-800 " +
+        "cursor-pointer border-b border-gray-100 dark:border-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 " +
         (isSelected
           ? "bg-violet-50/70 dark:bg-violet-900/20"
           : "hover:bg-gray-50 dark:hover:bg-gray-800/30")
       }
       data-testid={`heir-table-row-${heir.id}`}
     >
-      {/* 라디오 선택 */}
-      <td className="text-center py-2 w-9">
-        <input
-          type="radio"
-          name="heir-selector"
-          checked={isSelected}
-          onChange={onSelect}
-          onClick={(e) => e.stopPropagation()}
-          aria-label={`${nameDisplay} 선택`}
-          className="cursor-pointer accent-violet-600"
-        />
-      </td>
       {/* 종류 */}
-      <td className="pl-2 py-1.5 whitespace-nowrap text-xs">
+      <td className="pl-3 py-1.5 whitespace-nowrap text-xs">
         {HEIR_KIND_LABELS[kind]}
       </td>
       {/* 관계 */}
@@ -232,6 +232,10 @@ function HeirTableRow({ heir, isSelected, onSelect, deathDate }: HeirTableRowPro
       {/* 특이사항 배지 */}
       <td className="pl-2 py-1.5">
         <div className="flex flex-wrap gap-1">{badges}</div>
+      </td>
+      {/* 편집 아이콘 힌트 */}
+      <td className="pr-3 py-1.5 text-right text-gray-300 dark:text-gray-600 text-xs select-none">
+        ✎
       </td>
     </tr>
   );
@@ -256,12 +260,12 @@ export function HeirTableView({ heirs, selectedHeirId, onSelect, deathDate }: He
       <table className="w-full text-xs border-collapse">
         <thead>
           <tr className="border-b border-gray-200 dark:border-gray-700">
-            <th className="w-9 py-2 text-center text-gray-500 font-medium">선택</th>
-            <th className="py-2 text-left pl-2 text-gray-500 font-medium">종류</th>
+            <th className="py-2 text-left pl-3 text-gray-500 font-medium">종류</th>
             <th className="py-2 text-left pl-2 text-gray-500 font-medium">관계</th>
             <th className="py-2 text-left pl-2 text-gray-500 font-medium">이름</th>
             <th className="py-2 text-left pl-2 text-gray-500 font-medium">생년월일·성별</th>
             <th className="py-2 text-left pl-2 text-gray-500 font-medium">특이사항</th>
+            <th className="w-8 py-2 text-right pr-3 text-gray-400 font-medium text-[10px]">편집</th>
           </tr>
         </thead>
         <tbody>

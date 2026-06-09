@@ -4,7 +4,8 @@
  * HeirComposition — 상속인 구성 입력 컴포넌트
  * 상속세 계산 마법사에서 Heir[] 입력에 사용.
  *
- * 구조: 요약 테이블(HeirTableView) + 단일 편집 카드(HeirEditor) + 2단계 추가 picker.
+ * 구조: 요약 테이블(HeirTableView) + 편집 모달(Dialog+HeirEditor) + 2단계 추가 picker.
+ * 행 클릭 → 모달 오픈. 추가 직후 자동 선택(E-1) → 모달 자동 오픈.
  * 설계: docs/02-design/features/inheritance-heir-table-view.ui.design.md
  *
  * 분리 이력 (800줄 정책):
@@ -21,6 +22,12 @@ import { HeirEditor, changeHeirRelation, RelationButton } from "@/components/cal
 import { HeirTableView } from "@/components/calc/HeirTableView";
 import { HEIR_PERSON_RELATIONS } from "@/components/calc/inheritance/heir-relation-meta";
 import { generateSubstituteGroupId } from "@/lib/calc/substitute-group-id";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 // ============================================================
 // 추가 picker 타입 (테이블 종류 컬럼 HeirKind와 구분)
@@ -232,19 +239,45 @@ export function HeirComposition({ heirs, onChange, deathDate }: HeirCompositionP
         />
       )}
 
-      {/* 단일 편집 카드 — 선택된 heir만 (aria-live="polite" 선택 변경 알림) */}
-      <div aria-live="polite" aria-label="선택된 상속인 편집">
-        {selectedHeir && (
-          <HeirEditor
-            heir={selectedHeir}
-            index={selectedIndex}
-            deathDate={deathDate}
-            allHeirs={heirs}
-            onUpdate={(updated) => handleUpdate(selectedIndex, updated)}
-            onRemove={() => handleRemove(selectedIndex)}
-          />
-        )}
-      </div>
+      {/* 편집 모달 — 행 클릭 또는 추가 직후 자동 오픈 */}
+      <Dialog
+        open={selectedHeirId !== null}
+        onOpenChange={(open) => {
+          if (!open) setSelectedHeirId(null);
+        }}
+      >
+        <DialogContent
+          className="sm:max-w-lg w-full p-0"
+          showCloseButton={false}
+        >
+          <DialogHeader className="px-4 pt-4 pb-0">
+            <DialogTitle>상속인 편집</DialogTitle>
+          </DialogHeader>
+          <div className="max-h-[80vh] overflow-y-auto px-4 pb-4 pt-3">
+            {selectedHeir && (
+              <HeirEditor
+                heir={selectedHeir}
+                index={selectedIndex}
+                deathDate={deathDate}
+                allHeirs={heirs}
+                onUpdate={(updated) => handleUpdate(selectedIndex, updated)}
+                onRemove={() => {
+                  handleRemove(selectedIndex);
+                }}
+              />
+            )}
+          </div>
+          <div className="border-t px-4 py-3 flex justify-end">
+            <button
+              type="button"
+              onClick={() => setSelectedHeirId(null)}
+              className="px-4 py-2 rounded-md text-sm border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+            >
+              닫기
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* 추가 패널 */}
       {showAddPanel ? (
