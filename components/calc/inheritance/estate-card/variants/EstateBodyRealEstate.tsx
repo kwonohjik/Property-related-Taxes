@@ -140,6 +140,10 @@ export function EstateBodyRealEstate({
     };
   });
   const [standardPricePerSqm, setStandardPricePerSqm] = useState("");
+  // 보충적 평가 토글 — 값>0이면 초기 ON(비파괴). mount 1회. OFF로 닫아도 store 값 보존.
+  const [supplementaryOpen, setSupplementaryOpen] = useState(
+    () => (item.standardPrice ?? 0) > 0,
+  );
 
   const showLeaseDeposit =
     cat === "real_estate_apartment" || cat === "real_estate_building";
@@ -236,10 +240,14 @@ export function EstateBodyRealEstate({
       {/* 평가액 입력 — 시가·감정가액·매매사례가액 아코디언 (D-6 안 가: 보충평가 위, 우선순위 순) */}
       <ValuationAccordionFields item={item} set={set} />
 
-      {/* 보충적 평가 (StandardPriceInput) — 상시 노출, 우선순위 최후 (D-2 라벨) */}
-      <FieldCard
-        label={SUPPLEMENTARY_LABEL[cat]}
-        hint="시가·감정가·매매사례가 모두 없을 때 최종 적용"
+      {/* 보충적 평가 (StandardPriceInput) — 토글 펼침, 우선순위 최후 (D-2 라벨). 값>0이면 초기 ON(비파괴) */}
+      <ToggleCard
+        tone="emerald"
+        size="sm"
+        title={SUPPLEMENTARY_LABEL[cat]}
+        description="시가·감정가·매매사례가 모두 없을 때 최종 적용"
+        checked={supplementaryOpen}
+        onCheckedChange={setSupplementaryOpen}
       >
         <div className="space-y-2">
           {!addrValue.jibun && (
@@ -262,7 +270,7 @@ export function EstateBodyRealEstate({
             enableLookup={true}
           />
         </div>
-      </FieldCard>
+      </ToggleCard>
 
       </EstateBodySection>
 
@@ -388,17 +396,26 @@ function CollateralLeaseFields({
   showCohabitToggle,
   hasCohabitantChild,
 }: RealEstateAdvancedFieldsProps) {
+  // 담보·임대 토글 — 관련 값/설정이 하나라도 있으면 초기 ON(비파괴). mount 1회.
+  // isCohabitantHouse·deductSecuredClaimAsDebt 포함: 설정 켜진 채 접혀 숨겨지는 사고 방지(R-1).
+  const [open, setOpen] = useState(
+    () =>
+      (item.leaseDeposit ?? 0) > 0 ||
+      (item.monthlyRent ?? 0) > 0 ||
+      (item.mortgageAmount ?? 0) > 0 ||
+      (item.creditGuaranteeAmount ?? 0) > 0 ||
+      item.deductSecuredClaimAsDebt === true ||
+      item.isCohabitantHouse === true,
+  );
   return (
-    <div className="rounded-lg border border-amber-200 bg-amber-50/40 dark:border-amber-700 dark:bg-amber-900/10 p-3 space-y-2">
-      <div className="flex items-center gap-2">
-        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-[10px] font-bold text-amber-800 select-none">
-          §
-        </span>
-        <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">
-          담보·임대 (§66 평가 하한 · §14 채무공제)
-        </p>
-      </div>
-
+    <ToggleCard
+      tone="amber"
+      size="sm"
+      title="담보·임대 (§66 평가 하한 · §14 채무공제)"
+      description="임대보증금·저당권·신용보증·§14 자동공제·§23의2 — 해당 시 펼쳐 입력"
+      checked={open}
+      onCheckedChange={setOpen}
+    >
       {/* 임대보증금 (apartment·building만 — land 미노출 [UV2-1]) */}
       {showLeaseDeposit && (
         <FieldCard
@@ -567,6 +584,6 @@ function CollateralLeaseFields({
           </ToggleCard>
         </div>
       )}
-    </div>
+    </ToggleCard>
   );
 }

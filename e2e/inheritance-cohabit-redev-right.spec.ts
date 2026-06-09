@@ -37,10 +37,13 @@ async function setupCohabitApartmentWithChild(page: Page) {
   await page.getByRole("button", { name: /상속재산 추가/ }).click();
   await page.getByRole("button", { name: /주택/ }).click();
 
+  // 보충적 평가(주택 기준시가) 토글 ON — 금액 입력 펼침 (2026-06-09 토글 전환)
+  await page.getByRole("switch", { name: /보충적 평가방법/ }).click();
   // 기준시가 입력
   await page.locator('[placeholder="금액 입력"]').first().fill("800000000");
 
-  // 담보·임대 섹션 상시 노출 (2026-06-08 아코디언 전환) — 동거주택 공제 대상 토글 ON
+  // 담보·임대 섹션 토글 ON → 동거주택 공제 대상 토글 ON (2026-06-09 토글 전환)
+  await page.getByRole("switch", { name: /담보·임대/ }).click();
   await page.getByText("동거주택 공제 대상 (§23의2)").click();
 
   // RadioCardGroup이 노출되는지 확인 (자산 유형 선택 섹션)

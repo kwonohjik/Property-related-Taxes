@@ -30,6 +30,8 @@ function fieldInput(page: Page, label: string) {
 test.describe("§66 임대료환산(㉱)+신용보증(㉲) 입력 UI", () => {
   test("토지 → 신용보증기관 보증액 칸 노출 + 월 임대료 비노출(주택 한정)", async ({ page }) => {
     await gotoEstate(page, /토지/);
+    // 담보·임대 섹션 토글 ON (2026-06-09 토글 전환 — 신용보증·저당 칸 펼침)
+    await page.getByRole("switch", { name: /담보·임대/ }).click();
     await expect(
       page.getByText("신용보증기관 보증액 (원)", { exact: true }),
     ).toBeVisible();
@@ -38,6 +40,8 @@ test.describe("§66 임대료환산(㉱)+신용보증(㉲) 입력 UI", () => {
 
   test("주택 → 월 임대료 칸 노출·입력 + 저당·신용보증 입력 (저당0 disabled)", async ({ page }) => {
     await gotoEstate(page, /주택/);
+    // 담보·임대 섹션 토글 ON (2026-06-09 토글 전환 — 월 임대료·저당·신용보증 칸 펼침)
+    await page.getByRole("switch", { name: /담보·임대/ }).click();
 
     // 월 임대료 칸 노출 + 입력
     await expect(page.getByText("월 임대료 (원)", { exact: true })).toBeVisible();

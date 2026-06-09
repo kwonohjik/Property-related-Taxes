@@ -26,10 +26,13 @@ test.describe("담보채무 §14 자동공제 토글 ON → 자동노출", () =>
     await gotoEstateLandCard(page);
 
     // 단가 100만 × 면적 200 = 평가액 2억 (담보 < 평가액, §66 하한 미발동)
+    // 보충적 평가(개별공시지가) 토글 ON — 면적·단가 입력 펼침 (2026-06-09 토글 전환)
+    await page.getByRole("switch", { name: /보충적 평가방법/ }).click();
     await page.getByPlaceholder("면적 입력").fill("200");
     await page.getByPlaceholder("공시지가 단가").fill("1000000");
 
-    // 저당권은 담보·임대 섹션 상시 노출 (2026-06-08 아코디언 전환)
+    // 담보·임대 섹션 토글 ON (2026-06-09 토글 전환 — 값 입력 위해 펼침)
+    await page.getByRole("switch", { name: /담보·임대/ }).click();
 
     // 저당권 담보채권액 5천만
     const mortgageInput = page
@@ -61,9 +64,12 @@ test.describe("담보채무 §14 자동공제 토글 ON → 자동노출", () =>
 
   test("토글 OFF(기본) → Step2에 담보채무 자동노출 카드 없음 (회귀)", async ({ page }) => {
     await gotoEstateLandCard(page);
+    // 보충적 평가(개별공시지가) 토글 ON — 면적·단가 입력 펼침 (2026-06-09 토글 전환)
+    await page.getByRole("switch", { name: /보충적 평가방법/ }).click();
     await page.getByPlaceholder("면적 입력").fill("200");
     await page.getByPlaceholder("공시지가 단가").fill("1000000");
-    // 저당권은 담보·임대 섹션 상시 노출 (2026-06-08 아코디언 전환)
+    // 담보·임대 섹션 토글 ON (2026-06-09 토글 전환)
+    await page.getByRole("switch", { name: /담보·임대/ }).click();
     const mortgageInput = page
       .getByText("저당권 등에 의해 담보된 채권액", { exact: true })
       .locator("xpath=ancestor::div[@data-slot='field-card']//input");

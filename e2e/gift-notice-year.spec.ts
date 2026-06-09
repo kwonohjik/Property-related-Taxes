@@ -28,6 +28,8 @@ async function gotoGiftAptCard(page: Page, year: string, month: string, day: str
   // 증여재산 추가 → 주택
   await page.getByRole("button", { name: /증여재산 추가/ }).click();
   await page.getByRole("button", { name: /주택/ }).click();
+  // 보충적 평가(주택 기준시가) 토글 ON — 공시연도 select 펼침 (2026-06-09 토글 전환)
+  await page.getByRole("switch", { name: /보충적 평가방법/ }).click();
 }
 
 /** 기준시가 연도 select (공시가격 조회 버튼과 같은 행) */

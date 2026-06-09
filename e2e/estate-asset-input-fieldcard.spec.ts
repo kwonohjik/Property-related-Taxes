@@ -42,15 +42,16 @@ test.describe("부동산 자산 카드 — FieldCard + 섹션 스타일", () => 
     // 섹션 헤더
     await expect(page.getByText("평가액 입력").first()).toBeVisible();
 
-    // FieldCard(data-slot="field-card") — 기본 노출(자산명·별칭·보충적 평가방법) 3개 이상
+    // FieldCard(data-slot="field-card") — 기본 노출(자산명·별칭) 2개 이상
+    // (보충적 평가방법은 2026-06-09 ToggleCard 전환으로 field-card 카운트에서 제외)
     await expect(
       page.locator('[data-slot="field-card"]').first(),
     ).toBeVisible();
     expect(
       await page.locator('[data-slot="field-card"]').count(),
-    ).toBeGreaterThanOrEqual(3);
+    ).toBeGreaterThanOrEqual(2);
 
-    // 기본 노출 라벨 확인 — 보충적 평가방법(라벨 변경 2026-06-08 D-2)
+    // 기본 노출 라벨 확인 — 보충적 평가방법 title(ToggleCard switch)은 OFF여도 노출 (라벨 2026-06-08 D-2)
     await expect(page.getByText("별칭", { exact: true })).toBeVisible();
     await expect(
       page.getByText("보충적 평가방법 (토지: 개별공시지가, 면적 포함 합산)", { exact: true }),
