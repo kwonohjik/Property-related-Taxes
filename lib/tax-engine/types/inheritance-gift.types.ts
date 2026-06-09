@@ -717,8 +717,32 @@ export interface Heir {
    * isGenerationSkipBeneficiary(직계비속 세대생략)이면서 대습상속(부모 사망·결격으로 갈음 상속)인 경우 true
    * → §27 할증 전액 배제(30%·40% 모두). 자동 판정 불가 → 사용자 명시.
    * v1: 직계비속 대습(§1001)·배우자 대습(§1003②) 미구분 — generic 1플래그가 양자 포괄.
+   * 신규(2026-06-09): substituteGroupId 보유 시 cohabit-helpers가 본 플래그와 동치 처리(파생).
    */
   isSubstituteInheritance?: boolean;
+
+  // ===== 대습상속 법정상속분 반영 (민법 §1001·§1003②·§1010, 2026-06-09) =====
+  /**
+   * 대습상속 그룹 식별자 — 같은 피대습자(상속개시 전 사망·결격된 자녀·형제)를 갈음하는
+   * 대습상속인들이 공유. 존재 시 이 Heir는 **대습상속인**(실제 상속인) —
+   * computeLegalShares가 피대습 슬롯을 §1010②로 재분배한다.
+   * 피대습자는 별도 Heir 엔트리로 만들지 않음(그룹키 방식). relation은 표시용,
+   * 그룹 판정은 본 필드 단독(enum substring 매칭 금지).
+   */
+  substituteGroupId?: string;
+  /**
+   * 피대습자의 원래 상속순위 — §1001은 1순위(직계비속)·3순위(형제자매)만 대습 가능.
+   * "child"=사망 자녀 / "sibling"=사망 형제자매. (2순위 직계존속·배우자 본인 대습 없음)
+   * computeLegalShares가 어느 그룹 슬롯을 차지하는지 결정.
+   */
+  substituteForRelation?: "child" | "sibling";
+  /**
+   * 대습 그룹 내 역할 — §1010②/§1009 재분배 비율(통일 가중치 spouse=3·descendant=2).
+   * "spouse"=피대습자의 배우자(며느리·사위·형수·매부, §1003②) /
+   * "descendant"=피대습자의 직계비속(손자녀·조카).
+   */
+  substituteRole?: "spouse" | "descendant";
+
   /**
    * §27 미성년 여부 수동 override (3-state).
    * - undefined: birthDate 기반 자동 판정 (differenceInYears(deathDate, birthDate) < 19, 민법 §4)

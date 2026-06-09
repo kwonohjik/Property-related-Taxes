@@ -38,6 +38,11 @@ export function computeLegalShares(heirs: Heir[]): LegalShareResult {
       h.isHeir !== false,
   );
 
+  // 대습상속(민법 §1001) 입력이 있으면 확장 경로. 없으면 기존 단순 경로(회귀 0).
+  if (heirs.some((h) => h.substituteGroupId != null)) {
+    return computeLegalSharesWithSubstitute(heirs, eligible);
+  }
+
   const spouse = eligible.find((h) => h.relation === "spouse");
   const children = eligible.filter((h) => h.relation === "child");
   const ascendants = eligible.filter((h) => h.relation === "lineal_ascendant");
@@ -87,6 +92,144 @@ export function computeLegalShares(heirs: Heir[]): LegalShareResult {
 
   // 배부 가능 상속인 없음 (legatee·corporate만)
   return { shares: [], denominator: 1 };
+}
+
+// ============================================================
+// 대습상속 확장 (민법 §1001·§1003②·§1010) — 2026-06-09
+// ============================================================
+
+function gcd(a: number, b: number): number {
+  let x = Math.abs(a);
+  let y = Math.abs(b);
+  while (y) {
+    [x, y] = [y, x % y];
+  }
+  return x || 1;
+}
+
+/**
+ * 대습상속인을 실제 상속인으로 편입한 법정상속분 산정.
+ *
+ * 알고리즘 (설계 §B):
+ *  1. substituteGroupId 보유 heir는 normal 그룹에서 제외(4촌 others falling 차단).
+ *  2. 피대습 슬롯 = 대습 그룹 1개 = 1슬롯(생존자와 동일 numerator).
+ *  3. 활성 순위(§1000/§1003①) 결정 → base 분모·슬롯 numerator(배우자공동 1·2순위=2 / 균분=1).
+ *  4. §1010② 그룹 내부 재분배: 통일 가중치 spouse=3·descendant=2, S_g=Σweight.
+ *     commonExtra=Π(S_g). 멤버 numerator = perSlotNum × weight × (commonExtra / S_g).
+ *     비대습(생존·배우자·base) numerator ×= commonExtra. 최종 GCD 약분.
+ */
+function computeLegalSharesWithSubstitute(
+  heirs: Heir[],
+  eligible: Heir[],
+): LegalShareResult {
+  const eligibleNormal = eligible.filter((h) => h.substituteGroupId == null);
+
+  const spouse = eligibleNormal.find((h) => h.relation === "spouse");
+  const survChildren = eligibleNormal.filter((h) => h.relation === "child");
+  const survAscend = eligibleNormal.filter(
+    (h) => h.relation === "lineal_ascendant",
+  );
+  const survSiblings = eligibleNormal.filter((h) => h.relation === "sibling");
+  const survOthers = eligibleNormal.filter((h) => h.relation === "other");
+
+  // 대습상속인 그룹 (substituteForRelation별, isHeir!==false)
+  const subHeirs = heirs.filter(
+    (h) => h.substituteGroupId != null && h.isHeir !== false,
+  );
+  const groupsByRel = (rel: "child" | "sibling"): Map<string, Heir[]> => {
+    const m = new Map<string, Heir[]>();
+    for (const h of subHeirs) {
+      if (h.substituteForRelation !== rel) continue;
+      const arr = m.get(h.substituteGroupId!) ?? [];
+      arr.push(h);
+      m.set(h.substituteGroupId!, arr);
+    }
+    return m;
+  };
+  const childGroups = groupsByRel("child");
+  const siblingGroups = groupsByRel("sibling");
+
+  const childSlots = survChildren.length + childGroups.size;
+  const siblingSlots = survSiblings.length + siblingGroups.size;
+
+  // 활성 순위 결정 (기존 :50-63 순서 = §1000/§1003①)
+  let activeSurvivors: Heir[] = [];
+  let activeGroups = new Map<string, Heir[]>();
+  let spouseSharesWithBlood = false;
+  if (childSlots > 0) {
+    activeSurvivors = survChildren;
+    activeGroups = childGroups;
+    spouseSharesWithBlood = true;
+  } else if (survAscend.length > 0) {
+    activeSurvivors = survAscend;
+    spouseSharesWithBlood = true; // 직계존속은 대습 없음(2순위)
+  } else if (spouse) {
+    // 배우자 단독 (1·2순위 없음 — 3·4순위와 비공동 §1003①)
+    return { shares: [{ heirId: spouse.id, numerator: 1 }], denominator: 1 };
+  } else if (siblingSlots > 0) {
+    activeSurvivors = survSiblings;
+    activeGroups = siblingGroups;
+  } else if (survOthers.length > 0) {
+    activeSurvivors = survOthers;
+  }
+
+  const slotCount = activeSurvivors.length + activeGroups.size;
+  if (slotCount === 0) {
+    return spouse
+      ? { shares: [{ heirId: spouse.id, numerator: 1 }], denominator: 1 }
+      : { shares: [], denominator: 1 };
+  }
+
+  // base 분모·슬롯 numerator
+  let baseDenom: number;
+  let spouseNum: number;
+  let perSlotNum: number;
+  if (spouse && spouseSharesWithBlood) {
+    baseDenom = 2 * slotCount + 3; // 배우자 3 : 슬롯 2씩
+    spouseNum = 3;
+    perSlotNum = 2;
+  } else {
+    baseDenom = slotCount; // 혈족 균분 §1009①
+    spouseNum = 0;
+    perSlotNum = 1;
+  }
+
+  // §1010② 그룹 내부 가중치 S_g + commonExtra
+  const groupS = new Map<string, number>();
+  for (const [gid, members] of activeGroups) {
+    let s = 0;
+    for (const m of members) s += m.substituteRole === "spouse" ? 3 : 2;
+    groupS.set(gid, s);
+  }
+  let commonExtra = 1;
+  for (const s of groupS.values()) commonExtra *= s;
+
+  const denominator = baseDenom * commonExtra;
+  const shares: LegalShare[] = [];
+  if (spouse && spouseNum > 0) {
+    shares.push({ heirId: spouse.id, numerator: spouseNum * commonExtra });
+  }
+  for (const surv of activeSurvivors) {
+    shares.push({ heirId: surv.id, numerator: perSlotNum * commonExtra });
+  }
+  for (const [gid, members] of activeGroups) {
+    const s = groupS.get(gid)!;
+    for (const m of members) {
+      const w = m.substituteRole === "spouse" ? 3 : 2;
+      shares.push({
+        heirId: m.id,
+        numerator: perSlotNum * w * (commonExtra / s),
+      });
+    }
+  }
+
+  // GCD 약분
+  const g = shares.reduce((acc, sh) => gcd(acc, sh.numerator), denominator);
+  if (g > 1) {
+    for (const sh of shares) sh.numerator /= g;
+    return { shares, denominator: denominator / g };
+  }
+  return { shares, denominator };
 }
 
 /**
