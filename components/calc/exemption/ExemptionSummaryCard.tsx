@@ -64,6 +64,17 @@ interface ExemptionSummaryCardProps {
   itemResults?: ExemptionItemResult[];
 }
 
+function GroupHeading({ title, lawRef }: { title: string; lawRef: string }) {
+  return (
+    <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 mb-1">
+      {title}
+      <span className="ml-1 font-normal text-emerald-600/70 dark:text-emerald-500">
+        {lawRef}
+      </span>
+    </p>
+  );
+}
+
 export function ExemptionSummaryCard({
   result,
   itemResults = [],
@@ -72,15 +83,22 @@ export function ExemptionSummaryCard({
     return null;
   }
 
+  // 과세가액 불산입(§16·§17)이 있으면 "과세제외 내역"으로 2그룹 분리, 없으면 기존 "비과세 적용 내역" 단일 (작업1)
+  const hasNotIncluded = (result.notIncludedTotal ?? 0) > 0;
+  const nonTaxableItems = itemResults.filter((i) => i.treatment !== "not_included");
+  const notIncludedItems = itemResults.filter((i) => i.treatment === "not_included");
+
   return (
     <div className="rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/20 p-4">
       {/* 헤더 */}
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">
-          비과세 적용 내역
+          {hasNotIncluded ? "과세제외 내역" : "비과세 적용 내역"}
         </h3>
         <div className="text-right">
-          <p className="text-xs text-emerald-600 dark:text-emerald-400">총 비과세 차감</p>
+          <p className="text-xs text-emerald-600 dark:text-emerald-400">
+            {hasNotIncluded ? "총 차감" : "총 비과세 차감"}
+          </p>
           <p className="text-lg font-bold text-emerald-700 dark:text-emerald-300">
             -{formatKRW(result.totalExemptAmount)}
           </p>
@@ -88,13 +106,37 @@ export function ExemptionSummaryCard({
       </div>
 
       {/* 항목별 내역 */}
-      {itemResults.length > 0 && (
-        <div className="divide-y divide-gray-100 dark:divide-gray-800">
-          {itemResults.map((item) => (
-            <ItemRow key={item.ruleId} item={item} />
-          ))}
-        </div>
-      )}
+      {itemResults.length > 0 &&
+        (hasNotIncluded ? (
+          <div className="space-y-3">
+            {nonTaxableItems.length > 0 && (
+              <div data-testid="exemption-result-group-non_taxable">
+                <GroupHeading title="비과세" lawRef="상증법 §12" />
+                <div className="divide-y divide-gray-100 dark:divide-gray-800">
+                  {nonTaxableItems.map((item) => (
+                    <ItemRow key={item.ruleId} item={item} />
+                  ))}
+                </div>
+              </div>
+            )}
+            {notIncludedItems.length > 0 && (
+              <div data-testid="exemption-result-group-not_included">
+                <GroupHeading title="과세가액 불산입" lawRef="상증법 §16·§17" />
+                <div className="divide-y divide-gray-100 dark:divide-gray-800">
+                  {notIncludedItems.map((item) => (
+                    <ItemRow key={item.ruleId} item={item} />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-100 dark:divide-gray-800">
+            {itemResults.map((item) => (
+              <ItemRow key={item.ruleId} item={item} />
+            ))}
+          </div>
+        ))}
 
       {/* 적용 법령 */}
       {result.appliedLaws.length > 0 && (

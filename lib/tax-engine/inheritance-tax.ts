@@ -734,6 +734,11 @@ export function calcInheritanceTax(
       corporateGiftTaxBase,
       grossEstateWithGifts: taxableEstateValue,
       isFiledOnTime: input.creditInput.isFiledOnTime,
+      // 작업4: 비과세 협의분할 — 인정 비과세액(itemResults[].exemptAmount)을 ruleId 키로 주입
+      exemptionItems: input.exemptions ?? [],
+      recognizedExemptByRuleId: new Map(
+        (exemptionDetail?.itemResults ?? []).map((r) => [r.ruleId, r.exemptAmount]),
+      ),
     });
     allBreakdown.push(...heirAllocationResult.breakdown);
   }

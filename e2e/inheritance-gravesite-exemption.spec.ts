@@ -33,7 +33,7 @@ async function gotoExemptionStep(page: Page) {
 
   // 비과세·장례비 단계로 직접 이동
   await page.getByRole("button", { name: /비과세.*단계로 이동/ }).click();
-  await expect(page.getByText("비과세 해당 여부")).toBeVisible();
+  await expect(page.getByText(/비과세.*해당 여부/)).toBeVisible();
 
   // 비과세 마스터 토글 "여"
   await page.getByRole("button", { name: "여", exact: true }).first().click();
@@ -48,9 +48,18 @@ test.describe("금양임야·묘토 비과세 면적/금액 한도 (상증령 §
 
     await expect(page.getByText("금양임야 (禁養林野)")).toBeVisible();
     await expect(page.getByText("묘토 (墓土)")).toBeVisible();
-    // 정정값 9,900㎡(금양임야)·1,980㎡(묘토) — 구 1,983/3,966 회귀 방지
-    await expect(page.getByText(/9,900㎡/).first()).toBeVisible();
-    await expect(page.getByText(/1,980㎡/).first()).toBeVisible();
+    // 정정값 9,900㎡(금양임야)·1,980㎡(묘토) — 면적 한도는 항목 '여' 선택 후 면적 입력 라벨에 1회 표기(단일 출처)
+    const forestRow = page
+      .locator("div.rounded-lg.border")
+      .filter({ hasText: "금양임야 (禁養林野)" });
+    await forestRow.getByRole("button", { name: "여", exact: true }).click();
+    await expect(forestRow.getByText(/9,900㎡/).first()).toBeVisible();
+    const graveRow = page
+      .locator("div.rounded-lg.border")
+      .filter({ hasText: "묘토 (墓土)" });
+    await graveRow.getByRole("button", { name: "여", exact: true }).click();
+    await expect(graveRow.getByText(/1,980㎡/).first()).toBeVisible();
+    // 구값 1,983/3,966 회귀 방지
     await expect(page.getByText(/1,983㎡/)).toHaveCount(0);
     await expect(page.getByText(/3,966㎡/)).toHaveCount(0);
   });

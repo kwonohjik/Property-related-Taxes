@@ -389,6 +389,8 @@ export const exemptionCheckedItemSchema = z.object({
   excessStockAmount: z.number().nonnegative().optional(),
   marriageExemptionAlreadyUsed: z.boolean().optional(),
   claimedAreaM2: z.number().nonnegative().optional(),
+  // 작업4: 협의분할 — 상속인별 귀속 (heirAllocationSchema 재사용). 누락 시 침묵 strip
+  heirAllocations: z.array(heirAllocationSchema).optional(),
 });
 
 /** @deprecated ExemptionInput → ExemptionCheckedItem[] 로 대체됨 */

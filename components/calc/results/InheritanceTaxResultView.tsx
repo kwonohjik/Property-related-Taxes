@@ -18,6 +18,7 @@ import type {
 import type { FarmingDeductionDetail } from "@/lib/tax-engine/types/inheritance-farming.types";
 import type { FamilyBusinessInheritanceInput } from "@/lib/tax-engine/types/inheritance-family-business.types";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
+import { SummaryRow } from "./SummaryRow";
 import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
 import { LoginPromptBanner } from "@/components/calc/shared/LoginPromptBanner";
 import { HeirAllocationSummaryTable } from "@/components/calc/results/HeirAllocationSummaryTable";
@@ -61,33 +62,6 @@ export { FarmingDeductionDetailRow } from "./deduction-breakdown/FarmingDeductio
 // ============================================================
 // 과세 요약 Row
 // ============================================================
-
-function SummaryRow({
-  label,
-  value,
-  sub = false,
-  highlight = false,
-  deduction = false,
-}: {
-  label: string;
-  value: string;
-  sub?: boolean;
-  highlight?: boolean;
-  deduction?: boolean;
-}) {
-  return (
-    <div
-      className={`flex items-center justify-between px-4 py-2.5 ${
-        highlight ? "bg-muted/50 font-semibold" : ""
-      } ${sub ? "pl-7" : ""}`}
-    >
-      <span className={sub ? "text-xs text-muted-foreground" : "text-sm"}>{label}</span>
-      <span className={`font-mono text-sm ${deduction ? "text-blue-600 dark:text-blue-400" : ""}`}>
-        {value}
-      </span>
-    </div>
-  );
-}
 
 // ============================================================
 // 메인 컴포넌트
@@ -358,9 +332,30 @@ export function InheritanceTaxResultView({
         </div>
         <div className="divide-y divide-border">
           <SummaryRow label="상속재산 평가액" value={formatKRW(result.grossEstateValue)} />
-          {result.exemptAmount > 0 && (
-            <SummaryRow label="비과세 차감" value={`- ${formatKRW(result.exemptAmount)}`} sub deduction />
-          )}
+          {result.exemptAmount > 0 &&
+            (() => {
+              // 과세가액 불산입(§16·§17)이 있으면 비과세/불산입 2행 분리 (작업1)
+              const ni = result.exemptionDetail?.notIncludedTotal ?? 0;
+              const nt = result.exemptionDetail?.nonTaxableTotal ?? 0;
+              if (ni > 0) {
+                return (
+                  <>
+                    {nt > 0 && (
+                      <SummaryRow label="비과세 차감" value={`- ${formatKRW(nt)}`} sub deduction />
+                    )}
+                    <SummaryRow
+                      label="과세가액 불산입 차감"
+                      value={`- ${formatKRW(ni)}`}
+                      sub
+                      deduction
+                    />
+                  </>
+                );
+              }
+              return (
+                <SummaryRow label="비과세 차감" value={`- ${formatKRW(result.exemptAmount)}`} sub deduction />
+              );
+            })()}
           {result.deductedBeforeAggregation > 0 && (
             <SummaryRow
               label="장례비·채무 차감"

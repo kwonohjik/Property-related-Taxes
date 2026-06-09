@@ -36,6 +36,8 @@ function evaluateSingleExemption(
     ruleId: rule.id,
     ruleName: rule.name,
     claimedAmount: item.claimedAmount,
+    // 과세상 취급 echo — §16·§17 과세가액 불산입 vs §12·§46 비과세 (결과 화면 그룹 구분, 작업1)
+    treatment: rule.taxTreatment ?? "non_taxable",
   };
 
   const warnings: string[] = [];
@@ -260,6 +262,14 @@ export function evaluateExemptions(
 
   const totalExemptAmount = itemResults.reduce((s, r) => s + r.exemptAmount, 0);
 
+  // 결과 화면 그룹 구분용 분리 합계 (작업1). 클램프 전 인정액 기준 — 클램프는 비과세>과세가액 극단 케이스만.
+  const nonTaxableTotal = itemResults
+    .filter((r) => (r.treatment ?? "non_taxable") === "non_taxable")
+    .reduce((s, r) => s + r.exemptAmount, 0);
+  const notIncludedTotal = itemResults
+    .filter((r) => r.treatment === "not_included")
+    .reduce((s, r) => s + r.exemptAmount, 0);
+
   // 비과세 총액이 과세가액을 초과하지 않도록 방어
   const clampedExemptAmount = Math.min(totalExemptAmount, grossEstateValue);
 
@@ -274,6 +284,8 @@ export function evaluateExemptions(
 
   return {
     totalExemptAmount: clampedExemptAmount,
+    nonTaxableTotal,
+    notIncludedTotal,
     breakdown,
     appliedLaws: Array.from(allLaws),
     itemResults,

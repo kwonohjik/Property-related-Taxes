@@ -44,6 +44,7 @@ import type {
   EstateItem,
   PresumedInheritanceItem,
   DebtItem,
+  ExemptionCheckedItem,
 } from "./types/inheritance-gift.types";
 
 // ────────────────────────────────────────────────────
@@ -148,6 +149,10 @@ export interface HeirAllocationParams {
   grossEstateWithGifts: number;
   /** §69 신고세액공제 적용 여부 (기한 내 신고) */
   isFiledOnTime: boolean;
+  /** 비과세 항목 (협의분할 분배 소스). 작업4 — 미입력 시 빈 배열로 무영향 */
+  exemptionItems?: ExemptionCheckedItem[];
+  /** ruleId → 인정 비과세액(itemResults[].exemptAmount). per-heir 차감 target. 작업4 */
+  recognizedExemptByRuleId?: Map<string, number>;
 }
 
 // ────────────────────────────────────────────────────
@@ -202,6 +207,37 @@ function scaleMapToTotal(
     running += amt;
     out.set(heirId, amt);
   });
+  return out;
+}
+
+/**
+ * 비과세·과세가액 불산입 재산의 상속인별 차감액(exemptByHeir) 계산 (작업4, anchor A1 확정).
+ *
+ * 2단계 안분 — 분배 단위(claimedAmount) ≠ 차감 단위(인정 exemptAmount):
+ *   1. claimedAmount 비율로 raw 분배(협의분할 입력) 또는 법정상속분(미입력)
+ *   2. scaleMapToTotal(raw, 인정 exemptAmount)로 인정액 안분(잔액 흡수, Σ==인정액)
+ * 한도초과(금양임야·족보 등)에서 claimedAmount ≠ exemptAmount이므로 단순 합산 불가.
+ */
+function computeExemptByHeir(
+  exemptionItems: ExemptionCheckedItem[],
+  recognizedByRuleId: Map<string, number>,
+  legalShares: LegalShareResult,
+): Map<string, number> {
+  const out = new Map<string, number>();
+  for (const ex of exemptionItems) {
+    const recognized = recognizedByRuleId.get(ex.ruleId) ?? 0;
+    if (recognized <= 0) continue; // 인정액 0(사회통념 미입력 등) → 차감 없음
+    // 1단계: claimedAmount 분배 비율 raw
+    const raw =
+      ex.heirAllocations && ex.heirAllocations.length > 0
+        ? new Map(ex.heirAllocations.map((a) => [a.heirId, a.amount]))
+        : distributeByLegalShares(ex.claimedAmount, legalShares);
+    // 2단계: 인정액으로 환산(잔액 흡수)
+    const scaled = scaleMapToTotal(raw, recognized);
+    for (const [heirId, v] of scaled) {
+      out.set(heirId, (out.get(heirId) ?? 0) + v);
+    }
+  }
   return out;
 }
 
@@ -347,10 +383,19 @@ export function calcHeirAllocation(
     corporateGiftTaxBase,
     grossEstateWithGifts,
     isFiledOnTime,
+    exemptionItems = [],
+    recognizedExemptByRuleId = new Map(),
   } = params;
 
   // 법정상속분 (협의분할 미입력 자산 자동 배분 기준 — 민법 §1009·§1003·§1000)
   const legalShares = computeLegalShares(heirs);
+
+  // 비과세·과세가액 불산입 상속인별 차감액 (작업4 — 후보② 별도 항 차감)
+  const exemptByHeir = computeExemptByHeir(
+    exemptionItems,
+    recognizedExemptByRuleId,
+    legalShares,
+  );
 
   // echo — 미입력 자산이 법정상속분으로 자동 배분되었는지 (결과 카드 안내용)
   const isUnallocated = (x: { heirAllocations?: HeirAllocation[] }) =>
@@ -519,12 +564,16 @@ export function calcHeirAllocation(
       continue;
     }
 
-    // 13-2: 과세가액상당액 = 본래 + 추정 + 사전증여 − 채무 분담
+    // 13-2: 과세가액상당액 = 본래 + 추정 + 사전증여 − 채무 분담 − 비과세 차감(작업4)
     const directEstateAmount = estateByHeir.get(heir.id) ?? 0;
     const presumedAmount = presumedByHeir.get(heir.id) ?? 0;
     const debtShare = debtByHeir.get(heir.id) ?? 0;
-    const taxableValueShare =
-      directEstateAmount + presumedAmount + giftAmount - debtShare;
+    const exemptShare = exemptByHeir.get(heir.id) ?? 0;
+    // 후보②(anchor A1): 별도 항 차감 + 음수 가드. exemptShare는 인정 비과세액의 상속인별 안분.
+    const taxableValueShare = Math.max(
+      0,
+      directEstateAmount + presumedAmount + giftAmount - debtShare - exemptShare,
+    );
 
     // 13-3: 직접배부 = giftTaxBase (이미 공제 후)
     const directTaxBaseShare = giftTaxBase;
@@ -601,6 +650,7 @@ export function calcHeirAllocation(
       priorGiftAmount: giftAmount,
       presumedAmount,
       debtShare,
+      excludedFromTaxation: exemptShare, // ㉠ 과세제외 per-heir (작업4 — 죽은 필드 활성화)
       taxableValueShare,
       directTaxBaseShare,
       indirectTaxBaseShare,
