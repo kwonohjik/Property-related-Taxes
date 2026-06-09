@@ -10,8 +10,10 @@
  * 설계: docs/02-design/features/inheritance-installment-payment.design.md §5.2
  */
 
+import { useState } from "react";
 import { addMonths, endOfMonth, format } from "date-fns";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
+import { ExpandToggleButton } from "@/components/calc/results/shared/ExpandToggleButton";
 import {
   calcInstallmentSchedule,
   isInstallmentEligible,
@@ -50,6 +52,8 @@ export function InstallmentScheduleCard({
   futureRate,
 }: InstallmentScheduleCardProps) {
   const finalTax = result.finalTax;
+  // 기본 접힘 — 다른 섹션(상장주식 평가조서 등)과 통일. 인쇄 시 CSS 자동 펼침.
+  const [open, setOpen] = useState(false);
 
   // 부적격(2천만원 이하)이면 표시 안 함
   if (!isInstallmentEligible(finalTax)) return null;
@@ -111,23 +115,31 @@ export function InstallmentScheduleCard({
     seg === "family_business" ? "가업" : "일반";
 
   return (
-    <div className={cardWrap} data-testid="installment-schedule-card">
-      <div className="bg-amber-50 dark:bg-amber-900/20 px-4 py-3">
-        <h4 className="text-sm font-medium text-amber-800 dark:text-amber-200">
+    <section
+      className="border border-border rounded-xl overflow-hidden"
+      data-testid="installment-schedule-card"
+    >
+      {/* 헤더 — 다른 섹션(상장주식 평가조서 등)과 통일된 접힘/펼침 */}
+      <div className="px-4 py-3 bg-muted/30 flex items-center justify-between gap-2">
+        <h4 className="text-sm font-medium">
           연부연납 일정표 (상증법 §71·§72)
         </h4>
-        <p className="mt-0.5 text-xs text-amber-600 dark:text-amber-400">
-          신고기한 즉납 1회 + 매년 분할납부 — 각 회분 납부일 현재 고시 가산율 적용
-          {schedule.autoShortened && (
-            <span className="ml-1 rounded bg-amber-200 px-1.5 py-0.5 font-medium text-amber-800 dark:bg-amber-800/40 dark:text-amber-200">
-              §71② 단서로 {schedule.appliedYears}년 적용(희망 {reqYears}년)
-            </span>
-          )}
-        </p>
+        <ExpandToggleButton open={open} onClick={() => setOpen((v) => !v)} tone="slate" />
       </div>
 
+      <div className={open ? "block" : "hidden print:block"}>
+      {/* 부제 */}
+      <p className="px-4 pt-3 text-xs text-muted-foreground">
+        신고기한 즉납 1회 + 매년 분할납부 — 각 회분 납부일 현재 고시 가산율 적용
+        {schedule.autoShortened && (
+          <span className="ml-1 rounded bg-amber-200 px-1.5 py-0.5 font-medium text-amber-800 dark:bg-amber-800/40 dark:text-amber-200">
+            §71② 단서로 {schedule.appliedYears}년 적용(희망 {reqYears}년)
+          </span>
+        )}
+      </p>
+
       {/* 요약 */}
-      <div className="space-y-1.5 border-b border-amber-100 p-3 text-xs text-gray-700 dark:border-amber-800 dark:text-gray-200">
+      <div className="space-y-1.5 border-b border-border p-3 text-xs text-gray-700 dark:text-gray-200">
         <div className="flex justify-between">
           <span>연부연납 대상 (결정세액)</span>
           <span className={amountCell}>{formatKRW(schedule.totalPrincipal)}</span>
@@ -214,7 +226,7 @@ export function InstallmentScheduleCard({
       </div>
 
       {/* 주석 */}
-      <div className="space-y-1 border-t border-amber-100 p-3 text-[11px] text-amber-700 dark:border-amber-800 dark:text-amber-300">
+      <div className="space-y-1 border-t border-border p-3 text-[11px] text-muted-foreground">
         {decedentType === "non_resident" && (
           <p>※ 비거주자 — 신고기한을 상속개시월 말일부터 9개월로 산정했습니다(§67④).</p>
         )}
@@ -227,6 +239,7 @@ export function InstallmentScheduleCard({
           관할 세무서·세무사 확인을 권장합니다.
         </p>
       </div>
-    </div>
+      </div>
+    </section>
   );
 }
