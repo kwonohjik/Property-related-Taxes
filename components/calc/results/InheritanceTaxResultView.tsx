@@ -592,31 +592,33 @@ export function InheritanceTaxResultView({
       {/* 면책고지 */}
       <DisclaimerBanner />
 
-      {/* 버튼 */}
-      <div className="flex flex-wrap gap-3 print:hidden">
+      {/* 버튼 — 입력 단계 네비게이션과 통일 (justify-between · 컴팩트 px/py) */}
+      <div className="flex items-center justify-between gap-2 print:hidden">
         <button
           type="button"
           onClick={onBack}
-          className="flex items-center justify-center gap-1 rounded-md border border-border py-2.5 px-4 text-sm font-medium hover:bg-muted transition-colors"
+          className="inline-flex items-center gap-1 rounded-md border border-border px-5 py-2 text-sm font-medium hover:bg-muted transition-colors"
           aria-label="바로 앞 단계로 돌아가기"
         >
           <ChevronLeft className="w-4 h-4" />
           뒤로 가기
         </button>
-        <button
-          type="button"
-          onClick={onGoToFirst ?? onBack}
-          className="flex-1 min-w-[120px] rounded-md border border-border py-2.5 text-sm font-medium hover:bg-muted transition-colors"
-        >
-          다시 계산
-        </button>
-        <button
-          type="button"
-          onClick={onReset}
-          className="flex-1 min-w-[120px] rounded-md bg-primary text-primary-foreground py-2.5 text-sm font-medium hover:bg-primary/90 transition-colors"
-        >
-          처음으로
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onGoToFirst ?? onBack}
+            className="inline-flex items-center justify-center rounded-md border border-border px-5 py-2 text-sm font-medium hover:bg-muted transition-colors"
+          >
+            다시 계산
+          </button>
+          <button
+            type="button"
+            onClick={onReset}
+            className="inline-flex items-center justify-center rounded-md bg-primary text-primary-foreground px-6 py-2 text-sm font-medium hover:bg-primary/90 transition-colors"
+          >
+            처음으로
+          </button>
+        </div>
       </div>
     </div>
   );
