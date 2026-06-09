@@ -59,10 +59,13 @@ async function gotoStep0AndAddChildren(page: Page, childCount: number) {
   // 상속개시일
   await fillDateAndVerify(page, { year: "2024", month: "6", day: "10" });
 
-  // 자녀 N명 추가
+  // 자녀 N명 추가 (2단계 picker: 1단계 종류→2단계 관계)
   for (let i = 0; i < childCount; i++) {
     await page.getByRole("button", { name: /상속인 추가/ }).click();
-    await page.getByText("자녀", { exact: true }).click();
+    // 1단계: "상속인" 선택 (KindButton — span 분리로 filter 사용)
+    await page.locator("button").filter({ hasText: "상속인" }).first().click();
+    // 2단계: "자녀" 선택 (RelationButton)
+    await page.locator("button").filter({ hasText: "자녀" }).first().click();
     await page.getByPlaceholder("앞 6자리-뒤 7자리").last().fill("700101-1000000");
   }
 

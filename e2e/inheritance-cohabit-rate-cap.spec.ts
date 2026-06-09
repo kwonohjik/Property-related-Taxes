@@ -13,6 +13,7 @@ import {
   fillDateAndVerify,
   nextSteps,
   calcAndWaitResult,
+  addHeir,
 } from "./_helpers/tax-flow";
 
 /** Step0: 상속개시일(year) + 동거 자녀 1명 → Step1: 아파트 8억 + 동거주택 체크 → 계산 → 공제 상세 펼침 */
@@ -20,8 +21,7 @@ async function calcWithCohabitHouse(page: Page, year: string) {
   await page.goto("/calc/inheritance-tax");
   await fillDateAndVerify(page, { year, month: "6", day: "1" });
 
-  await page.getByRole("button", { name: /상속인 추가/ }).click();
-  await page.getByText("자녀", { exact: true }).click();
+  await addHeir(page, "heir", "child");
   await page.getByPlaceholder("앞 6자리-뒤 7자리").last().fill("700101-1000000");
   // 자녀 동거(isCohabitant) — §23의2 게이팅 충족
   await page.getByText("동거주택 상속공제 해당").click();

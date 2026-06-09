@@ -15,14 +15,14 @@ import {
   addLandAsset,
   nextSteps,
   calcAndWaitResult,
+  addHeir,
 } from "./_helpers/tax-flow";
 
 /** 상속 Step1: 2024-06-10 + 자녀1 → 토지 30억(300㎡ × 1천만/㎡) */
 async function gotoStep1WithLand(page: Page) {
   await page.goto("/calc/inheritance-tax");
   await fillDateAndVerify(page, { year: "2024", month: "6", day: "10" });
-  await page.getByRole("button", { name: /상속인 추가/ }).click();
-  await page.getByText("자녀", { exact: true }).click();
+  await addHeir(page, "heir", "child");
   await page.getByPlaceholder("앞 6자리-뒤 7자리").last().fill("700101-1000000");
   await page.getByRole("button", { name: /^다음/ }).click(); // → Step1
   await addLandAsset(page, { area: "300", unitPrice: "10000000" });

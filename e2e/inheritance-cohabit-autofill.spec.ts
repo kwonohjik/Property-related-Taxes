@@ -8,6 +8,7 @@
  * 설계: docs/02-design/features/inheritance-additional-deduction-autofill-v3.ui.design.md
  */
 import { test, expect, type Page } from "@playwright/test";
+import { addHeir } from "./_helpers/tax-flow";
 
 /** Step0: 상속개시일 + 자녀 1명 등록 (cohabit 옵션) → Step1 아파트 추가 + 기준시가 입력 */
 async function setupAptCard(page: Page, opts: { cohabitChild: boolean }) {
@@ -16,8 +17,7 @@ async function setupAptCard(page: Page, opts: { cohabitChild: boolean }) {
   await page.getByLabel("월").first().fill("3");
   await page.getByLabel("일").first().fill("10");
 
-  await page.getByRole("button", { name: /상속인 추가/ }).click();
-  await page.getByText("자녀", { exact: true }).click();
+  await addHeir(page, "heir", "child");
 
   // 자녀 동거(isCohabitant) 표시 — HeirComposition '동거주택 상속공제 해당' 토글
   if (opts.cohabitChild) {

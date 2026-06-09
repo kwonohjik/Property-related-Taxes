@@ -24,6 +24,7 @@ import {
   fillAndVerify,
   nextSteps,
   calcAndWaitResult,
+  addHeir,
 } from "./_helpers/tax-flow";
 
 // ============================================================
@@ -38,8 +39,7 @@ async function gotoStep0WithChild(page: Page) {
   await fillDateAndVerify(page, { year: "2024", month: "6", day: "10" });
 
   // 자녀 1명 추가
-  await page.getByRole("button", { name: /상속인 추가/ }).click();
-  await page.getByText("자녀", { exact: true }).click();
+  await addHeir(page, "heir", "child");
   await page.getByPlaceholder("앞 6자리-뒤 7자리").last().fill("700101-1000000");
 
   // Step1(상속재산)으로 이동

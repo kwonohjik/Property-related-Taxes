@@ -41,3 +41,15 @@ export const HEIR_RELATIONS: HeirRelation[] = [
  * §19·§24 유증액 · §3의2② 부표 5.
  */
 export const SPECIAL_RELATIONS: HeirRelation[] = ["legatee", "corporate"];
+
+/**
+ * 법정상속인 4종 — 2단계 추가 picker에서 "상속인" 선택 후 관계 선택 전용.
+ * HEIR_RELATIONS(other 포함 5종)·SPECIAL_RELATIONS와 구분.
+ * other(기타)는 2단계 없이 KindButton에서 직접 추가됨.
+ */
+export const HEIR_PERSON_RELATIONS: HeirRelation[] = [
+  "spouse",
+  "child",
+  "lineal_ascendant",
+  "sibling",
+];

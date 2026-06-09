@@ -17,6 +17,7 @@ import {
   addLandAsset,
   nextSteps,
   calcAndWaitResult,
+  addHeir,
 } from "./_helpers/tax-flow";
 
 test.describe("피상속인 인적사항 Step1 입력 → 신고서 반영", () => {
@@ -35,8 +36,7 @@ test.describe("피상속인 인적사항 Step1 입력 → 신고서 반영", () 
       await fillDateAndVerify(page, { year: "2024", month: "6", day: "10" });
 
       // 자녀 1명 + 주민등록번호 입력
-      await page.getByRole("button", { name: /상속인 추가/ }).click();
-      await page.getByText("자녀", { exact: true }).click();
+      await addHeir(page, "heir", "child");
       await page.getByPlaceholder("앞 6자리-뒤 7자리").nth(1).fill("900202-2000000");
 
       // Step1(상속재산) → 토지

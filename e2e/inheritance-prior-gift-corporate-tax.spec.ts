@@ -14,6 +14,7 @@
  */
 
 import { test, expect, type Page } from "@playwright/test";
+import { addHeir } from "./_helpers/tax-flow";
 
 /** Step0: 상속개시일 + 자녀 1 + 영리법인 1 → Step1 이동 */
 async function gotoStep0WithChildAndCorporate(page: Page) {
@@ -25,12 +26,10 @@ async function gotoStep0WithChildAndCorporate(page: Page) {
   await page.getByLabel("일").first().fill("10");
 
   // 상속인 추가 패널 열기 → 자녀 (추가 시 패널 자동 닫힘 — handleAdd setShowAddPanel(false))
-  await page.getByRole("button", { name: /상속인 추가/ }).click();
-  await page.getByText("자녀", { exact: true }).click();
+  await addHeir(page, "heir", "child");
 
   // 영리법인 추가 — 패널 재오픈 후 SPECIAL_RELATIONS "법인" 버튼
-  await page.getByRole("button", { name: /상속인 추가/ }).click();
-  await page.getByText("법인", { exact: true }).click();
+  await addHeir(page, "corporate");
 
   // Step1(상속재산)으로 이동
   await page.getByRole("button", { name: /^다음/ }).click();

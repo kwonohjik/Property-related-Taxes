@@ -94,6 +94,50 @@ export async function addLandAsset(
 }
 
 /**
+ * 상속인 추가 헬퍼 — 2단계 picker(2026-06-10 테이블 뷰 개편 이후).
+ *
+ * 이전 UI: "상속인 추가" → 관계 바로 클릭 (1단계 RelationPickerGrid)
+ * 현재 UI: "상속인 추가" → 1단계 종류 선택 → (상속인 종류만) 2단계 관계 선택
+ *
+ * @param kind AddKind — 추가할 종류 (heir|legatee|substitute|corporate|other)
+ * @param relation heir 종류 선택 시 2단계 관계 (spouse|child|lineal_ascendant|sibling)
+ *
+ * 사용 예:
+ *   await addHeir(page, "heir", "child");    // 자녀 추가
+ *   await addHeir(page, "heir", "spouse");   // 배우자 추가
+ *   await addHeir(page, "legatee");          // 수유자 추가 (2단계 없음)
+ *   await addHeir(page, "corporate");        // 법인 추가
+ *   await addHeir(page, "substitute");       // 대습상속인 추가
+ *   await addHeir(page, "other");            // 기타 추가
+ */
+export async function addHeir(
+  page: Page,
+  kind: "heir" | "legatee" | "substitute" | "corporate" | "other",
+  relation?: "spouse" | "child" | "lineal_ascendant" | "sibling",
+): Promise<void> {
+  await page.getByRole("button", { name: /상속인 추가/ }).click();
+  // KindButton / RelationButton 은 span이 분리되어 있어 filter로 찾음
+  const kindLabels: Record<string, string> = {
+    heir: "상속인",
+    legatee: "수유자",
+    substitute: "대습상속인",
+    corporate: "법인",
+    other: "기타",
+  };
+  await page.locator("button").filter({ hasText: kindLabels[kind] }).first().click();
+  if (kind === "heir" && relation) {
+    const relationLabels: Record<string, string> = {
+      spouse: "배우자",
+      child: "자녀",
+      lineal_ascendant: "직계존속 (부모·조부모)",
+      sibling: "형제자매",
+    };
+    // 2단계 관계 선택 — 정확한 텍스트로 first() 클릭
+    await page.locator("button").filter({ hasText: relationLabels[relation] }).first().click();
+  }
+}
+
+/**
  * "다음" 버튼 N회 클릭 — 마법사 단계 이동.
  * 각 클릭 후 버튼이 여전히 존재하면 그대로 진행(단계 전환은 calc/result 에서 검증).
  */

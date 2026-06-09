@@ -8,6 +8,7 @@
  *       결과 단계까지 가지 않고 입력 단계에서 UI↔엔진 배선을 검증.
  */
 import { test, expect, type Page } from "@playwright/test";
+import { addHeir } from "./_helpers/tax-flow";
 
 /** Step0(자녀 1명) → Step1(토지 3억) → Step4(공제) 도달 */
 async function gotoDeductionStep(page: Page) {
@@ -16,8 +17,7 @@ async function gotoDeductionStep(page: Page) {
   await page.getByLabel("월").first().fill("6");
   await page.getByLabel("일").first().fill("10");
 
-  await page.getByRole("button", { name: /상속인 추가/ }).click();
-  await page.getByText("자녀", { exact: true }).click();
+  await addHeir(page, "heir", "child");
   await page.getByRole("button", { name: /^다음/ }).click(); // → Step1
 
   // 토지 3억 (공시지가 1,000,000 × 300㎡)

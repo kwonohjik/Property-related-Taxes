@@ -12,6 +12,7 @@ import {
   calcAndWaitResult,
   fillDateAndVerify,
   nextSteps,
+  addHeir,
 } from "./_helpers/tax-flow";
 
 test("재산 평가 내역 — 이름 미입력 자산은 카테고리 라벨, 내부 id(prop-/stock-) 미노출", async ({
@@ -22,8 +23,7 @@ test("재산 평가 내역 — 이름 미입력 자산은 카테고리 라벨, �
   await fillDateAndVerify(page, { year: "2024", month: "6", day: "10" });
 
   // 자녀 1명
-  await page.getByRole("button", { name: /상속인 추가/ }).click();
-  await page.getByText("자녀", { exact: true }).click();
+  await addHeir(page, "heir", "child");
   await page.getByPlaceholder("앞 6자리-뒤 7자리").last().fill("700101-1000000");
   await page.getByRole("button", { name: /^다음/ }).click();
 

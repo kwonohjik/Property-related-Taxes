@@ -13,14 +13,14 @@
  * 진입 헬퍼: inheritance-unlisted-v2-convenience-fields.spec.ts 동일 패턴 재사용
  */
 import { test, expect, type Page } from "@playwright/test";
+import { addHeir } from "./_helpers/tax-flow";
 
 async function gotoStep0AndFillDeathDate(page: Page, year: string, month: string, day: string) {
   await page.goto("/calc/inheritance-tax");
   await page.getByLabel("연도").first().fill(year);
   await page.getByLabel("월").first().fill(month);
   await page.getByLabel("일").first().fill(day);
-  await page.getByRole("button", { name: /상속인 추가/ }).click();
-  await page.getByText("자녀", { exact: true }).click();
+  await addHeir(page, "heir", "child");
   await page.getByPlaceholder("앞 6자리-뒤 7자리").last().fill("700101-1000000");
   await page.getByRole("button", { name: /^다음/ }).click();
 }

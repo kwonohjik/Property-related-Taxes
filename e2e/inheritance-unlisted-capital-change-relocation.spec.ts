@@ -13,6 +13,7 @@
  *   Step0(상속개시일+상속인) → 다음 → Step1 → "주식·지분 추가" → "비상장주식" → "정식평가" 라디오
  */
 import { test, expect, type Page } from "@playwright/test";
+import { addHeir } from "./_helpers/tax-flow";
 
 async function gotoV2FormalValuationCard(page: Page) {
   await page.goto("/calc/inheritance-tax");
@@ -23,8 +24,7 @@ async function gotoV2FormalValuationCard(page: Page) {
   await page.getByLabel("일").first().fill("31");
 
   // 상속인 1명(자녀) 등록
-  await page.getByRole("button", { name: /상속인 추가/ }).click();
-  await page.getByText("자녀", { exact: true }).click();
+  await addHeir(page, "heir", "child");
   await page.getByPlaceholder("앞 6자리-뒤 7자리").last().fill("700101-1000000");
 
   // Step1(상속재산 평가)으로 이동

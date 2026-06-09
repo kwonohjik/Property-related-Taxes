@@ -8,6 +8,7 @@
  * 검증: 상속인 추가 패널에 "수유자" 버튼 노출 + 추가 → 협의분할 배분 대상 포함.
  */
 import { test, expect } from "@playwright/test";
+import { addHeir } from "./_helpers/tax-flow";
 
 test("수유자(legatee) 추가 버튼 노출 + 추가 (상속인 외 유증 입력 경로)", async ({
   page,
@@ -19,10 +20,8 @@ test("수유자(legatee) 추가 버튼 노출 + 추가 (상속인 외 유증 입
   await page.getByLabel("일").first().fill("10");
 
   // 배우자 + 자녀 추가
-  await page.getByRole("button", { name: /상속인 추가/ }).click();
-  await page.getByText("배우자", { exact: true }).click();
-  await page.getByRole("button", { name: /상속인 추가/ }).click();
-  await page.getByText("자녀", { exact: true }).click();
+  await addHeir(page, "heir", "spouse");
+  await addHeir(page, "heir", "child");
 
   // 상속인 추가 패널 → "수유자" 버튼 노출 (SPECIAL_RELATIONS — 버그 수정 핵심)
   await page.getByRole("button", { name: /상속인 추가/ }).click();

@@ -12,13 +12,14 @@
  */
 
 import { test, expect, type Page } from "@playwright/test";
-import { fillDateAndVerify, nextSteps } from "./_helpers/tax-flow";
+import { fillDateAndVerify, nextSteps,
+  addHeir,
+} from "./_helpers/tax-flow";
 
 async function gotoStep0AndFillDeathDate(page: Page, year: string, month: string, day: string) {
   await page.goto("/calc/inheritance-tax");
   await fillDateAndVerify(page, { year, month, day });
-  await page.getByRole("button", { name: /상속인 추가/ }).click();
-  await page.getByText("자녀", { exact: true }).click();
+  await addHeir(page, "heir", "child");
   await nextSteps(page, 1);
 }
 

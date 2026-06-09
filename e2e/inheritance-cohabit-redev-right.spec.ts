@@ -7,6 +7,7 @@
  * 서버: E2E_PORT 환경변수 또는 기본 3000
  */
 import { test, expect, type Page } from "@playwright/test";
+import { addHeir } from "./_helpers/tax-flow";
 
 const PORT = process.env.E2E_PORT ?? "3000";
 const BASE = `http://localhost:${PORT}`;
@@ -24,8 +25,7 @@ async function setupCohabitApartmentWithChild(page: Page) {
   await page.getByLabel("일").first().fill("1");
 
   // 자녀 추가
-  await page.getByRole("button", { name: /상속인 추가/ }).click();
-  await page.getByText("자녀", { exact: true }).click();
+  await addHeir(page, "heir", "child");
 
   // 동거주택 상속공제 해당 (isCohabitant) 토글 ON — 동거주택 토글 활성화 조건
   await page.getByText("동거주택 상속공제 해당").click();

@@ -10,7 +10,9 @@
  */
 
 import { test, expect, type Page } from "@playwright/test";
-import { nextSteps, calcAndWaitResult } from "./_helpers/tax-flow";
+import { nextSteps, calcAndWaitResult,
+  addHeir,
+} from "./_helpers/tax-flow";
 
 /** Step0(상속인) → Step1(토지 10억) → Step2(비과세) — 단계 네비 버튼으로 결정적 이동 */
 async function gotoExemptionStep(page: Page) {
@@ -18,8 +20,7 @@ async function gotoExemptionStep(page: Page) {
   await page.getByLabel("연도").first().fill("2026");
   await page.getByLabel("월").first().fill("5");
   await page.getByLabel("일").first().fill("15");
-  await page.getByRole("button", { name: /상속인 추가/ }).click();
-  await page.getByText("자녀", { exact: true }).click();
+  await addHeir(page, "heir", "child");
   await page.getByPlaceholder("앞 6자리-뒤 7자리").last().fill("700101-1000000"); // 주민번호 필수(계산 차단 회피)
   await page.getByRole("button", { name: /^다음/ }).click(); // → Step1
 

@@ -22,6 +22,7 @@ import {
   addLandAsset as addLandAssetHelper,
   nextSteps,
   calcAndWaitResult,
+  addHeir,
 } from "./_helpers/tax-flow";
 
 // ============================================================
@@ -35,14 +36,12 @@ async function fillStep0WithSpouseAndChildren(page: Page) {
   await fillDateAndVerify(page, { year: "2024", month: "6", day: "10" });
 
   // 배우자 추가
-  await page.getByRole("button", { name: /상속인 추가/ }).click();
-  await page.getByText("배우자", { exact: true }).click();
+  await addHeir(page, "heir", "spouse");
   await page.getByPlaceholder("앞 6자리-뒤 7자리").last().fill("700101-1000000");
 
   // 자녀 2명 추가
   for (let i = 0; i < 2; i++) {
-    await page.getByRole("button", { name: /상속인 추가/ }).click();
-    await page.getByText("자녀", { exact: true }).click();
+    await addHeir(page, "heir", "child");
     await page.getByPlaceholder("앞 6자리-뒤 7자리").last().fill("700101-1000000");
   }
 
@@ -55,8 +54,7 @@ async function fillStep0WithChild(page: Page) {
 
   await fillDateAndVerify(page, { year: "2024", month: "6", day: "10" });
 
-  await page.getByRole("button", { name: /상속인 추가/ }).click();
-  await page.getByText("자녀", { exact: true }).click();
+  await addHeir(page, "heir", "child");
   await page.getByPlaceholder("앞 6자리-뒤 7자리").last().fill("700101-1000000");
 
   await page.getByRole("button", { name: /^다음/ }).click();

@@ -20,6 +20,7 @@
  *   → FiscalYearAdjustmentTable 렌더 → 개시일 DateInput 노출
  */
 import { test, expect, type Page } from "@playwright/test";
+import { addHeir } from "./_helpers/tax-flow";
 
 /**
  * V2 정식평가 카드 모드로 진입하는 헬퍼
@@ -40,8 +41,7 @@ async function gotoV2FormalValuationCard(page: Page) {
   await page.getByLabel("일").first().fill("31");
 
   // 상속인 1명(자녀) 등록
-  await page.getByRole("button", { name: /상속인 추가/ }).click();
-  await page.getByText("자녀", { exact: true }).click();
+  await addHeir(page, "heir", "child");
   await page.getByPlaceholder("앞 6자리-뒤 7자리").last().fill("700101-1000000");
 
   // Step1(상속재산 평가)으로 이동

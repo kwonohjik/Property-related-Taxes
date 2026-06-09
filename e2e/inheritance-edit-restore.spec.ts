@@ -13,6 +13,7 @@
  */
 
 import { test, expect, type Page } from "@playwright/test";
+import { addHeir } from "./_helpers/tax-flow";
 
 async function inputAndCalculate(page: Page) {
   await page.goto("/calc/inheritance-tax");
@@ -21,8 +22,7 @@ async function inputAndCalculate(page: Page) {
   await page.getByLabel("월").first().fill("6");
   await page.getByLabel("일").first().fill("10");
   // 자녀 1명
-  await page.getByRole("button", { name: /상속인 추가/ }).click();
-  await page.getByText("자녀", { exact: true }).click();
+  await addHeir(page, "heir", "child");
   await page.getByPlaceholder("앞 6자리-뒤 7자리").last().fill("700101-1000000");
   // Step1 상속재산
   await page.getByRole("button", { name: /^다음/ }).click();

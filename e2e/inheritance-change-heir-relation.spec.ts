@@ -12,6 +12,7 @@
  * 정책: [[feedback_browser_verify_with_playwright]]
  */
 import { test, expect } from "@playwright/test";
+import { addHeir } from "./_helpers/tax-flow";
 
 async function fillStep0(page: import("@playwright/test").Page) {
   await page.goto("/calc/inheritance-tax");
@@ -25,8 +26,7 @@ test("CHR-1: 기타 → 수유자 종류 변경 (삭제·재추가 없이 교정
   await fillStep0(page);
 
   // 기타(other) 1명 추가 → 헤더 "1. 기타 법정상속인..." 형식
-  await page.getByRole("button", { name: /상속인 추가/ }).click();
-  await page.getByText("기타", { exact: true }).click();
+  await addHeir(page, "other");
   await expect(page.getByText(/\d\. 기타/).first()).toBeVisible();
 
   // 종류 변경 버튼 → 관계 선택 그리드 펼침
@@ -50,8 +50,7 @@ test("CHR-2: 법인 → 자녀 종류 변경 (법인 전용 UI 제거, 자연인
   await fillStep0(page);
 
   // 법인(corporate) 추가 → 영리법인 토글 노출
-  await page.getByRole("button", { name: /상속인 추가/ }).click();
-  await page.getByText("법인", { exact: true }).click();
+  await addHeir(page, "corporate");
   await expect(page.getByTestId("heir-is-for-profit")).toBeVisible();
 
   // 종류 변경 → 자녀

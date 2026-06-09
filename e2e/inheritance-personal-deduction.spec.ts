@@ -18,6 +18,7 @@ import {
   addLandAsset as addLandAssetHelper,
   nextSteps,
   calcAndWaitResult,
+  addHeir,
 } from "./_helpers/tax-flow";
 
 // ============================================================
@@ -30,8 +31,7 @@ async function gotoStep0(page: Page, [y, m, d]: [string, string, string]) {
 }
 
 async function addChild(page: Page) {
-  await page.getByRole("button", { name: /상속인 추가/ }).click();
-  await page.getByText("자녀", { exact: true }).click();
+  await addHeir(page, "heir", "child");
 }
 
 /** heir-editor-{index} 내부 생년월일 DateInput 채움 */

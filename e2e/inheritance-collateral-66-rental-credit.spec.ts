@@ -8,14 +8,14 @@
  * 설계: docs/02-design/features/inheritance-collateral-66-rental-credit-guarantee.{plan,ui.design}.md
  */
 import { test, expect, type Page } from "@playwright/test";
+import { addHeir } from "./_helpers/tax-flow";
 
 async function gotoEstate(page: Page, assetButton: RegExp) {
   await page.goto("/calc/inheritance-tax");
   await page.getByLabel("연도").first().fill("2023");
   await page.getByLabel("월").first().fill("3");
   await page.getByLabel("일").first().fill("10");
-  await page.getByRole("button", { name: /상속인 추가/ }).click();
-  await page.getByText("자녀", { exact: true }).click();
+  await addHeir(page, "heir", "child");
   await page.getByRole("button", { name: /^다음/ }).click();
   await page.getByRole("button", { name: /상속재산 추가/ }).click();
   await page.getByRole("button", { name: assetButton }).first().click();

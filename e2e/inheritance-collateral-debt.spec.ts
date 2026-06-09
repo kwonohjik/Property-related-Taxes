@@ -7,6 +7,7 @@
  * 계획: docs/00-pm/inheritance-collateral-debt-auto-deduction.plan.md
  */
 import { test, expect, type Page } from "@playwright/test";
+import { addHeir } from "./_helpers/tax-flow";
 
 /** Step0 상속개시일 + 상속인(자녀) → 다음 → Step1 상속재산 → 토지 카드 추가 */
 async function gotoEstateLandCard(page: Page) {
@@ -14,8 +15,7 @@ async function gotoEstateLandCard(page: Page) {
   await page.getByLabel("연도").first().fill("2023");
   await page.getByLabel("월").first().fill("3");
   await page.getByLabel("일").first().fill("10");
-  await page.getByRole("button", { name: /상속인 추가/ }).click();
-  await page.getByText("자녀", { exact: true }).click();
+  await addHeir(page, "heir", "child");
   await page.getByRole("button", { name: /^다음/ }).click();
   await page.getByRole("button", { name: /상속재산 추가/ }).click();
   await page.getByRole("button", { name: /토지/ }).first().click();

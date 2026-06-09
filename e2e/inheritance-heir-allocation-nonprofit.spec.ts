@@ -15,7 +15,9 @@
  */
 
 import { test, expect } from "@playwright/test";
-import { fillDateAndVerify, addLandAsset } from "./_helpers/tax-flow";
+import { fillDateAndVerify, addLandAsset,
+  addHeir,
+} from "./_helpers/tax-flow";
 
 test.describe("협의분할 — 비영리법인 노출·기본값 제거·2열", () => {
   test("N-1: 비영리법인 노출 + ON 미선택 + 칩 선택 시 전액", async ({ page }) => {
@@ -25,16 +27,14 @@ test.describe("협의분할 — 비영리법인 노출·기본값 제거·2열",
     await fillDateAndVerify(page, { year: "2024", month: "6", day: "10" });
 
     // 자녀 추가
-    await page.getByRole("button", { name: /상속인 추가/ }).click();
-    await page.getByText("자녀", { exact: true }).click();
+    await addHeir(page, "heir", "child");
     await page
       .getByPlaceholder("앞 6자리-뒤 7자리")
       .last()
       .fill("700101-1000000");
 
     // 법인 추가 → 영리법인 여부 토글 OFF (비영리법인)
-    await page.getByRole("button", { name: /상속인 추가/ }).click();
-    await page.getByText("법인", { exact: true }).click();
+    await addHeir(page, "corporate");
     await page
       .locator('[data-slot="toggle-card"]')
       .filter({ hasText: "영리법인 여부" })

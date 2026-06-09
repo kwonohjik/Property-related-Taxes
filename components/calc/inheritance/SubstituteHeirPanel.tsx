@@ -12,11 +12,7 @@ import type { Heir } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { useMemo } from "react";
-
-let _nextSubstGroup = 1;
-function generateSubstituteGroupId() {
-  return `subst-${Date.now()}-${_nextSubstGroup++}`;
-}
+import { generateSubstituteGroupId } from "@/lib/calc/substitute-group-id";
 
 interface SubstituteHeirPanelProps {
   heir: Heir;

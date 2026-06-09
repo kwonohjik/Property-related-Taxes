@@ -8,6 +8,7 @@
  * 서버: E2E_PORT 환경변수 또는 기본 3000
  */
 import { test, expect, type Page } from "@playwright/test";
+import { addHeir } from "./_helpers/tax-flow";
 
 // ─────────────────────────────────────────────
 // 공통 헬퍼
@@ -22,8 +23,7 @@ async function setupStep0WithCohabitChild(page: Page) {
   await page.getByLabel("일").first().fill("1");
 
   // 자녀 추가
-  await page.getByRole("button", { name: /상속인 추가/ }).click();
-  await page.getByText("자녀", { exact: true }).click();
+  await addHeir(page, "heir", "child");
 
   // 동거주택 토글 ON — Phase 2 G3 블록 노출 조건
   await page.getByText("동거주택 상속공제 해당").click();
@@ -61,8 +61,7 @@ test.describe("G5 — §23의2 적격 관계 (손자녀 legatee)", () => {
     await page.getByLabel("일").first().fill("1");
 
     // 수유자 추가 — label은 "수유자"
-    await page.getByRole("button", { name: /상속인 추가/ }).click();
-    await page.getByText("수유자", { exact: true }).click();
+    await addHeir(page, "legatee");
 
     // 세대생략 토글 ON
     await page.getByText("§27 세대생략 할증 대상").click();
@@ -78,8 +77,7 @@ test.describe("G5 — §23의2 적격 관계 (손자녀 legatee)", () => {
     await page.getByLabel("일").first().fill("1");
 
     // 수유자 추가 (세대생략 OFF)
-    await page.getByRole("button", { name: /상속인 추가/ }).click();
-    await page.getByText("수유자", { exact: true }).click();
+    await addHeir(page, "legatee");
 
     // 세대생략 OFF → showCohabitant=false → 토글 미노출
     await expect(page.getByText("동거주택 상속공제 해당")).not.toBeVisible();

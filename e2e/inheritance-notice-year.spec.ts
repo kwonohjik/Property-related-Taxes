@@ -7,6 +7,7 @@
  * 계획: docs/00-pm/standard-price-notice-year-auto.plan.md
  */
 import { test, expect, type Page } from "@playwright/test";
+import { addHeir } from "./_helpers/tax-flow";
 
 /** 상속개시일 입력 → 상속인 1명(자녀) 등록 → 상속재산 단계 진입 → 아파트 카드 추가 */
 async function gotoEstateAptCard(page: Page, year: string, month: string, day: string) {
@@ -18,8 +19,7 @@ async function gotoEstateAptCard(page: Page, year: string, month: string, day: s
   await page.getByLabel("일").first().fill(day);
 
   // 상속인 1명 등록 (다음 단계 진입 전제)
-  await page.getByRole("button", { name: /상속인 추가/ }).click();
-  await page.getByText("자녀", { exact: true }).click();
+  await addHeir(page, "heir", "child");
 
   // 상속재산 단계로
   await page.getByRole("button", { name: /^다음/ }).click();
@@ -52,8 +52,7 @@ test.describe("상속세 기준시가 공시연도 자동 선택", () => {
     await page.getByLabel("연도").first().fill("2023");
     await page.getByLabel("월").first().fill("3");
     await page.getByLabel("일").first().fill("10");
-    await page.getByRole("button", { name: /상속인 추가/ }).click();
-    await page.getByText("자녀", { exact: true }).click();
+    await addHeir(page, "heir", "child");
     await page.getByRole("button", { name: /^다음/ }).click();
 
     // 토지 자산 추가 (개별공시지가 = 단가×면적)
@@ -91,8 +90,7 @@ test.describe("상속세 기준시가 공시연도 자동 선택", () => {
     await page.getByLabel("연도").first().fill("2023");
     await page.getByLabel("월").first().fill("3");
     await page.getByLabel("일").first().fill("10");
-    await page.getByRole("button", { name: /상속인 추가/ }).click();
-    await page.getByText("자녀", { exact: true }).click();
+    await addHeir(page, "heir", "child");
 
     // dead field("실제 상속 비율") 완전 제거
     await expect(page.getByText("실제 상속 비율")).toHaveCount(0);

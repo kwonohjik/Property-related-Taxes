@@ -9,6 +9,7 @@
  * 진입 경로: inheritance-unlisted-capital-increase-section56-5.spec.ts와 동일 헬퍼 재사용
  */
 import { test, expect, type Page, type Locator } from "@playwright/test";
+import { addHeir } from "./_helpers/tax-flow";
 
 async function gotoV2FormalValuationCard(page: Page) {
   await page.goto("/calc/inheritance-tax");
@@ -18,8 +19,7 @@ async function gotoV2FormalValuationCard(page: Page) {
   await page.getByLabel("월").first().fill("3");
   await page.getByLabel("일").first().fill("31");
 
-  await page.getByRole("button", { name: /상속인 추가/ }).click();
-  await page.getByText("자녀", { exact: true }).click();
+  await addHeir(page, "heir", "child");
   await page.getByPlaceholder("앞 6자리-뒤 7자리").last().fill("700101-1000000");
   await page.getByRole("button", { name: /^다음/ }).click();
 

@@ -10,6 +10,7 @@
  * 정책: [[feedback_browser_verify_with_playwright]]
  */
 import { test, expect } from "@playwright/test";
+import { addHeir } from "./_helpers/tax-flow";
 
 test.describe("상속세 §27 단서 대습상속", () => {
   test("SI-E2E: 수유자 세대생략 ON → 대습 토글 노출 → ON → 계산", async ({
@@ -22,8 +23,7 @@ test.describe("상속세 §27 단서 대습상속", () => {
     await page.getByLabel("연도").first().fill("2024");
     await page.getByLabel("월").first().fill("6");
     await page.getByLabel("일").first().fill("10");
-    await page.getByRole("button", { name: /상속인 추가/ }).click();
-    await page.getByText("수유자", { exact: true }).click();
+    await addHeir(page, "legatee");
 
     // §27 세대생략 토글 ON
     const genSkipToggle = page.getByText(

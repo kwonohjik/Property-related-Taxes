@@ -8,7 +8,9 @@
  * 설계: docs/02-design/features/inheritance-buppyo3-collateral-debt-display.{plan,engine.design,ui.design}.md
  */
 import { test, expect, type Page } from "@playwright/test";
-import { nextSteps, calcAndWaitResult } from "./_helpers/tax-flow";
+import { nextSteps, calcAndWaitResult,
+  addHeir,
+} from "./_helpers/tax-flow";
 
 /** Step0 상속개시일 + 상속인(자녀) → 다음 → Step1 토지 카드 추가 + 담보 §14 자동공제(5천만, 수동 채무 없음) */
 async function setupCollateralOnlyLand(page: Page) {
@@ -16,8 +18,7 @@ async function setupCollateralOnlyLand(page: Page) {
   await page.getByLabel("연도").first().fill("2023");
   await page.getByLabel("월").first().fill("3");
   await page.getByLabel("일").first().fill("10");
-  await page.getByRole("button", { name: /상속인 추가/ }).click();
-  await page.getByText("자녀", { exact: true }).click();
+  await addHeir(page, "heir", "child");
   await page.getByPlaceholder("앞 6자리-뒤 7자리").last().fill("700101-1000000");
   await page.getByRole("button", { name: /^다음/ }).click();
 

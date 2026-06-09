@@ -10,7 +10,9 @@
  * UI 설계:  docs/02-design/features/inheritance-section24-marriage-birth-deduction.ui.design.md
  */
 import { test, expect } from "@playwright/test";
-import { fillDateAndVerify, calcAndWaitResult } from "./_helpers/tax-flow";
+import { fillDateAndVerify, calcAndWaitResult,
+  addHeir,
+} from "./_helpers/tax-flow";
 
 test.describe("상속세 §53의2 혼인·출산 증여재산공제", () => {
   test("E2E-1: 자녀 수증자 사전증여 → §53의2 위젯 노출 + 입력 + 계산", async ({ page }) => {
@@ -18,8 +20,7 @@ test.describe("상속세 §53의2 혼인·출산 증여재산공제", () => {
 
     // Step0: 상속개시일 2024-6-1 + 자녀 1명
     await fillDateAndVerify(page, { year: "2024", month: "6", day: "1" });
-    await page.getByRole("button", { name: /상속인 추가/ }).click();
-    await page.getByText("자녀", { exact: true }).click();
+    await addHeir(page, "heir", "child");
     await page.getByPlaceholder("앞 6자리-뒤 7자리").last().fill("700101-1000000");
     await page.getByRole("button", { name: /^다음/ }).click(); // → Step1
 

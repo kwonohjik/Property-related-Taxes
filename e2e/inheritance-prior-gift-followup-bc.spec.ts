@@ -10,6 +10,7 @@
  * UI 설계: docs/02-design/features/inheritance-prior-gift-followup-3items.ui.design.md
  */
 import { test, expect } from "@playwright/test";
+import { addHeir } from "./_helpers/tax-flow";
 
 async function gotoStep3WithChild(page: import("@playwright/test").Page) {
   await page.goto("/calc/inheritance-tax");
@@ -18,8 +19,7 @@ async function gotoStep3WithChild(page: import("@playwright/test").Page) {
   await page.getByLabel("연도").first().fill("2024");
   await page.getByLabel("월").first().fill("6");
   await page.getByLabel("일").first().fill("1");
-  await page.getByRole("button", { name: /상속인 추가/ }).click();
-  await page.getByText("자녀", { exact: true }).click();
+  await addHeir(page, "heir", "child");
   await page.getByPlaceholder("앞 6자리-뒤 7자리").last().fill("700101-1000000");
   await page.getByRole("button", { name: /^다음/ }).click(); // → Step1
 

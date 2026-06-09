@@ -19,14 +19,15 @@
  */
 
 import { test, expect, type Page } from "@playwright/test";
-import { fillDateAndVerify, nextSteps, calcAndWaitResult } from "./_helpers/tax-flow";
+import { fillDateAndVerify, nextSteps, calcAndWaitResult,
+  addHeir,
+} from "./_helpers/tax-flow";
 
 /** Step0: 상속개시일 + 자녀 1명 → Step1 */
 async function gotoStep0(page: Page) {
   await page.goto("/calc/inheritance-tax");
   await fillDateAndVerify(page, { year: "2026", month: "1", day: "10" });
-  await page.getByRole("button", { name: /상속인 추가/ }).click();
-  await page.getByText("자녀", { exact: true }).click();
+  await addHeir(page, "heir", "child");
   await page.getByPlaceholder("앞 6자리-뒤 7자리").last().fill("700101-1000000");
   await page.getByRole("button", { name: /^다음/ }).click();
 }
