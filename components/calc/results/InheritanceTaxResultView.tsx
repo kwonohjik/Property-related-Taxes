@@ -32,6 +32,7 @@ import { DebtAllocationResultCard } from "@/components/calc/results/DebtAllocati
 import { UnlistedStockBesshiResultSection } from "@/components/calc/results/UnlistedStockBesshiResultSection";
 import { ListedStockBesshiResultSection } from "@/components/calc/results/ListedStockBesshiResultSection";
 import { SourceDataSummarySection } from "@/components/calc/results/source-summary/SourceDataSummarySection";
+import { toCollateralDebtItems } from "@/lib/tax-engine/inheritance-collateral-debt";
 import { addMonths, endOfMonth, format } from "date-fns";
 import { isInstallmentEligible } from "@/lib/tax-engine/credits/installment-payment";
 import { isInstallmentSplitEligible } from "@/lib/tax-engine/credits/installment-split";
@@ -188,6 +189,10 @@ export function InheritanceTaxResultView({
     () => new Set()
   );
 
+  // 채무 표시(협의분할 카드·인쇄 선택)는 수동 debtItems 또는 §14 담보채무 자동도출분 중 하나만 있어도 노출
+  const hasDebtOrCollateral =
+    (debtItems?.length ?? 0) > 0 || (result.collateralDebtDetail?.length ?? 0) > 0;
+
   // 현재 결과뷰에 실제 렌더되는 leaf id (각 섹션 렌더 가드와 1:1 — 설계 §1)
   const availablePrintIds = useMemo<Set<PrintSectionId>>(() => {
     const s = new Set<PrintSectionId>();
@@ -205,7 +210,7 @@ export function InheritanceTaxResultView({
     if (priorGifts && priorGifts.length > 0 && deathDate) s.add("prior-gift-filing");
     if (result.corporateExemption && result.corporateExemption.amount > 0)
       s.add("corporate-exemption");
-    if (hasAlloc && debtItems && debtItems.length > 0) s.add("debt-allocation");
+    if (hasAlloc && hasDebtOrCollateral) s.add("debt-allocation");
     if (hasAlloc) s.add("filing-form-9");
     if (hasAlloc && (items.length > 0 || (priorGifts?.length ?? 0) > 0))
       s.add("besshi-buppyo-2");
@@ -227,7 +232,13 @@ export function InheritanceTaxResultView({
     if (paymentInKindEnabled) s.add("payment-in-kind");
     if (result.warnings.length > 0) s.add("warnings");
     return s;
-  }, [result, heirs, debtItems, estateItems, priorGifts, deathDate, installmentEnabled, paymentInKindEnabled]);
+  }, [result, heirs, estateItems, priorGifts, deathDate, installmentEnabled, paymentInKindEnabled, hasDebtOrCollateral]);
+
+  // 협의분할 표(3) 전용 — debtItems + §14 담보채무 merge (부표3·④카드 전달 금지: 이중 표시 방지)
+  const debtItemsWithCollateral = useMemo(
+    () => [...(debtItems ?? []), ...toCollateralDebtItems(result.collateralDebtDetail ?? [])],
+    [debtItems, result.collateralDebtDetail],
+  );
 
   // 별지9호 ㊵ 물납액 (§73) — min(희망액, 허용한도). 화면 카드와 동일 엔진(단일 진실)
   const paymentInKindFilingAmount = useMemo(() => {
@@ -456,7 +467,7 @@ export function InheritanceTaxResultView({
             presumedItems={presumedItems}
             presumedResultItems={result.presumedInheritanceDetail?.items}
             presumedTotal={result.presumedInheritanceDetail?.total}
-            debtItems={debtItems}
+            debtItems={debtItemsWithCollateral}
             priorGifts={priorGifts}
           />
         </PrintSection>
@@ -494,15 +505,14 @@ export function InheritanceTaxResultView({
         </PrintSection>
       )}
 
-      {/* 채무·공과·장례비 협의분할 결과 카드 */}
+      {/* 채무·공과·장례비 협의분할 결과 카드 — debtItems 없이 §14 담보채무만 있어도 표시 */}
       {result.heirAllocationResult &&
-        debtItems !== undefined &&
-        debtItems.length > 0 &&
+        hasDebtOrCollateral &&
         heirs &&
         heirs.length > 0 && (
           <PrintSection id="debt-allocation" selectedIds={selectedPrintIds}>
             <DebtAllocationResultCard
-              debtItems={debtItems}
+              debtItems={debtItems ?? []}
               heirAllocationResult={result.heirAllocationResult}
               heirs={heirs}
               collateralDebtDetail={result.collateralDebtDetail}

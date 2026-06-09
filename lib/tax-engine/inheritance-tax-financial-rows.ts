@@ -19,6 +19,9 @@ import { resolveEstateItemValue } from "./valuation/resolve-estate-item-value";
 import { sumCollateralFinancialDebt } from "./inheritance-collateral-debt";
 import { isFinancialAssetEligible } from "./inheritance-tax-financial-eligibility";
 
+/** 담보 금융저당 fdd.rows 행 라벨 — 부표5 어댑터(deduction-besshi-data)와 단일출처 */
+export const COLLATERAL_FINANCIAL_DEBT_ROW_LABEL = "담보 금융저당";
+
 export function buildPhaseDFinancialRows(
   estateItems: EstateItem[],
   debtItems: DebtItem[] | undefined,
@@ -65,6 +68,6 @@ export function buildPhaseDFinancialRows(
   if (otherFinancialTotal > 0) rows.push({ label: "기타금융", amount: otherFinancialTotal });
   if (financialDebtTotal > 0) rows.push({ label: "금융채무", amount: financialDebtTotal });
   if (collateralFinancialTotal > 0)
-    rows.push({ label: "담보 금융저당", amount: collateralFinancialTotal });
+    rows.push({ label: COLLATERAL_FINANCIAL_DEBT_ROW_LABEL, amount: collateralFinancialTotal });
   return rows;
 }
