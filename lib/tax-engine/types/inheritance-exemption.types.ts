@@ -5,7 +5,7 @@
  * barrel: inheritance-gift.types.ts에서 re-export.
  */
 
-import type { CalculationStep } from "./inheritance-gift.types";
+import type { CalculationStep, HeirAllocation } from "./inheritance-gift.types";
 
 /**
  * 체크리스트 기반 비과세 항목 (ExemptionChecklist 컴포넌트 출력)
@@ -30,6 +30,11 @@ export interface ExemptionCheckedItem {
   claimedAreaM2?: number;
   /** @deprecated claimedAreaM2 사용 권장 */
   areaM2?: number;
+  /**
+   * 협의분할 — 비과세 재산의 상속인별 귀속 (합 = claimedAmount). 미입력=법정상속분 (작업4).
+   * 상속세 전용 (증여세는 수증자 1인). per-heir 과세가액에서 인정 비과세액을 이 비율로 안분 차감.
+   */
+  heirAllocations?: HeirAllocation[];
 }
 
 /**
@@ -52,6 +57,10 @@ export interface ExemptionInput {
 /** 비과세 계산 결과 */
 export interface ExemptionResult {
   totalExemptAmount: number;
+  /** 비과세(§12·§46) 합계 — 결과 화면 그룹 구분용 (작업1) */
+  nonTaxableTotal?: number;
+  /** 과세가액 불산입(§16·§17) 합계 — 결과 화면 그룹 구분용 (작업1) */
+  notIncludedTotal?: number;
   breakdown: CalculationStep[];
   appliedLaws: string[];
 }
@@ -64,6 +73,8 @@ export interface ExemptionItemResult {
   ruleId: string;
   ruleName: string;
   claimedAmount: number;
+  /** 과세상 취급 — "non_taxable"(§12·§46 비과세) / "not_included"(§16·§17 과세가액 불산입). 결과 화면 그룹 구분용 (작업1) */
+  treatment?: "non_taxable" | "not_included";
   /** 실제 인정된 비과세 금액 */
   exemptAmount: number;
   /** 한도 초과로 일반 과세되는 금액 */

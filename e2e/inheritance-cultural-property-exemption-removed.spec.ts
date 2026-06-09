@@ -33,11 +33,11 @@ async function gotoExemptionStep(page: Page) {
 
   // 비과세·장례비 단계로 직접 이동
   await page.getByRole("button", { name: /비과세.*단계로 이동/ }).click();
-  await expect(page.getByText("비과세 해당 여부")).toBeVisible();
+  await expect(page.getByText(/비과세.*해당 여부/)).toBeVisible();
 
-  // 비과세 마스터 토글 "여"
+  // 비과세 마스터 토글 "여" — 선택 시 '과세가액 불산입' 그룹 헤더 노출(상속세)
   await page.getByRole("button", { name: "여", exact: true }).first().click();
-  await expect(page.getByText("비과세 해당 항목 선택")).toBeVisible();
+  await expect(page.getByText("과세가액 불산입").first()).toBeVisible();
 }
 
 test.describe("문화재 비과세 룰 제거 (§12 2호 삭제 정정)", () => {

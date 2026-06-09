@@ -217,6 +217,7 @@ export function Step2({ form, set }: { form: FormState; set: FormSet }) {
         category="inheritance"
         value={form.exemptionItems}
         onChange={(items) => set({ exemptionItems: items })}
+        heirs={form.heirs}
       />
 
       {/* 협의분할 모드 토글 (amber tone) */}

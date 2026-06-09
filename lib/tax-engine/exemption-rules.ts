@@ -44,6 +44,15 @@ export type LimitType =
 /** 사후관리·추징 리스크 수준 */
 export type RiskLevel = "none" | "low" | "medium" | "high";
 
+/**
+ * 과세상 취급 구분 — 비과세 vs 과세가액 불산입.
+ * 법령상 별개 개념이므로 UI에서 섹션을 분리한다.
+ *   - "non_taxable": 비과세 (상속 §11·§12 / 증여 §46·§46의2)
+ *   - "not_included": 과세가액 불산입 (상속 §16 공익법인 출연·§17 공익신탁 / 증여 §48 등)
+ * 미지정 시 "non_taxable"로 간주.
+ */
+export type ExemptionTreatment = "non_taxable" | "not_included";
+
 /** 비과세 룰 정의 */
 export interface ExemptionRule {
   id: string;
@@ -51,6 +60,8 @@ export interface ExemptionRule {
   name: string;
   lawRef: string;
   description: string;
+  /** 과세상 취급 (비과세 / 과세가액 불산입). 미지정 시 "non_taxable". */
+  taxTreatment?: ExemptionTreatment;
   limitType: LimitType;
   /** 한도 금액 (limitType=fixed 시) */
   limitAmount?: number;
@@ -96,7 +107,7 @@ export const INHERITANCE_EXEMPTION_RULES: ExemptionRule[] = [
     category: "inheritance",
     name: "금양임야 (禁養林野)",
     lawRef: EXEMPTION.INH_NONTAXABLE,
-    description: "피상속인이 제사를 모시던 선조 분묘에 속한 임야 — 9,900㎡(3,000평) 이내 (상증령 §8③1호)",
+    description: "피상속인이 제사를 모시던 선조 분묘에 속한 임야 (상증령 §8③1호)",
     limitType: "area",
     limitAreaM2: EXEMPTION.GRAVE_FOREST_LIMIT_M2,
     riskLevel: "medium",
@@ -109,7 +120,6 @@ export const INHERITANCE_EXEMPTION_RULES: ExemptionRule[] = [
     exclusions: [
       "개인 소유 임야",
       "제사·봉안과 무관한 임야",
-      "9,900㎡(3,000평) 초과 부분",
     ],
   },
   {
@@ -117,7 +127,7 @@ export const INHERITANCE_EXEMPTION_RULES: ExemptionRule[] = [
     category: "inheritance",
     name: "묘토 (墓土)",
     lawRef: EXEMPTION.INH_NONTAXABLE,
-    description: "선조 분묘에 속한 묘토인 농지 — 1,980㎡(600평) 이내 (상증령 §8③2호)",
+    description: "선조 분묘에 속한 묘토인 농지 (상증령 §8③2호)",
     limitType: "area",
     limitAreaM2: EXEMPTION.GRAVE_LAND_LIMIT_M2,
     riskLevel: "medium",
@@ -129,7 +139,6 @@ export const INHERITANCE_EXEMPTION_RULES: ExemptionRule[] = [
     exclusions: [
       "분묘가 없는 농지",
       "묘토가 아닌(제사·봉사 목적 외) 농지",
-      "1,980㎡(600평) 초과 부분",
     ],
   },
   {
@@ -137,13 +146,13 @@ export const INHERITANCE_EXEMPTION_RULES: ExemptionRule[] = [
     category: "inheritance",
     name: "족보·제구 (族譜·祭具)",
     lawRef: EXEMPTION.INH_NONTAXABLE,
-    description: "가문 족보, 제사용 제기류 등 — 1천만원 한도 (상증령 §8③3호)",
+    description: "가문 족보, 제사용 제기류 등 (상증령 §8③3호)",
     limitType: "fixed",
     limitAmount: EXEMPTION.RITUAL_AMOUNT_LIMIT,
     riskLevel: "none",
     riskNote: "1천만원 초과분은 일반 상속재산으로 과세 (상증령 §8③3호 단서)",
     requirements: ["가문 족보 또는 제사용 제기류임이 확인됨"],
-    exclusions: ["고가 골동품으로 판매 목적인 경우", "1천만원 초과 부분"],
+    exclusions: ["고가 골동품으로 판매 목적인 경우"],
   },
   {
     id: "inh_public_interest",
@@ -151,6 +160,7 @@ export const INHERITANCE_EXEMPTION_RULES: ExemptionRule[] = [
     name: "공익법인 출연 재산",
     lawRef: EXEMPTION.PUBLIC_INTEREST,
     description: "공익법인(사회복지·학교·의료법인 등)에 출연한 재산 (§16 과세가액 불산입)",
+    taxTreatment: "not_included",
     limitType: "unlimited",
     riskLevel: "high",
     riskNote: "동족기업 주식 5% 초과 보유 시 초과분 과세; 3년 내 공익 외 사용 시 추징 (§48)",
@@ -172,6 +182,7 @@ export const INHERITANCE_EXEMPTION_RULES: ExemptionRule[] = [
     lawRef: EXEMPTION.PUBLIC_TRUST, // §17
     description:
       "「공익신탁법」에 따른 공익신탁(종교·자선·학술 등)을 통해 공익법인등에 출연하는 재산 (§17) — 과세가액 불산입",
+    taxTreatment: "not_included",
     limitType: "unlimited",
     riskLevel: "medium",
     riskNote:
@@ -340,7 +351,7 @@ export const GIFT_EXEMPTION_RULES: ExemptionRule[] = [
     category: "gift",
     name: "장애인 신탁 비과세",
     lawRef: EXEMPTION.PUBLIC_INTEREST,
-    description: "장애인에게 신탁된 재산 — 5억원 한도 (§46의2)",
+    description: "장애인에게 신탁된 재산 (§46의2)",
     limitType: "fixed",
     limitAmount: DISABLED_TRUST_LIMIT,
     riskLevel: "high",
@@ -352,7 +363,6 @@ export const GIFT_EXEMPTION_RULES: ExemptionRule[] = [
       "10년 합산 5억원 이내",
     ],
     exclusions: [
-      "5억원 초과 부분 (일반 증여세 과세)",
       "신탁 해지 후 잔존 원금",
       "신탁 계약 조건 위반 시",
     ],
@@ -386,4 +396,9 @@ export function getHighRiskRules(): ExemptionRule[] {
   return ALL_EXEMPTION_RULES.filter(
     (r) => r.riskLevel === "high" || r.riskLevel === "medium",
   );
+}
+
+/** 룰의 과세상 취급 (미지정 시 "non_taxable"로 간주) */
+export function getExemptionTreatment(rule: ExemptionRule): ExemptionTreatment {
+  return rule.taxTreatment ?? "non_taxable";
 }

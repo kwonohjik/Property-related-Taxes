@@ -32,7 +32,7 @@ async function gotoExemptionStep(page: Page) {
 
   // 비과세·장례비 단계로 직접 이동 (다음 카운팅 회피)
   await page.getByRole("button", { name: /비과세.*단계로 이동/ }).click();
-  await expect(page.getByText("비과세 해당 여부")).toBeVisible();
+  await expect(page.getByText(/비과세.*해당 여부/)).toBeVisible();
 
   // 비과세 마스터 토글 "여" (exact — "사전증여 단계로 이동" substring 매칭 회피)
   await page.getByRole("button", { name: "여", exact: true }).first().click();
@@ -61,10 +61,15 @@ test.describe("공익신탁 §17 과세가액 불산입", () => {
     await expect(trustRow).toBeVisible();
     await trustRow.getByRole("button", { name: "여", exact: true }).click();
 
-    // 요건(§17 본문) + 금액 입력란 노출
+    // 금액 입력란 노출
+    await expect(trustRow.getByPlaceholder("금액 입력")).toBeVisible();
+
+    // 요건(§17 본문)은 '자세히' 접힘 안에 위치 → 토글 클릭 후 노출
+    await trustRow
+      .getByTestId("exemption-row-inh_public_trust-details-toggle")
+      .click();
     await expect(
       trustRow.getByText("「공익신탁법」에 따른 공익신탁일 것"),
     ).toBeVisible();
-    await expect(trustRow.getByPlaceholder("금액 입력")).toBeVisible();
   });
 });

@@ -16,7 +16,6 @@ import type {
   PresumedInheritanceItem,
   DebtItem,
   Heir,
-  ExemptionCheckedItem,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { deriveCollateralDebts } from "@/lib/tax-engine/inheritance-collateral-debt";
 import { resolveEngineValuatedAmount } from "@/lib/tax-engine/property-valuation";
@@ -28,6 +27,15 @@ import {
   isCompleteResidentNumber,
 } from "@/lib/calc/resident-number";
 import { endOfMonth, addMonths, format } from "date-fns";
+import {
+  validateExemptionAreaInput,
+  validateExemptionItemAllocations,
+} from "./inheritance-validate-exemption";
+// 800줄 분리 — 외부 import 호환 보존 (feedback_800line_split_export_preservation)
+export {
+  validateExemptionAreaInput,
+  validateExemptionItemAllocations,
+} from "./inheritance-validate-exemption";
 
 // ────────────────────────────────────────────────────
 // 단일 자산 — heirAllocations 합계 검증
@@ -313,26 +321,6 @@ export function warnCollateralDebtDuplication(
 // ────────────────────────────────────────────────────
 
 /**
- * 금양임야·묘토 비과세 면적 입력 검증 (상증령 §8③1·2호).
- * 면적 한도 항목 선택 시 면적(claimedAreaM2) 미입력 차단 — 자동 0 fallback 금지.
- * UI(ExemptionChecklist)가 면적 입력 위젯을 제공하므로 validate 차단과 정합 (CLAUDE.md ⑧).
- */
-export function validateExemptionAreaInput(
-  exemptions: ExemptionCheckedItem[] | undefined,
-): string | null {
-  for (const it of exemptions ?? []) {
-    if (
-      (it.ruleId === "inh_forest_burial" || it.ruleId === "inh_grave_land") &&
-      (it.claimedAreaM2 == null || it.claimedAreaM2 <= 0)
-    ) {
-      const name = it.ruleId === "inh_forest_burial" ? "금양임야" : "묘토";
-      return `${name} 비과세를 선택한 경우 면적(㎡)을 입력해야 합니다. (면적 한도 판정에 필요)`;
-    }
-  }
-  return null;
-}
-
-/**
  * 전체 InheritanceTaxInput validation. 첫 오류 발견 시 그 메시지 반환.
  * 다중 오류 수집은 별도 호출자 책임 (필요 시 추후 확장).
  */
@@ -392,6 +380,12 @@ export function validateInheritanceTaxInput(
   // 금양임야·묘토 비과세 면적 입력 검증 (상증령 §8③)
   const exemptAreaErr = validateExemptionAreaInput(input.exemptions);
   if (exemptAreaErr) return exemptAreaErr;
+
+  // 비과세 협의분할 합계 검증 (작업4)
+  for (const ex of input.exemptions ?? []) {
+    const e = validateExemptionItemAllocations(ex);
+    if (e) return e;
+  }
 
   for (const item of input.estateItems) {
     const e = validateEstateItemAllocations(item);
