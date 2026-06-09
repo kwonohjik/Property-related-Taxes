@@ -39,6 +39,22 @@ npm run verify:legal          # 법령 조문 상수 검증 (:refresh = 캐시 �
 
 **자동 게이트**: husky pre-commit(lint-staged) + pre-push(typecheck + test) + GitHub Actions.
 
+### 머지 워크플로 — `scripts/ship.sh` (수시 수정 사이클)
+
+브랜치 → 커밋 → 푸시 → PR → 머지 → 브랜치 삭제 → master 동기화를 **한 명령**으로.
+
+```bash
+scripts/ship.sh <branch> "<commit message>"          # 즉시 머지 + 원격/로컬 브랜치 삭제 + master 동기화
+scripts/ship.sh <branch> "<commit message>" --auto   # CI 통과 후 자동 머지(감독 불필요)
+```
+
+- **전제**: master에서 작업 변경분을 들고 실행(자동으로 새 브랜치 분기)하거나, 이미 `<branch>`에 있는 상태.
+- **진짜 게이트는 `git push` 시 pre-push(tsc + 전체 test)뿐**. master에 브랜치 보호가 없어 **CI는 머지를 차단하지 않음**(머지 후 기록용 실행) → 즉시 머지 모드는 CI를 기다리지 않는다.
+- repo 설정 `deleteBranchOnMerge: true`(원격 자동삭제) + `allowAutoMerge: true`(`--auto`) 적용됨.
+- **lint 갭 주의**: pre-push는 tsc+test만(lint 제외). lint는 commit 시 lint-staged가 **변경 파일만** `--fix`. 대규모 변경 후 불안하면 push 전 `npm run lint`.
+- **효율**: 작은 수정 여러 개를 한 브랜치에 모아 1회 ship → CI 실행 횟수↓.
+- `.claude/commands/`(로컬 개인 슬래시 커맨드)는 `.git/info/exclude`로 제외됨 → `git add -A` 오염 없음.
+
 **ESLint --fix 함정**: pre-commit lint-staged의 `eslint --fix`가 미사용 import 정리 시 **같은 라인의 사용 중인 named export까지 제거**할 수 있다 (`import { CurrencyInput, parseAmount }`에서 CurrencyInput만 미사용 → parseAmount도 제거 → TS2304). 회피: 신규 import는 한 라인에 한 named만. pre-push `tsc`가 잡지만 fix 커밋 1개 추가됨.
 
 ## Tech Stack
