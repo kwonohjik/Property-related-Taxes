@@ -9,6 +9,7 @@ import type {
   PriorGift,
   DebtItem,
   PresumedInheritanceItem,
+  ExemptionCheckedItem,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { FamilyBusinessInheritanceInput } from "@/lib/tax-engine/types/inheritance-family-business.types";
 
@@ -43,6 +44,8 @@ export interface InheritanceTaxResultViewProps {
   estateItems?: EstateItem[];
   /** 사전증여 행별 명세 — InheritanceFilingFormTable 표시용 (Phase 3) */
   priorGifts?: PriorGift[];
+  /** 비과세·과세가액불산입 입력 — 부표2 계 ⑲~㉔ per-heir 기재용 */
+  exemptions?: ExemptionCheckedItem[];
   /** 상속개시일 (ISO date) — InheritanceFilingFormTable 13년 cutoff 분기용 */
   deathDate?: string;
   /** 추정상속재산 입력 — SourceDataSummarySection Table B용 (2026-05-28) */

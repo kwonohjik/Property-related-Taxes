@@ -26,6 +26,7 @@ import type {
   EstateItem,
   PriorGift,
   DebtItem,
+  ExemptionCheckedItem,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { FamilyBusinessInheritanceInput } from "@/lib/tax-engine/types/inheritance-family-business.types";
 
@@ -57,6 +58,8 @@ export function InheritanceSelectedBesshiPages({
     ...((inputData?.stockItems as unknown as EstateItem[]) ?? []),
   ];
   const priorGiftsArr = (inputData?.priorGifts as unknown as PriorGift[]) ?? [];
+  const exemptionsArr =
+    (inputData?.exemptions as unknown as ExemptionCheckedItem[]) ?? [];
   const debtItemsArr = (inputData?.debtItems as unknown as DebtItem[]) ?? [];
   const deathDateStr = str(inputData?.deathDate);
   const hasAlloc = !!inhResult.heirAllocationResult && heirsArr.length > 0;
@@ -68,7 +71,7 @@ export function InheritanceSelectedBesshiPages({
 
   // 부표2 — 상속인별 N장
   const bp2 = want("besshi-buppyo-2") && hasAlloc
-    ? buildBuppyo2Data(inhResult, heirsArr, estateItemsArr, priorGiftsArr)
+    ? buildBuppyo2Data(inhResult, heirsArr, estateItemsArr, priorGiftsArr, exemptionsArr)
     : null;
 
   // 부표3·별지5호·별지1호

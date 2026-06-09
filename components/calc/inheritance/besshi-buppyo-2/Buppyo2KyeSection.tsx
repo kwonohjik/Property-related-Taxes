@@ -35,8 +35,21 @@ function valueFor(key: Buppyo2KyeKey, t: Buppyo2SectionTotal): number | null {
       return t.priorGift30_6;
     case "total":
       return t.total;
+    // 비과세 ⑲⑳㉑ · 과세가액불산입 ㉒㉓㉔ — per-heir 인정액
+    case "nontax_farmland":
+      return t.nonTaxableFarmland;
+    case "nontax_public":
+      return t.nonTaxablePublic;
+    case "nontax_other":
+      return t.nonTaxableOther;
+    case "excl_public_corp":
+      return t.exclusionPublicCorp;
+    case "excl_public_trust":
+      return t.exclusionPublicTrust;
+    case "excl_other":
+      return t.exclusionOther;
     default:
-      return null; // nontax_*, excl_* — 세부 미분리 공란
+      return null;
   }
 }
 
