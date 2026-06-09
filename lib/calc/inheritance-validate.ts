@@ -18,6 +18,7 @@ import type {
   Heir,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { deriveCollateralDebts } from "@/lib/tax-engine/inheritance-collateral-debt";
+import { validateSubstituteHeirs } from "@/lib/calc/inheritance-validate-substitute";
 import { resolveEngineValuatedAmount } from "@/lib/tax-engine/property-valuation";
 import { checkCorporateGiftRule } from "@/lib/calc/prior-gift-corporate-rule";
 import { checkMarriageBirthGiftRule } from "@/lib/calc/prior-gift-marriage-birth-rule";
@@ -265,6 +266,9 @@ export function validateHeirReferences(
   checkAllocs("자산", estateItems);
   checkAllocs("채무", debtItems);
   checkAllocs("추정상속재산", presumedItems);
+
+  // 대습상속(민법 §1001) 입력 검증 (2026-06-09, 결정-C) — sibling 파일 위임(800줄 정책)
+  errors.push(...validateSubstituteHeirs(heirs));
 
   return errors;
 }

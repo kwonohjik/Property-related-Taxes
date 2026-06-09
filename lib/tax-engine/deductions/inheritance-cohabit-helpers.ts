@@ -101,11 +101,14 @@ export function isCohabitDeductionEligibleRelation(
 
   // 대습상속된 직계비속의 배우자: 2022.1.1.~ §23의2①1호 개정 (KoreanLaw time_travel 검증)
   // relation="other" + isSubstituteInheritance=true (계약 C2)
+  // 신규(2026-06-09): 그룹키 모델 며느리·사위 = substituteGroupId + substituteRole="spouse"도 동치
+  //   (deriveSubstituteFlag orchestrator 선처리 대신 소비처에서 직접 동치 처리 — 환류)
   // ※ "legatee" 수유자에 isSubstituteInheritance=true인 경우는 isLinealDescendant 조건에서 제외됨
   const isSubstituteDescendantSpouse =
     d >= "2022-01-01" &&
     heir.relation === "other" &&
-    heir.isSubstituteInheritance === true;
+    (heir.isSubstituteInheritance === true ||
+      (heir.substituteGroupId != null && heir.substituteRole === "spouse"));
 
   return isLinealDescendant || isSubstituteDescendantSpouse;
 }

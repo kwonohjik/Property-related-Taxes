@@ -25,6 +25,7 @@ import {
 } from "@/components/calc/inheritance/heir-relation-meta";
 import { isCohabitDeductionEligibleRelation } from "@/lib/tax-engine/deductions/inheritance-cohabit-helpers";
 import { CohabitRequirementBlock } from "@/components/calc/inheritance/CohabitRequirementBlock";
+import { SubstituteHeirPanel } from "@/components/calc/inheritance/SubstituteHeirPanel";
 import { parseResidentNumber } from "@/lib/calc/resident-number";
 
 // ============================================================
@@ -109,6 +110,13 @@ export function changeHeirRelation(heir: Heir, newRelation: HeirRelation): Heir 
     if (!showBirthDate) next.birthDate = undefined;
   }
 
+  // 대습상속(§1001) 3필드는 "기타(other)" 전용 — 다른 관계로 변경 시 정리(stale 법정상속분 오염 차단)
+  if (newRelation !== "other") {
+    next.substituteGroupId = undefined;
+    next.substituteForRelation = undefined;
+    next.substituteRole = undefined;
+  }
+
   return next;
 }
 
@@ -141,6 +149,8 @@ function HeirEditor({ heir, index, deathDate, allHeirs, onUpdate, onRemove }: He
   // (직계비속 자녀·세대생략 손자녀 + 2022~ 대습배우자 other+isSubstituteInheritance)
   const showCohabitant = isCohabitDeductionEligibleRelation(heir, deathDate);
   const isCorporate = heir.relation === "corporate";
+  // 대습상속(§1001) — "기타(other)" 전용 (며느리·사위·손자녀·조카를 기타로 입력)
+  const isSubstituteEligible = heir.relation === "other";
 
   // 주민번호 앞 7자리 → 생년월일·성별 도출 (단일 출처).
   // 도출 성공 시 birthDate·gender 직접입력 필드를 숨기고 자동값을 사용한다.
@@ -382,6 +392,16 @@ function HeirEditor({ heir, index, deathDate, allHeirs, onUpdate, onRemove }: He
             </div>
           )}
         </>
+      )}
+
+      {/* 대습상속인 (민법 §1001·§1003②) — "기타(other)" 전용. §27 legatee 손자 대습은 이 토글(실제 상속인) 사용 */}
+      {isSubstituteEligible && (
+        <SubstituteHeirPanel
+          heir={heir}
+          index={index}
+          allHeirs={allHeirs}
+          set={set}
+        />
       )}
 
       {/* 장애인 여부 — 자연인 전용. 성별은 주민번호 도출값(우선) 또는 라디오(fallback)로 관리 */}

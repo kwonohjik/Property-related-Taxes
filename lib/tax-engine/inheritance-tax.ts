@@ -346,18 +346,17 @@ export function calcInheritanceTax(
       // 정확 분자: + 장례비 (deductedBeforeAggregation에서 장례비 분 환산)
       const numeratorCorrected = numerator + funeralAmount;
 
-      // I-2 배우자 법정지분 비율 (민법 §1009) — 직계비속 우선, 없으면 직계존속. 수유자·법인 제외.
-      // L-1 수정: 상속포기(isHeir===false)는 민법 §1042·§1043상 처음부터 상속인이 아님
-      //   → computeLegalShares와 동일한 isHeir!==false 필터로 dual-truth 해소.
-      //   현재 UI에 상속포기 토글 없어 정상 입력 흐름에서는 결과 불변.
-      const childCount = input.heirs.filter(
-        (h) => h.relation === "child" && h.isHeir !== false,
-      ).length;
-      const ascendantCount = input.heirs.filter(
-        (h) => h.relation === "lineal_ascendant" && h.isHeir !== false,
-      ).length;
-      const coheirCount = childCount > 0 ? childCount : ascendantCount;
-      const spouseRatio = 1.5 / (1.5 + coheirCount);
+      // I-2 배우자 법정지분 비율 (민법 §1009) — computeLegalShares 재사용(dual-truth 해소).
+      //   직접 카운트(childCount/coheirCount) 폐지 → 대습상속(§1001) 피대습 슬롯도 분모에 자동 산입.
+      //   상속포기(isHeir===false)·수유자·법인 제외는 computeLegalShares가 동일 적용.
+      //   비대습 케이스 결과 불변: 자녀2 → 3/7 = 1.5/3.5 동일.
+      const legalForSpouse = computeLegalShares(input.heirs);
+      const spouseShareEntry = legalForSpouse.shares.find(
+        (s) => s.heirId === spouseHeir.id,
+      );
+      const spouseRatio = spouseShareEntry
+        ? spouseShareEntry.numerator / legalForSpouse.denominator
+        : 0;
       const spouseLegalShareRaw = Math.floor(numeratorCorrected * spouseRatio);
       computedSpouseLegalShare = Math.max(0, spouseLegalShareRaw - spouseGiftTaxBase);
 

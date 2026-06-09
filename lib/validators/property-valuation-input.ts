@@ -433,6 +433,11 @@ export const heirSchema = z.object({
   isGenerationSkipBeneficiary: z.boolean().optional(),
   // §27 단서 — 민법 §1001 대습상속 할증 배제 (2026-06-07)
   isSubstituteInheritance: z.boolean().optional(),
+  // 대습상속 법정상속분 (민법 §1001·§1003②·§1010, 2026-06-09) — ⑫ z.object 침묵 strip 방지.
+  // forRelation·Role 필수성(substituteGroupId 보유 시)은 inheritance-validate.ts ⑧에서 검증.
+  substituteGroupId: z.string().optional(),
+  substituteForRelation: z.enum(["child", "sibling"]).optional(),
+  substituteRole: z.enum(["spouse", "descendant"]).optional(),
   // B-7 (2026-06-01) — §27 미성년 3-state override. undefined=자동(birthDate), true/false=수동.
   isMinorOverride: z.boolean().optional(),
   // Phase 2 (2026-06-07) — §23의2①1호 동거기간 검증. ⑫ 미선언 시 z.object 침묵 strip → 엔진 미도달.
