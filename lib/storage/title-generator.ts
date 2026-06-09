@@ -10,7 +10,7 @@ const TAX_LABEL: Record<LocalTaxType, string> = {
   stock_transfer: "주식 양도세",
 };
 
-function formatDate(dateStr: string | undefined | null): string | null {
+export function formatDate(dateStr: string | undefined | null): string | null {
   if (!dateStr) return null;
   try {
     const d = new Date(dateStr);
@@ -24,7 +24,7 @@ function formatDate(dateStr: string | undefined | null): string | null {
   }
 }
 
-function extractAddress(input: Record<string, unknown>): string | null {
+export function extractAddress(input: Record<string, unknown>): string | null {
   // 양도세: input.assets[0].addressRoad or addressJibun
   const assets = input.assets as Array<Record<string, unknown>> | undefined;
   if (Array.isArray(assets) && assets.length > 0) {
@@ -40,7 +40,7 @@ function extractAddress(input: Record<string, unknown>): string | null {
   return road?.trim() || jibun?.trim() || null;
 }
 
-function extractTransferDate(input: Record<string, unknown>): string | null {
+export function extractTransferDate(input: Record<string, unknown>): string | null {
   // transferDate는 TransferFormData top-level 필드
   return formatDate(input.transferDate as string | undefined);
 }

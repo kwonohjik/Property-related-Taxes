@@ -70,7 +70,7 @@ export function useAutoSaveCalculation({
     const now = new Date().toISOString();
     const title = generateTitle(taxType, inputData, now);
     calculationRepository
-      .saveOrUpdateByContent({
+      .saveOrUpdateByBusinessKey({
         taxType,
         title,
         inputData,

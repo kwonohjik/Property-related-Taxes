@@ -6,13 +6,13 @@ import * as React from "react";
 import { useAutoSaveCalculation } from "@/lib/storage/use-auto-save-calculation";
 import { resetLocalDB } from "@/lib/storage";
 
-// repository mock — saveOrUpdateByContent 호출 횟수만 추적
+// repository mock — saveOrUpdateByBusinessKey 호출 횟수만 추적 (자동저장 라우팅 전환)
 const saveOrUpdateSpy = vi.fn();
 const touchSpy = vi.fn();
 vi.mock("@/lib/storage/calculation-repository", () => ({
   calculationRepository: {
     save: vi.fn(),
-    saveOrUpdateByContent: (...args: unknown[]) => saveOrUpdateSpy(...args),
+    saveOrUpdateByBusinessKey: (...args: unknown[]) => saveOrUpdateSpy(...args),
     update: vi.fn(),
   },
 }));
