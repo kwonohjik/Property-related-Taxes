@@ -214,6 +214,7 @@ export function buildSummaryTable(
   rows.push({
     rowId: "row-a-nontaxable",
     groupId: "value",
+    rowNo: "㉠",
     label: "비과세 재산 (§11·§12)",
     total: sumPerHeir((p) => p?.nonTaxableShare) || null,
     perHeir: buildPerHeir(sorted, (h) => get(h.id)?.nonTaxableShare),
@@ -221,15 +222,17 @@ export function buildSummaryTable(
   rows.push({
     rowId: "row-a-notincluded",
     groupId: "value",
+    rowNo: "㉠",
     label: "과세가액 불산입 (§16·§17)",
     total: sumPerHeir((p) => p?.notIncludedShare) || null,
     perHeir: buildPerHeir(sorted, (h) => get(h.id)?.notIncludedShare),
   });
 
-  // ㉡ 채무·공과·장례비 분리 — 채무(§14①3호) / 공과금(§14①1호) / 장례비(§14①2호). rowNo 생략.
+  // ㉡ 채무·공과·장례비 분리 — 채무(§14①3호) / 공과금(§14①1호) / 장례비(§14①2호). 그룹 원문자 ㉡ 반복.
   rows.push({
     rowId: "row-b-debt-principal",
     groupId: "value",
+    rowNo: "㉡",
     label: "채무 (§14①3호)",
     total: sumPerHeir((p) => p?.debtPrincipalShare) || null,
     perHeir: buildPerHeir(sorted, (h) => get(h.id)?.debtPrincipalShare),
@@ -237,6 +240,7 @@ export function buildSummaryTable(
   rows.push({
     rowId: "row-b-debt-publiccharge",
     groupId: "value",
+    rowNo: "㉡",
     label: "공과금 (§14①1호)",
     total: sumPerHeir((p) => p?.publicChargeShare) || null,
     perHeir: buildPerHeir(sorted, (h) => get(h.id)?.publicChargeShare),
@@ -244,6 +248,7 @@ export function buildSummaryTable(
   rows.push({
     rowId: "row-b-debt-funeral",
     groupId: "value",
+    rowNo: "㉡",
     label: "장례비 (§14①2호)",
     total: sumPerHeir((p) => p?.funeralShare) || null,
     perHeir: buildPerHeir(sorted, (h) => get(h.id)?.funeralShare),
@@ -284,8 +289,7 @@ export function buildSummaryTable(
     rowId: "row-4-taxableEstate",
     groupId: "value",
     rowNo: "④",
-    label:
-      "상속세 과세가액 (총상속재산 − 비과세 − 과세가액불산입 − 채무 − 공과금 − 장례비 + 사전증여 + 추정상속)",
+    label: "상속세 과세가액 (① − ㉠ − ㉡ + ② + ③)",
     isHeaderGroup: true,
     total: result.taxableEstateValue ?? null,
     perHeir: buildPerHeir(sorted, (h) => get(h.id)?.taxableValueShare),
