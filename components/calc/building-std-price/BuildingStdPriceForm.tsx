@@ -14,6 +14,7 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
+import { AddressSearch, type AddressValue } from "@/components/ui/address-search";
 import { BuildingStructureSelect } from "./BuildingStructureSelect";
 import { BuildingUsageSelect } from "./BuildingUsageSelect";
 import { AdjustmentRateModal } from "./AdjustmentRateModal";
@@ -104,6 +105,12 @@ export function BuildingStdPriceForm({ onResult }: Props) {
   const set = <K extends keyof BuildingStdPriceFormState>(key: K, value: BuildingStdPriceFormState[K]) =>
     setF((prev) => ({ ...prev, [key]: value }));
 
+  // 연도 Select 값 → 공시지가 조회 기준일 합성(6/1 = 해당 연도 공시 추천). 빈값이면 미전달.
+  const landRefDate = (year: string) => (year ? `${year}-06-01` : undefined);
+  const jibun = f.addressJibun || undefined;
+  // 부속토지 면적 — 토지기준시가(= 공시지가 × 면적) 표시용. 취득·양도·평가 공통(동일 필지).
+  const landArea = parseFloat(f.landAreaM2.replace(/,/g, "")) || undefined;
+
   const isMech = f.isMechanicalParking;
   const yearOpts = useMemo(() => availableYears(isMech), [isMech]);
   // 취득연도는 2000이전(산정기준율) 포함
@@ -146,6 +153,9 @@ export function BuildingStdPriceForm({ onResult }: Props) {
   const composite = f.taxType === "inheritance_gift" && f.compositeMode;
   // 연면적 입력 불요: 복합구조(부분별)·공동주택 환산(자체 연면적)
   const hideFloorArea = composite || apartmentConv;
+  // 건물 기본 면적 표시 조건 — 둘 다 보일 때만 한 행에 배치
+  const showFloorArea = !isMech && !hideFloorArea;
+  const showLandArea = !isMech && !apartmentConv && !f.landParcelMode;
 
   const handleCalc = () => {
     const err = validateBuildingStdPriceForm(f);
@@ -190,15 +200,71 @@ export function BuildingStdPriceForm({ onResult }: Props) {
         </FieldCard>
       </ToggleCard>
 
+      {/* 소재지 — 개별공시지가 자동조회용(건물 단위 1회 입력). 기계식주차는 토지가액 미사용 → 숨김 */}
+      {!isMech && (
+        <div className="space-y-1.5 rounded-lg border border-rose-200 bg-rose-50/40 p-3">
+          <div className="flex items-center gap-2">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-200 text-[10px] font-bold text-rose-800">
+              ＠
+            </span>
+            <span className="text-sm font-semibold text-rose-700">소재지 (공시지가 조회용)</span>
+          </div>
+          <p className="text-[11px] text-rose-600/90">
+            주소를 입력하면 아래 ㎡당 개별공시지가를 연도별로 자동 조회할 수 있습니다. 미입력 시 직접 입력하세요.
+          </p>
+          <AddressSearch
+            value={
+              {
+                road: f.addressRoad,
+                jibun: f.addressJibun,
+                building: f.buildingName,
+                detail: f.addressDetail,
+                lng: f.longitude,
+                lat: f.latitude,
+              } satisfies AddressValue
+            }
+            onChange={(v) =>
+              setF((prev) => ({
+                ...prev,
+                addressRoad: v.road,
+                addressJibun: v.jibun,
+                buildingName: v.building,
+                addressDetail: v.detail,
+                longitude: v.lng,
+                latitude: v.lat,
+              }))
+            }
+          />
+        </div>
+      )}
+
       {/* ① 건물 기본 */}
       <SectionCard num={1} title="건물 기본" tone="sky">
         <FieldCard label="신축연도" hint="준공·사용승인 연도">
           <DecimalInput value={f.builtYear} onChange={(v) => set("builtYear", v)} placeholder="예: 2010" thousandSeparator={false} />
         </FieldCard>
-        {!isMech && !hideFloorArea && (
-          <FieldCard label="건물 연면적" hint="공동주택 = 전유 + 공용">
-            <DecimalInput value={f.floorArea} onChange={(v) => set("floorArea", v)} unit="㎡" placeholder="예: 200" />
-          </FieldCard>
+        {showFloorArea && showLandArea ? (
+          <div className="grid grid-cols-2 gap-2">
+            <FieldCard label="건물 연면적" className="sm:grid-cols-[96px_1fr]">
+              <DecimalInput value={f.floorArea} onChange={(v) => set("floorArea", v)} unit="㎡" placeholder="건물 연면적" />
+            </FieldCard>
+            <FieldCard label="토지 면적" className="sm:grid-cols-[96px_1fr]">
+              <DecimalInput value={f.landAreaM2} onChange={(v) => set("landAreaM2", v)} unit="㎡" placeholder="부속토지 면적" />
+            </FieldCard>
+          </div>
+        ) : (
+          <>
+            {showFloorArea && (
+              <FieldCard label="건물 연면적">
+                <DecimalInput value={f.floorArea} onChange={(v) => set("floorArea", v)} unit="㎡" placeholder="건물 연면적" />
+              </FieldCard>
+            )}
+            {showLandArea && (
+              <FieldCard label="토지 면적">
+                <DecimalInput value={f.landAreaM2} onChange={(v) => set("landAreaM2", v)} unit="㎡" placeholder="부속토지 면적" />
+              </FieldCard>
+            )}
+          </>
         )}
         {f.taxType === "inheritance_gift" && (
           <FieldCard label="리모델링·대수선 연도" hint="입력 시 잔가율을 리모델링 연도 기준 적용(선택)">
@@ -236,6 +302,9 @@ export function BuildingStdPriceForm({ onResult }: Props) {
                 <LandPriceLookupField
                   pricePerSqm={f.acqLandPrice}
                   onPricePerSqmChange={(v) => set("acqLandPrice", v)}
+                  area={landArea}
+                  jibun={jibun}
+                  referenceDate={landRefDate(f.acquisitionYear)}
                   label="취득당시 ㎡당 개별공시지가"
                   hint="여러 필지면 면적 가중평균한 ㎡당 가액"
                 />
@@ -256,6 +325,8 @@ export function BuildingStdPriceForm({ onResult }: Props) {
               <ApartmentConversionSection
                 value={f.apartmentConversion}
                 onChange={(patch) => set("apartmentConversion", { ...f.apartmentConversion, ...patch })}
+                jibun={jibun}
+                acquisitionYear={f.acquisitionYear}
               />
             </ToggleCard>
           )}
@@ -289,6 +360,9 @@ export function BuildingStdPriceForm({ onResult }: Props) {
                 <LandPriceLookupField
                   pricePerSqm={f.transLandPrice}
                   onPricePerSqmChange={(v) => set("transLandPrice", v)}
+                  area={landArea}
+                  jibun={jibun}
+                  referenceDate={landRefDate(f.transferYear)}
                   label="양도당시 ㎡당 개별공시지가"
                 />
               </>
@@ -312,6 +386,11 @@ export function BuildingStdPriceForm({ onResult }: Props) {
                 <LandPriceLookupField
                   pricePerSqm={f.prevLandPrice}
                   onPricePerSqmChange={(v) => set("prevLandPrice", v)}
+                  area={landArea}
+                  jibun={jibun}
+                  referenceDate={
+                    f.acquisitionYear ? landRefDate(String(Number(f.acquisitionYear) - 1)) : undefined
+                  }
                   label="취득전기(취득연도-1) ㎡당 공시지가"
                 />
               ) : (
@@ -394,6 +473,8 @@ export function BuildingStdPriceForm({ onResult }: Props) {
                   <LandParcelsSection
                     parcels={f.landParcels}
                     onChange={(parcels) => set("landParcels", parcels)}
+                    jibun={jibun}
+                    referenceDate={landRefDate(f.valuationYear)}
                   />
                 </ToggleCard>
 
@@ -401,6 +482,9 @@ export function BuildingStdPriceForm({ onResult }: Props) {
                   <LandPriceLookupField
                     pricePerSqm={f.valLandPrice}
                     onPricePerSqmChange={(v) => set("valLandPrice", v)}
+                    area={landArea}
+                    jibun={jibun}
+                    referenceDate={landRefDate(f.valuationYear)}
                     label="㎡당 개별공시지가"
                     hint="2001~2002년 평가는 해당연도 1.1 기준"
                   />

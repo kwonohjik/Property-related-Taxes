@@ -64,10 +64,19 @@ export const initialApartmentConversionForm: ApartmentConversionForm = {
 export interface BuildingStdPriceFormState {
   taxType: BuildingStdPriceTaxType;
   floorArea: string;
+  /** 부속토지(대지) 면적 — 토지기준시가 표시용(= 공시지가 × 면적). 건물 기준시가 엔진 입력 아님 */
+  landAreaM2: string;
   builtYear: string;
   remodelYear: string; // 상증 — "" = 해당없음
   isMechanicalParking: boolean;
   parkingLotCount: string;
+  // 소재지(개별공시지가 조회용 — 엔진 입력 아님)
+  addressRoad: string;
+  addressJibun: string;
+  buildingName: string;
+  addressDetail: string;
+  longitude: string;
+  latitude: string;
   // 양도
   acquisitionYear: string;
   transferYear: string;
@@ -112,10 +121,17 @@ export function emptyCompositePart(): CompositePartForm {
 export const initialBuildingStdPriceForm: BuildingStdPriceFormState = {
   taxType: "transfer",
   floorArea: "",
+  landAreaM2: "",
   builtYear: "",
   remodelYear: "",
   isMechanicalParking: false,
   parkingLotCount: "",
+  addressRoad: "",
+  addressJibun: "",
+  buildingName: "",
+  addressDetail: "",
+  longitude: "",
+  latitude: "",
   acquisitionYear: "",
   transferYear: "",
   acqStructureKey: "",

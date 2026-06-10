@@ -16,11 +16,15 @@ import type { LandParcelForm } from "@/lib/calc/building-std-price-form";
 interface Props {
   parcels: LandParcelForm[];
   onChange: (parcels: LandParcelForm[]) => void;
+  /** 소재지 지번(공시지가 조회용) — 대표 지번 기준. 필지별 주소가 다르면 조회값은 대표 지번에만 정확하므로 수동 수정 */
+  jibun?: string;
+  /** 평가 시점 기준일(공시지가 조회 연도) */
+  referenceDate?: string;
 }
 
 const fmt = (n: number) => n.toLocaleString("ko-KR");
 
-export function LandParcelsSection({ parcels, onChange }: Props) {
+export function LandParcelsSection({ parcels, onChange, jibun, referenceDate }: Props) {
   const update = (i: number, patch: Partial<LandParcelForm>) =>
     onChange(parcels.map((p, idx) => (idx === i ? { ...p, ...patch } : p)));
   const add = () => onChange([...parcels, { areaM2: "", pricePerM2: "" }]);
@@ -58,6 +62,8 @@ export function LandParcelsSection({ parcels, onChange }: Props) {
             pricePerSqm={p.pricePerM2}
             onPricePerSqmChange={(v) => update(i, { pricePerM2: v })}
             area={parseDecimal(p.areaM2) || undefined}
+            jibun={jibun}
+            referenceDate={referenceDate}
             label={`필지 ${i + 1} ㎡당 개별공시지가`}
           />
         </div>

@@ -20,6 +20,10 @@ import {
 interface Props {
   value: ApartmentConversionForm;
   onChange: (patch: Partial<ApartmentConversionForm>) => void;
+  /** 소재지 지번(공시지가 조회용) */
+  jibun?: string;
+  /** 부모 「취득 시점」의 취득연도 — 취득당시 공시지가 조회 기준연도 */
+  acquisitionYear?: string;
 }
 
 const Y = APARTMENT_CONVERSION_INDEX_YEAR;
@@ -54,7 +58,8 @@ function MiniCard({
   );
 }
 
-export function ApartmentConversionSection({ value, onChange }: Props) {
+export function ApartmentConversionSection({ value, onChange, jibun, acquisitionYear }: Props) {
+  const refDate = (year?: string) => (year ? `${year}-06-01` : undefined);
   return (
     <div className="space-y-2.5">
       <p className="rounded-md bg-violet-50 px-2.5 py-1.5 text-[11px] text-violet-700">
@@ -98,6 +103,8 @@ export function ApartmentConversionSection({ value, onChange }: Props) {
         <LandPriceLookupField
           pricePerSqm={value.building2001LandPrice}
           onPricePerSqmChange={(v) => onChange({ building2001LandPrice: v })}
+          jibun={jibun}
+          referenceDate={refDate(String(Y))}
           label={`${Y}년 건물기준시가 위치지수용 ㎡당 공시지가`}
           hint={`${Y}.1.1 기준 개별공시지가`}
         />
@@ -108,6 +115,8 @@ export function ApartmentConversionSection({ value, onChange }: Props) {
           pricePerSqm={value.firstNoticeLandPrice}
           onPricePerSqmChange={(v) => onChange({ firstNoticeLandPrice: v })}
           area={parseFloat(value.landAreaM2.replace(/,/g, "")) || undefined}
+          jibun={jibun}
+          referenceDate={refDate(value.firstNoticeYear)}
           label="최초고시 시점 ㎡당 공시지가"
           hint="② 토지가액 = 공시지가 × 대지지분면적"
         />
@@ -118,6 +127,8 @@ export function ApartmentConversionSection({ value, onChange }: Props) {
           pricePerSqm={value.acquisitionLandPrice}
           onPricePerSqmChange={(v) => onChange({ acquisitionLandPrice: v })}
           area={parseFloat(value.landAreaM2.replace(/,/g, "")) || undefined}
+          jibun={jibun}
+          referenceDate={refDate(acquisitionYear)}
           label="취득당시 ㎡당 공시지가"
           hint="④ 토지가액 = 공시지가 × 대지지분면적"
         />

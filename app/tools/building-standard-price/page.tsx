@@ -16,7 +16,7 @@ export default function BuildingStandardPricePage() {
   const [error, setError] = useState<string | null>(null);
 
   return (
-    <main className="mx-auto max-w-2xl px-4 py-6">
+    <main className="mx-auto max-w-[63rem] px-4 py-6">
       <header className="mb-5">
         <h1 className="text-xl font-bold">건물 기준시가 계산기</h1>
         <p className="mt-1 text-sm text-slate-500">

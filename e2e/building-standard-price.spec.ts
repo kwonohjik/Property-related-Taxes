@@ -23,7 +23,7 @@ test("상속·증여 기본 — 224,600,000 (BSP-01)", async ({ page }) => {
   await page.getByText("상속·증여(1시점)").click();
 
   await page.getByPlaceholder("예: 2010").fill("2020"); // 신축연도
-  await page.getByPlaceholder("예: 200").fill("200"); // 연면적
+  await page.getByPlaceholder("건물 연면적").fill("200"); // 연면적
 
   await selectOption(page, "연도 선택", "2025년"); // 평가연도
   await selectOption(page, "구조 선택", /철근콘크리트조/);
@@ -42,7 +42,7 @@ test("양도 2시점 — 취득 82,200,000 / 양도 90,000,000 (BSP-06)", async 
   // 기본이 양도 모드
 
   await page.getByPlaceholder("예: 2010").fill("2010"); // 신축연도
-  await page.getByPlaceholder("예: 200").fill("100"); // 연면적
+  await page.getByPlaceholder("건물 연면적").fill("100"); // 연면적
 
   // 취득 시점
   await selectOption(page, "연도 선택", "2015년"); // 취득연도(첫 연도 Select)
@@ -151,6 +151,65 @@ test("공동주택 고시 전 취득 환산 — 취득당시 128,660,408", async
   const result = page.getByTestId("bsp-result");
   await expect(result).toBeVisible();
   await expect(result).toContainText("128,660,408");
+});
+
+test("공시지가 자동조회 — 소재지+연도 입력 후 조회 버튼 활성·자동 채움", async ({ page }) => {
+  // 주소 검색 / 공시지가 조회 API mock (VWORLD 키·네트워크 비의존)
+  await page.route("**/api/address/search**", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        results: [
+          {
+            pnu: "1168010100101230000",
+            title: "테헤란로 123",
+            road: "서울 강남구 테헤란로 123",
+            jibun: "서울 강남구 역삼동 123",
+            building: "",
+            zipcode: "",
+            lng: "127.0",
+            lat: "37.5",
+          },
+        ],
+      }),
+    }),
+  );
+  await page.route("**/api/address/standard-price**", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        pnu: "1168010100101230000",
+        priceType: "land_price",
+        year: "2015",
+        price: 6000000,
+      }),
+    }),
+  );
+
+  await page.goto(URL); // 기본 양도 모드
+
+  // 취득연도 선택 → 공시지가 기준연도 자동 채움 (원인② referenceDate 배선 검증)
+  await selectOption(page, "연도 선택", "2015년");
+  await expect(page.getByText("2015년 (자동)").first()).toBeVisible();
+
+  // 소재지 미입력 시 취득 조회 버튼 비활성 (원인① jibun 게이트)
+  const lookupBtn = page.getByRole("button", { name: "공시지가 조회" }).first();
+  await expect(lookupBtn).toBeDisabled();
+
+  // 소재지 검색 → 결과 선택 → jibun 채움
+  await page.getByPlaceholder("도로명 또는 지번 주소 입력 (예: 테헤란로 123)").fill("테헤란로 123");
+  await page.getByRole("button", { name: /테헤란로 123/ }).click();
+
+  // 조회 버튼 활성 → 클릭 → 취득당시 ㎡당 공시지가 자동 채움
+  await expect(lookupBtn).toBeEnabled();
+  await lookupBtn.click();
+  await expect(page.getByPlaceholder("원/㎡").first()).toHaveValue("6,000,000");
+
+  // 토지 면적 입력 → 토지기준시가 = 공시지가 × 면적 자동 계산 (6,000,000 × 100)
+  await page.getByPlaceholder("부속토지 면적").fill("100");
+  await expect(page.getByText("600,000,000")).toBeVisible();
 });
 
 test("홈 링크 → 건물 기준시가 계산기 진입", async ({ page }) => {
