@@ -231,11 +231,16 @@ export function CohabitantDependentSection({
 
   return (
     <div className="rounded-lg border border-sky-200 bg-sky-50/40 dark:border-sky-800 dark:bg-sky-950/20 p-3 space-y-3">
-      {/* 헤더 */}
+      {/* 헤더 — 섹션 ③ (상속인·수유자 ② 다음 독립 섹션) */}
       <div className="flex items-center justify-between gap-2">
-        <p className="text-xs font-semibold text-sky-700 dark:text-sky-300">
-          동거가족 (인적공제 대상 부양가족) — §20·시령 §18①
-        </p>
+        <div className="flex items-center gap-2">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-[10px] font-bold text-sky-800 select-none">
+            3
+          </span>
+          <p className="text-xs font-semibold text-sky-700 dark:text-sky-300">
+            동거가족 (인적공제 대상 부양가족) — §20·시령 §18①
+          </p>
+        </div>
         <button
           type="button"
           onClick={handleAdd}
@@ -244,14 +249,6 @@ export function CohabitantDependentSection({
           + 동거가족 추가
         </button>
       </div>
-
-      {/* 안내문 */}
-      <p className="text-[11px] text-muted-foreground leading-relaxed">
-        상속인이 아니지만 피상속인이 상속개시일 현재{" "}
-        <strong>사실상 부양</strong>한 직계존비속(배우자의 직계존속 포함)·형제자매.
-        미성년·연로자·장애인공제 대상입니다 (자녀공제 제외). 수유자·영리법인은 대상이
-        아닙니다.
-      </p>
 
       {/* 요약 테이블 (deps 0명이면 미표시) */}
       {deps.length > 0 && (

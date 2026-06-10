@@ -153,13 +153,14 @@ export function Step0({
           ℹ️ 협의분할은 각 <strong>자산 카드</strong>에서 상속인별로 분배합니다. 분배를 입력하지 않은 자산은
           <strong> 법정상속분</strong>(배우자 1.5 : 직계비속·직계존속 1)으로 자동 배분됩니다.
         </p>
-        {/* §20 P1 — 동거가족 인적공제 (비상속인 부양가족, 시령 §18①) */}
-        <CohabitantDependentSection
-          value={form.cohabitantDependents}
-          onChange={(deps) => set({ cohabitantDependents: deps })}
-          deathDate={form.deathDate}
-        />
       </div>
+
+      {/* 섹션 ③ — 동거가족 인적공제 (비상속인 부양가족, 시령 §18①) — ② 밖 독립 섹션 */}
+      <CohabitantDependentSection
+        value={form.cohabitantDependents}
+        onChange={(deps) => set({ cohabitantDependents: deps })}
+        deathDate={form.deathDate}
+      />
     </div>
   );
 }
