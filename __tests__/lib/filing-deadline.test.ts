@@ -97,11 +97,36 @@ describe("derivePenaltyFields — 양도일·신고일 → 가산세 파생", ()
     expect(patch).toEqual({});
   });
 
-  it("신고기한 이내 + 현재 ON → 가산세 OFF 패치", () => {
-    const patch = derivePenaltyFields("2025-01-10", "2025-03-20", ON_OVERDUE);
+  it("이미 ON + 수동 신고유형(under) → filingType 보존, 날짜 파생값만 갱신", () => {
+    const patch = derivePenaltyFields("2025-02-10", "2025-05-15", {
+      ...ON_OVERDUE,
+      filingType: "under",
+      penaltyReason: "fraudulent",
+    });
+    // filingType·penaltyReason은 패치에 없음(보존), 새 양도일 기준 deadline만 갱신
+    expect(patch).toEqual({
+      paymentDeadline: "2025-04-30",
+      actualPaymentDate: "2025-05-15",
+    });
+  });
+
+  it("이미 ON + 날짜 파생값도 동일 → 빈 패치 (수동 filingType 무관)", () => {
+    const patch = derivePenaltyFields("2025-01-10", "2025-04-15", {
+      ...ON_OVERDUE,
+      filingType: "under",
+    });
+    expect(patch).toEqual({});
+  });
+
+  it("신고기한 이내 + 현재 ON → 가산세 OFF 패치 (penaltyReason도 normal 리셋)", () => {
+    const patch = derivePenaltyFields("2025-01-10", "2025-03-20", {
+      ...ON_OVERDUE,
+      penaltyReason: "fraudulent",
+    });
     expect(patch).toEqual({
       enablePenalty: false,
       filingType: "correct",
+      penaltyReason: "normal",
       paymentDeadline: "",
       actualPaymentDate: "",
     });
@@ -111,10 +136,19 @@ describe("derivePenaltyFields — 양도일·신고일 → 가산세 파생", ()
     expect(derivePenaltyFields("2025-01-10", "2025-03-20", OFF)).toEqual({});
   });
 
+  it("OFF인데 stale penaltyReason(fraudulent) 잔류 → 리셋 패치", () => {
+    const patch = derivePenaltyFields("2025-01-10", "2025-03-20", {
+      ...OFF,
+      penaltyReason: "fraudulent",
+    });
+    expect(patch.penaltyReason).toBe("normal");
+  });
+
   it("양도일·신고일 미입력 + 현재 ON → OFF 패치", () => {
     expect(derivePenaltyFields("", "", ON_OVERDUE)).toEqual({
       enablePenalty: false,
       filingType: "correct",
+      penaltyReason: "normal",
       paymentDeadline: "",
       actualPaymentDate: "",
     });

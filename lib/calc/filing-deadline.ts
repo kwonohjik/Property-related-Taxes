@@ -57,8 +57,12 @@ export type PenaltyPatch = Partial<PenaltyDerivationState>;
  * memory `feedback_useeffect_store_mirror_forbidden` — useEffect→store 미러링 대신
  * onChange 핸들러(라이브 편집)·마이그레이션(로드 시점)에서 직접 호출하는 순수 함수.
  *
- * - 신고기한 초과: 무신고(filingType="none") + 지연납부 자동 ON (paymentDeadline=신고기한, actualPaymentDate=신고일)
- * - 기한 이내 또는 양도일·신고일 미입력: 가산세 자동 OFF
+ * - 신고기한 초과 + 가산세 OFF: 무신고(filingType="none") + 지연납부 자동 ON
+ *   (paymentDeadline=신고기한, actualPaymentDate=신고일)
+ * - 신고기한 초과 + 이미 ON: 사용자가 Step6에서 수동 선택한 신고유형(과소·초과환급 등)은
+ *   보존하고 paymentDeadline·actualPaymentDate만 새 날짜로 갱신
+ * - 기한 이내 또는 양도일·신고일 미입력: 가산세 자동 OFF (penaltyReason도 normal로 리셋 —
+ *   stale 부정행위 사유가 재-ON 시 잔류하는 것 방지)
  * - 이미 동일 상태면 빈 패치 반환 (불필요한 store 갱신 방지)
  */
 export function derivePenaltyFields(
@@ -69,22 +73,20 @@ export function derivePenaltyFields(
   const offPatch: PenaltyPatch = {
     enablePenalty: false,
     filingType: "correct",
+    penaltyReason: "normal",
     paymentDeadline: "",
     actualPaymentDate: "",
   };
+  const needsOff = current.enablePenalty || current.penaltyReason !== "normal";
 
   if (!transferDate || !filingDate) {
-    return current.enablePenalty ? offPatch : {};
+    return needsOff ? offPatch : {};
   }
 
   if (isFilingOverdue(transferDate, filingDate)) {
     const deadline = getFilingDeadline(transferDate);
-    if (
-      !current.enablePenalty ||
-      current.filingType !== "none" ||
-      current.paymentDeadline !== deadline ||
-      current.actualPaymentDate !== filingDate
-    ) {
+    if (!current.enablePenalty) {
+      // OFF → ON 자동 전이: 무신고 기본값으로 초기화
       return {
         enablePenalty: true,
         filingType: "none",
@@ -93,8 +95,15 @@ export function derivePenaltyFields(
         actualPaymentDate: filingDate,
       };
     }
+    // 이미 ON: 수동 선택(filingType·penaltyReason) 보존, 날짜 파생값만 동기화
+    if (
+      current.paymentDeadline !== deadline ||
+      current.actualPaymentDate !== filingDate
+    ) {
+      return { paymentDeadline: deadline, actualPaymentDate: filingDate };
+    }
     return {};
   }
 
-  return current.enablePenalty ? offPatch : {};
+  return needsOff ? offPatch : {};
 }

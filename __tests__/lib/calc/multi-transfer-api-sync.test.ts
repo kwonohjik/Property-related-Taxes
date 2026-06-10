@@ -10,9 +10,11 @@
  *         transferExpense·householdRightCount)는 build에서 전송.
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import {
   buildPropertyPayload,
+  mergePriorReductionUsage,
+  callMultiTransferTaxAPI,
 } from "@/lib/calc/multi-transfer-tax-api";
 import {
   validateMultiSupportedMode,
@@ -162,5 +164,94 @@ describe("[H-2] 미지원 고급 모드 명시 차단", () => {
       makeProperty(baseForm(), "건2"),
     ]);
     expect(validateMultiSettings(multi)).toBeNull();
+  });
+
+  it("[R2-H1] 상속 보충평가(자동) 모드 차단 — 취득가 0 과대 과세 방지", () => {
+    const form = baseForm();
+    form.assets[0] = {
+      ...form.assets[0],
+      acquisitionCause: "inheritance",
+      decedentAcquisitionDate: "2000-01-01",
+      inheritanceValuationMode: "auto",
+      inheritanceAssetKind: "house_apart",
+      publishedValueAtInheritance: "300,000,000",
+      fixedAcquisitionPrice: "",
+    };
+    const msg = validateMultiSupportedMode(form);
+    expect(msg).not.toBeNull();
+    expect(msg).toContain("보충적평가");
+  });
+
+  it("[R2-H1 대조군] 상속 + 직접입력(manual) 모드는 통과", () => {
+    const form = baseForm();
+    form.assets[0] = {
+      ...form.assets[0],
+      acquisitionCause: "inheritance",
+      decedentAcquisitionDate: "2000-01-01",
+      inheritanceValuationMode: "manual",
+      fixedAcquisitionPrice: "300,000,000",
+    };
+    expect(validateMultiSupportedMode(form)).toBeNull();
+  });
+});
+
+// ─────────────────────────────────────────────────────────
+// R2-H2: 다건 priorReductionUsage 전송 (⑬) + merge dedup
+// ─────────────────────────────────────────────────────────
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
+describe("[R2-H2] 다건 priorReductionUsage 합성·전송", () => {
+  it("mergePriorReductionUsage — 건 간 동일 항목은 1건으로 dedup, 상이 항목은 모두 유지", () => {
+    const f1 = baseForm();
+    f1.priorReductionUsage = [
+      { year: 2024, type: "self_farming", amount: 50_000_000 },
+      { year: 2023, type: "self_farming", amount: 30_000_000 },
+    ];
+    const f2 = baseForm();
+    f2.priorReductionUsage = [
+      { year: 2024, type: "self_farming", amount: 50_000_000 }, // f1과 동일 → dedup
+      { year: 2022, type: "public_expropriation", amount: 20_000_000 },
+    ];
+    const merged = mergePriorReductionUsage([
+      makeProperty(f1, "건1"),
+      makeProperty(f2, "건2"),
+    ]);
+    expect(merged).toEqual([
+      { year: 2024, type: "self_farming", amount: 50_000_000 },
+      { year: 2023, type: "self_farming", amount: 30_000_000 },
+      { year: 2022, type: "public_expropriation", amount: 20_000_000 },
+    ]);
+  });
+
+  it("multi fetch body에 priorReductionUsage가 포함된다", async () => {
+    const form = baseForm();
+    form.priorReductionUsage = [{ year: 2024, type: "self_farming", amount: 150_000_000 }];
+    const prop = makeProperty(form, "건1");
+    const multi = makeMultiForm([prop]);
+
+    let captured: Record<string, unknown> | null = null;
+    vi.stubGlobal("fetch", vi.fn(async (_u: string, init: RequestInit) => {
+      captured = JSON.parse(String(init.body));
+      return { ok: true, json: async () => ({ data: {} }) } as Response;
+    }));
+    await callMultiTransferTaxAPI(multi, [prop]);
+    expect(captured!.priorReductionUsage).toEqual([
+      { year: 2024, type: "self_farming", amount: 150_000_000 },
+    ]);
+  });
+
+  it("이력 미입력 시 빈 배열 전송 (Zod default와 동일)", async () => {
+    const prop = makeProperty(baseForm(), "건1");
+    const multi = makeMultiForm([prop]);
+    let captured: Record<string, unknown> | null = null;
+    vi.stubGlobal("fetch", vi.fn(async (_u: string, init: RequestInit) => {
+      captured = JSON.parse(String(init.body));
+      return { ok: true, json: async () => ({ data: {} }) } as Response;
+    }));
+    await callMultiTransferTaxAPI(multi, [prop]);
+    expect(captured!.priorReductionUsage).toEqual([]);
   });
 });

@@ -12,7 +12,7 @@
  */
 
 import { applyRate, truncateToWon } from "./tax-utils";
-import { applyFiveYearLimits } from "./aggregate-reduction-limits";
+import { applyAnnualLimits, applyFiveYearLimits } from "./aggregate-reduction-limits";
 import { TRANSFER } from "./legal-codes";
 import { calculateBuildingPenalty, calcTax, calcReductions } from "./transfer-tax-rate-calc";
 import {
@@ -149,19 +149,28 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
   let cappedReductionAmount = reductionAmount;
   const priorUsage = input.priorReductionUsage ?? [];
   if (reductionAmount > 0 && reductionTypeApplied && priorUsage.length > 0) {
-    const { fiveYearCappedByType, fiveYearCapInfoByType } = applyFiveYearLimits(
+    // 연간 한도 선처리 — applyFiveYearLimits 인자 계약("연간 캡 적용 후 값") 준수.
+    // 현행 자경·공익수용은 calcReductions 내부에서 이미 연간 캡이 적용되어 등가(no-op)이나,
+    // 내부 캡 없는 감면 유형이 향후 추가될 때 silent 과감면을 방지한다.
+    const { cappedByType: annuallyCappedByType, capInfoByType } = applyAnnualLimits(
       new Map([[reductionTypeApplied, reductionAmount]]),
+    );
+    const { fiveYearCappedByType, fiveYearCapInfoByType } = applyFiveYearLimits(
+      annuallyCappedByType,
       priorUsage,
       input.transferDate.getFullYear(),
     );
     const fiveInfo = fiveYearCapInfoByType.get(reductionTypeApplied);
+    const annualInfo = capInfoByType.get(reductionTypeApplied);
     const capped = fiveYearCappedByType.get(reductionTypeApplied) ?? reductionAmount;
-    if (fiveInfo?.cappedByFiveYear && capped < reductionAmount) {
+    if (capped < reductionAmount) {
       steps.push({
-        label: "§133 5년 누적 한도",
-        formula: `감면세액 ${reductionAmount.toLocaleString()} → ${capped.toLocaleString()} (5년 한도 ${fiveInfo.fiveYearLimit.toLocaleString()} − 과거 4개 연도 누적 ${fiveInfo.priorGroupSum.toLocaleString()} = 잔여 ${fiveInfo.remaining.toLocaleString()})`,
+        label: "§133 종합한도",
+        formula: fiveInfo?.cappedByFiveYear
+          ? `감면세액 ${reductionAmount.toLocaleString()} → ${capped.toLocaleString()} (5년 한도 ${fiveInfo.fiveYearLimit.toLocaleString()} − 과거 4개 연도 누적 ${fiveInfo.priorGroupSum.toLocaleString()} = 잔여 ${fiveInfo.remaining.toLocaleString()})`
+          : `감면세액 ${reductionAmount.toLocaleString()} → ${capped.toLocaleString()} (연간 한도 ${Number.isFinite(annualInfo?.annualLimit) ? annualInfo!.annualLimit.toLocaleString() : ""})`,
         amount: capped,
-        legalBasis: fiveInfo.legalBasis,
+        legalBasis: fiveInfo?.cappedByFiveYear ? fiveInfo.legalBasis : annualInfo?.legalBasis ?? "",
       });
       cappedReductionAmount = capped;
     }
