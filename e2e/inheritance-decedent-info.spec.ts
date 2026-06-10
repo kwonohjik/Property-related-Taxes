@@ -35,16 +35,8 @@ test.describe("피상속인 인적사항 Step1 입력 → 신고서 반영", () 
       // 상속개시일
       await fillDateAndVerify(page, { year: "2024", month: "6", day: "10" });
 
-      // 자녀 1명 + 주민등록번호 입력
-      await addHeir(page, "heir", "child");
-      await page.getByPlaceholder("앞 6자리-뒤 7자리").nth(1).fill("900202-2000000");
-
-      // 자녀 추가 직후 "상속인 편집" 모달이 자동 오픈됨 → 다음 진행 전 닫기
-      const heirDialog = page.getByRole("dialog", { name: "상속인 편집" });
-      if (await heirDialog.isVisible()) {
-        await heirDialog.getByRole("button", { name: "닫기" }).click();
-        await expect(heirDialog).not.toBeVisible({ timeout: 3_000 });
-      }
+      // 자녀 1명 — addHeir가 모달 안 주민번호 입력 + 닫기까지 수행 (피상속인 RRN은 위 별도 입력)
+      await addHeir(page, "heir", "child", { residentNumber: "900202-2000000" });
 
       // Step1(상속재산) → 토지
       await page.getByRole("button", { name: /^다음/ }).click();

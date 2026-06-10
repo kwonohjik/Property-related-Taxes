@@ -21,7 +21,6 @@ async function gotoExemptionStep(page: Page) {
   await page.getByLabel("월").first().fill("5");
   await page.getByLabel("일").first().fill("15");
   await addHeir(page, "heir", "child");
-  await page.getByPlaceholder("앞 6자리-뒤 7자리").last().fill("700101-1000000"); // 주민번호 필수(계산 차단 회피)
   await page.getByRole("button", { name: /^다음/ }).click(); // → Step1
 
   // Step1: 토지 1건 (보충적 평가 1,000㎡ × 100만 = 10억 — 비과세 클램프 회피)

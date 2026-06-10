@@ -17,7 +17,7 @@
  */
 
 import { test, expect, type Page } from "@playwright/test";
-import { addHeir } from "./_helpers/tax-flow";
+import { addHeir, closeHeirEditModal } from "./_helpers/tax-flow";
 
 /** Step0: 상속개시일 2024-06-10 + 자녀(이름 김철수) + 영리법인 */
 async function gotoStep0WithChildAndCorporate(page: Page) {
@@ -26,12 +26,12 @@ async function gotoStep0WithChildAndCorporate(page: Page) {
   await page.getByLabel("월").first().fill("6");
   await page.getByLabel("일").first().fill("10");
 
-  // 자녀 추가 + 이름 입력 (드롭다운 그룹1에 "김철수 (자녀)"로 노출되어야 함)
-  await addHeir(page, "heir", "child");
-  // 이름 input은 label-htmlFor 연결이 없어 placeholder로 타겟 (자녀 카드가 첫 카드)
+  // 자녀 추가 + 이름 입력 — 모달 유지하여 이름 입력 후 닫기 (이름 input이 모달 안)
+  await addHeir(page, "heir", "child", { keepModalOpen: true });
   await page.getByPlaceholder("예: 홍길동").first().fill("김철수");
+  await closeHeirEditModal(page);
 
-  // 영리법인 추가 → 부표 5 영리법인 면제 명세 카드 노출
+  // 영리법인 추가 → 부표 5 영리법인 면제 명세 카드 노출 (메인 페이지)
   await addHeir(page, "corporate");
 
   await expect(

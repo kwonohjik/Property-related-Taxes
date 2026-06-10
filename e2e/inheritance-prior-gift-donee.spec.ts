@@ -40,7 +40,6 @@ async function gotoStep0WithChild(page: Page) {
 
   // 자녀 1명 추가
   await addHeir(page, "heir", "child");
-  await page.getByPlaceholder("앞 6자리-뒤 7자리").last().fill("700101-1000000");
 
   // Step1(상속재산)으로 이동
   await nextSteps(page, 1);

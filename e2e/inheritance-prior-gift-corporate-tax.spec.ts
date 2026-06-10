@@ -14,7 +14,7 @@
  */
 
 import { test, expect, type Page } from "@playwright/test";
-import { addHeir } from "./_helpers/tax-flow";
+import { addHeir, addLandAsset } from "./_helpers/tax-flow";
 
 /** Step0: 상속개시일 + 자녀 1 + 영리법인 1 → Step1 이동 */
 async function gotoStep0WithChildAndCorporate(page: Page) {
@@ -37,11 +37,8 @@ async function gotoStep0WithChildAndCorporate(page: Page) {
 
 /** Step1: 토지 자산 3억 + Step3(사전증여)까지 이동 */
 async function addLandAndGotoStep3(page: Page) {
-  await page.getByRole("button", { name: /상속재산 추가/ }).click();
-  await page.getByRole("button", { name: /토지/ }).first().click();
-  await page.getByRole("switch", { name: /보충적 평가방법/ }).click();
-  await page.getByPlaceholder("면적 입력").fill("300");
-  await page.getByPlaceholder("공시지가 단가").fill("1000000");
+  // 자산 추가 → 편집 모달 자동오픈 → 입력 후 닫기 (shared addLandAsset)
+  await addLandAsset(page, { area: "300", unitPrice: "1000000" });
   // Step2(비과세) → Step3(사전증여)
   await page.getByRole("button", { name: /^다음/ }).click();
   await page.getByRole("button", { name: /^다음/ }).click();

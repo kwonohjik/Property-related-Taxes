@@ -20,7 +20,6 @@ async function gotoV2FormalValuationCard(page: Page) {
   await page.getByLabel("일").first().fill("31");
 
   await addHeir(page, "heir", "child");
-  await page.getByPlaceholder("앞 6자리-뒤 7자리").last().fill("700101-1000000");
   await page.getByRole("button", { name: /^다음/ }).click();
 
   // Step1: 비상장주식 V2 카드 열기

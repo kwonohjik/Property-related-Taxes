@@ -23,7 +23,8 @@ test.describe("상속세 §27 단서 대습상속", () => {
     await page.getByLabel("연도").first().fill("2024");
     await page.getByLabel("월").first().fill("6");
     await page.getByLabel("일").first().fill("10");
-    await addHeir(page, "legatee");
+    // 수유자 추가 → 모달 유지(세대생략·대습 토글이 모달 안)
+    await addHeir(page, "legatee", undefined, { keepModalOpen: true });
 
     // §27 세대생략 토글 ON
     const genSkipToggle = page.getByText(

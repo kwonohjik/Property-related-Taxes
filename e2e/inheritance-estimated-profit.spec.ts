@@ -18,7 +18,6 @@ async function gotoInheritanceV2Formal(page: Page) {
   await page.getByLabel("월").first().fill("5");
   await page.getByLabel("일").first().fill("15");
   await addHeir(page, "heir", "child");
-  await page.getByPlaceholder("앞 6자리-뒤 7자리").last().fill("700101-1000000");
   await page.getByRole("button", { name: /^다음/ }).click();
   await page.getByRole("button", { name: /주식·지분 추가/ }).click();
   await page.getByRole("button", { name: /비상장주식/ }).click();

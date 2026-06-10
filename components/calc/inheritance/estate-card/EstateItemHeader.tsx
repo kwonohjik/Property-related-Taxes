@@ -25,6 +25,12 @@ export interface EstateItemHeaderProps {
   onRemove: () => void;
   /** PR-F FU-6: 카테고리 변경 ⋮ 메뉴 콜백. 미전달 시 ⋮ 메뉴 미노출 */
   onChangeCategory?: () => void;
+  /**
+   * 모달(EstateItemEditor) 안에서 사용 시 카테고리+번호 타이틀부를 숨김.
+   * DialogTitle("{카테고리} 편집")과 중복 제거. 기본 false(타이틀 표시).
+   * estate-asset-table-view.ui.design.md §5.3.
+   */
+  hideTitle?: boolean;
 }
 
 export function EstateItemHeader({
@@ -40,6 +46,7 @@ export function EstateItemHeader({
   advancedBadgeCount,
   onRemove,
   onChangeCategory,
+  hideTitle = false,
 }: EstateItemHeaderProps) {
   return (
     <div
@@ -47,12 +54,14 @@ export function EstateItemHeader({
       className="flex flex-wrap items-start justify-between gap-2"
     >
       <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
-        <div className="flex items-center gap-2 shrink-0">
-          <span className="text-lg" aria-hidden>{icon}</span>
-          <span className="font-semibold text-sm text-gray-700 dark:text-gray-200">
-            {categoryLabel} {index + 1}
-          </span>
-        </div>
+        {!hideTitle && (
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-lg" aria-hidden>{icon}</span>
+            <span className="font-semibold text-sm text-gray-700 dark:text-gray-200">
+              {categoryLabel} {index + 1}
+            </span>
+          </div>
+        )}
         <EstateItemHeaderChips
           itemId={itemId}
           chips={chips}

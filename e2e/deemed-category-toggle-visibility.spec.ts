@@ -13,18 +13,19 @@
  */
 
 import { test, expect, type Page } from "@playwright/test";
+import { addHeir, closeHeirEditModal } from "./_helpers/tax-flow";
 
 async function gotoStep1WithChild(page: Page) {
   await page.goto("/calc/inheritance-tax");
   await page.getByLabel("연도").first().fill("2026");
   await page.getByLabel("월").first().fill("5");
   await page.getByLabel("일").first().fill("15");
-  await page.getByRole("button", { name: /상속인 추가/ }).click();
-  await page.getByText("자녀", { exact: true }).click();
+  await addHeir(page, "heir", "child");
+  await closeHeirEditModal(page);
   await page.getByRole("button", { name: /^다음/ }).click();
 }
 
-/** 간주분류 사전 선택 → base 종류 클릭 → 카드 추가 */
+/** 간주분류 사전 선택 → base 종류 클릭 → 카드 추가 → 편집 모달 자동 오픈(E-1) */
 async function addDeemedAsset(
   page: Page,
   deemedLabel: RegExp,
@@ -40,9 +41,8 @@ async function addDeemedAsset(
   } else {
     await page.getByRole("button", { name: baseTypeLabel }).first().click();
   }
-  await expect(
-    page.locator('[data-testid^="estate-card-shell-"]').first(),
-  ).toBeVisible();
+  // estate-card-shell은 테이블 전환으로 폐기 → 편집 모달 자동 오픈으로 대체
+  await expect(page.getByTestId("estate-edit-dialog")).toBeVisible();
 }
 
 test.describe("간주상속재산 토글 노출 정합화", () => {

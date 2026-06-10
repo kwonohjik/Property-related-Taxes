@@ -10,25 +10,29 @@
  */
 
 import { test, expect, type Page } from "@playwright/test";
+import { addHeir, closeHeirEditModal } from "./_helpers/tax-flow";
 
 async function gotoStep1WithChild(page: Page) {
   await page.goto("/calc/inheritance-tax");
   await page.getByLabel("연도").first().fill("2026");
   await page.getByLabel("월").first().fill("5");
   await page.getByLabel("일").first().fill("15");
-  await page.getByRole("button", { name: /상속인 추가/ }).click();
-  await page.getByText("자녀", { exact: true }).click();
+  await addHeir(page, "heir", "child");
+  await closeHeirEditModal(page);
   await page.getByRole("button", { name: /^다음/ }).click();
 }
 
+/** 자산 추가 → 편집 모달 자동 오픈(E-1). 본문 FieldCard는 모달 안에 위치. */
 async function addLandCard(page: Page) {
   await page.getByRole("button", { name: /재산 추가|상속재산 추가/ }).first().click();
   await page.getByRole("button", { name: /토지/ }).first().click();
+  await expect(page.getByTestId("estate-edit-dialog")).toBeVisible();
 }
 
 async function addFinancialCard(page: Page) {
   await page.getByRole("button", { name: /재산 추가|상속재산 추가/ }).first().click();
   await page.getByText("예금·펀드·채권·공제금", { exact: true }).click();
+  await expect(page.getByTestId("estate-edit-dialog")).toBeVisible();
 }
 
 test.describe("부동산 자산 카드 — FieldCard + 섹션 스타일", () => {

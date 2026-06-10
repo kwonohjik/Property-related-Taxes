@@ -35,7 +35,6 @@ async function gotoStep0(page: Page) {
 /** 자녀 상속인 1명 추가 + 주민번호 + 상속인 편집 모달 닫기 */
 async function addChildHeir(page: Page) {
   await addHeir(page, "heir", "child");
-  await page.getByPlaceholder("앞 6자리-뒤 7자리").last().fill("700101-1000000");
   // 자녀 추가 직후 "상속인 편집" 모달이 자동 오픈됨 → 동거가족 추가 전에 닫아야 함
   const heirDialog = page.getByRole("dialog", { name: "상속인 편집" });
   if (await heirDialog.isVisible()) {

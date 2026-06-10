@@ -20,7 +20,6 @@ async function gotoStep3WithChild(page: import("@playwright/test").Page) {
   await page.getByLabel("월").first().fill("6");
   await page.getByLabel("일").first().fill("1");
   await addHeir(page, "heir", "child");
-  await page.getByPlaceholder("앞 6자리-뒤 7자리").last().fill("700101-1000000");
   await page.getByRole("button", { name: /^다음/ }).click(); // → Step1
 
   // Step1: 아파트 10억

@@ -3,29 +3,33 @@
  *
  * Plan estate-card-followup.plan.md §8 Anchor #2
  *
- * 시나리오:
+ * 시나리오 (2026-06-10 테이블+모달 전환 후):
  *   1. 상속세 진입 + 자녀 상속인 추가
- *   2. 예금·펀드·채권·공제금(financial) 자산 1개 추가
- *   3. 헤더 칩 §22 클릭 → 3-state 순환 (undef → true → false → undef)
- *   4. 분류 칩 클릭 → 인라인 펼침 → 보험금 선택 → 칩 라벨 갱신
- *   5. ⚙️ 옵션 버튼 클릭 → 고급 패널 펼침
+ *   2. 예금·펀드·채권·공제금(financial) 자산 1개 추가 → 편집 모달 자동 오픈(E-1)
+ *   3. 모달 안 헤더 칩 §22 클릭 → 3-state 순환 (undef → true → false → undef)
+ *   4. 모달 안 분류 칩 클릭 → 인라인 펼침 → 보험금 선택 → 칩 라벨 갱신
+ *   5. 모달 안 ⚙️ 옵션 버튼 클릭 → 고급 패널 펼침
  *
  * 정책: [[feedback_browser_verify_with_playwright]]
  */
 
 import { test, expect, type Page } from "@playwright/test";
+import { addHeir, closeHeirEditModal } from "./_helpers/tax-flow";
 
+/** financial 자산 추가 → 편집 모달 자동 오픈. 칩·패널은 모달(estate-edit-dialog) 안에 위치. */
 async function gotoStep1WithFinancialCard(page: Page) {
   await page.goto("/calc/inheritance-tax");
   await page.getByLabel("연도").first().fill("2026");
   await page.getByLabel("월").first().fill("5");
   await page.getByLabel("일").first().fill("15");
-  await page.getByRole("button", { name: /상속인 추가/ }).click();
-  await page.getByText("자녀", { exact: true }).click();
+  await addHeir(page, "heir", "child");
+  await closeHeirEditModal(page);
   await page.getByRole("button", { name: /^다음/ }).click();
-  // 부동산·금융 자산 추가 (financial)
+  // 부동산·금융 자산 추가 (financial) → handleAdd가 selectedItemId set → 모달 자동 오픈
   await page.getByRole("button", { name: /재산 추가/ }).first().click();
   await page.getByText("예금·펀드·채권·공제금", { exact: true }).click();
+  // 편집 모달 자동 오픈 확인 (E-1)
+  await expect(page.getByTestId("estate-edit-dialog")).toBeVisible();
 }
 
 test.describe("PR-G S-1: 헤더 칩 ↔ ⚙️ 패널 상태 동기", () => {
@@ -33,9 +37,8 @@ test.describe("PR-G S-1: 헤더 칩 ↔ ⚙️ 패널 상태 동기", () => {
     test.setTimeout(60_000);
     await gotoStep1WithFinancialCard(page);
 
-    // estate-card-shell이 노출되었는지 (testid prefix로 찾기)
-    const shell = page.locator('[data-testid^="estate-card-shell-"]').first();
-    await expect(shell).toBeVisible();
+    // 편집 모달이 자동 오픈됨 (estate-card-shell은 테이블 전환으로 폐기 → 모달로 대체)
+    await expect(page.getByTestId("estate-edit-dialog")).toBeVisible();
 
     // §22 칩 — 라벨 "금융재산 공제" + 체크는 mark(굵은 아이콘)·aria-pressed로 표현 (2026-05-29)
     const section22Chip = page.locator('[data-testid^="estate-chip-section22-"]').first();

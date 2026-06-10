@@ -13,17 +13,21 @@
  */
 
 import { test, expect, type Page } from "@playwright/test";
+import { addHeir, closeHeirEditModal } from "./_helpers/tax-flow";
 
+/** financial 자산 추가 → 편집 모달 자동 오픈(E-1). ⋮ 메뉴·카테고리 변경은 모달 안. */
 async function gotoStep1WithFinancialCard(page: Page) {
   await page.goto("/calc/inheritance-tax");
   await page.getByLabel("연도").first().fill("2026");
   await page.getByLabel("월").first().fill("5");
   await page.getByLabel("일").first().fill("15");
-  await page.getByRole("button", { name: /상속인 추가/ }).click();
-  await page.getByText("자녀", { exact: true }).click();
+  await addHeir(page, "heir", "child");
+  await closeHeirEditModal(page);
   await page.getByRole("button", { name: /^다음/ }).click();
   await page.getByRole("button", { name: /재산 추가/ }).first().click();
   await page.getByText("예금·펀드·채권·공제금", { exact: true }).click();
+  // 추가 직후 편집 모달 자동 오픈 — ⋮ 메뉴는 모달 안에 위치
+  await expect(page.getByTestId("estate-edit-dialog")).toBeVisible();
 }
 
 test.describe("PR-F S-2: 카테고리 변경 워크플로", () => {

@@ -22,7 +22,6 @@ async function calcWithCohabitHouse(page: Page, year: string) {
   await fillDateAndVerify(page, { year, month: "6", day: "1" });
 
   await addHeir(page, "heir", "child");
-  await page.getByPlaceholder("앞 6자리-뒤 7자리").last().fill("700101-1000000");
   // 자녀 동거(isCohabitant) — §23의2 게이팅 충족
   await page.getByText("동거주택 상속공제 해당").click();
 

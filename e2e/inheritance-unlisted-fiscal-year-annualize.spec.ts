@@ -42,7 +42,6 @@ async function gotoV2FormalValuationCard(page: Page) {
 
   // 상속인 1명(자녀) 등록
   await addHeir(page, "heir", "child");
-  await page.getByPlaceholder("앞 6자리-뒤 7자리").last().fill("700101-1000000");
 
   // Step1(상속재산 평가)으로 이동
   await page.getByRole("button", { name: /^다음/ }).click();
