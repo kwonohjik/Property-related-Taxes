@@ -12,6 +12,7 @@
  */
 
 import { applyRate, truncateToWon } from "./tax-utils";
+import { applyFiveYearLimits } from "./aggregate-reduction-limits";
 import { TRANSFER } from "./legal-codes";
 import { calculateBuildingPenalty, calcTax, calcReductions } from "./transfer-tax-rate-calc";
 import {
@@ -103,7 +104,7 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
         label: "§99의3 농어촌특별세 (감면세액 × 20%)",
         formula: `(감면 전 산출세액 ${taxResultBefore993.calculatedTax.toLocaleString()} − 감면 후 산출세액 ${taxResult.calculatedTax.toLocaleString()}) × 20% = ${ruralSurtax993.toLocaleString()}`,
         amount: ruralSurtax993,
-        legalBasis: "농특세법 §3·§5",
+        legalBasis: TRANSFER.RURAL_SURTAX_993,
       });
     }
   }
@@ -142,11 +143,35 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
     legalBasis: getReductionLegalBasis(reductionType, publicExpropriationDetail?.useLegacyRates),
   });
 
+  // ── STEP 8.5: §133② 5년 누적 한도 — 과거 4개 과세연도 감면 이력 차감 ──
+  // aggregate 경로(2자산 이상·일반건물 dispatch)는 transfer-tax-aggregate.ts M-8에서
+  // 동일 모듈(applyFiveYearLimits)로 별도 적용 — per-asset 입력에는 이력이 없어 이중 차감 없음.
+  let cappedReductionAmount = reductionAmount;
+  const priorUsage = input.priorReductionUsage ?? [];
+  if (reductionAmount > 0 && reductionTypeApplied && priorUsage.length > 0) {
+    const { fiveYearCappedByType, fiveYearCapInfoByType } = applyFiveYearLimits(
+      new Map([[reductionTypeApplied, reductionAmount]]),
+      priorUsage,
+      input.transferDate.getFullYear(),
+    );
+    const fiveInfo = fiveYearCapInfoByType.get(reductionTypeApplied);
+    const capped = fiveYearCappedByType.get(reductionTypeApplied) ?? reductionAmount;
+    if (fiveInfo?.cappedByFiveYear && capped < reductionAmount) {
+      steps.push({
+        label: "§133 5년 누적 한도",
+        formula: `감면세액 ${reductionAmount.toLocaleString()} → ${capped.toLocaleString()} (5년 한도 ${fiveInfo.fiveYearLimit.toLocaleString()} − 과거 4개 연도 누적 ${fiveInfo.priorGroupSum.toLocaleString()} = 잔여 ${fiveInfo.remaining.toLocaleString()})`,
+        amount: capped,
+        legalBasis: fiveInfo.legalBasis,
+      });
+      cappedReductionAmount = capped;
+    }
+  }
+
   // ── STEP 9: 결정세액 = 산출세액 - 감면 (원 미만 절사) ──
-  const determinedTax = truncateToWon(Math.max(0, taxResult.calculatedTax - reductionAmount));
+  const determinedTax = truncateToWon(Math.max(0, taxResult.calculatedTax - cappedReductionAmount));
   steps.push({
     label: "결정세액",
-    formula: `산출세액 ${taxResult.calculatedTax.toLocaleString()} - 감면 ${reductionAmount.toLocaleString()} (원 미만 절사)`,
+    formula: `산출세액 ${taxResult.calculatedTax.toLocaleString()} - 감면 ${cappedReductionAmount.toLocaleString()} (원 미만 절사)`,
     amount: determinedTax,
     legalBasis: TRANSFER.FINAL_TAX,
   });
@@ -196,7 +221,8 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
   return {
     new993FinalResult,
     ruralSurtax993,
-    reductionAmount,
+    // STEP 8.5 5년 한도 반영값 — 결과 표시(결정세액 산식)와 일관 유지
+    reductionAmount: cappedReductionAmount,
     reductionType,
     reductionTypeApplied,
     reducibleIncome,

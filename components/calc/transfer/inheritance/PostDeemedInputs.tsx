@@ -10,7 +10,7 @@
  * ① 평가방법 선택 → ② 신고가액 → ③ (보충적평가 선택 시) 보조계산
  */
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
@@ -65,38 +65,42 @@ export function PostDeemedInputs({ asset, onChange, transferDate }: Props) {
     return unitPrice > 0 && area > 0 ? Math.floor(unitPrice * area).toLocaleString() : "";
   });
 
-  // 보충적평가 보조계산: 합산 → inheritanceReportedValue 자동 동기화
-  useEffect(() => {
-    if (!asset.useSupplementaryHelper || !isSupplementary) return;
-    const landAmt = parseAmount(landTotal);
-    const buildingAmt = parseAmount(asset.supplementaryBuildingValue);
-    const total = landAmt + buildingAmt;
-    if (total > 0) {
-      onChange({ inheritanceReportedValue: total.toLocaleString() });
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [landTotal, asset.supplementaryBuildingValue, asset.useSupplementaryHelper]);
+  // 보충적평가 보조계산: 합산 → inheritanceReportedValue 동기화.
+  // memory `mirror-pattern` — useEffect→store 미러링 금지. onChange 핸들러에서 직접 패치.
+  // 보조계산 활성 시에만 패치(미활성이면 수동 입력 보존). total 0이면 "" 로 초기화(stale 방지).
+  function reportedPatch(landTotalStr: string, buildingStr: string) {
+    if (!asset.useSupplementaryHelper || !isSupplementary) return {};
+    const total = parseAmount(landTotalStr) + parseAmount(buildingStr);
+    return { inheritanceReportedValue: total > 0 ? total.toLocaleString() : "" };
+  }
 
   function handleLandUnitPriceChange(v: string) {
-    onChange({ supplementaryLandUnitPrice: v });
     const unitPrice = parseAmount(v);
     const area = parseFloat(asset.supplementaryLandArea) || 0;
-    if (unitPrice > 0 && area > 0) {
-      setLandTotal(Math.floor(unitPrice * area).toLocaleString());
-    } else {
-      setLandTotal("");
-    }
+    const newLandTotal = unitPrice > 0 && area > 0 ? Math.floor(unitPrice * area).toLocaleString() : "";
+    setLandTotal(newLandTotal);
+    onChange({
+      supplementaryLandUnitPrice: v,
+      ...reportedPatch(newLandTotal, asset.supplementaryBuildingValue),
+    });
   }
 
   function handleLandAreaChange(v: string) {
-    onChange({ supplementaryLandArea: v });
     const unitPrice = parseAmount(asset.supplementaryLandUnitPrice);
     const area = parseFloat(v.replace(/,/g, "")) || 0;
-    if (unitPrice > 0 && area > 0) {
-      setLandTotal(Math.floor(unitPrice * area).toLocaleString());
-    } else {
-      setLandTotal("");
-    }
+    const newLandTotal = unitPrice > 0 && area > 0 ? Math.floor(unitPrice * area).toLocaleString() : "";
+    setLandTotal(newLandTotal);
+    onChange({
+      supplementaryLandArea: v,
+      ...reportedPatch(newLandTotal, asset.supplementaryBuildingValue),
+    });
+  }
+
+  function handleBuildingValueChange(v: string) {
+    onChange({
+      supplementaryBuildingValue: v,
+      ...reportedPatch(landTotal, v),
+    });
   }
 
   return (
@@ -202,7 +206,19 @@ export function PostDeemedInputs({ asset, onChange, transferDate }: Props) {
             />
           }
           checked={asset.useSupplementaryHelper}
-          onCheckedChange={(v) => onChange({ useSupplementaryHelper: v })}
+          onCheckedChange={(v) => {
+            // 토글 ON 시 기존 입력값으로 즉시 합산 동기화 (useEffect 대체).
+            // OFF 시 신고가액은 손대지 않음(수동 편집 보존).
+            if (v && isSupplementary) {
+              const total = parseAmount(landTotal) + parseAmount(asset.supplementaryBuildingValue);
+              onChange({
+                useSupplementaryHelper: true,
+                inheritanceReportedValue: total > 0 ? total.toLocaleString() : "",
+              });
+            } else {
+              onChange({ useSupplementaryHelper: v });
+            }
+          }}
         >
           {asset.useSupplementaryHelper && (
             <div className="space-y-3">
@@ -244,7 +260,7 @@ export function PostDeemedInputs({ asset, onChange, transferDate }: Props) {
                   label=""
                   hideUnit
                   value={asset.supplementaryBuildingValue}
-                  onChange={(v) => onChange({ supplementaryBuildingValue: v })}
+                  onChange={handleBuildingValueChange}
                   placeholder="공시가격 총액 (원)"
                 />
               </FieldCard>

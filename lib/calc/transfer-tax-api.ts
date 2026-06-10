@@ -259,11 +259,8 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
             acqResidentialArea: parseFloat(primary.partialChangeAcqResidentialArea) || undefined,
             acqCommercialArea: parseFloat(primary.partialChangeAcqCommercialArea) || undefined,
             // 집행기준 89-154-24 취지 — 용도변경일 입력 시 LTHD 시간 비례 분할
-            usageChangeDate:
-              primary.partialChangeDate &&
-              !Number.isNaN(new Date(primary.partialChangeDate).getTime())
-                ? new Date(primary.partialChangeDate)
-                : undefined,
+            // 문자열 그대로 전송 → route handler가 date-coerce로 Date 변환 (정책: API 변환에서 new Date() 금지)
+            usageChangeDate: primary.partialChangeDate || undefined,
           }
         : undefined,
   } : undefined;
@@ -466,6 +463,8 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     isOneHousehold: form.isOneHousehold,
     reductions,
     annualBasicDeductionUsed: parseAmount(form.annualBasicDeductionUsed),
+    // ⑬ §133 5년 누적 한도 — 과거 4개 과세연도 감면 이력 (TypeScript 미감지 영역 — 누락 시 침묵 stripping)
+    priorReductionUsage: form.priorReductionUsage ?? [],
     ...(form.temporaryTwoHouseSpecial &&
     form.previousHouseAcquisitionDate &&
     form.newHouseAcquisitionDate

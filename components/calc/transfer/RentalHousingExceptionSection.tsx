@@ -174,37 +174,22 @@ function RentalUnitCard({ unit, index, onChange, onRemove, canRemove }: RentalUn
       </FieldCard>
 
       {/* 기타 요건 자기확인 */}
-      <div className={cn(
-        "rounded border p-2.5 space-y-1.5",
-        unit.requirementsConfirmed
-          ? "border-violet-300 bg-violet-50/70"
-          : "border-violet-200/70 bg-violet-50/40",
-      )}>
-        <div className="flex items-start gap-2">
-          <input
-            type="checkbox"
-            id={`req-confirm-${index}`}
-            checked={unit.requirementsConfirmed}
-            onChange={(e) => set("requirementsConfirmed", e.target.checked)}
-            className="mt-0.5 accent-violet-600 w-4 h-4 shrink-0 cursor-pointer"
-          />
-          <label
-            htmlFor={`req-confirm-${index}`}
-            className="text-xs text-violet-800 dark:text-violet-200 cursor-pointer leading-snug"
-          >
-            임대료 5% 상한, 임대사업자 등록 유지, 임대료 증액 후 1년 이내 재증액 금지 요건을 모두 충족합니다.
-          </label>
-          <LawArticleModal
-            legalBasis="소득세법 시행령 §155"
-            label="§155⑳"
-          />
-        </div>
-        {!unit.requirementsConfirmed && (
-          <p className="text-[10px] text-violet-600 dark:text-violet-400 pl-6">
-            특례 적용을 위해 위 요건을 확인하고 체크하세요.
-          </p>
-        )}
-      </div>
+      <ToggleCard
+        variant="card"
+        size="sm"
+        tone="violet"
+        title="임대료 5% 상한, 임대사업자 등록 유지, 임대료 증액 후 1년 이내 재증액 금지 요건을 모두 충족합니다."
+        description={
+          unit.requirementsConfirmed
+            ? undefined
+            : "특례 적용을 위해 위 요건을 확인하고 체크하세요."
+        }
+        trailing={
+          <LawArticleModal legalBasis="소득세법 시행령 §155" label="§155⑳" />
+        }
+        checked={unit.requirementsConfirmed}
+        onCheckedChange={(v) => set("requirementsConfirmed", v)}
+      />
     </div>
   );
 }

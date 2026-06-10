@@ -722,8 +722,6 @@ export interface TransferTaxResult {
    * 환산 케이스는 valuationMeta 포함 (§164⑦ 단서 발동 여부).
    */
   redevelopmentDetail?: RedevelopmentResult;
-  /** 이월과세 모드 신고서 표시용 취득일. A=증여자 취득일, B=등기접수일. FilingFormTable 보유기간 계산용. */
-  displayAcquisitionDate?: string;
   /** 장기임대 거주주택 비과세 특례(§155⑳·§161). rentalHousingException 제공 시. */
   rentalHousingExceptionDetail?: import("../transfer-tax/rental-housing-exception/types").RentalHousingExceptionResult;
   /** Phase 2: 조특법 §99의3 신축주택 과세특례 상세. type==="new_99_3" 시. UI 5년 안분·부호·농특세 산식. */
