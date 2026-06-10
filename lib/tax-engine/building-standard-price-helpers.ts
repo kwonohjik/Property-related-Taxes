@@ -178,17 +178,19 @@ export function calcAcqBaseBreakdown(
 
 /**
  * §164⑧ 동일연도 취득·양도 환산 (제1·제2산식, p.302).
- * 제1산식: 양도기준시가 = acqStd + (acqStd − prevStd) × min(보유월수/조정월수, 1)
- * 제2산식: 양도기준시가 = acqStd + (newStd − acqStd) × min(보유월수/조정월수, 1)
+ * 양도기준시가 = acqStd + delta × min(보유월수/조정월수, 1).
+ *   제1산식 delta = acqStd − prevStd  (취득 − 취득전기)
+ *   제2산식 delta = newStd − acqStd    (신규고시 − 취득)
+ * ⚠️ 두 산식의 delta 부호가 반대(설계 p.302) — orchestrator에서 산식별로 delta를 구성해 전달.
  */
 export function calcSameYearTransferStdPrice(
   acqStd: number,
-  otherStd: number, // prevStd(제1) 또는 newStd(제2)
+  delta: number,
   holdingMonths: number,
   adjustMonths: number,
 ): number {
   const ratio = Math.min(holdingMonths / adjustMonths, 1);
-  return Math.floor(acqStd + (otherStd - acqStd) * ratio);
+  return Math.floor(acqStd + delta * ratio);
 }
 
 /**

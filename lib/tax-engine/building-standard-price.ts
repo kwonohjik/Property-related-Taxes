@@ -130,13 +130,15 @@ export function calcBuildingStandardPrice(
     const adjustMonths = input.adjustMonths ?? 12;
     const formula = input.sameYearFormula ?? "prev";
 
-    let otherStd: number;
+    const acqStd = acquisition.standardPrice;
+    let delta: number;
     if (formula === "new") {
       if (input.newNoticePricePerM2 === undefined || !(input.newNoticePricePerM2 > 0)) {
         throw new BuildingStdPriceError("동일연도 제2산식: 새로운 기준시가 ㎡당 금액 필수");
       }
-      // newStd = (1,000원 절사된 ㎡당 금액) × 면적
-      otherStd = Math.floor(truncateToThousand(input.newNoticePricePerM2) * input.floorArea);
+      // newStd = (1,000원 절사된 ㎡당 금액) × 면적. 제2산식 delta = newStd − acqStd
+      const newStd = Math.floor(truncateToThousand(input.newNoticePricePerM2) * input.floorArea);
+      delta = newStd - acqStd;
     } else {
       if (input.prevLandPricePerM2 === undefined || !(input.prevLandPricePerM2 > 0)) {
         throw new BuildingStdPriceError("동일연도 제1산식: 취득전기 공시지가 필수 입력");
@@ -154,11 +156,12 @@ export function calcBuildingStandardPrice(
         1.0,
         "취득전기",
       );
-      otherStd = prevBd.standardPrice;
+      // 제1산식 delta = acqStd − prevStd
+      delta = acqStd - prevBd.standardPrice;
     }
     const transferStd = calcSameYearTransferStdPrice(
-      acquisition.standardPrice,
-      otherStd,
+      acqStd,
+      delta,
       input.holdingMonths,
       adjustMonths,
     );
