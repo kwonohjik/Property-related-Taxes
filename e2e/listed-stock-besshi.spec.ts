@@ -10,13 +10,14 @@
  * Plan: docs/00-pm/listed-stock-besshi-form-replica.plan.md §8
  */
 import { test, expect, type Page } from "@playwright/test";
-import { fillDateAndVerify } from "./_helpers/tax-flow";
+import { fillDateAndVerify, addHeir, closeHeirEditModal } from "./_helpers/tax-flow";
 
 async function gotoStep0(page: Page) {
   await page.goto("/calc/inheritance-tax");
   await fillDateAndVerify(page, { year: "2022", month: "7", day: "6" });
-  await page.getByRole("button", { name: /상속인 추가/ }).click();
-  await page.getByText("자녀", { exact: true }).click();
+  // 2단계 picker + 모달 RRN 자동입력·닫기 (PR #68)
+  await addHeir(page, "heir", "child");
+  await closeHeirEditModal(page);
   await page.getByRole("button", { name: /^다음/ }).click();
 }
 

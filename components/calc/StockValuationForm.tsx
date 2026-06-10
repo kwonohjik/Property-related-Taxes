@@ -613,49 +613,40 @@ export function StockValuationForm({
         </div>
       )}
 
-      {/* 상장주식 목록 */}
-      {listedItems.length > 0 && (
+      {/* 주식·지분 목록 — 사용자 입력 순서대로 표시 (카테고리별 그룹핑 없음).
+          각 카드가 헤더에 emoji+타입+번호를 자체 표시(상장주식 N / 비상장주식 N).
+          index는 카테고리별 indexOf로 유지 → "상장주식 1"·"비상장주식 1" 의미 보존. */}
+      {items.length > 0 && (
         <div className="space-y-3">
-          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 flex items-center gap-1">
-            <span>📈</span> 상장주식
-          </p>
-          {items.map((item, i) =>
-            item.category === "listed_stock" ? (
-              <ListedStockEditor
-                key={item.id}
-                item={item}
-                index={listedItems.indexOf(item)}
-                onUpdate={(updated) => handleUpdate(i, updated)}
-                onRemove={() => handleRemove(i)}
-                valuationDate={valuationDate}
-                mode={mode}
-                heirs={heirs}
-              />
-            ) : null,
-          )}
-        </div>
-      )}
-
-      {/* 비상장주식 목록 */}
-      {unlistedItems.length > 0 && (
-        <div className="space-y-3">
-          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 flex items-center gap-1">
-            <span>📋</span> 비상장주식
-          </p>
-          {items.map((item, i) =>
-            item.category === "unlisted_stock" ? (
-              <UnlistedStockCard
-                key={item.id}
-                item={item}
-                index={unlistedItems.indexOf(item)}
-                onUpdate={(updated) => handleUpdate(i, updated)}
-                onRemove={() => handleRemove(i)}
-                mode={mode}
-                heirs={heirs}
-                valuationDate={valuationDate}
-              />
-            ) : null,
-          )}
+          {items.map((item, i) => (
+            <div
+              key={item.id}
+              data-testid="stock-card"
+              data-category={item.category}
+            >
+              {item.category === "listed_stock" ? (
+                <ListedStockEditor
+                  item={item}
+                  index={listedItems.indexOf(item)}
+                  onUpdate={(updated) => handleUpdate(i, updated)}
+                  onRemove={() => handleRemove(i)}
+                  valuationDate={valuationDate}
+                  mode={mode}
+                  heirs={heirs}
+                />
+              ) : (
+                <UnlistedStockCard
+                  item={item}
+                  index={unlistedItems.indexOf(item)}
+                  onUpdate={(updated) => handleUpdate(i, updated)}
+                  onRemove={() => handleRemove(i)}
+                  mode={mode}
+                  heirs={heirs}
+                  valuationDate={valuationDate}
+                />
+              )}
+            </div>
+          ))}
         </div>
       )}
 
@@ -702,11 +693,13 @@ export function StockValuationForm({
           </button>
         </div>
       ) : (
-        // controlled(외부 헤더 버튼) 시 하단 기본 버튼 미렌더
-        !isAddControlled && (
+        // 하단 추가 버튼 — uncontrolled(증여세 등)는 항상, controlled(상속 헤더 버튼)는
+        // 목록이 있을 때만(빈 목록은 헤더 버튼 단독 → 추가 트리거 중복·E2E strict 위반 회피).
+        (!isAddControlled || items.length > 0) && (
           <button
             type="button"
             onClick={() => setShowAddPanel(true)}
+            data-testid="stock-add-bottom"
             className="w-full flex items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 dark:border-gray-600 py-3 text-sm text-gray-500 dark:text-gray-400 hover:border-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors"
           >
             <span className="text-lg">+</span>
