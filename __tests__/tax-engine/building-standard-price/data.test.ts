@@ -193,8 +193,14 @@ describe("D9 기계식주차 산식 (연도 가변)", () => {
   it("2001·2002 = 5,000,000 · 내용연수 20년", () => {
     expect(resolveMechParkingFormula(2001)).toEqual({ unitPrice: 5_000_000, durableYears: 20 });
   });
-  it("중간 연도(2003~2014)는 미확정 → undefined (D3 연동 대기)", () => {
-    expect(resolveMechParkingFormula(2014)).toBeUndefined();
+  it("중간 연도(2003~2012)는 미확정 → undefined (D3 연동 대기)", () => {
+    expect(resolveMechParkingFormula(2012)).toBeUndefined();
+  });
+  it("기계식주차 단가·내용연수 연도 변천: 2013=5.5백만 / 2014=5.75백만 / 2015=6백만(20년) / 2016~=6백만(30년)", () => {
+    expect(resolveMechParkingFormula(2013)).toEqual({ unitPrice: 5_500_000, durableYears: 20 });
+    expect(resolveMechParkingFormula(2014)).toEqual({ unitPrice: 5_750_000, durableYears: 20 });
+    expect(resolveMechParkingFormula(2015)).toEqual({ unitPrice: 6_000_000, durableYears: 20 });
+    expect(resolveMechParkingFormula(2016)).toEqual({ unitPrice: 6_000_000, durableYears: 30 });
   });
 
   it("BSP-MECH 손계산: 6,000,000 × 0.850(III·경과5) × 50 = 255,000,000", () => {
@@ -268,11 +274,12 @@ describe("D3 용도지수 (이미지 직접 판독, 2026 BASE + 연도 override)
     expect(resolveUsageIndex(2018, 34)).toBe(105);
     expect(resolveUsageIndex(2019, 34)).toBe(107);
   });
-  it("미전사 연도: 2014 이하 = undefined, 2015~2026 = 전사완료", () => {
-    expect(hasUsageIndexYear(2014)).toBe(false);
-    expect(resolveUsageIndex(2014, 1)).toBeUndefined();
+  it("미전사 연도: 2012 이하 = undefined, 2013~2026 = 전사완료", () => {
+    expect(hasUsageIndexYear(2012)).toBe(false);
+    expect(resolveUsageIndex(2012, 1)).toBeUndefined();
+    expect(hasUsageIndexYear(2013)).toBe(true);
+    expect(hasUsageIndexYear(2014)).toBe(true);
     expect(hasUsageIndexYear(2015)).toBe(true);
-    expect(hasUsageIndexYear(2016)).toBe(true);
     expect(hasUsageIndexYear(2017)).toBe(true);
     expect(hasUsageIndexYear(2018)).toBe(true);
     expect(hasUsageIndexYear(2026)).toBe(true);
@@ -325,6 +332,50 @@ describe("D3 용도지수 59항목 체계 (2003~2017, 2017 BASE + 연도 overrid
   });
   it("2015 기계식주차 = 6,000,000 · 20년 (★ 내용연수 2016부터 30년)", () => {
     expect(resolveMechParkingFormula(2015)).toEqual({ unitPrice: 6_000_000, durableYears: 20 });
+  });
+});
+
+describe("D3 용도지수 61항목-2014 체계 (2014 단독)", () => {
+  // 고시원=#7·기타판매=#12·도매시장=#13·하역장=#51·캐노피=#53 별도 행
+  it("2014: 아파트=110 / 고시원(#7)=100 / 기타판매(#12)=95 / 도매시장(#13)=80 / 무도장(#15)=135", () => {
+    expect(resolveUsageIndex(2014, 1)).toBe(110);
+    expect(resolveUsageIndex(2014, 7)).toBe(100);
+    expect(resolveUsageIndex(2014, 12)).toBe(95);
+    expect(resolveUsageIndex(2014, 13)).toBe(80);
+    expect(resolveUsageIndex(2014, 15)).toBe(135);
+  });
+  it("2014: 종합병원(#27)=120 / 장례식장(#28)=110 / 원자력(#47)=300 / 캐노피(#53)=85 / 화초온실(#60)=45", () => {
+    expect(resolveUsageIndex(2014, 27)).toBe(120);
+    expect(resolveUsageIndex(2014, 28)).toBe(110);
+    expect(resolveUsageIndex(2014, 47)).toBe(300);
+    expect(resolveUsageIndex(2014, 53)).toBe(85);
+    expect(resolveUsageIndex(2014, 60)).toBe(45);
+  });
+  it("2014 listUsageOptions = 60항목(#1~60, #61 기계식 제외), #7=고시원", () => {
+    const opts = listUsageOptions(2014);
+    expect(opts.length).toBe(60);
+    expect(opts.find((o) => o.no === 7)?.label).toBe("고시원");
+  });
+});
+
+describe("D3 용도지수 53항목 체계 (2013 단독)", () => {
+  // 단독주택 #2·다중주택 #3 분리, 유흥+무도장 통합 #14, 원자력 별도행 없음(#41에 발전소 통합)
+  it("2013: 아파트=110 / 단독주택(#2)=100 / 다중주택(#3)=100 / 유흥+무도장(#14)=130", () => {
+    expect(resolveUsageIndex(2013, 1)).toBe(110);
+    expect(resolveUsageIndex(2013, 2)).toBe(100);
+    expect(resolveUsageIndex(2013, 3)).toBe(100);
+    expect(resolveUsageIndex(2013, 14)).toBe(130);
+  });
+  it("2013: 종합병원(#24)=120 / 장례식장(#26)=110 / 냉동공장+발전소(#41)=90 / 화초온실(#52)=40", () => {
+    expect(resolveUsageIndex(2013, 24)).toBe(120);
+    expect(resolveUsageIndex(2013, 26)).toBe(110);
+    expect(resolveUsageIndex(2013, 41)).toBe(90);
+    expect(resolveUsageIndex(2013, 52)).toBe(40);
+  });
+  it("2013 listUsageOptions = 52항목(#1~52, #53 기계식 제외), #53 번호 없음", () => {
+    const opts = listUsageOptions(2013);
+    expect(opts.length).toBe(52);
+    expect(resolveUsageIndex(2013, 53)).toBeUndefined(); // #53은 기계식(D9)
   });
 });
 
