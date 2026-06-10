@@ -10,6 +10,7 @@ import {
   makeDefaultAsset,
   migrateAsset,
 } from "./calc-wizard-store";
+import { derivePenaltyFields } from "@/lib/calc/filing-deadline";
 
 /** ParcelListInput 마이그레이션 — store에서 분리된 헬퍼 */
 function migrateParcel(p: unknown): ParcelFormItem {
@@ -276,10 +277,18 @@ export function migrateLegacyForm(
   void _ec; void _eb; void _ebhy; void _ead;
   void _inbl; void _nlt; void _nla; void _nzt; void _nfs; void _nfrd; void _nbup;
 
-  return {
+  const merged: TransferFormData = {
     ...defaultFormData,
     ...(rest as Partial<TransferFormData>),
     contractTotalPrice: String(transferPrice ?? ""),
     assets: [primaryAsset, ...companions],
   };
+  // 로드 시점 가산세 cross-field 보정 (effect→store 미러링 제거 후 마이그레이션에서 1회 파생).
+  // 레거시 데이터가 양도일·신고일은 있으나 가산세 필드가 기본값일 때 신고기한 초과분 자동 반영.
+  const penaltyPatch = derivePenaltyFields(
+    merged.transferDate,
+    merged.filingDate,
+    merged,
+  );
+  return { ...merged, ...penaltyPatch };
 }

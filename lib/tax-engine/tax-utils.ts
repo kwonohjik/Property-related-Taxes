@@ -43,6 +43,23 @@ export function applyRate(amount: number, rate: number): number {
   return Math.floor(amount * rate);
 }
 
+/**
+ * 엔진 레이어 날짜 변환 — string|Date|undefined → Date|undefined.
+ *
+ * 엔진 내부에서 직접 `new Date(x)` 호출을 금지하기 위한 안전 헬퍼 (Layer 2 전용).
+ * `lib/api/date-coerce.ts`(toOptionalDate)는 Route 레이어 전용이므로 엔진에서 import 금지.
+ *
+ * - 빈문자열·null·undefined → undefined
+ * - invalid 날짜 문자열 → undefined (silent false 비교 트랩 방어)
+ * - 이미 Date면 유효성만 검사 후 통과 (Route에서 변환된 Date 입력 호환)
+ */
+export function coerceOptionalDate(value: string | Date | undefined | null): Date | undefined {
+  if (value === null || value === undefined || value === "") return undefined;
+  if (value instanceof Date) return isNaN(value.getTime()) ? undefined : value;
+  const d = new Date(value);
+  return isNaN(d.getTime()) ? undefined : d;
+}
+
 // ============================================================
 // 절사 유틸
 // ============================================================

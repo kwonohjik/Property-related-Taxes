@@ -10,7 +10,7 @@
  */
 
 import { addYears } from "date-fns";
-import { calculateHoldingPeriod } from "./tax-utils";
+import { calculateHoldingPeriod, applyRate } from "./tax-utils";
 import { calcPreHousingDisclosureGain } from "./transfer-tax-pre-housing-disclosure";
 import { TRANSFER } from "./legal-codes";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
@@ -200,7 +200,7 @@ export function calcCarryoverScenarios(
         ? Math.floor(rawInput.transferPrice * stdAtAcq / stdAtTransfer)
         : 0;
       // 개산공제 = 취득시 기준시가 × 3% (§163⑥)
-      estimatedDeductionForGiftTax = Math.floor(stdAtAcq * 0.03);
+      estimatedDeductionForGiftTax = applyRate(stdAtAcq, 0.03);
     }
   } else {
     donorAcqPrice = ct.donorAcquisitionPrice ?? 0;

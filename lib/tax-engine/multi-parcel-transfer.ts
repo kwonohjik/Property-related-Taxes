@@ -297,7 +297,7 @@ export function calculateMultiParcelTransfer(input: MultiParcelInput): MultiParc
       // 환산취득가액 = allocatedPrice × (standardAtAcq / standardAtTransfer)
       acquisitionPrice = safeMultiplyThenDivide(allocatedPrice, standardAtAcq, standardAtTransfer);
       // 개산공제 = 취득기준시가 × 3% (소득세법 §97 ①②)
-      estimatedDeduction = Math.floor(standardAtAcq * 0.03);
+      estimatedDeduction = applyRate(standardAtAcq, 0.03);
 
       // §97② 단서 swap — 환산 + 개산공제 < 자본 + 양도비 시 자본+양도비 적용
       const capExp = parcel.capitalExpenditure ?? 0;

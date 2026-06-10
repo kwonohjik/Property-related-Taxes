@@ -11,6 +11,7 @@
  */
 
 import { GIFT } from "./legal-codes";
+import { applyRate } from "./tax-utils";
 import type { CalculationStep } from "./types/inheritance-gift.types";
 
 // ============================================================
@@ -123,7 +124,7 @@ export function detectBargainTransfer(
   if (!isRelatedParty) {
     // §35 ② 단서: 비특수관계인은 min(시가×30%, 3억) 공제
     nonRelatedDeduction = Math.min(
-      Math.floor(marketValue * RELATED_RATE_THRESHOLD),
+      applyRate(marketValue, RELATED_RATE_THRESHOLD),
       ABSOLUTE_THRESHOLD,
     );
     deemedGiftAmount = Math.max(0, rawDiff - nonRelatedDeduction);

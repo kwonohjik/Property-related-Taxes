@@ -48,7 +48,6 @@ export function OtherLandDetailSection({
           type="number"
           value={asset.nblOtherBuildingValue}
           onChange={(e) => onAssetChange({ nblOtherBuildingValue: e.target.value })}
-          onFocus={(e) => e.target.select()}
           min={0}
           placeholder="0"
           className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -60,7 +59,6 @@ export function OtherLandDetailSection({
           type="number"
           value={asset.nblOtherLandValue}
           onChange={(e) => onAssetChange({ nblOtherLandValue: e.target.value })}
-          onFocus={(e) => e.target.select()}
           min={0}
           placeholder="0"
           className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"

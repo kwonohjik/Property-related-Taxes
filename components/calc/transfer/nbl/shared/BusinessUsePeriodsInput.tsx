@@ -50,7 +50,6 @@ export function BusinessUsePeriodsInput({
               type="text"
               value={p.usageType}
               onChange={(e) => updatePeriod(i, { usageType: e.target.value })}
-              onFocus={(e) => e.target.select()}
               placeholder="자경"
               className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />

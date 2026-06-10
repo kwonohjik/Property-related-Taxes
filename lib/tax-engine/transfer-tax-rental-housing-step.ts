@@ -91,7 +91,8 @@ export function runRentalHousingExceptionStep(
     amount: rhe.taxableGain,
     legalBasis: TRANSFER_RENTAL_HOUSING.PIT_RD_155_20,
   });
-  const rheTaxBase = truncateToWon(Math.max(0, rhe.taxableGain - 2_500_000));
+  const rheBasicDeduction = parsedRates.basicDeductionRules.annualLimit;
+  const rheTaxBase = truncateToWon(Math.max(0, rhe.taxableGain - rheBasicDeduction));
   const rheTaxResult = calcTax(rheTaxBase, parsedRates, effectiveInput, multiHouseSurchargeResult);
 
   // §161 비과세 양도소득금액 = §95① 양도소득금액 − 과세대상 양도소득금액.
@@ -137,7 +138,7 @@ export function runRentalHousingExceptionStep(
       : 0,
     lthdStartDate: resolveLTHDStartDate(effectiveInput),
     nontaxableGainAmount,
-    basicDeduction: rhe.taxableGain > 0 ? 2_500_000 : 0,
+    basicDeduction: rhe.taxableGain > 0 ? rheBasicDeduction : 0,
     taxBase: rheTaxBase,
     appliedRate: rheTaxResult.appliedRate,
     progressiveDeduction: rheTaxResult.progressiveDeduction,
