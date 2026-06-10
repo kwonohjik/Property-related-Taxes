@@ -12,6 +12,7 @@ import type {
   ExemptionCheckedItem,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { FamilyBusinessInheritanceInput } from "@/lib/tax-engine/types/inheritance-family-business.types";
+import type { AddressValue } from "@/components/ui/address-search";
 
 /**
  * 재산 평가 내역 표시명 — 사용자가 자산 이름(name)을 비우면 내부 id(prop-…·stock-…) 대신
@@ -56,6 +57,8 @@ export interface InheritanceTaxResultViewProps {
   decedentName?: string;
   /** 피상속인 주민등록번호 — 각 신고서 인적사항 칸 */
   decedentResidentNumber?: string;
+  /** 피상속인 주소 (Vworld) — 별지9호 ⑩칸. 선택 입력, 미입력 시 빈칸. */
+  decedentAddress?: AddressValue;
   /** 저장된 계산 id — 서버 PDF 선택 출력(PR-2)용. 미저장/비로그인 시 undefined */
   savedId?: string;
   /** 연부연납 입력 (Step4, §71·§72) — 결정세액 미영향 투영 */

@@ -67,6 +67,7 @@ export function InheritanceTaxResultView({
   familyBusinessInput,
   decedentName,
   decedentResidentNumber,
+  decedentAddress,
   savedId,
   installmentEnabled = false,
   installmentYears = "5",
@@ -398,6 +399,7 @@ export function InheritanceTaxResultView({
             deathDate={deathDate}
             decedentName={decedentName}
             decedentResidentNumber={decedentResidentNumber}
+            decedentAddress={decedentAddress}
             splitPaymentAmount={
               !installmentEnabled && splitPaymentEnabled && splitPaymentAmount
                 ? parseAmount(splitPaymentAmount)

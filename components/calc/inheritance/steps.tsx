@@ -12,6 +12,8 @@ import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInp
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { AddressSearch } from "@/components/ui/address-search";
+import type { AddressValue } from "@/components/ui/address-search";
 import { ExemptionChecklist } from "@/components/calc/exemption/ExemptionChecklist";
 import { PriorGiftInput } from "@/components/calc/PriorGiftInput";
 import { HeirComposition } from "@/components/calc/HeirComposition";
@@ -57,6 +59,16 @@ function autoFillValue(raw: string, s: DeductionSuggestion): string {
 // 색상 카드 + 섹션 번호 패턴 (components/calc/CLAUDE.md 강제)
 // ============================================================
 
+/** AddressSearch 빈 값 (undefined 대신 빈 객체로 컴포넌트에 전달) */
+const EMPTY_ADDRESS: AddressValue = {
+  road: "",
+  jibun: "",
+  building: "",
+  detail: "",
+  lng: "",
+  lat: "",
+};
+
 export function Step0({
   form,
   set,
@@ -77,8 +89,9 @@ export function Step0({
           <p className="text-xs font-semibold text-sky-700">피상속인 기본 정보</p>
         </div>
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div className="space-y-1.5">
+        {/* 1행 — 항상 3컬럼 고정 (성명·주민등록번호·상속개시일) */}
+        <div className="grid grid-cols-3 gap-3">
+          <div className="min-w-0 space-y-1.5">
             <label className="block text-sm font-medium">피상속인 성명</label>
             <input
               type="text"
@@ -88,7 +101,7 @@ export function Step0({
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
           </div>
-          <div className="space-y-1.5">
+          <div className="min-w-0 space-y-1.5">
             <label className="block text-sm font-medium">주민등록번호</label>
             <input
               type="text"
@@ -99,39 +112,42 @@ export function Step0({
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-mono focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
           </div>
-        </div>
-
-        <div className="space-y-2">
-          <label className="block text-sm font-medium">거주자 여부</label>
-          <div className="grid grid-cols-2 gap-3">
-            {(["resident", "non_resident"] as const).map((v) => (
-              <button
-                key={v}
-                type="button"
-                onClick={() => set({ decedentType: v })}
-                className={`rounded-lg border-2 py-3 px-4 text-sm font-medium transition-colors ${
-                  form.decedentType === v
-                    ? "border-primary bg-primary/5 text-primary"
-                    : "border-border hover:border-muted-foreground/50"
-                }`}
-              >
-                {v === "resident" ? "거주자" : "비거주자"}
-                <p className="text-xs font-normal text-muted-foreground mt-0.5">
-                  {v === "resident" ? "국내에 주소 or 183일 이상 거소" : "거주자 이외"}
-                </p>
-              </button>
-            ))}
+          <div className="min-w-0 space-y-1.5">
+            <label className="block text-sm font-medium">
+              상속개시일 (사망일) <span className="text-destructive">*</span>
+            </label>
+            <DateInput value={form.deathDate} onChange={(v) => set({ deathDate: v })} />
+            <p className="text-xs text-muted-foreground">
+              평가기준일·신고기한(6개월) 계산의 기준이 됩니다.
+            </p>
           </div>
         </div>
 
+        {/* 2행 — 거주자 여부 (RadioCardGroup inline) */}
+        <div className="space-y-1.5">
+          <label className="block text-sm font-medium">거주자 여부</label>
+          <RadioCardGroup
+            name="decedentType"
+            layout="inline"
+            tone="sky"
+            value={form.decedentType}
+            onChange={(v) => set({ decedentType: v as "resident" | "non_resident" })}
+            options={[
+              { value: "resident", label: "거주자" },
+              { value: "non_resident", label: "비거주자" },
+            ]}
+          />
+        </div>
+
+        {/* 3행 — 주소 (Vworld 검색, 선택 입력) */}
         <div className="space-y-1.5">
           <label className="block text-sm font-medium">
-            상속개시일 (사망일) <span className="text-destructive">*</span>
+            피상속인 주소 <span className="text-xs text-muted-foreground">(선택 — 신고서 ⑩칸 자동 입력)</span>
           </label>
-          <DateInput value={form.deathDate} onChange={(v) => set({ deathDate: v })} />
-          <p className="text-xs text-muted-foreground">
-            평가기준일·신고기한(6개월) 계산의 기준이 됩니다.
-          </p>
+          <AddressSearch
+            value={form.decedentAddress ?? EMPTY_ADDRESS}
+            onChange={(v) => set({ decedentAddress: v })}
+          />
         </div>
       </div>
 
