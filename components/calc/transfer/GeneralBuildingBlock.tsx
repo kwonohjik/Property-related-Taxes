@@ -21,6 +21,7 @@
 import { useMemo } from "react";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import { BuildingStdPriceModalButton } from "@/components/calc/building-std-price/BuildingStdPriceModalButton";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
@@ -320,9 +321,12 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
             hint="양도일 전년도 기준 개별공시지가 (원/㎡). Vworld 또는 토지이음에서 조회."
           />
 
-          <FieldCard label="양도시 건물기준시가" unit="원" hint="국세청 홈택스 → 기준시가 조회 → 건물분 기준시가 총액 (원)">
+          <FieldCard label="양도시 건물기준시가" unit="원" hint="국세청 홈택스 → 기준시가 조회 → 건물분 기준시가 총액 (원). 모르면 아래 계산기로 산정.">
             <CurrencyInput label="양도시 건물기준시가" hideUnit value={asset.gbTransferBuildingValue} onChange={(v) => onChange({ gbTransferBuildingValue: v })} />
           </FieldCard>
+          <div className="flex justify-end">
+            <BuildingStdPriceModalButton onApply={(v) => onChange({ gbTransferBuildingValue: String(v) })} />
+          </div>
         </div>
 
         {/* ③ 취득시 기준시가 (amber) — 환산취득가 / 일괄(증축) / 부담부증여(§159①1호 환산) 모드 */}
@@ -346,6 +350,9 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
             <FieldCard label="취득시 건물기준시가" unit="원" hint="취득일 기준 건물기준시가 총액. 이 금액의 3%가 건물 개산공제액 (§163⑥)">
               <CurrencyInput label="취득시 건물기준시가" hideUnit value={asset.gbAcqBuildingValue} onChange={(v) => onChange({ gbAcqBuildingValue: v })} />
             </FieldCard>
+            <div className="flex justify-end">
+              <BuildingStdPriceModalButton onApply={(v) => onChange({ gbAcqBuildingValue: String(v) })} />
+            </div>
 
             <div className="rounded bg-violet-50/60 border border-violet-200 px-3 py-2 text-xs text-violet-700 space-y-0.5">
               <p className="font-semibold">개산공제 (§163⑥)</p>

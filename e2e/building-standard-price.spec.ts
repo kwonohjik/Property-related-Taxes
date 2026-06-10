@@ -90,3 +90,10 @@ test("검증 차단 — 미입력 시 오류", async ({ page }) => {
   await page.getByRole("button", { name: "기준시가 계산하기" }).click();
   await expect(page.getByTestId("bsp-error")).toBeVisible();
 });
+
+test("홈 링크 → 건물 기준시가 계산기 진입", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("link", { name: /건물 기준시가 계산기/ }).click();
+  await expect(page).toHaveURL(/\/tools\/building-standard-price/);
+  await expect(page.getByRole("heading", { name: "건물 기준시가 계산기" })).toBeVisible();
+});
