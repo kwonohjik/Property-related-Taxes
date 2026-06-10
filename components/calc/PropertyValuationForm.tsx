@@ -81,6 +81,12 @@ export interface PropertyValuationFormProps {
   valuationDate?: string;
   /** 헤더(제목·설명·개수 배지) 숨김 — 외부 접기 래퍼가 헤더를 담당할 때 사용 */
   hideHeader?: boolean;
+  /**
+   * 추가 패널 열림 상태 (controlled). onAddPanelOpenChange와 함께 전달 시 외부 헤더
+   * 버튼이 추가를 트리거 → 하단 기본 "+추가" 버튼 미렌더(중복 방지). 미전달 시 내부 상태 사용.
+   */
+  addPanelOpen?: boolean;
+  onAddPanelOpenChange?: (open: boolean) => void;
 }
 
 let _nextId = 1;
@@ -95,8 +101,14 @@ export function PropertyValuationForm({
   heirs,
   valuationDate,
   hideHeader = false,
+  addPanelOpen,
+  onAddPanelOpenChange,
 }: PropertyValuationFormProps) {
-  const [showAddPanel, setShowAddPanel] = useState(false);
+  const [internalAddPanel, setInternalAddPanel] = useState(false);
+  // controlled(외부 헤더 버튼) vs uncontrolled(내부 하단 버튼)
+  const isAddControlled = onAddPanelOpenChange !== undefined;
+  const showAddPanel = addPanelOpen ?? internalAddPanel;
+  const setShowAddPanel = onAddPanelOpenChange ?? setInternalAddPanel;
   // 자산 추가 시 미리 선택할 간주상속재산 분류 (상속세 모드 전용)
   const [pendingDeemed, setPendingDeemed] = useState<
     "none" | "insurance" | "trust" | "retirement"
@@ -289,14 +301,17 @@ export function PropertyValuationForm({
           </button>
         </div>
       ) : (
-        <button
-          type="button"
-          onClick={() => setShowAddPanel(true)}
-          className="w-full flex items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 dark:border-gray-600 py-3 text-sm text-gray-500 dark:text-gray-400 hover:border-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors"
-        >
-          <span className="text-lg">+</span>
-          {modeLabel}재산 추가
-        </button>
+        // controlled(외부 헤더 버튼) 시 하단 기본 버튼 미렌더
+        !isAddControlled && (
+          <button
+            type="button"
+            onClick={() => setShowAddPanel(true)}
+            className="w-full flex items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 dark:border-gray-600 py-3 text-sm text-gray-500 dark:text-gray-400 hover:border-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors"
+          >
+            <span className="text-lg">+</span>
+            {modeLabel}재산 추가
+          </button>
+        )
       )}
 
       {/* 합계 */}

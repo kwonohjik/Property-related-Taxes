@@ -37,6 +37,7 @@ import { test, expect, type Page } from "@playwright/test";
 import {
   fillDateAndVerify,
   addLandAsset as addLandAssetHelper,
+  addHeir,
   nextSteps,
   calcAndWaitResult,
 } from "./_helpers/tax-flow";
@@ -59,13 +60,12 @@ async function gotoStep0AndAddChildren(page: Page, childCount: number) {
   // 상속개시일
   await fillDateAndVerify(page, { year: "2024", month: "6", day: "10" });
 
-  // 자녀 N명 추가 (2단계 picker: 1단계 종류→2단계 관계)
+  // 자녀 N명 추가 — addHeir이 2단계 picker + 모달 안 주민번호 자동입력 + 모달 닫기 담당
+  //   (상속세 calc은 상속인 RRN 필수 — 미입력 시 결과 미렌더. 상속인별 distinct RRN 부여)
   for (let i = 0; i < childCount; i++) {
-    await page.getByRole("button", { name: /상속인 추가/ }).click();
-    // 1단계: "상속인" 선택 (KindButton — span 분리로 filter 사용)
-    await page.locator("button").filter({ hasText: "상속인" }).first().click();
-    // 2단계: "자녀" 선택 (RelationButton)
-    await page.locator("button").filter({ hasText: "자녀" }).first().click();
+    await addHeir(page, "heir", "child", {
+      residentNumber: `9001${String(i + 1).padStart(2, "0")}-100000${i}`,
+    });
   }
 
   // Step1(상속재산)으로 이동

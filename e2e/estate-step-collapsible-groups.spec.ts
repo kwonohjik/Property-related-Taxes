@@ -56,19 +56,28 @@ test.describe("상속재산 단계 그룹 접기/펼치기", () => {
     test.setTimeout(60_000);
     await gotoEstateStep(page);
 
-    // 토글 헤더(번호 배지 포함)에 번호 + 제목이 함께 노출
-    await expect(page.getByTestId("estate-group-toggle-estate")).toContainText("1");
-    await expect(page.getByTestId("estate-group-toggle-estate")).toContainText(
-      "상속재산 목록",
-    );
-    await expect(page.getByTestId("estate-group-toggle-stock")).toContainText("2");
-    await expect(page.getByTestId("estate-group-toggle-stock")).toContainText(
-      "주식·지분 목록",
-    );
-    await expect(page.getByTestId("estate-group-toggle-presumed")).toContainText("3");
-    await expect(page.getByTestId("estate-group-toggle-presumed")).toContainText(
-      "추정상속재산 §15",
-    );
+    // 제목 앞 원형 번호 배지 1·2·3 (피상속인 Step §①②③과 동형)
+    await expect(page.getByTestId("estate-group-badge-estate")).toHaveText("1");
+    await expect(page.getByTestId("estate-group-badge-stock")).toHaveText("2");
+    await expect(page.getByTestId("estate-group-badge-presumed")).toHaveText("3");
+
+    // 펼치기/접기 버튼은 결과 탭 형식("▼ 펼치기"/"▲ 접기")
+    await expect(page.getByTestId("estate-group-toggle-estate")).toContainText("접기");
+  });
+
+  test("추가 버튼이 섹션 헤더 우측으로 이동 (상속재산·주식)", async ({ page }) => {
+    test.setTimeout(60_000);
+    await gotoEstateStep(page);
+
+    // 헤더 우측 "+ 추가" 버튼 노출 (하단 dashed 버튼 아님)
+    const estateAdd = page.getByTestId("estate-add-header-estate");
+    await expect(estateAdd).toBeVisible();
+    await expect(page.getByTestId("estate-add-header-stock")).toBeVisible();
+
+    // 클릭 → 추가 패널 펼침 + 헤더 버튼 숨김(패널과 상호배타)
+    await estateAdd.click();
+    await expect(estateAdd).toBeHidden();
+    await expect(page.getByText("추가할 재산 종류 선택")).toBeVisible();
   });
 
   test("3그룹 토글 독립 동작 (주식·추정상속재산)", async ({ page }) => {

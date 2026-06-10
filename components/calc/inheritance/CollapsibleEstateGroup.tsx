@@ -11,7 +11,10 @@
  */
 
 import { useState, type ReactNode } from "react";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import {
+  expandToggleClass,
+  expandToggleLabel,
+} from "@/components/calc/results/shared/ExpandToggleButton";
 
 type EstateGroupTone = "sky" | "emerald" | "amber" | "violet" | "rose";
 
@@ -65,6 +68,8 @@ interface CollapsibleEstateGroupProps {
   tone?: EstateGroupTone;
   title: string;
   description?: ReactNode;
+  /** 헤더 우측 액션(추가 버튼 등) — 펼쳐진 상태에서만 노출(접힘 시 본문 숨김으로 추가 패널 미표시 방지) */
+  headerAction?: ReactNode;
   /** 항목 개수 (배열 length) */
   count: number;
   /** 합계(원). 0이면 요약에서 금액 생략 */
@@ -79,6 +84,7 @@ export function CollapsibleEstateGroup({
   tone = "sky",
   title,
   description,
+  headerAction,
   count,
   totalAmount,
   defaultOpen = true,
@@ -89,29 +95,18 @@ export function CollapsibleEstateGroup({
 
   return (
     <div className={`rounded-lg border p-3 space-y-3 ${TONE_CARD[tone]}`}>
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        aria-expanded={open}
-        data-testid={`estate-group-toggle-${groupKey}`}
-        className="flex w-full items-start gap-2 text-left group"
-      >
-        <span className="mt-0.5 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300">
-          {open ? (
-            <ChevronDown className="h-4 w-4" />
-          ) : (
-            <ChevronRight className="h-4 w-4" />
-          )}
-        </span>
-        {sectionNum !== undefined && (
-          <span
-            className={`mt-px flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold select-none ${TONE_BADGE[tone]}`}
-          >
-            {sectionNum}
-          </span>
-        )}
-        <span className="flex-1">
-          <span className="flex items-center gap-2 flex-wrap">
+      {/* 헤더 — 좌측(번호·제목·요약·설명) + 우측(추가 액션 + 펼치기 버튼, 결과 탭과 동형) */}
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            {sectionNum !== undefined && (
+              <span
+                data-testid={`estate-group-badge-${groupKey}`}
+                className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold select-none ${TONE_BADGE[tone]}`}
+              >
+                {sectionNum}
+              </span>
+            )}
             <span className={`text-xs font-semibold ${TONE_TITLE[tone]}`}>
               {title}
             </span>
@@ -124,14 +119,25 @@ export function CollapsibleEstateGroup({
                 {count}건{amountText ? ` · ${amountText}` : ""}
               </span>
             )}
-          </span>
+          </div>
           {description && (
-            <span className="block text-xs text-muted-foreground mt-0.5">
-              {description}
-            </span>
+            <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
           )}
-        </span>
-      </button>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          {open && headerAction}
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            aria-expanded={open}
+            data-testid={`estate-group-toggle-${groupKey}`}
+            className={expandToggleClass("slate")}
+          >
+            {expandToggleLabel(open)}
+          </button>
+        </div>
+      </div>
 
       {/* 본문 — 접힘 시 hidden(display:none)으로 입력값·포커스 보존 */}
       <div className={open ? "block" : "hidden"}>{children}</div>

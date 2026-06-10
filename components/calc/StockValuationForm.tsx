@@ -531,6 +531,12 @@ export interface StockValuationFormProps {
   heirs?: Heir[];
   /** 헤더(제목·설명·개수 배지) 숨김 — 외부 접기 래퍼가 헤더를 담당할 때 사용 */
   hideHeader?: boolean;
+  /**
+   * 추가 패널 열림 상태 (controlled). onAddPanelOpenChange와 함께 전달 시 외부 헤더
+   * 버튼이 추가를 트리거 → 하단 기본 "+추가" 버튼 미렌더(중복 방지). 미전달 시 내부 상태 사용.
+   */
+  addPanelOpen?: boolean;
+  onAddPanelOpenChange?: (open: boolean) => void;
 }
 
 let _nextStockId = 1;
@@ -545,9 +551,14 @@ export function StockValuationForm({
   valuationDate,
   heirs,
   hideHeader = false,
+  addPanelOpen,
+  onAddPanelOpenChange,
 }: StockValuationFormProps) {
   // 부동산과다보유법인 여부는 unlistedStockData.isRealEstateHeavy(store)에 저장 — heavyMap local state 폐지.
-  const [showAddPanel, setShowAddPanel] = useState(false);
+  const [internalAddPanel, setInternalAddPanel] = useState(false);
+  const isAddControlled = onAddPanelOpenChange !== undefined;
+  const showAddPanel = addPanelOpen ?? internalAddPanel;
+  const setShowAddPanel = onAddPanelOpenChange ?? setInternalAddPanel;
 
   const handleAdd = (category: "listed_stock" | "unlisted_stock") => {
     const newItem: EstateItem = {
@@ -691,14 +702,17 @@ export function StockValuationForm({
           </button>
         </div>
       ) : (
-        <button
-          type="button"
-          onClick={() => setShowAddPanel(true)}
-          className="w-full flex items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 dark:border-gray-600 py-3 text-sm text-gray-500 dark:text-gray-400 hover:border-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors"
-        >
-          <span className="text-lg">+</span>
-          주식·지분 추가
-        </button>
+        // controlled(외부 헤더 버튼) 시 하단 기본 버튼 미렌더
+        !isAddControlled && (
+          <button
+            type="button"
+            onClick={() => setShowAddPanel(true)}
+            className="w-full flex items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 dark:border-gray-600 py-3 text-sm text-gray-500 dark:text-gray-400 hover:border-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors"
+          >
+            <span className="text-lg">+</span>
+            주식·지분 추가
+          </button>
+        )
       )}
 
       {/* 합계 */}
