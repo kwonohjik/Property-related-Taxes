@@ -26,6 +26,7 @@ import { GeneralBuildingValuationDetailCard } from "@/components/calc/results/Ge
 import { BurdenedGiftDetailCard } from "@/components/calc/results/transfer/BurdenedGiftDetailCard";
 import { RedevelopmentDetailCard } from "@/components/calc/results/transfer/RedevelopmentDetailCard";
 import { FamilyBusinessImputedComparisonCard } from "@/components/calc/results/transfer/FamilyBusinessImputedComparisonCard";
+import { ReductionDetailCards } from "@/components/calc/results/transfer/ReductionDetailCards";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPanel";
@@ -746,6 +747,9 @@ export function TransferTaxResultView({
       {result.rentalHousingExceptionDetail && (
         <RentalHousingExceptionDetailCard detail={result.rentalHousingExceptionDetail} />
       )}
+
+      {/* ⑦ 감면·환산취득가 상세 4건 (자경농지·상속주택·신축주택·장기임대) */}
+      <ReductionDetailCards result={result} />
 
       {/* 비로그인 안내 */}
       {onLoginPrompt && (
