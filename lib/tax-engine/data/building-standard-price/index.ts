@@ -37,11 +37,13 @@ export {
 
 // D5 잔가율
 export {
-  RESIDUAL_RATE_STEP,
   RESIDUAL_RATE_MIN,
   RESIDUAL_RATE_DURABLE_YEARS,
   durableYearsToResidualGroup,
+  residualMinByDurable,
+  residualStepForGroup,
   calcResidualRate,
+  calcResidualRateByDurable,
 } from "./residual-rate";
 
 // D7 조정율
@@ -82,6 +84,8 @@ export {
   STRUCTURE_META,
   resolveResidualGroup,
   resolveResidualGroup2001,
+  resolveResidualGroupEraB,
+  resolveResidualGroupForYear,
   resolveAcqBaseGroup,
 } from "./structure-group-map";
 export type { StructureMeta } from "./structure-group-map";

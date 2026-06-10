@@ -55,9 +55,10 @@ describe("BSP Pre-Do anchor (PDF 2025 손계산) — Phase B 엔진", () => {
     expect(r.valuation?.mechDurableYears).toBe(30);
   });
 
-  // BSP-MECH-Y: 기계식 연도 가변 — 2002년 #39 = 5,000,000원·내용연수 20년(IV그룹)
-  // 5,000,000 × 잔가율 0.820(IV·경과4년: 1−4×0.045) × 주차대수 10 = 41,000,000
-  it("BSP-MECH-Y 기계식 연도가변(2002): 5,000,000 × 0.820 × 10 = 41,000,000", () => {
+  // BSP-MECH-Y: 기계식 연도 가변 — 2002년 #39 = 5,000,000원·내용연수 20년
+  //   ★2002년 20년버킷 잔존율 0.20(연도별 잔가율표: 20년 2004년부터 0.10)·step0.04·경과4 → 0.840.
+  // 5,000,000 × 잔가율 0.840(1−4×0.04) × 주차대수 10 = 42,000,000
+  it("BSP-MECH-Y 기계식 연도가변(2002): 5,000,000 × 0.840 × 10 = 42,000,000", () => {
     const input: BuildingStandardPriceInput = {
       taxType: "inheritance_gift",
       floorArea: 0,
@@ -67,7 +68,8 @@ describe("BSP Pre-Do anchor (PDF 2025 손계산) — Phase B 엔진", () => {
       parkingLotCount: 10,
     };
     const r = calcBuildingStandardPrice(input);
-    expect(r.valuation?.standardPrice).toBe(41_000_000);
+    expect(r.valuation?.residualRate).toBe(0.84); // 2002 20년버킷 잔존율 0.20
+    expect(r.valuation?.standardPrice).toBe(42_000_000);
     expect(r.valuation?.mechDurableYears).toBe(20);
   });
 
@@ -111,9 +113,10 @@ describe("BSP Pre-Do anchor (PDF 2025 손계산) — Phase B 엔진", () => {
   });
 
   // BSP-06: 양도 2시점 일반(취득 2015 / 양도 2025, 구조 rc·용도#1·built 2010·면적 100). 조정율 미적용.
-  // 취득 2015: 650,000×100×110×125÷1e6=893,750 ×잔가0.910=813,312.5→813,000 ×100=81,300,000
-  // 양도 2025: 1,234,200 ×잔가0.730(경과15)=900,966→900,000 ×100=90,000,000
-  it("BSP-06 양도 2시점: 취득 81,300,000 / 양도 90,000,000", () => {
+  // 취득 2015: 650,000×100×110×125÷1e6=893,750 ×잔가0.920(★2015년 50년버킷 잔존율 0.20·step0.016·경과5)
+  //   =822,250→822,000 ×100=82,200,000  (★연도별 잔가율표: 50·40년 버킷 2015년까지 잔존율 0.20)
+  // 양도 2025: 1,234,200 ×잔가0.730(2025년 잔존율 0.10·경과15)=900,966→900,000 ×100=90,000,000
+  it("BSP-06 양도 2시점: 취득 82,200,000 / 양도 90,000,000", () => {
     const input: BuildingStandardPriceInput = {
       taxType: "transfer",
       floorArea: 100,
@@ -124,7 +127,8 @@ describe("BSP Pre-Do anchor (PDF 2025 손계산) — Phase B 엔진", () => {
       transfer: { structureKey: "rc", usageNo: 1, landPricePerM2: 7_500_000 }, // 2025 위치 132
     };
     const r = calcBuildingStandardPrice(input);
-    expect(r.acquisition?.standardPrice).toBe(81_300_000);
+    expect(r.acquisition?.residualRate).toBe(0.92); // 2015년 50년버킷 잔존율 0.20
+    expect(r.acquisition?.standardPrice).toBe(82_200_000);
     expect(r.transfer?.standardPrice).toBe(90_000_000);
     expect(r.acquisition?.appliedLandPriceYear).toBe(2015);
   });
@@ -150,9 +154,11 @@ describe("BSP Pre-Do anchor (PDF 2025 손계산) — Phase B 엔진", () => {
   });
 
   // BSP-08: §164⑧ 동일연도(2010) 제1산식. 전기 2009·built 2005·보유 6월/조정 12월.
-  // acq(2010)=683,100×0.910=621,621→621,000×100=62,100,000 / prev(2009)=645,150×0.928=598,699.2→598,000×100=59,800,000
-  // 양도 = floor(62,100,000 + (62,100,000−59,800,000)×0.5) = 63,250,000
-  it("BSP-08 §164⑧ 제1산식(동일연도): 취득 62,100,000 / 양도 63,250,000", () => {
+  //   ★2010년 = era-B(rc 내용연수 40년·잔존율 0.20·step0.02). 경과 acq5/prev4.
+  //   acq(2010)=683,100×0.900(1−5×0.02)=614,790→614,000×100=61,400,000
+  //   prev(2009)=645,150×0.920(1−4×0.02)=593,538→593,000×100=59,300,000
+  //   양도 = floor(61,400,000 + (61,400,000−59,300,000)×0.5) = 62,450,000
+  it("BSP-08 §164⑧ 제1산식(동일연도): 취득 61,400,000 / 양도 62,450,000", () => {
     const input: BuildingStandardPriceInput = {
       taxType: "transfer",
       floorArea: 100,
@@ -167,13 +173,15 @@ describe("BSP Pre-Do anchor (PDF 2025 손계산) — Phase B 엔진", () => {
     };
     const r = calcBuildingStandardPrice(input);
     expect(r.sameYearAdjusted).toBe(true);
-    expect(r.acquisition?.standardPrice).toBe(62_100_000);
-    expect(r.transfer?.standardPrice).toBe(63_250_000);
+    expect(r.acquisition?.residualRate).toBe(0.9); // 2010 era-B rc 40년·잔존율 0.20·경과5
+    expect(r.acquisition?.standardPrice).toBe(61_400_000);
+    expect(r.transfer?.standardPrice).toBe(62_450_000);
   });
 
   // BSP-14: §164⑧ 동일연도 제2산식(새 기준시가 고시 선택). newNotice 700,000원/㎡.
-  // newStd = 700,000×100 = 70,000,000 / 양도 = floor(62,100,000 + (70,000,000−62,100,000)×0.5) = 66,050,000
-  it("BSP-14 §164⑧ 제2산식(동일연도): 양도 66,050,000", () => {
+  //   acq(2010)=61,400,000(era-B, BSP-08과 동일). newStd = 700,000×100 = 70,000,000
+  //   양도 = floor(61,400,000 + (70,000,000−61,400,000)×0.5) = 65,700,000
+  it("BSP-14 §164⑧ 제2산식(동일연도): 양도 65,700,000", () => {
     const input: BuildingStandardPriceInput = {
       taxType: "transfer",
       floorArea: 100,
@@ -189,6 +197,6 @@ describe("BSP Pre-Do anchor (PDF 2025 손계산) — Phase B 엔진", () => {
     };
     const r = calcBuildingStandardPrice(input);
     expect(r.sameYearAdjusted).toBe(true);
-    expect(r.transfer?.standardPrice).toBe(66_050_000);
+    expect(r.transfer?.standardPrice).toBe(65_700_000);
   });
 });

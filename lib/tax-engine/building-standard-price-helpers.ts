@@ -21,10 +21,9 @@ import {
   resolveUsageIndex,
   resolveLocationIndex,
   calcResidualRate,
-  durableYearsToResidualGroup,
-  resolveResidualGroup,
-  resolveResidualGroup2001,
-  RESIDUAL_RATE_STEP,
+  calcResidualRateByDurable,
+  residualStepForGroup,
+  resolveResidualGroupForYear,
   resolveAcqBaseGroup,
   resolveAcqBaseRate,
   resolveMechParkingFormula,
@@ -78,7 +77,8 @@ export function calcEffectiveResidualRate(
   const baseResid = calcResidualRate(group, valuationYear - builtYear, valuationYear);
   if (!remodel?.isInheritanceGift || remodel.remodelYear === undefined) return baseResid;
   const elapsedToRemodel = Math.max(0, remodel.remodelYear - builtYear);
-  const surcharge = RESIDUAL_RATE_STEP[group] * elapsedToRemodel * 0.3;
+  // 대수선할증률 = 연상각률(잔가율 step = (1−잔존율)/내용연수, 평가연도별) × 대수선시점 경과연수 × 0.3
+  const surcharge = residualStepForGroup(group, valuationYear) * elapsedToRemodel * 0.3;
   return Math.round((baseResid + surcharge) * 10000) / 10000;
 }
 
@@ -119,9 +119,8 @@ export function calcPointBreakdown(
     );
   }
 
-  // 2001년 평가(산정기준율 경로 등)는 3그룹 잔가율표 — 그룹 매핑도 시대별(황토·철파이프)
-  const residualGroup =
-    year <= 2001 ? resolveResidualGroup2001(point.structureKey) : resolveResidualGroup(point.structureKey);
+  // 구조→잔가율 그룹은 시대별 멤버십(3그룹/era-B/era-C). 내용연수·잔존율도 평가연도로 결정
+  const residualGroup = resolveResidualGroupForYear(point.structureKey, year);
   const residualRate = calcEffectiveResidualRate(residualGroup, builtYear, year, remodel);
 
   // 정수곱(부동소수 누적 회피) 후 /1,000,000 — 지수 3개가 각 ÷100
@@ -175,8 +174,8 @@ export function calcMechBreakdown(
   if (formula === undefined) {
     throw new BuildingStdPriceError(`기계식주차: ${year}년 특수산식(단가·내용연수) 미수록`);
   }
-  const group = durableYearsToResidualGroup(formula.durableYears);
-  const residualRate = calcResidualRate(group, year - effBuiltYear);
+  // 기계식주차 잔가율 = 내용연수 버킷(연도가변 20/30년)·평가연도 잔존율로 직접 계산(그룹 레터 비경유)
+  const residualRate = calcResidualRateByDurable(formula.durableYears, year - effBuiltYear, year);
   const standardPrice = Math.floor(safeMultiply(formula.unitPrice, parkingLotCount) * residualRate);
 
   return {
