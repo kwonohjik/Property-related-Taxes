@@ -59,13 +59,14 @@ export function InheritanceSidebar({
         {/* ① 총상속재산 (본래+간주+추정) */}
         {summary.totalEstate > 0 && (
           <Row
-            label="총상속재산"
+            label="① 총상속재산"
             value={formatKRW(summary.totalEstate)}
             sub={
               summary.presumedAdded > 0
                 ? `+ 추정상속재산 §15 ${formatKRW(summary.presumedAdded)}`
                 : undefined
             }
+            highlight
           />
         )}
 

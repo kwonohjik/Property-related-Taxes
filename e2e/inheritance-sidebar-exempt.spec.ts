@@ -224,8 +224,8 @@ test("SB-3 사이드바 Row 세로 레이아웃 — 라벨과 금액이 같은 �
   const sidebar = sidebarPanel(page);
   await expect(sidebar.getByText("총상속재산")).toBeVisible({ timeout: 5_000 });
 
-  // Row 컨테이너: "총상속재산" 텍스트를 품는 <p> 의 부모 div가 flex flex-col
-  const labelP = sidebar.locator("p").filter({ hasText: /^총상속재산$/ }).first();
+  // Row 컨테이너: "① 총상속재산" 텍스트를 품는 <p> 의 부모 div가 flex flex-col
+  const labelP = sidebar.locator("p").filter({ hasText: /^① 총상속재산$/ }).first();
   await expect(labelP).toBeVisible();
 
   // 부모 div에 flex + flex-col 클래스 확인
@@ -243,8 +243,8 @@ test("SB-3 사이드바 Row 세로 레이아웃 — 라벨과 금액이 같은 �
   // 금액 span의 내용이 라벨 p의 내용과 다름 (별도 요소)
   const labelText = await labelP.textContent();
   const valueText = await valueSpan.textContent();
-  expect(labelText?.trim()).toBe("총상속재산");
-  expect(valueText?.trim()).not.toBe("총상속재산");
+  expect(labelText?.trim()).toBe("① 총상속재산");
+  expect(valueText?.trim()).not.toBe("① 총상속재산");
   // 금액이 숫자 형태 (콤마 허용)
   expect(valueText?.replace(/,/g, "")).toMatch(/\d+/);
 
