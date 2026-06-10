@@ -193,10 +193,11 @@ describe("D9 기계식주차 산식 (연도 가변)", () => {
   it("2001·2002 = 5,000,000 · 내용연수 20년", () => {
     expect(resolveMechParkingFormula(2001)).toEqual({ unitPrice: 5_000_000, durableYears: 20 });
   });
-  it("중간 연도(2003~2012)는 미확정 → undefined (D3 연동 대기)", () => {
-    expect(resolveMechParkingFormula(2012)).toBeUndefined();
+  it("중간 연도(2003~2011)는 미확정 → undefined (D3 연동 대기)", () => {
+    expect(resolveMechParkingFormula(2011)).toBeUndefined();
   });
-  it("기계식주차 단가·내용연수 연도 변천: 2013=5.5백만 / 2014=5.75백만 / 2015=6백만(20년) / 2016~=6백만(30년)", () => {
+  it("기계식주차 단가·내용연수 연도 변천: 2012=5백만 / 2013=5.5백만 / 2014=5.75백만 / 2015=6백만(20년) / 2016~=6백만(30년)", () => {
+    expect(resolveMechParkingFormula(2012)).toEqual({ unitPrice: 5_000_000, durableYears: 20 });
     expect(resolveMechParkingFormula(2013)).toEqual({ unitPrice: 5_500_000, durableYears: 20 });
     expect(resolveMechParkingFormula(2014)).toEqual({ unitPrice: 5_750_000, durableYears: 20 });
     expect(resolveMechParkingFormula(2015)).toEqual({ unitPrice: 6_000_000, durableYears: 20 });
@@ -274,9 +275,10 @@ describe("D3 용도지수 (이미지 직접 판독, 2026 BASE + 연도 override)
     expect(resolveUsageIndex(2018, 34)).toBe(105);
     expect(resolveUsageIndex(2019, 34)).toBe(107);
   });
-  it("미전사 연도: 2012 이하 = undefined, 2013~2026 = 전사완료", () => {
-    expect(hasUsageIndexYear(2012)).toBe(false);
-    expect(resolveUsageIndex(2012, 1)).toBeUndefined();
+  it("미전사 연도: 2011 이하 = undefined, 2012~2026 = 전사완료", () => {
+    expect(hasUsageIndexYear(2011)).toBe(false);
+    expect(resolveUsageIndex(2011, 1)).toBeUndefined();
+    expect(hasUsageIndexYear(2012)).toBe(true);
     expect(hasUsageIndexYear(2013)).toBe(true);
     expect(hasUsageIndexYear(2014)).toBe(true);
     expect(hasUsageIndexYear(2015)).toBe(true);
@@ -376,6 +378,30 @@ describe("D3 용도지수 53항목 체계 (2013 단독)", () => {
     const opts = listUsageOptions(2013);
     expect(opts.length).toBe(52);
     expect(resolveUsageIndex(2013, 53)).toBeUndefined(); // #53은 기계식(D9)
+  });
+});
+
+describe("D3 용도지수 51항목 체계 (2012 단독)", () => {
+  // 예식장 #17 단독·동물원+공연장+집회장 통합 #18·관람장+전시장 #19. 50 일반 + #51 기계식
+  it("2012: 아파트=110 / 예식장(#17)=120 / 동물원+공연장(#18)=110 / 유흥+무도장(#14)=120", () => {
+    expect(resolveUsageIndex(2012, 1)).toBe(110);
+    expect(resolveUsageIndex(2012, 17)).toBe(120);
+    expect(resolveUsageIndex(2012, 18)).toBe(110);
+    expect(resolveUsageIndex(2012, 14)).toBe(120);
+  });
+  it("2012: 종합병원(#23)=120 / 장례식장(#25)=110 / 냉동공장+발전소(#39)=90 / 화초온실(#50)=40", () => {
+    expect(resolveUsageIndex(2012, 23)).toBe(120);
+    expect(resolveUsageIndex(2012, 25)).toBe(110);
+    expect(resolveUsageIndex(2012, 39)).toBe(90);
+    expect(resolveUsageIndex(2012, 50)).toBe(40);
+  });
+  it("2012 listUsageOptions = 50항목(#1~50, #51 기계식 제외)", () => {
+    const opts = listUsageOptions(2012);
+    expect(opts.length).toBe(50);
+    expect(resolveUsageIndex(2012, 51)).toBeUndefined(); // #51은 기계식(D9)
+  });
+  it("2012 기계식주차 = 5,000,000 · 20년", () => {
+    expect(resolveMechParkingFormula(2012)).toEqual({ unitPrice: 5_000_000, durableYears: 20 });
   });
 });
 
