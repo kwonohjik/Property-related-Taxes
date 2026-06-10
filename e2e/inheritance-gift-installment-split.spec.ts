@@ -32,7 +32,6 @@ async function inhStep0(page: Page, opts: { nonResident?: boolean } = {}) {
     await page.getByRole("button", { name: /비거주자/ }).click();
   }
   await addHeir(page, "heir", "child");
-  await page.getByPlaceholder("앞 6자리-뒤 7자리").last().fill("700101-1000000");
   await nextSteps(page, 1); // → Step1
 }
 

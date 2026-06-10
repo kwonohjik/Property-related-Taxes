@@ -73,6 +73,10 @@ export async function fillDateAndVerify(
 /**
  * 토지 자산 추가 (면적 + 공시지가 단가) + 값 커밋 검증.
  * 상속/증여 공통 — addButtonName 으로 추가 버튼 라벨 구분.
+ *
+ * 2026-06-10 자산 카드 테이블+모달 전환 이후: 자산 추가 시 편집 모달이 자동 오픈(E-1)되며
+ * 면적·공시지가 입력은 모달 안에 위치. 입력 후 모달을 닫아야 다음 단계(다음 버튼) 클릭이
+ * 오버레이에 막히지 않는다.
  */
 export async function addLandAsset(
   page: Page,
@@ -80,17 +84,26 @@ export async function addLandAsset(
     area: string;
     unitPrice: string;
     addButtonName?: RegExp;
+    /** 입력 후 편집 모달을 닫지 않음 (모달 안 칩·고급옵션을 추가로 조작하는 spec용) */
+    keepModalOpen?: boolean;
   },
 ): Promise<void> {
   const addButtonName = opts.addButtonName ?? /상속재산 추가/;
   await page.getByRole("button", { name: addButtonName }).click();
   await page.getByRole("button", { name: /토지/ }).first().click();
+  // 추가 직후 편집 모달 자동 오픈 — 면적·단가 입력은 모달 안
+  await expect(page.getByTestId("estate-edit-dialog")).toBeVisible();
   // 보충적 평가(개별공시지가) 토글 ON — 면적·단가 입력 펼침 (2026-06-09 토글 전환)
   await page.getByRole("switch", { name: /보충적 평가방법/ }).click();
   const areaInput = page.getByPlaceholder("면적 입력");
   const priceInput = page.getByPlaceholder("공시지가 단가");
   await fillAndVerify(areaInput, opts.area);
   await fillAndVerify(priceInput, opts.unitPrice);
+  if (!opts.keepModalOpen) {
+    // 편집 모달 닫기 → 요약 테이블로 복귀 (다음 단계 클릭 가능)
+    await page.getByRole("dialog").getByRole("button", { name: "닫기" }).click();
+    await expect(page.getByTestId("estate-edit-dialog")).toBeHidden();
+  }
 }
 
 /**
@@ -114,6 +127,15 @@ export async function addHeir(
   page: Page,
   kind: "heir" | "legatee" | "substitute" | "corporate" | "other",
   relation?: "spouse" | "child" | "lineal_ascendant" | "sibling",
+  opts: {
+    /** 주민번호(생년월일·성별 의존 케이스). 기본 700101-1000000. corporate는 무시. */
+    residentNumber?: string;
+    /**
+     * true면 모달을 닫지 않음 — 모달 안에서 상속인 속성(법인 영리 여부·대습 패널·장애인·
+     * 동거 등)을 추가 편집하는 spec용. 편집 후 closeHeirEditModal(page)로 직접 닫는다.
+     */
+    keepModalOpen?: boolean;
+  } = {},
 ): Promise<void> {
   await page.getByRole("button", { name: /상속인 추가/ }).click();
   // KindButton / RelationButton 은 span이 분리되어 있어 filter로 찾음
@@ -134,6 +156,34 @@ export async function addHeir(
     };
     // 2단계 관계 선택 — 정확한 텍스트로 first() 클릭
     await page.locator("button").filter({ hasText: relationLabels[relation] }).first().click();
+  }
+  // 추가 직후 상속인 편집 모달이 자동 오픈(E-1, PR #68)됨.
+  //  · 자연인(법인 제외): 모달 안에서 주민번호 입력(상속세 calc 필수, inheritance-validate §RRN).
+  //  · keepModalOpen 아니면 입력 후 모달 닫기 — 안 닫으면 오버레이가 다음/추가 클릭을 막음.
+  const heirDialog = page.getByRole("dialog", { name: "상속인 편집" });
+  if (await heirDialog.isVisible().catch(() => false)) {
+    if (kind !== "corporate") {
+      const rrnInput = heirDialog.getByPlaceholder("앞 6자리-뒤 7자리");
+      if (await rrnInput.isVisible().catch(() => false)) {
+        await rrnInput.fill(opts.residentNumber ?? "700101-1000000");
+      }
+    }
+    if (!opts.keepModalOpen) {
+      await heirDialog.getByRole("button", { name: "닫기" }).click();
+      await expect(heirDialog).toBeHidden();
+    }
+  }
+}
+
+/**
+ * 상속인 편집 모달 닫기 — addHeir는 이미 모달을 닫지만, 모달 안에서 추가 입력 후 직접 닫아야
+ * 하는 경우(피상속인+상속인 RRN 분리 입력 등)에 명시 호출. 모달이 없으면 no-op.
+ */
+export async function closeHeirEditModal(page: Page): Promise<void> {
+  const heirDialog = page.getByRole("dialog", { name: "상속인 편집" });
+  if (await heirDialog.isVisible().catch(() => false)) {
+    await heirDialog.getByRole("button", { name: "닫기" }).click();
+    await expect(heirDialog).toBeHidden();
   }
 }
 

@@ -66,7 +66,6 @@ async function gotoStep0AndAddChildren(page: Page, childCount: number) {
     await page.locator("button").filter({ hasText: "상속인" }).first().click();
     // 2단계: "자녀" 선택 (RelationButton)
     await page.locator("button").filter({ hasText: "자녀" }).first().click();
-    await page.getByPlaceholder("앞 6자리-뒤 7자리").last().fill("700101-1000000");
   }
 
   // Step1(상속재산)으로 이동

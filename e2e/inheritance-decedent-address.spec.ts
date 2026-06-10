@@ -94,9 +94,8 @@ test("DA-3: 주소 미입력 → 계산 통과 + 별지9호 ⑩칸 빈칸", asyn
   await page.getByPlaceholder("앞 6자리-뒤 7자리").fill("350505-1234567");
   await fillDateAndVerify(page, { year: "2024", month: "6", day: "10" });
 
-  // 자녀 1명
-  await addHeir(page, "heir", "child");
-  await page.getByPlaceholder("앞 6자리-뒤 7자리").nth(1).fill("900202-2000000");
+  // 자녀 1명 — addHeir가 모달 안 주민번호 입력 + 닫기 (피상속인 RRN은 위 별도 입력)
+  await addHeir(page, "heir", "child", { residentNumber: "900202-2000000" });
 
   // 상속인 편집 모달 닫기 (자동 오픈 시)
   const heirDialog = page.getByRole("dialog", { name: "상속인 편집" });
@@ -136,9 +135,8 @@ test("DA-4: 비거주자 선택 후 계산 → 오류 없이 결과 표시", asy
   await page.getByPlaceholder("성명").first().fill("김철수");
   await fillDateAndVerify(page, { year: "2024", month: "3", day: "15" });
 
-  // 자녀 1명
-  await addHeir(page, "heir", "child");
-  await page.getByPlaceholder("앞 6자리-뒤 7자리").nth(1).fill("950505-2000000");
+  // 자녀 1명 — addHeir가 모달 안 주민번호 입력 + 닫기 (피상속인 RRN은 위 별도 입력)
+  await addHeir(page, "heir", "child", { residentNumber: "950505-2000000" });
 
   // 상속인 편집 모달 닫기
   const heirDialog = page.getByRole("dialog", { name: "상속인 편집" });

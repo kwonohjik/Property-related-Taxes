@@ -17,6 +17,7 @@
 import { test, expect } from "@playwright/test";
 import { fillDateAndVerify, addLandAsset,
   addHeir,
+  closeHeirEditModal,
 } from "./_helpers/tax-flow";
 
 test.describe("협의분할 — 비영리법인 노출·기본값 제거·2열", () => {
@@ -26,20 +27,17 @@ test.describe("협의분할 — 비영리법인 노출·기본값 제거·2열",
     // 상속개시일
     await fillDateAndVerify(page, { year: "2024", month: "6", day: "10" });
 
-    // 자녀 추가
+    // 자녀 추가 (addHeir가 모달 안 주민번호 입력 + 닫기까지 수행)
     await addHeir(page, "heir", "child");
-    await page
-      .getByPlaceholder("앞 6자리-뒤 7자리")
-      .last()
-      .fill("700101-1000000");
 
-    // 법인 추가 → 영리법인 여부 토글 OFF (비영리법인)
-    await addHeir(page, "corporate");
+    // 법인 추가 → 모달 유지(keepModalOpen)하여 영리법인 여부 토글 OFF(비영리법인) → 닫기
+    await addHeir(page, "corporate", undefined, { keepModalOpen: true });
     await page
       .locator('[data-slot="toggle-card"]')
       .filter({ hasText: "영리법인 여부" })
       .getByRole("switch")
       .click();
+    await closeHeirEditModal(page);
 
     // Step1 (상속재산)
     await page.getByRole("button", { name: /^다음/ }).click();

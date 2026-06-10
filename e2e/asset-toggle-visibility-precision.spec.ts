@@ -18,18 +18,20 @@
  */
 
 import { test, expect, type Page } from "@playwright/test";
+import { addHeir, closeHeirEditModal } from "./_helpers/tax-flow";
 
-/** Step0: 상속개시일 + 자녀 1명 → Step1 이동 */
+/** Step0: 상속개시일 + 자녀 1명 → Step1 이동 (상속인 편집 모달 닫고 진행) */
 async function gotoStep1WithChild(page: Page) {
   await page.goto("/calc/inheritance-tax");
   await page.getByLabel("연도").first().fill("2026");
   await page.getByLabel("월").first().fill("5");
   await page.getByLabel("일").first().fill("15");
-  await page.getByRole("button", { name: /상속인 추가/ }).click();
-  await page.getByText("자녀", { exact: true }).click();
+  await addHeir(page, "heir", "child");
+  await closeHeirEditModal(page);
   await page.getByRole("button", { name: /^다음/ }).click();
 }
 
+/** 자산 추가 → 편집 모달 자동 오픈(E-1). 칩은 모달 안에 위치 (모달 유지). */
 async function addAssetByType(page: Page, typeLabel: string | RegExp) {
   await page
     .getByRole("button", { name: /재산 추가|상속재산 추가/ })
@@ -40,9 +42,8 @@ async function addAssetByType(page: Page, typeLabel: string | RegExp) {
   } else {
     await page.getByRole("button", { name: typeLabel }).first().click();
   }
-  await expect(
-    page.locator('[data-testid^="estate-card-shell-"]').first(),
-  ).toBeVisible();
+  // estate-card-shell은 테이블 전환으로 폐기 → 편집 모달 자동 오픈으로 대체
+  await expect(page.getByTestId("estate-edit-dialog")).toBeVisible();
 }
 
 test.describe("자산 토글 자동 노출 정밀화", () => {

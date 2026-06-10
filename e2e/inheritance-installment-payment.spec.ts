@@ -25,7 +25,6 @@ async function fillStep0WithChild(page: Page) {
   await page.goto("/calc/inheritance-tax");
   await fillDateAndVerify(page, { year: "2024", month: "6", day: "10" });
   await addHeir(page, "heir", "child");
-  await page.getByPlaceholder("앞 6자리-뒤 7자리").last().fill("700101-1000000");
   await page.getByRole("button", { name: /^다음/ }).click(); // → Step1
 }
 
@@ -91,7 +90,6 @@ test.describe("연부연납 일정표 (§71·§72)", () => {
     await fillDateAndVerify(page, { year: "2024", month: "6", day: "10" });
     await page.getByRole("button", { name: /비거주자/ }).click();
     await addHeir(page, "heir", "child");
-    await page.getByPlaceholder("앞 6자리-뒤 7자리").last().fill("700101-1000000");
     await page.getByRole("button", { name: /^다음/ }).click(); // → Step1
 
     await addLandAsset(page);

@@ -21,11 +21,8 @@ async function gotoExemptionStep(page: Page) {
   await page.getByLabel("월").first().fill("5");
   await page.getByLabel("일").first().fill("15");
 
-  await addHeir(page, "heir", "spouse");
-  await page.getByPlaceholder("앞 6자리-뒤 7자리").last().fill("700101-2000000");
-
-  await addHeir(page, "heir", "child");
-  await page.getByPlaceholder("앞 6자리-뒤 7자리").last().fill("000101-3000000");
+  await addHeir(page, "heir", "spouse", { residentNumber: "700101-2000000" });
+  await addHeir(page, "heir", "child", { residentNumber: "000101-3000000" });
 
   await page.getByRole("button", { name: /^다음/ }).click(); // → Step1
 

@@ -19,7 +19,6 @@ async function setupCollateralOnlyLand(page: Page) {
   await page.getByLabel("월").first().fill("3");
   await page.getByLabel("일").first().fill("10");
   await addHeir(page, "heir", "child");
-  await page.getByPlaceholder("앞 6자리-뒤 7자리").last().fill("700101-1000000");
   await page.getByRole("button", { name: /^다음/ }).click();
 
   // Step1 상속재산 — 토지 카드 (평가액 2억: 단가 100만 × 면적 200, 담보 < 평가액 → §66 하한 미발동)

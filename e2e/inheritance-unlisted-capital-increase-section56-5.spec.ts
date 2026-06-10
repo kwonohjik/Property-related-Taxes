@@ -26,7 +26,6 @@ async function gotoV2FormalValuationCard(page: Page) {
   await page.getByLabel("일").first().fill("31");
 
   await addHeir(page, "heir", "child");
-  await page.getByPlaceholder("앞 6자리-뒤 7자리").last().fill("700101-1000000");
   await page.getByRole("button", { name: /^다음/ }).click();
 
   await page.getByRole("button", { name: /주식·지분 추가/ }).click();

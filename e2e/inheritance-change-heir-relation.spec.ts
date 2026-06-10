@@ -25,8 +25,8 @@ test("CHR-1: 기타 → 수유자 종류 변경 (삭제·재추가 없이 교정
   test.setTimeout(90_000);
   await fillStep0(page);
 
-  // 기타(other) 1명 추가 → 헤더 "1. 기타 법정상속인..." 형식
-  await addHeir(page, "other");
+  // 기타(other) 1명 추가 → 모달 유지(관계 변경 picker가 모달 안) → 헤더 "1. 기타..." 형식
+  await addHeir(page, "other", undefined, { keepModalOpen: true });
   await expect(page.getByText(/\d\. 기타/).first()).toBeVisible();
 
   // 종류 변경 버튼 → 관계 선택 그리드 펼침
@@ -49,8 +49,8 @@ test("CHR-2: 법인 → 자녀 종류 변경 (법인 전용 UI 제거, 자연인
   test.setTimeout(90_000);
   await fillStep0(page);
 
-  // 법인(corporate) 추가 → 영리법인 토글 노출
-  await addHeir(page, "corporate");
+  // 법인(corporate) 추가 → 모달 유지(영리법인 토글·관계 변경이 모달 안) → 영리법인 토글 노출
+  await addHeir(page, "corporate", undefined, { keepModalOpen: true });
   await expect(page.getByTestId("heir-is-for-profit")).toBeVisible();
 
   // 종류 변경 → 자녀

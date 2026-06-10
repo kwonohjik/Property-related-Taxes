@@ -13,15 +13,16 @@
  */
 
 import { test, expect, type Page } from "@playwright/test";
+import { addHeir, closeHeirEditModal, addLandAsset } from "./_helpers/tax-flow";
 
-/** Step0: 상속개시일 + 자녀 1명 → Step1 이동 */
+/** Step0: 상속개시일 + 자녀 1명 → Step1 이동 (상속인 편집 모달 닫고 진행) */
 async function gotoStep1WithChild(page: Page) {
   await page.goto("/calc/inheritance-tax");
   await page.getByLabel("연도").first().fill("2026");
   await page.getByLabel("월").first().fill("5");
   await page.getByLabel("일").first().fill("15");
-  await page.getByRole("button", { name: /상속인 추가/ }).click();
-  await page.getByText("자녀", { exact: true }).click();
+  await addHeir(page, "heir", "child");
+  await closeHeirEditModal(page);
   await page.getByRole("button", { name: /^다음/ }).click();
 }
 
@@ -31,13 +32,13 @@ async function addFinancialCard(page: Page) {
   await page.getByText("예금·펀드·채권·공제금", { exact: true }).click();
 }
 
-/** 토지 카드 추가 + 면적·공시지가(3억) 입력 */
+/**
+ * 토지 카드 추가 + 면적·공시지가(3억) 입력 — 편집 모달 유지(keepModalOpen).
+ * 공유 addLandAsset의 fillAndVerify로 값 커밋을 보장(보충평가 평가액이 협의분할 칩 클릭 전
+ * 확정되어야 첫 상속인 전액 자동배분이 정확). 모달은 닫지 않아 칩 조작을 이어간다.
+ */
 async function addLandAssetWithValue(page: Page) {
-  await page.getByRole("button", { name: /재산 추가|상속재산 추가/ }).first().click();
-  await page.getByRole("button", { name: /토지/ }).first().click();
-  await page.getByRole("switch", { name: /보충적 평가방법/ }).click();
-  await page.getByPlaceholder("면적 입력").fill("300");
-  await page.getByPlaceholder("공시지가 단가").fill("1000000"); // 300㎡ × 100만 = 3억
+  await addLandAsset(page, { area: "300", unitPrice: "1000000", keepModalOpen: true });
 }
 
 test.describe("항목1: §22 칩 '금융재산 공제' 라벨 + 굵은 체크", () => {
@@ -100,10 +101,8 @@ test.describe("항목3: financial 자산 가업 §15⑤ 칩 미노출", () => {
     await gotoStep1WithChild(page);
     await addFinancialCard(page);
 
-    // 자산 카드는 렌더됨
-    await expect(
-      page.locator('[data-testid^="estate-card-shell-"]').first(),
-    ).toBeVisible();
+    // 자산 추가 → 편집 모달 자동 오픈 (estate-card-shell은 테이블 전환으로 폐기)
+    await expect(page.getByTestId("estate-edit-dialog")).toBeVisible();
 
     // 가업 §15⑤ 칩 미노출 (예금·펀드·채권은 §15⑤ 미해당)
     await expect(

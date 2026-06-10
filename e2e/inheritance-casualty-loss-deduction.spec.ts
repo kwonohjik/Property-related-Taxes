@@ -24,7 +24,6 @@ test.describe("상속세 재해손실공제 §23", () => {
     // Step0: 상속개시일 2024-6-1 + 자녀 1명
     await fillDateAndVerify(page, { year: "2024", month: "6", day: "1" });
     await addHeir(page, "heir", "child");
-    await page.getByPlaceholder("앞 6자리-뒤 7자리").last().fill("700101-1000000");
     await page.getByRole("button", { name: /^다음/ }).click(); // → Step1
 
     // Step1: 아파트 10억

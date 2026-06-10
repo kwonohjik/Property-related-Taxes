@@ -22,10 +22,8 @@ async function gotoStep1SpouseChild(page: Page) {
   await fillDateAndVerify(page, { year: "2024", month: "6", day: "10" });
   // 배우자 추가 (추가 시 패널 닫힘)
   await addHeir(page, "heir", "spouse");
-  await page.getByPlaceholder("앞 6자리-뒤 7자리").last().fill("700101-1000000");
   // 자녀 추가 (패널 재오픈)
   await addHeir(page, "heir", "child");
-  await page.getByPlaceholder("앞 6자리-뒤 7자리").last().fill("700101-1000000");
   await nextSteps(page, 1);
 }
 
@@ -75,7 +73,6 @@ test("§21② 배우자 단독상속 → 일괄공제 배제 안내 노출", asy
   await fillDateAndVerify(page, { year: "2024", month: "6", day: "10" });
   // 배우자만 상속인 (자녀 미추가 → 배우자 단독상속)
   await addHeir(page, "heir", "spouse");
-  await page.getByPlaceholder("앞 6자리-뒤 7자리").last().fill("700101-1000000");
   await nextSteps(page, 1);
 
   // 토지 20억

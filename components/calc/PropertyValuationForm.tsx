@@ -1,285 +1,48 @@
 "use client";
 
 /**
- * PropertyValuationForm — 부동산·금융·보증금 자산 평가 입력 폼
- * 상속세·증여세 계산 마법사에서 EstateItem[] 입력에 사용
+ * PropertyValuationForm — 부동산·금융·보증금 자산 평가 입력 (요약 테이블 + 편집 모달)
  *
- * 지원 카테고리: real_estate_land, real_estate_building,
- *   real_estate_apartment, financial, deposit, other
- * 주식(listed_stock, unlisted_stock)은 StockValuationForm을 사용
+ * estate-asset-table-view.plan.md · ui.design.md.
+ * 카드 나열 → 요약 테이블(EstateItemTableView) + 행 클릭 시 Dialog 모달(EstateItemEditor).
+ * 추가 직후 자동 모달 오픈(E-1). public props 동일 → Step1Estate·gift-tax-form-shared 무변경.
+ *
+ * 지원 카테고리: real_estate_land, real_estate_building, real_estate_apartment,
+ *   financial, deposit, cash, other. 주식(listed/unlisted)은 StockValuationForm.
  */
 
-import { useMemo, useState } from "react";
-import { EstateItemHeader } from "@/components/calc/inheritance/estate-card/EstateItemHeader";
-import { EstateChipInlineExpand } from "@/components/calc/inheritance/estate-card/EstateChipInlineExpand";
-import { EstateItemAdvancedPanel } from "@/components/calc/inheritance/estate-card/EstateItemAdvancedPanel";
-import { EstateItemCardShell } from "@/components/calc/inheritance/estate-card/EstateItemCardShell";
-import { createChipClickHandler } from "@/components/calc/inheritance/estate-card/handleChipClick";
-import { CategoryChangeDialog } from "@/components/calc/inheritance/estate-card/CategoryChangeDialog";
+import { useState } from "react";
+import { EstateItemTableView } from "@/components/calc/EstateItemTableView";
+import { EstateItemEditor } from "@/components/calc/EstateItemEditor";
 import {
-  EstateBodySimple,
-  EstateBodyRealEstate,
-  EstateBodyDeposit,
-} from "@/components/calc/inheritance/estate-card/variants";
-import type {
-  SupportedCategory as VariantSupportedCategory,
-  VariantBodyProps,
-} from "@/components/calc/inheritance/estate-card/variants/types";
-
-/** PR-D variant body 호출 래퍼 — switch 분기로 컴포넌트 직접 렌더 (static-components lint 준수) */
-function VariantBody(props: VariantBodyProps) {
-  const cat = props.item.category as VariantSupportedCategory;
-  switch (cat) {
-    case "real_estate_land":
-    case "real_estate_building":
-    case "real_estate_apartment":
-      return <EstateBodyRealEstate {...props} />;
-    case "deposit":
-      return <EstateBodyDeposit {...props} />;
-    case "cash":
-    case "financial":
-    case "other":
-      return <EstateBodySimple {...props} />;
-  }
-}
-import {
-  countNonDefaultOptions,
-  resolveChips,
-  type ChipKey,
-  type ChipState,
-} from "@/components/calc/inheritance/estate-card/chip-config";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { TotalEstimatedValue } from "@/components/calc/property-valuation-preview";
-import { CorporateNonBusinessAssetsSection } from "@/components/calc/inheritance/CorporateNonBusinessAssetsSection";
-import type { EstateItem, AssetCategory, Heir } from "@/lib/tax-engine/types/inheritance-gift.types";
-
-/**
- * 자산 카드별 "효과 평가액" 우선순위 — 시가 > 감정가 > 기준시가 > 보증금(deposit).
- * 본 export는 backwards-compat re-export. 본체는 lib/calc/estate-item-valuation.ts.
- */
-export { computeEffectiveValuation } from "@/lib/calc/estate-item-valuation";
-
-// ============================================================
-// 카테고리 메타
-// ============================================================
-
-type SupportedCategory = Exclude<AssetCategory, "listed_stock" | "unlisted_stock">;
-
-// real_estate_apartment 키는 "주택"(아파트·공동주택·단독주택)을 의미 — 식별자(apartment)와
-// 표시명(주택)이 다른 것은 키 유지(마이그레이션 회피) 결정에 따른 것. 평가 위젯은 단독주택도
-// 동일(주택공시가격 계열). real_estate_building 은 상업용·기타 건물 전용.
-const CATEGORY_LABELS: Record<SupportedCategory, string> = {
-  real_estate_land: "토지",
-  real_estate_building: "상업용 건물",
-  real_estate_apartment: "주택",
-  cash: "현금",
-  financial: "예금·펀드·채권·공제금",
-  deposit: "전세보증금 반환채권",
-  other: "기타 재산",
-};
-
-const CATEGORY_ICONS: Record<SupportedCategory, string> = {
-  real_estate_land: "🏔",
-  real_estate_building: "🏢",
-  real_estate_apartment: "🏠",
-  cash: "💵",
-  financial: "🏦",
-  deposit: "🔑",
-  other: "📦",
-};
-
-// VALUATION_PRIORITY_HINT는 PR-D variant 분리 후 EstateBodySimple·RealEstate·Deposit 내부로 이관됨.
-
-/** 증여세 폼에서 노출할 카테고리 (deposit 제외) */
-const GIFT_CATEGORIES: SupportedCategory[] = [
-  "real_estate_apartment",
-  "real_estate_building",
-  "real_estate_land",
-  "cash",
-  "financial",
-  "other",
-];
-
-// INHERITANCE_CATEGORIES는 deemed-category-policy.ts로 이관됨 (DEEMED_ALLOWED_CATEGORIES.none이 동일 매핑).
-
-/**
- * 간주상속재산 분류별 허용 카테고리는 lib/calc/deemed-category-policy.ts로 분리.
- * Phase 2 INT-4 — PR-F category-change-policy가 의존하므로 lib 격상.
- * 기존 사용 사이트는 본 파일에서 re-export 받음 (backwards-compat).
- */
+import {
+  CATEGORY_ICONS,
+  CATEGORY_LABELS,
+  GIFT_CATEGORIES,
+  type SupportedCategory,
+} from "@/components/calc/inheritance/estate-card/estate-category-meta";
 import {
   DEEMED_ALLOWED_CATEGORIES,
   DEEMED_FILTER_NOTE,
 } from "@/lib/calc/deemed-category-policy";
+import type { EstateItem, Heir } from "@/lib/tax-engine/types/inheritance-gift.types";
 
+/**
+ * 자산 카드별 "효과 평가액" 우선순위 — 시가 > 감정가 > 기준시가 > 보증금(deposit).
+ * backwards-compat re-export. 본체는 lib/calc/estate-item-valuation.ts.
+ */
+export { computeEffectiveValuation } from "@/lib/calc/estate-item-valuation";
+/** backwards-compat re-export (본체 lib/calc/deemed-category-policy.ts) */
 export { DEEMED_ALLOWED_CATEGORIES, DEEMED_FILTER_NOTE };
 
 // ============================================================
-// 개별 자산 항목 Form
-// ============================================================
-
-interface ItemEditorProps {
-  item: EstateItem;
-  index: number;
-  onUpdate: (updated: EstateItem) => void;
-  onRemove: () => void;
-  /** 상속세 모드에서 협의분할 토글 노출 — gift 모드는 미렌더 */
-  mode: "inheritance" | "gift";
-  /** 협의분할 분배 후보 — inheritance 모드에서만 의미 */
-  heirs?: Heir[];
-  /** 평가기준일 (상속개시일·증여일) — 기준시가 공시연도 기본값 계산용 */
-  valuationDate?: string;
-  /** PR-C FU-3: 자산 총 개수 — 5 이상이면 카드 collapse 토글 노출 */
-  totalAssetCount: number;
-}
-
-function ItemEditor({ item, index, onUpdate, onRemove, mode, heirs, valuationDate, totalAssetCount }: ItemEditorProps) {
-  const cat = item.category as SupportedCategory;
-
-  // 카드 압축 v4: 인라인 펼침 칩 키 + ⚙️ 패널 펼침 (자산별 로컬, accordion 단일)
-  const [inlineExpandedKey, setInlineExpandedKey] = useState<ChipKey | null>(null);
-  const [advancedOpen, setAdvancedOpen] = useState(false);
-  // PR-D RM-6: collapse 자동 해제 신호 (incrementing key) — ⚙️ 클릭 시 Shell에 전달
-  const [forceExpandKey, setForceExpandKey] = useState(0);
-  // PR-F FU-6: 카테고리 변경 Dialog 펼침 상태
-  const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
-  // 헤더 칩 도출 (mode·heirs 의존)
-  const chips: ChipState[] = useMemo(
-    () => resolveChips({ item, mode, heirsCount: heirs?.length ?? 0 }),
-    [item, mode, heirs],
-  );
-  const advancedBadgeCount = useMemo(
-    () => countNonDefaultOptions(item, mode),
-    [item, mode],
-  );
-
-  /**
-   * 담보채무 §14 자동공제 토글 노출 조건:
-   *   real_estate_land·apartment·building·deposit 카테고리
-   *   AND (mortgageAmount > 0 OR leaseDeposit > 0)
-   * VariantBody(EstateBodyRealEstate·Deposit)에 prop으로 전달.
-   */
-  const securedClaimTotal =
-    (item.mortgageAmount ?? 0) + (item.leaseDeposit ?? 0);
-  const showCollateralDeductToggle =
-    mode === "inheritance" &&
-    (cat === "real_estate_land" ||
-      cat === "real_estate_apartment" ||
-      cat === "real_estate_building" ||
-      cat === "deposit") &&
-    securedClaimTotal > 0;
-
-  // §23의2 동거주택 체크 활성 조건 — 동거 자녀 존재 여부 (EstateItem엔 heirs 없어 ItemEditor에서 도출)
-  const hasCohabitantChild =
-    mode === "inheritance" &&
-    (heirs?.some((h) => h.relation === "child" && h.isCohabitant === true) ??
-      false);
-
-  // 칩 클릭 핸들러 — Phase 2 INT-1: createChipClickHandler 공통 helper 사용
-  // (EstateCommonAttributesSection도 동일 helper 사용 예정 — PR-E)
-  const handleChipClick = useMemo(
-    () =>
-      createChipClickHandler({
-        item,
-        onUpdate,
-        setInlineExpandedKey,
-        heirs,
-        currentExpandedKey: inlineExpandedKey,
-      }),
-    [item, onUpdate, heirs, inlineExpandedKey],
-  );
-
-  function handleToggleAdvanced() {
-    // PR-D RM-6: collapse 자동 해제 신호 + advancedOpen 토글
-    setForceExpandKey((k) => k + 1);
-    setAdvancedOpen((v) => !v);
-  }
-
-  return (
-    <>
-    <EstateItemCardShell
-      itemId={item.id}
-      collapseEnabled={totalAssetCount >= 5}
-      forceExpand={forceExpandKey}
-      header={
-        <EstateItemHeader
-          itemId={item.id}
-          icon={CATEGORY_ICONS[cat]}
-          categoryLabel={CATEGORY_LABELS[cat]}
-          index={index}
-          chips={chips}
-          expandedKey={inlineExpandedKey}
-          onChipClick={handleChipClick}
-          advancedOpen={advancedOpen}
-          onToggleAdvanced={handleToggleAdvanced}
-          advancedBadgeCount={advancedBadgeCount}
-          onRemove={onRemove}
-          onChangeCategory={() => setCategoryDialogOpen(true)}
-        />
-      }
-      body={
-    <div className="space-y-3">
-      <VariantBody
-        item={item}
-        onUpdate={onUpdate}
-        valuationDate={valuationDate}
-        showCollateralDeductToggle={showCollateralDeductToggle}
-        hasCohabitantChild={hasCohabitantChild}
-        mode={mode}
-      />
-
-      {/* 법인 사업무관자산 차감 (§15⑤2호 + §16⑤2호) — corporate_stock 자산만 (PropertyValuationForm은 주식 미처리이나 안전상 보존) */}
-      {mode === "inheritance" && (
-        <CorporateNonBusinessAssetsSection item={item} onUpdate={onUpdate} deathDate={valuationDate} />
-      )}
-
-      {/* ─────────────────────────────────────────────────────────
-       * 헤더 칩 인라인 펼침 (분류·분할·영농·가업)
-       * — Plan §3.5 · Design D-O1 단일 인스턴스 정책
-       * ───────────────────────────────────────────────────────── */}
-      <EstateChipInlineExpand
-        expandedKey={inlineExpandedKey}
-        itemId={item.id}
-        item={item}
-        onUpdate={onUpdate}
-        heirs={heirs}
-        onClose={() => setInlineExpandedKey(null)}
-        deathDate={valuationDate}
-      />
-
-      {/* ─────────────────────────────────────────────────────────
-       * ⚙️ 고급 옵션 패널
-       * — Plan §3.4 · Design D-O1·D-O2
-       * ───────────────────────────────────────────────────────── */}
-      {advancedOpen && mode === "inheritance" && (
-        <EstateItemAdvancedPanel
-          itemId={item.id}
-          item={item}
-          onUpdate={onUpdate}
-          showSecuredClaimSubFields={showCollateralDeductToggle}
-          deathDate={valuationDate}
-        />
-      )}
-    </div>
-      }
-    />
-    {/* PR-F FU-6: 카테고리 변경 Dialog */}
-    <CategoryChangeDialog
-      open={categoryDialogOpen}
-      item={item}
-      mode={mode}
-      onConfirm={(preserved) => {
-        // pickPreservedFields 결과를 onUpdate에 전달 — 손실 필드는 undefined로 자동 처리
-        onUpdate({ ...item, ...preserved } as EstateItem);
-        setCategoryDialogOpen(false);
-      }}
-      onCancel={() => setCategoryDialogOpen(false)}
-    />
-    </>
-  );
-}
-
-// ============================================================
-// 카테고리 선택 버튼
+// 카테고리 선택 버튼 (추가 패널)
 // ============================================================
 
 interface CategoryButtonProps {
@@ -310,7 +73,7 @@ export interface PropertyValuationFormProps {
   /** 현재 자산 목록 (주식 제외) */
   items: EstateItem[];
   onChange: (items: EstateItem[]) => void;
-  /** "상속" 또는 "증여" — 안내 문구 조정 + 협의분할 노출 분기 */
+  /** "상속" 또는 "증여" — 안내 문구 조정 + 협의분할·옵션 노출 분기 */
   mode?: "inheritance" | "gift";
   /** 협의분할 분배 후보 — inheritance 모드에서 필수 */
   heirs?: Heir[];
@@ -325,7 +88,6 @@ function generateId() {
   return `prop-${Date.now()}-${_nextId++}`;
 }
 
-
 export function PropertyValuationForm({
   items,
   onChange,
@@ -339,18 +101,31 @@ export function PropertyValuationForm({
   const [pendingDeemed, setPendingDeemed] = useState<
     "none" | "insurance" | "trust" | "retirement"
   >("none");
+  // 편집 모달 대상 (UI ephemeral — zustand store 금지)
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
 
+  const selectedIndex = items.findIndex((it) => it.id === selectedItemId);
+  const selectedItem = selectedIndex >= 0 ? items[selectedIndex] : null;
+
+  /** 테이블 행 선택 → 모달 오픈 (추가 패널 강제 종료) */
+  const handleSelect = (id: string) => {
+    setSelectedItemId(id);
+    setShowAddPanel(false);
+    setPendingDeemed("none");
+  };
+
+  /** 자산 추가 — 추가 직후 자동 선택(E-1) → Dialog 자동 오픈 */
   const handleAdd = (category: SupportedCategory) => {
     const newItem: EstateItem = {
       id: generateId(),
       category,
       name: "",
-      // 상속세 모드에서 간주상속재산 분류가 선택되어 있으면 prefilled
       ...(mode === "inheritance" && pendingDeemed !== "none"
         ? { deemedCategory: pendingDeemed }
         : {}),
     };
     onChange([...items, newItem]);
+    setSelectedItemId(newItem.id);
     setShowAddPanel(false);
     setPendingDeemed("none");
   };
@@ -358,7 +133,7 @@ export function PropertyValuationForm({
   const handleUpdate = (index: number, updated: EstateItem) => {
     let next = [...items];
     next[index] = updated;
-    // §23의2 동거주택 단일선택 — 한 주택을 동거주택으로 지정하면 다른 주택은 자동 해제(1세대 1주택)
+    // §23의2 동거주택 단일선택 — 한 주택 지정 시 다른 주택 자동 해제(1세대 1주택)
     if (updated.isCohabitantHouse === true) {
       next = next.map((it, i) =>
         i !== index && it.isCohabitantHouse
@@ -369,8 +144,11 @@ export function PropertyValuationForm({
     onChange(next);
   };
 
+  /** 삭제 — 삭제 행이 선택 중이면 모달 자동 닫힘(E-2) */
   const handleRemove = (index: number) => {
+    const removedId = items[index].id;
     onChange(items.filter((_, i) => i !== index));
+    if (selectedItemId === removedId) setSelectedItemId(null);
   };
 
   const modeLabel = mode === "inheritance" ? "상속" : "증여";
@@ -393,24 +171,58 @@ export function PropertyValuationForm({
         </div>
       )}
 
-      {/* 자산 목록 */}
-      {items.length > 0 && (
-        <div className="space-y-3">
-          {items.map((item, i) => (
-            <ItemEditor
-              key={item.id}
-              item={item}
-              index={i}
-              onUpdate={(updated) => handleUpdate(i, updated)}
-              onRemove={() => handleRemove(i)}
-              mode={mode}
-              heirs={heirs}
-              valuationDate={valuationDate}
-              totalAssetCount={items.length}
-            />
-          ))}
-        </div>
-      )}
+      {/* 요약 테이블 (행 클릭 → 편집 모달) */}
+      <EstateItemTableView
+        items={items}
+        selectedItemId={selectedItemId}
+        onSelect={handleSelect}
+        mode={mode}
+        heirsCount={heirs?.length ?? 0}
+        ariaLabel={`${modeLabel}재산 목록`}
+      />
+
+      {/* 편집 모달 — 행 클릭 또는 추가 직후 자동 오픈 */}
+      <Dialog
+        open={selectedItemId !== null}
+        onOpenChange={(open) => {
+          if (!open) setSelectedItemId(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-lg w-full p-0" showCloseButton={false}>
+          <DialogHeader className="px-4 pt-4 pb-0">
+            <DialogTitle>
+              {selectedItem
+                ? `${CATEGORY_LABELS[selectedItem.category as SupportedCategory]} 편집`
+                : "자산 편집"}
+            </DialogTitle>
+          </DialogHeader>
+          <div
+            className="max-h-[80vh] overflow-y-auto px-4 pb-4 pt-3"
+            data-testid="estate-edit-dialog"
+          >
+            {selectedItem && (
+              <EstateItemEditor
+                item={selectedItem}
+                index={selectedIndex}
+                mode={mode}
+                heirs={heirs}
+                valuationDate={valuationDate}
+                onUpdate={(updated) => handleUpdate(selectedIndex, updated)}
+                onRemove={() => handleRemove(selectedIndex)}
+              />
+            )}
+          </div>
+          <div className="border-t px-4 py-3 flex justify-end">
+            <button
+              type="button"
+              onClick={() => setSelectedItemId(null)}
+              className="px-4 py-2 rounded-md text-sm border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+            >
+              닫기
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* 자산 추가 패널 */}
       {showAddPanel ? (
