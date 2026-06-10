@@ -81,6 +81,7 @@ export { ACQ_BASE_RATE, resolveAcqBaseRate } from "./acq-base-rate";
 export {
   STRUCTURE_META,
   resolveResidualGroup,
+  resolveResidualGroup2001,
   resolveAcqBaseGroup,
 } from "./structure-group-map";
 export type { StructureMeta } from "./structure-group-map";

@@ -3,31 +3,47 @@
  *
  * 출처: 국세청 「건물 기준시가 계산방법」 고시 — 부록 「연도별 잔가율표」(26p, 평가연도별 표).
  *
- * ★ 핵심: 잔가율 값은 **경과연수에만 의존**(평가연도 무관). PDF 2025·2026 두 표 전수 대조로 확인 —
- *   경과연수가 같으면 어느 평가연도 표에서나 동일 값(등치쌍 실측: 2026평가·2021신축 = 2025평가·2020신축
- *   = 0.910(경과5) / 2026평가·2020신축 = 2025평가·2019신축 = 0.892(경과6)).
- *   → 26개 표를 1D(경과연수)로 압축.
- *
- * ★ 완전 선형 검증(2026-06-10 PDF 전수 대조):
- *   잔가율 = max(1.000 − 경과연수 × step, 0.100). PDF 전사값과 **모든 그룹·모든 경과연수에서 1:1 일치**.
- *     I그룹(50년)  step 0.018   : 경과0=1.000 / 경과5=0.910 / 경과49=0.118 / 경과50↑=0.100
- *     II그룹(40년) step 0.0225  : 경과0=1.000 / 경과5=0.8875 / 경과39=0.1225 / 경과40↑=0.100
- *     III그룹(30년) step 0.030  : 경과0=1.000 / 경과5=0.850 / 경과29=0.130 / 경과30↑=0.100
- *     IV그룹(20년) step 0.045   : 경과0=1.000 / 경과5=0.775 / 경과19=0.145 / 경과20↑=0.100
- *   (계획서 C1 해소 — 선형 공식 = PDF 전사값. 별도 전사 테이블 불요.)
+ * ★★★ **평가연도별 스킴 상이**(국세청 계산사례 검증으로 확정 — "평가연도 무관" 가정 폐기):
+ *   잔가율표는 시대별로 그룹 체계·내용연수·잔존율(하한)이 다르다. 선형 공식은 유지되나 파라미터가 다름.
+ *     잔가율 = max(1.000 − 경과연수 × step, 잔존율),  step = (1 − 잔존율) ÷ 내용연수.
+ *   - **현행(2002~2026 잠정)**: 4그룹. I=50·II=40·III=30·IV=20년, 잔존율 0.10.
+ *       I step 0.018 / II 0.0225 / III 0.030 / IV 0.045. (2025·2026 PDF 전수 대조 일치)
+ *   - **2001년표**: 3그룹. I=40·II=30·III=20년, 잔존율 0.20. (2001 잔가율표 실측)
+ *       I step 0.02 / II 0.026667 / III 0.04. ⚠️ 그룹 구성 상이(황토 2001 II·2026 III / 철파이프 2001 III·2026 IV).
+ *   ⚠️ 2002~2024 중간 연도표 미확보 — 현행(4그룹) 잠정 적용. 자료 확보 시 재검증 필요.
  *
  * 경과연수 = 평가연도 − 신축(또는 리모델링)연도. 같은 해 신축·평가 = 경과 0 = 1.000.
- * ⚠️ 취득세용 `acquisition-standard-price.ts`의 `calculateResidualRatio`와 별개(단일 곡선 아님 — 그룹별 step).
+ * ⚠️ 취득세용 `acquisition-standard-price.ts`의 `calculateResidualRatio`와 별개.
  */
 import type { ResidualRateGroup } from "../../types/building-standard-price.types";
 
-/** 그룹별 연간 감가 step (1.000 기준) */
+/** 그룹별 연간 감가 step (1.000 기준, 현행 스킴) */
 export const RESIDUAL_RATE_STEP: Readonly<Record<ResidualRateGroup, number>> = Object.freeze({
   I: 0.018,
   II: 0.0225,
   III: 0.03,
   IV: 0.045,
 });
+
+/** 평가연도별 잔가율 스킴(그룹별 내용연수 + 잔존율). 시대별 그룹 체계·내용연수·하한 상이 */
+interface ResidualScheme {
+  durableYears: Partial<Record<ResidualRateGroup, number>>;
+  minRate: number;
+}
+const SCHEME_CURRENT: ResidualScheme = {
+  durableYears: { I: 50, II: 40, III: 30, IV: 20 },
+  minRate: 0.1,
+};
+/** 2001년표 — 3그룹(I=40·II=30·III=20년), 잔존율 0.20. 그룹 매핑은 resolveResidualGroup2001 */
+const SCHEME_2001: ResidualScheme = {
+  durableYears: { I: 40, II: 30, III: 20 },
+  minRate: 0.2,
+};
+
+/** 평가연도 → 잔가율 스킴. 2001 이하 = 2001표 / 2002~2026 = 현행(잠정) */
+function residualSchemeForYear(valuationYear: number): ResidualScheme {
+  return valuationYear <= 2001 ? SCHEME_2001 : SCHEME_CURRENT;
+}
 
 /** 잔가율 하한 */
 export const RESIDUAL_RATE_MIN = 0.1;
@@ -57,16 +73,25 @@ export function durableYearsToResidualGroup(durableYears: number): ResidualRateG
 }
 
 /**
- * 경과연수별 잔가율 계산. 부동소수 누적 오차 회피를 위해 0.0001 단위로 round 후 반환
- * (PDF 표가 소수 4자리까지 표기 — II그룹 0.9775 등).
+ * 경과연수별 잔가율 계산. 평가연도별 스킴(내용연수·잔존율)으로 step·하한 결정.
+ * 잔가율 = max(1 − 경과 × (1−잔존율)/내용연수, 잔존율). 소수 4자리 round.
  *
- * @param group     잔가율 그룹(I~IV)
- * @param elapsedYears 경과연수(음수 입력 방어 — 0으로 클램프)
+ * @param group        잔가율 그룹(스킴 기준 — 2001은 resolveResidualGroup2001 결과)
+ * @param elapsedYears 경과연수(음수 방어 — 0 클램프)
+ * @param valuationYear 평가연도(스킴 선택). 미지정 = 현행 스킴
  */
-export function calcResidualRate(group: ResidualRateGroup, elapsedYears: number): number {
+export function calcResidualRate(
+  group: ResidualRateGroup,
+  elapsedYears: number,
+  valuationYear?: number,
+): number {
+  const scheme = valuationYear === undefined ? SCHEME_CURRENT : residualSchemeForYear(valuationYear);
+  const durable = scheme.durableYears[group];
+  if (durable === undefined) {
+    throw new Error(`잔가율 그룹 '${group}' 미정의(평가연도 ${valuationYear ?? "현행"} 스킴)`);
+  }
+  const step = (1 - scheme.minRate) / durable;
   const e = Math.max(0, elapsedYears);
-  const raw = 1 - e * RESIDUAL_RATE_STEP[group];
-  const clamped = Math.max(raw, RESIDUAL_RATE_MIN);
-  // 소수 4자리 round (0.0225 × 정수의 부동소수 오차 정리)
+  const clamped = Math.max(1 - e * step, scheme.minRate);
   return Math.round(clamped * 10000) / 10000;
 }

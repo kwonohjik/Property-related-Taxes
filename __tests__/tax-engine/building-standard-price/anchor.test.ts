@@ -130,9 +130,9 @@ describe("BSP Pre-Do anchor (PDF 2025 손계산) — Phase B 엔진", () => {
   });
 
   // BSP-07: 양도 취득시 2000.12.31 이전 → 산정기준율(소령 §164⑤). 취득 1995·built 1990·rc.
-  // 2001지수표 ㎡당=400,000×100×100×105÷1e6=420,000 ×잔가0.802(경과11)=336,840→336,000
-  // 산정기준율 0.981(I·built1990·취득1995) → floor(336,000×100×0.981)=32,961,600
-  it("BSP-07 산정기준율(취득 2000이전): 취득 32,961,600 · 율 0.981", () => {
+  // 2001지수표 ㎡당=400,000×100×100×105÷1e6=420,000 ×잔가0.78(★2001표 I=40년·step0.02·경과11)=327,600→327,000
+  // 산정기준율 0.981(I·built1990·취득1995) → floor(327,000×100×0.981)=32,078,700
+  it("BSP-07 산정기준율(취득 2000이전): 취득 32,078,700 · 율 0.981 (2001 잔가율표)", () => {
     const input: BuildingStandardPriceInput = {
       taxType: "transfer",
       floorArea: 100,
@@ -143,7 +143,8 @@ describe("BSP Pre-Do anchor (PDF 2025 손계산) — Phase B 엔진", () => {
       transfer: { structureKey: "rc", usageNo: 1, landPricePerM2: 4_500_000 },
     };
     const r = calcBuildingStandardPrice(input);
-    expect(r.acquisition?.standardPrice).toBe(32_961_600);
+    expect(r.acquisition?.residualRate).toBe(0.78); // 2001 잔가율표 I그룹(40년) 경과11
+    expect(r.acquisition?.standardPrice).toBe(32_078_700);
     expect(r.acquisition?.acqBaseRate).toBe(0.981);
     expect(r.acquisition?.appliedLandPriceYear).toBe(2001);
   });

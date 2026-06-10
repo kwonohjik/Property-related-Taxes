@@ -80,6 +80,20 @@ export function resolveResidualGroup(structureKey: string): ResidualRateGroup {
   return meta.residual;
 }
 
+/**
+ * 2001년 잔가율표 그룹 매핑(3그룹). 현행(2026)과 그룹 구성이 다른 구조만 override.
+ *   · 황토조 ocher: 2026 III(30년) → 2001 II(30년)
+ *   · 철파이프조 steel_pipe: 2026 IV(20년) → 2001 III(20년)
+ * 나머지는 현행 그룹과 동일(내용연수만 스킴에서 보정). 2001 미수록 신공법은 structure-index에서 이미 차단.
+ */
+const RESIDUAL_GROUP_2001_OVERRIDE: Readonly<Record<string, ResidualRateGroup>> = Object.freeze({
+  ocher: "II",
+  steel_pipe: "III",
+});
+export function resolveResidualGroup2001(structureKey: string): ResidualRateGroup {
+  return RESIDUAL_GROUP_2001_OVERRIDE[structureKey] ?? resolveResidualGroup(structureKey);
+}
+
 /** 산정기준율 그룹 조회 — 헤더 미수록 신공법 구조는 undefined(호출부에서 검증 오류) */
 export function resolveAcqBaseGroup(structureKey: string): AcqBaseRateGroup | undefined {
   return STRUCTURE_META[structureKey]?.acqBase;
