@@ -18,6 +18,7 @@ import type { AppraisalFeeFormFields } from "@/lib/calc/appraisal-fee-form";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { PropertyValuationForm } from "@/components/calc/PropertyValuationForm";
 import { StockValuationForm } from "@/components/calc/StockValuationForm";
@@ -530,34 +531,24 @@ export function Step3({
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">
           조특법 과세특례 (창업·가업)
         </label>
-        <div className="space-y-2">
-          {(
-            [
-              { val: "", label: "해당 없음" },
-              { val: "startup", label: "창업자금 증여세 과세특례 (§30의5)" },
-              { val: "family_business", label: "가업승계 증여세 과세특례 (§30의6)" },
-            ] as const
-          ).map(({ val, label }) => (
-            <button
-              key={val}
-              type="button"
-              onClick={() =>
-                set({
-                  specialTreatment: val,
-                  // startup이 아니면 startupInvestmentCompleted 초기화
-                  ...(val !== "startup" ? { startupInvestmentCompleted: false } : {}),
-                })
-              }
-              className={`w-full text-left rounded-lg border px-3 py-2 text-sm transition-colors ${
-                form.specialTreatment === val
-                  ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20"
-                  : "border-border hover:border-muted-foreground/50"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+        <RadioCardGroup<"none" | "startup" | "family_business">
+          name="giftSpecialTreatment"
+          tone="emerald"
+          value={form.specialTreatment === "" ? "none" : form.specialTreatment}
+          onChange={(v) => {
+            const val = v === "none" ? "" : v;
+            set({
+              specialTreatment: val,
+              // startup이 아니면 startupInvestmentCompleted 초기화
+              ...(val !== "startup" ? { startupInvestmentCompleted: false } : {}),
+            });
+          }}
+          options={[
+            { value: "none", label: "해당 없음" },
+            { value: "startup", label: "창업자금 증여세 과세특례 (§30의5)" },
+            { value: "family_business", label: "가업승계 증여세 과세특례 (§30의6)" },
+          ]}
+        />
       </div>
 
       {/* G-M7: 창업자금 투자 완료 여부 (§30의5④) — startup 선택 시 노출 */}
