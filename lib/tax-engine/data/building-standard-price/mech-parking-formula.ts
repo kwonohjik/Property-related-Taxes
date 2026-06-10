@@ -26,7 +26,8 @@ export interface MechParkingFormula {
 export const MECH_PARKING_FORMULA: Readonly<Record<number, MechParkingFormula>> = Object.freeze({
   2001: { unitPrice: 5_000_000, durableYears: 20 },
   2002: { unitPrice: 5_000_000, durableYears: 20 },
-  // ☐ 2003~2015: D3 용도지수 각 연도표 IV 행에서 단가·내용연수 확정 예정
+  // ☐ 2003~2014: D3 용도지수 각 연도표 IV 행에서 단가·내용연수 확정 예정
+  2015: { unitPrice: 6_000_000, durableYears: 20 }, // ★ 단가 6백만이나 내용연수 20년(2016부터 30년)
   2016: { unitPrice: 6_000_000, durableYears: 30 },
   2017: { unitPrice: 6_000_000, durableYears: 30 },
   2018: { unitPrice: 6_000_000, durableYears: 30 },

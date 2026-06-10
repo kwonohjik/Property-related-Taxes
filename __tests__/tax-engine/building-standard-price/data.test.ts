@@ -193,8 +193,8 @@ describe("D9 기계식주차 산식 (연도 가변)", () => {
   it("2001·2002 = 5,000,000 · 내용연수 20년", () => {
     expect(resolveMechParkingFormula(2001)).toEqual({ unitPrice: 5_000_000, durableYears: 20 });
   });
-  it("중간 연도(2003~2024)는 미확정 → undefined (D3 연동 대기)", () => {
-    expect(resolveMechParkingFormula(2015)).toBeUndefined();
+  it("중간 연도(2003~2014)는 미확정 → undefined (D3 연동 대기)", () => {
+    expect(resolveMechParkingFormula(2014)).toBeUndefined();
   });
 
   it("BSP-MECH 손계산: 6,000,000 × 0.850(III·경과5) × 50 = 255,000,000", () => {
@@ -268,9 +268,10 @@ describe("D3 용도지수 (이미지 직접 판독, 2026 BASE + 연도 override)
     expect(resolveUsageIndex(2018, 34)).toBe(105);
     expect(resolveUsageIndex(2019, 34)).toBe(107);
   });
-  it("미전사 연도: 2015 이하 = undefined, 2016~2026 = 전사완료", () => {
-    expect(hasUsageIndexYear(2015)).toBe(false);
-    expect(resolveUsageIndex(2015, 1)).toBeUndefined();
+  it("미전사 연도: 2014 이하 = undefined, 2015~2026 = 전사완료", () => {
+    expect(hasUsageIndexYear(2014)).toBe(false);
+    expect(resolveUsageIndex(2014, 1)).toBeUndefined();
+    expect(hasUsageIndexYear(2015)).toBe(true);
     expect(hasUsageIndexYear(2016)).toBe(true);
     expect(hasUsageIndexYear(2017)).toBe(true);
     expect(hasUsageIndexYear(2018)).toBe(true);
@@ -313,6 +314,17 @@ describe("D3 용도지수 59항목 체계 (2003~2017, 2017 BASE + 연도 overrid
   it("59체계 연도 기계식주차: 2016·2017 = 6,000,000 · 30년", () => {
     expect(resolveMechParkingFormula(2016)).toEqual({ unitPrice: 6_000_000, durableYears: 30 });
     expect(resolveMechParkingFormula(2017)).toEqual({ unitPrice: 6_000_000, durableYears: 30 });
+  });
+  it("2015 override: 여인숙(#8)=90 / 도매시장(#12)=80 / 무도장(#14)=135 / 오피스텔(#29)=130 / 화초온실(#58)=45", () => {
+    expect(resolveUsageIndex(2015, 8)).toBe(90);
+    expect(resolveUsageIndex(2015, 12)).toBe(80);
+    expect(resolveUsageIndex(2015, 14)).toBe(135);
+    expect(resolveUsageIndex(2015, 29)).toBe(130);
+    expect(resolveUsageIndex(2015, 58)).toBe(45);
+    expect(resolveUsageIndex(2015, 1)).toBe(110); // BASE 동일
+  });
+  it("2015 기계식주차 = 6,000,000 · 20년 (★ 내용연수 2016부터 30년)", () => {
+    expect(resolveMechParkingFormula(2015)).toEqual({ unitPrice: 6_000_000, durableYears: 20 });
   });
 });
 
