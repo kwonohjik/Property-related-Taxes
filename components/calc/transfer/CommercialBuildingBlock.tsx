@@ -23,6 +23,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import { BuildingStdPriceModalButton } from "@/components/calc/building-std-price/BuildingStdPriceModalButton";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
@@ -210,6 +211,9 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
                 hideUnit
               />
             </FieldCard>
+            <div className="flex justify-end">
+              <BuildingStdPriceModalButton onApply={(v) => onChange({ cbBuildingStdPriceAtAcq: String(v) })} />
+            </div>
             {/* 최초고시시(2005) — amber */}
             <FieldCard
               label="최초고시시(2005) 건물 기준시가"
@@ -237,6 +241,9 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
                   hideUnit
                 />
               </FieldCard>
+              <div className="mt-1 flex justify-end">
+                <BuildingStdPriceModalButton onApply={(v) => onChange({ cbBuildingStdPriceAtTransfer: String(v) })} />
+              </div>
             </div>
           </div>
         )}

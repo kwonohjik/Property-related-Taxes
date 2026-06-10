@@ -119,6 +119,13 @@ const MENU = [
     tone: "violet",
   },
   {
+    href: "/tools/building-standard-price",
+    title: "건물 기준시가 계산기",
+    subtitle: "양도·상속·증여 건물분 기준시가 산정",
+    icon: "🏗️",
+    tone: "cyan",
+  },
+  {
     href: "/law",
     title: "법령 리서치",
     subtitle: "조문·판례·별표 통합 검색",

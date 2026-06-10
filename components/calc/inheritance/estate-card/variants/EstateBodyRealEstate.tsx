@@ -24,6 +24,7 @@ import {
   isReverseGeocodeError,
 } from "@/lib/calc/vworld-reverse-geocode";
 import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
+import { BuildingStdPriceModalButton } from "@/components/calc/building-std-price/BuildingStdPriceModalButton";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import {
   RadioCardGroup,
@@ -269,6 +270,14 @@ export function EstateBodyRealEstate({
             label=""
             enableLookup={true}
           />
+          {propertyKind !== "land" && (
+            <div className="flex justify-end">
+              <BuildingStdPriceModalButton
+                buttonLabel="건물 기준시가 계산"
+                onApply={(v) => set({ standardPrice: v })}
+              />
+            </div>
+          )}
         </div>
       </ToggleCard>
 
