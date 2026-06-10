@@ -156,3 +156,32 @@ describe("NTS 공식 계산사례 — 다필지 부속토지 위치지수 가중
     expect(r.compositeTotal).toBe(4_198_000_000);
   });
 });
+
+describe("NTS 공식 계산사례 — 공용 부속시설 면적비율 안분 (안분계산 마)", () => {
+  // rc, 1층 슈퍼 100㎡(근생#41·조정1.08·공용0.54) + 2~3층 주택 200㎡(단독#2·조정1.00·공용0.60)
+  // 공용 90㎡(주차60+보일러30) → 면적비율 안분(슈퍼 30㎡·주택 60㎡). 위치 250만(#20=116)·신축2000·상속2026
+  // 슈퍼 주용도 544,000/54,400,000 + 공용 272,000/8,160,000(30㎡) = 62,560,000
+  // 주택 주용도 530,000/106,000,000 + 공용 318,000/19,080,000(60㎡) = 125,080,000 → 합계 187,640,000
+  it("공용시설 면적비율 안분: 슈퍼 62,560,000 + 주택 125,080,000 = 187,640,000", () => {
+    const r = calcBuildingStandardPrice({
+      taxType: "inheritance_gift",
+      floorArea: 0,
+      builtYear: 2000,
+      valuationYear: 2026,
+      valuation: { structureKey: "rc", usageNo: 41, landPricePerM2: 2_500_000 },
+      sharedFacilityArea: 90,
+      compositeParts: [
+        { label: "1층 슈퍼", structureKey: "rc", usageNo: 41, floorArea: 100, adjustmentRate: 108, sharedAdjustmentRate: 54 },
+        { label: "2~3층 주택", structureKey: "rc", usageNo: 2, floorArea: 200, adjustmentRate: 100, sharedAdjustmentRate: 60 },
+      ],
+    });
+    const bd = r.compositeBreakdowns ?? [];
+    expect(bd[0].standardPrice).toBe(54_400_000); // 슈퍼 주용도
+    expect(bd[1].standardPrice).toBe(8_160_000); // 슈퍼 공용(30㎡)
+    expect(bd[1].floorArea).toBe(30);
+    expect(bd[2].standardPrice).toBe(106_000_000); // 주택 주용도
+    expect(bd[3].standardPrice).toBe(19_080_000); // 주택 공용(60㎡)
+    expect(bd[3].floorArea).toBe(60);
+    expect(r.compositeTotal).toBe(187_640_000);
+  });
+});
