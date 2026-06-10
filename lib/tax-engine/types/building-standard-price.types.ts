@@ -108,6 +108,11 @@ export interface BuildingStandardPriceInput {
   landParcels?: LandParcel[];
   /** 층/부분별 구조·용도가 다른 복합건물 — 각 부분 독립 계산 후 합산. 있으면 valuation 단일 point 무시 */
   compositeParts?: BuildingCompositePart[];
+  /**
+   * 공용 부속시설 총면적(㎡, 주차장+보일러실+기계실 등). compositeParts의 주용도 면적비율로 안분(고시 계산서 V항).
+   * 각 부분의 sharedAdjustmentRate와 함께 사용. 단독으론 무효.
+   */
+  sharedFacilityArea?: number;
 }
 
 /** 다필지 부속토지 1필지(위치지수 가중평균용) */
@@ -127,6 +132,11 @@ export interface BuildingCompositePart {
   floorArea: number;
   /** 조정율 배율(1.0 기준, 100=1.0 미적용). 부분별 상이. 미입력 = 1.0 */
   adjustmentRate?: number;
+  /**
+   * 공용 부속시설(주차장·보일러실 등) 귀속분 조정율(100=1.0). 지정 시 sharedFacilityArea를 이 부분의
+   * 주용도 면적비율로 안분해 공용 기준시가를 별도 산정(주용도 구조·용도·위치·잔가는 동일, 조정율만 다름).
+   */
+  sharedAdjustmentRate?: number;
 }
 
 /** 시점별 산출근거 echo */

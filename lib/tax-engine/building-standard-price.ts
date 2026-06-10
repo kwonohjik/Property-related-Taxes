@@ -87,22 +87,32 @@ function calcCompositeValuation(
           },
         ];
 
-  const compositeBreakdowns: BuildingStdPriceBreakdown[] = parts.map((p, i) => {
+  const totalMainArea = parts.reduce((s, p) => s + p.floorArea, 0);
+  const sharedFacilityArea = input.sharedFacilityArea ?? 0;
+  const remodel = { remodelYear: input.remodelYear, isInheritanceGift: true };
+
+  const compositeBreakdowns: BuildingStdPriceBreakdown[] = [];
+  for (let i = 0; i < parts.length; i++) {
+    const p = parts[i];
     if (!p.structureKey) throw new BuildingStdPriceError(`복합 부분 ${i + 1}: 구조 미선택`);
     if (p.usageNo === undefined || p.usageNo < 1) throw new BuildingStdPriceError(`복합 부분 ${i + 1}: 용도 미선택`);
     if (!(p.floorArea > 0)) throw new BuildingStdPriceError(`복합 부분 ${i + 1}: 면적(㎡) 필요`);
-    const adjRate = p.adjustmentRate != null ? p.adjustmentRate / 100 : 1.0;
-    const bd = calcPointBreakdown(
-      year,
-      { structureKey: p.structureKey, usageNo: p.usageNo, landPricePerM2: landPrice },
-      p.floorArea,
-      input.builtYear,
-      adjRate,
-      p.label ?? `부분 ${i + 1}`,
-      { remodelYear: input.remodelYear, isInheritanceGift: true },
-    );
-    return { ...bd, label: p.label, floorArea: p.floorArea };
-  });
+    const point = { structureKey: p.structureKey, usageNo: p.usageNo, landPricePerM2: landPrice };
+
+    // 주용도 부분
+    const mainAdj = p.adjustmentRate != null ? p.adjustmentRate / 100 : 1.0;
+    const main = calcPointBreakdown(year, point, p.floorArea, input.builtYear, mainAdj, p.label ?? `부분 ${i + 1}`, remodel);
+    compositeBreakdowns.push({ ...main, label: p.label, floorArea: p.floorArea });
+
+    // 공용 부속시설 안분(주용도 면적비율) — 구조·용도·위치·잔가 동일, 공용 조정율만 다름
+    if (sharedFacilityArea > 0 && p.sharedAdjustmentRate != null && totalMainArea > 0) {
+      const sharedArea = parseFloat(((sharedFacilityArea * p.floorArea) / totalMainArea).toFixed(2));
+      const sharedAdj = p.sharedAdjustmentRate / 100;
+      const sharedLabel = `${p.label ?? `부분 ${i + 1}`} 공용`;
+      const shared = calcPointBreakdown(year, point, sharedArea, input.builtYear, sharedAdj, sharedLabel, remodel);
+      compositeBreakdowns.push({ ...shared, label: sharedLabel, floorArea: sharedArea });
+    }
+  }
 
   const compositeTotal = compositeBreakdowns.reduce((s, b) => s + b.standardPrice, 0);
   return {
