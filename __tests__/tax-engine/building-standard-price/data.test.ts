@@ -193,10 +193,11 @@ describe("D9 기계식주차 산식 (연도 가변)", () => {
   it("2001·2002 = 5,000,000 · 내용연수 20년", () => {
     expect(resolveMechParkingFormula(2001)).toEqual({ unitPrice: 5_000_000, durableYears: 20 });
   });
-  it("중간 연도(2003~2010)는 미확정 → undefined (D3 연동 대기)", () => {
-    expect(resolveMechParkingFormula(2010)).toBeUndefined();
+  it("중간 연도(2003~2009)는 미확정 → undefined (D3 연동 대기)", () => {
+    expect(resolveMechParkingFormula(2009)).toBeUndefined();
   });
-  it("기계식주차 단가·내용연수 연도 변천: 2011·2012=5백만 / 2013=5.5백만 / 2014=5.75백만 / 2015=6백만(20년) / 2016~=6백만(30년)", () => {
+  it("기계식주차 단가·내용연수 연도 변천: 2010·2011·2012=5백만 / 2013=5.5백만 / 2014=5.75백만 / 2015=6백만(20년) / 2016~=6백만(30년)", () => {
+    expect(resolveMechParkingFormula(2010)).toEqual({ unitPrice: 5_000_000, durableYears: 20 });
     expect(resolveMechParkingFormula(2011)).toEqual({ unitPrice: 5_000_000, durableYears: 20 });
     expect(resolveMechParkingFormula(2012)).toEqual({ unitPrice: 5_000_000, durableYears: 20 });
     expect(resolveMechParkingFormula(2013)).toEqual({ unitPrice: 5_500_000, durableYears: 20 });
@@ -276,9 +277,10 @@ describe("D3 용도지수 (이미지 직접 판독, 2026 BASE + 연도 override)
     expect(resolveUsageIndex(2018, 34)).toBe(105);
     expect(resolveUsageIndex(2019, 34)).toBe(107);
   });
-  it("미전사 연도: 2010 이하 = undefined, 2011~2026 = 전사완료", () => {
-    expect(hasUsageIndexYear(2010)).toBe(false);
-    expect(resolveUsageIndex(2010, 1)).toBeUndefined();
+  it("미전사 연도: 2009 이하 = undefined, 2010~2026 = 전사완료", () => {
+    expect(hasUsageIndexYear(2009)).toBe(false);
+    expect(resolveUsageIndex(2009, 1)).toBeUndefined();
+    expect(hasUsageIndexYear(2010)).toBe(true);
     expect(hasUsageIndexYear(2011)).toBe(true);
     expect(hasUsageIndexYear(2012)).toBe(true);
     expect(hasUsageIndexYear(2013)).toBe(true);
@@ -428,6 +430,29 @@ describe("D3 용도지수 46항목 체계 (2011 단독)", () => {
   });
   it("2011 기계식주차 = 5,000,000 · 20년 (원본 IV행 부재, 2012 동일)", () => {
     expect(resolveMechParkingFormula(2011)).toEqual({ unitPrice: 5_000_000, durableYears: 20 });
+  });
+});
+
+describe("D3 용도지수 48항목 체계 (2010 단독)", () => {
+  // 투전기업소 포함 통합위락#14·동물원#18(110)/공연장+집회장+관람장+전시장#19(100). 원본 꼬리 번호 오타 보정(주차장#46·축사#47)
+  it("2010: 아파트=110 / 통합위락(#14)=120 / 동물원(#18)=110 / 공연장+관람장(#19)=100", () => {
+    expect(resolveUsageIndex(2010, 1)).toBe(110);
+    expect(resolveUsageIndex(2010, 14)).toBe(120);
+    expect(resolveUsageIndex(2010, 18)).toBe(110);
+    expect(resolveUsageIndex(2010, 19)).toBe(100);
+  });
+  it("2010: 종합병원(#23)=120 / 장례식장(#25)=110 / 주차장(#46)=60 / 축사+화초(#47)=40", () => {
+    expect(resolveUsageIndex(2010, 23)).toBe(120);
+    expect(resolveUsageIndex(2010, 25)).toBe(110);
+    expect(resolveUsageIndex(2010, 46)).toBe(60);
+    expect(resolveUsageIndex(2010, 47)).toBe(40);
+  });
+  it("2010 listUsageOptions = 47항목(#1~47, 기계식 별도)", () => {
+    const opts = listUsageOptions(2010);
+    expect(opts.length).toBe(47);
+  });
+  it("2010 기계식주차 = 5,000,000 · 20년", () => {
+    expect(resolveMechParkingFormula(2010)).toEqual({ unitPrice: 5_000_000, durableYears: 20 });
   });
 });
 
