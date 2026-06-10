@@ -61,9 +61,11 @@ function EstateItemTableRow({ item, isSelected, onSelect, mode, heirsCount }: Es
   const nameDisplay = item.name?.trim() || CATEGORY_LABELS[cat];
   const value = computeEffectiveValuation(item);
 
-  // resolveChips 단일 출처 — 평가액(estimated-value) 칩은 전용 컬럼이므로 제외
+  // resolveChips 단일 출처 — 읽기 전용 테이블은 실제 적용·설정된 비기본 옵션만 표시.
+  //   isActiveData=false인 기본/미설정 안내 칩(평가액·일반·법정분할·영농/가업 미선택 등) 제외.
+  //   실제 입력 여부 판정은 chip-config의 countNonDefaultOptions와 동일 술어 (단일 진실).
   const optionChips = resolveChips({ item, mode, heirsCount }).filter(
-    (c) => c.key !== "estimated-value",
+    (c) => c.isActiveData === true,
   );
   const optionCount = countNonDefaultOptions(item, mode);
 
