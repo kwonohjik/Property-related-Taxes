@@ -4,6 +4,7 @@
  * CollapsibleEstateGroup — 상속재산 단계 그룹 접기/펼치기 래퍼
  *
  * 상속재산 목록·주식/지분 목록·추정상속재산 §15 각 그룹을 감싼다.
+ * - 피상속인 Step(steps.tsx §①②③)과 동일한 번호 배지 + 색상 카드 형식.
  * - 기본 펼침. 접으면 헤더에 "N건 · 합계" 요약 표시.
  * - 본문은 CSS hidden 토글(unmount 안 함 → 입력값·포커스 보존).
  * - 상태는 로컬(useState) — 단계 이동/새로고침 시 기본(펼침) 복귀.
@@ -11,6 +12,34 @@
 
 import { useState, type ReactNode } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
+
+type EstateGroupTone = "sky" | "emerald" | "amber" | "violet" | "rose";
+
+// 정적 tone 클래스 매핑 (JIT purge 안전 — dynamic `bg-${tone}` 금지)
+const TONE_CARD: Record<EstateGroupTone, string> = {
+  sky: "border-sky-200 bg-sky-50/40 dark:border-sky-800 dark:bg-sky-900/15",
+  emerald:
+    "border-emerald-200 bg-emerald-50/40 dark:border-emerald-800 dark:bg-emerald-900/15",
+  amber:
+    "border-amber-200 bg-amber-50/40 dark:border-amber-800 dark:bg-amber-900/15",
+  violet:
+    "border-violet-200 bg-violet-50/40 dark:border-violet-800 dark:bg-violet-900/15",
+  rose: "border-rose-200 bg-rose-50/40 dark:border-rose-800 dark:bg-rose-900/15",
+};
+const TONE_BADGE: Record<EstateGroupTone, string> = {
+  sky: "bg-sky-200 text-sky-800",
+  emerald: "bg-emerald-200 text-emerald-800",
+  amber: "bg-amber-200 text-amber-800",
+  violet: "bg-violet-200 text-violet-800",
+  rose: "bg-rose-200 text-rose-800",
+};
+const TONE_TITLE: Record<EstateGroupTone, string> = {
+  sky: "text-sky-700 dark:text-sky-300",
+  emerald: "text-emerald-700 dark:text-emerald-300",
+  amber: "text-amber-700 dark:text-amber-300",
+  violet: "text-violet-700 dark:text-violet-300",
+  rose: "text-rose-700 dark:text-rose-300",
+};
 
 /** 금액(원)을 억/만 단위로 축약. 0이면 빈 문자열. */
 function formatKoreanAmountShort(amount: number): string {
@@ -30,6 +59,10 @@ function formatKoreanAmountShort(amount: number): string {
 interface CollapsibleEstateGroupProps {
   /** 그룹 식별자 — data-testid·고유 key 용 (예: "estate", "stock", "presumed") */
   groupKey: string;
+  /** 섹션 번호 — 제목 앞 원형 배지 (피상속인 Step §①②③과 동일) */
+  sectionNum?: number;
+  /** 카드·배지·제목 색조 (기본 sky) */
+  tone?: EstateGroupTone;
   title: string;
   description?: ReactNode;
   /** 항목 개수 (배열 length) */
@@ -42,6 +75,8 @@ interface CollapsibleEstateGroupProps {
 
 export function CollapsibleEstateGroup({
   groupKey,
+  sectionNum,
+  tone = "sky",
   title,
   description,
   count,
@@ -53,7 +88,7 @@ export function CollapsibleEstateGroup({
   const amountText = formatKoreanAmountShort(totalAmount);
 
   return (
-    <div className="space-y-3">
+    <div className={`rounded-lg border p-3 space-y-3 ${TONE_CARD[tone]}`}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -68,9 +103,16 @@ export function CollapsibleEstateGroup({
             <ChevronRight className="h-4 w-4" />
           )}
         </span>
+        {sectionNum !== undefined && (
+          <span
+            className={`mt-px flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold select-none ${TONE_BADGE[tone]}`}
+          >
+            {sectionNum}
+          </span>
+        )}
         <span className="flex-1">
           <span className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+            <span className={`text-xs font-semibold ${TONE_TITLE[tone]}`}>
               {title}
             </span>
             {/* 접힘 시에만 요약 배지 — 펼치면 본문에 다 보이므로 숨김 */}
