@@ -214,20 +214,85 @@ export function HeirComposition({ heirs, onChange, deathDate }: HeirCompositionP
 
   return (
     <div className="space-y-4">
-      {/* 헤더 */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200">
-            상속인 구성
-          </h3>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-            배우자 공제·인적공제 자동 계산에 사용됩니다
+      {/* 헤더 — ② 섹션 타이틀(번호·제목) + 우측 6명·추가버튼 (동거가족 ③과 동형) */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-[10px] font-bold text-violet-800 select-none">
+            2
+          </span>
+          <p className="text-xs font-semibold text-violet-700 dark:text-violet-300">
+            상속인·수유자 구성
           </p>
         </div>
-        {heirs.length > 0 && (
-          <span className="text-xs text-gray-400">{heirs.length}명</span>
-        )}
+        <div className="flex items-center gap-2 shrink-0">
+          {heirs.length > 0 && (
+            <span className="text-xs text-gray-400">{heirs.length}명</span>
+          )}
+          {/* picker 열림 시 숨김 — 추가 버튼과 picker는 상호배타 (KindButton "상속인" 텍스트 충돌 방지) */}
+          {!showAddPanel && (
+            <button
+              type="button"
+              onClick={() => {
+                setShowAddPanel(true);
+                setAddStep("kind");
+              }}
+              className="shrink-0 rounded-md border border-indigo-300 bg-indigo-100 px-2.5 py-1 text-[11px] font-medium text-indigo-800 hover:bg-indigo-200 dark:border-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200"
+            >
+              + 상속인 추가
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* 추가 picker 패널 — 헤더 아래 (showAddPanel 시 펼침) */}
+      {showAddPanel && (
+        <div className="border border-dashed border-indigo-300 dark:border-indigo-700 rounded-lg p-4 space-y-3">
+          {addStep === "kind" && (
+            <>
+              <p className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                종류 선택 (1단계)
+              </p>
+              <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+                {(["heir", "legatee", "substitute", "corporate", "other"] as AddKind[]).map(
+                  (k) => (
+                    <KindButton key={k} kind={k} onPick={handleKindPick} />
+                  )
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAddPanel(false);
+                  setAddStep(null);
+                  setPendingKind(null);
+                }}
+                className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+              >
+                취소
+              </button>
+            </>
+          )}
+
+          {addStep === "relation" && pendingKind === "heir" && (
+            <>
+              <p className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                관계 선택 (2단계 — 상속인)
+              </p>
+              <PersonRelationPicker onPick={handleAdd} />
+              <button
+                type="button"
+                onClick={() => {
+                  setAddStep("kind");
+                  setPendingKind(null);
+                }}
+                className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+              >
+                ← 종류 선택으로
+              </button>
+            </>
+          )}
+        </div>
+      )}
 
       {/* 요약 테이블 (E-3: heirs 0명이면 미표시) */}
       {heirs.length > 0 && (
@@ -279,67 +344,6 @@ export function HeirComposition({ heirs, onChange, deathDate }: HeirCompositionP
         </DialogContent>
       </Dialog>
 
-      {/* 추가 패널 */}
-      {showAddPanel ? (
-        <div className="border border-dashed border-indigo-300 dark:border-indigo-700 rounded-lg p-4 space-y-3">
-          {addStep === "kind" && (
-            <>
-              <p className="text-xs font-medium text-gray-600 dark:text-gray-400">
-                종류 선택 (1단계)
-              </p>
-              <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
-                {(["heir", "legatee", "substitute", "corporate", "other"] as AddKind[]).map(
-                  (k) => (
-                    <KindButton key={k} kind={k} onPick={handleKindPick} />
-                  )
-                )}
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowAddPanel(false);
-                  setAddStep(null);
-                  setPendingKind(null);
-                }}
-                className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
-              >
-                취소
-              </button>
-            </>
-          )}
-
-          {addStep === "relation" && pendingKind === "heir" && (
-            <>
-              <p className="text-xs font-medium text-gray-600 dark:text-gray-400">
-                관계 선택 (2단계 — 상속인)
-              </p>
-              <PersonRelationPicker onPick={handleAdd} />
-              <button
-                type="button"
-                onClick={() => {
-                  setAddStep("kind");
-                  setPendingKind(null);
-                }}
-                className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
-              >
-                ← 종류 선택으로
-              </button>
-            </>
-          )}
-        </div>
-      ) : (
-        <button
-          type="button"
-          onClick={() => {
-            setShowAddPanel(true);
-            setAddStep("kind");
-          }}
-          className="w-full flex items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 dark:border-gray-600 py-3 text-sm text-gray-500 dark:text-gray-400 hover:border-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors"
-        >
-          <span className="text-lg">+</span>
-          상속인 추가
-        </button>
-      )}
     </div>
   );
 }
