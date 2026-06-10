@@ -7,8 +7,8 @@
  * 전사 현황(2026-06-10):
  *   ✅ D1 new-building-base-price / D2 structure-index / D4 location-index /
  *      D5 residual-rate / D6 acq-base-rate / D7 special-adjustment-rate / D8 structure-group-map
- *   ◑ D9 mech-parking-formula (확정 연도 2001·02·2016~2026 / 2003~2015 D3 연동 대기)
- *   ◑ D3 usage-index (60항목 2018~2026 + 59항목 2016~2017 전사 완료 / 2015~2001 대기 — 연도별 상이)
+ *   ◑ D9 mech-parking-formula (확정 연도 2001·02·2013~2026 / 2003~2012 D3 연동 대기)
+ *   ◑ D3 usage-index (시대별 스킴 레지스트리: 2013~2026 전사 완료 / 2012~2001 대기 — 번호 체계 연도군별 상이)
  */
 
 // D1 신축가격기준액
