@@ -7,7 +7,7 @@
  * 3그룹을 CollapsibleEstateGroup으로 감싸 접기/펼치기 + 접힘 요약(개수·합계)을 제공.
  */
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { PropertyValuationForm } from "@/components/calc/PropertyValuationForm";
 import { StockValuationForm } from "@/components/calc/StockValuationForm";
 import { PresumedInheritanceInput } from "./PresumedInheritanceInput";
@@ -18,7 +18,32 @@ import {
 } from "@/lib/stores/inheritance-summary";
 import type { FormState, FormSet } from "./shared";
 
+/** 섹션 헤더 우측 "+ 추가" 버튼 — 상속인 추가 버튼(HeirComposition)과 동형 스타일 */
+function SectionAddButton({
+  onClick,
+  label,
+  testId,
+}: {
+  onClick: () => void;
+  label: string;
+  testId?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      data-testid={testId}
+      className="shrink-0 rounded-md border border-indigo-300 bg-indigo-100 px-2.5 py-1 text-[11px] font-medium text-indigo-800 hover:bg-indigo-200 dark:border-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200"
+    >
+      + {label}
+    </button>
+  );
+}
+
 export function Step1({ form, set }: { form: FormState; set: FormSet }) {
+  // 추가 패널 열림 상태 — 헤더 "+추가" 버튼(controlled)이 토글
+  const [estateAddOpen, setEstateAddOpen] = useState(false);
+  const [stockAddOpen, setStockAddOpen] = useState(false);
   // 그룹별 합계 — computeInheritanceSummary와 동일 valuation 로직 공유 (접기 헤더 요약용)
   const estateTotal = useMemo(
     () => sumEstateItemsValuation(form.estateItems, form.deathDate),
@@ -53,6 +78,15 @@ export function Step1({ form, set }: { form: FormState; set: FormSet }) {
         }
         count={form.estateItems.length}
         totalAmount={estateTotal}
+        headerAction={
+          !estateAddOpen && (
+            <SectionAddButton
+              onClick={() => setEstateAddOpen(true)}
+              label="상속재산 추가"
+              testId="estate-add-header-estate"
+            />
+          )
+        }
       >
         <PropertyValuationForm
           items={form.estateItems}
@@ -61,6 +95,8 @@ export function Step1({ form, set }: { form: FormState; set: FormSet }) {
           heirs={form.heirs}
           valuationDate={form.deathDate}
           hideHeader
+          addPanelOpen={estateAddOpen}
+          onAddPanelOpenChange={setEstateAddOpen}
         />
       </CollapsibleEstateGroup>
 
@@ -72,6 +108,15 @@ export function Step1({ form, set }: { form: FormState; set: FormSet }) {
         description="상장주식과 비상장주식을 구분하여 입력하세요"
         count={form.stockItems.length}
         totalAmount={stockTotal}
+        headerAction={
+          !stockAddOpen && (
+            <SectionAddButton
+              onClick={() => setStockAddOpen(true)}
+              label="주식·지분 추가"
+              testId="estate-add-header-stock"
+            />
+          )
+        }
       >
         <StockValuationForm
           items={form.stockItems}
@@ -80,6 +125,8 @@ export function Step1({ form, set }: { form: FormState; set: FormSet }) {
           valuationDate={form.deathDate}
           heirs={form.heirs}
           hideHeader
+          addPanelOpen={stockAddOpen}
+          onAddPanelOpenChange={setStockAddOpen}
         />
       </CollapsibleEstateGroup>
 
