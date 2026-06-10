@@ -18,7 +18,9 @@ import type {
   PresumedInheritanceItem,
   DebtItem,
   PriorGift,
+  ExemptionCheckedItem,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
+import { evaluateExemptions } from "@/lib/tax-engine/exemption-evaluator";
 import { evaluatePresumedItem } from "@/lib/tax-engine/presumed-inheritance";
 import { computeEffectiveValuation } from "@/lib/calc/estate-item-valuation";
 import { resolveActiveUnlistedValuation } from "@/lib/calc/unlisted-valuation-mode";
@@ -46,6 +48,12 @@ export interface InheritanceSummaryFormInput {
   funeralIncludesBongan: boolean;
   priorGifts: PriorGift[];
   /**
+   * 비과세·과세가액 불산입 항목 목록 (상증법 §11·§12·§16·§17)
+   * FormState.exemptionItems와 동일 타입 — spread({...form})로 런타임 전달됨.
+   * 입력 중 과세가액 추정 시 evaluateExemptions에 직접 전달 (single-source).
+   */
+  exemptionItems?: ExemptionCheckedItem[];
+  /**
    * 평가기준일 fallback — 상속개시일 또는 증여일 (YYYY-MM-DD)
    * 비상장 V2 evaluationDate 미입력 시 evaluateUnlistedStockV2에 주입.
    * mirror-pattern: useEffect 없이 순수 계산 시점에 주입.
@@ -56,7 +64,7 @@ export interface InheritanceSummaryFormInput {
 export interface InheritanceSummary {
   /** ① 총상속재산 — 본래(estateItems+stockItems valuation 추정) + 추정상속재산 §15 가산 */
   totalEstate: number;
-  /** ② 상속세 과세가액 = 총상속 + 사전증여 가산 − 채무·공과·장례 차감 */
+  /** ② 상속세 과세가액 = 총상속 + 사전증여 가산 − 채무·공과·장례 − 비과세·불산입 차감 */
   taxableEstateValue: number;
   /** ③ 과세표준 (result 도착 전: null) */
   taxBase: number | null;
@@ -67,6 +75,12 @@ export interface InheritanceSummary {
   totalDebts: number; // 채무·공과 합계 (장례 한도 적용 전)
   funeralApplied: number; // 장례 한도 적용 후 금액
   priorGiftTotal: number; // 사전증여 가산가액 (전체)
+  /**
+   * 비과세·과세가액 불산입 추정액 (상증법 §11·§12·§16·§17)
+   * result 도착 전: evaluateExemptions 추정값 / 도착 후: result.exemptAmount
+   * 사이드바 "− 비과세·불산입" 행 표시용 (> 0일 때만 노출)
+   */
+  exemptEstimate: number;
 }
 
 // ────────────────────────────────────────────────────
@@ -171,11 +185,24 @@ export function computeInheritanceSummary(
   // 입력 단계에서는 간주상속재산(deemedCategory)도 estateItems에 포함되어 valuation됨
   const totalEstate = estateValueRaw + presumedAdded;
 
+  // ── 비과세·과세가액 불산입 추정 (single-source: evaluateExemptions 엔진 헬퍼 재사용) ──
+  // result 도착 후: result.exemptAmount (엔진 정확값)
+  // result 미도착: 입력된 exemptionItems로 evaluateExemptions 추정 (UI 자체 재구현 금지)
+  const items = form.exemptionItems ?? [];
+  const exemptEstimate =
+    result?.exemptAmount ??
+    (items.length > 0
+      ? evaluateExemptions(items, totalEstate).totalExemptAmount
+      : 0);
+
   // ── 상속세 과세가액 ──
-  // result 도착 시 엔진값 우선, 미도착 시 입력값 추정
+  // result 도착 시 엔진값 우선, 미도착 시 입력값 추정 (비과세 차감 포함 — §250 엔진 정합)
   const taxableEstateValue =
     result?.taxableEstateValue ??
-    Math.max(0, totalEstate - totalDebts - funeralApplied + priorGiftTotal);
+    Math.max(
+      0,
+      totalEstate - exemptEstimate - totalDebts - funeralApplied + priorGiftTotal,
+    );
 
   // ── 과세표준·자진납부세액 — 엔진 결과 도착 시에만 ──
   const taxBase = result?.taxBase ?? null;
@@ -201,5 +228,6 @@ export function computeInheritanceSummary(
     totalDebts,
     funeralApplied,
     priorGiftTotal,
+    exemptEstimate,
   };
 }

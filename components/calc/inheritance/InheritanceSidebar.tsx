@@ -97,6 +97,15 @@ export function InheritanceSidebar({
           />
         )}
 
+        {/* 비과세·과세가액 불산입 차감 (§12·§16·§17) */}
+        {summary.exemptEstimate > 0 && (
+          <Row
+            label="− 비과세·불산입"
+            value={formatKRW(-summary.exemptEstimate)}
+            tone="sub"
+          />
+        )}
+
         {/* ② 상속세 과세가액 */}
         {summary.taxableEstateValue > 0 && (
           <Row
@@ -171,23 +180,21 @@ function Row({ label, value, sub, highlight, tone }: RowProps) {
           : "";
   return (
     <div
-      className={`flex items-baseline justify-between gap-2 ${
+      className={`flex flex-col gap-0.5 ${
         highlight ? "border-t border-indigo-200 dark:border-indigo-900 pt-2" : ""
       }`}
     >
-      <div className="flex-1 min-w-0">
-        <p
-          className={`text-xs ${
-            highlight ? "font-semibold text-indigo-900 dark:text-indigo-200" : "text-muted-foreground"
-          }`}
-        >
-          {label}
-        </p>
-        {sub && (
-          <p className="text-[10px] text-muted-foreground/80 mt-0.5">{sub}</p>
-        )}
-      </div>
-      <span className={`text-sm font-mono whitespace-nowrap ${valueClass}`}>
+      <p
+        className={`text-xs whitespace-nowrap ${
+          highlight ? "font-semibold text-indigo-900 dark:text-indigo-200" : "text-muted-foreground"
+        }`}
+      >
+        {label}
+      </p>
+      {sub && (
+        <p className="text-[10px] text-muted-foreground/80">{sub}</p>
+      )}
+      <span className={`text-sm font-mono tabular-nums whitespace-nowrap ${valueClass}`}>
         {value}
       </span>
     </div>
