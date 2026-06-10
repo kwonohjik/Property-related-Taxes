@@ -214,14 +214,14 @@ export function HeirComposition({ heirs, onChange, deathDate }: HeirCompositionP
 
   return (
     <div className="space-y-4">
-      {/* 헤더 — 추가 버튼을 동거가족 섹션과 같은 스타일로 우측 상단 배치 */}
+      {/* 헤더 — ② 섹션 타이틀(번호·제목) + 우측 6명·추가버튼 (동거가족 ③과 동형) */}
       <div className="flex items-center justify-between gap-2">
-        <div>
-          <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200">
-            상속인 구성
-          </h3>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-            배우자 공제·인적공제 자동 계산에 사용됩니다
+        <div className="flex items-center gap-2">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-[10px] font-bold text-violet-800 select-none">
+            2
+          </span>
+          <p className="text-xs font-semibold text-violet-700 dark:text-violet-300">
+            상속인·수유자 구성
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">

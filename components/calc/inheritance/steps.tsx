@@ -135,18 +135,8 @@ export function Step0({
         </div>
       </div>
 
-      {/* 섹션 ② — 상속인·수유자 구성 (violet tone) */}
+      {/* 섹션 ② — 상속인·수유자 구성 (violet tone). 헤더(번호·제목·6명·추가버튼)는 HeirComposition이 렌더 */}
       <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-3">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-[10px] font-bold text-violet-800 select-none">
-            2
-          </span>
-          <p className="text-xs font-semibold text-violet-700">상속인·수유자 구성</p>
-        </div>
-        <p className="text-[11px] text-muted-foreground leading-relaxed">
-          ※ 협의분할 대상에 포함될 모든 <strong>자연인</strong>(법정상속인 + 수유자)을 등록하세요.
-          영리법인 수증자는 사전증여·유증 전용으로 별도 처리되며 일반 상속재산 협의분할 대상이 아닙니다.
-        </p>
         {/* B-2 (2026-06-01): deathDate 전달 — legatee 미성년 자동 판정용 */}
         <HeirComposition heirs={form.heirs} onChange={setHeirs} deathDate={form.deathDate} />
         <p className="rounded-md bg-sky-50 dark:bg-sky-950/30 border border-sky-200 dark:border-sky-900 px-3 py-2 text-[11px] text-sky-800 dark:text-sky-200 leading-relaxed">

@@ -238,7 +238,7 @@ export function CohabitantDependentSection({
             3
           </span>
           <p className="text-xs font-semibold text-sky-700 dark:text-sky-300">
-            동거가족 (인적공제 대상 부양가족) — §20·시령 §18①
+            동거가족 (상속인 이외 인적공제 대상자)
           </p>
         </div>
         <button
@@ -278,7 +278,14 @@ export function CohabitantDependentSection({
           <DialogHeader className="px-4 pt-4 pb-0">
             <DialogTitle>동거가족 편집</DialogTitle>
           </DialogHeader>
-          <div className="max-h-[80vh] overflow-y-auto px-4 pb-4 pt-3">
+          <div
+            className="max-h-[80vh] overflow-y-auto px-4 pb-4 pt-3"
+            data-testid={
+              selectedIndex >= 0
+                ? `cohabitant-editor-${selectedIndex}`
+                : undefined
+            }
+          >
             {selectedDep && (
               <DepEditor
                 dep={selectedDep}
