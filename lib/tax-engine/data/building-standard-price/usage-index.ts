@@ -196,10 +196,11 @@ const USAGE_INDEX_2017: Readonly<Record<number, number>> = Object.freeze({
 const USAGE_OVERRIDE_59: Readonly<Record<number, Readonly<Record<number, number>>>> = Object.freeze({
   // 2017 = BASE (override 없음)
   2016: { 30: 110 },
+  2015: { 8: 90, 12: 80, 14: 135, 29: 130, 30: 110, 36: 70, 43: 125, 49: 100, 58: 45 },
 });
 
 /** 59항목 체계 적용 연도 (전사 완료분) */
-const USAGE_59_YEARS_DONE = new Set([2016, 2017]);
+const USAGE_59_YEARS_DONE = new Set([2015, 2016, 2017]);
 
 // ───────────────────────────────────────────────────────────────────────────
 // 공통 디스패치
