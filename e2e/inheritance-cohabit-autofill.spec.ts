@@ -19,10 +19,13 @@ async function setupAptCard(page: Page, opts: { cohabitChild: boolean }) {
 
   await addHeir(page, "heir", "child");
 
-  // 자녀 동거(isCohabitant) 표시 — HeirComposition '동거주택 상속공제 해당' 토글
+  // addHeir 후 편집 모달 자동 오픈(E-1, 상속인 테이블+모달 전환 이후).
+  // 자녀 동거(isCohabitant) 토글은 모달 안 HeirEditor에 있으므로 모달이 열린 상태에서 클릭.
   if (opts.cohabitChild) {
     await page.getByText("동거주택 상속공제 해당").click();
   }
+  // 모달을 닫아야 "다음" 버튼이 backdrop에 가려지지 않음
+  await page.getByRole("button", { name: "닫기" }).click();
 
   await page.getByRole("button", { name: /^다음/ }).click();
 

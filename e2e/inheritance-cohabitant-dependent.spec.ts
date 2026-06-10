@@ -32,6 +32,12 @@ async function gotoStep0(page: Page, [y, m, d]: [string, string, string]) {
 async function addChild(page: Page) {
   await addHeir(page, "heir", "child");
   await page.getByPlaceholder("앞 6자리-뒤 7자리").last().fill("700101-1000000");
+  // 자녀 추가 직후 "상속인 편집" 모달이 자동 오픈됨 → 동거가족 추가 전에 닫아야 함
+  const heirDialog = page.getByRole("dialog", { name: "상속인 편집" });
+  if (await heirDialog.isVisible()) {
+    await heirDialog.getByRole("button", { name: "닫기" }).click();
+    await expect(heirDialog).not.toBeVisible({ timeout: 3_000 });
+  }
 }
 
 async function addCohabitant(page: Page) {
@@ -81,6 +87,9 @@ test.describe("상속세 동거가족 인적공제 §20 P1", () => {
     await dep.getByText("장애인", { exact: true }).click();
     await dep.getByText("남성", { exact: true }).click();
 
+    // 모달 닫기 (Dialog backdrop이 "다음" 클릭을 막지 않도록)
+    await page.getByRole("button", { name: "닫기" }).click();
+
     await page.getByRole("button", { name: /^다음/ }).click(); // Step0→1
     await addLandAsset(page, { area: "300", unitPrice: "10000000" }); // 토지 30억 → 인적공제 9억 의미
     await proceedToResult(page);
@@ -111,7 +120,7 @@ test.describe("상속세 동거가족 인적공제 §20 P1", () => {
 
     // 섹션 헤더 노출
     await expect(
-      page.getByText(/동거가족 \(인적공제 대상 부양가족\)/),
+      page.getByText(/동거가족 \(상속인 이외 인적공제 대상자\)/),
     ).toBeVisible();
 
     await addCohabitant(page);
@@ -151,6 +160,9 @@ test.describe("상속세 동거가족 인적공제 §20 P1", () => {
       { scope: dep },
     );
     await dep.getByText("장애인", { exact: true }).click(); // 성별 미선택
+
+    // 모달 닫기 (Dialog backdrop이 "다음" 클릭을 막지 않도록)
+    await page.getByRole("button", { name: "닫기" }).click();
 
     await page.getByRole("button", { name: /^다음/ }).click(); // Step0→1
     await addLandAsset(page, { area: "300", unitPrice: "10000000" });

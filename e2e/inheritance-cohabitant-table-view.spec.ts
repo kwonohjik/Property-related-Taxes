@@ -74,7 +74,7 @@ test.describe("동거가족 테이블+모달 뷰 (CohabitantDependentSection)", 
     await addChildHeir(page);
 
     // 섹션 헤더 표시 확인
-    await expect(page.getByText(/동거가족 \(인적공제 대상 부양가족\)/)).toBeVisible();
+    await expect(page.getByText(/동거가족 \(상속인 이외 인적공제 대상자\)/)).toBeVisible();
 
     // 추가 전: 테이블 행 없음
     await expect(
