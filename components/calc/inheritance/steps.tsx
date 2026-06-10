@@ -117,9 +117,6 @@ export function Step0({
               상속개시일 (사망일) <span className="text-destructive">*</span>
             </label>
             <DateInput value={form.deathDate} onChange={(v) => set({ deathDate: v })} />
-            <p className="text-xs text-muted-foreground">
-              평가기준일·신고기한(6개월) 계산의 기준이 됩니다.
-            </p>
           </div>
         </div>
 
@@ -142,7 +139,7 @@ export function Step0({
         {/* 3행 — 주소 (Vworld 검색, 선택 입력) */}
         <div className="space-y-1.5">
           <label className="block text-sm font-medium">
-            피상속인 주소 <span className="text-xs text-muted-foreground">(선택 — 신고서 ⑩칸 자동 입력)</span>
+            피상속인 주소
           </label>
           <AddressSearch
             value={form.decedentAddress ?? EMPTY_ADDRESS}
