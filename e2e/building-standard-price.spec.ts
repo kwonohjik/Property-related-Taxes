@@ -91,6 +91,68 @@ test("검증 차단 — 미입력 시 오류", async ({ page }) => {
   await expect(page.getByTestId("bsp-error")).toBeVisible();
 });
 
+test("복합구조 + 공용시설 안분 — 합계 187,640,000", async ({ page }) => {
+  await page.goto(URL);
+  await page.getByText("상속·증여(1시점)").click();
+
+  await page.getByPlaceholder("예: 2010").fill("2000"); // 신축연도
+  await selectOption(page, "연도 선택", "2026년"); // 평가연도 (부분 구조/용도 옵션 활성화 선행)
+
+  await page.getByText("복합구조 (층·구역별 구조·용도 상이)").click(); // 토글 ON
+  await page.getByPlaceholder("공용시설 면적 (없으면 비워두세요)").fill("90"); // → 공용 조정률 노출
+
+  // 부분 1: 1층 슈퍼 (근생 #41, 조정 108, 공용 54)
+  await selectOption(page, "구조 선택", /철근콘크리트조/);
+  await selectOption(page, "용도 선택", /^41\./);
+  await page.getByPlaceholder("부분 면적").fill("100");
+  await page.getByPlaceholder("100").nth(0).fill("108"); // 조정률
+  await page.getByPlaceholder("100").nth(1).fill("54"); // 공용 조정률
+
+  // 부분 2: 2~3층 주택 (단독 #2, 조정 100, 공용 60)
+  await page.getByRole("button", { name: "+ 부분 추가" }).click();
+  await selectOption(page, "구조 선택", /철근콘크리트조/);
+  await selectOption(page, "용도 선택", /^2\./);
+  await page.getByPlaceholder("부분 면적").nth(1).fill("200");
+  await page.getByPlaceholder("100").nth(2).fill("100"); // 부분2 조정률
+  await page.getByPlaceholder("100").nth(3).fill("60"); // 부분2 공용 조정률
+
+  await page.getByPlaceholder("원/㎡").fill("2500000"); // 단일 공시지가(위치지수)
+
+  await page.getByRole("button", { name: "기준시가 계산하기" }).click();
+
+  const result = page.getByTestId("bsp-result");
+  await expect(result).toBeVisible();
+  await expect(result).toContainText("187,640,000");
+});
+
+test("공동주택 고시 전 취득 환산 — 취득당시 128,660,408", async ({ page }) => {
+  await page.goto(URL);
+  // 기본 양도 모드
+
+  await page.getByPlaceholder("예: 2010").fill("1998"); // 신축연도
+  await page.getByText("공동주택 고시 전 취득 (취득당시 기준시가 환산)").click(); // 토글 ON (양도시점 숨김)
+  await selectOption(page, "연도 선택", "1998년"); // 취득연도(유일한 연도 Select)
+
+  await selectOption(page, "구조 선택", /철근콘크리트조/); // 2001년 지수표
+  await selectOption(page, "용도 선택", /아파트/);
+
+  await page.getByPlaceholder("최초고시 공동주택기준시가").fill("119000000");
+  await page.getByPlaceholder("최초고시 연도 (4자리)").fill("1999");
+  await page.getByPlaceholder("대지지분 면적").fill("33.15");
+  await page.getByPlaceholder("건물 연면적").fill("105.78");
+
+  // 공시지가 3종: building2001(0) / 최초고시(1) / 취득당시(2)
+  await page.getByPlaceholder("원/㎡").nth(0).fill("1820000");
+  await page.getByPlaceholder("원/㎡").nth(1).fill("1820000");
+  await page.getByPlaceholder("원/㎡").nth(2).fill("2050000");
+
+  await page.getByRole("button", { name: "기준시가 계산하기" }).click();
+
+  const result = page.getByTestId("bsp-result");
+  await expect(result).toBeVisible();
+  await expect(result).toContainText("128,660,408");
+});
+
 test("홈 링크 → 건물 기준시가 계산기 진입", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("link", { name: /건물 기준시가 계산기/ }).click();

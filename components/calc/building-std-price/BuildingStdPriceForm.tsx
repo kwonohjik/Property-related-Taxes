@@ -17,6 +17,9 @@ import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupFi
 import { BuildingStructureSelect } from "./BuildingStructureSelect";
 import { BuildingUsageSelect } from "./BuildingUsageSelect";
 import { AdjustmentRateModal } from "./AdjustmentRateModal";
+import { LandParcelsSection } from "./LandParcelsSection";
+import { CompositePartsSection } from "./CompositePartsSection";
+import { ApartmentConversionSection } from "./ApartmentConversionSection";
 import {
   type BuildingStdPriceFormState,
   initialBuildingStdPriceForm,
@@ -138,6 +141,11 @@ export function BuildingStdPriceForm({ onResult }: Props) {
   };
 
   const sameYear = f.taxType === "transfer" && f.acquisitionYear !== "" && f.acquisitionYear === f.transferYear;
+  const valYear = f.valuationYear ? parseInt(f.valuationYear, 10) : undefined;
+  const apartmentConv = f.taxType === "transfer" && f.apartmentConversionMode;
+  const composite = f.taxType === "inheritance_gift" && f.compositeMode;
+  // 연면적 입력 불요: 복합구조(부분별)·공동주택 환산(자체 연면적)
+  const hideFloorArea = composite || apartmentConv;
 
   const handleCalc = () => {
     const err = validateBuildingStdPriceForm(f);
@@ -187,7 +195,7 @@ export function BuildingStdPriceForm({ onResult }: Props) {
         <FieldCard label="신축연도" hint="준공·사용승인 연도">
           <DecimalInput value={f.builtYear} onChange={(v) => set("builtYear", v)} placeholder="예: 2010" thousandSeparator={false} />
         </FieldCard>
-        {!isMech && (
+        {!isMech && !hideFloorArea && (
           <FieldCard label="건물 연면적" hint="공동주택 = 전유 + 공용">
             <DecimalInput value={f.floorArea} onChange={(v) => set("floorArea", v)} unit="㎡" placeholder="예: 200" />
           </FieldCard>
@@ -212,12 +220,12 @@ export function BuildingStdPriceForm({ onResult }: Props) {
                 }
               />
             </FieldCard>
-            {acqIndexYear === 2001 && (
+            {acqIndexYear === 2001 && !apartmentConv && (
               <p className="rounded-md bg-violet-50 px-2.5 py-1.5 text-xs text-violet-700">
                 2000년 이전 취득 — 2001.1.1 ㎡당 금액 × 산정기준율로 환산됩니다. 구조·용도는 2001년 지수표 기준입니다.
               </p>
             )}
-            {!isMech && (
+            {!isMech && !apartmentConv && (
               <>
                 <FieldCard label="취득당시 구조">
                   <BuildingStructureSelect year={acqIndexYear} value={f.acqStructureKey} onChange={(v) => set("acqStructureKey", v)} />
@@ -235,6 +243,25 @@ export function BuildingStdPriceForm({ onResult }: Props) {
             )}
           </SectionCard>
 
+          {/* 공동주택 고시 전 취득 환산 토글 — 일반 2시점 흐름 대체 */}
+          {!isMech && (
+            <ToggleCard
+              checked={f.apartmentConversionMode}
+              onCheckedChange={(v) => set("apartmentConversionMode", v)}
+              title="공동주택 고시 전 취득 (취득당시 기준시가 환산)"
+              tone="violet"
+              variant="card"
+              description="공동주택기준시가 최초고시 전에 취득한 경우, 최초고시 기준시가를 토지·건물 비율로 취득당시 가액으로 환산합니다(소령 §164). 활성화 시 위 취득연도와 아래 환산 정보로 계산하며 일반 양도시점 입력은 사용하지 않습니다."
+            >
+              <ApartmentConversionSection
+                value={f.apartmentConversion}
+                onChange={(patch) => set("apartmentConversion", { ...f.apartmentConversion, ...patch })}
+              />
+            </ToggleCard>
+          )}
+
+          {!apartmentConv && (
+          <>
           <SectionCard num={3} title="양도 시점" tone="emerald">
             <FieldCard label="양도연도">
               <YearSelect
@@ -300,6 +327,8 @@ export function BuildingStdPriceForm({ onResult }: Props) {
               </FieldCard>
             </SectionCard>
           )}
+          </>
+          )}
         </>
       )}
 
@@ -316,31 +345,71 @@ export function BuildingStdPriceForm({ onResult }: Props) {
             </FieldCard>
             {!isMech && (
               <>
-                <FieldCard label="건물 구조">
-                  <BuildingStructureSelect
-                    year={f.valuationYear ? parseInt(f.valuationYear, 10) : undefined}
-                    value={f.valStructureKey}
-                    onChange={(v) => set("valStructureKey", v)}
+                {/* 복합구조 토글 — 층·구역별 구조·용도 상이 */}
+                <ToggleCard
+                  checked={f.compositeMode}
+                  onCheckedChange={(v) => set("compositeMode", v)}
+                  title="복합구조 (층·구역별 구조·용도 상이)"
+                  tone="violet"
+                  variant="card"
+                  description="층·구역마다 구조나 용도가 다른 건물을 각 부분 독립 계산 후 합산합니다. 공용 부속시설(주차장·기계실 등)은 주용도 면적비율로 안분합니다. 활성화 시 아래 단일 구조·용도·조정률 입력 대신 부분별로 입력합니다."
+                >
+                  <CompositePartsSection
+                    year={valYear}
+                    parts={f.compositeParts}
+                    onPartsChange={(parts) => set("compositeParts", parts)}
+                    sharedFacilityArea={f.sharedFacilityArea}
+                    onSharedFacilityAreaChange={(v) => set("sharedFacilityArea", v)}
                   />
-                </FieldCard>
-                <FieldCard label="건물 용도">
-                  <BuildingUsageSelect
-                    year={f.valuationYear ? parseInt(f.valuationYear, 10) : undefined}
-                    value={f.valUsageNo}
-                    onChange={(v) => set("valUsageNo", v)}
+                </ToggleCard>
+
+                {!composite && (
+                  <>
+                    <FieldCard label="건물 구조">
+                      <BuildingStructureSelect
+                        year={valYear}
+                        value={f.valStructureKey}
+                        onChange={(v) => set("valStructureKey", v)}
+                      />
+                    </FieldCard>
+                    <FieldCard label="건물 용도">
+                      <BuildingUsageSelect
+                        year={valYear}
+                        value={f.valUsageNo}
+                        onChange={(v) => set("valUsageNo", v)}
+                      />
+                    </FieldCard>
+                  </>
+                )}
+
+                {/* 다필지 토글 — 위치지수 면적가중평균 */}
+                <ToggleCard
+                  checked={f.landParcelMode}
+                  onCheckedChange={(v) => set("landParcelMode", v)}
+                  title="다필지 부속토지 (위치지수 가중평균)"
+                  tone="sky"
+                  variant="card"
+                  description="부속토지가 여러 필지면 각 필지 면적 × ㎡당 공시지가의 가중평균으로 위치지수를 산정합니다(고시 §6⑥). 활성화 시 아래 단일 공시지가 대신 필지별로 입력합니다."
+                >
+                  <LandParcelsSection
+                    parcels={f.landParcels}
+                    onChange={(parcels) => set("landParcels", parcels)}
                   />
-                </FieldCard>
-                <LandPriceLookupField
-                  pricePerSqm={f.valLandPrice}
-                  onPricePerSqmChange={(v) => set("valLandPrice", v)}
-                  label="㎡당 개별공시지가"
-                  hint="2001~2002년 평가는 해당연도 1.1 기준"
-                />
+                </ToggleCard>
+
+                {!f.landParcelMode && (
+                  <LandPriceLookupField
+                    pricePerSqm={f.valLandPrice}
+                    onPricePerSqmChange={(v) => set("valLandPrice", v)}
+                    label="㎡당 개별공시지가"
+                    hint="2001~2002년 평가는 해당연도 1.1 기준"
+                  />
+                )}
               </>
             )}
           </SectionCard>
 
-          {!isMech && (
+          {!isMech && !composite && (
             <SectionCard num={3} title="조정률" tone="violet">
               <RadioCardGroup
                 name="adjustmentMode"
