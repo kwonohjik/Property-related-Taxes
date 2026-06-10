@@ -21,10 +21,13 @@ export type SameYearFormula = "prev" | "new";
 
 /** 한 시점(취득/양도/평가)의 구조·용도·공시지가 입력 */
 export interface BuildingPointInput {
-  /** 해당 시점 연도 구조지수표 항목 키(B안 — 개별 구조명 단위) */
+  /** 해당 시점 연도 구조지수표 항목 키(개별 구조명 단위 — STRUCTURE_META 키. 예 "rc"·"wood") */
   structureKey: string;
-  /** 해당 시점 연도 용도지수표 항목 키(B안) */
-  usageKey: string;
+  /**
+   * 해당 시점 연도 용도지수표 항목 번호(연도군별 상이 — listUsageOptions(year)의 `no`).
+   * ⚠️ 용도지수 데이터는 번호 기반(resolveUsageIndex(year, usageNo)) — UI 드롭다운이 연도별 번호를 선택해 전달.
+   */
+  usageNo: number;
   /** ㎡당 개별공시지가(위치지수 산정용). 기준일은 §1.5 */
   landPricePerM2: number;
 }
@@ -83,10 +86,10 @@ export interface BuildingStandardPriceInput {
   newNoticePricePerM2?: number;
   /** §164⑧ 제1산식 취득전기(취득연도-1) 위치지수용 공시지가 */
   prevLandPricePerM2?: number;
-  /** 취득전기 구조키(미입력 시 acquisition.structureKey 동명 매칭) */
+  /** 취득전기 구조키(미입력 시 acquisition.structureKey 재사용) */
   prevStructureKey?: string;
-  /** 취득전기 용도키(미입력 시 acquisition.usageKey 동명 매칭) */
-  prevUsageKey?: string;
+  /** 취득전기 용도번호(미입력 시 acquisition.usageNo 재사용) */
+  prevUsageNo?: number;
 
   // 상속·증여 모드 (1시점)
   valuationYear?: number;
@@ -95,6 +98,10 @@ export interface BuildingStandardPriceInput {
   specialFeatures?: SpecialAdjustmentFeatures;
   /** fallback: 조정율 직접 입력(%, 100=1.0) */
   manualAdjustmentRate?: number;
+  /** 조정율 II 판정용 — 주거용 건물 여부(용도지수 구분 I). 연면적 조정 미적용·최고층수는 아파트만 */
+  isResidentialUse?: boolean;
+  /** 조정율 II 판정용 — 아파트 여부(주거용 중 최고층수 적용 대상) */
+  isApartmentUse?: boolean;
 }
 
 /** 시점별 산출근거 echo */
