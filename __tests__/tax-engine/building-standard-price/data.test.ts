@@ -268,9 +268,11 @@ describe("D3 용도지수 (이미지 직접 판독, 2026 BASE + 연도 override)
     expect(resolveUsageIndex(2018, 34)).toBe(105);
     expect(resolveUsageIndex(2019, 34)).toBe(107);
   });
-  it("미전사 연도: 2017 이하(번호 체계 상이)·2003~ = undefined, 2018~2026 = 전사완료", () => {
-    expect(hasUsageIndexYear(2017)).toBe(false);
-    expect(resolveUsageIndex(2017, 1)).toBeUndefined();
+  it("미전사 연도: 2015 이하 = undefined, 2016~2026 = 전사완료", () => {
+    expect(hasUsageIndexYear(2015)).toBe(false);
+    expect(resolveUsageIndex(2015, 1)).toBeUndefined();
+    expect(hasUsageIndexYear(2016)).toBe(true);
+    expect(hasUsageIndexYear(2017)).toBe(true);
     expect(hasUsageIndexYear(2018)).toBe(true);
     expect(hasUsageIndexYear(2026)).toBe(true);
   });
@@ -278,6 +280,39 @@ describe("D3 용도지수 (이미지 직접 판독, 2026 BASE + 연도 override)
     const opts = listUsageOptions(2026);
     expect(opts.length).toBe(60);
     expect(opts[0]).toMatchObject({ no: 1, label: "아파트", index: 110 });
+  });
+});
+
+describe("D3 용도지수 59항목 체계 (2003~2017, 2017 BASE + 연도 override)", () => {
+  // 59체계: 장례식장=#27(종합병원 #26 직후)·일반병원=#28·오피스텔=#29. 60체계와 번호 상이.
+  it("2017 BASE: 아파트=110 / 종합병원=125 / 장례식장(#27)=115 / 일반병원(#28)=105 / 오피스텔(#29)=140", () => {
+    expect(resolveUsageIndex(2017, 1)).toBe(110);
+    expect(resolveUsageIndex(2017, 26)).toBe(125);
+    expect(resolveUsageIndex(2017, 27)).toBe(115);
+    expect(resolveUsageIndex(2017, 28)).toBe(105);
+    expect(resolveUsageIndex(2017, 29)).toBe(140);
+  });
+  it("2017 사무소(#30)=115 / 원자력(#47)=300 / 화초온실(#58)=50", () => {
+    expect(resolveUsageIndex(2017, 30)).toBe(115);
+    expect(resolveUsageIndex(2017, 47)).toBe(300);
+    expect(resolveUsageIndex(2017, 58)).toBe(50);
+  });
+  it("2016 vs 2017 차이: 사무소(#30) 2016=110 / 2017=115, 그 외 동일", () => {
+    expect(resolveUsageIndex(2016, 30)).toBe(110);
+    expect(resolveUsageIndex(2017, 30)).toBe(115);
+    expect(resolveUsageIndex(2016, 27)).toBe(115); // 장례식장 동일
+    expect(resolveUsageIndex(2016, 1)).toBe(110); // BASE 동일
+  });
+  it("59체계 listUsageOptions(2017) = 58항목(#1~58, #59 기계식 제외)", () => {
+    const opts = listUsageOptions(2017);
+    expect(opts.length).toBe(58);
+    expect(opts[0]).toMatchObject({ no: 1, label: "아파트", index: 110 });
+    // 60체계엔 없는 위치: 59체계 #27=장례식장
+    expect(opts.find((o) => o.no === 27)?.label).toContain("장례식장");
+  });
+  it("59체계 연도 기계식주차: 2016·2017 = 6,000,000 · 30년", () => {
+    expect(resolveMechParkingFormula(2016)).toEqual({ unitPrice: 6_000_000, durableYears: 30 });
+    expect(resolveMechParkingFormula(2017)).toEqual({ unitPrice: 6_000_000, durableYears: 30 });
   });
 });
 
