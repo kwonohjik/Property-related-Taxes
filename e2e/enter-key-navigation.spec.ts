@@ -9,6 +9,7 @@
  * 진입 경로는 inheritance-unlisted-fiscal-year-annualize.spec.ts 헬퍼와 동일.
  */
 import { test, expect, type Page } from "@playwright/test";
+import { addHeir, closeHeirEditModal } from "./_helpers/tax-flow";
 
 /** V2 정식평가 카드 모드로 진입 (법인명 등 연속 텍스트 입력 노출) */
 async function gotoV2FormalValuationCard(page: Page) {
@@ -19,9 +20,9 @@ async function gotoV2FormalValuationCard(page: Page) {
   await page.getByLabel("월").first().fill("3");
   await page.getByLabel("일").first().fill("31");
 
-  // 상속인 1명(자녀) 등록
-  await page.getByRole("button", { name: /상속인 추가/ }).click();
-  await page.getByText("자녀", { exact: true }).click();
+  // 상속인 1명(자녀) 등록 — 2단계 picker + 모달 RRN 자동입력·닫기 (PR #68)
+  await addHeir(page, "heir", "child");
+  await closeHeirEditModal(page);
 
   // Step1(상속재산 평가)으로 이동
   await page.getByRole("button", { name: /^다음/ }).click();
