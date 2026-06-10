@@ -115,45 +115,11 @@ export function InheritanceSidebar({
           />
         )}
 
-        {/* ③ 과세표준 (엔진 결과 도착 시) */}
-        {summary.taxBase !== null && (
-          <Row
-            label="③ 과세표준"
-            value={formatKRW(summary.taxBase)}
-          />
-        )}
-
-        {/* ④ 자진납부세액 (결정세액) */}
-        {summary.estimatedTax !== null && (
-          <Row
-            label="④ 자진납부세액"
-            value={formatKRW(summary.estimatedTax)}
-            highlight
-            tone="primary"
-          />
-        )}
-
-        {/* §74 징수유예 — 결정세액에서 차감하여 납부세액 표시 */}
-        {result && (result.culturalHeritageDeferredTax ?? 0) > 0 && (
-          <>
-            <Row
-              label="징수유예액 (§74)"
-              value={`- ${formatKRW(result.culturalHeritageDeferredTax ?? 0)}`}
-              tone="sub"
-            />
-            <Row
-              label="납부할세액"
-              value={formatKRW(result.finalTax - (result.culturalHeritageDeferredTax ?? 0))}
-              highlight
-              tone="primary"
-            />
-          </>
-        )}
-
-        {/* 결과 미도착 안내 */}
-        {summary.taxBase === null && summary.taxableEstateValue > 0 && (
+        {/* ③ 과세표준·④ 자진납부세액·§74 징수유예는 계산 후 결과 화면에서 표시.
+            사이드바는 result===null(입력 단계)에서만 렌더되므로 여기서는 ②까지만 노출. */}
+        {summary.taxableEstateValue > 0 && (
           <p className="text-xs text-muted-foreground italic pt-1">
-            과세표준·자진납부세액은 계산 실행 후 표시됩니다.
+            과세표준·자진납부세액은 계산 결과 화면에서 확인됩니다.
           </p>
         )}
       </div>
