@@ -7,7 +7,10 @@
 
 import { describe, it, expect } from "vitest";
 import { calcInheritanceTax } from "@/lib/tax-engine/inheritance-tax";
-import { buildFilingForm9Data } from "@/lib/calc/filing-form-9-data";
+import {
+  buildFilingForm9Data,
+  buildDecedentAddressText,
+} from "@/lib/calc/filing-form-9-data";
 import { calcInheritanceFilingDeadline } from "@/lib/tax-engine/deductions/family-business-autoderive";
 import {
   EXAMPLE_HEIRS,
@@ -161,5 +164,63 @@ describe("L-10 — §67① 신고기한 edge 케이스 (deriveDueDates / calcInh
     const data = buildFilingForm9Data(result, EXAMPLE_HEIRS, "2023-03-05");
     expect(data.filingDueDate).toBe("2023-09-30");
     expect(data.installmentDueDate).toBe("2023-11-30");
+  });
+});
+
+// ============================================================
+// 피상속인 주소 표시 (별지9호 ⑩칸) — 도로명+상세, 지번 fallback
+// E2E가 Vworld 외부 API 의존으로 못 한 핵심 표시 로직을 단위 테스트로 검증
+// ============================================================
+
+describe("buildDecedentAddressText — 별지9호 ⑩ 주소 표시", () => {
+  const base = { building: "", lng: "", lat: "" };
+
+  it("ADDR-01: undefined → 빈 문자열", () => {
+    expect(buildDecedentAddressText(undefined)).toBe("");
+  });
+
+  it("ADDR-02: 도로명 + 상세 → '도로명 상세'", () => {
+    expect(
+      buildDecedentAddressText({
+        ...base,
+        road: "서울특별시 강남구 테헤란로 123",
+        jibun: "서울특별시 강남구 역삼동 100-1",
+        detail: "101동 202호",
+      }),
+    ).toBe("서울특별시 강남구 테헤란로 123 101동 202호");
+  });
+
+  it("ADDR-03: 도로명만(상세 없음) → 도로명 단독", () => {
+    expect(
+      buildDecedentAddressText({
+        ...base,
+        road: "서울특별시 강남구 테헤란로 123",
+        jibun: "",
+        detail: "",
+      }),
+    ).toBe("서울특별시 강남구 테헤란로 123");
+  });
+
+  it("ADDR-04: 도로명 없음 → 지번 fallback + 상세", () => {
+    expect(
+      buildDecedentAddressText({
+        ...base,
+        road: "",
+        jibun: "서울특별시 강남구 역삼동 100-1",
+        detail: "202호",
+      }),
+    ).toBe("서울특별시 강남구 역삼동 100-1 202호");
+  });
+
+  it("ADDR-05: 도로명·지번 모두 없음 → 상세 단독", () => {
+    expect(
+      buildDecedentAddressText({ ...base, road: "", jibun: "", detail: "202호" }),
+    ).toBe("202호");
+  });
+
+  it("ADDR-06: 전부 빈 값/공백 → 빈 문자열", () => {
+    expect(
+      buildDecedentAddressText({ ...base, road: "  ", jibun: "", detail: "" }),
+    ).toBe("");
   });
 });

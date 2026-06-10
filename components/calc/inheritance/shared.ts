@@ -16,6 +16,7 @@ import type { FamilyBusinessInheritanceInput } from "@/lib/tax-engine/types/inhe
 import type { ExemptionCheckedItem } from "@/lib/tax-engine/exemption-evaluator";
 import type { AppraisalFeeFormFields } from "@/lib/calc/appraisal-fee-form";
 import { INITIAL_APPRAISAL_FEE_FIELDS } from "@/lib/calc/appraisal-fee-form";
+import type { AddressValue } from "@/components/ui/address-search";
 
 export interface FormState extends AppraisalFeeFormFields {
   // Step 0
@@ -23,6 +24,8 @@ export interface FormState extends AppraisalFeeFormFields {
   decedentResidentNumber: string;
   decedentType: "resident" | "non_resident";
   deathDate: string;
+  /** 피상속인 주소 (Vworld 검색). 선택 입력 — 미입력 시 undefined. 별지9호 ⑩칸에 표시. */
+  decedentAddress?: AddressValue;
   // Step 1 — 상속재산 + 추정상속재산
   estateItems: EstateItem[];
   stockItems: EstateItem[];
@@ -172,6 +175,7 @@ export const INITIAL_FORM: FormState = {
   decedentResidentNumber: "",
   decedentType: "resident",
   deathDate: "",
+  decedentAddress: undefined,
   estateItems: [],
   stockItems: [],
   presumedItems: [],

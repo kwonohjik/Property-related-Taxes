@@ -23,6 +23,7 @@ import type {
 } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { buildSummaryTable, sortHeirs } from "@/lib/calc/heir-allocation-summary";
 import { FF9_CALC_LABELS, FF9_LAW_REFS } from "@/components/calc/inheritance/filing-form-9/filing-form-9-constants";
+import type { AddressValue } from "@/components/ui/address-search";
 
 /** ⑤ 피상속인과의 관계 라벨 (이미지1 child="자" 표기 우선). labelOf(name 우선)는 부적합. */
 export const HEIR_RELATION_TO_DECLARANT_LABEL: Record<HeirRelation, string> = {
@@ -47,6 +48,8 @@ export interface FilingForm9Data {
   decedentName: string;
   /** ⑧ 피상속인 주민등록번호 (Step1 입력, 미입력 "") */
   decedentResidentNumber: string;
+  /** ⑩ 피상속인 주소 (도로명+상세, 미입력 "") */
+  decedentAddressText: string;
   /** ⑫ 상속개시일 YYYY-MM-DD (없으면 "") */
   deathDate: string;
   /** ⑪ 상속원인 기본 사망 */
@@ -85,6 +88,20 @@ function headerRow(label: string, column: "left" | "right"): FilingFormRow {
 /**
  * 별지 제9호서식 데이터 조립 — 엔진 result + buildSummaryTable 합계열만 읽음.
  */
+/**
+ * 피상속인 주소 → 별지9호 ⑩칸 표시 문자열.
+ * 도로명+상세주소 우선. 도로명 없으면 지번 fallback.
+ */
+export function buildDecedentAddressText(addr?: AddressValue): string {
+  if (!addr) return "";
+  const road = addr.road?.trim() ?? "";
+  const detail = addr.detail?.trim() ?? "";
+  const jibun = addr.jibun?.trim() ?? "";
+  if (road) return [road, detail].filter(Boolean).join(" ");
+  if (jibun) return [jibun, detail].filter(Boolean).join(" ");
+  return detail;
+}
+
 export function buildFilingForm9Data(
   result: InheritanceTaxResult,
   heirs: Heir[],
@@ -95,6 +112,8 @@ export function buildFilingForm9Data(
   splitPaymentAmount?: number,
   /** ㊵ 물납액 (§73) — min(희망액, 허용한도). 미입력 시 0 (display dash) */
   paymentInKindAmount?: number,
+  /** ⑩ 피상속인 주소 (Vworld AddressValue) — 선택 입력 */
+  decedentAddress?: AddressValue,
 ): FilingForm9Data {
   const summary = buildSummaryTable(result, heirs);
   const rowTotal = (rowId: string): number =>
@@ -208,6 +227,7 @@ export function buildFilingForm9Data(
     declarant,
     decedentName: decedentName?.trim() ?? "",
     decedentResidentNumber: decedentResidentNumber?.trim() ?? "",
+    decedentAddressText: buildDecedentAddressText(decedentAddress),
     deathDate: deathDateInput ? toIsoDate(deathDateInput) : "",
     inheritanceCause: "death",
     filingDueDate: dueDates.filingDueDate,

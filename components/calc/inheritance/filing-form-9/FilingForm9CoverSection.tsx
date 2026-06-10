@@ -18,6 +18,7 @@ import type {
   InheritanceTaxResult,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { buildFilingForm9Data } from "@/lib/calc/filing-form-9-data";
+import type { AddressValue } from "@/components/ui/address-search";
 import { BesshiColumn } from "@/components/calc/results/shared/BesshiRow";
 import { ExpandToggleButton } from "@/components/calc/results/shared/ExpandToggleButton";
 import {
@@ -54,6 +55,8 @@ interface Props {
   decedentName?: string;
   /** ⑧ 피상속인 주민등록번호 (Step1 입력) */
   decedentResidentNumber?: string;
+  /** ⑩ 피상속인 주소 (Vworld AddressValue) — 선택 입력 */
+  decedentAddress?: AddressValue;
   /** ㊶ 분납액 (§70②) — 미입력 시 0 */
   splitPaymentAmount?: number;
   /** ㊵ 물납액 (§73) — min(희망액, 허용한도). 미입력 시 0 */
@@ -73,6 +76,7 @@ export function FilingForm9CoverSection({
   deathDate,
   decedentName,
   decedentResidentNumber,
+  decedentAddress,
   splitPaymentAmount,
   paymentInKindAmount,
 }: Props) {
@@ -80,7 +84,7 @@ export function FilingForm9CoverSection({
 
   if (!result.heirAllocationResult || !heirs || heirs.length === 0) return null;
 
-  const data = buildFilingForm9Data(result, heirs, deathDate, decedentName, decedentResidentNumber, splitPaymentAmount, paymentInKindAmount);
+  const data = buildFilingForm9Data(result, heirs, deathDate, decedentName, decedentResidentNumber, splitPaymentAmount, paymentInKindAmount, decedentAddress);
 
   return (
     <section
@@ -155,7 +159,7 @@ export function FilingForm9CoverSection({
               </tr>
               <tr>
                 <th className={HEAD}>⑩ {L["⑩"]}</th>
-                <td className={VAL} data-testid="ff9-⑩"></td>
+                <td className={VAL} data-testid="ff9-⑩">{data.decedentAddressText}</td>
                 <th className={HEAD}>⑨ {L["⑨"]}</th>
                 <td className={VAL} data-testid="ff9-⑨">
                   {FF9_RESIDENCY_OPTIONS.map((o) => chk(o, false)).join(" ")}

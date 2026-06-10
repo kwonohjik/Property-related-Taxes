@@ -39,6 +39,13 @@ test.describe("피상속인 인적사항 Step1 입력 → 신고서 반영", () 
       await addHeir(page, "heir", "child");
       await page.getByPlaceholder("앞 6자리-뒤 7자리").nth(1).fill("900202-2000000");
 
+      // 자녀 추가 직후 "상속인 편집" 모달이 자동 오픈됨 → 다음 진행 전 닫기
+      const heirDialog = page.getByRole("dialog", { name: "상속인 편집" });
+      if (await heirDialog.isVisible()) {
+        await heirDialog.getByRole("button", { name: "닫기" }).click();
+        await expect(heirDialog).not.toBeVisible({ timeout: 3_000 });
+      }
+
       // Step1(상속재산) → 토지
       await page.getByRole("button", { name: /^다음/ }).click();
       await addLandAsset(page, { area: "300", unitPrice: "1000000" });

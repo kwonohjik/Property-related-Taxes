@@ -552,6 +552,7 @@ export function InheritanceTaxForm() {
           familyBusinessInput={form.familyBusiness}
           decedentName={form.decedentName}
           decedentResidentNumber={form.decedentResidentNumber}
+          decedentAddress={form.decedentAddress}
           savedId={autoSave.savedId ?? undefined}
           installmentEnabled={form.installmentEnabled}
           installmentYears={form.installmentYears}
