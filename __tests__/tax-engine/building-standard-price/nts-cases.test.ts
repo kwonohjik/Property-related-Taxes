@@ -104,3 +104,55 @@ describe("NTS 공식 계산사례 — 리모델링(대수선) 잔가율 할증 (
     expect(r.valuation?.standardPrice).toBe(229_824_000);
   });
 });
+
+describe("NTS 공식 계산사례 — 복합구조(층·구역별 구조 상이) (기타사례 나)", () => {
+  // 1층 철근콘크리트조 공장 2,100㎡ + 2층 경량철골조 창고 1,300㎡, 위치 560,000(0.97), 신축 1998, 상속 2026
+  // 1층: ㎡당 322,000 / 676,200,000 (잔가 0.496·조정 1.00) / 2층: 65,000 / 84,500,000 (잔가 0.16·조정 0.80)
+  it("층별 다른 구조: 1층 676,200,000 + 2층 84,500,000 = 합계 760,700,000", () => {
+    const r = calcBuildingStandardPrice({
+      taxType: "inheritance_gift",
+      floorArea: 0,
+      builtYear: 1998,
+      valuationYear: 2026,
+      valuation: { structureKey: "rc", usageNo: 48, landPricePerM2: 560_000 },
+      compositeParts: [
+        { label: "1층 공장", structureKey: "rc", usageNo: 48, floorArea: 2100, adjustmentRate: 100 },
+        { label: "2층 창고", structureKey: "light_steel_frame", usageNo: 48, floorArea: 1300, adjustmentRate: 80 },
+      ],
+    });
+    expect(r.compositeBreakdowns?.[0].standardPrice).toBe(676_200_000);
+    expect(r.compositeBreakdowns?.[0].pricePerM2).toBe(322_000);
+    expect(r.compositeBreakdowns?.[1].standardPrice).toBe(84_500_000);
+    expect(r.compositeBreakdowns?.[1].pricePerM2).toBe(65_000);
+    expect(r.compositeTotal).toBe(760_700_000);
+  });
+});
+
+describe("NTS 공식 계산사례 — 다필지 부속토지 위치지수 가중평균 (기타사례 다)", () => {
+  // A 1,000㎡@2,500,000 + B 2,000㎡@3,000,000 + C 3,000㎡@1,500,000 → 가중평균 2,166,666 → 위치 #19=114
+  // 1~5층 사무소 6,000㎡(조정 1.10) + 지하1층 주차장 2,000㎡(조정 0.60), rc, 신축 1997, 상속 2026
+  // 사무소 592,000/3,552,000,000 + 주차장 323,000/646,000,000 = 4,198,000,000
+  it("다필지 가중평균 + 복합용도: 위치지수 114 / 합계 4,198,000,000", () => {
+    const r = calcBuildingStandardPrice({
+      taxType: "inheritance_gift",
+      floorArea: 0,
+      builtYear: 1997,
+      valuationYear: 2026,
+      valuation: { structureKey: "rc", usageNo: 29, landPricePerM2: 0 },
+      landParcels: [
+        { areaM2: 1000, pricePerM2: 2_500_000 },
+        { areaM2: 2000, pricePerM2: 3_000_000 },
+        { areaM2: 3000, pricePerM2: 1_500_000 },
+      ],
+      compositeParts: [
+        { label: "1~5층 사무소", structureKey: "rc", usageNo: 29, floorArea: 6000, adjustmentRate: 110 },
+        { label: "지하1층 주차장", structureKey: "rc", usageNo: 29, floorArea: 2000, adjustmentRate: 60 },
+      ],
+    });
+    expect(r.weightedLandPricePerM2).toBeCloseTo(2_166_666.67, 1);
+    expect(r.compositeBreakdowns?.[0].locationIndex).toBe(114);
+    expect(r.compositeBreakdowns?.[0].standardPrice).toBe(3_552_000_000);
+    expect(r.compositeBreakdowns?.[1].standardPrice).toBe(646_000_000);
+    expect(r.compositeTotal).toBe(4_198_000_000);
+  });
+});

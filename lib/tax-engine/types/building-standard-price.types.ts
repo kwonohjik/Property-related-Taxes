@@ -102,6 +102,31 @@ export interface BuildingStandardPriceInput {
   isResidentialUse?: boolean;
   /** 조정율 II 판정용 — 아파트 여부(주거용 중 최고층수 적용 대상) */
   isApartmentUse?: boolean;
+
+  // 복합 건물 (상속·증여 1시점 전용)
+  /** 다필지 부속토지 — 위치지수를 면적가중평균 ㎡당 공시지가로 산정(고시 §6⑥). landParcels 있으면 단일 공시지가 무시 */
+  landParcels?: LandParcel[];
+  /** 층/부분별 구조·용도가 다른 복합건물 — 각 부분 독립 계산 후 합산. 있으면 valuation 단일 point 무시 */
+  compositeParts?: BuildingCompositePart[];
+}
+
+/** 다필지 부속토지 1필지(위치지수 가중평균용) */
+export interface LandParcel {
+  /** 필지 면적(㎡) */
+  areaM2: number;
+  /** ㎡당 개별공시지가 */
+  pricePerM2: number;
+}
+
+/** 복합건물 1개 부분(층/구역) — 구조·용도·면적 상이. 위치지수·신축연도·평가연도는 건물 공통 */
+export interface BuildingCompositePart {
+  /** 부분명(예 "1층 공장") */
+  label?: string;
+  structureKey: string;
+  usageNo: number;
+  floorArea: number;
+  /** 조정율 배율(1.0 기준, 100=1.0 미적용). 부분별 상이. 미입력 = 1.0 */
+  adjustmentRate?: number;
 }
 
 /** 시점별 산출근거 echo */
@@ -128,6 +153,10 @@ export interface BuildingStdPriceBreakdown {
   parkingLotCount?: number;
   /** 기계식주차만 — 적용 내용연수 echo(연도 가변) */
   mechDurableYears?: number;
+  /** 복합건물 부분명 echo(층/구역) */
+  label?: string;
+  /** 해당 부분 면적(㎡) echo */
+  floorArea?: number;
 }
 
 /** 건물 기준시가 엔진 결과 */
@@ -140,6 +169,12 @@ export interface BuildingStandardPriceResult {
   transfer?: BuildingStdPriceBreakdown;
   /** §164⑧ 동일연도 환산 적용 여부 */
   sameYearAdjusted?: boolean;
+  /** 복합건물 부분별 breakdown(층/구역) */
+  compositeBreakdowns?: BuildingStdPriceBreakdown[];
+  /** 복합건물 부분 기준시가 합계(원) */
+  compositeTotal?: number;
+  /** 다필지 면적가중평균 ㎡당 공시지가 echo */
+  weightedLandPricePerM2?: number;
   warnings: string[];
   legalBasis: string;
 }

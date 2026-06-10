@@ -23,6 +23,7 @@ import {
   calcAcqBaseBreakdown,
   calcSameYearTransferStdPrice,
   calcSpecialAdjustmentRate,
+  weightedAvgLandPrice,
 } from "./building-standard-price-helpers";
 
 export type {
@@ -49,6 +50,68 @@ function validatePoint(point: BuildingPointInput | undefined, label: string): Bu
     throw new BuildingStdPriceError(`${label}: 개별공시지가(원/㎡) 필수 입력`);
   }
   return point;
+}
+
+/** 복합건물(다필지 가중평균 / 층·구역별 구조 상이) 여부 */
+function hasComposite(input: BuildingStandardPriceInput): boolean {
+  return (input.compositeParts?.length ?? 0) > 0 || (input.landParcels?.length ?? 0) > 0;
+}
+
+/**
+ * 복합건물 평가(상증 1시점). 다필지 → 위치지수 가중평균 / 층·구역별 → 부분 독립 계산 후 합산.
+ * compositeParts 없이 landParcels만이면 valuation 단일 point + 가중평균 공시지가.
+ */
+function calcCompositeValuation(
+  input: BuildingStandardPriceInput,
+  year: number,
+  warnings: string[],
+): BuildingStandardPriceResult {
+  const hasParcels = (input.landParcels?.length ?? 0) > 0;
+  const landPrice = hasParcels
+    ? weightedAvgLandPrice(input.landParcels!)
+    : input.valuation?.landPricePerM2 ?? 0;
+  if (!(landPrice > 0)) {
+    throw new BuildingStdPriceError("복합건물: ㎡당 공시지가(또는 부속토지)가 필요합니다.");
+  }
+
+  const parts =
+    (input.compositeParts?.length ?? 0) > 0
+      ? input.compositeParts!
+      : [
+          {
+            label: undefined,
+            structureKey: input.valuation?.structureKey ?? "",
+            usageNo: input.valuation?.usageNo ?? 0,
+            floorArea: input.floorArea,
+            adjustmentRate: undefined as number | undefined,
+          },
+        ];
+
+  const compositeBreakdowns: BuildingStdPriceBreakdown[] = parts.map((p, i) => {
+    if (!p.structureKey) throw new BuildingStdPriceError(`복합 부분 ${i + 1}: 구조 미선택`);
+    if (p.usageNo === undefined || p.usageNo < 1) throw new BuildingStdPriceError(`복합 부분 ${i + 1}: 용도 미선택`);
+    if (!(p.floorArea > 0)) throw new BuildingStdPriceError(`복합 부분 ${i + 1}: 면적(㎡) 필요`);
+    const adjRate = p.adjustmentRate != null ? p.adjustmentRate / 100 : 1.0;
+    const bd = calcPointBreakdown(
+      year,
+      { structureKey: p.structureKey, usageNo: p.usageNo, landPricePerM2: landPrice },
+      p.floorArea,
+      input.builtYear,
+      adjRate,
+      p.label ?? `부분 ${i + 1}`,
+      { remodelYear: input.remodelYear, isInheritanceGift: true },
+    );
+    return { ...bd, label: p.label, floorArea: p.floorArea };
+  });
+
+  const compositeTotal = compositeBreakdowns.reduce((s, b) => s + b.standardPrice, 0);
+  return {
+    compositeBreakdowns,
+    compositeTotal,
+    weightedLandPricePerM2: hasParcels ? landPrice : undefined,
+    warnings,
+    legalBasis: LEGAL_BASIS,
+  };
 }
 
 /** 상증 조정율 배율(1.0 = 미적용). 양도는 항상 1.0. */
@@ -82,7 +145,7 @@ export function calcBuildingStandardPrice(
     if (input.parkingLotCount === undefined || !(input.parkingLotCount > 0)) {
       throw new BuildingStdPriceError("기계식주차: 주차대수 필수 입력");
     }
-  } else if (!(input.floorArea > 0)) {
+  } else if (!hasComposite(input) && !(input.floorArea > 0)) {
     throw new BuildingStdPriceError("연면적(㎡) 필수 입력");
   }
 
@@ -91,6 +154,12 @@ export function calcBuildingStandardPrice(
       throw new BuildingStdPriceError("상속·증여: 평가연도 필수");
     }
     const year = input.valuationYear;
+
+    // 복합건물(다필지 위치지수 가중평균 / 층·구역별 구조 상이)
+    if (!input.isMechanicalParking && hasComposite(input)) {
+      return calcCompositeValuation(input, year, warnings);
+    }
+
     let valuation: BuildingStdPriceBreakdown;
     if (input.isMechanicalParking) {
       valuation = calcMechBreakdown(year, input.parkingLotCount!, effBuiltYear);
