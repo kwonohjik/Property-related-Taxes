@@ -261,9 +261,17 @@ describe("D3 용도지수 (이미지 직접 판독, 2026 BASE + 연도 override)
     expect(resolveUsageIndex(2020, 27)).toBe(105);
     expect(resolveUsageIndex(2021, 27)).toBe(110);
   });
-  it("미전사 연도(2019~2003) = undefined", () => {
-    expect(hasUsageIndexYear(2019)).toBe(false);
-    expect(resolveUsageIndex(2019, 1)).toBeUndefined();
+  it("2019: #15=130(BASE 회귀, 2020~2023=135) / 2018: #32=105·#34=105", () => {
+    expect(resolveUsageIndex(2019, 15)).toBe(130);
+    expect(resolveUsageIndex(2020, 15)).toBe(135);
+    expect(resolveUsageIndex(2018, 32)).toBe(105);
+    expect(resolveUsageIndex(2018, 34)).toBe(105);
+    expect(resolveUsageIndex(2019, 34)).toBe(107);
+  });
+  it("미전사 연도: 2017 이하(번호 체계 상이)·2003~ = undefined, 2018~2026 = 전사완료", () => {
+    expect(hasUsageIndexYear(2017)).toBe(false);
+    expect(resolveUsageIndex(2017, 1)).toBeUndefined();
+    expect(hasUsageIndexYear(2018)).toBe(true);
     expect(hasUsageIndexYear(2026)).toBe(true);
   });
   it("listUsageOptions(2026) = 60항목(#1~60, #61 기계식 제외)", () => {
