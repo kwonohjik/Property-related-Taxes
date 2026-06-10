@@ -15,12 +15,14 @@
  *   - **51항목 체계(2012)**: scheme-2012.ts. 일반용도 #1~50 + 기계식주차 #51. 예식장 #17 단독·동물원+공연장+집회장 통합 #18.
  *   - **46항목 체계(2011)**: scheme-2011.ts. 일반용도 #1~46(#43 원본 건너뜀) + 기계식주차(2012 동일). 단란+유흥+유원+카지노+무도장 통합 #13·주점영업 #14.
  *   - **48항목 체계(2010)**: scheme-2010.ts. 일반용도 #1~47 + 기계식주차. 투전기업소 포함 통합위락 #14.
- *   - **39항목 체계(2001~2002)**: 후속 전사 대기.
+ *   - **45항목 체계(2009·2008)**: scheme-2009/2008.ts. 일반용도 #1~44 + 기계식주차 #45. 라벨 공유(LABELS_2009). ⚠️ 2008 #20~24 원본 인쇄 누락.
+ *   - **44항목 체계(2007·2006·2005)**: scheme-2007/2006/2005.ts. 일반용도 #1~43 + 기계식주차 #44. 위락 #12 통합. 라벨 순서 연도별 상이(#26/#27·#10/#11) → 단독 스킴.
+ *   - **41항목 체계(2003·2004)**: scheme-2003-2004.ts. 공통표. 일반용도 #1~40 + 기계식주차 #41. 목욕장 #28만 별도·냉장창고 통합. ⚠️ #30 화장시설 페이지 경계 누락.
+ *   - **39항목 체계(2001·2002)**: scheme-2001-2002.ts. 공통표. 일반용도 #1~38 + 기계식주차 #39. #1 단독+아파트 통합·목욕장/냉장창고 통합.
  * ★ 기계식주차전용빌딩(각 체계 마지막 번호)은 일반 용도지수가 아닌 특수산식 → `mech-parking-formula.ts`(D9)에서 처리.
  *   본 파일의 용도지수는 일반 용도(maxGeneralNo 이하)만 다룬다.
  *
- * ⚠️ 전사 현황: 2010~2026 확정. **2009~2001 전사 대기**(용도지수2 PDF 연도별 판독 필요).
- *   양도세 과거 취득연도 계산에는 전 연도 필요 → 후속 보강.
+ * ⚠️ 전사 현황: 2001~2026 전 연도 확정. 미확정 셀(원본 결함·추정 금지): 2008 #20~24(인쇄 누락)·2003·2004 #30(페이지 경계 누락).
  */
 import type { UsageScheme } from "./usage-index-schemes/types";
 import { SCHEME_60 } from "./usage-index-schemes/scheme-60";
@@ -30,6 +32,13 @@ import { SCHEME_2013 } from "./usage-index-schemes/scheme-2013";
 import { SCHEME_2012 } from "./usage-index-schemes/scheme-2012";
 import { SCHEME_2011 } from "./usage-index-schemes/scheme-2011";
 import { SCHEME_2010 } from "./usage-index-schemes/scheme-2010";
+import { SCHEME_2009 } from "./usage-index-schemes/scheme-2009";
+import { SCHEME_2008 } from "./usage-index-schemes/scheme-2008";
+import { SCHEME_2007 } from "./usage-index-schemes/scheme-2007";
+import { SCHEME_2006 } from "./usage-index-schemes/scheme-2006";
+import { SCHEME_2005 } from "./usage-index-schemes/scheme-2005";
+import { SCHEME_2003_2004 } from "./usage-index-schemes/scheme-2003-2004";
+import { SCHEME_2001_2002 } from "./usage-index-schemes/scheme-2001-2002";
 
 // 라벨 테이블 re-export (barrel·UI 하위 호환 유지)
 export { USAGE_LABELS } from "./usage-index-schemes/scheme-60";
@@ -44,6 +53,13 @@ const SCHEMES: ReadonlyArray<UsageScheme> = [
   SCHEME_2012,
   SCHEME_2011,
   SCHEME_2010,
+  SCHEME_2009,
+  SCHEME_2008,
+  SCHEME_2007,
+  SCHEME_2006,
+  SCHEME_2005,
+  SCHEME_2003_2004,
+  SCHEME_2001_2002,
 ];
 
 export const USAGE_INDEX_MIN_YEAR = 2001;

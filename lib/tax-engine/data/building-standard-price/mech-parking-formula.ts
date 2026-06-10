@@ -7,8 +7,8 @@
  * ★ 일반 산식과 완전히 다른 특수산식: `기준시가 = 단가 × 경과연수별잔가율(내용연수 그룹) × 주차대수`.
  *   구조·용도·위치지수·연면적·조정율 모두 미적용. 잔가율 그룹은 내용연수로 결정(`durableYearsToResidualGroup`).
  *
- * ⚠️ **연도 가변**(실측 확정): 2025·2026년 = 6,000,000원·내용연수 30년 / 2001·2002년 = 5,000,000원·내용연수 20년.
- *   ☐ 중간 연도(2003~2024)의 단가·내용연수 변경 시점은 D3 용도지수 전사 시 각 연도표 IV 행에서 확정 예정.
+ * ⚠️ **연도 가변**(실측 확정): 2025·2026년 = 6,000,000원·내용연수 30년 / 2001~2013년 = 5,000,000원·내용연수 20년.
+ *   2013년부터 단가 상승(5.5백만→5.75백만→6백만), 2016년부터 내용연수 30년. 각 연도표 구분 IV 비고 행 실측.
  *   미확정 연도는 undefined 반환 → 호출부에서 검증 오류 처리(silent fallback 금지).
  */
 
@@ -26,7 +26,13 @@ export interface MechParkingFormula {
 export const MECH_PARKING_FORMULA: Readonly<Record<number, MechParkingFormula>> = Object.freeze({
   2001: { unitPrice: 5_000_000, durableYears: 20 },
   2002: { unitPrice: 5_000_000, durableYears: 20 },
-  // ☐ 2003~2009: D3 용도지수 각 연도표 IV 행에서 단가·내용연수 확정 예정
+  2003: { unitPrice: 5_000_000, durableYears: 20 }, // (23) 2003·2004 공통표 IV #41 실측
+  2004: { unitPrice: 5_000_000, durableYears: 20 },
+  2005: { unitPrice: 5_000_000, durableYears: 20 }, // (22) IV #44 실측
+  2006: { unitPrice: 5_000_000, durableYears: 20 }, // (21) IV #44 실측
+  2007: { unitPrice: 5_000_000, durableYears: 20 }, // (20) IV #44 실측
+  2008: { unitPrice: 5_000_000, durableYears: 20 }, // (19) IV #45 실측
+  2009: { unitPrice: 5_000_000, durableYears: 20 }, // (18) IV #45 실측
   2010: { unitPrice: 5_000_000, durableYears: 20 },
   2011: { unitPrice: 5_000_000, durableYears: 20 }, // 원본 IV행 부재, 2012와 동일(사용자 확인)
   2012: { unitPrice: 5_000_000, durableYears: 20 },
