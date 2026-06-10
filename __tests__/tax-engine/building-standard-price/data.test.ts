@@ -46,29 +46,29 @@ describe("D1 신축가격기준액", () => {
   });
 });
 
-describe("D5 잔가율 (선형 공식 = PDF 전수 일치, C1 해소)", () => {
+describe("D5 잔가율 현행(era-C, 2016~ 잔존율 0.10) — 선형 공식", () => {
   it("경과 0 = 1.000 (모든 그룹)", () => {
-    expect(calcResidualRate("I", 0)).toBe(1.0);
-    expect(calcResidualRate("IV", 0)).toBe(1.0);
+    expect(calcResidualRate("I", 0, 2026)).toBe(1.0);
+    expect(calcResidualRate("IV", 0, 2026)).toBe(1.0);
   });
   it("I그룹(50년) 경과 5 = 0.910 (BSP-01 anchor 구성요소)", () => {
-    expect(calcResidualRate("I", 5)).toBe(0.91);
+    expect(calcResidualRate("I", 5, 2026)).toBe(0.91);
   });
   it("II그룹(40년) 경과 5 = 0.8875 / 경과 1 = 0.9775", () => {
-    expect(calcResidualRate("II", 5)).toBe(0.8875);
-    expect(calcResidualRate("II", 1)).toBe(0.9775);
+    expect(calcResidualRate("II", 5, 2026)).toBe(0.8875);
+    expect(calcResidualRate("II", 1, 2026)).toBe(0.9775);
   });
   it("III그룹(30년) 경과 5 = 0.850 (BSP-MECH anchor 구성요소)", () => {
-    expect(calcResidualRate("III", 5)).toBe(0.85);
+    expect(calcResidualRate("III", 5, 2026)).toBe(0.85);
   });
   it("IV그룹(20년) 경과 5 = 0.775 / 경과 19 = 0.145", () => {
-    expect(calcResidualRate("IV", 5)).toBe(0.775);
-    expect(calcResidualRate("IV", 19)).toBe(0.145);
+    expect(calcResidualRate("IV", 5, 2026)).toBe(0.775);
+    expect(calcResidualRate("IV", 19, 2026)).toBe(0.145);
   });
   it("내용연수 초과 = 최저 0.100", () => {
-    expect(calcResidualRate("I", 50)).toBe(0.1);
-    expect(calcResidualRate("I", 60)).toBe(0.1);
-    expect(calcResidualRate("IV", 20)).toBe(0.1);
+    expect(calcResidualRate("I", 50, 2026)).toBe(0.1);
+    expect(calcResidualRate("I", 60, 2026)).toBe(0.1);
+    expect(calcResidualRate("IV", 20, 2026)).toBe(0.1);
   });
   it("내용연수 → 잔가율 그룹 매핑", () => {
     expect(durableYearsToResidualGroup(50)).toBe("I");
@@ -214,7 +214,7 @@ describe("D9 기계식주차 산식 (연도 가변)", () => {
 
   it("BSP-MECH 손계산: 6,000,000 × 0.850(III·경과5) × 50 = 255,000,000", () => {
     const f = resolveMechParkingFormula(2025)!;
-    const rate = calcResidualRate(durableYearsToResidualGroup(f.durableYears), 2025 - 2020);
+    const rate = calcResidualRate(durableYearsToResidualGroup(f.durableYears), 2025 - 2020, 2025);
     expect(Math.floor(f.unitPrice * rate * 50)).toBe(255_000_000);
   });
 });
@@ -570,7 +570,7 @@ describe("BSP-01 데이터 구성요소 손계산 (엔진 미구현 — 데이�
     const structIdx = resolveStructureIndex(2025, "rc")!; // 100
     const usageIdx = resolveUsageIndex(2025, 1)!; // 아파트 110 (D3 전사 완료)
     const locIdx = resolveLocationIndex(2025, 7_500_000)!; // 132
-    const residual = calcResidualRate("I", 2025 - 2020); // 0.910
+    const residual = calcResidualRate("I", 2025 - 2020, 2025); // 0.910
     const raw = (basePrice * structIdx * usageIdx * locIdx) / 1_000_000 * residual;
     const pricePerM2 = Math.floor(raw / 1000) * 1000;
     expect(pricePerM2).toBe(1_123_000);

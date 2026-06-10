@@ -37,7 +37,7 @@ test("상속·증여 기본 — 224,600,000 (BSP-01)", async ({ page }) => {
   await expect(result).toContainText("224,600,000");
 });
 
-test("양도 2시점 — 취득 81,300,000 / 양도 90,000,000 (BSP-06)", async ({ page }) => {
+test("양도 2시점 — 취득 82,200,000 / 양도 90,000,000 (BSP-06)", async ({ page }) => {
   await page.goto(URL);
   // 기본이 양도 모드
 
@@ -64,7 +64,7 @@ test("양도 2시점 — 취득 81,300,000 / 양도 90,000,000 (BSP-06)", async 
 
   const result = page.getByTestId("bsp-result");
   await expect(result).toBeVisible();
-  await expect(result).toContainText("81,300,000");
+  await expect(result).toContainText("82,200,000"); // 2015년 50년버킷 잔존율 0.20
   await expect(result).toContainText("90,000,000");
 });
 
