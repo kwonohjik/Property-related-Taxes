@@ -193,8 +193,10 @@ describe("D9 기계식주차 산식 (연도 가변)", () => {
   it("2001·2002 = 5,000,000 · 내용연수 20년", () => {
     expect(resolveMechParkingFormula(2001)).toEqual({ unitPrice: 5_000_000, durableYears: 20 });
   });
-  it("중간 연도(2003~2009)는 미확정 → undefined (D3 연동 대기)", () => {
-    expect(resolveMechParkingFormula(2009)).toBeUndefined();
+  it("2003~2009 = 5,000,000 · 20년 (각 연도표 구분 IV 비고 행 실측)", () => {
+    for (const y of [2003, 2004, 2005, 2006, 2007, 2008, 2009]) {
+      expect(resolveMechParkingFormula(y)).toEqual({ unitPrice: 5_000_000, durableYears: 20 });
+    }
   });
   it("기계식주차 단가·내용연수 연도 변천: 2010·2011·2012=5백만 / 2013=5.5백만 / 2014=5.75백만 / 2015=6백만(20년) / 2016~=6백만(30년)", () => {
     expect(resolveMechParkingFormula(2010)).toEqual({ unitPrice: 5_000_000, durableYears: 20 });
@@ -277,18 +279,11 @@ describe("D3 용도지수 (이미지 직접 판독, 2026 BASE + 연도 override)
     expect(resolveUsageIndex(2018, 34)).toBe(105);
     expect(resolveUsageIndex(2019, 34)).toBe(107);
   });
-  it("미전사 연도: 2009 이하 = undefined, 2010~2026 = 전사완료", () => {
-    expect(hasUsageIndexYear(2009)).toBe(false);
-    expect(resolveUsageIndex(2009, 1)).toBeUndefined();
-    expect(hasUsageIndexYear(2010)).toBe(true);
-    expect(hasUsageIndexYear(2011)).toBe(true);
-    expect(hasUsageIndexYear(2012)).toBe(true);
-    expect(hasUsageIndexYear(2013)).toBe(true);
-    expect(hasUsageIndexYear(2014)).toBe(true);
-    expect(hasUsageIndexYear(2015)).toBe(true);
-    expect(hasUsageIndexYear(2017)).toBe(true);
-    expect(hasUsageIndexYear(2018)).toBe(true);
-    expect(hasUsageIndexYear(2026)).toBe(true);
+  it("전사 완료: 2001~2026 전 연도 = true, 범위 밖(2000)·미존재 번호 = false/undefined", () => {
+    for (let y = 2001; y <= 2026; y++) expect(hasUsageIndexYear(y)).toBe(true);
+    expect(hasUsageIndexYear(2000)).toBe(false);
+    expect(resolveUsageIndex(2000, 1)).toBeUndefined();
+    expect(resolveUsageIndex(2009, 1)).toBe(110); // 전사 완료(아파트)
   });
   it("listUsageOptions(2026) = 60항목(#1~60, #61 기계식 제외)", () => {
     const opts = listUsageOptions(2026);
@@ -453,6 +448,113 @@ describe("D3 용도지수 48항목 체계 (2010 단독)", () => {
   });
   it("2010 기계식주차 = 5,000,000 · 20년", () => {
     expect(resolveMechParkingFormula(2010)).toEqual({ unitPrice: 5_000_000, durableYears: 20 });
+  });
+});
+
+describe("D3 용도지수 45항목 체계 (2009·2008)", () => {
+  // (18) 2009: #1~44 + 기계식 #45. 라벨 LABELS_2009 공유.
+  it("2009: 아파트=110 / 호텔(#5)=130 / 통합위락(#12)=130 / 화장시설(#33)=100 / 축사(#44)=40", () => {
+    expect(resolveUsageIndex(2009, 1)).toBe(110);
+    expect(resolveUsageIndex(2009, 5)).toBe(130);
+    expect(resolveUsageIndex(2009, 12)).toBe(130);
+    expect(resolveUsageIndex(2009, 33)).toBe(100);
+    expect(resolveUsageIndex(2009, 44)).toBe(40);
+  });
+  it("2009: 종합병원(#20)=120 / 장례식장(#22)=110 / 냉동창고(#36)=90 / 냉장창고(#37)=80 / 창고·하역장(#38)=60", () => {
+    expect(resolveUsageIndex(2009, 20)).toBe(120);
+    expect(resolveUsageIndex(2009, 22)).toBe(110);
+    expect(resolveUsageIndex(2009, 36)).toBe(90);
+    expect(resolveUsageIndex(2009, 37)).toBe(80);
+    expect(resolveUsageIndex(2009, 38)).toBe(60);
+  });
+  it("2009 listUsageOptions = 44항목(#1~44, 기계식 #45 별도)", () => {
+    expect(listUsageOptions(2009).length).toBe(44);
+    expect(resolveUsageIndex(2009, 45)).toBeUndefined(); // 기계식(D9)
+  });
+  // (19) 2008: 2009 대비 #5 호텔 120·#33 화장시설 90. ⚠️ #20~24 원본 인쇄 누락 → undefined.
+  it("2008: 호텔(#5)=120 / 화장시설(#33)=90 / 나머지 2009 동일(아파트=110·축사(#44)=40)", () => {
+    expect(resolveUsageIndex(2008, 5)).toBe(120);
+    expect(resolveUsageIndex(2008, 33)).toBe(90);
+    expect(resolveUsageIndex(2008, 1)).toBe(110);
+    expect(resolveUsageIndex(2008, 44)).toBe(40);
+  });
+  it("2008 #20~24 원본 인쇄 누락 → undefined(추정 금지) / listUsageOptions = 39항목", () => {
+    for (const no of [20, 21, 22, 23, 24]) expect(resolveUsageIndex(2008, no)).toBeUndefined();
+    expect(resolveUsageIndex(2008, 19)).toBe(100); // #19 실내운동(누락 직전)
+    expect(resolveUsageIndex(2008, 25)).toBe(110); // #25 방송국(누락 직후)
+    expect(listUsageOptions(2008).length).toBe(39); // 44 - 5(누락)
+  });
+});
+
+describe("D3 용도지수 44항목 체계 (2007·2006·2005)", () => {
+  // (20) 2007: 위락 #12 통합 → #1~43 + 기계식 #44. #10 일반상점=100(사용자 확정). #26 학교 → #27 청소년수련.
+  it("2007: 아파트=110 / 일반상점(#10)=100 / 위락(#12)=130 / 학교(#26)=90 / 청소년수련(#27)=100", () => {
+    expect(resolveUsageIndex(2007, 1)).toBe(110);
+    expect(resolveUsageIndex(2007, 10)).toBe(100);
+    expect(resolveUsageIndex(2007, 12)).toBe(130);
+    expect(resolveUsageIndex(2007, 26)).toBe(90);
+    expect(resolveUsageIndex(2007, 27)).toBe(100);
+  });
+  it("2007: 종합병원(#19)=120 / 장례식장(#21)=100 / 자동차매매장(#41)=80 / 축사(#43)=40 / listUsageOptions=43", () => {
+    expect(resolveUsageIndex(2007, 19)).toBe(120);
+    expect(resolveUsageIndex(2007, 21)).toBe(100);
+    expect(resolveUsageIndex(2007, 41)).toBe(80);
+    expect(resolveUsageIndex(2007, 43)).toBe(40);
+    expect(listUsageOptions(2007).length).toBe(43);
+    expect(resolveUsageIndex(2007, 44)).toBeUndefined(); // 기계식(D9)
+  });
+  // (21) 2006: 2007 대비 #21 장례식장 90, #26 청소년수련 → #27 학교 순서(역순).
+  it("2006: 장례식장(#21)=90 / 청소년수련(#26)=100 / 학교(#27)=90 / 일반상점(#10)=100", () => {
+    expect(resolveUsageIndex(2006, 21)).toBe(90);
+    expect(resolveUsageIndex(2006, 26)).toBe(100);
+    expect(resolveUsageIndex(2006, 27)).toBe(90);
+    expect(resolveUsageIndex(2006, 10)).toBe(100);
+    expect(listUsageOptions(2006).length).toBe(43);
+  });
+  // (22) 2005: #10 운수 → #11 일반상점 순서. #3 다중주택 90·#31 근생 90.
+  it("2005: 다중주택(#3)=90 / 운수(#10)=100 / 일반상점(#11)=90 / 근생(#31)=90 / 자동차매매장(#41)=80", () => {
+    expect(resolveUsageIndex(2005, 3)).toBe(90);
+    expect(resolveUsageIndex(2005, 10)).toBe(100);
+    expect(resolveUsageIndex(2005, 11)).toBe(90);
+    expect(resolveUsageIndex(2005, 31)).toBe(90);
+    expect(resolveUsageIndex(2005, 41)).toBe(80);
+    expect(listUsageOptions(2005).length).toBe(43);
+  });
+});
+
+describe("D3 용도지수 41/39항목 체계 (2003·2004 / 2001·2002 공통표)", () => {
+  // (23) 2003·2004 공통: #1~40 + 기계식 #41. 목욕장 #28만 별도. ⚠️ #30 화장시설 페이지 경계 누락.
+  it("2003·2004 동일 지수: 아파트=110 / 목욕장3000(#28)=110 / 근생(#29)=90 / 냉동공장(#31)=90 / 축사(#40)=40", () => {
+    for (const y of [2003, 2004]) {
+      expect(resolveUsageIndex(y, 1)).toBe(110);
+      expect(resolveUsageIndex(y, 28)).toBe(110);
+      expect(resolveUsageIndex(y, 29)).toBe(90);
+      expect(resolveUsageIndex(y, 31)).toBe(90);
+      expect(resolveUsageIndex(y, 40)).toBe(40);
+    }
+  });
+  it("2003·2004 #30 화장시설 페이지 경계 누락 → undefined / listUsageOptions=39", () => {
+    expect(resolveUsageIndex(2003, 30)).toBeUndefined();
+    expect(resolveUsageIndex(2004, 30)).toBeUndefined();
+    expect(listUsageOptions(2003).length).toBe(39); // 40 - 1(누락)
+    expect(resolveUsageIndex(2003, 41)).toBeUndefined(); // 기계식(D9)
+  });
+  // (24) 2001·2002 공통: #1 단독+아파트 통합 100. #1~38 + 기계식 #39. #36 자동차매매장=100.
+  it("2001·2002 동일 지수: 단독+아파트(#1)=100 / 관광호텔(#3)=130 / 백화점(#7)=130 / 위락(#11)=130 / 자동차매매장(#36)=100", () => {
+    for (const y of [2001, 2002]) {
+      expect(resolveUsageIndex(y, 1)).toBe(100);
+      expect(resolveUsageIndex(y, 3)).toBe(130);
+      expect(resolveUsageIndex(y, 7)).toBe(130);
+      expect(resolveUsageIndex(y, 11)).toBe(130);
+      expect(resolveUsageIndex(y, 36)).toBe(100);
+    }
+  });
+  it("2001·2002: 화장시설(#28)=90 / 냉동창고(#31)=90 / 축사(#38)=40 / listUsageOptions=38", () => {
+    expect(resolveUsageIndex(2001, 28)).toBe(90);
+    expect(resolveUsageIndex(2001, 31)).toBe(90);
+    expect(resolveUsageIndex(2001, 38)).toBe(40);
+    expect(listUsageOptions(2001).length).toBe(38);
+    expect(resolveUsageIndex(2001, 39)).toBeUndefined(); // 기계식(D9)
   });
 });
 
