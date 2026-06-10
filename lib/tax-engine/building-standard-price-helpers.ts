@@ -20,6 +20,7 @@ import {
   calcResidualRate,
   durableYearsToResidualGroup,
   resolveResidualGroup,
+  RESIDUAL_RATE_STEP,
   resolveAcqBaseGroup,
   resolveAcqBaseRate,
   resolveMechParkingFormula,
@@ -51,6 +52,32 @@ export interface AdjustmentContext {
   isApartment: boolean;
 }
 
+/** 리모델링(대수선) 정보 — 상증만 잔가율 할증 */
+export interface RemodelInfo {
+  remodelYear?: number;
+  isInheritanceGift?: boolean;
+}
+
+/**
+ * 유효 잔가율. 일반 = 신축연도 경과 잔가율.
+ * 상증 리모델링(대수선) 시 = 신축연도 잔가율 + 대수선할증률(고시).
+ *   대수선할증률 = 연상각률(= 잔가율 step = (1−0.1)/내용연수) × 대수선시점 경과연수(리모델링−신축) × 0.3.
+ *   ⚠️ 리모델링연도를 신축연도로 치환하지 않음(국세청 계산사례 p.67 — 신축 잔가율에 할증을 가산).
+ *   양도세는 미적용(신축연도 잔가율).
+ */
+export function calcEffectiveResidualRate(
+  group: "I" | "II" | "III" | "IV",
+  builtYear: number,
+  valuationYear: number,
+  remodel?: RemodelInfo,
+): number {
+  const baseResid = calcResidualRate(group, valuationYear - builtYear);
+  if (!remodel?.isInheritanceGift || remodel.remodelYear === undefined) return baseResid;
+  const elapsedToRemodel = Math.max(0, remodel.remodelYear - builtYear);
+  const surcharge = RESIDUAL_RATE_STEP[group] * elapsedToRemodel * 0.3;
+  return Math.round((baseResid + surcharge) * 10000) / 10000;
+}
+
 /**
  * §A 공통 ㎡당 금액 + 건물 기준시가 (1시점, 일반 건물).
  * raw = basePrice × (structIdx/100) × (usageIdx/100) × (locIdx/100) × residual × adjRate
@@ -60,9 +87,10 @@ export function calcPointBreakdown(
   year: number,
   point: BuildingPointInput,
   floorArea: number,
-  effBuiltYear: number,
+  builtYear: number,
   adjustmentRate: number, // 1.0 = 미적용(양도). 상증은 calcSpecialAdjustmentRate 결과
   labelForError: string,
+  remodel?: RemodelInfo, // 상증 리모델링 잔가율 할증
 ): BuildingStdPriceBreakdown {
   const basePrice = resolveNewBuildingBasePrice(year);
   if (basePrice === undefined) {
@@ -88,7 +116,7 @@ export function calcPointBreakdown(
   }
 
   const residualGroup = resolveResidualGroup(point.structureKey);
-  const residualRate = calcResidualRate(residualGroup, year - effBuiltYear);
+  const residualRate = calcEffectiveResidualRate(residualGroup, builtYear, year, remodel);
 
   // 정수곱(부동소수 누적 회피) 후 /1,000,000 — 지수 3개가 각 ÷100
   const indexProduct = safeMultiply(

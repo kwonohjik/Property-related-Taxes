@@ -75,6 +75,7 @@ export function calcBuildingStandardPrice(
   input: BuildingStandardPriceInput,
 ): BuildingStandardPriceResult {
   const warnings: string[] = [];
+  // 기계식주차 전용 — 리모델링 시 신축연도 치환(일반 건물은 calcEffectiveResidualRate에서 할증 처리)
   const effBuiltYear = input.remodelYear ?? input.builtYear;
 
   if (input.isMechanicalParking) {
@@ -96,7 +97,10 @@ export function calcBuildingStandardPrice(
     } else {
       const point = validatePoint(input.valuation, "평가");
       const adjRate = computeAdjustmentRate(input, year, point);
-      valuation = calcPointBreakdown(year, point, input.floorArea, effBuiltYear, adjRate, "평가");
+      valuation = calcPointBreakdown(year, point, input.floorArea, input.builtYear, adjRate, "평가", {
+        remodelYear: input.remodelYear,
+        isInheritanceGift: true,
+      });
     }
     return { valuation, warnings, legalBasis: LEGAL_BASIS };
   }
@@ -119,7 +123,7 @@ export function calcBuildingStandardPrice(
   // 취득시 breakdown — 2001 이후 일반 / 2000 이전 산정기준율
   const acquisition =
     acquisitionYear >= 2001
-      ? calcPointBreakdown(acquisitionYear, acqPoint, input.floorArea, effBuiltYear, 1.0, "취득시")
+      ? calcPointBreakdown(acquisitionYear, acqPoint, input.floorArea, input.builtYear, 1.0, "취득시")
       : calcAcqBaseBreakdown(acquisitionYear, acqPoint, input.floorArea, input.builtYear);
 
   // 동일연도(§164⑧) 환산 분기
@@ -152,7 +156,7 @@ export function calcBuildingStandardPrice(
         acquisitionYear - 1,
         prevPoint,
         input.floorArea,
-        effBuiltYear,
+        input.builtYear,
         1.0,
         "취득전기",
       );
@@ -174,7 +178,7 @@ export function calcBuildingStandardPrice(
     transferYear,
     transferPoint,
     input.floorArea,
-    effBuiltYear,
+    input.builtYear,
     1.0,
     "양도시",
   );

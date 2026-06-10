@@ -134,13 +134,13 @@ describe("building-std-price 검증 (⑧) — 미입력 차단", () => {
 });
 
 describe("building-std-price 연도 옵션 — 데이터 보유 교집합", () => {
-  it("일반 모드: 위치지수 2026 부재 → 2026 제외(2025~2001)", () => {
+  it("일반 모드: 2026 위치지수 확보 → 2026~2001 전 연도", () => {
     const ys = availableYears(false);
+    expect(ys[0]).toBe(2026);
     expect(ys).toContain(2025);
-    expect(ys).not.toContain(2026);
     expect(ys[ys.length - 1]).toBe(2001);
   });
-  it("기계식 모드: 2026 포함(위치지수 불요)", () => {
+  it("기계식 모드: 2026 포함", () => {
     expect(availableYears(true)).toContain(2026);
   });
 });
