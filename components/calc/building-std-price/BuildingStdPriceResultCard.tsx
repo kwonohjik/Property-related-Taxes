@@ -8,6 +8,7 @@ import type {
   BuildingStandardPriceResult,
   BuildingStdPriceBreakdown,
 } from "@/lib/tax-engine/building-standard-price";
+import { BuildingStdPriceAdvancedResult } from "./BuildingStdPriceAdvancedResult";
 
 const fmt = (n: number) => n.toLocaleString("ko-KR");
 const idx = (n: number | undefined) => (n === undefined ? "" : (n / 100).toFixed(2));
@@ -114,6 +115,7 @@ export function BuildingStdPriceResultCard({ result, floorArea }: Props) {
           sameYearBadge={sameYearAdjusted}
         />
       )}
+      <BuildingStdPriceAdvancedResult result={result} />
       <p className="text-[11px] leading-relaxed text-slate-400">{result.legalBasis}</p>
       {result.warnings.map((w, i) => (
         <p key={i} className="text-xs text-amber-700">

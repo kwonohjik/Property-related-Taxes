@@ -133,6 +133,144 @@ describe("building-std-price 검증 (⑧) — 미입력 차단", () => {
   });
 });
 
+describe("building-std-price 복합구조 폼 (④) — 엔진 anchor 연동", () => {
+  it("층별 다른 구조 폼 → 1층 676,200,000 + 2층 84,500,000 = 760,700,000", () => {
+    const f = form({
+      taxType: "inheritance_gift",
+      builtYear: "1998",
+      valuationYear: "2026",
+      valLandPrice: "560,000",
+      compositeMode: true,
+      compositeParts: [
+        { label: "1층 공장", structureKey: "rc", usageNo: "48", floorArea: "2100", adjustmentRate: "100", sharedAdjustmentRate: "" },
+        { label: "2층 창고", structureKey: "light_steel_frame", usageNo: "48", floorArea: "1300", adjustmentRate: "80", sharedAdjustmentRate: "" },
+      ],
+    });
+    expect(validateBuildingStdPriceForm(f)).toBeNull();
+    const r = calcBuildingStandardPrice(toEngineInput(f));
+    expect(r.compositeBreakdowns?.[0].standardPrice).toBe(676_200_000);
+    expect(r.compositeBreakdowns?.[1].standardPrice).toBe(84_500_000);
+    expect(r.compositeTotal).toBe(760_700_000);
+  });
+
+  it("공용시설 면적비율 안분 폼 → 합계 187,640,000", () => {
+    const f = form({
+      taxType: "inheritance_gift",
+      builtYear: "2000",
+      valuationYear: "2026",
+      valLandPrice: "2,500,000",
+      compositeMode: true,
+      sharedFacilityArea: "90",
+      compositeParts: [
+        { label: "1층 슈퍼", structureKey: "rc", usageNo: "41", floorArea: "100", adjustmentRate: "108", sharedAdjustmentRate: "54" },
+        { label: "2~3층 주택", structureKey: "rc", usageNo: "2", floorArea: "200", adjustmentRate: "100", sharedAdjustmentRate: "60" },
+      ],
+    });
+    expect(validateBuildingStdPriceForm(f)).toBeNull();
+    const r = calcBuildingStandardPrice(toEngineInput(f));
+    expect(r.compositeTotal).toBe(187_640_000);
+  });
+});
+
+describe("building-std-price 다필지 폼 (④) — 위치지수 가중평균", () => {
+  it("다필지 + 복합용도 폼 → 위치지수 114 / 합계 4,198,000,000", () => {
+    const f = form({
+      taxType: "inheritance_gift",
+      builtYear: "1997",
+      valuationYear: "2026",
+      landParcelMode: true,
+      landParcels: [
+        { areaM2: "1000", pricePerM2: "2,500,000" },
+        { areaM2: "2000", pricePerM2: "3,000,000" },
+        { areaM2: "3000", pricePerM2: "1,500,000" },
+      ],
+      compositeMode: true,
+      compositeParts: [
+        { label: "1~5층 사무소", structureKey: "rc", usageNo: "29", floorArea: "6000", adjustmentRate: "110", sharedAdjustmentRate: "" },
+        { label: "지하1층 주차장", structureKey: "rc", usageNo: "29", floorArea: "2000", adjustmentRate: "60", sharedAdjustmentRate: "" },
+      ],
+    });
+    expect(validateBuildingStdPriceForm(f)).toBeNull();
+    const r = calcBuildingStandardPrice(toEngineInput(f));
+    expect(r.weightedLandPricePerM2).toBeCloseTo(2_166_666.67, 1);
+    expect(r.compositeBreakdowns?.[0].locationIndex).toBe(114);
+    expect(r.compositeTotal).toBe(4_198_000_000);
+  });
+});
+
+describe("building-std-price 공동주택 환산 폼 (④) — 양도 전용", () => {
+  it("공동주택 고시 전 취득 폼 → 취득당시 128,660,408", () => {
+    const f = form({
+      taxType: "transfer",
+      builtYear: "1998",
+      acquisitionYear: "1998",
+      apartmentConversionMode: true,
+      apartmentConversion: {
+        firstNoticeApartmentPrice: "119,000,000",
+        firstNoticeYear: "1999",
+        landAreaM2: "33.15",
+        totalFloorArea: "105.78",
+        structureKey: "rc",
+        usageNo: "1",
+        firstNoticeLandPrice: "1,820,000",
+        acquisitionLandPrice: "2,050,000",
+        building2001LandPrice: "1,820,000",
+      },
+    });
+    expect(validateBuildingStdPriceForm(f)).toBeNull();
+    const r = calcBuildingStandardPrice(toEngineInput(f));
+    expect(r.apartmentConversion?.convertedAcquisitionPrice).toBe(128_660_408);
+  });
+});
+
+describe("building-std-price 고급 케이스 검증 (⑧) — 미입력 차단", () => {
+  it("복합 부분 구조 미선택 차단", () => {
+    const f = form({
+      taxType: "inheritance_gift",
+      builtYear: "1998",
+      valuationYear: "2026",
+      valLandPrice: "560,000",
+      compositeMode: true,
+      compositeParts: [{ label: "1층", structureKey: "", usageNo: "48", floorArea: "2100", adjustmentRate: "100", sharedAdjustmentRate: "" }],
+    });
+    expect(validateBuildingStdPriceForm(f)).toMatch(/복합 부분 1.*구조/);
+  });
+  it("공용시설 면적만 입력하고 공용 조정률 없으면 차단", () => {
+    const f = form({
+      taxType: "inheritance_gift",
+      builtYear: "2000",
+      valuationYear: "2026",
+      valLandPrice: "2,500,000",
+      compositeMode: true,
+      sharedFacilityArea: "90",
+      compositeParts: [{ label: "1층", structureKey: "rc", usageNo: "41", floorArea: "100", adjustmentRate: "108", sharedAdjustmentRate: "" }],
+    });
+    expect(validateBuildingStdPriceForm(f)).toMatch(/공용 조정률/);
+  });
+  it("다필지 모드에서 필지 미입력 차단", () => {
+    const f = form({
+      taxType: "inheritance_gift",
+      builtYear: "2020",
+      valuationYear: "2026",
+      valStructureKey: "rc",
+      valUsageNo: "1",
+      floorArea: "200",
+      landParcelMode: true,
+      landParcels: [{ areaM2: "", pricePerM2: "" }],
+    });
+    expect(validateBuildingStdPriceForm(f)).toMatch(/다필지/);
+  });
+  it("공동주택 환산 필드 미입력 차단", () => {
+    const f = form({
+      taxType: "transfer",
+      builtYear: "1998",
+      acquisitionYear: "1998",
+      apartmentConversionMode: true,
+    });
+    expect(validateBuildingStdPriceForm(f)).toMatch(/최초고시 공동주택기준시가/);
+  });
+});
+
 describe("building-std-price 연도 옵션 — 데이터 보유 교집합", () => {
   it("일반 모드: 2026 위치지수 확보 → 2026~2001 전 연도", () => {
     const ys = availableYears(false);
