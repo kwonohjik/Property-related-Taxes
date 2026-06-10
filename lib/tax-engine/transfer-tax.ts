@@ -10,6 +10,7 @@ import { TRANSFER, NBL, TRANSFER_REDUCTION_ARTICLE } from "./legal-codes";
 import {
   applyRate,
   isSurchargeSuspended,
+  coerceOptionalDate,
 } from "./tax-utils";
 import {
   type MultiHouseSurchargeInput,
@@ -600,14 +601,13 @@ export function calculateTransferTax(
     // Round 9 정정 (2026-05-06): contractDate 우선순위
     //   1) reduction.contractDate993 (legacy 이력 호환, 1개월 alias 후 제거)
     //   2) input.assetContractDate (자산-수준 매매계약일 — 상단 입력)
-    const effectiveContractDate = new993Reduction.contractDate993
-      ? new Date(new993Reduction.contractDate993)
-      : input.assetContractDate;
+    const effectiveContractDate =
+      coerceOptionalDate(new993Reduction.contractDate993) ?? input.assetContractDate;
     new993PreliminaryResult = evaluateNew993({
       transferDate: input.transferDate,
       acquisitionDate: input.acquisitionDate,
       contractDate: effectiveContractDate,
-      usageApprovalDate: new993Reduction.usageApprovalDate993 ? new Date(new993Reduction.usageApprovalDate993) : undefined,
+      usageApprovalDate: coerceOptionalDate(new993Reduction.usageApprovalDate993),
       transferIncome: transferIncomeBefore993,
       standardPriceAtAcquisition: new993Reduction.standardPriceAtAcquisition993 ?? 0,
       standardPriceAt5Years: new993Reduction.standardPriceAt5Years ?? 0,

@@ -101,7 +101,6 @@ export function GracePeriodSection({
               type="text"
               value={p.description}
               onChange={(e) => updatePeriod(idx, { description: e.target.value })}
-              onFocus={(e) => e.target.select()}
               placeholder="예: 질병으로 인한 입원 기간"
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />

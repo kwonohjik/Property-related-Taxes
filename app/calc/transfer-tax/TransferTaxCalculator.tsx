@@ -14,7 +14,7 @@ import { MixedUseResultCard } from "@/components/calc/results/mixed-use/MixedUse
 import { callTransferTaxAPI } from "@/lib/calc/transfer-tax-api";
 import type { TransferTaxPenaltyResult } from "@/lib/tax-engine/transfer-tax-penalty";
 import { validateStep } from "@/lib/calc/transfer-tax-validate";
-import { getFilingDeadline, isFilingOverdue } from "@/lib/calc/filing-deadline";
+import { derivePenaltyFields } from "@/lib/calc/filing-deadline";
 import { ResetButton } from "@/components/calc/shared/ResetButton";
 import { HomeButton } from "@/components/calc/shared/HomeButton";
 import { computeTransferSummary } from "@/lib/stores/calc-wizard-store";
@@ -124,52 +124,22 @@ export default function TransferTaxCalculator({
     }
   }, [currentStep, totalSteps, result, setStep]);
 
-  // 신고일·양도일 변경 시 가산세 필드 자동 설정
-  //   - 신고기한 초과 시: 무신고(filingType="none") + 지연납부 자동 ON, paymentDeadline=신고기한, actualPaymentDate=신고일
-  //   - 신고기한 이내 또는 신고일 미입력: 가산세 자동 OFF
-  useEffect(() => {
-    const { transferDate, filingDate } = formData;
-    if (!transferDate || !filingDate) {
-      if (formData.enablePenalty) {
-        updateFormData({
-          enablePenalty: false,
-          filingType: "correct",
-          paymentDeadline: "",
-          actualPaymentDate: "",
-        });
+  // 신고일·양도일 변경 시 가산세 필드 cross-field 파생.
+  // memory `feedback_useeffect_store_mirror_forbidden` — useEffect→store 미러링 금지.
+  // onChange 핸들러에서 직접 파생(아래 handleFormChange). 로드 시점 보정은 migrateLegacyForm에서 처리.
+  const handleFormChange = useCallback(
+    (patch: Partial<typeof formData>) => {
+      if ("transferDate" in patch || "filingDate" in patch) {
+        const nextTransferDate = patch.transferDate ?? formData.transferDate;
+        const nextFilingDate = patch.filingDate ?? formData.filingDate;
+        const penaltyPatch = derivePenaltyFields(nextTransferDate, nextFilingDate, formData);
+        updateFormData({ ...patch, ...penaltyPatch });
+      } else {
+        updateFormData(patch);
       }
-      return;
-    }
-    const overdue = isFilingOverdue(transferDate, filingDate);
-    if (overdue) {
-      const deadline = getFilingDeadline(transferDate);
-      if (
-        !formData.enablePenalty ||
-        formData.filingType !== "none" ||
-        formData.paymentDeadline !== deadline ||
-        formData.actualPaymentDate !== filingDate
-      ) {
-        updateFormData({
-          enablePenalty: true,
-          filingType: "none",
-          penaltyReason: formData.penaltyReason || "normal",
-          paymentDeadline: deadline,
-          actualPaymentDate: filingDate,
-        });
-      }
-    } else {
-      if (formData.enablePenalty) {
-        updateFormData({
-          enablePenalty: false,
-          filingType: "correct",
-          paymentDeadline: "",
-          actualPaymentDate: "",
-        });
-      }
-    }
-    // 의도적으로 일부 필드만 의존성에 포함
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formData.transferDate, formData.filingDate]);
+    },
+    [formData, updateFormData],
+  );
 
   function handleNext() {
     const err = validateStep(currentStep, formData);
@@ -325,7 +295,7 @@ export default function TransferTaxCalculator({
   }, [formData, router]);
 
   const stepComponentsAll = [
-    <Step1 key={0} form={formData} onChange={updateFormData} />,
+    <Step1 key={0} form={formData} onChange={handleFormChange} />,
     <Step4 key={1} form={formData} onChange={updateFormData} />,
     <Step5 key={2} form={formData} onChange={updateFormData} />,
     <Step6 key={3} form={formData} onChange={updateFormData} determinedTax={calcDeterminedTax} />,

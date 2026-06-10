@@ -41,8 +41,10 @@ export function buildTotalTax(
   commercialIncome: number,
   nonBizIncome: number,
   brackets: TaxBracket[],
+  /** 기본공제 연간 한도 (DB 세율 basicDeductionRules.annualLimit). 미전달 시 250만원 fallback. */
+  basicDeductionLimit = 2_500_000,
 ): MixedUseTotalTax {
-  const BASIC_DEDUCTION = 2_500_000;
+  const BASIC_DEDUCTION = basicDeductionLimit;
 
   const aggregateIncome = housingIncome + commercialIncome + nonBizIncome;
   const taxBase = Math.max(0, aggregateIncome - BASIC_DEDUCTION);

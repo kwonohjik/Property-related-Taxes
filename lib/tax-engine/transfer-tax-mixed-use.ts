@@ -69,8 +69,8 @@ export function calcMixedUseTransferTax(
   const warnings: string[] = collectWarnings(asset);
   const steps: MixedUseStep[] = [];
 
-  // 누진세율 brackets (DB 세율)
-  const { brackets } = parseRatesFromMap(rates);
+  // 누진세율 brackets + 기본공제 한도 (DB 세율)
+  const { brackets, basicDeductionRules } = parseRatesFromMap(rates);
 
   // 파생값 (면적 비율)
   const derived = computeDerivedAreas(asset);
@@ -181,6 +181,7 @@ export function calcMixedUseTransferTax(
     commercialPart.incomeAmount,
     nonBusinessLandPart?.incomeAmount ?? 0,
     brackets,
+    basicDeductionRules.annualLimit,
   );
   steps.push(buildTotalStep(total));
 
