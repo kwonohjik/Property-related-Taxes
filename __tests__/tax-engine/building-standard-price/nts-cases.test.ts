@@ -185,3 +185,57 @@ describe("NTS 공식 계산사례 — 공용 부속시설 면적비율 안분 (�
     expect(r.compositeTotal).toBe(187_640_000);
   });
 });
+
+describe("NTS 공식 계산사례 — 공동주택 고시 전 취득 환산 (기타사례 바)", () => {
+  // 강동구 아파트, rc, 신축1998, 취득1998.7.15, 최초고시1999.7.1(119,000,000), 전유84.88+공용20.90=105.78
+  // 대지지분 33.15. 공시지가: 최초고시 1,820,000 / 취득 2,050,000.
+  // 2001 건물기준시가 41,677,320(★2001 잔가율 0.94). 산정기준율 최초고시 1.003·취득 1.019
+  // ② 60,333,000 + ③ 41,802,351 / ④ 67,957,500 + ⑤ 42,469,189 → Ⅰ = 128,660,408
+  it("공동주택 환산: 취득당시 기준시가 128,660,408", () => {
+    const r = calcBuildingStandardPrice({
+      taxType: "transfer",
+      floorArea: 0,
+      builtYear: 1998,
+      acquisitionYear: 1998,
+      transferYear: 2025,
+      apartmentConversion: {
+        firstNoticeApartmentPrice: 119_000_000,
+        firstNoticeYear: 1999,
+        landAreaM2: 33.15,
+        totalFloorArea: 105.78,
+        structureKey: "rc",
+        usageNo: 1,
+        firstNoticeLandPrice: 1_820_000,
+        acquisitionLandPrice: 2_050_000,
+        building2001LandPrice: 1_820_000,
+      },
+    });
+    const c = r.apartmentConversion!;
+    expect(c.base2001BuildingPrice).toBe(41_677_320); // 2001 잔가율 0.94 적용
+    expect(c.firstNoticeAcqBaseRate).toBe(1.003);
+    expect(c.acquisitionAcqBaseRate).toBe(1.019);
+    expect(c.firstNoticeLandValue).toBe(60_333_000);
+    expect(c.firstNoticeBuildingValue).toBe(41_802_351);
+    expect(c.acqLandValue).toBe(67_957_500);
+    expect(c.acqBuildingValue).toBe(42_469_189);
+    expect(c.convertedAcquisitionPrice).toBe(128_660_408);
+  });
+});
+
+describe("2001년 잔가율표 (3그룹·내용연수 40/30/20·잔존율 0.20)", () => {
+  it("그룹별 step·하한이 현행과 다름", async () => {
+    const { calcResidualRate } = await import("../../../lib/tax-engine/data/building-standard-price/residual-rate");
+    // I그룹 40년 step 0.02
+    expect(calcResidualRate("I", 3, 2001)).toBe(0.94); // PDF 1998신축
+    expect(calcResidualRate("I", 11, 2001)).toBe(0.78);
+    expect(calcResidualRate("I", 40, 2001)).toBe(0.2); // 하한
+    // II그룹 30년 step 0.026667
+    expect(calcResidualRate("II", 1, 2001)).toBe(0.9733);
+    expect(calcResidualRate("II", 2, 2001)).toBe(0.9467);
+    // III그룹 20년 step 0.04
+    expect(calcResidualRate("III", 1, 2001)).toBe(0.96);
+    expect(calcResidualRate("III", 20, 2001)).toBe(0.2);
+    // 현행(2026)은 다름 — I 경과3 = 0.946(50년·0.018)
+    expect(calcResidualRate("I", 3, 2026)).toBe(0.946);
+  });
+});

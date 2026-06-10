@@ -113,6 +113,33 @@ export interface BuildingStandardPriceInput {
    * 각 부분의 sharedAdjustmentRate와 함께 사용. 단독으론 무효.
    */
   sharedFacilityArea?: number;
+
+  /** 공동주택 고시 전 취득 → 취득당시 기준시가 환산(양도 전용). builtYear·acquisitionYear는 본 input 공통 */
+  apartmentConversion?: ApartmentConversionInput;
+}
+
+/**
+ * 공동주택 기준시가 고시 전 취득 → 취득당시 기준시가 환산 입력(소령 §164·고시).
+ * 취득당시 = 최초고시 공동주택기준시가 × (취득당시 토지+건물) ÷ (최초고시 토지+건물).
+ * 토지 = 공시지가 × 대지지분면적 / 건물 = 2001 건물기준시가 × 산정기준율(해당 시점).
+ */
+export interface ApartmentConversionInput {
+  /** ① 최초고시 공동주택기준시가(원) */
+  firstNoticeApartmentPrice: number;
+  /** 최초고시 연도(산정기준율 취득연도 기준) */
+  firstNoticeYear: number;
+  /** 대지(지분)면적(㎡) */
+  landAreaM2: number;
+  /** 건물 연면적(전유+공용, ㎡) — 2001 건물기준시가 산정용 */
+  totalFloorArea: number;
+  structureKey: string;
+  usageNo: number;
+  /** ② 최초고시 시점 ㎡당 공시지가 */
+  firstNoticeLandPrice: number;
+  /** ④ 취득당시 ㎡당 공시지가 */
+  acquisitionLandPrice: number;
+  /** 2001 건물기준시가 위치지수 산정용 ㎡당 공시지가 */
+  building2001LandPrice: number;
 }
 
 /** 다필지 부속토지 1필지(위치지수 가중평균용) */
@@ -169,6 +196,24 @@ export interface BuildingStdPriceBreakdown {
   floorArea?: number;
 }
 
+/** 공동주택 고시 전 취득 환산 결과(산출근거 echo) */
+export interface ApartmentConversionResult {
+  /** 취득당시 환산 기준시가(원) — Ⅰ */
+  convertedAcquisitionPrice: number;
+  /** 2001 건물기준시가(원) */
+  base2001BuildingPrice: number;
+  /** ② 최초고시 토지가액 */
+  firstNoticeLandValue: number;
+  /** ③ 최초고시 건물기준시가(= 2001건물 × 산정기준율) */
+  firstNoticeBuildingValue: number;
+  /** ④ 취득당시 토지가액 */
+  acqLandValue: number;
+  /** ⑤ 취득당시 건물기준시가 */
+  acqBuildingValue: number;
+  firstNoticeAcqBaseRate: number;
+  acquisitionAcqBaseRate: number;
+}
+
 /** 건물 기준시가 엔진 결과 */
 export interface BuildingStandardPriceResult {
   /** 상증 1세트 */
@@ -185,6 +230,8 @@ export interface BuildingStandardPriceResult {
   compositeTotal?: number;
   /** 다필지 면적가중평균 ㎡당 공시지가 echo */
   weightedLandPricePerM2?: number;
+  /** 공동주택 고시 전 취득 환산 결과 */
+  apartmentConversion?: ApartmentConversionResult;
   warnings: string[];
   legalBasis: string;
 }

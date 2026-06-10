@@ -24,6 +24,7 @@ import {
   calcSameYearTransferStdPrice,
   calcSpecialAdjustmentRate,
   weightedAvgLandPrice,
+  calcApartmentConversion,
 } from "./building-standard-price-helpers";
 
 export type {
@@ -155,7 +156,7 @@ export function calcBuildingStandardPrice(
     if (input.parkingLotCount === undefined || !(input.parkingLotCount > 0)) {
       throw new BuildingStdPriceError("기계식주차: 주차대수 필수 입력");
     }
-  } else if (!hasComposite(input) && !(input.floorArea > 0)) {
+  } else if (!hasComposite(input) && !input.apartmentConversion && !(input.floorArea > 0)) {
     throw new BuildingStdPriceError("연면적(㎡) 필수 입력");
   }
 
@@ -182,6 +183,15 @@ export function calcBuildingStandardPrice(
       });
     }
     return { valuation, warnings, legalBasis: LEGAL_BASIS };
+  }
+
+  // 공동주택 고시 전 취득 → 취득당시 기준시가 환산(양도 전용)
+  if (input.apartmentConversion) {
+    if (input.acquisitionYear === undefined) {
+      throw new BuildingStdPriceError("공동주택 환산: 취득연도 필수");
+    }
+    const conv = calcApartmentConversion(input.builtYear, input.acquisitionYear, input.apartmentConversion);
+    return { apartmentConversion: conv, warnings, legalBasis: LEGAL_BASIS };
   }
 
   // 양도 모드 (취득시·양도시 2시점)

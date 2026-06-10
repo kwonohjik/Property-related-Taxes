@@ -6,12 +6,14 @@
  * 시점별 ㎡당 금액·기계식주차 특수산식·조정율(상증)·산정기준율(2000이전 취득)·§164⑧ 동일연도 환산.
  * 정수곱 후 /1,000,000, 잔가율·조정율 곱, 1,000원 절사(truncateToThousand), 면적 곱 후 원 절사 순서.
  */
-import { safeMultiply, truncateToThousand } from "./tax-utils";
+import { safeMultiply, safeMultiplyThenDivide, truncateToThousand } from "./tax-utils";
 import type {
   BuildingPointInput,
   BuildingStdPriceBreakdown,
   SpecialAdjustmentFeatures,
   LandParcel,
+  ApartmentConversionInput,
+  ApartmentConversionResult,
 } from "./types/building-standard-price.types";
 import {
   resolveNewBuildingBasePrice,
@@ -21,6 +23,7 @@ import {
   calcResidualRate,
   durableYearsToResidualGroup,
   resolveResidualGroup,
+  resolveResidualGroup2001,
   RESIDUAL_RATE_STEP,
   resolveAcqBaseGroup,
   resolveAcqBaseRate,
@@ -72,7 +75,7 @@ export function calcEffectiveResidualRate(
   valuationYear: number,
   remodel?: RemodelInfo,
 ): number {
-  const baseResid = calcResidualRate(group, valuationYear - builtYear);
+  const baseResid = calcResidualRate(group, valuationYear - builtYear, valuationYear);
   if (!remodel?.isInheritanceGift || remodel.remodelYear === undefined) return baseResid;
   const elapsedToRemodel = Math.max(0, remodel.remodelYear - builtYear);
   const surcharge = RESIDUAL_RATE_STEP[group] * elapsedToRemodel * 0.3;
@@ -116,7 +119,9 @@ export function calcPointBreakdown(
     );
   }
 
-  const residualGroup = resolveResidualGroup(point.structureKey);
+  // 2001년 평가(산정기준율 경로 등)는 3그룹 잔가율표 — 그룹 매핑도 시대별(황토·철파이프)
+  const residualGroup =
+    year <= 2001 ? resolveResidualGroup2001(point.structureKey) : resolveResidualGroup(point.structureKey);
   const residualRate = calcEffectiveResidualRate(residualGroup, builtYear, year, remodel);
 
   // 정수곱(부동소수 누적 회피) 후 /1,000,000 — 지수 3개가 각 ÷100
@@ -217,6 +222,58 @@ export function calcAcqBaseBreakdown(
     standardPrice,
     acqBaseRate,
     appliedLandPriceYear: 2001,
+  };
+}
+
+/**
+ * 공동주택 고시 전 취득 → 취득당시 기준시가 환산.
+ * Ⅰ = ① × (취득토지④ + 취득건물⑤) ÷ (최초고시토지② + 최초고시건물③).
+ *   토지 = 공시지가 × 대지지분면적 / 건물 = 2001건물기준시가 × 산정기준율(해당 취득시점, I~III그룹).
+ */
+export function calcApartmentConversion(
+  builtYear: number,
+  acquisitionYear: number,
+  ac: ApartmentConversionInput,
+): ApartmentConversionResult {
+  // 2001 건물기준시가(조정 미적용)
+  const base2001 = calcPointBreakdown(
+    2001,
+    { structureKey: ac.structureKey, usageNo: ac.usageNo, landPricePerM2: ac.building2001LandPrice },
+    ac.totalFloorArea,
+    builtYear,
+    1.0,
+    "공동주택 2001 건물기준시가",
+  ).standardPrice;
+
+  const acqGroup = resolveAcqBaseGroup(ac.structureKey);
+  if (acqGroup === undefined) {
+    throw new BuildingStdPriceError(`공동주택 환산: 구조 '${ac.structureKey}'는 산정기준율표 미수록`);
+  }
+  const firstNoticeAcqBaseRate = resolveAcqBaseRate(acqGroup, builtYear, ac.firstNoticeYear);
+  const acquisitionAcqBaseRate = resolveAcqBaseRate(acqGroup, builtYear, acquisitionYear);
+  if (firstNoticeAcqBaseRate === undefined || acquisitionAcqBaseRate === undefined) {
+    throw new BuildingStdPriceError("공동주택 환산: 산정기준율 미수록(취득연도 2000 초과 또는 셀 부재)");
+  }
+
+  const firstNoticeLandValue = Math.floor(ac.firstNoticeLandPrice * ac.landAreaM2);
+  const acqLandValue = Math.floor(ac.acquisitionLandPrice * ac.landAreaM2);
+  const firstNoticeBuildingValue = Math.floor(base2001 * firstNoticeAcqBaseRate);
+  const acqBuildingValue = Math.floor(base2001 * acquisitionAcqBaseRate);
+
+  const numerator = acqLandValue + acqBuildingValue;
+  const denominator = firstNoticeLandValue + firstNoticeBuildingValue;
+  if (denominator <= 0) throw new BuildingStdPriceError("공동주택 환산: 최초고시 토지+건물 합계가 0");
+  const convertedAcquisitionPrice = safeMultiplyThenDivide(ac.firstNoticeApartmentPrice, numerator, denominator);
+
+  return {
+    convertedAcquisitionPrice,
+    base2001BuildingPrice: base2001,
+    firstNoticeLandValue,
+    firstNoticeBuildingValue,
+    acqLandValue,
+    acqBuildingValue,
+    firstNoticeAcqBaseRate,
+    acquisitionAcqBaseRate,
   };
 }
 
