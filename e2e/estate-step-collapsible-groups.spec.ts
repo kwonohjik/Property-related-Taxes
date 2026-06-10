@@ -50,6 +50,27 @@ test.describe("상속재산 단계 그룹 접기/펼치기", () => {
     await expect(page.getByTestId("estate-group-summary-estate")).toHaveCount(0);
   });
 
+  test("각 그룹 제목 앞 섹션 번호 배지(1·2·3) 표시 — 피상속인 Step과 동일 형식", async ({
+    page,
+  }) => {
+    test.setTimeout(60_000);
+    await gotoEstateStep(page);
+
+    // 토글 헤더(번호 배지 포함)에 번호 + 제목이 함께 노출
+    await expect(page.getByTestId("estate-group-toggle-estate")).toContainText("1");
+    await expect(page.getByTestId("estate-group-toggle-estate")).toContainText(
+      "상속재산 목록",
+    );
+    await expect(page.getByTestId("estate-group-toggle-stock")).toContainText("2");
+    await expect(page.getByTestId("estate-group-toggle-stock")).toContainText(
+      "주식·지분 목록",
+    );
+    await expect(page.getByTestId("estate-group-toggle-presumed")).toContainText("3");
+    await expect(page.getByTestId("estate-group-toggle-presumed")).toContainText(
+      "추정상속재산 §15",
+    );
+  });
+
   test("3그룹 토글 독립 동작 (주식·추정상속재산)", async ({ page }) => {
     test.setTimeout(60_000);
     await gotoEstateStep(page);

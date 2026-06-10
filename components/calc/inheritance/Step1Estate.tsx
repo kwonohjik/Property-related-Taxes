@@ -41,6 +41,8 @@ export function Step1({ form, set }: { form: FormState; set: FormSet }) {
 
       <CollapsibleEstateGroup
         groupKey="estate"
+        sectionNum={1}
+        tone="sky"
         title="상속재산 목록"
         description={
           <>
@@ -62,40 +64,40 @@ export function Step1({ form, set }: { form: FormState; set: FormSet }) {
         />
       </CollapsibleEstateGroup>
 
-      <div className="border-t border-dashed border-gray-200 dark:border-gray-700 pt-4">
-        <CollapsibleEstateGroup
-          groupKey="stock"
-          title="주식·지분 목록"
-          description="상장주식과 비상장주식을 구분하여 입력하세요"
-          count={form.stockItems.length}
-          totalAmount={stockTotal}
-        >
-          <StockValuationForm
-            items={form.stockItems}
-            onChange={(items) => set({ stockItems: items })}
-            mode="inheritance"
-            valuationDate={form.deathDate}
-            heirs={form.heirs}
-            hideHeader
-          />
-        </CollapsibleEstateGroup>
-      </div>
+      <CollapsibleEstateGroup
+        groupKey="stock"
+        sectionNum={2}
+        tone="emerald"
+        title="주식·지분 목록"
+        description="상장주식과 비상장주식을 구분하여 입력하세요"
+        count={form.stockItems.length}
+        totalAmount={stockTotal}
+      >
+        <StockValuationForm
+          items={form.stockItems}
+          onChange={(items) => set({ stockItems: items })}
+          mode="inheritance"
+          valuationDate={form.deathDate}
+          heirs={form.heirs}
+          hideHeader
+        />
+      </CollapsibleEstateGroup>
 
-      <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-        <CollapsibleEstateGroup
-          groupKey="presumed"
-          title="추정상속재산 §15"
-          description="상속개시 전 2년 이내 처분·인출·차입 중 사용처가 객관적으로 불분명한 금액 (1년 이내 2억 OR 2년 이내 5억 임계)."
-          count={form.presumedItems.length}
-          totalAmount={presumedTotal}
-        >
-          <PresumedInheritanceInput
-            items={form.presumedItems}
-            heirs={form.heirs}
-            onChange={(items) => set({ presumedItems: items })}
-          />
-        </CollapsibleEstateGroup>
-      </div>
+      <CollapsibleEstateGroup
+        groupKey="presumed"
+        sectionNum={3}
+        tone="amber"
+        title="추정상속재산 §15"
+        description="상속개시 전 2년 이내 처분·인출·차입 중 사용처가 객관적으로 불분명한 금액 (1년 이내 2억 OR 2년 이내 5억 임계)."
+        count={form.presumedItems.length}
+        totalAmount={presumedTotal}
+      >
+        <PresumedInheritanceInput
+          items={form.presumedItems}
+          heirs={form.heirs}
+          onChange={(items) => set({ presumedItems: items })}
+        />
+      </CollapsibleEstateGroup>
     </div>
   );
 }
