@@ -90,4 +90,104 @@ describe("BSP Pre-Do anchor (PDF 2025 손계산) — Phase B 엔진", () => {
     expect(r.valuation?.pricePerM2).toBe(1_347_000);
     expect(r.valuation?.standardPrice).toBe(269_400_000);
   });
+
+  // BSP-03: 상증 + 조정율 다구분 곱(II 최고층수 11층=110 · IV 상가1층=120 · V 1회개축=110 → 1.452)
+  // (비주거 → 연면적 90도 II 후보지만 max=110 채택). built 2020 경과5 잔가율 0.910.
+  // ㎡당 raw = 1,234,200 × 0.910 × 1.452 = 1,630,773.1 → 1,630,000 × 100㎡ = 163,000,000
+  it("BSP-03 상증 조정율 다구분 곱(110×120×110/1e6=1.452): ㎡당 1,630,000 / 163,000,000", () => {
+    const input: BuildingStandardPriceInput = {
+      taxType: "inheritance_gift",
+      floorArea: 100,
+      builtYear: 2020,
+      valuationYear: 2025,
+      isResidentialUse: false,
+      valuation: { structureKey: "rc", usageNo: 1, landPricePerM2: 7_500_000 },
+      specialFeatures: { maxFloors: 11, commercialFloor: 20, remodelCount: 26 },
+    };
+    const r = calcBuildingStandardPrice(input);
+    expect(r.valuation?.adjustmentRate).toBeCloseTo(1.452, 10);
+    expect(r.valuation?.pricePerM2).toBe(1_630_000);
+    expect(r.valuation?.standardPrice).toBe(163_000_000);
+  });
+
+  // BSP-06: 양도 2시점 일반(취득 2015 / 양도 2025, 구조 rc·용도#1·built 2010·면적 100). 조정율 미적용.
+  // 취득 2015: 650,000×100×110×125÷1e6=893,750 ×잔가0.910=813,312.5→813,000 ×100=81,300,000
+  // 양도 2025: 1,234,200 ×잔가0.730(경과15)=900,966→900,000 ×100=90,000,000
+  it("BSP-06 양도 2시점: 취득 81,300,000 / 양도 90,000,000", () => {
+    const input: BuildingStandardPriceInput = {
+      taxType: "transfer",
+      floorArea: 100,
+      builtYear: 2010,
+      acquisitionYear: 2015,
+      transferYear: 2025,
+      acquisition: { structureKey: "rc", usageNo: 1, landPricePerM2: 5_000_000 }, // 2015 위치 125
+      transfer: { structureKey: "rc", usageNo: 1, landPricePerM2: 7_500_000 }, // 2025 위치 132
+    };
+    const r = calcBuildingStandardPrice(input);
+    expect(r.acquisition?.standardPrice).toBe(81_300_000);
+    expect(r.transfer?.standardPrice).toBe(90_000_000);
+    expect(r.acquisition?.appliedLandPriceYear).toBe(2015);
+  });
+
+  // BSP-07: 양도 취득시 2000.12.31 이전 → 산정기준율(소령 §164⑤). 취득 1995·built 1990·rc.
+  // 2001지수표 ㎡당=400,000×100×100×105÷1e6=420,000 ×잔가0.802(경과11)=336,840→336,000
+  // 산정기준율 0.981(I·built1990·취득1995) → floor(336,000×100×0.981)=32,961,600
+  it("BSP-07 산정기준율(취득 2000이전): 취득 32,961,600 · 율 0.981", () => {
+    const input: BuildingStandardPriceInput = {
+      taxType: "transfer",
+      floorArea: 100,
+      builtYear: 1990,
+      acquisitionYear: 1995,
+      transferYear: 2010,
+      acquisition: { structureKey: "rc", usageNo: 1, landPricePerM2: 3_000_000 }, // 2001 위치 105
+      transfer: { structureKey: "rc", usageNo: 1, landPricePerM2: 4_500_000 },
+    };
+    const r = calcBuildingStandardPrice(input);
+    expect(r.acquisition?.standardPrice).toBe(32_961_600);
+    expect(r.acquisition?.acqBaseRate).toBe(0.981);
+    expect(r.acquisition?.appliedLandPriceYear).toBe(2001);
+  });
+
+  // BSP-08: §164⑧ 동일연도(2010) 제1산식. 전기 2009·built 2005·보유 6월/조정 12월.
+  // acq(2010)=683,100×0.910=621,621→621,000×100=62,100,000 / prev(2009)=645,150×0.928=598,699.2→598,000×100=59,800,000
+  // 양도 = floor(62,100,000 + (62,100,000−59,800,000)×0.5) = 63,250,000
+  it("BSP-08 §164⑧ 제1산식(동일연도): 취득 62,100,000 / 양도 63,250,000", () => {
+    const input: BuildingStandardPriceInput = {
+      taxType: "transfer",
+      floorArea: 100,
+      builtYear: 2005,
+      acquisitionYear: 2010,
+      transferYear: 2010,
+      holdingMonths: 6,
+      adjustMonths: 12,
+      acquisition: { structureKey: "rc", usageNo: 1, landPricePerM2: 4_500_000 }, // 2010 위치 115
+      transfer: { structureKey: "rc", usageNo: 1, landPricePerM2: 4_500_000 },
+      prevLandPricePerM2: 4_000_000, // 2009 위치 115
+    };
+    const r = calcBuildingStandardPrice(input);
+    expect(r.sameYearAdjusted).toBe(true);
+    expect(r.acquisition?.standardPrice).toBe(62_100_000);
+    expect(r.transfer?.standardPrice).toBe(63_250_000);
+  });
+
+  // BSP-14: §164⑧ 동일연도 제2산식(새 기준시가 고시 선택). newNotice 700,000원/㎡.
+  // newStd = 700,000×100 = 70,000,000 / 양도 = floor(62,100,000 + (70,000,000−62,100,000)×0.5) = 66,050,000
+  it("BSP-14 §164⑧ 제2산식(동일연도): 양도 66,050,000", () => {
+    const input: BuildingStandardPriceInput = {
+      taxType: "transfer",
+      floorArea: 100,
+      builtYear: 2005,
+      acquisitionYear: 2010,
+      transferYear: 2010,
+      holdingMonths: 6,
+      adjustMonths: 12,
+      sameYearFormula: "new",
+      newNoticePricePerM2: 700_000,
+      acquisition: { structureKey: "rc", usageNo: 1, landPricePerM2: 4_500_000 },
+      transfer: { structureKey: "rc", usageNo: 1, landPricePerM2: 4_500_000 },
+    };
+    const r = calcBuildingStandardPrice(input);
+    expect(r.sameYearAdjusted).toBe(true);
+    expect(r.transfer?.standardPrice).toBe(66_050_000);
+  });
 });
