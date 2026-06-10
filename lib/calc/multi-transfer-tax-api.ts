@@ -5,9 +5,10 @@
 
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
+import { sumResidenceMonths } from "@/lib/stores/calc-wizard-asset-residence";
 import type { MultiTransferFormData, PropertyItem } from "@/lib/stores/multi-transfer-tax-store";
 import type { AggregateTransferResult } from "@/lib/tax-engine/transfer-tax-aggregate";
-import { toEngineReductions } from "@/lib/calc/transfer-tax-api-helpers";
+import { toEngineReductions, toRentalHousingExceptionApi } from "@/lib/calc/transfer-tax-api-helpers";
 
 const isHousingLike = (pt: string) =>
   pt === "housing" || pt === "right_to_move_in" || pt === "presale_right";
@@ -72,31 +73,57 @@ export function buildPropertyPayload(form: TransferFormData) {
         ]
       : undefined;
 
-  const isEstimated = form.acquisitionMethod === "estimated" || (primary?.useEstimatedAcquisition ?? false);
-  const isAppraisal = form.acquisitionMethod === "appraisal";
+  // 취득가 산정방식은 자산-수준 플래그에서 도출 (단건 callTransferTaxAPI와 동일 규칙).
+  // 폼-전역 form.acquisitionMethod / form.appraisalValue 는 deprecated — 더 이상 사용하지 않음.
+  const isAppraisal = primary?.isAppraisalAcquisition === true;
+  const isEstimated = !isAppraisal && (primary?.useEstimatedAcquisition ?? false);
   const acquisitionCause = primary?.acquisitionCause ?? "purchase";
 
+  // §97② 단서 swap 분리 입력 — 단건과 동일: 두 필드 중 하나라도 입력되면 분리 전송.
+  const capEx = parseAmount(primary?.capitalExpenditure ?? "");
+  const directTransferExpense = parseAmount(primary?.transferExpense ?? "");
+  const formTotalTransferExpense = parseAmount(form.totalTransferExpense ?? "");
+  const effectiveTransferExpense = directTransferExpense > 0 ? directTransferExpense : formTotalTransferExpense;
+
+  // ⑬ 장기임대주택 거주주택 비과세 특례 (소령 §155⑳) — 토글 OFF 시 undefined, body에서 제외
+  const rhPayload = primary ? toRentalHousingExceptionApi(primary) : undefined;
+
+  // 주의: 부담부증여·재개발(§166)·겸용주택·이월과세(§97의2)·일반건물/상업용 환산·PHD(§164⑤)·
+  // 1990 환산·다필지·토지/건물 분리·가업상속(§97의2④)·건별 다자산(companion)은 다건 합산
+  // route(⑭)가 매핑하지 않으므로 여기서 전송하지 않는다 — validateMultiSupportedModes에서 명시 차단.
   return {
     propertyType: primaryKind,
     transferPrice: parseAmount(form.contractTotalPrice),
     transferDate: form.transferDate,
     acquisitionPrice: (isEstimated || isAppraisal) ? 0 : parseAmount(primary?.fixedAcquisitionPrice ?? "0"),
     acquisitionDate: primary?.acquisitionDate ?? "",
+    // 자산-수준 매매계약일 — §99의3 등 매매계약일 기준 조문 시한 판정용
+    assetContractDate: primary?.assetContractDate || undefined,
     expenses: (isEstimated || isAppraisal) ? 0 : parseAmount(primary?.directExpenses ?? "0"),
+    // §97② 단서 swap — 둘 다 0이면 undefined로 보내 swap 비활성 (단건과 동일 게이트)
+    capitalExpenditure: (capEx || effectiveTransferExpense) ? capEx : undefined,
+    transferExpense: (capEx || effectiveTransferExpense) ? (effectiveTransferExpense || undefined) : undefined,
     useEstimatedAcquisition: isEstimated,
     standardPriceAtAcquisition: isEstimated ? parseAmount(primary?.standardPriceAtAcq ?? "") : undefined,
     standardPriceAtTransfer: isEstimated ? parseAmount(primary?.standardPriceAtTransfer ?? "") : undefined,
-    acquisitionMethod: form.acquisitionMethod || "actual",
-    appraisalValue: isAppraisal ? parseAmount(form.appraisalValue) : undefined,
-    isSelfBuilt: form.isSelfBuilt || undefined,
-    buildingType: form.buildingType || undefined,
-    constructionDate: form.isSelfBuilt && form.constructionDate ? form.constructionDate : undefined,
+    acquisitionMethod: isAppraisal ? "appraisal" : isEstimated ? "estimated" : "actual",
+    // 감정가 모드 — 단건과 동일하게 자산 카드의 취득가 입력란(fixedAcquisitionPrice)이 감정가
+    appraisalValue: isAppraisal ? parseAmount(primary?.fixedAcquisitionPrice ?? "0") : undefined,
+    isSelfBuilt: primary?.isSelfBuilt || undefined,
+    buildingType: primary?.buildingType || undefined,
+    constructionDate: primary?.isSelfBuilt && primary?.constructionDate ? primary.constructionDate : undefined,
     extensionFloorArea:
-      form.buildingType === "extension" && form.extensionFloorArea
-        ? parseFloat(form.extensionFloorArea)
+      primary?.buildingType === "extension" && primary?.extensionFloorArea
+        ? parseFloat(primary.extensionFloorArea)
         : undefined,
     householdHousingCount: parseInt(form.householdHousingCount) || 0,
-    residencePeriodMonths: parseInt(form.residencePeriodMonths) || 0,
+    // §89①4호 가목 1세대1입주권 — 조합원입주권 수 (단건과 동일 fallback "0")
+    householdRightCount: parseInt(form.householdRightCount ?? "0") || 0,
+    // 거주기간 — interval 모드면 자산 구간 합산 (단건과 동일 규칙)
+    residencePeriodMonths:
+      primary?.residenceInputMode === "interval" && (primary?.residencePeriods?.length ?? 0) > 0
+        ? sumResidenceMonths(primary.residencePeriods, form.transferDate)
+        : parseInt(primary?.residencePeriodMonthsAsset || form.residencePeriodMonths) || 0,
     isRegulatedArea: form.isRegulatedArea,
     wasRegulatedAtAcquisition: form.wasRegulatedAtAcquisition,
     isUnregistered: form.isUnregistered,
@@ -154,6 +181,8 @@ export function buildPropertyPayload(form: TransferFormData) {
           },
         }
       : {}),
+    // ⑬ 장기임대주택 거주주택 비과세 특례 (소령 §155⑳) — 다건 route(⑭)가 매핑하는 지원 모드
+    ...(rhPayload ? { rentalHousingException: rhPayload } : {}),
   };
 }
 

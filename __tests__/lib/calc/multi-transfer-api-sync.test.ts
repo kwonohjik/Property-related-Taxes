@@ -1,0 +1,166 @@
+/**
+ * 다건 양도소득세 변환·검증 동기화 회귀 (H-2 · M-2)
+ *
+ * 2026-06-11 review-autofix:
+ *   M-2 — buildPropertyPayload가 deprecated 폼-전역 form.acquisitionMethod/appraisalValue에
+ *         의존하던 결함 → 자산-수준 isAppraisalAcquisition/useEstimatedAcquisition으로 전환.
+ *   H-2 — 합산 경로가 구조적으로 처리 못 하는 sub-object 모드(부담부증여·재개발·겸용·이월과세·
+ *         PHD·일반/상업건물·다필지·1990·가업상속·토지건물분리·companion)를 명시 차단.
+ *         per-asset 단건 엔진이 honor하는 단순 스칼라(assetContractDate·capitalExpenditure·
+ *         transferExpense·householdRightCount)는 build에서 전송.
+ */
+
+import { describe, it, expect } from "vitest";
+import {
+  buildPropertyPayload,
+} from "@/lib/calc/multi-transfer-tax-api";
+import {
+  validateMultiSupportedMode,
+  validateMultiSettings,
+} from "@/lib/calc/multi-transfer-tax-validate";
+import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
+import type { MultiTransferFormData, PropertyItem } from "@/lib/stores/multi-transfer-tax-store";
+
+function baseForm() {
+  const form = createDefaultTransferFormData();
+  form.transferDate = "2026-03-01";
+  form.contractTotalPrice = "500,000,000";
+  form.assets[0] = {
+    ...form.assets[0],
+    acquisitionDate: "2020-01-01",
+    fixedAcquisitionPrice: "300,000,000",
+  };
+  return form;
+}
+
+function makeProperty(form: PropertyItem["form"], label = "건1"): PropertyItem {
+  return { propertyId: "p1", propertyLabel: label, form, completionPercent: 100 };
+}
+
+function makeMultiForm(props: PropertyItem[]): MultiTransferFormData {
+  return {
+    taxYear: 2026,
+    properties: props,
+    activePropertyIndex: 0,
+    activeStep: "settings",
+    annualBasicDeductionUsed: "0",
+    basicDeductionAllocation: "MAX_BENEFIT",
+  };
+}
+
+// ─────────────────────────────────────────────────────────
+// M-2: 자산-수준 취득방식 도출
+// ─────────────────────────────────────────────────────────
+
+describe("[M-2] buildPropertyPayload 자산-수준 취득방식 도출", () => {
+  it("M-2-1: 감정가 모드는 자산 isAppraisalAcquisition에서 도출 (폼-전역 미사용)", () => {
+    const form = baseForm();
+    form.assets[0] = { ...form.assets[0], isAppraisalAcquisition: true, fixedAcquisitionPrice: "420,000,000" };
+    const payload = buildPropertyPayload(form) as Record<string, unknown>;
+    expect(payload.acquisitionMethod).toBe("appraisal");
+    expect(payload.appraisalValue).toBe(420_000_000);
+    expect(payload.acquisitionPrice).toBe(0); // 감정가 모드 → 취득가 0, 엔진이 appraisalValue 사용
+  });
+
+  it("M-2-2: 환산취득가 모드는 자산 useEstimatedAcquisition에서 도출", () => {
+    const form = baseForm();
+    form.assets[0] = {
+      ...form.assets[0],
+      useEstimatedAcquisition: true,
+      standardPriceAtAcq: "100,000,000",
+      standardPriceAtTransfer: "200,000,000",
+    };
+    const payload = buildPropertyPayload(form) as Record<string, unknown>;
+    expect(payload.acquisitionMethod).toBe("estimated");
+    expect(payload.useEstimatedAcquisition).toBe(true);
+    expect(payload.standardPriceAtAcquisition).toBe(100_000_000);
+    expect(payload.standardPriceAtTransfer).toBe(200_000_000);
+  });
+
+  it("M-2-3: 실가 모드(기본) → actual", () => {
+    const payload = buildPropertyPayload(baseForm()) as Record<string, unknown>;
+    expect(payload.acquisitionMethod).toBe("actual");
+    expect(payload.useEstimatedAcquisition).toBe(false);
+    expect(payload.acquisitionPrice).toBe(300_000_000);
+  });
+});
+
+// ─────────────────────────────────────────────────────────
+// H-2(지원): per-asset 단건 엔진 honor 스칼라 전송
+// ─────────────────────────────────────────────────────────
+
+describe("[H-2] 지원 스칼라 필드 전송", () => {
+  it("H2-S1: assetContractDate·householdRightCount 전송", () => {
+    const form = baseForm();
+    form.householdRightCount = "2";
+    form.assets[0] = { ...form.assets[0], assetContractDate: "2025-12-01" };
+    const payload = buildPropertyPayload(form) as Record<string, unknown>;
+    expect(payload.assetContractDate).toBe("2025-12-01");
+    expect(payload.householdRightCount).toBe(2);
+  });
+
+  it("H2-S2: §97② swap — capitalExpenditure/transferExpense 둘 중 하나라도 입력 시 분리 전송", () => {
+    const form = baseForm();
+    form.assets[0] = { ...form.assets[0], capitalExpenditure: "5,000,000", transferExpense: "0" };
+    const payload = buildPropertyPayload(form) as Record<string, unknown>;
+    expect(payload.capitalExpenditure).toBe(5_000_000);
+    expect(payload.transferExpense).toBeUndefined();
+  });
+
+  it("H2-S3: 둘 다 0이면 swap 비활성 (undefined)", () => {
+    const payload = buildPropertyPayload(baseForm()) as Record<string, unknown>;
+    expect(payload.capitalExpenditure).toBeUndefined();
+    expect(payload.transferExpense).toBeUndefined();
+  });
+});
+
+// ─────────────────────────────────────────────────────────
+// H-2(차단): 고급 sub-object 모드 명시 차단
+// ─────────────────────────────────────────────────────────
+
+describe("[H-2] 미지원 고급 모드 명시 차단", () => {
+  const cases: Array<[string, (f: ReturnType<typeof baseForm>) => void]> = [
+    ["부담부증여", (f) => { f.assets[0] = { ...f.assets[0], transferType: "burdened_gift" }; }],
+    ["재개발", (f) => { f.assets[0] = { ...f.assets[0], assetKind: "redevelopment_apt" }; }],
+    ["겸용주택", (f) => { f.assets[0] = { ...f.assets[0], assetKind: "housing", isMixedUseHouse: true }; }],
+    ["일반건물", (f) => { f.assets[0] = { ...f.assets[0], assetKind: "general_building" }; }],
+    ["이월과세", (f) => { f.assets[0] = { ...f.assets[0], acquisitionCause: "carryover_gift" }; }],
+    ["PHD", (f) => { f.assets[0] = { ...f.assets[0], usePreHousingDisclosure: true }; }],
+    ["1990토지", (f) => { f.assets[0] = { ...f.assets[0], assetKind: "land", pre1990Enabled: true }; }],
+    ["다필지", (f) => { f.assets[0] = { ...f.assets[0], assetKind: "land", parcelMode: true }; }],
+    ["토지건물분리", (f) => { f.assets[0] = { ...f.assets[0], hasSeperateLandAcquisitionDate: true }; }],
+  ];
+
+  it.each(cases)("%s 자산은 validateMultiSupportedMode가 차단 사유 반환", (_label, mutate) => {
+    const form = baseForm();
+    mutate(form);
+    expect(validateMultiSupportedMode(form)).not.toBeNull();
+  });
+
+  it("companion(자산 2건) 차단", () => {
+    const form = baseForm();
+    form.assets = [form.assets[0], { ...form.assets[0] }];
+    expect(validateMultiSupportedMode(form)).not.toBeNull();
+  });
+
+  it("일반 매매 단일 주택은 통과(null)", () => {
+    expect(validateMultiSupportedMode(baseForm())).toBeNull();
+  });
+
+  it("validateMultiSettings가 차단 모드 포함 시 라벨과 함께 에러 반환", () => {
+    const form = baseForm();
+    form.assets[0] = { ...form.assets[0], transferType: "burdened_gift" };
+    const multi = makeMultiForm([makeProperty(form, "강남APT")]);
+    const err = validateMultiSettings(multi);
+    expect(err).toContain("강남APT");
+    expect(err).toContain("부담부증여");
+  });
+
+  it("validateMultiSettings 정상 단일주택 2건은 통과(null)", () => {
+    const multi = makeMultiForm([
+      makeProperty(baseForm(), "건1"),
+      makeProperty(baseForm(), "건2"),
+    ]);
+    expect(validateMultiSettings(multi)).toBeNull();
+  });
+});

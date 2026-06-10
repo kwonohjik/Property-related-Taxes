@@ -6,7 +6,7 @@
  *
  * P0-2 원칙: 세율 × 금액 곱셈은 반드시 applyRate() 사용.
  */
-import { TRANSFER, NBL } from "./legal-codes";
+import { TRANSFER, NBL, TRANSFER_REDUCTION_ARTICLE } from "./legal-codes";
 import {
   applyRate,
   isSurchargeSuspended,
@@ -630,14 +630,14 @@ export function calculateTransferTax(
         label: "§99의3 신축주택 과세특례 — 양도소득금액 차감",
         formula: `양도소득금액 ${transferIncomeBefore993.toLocaleString()} - 감면 양도소득금액 ${new993PreliminaryResult.reducibleTransferIncome.toLocaleString()} = ${transferIncome.toLocaleString()}`,
         amount: transferIncome,
-        legalBasis: "조특법 §99의3",
+        legalBasis: TRANSFER_REDUCTION_ARTICLE.NEW_99_3,
       });
     } else {
       steps.push({
         label: "§99의3 신축주택 과세특례 — 적용 불가",
         formula: new993PreliminaryResult.ineligibleReasons.map((r) => r.message).join(" · "),
         amount: 0,
-        legalBasis: "조특법 §99의3",
+        legalBasis: TRANSFER_REDUCTION_ARTICLE.NEW_99_3,
       });
     }
   }

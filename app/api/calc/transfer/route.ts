@@ -700,9 +700,8 @@ export async function POST(request: NextRequest) {
         partialUsageChange: data.mixedUse.partialUsageChange
           ? {
               ...data.mixedUse.partialUsageChange,
-              usageChangeDate: data.mixedUse.partialUsageChange.usageChangeDate
-                ? new Date(data.mixedUse.partialUsageChange.usageChangeDate)
-                : undefined,
+              // date-coerce: 빈문자열·invalid → undefined 가드 (API 변환에서 new Date() 제거 후 route 단일 변환)
+              usageChangeDate: toOptionalDate(data.mixedUse.partialUsageChange.usageChangeDate),
             }
           : undefined,
       };
@@ -789,8 +788,8 @@ export async function POST(request: NextRequest) {
         error: {
           code: "INTERNAL_ERROR",
           message: errMsg || "계산 중 오류가 발생했습니다",
-          // 디버깅용 — 운영 환경에서는 제거 권장. 현재는 사례 27 진단을 위해 노출
-          stack: errStack,
+          // 스택은 비운영 환경에서만 노출 (운영 내부 경로·구현 정보 노출 차단)
+          ...(process.env.NODE_ENV !== "production" ? { stack: errStack } : {}),
         },
       },
       { status: 500 },

@@ -129,11 +129,6 @@ export interface CarryoverScenarioADetail {
   localIncomeTax?: number;
   /** 총 납부세액 (결정세액 + 지방소득세) */
   totalTax?: number;
-  /**
-   * 신고서 양식 표 표시용 취득일 — 증여자 취득일(ISO 날짜 문자열 "YYYY-MM-DD").
-   * FilingFormTableHelpers에서 폼 acquisitionDate 대신 이 값을 사용해 보유기간 계산.
-   */
-  displayAcquisitionDate?: string;
 }
 
 /**

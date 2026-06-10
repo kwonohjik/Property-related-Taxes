@@ -102,7 +102,14 @@ export async function POST(request: NextRequest) {
       transferDate: new Date(p.transferDate),
       acquisitionPrice: p.acquisitionPrice,
       acquisitionDate: new Date(p.acquisitionDate),
+      // ⑭ 자산-수준 매매계약일 — §99의3 등 매매계약일 기준 조문 시한 판정용 (per-asset 단건 엔진 honor)
+      assetContractDate: p.assetContractDate ? new Date(p.assetContractDate) : undefined,
       expenses: p.expenses,
+      // ⑭ §97② 단서 swap 분리 입력 — 미명시 시 undefined (swap 비활성)
+      capitalExpenditure: p.capitalExpenditure,
+      transferExpense: p.transferExpense,
+      // ⑭ §89①4호 가목 1세대1입주권 — 조합원입주권 수 (right_to_move_in 자산 전용)
+      householdRightCount: p.householdRightCount,
       useEstimatedAcquisition: p.useEstimatedAcquisition,
       standardPriceAtAcquisition: p.standardPriceAtAcquisition,
       standardPriceAtTransfer: p.standardPriceAtTransfer,

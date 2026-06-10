@@ -264,13 +264,13 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
       </p>
 
       {/* ① 토지 면적 */}
-      <FieldCard label="토지 면적" unit="㎡" hint="주택 부수 토지 면적. 3시점 토지 기준시가 계산의 기준값.">
+      <FieldCard label="토지 면적" unit="㎡" hint="주택 부수 토지 면적(㎡). 3시점 토지 기준시가 계산의 기준값.">
         <input
           type="text"
           inputMode="decimal"
           value={asset.inhHouseValLandArea}
           onChange={(e) => onChange({ inhHouseValLandArea: e.target.value.replace(/[^0-9.]/g, "") })}
-          placeholder="예) 184.2"
+          placeholder="토지 면적 입력"
           className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         />
       </FieldCard>
