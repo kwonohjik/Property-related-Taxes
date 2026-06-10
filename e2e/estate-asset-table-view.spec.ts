@@ -100,4 +100,31 @@ test.describe("AT: 자산 카드 테이블 + 편집 모달", () => {
     await page.getByRole("dialog").getByRole("button", { name: "삭제" }).click();
     await expect(page.locator('[data-testid^="presumed-table-row-"]')).toHaveCount(0);
   });
+
+  test("AT-4: 분류·옵션 컬럼은 실제 입력만 — 기본 토지 행에 영농·가업·일반 안내 칩 미표시", async ({
+    page,
+  }) => {
+    test.setTimeout(90_000);
+    await gotoInheritanceStep1(page);
+
+    // 기본(미분류) 토지 추가 — 영농·가업은 "입력 가능 안내"일 뿐 미선택 상태
+    await addLandAsset(page, { area: "300", unitPrice: "1000000" });
+
+    const row = page.locator('[data-testid^="estate-table-row-"]').first();
+    await expect(row).toBeVisible();
+    await expect(row).toContainText("토지");
+
+    // 미선택 안내 칩(✓ 없음)은 읽기 전용 테이블에서 숨김 — isActiveData=false
+    await expect(row).not.toContainText("영농 §16⑤");
+    await expect(row).not.toContainText("가업 §15⑤");
+    await expect(row).not.toContainText("일반"); // 간주분류 기본(none) 라벨
+    await expect(row).not.toContainText("법정분할"); // 협의분할 미전환 기본
+
+    // 모달에서는 분류 입력용으로 영농·가업 칩이 여전히 노출(상호작용 유지)
+    await row.click();
+    await expect(page.getByTestId("estate-edit-dialog")).toBeVisible();
+    await expect(
+      page.locator('[data-testid^="estate-chip-farming-"]'),
+    ).not.toHaveCount(0);
+  });
 });

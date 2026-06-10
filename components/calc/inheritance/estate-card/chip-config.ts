@@ -49,6 +49,14 @@ export interface ChipState {
   mark?: "on" | "off";
   /** 사용자 지정값(기본값과 다름) 표시용 violet 외곽 */
   isUserOverride?: boolean;
+  /**
+   * 실제 적용·설정된 비기본 옵션인지 여부 (읽기 전용 테이블 필터용).
+   *   true  → 실제 입력·적용된 데이터 (✓ 적용됨 또는 사용자가 명시 설정한 분류·토글)
+   *   false/undefined → 기본/미설정 안내 칩 (일반·법정분할·영농/가업 미선택·최대주주 기본)
+   * 상호작용 칩(EstateItemEditor·EstateStockChipsHeader)은 이 값을 무시하고 전체 노출.
+   * 판정 술어는 countNonDefaultOptions와 동일한 item 필드 기준 (단일 진실).
+   */
+  isActiveData?: boolean;
   /** hover tooltip */
   tooltip?: string;
 }
@@ -139,6 +147,7 @@ export function resolveChips({ item, mode, heirsCount, showMajorShareholderChip 
     tone: deemed === "none" ? "violet" : "amber",
     isExpandable: true,
     isToggle: false,
+    isActiveData: deemed !== "none",
     tooltip: "간주상속재산 분류 (§8·§9·§10) — 클릭하여 변경",
   });
 
@@ -159,6 +168,8 @@ export function resolveChips({ item, mode, heirsCount, showMajorShareholderChip 
       isExpandable: false,
       isToggle: true,
       isUserOverride,
+      // 적용(✓)되었거나 사용자가 명시 설정(override)한 경우만 실제 데이터
+      isActiveData: eligible || isUserOverride,
       tooltip: "§22 금융재산공제 (상증령 §19①) — 클릭하여 ON→OFF→기본 순환",
     });
   }
@@ -173,6 +184,8 @@ export function resolveChips({ item, mode, heirsCount, showMajorShareholderChip 
         tone: "gray",
         isExpandable: true,
         isToggle: false,
+        // 법정분할 = 기본(자동 안분) 상태 — 실제 입력 아님
+        isActiveData: false,
         tooltip: "민법 §1009 자동 안분 — 클릭하여 협의분할 입력",
       });
     } else if (allocations.length === 0) {
@@ -182,6 +195,8 @@ export function resolveChips({ item, mode, heirsCount, showMajorShareholderChip 
         tone: "amber",
         isExpandable: true,
         isToggle: false,
+        // 협의분할 모드로 전환됨(heirAllocations 정의) — 비기본 설정
+        isActiveData: true,
         tooltip: "분배 대상이 없습니다 — 상속인을 선택하세요",
       });
     } else {
@@ -192,6 +207,7 @@ export function resolveChips({ item, mode, heirsCount, showMajorShareholderChip 
         tone: "sky",
         isExpandable: true,
         isToggle: false,
+        isActiveData: true,
         tooltip: "상속인·수유자별 직접 분배 (민법 §1013·§1073)",
       });
     }
@@ -206,6 +222,7 @@ export function resolveChips({ item, mode, heirsCount, showMajorShareholderChip 
       tone: "violet",
       isExpandable: true,
       isToggle: false,
+      isActiveData: item.farmingCategory !== undefined,
       tooltip: "영농상속 자산 분류 (§16⑤) — 클릭하여 분류 선택",
     });
   }
@@ -225,6 +242,7 @@ export function resolveChips({ item, mode, heirsCount, showMajorShareholderChip 
       tone: "violet",
       isExpandable: true,
       isToggle: false,
+      isActiveData: item.familyBusinessCategory !== undefined,
       tooltip: "가업상속 자산 분류 (§15⑤) — 클릭하여 분류 선택",
     });
   }
@@ -237,6 +255,8 @@ export function resolveChips({ item, mode, heirsCount, showMajorShareholderChip 
       tone: "amber",
       isExpandable: false,
       isToggle: true,
+      // ON일 때만 푸시되는 칩 → 항상 실제 데이터
+      isActiveData: true,
       tooltip: "저당채무 §14 자동공제 ON — 클릭하여 OFF",
     });
   }
@@ -251,6 +271,7 @@ export function resolveChips({ item, mode, heirsCount, showMajorShareholderChip 
       tone: isMajor ? "rose" : "gray",
       isExpandable: false,
       isToggle: true,
+      isActiveData: isMajor,
       tooltip: "§22② 최대주주 보유주식은 금융재산공제 배제 — 클릭하여 토글",
     });
   }

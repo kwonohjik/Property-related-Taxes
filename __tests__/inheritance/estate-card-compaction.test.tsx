@@ -411,3 +411,83 @@ describe("CC — chip-config 시맨틱 정정 (hidden_expandable 칩 행 미포�
     expect(chips.map((c) => c.key)).toContain("family-business");
   });
 });
+
+// ============================================================
+// Anchor — isActiveData (읽기 전용 테이블 "실제 입력만" 필터)
+//   판정 술어는 countNonDefaultOptions와 동일 (단일 진실).
+//   상호작용 칩(모달·주식 헤더)은 isActiveData 무시 → 전체 노출.
+// ============================================================
+
+describe("resolveChips — isActiveData (테이블 실제입력 필터)", () => {
+  function chipBy(item: EstateItem, key: string, heirsCount = 0) {
+    return resolveChips({ item, mode: "inheritance", heirsCount }).find(
+      (c) => c.key === key,
+    );
+  }
+  // 테이블이 실제로 렌더하는 칩 집합 (필터 동치)
+  function activeKeys(item: EstateItem, heirsCount = 0): string[] {
+    return resolveChips({ item, mode: "inheritance", heirsCount })
+      .filter((c) => c.isActiveData === true)
+      .map((c) => c.key);
+  }
+
+  it("토지 기본(미분류) → 영농·가업·일반·평가액 모두 isActiveData=false → 옵션 칩 0개", () => {
+    const item = makeItem({ category: "real_estate_land", marketValue: 200_000_000 });
+    expect(chipBy(item, "farming")?.isActiveData).toBe(false);
+    expect(chipBy(item, "family-business")?.isActiveData).toBe(false);
+    expect(chipBy(item, "classification")?.isActiveData).toBe(false);
+    expect(chipBy(item, "estimated-value")?.isActiveData).toBeFalsy();
+    expect(activeKeys(item)).toEqual([]);
+  });
+
+  it("영농 분류 입력 → farming isActiveData=true (✓ 적용)", () => {
+    const item = makeItem({ category: "real_estate_land", farmingCategory: "farmland" });
+    expect(chipBy(item, "farming")?.isActiveData).toBe(true);
+    expect(activeKeys(item)).toContain("farming");
+  });
+
+  it("가업 분류 입력 → family-business isActiveData=true", () => {
+    const item = makeItem({
+      category: "real_estate_land",
+      familyBusinessCategory: "business_real_estate",
+    });
+    expect(chipBy(item, "family-business")?.isActiveData).toBe(true);
+  });
+
+  it("간주분류(신탁) → classification isActiveData=true / 일반은 false", () => {
+    expect(
+      chipBy(makeItem({ deemedCategory: "trust" }), "classification")?.isActiveData,
+    ).toBe(true);
+    expect(chipBy(makeItem(), "classification")?.isActiveData).toBe(false);
+  });
+
+  it("협의분할: 법정분할(undefined)=false · 미입력([])=true · 입력=true", () => {
+    expect(
+      chipBy(makeItem(), "heir-allocation", 2)?.isActiveData,
+    ).toBe(false);
+    expect(
+      chipBy(makeItem({ heirAllocations: [] }), "heir-allocation", 2)?.isActiveData,
+    ).toBe(true);
+    expect(
+      chipBy(
+        makeItem({ heirAllocations: [{ heirId: "h1", amount: 1_000_000 }] }),
+        "heir-allocation",
+        2,
+      )?.isActiveData,
+    ).toBe(true);
+  });
+
+  it("financial 기본 → 금융재산공제 적용(✓) → section22 isActiveData=true", () => {
+    const item = makeItem({ category: "financial", marketValue: 500_000_000 });
+    expect(chipBy(item, "section22")?.isActiveData).toBe(true);
+  });
+
+  it("§14 담보공제 ON → secured-claim-14 isActiveData=true", () => {
+    const item = makeItem({
+      category: "real_estate_apartment",
+      mortgageAmount: 300_000_000,
+      deductSecuredClaimAsDebt: true,
+    });
+    expect(chipBy(item, "secured-claim-14")?.isActiveData).toBe(true);
+  });
+});
