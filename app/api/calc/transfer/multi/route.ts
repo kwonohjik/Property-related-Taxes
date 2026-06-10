@@ -276,6 +276,9 @@ export async function POST(request: NextRequest) {
     properties,
     annualBasicDeductionUsed: data.annualBasicDeductionUsed,
     basicDeductionAllocation: data.basicDeductionAllocation,
+    // ⑭ §133 5년 누적 한도 — aggregate M-8(applyFiveYearLimits)에서 소비.
+    // optional 필드라 TypeScript가 누락을 감지하지 못함 — 누락 시 5년 capping 상시 비활성.
+    priorReductionUsage: data.priorReductionUsage ?? [],
   };
 
   try {

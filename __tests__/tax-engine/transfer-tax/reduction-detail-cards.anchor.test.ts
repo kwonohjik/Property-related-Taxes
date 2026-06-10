@@ -379,3 +379,56 @@ describe("A-4: inheritedHouseValuationDetail anchor", () => {
     expect(result.inheritedHouseValuationDetail).toBeUndefined();
   });
 });
+
+// ============================================================
+// A-5: inheritedAcquisitionDetail anchor (R2-M2 — 카드 신설 대응)
+// ============================================================
+
+describe("A-5: inheritedAcquisitionDetail anchor", () => {
+  it("A-5a: Case B(의제취득일 후 상속) 신고가액 → acquisitionPrice = reportedValue (소령 §163⑨)", () => {
+    const input = baseInput({
+      transferPrice: 500_000_000,
+      acquisitionPrice: 0,
+      acquisitionDate: new Date("1995-01-01"),
+      transferDate: new Date("2024-01-01"),
+      isOneHousehold: true,
+      householdHousingCount: 1,
+      residencePeriodMonths: 24,
+      inheritedAcquisition: {
+        inheritanceDate: new Date("1995-01-01"), // 1985.1.1. 이후 → Case B
+        assetKind: "house_individual",
+        transferDate: new Date("2024-01-01"),
+        transferPrice: 500_000_000,
+        // 상속세 신고가액 — 그대로 취득가액 의제 (상증법 §60·§61, 소령 §163⑨)
+        reportedValue: 200_000_000,
+        reportedMethod: "supplementary",
+      },
+    });
+
+    const result = calculateTransferTax(input, makeMockRates());
+    expect(result.inheritedAcquisitionDetail).toBeDefined();
+
+    const d = result.inheritedAcquisitionDetail!;
+    // Case B: 취득가액 = 상속세 신고 평가가액 그대로
+    expect(d.acquisitionPrice).toBe(200_000_000);
+    expect(d.method).toBe("supplementary");
+    // 카드 헤더·산식 필드 — 비어 있으면 빈 카드 렌더
+    expect(typeof d.formula).toBe("string");
+    expect(d.formula.length).toBeGreaterThan(0);
+    expect(d.legalBasis.length).toBeGreaterThan(0);
+  });
+
+  it("A-5b: inheritedAcquisition 미제공 → inheritedAcquisitionDetail undefined (카드 미노출)", () => {
+    const input = baseInput({
+      transferPrice: 300_000_000,
+      acquisitionPrice: 100_000_000,
+      acquisitionDate: new Date("2010-01-01"),
+      transferDate: new Date("2024-01-01"),
+      isOneHousehold: true,
+      householdHousingCount: 1,
+      residencePeriodMonths: 36,
+    });
+    const result = calculateTransferTax(input, makeMockRates());
+    expect(result.inheritedAcquisitionDetail).toBeUndefined();
+  });
+});

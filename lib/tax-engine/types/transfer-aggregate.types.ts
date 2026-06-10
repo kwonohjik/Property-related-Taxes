@@ -28,12 +28,15 @@ export type RateGroup =
 /**
  * 자산 단위 입력 — TransferTaxInput에서 공통 필드 제외 + 식별자 추가.
  * `filingPenaltyDetails`/`delayedPaymentDetails`는 자산별로 입력 가능 (단건 엔진이 자산별 결정세액 기준 계산).
+ * `priorReductionUsage`는 인별 이력이므로 AggregateTransferInput top-level 전용 —
+ * 자산 단위에 허용하면 단건 STEP 8.5와 aggregate M-8이 이중 capping되어 자산별 표시값이 어긋난다.
  */
 export type TransferTaxItemInput = Omit<
   TransferTaxInput,
   | "annualBasicDeductionUsed"
   | "skipBasicDeduction"
   | "skipLossFloor"
+  | "priorReductionUsage"
 > & {
   propertyId: string;
   propertyLabel: string;

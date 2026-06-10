@@ -186,6 +186,29 @@ export function buildPropertyPayload(form: TransferFormData) {
   };
 }
 
+/**
+ * §133 5년 이력 — 다건 top-level 합성.
+ *
+ * 인별(동일 납세자) 이력이지만 다건 자산 편집은 단건 마법사(Step5)를 재사용하므로
+ * 각 건의 form.priorReductionUsage에 분산 입력될 수 있다. 동일 항목(연도·유형·금액)이
+ * 여러 건에 중복 입력된 경우는 같은 이력의 재입력으로 보고 1건으로 dedup하여 합성한다.
+ */
+export function mergePriorReductionUsage(
+  properties: PropertyItem[],
+): { year: number; type: string; amount: number }[] {
+  const seen = new Set<string>();
+  const merged: { year: number; type: string; amount: number }[] = [];
+  for (const p of properties) {
+    for (const r of p.form.priorReductionUsage ?? []) {
+      const key = `${r.year}:${r.type}:${r.amount}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      merged.push({ year: r.year, type: r.type, amount: r.amount });
+    }
+  }
+  return merged;
+}
+
 export async function callMultiTransferTaxAPI(
   multiForm: MultiTransferFormData,
   properties: PropertyItem[],
@@ -201,6 +224,8 @@ export async function callMultiTransferTaxAPI(
     properties: propertiesPayload,
     annualBasicDeductionUsed: parseAmount(multiForm.annualBasicDeductionUsed),
     basicDeductionAllocation: multiForm.basicDeductionAllocation,
+    // ⑬ §133 5년 누적 한도 — 인별 이력 (TypeScript 미감지 영역, 누락 시 침묵 stripping)
+    priorReductionUsage: mergePriorReductionUsage(properties),
   };
 
   const res = await fetch("/api/calc/transfer/multi", {

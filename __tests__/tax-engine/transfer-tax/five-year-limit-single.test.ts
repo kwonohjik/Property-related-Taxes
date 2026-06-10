@@ -57,8 +57,8 @@ describe("FS: §133② 5년 누적 한도 — 단건 경로 (STEP 8.5)", () => {
     );
     expect(result.reductionAmount).toBe(0);
     expect(result.determinedTax).toBe(result.calculatedTax);
-    // STEP 8.5 산식 step 노출 확인
-    expect(result.steps.some((s) => s.label === "§133 5년 누적 한도")).toBe(true);
+    // STEP 8.5 산식 step 노출 확인 (R2-M3: 연간캡 선처리 도입으로 라벨 "§133 종합한도"로 일반화)
+    expect(result.steps.some((s) => s.label === "§133 종합한도")).toBe(true);
   });
 
   it("FS-03: 과거 누적 1.4억 → 잔여 6천만으로 capping", () => {
