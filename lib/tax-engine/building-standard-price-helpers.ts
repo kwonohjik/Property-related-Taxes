@@ -11,6 +11,7 @@ import type {
   BuildingPointInput,
   BuildingStdPriceBreakdown,
   SpecialAdjustmentFeatures,
+  LandParcel,
 } from "./types/building-standard-price.types";
 import {
   resolveNewBuildingBasePrice,
@@ -139,6 +140,21 @@ export function calcPointBreakdown(
     adjustmentRate: adjustmentRate === 1 ? undefined : adjustmentRate,
     appliedLandPriceYear: year,
   };
+}
+
+/**
+ * 다필지 부속토지 면적가중평균 ㎡당 공시지가(고시 §6⑥). Σ(면적×지가) ÷ Σ면적.
+ * 위치지수 구간 판정용 — 정수 절사 없이 사용(구간 경계 영향 없음).
+ */
+export function weightedAvgLandPrice(parcels: LandParcel[]): number {
+  let areaSum = 0;
+  let valueSum = 0;
+  for (const p of parcels) {
+    areaSum += p.areaM2;
+    valueSum += p.areaM2 * p.pricePerM2;
+  }
+  if (areaSum <= 0) throw new BuildingStdPriceError("다필지 부속토지: 면적 합계가 0입니다.");
+  return valueSum / areaSum;
 }
 
 /**
