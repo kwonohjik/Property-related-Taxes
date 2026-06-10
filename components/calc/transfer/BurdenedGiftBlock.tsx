@@ -20,6 +20,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { BurdenedGiftPriorGiftsBlock } from "./BurdenedGiftPriorGiftsBlock";
 
 interface Props {
@@ -239,36 +240,36 @@ export function BurdenedGiftBlock({ asset, onChange }: Props) {
             }))}
           />
         </FieldCard>
-        <div className="space-y-1.5">
-          <label className="flex items-center gap-2 text-xs text-violet-900">
-            <input
-              type="checkbox"
-              checked={asset.bgIsGenerationSkip}
-              onChange={(e) => onChange({ bgIsGenerationSkip: e.target.checked })}
-              className="h-3.5 w-3.5"
+        <div className="space-y-2">
+          {/* 세대생략 증여 — ON 시 미성년 토글 펼침 (children은 checked일 때만 렌더) */}
+          <ToggleCard
+            variant="card"
+            size="sm"
+            tone="violet"
+            title="세대생략 증여"
+            description="§57 — 30% 또는 미성년 20억 초과 40% 할증"
+            checked={asset.bgIsGenerationSkip}
+            onCheckedChange={(v) => onChange({ bgIsGenerationSkip: v })}
+          >
+            <ToggleCard
+              variant="card"
+              size="sm"
+              tone="violet"
+              title="수증자 미성년"
+              description="세대생략 증여재산가액 20억 초과 시 40% 할증"
+              checked={asset.bgIsMinorDonee}
+              onCheckedChange={(v) => onChange({ bgIsMinorDonee: v })}
             />
-            <span>세대생략 증여 (§57 — 30% 또는 미성년 20억 초과 40% 할증)</span>
-          </label>
-          {asset.bgIsGenerationSkip && (
-            <label className="flex items-center gap-2 text-xs text-violet-900 pl-5">
-              <input
-                type="checkbox"
-                checked={asset.bgIsMinorDonee}
-                onChange={(e) => onChange({ bgIsMinorDonee: e.target.checked })}
-                className="h-3.5 w-3.5"
-              />
-              <span>수증자 미성년 (세대생략 증여재산가액 20억 초과 시 40% 할증)</span>
-            </label>
-          )}
-          <label className="flex items-center gap-2 text-xs text-violet-900">
-            <input
-              type="checkbox"
-              checked={asset.bgIsFiledOnTime}
-              onChange={(e) => onChange({ bgIsFiledOnTime: e.target.checked })}
-              className="h-3.5 w-3.5"
-            />
-            <span>법정신고기한 내 신고 (§69 신고세액공제 3%)</span>
-          </label>
+          </ToggleCard>
+          <ToggleCard
+            variant="card"
+            size="sm"
+            tone="emerald"
+            title="법정신고기한 내 신고"
+            description="§69 신고세액공제 3%"
+            checked={asset.bgIsFiledOnTime}
+            onCheckedChange={(v) => onChange({ bgIsFiledOnTime: v })}
+          />
         </div>
       </div>
 
