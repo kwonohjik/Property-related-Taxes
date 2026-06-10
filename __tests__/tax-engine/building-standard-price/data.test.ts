@@ -99,10 +99,14 @@ describe("D4 위치지수", () => {
     expect(resolveLocationIndex(2014, 0)).toBe(75);
     expect(resolveLocationIndex(2014, 50_000_000)).toBe(145);
   });
-  it("2026 위치지수표 부재 (R11) → undefined", () => {
-    expect(hasLocationIndexYear(2026)).toBe(false);
-    expect(resolveLocationIndex(2026, 1_000_000)).toBeUndefined();
-    expect(hasLocationIndexYear(2025)).toBe(true);
+  it("2026 위치지수 확보(R11 해소) — 계산사례 교차검증 + #18 오타 정정(108)", () => {
+    expect(hasLocationIndexYear(2026)).toBe(true);
+    expect(resolveLocationIndex(2026, 964_000)).toBe(102); // #15 80만~100만 (목구조 사례)
+    expect(resolveLocationIndex(2026, 1_115_000)).toBe(104); // #16 100~120만 (105→104 하향)
+    expect(resolveLocationIndex(2026, 1_450_000)).toBe(106); // #17 120~160만 (108→106)
+    expect(resolveLocationIndex(2026, 1_730_000)).toBe(108); // #18 160~200만 (111→108, 이미지 오타 118 아님)
+    expect(resolveLocationIndex(2026, 600_000)).toBe(97); // #13 50~65만 (98→97)
+    expect(resolveLocationIndex(2026, 80_000_000)).toBe(182); // #45 8천만 이상
   });
   it("2000 이전 = 2001년표", () => {
     expect(resolveLocationIndex(1999, 100_000)).toBe(90);
