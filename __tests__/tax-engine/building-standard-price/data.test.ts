@@ -478,11 +478,13 @@ describe("D3 용도지수 45항목 체계 (2009·2008)", () => {
     expect(resolveUsageIndex(2008, 1)).toBe(110);
     expect(resolveUsageIndex(2008, 44)).toBe(40);
   });
-  it("2008 #20~24 원본 인쇄 누락 → undefined(추정 금지) / listUsageOptions = 39항목", () => {
-    for (const no of [20, 21, 22, 23, 24]) expect(resolveUsageIndex(2008, no)).toBeUndefined();
-    expect(resolveUsageIndex(2008, 19)).toBe(100); // #19 실내운동(누락 직전)
-    expect(resolveUsageIndex(2008, 25)).toBe(110); // #25 방송국(누락 직후)
-    expect(listUsageOptions(2008).length).toBe(39); // 44 - 5(누락)
+  it("2008 #20~24(사용자 별표 보강): 종합병원=120·일반병원=100·장례식장=100·오피스텔=110·사무소=100 / listUsageOptions=44", () => {
+    expect(resolveUsageIndex(2008, 20)).toBe(120);
+    expect(resolveUsageIndex(2008, 21)).toBe(100);
+    expect(resolveUsageIndex(2008, 22)).toBe(100); // ★ 2009(110)와 다름
+    expect(resolveUsageIndex(2008, 23)).toBe(110);
+    expect(resolveUsageIndex(2008, 24)).toBe(100);
+    expect(listUsageOptions(2008).length).toBe(44);
   });
 });
 
@@ -533,10 +535,10 @@ describe("D3 용도지수 41/39항목 체계 (2003·2004 / 2001·2002 공통표)
       expect(resolveUsageIndex(y, 40)).toBe(40);
     }
   });
-  it("2003·2004 #30 화장시설 페이지 경계 누락 → undefined / listUsageOptions=39", () => {
-    expect(resolveUsageIndex(2003, 30)).toBeUndefined();
-    expect(resolveUsageIndex(2004, 30)).toBeUndefined();
-    expect(listUsageOptions(2003).length).toBe(39); // 40 - 1(누락)
+  it("2003·2004 #30 화장시설(사용자 별표 보강)=90 / listUsageOptions=40", () => {
+    expect(resolveUsageIndex(2003, 30)).toBe(90);
+    expect(resolveUsageIndex(2004, 30)).toBe(90);
+    expect(listUsageOptions(2003).length).toBe(40);
     expect(resolveUsageIndex(2003, 41)).toBeUndefined(); // 기계식(D9)
   });
   // (24) 2001·2002 공통: #1 단독+아파트 통합 100. #1~38 + 기계식 #39. #36 자동차매매장=100.
