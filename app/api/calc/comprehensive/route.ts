@@ -91,6 +91,7 @@ function toEngineInput(
   return {
     properties,
     taxpayerType: schema.taxpayerType,
+    isJointOwnershipSpecialCase: schema.isJointOwnershipSpecialCase,
     isOneHouseOwner: schema.isOneHouseOwner,
     birthDate: schema.birthDate ? parseDate(schema.birthDate) : undefined,
     acquisitionDate: schema.acquisitionDate

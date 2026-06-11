@@ -130,6 +130,10 @@ export async function callComprehensiveApi(
     taxpayerType,                                         // ⑬ body spread
     // 법인 시 명시 strip (엔진 무시가 1차 방어, API strip이 2차 — 3중 패턴)
     isOneHouseOwner: isCorporate ? false : formData.isOneHouseOwner,
+    // isJointOwnershipSpecialCase: 법인 시 strip — Zod refine이 3차 차단 (상호배타: isOneHouseOwner && isJointOwnershipSpecialCase)
+    isJointOwnershipSpecialCase: isCorporate
+      ? false
+      : (formData.isJointOwnershipSpecialCase ?? false),  // ③ normalize fallback (3중 일치)
     birthDate: isCorporate ? undefined : formData.birthDate || undefined,
     acquisitionDate: isCorporate ? undefined : formData.acquisitionDate || undefined,
     previousYearTotalTax: formData.previousYearTotalTax

@@ -200,7 +200,13 @@ function HousingTaxBaseSection({
           />
         ) : (
           <TaxRow
-            label={`기본공제 (${result.isOneHouseOwner ? "1세대1주택" : "일반"} ${formatKRW(result.basicDeduction)})`}
+            label={`기본공제 (${
+              result.isOneHouseOwner
+                ? "1세대1주택"
+                : result.isJointOwnershipApplied
+                ? "부부 공동명의 특례 (1세대1주택 의제)"
+                : "일반"
+            } ${formatKRW(result.basicDeduction)})`}
             amount={result.basicDeduction}
             sub
           />
@@ -248,6 +254,7 @@ function HousingTaxSection({
       return "§9②1호 공공주택사업자등 — 일반 누진세율 (주택 수 무관)";
     if (result.taxpayerType === "corporate_public")
       return "§9②2호 공익법인등 — §9①각호 세율";
+    if (result.isJointOwnershipApplied) return "§10의2 부부 공동명의 특례";
     if (result.isMultiHouseRateApplied) {
       return parseInt(result.assessmentDate.slice(0, 4)) <= 2022
         ? "다주택 중과세율 적용 (조정대상지역 2주택 또는 3주택 이상 — 구 §9①3호)"

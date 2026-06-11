@@ -79,8 +79,10 @@ export interface ComprehensiveFormData {
    *  - corporate_public:  §9②2호 — §9①각호(주택 수 분기) */
   taxpayerType: "individual" | "corporate_special" | "corporate_general" | "corporate_public";
   isOneHouseOwner: boolean;
-  birthDate: string;               // 생년월일 YYYY-MM-DD (고령자 공제용)
-  acquisitionDate: string;         // 최초 취득일 YYYY-MM-DD (장기보유 공제용)
+  /** 부부 공동명의 1주택자 특례 (§10의2) — 개인에만 적용, 법인 시 엔진 무시 */
+  isJointOwnershipSpecialCase: boolean;
+  birthDate: string;               // 생년월일 YYYY-MM-DD (고령자·신청인 공제용)
+  acquisitionDate: string;         // 최초 취득일 YYYY-MM-DD (장기보유·신청인 공제용)
 
   // ── Step 2: 주택 목록 ──
   properties: PropertyEntry[];
@@ -140,8 +142,9 @@ const DEFAULT_LAND_AGGREGATE: AggregateLandForm = {
 
 const defaultFormData: ComprehensiveFormData = {
   assessmentYear: String(new Date().getFullYear()),
-  taxpayerType: "individual",     // ② initial value
+  taxpayerType: "individual",              // ② initial value
   isOneHouseOwner: false,
+  isJointOwnershipSpecialCase: false,      // ② initial value
   birthDate: "",
   acquisitionDate: "",
   properties: [makeProperty()],
@@ -293,6 +296,9 @@ export const useComprehensiveWizardStore = create<ComprehensiveWizardState>()(
           // taxpayerType: 구 세션 복원 시 undefined → "individual" 폴백 (3중 일치)
           state.formData.taxpayerType =
             state.formData.taxpayerType ?? "individual";
+          // isJointOwnershipSpecialCase: 구 세션 복원 시 undefined → false 폴백 (3중 일치)
+          state.formData.isJointOwnershipSpecialCase =
+            state.formData.isJointOwnershipSpecialCase ?? false;
         }
       },
     },
