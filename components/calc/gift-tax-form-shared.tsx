@@ -317,18 +317,20 @@ export function validateStep(step: number, form: FormState): string | null {
     }
     // 1억 초과 입력은 엔진 가드(min 처리)로 안전 처리됨 — UI 차단 없음 (모순 방지)
 
-    // 엔진 superRefine 동기화 (⑧): 혼합 자산(N≥2)에서 특례 선택 시 귀속 미설정 차단
-    // 자산 1개는 엔진이 자동 귀속으로 처리하므로 여기서도 차단 없음
+    // 엔진 superRefine 동기화 (⑧): 혼합 자산(N≥2)에서 특례 선택 시 귀속 미설정 차단.
+    // 자산 1개는 엔진이 자동 귀속으로 처리하므로 차단 없음.
+    // Zod superRefine(property-valuation-input.ts)과 동일 조건 — 미귀속(undefined) 1개라도
+    // 있으면 차단. (일부만 태깅 후 신규 자산 추가 시 UI 통과↔API 400 모순 방지)
     if (form.specialTreatment !== "") {
       const allItems = [...form.giftItems, ...form.stockItems];
       if (allItems.length >= 2) {
-        const hasTagged = allItems.some(
-          (it) => it.isSpecialTreatmentAsset === true
+        const unassigned = allItems.filter(
+          (it) => it.isSpecialTreatmentAsset === undefined
         );
-        if (!hasTagged) {
+        if (unassigned.length > 0) {
           const label =
             form.specialTreatment === "startup" ? "창업자금" : "가업승계";
-          return `${label} 특례를 적용할 자산을 선택하세요. (위 "특례 귀속 자산 선택" 항목)`;
+          return `${label} 특례 적용 시 모든 자산의 특례 귀속 여부를 선택하세요. (위 "특례 귀속 자산 선택" 항목 — 미선택 ${unassigned.length}개)`;
         }
       }
     }
