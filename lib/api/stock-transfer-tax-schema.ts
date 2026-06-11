@@ -192,7 +192,7 @@ export const stockTransferInputSchema = z.object({
 
   // 양도가액
   transferPriceMode: transferPriceModeSchema,
-  transferActualInputMode: transferActualInputModeSchema.optional(),  // default "per_share"
+  transferActualInputMode: transferActualInputModeSchema.optional().default("total"),  // 3중 패턴 default: "total" (store·normalize·api 일치)
   perShareTransferPrice: z.number().min(0).optional(),
   transferTotalPrice: z.number().int().min(0).optional(),
   exchangePropertyValue: z.number().min(0).optional(),
@@ -213,7 +213,7 @@ export const stockTransferInputSchema = z.object({
   transferMarketSampleCounterparty: z.string().optional(),
 
   // R-2 자본조정 (무상증자·감자)
-  capitalAdjustments: z.array(capitalAdjustmentSchema).optional(),
+  capitalAdjustments: z.array(capitalAdjustmentSchema).max(100).optional(),
 
   // 환산 — 상장
   transferDatePriceAvg1Month: z.number().min(0).optional(),
@@ -263,10 +263,11 @@ export const stockTransferInputSchema = z.object({
   realEstateGroupBasicDeductionUsed: z.number().min(0),
 
   // 분할 매수·분할 양도 (Plan v2.2 — optional, lotsMode='split' 시 필수)
-  acquisitionLots: z.array(acquisitionLotSchema).optional(),
-  transferLots: z.array(transferLotSchema).optional(),
+  // .max() — 요청당 계산 비용 상한 (DoS 표면 차단; 실무상 lot 수는 수백 미만)
+  acquisitionLots: z.array(acquisitionLotSchema).max(500).optional(),
+  transferLots: z.array(transferLotSchema).max(500).optional(),
   costAllocationMethod: costAllocationMethodSchema.optional(),
-  specificMatchings: z.array(specificMatchingSchema).optional(),
+  specificMatchings: z.array(specificMatchingSchema).max(2000).optional(),
 });
 
 export type StockTransferInputSchema = z.infer<typeof stockTransferInputSchema>;
@@ -352,7 +353,7 @@ export function addStockRefines(
     // 양도가액 total 모드 필수성 (single 모드 한정 — split 모드는 위 게이트에서 차단)
     if (
       data.transferPriceMode === "actual" &&
-      (data.transferActualInputMode ?? "per_share") === "total" &&
+      (data.transferActualInputMode ?? "total") === "total" &&
       (!data.transferTotalPrice || data.transferTotalPrice <= 0)
     ) {
       ctx.addIssue({
@@ -513,8 +514,8 @@ export function addStockRefines(
  *   - 각 종목 결과 개별 계산 후 합산
  */
 export const stockTransferAggregateInputSchema = z.object({
-  /** 양도 종목 배열 (최소 1개) */
-  items: stockTransferInputSchema.array().min(1),
+  /** 양도 종목 배열 (최소 1개, 최대 100 — 요청당 계산 비용 상한) */
+  items: stockTransferInputSchema.array().min(1).max(100),
   /**
    * 다자산 합산 시 §103② 기본공제 그룹별 한도 적용 방식
    * - "each_item": 각 종목별 개별 공제 (단건과 동일 — 과다공제 가능)
@@ -591,8 +592,8 @@ export const foreignStockInputSchema = z.object({
   // ── FS-09 §178의5② 장기할부 분할 수령 ──
   /** 수령 방식: "single"(기본) | "installments"(장기할부) */
   transferReceiptMode: transferReceiptModeSchema.optional().default("single"),
-  /** 분할 수령 배열 (transferReceiptMode="installments" 시 필수, ≥2건) */
-  transferInstallmentReceipts: z.array(installmentReceiptSchema).optional(),
+  /** 분할 수령 배열 (transferReceiptMode="installments" 시 필수, ≥2건, 최대 120) */
+  transferInstallmentReceipts: z.array(installmentReceiptSchema).max(120).optional(),
 
   // ── 취득 정보 ──
   acquisitionDate: z.union([z.string(), z.date()]),

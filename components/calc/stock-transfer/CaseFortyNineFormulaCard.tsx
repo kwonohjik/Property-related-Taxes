@@ -63,7 +63,7 @@ export function CaseFortyNineFormulaCard({
         {isNetAssetOnly ? (
           <p className="text-fuchsia-700">
             순자산가치 단독 평가 (§165④3) = 1주당 순자산가치 ={" "}
-            <strong>{naPerShare.toLocaleString()}원</strong>
+            <strong>{naPerShare.toLocaleString()}</strong>
           </p>
         ) : (
           <>
@@ -72,18 +72,18 @@ export function CaseFortyNineFormulaCard({
             </p>
             <p className="text-fuchsia-700">
               = ({niPerShare.toLocaleString()} × {niWeight} + {naPerShare.toLocaleString()} ×{" "}
-              {naWeight}) ÷ 5 = <strong>{weighted.toLocaleString()}원</strong>
+              {naWeight}) ÷ 5 = <strong>{weighted.toLocaleString()}</strong>
             </p>
             {floor80Applied && (
               <p className="text-rose-700">
                 ※ 80% 하한 발동 (§165④1 단서): 1주당 순자산가치 × 80% ={" "}
-                {naPerShare.toLocaleString()} × 80% = <strong>{floor80Value.toLocaleString()}원</strong>
-                {" "}→ 양도기준시가 = <strong>{transferStdPriceAfterFloor.toLocaleString()}원</strong>
+                {naPerShare.toLocaleString()} × 80% = <strong>{floor80Value.toLocaleString()}</strong>
+                {" "}→ 양도기준시가 = <strong>{transferStdPriceAfterFloor.toLocaleString()}</strong>
               </p>
             )}
             {!floor80Applied && (
               <p className="text-emerald-700">
-                양도기준시가 = <strong>{transferStdPriceAfterFloor.toLocaleString()}원</strong>{" "}
+                양도기준시가 = <strong>{transferStdPriceAfterFloor.toLocaleString()}</strong>{" "}
                 (80% 하한 미발동)
               </p>
             )}
@@ -99,7 +99,7 @@ export function CaseFortyNineFormulaCard({
         <p className="text-fuchsia-700">
           = 1주당 액면가 × 주식수 = {acqFaceValuePerShare.toLocaleString()} ×{" "}
           {shareCount.toLocaleString()}주 ={" "}
-          <strong>{acquisitionStdPriceTotal.toLocaleString()}원</strong>
+          <strong>{acquisitionStdPriceTotal.toLocaleString()}</strong>
         </p>
       </section>
 
@@ -112,7 +112,7 @@ export function CaseFortyNineFormulaCard({
         <p className="text-fuchsia-700">
           = {transferPrice.toLocaleString()} × ({acqFaceValuePerShare.toLocaleString()} ÷{" "}
           {transferStdPriceAfterFloor.toLocaleString()}) ={" "}
-          <strong className="text-fuchsia-900">{acquisitionPrice.toLocaleString()}원</strong>
+          <strong className="text-fuchsia-900">{acquisitionPrice.toLocaleString()}</strong>
         </p>
       </section>
 
@@ -123,7 +123,7 @@ export function CaseFortyNineFormulaCard({
         </p>
         <p className="text-fuchsia-700">
           = 취득기준시가 × 1% = {acquisitionStdPriceTotal.toLocaleString()} × 1% ={" "}
-          <strong>{expenses.toLocaleString()}원</strong>
+          <strong>{expenses.toLocaleString()}</strong>
         </p>
       </section>
     </div>

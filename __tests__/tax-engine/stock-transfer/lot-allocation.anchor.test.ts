@@ -10,10 +10,40 @@
 
 import { describe, it, expect } from "vitest";
 import { allocateLots, resolveLotStartDate } from "@/lib/tax-engine/stock-transfer/lot-allocation";
+import { calcSplitModeTax } from "@/lib/tax-engine/stock-transfer/lot-allocation-tax";
 import type {
   AcquisitionLot,
   TransferLot,
+  LotMatchingDetail,
+  MatchedSubLot,
 } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
+
+/** 비대주주 분기 anchor용 최소 LotMatchingDetail (matched는 비대주주 분기에서 미사용) */
+function makeNonMajorLotDetail(totalGain: number): LotMatchingDetail {
+  const sub: MatchedSubLot = {
+    saleDate: new Date("2025-03-10"),
+    saleShares: 100,
+    perShareSalePrice: 15_000,
+    acquisitionDate: new Date("2023-01-15"),
+    buyShares: 100,
+    perShareBuyPrice: 5_000,
+    holdingDays: 785,
+    isShortTerm: false,
+    perLotGain: totalGain,
+    appliedRate: 0,
+    subLotTax: 0,
+  };
+  return {
+    method: "fifo",
+    matched: [sub],
+    totalTransferPrice: 1_500_000,
+    totalAcquisitionPrice: 500_000,
+    totalGain,
+    shortTermGain: 0,
+    longTermGain: totalGain,
+    warnings: [],
+  };
+}
 
 describe("lot-allocation Pre-Do anchor", () => {
   // AT-LOT-1: specific 개별법 N:M 매칭
@@ -259,6 +289,38 @@ describe("lot-allocation Pre-Do anchor", () => {
         preMergerAcquisitionDate: new Date("2018-06-20"),
       };
       expect(resolveLotStartDate(lot)).toEqual(new Date("2018-06-20"));
+    });
+  });
+
+  // ============================================================
+  // calcSplitModeTax 비대주주 SME 세율 (§104①11호 나목 1) 10%)
+  // 회귀: split 모드가 listed_otc_non_major에만 SME 10% 적용 →
+  //       unlisted_non_major·listed_off_market_non_major + 중소기업 누락 버그
+  //       (정상 경로 applyStockTaxRate는 3개 범주 전부 10% 적용)
+  // ============================================================
+  describe("calcSplitModeTax 비대주주 SME 세율 (회귀: 3개 범주 전부 10%)", () => {
+    const TAX_BASE = 10_000_000;
+    const detail = makeNonMajorLotDetail(10_000_000);
+
+    it("AT-SPLIT-SME-1: unlisted_non_major + 중소기업 → 10% (1,000,000)", () => {
+      const r = calcSplitModeTax(TAX_BASE, detail, "unlisted_non_major", true);
+      expect(r.calculatedTax).toBe(1_000_000); // 10%
+      expect(r.isMixedRate).toBe(false);
+    });
+
+    it("AT-SPLIT-SME-2: listed_off_market_non_major + 중소기업 → 10% (1,000,000)", () => {
+      const r = calcSplitModeTax(TAX_BASE, detail, "listed_off_market_non_major", true);
+      expect(r.calculatedTax).toBe(1_000_000); // 10%
+    });
+
+    it("AT-SPLIT-SME-3: listed_otc_non_major + 중소기업 → 10% (기존 정상 유지)", () => {
+      const r = calcSplitModeTax(TAX_BASE, detail, "listed_otc_non_major", true);
+      expect(r.calculatedTax).toBe(1_000_000); // 10%
+    });
+
+    it("AT-SPLIT-SME-4: unlisted_non_major + 비중소기업 → 20% (2,000,000)", () => {
+      const r = calcSplitModeTax(TAX_BASE, detail, "unlisted_non_major", false);
+      expect(r.calculatedTax).toBe(2_000_000); // 20%
     });
   });
 });
