@@ -1,7 +1,7 @@
 # §98의9 수도권 밖 준공후미분양주택 — UI 설계
 
 > 선행: `transfer-98-9-unsold.plan.md` · `.engine.design.md`
-> 위치: `UnifiedReductionPanel` **unsold_housing 그룹**(sky tone, "미분양주택" §98 시리즈) — 그룹 내 유일 활성 라디오 (나머지 9개 조문은 과거 일몰 stub).
+> 위치: `UnifiedReductionPanel` **unsold_housing 그룹**(sky tone, "미분양주택" §98 시리즈) — 그룹 내 유일 활성 라디오. 나머지 9개 조문은 미구현 stub — **취득기간이 종료됐을 뿐 폐지 조문이 아님**. 양도세는 양도 시점 과세이므로 해당 기간 취득분을 지금 양도하면 적용 대상 (후속 구현 백로그).
 
 ## 1. 사용자 시나리오
 
