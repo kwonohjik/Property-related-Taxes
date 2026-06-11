@@ -55,8 +55,9 @@ export function DeemedMajorShareholderSection({ form, set }: Props) {
 ② 지분 증가분에 과세 (이미 과점주주였으면 증가분만)
 ③ 법인이 과세대상 자산 보유 (부동산·차량·기계장비 등)
 
-## 비과세 (§9①)
-- 상장법인(유가증권시장·코스닥·코넥스)의 과점주주는 과세 제외
+## 상장법인 제외 (지방세기본법 §46, 시행령 §24①)
+- **유가증권시장·코스닥시장** 상장법인 주식은 과점주주 정의에서 제외 → 간주취득 과세 대상 아님
+- **코넥스(KONEX) 상장법인은 제외 대상이 아니므로 과세** — 시행령 §24①의 증권시장에 코넥스 미포함
 
 ## 과세표준
 법인 보유 과세대상 자산 시가표준액 × 과세 지분율(증가분)`}
@@ -64,17 +65,18 @@ export function DeemedMajorShareholderSection({ form, set }: Props) {
         />
       </div>
 
-      {/* 상장법인 여부 */}
+      {/* 상장법인 여부 — 유가증권·코스닥만 (코넥스 제외) */}
       <ToggleCard
         tone="rose"
-        title="상장법인 여부"
-        description="유가증권시장·코스닥·코넥스 상장법인은 과세 제외 (§7의2① 단서)"
+        title="유가증권시장·코스닥 상장법인 여부"
+        description="유가증권시장·코스닥 상장법인은 과점주주 정의에서 제외 (지방세기본법 §46). 코넥스는 과세 대상이므로 OFF로 두세요."
         checked={isListed}
         onCheckedChange={(v) => set("deemedMajorIsListed", v)}
       >
         <div className="rounded-md bg-rose-100 px-3 py-2 text-sm text-rose-800">
-          상장법인의 과점주주는 취득세 과세 대상이 아닙니다.
-          계산 없이 비과세로 처리됩니다.
+          유가증권시장·코스닥시장 상장법인의 과점주주는 취득세 과세 대상이 아닙니다 (계산 없이 비과세).
+          <br />
+          <span className="font-medium">코넥스(KONEX) 상장법인은 제외 대상이 아니므로 과세됩니다 — 이 토글을 OFF로 두고 지분율을 입력하세요.</span>
         </div>
       </ToggleCard>
 

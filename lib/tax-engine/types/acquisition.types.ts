@@ -151,7 +151,7 @@ export interface DeemedAcquisitionInput {
     corporateAssetValue: number;    // 법인 보유 과세대상 자산 시가표준액 합계
     prevShareRatio: number;         // 취득 전 지분율 (0~1)
     newShareRatio: number;          // 취득 후 지분율 (0~1)
-    isListed: boolean;              // 상장법인 여부 (상장이면 §9① 비과세)
+    isListed: boolean;              // 유가증권·코스닥 상장법인 여부 (과점주주 정의 제외 → 비과세, 지방세기본법 §46·시행령 §24①. 코넥스 제외 대상 아님 → false)
     /**
      * 합병·분할로 인한 주식 취득 여부 — 과세 제외 처리 (형식적 취득)
      * ※ 일반 비과세 명문 규정은 없음 — 지특법 §57의2⑤은 부실금융기관 인수·

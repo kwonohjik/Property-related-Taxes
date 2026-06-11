@@ -47,7 +47,8 @@ export type { LandCategory };
  * 판정 기준:
  * - 취득 전 비과점주주 → 취득 후 과점주주: 전체 지분율 기준 간주취득
  * - 취득 전 과점주주 → 지분율 증가: 증가분 지분율 기준 간주취득
- * - 상장법인 주식: 간주취득 비과세 (지방세법 §9①)
+ * - 유가증권·코스닥 상장법인 주식: 과점주주 정의에서 제외(지방세기본법 §46) → 간주취득 비과세
+ *   (코넥스는 제외 대상 아님 — 과세)
  */
 export function assessMajorShareholder(
   input: NonNullable<DeemedAcquisitionInput["majorShareholder"]>
@@ -55,7 +56,10 @@ export function assessMajorShareholder(
   const warnings: string[] = [];
   const { corporateAssetValue, prevShareRatio, newShareRatio, isListed, isMergerOrSplitShare, isFoundingShare } = input;
 
-  // ① 상장법인은 과점주주 간주취득 비과세 (지방세법 §9①)
+  // ① 증권시장 상장법인은 과점주주 정의에서 제외 → 간주취득 비과세
+  //    근거: 지방세기본법 §46(시행령 §24①) — "대통령령으로 정하는 증권시장"은
+  //    유가증권시장·코스닥시장만. 코넥스(KONEX)는 제외 대상이 아니므로 과세된다.
+  //    (isListed 플래그는 유가증권·코스닥 상장을 전제 — 코넥스는 false로 입력해야 함)
   if (isListed) {
     return {
       isSubjectToTax: false,
@@ -63,8 +67,12 @@ export function assessMajorShareholder(
       prevShareRatio,
       newShareRatio,
       taxableRatio: 0,
-      legalBasis: ACQUISITION.NON_TAXABLE,
-      warnings: [`상장법인 주식 취득은 과점주주 간주취득 과세 대상에서 제외됩니다 (${ACQUISITION.NON_TAXABLE}).`],
+      legalBasis: ACQUISITION.LISTED_NOT_OLIGOPOLY,
+      warnings: [
+        `유가증권시장·코스닥시장 상장법인 주식 취득은 과점주주 정의에서 제외되어 ` +
+        `간주취득 과세 대상이 아닙니다 (${ACQUISITION.LISTED_NOT_OLIGOPOLY}, 시행령 §24①). ` +
+        `다만 코넥스(KONEX) 상장법인은 제외 대상이 아니므로 과세됩니다.`,
+      ],
     };
   }
 
