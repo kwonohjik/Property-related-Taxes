@@ -27,6 +27,7 @@ import { PriorGiftInput } from "@/components/calc/PriorGiftInput";
 import { AppraisalFeeSection } from "@/components/calc/deductions/AppraisalFeeSection";
 import { resolveValuationMethod } from "@/lib/tax-engine/property-valuation";
 import { INITIAL_APPRAISAL_FEE_FIELDS } from "@/lib/calc/appraisal-fee-form";
+import { SpecialTreatmentAssetSelector } from "@/components/calc/gift/SpecialTreatmentAssetSelector";
 
 // ============================================================
 // 폼 상태 타입
@@ -315,6 +316,22 @@ export function validateStep(step: number, form: FormState): string | null {
       return "이미 공제받은 혼인·출산 공제액은 0원 이상이어야 합니다.";
     }
     // 1억 초과 입력은 엔진 가드(min 처리)로 안전 처리됨 — UI 차단 없음 (모순 방지)
+
+    // 엔진 superRefine 동기화 (⑧): 혼합 자산(N≥2)에서 특례 선택 시 귀속 미설정 차단
+    // 자산 1개는 엔진이 자동 귀속으로 처리하므로 여기서도 차단 없음
+    if (form.specialTreatment !== "") {
+      const allItems = [...form.giftItems, ...form.stockItems];
+      if (allItems.length >= 2) {
+        const hasTagged = allItems.some(
+          (it) => it.isSpecialTreatmentAsset === true
+        );
+        if (!hasTagged) {
+          const label =
+            form.specialTreatment === "startup" ? "창업자금" : "가업승계";
+          return `${label} 특례를 적용할 자산을 선택하세요. (위 "특례 귀속 자산 선택" 항목)`;
+        }
+      }
+    }
   }
   return null;
 }
@@ -597,8 +614,19 @@ export function Step3({
           value={form.specialTreatment === "" ? "none" : form.specialTreatment}
           onChange={(v) => {
             const val = v === "none" ? "" : v;
+            // 특례 타입이 바뀔 때 모든 자산의 isSpecialTreatmentAsset을 초기화
+            // N≥2 혼합 자산 귀속: false(미귀속)로 초기화 → 사용자가 명시 선택 필요
+            // 자산 1개: 엔진이 자동 귀속 처리 (isSpecialTreatmentAsset 미설정도 OK)
+            const resetGiftItems = val !== ""
+              ? form.giftItems.map((it) => ({ ...it, isSpecialTreatmentAsset: false as boolean | undefined }))
+              : form.giftItems.map((it) => ({ ...it, isSpecialTreatmentAsset: undefined as boolean | undefined }));
+            const resetStockItems = val !== ""
+              ? form.stockItems.map((it) => ({ ...it, isSpecialTreatmentAsset: false as boolean | undefined }))
+              : form.stockItems.map((it) => ({ ...it, isSpecialTreatmentAsset: undefined as boolean | undefined }));
             set({
               specialTreatment: val,
+              giftItems: resetGiftItems,
+              stockItems: resetStockItems,
               // startup이 아니면 startupInvestmentCompleted / startupNewHiresAtLeast10 초기화
               ...(val !== "startup" ? { startupInvestmentCompleted: false, startupNewHiresAtLeast10: false } : {}),
             });
@@ -610,6 +638,36 @@ export function Step3({
           ]}
         />
       </div>
+
+      {/* 특례 귀속 자산 선택 — 자산 1개:자동귀속, N개:멀티선택 */}
+      {form.specialTreatment !== "" && (
+        <SpecialTreatmentAssetSelector
+          specialTreatment={form.specialTreatment as "startup" | "family_business"}
+          allItems={[...form.giftItems, ...form.stockItems]}
+          onItemChange={(index, isSpecial) => {
+            // giftItems vs stockItems 인덱스 분리 — allItems 순서: giftItems 먼저
+            // isSpecial=true → 특례 귀속, false → 일반 스트림(Zod: false = "명시 일반")
+            // undefined가 아닌 boolean을 저장해야 Zod superRefine 통과
+            const giftLen = form.giftItems.length;
+            if (index < giftLen) {
+              const updated = form.giftItems.map((it, i) =>
+                i === index
+                  ? { ...it, isSpecialTreatmentAsset: isSpecial }
+                  : it
+              );
+              set({ giftItems: updated });
+            } else {
+              const stockIdx = index - giftLen;
+              const updated = form.stockItems.map((it, i) =>
+                i === stockIdx
+                  ? { ...it, isSpecialTreatmentAsset: isSpecial }
+                  : it
+              );
+              set({ stockItems: updated });
+            }
+          }}
+        />
+      )}
 
       {/* G-M7: 창업자금 투자 완료 여부 (§30의5④) — startup 선택 시 노출 */}
       {form.specialTreatment === "startup" && (
