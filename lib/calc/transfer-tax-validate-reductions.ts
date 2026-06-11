@@ -1,0 +1,92 @@
+/**
+ * STEP 2 (감면·공제) 검증 — §99의3 + 장기임대 §97 시리즈
+ *
+ * transfer-tax-validate.ts 800줄 정책 분리 (2026-06-11).
+ * 반환: 실패 시 ValidationIssue, 통과 시 null.
+ */
+
+import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
+import type { ValidationIssue } from "./transfer-tax-validate";
+
+export function validateStep2Reductions(step: number, form: TransferFormData): ValidationIssue | null {
+  // step 2: 감면·공제 (구 step 4)
+  if (step === 2) {
+    const assets = form.assets ?? [];
+    for (let ai = 0; ai < assets.length; ai++) {
+      const asset = assets[ai];
+      const fail = (message: string): ValidationIssue => ({ step, assetIndex: ai, message });
+      for (const r of asset.reductions ?? []) {
+        if (r.type === "public_expropriation") {
+          const cash = parseAmount(r.expropriationCash || "0");
+          const bond = parseAmount(r.expropriationBond || "0");
+          if (cash + bond <= 0) return fail("현금 또는 채권 보상액 중 최소 하나를 입력하세요.");
+          if (!r.expropriationApprovalDate) return fail("사업인정고시일을 선택하세요.");
+          if (form.transferDate && r.expropriationApprovalDate >= form.transferDate)
+            return fail("사업인정고시일은 양도일보다 이전이어야 합니다.");
+        }
+        // Phase 2 (2026-05-06): §99의3 신축주택 과세특례 본 요건 검증
+        if (r.type === "new_99_3") {
+          // 취득 유형별 필수 일자 검증
+          // Round 9 (2026-05-06): 1호 매매계약일은 자산-수준 assetContractDate fallback
+          // 메모리 feedback_validation_sync_8th_point.md ⑧ 정책 (UI/API fallback ↔ validate 동기화)
+          if (r.acquisitionType993 === "from_builder") {
+            const hasContractDate = !!(r.contractDate993 || asset.assetContractDate);
+            if (!hasContractDate) return fail("§99의3 1호 적용: 매매계약일을 펼침 영역 상단에 입력하세요.");
+          } else if (r.acquisitionType993 === "self_built") {
+            if (!r.usageApprovalDate993) return fail("§99의3 2호 적용: 사용승인일을 선택하세요.");
+          }
+          // 취득시 기준시가 필수 (PHD 환산 결과 또는 직접 입력)
+          // Round 10 (2026-05-06): PHD 모드 ON 시 자동 산출되어 standardPriceAtAcquisition993에 적용됨
+          // PHD 모드 ON + 입력 부족 시 자동 적용 안 되므로 동일 검증으로 차단됨 (UI/API fallback ↔ validate 동기화 정책)
+          if (parseAmount(r.standardPriceAtAcquisition993 || "0") <= 0) {
+            return fail(r.phdMode993
+              ? "§99의3 PHD 환산 모드: 환산 결과가 0입니다. 토지 공시지가·면적·최초공시 정보를 모두 입력했는지 확인 후 '적용' 버튼을 클릭하세요."
+              : "§99의3 적용: 취득시 기준시가를 입력하세요. (공동주택 최초고시 전 취득 시 PHD 환산 모드 ON 권장)");
+          }
+          // 5년 시점 기준시가 필수 (5년 후 양도인 경우 안분 산식에 사용)
+          if (parseAmount(r.standardPriceAt5Years || "0") <= 0) {
+            return fail("§99의3 적용: 5년 시점 기준시가를 입력하세요. (취득일+5년 인접 고시일 가격)");
+          }
+        }
+        // Phase 2 (2026-06-11): 장기임대 §97 시리즈 — 3-state 미선택 차단 (자동 안분 fallback 금지)
+        if (
+          r.type === "rental_97_3" ||
+          r.type === "rental_97_4" ||
+          r.type === "rental_97_5" ||
+          r.type === "rental_97_main" ||
+          r.type === "rental_97_proviso" ||
+          r.type === "rental_97_2"
+        ) {
+          const articleLabel: Record<string, string> = {
+            rental_97_3: "§97의3", rental_97_4: "§97의4", rental_97_5: "§97의5",
+            rental_97_main: "§97 본문", rental_97_proviso: "§97 단서", rental_97_2: "§97의2",
+          };
+          const label = articleLabel[r.type];
+          if (!r.rentalStartDate) return fail(`${label} 적용: 임대개시일을 입력하세요.`);
+          if ((r.type === "rental_97_3" || r.type === "rental_97_4" || r.type === "rental_97_5") && !r.registrationDate)
+            return fail(`${label} 적용: 임대사업자 등록일을 입력하세요.`);
+          // 3-state: "" = 미선택 → 차단 (간소화 모드 명시 선택 강제)
+          if (r.rentIncreaseViolationMode === "")
+            return fail(`${label} 적용: 임대료 5% 증액 위반 이력 여부(없음/있음)를 선택하세요.`);
+          if (r.rentIncreaseViolationMode === "has_violation" && (!r.rentHistory || r.rentHistory.length < 2))
+            return fail(`${label} 적용: 위반 이력 "있음" 선택 시 계약별 임대료 이력을 2건 이상 입력하세요.`);
+          if (r.hasVacancyOver6Months === null)
+            return fail(`${label} 적용: 6개월 이상 공실 여부(없음/있음)를 선택하세요.`);
+          if (r.hasVacancyOver6Months === true && (!r.vacancyPeriods || r.vacancyPeriods.length === 0))
+            return fail(`${label} 적용: 공실 "있음" 선택 시 공실 구간을 1건 이상 입력하세요.`);
+          if ((r.type === "rental_97_3" || r.type === "rental_97_5") && parseAmount((r as { officialPriceAtStart?: string }).officialPriceAtStart || "0") <= 0)
+            return fail(`${label} 적용: 임대개시일 당시 기준시가(주택+부속토지 합계)를 입력하세요.`);
+          if ((r.type === "rental_97_main" || r.type === "rental_97_proviso") && !(parseInt((r as { constructionYear?: string }).constructionYear || "") > 0))
+            return fail(`${label} 적용: 신축 연도를 입력하세요.`);
+          if (r.type === "rental_97_proviso" && !(r as { provisoCase?: string }).provisoCase)
+            return fail(`${label} 적용: 단서 유형(건설임대/매입임대/10년 이상)을 선택하세요.`);
+          if (r.type === "rental_97_2" && !(r as { rental972Type?: string }).rental972Type)
+            return fail(`${label} 적용: 건설임대(1호)/매입임대(2호) 유형을 선택하세요.`);
+        }
+      }
+    }
+  }
+
+  return null;
+}

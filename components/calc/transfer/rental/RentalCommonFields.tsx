@@ -1,0 +1,292 @@
+"use client";
+
+/**
+ * §97 시리즈 공통 입력 필드 묶음
+ * - 등록일(DateInput)·세무서 등록(ToggleCard)·임대개시일(DateInput)
+ * - 임대료 5% 증액 위반(RadioCardGroup, 3-state: "" 미선택)
+ *   → "있음" 시 계약 이력 표 (최소 2행 안내)
+ * - 6개월+ 공실(RadioCardGroup, 3-state: null 미선택)
+ *   → "있음" 시 구간 [시작~종료] [+ 추가]
+ */
+
+import { DateInput } from "@/components/ui/date-input";
+import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import type {
+  RentalCommonFormFields,
+  RentHistoryFormItem,
+  VacancyPeriodFormItem,
+} from "@/lib/stores/calc-wizard-asset-reduction";
+
+interface Props {
+  value: RentalCommonFormFields;
+  onChange: (patch: Partial<RentalCommonFormFields>) => void;
+  /** 섹션 번호 오프셋 — RentalCommonFields가 렌더하는 ③④ 섹션의 시작 번호 */
+  sectionOffset?: number;
+}
+
+const CONTRACT_TYPE_LABELS: Record<RentHistoryFormItem["contractType"], string> = {
+  jeonse: "전세",
+  monthly: "월세",
+  semi_jeonse: "반전세",
+};
+
+export function RentalCommonFields({ value, onChange, sectionOffset = 3 }: Props) {
+  // ── 임대료 계약 이력 ──
+  function addRentHistory() {
+    const next: RentHistoryFormItem = {
+      contractDate: "",
+      contractType: "monthly",
+      monthlyRent: "",
+      deposit: "",
+    };
+    onChange({ rentHistory: [...(value.rentHistory ?? []), next] });
+  }
+
+  function removeRentHistory(idx: number) {
+    onChange({ rentHistory: (value.rentHistory ?? []).filter((_, i) => i !== idx) });
+  }
+
+  function updateRentHistory(idx: number, patch: Partial<RentHistoryFormItem>) {
+    onChange({
+      rentHistory: (value.rentHistory ?? []).map((item, i) =>
+        i === idx ? { ...item, ...patch } : item,
+      ),
+    });
+  }
+
+  // ── 공실 구간 ──
+  function addVacancy() {
+    const next: VacancyPeriodFormItem = { startDate: "", endDate: "" };
+    onChange({ vacancyPeriods: [...(value.vacancyPeriods ?? []), next] });
+  }
+
+  function removeVacancy(idx: number) {
+    onChange({ vacancyPeriods: (value.vacancyPeriods ?? []).filter((_, i) => i !== idx) });
+  }
+
+  function updateVacancy(idx: number, patch: Partial<VacancyPeriodFormItem>) {
+    onChange({
+      vacancyPeriods: (value.vacancyPeriods ?? []).map((item, i) =>
+        i === idx ? { ...item, ...patch } : item,
+      ),
+    });
+  }
+
+  const sec3 = sectionOffset;
+  const sec4 = sectionOffset + 1;
+
+  return (
+    <>
+      {/* ③ 임대료 증액 제한 */}
+      <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-2">
+        <div className="flex items-center gap-2">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-[10px] font-bold text-violet-800 select-none">
+            {sec3}
+          </span>
+          <p className="text-xs font-semibold text-violet-700">임대료 증액 제한 (§97의3①2호)</p>
+        </div>
+        <div>
+          <p className="text-xs text-muted-foreground mb-1.5">임대료 5% 증액 위반 이력</p>
+          <RadioCardGroup
+            name="rentIncreaseViolationMode"
+            layout="inline"
+            tone="violet"
+            value={value.rentIncreaseViolationMode}
+            onChange={(v) => onChange({ rentIncreaseViolationMode: v as RentalCommonFormFields["rentIncreaseViolationMode"] })}
+            options={[
+              { value: "none", label: "없음" },
+              { value: "has_violation", label: "있음" },
+            ]}
+          />
+          {value.rentIncreaseViolationMode === "" && (
+            <p className="mt-1 text-[10px] text-rose-600">※ 반드시 선택하세요 (미선택 시 계산 불가)</p>
+          )}
+        </div>
+
+        {value.rentIncreaseViolationMode === "has_violation" && (
+          <div className="mt-2 space-y-2">
+            <p className="text-xs font-medium text-violet-800">
+              계약 이력 입력 (최소 2건 이상 — 위반 시점 확인용)
+            </p>
+            {(value.rentHistory ?? []).map((item, idx) => (
+              <div key={idx} className="rounded-md border border-violet-200 bg-white/70 dark:bg-white/5 p-2.5 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-violet-700">계약 {idx + 1}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeRentHistory(idx)}
+                    className="text-[10px] text-rose-600 hover:underline"
+                  >
+                    삭제
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div>
+                    <label className="mb-1 block text-[11px] font-medium">계약일</label>
+                    <DateInput
+                      value={item.contractDate}
+                      onChange={(v) => updateRentHistory(idx, { contractDate: v })}
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-[11px] font-medium">계약 유형</label>
+                    <Select
+                      value={item.contractType}
+                      onValueChange={(v) => v && updateRentHistory(idx, { contractType: v as RentHistoryFormItem["contractType"] })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue>{CONTRACT_TYPE_LABELS[item.contractType]}</SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="monthly">월세</SelectItem>
+                        <SelectItem value="jeonse">전세</SelectItem>
+                        <SelectItem value="semi_jeonse">반전세</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {(item.contractType === "monthly" || item.contractType === "semi_jeonse") && (
+                    <div>
+                      <label className="mb-1 block text-[11px] font-medium">월세 (원)</label>
+                      <CurrencyInput
+                        label=""
+                        value={item.monthlyRent}
+                        onChange={(v) => updateRentHistory(idx, { monthlyRent: v })}
+                      />
+                    </div>
+                  )}
+                  <div>
+                    <label className="mb-1 block text-[11px] font-medium">보증금 (원)</label>
+                    <CurrencyInput
+                      label=""
+                      value={item.deposit}
+                      onChange={(v) => updateRentHistory(idx, { deposit: v })}
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+            {(value.rentHistory ?? []).length < 2 && (
+              <p className="text-[10px] text-amber-700">
+                ※ 최소 2건 입력 필요 (현재 {(value.rentHistory ?? []).length}건)
+              </p>
+            )}
+            <button
+              type="button"
+              onClick={addRentHistory}
+              className="text-xs text-violet-700 hover:underline font-medium"
+            >
+              + 계약 추가
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* ④ 공실 기간 */}
+      <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2">
+        <div className="flex items-center gap-2">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-[10px] font-bold text-sky-800 select-none">
+            {sec4}
+          </span>
+          <p className="text-xs font-semibold text-sky-700">공실 기간</p>
+        </div>
+        <div>
+          <p className="text-xs text-muted-foreground mb-1.5">6개월 이상 공실 구간</p>
+          <RadioCardGroup
+            name="hasVacancyOver6Months"
+            layout="inline"
+            tone="sky"
+            value={value.hasVacancyOver6Months === null ? "" : value.hasVacancyOver6Months ? "yes" : "no"}
+            onChange={(v) => onChange({ hasVacancyOver6Months: v === "yes" ? true : false })}
+            options={[
+              { value: "no", label: "없음" },
+              { value: "yes", label: "있음" },
+            ]}
+          />
+          {value.hasVacancyOver6Months === null && (
+            <p className="mt-1 text-[10px] text-rose-600">※ 반드시 선택하세요 (미선택 시 계산 불가)</p>
+          )}
+        </div>
+
+        {value.hasVacancyOver6Months === true && (
+          <div className="mt-2 space-y-2">
+            <p className="text-xs font-medium text-sky-800">공실 구간 입력</p>
+            {(value.vacancyPeriods ?? []).map((period, idx) => (
+              <div key={idx} className="flex items-center gap-2 flex-wrap">
+                <DateInput
+                  value={period.startDate}
+                  onChange={(v) => updateVacancy(idx, { startDate: v })}
+                />
+                <span className="text-xs text-muted-foreground">~</span>
+                <DateInput
+                  value={period.endDate}
+                  onChange={(v) => updateVacancy(idx, { endDate: v })}
+                />
+                <button
+                  type="button"
+                  onClick={() => removeVacancy(idx)}
+                  className="text-[10px] text-rose-600 hover:underline"
+                >
+                  삭제
+                </button>
+              </div>
+            ))}
+            {(value.vacancyPeriods ?? []).length === 0 && (
+              <p className="text-[10px] text-amber-700">※ 공실 구간을 1개 이상 추가하세요</p>
+            )}
+            <button
+              type="button"
+              onClick={addVacancy}
+              className="text-xs text-sky-700 hover:underline font-medium"
+            >
+              + 구간 추가
+            </button>
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+// ── 등록일·세무서 등록·임대개시일 공통 상단 필드 (섹션 ① 내부에서 사용) ──
+
+interface RegistrationFieldsProps {
+  registrationDate: string;
+  isTaxRegistered: boolean;
+  rentalStartDate: string;
+  onRegistrationDateChange: (v: string) => void;
+  onIsTaxRegisteredChange: (v: boolean) => void;
+  onRentalStartDateChange: (v: string) => void;
+}
+
+export function RegistrationFields({
+  registrationDate,
+  isTaxRegistered,
+  rentalStartDate,
+  onRegistrationDateChange,
+  onIsTaxRegisteredChange,
+  onRentalStartDateChange,
+}: RegistrationFieldsProps) {
+  return (
+    <div className="space-y-2">
+      <div>
+        <label className="mb-1 block text-xs font-medium">지자체 임대사업자 등록일</label>
+        <DateInput value={registrationDate} onChange={onRegistrationDateChange} />
+      </div>
+      <ToggleCard
+        variant="chip"
+        checked={isTaxRegistered}
+        onCheckedChange={onIsTaxRegisteredChange}
+        title="세무서 사업자 등록"
+        description="소득세법 §168 — 임대개시 인정 요건"
+        tone="violet"
+      />
+      <div>
+        <label className="mb-1 block text-xs font-medium">임대개시일</label>
+        <DateInput value={rentalStartDate} onChange={onRentalStartDateChange} />
+      </div>
+    </div>
+  );
+}

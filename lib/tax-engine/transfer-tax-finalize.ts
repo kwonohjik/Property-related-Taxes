@@ -60,6 +60,7 @@ export interface FinalizeResult {
   newHousingReductionDetail: TransferTaxResult["newHousingReductionDetail"];
   publicExpropriationDetail: TransferTaxResult["publicExpropriationDetail"];
   selfFarmingReductionDetail: TransferTaxResult["selfFarmingReductionDetail"];
+  rental97TaxDetail: TransferTaxResult["rental97TaxDetail"];
   // 결정세액·가산세
   determinedTax: number;
   penaltyTax: number;
@@ -119,6 +120,7 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
     newHousingReductionDetail,
     publicExpropriationDetail,
     selfFarmingReductionDetail,
+    rental97TaxDetail,
   } = calcReductions(
     taxResult.calculatedTax,
     input.reductions,
@@ -135,6 +137,8 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
     input.acquisitionDate,
     input.standardPriceAtAcquisition,
     input.standardPriceAtTransfer,
+    // Phase 2 (2026-06-11): §97의2·§97의5 시한 — 매매계약일 우선
+    input.assetContractDate,
   );
   steps.push({
     label: "감면세액",
@@ -239,6 +243,7 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
     newHousingReductionDetail,
     publicExpropriationDetail,
     selfFarmingReductionDetail,
+    rental97TaxDetail,
     determinedTax,
     penaltyTax,
     penaltyBase,

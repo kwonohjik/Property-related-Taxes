@@ -174,10 +174,20 @@ function AssetReductionBlock({
         </div>
       )}
 
-      {/* 장기임대주택 서브패널 */}
+      {/* 장기임대주택 서브패널 — deprecated 안내 + 기존 입력 보존 */}
       {longTermRental && longTermRental.type === "long_term_rental" && (
         <div className="rounded-lg border border-dashed border-primary/40 bg-primary/3 p-4 space-y-3">
-          <p className="text-xs font-medium text-primary">임대 조건 입력</p>
+          {/* C: deprecated 배너 */}
+          <div className="rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 px-3 py-2">
+            <p className="text-xs font-semibold text-amber-800 dark:text-amber-300">
+              ⚠ 구 방식 입력입니다
+            </p>
+            <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5">
+              §97의3 정밀 계산은 <strong>감면 그룹 패널의 「§97의3」 항목</strong>을 이용하세요.
+              기존 입력 값은 하위 호환을 위해 유지되지만 이후 계산에서는 정밀 입력 방식이 우선됩니다.
+            </p>
+          </div>
+          <p className="text-xs font-medium text-primary">임대 조건 입력 (구 방식 — 보존)</p>
           <div className="flex items-center gap-2">
             <DecimalInput
               className="w-20"

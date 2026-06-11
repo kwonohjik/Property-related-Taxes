@@ -546,13 +546,17 @@ export const TRANSFER_REDUCTION_ARTICLE = {
   // ── 별도 카테고리 ──
   SELF_FARMING:       "조특법 §69",
   PUBLIC_EXPROPRIATION: "조특법 §77",
+  // ── 횡단 ──
+  /** 양도소득세 감면 중복 적용 배제 — 거주자 선택 1건 (law.go.kr 확인 2026-06-11. 종전 "§127②" 표기는 오기) */
+  OVERLAP_EXCLUSION:  "조특법 §127⑦",
 } as const;
 
 /**
  * 감면 효과 카테고리 — UI 라벨·계산 분기 분류.
  * - tax_amount: 산출세액 단계 감면 (산출세액 × 감면율)
  * - capital_gain: 양도소득금액 단계 차감
- * - long_term_holding_special: 장기보유특별공제율/추가율 특례 (§97의3, §97의4)
+ * - long_term_holding_special: 장기보유특별공제율 대체 특례 (§97의3 — 70% 단일율로 대체)
+ * - long_term_holding_additional: 장기보유특별공제 추가율 가산 (§97의4 — 보유기간 공제율 + 임대기간 추가율)
  * - house_count_exclusion: 1세대1주택 비과세 시 주택수 제외 (§99의4, §98의9, §99의2 등)
  * - separated_taxation: 분리과세 선택 (§98)
  * - cgt_with_normal_rate_and_ltsd: 누진세율 + 표1 장특공제 (§98의2)
@@ -561,6 +565,7 @@ export type ReductionEffectCategory =
   | "tax_amount"
   | "capital_gain"
   | "long_term_holding_special"
+  | "long_term_holding_additional"
   | "house_count_exclusion"
   | "separated_taxation"
   | "cgt_with_normal_rate_and_ltsd";

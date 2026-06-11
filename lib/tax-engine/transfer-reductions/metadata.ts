@@ -87,6 +87,7 @@ export const REDUCTION_METADATA: Record<TransferReductionId, ReductionMetadata> 
     effectCategory: "tax_amount",
     uiLabel: "§97 ① 본문 — 장기임대 50% 감면",
     effectLabel: "산출세액 50% 감면 (5년+ 임대)",
+    isFullyImplemented: true,
   },
   rental_97_proviso: {
     id: "rental_97_proviso",
@@ -95,6 +96,7 @@ export const REDUCTION_METADATA: Record<TransferReductionId, ReductionMetadata> 
     effectCategory: "tax_amount",
     uiLabel: "§97 ① 단서 — 100% 면제",
     effectLabel: "산출세액 100% 면제 (건설/매입 5+ 또는 10년+ 임대)",
+    isFullyImplemented: true,
   },
   rental_97_2: {
     id: "rental_97_2",
@@ -103,6 +105,7 @@ export const REDUCTION_METADATA: Record<TransferReductionId, ReductionMetadata> 
     effectCategory: "tax_amount",
     uiLabel: "§97의2 — 신축임대 100% 면제",
     effectLabel: "산출세액 100% 면제 (1999.8.20~2001.12.31 신축/취득)",
+    isFullyImplemented: true,
   },
   rental_97_3: {
     id: "rental_97_3",
@@ -111,14 +114,16 @@ export const REDUCTION_METADATA: Record<TransferReductionId, ReductionMetadata> 
     effectCategory: "long_term_holding_special",
     uiLabel: "§97의3 — 장특공제율 70%",
     effectLabel: "장기보유특별공제율 70% 적용 (10년+ 임대, 등록 ~2027.12.31)",
+    isFullyImplemented: true,
   },
   rental_97_4: {
     id: "rental_97_4",
     article: TRANSFER_REDUCTION_ARTICLE.RENTAL_97_4,
     category: "rental",
-    effectCategory: "long_term_holding_special",
+    // 2026-06-11 정정: §97의3(대체)과 달리 §97의4는 보유기간 공제율에 "가산" — 별도 effectCategory
+    effectCategory: "long_term_holding_additional",
     uiLabel: "§97의4 — 장특공제 추가율",
-    effectLabel: "장특공제 추가 2~10% (6~10년+ 임대)",
+    effectLabel: "장특공제 추가 2~10% (6~10년+ 임대) — 추가율 표 원문 확인 중",
   },
   rental_97_5: {
     id: "rental_97_5",
@@ -127,6 +132,7 @@ export const REDUCTION_METADATA: Record<TransferReductionId, ReductionMetadata> 
     effectCategory: "tax_amount",
     uiLabel: "§97의5 — 장기일반민간임대 100% 감면",
     effectLabel: "산출세액 100% 감면 (10년+ 임대, 취득·등록 ~2018.12.31)",
+    isFullyImplemented: true,
   },
 
   // ── 신축 §99 시리즈 ──

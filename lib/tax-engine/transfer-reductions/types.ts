@@ -98,3 +98,118 @@ export interface ReductionEvaluationInput extends PeriodCheckContext {
     region?: "metropolitan" | "non_metropolitan" | "outside_overconcentration" | "nationwide";
   };
 }
+
+// ============================================================
+// 장기임대 §97 시리즈 — Phase 2 본격 구현 (2026-06-11)
+// 법령 검증: 조특법 §97·§97의2·§97의3·§97의4·§97의5 + 조특령 §97의3·§97의4·§97의5
+// (law.go.kr 2026-06-11 현행 조회. §97의4 추가율 표 수치는 API 응답 누락 — R-3 미확정)
+// ============================================================
+
+export type Rental97ArticleId =
+  | "rental_97_main" | "rental_97_proviso" | "rental_97_2"
+  | "rental_97_3" | "rental_97_4" | "rental_97_5";
+
+export interface Rental97RentHistoryItem {
+  contractDate: Date;
+  monthlyRent: number;
+  deposit: number;
+  contractType: "jeonse" | "monthly" | "semi_jeonse";
+}
+
+export interface Rental97VacancyPeriod {
+  startDate: Date;
+  endDate: Date;
+}
+
+/**
+ * §97 시리즈 평가 입력 — 기존 stub 패턴(ReductionEvaluationInput)과 동일하게
+ * PeriodCheckContext를 extends (registrationDate·rentalStartDate·contractDate·
+ * usageApprovalDate 키를 ctx 그대로 사용 — 변환 매핑 불요).
+ */
+export interface Rental97EvaluationInput extends PeriodCheckContext {
+  id: Rental97ArticleId;
+  /** 세무서 사업자 등록 (소법 §168) — §97의3·§97의5 임대개시 인정 요건 (조특령 §97의3④·§97의5③) */
+  isTaxRegistered?: boolean;
+  /** 6개월(180일) 이상 공실 구간 — 유효임대기간에서 차감 */
+  vacancyPeriods?: Rental97VacancyPeriod[];
+  /** 간소화 모드 — 사용자 명시 신고 (true = 임대료 5% 증액 위반 있음 → 불적용) */
+  rentIncreaseViolated?: boolean;
+  /** 정밀 모드 — 제공 시 validateRentIncrease로 검증 (간소화 신고보다 우선) */
+  rentHistory?: Rental97RentHistoryItem[];
+  /** 전월세 전환율 (정밀 모드 환산보증금용, 기본 0.04) */
+  jeonseConversionRate?: number;
+  // ── §97의3 (조특령 §97의3③) ──
+  /** 임대개시일 당시 주택+부속토지 기준시가 합계 (원) — 6억(수도권 밖 3억) 한도 (령 §97의3③4호) */
+  officialPriceAtStart?: number;
+  /** 국민주택규모 이하 여부 — 사용자 확인 입력 (령 §97의3③2호. 다가구는 가구당 전용면적 기준) */
+  isNationalHousingScale?: boolean;
+  region?: "capital" | "non_capital";
+  propertyType?: "apartment" | "non_apartment";
+  rentalHousingType?: "long_term_private" | "public_support_private";
+  /** 2020.7.11 이후 단기민간임대 → 장기일반 변경 신고분 — 적용 제외 (§97의3① 괄호) */
+  isConvertedFromShortTerm?: boolean;
+  // ── §97 본문/단서 ──
+  /** 신축 연도 (1986~2000 — §97①1호) */
+  constructionYear?: number;
+  /** 국민주택 여부 — 사용자 확인 입력 (§97①·§97의2① 공통 요건) */
+  isNationalHousing?: boolean;
+  /** §97① 단서 분기: (a) 건설임대 5년+ / (b) 매입임대 5년+ (1995.1.1 이후 취득·미입주) / (c) 10년+ */
+  provisoCase?: "a_construction" | "b_purchase" | "c_10years";
+  // ── §97의2 ──
+  /** 건설임대(1호) vs 매입임대(2호) */
+  rental972Type?: "construction" | "purchase";
+  // ── 임대기간 안분 (조특령 §97의3⑤·§97의5②) ──
+  /**
+   * 임대기간 중 발생 양도차익 안분용 기준시가 3점 (원).
+   * rentalStartDate ≤ acquisitionDate(취득 즉시 임대)이면 불요 — ratio 1.
+   * 그 외에는 3점 모두 필요 (미입력 시 불적용 사유 반환 — silent 안분 금지).
+   */
+  stdPriceAtAcquisition?: number;
+  stdPriceAtRentalStart?: number;
+  stdPriceAtTransfer?: number;
+  // ── 세액감면 계열 컨텍스트 ──
+  /** 산출세액 (tax_amount 계열 — §97·§97의2·§97의5) */
+  calculatedTax?: number;
+}
+
+export interface Rental97IneligibleReason {
+  code: string;
+  message: string;
+  legalBasis: string;
+}
+
+/** §97의3·§97의4 — 장기보유특별공제 단계(STEP 4) 효과 */
+export interface RentalLthdEffect {
+  effectCategory: "long_term_holding_special" | "long_term_holding_additional";
+  /** §97의3: 0.70 — 일반 공제율 대체 (임대기간 분 양도차익 한정) */
+  overrideRate?: number;
+  /** §97의4: 0.02~0.10 — 보유기간 공제율에 가산 (⚠️ R-3 표 수치 원문 미확정) */
+  additionalRate?: number;
+  /**
+   * 임대기간 분 양도차익 비율 (0~1) — 조특령 §97의3⑤ 기준시가 안분.
+   * 취득 즉시 임대(rentalStartDate ≤ acquisitionDate)면 1.
+   */
+  rentalGainRatio: number;
+  eligibleRentalYears: number;
+}
+
+/** §97 본문/단서·§97의2·§97의5 — 산출세액 단계(STEP 7) 효과 */
+export interface RentalTaxAmountEffect {
+  effectCategory: "tax_amount";
+  reductionRate: number;       // 0.5 | 1.0
+  /** applyRate(calculatedTax × rentalGainRatio, rate) — §133 한도 미적용 (§133 열거 외 — law.go.kr 확인) */
+  reductionAmount: number;
+  /** 임대기간 분 비율 (§97의5만 안분 — §97·§97의2는 1) */
+  rentalGainRatio: number;
+  isFullExemption: boolean;
+}
+
+export type Rental97Result =
+  | ({ id: Rental97ArticleId; isEligible: true; legalBasis: string } & (RentalLthdEffect | RentalTaxAmountEffect))
+  | {
+      id: Rental97ArticleId;
+      isEligible: false;
+      ineligibleReasons: Rental97IneligibleReason[];
+      legalBasis: string;
+      effectCategory: ReductionEffectCategory;
+    };
