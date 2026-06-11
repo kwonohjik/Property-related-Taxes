@@ -102,8 +102,22 @@ export type TransferReductionStub =
       phdBuildingStdAtAcq993?: number;
       phdBuildingStdAtFirst993?: number;
     }
-  | { type: "new_99_4_rural";    _phase1Stub?: true }
-  | { type: "new_99_4_hometown"; _phase1Stub?: true }
+  // §99의4 — Phase 2 본격 구현 (2026-06-11): 주택수 제외 본 필드 (Date — route mapper ⑭ 변환)
+  | { type: "new_99_4_rural";
+      ruralHouseAcquisitionDate?: Date;
+      ruralHouseStdPrice?: number;
+      isRegisteredHanok?: boolean;
+      isAdjacentArea?: boolean;
+      meetsLocationRequirement?: boolean;
+      _phase1Stub?: true }
+  | { type: "new_99_4_hometown";
+      ruralHouseAcquisitionDate?: Date;
+      ruralHouseStdPrice?: number;
+      isRegisteredHanok?: boolean;
+      isAdjacentArea?: boolean;
+      meetsLocationRequirement?: boolean;
+      meetsHometownRequirement?: boolean;
+      _phase1Stub?: true }
   // 미분양 §98 시리즈 + §99의2
   | { type: "unsold_98";         _phase1Stub?: true }
   | { type: "unsold_98_2";       _phase1Stub?: true }

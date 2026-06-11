@@ -93,14 +93,17 @@ const RULES: Record<TransferReductionId, PeriodRule> = {
     },
     failReason: "매매계약/사용승인일이 2001.5.23~2003.6.30 시한 외 — 조특법 §99의3",
   },
+  // D-1 (2026-06-11): §99의4 시한 기준은 "농어촌주택등 취득일"인데 PeriodCheckContext는
+  // 자산(양도하는 일반주택) 취득일만 보유 → 라디오 사전판정은 낙관 통과.
+  // 정확 판정은 evaluateNew994(new-99-4.ts)가 ruralHouseAcquisitionDate 기준으로 수행.
   new_99_4_rural: {
     label: "농어촌주택 취득 2003.8.1~2028.12.31",
-    check: (c) => within(c.acquisitionDate, D("2003-08-01"), D("2028-12-31")),
+    check: () => true,
     failReason: "농어촌주택 취득기간(2003.8.1~2028.12.31) 시한 외 — 조특법 §99의4 ①항 1호",
   },
   new_99_4_hometown: {
     label: "고향주택 취득 2009.1.1~2028.12.31",
-    check: (c) => within(c.acquisitionDate, D("2009-01-01"), D("2028-12-31")),
+    check: () => true,
     failReason: "고향주택 취득기간(2009.1.1~2028.12.31) 시한 외 — 조특법 §99의4 ①항 2호",
   },
 

@@ -84,6 +84,15 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
           if (r.type === "rental_97_2" && !(r as { rental972Type?: string }).rental972Type)
             return fail(`${label} 적용: 건설임대(1호)/매입임대(2호) 유형을 선택하세요.`);
         }
+        // §99의4 농어촌·고향주택 (2026-06-11): 취득일·기준시가 필수 (⑧).
+        // 소재지·연접·고향 토글은 차단하지 않음 — 엔진 불적용 사유로 안내 (낙관 입력 패턴).
+        if (r.type === "new_99_4_rural" || r.type === "new_99_4_hometown") {
+          const label994 = r.type === "new_99_4_rural" ? "§99의4 농어촌주택" : "§99의4 고향주택";
+          if (!r.ruralHouseAcquisitionDate)
+            return fail(`${label994} 적용: ${r.type === "new_99_4_rural" ? "농어촌주택" : "고향주택"} 취득일을 입력하세요.`);
+          if (parseAmount(r.ruralHouseStdPrice || "0") <= 0)
+            return fail(`${label994} 적용: 취득 당시 기준시가 합계(주택+부속토지)를 입력하세요.`);
+        }
       }
     }
   }

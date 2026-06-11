@@ -29,6 +29,7 @@ import { Rental975InputForm } from "@/components/calc/transfer/rental/Rental975I
 import { Rental97MainInputForm } from "@/components/calc/transfer/rental/Rental97MainInputForm";
 import { Rental972InputForm } from "@/components/calc/transfer/rental/Rental972InputForm";
 import { Rental974InputForm } from "@/components/calc/transfer/rental/Rental974InputForm";
+import { New994InputForm } from "@/components/calc/transfer/New994InputForm";
 import {
   REDUCTION_METADATA,
   ALL_REDUCTION_IDS,
@@ -189,6 +190,28 @@ function getReductionDefault(id: TransferReductionId): AssetReductionForm {
       isNationalHousing: false,
     };
   }
+  // §99의4 농어촌·고향주택 (2026-06-11)
+  if (id === "new_99_4_rural") {
+    return {
+      type: "new_99_4_rural",
+      ruralHouseAcquisitionDate: "",
+      ruralHouseStdPrice: "",
+      isRegisteredHanok: false,
+      isAdjacentArea: false,
+      meetsLocationRequirement: false,
+    };
+  }
+  if (id === "new_99_4_hometown") {
+    return {
+      type: "new_99_4_hometown",
+      ruralHouseAcquisitionDate: "",
+      ruralHouseStdPrice: "",
+      isRegisteredHanok: false,
+      isAdjacentArea: false,
+      meetsLocationRequirement: false,
+      meetsHometownRequirement: false,
+    };
+  }
   // Phase 1 stub: type만 (실제로 활성 클릭 불가하므로 도달하지 않음)
   return { type: id } as AssetReductionForm;
 }
@@ -283,6 +306,18 @@ export function UnifiedReductionPanel({ asset, transferDate, onChange }: Unified
     });
   }
 
+  // ── §99의4 농어촌·고향주택 폼 필드 업데이트 (2026-06-11) ──
+  function update994(
+    id: "new_99_4_rural" | "new_99_4_hometown",
+    patch: Partial<Extract<AssetReductionForm, { type: "new_99_4_hometown" }>>,
+  ) {
+    onChange({
+      reductions: reductions.map((r) =>
+        r.type === id ? ({ ...r, ...patch } as AssetReductionForm) : r,
+      ),
+    });
+  }
+
   const new993 = reductions.find((r) => r.type === "new_99_3");
 
   return (
@@ -308,6 +343,7 @@ export function UnifiedReductionPanel({ asset, transferDate, onChange }: Unified
           new993={new993 && new993.type === "new_99_3" ? new993 : undefined}
           onUpdate993={update993}
           onUpdateRentalVariant={updateRentalVariant}
+          onUpdate994={update994}
           assetContractDate={asset.assetContractDate ?? ""}
           onAssetContractDateChange={(v) => onChange({ assetContractDate: v })}
           acquisitionDate={asset.acquisitionDate}
@@ -367,6 +403,7 @@ function GroupCategorySection({
   new993,
   onUpdate993,
   onUpdateRentalVariant,
+  onUpdate994,
   assetContractDate,
   onAssetContractDateChange,
   acquisitionDate,
@@ -388,6 +425,10 @@ function GroupCategorySection({
   onUpdateRentalVariant: (
     id: RentalReductionFormVariant["type"],
     patch: Partial<RentalReductionFormVariant>,
+  ) => void;
+  onUpdate994: (
+    id: "new_99_4_rural" | "new_99_4_hometown",
+    patch: Partial<Extract<AssetReductionForm, { type: "new_99_4_hometown" }>>,
   ) => void;
   /** Round 9 (2026-05-06): 매매계약일 (자산-수준, 펼침 시 활성화) */
   assetContractDate: string;
@@ -536,6 +577,18 @@ function GroupCategorySection({
                       transferDate={transferDate}
                     />
                   )}
+                  {/* §99의4 농어촌·고향주택 입력 폼 (2026-06-11) */}
+                  {(id === "new_99_4_rural" || id === "new_99_4_hometown") &&
+                    (() => {
+                      const form994 = reductions.find((r) => r.type === id);
+                      return form994 && (form994.type === "new_99_4_rural" || form994.type === "new_99_4_hometown") ? (
+                        <New994InputForm
+                          value={form994}
+                          onChange={(patch) => onUpdate994(id as "new_99_4_rural" | "new_99_4_hometown", patch)}
+                          transferDate={transferDate}
+                        />
+                      ) : null;
+                    })()}
                 </ToggleCard>
               </div>
             );

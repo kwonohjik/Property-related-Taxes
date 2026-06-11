@@ -165,22 +165,21 @@ describe("§99의4 (농어촌·고향) 시한 검증 — 취득일 전용", () =
     expect(r.inPeriod).toBe(true);
   });
 
-  it("취득 2003.7.1 (농어촌 시한 시작 2003.8.1 이전) → 시한 외", () => {
-    const ctx: PeriodCheckContext = {
+  // D-1 정정 (2026-06-11): §99의4 시한 기준은 "농어촌주택등 취득일"인데 PeriodCheckContext의
+  // acquisitionDate는 양도하는 일반주택 취득일 → period-check는 낙관 통과로 변경.
+  // 정확한 시한 판정은 evaluateNew994(new-99-4.test.ts A-5)가 ruralHouseAcquisitionDate로 수행.
+  it("D-1: 자산(일반주택) 취득일이 시한 외여도 낙관 통과 — 농어촌주택 취득일 기준은 evaluator 판정", () => {
+    const rural = checkReductionPeriod("new_99_4_rural", {
       transferDate,
-      acquisitionDate: new Date("2003-07-01T00:00:00"),
-    };
-    const r = checkReductionPeriod("new_99_4_rural", ctx);
-    expect(r.inPeriod).toBe(false);
-  });
+      acquisitionDate: new Date("2003-07-01T00:00:00"), // 일반주택 취득일 — 시한 판정에 미사용
+    });
+    expect(rural.inPeriod).toBe(true);
 
-  it("고향주택 2008.12.31 → 시한 외 (시작 2009.1.1)", () => {
-    const ctx: PeriodCheckContext = {
+    const hometown = checkReductionPeriod("new_99_4_hometown", {
       transferDate,
       acquisitionDate: new Date("2008-12-31T00:00:00"),
-    };
-    const r = checkReductionPeriod("new_99_4_hometown", ctx);
-    expect(r.inPeriod).toBe(false);
+    });
+    expect(hometown.inPeriod).toBe(true);
   });
 });
 

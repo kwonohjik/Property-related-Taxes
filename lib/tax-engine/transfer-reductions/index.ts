@@ -89,6 +89,24 @@ export type {
   RentalTaxAmountEffect,
 } from "./types";
 
+// ── §99의4 농어촌·고향주택 — 주택수 제외 (2026-06-11) ──
+export {
+  evaluateNew994,
+  NEW_99_4_RURAL_FROM,
+  NEW_99_4_HOMETOWN_FROM,
+  NEW_99_4_PERIOD_TO,
+  NEW_99_4_STD_PRICE_LIMIT,
+  NEW_99_4_STD_PRICE_LIMIT_HANOK,
+  NEW_99_4_MANDATORY_YEARS,
+} from "./new-99-4";
+export type {
+  New994ArticleId,
+  New994EvaluationInput,
+  New994Result,
+  New994IneligibleCode,
+  New994IneligibleReason,
+} from "./types";
+
 /**
  * 23개 조문 통합 stub evaluator. Phase 1 단계는 모두 isEligible:false 반환.
  * 시한 외 케이스는 명시적 사유, 시한 내 케이스는 "구현 예정" 사유.
