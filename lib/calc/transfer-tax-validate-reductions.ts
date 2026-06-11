@@ -7,6 +7,7 @@
 
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { isWithin5YearsCheck } from "@/lib/tax-engine/transfer-reductions/new-99-3";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { ValidationIssue } from "./transfer-tax-validate";
 
@@ -163,6 +164,19 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
             return fail("§98의7 적용: 최초 매매계약일을 입력하세요 (2012.9.24~2012.12.31).");
           if (parseAmount(r.acquisitionPrice987 || "0") <= 0)
             return fail("§98의7 적용: 취득가액을 입력하세요 (9억원 이하 — 취득세·부대비용 제외).");
+          // 취득 후 5년 경과 양도 = 5년 발생분 기준시가 안분(조특령 §40① 준용) 경로 → 취득시·5년시점
+          // 기준시가 필수 (자산-수준 fallback 없음). 미입력 시 엔진이 부적격 처리해 감면이 조용히
+          // 미적용되므로 미리 차단 (M-4). 5년 이내 양도는 세액감면 경로라 기준시가 불요.
+          if (
+            asset.acquisitionDate &&
+            form.transferDate &&
+            !isWithin5YearsCheck(new Date(asset.acquisitionDate), new Date(form.transferDate))
+          ) {
+            if (parseAmount(r.standardPriceAtAcquisition987 || "0") <= 0)
+              return fail("§98의7 적용: 취득 후 5년 경과 양도는 취득시 기준시가를 입력하세요 (5년 발생분 안분 — 미입력 시 감면이 적용되지 않습니다).");
+            if (parseAmount(r.standardPriceAt5Years987 || "0") <= 0)
+              return fail("§98의7 적용: 취득 후 5년 경과 양도는 취득 5년 시점 기준시가를 입력하세요.");
+          }
         }
         // P2 §99의2 신축·미분양·1세대1주택 (2026-06-11): 유형별 일자 + 취득가·면적 필수 (⑧).
         // 자격 토글은 차단하지 않음 — 엔진 불적용 사유 (낙관 입력 패턴).
