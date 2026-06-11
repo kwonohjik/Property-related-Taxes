@@ -265,7 +265,7 @@ export function GiftTaxValuationFormTable({
                     {/* PR 3 (2026-05-22): GiftPriorPropertyCategory 전용 매핑 헬퍼 사용
                         — EstateItem.category 와 enum 다르므로 toPriorGiftPropertyTypeCode 별도 */}
                     {toPropertyTypeDisplay(
-                      toPriorGiftPropertyTypeCode(pg as never),
+                      toPriorGiftPropertyTypeCode(pg),
                     )}
                   </td>
                   <td className={CELL_CENTER} data-testid="col-overseas">
