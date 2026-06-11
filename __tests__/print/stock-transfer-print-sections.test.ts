@@ -21,11 +21,12 @@ import {
   type StockTransferPrintSectionId,
 } from "@/lib/print/stock-transfer-print-sections";
 
-// 설계 §2.7 기준 leaf 3종
+// 설계 §2.7 기준 leaf 4종 (securities-transaction-tax 추가 — 증권거래세 UI 통합)
 const ALL_LEAVES: StockTransferPrintSectionId[] = [
   "calculation",
   "detail-cards",
   "filing-form",
+  "securities-transaction-tax",
 ];
 
 describe("주식 양도세 선택 출력 레지스트리 — Pre-Do anchor (PR-F3)", () => {
@@ -45,7 +46,7 @@ describe("주식 양도세 선택 출력 레지스트리 — Pre-Do anchor (PR-F
     }
   });
 
-  it("PD-st-3: flattenPrintSectionIds는 3개 유니크 leaf, group: 접두 없음", () => {
+  it("PD-st-3: flattenPrintSectionIds는 4개 유니크 leaf, group: 접두 없음", () => {
     const ids = flattenPrintSectionIds();
     expect(ids).toHaveLength(ALL_LEAVES.length);
     expect(new Set(ids).size).toBe(ids.length);

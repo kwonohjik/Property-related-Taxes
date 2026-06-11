@@ -401,11 +401,15 @@ export function buildRows(
     ),
   });
 
-  // 15. 증권거래세 (조건부 — actual 모드에서 별도 비용으로 입력된 경우)
+  // 15. 증권거래세
+  //   소득세법상 필요경비(§163①6호)이지만 사용자가 actualExpenses에 포함해 입력.
+  //   echo 채우기 시 필요경비 이중 차감 왜곡 → null 유지.
+  //   정보용 STX 계산·표시는 SecuritiesTransactionTaxCard(결과뷰·Step3 인라인) 참조.
+  //   설계: docs/02-design/features/stock-transfer-tax.ui.design.md §2-5
   rows.push({
     label: "15.   증권거래세",
     values: val(
-      null, // 현재 엔진은 증권거래세를 별도 분리하지 않음 (actualExpenses에 포함)
+      null,
       () => null,
       () => null,
     ),
