@@ -34,6 +34,20 @@ export function hasDistributableHeir(heirs: Heir[]): boolean {
 }
 
 /**
+ * 협의분할 합계 일치 판정 (단일 출처).
+ * 기준금액 0이면 평가 보류로 일치 간주, 그 외엔 분배 합계 === 기준금액.
+ * HeirAllocationInput 내부 검증과 DebtItemTableView 행 배지가 동일 술어를 쓰도록 추출
+ * (feedback_ui_engine_dual_truth_avoidance — 판정 로직 재정의 금지).
+ */
+export function isHeirAllocationMatched(
+  allocations: HeirAllocation[] | undefined,
+  expectedTotal: number,
+): boolean {
+  const sum = (allocations ?? []).reduce((s, a) => s + a.amount, 0);
+  return expectedTotal === 0 || sum === expectedTotal;
+}
+
+/**
  * 협의분할 ON 전환 시 초기 배분 — **빈 배열**(아무도 미선택).
  * 이슈2: 종전 첫 자연인 전액 자동배정 제거. 사용자가 칩 선택 시 toggleHeir가 잔여(=전액) 자동입력.
  * 인자(heirs·effectiveValuation)는 호출처 호환 위해 시그니처만 유지(미사용 — void 표시).
@@ -90,7 +104,7 @@ export function HeirAllocationInput({
 }: HeirAllocationInputProps) {
   const allocs = allocations ?? [];
   const sum = allocs.reduce((s, a) => s + a.amount, 0);
-  const matched = expectedTotal === 0 || sum === expectedTotal;
+  const matched = isHeirAllocationMatched(allocs, expectedTotal);
   const hasInput = allocs.length > 0;
 
   // 영리법인(§3의2② 면제·별도 배부)만 분배 후보에서 제외 — 비영리법인은 수유자로 포함
