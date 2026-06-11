@@ -401,6 +401,10 @@ export function calcGiftGenerationSkipSurchargeWithLimit(
  *            giftDate=2021-05-21 → 포함 / giftDate=2021-05-20 → 제외
  */
 export function isWithin13Cutoff(gift: PriorGift, deathDate: string): boolean {
+  // 조특법 §30의5⑨·§30의6⑤: 창업자금·가업승계 특례 prior는 기간과 관계없이 §13 가산 대상
+  // "증여받은 날부터 상속개시일까지의 기간과 관계없이 상속세 과세가액에 가산"
+  if (gift.specialTreatmentType !== undefined) return true;
+  // 일반 prior: §13①1호(상속인 10년) / 2호(비상속인 5년) cutoff — 일(日) 단위 비교
   const giftDate = new Date(gift.giftDate);
   const limitYears = gift.isHeir ? 10 : 5;
   const boundary = subYears(new Date(deathDate), limitYears);

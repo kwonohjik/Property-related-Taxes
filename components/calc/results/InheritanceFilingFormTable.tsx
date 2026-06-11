@@ -194,7 +194,8 @@ function renderGiftRow(
       : "—";
   // PR 3 (2026-05-22): 헬퍼 사용 — 토지I/II 부수토지 토글 분기 포함
   const categoryLabel = getPropertyCategoryLabel(gift);
-  const kindCode = inferPropertyKindCode(gift);
+  // 조특법 특례(§30의5 A23·§30의6 A24) 재산구분코드 — specialTreatmentType 전달 필수
+  const kindCode = inferPropertyKindCode(gift, gift.specialTreatmentType);
   const computedTax = isCorporate
     ? gift.corporateGiftComputedTax ?? 0
     : gift.computedTax ?? 0;
@@ -243,8 +244,19 @@ function renderGiftRow(
           : isCorporate
             ? "🏢 §13①2호 · §3의2② 면제"
             : ""}
+        {/* 조특법 특례 라벨 — §30의5⑨·§30의6⑤ 기간 무관 가산 (상속세 경로 전용) */}
+        {!dimmed && !isCorporate && gift.specialTreatmentType === "startup" && (
+          <span className="ml-1 inline-block bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 rounded px-1">
+            §30의5⑧ 기간무관 가산
+          </span>
+        )}
+        {!dimmed && !isCorporate && gift.specialTreatmentType === "family_business" && (
+          <span className="ml-1 inline-block bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 rounded px-1">
+            §30의6⑤ 준용
+          </span>
+        )}
         {/* [B] 과세표준 출처 라벨 — manual 직접 입력 vs auto §53 도출 */}
-        {!isCorporate && !dimmed && (
+        {!isCorporate && !dimmed && !gift.specialTreatmentType && (
           gift.giftTaxBase != null ? (
             <span className="ml-1 inline-block bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 rounded px-1">
               직접 입력 과세표준

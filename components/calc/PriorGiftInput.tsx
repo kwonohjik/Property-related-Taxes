@@ -191,6 +191,7 @@ export function PriorGiftInput({
               index={i}
               showIsHeir={mode === "inheritance"}
               showGiftPhaseA={mode === "gift"}
+              showSpecialType={mode === "inheritance"}
               onUpdate={(updated) => handleUpdate(i, updated)}
               onRemove={() => handleRemove(i)}
               heirs={heirs}

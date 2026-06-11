@@ -118,4 +118,16 @@ describe("PR 3 — 재산구분코드 자동 추론 (inferPropertyKindCode)", ()
     const gift = buildGift({ isHeir: true });
     expect(inferPropertyKindCode(gift, "family_business")).toBe("A24");
   });
+
+  // 회귀 가드 (Phase 2 Check Medium): 2번째 인자 생략 시에도 gift.specialTreatmentType에서
+  // 직접 읽어 A23/A24 도출 — 호출부 인자 누락으로 A21/A22 오출력되던 버그 차단
+  it("ANCHOR-P11c: 인자 생략 + gift.specialTreatmentType=startup → A23", () => {
+    const gift = buildGift({ isHeir: true, specialTreatmentType: "startup" });
+    expect(inferPropertyKindCode(gift)).toBe("A23");
+  });
+
+  it("ANCHOR-P11d: 인자 생략 + gift.specialTreatmentType=family_business → A24", () => {
+    const gift = buildGift({ isHeir: true, specialTreatmentType: "family_business" });
+    expect(inferPropertyKindCode(gift)).toBe("A24");
+  });
 });

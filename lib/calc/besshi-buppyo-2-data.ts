@@ -327,7 +327,7 @@ export function buildBuppyo2Data(
     // ── 나 섹션: 사전증여 행 (doneeId 매칭분만) ──
     for (const gift of myPriorGifts) {
       itemRows.push({
-        kindCode: inferPropertyKindCode(gift),
+        kindCode: inferPropertyKindCode(gift, gift.specialTreatmentType),
         typeCode: toPriorGiftPropertyTypeCode(gift),
         locationOrName:
           gift.propertyLocation?.trim() ||
