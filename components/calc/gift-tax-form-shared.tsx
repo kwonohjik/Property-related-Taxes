@@ -29,6 +29,10 @@ import { AppraisalFeeSection } from "@/components/calc/deductions/AppraisalFeeSe
 import { resolveValuationMethod } from "@/lib/tax-engine/property-valuation";
 import { INITIAL_APPRAISAL_FEE_FIELDS } from "@/lib/calc/appraisal-fee-form";
 import { SpecialTreatmentAssetSelector } from "@/components/calc/gift/SpecialTreatmentAssetSelector";
+import {
+  isSpecialTreatmentEligibleCategory,
+  SPECIAL_TREATMENT_CATEGORY_BLOCK_REASON,
+} from "@/lib/tax-engine/gift-special-stream";
 
 // ============================================================
 // 폼 상태 타입
@@ -339,6 +343,21 @@ export function validateStep(step: number, form: FormState): string | null {
             form.specialTreatment === "startup" ? "창업자금" : "가업승계";
           return `${label} 특례 적용 시 모든 자산의 특례 귀속 여부를 선택하세요. (위 "특례 귀속 자산 선택" 항목 — 미선택 ${unassigned.length}개)`;
         }
+      }
+
+      // 특례 귀속 재산 종류 제약 — Zod superRefine 동기화 (⑧, R3 잔여 해소).
+      // startup: 소법 §94① 재산(부동산·주식) 제외 (조특령 §27의5①) / family_business: 주식만 (§30의6①).
+      // 단일 자산은 엔진 자동 귀속이므로 동일 검사 (Zod와 동일 조건 — UI 통과↔API 400 모순 방지)
+      const effectiveSpecialItems =
+        allItems.length === 1
+          ? allItems
+          : allItems.filter((it) => it.isSpecialTreatmentAsset === true);
+      const ineligible = effectiveSpecialItems.filter(
+        (it) =>
+          !isSpecialTreatmentEligibleCategory(it.category, form.specialTreatment as "startup" | "family_business")
+      );
+      if (ineligible.length > 0) {
+        return `특례 귀속 불가 재산 ${ineligible.length}개 — ${SPECIAL_TREATMENT_CATEGORY_BLOCK_REASON[form.specialTreatment as "startup" | "family_business"]}`;
       }
     }
 

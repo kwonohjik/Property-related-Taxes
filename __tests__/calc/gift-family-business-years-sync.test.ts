@@ -22,12 +22,15 @@ function makeForm(overrides: Partial<FormState> = {}): FormState {
   return {
     ...INITIAL_FORM,
     giftDate: "2025-01-15",
+    // 가업승계 특례는 주식·출자지분만 가능(§30의6①) — 픽스처도 법령 정합 카테고리 사용
     giftItems: [
       {
         id: "a",
-        category: "financial",
+        category: "unlisted_stock",
         name: "가업주식",
         marketValue: 1_000_000_000,
+        // unlistedStockItemSchema superRefine: legacy 또는 V2 평가 데이터 필수
+        unlistedStockData: { totalShares: 10_000, ownedShares: 10_000, netAssetValue: 1_000_000_000 },
       } as EstateItem,
     ],
     ...overrides,
