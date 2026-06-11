@@ -22,6 +22,27 @@ import type {
 // 임대주택 합산배제 요건 판정 (시행령 §3)
 // ============================================================
 
+/**
+ * 임대유형별 의무임대기간 (시행령 §3① 각 호 나목, 2026.2.27 시행본 실측)
+ *
+ * - 장기일반·공공지원민간임대(§3①7·8호): 10년
+ * - 건설·매입·2005 이전 구법(§3①1·2·3호): 5년
+ * - 공공건설/공공매입: §3①1·2호 5년 (단 §3⑦8호 임대의무기간 종료일까지 계속임대 간주 — 별도 사후관리)
+ *
+ * ※ 단기민간임대주택(§2⑥의2, 6년·§3①10·11호)은 현재 registrationType enum에 대응 유형이 없어 미포함(후속 확장).
+ */
+const MANDATORY_PERIOD_BY_TYPE: Record<
+  RentalExclusionInput["registrationType"],
+  number
+> = {
+  private_construction: COMPREHENSIVE_EXCL_CONST.MANDATORY_PERIOD_SHORT,   // 5 — §3①1호
+  private_purchase_short: COMPREHENSIVE_EXCL_CONST.MANDATORY_PERIOD_SHORT, // 5 — §3①2호 (구법)
+  private_purchase_long: COMPREHENSIVE_EXCL_CONST.MANDATORY_PERIOD_LONG,   // 10 — §3①8호
+  public_support: COMPREHENSIVE_EXCL_CONST.MANDATORY_PERIOD_LONG,          // 10 — §3①7·8호 (공공지원=장기일반민간임대등)
+  public_construction: COMPREHENSIVE_EXCL_CONST.MANDATORY_PERIOD_SHORT,    // 5 — §3①1호
+  public_purchase: COMPREHENSIVE_EXCL_CONST.MANDATORY_PERIOD_SHORT,        // 5 — §3①2호
+};
+
 export function validateRentalExclusion(
   input: RentalExclusionInput,
 ): ExclusionValidationResult {
@@ -51,13 +72,35 @@ export function validateRentalExclusion(
     failReasons.push(COMPREHENSIVE_EXCL.RENTAL_NOT_STARTED);
   }
 
+  // 의무임대기간 — 등록 말소 확인 시 즉시 차단 (시행령 §3① 계속임대 위반 확정)
+  // ※ "현재까지 N년 미달"은 거부 사유 아님 — 장래 의무이므로 경고만(아래 warnings)
+  if (
+    input.registrationRevokedDate &&
+    input.registrationRevokedDate <= input.assessmentDate
+  ) {
+    failReasons.push(COMPREHENSIVE_EXCL.MANDATORY_PERIOD_NOT_MET);
+  }
+
   if (failReasons.length > 0) {
     return { isExcluded: false, reason: failReasons[0], failReasons };
+  }
+
+  // 배제 성립 — 경과 연수가 의무기간 미달이면 사후 추징 위험 경고 (배제는 유지)
+  const warnings: string[] = [];
+  if (input.actualRentalYears !== undefined) {
+    const requiredYears = MANDATORY_PERIOD_BY_TYPE[input.registrationType];
+    if (requiredYears > 0 && input.actualRentalYears < requiredYears) {
+      warnings.push(
+        `의무임대기간(${requiredYears}년) 미충족 — 현재 ${input.actualRentalYears}년 경과. ` +
+          `의무기간 충족 전 등록 말소 시 합산배제 세액이 소급 추징됩니다 (시행령 §3①).`,
+      );
+    }
   }
 
   return {
     isExcluded: true,
     reason: getRentalExclusionLegalCode(input.registrationType),
+    warnings: warnings.length > 0 ? warnings : undefined,
   };
 }
 
@@ -226,6 +269,7 @@ export function applyAggregationExclusion(
       exclusionType: prop.exclusionType,
       reason: validationResult.reason,
       failReasons: validationResult.failReasons,
+      warnings: validationResult.warnings,
     };
   });
 

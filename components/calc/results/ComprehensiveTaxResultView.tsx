@@ -119,6 +119,24 @@ function AggregationExclusionSection({
           <span className="font-medium">{aggregationExclusion.includedCount}건</span>
         </div>
       </div>
+
+      {/* 의무임대기간 미충족 경고 (시행령 §3① — 사후 추징 위험) */}
+      {aggregationExclusion.propertyResults.some(
+        (r) => r.warnings && r.warnings.length > 0,
+      ) && (
+        <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2.5">
+          <p className="text-xs font-semibold text-amber-800">의무임대기간 확인 필요</p>
+          <ul className="mt-1 space-y-1">
+            {aggregationExclusion.propertyResults.flatMap((r, idx) =>
+              (r.warnings ?? []).map((w, wi) => (
+                <li key={`${idx}-${wi}`} className="text-xs text-amber-700">
+                  임대주택 {idx + 1}번째: {w}
+                </li>
+              )),
+            )}
+          </ul>
+        </div>
+      )}
     </section>
   );
 }

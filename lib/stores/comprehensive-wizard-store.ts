@@ -31,6 +31,8 @@ export interface PropertyEntry {
   currentRent: string;             // 현재 임대료 (원)
   previousRent: string;            // 직전 임대료 (원)
   isInitialContract: boolean;
+  actualRentalYears: string;       // 실제 임대 경과 연수 (시행령 §3⑦ 합산, 선택)
+  registrationRevokedDate: string; // 임대등록 말소일 YYYY-MM-DD (선택, 입력 시 과세기준일 이전이면 배제 거부)
   // ── 기타 합산배제 상세 ──
   recruitmentNoticeDate: string;   // 미분양: 입주자모집공고일
   acquisitionDate: string;         // 미분양: 취득일
@@ -84,7 +86,6 @@ export interface ComprehensiveFormData {
   landSeparate: SeparateLandEntry[];
 
   // ── Step 5: 세부담 상한 ──
-  isMultiHouseInAdjustedArea: boolean;
   previousYearTotalTax: string;    // 전년도 종부세+재산세 합계 (원)
 }
 
@@ -106,6 +107,8 @@ function makeProperty(): PropertyEntry {
     currentRent: "",
     previousRent: "",
     isInitialContract: true,
+    actualRentalYears: "",
+    registrationRevokedDate: "",
     recruitmentNoticeDate: "",
     acquisitionDate: "",
     isFirstSale: true,
@@ -133,7 +136,6 @@ const defaultFormData: ComprehensiveFormData = {
   landAggregate: { ...DEFAULT_LAND_AGGREGATE },
   hasSeparateLand: false,
   landSeparate: [],
-  isMultiHouseInAdjustedArea: false,
   previousYearTotalTax: "",
 };
 

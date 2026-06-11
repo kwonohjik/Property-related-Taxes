@@ -53,6 +53,12 @@ export interface RentalExclusionInput {
   currentRent: number;             // 현재 임대료
   isInitialContract: boolean;      // 최초 계약 여부
   assessmentDate: Date;            // 과세기준일 (6월 1일)
+
+  // ── 의무임대기간 (시행령 §3① "N년 이상 계속하여 임대") ──
+  /** 임대등록 말소일 — 입력 + 과세기준일 이전이면 합산배제 거부 (시행령 §3① 계속임대 위반 확정) */
+  registrationRevokedDate?: Date;
+  /** 실제 임대 경과 연수 (기산일~과세기준일, 시행령 §3⑦ 합산기간) — 의무기간 미달 시 추징 위험 경고용 (배제 거부 아님) */
+  actualRentalYears?: number;
 }
 
 /**
@@ -93,6 +99,7 @@ export interface ExclusionValidationResult {
   isExcluded: boolean;
   reason: string;        // 법령 근거 상수 (COMPREHENSIVE_EXCL.*)
   failReasons?: string[];
+  warnings?: string[];   // 사후 추징 위험 경고 (의무임대기간 미충족 등) — 코어 메시지(순번 접두 없음)
 }
 
 /**
@@ -105,6 +112,7 @@ export interface ExclusionResult {
   exclusionType: ExclusionType;
   reason: string;              // 법령 근거 상수
   failReasons?: string[];      // 요건 미충족 사유 목록
+  warnings?: string[];         // 사후 추징 위험 경고 (코어 메시지 — 순번 접두 없음)
 }
 
 /**
@@ -170,7 +178,6 @@ export interface ComprehensiveTaxInput {
 
   // ── 과세 기준 ──
   assessmentYear: number;         // 과세연도 (과세기준일 = 해당연도 6월 1일)
-  isMultiHouseInAdjustedArea?: boolean; // 조정대상지역 2주택+ 여부 (세부담 상한 300% 적용)
 
   // ── 세부담 상한 (선택 — 미입력 시 상한 생략) ──
   previousYearTotalTax?: number;  // 전년도 총세액 (종부세 + 재산세, 농특세 제외)
@@ -203,7 +210,7 @@ export interface OneHouseDeductionResult {
  */
 export interface TaxCapResult {
   previousYearTotalTax: number; // 전년도 총세액 (입력값)
-  capRate: number;              // 1.5 또는 3.0
+  capRate: number;              // 1.5 (현행 §10 단일 상한 — 구 다주택 300% 조항 삭제됨)
   capAmount: number;            // 상한액 (전년도 × 상한율)
   cappedTax: number;            // 상한 적용 후 종부세액
   isApplied: boolean;           // 실제 상한 적용 여부

@@ -13,7 +13,9 @@
  * 종합부동산세법 시행령 §3·§4 기반
  */
 
+import { useState } from "react";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
+import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import type { PropertyEntry } from "@/lib/stores/comprehensive-wizard-store";
@@ -70,6 +72,11 @@ function RentalExclusionDetail({
   property: PropertyEntry;
   onUpdate: (data: Partial<PropertyEntry>) => void;
 }) {
+  // 말소일 입력은 예외 케이스이므로 기본 접힘. 이력 로드로 값이 있으면 펼침.
+  const [showRevoke, setShowRevoke] = useState(
+    property.registrationRevokedDate !== "",
+  );
+
   return (
     <div className="space-y-4">
       {/* 임대등록 유형 */}
@@ -117,6 +124,43 @@ function RentalExclusionDetail({
           과세기준일(6월 1일) 이전에 임대가 개시되어야 합니다.
         </p>
       </div>
+
+      {/* 실제 임대 경과 연수 (의무임대기간 경고용, 선택) */}
+      <div className="space-y-1.5">
+        <label className="block text-sm font-medium">실제 임대 경과 연수 (선택)</label>
+        <DecimalInput
+          value={property.actualRentalYears}
+          onChange={(v) => onUpdate({ actualRentalYears: v })}
+          unit="년"
+        />
+        <p className="text-xs text-muted-foreground">
+          임대 기산일부터 과세기준일까지 경과 연수. 미입력 시 의무임대기간 경고 생략.
+          상속·합병 승계 임대기간은 합산하여 입력 (시행령 §3⑦).
+        </p>
+      </div>
+
+      {/* 임대등록 말소 (예외 케이스 — 기본 접힘) */}
+      <ToggleCard
+        tone="rose"
+        title="임대등록 말소"
+        description="의무임대기간 중 자진·직권 말소된 경우"
+        checked={showRevoke}
+        onCheckedChange={(v) => {
+          setShowRevoke(v);
+          if (!v) onUpdate({ registrationRevokedDate: "" });
+        }}
+      >
+        <div className="space-y-1.5">
+          <label className="block text-sm font-medium">말소일</label>
+          <DateInput
+            value={property.registrationRevokedDate}
+            onChange={(v) => onUpdate({ registrationRevokedDate: v })}
+          />
+          <p className="text-xs text-muted-foreground">
+            말소일이 과세기준일(6월 1일) 이전이면 합산배제가 적용되지 않습니다 (시행령 §3①).
+          </p>
+        </div>
+      </ToggleCard>
 
       {/* 최초 계약 여부 */}
       <ToggleCard

@@ -89,17 +89,16 @@ export function applyOneHouseDeduction(
  * @param comprehensiveTax - 당해연도 종부세액 (재산세 비율안분 공제 후)
  * @param totalPropertyTax - 당해연도 재산세 합계
  * @param previousYearTotalTax - 전년도 총세액 (종부세+재산세, 미입력 시 undefined)
- * @param isMultiHouseInAdjustedArea - 조정대상지역 2주택+ 여부 (현행법 단일상한, 호환성 유지용)
+ *
+ * ※ 현행 §10은 단일 상한(150%) — 구 조정대상지역 다주택 300% 조항은 삭제됨.
  */
 export function applyTaxCap(
   comprehensiveTax: number,
   totalPropertyTax: number,
   previousYearTotalTax: number | undefined,
-  isMultiHouseInAdjustedArea: boolean,
 ): TaxCapResult | undefined {
   if (previousYearTotalTax === undefined) return undefined;
 
-  void isMultiHouseInAdjustedArea; // 현행법상 구분 불필요, 파라미터 호환성 유지
   const capRate = COMPREHENSIVE_CONST.TAX_CAP_RATE_GENERAL;
   const capAmount = Math.floor(previousYearTotalTax * capRate);
   const cappedTax = Math.max(

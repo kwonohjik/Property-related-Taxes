@@ -108,6 +108,107 @@ describe("validateRentalExclusion — 임대주택 합산배제", () => {
 });
 
 // ============================================================
+// 의무임대기간 검증 (시행령 §3① "N년 이상 계속하여 임대")
+// GAP-1: 말소 차단 + 미충족 경고 이분화
+// ============================================================
+
+describe("validateRentalExclusion — 의무임대기간 (GAP-1)", () => {
+  const baseRentalInput: RentalExclusionInput = {
+    registrationType: "public_support",        // 10년 의무 (※ 공공지원 연수 Do 전 재검증)
+    rentalRegistrationDate: new Date("2020-01-01"),
+    rentalStartDate: new Date("2020-02-01"),
+    assessedValue: 800_000_000,  // 8억 (공공지원 수도권 9억 이하)
+    area: 75,
+    location: "metro",
+    currentRent: 1_500_000,
+    isInitialContract: true,
+    assessmentDate: ASSESSMENT_DATE,
+  };
+
+  // Anchor-1: 등록 말소일이 과세기준일 이전 → 합산배제 거부
+  it("Anchor-1: 말소일 < 과세기준일 → MANDATORY_PERIOD_NOT_MET (배제 거부)", () => {
+    const result = validateRentalExclusion({
+      ...baseRentalInput,
+      registrationRevokedDate: new Date("2023-05-01"),  // 과세기준일 2024-06-01 이전
+    });
+    expect(result.isExcluded).toBe(false);
+    expect(result.failReasons).toContain(COMPREHENSIVE_EXCL.MANDATORY_PERIOD_NOT_MET);
+  });
+
+  // Anchor-2: 경과 연수 < 의무기간, 말소 없음 → 배제 유지 + 경고
+  it("Anchor-2: 경과 3년 < 의무 10년, 말소 없음 → isExcluded:true + warnings", () => {
+    const result = validateRentalExclusion({
+      ...baseRentalInput,
+      actualRentalYears: 3,
+    });
+    expect(result.isExcluded).toBe(true);
+    expect(result.warnings).toBeDefined();
+    expect(result.warnings!.length).toBeGreaterThan(0);
+    expect(result.warnings![0]).toContain("10");  // 의무기간 안내 포함
+  });
+
+  // T-MP-1: 경과 ≥ 의무기간 → 경고 없음
+  it("T-MP-1: 경과 12년 ≥ 의무 10년 → isExcluded:true, warnings 없음", () => {
+    const result = validateRentalExclusion({
+      ...baseRentalInput,
+      actualRentalYears: 12,
+    });
+    expect(result.isExcluded).toBe(true);
+    expect(result.warnings).toBeUndefined();
+  });
+
+  // T-MP-2: 5년 의무 유형(구법 매입 단기)·경과 3년 → 경고
+  it("T-MP-2: private_purchase_short 5년 의무·경과 3년 → warnings(5년 안내)", () => {
+    const result = validateRentalExclusion({
+      ...baseRentalInput,
+      registrationType: "private_purchase_short",
+      assessedValue: 500_000_000,  // 일반 임대 수도권 6억 이하
+      actualRentalYears: 3,
+    });
+    expect(result.isExcluded).toBe(true);
+    expect(result.warnings![0]).toContain("5");
+  });
+
+  // T-MP-3: 말소일 = 과세기준일 당일 → 거부 (경계, <= 비교)
+  it("T-MP-3: 말소일 = 과세기준일 당일 → 배제 거부", () => {
+    const result = validateRentalExclusion({
+      ...baseRentalInput,
+      registrationRevokedDate: new Date("2024-06-01"),
+    });
+    expect(result.isExcluded).toBe(false);
+    expect(result.failReasons).toContain(COMPREHENSIVE_EXCL.MANDATORY_PERIOD_NOT_MET);
+  });
+
+  // T-MP-4: 말소일 > 과세기준일 (미래 말소 예정) → 배제 유지
+  it("T-MP-4: 말소일 > 과세기준일 (미래 예정) → 배제 유지", () => {
+    const result = validateRentalExclusion({
+      ...baseRentalInput,
+      registrationRevokedDate: new Date("2024-12-01"),
+    });
+    expect(result.isExcluded).toBe(true);
+  });
+
+  // T-MP-5: 신규 2필드 미입력 → 기존 동작 보존 (경고·차단 없음)
+  it("T-MP-5: 신규 필드 미입력 → isExcluded:true, warnings 없음 (회귀 보존)", () => {
+    const result = validateRentalExclusion(baseRentalInput);
+    expect(result.isExcluded).toBe(true);
+    expect(result.warnings).toBeUndefined();
+  });
+
+  // T-MP-6: 공공매입 — 5년 의무·경과 7년 → 충족 → 경고 없음
+  it("T-MP-6: public_purchase 5년 의무·경과 7년 → 경고 없음", () => {
+    const result = validateRentalExclusion({
+      ...baseRentalInput,
+      registrationType: "public_purchase",
+      assessedValue: 500_000_000,
+      actualRentalYears: 7,
+    });
+    expect(result.isExcluded).toBe(true);
+    expect(result.warnings).toBeUndefined();
+  });
+});
+
+// ============================================================
 // 기타 합산배제 주택 (시행령 §4)
 // ============================================================
 

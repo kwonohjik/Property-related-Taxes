@@ -131,6 +131,16 @@ export function calculateComprehensiveTax(
     assessmentDate,
   );
 
+  // 합산배제 의무임대기간 미충족 경고 전파 (시행령 §3① — 사후 추징 위험)
+  // 내부 propertyId 노출 금지 → "임대주택 N번째" 순번 접두 부착 (코어 메시지는 ExclusionResult.warnings에 보존)
+  aggregationExclusion.propertyResults.forEach((r, idx) => {
+    if (r.warnings && r.warnings.length > 0) {
+      for (const w of r.warnings) {
+        warnings.push(`임대주택 ${idx + 1}번째: ${w}`);
+      }
+    }
+  });
+
   // ── Step 1: 개별 주택 재산세 자동 계산 + 합산배제 기록 ──
   const exclusionMap = new Map(
     aggregationExclusion.propertyResults.map((r) => [r.propertyId, r]),
@@ -241,7 +251,6 @@ export function calculateComprehensiveTax(
     comprehensiveTaxAfterCredit,
     totalPropertyTaxAmount,
     input.previousYearTotalTax,
-    input.isMultiHouseInAdjustedArea ?? false,
   );
 
   if (input.previousYearTotalTax === undefined) {

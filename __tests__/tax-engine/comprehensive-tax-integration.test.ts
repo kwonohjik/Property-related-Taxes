@@ -168,14 +168,13 @@ describe("SC3: 3주택 합산과세 — 9억 기본공제", () => {
     expect(result.grandTotal).toBeGreaterThan(0);
   });
 
-  it("다주택 조정대상지역 — 세부담 상한 300% 적용 케이스", () => {
+  it("다주택 — 세부담 상한 현행 §10 단일 150% (구 300% 삭제 반영)", () => {
     const input: ComprehensiveTaxInput = {
       properties: [
         { propertyId: "H1", assessedValue: 800_000_000, exclusionType: "none" },
         { propertyId: "H2", assessedValue: 700_000_000, exclusionType: "none" },
       ],
       isOneHouseOwner: false,
-      isMultiHouseInAdjustedArea: true,
       previousYearTotalTax: 5_000_000,   // 전년도 세액 500만
       assessmentYear: ASSESSMENT_YEAR,
     };
@@ -194,7 +193,6 @@ describe("SC3: 3주택 합산과세 — 9억 기본공제", () => {
         { propertyId: "H2", assessedValue: 700_000_000, exclusionType: "none" },
       ],
       isOneHouseOwner: false,
-      isMultiHouseInAdjustedArea: false,
       previousYearTotalTax: 3_000_000,
       assessmentYear: ASSESSMENT_YEAR,
     };
@@ -203,6 +201,43 @@ describe("SC3: 3주택 합산과세 — 9억 기본공제", () => {
 
     expect(result.taxCap).toBeDefined();
     expect(result.taxCap!.capRate).toBe(1.5);  // 150% 상한
+  });
+
+  // T-MP-8: 의무임대기간 미충족 경고가 result.warnings까지 전파 (통합)
+  it("T-MP-8: 임대주택 의무기간 미충족 → result.warnings에 순번 접두 경고 전파", () => {
+    const input: ComprehensiveTaxInput = {
+      properties: [
+        { propertyId: "H1", assessedValue: 1_000_000_000, exclusionType: "none" },
+        {
+          propertyId: "H2",
+          assessedValue: 500_000_000,
+          area: 75,
+          location: "metro",
+          exclusionType: "private_purchase_rental_long",
+          rentalInfo: {
+            registrationType: "private_purchase_long",  // 10년 의무
+            rentalRegistrationDate: new Date("2021-01-01"),
+            rentalStartDate: new Date("2021-03-01"),
+            assessedValue: 500_000_000,
+            area: 75,
+            location: "metro",
+            currentRent: 1_000_000,
+            isInitialContract: true,
+            assessmentDate: new Date(`${ASSESSMENT_YEAR}-06-01`),
+            actualRentalYears: 3,  // 3년 < 10년 → 경고
+          },
+        },
+      ],
+      isOneHouseOwner: false,
+      assessmentYear: ASSESSMENT_YEAR,
+    };
+
+    const result = calculateComprehensiveTax(input);
+
+    const mandatoryWarning = result.warnings.find((w) => w.includes("의무임대기간"));
+    expect(mandatoryWarning).toBeDefined();
+    expect(mandatoryWarning).toContain("임대주택 2번째");  // 순번 접두
+    expect(mandatoryWarning).toContain("10년");
   });
 });
 

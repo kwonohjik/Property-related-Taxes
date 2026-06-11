@@ -58,6 +58,9 @@ function toEngineInput(
           ...p.rentalInfo,
           rentalRegistrationDate: parseDate(p.rentalInfo.rentalRegistrationDate),
           rentalStartDate: parseDate(p.rentalInfo.rentalStartDate),
+          registrationRevokedDate: p.rentalInfo.registrationRevokedDate
+            ? parseDate(p.rentalInfo.registrationRevokedDate)
+            : undefined,
           assessmentDate,
         }
       : undefined;
@@ -93,7 +96,6 @@ function toEngineInput(
       ? parseDate(schema.acquisitionDate)
       : undefined,
     assessmentYear: schema.assessmentYear,
-    isMultiHouseInAdjustedArea: schema.isMultiHouseInAdjustedArea,
     previousYearTotalTax: schema.previousYearTotalTax,
     landAggregate: schema.landAggregate,
     landSeparate: schema.landSeparate,
