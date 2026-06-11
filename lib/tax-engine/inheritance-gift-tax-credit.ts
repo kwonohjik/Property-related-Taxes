@@ -205,18 +205,30 @@ export function calcInheritanceTaxCredits(
   ];
   const appliedLaws: Set<string> = new Set();
 
-  // 1. 증여세액공제 (§28)
+  // 1. 증여세액공제 (§28) + 조특법 §30의5⑩ 특례 직접 공제
   // §28①: "제13조에 따라 상속재산에 가산한 증여재산에 대한 증여세액" — §13 기준이 단일 진실.
   // isWithin13Cutoff(inheritance-gift-common.ts)를 재사용하여 §13 합산 집합 == §28 eligible 집합
   // 보장. 일(日) 단위 비교: boundary = subYears(deathDate, limitYears), 경계일 포함.
+  //
+  // 조특법 §30의5⑩·§30의6⑤: 창업자금·가업승계 특례 prior는 §28② 안분 한도 배제 → 직접 전액 공제.
+  // 적용 순서: 일반 §28① 공제(normalPriorGifts) 선행 → 특례 §30의5⑩ 공제(specialPriorGifts) 후행.
   const allPriorGifts = creditInput.priorGifts ?? [];
   const eligiblePriorGifts = deathDate
     ? allPriorGifts.filter((gift) => isWithin13Cutoff(gift, deathDate))
     : allPriorGifts;
 
+  // 일반 prior: §28① 안분 한도 적용
+  const normalPriorGifts = eligiblePriorGifts.filter(
+    (g) => g.specialTreatmentType === undefined,
+  );
+  // 특례 prior: §30의5⑩ 직접 공제 대상 (창업자금·가업승계)
+  const specialPriorGifts = eligiblePriorGifts.filter(
+    (g) => g.specialTreatmentType !== undefined,
+  );
+
   const { creditAmount: giftTaxCredit, breakdown: giftBreakdown } =
     calcGiftTaxCredit(
-      eligiblePriorGifts,
+      normalPriorGifts,
       totalComputedTax,
       taxBase ?? 0,          // §28 ① 분모: 과세표준 우선
       taxableEstateValue,    // 과세표준 0이면 과세가액 fallback
@@ -224,7 +236,26 @@ export function calcInheritanceTaxCredits(
   allBreakdown.push(...giftBreakdown);
   appliedLaws.add(TAX_CREDIT.GIFT_TAX_CREDIT);
 
-  let remainingTax = totalComputedTax - giftTaxCredit;
+  // 조특법 §30의5⑩ 직접 공제: specialTreatmentType prior의 giftTaxPaid 합계
+  // 한도: max(0, 산출세액 − 일반 §28 공제분) — 초과환급 불가
+  const specialTaxPaidTotal = specialPriorGifts.reduce(
+    (s, g) => s + (g.giftTaxPaid ?? 0),
+    0,
+  );
+  const specialTreatmentCredit = Math.min(
+    specialTaxPaidTotal,
+    Math.max(0, totalComputedTax - giftTaxCredit),
+  );
+  if (specialTreatmentCredit > 0) {
+    allBreakdown.push({
+      label: `조특법 §30의5⑩ 특례 증여세액 직접 공제`,
+      amount: specialTreatmentCredit,
+      lawRef: TAX_CREDIT.STARTUP_FUND_TAX_CREDIT,
+    });
+    appliedLaws.add(TAX_CREDIT.STARTUP_FUND_TAX_CREDIT);
+  }
+
+  let remainingTax = totalComputedTax - giftTaxCredit - specialTreatmentCredit;
 
   // 2. 외국납부세액공제 (§29 / 상증령 §21①)
   // 한도 = totalComputedTax(원 산출세액, §28 차감 前) × (국외 과세표준 ÷ 전체 과세표준).
@@ -302,7 +333,7 @@ export function calcInheritanceTaxCredits(
   if (filingCredit > 0) appliedLaws.add(TAX_CREDIT.FILING_CREDIT);
 
   const totalCredit =
-    giftTaxCredit + foreignTaxCredit + shortTermReinheritCredit + filingCredit;
+    giftTaxCredit + specialTreatmentCredit + foreignTaxCredit + shortTermReinheritCredit + filingCredit;
 
   allBreakdown.push({
     label: "세액공제 합계",
@@ -314,7 +345,7 @@ export function calcInheritanceTaxCredits(
     foreignTaxCredit,
     shortTermReinheritCredit,
     filingCredit,
-    specialTreatmentCredit: 0, // 상속세: 조특법 특례 없음
+    specialTreatmentCredit,
     totalCredit,
     breakdown: allBreakdown,
     appliedLaws: Array.from(appliedLaws),

@@ -134,6 +134,9 @@ export function computePriorGiftDeductionForLimit(
 
   for (const g of preGifts) {
     if (!isWithin13Cutoff(g, deathDate)) continue;
+    // 조특법 §30의5⑨ 단서·§30의6⑤: 특례 prior는 §24 3호 분모 대상에서 제외
+    // "제24조제3호를 적용할 때에는 상속세 과세가액에 가산한 증여재산가액으로 보지 아니한다"
+    if (g.specialTreatmentType !== undefined) continue;
     if (g.giftTaxBase !== undefined) {
       explicitTotal += Math.max(0, g.giftAmount - g.giftTaxBase);
     } else if (g.doneeRelation) {

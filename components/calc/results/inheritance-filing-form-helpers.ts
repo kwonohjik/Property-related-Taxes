@@ -93,7 +93,8 @@ export function toPriorGiftPropertyTypeCode(gift: PriorGift): string {
  */
 export function inferPropertyKindCode(
   gift: PriorGift,
-  specialTreatment?: "startup" | "family_business",
+  // 미전달 시 gift.specialTreatmentType에서 직접 읽음 — 호출부 인자 누락 시에도 A23/A24 보장
+  specialTreatment: "startup" | "family_business" | undefined = gift.specialTreatmentType,
 ): EstatePropertyKindCode {
   // 조특법 §30의5 창업자금
   if (specialTreatment === "startup") return "A23";
