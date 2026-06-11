@@ -125,6 +125,40 @@ export type {
   Unsold989IneligibleReason,
 } from "./types";
 
+// ── P1 차감형 (2026-06-11): §99 (IMF 1차) + §98의8 + 공용 라우터 ──
+export {
+  evaluateNew99,
+  NEW_99_PERIOD_START,
+  NEW_99_PERIOD_END,
+  NEW_99_PERIOD_END_NATIONAL,
+  type New99Input,
+  type New99Result,
+  type New99IneligibleCode,
+  type New99IneligibleReason,
+} from "./new-99";
+export {
+  evaluateUnsold988,
+  fullMonthsBetween,
+  UNSOLD_98_8_PRICE_LIMIT,
+  UNSOLD_98_8_AREA_LIMIT_SQM,
+  UNSOLD_98_8_DEDUCTION_RATE,
+  UNSOLD_98_8_RENTAL_MONTHS,
+  type Unsold988Input,
+  type Unsold988Result,
+  type Unsold988IneligibleCode,
+  type Unsold988IneligibleReason,
+} from "./unsold-98-8";
+export {
+  resolveIncomeDeduction,
+  resolveSurchargeExclusionByReduction,
+  buildIncomeDeductionStep,
+  buildSurchargeExclusionStep,
+  SURCHARGE_EXCLUDED_INCOME_DEDUCTION_IDS,
+  type IncomeDeductionId,
+  type IncomeDeductionContext,
+  type IncomeDeductionResolution,
+} from "./income-deduction-router";
+
 /**
  * 23개 조문 통합 stub evaluator. Phase 1 단계는 모두 isEligible:false 반환.
  * 시한 외 케이스는 명시적 사유, 시한 내 케이스는 "구현 예정" 사유.

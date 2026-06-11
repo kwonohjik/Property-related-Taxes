@@ -284,9 +284,22 @@ export const reductionSchema = z.discriminatedUnion("type", [
     region: z.enum(["capital", "non_capital"]).optional(),
     _phase1Stub: z.literal(true).optional(),
   }),
+  // §99 — P1 본격 구현 (2026-06-11): 차감형 본 필드 (⑫ — 누락 시 침묵 strip)
   z.object({
     type: z.literal("new_99"),
     region: z.enum(["metropolitan", "non_metropolitan"]).optional(),
+    contractDate99: z.string().date().optional(),
+    usageApprovalDate99: z.string().date().optional(),
+    acquisitionType99: z.enum(["from_builder", "self_built"]).optional(),
+    isNationalHousing99: z.boolean().optional(),
+    standardPriceAtAcquisition99: z.number().int().nonnegative().optional(),
+    standardPriceAt5Years99: z.number().int().nonnegative().optional(),
+    standardPriceAtTransfer99: z.number().int().nonnegative().optional(),
+    exclusiveAreaSqm99: z.number().nonnegative().optional(),
+    hasOccupancyAtContract99: z.boolean().optional(),
+    isRecontractExcluded99: z.boolean().optional(),
+    isRedevelopedNewHouse99: z.boolean().optional(),
+    previousHouseStdPrice99: z.number().int().nonnegative().optional(),
     _phase1Stub: z.literal(true).optional(),
   }),
   // §99의3 — Phase 2 본격 구현 (2026-05-06): 본 요건 필드 추가 + Phase 1 stub 호환
@@ -361,7 +374,23 @@ export const reductionSchema = z.discriminatedUnion("type", [
   }),
   z.object({ type: z.literal("unsold_98_6"),       _phase1Stub: z.literal(true).optional() }),
   z.object({ type: z.literal("unsold_98_7"),       _phase1Stub: z.literal(true).optional() }),
-  z.object({ type: z.literal("unsold_98_8"),       _phase1Stub: z.literal(true).optional() }),
+  // §98의8 — P1 본격 구현 (2026-06-11): 차감형 50% 본 필드 (⑫ — 누락 시 침묵 strip)
+  z.object({
+    type: z.literal("unsold_98_8"),
+    contractDate988: z.string().date().optional(),
+    acquisitionPrice988: z.number().int().nonnegative().optional(),
+    exclusiveAreaSqm988: z.number().nonnegative().optional(),
+    rentalStartDate988: z.string().date().optional(),
+    rentalEndDate988: z.string().date().optional(),
+    inheritedRentalMonths988: z.number().int().nonnegative().optional(),
+    isUnsoldAfterCompletion988: z.boolean().optional(),
+    isFirstContract988: z.boolean().optional(),
+    isNotRecontract988: z.boolean().optional(),
+    standardPriceAtAcquisition988: z.number().int().nonnegative().optional(),
+    standardPriceAt5Years988: z.number().int().nonnegative().optional(),
+    standardPriceAtTransfer988: z.number().int().nonnegative().optional(),
+    _phase1Stub: z.literal(true).optional(),
+  }),
   // §98의9 — Phase 2 본격 구현 (2026-06-11): 주택수 제외 본 필드 (⑫ — 누락 시 침묵 strip)
   z.object({
     type: z.literal("unsold_98_9"),

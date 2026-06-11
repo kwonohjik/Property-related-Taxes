@@ -195,6 +195,62 @@ export type RentalReductionFormVariant =
       /** ①2호가목·령⑥ 고향 요건 (등록기준지/거주 10년) */
       meetsHometownRequirement: boolean;
     }
+  // ── P1 (2026-06-11): §99 신축주택 IMF 1차 — 차감형 ──
+  | {
+      type: "new_99";
+      /** 최초 매매계약일 (YYYY-MM-DD) — 2호(주건업). 미입력 시 자산 매매계약일 fallback */
+      contractDate99: string;
+      /** 사용승인·사용검사일 (YYYY-MM-DD) — 1호(자기건설) */
+      usageApprovalDate99: string;
+      /** 취득 유형 — 2호(주건업) | 1호(자기건설·조합원) */
+      acquisitionType99: "from_builder" | "self_built";
+      /** 국민주택 — 신축주택취득기간 ~1999.12.31 연장 */
+      isNationalHousing99: boolean;
+      /** 취득시 기준시가 (원) */
+      standardPriceAtAcquisition99: string;
+      /** 취득일+5년 시점 기준시가 (원) — 5년 후 양도 시 필수 */
+      standardPriceAt5Years99: string;
+      /** 양도시 기준시가 (원) — 미입력 시 자산 standardPriceAtTransfer fallback */
+      standardPriceAtTransfer99: string;
+      /** 전용면적 (㎡) — 고가주택 판정 (165/149㎡ 기준 시대) */
+      exclusiveAreaSqm99: string;
+      /** (2호) 매매계약일 현재 다른 자 입주 사실 — ON이면 배제 */
+      hasOccupancyAtContract99: boolean;
+      /** 령 §99② — 1998.5.21 이전 계약 해제 후 재계약·대체취득 — ON이면 배제 */
+      isRecontractExcluded99: boolean;
+      /** 재개발·재건축 신축주택 (령 §99①1호 단서 — 5년 내도 안분) */
+      isRedevelopedNewHouse99: boolean;
+      /** 종전주택 취득 당시 기준시가 (원) — 변형 ON 시 필수 */
+      previousHouseStdPrice99: string;
+    }
+  // ── P1 (2026-06-11): §98의8 준공후미분양 50% 공제 — 차감형 ──
+  | {
+      type: "unsold_98_8";
+      /** 최초 매매계약일 (YYYY-MM-DD) — 시한 2015.1.1~12.31 */
+      contractDate988: string;
+      /** 취득가액 (원) — 6억 이하 (취득세·부대비용 제외) */
+      acquisitionPrice988: string;
+      /** 연면적(공동주택 전용, ㎡) — 135 이하 (DecimalInput) */
+      exclusiveAreaSqm988: string;
+      /** 임대개시일 (YYYY-MM-DD) — 사업자등록+임대사업자등록 후 개시일 기산 (령 §98의5⑤1호 준용) */
+      rentalStartDate988: string;
+      /** 임대종료일 (YYYY-MM-DD) — 빈값 = 양도일까지 계속 */
+      rentalEndDate988: string;
+      /** 상속 합산 피상속인 임대기간 (개월) */
+      inheritedRentalMonths988: string;
+      /** 준공후미분양 확인 (령 §98의7① — 2014.12.31까지 미계약 + 선착순) */
+      isUnsoldAfterCompletion988: boolean;
+      /** 사업주체등과 최초 매매계약 (령 §98의7③) */
+      isFirstContract988: boolean;
+      /** 계약 해제 후 본인·배우자 등 재계약 아님 (령 §98의7②2·3호) */
+      isNotRecontract988: boolean;
+      /** 취득시 기준시가 (원) — 5년 후 양도 안분 */
+      standardPriceAtAcquisition988: string;
+      /** 취득일+5년 시점 기준시가 (원) */
+      standardPriceAt5Years988: string;
+      /** 양도시 기준시가 (원) — 미입력 시 자산 standardPriceAtTransfer fallback */
+      standardPriceAtTransfer988: string;
+    }
   // ── §98의9 수도권 밖 준공후미분양 — 주택수 제외 (2026-06-11) ──
   | {
       type: "unsold_98_9";

@@ -55,6 +55,24 @@ export function mapReductionsToEngine(reductions: ReductionPayload[]): TransferR
           : undefined,
       } as TransferReduction;
     }
+    // P1 §99 신축주택 IMF 1차 (2026-06-11): string 일자 → Date 변환 (⑭)
+    // (income-deduction-router는 coerceOptionalDate로 string도 수용하나, 엔진 입력 계약은 Date)
+    if (r.type === "new_99") {
+      return {
+        ...r,
+        contractDate99: r.contractDate99 ? new Date(r.contractDate99) : undefined,
+        usageApprovalDate99: r.usageApprovalDate99 ? new Date(r.usageApprovalDate99) : undefined,
+      } as TransferReduction;
+    }
+    // P1 §98의8 준공후미분양 50% (2026-06-11): string 일자 → Date 변환 (⑭)
+    if (r.type === "unsold_98_8") {
+      return {
+        ...r,
+        contractDate988: r.contractDate988 ? new Date(r.contractDate988) : undefined,
+        rentalStartDate988: r.rentalStartDate988 ? new Date(r.rentalStartDate988) : undefined,
+        rentalEndDate988: r.rentalEndDate988 ? new Date(r.rentalEndDate988) : undefined,
+      } as TransferReduction;
+    }
     // §98의9 수도권 밖 준공후미분양 (2026-06-11): string 일자 → Date 변환 (⑭)
     if (r.type === "unsold_98_9") {
       return {

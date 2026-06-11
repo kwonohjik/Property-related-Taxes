@@ -79,8 +79,9 @@ const RULES: Record<TransferReductionId, PeriodRule> = {
     check: (c) => {
       // 조특법 §99 ① 1호(자기건설): 사용승인일 / ① 2호(주건업): 매매계약일 + 계약금 납부
       // 본 헬퍼는 넓은 범위로 통과 — 본 요건(자기건설 vs 주건업 분기)은 evaluateNew99에서 재검증.
+      // P1 (2026-06-11): 일자 전부 미입력 시 낙관 통과 (라디오 활성) — 정확 판정은 evaluator (D-1' 완화).
       const target = c.contractDate ?? c.usageApprovalDate ?? c.acquisitionDate;
-      return within(target, D("1998-05-22"), D("1999-12-31"));
+      return target === undefined || within(target, D("1998-05-22"), D("1999-12-31"));
     },
     failReason: "매매계약/사용승인일이 1998.5.22~1999.6.30(국민주택 ~1999.12.31) 시한 외 — 조특법 §99",
   },
@@ -150,7 +151,11 @@ const RULES: Record<TransferReductionId, PeriodRule> = {
   },
   unsold_98_8: {
     label: "매매계약 2015.1.1~2015.12.31",
-    check: (c) => within(c.contractDate, D("2015-01-01"), D("2015-12-31")),
+    // P1 (2026-06-11): 자산 계약일 미입력 시 낙관 통과 — 본 판정은 reduction-수준
+    // contractDate988 기준 evaluateUnsold988 (D-1' 완화). 취득일 fallback 금지 —
+    // 계약 2015·취득 2016 케이스를 취득일로 오차단하지 않도록 contractDate만 본다.
+    check: (c) =>
+      c.contractDate === undefined || within(c.contractDate, D("2015-01-01"), D("2015-12-31")),
     failReason: "준공후미분양 매매계약 시한(2015.1.1~2015.12.31) 외 — 조특법 §98의8",
   },
   // D-1' (2026-06-11): §98의9 시한 기준은 "준공후미분양주택 취득일"인데 PeriodCheckContext는
