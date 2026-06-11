@@ -16,14 +16,13 @@ import {
   calculateProgressiveTax,
   calculateHoldingPeriod,
   isSurchargeSuspended,
-  safeMultiplyThenDivide,
   truncateToWon,
 } from "./tax-utils";
 import type { MultiHouseSurchargeResult } from "./multi-house-surcharge";
 import type { ParsedRates } from "./transfer-tax-helpers";
 import { calcBasicDeduction } from "./transfer-tax-helpers";
 import { resolveCompanionLandRate } from "./appurtenant-land-rate";
-import { getEffectiveAcquisitionDate } from "./transfer-tax-finalize";
+import { getEffectiveAcquisitionDate } from "./transfer-tax-lthd-start";
 // re-export — 기존 import 경로 하위 호환 유지
 export {
   resolveCompanionLandRate,
@@ -31,28 +30,7 @@ export {
   type PrimaryContextForCompanionRate,
   type CompanionLandRateResolution,
 } from "./appurtenant-land-rate";
-import {
-  type RentalReductionInput,
-  type RentalReductionResult,
-  calculateRentalReduction,
-} from "./rental-housing-reduction";
-import { evaluateRental97TaxAmount } from "./transfer-reductions/rental-97-router";
-import type { Rental97Result } from "./transfer-reductions/types";
-import {
-  type NewHousingReductionInput,
-  type NewHousingReductionResult,
-  determineNewHousingReduction,
-} from "./new-housing-reduction";
-import {
-  type PublicExpropriationReductionResult,
-  calculatePublicExpropriationReduction,
-} from "./public-expropriation-reduction";
-import {
-  type SelfFarmingReductionResult,
-  calculateSelfFarmingReduction,
-} from "./self-farming-reduction";
-import type { LongTermRentalRuleSet, NewHousingMatrixData } from "./schemas/rate-table.schema";
-import type { TransferTaxInput, TransferReduction, CalculationStep, TransferTaxResult } from "./types/transfer.types";
+import type { TransferTaxInput, CalculationStep, TransferTaxResult } from "./types/transfer.types";
 import { TRANSFER } from "./legal-codes";
 import {
   calculateMultiParcelTransfer,
@@ -448,7 +426,7 @@ export function handleMultiParcelBranch(
   ctx: MultiParcelBranchContext,
   steps: CalculationStep[],
 ): TransferTaxResult | null {
-  const { rawInput, effectiveInput, input, parsedRates, multiHouseSurchargeResult, carryoverDetail, options } = ctx;
+  const { rawInput, effectiveInput, input, parsedRates, multiHouseSurchargeResult, options } = ctx;
 
   if (!rawInput.parcels || rawInput.parcels.length === 0) return null;
 

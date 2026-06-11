@@ -383,42 +383,9 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
   };
 }
 
-/**
- * 장기보유특별공제 보유기간 기산일 결정 — 사례 35.
- *
- * 사전법규재산 2022-684·881 / 서울행법 2012구단26961:
- *  - 다주택 상태에서 주택을 상가로 용도변경 후 양도 시 변경일 이전 기간은 LTHD 배제.
- *  - 1주택 상태 용도변경은 당초 취득일 기산.
- *
- * 본 함수는 `acquisitionDate`를 교체하지 않으며, LTHD 보유기간 산정 시점만 이동시킨다.
- * 취득가액·양도차익·필요경비 등 LTHD 외 모든 계산에는 영향 없음.
- */
-export function resolveLTHDStartDate(input: TransferTaxInput): Date {
-  // 사례 48 — 승계조합원 신축APT 양도 (관리처분 후 입주권 승계).
-  // 사전-2019-법령해석재산-0649 + 시행령 §162①4호 — 보유기간 기산일 = 준공일.
-  if (
-    input.propertyType === "redevelopment_apt" &&
-    input.redevelopment?.isSuccessorMember === true &&
-    input.redevelopment?.completionDate
-  ) {
-    return input.redevelopment.completionDate;
-  }
-
-  // 사례 35 — 주택→상가 용도변경 (기존)
-  if (!input.houseToCommercialConversion) return input.acquisitionDate;
-  if (!input.wasMultiHouseAtConversion) return input.acquisitionDate;
-  return input.conversionDate ?? input.acquisitionDate;
-}
-
-/**
- * LTHD + 세율 보유기간 통합 기산일 결정 (사례 48 도입).
- *
- * 단기세율 분기(§104①2/3호 — 1년/2년 미만)와 LTHD 보유기간 모두 동일 기산일 사용.
- * 현재는 resolveLTHDStartDate 와 동일 결과 — 후속 PR에서 분기 차이 발생 시 분리.
- */
-export function getEffectiveAcquisitionDate(input: TransferTaxInput): Date {
-  return resolveLTHDStartDate(input);
-}
+// LTHD/세율 보유기간 기산일 결정(사례 35·48)은 transfer-tax-lthd-start.ts로 이동했다
+// (리뷰 Low #8 — rate-calc ↔ finalize 순환 import 해소). 하위 호환을 위해 re-export 유지.
+export { resolveLTHDStartDate, getEffectiveAcquisitionDate } from "./transfer-tax-lthd-start";
 
 /**
  * 결과 detail 필드 공통 빌더 — 조기 반환(비과세·손실)과 정상 반환의 detail 누락 방지.

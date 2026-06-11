@@ -407,7 +407,9 @@ export function buildSurchargeExclusionStep(exclusion: {
   appliedId?: IncomeDeductionId;
   legalBasis?: string;
 }): { label: string; formula: string; amount: number; legalBasis: string } {
-  const article = exclusion.appliedId ? EXCLUSION_ARTICLE_LABELS[exclusion.appliedId] : "조특법 §99의3";
+  // appliedId는 중과 배제(excluded=true) 시 항상 set — fallback은 도달 불가이나 특정 조문
+  // 하드코딩("§99의3") 대신 중립 표현으로 오표시 방지 (리뷰 Low #3 방어).
+  const article = exclusion.appliedId ? EXCLUSION_ARTICLE_LABELS[exclusion.appliedId] : "조특법 감면주택";
   return {
     label: "감면주택 다주택 중과 배제",
     formula: `${article} 감면주택 양도 — 중과세율 적용 제외`,
