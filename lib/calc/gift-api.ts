@@ -72,7 +72,8 @@ export function buildGiftTaxInput(form: FormState): GiftTaxInput {
     donor: form.donor,
     giftItems: allItems,
     exemptions: form.exemptionItems.length > 0 ? form.exemptionItems : undefined,
-    // sourceCalculationId(UI 메타)는 엔진 입력에서 strip (지점 ④)
+    // sourceCalculationId(UI 메타)는 엔진 입력에서 strip (지점 ④).
+    // specialTreatmentType·priorSpecialTaxPaid는 엔진 필요 필드 — strip 금지.
     priorGiftsWithin10Years: form.priorGifts.map(
       ({ sourceCalculationId: _src, ...rest }) => rest,
     ),

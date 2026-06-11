@@ -354,6 +354,24 @@ export interface EstateItem extends EstateLocationFields {
    */
   farmingUseStartDate?: string;
 
+  // ===== 조특법 특례 2-스트림 분리과세 (2026-06-11, §30의5⑪·§30의6⑤) =====
+  /**
+   * 해당 자산이 조특법 특례(창업자금·가업승계) 귀속 자산인지 여부.
+   *
+   * 법령 근거:
+   *   §30의5⑪: 창업자금 외의 일반 증여재산은 특례 과세가액에 §47② 합산 금지.
+   *             → 자산별로 특례 스트림 vs 일반 스트림을 명시 구분해야 함.
+   *
+   * 귀속 규칙:
+   *   - giftItems 1개 + specialTreatment 선택: 자동 특례 귀속 (본 필드 불필요)
+   *   - giftItems N개 + specialTreatment 선택: 자산-수준 명시 필수.
+   *     true  → 특례 스트림 (창업자금·가업승계 자산)
+   *     false → 일반 스트림
+   *     undefined + N개 혼합: validation 차단 ("특례 귀속 자산을 선택해 주세요")
+   *   - specialTreatment 미선택: 본 필드 무시
+   */
+  isSpecialTreatmentAsset?: boolean;
+
   // ===== §47① 부담부증여 채무인수 (gift-burdened-debt-47-1) =====
   /**
    * §47① 부담부증여 수증자 인수 채무액 (원).
@@ -1681,4 +1699,46 @@ export interface GiftTaxResult extends TaxResultMeta {
   cashDeferred?: number;             // ㊼ §70② 현금 분납
   /** 별지 제10호서식 좌·우 컬럼 행 배열 (총 34행) — UI는 본 배열만 읽음 */
   besshi10Rows: FilingFormRow[];
+
+  // ===== 조특법 특례 2-스트림 분리과세 결과 (2026-06-11) =====
+  /**
+   * 특례 스트림 세액 (§30의5·§30의6 해당분).
+   *
+   * 법령 근거:
+   *   §30의5: 창업자금 — 5억 공제, 10% 단일세율, §69 배제
+   *   §30의6: 가업승계 — 10억 공제, 120억 이하 10%/초과 20%, §69 배제
+   *   §30의5①후단: 기간무관 합산(과거 특례 prior 포함), 기납부 특례세액 차감
+   *
+   * specialTreatment 미선택 시 0.
+   * Map 금지 — Record/원시값만 사용 (memory: feedback_engine_result_map_json_loss).
+   */
+  specialStreamTax?: number;
+
+  /**
+   * 일반 스트림 세액 (§47·§53·§56·§57·§58·§69 일반 과세).
+   *
+   * specialTreatment 미선택 시 computedTax와 동일(단일 스트림).
+   * 혼합 증여(특례+일반) 시 일반 자산 분 세액만.
+   */
+  ordinaryStreamTax?: number;
+
+  /**
+   * 특례 스트림 기반 합산 과세가액 (별지 표시·결과뷰용).
+   *
+   * = 신규 특례 자산가액 + 과거 특례 prior 가액(기간무관 합산)
+   * specialTreatment 미선택 시 undefined.
+   */
+  specialStreamAggregatedValue?: number;
+
+  /**
+   * @deprecated 조특법 특례 2-스트림 분리과세(2026-06-11) 이후 의미 없음.
+   *
+   * 이전 구조: "절감액 공제" 방식 — 일반 산출세액에서 특례세액을 공제.
+   * 신규 구조: 특례 자산은 처음부터 특례 스트림(10%/20%)으로만 계산되므로
+   *            "일반 산출세액"이 존재하지 않음. 본 필드는 0으로 고정됨.
+   *
+   * creditDetail.specialTreatmentCredit은 항상 0.
+   * 특례 세액은 specialStreamTax 필드로 접근할 것.
+   */
+  _deprecatedSpecialTreatmentCredit_alwaysZero?: never;
 }

@@ -471,34 +471,56 @@ export type InheritanceTaxInputSchema = z.infer<typeof inheritanceTaxInputSchema
 // 증여세 전체 입력 스키마
 // ============================================================
 
-export const giftTaxInputSchema = z.object({
-  giftDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD 형식"),
-  donorRelation: z.enum([
-    "spouse",
-    "lineal_ascendant_adult",
-    "lineal_ascendant_minor",
-    "lineal_descendant",
-    "other_relative",
-  ]),
-  /** Phase A: 증여자 관계 (동일인 §47 합산 그룹화 + §57 적용 판정) — 필수 */
-  donor: giftDonorRelationSchema,
-  giftItems: z.array(estateItemSchema).min(1, "증여재산이 1개 이상 필요합니다."),
-  exemptions: z.array(exemptionCheckedItemSchema).optional(),
-  priorGiftsWithin10Years: z.array(priorGiftSchema),
-  isGenerationSkip: z.boolean(),
-  isMinorDonee: z.boolean(),
-  /**
-   * §57① 단서 — 최근친 직계비속 사망 시 할증 배제.
-   * true 시 donorGroup=B이어도 §57① 할증 전액 미적용.
-   */
-  isSubstituteGift: z.boolean().optional(),
-  deductionInput: giftDeductionInputSchema,
-  creditInput: giftTaxCreditInputSchema,
-  valuationBaseDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-  appraisalFee: appraisalFeeSchema.optional(),
-  // 분납 (§70②) — 별지10호 ㊼ 연동
-  applyInstallmentSplit: z.boolean().optional(),
-  requestedSplitAmount: z.number().nonnegative().optional(),
-});
+export const giftTaxInputSchema = z
+  .object({
+    giftDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD 형식"),
+    donorRelation: z.enum([
+      "spouse",
+      "lineal_ascendant_adult",
+      "lineal_ascendant_minor",
+      "lineal_descendant",
+      "other_relative",
+    ]),
+    /** Phase A: 증여자 관계 (동일인 §47 합산 그룹화 + §57 적용 판정) — 필수 */
+    donor: giftDonorRelationSchema,
+    giftItems: z.array(estateItemSchema).min(1, "증여재산이 1개 이상 필요합니다."),
+    exemptions: z.array(exemptionCheckedItemSchema).optional(),
+    priorGiftsWithin10Years: z.array(priorGiftSchema),
+    isGenerationSkip: z.boolean(),
+    isMinorDonee: z.boolean(),
+    /**
+     * §57① 단서 — 최근친 직계비속 사망 시 할증 배제.
+     * true 시 donorGroup=B이어도 §57① 할증 전액 미적용.
+     */
+    isSubstituteGift: z.boolean().optional(),
+    deductionInput: giftDeductionInputSchema,
+    creditInput: giftTaxCreditInputSchema,
+    valuationBaseDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+    appraisalFee: appraisalFeeSchema.optional(),
+    // 분납 (§70②) — 별지10호 ㊼ 연동
+    applyInstallmentSplit: z.boolean().optional(),
+    requestedSplitAmount: z.number().nonnegative().optional(),
+  })
+  .superRefine((data, ctx) => {
+    // T-12 (동기화 지점 ⑩): 조특법 특례 2-스트림 — 혼합 자산 귀속 미설정 차단
+    // §30의5⑪: 창업자금 외 자산은 특례 스트림 과세가액에 §47② 합산 금지.
+    // 혼합 증여(N≥2 자산)에서 특례 선택 시 isSpecialTreatmentAsset 명시 필수.
+    const specialTreatment = data.creditInput?.specialTreatment;
+    if (specialTreatment && data.giftItems.length >= 2) {
+      const unassigned = data.giftItems.filter(
+        (item) => item.isSpecialTreatmentAsset === undefined,
+      );
+      if (unassigned.length > 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["giftItems"],
+          message:
+            `조특법 특례(${specialTreatment === "startup" ? "창업자금 §30의5" : "가업승계 §30의6"}) 선택 시 ` +
+            `혼합 자산 ${data.giftItems.length}개 중 미귀속 자산 ${unassigned.length}개에 ` +
+            `특례 귀속(isSpecialTreatmentAsset)을 명시해야 합니다 (§30의5⑪).`,
+        });
+      }
+    }
+  });
 
 export type GiftTaxInputSchema = z.infer<typeof giftTaxInputSchema>;
