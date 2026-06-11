@@ -107,6 +107,24 @@ export type {
   New994IneligibleReason,
 } from "./types";
 
+// ── §98의9 수도권 밖 준공후미분양 — 주택수 제외 (2026-06-11) ──
+export {
+  evaluateUnsold989,
+  evaluateUnsold989FromReductions,
+  resolveHouseCountExclusion,
+  UNSOLD_98_9_FROM,
+  UNSOLD_98_9_TO,
+  UNSOLD_98_9_PRICE_LIMIT,
+  UNSOLD_98_9_AREA_LIMIT_SQM,
+  type HouseCountExclusionResolution,
+} from "./unsold-98-9";
+export type {
+  Unsold989EvaluationInput,
+  Unsold989Result,
+  Unsold989IneligibleCode,
+  Unsold989IneligibleReason,
+} from "./types";
+
 /**
  * 23개 조문 통합 stub evaluator. Phase 1 단계는 모두 isEligible:false 반환.
  * 시한 외 케이스는 명시적 사유, 시한 내 케이스는 "구현 예정" 사유.

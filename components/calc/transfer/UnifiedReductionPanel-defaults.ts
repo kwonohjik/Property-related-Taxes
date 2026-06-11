@@ -1,0 +1,179 @@
+/**
+ * UnifiedReductionPanel — 순수 기본값·토글 헬퍼 (800줄 정책 분리, 2026-06-11)
+ *
+ * 상태 무의존 순수 함수/상수만 보유. 패널 본체에서 import.
+ */
+
+import type { AssetReductionForm } from "@/lib/stores/calc-wizard-store";
+import {
+  REDUCTION_METADATA,
+  type TransferReductionId,
+  type ReductionCategory,
+} from "@/lib/tax-engine/transfer-reductions";
+
+export const STANDALONE_LABELS: Record<"self_farming" | "public_expropriation", { label: string; desc: string }> = {
+  self_farming: { label: "자경농지 감면 (§69)", desc: "8년 이상 자경 (한도 1억)" },
+  public_expropriation: { label: "공익사업 수용 감면 (§77)", desc: "현금 10% / 채권 15~40% (연간 2억)" },
+};
+
+export function getStandaloneDefault(type: "self_farming" | "public_expropriation"): AssetReductionForm {
+  if (type === "self_farming") {
+    return { type: "self_farming", farmingYears: "0" };
+  }
+  return {
+    type: "public_expropriation",
+    expropriationCash: "0",
+    expropriationBond: "0",
+    expropriationBondHoldingYears: "none",
+    expropriationApprovalDate: "",
+  };
+}
+
+/**
+ * Legacy ID(자동변환 마이그레이션 전 또는 1개월 alias 기간) → 카테고리 매핑.
+ * REDUCTION_METADATA에 등록되지 않은 legacy ID도 같은 카테고리 라디오 동작 시 제거되도록.
+ * 사용자 결정사항 #4 (legacy 1개월 alias) 정책 준수.
+ */
+const LEGACY_TO_CATEGORY: Record<string, ReductionCategory> = {
+  long_term_rental: "rental",
+  new_housing: "new_housing",
+  unsold_housing: "unsold_housing",
+};
+
+export function toggleGroupRadio(
+  reductions: AssetReductionForm[],
+  category: ReductionCategory,
+  newId: TransferReductionId,
+  alreadySelected: boolean,
+): AssetReductionForm[] {
+  // 1. 같은 카테고리 기존 선택 제거 (라디오 동작) — legacy ID도 포함
+  const others = reductions.filter((r) => {
+    const meta = REDUCTION_METADATA[r.type as TransferReductionId];
+    const cat = meta?.category ?? LEGACY_TO_CATEGORY[r.type];
+    return cat !== category;
+  });
+
+  // 2. 같은 항목 재클릭 시 해제 (사용자 결정사항 #5)
+  if (alreadySelected) return others;
+
+  // 3. 신규 선택 추가
+  return [...others, getReductionDefault(newId)];
+}
+
+/** §97 시리즈 공통 기본값 (3-state 초기값 준수: rentIncreaseViolationMode="" / hasVacancyOver6Months=null) */
+const RENTAL_COMMON_DEFAULTS = {
+  registrationDate: "",
+  isTaxRegistered: false,
+  rentalStartDate: "",
+  rentIncreaseViolationMode: "" as const,
+  rentHistory: [],
+  hasVacancyOver6Months: null,
+  vacancyPeriods: [],
+};
+
+export function getReductionDefault(id: TransferReductionId): AssetReductionForm {
+  if (id === "new_99_3") {
+    return {
+      type: "new_99_3",
+      contractDate993: "",
+      usageApprovalDate993: "",
+      standardPriceAt5Years: "",
+      standardPriceAtAcquisition993: "",
+      standardPriceAtTransfer993: "",
+      region993: "outside_speculation",
+      acquisitionType993: "from_builder",
+      hasOccupancyAtContract: false,
+      isResident993: true,
+      isHousingConstructionBusiness993: false,
+    };
+  }
+  // ── §97 시리즈 기본값 (Phase 2, 2026-06-11) ──
+  if (id === "rental_97_3") {
+    return {
+      type: "rental_97_3",
+      ...RENTAL_COMMON_DEFAULTS,
+      rentalHousingType: "long_term_private",
+      propertyType: "non_apartment",
+      region: "capital",
+      officialPriceAtStart: "",
+      isNationalHousingScale: false,
+      isConvertedFromShortTerm: false,
+    };
+  }
+  if (id === "rental_97_4") {
+    return {
+      type: "rental_97_4",
+      ...RENTAL_COMMON_DEFAULTS,
+      region: "capital",
+    };
+  }
+  if (id === "rental_97_5") {
+    return {
+      type: "rental_97_5",
+      ...RENTAL_COMMON_DEFAULTS,
+      officialPriceAtStart: "",
+      region: "capital",
+    };
+  }
+  if (id === "rental_97_main") {
+    return {
+      type: "rental_97_main",
+      ...RENTAL_COMMON_DEFAULTS,
+      constructionYear: "",
+      isNationalHousing: false,
+    };
+  }
+  if (id === "rental_97_proviso") {
+    return {
+      type: "rental_97_proviso",
+      ...RENTAL_COMMON_DEFAULTS,
+      constructionYear: "",
+      isNationalHousing: false,
+      provisoCase: undefined,
+    };
+  }
+  if (id === "rental_97_2") {
+    return {
+      type: "rental_97_2",
+      ...RENTAL_COMMON_DEFAULTS,
+      rental972Type: "",
+      isNationalHousing: false,
+    };
+  }
+  // §99의4 농어촌·고향주택 (2026-06-11)
+  if (id === "new_99_4_rural") {
+    return {
+      type: "new_99_4_rural",
+      ruralHouseAcquisitionDate: "",
+      ruralHouseStdPrice: "",
+      isRegisteredHanok: false,
+      isAdjacentArea: false,
+      meetsLocationRequirement: false,
+    };
+  }
+  if (id === "new_99_4_hometown") {
+    return {
+      type: "new_99_4_hometown",
+      ruralHouseAcquisitionDate: "",
+      ruralHouseStdPrice: "",
+      isRegisteredHanok: false,
+      isAdjacentArea: false,
+      meetsLocationRequirement: false,
+      meetsHometownRequirement: false,
+    };
+  }
+  // §98의9 수도권 밖 준공후미분양 (2026-06-11)
+  if (id === "unsold_98_9") {
+    return {
+      type: "unsold_98_9",
+      unsoldHouseAcquisitionDate: "",
+      unsoldHouseAcquisitionPrice: "",
+      unsoldHouseExclusiveArea: "",
+      isNonCapitalRegion: false,
+      wasOneHouseholdAtAcquisition: false,
+      meetsSellerAndContractRequirement: false,
+    };
+  }
+  // Phase 1 stub: type만 (실제로 활성 클릭 불가하므로 도달하지 않음)
+  return { type: id } as AssetReductionForm;
+}

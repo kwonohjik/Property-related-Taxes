@@ -586,6 +586,19 @@ export function toEngineReductions(
       }
       return { type: "new_99_4_rural" as const, ...common994 };
     }
+    // ── §98의9 수도권 밖 준공후미분양 (2026-06-11): 주택수 제외 본 변환 (④) ──
+    // 날짜는 string 그대로 — Route handler(⑭ route-reductions-mapper)에서 Date 변환.
+    if (r.type === "unsold_98_9") {
+      return {
+        type: "unsold_98_9" as const,
+        unsoldHouseAcquisitionDate: r.unsoldHouseAcquisitionDate || undefined,
+        unsoldHouseAcquisitionPrice: parseAmount(r.unsoldHouseAcquisitionPrice || "0") || undefined,
+        unsoldHouseExclusiveArea: parseDecimal(r.unsoldHouseExclusiveArea || "") || undefined,
+        isNonCapitalRegion: r.isNonCapitalRegion,
+        wasOneHouseholdAtAcquisition: r.wasOneHouseholdAtAcquisition,
+        meetsSellerAndContractRequirement: r.meetsSellerAndContractRequirement,
+      };
+    }
     // ── Phase 1 stub 잔여: 본 요건 미구현 — type만 전달 (엔진은 시한 검증만 수행) ──
     // 해당 ID들은 transfer.types.ts TransferReductionStub 정의 + Zod schema 통과 보장.
     // TypeScript narrowing이 모든 케이스를 소진해 never로 좁혀지므로 unknown 캐스트로 우회.

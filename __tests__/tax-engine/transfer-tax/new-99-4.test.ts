@@ -109,6 +109,15 @@ describe("§99의4 evaluateNew994", () => {
     expect(r.isEligible).toBe(true);
   });
 
+  it("A-8 동형: 양도일 < 농어촌 취득일 → 불적용 (§98의9 검토에서 발견된 동일 갭 보강)", () => {
+    const r = evaluateNew994(base({
+      ruralHouseAcquisitionDate: new Date("2026-01-01"),
+      transferDate: new Date("2025-06-01"),
+    }));
+    expect(r.isEligible).toBe(false);
+    expect(codesOf(r)).toContain("TRANSFER_BEFORE_ACQUISITION");
+  });
+
   it("필수 입력 미입력 → 불적용 사유 (자동 fallback 금지)", () => {
     const r = evaluateNew994(base({ ruralHouseAcquisitionDate: undefined, ruralHouseStdPrice: undefined }));
     expect(r.isEligible).toBe(false);

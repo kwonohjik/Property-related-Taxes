@@ -41,7 +41,7 @@ import type { CarryoverTaxationDetail } from "./types/transfer-carryover.types";
 export type { TransferTaxInput, TransferReduction, CalculationStep, TransferTaxResult };
 import { runRentalHousingExceptionStep } from "./transfer-tax-rental-housing-step";
 import { evaluateNew993, type New993Result } from "./transfer-reductions/new-99-3";
-import { evaluateNew994FromReductions } from "./transfer-reductions/new-99-4";
+import { resolveHouseCountExclusion, buildHouseCountExclusionStep } from "./transfer-reductions/unsold-98-9";
 
 import {
   parseRatesFromMap,
@@ -290,22 +290,17 @@ export function calculateTransferTax(
   // STEP 0.65: 재개발/재건축 분기 — 시행령 §166. STEP 1: 비과세 판단
   if (isRedevelopmentActive(effectiveInput.propertyType, effectiveInput.redevelopment)) return calculateRedevelopmentTax(effectiveInput, parsedRates, steps);
 
-  // STEP 0.9: §99의4 농어촌·고향주택 주택수 제외 (소법 §89①3호 의제) — eligible 시 비과세·
-  // 12억 안분·LTHD 표2에 유효 주택수(count−1) 반영. 중과는 §167의3 별개 체계 — 원본 유지(R-D).
-  const new994Detail = evaluateNew994FromReductions(effectiveInput.reductions, {
-    generalHouseAcquisitionDate: effectiveInput.acquisitionDate,
-    transferDate: effectiveInput.transferDate,
-  });
-  const exemptionJudgeInput = new994Detail?.isEligible
+  // STEP 0.9: §99의4·§98의9 주택수 제외 (소법 §89①3호 의제) — §99의4 우선 1건(F-4) 적용,
+  // 비과세·12억 안분·LTHD 표2에 유효 주택수(count−1) 반영. 중과는 §167의3 별개 — 원본(R-D).
+  const { applied: hceApplied, new994Detail, unsold989Detail } = resolveHouseCountExclusion(
+    effectiveInput.reductions,
+    { generalHouseAcquisitionDate: effectiveInput.acquisitionDate, transferDate: effectiveInput.transferDate },
+  );
+  const exemptionJudgeInput = hceApplied
     ? { ...effectiveInput, householdHousingCount: Math.max(effectiveInput.householdHousingCount - 1, 0) }
     : effectiveInput;
-  if (new994Detail?.isEligible) {
-    steps.push({
-      label: "농어촌·고향주택 소유주택 제외 (§99의4)",
-      formula: `주택 수 ${effectiveInput.householdHousingCount}채 − 농어촌주택등 1채 = ${exemptionJudgeInput.householdHousingCount}채로 보아 1세대1주택 판정`,
-      amount: 0,
-      legalBasis: new994Detail.legalBasis,
-    });
+  if (hceApplied) {
+    steps.push(buildHouseCountExclusionStep(hceApplied, effectiveInput.householdHousingCount, exemptionJudgeInput.householdHousingCount));
   }
 
   const exemptionResult = checkExemption(exemptionJudgeInput, parsedRates.oneHouseSpecialRules);
@@ -322,6 +317,7 @@ export function calculateTransferTax(
       isExempt: true,
       exemptReason: exemptionResult.exemptReason,
       new994Detail, // §99의4 주택수 제외가 비과세 근거인 경우 카드 표시 (추징 경고 포함)
+      unsold989Detail, // §98의9 동일 (종부세 안내·F-4 경고 포함)
       warnings: warnings.length > 0 ? warnings : undefined,
       transferGain: 0,
       taxableGain: 0,
@@ -793,6 +789,7 @@ export function calculateTransferTax(
     rental97LthdDetail,
     rental97TaxDetail,
     new994Detail,
+    unsold989Detail,
     penaltyDetail,
     new993Detail: new993FinalResult,
     transferBurdenedGiftBreakdown,
