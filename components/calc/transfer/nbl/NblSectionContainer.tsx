@@ -3,6 +3,14 @@
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { UnconditionalExemptionSection } from "./UnconditionalExemptionSection";
 import { ResidenceHistorySection } from "./ResidenceHistorySection";
 import { GracePeriodSection } from "./GracePeriodSection";
@@ -88,29 +96,39 @@ export function NblSectionContainer({
       <div className={anyExempt ? "opacity-50 pointer-events-none" : undefined}>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <FieldCard label="토지 지목">
-            <select
-              value={asset.nblLandType}
-              onChange={(e) => onAssetChange({ nblLandType: e.target.value as AssetForm["nblLandType"] })}
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            <Select
+              value={asset.nblLandType ?? ""}
+              onValueChange={(v) => v && onAssetChange({ nblLandType: v as AssetForm["nblLandType"] })}
             >
-              <option value="">선택 안 함</option>
-              {LAND_TYPE_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </select>
+              <SelectTrigger>
+                <SelectValue>
+                  {LAND_TYPE_OPTIONS.find((o) => o.value === asset.nblLandType)?.label ?? "선택 안 함"}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {LAND_TYPE_OPTIONS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </FieldCard>
 
           <FieldCard label="용도지역">
-            <select
-              value={asset.nblZoneType}
-              onChange={(e) => onAssetChange({ nblZoneType: e.target.value })}
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            <Select
+              value={asset.nblZoneType ?? ""}
+              onValueChange={(v) => v && onAssetChange({ nblZoneType: v })}
             >
-              <option value="">선택 안 함</option>
-              {ZONE_TYPE_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </select>
+              <SelectTrigger>
+                <SelectValue>
+                  {ZONE_TYPE_OPTIONS.find((o) => o.value === asset.nblZoneType)?.label ?? "선택 안 함"}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {ZONE_TYPE_OPTIONS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </FieldCard>
         </div>
 
@@ -145,15 +163,9 @@ export function NblSectionContainer({
             />
           </FieldCard>
           <FieldCard label="공동소유 지분" hint="예: 0.5 (50%), 기본 1">
-            <input
-              type="number"
-              min="0"
-              max="1"
-              step="0.01"
+            <DecimalInput
               value={asset.nblOwnershipRatio}
-              onChange={(e) => onAssetChange({ nblOwnershipRatio: e.target.value })}
-              placeholder="1"
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              onChange={(v) => onAssetChange({ nblOwnershipRatio: v })}
             />
           </FieldCard>
         </div>

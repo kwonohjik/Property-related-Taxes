@@ -19,9 +19,15 @@ import { getFilingDeadline, isFilingOverdue } from "@/lib/calc/filing-deadline";
 export function Step1({
   form,
   onChange,
+  errorAssetIndex,
+  errorMessage,
 }: {
   form: TransferFormData;
   onChange: (d: Partial<TransferFormData>) => void;
+  /** 검증 실패 자산 인덱스 — 해당 카드 인라인 에러 표시 */
+  errorAssetIndex?: number | null;
+  /** 검증 실패 메시지 */
+  errorMessage?: string | null;
 }) {
   const [hasBundledAssets, setHasBundledAssets] = useState(() => form.assets.length > 1);
 
@@ -182,6 +188,8 @@ export function Step1({
           contractTotalPrice={form.contractTotalPrice}
           totalTransferExpense={form.totalTransferExpense}
           isOneHouseSingle={form.isOneHousehold === true && form.householdHousingCount === "1"}
+          errorAssetIndex={errorAssetIndex}
+          errorMessage={errorMessage}
         />
 
         {hasBundledAssets && (

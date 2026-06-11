@@ -3,6 +3,8 @@ import { cn } from "@/lib/utils";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { DateInput } from "@/components/ui/date-input";
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { NblSectionContainer } from "@/components/calc/transfer/nbl/NblSectionContainer";
 import { HousesListSection } from "./step4-sections/HousesListSection";
 import { MergeDateSection } from "./step4-sections/MergeDateSection";
@@ -179,18 +181,13 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
           </div>
 
           {/* 1세대 여부 */}
-          <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/30 px-4 py-3">
-            <input
-              id="isOneHousehold"
-              type="checkbox"
-              checked={form.isOneHousehold}
-              onChange={(e) => onChange({ isOneHousehold: e.target.checked })}
-              className="h-4 w-4 rounded accent-primary"
-            />
-            <label htmlFor="isOneHousehold" className="text-sm font-medium cursor-pointer">
-              1세대 해당 (독립적인 생계를 유지하는 세대)
-            </label>
-          </div>
+          <ToggleCard
+            checked={form.isOneHousehold}
+            onCheckedChange={(v) => onChange({ isOneHousehold: v })}
+            title="1세대 해당"
+            description="독립적인 생계를 유지하는 세대"
+            tone="violet"
+          />
 
           {/* 주택 수 */}
           <div className="space-y-1.5">
@@ -288,36 +285,20 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
           {/* 조정대상지역 — 주택만 표시 */}
           {primaryKind === "housing" && (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div className="flex items-center gap-3 rounded-lg border border-border px-4 py-3">
-                <input
-                  id="isRegulated"
-                  type="checkbox"
-                  checked={form.isRegulatedArea}
-                  onChange={(e) => onChange({ isRegulatedArea: e.target.checked })}
-                  className="h-4 w-4 rounded accent-primary"
-                />
-                <div>
-                  <label htmlFor="isRegulated" className="text-sm font-medium cursor-pointer">
-                    양도일 기준 조정대상지역
-                  </label>
-                  <p className="text-xs text-muted-foreground">중과세 판단 기준</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 rounded-lg border border-border px-4 py-3">
-                <input
-                  id="wasRegulated"
-                  type="checkbox"
-                  checked={form.wasRegulatedAtAcquisition}
-                  onChange={(e) => onChange({ wasRegulatedAtAcquisition: e.target.checked })}
-                  className="h-4 w-4 rounded accent-primary"
-                />
-                <div>
-                  <label htmlFor="wasRegulated" className="text-sm font-medium cursor-pointer">
-                    취득일 기준 조정대상지역
-                  </label>
-                  <p className="text-xs text-muted-foreground">비과세 거주요건 판단</p>
-                </div>
-              </div>
+              <ToggleCard
+                checked={form.isRegulatedArea}
+                onCheckedChange={(v) => onChange({ isRegulatedArea: v })}
+                title="양도일 기준 조정대상지역"
+                description="중과세 판단 기준"
+                tone="rose"
+              />
+              <ToggleCard
+                checked={form.wasRegulatedAtAcquisition}
+                onCheckedChange={(v) => onChange({ wasRegulatedAtAcquisition: v })}
+                title="취득일 기준 조정대상지역"
+                description="비과세 거주요건 판단"
+                tone="rose"
+              />
             </div>
           )}
         </div>
@@ -333,62 +314,42 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
           </p>
           <div className="space-y-3">
             <p className="text-sm font-medium">일시적 2주택 특례</p>
-            <div
-              className={cn(
-                "rounded-lg border px-4 py-3 transition-colors",
-                form.temporaryTwoHouseSpecial ? "border-emerald-400 bg-emerald-100/40" : "border-border bg-background",
-              )}
+            <ToggleCard
+              checked={form.temporaryTwoHouseSpecial}
+              onCheckedChange={(v) =>
+                onChange({
+                  temporaryTwoHouseSpecial: v,
+                  previousHouseAcquisitionDate: v ? form.previousHouseAcquisitionDate : "",
+                  newHouseAcquisitionDate: v ? form.newHouseAcquisitionDate : "",
+                })
+              }
+              title="일시적 2주택 특례 해당"
+              description="종전 주택 보유 중 신규 주택 취득 후 일정 기간(보통 3년) 내 종전 주택 양도 시 비과세"
+              tone="emerald"
             >
-              <div className="flex items-center gap-3">
-                <input
-                  id="temporaryTwoHouse"
-                  type="checkbox"
-                  checked={form.temporaryTwoHouseSpecial}
-                  onChange={(e) =>
-                    onChange({
-                      temporaryTwoHouseSpecial: e.target.checked,
-                      previousHouseAcquisitionDate: e.target.checked ? form.previousHouseAcquisitionDate : "",
-                      newHouseAcquisitionDate: e.target.checked ? form.newHouseAcquisitionDate : "",
-                    })
-                  }
-                  className="h-4 w-4 rounded accent-primary"
-                  aria-describedby="temporaryTwoHouseDesc"
-                />
-                <div>
-                  <label htmlFor="temporaryTwoHouse" className="text-sm font-medium cursor-pointer">
-                    일시적 2주택 특례 해당
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium">
+                    종전 주택 취득일 <span className="text-destructive">*</span>
                   </label>
-                  <p id="temporaryTwoHouseDesc" className="text-xs text-muted-foreground">
-                    종전 주택 보유 중 신규 주택 취득 후 일정 기간(보통 3년) 내 종전 주택 양도 시 비과세
-                  </p>
+                  <DateInput
+                    value={form.previousHouseAcquisitionDate}
+                    onChange={(v) => onChange({ previousHouseAcquisitionDate: v })}
+                  />
+                  <p className="text-xs text-muted-foreground">지금 양도하는 주택의 취득일</p>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium">
+                    신규 주택 취득일 <span className="text-destructive">*</span>
+                  </label>
+                  <DateInput
+                    value={form.newHouseAcquisitionDate}
+                    onChange={(v) => onChange({ newHouseAcquisitionDate: v })}
+                  />
+                  <p className="text-xs text-muted-foreground">새로 취득한 주택의 취득일</p>
                 </div>
               </div>
-
-              {form.temporaryTwoHouseSpecial && (
-                <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 border-t border-border">
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium">
-                      종전 주택 취득일 <span className="text-destructive">*</span>
-                    </label>
-                    <DateInput
-                      value={form.previousHouseAcquisitionDate}
-                      onChange={(v) => onChange({ previousHouseAcquisitionDate: v })}
-                    />
-                    <p className="text-xs text-muted-foreground">지금 양도하는 주택의 취득일</p>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium">
-                      신규 주택 취득일 <span className="text-destructive">*</span>
-                    </label>
-                    <DateInput
-                      value={form.newHouseAcquisitionDate}
-                      onChange={(v) => onChange({ newHouseAcquisitionDate: v })}
-                    />
-                    <p className="text-xs text-muted-foreground">새로 취득한 주택의 취득일</p>
-                  </div>
-                </div>
-              )}
-            </div>
+            </ToggleCard>
 
             <MergeDateSection form={form} onChange={onChange} />
           </div>
@@ -417,66 +378,38 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
         {(primaryKind === "housing" ||
           primaryKind === "land" ||
           primaryKind === "building") && (
-          <div
-            className={cn(
-              "flex items-center gap-3 rounded-lg border px-4 py-3 transition-colors",
-              form.isUnregistered ? "border-destructive bg-destructive/5" : "border-border",
-            )}
-          >
-            <input
-              id="isUnregistered"
-              type="checkbox"
-              checked={form.isUnregistered}
-              onChange={(e) => onChange({ isUnregistered: e.target.checked })}
-              className="h-4 w-4 rounded accent-primary"
-            />
-            <div>
-              <label htmlFor="isUnregistered" className="text-sm font-medium cursor-pointer">
-                미등기 양도
-              </label>
-              {form.isUnregistered && (
-                <p className="text-xs text-destructive font-medium mt-0.5">
-                  ⚠️ 70% 단일세율 적용 — 장기보유공제·기본공제 전액 배제
-                </p>
-              )}
-            </div>
-          </div>
+          <ToggleCard
+            checked={form.isUnregistered}
+            onCheckedChange={(v) => onChange({ isUnregistered: v })}
+            title="미등기 양도"
+            description="70% 단일세율 적용 — 장기보유공제·기본공제 전액 배제"
+            tone="rose"
+          />
         )}
 
-        {primaryKind === "land" && (
-          <div className="rounded-lg border border-border px-4 py-3 space-y-2">
-            <div className="flex items-center gap-3">
-              <input
-                id="isNonBusiness"
-                type="checkbox"
-                checked={primary?.isNonBusinessLand ?? false}
-                onChange={(e) => {
-                  if (!primary) return;
-                  onChange({
-                    assets: form.assets.map((a, i) =>
-                      i === 0
-                        ? {
-                            ...a,
-                            isNonBusinessLand: e.target.checked,
-                            // 체크 해제 시 상세 판정도 끔. 체크 시는 현재 상태 유지(라디오로 선택).
-                            nblUseDetailedJudgment: e.target.checked ? a.nblUseDetailedJudgment : false,
-                          }
-                        : a
-                    ),
-                  });
-                }}
-                className="h-4 w-4 rounded accent-primary"
-              />
-              <div>
-                <label htmlFor="isNonBusiness" className="text-sm font-medium cursor-pointer">
-                  비사업용 토지
-                </label>
-                <p className="text-xs text-muted-foreground">누진세율 + 10%p 중과세 (장기보유특별공제 표1 적용)</p>
-              </div>
-            </div>
-
+        {primaryKind === "land" && primary && (
+          <ToggleCard
+            checked={primary.isNonBusinessLand ?? false}
+            onCheckedChange={(v) =>
+              onChange({
+                assets: form.assets.map((a, i) =>
+                  i === 0
+                    ? {
+                        ...a,
+                        isNonBusinessLand: v,
+                        // 체크 해제 시 상세 판정도 끔. 체크 시는 현재 상태 유지(라디오로 선택).
+                        nblUseDetailedJudgment: v ? a.nblUseDetailedJudgment : false,
+                      }
+                    : a
+                ),
+              })
+            }
+            title="비사업용 토지"
+            description="누진세율 + 10%p 중과세 (장기보유특별공제 표1 적용)"
+            tone="rose"
+          >
             {/* P3: 재촌 요건 안내 */}
-            <div className="ml-7 rounded-md bg-muted/40 border border-border/60 px-3 py-2 text-xs text-muted-foreground space-y-1">
+            <div className="rounded-md bg-muted/40 border border-border/60 px-3 py-2 text-xs text-muted-foreground space-y-1">
               <p className="font-medium text-foreground/70">농지·임야 재촌(在村) 요건 — 아래 중 하나 충족 시 사업용</p>
               <ul className="space-y-0.5 pl-2">
                 <li>• 토지 소재지와 <strong>동일 시·군·구</strong>에 거주</li>
@@ -486,43 +419,27 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
               <p className="text-muted-foreground/70 text-[10px] mt-1">소득세법 시행령 §168조의8 — 정밀 판정을 원하시면 세무사 확인 권장</p>
             </div>
 
-            {/* 판정 상태 라디오 — 체크 시만 표시 */}
-            {primary?.isNonBusinessLand && (
-              <div className="ml-7 space-y-1.5 pt-1 border-t border-border/40">
-                <p className="text-xs font-medium text-foreground/70 pt-1">판정 상태</p>
-                <label className="flex items-start gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name={`nbl-mode-${primary.assetId}`}
-                    checked={!primary.nblUseDetailedJudgment}
-                    onChange={() =>
-                      onChange({ assets: form.assets.map((a, i) => i === 0 ? { ...a, nblUseDetailedJudgment: false } : a) })
-                    }
-                    className="mt-0.5 accent-primary"
-                  />
-                  <div>
-                    <span className="text-sm">이미 비사업용으로 판정 완료</span>
-                    <p className="text-xs text-muted-foreground">바로 +10%p 중과세 적용</p>
-                  </div>
-                </label>
-                <label className="flex items-start gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name={`nbl-mode-${primary.assetId}`}
-                    checked={primary.nblUseDetailedJudgment}
-                    onChange={() =>
-                      onChange({ assets: form.assets.map((a, i) => i === 0 ? { ...a, nblUseDetailedJudgment: true } : a) })
-                    }
-                    className="mt-0.5 accent-primary"
-                  />
-                  <div>
-                    <span className="text-sm">판정 도움 필요</span>
-                    <p className="text-xs text-muted-foreground">지목·재촌·자경 입력으로 엔진이 자동 판정</p>
-                  </div>
-                </label>
-              </div>
-            )}
-          </div>
+            {/* 판정 상태 라디오 */}
+            <div className="space-y-1.5">
+              <p className="text-xs font-medium text-foreground/70">판정 상태</p>
+              <RadioCardGroup
+                name={`nbl-mode-${primary.assetId}`}
+                tone="rose"
+                value={primary.nblUseDetailedJudgment ? "detailed" : "completed"}
+                onChange={(v) =>
+                  onChange({
+                    assets: form.assets.map((a, i) =>
+                      i === 0 ? { ...a, nblUseDetailedJudgment: v === "detailed" } : a
+                    ),
+                  })
+                }
+                options={[
+                  { value: "completed", label: "이미 비사업용으로 판정 완료", description: "바로 +10%p 중과세 적용" },
+                  { value: "detailed", label: "판정 도움 필요", description: "지목·재촌·자경 입력으로 엔진이 자동 판정" },
+                ]}
+              />
+            </div>
+          </ToggleCard>
         )}
       </div>
 

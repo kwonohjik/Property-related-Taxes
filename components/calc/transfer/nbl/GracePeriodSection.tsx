@@ -3,6 +3,13 @@
 import { DateInput } from "@/components/ui/date-input";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { AssetForm, GracePeriodInput } from "@/lib/stores/calc-wizard-store";
 
 const GRACE_TYPE_OPTIONS: { value: GracePeriodInput["type"]; label: string }[] = [
@@ -70,15 +77,21 @@ export function GracePeriodSection({
           </div>
 
           <FieldCard label="사유">
-            <select
+            <Select
               value={p.type}
-              onChange={(e) => updatePeriod(idx, { type: e.target.value as GracePeriodInput["type"] })}
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              onValueChange={(v) => v && updatePeriod(idx, { type: v as GracePeriodInput["type"] })}
             >
-              {GRACE_TYPE_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </select>
+              <SelectTrigger>
+                <SelectValue>
+                  {GRACE_TYPE_OPTIONS.find((o) => o.value === p.type)?.label ?? p.type}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {GRACE_TYPE_OPTIONS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </FieldCard>
 
           <div className="grid grid-cols-2 gap-2">

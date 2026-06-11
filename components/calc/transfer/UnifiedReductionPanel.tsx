@@ -17,11 +17,11 @@
  */
 
 import { useMemo, useState } from "react";
-import { cn } from "@/lib/utils";
 import type { AssetForm, AssetReductionForm } from "@/lib/stores/calc-wizard-store";
 import { DateInput } from "@/components/ui/date-input";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ReductionPhdInput, type ReductionPhdValue } from "@/components/calc/transfer/ReductionPhdInput";
 import {
   REDUCTION_METADATA,
@@ -423,26 +423,42 @@ function New993InputForm({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label className="mb-1 block text-xs font-medium">취득 유형</label>
-          <select
+          <Select
             value={value.acquisitionType993}
-            onChange={(e) => onUpdate("acquisitionType993", e.target.value as "from_builder" | "self_built")}
-            className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm"
+            onValueChange={(v) => v && onUpdate("acquisitionType993", v as "from_builder" | "self_built")}
           >
-            <option value="from_builder">1호 — 주택건설사업자로부터 취득</option>
-            <option value="self_built">2호 — 자기건설 신축</option>
-          </select>
+            <SelectTrigger>
+              <SelectValue>
+                {value.acquisitionType993 === "self_built"
+                  ? "2호 — 자기건설 신축"
+                  : "1호 — 주택건설사업자로부터 취득"}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="from_builder">1호 — 주택건설사업자로부터 취득</SelectItem>
+              <SelectItem value="self_built">2호 — 자기건설 신축</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         <div>
           <label className="mb-1 block text-xs font-medium">소재지</label>
-          <select
+          <Select
             value={value.region993}
-            onChange={(e) => onUpdate("region993", e.target.value as "outside_speculation" | "speculation")}
-            className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm"
+            onValueChange={(v) => v && onUpdate("region993", v as "outside_speculation" | "speculation")}
           >
-            <option value="outside_speculation">가격 급등 지역 외</option>
-            <option value="speculation">가격 급등 지역(서울·과천·5대 신도시) — 적용 배제</option>
-          </select>
+            <SelectTrigger>
+              <SelectValue>
+                {value.region993 === "speculation"
+                  ? "가격 급등 지역(서울·과천·5대 신도시) — 적용 배제"
+                  : "가격 급등 지역 외"}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="outside_speculation">가격 급등 지역 외</SelectItem>
+              <SelectItem value="speculation">가격 급등 지역(서울·과천·5대 신도시) — 적용 배제</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {value.acquisitionType993 === "self_built" && (

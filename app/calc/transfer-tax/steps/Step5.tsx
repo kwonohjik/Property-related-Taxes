@@ -1,8 +1,10 @@
-import { cn } from "@/lib/utils";
 import type { TransferFormData, AssetForm, AssetReductionForm, PriorReductionUsageItem } from "@/lib/stores/calc-wizard-store";
 import { DateInput } from "@/components/ui/date-input";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
 import { SelfFarmingIncorporationInput } from "@/components/calc/inputs/SelfFarmingIncorporationInput";
 import { UnifiedReductionPanel } from "@/components/calc/transfer/UnifiedReductionPanel";
@@ -115,13 +117,10 @@ function AssetReductionBlock({
         <div className="rounded-lg border border-dashed border-primary/40 bg-primary/3 p-4 space-y-3">
           <p className="text-xs font-medium text-primary">자경 기간 입력</p>
           <div className="flex items-center gap-2">
-            <input
-              type="number"
-              min="0"
+            <DecimalInput
+              className="w-20"
               value={selfFarming.farmingYears}
-              onChange={(e) => updateReduction("self_farming", { farmingYears: e.target.value } as Partial<AssetReductionForm>)}
-              onFocus={(e) => e.target.select()}
-              className="w-20 rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              onChange={(v) => updateReduction("self_farming", { farmingYears: v } as Partial<AssetReductionForm>)}
             />
             <span className="text-sm text-muted-foreground">년 (8년 이상이어야 감면 적용)</span>
           </div>
@@ -140,15 +139,12 @@ function AssetReductionBlock({
                   </p>
                   <div className="flex items-center gap-2">
                     <label className="text-sm text-muted-foreground whitespace-nowrap">피상속인 자경기간:</label>
-                    <input
-                      type="number"
-                      min="0"
+                    <DecimalInput
+                      className="w-20"
                       value={selfFarming.decedentFarmingYears ?? "0"}
-                      onChange={(e) =>
-                        updateReduction("self_farming", { decedentFarmingYears: e.target.value } as Partial<AssetReductionForm>)
+                      onChange={(v) =>
+                        updateReduction("self_farming", { decedentFarmingYears: v } as Partial<AssetReductionForm>)
                       }
-                      onFocus={(e) => e.target.select()}
-                      className="w-20 rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     />
                     <span className="text-sm text-muted-foreground">년</span>
                   </div>
@@ -183,30 +179,22 @@ function AssetReductionBlock({
         <div className="rounded-lg border border-dashed border-primary/40 bg-primary/3 p-4 space-y-3">
           <p className="text-xs font-medium text-primary">임대 조건 입력</p>
           <div className="flex items-center gap-2">
-            <input
-              type="number"
-              min="0"
+            <DecimalInput
+              className="w-20"
               value={longTermRental.rentalYears}
-              onChange={(e) =>
-                updateReduction("long_term_rental", { rentalYears: e.target.value } as Partial<AssetReductionForm>)
+              onChange={(v) =>
+                updateReduction("long_term_rental", { rentalYears: v } as Partial<AssetReductionForm>)
               }
-              onFocus={(e) => e.target.select()}
-              className="w-20 rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
             <span className="text-sm text-muted-foreground">년 임대</span>
           </div>
           <div className="flex items-center gap-2">
-            <input
-              type="number"
-              min="0"
-              max="100"
-              step="0.1"
+            <DecimalInput
+              className="w-20"
               value={longTermRental.rentIncreaseRate}
-              onChange={(e) =>
-                updateReduction("long_term_rental", { rentIncreaseRate: e.target.value } as Partial<AssetReductionForm>)
+              onChange={(v) =>
+                updateReduction("long_term_rental", { rentIncreaseRate: v } as Partial<AssetReductionForm>)
               }
-              onFocus={(e) => e.target.select()}
-              className="w-20 rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
             <span className="text-sm text-muted-foreground">% 임대료 인상률 (5% 이하여야 감면)</span>
           </div>
@@ -231,7 +219,6 @@ function AssetReductionBlock({
                 onChange={(v) =>
                   updateReduction("public_expropriation", { expropriationCash: v } as Partial<AssetReductionForm>)
                 }
-                placeholder="0"
               />
             </div>
             <div>
@@ -242,31 +229,27 @@ function AssetReductionBlock({
                 onChange={(v) =>
                   updateReduction("public_expropriation", { expropriationBond: v } as Partial<AssetReductionForm>)
                 }
-                placeholder="0"
               />
             </div>
           </div>
           <div>
             <p className="block text-xs font-medium mb-1">채권 만기보유 특약</p>
-            <div className="flex gap-4 text-sm">
-              {(["none", "3", "5"] as const).map((v) => (
-                <label key={v} className="flex items-center gap-1.5 cursor-pointer">
-                  <input
-                    type="radio"
-                    name={`expropriationBondHoldingYears-${assetIndex}`}
-                    value={v}
-                    checked={expropriation.expropriationBondHoldingYears === v}
-                    onChange={() =>
-                      updateReduction("public_expropriation", {
-                        expropriationBondHoldingYears: v,
-                      } as Partial<AssetReductionForm>)
-                    }
-                    className="accent-primary"
-                  />
-                  <span>{v === "none" ? "없음 (15%)" : v === "3" ? "3년 (30%)" : "5년 (40%)"}</span>
-                </label>
-              ))}
-            </div>
+            <RadioCardGroup
+              name={`expropriationBondHoldingYears-${assetIndex}`}
+              layout="inline"
+              tone="amber"
+              value={expropriation.expropriationBondHoldingYears}
+              onChange={(v) =>
+                updateReduction("public_expropriation", {
+                  expropriationBondHoldingYears: v,
+                } as Partial<AssetReductionForm>)
+              }
+              options={[
+                { value: "none", label: "없음 (15%)" },
+                { value: "3", label: "3년 (30%)" },
+                { value: "5", label: "5년 (40%)" },
+              ]}
+            />
           </div>
           <div>
             <label className="block text-xs font-medium mb-1">사업인정고시일</label>
@@ -289,35 +272,25 @@ function AssetReductionBlock({
       {(newHousing || unsoldHousing) && (
         <div className="rounded-lg border border-dashed border-primary/40 bg-primary/3 p-4 space-y-3">
           <p className="text-xs font-medium text-primary">물건 소재지</p>
-          <div className="flex flex-col gap-2">
-            {(["metropolitan", "outside_overconcentration", "non_metropolitan"] as const).map((region) => {
-              const regionLabels = {
-                metropolitan: { label: "수도권 (과밀억제권역)", desc: "50% 감면" },
-                outside_overconcentration: { label: "수도권 (과밀억제권역 외)", desc: "조문별 상이" },
-                non_metropolitan: { label: "비수도권 (지방)", desc: "100% 감면" },
-              };
-              const { label: rLabel, desc } = regionLabels[region];
-              const activeType = newHousing ? "new_housing" : "unsold_housing";
-              const activeReduction = newHousing ?? unsoldHousing!;
-              return (
-                <label key={region} className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name={`reductionRegion-${assetIndex}`}
-                    value={region}
-                    checked={(activeReduction as { reductionRegion: string }).reductionRegion === region}
-                    onChange={() =>
-                      updateReduction(activeType, { reductionRegion: region } as Partial<AssetReductionForm>)
-                    }
-                    className="accent-primary"
-                    aria-label={rLabel}
-                  />
-                  <span className="text-sm">{rLabel}</span>
-                  <span className="text-xs text-muted-foreground">({desc})</span>
-                </label>
-              );
-            })}
-          </div>
+          {(() => {
+            const activeType = newHousing ? "new_housing" : "unsold_housing";
+            const activeReduction = newHousing ?? unsoldHousing!;
+            return (
+              <RadioCardGroup
+                name={`reductionRegion-${assetIndex}`}
+                tone="amber"
+                value={(activeReduction as { reductionRegion: string }).reductionRegion}
+                onChange={(v) =>
+                  updateReduction(activeType, { reductionRegion: v } as Partial<AssetReductionForm>)
+                }
+                options={[
+                  { value: "metropolitan", label: "수도권 (과밀억제권역)", description: "50% 감면" },
+                  { value: "outside_overconcentration", label: "수도권 (과밀억제권역 외)", description: "조문별 상이" },
+                  { value: "non_metropolitan", label: "비수도권 (지방)", description: "100% 감면" },
+                ]}
+              />
+            );
+          })()}
         </div>
       )}
 
@@ -359,24 +332,34 @@ function PriorReductionUsageInput({
       </div>
       {value.map((row, i) => (
         <div key={i} className="flex flex-wrap gap-2 items-center">
-          <select
-            value={row.year}
-            onChange={(e) => updateRow(i, { year: parseInt(e.target.value) })}
-            className="rounded-md border border-input bg-background px-2 py-2 text-sm"
+          <Select
+            value={String(row.year)}
+            onValueChange={(v) => v && updateRow(i, { year: parseInt(v) })}
           >
-            {yearOptions.map((y) => (
-              <option key={y} value={y}>{y}년</option>
-            ))}
-          </select>
-          <select
+            <SelectTrigger className="w-28">
+              <SelectValue>{row.year}년</SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {yearOptions.map((y) => (
+                <SelectItem key={y} value={String(y)}>{y}년</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select
             value={row.type}
-            onChange={(e) => updateRow(i, { type: e.target.value as PriorReductionUsageItem["type"] })}
-            className="rounded-md border border-input bg-background px-2 py-2 text-sm"
+            onValueChange={(v) => v && updateRow(i, { type: v as PriorReductionUsageItem["type"] })}
           >
-            {(Object.keys(REDUCTION_LABELS) as ReductionUiType[]).map((t) => (
-              <option key={t} value={t}>{REDUCTION_LABELS[t].label}</option>
-            ))}
-          </select>
+            <SelectTrigger className="w-44">
+              <SelectValue>
+                {REDUCTION_LABELS[row.type as ReductionUiType]?.label ?? row.type}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {(Object.keys(REDUCTION_LABELS) as ReductionUiType[]).map((t) => (
+                <SelectItem key={t} value={t}>{REDUCTION_LABELS[t].label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <div className="w-36">
             <CurrencyInput
               label=""
@@ -466,7 +449,6 @@ export function Step5({
           hideUnit
           value={form.annualBasicDeductionUsed}
           onChange={(v) => onChange({ annualBasicDeductionUsed: v })}
-          placeholder="0"
         />
       </FieldCard>
     </div>

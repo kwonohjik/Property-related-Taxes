@@ -11,6 +11,7 @@
 import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { Plus, Trash2 } from "lucide-react";
 import {
   type ResidencePeriod,
@@ -163,19 +164,17 @@ export function ResidencePeriodSection({
         )}
         {!isInterval && (
           <FieldCard label="거주기간 (개월)" hint="1세대1주택 표2 장특공제(거주 2년 이상)에 사용">
-            <input
-              type="number"
-              min={0}
-              max={480}
-              value={residencePeriodMonthsAsset}
-              onChange={(e) =>
-                onChange({ residencePeriodMonthsAsset: e.target.value })
-              }
-              className="w-32 rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            />
-            <span className="ml-2 text-xs text-muted-foreground">
-              ({fmtPeriod(parseInt(residencePeriodMonthsAsset) || 0)})
-            </span>
+            <div className="flex items-center gap-2">
+              <div className="w-32">
+                <DecimalInput
+                  value={residencePeriodMonthsAsset}
+                  onChange={(v) => onChange({ residencePeriodMonthsAsset: v })}
+                />
+              </div>
+              <span className="text-xs text-muted-foreground">
+                ({fmtPeriod(parseInt(residencePeriodMonthsAsset) || 0)})
+              </span>
+            </div>
           </FieldCard>
         )}
       </ToggleCard>

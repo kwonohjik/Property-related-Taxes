@@ -50,7 +50,6 @@ export function AggregateSettingsPanel({ form, onChange }: AggregateSettingsPane
             label="연간 기사용 기본공제"
             value={form.annualBasicDeductionUsed}
             onChange={(v) => onChange({ annualBasicDeductionUsed: v })}
-            placeholder="0"
           />
         </div>
         <p className="text-xs text-muted-foreground">
