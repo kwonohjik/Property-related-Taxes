@@ -212,6 +212,39 @@ test("공시지가 자동조회 — 소재지+연도 입력 후 조회 버튼 �
   await expect(page.getByText("600,000,000")).toBeVisible();
 });
 
+test("결과 인쇄/PDF 서식 — 적용지수·적용요령 테이블 렌더", async ({ page }) => {
+  await page.goto(URL);
+  // 기본 양도 모드: 취득 2015 / 양도 2025 (BSP-06과 동일 입력)
+  await page.getByPlaceholder("예: 2010").fill("2010");
+  await page.getByPlaceholder("건물 연면적").fill("100");
+  await selectOption(page, "연도 선택", "2015년");
+  await page.getByText("구조 선택").first().click();
+  await page.getByRole("option", { name: /철근콘크리트조/ }).first().click();
+  await page.getByText("용도 선택").first().click();
+  await page.getByRole("option", { name: /아파트/ }).first().click();
+  await page.getByPlaceholder("원/㎡").first().fill("5000000");
+  await selectOption(page, "연도 선택", "2025년");
+  await page.getByText("구조 선택").first().click();
+  await page.getByRole("option", { name: /철근콘크리트조/ }).first().click();
+  await page.getByText("용도 선택").first().click();
+  await page.getByRole("option", { name: /아파트/ }).first().click();
+  await page.getByPlaceholder("원/㎡").nth(1).fill("7500000");
+  await page.getByRole("button", { name: "기준시가 계산하기" }).click();
+
+  await expect(page.getByTestId("bsp-result")).toBeVisible();
+  // 인쇄 버튼 존재
+  await expect(page.getByTestId("bsp-print")).toBeVisible();
+  // 인쇄 전용 서식: 취득/양도 시점별 별도 테이블 + 적용요령(철근콘크리트조·천원미만 절사)
+  await emulatePrint(page);
+  await expect(page.getByText("취득당시 기준시가의 계산")).toBeVisible();
+  await expect(page.getByText("양도당시 기준시가의 계산")).toBeVisible();
+  await expect(page.getByText("(천원미만 절사)").first()).toBeVisible();
+});
+
+async function emulatePrint(page: Page) {
+  await page.emulateMedia({ media: "print" });
+}
+
 test("계산기 → 홈으로 네비게이션 버튼", async ({ page }) => {
   await page.goto(URL);
   page.on("dialog", (d) => d.accept()); // 이동 확인 다이얼로그 수락

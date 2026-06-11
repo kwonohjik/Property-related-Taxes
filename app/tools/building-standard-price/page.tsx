@@ -6,8 +6,10 @@
  * 국세청 「건물 기준시가 계산방법」 고시(법령 조문 아님). 클라이언트 엔진 직접 호출(이력 저장 없음).
  */
 import { useState } from "react";
+import { Printer } from "lucide-react";
 import { BuildingStdPriceForm } from "@/components/calc/building-std-price/BuildingStdPriceForm";
 import { BuildingStdPriceResultCard } from "@/components/calc/building-std-price/BuildingStdPriceResultCard";
+import { BuildingStdPricePrintView } from "@/components/calc/building-std-price/BuildingStdPricePrintView";
 import { HomeButton } from "@/components/calc/shared/HomeButton";
 import type { BuildingStandardPriceResult } from "@/lib/tax-engine/building-standard-price";
 
@@ -18,34 +20,55 @@ export default function BuildingStandardPricePage() {
 
   return (
     <main className="mx-auto max-w-[63rem] px-4 py-6">
-      <div className="mb-3 flex justify-end">
+      <div className="mb-3 flex justify-end print:hidden">
         <HomeButton confirmMessage="홈으로 이동하면 현재 입력 중인 값이 사라집니다.&#10;계속하시겠습니까?" />
       </div>
-      <header className="mb-5">
+      <header className="mb-5 print:hidden">
         <h1 className="text-xl font-bold">건물 기준시가 계산기</h1>
         <p className="mt-1 text-sm text-slate-500">
           국세청 「건물 기준시가 계산방법」 고시 기준. 토지를 제외한 건물분 기준시가를 산정합니다.
         </p>
       </header>
 
-      <BuildingStdPriceForm
-        onResult={(r, fa, err) => {
-          setResult(r);
-          setFloorArea(fa);
-          setError(err);
-        }}
-      />
+      <div className="print:hidden">
+        <BuildingStdPriceForm
+          onResult={(r, fa, err) => {
+            setResult(r);
+            setFloorArea(fa);
+            setError(err);
+          }}
+        />
+      </div>
 
       {error && (
-        <p data-testid="bsp-error" className="mt-4 rounded-md bg-rose-50 px-3 py-2 text-sm text-rose-700">
+        <p
+          data-testid="bsp-error"
+          className="mt-4 rounded-md bg-rose-50 px-3 py-2 text-sm text-rose-700 print:hidden"
+        >
           {error}
         </p>
       )}
 
       {result && (
-        <section className="mt-6" data-testid="bsp-result">
-          <BuildingStdPriceResultCard result={result} floorArea={floorArea} />
-        </section>
+        <>
+          <section className="mt-6 print:hidden" data-testid="bsp-result">
+            <div className="mb-3 flex justify-end">
+              <button
+                type="button"
+                onClick={() => window.print()}
+                data-testid="bsp-print"
+                className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <Printer className="h-3.5 w-3.5" />
+                인쇄 / PDF 저장
+              </button>
+            </div>
+            <BuildingStdPriceResultCard result={result} floorArea={floorArea} />
+          </section>
+
+          {/* 인쇄·PDF 전용 서식(화면 숨김 / 인쇄 시 표시) */}
+          <BuildingStdPricePrintView result={result} floorArea={floorArea} />
+        </>
       )}
     </main>
   );

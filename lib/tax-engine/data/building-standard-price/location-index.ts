@@ -132,3 +132,27 @@ export function resolveLocationIndex(year: number, landPricePerM2: number): numb
   }
   return table.rates[idx];
 }
+
+/** 원 → "N만원" (경계는 모두 1만원 배수). 예 1,200,000 → "120만원" */
+function manWon(won: number): string {
+  return `${(won / 10_000).toLocaleString("ko-KR")}만원`;
+}
+
+/**
+ * 위치지수 적용 구간 설명(인쇄·결과 적용요령용). 예 "17. 120만원 이상~160만원 미만".
+ * 번호 = 구간 순번(1부터), 위치지수표 번호와 동일. 첫 구간="N만원 미만"·마지막="N만원 이상".
+ */
+export function describeLocationBucket(year: number, landPricePerM2: number): string | undefined {
+  const table = resolveYearTable(year);
+  if (!table) return undefined;
+  let idx = 0;
+  for (let i = 0; i < table.boundaries.length; i++) {
+    if (landPricePerM2 >= table.boundaries[i]) idx = i;
+    else break;
+  }
+  const no = idx + 1;
+  const hi = table.boundaries[idx + 1];
+  if (idx === 0) return `${no}. ${manWon(table.boundaries[1])} 미만`;
+  if (hi === undefined) return `${no}. ${manWon(table.boundaries[idx])} 이상`;
+  return `${no}. ${manWon(table.boundaries[idx])} 이상~${manWon(hi)} 미만`;
+}
