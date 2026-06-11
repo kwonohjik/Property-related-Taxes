@@ -40,6 +40,11 @@ export const giftTaxCreditInputSchema = z.object({
   startupInvestmentCompleted: z.boolean().optional(),
   /** §30의5① 창업자금 과세가액 한도 기준: 10인 이상 신규 고용 여부 (true → 100억, false/undefined → 50억) */
   startupNewHiresAtLeast10: z.boolean().optional(),
+  /**
+   * §30의6① 가업 영위기간(년) — 한도 분기: 10년 이상 300억 / 20년 이상 400억 / 30년 이상 600억.
+   * 미입력 시 엔진 기본 10년(300억 한도). 10 미만 명시 입력은 엔진이 특례 불가 판정(일반 스트림 폴백).
+   */
+  familyBusinessYears: z.number().min(0).optional(),
 });
 
 // ============================================================

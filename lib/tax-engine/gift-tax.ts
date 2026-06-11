@@ -17,6 +17,7 @@
  */
 
 import { GIFT as GIFT_LAW } from "./legal-codes";
+import { TAX_CREDIT } from "./legal-codes";
 import type {
   EstateItem,
   GiftTaxInput,
@@ -477,9 +478,22 @@ function calcGiftTaxTwoStream(
   allWarnings.push(...specialStream.warnings);
 
   // 특례 미적격 시 일반 스트림으로 폴백 (모든 자산을 일반 처리)
+  // 적격이어도 §30의5①·§30의6① 한도 초과 신규분은 특례 대상이 아니므로 일반 스트림 합산
+  // (법문: "창업자금"은 과세가액 50억/100억 한도로 정의, 가업승계 한도는 영위기간별 300/400/600억)
   const effectiveOrdinaryGrossValue = specialStream.isEligible
-    ? ordinaryItemsGrossValue
+    ? ordinaryItemsGrossValue + specialStream.excessToOrdinary
     : ordinaryItemsGrossValue + specialItemsValue;
+  if (specialStream.isEligible && specialStream.excessToOrdinary > 0) {
+    allBreakdown.push({
+      label: "특례 한도 초과 신규 증여분 일반 스트림 합산",
+      amount: specialStream.excessToOrdinary,
+      lawRef:
+        specialTreatmentType === "startup"
+          ? TAX_CREDIT.STARTUP_FUND
+          : TAX_CREDIT.FAMILY_BUSINESS,
+      note: "한도 초과분은 특례 미적용 — 일반 증여세 과세",
+    });
+  }
 
   // ─────────────────────────────────────────────
   // STEP 2 (일반 스트림): 비과세·채무 차감 + §47 합산
