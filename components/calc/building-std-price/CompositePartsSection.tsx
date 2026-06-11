@@ -14,6 +14,7 @@ import {
   emptyCompositePart,
   type CompositePartForm,
   type AncillaryAreaForm,
+  type AncillaryFloorForm,
 } from "@/lib/calc/building-std-price-form";
 import type { AncillaryFacilityKind } from "@/lib/tax-engine/types/building-standard-price.types";
 
@@ -37,6 +38,9 @@ interface Props {
   onPartsChange: (parts: CompositePartForm[]) => void;
   ancillaryAreas: AncillaryAreaForm;
   onAncillaryChange: (areas: AncillaryAreaForm) => void;
+  /** 부속시설 종류별 위치 층 라벨(계산서 Ⅳ "층별") */
+  ancillaryFloors: AncillaryFloorForm;
+  onAncillaryFloorsChange: (floors: AncillaryFloorForm) => void;
 }
 
 export function CompositePartsSection({
@@ -47,6 +51,8 @@ export function CompositePartsSection({
   onPartsChange,
   ancillaryAreas,
   onAncillaryChange,
+  ancillaryFloors,
+  onAncillaryFloorsChange,
 }: Props) {
   const hasShared = ANCILLARY_FIELDS.some((a) => (parseFloat(ancillaryAreas[a.kind].replace(/,/g, "")) || 0) > 0);
 
@@ -55,6 +61,8 @@ export function CompositePartsSection({
   const add = () => onPartsChange([...parts, emptyCompositePart()]);
   const remove = (i: number) => onPartsChange(parts.filter((_, idx) => idx !== i));
   const setAnc = (kind: AncillaryFacilityKind, v: string) => onAncillaryChange({ ...ancillaryAreas, [kind]: v });
+  const setAncFloor = (kind: AncillaryFacilityKind, v: string) =>
+    onAncillaryFloorsChange({ ...ancillaryFloors, [kind]: v });
 
   return (
     <div className="space-y-2.5">
@@ -143,11 +151,25 @@ export function CompositePartsSection({
       <div className="rounded-md border border-violet-200 bg-violet-50/40 p-2.5 space-y-2">
         <p className="text-xs font-semibold text-violet-700">부속시설 면적 (주차장·기계실 등 — 선택)</p>
         <div className="grid grid-cols-2 gap-2">
-          {ANCILLARY_FIELDS.map((a) => (
-            <FieldCard key={a.kind} label={a.label} className="sm:grid-cols-[72px_1fr]">
-              <DecimalInput value={ancillaryAreas[a.kind]} onChange={(v) => setAnc(a.kind, v)} unit="㎡" placeholder={`${a.label} 면적`} />
-            </FieldCard>
-          ))}
+          {ANCILLARY_FIELDS.map((a) => {
+            const hasArea = (parseFloat(ancillaryAreas[a.kind].replace(/,/g, "")) || 0) > 0;
+            return (
+              <FieldCard key={a.kind} label={a.label} className="sm:grid-cols-[72px_1fr]">
+                <div className="flex items-center gap-1.5">
+                  <DecimalInput value={ancillaryAreas[a.kind]} onChange={(v) => setAnc(a.kind, v)} unit="㎡" placeholder={`${a.label} 면적`} />
+                  {hasArea && (
+                    <input
+                      type="text"
+                      value={ancillaryFloors[a.kind]}
+                      onChange={(e) => setAncFloor(a.kind, e.target.value)}
+                      placeholder="층(예 지하1)"
+                      className="w-24 shrink-0 rounded-md border border-input bg-background px-2 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    />
+                  )}
+                </div>
+              </FieldCard>
+            );
+          })}
         </div>
         {hasShared && !forTransfer && (
           <p className="rounded-md bg-violet-50 px-2.5 py-1.5 text-[11px] text-violet-700">

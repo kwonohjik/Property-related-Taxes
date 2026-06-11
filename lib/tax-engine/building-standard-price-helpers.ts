@@ -272,10 +272,14 @@ export function calcCompositeForYear(
   const totalMainArea = parts.reduce((s, p) => s + p.floorArea, 0);
   if (!(totalMainArea > 0)) throw new BuildingStdPriceError(`${prefix}: 면적 합계가 0입니다.`);
 
-  // 부속 종류별 총면적 집계
+  // 부속 종류별 총면적 + 층 라벨 집계(층은 종류별 첫 입력값 — 계산서 Ⅳ "층별" 표기 전용)
   const totalByKind: Partial<Record<AncillaryFacilityKind, number>> = {};
+  const floorByKind: Partial<Record<AncillaryFacilityKind, string>> = {};
   for (const a of opts.ancillary) {
-    if (a.areaM2 > 0) totalByKind[a.kind] = (totalByKind[a.kind] ?? 0) + a.areaM2;
+    if (a.areaM2 > 0) {
+      totalByKind[a.kind] = (totalByKind[a.kind] ?? 0) + a.areaM2;
+      if (floorByKind[a.kind] === undefined && a.floorLabel?.trim()) floorByKind[a.kind] = a.floorLabel.trim();
+    }
   }
   const activeKinds = ANCILLARY_KIND_ORDER.filter((k) => (totalByKind[k] ?? 0) > 0);
   const hasAncillary = activeKinds.length > 0;
@@ -319,6 +323,7 @@ export function calcCompositeForYear(
           floorArea: area,
           ancillaryKind: kind,
           attributedTo: p.label,
+          ancillaryFloorLabel: floorByKind[kind],
           adjustmentItems: sharedAdj.items,
         });
       }

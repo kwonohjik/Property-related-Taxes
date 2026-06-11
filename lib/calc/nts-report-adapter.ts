@@ -8,7 +8,18 @@ import type {
   BuildingStandardPriceResult,
   BuildingStdPriceBreakdown,
   AncillaryApportionment,
+  AncillaryFacilityKind,
 } from "@/lib/tax-engine/types/building-standard-price.types";
+
+/** 부속 종류 한글 라벨 — 계산서 Ⅳ "용도(구분)" 칸 표기용 */
+const ANCILLARY_KIND_LABEL: Record<AncillaryFacilityKind, string> = {
+  parking: "주차장",
+  machine: "기계실",
+  boiler: "보일러실",
+  shelter: "대피소",
+  rooftop: "옥탑",
+  other: "공용",
+};
 
 /** 계산서 Ⅲ·Ⅳ 한 행(층별) */
 export interface NtsReportRow {
@@ -41,6 +52,7 @@ export interface NtsReportInstance {
   structureLabel?: string;
   structureIndex?: number; // ①
   usageSummary?: string; // 건물용도 요약
+  usageIndexSummary?: string; // ② 용도지수 요약(용도와 같은 순서·dedup, "1.00 · 1.00")
   landAreaM2: number; // ③
   landPricePerM2: number; // ④
   landValue: number; // ⑤ = floor(③×④)
@@ -102,11 +114,18 @@ export interface NtsReportContext {
 const isMainRow = (b: BuildingStdPriceBreakdown) => b.ancillaryKind === undefined;
 
 function toRow(b: BuildingStdPriceBreakdown): NtsReportRow {
+  const isAnc = b.ancillaryKind !== undefined;
+  // 부속 행: 층별 = 위치 층(ancillaryFloorLabel) / 용도 = 종류(귀속 부분). other(단일 합계)는 기존 label 유지.
+  const usageLabel = isAnc
+    ? b.ancillaryKind === "other"
+      ? b.label
+      : `${ANCILLARY_KIND_LABEL[b.ancillaryKind!]}(${b.attributedTo ?? ""} 귀속)`
+    : b.applyNotes?.usage;
   return {
-    floorLabel: b.label ?? "",
+    floorLabel: isAnc ? (b.ancillaryFloorLabel ?? "") : (b.label ?? ""),
     basePrice: b.basePrice,
     structureIndex: b.structureIndex,
-    usageLabel: b.ancillaryKind ? b.label : b.applyNotes?.usage,
+    usageLabel,
     usageIndex: b.usageIndex,
     locationIndex: b.locationIndex,
     residualRate: b.residualRate,
@@ -132,6 +151,7 @@ function fillBody(
   | "structureLabel"
   | "structureIndex"
   | "usageSummary"
+  | "usageIndexSummary"
   | "locationIndex"
   | "residualRate"
   | "residualGroup"
@@ -146,7 +166,16 @@ function fillBody(
   const ancillaryTotalArea = anc.reduce((s, b) => s + (b.floorArea ?? 0), 0);
   const ancillaryTotal = anc.reduce((s, b) => s + b.standardPrice, 0);
   const head = mains[0];
-  const usages = Array.from(new Set(mains.map((b) => b.applyNotes?.usage).filter(Boolean))) as string[];
+  // 용도·용도지수를 같은 순서·dedup(용도 라벨 기준)으로 묶어 Ⅱ 칸에 함께 표기.
+  const usagePairs: { usage: string; index?: number }[] = [];
+  const seenUsage = new Set<string>();
+  for (const b of mains) {
+    const u = b.applyNotes?.usage;
+    if (u && !seenUsage.has(u)) {
+      seenUsage.add(u);
+      usagePairs.push({ usage: u, index: b.usageIndex });
+    }
+  }
   return {
     mainRows,
     mainTotalArea,
@@ -157,7 +186,11 @@ function fillBody(
     buildingTotal: mainTotal + ancillaryTotal,
     structureLabel: head?.applyNotes?.structure,
     structureIndex: head?.structureIndex,
-    usageSummary: usages.join(" · ") || undefined,
+    usageSummary: usagePairs.map((p) => p.usage).join(" · ") || undefined,
+    usageIndexSummary:
+      usagePairs.length > 0
+        ? usagePairs.map((p) => (p.index === undefined ? "" : (p.index / 100).toFixed(2))).join(" · ")
+        : undefined,
     locationIndex: head?.locationIndex,
     residualRate: head?.residualRate,
     residualGroup: head?.residualGroup,
@@ -215,7 +248,7 @@ export function buildNtsReportModel(
         dateLabel: point?.dateLabel ?? "",
         ...land,
         ...body,
-        totalFloorArea: body.mainTotalArea,
+        totalFloorArea: body.mainTotalArea + body.ancillaryTotalArea, // 건물 전체 = 주용도 + 부속
       });
     }
     return { instances, apportionment: result.ancillaryApportionment };
@@ -235,7 +268,7 @@ export function buildNtsReportModel(
       dateLabel: tPoint.dateLabel,
       ...land,
       ...tBody,
-      totalFloorArea: tBody.mainTotalArea,
+      totalFloorArea: tBody.mainTotalArea + tBody.ancillaryTotalArea, // 건물 전체 = 주용도 + 부속
     });
   }
 
@@ -255,7 +288,7 @@ export function buildNtsReportModel(
       acqNoteLabel: isPre2001 ? "2001.1.1 건물 기준시가" : undefined,
       ...land,
       ...aBody,
-      totalFloorArea: aBody.mainTotalArea,
+      totalFloorArea: aBody.mainTotalArea + aBody.ancillaryTotalArea, // 건물 전체 = 주용도 + 부속
       acqBase: result.acqBaseConversion
         ? {
             total2001: result.acqBaseConversion.total2001,

@@ -32,7 +32,7 @@ export function ReportSection2Overview({ inst }: { inst: NtsReportInstance }) {
             <td className={TD}>{inst.structureLabel ?? ""}</td>
             <td className={TD}>{idx2(inst.structureIndex)}</td>
             <td className={TD}>{inst.usageSummary ?? ""}</td>
-            <td className={TD}>{/* 부분별 — Ⅲ 참조 */}</td>
+            <td className={TD}>{inst.usageIndexSummary ?? ""}</td>
             <td className={`${TD} ${AMOUNT_CELL}`}>{inst.landAreaM2 ? `${inst.landAreaM2}㎡` : ""}</td>
             <td className={`${TD} ${AMOUNT_CELL}`}>{fmt(inst.landPricePerM2)}</td>
           </tr>

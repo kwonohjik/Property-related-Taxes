@@ -361,6 +361,8 @@ export function BuildingStdPriceForm({ onResult }: Props) {
                 onPartsChange={(parts) => set("compositeParts", parts)}
                 ancillaryAreas={f.ancillaryAreas}
                 onAncillaryChange={(a) => set("ancillaryAreas", a)}
+                ancillaryFloors={f.ancillaryFloors}
+                onAncillaryFloorsChange={(fl) => set("ancillaryFloors", fl)}
               />
             </ToggleCard>
           )}
@@ -517,6 +519,8 @@ export function BuildingStdPriceForm({ onResult }: Props) {
                     onPartsChange={(parts) => set("compositeParts", parts)}
                     ancillaryAreas={f.ancillaryAreas}
                     onAncillaryChange={(a) => set("ancillaryAreas", a)}
+                    ancillaryFloors={f.ancillaryFloors}
+                    onAncillaryFloorsChange={(fl) => set("ancillaryFloors", fl)}
                   />
                 </ToggleCard>
 

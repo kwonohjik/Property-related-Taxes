@@ -58,6 +58,18 @@ export const emptyAncillaryAreas: AncillaryAreaForm = {
   other: "",
 };
 
+/** 부속시설 종류별 위치 층 라벨(예 "지하1") — 계산서 Ⅳ "층별" 칸 표기 전용 */
+export type AncillaryFloorForm = Record<AncillaryFacilityKind, string>;
+
+export const emptyAncillaryFloors: AncillaryFloorForm = {
+  parking: "",
+  machine: "",
+  boiler: "",
+  shelter: "",
+  rooftop: "",
+  other: "",
+};
+
 /** 공동주택 고시 전 취득 환산 — 폼 문자열 */
 export interface ApartmentConversionForm {
   firstNoticeApartmentPrice: string;
@@ -145,6 +157,8 @@ export interface BuildingStdPriceFormState {
   sharedFacilityArea: string;
   /** 부속시설 종류별 면적(계산서 Ⅳ·Ⅴ) */
   ancillaryAreas: AncillaryAreaForm;
+  /** 부속시설 종류별 위치 층 라벨(계산서 Ⅳ "층별") */
+  ancillaryFloors: AncillaryFloorForm;
 }
 
 /** 빈 복합 부분 1개 */
@@ -211,6 +225,7 @@ export const initialBuildingStdPriceForm: BuildingStdPriceFormState = {
   compositeParts: [emptyCompositePart()],
   sharedFacilityArea: "",
   ancillaryAreas: { ...emptyAncillaryAreas },
+  ancillaryFloors: { ...emptyAncillaryFloors },
 };
 
 /** 공동주택 환산 구조·용도 옵션 기준 연도(2001년 건물기준시가 산정) */
@@ -250,9 +265,9 @@ const parseNos = (s: string): number[] | undefined => {
 };
 
 /** 종류별 면적 폼 → AncillaryFacility[]. 면적>0 칸만. */
-function buildAncillary(areas: AncillaryAreaForm): AncillaryFacility[] {
+function buildAncillary(areas: AncillaryAreaForm, floors?: AncillaryFloorForm): AncillaryFacility[] {
   return (Object.keys(areas) as AncillaryFacilityKind[])
-    .map((kind) => ({ kind, areaM2: parseDecimal(areas[kind]) }))
+    .map((kind) => ({ kind, areaM2: parseDecimal(areas[kind]), floorLabel: floors?.[kind].trim() || undefined }))
     .filter((a) => a.areaM2 > 0);
 }
 
@@ -277,7 +292,7 @@ function toCompositePart(p: CompositePartForm, forTransfer: boolean): BuildingCo
 
 /** 부속시설 입력(종류별 우선, 없으면 단일 합계) → 엔진 input에 1종만 설정(동시 설정 금지) */
 function applyAncillary(base: BuildingStandardPriceInput, f: BuildingStdPriceFormState): void {
-  const anc = buildAncillary(f.ancillaryAreas);
+  const anc = buildAncillary(f.ancillaryAreas, f.ancillaryFloors);
   if (anc.length > 0) base.ancillaryFacilities = anc;
   else if (parseDecimal(f.sharedFacilityArea) > 0) base.sharedFacilityArea = parseDecimal(f.sharedFacilityArea);
 }

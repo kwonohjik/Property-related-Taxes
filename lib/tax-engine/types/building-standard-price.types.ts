@@ -198,6 +198,8 @@ export type AncillaryFacilityKind =
 export interface AncillaryFacility {
   kind: AncillaryFacilityKind;
   areaM2: number;
+  /** 부속시설이 위치한 층 라벨(예 "지하1") — 계산서 Ⅳ "층별" 칸 표기 전용. 산식 무관 */
+  floorLabel?: string;
 }
 
 /** 시점별 산출근거 echo */
@@ -241,6 +243,8 @@ export interface BuildingStdPriceBreakdown {
   ancillaryKind?: AncillaryFacilityKind;
   /** 부속 귀속 부분명 echo — "주차장(슈퍼귀속)" 표기용 */
   attributedTo?: string;
+  /** 부속시설 위치 층 라벨 echo(예 "지하1") — 계산서 Ⅳ "층별" 칸. 산식 무관 */
+  ancillaryFloorLabel?: string;
   /** 적용요령 echo(인쇄·서식용) — 일반 건물만. 산식 무관 표시 전용 */
   applyNotes?: BuildingStdPriceApplyNotes;
 }
