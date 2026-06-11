@@ -41,6 +41,7 @@ export {
   RESIDUAL_RATE_MIN,
   RESIDUAL_RATE_DURABLE_YEARS,
   durableYearsToResidualGroup,
+  durableForGroup,
   residualMinByDurable,
   residualStepForGroup,
   calcResidualRate,
@@ -68,6 +69,7 @@ export {
   resolveGrossAreaNo,
   resolveWallessRate,
   resolveWallessNo,
+  resolveAdjustmentRateByNo,
 } from "./special-adjustment-rate";
 
 // D3 용도지수

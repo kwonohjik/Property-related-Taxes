@@ -13,12 +13,17 @@ import type {
   BuildingStandardPriceResult,
   BuildingStdPriceBreakdown,
   BuildingPointInput,
+  BuildingCompositePart,
 } from "./types/building-standard-price.types";
 import { resolveStructureIndex } from "./data/building-standard-price";
-import { truncateToThousand } from "./tax-utils";
+import {
+  BUILDING_STD_PRICE_LEGAL_BASIS_TRANSFER,
+  BUILDING_STD_PRICE_LEGAL_BASIS_INHERITANCE,
+} from "./legal-codes/building-standard-price";
 import {
   BuildingStdPriceError,
   calcPointBreakdown,
+  stdPriceFromPerM2,
   calcMechBreakdown,
   calcAcqBaseBreakdown,
   calcSameYearTransferStdPrice,
@@ -26,7 +31,10 @@ import {
   describeSpecialAdjustment,
   weightedAvgLandPrice,
   calcApartmentConversion,
+  calcCompositeForYear,
+  normalizeAncillary,
 } from "./building-standard-price-helpers";
+import { resolveAcqBaseGroup, resolveAcqBaseRate } from "./data/building-standard-price";
 
 export type {
   BuildingStandardPriceInput,
@@ -38,8 +46,6 @@ export type {
   SameYearFormula,
 } from "./types/building-standard-price.types";
 
-const LEGAL_BASIS =
-  "소득세법 §99①1호나목·시행령 §164⑤⑧③·상속세 및 증여세법 §61①2호·국세청 「건물 기준시가 계산방법」 고시";
 
 /** 시점 입력 필수 필드 검증(구조·용도·공시지가). */
 function validatePoint(point: BuildingPointInput | undefined, label: string): BuildingPointInput {
@@ -59,6 +65,20 @@ function hasComposite(input: BuildingStandardPriceInput): boolean {
   return (input.compositeParts?.length ?? 0) > 0 || (input.landParcels?.length ?? 0) > 0;
 }
 
+/** 복합건물 부분 목록 — compositeParts 우선, 없으면 valuation 단일 point fallback(다필지 전용) */
+function resolveCompositeParts(input: BuildingStandardPriceInput): BuildingCompositePart[] {
+  return (input.compositeParts?.length ?? 0) > 0
+    ? input.compositeParts!
+    : [
+        {
+          label: undefined,
+          structureKey: input.valuation?.structureKey ?? "",
+          usageNo: input.valuation?.usageNo ?? 0,
+          floorArea: input.floorArea,
+        },
+      ];
+}
+
 /**
  * 복합건물 평가(상증 1시점). 다필지 → 위치지수 가중평균 / 층·구역별 → 부분 독립 계산 후 합산.
  * compositeParts 없이 landParcels만이면 valuation 단일 point + 가중평균 공시지가.
@@ -76,53 +96,116 @@ function calcCompositeValuation(
     throw new BuildingStdPriceError("복합건물: ㎡당 공시지가(또는 부속토지)가 필요합니다.");
   }
 
-  const parts =
-    (input.compositeParts?.length ?? 0) > 0
-      ? input.compositeParts!
-      : [
-          {
-            label: undefined,
-            structureKey: input.valuation?.structureKey ?? "",
-            usageNo: input.valuation?.usageNo ?? 0,
-            floorArea: input.floorArea,
-            adjustmentRate: undefined as number | undefined,
-          },
-        ];
+  const { breakdowns, total, apportionment } = calcCompositeForYear(
+    resolveCompositeParts(input),
+    year,
+    landPrice,
+    input.builtYear,
+    {
+      usageNoSelector: (p) => p.usageNo,
+      adjustmentEnabled: true,
+      ancillary: normalizeAncillary(input.ancillaryFacilities, input.sharedFacilityArea),
+      remodel: { remodelYear: input.remodelYear, isInheritanceGift: true },
+    },
+  );
 
-  const totalMainArea = parts.reduce((s, p) => s + p.floorArea, 0);
-  const sharedFacilityArea = input.sharedFacilityArea ?? 0;
-  const remodel = { remodelYear: input.remodelYear, isInheritanceGift: true };
+  return {
+    compositeBreakdowns: breakdowns,
+    compositeTotal: total,
+    ancillaryApportionment: apportionment,
+    weightedLandPricePerM2: hasParcels ? landPrice : undefined,
+    warnings,
+    legalBasis: BUILDING_STD_PRICE_LEGAL_BASIS_INHERITANCE,
+  };
+}
 
-  const compositeBreakdowns: BuildingStdPriceBreakdown[] = [];
-  for (let i = 0; i < parts.length; i++) {
-    const p = parts[i];
-    if (!p.structureKey) throw new BuildingStdPriceError(`복합 부분 ${i + 1}: 구조 미선택`);
-    if (p.usageNo === undefined || p.usageNo < 1) throw new BuildingStdPriceError(`복합 부분 ${i + 1}: 용도 미선택`);
-    if (!(p.floorArea > 0)) throw new BuildingStdPriceError(`복합 부분 ${i + 1}: 면적(㎡) 필요`);
-    const point = { structureKey: p.structureKey, usageNo: p.usageNo, landPricePerM2: landPrice };
+/**
+ * 양도 복합건물 평가(취득시·양도시 2시점). 양도는 조정률 미적용(고시).
+ * 취득 ≤2000: 2001 지수표 복합 합계 × 산정기준율(※식). 부분 용도는 시점별 상이(acqUsageNo).
+ */
+function calcTransferComposite(
+  input: BuildingStandardPriceInput,
+  transferYear: number,
+  acquisitionYear: number,
+  warnings: string[],
+): BuildingStandardPriceResult {
+  const parts = input.compositeParts!;
+  const transferLandPrice = input.transfer?.landPricePerM2 ?? 0;
+  const acqLandPrice = input.acquisition?.landPricePerM2 ?? 0;
+  if (!(transferLandPrice > 0)) throw new BuildingStdPriceError("양도시: 개별공시지가(원/㎡) 필요");
+  if (!(acqLandPrice > 0)) throw new BuildingStdPriceError("취득시: 개별공시지가(원/㎡) 필요");
 
-    // 주용도 부분
-    const mainAdj = p.adjustmentRate != null ? p.adjustmentRate / 100 : 1.0;
-    const main = calcPointBreakdown(year, point, p.floorArea, input.builtYear, mainAdj, p.label ?? `부분 ${i + 1}`, remodel);
-    compositeBreakdowns.push({ ...main, label: p.label, floorArea: p.floorArea });
-
-    // 공용 부속시설 안분(주용도 면적비율) — 구조·용도·위치·잔가 동일, 공용 조정율만 다름
-    if (sharedFacilityArea > 0 && p.sharedAdjustmentRate != null && totalMainArea > 0) {
-      const sharedArea = parseFloat(((sharedFacilityArea * p.floorArea) / totalMainArea).toFixed(2));
-      const sharedAdj = p.sharedAdjustmentRate / 100;
-      const sharedLabel = `${p.label ?? `부분 ${i + 1}`} 공용`;
-      const shared = calcPointBreakdown(year, point, sharedArea, input.builtYear, sharedAdj, sharedLabel, remodel);
-      compositeBreakdowns.push({ ...shared, label: sharedLabel, floorArea: sharedArea });
+  // 양도 복합 조정률 입력 금지(고시: 조정률은 상속·증여만)
+  for (const p of parts) {
+    if (
+      p.adjustmentRate != null ||
+      (p.adjustmentNos?.length ?? 0) > 0 ||
+      p.sharedAdjustmentRate != null ||
+      (p.sharedAdjustmentNos?.length ?? 0) > 0
+    ) {
+      throw new BuildingStdPriceError("양도 복합: 조정률은 상속·증여에만 적용됩니다.");
     }
   }
 
-  const compositeTotal = compositeBreakdowns.reduce((s, b) => s + b.standardPrice, 0);
+  const ancillary = normalizeAncillary(input.ancillaryFacilities, input.sharedFacilityArea);
+  // 취득시 용도번호는 연도군별 상이 → acqUsageNo 필수(silent fallback 금지)
+  const acqSelector = (p: BuildingCompositePart): number => {
+    if (p.acqUsageNo == null) throw new BuildingStdPriceError("양도 복합 부분: 취득시 용도(연도별 상이) 필요");
+    return p.acqUsageNo;
+  };
+
+  const transfer = calcCompositeForYear(parts, transferYear, transferLandPrice, input.builtYear, {
+    usageNoSelector: (p) => p.usageNo,
+    adjustmentEnabled: false,
+    ancillary,
+    errorPrefix: "양도 복합 부분",
+  });
+
+  // 취득 ≥2001: 해당연도 복합. ≤2000: 2001 복합 × 산정기준율.
+  if (acquisitionYear >= 2001) {
+    const acquisition = calcCompositeForYear(parts, acquisitionYear, acqLandPrice, input.builtYear, {
+      usageNoSelector: acqSelector,
+      adjustmentEnabled: false,
+      ancillary,
+      errorPrefix: "양도 복합 부분",
+    });
+    return {
+      transferComposite: { breakdowns: transfer.breakdowns, total: transfer.total },
+      acquisitionComposite: { breakdowns: acquisition.breakdowns, total: acquisition.total },
+      ancillaryApportionment: transfer.apportionment,
+      warnings,
+      legalBasis: BUILDING_STD_PRICE_LEGAL_BASIS_TRANSFER,
+    };
+  }
+
+  // 취득 ≤2000 — 2001 지수표 복합 합계 × 산정기준율(소령 §164⑤). 부분 구조 단일 그룹만 지원.
+  const base2001 = calcCompositeForYear(parts, 2001, acqLandPrice, input.builtYear, {
+    usageNoSelector: acqSelector,
+    adjustmentEnabled: false,
+    ancillary,
+    errorPrefix: "양도 복합 부분(2001)",
+  });
+  const groups = parts.map((p) => resolveAcqBaseGroup(p.structureKey));
+  if (groups.some((g) => g === undefined)) {
+    throw new BuildingStdPriceError("취득(2000이전) 복합: 산정기준율표 미수록 구조(신공법) 포함");
+  }
+  if (new Set(groups).size > 1) {
+    throw new BuildingStdPriceError("취득(2000이전) 복합: 부분별 산정기준율 그룹 상이는 미지원(동일 구조로 입력)");
+  }
+  const acqBaseRate = resolveAcqBaseRate(groups[0]!, input.builtYear, acquisitionYear);
+  if (acqBaseRate === undefined) {
+    throw new BuildingStdPriceError(
+      `취득(2000이전) 복합: 산정기준율 미수록(그룹 ${groups[0]}·신축 ${input.builtYear}·취득 ${acquisitionYear})`,
+    );
+  }
+  const convertedTotal = Math.floor(base2001.total * acqBaseRate);
   return {
-    compositeBreakdowns,
-    compositeTotal,
-    weightedLandPricePerM2: hasParcels ? landPrice : undefined,
+    transferComposite: { breakdowns: transfer.breakdowns, total: transfer.total },
+    acquisitionComposite: { breakdowns: base2001.breakdowns, total: base2001.total },
+    acqBaseConversion: { total2001: base2001.total, acqBaseRate, convertedTotal },
+    ancillaryApportionment: transfer.apportionment,
     warnings,
-    legalBasis: LEGAL_BASIS,
+    legalBasis: BUILDING_STD_PRICE_LEGAL_BASIS_TRANSFER,
   };
 }
 
@@ -193,7 +276,7 @@ export function calcBuildingStandardPrice(
         );
       }
     }
-    return { valuation, warnings, legalBasis: LEGAL_BASIS };
+    return { valuation, warnings, legalBasis: BUILDING_STD_PRICE_LEGAL_BASIS_INHERITANCE };
   }
 
   // 공동주택 고시 전 취득 → 취득당시 기준시가 환산(양도 전용)
@@ -202,7 +285,7 @@ export function calcBuildingStandardPrice(
       throw new BuildingStdPriceError("공동주택 환산: 취득연도 필수");
     }
     const conv = calcApartmentConversion(input.builtYear, input.acquisitionYear, input.apartmentConversion);
-    return { apartmentConversion: conv, warnings, legalBasis: LEGAL_BASIS };
+    return { apartmentConversion: conv, warnings, legalBasis: BUILDING_STD_PRICE_LEGAL_BASIS_TRANSFER };
   }
 
   // 양도 모드 (취득시·양도시 2시점)
@@ -214,10 +297,20 @@ export function calcBuildingStandardPrice(
   if (input.isMechanicalParking) {
     const acquisition = calcMechBreakdown(acquisitionYear, input.parkingLotCount!, effBuiltYear);
     const transfer = calcMechBreakdown(transferYear, input.parkingLotCount!, effBuiltYear);
-    return { acquisition, transfer, warnings, legalBasis: LEGAL_BASIS };
+    return { acquisition, transfer, warnings, legalBasis: BUILDING_STD_PRICE_LEGAL_BASIS_TRANSFER };
   }
 
-  const transferPoint = validatePoint(input.transfer, "양도시");
+  // 양도 복합건물(층·구역별 구조·용도 상이) — compositeParts 활성. 취득시·양도시 각 복합 계산.
+  if ((input.compositeParts?.length ?? 0) > 0) {
+    if (transferYear === acquisitionYear) {
+      throw new BuildingStdPriceError("동일연도 양도(§164⑧)는 복합구조를 지원하지 않습니다.");
+    }
+    return calcTransferComposite(input, transferYear, acquisitionYear, warnings);
+  }
+  if ((input.landParcels?.length ?? 0) > 0) {
+    throw new BuildingStdPriceError("양도 모드 다필지 위치지수 가중평균은 미지원입니다(복합구조로 입력).");
+  }
+
   const acqPoint = validatePoint(input.acquisition, "취득시");
 
   // 취득시 breakdown — 2001 이후 일반 / 2000 이전 산정기준율
@@ -241,7 +334,7 @@ export function calcBuildingStandardPrice(
         throw new BuildingStdPriceError("동일연도 제2산식: 새로운 기준시가 ㎡당 금액 필수");
       }
       // newStd = (1,000원 절사된 ㎡당 금액) × 면적. 제2산식 delta = newStd − acqStd
-      const newStd = Math.floor(truncateToThousand(input.newNoticePricePerM2) * input.floorArea);
+      const newStd = stdPriceFromPerM2(input.newNoticePricePerM2, input.floorArea).standardPrice;
       delta = newStd - acqStd;
     } else {
       if (input.prevLandPricePerM2 === undefined || !(input.prevLandPricePerM2 > 0)) {
@@ -270,10 +363,18 @@ export function calcBuildingStandardPrice(
       adjustMonths,
     );
     const transfer: BuildingStdPriceBreakdown = { ...acquisition, standardPrice: transferStd };
-    return { acquisition, transfer, sameYearAdjusted: true, warnings, legalBasis: LEGAL_BASIS };
+    return {
+      acquisition,
+      transfer,
+      sameYearAdjusted: true,
+      warnings,
+      legalBasis: BUILDING_STD_PRICE_LEGAL_BASIS_TRANSFER,
+    };
   }
 
-  // 일반 양도 — 양도시 당해연도 산식
+  // 일반 양도 — 양도시 당해연도 산식. 양도시점 구조·용도·공시지가는 비동일연도에서만 필요
+  // (§164⑧ 동일연도는 취득 기준시가를 환산하므로 위 분기에서 transfer 입력 미사용)
+  const transferPoint = validatePoint(input.transfer, "양도시");
   const transfer = calcPointBreakdown(
     transferYear,
     transferPoint,
@@ -282,5 +383,5 @@ export function calcBuildingStandardPrice(
     1.0,
     "양도시",
   );
-  return { acquisition, transfer, warnings, legalBasis: LEGAL_BASIS };
+  return { acquisition, transfer, warnings, legalBasis: BUILDING_STD_PRICE_LEGAL_BASIS_TRANSFER };
 }

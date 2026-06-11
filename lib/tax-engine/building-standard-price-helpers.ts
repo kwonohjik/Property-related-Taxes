@@ -14,6 +14,11 @@ import type {
   LandParcel,
   ApartmentConversionInput,
   ApartmentConversionResult,
+  BuildingCompositePart,
+  AncillaryFacility,
+  AncillaryFacilityKind,
+  AncillaryApportionment,
+  AncillaryApportionRow,
 } from "./types/building-standard-price.types";
 import {
   resolveNewBuildingBasePrice,
@@ -23,9 +28,11 @@ import {
   calcResidualRate,
   calcResidualRateByDurable,
   residualStepForGroup,
+  durableForGroup,
   resolveResidualGroupForYear,
   resolveAcqBaseGroup,
   resolveAcqBaseRate,
+  resolveAdjustmentRateByNo,
   resolveMechParkingFormula,
   ADJUSTMENT_RATE_BASE,
   ROOF_MATERIAL_RATE,
@@ -90,6 +97,18 @@ export function calcEffectiveResidualRate(
 }
 
 /**
+ * ㎡당 금액(절사 전) → 1,000원 절사 후 면적 곱(원 미만 절사).
+ * 절사+면적곱의 단일 출처 — calcPointBreakdown·§164⑧ 제2산식(신규고시 단가) 공용.
+ */
+export function stdPriceFromPerM2(
+  rawPerM2: number,
+  floorArea: number,
+): { pricePerM2: number; standardPrice: number } {
+  const pricePerM2 = truncateToThousand(rawPerM2);
+  return { pricePerM2, standardPrice: Math.floor(pricePerM2 * floorArea) };
+}
+
+/**
  * §A 공통 ㎡당 금액 + 건물 기준시가 (1시점, 일반 건물).
  * raw = basePrice × (structIdx/100) × (usageIdx/100) × (locIdx/100) × residual × adjRate
  * pricePerM2 = 1,000원 절사 → standardPrice = floor(pricePerM2 × floorArea)
@@ -128,6 +147,7 @@ export function calcPointBreakdown(
 
   // 구조→잔가율 그룹은 시대별 멤버십(3그룹/era-B/era-C). 내용연수·잔존율도 평가연도로 결정
   const residualGroup = resolveResidualGroupForYear(point.structureKey, year);
+  const durableYears = durableForGroup(residualGroup, year);
   const residualRate = calcEffectiveResidualRate(residualGroup, builtYear, year, remodel);
 
   // 정수곱(부동소수 누적 회피) 후 /1,000,000 — 지수 3개가 각 ÷100
@@ -137,8 +157,7 @@ export function calcPointBreakdown(
   );
   const perM2Base = indexProduct / 1_000_000;
   const raw = perM2Base * residualRate * adjustmentRate;
-  const pricePerM2 = truncateToThousand(raw);
-  const standardPrice = Math.floor(pricePerM2 * floorArea);
+  const { pricePerM2, standardPrice } = stdPriceFromPerM2(raw, floorArea);
 
   const usageLabel = resolveUsageLabel(year, point.usageNo);
 
@@ -150,6 +169,8 @@ export function calcPointBreakdown(
     usageIndex,
     locationIndex,
     residualRate,
+    residualGroup,
+    durableYears,
     adjustmentRate: adjustmentRate === 1 ? undefined : adjustmentRate,
     appliedLandPriceYear: year,
     applyNotes: {
@@ -174,6 +195,166 @@ export function weightedAvgLandPrice(parcels: LandParcel[]): number {
   }
   if (areaSum <= 0) throw new BuildingStdPriceError("다필지 부속토지: 면적 합계가 0입니다.");
   return valueSum / areaSum;
+}
+
+/** 부속시설 종류 표시 순서·라벨(계산서 Ⅴ Ci~Hi). "other"="공용"(기존 단일 sharedFacilityArea 라벨 보존) */
+const ANCILLARY_KIND_ORDER: AncillaryFacilityKind[] = [
+  "parking",
+  "machine",
+  "boiler",
+  "shelter",
+  "rooftop",
+  "other",
+];
+const ANCILLARY_KIND_LABEL: Record<AncillaryFacilityKind, string> = {
+  parking: "주차장",
+  machine: "기계실",
+  boiler: "보일러실",
+  shelter: "대피소",
+  rooftop: "옥탑",
+  other: "공용",
+};
+
+/** 조정율 번호(들) → {배율, echo items}. 번호 미수록 시 throw. */
+function adjustmentFromNos(
+  nos: number[] | undefined,
+  ratePercent: number | undefined,
+  label: string,
+): { adjRate: number; items?: { nos: number[]; rate: number }[] } {
+  if (nos && nos.length > 0) {
+    const rates = nos.map((no) => {
+      const r = resolveAdjustmentRateByNo(no);
+      if (r === undefined) throw new BuildingStdPriceError(`${label}: 조정률 번호 ${no} 미수록(1~36)`);
+      return r;
+    });
+    const numerator = rates.reduce((a, r) => a * r, 1);
+    return {
+      adjRate: numerator / 100 ** rates.length,
+      items: nos.map((no, i) => ({ nos: [no], rate: rates[i] })),
+    };
+  }
+  if (ratePercent != null) return { adjRate: ratePercent / 100 };
+  return { adjRate: 1.0 };
+}
+
+/** 복합 계산 1시점 옵션 — usageNo 선택(양도 취득/양도 시점별)·조정률 적용(상증만)·부속 종류 */
+export interface CompositeYearOptions {
+  /** 부분 → 해당 시점 용도번호(양도 취득=acqUsageNo, 그 외=usageNo) */
+  usageNoSelector: (p: BuildingCompositePart) => number;
+  /** 조정률 적용 여부 — 상증 true / 양도 false(고시: 양도 조정률 미적용) */
+  adjustmentEnabled: boolean;
+  /** 부속시설 종류별 면적(정규화 후) */
+  ancillary: AncillaryFacility[];
+  remodel?: RemodelInfo;
+  /** 오류 메시지 접두(예 "복합 부분"·"양도 복합 부분") */
+  errorPrefix?: string;
+}
+
+export interface CompositeYearResult {
+  breakdowns: BuildingStdPriceBreakdown[];
+  total: number;
+  apportionment?: AncillaryApportionment;
+}
+
+/**
+ * 복합건물 1시점 평가(상증·양도 공용). 부분별 주용도 행 + 부속 종류별 행(Ⅳ) + Ⅴ 안분 echo.
+ * breakdowns 순서 = [주용도1, 부속1(종류순), 주용도2, 부속2, ...] (인터리브 — 기존 단언 호환).
+ * 부속 행은 주용도와 동일 구조·용도·위치·잔가, 조정률만 상이(공용 조정률). "other" 단일 종류 = 기존 동작.
+ */
+export function calcCompositeForYear(
+  parts: BuildingCompositePart[],
+  year: number,
+  landPrice: number,
+  builtYear: number,
+  opts: CompositeYearOptions,
+): CompositeYearResult {
+  const prefix = opts.errorPrefix ?? "복합 부분";
+  const totalMainArea = parts.reduce((s, p) => s + p.floorArea, 0);
+  if (!(totalMainArea > 0)) throw new BuildingStdPriceError(`${prefix}: 면적 합계가 0입니다.`);
+
+  // 부속 종류별 총면적 집계
+  const totalByKind: Partial<Record<AncillaryFacilityKind, number>> = {};
+  for (const a of opts.ancillary) {
+    if (a.areaM2 > 0) totalByKind[a.kind] = (totalByKind[a.kind] ?? 0) + a.areaM2;
+  }
+  const activeKinds = ANCILLARY_KIND_ORDER.filter((k) => (totalByKind[k] ?? 0) > 0);
+  const hasAncillary = activeKinds.length > 0;
+
+  const breakdowns: BuildingStdPriceBreakdown[] = [];
+  const apportionRows: AncillaryApportionRow[] = [];
+
+  for (let i = 0; i < parts.length; i++) {
+    const p = parts[i];
+    const label = p.label ?? `${prefix} ${i + 1}`;
+    if (!p.structureKey) throw new BuildingStdPriceError(`${label}: 구조 미선택`);
+    const usageNo = opts.usageNoSelector(p);
+    if (usageNo === undefined || usageNo < 1) throw new BuildingStdPriceError(`${label}: 용도 미선택`);
+    if (!(p.floorArea > 0)) throw new BuildingStdPriceError(`${label}: 면적(㎡) 필요`);
+    const point: BuildingPointInput = { structureKey: p.structureKey, usageNo, landPricePerM2: landPrice };
+
+    // 주용도 행
+    const mainAdj = opts.adjustmentEnabled
+      ? adjustmentFromNos(p.adjustmentNos, p.adjustmentRate, label)
+      : { adjRate: 1.0, items: undefined };
+    const main = calcPointBreakdown(year, point, p.floorArea, builtYear, mainAdj.adjRate, label, opts.remodel);
+    breakdowns.push({ ...main, label: p.label, floorArea: p.floorArea, adjustmentItems: mainAdj.items });
+
+    // 부속 — 수령 여부(상증 = 공용 조정률 지정 부분만 / 양도 = 전 부분)
+    const receives = opts.adjustmentEnabled
+      ? p.sharedAdjustmentRate != null || (p.sharedAdjustmentNos?.length ?? 0) > 0
+      : true;
+    if (hasAncillary && receives) {
+      const sharedAdj = opts.adjustmentEnabled
+        ? adjustmentFromNos(p.sharedAdjustmentNos, p.sharedAdjustmentRate, `${label} 공용`)
+        : { adjRate: 1.0, items: undefined };
+      const byKind: Partial<Record<AncillaryFacilityKind, number>> = {};
+      for (const kind of activeKinds) {
+        const area = parseFloat(((totalByKind[kind]! * p.floorArea) / totalMainArea).toFixed(2));
+        byKind[kind] = area;
+        const kLabel = `${label} ${ANCILLARY_KIND_LABEL[kind]}`;
+        const bd = calcPointBreakdown(year, point, area, builtYear, sharedAdj.adjRate, kLabel, opts.remodel);
+        breakdowns.push({
+          ...bd,
+          label: kind === "other" ? `${label} 공용` : kLabel,
+          floorArea: area,
+          ancillaryKind: kind,
+          attributedTo: p.label,
+          adjustmentItems: sharedAdj.items,
+        });
+      }
+      apportionRows.push({
+        label: p.label,
+        usageIndex: main.usageIndex ?? 0,
+        ratio: p.floorArea / totalMainArea,
+        areaSum: activeKinds.reduce((s, k) => s + (byKind[k] ?? 0), 0),
+        byKind,
+      });
+    }
+  }
+
+  const total = breakdowns.reduce((s, b) => s + b.standardPrice, 0);
+  const apportionment: AncillaryApportionment | undefined = hasAncillary
+    ? { totalArea: activeKinds.reduce((s, k) => s + (totalByKind[k] ?? 0), 0), totalByKind, rows: apportionRows }
+    : undefined;
+  return { breakdowns, total, apportionment };
+}
+
+/**
+ * 부속시설 입력 정규화 — sharedFacilityArea(단일 합계) ↔ ancillaryFacilities(종류별) 단일화.
+ * 양쪽 동시 입력 = 검증 오류. sharedFacilityArea > 0 → [{kind:"other"}](하위호환·결과 불변).
+ */
+export function normalizeAncillary(
+  ancillaryFacilities: AncillaryFacility[] | undefined,
+  sharedFacilityArea: number | undefined,
+): AncillaryFacility[] {
+  const hasList = (ancillaryFacilities?.length ?? 0) > 0;
+  const hasLegacy = (sharedFacilityArea ?? 0) > 0;
+  if (hasList && hasLegacy) {
+    throw new BuildingStdPriceError("부속시설: 종류별 면적과 단일 합계를 동시에 입력할 수 없습니다.");
+  }
+  if (hasList) return ancillaryFacilities!.filter((a) => a.areaM2 > 0);
+  if (hasLegacy) return [{ kind: "other", areaM2: sharedFacilityArea! }];
+  return [];
 }
 
 /**

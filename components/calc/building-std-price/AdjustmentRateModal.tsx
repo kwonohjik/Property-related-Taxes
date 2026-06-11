@@ -137,8 +137,24 @@ export function AdjustmentRateModal({
           </DialogDescription>
         </DialogHeader>
 
+        {!isResidential && floorArea <= 0 && (
+          <p className="rounded-md bg-amber-50 px-2.5 py-1.5 text-xs text-amber-700">
+            연면적이 아직 입력되지 않아 II구분 연면적 구간은 예상 조정률에 반영되지 않습니다. 실제 계산은
+            입력된 연면적 기준으로 적용됩니다.
+          </p>
+        )}
+
         <div className="space-y-3">
-          <FieldCard label="I 지붕재료" hint={roofActive ? "구조지수 100 미만일 때만 적용" : "구조지수 100 이상 — 미적용"}>
+          <FieldCard
+            label="I 지붕재료"
+            hint={
+              roofActive
+                ? "구조지수 100 미만일 때만 적용"
+                : structureIndex > 0
+                  ? "구조지수 100 이상 — 미적용"
+                  : "건물 구조 선택 후 적용 가능(구조지수 100 미만 전용)"
+            }
+          >
             <RadioCardGroup
               name="roof"
               tone="violet"
@@ -159,7 +175,7 @@ export function AdjustmentRateModal({
               value={draft.maxFloors !== undefined ? String(draft.maxFloors) : ""}
               onChange={(v) => set("maxFloors", v)}
               unit="층"
-              placeholder="예: 16"
+              placeholder="지상 최고층수"
             />
           </FieldCard>
 
@@ -224,7 +240,7 @@ export function AdjustmentRateModal({
             <DecimalInput
               value={draft.wallessRatio !== undefined ? String(draft.wallessRatio) : ""}
               onChange={(v) => set("wallessRatio", v)}
-              placeholder="예: 0.5"
+              placeholder="무벽면적비율"
             />
           </FieldCard>
 
@@ -241,7 +257,7 @@ export function AdjustmentRateModal({
             <DecimalInput
               value={draft.normalUseRatio !== undefined ? String(draft.normalUseRatio) : ""}
               onChange={(v) => set("normalUseRatio", v)}
-              placeholder="예: 0.7"
+              placeholder="정상 사용 면적비율"
             />
           </FieldCard>
         </div>
