@@ -38,6 +38,16 @@ export interface FilingFormRowsInput {
    * filingCreditBase가 전달된 경우 formula에 반영.
    */
   foreignTaxCredit?: number;
+  /**
+   * 비과세재산가액 합계 (§46) — ⑤ formula 표시 정합용.
+   * 0 초과 시 ⑤ 산식에 "− 비과세재산가액" 표기 (①은 비과세 차감 전 가액이므로).
+   */
+  exemptTotal?: number;
+  /**
+   * 감정평가수수료 공제액 (§55①·시행령 §46의2) — ⑤ formula 표시 정합용.
+   * 0 초과 시 ⑤ 산식에 "− 감정평가수수료" 표기.
+   */
+  appraisalFeeTotal?: number;
 }
 
 export function buildFilingFormRows(input: FilingFormRowsInput): FilingFormRow[] {
@@ -56,6 +66,8 @@ export function buildFilingFormRows(input: FilingFormRowsInput): FilingFormRow[]
     hasPriorGifts,
     filingCreditBase,
     foreignTaxCredit,
+    exemptTotal,
+    appraisalFeeTotal,
   } = input;
 
   // §69 신고세액공제 formula 문자열 빌드.
@@ -104,12 +116,22 @@ export function buildFilingFormRows(input: FilingFormRowsInput): FilingFormRow[]
     display: "amount",
     lawRef: GIFT.GIFT_DEDUCTION,
   });
+  // ⑤ formula 표시 정합 — ①은 비과세 차감 전 가액, 엔진 ⑤ = (① − 비과세) − ② + ③ − ④ − 감정평가수수료.
+  // 비과세·수수료가 0인 일반 케이스는 "① − ② + ③ − ④"로 표기 (② 채무 행 포함).
+  const taxBaseFormula = [
+    "①",
+    ...((exemptTotal ?? 0) > 0 ? ["− 비과세재산가액"] : []),
+    "− ②",
+    "+ ③",
+    "− ④",
+    ...((appraisalFeeTotal ?? 0) > 0 ? ["− 감정평가수수료"] : []),
+  ].join(" ");
   rows.push({
     number: "⑤",
     label: "합산과세표준",
     amount: taxBase,
     display: "amount",
-    formula: "① + ③ − ④",
+    formula: taxBaseFormula,
     lawRef: GIFT.TAX_BASE,
   });
   rows.push({

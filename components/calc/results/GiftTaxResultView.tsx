@@ -248,7 +248,8 @@ export function GiftTaxResultView({
     const items = estateItems ?? [];
     s.add("core-result");
     s.add("tax-summary");
-    if (result.generationSkipSurchargeDetail) s.add("gen-skip-surcharge");
+    if (result.generationSkipSurchargeDetail || result.generationSkipProvisoApplied)
+      s.add("gen-skip-surcharge");
     if (result.totalTaxCredit > 0) s.add("tax-credit");
     if (priorGifts.length > 0) s.add("prior-gift");
     if (result.filingFormRows && result.filingFormRows.length > 0)
@@ -442,12 +443,15 @@ export function GiftTaxResultView({
       </div>
       </PrintSection>
 
-      {/* §57① 단서 적용 — 세대생략 할증 배제 안내 (donorGroup=B이지만 단서로 할증 0인 경우) */}
+      {/* §57① 단서 적용 — 세대생략 할증 배제 안내 (donorGroup=B이지만 단서로 할증 0인 경우)
+          선택 출력: 할증 산출근거와 같은 gen-skip-surcharge 섹션으로 편입 (availablePrintIds 가드 동기화) */}
       {result.generationSkipProvisoApplied === true && (
-        <div className="border border-rose-200 rounded-xl bg-rose-50/30 px-4 py-3 text-sm text-rose-700">
-          세대생략 할증과세 배제 (상증법 §57① 단서) — 증여자의 최근친 직계비속(부·모) 사망으로 인해
-          세대생략 할증(30%·40%)이 적용되지 않습니다.
-        </div>
+        <PrintSection id="gen-skip-surcharge" selectedIds={selectedPrintIds}>
+          <div className="border border-rose-200 rounded-xl bg-rose-50/30 px-4 py-3 text-sm text-rose-700">
+            세대생략 할증과세 배제 (상증법 §57① 단서) — 증여자의 최근친 직계비속(부·모) 사망으로 인해
+            세대생략 할증(30%·40%)이 적용되지 않습니다.
+          </div>
+        </PrintSection>
       )}
 
       {/* §57 세대생략 할증과세 산출근거 — 그룹 B 조부모→손자녀 시만 활성 */}
