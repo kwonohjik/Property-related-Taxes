@@ -89,6 +89,11 @@ export interface GiftTaxCreditInput {
   specialTreatment?: "startup" | "family_business";
   /** 창업자금: 창업법인 설립 후 2년 이내 투자 완료 여부 */
   startupInvestmentCompleted?: boolean;
+  /**
+   * 창업자금 과세가액 한도 기준 — 10인 이상 신규 고용 여부 (§30의5①, D2)
+   * true → 과세가액 한도 100억, false/undefined → 50억
+   */
+  startupNewHiresAtLeast10?: boolean;
 }
 
 /** 세액공제 계산 결과 (상속·증여 공통 구조) */
