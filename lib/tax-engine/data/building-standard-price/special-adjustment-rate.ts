@@ -164,8 +164,8 @@ export function resolveMaxFloorsRate(maxFloors: number): number {
 }
 
 /** 최고층수 → 적용 번호(4~8) */
-export function resolveMaxFloorsNo(maxFloors: number): number {
-  let no: number = MAX_FLOORS_RATE[0].no;
+export function resolveMaxFloorsNo(maxFloors: number): 4 | 5 | 6 | 7 | 8 {
+  let no: 4 | 5 | 6 | 7 | 8 = MAX_FLOORS_RATE[0].no;
   for (const b of MAX_FLOORS_RATE) {
     if (maxFloors >= b.minFloors) no = b.no;
   }
@@ -182,8 +182,8 @@ export function resolveGrossAreaRate(grossArea: number): number {
 }
 
 /** 연면적(㎡) → 적용 번호(9~13) */
-export function resolveGrossAreaNo(grossArea: number): number {
-  let no: number = GROSS_AREA_RATE[0].no;
+export function resolveGrossAreaNo(grossArea: number): 9 | 10 | 11 | 12 | 13 {
+  let no: 9 | 10 | 11 | 12 | 13 = GROSS_AREA_RATE[0].no;
   for (const b of GROSS_AREA_RATE) {
     if (grossArea >= b.minArea) no = b.no;
   }
@@ -207,4 +207,28 @@ export function resolveWallessRate(ratio: number): number {
   if (ratio >= 0.5) return 70; // 29: 2/4 이상~3/4 미만
   if (ratio > 0.25) return 80; // 28: 1/4 초과~2/4 미만
   return ADJUSTMENT_RATE_BASE; // 1/4 이하 미적용
+}
+
+/**
+ * 조정율 번호(1~36) → 지수(정수, 100기준) 통합 맵. 분산 테이블의 단일 출처 집계.
+ * 37(화재·멸실 정상사용면적비율)은 비율 입력형 → 번호 입력 비대상(undefined).
+ * 계산서 Ⅲ·Ⅳ "조정률(번호)" 칸 입력(상증 전용)을 지수로 변환.
+ */
+const ADJUSTMENT_RATE_BY_NO: Readonly<Record<number, number>> = Object.freeze({
+  ...ROOF_MATERIAL_RATE, // 1~3
+  ...Object.fromEntries(MAX_FLOORS_RATE.map((b) => [b.no, b.rate])), // 4~8
+  ...Object.fromEntries(GROSS_AREA_RATE.map((b) => [b.no, b.rate])), // 9~13
+  14: INTELLIGENT_BUILDING_RATE["3-4"], // 14
+  15: INTELLIGENT_BUILDING_RATE["1-2"], // 15
+  ...HOUSE_TYPE_RATE, // 16~19
+  ...COMMERCIAL_FLOOR_RATE, // 20~23
+  ...ANCILLARY_RATE, // 24~25
+  ...REMODEL_COUNT_RATE, // 26~27
+  ...Object.fromEntries(WALLESS_RATE.map((b) => [b.no, b.rate])), // 28~30
+  ...STRUCTURAL_SAFETY_RATE, // 31~36
+});
+
+/** 조정율 번호(1~36) → 지수. 미수록(0·37·범위 외) = undefined(검증 오류 처리). */
+export function resolveAdjustmentRateByNo(no: number): number | undefined {
+  return ADJUSTMENT_RATE_BY_NO[no];
 }

@@ -524,8 +524,8 @@ export function calculateTransferTax(
       ? isSurchargeSuspended(parsedRates.surchargeSpecialRules, input.transferDate, surchargeTypeKey)
       : false;
 
-  // STEP 4: 장기보유특별공제 (장기임대 특례율 포함)
-  const { deduction: longTermHoldingDeduction, rate: longTermHoldingRate, holdingPeriod } =
+  // STEP 4: 장기보유특별공제 (장기임대 특례율 포함 — §97의3·§97의4는 L-2' 블록)
+  const { deduction: longTermHoldingDeduction, rate: longTermHoldingRate, holdingPeriod, rental97LthdDetail } =
     calcLongTermHoldingDeduction(taxableGain, effectiveInput, parsedRates.longTermHoldingRules, isSurchargeCase, suspendedResult, parsedRates.longTermRentalRules, splitDetail);
   const holdingPeriodStr = holdingPeriod.years > 0 || holdingPeriod.months > 0
     ? `보유기간 ${holdingPeriod.years}년 ${holdingPeriod.months}개월`
@@ -711,6 +711,7 @@ export function calculateTransferTax(
     newHousingReductionDetail,
     publicExpropriationDetail,
     selfFarmingReductionDetail,
+    rental97TaxDetail,
     determinedTax,
     penaltyTax,
     penaltyBase,
@@ -766,6 +767,8 @@ export function calculateTransferTax(
     newHousingReductionDetail,
     publicExpropriationDetail,
     selfFarmingReductionDetail,
+    rental97LthdDetail,
+    rental97TaxDetail,
     penaltyDetail,
     new993Detail: new993FinalResult,
     transferBurdenedGiftBreakdown,

@@ -496,7 +496,78 @@ export function toEngineReductions(
           : undefined,
       };
     }
-    // ── Phase 1 stub 20종: 본 요건 미구현 — type만 전달 (엔진은 시한 검증만 수행) ──
+    // ── Phase 2 (2026-06-11): 장기임대 §97 시리즈 본격 변환 ──
+    // 명명 통일(E5): registrationDate — 폼·Zod·Route·엔진 동일 키. 날짜는 string 그대로
+    // 전달하고 Route handler(⑭)에서 Date 변환 (date-coerce).
+    if (
+      r.type === "rental_97_3" ||
+      r.type === "rental_97_4" ||
+      r.type === "rental_97_5" ||
+      r.type === "rental_97_main" ||
+      r.type === "rental_97_proviso" ||
+      r.type === "rental_97_2"
+    ) {
+      const common = {
+        registrationDate: r.registrationDate || undefined,
+        rentalStartDate: r.rentalStartDate || undefined,
+        isTaxRegistered: r.isTaxRegistered,
+        // 간소화 모드: "none" → false / "has_violation" → true. 미선택("")은 validate(⑧)에서 차단.
+        rentIncreaseViolated: r.rentIncreaseViolationMode === "has_violation",
+        rentHistory:
+          r.rentIncreaseViolationMode === "has_violation" && r.rentHistory && r.rentHistory.length >= 2
+            ? r.rentHistory.map((h) => ({
+                contractDate: h.contractDate,
+                contractType: h.contractType,
+                monthlyRent: parseAmount(h.monthlyRent || "0"),
+                deposit: parseAmount(h.deposit || "0"),
+              }))
+            : undefined,
+        vacancyPeriods:
+          r.hasVacancyOver6Months === true && r.vacancyPeriods && r.vacancyPeriods.length > 0
+            ? r.vacancyPeriods.map((v) => ({ startDate: v.startDate, endDate: v.endDate }))
+            : undefined,
+      };
+      if (r.type === "rental_97_3") {
+        return {
+          type: "rental_97_3" as const,
+          ...common,
+          officialPriceAtStart: parseAmount(r.officialPriceAtStart || "0") || undefined,
+          isNationalHousingScale: r.isNationalHousingScale,
+          region: r.region,
+          propertyType: r.propertyType,
+          rentalHousingType: r.rentalHousingType,
+          isConvertedFromShortTerm: r.isConvertedFromShortTerm,
+        };
+      }
+      if (r.type === "rental_97_4") {
+        return { type: "rental_97_4" as const, ...common, region: r.region };
+      }
+      if (r.type === "rental_97_5") {
+        return {
+          type: "rental_97_5" as const,
+          ...common,
+          officialPriceAtStart: parseAmount(r.officialPriceAtStart || "0") || undefined,
+          region: r.region,
+        };
+      }
+      if (r.type === "rental_97_2") {
+        return {
+          type: "rental_97_2" as const,
+          ...common,
+          rental972Type: r.rental972Type || undefined,
+          isNationalHousing: r.isNationalHousing,
+        };
+      }
+      // rental_97_main | rental_97_proviso
+      return {
+        type: r.type,
+        ...common,
+        constructionYear: parseInt(r.constructionYear) || undefined,
+        isNationalHousing: r.isNationalHousing,
+        ...(r.type === "rental_97_proviso" && r.provisoCase ? { provisoCase: r.provisoCase } : {}),
+      };
+    }
+    // ── Phase 1 stub 잔여: 본 요건 미구현 — type만 전달 (엔진은 시한 검증만 수행) ──
     // 해당 ID들은 transfer.types.ts TransferReductionStub 정의 + Zod schema 통과 보장.
     // TypeScript narrowing이 모든 케이스를 소진해 never로 좁혀지므로 unknown 캐스트로 우회.
     const stubType = (r as unknown as { type: string }).type;

@@ -43,7 +43,7 @@ export const RESIDUAL_RATE_MIN = 0.1;
  *   ≤2002 = 3그룹(I=40·II=30·III=20), ≥2003 = 4그룹(I=50·II=40·III=30·IV=20).
  * (멤버십 resolver가 구조→그룹 레터를 시대별로 결정하므로, 여기선 레터→내용연수만)
  */
-function durableForGroup(group: ResidualRateGroup, valuationYear: number): number {
+export function durableForGroup(group: ResidualRateGroup, valuationYear: number): number {
   if (valuationYear <= 2002) {
     const d: Partial<Record<ResidualRateGroup, number>> = { I: 40, II: 30, III: 20 };
     const v = d[group];

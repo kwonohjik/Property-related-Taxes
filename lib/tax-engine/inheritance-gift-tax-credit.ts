@@ -454,6 +454,7 @@ export function calcGiftTaxCredits(params: GiftTaxCreditParams): TaxCreditResult
       giftAmount,
       normalComputedTax: totalComputedTax,
       startupInvestmentCompleted: creditInput.startupInvestmentCompleted,
+      startupNewHiresAtLeast10: creditInput.startupNewHiresAtLeast10,
     });
     specialTreatmentCredit = specialResult.creditAmount;
     allBreakdown.push(...specialResult.breakdown);
@@ -468,13 +469,28 @@ export function calcGiftTaxCredits(params: GiftTaxCreditParams): TaxCreditResult
     remainingTax = Math.max(0, remainingTax - specialTreatmentCredit);
   }
 
-  // 3. 신고세액공제 (§69) — 남은 금액의 3%
+  // D5: §30의5⑪ 신고세액공제 배제 — 특례 적용(specialTreatmentCredit > 0) 시 §69 배제
+  // §30의5⑪: "제1항을 적용받는 자에 대하여는 §69를 적용하지 아니한다"
+  // §30의6⑤가 §30의5⑪ 준용 → 가업승계 특례에도 동일 배제
+  // 미적격(투자미완료·10년미만) 폴백 시 specialTreatmentCredit=0 → §69 정상 적용
+  const isSpecialTreatmentApplied = specialTreatmentCredit > 0;
+
+  // 3. 신고세액공제 (§69) — 남은 금액의 3% (D5: 특례 적격 시 배제)
   const filingResult = calcFilingCredit({
-    isFiledOnTime: creditInput.isFiledOnTime,
+    isFiledOnTime: creditInput.isFiledOnTime && !isSpecialTreatmentApplied,
     taxBeforeFilingCredit: Math.max(0, remainingTax),
   });
   const filingCredit = filingResult.creditAmount;
   allBreakdown.push(...filingResult.breakdown);
+  // D5: 특례 적격 + 기한 내 신고 시 배제 사유 echo
+  if (isSpecialTreatmentApplied && creditInput.isFiledOnTime) {
+    allBreakdown.push({
+      label: TAX_CREDIT.STARTUP_FUND_NO_FILING_CREDIT + " 적용 — 신고세액공제 배제",
+      amount: 0,
+      lawRef: TAX_CREDIT.STARTUP_FUND_NO_FILING_CREDIT,
+      note: "조특법 §30의5⑪: 과세특례를 적용받는 자에 대하여는 §69(신고세액공제)를 적용하지 아니함",
+    });
+  }
   if (filingCredit > 0) appliedLaws.add(TAX_CREDIT.FILING_CREDIT);
 
   const totalCredit =

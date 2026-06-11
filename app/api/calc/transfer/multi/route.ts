@@ -22,7 +22,7 @@ import { TaxCalculationError, TaxErrorCode } from "@/lib/tax-engine/tax-errors";
 import { checkRateLimit, getClientIp, shouldBypassRateLimit } from "@/lib/api/rate-limit";
 import { multiInputSchema } from "@/lib/api/transfer-tax-schema";
 import type { TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
-import type { TransferReduction } from "@/lib/tax-engine/types/transfer.types";
+import { mapReductionsToEngine } from "../route-reductions-mapper";
 
 export async function POST(request: NextRequest) {
   // Rate Limiting — 분당 15회 (단건 30회의 절반)
@@ -130,18 +130,8 @@ export async function POST(request: NextRequest) {
             newAcquisitionDate: new Date(p.temporaryTwoHouse.newAcquisitionDate),
           }
         : undefined,
-      reductions: p.reductions.map((r): TransferReduction => {
-        if (r.type === "public_expropriation") {
-          return { ...r, businessApprovalDate: new Date(r.businessApprovalDate) };
-        }
-        if (r.type === "self_farming") {
-          return {
-            ...r,
-            incorporationDate: r.incorporationDate ? new Date(r.incorporationDate) : undefined,
-          };
-        }
-        return r;
-      }),
+      // 감면 매핑 — 단건 route와 공용 (rental §97 시리즈 Date 변환 포함, 2026-06-11)
+      reductions: mapReductionsToEngine(p.reductions),
       nonBusinessLandDetails: p.nonBusinessLandDetails
         ? {
             ...p.nonBusinessLandDetails,

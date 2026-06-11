@@ -27,6 +27,7 @@ import { PriorGiftInput } from "@/components/calc/PriorGiftInput";
 import { AppraisalFeeSection } from "@/components/calc/deductions/AppraisalFeeSection";
 import { resolveValuationMethod } from "@/lib/tax-engine/property-valuation";
 import { INITIAL_APPRAISAL_FEE_FIELDS } from "@/lib/calc/appraisal-fee-form";
+import { SpecialTreatmentAssetSelector } from "@/components/calc/gift/SpecialTreatmentAssetSelector";
 
 // ============================================================
 // 폼 상태 타입
@@ -71,6 +72,8 @@ export interface FormState extends AppraisalFeeFormFields {
   specialTreatment: "" | "startup" | "family_business";
   /** 창업자금 §30의5④ — 투자 완료 여부 (startup 선택 시 노출) */
   startupInvestmentCompleted: boolean;
+  /** 창업자금 §30의5① — 10명 이상 신규 고용 여부 (한도 50억 → 100억, startup 선택 시 노출) */
+  startupNewHiresAtLeast10: boolean;
   // 분납 (Step3 끝, 상증법 §70②) — 결정세액 미영향 투영, 별지10호 ㊼ 연동
   /** 분납 신청 여부 */
   splitPaymentEnabled: boolean;
@@ -97,6 +100,7 @@ export const INITIAL_FORM: FormState = {
   foreignTaxPaid: "",
   specialTreatment: "",
   startupInvestmentCompleted: false,
+  startupNewHiresAtLeast10: false,
   splitPaymentEnabled: false,
   splitPaymentAmount: "",
   ...INITIAL_APPRAISAL_FEE_FIELDS,
@@ -263,6 +267,21 @@ export function validateStep(step: number, form: FormState): string | null {
     if (needsName.some((it) => !it.name.trim())) {
       return "모든 증여재산에 자산명을 입력하세요.";
     }
+    // §47① 채무인수액 > 재산평가액 경고 (차단 아님 — §47① 입증 후 허용 가능, 엔진 음수가드 위임)
+    const realEstateItems = form.giftItems.filter((it) =>
+      it.category.startsWith("real_estate")
+    );
+    for (let i = 0; i < realEstateItems.length; i++) {
+      const it = realEstateItems[i];
+      const debtForGift = it.assumedDebtForGift ?? 0;
+      if (debtForGift > 0) {
+        const valuation =
+          it.marketValue ?? it.appraisedValue ?? it.similarSalesValue ?? it.standardPrice ?? 0;
+        if (valuation > 0 && debtForGift > valuation) {
+          return `${it.name.trim() || `재산 ${i + 1}`}: 채무인수액(${debtForGift.toLocaleString()}원)이 평가액(${valuation.toLocaleString()}원)을 초과합니다. 입력값을 확인하세요. (과세가액 0으로 처리됩니다)`;
+        }
+      }
+    }
   }
   if (step === 2) {
     // 사전증여 입력 시 동일인 그룹·⑤·⑦ 필수 (UI ↔ validate 모순 방지)
@@ -297,6 +316,24 @@ export function validateStep(step: number, form: FormState): string | null {
       return "이미 공제받은 혼인·출산 공제액은 0원 이상이어야 합니다.";
     }
     // 1억 초과 입력은 엔진 가드(min 처리)로 안전 처리됨 — UI 차단 없음 (모순 방지)
+
+    // 엔진 superRefine 동기화 (⑧): 혼합 자산(N≥2)에서 특례 선택 시 귀속 미설정 차단.
+    // 자산 1개는 엔진이 자동 귀속으로 처리하므로 차단 없음.
+    // Zod superRefine(property-valuation-input.ts)과 동일 조건 — 미귀속(undefined) 1개라도
+    // 있으면 차단. (일부만 태깅 후 신규 자산 추가 시 UI 통과↔API 400 모순 방지)
+    if (form.specialTreatment !== "") {
+      const allItems = [...form.giftItems, ...form.stockItems];
+      if (allItems.length >= 2) {
+        const unassigned = allItems.filter(
+          (it) => it.isSpecialTreatmentAsset === undefined
+        );
+        if (unassigned.length > 0) {
+          const label =
+            form.specialTreatment === "startup" ? "창업자금" : "가업승계";
+          return `${label} 특례 적용 시 모든 자산의 특례 귀속 여부를 선택하세요. (위 "특례 귀속 자산 선택" 항목 — 미선택 ${unassigned.length}개)`;
+        }
+      }
+    }
   }
   return null;
 }
@@ -579,10 +616,21 @@ export function Step3({
           value={form.specialTreatment === "" ? "none" : form.specialTreatment}
           onChange={(v) => {
             const val = v === "none" ? "" : v;
+            // 특례 타입이 바뀔 때 모든 자산의 isSpecialTreatmentAsset을 초기화
+            // N≥2 혼합 자산 귀속: false(미귀속)로 초기화 → 사용자가 명시 선택 필요
+            // 자산 1개: 엔진이 자동 귀속 처리 (isSpecialTreatmentAsset 미설정도 OK)
+            const resetGiftItems = val !== ""
+              ? form.giftItems.map((it) => ({ ...it, isSpecialTreatmentAsset: false as boolean | undefined }))
+              : form.giftItems.map((it) => ({ ...it, isSpecialTreatmentAsset: undefined as boolean | undefined }));
+            const resetStockItems = val !== ""
+              ? form.stockItems.map((it) => ({ ...it, isSpecialTreatmentAsset: false as boolean | undefined }))
+              : form.stockItems.map((it) => ({ ...it, isSpecialTreatmentAsset: undefined as boolean | undefined }));
             set({
               specialTreatment: val,
-              // startup이 아니면 startupInvestmentCompleted 초기화
-              ...(val !== "startup" ? { startupInvestmentCompleted: false } : {}),
+              giftItems: resetGiftItems,
+              stockItems: resetStockItems,
+              // startup이 아니면 startupInvestmentCompleted / startupNewHiresAtLeast10 초기화
+              ...(val !== "startup" ? { startupInvestmentCompleted: false, startupNewHiresAtLeast10: false } : {}),
             });
           }}
           options={[
@@ -593,6 +641,36 @@ export function Step3({
         />
       </div>
 
+      {/* 특례 귀속 자산 선택 — 자산 1개:자동귀속, N개:멀티선택 */}
+      {form.specialTreatment !== "" && (
+        <SpecialTreatmentAssetSelector
+          specialTreatment={form.specialTreatment as "startup" | "family_business"}
+          allItems={[...form.giftItems, ...form.stockItems]}
+          onItemChange={(index, isSpecial) => {
+            // giftItems vs stockItems 인덱스 분리 — allItems 순서: giftItems 먼저
+            // isSpecial=true → 특례 귀속, false → 일반 스트림(Zod: false = "명시 일반")
+            // undefined가 아닌 boolean을 저장해야 Zod superRefine 통과
+            const giftLen = form.giftItems.length;
+            if (index < giftLen) {
+              const updated = form.giftItems.map((it, i) =>
+                i === index
+                  ? { ...it, isSpecialTreatmentAsset: isSpecial }
+                  : it
+              );
+              set({ giftItems: updated });
+            } else {
+              const stockIdx = index - giftLen;
+              const updated = form.stockItems.map((it, i) =>
+                i === stockIdx
+                  ? { ...it, isSpecialTreatmentAsset: isSpecial }
+                  : it
+              );
+              set({ stockItems: updated });
+            }
+          }}
+        />
+      )}
+
       {/* G-M7: 창업자금 투자 완료 여부 (§30의5④) — startup 선택 시 노출 */}
       {form.specialTreatment === "startup" && (
         <ToggleCard
@@ -601,6 +679,17 @@ export function Step3({
           description="증여일로부터 2년 이내 창업법인 설립 및 투자 완료 여부. 미완료 시 과세특례 미적용."
           checked={form.startupInvestmentCompleted}
           onCheckedChange={(v) => set({ startupInvestmentCompleted: v })}
+        />
+      )}
+
+      {/* G-M8: 10명 이상 신규 고용 여부 (§30의5①) — startup 선택 시 노출. ⑧ validation 불필요(boolean, 차단 없음) */}
+      {form.specialTreatment === "startup" && (
+        <ToggleCard
+          tone="emerald"
+          title="창업을 통하여 10명 이상 신규 고용 (§30의5①)"
+          description="창업자금 증여세 과세특례 적용 한도: 10명 이상 신규 고용 시 100억원, 그 외 50억원 (조특법 §30의5①)."
+          checked={form.startupNewHiresAtLeast10}
+          onCheckedChange={(v) => set({ startupNewHiresAtLeast10: v })}
         />
       )}
 

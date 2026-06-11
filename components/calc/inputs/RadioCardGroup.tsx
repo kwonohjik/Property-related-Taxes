@@ -95,6 +95,8 @@ export interface RadioCardOption<T extends string> {
   /** 옵션 하단 힌트·경고 */
   hint?: ReactNode;
   disabled?: boolean;
+  /** 라디오 input에 부여할 data-testid (E2E·단위 테스트 셀렉터용) */
+  testId?: string;
 }
 
 export interface RadioCardGroupProps<T extends string> {
@@ -157,6 +159,7 @@ export function RadioCardGroup<T extends string>({
               checked={isSelected}
               disabled={opt.disabled}
               onChange={() => !opt.disabled && onChange(opt.value)}
+              data-testid={opt.testId}
               className={cn(
                 layout === "inline" ? "h-4 w-4 shrink-0" : "mt-0.5 h-4 w-4 shrink-0",
                 t.accent,

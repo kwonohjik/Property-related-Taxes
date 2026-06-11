@@ -70,8 +70,8 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
   /** 양도비 (소득세법 §97① 나목) — §97② 단서 swap 비교에 사용 */
   transferExpense: string;
 
-  // ── 자산별 감면 (복수 선택 허용, 조특법 §127②) ──
-  /** 이 자산에 적용할 감면 목록. 복수 체크 가능, 엔진이 §127② 규칙 적용. */
+  // ── 자산별 감면 (복수 선택 허용, 조특법 §127⑦) ──
+  /** 이 자산에 적용할 감면 목록. 복수 체크 가능, 엔진이 §127⑦ 규칙 적용. */
   reductions: AssetReductionForm[];
 
   /** 상속 취득가액 산정 모드: auto=보충적평가, manual=직접입력 */

@@ -18,11 +18,17 @@
 
 import { useMemo, useState } from "react";
 import type { AssetForm, AssetReductionForm } from "@/lib/stores/calc-wizard-store";
+import type { RentalReductionFormVariant } from "@/lib/stores/calc-wizard-asset-reduction";
 import { DateInput } from "@/components/ui/date-input";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ReductionPhdInput, type ReductionPhdValue } from "@/components/calc/transfer/ReductionPhdInput";
+import { Rental973InputForm } from "@/components/calc/transfer/rental/Rental973InputForm";
+import { Rental975InputForm } from "@/components/calc/transfer/rental/Rental975InputForm";
+import { Rental97MainInputForm } from "@/components/calc/transfer/rental/Rental97MainInputForm";
+import { Rental972InputForm } from "@/components/calc/transfer/rental/Rental972InputForm";
+import { Rental974InputForm } from "@/components/calc/transfer/rental/Rental974InputForm";
 import {
   REDUCTION_METADATA,
   ALL_REDUCTION_IDS,
@@ -103,6 +109,17 @@ function toggleGroupRadio(
   return [...others, getReductionDefault(newId)];
 }
 
+/** §97 시리즈 공통 기본값 (3-state 초기값 준수: rentIncreaseViolationMode="" / hasVacancyOver6Months=null) */
+const RENTAL_COMMON_DEFAULTS = {
+  registrationDate: "",
+  isTaxRegistered: false,
+  rentalStartDate: "",
+  rentIncreaseViolationMode: "" as const,
+  rentHistory: [],
+  hasVacancyOver6Months: null,
+  vacancyPeriods: [],
+};
+
 function getReductionDefault(id: TransferReductionId): AssetReductionForm {
   if (id === "new_99_3") {
     return {
@@ -117,6 +134,59 @@ function getReductionDefault(id: TransferReductionId): AssetReductionForm {
       hasOccupancyAtContract: false,
       isResident993: true,
       isHousingConstructionBusiness993: false,
+    };
+  }
+  // ── §97 시리즈 기본값 (Phase 2, 2026-06-11) ──
+  if (id === "rental_97_3") {
+    return {
+      type: "rental_97_3",
+      ...RENTAL_COMMON_DEFAULTS,
+      rentalHousingType: "long_term_private",
+      propertyType: "non_apartment",
+      region: "capital",
+      officialPriceAtStart: "",
+      isNationalHousingScale: false,
+      isConvertedFromShortTerm: false,
+    };
+  }
+  if (id === "rental_97_4") {
+    return {
+      type: "rental_97_4",
+      ...RENTAL_COMMON_DEFAULTS,
+      region: "capital",
+    };
+  }
+  if (id === "rental_97_5") {
+    return {
+      type: "rental_97_5",
+      ...RENTAL_COMMON_DEFAULTS,
+      officialPriceAtStart: "",
+      region: "capital",
+    };
+  }
+  if (id === "rental_97_main") {
+    return {
+      type: "rental_97_main",
+      ...RENTAL_COMMON_DEFAULTS,
+      constructionYear: "",
+      isNationalHousing: false,
+    };
+  }
+  if (id === "rental_97_proviso") {
+    return {
+      type: "rental_97_proviso",
+      ...RENTAL_COMMON_DEFAULTS,
+      constructionYear: "",
+      isNationalHousing: false,
+      provisoCase: undefined,
+    };
+  }
+  if (id === "rental_97_2") {
+    return {
+      type: "rental_97_2",
+      ...RENTAL_COMMON_DEFAULTS,
+      rental972Type: "",
+      isNationalHousing: false,
     };
   }
   // Phase 1 stub: type만 (실제로 활성 클릭 불가하므로 도달하지 않음)
@@ -134,12 +204,24 @@ function buildPeriodContext(asset: AssetForm, transferDate: string): PeriodCheck
   // 신축·미분양·임대 감면 13개 조문은 매매계약일 + 계약금 납부 기준으로 시한 판정.
   // 미입력 시 acquisitionDate fallback (조문 단서 "매매계약 + 계약금 = 취득" 정책 준수).
   const assetContract = asset.assetContractDate ? new Date(asset.assetContractDate) : undefined;
+  // Phase 2 (2026-06-11): 장기임대 §97 시리즈 — 선택된 rental 항목의 등록일·임대개시일 주입.
+  // 미입력 시 acquisitionDate 낙관 fallback (period-check의 before(undefined)=false 가 라디오를
+  // 영구 disabled로 만드는 것을 방지 — 표시용 낙관. 본 요건 검증은 엔진 evaluator·validate 담당).
+  const rentalRed = (asset.reductions ?? []).find(
+    (r): r is Extract<AssetReductionForm, { registrationDate: string }> =>
+      typeof r.type === "string" && r.type.startsWith("rental_97"),
+  );
+  const rentalReg = rentalRed?.registrationDate ? new Date(rentalRed.registrationDate) : undefined;
+  const rentalStart = rentalRed?.rentalStartDate ? new Date(rentalRed.rentalStartDate) : undefined;
   return {
     transferDate: transDate,
     acquisitionDate: acqDate,
     contractDate: assetContract,
-    registrationDate: undefined,  // §97의3·§97의5 등록일 — 후속 작업 (현재 N/A)
-    rentalStartDate: undefined,
+    // 등록일 미입력 = "모름" → 양도일까지 낙관 fallback (§97의3 등록 ~2027.12.31 — 빈 폼에서
+    // disabled로 단정하지 않음). 임대개시일은 acqDate까지만 — 구법(§97 ~2000.12.31)은 취득일
+    // 입력 전 비활성이 합리적 (양도일 fallback 시 항상 시한 외 오탐).
+    registrationDate: rentalReg ?? acqDate ?? transDate,
+    rentalStartDate: rentalStart ?? acqDate,
     usageApprovalDate: undefined,
   };
 }
@@ -189,6 +271,18 @@ export function UnifiedReductionPanel({ asset, transferDate, onChange }: Unified
     });
   }
 
+  // ── §97 시리즈 폼 필드 업데이트 ──
+  function updateRentalVariant(
+    id: RentalReductionFormVariant["type"],
+    patch: Partial<RentalReductionFormVariant>,
+  ) {
+    onChange({
+      reductions: reductions.map((r) =>
+        r.type === id ? ({ ...r, ...patch } as AssetReductionForm) : r,
+      ),
+    });
+  }
+
   const new993 = reductions.find((r) => r.type === "new_99_3");
 
   return (
@@ -213,9 +307,11 @@ export function UnifiedReductionPanel({ asset, transferDate, onChange }: Unified
           onSelectId={(id) => toggleGroup(cat, id)}
           new993={new993 && new993.type === "new_99_3" ? new993 : undefined}
           onUpdate993={update993}
+          onUpdateRentalVariant={updateRentalVariant}
           assetContractDate={asset.assetContractDate ?? ""}
           onAssetContractDateChange={(v) => onChange({ assetContractDate: v })}
           acquisitionDate={asset.acquisitionDate}
+          transferDate={transferDate}
           assetPhdSnapshot={undefined /* 자산-수준 PHD 데이터는 향후 통합 시 매핑 (현재 자산 카드 PHD UI와 별개) */}
         />
       ))}
@@ -270,9 +366,11 @@ function GroupCategorySection({
   onSelectId,
   new993,
   onUpdate993,
+  onUpdateRentalVariant,
   assetContractDate,
   onAssetContractDateChange,
   acquisitionDate,
+  transferDate,
   assetPhdSnapshot,
 }: {
   category: ReductionCategory;
@@ -287,11 +385,17 @@ function GroupCategorySection({
     key: K,
     value: Extract<AssetReductionForm, { type: "new_99_3" }>[K],
   ) => void;
+  onUpdateRentalVariant: (
+    id: RentalReductionFormVariant["type"],
+    patch: Partial<RentalReductionFormVariant>,
+  ) => void;
   /** Round 9 (2026-05-06): 매매계약일 (자산-수준, 펼침 시 활성화) */
   assetContractDate: string;
   onAssetContractDateChange: (v: string) => void;
   /** Round 10 (2026-05-06): 자산 취득일 — PHD 자동 활성화 권장 판정 */
   acquisitionDate?: string;
+  /** 양도일 — 임대 기간 미리보기용 */
+  transferDate?: string;
   /** Round 10 (2026-05-06): 자산-수준 PHD 데이터 스냅샷 — "자산 카드 PHD 가져오기" 버튼 */
   assetPhdSnapshot?: ReductionPhdValue;
 }) {
@@ -351,6 +455,16 @@ function GroupCategorySection({
                 ? "📋 시한 통과 — Phase 2~ 본격 구현 예정"
                 : undefined;
 
+            // §97 시리즈 현재 선택된 variant 찾기
+            const rentalVariantTypes = [
+              "rental_97_3", "rental_97_4", "rental_97_5",
+              "rental_97_main", "rental_97_proviso", "rental_97_2",
+            ] as const;
+            const isRentalId = (rentalVariantTypes as readonly string[]).includes(id);
+            const rentalForm = isRentalId
+              ? reductions.find((r) => r.type === id) as RentalReductionFormVariant | undefined
+              : undefined;
+
             return (
               <div key={id}>
                 {/* ToggleCard 그룹 — 카테고리 내 1개 강제는 parent의 toggleGroupRadio가 처리 */}
@@ -374,6 +488,52 @@ function GroupCategorySection({
                       onUpdate={onUpdate993}
                       acquisitionDate={acquisitionDate}
                       assetPhdSnapshot={assetPhdSnapshot}
+                    />
+                  )}
+                  {/* §97의3 입력 폼 */}
+                  {id === "rental_97_3" && rentalForm && rentalForm.type === "rental_97_3" && (
+                    <Rental973InputForm
+                      value={rentalForm}
+                      onChange={(patch) => onUpdateRentalVariant("rental_97_3", patch as Partial<RentalReductionFormVariant>)}
+                      transferDate={transferDate}
+                    />
+                  )}
+                  {/* §97의5 입력 폼 */}
+                  {id === "rental_97_5" && rentalForm && rentalForm.type === "rental_97_5" && (
+                    <Rental975InputForm
+                      value={rentalForm}
+                      onChange={(patch) => onUpdateRentalVariant("rental_97_5", patch as Partial<RentalReductionFormVariant>)}
+                      acquisitionDate={acquisitionDate}
+                      transferDate={transferDate}
+                    />
+                  )}
+                  {/* §97 본문 입력 폼 */}
+                  {id === "rental_97_main" && rentalForm && rentalForm.type === "rental_97_main" && (
+                    <Rental97MainInputForm
+                      value={rentalForm}
+                      onChange={(patch) => onUpdateRentalVariant("rental_97_main", patch as Partial<RentalReductionFormVariant>)}
+                    />
+                  )}
+                  {/* §97 단서 입력 폼 */}
+                  {id === "rental_97_proviso" && rentalForm && rentalForm.type === "rental_97_proviso" && (
+                    <Rental97MainInputForm
+                      value={rentalForm}
+                      onChange={(patch) => onUpdateRentalVariant("rental_97_proviso", patch as Partial<RentalReductionFormVariant>)}
+                    />
+                  )}
+                  {/* §97의2 입력 폼 */}
+                  {id === "rental_97_2" && rentalForm && rentalForm.type === "rental_97_2" && (
+                    <Rental972InputForm
+                      value={rentalForm}
+                      onChange={(patch) => onUpdateRentalVariant("rental_97_2", patch as Partial<RentalReductionFormVariant>)}
+                    />
+                  )}
+                  {/* §97의4 입력 폼 */}
+                  {id === "rental_97_4" && rentalForm && rentalForm.type === "rental_97_4" && (
+                    <Rental974InputForm
+                      value={rentalForm}
+                      onChange={(patch) => onUpdateRentalVariant("rental_97_4", patch as Partial<RentalReductionFormVariant>)}
+                      transferDate={transferDate}
                     />
                   )}
                 </ToggleCard>

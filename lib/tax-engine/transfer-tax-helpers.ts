@@ -59,10 +59,8 @@ import {
   calculateCommercialBuildingValuation,
   type CommercialBuildingValuationResult,
 } from "./commercial-building-valuation";
-import {
-  calculateTransferTaxPenalty,
-  type TransferTaxPenaltyResult,
-} from "./transfer-tax-penalty";
+import { evaluateRental97Lthd } from "./transfer-reductions/rental-97-router";
+import type { Rental97Result } from "./transfer-reductions/types";
 
 // ============================================================
 // 내부 파싱 결과 타입 — transfer-tax-rate-calc.ts 에서도 import
@@ -445,6 +443,8 @@ interface LongTermHoldingResult {
   deduction: number;
   rate: number;
   holdingPeriod: { years: number; months: number };
+  /** §97의3·§97의4 평가 결과 echo (Phase 2 — 2026-06-11). 평가 항목이 없으면 undefined. */
+  rental97LthdDetail?: Rental97Result;
 }
 
 export function calcLongTermHoldingDeduction(
@@ -598,12 +598,53 @@ export function calcLongTermHoldingDeduction(
   const holdingPeriod = { years: holding.years, months: holding.months };
 
   const rate = rateForYears(holding.years);
-  if (rate > 0) {
-    const deduction = applyRate(taxableGain, rate);
-    return { deduction, rate, holdingPeriod };
+
+  // L-2': 장기임대 §97의3 (장특 70% 대체) / §97의4 (추가율 가산) — Phase 2 (2026-06-11)
+  // reductions[]의 rental_97_3/rental_97_4 본 필드 항목을 평가. 임대분 안분은 조특령 §97의3⑤.
+  const rental97Eval = evaluateRental97Lthd(input.reductions, {
+    transferDate: input.transferDate,
+    acquisitionDate: input.acquisitionDate,
+    stdPriceAtAcquisition: input.standardPriceAtAcquisition,
+    stdPriceAtTransfer: input.standardPriceAtTransfer,
+  });
+  if (
+    rental97Eval?.isEligible &&
+    rental97Eval.effectCategory === "long_term_holding_special" &&
+    rental97Eval.overrideRate !== undefined
+  ) {
+    // §97의3: 임대기간 분 양도차익 × 70% + 비임대분 × 일반율 (ratio=1이면 전액 70%)
+    const positiveGain = Math.max(taxableGain, 0);
+    const rentalGain = applyRate(positiveGain, rental97Eval.rentalGainRatio);
+    const nonRentalGain = positiveGain - rentalGain;
+    const deduction = applyRate(rentalGain, rental97Eval.overrideRate) + applyRate(nonRentalGain, rate);
+    const blendedRate =
+      rental97Eval.overrideRate * rental97Eval.rentalGainRatio + rate * (1 - rental97Eval.rentalGainRatio);
+    return { deduction, rate: blendedRate, holdingPeriod, rental97LthdDetail: rental97Eval };
+  }
+  if (
+    rental97Eval?.isEligible &&
+    rental97Eval.effectCategory === "long_term_holding_additional" &&
+    rental97Eval.additionalRate !== undefined
+  ) {
+    // §97의4: 보유기간별 공제율(§95② 표)에 추가율 가산 — 기본 공제율이 0(보유 3년 미만)이면 가산 불가
+    if (rate > 0) {
+      const combined = rate + rental97Eval.additionalRate;
+      return {
+        deduction: applyRate(taxableGain, combined),
+        rate: combined,
+        holdingPeriod,
+        rental97LthdDetail: rental97Eval,
+      };
+    }
+    return { deduction: 0, rate: 0, holdingPeriod, rental97LthdDetail: rental97Eval };
   }
 
-  return { deduction: 0, rate: 0, holdingPeriod };
+  if (rate > 0) {
+    const deduction = applyRate(taxableGain, rate);
+    return { deduction, rate, holdingPeriod, rental97LthdDetail: rental97Eval };
+  }
+
+  return { deduction: 0, rate: 0, holdingPeriod, rental97LthdDetail: rental97Eval };
 }
 
 // ============================================================
@@ -716,84 +757,8 @@ export function runCommercialBuildingStep(
 }
 
 // ============================================================
-// H-12: emitPenaltySteps — STEP 12 신고불성실·납부지연 가산세 + 합산 step 푸시
+// H-12: emitPenaltySteps — transfer-tax-penalty-steps.ts로 분리 (800줄 정책, 2026-06-11)
+// 외부 import 호환 re-export.
 // ============================================================
 
-export interface PenaltyEmissionResult {
-  penaltyDetail?: TransferTaxPenaltyResult;
-  filingDelayedPenalty: number;
-  totalAllPenalty: number;
-}
-
-/**
- * STEP 12: 신고불성실·납부지연 가산세 계산 + 가산세 합산 step 5종 푸시.
- *
- * - 입력에 filingPenaltyDetails 또는 delayedPaymentDetails가 있으면 calculateTransferTaxPenalty 호출.
- * - 환산가액적용가산세(§114조의2 penaltyTax)와 합산하여 totalAllPenalty 반환.
- * - 가산세가 0보다 크면 steps에 4~5건의 항목 push (가산세 합계 / §114조의2 / 신고불성실 / 납부지연 / 총결정세액).
- *
- * 부수효과: steps 배열에 push (호출측 배열을 그대로 변경).
- */
-export function emitPenaltySteps(
-  input: TransferTaxInput,
-  steps: CalculationStep[],
-  determinedTax: number,
-  penaltyTax: number,
-  penaltyBase: number,
-  penaltyNote: string | undefined,
-): PenaltyEmissionResult {
-  const penaltyDetail =
-    input.filingPenaltyDetails || input.delayedPaymentDetails
-      ? calculateTransferTaxPenalty({
-          filing: input.filingPenaltyDetails,
-          delayedPayment: input.delayedPaymentDetails,
-        })
-      : undefined;
-  const filingDelayedPenalty = penaltyDetail?.totalPenalty ?? 0;
-  const totalAllPenalty = penaltyTax + filingDelayedPenalty;
-
-  if (totalAllPenalty > 0) {
-    steps.push({
-      label: "가산세 합계",
-      formula: `환산가액적용가산세 + 신고불성실가산세 + 납부지연가산세`,
-      amount: totalAllPenalty,
-      legalBasis: TRANSFER.BUILDING_PENALTY,
-    });
-    if (penaltyTax > 0) {
-      steps.push({
-        label: "환산가액적용가산세 (§114조의2)",
-        formula: `${penaltyBase.toLocaleString()} × 5% (${penaltyNote ?? ""})`,
-        amount: penaltyTax,
-        legalBasis: TRANSFER.BUILDING_PENALTY,
-        sub: true,
-      });
-    }
-    if (penaltyDetail?.filingPenalty && penaltyDetail.filingPenalty.filingPenalty > 0) {
-      steps.push({
-        label: `신고불성실가산세 (${(penaltyDetail.filingPenalty.penaltyRate * 100).toFixed(0)}%)`,
-        formula: `납부세액 ${penaltyDetail.filingPenalty.penaltyBase.toLocaleString()} × ${(penaltyDetail.filingPenalty.penaltyRate * 100).toFixed(0)}%`,
-        amount: penaltyDetail.filingPenalty.filingPenalty,
-        legalBasis: penaltyDetail.filingPenalty.legalBasis,
-        sub: true,
-      });
-    }
-    if (penaltyDetail?.delayedPaymentPenalty && penaltyDetail.delayedPaymentPenalty.delayedPaymentPenalty > 0) {
-      const d = penaltyDetail.delayedPaymentPenalty;
-      steps.push({
-        label: `납부지연가산세 (${d.elapsedDays}일 × ${(d.dailyRate * 100).toFixed(3)}%)`,
-        formula: `미납세액 ${d.unpaidTax.toLocaleString()} × ${d.elapsedDays}일 × ${(d.dailyRate * 100).toFixed(3)}%`,
-        amount: d.delayedPaymentPenalty,
-        legalBasis: "국세기본법 §47의4",
-        sub: true,
-      });
-    }
-    steps.push({
-      label: "총결정세액",
-      formula: `결정세액 ${determinedTax.toLocaleString()} + 가산세 합계 ${totalAllPenalty.toLocaleString()}`,
-      amount: determinedTax + totalAllPenalty,
-      legalBasis: TRANSFER.FINAL_TAX,
-    });
-  }
-
-  return { penaltyDetail, filingDelayedPenalty, totalAllPenalty };
-}
+export { emitPenaltySteps, type PenaltyEmissionResult } from "./transfer-tax-penalty-steps";

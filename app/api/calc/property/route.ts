@@ -10,6 +10,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { TaxCalculationError } from "@/lib/tax-engine/tax-errors";
 import { checkRateLimit, getClientIp, shouldBypassRateLimit } from "@/lib/api/rate-limit";
+import { toOptionalDate } from "@/lib/api/date-coerce";
 import { propertyTaxInputSchema } from "@/lib/validators/property-input";
 import { calculatePropertyTax } from "@/lib/tax-engine/property-tax";
 import { preloadTaxRates } from "@/lib/db/tax-rates";
@@ -83,9 +84,7 @@ export async function POST(req: NextRequest) {
   let rates: TaxRatesMap | undefined;
   if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
     try {
-      const taxBaseDate = input.targetDate
-        ? new Date(input.targetDate)
-        : new Date();
+      const taxBaseDate = toOptionalDate(input.targetDate) ?? new Date();
       rates = await preloadTaxRates(["property"], taxBaseDate);
     } catch (err) {
       // DB 연결 실패 시 엔진 내부 상수로 계산 진행

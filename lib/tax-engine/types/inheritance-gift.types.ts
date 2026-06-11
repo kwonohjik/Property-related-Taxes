@@ -354,6 +354,59 @@ export interface EstateItem extends EstateLocationFields {
    */
   farmingUseStartDate?: string;
 
+  // ===== 조특법 특례 2-스트림 분리과세 (2026-06-11, §30의5⑪·§30의6⑤) =====
+  /**
+   * 해당 자산이 조특법 특례(창업자금·가업승계) 귀속 자산인지 여부.
+   *
+   * 법령 근거:
+   *   §30의5⑪: 창업자금 외의 일반 증여재산은 특례 과세가액에 §47② 합산 금지.
+   *             → 자산별로 특례 스트림 vs 일반 스트림을 명시 구분해야 함.
+   *
+   * 귀속 규칙:
+   *   - giftItems 1개 + specialTreatment 선택: 자동 특례 귀속 (본 필드 불필요)
+   *   - giftItems N개 + specialTreatment 선택: 자산-수준 명시 필수.
+   *     true  → 특례 스트림 (창업자금·가업승계 자산)
+   *     false → 일반 스트림
+   *     undefined + N개 혼합: validation 차단 ("특례 귀속 자산을 선택해 주세요")
+   *   - specialTreatment 미선택: 본 필드 무시
+   */
+  isSpecialTreatmentAsset?: boolean;
+
+  // ===== §47① 부담부증여 채무인수 (gift-burdened-debt-47-1) =====
+  /**
+   * §47① 부담부증여 수증자 인수 채무액 (원).
+   *
+   * 법령: 상증법 §47① — "증여세 과세가액은 증여재산가액을 합친 금액에서
+   *       그 증여재산에 담보된 채무(그 증여재산에 관련된 채무 등 대통령령으로 정하는
+   *       채무를 포함한다)로서 수증자가 인수한 금액을 뺀 금액으로 한다."
+   *
+   * 성질 구분:
+   *   - 이 필드: §47① **과세가액 차감** (증여 전용)
+   *   - mortgageAmount: §66 MAX 평가 상향 + 선택적으로 §14 상속채무 공제 (상속 전용)
+   *   두 필드는 동일 자산에 공존 가능 — §66 MAX 교차 케이스 허용.
+   *
+   * undefined/0: 부담부증여 아님 (기본).
+   * 양수: 수증자가 인수하기로 한 채무액.
+   * 음수 가드: Math.max(0, ...) 엔진에서 처리.
+   * §47③ 배우자·직계존비속: UI에서 안내 문구 표시, 차단 안 함.
+   */
+  assumedDebtForGift?: number;
+
+  /**
+   * §47③ 부담부증여 채무 인수 객관적 입증 여부 토글 (배우자·직계존비속 한정).
+   *
+   * 법령: 상증법 §47③ — "배우자·직계존비속 간 부담부증여는 채무 인수를 추정하지 아니한다.
+   *       다만, 객관적으로 인정되는 것인 경우에는 그러하지 아니하다."
+   *
+   * - undefined/false: 미입증 (기본 — §47③ 추정 배제).
+   * - true: 입증됨 (금융기관 채무 확인서 등 객관적 증빙 첨부).
+   *
+   * 엔진은 assumedDebtForGift > 0이면 관계 불문 차감 처리.
+   * UI에서 donorRelation이 배우자/직계존비속인 경우 이 토글 ON 시 안내 문구 표시.
+   * 자동 차단(validation 오류) 금지 — §47③ 단서 "객관적으로 인정되는 것"에 해당 시 인정.
+   */
+  burdenedGiftDebtConfirmed?: boolean;
+
   // 위치 필드(좌표·주소·시·군·구 코드)는 EstateLocationFields mixin — 본 인터페이스에 직접 정의 안 함
 }
 
@@ -1646,4 +1699,46 @@ export interface GiftTaxResult extends TaxResultMeta {
   cashDeferred?: number;             // ㊼ §70② 현금 분납
   /** 별지 제10호서식 좌·우 컬럼 행 배열 (총 34행) — UI는 본 배열만 읽음 */
   besshi10Rows: FilingFormRow[];
+
+  // ===== 조특법 특례 2-스트림 분리과세 결과 (2026-06-11) =====
+  /**
+   * 특례 스트림 세액 (§30의5·§30의6 해당분).
+   *
+   * 법령 근거:
+   *   §30의5: 창업자금 — 5억 공제, 10% 단일세율, §69 배제
+   *   §30의6: 가업승계 — 10억 공제, 120억 이하 10%/초과 20%, §69 배제
+   *   §30의5①후단: 기간무관 합산(과거 특례 prior 포함), 기납부 특례세액 차감
+   *
+   * specialTreatment 미선택 시 0.
+   * Map 금지 — Record/원시값만 사용 (memory: feedback_engine_result_map_json_loss).
+   */
+  specialStreamTax?: number;
+
+  /**
+   * 일반 스트림 세액 (§47·§53·§56·§57·§58·§69 일반 과세).
+   *
+   * specialTreatment 미선택 시 computedTax와 동일(단일 스트림).
+   * 혼합 증여(특례+일반) 시 일반 자산 분 세액만.
+   */
+  ordinaryStreamTax?: number;
+
+  /**
+   * 특례 스트림 기반 합산 과세가액 (별지 표시·결과뷰용).
+   *
+   * = 신규 특례 자산가액 + 과거 특례 prior 가액(기간무관 합산)
+   * specialTreatment 미선택 시 undefined.
+   */
+  specialStreamAggregatedValue?: number;
+
+  /**
+   * @deprecated 조특법 특례 2-스트림 분리과세(2026-06-11) 이후 의미 없음.
+   *
+   * 이전 구조: "절감액 공제" 방식 — 일반 산출세액에서 특례세액을 공제.
+   * 신규 구조: 특례 자산은 처음부터 특례 스트림(10%/20%)으로만 계산되므로
+   *            "일반 산출세액"이 존재하지 않음. 본 필드는 0으로 고정됨.
+   *
+   * creditDetail.specialTreatmentCredit은 항상 0.
+   * 특례 세액은 specialStreamTax 필드로 접근할 것.
+   */
+  _deprecatedSpecialTreatmentCredit_alwaysZero?: never;
 }

@@ -4,14 +4,14 @@
  * §30의5 — 창업자금 증여세 과세특례
  *   요건: 60세 이상 부모 → 18세 이상 자녀, 창업 목적
  *   공제: 5억원
- *   세율: 10% (과세표준 50억 이하) / 20% (초과분)
- *   최대 공제 한도: 100억 (일반) / 120억 (1인 창업)
+ *   세율: 단일 10% (D1 정정 — 2단계 아님)
+ *   과세가액 한도: 50억 (일반) / 100억 (10인 이상 신규고용)  ← D2 신규
  *
  * §30의6 — 가업승계 증여세 과세특례
  *   요건: 10년 이상 가업 영위 중소·중견기업 주식 증여
  *   공제: 10억원
- *   세율: 10% (과세표준 600억 이하)
- *   최대 공제 가업재산: 10년 이상 300억, 20년 이상 500억, 30년 이상 600억
+ *   세율: 120억 이하 10% / 초과분 20%  ← D3 정정
+ *   과세가액 한도: 10년 이상 300억, 20년 이상 400억, 30년 이상 600억  ← D4 정정
  *
  * 특례 세액 = 일반 증여세 산출세액 - 특례 세액공제
  * specialTreatmentCredit = 일반세액 - 특례세액 (절감액)
@@ -30,14 +30,14 @@ import { calculateProgressiveTax } from "../tax-utils";
 /** 창업자금 기본 공제: 5억원 */
 const STARTUP_BASE_DEDUCTION = 500_000_000;
 
-/** 창업자금 특례세율 하한 (10% 적용 과세표준 한도): 50억원 */
-const STARTUP_LOW_RATE_LIMIT = 5_000_000_000;
+/** 창업자금 특례 세율: 10% (단일, D1 정정 — 2단계 아님) */
+const STARTUP_RATE = 0.1;
 
-/** 창업자금 특례 세율 (50억 이하): 10% */
-const STARTUP_RATE_LOW = 0.1;
+/** 창업자금 과세가액 한도 — 일반 (§30의5①): 50억원 (D2) */
+const STARTUP_GIFT_LIMIT_NORMAL = 5_000_000_000;
 
-/** 창업자금 특례 세율 (50억 초과): 20% */
-const STARTUP_RATE_HIGH = 0.2;
+/** 창업자금 과세가액 한도 — 10인 이상 신규고용 (§30의5①): 100억원 (D2) */
+const STARTUP_GIFT_LIMIT_HIGH_HIRES = 10_000_000_000;
 
 // ============================================================
 // 가업승계 특례 상수 (§30의6)
@@ -46,8 +46,14 @@ const STARTUP_RATE_HIGH = 0.2;
 /** 가업승계 기본 공제: 10억원 */
 const FAMILY_BUSINESS_BASE_DEDUCTION = 1_000_000_000;
 
-/** 가업승계 특례세율: 10% (600억 이하) */
-const FAMILY_BUSINESS_RATE = 0.1;
+/** 가업승계 특례 세율 (120억 이하): 10% */
+const FAMILY_BUSINESS_RATE_LOW = 0.1;
+
+/** 가업승계 특례 세율 (120억 초과분): 20% (D3 신규) */
+const FAMILY_BUSINESS_RATE_HIGH = 0.2;
+
+/** 가업승계 120억 구간 임계 (D3): 120억원 */
+const FAMILY_BUSINESS_120B_THRESHOLD = 12_000_000_000;
 
 /** 가업승계 특례 상한 (30년 이상): 600억원 */
 const FAMILY_BUSINESS_MAX_LIMIT = 60_000_000_000;
@@ -67,6 +73,11 @@ export interface StartupFundTaxInput {
    * false이면 특례 미적용 처리 (사후관리 위반 시 추징 가능).
    */
   startupInvestmentCompleted?: boolean;
+  /**
+   * 10인 이상 신규 고용 여부 (§30의5①) — D2 신규
+   * true → 과세가액 한도 100억, false/undefined → 50억
+   */
+  startupNewHiresAtLeast10?: boolean;
 }
 
 export interface SpecialTreatmentResult {
@@ -79,11 +90,14 @@ export interface SpecialTreatmentResult {
 
 /**
  * 창업자금 증여세 과세특례 계산 (§30의5)
+ *
+ * D1: 단일 10% 세율 (2단계 아님)
+ * D2: 과세가액 한도 50억 (일반) / 100억 (10인 이상 신규고용)
  */
 export function calcStartupFundSpecialTax(
   input: StartupFundTaxInput,
 ): SpecialTreatmentResult {
-  const { giftAmount, normalComputedTax, startupInvestmentCompleted } = input;
+  const { giftAmount, normalComputedTax, startupInvestmentCompleted, startupNewHiresAtLeast10 } = input;
 
   // 투자 미완료 시 특례 불적용 (§30의5 ④ 위반 → 사후추징 대상)
   if (startupInvestmentCompleted === false) {
@@ -101,8 +115,15 @@ export function calcStartupFundSpecialTax(
     };
   }
 
-  // 특례 과세표준 = 증여재산가액 - 5억 공제
-  const taxBase = Math.max(0, giftAmount - STARTUP_BASE_DEDUCTION);
+  // D2: 과세가액 한도 적용 (§30의5①)
+  const giftLimit = startupNewHiresAtLeast10
+    ? STARTUP_GIFT_LIMIT_HIGH_HIRES  // 100억
+    : STARTUP_GIFT_LIMIT_NORMAL;     // 50억
+  const eligibleAmount = Math.min(giftAmount, giftLimit);
+  const excessAmount = Math.max(0, giftAmount - eligibleAmount);
+
+  // D1: 특례 과세표준 = 특례 적용 가액(한도 내) - 5억 공제
+  const taxBase = Math.max(0, eligibleAmount - STARTUP_BASE_DEDUCTION);
 
   let specialTax = 0;
   const breakdown: CalculationStep[] = [
@@ -111,6 +132,19 @@ export function calcStartupFundSpecialTax(
       amount: giftAmount,
       lawRef: TAX_CREDIT.STARTUP_FUND,
     },
+  ];
+
+  // 한도 초과분 안내
+  if (excessAmount > 0) {
+    breakdown.push({
+      label: `과세가액 한도 (${(giftLimit / 100_000_000).toFixed(0)}억) 적용`,
+      amount: eligibleAmount,
+      lawRef: TAX_CREDIT.STARTUP_FUND,
+      note: `한도 초과분 ${excessAmount.toLocaleString()}원은 일반 증여세 적용`,
+    });
+  }
+
+  breakdown.push(
     {
       label: "창업자금 기본 공제 (5억)",
       amount: -STARTUP_BASE_DEDUCTION,
@@ -120,7 +154,7 @@ export function calcStartupFundSpecialTax(
       label: "특례 과세표준",
       amount: taxBase,
     },
-  ];
+  );
 
   if (taxBase <= 0) {
     // 과세표준 0 이하: 증여세 없음
@@ -129,32 +163,13 @@ export function calcStartupFundSpecialTax(
     return { specialTax: 0, creditAmount, breakdown };
   }
 
-  if (taxBase <= STARTUP_LOW_RATE_LIMIT) {
-    // 50억 이하: 단일 10%
-    specialTax = applyRate(taxBase, STARTUP_RATE_LOW);
-    breakdown.push({
-      label: `특례세액 (10% × 과세표준 ${taxBase.toLocaleString()}`,
-      amount: specialTax,
-      lawRef: TAX_CREDIT.STARTUP_FUND,
-    });
-  } else {
-    // 50억 초과: 50억분 10% + 초과분 20%
-    const lowPart = applyRate(STARTUP_LOW_RATE_LIMIT, STARTUP_RATE_LOW);
-    const excessPart = applyRate(taxBase - STARTUP_LOW_RATE_LIMIT, STARTUP_RATE_HIGH);
-    specialTax = lowPart + excessPart;
-    breakdown.push(
-      {
-        label: `특례세액 (50억 이하 10%: ${lowPart.toLocaleString()}`,
-        amount: lowPart,
-        lawRef: TAX_CREDIT.STARTUP_FUND,
-      },
-      {
-        label: `특례세액 (50억 초과 20%: ${excessPart.toLocaleString()}`,
-        amount: excessPart,
-        lawRef: TAX_CREDIT.STARTUP_FUND,
-      },
-    );
-  }
+  // D1: 단일 10% (2단계 구분 없음)
+  specialTax = applyRate(taxBase, STARTUP_RATE);
+  breakdown.push({
+    label: `특례세액 (단일 10% × 과세표준 ${taxBase.toLocaleString()})`,
+    amount: specialTax,
+    lawRef: TAX_CREDIT.STARTUP_FUND,
+  });
 
   const creditAmount = Math.max(0, normalComputedTax - specialTax);
   breakdown.push({
@@ -181,11 +196,12 @@ export interface FamilyBusinessTaxInput {
 
 /**
  * 가업상속재산 가액 한도 (§30의6 ① — 영위 기간별)
+ * D4 정정: 20년 이상 30년 미만 → 400억 (기존 500억 오류)
  */
 export function getFamilyBusinessLimit(businessYears: number): number {
   if (businessYears >= 30) return FAMILY_BUSINESS_MAX_LIMIT; // 600억
-  if (businessYears >= 20) return 50_000_000_000;             // 500억
-  if (businessYears >= 10) return 30_000_000_000;             // 300억
+  if (businessYears >= 20) return 40_000_000_000;            // 400억 (D4 정정)
+  if (businessYears >= 10) return 30_000_000_000;            // 300억
   return 0; // 10년 미만: 특례 불가
 }
 
@@ -240,14 +256,34 @@ export function calcFamilyBusinessSpecialTax(
     },
   );
 
-  // 특례세율: 10% (한도 내)
-  const specialTax = applyRate(taxBase, FAMILY_BUSINESS_RATE);
-
-  breakdown.push({
-    label: `가업승계 특례세액 (10% × ${taxBase.toLocaleString()}`,
-    amount: specialTax,
-    lawRef: TAX_CREDIT.FAMILY_BUSINESS,
-  });
+  // D3: 120억 이하 10% / 초과분 20% 2단계 세율
+  let specialTax: number;
+  if (taxBase <= FAMILY_BUSINESS_120B_THRESHOLD) {
+    // 120억 이하: 단일 10%
+    specialTax = applyRate(taxBase, FAMILY_BUSINESS_RATE_LOW);
+    breakdown.push({
+      label: `가업승계 특례세액 (10% × ${taxBase.toLocaleString()})`,
+      amount: specialTax,
+      lawRef: TAX_CREDIT.FAMILY_BUSINESS,
+    });
+  } else {
+    // 120억 초과: 120억 × 10% + 초과분 × 20%
+    const lowPart = applyRate(FAMILY_BUSINESS_120B_THRESHOLD, FAMILY_BUSINESS_RATE_LOW);
+    const excessPart = applyRate(taxBase - FAMILY_BUSINESS_120B_THRESHOLD, FAMILY_BUSINESS_RATE_HIGH);
+    specialTax = lowPart + excessPart;
+    breakdown.push(
+      {
+        label: `특례세액 (120억 이하 10%: ${lowPart.toLocaleString()})`,
+        amount: lowPart,
+        lawRef: TAX_CREDIT.FAMILY_BUSINESS,
+      },
+      {
+        label: `특례세액 (120억 초과 20%: ${excessPart.toLocaleString()})`,
+        amount: excessPart,
+        lawRef: TAX_CREDIT.FAMILY_BUSINESS,
+      },
+    );
+  }
 
   const creditAmount = Math.max(0, normalComputedTax - specialTax);
   breakdown.push({
@@ -271,6 +307,8 @@ export interface SpecialTreatmentInput {
   normalComputedTax: number;
   /** 창업자금 전용 — 투자 완료 여부 */
   startupInvestmentCompleted?: boolean;
+  /** 창업자금 전용 — 10인 이상 신규 고용 여부 (D2: true→100억 한도, false/undefined→50억) */
+  startupNewHiresAtLeast10?: boolean;
   /** 가업승계 전용 */
   businessYears?: number;
   /** 일반 누진세율 구간 (§26) */
@@ -288,6 +326,7 @@ export function calcSpecialTaxTreatment(
       giftAmount: input.giftAmount,
       normalComputedTax: input.normalComputedTax,
       startupInvestmentCompleted: input.startupInvestmentCompleted,
+      startupNewHiresAtLeast10: input.startupNewHiresAtLeast10,
     });
   }
 

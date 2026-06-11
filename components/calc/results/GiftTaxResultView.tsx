@@ -402,6 +402,14 @@ export function GiftTaxResultView({
               deduction
             />
           )}
+          {(result.debtAssumed ?? 0) > 0 && (
+            <Row
+              label="부담부증여 채무인수 차감 (§47①)"
+              value={`- ${formatKRW(result.debtAssumed ?? 0)}`}
+              sub
+              deduction
+            />
+          )}
           {result.aggregatedGiftValue > result.grossGiftValue && (
             <Row
               label="10년 합산 증여가액"
@@ -442,6 +450,74 @@ export function GiftTaxResultView({
         </div>
       </div>
       </PrintSection>
+
+      {/* 2-스트림 분리과세 상세 — specialStreamTax 있을 때만 표시 */}
+      {(result.specialStreamTax != null && result.specialStreamTax > 0) && (
+        <div className="space-y-2">
+          {/* 일반 스트림 */}
+          {(result.ordinaryStreamTax != null && result.ordinaryStreamTax > 0) && (
+            <div className="border rounded-xl overflow-hidden">
+              <div className="bg-muted/30 px-4 py-2.5">
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+                  일반 증여 스트림 (§47·§53·§56)
+                </h3>
+              </div>
+              <div className="divide-y divide-border">
+                <Row label="일반 증여 산출세액" value={formatKRW(result.ordinaryStreamTax)} highlight />
+              </div>
+            </div>
+          )}
+          {(result.ordinaryStreamTax == null || result.ordinaryStreamTax === 0) && (
+            <div className="border rounded-xl px-4 py-3 bg-muted/10">
+              <p className="text-xs text-muted-foreground">일반 스트림 없음 (일반 증여재산 없음 또는 산출세액 0)</p>
+            </div>
+          )}
+
+          {/* 특례 스트림 */}
+          <div className="border border-emerald-200 rounded-xl overflow-hidden">
+            <div className="bg-emerald-50 dark:bg-emerald-900/20 px-4 py-2.5">
+              <h3 className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">
+                조특법 과세특례 스트림 (§30의5·§30의6)
+              </h3>
+            </div>
+            <div className="divide-y divide-border">
+              {(result.specialStreamAggregatedValue ?? 0) > 0 && (
+                <Row
+                  label="특례 스트림 합산 과세가액 (신규 + 기간무관 prior)"
+                  value={formatKRW(result.specialStreamAggregatedValue ?? 0)}
+                />
+              )}
+              <Row
+                label="특례 스트림 세액 (10% 또는 20%)"
+                value={formatKRW(result.specialStreamTax)}
+                highlight
+              />
+              {/* §30의5⑫ §69 신고세액공제 배제 안내 */}
+              {result.creditDetail?.specialTreatmentCredit === 0 && (
+                <div className="px-4 py-2.5 text-[11px] text-amber-700 dark:text-amber-400">
+                  신고세액공제(§69) 배제 — §30의5⑫(§30의6⑤ 준용): 조특법 과세특례 선택 시 신고세액공제 미적용
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* 최종 납부세액 합산 */}
+          {(result.ordinaryStreamTax ?? 0) > 0 && (
+            <div className="border border-gray-300 rounded-xl overflow-hidden">
+              <div className="bg-muted/50 px-4 py-2.5">
+                <h3 className="text-sm font-semibold">최종 납부세액 (일반 + 특례)</h3>
+              </div>
+              <div className="divide-y divide-border">
+                <Row
+                  label={`= 일반 ${formatKRW(result.ordinaryStreamTax ?? 0)} + 특례 ${formatKRW(result.specialStreamTax)}`}
+                  value={formatKRW(result.finalTax)}
+                  highlight
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* §57① 단서 적용 — 세대생략 할증 배제 안내 (donorGroup=B이지만 단서로 할증 0인 경우)
           선택 출력: 할증 산출근거와 같은 gen-skip-surcharge 섹션으로 편입 (availablePrintIds 가드 동기화) */}

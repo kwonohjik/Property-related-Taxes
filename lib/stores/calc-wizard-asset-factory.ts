@@ -367,6 +367,22 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (!a.standardPricePerSqmAtTransfer) a.standardPricePerSqmAtTransfer = "";
   // Round 9 (2026-05-06): 자산-수준 매매계약일 (감면 시한 판정)
   if (a.assetContractDate === undefined) a.assetContractDate = "";
+  // Phase 2 (2026-06-11): 장기임대 §97 시리즈 — 3-state 필드 누락 보정 (구 세션 복원 방어)
+  if (Array.isArray(a.reductions)) {
+    a.reductions = (a.reductions as Record<string, unknown>[]).map((r) => {
+      if (r && typeof r.type === "string" && (r.type as string).startsWith("rental_97") && r.type !== "rental_97_3_legacy") {
+        return {
+          registrationDate: "",
+          rentalStartDate: "",
+          isTaxRegistered: false,
+          rentIncreaseViolationMode: "",
+          hasVacancyOver6Months: null,
+          ...r,
+        };
+      }
+      return r;
+    });
+  }
   if (!a.selfOwns) a.selfOwns = "both";
   if (a.hasSeperateLandAcquisitionDate === undefined) a.hasSeperateLandAcquisitionDate = false;
   if (!a.landAcquisitionDate) a.landAcquisitionDate = "";

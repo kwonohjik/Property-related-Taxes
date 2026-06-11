@@ -74,6 +74,21 @@ export const priorGiftSchema = z
     doneeWasMinorAtGift: z.boolean().optional(),
     // [B] 상속세 모드 과세표준 산정 방식 (UI 메타 — 엔진 무시, giftTaxBase 유무로 branch)
     priorGiftTaxBaseInputMode: z.enum(["auto", "manual"]).optional(),
+    // ===== 조특법 특례 2-스트림 분리과세 (§30의5①후단·§30의5⑪·§30의6⑤) =====
+    // T-10: 동기화 지점 ⑨⑫ — types/inheritance-prior-gift.types.ts PriorGift와 동기화
+    /**
+     * 과거 특례 회차 구분 — §30의5①후단·§30의6⑤ 기간무관 합산용.
+     * "startup": 창업자금 (§30의5) — §47② 일반 합산 제외, 특례 스트림에서 기간무관 합산
+     * "family_business": 가업승계 (§30의6) — §30의6⑤ 준용
+     * undefined: 일반 증여 (§47② 10년 cutoff 합산)
+     */
+    specialTreatmentType: z.enum(["startup", "family_business"]).optional(),
+    /**
+     * 과거 특례 회차에서 실제 납부한 특례세액 (이중과세 방지 차감용).
+     * §30의5①후단 합산 시: max(0, 합산기준특례산출세액 - Σ priorSpecialTaxPaid)
+     * specialTreatmentType 있을 때만 유효. 미입력 시 0으로 처리.
+     */
+    priorSpecialTaxPaid: z.number().nonnegative().optional(),
   })
   .superRefine((data, ctx) => {
     // 영리법인 사전증여 필수요건 (동기화 지점 ⑨)

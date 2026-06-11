@@ -96,8 +96,15 @@ function EstateItemTableRow({ item, isSelected, onSelect, mode, heirsCount }: Es
         <span className="mr-1" aria-hidden>{CATEGORY_ICONS[cat]}</span>
         {CATEGORY_LABELS[cat]}
       </td>
-      {/* 자산명 */}
-      <td className="pl-2 py-1.5 text-xs font-medium">{nameDisplay}</td>
+      {/* 자산명 + 특례 배지 */}
+      <td className="pl-2 py-1.5 text-xs font-medium">
+        <span>{nameDisplay}</span>
+        {item.isSpecialTreatmentAsset === true && (
+          <span className="ml-1.5 inline-flex items-center text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 font-medium align-middle">
+            특례 귀속
+          </span>
+        )}
+      </td>
       {/* 평가액 (우정렬 — amount-column-align) */}
       <td className="pr-2 py-1.5 text-xs text-right font-mono tabular-nums whitespace-nowrap">
         {value > 0 ? (

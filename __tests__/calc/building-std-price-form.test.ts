@@ -7,10 +7,12 @@
 import { describe, it, expect } from "vitest";
 import {
   initialBuildingStdPriceForm,
+  emptyCompositePart,
   toEngineInput,
   validateBuildingStdPriceForm,
   availableYears,
   type BuildingStdPriceFormState,
+  type CompositePartForm,
 } from "../../lib/calc/building-std-price-form";
 import { calcBuildingStandardPrice } from "../../lib/tax-engine/building-standard-price";
 
@@ -18,6 +20,9 @@ const form = (o: Partial<BuildingStdPriceFormState>): BuildingStdPriceFormState 
   ...initialBuildingStdPriceForm,
   ...o,
 });
+
+/** 복합 부분 fixture — 신규 필드(acqUsageNo·조정률 번호) 기본값 채움 */
+const cp = (o: Partial<CompositePartForm>): CompositePartForm => ({ ...emptyCompositePart(), ...o });
 
 describe("building-std-price 폼 변환 (④) — 엔진 anchor 연동", () => {
   it("BSP-01 상증 폼 → 224,600,000 (엔진 anchor 일치)", () => {
@@ -92,6 +97,30 @@ describe("building-std-price 폼 변환 (④) — 엔진 anchor 연동", () => {
     expect(r.sameYearAdjusted).toBe(true);
     expect(r.transfer?.standardPrice).toBe(62_450_000);
   });
+
+  it("동일연도 — 양도당시 구조·용도·공시지가 없이 검증 통과 + 동일 anchor (§164⑧ 미사용 입력)", () => {
+    const f = form({
+      taxType: "transfer",
+      floorArea: "100",
+      builtYear: "2005",
+      acquisitionYear: "2010",
+      transferYear: "2010",
+      acqStructureKey: "rc",
+      acqUsageNo: "1",
+      acqLandPrice: "4,500,000",
+      // trans* 3필드 비입력 — 동일연도는 취득 기준시가를 환산하므로 불요
+      holdingMonths: "6",
+      adjustMonths: "12",
+      sameYearFormula: "prev",
+      prevLandPrice: "4,000,000",
+    });
+    expect(validateBuildingStdPriceForm(f)).toBeNull();
+    const input = toEngineInput(f);
+    expect(input.transfer).toBeUndefined(); // ④ 동일연도는 transfer point 미전달
+    const r = calcBuildingStandardPrice(input);
+    expect(r.sameYearAdjusted).toBe(true);
+    expect(r.transfer?.standardPrice).toBe(62_450_000); // trans* 입력 유무와 무관 — 동일 결과
+  });
 });
 
 describe("building-std-price 검증 (⑧) — 미입력 차단", () => {
@@ -142,8 +171,8 @@ describe("building-std-price 복합구조 폼 (④) — 엔진 anchor 연동", (
       valLandPrice: "560,000",
       compositeMode: true,
       compositeParts: [
-        { label: "1층 공장", structureKey: "rc", usageNo: "48", floorArea: "2100", adjustmentRate: "100", sharedAdjustmentRate: "" },
-        { label: "2층 창고", structureKey: "light_steel_frame", usageNo: "48", floorArea: "1300", adjustmentRate: "80", sharedAdjustmentRate: "" },
+        cp({ label: "1층 공장", structureKey: "rc", usageNo: "48", floorArea: "2100", adjustmentRate: "100" }),
+        cp({ label: "2층 창고", structureKey: "light_steel_frame", usageNo: "48", floorArea: "1300", adjustmentRate: "80" }),
       ],
     });
     expect(validateBuildingStdPriceForm(f)).toBeNull();
@@ -162,13 +191,71 @@ describe("building-std-price 복합구조 폼 (④) — 엔진 anchor 연동", (
       compositeMode: true,
       sharedFacilityArea: "90",
       compositeParts: [
-        { label: "1층 슈퍼", structureKey: "rc", usageNo: "41", floorArea: "100", adjustmentRate: "108", sharedAdjustmentRate: "54" },
-        { label: "2~3층 주택", structureKey: "rc", usageNo: "2", floorArea: "200", adjustmentRate: "100", sharedAdjustmentRate: "60" },
+        cp({ label: "1층 슈퍼", structureKey: "rc", usageNo: "41", floorArea: "100", adjustmentRate: "108", sharedAdjustmentRate: "54" }),
+        cp({ label: "2~3층 주택", structureKey: "rc", usageNo: "2", floorArea: "200", adjustmentRate: "100", sharedAdjustmentRate: "60" }),
       ],
     });
     expect(validateBuildingStdPriceForm(f)).toBeNull();
     const r = calcBuildingStandardPrice(toEngineInput(f));
     expect(r.compositeTotal).toBe(187_640_000);
+  });
+});
+
+describe("building-std-price 양도 복합 폼 (④⑧) — 계산서 작성례(1)(2)", () => {
+  it("양도 복합 폼 → 양도당시 217,230,000 / 취득당시(2001) 154,960,000 / ※ 157,439,360", () => {
+    const f = form({
+      taxType: "transfer",
+      builtYear: "2000",
+      transferYear: "2023",
+      acquisitionYear: "2000",
+      acqLandPrice: "2,240,000",
+      transLandPrice: "2,500,000",
+      compositeMode: true,
+      sharedFacilityArea: "90",
+      compositeParts: [
+        cp({ label: "지상1", structureKey: "rc", usageNo: "41", acqUsageNo: "27", floorArea: "100" }),
+        cp({ label: "지상2", structureKey: "rc", usageNo: "2", acqUsageNo: "1", floorArea: "100" }),
+        cp({ label: "지상3", structureKey: "rc", usageNo: "2", acqUsageNo: "1", floorArea: "100" }),
+      ],
+    });
+    expect(validateBuildingStdPriceForm(f)).toBeNull();
+    const r = calcBuildingStandardPrice(toEngineInput(f));
+    expect(r.transferComposite?.total).toBe(217_230_000);
+    expect(r.acquisitionComposite?.total).toBe(154_960_000);
+    expect(r.acqBaseConversion?.convertedTotal).toBe(157_439_360);
+  });
+
+  it("양도 복합 — 취득시 용도 미입력 차단", () => {
+    const f = form({
+      taxType: "transfer",
+      builtYear: "2000",
+      transferYear: "2023",
+      acquisitionYear: "2015",
+      acqLandPrice: "2,000,000",
+      transLandPrice: "2,500,000",
+      compositeMode: true,
+      compositeParts: [cp({ label: "지상1", structureKey: "rc", usageNo: "2", floorArea: "100" })],
+    });
+    expect(validateBuildingStdPriceForm(f)).toMatch(/취득시 용도/);
+  });
+
+  it("상증 복합 조정률 번호 폼 → 200,540,000 (% 입력과 동일)", () => {
+    const f = form({
+      taxType: "inheritance_gift",
+      builtYear: "2000",
+      valuationYear: "2023",
+      valLandPrice: "2,500,000",
+      compositeMode: true,
+      sharedFacilityArea: "90",
+      compositeParts: [
+        cp({ label: "지상1", structureKey: "rc", usageNo: "41", floorArea: "100", adjustmentNos: "9,20", sharedAdjustmentNos: "9,24" }),
+        cp({ label: "지상2", structureKey: "rc", usageNo: "2", floorArea: "100", sharedAdjustmentNos: "24" }),
+        cp({ label: "지상3", structureKey: "rc", usageNo: "2", floorArea: "100", sharedAdjustmentNos: "24" }),
+      ],
+    });
+    expect(validateBuildingStdPriceForm(f)).toBeNull();
+    const r = calcBuildingStandardPrice(toEngineInput(f));
+    expect(r.compositeTotal).toBe(200_540_000);
   });
 });
 
@@ -186,8 +273,8 @@ describe("building-std-price 다필지 폼 (④) — 위치지수 가중평균",
       ],
       compositeMode: true,
       compositeParts: [
-        { label: "1~5층 사무소", structureKey: "rc", usageNo: "29", floorArea: "6000", adjustmentRate: "110", sharedAdjustmentRate: "" },
-        { label: "지하1층 주차장", structureKey: "rc", usageNo: "29", floorArea: "2000", adjustmentRate: "60", sharedAdjustmentRate: "" },
+        cp({ label: "1~5층 사무소", structureKey: "rc", usageNo: "29", floorArea: "6000", adjustmentRate: "110" }),
+        cp({ label: "지하1층 주차장", structureKey: "rc", usageNo: "29", floorArea: "2000", adjustmentRate: "60" }),
       ],
     });
     expect(validateBuildingStdPriceForm(f)).toBeNull();
@@ -231,7 +318,7 @@ describe("building-std-price 고급 케이스 검증 (⑧) — 미입력 차단"
       valuationYear: "2026",
       valLandPrice: "560,000",
       compositeMode: true,
-      compositeParts: [{ label: "1층", structureKey: "", usageNo: "48", floorArea: "2100", adjustmentRate: "100", sharedAdjustmentRate: "" }],
+      compositeParts: [cp({ label: "1층", structureKey: "", usageNo: "48", floorArea: "2100", adjustmentRate: "100" })],
     });
     expect(validateBuildingStdPriceForm(f)).toMatch(/복합 부분 1.*구조/);
   });
@@ -243,7 +330,7 @@ describe("building-std-price 고급 케이스 검증 (⑧) — 미입력 차단"
       valLandPrice: "2,500,000",
       compositeMode: true,
       sharedFacilityArea: "90",
-      compositeParts: [{ label: "1층", structureKey: "rc", usageNo: "41", floorArea: "100", adjustmentRate: "108", sharedAdjustmentRate: "" }],
+      compositeParts: [cp({ label: "1층", structureKey: "rc", usageNo: "41", floorArea: "100", adjustmentRate: "108" })],
     });
     expect(validateBuildingStdPriceForm(f)).toMatch(/공용 조정률/);
   });

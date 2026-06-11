@@ -111,8 +111,15 @@ export interface BuildingStandardPriceInput {
   /**
    * 공용 부속시설 총면적(㎡, 주차장+보일러실+기계실 등). compositeParts의 주용도 면적비율로 안분(고시 계산서 V항).
    * 각 부분의 sharedAdjustmentRate와 함께 사용. 단독으론 무효.
+   * @deprecated ancillaryFacilities로 종류 분해(엔진 내부에서 [{kind:"other"}]로 정규화 — 하위호환·결과 불변).
    */
   sharedFacilityArea?: number;
+  /**
+   * 부속시설 종류별 면적 — Ⅳ·Ⅴ 종류 분해(주차장·기계실·보일러실·대피소·옥탑·기타).
+   * sharedFacilityArea와 동시 입력 = 검증 오류. 양쪽 미입력이면 부속 미적용.
+   * 종류별 합 = sharedFacilityArea 단일 합계와 numeric 동일(echo·표시 전용 분해).
+   */
+  ancillaryFacilities?: AncillaryFacility[];
 
   /** 공동주택 고시 전 취득 → 취득당시 기준시가 환산(양도 전용). builtYear·acquisitionYear는 본 input 공통 */
   apartmentConversion?: ApartmentConversionInput;
@@ -157,13 +164,40 @@ export interface BuildingCompositePart {
   structureKey: string;
   usageNo: number;
   floorArea: number;
+  /**
+   * 취득시점 용도번호 — 양도 복합 전용. 용도번호 체계가 연도군별 상이(근린생활시설 2001=#27 ↔ 2023=#41).
+   * 양도 복합에서 미입력 = 검증 오류(usageNo 재사용 fallback 금지 — 잘못된 지수 적용 방지). 상증·단일 무시.
+   */
+  acqUsageNo?: number;
   /** 조정율 배율(1.0 기준, 100=1.0 미적용). 부분별 상이. 미입력 = 1.0 */
   adjustmentRate?: number;
+  /**
+   * 조정율 번호 ⓧⓨⓩ(최대 3, 상증 전용) — 계산서 Ⅲ "조정률(번호)" 칸 "0.9(9)" 표기.
+   * 입력 시 adjustmentRate(%) 대신 번호→지수 곱으로 배율 산정. adjustmentRate와 동시 입력 = 검증 오류.
+   */
+  adjustmentNos?: number[];
   /**
    * 공용 부속시설(주차장·보일러실 등) 귀속분 조정율(100=1.0). 지정 시 sharedFacilityArea를 이 부분의
    * 주용도 면적비율로 안분해 공용 기준시가를 별도 산정(주용도 구조·용도·위치·잔가는 동일, 조정율만 다름).
    */
   sharedAdjustmentRate?: number;
+  /** 공용 부속분 조정율 번호(최대 3, 상증 전용) — 계산서 Ⅳ. sharedAdjustmentRate와 동시 입력 = 검증 오류. */
+  sharedAdjustmentNos?: number[];
+}
+
+/** 부속시설 종류 — 계산서 Ⅴ항 열 Ci~Hi 순서 고정 */
+export type AncillaryFacilityKind =
+  | "parking" // Ci 주차장(지하 포함)
+  | "machine" // Di 기계실
+  | "boiler" // Ei 보일러실
+  | "shelter" // Fi 대피소
+  | "rooftop" // Gi 옥탑
+  | "other"; // Hi 기타
+
+/** 부속시설 종류별 총면적(㎡) — sharedFacilityArea(단일 합계)의 종류 분해 */
+export interface AncillaryFacility {
+  kind: AncillaryFacilityKind;
+  areaM2: number;
 }
 
 /** 시점별 산출근거 echo */
@@ -194,8 +228,54 @@ export interface BuildingStdPriceBreakdown {
   label?: string;
   /** 해당 부분 면적(㎡) echo */
   floorArea?: number;
+  /** 잔가율 그룹 echo — 계산서 Ⅱ "내용연수(그룹별)" 표기용 */
+  residualGroup?: ResidualRateGroup;
+  /** 내용연수(연) echo — Ⅱ "50년/40년". durableForGroup(group, year) */
+  durableYears?: number;
+  /**
+   * 적용 조정률 번호 echo — 계산서 Ⅲ·Ⅳ "조정률(번호)" 칸 "0.9(9)" 표기.
+   * IV구분 동시해당(상가층+부속 → 지수 60)은 번호 2개·rate 1개 → {nos[], rate}. 미적용 시 undefined.
+   */
+  adjustmentItems?: { nos: number[]; rate: number }[];
+  /** 부속시설 행 마킹 — Ⅳ 분리 필터용. undefined = 주용도(Ⅲ) */
+  ancillaryKind?: AncillaryFacilityKind;
+  /** 부속 귀속 부분명 echo — "주차장(슈퍼귀속)" 표기용 */
+  attributedTo?: string;
   /** 적용요령 echo(인쇄·서식용) — 일반 건물만. 산식 무관 표시 전용 */
   applyNotes?: BuildingStdPriceApplyNotes;
+}
+
+/** 계산서 Ⅴ "주용도에 의한 부속시설 면적 안분" 1행 */
+export interface AncillaryApportionRow {
+  /** 귀속 부분명 */
+  label?: string;
+  /** 해당 부분 주용도지수(정수 100기준) — Ⅴ "주용도지수" 칸 */
+  usageIndex: number;
+  /** Bi = 주용도 면적비율(원천 분수 — 표시 반올림은 UI) */
+  ratio: number;
+  /** Ai = 종류별 안분면적 합(㎡) */
+  areaSum: number;
+  /** Ci~Hi 종류별 안분면적(㎡, toFixed(2) 후) */
+  byKind: Partial<Record<AncillaryFacilityKind, number>>;
+}
+
+/** 계산서 Ⅴ 안분계산표 echo */
+export interface AncillaryApportionment {
+  /** 계(t): At */
+  totalArea: number;
+  /** 계(t): Ct~Ht */
+  totalByKind: Partial<Record<AncillaryFacilityKind, number>>;
+  rows: AncillaryApportionRow[];
+}
+
+/** ※ 2000.12.31 이전 취득 복합 환산 echo(양도 전용) */
+export interface AcqBaseConversion {
+  /** (1) 2001.1.1 현재 건물 기준시가(복합 합계 ⑪) */
+  total2001: number;
+  /** (2) 산정기준율 — 부분 구조가 단일 그룹일 때만(상이 시 undefined → 부분별 적용) */
+  acqBaseRate?: number;
+  /** (3) = 단일 그룹: floor((1)×(2)) / 그룹 상이: Σ floor(부분⑩×부분율) */
+  convertedTotal: number;
 }
 
 /** 결과 서식 "적용요령" 칸 텍스트 echo(산식 변경 없음). 예 구조 "철골조" · 용도 "6. 여관" */
@@ -244,6 +324,14 @@ export interface BuildingStandardPriceResult {
   compositeBreakdowns?: BuildingStdPriceBreakdown[];
   /** 복합건물 부분 기준시가 합계(원) */
   compositeTotal?: number;
+  /** 양도 복합 — 취득시점 부분별 breakdown(Ⅲ·Ⅳ 마킹 포함) + 합계(2001 ≤2000 시 total=total2001) */
+  acquisitionComposite?: { breakdowns: BuildingStdPriceBreakdown[]; total: number };
+  /** 양도 복합 — 양도시점 부분별 breakdown + 합계 */
+  transferComposite?: { breakdowns: BuildingStdPriceBreakdown[]; total: number };
+  /** 계산서 Ⅴ 안분계산표(상증·양도 공용 — 부분 구성 공통이므로 1벌) */
+  ancillaryApportionment?: AncillaryApportionment;
+  /** ※식 echo(양도 취득 ≤2000 복합) */
+  acqBaseConversion?: AcqBaseConversion;
   /** 다필지 면적가중평균 ㎡당 공시지가 echo */
   weightedLandPricePerM2?: number;
   /** 공동주택 고시 전 취득 환산 결과 */

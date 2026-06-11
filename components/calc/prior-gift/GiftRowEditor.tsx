@@ -578,8 +578,64 @@ export function GiftRowEditor({
         </div>
       </div>
 
-      {/* Phase A: 증여세 모드 전용 — donor + ⑤ + ⑦ + 할증 + ⑫ */}
+      {/* Phase A: 증여세 모드 전용 — 과세특례 구분 + donor + ⑤ + ⑦ + 할증 + ⑫ */}
       {showGiftPhaseA && (
+        <>
+        {/* 과세특례 구분 — §30의5·§30의6 해당 여부. 특례 prior는 §47② 일반합산에서 제외, 특례 스트림에만 포함. */}
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-3 space-y-2">
+          <div className="flex items-center gap-2">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-[10px] font-bold text-emerald-800 select-none">
+              §30
+            </span>
+            <p className="text-xs font-semibold text-emerald-700">
+              이 사전증여의 조특법 과세특례 여부
+            </p>
+          </div>
+          <RadioCardGroup<"none" | "startup" | "family_business">
+            name={`priorGiftSpecialType-${index}`}
+            tone="emerald"
+            layout="inline"
+            value={gift.specialTreatmentType ?? "none"}
+            onChange={(v) =>
+              set({
+                specialTreatmentType: v === "none" ? undefined : (v as "startup" | "family_business"),
+                // 특례 타입 초기화 시 priorSpecialTaxPaid도 초기화
+                ...(v === "none" ? { priorSpecialTaxPaid: undefined } : {}),
+              })
+            }
+            options={[
+              { value: "none", label: "일반 증여" },
+              { value: "startup", label: "창업자금 §30의5" },
+              { value: "family_business", label: "가업승계 §30의6" },
+            ]}
+          />
+          {gift.specialTreatmentType === "startup" && (
+            <p className="text-[11px] text-emerald-700 dark:text-emerald-400">
+              §30의5① 후단 — 창업자금은 증여 시기와 무관하게 현재 신고분과 합산됩니다. §47②(10년 합산)에서 제외되어 별도 특례 스트림으로 계산됩니다.
+            </p>
+          )}
+          {gift.specialTreatmentType === "family_business" && (
+            <p className="text-[11px] text-emerald-700 dark:text-emerald-400">
+              §30의6 — 가업승계는 §30의5 제8항~제13항 준용. 과거 가업승계 prior는 기간무관 합산됩니다.
+            </p>
+          )}
+          {/* 기납부 특례세액 — 특례 타입 선택 시 노출 */}
+          {gift.specialTreatmentType && (
+            <CurrencyInput
+              label="그 회차에 납부한 특례세액 (기납부 특례세액 차감용)"
+              value={
+                gift.priorSpecialTaxPaid && gift.priorSpecialTaxPaid > 0
+                  ? String(gift.priorSpecialTaxPaid)
+                  : ""
+              }
+              onChange={(v) =>
+                set({ priorSpecialTaxPaid: parseAmount(v) || undefined })
+              }
+              hint="§30의5①후단 합산 시 기납부 특례세액 차감 (max(0, 합산기준특례산출세액 - Σ기납부)). 없으면 빈칸."
+            />
+          )}
+        </div>
+
         <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-3">
           <div className="flex items-center gap-2">
             <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-[10px] font-bold text-violet-800 select-none">
@@ -667,10 +723,11 @@ export function GiftRowEditor({
                     parseAmount(v) || undefined,
                 })
               }
-              hint="신고서 ⑫ 값. §57 누적 기할증과세액 ⑨ 산정용."
+              hint="신고서 ⑱ 값. §57 누적 기할증과세액 ⑨ 산정용."
             />
           )}
         </div>
+        </>
       )}
 
       {/* 요약 미리보기 */}

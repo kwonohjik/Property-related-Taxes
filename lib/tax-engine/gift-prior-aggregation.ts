@@ -113,6 +113,15 @@ export function aggregatePriorGiftsForGift(
   const warnings: string[] = [];
 
   for (const gift of priorGifts) {
+    // §30의5⑪·§30의6⑤: 조특법 특례 prior (specialTreatmentType 설정)는
+    // §47② 일반 합산에서 제외 — 특례 스트림에서 기간무관 별도 합산됨.
+    if (gift.specialTreatmentType !== undefined) {
+      warnings.push(
+        `사전증여 ${gift.giftDate} — 조특법 특례(${gift.specialTreatmentType}) 적용 prior → §47② 일반 합산 제외, 특례 스트림에서 기간무관 합산됨 (§30의5⑪)`,
+      );
+      continue;
+    }
+
     // 사전증여일이 boundary보다 이전이면 도과(10년 초과) → 제외
     if (isBefore(new Date(gift.giftDate), boundary47)) continue;
 

@@ -1,4 +1,5 @@
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import type { PropertyTaxResult } from "@/lib/tax-engine/types/property.types";
 
 // ============================================================
@@ -38,10 +39,10 @@ export const SEPARATED_TYPE_OPTIONS: { value: string; label: string; rate: strin
   { value: "saltfield",    label: "염전",                                   rate: "0.2%" },
   { value: "terminal",     label: "여객·화물터미널 / 공영주차장",              rate: "0.2%" },
   { value: "golf_member",  label: "회원제 골프장",                           rate: "4%"   },
-  { value: "golf_public",  label: "대중·간이 골프장",                        rate: "0.2%" },
   { value: "entertainment",label: "고급오락장 (카지노·유흥주점 등)",           rate: "4%"   },
-  { value: "other",        label: "기타 분리과세 토지",                       rate: "0.2%" },
 ];
+// 대중형·간이 골프장 부속토지는 분리과세 대상이 아님 (§106①3호 다목 — 회원제만 해당)
+// → 별도합산과세대상으로 입력 안내 (Step2Separated 하단 카드)
 
 // ============================================================
 // 폼 상태
@@ -107,13 +108,13 @@ export function validateStep(step: number, form: FormState): string | null {
   if (step === 2) {
     if (form.landTaxType === "separate_aggregate") {
       if (!form.saZoningDistrict) return "용도지역을 선택하세요.";
-      const landArea = parseAmount(form.saLandArea);
+      const landArea = parseDecimal(form.saLandArea);
       if (!landArea || landArea <= 0) return "토지 면적(㎡)을 입력하세요.";
       if (form.saIsFactory) {
-        const fsa = parseAmount(form.saFactoryStandardArea);
+        const fsa = parseDecimal(form.saFactoryStandardArea);
         if (!fsa || fsa <= 0) return "공장입지기준면적(㎡)을 입력하세요.";
       } else {
-        const bfa = parseAmount(form.saBuildingFloorArea);
+        const bfa = parseDecimal(form.saBuildingFloorArea);
         if (!bfa || bfa <= 0) return "건물 바닥면적(㎡)을 입력하세요.";
       }
       if (form.saDemolished && !form.saDemolishedDate) return "철거일을 입력하세요.";
@@ -131,7 +132,8 @@ export function validateStep(step: number, form: FormState): string | null {
 // API 호출
 // ============================================================
 
-export async function callPropertyTaxAPI(form: FormState): Promise<PropertyTaxResult> {
+/** 폼 상태 → API 요청 본문 변환 (순수 함수 — 테스트 anchor 대상) */
+export function buildPropertyTaxRequestBody(form: FormState): Record<string, unknown> {
   const body: Record<string, unknown> = {
     objectType: form.objectType,
     publishedPrice: parseAmount(form.publishedPrice) ?? 0,
@@ -147,7 +149,7 @@ export async function callPropertyTaxAPI(form: FormState): Promise<PropertyTaxRe
     body.landTaxType = form.landTaxType;
 
     if (form.landTaxType === "separate_aggregate") {
-      const landArea = parseAmount(form.saLandArea) ?? 0;
+      const landArea = parseDecimal(form.saLandArea);
       const publishedTotal = parseAmount(form.publishedPrice) ?? 0;
       const officialLandPrice = landArea > 0 ? Math.floor(publishedTotal / landArea) : 0;
 
@@ -160,10 +162,10 @@ export async function callPropertyTaxAPI(form: FormState): Promise<PropertyTaxRe
         ...(form.saIsFactory
           ? {
               isFactory: true,
-              factoryStandardArea: parseAmount(form.saFactoryStandardArea) ?? undefined,
+              factoryStandardArea: parseDecimal(form.saFactoryStandardArea) || undefined,
             }
           : {
-              buildingFloorArea: parseAmount(form.saBuildingFloorArea) ?? undefined,
+              buildingFloorArea: parseDecimal(form.saBuildingFloorArea) || undefined,
             }),
         ...(form.saDemolished
           ? { demolished: true, demolishedDate: form.saDemolishedDate || undefined }
@@ -184,17 +186,25 @@ export async function callPropertyTaxAPI(form: FormState): Promise<PropertyTaxRe
         case "saltfield":     st.isSaltField = true; break;
         case "terminal":      st.isTerminalOrParking = true; break;
         case "golf_member":   st.isGolfCourse = true; st.golfCourseType = "member"; break;
-        case "golf_public":   st.isGolfCourse = true; st.golfCourseType = "public"; break;
         case "entertainment": st.isHighClassEntertainment = true; break;
       }
       body.separateTaxationItem = st;
     }
   }
 
-  const prevTax = parseAmount(form.previousYearTax);
-  if (prevTax !== null && prevTax > 0) {
-    body.previousYearTax = prevTax;
+  // 주택은 세부담상한 미적용 (지방세법 §122 단서) — 전년도 세액 미전송 (엔진·UI 동기화)
+  if (form.objectType !== "housing") {
+    const prevTax = parseAmount(form.previousYearTax);
+    if (prevTax !== null && prevTax > 0) {
+      body.previousYearTax = prevTax;
+    }
   }
+
+  return body;
+}
+
+export async function callPropertyTaxAPI(form: FormState): Promise<PropertyTaxResult> {
+  const body = buildPropertyTaxRequestBody(form);
 
   const res = await fetch("/api/calc/property", {
     method: "POST",

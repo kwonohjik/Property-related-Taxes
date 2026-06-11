@@ -738,3 +738,4 @@ describe("[GM-E] 완전 파이프라인 통합 anchor — schema → calcGiftTax
     expect(rt.finalTax).toBe(7_760_000);
   });
 });
+

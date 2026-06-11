@@ -9,14 +9,16 @@ import { useState } from "react";
 import { Printer } from "lucide-react";
 import { BuildingStdPriceForm } from "@/components/calc/building-std-price/BuildingStdPriceForm";
 import { BuildingStdPriceResultCard } from "@/components/calc/building-std-price/BuildingStdPriceResultCard";
-import { BuildingStdPricePrintView } from "@/components/calc/building-std-price/BuildingStdPricePrintView";
+import { NtsBuildingStdPriceReport } from "@/components/calc/building-std-price/nts-report/NtsBuildingStdPriceReport";
 import { HomeButton } from "@/components/calc/shared/HomeButton";
 import type { BuildingStandardPriceResult } from "@/lib/tax-engine/building-standard-price";
+import type { NtsReportModel } from "@/lib/calc/nts-report-adapter";
 
 export default function BuildingStandardPricePage() {
   const [result, setResult] = useState<BuildingStandardPriceResult | null>(null);
   const [floorArea, setFloorArea] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [report, setReport] = useState<NtsReportModel | null>(null);
 
   return (
     <main className="mx-auto max-w-[63rem] px-4 py-6">
@@ -32,10 +34,11 @@ export default function BuildingStandardPricePage() {
 
       <div className="print:hidden">
         <BuildingStdPriceForm
-          onResult={(r, fa, err) => {
+          onResult={(r, fa, err, rep) => {
             setResult(r);
             setFloorArea(fa);
             setError(err);
+            setReport(rep);
           }}
         />
       </div>
@@ -66,8 +69,8 @@ export default function BuildingStandardPricePage() {
             <BuildingStdPriceResultCard result={result} floorArea={floorArea} />
           </section>
 
-          {/* 인쇄·PDF 전용 서식(화면 숨김 / 인쇄 시 표시) */}
-          <BuildingStdPricePrintView result={result} floorArea={floorArea} />
+          {/* 국세청 「건물 기준시가 계산서」 서식 — 화면 접힘 / 인쇄 자동 펼침 */}
+          {report && <NtsBuildingStdPriceReport model={report} />}
         </>
       )}
     </main>

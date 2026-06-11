@@ -188,6 +188,19 @@ describe("EstateItem Zod round-trip — 부동산 (real_estate_apartment)", () =
     if (result.data.category !== "real_estate_apartment") return;
     expect(result.data.valuationMethod).toBe("market_value");
   });
+
+  it("G-4: §47① assumedDebtForGift·burdenedGiftDebtConfirmed 보존 (부담부증여 strip 방지)", () => {
+    const result = estateItemSchema.safeParse({
+      ...apt,
+      assumedDebtForGift: 400_000_000,
+      burdenedGiftDebtConfirmed: true,
+    });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    if (result.data.category !== "real_estate_apartment") return;
+    expect(result.data.assumedDebtForGift).toBe(400_000_000);
+    expect(result.data.burdenedGiftDebtConfirmed).toBe(true);
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

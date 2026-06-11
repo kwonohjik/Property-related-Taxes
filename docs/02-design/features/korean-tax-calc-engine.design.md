@@ -563,7 +563,7 @@ calculateTransferTax(input, rates) → TransferTaxResult
 8. 감면 적용 (조세특례제한법)
    ├─ rentalReductionDetails 제공 → calculateRentalReduction() 호출 (정밀 감면)
    ├─ newHousingDetails 제공 → determineNewHousingReduction() 호출 (조문 매트릭스)
-   └─ 복수 감면 해당 시 납세자 유리 1건 선택 (조특법 §127 ②)
+   └─ 복수 감면 해당 시 납세자 유리 1건 선택 (조특법 §127⑦)
 
 9. 결정세액 = truncateToWon(산출세액 - 감면세액)
 10. 지방소득세 = 결정세액 × 10%

@@ -163,6 +163,30 @@ export const houseSchema = z.object({
   isUnsoldHousing: z.boolean().default(false),
 });
 
+/**
+ * 장기임대 §97 시리즈 공통 필드 (Phase 2 — 2026-06-11).
+ * 날짜는 YYYY-MM-DD string — Route handler에서 Date 변환 (⑭).
+ */
+const rental97CommonShape = {
+  registrationDate: z.string().date().optional(),
+  rentalStartDate: z.string().date().optional(),
+  isTaxRegistered: z.boolean().optional(),
+  rentIncreaseViolated: z.boolean().optional(),
+  rentHistory: z
+    .array(
+      z.object({
+        contractDate: z.string().date(),
+        contractType: z.enum(["jeonse", "monthly", "semi_jeonse"]),
+        monthlyRent: z.number().int().nonnegative(),
+        deposit: z.number().int().nonnegative(),
+      }),
+    )
+    .optional(),
+  vacancyPeriods: z
+    .array(z.object({ startDate: z.string().date(), endDate: z.string().date() }))
+    .optional(),
+} as const;
+
 export const reductionSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("self_farming"),
@@ -208,17 +232,58 @@ export const reductionSchema = z.discriminatedUnion("type", [
   // 본 단계는 type 식별 + 시한 검증만 — 본 요건 필드는 Phase 2~ 에서 추가.
   // 매핑: lib/tax-engine/transfer-reductions/types.ts TransferReductionId
   // ─────────────────────────────────────────────────────────────
-  z.object({ type: z.literal("rental_97_main"),    _phase1Stub: z.literal(true).optional() }),
-  z.object({ type: z.literal("rental_97_proviso"), _phase1Stub: z.literal(true).optional() }),
-  z.object({ type: z.literal("rental_97_2"),       _phase1Stub: z.literal(true).optional() }),
+  // ── Phase 2 (2026-06-11): 장기임대 §97 시리즈 본 요건 필드 (모두 optional — stub 호환 + UI/validate에서 필수 검증) ──
+  // 명명 통일(E5): registrationDate — 폼·API·Route·엔진 동일 키.
   z.object({
-    type: z.literal("rental_97_3"),
-    rentalYears: z.number().int().nonnegative().optional(),
-    rentIncreaseRate: z.number().min(0).max(1).optional(),
+    type: z.literal("rental_97_main"),
+    ...rental97CommonShape,
+    constructionYear: z.number().int().optional(),
+    isNationalHousing: z.boolean().optional(),
     _phase1Stub: z.literal(true).optional(),
   }),
-  z.object({ type: z.literal("rental_97_4"),       _phase1Stub: z.literal(true).optional() }),
-  z.object({ type: z.literal("rental_97_5"),       _phase1Stub: z.literal(true).optional() }),
+  z.object({
+    type: z.literal("rental_97_proviso"),
+    ...rental97CommonShape,
+    constructionYear: z.number().int().optional(),
+    isNationalHousing: z.boolean().optional(),
+    provisoCase: z.enum(["a_construction", "b_purchase", "c_10years"]).optional(),
+    _phase1Stub: z.literal(true).optional(),
+  }),
+  z.object({
+    type: z.literal("rental_97_2"),
+    ...rental97CommonShape,
+    rental972Type: z.enum(["construction", "purchase"]).optional(),
+    isNationalHousing: z.boolean().optional(),
+    _phase1Stub: z.literal(true).optional(),
+  }),
+  z.object({
+    type: z.literal("rental_97_3"),
+    /** @deprecated Phase 1 stub 호환 */
+    rentalYears: z.number().int().nonnegative().optional(),
+    /** @deprecated Phase 1 stub 호환 */
+    rentIncreaseRate: z.number().min(0).max(1).optional(),
+    ...rental97CommonShape,
+    officialPriceAtStart: z.number().int().nonnegative().optional(),
+    isNationalHousingScale: z.boolean().optional(),
+    region: z.enum(["capital", "non_capital"]).optional(),
+    propertyType: z.enum(["apartment", "non_apartment"]).optional(),
+    rentalHousingType: z.enum(["long_term_private", "public_support_private"]).optional(),
+    isConvertedFromShortTerm: z.boolean().optional(),
+    _phase1Stub: z.literal(true).optional(),
+  }),
+  z.object({
+    type: z.literal("rental_97_4"),
+    ...rental97CommonShape,
+    region: z.enum(["capital", "non_capital"]).optional(),
+    _phase1Stub: z.literal(true).optional(),
+  }),
+  z.object({
+    type: z.literal("rental_97_5"),
+    ...rental97CommonShape,
+    officialPriceAtStart: z.number().int().nonnegative().optional(),
+    region: z.enum(["capital", "non_capital"]).optional(),
+    _phase1Stub: z.literal(true).optional(),
+  }),
   z.object({
     type: z.literal("new_99"),
     region: z.enum(["metropolitan", "non_metropolitan"]).optional(),

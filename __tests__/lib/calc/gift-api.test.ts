@@ -54,6 +54,7 @@ function makeForm(overrides: Partial<FormState> = {}): FormState {
     foreignTaxPaid: "",
     specialTreatment: "",
     startupInvestmentCompleted: false,
+    startupNewHiresAtLeast10: false,
     splitPaymentEnabled: false,
     splitPaymentAmount: "",
     ...INITIAL_APPRAISAL_FEE_FIELDS,
@@ -299,6 +300,32 @@ describe("buildGiftTaxInput() — ④ 지점 변환 anchor (G-H3)", () => {
     const form = makeForm({ donor: "grandparent", isGenerationSkip: false });
     const result = buildGiftTaxInput(form);
     expect(result.isGenerationSkip).toBe(true); // 파생 결과 true
+  });
+
+  // ─────── GA-C: startupNewHiresAtLeast10 G-M8 3중 패턴 검증 ───────
+
+  it("[GA-C1] specialTreatment=startup + startupNewHiresAtLeast10=true → creditInput에 true 전달", () => {
+    const form = makeForm({ specialTreatment: "startup", startupNewHiresAtLeast10: true });
+    const result = buildGiftTaxInput(form);
+    expect(result.creditInput.startupNewHiresAtLeast10).toBe(true);
+  });
+
+  it("[GA-C2] specialTreatment=startup + startupNewHiresAtLeast10=false → creditInput에 false 전달", () => {
+    const form = makeForm({ specialTreatment: "startup", startupNewHiresAtLeast10: false });
+    const result = buildGiftTaxInput(form);
+    expect(result.creditInput.startupNewHiresAtLeast10).toBe(false);
+  });
+
+  it("[GA-C3] specialTreatment=family_business → startupNewHiresAtLeast10=undefined (3중 패턴 strip)", () => {
+    const form = makeForm({ specialTreatment: "family_business", startupNewHiresAtLeast10: true });
+    const result = buildGiftTaxInput(form);
+    expect(result.creditInput.startupNewHiresAtLeast10).toBeUndefined();
+  });
+
+  it("[GA-C4] specialTreatment='' → startupNewHiresAtLeast10=undefined strip", () => {
+    const form = makeForm({ specialTreatment: "", startupNewHiresAtLeast10: true });
+    const result = buildGiftTaxInput(form);
+    expect(result.creditInput.startupNewHiresAtLeast10).toBeUndefined();
   });
 
   // ─────── GA-A: §57① 단서 isSubstituteGift 3중 패턴 검증 ───────
