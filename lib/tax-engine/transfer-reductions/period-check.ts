@@ -125,7 +125,10 @@ const RULES: Record<TransferReductionId, PeriodRule> = {
   },
   unsold_98_3: {
     label: "취득 2009.2.12~2010.2.11 (비거주자 2009.3.16~)",
-    check: (c) => within(c.contractDate ?? c.acquisitionDate, D("2009-02-12"), D("2010-02-11")),
+    // P3 (2026-06-12): 낙관 통과 + contractDate만 — 자기건설(법②)은 착공·사용승인 기준이라
+    // 자산 취득일로 차단 불가. 본 판정은 evaluateUnsold983 (취득일 fallback 금지).
+    check: (c) =>
+      c.contractDate === undefined || within(c.contractDate, D("2009-02-12"), D("2010-02-11")),
     failReason: "미분양 취득기간(거주자 2009.2.12~2010.2.11 / 비거주자 2009.3.16~2010.2.11) 시한 외 — 조특법 §98의3",
   },
   unsold_98_4: {
@@ -135,13 +138,18 @@ const RULES: Record<TransferReductionId, PeriodRule> = {
   },
   unsold_98_5: {
     label: "매매계약 ~2011.4.30 (2010.2.11 현재 미분양)",
-    check: (c) => before(c.contractDate, D("2011-04-30")) &&
-                  (c.contractDate === undefined || c.contractDate >= D("2010-02-12")),
+    // P3 (2026-06-12): 낙관 통과. D-8 — 법문에 시작 경계 없으나 2010.2.11 미분양 컷오프상
+    // 그 이전 본인 계약은 미분양 모순 → 사실상 2010.2.12 이후 유지. 본 판정은 evaluateUnsold985.
+    check: (c) =>
+      c.contractDate === undefined ||
+      within(c.contractDate, D("2010-02-12"), D("2011-04-30")),
     failReason: "수도권 외 미분양 매매계약 시한(2010.2.12~2011.4.30) 외 — 조특법 §98의5",
   },
   unsold_98_6: {
     label: "임대계약 ~2011.12.31",
-    check: (c) => before(c.contractDate ?? c.acquisitionDate, D("2011-12-31")),
+    // P3 (2026-06-12): 낙관 통과 — 시한 기준은 임대계약 체결일(법 ①1·2호)인데
+    // PeriodCheckContext는 자산 매매계약·취득일만 보유. 본 판정은 evaluateUnsold986.
+    check: () => true,
     failReason: "준공후미분양 임대계약 시한(~2011.12.31) 외 — 조특법 §98의6",
   },
   unsold_98_7: {

@@ -251,6 +251,81 @@ export type RentalReductionFormVariant =
       /** 양도시 기준시가 (원) — 미입력 시 자산 standardPriceAtTransfer fallback */
       standardPriceAtTransfer988: string;
     }
+  // ── P3 (2026-06-12): §98의3 서울 밖 미분양 — 100%(과밀 60%) 하이브리드 ──
+  | {
+      type: "unsold_98_3";
+      /** 거주자 / 국내사업장 없는 비거주자 — 시한 시작일 분기 */
+      residencyType983: "resident" | "nonresident_no_pe";
+      /** 사업주체 취득 / 자기건설 (법②) */
+      houseType983: "purchased" | "self_built";
+      /** 최초 매매계약일 (YYYY-MM-DD) — purchased */
+      contractDate983: string;
+      /** 착공일 (YYYY-MM-DD) — self_built */
+      constructionStartDate983: string;
+      /** 사용승인·사용검사일 (YYYY-MM-DD) — self_built */
+      usageApprovalDate983: string;
+      /** 서울 밖 + 지정지역 아님 확인 */
+      isOutsideSeoulNotDesignated983: boolean;
+      /** 수도권과밀억제권역 (60% + 면적 한정) */
+      isOverconcentration983: boolean;
+      /** 대지면적 (㎡, DecimalInput) — 과밀 시 660 이내 */
+      landAreaSqm983: string;
+      /** 연면적 (공동주택 전용, ㎡) — 과밀 시 149 이내 */
+      floorAreaSqm983: string;
+      isUnsoldConfirmed983: boolean;
+      isFirstContract983: boolean;
+      isNotOccupiedAtContract983: boolean;
+      isNotRecontract983: boolean;
+      isNotExcludedSelfBuilt983: boolean;
+      standardPriceAtAcquisition983: string;
+      standardPriceAt5Years983: string;
+      standardPriceAtTransfer983: string;
+    }
+  // ── P3 (2026-06-12): §98의5 수도권 밖 미분양 — 인하율별 60/80/100% ──
+  | {
+      type: "unsold_98_5";
+      /** 최초 매매계약일 (YYYY-MM-DD) — ~2011.4.30 */
+      contractDate985: string;
+      /** 분양가격 인하율 (%, DecimalInput) */
+      priceReductionRatePct985: string;
+      /** 2010.2.11 현재 수도권 밖 미분양 확인 */
+      isNonCapitalUnsoldAtCutoff985: boolean;
+      isFirstContract985: boolean;
+      isNotOccupiedAtContract985: boolean;
+      isNotRecontract985: boolean;
+      standardPriceAtAcquisition985: string;
+      standardPriceAt5Years985: string;
+      standardPriceAtTransfer985: string;
+    }
+  // ── P3 (2026-06-12): §98의6 준공후미분양 50% — 1호/2호 ──
+  | {
+      type: "unsold_98_6";
+      /** 1호 사업주체등 2년 임대 후 취득 / 2호 취득 후 5년 임대 */
+      hoType986: "seller_rented" | "buyer_rented";
+      /** 최초 매매계약일 (YYYY-MM-DD) */
+      contractDate986: string;
+      /** 주택+부수토지 기준시가 합계 (원) — 6억 한도 (1호는 최초 임대개시 당시) */
+      stdPriceSumAtBase986: string;
+      /** 연면적 (공동주택 전용, ㎡) — 149 한도 */
+      floorAreaSqm986: string;
+      isUnsoldAfterCompletion986: boolean;
+      isFirstContract986: boolean;
+      isNotOccupiedAfterCompletion986: boolean;
+      isNotRecontract986: boolean;
+      /** (1호) 사업주체등 ~2011.12.31 임대계약 + 2년 임대 확인 */
+      sellerRented2Years986: boolean;
+      /** (2호) 임대계약 체결일 (~2011.12.31) */
+      rentalContractDate986: string;
+      /** (2호) 임대개시일 — 등록 후 기산 */
+      rentalStartDate986: string;
+      /** (2호) 임대종료일 — 빈값 = 양도일까지 */
+      rentalEndDate986: string;
+      /** (2호) 상속 합산 임대기간 (개월) */
+      inheritedRentalMonths986: string;
+      standardPriceAtAcquisition986: string;
+      standardPriceAt5Years986: string;
+      standardPriceAtTransfer986: string;
+    }
   // ── P2 (2026-06-11): §98의7 9억↓ 미분양 — 하이브리드 (5년 내 100% 세액감면 / 5년 후 공제) ──
   | {
       type: "unsold_98_7";

@@ -45,6 +45,7 @@ import {
   resolveSurchargeExclusionByReduction,
   buildIncomeDeductionStep,
   buildSurchargeExclusionStep,
+  RATE_SPECIAL_REDUCTION_IDS,
 } from "./transfer-reductions/income-deduction-router";
 import { resolveHouseCountExclusion, buildHouseCountExclusionStep } from "./transfer-reductions/unsold-98-9";
 
@@ -60,7 +61,7 @@ import {
   type CommercialBuildingStepResult,
 } from "./transfer-tax-helpers";
 import { calculateBuildingPenalty, calcTax, handleMultiParcelBranch } from "./transfer-tax-rate-calc";
-import { finalizeTransferTax, resolveLTHDStartDate } from "./transfer-tax-finalize";
+import { finalizeTransferTax, resolveLTHDStartDate, buildTransferResultDetails } from "./transfer-tax-finalize";
 import { isRedevelopmentActive, calculateRedevelopmentTax } from "./transfer-tax-redevelopment";
 import { calcCarryoverScenarios } from "./transfer-tax-carryover";
 import { buildBurdenedGiftBreakdown, assertBurdenedGiftEligible, detectBurdenedGiftMultiHouseWarning } from "./burdened-gift-apportionment";
@@ -71,47 +72,6 @@ export type { TransferTaxAcquisitionOptions } from "./transfer-tax-acquisition-o
 import { applyFamilyBusinessCgtStep } from "./transfer-tax-family-business";
 export { parseRatesFromMap } from "./transfer-tax-helpers";
 export { calcTax } from "./transfer-tax-rate-calc";
-
-/**
- * 결과 detail 필드 공통 빌더 — 조기 반환(비과세·손실)과 정상 반환의 detail 누락 방지.
- *
- * 각 detail은 해당 STEP 변수가 존재할 때만 채운다. 조기 반환 시점에 아직
- * 선언되지 않은 변수(cbStep·splitDetail 등)는 호출측에서 ctx에 생략하면 undefined로 처리된다.
- */
-function buildTransferResultDetails(ctx: {
-  multiHouseSurchargeResult?: MultiHouseSurchargeResult;
-  nonBusinessLandJudgment?: NonBusinessLandJudgment;
-  pre1990LandResult?: Pre1990LandValuationResult;
-  carryoverDetail?: CarryoverTaxationDetail;
-  inheritedAcquisitionStep?: InheritedAcquisitionStepResult;
-  cbStep?: CommercialBuildingStepResult;
-  splitDetail?: TransferTaxResult["splitDetail"];
-}): Pick<
-  TransferTaxResult,
-  | "multiHouseSurchargeDetail"
-  | "nonBusinessLandJudgmentDetail"
-  | "pre1990LandValuationDetail"
-  | "carryoverTaxationDetail"
-  | "inheritedAcquisitionDetail"
-  | "inheritedHouseValuationDetail"
-  | "commercialBuildingValuationDetail"
-  | "splitDetail"
-  | "preHousingDisclosureDetail"
-> {
-  return {
-    multiHouseSurchargeDetail: ctx.multiHouseSurchargeResult
-      ? buildMultiHouseSurchargeDetail(ctx.multiHouseSurchargeResult)
-      : undefined,
-    nonBusinessLandJudgmentDetail: ctx.nonBusinessLandJudgment,
-    pre1990LandValuationDetail: ctx.pre1990LandResult,
-    carryoverTaxationDetail: ctx.carryoverDetail,
-    inheritedAcquisitionDetail: ctx.inheritedAcquisitionStep?.result,
-    inheritedHouseValuationDetail: ctx.inheritedAcquisitionStep?.houseValuationResult,
-    commercialBuildingValuationDetail: ctx.cbStep?.detail,
-    splitDetail: ctx.splitDetail ?? undefined,
-    preHousingDisclosureDetail: ctx.splitDetail?.preHousingDisclosureDetail,
-  };
-}
 
 export function calculateTransferTax(
   rawInput: TransferTaxInput,
@@ -679,9 +639,16 @@ export function calculateTransferTax(
 
   // STEP 7: 산출세액
   // selfOwns="land_only" 시 단기/장기 세율 판정은 토지 취득일 기준 (소령 §166⑥)
-  const taxRateInput = selfOwns === "land_only" && effectiveInput.landAcquisitionDate
+  // P3 특칙: §98의3④·§98의5③·§98의6③ — 적격 시 단기세율(§104①2·3호) 배제 (세율 §104①1호 강제)
+  const rateSpecialActive =
+    incomeDeduction.eligibleId !== undefined &&
+    RATE_SPECIAL_REDUCTION_IDS.includes(incomeDeduction.eligibleId);
+  const taxRateInputBase = selfOwns === "land_only" && effectiveInput.landAcquisitionDate
     ? { ...effectiveInput, acquisitionDate: effectiveInput.landAcquisitionDate }
     : effectiveInput;
+  const taxRateInput = rateSpecialActive
+    ? { ...taxRateInputBase, suppressShortTermRate: true }
+    : taxRateInputBase;
   const taxResult = calcTax(taxBase, parsedRates, taxRateInput, multiHouseSurchargeResult);
   const fmtPct = (r: number) => `${Math.round(r * 100)}%`;
   steps.push({
@@ -711,6 +678,9 @@ export function calculateTransferTax(
     unsold988PreliminaryResult: incomeDeduction.unsold988Detail,
     unsold987PreliminaryResult: incomeDeduction.unsold987Detail,
     unsold992PreliminaryResult: incomeDeduction.unsold992Detail,
+    unsold983PreliminaryResult: incomeDeduction.unsold983Detail,
+    unsold985PreliminaryResult: incomeDeduction.unsold985Detail,
+    unsold986PreliminaryResult: incomeDeduction.unsold986Detail,
   });
   const {
     new993FinalResult,
@@ -718,6 +688,9 @@ export function calculateTransferTax(
     unsold988FinalResult,
     unsold987FinalResult,
     unsold992FinalResult,
+    unsold983FinalResult,
+    unsold985FinalResult,
+    unsold986FinalResult,
     reductionAmount,
     reductionType,
     reductionTypeApplied,
@@ -792,6 +765,9 @@ export function calculateTransferTax(
     unsold988Detail: unsold988FinalResult,
     unsold987Detail: unsold987FinalResult,
     unsold992Detail: unsold992FinalResult,
+    unsold983Detail: unsold983FinalResult,
+    unsold985Detail: unsold985FinalResult,
+    unsold986Detail: unsold986FinalResult,
     transferBurdenedGiftBreakdown,
   };
 }

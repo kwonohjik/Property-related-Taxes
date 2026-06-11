@@ -234,6 +234,70 @@ export function toEngineReductions(
         standardPriceAtTransfer988: parseAmount(r.standardPriceAtTransfer988 || "0") || undefined,
       };
     }
+    // ── P3 §98의3 (2026-06-12): 하이브리드 본 변환 (④) — houseType별 일자 strip ──
+    if (r.type === "unsold_98_3") {
+      return {
+        type: "unsold_98_3" as const,
+        residencyType983: r.residencyType983,
+        houseType983: r.houseType983,
+        contractDate983:
+          r.houseType983 !== "self_built" ? r.contractDate983 || undefined : undefined,
+        constructionStartDate983:
+          r.houseType983 === "self_built" ? r.constructionStartDate983 || undefined : undefined,
+        usageApprovalDate983:
+          r.houseType983 === "self_built" ? r.usageApprovalDate983 || undefined : undefined,
+        isOutsideSeoulNotDesignated983: r.isOutsideSeoulNotDesignated983,
+        isOverconcentration983: r.isOverconcentration983,
+        landAreaSqm983: r.isOverconcentration983 ? parseDecimal(r.landAreaSqm983 || "") || undefined : undefined,
+        floorAreaSqm983: r.isOverconcentration983 ? parseDecimal(r.floorAreaSqm983 || "") || undefined : undefined,
+        isUnsoldConfirmed983: r.isUnsoldConfirmed983,
+        isFirstContract983: r.isFirstContract983,
+        isNotOccupiedAtContract983: r.isNotOccupiedAtContract983,
+        isNotRecontract983: r.isNotRecontract983,
+        isNotExcludedSelfBuilt983: r.isNotExcludedSelfBuilt983,
+        standardPriceAtAcquisition983: parseAmount(r.standardPriceAtAcquisition983 || "0") || undefined,
+        standardPriceAt5Years983: parseAmount(r.standardPriceAt5Years983 || "0") || undefined,
+        standardPriceAtTransfer983: parseAmount(r.standardPriceAtTransfer983 || "0") || undefined,
+      };
+    }
+    // ── P3 §98의5 (2026-06-12): 하이브리드 본 변환 (④) ──
+    if (r.type === "unsold_98_5") {
+      return {
+        type: "unsold_98_5" as const,
+        contractDate985: r.contractDate985 || undefined,
+        priceReductionRatePct985: parseDecimal(r.priceReductionRatePct985 || "") || undefined,
+        isNonCapitalUnsoldAtCutoff985: r.isNonCapitalUnsoldAtCutoff985,
+        isFirstContract985: r.isFirstContract985,
+        isNotOccupiedAtContract985: r.isNotOccupiedAtContract985,
+        isNotRecontract985: r.isNotRecontract985,
+        standardPriceAtAcquisition985: parseAmount(r.standardPriceAtAcquisition985 || "0") || undefined,
+        standardPriceAt5Years985: parseAmount(r.standardPriceAt5Years985 || "0") || undefined,
+        standardPriceAtTransfer985: parseAmount(r.standardPriceAtTransfer985 || "0") || undefined,
+      };
+    }
+    // ── P3 §98의6 (2026-06-12): 하이브리드 본 변환 (④) — hoType별 임대 필드 strip ──
+    if (r.type === "unsold_98_6") {
+      const isBuyerRented = r.hoType986 === "buyer_rented";
+      return {
+        type: "unsold_98_6" as const,
+        hoType986: r.hoType986,
+        contractDate986: r.contractDate986 || undefined,
+        stdPriceSumAtBase986: parseAmount(r.stdPriceSumAtBase986 || "0") || undefined,
+        floorAreaSqm986: parseDecimal(r.floorAreaSqm986 || "") || undefined,
+        isUnsoldAfterCompletion986: r.isUnsoldAfterCompletion986,
+        isFirstContract986: r.isFirstContract986,
+        isNotOccupiedAfterCompletion986: r.isNotOccupiedAfterCompletion986,
+        isNotRecontract986: r.isNotRecontract986,
+        sellerRented2Years986: isBuyerRented ? undefined : r.sellerRented2Years986,
+        rentalContractDate986: isBuyerRented ? r.rentalContractDate986 || undefined : undefined,
+        rentalStartDate986: isBuyerRented ? r.rentalStartDate986 || undefined : undefined,
+        rentalEndDate986: isBuyerRented ? r.rentalEndDate986 || undefined : undefined,
+        inheritedRentalMonths986: isBuyerRented ? parseInt(r.inheritedRentalMonths986 || "") || undefined : undefined,
+        standardPriceAtAcquisition986: parseAmount(r.standardPriceAtAcquisition986 || "0") || undefined,
+        standardPriceAt5Years986: parseAmount(r.standardPriceAt5Years986 || "0") || undefined,
+        standardPriceAtTransfer986: parseAmount(r.standardPriceAtTransfer986 || "0") || undefined,
+      };
+    }
     // ── P2 §98의7 9억↓ 미분양 (2026-06-11): 하이브리드 본 변환 (④) ──
     if (r.type === "unsold_98_7") {
       return {

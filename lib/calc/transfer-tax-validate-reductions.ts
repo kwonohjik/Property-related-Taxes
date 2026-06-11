@@ -119,6 +119,43 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
           if (!r.rentalStartDate988)
             return fail("§98의8 적용: 임대개시일을 입력하세요 (사업자등록과 임대사업자등록 후 임대를 개시한 날).");
         }
+        // P3 §98의3 (2026-06-12): 분기별 일자 + 과밀 면적 필수 (⑧). 토글은 낙관 — 엔진 사유.
+        if (r.type === "unsold_98_3") {
+          if (r.houseType983 === "self_built") {
+            if (!r.constructionStartDate983 || !r.usageApprovalDate983)
+              return fail("§98의3 적용: 자기건설 주택의 착공일과 사용승인일을 입력하세요 (2009.2.12~2010.2.11).");
+          } else if (!r.contractDate983) {
+            return fail("§98의3 적용: 최초 매매계약일을 입력하세요 (거주자 2009.2.12~ / 비거주자 2009.3.16~2010.2.11).");
+          }
+          if (r.isOverconcentration983) {
+            if (!(parseDecimal(r.landAreaSqm983 || "") > 0))
+              return fail("§98의3 적용: 수도권과밀억제권역 주택은 대지면적(㎡)을 입력하세요 (660㎡ 이내 한정).");
+            if (!(parseDecimal(r.floorAreaSqm983 || "") > 0))
+              return fail("§98의3 적용: 수도권과밀억제권역 주택은 연면적(전용면적, ㎡)을 입력하세요 (149㎡ 이내 한정).");
+          }
+        }
+        // P3 §98의5 (2026-06-12): 계약일·인하율 필수 (⑧).
+        if (r.type === "unsold_98_5") {
+          if (!r.contractDate985)
+            return fail("§98의5 적용: 최초 매매계약일을 입력하세요 (~2011.4.30).");
+          if (!(parseDecimal(r.priceReductionRatePct985 || "") > 0))
+            return fail("§98의5 적용: 분양가격 인하율(%)을 입력하세요 — (최초 공시 분양가 − 매매가) ÷ 최초 분양가 × 100.");
+        }
+        // P3 §98의6 (2026-06-12): 계약일·기준시가 합계·면적 + 2호 임대 일자 필수 (⑧).
+        if (r.type === "unsold_98_6") {
+          if (!r.contractDate986)
+            return fail("§98의6 적용: 최초 매매계약일을 입력하세요.");
+          if (parseAmount(r.stdPriceSumAtBase986 || "0") <= 0)
+            return fail("§98의6 적용: 주택과 부수토지의 기준시가 합계를 입력하세요 (6억 한도).");
+          if (!(parseDecimal(r.floorAreaSqm986 || "") > 0))
+            return fail("§98의6 적용: 연면적(공동주택은 전용면적, ㎡)을 입력하세요 (149㎡ 한도).");
+          if (r.hoType986 === "buyer_rented") {
+            if (!r.rentalContractDate986)
+              return fail("§98의6 2호 적용: 임대계약 체결일을 입력하세요 (2011.12.31 이전 한정).");
+            if (!r.rentalStartDate986)
+              return fail("§98의6 2호 적용: 임대개시일을 입력하세요 (사업자등록과 임대사업자등록 후 임대를 개시한 날).");
+          }
+        }
         // P2 §98의7 9억↓ 미분양 (2026-06-11): 계약일·취득가 필수 (⑧).
         // 자격 토글 4종은 차단하지 않음 — 엔진 불적용 사유 (낙관 입력 패턴).
         if (r.type === "unsold_98_7") {

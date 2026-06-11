@@ -35,6 +35,9 @@ import { New99InputForm } from "@/components/calc/transfer/New99InputForm";
 import { Unsold988InputForm } from "@/components/calc/transfer/Unsold988InputForm";
 import { Unsold987InputForm } from "@/components/calc/transfer/Unsold987InputForm";
 import { Unsold992InputForm } from "@/components/calc/transfer/Unsold992InputForm";
+import { Unsold983InputForm } from "@/components/calc/transfer/Unsold983InputForm";
+import { Unsold985InputForm } from "@/components/calc/transfer/Unsold985InputForm";
+import { Unsold986InputForm } from "@/components/calc/transfer/Unsold986InputForm";
 import {
   REDUCTION_METADATA,
   ALL_REDUCTION_IDS,
@@ -205,6 +208,28 @@ export function UnifiedReductionPanel({ asset, transferDate, onChange }: Unified
       ),
     });
   }
+  // ── P3 (2026-06-12): §98의3 / §98의5 / §98의6 ──
+  function update983(patch: Partial<Extract<AssetReductionForm, { type: "unsold_98_3" }>>) {
+    onChange({
+      reductions: reductions.map((r) =>
+        r.type === "unsold_98_3" ? ({ ...r, ...patch } as AssetReductionForm) : r,
+      ),
+    });
+  }
+  function update985(patch: Partial<Extract<AssetReductionForm, { type: "unsold_98_5" }>>) {
+    onChange({
+      reductions: reductions.map((r) =>
+        r.type === "unsold_98_5" ? ({ ...r, ...patch } as AssetReductionForm) : r,
+      ),
+    });
+  }
+  function update986(patch: Partial<Extract<AssetReductionForm, { type: "unsold_98_6" }>>) {
+    onChange({
+      reductions: reductions.map((r) =>
+        r.type === "unsold_98_6" ? ({ ...r, ...patch } as AssetReductionForm) : r,
+      ),
+    });
+  }
 
   const new993 = reductions.find((r) => r.type === "new_99_3");
 
@@ -237,6 +262,9 @@ export function UnifiedReductionPanel({ asset, transferDate, onChange }: Unified
           onUpdate988={update988}
           onUpdate987={update987}
           onUpdate992={update992}
+          onUpdate983={update983}
+          onUpdate985={update985}
+          onUpdate986={update986}
           assetContractDate={asset.assetContractDate ?? ""}
           onAssetContractDateChange={(v) => onChange({ assetContractDate: v })}
           acquisitionDate={asset.acquisitionDate}
@@ -302,6 +330,9 @@ function GroupCategorySection({
   onUpdate988,
   onUpdate987,
   onUpdate992,
+  onUpdate983,
+  onUpdate985,
+  onUpdate986,
   assetContractDate,
   onAssetContractDateChange,
   acquisitionDate,
@@ -333,6 +364,9 @@ function GroupCategorySection({
   onUpdate988: (patch: Partial<Extract<AssetReductionForm, { type: "unsold_98_8" }>>) => void;
   onUpdate987: (patch: Partial<Extract<AssetReductionForm, { type: "unsold_98_7" }>>) => void;
   onUpdate992: (patch: Partial<Extract<AssetReductionForm, { type: "unsold_99_2" }>>) => void;
+  onUpdate983: (patch: Partial<Extract<AssetReductionForm, { type: "unsold_98_3" }>>) => void;
+  onUpdate985: (patch: Partial<Extract<AssetReductionForm, { type: "unsold_98_5" }>>) => void;
+  onUpdate986: (patch: Partial<Extract<AssetReductionForm, { type: "unsold_98_6" }>>) => void;
   /** Round 9 (2026-05-06): 매매계약일 (자산-수준, 펼침 시 활성화) */
   assetContractDate: string;
   onAssetContractDateChange: (v: string) => void;
@@ -530,6 +564,28 @@ function GroupCategorySection({
                       const form992 = reductions.find((r) => r.type === "unsold_99_2");
                       return form992 && form992.type === "unsold_99_2" ? (
                         <Unsold992InputForm value={form992} onChange={onUpdate992} />
+                      ) : null;
+                    })()}
+                  {/* P3 (2026-06-12): §98의3 / §98의5 / §98의6 입력 폼 */}
+                  {id === "unsold_98_3" &&
+                    (() => {
+                      const form983 = reductions.find((r) => r.type === "unsold_98_3");
+                      return form983 && form983.type === "unsold_98_3" ? (
+                        <Unsold983InputForm value={form983} onChange={onUpdate983} />
+                      ) : null;
+                    })()}
+                  {id === "unsold_98_5" &&
+                    (() => {
+                      const form985 = reductions.find((r) => r.type === "unsold_98_5");
+                      return form985 && form985.type === "unsold_98_5" ? (
+                        <Unsold985InputForm value={form985} onChange={onUpdate985} />
+                      ) : null;
+                    })()}
+                  {id === "unsold_98_6" &&
+                    (() => {
+                      const form986 = reductions.find((r) => r.type === "unsold_98_6");
+                      return form986 && form986.type === "unsold_98_6" ? (
+                        <Unsold986InputForm value={form986} onChange={onUpdate986} />
                       ) : null;
                     })()}
                 </ToggleCard>

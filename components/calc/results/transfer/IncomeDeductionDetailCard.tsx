@@ -18,21 +18,34 @@ type Detail =
   | { kind: "new_99"; result: New99Result }
   | { kind: "unsold_98_8"; result: Unsold988Result }
   | { kind: "unsold_98_7"; result: UnsoldHybridResult }
-  | { kind: "unsold_99_2"; result: UnsoldHybridResult };
+  | { kind: "unsold_99_2"; result: UnsoldHybridResult }
+  | { kind: "unsold_98_3"; result: UnsoldHybridResult }
+  | { kind: "unsold_98_5"; result: UnsoldHybridResult }
+  | { kind: "unsold_98_6"; result: UnsoldHybridResult };
 
 const TITLES: Record<Detail["kind"], string> = {
   new_99: "§99 — 신축주택 양도소득세 감면 (IMF 1차)",
   unsold_98_8: "§98의8 — 준공후미분양주택 50% 공제",
   unsold_98_7: "§98의7 — 미분양주택 과세특례 (9억 이하)",
   unsold_99_2: "§99의2 — 신축주택등 과세특례 (신축·미분양·1세대1주택)",
+  unsold_98_3: "§98의3 — 미분양주택 과세특례 (서울 밖, 100%·과밀 60%)",
+  unsold_98_5: "§98의5 — 수도권 밖 미분양 과세특례 (인하율별 60/80/100%)",
+  unsold_98_6: "§98의6 — 준공후미분양주택 과세특례 (50%)",
 };
+
+const HYBRID_KINDS: ReadonlyArray<string> = [
+  "unsold_98_7", "unsold_99_2", "unsold_98_3", "unsold_98_5", "unsold_98_6",
+];
 
 export function IncomeDeductionDetailCard({ kind, result }: Detail) {
   const title = TITLES[kind];
-  // P2 하이브리드 — 5년 내 양도 = 세액감면 경로 (소득금액 차감 아님)
-  const isTaxAmountMode =
-    (kind === "unsold_98_7" || kind === "unsold_99_2") &&
-    (result as UnsoldHybridResult).effectCategory === "tax_amount";
+  // P2·P3 하이브리드 — 5년 내 양도 = 세액감면 경로 (소득금액 차감 아님)
+  const isHybrid = HYBRID_KINDS.includes(kind);
+  const isTaxAmountMode = isHybrid && (result as UnsoldHybridResult).effectCategory === "tax_amount";
+  const isRuralExempt = isHybrid && (result as UnsoldHybridResult).ruralSurtaxExempt;
+  const hybridRatePct = isHybrid
+    ? Math.round((result as UnsoldHybridResult).taxReductionRate * 100)
+    : 100;
   if (!result.isEligible) {
     return (
       <div className="rounded-lg border border-rose-300 bg-rose-50/80 dark:border-rose-700/50 dark:bg-rose-950/30 p-4 space-y-3">
@@ -59,7 +72,7 @@ export function IncomeDeductionDetailCard({ kind, result }: Detail) {
         <span className="text-xs rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 px-2 py-0.5 font-medium">
           {result.isWithin5Years
             ? isTaxAmountMode
-              ? "취득 후 5년 이내 — 100% 세액감면"
+              ? `취득 후 5년 이내 — ${hybridRatePct}% 세액감면`
               : "취득 후 5년 이내 양도"
             : "취득 후 5년 경과 양도"}
         </span>
@@ -81,7 +94,7 @@ export function IncomeDeductionDetailCard({ kind, result }: Detail) {
         ))}
         <div className="border-t border-emerald-200 dark:border-emerald-800/40 pt-1.5 flex items-baseline justify-between">
           <span className="text-xs font-semibold text-emerald-900 dark:text-emerald-200">
-            {isTaxAmountMode ? "감면세액 (산출세액의 100%)" : "과세대상소득금액에서 차감한 양도소득금액"}
+            {isTaxAmountMode ? `감면세액 (산출세액의 ${hybridRatePct}%)` : "과세대상소득금액에서 차감한 양도소득금액"}
           </span>
           <span className="text-sm font-bold text-emerald-900 dark:text-emerald-100 font-mono tabular-nums">
             {isTaxAmountMode
@@ -96,6 +109,13 @@ export function IncomeDeductionDetailCard({ kind, result }: Detail) {
           <p className="text-[11px] text-sky-900 dark:text-sky-300">
             농어촌특별세: 감면세액 {result.taxReductionForRuralSurtax.toLocaleString()} × 20% ={" "}
             {result.ruralSurtax.toLocaleString()} (농어촌특별세법 §5 — 총 납부세액에 합산)
+          </p>
+        </div>
+      )}
+      {isRuralExempt && (
+        <div className="rounded-md border border-sky-200 bg-sky-50 dark:border-sky-800/40 dark:bg-sky-950/30 px-3 py-2">
+          <p className="text-[11px] text-sky-900 dark:text-sky-300">
+            농어촌특별세 비과세 (농어촌특별세법 시행령 §4⑦1호)
           </p>
         </div>
       )}

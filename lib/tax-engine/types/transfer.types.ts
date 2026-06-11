@@ -267,10 +267,7 @@ export interface TransferTaxInput {
   filingPenaltyDetails?: FilingPenaltyInput;
   /** 지연납부가산세 입력 (선택, 미제공 시 가산세 계산 생략) */
   delayedPaymentDetails?: DelayedPaymentInput;
-  /**
-   * 기본공제 스킵 (§103). aggregate 엔진에서 호출 시 true로 세팅.
-   * default false → 기존 동작 유지.
-   */
+  /** 기본공제 스킵 (§103). aggregate 엔진에서 호출 시 true. default false. */
   skipBasicDeduction?: boolean;
   /**
    * 양도차익 음수 바닥 처리 생략 (§102② 차손 통산용).
@@ -278,6 +275,8 @@ export interface TransferTaxInput {
    * default false → 기존 `Math.max(0, gain)` 동작 유지.
    */
   skipLossFloor?: boolean;
+  /** P3 특칙 — §98의3④·§98의5③·§98의6③ 단기세율(§104①2·3호) 배제. 엔진 내부 주입 (STEP 7). */
+  suppressShortTermRate?: boolean;
   /**
    * 1990.8.30. 이전 취득 토지 기준시가 환산 입력 (선택).
    * 제공 시 엔진이 calculatePre1990LandValuation()으로 기준시가를 산출하여
@@ -669,6 +668,12 @@ export interface TransferTaxResult {
   unsold987Detail?: UnsoldHybridResult;
   /** §99의2 신축·미분양·1세대1주택 하이브리드 — 6억 OR 85㎡ (P2) */
   unsold992Detail?: UnsoldHybridResult;
+  /** §98의3 서울 밖 미분양 — 100%(과밀 60%)·농특세 비과세 (P3) */
+  unsold983Detail?: UnsoldHybridResult;
+  /** §98의5 수도권 밖 미분양 — 인하율별 60/80/100%·농특세 비과세 (P3) */
+  unsold985Detail?: UnsoldHybridResult;
+  /** §98의6 준공후미분양 50% — 1호/2호 (5년 내 감면 1호 한정) (P3) */
+  unsold986Detail?: UnsoldHybridResult;
   /** 신축·미분양 감면 상세 (newHousingDetails 제공 시) — 매칭 조문·감면율·5년 안분 표시용 */
   newHousingReductionDetail?: NewHousingReductionResult;
   /**
@@ -694,25 +699,13 @@ export interface TransferTaxResult {
   pre1990LandValuationDetail?: Pre1990LandValuationResult;
   /** 다필지 계산 상세 결과 (parcels 제공 시만 포함) */
   parcelDetails?: ParcelResult[];
-  /**
-   * 토지/건물 분리 계산 상세 결과 (landAcquisitionDate 제공 시만 포함).
-   * UI에서 토지·건물 각각의 양도차익·장특공제 내역 표시용.
-   */
+  /** 토지/건물 분리 계산 상세 (landAcquisitionDate 제공 시) — 각 양도차익·장특 내역 표시용 */
   splitDetail?: SplitGainResult;
-  /**
-   * 개별주택가격 미공시 취득 환산 상세 결과 (preHousingDisclosure 제공 시만 포함).
-   * UI에서 Sum_A/Sum_F/P_A_est·안분비율·각 항목 산식 표시용.
-   */
+  /** 개별주택가격 미공시 취득 환산 상세 (preHousingDisclosure 제공 시) — 안분비율·산식 표시용 */
   preHousingDisclosureDetail?: PreHousingDisclosureResult;
-  /**
-   * 상속 취득가액 의제 상세 결과 (inheritedAcquisition 제공 시만 포함).
-   * UI에서 case A 환산/실가×CPI 비교 또는 case B 신고가액·평가방법 표시용.
-   */
+  /** 상속 취득가액 의제 상세 (inheritedAcquisition 제공 시) — case A/B 비교 표시용 */
   inheritedAcquisitionDetail?: import("./inheritance-acquisition.types").InheritanceAcquisitionResult;
-  /**
-   * 상속 주택 환산취득가 상세 결과 (inheritedHouseValuation 제공 시만 포함).
-   * UI에서 3-시점 합계 기준시가·추정 주택가격·1990 등급가액 환산 산식 표시용.
-   */
+  /** 상속 주택 환산취득가 상세 (inheritedHouseValuation 제공 시) — 3-시점·1990 환산 산식 표시용 */
   inheritedHouseValuationDetail?: InheritanceHouseValuationResult;
   /** 겸용주택 분리계산 (propertyType === "mixed-use-house"). UI 4-카드. */
   mixedUseDetail?: MixedUseGainBreakdown;

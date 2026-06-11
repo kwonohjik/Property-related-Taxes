@@ -73,6 +73,30 @@ export function mapReductionsToEngine(reductions: ReductionPayload[]): TransferR
         rentalEndDate988: r.rentalEndDate988 ? new Date(r.rentalEndDate988) : undefined,
       } as TransferReduction;
     }
+    // P3 §98의3·§98의5·§98의6 (2026-06-12): string 일자 → Date 변환 (⑭)
+    if (r.type === "unsold_98_3") {
+      return {
+        ...r,
+        contractDate983: r.contractDate983 ? new Date(r.contractDate983) : undefined,
+        constructionStartDate983: r.constructionStartDate983 ? new Date(r.constructionStartDate983) : undefined,
+        usageApprovalDate983: r.usageApprovalDate983 ? new Date(r.usageApprovalDate983) : undefined,
+      } as TransferReduction;
+    }
+    if (r.type === "unsold_98_5") {
+      return {
+        ...r,
+        contractDate985: r.contractDate985 ? new Date(r.contractDate985) : undefined,
+      } as TransferReduction;
+    }
+    if (r.type === "unsold_98_6") {
+      return {
+        ...r,
+        contractDate986: r.contractDate986 ? new Date(r.contractDate986) : undefined,
+        rentalContractDate986: r.rentalContractDate986 ? new Date(r.rentalContractDate986) : undefined,
+        rentalStartDate986: r.rentalStartDate986 ? new Date(r.rentalStartDate986) : undefined,
+        rentalEndDate986: r.rentalEndDate986 ? new Date(r.rentalEndDate986) : undefined,
+      } as TransferReduction;
+    }
     // P2 §98의7 9억↓ 미분양 (2026-06-11): string 일자 → Date 변환 (⑭)
     if (r.type === "unsold_98_7") {
       return {

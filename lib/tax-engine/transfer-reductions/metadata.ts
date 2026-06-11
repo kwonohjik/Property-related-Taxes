@@ -200,7 +200,9 @@ export const REDUCTION_METADATA: Record<TransferReductionId, ReductionMetadata> 
     category: "unsold_housing",
     effectCategory: "tax_amount",
     uiLabel: "§98의3 — 서울 외 미분양 100%(과밀 60%)",
-    effectLabel: "5년 내 100% (수도권과밀 60%) / 5년 후 5년간 발생분 차감",
+    // P3 (2026-06-12): 농특세 비과세 (농특세령 §4⑦1호) + 장특 표1·기본세율 특칙 (법 ④)
+    effectLabel: "5년 내 세액 100% 감면 (수도권과밀 60%·660/149㎡ 한정) / 5년 후 5년간 발생분 차감 — 농특세 비과세",
+    isFullyImplemented: true,
   },
   unsold_98_4: {
     id: "unsold_98_4",
@@ -216,7 +218,9 @@ export const REDUCTION_METADATA: Record<TransferReductionId, ReductionMetadata> 
     category: "unsold_housing",
     effectCategory: "tax_amount",
     uiLabel: "§98의5 — 분양가 인하율 60/80/100%",
-    effectLabel: "5년 내 인하율별 세액감면 / 5년 후 5년간 발생분 인하율 비율 차감 (2010.2.12~2011.4.30)",
+    // P3 (2026-06-12): 농특세 비과세 (농특세령 §4⑦1호)
+    effectLabel: "5년 내 인하율별 세액감면 / 5년 후 5년간 발생분 인하율 비율 차감 (2010.2.11 현재 수도권 밖 미분양, ~2011.4.30 계약) — 농특세 비과세",
+    isFullyImplemented: true,
   },
   unsold_98_6: {
     id: "unsold_98_6",
@@ -224,7 +228,9 @@ export const REDUCTION_METADATA: Record<TransferReductionId, ReductionMetadata> 
     category: "unsold_housing",
     effectCategory: "tax_amount",
     uiLabel: "§98의6 — 준공후미분양 50%",
-    effectLabel: "5년 내 50% / 5년 후 5년간 발생분의 50% 차감 (~2011.12.31 임대계약)",
+    // M-2 (2026-06-12): 5년 내 감면 ①1호 한정 + 령 §98의5② 한정 (기준시가 합계 6억·전용 149)
+    effectLabel: "5년 내 50% (①1호 한정) / 5년 후 5년간 발생분의 50% 차감 (~2011.12.31 임대계약, 기준시가 합계 6억·149㎡ 이내)",
+    isFullyImplemented: true,
   },
   unsold_98_7: {
     id: "unsold_98_7",
