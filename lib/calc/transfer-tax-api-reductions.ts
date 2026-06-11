@@ -234,6 +234,45 @@ export function toEngineReductions(
         standardPriceAtTransfer988: parseAmount(r.standardPriceAtTransfer988 || "0") || undefined,
       };
     }
+    // ── P2 §98의7 9억↓ 미분양 (2026-06-11): 하이브리드 본 변환 (④) ──
+    if (r.type === "unsold_98_7") {
+      return {
+        type: "unsold_98_7" as const,
+        contractDate987: r.contractDate987 || undefined,
+        acquisitionPrice987: parseAmount(r.acquisitionPrice987 || "0") || undefined,
+        isUnsoldAtCutoff987: r.isUnsoldAtCutoff987,
+        isFirstContract987: r.isFirstContract987,
+        isNotOccupiedAtContract987: r.isNotOccupiedAtContract987,
+        isNotRecontract987: r.isNotRecontract987,
+        standardPriceAtAcquisition987: parseAmount(r.standardPriceAtAcquisition987 || "0") || undefined,
+        standardPriceAt5Years987: parseAmount(r.standardPriceAt5Years987 || "0") || undefined,
+        standardPriceAtTransfer987: parseAmount(r.standardPriceAtTransfer987 || "0") || undefined,
+      };
+    }
+    // ── P2 §99의2 신축·미분양·1세대1주택 (2026-06-11): 하이브리드 본 변환 (④) ──
+    // houseType별 비활성 분기 일자만 strip (UI 검토 #4 — 라디오 전환 잔존값 미전달)
+    if (r.type === "unsold_99_2") {
+      return {
+        type: "unsold_99_2" as const,
+        houseType992: r.houseType992,
+        contractDate992:
+          r.houseType992 !== "self_built" ? r.contractDate992 || undefined : undefined,
+        usageApprovalDate992:
+          r.houseType992 === "self_built" ? r.usageApprovalDate992 || undefined : undefined,
+        acquisitionPrice992: parseAmount(r.acquisitionPrice992 || "0") || undefined,
+        exclusiveAreaSqm992: parseDecimal(r.exclusiveAreaSqm992 || "") || undefined,
+        meetsHouseTypeRequirement992: r.meetsHouseTypeRequirement992,
+        isNotExcludedSelfBuilt992: r.isNotExcludedSelfBuilt992,
+        meetsOneHouseSellerRequirement992: r.meetsOneHouseSellerRequirement992,
+        isOfficetel992: r.isOfficetel992,
+        meetsOfficetelRequirement992: r.meetsOfficetelRequirement992,
+        isNotRecontract992: r.isNotRecontract992,
+        hasConfirmationSeal992: r.hasConfirmationSeal992,
+        standardPriceAtAcquisition992: parseAmount(r.standardPriceAtAcquisition992 || "0") || undefined,
+        standardPriceAt5Years992: parseAmount(r.standardPriceAt5Years992 || "0") || undefined,
+        standardPriceAtTransfer992: parseAmount(r.standardPriceAtTransfer992 || "0") || undefined,
+      };
+    }
     // ── §98의9 수도권 밖 준공후미분양 (2026-06-11): 주택수 제외 본 변환 (④) ──
     // 날짜는 string 그대로 — Route handler(⑭ route-reductions-mapper)에서 Date 변환.
     if (r.type === "unsold_98_9") {

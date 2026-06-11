@@ -73,6 +73,21 @@ export function mapReductionsToEngine(reductions: ReductionPayload[]): TransferR
         rentalEndDate988: r.rentalEndDate988 ? new Date(r.rentalEndDate988) : undefined,
       } as TransferReduction;
     }
+    // P2 §98의7 9억↓ 미분양 (2026-06-11): string 일자 → Date 변환 (⑭)
+    if (r.type === "unsold_98_7") {
+      return {
+        ...r,
+        contractDate987: r.contractDate987 ? new Date(r.contractDate987) : undefined,
+      } as TransferReduction;
+    }
+    // P2 §99의2 신축·미분양·1세대1주택 (2026-06-11): string 일자 → Date 변환 (⑭)
+    if (r.type === "unsold_99_2") {
+      return {
+        ...r,
+        contractDate992: r.contractDate992 ? new Date(r.contractDate992) : undefined,
+        usageApprovalDate992: r.usageApprovalDate992 ? new Date(r.usageApprovalDate992) : undefined,
+      } as TransferReduction;
+    }
     // §98의9 수도권 밖 준공후미분양 (2026-06-11): string 일자 → Date 변환 (⑭)
     if (r.type === "unsold_98_9") {
       return {

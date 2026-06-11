@@ -198,6 +198,42 @@ export function getReductionDefault(id: TransferReductionId): AssetReductionForm
       standardPriceAtTransfer988: "",
     };
   }
+  // P2 (2026-06-11): §98의7 9억↓ 미분양 — 하이브리드
+  if (id === "unsold_98_7") {
+    return {
+      type: "unsold_98_7",
+      contractDate987: "",
+      acquisitionPrice987: "",
+      isUnsoldAtCutoff987: false,
+      isFirstContract987: false,
+      isNotOccupiedAtContract987: false,
+      isNotRecontract987: false,
+      standardPriceAtAcquisition987: "",
+      standardPriceAt5Years987: "",
+      standardPriceAtTransfer987: "",
+    };
+  }
+  // P2 (2026-06-11): §99의2 신축·미분양·1세대1주택 — 하이브리드
+  if (id === "unsold_99_2") {
+    return {
+      type: "unsold_99_2",
+      houseType992: "new_or_unsold",
+      contractDate992: "",
+      usageApprovalDate992: "",
+      acquisitionPrice992: "",
+      exclusiveAreaSqm992: "",
+      meetsHouseTypeRequirement992: false,
+      isNotExcludedSelfBuilt992: false,
+      meetsOneHouseSellerRequirement992: false,
+      isOfficetel992: false,
+      meetsOfficetelRequirement992: false,
+      isNotRecontract992: false,
+      hasConfirmationSeal992: false,
+      standardPriceAtAcquisition992: "",
+      standardPriceAt5Years992: "",
+      standardPriceAtTransfer992: "",
+    };
+  }
   // §98의9 수도권 밖 준공후미분양 (2026-06-11)
   if (id === "unsold_98_9") {
     return {

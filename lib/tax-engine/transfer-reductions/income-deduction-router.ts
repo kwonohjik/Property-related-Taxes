@@ -14,14 +14,17 @@ import { coerceOptionalDate } from "../tax-utils";
 import { evaluateNew993, type New993Result } from "./new-99-3";
 import { evaluateNew99, type New99Result } from "./new-99";
 import { evaluateUnsold988, type Unsold988Result } from "./unsold-98-8";
+import { evaluateHybridFromReduction, type UnsoldHybridResult } from "./unsold-hybrid";
 
-export type IncomeDeductionId = "new_99_3" | "new_99" | "unsold_98_8";
+export type IncomeDeductionId = "new_99_3" | "new_99" | "unsold_98_8" | "unsold_98_7" | "unsold_99_2";
 
 /** 중과 배제 대상 (소령 §167의3①5호 열거 — §98의4는 비열거라 P4에서 제외 유지) */
 export const SURCHARGE_EXCLUDED_INCOME_DEDUCTION_IDS: ReadonlyArray<IncomeDeductionId> = [
   "new_99_3",
   "new_99",
   "unsold_98_8",
+  "unsold_98_7",
+  "unsold_99_2",
 ];
 
 /** 라우터 평가 컨텍스트 — 자산-수준 입력에서 추출 (TransferTaxInput 직접 의존 회피) */
@@ -37,17 +40,27 @@ export interface IncomeDeductionContext {
 }
 
 export interface IncomeDeductionResolution {
-  /** 적용(eligible) 조문 — 없으면 undefined */
+  /** 차감(소득금액 공제) 적용 조문 — 없으면 undefined */
   appliedId?: IncomeDeductionId;
+  /**
+   * 효과 경로 무관 적격 조문 — 중과 배제(소령 §167의3①5호 "감면되는 주택") 판정용 (P2).
+   * 하이브리드 5년 내(세액감면 경로)는 appliedId 없이 eligibleId만 설정됨.
+   * 기존 차감 3조문은 eligibleId === appliedId.
+   */
+  eligibleId?: IncomeDeductionId;
   /** 차감액 (적용 조문의 reducibleTransferIncome) */
   reducible: number;
   new993Detail?: New993Result;
   new99Detail?: New99Result;
   unsold988Detail?: Unsold988Result;
+  unsold987Detail?: UnsoldHybridResult;
+  unsold992Detail?: UnsoldHybridResult;
   /** step 표시용 — 적용/불적격 공통 */
   stepLabel?: string;
   legalBasis?: string;
   ineligibleMessages?: string;
+  /** 하이브리드 5년 내 — 세액감면 경로 안내 step용 (P2) */
+  taxAmountMode?: boolean;
 }
 
 /** reduction variant 멤버 — 구조적 타이핑 (stub.types 직접 import 회피, §98의9 선례) */
@@ -60,6 +73,8 @@ const STEP_LABELS: Record<IncomeDeductionId, string> = {
   new_99_3: "§99의3 신축주택 과세특례",
   new_99: "§99 신축주택 감면 (IMF 1차)",
   unsold_98_8: "§98의8 준공후미분양 50% 공제",
+  unsold_98_7: "§98의7 미분양주택 과세특례",
+  unsold_99_2: "§99의2 신축주택등 과세특례",
 };
 
 /**
@@ -159,6 +174,38 @@ export function resolveIncomeDeduction(
       { unsold988Detail: detail });
   }
 
+  // ── §98의7 · §99의2 하이브리드 (P2 신규) — 5년 후만 차감, 5년 내는 세액감면(calcReductions) ──
+  const rHybrid = reductions.find((x) => x.type === "unsold_98_7" || x.type === "unsold_99_2") as
+    | ReductionLike
+    | undefined;
+  if (rHybrid) {
+    const detail = evaluateHybridFromReduction(rHybrid, {
+      transferDate: ctx.transferDate,
+      acquisitionDate: ctx.acquisitionDate,
+      assetContractDate: ctx.assetContractDate,
+      standardPriceAtTransfer: ctx.standardPriceAtTransfer,
+      transferIncome: ctx.transferIncome,
+    });
+    if (detail) {
+      const id = detail.id;
+      const detailField = id === "unsold_98_7" ? { unsold987Detail: detail } : { unsold992Detail: detail };
+      const isIncomeDeduction = detail.isEligible && detail.effectCategory === "income_deduction";
+      return {
+        // 5년 내(tax_amount)는 appliedId 미설정 — STEP 4.6 차감 없음 (calcReductions 경로와 이중 혜택 차단)
+        appliedId: isIncomeDeduction ? id : undefined,
+        eligibleId: detail.isEligible ? id : undefined,
+        reducible: isIncomeDeduction ? detail.reducibleTransferIncome : 0,
+        stepLabel: STEP_LABELS[id],
+        legalBasis: detail.legalBasis,
+        ineligibleMessages: detail.isEligible
+          ? undefined
+          : detail.ineligibleReasons.map((x) => x.message).join(" · "),
+        taxAmountMode: detail.isEligible && detail.effectCategory === "tax_amount",
+        ...detailField,
+      };
+    }
+  }
+
   return { reducible: 0 };
 }
 
@@ -172,6 +219,7 @@ function buildResolution(
 ): IncomeDeductionResolution {
   return {
     appliedId: isEligible ? id : undefined,
+    eligibleId: isEligible ? id : undefined,
     reducible: isEligible ? reducible : 0,
     stepLabel: STEP_LABELS[id],
     legalBasis,
@@ -186,6 +234,15 @@ export function buildIncomeDeductionStep(
   incomeBefore: number,
   incomeAfter: number,
 ): { label: string; formula: string; amount: number; legalBasis: string } {
+  // 하이브리드 5년 내 — 차감 없음, 세액감면 경로 안내 (P2)
+  if (resolution.taxAmountMode) {
+    return {
+      label: `${resolution.stepLabel} — 5년 이내 양도 (세액감면 경로)`,
+      formula: "취득일부터 5년 이내 양도 — 감면세액 단계에서 양도소득세 100% 세액감면 적용",
+      amount: 0,
+      legalBasis: resolution.legalBasis ?? "",
+    };
+  }
   if (resolution.appliedId) {
     return {
       label: `${resolution.stepLabel} — 양도소득금액 차감`,
@@ -203,12 +260,19 @@ export function buildIncomeDeductionStep(
 }
 
 /** STEP 0.45 중과 배제 단계 표시 */
+const EXCLUSION_ARTICLE_LABELS: Record<IncomeDeductionId, string> = {
+  new_99_3: "조특법 §99의3",
+  new_99: "조특법 §99",
+  unsold_98_8: "조특법 §98의8",
+  unsold_98_7: "조특법 §98의7",
+  unsold_99_2: "조특법 §99의2",
+};
+
 export function buildSurchargeExclusionStep(exclusion: {
   appliedId?: IncomeDeductionId;
   legalBasis?: string;
 }): { label: string; formula: string; amount: number; legalBasis: string } {
-  const article =
-    exclusion.appliedId === "unsold_98_8" ? "조특법 §98의8" : exclusion.appliedId === "new_99" ? "조특법 §99" : "조특법 §99의3";
+  const article = exclusion.appliedId ? EXCLUSION_ARTICLE_LABELS[exclusion.appliedId] : "조특법 §99의3";
   return {
     label: "감면주택 다주택 중과 배제",
     formula: `${article} 감면주택 양도 — 중과세율 적용 제외`,
@@ -228,10 +292,12 @@ export function resolveSurchargeExclusionByReduction(
   ctx: Omit<IncomeDeductionContext, "transferIncome">,
 ): { excluded: boolean; appliedId?: IncomeDeductionId; legalBasis?: string } {
   const resolution = resolveIncomeDeduction(reductions, { ...ctx, transferIncome: 0 });
-  if (resolution.appliedId && SURCHARGE_EXCLUDED_INCOME_DEDUCTION_IDS.includes(resolution.appliedId)) {
+  // P2: appliedId → eligibleId 기준 — 하이브리드 5년 내(세액감면 경로)도 §167의3①5호
+  // "감면되는 주택"에 해당하므로 효과 경로 무관 적격이면 배제.
+  if (resolution.eligibleId && SURCHARGE_EXCLUDED_INCOME_DEDUCTION_IDS.includes(resolution.eligibleId)) {
     return {
       excluded: true,
-      appliedId: resolution.appliedId,
+      appliedId: resolution.eligibleId,
       legalBasis: "소령 §167의3①5호·§167의10①2호",
     };
   }

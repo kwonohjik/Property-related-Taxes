@@ -26,6 +26,10 @@ import {
   calculateSelfFarmingReduction,
 } from "./self-farming-reduction";
 import { evaluateRental97TaxAmount } from "./transfer-reductions/rental-97-router";
+import {
+  evaluateHybridTaxAmountFromReductions,
+  type UnsoldHybridResult,
+} from "./transfer-reductions/unsold-hybrid";
 import type { Rental97Result } from "./transfer-reductions/types";
 import type { LongTermRentalRuleSet, NewHousingMatrixData } from "./schemas/rate-table.schema";
 import type { TransferReduction } from "./types/transfer.types";
@@ -66,6 +70,7 @@ export function calcReductions(
   publicExpropriationDetail?: PublicExpropriationReductionResult;
   selfFarmingReductionDetail?: SelfFarmingReductionResult;
   rental97TaxDetail?: Rental97Result;
+  hybridTaxDetail?: UnsoldHybridResult;
 } {
   if (reductions.length === 0 && !rentalReductionDetails && !newHousingDetails) {
     return { reductionAmount: 0 };
@@ -114,6 +119,29 @@ export function calcReductions(
         rental97Result.reductionAmount > 0
       ) {
         candidates.push({ amount: rental97Result.reductionAmount, type: rental97Result.id });
+      }
+    }
+  }
+
+  // P2 (2026-06-11): §98의7·§99의2 하이브리드 5년 내 세액감면 (100%) — §127⑦ max 합류.
+  // 5년 후 차감 경로는 STEP 4.6 income-deduction-router가 담당 (이중 혜택 없음 —
+  // evaluator가 effectCategory로 단일 경로 보장).
+  let hybridTaxDetail: UnsoldHybridResult | undefined;
+  if (transferDate) {
+    const hybridResult = evaluateHybridTaxAmountFromReductions(reductions, {
+      transferDate,
+      acquisitionDate,
+      assetContractDate,
+      calculatedTax,
+    });
+    if (hybridResult) {
+      hybridTaxDetail = hybridResult;
+      if (
+        hybridResult.isEligible &&
+        hybridResult.effectCategory === "tax_amount" &&
+        hybridResult.reductionAmount > 0
+      ) {
+        candidates.push({ amount: hybridResult.reductionAmount, type: hybridResult.id });
       }
     }
   }
@@ -297,5 +325,6 @@ export function calcReductions(
     publicExpropriationDetail,
     selfFarmingReductionDetail,
     rental97TaxDetail,
+    hybridTaxDetail,
   };
 }

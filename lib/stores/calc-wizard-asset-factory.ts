@@ -428,6 +428,42 @@ export function migrateAsset(raw: unknown): AssetForm {
           ...r,
         };
       }
+      // P2 §98의7 (2026-06-11): 구 stub 데이터 본 필드 누락 보정 (③)
+      if (r && r.type === "unsold_98_7") {
+        return {
+          contractDate987: "",
+          acquisitionPrice987: "",
+          isUnsoldAtCutoff987: false,
+          isFirstContract987: false,
+          isNotOccupiedAtContract987: false,
+          isNotRecontract987: false,
+          standardPriceAtAcquisition987: "",
+          standardPriceAt5Years987: "",
+          standardPriceAtTransfer987: "",
+          ...r,
+        };
+      }
+      // P2 §99의2 (2026-06-11): 구 stub 데이터 본 필드 누락 보정 (③)
+      if (r && r.type === "unsold_99_2") {
+        return {
+          houseType992: "new_or_unsold",
+          contractDate992: "",
+          usageApprovalDate992: "",
+          acquisitionPrice992: "",
+          exclusiveAreaSqm992: "",
+          meetsHouseTypeRequirement992: false,
+          isNotExcludedSelfBuilt992: false,
+          meetsOneHouseSellerRequirement992: false,
+          isOfficetel992: false,
+          meetsOfficetelRequirement992: false,
+          isNotRecontract992: false,
+          hasConfirmationSeal992: false,
+          standardPriceAtAcquisition992: "",
+          standardPriceAt5Years992: "",
+          standardPriceAtTransfer992: "",
+          ...r,
+        };
+      }
       // §98의9 (2026-06-11): 구 stub 데이터 본 필드 누락 보정 (③)
       if (r && r.type === "unsold_98_9") {
         return {

@@ -28,6 +28,7 @@ import type {
 import type { New993Result } from "./transfer-reductions/new-99-3";
 import type { New99Result } from "./transfer-reductions/new-99";
 import type { Unsold988Result } from "./transfer-reductions/unsold-98-8";
+import type { UnsoldHybridResult } from "./transfer-reductions/unsold-hybrid";
 import type { MultiHouseSurchargeResult } from "./multi-house-surcharge";
 import type { TransferTaxPenaltyResult } from "./transfer-tax-penalty";
 
@@ -49,6 +50,9 @@ export interface FinalizeArgs {
   new993PreliminaryResult?: New993Result;
   new99PreliminaryResult?: New99Result;
   unsold988PreliminaryResult?: Unsold988Result;
+  /** P2 하이브리드 (§98의7·§99의2) — router 평가 결과 (5년 후 차감 또는 5년 내 tax_amount) */
+  unsold987PreliminaryResult?: UnsoldHybridResult;
+  unsold992PreliminaryResult?: UnsoldHybridResult;
 }
 
 export interface FinalizeResult {
@@ -56,6 +60,9 @@ export interface FinalizeResult {
   new993FinalResult?: New993Result;
   new99FinalResult?: New99Result;
   unsold988FinalResult?: Unsold988Result;
+  // P2 하이브리드 (§98의7·§99의2) — 농특세 채움 후 최종 detail
+  unsold987FinalResult?: UnsoldHybridResult;
+  unsold992FinalResult?: UnsoldHybridResult;
   ruralSurtax993: number;
   // 감면 (calcReductions return의 fan-out)
   reductionAmount: number;
@@ -92,19 +99,32 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
     basicDeduction, taxBase, estimatedBase,
     transferIncomeBefore993, new993PreliminaryResult,
     new99PreliminaryResult, unsold988PreliminaryResult,
+    unsold987PreliminaryResult, unsold992PreliminaryResult,
   } = args;
 
-  // ── STEP 7.5: 차감형 감면(§99의3·§99·§98의8) 농어촌특별세 — 2-pass 공통 ──
-  // 농특세법 §2①1호 "소득공제" 해당 — 감면 전후 산출세액 차 × 20% (§99의3 선례 일반화, P1)
+  // ── STEP 7.5: 차감형 감면(§99의3·§99·§98의8 + 하이브리드 5년 후) 농어촌특별세 — 2-pass 공통 ──
+  // 농특세법 §2①1호 "소득공제" 해당 — 감면 전후 산출세액 차 × 20% (§99의3 선례 일반화, P1·P2)
   let new993FinalResult: New993Result | undefined = new993PreliminaryResult;
   let new99FinalResult: New99Result | undefined = new99PreliminaryResult;
   let unsold988FinalResult: Unsold988Result | undefined = unsold988PreliminaryResult;
+  let unsold987FinalResult: UnsoldHybridResult | undefined = unsold987PreliminaryResult;
+  let unsold992FinalResult: UnsoldHybridResult | undefined = unsold992PreliminaryResult;
   let ruralSurtax993 = 0;
-  const activePrelim = [new993PreliminaryResult, new99PreliminaryResult, unsold988PreliminaryResult]
-    .find((d) => d?.isEligible);
+  // 하이브리드는 5년 후(income_deduction)만 2-pass — 5년 내(tax_amount)는 STEP 8.7
+  const hybridIncomePrelims = [unsold987PreliminaryResult, unsold992PreliminaryResult].filter(
+    (d) => d?.isEligible && d.effectCategory === "income_deduction",
+  );
+  const activePrelim = [
+    new993PreliminaryResult, new99PreliminaryResult, unsold988PreliminaryResult,
+    ...hybridIncomePrelims,
+  ].find((d) => d?.isEligible);
   if (activePrelim) {
     const articleLabel =
-      activePrelim === unsold988PreliminaryResult ? "§98의8" : activePrelim === new99PreliminaryResult ? "§99" : "§99의3";
+      activePrelim === unsold988PreliminaryResult ? "§98의8"
+      : activePrelim === new99PreliminaryResult ? "§99"
+      : activePrelim === unsold987PreliminaryResult ? "§98의7"
+      : activePrelim === unsold992PreliminaryResult ? "§99의2"
+      : "§99의3";
     const taxBaseBefore993 = Math.max(0, transferIncomeBefore993 - basicDeduction);
     const taxResultBefore993 = calcTax(taxBaseBefore993, parsedRates, taxRateInput, multiHouseSurchargeResult);
     const taxReduction993 = Math.max(0, taxResultBefore993.calculatedTax - taxResult.calculatedTax);
@@ -112,6 +132,8 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
     const surtaxFields = { taxReductionForRuralSurtax: taxReduction993, ruralSurtax: ruralSurtax993 };
     if (activePrelim === new993PreliminaryResult) new993FinalResult = { ...new993PreliminaryResult!, ...surtaxFields };
     else if (activePrelim === new99PreliminaryResult) new99FinalResult = { ...new99PreliminaryResult!, ...surtaxFields };
+    else if (activePrelim === unsold987PreliminaryResult) unsold987FinalResult = { ...unsold987PreliminaryResult!, ...surtaxFields };
+    else if (activePrelim === unsold992PreliminaryResult) unsold992FinalResult = { ...unsold992PreliminaryResult!, ...surtaxFields };
     else unsold988FinalResult = { ...unsold988PreliminaryResult!, ...surtaxFields };
     if (taxReduction993 > 0) {
       steps.push({
@@ -134,6 +156,7 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
     publicExpropriationDetail,
     selfFarmingReductionDetail,
     rental97TaxDetail,
+    hybridTaxDetail,
   } = calcReductions(
     taxResult.calculatedTax,
     input.reductions,
@@ -193,6 +216,35 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
     }
   }
 
+  // ── STEP 8.7: 하이브리드(§98의7·§99의2) 5년 내 세액감면 농어촌특별세 — 감면세액 × 20% ──
+  // 농특세법 §2①1호 "조특법에 따라 감면받는 세액". §98의3·§98의5(P3)는 농특세령 §4⑦1호 비과세 —
+  // 본 2조문은 비과세 열거 없음 (plan §2-1).
+  let ruralSurtaxHybrid = 0;
+  if (
+    (reductionTypeApplied === "unsold_98_7" || reductionTypeApplied === "unsold_99_2") &&
+    cappedReductionAmount > 0
+  ) {
+    ruralSurtaxHybrid = applyRate(cappedReductionAmount, 0.2);
+    const hybridArticle = reductionTypeApplied === "unsold_98_7" ? "§98의7" : "§99의2";
+    steps.push({
+      label: `${hybridArticle} 농어촌특별세 (감면세액 × 20%)`,
+      formula: `감면세액 ${cappedReductionAmount.toLocaleString()} × 20% = ${ruralSurtaxHybrid.toLocaleString()}`,
+      amount: ruralSurtaxHybrid,
+      legalBasis: "농어촌특별세법 §5①1호",
+    });
+    // 최종 detail에 감면액·농특세 echo (calcReductions 평가본 우선 — reductionAmount 보유)
+    if (hybridTaxDetail && hybridTaxDetail.id === reductionTypeApplied) {
+      const merged: UnsoldHybridResult = {
+        ...hybridTaxDetail,
+        reductionAmount: cappedReductionAmount,
+        taxReductionForRuralSurtax: cappedReductionAmount,
+        ruralSurtax: ruralSurtaxHybrid,
+      };
+      if (merged.id === "unsold_98_7") unsold987FinalResult = merged;
+      else unsold992FinalResult = merged;
+    }
+  }
+
   // ── STEP 9: 결정세액 = 산출세액 - 감면 (원 미만 절사) ──
   const determinedTax = truncateToWon(Math.max(0, taxResult.calculatedTax - cappedReductionAmount));
   steps.push({
@@ -236,10 +288,11 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
   );
 
   // ── STEP 11: 총 납부세액 ──
-  const totalTax = determinedTaxWithPenalty + localIncomeTax + filingDelayedPenalty + ruralSurtax993;
+  const ruralSurtaxTotal = ruralSurtax993 + ruralSurtaxHybrid;
+  const totalTax = determinedTaxWithPenalty + localIncomeTax + filingDelayedPenalty + ruralSurtaxTotal;
   steps.push({
     label: "총 납부세액",
-    formula: `${totalAllPenalty > 0 ? "총결정세액" : "결정세액"} ${(determinedTax + totalAllPenalty).toLocaleString()} + 지방소득세 ${localIncomeTax.toLocaleString()}${ruralSurtax993 > 0 ? ` + 농특세 ${ruralSurtax993.toLocaleString()}` : ""}`,
+    formula: `${totalAllPenalty > 0 ? "총결정세액" : "결정세액"} ${(determinedTax + totalAllPenalty).toLocaleString()} + 지방소득세 ${localIncomeTax.toLocaleString()}${ruralSurtaxTotal > 0 ? ` + 농특세 ${ruralSurtaxTotal.toLocaleString()}` : ""}`,
     amount: totalTax,
     legalBasis: `${TRANSFER.FINAL_TAX} + ${TRANSFER.LOCAL_INCOME_TAX}`,
   });
@@ -248,6 +301,8 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
     new993FinalResult,
     new99FinalResult,
     unsold988FinalResult,
+    unsold987FinalResult,
+    unsold992FinalResult,
     ruralSurtax993,
     // STEP 8.5 5년 한도 반영값 — 결과 표시(결정세액 산식)와 일관 유지
     reductionAmount: cappedReductionAmount,

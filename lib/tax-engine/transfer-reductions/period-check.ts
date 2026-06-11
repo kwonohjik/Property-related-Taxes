@@ -146,7 +146,11 @@ const RULES: Record<TransferReductionId, PeriodRule> = {
   },
   unsold_98_7: {
     label: "매매계약 2012.9.24~2012.12.31",
-    check: (c) => within(c.contractDate, D("2012-09-24"), D("2012-12-31")),
+    // P2 (2026-06-11): 자산 계약일 미입력 시 낙관 통과 — 본 판정은 reduction-수준
+    // contractDate987 기준 evaluateUnsold987. 취득일 fallback 금지 — 계약 2012·취득 2013
+    // 케이스("그 계약에 따라 취득")를 취득일로 오차단하지 않도록 contractDate만 본다.
+    check: (c) =>
+      c.contractDate === undefined || within(c.contractDate, D("2012-09-24"), D("2012-12-31")),
     failReason: "9억 이하 미분양 매매계약 시한(2012.9.24~2012.12.31) 외 — 조특법 §98의7",
   },
   unsold_98_8: {
@@ -168,7 +172,10 @@ const RULES: Record<TransferReductionId, PeriodRule> = {
   },
   unsold_99_2: {
     label: "매매계약 2013.4.1~2013.12.31",
-    check: (c) => within(c.contractDate, D("2013-04-01"), D("2013-12-31")),
+    // P2 (2026-06-11): 낙관 통과 + contractDate만 (자기건설은 사용승인일 기준이라
+    // 자산 계약일로 차단 불가 — 본 판정은 evaluateUnsold992. 취득일 fallback 금지)
+    check: (c) =>
+      c.contractDate === undefined || within(c.contractDate, D("2013-04-01"), D("2013-12-31")),
     failReason: "신축·미분양·1세대1주택 매매계약 시한(2013.4.1~2013.12.31) 외 — 조특법 §99의2",
   },
 

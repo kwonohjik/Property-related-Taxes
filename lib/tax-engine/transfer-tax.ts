@@ -709,11 +709,15 @@ export function calculateTransferTax(
     new993PreliminaryResult,
     new99PreliminaryResult: incomeDeduction.new99Detail,
     unsold988PreliminaryResult: incomeDeduction.unsold988Detail,
+    unsold987PreliminaryResult: incomeDeduction.unsold987Detail,
+    unsold992PreliminaryResult: incomeDeduction.unsold992Detail,
   });
   const {
     new993FinalResult,
     new99FinalResult,
     unsold988FinalResult,
+    unsold987FinalResult,
+    unsold992FinalResult,
     reductionAmount,
     reductionType,
     reductionTypeApplied,
@@ -786,6 +790,8 @@ export function calculateTransferTax(
     new993Detail: new993FinalResult,
     new99Detail: new99FinalResult,
     unsold988Detail: unsold988FinalResult,
+    unsold987Detail: unsold987FinalResult,
+    unsold992Detail: unsold992FinalResult,
     transferBurdenedGiftBreakdown,
   };
 }

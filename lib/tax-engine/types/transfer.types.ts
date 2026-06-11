@@ -51,6 +51,8 @@ import type { New99Result } from "../transfer-reductions/new-99";
 export type { New99Result } from "../transfer-reductions/new-99";
 import type { Unsold988Result } from "../transfer-reductions/unsold-98-8";
 export type { Unsold988Result } from "../transfer-reductions/unsold-98-8";
+import type { UnsoldHybridResult } from "../transfer-reductions/unsold-hybrid";
+export type { UnsoldHybridResult } from "../transfer-reductions/unsold-hybrid";
 import type { InheritanceHouseValuationInput, InheritanceHouseValuationResult } from "./inheritance-house-valuation.types";
 import type { MixedUseAssetInput, MixedUseGainBreakdown } from "./transfer-mixed-use.types";
 import type { CarryoverTaxationInput, CarryoverTaxationDetail } from "./transfer-carryover.types";
@@ -657,18 +659,17 @@ export interface TransferTaxResult {
   new994Detail?: New994Result;
   /**
    * §98의9 수도권 밖 준공후미분양 주택수 제외 평가 결과 (2026-06-11).
-   * eligible 시 §99의4와 동일 경로 반영 — 단 §99의4 동시 적격이면 §99의4 우선(F-4,
-   * dualExclusionWarning). 종부세 ② 의제는 범위 외 — comprehensiveTaxNote 안내.
-   */
+   * eligible 시 §99의4 동일 경로 — 동시 적격이면 §99의4 우선(F-4). 종부세 ②는 범위 외. */
   unsold989Detail?: Unsold989Result;
-  /** §99 신축주택(IMF 1차) 차감 결과 — 5년 내 전액/5년 후 안분 + 재개발 변형(령 §99①) + 농특세 (P1) */
+  /** §99 신축주택(IMF 1차) 차감 — 5년 내 전액/5년 후 안분 + 재개발 변형(령 §99①) (P1) */
   new99Detail?: New99Result;
-  /** §98의8 준공후미분양 50% 공제 결과 — 5년 발생분 × 50% 단일 경로 + 임대 5년(등록 후 기산) (P1) */
+  /** §98의8 준공후미분양 50% 공제 — 5년 발생분 × 50% + 임대 5년(등록 후 기산) (P1) */
   unsold988Detail?: Unsold988Result;
-  /**
-   * 신축주택·미분양주택 감면 상세 결과 (newHousingDetails 제공 시만 포함)
-   * UI에서 매칭 조문·감면율·5년 안분 결과 표시용
-   */
+  /** §98의7 9억↓ 미분양 하이브리드 — 5년 내 세액감면 100%/5년 후 공제 (P2) */
+  unsold987Detail?: UnsoldHybridResult;
+  /** §99의2 신축·미분양·1세대1주택 하이브리드 — 6억 OR 85㎡ (P2) */
+  unsold992Detail?: UnsoldHybridResult;
+  /** 신축·미분양 감면 상세 (newHousingDetails 제공 시) — 매칭 조문·감면율·5년 안분 표시용 */
   newHousingReductionDetail?: NewHousingReductionResult;
   /**
    * 공익사업용 토지 수용 감면 상세 결과 (조특법 §77)

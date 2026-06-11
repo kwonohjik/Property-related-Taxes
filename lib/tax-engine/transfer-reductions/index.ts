@@ -159,6 +159,22 @@ export {
   type IncomeDeductionResolution,
 } from "./income-deduction-router";
 
+// ── P2 하이브리드 (2026-06-11): §98의7 + §99의2 (5년 내 세액감면 + 5년 후 차감) ──
+export {
+  evaluateUnsold987,
+  evaluateUnsold992,
+  evaluateHybridFromReduction,
+  evaluateHybridTaxAmountFromReductions,
+  UNSOLD_98_7_PRICE_LIMIT,
+  UNSOLD_99_2_PRICE_LIMIT,
+  UNSOLD_99_2_AREA_LIMIT_SQM,
+  type UnsoldHybridId,
+  type UnsoldHybridResult,
+  type Unsold987Input,
+  type Unsold992Input,
+  type Unsold992HouseType,
+} from "./unsold-hybrid";
+
 /**
  * 23개 조문 통합 stub evaluator. Phase 1 단계는 모두 isEligible:false 반환.
  * 시한 외 케이스는 명시적 사유, 시한 내 케이스는 "구현 예정" 사유.
