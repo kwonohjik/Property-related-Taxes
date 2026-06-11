@@ -38,6 +38,9 @@ import type { FormState, FormSet } from "./shared";
 import { AppraisalFeeSection } from "@/components/calc/deductions/AppraisalFeeSection";
 import { resolveValuationMethod } from "@/lib/tax-engine/property-valuation";
 import { CohabitAncillaryLandBlock } from "./CohabitAncillaryLandBlock";
+import { Step4DeductionGroup } from "./Step4DeductionGroup";
+import { CasualtyLossSection } from "./CasualtyLossSection";
+import { InheritanceReviewSummary } from "./InheritanceReviewSummary";
 
 /** Step4 추가공제 자동 도출값 — InheritanceTaxForm useMemo에서 계산해 prop 전달(3중 일치). */
 export type Step4Autos = {
@@ -349,16 +352,63 @@ export function Step4({
 }) {
   const hasSpouse = form.heirs.some((h) => h.relation === "spouse");
 
-  return (
-    <div className="space-y-6">
-      <div className="space-y-4">
-        <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200">
-          추가 공제 입력 (선택)
-        </h3>
-        <p className="text-[11px] text-gray-500 dark:text-gray-400">
-          ⓘ 자산 카드·상속인 구성에서 도출 가능한 값은 칸에 자동으로 채워집니다 (수정하면 입력값이 우선).
-        </p>
+  // 그룹별 "입력됨" 배지용 — 접어 둬도 입력 여부를 헤더에서 확인.
+  const has = (s: string) => s.trim() !== "";
+  const groupDeductionData =
+    [
+      form.spouseActualAmount,
+      form.netFinancialAssets,
+      form.cohabitHouseStdPrice,
+      form.cohabitDirectAmount,
+      form.ancillaryLandArea,
+      form.farmingAssetValue,
+      form.familyBusinessValue,
+      form.familyBusinessDirectAmount,
+    ].some(has) || form.familyBusiness != null;
+  const groupAdjustData =
+    [
+      form.legateeAmountNonHeir,
+      form.priorGiftDeductionTotal,
+      form.disasterLossDeduction,
+      form.appraisalRealEstateFee,
+      form.appraisalUnlistedFee,
+      form.appraisalTangibleFee,
+    ].some(has) || form.casualtyLossEnabled;
+  const groupCreditData =
+    form.isUnfiled ||
+    !form.isFiledOnTime ||
+    form.shortTermReinheritAssets.length > 0 ||
+    [
+      form.foreignTaxPaid,
+      form.foreignInheritanceTaxBase,
+      form.shortTermReinheritPriorDeathDate,
+      form.shortTermReinheritTaxPaid,
+      form.shortTermReinheritAssetValue,
+      form.shortTermReinheritPriorEstateValue,
+      form.shortTermReinheritYears,
+    ].some(has);
+  const groupPaymentData =
+    form.installmentEnabled || form.splitPaymentEnabled || form.paymentInKindEnabled;
 
+  return (
+    <div className="space-y-4">
+      <div>
+        <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+          공제·세액공제 입력 (선택)
+        </h3>
+        <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+          ⓘ 해당하지 않는 항목 그룹은 헤더를 눌러 접어 둘 수 있습니다. 자산 카드·상속인 구성에서
+          도출 가능한 값은 칸에 자동으로 채워집니다 (수정하면 입력값이 우선).
+        </p>
+      </div>
+
+      {/* ── 그룹 A: 상속공제 (추가) ── */}
+      <Step4DeductionGroup
+        title="상속공제 — 배우자·금융재산·동거주택·영농·가업"
+        tone="emerald"
+        hasData={groupDeductionData}
+        testId="step4-group-deduction"
+      >
         {hasSpouse && (
           <div className="space-y-2">
             <CurrencyInput
@@ -497,7 +547,15 @@ export function Step4({
             />
           </div>
         </div>
+      </Step4DeductionGroup>
 
+      {/* ── 그룹 B: 종합한도 보정·재해손실·감정평가수수료 ── */}
+      <Step4DeductionGroup
+        title="종합한도 보정·재해손실·감정평가수수료"
+        tone="amber"
+        hasData={groupAdjustData}
+        testId="step4-group-adjust"
+      >
         {/* Phase D §19·§24 보정용 입력 */}
         <CurrencyInput
           label="상속외자 유증 금액 (§19·§24 분자 차감)"
@@ -534,15 +592,15 @@ export function Step4({
             (i) => (i.valuationMethod ?? resolveValuationMethod(i)) === "appraisal",
           )}
         />
+      </Step4DeductionGroup>
 
-      </div>
-
-      {/* ─── 세액공제 (구 Step 5 통합) ─── */}
-      <div className="border-t border-gray-200 dark:border-gray-700 pt-5 space-y-5">
-        <p className="text-sm text-muted-foreground">
-          세액공제 항목을 입력하면 납부세액이 줄어듭니다.
-        </p>
-
+      {/* ── 그룹 C: 신고 상태·외국납부·단기재상속 세액공제 ── */}
+      <Step4DeductionGroup
+        title="신고 상태·외국납부·단기재상속 세액공제"
+        tone="violet"
+        hasData={groupCreditData}
+        testId="step4-group-credit"
+      >
       {/* B-4 (2026-06-01): 전역 세대생략 입력 제거 → read-only 안내 (§27 자동 도출) */}
       {form.heirs.some((h) => h.isGenerationSkipBeneficiary) && (
         <div className="rounded-md border border-sky-200 bg-sky-50/40 dark:border-sky-700 dark:bg-sky-900/20 px-3 py-2 text-[11px] text-sky-800 dark:text-sky-200">
@@ -625,128 +683,21 @@ export function Step4({
 
       {/* 단기재상속공제 섹션 (§30) — 재산별 구분 (집행 30-22-1②) */}
       <ShortTermReinheritSection form={form} set={set} />
+      </Step4DeductionGroup>
 
-      <InstallmentInputSection form={form} set={set} />
+      {/* ── 그룹 D: 납부 방법 ── */}
+      <Step4DeductionGroup
+        title="납부 방법 — 연부연납·분납·물납"
+        tone="sky"
+        hasData={groupPaymentData}
+        testId="step4-group-payment"
+      >
+        <InstallmentInputSection form={form} set={set} />
+        <PaymentInKindInputSection form={form} set={set} />
+      </Step4DeductionGroup>
 
-      <PaymentInKindInputSection form={form} set={set} />
-      </div>
+      {/* 계산 직전 입력 요약 — 누락 인지용 read-only 카드 */}
+      <InheritanceReviewSummary form={form} autos={autos} />
     </div>
-  );
-}
-
-// ============================================================
-// CasualtyLossSection — §23 재해손실공제 입력 (Step 4 내부)
-// UI 설계: docs/02-design/features/inheritance-casualty-loss-deduction.ui.design.md
-// ============================================================
-
-/** §23 재난 종류 enum → 한국어 라벨 (단일 출처 — RadioCardGroup·결과 표시 공용) */
-const DISASTER_TYPE_LABELS: Record<
-  "fire" | "collapse" | "explosion" | "environmental" | "natural" | "other",
-  string
-> = {
-  fire: "화재",
-  collapse: "붕괴",
-  explosion: "폭발",
-  environmental: "환경오염사고",
-  natural: "자연재해",
-  other: "기타",
-};
-
-function CasualtyLossSection({
-  form,
-  set,
-}: {
-  form: FormState;
-  set: FormSet;
-}) {
-  // 자동계산 박스 — useMemo (useEffect→store 미러링 금지)
-  const autoDeduction = useMemo(() => {
-    if (!form.casualtyLossEnabled) return 0;
-    const loss = parseAmount(form.casualtyLossValue);
-    const comp = parseAmount(form.casualtyLossCompensated) || 0;
-    return Math.max(0, loss - comp);
-  }, [form.casualtyLossEnabled, form.casualtyLossValue, form.casualtyLossCompensated]);
-
-  const disasterTypeOptions = (
-    Object.keys(DISASTER_TYPE_LABELS) as Array<keyof typeof DISASTER_TYPE_LABELS>
-  ).map((v) => ({ value: v, label: DISASTER_TYPE_LABELS[v] }));
-
-  return (
-    <ToggleCard
-      tone="rose"
-      title="재해손실공제 신청 (상증법 §23)"
-      description="신고기한(상속개시일 말일부터 6개월) 이내 화재·붕괴·폭발·자연재해 등으로 상속재산이 멸실·훼손된 경우 과세가액에서 공제"
-      checked={form.casualtyLossEnabled}
-      onCheckedChange={(v) => set({ casualtyLossEnabled: v })}
-    >
-      {/* ① 재난 정보 (sky 카드) */}
-      <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-3">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-[10px] font-bold text-sky-800 select-none">
-            1
-          </span>
-          <p className="text-xs font-semibold text-sky-700">재난 정보</p>
-        </div>
-        <div className="space-y-1">
-          <p className="text-xs font-medium text-gray-700 dark:text-gray-300">재난 종류</p>
-          <RadioCardGroup
-            name="casualtyLossType"
-            tone="sky"
-            layout="inline"
-            value={form.casualtyLossType}
-            onChange={(v) =>
-              set({
-                casualtyLossType: v as FormState["casualtyLossType"],
-              })
-            }
-            options={disasterTypeOptions}
-          />
-        </div>
-        <div data-testid="casualty-disaster-date">
-          <FieldCard
-            label="재난 발생일"
-            hint="§23 요건 — 상속개시일 이후, 신고기한(상속개시일 말일부터 6개월) 이내 발생한 재난이어야 합니다."
-          >
-            <DateInput
-              value={form.casualtyLossDate}
-              onChange={(v) => set({ casualtyLossDate: v })}
-            />
-          </FieldCard>
-        </div>
-      </div>
-
-      {/* ② 손실 산정 (rose 카드) */}
-      <div className="rounded-lg border border-rose-200 bg-rose-50/40 p-3 space-y-3">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-200 text-[10px] font-bold text-rose-800 select-none">
-            2
-          </span>
-          <p className="text-xs font-semibold text-rose-700">손실 산정</p>
-        </div>
-        <CurrencyInput
-          label="재해손실재산가액"
-          value={form.casualtyLossValue}
-          onChange={(v) => set({ casualtyLossValue: v })}
-          hint="멸실·훼손된 상속재산의 평가액 (상속개시일 평가 기준, §20②)"
-          placeholder="없으면 빈칸"
-        />
-        <CurrencyInput
-          label="보전가능금액"
-          value={form.casualtyLossCompensated}
-          onChange={(v) => set({ casualtyLossCompensated: v })}
-          hint="보험금 수령액·구상권 행사로 보전 가능한 금액. 없으면 0 또는 빈칸."
-          placeholder="없으면 빈칸"
-        />
-        {/* 자동계산 박스 */}
-        <div className="rounded-md border border-rose-200 bg-rose-100/60 px-3 py-2 text-xs space-y-1">
-          <p className="text-rose-700 font-medium">
-            공제 신청액 = 재해손실재산가액 − 보전가능금액
-          </p>
-          <p className="text-right font-mono tabular-nums text-rose-900 font-semibold text-sm">
-            {autoDeduction.toLocaleString("ko-KR")}
-          </p>
-        </div>
-      </div>
-    </ToggleCard>
   );
 }

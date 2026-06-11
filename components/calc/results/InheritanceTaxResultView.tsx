@@ -38,6 +38,7 @@ import { TaxCreditBreakdownCard } from "@/components/calc/TaxCreditBreakdownCard
 import { expandToggleClass, expandToggleLabel } from "./shared/ExpandToggleButton";
 import { type InheritanceTaxResultViewProps } from "./InheritanceTaxResultView.types";
 import { useInheritanceResultDerived } from "./useInheritanceResultDerived";
+import { STEPS as INHERITANCE_STEPS } from "@/components/calc/inheritance/shared";
 // re-export 보존 — shared.tsx 에서 실제 구현
 export { Row, formatBillion, LawBadge } from "./deduction-breakdown/shared";
 // re-export 보존 — FarmingDeductionDetailRow (farming-section.test.tsx 사용)
@@ -56,6 +57,7 @@ export function InheritanceTaxResultView({
   onReset,
   onBack,
   onGoToFirst,
+  onEditStep,
   showLoginPrompt = false,
   heirs,
   debtItems,
@@ -601,6 +603,30 @@ export function InheritanceTaxResultView({
 
       {/* 면책고지 */}
       <DisclaimerBanner />
+
+      {/* 입력 수정 — 결과에서 특정 입력 단계로 바로 이동(입력값 보존) */}
+      {onEditStep && (
+        <div
+          className="rounded-md border border-border bg-muted/30 px-3 py-2 print:hidden"
+          data-testid="result-edit-steps"
+        >
+          <p className="mb-1.5 text-[11px] text-muted-foreground">
+            입력 단계로 돌아가 수정
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {INHERITANCE_STEPS.map((label, i) => (
+              <button
+                key={label}
+                type="button"
+                onClick={() => onEditStep(i)}
+                className="rounded-full border border-border bg-background px-2.5 py-1 text-[11px] font-medium hover:bg-muted transition-colors"
+              >
+                {i + 1}. {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* 버튼 — 입력 단계 네비게이션과 통일 (justify-between · 컴팩트 px/py) */}
       <div className="flex items-center justify-between gap-2 print:hidden">
