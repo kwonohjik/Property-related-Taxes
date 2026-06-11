@@ -10,7 +10,6 @@ import { TRANSFER, NBL, TRANSFER_REDUCTION_ARTICLE } from "./legal-codes";
 import {
   applyRate,
   isSurchargeSuspended,
-  coerceOptionalDate,
 } from "./tax-utils";
 import {
   type MultiHouseSurchargeInput,
@@ -40,7 +39,13 @@ import type {
 import type { CarryoverTaxationDetail } from "./types/transfer-carryover.types";
 export type { TransferTaxInput, TransferReduction, CalculationStep, TransferTaxResult };
 import { runRentalHousingExceptionStep } from "./transfer-tax-rental-housing-step";
-import { evaluateNew993, type New993Result } from "./transfer-reductions/new-99-3";
+import type { New993Result } from "./transfer-reductions/new-99-3";
+import {
+  resolveIncomeDeduction,
+  resolveSurchargeExclusionByReduction,
+  buildIncomeDeductionStep,
+  buildSurchargeExclusionStep,
+} from "./transfer-reductions/income-deduction-router";
 import { resolveHouseCountExclusion, buildHouseCountExclusionStep } from "./transfer-reductions/unsold-98-9";
 
 import {
@@ -244,12 +249,27 @@ export function calculateTransferTax(
     if (multiHouseWarning) warnings.push(multiHouseWarning);
   }
 
+  // STEP 0.45: 차감형 감면주택(§99의3·§99·§98의8) 중과 배제 선판정 — 소령 §167의3①5호·§167의10①2호.
+  // 적격 시 양도 주택에 isTaxSpecialExemption 주입 → 기존 중과 엔진 경로로 배제 (D-11 자동화).
+  const surchargeExclusionByReduction = resolveSurchargeExclusionByReduction(workingInput.reductions, {
+    transferDate: workingInput.transferDate,
+    acquisitionDate: workingInput.acquisitionDate,
+    assetContractDate: workingInput.assetContractDate,
+    transferPrice: workingInput.transferPrice,
+    standardPriceAtTransfer: workingInput.standardPriceAtTransfer,
+  });
+
   // STEP 0.5: 다주택 중과세 판정 (houses[] 제공 + 주택 수 산정 규칙 로드 완료 시)
   let multiHouseSurchargeResult: MultiHouseSurchargeResult | undefined;
   if (workingInput.houses && workingInput.houses.length > 0 && parsedRates.houseCountExclusionRules) {
+    const sellingId = workingInput.sellingHouseId ?? workingInput.houses[0].id;
+    const housesForSurcharge = surchargeExclusionByReduction.excluded
+      ? workingInput.houses.map((h) => (h.id === sellingId ? { ...h, isTaxSpecialExemption: true } : h))
+      : workingInput.houses;
+    if (surchargeExclusionByReduction.excluded) steps.push(buildSurchargeExclusionStep(surchargeExclusionByReduction));
     const mhInput: MultiHouseSurchargeInput = {
-      houses: workingInput.houses,
-      sellingHouseId: workingInput.sellingHouseId ?? workingInput.houses[0].id,
+      houses: housesForSurcharge,
+      sellingHouseId: sellingId,
       transferDate: workingInput.transferDate,
       isOneHousehold: workingInput.isOneHousehold,
       temporaryTwoHouse: workingInput.multiHouseTemporaryTwoHouse,
@@ -610,55 +630,23 @@ export function calculateTransferTax(
     legalBasis: TRANSFER.LONG_TERM_DEDUCTION,
   });
 
-  // STEP 4.6 (Phase 2, 2026-05-06): §99의3 신축주택 과세특례 — 양도소득금액 차감 방식
-  // 5년 내 양도 = 취득~양도일까지 발생분 전액 / 5년 후 양도 = 5년 안분 산식
-  // 농특세 = (감면 전 산출세액 - 감면 후 산출세액) × 20% (STEP 7 이후 계산)
+  // STEP 4.6: 차감형 감면(§99의3·§99·§98의8) — 양도소득금액 차감 방식 (income-deduction-router)
+  // 5년 내 = 발생분 전액(§98의8은 50%) / 5년 후 = 기준시가 안분. 농특세는 finalize 2-pass.
   let transferIncome = transferIncomeBefore993;
-  const new993Reduction = input.reductions?.find((r) => r.type === "new_99_3");
-  let new993PreliminaryResult: New993Result | undefined;
-  if (new993Reduction && new993Reduction.type === "new_99_3") {
-    // Round 9 정정 (2026-05-06): contractDate 우선순위
-    //   1) reduction.contractDate993 (legacy 이력 호환, 1개월 alias 후 제거)
-    //   2) input.assetContractDate (자산-수준 매매계약일 — 상단 입력)
-    const effectiveContractDate =
-      coerceOptionalDate(new993Reduction.contractDate993) ?? input.assetContractDate;
-    new993PreliminaryResult = evaluateNew993({
-      transferDate: input.transferDate,
-      acquisitionDate: input.acquisitionDate,
-      contractDate: effectiveContractDate,
-      usageApprovalDate: coerceOptionalDate(new993Reduction.usageApprovalDate993),
-      transferIncome: transferIncomeBefore993,
-      standardPriceAtAcquisition: new993Reduction.standardPriceAtAcquisition993 ?? 0,
-      standardPriceAt5Years: new993Reduction.standardPriceAt5Years ?? 0,
-      standardPriceAtTransfer:
-        new993Reduction.standardPriceAtTransfer993 ?? input.standardPriceAtTransfer ?? 0,
-      transferPrice: input.transferPrice,
-      exclusiveAreaSqm: 0, // 자산 면적 정보가 별도 — 고가주택 면적 기준은 호출자에서 사전 검증 권장
-      region: new993Reduction.region993 ?? "outside_speculation",
-      isResident: new993Reduction.isResident993 ?? true,
-      isHousingConstructionBusiness: new993Reduction.isHousingConstructionBusiness993 ?? false,
-      acquisitionType: new993Reduction.acquisitionType993 ?? "from_builder",
-      hasOccupancyAtContract: new993Reduction.hasOccupancyAtContract,
-      // 농특세는 STEP 7 산출세액 계산 후 별도로 재계산 (preliminary는 placeholder 0)
-      calculatedTaxBeforeReduction: 0,
-      calculatedTaxAfterReduction: 0,
-    });
-    if (new993PreliminaryResult.isEligible) {
-      transferIncome = Math.max(0, transferIncomeBefore993 - new993PreliminaryResult.reducibleTransferIncome);
-      steps.push({
-        label: "§99의3 신축주택 과세특례 — 양도소득금액 차감",
-        formula: `양도소득금액 ${transferIncomeBefore993.toLocaleString()} - 감면 양도소득금액 ${new993PreliminaryResult.reducibleTransferIncome.toLocaleString()} = ${transferIncome.toLocaleString()}`,
-        amount: transferIncome,
-        legalBasis: TRANSFER_REDUCTION_ARTICLE.NEW_99_3,
-      });
-    } else {
-      steps.push({
-        label: "§99의3 신축주택 과세특례 — 적용 불가",
-        formula: new993PreliminaryResult.ineligibleReasons.map((r) => r.message).join(" · "),
-        amount: 0,
-        legalBasis: TRANSFER_REDUCTION_ARTICLE.NEW_99_3,
-      });
-    }
+  const incomeDeduction = resolveIncomeDeduction(input.reductions, {
+    transferDate: input.transferDate,
+    acquisitionDate: input.acquisitionDate,
+    assetContractDate: input.assetContractDate,
+    transferPrice: input.transferPrice,
+    standardPriceAtTransfer: input.standardPriceAtTransfer,
+    transferIncome: transferIncomeBefore993,
+  });
+  const new993PreliminaryResult: New993Result | undefined = incomeDeduction.new993Detail;
+  if (incomeDeduction.appliedId) {
+    transferIncome = Math.max(0, transferIncomeBefore993 - incomeDeduction.reducible);
+  }
+  if (incomeDeduction.stepLabel) {
+    steps.push(buildIncomeDeductionStep(incomeDeduction, transferIncomeBefore993, transferIncome));
   }
 
   // STEP 5: 기본공제 (aggregate 엔진에서 호출 시 skipBasicDeduction=true로 스킵)
@@ -719,9 +707,13 @@ export function calculateTransferTax(
     estimatedBase,
     transferIncomeBefore993,
     new993PreliminaryResult,
+    new99PreliminaryResult: incomeDeduction.new99Detail,
+    unsold988PreliminaryResult: incomeDeduction.unsold988Detail,
   });
   const {
     new993FinalResult,
+    new99FinalResult,
+    unsold988FinalResult,
     reductionAmount,
     reductionType,
     reductionTypeApplied,
@@ -792,6 +784,8 @@ export function calculateTransferTax(
     unsold989Detail,
     penaltyDetail,
     new993Detail: new993FinalResult,
+    new99Detail: new99FinalResult,
+    unsold988Detail: unsold988FinalResult,
     transferBurdenedGiftBreakdown,
   };
 }

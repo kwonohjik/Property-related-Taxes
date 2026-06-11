@@ -24,6 +24,7 @@ import { RentalReductionDetailCard } from "./RentalReductionDetailCard";
 import { Rental97DetailCard } from "./Rental97DetailCard";
 import { New994DetailCard } from "./New994DetailCard";
 import { Unsold989DetailCard } from "./Unsold989DetailCard";
+import { IncomeDeductionDetailCard } from "./IncomeDeductionDetailCard";
 
 interface Props {
   result: TransferTaxResult;
@@ -39,7 +40,9 @@ export function ReductionDetailCards({ result }: Props) {
     !!result.rental97LthdDetail ||
     !!result.rental97TaxDetail ||
     !!result.new994Detail ||
-    !!result.unsold989Detail;
+    !!result.unsold989Detail ||
+    !!result.new99Detail ||
+    !!result.unsold988Detail;
 
   if (!hasAny) return null;
 
@@ -77,6 +80,11 @@ export function ReductionDetailCards({ result }: Props) {
       {result.new994Detail && <New994DetailCard detail={result.new994Detail} />}
       {/* §98의9 수도권 밖 준공후미분양 주택수 제외 (2026-06-11) */}
       {result.unsold989Detail && <Unsold989DetailCard detail={result.unsold989Detail} />}
+      {/* P1 차감형 (2026-06-11): §99 신축주택 IMF 1차 · §98의8 준공후미분양 50% */}
+      {result.new99Detail && <IncomeDeductionDetailCard kind="new_99" result={result.new99Detail} />}
+      {result.unsold988Detail && (
+        <IncomeDeductionDetailCard kind="unsold_98_8" result={result.unsold988Detail} />
+      )}
     </>
   );
 }

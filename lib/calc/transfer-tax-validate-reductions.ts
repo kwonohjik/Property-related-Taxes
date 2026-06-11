@@ -94,6 +94,31 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
           if (parseAmount(r.ruralHouseStdPrice || "0") <= 0)
             return fail(`${label994} 적용: 취득 당시 기준시가 합계(주택+부속토지)를 입력하세요.`);
         }
+        // P1 §99 신축주택 IMF 1차 (2026-06-11): 유형별 기준일·기준시가·면적 필수 (⑧).
+        // 배제 토글은 차단하지 않음 — 엔진 불적용 사유 (낙관 입력 패턴).
+        if (r.type === "new_99") {
+          if (r.acquisitionType99 === "self_built" && !r.usageApprovalDate99)
+            return fail("§99 적용: 자기건설 주택의 사용승인일을 입력하세요.");
+          if (parseAmount(r.standardPriceAtAcquisition99 || "0") <= 0)
+            return fail("§99 적용: 취득시 기준시가를 입력하세요.");
+          if (!(parseDecimal(r.exclusiveAreaSqm99 || "") > 0))
+            return fail("§99 적용: 전용면적(㎡)을 입력하세요 (고가주택 판정).");
+          // 재개발·재건축 변형 ON 시 종전주택 기준시가 필수 (B-11 — 자동 안분 fallback 금지)
+          if (r.isRedevelopedNewHouse99 && parseAmount(r.previousHouseStdPrice99 || "0") <= 0)
+            return fail("§99 적용: 재개발·재건축 신축주택은 종전주택 취득 당시 기준시가를 입력하세요.");
+        }
+        // P1 §98의8 준공후미분양 50% (2026-06-11): 계약일·취득가·면적·임대개시일 필수 (⑧).
+        // 자격 토글 3종은 차단하지 않음 — 엔진 불적용 사유 (낙관 입력 패턴).
+        if (r.type === "unsold_98_8") {
+          if (!r.contractDate988)
+            return fail("§98의8 적용: 최초 매매계약일을 입력하세요.");
+          if (parseAmount(r.acquisitionPrice988 || "0") <= 0)
+            return fail("§98의8 적용: 취득가액을 입력하세요.");
+          if (!(parseDecimal(r.exclusiveAreaSqm988 || "") > 0))
+            return fail("§98의8 적용: 연면적(공동주택은 전용면적, ㎡)을 입력하세요.");
+          if (!r.rentalStartDate988)
+            return fail("§98의8 적용: 임대개시일을 입력하세요 (사업자등록과 임대사업자등록 후 임대를 개시한 날).");
+        }
         // §98의9 수도권 밖 준공후미분양 (2026-06-11): 취득일·취득가·전용면적 필수 (⑧).
         // 토글 3종은 차단하지 않음 — 엔진 불적용 사유 (낙관 입력 패턴).
         if (r.type === "unsold_98_9") {

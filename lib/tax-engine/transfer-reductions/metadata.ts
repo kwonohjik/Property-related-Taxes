@@ -144,7 +144,9 @@ export const REDUCTION_METADATA: Record<TransferReductionId, ReductionMetadata> 
     category: "new_housing",
     effectCategory: "capital_gain",
     uiLabel: "§99 — 신축주택 양도세 감면 (IMF 1차)",
-    effectLabel: "5년 내 = 취득~양도 발생분 차감 / 5년 후 = 5년간 발생분 차감 (1998.5.22~1999.6.30)",
+    effectLabel: "5년 내 = 취득~양도 발생분 차감 / 5년 후 = 5년간 발생분 차감 (1998.5.22~1999.6.30, 국민주택 ~1999.12.31)",
+    // P1 (2026-06-11): 본격 구현 — evaluateNew99 + income-deduction-router
+    isFullyImplemented: true,
   },
   new_99_3: {
     id: "new_99_3",
@@ -238,7 +240,10 @@ export const REDUCTION_METADATA: Record<TransferReductionId, ReductionMetadata> 
     category: "unsold_housing",
     effectCategory: "capital_gain",
     uiLabel: "§98의8 — 준공후미분양 6억·135㎡↓ 50%",
-    effectLabel: "5년간 발생분의 50% 차감 (2015.1.1~2015.12.31, 5년+ 임대)",
+    // M-4 (2026-06-11): 6억 이하 AND 135㎡ 이하 (한쪽 초과도 배제 — 령 §98의7②1호)
+    effectLabel: "5년간 발생분의 50% 차감 (2015.1.1~2015.12.31 계약, 6억 이하 + 전용 135㎡ 이하, 5년+ 임대)",
+    // P1 (2026-06-11): 본격 구현 — evaluateUnsold988 + income-deduction-router
+    isFullyImplemented: true,
   },
   unsold_98_9: {
     id: "unsold_98_9",

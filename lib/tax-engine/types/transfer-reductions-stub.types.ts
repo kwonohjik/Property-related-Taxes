@@ -74,7 +74,24 @@ export type TransferReductionStub =
       region?: "capital" | "non_capital";
     } & Rental97CommonFields)
   // 신축 §99 시리즈
-  | { type: "new_99";            region?: "metropolitan" | "non_metropolitan"; _phase1Stub?: true }
+  // §99 — P1 본격 구현 (2026-06-11): 차감형 본 필드 (Date — route mapper ⑭ 변환)
+  | { type: "new_99";
+      region?: "metropolitan" | "non_metropolitan"; // Phase 1 stub 호환
+      contractDate99?: Date;
+      usageApprovalDate99?: Date;
+      standardPriceAtAcquisition99?: number;
+      standardPriceAt5Years99?: number;
+      standardPriceAtTransfer99?: number;
+      exclusiveAreaSqm99?: number;
+      isResident99?: boolean;
+      isHousingConstructionBusiness99?: boolean;
+      acquisitionType99?: "from_builder" | "self_built";
+      isNationalHousing99?: boolean;
+      hasOccupancyAtContract99?: boolean;
+      isRecontractExcluded99?: boolean;
+      isRedevelopedNewHouse99?: boolean;
+      previousHouseStdPrice99?: number;
+      _phase1Stub?: true }
   // §99의3 — Phase 2 본격 구현 (2026-05-06): 본 요건 필드 union 멤버
   | {
       type: "new_99_3";
@@ -126,7 +143,22 @@ export type TransferReductionStub =
   | { type: "unsold_98_5";       priceReductionRate?: number; _phase1Stub?: true }
   | { type: "unsold_98_6";       _phase1Stub?: true }
   | { type: "unsold_98_7";       _phase1Stub?: true }
-  | { type: "unsold_98_8";       _phase1Stub?: true }
+  // §98의8 — P1 본격 구현 (2026-06-11): 차감형 50% 본 필드 (Date — route mapper ⑭ 변환)
+  | { type: "unsold_98_8";
+      contractDate988?: Date;
+      acquisitionPrice988?: number;
+      exclusiveAreaSqm988?: number;
+      rentalStartDate988?: Date;
+      rentalEndDate988?: Date;
+      inheritedRentalMonths988?: number;
+      isResident988?: boolean;
+      isUnsoldAfterCompletion988?: boolean;
+      isFirstContract988?: boolean;
+      isNotRecontract988?: boolean;
+      standardPriceAtAcquisition988?: number;
+      standardPriceAt5Years988?: number;
+      standardPriceAtTransfer988?: number;
+      _phase1Stub?: true }
   // §98의9 — Phase 2 본격 구현 (2026-06-11): 주택수 제외 본 필드 (Date — route mapper ⑭ 변환)
   | { type: "unsold_98_9";
       unsoldHouseAcquisitionDate?: Date;

@@ -162,6 +162,42 @@ export function getReductionDefault(id: TransferReductionId): AssetReductionForm
       meetsHometownRequirement: false,
     };
   }
+  // P1 (2026-06-11): §99 신축주택 IMF 1차 — 차감형
+  if (id === "new_99") {
+    return {
+      type: "new_99",
+      contractDate99: "",
+      usageApprovalDate99: "",
+      acquisitionType99: "from_builder",
+      isNationalHousing99: false,
+      standardPriceAtAcquisition99: "",
+      standardPriceAt5Years99: "",
+      standardPriceAtTransfer99: "",
+      exclusiveAreaSqm99: "",
+      hasOccupancyAtContract99: false,
+      isRecontractExcluded99: false,
+      isRedevelopedNewHouse99: false,
+      previousHouseStdPrice99: "",
+    };
+  }
+  // P1 (2026-06-11): §98의8 준공후미분양 50% — 차감형
+  if (id === "unsold_98_8") {
+    return {
+      type: "unsold_98_8",
+      contractDate988: "",
+      acquisitionPrice988: "",
+      exclusiveAreaSqm988: "",
+      rentalStartDate988: "",
+      rentalEndDate988: "",
+      inheritedRentalMonths988: "",
+      isUnsoldAfterCompletion988: false,
+      isFirstContract988: false,
+      isNotRecontract988: false,
+      standardPriceAtAcquisition988: "",
+      standardPriceAt5Years988: "",
+      standardPriceAtTransfer988: "",
+    };
+  }
   // §98의9 수도권 밖 준공후미분양 (2026-06-11)
   if (id === "unsold_98_9") {
     return {

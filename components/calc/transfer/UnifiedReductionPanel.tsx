@@ -31,6 +31,8 @@ import { Rental972InputForm } from "@/components/calc/transfer/rental/Rental972I
 import { Rental974InputForm } from "@/components/calc/transfer/rental/Rental974InputForm";
 import { New994InputForm } from "@/components/calc/transfer/New994InputForm";
 import { Unsold989InputForm } from "@/components/calc/transfer/Unsold989InputForm";
+import { New99InputForm } from "@/components/calc/transfer/New99InputForm";
+import { Unsold988InputForm } from "@/components/calc/transfer/Unsold988InputForm";
 import {
   REDUCTION_METADATA,
   ALL_REDUCTION_IDS,
@@ -171,6 +173,22 @@ export function UnifiedReductionPanel({ asset, transferDate, onChange }: Unified
     });
   }
 
+  // ── P1 (2026-06-11): §99 신축주택 IMF 1차 / §98의8 준공후미분양 50% ──
+  function update99(patch: Partial<Extract<AssetReductionForm, { type: "new_99" }>>) {
+    onChange({
+      reductions: reductions.map((r) =>
+        r.type === "new_99" ? ({ ...r, ...patch } as AssetReductionForm) : r,
+      ),
+    });
+  }
+  function update988(patch: Partial<Extract<AssetReductionForm, { type: "unsold_98_8" }>>) {
+    onChange({
+      reductions: reductions.map((r) =>
+        r.type === "unsold_98_8" ? ({ ...r, ...patch } as AssetReductionForm) : r,
+      ),
+    });
+  }
+
   const new993 = reductions.find((r) => r.type === "new_99_3");
 
   return (
@@ -198,6 +216,8 @@ export function UnifiedReductionPanel({ asset, transferDate, onChange }: Unified
           onUpdateRentalVariant={updateRentalVariant}
           onUpdate994={update994}
           onUpdate989={update989}
+          onUpdate99={update99}
+          onUpdate988={update988}
           assetContractDate={asset.assetContractDate ?? ""}
           onAssetContractDateChange={(v) => onChange({ assetContractDate: v })}
           acquisitionDate={asset.acquisitionDate}
@@ -259,6 +279,8 @@ function GroupCategorySection({
   onUpdateRentalVariant,
   onUpdate994,
   onUpdate989,
+  onUpdate99,
+  onUpdate988,
   assetContractDate,
   onAssetContractDateChange,
   acquisitionDate,
@@ -286,6 +308,8 @@ function GroupCategorySection({
     patch: Partial<Extract<AssetReductionForm, { type: "new_99_4_hometown" }>>,
   ) => void;
   onUpdate989: (patch: Partial<Extract<AssetReductionForm, { type: "unsold_98_9" }>>) => void;
+  onUpdate99: (patch: Partial<Extract<AssetReductionForm, { type: "new_99" }>>) => void;
+  onUpdate988: (patch: Partial<Extract<AssetReductionForm, { type: "unsold_98_8" }>>) => void;
   /** Round 9 (2026-05-06): 매매계약일 (자산-수준, 펼침 시 활성화) */
   assetContractDate: string;
   onAssetContractDateChange: (v: string) => void;
@@ -451,6 +475,22 @@ function GroupCategorySection({
                       const form989 = reductions.find((r) => r.type === "unsold_98_9");
                       return form989 && form989.type === "unsold_98_9" ? (
                         <Unsold989InputForm value={form989} onChange={onUpdate989} />
+                      ) : null;
+                    })()}
+                  {/* P1 (2026-06-11): §99 신축주택 IMF 1차 입력 폼 */}
+                  {id === "new_99" &&
+                    (() => {
+                      const form99 = reductions.find((r) => r.type === "new_99");
+                      return form99 && form99.type === "new_99" ? (
+                        <New99InputForm value={form99} onChange={onUpdate99} />
+                      ) : null;
+                    })()}
+                  {/* P1 (2026-06-11): §98의8 준공후미분양 50% 입력 폼 */}
+                  {id === "unsold_98_8" &&
+                    (() => {
+                      const form988 = reductions.find((r) => r.type === "unsold_98_8");
+                      return form988 && form988.type === "unsold_98_8" ? (
+                        <Unsold988InputForm value={form988} onChange={onUpdate988} />
                       ) : null;
                     })()}
                 </ToggleCard>

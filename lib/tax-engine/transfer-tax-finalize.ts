@@ -26,6 +26,8 @@ import type {
   TransferTaxResult,
 } from "./types/transfer.types";
 import type { New993Result } from "./transfer-reductions/new-99-3";
+import type { New99Result } from "./transfer-reductions/new-99";
+import type { Unsold988Result } from "./transfer-reductions/unsold-98-8";
 import type { MultiHouseSurchargeResult } from "./multi-house-surcharge";
 import type { TransferTaxPenaltyResult } from "./transfer-tax-penalty";
 
@@ -42,14 +44,18 @@ export interface FinalizeArgs {
   basicDeduction: number;
   taxBase: number;
   estimatedBase?: number;
-  /** §99의3 감면 전 양도소득금액 (산출세액 차감 비교 기준) */
+  /** 차감형 감면 전 양도소득금액 (산출세액 차감 비교 기준) */
   transferIncomeBefore993: number;
   new993PreliminaryResult?: New993Result;
+  new99PreliminaryResult?: New99Result;
+  unsold988PreliminaryResult?: Unsold988Result;
 }
 
 export interface FinalizeResult {
-  // 농특세
+  // 농특세 (차감형 — §99의3·§99·§98의8 중 적용 1건)
   new993FinalResult?: New993Result;
+  new99FinalResult?: New99Result;
+  unsold988FinalResult?: Unsold988Result;
   ruralSurtax993: number;
   // 감면 (calcReductions return의 fan-out)
   reductionAmount: number;
@@ -85,24 +91,31 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
     multiHouseSurchargeResult, taxableGain, longTermHoldingDeduction,
     basicDeduction, taxBase, estimatedBase,
     transferIncomeBefore993, new993PreliminaryResult,
+    new99PreliminaryResult, unsold988PreliminaryResult,
   } = args;
 
-  // ── STEP 7.5: §99의3 농어촌특별세 ──
+  // ── STEP 7.5: 차감형 감면(§99의3·§99·§98의8) 농어촌특별세 — 2-pass 공통 ──
+  // 농특세법 §2①1호 "소득공제" 해당 — 감면 전후 산출세액 차 × 20% (§99의3 선례 일반화, P1)
   let new993FinalResult: New993Result | undefined = new993PreliminaryResult;
+  let new99FinalResult: New99Result | undefined = new99PreliminaryResult;
+  let unsold988FinalResult: Unsold988Result | undefined = unsold988PreliminaryResult;
   let ruralSurtax993 = 0;
-  if (new993PreliminaryResult?.isEligible) {
+  const activePrelim = [new993PreliminaryResult, new99PreliminaryResult, unsold988PreliminaryResult]
+    .find((d) => d?.isEligible);
+  if (activePrelim) {
+    const articleLabel =
+      activePrelim === unsold988PreliminaryResult ? "§98의8" : activePrelim === new99PreliminaryResult ? "§99" : "§99의3";
     const taxBaseBefore993 = Math.max(0, transferIncomeBefore993 - basicDeduction);
     const taxResultBefore993 = calcTax(taxBaseBefore993, parsedRates, taxRateInput, multiHouseSurchargeResult);
     const taxReduction993 = Math.max(0, taxResultBefore993.calculatedTax - taxResult.calculatedTax);
     ruralSurtax993 = applyRate(taxReduction993, 0.2);
-    new993FinalResult = {
-      ...new993PreliminaryResult,
-      taxReductionForRuralSurtax: taxReduction993,
-      ruralSurtax: ruralSurtax993,
-    };
+    const surtaxFields = { taxReductionForRuralSurtax: taxReduction993, ruralSurtax: ruralSurtax993 };
+    if (activePrelim === new993PreliminaryResult) new993FinalResult = { ...new993PreliminaryResult!, ...surtaxFields };
+    else if (activePrelim === new99PreliminaryResult) new99FinalResult = { ...new99PreliminaryResult!, ...surtaxFields };
+    else unsold988FinalResult = { ...unsold988PreliminaryResult!, ...surtaxFields };
     if (taxReduction993 > 0) {
       steps.push({
-        label: "§99의3 농어촌특별세 (감면세액 × 20%)",
+        label: `${articleLabel} 농어촌특별세 (감면세액 × 20%)`,
         formula: `(감면 전 산출세액 ${taxResultBefore993.calculatedTax.toLocaleString()} − 감면 후 산출세액 ${taxResult.calculatedTax.toLocaleString()}) × 20% = ${ruralSurtax993.toLocaleString()}`,
         amount: ruralSurtax993,
         legalBasis: TRANSFER.RURAL_SURTAX_993,
@@ -233,6 +246,8 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
 
   return {
     new993FinalResult,
+    new99FinalResult,
+    unsold988FinalResult,
     ruralSurtax993,
     // STEP 8.5 5년 한도 반영값 — 결과 표시(결정세액 산식)와 일관 유지
     reductionAmount: cappedReductionAmount,

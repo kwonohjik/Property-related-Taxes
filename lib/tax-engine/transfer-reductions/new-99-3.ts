@@ -186,7 +186,7 @@ export function isHighValueHouseUnder993(
  * 취득일 + 5년 시점이 양도일보다 이전이면 "5년 후 양도".
  * 동일 일자는 "5년 내" (취득일 + 5년 = 양도일).
  */
-function isWithin5YearsCheck(acquisitionDate: Date, transferDate: Date): boolean {
+export function isWithin5YearsCheck(acquisitionDate: Date, transferDate: Date): boolean {
   const fiveYearMark = new Date(acquisitionDate);
   fiveYearMark.setFullYear(fiveYearMark.getFullYear() + 5);
   return transferDate <= fiveYearMark;
@@ -275,21 +275,23 @@ function checkIneligibility(input: New993Input): New993IneligibleReason[] {
 // 헬퍼: 5년 안분 비율 계산 (부호 4가지 케이스 처리)
 // ============================================================================
 
-interface FiveYearAllocation {
+export interface FiveYearAllocation {
   ratio: number;
   signCase: New993SignCase;
   reducibleIncome: number;
 }
 
-function calc5YearAllocation(
+/**
+ * 기준시가 안분 공통 — 분자·분모를 직접 받는 저수준 형태 (P1 일반화, 2026-06-11).
+ * §99의3 산식(분자 = 5년시점 − 취득시 / 분모 = 양도시 − 취득시)과
+ * §99 재개발·재건축 변형(령 §99① — 분모 = 양도시 − 종전주택 취득시)이 공유.
+ * 부호 4케이스 정책(부동산-136·525·재산2014-2035)은 동일 적용.
+ */
+export function calcSignedAllocation(
   transferIncome: number,
-  stdAtAcq: number,
-  stdAt5Y: number,
-  stdAtTransfer: number,
+  numerator: number,
+  denominator: number,
 ): FiveYearAllocation {
-  const numerator = stdAt5Y - stdAtAcq;     // 5년시점 - 취득시
-  const denominator = stdAtTransfer - stdAtAcq; // 양도시 - 취득시
-
   // 부호 4가지 케이스 (PDF 부호 표)
   if (numerator > 0 && denominator > 0) {
     // (+,+) 정상 안분
@@ -313,6 +315,16 @@ function calc5YearAllocation(
   }
   // 그 외: 분자/분모 동시 음수, 분자 0, 분모 0 등 → 감면 0
   return { ratio: 0, signCase: "all_negative", reducibleIncome: 0 };
+}
+
+/** §99의3 5년 안분 — 기존 시그니처 보존 (anchor 호환) */
+function calc5YearAllocation(
+  transferIncome: number,
+  stdAtAcq: number,
+  stdAt5Y: number,
+  stdAtTransfer: number,
+): FiveYearAllocation {
+  return calcSignedAllocation(transferIncome, stdAt5Y - stdAtAcq, stdAtTransfer - stdAtAcq);
 }
 
 // ============================================================================
