@@ -59,6 +59,11 @@ export function buildGiftTaxInput(form: FormState): GiftTaxInput {
       form.specialTreatment === "startup"
         ? form.startupInvestmentCompleted
         : undefined,
+    // G-M8: startupNewHiresAtLeast10 — startup 선택 시에만 전달 (3중 패턴: specialTreatment!=="startup"이면 undefined strip)
+    startupNewHiresAtLeast10:
+      form.specialTreatment === "startup"
+        ? form.startupNewHiresAtLeast10
+        : undefined,
   };
 
   return {
