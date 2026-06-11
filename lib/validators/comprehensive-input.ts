@@ -231,9 +231,20 @@ export const comprehensiveTaxInputSchema = z.object({
     .min(1, { message: "주택 정보를 1건 이상 입력해주세요." }),
 
   /**
+   * 납세의무자 유형 (§9②). 미입력 = "individual".
+   * - corporate_special: §9②3호 — 단일세율(2.7%/5.0%, ≤2022 3%/6%)·기본공제 0·상한 배제
+   * - corporate_general: §9②1호 — 일반 누진(주택 수 무관)
+   * - corporate_public:  §9②2호 — §9①각호(주택 수 분기)
+   */
+  taxpayerType: z
+    .enum(["individual", "corporate_special", "corporate_general", "corporate_public"])
+    .optional(),
+
+  /**
    * 1세대1주택자 여부
    * - true: 기본공제 12억, 세액공제(고령자·장기보유) 적용
    * - false: 기본공제 9억
+   * (법인 선택 시 엔진이 무시 — API 변환에서도 strip)
    */
   isOneHouseOwner: z.boolean(),
 

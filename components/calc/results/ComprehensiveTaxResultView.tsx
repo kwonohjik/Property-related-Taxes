@@ -37,6 +37,37 @@ function formatRate(rate: number, digits = 2): string {
 // 공통 행 컴포넌트
 // ============================================================
 
+/** 금액 대신 라벨 문자열을 표시하는 행 (기본공제 "적용 없음" 등) */
+function TaxLabelRow({
+  label,
+  valueLabel,
+  sub = false,
+  badge,
+}: {
+  label: string;
+  valueLabel: string;
+  sub?: boolean;
+  badge?: string;
+}) {
+  return (
+    <div
+      className={`flex items-start justify-between py-2 gap-2 ${
+        sub ? "pl-4 text-sm text-muted-foreground" : "text-sm"
+      }`}
+    >
+      <span className="flex items-center gap-1.5 flex-wrap">
+        {label}
+        {badge && (
+          <span className="text-xs font-medium bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full">
+            {badge}
+          </span>
+        )}
+      </span>
+      <span className="shrink-0 text-muted-foreground italic">{valueLabel}</span>
+    </div>
+  );
+}
+
 function TaxRow({
   label,
   amount,
@@ -150,6 +181,8 @@ function HousingTaxBaseSection({
 }: {
   result: ComprehensiveTaxResult;
 }) {
+  const isCorporateSpecial = result.taxpayerType === "corporate_special";
+
   return (
     <section className="space-y-2">
       <SectionHeader>주택분 과세표준 계산</SectionHeader>
@@ -158,11 +191,20 @@ function HousingTaxBaseSection({
           label="공시가격 합산 (합산배제 후)"
           amount={result.includedAssessedValue}
         />
-        <TaxRow
-          label={`기본공제 (${result.isOneHouseOwner ? "1세대1주택" : "일반"} ${formatKRW(result.basicDeduction)})`}
-          amount={result.basicDeduction}
-          sub
-        />
+        {/* 법인 §9②3호: 기본공제 0원 (§8①2호 — "적용 없음" 라벨) */}
+        {isCorporateSpecial ? (
+          <TaxLabelRow
+            label="기본공제"
+            valueLabel="적용 없음 (§8①2호)"
+            sub
+          />
+        ) : (
+          <TaxRow
+            label={`기본공제 (${result.isOneHouseOwner ? "1세대1주택" : "일반"} ${formatKRW(result.basicDeduction)})`}
+            amount={result.basicDeduction}
+            sub
+          />
+        )}
         <TaxRow
           label="공제 후 금액"
           amount={Math.max(result.includedAssessedValue - result.basicDeduction, 0)}
@@ -197,6 +239,22 @@ function HousingTaxSection({
 }) {
   if (!result.isSubjectToHousingTax) return null;
   const { oneHouseDeduction, propertyTaxCredit, taxCap } = result;
+  const isCorporateSpecial = result.taxpayerType === "corporate_special";
+
+  // 산출세액 배지 — taxpayerType 기준 (corporate_special은 isMultiHouseRateApplied와 무관하게 별도 배지)
+  function getCalculatedTaxBadge(): string | undefined {
+    if (isCorporateSpecial) return "§9② 법인 단일세율";
+    if (result.taxpayerType === "corporate_general")
+      return "§9②1호 공공주택사업자등 — 일반 누진세율 (주택 수 무관)";
+    if (result.taxpayerType === "corporate_public")
+      return "§9②2호 공익법인등 — §9①각호 세율";
+    if (result.isMultiHouseRateApplied) {
+      return parseInt(result.assessmentDate.slice(0, 4)) <= 2022
+        ? "다주택 중과세율 적용 (조정대상지역 2주택 또는 3주택 이상 — 구 §9①3호)"
+        : "3주택 이상 중과세율 적용 (§9①2호 — 12억 초과 구간)";
+    }
+    return undefined;
+  }
 
   return (
     <section className="space-y-2">
@@ -206,19 +264,17 @@ function HousingTaxSection({
         <TaxRow
           label={`세율 적용 (${formatRate(result.appliedRate, 4)})`}
           amount={result.calculatedTax}
-          note={`누진공제 ${formatKRW(result.progressiveDeduction)}`}
+          note={
+            isCorporateSpecial
+              ? "누진공제 없음 (단일 비례세율)"
+              : `누진공제 ${formatKRW(result.progressiveDeduction)}`
+          }
           sub
         />
         <TaxRow
           label="산출세액"
           amount={result.calculatedTax}
-          badge={
-            result.isMultiHouseRateApplied
-              ? parseInt(result.assessmentDate.slice(0, 4)) <= 2022
-                ? "다주택 중과세율 적용 (조정대상지역 2주택 또는 3주택 이상 — 구 §9①3호)"
-                : "3주택 이상 중과세율 적용 (§9①2호 — 12억 초과 구간)"
-              : undefined
-          }
+          badge={getCalculatedTaxBadge()}
         />
 
         {/* 1세대1주택 세액공제 */}
@@ -280,6 +336,12 @@ function HousingTaxSection({
               sub
             />
           </>
+        )}
+        {/* corporate_special: taxCap이 undefined → 세부담상한 미적용 안내 */}
+        {isCorporateSpecial && !taxCap && (
+          <div className="pl-4 py-2 text-xs text-muted-foreground italic">
+            세부담 상한 미적용 (§10 단서 — §9②3호 세율 적용 법인 배제)
+          </div>
         )}
 
         {/* 결정세액 */}

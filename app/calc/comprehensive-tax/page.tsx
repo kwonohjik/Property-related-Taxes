@@ -18,8 +18,8 @@ import { useState } from "react";
 import { ChevronLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { StepIndicator } from "@/components/calc/StepIndicator";
-import { CurrencyInput, parseAmount, formatKRW } from "@/components/calc/inputs/CurrencyInput";
-import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { CurrencyInput, formatKRW } from "@/components/calc/inputs/CurrencyInput";
+import { callComprehensiveApi } from "@/lib/calc/comprehensive-api";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { DateInput } from "@/components/ui/date-input";
@@ -41,30 +41,12 @@ import {
   COMPREHENSIVE_SUPPORTED_YEARS,
   getComprehensiveParams,
 } from "@/lib/tax-engine/data/comprehensive-historical";
-import type { ComprehensiveTaxResult } from "@/lib/tax-engine/types/comprehensive.types";
 
 // ============================================================
 // 상수
 // ============================================================
 
 const STEPS = ["기본 정보", "주택 목록", "합산배제", "토지 정보", "세부담 상한"];
-
-// 임대주택 합산배제 유형 (rentalInfo 필드 구성에 사용)
-const RENTAL_TYPES = new Set([
-  "private_construction_rental",
-  "private_purchase_rental_long",
-  "private_purchase_rental_short",
-  "public_support_rental",
-  "public_construction_rental",
-  "public_purchase_rental",
-]);
-
-// 기타 합산배제 유형 (otherInfo 필드 구성에 사용)
-const OTHER_INFO_TYPES = new Set([
-  "unsold_housing",
-  "daycare_housing",
-  "employee_housing",
-]);
 
 // ============================================================
 // 네비게이션 버튼
@@ -167,9 +149,22 @@ function Step1Basic() {
     ? [...COMPREHENSIVE_SUPPORTED_YEARS]
     : [...COMPREHENSIVE_SUPPORTED_YEARS, currentYear];
 
+  const params = getComprehensiveParams(selectedYear);
+  // 법인 여부 파생 (dual-truth 금지 — 별도 isCorporate store 필드 없음)
+  const isCorporate = formData.taxpayerType !== "individual";
+
   function handleYearChange(year: string) {
     updateFormData({ assessmentYear: year });
     setResult(null); // 과세연도 변경 시 기존 결과 무효화
+  }
+
+  function handleTaxpayerTypeToggle(v: string) {
+    if (v === "corporate") {
+      // 법인 선택 → corporate_special 기본 (하위 라디오에서 변경 가능)
+      updateFormData({ taxpayerType: "corporate_special" });
+    } else {
+      updateFormData({ taxpayerType: "individual" });
+    }
   }
 
   return (
@@ -206,47 +201,109 @@ function Step1Basic() {
         </p>
       </div>
 
-      {/* 1세대1주택 여부 */}
-      <ToggleCard
-        tone="sky"
-        title="1세대 1주택자"
-        description="기본공제 12억 적용 + 고령자·장기보유 세액공제 적용 (§8①1호, §9②)"
-        checked={formData.isOneHouseOwner}
-        onCheckedChange={(v) => updateFormData({ isOneHouseOwner: v })}
-      >
-        {/* 1세대1주택자 추가 정보 (ON 시 펼침) */}
-        <p className="text-xs text-sky-700 font-medium">
-          1세대1주택자 세액공제 적용을 위한 추가 정보
-        </p>
+      {/* 납세의무자 유형 — [개인] [법인] */}
+      <div className="space-y-2">
+        <label className="block text-sm font-medium">납세의무자 유형</label>
+        <RadioCardGroup
+          name="taxpayerTypeMain"
+          tone="sky"
+          layout="inline"
+          value={isCorporate ? "corporate" : "individual"}
+          onChange={handleTaxpayerTypeToggle}
+          options={[
+            { value: "individual", label: "개인" },
+            { value: "corporate", label: "법인" },
+          ]}
+        />
+      </div>
 
-        {/* 생년월일 */}
-        <div className="space-y-1.5">
-          <label className="block text-sm font-medium">
-            생년월일 (고령자 세액공제용)
-          </label>
-          <DateInput
-            value={formData.birthDate}
-            onChange={(v) => updateFormData({ birthDate: v })}
+      {/* 법인 선택 시: 하위 법인 유형 RadioCardGroup + 안내 카드 */}
+      {isCorporate && (
+        <div className="rounded-md border border-violet-200 bg-violet-50/60 p-4 space-y-3">
+          <p className="text-xs font-semibold text-violet-800">법인 유형 선택</p>
+          <RadioCardGroup
+            name="taxpayerTypeCorporate"
+            tone="violet"
+            layout="stack"
+            value={formData.taxpayerType}
+            onChange={(v) =>
+              updateFormData({
+                taxpayerType: v as "corporate_special" | "corporate_general" | "corporate_public",
+              })
+            }
+            options={[
+              {
+                value: "corporate_special",
+                label: "일반 법인 — 단일세율 (§9②3호)",
+                description: `기본공제 0원 · ${(params.corporateRate2HouseOrLess * 100).toFixed(1)}%/${(params.corporateRate3HouseOrMore * 100).toFixed(1)}% 비례세율 · 세부담상한 미적용`,
+              },
+              {
+                value: "corporate_general",
+                label: "공공주택사업자 등 (§9②1호 — 일반 누진세율)",
+                description: "주택 수 무관 일반 누진세율 적용 · 세부담상한 적용",
+              },
+              {
+                value: "corporate_public",
+                label: "공익법인등 (§9②2호)",
+                description: "주택 수 기준 일반/다주택 누진세율 · 세부담상한 적용",
+              },
+            ]}
           />
-          <p className="text-xs text-muted-foreground">
-            만 60세 이상: 20%, 65세: 30%, 70세: 40% (최대 80% 합산)
-          </p>
+          <div className="rounded-md bg-violet-100/60 border border-violet-200 px-3 py-2 text-xs text-violet-900 space-y-0.5">
+            <p className="font-semibold">§9②3호 법인 계산 특례</p>
+            <p>기본공제: 0원 (§8①2호 — 법인 적용 없음)</p>
+            <p>
+              세율: 2주택 이하 {(params.corporateRate2HouseOrLess * 100).toFixed(1)}% /{" "}
+              3주택 이상 (≤{selectedYear <= 2022 ? "2022 조정 2주택 포함" : "현행"}) {(params.corporateRate3HouseOrMore * 100).toFixed(1)}%
+            </p>
+            <p>세부담 상한: 미적용 (§10 단서)</p>
+          </div>
         </div>
+      )}
 
-        {/* 최초 취득일 */}
-        <div className="space-y-1.5">
-          <label className="block text-sm font-medium">
-            최초 취득일 (장기보유 세액공제용)
-          </label>
-          <DateInput
-            value={formData.acquisitionDate}
-            onChange={(v) => updateFormData({ acquisitionDate: v })}
-          />
-          <p className="text-xs text-muted-foreground">
-            5년 이상: 20%, 10년: 40%, 15년: 50% (고령자공제 합산 최대 80%)
+      {/* 개인 선택 시만 — 1세대1주택 여부 */}
+      {!isCorporate && (
+        <ToggleCard
+          tone="sky"
+          title="1세대 1주택자"
+          description="기본공제 12억 적용 + 고령자·장기보유 세액공제 적용 (§8①1호, §9②)"
+          checked={formData.isOneHouseOwner}
+          onCheckedChange={(v) => updateFormData({ isOneHouseOwner: v })}
+        >
+          {/* 1세대1주택자 추가 정보 (ON 시 펼침) */}
+          <p className="text-xs text-sky-700 font-medium">
+            1세대1주택자 세액공제 적용을 위한 추가 정보
           </p>
-        </div>
-      </ToggleCard>
+
+          {/* 생년월일 */}
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium">
+              생년월일 (고령자 세액공제용)
+            </label>
+            <DateInput
+              value={formData.birthDate}
+              onChange={(v) => updateFormData({ birthDate: v })}
+            />
+            <p className="text-xs text-muted-foreground">
+              만 60세 이상: 20%, 65세: 30%, 70세: 40% (최대 80% 합산)
+            </p>
+          </div>
+
+          {/* 최초 취득일 */}
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium">
+              최초 취득일 (장기보유 세액공제용)
+            </label>
+            <DateInput
+              value={formData.acquisitionDate}
+              onChange={(v) => updateFormData({ acquisitionDate: v })}
+            />
+            <p className="text-xs text-muted-foreground">
+              5년 이상: 20%, 10년: 40%, 15년: 50% (고령자공제 합산 최대 80%)
+            </p>
+          </div>
+        </ToggleCard>
+      )}
     </div>
   );
 }
@@ -453,11 +510,27 @@ function Step5TaxCap() {
   const year = parseInt(formData.assessmentYear) || new Date().getFullYear();
   const showMultiHouseCap = year < 2023;
   const isMultiHouseOn = formData.isMultiHouseInAdjustedArea;
+  const taxpayerType = formData.taxpayerType ?? "individual";
+  // corporate_special(§9②3호): 세부담상한 미적용 → 전년도 세액 입력 숨김
+  const isCorporateSpecial = taxpayerType === "corporate_special";
+  // corporate_general(§9②1호): 주택 수 무관 → 조정대상지역 2주택 토글 숨김
+  const isCorporateGeneral = taxpayerType === "corporate_general";
 
   return (
     <div className="space-y-6">
-      {/* 조정대상지역 2주택 이상 — 과세연도 < 2023 일 때만 노출 */}
-      {showMultiHouseCap && (
+      {/* corporate_special(§9②3호): 세부담상한 미적용 안내 */}
+      {isCorporateSpecial && (
+        <div className="rounded-md border border-violet-200 bg-violet-50/60 px-4 py-3 text-xs text-violet-900">
+          <p className="font-semibold">§9②3호 법인 — 세부담 상한 미적용</p>
+          <p className="mt-1">
+            종합부동산세법 §10 단서에 따라 §9②3호 세율(단일 비례세율)이 적용되는 법인에는
+            세부담 상한이 적용되지 않습니다. 전년도 세액 입력이 필요하지 않습니다.
+          </p>
+        </div>
+      )}
+
+      {/* 조정대상지역 2주택 이상 — 과세연도 < 2023 이고 corporate_general이 아닐 때만 노출 */}
+      {showMultiHouseCap && !isCorporateGeneral && (
         <ToggleCard
           tone="rose"
           title="조정대상지역 2주택 이상"
@@ -472,166 +545,45 @@ function Step5TaxCap() {
         </ToggleCard>
       )}
 
-      {/* 전년도 세액 */}
-      <div className="space-y-2">
-        <CurrencyInput
-          label="전년도 총세액 (선택)"
-          value={formData.previousYearTotalTax}
-          onChange={(v) => updateFormData({ previousYearTotalTax: v })}
-          placeholder="0"
-          hint="전년도 종합부동산세 + 재산세 합계 (농특세 제외). 미입력 시 세부담 상한 계산 생략."
-        />
-        <div className="rounded-md bg-muted/30 border px-4 py-3 text-xs text-muted-foreground">
-          <p className="font-medium mb-1">세부담 상한 계산 방식</p>
-          {showMultiHouseCap ? (
-            <>
-              <p>
-                상한액 = 전년도 세액 ×{" "}
-                {isMultiHouseOn ? "300% (조정대상지역 2주택 이상 §10②)" : "150% (일반 §10①)"}
-              </p>
-              <p className="mt-1">
-                3주택 이상은 자동으로 300% 상한이 적용됩니다.
-              </p>
-            </>
-          ) : (
-            <p>상한액 = 전년도 세액 × 150% (종합부동산세법 §10)</p>
-          )}
-          <p className="mt-1">
-            당해 종부세가 상한액을 초과하면 상한액 - 재산세 = 확정 종부세
-          </p>
+      {/* 전년도 세액 — corporate_special(상한 미적용)은 숨김 */}
+      {!isCorporateSpecial && (
+        <div className="space-y-2">
+          <CurrencyInput
+            label="전년도 총세액 (선택)"
+            value={formData.previousYearTotalTax}
+            onChange={(v) => updateFormData({ previousYearTotalTax: v })}
+            placeholder="0"
+            hint="전년도 종합부동산세 + 재산세 합계 (농특세 제외). 미입력 시 세부담 상한 계산 생략."
+          />
+          <div className="rounded-md bg-muted/30 border px-4 py-3 text-xs text-muted-foreground">
+            <p className="font-medium mb-1">세부담 상한 계산 방식</p>
+            {showMultiHouseCap ? (
+              <>
+                <p>
+                  상한액 = 전년도 세액 ×{" "}
+                  {isMultiHouseOn ? "300% (조정대상지역 2주택 이상 §10②)" : "150% (일반 §10①)"}
+                </p>
+                <p className="mt-1">
+                  3주택 이상은 자동으로 300% 상한이 적용됩니다.
+                </p>
+              </>
+            ) : (
+              <p>상한액 = 전년도 세액 × 150% (종합부동산세법 §10)</p>
+            )}
+            <p className="mt-1">
+              당해 종부세가 상한액을 초과하면 상한액 - 재산세 = 확정 종부세
+            </p>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
 
 // ============================================================
-// API 호출 및 데이터 변환
-// ============================================================
-
-// store의 exclusionType → validator의 registrationType 매핑
-// (임대주택 합산배제 신청 시 UI 선택값을 API 검증 스키마 값으로 변환)
-function toRegistrationType(exclusionType: string): string {
-  const map: Record<string, string> = {
-    private_construction_rental: "private_construction",
-    private_purchase_rental_long: "private_purchase_long",
-    private_purchase_rental_short: "private_purchase_short",
-    public_support_rental: "public_support",
-    public_construction_rental: "public_construction",
-    public_purchase_rental: "public_purchase",
-  };
-  return map[exclusionType] ?? "private_purchase_long";
-}
-
-async function callComprehensiveApi(
-  formData: ReturnType<typeof useComprehensiveWizardStore.getState>["formData"],
-): Promise<ComprehensiveTaxResult> {
-
-  const properties = formData.properties.map((p) => {
-    const base = {
-      propertyId: p.id,
-      assessedValue: parseAmount(p.assessedValue),
-      area: p.area ? parseFloat(p.area) : undefined,
-      location: p.location,
-      exclusionType: p.exclusionType !== "none" ? p.exclusionType : undefined,
-    };
-
-    // 임대주택 합산배제 상세
-    if (RENTAL_TYPES.has(p.exclusionType)) {
-      const registrationType = p.rentalRegistrationType || toRegistrationType(p.exclusionType);
-      return {
-        ...base,
-        rentalInfo: {
-          registrationType,
-          rentalRegistrationDate: p.rentalRegistrationDate || `${formData.assessmentYear}-01-01`,
-          rentalStartDate: p.rentalStartDate || `${formData.assessmentYear}-01-01`,
-          assessedValue: base.assessedValue,
-          area: p.area ? parseFloat(p.area) : 60,
-          location: p.location,
-          previousRent: p.previousRent ? parseAmount(p.previousRent) : undefined,
-          currentRent: parseAmount(p.currentRent),
-          isInitialContract: p.isInitialContract,
-          actualRentalYears: p.actualRentalYears ? parseDecimal(p.actualRentalYears) : undefined,
-          registrationRevokedDate: p.registrationRevokedDate || undefined,
-        },
-      };
-    }
-
-    // 기타 합산배제 상세
-    if (OTHER_INFO_TYPES.has(p.exclusionType)) {
-      return {
-        ...base,
-        otherInfo: {
-          recruitmentNoticeDate: p.recruitmentNoticeDate || undefined,
-          acquisitionDate: p.acquisitionDate || undefined,
-          isFirstSale: p.isFirstSale,
-          hasDaycarePermit: p.hasDaycarePermit,
-          isActuallyUsedAsDaycare: p.isActuallyUsedAsDaycare,
-          isProvidedToEmployee: p.isProvidedToEmployee,
-          rentalFeeRate: p.rentalFeeRate ? parseFloat(p.rentalFeeRate) / 100 : undefined,
-        },
-      };
-    }
-
-    return base;
-  });
-
-  // 종합합산 토지
-  const landAggregate =
-    formData.hasAggregateLand && parseAmount(formData.landAggregate.totalOfficialValue) > 0
-      ? {
-          totalOfficialValue: parseAmount(formData.landAggregate.totalOfficialValue),
-          propertyTaxBase: parseAmount(formData.landAggregate.propertyTaxBase),
-          propertyTaxAmount: parseAmount(formData.landAggregate.propertyTaxAmount),
-          previousYearTotalTax: formData.landAggregate.previousYearTotalTax
-            ? parseAmount(formData.landAggregate.previousYearTotalTax) || undefined
-            : undefined,
-        }
-      : undefined;
-
-  // 별도합산 토지
-  const landSeparate =
-    formData.hasSeparateLand && formData.landSeparate.length > 0
-      ? formData.landSeparate
-          .filter((l) => parseAmount(l.publicPrice) > 0)
-          .map((l) => ({
-            landId: l.id,
-            publicPrice: parseAmount(l.publicPrice),
-            propertyTaxBase: parseAmount(l.propertyTaxBase),
-            propertyTaxAmount: parseAmount(l.propertyTaxAmount),
-          }))
-      : undefined;
-
-  const body = {
-    assessmentYear: parseInt(formData.assessmentYear) || new Date().getFullYear(),
-    isOneHouseOwner: formData.isOneHouseOwner,
-    birthDate: formData.birthDate || undefined,
-    acquisitionDate: formData.acquisitionDate || undefined,
-    previousYearTotalTax: formData.previousYearTotalTax
-      ? parseAmount(formData.previousYearTotalTax) || undefined
-      : undefined,
-    properties,
-    landAggregate,
-    landSeparate,
-    isMultiHouseInAdjustedArea: formData.isMultiHouseInAdjustedArea,
-  };
-
-  const res = await fetch("/api/calc/comprehensive", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-
-  const json = await res.json();
-  if (!res.ok) {
-    throw new Error(json.error?.message ?? "계산 요청 실패");
-  }
-  return json.data as ComprehensiveTaxResult;
-}
-
-// ============================================================
 // 메인 페이지
 // ============================================================
+// (API 호출·변환은 lib/calc/comprehensive-api.ts — 800줄 정책 분리)
 
 export default function ComprehensiveTaxPage() {
   const router = useRouter();
