@@ -54,7 +54,11 @@ const CASES: Case2023[] = [
 ];
 
 describe("NTS 공식 계산사례 2023 — 복합건물(섹션3)", () => {
-  it("나.층별 구조 상이 — 1층 철콘 공장 + 2층 경량철골 부속창고 → 합계 859,000,000", () => {
+  // 나.층별 구조 — 공시지가 560,000(50~65만) 위치지수: 엔진 0.98(위치지수표 기준) 채택.
+  //   ⚠️ 계산사례 나는 0.97을 써서 합계 859,000,000(1층 349,000·2층 97,000)이나, 같은 문서의 계산사례
+  //   마(여관 잔가율 IV그룹 오류)와 동일 성격의 위치지수 오류로 보아 엔진값(0.98) 기준 검증.
+  //   위치지수표 원본 확인 시 0.97이면 location-index.ts 2023 #13 정정 + 본 anchor 859,000,000 복원.
+  it("나.층별 구조 상이 — 엔진 0.98 기준 합계 870,000,000 (계산사례는 0.97로 859,000,000)", () => {
     const r = calcBuildingStandardPrice({
       taxType: "inheritance_gift",
       floorArea: 0,
@@ -66,11 +70,11 @@ describe("NTS 공식 계산사례 2023 — 복합건물(섹션3)", () => {
         { label: "2층", structureKey: "light_steel_frame", usageNo: 48, floorArea: 1_300, adjustmentRate: 80 },
       ],
     });
-    expect(r.compositeBreakdowns?.[0].pricePerM2).toBe(349_000);
-    expect(r.compositeBreakdowns?.[0].standardPrice).toBe(732_900_000);
-    expect(r.compositeBreakdowns?.[1].pricePerM2).toBe(97_000);
-    expect(r.compositeBreakdowns?.[1].standardPrice).toBe(126_100_000);
-    expect(r.compositeTotal).toBe(859_000_000);
+    expect(r.compositeBreakdowns?.[0].pricePerM2).toBe(353_000);
+    expect(r.compositeBreakdowns?.[0].standardPrice).toBe(741_300_000);
+    expect(r.compositeBreakdowns?.[1].pricePerM2).toBe(99_000);
+    expect(r.compositeBreakdowns?.[1].standardPrice).toBe(128_700_000);
+    expect(r.compositeTotal).toBe(870_000_000);
   });
 
   it("라.새 개별공시지가 위치지수 — 2023.5.30 이전(1.14)=28,559,680", () => {
@@ -155,25 +159,25 @@ describe("NTS 공식 계산사례 2023 — 단일 시점 일반 건물 13건", (
   }
 
   /**
-   * ★ 버그1 [미수정 — 보고만] 잔가율 그룹이 용도(내용연수 단축)를 반영하지 못함.
+   * 마.철골조 여관 — 엔진이 정답(잔가율표 검증 완료, PDF 계산사례 오류 anchor).
    *
-   * 사례 마. 철골조 여관(usageNo 6, 2004 신축, 2023 평가): PDF 잔가율 0.145 (IV그룹, 내용연수 20년).
-   * 엔진은 resolveResidualGroupForYear(structureKey, year)가 용도(usageNo) 인자 없이 구조만으로
-   * 그룹을 도출 → 철골조 = 항상 II그룹(40년) → 0.5725. (building-standard-price-helpers.ts:123)
+   * 잔가율표 헤더: "…철골조…의 **모든 건물** = II그룹(내용연수 40년)" → 내용연수는 구조 단독(용도 무관).
+   * 따라서 철골조 여관 = II그룹 → 2004 신축·2023 평가(19년)·잔존율 0.1: 1 − 19×0.0225 = 0.5725.
+   * ㎡당 = floor(820,000 × 0.97 × 1.17 × 1.08 × 0.5725 × 0.90) = 517,000, 기준시가 38,930,100.
    *
-   * 근거: 동일 철골조인 자원순환(II 0.685)·창고(II 0.595)는 통과. 용도만 다른 여관만 IV(20년)으로
-   *   단축. PDF 내부 계산(131,000·9,864,300)이 0.145로 자기일관 → 오타 아님.
-   * 정식 수정 조건: 공식 「건물 기준시가 계산방법」 해설서의 (구조×용도) 내용연수표 확보 후
-   *   resolveResidualGroupForYear에 usageNo 차원 추가. 표 미확보로 보류(법령 정확성 최우선·추정 금지).
+   * ⚠️ 2023 계산사례 마는 IV그룹(20년) 0.145 → 131,000·9,864,300으로 계산했으나, 이는 잔가율표
+   *   "모든 건물" 규정에 반하는 **PDF 계산사례 오류**(IV그룹 칸 오적용; IV 2007신축=0.145와 혼동).
+   *   동일 철골조 자원순환(II 0.685)·창고(II 0.595)는 계산사례도 II그룹으로 정상 적용 → 마만 오류.
+   * 엔진 STRUCTURE_META(structure-group-map.ts)는 잔가율표 25개 구조 그룹을 정확히 전사함(검증 완료).
    */
-  it.skip("마.철골조 여관 — [버그1] 용도별 내용연수 단축(IV/20년) 미구현 → 엔진 0.5725 vs PDF 0.145", () => {
+  it("마.철골조 여관 — 엔진 정답 II그룹 0.5725·517,000·38,930,100 (계산사례 마는 IV그룹 오류)", () => {
     const v = calcBuildingStandardPrice({
       taxType: "inheritance_gift", floorArea: 75.3, builtYear: 2004, valuationYear: 2023,
       valuation: { structureKey: "steel_frame", usageNo: 6, landPricePerM2: 1_450_000 },
       manualAdjustmentRate: 90,
     }).valuation;
-    expect(v?.residualRate).toBe(0.145);
-    expect(v?.pricePerM2).toBe(131_000);
-    expect(v?.standardPrice).toBe(9_864_300);
+    expect(v?.residualRate).toBe(0.5725);
+    expect(v?.pricePerM2).toBe(517_000);
+    expect(v?.standardPrice).toBe(38_930_100);
   });
 });
