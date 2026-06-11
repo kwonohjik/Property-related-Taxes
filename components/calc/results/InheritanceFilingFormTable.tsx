@@ -194,7 +194,8 @@ function renderGiftRow(
       : "—";
   // PR 3 (2026-05-22): 헬퍼 사용 — 토지I/II 부수토지 토글 분기 포함
   const categoryLabel = getPropertyCategoryLabel(gift);
-  const kindCode = inferPropertyKindCode(gift);
+  // 조특법 특례(§30의5 A23·§30의6 A24) 재산구분코드 — specialTreatmentType 전달 필수
+  const kindCode = inferPropertyKindCode(gift, gift.specialTreatmentType);
   const computedTax = isCorporate
     ? gift.corporateGiftComputedTax ?? 0
     : gift.computedTax ?? 0;
