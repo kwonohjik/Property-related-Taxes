@@ -7,13 +7,14 @@
  * 양 variant 모두 stx prop 수신 — 자체 엔진 호출 없음.
  * 표시 게이트는 부모에서 `stx.totalTax > 0 || stx.warning` 판정 후 렌더.
  *
- * 법령: 증권거래세법 시행령 §5 (2026.01.02 시행) + 농특세법 §5①5호
+ * 법령: 증권거래세법 시행령 §5 (현행 = 영 제36001호, 2026.1.1 시행) + 농특세법 §5①5호
+ *       연도별 세율·인용은 엔진 echo(rateReference) 파생 — 카드는 표시 전용.
  *
  * variant:
  *   "result"  — 결과 화면 서버 echo 표시 (sky-50 full 카드, 산식 행 포함)
  *   "inline"  — Step3 inline 미리보기 (소형 카드, 실가 경비 안내 선택)
  *
- * PR-3 Phase 1: 현행(2026.01.02~) 세율 단일화 + result/inline 2 variant.
+ * Phase 2: 코스피 2025 영세율 구간(appliedRateNum=0·농특세만) 분기 — 양 variant 공통.
  */
 
 import React from "react";
@@ -75,12 +76,29 @@ export function SecuritiesTransactionTaxCard(props: SecuritiesTransactionTaxCard
   // 표시 게이트는 부모에서 판정 후 렌더 — 카드 내부 게이트 제거
   // (기타자산 C-06 경고 표시 위해 totalTax===0 && warning 케이스도 렌더)
 
+  // 코스피 2025 영세율 구간 (Phase 2) — 증권거래세 0 + 농특세만.
+  // "× 0.00%" 산식 표기 대신 영세율 안내 행 (양 variant 공통).
+  // 기타자산(num=0·농특세 0)은 totalTax=0이라 미충돌.
+  const isZeroRate = stx.appliedRateNum === 0 && stx.agriculturalTax > 0;
+
   if (props.variant === "inline") {
     const { transferPrice, showExpenseInclusionHint } = props;
     return (
       <div className="rounded-lg border border-sky-200 bg-sky-50/60 px-3 py-2 text-xs space-y-1">
         <p className="font-semibold text-sky-700">증권거래세 참고 (정보용)</p>
-        {stx.totalTax > 0 && (
+        {stx.totalTax > 0 && isZeroRate && (
+          <>
+            <p className="text-slate-600">
+              증권거래세 영세율 적용 — 농어촌특별세만 부과
+            </p>
+            <p className="text-slate-600">
+              양도가액 {fmt(transferPrice)} × {fmtRate(stx.appliedAgriRateNum, stx.appliedRateDen)} (농특세)
+              = <span className="font-medium text-slate-800">{fmt(stx.agriculturalTax)}</span>
+            </p>
+            <p className="text-sky-600 font-medium">합계 {fmt(stx.totalTax)}</p>
+          </>
+        )}
+        {stx.totalTax > 0 && !isZeroRate && (
           <>
             <p className="text-slate-600">
               양도가액 {fmt(transferPrice)} × {fmtRate(stx.appliedRateNum, stx.appliedRateDen)}
@@ -131,22 +149,30 @@ export function SecuritiesTransactionTaxCard(props: SecuritiesTransactionTaxCard
         </p>
       </div>
       <div className="px-4 py-3 space-y-2 text-sm">
-        {/* 산식 행 — 양도가액 × 세율 = 증권거래세 */}
-        {stx.totalTax > 0 && transferPrice !== undefined && transferPrice > 0 && (
+        {/* 산식 행 — 양도가액 × 세율 (영세율 구간은 안내 행으로 대체) */}
+        {stx.totalTax > 0 && !isZeroRate && transferPrice !== undefined && transferPrice > 0 && (
           <p className="text-xs text-slate-500">
             양도가액 {fmt(transferPrice)} × {fmtRate(stx.appliedRateNum, stx.appliedRateDen)}
           </p>
         )}
+        {stx.totalTax > 0 && isZeroRate && (
+          <div className="flex justify-between items-center">
+            <span className="text-slate-600">증권거래세 — 영세율 적용</span>
+            <span className="font-medium text-right font-mono tabular-nums whitespace-nowrap">0</span>
+          </div>
+        )}
         {stx.totalTax > 0 && (
           <>
-            <div className="flex justify-between items-center">
-              <span className="text-slate-600">
-                증권거래세 ({fmtRate(stx.appliedRateNum, stx.appliedRateDen)})
-              </span>
-              <span className="font-medium text-right font-mono tabular-nums whitespace-nowrap">
-                {fmt(stx.securitiesTransactionTax)}
-              </span>
-            </div>
+            {!isZeroRate && (
+              <div className="flex justify-between items-center">
+                <span className="text-slate-600">
+                  증권거래세 ({fmtRate(stx.appliedRateNum, stx.appliedRateDen)})
+                </span>
+                <span className="font-medium text-right font-mono tabular-nums whitespace-nowrap">
+                  {fmt(stx.securitiesTransactionTax)}
+                </span>
+              </div>
+            )}
             {stx.agriculturalTax > 0 && (
               <div className="flex justify-between items-center">
                 <span className="text-slate-600">

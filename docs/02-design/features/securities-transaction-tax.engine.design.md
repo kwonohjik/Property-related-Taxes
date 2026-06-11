@@ -1,5 +1,7 @@
 # 증권거래세 정보성 산출 (주식 양도세 통합) — 엔진 설계
 
+> ⚠️ **Phase 2 정정 고지**: "2026.01.02 시행" 표기는 오류(실제 = 영 제36001호, 2026.1.1 시행 — 35947호는 타법). C-09/STX-09 경고 anchor는 Phase 2에서 영세율 구간 정합값으로 대체(A-28), 경고는 cutoff(2021-01-01) 미만으로 이동. 상세: `securities-transaction-tax-phase2.engine.design.md`. 충돌 시 Phase 2 문서 우선.
+
 > 계획서: `docs/00-pm/securities-transaction-tax.plan.md` (rev.2) · 13단계 자가 검토 STEP 5 산출물
 > Phase 1 스코프: 현행(2026.01.02~) 세율 단일 + 2경로 echo 통합 + 과거 거래일 경고
 

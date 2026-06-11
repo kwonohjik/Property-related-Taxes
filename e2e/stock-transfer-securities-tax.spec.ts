@@ -212,7 +212,7 @@ test("E-1: 코스피 상장 + 양도가액 입력 시 Step3 inline STX 카드 �
   });
 
   // Step3 화면 → inline STX 카드 확인
-  // 코스피: 세율 0.05% (시령 §5 2026.01.02 시행)
+  // 코스피: 세율 0.05% (시행령 §5 1호 — 현행 영 36001호, 2026.1.1 시행)
   await expect(page.getByText("증권거래세 참고 (정보용)").first()).toBeVisible({ timeout: 10_000 });
   // 세율 정보 또는 금액이 표시되는지 확인
   await expect(page.getByText(/0\.05%/).first()).toBeVisible({ timeout: 5_000 });
@@ -374,4 +374,51 @@ test("E-4: 기타자산(과점주주) → STX 카드 양도소득세 별도 납�
   await expect(
     page.getByText(/증권거래세법|비과세|납부 의무/).first(),
   ).toBeVisible({ timeout: 5_000 });
+});
+
+// ─────────────────────────────────────────────────────────────────
+// E-5 (Phase 2): 2025년 코스피 양도 — 영세율 + 농어촌특별세만, 경고 부재
+// 시행령 §5 본문(2025 — 코스피 영세율) + 농특세법 §4 7호 단서(영세율 유가증권시장 = 농특세 과세)
+// ─────────────────────────────────────────────────────────────────
+
+test("E-5: 코스피 + 양도일 2025-06-15 → 결과뷰 영세율 안내 + 농특세 150,000, 경고 부재", async ({ page }) => {
+  test.setTimeout(120_000);
+
+  await gotoStockTransferTax(page);
+
+  // Step1: 코스피, 양도일 2025-06-15 (2025 영세율 구간)
+  await fillStep1(page, {
+    securityName: "예제주식B",
+    marketLabel: "코스피",
+    transferDate: "2025-06-15",
+    acquisitionDate: "2020-01-10",
+    shareCount: "1000",
+    totalIssuedShares: "10000000",
+  });
+
+  // Step2: 양도가액 1억 + Step3 이동
+  await fillStep2AndGoToStep3(page, {
+    transferTotalPrice: "100000000",
+    perShareAcquisitionPrice: "30000",
+  });
+
+  // Step3 inline 미리보기 — 영세율 안내 (양 variant 공통 분기)
+  await expect(page.getByText("증권거래세 참고 (정보용)").first()).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByText(/영세율/).first()).toBeVisible({ timeout: 5_000 });
+
+  // Step3: 신고일 입력 + 결과 보기 → API 대기
+  await fillStep3FilingDateAndGoToResult(page, { filingDate: "2025-08-31" });
+
+  // 결과뷰 로딩 대기
+  await expect(page.getByText(/산출세액|과세표준|양도소득금액/).first()).toBeVisible({
+    timeout: 20_000,
+  });
+
+  // result variant — 영세율 행 + 농특세 150,000 (100,000,000 × 15/10000)
+  await expect(page.getByText("증권거래세 (정보용)").first()).toBeVisible({ timeout: 5_000 });
+  await expect(page.getByText("증권거래세 — 영세율 적용").first()).toBeVisible({ timeout: 5_000 });
+  await expect(page.getByText("150,000").first()).toBeVisible({ timeout: 5_000 });
+
+  // Phase 1의 과거 거래일 경고가 사라졌는지 — "미지원" 경고 부재 (Phase 2 매트릭스 적용)
+  await expect(page.getByText(/미지원/)).toHaveCount(0);
 });

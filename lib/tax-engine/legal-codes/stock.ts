@@ -472,8 +472,10 @@ export const STOCK_FLOOR_80_PCT = 0.80 as const;
 // 증권거래세 법령 상수 그룹 (STOCK_STX)
 // 증권거래세법 + 농어촌특별세법 기반
 // KoreanLaw MCP 조회 기준일: 2026-06-11
-// 증권거래세법 시행령 MST: 280901 (2026.01.02 시행)
+// 현행 §5 세율 개정: 영 제36001호 (2025.12.31 공포, 2026.1.1 시행, MST 282431)
+//   ※ "영 35947호 2026.1.2 시행"은 부처명 타법개정으로 §5 무관 (Phase 1 오귀속 정정)
 // 농어촌특별세법 MST: 285905 (2026.05.12 시행)
+// 연도별 세율 매트릭스: lib/tax-engine/data/securities-transaction-tax-rates.ts (단일 진실)
 // ============================================================
 
 export const STOCK_STX = {
@@ -489,10 +491,10 @@ export const STOCK_STX = {
   STX_LAW_8_2_MARKET_DELEGATION: "증권거래세법 §8②",
 
   /**
-   * 시행령 §5 1호 (2026.01.02 시행) — 유가증권시장(코스피)
-   * 5/10000 (0.05%)
+   * 시행령 §5 1호 — 유가증권시장(코스피)
+   * 현행(영 36001호, 2026.1.1 시행) 5/10000. 연도별 세율은 data/ 매트릭스.
    */
-  STX_DECREE_5_1_KOSPI: "증권거래세법 시행령 §5 1호 (2026.01.02 시행)",
+  STX_DECREE_5_1_KOSPI: "증권거래세법 시행령 §5 1호",
 
   /**
    * 시행령 §5 2호 — 코넥스
@@ -540,30 +542,9 @@ export const STOCK_STX = {
   STX_LAW_2_PROVISO_1_FOREIGN: "증권거래세법 §2 단서 1호",
 
   /**
-   * 과거 거래일 경고 — 2026.01.02 이전 거래는 시행령 §5 개정 전 세율 적용 가능
-   * Phase 2에서 연도별 매트릭스 구현 예정
+   * 매트릭스 커버 범위(2021-01-01) 미만 양도 경고 — Phase 2.
+   * 2021 이전 시행령 §5 연혁은 미탑재 → 현행 세율 fallback + 본 경고.
    */
-  WARNING_PRIOR_DATE: "2026-01-02 시행 세율 적용 — 거래일 당시 시행령 §5 세율 확인 필요",
-} as const;
-
-/** 증권거래세 분자·분모 쌍 타입 */
-export interface StxRatePair {
-  /** 분자 (예: 20) */
-  num: number;
-  /** 분모 (항상 10000) */
-  den: 10000;
-  /** 분자: 0 = 미부과 */
-  agriNum: number;
-}
-
-/**
- * 시장별 증권거래세율 매트릭스 (2026.01.02 시행)
- * 분수 정수연산용 num/den 쌍 (memory feedback_applyrate_fractional_rate_one_won_error)
- */
-export const STX_RATE_MATRIX: Record<string, StxRatePair> = {
-  kospi:    { num: 5,  den: 10000, agriNum: 15 }, // §5 1호 + 농특세 §5①5호
-  konex:    { num: 10, den: 10000, agriNum: 0  }, // §5 2호
-  kosdaq:   { num: 20, den: 10000, agriNum: 0  }, // §5 3호 가목
-  kotc:     { num: 20, den: 10000, agriNum: 0  }, // §5 3호 나목
-  unlisted: { num: 35, den: 10000, agriNum: 0  }, // 법 §8① 본칙
+  WARNING_UNSUPPORTED_PERIOD:
+    "2021-01-01 이전 양도 — 당시 세율 미지원, 거래일 기준 시행령 §5 세율 별도 확인 필요",
 } as const;

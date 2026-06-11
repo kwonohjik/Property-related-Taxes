@@ -17,9 +17,9 @@
 import { describe, it, expect } from "vitest";
 import { calcSecuritiesTransactionTax } from "../../../lib/tax-engine/stock-transfer/securities-transaction-tax";
 
-// 공통 transferDate — 2026-01-02 이후 (경고 없는 케이스)
+// 공통 transferDate — 현행 구간 (영 36001호 2026.1.1 시행 둘째 날)
 const DATE_2026 = new Date("2026-01-02");
-// 과거 거래일 — 경고 있는 케이스
+// 2025 구간 말일 — 코스피 영세율 구간 (Phase 2 매트릭스 적용)
 const DATE_2025 = new Date("2025-12-31");
 
 // ============================================================
@@ -193,27 +193,31 @@ describe("STX-08: 분수 정수연산 실증 (코스피, 435,990,000)", () => {
 });
 
 // ============================================================
-// STX-09: 과거 거래일 경고 (2025-12-31)
-// 정상 산출 + warning 부착
+// STX-09 (Phase 2 재산정): 2025-12-31 코스피 = 영세율 구간 적용
+// Phase 1의 "과거 거래일 경고" 기대값을 법령 정합값으로 대체
+// (memory feedback_anchor_correction_legal_priority — 시행령 §5 본문 2025:
+//  코스피 영(0) + 농특세법 §4 7호 단서로 농특세 15/10000만 부과.
+//  경고 anchor는 phase2 A-30(2020-12-31, cutoff 미만)으로 이동)
 // ============================================================
-describe("STX-09: 과거 거래일 경고 (2025-12-31)", () => {
-  it("코스피 + transferDate=2025-12-31 → 정상 산출 + warning", () => {
+describe("STX-09 (Phase 2 재산정): 2025-12-31 코스피 영세율 구간", () => {
+  it("코스피 + transferDate=2025-12-31 → 영세율 0 + 농특세 150,000, 경고 없음", () => {
     const result = calcSecuritiesTransactionTax(
       { marketType: "kospi", isKOTCTrading: false, transferDate: DATE_2025 },
       100_000_000,
     );
-    expect(result.securitiesTransactionTax).toBe(50_000);
+    expect(result.securitiesTransactionTax).toBe(0);
     expect(result.agriculturalTax).toBe(150_000);
-    expect(result.totalTax).toBe(200_000);
-    expect(result.warning).toBeDefined();
-    expect(result.warning).toContain("2026-01-02");
+    expect(result.totalTax).toBe(150_000);
+    expect(result.appliedRateNum).toBe(0);
+    expect(result.warning).toBeUndefined();
   });
 });
 
 // ============================================================
-// STX-10: 경계일 경고 없음 (2026-01-02)
+// STX-10: 현행 구간 무경고 (2026-01-02 — 영 36001호 2026.1.1 시행 둘째 날.
+// 시행 첫날 경계는 phase2 A-29가 검증)
 // ============================================================
-describe("STX-10: 경계일 경고 없음 (2026-01-02)", () => {
+describe("STX-10: 현행 구간 무경고 (2026-01-02)", () => {
   it("코스피 + transferDate=2026-01-02 → warning 없음", () => {
     const result = calcSecuritiesTransactionTax(
       { marketType: "kospi", isKOTCTrading: false, transferDate: new Date("2026-01-02") },

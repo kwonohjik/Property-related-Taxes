@@ -1,5 +1,7 @@
 # 증권거래세 정보성 산출 — UI 디자인
 
+> ⚠️ **Phase 2 정정 고지**: S-5(2025-12-31 경고) 시나리오는 Phase 2에서 "2025 영세율 구간 적용·경고 없음"으로 대체(시행일 오귀속 정정 — 영 제36001호 2026.1.1). 영세율 카드 분기·경고 문구 변경: `securities-transaction-tax-phase2.ui.design.md`. 충돌 시 Phase 2 문서 우선.
+
 > 계획서: `docs/00-pm/securities-transaction-tax.plan.md` (rev.2) · 엔진 설계: `securities-transaction-tax.engine.design.md`
 > 13단계 자가 검토 STEP 12 산출물. 신규 입력 필드 0 — UI 작업은 ⑤(Step3 교체)·⑦(결과 카드)·인쇄 한정.
 

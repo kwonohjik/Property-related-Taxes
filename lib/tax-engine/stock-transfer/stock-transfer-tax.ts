@@ -42,11 +42,14 @@ import { buildPr2Detail } from "./stock-transfer-pr2-detail";
 import { STOCK, STOCK_ESTIMATED_EXPENSE_RATE } from "@/lib/tax-engine/legal-codes/stock";
 import { allocateLots } from "./lot-allocation";
 import { calcSplitModeTax } from "./lot-allocation-tax";
-import { computeInformationalAcquisition } from "./exempt-informational-acquisition";
-import { buildExemptResult, calcTransferPriceSimple } from "./stock-transfer-exempt-result";
+import { buildExemptResult } from "./stock-transfer-exempt-result";
 import { applyExemptZeroing } from "./apply-exempt-zeroing";
 import { apply163_9Conversion, resolveTransferStd } from "./apply-163-9-conversion";
-import { calcSecuritiesTransactionTax } from "./securities-transaction-tax";
+import {
+  calcSecuritiesTransactionTax,
+  sumSecuritiesTransactionTax,
+  type SecuritiesTransactionTaxTotal,
+} from "./securities-transaction-tax";
 
 // ============================================================
 // split 모드 판정 헬퍼
@@ -603,6 +606,13 @@ export interface StockTransferAggregateResult {
   totalFinalTax: number;
   /** 합산 지방소득세 */
   totalLocalIncomeTax: number;
+  /**
+   * 종목별 증권거래세 정보성 echo 합산 (Phase 2 — B-E1).
+   * 이미 floor된 종목별 값의 단순합 — 안분·잔액흡수 비해당.
+   * 비과세 종목 echo도 포함 (증권거래세는 양도세 비과세와 독립).
+   * ⚠️ 현재 aggregate UI 소비자 없음(다자산 UI 미연결) — 향후 연결 시 14지점 재점검 대상.
+   */
+  totalSecuritiesTransactionTax: SecuritiesTransactionTaxTotal;
 }
 
 /**
@@ -654,6 +664,7 @@ export function calculateStockTransferTaxAggregate(
       electronicFilingCredit,
       totalFinalTax,
       totalLocalIncomeTax,
+      totalSecuritiesTransactionTax: sumSecuritiesTransactionTax(items),
     };
   }
 
@@ -782,5 +793,6 @@ export function calculateStockTransferTaxAggregate(
     electronicFilingCredit,
     totalFinalTax,
     totalLocalIncomeTax,
+    totalSecuritiesTransactionTax: sumSecuritiesTransactionTax(processedItems),
   };
 }
