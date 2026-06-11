@@ -71,6 +71,8 @@ export interface FormState extends AppraisalFeeFormFields {
   specialTreatment: "" | "startup" | "family_business";
   /** 창업자금 §30의5④ — 투자 완료 여부 (startup 선택 시 노출) */
   startupInvestmentCompleted: boolean;
+  /** 창업자금 §30의5① — 10명 이상 신규 고용 여부 (한도 50억 → 100억, startup 선택 시 노출) */
+  startupNewHiresAtLeast10: boolean;
   // 분납 (Step3 끝, 상증법 §70②) — 결정세액 미영향 투영, 별지10호 ㊼ 연동
   /** 분납 신청 여부 */
   splitPaymentEnabled: boolean;
@@ -97,6 +99,7 @@ export const INITIAL_FORM: FormState = {
   foreignTaxPaid: "",
   specialTreatment: "",
   startupInvestmentCompleted: false,
+  startupNewHiresAtLeast10: false,
   splitPaymentEnabled: false,
   splitPaymentAmount: "",
   ...INITIAL_APPRAISAL_FEE_FIELDS,
@@ -581,8 +584,8 @@ export function Step3({
             const val = v === "none" ? "" : v;
             set({
               specialTreatment: val,
-              // startup이 아니면 startupInvestmentCompleted 초기화
-              ...(val !== "startup" ? { startupInvestmentCompleted: false } : {}),
+              // startup이 아니면 startupInvestmentCompleted / startupNewHiresAtLeast10 초기화
+              ...(val !== "startup" ? { startupInvestmentCompleted: false, startupNewHiresAtLeast10: false } : {}),
             });
           }}
           options={[
@@ -601,6 +604,17 @@ export function Step3({
           description="증여일로부터 2년 이내 창업법인 설립 및 투자 완료 여부. 미완료 시 과세특례 미적용."
           checked={form.startupInvestmentCompleted}
           onCheckedChange={(v) => set({ startupInvestmentCompleted: v })}
+        />
+      )}
+
+      {/* G-M8: 10명 이상 신규 고용 여부 (§30의5①) — startup 선택 시 노출. ⑧ validation 불필요(boolean, 차단 없음) */}
+      {form.specialTreatment === "startup" && (
+        <ToggleCard
+          tone="emerald"
+          title="창업을 통하여 10명 이상 신규 고용 (§30의5①)"
+          description="창업자금 증여세 과세특례 적용 한도: 10명 이상 신규 고용 시 100억원, 그 외 50억원 (조특법 §30의5①)."
+          checked={form.startupNewHiresAtLeast10}
+          onCheckedChange={(v) => set({ startupNewHiresAtLeast10: v })}
         />
       )}
 

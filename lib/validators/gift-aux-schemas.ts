@@ -38,6 +38,8 @@ export const giftTaxCreditInputSchema = z.object({
   isFiledOnTime: z.boolean(),
   specialTreatment: z.enum(["startup", "family_business"]).optional(),
   startupInvestmentCompleted: z.boolean().optional(),
+  /** §30의5① 창업자금 과세가액 한도 기준: 10인 이상 신규 고용 여부 (true → 100억, false/undefined → 50억) */
+  startupNewHiresAtLeast10: z.boolean().optional(),
 });
 
 // ============================================================

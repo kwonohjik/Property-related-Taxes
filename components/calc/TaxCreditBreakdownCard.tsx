@@ -245,6 +245,16 @@ function buildSection69Formula(
   const corp = corporateExemption;
   const allOthersZero = foreign === 0 && special === 0 && shortTerm === 0;
 
+  // §30의5⑪ 배제 케이스: 창업자금 특례 적격(specialTreatmentCredit > 0) + 신고세액공제 = 0
+  const isStartupExcluded = special > 0 && credit.filingCredit === 0;
+  if (isStartupExcluded) {
+    return (
+      <div className="text-[10px] text-amber-700 dark:text-amber-400">
+        신고세액공제 = 0 (조특법 §30의5⑪ — 창업자금 증여세 과세특례 선택 시 신고세액공제 배제)
+      </div>
+    );
+  }
+
   return (
     <>
       <div>
@@ -301,7 +311,8 @@ interface CreditRowProps {
 
 function CreditRow({ label, amount, lawRef, highlight, formula }: CreditRowProps) {
   const [expanded, setExpanded] = useState(false);
-  if (amount === 0) return null;
+  // formula가 있으면 amount===0이어도 사유 안내를 위해 렌더 (§30의5⑪ 신고세액공제 배제 등)
+  if (amount === 0 && !formula) return null;
   return (
     <div className="space-y-1">
       <div
