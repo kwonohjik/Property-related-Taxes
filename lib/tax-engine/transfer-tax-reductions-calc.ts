@@ -149,7 +149,9 @@ export function calcReductions(
     }
   }
 
-  // R-1~R-4: 하위 호환 단순 감면
+  // R-1~R-4: 하위 호환 단순 감면 (신규 UI 미생성 — 2026-04-25 이전 폼-전역 구버전
+  // sessionStorage 마이그레이션 전용. §97 시리즈는 STEP 4 + R-2-97 evaluator가 처리.
+  // 후속 정리: docs/00-pm/transfer-rental-followup.plan.md §R-4)
   const v2Types = new Set(candidates.map((c) => c.type));
   for (const reduction of reductions) {
     if (v2Types.has(reduction.type)) continue;
@@ -221,6 +223,13 @@ export function calcReductions(
         }
       }
     } else if (reduction.type === "long_term_rental") {
+      // ⚠️ R-1 (장기임대 §97의3 8년 50% 경과규정) — 레거시 단순 경로.
+      // 신규 UI(UnifiedReductionPanel)는 rental_97_* ID만 생성하므로 이 type은 신규
+      // 입력에서 도달 불가(dead). 2026-04-25 이전 폼-전역 구버전 sessionStorage
+      // 마이그레이션(calc-wizard-migration.ts:149)으로만 폼에 존재한다.
+      // 시한·등록일 게이트 없이 8년 50%를 적용 — §97의3 현행은 10년 70% 단일이고
+      // 8년 50%는 과거 경과규정. 부칙 존속 여부 미확정(R-1: KoreanLaw 확보 불가, 외부
+      // 원문 필요)으로 제거·게이트추가 모두 보류. 후속: followup.plan.md §R-1·R-4.
       if (reduction.rentalYears >= 8 && reduction.rentIncreaseRate <= 0.05) {
         amount = applyRate(calculatedTax, 0.5);
       }
