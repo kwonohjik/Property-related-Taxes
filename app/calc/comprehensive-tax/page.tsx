@@ -18,8 +18,8 @@ import { useState } from "react";
 import { ChevronLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { StepIndicator } from "@/components/calc/StepIndicator";
-import { CurrencyInput, parseAmount, formatKRW } from "@/components/calc/inputs/CurrencyInput";
-import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { CurrencyInput, formatKRW } from "@/components/calc/inputs/CurrencyInput";
+import { callComprehensiveApi } from "@/lib/calc/comprehensive-api";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { DateInput } from "@/components/ui/date-input";
@@ -41,30 +41,12 @@ import {
   COMPREHENSIVE_SUPPORTED_YEARS,
   getComprehensiveParams,
 } from "@/lib/tax-engine/data/comprehensive-historical";
-import type { ComprehensiveTaxResult } from "@/lib/tax-engine/types/comprehensive.types";
 
 // ============================================================
 // 상수
 // ============================================================
 
 const STEPS = ["기본 정보", "주택 목록", "합산배제", "토지 정보", "세부담 상한"];
-
-// 임대주택 합산배제 유형 (rentalInfo 필드 구성에 사용)
-const RENTAL_TYPES = new Set([
-  "private_construction_rental",
-  "private_purchase_rental_long",
-  "private_purchase_rental_short",
-  "public_support_rental",
-  "public_construction_rental",
-  "public_purchase_rental",
-]);
-
-// 기타 합산배제 유형 (otherInfo 필드 구성에 사용)
-const OTHER_INFO_TYPES = new Set([
-  "unsold_housing",
-  "daycare_housing",
-  "employee_housing",
-]);
 
 // ============================================================
 // 네비게이션 버튼
@@ -506,132 +488,9 @@ function Step5TaxCap() {
 }
 
 // ============================================================
-// API 호출 및 데이터 변환
-// ============================================================
-
-// store의 exclusionType → validator의 registrationType 매핑
-// (임대주택 합산배제 신청 시 UI 선택값을 API 검증 스키마 값으로 변환)
-function toRegistrationType(exclusionType: string): string {
-  const map: Record<string, string> = {
-    private_construction_rental: "private_construction",
-    private_purchase_rental_long: "private_purchase_long",
-    private_purchase_rental_short: "private_purchase_short",
-    public_support_rental: "public_support",
-    public_construction_rental: "public_construction",
-    public_purchase_rental: "public_purchase",
-  };
-  return map[exclusionType] ?? "private_purchase_long";
-}
-
-async function callComprehensiveApi(
-  formData: ReturnType<typeof useComprehensiveWizardStore.getState>["formData"],
-): Promise<ComprehensiveTaxResult> {
-
-  const properties = formData.properties.map((p) => {
-    const base = {
-      propertyId: p.id,
-      assessedValue: parseAmount(p.assessedValue),
-      area: p.area ? parseFloat(p.area) : undefined,
-      location: p.location,
-      exclusionType: p.exclusionType !== "none" ? p.exclusionType : undefined,
-    };
-
-    // 임대주택 합산배제 상세
-    if (RENTAL_TYPES.has(p.exclusionType)) {
-      const registrationType = p.rentalRegistrationType || toRegistrationType(p.exclusionType);
-      return {
-        ...base,
-        rentalInfo: {
-          registrationType,
-          rentalRegistrationDate: p.rentalRegistrationDate || `${formData.assessmentYear}-01-01`,
-          rentalStartDate: p.rentalStartDate || `${formData.assessmentYear}-01-01`,
-          assessedValue: base.assessedValue,
-          area: p.area ? parseFloat(p.area) : 60,
-          location: p.location,
-          previousRent: p.previousRent ? parseAmount(p.previousRent) : undefined,
-          currentRent: parseAmount(p.currentRent),
-          isInitialContract: p.isInitialContract,
-          actualRentalYears: p.actualRentalYears ? parseDecimal(p.actualRentalYears) : undefined,
-          registrationRevokedDate: p.registrationRevokedDate || undefined,
-        },
-      };
-    }
-
-    // 기타 합산배제 상세
-    if (OTHER_INFO_TYPES.has(p.exclusionType)) {
-      return {
-        ...base,
-        otherInfo: {
-          recruitmentNoticeDate: p.recruitmentNoticeDate || undefined,
-          acquisitionDate: p.acquisitionDate || undefined,
-          isFirstSale: p.isFirstSale,
-          hasDaycarePermit: p.hasDaycarePermit,
-          isActuallyUsedAsDaycare: p.isActuallyUsedAsDaycare,
-          isProvidedToEmployee: p.isProvidedToEmployee,
-          rentalFeeRate: p.rentalFeeRate ? parseFloat(p.rentalFeeRate) / 100 : undefined,
-        },
-      };
-    }
-
-    return base;
-  });
-
-  // 종합합산 토지
-  const landAggregate =
-    formData.hasAggregateLand && parseAmount(formData.landAggregate.totalOfficialValue) > 0
-      ? {
-          totalOfficialValue: parseAmount(formData.landAggregate.totalOfficialValue),
-          propertyTaxBase: parseAmount(formData.landAggregate.propertyTaxBase),
-          propertyTaxAmount: parseAmount(formData.landAggregate.propertyTaxAmount),
-          previousYearTotalTax: formData.landAggregate.previousYearTotalTax
-            ? parseAmount(formData.landAggregate.previousYearTotalTax) || undefined
-            : undefined,
-        }
-      : undefined;
-
-  // 별도합산 토지
-  const landSeparate =
-    formData.hasSeparateLand && formData.landSeparate.length > 0
-      ? formData.landSeparate
-          .filter((l) => parseAmount(l.publicPrice) > 0)
-          .map((l) => ({
-            landId: l.id,
-            publicPrice: parseAmount(l.publicPrice),
-            propertyTaxBase: parseAmount(l.propertyTaxBase),
-            propertyTaxAmount: parseAmount(l.propertyTaxAmount),
-          }))
-      : undefined;
-
-  const body = {
-    assessmentYear: parseInt(formData.assessmentYear) || new Date().getFullYear(),
-    isOneHouseOwner: formData.isOneHouseOwner,
-    birthDate: formData.birthDate || undefined,
-    acquisitionDate: formData.acquisitionDate || undefined,
-    previousYearTotalTax: formData.previousYearTotalTax
-      ? parseAmount(formData.previousYearTotalTax) || undefined
-      : undefined,
-    properties,
-    landAggregate,
-    landSeparate,
-    isMultiHouseInAdjustedArea: formData.isMultiHouseInAdjustedArea,
-  };
-
-  const res = await fetch("/api/calc/comprehensive", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-
-  const json = await res.json();
-  if (!res.ok) {
-    throw new Error(json.error?.message ?? "계산 요청 실패");
-  }
-  return json.data as ComprehensiveTaxResult;
-}
-
-// ============================================================
 // 메인 페이지
 // ============================================================
+// (API 호출·변환은 lib/calc/comprehensive-api.ts — 800줄 정책 분리)
 
 export default function ComprehensiveTaxPage() {
   const router = useRouter();
