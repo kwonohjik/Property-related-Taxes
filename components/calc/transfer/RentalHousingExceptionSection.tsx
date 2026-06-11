@@ -445,13 +445,10 @@ export function RentalHousingExceptionSection({
                 label="거주주택 거주기간 (개월)"
                 hint="실제 거주한 기간을 개월 수로 입력하세요. 본 특례는 2년(24개월) 이상이 필요합니다."
               >
-                <input
-                  type="number"
-                  min={0}
-                  max={480}
+                <DecimalInput
+                  className="w-32"
                   value={residencePeriodMonthsAsset ?? ""}
-                  onChange={(e) => onChangeResidencePeriodMonths(e.target.value)}
-                  className="w-32 rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  onChange={(v) => onChangeResidencePeriodMonths(v)}
                 />
                 <span className="ml-2 text-xs text-muted-foreground">
                   {liveMonths > 0 && `(${Math.floor(liveMonths / 12)}년 ${liveMonths % 12}개월)`}

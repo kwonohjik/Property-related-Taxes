@@ -12,6 +12,7 @@
 import { useState } from "react";
 import { DateInput } from "@/components/ui/date-input";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
+import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ThreePointStandardPriceInput } from "./ThreePointStandardPriceInput";
@@ -97,14 +98,10 @@ export function PreHousingDisclosureSection({ asset, transferDate, onChange }: P
         hint="단위공시지가(원/㎡) × 면적으로 기준시가 계산 — 등기부등본의 토지 면적 기재"
         unit="㎡"
       >
-        <input
-          type="number"
-          min="0"
-          step="0.01"
-          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm tabular-nums placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+        <DecimalInput
           placeholder="토지 면적 입력"
           value={asset.acquisitionArea}
-          onChange={(e) => onChange({ acquisitionArea: e.target.value })}
+          onChange={(v) => onChange({ acquisitionArea: v })}
         />
       </FieldCard>
 

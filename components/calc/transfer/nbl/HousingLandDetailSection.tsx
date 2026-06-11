@@ -3,6 +3,7 @@
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
+import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 
 export interface HousingLandDetailSectionProps {
@@ -63,13 +64,9 @@ export function HousingLandDetailSection({
       </FieldCard>
 
       <FieldCard label="주택 연면적" unit="㎡">
-        <input
-          type="number"
+        <DecimalInput
           value={asset.nblHousingFootprint}
-          onChange={(e) => onAssetChange({ nblHousingFootprint: e.target.value })}
-          min={0}
-          placeholder="0"
-          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          onChange={(v) => onAssetChange({ nblHousingFootprint: v })}
         />
       </FieldCard>
 

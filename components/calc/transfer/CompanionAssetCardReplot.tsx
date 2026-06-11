@@ -2,6 +2,7 @@
 import { useState } from "react";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { DateInput } from "@/components/ui/date-input";
+import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 
 export const AREA_INPUT_CLASS = "w-full border rounded-md px-3 py-2 text-sm bg-background";
 
@@ -61,39 +62,39 @@ export function ReplotReductionFields({
             권리면적 (㎡)
             <span title="환지예정지 지정 시 받기로 한 면적" className="ml-1 cursor-help text-muted-foreground">ⓘ</span>
           </label>
-          <input type="number" step="0.01" className={AREA_INPUT_CLASS}
+          <DecimalInput
             value={asset.entitlementArea}
-            onChange={(e) => {
-              const eff = calcEffectiveArea(asset.priorLandArea, asset.allocatedArea, e.target.value);
-              onChange({ entitlementArea: e.target.value, acquisitionArea: eff });
+            onChange={(v) => {
+              const eff = calcEffectiveArea(asset.priorLandArea, asset.allocatedArea, v);
+              onChange({ entitlementArea: v, acquisitionArea: eff });
             }}
-            placeholder="0.00" />
+          />
         </div>
         <div className="space-y-1">
           <label className="text-xs text-muted-foreground">
             교부면적 (㎡)
             <span title="환지처분 확정 후 실제 교부받은 면적. 양도면적으로 자동 적용됩니다." className="ml-1 cursor-help text-muted-foreground">ⓘ</span>
           </label>
-          <input type="number" step="0.01" className={AREA_INPUT_CLASS}
+          <DecimalInput
             value={asset.allocatedArea}
-            onChange={(e) => {
-              const eff = calcEffectiveArea(asset.priorLandArea, e.target.value, asset.entitlementArea);
-              onChange({ allocatedArea: e.target.value, transferArea: e.target.value, acquisitionArea: eff });
+            onChange={(v) => {
+              const eff = calcEffectiveArea(asset.priorLandArea, v, asset.entitlementArea);
+              onChange({ allocatedArea: v, transferArea: v, acquisitionArea: eff });
             }}
-            placeholder="0.00" />
+          />
         </div>
         <div className="space-y-1">
           <label className="text-xs text-muted-foreground">
             종전면적 (㎡)
             <span title="환지 전 보유했던 원래 면적. 의제취득면적 = 종전×(교부÷권리)" className="ml-1 cursor-help text-muted-foreground">ⓘ</span>
           </label>
-          <input type="number" step="0.01" className={AREA_INPUT_CLASS}
+          <DecimalInput
             value={asset.priorLandArea}
-            onChange={(e) => {
-              const eff = calcEffectiveArea(e.target.value, asset.allocatedArea, asset.entitlementArea);
-              onChange({ priorLandArea: e.target.value, acquisitionArea: eff });
+            onChange={(v) => {
+              const eff = calcEffectiveArea(v, asset.allocatedArea, asset.entitlementArea);
+              onChange({ priorLandArea: v, acquisitionArea: eff });
             }}
-            placeholder="0.00" />
+          />
         </div>
       </div>
 
@@ -177,20 +178,20 @@ export function ReplotIncreaseFields({
             취득 당시 면적 (㎡)
             <span title="환지처분 전 원래 보유 면적 (권리면적 기준)" className="ml-1 cursor-help text-muted-foreground">ⓘ</span>
           </label>
-          <input type="number" step="0.01" className={AREA_INPUT_CLASS}
+          <DecimalInput
             value={asset.acquisitionArea}
-            onChange={(e) => onChange({ acquisitionArea: e.target.value, entitlementArea: e.target.value })}
-            placeholder="권리면적 기준" />
+            onChange={(v) => onChange({ acquisitionArea: v, entitlementArea: v })}
+          />
         </div>
         <div className="space-y-1">
           <label className="text-xs text-muted-foreground">
             양도 당시 면적 (㎡)
             <span title="이번 양도 면적 (증가분 제외, 권리면적 기준)" className="ml-1 cursor-help text-muted-foreground">ⓘ</span>
           </label>
-          <input type="number" step="0.01" className={AREA_INPUT_CLASS}
+          <DecimalInput
             value={asset.transferArea}
-            onChange={(e) => onChange({ transferArea: e.target.value, allocatedArea: e.target.value })}
-            placeholder="이번에 파는 면적" />
+            onChange={(v) => onChange({ transferArea: v, allocatedArea: v })}
+          />
         </div>
       </div>
 

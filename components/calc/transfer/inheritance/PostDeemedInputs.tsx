@@ -13,6 +13,7 @@
 import { useState } from "react";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { HouseValuationSection } from "./HouseValuationSection";
@@ -236,14 +237,9 @@ export function PostDeemedInputs({ asset, onChange, transferDate }: Props) {
                     />
                   </FieldCard>
                   <FieldCard label="면적" unit="㎡">
-                    <input
-                      type="number"
-                      className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                    <DecimalInput
                       value={asset.supplementaryLandArea}
-                      onChange={(e) => handleLandAreaChange(e.target.value)}
-                      placeholder="0"
-                      min="0"
-                      step="0.01"
+                      onChange={(v) => handleLandAreaChange(v)}
                     />
                   </FieldCard>
                 </div>

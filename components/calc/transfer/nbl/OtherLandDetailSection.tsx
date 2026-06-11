@@ -3,6 +3,14 @@
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 
 export interface OtherLandDetailSectionProps {
@@ -28,40 +36,45 @@ export function OtherLandDetailSection({
       />
 
       <FieldCard label="재산세 과세 분류">
-        <select
-          value={asset.nblOtherPropertyTaxType}
-          onChange={(e) =>
-            onAssetChange({ nblOtherPropertyTaxType: e.target.value as PropertyTaxType })
-          }
-          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        <Select
+          value={asset.nblOtherPropertyTaxType ?? ""}
+          onValueChange={(v) => v && onAssetChange({ nblOtherPropertyTaxType: v as PropertyTaxType })}
         >
-          <option value="">선택 안 함</option>
-          <option value="comprehensive">종합합산</option>
-          <option value="separate">별도합산</option>
-          <option value="special_sum">분리과세</option>
-          <option value="exempt">비과세·면제</option>
-        </select>
+          <SelectTrigger>
+            <SelectValue>
+              {asset.nblOtherPropertyTaxType === "comprehensive" ? "종합합산"
+                : asset.nblOtherPropertyTaxType === "separate" ? "별도합산"
+                : asset.nblOtherPropertyTaxType === "special_sum" ? "분리과세"
+                : asset.nblOtherPropertyTaxType === "exempt" ? "비과세·면제"
+                : "선택 안 함"}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="comprehensive">종합합산</SelectItem>
+            <SelectItem value="separate">별도합산</SelectItem>
+            <SelectItem value="special_sum">분리과세</SelectItem>
+            <SelectItem value="exempt">비과세·면제</SelectItem>
+          </SelectContent>
+        </Select>
       </FieldCard>
 
       <FieldCard label="건물가액" unit="원">
-        <input
-          type="number"
+        <CurrencyInput
+          label="건물가액"
+          hideLabel
           value={asset.nblOtherBuildingValue}
-          onChange={(e) => onAssetChange({ nblOtherBuildingValue: e.target.value })}
-          min={0}
-          placeholder="0"
-          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          onChange={(v) => onAssetChange({ nblOtherBuildingValue: v })}
+          hideUnit
         />
       </FieldCard>
 
       <FieldCard label="토지가액" unit="원">
-        <input
-          type="number"
+        <CurrencyInput
+          label="토지가액"
+          hideLabel
           value={asset.nblOtherLandValue}
-          onChange={(e) => onAssetChange({ nblOtherLandValue: e.target.value })}
-          min={0}
-          placeholder="0"
-          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          onChange={(v) => onAssetChange({ nblOtherLandValue: v })}
+          hideUnit
         />
       </FieldCard>
 

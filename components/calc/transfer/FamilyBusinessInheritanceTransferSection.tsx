@@ -23,6 +23,7 @@
 
 import { useState } from "react";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
+import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { DateInput } from "@/components/ui/date-input";
@@ -190,21 +191,12 @@ export function FamilyBusinessInheritanceTransferSection({ asset, onChange, tran
             required
             hint="소령 §163의2③ — 개인가업: 공제금액 ÷ 가업상속 재산가액 / 법인가업: 사업관련자산가액 ÷ 총자산가액"
           >
-            <div className="relative">
-              <input
-                type="number"
-                min={0}
-                max={100}
-                step={0.0001}
-                value={toRateStr(fb.fbDeductionAppliedRate)}
-                onChange={(e) => patchFb({ fbDeductionAppliedRate: parseRateStr(e.target.value) })}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm pr-8"
-                placeholder="적용률 (0~100)"
-              />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">
-                %
-              </span>
-            </div>
+            <DecimalInput
+              unit="%"
+              value={toRateStr(fb.fbDeductionAppliedRate)}
+              onChange={(v) => patchFb({ fbDeductionAppliedRate: parseRateStr(v) })}
+              placeholder="적용률 (0~100)"
+            />
           </FieldCard>
 
           {/* ④ 상속개시일 */}

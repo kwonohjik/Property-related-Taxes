@@ -3,6 +3,7 @@
 import type { AssetForm, ParcelFormItem } from "@/lib/stores/calc-wizard-store";
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { AddressSearch, type AddressValue } from "@/components/ui/address-search";
@@ -76,6 +77,8 @@ interface Props {
    * 사례 45 — RedevelopmentBlock §⑤ 거주월수 분리 입력 카드 가시성 가드.
    */
   isOneHouseSingle?: boolean;
+  /** 검증 실패 메시지 — 이 자산 카드에 해당하는 오류. 상단 인라인 배너 + 테두리 강조. */
+  errorMessage?: string;
 }
 
 export function CompanionAssetCard({
@@ -91,6 +94,7 @@ export function CompanionAssetCard({
   totalTransferExpense,
   primaryAsset,
   isOneHouseSingle,
+  errorMessage,
 }: Props) {
   const isMultiBundled = !singleMode && bundledSaleMode !== undefined;
   const isPrimary = asset.isPrimaryForHouseholdFlags;
@@ -103,10 +107,20 @@ export function CompanionAssetCard({
   const showUnifiedBadge = useUnifiedRateBadge(asset, primaryAsset, transferDate);
 
   return (
-    <div className={cn(
-      "border rounded-lg p-4 space-y-4",
-      isPrimary ? "bg-background border-primary/30" : "bg-muted/30",
-    )}>
+    <div
+      data-asset-card-index={index}
+      className={cn(
+        "border rounded-lg p-4 space-y-4 scroll-mt-24",
+        errorMessage
+          ? "border-destructive ring-1 ring-destructive/30 bg-destructive/[0.03]"
+          : isPrimary ? "bg-background border-primary/30" : "bg-muted/30",
+      )}
+    >
+      {errorMessage && (
+        <p className="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-xs font-medium text-destructive">
+          {errorMessage}
+        </p>
+      )}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="font-medium text-sm">
@@ -313,15 +327,12 @@ export function CompanionAssetCard({
                   className="ml-1 cursor-help"
                 >ⓘ</span>
               </label>
-              <input
-                type="number"
+              <DecimalInput
                 value={asset.transferArea}
-                onChange={(e) =>
-                  onChange({ acquisitionArea: e.target.value, transferArea: e.target.value })
+                onChange={(v) =>
+                  onChange({ acquisitionArea: v, transferArea: v })
                 }
-                min={0}
                 placeholder="면적 입력"
-                className="w-full border rounded-md px-3 py-2 text-sm bg-background"
               />
             </div>
           )}
@@ -334,13 +345,10 @@ export function CompanionAssetCard({
                 취득 당시 면적 (㎡)
                 <span title="처음 취득 시 보유한 전체 면적. 취득 기준시가 = ㎡ 단가 × 이 면적." className="ml-1 cursor-help">ⓘ</span>
               </label>
-                <input
-                  type="number"
+                <DecimalInput
                   value={asset.acquisitionArea}
-                  onChange={(e) => onChange({ acquisitionArea: e.target.value })}
-                  min={0}
+                  onChange={(v) => onChange({ acquisitionArea: v })}
                   placeholder="전체 취득한 면적"
-                  className="w-full border rounded-md px-3 py-2 text-sm bg-background"
                 />
               </div>
               <div className="space-y-1">
@@ -348,13 +356,10 @@ export function CompanionAssetCard({
                 양도 당시 면적 (㎡)
                 <span title="이번 양도 계약에서 매매하는 면적. 양도 기준시가 = ㎡ 단가 × 이 면적." className="ml-1 cursor-help">ⓘ</span>
               </label>
-                <input
-                  type="number"
+                <DecimalInput
                   value={asset.transferArea}
-                  onChange={(e) => onChange({ transferArea: e.target.value })}
-                  min={0}
+                  onChange={(v) => onChange({ transferArea: v })}
                   placeholder="이번에 파는 면적"
-                  className="w-full border rounded-md px-3 py-2 text-sm bg-background"
                 />
               </div>
             </div>

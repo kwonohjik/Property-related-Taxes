@@ -570,23 +570,43 @@ function validateAssetAcquisition(asset: AssetForm, label: string, formTransferD
   return null;
 }
 
+/**
+ * 검증 실패 정보 — 메시지 + 단계 + (자산 단위 오류 시) 자산 인덱스.
+ * assetIndex가 있으면 UI에서 해당 자산 카드로 자동 스크롤 + 인라인 에러 배너 표시.
+ */
+export interface ValidationIssue {
+  message: string;
+  step: number;
+  /** 자산-수준 오류일 때 0-based 자산 인덱스 (스크롤·인라인 표시 대상) */
+  assetIndex?: number;
+}
+
+/**
+ * 기존 string 반환 API 보존 — 호출처·테스트 호환.
+ * 위치 정보가 필요한 UI는 validateStepDetailed를 사용한다.
+ */
 export function validateStep(step: number, form: TransferFormData): string | null {
+  return validateStepDetailed(step, form)?.message ?? null;
+}
+
+export function validateStepDetailed(step: number, form: TransferFormData): ValidationIssue | null {
   // step 0: 자산 목록 (취득 정보 통합)
   if (step === 0) {
-    if (!form.assets || form.assets.length === 0) return "자산을 최소 1건 입력하세요.";
-    if (!form.transferDate) return "양도일을 선택하세요.";
+    if (!form.assets || form.assets.length === 0) return { step, message: "자산을 최소 1건 입력하세요." };
+    if (!form.transferDate) return { step, message: "양도일을 선택하세요." };
     // 부담부증여(소령 §159) 모드는 양도가액 = 인수채무액으로 엔진 자동 산정이므로 contractTotalPrice 검증 면제.
     const allBurdenedGift = form.assets.every((a) => a.transferType === "burdened_gift");
     if (!allBurdenedGift) {
       if (!form.contractTotalPrice || parseAmount(form.contractTotalPrice) <= 0)
-        return "총 양도가액을 입력하세요.";
+        return { step, message: "총 양도가액을 입력하세요." };
     }
 
     for (let i = 0; i < form.assets.length; i++) {
       const a = form.assets[i];
       const label = form.assets.length === 1 ? "자산" : `자산 ${i + 1}`;
+      const fail = (message: string): ValidationIssue => ({ step, assetIndex: i, message });
 
-      if (!a.assetKind) return `${label}: 자산 유형을 선택하세요.`;
+      if (!a.assetKind) return fail(`${label}: 자산 유형을 선택하세요.`);
 
       // ⑧ landNature 필수 차단 — 토지 자산이 포함된 일괄양도 시 명시 선택 강제
       // 자동 안분 fallback 금지 원칙 준수 (부수토지/독립 나대지에 따라 세율 분기가 달라짐)
@@ -599,23 +619,23 @@ export function validateStep(step: number, form: TransferFormData): string | nul
               other.assetKind === "presale_right"),
         );
         if (hasHousingInBundle && !a.landNature) {
-          return `${label}: 토지 성격(부수토지 / 독립 나대지)을 선택하세요. 주택·입주권과 함께 일괄양도하는 토지는 성격에 따라 세율이 달라집니다.`;
+          return fail(`${label}: 토지 성격(부수토지 / 독립 나대지)을 선택하세요. 주택·입주권과 함께 일괄양도하는 토지는 성격에 따라 세율이 달라집니다.`);
         }
       }
 
       // 공유 지분율 검증 (분자 ≤ 분모, 분모 > 0)
       const ownN = parseFloat(a.ownershipNumerator || "100");
       const ownD = parseFloat(a.ownershipDenominator || "100");
-      if (!isFinite(ownN) || !isFinite(ownD)) return `${label}: 지분율 분자/분모는 숫자여야 합니다.`;
-      if (ownD <= 0) return `${label}: 지분율 분모는 0보다 커야 합니다.`;
-      if (ownN <= 0) return `${label}: 지분율 분자는 0보다 커야 합니다.`;
-      if (ownN > ownD) return `${label}: 지분율 분자는 분모를 초과할 수 없습니다.`;
-      if (ownD > 1000) return `${label}: 지분율 분모는 1000 이하여야 합니다.`;
+      if (!isFinite(ownN) || !isFinite(ownD)) return fail(`${label}: 지분율 분자/분모는 숫자여야 합니다.`);
+      if (ownD <= 0) return fail(`${label}: 지분율 분모는 0보다 커야 합니다.`);
+      if (ownN <= 0) return fail(`${label}: 지분율 분자는 0보다 커야 합니다.`);
+      if (ownN > ownD) return fail(`${label}: 지분율 분자는 분모를 초과할 수 없습니다.`);
+      if (ownD > 1000) return fail(`${label}: 지분율 분모는 1000 이하여야 합니다.`);
 
       // 단건 + 지분 모드 차단 — 합산 신고 없이 ratio < 1.0 자산을 단독 계산 시 잘못된 결과
       // (사례 27 같은 동일 물건 다회 분할 취득은 모든 지분을 별도 자산으로 추가해야 정확)
       if (form.assets.length === 1 && ownN < ownD) {
-        return `${label}: 지분 모드 자산(${ownN}/${ownD})은 단독으로 계산할 수 없습니다. 같은 물건의 다른 지분도 별도 자산으로 추가하거나, 단독 소유라면 지분율을 100/100으로 입력하세요.`;
+        return fail(`${label}: 지분 모드 자산(${ownN}/${ownD})은 단독으로 계산할 수 없습니다. 같은 물건의 다른 지분도 별도 자산으로 추가하거나, 단독 소유라면 지분율을 100/100으로 입력하세요.`);
       }
 
       // 다자산 양도가액 — 지분 모드(ratio < 1.0) 자산은 양도가액이 총양도가 × ratio로
@@ -625,38 +645,38 @@ export function validateStep(step: number, form: TransferFormData): string | nul
       if (form.assets.length > 1 && !isFractionalAsset) {
         if (form.bundledSaleMode === "actual") {
           if (!a.actualSalePrice || parseAmount(a.actualSalePrice) <= 0)
-            return `${label}: 계약서상 양도가액을 입력하세요.`;
+            return fail(`${label}: 계약서상 양도가액을 입력하세요.`);
         } else {
           if (!a.standardPriceAtTransfer || parseAmount(a.standardPriceAtTransfer) <= 0)
-            return `${label}: 양도시 기준시가를 입력하세요.`;
+            return fail(`${label}: 양도시 기준시가를 입력하세요.`);
         }
       }
 
       // 자산별 취득 정보 검증 (취득일 + 취득가 + 환산 + 1990 + 신축)
       const acqError = validateAssetAcquisition(a, label, form.transferDate);
-      if (acqError) return acqError;
+      if (acqError) return fail(acqError);
 
       // ⑧ 가업상속공제 §97의2④ 의제 취득가액 — 토글 ON 시 4필드 전수 입력 강제
       // 자동 안분 fallback 금지 원칙 준수 (feedback_no_silent_apportion_fallback)
       if (a.familyBusinessInheritance) {
         const fb = a.familyBusinessInheritance;
         if (fb.decedentAcquisitionPrice == null || parseAmount(String(fb.decedentAcquisitionPrice)) < 0)
-          return `${label}: 가업상속공제 — 피상속인 취득가액을 입력하세요.`;
+          return fail(`${label}: 가업상속공제 — 피상속인 취득가액을 입력하세요.`);
         if (fb.inheritanceMarketValue == null || parseAmount(String(fb.inheritanceMarketValue)) <= 0)
-          return `${label}: 가업상속공제 — 상속개시일 현재 자산가액을 입력하세요.`;
+          return fail(`${label}: 가업상속공제 — 상속개시일 현재 자산가액을 입력하세요.`);
         if (fb.fbDeductionAppliedRate == null || fb.fbDeductionAppliedRate < 0 || fb.fbDeductionAppliedRate > 1)
-          return `${label}: 가업상속공제 — 적용률은 0~1 범위여야 합니다.`;
+          return fail(`${label}: 가업상속공제 — 적용률은 0~1 범위여야 합니다.`);
         if (!fb.inheritanceDate)
-          return `${label}: 가업상속공제 — 상속개시일을 입력하세요.`;
+          return fail(`${label}: 가업상속공제 — 상속개시일을 입력하세요.`);
       }
 
       // ⑧ 장기임대주택 거주주택 비과세 특례 검증 (소령 §155⑳)
       const rhError = validateRentalHousingException(a.rentalHousingException, a, label, form.transferDate);
-      if (rhError) return rhError;
+      if (rhError) return fail(rhError);
 
       // 취득일-양도일 순서 (다필지 모드 외)
       if (!a.parcelMode && a.acquisitionDate && a.acquisitionDate >= form.transferDate)
-        return `${label}: 취득일은 양도일보다 이전이어야 합니다.`;
+        return fail(`${label}: 취득일은 양도일보다 이전이어야 합니다.`);
 
       // 상속·증여자 취득일 순서
       if (
@@ -665,14 +685,14 @@ export function validateStep(step: number, form: TransferFormData): string | nul
         a.acquisitionDate &&
         a.decedentAcquisitionDate >= a.acquisitionDate
       )
-        return `${label}: 피상속인 취득일은 상속개시일보다 이전이어야 합니다.`;
+        return fail(`${label}: 피상속인 취득일은 상속개시일보다 이전이어야 합니다.`);
       if (
         a.acquisitionCause === "gift" &&
         a.donorAcquisitionDate &&
         a.acquisitionDate &&
         a.donorAcquisitionDate >= a.acquisitionDate
       )
-        return `${label}: 증여자 취득일은 증여일보다 이전이어야 합니다.`;
+        return fail(`${label}: 증여자 취득일은 증여일보다 이전이어야 합니다.`);
     }
 
     // actual 모드 합계 검증 — 지분 모드 자산이 하나라도 있으면 ratio 자동 적용으로 합계 검증 생략.
@@ -688,13 +708,13 @@ export function validateStep(step: number, form: TransferFormData): string | nul
         0,
       );
       if (sumActual !== parseAmount(form.contractTotalPrice))
-        return "구분 기재된 양도가액 합이 총 양도가액과 일치하지 않습니다.";
+        return { step, message: "구분 기재된 양도가액 합이 총 양도가액과 일치하지 않습니다." };
     }
   }
 
   // step 1: 보유 상황 (구 step 3)
   if (step === 1) {
-    if (!form.householdHousingCount) return "세대 보유 주택 수를 선택하세요.";
+    if (!form.householdHousingCount) return { step, message: "세대 보유 주택 수를 선택하세요." };
 
     // 1세대1주택 + housing 자산 + interval 모드 거주 구간 검증
     const primary = form.assets?.[0];
@@ -704,30 +724,34 @@ export function validateStep(step: number, form: TransferFormData): string | nul
       for (let i = 0; i < periods.length; i++) {
         const p = periods[i];
         const label = `거주 구간 #${i + 1}`;
-        if (!p.moveInDate) return `${label}: 입주일을 입력하세요.`;
+        const fail = (message: string): ValidationIssue => ({ step, assetIndex: 0, message });
+        if (!p.moveInDate) return fail(`${label}: 입주일을 입력하세요.`);
         if (!p.moveOutDate)
-          return `${label}: 퇴거일을 입력하세요. (양도일까지 거주한 경우 양도일을 퇴거일로 입력)`;
+          return fail(`${label}: 퇴거일을 입력하세요. (양도일까지 거주한 경우 양도일을 퇴거일로 입력)`);
         if (p.moveOutDate < p.moveInDate)
-          return `${label}: 퇴거일은 입주일보다 이후여야 합니다.`;
+          return fail(`${label}: 퇴거일은 입주일보다 이후여야 합니다.`);
         if (form.transferDate && p.moveInDate > form.transferDate)
-          return `${label}: 입주일은 양도일 이전이어야 합니다.`;
+          return fail(`${label}: 입주일은 양도일 이전이어야 합니다.`);
         if (form.transferDate && p.moveOutDate && p.moveOutDate > form.transferDate)
-          return `${label}: 퇴거일은 양도일 이전이어야 합니다.`;
+          return fail(`${label}: 퇴거일은 양도일 이전이어야 합니다.`);
       }
     }
   }
 
   // step 2: 감면·공제 (구 step 4)
   if (step === 2) {
-    for (const asset of form.assets ?? []) {
+    const assets = form.assets ?? [];
+    for (let ai = 0; ai < assets.length; ai++) {
+      const asset = assets[ai];
+      const fail = (message: string): ValidationIssue => ({ step, assetIndex: ai, message });
       for (const r of asset.reductions ?? []) {
         if (r.type === "public_expropriation") {
           const cash = parseAmount(r.expropriationCash || "0");
           const bond = parseAmount(r.expropriationBond || "0");
-          if (cash + bond <= 0) return "현금 또는 채권 보상액 중 최소 하나를 입력하세요.";
-          if (!r.expropriationApprovalDate) return "사업인정고시일을 선택하세요.";
+          if (cash + bond <= 0) return fail("현금 또는 채권 보상액 중 최소 하나를 입력하세요.");
+          if (!r.expropriationApprovalDate) return fail("사업인정고시일을 선택하세요.");
           if (form.transferDate && r.expropriationApprovalDate >= form.transferDate)
-            return "사업인정고시일은 양도일보다 이전이어야 합니다.";
+            return fail("사업인정고시일은 양도일보다 이전이어야 합니다.");
         }
         // Phase 2 (2026-05-06): §99의3 신축주택 과세특례 본 요건 검증
         if (r.type === "new_99_3") {
@@ -736,21 +760,21 @@ export function validateStep(step: number, form: TransferFormData): string | nul
           // 메모리 feedback_validation_sync_8th_point.md ⑧ 정책 (UI/API fallback ↔ validate 동기화)
           if (r.acquisitionType993 === "from_builder") {
             const hasContractDate = !!(r.contractDate993 || asset.assetContractDate);
-            if (!hasContractDate) return "§99의3 1호 적용: 매매계약일을 펼침 영역 상단에 입력하세요.";
+            if (!hasContractDate) return fail("§99의3 1호 적용: 매매계약일을 펼침 영역 상단에 입력하세요.");
           } else if (r.acquisitionType993 === "self_built") {
-            if (!r.usageApprovalDate993) return "§99의3 2호 적용: 사용승인일을 선택하세요.";
+            if (!r.usageApprovalDate993) return fail("§99의3 2호 적용: 사용승인일을 선택하세요.");
           }
           // 취득시 기준시가 필수 (PHD 환산 결과 또는 직접 입력)
           // Round 10 (2026-05-06): PHD 모드 ON 시 자동 산출되어 standardPriceAtAcquisition993에 적용됨
           // PHD 모드 ON + 입력 부족 시 자동 적용 안 되므로 동일 검증으로 차단됨 (UI/API fallback ↔ validate 동기화 정책)
           if (parseAmount(r.standardPriceAtAcquisition993 || "0") <= 0) {
-            return r.phdMode993
+            return fail(r.phdMode993
               ? "§99의3 PHD 환산 모드: 환산 결과가 0입니다. 토지 공시지가·면적·최초공시 정보를 모두 입력했는지 확인 후 '적용' 버튼을 클릭하세요."
-              : "§99의3 적용: 취득시 기준시가를 입력하세요. (공동주택 최초고시 전 취득 시 PHD 환산 모드 ON 권장)";
+              : "§99의3 적용: 취득시 기준시가를 입력하세요. (공동주택 최초고시 전 취득 시 PHD 환산 모드 ON 권장)");
           }
           // 5년 시점 기준시가 필수 (5년 후 양도인 경우 안분 산식에 사용)
           if (parseAmount(r.standardPriceAt5Years || "0") <= 0) {
-            return "§99의3 적용: 5년 시점 기준시가를 입력하세요. (취득일+5년 인접 고시일 가격)";
+            return fail("§99의3 적용: 5년 시점 기준시가를 입력하세요. (취득일+5년 인접 고시일 가격)");
           }
         }
       }

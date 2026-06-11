@@ -4,6 +4,14 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
 import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { BusinessUsePeriodsInput } from "./shared/BusinessUsePeriodsInput";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 
@@ -42,28 +50,27 @@ export function PastureDetailSection({
       />
 
       <FieldCard label="축종">
-        <select
-          value={asset.nblPastureLivestockType}
-          onChange={(e) => onAssetChange({ nblPastureLivestockType: e.target.value })}
-          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        <Select
+          value={asset.nblPastureLivestockType ?? ""}
+          onValueChange={(v) => v && onAssetChange({ nblPastureLivestockType: v })}
         >
-          <option value="">선택 안 함</option>
-          {LIVESTOCK_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger>
+            <SelectValue>
+              {LIVESTOCK_OPTIONS.find((o) => o.value === asset.nblPastureLivestockType)?.label ?? "선택 안 함"}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {LIVESTOCK_OPTIONS.map((o) => (
+              <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </FieldCard>
 
       <FieldCard label="사육 두수" unit="두">
-        <input
-          type="number"
+        <DecimalInput
           value={asset.nblPastureLivestockCount}
-          onChange={(e) => onAssetChange({ nblPastureLivestockCount: e.target.value })}
-          min={0}
-          placeholder="0"
-          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          onChange={(v) => onAssetChange({ nblPastureLivestockCount: v })}
         />
       </FieldCard>
 
