@@ -141,7 +141,6 @@ export function calculateComprehensiveTax(
   );
   const propertyResults: ComprehensiveTaxResult["properties"] = [];
   let totalPropertyTaxAmount = 0;  // ⓐ: 부과세액 합계 (determinedTax)
-  let standardRateTaxSum = 0;      // ⑥: 일반 표준세율 재산세 산출세액 합계 (특례세율 아님, 누진공제 적용)
   let totalAssessedValueFromLoop = 0;
 
   for (const prop of input.properties) {
@@ -150,7 +149,6 @@ export function calculateComprehensiveTax(
     const isExcluded = exclusionResult?.isExcluded ?? false;
 
     let propTax = 0;
-    let propStandardRateTax = 0;  // ⑥ 누적용: 해당 주택의 일반 표준세율 재산세 산출세액
     try {
       const ptResult = calculatePropertyTax(
         {
@@ -162,11 +160,6 @@ export function calculateComprehensiveTax(
         rates,
       );
       propTax = ptResult.determinedTax;
-
-      // ⑥ 계산: 일반 표준세율 강제 (isOneHousehold=false) — 특례세율 배제
-      // calcHousingTax(taxBase, publishedPrice, isOneHousehold=false)
-      // taxBase = ptResult.taxBase (재산세 과세표준, 재산세 FMR 적용 후)
-      propStandardRateTax = calcHousingTax(ptResult.taxBase, prop.assessedValue, false).tax;
     } catch {
       warnings.push(
         `주택(${prop.propertyId}) 재산세 계산 오류 — 비율 안분 공제에서 제외됩니다.`,
@@ -176,7 +169,6 @@ export function calculateComprehensiveTax(
     // 합산배제 주택은 비율안분 합계에 포함하지 않음
     if (!isExcluded) {
       totalPropertyTaxAmount += propTax;
-      standardRateTaxSum += propStandardRateTax;
     }
 
     propertyResults.push({
@@ -260,12 +252,24 @@ export function calculateComprehensiveTax(
   const numeratorStdTaxEq = Math.floor(
     (taxBase * Math.round(propertyFMR * 100) * 4) / 100_000,
   );
-  // ⑥ = standardRateTaxSum (Step 1 루프에서 일반 표준세율 산출세액 누적)
+  // ⑥ = 주택을 합산하여 주택분 재산세 표준세율로 계산한 재산세상당액 (시행령 §4의3)
+  //   = (합산배제 후 공시가격 합산 × 재산세 FMR 60%) 과표에 일반 표준세율 누진 1회 적용
+  //   ★ Σ 각 주택별 세액이 아님 — 국세청 작성방법 ⑦ 및 사례5 실측
+  //     (17억 × 60% × 0.4% − 630,000 = 3,450,000. Σ per-house는 3,120,000으로 불일치)
+  //     1주택은 양 방식 동치 — 사례1 anchor 504,000 무변경.
+  const aggregatedPropertyTaxBase = Math.floor(
+    (includedAssessedValue * Math.round(propertyFMR * 100)) / 100,
+  );
+  const denominatorStdTax = calcHousingTax(
+    aggregatedPropertyTaxBase,
+    includedAssessedValue,
+    false, // 일반 표준세율 강제 — 특례세율 배제
+  ).tax;
   // ⓐ = totalPropertyTaxAmount (부과세액 합계)
   const propertyTaxCredit = calculatePropertyTaxCreditProration(
     totalPropertyTaxAmount,
     numeratorStdTaxEq,
-    standardRateTaxSum,
+    denominatorStdTax,
     taxAfterOneHouseDeduction,
   );
   const comprehensiveTaxAfterCredit = Math.max(
@@ -299,15 +303,15 @@ export function calculateComprehensiveTax(
   );
   const totalHousingTax = determinedHousingTax + housingRuralSpecialTax;
 
-  // ── Step A: 종합합산 토지분 ──
+  // ── Step A: 종합합산 토지분 (토지 FMR 연도별 — 시행령 §2의4②: 2021=95%, 2022~=100%) ──
   const aggregateLandTax = input.landAggregate
-    ? calculateAggregateLandTax(input.landAggregate)
+    ? calculateAggregateLandTax(input.landAggregate, yearParams.fairMarketRatioLand)
     : undefined;
 
-  // ── Step B: 별도합산 토지분 ──
+  // ── Step B: 별도합산 토지분 (토지 FMR 연도별 동일) ──
   const separateLandTax =
     input.landSeparate && input.landSeparate.length > 0
-      ? calculateSeparateAggregateLandTax(input.landSeparate)
+      ? calculateSeparateAggregateLandTax(input.landSeparate, yearParams.fairMarketRatioLand)
       : undefined;
 
   // ── 최종 합계 ──

@@ -182,13 +182,16 @@ export function applySeparateLandPropertyTaxCredit(
  *   (세부담 상한 없음)
  *
  * @param lands - 별도합산 토지 목록 (개별 공시지가 + 재산세 데이터)
+ * @param fairMarketRatio - 종부세 토지 공정시장가액비율 (시행령 §2의4② — 2021=0.95, 2022~=1.00).
+ *                          기본값 1.00 → 기존 직접 호출 하위호환.
  */
 export function calculateSeparateAggregateLandTax(
   lands: SeparateAggregateLandForComprehensive[],
+  fairMarketRatio: number = COMPREHENSIVE_LAND_CONST.SEPARATE_FAIR_MARKET_RATIO,
 ): SeparateAggregateLandTaxResult {
   // 빈 배열 처리
   if (lands.length === 0) {
-    return buildZeroResult(0);
+    return buildZeroResult(0, fairMarketRatio);
   }
 
   // 인별 합산: 공시지가 합계 + 재산세 과세표준·부과세액 합계
@@ -201,14 +204,14 @@ export function calculateSeparateAggregateLandTax(
     totalPublicPrice > COMPREHENSIVE_LAND_CONST.SEPARATE_DEDUCTION_AMOUNT;
 
   if (!isSubjectToTax) {
-    return buildZeroResult(totalPublicPrice);
+    return buildZeroResult(totalPublicPrice, fairMarketRatio);
   }
 
-  // 과세표준: (합산 - 80억) × 100% → 만원 미만 절사
+  // 과세표준: (합산 - 80억) × FMR → 만원 미만 절사
+  // 절사 순서는 종합합산 calcAggregateLandTaxBase와 동일: floor(× FMR) → 만원 절사
   const afterDeduction =
     totalPublicPrice - COMPREHENSIVE_LAND_CONST.SEPARATE_DEDUCTION_AMOUNT;
-  // 공정시장가액비율 100% → afterDeduction 그대로, 만원 절사만 수행
-  const taxBase = truncateToTenThousand(afterDeduction);
+  const taxBase = truncateToTenThousand(Math.floor(afterDeduction * fairMarketRatio));
 
   // 세율 적용
   const { appliedRate, progressiveDeduction, calculatedTax } =
@@ -250,7 +253,7 @@ export function calculateSeparateAggregateLandTax(
     totalPublicPrice,
     basicDeduction: COMPREHENSIVE_LAND_CONST.SEPARATE_DEDUCTION_AMOUNT,
     afterDeduction,
-    fairMarketRatio: COMPREHENSIVE_LAND_CONST.SEPARATE_FAIR_MARKET_RATIO,
+    fairMarketRatio,
     taxBase,
     appliedRate,
     progressiveDeduction,
@@ -265,13 +268,14 @@ export function calculateSeparateAggregateLandTax(
 /** 납세의무 없는 경우 0원 결과 생성 */
 function buildZeroResult(
   totalPublicPrice: number,
+  fairMarketRatio: number = COMPREHENSIVE_LAND_CONST.SEPARATE_FAIR_MARKET_RATIO,
 ): SeparateAggregateLandTaxResult {
   return {
     isSubjectToTax: false,
     totalPublicPrice,
     basicDeduction: COMPREHENSIVE_LAND_CONST.SEPARATE_DEDUCTION_AMOUNT,
     afterDeduction: 0,
-    fairMarketRatio: COMPREHENSIVE_LAND_CONST.SEPARATE_FAIR_MARKET_RATIO,
+    fairMarketRatio,
     taxBase: 0,
     appliedRate: COMPREHENSIVE_LAND_CONST.SEPARATE_RATE_1,
     progressiveDeduction: 0,
