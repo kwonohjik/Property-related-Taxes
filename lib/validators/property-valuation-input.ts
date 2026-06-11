@@ -780,6 +780,11 @@ export const giftTaxInputSchema = z.object({
   priorGiftsWithin10Years: z.array(priorGiftSchema),
   isGenerationSkip: z.boolean(),
   isMinorDonee: z.boolean(),
+  /**
+   * §57① 단서 — 최근친 직계비속 사망 시 할증 배제.
+   * true 시 donorGroup=B이어도 §57① 할증 전액 미적용.
+   */
+  isSubstituteGift: z.boolean().optional(),
   deductionInput: giftDeductionInputSchema,
   creditInput: giftTaxCreditInputSchema,
   valuationBaseDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),

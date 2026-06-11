@@ -255,6 +255,7 @@ export function calcGenerationSkipSurcharge(
  * @param currentGiftValue 금번 증여재산가액 ① (할증율 40% 판정 기준)
  * @param priorAggregation 사전증여 합산 결과
  * @param aggregatedTaxBase 금번 합산과세표준 ⑤
+ * @param isSubstituteGift §57① 단서 — 최근친 직계비속 사망 시 할증 배제 여부
  */
 export function calcGiftGenerationSkipSurchargeWithLimit(
   computedTax: number,
@@ -263,6 +264,7 @@ export function calcGiftGenerationSkipSurchargeWithLimit(
   currentGiftValue: number,
   priorAggregation: PriorAggregationResult,
   aggregatedTaxBase: number,
+  isSubstituteGift?: boolean,
 ): {
   detail: GenerationSkipSurchargeDetail | null;
   additionalSurcharge: number;
@@ -271,6 +273,22 @@ export function calcGiftGenerationSkipSurchargeWithLimit(
   // §57 적용 조건: 그룹 B (조부모 → 손자녀) 만
   if (donorGroup !== "B" || computedTax <= 0) {
     return { detail: null, additionalSurcharge: 0, breakdown: [] };
+  }
+
+  // §57① 단서: 증여자의 최근친 직계비속이 사망하여 그 사망자의 최근친인 직계비속이
+  // 증여받은 경우 → 할증 전액 배제 (예: 조부→손자, 부(父) 사망 케이스)
+  if (isSubstituteGift) {
+    return {
+      detail: null,
+      additionalSurcharge: 0,
+      breakdown: [
+        {
+          label: "§57① 단서 적용 — 최근친 직계비속 사망으로 할증 배제",
+          amount: 0,
+          lawRef: GIFT.GENERATION_SKIP_PROVISO,
+        },
+      ],
+    };
   }
 
   const SURCHARGE_THRESHOLD_FOR_40 = 2_000_000_000;

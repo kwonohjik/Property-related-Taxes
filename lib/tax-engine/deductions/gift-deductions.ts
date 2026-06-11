@@ -107,17 +107,20 @@ export function isMarriageBirthEligibleRelation(relation: DonorRelation): boolea
  *   - 증여자가 직계존속이어야 함 (§53의2① "직계존속으로부터" 명문)
  *   - 혼인·출산 합산 통합한도 1억원 (§53의2③)
  *   - §53 관계공제와 별도 적용 (별개 한도)
+ *   - §53의2③ 수증자 통산 기공제액 차감: 잔여 = max(0, 1억 − priorUsedMarriageBirthDeduction)
  *
  * @param donorRelation   증여자-수증자 관계 — 직계존속일 때만 적용
  * @param grossGiftValue  합산 증여재산가액 (과세가액 상한 캡 적용용)
  * @param marriageExemption 혼인공제 금액 (≤ 1억)
  * @param birthExemption    출산공제 금액 (≤ 1억)
+ * @param priorUsedMarriageBirthDeduction §53의2③ 기공제 누계액 — 미입력 시 0 (기존 동작 보존)
  */
 export function calcMarriageBirthDeduction(
   donorRelation: DonorRelation,
   grossGiftValue: number,
   marriageExemption?: number,
   birthExemption?: number,
+  priorUsedMarriageBirthDeduction?: number,
 ): { deduction: number; breakdown: CalculationStep[] } {
   // §53의2 게이트: 직계존속 증여가 아니면 공제 불가
   if (!isMarriageBirthEligibleRelation(donorRelation)) {
@@ -127,8 +130,13 @@ export function calcMarriageBirthDeduction(
   const marriage = Math.max(0, Math.min(marriageExemption ?? 0, MARRIAGE_BIRTH_MAX));
   const birth = Math.max(0, Math.min(birthExemption ?? 0, MARRIAGE_BIRTH_MAX));
 
-  // 혼인 + 출산 합산 최대 1억 (§53의2③)
-  const combinedMax = Math.min(marriage + birth, MARRIAGE_BIRTH_MAX);
+  // §53의2③ 수증자 통산 기공제 차감
+  const priorUsedMB = priorUsedMarriageBirthDeduction ?? 0;
+  // 잔여 한도: max(0, 1억 − min(기공제, 1억)) — 기공제가 1억 초과해도 음수 방지
+  const remainingMBLimit = Math.max(0, MARRIAGE_BIRTH_MAX - Math.min(priorUsedMB, MARRIAGE_BIRTH_MAX));
+
+  // 혼인 + 출산 합산 후 잔여 한도 적용 (§53의2③)
+  const combinedMax = Math.min(marriage + birth, remainingMBLimit);
 
   // 합산 증여재산가액 상한 캡 — totalDeduction이 과세가액 초과 방지
   const deduction = Math.min(combinedMax, Math.max(0, grossGiftValue));
@@ -137,22 +145,34 @@ export function calcMarriageBirthDeduction(
     return { deduction: 0, breakdown: [] };
   }
 
-  return {
-    deduction,
-    breakdown: [
-      ...(marriage > 0
-        ? [{ label: "혼인 증여재산공제", amount: marriage, lawRef: GIFT.MARRIAGE_DEDUCTION }]
-        : []),
-      ...(birth > 0
-        ? [{ label: "출산 증여재산공제", amount: birth, lawRef: GIFT.MARRIAGE_DEDUCTION }]
-        : []),
-      {
-        label: "혼인·출산 공제 합계 (최대 1억, 직계존속 한정)",
-        amount: deduction,
-        lawRef: GIFT.MARRIAGE_DEDUCTION,
-      },
-    ],
-  };
+  const breakdown: CalculationStep[] = [];
+
+  if (marriage > 0) {
+    breakdown.push({ label: "혼인 증여재산공제", amount: marriage, lawRef: GIFT.MARRIAGE_DEDUCTION });
+  }
+  if (birth > 0) {
+    breakdown.push({ label: "출산 증여재산공제", amount: birth, lawRef: GIFT.MARRIAGE_DEDUCTION });
+  }
+  // 기공제 차감이 있는 경우에만 breakdown에 명시 표시
+  if (priorUsedMB > 0) {
+    breakdown.push({
+      label: "§53의2③ 기사용 공제 (수증자 통산)",
+      amount: -priorUsedMB,
+      lawRef: GIFT.MARRIAGE_CUMULATIVE_LIMIT,
+    });
+    breakdown.push({
+      label: "잔여 공제 가능액",
+      amount: remainingMBLimit,
+      lawRef: GIFT.MARRIAGE_CUMULATIVE_LIMIT,
+    });
+  }
+  breakdown.push({
+    label: "혼인·출산 공제 합계 (최대 1억, 직계존속 한정)",
+    amount: deduction,
+    lawRef: GIFT.MARRIAGE_DEDUCTION,
+  });
+
+  return { deduction, breakdown };
 }
 
 // ============================================================
@@ -192,6 +212,7 @@ export function calcGiftDeductions(
       grossGiftValue,
       input.marriageExemption,
       input.birthExemption,
+      input.priorUsedMarriageBirthDeduction,
     );
 
   // 합계가 합산 증여재산가액을 초과하지 않도록 캡 적용

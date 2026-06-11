@@ -517,6 +517,140 @@ describe("[GM-D] schema reject — 422/400 매핑 재현", () => {
 });
 
 // ─────────────────────────────────────────────────────────
+// GM-F: §57① 단서 + §53의2③ 신규 2필드 round-trip
+// ─────────────────────────────────────────────────────────
+
+describe("[GM-F] 신규 2필드 — isSubstituteGift + priorUsedMarriageBirthDeduction round-trip", () => {
+  it("[GM-F1] isSubstituteGift=true — schema round-trip 후 보존, 엔진 할증 0", () => {
+    /**
+     * §57① 단서: 조부모→손자녀, 부(父) 사망.
+     * isSubstituteGift=true → Zod 통과 → 엔진 도달 → additionalGenerationSkipSurcharge=0.
+     */
+    const raw: GiftTaxInput = makeValidGiftInput({
+      donor: "grandparent",
+      giftItems: [
+        {
+          id: "item-1",
+          category: "financial",
+          name: "현금",
+          marketValue: 300_000_000,
+        } as EstateItem,
+      ],
+      isGenerationSkip: true,
+      isMinorDonee: false,
+      isSubstituteGift: true,
+      deductionInput: { donorRelation: "lineal_descendant" },
+    });
+
+    const body = jsonRoundTrip(raw);
+    const parsed = giftTaxInputSchema.safeParse(body);
+
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) return;
+
+    expect(parsed.data.isSubstituteGift).toBe(true);
+
+    // 엔진 도달 확인 — 할증 0 (단서 적용)
+    const result = calcGiftTax(parsed.data as unknown as GiftTaxInput);
+    expect(result.additionalGenerationSkipSurcharge).toBe(0);
+    expect(result.generationSkipProvisoApplied).toBe(true);
+  });
+
+  it("[GM-F2] isSubstituteGift=false — schema round-trip 후 보존, 엔진 30% 할증 적용", () => {
+    const raw: GiftTaxInput = makeValidGiftInput({
+      donor: "grandparent",
+      giftItems: [
+        {
+          id: "item-1",
+          category: "financial",
+          name: "현금",
+          marketValue: 300_000_000,
+        } as EstateItem,
+      ],
+      isGenerationSkip: true,
+      isMinorDonee: false,
+      isSubstituteGift: false,
+      deductionInput: { donorRelation: "lineal_descendant" },
+    });
+
+    const body = jsonRoundTrip(raw);
+    const parsed = giftTaxInputSchema.safeParse(body);
+
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) return;
+
+    const result = calcGiftTax(parsed.data as unknown as GiftTaxInput);
+    // 단서 미적용 → 30% 할증 적용
+    expect(result.additionalGenerationSkipSurcharge).toBeGreaterThan(0);
+    expect(result.generationSkipProvisoApplied).toBeUndefined();
+  });
+
+  it("[GM-F3] priorUsedMarriageBirthDeduction=60,000,000 — schema round-trip 후 보존, 엔진 잔여 4천만 공제", () => {
+    /**
+     * §53의2③: 기공제 6천만, 혼인 1억 신청 → 잔여 4천만 공제.
+     * deductionInput.priorUsedMarriageBirthDeduction이 Zod 통과 → 엔진 도달.
+     */
+    const raw: GiftTaxInput = makeValidGiftInput({
+      giftItems: [
+        {
+          id: "item-1",
+          category: "financial",
+          name: "현금",
+          marketValue: 200_000_000,
+        } as EstateItem,
+      ],
+      deductionInput: {
+        donorRelation: "lineal_ascendant_adult",
+        marriageExemption: 100_000_000,
+        priorUsedMarriageBirthDeduction: 60_000_000,
+      },
+    });
+
+    const body = jsonRoundTrip(raw);
+    const parsed = giftTaxInputSchema.safeParse(body);
+
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) return;
+
+    expect(parsed.data.deductionInput.priorUsedMarriageBirthDeduction).toBe(60_000_000);
+
+    // 엔진 도달 확인 — 잔여 공제 4천만
+    const result = calcGiftTax(parsed.data as unknown as GiftTaxInput);
+    expect(result.deductionDetail.marriageBirthDeduction).toBe(40_000_000);
+  });
+
+  it("[GM-F4] priorUsedMarriageBirthDeduction 미입력 — schema optional 통과, 기존 동작 보존", () => {
+    const raw: GiftTaxInput = makeValidGiftInput({
+      giftItems: [
+        {
+          id: "item-1",
+          category: "financial",
+          name: "현금",
+          marketValue: 200_000_000,
+        } as EstateItem,
+      ],
+      deductionInput: {
+        donorRelation: "lineal_ascendant_adult",
+        marriageExemption: 100_000_000,
+        // priorUsedMarriageBirthDeduction 미입력
+      },
+    });
+
+    const body = jsonRoundTrip(raw);
+    const parsed = giftTaxInputSchema.safeParse(body);
+
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) return;
+
+    expect(parsed.data.deductionInput.priorUsedMarriageBirthDeduction).toBeUndefined();
+
+    // 기존 동작: 혼인 1억 전액 공제
+    const result = calcGiftTax(parsed.data as unknown as GiftTaxInput);
+    expect(result.deductionDetail.marriageBirthDeduction).toBe(100_000_000);
+  });
+});
+
+// ─────────────────────────────────────────────────────────
 // GM-E: 완전 파이프라인 통합 (schema → engine → round-trip)
 // ─────────────────────────────────────────────────────────
 

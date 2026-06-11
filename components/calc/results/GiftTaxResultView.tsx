@@ -442,6 +442,14 @@ export function GiftTaxResultView({
       </div>
       </PrintSection>
 
+      {/* §57① 단서 적용 — 세대생략 할증 배제 안내 (donorGroup=B이지만 단서로 할증 0인 경우) */}
+      {result.generationSkipProvisoApplied === true && (
+        <div className="border border-rose-200 rounded-xl bg-rose-50/30 px-4 py-3 text-sm text-rose-700">
+          세대생략 할증과세 배제 (상증법 §57① 단서) — 증여자의 최근친 직계비속(부·모) 사망으로 인해
+          세대생략 할증(30%·40%)이 적용되지 않습니다.
+        </div>
+      )}
+
       {/* §57 세대생략 할증과세 산출근거 — 그룹 B 조부모→손자녀 시만 활성 */}
       {result.generationSkipSurchargeDetail && (
         <PrintSection id="gen-skip-surcharge" selectedIds={selectedPrintIds}>

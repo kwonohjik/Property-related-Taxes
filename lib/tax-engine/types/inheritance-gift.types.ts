@@ -1275,6 +1275,14 @@ export interface GiftDeductionInput {
   birthExemption?: number;
   /** 10년 이내 동일인(동일 관계 그룹)에 대한 기사용 공제 합산 */
   priorUsedDeduction?: number;
+  /**
+   * §53의2③ 수증자 통산 기공제액 (혼인+출산 합산 한도 1억).
+   * 과거 증여에서 이미 적용된 §53의2 공제 누계액.
+   * 미입력(undefined) 시 0으로 처리 — 기존 동작 100% 보존.
+   * 상증법 §53의2③: "이미 공제받았거나 받을 금액을 합한 금액이 1억원을 초과하는
+   * 경우 그 초과분은 공제하지 아니한다."
+   */
+  priorUsedMarriageBirthDeduction?: number;
 }
 
 /** 증여공제 계산 결과 */
@@ -1551,6 +1559,17 @@ export interface GiftTaxInput {
   isGenerationSkip: boolean;
   /** 수증자 미성년 여부 (세대생략 20억 초과 40% 기준) */
   isMinorDonee: boolean;
+  /**
+   * §57① 단서 — 증여자의 최근친(最근친)인 직계비속이 사망하여,
+   * 그 사망자의 최근친인 직계비속이 증여받은 경우 → 세대생략 할증 미적용.
+   *
+   * 예: 조부(증여자) → 손자(수증자), 부(父)가 이미 사망한 경우.
+   *
+   * true 시 donorGroup=B이어도 §57① 할증 전액 배제.
+   * 상속세 Heir.isSubstituteInheritance와 동일 개념의 증여세 버전.
+   * 미입력(undefined/false) 시 기존 동작 100% 보존.
+   */
+  isSubstituteGift?: boolean;
   deductionInput: GiftDeductionInput;
   creditInput: GiftTaxCreditInput;
   /** 평가기준일 (기본: 증여일) */
@@ -1598,6 +1617,13 @@ export interface GiftTaxResult extends TaxResultMeta {
   additionalGenerationSkipSurcharge: number;
   /** §57 할증과세 세부 (donorGroup=B 일 때만 not null) */
   generationSkipSurchargeDetail: GenerationSkipSurchargeDetail | null;
+  /**
+   * §57① 단서 적용 여부 echo (표시 전용 — 산식 무변경).
+   * isSubstituteGift=true 로 할증이 배제된 경우에만 true.
+   * undefined/false = 단서 미적용 (일반 케이스).
+   * Map 금지 — Record/원시값만 사용 (memory: feedback_engine_result_map_json_loss).
+   */
+  generationSkipProvisoApplied?: boolean;
   /** §58 안분 한도 세부 (priorGifts 그룹 일치 1건 이상일 때만 not null) */
   priorGiftCreditDetail: PriorGiftCreditDetail | null;
   /** 신고서 양식 표 행 (12행 사례1 / 18행 사례2) — 후속 PR에서 besshi10Rows 로 대체 예정 */

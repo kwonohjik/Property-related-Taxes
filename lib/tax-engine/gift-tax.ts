@@ -186,6 +186,7 @@ export function calcGiftTax(
     grossGiftValue,
     priorAggregation,
     taxBase,
+    input.isSubstituteGift,
   );
   allBreakdown.push(...surchargeResult.breakdown);
   if (surchargeResult.detail !== null) {
@@ -299,6 +300,8 @@ export function calcGiftTax(
     donorGroup,
     additionalGenerationSkipSurcharge: surchargeResult.additionalSurcharge,
     generationSkipSurchargeDetail: surchargeResult.detail,
+    // §57① 단서 적용 여부 echo (단서로 할증이 배제된 경우에만 true)
+    generationSkipProvisoApplied: input.isSubstituteGift === true ? true : undefined,
     priorGiftCreditDetail,
     filingFormRows,
     // 별지 제10호서식 표시 전용 (default 0)
