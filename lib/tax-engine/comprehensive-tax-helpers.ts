@@ -89,17 +89,17 @@ export function applyOneHouseDeduction(
  * @param comprehensiveTax - 당해연도 종부세액 (재산세 비율안분 공제 후)
  * @param totalPropertyTax - 당해연도 재산세 합계
  * @param previousYearTotalTax - 전년도 총세액 (종부세+재산세, 미입력 시 undefined)
- *
- * ※ 현행 §10은 단일 상한(150%) — 구 조정대상지역 다주택 300% 조항은 삭제됨.
+ * @param capRate - 세부담 상한율 (기본 1.5). 연도·다주택 분기는 호출부(comprehensive-tax.ts)가 결정
+ *                  — 2022 이하 조정다주택/3주택+ 3.0, 그 외 1.5.
  */
 export function applyTaxCap(
   comprehensiveTax: number,
   totalPropertyTax: number,
   previousYearTotalTax: number | undefined,
+  capRate: number = COMPREHENSIVE_CONST.TAX_CAP_RATE_GENERAL,
 ): TaxCapResult | undefined {
   if (previousYearTotalTax === undefined) return undefined;
 
-  const capRate = COMPREHENSIVE_CONST.TAX_CAP_RATE_GENERAL;
   const capAmount = Math.floor(previousYearTotalTax * capRate);
   const cappedTax = Math.max(
     Math.min(comprehensiveTax, capAmount - totalPropertyTax),

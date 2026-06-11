@@ -25,6 +25,12 @@
 
 import { applyRate, truncateToTenThousand } from "./tax-utils";
 import { COMPREHENSIVE_CONST } from "./legal-codes";
+import {
+  getComprehensiveParams,
+  isComprehensiveYearSupported,
+  isMultiHouseRate,
+  COMPREHENSIVE_MIN_SUPPORTED_YEAR,
+} from "./data/comprehensive-historical";
 import { calculatePropertyTax } from "./property-tax";
 import { calculateSeparateAggregateLandTax } from "./comprehensive-separate-land";
 import {
@@ -48,6 +54,7 @@ import {
 } from "./comprehensive-land-aggregate";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import type {
+  ComprehensiveBracket,
   ComprehensiveTaxInput,
   ComprehensiveTaxResult,
   OneHouseDeductionResult,
@@ -58,47 +65,34 @@ import type {
 // 주택분 누진세율 7단계 (종합부동산세법 §9①)
 // ============================================================
 
-interface ComprehensiveBracket {
-  limit: number;
-  rate: number;
-  deduction: number;
-}
-
-const HOUSING_BRACKETS: ComprehensiveBracket[] = [
-  { limit: 300_000_000,    rate: 0.005, deduction: 0 },
-  { limit: 600_000_000,    rate: 0.007, deduction: 600_000 },
-  { limit: 1_200_000_000,  rate: 0.010, deduction: 2_400_000 },
-  { limit: 2_500_000_000,  rate: 0.013, deduction: 6_000_000 },
-  { limit: 5_000_000_000,  rate: 0.015, deduction: 11_000_000 },
-  { limit: 9_400_000_000,  rate: 0.020, deduction: 36_000_000 },
-  { limit: Infinity,       rate: 0.027, deduction: 101_800_000 },
-];
-
-function calcHousingTaxAmount(taxBase: number): {
+/**
+ * 주택분 누진세율 적용 (종합부동산세법 §9①) — 연도별 세율표를 매개변수로 받음.
+ * 세율표는 getComprehensiveParams(year)의 general/multi 중 호출부가 선택해 전달.
+ */
+function calcHousingTaxAmount(
+  taxBase: number,
+  brackets: ComprehensiveBracket[],
+): {
   calculatedTax: number;
   appliedRate: number;
   progressiveDeduction: number;
 } {
   if (taxBase <= 0) {
-    return { calculatedTax: 0, appliedRate: 0.005, progressiveDeduction: 0 };
+    return { calculatedTax: 0, appliedRate: brackets[0].rate, progressiveDeduction: 0 };
   }
 
-  for (const bracket of HOUSING_BRACKETS) {
-    if (taxBase <= bracket.limit) {
-      const calculatedTax = applyRate(taxBase, bracket.rate) - bracket.deduction;
-      return {
-        calculatedTax: Math.max(calculatedTax, 0),
-        appliedRate: bracket.rate,
-        progressiveDeduction: bracket.deduction,
-      };
-    }
-  }
+  // 세율 × 과세표준은 분수 정수 연산. rate(예: 0.036)를 float로 곱하면
+  // floor 시 1원 부족(49,679,999.99→49,679,999). rate×1000 정수로 분수 연산.
+  // (종부세 주택 세율은 최대 소수 3자리 — 0.006~0.060. memory feedback_applyrate_fractional_rate_one_won_error)
+  const taxAtRate = (base: number, rate: number): number =>
+    Math.floor((base * Math.round(rate * 1000)) / 1000);
 
-  const last = HOUSING_BRACKETS[HOUSING_BRACKETS.length - 1];
+  const target =
+    brackets.find((b) => taxBase <= b.limit) ?? brackets[brackets.length - 1];
   return {
-    calculatedTax: Math.max(applyRate(taxBase, last.rate) - last.deduction, 0),
-    appliedRate: last.rate,
-    progressiveDeduction: last.deduction,
+    calculatedTax: Math.max(taxAtRate(taxBase, target.rate) - target.deduction, 0),
+    appliedRate: target.rate,
+    progressiveDeduction: target.deduction,
   };
 }
 
@@ -193,14 +187,22 @@ export function calculateComprehensiveTax(
   const totalAssessedValue = totalAssessedValueFromLoop;
   const includedAssessedValue = totalAssessedValue - aggregationExclusion.totalExcludedValue;
 
-  // ── Step 3: 기본공제 차감 ──
+  // ── 연도별 세법 파라미터 로드 (과세귀속연도 기준) ──
+  const yearParams = getComprehensiveParams(input.assessmentYear);
+  if (!isComprehensiveYearSupported(input.assessmentYear)) {
+    warnings.push(
+      `${input.assessmentYear}년 귀속은 미지원 연도입니다 — ${COMPREHENSIVE_MIN_SUPPORTED_YEAR}년 이후 기준으로 계산하세요. (현행 세법으로 계산됨)`,
+    );
+  }
+
+  // ── Step 3: 기본공제 차감 (연도별 일반/1세대1주택) ──
   const basicDeduction = input.isOneHouseOwner
-    ? COMPREHENSIVE_CONST.BASIC_DEDUCTION_ONE_HOUSE
-    : COMPREHENSIVE_CONST.BASIC_DEDUCTION_GENERAL;
+    ? yearParams.basicDeductionOneHouse
+    : yearParams.basicDeductionGeneral;
   const afterBasicDeduction = Math.max(includedAssessedValue - basicDeduction, 0);
 
-  // ── Step 4: 공정시장가액비율 + 만원 미만 절사 ──
-  const fairMarketRatio = COMPREHENSIVE_CONST.FAIR_MARKET_RATIO_HOUSING;
+  // ── Step 4: 공정시장가액비율 (연도별) + 만원 미만 절사 ──
+  const fairMarketRatio = yearParams.fairMarketRatioHousing;
   const taxBase = truncateToTenThousand(Math.floor(afterBasicDeduction * fairMarketRatio));
 
   const isSubjectToHousingTax = taxBase > 0;
@@ -208,9 +210,18 @@ export function calculateComprehensiveTax(
     warnings.push("주택분 종합부동산세 납세의무가 없습니다 (기본공제 이하).");
   }
 
-  // ── Step 5: 누진세율 7단계 ──
+  // ── Step 5: 누진세율 — 연도별 + 다주택 중과 판정 ──
+  //   다주택 = 합산배제 제외 후 과세대상 주택 수 ≥ 3 (≤2022는 조정대상지역 2주택도 포함)
+  const useMultiRate = isMultiHouseRate(
+    input.assessmentYear,
+    aggregationExclusion.includedCount,
+    input.isMultiHouseInAdjustedArea ?? false,
+  );
+  const brackets = useMultiRate
+    ? yearParams.housingBracketsMulti
+    : yearParams.housingBracketsGeneral;
   const { calculatedTax, appliedRate, progressiveDeduction } =
-    calcHousingTaxAmount(taxBase);
+    calcHousingTaxAmount(taxBase, brackets);
 
   // ── Step 6: 1세대1주택 세액공제 ──
   let oneHouseDeduction: OneHouseDeductionResult | undefined = undefined;
@@ -246,11 +257,16 @@ export function calculateComprehensiveTax(
     0,
   );
 
-  // ── Step 8: 세부담 상한 ──
+  // ── Step 8: 세부담 상한 (연도별 — ≤2022 다주택 300% / 2023~ 단일 150%) ──
+  const capRate =
+    useMultiRate && yearParams.taxCapRateMultiHouseAdjusted !== undefined
+      ? yearParams.taxCapRateMultiHouseAdjusted
+      : yearParams.taxCapRateGeneral;
   const taxCap = applyTaxCap(
     comprehensiveTaxAfterCredit,
     totalPropertyTaxAmount,
     input.previousYearTotalTax,
+    capRate,
   );
 
   if (input.previousYearTotalTax === undefined) {
@@ -305,6 +321,7 @@ export function calculateComprehensiveTax(
     appliedRate,
     progressiveDeduction,
     calculatedTax,
+    isMultiHouseRateApplied: useMultiRate,
     oneHouseDeduction,
     propertyTaxCredit,
     taxCap,

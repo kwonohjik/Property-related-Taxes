@@ -11,6 +11,17 @@
  */
 
 // ============================================================
+// 0. 연도별 세율 구간 (과세연도별 세법 파라미터 — comprehensive-historical.ts)
+// ============================================================
+
+/** 주택분 누진세율 구간 (종합부동산세법 §9①) */
+export interface ComprehensiveBracket {
+  limit: number;       // 구간 상한 (과세표준, 원). 마지막 구간은 Infinity
+  rate: number;        // 세율 (0~1)
+  deduction: number;   // 누진공제액 (원)
+}
+
+// ============================================================
 // 1. 합산배제 관련 타입
 // ============================================================
 
@@ -179,6 +190,12 @@ export interface ComprehensiveTaxInput {
   // ── 과세 기준 ──
   assessmentYear: number;         // 과세연도 (과세기준일 = 해당연도 6월 1일)
 
+  /**
+   * 조정대상지역 2주택 이상 여부 (구 §9①3호·§10② — 2022 귀속 이하만 유효).
+   * 2023+ 연도에서는 엔진이 무시(주택 수 3 이상만 중과). 미입력 시 false.
+   */
+  isMultiHouseInAdjustedArea?: boolean;
+
   // ── 세부담 상한 (선택 — 미입력 시 상한 생략) ──
   previousYearTotalTax?: number;  // 전년도 총세액 (종부세 + 재산세, 농특세 제외)
 
@@ -335,6 +352,7 @@ export interface ComprehensiveTaxResult {
   appliedRate: number;            // 적용 세율
   progressiveDeduction: number;   // 누진공제
   calculatedTax: number;          // 산출세액
+  isMultiHouseRateApplied: boolean; // 다주택 중과세율 적용 여부 (echo — 결과뷰 안내)
 
   // ── 1세대1주택 세액공제 (isOneHouseOwner=true 일 때만) ──
   oneHouseDeduction?: OneHouseDeductionResult;

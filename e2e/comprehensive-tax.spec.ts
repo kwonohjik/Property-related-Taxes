@@ -40,7 +40,7 @@ test.describe("종합부동산세 마법사", () => {
     await page.goto(PAGE);
 
     // Step1: 과세연도
-    await page.getByPlaceholder("2024").fill("2024");
+    await page.getByRole("radio", { name: "2024" }).check();
     await clickNext(page);
 
     // Step2: 공시가격 + 면적
@@ -67,7 +67,7 @@ test.describe("종합부동산세 마법사", () => {
     await page.goto(PAGE);
 
     // Step1: 과세연도 + 1세대1주택 ToggleCard ON
-    await page.getByPlaceholder("2024").fill("2024");
+    await page.getByRole("radio", { name: "2024" }).check();
     await page.getByRole("switch").first().click(); // 1세대1주택자
     // 펼쳐진 생년월일·취득일 (DateInput: 연/월/일 라벨)
     await page.getByLabel("연도").first().fill("1955");
@@ -98,7 +98,7 @@ test.describe("종합부동산세 마법사", () => {
     await page.goto(PAGE);
 
     // Step1
-    await page.getByPlaceholder("2024").fill("2024");
+    await page.getByRole("radio", { name: "2024" }).check();
     await clickNext(page);
 
     // Step2: 주택 공시 5억 (기본공제 이하)

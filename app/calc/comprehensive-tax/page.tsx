@@ -160,6 +160,12 @@ function Step1Basic() {
   const { formData, updateFormData, reset, setResult } = useComprehensiveWizardStore();
   const currentYear = new Date().getFullYear();
   const selectedYear = parseInt(formData.assessmentYear) || currentYear;
+  // 지원 연도 상수(2021~2025)에 현재연도가 없으면 보강 — 매년 상수 갱신 없이 현재연도 선택 가능
+  const supportedYears = (
+    COMPREHENSIVE_SUPPORTED_YEARS as readonly number[]
+  ).includes(currentYear)
+    ? [...COMPREHENSIVE_SUPPORTED_YEARS]
+    : [...COMPREHENSIVE_SUPPORTED_YEARS, currentYear];
 
   function handleYearChange(year: string) {
     updateFormData({ assessmentYear: year });
@@ -183,7 +189,7 @@ function Step1Basic() {
           layout="inline"
           value={formData.assessmentYear as (typeof COMPREHENSIVE_SUPPORTED_YEARS)[number] extends number ? string : string}
           onChange={handleYearChange}
-          options={COMPREHENSIVE_SUPPORTED_YEARS.map((y) => ({
+          options={supportedYears.map((y) => ({
             value: String(y),
             label: String(y),
             trailing:
