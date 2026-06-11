@@ -149,9 +149,22 @@ function Step1Basic() {
     ? [...COMPREHENSIVE_SUPPORTED_YEARS]
     : [...COMPREHENSIVE_SUPPORTED_YEARS, currentYear];
 
+  const params = getComprehensiveParams(selectedYear);
+  // 법인 여부 파생 (dual-truth 금지 — 별도 isCorporate store 필드 없음)
+  const isCorporate = formData.taxpayerType !== "individual";
+
   function handleYearChange(year: string) {
     updateFormData({ assessmentYear: year });
     setResult(null); // 과세연도 변경 시 기존 결과 무효화
+  }
+
+  function handleTaxpayerTypeToggle(v: string) {
+    if (v === "corporate") {
+      // 법인 선택 → corporate_special 기본 (하위 라디오에서 변경 가능)
+      updateFormData({ taxpayerType: "corporate_special" });
+    } else {
+      updateFormData({ taxpayerType: "individual" });
+    }
   }
 
   return (
@@ -188,47 +201,109 @@ function Step1Basic() {
         </p>
       </div>
 
-      {/* 1세대1주택 여부 */}
-      <ToggleCard
-        tone="sky"
-        title="1세대 1주택자"
-        description="기본공제 12억 적용 + 고령자·장기보유 세액공제 적용 (§8①1호, §9②)"
-        checked={formData.isOneHouseOwner}
-        onCheckedChange={(v) => updateFormData({ isOneHouseOwner: v })}
-      >
-        {/* 1세대1주택자 추가 정보 (ON 시 펼침) */}
-        <p className="text-xs text-sky-700 font-medium">
-          1세대1주택자 세액공제 적용을 위한 추가 정보
-        </p>
+      {/* 납세의무자 유형 — [개인] [법인] */}
+      <div className="space-y-2">
+        <label className="block text-sm font-medium">납세의무자 유형</label>
+        <RadioCardGroup
+          name="taxpayerTypeMain"
+          tone="sky"
+          layout="inline"
+          value={isCorporate ? "corporate" : "individual"}
+          onChange={handleTaxpayerTypeToggle}
+          options={[
+            { value: "individual", label: "개인" },
+            { value: "corporate", label: "법인" },
+          ]}
+        />
+      </div>
 
-        {/* 생년월일 */}
-        <div className="space-y-1.5">
-          <label className="block text-sm font-medium">
-            생년월일 (고령자 세액공제용)
-          </label>
-          <DateInput
-            value={formData.birthDate}
-            onChange={(v) => updateFormData({ birthDate: v })}
+      {/* 법인 선택 시: 하위 법인 유형 RadioCardGroup + 안내 카드 */}
+      {isCorporate && (
+        <div className="rounded-md border border-violet-200 bg-violet-50/60 p-4 space-y-3">
+          <p className="text-xs font-semibold text-violet-800">법인 유형 선택</p>
+          <RadioCardGroup
+            name="taxpayerTypeCorporate"
+            tone="violet"
+            layout="stack"
+            value={formData.taxpayerType}
+            onChange={(v) =>
+              updateFormData({
+                taxpayerType: v as "corporate_special" | "corporate_general" | "corporate_public",
+              })
+            }
+            options={[
+              {
+                value: "corporate_special",
+                label: "일반 법인 — 단일세율 (§9②3호)",
+                description: `기본공제 0원 · ${(params.corporateRate2HouseOrLess * 100).toFixed(1)}%/${(params.corporateRate3HouseOrMore * 100).toFixed(1)}% 비례세율 · 세부담상한 미적용`,
+              },
+              {
+                value: "corporate_general",
+                label: "공공주택사업자 등 (§9②1호 — 일반 누진세율)",
+                description: "주택 수 무관 일반 누진세율 적용 · 세부담상한 적용",
+              },
+              {
+                value: "corporate_public",
+                label: "공익법인등 (§9②2호)",
+                description: "주택 수 기준 일반/다주택 누진세율 · 세부담상한 적용",
+              },
+            ]}
           />
-          <p className="text-xs text-muted-foreground">
-            만 60세 이상: 20%, 65세: 30%, 70세: 40% (최대 80% 합산)
-          </p>
+          <div className="rounded-md bg-violet-100/60 border border-violet-200 px-3 py-2 text-xs text-violet-900 space-y-0.5">
+            <p className="font-semibold">§9②3호 법인 계산 특례</p>
+            <p>기본공제: 0원 (§8①2호 — 법인 적용 없음)</p>
+            <p>
+              세율: 2주택 이하 {(params.corporateRate2HouseOrLess * 100).toFixed(1)}% /{" "}
+              3주택 이상 (≤{selectedYear <= 2022 ? "2022 조정 2주택 포함" : "현행"}) {(params.corporateRate3HouseOrMore * 100).toFixed(1)}%
+            </p>
+            <p>세부담 상한: 미적용 (§10 단서)</p>
+          </div>
         </div>
+      )}
 
-        {/* 최초 취득일 */}
-        <div className="space-y-1.5">
-          <label className="block text-sm font-medium">
-            최초 취득일 (장기보유 세액공제용)
-          </label>
-          <DateInput
-            value={formData.acquisitionDate}
-            onChange={(v) => updateFormData({ acquisitionDate: v })}
-          />
-          <p className="text-xs text-muted-foreground">
-            5년 이상: 20%, 10년: 40%, 15년: 50% (고령자공제 합산 최대 80%)
+      {/* 개인 선택 시만 — 1세대1주택 여부 */}
+      {!isCorporate && (
+        <ToggleCard
+          tone="sky"
+          title="1세대 1주택자"
+          description="기본공제 12억 적용 + 고령자·장기보유 세액공제 적용 (§8①1호, §9②)"
+          checked={formData.isOneHouseOwner}
+          onCheckedChange={(v) => updateFormData({ isOneHouseOwner: v })}
+        >
+          {/* 1세대1주택자 추가 정보 (ON 시 펼침) */}
+          <p className="text-xs text-sky-700 font-medium">
+            1세대1주택자 세액공제 적용을 위한 추가 정보
           </p>
-        </div>
-      </ToggleCard>
+
+          {/* 생년월일 */}
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium">
+              생년월일 (고령자 세액공제용)
+            </label>
+            <DateInput
+              value={formData.birthDate}
+              onChange={(v) => updateFormData({ birthDate: v })}
+            />
+            <p className="text-xs text-muted-foreground">
+              만 60세 이상: 20%, 65세: 30%, 70세: 40% (최대 80% 합산)
+            </p>
+          </div>
+
+          {/* 최초 취득일 */}
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium">
+              최초 취득일 (장기보유 세액공제용)
+            </label>
+            <DateInput
+              value={formData.acquisitionDate}
+              onChange={(v) => updateFormData({ acquisitionDate: v })}
+            />
+            <p className="text-xs text-muted-foreground">
+              5년 이상: 20%, 10년: 40%, 15년: 50% (고령자공제 합산 최대 80%)
+            </p>
+          </div>
+        </ToggleCard>
+      )}
     </div>
   );
 }
@@ -435,11 +510,27 @@ function Step5TaxCap() {
   const year = parseInt(formData.assessmentYear) || new Date().getFullYear();
   const showMultiHouseCap = year < 2023;
   const isMultiHouseOn = formData.isMultiHouseInAdjustedArea;
+  const taxpayerType = formData.taxpayerType ?? "individual";
+  // corporate_special(§9②3호): 세부담상한 미적용 → 전년도 세액 입력 숨김
+  const isCorporateSpecial = taxpayerType === "corporate_special";
+  // corporate_general(§9②1호): 주택 수 무관 → 조정대상지역 2주택 토글 숨김
+  const isCorporateGeneral = taxpayerType === "corporate_general";
 
   return (
     <div className="space-y-6">
-      {/* 조정대상지역 2주택 이상 — 과세연도 < 2023 일 때만 노출 */}
-      {showMultiHouseCap && (
+      {/* corporate_special(§9②3호): 세부담상한 미적용 안내 */}
+      {isCorporateSpecial && (
+        <div className="rounded-md border border-violet-200 bg-violet-50/60 px-4 py-3 text-xs text-violet-900">
+          <p className="font-semibold">§9②3호 법인 — 세부담 상한 미적용</p>
+          <p className="mt-1">
+            종합부동산세법 §10 단서에 따라 §9②3호 세율(단일 비례세율)이 적용되는 법인에는
+            세부담 상한이 적용되지 않습니다. 전년도 세액 입력이 필요하지 않습니다.
+          </p>
+        </div>
+      )}
+
+      {/* 조정대상지역 2주택 이상 — 과세연도 < 2023 이고 corporate_general이 아닐 때만 노출 */}
+      {showMultiHouseCap && !isCorporateGeneral && (
         <ToggleCard
           tone="rose"
           title="조정대상지역 2주택 이상"
@@ -454,35 +545,37 @@ function Step5TaxCap() {
         </ToggleCard>
       )}
 
-      {/* 전년도 세액 */}
-      <div className="space-y-2">
-        <CurrencyInput
-          label="전년도 총세액 (선택)"
-          value={formData.previousYearTotalTax}
-          onChange={(v) => updateFormData({ previousYearTotalTax: v })}
-          placeholder="0"
-          hint="전년도 종합부동산세 + 재산세 합계 (농특세 제외). 미입력 시 세부담 상한 계산 생략."
-        />
-        <div className="rounded-md bg-muted/30 border px-4 py-3 text-xs text-muted-foreground">
-          <p className="font-medium mb-1">세부담 상한 계산 방식</p>
-          {showMultiHouseCap ? (
-            <>
-              <p>
-                상한액 = 전년도 세액 ×{" "}
-                {isMultiHouseOn ? "300% (조정대상지역 2주택 이상 §10②)" : "150% (일반 §10①)"}
-              </p>
-              <p className="mt-1">
-                3주택 이상은 자동으로 300% 상한이 적용됩니다.
-              </p>
-            </>
-          ) : (
-            <p>상한액 = 전년도 세액 × 150% (종합부동산세법 §10)</p>
-          )}
-          <p className="mt-1">
-            당해 종부세가 상한액을 초과하면 상한액 - 재산세 = 확정 종부세
-          </p>
+      {/* 전년도 세액 — corporate_special(상한 미적용)은 숨김 */}
+      {!isCorporateSpecial && (
+        <div className="space-y-2">
+          <CurrencyInput
+            label="전년도 총세액 (선택)"
+            value={formData.previousYearTotalTax}
+            onChange={(v) => updateFormData({ previousYearTotalTax: v })}
+            placeholder="0"
+            hint="전년도 종합부동산세 + 재산세 합계 (농특세 제외). 미입력 시 세부담 상한 계산 생략."
+          />
+          <div className="rounded-md bg-muted/30 border px-4 py-3 text-xs text-muted-foreground">
+            <p className="font-medium mb-1">세부담 상한 계산 방식</p>
+            {showMultiHouseCap ? (
+              <>
+                <p>
+                  상한액 = 전년도 세액 ×{" "}
+                  {isMultiHouseOn ? "300% (조정대상지역 2주택 이상 §10②)" : "150% (일반 §10①)"}
+                </p>
+                <p className="mt-1">
+                  3주택 이상은 자동으로 300% 상한이 적용됩니다.
+                </p>
+              </>
+            ) : (
+              <p>상한액 = 전년도 세액 × 150% (종합부동산세법 §10)</p>
+            )}
+            <p className="mt-1">
+              당해 종부세가 상한액을 초과하면 상한액 - 재산세 = 확정 종부세
+            </p>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

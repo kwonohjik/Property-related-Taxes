@@ -11,6 +11,24 @@
  */
 
 // ============================================================
+// -1. 납세의무자 유형 (종합부동산세법 §9②)
+// ============================================================
+
+/**
+ * 납세의무자 유형 (§9② 세율 분기)
+ *
+ * - individual:         개인 (기본, §9① 각호 누진세율)
+ * - corporate_special:  법인 §9②3호 — 단일세율(가/나목)·기본공제 0(§8①2호)·세부담상한 배제(§10 단서)
+ * - corporate_general:  법인 §9②1호 — §9①1호 general 표 고정·기본공제 9억(6억)·상한 적용
+ * - corporate_public:   법인 §9②2호 (공익법인 등) — §9① 각호(주택 수 분기)·기본공제 9억(6억)·상한 적용
+ */
+export type ComprehensiveTaxpayerType =
+  | "individual"
+  | "corporate_special"
+  | "corporate_general"
+  | "corporate_public";
+
+// ============================================================
 // 0. 연도별 세율 구간 (과세연도별 세법 파라미터 — comprehensive-historical.ts)
 // ============================================================
 
@@ -179,6 +197,16 @@ export interface SeparateAggregateLandForComprehensive {
 export interface ComprehensiveTaxInput {
   // ── 주택 목록 ──
   properties: ComprehensiveProperty[];
+
+  // ── 납세의무자 유형 (미입력 시 "individual" — 기존 anchor 무변경) ──
+  /**
+   * 납세의무자 유형 (§9②).
+   * - undefined / "individual": 개인 (기본값, 기존 동작 보존)
+   * - "corporate_special":  §9②3호 단일세율, 기본공제 0, 상한 배제
+   * - "corporate_general":  §9②1호 general 표 고정
+   * - "corporate_public":   §9②2호 §9①각호 분기
+   */
+  taxpayerType?: ComprehensiveTaxpayerType;
 
   // ── 1세대1주택자 여부 ──
   isOneHouseOwner: boolean;
@@ -379,6 +407,8 @@ export interface ComprehensiveTaxResult {
   // ── 메타 ──
   assessmentDate: string;         // 과세기준일 (YYYY-06-01)
   isOneHouseOwner: boolean;
+  /** 납세의무자 유형 echo — 결과뷰 배지·라벨 표시용 (§9②) */
+  taxpayerType: ComprehensiveTaxpayerType;
   warnings: string[];             // 경고 메시지 (v1.3 scope 한계 등)
   appliedLawDate: string;         // 적용 법령 기준일
 }

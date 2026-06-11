@@ -43,6 +43,23 @@ export interface ComprehensiveYearParams {
   taxCapRateGeneral: number;                   // 1.5
   /** 조정다주택/3주택+ 상한율. 2023+ undefined (구 §10② 삭제 — 단일 150%) */
   taxCapRateMultiHouseAdjusted?: number;       // 3.0 (≤2022)
+
+  // ── 법인 단일세율 (§9②3호 — corporate_special) ──
+  /**
+   * §9②3호 가목: 2주택 이하 법인 단일세율.
+   *   2021·2022 구법 §9②: 1천분의 30 (3.0%)
+   *   2023~   현행 §9②3호 가목: 1천분의 27 (2.7%)
+   *
+   * 나목(3주택+ 또는 ≤2022 조정 2주택) 판정은 isMultiHouseRate() 재사용.
+   * 출처: KoreanLaw MCP 구법·현행 §9② 축자 + 국세청 2022 사례집 pdf38 법인 열 실측
+   */
+  corporateRate2HouseOrLess: number;   // 0.030 (≤2022) / 0.027 (2023~)
+  /**
+   * §9②3호 나목: 3주택 이상(또는 ≤2022 조정대상지역 2주택) 법인 단일세율.
+   *   2021·2022 구법 §9②: 1천분의 60 (6.0%)
+   *   2023~   현행 §9②3호 나목: 1천분의 50 (5.0%)
+   */
+  corporateRate3HouseOrMore: number;   // 0.060 (≤2022) / 0.050 (2023~)
 }
 
 // ============================================================
@@ -110,6 +127,8 @@ const YEAR_PARAMS: readonly ComprehensiveYearParams[] = [
     housingBracketsMulti: BRACKETS_PRE2023_MULTI,
     taxCapRateGeneral: 1.5,
     taxCapRateMultiHouseAdjusted: 3.0,
+    corporateRate2HouseOrLess: 0.030,
+    corporateRate3HouseOrMore: 0.060,
   },
   {
     year: 2022,
@@ -121,6 +140,8 @@ const YEAR_PARAMS: readonly ComprehensiveYearParams[] = [
     housingBracketsMulti: BRACKETS_PRE2023_MULTI,
     taxCapRateGeneral: 1.5,
     taxCapRateMultiHouseAdjusted: 3.0,
+    corporateRate2HouseOrLess: 0.030,
+    corporateRate3HouseOrMore: 0.060,
   },
   {
     year: "default", // 2023 이상
@@ -132,6 +153,8 @@ const YEAR_PARAMS: readonly ComprehensiveYearParams[] = [
     housingBracketsMulti: BRACKETS_2023_MULTI,
     taxCapRateGeneral: 1.5,
     taxCapRateMultiHouseAdjusted: undefined, // 구 §10② 삭제
+    corporateRate2HouseOrLess: 0.027,
+    corporateRate3HouseOrMore: 0.050,
   },
 ];
 

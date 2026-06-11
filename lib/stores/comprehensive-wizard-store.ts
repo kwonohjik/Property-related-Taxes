@@ -72,6 +72,12 @@ export interface SeparateLandEntry {
 export interface ComprehensiveFormData {
   // ── Step 1: 기본 정보 ──
   assessmentYear: string;          // 과세연도 (숫자 입력용 문자열)
+  /** 납세의무자 유형 (①)
+   *  - individual: 개인 (기본)
+   *  - corporate_special: §9②3호 — 단일세율·기본공제 0·상한 배제
+   *  - corporate_general: §9②1호 — 일반 누진(주택 수 무관)
+   *  - corporate_public:  §9②2호 — §9①각호(주택 수 분기) */
+  taxpayerType: "individual" | "corporate_special" | "corporate_general" | "corporate_public";
   isOneHouseOwner: boolean;
   birthDate: string;               // 생년월일 YYYY-MM-DD (고령자 공제용)
   acquisitionDate: string;         // 최초 취득일 YYYY-MM-DD (장기보유 공제용)
@@ -134,6 +140,7 @@ const DEFAULT_LAND_AGGREGATE: AggregateLandForm = {
 
 const defaultFormData: ComprehensiveFormData = {
   assessmentYear: String(new Date().getFullYear()),
+  taxpayerType: "individual",     // ② initial value
   isOneHouseOwner: false,
   birthDate: "",
   acquisitionDate: "",
@@ -283,6 +290,9 @@ export const useComprehensiveWizardStore = create<ComprehensiveWizardState>()(
         if (state && state.formData) {
           state.formData.isMultiHouseInAdjustedArea =
             state.formData.isMultiHouseInAdjustedArea ?? false;
+          // taxpayerType: 구 세션 복원 시 undefined → "individual" 폴백 (3중 일치)
+          state.formData.taxpayerType =
+            state.formData.taxpayerType ?? "individual";
         }
       },
     },

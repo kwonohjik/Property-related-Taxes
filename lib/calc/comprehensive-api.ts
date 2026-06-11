@@ -120,11 +120,18 @@ export async function callComprehensiveApi(
           }))
       : undefined;
 
+  // ④ 법인 여부 파생 — taxpayerType 기준 (dual-truth 금지: 별도 isCorporate 필드 없음)
+  // fallback을 먼저 적용해야 구버전 sessionStorage(undefined)가 법인으로 오판되지 않음 (3중 일치)
+  const taxpayerType = formData.taxpayerType ?? "individual";
+  const isCorporate = taxpayerType !== "individual";
+
   const body = {
     assessmentYear: parseInt(formData.assessmentYear) || new Date().getFullYear(),
-    isOneHouseOwner: formData.isOneHouseOwner,
-    birthDate: formData.birthDate || undefined,
-    acquisitionDate: formData.acquisitionDate || undefined,
+    taxpayerType,                                         // ⑬ body spread
+    // 법인 시 명시 strip (엔진 무시가 1차 방어, API strip이 2차 — 3중 패턴)
+    isOneHouseOwner: isCorporate ? false : formData.isOneHouseOwner,
+    birthDate: isCorporate ? undefined : formData.birthDate || undefined,
+    acquisitionDate: isCorporate ? undefined : formData.acquisitionDate || undefined,
     previousYearTotalTax: formData.previousYearTotalTax
       ? parseAmount(formData.previousYearTotalTax) || undefined
       : undefined,

@@ -78,3 +78,109 @@ describe("SC-A1: 2021 종합합산 토지 FMR 95%", () => {
     expect(result.aggregateLandTax?.fairMarketRatio).toBe(0.95);
   });
 });
+
+// ============================================================
+// SC-B: 법인 주택분 §9② (Phase B)
+//   법령: 현행 §9②3호 가·나목 2.7%/5.0% · 구법(≤2022) §9② 3.0%/6.0%
+//        기본공제 0원 §8①2호 · 세부담상한 배제 §10 단서 (Phase 0 축자 확정)
+// ============================================================
+
+describe("SC-B: 법인 §9②3호 — 단일세율·기본공제 0·상한 배제", () => {
+  const corporateBase = (
+    year: number,
+    values: number[],
+  ): ComprehensiveTaxInput => ({
+    assessmentYear: year,
+    taxpayerType: "corporate_special",
+    isOneHouseOwner: false,
+    properties: values.map((v, i) => ({
+      propertyId: `p${i + 1}`,
+      assessedValue: v,
+      exclusionType: "none" as const,
+    })),
+  });
+
+  it("SC-B1: 2024 가목(2주택 이하) 공시 20억 → 공제 0 → 과표 12억 × 2.7% = 32,400,000", () => {
+    const result = calculateComprehensiveTax(corporateBase(2024, [2_000_000_000]));
+
+    expect(result.basicDeduction).toBe(0);                  // §8①2호
+    expect(result.taxBase).toBe(1_200_000_000);             // 20억 × 60%
+    expect(result.appliedRate).toBe(0.027);                 // §9②3호 가목
+    expect(result.progressiveDeduction).toBe(0);            // 단일 비례 — 누진공제 없음
+    expect(result.calculatedTax).toBe(32_400_000);
+    expect(result.isMultiHouseRateApplied).toBe(false);     // 개인 multi 표 echo 아님
+    expect(result.taxpayerType).toBe("corporate_special");
+  });
+
+  it("SC-B2: 2024 나목(3주택 이상) 합산 30억 → 과표 18억 × 5.0% = 90,000,000", () => {
+    const result = calculateComprehensiveTax(
+      corporateBase(2024, [1_000_000_000, 1_000_000_000, 1_000_000_000]),
+    );
+
+    expect(result.taxBase).toBe(1_800_000_000);
+    expect(result.appliedRate).toBe(0.05);                  // §9②3호 나목
+    expect(result.calculatedTax).toBe(90_000_000);
+  });
+
+  it("SC-B3: 법인 상한 배제 — previousYearTotalTax 입력해도 taxCap undefined (§10 단서)", () => {
+    const input = corporateBase(2024, [2_000_000_000]);
+    input.previousYearTotalTax = 10_000_000;
+    const result = calculateComprehensiveTax(input);
+
+    expect(result.taxCap).toBeUndefined();
+  });
+
+  it("SC-B4: 법인 + 1세대1주택 입력 잔존 → 전부 무시 (공제 0·세액공제 없음)", () => {
+    const input = corporateBase(2024, [2_000_000_000]);
+    input.isOneHouseOwner = true;
+    input.birthDate = new Date("1950-01-01");
+    input.acquisitionDate = new Date("2000-01-01");
+    const result = calculateComprehensiveTax(input);
+
+    expect(result.basicDeduction).toBe(0);                  // 12억 공제 미적용
+    expect(result.oneHouseDeduction).toBeUndefined();       // §9⑤~⑨ 개인 전용
+    expect(result.calculatedTax).toBe(32_400_000);
+  });
+
+  it("SC-B5: 2024 §9②1호(공공주택사업자 등) 3주택 30억 → 공제 9억 → general 표 (multi 금지)", () => {
+    const input = corporateBase(2024, [1_000_000_000, 1_000_000_000, 1_000_000_000]);
+    input.taxpayerType = "corporate_general";
+    const result = calculateComprehensiveTax(input);
+
+    expect(result.basicDeduction).toBe(900_000_000);
+    expect(result.taxBase).toBe(1_260_000_000);             // (30억 − 9억) × 60%
+    expect(result.appliedRate).toBe(0.013);                 // §9①1호 12억~25억 (중과 아님)
+    expect(result.calculatedTax).toBe(10_380_000);          // 12.6억 × 1.3% − 600만
+    expect(result.isMultiHouseRateApplied).toBe(false);
+  });
+
+  it("SC-B6: 2024 §9②2호(공익법인등) 3주택 30억 → §9①2호 multi 표", () => {
+    const input = corporateBase(2024, [1_000_000_000, 1_000_000_000, 1_000_000_000]);
+    input.taxpayerType = "corporate_public";
+    const result = calculateComprehensiveTax(input);
+
+    expect(result.basicDeduction).toBe(900_000_000);
+    expect(result.appliedRate).toBe(0.02);                  // §9①2호 12억~25억 중과
+    expect(result.calculatedTax).toBe(10_800_000);          // 12.6억 × 2.0% − 1,440만
+    expect(result.isMultiHouseRateApplied).toBe(true);
+  });
+
+  it("SC-B7: 2022 가목 공시 20억 → 과표 12억 × 3.0% = 36,000,000 (구법 §9②)", () => {
+    const result = calculateComprehensiveTax(corporateBase(2022, [2_000_000_000]));
+
+    expect(result.basicDeduction).toBe(0);                  // 구법 §8① 괄호
+    expect(result.taxBase).toBe(1_200_000_000);
+    expect(result.appliedRate).toBe(0.03);
+    expect(result.calculatedTax).toBe(36_000_000);
+  });
+
+  it("SC-B8: 2022 나목 조정 2주택 합산 20억 → 과표 12억 × 6.0% = 72,000,000", () => {
+    const input = corporateBase(2022, [1_000_000_000, 1_000_000_000]);
+    input.isMultiHouseInAdjustedArea = true;                // ≤2022 나목 = 조정 2주택 포함
+    const result = calculateComprehensiveTax(input);
+
+    expect(result.taxBase).toBe(1_200_000_000);
+    expect(result.appliedRate).toBe(0.06);
+    expect(result.calculatedTax).toBe(72_000_000);
+  });
+});

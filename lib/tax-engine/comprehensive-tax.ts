@@ -109,6 +109,12 @@ export function calculateComprehensiveTax(
   const assessmentDateStr = input.targetDate ?? `${input.assessmentYear}-06-01`;
   const assessmentDate = new Date(assessmentDateStr);
 
+  // ── 납세의무자 유형 (§9②) — 미입력 시 개인 (기존 동작 보존) ──
+  // 법인은 1세대1주택 관련 입력(isOneHouseOwner·birthDate·acquisitionDate)이
+  // store에 잔존해도 전부 무시 (3중 패턴 1차 방어 — 법령상 해당 없음)
+  const taxpayerType = input.taxpayerType ?? "individual";
+  const isCorporate = taxpayerType !== "individual";
+
   // ── Step 0: 합산배제 판정 ──
   const propertiesForExclusion: PropertyForExclusion[] = input.properties.map((p) => ({
     propertyId: p.propertyId,
@@ -154,7 +160,8 @@ export function calculateComprehensiveTax(
         {
           objectType: "housing",
           publishedPrice: prop.assessedValue,
-          isOneHousehold: input.isOneHouseOwner && input.properties.length === 1,
+          // 재산세 1세대1주택 특례세율은 개인 전용 — 법인은 일반세율
+          isOneHousehold: !isCorporate && input.isOneHouseOwner && input.properties.length === 1,
           targetDate: assessmentDateStr,
         },
         rates,
@@ -191,10 +198,17 @@ export function calculateComprehensiveTax(
     );
   }
 
-  // ── Step 3: 기본공제 차감 (연도별 일반/1세대1주택) ──
-  const basicDeduction = input.isOneHouseOwner
-    ? yearParams.basicDeductionOneHouse
-    : yearParams.basicDeductionGeneral;
+  // ── Step 3: 기본공제 차감 (연도별 일반/1세대1주택 + 법인 분기) ──
+  //   corporate_special: 0원 (§8①2호 — 구법 §8① 괄호 "제9조제2항 각 호의 세율이 적용되는 경우는 제외")
+  //   corporate_general·corporate_public: 일반 공제 (1세대1주택 경로 차단)
+  const basicDeduction =
+    taxpayerType === "corporate_special"
+      ? 0
+      : isCorporate
+        ? yearParams.basicDeductionGeneral
+        : input.isOneHouseOwner
+          ? yearParams.basicDeductionOneHouse
+          : yearParams.basicDeductionGeneral;
   const afterBasicDeduction = Math.max(includedAssessedValue - basicDeduction, 0);
 
   // ── Step 4: 공정시장가액비율 (연도별) + 만원 미만 절사 ──
@@ -206,24 +220,51 @@ export function calculateComprehensiveTax(
     warnings.push("주택분 종합부동산세 납세의무가 없습니다 (기본공제 이하).");
   }
 
-  // ── Step 5: 누진세율 — 연도별 + 다주택 중과 판정 ──
+  // ── Step 5: 세율 — 연도별 + 다주택 중과 판정 + 법인 분기 (§9①·§9②) ──
   //   다주택 = 합산배제 제외 후 과세대상 주택 수 ≥ 3 (≤2022는 조정대상지역 2주택도 포함)
+  //   법인 §9②3호 가/나목 판정도 동일 기준 (구법 §10이 상한 분기를 "§9①2호 적용대상"으로
+  //   정의한 것과 동일 축 — Phase 0 축자 확인)
   const useMultiRate = isMultiHouseRate(
     input.assessmentYear,
     aggregationExclusion.includedCount,
     input.isMultiHouseInAdjustedArea ?? false,
   );
-  const brackets = useMultiRate
-    ? yearParams.housingBracketsMulti
-    : yearParams.housingBracketsGeneral;
-  const { calculatedTax, appliedRate, progressiveDeduction } =
-    calcHousingTaxAmount(taxBase, brackets);
+
+  let calculatedTax: number;
+  let appliedRate: number;
+  let progressiveDeduction: number;
+  let isMultiHouseRateApplied = false;
+
+  if (taxpayerType === "corporate_special") {
+    // §9②3호: 단일 비례세율 (누진공제 없음) — 가목 2주택 이하 / 나목 3주택 이상(≤2022 조정 2주택 포함)
+    // 2021·2022 = 3.0%/6.0% (구법 §9②) / 2023~ = 2.7%/5.0%
+    // 분수 정수 연산: rate × 1000을 정수화 후 ×/÷ (float 직접 곱 floor 1원 부족 방지)
+    const corporateRate = useMultiRate
+      ? yearParams.corporateRate3HouseOrMore
+      : yearParams.corporateRate2HouseOrLess;
+    calculatedTax = Math.floor((taxBase * Math.round(corporateRate * 1000)) / 1000);
+    appliedRate = corporateRate;
+    progressiveDeduction = 0;
+  } else if (taxpayerType === "corporate_general") {
+    // §9②1호 (공공주택사업자 등): 주택 수 무관 §9①1호 general 표 고정
+    ({ calculatedTax, appliedRate, progressiveDeduction } =
+      calcHousingTaxAmount(taxBase, yearParams.housingBracketsGeneral));
+  } else {
+    // 개인 + §9②2호 공익법인등: §9① 각호 (주택 수 분기)
+    const brackets = useMultiRate
+      ? yearParams.housingBracketsMulti
+      : yearParams.housingBracketsGeneral;
+    ({ calculatedTax, appliedRate, progressiveDeduction } =
+      calcHousingTaxAmount(taxBase, brackets));
+    isMultiHouseRateApplied = useMultiRate;
+  }
 
   // ── Step 6: 1세대1주택 세액공제 ──
   let oneHouseDeduction: OneHouseDeductionResult | undefined = undefined;
   let taxAfterOneHouseDeduction = calculatedTax;
 
   if (
+    !isCorporate && // 1세대1주택 세액공제(§9⑤~⑨)는 개인 전용 — 법인 잔존 입력 무시
     input.isOneHouseOwner &&
     isSubjectToHousingTax &&
     input.birthDate &&
@@ -278,18 +319,22 @@ export function calculateComprehensiveTax(
   );
 
   // ── Step 8: 세부담 상한 (연도별 — ≤2022 다주택 300% / 2023~ 단일 150%) ──
+  //   §9②3호 법인은 상한 배제 (§10 단서 — 구법·현행 동일, 전년도 세액 입력해도 미적용)
   const capRate =
     useMultiRate && yearParams.taxCapRateMultiHouseAdjusted !== undefined
       ? yearParams.taxCapRateMultiHouseAdjusted
       : yearParams.taxCapRateGeneral;
-  const taxCap = applyTaxCap(
-    comprehensiveTaxAfterCredit,
-    totalPropertyTaxAmount,
-    input.previousYearTotalTax,
-    capRate,
-  );
+  const taxCap =
+    taxpayerType === "corporate_special"
+      ? undefined
+      : applyTaxCap(
+          comprehensiveTaxAfterCredit,
+          totalPropertyTaxAmount,
+          input.previousYearTotalTax,
+          capRate,
+        );
 
-  if (input.previousYearTotalTax === undefined) {
+  if (input.previousYearTotalTax === undefined && taxpayerType !== "corporate_special") {
     warnings.push(
       "전년도 재산세·종부세 고지서의 합계 세액을 입력하시면 세부담 상한이 자동 적용됩니다.",
     );
@@ -325,9 +370,15 @@ export function calculateComprehensiveTax(
     (aggregateLandTax?.totalTax ?? 0) +
     (separateLandTax?.totalTax ?? 0);
 
-  warnings.push(
-    "본 계산은 개인 단독명의 기준입니다. 부부 공동명의 특례·법인 종부세는 세무사 상담을 권장합니다.",
-  );
+  if (!isCorporate) {
+    warnings.push(
+      "본 계산은 개인 단독명의 기준입니다. 부부 공동명의 특례(§10의2)는 세무사 상담을 권장합니다.",
+    );
+  } else if (taxpayerType === "corporate_special") {
+    warnings.push(
+      "§9②1호(공공주택사업자 등)·2호(공익법인등) 해당 여부는 시행령 §4의4 요건 확인이 필요합니다.",
+    );
+  }
 
   return {
     aggregationExclusion,
@@ -341,7 +392,7 @@ export function calculateComprehensiveTax(
     appliedRate,
     progressiveDeduction,
     calculatedTax,
-    isMultiHouseRateApplied: useMultiRate,
+    isMultiHouseRateApplied,
     oneHouseDeduction,
     propertyTaxCredit,
     taxCap,
@@ -354,6 +405,7 @@ export function calculateComprehensiveTax(
     grandTotal,
     assessmentDate: assessmentDateStr,
     isOneHouseOwner: input.isOneHouseOwner,
+    taxpayerType,
     warnings,
     appliedLawDate: assessmentDateStr,
   };
