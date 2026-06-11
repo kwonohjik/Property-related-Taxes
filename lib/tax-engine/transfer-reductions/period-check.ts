@@ -120,7 +120,14 @@ const RULES: Record<TransferReductionId, PeriodRule> = {
   },
   unsold_98_2: {
     label: "취득 2008.11.3~2010.12.31",
-    check: (c) => within(c.contractDate ?? c.acquisitionDate, D("2008-11-03"), D("2010-12-31")),
+    // P4 (2026-06-12): 일자 미입력 시 낙관 통과 (라디오 활성) — 본 판정은 evaluateUnsold982
+    // (취득일 OR 계약일 — 계약+계약금 케이스는 취득일이 기간 외여도 적격).
+    check: (c) => {
+      const t = c.contractDate ?? c.acquisitionDate;
+      return t === undefined ||
+        within(c.acquisitionDate, D("2008-11-03"), D("2010-12-31")) ||
+        within(c.contractDate, D("2008-11-03"), D("2010-12-31"));
+    },
     failReason: "지방 미분양 취득기간(2008.11.3~2010.12.31) 시한 외 — 조특법 §98의2",
   },
   unsold_98_3: {
@@ -133,7 +140,13 @@ const RULES: Record<TransferReductionId, PeriodRule> = {
   },
   unsold_98_4: {
     label: "취득 2009.3.16~2010.2.11 (비거주자 일반주택)",
-    check: (c) => within(c.contractDate ?? c.acquisitionDate, D("2009-03-16"), D("2010-02-11")),
+    // P4 (2026-06-12): 일자 미입력 시 낙관 통과 — 본 판정은 evaluateUnsold984 (취득 OR 계약).
+    check: (c) => {
+      const t = c.contractDate ?? c.acquisitionDate;
+      return t === undefined ||
+        within(c.acquisitionDate, D("2009-03-16"), D("2010-02-11")) ||
+        within(c.contractDate, D("2009-03-16"), D("2010-02-11"));
+    },
     failReason: "비거주자 일반주택 취득기간(2009.3.16~2010.2.11) 시한 외 — 조특법 §98의4",
   },
   unsold_98_5: {

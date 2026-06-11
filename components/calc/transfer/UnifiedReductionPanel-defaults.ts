@@ -198,6 +198,23 @@ export function getReductionDefault(id: TransferReductionId): AssetReductionForm
       standardPriceAtTransfer988: "",
     };
   }
+  // P4 (2026-06-12): §98의2 / §98의4
+  if (id === "unsold_98_2") {
+    return {
+      type: "unsold_98_2",
+      contractDate982: "",
+      isNonCapitalUnsold982: false,
+      isFirstOrFcfsContract982: false,
+    };
+  }
+  if (id === "unsold_98_4") {
+    return {
+      type: "unsold_98_4",
+      contractDate984: "",
+      isNonResidentNoPe984: false,
+      isNotUnsold983House984: false,
+    };
+  }
   // P3 (2026-06-12): §98의3 / §98의5 / §98의6 — 하이브리드
   if (id === "unsold_98_3") {
     return {

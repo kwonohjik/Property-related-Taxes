@@ -30,9 +30,11 @@ export type IncomeDeductionId =
   | "unsold_99_2"
   | "unsold_98_3"
   | "unsold_98_5"
-  | "unsold_98_6";
+  | "unsold_98_6"
+  | "unsold_98_2"
+  | "unsold_98_4";
 
-/** 중과 배제 대상 (소령 §167의3①5호 열거 — §98의4는 비열거라 P4에서 제외 유지) */
+/** 중과 배제 대상 (소령 §167의3①5호 열거 — §98의4는 **비열거**라 제외, P4-5 anchor) */
 export const SURCHARGE_EXCLUDED_INCOME_DEDUCTION_IDS: ReadonlyArray<IncomeDeductionId> = [
   "new_99_3",
   "new_99",
@@ -42,6 +44,7 @@ export const SURCHARGE_EXCLUDED_INCOME_DEDUCTION_IDS: ReadonlyArray<IncomeDeduct
   "unsold_98_3",
   "unsold_98_5",
   "unsold_98_6",
+  "unsold_98_2",
 ];
 
 /** 라우터 평가 컨텍스트 — 자산-수준 입력에서 추출 (TransferTaxInput 직접 의존 회피) */
@@ -75,12 +78,16 @@ export interface IncomeDeductionResolution {
   unsold983Detail?: UnsoldHybridResult;
   unsold985Detail?: UnsoldHybridResult;
   unsold986Detail?: UnsoldHybridResult;
+  unsold982Detail?: UnsoldHybridResult;
+  unsold984Detail?: UnsoldHybridResult;
   /** step 표시용 — 적용/불적격 공통 */
   stepLabel?: string;
   legalBasis?: string;
   ineligibleMessages?: string;
   /** 하이브리드 5년 내 — 세액감면 경로 안내 step용 (P2) */
   taxAmountMode?: boolean;
+  /** §98의2 특칙 전용 — 장특 표2·기본세율 안내 step용 (P4) */
+  specialOnlyMode?: boolean;
 }
 
 /** reduction variant 멤버 — 구조적 타이핑 (stub.types 직접 import 회피, §98의9 선례) */
@@ -98,15 +105,20 @@ const STEP_LABELS: Record<IncomeDeductionId, string> = {
   unsold_98_3: "§98의3 미분양주택 과세특례",
   unsold_98_5: "§98의5 수도권 밖 미분양 과세특례",
   unsold_98_6: "§98의6 준공후미분양 과세특례",
+  unsold_98_2: "§98의2 지방 미분양주택 과세특례",
+  unsold_98_4: "§98의4 비거주자 주택취득 과세특례",
 };
 
 const HYBRID_DETAIL_FIELDS: Record<string, keyof Pick<IncomeDeductionResolution,
-  "unsold987Detail" | "unsold992Detail" | "unsold983Detail" | "unsold985Detail" | "unsold986Detail">> = {
+  "unsold987Detail" | "unsold992Detail" | "unsold983Detail" | "unsold985Detail" | "unsold986Detail"
+  | "unsold982Detail" | "unsold984Detail">> = {
   unsold_98_7: "unsold987Detail",
   unsold_99_2: "unsold992Detail",
   unsold_98_3: "unsold983Detail",
   unsold_98_5: "unsold985Detail",
   unsold_98_6: "unsold986Detail",
+  unsold_98_2: "unsold982Detail",
+  unsold_98_4: "unsold984Detail",
 };
 
 /**
@@ -233,6 +245,7 @@ export function resolveIncomeDeduction(
           ? undefined
           : detail.ineligibleReasons.map((x) => x.message).join(" · "),
         taxAmountMode: detail.isEligible && detail.effectCategory === "tax_amount",
+        specialOnlyMode: detail.isEligible && detail.effectCategory === "lthd_rate_special",
         ...detailField,
       };
     }
@@ -266,6 +279,15 @@ export function buildIncomeDeductionStep(
   incomeBefore: number,
   incomeAfter: number,
 ): { label: string; formula: string; amount: number; legalBasis: string } {
+  // §98의2 특칙 전용 — 차감·감면 없음, 특칙 안내 (P4)
+  if (resolution.specialOnlyMode) {
+    return {
+      label: `${resolution.stepLabel} — 특칙 적용 (장특 표2·기본세율)`,
+      formula: "감면세액 없음 — 장기보유특별공제 표2 보유기간별 공제율 + §104①1호 기본세율 적용 (법 §98의2①)",
+      amount: 0,
+      legalBasis: resolution.legalBasis ?? "",
+    };
+  }
   // 하이브리드 5년 내 — 차감 없음, 세액감면 경로 안내 (P2)
   if (resolution.taxAmountMode) {
     return {
@@ -301,6 +323,8 @@ const EXCLUSION_ARTICLE_LABELS: Record<IncomeDeductionId, string> = {
   unsold_98_3: "조특법 §98의3",
   unsold_98_5: "조특법 §98의5",
   unsold_98_6: "조특법 §98의6",
+  unsold_98_2: "조특법 §98의2",
+  unsold_98_4: "조특법 §98의4",
 };
 
 export function buildSurchargeExclusionStep(exclusion: {

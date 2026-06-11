@@ -192,7 +192,10 @@ export const REDUCTION_METADATA: Record<TransferReductionId, ReductionMetadata> 
     category: "unsold_housing",
     effectCategory: "cgt_with_normal_rate_and_ltsd",
     uiLabel: "§98의2 — 지방 미분양 일반세율",
-    effectLabel: "장특공제(표 1) + 일반 누진세율 (2008.11.3~2010.12.31, 중과 배제)",
+    // M-1 (2026-06-12): 법 ①1호 원문 "표2에 따른 보유기간별 공제율" — 표 1 오기 정정
+    effectLabel: "장특공제(표2 보유기간별, 연 4%·최대 40%) + 기본 누진세율 — 감면세액 없음 (취득 2008.11.3~2010.12.31, 중과 배제)",
+    // P4 (2026-06-12): 본격 구현 — evaluateUnsold982 + STEP 4.05 표2 override
+    isFullyImplemented: true,
   },
   unsold_98_3: {
     id: "unsold_98_3",
@@ -211,6 +214,8 @@ export const REDUCTION_METADATA: Record<TransferReductionId, ReductionMetadata> 
     effectCategory: "tax_amount",
     uiLabel: "§98의4 — 비거주자 일반주택 10%",
     effectLabel: "산출세액 10% 감면 (2009.3.16~2010.2.11, 비거주자 한정)",
+    // P4 (2026-06-12): 본격 구현 — evaluateUnsold984 (10% 단일·중과 배제 비대상)
+    isFullyImplemented: true,
   },
   unsold_98_5: {
     id: "unsold_98_5",

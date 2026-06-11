@@ -21,6 +21,7 @@
 import { applyRate as applyHybridRate } from "../tax-utils";
 import { TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
 import { fullMonthsBetween } from "./unsold-98-8";
+import { evaluateP4FromReduction } from "./unsold-hybrid-p4";
 import {
   computeHybridEffect,
   ineligibleHybrid,
@@ -52,11 +53,12 @@ export const UNSOLD_98_6_STD_SUM_LIMIT = 600_000_000;
 export const UNSOLD_98_6_FLOOR_LIMIT = 149;
 export const UNSOLD_98_6_RENTAL_MONTHS = 60;
 
-/** P3 특칙 — 단기세율(§104①2·3호) 배제 대상 (법 §98의3④·§98의5③·§98의6③ 2호) */
+/** 특칙 — 단기세율(§104①2·3호) 배제 대상 (법 §98의2①·§98의3④·§98의5③·§98의6③ 각 2호) */
 export const RATE_SPECIAL_REDUCTION_IDS: ReadonlyArray<string> = [
   "unsold_98_3",
   "unsold_98_5",
   "unsold_98_6",
+  "unsold_98_2",
 ];
 
 // ─────────────────────────────────────────────────────────────────
@@ -546,6 +548,8 @@ export const ALL_HYBRID_IDS: ReadonlyArray<string> = [
   "unsold_98_3",
   "unsold_98_5",
   "unsold_98_6",
+  "unsold_98_2",
+  "unsold_98_4",
 ];
 
 /**
@@ -647,5 +651,6 @@ export function evaluateAnyHybridFromReduction(
         (r.standardPriceAtTransfer986 as number | undefined) ?? ctx.standardPriceAtTransfer,
     });
   }
-  return evaluateP2HybridFromReduction(r, ctx);
+  // P4 (§98의2·§98의4) → P2 (§98의7·§99의2) 순 위임
+  return evaluateP4FromReduction(r, ctx) ?? evaluateP2HybridFromReduction(r, ctx);
 }

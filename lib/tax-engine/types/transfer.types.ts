@@ -674,6 +674,10 @@ export interface TransferTaxResult {
   unsold985Detail?: UnsoldHybridResult;
   /** §98의6 준공후미분양 50% — 1호/2호 (5년 내 감면 1호 한정) (P3) */
   unsold986Detail?: UnsoldHybridResult;
+  /** §98의2 지방 미분양 — 특칙 전용 (장특 표2·기본세율, 감면세액 없음) (P4) */
+  unsold982Detail?: UnsoldHybridResult;
+  /** §98의4 비거주자 10% 세액감면 — 5년 무관 단일, 중과 배제 비대상 (P4) */
+  unsold984Detail?: UnsoldHybridResult;
   /** 신축·미분양 감면 상세 (newHousingDetails 제공 시) — 매칭 조문·감면율·5년 안분 표시용 */
   newHousingReductionDetail?: NewHousingReductionResult;
   /**

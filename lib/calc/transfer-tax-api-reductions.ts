@@ -234,6 +234,23 @@ export function toEngineReductions(
         standardPriceAtTransfer988: parseAmount(r.standardPriceAtTransfer988 || "0") || undefined,
       };
     }
+    // ── P4 §98의2·§98의4 (2026-06-12): 본 변환 (④) ──
+    if (r.type === "unsold_98_2") {
+      return {
+        type: "unsold_98_2" as const,
+        contractDate982: r.contractDate982 || undefined,
+        isNonCapitalUnsold982: r.isNonCapitalUnsold982,
+        isFirstOrFcfsContract982: r.isFirstOrFcfsContract982,
+      };
+    }
+    if (r.type === "unsold_98_4") {
+      return {
+        type: "unsold_98_4" as const,
+        contractDate984: r.contractDate984 || undefined,
+        isNonResidentNoPe984: r.isNonResidentNoPe984,
+        isNotUnsold983House984: r.isNotUnsold983House984,
+      };
+    }
     // ── P3 §98의3 (2026-06-12): 하이브리드 본 변환 (④) — houseType별 일자 strip ──
     if (r.type === "unsold_98_3") {
       return {

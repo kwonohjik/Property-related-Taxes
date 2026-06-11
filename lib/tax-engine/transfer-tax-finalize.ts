@@ -62,6 +62,8 @@ export interface FinalizeArgs {
   unsold983PreliminaryResult?: UnsoldHybridResult;
   unsold985PreliminaryResult?: UnsoldHybridResult;
   unsold986PreliminaryResult?: UnsoldHybridResult;
+  unsold982PreliminaryResult?: UnsoldHybridResult;
+  unsold984PreliminaryResult?: UnsoldHybridResult;
 }
 
 export interface FinalizeResult {
@@ -75,6 +77,8 @@ export interface FinalizeResult {
   unsold983FinalResult?: UnsoldHybridResult;
   unsold985FinalResult?: UnsoldHybridResult;
   unsold986FinalResult?: UnsoldHybridResult;
+  unsold982FinalResult?: UnsoldHybridResult;
+  unsold984FinalResult?: UnsoldHybridResult;
   ruralSurtax993: number;
   // 감면 (calcReductions return의 fan-out)
   reductionAmount: number;
@@ -113,6 +117,7 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
     new99PreliminaryResult, unsold988PreliminaryResult,
     unsold987PreliminaryResult, unsold992PreliminaryResult,
     unsold983PreliminaryResult, unsold985PreliminaryResult, unsold986PreliminaryResult,
+    unsold982PreliminaryResult, unsold984PreliminaryResult,
   } = args;
 
   // ── STEP 7.5: 차감형 감면(§99의3·§99·§98의8 + 하이브리드 5년 후) 농어촌특별세 — 2-pass 공통 ──
@@ -125,6 +130,9 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
   let unsold983FinalResult: UnsoldHybridResult | undefined = unsold983PreliminaryResult;
   let unsold985FinalResult: UnsoldHybridResult | undefined = unsold985PreliminaryResult;
   let unsold986FinalResult: UnsoldHybridResult | undefined = unsold986PreliminaryResult;
+  // P4: §98의2(특칙 전용)·§98의4(단일 세액감면) — 2-pass 비대상, 그대로 echo (§98의4는 STEP 8.7)
+  const unsold982FinalResult: UnsoldHybridResult | undefined = unsold982PreliminaryResult;
+  let unsold984FinalResult: UnsoldHybridResult | undefined = unsold984PreliminaryResult;
   let ruralSurtax993 = 0;
   // 하이브리드는 5년 후(income_deduction)만 2-pass — 5년 내(tax_amount)는 STEP 8.7
   const hybridIncomePrelims = [
@@ -249,6 +257,7 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
   const HYBRID_ARTICLE: Record<string, string> = {
     unsold_98_7: "§98의7", unsold_99_2: "§99의2",
     unsold_98_3: "§98의3", unsold_98_5: "§98의5", unsold_98_6: "§98의6",
+    unsold_98_4: "§98의4",
   };
   if (
     reductionTypeApplied !== undefined &&
@@ -278,6 +287,7 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
       else if (merged.id === "unsold_99_2") unsold992FinalResult = merged;
       else if (merged.id === "unsold_98_3") unsold983FinalResult = merged;
       else if (merged.id === "unsold_98_5") unsold985FinalResult = merged;
+      else if (merged.id === "unsold_98_4") unsold984FinalResult = merged;
       else unsold986FinalResult = merged;
     }
   }
@@ -343,6 +353,8 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
     unsold983FinalResult,
     unsold985FinalResult,
     unsold986FinalResult,
+    unsold982FinalResult,
+    unsold984FinalResult,
     ruralSurtax993,
     // STEP 8.5 5년 한도 반영값 — 결과 표시(결정세액 산식)와 일관 유지
     reductionAmount: cappedReductionAmount,

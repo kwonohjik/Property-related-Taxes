@@ -524,8 +524,26 @@ export function calculateTransferTax(
   // STEP 4: 장기보유특별공제 (장기임대 특례율 포함 — §97의3·§97의4는 L-2' 블록)
   // §99의4 eligible 시 exemptionJudgeInput(유효 주택수) 전달 — 표2 판정도 §89①3호 의제 체인
   // (소령 §159의4 "그 밖의 규정에 따라 1세대 1주택으로 보는 주택 포함"). 중과 isSurchargeCase는 원본(R-D).
-  const { deduction: longTermHoldingDeduction, rate: longTermHoldingRate, holdingPeriod, rental97LthdDetail } =
+  // eslint-disable-next-line prefer-const -- deduction·rate는 STEP 4.05 §98의2 특칙에서 재할당
+  let { deduction: longTermHoldingDeduction, rate: longTermHoldingRate, holdingPeriod, rental97LthdDetail } =
     calcLongTermHoldingDeduction(taxableGain, exemptionJudgeInput, parsedRates.longTermHoldingRules, isSurchargeCase, suspendedResult, parsedRates.longTermRentalRules, splitDetail);
+  // STEP 4.05: §98의2 특칙 — 장특 = 양도차익 × §95② 표2 보유기간별 공제율 강제 (법 ①1호, P4).
+  // 적격 선판정은 STEP 0.45 (중과 배제 5호 열거 — 동일 신호). 1세대1주택 표2(보유+거주)는
+  // ①의 "각 표 외의 부분 본문 불구" 범위 밖 — 특례 적용 시 유지 (항상 ≥ 표2 보유 단독).
+  let lthd982Applied = false;
+  if (surchargeExclusionByReduction.appliedId === "unsold_98_2") {
+    const isOneHouseSpecial982 =
+      exemptionJudgeInput.isOneHousehold &&
+      exemptionJudgeInput.householdHousingCount === 1 &&
+      Math.floor(effectiveInput.residencePeriodMonths / 12) >= 2 &&
+      longTermHoldingDeduction > 0;
+    if (!isOneHouseSpecial982) {
+      const rate982 = holdingPeriod.years >= 3 ? Math.min(holdingPeriod.years * 0.04, 0.4) : 0;
+      longTermHoldingDeduction = applyRate(taxableGain, rate982);
+      longTermHoldingRate = rate982;
+      lthd982Applied = true;
+    }
+  }
   const holdingPeriodStr = holdingPeriod.years > 0 || holdingPeriod.months > 0
     ? `보유기간 ${holdingPeriod.years}년 ${holdingPeriod.months}개월`
     : "";
@@ -536,7 +554,9 @@ export function calculateTransferTax(
     exemptionJudgeInput.householdHousingCount === 1 &&
     residenceYearsForStep >= 2 &&
     longTermHoldingDeduction > 0;
-  const lthdFormulaRate = isOneHouseSpecial
+  const lthdFormulaRate = lthd982Applied
+    ? `§98의2 특칙 — 표2 보유 ${holdingPeriod.years}년×4% = ${Math.round(longTermHoldingRate * 100)}% (40% 한도, 법 §98의2①1호)`
+    : isOneHouseSpecial
     ? (() => {
         const hPart = Math.min(holdingPeriod.years * 4, 40);
         const rPart = Math.min(residenceYearsForStep * 4, 40);
@@ -681,6 +701,8 @@ export function calculateTransferTax(
     unsold983PreliminaryResult: incomeDeduction.unsold983Detail,
     unsold985PreliminaryResult: incomeDeduction.unsold985Detail,
     unsold986PreliminaryResult: incomeDeduction.unsold986Detail,
+    unsold982PreliminaryResult: incomeDeduction.unsold982Detail,
+    unsold984PreliminaryResult: incomeDeduction.unsold984Detail,
   });
   const {
     new993FinalResult,
@@ -691,6 +713,8 @@ export function calculateTransferTax(
     unsold983FinalResult,
     unsold985FinalResult,
     unsold986FinalResult,
+    unsold982FinalResult,
+    unsold984FinalResult,
     reductionAmount,
     reductionType,
     reductionTypeApplied,
@@ -768,6 +792,8 @@ export function calculateTransferTax(
     unsold983Detail: unsold983FinalResult,
     unsold985Detail: unsold985FinalResult,
     unsold986Detail: unsold986FinalResult,
+    unsold982Detail: unsold982FinalResult,
+    unsold984Detail: unsold984FinalResult,
     transferBurdenedGiftBreakdown,
   };
 }

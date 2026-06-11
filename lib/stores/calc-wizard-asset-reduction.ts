@@ -251,6 +251,26 @@ export type RentalReductionFormVariant =
       /** 양도시 기준시가 (원) — 미입력 시 자산 standardPriceAtTransfer fallback */
       standardPriceAtTransfer988: string;
     }
+  // ── P4 (2026-06-12): §98의2 지방 미분양 — 특칙 전용 (장특 표2·기본세율) ──
+  | {
+      type: "unsold_98_2";
+      /** 매매계약일 (YYYY-MM-DD, 선택) — 취득일이 기간 외인 계약+계약금 케이스용 */
+      contractDate982: string;
+      /** 수도권 밖 미분양 확인 (령 §98의2①) */
+      isNonCapitalUnsold982: boolean;
+      /** 선착순 공급 취득 또는 사업주체 최초 매매계약 (령①1·2호) */
+      isFirstOrFcfsContract982: boolean;
+    }
+  // ── P4 (2026-06-12): §98의4 비거주자 10% 세액감면 ──
+  | {
+      type: "unsold_98_4";
+      /** 매매계약일 (YYYY-MM-DD, 선택) */
+      contractDate984: string;
+      /** 국내사업장 없는 비거주자 확인 (소법 §120) — 미확인 시 적용 불가 */
+      isNonResidentNoPe984: boolean;
+      /** §98의3 미분양주택이 아닌 주택 확인 */
+      isNotUnsold983House984: boolean;
+    }
   // ── P3 (2026-06-12): §98의3 서울 밖 미분양 — 100%(과밀 60%) 하이브리드 ──
   | {
       type: "unsold_98_3";
