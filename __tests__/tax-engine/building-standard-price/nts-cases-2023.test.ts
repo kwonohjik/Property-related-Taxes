@@ -134,6 +134,47 @@ describe("NTS 공식 계산사례 2023 — 복합건물(섹션3)", () => {
     });
     expect(r.compositeTotal).toBe(200_540_000);
   });
+
+  // 가.리모델링(대수선) 단독주택 — 통나무조, 신축1996, 리모델링2008, 상속2023(27년경과)
+  //   구조 1.35(1.통나무조)·용도 1.0(2.단독주택)·위치 0.90(8.15만~18만)·조정 1.40(17.단독주택 331㎡이상)
+  //   신축 잔가율 0.5140(I그룹 1996신축 27경과) → ㎡당 716,000 / 기준시가 244,872,000
+  //   ⚠️ 2026 사례(nts-cases.test.ts)는 30년경과·잔가율 0.46으로 연도값이 다름 → 2023 별도 anchor 필수.
+  it("가.리모델링 미적용 — 잔가율 0.514 / ㎡당 716,000 / 기준시가 244,872,000", () => {
+    const r = calcBuildingStandardPrice({
+      taxType: "inheritance_gift",
+      floorArea: 342,
+      builtYear: 1996,
+      valuationYear: 2023,
+      valuation: { structureKey: "solid_wood", usageNo: 2, landPricePerM2: 152_000 },
+      specialFeatures: { houseTypeTier: 17 }, // 단독주택 331㎡이상 → 140
+      isResidentialUse: true,
+    });
+    expect(r.valuation?.structureIndex).toBe(135);
+    expect(r.valuation?.usageIndex).toBe(100);
+    expect(r.valuation?.locationIndex).toBe(90);
+    expect(r.valuation?.residualRate).toBe(0.514);
+    expect(r.valuation?.adjustmentRate).toBeCloseTo(1.4, 10);
+    expect(r.valuation?.pricePerM2).toBe(716_000);
+    expect(r.valuation?.standardPrice).toBe(244_872_000);
+  });
+
+  // 리모델링(대수선) 할증: 상속개시당시 잔가율 = 신축 0.5140 + 대수선할증 0.0648(=0.018×12×0.3) = 0.5788
+  //   → ㎡당 807,000 / 기준시가 275,994,000 (PDF 각주 5)
+  it("가.리모델링 적용 — 잔가율 0.5788 / ㎡당 807,000 / 기준시가 275,994,000", () => {
+    const r = calcBuildingStandardPrice({
+      taxType: "inheritance_gift",
+      floorArea: 342,
+      builtYear: 1996,
+      remodelYear: 2008,
+      valuationYear: 2023,
+      valuation: { structureKey: "solid_wood", usageNo: 2, landPricePerM2: 152_000 },
+      specialFeatures: { houseTypeTier: 17 },
+      isResidentialUse: true,
+    });
+    expect(r.valuation?.residualRate).toBe(0.5788);
+    expect(r.valuation?.pricePerM2).toBe(807_000);
+    expect(r.valuation?.standardPrice).toBe(275_994_000);
+  });
 });
 
 describe("적용요령 echo(applyNotes) — 인쇄 서식용", () => {
