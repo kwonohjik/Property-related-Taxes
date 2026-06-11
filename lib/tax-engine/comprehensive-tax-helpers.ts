@@ -120,35 +120,61 @@ export function applyTaxCap(
 // ============================================================
 
 /**
- * 재산세 비율 안분 공제 계산 (T-08)
- * 공제액 = 재산세 부과세액 × (종부세 과세표준 ÷ 재산세 과세표준)
+ * 재산세 비율 안분 공제 계산 (T-08) — 종합부동산세법 시행령 §4의3
+ *
+ * 법정 산식:
+ *   공제액 = ⓐ × (⑤ ÷ ⑥)
+ *
+ *   ⓐ = 재산세 부과세액 합계 (특례세율·세부담상한 적용 후 determinedTax 합계)
+ *   ⑤ = 종부세 과세표준 × 재산세 공정시장가액비율(60%) × 0.4% (주택 최고세율)
+ *       = 종부세 과표분에 대한 일반 표준세율 재산세 상당액 [누진공제 없음]
+ *   ⑥ = 재산세 과세표준 합계 × 일반 표준세율 적용 산출세액 합계
+ *       (Σ 각 주택별 일반 표준세율 재산세 산출세액 — 특례세율 아님)
+ *
+ * 분모(⑥) = 0 가드, creditAmount ≤ calculatedTax 상한.
+ * ⑤ 계산의 ×0.004는 분수 정수(×4 / 1000) — floor 1원 오차 방지
+ *   (memory feedback_applyrate_fractional_rate_one_won_error)
+ *
+ * 참고: 사례1 (2022, 공시 9.5억, 일반 1주택)
+ *   ⑤ = 2.1억 × 60% × 0.4% = 504,000
+ *   ⑥ = 1,650,000 (5.7억 × 0.4% − 63만)
+ *   ⓐ = 1,650,000
+ *   공제 = 1,650,000 × 504,000 / 1,650,000 = 504,000 (국세청 사례집 pdf38 확인)
+ *
+ * @param propertyTaxAmount     - ⓐ: 재산세 부과세액 합계 (determinedTax 합계)
+ * @param numeratorStdTaxEq     - ⑤: 종부세 과표분 표준세율 재산세 상당액
+ * @param denominatorStdTaxSum  - ⑥: 총 일반 표준세율 재산세 산출세액 합계
+ * @param calculatedTax         - 공제 상한 (1세대1주택 공제 후 산출세액)
  */
 export function calculatePropertyTaxCreditProration(
   propertyTaxAmount: number,
-  comprehensiveTaxBase: number,
-  propertyTaxBase: number,
+  numeratorStdTaxEq: number,
+  denominatorStdTaxSum: number,
   calculatedTax: number,
 ): PropertyTaxCredit {
-  if (propertyTaxBase === 0) {
+  if (denominatorStdTaxSum === 0) {
     return {
       totalPropertyTax: propertyTaxAmount,
       propertyTaxBase: 0,
-      comprehensiveTaxBase,
+      comprehensiveTaxBase: 0,
       ratio: 0,
       creditAmount: 0,
     };
   }
 
-  const ratio = Math.min(comprehensiveTaxBase / propertyTaxBase, 1.0);
+  const ratio = Math.min(numeratorStdTaxEq / denominatorStdTaxSum, 1.0);
   const creditRaw = Math.floor(
-    safeMultiplyThenDivide(propertyTaxAmount, comprehensiveTaxBase, propertyTaxBase),
+    safeMultiplyThenDivide(propertyTaxAmount, numeratorStdTaxEq, denominatorStdTaxSum),
   );
   const creditAmount = Math.min(creditRaw, calculatedTax);
 
   return {
     totalPropertyTax: propertyTaxAmount,
-    propertyTaxBase,
-    comprehensiveTaxBase,
+    // 하위 호환용 필드: 법정 산식 전환 후 의미가 변경됨
+    // propertyTaxBase → denominatorStdTaxSum (총 일반 표준세율 재산세 합계)
+    // comprehensiveTaxBase → numeratorStdTaxEq (종부세 과표분 표준세율 재산세 상당액)
+    propertyTaxBase: denominatorStdTaxSum,
+    comprehensiveTaxBase: numeratorStdTaxEq,
     ratio,
     creditAmount,
   };

@@ -24,14 +24,14 @@
  */
 
 import { applyRate, truncateToTenThousand } from "./tax-utils";
-import { COMPREHENSIVE_CONST } from "./legal-codes";
+import { COMPREHENSIVE_CONST, PROPERTY_CONST } from "./legal-codes";
 import {
   getComprehensiveParams,
   isComprehensiveYearSupported,
   isMultiHouseRate,
   COMPREHENSIVE_MIN_SUPPORTED_YEAR,
 } from "./data/comprehensive-historical";
-import { calculatePropertyTax } from "./property-tax";
+import { calculatePropertyTax, calcHousingTax } from "./property-tax";
 import { calculateSeparateAggregateLandTax } from "./comprehensive-separate-land";
 import {
   applyAggregationExclusion,
@@ -140,8 +140,8 @@ export function calculateComprehensiveTax(
     aggregationExclusion.propertyResults.map((r) => [r.propertyId, r]),
   );
   const propertyResults: ComprehensiveTaxResult["properties"] = [];
-  let totalPropertyTaxAmount = 0;
-  let totalPropertyTaxBase = 0;
+  let totalPropertyTaxAmount = 0;  // ⓐ: 부과세액 합계 (determinedTax)
+  let standardRateTaxSum = 0;      // ⑥: 일반 표준세율 재산세 산출세액 합계 (특례세율 아님, 누진공제 적용)
   let totalAssessedValueFromLoop = 0;
 
   for (const prop of input.properties) {
@@ -150,7 +150,7 @@ export function calculateComprehensiveTax(
     const isExcluded = exclusionResult?.isExcluded ?? false;
 
     let propTax = 0;
-    let propTaxBase = 0;
+    let propStandardRateTax = 0;  // ⑥ 누적용: 해당 주택의 일반 표준세율 재산세 산출세액
     try {
       const ptResult = calculatePropertyTax(
         {
@@ -162,7 +162,11 @@ export function calculateComprehensiveTax(
         rates,
       );
       propTax = ptResult.determinedTax;
-      propTaxBase = ptResult.taxBase;
+
+      // ⑥ 계산: 일반 표준세율 강제 (isOneHousehold=false) — 특례세율 배제
+      // calcHousingTax(taxBase, publishedPrice, isOneHousehold=false)
+      // taxBase = ptResult.taxBase (재산세 과세표준, 재산세 FMR 적용 후)
+      propStandardRateTax = calcHousingTax(ptResult.taxBase, prop.assessedValue, false).tax;
     } catch {
       warnings.push(
         `주택(${prop.propertyId}) 재산세 계산 오류 — 비율 안분 공제에서 제외됩니다.`,
@@ -172,7 +176,7 @@ export function calculateComprehensiveTax(
     // 합산배제 주택은 비율안분 합계에 포함하지 않음
     if (!isExcluded) {
       totalPropertyTaxAmount += propTax;
-      totalPropertyTaxBase += propTaxBase;
+      standardRateTaxSum += propStandardRateTax;
     }
 
     propertyResults.push({
@@ -245,11 +249,23 @@ export function calculateComprehensiveTax(
     );
   }
 
-  // ── Step 7: 재산세 비율 안분 공제 ──
+  // ── Step 7: 재산세 비율 안분 공제 (종합부동산세법 시행령 §4의3) ──
+  //
+  // ⑤ = 종부세 과세표준 × 재산세FMR(60%) × 0.4% (주택 최고세율, 누진공제 없음)
+  //   = taxBase × PROPERTY_CONST.FAIR_MARKET_RATIO_HOUSING × 0.004
+  //   분수 정수: taxBase × 60 × 4 / (100 × 1000)  = taxBase × 240 / 100_000
+  //   (× 0.004 float 직접 곱 시 floor 1원 부족 — memory feedback_applyrate_fractional_rate_one_won_error)
+  const propertyFMR = PROPERTY_CONST.FAIR_MARKET_RATIO_HOUSING; // 0.60
+  // 0.004 = 4/1000, propertyFMR = 60/100 → 합산 numerator = taxBase × 60 × 4 / 100_000
+  const numeratorStdTaxEq = Math.floor(
+    (taxBase * Math.round(propertyFMR * 100) * 4) / 100_000,
+  );
+  // ⑥ = standardRateTaxSum (Step 1 루프에서 일반 표준세율 산출세액 누적)
+  // ⓐ = totalPropertyTaxAmount (부과세액 합계)
   const propertyTaxCredit = calculatePropertyTaxCreditProration(
     totalPropertyTaxAmount,
-    taxBase,
-    totalPropertyTaxBase,
+    numeratorStdTaxEq,
+    standardRateTaxSum,
     taxAfterOneHouseDeduction,
   );
   const comprehensiveTaxAfterCredit = Math.max(
