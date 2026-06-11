@@ -136,10 +136,12 @@ describe("[GM-G] startupNewHiresAtLeast10 — schema round-trip + 엔진 도달 
     const result = calcGiftTax(parsed.data as unknown as GiftTaxInput);
     // 2-스트림: specialStreamTax = 450,000,000 (4.5억, 한도 50억 적용)
     expect(result.specialStreamTax).toBe(450_000_000);
-    // §30의5⑫ 배제 — filingCredit = 0
-    expect(result.creditDetail.filingCredit).toBe(0);
-    // finalTax = specialStreamTax (단일 자산, 일반 스트림 없음)
-    expect(result.finalTax).toBe(450_000_000);
+    // 한도 초과 10억은 "창업자금"이 아님(§30의5① 한도 정의) → 일반 스트림 과세.
+    // §30의5⑪ §69 배제는 창업자금(특례 스트림) 한정 — 일반 스트림 §69는 정상 적용:
+    // 10억 − §53 5천만 = 9.5억 → ×30% − 6천만 = 2.25억 → ×3% = 6,750,000
+    expect(result.creditDetail.filingCredit).toBe(6_750_000);
+    // finalTax = 특례 4.5억 + 일반 (2.25억 − 675만) = 668,250,000
+    expect(result.finalTax).toBe(668_250_000);
     // 한도 초과 경고
     const hasLimitWarning = result.warnings.some((w) => w.includes("한도 초과"));
     expect(hasLimitWarning).toBe(true);

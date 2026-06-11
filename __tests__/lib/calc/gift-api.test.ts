@@ -55,6 +55,7 @@ function makeForm(overrides: Partial<FormState> = {}): FormState {
     specialTreatment: "",
     startupInvestmentCompleted: false,
     startupNewHiresAtLeast10: false,
+    familyBusinessYears: "",
     splitPaymentEnabled: false,
     splitPaymentAmount: "",
     ...INITIAL_APPRAISAL_FEE_FIELDS,

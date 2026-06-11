@@ -8,6 +8,7 @@
  */
 
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { resolveActiveUnlistedValuation } from "@/lib/calc/unlisted-valuation-mode";
 import { buildAppraisalFee } from "@/lib/calc/appraisal-fee-form";
 import { deriveDonorRelation } from "@/components/calc/gift-tax-form-shared";
@@ -33,6 +34,7 @@ export type { FormState as GiftTaxFormState };
  *   - foreignTaxPaid: parseAmount || undefined
  *   - specialTreatment: "" → undefined
  *   - startupInvestmentCompleted: specialTreatment==="startup"일 때만 전달, 아니면 undefined
+ *   - familyBusinessYears: specialTreatment==="family_business" + 입력 시에만 전달 (빈값 → undefined → 엔진 기본 10년)
  *   - exemptions: 빈 배열 → undefined
  */
 export function buildGiftTaxInput(form: FormState): GiftTaxInput {
@@ -63,6 +65,13 @@ export function buildGiftTaxInput(form: FormState): GiftTaxInput {
     startupNewHiresAtLeast10:
       form.specialTreatment === "startup"
         ? form.startupNewHiresAtLeast10
+        : undefined,
+    // §30의6① 가업 영위기간 — family_business 선택 + 입력 시에만 전달.
+    // 빈값 → undefined → 엔진 기본 10년(300억 한도). 10 미만 명시 입력(0 포함)은 그대로 전달 → 엔진이 특례 불가 판정(일반 스트림 폴백)
+    familyBusinessYears:
+      form.specialTreatment === "family_business" &&
+      form.familyBusinessYears !== ""
+        ? parseDecimal(form.familyBusinessYears)
         : undefined,
   };
 

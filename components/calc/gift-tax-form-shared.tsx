@@ -16,6 +16,7 @@ import type {
 import type { ExemptionCheckedItem } from "@/lib/tax-engine/exemption-evaluator";
 import type { AppraisalFeeFormFields } from "@/lib/calc/appraisal-fee-form";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
@@ -74,6 +75,11 @@ export interface FormState extends AppraisalFeeFormFields {
   startupInvestmentCompleted: boolean;
   /** 창업자금 §30의5① — 10명 이상 신규 고용 여부 (한도 50억 → 100억, startup 선택 시 노출) */
   startupNewHiresAtLeast10: boolean;
+  /**
+   * 가업승계 §30의6① — 부모 가업 영위기간(년). 한도 분기: 10년 이상 300억 / 20년 이상 400억 / 30년 이상 600억.
+   * DecimalInput 규약 string. 빈값 → 엔진 기본 10년(300억 한도). family_business 선택 시 노출.
+   */
+  familyBusinessYears: string;
   // 분납 (Step3 끝, 상증법 §70②) — 결정세액 미영향 투영, 별지10호 ㊼ 연동
   /** 분납 신청 여부 */
   splitPaymentEnabled: boolean;
@@ -101,6 +107,7 @@ export const INITIAL_FORM: FormState = {
   specialTreatment: "",
   startupInvestmentCompleted: false,
   startupNewHiresAtLeast10: false,
+  familyBusinessYears: "",
   splitPaymentEnabled: false,
   splitPaymentAmount: "",
   ...INITIAL_APPRAISAL_FEE_FIELDS,
@@ -333,6 +340,15 @@ export function validateStep(step: number, form: FormState): string | null {
           return `${label} 특례 적용 시 모든 자산의 특례 귀속 여부를 선택하세요. (위 "특례 귀속 자산 선택" 항목 — 미선택 ${unassigned.length}개)`;
         }
       }
+    }
+
+    // §30의6① 가업 영위기간 — Zod min(0) 동기화 (음수만 차단).
+    // 10년 미만은 엔진이 특례 불가 판정(일반 스트림 폴백)으로 안전 처리 — UI 차단 없음 (모순 방지)
+    if (
+      form.specialTreatment === "family_business" &&
+      parseDecimal(form.familyBusinessYears) < 0
+    ) {
+      return "가업 영위기간은 0 이상이어야 합니다.";
     }
   }
   return null;
@@ -631,6 +647,8 @@ export function Step3({
               stockItems: resetStockItems,
               // startup이 아니면 startupInvestmentCompleted / startupNewHiresAtLeast10 초기화
               ...(val !== "startup" ? { startupInvestmentCompleted: false, startupNewHiresAtLeast10: false } : {}),
+              // family_business가 아니면 familyBusinessYears 초기화
+              ...(val !== "family_business" ? { familyBusinessYears: "" } : {}),
             });
           }}
           options={[
@@ -691,6 +709,21 @@ export function Step3({
           checked={form.startupNewHiresAtLeast10}
           onCheckedChange={(v) => set({ startupNewHiresAtLeast10: v })}
         />
+      )}
+
+      {/* 가업 영위기간 (§30의6①) — family_business 선택 시 노출. 한도: 10년 이상 300억 / 20년 이상 400억 / 30년 이상 600억 */}
+      {form.specialTreatment === "family_business" && (
+        <FieldCard
+          label="부모 가업 영위기간 (§30의6①)"
+          hint="부모가 계속하여 경영한 기간(년). 과세가액 한도: 10년 이상 300억 / 20년 이상 400억 / 30년 이상 600억. 비워두면 10년(300억 한도)으로 계산하며, 10년 미만 입력 시 특례 미적용(일반 증여세)으로 계산합니다."
+        >
+          <DecimalInput
+            value={form.familyBusinessYears}
+            onChange={(v) => set({ familyBusinessYears: v })}
+            placeholder="영위 기간 입력"
+            unit="년"
+          />
+        </FieldCard>
       )}
 
       {/* 분납 신청 (상증법 §70②) */}

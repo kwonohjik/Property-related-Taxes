@@ -181,6 +181,14 @@ export interface SpecialStreamResult {
   isEligible: boolean;
   /** 미적격 사유 */
   ineligibleReason?: string;
+  /**
+   * 한도 초과분 중 이번 신규 증여분 — 일반 스트림 합산 대상.
+   * §30의5①은 "창업자금" 정의 자체를 과세가액 50억(신규고용 10명 이상 100억) 한도로 캡,
+   * §30의6①은 영위기간별 한도(300/400/600억)를 과세가액에 적용 — 초과분은 특례 대상이 아니므로
+   * 일반 증여세 과세. min(합산 과세가액 − 한도, 신규 특례가액) — 과거 prior 기인 초과분은
+   * 과거 신고분이므로 이번 일반 스트림에 합산하지 않음(이중과세 방지).
+   */
+  excessToOrdinary: number;
   breakdown: CalculationStep[];
   warnings: string[];
 }
@@ -215,6 +223,7 @@ function calcStartupStream(
       finalTax: 0,
       isEligible: false,
       ineligibleReason: "창업자금 투자 완료 조건 미충족 (§30의5④)",
+      excessToOrdinary: 0,
       breakdown,
       warnings,
     };
@@ -247,12 +256,17 @@ function calcStartupStream(
     ? STARTUP_GIFT_LIMIT_HIGH_HIRES
     : STARTUP_GIFT_LIMIT_NORMAL;
   const eligibleAmount = Math.min(aggregatedValue, giftLimit);
+  // 한도 초과분 중 신규 증여분만 일반 스트림 이관 (prior 기인분은 과거 신고분 — 이중과세 방지)
+  const excessToOrdinary = Math.min(
+    aggregatedValue - eligibleAmount,
+    specialItemsValue,
+  );
   if (eligibleAmount < aggregatedValue) {
     breakdown.push({
       label: `과세가액 한도 (${(giftLimit / 100_000_000).toFixed(0)}억) 적용`,
       amount: eligibleAmount,
       lawRef: TAX_CREDIT.STARTUP_FUND,
-      note: `한도 초과분 ${(aggregatedValue - eligibleAmount).toLocaleString()}원은 일반 스트림으로 이전`,
+      note: `한도 초과분 중 신규 증여분 ${excessToOrdinary.toLocaleString()}원은 일반 스트림으로 이전`,
     });
     warnings.push(
       `창업자금 과세가액 ${(giftLimit / 100_000_000).toFixed(0)}억 한도 초과 — 초과분은 일반 증여세 적용 (§30의5①)`,
@@ -310,6 +324,7 @@ function calcStartupStream(
     priorSpecialTaxPaid,
     finalTax,
     isEligible: true,
+    excessToOrdinary,
     breakdown,
     warnings,
   };
@@ -352,6 +367,7 @@ function calcFamilyBusinessStream(
       finalTax: 0,
       isEligible: false,
       ineligibleReason: "가업 영위기간 10년 미만 (§30의6①)",
+      excessToOrdinary: 0,
       breakdown,
       warnings,
     };
@@ -381,12 +397,17 @@ function calcFamilyBusinessStream(
 
   // 한도 적용
   const eligibleAmount = Math.min(aggregatedValue, limit);
+  // 한도 초과분 중 신규 증여분만 일반 스트림 이관 (prior 기인분은 과거 신고분 — 이중과세 방지)
+  const excessToOrdinary = Math.min(
+    aggregatedValue - eligibleAmount,
+    specialItemsValue,
+  );
   if (eligibleAmount < aggregatedValue) {
     breakdown.push({
       label: `가업승계 특례 한도 (${(limit / 100_000_000).toFixed(0)}억, 영위 ${businessYears}년)`,
       amount: eligibleAmount,
       lawRef: TAX_CREDIT.FAMILY_BUSINESS,
-      note: `한도 초과분 ${(aggregatedValue - eligibleAmount).toLocaleString()}원은 일반 스트림`,
+      note: `한도 초과분 중 신규 증여분 ${excessToOrdinary.toLocaleString()}원은 일반 스트림으로 이전`,
     });
     warnings.push(
       `가업승계 과세가액 한도 초과 — 초과분은 일반 증여세 적용 (§30의6①)`,
@@ -466,6 +487,7 @@ function calcFamilyBusinessStream(
     priorSpecialTaxPaid,
     finalTax,
     isEligible: true,
+    excessToOrdinary,
     breakdown,
     warnings,
   };
@@ -493,6 +515,7 @@ export function calcSpecialTreatmentStream(
       finalTax: 0,
       isEligible: false,
       ineligibleReason: "특례 미선택",
+      excessToOrdinary: 0,
       breakdown: [],
       warnings: [],
     };
