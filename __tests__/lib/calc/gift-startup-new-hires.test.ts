@@ -82,11 +82,15 @@ describe("[GM-G] startupNewHiresAtLeast10 — schema round-trip + 엔진 도달 
     expect(parsed.data.creditInput.startupNewHiresAtLeast10).toBe(false);
   });
 
-  it("[GM-G3] startupNewHiresAtLeast10=true → 한도 100억 반영, filingCredit=0 (§30의5⑪)", () => {
+  it("[GM-G3] startupNewHiresAtLeast10=true → 한도 100억 반영, specialStreamTax=5.5억, filingCredit=0 (§30의5⑪)", () => {
     /**
      * 60억 증여 + 10인 이상 신규 고용(한도 100억) → 60억 전액 특례 적용.
-     * 특례세액 = (60억 - 5억) × 10% = 5억5천만
-     * filingCredit = 0 (§30의5⑪ 배제)
+     * 특례 스트림세액 = (60억 - 5억) × 10% = 5억5천만
+     * filingCredit = 0 (§30의5⑫ 배제 — 특례 스트림에 §69 미적용)
+     *
+     * 2-스트림 재산정 (법령 정합, probe 실측):
+     *   specialTreatmentCredit deprecated(0) → specialStreamTax로 대체
+     *   단일 자산 → 자동 특례 귀속 → 일반 스트림 없음 → ordinaryStreamTax=0
      */
     const raw = makeStartupInput();
     const body = jsonRoundTrip(raw);
@@ -96,17 +100,24 @@ describe("[GM-G] startupNewHiresAtLeast10 — schema round-trip + 엔진 도달 
     if (!parsed.success) return;
 
     const result = calcGiftTax(parsed.data as unknown as GiftTaxInput);
-    // specialTreatmentCredit > 0 (60억 전액 특례 내)
-    expect(result.creditDetail.specialTreatmentCredit).toBeGreaterThan(0);
-    // §30의5⑪ 배제 — filingCredit = 0
+    // 2-스트림: specialStreamTax = 550,000,000 (5.5억)
+    expect(result.specialStreamTax).toBe(550_000_000);
+    // §30의5⑫ 배제 — 특례 스트림은 §69 미적용 → filingCredit = 0
     expect(result.creditDetail.filingCredit).toBe(0);
+    // finalTax = specialStreamTax (일반 스트림 없음)
+    expect(result.finalTax).toBe(550_000_000);
   });
 
-  it("[GM-G4] startupNewHiresAtLeast10=false → 한도 50억 반영, filingCredit=0 (§30의5⑪)", () => {
+  it("[GM-G4] startupNewHiresAtLeast10=false → 한도 50억, specialStreamTax=4.5억, filingCredit=0 (§30의5⑪)", () => {
     /**
-     * 60억 증여 + 고용 미달(한도 50억) → 초과 10억 일반과세.
-     * 특례 적격 giftAmount = 50억, taxBase = 45억 → specialTreatmentCredit 존재
-     * filingCredit = 0 (§30의5⑪ 배제 — 특례 적격)
+     * 60억 증여 + 고용 미달(한도 50억) → 특례 한도 50억, 초과분 10억은 경고.
+     * 단일 자산 → 자동 특례 귀속 → 일반 스트림 없음.
+     * 특례 스트림 세액 = (50억 - 5억) × 10% = 4억5천만
+     * filingCredit = 0 (§30의5⑫ 배제)
+     *
+     * 2-스트림 재산정 (법령 정합, probe 실측):
+     *   specialTreatmentCredit deprecated(0) → specialStreamTax로 대체
+     *   한도 초과 경고 포함
      */
     const raw = makeStartupInput({
       creditInput: {
@@ -123,9 +134,14 @@ describe("[GM-G] startupNewHiresAtLeast10 — schema round-trip + 엔진 도달 
     if (!parsed.success) return;
 
     const result = calcGiftTax(parsed.data as unknown as GiftTaxInput);
-    // 특례 적용 (한도 50억 내) → specialTreatmentCredit > 0
-    expect(result.creditDetail.specialTreatmentCredit).toBeGreaterThan(0);
-    // §30의5⑪ 배제
+    // 2-스트림: specialStreamTax = 450,000,000 (4.5억, 한도 50억 적용)
+    expect(result.specialStreamTax).toBe(450_000_000);
+    // §30의5⑫ 배제 — filingCredit = 0
     expect(result.creditDetail.filingCredit).toBe(0);
+    // finalTax = specialStreamTax (단일 자산, 일반 스트림 없음)
+    expect(result.finalTax).toBe(450_000_000);
+    // 한도 초과 경고
+    const hasLimitWarning = result.warnings.some((w) => w.includes("한도 초과"));
+    expect(hasLimitWarning).toBe(true);
   });
 });

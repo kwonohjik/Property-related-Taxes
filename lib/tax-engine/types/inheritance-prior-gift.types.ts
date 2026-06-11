@@ -92,6 +92,36 @@ export interface PriorGift {
    * 3-state 모드 토글 — giftTaxBase 유무에서 derive 금지(빈 입력 중 auto 오판). 명시 플래그로 구분.
    */
   priorGiftTaxBaseInputMode?: "auto" | "manual";
+
+  // ===== 조특법 특례 2-스트림 분리과세 (2026-06-11, §30의5①후단·§30의5⑪·§30의6⑤) =====
+  /**
+   * 과거 특례 회차 구분 — §30의5①후단·§30의6⑤ 기간무관 합산용.
+   *
+   * 법령 근거:
+   *   §30의5①후단: "창업자금을 2회 이상 증여받거나 부모로부터 각각 증여받는 경우에는
+   *                 각각의 증여세 과세가액을 합산하여 적용한다" (기간 무관)
+   *   §30의5⑪: 창업자금 외의 일반 증여재산은 특례 과세가액에 §47② 합산 금지.
+   *             → specialTreatmentType 설정 prior는 일반 §47② 합산에서 제외,
+   *               특례 스트림에서만 기간무관 합산됨.
+   *   §30의6⑤: §30의5 제8항~제13항 준용 → §30의5⑪·⑫ 동일 적용.
+   *
+   * - "startup": 창업자금 (§30의5) — 특례 스트림 합산, §47② 일반 합산 제외
+   * - "family_business": 가업승계 (§30의6) — 특례 스트림 합산, §47② 일반 합산 제외
+   * - undefined: 일반 증여 (§47② 10년 cutoff 합산)
+   */
+  specialTreatmentType?: "startup" | "family_business";
+
+  /**
+   * 과거 특례 회차에서 실제 납부한 특례세액 (§58 유사 기납부 차감용).
+   *
+   * 법령 근거:
+   *   §30의5①후단 합산 시 이중과세 방지를 위해 과거 납부세액 차감.
+   *   산식: 최종특례세액 = max(0, 합산기준특례산출세액 - Σ priorSpecialTaxPaid)
+   *
+   * specialTreatmentType 있을 때만 유효.
+   * 미입력/undefined 시 0으로 처리.
+   */
+  priorSpecialTaxPaid?: number;
 }
 
 /**

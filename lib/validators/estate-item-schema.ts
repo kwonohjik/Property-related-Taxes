@@ -131,6 +131,16 @@ const baseItemSchema = z.object({
   culturalHeritageType: z
     .enum(["heritage_data", "museum", "designated", "natural_monument"])
     .optional(),
+  // ===== 조특법 특례 2-스트림 분리과세 (§30의5⑪·§30의6⑤) =====
+  // T-11: 동기화 지점 ⑨⑫ — types/inheritance-gift.types.ts EstateItem.isSpecialTreatmentAsset과 동기화
+  /**
+   * 특례 스트림 귀속 여부 — 혼합 증여(N개 자산) 시 명시 필수.
+   *   true  → 특례 스트림 (창업자금 §30의5 / 가업승계 §30의6)
+   *   false → 일반 스트림 (§47·§53·§56)
+   *   undefined → 단일 자산 시 자동 특례 귀속 (명시 불필요)
+   * 법령 근거: §30의5⑪ — 창업자금 외 자산은 특례 스트림 과세가액에 §47② 합산 금지.
+   */
+  isSpecialTreatmentAsset: z.boolean().optional(),
 });
 
 export const landItemSchema = baseItemSchema.extend({
