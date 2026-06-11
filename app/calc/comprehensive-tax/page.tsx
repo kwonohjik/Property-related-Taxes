@@ -18,18 +18,14 @@ import { useState } from "react";
 import { ChevronLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { StepIndicator } from "@/components/calc/StepIndicator";
-import { CurrencyInput, formatKRW } from "@/components/calc/inputs/CurrencyInput";
+import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { callComprehensiveApi } from "@/lib/calc/comprehensive-api";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
-import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
-import { DateInput } from "@/components/ui/date-input";
 import { PropertyListInput } from "@/components/calc/PropertyListInput";
 import { ExclusionInfoInput } from "@/components/calc/ExclusionInfoInput";
 import { ComprehensiveTaxResultView } from "@/components/calc/results/ComprehensiveTaxResultView";
 import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
 import { LoginPromptBanner } from "@/components/calc/shared/LoginPromptBanner";
-import { ResetButton } from "@/components/calc/shared/ResetButton";
-import { HomeButton } from "@/components/calc/shared/HomeButton";
 import { useComprehensiveWizardStore } from "@/lib/stores/comprehensive-wizard-store";
 import { useAutoSaveCalculation } from "@/lib/storage/use-auto-save-calculation";
 import { runComprehensiveManualSave, formatComprehensiveSaveMessage } from "@/components/calc/comprehensive-tax-save-handler";
@@ -37,10 +33,7 @@ import { useRecordCount } from "@/components/calc/shared/save-handler-builders";
 import { SaveButton } from "@/components/calc/shared/SaveButton";
 import { SaveToast, type SaveToastMessage } from "@/components/calc/shared/SaveToast";
 import { useProfessionalStore } from "@/lib/stores/professional-store";
-import {
-  COMPREHENSIVE_SUPPORTED_YEARS,
-  getComprehensiveParams,
-} from "@/lib/tax-engine/data/comprehensive-historical";
+import { Step1Basic } from "./Step1Basic";
 
 // ============================================================
 // 상수
@@ -83,227 +76,6 @@ function NavButtons({
       >
         {loading ? "계산 중..." : nextLabel}
       </button>
-    </div>
-  );
-}
-
-// ============================================================
-// Step 1: 기본 정보
-// ============================================================
-
-// 연도별 세법 요약 힌트 카드
-function YearLawHintCard({ year }: { year: number }) {
-  const currentYear = new Date().getFullYear();
-  const params = getComprehensiveParams(year);
-  const hasMultiHouseCap = year < 2023;
-  const isPreUnified = year < 2023;
-
-  return (
-    <div className="rounded-md border border-amber-200 bg-amber-50/60 px-4 py-3 text-xs text-amber-900 space-y-1">
-      <p className="font-semibold">
-        {year} 귀속 적용 기준{isPreUnified ? " (개정 전 구법)" : ""}
-        {year === currentYear ? (
-          <span className="ml-1.5 rounded-full bg-sky-200 px-1.5 py-0.5 text-[10px] font-bold text-sky-800">
-            현재
-          </span>
-        ) : null}
-      </p>
-      <p>
-        기본공제: 일반 {formatKRW(params.basicDeductionGeneral)} / 1세대1주택{" "}
-        {formatKRW(params.basicDeductionOneHouse)}
-      </p>
-      <p>
-        공정시장가액비율 (주택분): {(params.fairMarketRatioHousing * 100).toFixed(0)}%
-      </p>
-      {isPreUnified ? (
-        <p>
-          세율: 일반(2주택 이하) 0.6%~3.0% / 다주택(조정2주택·3주택+) 1.2%~6.0%
-          (종합부동산세법 §9① 구법)
-        </p>
-      ) : (
-        <p>
-          세율: 2주택 이하 0.5%~2.7% / 3주택 이상 12억 초과 중과 2.0%~5.0%
-          (§9①2호 — 주택 수 자동 적용)
-        </p>
-      )}
-      {hasMultiHouseCap ? (
-        <p>
-          세부담 상한: 일반 150% / 조정대상지역 2주택+ 또는 3주택+ 300%
-          (§10② 구법)
-        </p>
-      ) : (
-        <p>세부담 상한: 전년도 세액의 150% (§10)</p>
-      )}
-    </div>
-  );
-}
-
-function Step1Basic() {
-  const { formData, updateFormData, reset, setResult } = useComprehensiveWizardStore();
-  const currentYear = new Date().getFullYear();
-  const selectedYear = parseInt(formData.assessmentYear) || currentYear;
-  // 지원 연도 상수(2021~2025)에 현재연도가 없으면 보강 — 매년 상수 갱신 없이 현재연도 선택 가능
-  const supportedYears = (
-    COMPREHENSIVE_SUPPORTED_YEARS as readonly number[]
-  ).includes(currentYear)
-    ? [...COMPREHENSIVE_SUPPORTED_YEARS]
-    : [...COMPREHENSIVE_SUPPORTED_YEARS, currentYear];
-
-  const params = getComprehensiveParams(selectedYear);
-  // 법인 여부 파생 (dual-truth 금지 — 별도 isCorporate store 필드 없음)
-  const isCorporate = formData.taxpayerType !== "individual";
-
-  function handleYearChange(year: string) {
-    updateFormData({ assessmentYear: year });
-    setResult(null); // 과세연도 변경 시 기존 결과 무효화
-  }
-
-  function handleTaxpayerTypeToggle(v: string) {
-    if (v === "corporate") {
-      // 법인 선택 → corporate_special 기본 (하위 라디오에서 변경 가능)
-      updateFormData({ taxpayerType: "corporate_special" });
-    } else {
-      updateFormData({ taxpayerType: "individual" });
-    }
-  }
-
-  return (
-    <div className="space-y-6">
-      <div className="flex justify-end gap-2">
-        <HomeButton confirmMessage="홈으로 이동하면 현재 입력 중인 값이 유지된 채 페이지를 떠납니다.&#10;계속하시겠습니까?" />
-        <ResetButton onReset={reset} />
-      </div>
-      {/* 과세연도 */}
-      <div className="space-y-2">
-        <label className="block text-sm font-medium">
-          과세연도 <span className="text-destructive">*</span>
-        </label>
-        <RadioCardGroup
-          name="assessmentYear"
-          tone="sky"
-          layout="inline"
-          value={formData.assessmentYear as (typeof COMPREHENSIVE_SUPPORTED_YEARS)[number] extends number ? string : string}
-          onChange={handleYearChange}
-          options={supportedYears.map((y) => ({
-            value: String(y),
-            label: String(y),
-            trailing:
-              y === currentYear ? (
-                <span className="rounded-full bg-sky-200 px-1.5 py-0.5 text-[10px] font-bold text-sky-800">
-                  현재
-                </span>
-              ) : undefined,
-          }))}
-        />
-        <YearLawHintCard year={selectedYear} />
-        <p className="text-xs text-muted-foreground">
-          과세기준일: {formData.assessmentYear}-06-01 (종합부동산세법 §16①)
-        </p>
-      </div>
-
-      {/* 납세의무자 유형 — [개인] [법인] */}
-      <div className="space-y-2">
-        <label className="block text-sm font-medium">납세의무자 유형</label>
-        <RadioCardGroup
-          name="taxpayerTypeMain"
-          tone="sky"
-          layout="inline"
-          value={isCorporate ? "corporate" : "individual"}
-          onChange={handleTaxpayerTypeToggle}
-          options={[
-            { value: "individual", label: "개인" },
-            { value: "corporate", label: "법인" },
-          ]}
-        />
-      </div>
-
-      {/* 법인 선택 시: 하위 법인 유형 RadioCardGroup + 안내 카드 */}
-      {isCorporate && (
-        <div className="rounded-md border border-violet-200 bg-violet-50/60 p-4 space-y-3">
-          <p className="text-xs font-semibold text-violet-800">법인 유형 선택</p>
-          <RadioCardGroup
-            name="taxpayerTypeCorporate"
-            tone="violet"
-            layout="stack"
-            value={formData.taxpayerType}
-            onChange={(v) =>
-              updateFormData({
-                taxpayerType: v as "corporate_special" | "corporate_general" | "corporate_public",
-              })
-            }
-            options={[
-              {
-                value: "corporate_special",
-                label: "일반 법인 — 단일세율 (§9②3호)",
-                description: `기본공제 0원 · ${(params.corporateRate2HouseOrLess * 100).toFixed(1)}%/${(params.corporateRate3HouseOrMore * 100).toFixed(1)}% 비례세율 · 세부담상한 미적용`,
-              },
-              {
-                value: "corporate_general",
-                label: "공공주택사업자 등 (§9②1호 — 일반 누진세율)",
-                description: "주택 수 무관 일반 누진세율 적용 · 세부담상한 적용",
-              },
-              {
-                value: "corporate_public",
-                label: "공익법인등 (§9②2호)",
-                description: "주택 수 기준 일반/다주택 누진세율 · 세부담상한 적용",
-              },
-            ]}
-          />
-          <div className="rounded-md bg-violet-100/60 border border-violet-200 px-3 py-2 text-xs text-violet-900 space-y-0.5">
-            <p className="font-semibold">§9②3호 법인 계산 특례</p>
-            <p>기본공제: 0원 (§8①2호 — 법인 적용 없음)</p>
-            <p>
-              세율: 2주택 이하 {(params.corporateRate2HouseOrLess * 100).toFixed(1)}% /{" "}
-              3주택 이상 (≤{selectedYear <= 2022 ? "2022 조정 2주택 포함" : "현행"}) {(params.corporateRate3HouseOrMore * 100).toFixed(1)}%
-            </p>
-            <p>세부담 상한: 미적용 (§10 단서)</p>
-          </div>
-        </div>
-      )}
-
-      {/* 개인 선택 시만 — 1세대1주택 여부 */}
-      {!isCorporate && (
-        <ToggleCard
-          tone="sky"
-          title="1세대 1주택자"
-          description="기본공제 12억 적용 + 고령자·장기보유 세액공제 적용 (§8①1호, §9②)"
-          checked={formData.isOneHouseOwner}
-          onCheckedChange={(v) => updateFormData({ isOneHouseOwner: v })}
-        >
-          {/* 1세대1주택자 추가 정보 (ON 시 펼침) */}
-          <p className="text-xs text-sky-700 font-medium">
-            1세대1주택자 세액공제 적용을 위한 추가 정보
-          </p>
-
-          {/* 생년월일 */}
-          <div className="space-y-1.5">
-            <label className="block text-sm font-medium">
-              생년월일 (고령자 세액공제용)
-            </label>
-            <DateInput
-              value={formData.birthDate}
-              onChange={(v) => updateFormData({ birthDate: v })}
-            />
-            <p className="text-xs text-muted-foreground">
-              만 60세 이상: 20%, 65세: 30%, 70세: 40% (최대 80% 합산)
-            </p>
-          </div>
-
-          {/* 최초 취득일 */}
-          <div className="space-y-1.5">
-            <label className="block text-sm font-medium">
-              최초 취득일 (장기보유 세액공제용)
-            </label>
-            <DateInput
-              value={formData.acquisitionDate}
-              onChange={(v) => updateFormData({ acquisitionDate: v })}
-            />
-            <p className="text-xs text-muted-foreground">
-              5년 이상: 20%, 10년: 40%, 15년: 50% (고령자공제 합산 최대 80%)
-            </p>
-          </div>
-        </ToggleCard>
-      )}
     </div>
   );
 }

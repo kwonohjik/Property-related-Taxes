@@ -13,6 +13,7 @@
 
 import { describe, it, expect } from "vitest";
 import { calculateComprehensiveTax } from "../../lib/tax-engine/comprehensive-tax";
+import { comprehensiveTaxInputSchema } from "../../lib/validators/comprehensive-input";
 import type { ComprehensiveTaxInput } from "../../lib/tax-engine/types/comprehensive.types";
 
 // ============================================================
@@ -182,5 +183,97 @@ describe("SC-B: 법인 §9②3호 — 단일세율·기본공제 0·상한 배�
     expect(result.taxBase).toBe(1_200_000_000);
     expect(result.appliedRate).toBe(0.06);
     expect(result.calculatedTax).toBe(72_000_000);
+  });
+});
+
+// ============================================================
+// SC-C: 부부 공동명의 1주택자 특례 §10의2 (Phase C)
+//   §10의2③ 1세대1주택자 의제 · 령 §5의2⑥ 지분 합산 · ⑧ 신청인 기준 공제
+// ============================================================
+
+describe("SC-C: §10의2 부부 공동명의 특례 — 1세대1주택자 의제", () => {
+  it("SC-C1: 2024 특례 + 공시 15억 → 공제 12억 → 90만 → 신청인 71세·16년 보유 80% 캡 공제", () => {
+    const input: ComprehensiveTaxInput = {
+      assessmentYear: 2024,
+      isOneHouseOwner: false,
+      isJointOwnershipSpecialCase: true,
+      birthDate: new Date("1953-01-01"),       // 과세기준일 2024-06-01 기준 71세 → 고령 40%
+      acquisitionDate: new Date("2008-01-01"), // 16년 보유 → 장기 50% (합 90% → 80% 캡)
+      properties: [
+        { propertyId: "p1", assessedValue: 1_500_000_000, exclusionType: "none" },
+      ],
+    };
+    const result = calculateComprehensiveTax(input);
+
+    expect(result.basicDeduction).toBe(1_200_000_000);      // §8①1호 의제 (§10의2③)
+    expect(result.taxBase).toBe(180_000_000);               // (15억 − 12억) × 60%
+    expect(result.calculatedTax).toBe(900_000);             // 1.8억 × 0.5%
+    expect(result.oneHouseDeduction?.combinedRate).toBe(0.8); // 40%+50% → 80% 캡
+    expect(result.oneHouseDeduction?.deductionAmount).toBe(720_000);
+    expect(result.isJointOwnershipApplied).toBe(true);
+  });
+
+  it("SC-C2: 상호배타 — isOneHouseOwner + 특례 동시 true는 Zod refine 거부", () => {
+    const parsed = comprehensiveTaxInputSchema.safeParse({
+      assessmentYear: 2024,
+      isOneHouseOwner: true,
+      isJointOwnershipSpecialCase: true,
+      properties: [{ propertyId: "p1", assessedValue: 1_500_000_000 }],
+    });
+    expect(parsed.success).toBe(false);
+  });
+
+  it("SC-C3: 2022 특례 → 기본공제 11억 (연도 준용) → 2.4억 × 0.6% = 1,440,000", () => {
+    const input: ComprehensiveTaxInput = {
+      assessmentYear: 2022,
+      isOneHouseOwner: false,
+      isJointOwnershipSpecialCase: true,
+      properties: [
+        { propertyId: "p1", assessedValue: 1_500_000_000, exclusionType: "none" },
+      ],
+    };
+    const result = calculateComprehensiveTax(input);
+
+    expect(result.basicDeduction).toBe(1_100_000_000);
+    expect(result.taxBase).toBe(240_000_000);
+    expect(result.calculatedTax).toBe(1_440_000);
+  });
+
+  // 사례5 (국세청 2022 사례집 pdf11~13): 부부 공동명의 특례 + 지방저가주택 — 특례 신청 시 본인 합산
+  //   ※ 고령자 공제 15억/17억 안분(528,933)·결정세액 969,711은 §8④ 지방저가 특례 범위 외 — 공제후까지 anchor
+  it("SC-C4 (사례5): 특례 경로 — 산출 2,280,000 → 안분 공제 781,356 → 공제후 1,498,644", () => {
+    const input: ComprehensiveTaxInput = {
+      assessmentYear: 2022,
+      isOneHouseOwner: false,
+      isJointOwnershipSpecialCase: true,
+      properties: [
+        { propertyId: "p1", assessedValue: 1_500_000_000, exclusionType: "none" },
+        { propertyId: "p2", assessedValue: 200_000_000, exclusionType: "none" },
+      ],
+    };
+    const result = calculateComprehensiveTax(input);
+
+    expect(result.basicDeduction).toBe(1_100_000_000);
+    expect(result.calculatedTax).toBe(2_280_000);                       // pdf11 ①
+    expect(result.propertyTaxCredit.creditAmount).toBe(781_356);        // pdf12 ④
+    expect(result.calculatedTax - result.propertyTaxCredit.creditAmount).toBe(1_498_644); // pdf12 ③
+    expect(result.isJointOwnershipApplied).toBe(true);
+  });
+
+  it("SC-C5: 법인 + 특례 잔존 입력 → 특례 무시 (공제 0 유지)", () => {
+    const input: ComprehensiveTaxInput = {
+      assessmentYear: 2024,
+      taxpayerType: "corporate_special",
+      isOneHouseOwner: false,
+      isJointOwnershipSpecialCase: true, // 법인 전환 후 잔존 가정
+      properties: [
+        { propertyId: "p1", assessedValue: 2_000_000_000, exclusionType: "none" },
+      ],
+    };
+    const result = calculateComprehensiveTax(input);
+
+    expect(result.basicDeduction).toBe(0);
+    expect(result.isJointOwnershipApplied).toBe(false);
+    expect(result.calculatedTax).toBe(32_400_000);
   });
 });

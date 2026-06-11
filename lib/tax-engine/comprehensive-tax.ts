@@ -115,6 +115,12 @@ export function calculateComprehensiveTax(
   const taxpayerType = input.taxpayerType ?? "individual";
   const isCorporate = taxpayerType !== "individual";
 
+  // ── §10의2 부부 공동명의 1주택자 특례 — 1세대1주택자 의제 (§10의2③) ──
+  // 법인이면 무시. isOneHouseOwner와 상호배타는 Zod refine이 차단 (방어적 OR 처리).
+  const isJointApplied = !isCorporate && input.isJointOwnershipSpecialCase === true;
+  // 1세대1주택자 취급 여부 (기본공제 §8①1호 + 세액공제 §9⑤~⑨ 공통 게이트)
+  const oneHouseTreatment = !isCorporate && (input.isOneHouseOwner || isJointApplied);
+
   // ── Step 0: 합산배제 판정 ──
   const propertiesForExclusion: PropertyForExclusion[] = input.properties.map((p) => ({
     propertyId: p.propertyId,
@@ -201,12 +207,13 @@ export function calculateComprehensiveTax(
   // ── Step 3: 기본공제 차감 (연도별 일반/1세대1주택 + 법인 분기) ──
   //   corporate_special: 0원 (§8①2호 — 구법 §8① 괄호 "제9조제2항 각 호의 세율이 적용되는 경우는 제외")
   //   corporate_general·corporate_public: 일반 공제 (1세대1주택 경로 차단)
+  //   oneHouseTreatment: 1세대1주택 또는 §10의2 부부 특례 의제 → §8①1호 공제 (12억/11억)
   const basicDeduction =
     taxpayerType === "corporate_special"
       ? 0
       : isCorporate
         ? yearParams.basicDeductionGeneral
-        : input.isOneHouseOwner
+        : oneHouseTreatment
           ? yearParams.basicDeductionOneHouse
           : yearParams.basicDeductionGeneral;
   const afterBasicDeduction = Math.max(includedAssessedValue - basicDeduction, 0);
@@ -264,8 +271,8 @@ export function calculateComprehensiveTax(
   let taxAfterOneHouseDeduction = calculatedTax;
 
   if (
-    !isCorporate && // 1세대1주택 세액공제(§9⑤~⑨)는 개인 전용 — 법인 잔존 입력 무시
-    input.isOneHouseOwner &&
+    // 1세대1주택 세액공제(§9⑤~⑨) — 개인 1세대1주택 또는 §10의2 부부 특례(신청인 기준, 령 §5의2⑧)
+    oneHouseTreatment &&
     isSubjectToHousingTax &&
     input.birthDate &&
     input.acquisitionDate
@@ -370,9 +377,13 @@ export function calculateComprehensiveTax(
     (aggregateLandTax?.totalTax ?? 0) +
     (separateLandTax?.totalTax ?? 0);
 
-  if (!isCorporate) {
+  if (isJointApplied) {
     warnings.push(
-      "본 계산은 개인 단독명의 기준입니다. 부부 공동명의 특례(§10의2)는 세무사 상담을 권장합니다.",
+      "§10의2 부부 공동명의 1주택자 특례 적용 — 주택 공시가격은 배우자 지분 합산(전체 금액) 기준이며, 세액공제는 납세의무자(합의로 정한 자)의 연령·보유기간 기준입니다. 특례 신청 기한은 해당 연도 9월 16일~30일입니다.",
+    );
+  } else if (!isCorporate) {
+    warnings.push(
+      "본 계산은 개인 단독명의 기준입니다. 부부 공동명의 1주택이면 1단계에서 §10의2 특례 신청 여부를 선택할 수 있습니다.",
     );
   } else if (taxpayerType === "corporate_special") {
     warnings.push(
@@ -406,6 +417,7 @@ export function calculateComprehensiveTax(
     assessmentDate: assessmentDateStr,
     isOneHouseOwner: input.isOneHouseOwner,
     taxpayerType,
+    isJointOwnershipApplied: isJointApplied,
     warnings,
     appliedLawDate: assessmentDateStr,
   };

@@ -249,6 +249,12 @@ export const comprehensiveTaxInputSchema = z.object({
   isOneHouseOwner: z.boolean(),
 
   /**
+   * 부부 공동명의 1주택자 특례 신청 (§10의2). 미입력 = false.
+   * 1세대1주택자로 보아 계산 (§10의2③) — isOneHouseOwner와 상호배타 (하단 refine).
+   */
+  isJointOwnershipSpecialCase: z.boolean().optional(),
+
+  /**
    * 생년월일 (고령자 세액공제용, isOneHouseOwner=true 시 필요)
    * YYYY-MM-DD 형식
    */
@@ -315,7 +321,15 @@ export const comprehensiveTaxInputSchema = z.object({
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/)
     .optional(),
-});
+}).refine(
+  // §10의2 특례와 1세대1주택자는 상호배타 — 특례는 "1세대1주택자로 본다"는 의제이므로 중복 선언 불가
+  (v) => !(v.isOneHouseOwner && v.isJointOwnershipSpecialCase),
+  {
+    message:
+      "1세대1주택자와 부부 공동명의 특례(§10의2)는 동시에 선택할 수 없습니다. 부부 공동명의 1주택이면 특례만 선택하세요.",
+    path: ["isJointOwnershipSpecialCase"],
+  },
+);
 
 // ============================================================
 // 타입 추론 Export

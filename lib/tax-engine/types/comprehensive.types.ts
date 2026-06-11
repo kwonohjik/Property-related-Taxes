@@ -211,7 +211,16 @@ export interface ComprehensiveTaxInput {
   // ── 1세대1주택자 여부 ──
   isOneHouseOwner: boolean;
 
-  // ── 1세대1주택자 세액공제 (isOneHouseOwner=true 일 때만 적용) ──
+  /**
+   * 부부 공동명의 1주택자 특례 신청 (§10의2). 미입력 = false.
+   * true 시 공동명의 1주택자를 1세대1주택자로 보아 과세표준·세율·세액공제 계산 (§10의2③).
+   * - properties: 지분 안분 없이 주택 전체 공시가격 입력 (령 §5의2⑥ — 배우자 지분 합산)
+   * - birthDate/acquisitionDate: 납세의무자(공동 소유자간 합의로 정한 자, 령 §5의2③) 기준 (령 §5의2⑧)
+   * - isOneHouseOwner와 상호배타 (Zod refine 차단), 법인(taxpayerType ≠ individual)이면 무시
+   */
+  isJointOwnershipSpecialCase?: boolean;
+
+  // ── 1세대1주택자 세액공제 (isOneHouseOwner 또는 §10의2 특례 적용 시) ──
   birthDate?: Date;        // 생년월일 (고령자 공제 계산용)
   acquisitionDate?: Date;  // 취득일 (장기보유 공제 계산용)
 
@@ -409,6 +418,8 @@ export interface ComprehensiveTaxResult {
   isOneHouseOwner: boolean;
   /** 납세의무자 유형 echo — 결과뷰 배지·라벨 표시용 (§9②) */
   taxpayerType: ComprehensiveTaxpayerType;
+  /** §10의2 부부 공동명의 1주택자 특례 적용 여부 echo — 결과뷰 배지·기본공제 라벨용 */
+  isJointOwnershipApplied: boolean;
   warnings: string[];             // 경고 메시지 (v1.3 scope 한계 등)
   appliedLawDate: string;         // 적용 법령 기준일
 }
