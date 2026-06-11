@@ -15,6 +15,7 @@ import {
   applySeparateAggregateLandRate,
   applySeparateLandPropertyTaxCredit,
   calculateSeparateAggregateLandTax,
+  calcSeparateAggregateLandStdTax,
 } from "../../lib/tax-engine/comprehensive-separate-land";
 import { COMPREHENSIVE_LAND_CONST } from "../../lib/tax-engine/legal-codes";
 import type { SeparateAggregateLandForComprehensive } from "../../lib/tax-engine/types/comprehensive.types";
@@ -79,56 +80,85 @@ describe("applySeparateAggregateLandRate — 별도합산 토지 누진세율", 
 });
 
 // ============================================================
+// 별도합산 재산세 표준세율 산출세액 — calcSeparateAggregateLandStdTax
+// ============================================================
+
+describe("calcSeparateAggregateLandStdTax — 별도합산 재산세 표준세율 산출세액", () => {
+  // SB01: 0 → 0
+  it("SB01: 과세표준 0 → 0", () => {
+    expect(calcSeparateAggregateLandStdTax(0)).toBe(0);
+  });
+
+  // SB02: 1억 (2억 이하 구간 0.2%)
+  it("SB02: 과세표준 1억 → 200,000원 (0.2%)", () => {
+    expect(calcSeparateAggregateLandStdTax(100_000_000)).toBe(200_000);
+  });
+
+  // SB03: 5억 (2억~10억 구간 0.3% - 20만)
+  it("SB03: 과세표준 5억 → 1,300,000원 (0.3% - 200,000)", () => {
+    // 5억 × 0.003 - 200,000 = 1,500,000 - 200,000 = 1,300,000
+    expect(calcSeparateAggregateLandStdTax(500_000_000)).toBe(1_300_000);
+  });
+
+  // SB04: 사례11 ⑥ 검증 — 재산세 과표 357억
+  it("SB04: 과세표준 357억 (사례11 ⑥) → 141,600,000원 (0.4% - 1,200,000)", () => {
+    // 35,700,000,000 × 0.004 - 1,200,000 = 142,800,000 - 1,200,000 = 141,600,000
+    expect(calcSeparateAggregateLandStdTax(35_700_000_000)).toBe(141_600_000);
+  });
+});
+
+// ============================================================
 // 재산세 비율 안분 공제 — applySeparateLandPropertyTaxCredit
 // ============================================================
 
-describe("applySeparateLandPropertyTaxCredit — 재산세 비율 안분 공제", () => {
-  // T07: 정상 비율 안분 공제
-  it("T07: 정상 비율 안분 — 종부세 과세표준 50% = creditAmount 절반", () => {
-    // calculatedTax=1억, propertyTax=2,000만, propertyTaxBase=100억, compBase=50억
-    // ratio = 50억/100억 = 0.5, creditRaw = floor(2,000만 × 0.5) = 1,000만
+describe("applySeparateLandPropertyTaxCredit — 재산세 비율 안분 공제 (§4의3)", () => {
+  // T07: 정상 비율 안분 — ⑤/⑥ 직접 전달
+  it("T07: 정상 비율 안분 — ⑤=5,000만 / ⑥=1억 → ratio 0.5, creditAmount 1,000만", () => {
+    // ⑤=5,000만, ⑥=1억, ⓐ=2,000만
+    // ratio = 5,000만/1억 = 0.5, creditRaw = floor(2,000만 × 0.5) = 1,000만
     const result = applySeparateLandPropertyTaxCredit(
       100_000_000,  // calculatedTax
-      20_000_000,   // propertyTaxAmount
-      10_000_000_000, // propertyTaxBase
-      5_000_000_000,  // comprehensiveTaxBase
+      20_000_000,   // propertyTaxAmount (ⓐ)
+      50_000_000,   // numeratorStdTaxEq (⑤)
+      100_000_000,  // denominatorStdTax (⑥)
     );
     expect(result.ratio).toBeCloseTo(0.5, 4);
     expect(result.creditAmount).toBe(10_000_000);
   });
 
-  // T08: 비율 1.0 상한 — 종부세 과세표준 > 재산세 과세표준
-  it("T08: 비율 1.0 상한 — 종부세 과세표준 > 재산세 과세표준 → ratio = 1.0", () => {
-    // ratio = min(80억/50억, 1.0) = min(1.6, 1.0) = 1.0
+  // T08: 비율 1.0 상한 — ⑤ > ⑥ 비현실 케이스 (표시 ratio는 1.0으로 클램프, creditRaw는 산식 그대로)
+  it("T08: ⑤ > ⑥ → ratio 표시는 1.0 클램프, creditAmount = floor(ⓐ × ⑤/⑥)", () => {
+    // ⑤=8,000만 > ⑥=5,000만 → ratio 표시 = 1.0, creditRaw = floor(2,000만 × 8,000만/5,000만) = 32,000,000
+    // 실무상 ⑤(종부세 과표분) > ⑥(재산세 과표 전체)는 발생하지 않으나 방어 코드 확인
     const result = applySeparateLandPropertyTaxCredit(
-      100_000_000,
-      20_000_000,
-      5_000_000_000,  // propertyTaxBase 50억
-      8_000_000_000,  // comprehensiveTaxBase 80억 (더 큼)
+      100_000_000,  // calculatedTax (상한)
+      20_000_000,   // ⓐ
+      80_000_000,   // ⑤ (더 큼 — 비현실적)
+      50_000_000,   // ⑥
     );
-    expect(result.ratio).toBe(1.0);
-    expect(result.creditAmount).toBe(20_000_000); // 전액 공제
+    expect(result.ratio).toBe(1.0);   // 표시 ratio 클램프
+    expect(result.creditAmount).toBe(32_000_000); // floor(20,000,000 × 80,000,000 / 50,000,000)
   });
 
   // T09: creditAmount ≤ calculatedTax 상한
   it("T09: creditAmount > calculatedTax → calculatedTax로 상한", () => {
-    // ratio = 1.0, creditRaw = 50,000,000 > calculatedTax = 30,000,000 → 30,000,000
+    // ⑤=⑥ → ratio=1.0, creditRaw=ⓐ=50,000,000 > calculatedTax=30,000,000 → 30,000,000
     const result = applySeparateLandPropertyTaxCredit(
       30_000_000,   // calculatedTax (작음)
-      50_000_000,   // propertyTaxAmount (큼)
-      5_000_000_000,
-      5_000_000_000,
+      50_000_000,   // ⓐ (큼)
+      10_000_000,   // ⑤
+      10_000_000,   // ⑥ (동일 → ratio=1.0)
     );
     expect(result.creditAmount).toBe(30_000_000); // calculatedTax 상한
   });
 
-  // T10: propertyTaxBase = 0 방어
-  it("T10: propertyTaxBase = 0 → creditAmount = 0", () => {
+  // T10: denominatorStdTax = 0 방어
+  it("T10: denominatorStdTax(⑥) = 0 → creditAmount = 0", () => {
     const result = applySeparateLandPropertyTaxCredit(
       100_000_000,
       20_000_000,
-      0,              // propertyTaxBase = 0 (분모)
-      5_000_000_000,
+      5_000_000,  // ⑤
+      0,          // ⑥ = 0 (분모 0 방어)
     );
     expect(result.ratio).toBe(0);
     expect(result.creditAmount).toBe(0);
@@ -186,8 +216,13 @@ describe("calculateSeparateAggregateLandTax — 통합 계산", () => {
     expect(result.isSubjectToTax).toBe(false);
   });
 
-  // T14: 공시지가 100억 → 과세표준 20억 → 0.5% → 산출세액 1,000만
-  it("T14: 공시지가 100억 → 과세표준 20억 → 1,000만원 (세율 0.5%)", () => {
+  // T14: 공시지가 100억 → 과세표준 20억 → §4의3 법정 산식 안분 공제
+  it("T14: 공시지가 100억 → 과세표준 20억 → §4의3 법정 안분 공제 검증", () => {
+    // publicPrice 100억, totalPropertyTaxBase 70억, propertyTaxAmount 1,000만
+    // taxBase = 100억 - 80억 = 20억
+    // ⑤ = floor(2,000,000,000 × 70 × 4 / 100_000) = 5,600,000
+    // ⑥ = calcSeparateAggregateLandStdTax(7,000,000,000) = 70억×0.4% - 120만 = 26,800,000
+    // 공제 = floor(10,000,000 × 5,600,000 / 26,800,000) = 2,089,552
     const lands: SeparateAggregateLandForComprehensive[] = [
       {
         landId: "L1",
@@ -204,12 +239,11 @@ describe("calculateSeparateAggregateLandTax — 통합 계산", () => {
     expect(result.appliedRate).toBe(COMPREHENSIVE_LAND_CONST.SEPARATE_RATE_1); // 0.5%
     expect(result.calculatedTax).toBe(10_000_000); // 20억 × 0.5% = 1,000만
 
-    // 재산세 비율 안분: creditAmount = floor(10,000,000 × 20억 / 70억) = 2,857,142
-    const expectedCredit = Math.floor(safeMultiplyThenDivide(10_000_000, 2_000_000_000, 7_000_000_000));
-    expect(result.propertyTaxCredit.creditAmount).toBe(expectedCredit);
+    // §4의3 법정 산식 공제액: 2,089,552원
+    expect(result.propertyTaxCredit.creditAmount).toBe(2_089_552);
 
     // 결정세액 = calculatedTax - creditAmount
-    expect(result.determinedTax).toBe(result.calculatedTax - expectedCredit);
+    expect(result.determinedTax).toBe(10_000_000 - 2_089_552); // 7,910,448
 
     // 농특세 = floor(결정세액 × 20%)
     expect(result.ruralSpecialTax).toBe(Math.floor(result.determinedTax * 0.2));
@@ -273,8 +307,13 @@ describe("calculateSeparateAggregateLandTax — 통합 계산", () => {
     expect(result.taxBase).toBe(1_000_000_000); // 100% 적용 후 그대로
   });
 
-  // T18: 200억 초과 구간 (0.6%) 전체 흐름
-  it("T18: 과세표준 300억 구간 (0.6%) — 결정세액 및 농특세 검증", () => {
+  // T18: 200억 초과 구간 (0.6%) — §4의3 법정 산식 공제 검증
+  it("T18: 과세표준 300억 구간 (0.6%) — §4의3 법정 안분 공제 검증", () => {
+    // publicPrice 380억, totalPropertyTaxBase 266억, propertyTaxAmount 3,800만
+    // taxBase = 380억 - 80억 = 300억
+    // ⑤ = floor(30,000,000,000 × 70 × 4 / 100_000) = 84,000,000
+    // ⑥ = calcSeparateAggregateLandStdTax(26,600,000,000) = 266억×0.4% - 120만 = 105,200,000
+    // 공제 = floor(38,000,000 × 84,000,000 / 105,200,000) = 30,342,205
     const lands: SeparateAggregateLandForComprehensive[] = [
       {
         landId: "L1",
@@ -287,19 +326,48 @@ describe("calculateSeparateAggregateLandTax — 통합 계산", () => {
 
     expect(result.taxBase).toBe(30_000_000_000); // 380억 - 80억 = 300억
     expect(result.appliedRate).toBe(COMPREHENSIVE_LAND_CONST.SEPARATE_RATE_2); // 0.6%
-    // 300억 × 0.6% - 2,000만 = 1억8,000만 - 2,000만 = 1억6,000만
+    // 300억 × 0.6% - 2,000만 = 1억6,000만
     expect(result.calculatedTax).toBe(160_000_000);
+    // §4의3 법정 산식 공제액: 30,342,205원
+    expect(result.propertyTaxCredit.creditAmount).toBe(30_342_205);
+    expect(result.determinedTax).toBe(160_000_000 - 30_342_205); // 129,657,795
     expect(result.ruralSpecialTax).toBe(Math.floor(result.determinedTax * 0.2));
     expect(result.totalTax).toBe(result.determinedTax + result.ruralSpecialTax);
   });
+
+  // YA-5S (별도합산): 국세청 사례11 실측 anchor
+  // 출처: 국세청 종합부동산세 계산 사례집 사례11 (2022)
+  it("YA-5S: 사례11 별도합산 — 공제 119,379,661원, 결정세액(세전) 121,620,339원", () => {
+    // 공시지가: 강원 평창군 90억 + 경기 용인시 420억 = 510억원
+    // 재산세 과표: 510억 × 70% = 357억원
+    // 재산세 부과세액: 24,000,000 + 116,400,000 = 140,400,000원
+    // 종부세 과표: (510억 - 80억) × 100% = 430억원
+    // 산출세액: 430억 × 0.7% - 6,000만 = 241,000,000원
+    // ⑤ = floor(43,000,000,000 × 70 × 4 / 100_000) = 120,400,000원
+    // ⑥ = 357억 × 0.4% - 1,200,000 = 141,600,000원
+    // 공제 = floor(140,400,000 × 120,400,000 / 141,600,000) = 119,379,661원
+    const lands: SeparateAggregateLandForComprehensive[] = [
+      {
+        landId: "L1",
+        publicPrice: 9_000_000_000,     // 강원 평창군 90억 (50% 지분 → 100억×50%? 아니라 이미 지분 반영)
+        propertyTaxBase: 6_300_000_000, // 90억 × 70%
+        propertyTaxAmount: 24_000_000,
+      },
+      {
+        landId: "L2",
+        publicPrice: 42_000_000_000,    // 경기 용인시 420억
+        propertyTaxBase: 29_400_000_000, // 420억 × 70%
+        propertyTaxAmount: 116_400_000,
+      },
+    ];
+    const result = calculateSeparateAggregateLandTax(lands);
+
+    expect(result.totalPublicPrice).toBe(51_000_000_000);       // 510억
+    expect(result.taxBase).toBe(43_000_000_000);                // 430억
+    expect(result.calculatedTax).toBe(241_000_000);             // 241,000,000
+    expect(result.propertyTaxCredit.creditAmount).toBe(119_379_661);  // 사례11 확인값
+    expect(result.determinedTax).toBe(121_620_339);             // 241,000,000 - 119,379,661
+    expect(result.ruralSpecialTax).toBe(Math.floor(121_620_339 * 0.2));
+  });
 });
 
-// 헬퍼 (테스트용)
-function safeMultiplyThenDivide(a: number, b: number, c: number): number {
-  if (c === 0) return 0;
-  const product = a * b;
-  if (Math.abs(product) > Number.MAX_SAFE_INTEGER) {
-    return Number(BigInt(Math.floor(a)) * BigInt(Math.floor(b)) / BigInt(Math.floor(c)));
-  }
-  return Math.floor(product / c);
-}
