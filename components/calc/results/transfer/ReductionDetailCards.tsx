@@ -44,7 +44,10 @@ export function ReductionDetailCards({ result }: Props) {
     !!result.new99Detail ||
     !!result.unsold988Detail ||
     !!result.unsold987Detail ||
-    !!result.unsold992Detail;
+    !!result.unsold992Detail ||
+    !!result.unsold983Detail ||
+    !!result.unsold985Detail ||
+    !!result.unsold986Detail;
 
   if (!hasAny) return null;
 
@@ -93,6 +96,16 @@ export function ReductionDetailCards({ result }: Props) {
       )}
       {result.unsold992Detail && (
         <IncomeDeductionDetailCard kind="unsold_99_2" result={result.unsold992Detail} />
+      )}
+      {/* P3 하이브리드 (2026-06-12) */}
+      {result.unsold983Detail && (
+        <IncomeDeductionDetailCard kind="unsold_98_3" result={result.unsold983Detail} />
+      )}
+      {result.unsold985Detail && (
+        <IncomeDeductionDetailCard kind="unsold_98_5" result={result.unsold985Detail} />
+      )}
+      {result.unsold986Detail && (
+        <IncomeDeductionDetailCard kind="unsold_98_6" result={result.unsold986Detail} />
       )}
     </>
   );

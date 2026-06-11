@@ -175,6 +175,20 @@ export {
   type Unsold992HouseType,
 } from "./unsold-hybrid";
 
+// ── P3 하이브리드 (2026-06-12): §98의3 + §98의5 + §98의6 ──
+export {
+  evaluateUnsold983,
+  evaluateUnsold985,
+  evaluateUnsold986,
+  evaluateAnyHybridFromReduction,
+  evaluateAnyHybridTaxAmount,
+  resolve985Rate,
+  RATE_SPECIAL_REDUCTION_IDS,
+  type Unsold983Input,
+  type Unsold985Input,
+  type Unsold986Input,
+} from "./unsold-hybrid-p3";
+
 /**
  * 23개 조문 통합 stub evaluator. Phase 1 단계는 모두 isEligible:false 반환.
  * 시한 외 케이스는 명시적 사유, 시한 내 케이스는 "구현 예정" 사유.

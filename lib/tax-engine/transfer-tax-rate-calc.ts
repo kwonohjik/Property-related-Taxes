@@ -329,10 +329,13 @@ export function calcTax(
     input.propertyType === "right_to_move_in" ||
     input.propertyType === "presale_right" ||
     input.propertyType === "redevelopment_apt"; // 신축APT는 주택 — §104①2/3호 60%/70%
-  const shortTermFlatRate =
-    holdingMonthsTotal < 12 ? (isHousingLikeProp ? 0.70 : 0.50) :
-    holdingMonthsTotal < 24 ? (isHousingLikeProp ? 0.60 : 0.40) :
-    null;
+  // P3 특칙 (§98의3④·§98의5③·§98의6③): 세율 = §104①1호 강제 — 단기세율(§104①2·3호) 배제.
+  // "§104①3호 불구" 법문이나 "세율은 1호" 강제이므로 2호(1년 미만)도 배제됨 (설계 검토 #4).
+  const shortTermFlatRate = input.suppressShortTermRate
+    ? null
+    : holdingMonthsTotal < 12 ? (isHousingLikeProp ? 0.70 : 0.50) :
+      holdingMonthsTotal < 24 ? (isHousingLikeProp ? 0.60 : 0.40) :
+      null;
   const shortTermNote =
     holdingMonthsTotal < 12 ? "보유기간 1년 미만 특례세율 적용" :
     holdingMonthsTotal < 24 ? "보유기간 2년 미만 특례세율 적용" :

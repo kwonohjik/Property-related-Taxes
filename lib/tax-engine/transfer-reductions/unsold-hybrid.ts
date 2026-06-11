@@ -42,7 +42,12 @@ export const UNSOLD_99_2_AREA_LIMIT_SQM = 85;
 /** 세액감면율·공제율 (100%) */
 export const UNSOLD_HYBRID_RATE = 1.0;
 
-export type UnsoldHybridId = "unsold_98_7" | "unsold_99_2";
+export type UnsoldHybridId =
+  | "unsold_98_7"
+  | "unsold_99_2"
+  | "unsold_98_3"
+  | "unsold_98_5"
+  | "unsold_98_6";
 
 export interface UnsoldHybridIneligibleReason {
   code: string;
@@ -69,6 +74,8 @@ export interface UnsoldHybridResult {
   /** 농특세 (finalize에서 채움 — 양 경로) */
   taxReductionForRuralSurtax: number;
   ruralSurtax: number;
+  /** 농특세 비과세 (농특세령 §4⑦1호 — §98의3·§98의5만 true, P3) */
+  ruralSurtaxExempt: boolean;
   legalBasis: string;
 }
 
@@ -144,10 +151,12 @@ export interface Unsold992Input {
 // 공통 효과 코어
 // ─────────────────────────────────────────────────────────────────
 
-function ineligible(
+export function ineligibleHybrid(
   id: UnsoldHybridId,
   reasons: UnsoldHybridIneligibleReason[],
   legalBasis: string,
+  rate: number = UNSOLD_HYBRID_RATE,
+  ruralSurtaxExempt: boolean = false,
 ): UnsoldHybridResult {
   return {
     id,
@@ -155,7 +164,7 @@ function ineligible(
     ineligibleReasons: reasons,
     isWithin5Years: false,
     effectCategory: "income_deduction",
-    taxReductionRate: UNSOLD_HYBRID_RATE,
+    taxReductionRate: rate,
     reductionAmount: 0,
     reducibleTransferIncome: 0,
     fiveYearRatio: 0,
@@ -163,11 +172,13 @@ function ineligible(
     formulaSteps: [],
     taxReductionForRuralSurtax: 0,
     ruralSurtax: 0,
+    ruralSurtaxExempt,
     legalBasis,
   };
 }
+const ineligible = ineligibleHybrid;
 
-interface HybridEffectInput {
+export interface HybridEffectInput {
   id: UnsoldHybridId;
   legalBasis: string;
   articleLabel: string;
@@ -179,19 +190,44 @@ interface HybridEffectInput {
   standardPriceAtTransfer?: number;
   /** 5년 후 안분 시 령 인용 (령 §40① 준용 근거) */
   allocationLegalBasis: string;
+  /** 감면·공제율 (P2 조문 1.0 / §98의3 과밀 0.6 / §98의5 인하율별 / §98의6 0.5) */
+  rate?: number;
+  /** 농특세 비과세 (농특세령 §4⑦1호 — §98의3·§98의5) */
+  ruralSurtaxExempt?: boolean;
+  /** 5년 내 세액감면 허용 여부 (§98의6 2호만 false — 법 ① "제1호의 요건을 갖춘 주택에 한정") */
+  allowWithin5YTaxAmount?: boolean;
+  /** allowWithin5YTaxAmount=false + 5년 내 양도 시 불적격 사유 */
+  within5YIneligibleReason?: UnsoldHybridIneligibleReason;
 }
 
-/** 5년 분기 + 효과 산출 — 요건 통과 후 호출 */
-function computeHybridEffect(input: HybridEffectInput): UnsoldHybridResult {
+/** 5년 분기 + 효과 산출 — 요건 통과 후 호출 (P3에서 rate 일반화) */
+export function computeHybridEffect(input: HybridEffectInput): UnsoldHybridResult {
+  const rate = input.rate ?? UNSOLD_HYBRID_RATE;
+  const ruralSurtaxExempt = input.ruralSurtaxExempt ?? false;
+  const ratePct = Math.round(rate * 100);
   const isWithin5Years = isWithin5YearsCheck(input.acquisitionDate, input.transferDate);
   const formulaSteps: New993FormulaStep[] = [];
 
   if (isWithin5Years) {
-    // 5년 내 — 양도소득세 100% 세액감면 (감면액은 calcReductions에서 산출세액 기준 산출)
+    // §98의6 2호: 5년 내 세액감면은 1호 한정 — 2호는 5년 내 양도 시 혜택 없음 (P3 검토 #1)
+    if (input.allowWithin5YTaxAmount === false) {
+      return ineligible(
+        input.id,
+        [input.within5YIneligibleReason ?? {
+          code: "NO_WITHIN_5Y_BENEFIT",
+          message: "취득일부터 5년 이내 양도에는 세액감면이 적용되지 않습니다.",
+          legalBasis: input.legalBasis,
+        }],
+        input.legalBasis,
+        rate,
+        ruralSurtaxExempt,
+      );
+    }
+    // 5년 내 — 세액감면 (감면액은 calcReductions에서 산출세액 × rate 산출)
     formulaSteps.push({
-      label: "취득일부터 5년 이내 양도 — 양도소득세 100% 세액감면",
+      label: `취득일부터 5년 이내 양도 — 양도소득세 ${ratePct}% 세액감면`,
       value: 0,
-      formula: `${input.articleLabel} — 양도소득세의 100분의 100에 상당하는 세액을 감면 (감면세액 단계 적용)`,
+      formula: `${input.articleLabel} — 양도소득세의 100분의 ${ratePct}에 상당하는 세액을 감면 (감면세액 단계 적용)`,
     });
     return {
       id: input.id,
@@ -199,7 +235,7 @@ function computeHybridEffect(input: HybridEffectInput): UnsoldHybridResult {
       ineligibleReasons: [],
       isWithin5Years: true,
       effectCategory: "tax_amount",
-      taxReductionRate: UNSOLD_HYBRID_RATE,
+      taxReductionRate: rate,
       reductionAmount: 0,
       reducibleTransferIncome: 0,
       fiveYearRatio: 1,
@@ -207,6 +243,7 @@ function computeHybridEffect(input: HybridEffectInput): UnsoldHybridResult {
       formulaSteps,
       taxReductionForRuralSurtax: 0,
       ruralSurtax: 0,
+      ruralSurtaxExempt,
       legalBasis: input.legalBasis,
     };
   }
@@ -224,19 +261,26 @@ function computeHybridEffect(input: HybridEffectInput): UnsoldHybridResult {
         legalBasis: input.allocationLegalBasis,
       }],
       input.legalBasis,
+      rate,
+      ruralSurtaxExempt,
     );
   }
   const allocation = calcSignedAllocation(input.transferIncome, stdAt5Y - stdAtAcq, stdAtTransfer - stdAtAcq);
-  const reducible = Math.min(allocation.reducibleIncome, Math.max(0, input.transferIncome));
+  const allocated = Math.min(allocation.reducibleIncome, Math.max(0, input.transferIncome));
+  const reducible = Math.min(applyRate(allocated, rate), Math.max(0, input.transferIncome));
   formulaSteps.push({
     label: "5년간 발생 양도소득금액 (기준시가 안분)",
-    value: reducible,
+    value: allocated,
     formula: `양도소득금액 ${input.transferIncome.toLocaleString()} × (5년시점 기준시가 ${stdAt5Y.toLocaleString()} − 취득시 기준시가 ${stdAtAcq.toLocaleString()}) ÷ (양도시 기준시가 ${stdAtTransfer.toLocaleString()} − 취득시 기준시가 ${stdAtAcq.toLocaleString()})`,
   });
   formulaSteps.push({
-    label: "과세대상소득금액에서 공제 (초과금액은 없는 것)",
+    label: rate === 1
+      ? "과세대상소득금액에서 공제 (초과금액은 없는 것)"
+      : `과세대상소득금액에서 공제 (5년간 발생분 × ${ratePct}%, 초과금액은 없는 것)`,
     value: reducible,
-    formula: `5년간 발생분 ${reducible.toLocaleString()}을 과세대상소득금액에서 공제`,
+    formula: rate === 1
+      ? `5년간 발생분 ${allocated.toLocaleString()}을 과세대상소득금액에서 공제`
+      : `5년간 발생분 ${allocated.toLocaleString()} × ${ratePct}% = ${reducible.toLocaleString()}을 과세대상소득금액에서 공제`,
   });
   return {
     id: input.id,
@@ -244,7 +288,7 @@ function computeHybridEffect(input: HybridEffectInput): UnsoldHybridResult {
     ineligibleReasons: [],
     isWithin5Years: false,
     effectCategory: "income_deduction",
-    taxReductionRate: UNSOLD_HYBRID_RATE,
+    taxReductionRate: rate,
     reductionAmount: 0,
     reducibleTransferIncome: reducible,
     fiveYearRatio: allocation.ratio,
@@ -252,6 +296,7 @@ function computeHybridEffect(input: HybridEffectInput): UnsoldHybridResult {
     formulaSteps,
     taxReductionForRuralSurtax: 0,
     ruralSurtax: 0,
+    ruralSurtaxExempt,
     legalBasis: input.legalBasis,
   };
 }
@@ -503,12 +548,12 @@ export function evaluateUnsold992(input: Unsold992Input): UnsoldHybridResult {
 // ─────────────────────────────────────────────────────────────────
 
 /** reduction variant 멤버 — 구조적 타이핑 (stub.types 직접 import 회피) */
-interface ReductionLike {
+export interface ReductionLike {
   type: string;
   [key: string]: unknown;
 }
 
-function toDate(v: unknown): Date | undefined {
+export function toHybridDate(v: unknown): Date | undefined {
   if (v === undefined || v === null || v === "") return undefined;
   if (v instanceof Date) return v;
   if (typeof v === "string") {
@@ -535,7 +580,7 @@ export function evaluateHybridFromReduction(
     return evaluateUnsold987({
       transferDate: ctx.transferDate,
       acquisitionDate: ctx.acquisitionDate,
-      contractDate: toDate(r.contractDate987) ?? ctx.assetContractDate,
+      contractDate: toHybridDate(r.contractDate987) ?? ctx.assetContractDate,
       acquisitionPrice: r.acquisitionPrice987 as number | undefined,
       isDomestic: (r.isDomestic987 as boolean | undefined) ?? true,
       isUnsoldAtCutoff: r.isUnsoldAtCutoff987 as boolean | undefined,
@@ -554,8 +599,8 @@ export function evaluateHybridFromReduction(
       transferDate: ctx.transferDate,
       acquisitionDate: ctx.acquisitionDate,
       houseType: r.houseType992 as Unsold992HouseType | undefined,
-      contractDate: toDate(r.contractDate992) ?? ctx.assetContractDate,
-      usageApprovalDate: toDate(r.usageApprovalDate992),
+      contractDate: toHybridDate(r.contractDate992) ?? ctx.assetContractDate,
+      usageApprovalDate: toHybridDate(r.usageApprovalDate992),
       acquisitionPrice: r.acquisitionPrice992 as number | undefined,
       exclusiveAreaSqm: r.exclusiveAreaSqm992 as number | undefined,
       meetsHouseTypeRequirement: r.meetsHouseTypeRequirement992 as boolean | undefined,
@@ -601,7 +646,7 @@ export function evaluateHybridTaxAmountFromReductions(
   });
   if (!detail) return undefined;
   if (detail.isEligible && detail.effectCategory === "tax_amount") {
-    return { ...detail, reductionAmount: applyRate(ctx.calculatedTax, UNSOLD_HYBRID_RATE) };
+    return { ...detail, reductionAmount: applyRate(ctx.calculatedTax, detail.taxReductionRate) };
   }
   return detail;
 }

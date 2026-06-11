@@ -14,9 +14,23 @@ import { coerceOptionalDate } from "../tax-utils";
 import { evaluateNew993, type New993Result } from "./new-99-3";
 import { evaluateNew99, type New99Result } from "./new-99";
 import { evaluateUnsold988, type Unsold988Result } from "./unsold-98-8";
-import { evaluateHybridFromReduction, type UnsoldHybridResult } from "./unsold-hybrid";
+import { type UnsoldHybridResult } from "./unsold-hybrid";
+import {
+  evaluateAnyHybridFromReduction,
+  ALL_HYBRID_IDS,
+  RATE_SPECIAL_REDUCTION_IDS,
+} from "./unsold-hybrid-p3";
+export { RATE_SPECIAL_REDUCTION_IDS };
 
-export type IncomeDeductionId = "new_99_3" | "new_99" | "unsold_98_8" | "unsold_98_7" | "unsold_99_2";
+export type IncomeDeductionId =
+  | "new_99_3"
+  | "new_99"
+  | "unsold_98_8"
+  | "unsold_98_7"
+  | "unsold_99_2"
+  | "unsold_98_3"
+  | "unsold_98_5"
+  | "unsold_98_6";
 
 /** 중과 배제 대상 (소령 §167의3①5호 열거 — §98의4는 비열거라 P4에서 제외 유지) */
 export const SURCHARGE_EXCLUDED_INCOME_DEDUCTION_IDS: ReadonlyArray<IncomeDeductionId> = [
@@ -25,6 +39,9 @@ export const SURCHARGE_EXCLUDED_INCOME_DEDUCTION_IDS: ReadonlyArray<IncomeDeduct
   "unsold_98_8",
   "unsold_98_7",
   "unsold_99_2",
+  "unsold_98_3",
+  "unsold_98_5",
+  "unsold_98_6",
 ];
 
 /** 라우터 평가 컨텍스트 — 자산-수준 입력에서 추출 (TransferTaxInput 직접 의존 회피) */
@@ -55,6 +72,9 @@ export interface IncomeDeductionResolution {
   unsold988Detail?: Unsold988Result;
   unsold987Detail?: UnsoldHybridResult;
   unsold992Detail?: UnsoldHybridResult;
+  unsold983Detail?: UnsoldHybridResult;
+  unsold985Detail?: UnsoldHybridResult;
+  unsold986Detail?: UnsoldHybridResult;
   /** step 표시용 — 적용/불적격 공통 */
   stepLabel?: string;
   legalBasis?: string;
@@ -75,6 +95,18 @@ const STEP_LABELS: Record<IncomeDeductionId, string> = {
   unsold_98_8: "§98의8 준공후미분양 50% 공제",
   unsold_98_7: "§98의7 미분양주택 과세특례",
   unsold_99_2: "§99의2 신축주택등 과세특례",
+  unsold_98_3: "§98의3 미분양주택 과세특례",
+  unsold_98_5: "§98의5 수도권 밖 미분양 과세특례",
+  unsold_98_6: "§98의6 준공후미분양 과세특례",
+};
+
+const HYBRID_DETAIL_FIELDS: Record<string, keyof Pick<IncomeDeductionResolution,
+  "unsold987Detail" | "unsold992Detail" | "unsold983Detail" | "unsold985Detail" | "unsold986Detail">> = {
+  unsold_98_7: "unsold987Detail",
+  unsold_99_2: "unsold992Detail",
+  unsold_98_3: "unsold983Detail",
+  unsold_98_5: "unsold985Detail",
+  unsold_98_6: "unsold986Detail",
 };
 
 /**
@@ -174,12 +206,12 @@ export function resolveIncomeDeduction(
       { unsold988Detail: detail });
   }
 
-  // ── §98의7 · §99의2 하이브리드 (P2 신규) — 5년 후만 차감, 5년 내는 세액감면(calcReductions) ──
-  const rHybrid = reductions.find((x) => x.type === "unsold_98_7" || x.type === "unsold_99_2") as
+  // ── 하이브리드 (P2 §98의7·§99의2 + P3 §98의3·§98의5·§98의6) — 5년 후만 차감, 5년 내는 세액감면(calcReductions) ──
+  const rHybrid = reductions.find((x) => ALL_HYBRID_IDS.includes(x.type)) as
     | ReductionLike
     | undefined;
   if (rHybrid) {
-    const detail = evaluateHybridFromReduction(rHybrid, {
+    const detail = evaluateAnyHybridFromReduction(rHybrid, {
       transferDate: ctx.transferDate,
       acquisitionDate: ctx.acquisitionDate,
       assetContractDate: ctx.assetContractDate,
@@ -188,7 +220,7 @@ export function resolveIncomeDeduction(
     });
     if (detail) {
       const id = detail.id;
-      const detailField = id === "unsold_98_7" ? { unsold987Detail: detail } : { unsold992Detail: detail };
+      const detailField = { [HYBRID_DETAIL_FIELDS[id]]: detail };
       const isIncomeDeduction = detail.isEligible && detail.effectCategory === "income_deduction";
       return {
         // 5년 내(tax_amount)는 appliedId 미설정 — STEP 4.6 차감 없음 (calcReductions 경로와 이중 혜택 차단)
@@ -266,6 +298,9 @@ const EXCLUSION_ARTICLE_LABELS: Record<IncomeDeductionId, string> = {
   unsold_98_8: "조특법 §98의8",
   unsold_98_7: "조특법 §98의7",
   unsold_99_2: "조특법 §99의2",
+  unsold_98_3: "조특법 §98의3",
+  unsold_98_5: "조특법 §98의5",
+  unsold_98_6: "조특법 §98의6",
 };
 
 export function buildSurchargeExclusionStep(exclusion: {

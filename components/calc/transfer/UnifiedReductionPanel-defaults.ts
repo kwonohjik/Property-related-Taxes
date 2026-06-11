@@ -198,6 +198,64 @@ export function getReductionDefault(id: TransferReductionId): AssetReductionForm
       standardPriceAtTransfer988: "",
     };
   }
+  // P3 (2026-06-12): §98의3 / §98의5 / §98의6 — 하이브리드
+  if (id === "unsold_98_3") {
+    return {
+      type: "unsold_98_3",
+      residencyType983: "resident",
+      houseType983: "purchased",
+      contractDate983: "",
+      constructionStartDate983: "",
+      usageApprovalDate983: "",
+      isOutsideSeoulNotDesignated983: false,
+      isOverconcentration983: false,
+      landAreaSqm983: "",
+      floorAreaSqm983: "",
+      isUnsoldConfirmed983: false,
+      isFirstContract983: false,
+      isNotOccupiedAtContract983: false,
+      isNotRecontract983: false,
+      isNotExcludedSelfBuilt983: false,
+      standardPriceAtAcquisition983: "",
+      standardPriceAt5Years983: "",
+      standardPriceAtTransfer983: "",
+    };
+  }
+  if (id === "unsold_98_5") {
+    return {
+      type: "unsold_98_5",
+      contractDate985: "",
+      priceReductionRatePct985: "",
+      isNonCapitalUnsoldAtCutoff985: false,
+      isFirstContract985: false,
+      isNotOccupiedAtContract985: false,
+      isNotRecontract985: false,
+      standardPriceAtAcquisition985: "",
+      standardPriceAt5Years985: "",
+      standardPriceAtTransfer985: "",
+    };
+  }
+  if (id === "unsold_98_6") {
+    return {
+      type: "unsold_98_6",
+      hoType986: "seller_rented",
+      contractDate986: "",
+      stdPriceSumAtBase986: "",
+      floorAreaSqm986: "",
+      isUnsoldAfterCompletion986: false,
+      isFirstContract986: false,
+      isNotOccupiedAfterCompletion986: false,
+      isNotRecontract986: false,
+      sellerRented2Years986: false,
+      rentalContractDate986: "",
+      rentalStartDate986: "",
+      rentalEndDate986: "",
+      inheritedRentalMonths986: "",
+      standardPriceAtAcquisition986: "",
+      standardPriceAt5Years986: "",
+      standardPriceAtTransfer986: "",
+    };
+  }
   // P2 (2026-06-11): §98의7 9억↓ 미분양 — 하이브리드
   if (id === "unsold_98_7") {
     return {

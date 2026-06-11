@@ -18,8 +18,14 @@ import { calculateBuildingPenalty, calcTax, calcReductions } from "./transfer-ta
 import {
   emitPenaltySteps,
   getReductionLegalBasis,
+  buildMultiHouseSurchargeDetail,
   type ParsedRates,
+  type CommercialBuildingStepResult,
 } from "./transfer-tax-helpers";
+import type { NonBusinessLandJudgment } from "./non-business-land";
+import type { Pre1990LandValuationResult } from "./pre-1990-land-valuation";
+import type { CarryoverTaxationDetail } from "./types/transfer-carryover.types";
+import type { InheritedAcquisitionStepResult } from "./inheritance-acquisition-helpers";
 import type {
   TransferTaxInput,
   CalculationStep,
@@ -50,9 +56,12 @@ export interface FinalizeArgs {
   new993PreliminaryResult?: New993Result;
   new99PreliminaryResult?: New99Result;
   unsold988PreliminaryResult?: Unsold988Result;
-  /** P2 하이브리드 (§98의7·§99의2) — router 평가 결과 (5년 후 차감 또는 5년 내 tax_amount) */
+  /** 하이브리드 (P2 §98의7·§99의2 + P3 §98의3·§98의5·§98의6) — router 평가 결과 */
   unsold987PreliminaryResult?: UnsoldHybridResult;
   unsold992PreliminaryResult?: UnsoldHybridResult;
+  unsold983PreliminaryResult?: UnsoldHybridResult;
+  unsold985PreliminaryResult?: UnsoldHybridResult;
+  unsold986PreliminaryResult?: UnsoldHybridResult;
 }
 
 export interface FinalizeResult {
@@ -60,9 +69,12 @@ export interface FinalizeResult {
   new993FinalResult?: New993Result;
   new99FinalResult?: New99Result;
   unsold988FinalResult?: Unsold988Result;
-  // P2 하이브리드 (§98의7·§99의2) — 농특세 채움 후 최종 detail
+  // 하이브리드 (P2+P3) — 농특세 채움 후 최종 detail
   unsold987FinalResult?: UnsoldHybridResult;
   unsold992FinalResult?: UnsoldHybridResult;
+  unsold983FinalResult?: UnsoldHybridResult;
+  unsold985FinalResult?: UnsoldHybridResult;
+  unsold986FinalResult?: UnsoldHybridResult;
   ruralSurtax993: number;
   // 감면 (calcReductions return의 fan-out)
   reductionAmount: number;
@@ -100,6 +112,7 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
     transferIncomeBefore993, new993PreliminaryResult,
     new99PreliminaryResult, unsold988PreliminaryResult,
     unsold987PreliminaryResult, unsold992PreliminaryResult,
+    unsold983PreliminaryResult, unsold985PreliminaryResult, unsold986PreliminaryResult,
   } = args;
 
   // ── STEP 7.5: 차감형 감면(§99의3·§99·§98의8 + 하이브리드 5년 후) 농어촌특별세 — 2-pass 공통 ──
@@ -109,11 +122,15 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
   let unsold988FinalResult: Unsold988Result | undefined = unsold988PreliminaryResult;
   let unsold987FinalResult: UnsoldHybridResult | undefined = unsold987PreliminaryResult;
   let unsold992FinalResult: UnsoldHybridResult | undefined = unsold992PreliminaryResult;
+  let unsold983FinalResult: UnsoldHybridResult | undefined = unsold983PreliminaryResult;
+  let unsold985FinalResult: UnsoldHybridResult | undefined = unsold985PreliminaryResult;
+  let unsold986FinalResult: UnsoldHybridResult | undefined = unsold986PreliminaryResult;
   let ruralSurtax993 = 0;
   // 하이브리드는 5년 후(income_deduction)만 2-pass — 5년 내(tax_amount)는 STEP 8.7
-  const hybridIncomePrelims = [unsold987PreliminaryResult, unsold992PreliminaryResult].filter(
-    (d) => d?.isEligible && d.effectCategory === "income_deduction",
-  );
+  const hybridIncomePrelims = [
+    unsold987PreliminaryResult, unsold992PreliminaryResult,
+    unsold983PreliminaryResult, unsold985PreliminaryResult, unsold986PreliminaryResult,
+  ].filter((d) => d?.isEligible && d.effectCategory === "income_deduction");
   const activePrelim = [
     new993PreliminaryResult, new99PreliminaryResult, unsold988PreliminaryResult,
     ...hybridIncomePrelims,
@@ -124,18 +141,27 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
       : activePrelim === new99PreliminaryResult ? "§99"
       : activePrelim === unsold987PreliminaryResult ? "§98의7"
       : activePrelim === unsold992PreliminaryResult ? "§99의2"
+      : activePrelim === unsold983PreliminaryResult ? "§98의3"
+      : activePrelim === unsold985PreliminaryResult ? "§98의5"
+      : activePrelim === unsold986PreliminaryResult ? "§98의6"
       : "§99의3";
+    // 농특세 비과세 (농특세령 §4⑦1호 — §98의3·§98의5): 차감 효과는 유지, 농특세만 0
+    const isExempt =
+      "ruralSurtaxExempt" in activePrelim! && (activePrelim as UnsoldHybridResult).ruralSurtaxExempt;
     const taxBaseBefore993 = Math.max(0, transferIncomeBefore993 - basicDeduction);
     const taxResultBefore993 = calcTax(taxBaseBefore993, parsedRates, taxRateInput, multiHouseSurchargeResult);
     const taxReduction993 = Math.max(0, taxResultBefore993.calculatedTax - taxResult.calculatedTax);
-    ruralSurtax993 = applyRate(taxReduction993, 0.2);
+    ruralSurtax993 = isExempt ? 0 : applyRate(taxReduction993, 0.2);
     const surtaxFields = { taxReductionForRuralSurtax: taxReduction993, ruralSurtax: ruralSurtax993 };
     if (activePrelim === new993PreliminaryResult) new993FinalResult = { ...new993PreliminaryResult!, ...surtaxFields };
     else if (activePrelim === new99PreliminaryResult) new99FinalResult = { ...new99PreliminaryResult!, ...surtaxFields };
     else if (activePrelim === unsold987PreliminaryResult) unsold987FinalResult = { ...unsold987PreliminaryResult!, ...surtaxFields };
     else if (activePrelim === unsold992PreliminaryResult) unsold992FinalResult = { ...unsold992PreliminaryResult!, ...surtaxFields };
+    else if (activePrelim === unsold983PreliminaryResult) unsold983FinalResult = { ...unsold983PreliminaryResult!, ...surtaxFields };
+    else if (activePrelim === unsold985PreliminaryResult) unsold985FinalResult = { ...unsold985PreliminaryResult!, ...surtaxFields };
+    else if (activePrelim === unsold986PreliminaryResult) unsold986FinalResult = { ...unsold986PreliminaryResult!, ...surtaxFields };
     else unsold988FinalResult = { ...unsold988PreliminaryResult!, ...surtaxFields };
-    if (taxReduction993 > 0) {
+    if (taxReduction993 > 0 && !isExempt) {
       steps.push({
         label: `${articleLabel} 농어촌특별세 (감면세액 × 20%)`,
         formula: `(감면 전 산출세액 ${taxResultBefore993.calculatedTax.toLocaleString()} − 감면 후 산출세액 ${taxResult.calculatedTax.toLocaleString()}) × 20% = ${ruralSurtax993.toLocaleString()}`,
@@ -220,28 +246,39 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
   // 농특세법 §2①1호 "조특법에 따라 감면받는 세액". §98의3·§98의5(P3)는 농특세령 §4⑦1호 비과세 —
   // 본 2조문은 비과세 열거 없음 (plan §2-1).
   let ruralSurtaxHybrid = 0;
+  const HYBRID_ARTICLE: Record<string, string> = {
+    unsold_98_7: "§98의7", unsold_99_2: "§99의2",
+    unsold_98_3: "§98의3", unsold_98_5: "§98의5", unsold_98_6: "§98의6",
+  };
   if (
-    (reductionTypeApplied === "unsold_98_7" || reductionTypeApplied === "unsold_99_2") &&
+    reductionTypeApplied !== undefined &&
+    HYBRID_ARTICLE[reductionTypeApplied] !== undefined &&
     cappedReductionAmount > 0
   ) {
-    ruralSurtaxHybrid = applyRate(cappedReductionAmount, 0.2);
-    const hybridArticle = reductionTypeApplied === "unsold_98_7" ? "§98의7" : "§99의2";
-    steps.push({
-      label: `${hybridArticle} 농어촌특별세 (감면세액 × 20%)`,
-      formula: `감면세액 ${cappedReductionAmount.toLocaleString()} × 20% = ${ruralSurtaxHybrid.toLocaleString()}`,
-      amount: ruralSurtaxHybrid,
-      legalBasis: "농어촌특별세법 §5①1호",
-    });
+    // 농특세 비과세 (농특세령 §4⑦1호): §98의3·§98의5 — evaluator의 exempt 플래그 단일 진실
+    const isExemptTax = hybridTaxDetail?.ruralSurtaxExempt === true;
+    ruralSurtaxHybrid = isExemptTax ? 0 : applyRate(cappedReductionAmount, 0.2);
+    if (!isExemptTax) {
+      steps.push({
+        label: `${HYBRID_ARTICLE[reductionTypeApplied]} 농어촌특별세 (감면세액 × 20%)`,
+        formula: `감면세액 ${cappedReductionAmount.toLocaleString()} × 20% = ${ruralSurtaxHybrid.toLocaleString()}`,
+        amount: ruralSurtaxHybrid,
+        legalBasis: "농어촌특별세법 §5①1호",
+      });
+    }
     // 최종 detail에 감면액·농특세 echo (calcReductions 평가본 우선 — reductionAmount 보유)
     if (hybridTaxDetail && hybridTaxDetail.id === reductionTypeApplied) {
       const merged: UnsoldHybridResult = {
         ...hybridTaxDetail,
         reductionAmount: cappedReductionAmount,
-        taxReductionForRuralSurtax: cappedReductionAmount,
+        taxReductionForRuralSurtax: isExemptTax ? 0 : cappedReductionAmount,
         ruralSurtax: ruralSurtaxHybrid,
       };
       if (merged.id === "unsold_98_7") unsold987FinalResult = merged;
-      else unsold992FinalResult = merged;
+      else if (merged.id === "unsold_99_2") unsold992FinalResult = merged;
+      else if (merged.id === "unsold_98_3") unsold983FinalResult = merged;
+      else if (merged.id === "unsold_98_5") unsold985FinalResult = merged;
+      else unsold986FinalResult = merged;
     }
   }
 
@@ -303,6 +340,9 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
     unsold988FinalResult,
     unsold987FinalResult,
     unsold992FinalResult,
+    unsold983FinalResult,
+    unsold985FinalResult,
+    unsold986FinalResult,
     ruralSurtax993,
     // STEP 8.5 5년 한도 반영값 — 결과 표시(결정세액 산식)와 일관 유지
     reductionAmount: cappedReductionAmount,
@@ -362,3 +402,45 @@ export function resolveLTHDStartDate(input: TransferTaxInput): Date {
 export function getEffectiveAcquisitionDate(input: TransferTaxInput): Date {
   return resolveLTHDStartDate(input);
 }
+
+/**
+ * 결과 detail 필드 공통 빌더 — 조기 반환(비과세·손실)과 정상 반환의 detail 누락 방지.
+ *
+ * 각 detail은 해당 STEP 변수가 존재할 때만 채운다. 조기 반환 시점에 아직
+ * 선언되지 않은 변수(cbStep·splitDetail 등)는 호출측에서 ctx에 생략하면 undefined로 처리된다.
+ */
+export function buildTransferResultDetails(ctx: {
+  multiHouseSurchargeResult?: MultiHouseSurchargeResult;
+  nonBusinessLandJudgment?: NonBusinessLandJudgment;
+  pre1990LandResult?: Pre1990LandValuationResult;
+  carryoverDetail?: CarryoverTaxationDetail;
+  inheritedAcquisitionStep?: InheritedAcquisitionStepResult;
+  cbStep?: CommercialBuildingStepResult;
+  splitDetail?: TransferTaxResult["splitDetail"];
+}): Pick<
+  TransferTaxResult,
+  | "multiHouseSurchargeDetail"
+  | "nonBusinessLandJudgmentDetail"
+  | "pre1990LandValuationDetail"
+  | "carryoverTaxationDetail"
+  | "inheritedAcquisitionDetail"
+  | "inheritedHouseValuationDetail"
+  | "commercialBuildingValuationDetail"
+  | "splitDetail"
+  | "preHousingDisclosureDetail"
+> {
+  return {
+    multiHouseSurchargeDetail: ctx.multiHouseSurchargeResult
+      ? buildMultiHouseSurchargeDetail(ctx.multiHouseSurchargeResult)
+      : undefined,
+    nonBusinessLandJudgmentDetail: ctx.nonBusinessLandJudgment,
+    pre1990LandValuationDetail: ctx.pre1990LandResult,
+    carryoverTaxationDetail: ctx.carryoverDetail,
+    inheritedAcquisitionDetail: ctx.inheritedAcquisitionStep?.result,
+    inheritedHouseValuationDetail: ctx.inheritedAcquisitionStep?.houseValuationResult,
+    commercialBuildingValuationDetail: ctx.cbStep?.detail,
+    splitDetail: ctx.splitDetail ?? undefined,
+    preHousingDisclosureDetail: ctx.splitDetail?.preHousingDisclosureDetail,
+  };
+}
+

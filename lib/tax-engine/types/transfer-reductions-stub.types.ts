@@ -138,10 +138,60 @@ export type TransferReductionStub =
   // 미분양 §98 시리즈 + §99의2
   | { type: "unsold_98";         _phase1Stub?: true }
   | { type: "unsold_98_2";       _phase1Stub?: true }
-  | { type: "unsold_98_3";       region?: "metropolitan" | "non_metropolitan"; _phase1Stub?: true }
+  // §98의3 — P3 본격 구현 (2026-06-12): 하이브리드 본 필드 (Date — route mapper ⑭ 변환)
+  | { type: "unsold_98_3";
+      region?: "metropolitan" | "non_metropolitan"; // Phase 1 stub 호환
+      residencyType983?: "resident" | "nonresident_no_pe";
+      houseType983?: "purchased" | "self_built";
+      contractDate983?: Date;
+      constructionStartDate983?: Date;
+      usageApprovalDate983?: Date;
+      isOutsideSeoulNotDesignated983?: boolean;
+      isOverconcentration983?: boolean;
+      landAreaSqm983?: number;
+      floorAreaSqm983?: number;
+      isUnsoldConfirmed983?: boolean;
+      isFirstContract983?: boolean;
+      isNotOccupiedAtContract983?: boolean;
+      isNotRecontract983?: boolean;
+      isNotExcludedSelfBuilt983?: boolean;
+      standardPriceAtAcquisition983?: number;
+      standardPriceAt5Years983?: number;
+      standardPriceAtTransfer983?: number;
+      _phase1Stub?: true }
   | { type: "unsold_98_4";       _phase1Stub?: true }
-  | { type: "unsold_98_5";       priceReductionRate?: number; _phase1Stub?: true }
-  | { type: "unsold_98_6";       _phase1Stub?: true }
+  // §98의5 — P3 본격 구현 (2026-06-12)
+  | { type: "unsold_98_5";
+      priceReductionRate?: number; // Phase 1 stub 호환
+      contractDate985?: Date;
+      priceReductionRatePct985?: number;
+      isNonCapitalUnsoldAtCutoff985?: boolean;
+      isFirstContract985?: boolean;
+      isNotOccupiedAtContract985?: boolean;
+      isNotRecontract985?: boolean;
+      standardPriceAtAcquisition985?: number;
+      standardPriceAt5Years985?: number;
+      standardPriceAtTransfer985?: number;
+      _phase1Stub?: true }
+  // §98의6 — P3 본격 구현 (2026-06-12)
+  | { type: "unsold_98_6";
+      hoType986?: "seller_rented" | "buyer_rented";
+      contractDate986?: Date;
+      stdPriceSumAtBase986?: number;
+      floorAreaSqm986?: number;
+      isUnsoldAfterCompletion986?: boolean;
+      isFirstContract986?: boolean;
+      isNotOccupiedAfterCompletion986?: boolean;
+      isNotRecontract986?: boolean;
+      sellerRented2Years986?: boolean;
+      rentalContractDate986?: Date;
+      rentalStartDate986?: Date;
+      rentalEndDate986?: Date;
+      inheritedRentalMonths986?: number;
+      standardPriceAtAcquisition986?: number;
+      standardPriceAt5Years986?: number;
+      standardPriceAtTransfer986?: number;
+      _phase1Stub?: true }
   // §98의7 — P2 본격 구현 (2026-06-11): 하이브리드 본 필드 (Date — route mapper ⑭ 변환)
   | { type: "unsold_98_7";
       contractDate987?: Date;
