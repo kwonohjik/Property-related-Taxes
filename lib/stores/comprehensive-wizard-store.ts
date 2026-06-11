@@ -87,6 +87,12 @@ export interface ComprehensiveFormData {
 
   // ── Step 5: 세부담 상한 ──
   previousYearTotalTax: string;    // 전년도 종부세+재산세 합계 (원)
+
+  // ── 연도별 세법 (과세연도 < 2023 일 때만 유효) ──
+  /** 조정대상지역 2주택 이상 여부 (구 §9①3호·§10② — 2022 귀속 이하에서만 의미 있음)
+   *  2023+ 연도에서는 엔진이 무시 (주택 수 3 이상만 중과)
+   */
+  isMultiHouseInAdjustedArea: boolean;
 }
 
 function makeProperty(): PropertyEntry {
@@ -137,6 +143,7 @@ const defaultFormData: ComprehensiveFormData = {
   hasSeparateLand: false,
   landSeparate: [],
   previousYearTotalTax: "",
+  isMultiHouseInAdjustedArea: false,
 };
 
 // ============================================================
@@ -271,6 +278,13 @@ export const useComprehensiveWizardStore = create<ComprehensiveWizardState>()(
         currentStep: state.currentStep,
         formData: state.formData,
       }),
+      // ③ normalize fallback — 구 sessionStorage에 없는 신규 필드 보정
+      onRehydrateStorage: () => (state) => {
+        if (state && state.formData) {
+          state.formData.isMultiHouseInAdjustedArea =
+            state.formData.isMultiHouseInAdjustedArea ?? false;
+        }
+      },
     },
   ),
 );

@@ -18,9 +18,10 @@ import { useState } from "react";
 import { ChevronLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { StepIndicator } from "@/components/calc/StepIndicator";
-import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { CurrencyInput, parseAmount, formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { DateInput } from "@/components/ui/date-input";
 import { PropertyListInput } from "@/components/calc/PropertyListInput";
 import { ExclusionInfoInput } from "@/components/calc/ExclusionInfoInput";
@@ -36,6 +37,10 @@ import { useRecordCount } from "@/components/calc/shared/save-handler-builders";
 import { SaveButton } from "@/components/calc/shared/SaveButton";
 import { SaveToast, type SaveToastMessage } from "@/components/calc/shared/SaveToast";
 import { useProfessionalStore } from "@/lib/stores/professional-store";
+import {
+  COMPREHENSIVE_SUPPORTED_YEARS,
+  getComprehensiveParams,
+} from "@/lib/tax-engine/data/comprehensive-historical";
 import type { ComprehensiveTaxResult } from "@/lib/tax-engine/types/comprehensive.types";
 
 // ============================================================
@@ -104,8 +109,62 @@ function NavButtons({
 // Step 1: 기본 정보
 // ============================================================
 
+// 연도별 세법 요약 힌트 카드
+function YearLawHintCard({ year }: { year: number }) {
+  const currentYear = new Date().getFullYear();
+  const params = getComprehensiveParams(year);
+  const hasMultiHouseCap = year < 2023;
+  const isPreUnified = year < 2023;
+
+  return (
+    <div className="rounded-md border border-amber-200 bg-amber-50/60 px-4 py-3 text-xs text-amber-900 space-y-1">
+      <p className="font-semibold">
+        {year} 귀속 적용 기준{isPreUnified ? " (개정 전 구법)" : ""}
+        {year === currentYear ? (
+          <span className="ml-1.5 rounded-full bg-sky-200 px-1.5 py-0.5 text-[10px] font-bold text-sky-800">
+            현재
+          </span>
+        ) : null}
+      </p>
+      <p>
+        기본공제: 일반 {formatKRW(params.basicDeductionGeneral)} / 1세대1주택{" "}
+        {formatKRW(params.basicDeductionOneHouse)}
+      </p>
+      <p>
+        공정시장가액비율 (주택분): {(params.fairMarketRatioHousing * 100).toFixed(0)}%
+      </p>
+      {isPreUnified ? (
+        <p>
+          세율: 일반(2주택 이하) 0.6%~3.0% / 다주택(조정2주택·3주택+) 1.2%~6.0%
+          (종합부동산세법 §9① 구법)
+        </p>
+      ) : (
+        <p>
+          세율: 2주택 이하 0.5%~2.7% / 3주택 이상 12억 초과 중과 2.0%~5.0%
+          (§9①2호 — 주택 수 자동 적용)
+        </p>
+      )}
+      {hasMultiHouseCap ? (
+        <p>
+          세부담 상한: 일반 150% / 조정대상지역 2주택+ 또는 3주택+ 300%
+          (§10② 구법)
+        </p>
+      ) : (
+        <p>세부담 상한: 전년도 세액의 150% (§10)</p>
+      )}
+    </div>
+  );
+}
+
 function Step1Basic() {
-  const { formData, updateFormData, reset } = useComprehensiveWizardStore();
+  const { formData, updateFormData, reset, setResult } = useComprehensiveWizardStore();
+  const currentYear = new Date().getFullYear();
+  const selectedYear = parseInt(formData.assessmentYear) || currentYear;
+
+  function handleYearChange(year: string) {
+    updateFormData({ assessmentYear: year });
+    setResult(null); // 과세연도 변경 시 기존 결과 무효화
+  }
 
   return (
     <div className="space-y-6">
@@ -114,21 +173,28 @@ function Step1Basic() {
         <ResetButton onReset={reset} />
       </div>
       {/* 과세연도 */}
-      <div className="space-y-1.5">
+      <div className="space-y-2">
         <label className="block text-sm font-medium">
           과세연도 <span className="text-destructive">*</span>
         </label>
-        <input
-          type="text"
-          inputMode="numeric"
-          value={formData.assessmentYear}
-          onChange={(e) =>
-            updateFormData({ assessmentYear: e.target.value.replace(/\D/g, "").slice(0, 4) })
-          }
-          placeholder="2024"
-          maxLength={4}
-          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        <RadioCardGroup
+          name="assessmentYear"
+          tone="sky"
+          layout="inline"
+          value={formData.assessmentYear as (typeof COMPREHENSIVE_SUPPORTED_YEARS)[number] extends number ? string : string}
+          onChange={handleYearChange}
+          options={COMPREHENSIVE_SUPPORTED_YEARS.map((y) => ({
+            value: String(y),
+            label: String(y),
+            trailing:
+              y === currentYear ? (
+                <span className="rounded-full bg-sky-200 px-1.5 py-0.5 text-[10px] font-bold text-sky-800">
+                  현재
+                </span>
+              ) : undefined,
+          }))}
         />
+        <YearLawHintCard year={selectedYear} />
         <p className="text-xs text-muted-foreground">
           과세기준일: {formData.assessmentYear}-06-01 (종합부동산세법 §16①)
         </p>
@@ -378,9 +444,28 @@ function Step4Land() {
 
 function Step5TaxCap() {
   const { formData, updateFormData } = useComprehensiveWizardStore();
+  const year = parseInt(formData.assessmentYear) || new Date().getFullYear();
+  const showMultiHouseCap = year < 2023;
+  const isMultiHouseOn = formData.isMultiHouseInAdjustedArea;
 
   return (
     <div className="space-y-6">
+      {/* 조정대상지역 2주택 이상 — 과세연도 < 2023 일 때만 노출 */}
+      {showMultiHouseCap && (
+        <ToggleCard
+          tone="rose"
+          title="조정대상지역 2주택 이상"
+          description={`세부담 상한 300% 적용 (종합부동산세법 §10② 구법 — ${year} 귀속 이전)\n3주택 이상은 주택 수로 자동 적용됩니다 — 이 토글은 조정대상지역 2주택 보유 시에만 켜세요`}
+          checked={formData.isMultiHouseInAdjustedArea}
+          onCheckedChange={(v) => updateFormData({ isMultiHouseInAdjustedArea: v })}
+        >
+          <p className="text-xs text-rose-700">
+            {year} 귀속(과세기준일 {year}-06-01)까지 조정대상지역 2주택 이상 보유자에게
+            적용된 규정입니다. 2023년부터 해당 조항이 삭제되어 150%로 단일화됩니다.
+          </p>
+        </ToggleCard>
+      )}
+
       {/* 전년도 세액 */}
       <div className="space-y-2">
         <CurrencyInput
@@ -391,10 +476,20 @@ function Step5TaxCap() {
           hint="전년도 종합부동산세 + 재산세 합계 (농특세 제외). 미입력 시 세부담 상한 계산 생략."
         />
         <div className="rounded-md bg-muted/30 border px-4 py-3 text-xs text-muted-foreground">
-          <p className="font-medium mb-1">세부담 상한 계산 방식 (§10)</p>
-          <p>
-            상한액 = 전년도 세액 × 150% (종합부동산세법 §10)
-          </p>
+          <p className="font-medium mb-1">세부담 상한 계산 방식</p>
+          {showMultiHouseCap ? (
+            <>
+              <p>
+                상한액 = 전년도 세액 ×{" "}
+                {isMultiHouseOn ? "300% (조정대상지역 2주택 이상 §10②)" : "150% (일반 §10①)"}
+              </p>
+              <p className="mt-1">
+                3주택 이상은 자동으로 300% 상한이 적용됩니다.
+              </p>
+            </>
+          ) : (
+            <p>상한액 = 전년도 세액 × 150% (종합부동산세법 §10)</p>
+          )}
           <p className="mt-1">
             당해 종부세가 상한액을 초과하면 상한액 - 재산세 = 확정 종부세
           </p>
@@ -512,6 +607,7 @@ async function callComprehensiveApi(
     properties,
     landAggregate,
     landSeparate,
+    isMultiHouseInAdjustedArea: formData.isMultiHouseInAdjustedArea,
   };
 
   const res = await fetch("/api/calc/comprehensive", {

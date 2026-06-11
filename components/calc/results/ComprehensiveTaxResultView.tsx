@@ -159,7 +159,7 @@ function HousingTaxBaseSection({
           amount={result.includedAssessedValue}
         />
         <TaxRow
-          label={`기본공제 (${result.isOneHouseOwner ? "1세대1주택 12억" : "일반 9억"})`}
+          label={`기본공제 (${result.isOneHouseOwner ? "1세대1주택" : "일반"} ${formatKRW(result.basicDeduction)})`}
           amount={result.basicDeduction}
           sub
         />
@@ -209,7 +209,17 @@ function HousingTaxSection({
           note={`누진공제 ${formatKRW(result.progressiveDeduction)}`}
           sub
         />
-        <TaxRow label="산출세액" amount={result.calculatedTax} />
+        <TaxRow
+          label="산출세액"
+          amount={result.calculatedTax}
+          badge={
+            result.isMultiHouseRateApplied
+              ? parseInt(result.assessmentDate.slice(0, 4)) <= 2022
+                ? "다주택 중과세율 적용 (조정대상지역 2주택 또는 3주택 이상 — 구 §9①3호)"
+                : "3주택 이상 중과세율 적용 (§9①2호 — 12억 초과 구간)"
+              : undefined
+          }
+        />
 
         {/* 1세대1주택 세액공제 */}
         {oneHouseDeduction && oneHouseDeduction.deductionAmount > 0 && (

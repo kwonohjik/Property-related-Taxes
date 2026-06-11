@@ -97,6 +97,7 @@ function toEngineInput(
       : undefined,
     assessmentYear: schema.assessmentYear,
     previousYearTotalTax: schema.previousYearTotalTax,
+    isMultiHouseInAdjustedArea: schema.isMultiHouseInAdjustedArea,
     landAggregate: schema.landAggregate,
     landSeparate: schema.landSeparate,
     targetDate: schema.targetDate,

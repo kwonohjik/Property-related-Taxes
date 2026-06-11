@@ -290,6 +290,13 @@ export const comprehensiveTaxInputSchema = z.object({
     .optional(),
 
   /**
+   * 조정대상지역 2주택 이상 여부 (구 §9①3호·§10② — 2022 귀속 이하에서만 유효)
+   * 2023+ 연도 요청에서는 엔진이 무시 (주택 수 3 이상만 중과)
+   * 미입력 시 false로 처리
+   */
+  isMultiHouseInAdjustedArea: z.boolean().optional(),
+
+  /**
    * 계산 기준일 오버라이드 (테스트·소급 계산용)
    * YYYY-MM-DD 형식, 미입력 시 assessmentYear-06-01 사용
    */
