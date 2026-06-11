@@ -669,8 +669,8 @@ export function buildStatementItems(
     value: result.reductionAmount,
     formula:
       reductionStep?.formula ??
-      "감면 적용 양도소득금액 비율 × 산출세액 (조특법 §127② 중복배제)",
-    legalBasis: reductionStep?.legalBasis ?? "조세특례제한법 §127",
+      "감면 적용 양도소득금액 비율 × 산출세액 (조특법 §127⑦ 중복배제)",
+    legalBasis: reductionStep?.legalBasis ?? "조세특례제한법 §127⑦",
     perAsset: isAggregate
       ? buildPerAssetWithFormula(
           properties,

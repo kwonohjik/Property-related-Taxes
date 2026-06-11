@@ -168,7 +168,7 @@ export function checkPropertyTaxExemption(
  * 재산세 감면 판정 (지방세특례제한법)
  *
  * 감면은 비과세와 달리 산출세액에서 감면율만큼 차감합니다.
- * 복수 감면 사유가 있을 경우 납세자에게 가장 유리한 1건 선택 (§127② 준용).
+ * 복수 감면 사유가 있을 경우 감면되는 세액이 큰 1건 선택 (지방세특례제한법 §180).
  *
  * @returns ReductionResult (reductionRate: 0이면 감면 없음)
  */

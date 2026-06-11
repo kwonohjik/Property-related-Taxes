@@ -212,8 +212,8 @@ export const TRANSFER = {
   REDUCTION_NEW_HOUSING:         "조특법 §99",
   /** 조특법 §98의3 — 미분양주택 과세특례 */
   REDUCTION_UNSOLD_HOUSING:      "조특법 §98의3",
-  /** 조특법 §127 ② — 감면 중복배제 (동일 자산 복수 감면 시 납세자 유리 1건 선택) */
-  REDUCTION_OVERLAP_EXCLUSION:   "조특법 §127 ②",
+  /** 조특법 §127⑦ — 양도소득세 감면 중복배제 (둘 이상 감면 동시 적용 시 거주자 선택 1건. law.go.kr 2026-06-11 확인. 종전 "§127②" 표기는 오기) */
+  REDUCTION_OVERLAP_EXCLUSION:   "조특법 §127⑦",
   /** 조특법 §77 — 공익사업용 토지 등에 대한 양도소득세 감면 */
   REDUCTION_PUBLIC_EXPROPRIATION: "조특법 §77",
   /** 조특법 부칙 제53조 — 공익사업 수용 감면 종전 감면율 경과조치 */
@@ -546,9 +546,6 @@ export const TRANSFER_REDUCTION_ARTICLE = {
   // ── 별도 카테고리 ──
   SELF_FARMING:       "조특법 §69",
   PUBLIC_EXPROPRIATION: "조특법 §77",
-  // ── 횡단 ──
-  /** 양도소득세 감면 중복 적용 배제 — 거주자 선택 1건 (law.go.kr 확인 2026-06-11. 종전 "§127②" 표기는 오기) */
-  OVERLAP_EXCLUSION:  "조특법 §127⑦",
 } as const;
 
 /**

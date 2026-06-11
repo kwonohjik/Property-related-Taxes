@@ -376,10 +376,10 @@ describe("T-44: 12억 경계 안분 정수 연산 (P0-1 회귀)", () => {
 
 // ============================================================
 // T-45: 감면 중복배제 — 장기임대 + 신축 동시 해당 시 납세자 유리 1건 선택
-// (조특법 §127 ②)
+// (조특법 §127⑦)
 // ============================================================
 
-describe("T-45: 감면 중복배제 — 장기임대 + 신축 동시 해당 (조특법 §127②)", () => {
+describe("T-45: 감면 중복배제 — 장기임대 + 신축 동시 해당 (조특법 §127⑦)", () => {
   it("T-45a: 장기임대 50% vs 신축 80% → 80%(신축) 선택", () => {
     // 장기임대: long_term_private 8년 → 50%
     // 신축: §99② 80% (tax_amount 방식)
@@ -440,7 +440,7 @@ describe("T-45: 감면 중복배제 — 장기임대 + 신축 동시 해당 (조
     expect(result.newHousingReductionDetail?.isEligible).toBe(true);
     expect(result.newHousingReductionDetail?.reductionRate).toBe(0.8);
 
-    // 조특법 §127② 중복배제: 80%(신축) 선택
+    // 조특법 §127⑦ 중복배제: 80%(신축) 선택
     const expectedReduction = Math.floor(result.calculatedTax * 0.8);
     expect(result.reductionAmount).toBe(expectedReduction);
     expect(result.reductionType).toBe("신축주택");
@@ -506,7 +506,7 @@ describe("T-45: 감면 중복배제 — 장기임대 + 신축 동시 해당 (조
     expect(result.newHousingReductionDetail?.isEligible).toBe(true);
     expect(result.newHousingReductionDetail?.reductionRate).toBe(0.5);
 
-    // 조특법 §127② 중복배제: 100%(장기임대) 선택
+    // 조특법 §127⑦ 중복배제: 100%(장기임대) 선택
     // 주의: 장기임대 100%는 연간한도(§133) 적용 가능 — 한도 적용 후 금액이 산출세액보다 클 수도 있음
     // 한도 적용 전 금액: calculatedTax × 1.0 = calculatedTax
     // 한도 적용 후: 1억 초과 시 1억 + (초과분 × 50%)

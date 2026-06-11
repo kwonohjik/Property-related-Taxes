@@ -4,7 +4,7 @@
  * transfer-tax-helpers.ts 에서 분리한 세율·세액·감면 계산 로직.
  *   H-6.5: calculateBuildingPenalty — §114조의2 가산세
  *   H-7:   calcTax                  — 세액 결정 (T-1 ~ T-4, + T-1.5 부수토지 일체과세)
- *   H-8:   calcReductions           — 감면 계산 (R-1 ~ R-5, 조특법 §127 ② 중복배제)
+ *   H-8:   calcReductions           — 감면 계산 (R-1 ~ R-5, 조특법 §127⑦ 중복배제)
  *   H-MP:  handleMultiParcelBranch  — 다필지 분리 계산 (소령 §166)
  *
  * 부수토지 일체과세 세율 결정 (H-9)은 appurtenant-land-rate.ts 로 분리됨.
