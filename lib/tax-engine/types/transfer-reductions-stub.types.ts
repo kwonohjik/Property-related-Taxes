@@ -142,7 +142,19 @@ export type TransferReductionStub =
   | { type: "unsold_98_4";       _phase1Stub?: true }
   | { type: "unsold_98_5";       priceReductionRate?: number; _phase1Stub?: true }
   | { type: "unsold_98_6";       _phase1Stub?: true }
-  | { type: "unsold_98_7";       _phase1Stub?: true }
+  // §98의7 — P2 본격 구현 (2026-06-11): 하이브리드 본 필드 (Date — route mapper ⑭ 변환)
+  | { type: "unsold_98_7";
+      contractDate987?: Date;
+      acquisitionPrice987?: number;
+      isDomestic987?: boolean;
+      isUnsoldAtCutoff987?: boolean;
+      isFirstContract987?: boolean;
+      isNotOccupiedAtContract987?: boolean;
+      isNotRecontract987?: boolean;
+      standardPriceAtAcquisition987?: number;
+      standardPriceAt5Years987?: number;
+      standardPriceAtTransfer987?: number;
+      _phase1Stub?: true }
   // §98의8 — P1 본격 구현 (2026-06-11): 차감형 50% 본 필드 (Date — route mapper ⑭ 변환)
   | { type: "unsold_98_8";
       contractDate988?: Date;
@@ -168,4 +180,21 @@ export type TransferReductionStub =
       wasOneHouseholdAtAcquisition?: boolean;
       meetsSellerAndContractRequirement?: boolean;
       _phase1Stub?: true }
-  | { type: "unsold_99_2";       _phase1Stub?: true };
+  // §99의2 — P2 본격 구현 (2026-06-11): 하이브리드 본 필드 (Date — route mapper ⑭ 변환)
+  | { type: "unsold_99_2";
+      houseType992?: "new_or_unsold" | "self_built" | "existing_one_house";
+      contractDate992?: Date;
+      usageApprovalDate992?: Date;
+      acquisitionPrice992?: number;
+      exclusiveAreaSqm992?: number;
+      meetsHouseTypeRequirement992?: boolean;
+      isNotExcludedSelfBuilt992?: boolean;
+      meetsOneHouseSellerRequirement992?: boolean;
+      isOfficetel992?: boolean;
+      meetsOfficetelRequirement992?: boolean;
+      isNotRecontract992?: boolean;
+      hasConfirmationSeal992?: boolean;
+      standardPriceAtAcquisition992?: number;
+      standardPriceAt5Years992?: number;
+      standardPriceAtTransfer992?: number;
+      _phase1Stub?: true };

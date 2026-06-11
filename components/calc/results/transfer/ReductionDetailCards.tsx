@@ -42,7 +42,9 @@ export function ReductionDetailCards({ result }: Props) {
     !!result.new994Detail ||
     !!result.unsold989Detail ||
     !!result.new99Detail ||
-    !!result.unsold988Detail;
+    !!result.unsold988Detail ||
+    !!result.unsold987Detail ||
+    !!result.unsold992Detail;
 
   if (!hasAny) return null;
 
@@ -84,6 +86,13 @@ export function ReductionDetailCards({ result }: Props) {
       {result.new99Detail && <IncomeDeductionDetailCard kind="new_99" result={result.new99Detail} />}
       {result.unsold988Detail && (
         <IncomeDeductionDetailCard kind="unsold_98_8" result={result.unsold988Detail} />
+      )}
+      {/* P2 하이브리드 (2026-06-11): §98의7 9억↓ 미분양 · §99의2 신축·미분양·1세대1주택 */}
+      {result.unsold987Detail && (
+        <IncomeDeductionDetailCard kind="unsold_98_7" result={result.unsold987Detail} />
+      )}
+      {result.unsold992Detail && (
+        <IncomeDeductionDetailCard kind="unsold_99_2" result={result.unsold992Detail} />
       )}
     </>
   );

@@ -8,19 +8,31 @@
  * eligible: emerald + 산식 단계 + 농특세 + 중과 배제 각주. 불적용: rose + 사유 목록.
  */
 
-import type { New99Result, Unsold988Result } from "@/lib/tax-engine/types/transfer.types";
+import type {
+  New99Result,
+  Unsold988Result,
+  UnsoldHybridResult,
+} from "@/lib/tax-engine/types/transfer.types";
 
 type Detail =
   | { kind: "new_99"; result: New99Result }
-  | { kind: "unsold_98_8"; result: Unsold988Result };
+  | { kind: "unsold_98_8"; result: Unsold988Result }
+  | { kind: "unsold_98_7"; result: UnsoldHybridResult }
+  | { kind: "unsold_99_2"; result: UnsoldHybridResult };
 
 const TITLES: Record<Detail["kind"], string> = {
   new_99: "§99 — 신축주택 양도소득세 감면 (IMF 1차)",
   unsold_98_8: "§98의8 — 준공후미분양주택 50% 공제",
+  unsold_98_7: "§98의7 — 미분양주택 과세특례 (9억 이하)",
+  unsold_99_2: "§99의2 — 신축주택등 과세특례 (신축·미분양·1세대1주택)",
 };
 
 export function IncomeDeductionDetailCard({ kind, result }: Detail) {
   const title = TITLES[kind];
+  // P2 하이브리드 — 5년 내 양도 = 세액감면 경로 (소득금액 차감 아님)
+  const isTaxAmountMode =
+    (kind === "unsold_98_7" || kind === "unsold_99_2") &&
+    (result as UnsoldHybridResult).effectCategory === "tax_amount";
   if (!result.isEligible) {
     return (
       <div className="rounded-lg border border-rose-300 bg-rose-50/80 dark:border-rose-700/50 dark:bg-rose-950/30 p-4 space-y-3">
@@ -45,7 +57,11 @@ export function IncomeDeductionDetailCard({ kind, result }: Detail) {
       <div className="flex items-center gap-2 flex-wrap">
         <p className="text-sm font-semibold text-emerald-900 dark:text-emerald-200">{title}</p>
         <span className="text-xs rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 px-2 py-0.5 font-medium">
-          {result.isWithin5Years ? "취득 후 5년 이내 양도" : "취득 후 5년 경과 양도"}
+          {result.isWithin5Years
+            ? isTaxAmountMode
+              ? "취득 후 5년 이내 — 100% 세액감면"
+              : "취득 후 5년 이내 양도"
+            : "취득 후 5년 경과 양도"}
         </span>
         {kind === "new_99" && (result as New99Result).redevelopedVariantApplied && (
           <span className="text-xs rounded-full bg-violet-100 text-violet-800 dark:bg-violet-950/40 dark:text-violet-300 px-2 py-0.5 font-medium">
@@ -65,10 +81,12 @@ export function IncomeDeductionDetailCard({ kind, result }: Detail) {
         ))}
         <div className="border-t border-emerald-200 dark:border-emerald-800/40 pt-1.5 flex items-baseline justify-between">
           <span className="text-xs font-semibold text-emerald-900 dark:text-emerald-200">
-            과세대상소득금액에서 차감한 양도소득금액
+            {isTaxAmountMode ? "감면세액 (산출세액의 100%)" : "과세대상소득금액에서 차감한 양도소득금액"}
           </span>
           <span className="text-sm font-bold text-emerald-900 dark:text-emerald-100 font-mono tabular-nums">
-            {result.reducibleTransferIncome.toLocaleString()}
+            {isTaxAmountMode
+              ? (result as UnsoldHybridResult).reductionAmount.toLocaleString()
+              : result.reducibleTransferIncome.toLocaleString()}
           </span>
         </div>
       </div>

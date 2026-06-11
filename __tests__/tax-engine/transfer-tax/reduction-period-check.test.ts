@@ -139,14 +139,16 @@ describe("§99의2 시한 검증 — 매매계약일 전용", () => {
     expect(r.inPeriod).toBe(false);
   });
 
-  it("매매계약 미입력 → 시한 외 (fallback 없음)", () => {
+  // P2 (2026-06-12): 미입력 낙관 통과로 정책 변경 — 본 판정은 reduction-수준
+  // contractDate992 기준 evaluateUnsold992 (자기건설은 사용승인일이라 자산 계약일로 차단 불가).
+  it("매매계약 미입력 → 낙관 통과 (정확 판정은 evaluator — P2)", () => {
     const ctx: PeriodCheckContext = {
       transferDate,
       contractDate: undefined,
       acquisitionDate: new Date("2013-05-01T00:00:00"), // §99의2는 contractDate 전용 → 무시
     };
     const r = checkReductionPeriod("unsold_99_2", ctx);
-    expect(r.inPeriod).toBe(false);
+    expect(r.inPeriod).toBe(true);
   });
 });
 

@@ -251,6 +251,62 @@ export type RentalReductionFormVariant =
       /** 양도시 기준시가 (원) — 미입력 시 자산 standardPriceAtTransfer fallback */
       standardPriceAtTransfer988: string;
     }
+  // ── P2 (2026-06-11): §98의7 9억↓ 미분양 — 하이브리드 (5년 내 100% 세액감면 / 5년 후 공제) ──
+  | {
+      type: "unsold_98_7";
+      /** 최초 매매계약일 (YYYY-MM-DD) — 시한 2012.9.24~12.31 (계약금 납부) */
+      contractDate987: string;
+      /** 취득가액 (원) — 9억 이하 (취득세·부대비용 제외 실거래가) */
+      acquisitionPrice987: string;
+      /** 2012.9.24 현재 미분양 확인 (령 §98의6① — 2012.9.23까지 미계약 + 선착순) */
+      isUnsoldAtCutoff987: boolean;
+      /** 사업주체등과 최초 매매계약 + 계약금 (령 §98의6③) */
+      isFirstContract987: boolean;
+      /** 매매계약일 현재 입주 사실 없음 (령 §98의6②2호) */
+      isNotOccupiedAtContract987: boolean;
+      /** 계약 해제 후 본인·배우자 등 재계약 아님 (령 §98의6②3·4호) */
+      isNotRecontract987: boolean;
+      /** 취득시 기준시가 (원) — 5년 후 양도 안분 */
+      standardPriceAtAcquisition987: string;
+      /** 취득일+5년 시점 기준시가 (원) */
+      standardPriceAt5Years987: string;
+      /** 양도시 기준시가 (원) — 미입력 시 자산 standardPriceAtTransfer fallback */
+      standardPriceAtTransfer987: string;
+    }
+  // ── P2 (2026-06-11): §99의2 신축·미분양·1세대1주택 — 하이브리드 (6억 OR 85㎡) ──
+  | {
+      type: "unsold_99_2";
+      /** 대상 주택 유형 — 령① 신축·미분양 / 령①8호 자기건설 / 령③ 1세대1주택자 주택 */
+      houseType992: "new_or_unsold" | "self_built" | "existing_one_house";
+      /** 최초 매매계약일 (YYYY-MM-DD) — new_or_unsold·existing (2013.4.1~12.31) */
+      contractDate992: string;
+      /** 사용승인·사용검사일 (YYYY-MM-DD) — self_built (임시사용승인 포함) */
+      usageApprovalDate992: string;
+      /** 실거래 취득가액 (원) — 취득세·부대비용 제외 */
+      acquisitionPrice992: string;
+      /** 연면적(공동주택·오피스텔 전용, ㎡) — DecimalInput */
+      exclusiveAreaSqm992: string;
+      /** (new_or_unsold) 신축주택등 해당 확인 (령 §99의2①1~9호) */
+      meetsHouseTypeRequirement992: boolean;
+      /** (self_built) 조합원 관리처분·멸실 재건축 아님 (령①8호 가·나목) */
+      isNotExcludedSelfBuilt992: boolean;
+      /** (existing) 1세대1주택 양도자 요건 (령③) */
+      meetsOneHouseSellerRequirement992: boolean;
+      /** 오피스텔 여부 (령①9호·③1호) */
+      isOfficetel992: boolean;
+      /** 오피스텔 사후요건 — 주민등록/임대등록 (령②4호) */
+      meetsOfficetelRequirement992: boolean;
+      /** 계약 해제 후 재계약 아님 (령②2·3호·⑤2호) */
+      isNotRecontract992: boolean;
+      /** 확인 날인 매매계약서 보유 (법④ — 미보유 시 적용 불가) */
+      hasConfirmationSeal992: boolean;
+      /** 취득시 기준시가 (원) */
+      standardPriceAtAcquisition992: string;
+      /** 취득일+5년 시점 기준시가 (원) */
+      standardPriceAt5Years992: string;
+      /** 양도시 기준시가 (원) — 미입력 시 자산 fallback */
+      standardPriceAtTransfer992: string;
+    }
   // ── §98의9 수도권 밖 준공후미분양 — 주택수 제외 (2026-06-11) ──
   | {
       type: "unsold_98_9";

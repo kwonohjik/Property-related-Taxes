@@ -232,7 +232,10 @@ export const REDUCTION_METADATA: Record<TransferReductionId, ReductionMetadata> 
     category: "unsold_housing",
     effectCategory: "tax_amount",
     uiLabel: "§98의7 — 9억↓ 미분양 100%",
-    effectLabel: "5년 내 100% / 5년 후 5년간 발생분 차감 (2012.9.24~2012.12.31)",
+    // M-3 (2026-06-11): 적용 주체 내국인 (거주자 아님 — 법 §98의7①)
+    effectLabel: "5년 내 세액 100% 감면 / 5년 후 5년간 발생분 차감 (내국인, 2012.9.24~2012.12.31 최초 매매계약)",
+    // P2 (2026-06-11): 본격 구현 — evaluateUnsold987 + 하이브리드 2-경로
+    isFullyImplemented: true,
   },
   unsold_98_8: {
     id: "unsold_98_8",
@@ -261,7 +264,10 @@ export const REDUCTION_METADATA: Record<TransferReductionId, ReductionMetadata> 
     category: "unsold_housing",
     effectCategory: "tax_amount",
     uiLabel: "§99의2 — 신축·미분양·1세대1주택 100%",
-    effectLabel: "5년 내 100% / 5년 후 5년간 발생분 차감 (2013.4.1~2013.12.31, 6억↓ OR 85㎡↓, 가격 급등 지역 배제)",
+    // 가격급등지역(법③)은 령 위임 규정 부재 실측 — 지정 지역 없음 (plan §1)
+    effectLabel: "5년 내 세액 100% 감면 / 5년 후 5년간 발생분 차감 (2013.4.1~2013.12.31, 6억↓ OR 85㎡↓, 오피스텔 포함·확인날인 필요)",
+    // P2 (2026-06-11): 본격 구현 — evaluateUnsold992 + 하이브리드 2-경로
+    isFullyImplemented: true,
   },
 
   // ── 별도 카테고리 ──
