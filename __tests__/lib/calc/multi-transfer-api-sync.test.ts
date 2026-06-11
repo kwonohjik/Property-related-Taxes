@@ -131,6 +131,11 @@ describe("[H-2] 미지원 고급 모드 명시 차단", () => {
     ["1990토지", (f) => { f.assets[0] = { ...f.assets[0], assetKind: "land", pre1990Enabled: true }; }],
     ["다필지", (f) => { f.assets[0] = { ...f.assets[0], assetKind: "land", parcelMode: true }; }],
     ["토지건물분리", (f) => { f.assets[0] = { ...f.assets[0], hasSeperateLandAcquisitionDate: true }; }],
+    // [리뷰 H-1] 차감형·세액감면형·세율특칙 감면 — 다건 합산 미지원
+    ["§98의7 미분양(차감/세액감면)", (f) => { f.assets[0] = { ...f.assets[0], reductions: [{ type: "unsold_98_7" } as never] }; }],
+    ["§99의2 신축등(하이브리드)", (f) => { f.assets[0] = { ...f.assets[0], reductions: [{ type: "unsold_99_2" } as never] }; }],
+    ["§98 미분양(세율 20% 특칙)", (f) => { f.assets[0] = { ...f.assets[0], reductions: [{ type: "unsold_98" } as never] }; }],
+    ["§99 신축주택(차감)", (f) => { f.assets[0] = { ...f.assets[0], reductions: [{ type: "new_99" } as never] }; }],
   ];
 
   it.each(cases)("%s 자산은 validateMultiSupportedMode가 차단 사유 반환", (_label, mutate) => {
@@ -192,6 +197,26 @@ describe("[H-2] 미지원 고급 모드 명시 차단", () => {
       fixedAcquisitionPrice: "300,000,000",
     };
     expect(validateMultiSupportedMode(form)).toBeNull();
+  });
+
+  it("[리뷰 H-1] 모드 2 — 보유 감면주택 주택수 제외(specialHouseExclusions) 차단", () => {
+    const form = baseForm();
+    form.specialHouseExclusions = [
+      { article: "unsold_98_8", houseAcquisitionDate: "2015-06-01", houseContractDate: "", requirementsConfirmed: true },
+    ];
+    const msg = validateMultiSupportedMode(form);
+    expect(msg).not.toBeNull();
+    expect(msg).toContain("주택수 제외");
+  });
+
+  it("[리뷰 H-1 대조군] 다건 지원 감면(자경 §69·§97 시리즈)은 통과", () => {
+    const farming = baseForm();
+    farming.assets[0] = { ...farming.assets[0], reductions: [{ type: "self_farming" } as never] };
+    expect(validateMultiSupportedMode(farming)).toBeNull();
+
+    const rental = baseForm();
+    rental.assets[0] = { ...rental.assets[0], reductions: [{ type: "rental_97_main" } as never] };
+    expect(validateMultiSupportedMode(rental)).toBeNull();
   });
 });
 

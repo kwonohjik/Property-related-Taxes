@@ -22,8 +22,9 @@ interface PeriodRule {
   failReason: string;
 }
 
-/** YYYY-MM-DD 문자열 → Date (시간대 무관) */
-const D = (s: string) => new Date(s + "T00:00:00");
+// YYYY-MM-DD 문자열 → Date. UTC 자정 파싱 — API 경유 입력(new Date("YYYY-MM-DD") = UTC midnight)과
+// 동일 기준. "T00:00:00" 로컬 자정은 KST 서버에서 9시간 어긋나 경계일 오판 (unsold-hybrid-p5 D()와 통일).
+const D = (s: string) => new Date(s);
 
 /** 일자가 [start, end] 구간(폐구간) 내인지 */
 const within = (d: Date | undefined, start: Date, end: Date): boolean =>

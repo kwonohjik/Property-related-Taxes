@@ -35,6 +35,24 @@ export type IncomeDeductionId =
   | "unsold_98_4"
   | "unsold_98";
 
+/**
+ * 차감형·세액감면형 라우터가 처리하는 전체 조문 ID (11종).
+ * 다건(multi) 합산 경로는 이 체계를 미지원하므로 `validateMultiSupportedMode`에서 명시 차단에 사용.
+ */
+export const ALL_INCOME_DEDUCTION_IDS: ReadonlyArray<IncomeDeductionId> = [
+  "new_99_3",
+  "new_99",
+  "unsold_98_8",
+  "unsold_98_7",
+  "unsold_99_2",
+  "unsold_98_3",
+  "unsold_98_5",
+  "unsold_98_6",
+  "unsold_98_2",
+  "unsold_98_4",
+  "unsold_98",
+];
+
 /** 중과 배제 대상 (소령 §167의3①5호 열거 — §98의4는 **비열거**라 제외, P4-5 anchor) */
 export const SURCHARGE_EXCLUDED_INCOME_DEDUCTION_IDS: ReadonlyArray<IncomeDeductionId> = [
   "new_99_3",
@@ -129,6 +147,11 @@ const HYBRID_DETAIL_FIELDS: Record<string, keyof Pick<IncomeDeductionResolution,
 
 /**
  * 차감형 감면 통합 평가 — transfer-tax.ts STEP 4.6 + STEP 0.45(중과 배제 선판정) 진입점.
+ *
+ * 각 조문을 순서대로 평가하되 **적격(eligibleId)을 만나면 즉시 채택**하고, 부적격이면 다음 후보를
+ * 계속 평가한다 (리뷰 M-1: 부적격 선순위가 적격 후순위를 차단하던 first-match 버그 해소).
+ * 적격 후보가 없으면 첫 부적격 결과를 표시용으로 반환.
+ * (조특법 §127⑦ 복수 적격 "납세자 선택 1건"은 UI 카테고리 라디오로 입력 단계에서 1건만 허용.)
  */
 export function resolveIncomeDeduction(
   reductions: ReadonlyArray<{ type: string }> | undefined,
@@ -136,7 +159,28 @@ export function resolveIncomeDeduction(
 ): IncomeDeductionResolution {
   if (!reductions || reductions.length === 0) return { reducible: 0 };
 
-  // ── §99의3 (기존 분기 이전 — 호출 로직·필드 fallback 동일 유지) ──
+  const evaluators: Array<() => IncomeDeductionResolution | null> = [
+    () => evalNew993(reductions, ctx),
+    () => evalNew99(reductions, ctx),
+    () => evalUnsold988(reductions, ctx),
+    () => evalHybrid(reductions, ctx),
+  ];
+
+  let firstIneligible: IncomeDeductionResolution | undefined;
+  for (const evaluate of evaluators) {
+    const res = evaluate();
+    if (!res) continue; // 해당 조문이 reductions에 없음
+    if (res.eligibleId) return res; // 적격 — 즉시 채택
+    if (!firstIneligible) firstIneligible = res; // 부적격 — 표시용 보관 (적격 없을 때만 사용)
+  }
+  return firstIneligible ?? { reducible: 0 };
+}
+
+/** §99의3 — 호출 로직·필드 fallback 동일 유지 (M-1 추출, 미입력 시 null) */
+function evalNew993(
+  reductions: ReadonlyArray<{ type: string }>,
+  ctx: IncomeDeductionContext,
+): IncomeDeductionResolution | null {
   const r993 = reductions.find((x) => x.type === "new_99_3") as ReductionLike | undefined;
   if (r993) {
     // Round 9 정정 (2026-05-06): contractDate993 (legacy) → assetContractDate 우선순위
@@ -167,8 +211,14 @@ export function resolveIncomeDeduction(
       detail.ineligibleReasons.map((x) => x.message).join(" · "), detail.legalBasis,
       { new993Detail: detail });
   }
+  return null;
+}
 
-  // ── §99 (P1 신규) ──
+/** §99 — P1 신규 (M-1 추출, 미입력 시 null) */
+function evalNew99(
+  reductions: ReadonlyArray<{ type: string }>,
+  ctx: IncomeDeductionContext,
+): IncomeDeductionResolution | null {
   const r99 = reductions.find((x) => x.type === "new_99") as ReductionLike | undefined;
   if (r99) {
     const detail = evaluateNew99({
@@ -196,8 +246,14 @@ export function resolveIncomeDeduction(
       detail.ineligibleReasons.map((x) => x.message).join(" · "), detail.legalBasis,
       { new99Detail: detail });
   }
+  return null;
+}
 
-  // ── §98의8 (P1 신규) ──
+/** §98의8 — P1 신규 (M-1 추출, 미입력 시 null) */
+function evalUnsold988(
+  reductions: ReadonlyArray<{ type: string }>,
+  ctx: IncomeDeductionContext,
+): IncomeDeductionResolution | null {
   const r988 = reductions.find((x) => x.type === "unsold_98_8") as ReductionLike | undefined;
   if (r988) {
     const detail = evaluateUnsold988({
@@ -223,8 +279,17 @@ export function resolveIncomeDeduction(
       detail.ineligibleReasons.map((x) => x.message).join(" · "), detail.legalBasis,
       { unsold988Detail: detail });
   }
+  return null;
+}
 
-  // ── 하이브리드 (P2 §98의7·§99의2 + P3 §98의3·§98의5·§98의6) — 5년 후만 차감, 5년 내는 세액감면(calcReductions) ──
+/**
+ * 하이브리드 (P2 §98의7·§99의2 + P3 §98의3·§98의5·§98의6 + P4·P5) — 5년 후만 차감,
+ * 5년 내는 세액감면(calcReductions). M-1 추출, 미입력·평가 불가 시 null.
+ */
+function evalHybrid(
+  reductions: ReadonlyArray<{ type: string }>,
+  ctx: IncomeDeductionContext,
+): IncomeDeductionResolution | null {
   const rHybrid = reductions.find((x) => ALL_HYBRID_IDS.includes(x.type)) as
     | ReductionLike
     | undefined;
@@ -258,8 +323,7 @@ export function resolveIncomeDeduction(
       };
     }
   }
-
-  return { reducible: 0 };
+  return null;
 }
 
 function buildResolution(
