@@ -10,7 +10,12 @@
 
 import { differenceInYears, isBefore, subYears } from "date-fns";
 import { INH, GIFT } from "./legal-codes";
-import { applyRate, calculateProgressiveTax, truncateToThousand } from "./tax-utils";
+import {
+  applyRate,
+  calculateProgressiveTax,
+  safeMultiplyThenDivide,
+  truncateToThousand,
+} from "./tax-utils";
 import type {
   CalculationStep,
   PriorGift,
@@ -282,12 +287,16 @@ export function calcGiftGenerationSkipSurchargeWithLimit(
   const surchargeBase = Math.floor(computedTax * ratio * surchargeRate);
 
   // ⑩ 한도 = ⑦ × ⑤_prior / ⑤ × 할증율 (단일 floor)
+  // 곱셈이 MAX_SAFE_INTEGER 초과 가능 → 할증율을 정수 분자(×10)로 올려
+  // safeMultiplyThenDivide BigInt 경로에서 단일 floor 의미 보존
+  const surchargeRateTenths = Math.round(surchargeRate * 10); // 0.3 → 3, 0.4 → 4
   const surchargeCreditLimit =
     aggregatedTaxBase === 0
       ? 0
-      : Math.floor(
-          (computedTax * priorAggregation.priorAddedTaxBase) / aggregatedTaxBase *
-            surchargeRate,
+      : safeMultiplyThenDivide(
+          computedTax * surchargeRateTenths,
+          priorAggregation.priorAddedTaxBase,
+          aggregatedTaxBase * 10,
         );
 
   // ⑪ 차감 기할증과세액

@@ -7,6 +7,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { ChevronLeft } from "lucide-react";
 import type { GiftTaxResult, EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
+import type { GiftDonorRelation } from "@/lib/tax-engine/types/inheritance-gift.types";
+import { GIFT_DONOR_LABELS } from "@/components/calc/prior-gift/meta";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
 import { LoginPromptBanner } from "@/components/calc/shared/LoginPromptBanner";
@@ -147,7 +149,7 @@ interface Props {
     giftDate: string;
     giftAmount: number;
     sourceCalculationId?: string;
-    donor?: string;
+    donor?: GiftDonorRelation;
     // PR 3 (2026-05-22): 부표 1 양식 정합 — 04 개별주택·06 오피스텔·08 부동산 권리 신규
     propertyCategory?:
       | "cash"
@@ -364,7 +366,7 @@ export function GiftTaxResultView({
               >
                 <div className="flex items-center gap-2">
                   <span className="text-gray-600 dark:text-gray-400">
-                    {pg.giftDate} {pg.donor && `· ${pg.donor}`}
+                    {pg.giftDate} {pg.donor && `· ${GIFT_DONOR_LABELS[pg.donor]}`}
                   </span>
                   {pg.sourceCalculationId && (
                     <span

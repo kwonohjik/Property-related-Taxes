@@ -17,6 +17,7 @@ import {
 } from "@/components/calc/inputs/CurrencyInput";
 import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import {
   DONOR_RELATION_LABELS,
   DONOR_RELATION_LIST,
@@ -514,32 +515,29 @@ export function GiftRowEditor({
             <label className="block text-xs font-medium text-sky-700">
               부수토지 여부 — 02/03 코드 분기
             </label>
-            <div className="flex gap-2 text-xs">
-              <label className="flex items-center gap-1 cursor-pointer">
-                <input
-                  type="radio"
-                  checked={gift.isAttachedLandToBuilding === false}
-                  onChange={() => set({ isAttachedLandToBuilding: false })}
-                />
-                <span>02 토지I (순수토지)</span>
-              </label>
-              <label className="flex items-center gap-1 cursor-pointer">
-                <input
-                  type="radio"
-                  checked={gift.isAttachedLandToBuilding === true}
-                  onChange={() => set({ isAttachedLandToBuilding: true })}
-                />
-                <span>03 토지II (일반건물 부수토지)</span>
-              </label>
-              <label className="flex items-center gap-1 cursor-pointer text-gray-500">
-                <input
-                  type="radio"
-                  checked={gift.isAttachedLandToBuilding === undefined}
-                  onChange={() => set({ isAttachedLandToBuilding: undefined })}
-                />
-                <span>미지정</span>
-              </label>
-            </div>
+            <RadioCardGroup<"pure" | "attached" | "unspecified">
+              name={`attachedLandToBuilding-${index}`}
+              tone="sky"
+              layout="inline"
+              value={
+                gift.isAttachedLandToBuilding === undefined
+                  ? "unspecified"
+                  : gift.isAttachedLandToBuilding
+                    ? "attached"
+                    : "pure"
+              }
+              onChange={(v) =>
+                set({
+                  isAttachedLandToBuilding:
+                    v === "unspecified" ? undefined : v === "attached",
+                })
+              }
+              options={[
+                { value: "pure", label: "02 토지I (순수토지)" },
+                { value: "attached", label: "03 토지II (일반건물 부수토지)" },
+                { value: "unspecified", label: "미지정" },
+              ]}
+            />
           </div>
         )}
 

@@ -9,7 +9,7 @@
  * 행 편집·영리법인 펼침·합산 요약은 `components/calc/prior-gift/` 의 sibling 파일에서.
  */
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { PriorGiftHistoryModal } from "@/components/calc/gift/PriorGiftHistoryModal";
 import { GiftRowEditor } from "@/components/calc/prior-gift/GiftRowEditor";
 import { AggregationSummary } from "@/components/calc/prior-gift/AggregationSummary";
@@ -91,9 +91,15 @@ export function PriorGiftInput({
   const canLookup =
     (mode === "gift" && Boolean(currentGiftDate) && Boolean(currentDonor)) ||
     (mode === "inheritance" && Boolean(currentDeathDate));
-  const excludeIds = gifts
-    .map((g) => g.sourceCalculationId)
-    .filter((v): v is string => Boolean(v));
+  // 모달 useEffect dep로 들어가는 배열 — 매 렌더 새 identity면 모달 열린 동안
+  // 부모 렌더마다 IndexedDB 재조회 발생 → useMemo로 identity 안정화
+  const excludeIds = useMemo(
+    () =>
+      gifts
+        .map((g) => g.sourceCalculationId)
+        .filter((v): v is string => Boolean(v)),
+    [gifts],
+  );
 
   const windowYears = mode === "inheritance" ? "10년 / 비상속인 5년" : "10년";
 
