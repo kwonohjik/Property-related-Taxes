@@ -111,10 +111,13 @@ const RULES: Record<TransferReductionId, PeriodRule> = {
   // ── 미분양 §98 시리즈 + §99의2 ──
   unsold_98: {
     label: "취득 1995.11.1~1997.12.31 (③항 1998.3.1~1998.12.31)",
+    // P5 (2026-06-12): 일자 미입력 시 낙관 통과 — 본 판정은 evaluateUnsold98 (취득 OR 계약 2-트랙)
     check: (c) => {
       const t = c.contractDate ?? c.acquisitionDate;
-      return within(t, D("1995-11-01"), D("1997-12-31")) ||
-             within(t, D("1998-03-01"), D("1998-12-31"));
+      if (t === undefined) return true;
+      const inTrack = (d: Date | undefined) =>
+        within(d, D("1995-11-01"), D("1997-12-31")) || within(d, D("1998-03-01"), D("1998-12-31"));
+      return inTrack(c.acquisitionDate) || inTrack(c.contractDate);
     },
     failReason: "미분양 국민주택 취득기간 시한 외 — 조특법 §98 ①·③",
   },

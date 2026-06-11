@@ -717,6 +717,15 @@ export function validateStepDetailed(step: number, form: TransferFormData): Vali
   if (step === 1) {
     if (!form.householdHousingCount) return { step, message: "세대 보유 주택 수를 선택하세요." };
 
+    // P5 모드 2 (⑧): 보유 감면주택 행 — 조문·취득일 필수 (확인 토글은 낙관 — 엔진 불적용 사유)
+    const she = form.specialHouseExclusions ?? [];
+    for (let i = 0; i < she.length; i++) {
+      if (!she[i].article)
+        return { step, message: `보유 감면주택 ${i + 1}: 적용 조문을 선택하세요.` };
+      if (!she[i].houseAcquisitionDate && !she[i].houseContractDate)
+        return { step, message: `보유 감면주택 ${i + 1}: 감면주택의 취득일(또는 매매계약일)을 입력하세요.` };
+    }
+
     // 1세대1주택 + housing 자산 + interval 모드 거주 구간 검증
     const primary = form.assets?.[0];
     if (form.isOneHousehold && primary && primary.assetKind === "housing"

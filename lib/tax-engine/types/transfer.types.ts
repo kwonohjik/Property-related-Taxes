@@ -78,15 +78,9 @@ export interface TransferTaxInput {
   propertyType: "housing" | "land" | "building" | "right_to_move_in" | "presale_right" | "mixed-use-house" | "commercial_building" | "general_building_unit" | "general_building" | "redevelopment_apt";
   /** 양도가액 (원, 정수) */
   transferPrice: number;
-  /**
-   * 총 물건 양도가액 (지분 모드 전용). 12억 비과세 안분 분모. 미설정 시 transferPrice 사용.
-   * 사례 27 (아파트 2번 지분취득) anchor.
-   */
+  /** 총 물건 양도가액 (지분 모드 전용) — 12억 안분 분모. 미설정 시 transferPrice (사례 27) */
   totalPropertyTransferPrice?: number;
-  /**
-   * 부담부증여 12억 안분 분모 (F-1, 해석 B): 증여가액 전체(C). 일반 양도 시 미설정.
-   * checkOneHouseExemption()·calcOneHouseProration() 우선순위 1번 분모.
-   */
+  /** 부담부증여 12억 안분 분모 (F-1 해석 B — 증여가액 C). 우선순위 1번 분모 */
   burdenedGiftDenominator?: number;
   /** 양도일 */
   transferDate: Date;
@@ -119,11 +113,7 @@ export interface TransferTaxInput {
   standardPriceAtTransfer?: number;
   /** 세대 보유 주택 수 */
   householdHousingCount: number;
-  /**
-   * 세대 보유 조합원입주권 수 (양도일 현재).
-   * §89①4호 가목 1세대1입주권 비과세 판단 (다른 주택 없음 + 입주권 1개).
-   * 미제공 시 0으로 간주.
-   */
+  /** 세대 보유 조합원입주권 수 (양도일 현재) — §89①4호 가목 판단. 미제공 시 0 */
   householdRightCount?: number;
   /** 거주기간 (월) */
   residencePeriodMonths: number;
@@ -277,6 +267,10 @@ export interface TransferTaxInput {
   skipLossFloor?: boolean;
   /** P3 특칙 — §98의3④·§98의5③·§98의6③ 단기세율(§104①2·3호) 배제. 엔진 내부 주입 (STEP 7). */
   suppressShortTermRate?: boolean;
+  /** P5 특례 — §98①1호 세율 20% 단일 (§104① 불구). 엔진 내부 주입 (STEP 7). */
+  forceFlatRate20?: boolean;
+  /** P5 모드 2 — 보유 감면주택 §89①3호 주택수 제외 (7개 조문 ②·§98 령②·§99②). */
+  specialHouseExclusions?: import("../transfer-reductions/unsold-hybrid-p5").SpecialHouseExclusionInput[];
   /**
    * 1990.8.30. 이전 취득 토지 기준시가 환산 입력 (선택).
    * 제공 시 엔진이 calculatePre1990LandValuation()으로 기준시가를 산출하여
@@ -678,6 +672,10 @@ export interface TransferTaxResult {
   unsold982Detail?: UnsoldHybridResult;
   /** §98의4 비거주자 10% 세액감면 — 5년 무관 단일, 중과 배제 비대상 (P4) */
   unsold984Detail?: UnsoldHybridResult;
+  /** §98 미분양 국민주택 — 세율 20% 특례 (P5) */
+  unsold98Detail?: UnsoldHybridResult;
+  /** P5 모드 2 — 보유 감면주택 주택수 제외 판정 echo */
+  specialHouseExclusionDetail?: import("../transfer-reductions/unsold-hybrid-p5").SpecialHouseExclusionResolution;
   /** 신축·미분양 감면 상세 (newHousingDetails 제공 시) — 매칭 조문·감면율·5년 안분 표시용 */
   newHousingReductionDetail?: NewHousingReductionResult;
   /**

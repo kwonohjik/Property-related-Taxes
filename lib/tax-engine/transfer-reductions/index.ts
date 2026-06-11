@@ -199,6 +199,18 @@ export {
   type Unsold984Input,
 } from "./unsold-hybrid-p4";
 
+// ── P5 (2026-06-12): §98 (세율 20%) + 모드 2 N-way ──
+export {
+  evaluateUnsold98,
+  resolveSpecialHouseExclusions,
+  SPECIAL_HOUSE_EXCLUSION_WINDOWS,
+  UNSOLD_98_FLAT_RATE,
+  type Unsold98Input,
+  type SpecialHouseExclusionArticle,
+  type SpecialHouseExclusionInput,
+  type SpecialHouseExclusionResolution,
+} from "./unsold-hybrid-p5";
+
 /**
  * 23개 조문 통합 stub evaluator. Phase 1 단계는 모두 isEligible:false 반환.
  * 시한 외 케이스는 명시적 사유, 시한 내 케이스는 "구현 예정" 사유.

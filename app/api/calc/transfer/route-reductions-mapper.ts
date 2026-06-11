@@ -73,6 +73,13 @@ export function mapReductionsToEngine(reductions: ReductionPayload[]): TransferR
         rentalEndDate988: r.rentalEndDate988 ? new Date(r.rentalEndDate988) : undefined,
       } as TransferReduction;
     }
+    // P5 §98 (2026-06-12): string 일자 → Date 변환 (⑭)
+    if (r.type === "unsold_98") {
+      return {
+        ...r,
+        contractDate98: r.contractDate98 ? new Date(r.contractDate98) : undefined,
+      } as TransferReduction;
+    }
     // P4 §98의2·§98의4 (2026-06-12): string 일자 → Date 변환 (⑭)
     if (r.type === "unsold_98_2") {
       return {

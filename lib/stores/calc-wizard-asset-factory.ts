@@ -428,6 +428,18 @@ export function migrateAsset(raw: unknown): AssetForm {
           ...r,
         };
       }
+      // P5 §98 (2026-06-12): 구 stub 데이터 본 필드 누락 보정 (③)
+      if (r && r.type === "unsold_98") {
+        return {
+          contractDate98: "",
+          isNationalScale98: false,
+          isOutsideSeoul98: false,
+          isUnsoldConfirmed98: false,
+          isFirstBuyerNoOccupancy98: false,
+          rentedFor5Years98: false,
+          ...r,
+        };
+      }
       // P4 §98의2·§98의4 (2026-06-12): 구 stub 데이터 본 필드 누락 보정 (③)
       if (r && r.type === "unsold_98_2") {
         return {

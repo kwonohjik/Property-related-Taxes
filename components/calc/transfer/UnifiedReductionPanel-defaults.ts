@@ -198,6 +198,18 @@ export function getReductionDefault(id: TransferReductionId): AssetReductionForm
       standardPriceAtTransfer988: "",
     };
   }
+  // P5 (2026-06-12): §98
+  if (id === "unsold_98") {
+    return {
+      type: "unsold_98",
+      contractDate98: "",
+      isNationalScale98: false,
+      isOutsideSeoul98: false,
+      isUnsoldConfirmed98: false,
+      isFirstBuyerNoOccupancy98: false,
+      rentedFor5Years98: false,
+    };
+  }
   // P4 (2026-06-12): §98의2 / §98의4
   if (id === "unsold_98_2") {
     return {

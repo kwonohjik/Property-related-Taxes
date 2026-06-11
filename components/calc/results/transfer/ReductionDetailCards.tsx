@@ -49,7 +49,8 @@ export function ReductionDetailCards({ result }: Props) {
     !!result.unsold985Detail ||
     !!result.unsold986Detail ||
     !!result.unsold982Detail ||
-    !!result.unsold984Detail;
+    !!result.unsold984Detail ||
+    !!result.unsold98Detail;
 
   if (!hasAny) return null;
 
@@ -115,6 +116,10 @@ export function ReductionDetailCards({ result }: Props) {
       )}
       {result.unsold984Detail && (
         <IncomeDeductionDetailCard kind="unsold_98_4" result={result.unsold984Detail} />
+      )}
+      {/* P5 (2026-06-12) */}
+      {result.unsold98Detail && (
+        <IncomeDeductionDetailCard kind="unsold_98" result={result.unsold98Detail} />
       )}
     </>
   );

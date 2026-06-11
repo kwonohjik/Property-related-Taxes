@@ -32,7 +32,8 @@ export type IncomeDeductionId =
   | "unsold_98_5"
   | "unsold_98_6"
   | "unsold_98_2"
-  | "unsold_98_4";
+  | "unsold_98_4"
+  | "unsold_98";
 
 /** 중과 배제 대상 (소령 §167의3①5호 열거 — §98의4는 **비열거**라 제외, P4-5 anchor) */
 export const SURCHARGE_EXCLUDED_INCOME_DEDUCTION_IDS: ReadonlyArray<IncomeDeductionId> = [
@@ -45,6 +46,8 @@ export const SURCHARGE_EXCLUDED_INCOME_DEDUCTION_IDS: ReadonlyArray<IncomeDeduct
   "unsold_98_5",
   "unsold_98_6",
   "unsold_98_2",
+  // §98 — 소령 §167의3①3호 (감면대상장기임대주택 — 5년+ 임대 국민주택) 경로 (P5)
+  "unsold_98",
 ];
 
 /** 라우터 평가 컨텍스트 — 자산-수준 입력에서 추출 (TransferTaxInput 직접 의존 회피) */
@@ -80,6 +83,7 @@ export interface IncomeDeductionResolution {
   unsold986Detail?: UnsoldHybridResult;
   unsold982Detail?: UnsoldHybridResult;
   unsold984Detail?: UnsoldHybridResult;
+  unsold98Detail?: UnsoldHybridResult;
   /** step 표시용 — 적용/불적격 공통 */
   stepLabel?: string;
   legalBasis?: string;
@@ -107,11 +111,12 @@ const STEP_LABELS: Record<IncomeDeductionId, string> = {
   unsold_98_6: "§98의6 준공후미분양 과세특례",
   unsold_98_2: "§98의2 지방 미분양주택 과세특례",
   unsold_98_4: "§98의4 비거주자 주택취득 과세특례",
+  unsold_98: "§98 미분양 국민주택 과세특례",
 };
 
 const HYBRID_DETAIL_FIELDS: Record<string, keyof Pick<IncomeDeductionResolution,
   "unsold987Detail" | "unsold992Detail" | "unsold983Detail" | "unsold985Detail" | "unsold986Detail"
-  | "unsold982Detail" | "unsold984Detail">> = {
+  | "unsold982Detail" | "unsold984Detail" | "unsold98Detail">> = {
   unsold_98_7: "unsold987Detail",
   unsold_99_2: "unsold992Detail",
   unsold_98_3: "unsold983Detail",
@@ -119,6 +124,7 @@ const HYBRID_DETAIL_FIELDS: Record<string, keyof Pick<IncomeDeductionResolution,
   unsold_98_6: "unsold986Detail",
   unsold_98_2: "unsold982Detail",
   unsold_98_4: "unsold984Detail",
+  unsold_98: "unsold98Detail",
 };
 
 /**
@@ -245,7 +251,9 @@ export function resolveIncomeDeduction(
           ? undefined
           : detail.ineligibleReasons.map((x) => x.message).join(" · "),
         taxAmountMode: detail.isEligible && detail.effectCategory === "tax_amount",
-        specialOnlyMode: detail.isEligible && detail.effectCategory === "lthd_rate_special",
+        specialOnlyMode:
+          detail.isEligible &&
+          (detail.effectCategory === "lthd_rate_special" || detail.effectCategory === "flat_rate_20"),
         ...detailField,
       };
     }
@@ -279,11 +287,14 @@ export function buildIncomeDeductionStep(
   incomeBefore: number,
   incomeAfter: number,
 ): { label: string; formula: string; amount: number; legalBasis: string } {
-  // §98의2 특칙 전용 — 차감·감면 없음, 특칙 안내 (P4)
+  // 특칙 전용 (§98의2 장특 표2·기본세율 / §98 세율 20%) — 차감·감면 없음, 안내 (P4·P5)
   if (resolution.specialOnlyMode) {
+    const is98 = resolution.stepLabel?.startsWith("§98 ");
     return {
-      label: `${resolution.stepLabel} — 특칙 적용 (장특 표2·기본세율)`,
-      formula: "감면세액 없음 — 장기보유특별공제 표2 보유기간별 공제율 + §104①1호 기본세율 적용 (법 §98의2①)",
+      label: `${resolution.stepLabel} — ${is98 ? "세율 20% 특례 적용" : "특칙 적용 (장특 표2·기본세율)"}`,
+      formula: is98
+        ? "감면세액 없음 — 양도소득세 세율 20% 단일 적용 (§104① 불구, 법 §98①1호)"
+        : "감면세액 없음 — 장기보유특별공제 표2 보유기간별 공제율 + §104①1호 기본세율 적용 (법 §98의2①)",
       amount: 0,
       legalBasis: resolution.legalBasis ?? "",
     };
@@ -325,6 +336,7 @@ const EXCLUSION_ARTICLE_LABELS: Record<IncomeDeductionId, string> = {
   unsold_98_6: "조특법 §98의6",
   unsold_98_2: "조특법 §98의2",
   unsold_98_4: "조특법 §98의4",
+  unsold_98: "조특법 §98",
 };
 
 export function buildSurchargeExclusionStep(exclusion: {
@@ -357,7 +369,11 @@ export function resolveSurchargeExclusionByReduction(
     return {
       excluded: true,
       appliedId: resolution.eligibleId,
-      legalBasis: "소령 §167의3①5호·§167의10①2호",
+      // §98은 3호 (감면대상장기임대주택 — 5년+ 임대 국민주택), 나머지는 5호 열거
+      legalBasis:
+        resolution.eligibleId === "unsold_98"
+          ? "소령 §167의3①3호·§167의10①2호"
+          : "소령 §167의3①5호·§167의10①2호",
     };
   }
   return { excluded: false };

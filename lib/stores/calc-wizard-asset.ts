@@ -27,7 +27,7 @@ import type { NblBusinessUsePeriod, ResidenceHistoryInput, GracePeriodInput } fr
 export type {
   AssetReductionForm,
   ReductionType,
-  PriorReductionUsageItem,
+  PriorReductionUsageItem, SpecialHouseExclusionFormItem,
 } from "./calc-wizard-asset-reduction";
 import type { AssetReductionForm } from "./calc-wizard-asset-reduction";
 

@@ -10,7 +10,7 @@ import {
   makeDefaultAsset,
   migrateAsset,
 } from "./calc-wizard-asset";
-import type { AssetForm, HouseEntry, PriorReductionUsageItem } from "./calc-wizard-asset";
+import type { AssetForm, HouseEntry, PriorReductionUsageItem, SpecialHouseExclusionFormItem } from "./calc-wizard-asset";
 
 export type {
   NblBusinessUsePeriod,
@@ -105,6 +105,8 @@ export interface TransferFormData {
    * 최근 4개 과세연도 사용분을 입력.
    */
   priorReductionUsage: PriorReductionUsageItem[];
+  /** P5 모드 2 — 보유 감면주택 주택수 제외 (§89①3호 의제, 폼-전역) */
+  specialHouseExclusions: SpecialHouseExclusionFormItem[];
 
   // appurtenantLandRateMode 필드 제거 (사례 28 landNature 명시 입력 정책으로 대체, 2026-05-07)
   // 자산-수준 landNature("appurtenant"|"standalone")가 폼-수준 모드 결정을 대체.
@@ -159,6 +161,7 @@ const defaultFormData: TransferFormData = {
   sellingHouseRegion: "capital",
   annualBasicDeductionUsed: "0",
   priorReductionUsage: [],
+  specialHouseExclusions: [],
   enablePenalty: false,
   filingType: "correct",
   penaltyReason: "normal",

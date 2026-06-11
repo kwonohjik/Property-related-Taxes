@@ -49,7 +49,8 @@ export type UnsoldHybridId =
   | "unsold_98_5"
   | "unsold_98_6"
   | "unsold_98_2"
-  | "unsold_98_4";
+  | "unsold_98_4"
+  | "unsold_98";
 
 export interface UnsoldHybridIneligibleReason {
   code: string;
@@ -62,8 +63,8 @@ export interface UnsoldHybridResult {
   isEligible: boolean;
   ineligibleReasons: UnsoldHybridIneligibleReason[];
   isWithin5Years: boolean;
-  /** 5년 내 = 세액감면 / 5년 후 = 소득금액 공제 / §98의2 = 특칙 전용(장특 표2·기본세율, P4) */
-  effectCategory: "tax_amount" | "income_deduction" | "lthd_rate_special";
+  /** 5년 내 = 세액감면 / 5년 후 = 공제 / §98의2 = 특칙(장특 표2) / §98 = 세율 20% (P5) */
+  effectCategory: "tax_amount" | "income_deduction" | "lthd_rate_special" | "flat_rate_20";
   /** 감면·공제율 echo (1.0) */
   taxReductionRate: number;
   /** 5년 내 세액감면액 — calcReductions 경로에서 채움 (router 평가 시 0) */

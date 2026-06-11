@@ -193,7 +193,17 @@ export const reductionSchema = z.discriminatedUnion("type", [
     meetsHometownRequirement: z.boolean().optional(),
     _phase1Stub: z.literal(true).optional(),
   }),
-  z.object({ type: z.literal("unsold_98"),         _phase1Stub: z.literal(true).optional() }),
+  // §98 — P5 본격 구현 (2026-06-12, ⑫)
+  z.object({
+    type: z.literal("unsold_98"),
+    contractDate98: z.string().date().optional(),
+    isNationalScale98: z.boolean().optional(),
+    isOutsideSeoul98: z.boolean().optional(),
+    isUnsoldConfirmed98: z.boolean().optional(),
+    isFirstBuyerNoOccupancy98: z.boolean().optional(),
+    rentedFor5Years98: z.boolean().optional(),
+    _phase1Stub: z.literal(true).optional(),
+  }),
   // §98의2 — P4 본격 구현 (2026-06-12, ⑫)
   z.object({
     type: z.literal("unsold_98_2"),

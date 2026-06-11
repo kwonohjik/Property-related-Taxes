@@ -22,6 +22,7 @@ import { applyRate as applyHybridRate } from "../tax-utils";
 import { TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
 import { fullMonthsBetween } from "./unsold-98-8";
 import { evaluateP4FromReduction } from "./unsold-hybrid-p4";
+import { evaluateP5FromReduction } from "./unsold-hybrid-p5";
 import {
   computeHybridEffect,
   ineligibleHybrid,
@@ -550,6 +551,7 @@ export const ALL_HYBRID_IDS: ReadonlyArray<string> = [
   "unsold_98_6",
   "unsold_98_2",
   "unsold_98_4",
+  "unsold_98",
 ];
 
 /**
@@ -651,6 +653,10 @@ export function evaluateAnyHybridFromReduction(
         (r.standardPriceAtTransfer986 as number | undefined) ?? ctx.standardPriceAtTransfer,
     });
   }
-  // P4 (§98의2·§98의4) → P2 (§98의7·§99의2) 순 위임
-  return evaluateP4FromReduction(r, ctx) ?? evaluateP2HybridFromReduction(r, ctx);
+  // P5 (§98) → P4 (§98의2·§98의4) → P2 (§98의7·§99의2) 순 위임
+  return (
+    evaluateP5FromReduction(r, ctx) ??
+    evaluateP4FromReduction(r, ctx) ??
+    evaluateP2HybridFromReduction(r, ctx)
+  );
 }

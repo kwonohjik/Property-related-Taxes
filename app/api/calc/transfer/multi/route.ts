@@ -104,6 +104,13 @@ export async function POST(request: NextRequest) {
       acquisitionDate: new Date(p.acquisitionDate),
       // ⑭ 자산-수준 매매계약일 — §99의3 등 매매계약일 기준 조문 시한 판정용 (per-asset 단건 엔진 honor)
       assetContractDate: p.assetContractDate ? new Date(p.assetContractDate) : undefined,
+      // P5 모드 2 (⑭): 보유 감면주택 주택수 제외 — 세대 단위 공통이라 전 자산 주입
+      specialHouseExclusions: (data.specialHouseExclusions ?? []).map((e) => ({
+        article: e.article,
+        houseAcquisitionDate: e.houseAcquisitionDate ? new Date(e.houseAcquisitionDate) : undefined,
+        houseContractDate: e.houseContractDate ? new Date(e.houseContractDate) : undefined,
+        requirementsConfirmed: e.requirementsConfirmed,
+      })),
       expenses: p.expenses,
       // ⑭ §97② 단서 swap 분리 입력 — 미명시 시 undefined (swap 비활성)
       capitalExpenditure: p.capitalExpenditure,

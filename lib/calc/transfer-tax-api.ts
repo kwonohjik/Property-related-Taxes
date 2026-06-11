@@ -465,6 +465,15 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     annualBasicDeductionUsed: parseAmount(form.annualBasicDeductionUsed),
     // ⑬ §133 5년 누적 한도 — 과거 4개 과세연도 감면 이력 (TypeScript 미감지 영역 — 누락 시 침묵 stripping)
     priorReductionUsage: form.priorReductionUsage ?? [],
+    // ⑬ P5 모드 2 — 보유 감면주택 주택수 제외 (행: article·취득일 입력분만 전달)
+    specialHouseExclusions: (form.specialHouseExclusions ?? [])
+      .filter((e) => e.article)
+      .map((e) => ({
+        article: e.article,
+        houseAcquisitionDate: e.houseAcquisitionDate || undefined,
+        houseContractDate: e.houseContractDate || undefined,
+        requirementsConfirmed: e.requirementsConfirmed,
+      })),
     ...(form.temporaryTwoHouseSpecial &&
     form.previousHouseAcquisitionDate &&
     form.newHouseAcquisitionDate
