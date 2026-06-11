@@ -692,6 +692,17 @@ export type StockTransferResult = {
    *   - "full": 전체 채움
    */
   postListingDetail?: PostListingValuationResult;
+
+  /**
+   * 증권거래세 정보성 산출 echo (Phase 1 — 2경로 통합).
+   * 양도세와 별도 납부 의무이므로 합산 금지 (정보성 표시 전용).
+   * plain object (JSON-safe — memory feedback_engine_result_map_json_loss, Map 금지).
+   *
+   * 표시 게이트 (UI): stx && (stx.totalTax > 0 || stx.warning)
+   *   - C-06 기타자산: totalTax=0이지만 warning 있음 → 표시
+   *   - transferPrice=0: totalTax=0·warning 없음 → 미표시
+   */
+  securitiesTransactionTax?: import("../securities-transaction-tax").SecuritiesTransactionTaxResult;
 };
 
 // ============================================================

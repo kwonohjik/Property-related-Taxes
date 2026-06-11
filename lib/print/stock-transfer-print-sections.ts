@@ -31,11 +31,12 @@ import {
 
 export type { PrintChannel, GroupCheckState };
 
-/** 선택 가능 leaf 3종 (exact 매칭) */
+/** 선택 가능 leaf 4종 (exact 매칭) */
 export type StockTransferPrintSectionId =
   | "calculation"
   | "detail-cards"
-  | "filing-form";
+  | "filing-form"
+  | "securities-transaction-tax";
 
 /** 주식 양도세 leaf로 좁힌 제네릭 타입 (shared 재사용) */
 export type StockTransferPrintSectionNode = GenericNode<StockTransferPrintSectionId>;
@@ -51,6 +52,7 @@ export const STOCK_TRANSFER_PRINT_SECTIONS: StockTransferPrintSectionGroup[] = [
     children: [
       { id: "calculation", label: "핵심 결과 (분류·결과표·양도가액 산식)", channel: SCREEN },
       { id: "detail-cards", label: "상세 분해·판정 (환산·누진·평가·가산세·대주주)", channel: SCREEN },
+      { id: "securities-transaction-tax", label: "증권거래세 (정보용)", channel: SCREEN },
     ],
   },
   {

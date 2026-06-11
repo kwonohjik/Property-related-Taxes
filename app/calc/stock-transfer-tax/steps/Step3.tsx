@@ -11,6 +11,14 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { DateInput } from "@/components/ui/date-input";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
+import {
+  calcSecuritiesTransactionTax,
+} from "@/lib/tax-engine/stock-transfer/securities-transaction-tax";
+import {
+  calcTransferPriceSimple,
+} from "@/lib/tax-engine/stock-transfer/stock-transfer-exempt-result";
+import type { StockTransferInput } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
+import { SecuritiesTransactionTaxCard } from "@/components/calc/stock-transfer/SecuritiesTransactionTaxCard";
 
 interface Step3Props {
   form: StockTransferFormData;
@@ -45,22 +53,6 @@ function calcFilingDeadline(transferDate: string): string {
   return `${endYear}-${String(deadlineMonth).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
 }
 
-const SECURITIES_TAX_RATE: Record<string, number> = {
-  kospi: 0.0015,
-  kosdaq: 0.0015,
-  konex: 0.001,
-  unlisted: 0.0035,
-  other_asset: 0,
-};
-
-const MARKET_LABEL: Record<string, string> = {
-  kospi: "코스피",
-  kosdaq: "코스닥",
-  konex: "코넥스",
-  unlisted: "비상장",
-  other_asset: "기타",
-};
-
 // 취득가액 방식 → 필요경비 방식 자동 결정 (소령 §163⑥4)
 //   actual → expenseMode "actual" 허용 (사용자 자유 선택)
 //   estimated/sale_case/face_value → expenseMode "estimated" 강제 (개산공제 1% 자동)
@@ -87,15 +79,62 @@ export function Step3({ form, onChange }: Step3Props) {
     [form.transferDate]
   );
 
-  const securitiesTaxPreview = useMemo(() => {
-    const perShare = parseAmount(form.perShareTransferPrice);
-    const count = parseInt(form.shareCount || "0", 10);
-    if (perShare <= 0 || count <= 0) return null;
-    const total = perShare * count;
-    const rate = SECURITIES_TAX_RATE[form.marketType] ?? 0;
-    if (rate === 0) return null;
-    return { total, rate, tax: Math.floor(total * rate) };
-  }, [form.perShareTransferPrice, form.shareCount, form.marketType]);
+  // 증권거래세 미리보기 — 엔진 단일 진실 (dual-truth 해소 — feedback_ui_engine_dual_truth_avoidance)
+  // total/per_share/exchange 모드 모두 지원 (폼 default "total"에서 미리보기 안 뜨던 기존 갭 해소)
+  const stxPreview = useMemo(() => {
+    // 폼 문자열 → 엔진 입력 부분 객체 (calcTransferPriceSimple에 필요한 필드만)
+    const priceMode = form.transferPriceMode || "actual";
+    const actualMode = form.transferActualInputMode || "total";
+    const partial: Pick<
+      StockTransferInput,
+      | "transferPriceMode"
+      | "transferActualInputMode"
+      | "transferTotalPrice"
+      | "perShareTransferPrice"
+      | "shareCount"
+      | "exchangePropertyValue"
+      | "exchangeDebtRelief"
+      | "exchangeCash"
+    > = {
+      transferPriceMode: priceMode,
+      transferActualInputMode: actualMode,
+      transferTotalPrice: parseAmount(form.transferTotalPrice),
+      perShareTransferPrice: parseAmount(form.perShareTransferPrice),
+      shareCount: parseInt(form.shareCount || "0", 10),
+      exchangePropertyValue: parseAmount(form.exchangePropertyValue),
+      exchangeDebtRelief: parseAmount(form.exchangeDebtRelief),
+      exchangeCash: parseAmount(form.exchangeCash),
+    };
+    const transferPrice = calcTransferPriceSimple(partial as StockTransferInput);
+    if (transferPrice <= 0) return null;
+
+    const marketType = (form.marketType || "other_asset") as StockTransferInput["marketType"];
+    const stx = calcSecuritiesTransactionTax(
+      {
+        marketType,
+        isKOTCTrading: form.isKOTCTrading,
+        transferDate: form.transferDate
+          ? new Date(form.transferDate)
+          : undefined,
+      },
+      transferPrice,
+    );
+    // 표시 게이트: totalTax > 0 || warning (기타자산 C-06 경고 포함)
+    if (stx.totalTax <= 0 && !stx.warning) return null;
+    return { stx, transferPrice };
+  }, [
+    form.transferPriceMode,
+    form.transferActualInputMode,
+    form.transferTotalPrice,
+    form.perShareTransferPrice,
+    form.shareCount,
+    form.exchangePropertyValue,
+    form.exchangeDebtRelief,
+    form.exchangeCash,
+    form.marketType,
+    form.isKOTCTrading,
+    form.transferDate,
+  ]);
 
   const isDeadlineNear = useMemo(() => {
     if (!filingDeadline) return false;
@@ -143,24 +182,14 @@ export function Step3({ form, onChange }: Step3Props) {
             />
           )}
 
-          {securitiesTaxPreview && (
-            <div className="rounded-lg border border-sky-200 bg-sky-50/60 px-4 py-3 text-sm">
-              <p className="font-medium text-sky-800 mb-1">증권거래세 참고 (정보성)</p>
-              <div className="text-sky-700 space-y-1 text-xs">
-                <p>
-                  시장: {MARKET_LABEL[form.marketType] ?? form.marketType} / 세율:{" "}
-                  {(securitiesTaxPreview.rate * 100).toFixed(2)}%
-                </p>
-                <p>
-                  양도가액 {securitiesTaxPreview.total.toLocaleString()} ×{" "}
-                  {(securitiesTaxPreview.rate * 100).toFixed(2)}% ={" "}
-                  <strong>{securitiesTaxPreview.tax.toLocaleString()}</strong>
-                </p>
-                <p className="text-sky-500">
-                  ※ 이 금액을 필요경비에 포함하여 직접 입력하세요 (자동 합산 안 됨).
-                </p>
-              </div>
-            </div>
+          {/* 증권거래세 미리보기 — 엔진 단일 진실 (§2-3 설계 적용) */}
+          {stxPreview && (
+            <SecuritiesTransactionTaxCard
+              variant="inline"
+              stx={stxPreview.stx}
+              transferPrice={stxPreview.transferPrice}
+              showExpenseInclusionHint={!expenseLocked}
+            />
           )}
         </div>
       </section>

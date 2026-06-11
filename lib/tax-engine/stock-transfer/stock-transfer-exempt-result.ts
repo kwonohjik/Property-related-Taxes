@@ -15,6 +15,7 @@ import { classifyStockTransfer } from "./stock-classification";
 import { buildAppliedThreshold } from "./stock-transfer-helpers";
 import { allocateLots } from "./lot-allocation";
 import { computeInformationalAcquisition } from "./exempt-informational-acquisition";
+import { calcSecuritiesTransactionTax } from "./securities-transaction-tax";
 
 /** 분할 모드 활성 여부 — 비과세 분기에서도 lot 검산용 echo가 필요 */
 function isSplitMode(input: StockTransferInput): boolean {
@@ -119,5 +120,8 @@ export function buildExemptResult(
     appliedRules: classification.appliedRules,
     // Round 4 C-02: 비과세 분기에서도 echo (UI 결과 카드 게이트 일관성)
     acquiredBeforeListing: input.acquiredBeforeListing,
+    // E5-ⓑ: K-OTC 비과세 조기 반환 경로에도 증권거래세 echo (설계 STX-11)
+    // ⚠️ spread 없는 명시 매핑 — TS 미감지, grep 자가점검 필수
+    securitiesTransactionTax: calcSecuritiesTransactionTax(input, transferPrice),
   };
 }
