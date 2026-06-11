@@ -243,8 +243,19 @@ function renderGiftRow(
           : isCorporate
             ? "🏢 §13①2호 · §3의2② 면제"
             : ""}
+        {/* 조특법 특례 라벨 — §30의5⑨·§30의6⑤ 기간 무관 가산 (상속세 경로 전용) */}
+        {!dimmed && !isCorporate && gift.specialTreatmentType === "startup" && (
+          <span className="ml-1 inline-block bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 rounded px-1">
+            §30의5⑧ 기간무관 가산
+          </span>
+        )}
+        {!dimmed && !isCorporate && gift.specialTreatmentType === "family_business" && (
+          <span className="ml-1 inline-block bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 rounded px-1">
+            §30의6⑤ 준용
+          </span>
+        )}
         {/* [B] 과세표준 출처 라벨 — manual 직접 입력 vs auto §53 도출 */}
-        {!isCorporate && !dimmed && (
+        {!isCorporate && !dimmed && !gift.specialTreatmentType && (
           gift.giftTaxBase != null ? (
             <span className="ml-1 inline-block bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 rounded px-1">
               직접 입력 과세표준
