@@ -9,6 +9,7 @@ import { NblSectionContainer } from "@/components/calc/transfer/nbl/NblSectionCo
 import { HousesListSection } from "./step4-sections/HousesListSection";
 import { MergeDateSection } from "./step4-sections/MergeDateSection";
 import { ResidencePeriodSection } from "@/components/calc/transfer/ResidencePeriodSection";
+import { SpecialHouseExclusionSection } from "@/components/calc/transfer/SpecialHouseExclusionSection";
 
 // Step4 내부 공용 헬퍼 — 주택·입주권·분양권·재개발APT 계열 판정
 // 재개발/재건축 완공 APT(시행령 §166②1호)는 신축주택 양도이므로 1세대1주택·12억 안분 등
@@ -212,6 +213,14 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
               ))}
             </div>
           </div>
+
+          {/* P5 모드 2 — 보유 감면주택 주택수 제외 (2채 이상 보유 시 의미) */}
+          {isHousingLike(primaryKind) && parseInt(form.householdHousingCount) >= 2 && (
+            <SpecialHouseExclusionSection
+              items={form.specialHouseExclusions ?? []}
+              onChange={(items) => onChange({ specialHouseExclusions: items })}
+            />
+          )}
 
           {/* 세대 보유 입주권 수 — right_to_move_in 자산 유형에서만 노출 (§89①4호 가목 판정) */}
           {primaryKind === "right_to_move_in" && (

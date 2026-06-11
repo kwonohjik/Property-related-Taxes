@@ -251,6 +251,17 @@ export type RentalReductionFormVariant =
       /** 양도시 기준시가 (원) — 미입력 시 자산 standardPriceAtTransfer fallback */
       standardPriceAtTransfer988: string;
     }
+  // ── P5 (2026-06-12): §98 미분양 국민주택 — 세율 20% 선택 ──
+  | {
+      type: "unsold_98";
+      /** 매매계약일 (YYYY-MM-DD, 선택 — 계약+계약금 케이스) */
+      contractDate98: string;
+      isNationalScale98: boolean;
+      isOutsideSeoul98: boolean;
+      isUnsoldConfirmed98: boolean;
+      isFirstBuyerNoOccupancy98: boolean;
+      rentedFor5Years98: boolean;
+    }
   // ── P4 (2026-06-12): §98의2 지방 미분양 — 특칙 전용 (장특 표2·기본세율) ──
   | {
       type: "unsold_98_2";
@@ -420,6 +431,19 @@ export type RentalReductionFormVariant =
     };
 
 export type ReductionType = AssetReductionForm["type"];
+
+/** P5 모드 2 — 보유 감면주택 주택수 제외 행 (폼-전역, 7개 조문 ②·§98 령②·§99②) */
+export interface SpecialHouseExclusionFormItem {
+  article:
+    | "unsold_98" | "unsold_98_2" | "unsold_98_3" | "unsold_98_5" | "unsold_98_6"
+    | "unsold_98_7" | "unsold_98_8" | "unsold_99_2" | "new_99" | "";
+  /** 감면주택 취득일 (YYYY-MM-DD) */
+  houseAcquisitionDate: string;
+  /** 감면주택 매매계약일 (YYYY-MM-DD, 선택) */
+  houseContractDate: string;
+  /** 해당 조문 본 요건 충족 확인 */
+  requirementsConfirmed: boolean;
+}
 
 /** 인별 5년 합산 한도 산정용 과거 감면 이력 항목 */
 export interface PriorReductionUsageItem {

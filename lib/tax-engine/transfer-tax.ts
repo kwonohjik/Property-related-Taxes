@@ -48,6 +48,7 @@ import {
   RATE_SPECIAL_REDUCTION_IDS,
 } from "./transfer-reductions/income-deduction-router";
 import { resolveHouseCountExclusion, buildHouseCountExclusionStep } from "./transfer-reductions/unsold-98-9";
+import { resolveSpecialHouseExclusions } from "./transfer-reductions/unsold-hybrid-p5";
 
 import {
   parseRatesFromMap,
@@ -64,9 +65,8 @@ import { calculateBuildingPenalty, calcTax, handleMultiParcelBranch } from "./tr
 import { finalizeTransferTax, resolveLTHDStartDate, buildTransferResultDetails } from "./transfer-tax-finalize";
 import { isRedevelopmentActive, calculateRedevelopmentTax } from "./transfer-tax-redevelopment";
 import { calcCarryoverScenarios } from "./transfer-tax-carryover";
-import { buildBurdenedGiftBreakdown, assertBurdenedGiftEligible, detectBurdenedGiftMultiHouseWarning } from "./burdened-gift-apportionment";
-import { BURDENED_GIFT_TRANSFER } from "./legal-codes/burdened-gift";
 import type { TransferBurdenedGiftBreakdown } from "./types/transfer-burdened-gift.types";
+import { runBurdenedGiftStep } from "./transfer-tax-burdened-gift-step";
 import { resolveAcquisitionOverride, type TransferTaxAcquisitionOptions } from "./transfer-tax-acquisition-override";
 export type { TransferTaxAcquisitionOptions } from "./transfer-tax-acquisition-override";
 import { applyFamilyBusinessCgtStep } from "./transfer-tax-family-business";
@@ -154,60 +154,10 @@ export function calculateTransferTax(
     }
   }
 
-  // STEP 0.48 부담부증여 §159 (Phase 2/F-1/F-2): transferType OR legacy + propertyType 4종 + overshoot + 5-a 해석 B + 12 안내.
-  let transferBurdenedGiftBreakdown: TransferBurdenedGiftBreakdown | undefined;
-  const isBurdenedGiftEngine =
-    rawInput.transferType === "burdened_gift" ||
-    rawInput.acquisitionCause === "burdened_gift";
-  if (isBurdenedGiftEngine && rawInput.burdenedGiftInfo) {
-    // Phase 2 게이트 — propertyType 허용 범위·overshoot fail-fast·고가주택 후속 PR 차단
-    assertBurdenedGiftEligible({
-      propertyType: workingInput.propertyType,
-      isOneHousehold: workingInput.isOneHousehold,
-      info: rawInput.burdenedGiftInfo,
-    });
-    transferBurdenedGiftBreakdown = buildBurdenedGiftBreakdown({
-      landStdPriceAtTransfer: rawInput.burdenedGiftInfo.landStdPriceAtTransfer,
-      buildingStdPriceAtTransfer: rawInput.burdenedGiftInfo.buildingStdPriceAtTransfer,
-      landStdPriceAtAcquisition: rawInput.burdenedGiftInfo.landStdPriceAtAcquisition,
-      buildingStdPriceAtAcquisition: rawInput.burdenedGiftInfo.buildingStdPriceAtAcquisition,
-      info: rawInput.burdenedGiftInfo,
-      giftDate: rawInput.transferDate, // Phase 2 — 증여일 = 양도일
-    });
-    const land = transferBurdenedGiftBreakdown.perAsset.land;
-    const building = transferBurdenedGiftBreakdown.perAsset.building;
-    const totalTransferPrice = land.transferPrice + building.transferPrice;
-    const totalAcquisitionPrice = land.acquisitionPrice + building.acquisitionPrice;
-    const totalEstimatedDeduction = land.estimatedDeduction + building.estimatedDeduction;
-    // override: §159 산정값으로 본 계산 진행 (§114⑦ 환산경로와 분리).
-    // F-1: burdenedGiftDenominator = giftValuation C — 12억 안분 해석 B 분모.
-    workingInput = {
-      ...workingInput,
-      transferPrice: totalTransferPrice,
-      acquisitionPrice: totalAcquisitionPrice,
-      expenses: totalEstimatedDeduction,
-      capitalExpenditure: undefined,
-      transferExpense: undefined,
-      useEstimatedAcquisition: false,
-      burdenedGiftDenominator: transferBurdenedGiftBreakdown.sangjeungbeopValuation.max,
-    };
-    steps.push({
-      label: "부담부증여 양도차익 산정 (소령 §159)",
-      formula:
-        `양도가 = 인수채무 ${transferBurdenedGiftBreakdown.assumedDebtAmount.toLocaleString()} ` +
-        `(${transferBurdenedGiftBreakdown.sangjeungbeopValuation.selectedMode} 평가 ${transferBurdenedGiftBreakdown.sangjeungbeopValuation.max.toLocaleString()} 중 ` +
-        `${(transferBurdenedGiftBreakdown.debtRatio * 100).toFixed(4)}% 안분)`,
-      amount: totalTransferPrice,
-      legalBasis: BURDENED_GIFT_TRANSFER.VALUATION_159,
-    });
-    // F-2: 케이스 12 다주택 중과 비스코프 안내 (양도자 = 증여자 → §97의2 미적용).
-    const multiHouseWarning = detectBurdenedGiftMultiHouseWarning({
-      propertyType: workingInput.propertyType,
-      isRegulatedArea: workingInput.isRegulatedArea,
-      householdHousingCount: workingInput.householdHousingCount,
-    });
-    if (multiHouseWarning) warnings.push(multiHouseWarning);
-  }
+  // STEP 0.48 부담부증여 §159 — 800줄 정책 분리 (P5): runBurdenedGiftStep
+  const bgStep = runBurdenedGiftStep(rawInput, workingInput, steps, warnings);
+  const transferBurdenedGiftBreakdown = bgStep.breakdown;
+  workingInput = bgStep.workingInput;
 
   // STEP 0.45: 차감형 감면주택(§99의3·§99·§98의8) 중과 배제 선판정 — 소령 §167의3①5호·§167의10①2호.
   // 적격 시 양도 주택에 isTaxSpecialExemption 주입 → 기존 중과 엔진 경로로 배제 (D-11 자동화).
@@ -276,11 +226,26 @@ export function calculateTransferTax(
     effectiveInput.reductions,
     { generalHouseAcquisitionDate: effectiveInput.acquisitionDate, transferDate: effectiveInput.transferDate },
   );
-  const exemptionJudgeInput = hceApplied
-    ? { ...effectiveInput, householdHousingCount: Math.max(effectiveInput.householdHousingCount - 1, 0) }
+  // STEP 0.95 (P5 모드 2): 보유 감면주택 N-way 주택수 제외 — 7개 조문 ② + §98 령②·⑥ + §99②.
+  // 비과세(§89①3호) 판정 주택수만 차감 — 중과 주택수는 원본 유지 (R-D).
+  const specialHouseExclusionDetail = resolveSpecialHouseExclusions(
+    effectiveInput.specialHouseExclusions,
+    effectiveInput.transferDate,
+  );
+  const totalExcluded = (hceApplied ? 1 : 0) + specialHouseExclusionDetail.excludedCount;
+  const exemptionJudgeInput = totalExcluded > 0
+    ? { ...effectiveInput, householdHousingCount: Math.max(effectiveInput.householdHousingCount - totalExcluded, 0) }
     : effectiveInput;
   if (hceApplied) {
-    steps.push(buildHouseCountExclusionStep(hceApplied, effectiveInput.householdHousingCount, exemptionJudgeInput.householdHousingCount));
+    steps.push(buildHouseCountExclusionStep(hceApplied, effectiveInput.householdHousingCount, Math.max(effectiveInput.householdHousingCount - 1, 0)));
+  }
+  if (specialHouseExclusionDetail.excludedCount > 0) {
+    steps.push({
+      label: "보유 감면주택 주택수 제외 (§89①3호 의제)",
+      formula: `${specialHouseExclusionDetail.entries.filter((e) => e.eligible).map((e) => e.articleLabel).join(" · ")} — 주택수 ${effectiveInput.householdHousingCount} → ${exemptionJudgeInput.householdHousingCount} (비과세 판정 한정 — 중과 주택수 불변)`,
+      amount: 0,
+      legalBasis: specialHouseExclusionDetail.entries.filter((e) => e.eligible).map((e) => e.legalBasis).join(" · "),
+    });
   }
 
   const exemptionResult = checkExemption(exemptionJudgeInput, parsedRates.oneHouseSpecialRules);
@@ -298,6 +263,8 @@ export function calculateTransferTax(
       exemptReason: exemptionResult.exemptReason,
       new994Detail, // §99의4 주택수 제외가 비과세 근거인 경우 카드 표시 (추징 경고 포함)
       unsold989Detail, // §98의9 동일 (종부세 안내·F-4 경고 포함)
+      specialHouseExclusionDetail:
+        specialHouseExclusionDetail.entries.length > 0 ? specialHouseExclusionDetail : undefined,
       warnings: warnings.length > 0 ? warnings : undefined,
       transferGain: 0,
       taxableGain: 0,
@@ -666,9 +633,13 @@ export function calculateTransferTax(
   const taxRateInputBase = selfOwns === "land_only" && effectiveInput.landAcquisitionDate
     ? { ...effectiveInput, acquisitionDate: effectiveInput.landAcquisitionDate }
     : effectiveInput;
-  const taxRateInput = rateSpecialActive
-    ? { ...taxRateInputBase, suppressShortTermRate: true }
-    : taxRateInputBase;
+  // P5: §98①1호 — 세율 20% 단일 강제 (§104① 불구)
+  const flatRate20Active = incomeDeduction.eligibleId === "unsold_98";
+  const taxRateInput = flatRate20Active
+    ? { ...taxRateInputBase, forceFlatRate20: true }
+    : rateSpecialActive
+      ? { ...taxRateInputBase, suppressShortTermRate: true }
+      : taxRateInputBase;
   const taxResult = calcTax(taxBase, parsedRates, taxRateInput, multiHouseSurchargeResult);
   const fmtPct = (r: number) => `${Math.round(r * 100)}%`;
   steps.push({
@@ -703,6 +674,7 @@ export function calculateTransferTax(
     unsold986PreliminaryResult: incomeDeduction.unsold986Detail,
     unsold982PreliminaryResult: incomeDeduction.unsold982Detail,
     unsold984PreliminaryResult: incomeDeduction.unsold984Detail,
+    unsold98PreliminaryResult: incomeDeduction.unsold98Detail,
   });
   const {
     new993FinalResult,
@@ -715,6 +687,7 @@ export function calculateTransferTax(
     unsold986FinalResult,
     unsold982FinalResult,
     unsold984FinalResult,
+    unsold98FinalResult,
     reductionAmount,
     reductionType,
     reductionTypeApplied,
@@ -794,6 +767,9 @@ export function calculateTransferTax(
     unsold986Detail: unsold986FinalResult,
     unsold982Detail: unsold982FinalResult,
     unsold984Detail: unsold984FinalResult,
+    unsold98Detail: unsold98FinalResult,
+    specialHouseExclusionDetail:
+      specialHouseExclusionDetail.entries.length > 0 ? specialHouseExclusionDetail : undefined,
     transferBurdenedGiftBreakdown,
   };
 }

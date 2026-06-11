@@ -200,6 +200,13 @@ export async function POST(request: NextRequest) {
     reductions: mapReductionsToEngine(data.reductions),
     annualBasicDeductionUsed: data.annualBasicDeductionUsed,
     priorReductionUsage: data.priorReductionUsage ?? [],
+    // P5 모드 2 (⑭): string 일자 → Date 변환
+    specialHouseExclusions: (data.specialHouseExclusions ?? []).map((e) => ({
+      article: e.article,
+      houseAcquisitionDate: e.houseAcquisitionDate ? new Date(e.houseAcquisitionDate) : undefined,
+      houseContractDate: e.houseContractDate ? new Date(e.houseContractDate) : undefined,
+      requirementsConfirmed: e.requirementsConfirmed,
+    })),
     nonBusinessLandDetails: data.nonBusinessLandDetails
       ? {
           ...data.nonBusinessLandDetails,

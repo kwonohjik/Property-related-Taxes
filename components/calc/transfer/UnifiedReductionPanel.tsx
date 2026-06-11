@@ -41,6 +41,7 @@ import { Unsold985InputForm } from "@/components/calc/transfer/Unsold985InputFor
 import { Unsold986InputForm } from "@/components/calc/transfer/Unsold986InputForm";
 import { Unsold982InputForm } from "@/components/calc/transfer/Unsold982InputForm";
 import { Unsold984InputForm } from "@/components/calc/transfer/Unsold984InputForm";
+import { Unsold98InputForm } from "@/components/calc/transfer/Unsold98InputForm";
 import {
   REDUCTION_METADATA,
   ALL_REDUCTION_IDS,
@@ -233,6 +234,14 @@ export function UnifiedReductionPanel({ asset, transferDate, onChange }: Unified
       ),
     });
   }
+  // ── P5 (2026-06-12): §98 ──
+  function update98(patch: Partial<Extract<AssetReductionForm, { type: "unsold_98" }>>) {
+    onChange({
+      reductions: reductions.map((r) =>
+        r.type === "unsold_98" ? ({ ...r, ...patch } as AssetReductionForm) : r,
+      ),
+    });
+  }
   // ── P4 (2026-06-12): §98의2 / §98의4 ──
   function update982(patch: Partial<Extract<AssetReductionForm, { type: "unsold_98_2" }>>) {
     onChange({
@@ -285,6 +294,7 @@ export function UnifiedReductionPanel({ asset, transferDate, onChange }: Unified
           onUpdate986={update986}
           onUpdate982={update982}
           onUpdate984Hybrid={update984}
+          onUpdate98={update98}
           assetContractDate={asset.assetContractDate ?? ""}
           onAssetContractDateChange={(v) => onChange({ assetContractDate: v })}
           acquisitionDate={asset.acquisitionDate}
@@ -355,6 +365,7 @@ function GroupCategorySection({
   onUpdate986,
   onUpdate982,
   onUpdate984Hybrid,
+  onUpdate98,
   assetContractDate,
   onAssetContractDateChange,
   acquisitionDate,
@@ -391,6 +402,7 @@ function GroupCategorySection({
   onUpdate986: (patch: Partial<Extract<AssetReductionForm, { type: "unsold_98_6" }>>) => void;
   onUpdate982: (patch: Partial<Extract<AssetReductionForm, { type: "unsold_98_2" }>>) => void;
   onUpdate984Hybrid: (patch: Partial<Extract<AssetReductionForm, { type: "unsold_98_4" }>>) => void;
+  onUpdate98: (patch: Partial<Extract<AssetReductionForm, { type: "unsold_98" }>>) => void;
   /** Round 9 (2026-05-06): 매매계약일 (자산-수준, 펼침 시 활성화) */
   assetContractDate: string;
   onAssetContractDateChange: (v: string) => void;
@@ -610,6 +622,14 @@ function GroupCategorySection({
                       const form986 = reductions.find((r) => r.type === "unsold_98_6");
                       return form986 && form986.type === "unsold_98_6" ? (
                         <Unsold986InputForm value={form986} onChange={onUpdate986} />
+                      ) : null;
+                    })()}
+                  {/* P5 (2026-06-12): §98 입력 폼 */}
+                  {id === "unsold_98" &&
+                    (() => {
+                      const form98 = reductions.find((r) => r.type === "unsold_98");
+                      return form98 && form98.type === "unsold_98" ? (
+                        <Unsold98InputForm value={form98} onChange={onUpdate98} />
                       ) : null;
                     })()}
                   {/* P4 (2026-06-12): §98의2 / §98의4 입력 폼 */}

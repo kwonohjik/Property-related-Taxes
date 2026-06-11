@@ -395,6 +395,19 @@ const propertyBaseShape = {
 
 // ─── 단건 스키마 (기존 inputSchema와 동일) ─────────────────────
 
+// P5 모드 2 (2026-06-12) — 보유 감면주택 주택수 제외 (§89①3호 의제, 7개 조문 ②·§98 령②·§99②)
+const specialHouseExclusionSchema = z.array(
+  z.object({
+    article: z.enum([
+      "unsold_98", "unsold_98_2", "unsold_98_3", "unsold_98_5", "unsold_98_6",
+      "unsold_98_7", "unsold_98_8", "unsold_99_2", "new_99",
+    ]),
+    houseAcquisitionDate: z.string().date().optional(),
+    houseContractDate: z.string().date().optional(),
+    requirementsConfirmed: z.boolean().default(false),
+  }),
+).default([]);
+
 const priorReductionUsageSchema = z.array(
   z.object({
     year: z.number().int().min(1990).max(new Date().getFullYear()),
@@ -419,6 +432,7 @@ export const propertySchema = z
     ...propertyBaseShape,
     annualBasicDeductionUsed: z.number().int().nonnegative().default(0),
     priorReductionUsage: priorReductionUsageSchema,
+    specialHouseExclusions: specialHouseExclusionSchema,
     filingPenaltyDetails: filingPenaltyDetailsSchema.optional(),
     delayedPaymentDetails: delayedPaymentDetailsSchema.optional(),
   })
@@ -657,6 +671,7 @@ export const multiInputSchema = z
     properties: z.array(propertyItemSchema).min(1).max(20),
     annualBasicDeductionUsed: z.number().int().nonnegative().default(0),
     priorReductionUsage: priorReductionUsageSchema,
+    specialHouseExclusions: specialHouseExclusionSchema,
     basicDeductionAllocation: z
       .enum(["MAX_BENEFIT", "FIRST", "EARLIEST_TRANSFER"])
       .default("MAX_BENEFIT"),

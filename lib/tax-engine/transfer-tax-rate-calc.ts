@@ -261,6 +261,18 @@ export function calcTax(
 
   const roundRate = (r: number) => Math.round(r * 10000) / 10000;
 
+  // P5 특례 (조특법 §98①1호): 세율 20% 단일 — §104①에도 불구하고 누진·단기·중과세율 전체 대체.
+  // STEP 7에서 eligible 시 forceFlatRate20 주입 (엔진 내부 플래그).
+  if (input.forceFlatRate20) {
+    return {
+      calculatedTax: applyRate(taxBase, 0.2),
+      appliedRate: 0.2,
+      progressiveDeduction: 0,
+      surchargeSuspended: false,
+      shortTermNote: "조특법 §98①1호 — 양도소득세 세율 20% (§104① 불구)",
+    };
+  }
+
   // 보유기간 기산 (§104② — 상속은 피상속인·증여이월은 증여자 취득일, 사례 48 승계조합원은 준공일).
   // T-2 비사업용 토지 §104①후단 비교와 T-2.5 단기 특례세율이 공유.
   const successorRateBasis = getEffectiveAcquisitionDate(input);

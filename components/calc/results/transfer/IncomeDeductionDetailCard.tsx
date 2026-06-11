@@ -23,7 +23,8 @@ type Detail =
   | { kind: "unsold_98_5"; result: UnsoldHybridResult }
   | { kind: "unsold_98_6"; result: UnsoldHybridResult }
   | { kind: "unsold_98_2"; result: UnsoldHybridResult }
-  | { kind: "unsold_98_4"; result: UnsoldHybridResult };
+  | { kind: "unsold_98_4"; result: UnsoldHybridResult }
+  | { kind: "unsold_98"; result: UnsoldHybridResult };
 
 const TITLES: Record<Detail["kind"], string> = {
   new_99: "§99 — 신축주택 양도소득세 감면 (IMF 1차)",
@@ -35,11 +36,12 @@ const TITLES: Record<Detail["kind"], string> = {
   unsold_98_6: "§98의6 — 준공후미분양주택 과세특례 (50%)",
   unsold_98_2: "§98의2 — 지방 미분양주택 과세특례 (장특 표2·기본세율)",
   unsold_98_4: "§98의4 — 비거주자 주택취득 과세특례 (10%)",
+  unsold_98: "§98 — 미분양 국민주택 과세특례 (세율 20%)",
 };
 
 const HYBRID_KINDS: ReadonlyArray<string> = [
   "unsold_98_7", "unsold_99_2", "unsold_98_3", "unsold_98_5", "unsold_98_6",
-  "unsold_98_2", "unsold_98_4",
+  "unsold_98_2", "unsold_98_4", "unsold_98",
 ];
 
 export function IncomeDeductionDetailCard({ kind, result }: Detail) {
@@ -48,7 +50,8 @@ export function IncomeDeductionDetailCard({ kind, result }: Detail) {
   const isHybrid = HYBRID_KINDS.includes(kind);
   const isTaxAmountMode = isHybrid && (result as UnsoldHybridResult).effectCategory === "tax_amount";
   // §98의2 특칙 전용 (감면세액 없음) / §98의4 중과 배제 비대상 (소령 §167의3①5호 비열거)
-  const isSpecialOnly = isHybrid && (result as UnsoldHybridResult).effectCategory === "lthd_rate_special";
+  const hybridEffect = isHybrid ? (result as UnsoldHybridResult).effectCategory : undefined;
+  const isSpecialOnly = hybridEffect === "lthd_rate_special" || hybridEffect === "flat_rate_20";
   const showSurchargeNote = kind !== "unsold_98_4";
   const isRuralExempt = isHybrid && (result as UnsoldHybridResult).ruralSurtaxExempt;
   const hybridRatePct = isHybrid
@@ -79,7 +82,9 @@ export function IncomeDeductionDetailCard({ kind, result }: Detail) {
         <p className="text-sm font-semibold text-emerald-900 dark:text-emerald-200">{title}</p>
         <span className="text-xs rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 px-2 py-0.5 font-medium">
           {isSpecialOnly
-            ? "특칙 적용 — 장특 표2·기본세율"
+            ? hybridEffect === "flat_rate_20"
+              ? "세율 20% 특례 적용"
+              : "특칙 적용 — 장특 표2·기본세율"
             : kind === "unsold_98_4"
               ? "10% 세액감면 (5년 구분 없음)"
               : result.isWithin5Years

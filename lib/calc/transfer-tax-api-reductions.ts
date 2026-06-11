@@ -234,6 +234,18 @@ export function toEngineReductions(
         standardPriceAtTransfer988: parseAmount(r.standardPriceAtTransfer988 || "0") || undefined,
       };
     }
+    // ── P5 §98 (2026-06-12): 본 변환 (④) ──
+    if (r.type === "unsold_98") {
+      return {
+        type: "unsold_98" as const,
+        contractDate98: r.contractDate98 || undefined,
+        isNationalScale98: r.isNationalScale98,
+        isOutsideSeoul98: r.isOutsideSeoul98,
+        isUnsoldConfirmed98: r.isUnsoldConfirmed98,
+        isFirstBuyerNoOccupancy98: r.isFirstBuyerNoOccupancy98,
+        rentedFor5Years98: r.rentedFor5Years98,
+      };
+    }
     // ── P4 §98의2·§98의4 (2026-06-12): 본 변환 (④) ──
     if (r.type === "unsold_98_2") {
       return {

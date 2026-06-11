@@ -136,7 +136,16 @@ export type TransferReductionStub =
       meetsHometownRequirement?: boolean;
       _phase1Stub?: true }
   // 미분양 §98 시리즈 + §99의2
-  | { type: "unsold_98";         _phase1Stub?: true }
+  // §98 — P5 본격 구현 (2026-06-12): 세율 20% 본 필드
+  | { type: "unsold_98";
+      contractDate98?: Date;
+      isResident98?: boolean;
+      isNationalScale98?: boolean;
+      isOutsideSeoul98?: boolean;
+      isUnsoldConfirmed98?: boolean;
+      isFirstBuyerNoOccupancy98?: boolean;
+      rentedFor5Years98?: boolean;
+      _phase1Stub?: true }
   // §98의2 — P4 본격 구현 (2026-06-12): 특칙 전용 본 필드
   | { type: "unsold_98_2";
       contractDate982?: Date;
