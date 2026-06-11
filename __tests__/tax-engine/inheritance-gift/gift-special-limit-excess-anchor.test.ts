@@ -30,10 +30,12 @@ function makeEstateItem(
   id: string,
   amount: number,
   isSpecial?: boolean,
+  // 가업승계 케이스는 주식만 가능(§30의6①) — 법령 정합 픽스처를 위해 카테고리 지정
+  category: "financial" | "unlisted_stock" = "financial",
 ): EstateItem {
   return {
     id,
-    category: "financial",
+    category,
     name: `자산${id}`,
     marketValue: amount,
     isSpecialTreatmentAsset: isSpecial,
@@ -206,7 +208,7 @@ describe("§30의6① 가업승계 영위기간별 한도 분기 (familyBusiness
   it("[LE-F] 350억 · 25년(한도 400억): 이관 0, finalTax 5,600,000,000", () => {
     const r = calcGiftTax(
       makeInput({
-        giftItems: [makeEstateItem("a", 35_000_000_000)],
+        giftItems: [makeEstateItem("a", 35_000_000_000, undefined, "unlisted_stock")],
         creditInput: familyCredit({ familyBusinessYears: 25 }),
       }),
     );
@@ -224,7 +226,7 @@ describe("§30의6① 가업승계 영위기간별 한도 분기 (familyBusiness
   it("[LE-G] 350억 · 미입력(10년 → 한도 300억): 초과 50억 이관, finalTax 6,554,550,000", () => {
     const r = calcGiftTax(
       makeInput({
-        giftItems: [makeEstateItem("a", 35_000_000_000)],
+        giftItems: [makeEstateItem("a", 35_000_000_000, undefined, "unlisted_stock")],
         creditInput: familyCredit(),
       }),
     );
@@ -236,7 +238,7 @@ describe("§30의6① 가업승계 영위기간별 한도 분기 (familyBusiness
   it("[LE-H] 350억 · 30년(한도 600억): 이관 0, finalTax 5,600,000,000", () => {
     const r = calcGiftTax(
       makeInput({
-        giftItems: [makeEstateItem("a", 35_000_000_000)],
+        giftItems: [makeEstateItem("a", 35_000_000_000, undefined, "unlisted_stock")],
         creditInput: familyCredit({ familyBusinessYears: 30 }),
       }),
     );
@@ -247,7 +249,7 @@ describe("§30의6① 가업승계 영위기간별 한도 분기 (familyBusiness
   it("[LE-H2] 350억 · 정확히 20년 경계(한도 400억): 이관 0 — 25년과 동일", () => {
     const r = calcGiftTax(
       makeInput({
-        giftItems: [makeEstateItem("a", 35_000_000_000)],
+        giftItems: [makeEstateItem("a", 35_000_000_000, undefined, "unlisted_stock")],
         creditInput: familyCredit({ familyBusinessYears: 20 }),
       }),
     );
@@ -262,7 +264,7 @@ describe("§30의6① 가업승계 영위기간별 한도 분기 (familyBusiness
   it("[LE-I] 20억 · 5년: 특례 불가 → 전액 일반, finalTax 601,400,000", () => {
     const r = calcGiftTax(
       makeInput({
-        giftItems: [makeEstateItem("a", 2_000_000_000)],
+        giftItems: [makeEstateItem("a", 2_000_000_000, undefined, "unlisted_stock")],
         creditInput: familyCredit({ familyBusinessYears: 5 }),
       }),
     );

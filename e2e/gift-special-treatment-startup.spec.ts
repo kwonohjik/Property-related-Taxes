@@ -2,14 +2,14 @@
  * E2E: 증여세 §30의5 창업자금 과세특례 + G-M8 신규 고용 토글
  *
  * 시나리오 [E2E-GST-1]:
- *   1. 증여일 2025-01-01, 증여자 부(father), 토지 60억 입력
+ *   1. 증여일 2025-01-01, 증여자 부(father), 현금 60억 입력
+ *      (창업자금은 소법 §94① 재산 제외 — 토지는 특례 귀속 불가 차단되므로 현금 사용)
  *   2. Step3 — 조특법 과세특례: 창업자금(startup) 선택
  *   3. G-M7 투자완료 토글 ON
- *   4. G-M8 신규 고용 10명 이상 토글 ON
+ *   4. G-M8 신규 고용 10명 이상 토글 ON (한도 100억 → 초과 없음)
  *   5. 계산
- *   6. 결과 검증:
- *      a. "조특법 과세특례 (창업·가업)" 세액공제 행 표시
- *      b. 신고세액공제 행: §30의5⑪ 배제 안내 표시 또는 amount=0 (사유 산식)
+ *   6. 결과 검증: finalTax 550,000,000 ((60억−5억)×10%, LE-C anchor 동일)
+ *      + 신고세액공제 §30의5⑪ 배제 안내
  *
  * 주의사항:
  *   - worktree 실행 시 E2E_PORT=3100 필수 (memory: feedback_e2e_worktree_port_isolation)
@@ -24,6 +24,30 @@ import {
   nextSteps,
 } from "./_helpers/tax-flow";
 
+
+// 헬퍼: 현금 자산 추가 (gift-special-stream.spec.ts 패턴 차용)
+async function addCashAsset(
+  page: Parameters<typeof fillDateAndVerify>[0],
+  opts: { name: string; amount: string },
+): Promise<void> {
+  await page.getByRole("button", { name: /증여재산 추가/ }).click();
+  await page.getByRole("button", { name: /현금$/ }).first().click();
+  await expect(page.getByTestId("estate-edit-dialog")).toBeVisible();
+  const dialog = page.getByRole("dialog");
+  const nameInput = dialog.getByPlaceholder(/자산명|이름/);
+  if (await nameInput.isVisible().catch(() => false)) {
+    await nameInput.fill(opts.name);
+  }
+  const valueInput = dialog.getByRole("textbox", { name: /시가|증여가액|금액/ }).first();
+  if (await valueInput.isVisible().catch(() => false)) {
+    await valueInput.fill(opts.amount);
+  } else {
+    await dialog.getByRole("textbox").first().fill(opts.amount);
+  }
+  await dialog.getByRole("button", { name: "닫기" }).click();
+  await expect(page.getByTestId("estate-edit-dialog")).toBeHidden();
+}
+
 test.describe("§30의5 창업자금 과세특례 + G-M8 신규 고용 토글", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/calc/gift-tax");
@@ -36,16 +60,8 @@ test.describe("§30의5 창업자금 과세특례 + G-M8 신규 고용 토글", 
     await fillDateAndVerify(page, { year: "2025", month: "1", day: "1" });
     await page.getByRole("button", { name: /^다음/ }).click();
 
-    // Step1: 토지 자산 추가 (G57-3 패턴: keepModalOpen=true → 자산명 → 닫기)
-    await addLandAsset(page, {
-      area: "600",
-      unitPrice: "10000000", // 600㎡ × 1천만 = 60억
-      addButtonName: /증여재산 추가/,
-      keepModalOpen: true,
-    });
-    await page.getByPlaceholder(/본가 토지/).fill("창업자금 토지");
-    await page.getByRole("dialog").getByRole("button", { name: "닫기" }).click();
-    await expect(page.getByTestId("estate-edit-dialog")).toBeHidden();
+    // Step1: 현금 자산 60억 (창업자금 — 소법 §94① 재산 제외 카테고리)
+    await addCashAsset(page, { name: "창업자금", amount: "6000000000" });
 
     // Step1→2→3 이동 (Step2는 비과세·합산 → 기본값 그대로)
     await nextSteps(page, 2);
@@ -62,26 +78,14 @@ test.describe("§30의5 창업자금 과세특례 + G-M8 신규 고용 토글", 
     // 계산 실행
     await calcAndWaitResult(page, { taxType: "gift" });
 
-    // 결과 검증 1: 세액공제 내역 카드에 "조특법 과세특례" 행 표시
-    await expect(
-      page.getByText("조특법 과세특례 (창업·가업)"),
-    ).toBeVisible({ timeout: 10_000 });
+    // 결과 검증 1: 특례 스트림 세액 표시 — (60억 − 5억) × 10% = 550,000,000
+    // (구 "조특법 과세특례 (창업·가업)" CreditRow는 PR #120 deprecated(0)로 자동 숨김 — 2-스트림 카드로 대체)
+    await expect(page.getByText("550,000,000").first()).toBeVisible({ timeout: 10_000 });
 
-    // 결과 검증 2: §30의5⑪ 배제 안내 — "신고세액공제 (3%)" 행의 산출근거 버튼 클릭 후 배제 텍스트 확인
-    // CreditRow(amount=0, formula=§30의5⑪배제 안내) → "▶ 산출근거" 버튼 펼침 → 배제 사유 노출
-    const filingCreditRow = page.getByText("신고세액공제 (3%)").locator("..");
-    const formulaButton = filingCreditRow.getByRole("button", { name: /산출근거/ });
-    if (await formulaButton.isVisible({ timeout: 5_000 }).catch(() => false)) {
-      await formulaButton.click();
-      await expect(
-        page.getByText(/§30의5⑪/),
-      ).toBeVisible({ timeout: 5_000 });
-    } else {
-      // 배제로 인해 신고세액공제 행이 0원으로 표시됨 — 행 자체 존재 확인
-      await expect(
-        page.getByText("신고세액공제 (3%)"),
-      ).toBeVisible({ timeout: 5_000 });
-    }
+    // 결과 검증 2: §69 배제 안내 — PR #120 이후 2-스트림 카드 내부 표시
+    await expect(
+      page.getByText(/신고세액공제\(§69\) 배제/).first(),
+    ).toBeVisible({ timeout: 5_000 });
   });
 
   test("[E2E-GST-2] startup 선택 후 다른 옵션으로 변경 시 G-M8 초기화 확인", async ({ page }) => {

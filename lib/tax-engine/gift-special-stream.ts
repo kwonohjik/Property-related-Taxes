@@ -21,6 +21,7 @@
 import { TAX_CREDIT, GIFT as GIFT_LAW } from "./legal-codes";
 import { applyRate, calculateProgressiveTax } from "./tax-utils";
 import type {
+  AssetCategory,
   EstateItem,
   GiftDeductionResult,
   GiftTaxCreditInput,
@@ -161,6 +162,50 @@ export function filterSpecialPriors(
 export function filterOrdinaryPriors(priorGifts: PriorGift[]): PriorGift[] {
   return priorGifts.filter((p) => p.specialTreatmentType === undefined);
 }
+
+// ============================================================
+// 특례 귀속 가능 재산 종류 판정 — UI ⑤·validateStep ⑧·Zod ⑩⑫ 단일 진실
+// ============================================================
+
+/** 소득세법 §94① 양도소득세 과세대상 재산 카테고리 — 창업자금 특례 제외 대상 (조특령 §27의5①) */
+const INCOME_TAX_94_1_CATEGORIES: ReadonlySet<AssetCategory> = new Set([
+  "real_estate_land", // §94①1 토지
+  "real_estate_building", // §94①1 건물
+  "real_estate_apartment", // §94①1 건물(공동주택)
+  "listed_stock", // §94①3 주식
+  "unlisted_stock", // §94①3 주식
+]);
+
+/**
+ * 특례 귀속 가능 재산 종류 판정.
+ *
+ * - startup (§30의5① 전단 + 조특령 §27의5①): "토지·건물 등 대통령령으로 정하는 재산
+ *   (= 소득세법 §94①에 따른 재산)을 제외한 재산" — 부동산·주식은 창업자금 불가.
+ *   cash·financial·other 등은 허용 (financial 내 일부 §94① 해당 가능성은 차단하지 않고
+ *   허용 — false positive 차단 방지, 안내는 UI 캡션).
+ * - family_business (§30의6①): "해당 가업의 주식 또는 출자지분" — 주식만 허용.
+ *   출자지분은 unlisted_stock 카테고리로 입력.
+ */
+export function isSpecialTreatmentEligibleCategory(
+  category: AssetCategory,
+  specialTreatment: "startup" | "family_business",
+): boolean {
+  if (specialTreatment === "family_business") {
+    return category === "listed_stock" || category === "unlisted_stock";
+  }
+  return !INCOME_TAX_94_1_CATEGORIES.has(category);
+}
+
+/** 차단 사유 문구 (validateStep ⑧·Zod ⑩⑫·UI ⑤ 공용) */
+export const SPECIAL_TREATMENT_CATEGORY_BLOCK_REASON: Record<
+  "startup" | "family_business",
+  string
+> = {
+  startup:
+    "소득세법 §94①의 양도소득세 과세대상 재산(토지·건물·주식 등)은 창업자금 과세특례 대상이 아닙니다 (조특법 §30의5① · 시행령 §27의5①)",
+  family_business:
+    "가업승계 과세특례는 가업의 주식·출자지분만 대상입니다 (조특법 §30의6①)",
+};
 
 // ============================================================
 // 특례 스트림 계산 결과

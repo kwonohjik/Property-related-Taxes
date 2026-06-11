@@ -84,6 +84,13 @@ export type BargainTransferInputSchema = z.infer<typeof bargainTransferInputSche
 export { giftDonorRelationSchema, priorGiftSchema } from "./prior-gift-schema";
 import { giftDonorRelationSchema, priorGiftSchema } from "./prior-gift-schema";
 
+// 특례 귀속 가능 재산 종류 — 엔진 단일 진실 (UI ⑤·validateStep ⑧과 동일 헬퍼)
+import {
+  isSpecialTreatmentEligibleCategory,
+  SPECIAL_TREATMENT_CATEGORY_BLOCK_REASON,
+} from "@/lib/tax-engine/gift-special-stream";
+import type { AssetCategory } from "@/lib/tax-engine/types/inheritance-gift.types";
+
 // ============================================================
 // 비과세 항목 스키마 — ExemptionCheckedItem[] 기반 (§11·§12·§46·§46의2)
 // ============================================================
@@ -518,6 +525,34 @@ export const giftTaxInputSchema = z
             `조특법 특례(${specialTreatment === "startup" ? "창업자금 §30의5" : "가업승계 §30의6"}) 선택 시 ` +
             `혼합 자산 ${data.giftItems.length}개 중 미귀속 자산 ${unassigned.length}개에 ` +
             `특례 귀속(isSpecialTreatmentAsset)을 명시해야 합니다 (§30의5⑪).`,
+        });
+      }
+    }
+
+    // 특례 귀속 자산 재산 종류 제약 (동기화 지점 ⑩ — R3 잔여 해소):
+    //   startup — 소득세법 §94① 재산(부동산·주식) 제외 (조특령 §27의5①)
+    //   family_business — 주식·출자지분만 (§30의6①)
+    // 명시 태깅(true) + 단일 자산 자동 귀속(엔진 partition이 1개면 자동 특례) 모두 검사.
+    // 이 차단으로 "특례 자산 + assumedDebtForGift(부동산 전용 입력)" 조합도 구조적으로 차단됨.
+    if (specialTreatment) {
+      const effectiveSpecialItems =
+        data.giftItems.length === 1
+          ? data.giftItems
+          : data.giftItems.filter(
+              (item) => item.isSpecialTreatmentAsset === true,
+            );
+      const ineligible = effectiveSpecialItems.filter(
+        (item) =>
+          !isSpecialTreatmentEligibleCategory(
+            item.category as AssetCategory,
+            specialTreatment,
+          ),
+      );
+      if (ineligible.length > 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["giftItems"],
+          message: `특례 귀속 불가 재산 ${ineligible.length}개 — ${SPECIAL_TREATMENT_CATEGORY_BLOCK_REASON[specialTreatment]}`,
         });
       }
     }

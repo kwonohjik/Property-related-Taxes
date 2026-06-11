@@ -22,6 +22,10 @@ import {
   CATEGORY_LABELS,
 } from "@/components/calc/inheritance/estate-card/estate-category-meta";
 import type { SupportedCategory } from "@/lib/calc/deemed-category-policy";
+import {
+  isSpecialTreatmentEligibleCategory,
+  SPECIAL_TREATMENT_CATEGORY_BLOCK_REASON,
+} from "@/lib/tax-engine/gift-special-stream";
 
 // ============================================================
 // 자산 표시값 계산 (평가액 우선순위)
@@ -99,6 +103,21 @@ export function SpecialTreatmentAssetSelector({
     const item = allItems[0];
     const val = getAssetValue(item);
     const label = getAssetLabel(item, 0);
+    // 재산 종류 부적격 — 자동 귀속 불가 경고 (validateStep ⑧·Zod ⑩이 차단)
+    if (!isSpecialTreatmentEligibleCategory(item.category, specialTreatment)) {
+      return (
+        <div className="rounded-lg border border-amber-300 bg-amber-50/60 p-3 space-y-1.5">
+          <p className="text-xs font-semibold text-amber-800">
+            특례 귀속 불가 재산 ({streamLabel})
+          </p>
+          <p className="text-sm text-amber-800">{label}</p>
+          <p className="text-[11px] text-amber-700">
+            {SPECIAL_TREATMENT_CATEGORY_BLOCK_REASON[specialTreatment]}. 특례
+            선택을 해제하거나 해당 재산 종류로 입력하세요.
+          </p>
+        </div>
+      );
+    }
     return (
       <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-3 space-y-2">
         <div className="flex items-center gap-2">
@@ -141,26 +160,45 @@ export function SpecialTreatmentAssetSelector({
           const isChecked = item.isSpecialTreatmentAsset === true;
           const val = getAssetValue(item);
           const label = getAssetLabel(item, i);
+          // 재산 종류 부적격 자산은 특례 귀속 선택 비활성 (startup: 소법 §94① 재산 제외 / family: 주식만)
+          const eligible = isSpecialTreatmentEligibleCategory(
+            item.category,
+            specialTreatment,
+          );
           return (
             <label
               key={item.id ?? i}
-              className={`flex items-center justify-between rounded-md border px-3 py-2 cursor-pointer transition-colors ${
-                isChecked
-                  ? "border-emerald-400 bg-emerald-100/80"
-                  : "border-emerald-200 bg-white dark:bg-transparent hover:bg-emerald-50"
+              className={`flex items-center justify-between rounded-md border px-3 py-2 transition-colors ${
+                !eligible
+                  ? "border-emerald-200/60 bg-emerald-50/30 opacity-60 cursor-not-allowed"
+                  : isChecked
+                    ? "border-emerald-400 bg-emerald-100/80 cursor-pointer"
+                    : "border-emerald-200 bg-white dark:bg-transparent hover:bg-emerald-50 cursor-pointer"
               }`}
+              title={
+                !eligible
+                  ? SPECIAL_TREATMENT_CATEGORY_BLOCK_REASON[specialTreatment]
+                  : undefined
+              }
             >
               <div className="flex items-center gap-2.5">
                 <input
                   type="checkbox"
                   checked={isChecked}
+                  // 부적격은 신규 체크 차단. 단 이미 체크된 상태(이력 복원 등)는 해제 가능해야 함
+                  disabled={!eligible && !isChecked}
                   onChange={(e) => onItemChange(i, e.target.checked)}
-                  className="h-4 w-4 rounded border-emerald-400 text-emerald-600 focus:ring-emerald-500"
+                  className="h-4 w-4 rounded border-emerald-400 text-emerald-600 focus:ring-emerald-500 disabled:cursor-not-allowed"
                 />
                 <span className="text-sm">{label}</span>
                 {isChecked && (
                   <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-200 text-emerald-800 font-medium">
                     특례 스트림
+                  </span>
+                )}
+                {!eligible && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium">
+                    특례 대상 아님
                   </span>
                 )}
               </div>
