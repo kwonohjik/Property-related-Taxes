@@ -21,6 +21,7 @@ import type { EstateItem, Heir } from "@/lib/tax-engine/types/inheritance-gift.t
 import { KiwoomValuationResultCard } from "@/components/calc/inheritance/listed-stock/KiwoomValuationResultCard";
 import { useKiwoomValuationFetch } from "@/components/calc/inheritance/listed-stock/useKiwoomValuationFetch";
 import { EstateCommonAttributesSection } from "@/components/calc/inheritance/EstateCommonAttributesSection";
+import { StockBurdenedDebtSection } from "@/components/calc/gift/StockBurdenedDebtSection";
 import { ListedStockBesshiAttributesSection } from "@/components/calc/inheritance/listed-stock/ListedStockBesshiAttributesSection";
 import { ListedStockSecurityInfoSection } from "@/components/calc/inheritance/listed-stock/ListedStockSecurityInfoSection";
 import { ListedStockBesshiPreviewCard } from "@/components/calc/inheritance/listed-stock/ListedStockBesshiPreviewCard";
@@ -292,6 +293,9 @@ function ListedStockEditor({
           Plan: docs/00-pm/listed-stock-form-formula-premium-display-fix.plan.md */}
       <ListedStockValuationPreviewCard item={item} />
 
+      {/* §47① 부담부증여 채무인수 (증여 모드 전용) — 평가 입력 뒤 = 계산 로직 순서 */}
+      <StockBurdenedDebtSection item={item} onUpdate={onUpdate} mode={mode} />
+
       {/* 공통속성 4블록 (EstateCommonAttributesSection) — PR-4: 상장·비상장 공용 */}
       <EstateCommonAttributesSection
         item={item}
@@ -449,6 +453,9 @@ function UnlistedStockCard({
           taxKind={mode}
         />
       )}
+
+      {/* §47① 부담부증여 채무인수 (증여 모드 전용) — 평가 입력 뒤 = 계산 로직 순서 */}
+      <StockBurdenedDebtSection item={item} onUpdate={onUpdate} mode={mode} />
 
       {/* 공통속성 4블록 (EstateCommonAttributesSection) — PR-4: 모드 밖, 카드 하단 배치 */}
       <EstateCommonAttributesSection

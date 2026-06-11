@@ -452,6 +452,37 @@ function calcGiftTaxTwoStream(
     0,
   );
 
+  // §47① 부담부증여 채무 — 자산 귀속별 분리 합산 (특례 자산 / 일반 자산)
+  //   특례 자산 채무: 특례 스트림 과세가액(한도)에서 차감 (specialItemsNetValue)
+  //   일반 자산 채무: 일반 스트림에서 차감 (STEP 2)
+  const specialItemsDebt = Math.max(
+    0,
+    partition.specialItems.reduce((s, item) => s + (item.assumedDebtForGift ?? 0), 0),
+  );
+  const ordinaryItemsDebt = Math.max(
+    0,
+    partition.ordinaryItems.reduce((s, item) => s + (item.assumedDebtForGift ?? 0), 0),
+  );
+  // §47① — "증여세 과세가액 = 증여재산가액 − 인수 채무". 조특법 §30의5⑬(§30의6⑤ 준용) 보충 적용으로
+  //   특례 과세가액(한도) 산정도 채무 차감 후 순가액 기준. (법문 해석 기준, 예규 미확보 — warnings 안내)
+  const specialItemsNetValue = Math.max(0, specialItemsValue - specialItemsDebt);
+  if (specialItemsDebt > 0 && specialItemsValue > 0) {
+    allBreakdown.push({
+      label: "가업승계 특례 자산 채무 인수 차감 (§47①)",
+      amount: -Math.min(specialItemsDebt, specialItemsValue),
+      lawRef: GIFT_LAW.TAXABLE_VALUE,
+      note: "특례 과세가액에서 차감 후 한도·공제 적용",
+    });
+    allWarnings.push(
+      "가업승계 과세특례와 부담부증여(§47① 채무 인수)가 동시 적용되는 경우, 특례 과세가액의 채무 차감 적용 범위에 대해 과세관청 해석을 확인하시기 바랍니다.",
+    );
+    if (specialItemsDebt > specialItemsValue) {
+      allWarnings.push(
+        "특례 자산의 인수 채무액이 특례 증여재산가액을 초과하여 특례 스트림 과세가액을 0으로 처리합니다.",
+      );
+    }
+  }
+
   // ─────────────────────────────────────────────
   // STEP 0.3: prior 분류
   //   특례 prior: specialTreatmentType === input.creditInput.specialTreatment
@@ -470,7 +501,7 @@ function calcGiftTaxTwoStream(
   //   §69 배제 (§30의5⑪·§30의6⑤)
   // ─────────────────────────────────────────────
   const specialStream = calcSpecialTreatmentStream(
-    specialItemsValue,
+    specialItemsNetValue,
     specialPriors,
     input.creditInput!,
   );
@@ -506,13 +537,13 @@ function calcGiftTaxTwoStream(
     allBreakdown.push(...exemptBreakdown);
   }
 
-  const assumedDebtTotal = Math.max(
-    0,
-    partition.ordinaryItems.reduce(
-      (sum, item) => sum + (item.assumedDebtForGift ?? 0),
-      0,
-    ),
-  );
+  // 일반 스트림 차감 채무:
+  //   적격 → 일반 자산 채무만 (특례 자산 채무는 specialItemsNetValue에서 이미 차감)
+  //   미적격 → 특례 자산이 gross로 일반 스트림에 폴백(effectiveOrdinaryGrossValue += specialItemsValue)
+  //           되므로 그 채무도 일반 스트림에서 차감
+  const assumedDebtTotal = specialStream.isEligible
+    ? ordinaryItemsDebt
+    : ordinaryItemsDebt + specialItemsDebt;
   if (assumedDebtTotal > 0) {
     allBreakdown.push({
       label: "부담부증여 수증자 인수 채무 (일반 스트림)",
@@ -735,6 +766,8 @@ function calcGiftTaxTwoStream(
     publicInterestExclusion: 0,
     publicTrustExclusion: 0,
     disabledTrustExclusion: 0,
+    // 별지 ㉒ §47 채무액 — 일반 스트림 채무 (besshi10·결과뷰 요약 모두 일반 스트림 컨텍스트).
+    //   특례 자산 채무는 specialStreamDebt로 분리 (2-스트림 카드 표시) — 자기일관성 유지.
     debtAssumed: assumedDebtTotal,
     disasterLossDeduction: 0,
     appraisalFeeDeduction: appraisalFee.total,
@@ -750,6 +783,8 @@ function calcGiftTaxTwoStream(
     specialStreamTax: specialStream.finalTax,
     ordinaryStreamTax: ordinaryFinalTax,
     specialStreamAggregatedValue: specialStream.aggregatedValue,
+    // 특례 자산 §47① 인수 채무 (한도 차감분) — 2-스트림 카드 표시용
+    specialStreamDebt: Math.min(specialItemsDebt, specialItemsValue) || undefined,
   };
 
   const besshi10Rows = buildBesshi10Rows(input, partialResult, brackets);

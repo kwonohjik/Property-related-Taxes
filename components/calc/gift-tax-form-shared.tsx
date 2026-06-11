@@ -26,7 +26,7 @@ import { StockValuationForm } from "@/components/calc/StockValuationForm";
 import { ExemptionChecklist } from "@/components/calc/exemption/ExemptionChecklist";
 import { PriorGiftInput } from "@/components/calc/PriorGiftInput";
 import { AppraisalFeeSection } from "@/components/calc/deductions/AppraisalFeeSection";
-import { resolveValuationMethod } from "@/lib/tax-engine/property-valuation";
+import { resolveValuationMethod, evaluateAllEstateItems } from "@/lib/tax-engine/property-valuation";
 import { INITIAL_APPRAISAL_FEE_FIELDS } from "@/lib/calc/appraisal-fee-form";
 import { SpecialTreatmentAssetSelector } from "@/components/calc/gift/SpecialTreatmentAssetSelector";
 import {
@@ -279,18 +279,26 @@ export function validateStep(step: number, form: FormState): string | null {
       return "모든 증여재산에 자산명을 입력하세요.";
     }
     // §47① 채무인수액 > 재산평가액 경고 (차단 아님 — §47① 입증 후 허용 가능, 엔진 음수가드 위임)
-    const realEstateItems = form.giftItems.filter((it) =>
-      it.category.startsWith("real_estate")
-    );
-    for (let i = 0; i < realEstateItems.length; i++) {
-      const it = realEstateItems[i];
+    // 부동산(giftItems) + 주식(stockItems) 전수. 주식 평가액은 엔진 단일 진실(evaluateAllEstateItems)
+    // — UI 자체 재계산 금지(dual-truth). 입력 미완성 예외는 try/catch → 0(경고 미발생, 엔진 위임).
+    const debtCandidates = [...form.giftItems, ...form.stockItems];
+    for (let i = 0; i < debtCandidates.length; i++) {
+      const it = debtCandidates[i];
       const debtForGift = it.assumedDebtForGift ?? 0;
-      if (debtForGift > 0) {
-        const valuation =
-          it.marketValue ?? it.appraisedValue ?? it.similarSalesValue ?? it.standardPrice ?? 0;
-        if (valuation > 0 && debtForGift > valuation) {
-          return `${it.name.trim() || `재산 ${i + 1}`}: 채무인수액(${debtForGift.toLocaleString()}원)이 평가액(${valuation.toLocaleString()}원)을 초과합니다. 입력값을 확인하세요. (과세가액 0으로 처리됩니다)`;
+      if (debtForGift <= 0) continue;
+      let valuation = 0;
+      if (it.category === "listed_stock" || it.category === "unlisted_stock") {
+        try {
+          valuation = evaluateAllEstateItems([it])[0]?.valuatedAmount ?? 0;
+        } catch {
+          valuation = 0;
         }
+      } else {
+        valuation =
+          it.marketValue ?? it.appraisedValue ?? it.similarSalesValue ?? it.standardPrice ?? 0;
+      }
+      if (valuation > 0 && debtForGift > valuation) {
+        return `${it.name.trim() || `재산 ${i + 1}`}: 채무인수액(${debtForGift.toLocaleString()}원)이 평가액(${valuation.toLocaleString()}원)을 초과합니다. 입력값을 확인하세요. (과세가액 0으로 처리됩니다)`;
       }
     }
   }

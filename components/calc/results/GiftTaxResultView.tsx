@@ -481,6 +481,14 @@ export function GiftTaxResultView({
               </h3>
             </div>
             <div className="divide-y divide-border">
+              {(result.specialStreamDebt ?? 0) > 0 && (
+                <Row
+                  label="특례 자산 채무인수 차감 (§47①)"
+                  value={`- ${formatKRW(result.specialStreamDebt ?? 0)}`}
+                  sub
+                  deduction
+                />
+              )}
               {(result.specialStreamAggregatedValue ?? 0) > 0 && (
                 <Row
                   label="특례 스트림 합산 과세가액 (신규 + 기간무관 prior)"
