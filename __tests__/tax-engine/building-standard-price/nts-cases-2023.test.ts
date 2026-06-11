@@ -136,6 +136,22 @@ describe("NTS 공식 계산사례 2023 — 복합건물(섹션3)", () => {
   });
 });
 
+describe("적용요령 echo(applyNotes) — 인쇄 서식용", () => {
+  it("철골조 여관 — 구조·용도·위치·잔가율 적용요령 문자열", () => {
+    const v = calcBuildingStandardPrice({
+      taxType: "inheritance_gift", floorArea: 75.3, builtYear: 2004, valuationYear: 2023,
+      valuation: { structureKey: "steel_frame", usageNo: 6, landPricePerM2: 1_450_000 },
+      manualAdjustmentRate: 90,
+    }).valuation;
+    expect(v?.applyNotes).toEqual({
+      structure: "철골조",
+      usage: "6. 여관(모텔 포함)", // 이미지 "(6. 여관(모텔 포함))"과 일치
+      location: "17. 120만원 이상~160만원 미만", // 1,450,000 → #17 (120~160만)
+      residual: "II그룹, 2004년 신축, 19년 경과", // 철골조=II그룹(40년) — 잔가율표 "모든 건물"
+    });
+  });
+});
+
 describe("NTS 공식 계산사례 2023 — 단일 시점 일반 건물 13건", () => {
   for (const c of CASES) {
     it(`${c.name}: ㎡당 ${c.pricePerM2.toLocaleString()} / 기준시가 ${c.standardPrice.toLocaleString()}`, () => {

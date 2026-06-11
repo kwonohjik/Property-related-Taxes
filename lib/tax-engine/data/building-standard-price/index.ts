@@ -33,6 +33,7 @@ export {
   LOCATION_INDEX_MAX_YEAR,
   hasLocationIndexYear,
   resolveLocationIndex,
+  describeLocationBucket,
 } from "./location-index";
 
 // D5 잔가율
@@ -73,6 +74,7 @@ export {
   USAGE_INDEX_MAX_YEAR,
   hasUsageIndexYear,
   resolveUsageIndex,
+  resolveUsageLabel,
   listUsageOptions,
 } from "./usage-index";
 

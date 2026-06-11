@@ -39,6 +39,9 @@ import {
   resolveMaxFloorsRate,
   resolveGrossAreaRate,
   resolveWallessRate,
+  describeLocationBucket,
+  resolveUsageLabel,
+  STRUCTURE_META,
 } from "./data/building-standard-price";
 
 /** 엔진 내부 오류(검증 실패) — orchestrator가 warnings로 변환하거나 throw */
@@ -133,6 +136,8 @@ export function calcPointBreakdown(
   const pricePerM2 = truncateToThousand(raw);
   const standardPrice = Math.floor(pricePerM2 * floorArea);
 
+  const usageLabel = resolveUsageLabel(year, point.usageNo);
+
   return {
     standardPrice,
     pricePerM2,
@@ -143,6 +148,12 @@ export function calcPointBreakdown(
     residualRate,
     adjustmentRate: adjustmentRate === 1 ? undefined : adjustmentRate,
     appliedLandPriceYear: year,
+    applyNotes: {
+      structure: STRUCTURE_META[point.structureKey]?.label,
+      usage: usageLabel ? `${point.usageNo}. ${usageLabel}` : `${point.usageNo}`,
+      location: describeLocationBucket(year, point.landPricePerM2),
+      residual: `${residualGroup}그룹, ${builtYear}년 신축, ${Math.max(0, year - builtYear)}년 경과`,
+    },
   };
 }
 

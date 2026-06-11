@@ -194,6 +194,20 @@ export interface BuildingStdPriceBreakdown {
   label?: string;
   /** 해당 부분 면적(㎡) echo */
   floorArea?: number;
+  /** 적용요령 echo(인쇄·서식용) — 일반 건물만. 산식 무관 표시 전용 */
+  applyNotes?: BuildingStdPriceApplyNotes;
+}
+
+/** 결과 서식 "적용요령" 칸 텍스트 echo(산식 변경 없음). 예 구조 "철골조" · 용도 "6. 여관" */
+export interface BuildingStdPriceApplyNotes {
+  /** 구조지수 — 구조 표시명. 예 "철골조" */
+  structure?: string;
+  /** 용도지수 — "번호. 표시명". 예 "6. 여관" */
+  usage?: string;
+  /** 위치지수 — "번호. 구간". 예 "17. 120만원 이상~160만원 미만" */
+  location?: string;
+  /** 잔가율 — "그룹, 신축연도, 경과". 예 "II그룹, 2004년 신축, 19년 경과" */
+  residual?: string;
 }
 
 /** 공동주택 고시 전 취득 환산 결과(산출근거 echo) */

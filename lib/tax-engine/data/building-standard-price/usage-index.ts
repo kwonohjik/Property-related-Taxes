@@ -89,6 +89,12 @@ export function resolveUsageIndex(year: number, usageNo: number): number | undef
   return scheme.baseIndex[usageNo];
 }
 
+/** 용도 표시명(인쇄·적용요령용). 예 (2007년 scheme) 6 → "여관". 없으면 undefined. */
+export function resolveUsageLabel(year: number, usageNo: number): string | undefined {
+  const scheme = schemeForYear(year);
+  return scheme?.labels[usageNo];
+}
+
 /** UI 드롭다운용 — 해당 연도 용도 옵션(번호·표시명·지수). 기계식주차는 제외(별도 토글). */
 export function listUsageOptions(
   year: number,
