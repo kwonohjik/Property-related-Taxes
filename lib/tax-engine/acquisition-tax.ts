@@ -393,7 +393,7 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
 
   const totalTax = acquisitionTax + additional.ruralSpecialTax + additional.localEducationTax;
 
-  // ── Step 8: 감면 적용 — 중복배제 패턴 (조특법 §127②) ──
+  // ── Step 8: 감면 적용 — 중복배제 패턴 (지방세특례제한법 §180) ──
   // 후보 감면 배열에 각 감면을 독립 계산 후 푸시 → 납세자 유리 1건 선택
 
   interface ReductionCandidate {
@@ -440,7 +440,7 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
     });
   }
 
-  // 납세자 유리 1건 선택 (조특법 §127②)
+  // 감면되는 세액이 큰 1건 선택 (지방세특례제한법 §180)
   const bestReduction = reductionCandidates.reduce(
     (best, c) => (c.amount >= best.amount ? c : best),
     { amount: 0, type: "first_home" as "first_home" | "self_cultivation", legalBasis: "", label: "" }

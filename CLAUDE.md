@@ -94,7 +94,7 @@ lib/calc/ — 클라이언트↔API 변환 (14개 동기화 지점 ④⑧ 담당
 - DB 기반 세율: `tax_rates` jsonb. key: `${tax_type}:${category}:${sub_category}`.
 - 정수 연산: 금액은 원(KRW, 정수). `applyRate()`/`safeMultiply()` 사용. `Math.round()` 금지.
 - 중간 절사: 세율 × 금액 직후 `Math.floor()`. 지방소득세는 원 미만 절사.
-- 감면 중복배제(조특법 §127②): 후보 배열 max 패턴.
+- 감면 중복배제(양도세 조특법 §127⑦·취득세/재산세 지방세특례제한법 §180): 후보 배열 max 패턴.
 - 법령 조문 상수: 문자열 리터럴 금지. `lib/tax-engine/legal-codes/` 의 `TRANSFER.*` 등 상수.
 
 **API Date 직렬화** — `lib/api/date-coerce.ts` 필수. JSON 경유 후 string 도달 → `Date < string` silent false 함정. `toDate(v, "field")` / `toOptionalDate(v)` / `coerceDates(obj, [...])`. 신규 코드 `new Date(x)` 직접 호출 금지.

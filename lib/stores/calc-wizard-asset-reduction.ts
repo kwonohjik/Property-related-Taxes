@@ -92,7 +92,83 @@ export type AssetReductionForm =
       phdBuildingStdAtAcq993?: string;
       /** 최초공시시 건물 기준시가 (원, 선택) */
       phdBuildingStdAtFirst993?: string;
-    };
+    }
+  // ── Phase 2 (2026-06-11): 장기임대 §97 시리즈 (아래 RentalReductionFormVariant 정의) ──
+  | RentalReductionFormVariant;
+
+// ── Phase 2 (2026-06-11): 장기임대 §97 시리즈 본격 구현 ──
+// 설계: docs/02-design/features/transfer-rental-reduction.ui.design.md
+// 명명 통일(E5): 등록일은 폼·Zod·Route·엔진 전 구간 registrationDate.
+
+/** 계약별 임대료 이력 행 (정밀 모드) */
+export interface RentHistoryFormItem {
+  contractDate: string;                       // YYYY-MM-DD
+  contractType: "jeonse" | "monthly" | "semi_jeonse";
+  monthlyRent: string;                        // CurrencyInput
+  deposit: string;                            // CurrencyInput
+}
+
+/** 공실 구간 행 */
+export interface VacancyPeriodFormItem {
+  startDate: string;                          // YYYY-MM-DD
+  endDate: string;                            // YYYY-MM-DD
+}
+
+/** §97 시리즈 공통 폼 필드 (5개 variant 공유) */
+export interface RentalCommonFormFields {
+  /** 지자체 임대사업자 등록일 (YYYY-MM-DD) — 엔진 PeriodCheckContext.registrationDate 동일 키 */
+  registrationDate: string;
+  /** 세무서 사업자등록 여부 (소법 §168) */
+  isTaxRegistered: boolean;
+  /** 임대개시일 (YYYY-MM-DD) */
+  rentalStartDate: string;
+  /** 임대료 5% 증액 위반 — 3-state: "" 미선택(차단) / "none" / "has_violation" */
+  rentIncreaseViolationMode: "" | "none" | "has_violation";
+  /** 정밀 모드 계약 이력 (has_violation 시 ≥ 2행) */
+  rentHistory?: RentHistoryFormItem[];
+  /** 6개월+ 공실 — 3-state: null 미선택(차단) */
+  hasVacancyOver6Months: boolean | null;
+  /** 공실 구간 (true 시 ≥ 1행) */
+  vacancyPeriods?: VacancyPeriodFormItem[];
+}
+
+export type RentalReductionFormVariant =
+  | ({
+      type: "rental_97_3";
+      rentalHousingType: "long_term_private" | "public_support_private";
+      propertyType: "apartment" | "non_apartment";
+      region: "capital" | "non_capital";
+      /** 임대개시일 당시 주택+부속토지 기준시가 합계 (원) — 령 §97의3③4호 6억/3억 한도 */
+      officialPriceAtStart: string;
+      /** 국민주택규모 이하 확인 (령 §97의3③2호) */
+      isNationalHousingScale: boolean;
+      /** 2020.7.11 이후 단기→장기 변경 신고분 (§97의3① 괄호 — 적용 제외) */
+      isConvertedFromShortTerm: boolean;
+    } & RentalCommonFormFields)
+  | ({
+      type: "rental_97_4";
+      region: "capital" | "non_capital";
+    } & RentalCommonFormFields)
+  | ({
+      type: "rental_97_5";
+      officialPriceAtStart: string;
+      region: "capital" | "non_capital";
+    } & RentalCommonFormFields)
+  | ({
+      type: "rental_97_main" | "rental_97_proviso";
+      /** 신축 연도 (1986~2000) */
+      constructionYear: string;
+      /** 국민주택 확인 (§97①) */
+      isNationalHousing: boolean;
+      /** §97① 단서 분기 (proviso만) */
+      provisoCase?: "a_construction" | "b_purchase" | "c_10years";
+    } & RentalCommonFormFields)
+  | ({
+      type: "rental_97_2";
+      /** 건설임대(1호) / 매입임대(2호) */
+      rental972Type: "construction" | "purchase" | "";
+      isNationalHousing: boolean;
+    } & RentalCommonFormFields);
 
 export type ReductionType = AssetReductionForm["type"];
 

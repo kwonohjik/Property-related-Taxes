@@ -147,6 +147,9 @@ export function migrateLegacyForm(
         selfFarmingStandardPriceAtIncorporation: String(legacy.selfFarmingStandardPriceAtIncorporation ?? ""),
       }];
     } else if (legacyReductionType === "long_term_rental") {
+      // ⚠️ R-1·R-4: 레거시 8년 50% 경과규정(§97의3 구법). 신규 입력은 rental_97_* 사용.
+      // 구버전 데이터 호환 보존 — 부칙 확정 전 rental_97_3(10년 70%)로 단순 치환 금지(율 상이).
+      // 후속: docs/00-pm/transfer-rental-followup.plan.md §R-1·R-4.
       primaryAsset.reductions = [{
         type: "long_term_rental",
         rentalYears: String(legacy.rentalYears ?? "0"),

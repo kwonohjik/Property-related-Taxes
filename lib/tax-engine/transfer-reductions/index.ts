@@ -55,6 +55,40 @@ export {
   type ReductionPhdResult,
 } from "./phd-helper";
 
+// ── Phase 2 (2026-06-11): 장기임대 §97 시리즈 본격 구현 ──
+export {
+  evaluateRental97Lthd,
+  evaluateRental97TaxAmount,
+  type Rental97EngineContext,
+} from "./rental-97-router";
+export {
+  evaluateRental973,
+  RENTAL_97_3_OVERRIDE_RATE,
+  RENTAL_97_3_OVERRIDE_RATE_8YEAR,
+  RENTAL_97_3_MANDATORY_YEARS,
+  RENTAL_97_3_MANDATORY_YEARS_8YEAR,
+  RENTAL_97_3_PRE_2023_REG_CUTOFF,
+} from "./rental-97-3";
+export { evaluateRental974, getRental974AdditionalRate, RENTAL_97_4_ADDITIONAL_RATE_TABLE } from "./rental-97-4";
+export { evaluateRental975, RENTAL_97_5_REGISTRATION_MONTHS } from "./rental-97-5";
+export { evaluateRental97Main } from "./rental-97-main";
+export { evaluateRental972 } from "./rental-97-2";
+export {
+  calculateEffectiveRentalPeriod,
+  validateRentIncrease,
+  convertToStandardDeposit,
+  calcRentalGainRatio,
+  RENTAL_VACANCY_GRACE_DAYS,
+} from "./rental-97-shared-helpers";
+export type {
+  Rental97ArticleId,
+  Rental97EvaluationInput,
+  Rental97Result,
+  Rental97IneligibleReason,
+  RentalLthdEffect,
+  RentalTaxAmountEffect,
+} from "./types";
+
 /**
  * 23개 조문 통합 stub evaluator. Phase 1 단계는 모두 isEligible:false 반환.
  * 시한 외 케이스는 명시적 사유, 시한 내 케이스는 "구현 예정" 사유.

@@ -12,14 +12,67 @@
  *      lib/tax-engine/transfer-reductions/metadata.ts REDUCTION_METADATA
  */
 
+/**
+ * 장기임대 §97 시리즈 — Phase 2 본격 구현 공통 필드 (2026-06-11).
+ * Date 필드는 route handler에서 date-coerce 적용 후 전달.
+ * 상세: lib/tax-engine/transfer-reductions/types.ts Rental97EvaluationInput
+ */
+interface Rental97CommonFields {
+  /** 지자체 임대사업자 등록일 */
+  registrationDate?: Date;
+  /** 임대개시일 */
+  rentalStartDate?: Date;
+  /** 세무서 사업자등록 여부 (소법 §168) */
+  isTaxRegistered?: boolean;
+  /** 임대료 5% 증액 위반 신고 (간소화 모드) */
+  rentIncreaseViolated?: boolean;
+  /** 계약별 임대료 이력 (정밀 모드 — 간소화보다 우선) */
+  rentHistory?: { contractDate: Date; monthlyRent: number; deposit: number; contractType: "jeonse" | "monthly" | "semi_jeonse" }[];
+  /** 6개월+ 공실 구간 */
+  vacancyPeriods?: { startDate: Date; endDate: Date }[];
+  /** 임대기간 안분용 기준시가 3점 (조특령 §97의3⑤·§97의5② — 임대개시>취득 시 필수) */
+  stdPriceAtRentalStart?: number;
+  _phase1Stub?: true;
+}
+
 export type TransferReductionStub =
   // 장기임대 §97 시리즈 (rental_97_3 = 기존 long_term_rental 후속 — 정정된 ID)
-  | { type: "rental_97_main";    _phase1Stub?: true }
-  | { type: "rental_97_proviso"; _phase1Stub?: true }
-  | { type: "rental_97_2";       _phase1Stub?: true }
-  | { type: "rental_97_3";       rentalYears?: number; rentIncreaseRate?: number; _phase1Stub?: true }
-  | { type: "rental_97_4";       _phase1Stub?: true }
-  | { type: "rental_97_5";       _phase1Stub?: true }
+  | ({ type: "rental_97_main";
+      constructionYear?: number;
+      isNationalHousing?: boolean;
+    } & Rental97CommonFields)
+  | ({ type: "rental_97_proviso";
+      constructionYear?: number;
+      isNationalHousing?: boolean;
+      provisoCase?: "a_construction" | "b_purchase" | "c_10years";
+    } & Rental97CommonFields)
+  | ({ type: "rental_97_2";
+      rental972Type?: "construction" | "purchase";
+      isNationalHousing?: boolean;
+    } & Rental97CommonFields)
+  | ({ type: "rental_97_3";
+      /** @deprecated Phase 1 stub 호환 (단순 경로 입력) */
+      rentalYears?: number;
+      /** @deprecated Phase 1 stub 호환 */
+      rentIncreaseRate?: number;
+      /** 임대개시일 당시 주택+부속토지 기준시가 합계 (령 §97의3③4호 — 6억/3억 한도) */
+      officialPriceAtStart?: number;
+      /** 국민주택규모 이하 (령 §97의3③2호) — 사용자 확인 */
+      isNationalHousingScale?: boolean;
+      region?: "capital" | "non_capital";
+      propertyType?: "apartment" | "non_apartment";
+      rentalHousingType?: "long_term_private" | "public_support_private";
+      /** 2020.7.11 이후 단기→장기 변경 신고분 (§97의3① 괄호 — 적용 제외) */
+      isConvertedFromShortTerm?: boolean;
+    } & Rental97CommonFields)
+  | ({ type: "rental_97_4";
+      rentalHousingType4?: "long_term_private" | "public_support_private" | "public_construction" | "public_purchase";
+      region?: "capital" | "non_capital";
+    } & Rental97CommonFields)
+  | ({ type: "rental_97_5";
+      officialPriceAtStart?: number;
+      region?: "capital" | "non_capital";
+    } & Rental97CommonFields)
   // 신축 §99 시리즈
   | { type: "new_99";            region?: "metropolitan" | "non_metropolitan"; _phase1Stub?: true }
   // §99의3 — Phase 2 본격 구현 (2026-05-06): 본 요건 필드 union 멤버
