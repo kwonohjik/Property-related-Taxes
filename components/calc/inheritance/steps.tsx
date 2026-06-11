@@ -41,6 +41,7 @@ import { CohabitAncillaryLandBlock } from "./CohabitAncillaryLandBlock";
 import { Step4DeductionGroup } from "./Step4DeductionGroup";
 import { CasualtyLossSection } from "./CasualtyLossSection";
 import { InheritanceReviewSummary } from "./InheritanceReviewSummary";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 
 /** Step4 추가공제 자동 도출값 — InheritanceTaxForm useMemo에서 계산해 prop 전달(3중 일치). */
 export type Step4Autos = {
@@ -417,6 +418,7 @@ export function Step4({
               onChange={(v) => set({ spouseActualAmount: v })}
               hint="협의분할 입력 시 배우자 배분액에서 자동 도출. 실제 상속액이 법정상속분보다 적을 때만 직접 입력 (최소 5억·최대 30억)."
             />
+            <LawArticleModal legalBasis="상속세및증여세법 §19" label="§19 배우자 상속공제" />
             <AutoSuggestBadge
               suggestion={autos.spouse}
               currentValue={autoFillValue(form.spouseActualAmount, autos.spouse)}
@@ -434,6 +436,7 @@ export function Step4({
             hint="예금·펀드·채권 등 — 자산 카드의 금융재산에서 자동 도출. 20% 공제, 최대 2억."
             placeholder="없으면 빈칸"
           />
+          <LawArticleModal legalBasis="상속세및증여세법 §22" label="§22 금융재산 상속공제" />
           <AutoSuggestBadge
             suggestion={autos.netFin}
             currentValue={autoFillValue(form.netFinancialAssets, autos.netFin)}
@@ -450,6 +453,7 @@ export function Step4({
             hint="자산 카드에서 주택을 '동거주택'으로 체크하면 기준시가가 자동 도출됩니다. 공시가 100%(2020.1.1.~)·이전 80%, 담보채무 차감 후 최대 6억."
             placeholder="자산 카드 동거주택 체크 또는 직접 입력"
           />
+          <LawArticleModal legalBasis="상속세및증여세법 §23의2" label="§23의2 동거주택 상속공제" />
           <AutoSuggestBadge
             suggestion={autos.cohabit}
             currentValue={autoFillValue(form.cohabitHouseStdPrice, autos.cohabit)}
@@ -482,6 +486,7 @@ export function Step4({
             hint="자산 카드에서 농지·초지·어선 등으로 분류하면 자동 도출(시행령 §16⑤). 최대 30억."
             placeholder="없으면 빈칸"
           />
+          <LawArticleModal legalBasis="상속세및증여세법 §18의3" label="§18의3 영농상속공제" />
           <AutoSuggestBadge
             suggestion={autos.farming}
             currentValue={autoFillValue(form.farmingAssetValue, autos.farming)}
@@ -492,9 +497,12 @@ export function Step4({
 
         {/* ── 가업상속공제 §18의2 ── */}
         <div className="space-y-3 border-t border-amber-100 dark:border-amber-900 pt-3">
-          <h4 className="text-sm font-semibold text-amber-800 dark:text-amber-200">
-            가업상속공제 (§18의2)
-          </h4>
+          <div className="flex flex-wrap items-center gap-2">
+            <h4 className="text-sm font-semibold text-amber-800 dark:text-amber-200">
+              가업상속공제 (§18의2)
+            </h4>
+            <LawArticleModal legalBasis="상속세및증여세법 §18의2" label="§18의2" />
+          </div>
 
           <FamilyBusinessEligibilitySection
             familyBusiness={form.familyBusiness}
@@ -611,9 +619,13 @@ export function Step4({
 
       {/* 신고 상태 — §69 신고세액공제 + §21① 단서(무신고 일괄공제 5억 고정) */}
       <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-2">
-        <p className="text-xs font-semibold text-violet-700">
-          신고 상태 (§67 · §69 신고세액공제 · §21① 일괄공제)
-        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-xs font-semibold text-violet-700">
+            신고 상태 (§67 · §69 신고세액공제 · §21① 일괄공제)
+          </p>
+          <LawArticleModal legalBasis="상속세및증여세법 §69" label="§69 신고세액공제" />
+          <LawArticleModal legalBasis="상속세및증여세법 §21" label="§21 일괄공제" />
+        </div>
         <RadioCardGroup
           name="filing-status"
           tone="violet"
@@ -650,8 +662,9 @@ export function Step4({
 
       {/* 외국납부세액공제 섹션 (§29 / 상증령 §21①) */}
       <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-3">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <p className="text-xs font-semibold text-violet-700">외국납부세액공제 (§29)</p>
+          <LawArticleModal legalBasis="상속세및증여세법 §29" label="§29" />
         </div>
         <p className="text-xs text-gray-500 dark:text-gray-400">
           해외 소재 상속재산에 외국 법령에 따라 부과된 상속세를 공제합니다. 한도는
