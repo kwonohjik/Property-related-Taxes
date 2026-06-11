@@ -209,9 +209,6 @@ export function normalizeAcquisitionForm(
     ownedHouses: Array.isArray(legacy.ownedHouses)
       ? (legacy.ownedHouses as OwnedHouseInfo[])
       : INITIAL_FORM.ownedHouses,
-    redevelopmentRights: (legacy.redevelopmentRights as string) ?? INITIAL_FORM.redevelopmentRights,
-    housingSubscriptionRights: (legacy.housingSubscriptionRights as string) ?? INITIAL_FORM.housingSubscriptionRights,
-    residentialOffices: (legacy.residentialOffices as string) ?? INITIAL_FORM.residentialOffices,
     trustedHouseCount: (legacy.trustedHouseCount as string) ?? INITIAL_FORM.trustedHouseCount,
 
     acquisitionOwnershipShare: (legacy.acquisitionOwnershipShare as string) ?? INITIAL_FORM.acquisitionOwnershipShare,

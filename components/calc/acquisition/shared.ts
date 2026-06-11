@@ -261,14 +261,8 @@ export interface FormState {
   farmlandLocationDistance: string;
 
   // ─── [P3] 주택 수 정교화 ───
-  /** 보유 주택 카드 배열 */
+  /** 보유 주택 카드 배열 (입주권·분양권·오피스텔은 카드의 propertyType으로 입력) */
   ownedHouses: OwnedHouseInfo[];
-  /** 조합원입주권 수 */
-  redevelopmentRights: string;
-  /** 주택분양권 수 */
-  housingSubscriptionRights: string;
-  /** 주거형 오피스텔 수 (1억 초과만 카운트) */
-  residentialOffices: string;
   /** 신탁재산 위탁자 보유 주택 수 */
   trustedHouseCount: string;
 
@@ -439,9 +433,6 @@ export const INITIAL_FORM: FormState = {
 
   // P3 주택 수
   ownedHouses: [],
-  redevelopmentRights: "0",
-  housingSubscriptionRights: "0",
-  residentialOffices: "0",
   trustedHouseCount: "0",
 
   // P3 공유지분

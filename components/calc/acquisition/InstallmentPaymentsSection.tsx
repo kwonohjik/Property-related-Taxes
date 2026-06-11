@@ -13,6 +13,7 @@
  */
 
 import { useMemo } from "react";
+import { differenceInMonths, parseISO } from "date-fns";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { DateInput } from "@/components/ui/date-input";
 
@@ -78,11 +79,9 @@ export function InstallmentPaymentsSection({ installments, contractDate, onChang
     const first = sorted[0].paymentDate;
     const last = sorted[sorted.length - 1].paymentDate;
 
-    // 2년 검증: contractDate 기준 또는 첫 회차 기준
+    // 2년 검증: contractDate 기준 또는 첫 회차 기준 (date-fns로 월·윤년 경계 정확 처리)
     const refDate = contractDate || first;
-    const refMs = new Date(refDate).getTime();
-    const lastMs = new Date(last).getTime();
-    const diffMonths = (lastMs - refMs) / (1000 * 60 * 60 * 24 * 30.44);
+    const diffMonths = differenceInMonths(parseISO(last), parseISO(refDate));
 
     return {
       total: sumTotal,
@@ -160,7 +159,7 @@ export function InstallmentPaymentsSection({ installments, contractDate, onChang
                 onChange={(e) =>
                   onChange(updateRow(installments, row.id, { label: e.target.value }))
                 }
-                placeholder='예: "계약금", "중도금", "잔금"'
+                placeholder="회차 명칭 (선택)"
                 className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </div>

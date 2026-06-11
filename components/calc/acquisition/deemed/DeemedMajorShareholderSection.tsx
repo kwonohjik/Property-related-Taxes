@@ -112,7 +112,7 @@ export function DeemedMajorShareholderSection({ form, set }: Props) {
         <DecimalInput
           value={form.deemedMajorPrevShareRatio ?? ""}
           onChange={(v) => set("deemedMajorPrevShareRatio", v)}
-          placeholder="0 ~ 100 (신규 진입이면 0)"
+          placeholder="취득 전 보유 지분율 (신규 진입 시 비움)"
           unit="%"
           disabled={isExemptCase}
         />
@@ -127,7 +127,7 @@ export function DeemedMajorShareholderSection({ form, set }: Props) {
         <DecimalInput
           value={form.deemedMajorNewShareRatio ?? ""}
           onChange={(v) => set("deemedMajorNewShareRatio", v)}
-          placeholder="50 초과여야 과점주주"
+          placeholder="취득 후 합산 지분율"
           unit="%"
           disabled={isExemptCase}
         />

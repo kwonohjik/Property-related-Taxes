@@ -29,10 +29,6 @@ function strOrUndef(v: string): string | undefined {
   return v.trim() ? v.trim() : undefined;
 }
 
-function boolOrUndef(v: boolean): boolean | undefined {
-  return v ? true : undefined;
-}
-
 /** 두 날짜(YYYY-MM-DD) 중 빠른 날 — 한쪽만 있으면 그 값 (지방세법 §20 취득시기) */
 function earlierDateStr(a: string | undefined, b: string | undefined): string | undefined {
   if (!a) return b;
@@ -244,14 +240,6 @@ export function buildAcquisitionTaxBody(form: FormState): Record<string, unknown
     // 신탁재산 위탁자 주택 수
     const tc = parseIntOrUndef(form.trustedHouseCount);
     if (tc && tc > 0) body.trustedHouseCount = tc;
-
-    // 기타 주택 수 관련 (직접 숫자 입력 — houseCountInput 미제공 시 폴백)
-    const rr = parseIntOrUndef(form.redevelopmentRights);
-    if (rr && rr > 0) body.redevelopmentRights = rr;
-    const hsr = parseIntOrUndef(form.housingSubscriptionRights);
-    if (hsr && hsr > 0) body.housingSubscriptionRights = hsr;
-    const ro = parseIntOrUndef(form.residentialOffices);
-    if (ro && ro > 0) body.residentialOffices = ro;
 
     // [P3] 보유 주택 배열 → HouseCountInput 자동 산정 (6차원 매트릭스)
     // ownedHouses[] 가 있으면 엔진 house-count/index.ts의 resolveHouseCount가

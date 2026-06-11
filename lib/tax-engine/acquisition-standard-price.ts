@@ -205,7 +205,9 @@ export function shouldUseStandardPrice(
   standardValue: number
 ): { useStandardPrice: boolean; reason: string } {
   // 무상취득(상속·증여·기부) → 시가 없으면 시가표준액
-  const isGratuitous = ["inheritance", "inheritance_farmland", "gift", "burdened_gift", "donation"].includes(
+  // (burdened_gift는 determineTaxBase에서 calcBurdenedGiftTaxBase로 선분기되어
+  //  이 함수에 도달하지 않으므로 제외 — 도달 시 calcGratuitousTaxBase 경로의 cause만)
+  const isGratuitous = ["inheritance", "inheritance_farmland", "gift", "donation"].includes(
     acquisitionCause
   );
 
