@@ -1731,6 +1731,15 @@ export interface GiftTaxResult extends TaxResultMeta {
   specialStreamAggregatedValue?: number;
 
   /**
+   * 특례 스트림 §47① 인수 채무 (한도 차감 적용분 = min(특례 자산 채무, 특례 자산가액)).
+   *
+   * 별지 ㉒ debtAssumed는 일반 스트림 채무만 담으므로(besshi10·결과뷰 요약 = 일반 스트림 컨텍스트),
+   * 특례 자산 부담부증여 채무는 본 필드로 분리하여 2-스트림 카드에 표시한다.
+   * 채무 0 또는 특례 미선택 시 undefined.
+   */
+  specialStreamDebt?: number;
+
+  /**
    * @deprecated 조특법 특례 2-스트림 분리과세(2026-06-11) 이후 의미 없음.
    *
    * 이전 구조: "절감액 공제" 방식 — 일반 산출세액에서 특례세액을 공제.
