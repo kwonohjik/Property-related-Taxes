@@ -392,6 +392,18 @@ export function migrateAsset(raw: unknown): AssetForm {
           ...r,
         };
       }
+      // §98의9 (2026-06-11): 구 stub 데이터 본 필드 누락 보정 (③)
+      if (r && r.type === "unsold_98_9") {
+        return {
+          unsoldHouseAcquisitionDate: "",
+          unsoldHouseAcquisitionPrice: "",
+          unsoldHouseExclusiveArea: "",
+          isNonCapitalRegion: false,
+          wasOneHouseholdAtAcquisition: false,
+          meetsSellerAndContractRequirement: false,
+          ...r,
+        };
+      }
       return r;
     });
   }

@@ -362,7 +362,17 @@ export const reductionSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("unsold_98_6"),       _phase1Stub: z.literal(true).optional() }),
   z.object({ type: z.literal("unsold_98_7"),       _phase1Stub: z.literal(true).optional() }),
   z.object({ type: z.literal("unsold_98_8"),       _phase1Stub: z.literal(true).optional() }),
-  z.object({ type: z.literal("unsold_98_9"),       _phase1Stub: z.literal(true).optional() }),
+  // §98의9 — Phase 2 본격 구현 (2026-06-11): 주택수 제외 본 필드 (⑫ — 누락 시 침묵 strip)
+  z.object({
+    type: z.literal("unsold_98_9"),
+    unsoldHouseAcquisitionDate: z.string().date().optional(),
+    unsoldHouseAcquisitionPrice: z.number().int().nonnegative().optional(),
+    unsoldHouseExclusiveArea: z.number().nonnegative().optional(),
+    isNonCapitalRegion: z.boolean().optional(),
+    wasOneHouseholdAtAcquisition: z.boolean().optional(),
+    meetsSellerAndContractRequirement: z.boolean().optional(),
+    _phase1Stub: z.literal(true).optional(),
+  }),
   z.object({ type: z.literal("unsold_99_2"),       _phase1Stub: z.literal(true).optional() }),
 ]);
 

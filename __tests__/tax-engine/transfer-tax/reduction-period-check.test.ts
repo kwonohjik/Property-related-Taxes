@@ -197,12 +197,15 @@ describe("§98의9 시한 검증 — 취득일 전용 (2024 신설)", () => {
     expect(r.inPeriod).toBe(true);
   });
 
-  it("취득 2024.1.9 (시한 시작 2024.1.10 이전) → 시한 외", () => {
+  // D-1' 정정 (2026-06-11): §98의9 시한 기준은 "준공후미분양주택 취득일"인데 PeriodCheckContext의
+  // acquisitionDate는 양도하는 종전주택 취득일 → period-check는 낙관 통과로 변경.
+  // 정확한 시한 판정은 evaluateUnsold989(unsold-98-9.test.ts A-5)가 수행.
+  it("D-1': 자산(종전주택) 취득일이 시한 외여도 낙관 통과 — 미분양 취득일 기준은 evaluator 판정", () => {
     const ctx: PeriodCheckContext = {
       transferDate,
-      acquisitionDate: new Date("2024-01-09T00:00:00"),
+      acquisitionDate: new Date("2024-01-09T00:00:00"), // 종전주택 취득일 — 시한 판정에 미사용
     };
     const r = checkReductionPeriod("unsold_98_9", ctx);
-    expect(r.inPeriod).toBe(false);
+    expect(r.inPeriod).toBe(true);
   });
 });

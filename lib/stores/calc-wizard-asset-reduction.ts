@@ -194,6 +194,22 @@ export type RentalReductionFormVariant =
       meetsLocationRequirement: boolean;
       /** ①2호가목·령⑥ 고향 요건 (등록기준지/거주 10년) */
       meetsHometownRequirement: boolean;
+    }
+  // ── §98의9 수도권 밖 준공후미분양 — 주택수 제외 (2026-06-11) ──
+  | {
+      type: "unsold_98_9";
+      /** 준공후미분양주택 취득일 (YYYY-MM-DD) — 시한 2024.1.10~2026.12.31·취득순서·양도시점 */
+      unsoldHouseAcquisitionDate: string;
+      /** 취득가액 (원) — 7억 이하 (령 §98의8①2호. 기준시가 아님) */
+      unsoldHouseAcquisitionPrice: string;
+      /** 전용면적 (㎡) — 85 이하 (령 §98의8①1호. DecimalInput) */
+      unsoldHouseExclusiveArea: string;
+      /** 수도권 밖 소재 (법 ①1호) */
+      isNonCapitalRegion: boolean;
+      /** 취득 당시 1세대 1주택 (법 ① 본문) */
+      wasOneHouseholdAtAcquisition: boolean;
+      /** 양도자 자격·최초계약·선착순·확인날인 (령 ①3~5호·②) */
+      meetsSellerAndContractRequirement: boolean;
     };
 
 export type ReductionType = AssetReductionForm["type"];

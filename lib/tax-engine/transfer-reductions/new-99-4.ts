@@ -119,6 +119,15 @@ export function evaluateNew994(input: New994EvaluationInput): New994Result {
         legalBasis,
       });
     }
+    // 3') 양도 시점 — ① "취득하여 … 일반주택을 양도" (§98의9 검토에서 발견된 동일 갭 보강.
+    //     기존에는 보유 0년 + 추징 경고로 eligible 통과하던 비정상 입력 차단)
+    if (input.transferDate.getTime() <= acq) {
+      reasons.push({
+        code: "TRANSFER_BEFORE_ACQUISITION",
+        message: `${houseLabel}을 취득한 후에 일반주택을 양도하는 경우에만 적용됩니다 (§99의4①).`,
+        legalBasis,
+      });
+    }
   }
 
   // 4) 가액 — 3억(등록 한옥 4억) "초과하지 아니할 것" → 경계 포함 적용

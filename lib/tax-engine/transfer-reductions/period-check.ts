@@ -153,9 +153,12 @@ const RULES: Record<TransferReductionId, PeriodRule> = {
     check: (c) => within(c.contractDate, D("2015-01-01"), D("2015-12-31")),
     failReason: "준공후미분양 매매계약 시한(2015.1.1~2015.12.31) 외 — 조특법 §98의8",
   },
+  // D-1' (2026-06-11): §98의9 시한 기준은 "준공후미분양주택 취득일"인데 PeriodCheckContext는
+  // 자산(양도하는 종전주택) 취득일만 보유 → 라디오 사전판정은 낙관 통과.
+  // 정확 판정은 evaluateUnsold989(unsold-98-9.ts)가 unsoldHouseAcquisitionDate 기준으로 수행.
   unsold_98_9: {
     label: "취득 2024.1.10~2026.12.31",
-    check: (c) => within(c.acquisitionDate, D("2024-01-10"), D("2026-12-31")),
+    check: () => true,
     failReason: "수도권 밖 준공후미분양 취득기간(2024.1.10~2026.12.31) 시한 외 — 조특법 §98의9",
   },
   unsold_99_2: {

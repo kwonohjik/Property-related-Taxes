@@ -6,6 +6,7 @@
  */
 
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { ValidationIssue } from "./transfer-tax-validate";
 
@@ -92,6 +93,16 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
             return fail(`${label994} 적용: ${r.type === "new_99_4_rural" ? "농어촌주택" : "고향주택"} 취득일을 입력하세요.`);
           if (parseAmount(r.ruralHouseStdPrice || "0") <= 0)
             return fail(`${label994} 적용: 취득 당시 기준시가 합계(주택+부속토지)를 입력하세요.`);
+        }
+        // §98의9 수도권 밖 준공후미분양 (2026-06-11): 취득일·취득가·전용면적 필수 (⑧).
+        // 토글 3종은 차단하지 않음 — 엔진 불적용 사유 (낙관 입력 패턴).
+        if (r.type === "unsold_98_9") {
+          if (!r.unsoldHouseAcquisitionDate)
+            return fail("§98의9 적용: 준공후미분양주택 취득일을 입력하세요.");
+          if (parseAmount(r.unsoldHouseAcquisitionPrice || "0") <= 0)
+            return fail("§98의9 적용: 준공후미분양주택 취득가액을 입력하세요.");
+          if (!(parseDecimal(r.unsoldHouseExclusiveArea || "") > 0))
+            return fail("§98의9 적용: 준공후미분양주택 전용면적(㎡)을 입력하세요.");
         }
       }
     }

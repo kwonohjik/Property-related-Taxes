@@ -127,5 +127,13 @@ export type TransferReductionStub =
   | { type: "unsold_98_6";       _phase1Stub?: true }
   | { type: "unsold_98_7";       _phase1Stub?: true }
   | { type: "unsold_98_8";       _phase1Stub?: true }
-  | { type: "unsold_98_9";       _phase1Stub?: true }
+  // §98의9 — Phase 2 본격 구현 (2026-06-11): 주택수 제외 본 필드 (Date — route mapper ⑭ 변환)
+  | { type: "unsold_98_9";
+      unsoldHouseAcquisitionDate?: Date;
+      unsoldHouseAcquisitionPrice?: number;
+      unsoldHouseExclusiveArea?: number;
+      isNonCapitalRegion?: boolean;
+      wasOneHouseholdAtAcquisition?: boolean;
+      meetsSellerAndContractRequirement?: boolean;
+      _phase1Stub?: true }
   | { type: "unsold_99_2";       _phase1Stub?: true };

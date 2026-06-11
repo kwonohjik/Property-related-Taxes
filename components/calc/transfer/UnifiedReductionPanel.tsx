@@ -30,6 +30,7 @@ import { Rental97MainInputForm } from "@/components/calc/transfer/rental/Rental9
 import { Rental972InputForm } from "@/components/calc/transfer/rental/Rental972InputForm";
 import { Rental974InputForm } from "@/components/calc/transfer/rental/Rental974InputForm";
 import { New994InputForm } from "@/components/calc/transfer/New994InputForm";
+import { Unsold989InputForm } from "@/components/calc/transfer/Unsold989InputForm";
 import {
   REDUCTION_METADATA,
   ALL_REDUCTION_IDS,
@@ -40,6 +41,11 @@ import {
   type ReductionCategory,
   type PeriodCheckContext,
 } from "@/lib/tax-engine/transfer-reductions";
+import {
+  STANDALONE_LABELS,
+  getStandaloneDefault,
+  toggleGroupRadio,
+} from "./UnifiedReductionPanel-defaults";
 
 // ============================================================================
 // Props
@@ -52,169 +58,7 @@ interface UnifiedReductionPanelProps {
   onChange: (patch: Partial<AssetForm>) => void;
 }
 
-// ============================================================================
-// 헬퍼: standalone 카테고리(자경·공익) 처리는 Step5 기존 서브패널에 위임
-// 본 패널은 카테고리 헤더의 체크박스만 처리 (선택 상태 토글)
-// ============================================================================
-
-const STANDALONE_LABELS: Record<"self_farming" | "public_expropriation", { label: string; desc: string }> = {
-  self_farming: { label: "자경농지 감면 (§69)", desc: "8년 이상 자경 (한도 1억)" },
-  public_expropriation: { label: "공익사업 수용 감면 (§77)", desc: "현금 10% / 채권 15~40% (연간 2억)" },
-};
-
-function getStandaloneDefault(type: "self_farming" | "public_expropriation"): AssetReductionForm {
-  if (type === "self_farming") {
-    return { type: "self_farming", farmingYears: "0" };
-  }
-  return {
-    type: "public_expropriation",
-    expropriationCash: "0",
-    expropriationBond: "0",
-    expropriationBondHoldingYears: "none",
-    expropriationApprovalDate: "",
-  };
-}
-
-// ============================================================================
-// 헬퍼: 그룹 카테고리 라디오 토글 — 같은 항목 재클릭 시 해제
-// ============================================================================
-
-/**
- * Legacy ID(자동변환 마이그레이션 전 또는 1개월 alias 기간) → 카테고리 매핑.
- * REDUCTION_METADATA에 등록되지 않은 legacy ID도 같은 카테고리 라디오 동작 시 제거되도록.
- * 사용자 결정사항 #4 (legacy 1개월 alias) 정책 준수.
- */
-const LEGACY_TO_CATEGORY: Record<string, ReductionCategory> = {
-  long_term_rental: "rental",
-  new_housing: "new_housing",
-  unsold_housing: "unsold_housing",
-};
-
-function toggleGroupRadio(
-  reductions: AssetReductionForm[],
-  category: ReductionCategory,
-  newId: TransferReductionId,
-  alreadySelected: boolean,
-): AssetReductionForm[] {
-  // 1. 같은 카테고리 기존 선택 제거 (라디오 동작) — legacy ID도 포함
-  const others = reductions.filter((r) => {
-    const meta = REDUCTION_METADATA[r.type as TransferReductionId];
-    const cat = meta?.category ?? LEGACY_TO_CATEGORY[r.type];
-    return cat !== category;
-  });
-
-  // 2. 같은 항목 재클릭 시 해제 (사용자 결정사항 #5)
-  if (alreadySelected) return others;
-
-  // 3. 신규 선택 추가
-  return [...others, getReductionDefault(newId)];
-}
-
-/** §97 시리즈 공통 기본값 (3-state 초기값 준수: rentIncreaseViolationMode="" / hasVacancyOver6Months=null) */
-const RENTAL_COMMON_DEFAULTS = {
-  registrationDate: "",
-  isTaxRegistered: false,
-  rentalStartDate: "",
-  rentIncreaseViolationMode: "" as const,
-  rentHistory: [],
-  hasVacancyOver6Months: null,
-  vacancyPeriods: [],
-};
-
-function getReductionDefault(id: TransferReductionId): AssetReductionForm {
-  if (id === "new_99_3") {
-    return {
-      type: "new_99_3",
-      contractDate993: "",
-      usageApprovalDate993: "",
-      standardPriceAt5Years: "",
-      standardPriceAtAcquisition993: "",
-      standardPriceAtTransfer993: "",
-      region993: "outside_speculation",
-      acquisitionType993: "from_builder",
-      hasOccupancyAtContract: false,
-      isResident993: true,
-      isHousingConstructionBusiness993: false,
-    };
-  }
-  // ── §97 시리즈 기본값 (Phase 2, 2026-06-11) ──
-  if (id === "rental_97_3") {
-    return {
-      type: "rental_97_3",
-      ...RENTAL_COMMON_DEFAULTS,
-      rentalHousingType: "long_term_private",
-      propertyType: "non_apartment",
-      region: "capital",
-      officialPriceAtStart: "",
-      isNationalHousingScale: false,
-      isConvertedFromShortTerm: false,
-    };
-  }
-  if (id === "rental_97_4") {
-    return {
-      type: "rental_97_4",
-      ...RENTAL_COMMON_DEFAULTS,
-      region: "capital",
-    };
-  }
-  if (id === "rental_97_5") {
-    return {
-      type: "rental_97_5",
-      ...RENTAL_COMMON_DEFAULTS,
-      officialPriceAtStart: "",
-      region: "capital",
-    };
-  }
-  if (id === "rental_97_main") {
-    return {
-      type: "rental_97_main",
-      ...RENTAL_COMMON_DEFAULTS,
-      constructionYear: "",
-      isNationalHousing: false,
-    };
-  }
-  if (id === "rental_97_proviso") {
-    return {
-      type: "rental_97_proviso",
-      ...RENTAL_COMMON_DEFAULTS,
-      constructionYear: "",
-      isNationalHousing: false,
-      provisoCase: undefined,
-    };
-  }
-  if (id === "rental_97_2") {
-    return {
-      type: "rental_97_2",
-      ...RENTAL_COMMON_DEFAULTS,
-      rental972Type: "",
-      isNationalHousing: false,
-    };
-  }
-  // §99의4 농어촌·고향주택 (2026-06-11)
-  if (id === "new_99_4_rural") {
-    return {
-      type: "new_99_4_rural",
-      ruralHouseAcquisitionDate: "",
-      ruralHouseStdPrice: "",
-      isRegisteredHanok: false,
-      isAdjacentArea: false,
-      meetsLocationRequirement: false,
-    };
-  }
-  if (id === "new_99_4_hometown") {
-    return {
-      type: "new_99_4_hometown",
-      ruralHouseAcquisitionDate: "",
-      ruralHouseStdPrice: "",
-      isRegisteredHanok: false,
-      isAdjacentArea: false,
-      meetsLocationRequirement: false,
-      meetsHometownRequirement: false,
-    };
-  }
-  // Phase 1 stub: type만 (실제로 활성 클릭 불가하므로 도달하지 않음)
-  return { type: id } as AssetReductionForm;
-}
+// 순수 기본값·토글 헬퍼는 UnifiedReductionPanel-defaults.ts로 분리 (800줄 정책, 2026-06-11)
 
 // ============================================================================
 // 시한 검증 컨텍스트
@@ -318,6 +162,15 @@ export function UnifiedReductionPanel({ asset, transferDate, onChange }: Unified
     });
   }
 
+  // ── §98의9 준공후미분양 폼 필드 업데이트 (2026-06-11) ──
+  function update989(patch: Partial<Extract<AssetReductionForm, { type: "unsold_98_9" }>>) {
+    onChange({
+      reductions: reductions.map((r) =>
+        r.type === "unsold_98_9" ? ({ ...r, ...patch } as AssetReductionForm) : r,
+      ),
+    });
+  }
+
   const new993 = reductions.find((r) => r.type === "new_99_3");
 
   return (
@@ -344,6 +197,7 @@ export function UnifiedReductionPanel({ asset, transferDate, onChange }: Unified
           onUpdate993={update993}
           onUpdateRentalVariant={updateRentalVariant}
           onUpdate994={update994}
+          onUpdate989={update989}
           assetContractDate={asset.assetContractDate ?? ""}
           onAssetContractDateChange={(v) => onChange({ assetContractDate: v })}
           acquisitionDate={asset.acquisitionDate}
@@ -404,6 +258,7 @@ function GroupCategorySection({
   onUpdate993,
   onUpdateRentalVariant,
   onUpdate994,
+  onUpdate989,
   assetContractDate,
   onAssetContractDateChange,
   acquisitionDate,
@@ -430,6 +285,7 @@ function GroupCategorySection({
     id: "new_99_4_rural" | "new_99_4_hometown",
     patch: Partial<Extract<AssetReductionForm, { type: "new_99_4_hometown" }>>,
   ) => void;
+  onUpdate989: (patch: Partial<Extract<AssetReductionForm, { type: "unsold_98_9" }>>) => void;
   /** Round 9 (2026-05-06): 매매계약일 (자산-수준, 펼침 시 활성화) */
   assetContractDate: string;
   onAssetContractDateChange: (v: string) => void;
@@ -587,6 +443,14 @@ function GroupCategorySection({
                           onChange={(patch) => onUpdate994(id as "new_99_4_rural" | "new_99_4_hometown", patch)}
                           transferDate={transferDate}
                         />
+                      ) : null;
+                    })()}
+                  {/* §98의9 준공후미분양 입력 폼 (2026-06-11) */}
+                  {id === "unsold_98_9" &&
+                    (() => {
+                      const form989 = reductions.find((r) => r.type === "unsold_98_9");
+                      return form989 && form989.type === "unsold_98_9" ? (
+                        <Unsold989InputForm value={form989} onChange={onUpdate989} />
                       ) : null;
                     })()}
                 </ToggleCard>

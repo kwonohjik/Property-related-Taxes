@@ -250,7 +250,9 @@ export type New994IneligibleCode =
   | "ADJACENT_AREA"
   | "LOCATION_UNCONFIRMED"
   | "HOMETOWN_UNCONFIRMED"
-  | "ACQUISITION_ORDER";
+  | "ACQUISITION_ORDER"
+  // §98의9 검토 발견(2026-06-11): ① "취득한 후 … 양도" — 농어촌 취득 전 양도 배제
+  | "TRANSFER_BEFORE_ACQUISITION";
 
 export interface New994IneligibleReason {
   code: New994IneligibleCode;
@@ -277,6 +279,76 @@ export type New994Result =
       ruralHoldingYears: number;
       /** ④ 선적용 (3년 미보유 양도) — ⑥ 추징 경고 */
       clawbackWarning: boolean;
+      /** R-D: 다주택 중과 주택수에는 미반영 (소령 §167의3 별개 체계) */
+      surchargeNotAffected: true;
+    };
+
+// ============================================================
+// §98의9 수도권 밖 준공후미분양주택 — 주택수 제외 (2026-06-11)
+// 법령 검증: 법 §98의9 ①~④ + 령 §98의8 ①~④ (법 §98의9의 위임 시행령은
+// 조번호가 어긋난 령 §98의8 — law.go.kr 원문 전문 확보)
+// 설계: docs/02-design/features/transfer-98-9-unsold.engine.design.md
+// ============================================================
+
+export interface Unsold989EvaluationInput {
+  id: "unsold_98_9";
+  /** 양도하는 종전주택의 취득일 (자산-수준 acquisitionDate — 취득순서 판정) */
+  generalHouseAcquisitionDate: Date;
+  transferDate: Date;
+  /** 준공후미분양주택 취득일 — 시한(2024.1.10~2026.12.31)·취득순서·양도시점 */
+  unsoldHouseAcquisitionDate?: Date;
+  /** 취득가액 (원) — 7억 이하 (령 §98의8①2호. 기준시가 아님) */
+  unsoldHouseAcquisitionPrice?: number;
+  /** 전용면적 (㎡) — 85 이하 (령 §98의8①1호) */
+  unsoldHouseExclusiveArea?: number;
+  /** 수도권 밖 소재 (법 §98의9①1호) — 사용자 확인 토글 */
+  isNonCapitalRegion?: boolean;
+  /** 취득 당시 1주택 보유 1세대 (법 §98의9① 본문) — 사용자 확인 토글 */
+  wasOneHouseholdAtAcquisition?: boolean;
+  /** 양도자 자격·최초계약·선착순·확인날인 (령 §98의8①3~5호·②) — 묶음 토글 */
+  meetsSellerAndContractRequirement?: boolean;
+}
+
+export type Unsold989IneligibleCode =
+  | "OUT_OF_PERIOD"
+  | "MISSING_UNSOLD_ACQ_DATE"
+  | "MISSING_PRICE"
+  | "MISSING_AREA"
+  | "PRICE_EXCEEDED"
+  | "AREA_EXCEEDED"
+  | "ACQUISITION_ORDER"
+  // 법 ① "취득한 후 … 양도" — 양도일 ≤ 미분양 취득일 배제 (검토 발견)
+  | "TRANSFER_BEFORE_ACQUISITION"
+  | "REGION_UNCONFIRMED"
+  | "ONE_HOUSE_UNCONFIRMED"
+  | "SELLER_UNCONFIRMED";
+
+export interface Unsold989IneligibleReason {
+  code: Unsold989IneligibleCode;
+  message: string;
+  legalBasis: string;
+}
+
+export type Unsold989Result =
+  | {
+      id: "unsold_98_9";
+      isEligible: false;
+      ineligibleReasons: Unsold989IneligibleReason[];
+      legalBasis: string;
+      effectCategory: "house_count_exclusion";
+    }
+  | {
+      id: "unsold_98_9";
+      isEligible: true;
+      legalBasis: string;
+      effectCategory: "house_count_exclusion";
+      /** 소유주택에서 제외하는 준공후미분양주택 수 (법 §98의9① — 1채) */
+      houseCountExclusion: 1;
+      /** 종부세 ② 1세대1주택자 의제 — 별도 신청(9.16~9.30) 안내 (계산기 범위 외) */
+      comprehensiveTaxNote: true;
+      /** F-4: §99의4 동시 적격 시 §99의4 우선 적용 — isEligible(자체 요건 충족)이지만
+       *  주택수 제외는 미반영. 카드가 "적격이나 §99의4 우선 적용으로 미적용" 표시. */
+      dualExclusionWarning?: boolean;
       /** R-D: 다주택 중과 주택수에는 미반영 (소령 §167의3 별개 체계) */
       surchargeNotAffected: true;
     };

@@ -247,6 +247,8 @@ export const REDUCTION_METADATA: Record<TransferReductionId, ReductionMetadata> 
     effectCategory: "house_count_exclusion",
     uiLabel: "§98의9 — 수도권 밖 준공후미분양 (주택수 제외)",
     effectLabel: "1세대1주택 비과세 적용 시 주택수 제외 + 종부세 1세대1주택자 (2024.1.10~2026.12.31)",
+    // 2026-06-11: 본격 구현 — evaluateUnsold989 + STEP 0.9 합류 (§99의4 우선 F-4)
+    isFullyImplemented: true,
   },
   unsold_99_2: {
     id: "unsold_99_2",

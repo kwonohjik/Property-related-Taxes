@@ -45,6 +45,8 @@ import type { Rental97Result } from "../transfer-reductions/types";
 export type { Rental97Result } from "../transfer-reductions/types";
 import type { New994Result } from "../transfer-reductions/types";
 export type { New994Result } from "../transfer-reductions/types";
+import type { Unsold989Result } from "../transfer-reductions/types";
+export type { Unsold989Result } from "../transfer-reductions/types";
 import type { InheritanceHouseValuationInput, InheritanceHouseValuationResult } from "./inheritance-house-valuation.types";
 import type { MixedUseAssetInput, MixedUseGainBreakdown } from "./transfer-mixed-use.types";
 import type { CarryoverTaxationInput, CarryoverTaxationDetail } from "./transfer-carryover.types";
@@ -649,6 +651,12 @@ export interface TransferTaxResult {
    * eligible 시 비과세·12억 안분·LTHD 표2에 유효 주택수(count−1) 반영 — 중과 주택수는 미반영(R-D).
    */
   new994Detail?: New994Result;
+  /**
+   * §98의9 수도권 밖 준공후미분양 주택수 제외 평가 결과 (2026-06-11).
+   * eligible 시 §99의4와 동일 경로 반영 — 단 §99의4 동시 적격이면 §99의4 우선(F-4,
+   * dualExclusionWarning). 종부세 ② 의제는 범위 외 — comprehensiveTaxNote 안내.
+   */
+  unsold989Detail?: Unsold989Result;
   /**
    * 신축주택·미분양주택 감면 상세 결과 (newHousingDetails 제공 시만 포함)
    * UI에서 매칭 조문·감면율·5년 안분 결과 표시용
