@@ -18,6 +18,7 @@ import { ResetButton } from "@/components/calc/shared/ResetButton";
 import { HomeButton } from "@/components/calc/shared/HomeButton";
 import { InheritanceTaxResultView } from "@/components/calc/results/InheritanceTaxResultView";
 import { InheritanceSidebar } from "@/components/calc/inheritance/InheritanceSidebar";
+import { InheritanceMobileSummaryBar } from "@/components/calc/inheritance/InheritanceMobileSummaryBar";
 import { useAutoSaveCalculation } from "@/lib/storage/use-auto-save-calculation";
 import { useProfessionalStore } from "@/lib/stores/professional-store";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
@@ -655,7 +656,8 @@ export function InheritanceTaxForm() {
         />
       </div>
 
-      {/* StepIndicator — 헤더 바로 아래 sticky (인쇄 시 일반 흐름) */}
+      {/* StepIndicator — 헤더 바로 아래 sticky (인쇄 시 일반 흐름).
+          모바일 합계 미니바(⑧)를 같은 sticky 컨테이너에 넣어 단일 sticky 요소로 처리. */}
       <div className="sticky top-14 z-30 -mx-4 px-4 py-3 bg-background/95 backdrop-blur border-b border-border/60 mb-4 print:static print:bg-transparent print:backdrop-blur-0 print:border-0">
         <StepIndicator
           steps={[...STEPS]}
@@ -664,12 +666,18 @@ export function InheritanceTaxForm() {
           stepStatus={stepStatuses}
           className="!mb-0"
         />
+        {/* 모바일 전용 접이식 합계 미니바 — 데스크톱은 좌측 사이드바가 담당.
+            (이 렌더 경로는 result===null 입력 모드에서만 도달) */}
+        <InheritanceMobileSummaryBar
+          form={{ ...form, valuationDate: form.deathDate || undefined }}
+          result={result}
+        />
       </div>
 
-      {/* 그리드: 데스크톱 좌(사이드바) · 우(입력) / 모바일 상단 stack / 인쇄 단일 컬럼 */}
+      {/* 그리드: 데스크톱 좌(사이드바) · 우(입력) / 인쇄 단일 컬럼 (모바일은 미니바가 대체) */}
       <div className="grid grid-cols-1 lg:grid-cols-[180px_1fr] gap-6 items-start print:block">
-        {/* 사이드바 합계 (지점 ⑥) — 좌측 sticky (데스크톱) / 상단 stack (모바일·인쇄) */}
-        <aside className="order-first lg:sticky lg:top-36 self-start max-h-[calc(100vh-9rem)] overflow-y-auto print:static print:max-h-none print:overflow-visible">
+        {/* 사이드바 합계 (지점 ⑥) — 좌측 sticky (데스크톱) / 인쇄 표시 / 모바일 숨김(미니바 대체) */}
+        <aside className="hidden lg:block lg:sticky lg:top-36 self-start max-h-[calc(100vh-9rem)] overflow-y-auto print:block print:static print:max-h-none print:overflow-visible">
           <InheritanceSidebar form={{ ...form, valuationDate: form.deathDate || undefined }} result={result} />
         </aside>
 
