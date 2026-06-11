@@ -18,7 +18,10 @@ import { useState } from "react";
 import { ChevronLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { StepIndicator } from "@/components/calc/StepIndicator";
-import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { CurrencyInput, parseAmount, formatKRW } from "@/components/calc/inputs/CurrencyInput";
+import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { DateInput } from "@/components/ui/date-input";
 import { PropertyListInput } from "@/components/calc/PropertyListInput";
 import { ExclusionInfoInput } from "@/components/calc/ExclusionInfoInput";
@@ -34,6 +37,10 @@ import { useRecordCount } from "@/components/calc/shared/save-handler-builders";
 import { SaveButton } from "@/components/calc/shared/SaveButton";
 import { SaveToast, type SaveToastMessage } from "@/components/calc/shared/SaveToast";
 import { useProfessionalStore } from "@/lib/stores/professional-store";
+import {
+  COMPREHENSIVE_SUPPORTED_YEARS,
+  getComprehensiveParams,
+} from "@/lib/tax-engine/data/comprehensive-historical";
 import type { ComprehensiveTaxResult } from "@/lib/tax-engine/types/comprehensive.types";
 
 // ============================================================
@@ -102,8 +109,68 @@ function NavButtons({
 // Step 1: 기본 정보
 // ============================================================
 
+// 연도별 세법 요약 힌트 카드
+function YearLawHintCard({ year }: { year: number }) {
+  const currentYear = new Date().getFullYear();
+  const params = getComprehensiveParams(year);
+  const hasMultiHouseCap = year < 2023;
+  const isPreUnified = year < 2023;
+
+  return (
+    <div className="rounded-md border border-amber-200 bg-amber-50/60 px-4 py-3 text-xs text-amber-900 space-y-1">
+      <p className="font-semibold">
+        {year} 귀속 적용 기준{isPreUnified ? " (개정 전 구법)" : ""}
+        {year === currentYear ? (
+          <span className="ml-1.5 rounded-full bg-sky-200 px-1.5 py-0.5 text-[10px] font-bold text-sky-800">
+            현재
+          </span>
+        ) : null}
+      </p>
+      <p>
+        기본공제: 일반 {formatKRW(params.basicDeductionGeneral)} / 1세대1주택{" "}
+        {formatKRW(params.basicDeductionOneHouse)}
+      </p>
+      <p>
+        공정시장가액비율 (주택분): {(params.fairMarketRatioHousing * 100).toFixed(0)}%
+      </p>
+      {isPreUnified ? (
+        <p>
+          세율: 일반(2주택 이하) 0.6%~3.0% / 다주택(조정2주택·3주택+) 1.2%~6.0%
+          (종합부동산세법 §9① 구법)
+        </p>
+      ) : (
+        <p>
+          세율: 2주택 이하 0.5%~2.7% / 3주택 이상 12억 초과 중과 2.0%~5.0%
+          (§9①2호 — 주택 수 자동 적용)
+        </p>
+      )}
+      {hasMultiHouseCap ? (
+        <p>
+          세부담 상한: 일반 150% / 조정대상지역 2주택+ 또는 3주택+ 300%
+          (§10② 구법)
+        </p>
+      ) : (
+        <p>세부담 상한: 전년도 세액의 150% (§10)</p>
+      )}
+    </div>
+  );
+}
+
 function Step1Basic() {
-  const { formData, updateFormData, reset } = useComprehensiveWizardStore();
+  const { formData, updateFormData, reset, setResult } = useComprehensiveWizardStore();
+  const currentYear = new Date().getFullYear();
+  const selectedYear = parseInt(formData.assessmentYear) || currentYear;
+  // 지원 연도 상수(2021~2025)에 현재연도가 없으면 보강 — 매년 상수 갱신 없이 현재연도 선택 가능
+  const supportedYears = (
+    COMPREHENSIVE_SUPPORTED_YEARS as readonly number[]
+  ).includes(currentYear)
+    ? [...COMPREHENSIVE_SUPPORTED_YEARS]
+    : [...COMPREHENSIVE_SUPPORTED_YEARS, currentYear];
+
+  function handleYearChange(year: string) {
+    updateFormData({ assessmentYear: year });
+    setResult(null); // 과세연도 변경 시 기존 결과 무효화
+  }
 
   return (
     <div className="space-y-6">
@@ -112,81 +179,74 @@ function Step1Basic() {
         <ResetButton onReset={reset} />
       </div>
       {/* 과세연도 */}
-      <div className="space-y-1.5">
+      <div className="space-y-2">
         <label className="block text-sm font-medium">
           과세연도 <span className="text-destructive">*</span>
         </label>
-        <input
-          type="text"
-          inputMode="numeric"
-          value={formData.assessmentYear}
-          onChange={(e) =>
-            updateFormData({ assessmentYear: e.target.value.replace(/\D/g, "").slice(0, 4) })
-          }
-          placeholder="2024"
-          maxLength={4}
-          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        <RadioCardGroup
+          name="assessmentYear"
+          tone="sky"
+          layout="inline"
+          value={formData.assessmentYear as (typeof COMPREHENSIVE_SUPPORTED_YEARS)[number] extends number ? string : string}
+          onChange={handleYearChange}
+          options={supportedYears.map((y) => ({
+            value: String(y),
+            label: String(y),
+            trailing:
+              y === currentYear ? (
+                <span className="rounded-full bg-sky-200 px-1.5 py-0.5 text-[10px] font-bold text-sky-800">
+                  현재
+                </span>
+              ) : undefined,
+          }))}
         />
+        <YearLawHintCard year={selectedYear} />
         <p className="text-xs text-muted-foreground">
           과세기준일: {formData.assessmentYear}-06-01 (종합부동산세법 §16①)
         </p>
       </div>
 
       {/* 1세대1주택 여부 */}
-      <div className="rounded-md border p-4 space-y-2">
-        <div className="flex items-center gap-3">
-          <input
-            type="checkbox"
-            id="one-house-owner"
-            checked={formData.isOneHouseOwner}
-            onChange={(e) => updateFormData({ isOneHouseOwner: e.target.checked })}
-            className="h-4 w-4 rounded border-input"
-          />
-          <label htmlFor="one-house-owner" className="text-sm font-medium cursor-pointer">
-            1세대 1주택자
-          </label>
-        </div>
-        <p className="text-xs text-muted-foreground pl-7">
-          기본공제 12억 적용 + 고령자·장기보유 세액공제 적용 (§8③, §9②)
+      <ToggleCard
+        tone="sky"
+        title="1세대 1주택자"
+        description="기본공제 12억 적용 + 고령자·장기보유 세액공제 적용 (§8①1호, §9②)"
+        checked={formData.isOneHouseOwner}
+        onCheckedChange={(v) => updateFormData({ isOneHouseOwner: v })}
+      >
+        {/* 1세대1주택자 추가 정보 (ON 시 펼침) */}
+        <p className="text-xs text-sky-700 font-medium">
+          1세대1주택자 세액공제 적용을 위한 추가 정보
         </p>
-      </div>
 
-      {/* 1세대1주택자 추가 정보 */}
-      {formData.isOneHouseOwner && (
-        <div className="rounded-md bg-blue-50/50 border border-blue-100 p-4 space-y-4">
-          <p className="text-xs text-blue-700 font-medium">
-            1세대1주택자 세액공제 적용을 위한 추가 정보
+        {/* 생년월일 */}
+        <div className="space-y-1.5">
+          <label className="block text-sm font-medium">
+            생년월일 (고령자 세액공제용)
+          </label>
+          <DateInput
+            value={formData.birthDate}
+            onChange={(v) => updateFormData({ birthDate: v })}
+          />
+          <p className="text-xs text-muted-foreground">
+            만 60세 이상: 20%, 65세: 30%, 70세: 40% (최대 80% 합산)
           </p>
-
-          {/* 생년월일 */}
-          <div className="space-y-1.5">
-            <label className="block text-sm font-medium">
-              생년월일 (고령자 세액공제용)
-            </label>
-            <DateInput
-              value={formData.birthDate}
-              onChange={(v) => updateFormData({ birthDate: v })}
-            />
-            <p className="text-xs text-muted-foreground">
-              만 60세 이상: 20%, 65세: 30%, 70세: 40% (최대 80% 합산)
-            </p>
-          </div>
-
-          {/* 최초 취득일 */}
-          <div className="space-y-1.5">
-            <label className="block text-sm font-medium">
-              최초 취득일 (장기보유 세액공제용)
-            </label>
-            <DateInput
-              value={formData.acquisitionDate}
-              onChange={(v) => updateFormData({ acquisitionDate: v })}
-            />
-            <p className="text-xs text-muted-foreground">
-              5년 이상: 20%, 10년: 40%, 15년: 50% (고령자공제 합산 최대 80%)
-            </p>
-          </div>
         </div>
-      )}
+
+        {/* 최초 취득일 */}
+        <div className="space-y-1.5">
+          <label className="block text-sm font-medium">
+            최초 취득일 (장기보유 세액공제용)
+          </label>
+          <DateInput
+            value={formData.acquisitionDate}
+            onChange={(v) => updateFormData({ acquisitionDate: v })}
+          />
+          <p className="text-xs text-muted-foreground">
+            5년 이상: 20%, 10년: 40%, 15년: 50% (고령자공제 합산 최대 80%)
+          </p>
+        </div>
+      </ToggleCard>
     </div>
   );
 }
@@ -267,98 +327,73 @@ function Step4Land() {
   return (
     <div className="space-y-6">
       {/* 종합합산 토지 */}
-      <section className="space-y-3">
-        <div className="flex items-center gap-3">
-          <input
-            type="checkbox"
-            id="has-aggregate-land"
-            checked={formData.hasAggregateLand}
-            onChange={(e) => updateFormData({ hasAggregateLand: e.target.checked })}
-            className="h-4 w-4 rounded border-input"
-          />
-          <label htmlFor="has-aggregate-land" className="text-sm font-medium cursor-pointer">
-            종합합산 토지 보유 (§11)
-          </label>
-        </div>
-        <p className="text-xs text-muted-foreground pl-7">
-          나대지·잡종지 등 — 기본공제 5억원, 세율 1%~3%
-        </p>
-
-        {formData.hasAggregateLand && (
-          <div className="rounded-md border p-4 space-y-4 ml-7">
-            <CurrencyInput
-              label="공시지가 합산 (원)"
-              value={formData.landAggregate.totalOfficialValue}
-              onChange={(v) =>
-                updateFormData({
-                  landAggregate: { ...formData.landAggregate, totalOfficialValue: v },
-                })
-              }
-              placeholder="0"
-              required
-              hint="인별 종합합산 토지 공시지가 합산액"
-            />
-            <CurrencyInput
-              label="재산세 과세표준 (원)"
-              value={formData.landAggregate.propertyTaxBase}
-              onChange={(v) =>
-                updateFormData({
-                  landAggregate: { ...formData.landAggregate, propertyTaxBase: v },
-                })
-              }
-              placeholder="0"
-              required
-              hint="비율 안분 공제 계산용 — 재산세 고지서에서 확인"
-            />
-            <CurrencyInput
-              label="재산세 부과세액 (원)"
-              value={formData.landAggregate.propertyTaxAmount}
-              onChange={(v) =>
-                updateFormData({
-                  landAggregate: { ...formData.landAggregate, propertyTaxAmount: v },
-                })
-              }
-              placeholder="0"
-              required
-              hint="재산세 고지서의 부과세액"
-            />
-            <CurrencyInput
-              label="전년도 세액 (원, 선택)"
-              value={formData.landAggregate.previousYearTotalTax}
-              onChange={(v) =>
-                updateFormData({
-                  landAggregate: { ...formData.landAggregate, previousYearTotalTax: v },
-                })
-              }
-              placeholder="0"
-              hint="전년도 종합합산 토지 세부담 상한 계산용 (미입력 시 상한 생략)"
-            />
-          </div>
-        )}
-      </section>
+      <ToggleCard
+        tone="sky"
+        title="종합합산 토지 보유 (§11)"
+        description="나대지·잡종지 등 — 기본공제 5억원, 세율 1%~3%"
+        checked={formData.hasAggregateLand}
+        onCheckedChange={(v) => updateFormData({ hasAggregateLand: v })}
+      >
+        <CurrencyInput
+          label="공시지가 합산 (원)"
+          value={formData.landAggregate.totalOfficialValue}
+          onChange={(v) =>
+            updateFormData({
+              landAggregate: { ...formData.landAggregate, totalOfficialValue: v },
+            })
+          }
+          placeholder="0"
+          required
+          hint="인별 종합합산 토지 공시지가 합산액"
+        />
+        <CurrencyInput
+          label="재산세 과세표준 (원)"
+          value={formData.landAggregate.propertyTaxBase}
+          onChange={(v) =>
+            updateFormData({
+              landAggregate: { ...formData.landAggregate, propertyTaxBase: v },
+            })
+          }
+          placeholder="0"
+          required
+          hint="비율 안분 공제 계산용 — 재산세 고지서에서 확인"
+        />
+        <CurrencyInput
+          label="재산세 부과세액 (원)"
+          value={formData.landAggregate.propertyTaxAmount}
+          onChange={(v) =>
+            updateFormData({
+              landAggregate: { ...formData.landAggregate, propertyTaxAmount: v },
+            })
+          }
+          placeholder="0"
+          required
+          hint="재산세 고지서의 부과세액"
+        />
+        <CurrencyInput
+          label="전년도 세액 (원, 선택)"
+          value={formData.landAggregate.previousYearTotalTax}
+          onChange={(v) =>
+            updateFormData({
+              landAggregate: { ...formData.landAggregate, previousYearTotalTax: v },
+            })
+          }
+          placeholder="0"
+          hint="전년도 종합합산 토지 세부담 상한 계산용 (미입력 시 상한 생략)"
+        />
+      </ToggleCard>
 
       <hr className="border-muted" />
 
       {/* 별도합산 토지 */}
-      <section className="space-y-3">
-        <div className="flex items-center gap-3">
-          <input
-            type="checkbox"
-            id="has-separate-land"
-            checked={formData.hasSeparateLand}
-            onChange={(e) => updateFormData({ hasSeparateLand: e.target.checked })}
-            className="h-4 w-4 rounded border-input"
-          />
-          <label htmlFor="has-separate-land" className="text-sm font-medium cursor-pointer">
-            별도합산 토지 보유 (§12)
-          </label>
-        </div>
-        <p className="text-xs text-muted-foreground pl-7">
-          사업용 건축물 부속 토지 등 — 기본공제 80억원, 세율 0.5%~0.7%
-        </p>
-
-        {formData.hasSeparateLand && (
-          <div className="space-y-3 ml-7">
+      <ToggleCard
+        tone="sky"
+        title="별도합산 토지 보유 (§12)"
+        description="사업용 건축물 부속 토지 등 — 기본공제 80억원, 세율 0.5%~0.7%"
+        checked={formData.hasSeparateLand}
+        onCheckedChange={(v) => updateFormData({ hasSeparateLand: v })}
+      >
+        <div className="space-y-3">
             {formData.landSeparate.map((land, index) => (
               <div key={land.id} className="rounded-md border p-4 space-y-3">
                 <div className="flex items-center justify-between">
@@ -403,9 +438,8 @@ function Step4Land() {
             >
               + 토지 추가
             </button>
-          </div>
-        )}
-      </section>
+        </div>
+      </ToggleCard>
     </div>
   );
 }
@@ -416,32 +450,27 @@ function Step4Land() {
 
 function Step5TaxCap() {
   const { formData, updateFormData } = useComprehensiveWizardStore();
+  const year = parseInt(formData.assessmentYear) || new Date().getFullYear();
+  const showMultiHouseCap = year < 2023;
+  const isMultiHouseOn = formData.isMultiHouseInAdjustedArea;
 
   return (
     <div className="space-y-6">
-      {/* 다주택 조정대상지역 */}
-      <div className="rounded-md border p-4 space-y-2">
-        <div className="flex items-center gap-3">
-          <input
-            type="checkbox"
-            id="multi-house-adjusted"
-            checked={formData.isMultiHouseInAdjustedArea}
-            onChange={(e) =>
-              updateFormData({ isMultiHouseInAdjustedArea: e.target.checked })
-            }
-            className="h-4 w-4 rounded border-input"
-          />
-          <label
-            htmlFor="multi-house-adjusted"
-            className="text-sm font-medium cursor-pointer"
-          >
-            조정대상지역 2주택 이상
-          </label>
-        </div>
-        <p className="text-xs text-muted-foreground pl-7">
-          체크 시 세부담 상한율 300% 적용, 미체크 시 150% 적용 (§10)
-        </p>
-      </div>
+      {/* 조정대상지역 2주택 이상 — 과세연도 < 2023 일 때만 노출 */}
+      {showMultiHouseCap && (
+        <ToggleCard
+          tone="rose"
+          title="조정대상지역 2주택 이상"
+          description={`세부담 상한 300% 적용 (종합부동산세법 §10② 구법 — ${year} 귀속 이전)\n3주택 이상은 주택 수로 자동 적용됩니다 — 이 토글은 조정대상지역 2주택 보유 시에만 켜세요`}
+          checked={formData.isMultiHouseInAdjustedArea}
+          onCheckedChange={(v) => updateFormData({ isMultiHouseInAdjustedArea: v })}
+        >
+          <p className="text-xs text-rose-700">
+            {year} 귀속(과세기준일 {year}-06-01)까지 조정대상지역 2주택 이상 보유자에게
+            적용된 규정입니다. 2023년부터 해당 조항이 삭제되어 150%로 단일화됩니다.
+          </p>
+        </ToggleCard>
+      )}
 
       {/* 전년도 세액 */}
       <div className="space-y-2">
@@ -453,10 +482,20 @@ function Step5TaxCap() {
           hint="전년도 종합부동산세 + 재산세 합계 (농특세 제외). 미입력 시 세부담 상한 계산 생략."
         />
         <div className="rounded-md bg-muted/30 border px-4 py-3 text-xs text-muted-foreground">
-          <p className="font-medium mb-1">세부담 상한 계산 방식 (§10)</p>
-          <p>
-            상한액 = 전년도 세액 × 상한율 (150% 또는 300%)
-          </p>
+          <p className="font-medium mb-1">세부담 상한 계산 방식</p>
+          {showMultiHouseCap ? (
+            <>
+              <p>
+                상한액 = 전년도 세액 ×{" "}
+                {isMultiHouseOn ? "300% (조정대상지역 2주택 이상 §10②)" : "150% (일반 §10①)"}
+              </p>
+              <p className="mt-1">
+                3주택 이상은 자동으로 300% 상한이 적용됩니다.
+              </p>
+            </>
+          ) : (
+            <p>상한액 = 전년도 세액 × 150% (종합부동산세법 §10)</p>
+          )}
           <p className="mt-1">
             당해 종부세가 상한액을 초과하면 상한액 - 재산세 = 확정 종부세
           </p>
@@ -512,6 +551,8 @@ async function callComprehensiveApi(
           previousRent: p.previousRent ? parseAmount(p.previousRent) : undefined,
           currentRent: parseAmount(p.currentRent),
           isInitialContract: p.isInitialContract,
+          actualRentalYears: p.actualRentalYears ? parseDecimal(p.actualRentalYears) : undefined,
+          registrationRevokedDate: p.registrationRevokedDate || undefined,
         },
       };
     }
@@ -566,13 +607,13 @@ async function callComprehensiveApi(
     isOneHouseOwner: formData.isOneHouseOwner,
     birthDate: formData.birthDate || undefined,
     acquisitionDate: formData.acquisitionDate || undefined,
-    isMultiHouseInAdjustedArea: formData.isMultiHouseInAdjustedArea || undefined,
     previousYearTotalTax: formData.previousYearTotalTax
       ? parseAmount(formData.previousYearTotalTax) || undefined
       : undefined,
     properties,
     landAggregate,
     landSeparate,
+    isMultiHouseInAdjustedArea: formData.isMultiHouseInAdjustedArea,
   };
 
   const res = await fetch("/api/calc/comprehensive", {

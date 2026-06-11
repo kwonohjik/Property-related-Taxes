@@ -31,6 +31,8 @@ export interface PropertyEntry {
   currentRent: string;             // 현재 임대료 (원)
   previousRent: string;            // 직전 임대료 (원)
   isInitialContract: boolean;
+  actualRentalYears: string;       // 실제 임대 경과 연수 (시행령 §3⑦ 합산, 선택)
+  registrationRevokedDate: string; // 임대등록 말소일 YYYY-MM-DD (선택, 입력 시 과세기준일 이전이면 배제 거부)
   // ── 기타 합산배제 상세 ──
   recruitmentNoticeDate: string;   // 미분양: 입주자모집공고일
   acquisitionDate: string;         // 미분양: 취득일
@@ -84,8 +86,13 @@ export interface ComprehensiveFormData {
   landSeparate: SeparateLandEntry[];
 
   // ── Step 5: 세부담 상한 ──
-  isMultiHouseInAdjustedArea: boolean;
   previousYearTotalTax: string;    // 전년도 종부세+재산세 합계 (원)
+
+  // ── 연도별 세법 (과세연도 < 2023 일 때만 유효) ──
+  /** 조정대상지역 2주택 이상 여부 (구 §9①3호·§10② — 2022 귀속 이하에서만 의미 있음)
+   *  2023+ 연도에서는 엔진이 무시 (주택 수 3 이상만 중과)
+   */
+  isMultiHouseInAdjustedArea: boolean;
 }
 
 function makeProperty(): PropertyEntry {
@@ -106,6 +113,8 @@ function makeProperty(): PropertyEntry {
     currentRent: "",
     previousRent: "",
     isInitialContract: true,
+    actualRentalYears: "",
+    registrationRevokedDate: "",
     recruitmentNoticeDate: "",
     acquisitionDate: "",
     isFirstSale: true,
@@ -133,8 +142,8 @@ const defaultFormData: ComprehensiveFormData = {
   landAggregate: { ...DEFAULT_LAND_AGGREGATE },
   hasSeparateLand: false,
   landSeparate: [],
-  isMultiHouseInAdjustedArea: false,
   previousYearTotalTax: "",
+  isMultiHouseInAdjustedArea: false,
 };
 
 // ============================================================
@@ -269,6 +278,13 @@ export const useComprehensiveWizardStore = create<ComprehensiveWizardState>()(
         currentStep: state.currentStep,
         formData: state.formData,
       }),
+      // ③ normalize fallback — 구 sessionStorage에 없는 신규 필드 보정
+      onRehydrateStorage: () => (state) => {
+        if (state && state.formData) {
+          state.formData.isMultiHouseInAdjustedArea =
+            state.formData.isMultiHouseInAdjustedArea ?? false;
+        }
+      },
     },
   ),
 );

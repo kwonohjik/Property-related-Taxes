@@ -166,7 +166,7 @@ describe("applyTaxCap — 세부담 상한", () => {
   it("T06: 일반 상한 150% — 당해 세액이 상한 초과 시 적용", () => {
     // comprehensiveTax=18,000,000, propertyTax=5,000,000, prevYear=10,000,000
     // capAmount = 15,000,000, cappedTax = min(18,000,000, 15,000,000 - 5,000,000) = 10,000,000
-    const result = applyTaxCap(18_000_000, 5_000_000, 10_000_000, false);
+    const result = applyTaxCap(18_000_000, 5_000_000, 10_000_000);
     expect(result).not.toBeUndefined();
     expect(result!.capRate).toBe(1.5);
     expect(result!.capAmount).toBe(15_000_000);
@@ -178,7 +178,7 @@ describe("applyTaxCap — 세부담 상한", () => {
   it("T07: 현행법 150% 상한 — 종부세 §10 개정(300% 삭제) 반영", () => {
     // comprehensiveTax=20,000,000, propertyTax=3,000,000, prevYear=8,000,000
     // 현행: capRate=1.5, capAmount=12,000,000, cappedTax=min(20M, 12M-3M)=9,000,000, isApplied=true
-    const result = applyTaxCap(20_000_000, 3_000_000, 8_000_000, true);
+    const result = applyTaxCap(20_000_000, 3_000_000, 8_000_000);
     expect(result).not.toBeUndefined();
     expect(result!.capRate).toBe(1.5);
     expect(result!.isApplied).toBe(true);
@@ -187,13 +187,13 @@ describe("applyTaxCap — 세부담 상한", () => {
 
   // T08: 전년도 세액 미입력 → undefined 반환
   it("T08: 전년도 세액 미입력 → undefined 반환", () => {
-    const result = applyTaxCap(10_000_000, 2_000_000, undefined, false);
+    const result = applyTaxCap(10_000_000, 2_000_000, undefined);
     expect(result).toBeUndefined();
   });
 
   // T09: 전년도 세액 0원 → cappedTax = 0
   it("T09: 전년도 세액 0원 → cappedTax = 0, isApplied = true", () => {
-    const result = applyTaxCap(5_000_000, 1_000_000, 0, false);
+    const result = applyTaxCap(5_000_000, 1_000_000, 0);
     expect(result).not.toBeUndefined();
     expect(result!.cappedTax).toBe(0);
     expect(result!.isApplied).toBe(true);
@@ -203,7 +203,7 @@ describe("applyTaxCap — 세부담 상한", () => {
   it("T10: cappedTax 음수 방어 (재산세 > 상한액-종부세) → 0원", () => {
     // comprehensiveTax=3,000,000, propertyTax=10,000,000, prevYear=5,000,000
     // capAmount = 7,500,000, cappedTax = min(3,000,000, 7,500,000 - 10,000,000) = max(-2,500,000, 0) = 0
-    const result = applyTaxCap(3_000_000, 10_000_000, 5_000_000, false);
+    const result = applyTaxCap(3_000_000, 10_000_000, 5_000_000);
     expect(result).not.toBeUndefined();
     expect(result!.cappedTax).toBe(0);
     expect(result!.isApplied).toBe(true);

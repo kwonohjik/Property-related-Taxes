@@ -82,6 +82,18 @@ const rentalExclusionInfoSchema = z.object({
 
   /** 최초 계약 여부 */
   isInitialContract: z.boolean(),
+
+  /** 실제 임대 경과 연수 (시행령 §3⑦ 합산, 선택) — 의무기간 미달 시 추징 경고용 */
+  actualRentalYears: z
+    .number()
+    .nonnegative({ message: "임대 경과 연수는 0년 이상이어야 합니다." })
+    .optional(),
+
+  /** 임대등록 말소일 (YYYY-MM-DD, 선택) — 과세기준일 이전이면 합산배제 거부 */
+  registrationRevokedDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, { message: "YYYY-MM-DD 형식이어야 합니다." })
+    .optional(),
 });
 
 // ============================================================
@@ -254,12 +266,6 @@ export const comprehensiveTaxInputSchema = z.object({
     .max(2100),
 
   /**
-   * 조정대상지역 2주택+ 여부 (세부담 상한 300% 적용)
-   * false 또는 미입력 시 150% 적용
-   */
-  isMultiHouseInAdjustedArea: z.boolean().optional(),
-
-  /**
    * 전년도 총세액 (종부세 + 재산세, 농특세 제외)
    * 미입력 시 세부담 상한 계산 생략
    */
@@ -282,6 +288,13 @@ export const comprehensiveTaxInputSchema = z.object({
   landSeparate: z
     .array(separateLandItemSchema)
     .optional(),
+
+  /**
+   * 조정대상지역 2주택 이상 여부 (구 §9①3호·§10② — 2022 귀속 이하에서만 유효)
+   * 2023+ 연도 요청에서는 엔진이 무시 (주택 수 3 이상만 중과)
+   * 미입력 시 false로 처리
+   */
+  isMultiHouseInAdjustedArea: z.boolean().optional(),
 
   /**
    * 계산 기준일 오버라이드 (테스트·소급 계산용)
