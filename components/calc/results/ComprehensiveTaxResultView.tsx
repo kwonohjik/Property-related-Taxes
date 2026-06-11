@@ -259,7 +259,7 @@ function HousingTaxSection({
             <span>{formatKRW(propertyTaxCredit.totalPropertyTax)}</span>
           </div>
           <div className="flex justify-between">
-            <span>안분 비율 (종부세 / 재산세 과세표준)</span>
+            <span>안분 비율 (종부세 과세표준분 표준세율 재산세 ÷ 전체 표준세율 재산세)</span>
             <span>{formatRate(propertyTaxCredit.ratio)}</span>
           </div>
         </div>
@@ -267,7 +267,7 @@ function HousingTaxSection({
           label="재산세 비율 안분 공제"
           amount={-propertyTaxCredit.creditAmount}
           sub
-          badge="시행령 §4의2"
+          badge="시행령 §4의3"
         />
 
         {/* 세부담 상한 */}
@@ -325,7 +325,7 @@ function AggregateLandSection({
         <TaxRow
           label="과세표준"
           amount={land.taxBase}
-          note={`세율 ${formatRate(land.appliedRate, 4)}`}
+          note={`공정시장가액비율 ${formatRate(land.fairMarketRatio)} · 세율 ${formatRate(land.appliedRate, 4)}`}
           highlight={land.isSubjectToTax}
         />
         {land.isSubjectToTax && (
@@ -380,7 +380,7 @@ function SeparateLandSection({
         <TaxRow
           label="과세표준"
           amount={land.taxBase}
-          note={`세율 ${formatRate(land.appliedRate, 4)}`}
+          note={`공정시장가액비율 ${formatRate(land.fairMarketRatio)} · 세율 ${formatRate(land.appliedRate, 4)}`}
           highlight={land.isSubjectToTax}
         />
         {land.isSubjectToTax && (

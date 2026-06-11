@@ -206,9 +206,13 @@ function calcLandPropertyTaxCreditProration(
 /**
  * 종합합산 토지분 종합부동산세 계산
  * 전체 흐름: 납세의무 판정 → 과세표준 → 세율 → 비율안분 → 상한 → 농특세
+ *
+ * @param fairMarketRatio - 종부세 토지 공정시장가액비율 (시행령 §2의4② — 2021=0.95, 2022~=1.00).
+ *                          기본값 1.00 → 기존 직접 호출 하위호환.
  */
 export function calculateAggregateLandTax(
   input: AggregateLandTaxInput,
+  fairMarketRatio: number = COMPREHENSIVE_LAND_CONST.AGGREGATE_FAIR_MARKET_RATIO,
 ): AggregateLandTaxResult {
   const {
     totalOfficialValue,
@@ -226,7 +230,7 @@ export function calculateAggregateLandTax(
       totalOfficialValue,
       basicDeduction: COMPREHENSIVE_LAND_CONST.AGGREGATE_DEDUCTION_AMOUNT,
       afterDeduction: 0,
-      fairMarketRatio: COMPREHENSIVE_LAND_CONST.AGGREGATE_FAIR_MARKET_RATIO,
+      fairMarketRatio,
       taxBase: 0,
       appliedRate: 0,
       progressiveDeduction: 0,
@@ -245,7 +249,7 @@ export function calculateAggregateLandTax(
     };
   }
 
-  const taxBase = calcAggregateLandTaxBase(totalOfficialValue);
+  const taxBase = calcAggregateLandTaxBase(totalOfficialValue, fairMarketRatio);
   const afterDeduction = Math.max(
     totalOfficialValue - COMPREHENSIVE_LAND_CONST.AGGREGATE_DEDUCTION_AMOUNT,
     0,
@@ -298,7 +302,7 @@ export function calculateAggregateLandTax(
     totalOfficialValue,
     basicDeduction: COMPREHENSIVE_LAND_CONST.AGGREGATE_DEDUCTION_AMOUNT,
     afterDeduction,
-    fairMarketRatio: COMPREHENSIVE_LAND_CONST.AGGREGATE_FAIR_MARKET_RATIO,
+    fairMarketRatio,
     taxBase,
     appliedRate,
     progressiveDeduction,
