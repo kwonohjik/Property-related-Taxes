@@ -162,6 +162,8 @@ export const REDUCTION_METADATA: Record<TransferReductionId, ReductionMetadata> 
     effectCategory: "house_count_exclusion",
     uiLabel: "§99의4 (농어촌주택) — 주택수 제외",
     effectLabel: "1세대1주택 비과세 시 주택수 제외 (2003.8.1~2028.12.31, 3년+ 보유)",
+    // 2026-06-11: 본격 구현 — evaluator(new-99-4.ts)·비과세/12억 안분/표2 유효 주택수 반영
+    isFullyImplemented: true,
   },
   new_99_4_hometown: {
     id: "new_99_4_hometown",
@@ -170,6 +172,7 @@ export const REDUCTION_METADATA: Record<TransferReductionId, ReductionMetadata> 
     effectCategory: "house_count_exclusion",
     uiLabel: "§99의4 (고향주택) — 주택수 제외",
     effectLabel: "1세대1주택 비과세 시 주택수 제외 (2009.1.1~2028.12.31, 3년+ 보유)",
+    isFullyImplemented: true,
   },
 
   // ── 미분양 §98 시리즈 + §99의2 ──

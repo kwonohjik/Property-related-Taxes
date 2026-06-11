@@ -213,3 +213,70 @@ export type Rental97Result =
       legalBasis: string;
       effectCategory: ReductionEffectCategory;
     };
+
+// ============================================================
+// §99의4 농어촌주택·고향주택 — 주택수 제외 (2026-06-11)
+// 법령 검증: 조특법 §99의4 본문 ①~⑧ + 령 ①~⑭ (law.go.kr 원문 전문 확보)
+// 설계: docs/02-design/features/transfer-99-4-rural-hometown.engine.design.md
+// ============================================================
+
+export type New994ArticleId = "new_99_4_rural" | "new_99_4_hometown";
+
+export interface New994EvaluationInput {
+  id: New994ArticleId;
+  /** 양도하는 일반주택의 취득일 (자산-수준 acquisitionDate 재사용 — ① "취득 전 보유" 순서 판정).
+   *  기존 패턴(acquisitionDate)과 달리 명시 명명 — 농어촌주택 취득일과의 모호성 제거. */
+  generalHouseAcquisitionDate: Date;
+  transferDate: Date;
+  /** 농어촌주택등 취득일 — 시한(rural 2003.8.1~ / hometown 2009.1.1~, ~2028.12.31)·3년 보유·취득순서 */
+  ruralHouseAcquisitionDate?: Date;
+  /** 취득 당시 주택+부속토지 기준시가 합계 (원) — 3억(등록 한옥 4억) 한도 (①1호나목·2호다목) */
+  ruralHouseStdPrice?: number;
+  /** 령⑭ 지자체 등록 한옥 — 한도 4억 전환 */
+  isRegisteredHanok?: boolean;
+  /** ③ 일반주택과 같은/연접 읍·면·동(고향은 시) — true면 배제 */
+  isAdjacentArea?: boolean;
+  /** ①1호가목/2호나목 소재지 요건 — 사용자 확인 토글 (별표12·배제지역 자동판정 범위 외) */
+  meetsLocationRequirement?: boolean;
+  /** ①2호가목·령⑥ 고향 요건 (등록기준지/거주 10년) — hometown 전용 */
+  meetsHometownRequirement?: boolean;
+}
+
+export type New994IneligibleCode =
+  | "OUT_OF_PERIOD"
+  | "MISSING_RURAL_ACQ_DATE"
+  | "MISSING_STD_PRICE"
+  | "STD_PRICE_EXCEEDED"
+  | "ADJACENT_AREA"
+  | "LOCATION_UNCONFIRMED"
+  | "HOMETOWN_UNCONFIRMED"
+  | "ACQUISITION_ORDER";
+
+export interface New994IneligibleReason {
+  code: New994IneligibleCode;
+  message: string;
+  legalBasis: string;
+}
+
+export type New994Result =
+  | {
+      id: New994ArticleId;
+      isEligible: false;
+      ineligibleReasons: New994IneligibleReason[];
+      legalBasis: string;
+      effectCategory: "house_count_exclusion";
+    }
+  | {
+      id: New994ArticleId;
+      isEligible: true;
+      legalBasis: string;
+      effectCategory: "house_count_exclusion";
+      /** 소유주택에서 제외하는 농어촌주택등 수 (§99의4① — 1채) */
+      houseCountExclusion: 1;
+      /** 농어촌주택등 보유연수 (결과 카드 표시·추징 경고 근거) */
+      ruralHoldingYears: number;
+      /** ④ 선적용 (3년 미보유 양도) — ⑥ 추징 경고 */
+      clawbackWarning: boolean;
+      /** R-D: 다주택 중과 주택수에는 미반영 (소령 §167의3 별개 체계) */
+      surchargeNotAffected: true;
+    };

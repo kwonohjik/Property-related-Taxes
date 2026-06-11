@@ -380,6 +380,18 @@ export function migrateAsset(raw: unknown): AssetForm {
           ...r,
         };
       }
+      // §99의4 (2026-06-11): 구 stub 데이터(_phase1Stub) 본 필드 누락 보정 (③)
+      if (r && (r.type === "new_99_4_rural" || r.type === "new_99_4_hometown")) {
+        return {
+          ruralHouseAcquisitionDate: "",
+          ruralHouseStdPrice: "",
+          isRegisteredHanok: false,
+          isAdjacentArea: false,
+          meetsLocationRequirement: false,
+          ...(r.type === "new_99_4_hometown" ? { meetsHometownRequirement: false } : {}),
+          ...r,
+        };
+      }
       return r;
     });
   }

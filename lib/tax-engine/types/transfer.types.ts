@@ -43,6 +43,8 @@ import type { TransferReductionStub } from "./transfer-reductions-stub.types";
 export type { TransferReductionStub } from "./transfer-reductions-stub.types";
 import type { Rental97Result } from "../transfer-reductions/types";
 export type { Rental97Result } from "../transfer-reductions/types";
+import type { New994Result } from "../transfer-reductions/types";
+export type { New994Result } from "../transfer-reductions/types";
 import type { InheritanceHouseValuationInput, InheritanceHouseValuationResult } from "./inheritance-house-valuation.types";
 import type { MixedUseAssetInput, MixedUseGainBreakdown } from "./transfer-mixed-use.types";
 import type { CarryoverTaxationInput, CarryoverTaxationDetail } from "./transfer-carryover.types";
@@ -641,6 +643,12 @@ export interface TransferTaxResult {
    * reductions에 해당 항목 포함 시 세팅 (불적용 사유 포함).
    */
   rental97TaxDetail?: Rental97Result;
+  /**
+   * §99의4 농어촌·고향주택 주택수 제외 평가 결과 (2026-06-11).
+   * reductions에 new_99_4_rural/new_99_4_hometown 포함 시 세팅 (불적용 사유·추징 경고 포함).
+   * eligible 시 비과세·12억 안분·LTHD 표2에 유효 주택수(count−1) 반영 — 중과 주택수는 미반영(R-D).
+   */
+  new994Detail?: New994Result;
   /**
    * 신축주택·미분양주택 감면 상세 결과 (newHousingDetails 제공 시만 포함)
    * UI에서 매칭 조문·감면율·5년 안분 결과 표시용

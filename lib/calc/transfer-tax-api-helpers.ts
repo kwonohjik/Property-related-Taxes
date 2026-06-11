@@ -567,6 +567,25 @@ export function toEngineReductions(
         ...(r.type === "rental_97_proviso" && r.provisoCase ? { provisoCase: r.provisoCase } : {}),
       };
     }
+    // ── §99의4 농어촌·고향주택 (2026-06-11): 주택수 제외 본 변환 (④) ──
+    // 날짜는 string 그대로 전달 — Route handler(⑭ route-reductions-mapper)에서 Date 변환.
+    if (r.type === "new_99_4_rural" || r.type === "new_99_4_hometown") {
+      const common994 = {
+        ruralHouseAcquisitionDate: r.ruralHouseAcquisitionDate || undefined,
+        ruralHouseStdPrice: parseAmount(r.ruralHouseStdPrice || "0") || undefined,
+        isRegisteredHanok: r.isRegisteredHanok,
+        isAdjacentArea: r.isAdjacentArea,
+        meetsLocationRequirement: r.meetsLocationRequirement,
+      };
+      if (r.type === "new_99_4_hometown") {
+        return {
+          type: "new_99_4_hometown" as const,
+          ...common994,
+          meetsHometownRequirement: r.meetsHometownRequirement,
+        };
+      }
+      return { type: "new_99_4_rural" as const, ...common994 };
+    }
     // ── Phase 1 stub 잔여: 본 요건 미구현 — type만 전달 (엔진은 시한 검증만 수행) ──
     // 해당 ID들은 transfer.types.ts TransferReductionStub 정의 + Zod schema 통과 보장.
     // TypeScript narrowing이 모든 케이스를 소진해 never로 좁혀지므로 unknown 캐스트로 우회.

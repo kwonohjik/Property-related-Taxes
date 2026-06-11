@@ -22,6 +22,7 @@ import { InheritedHouseValuationDetailCard } from "./InheritedHouseValuationDeta
 import { NewHousingReductionDetailCard } from "./NewHousingReductionDetailCard";
 import { RentalReductionDetailCard } from "./RentalReductionDetailCard";
 import { Rental97DetailCard } from "./Rental97DetailCard";
+import { New994DetailCard } from "./New994DetailCard";
 
 interface Props {
   result: TransferTaxResult;
@@ -35,7 +36,8 @@ export function ReductionDetailCards({ result }: Props) {
     !!result.newHousingReductionDetail ||
     !!result.rentalReductionDetail ||
     !!result.rental97LthdDetail ||
-    !!result.rental97TaxDetail;
+    !!result.rental97TaxDetail ||
+    !!result.new994Detail;
 
   if (!hasAny) return null;
 
@@ -69,6 +71,8 @@ export function ReductionDetailCards({ result }: Props) {
           effectLabel="장기임대주택 세액감면"
         />
       )}
+      {/* §99의4 농어촌·고향주택 주택수 제외 (2026-06-11) */}
+      {result.new994Detail && <New994DetailCard detail={result.new994Detail} />}
     </>
   );
 }

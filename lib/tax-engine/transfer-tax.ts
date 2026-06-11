@@ -41,6 +41,7 @@ import type { CarryoverTaxationDetail } from "./types/transfer-carryover.types";
 export type { TransferTaxInput, TransferReduction, CalculationStep, TransferTaxResult };
 import { runRentalHousingExceptionStep } from "./transfer-tax-rental-housing-step";
 import { evaluateNew993, type New993Result } from "./transfer-reductions/new-99-3";
+import { evaluateNew994FromReductions } from "./transfer-reductions/new-99-4";
 
 import {
   parseRatesFromMap,
@@ -288,7 +289,26 @@ export function calculateTransferTax(
 
   // STEP 0.65: 재개발/재건축 분기 — 시행령 §166. STEP 1: 비과세 판단
   if (isRedevelopmentActive(effectiveInput.propertyType, effectiveInput.redevelopment)) return calculateRedevelopmentTax(effectiveInput, parsedRates, steps);
-  const exemptionResult = checkExemption(effectiveInput, parsedRates.oneHouseSpecialRules);
+
+  // STEP 0.9: §99의4 농어촌·고향주택 주택수 제외 (소법 §89①3호 의제) — eligible 시 비과세·
+  // 12억 안분·LTHD 표2에 유효 주택수(count−1) 반영. 중과는 §167의3 별개 체계 — 원본 유지(R-D).
+  const new994Detail = evaluateNew994FromReductions(effectiveInput.reductions, {
+    generalHouseAcquisitionDate: effectiveInput.acquisitionDate,
+    transferDate: effectiveInput.transferDate,
+  });
+  const exemptionJudgeInput = new994Detail?.isEligible
+    ? { ...effectiveInput, householdHousingCount: Math.max(effectiveInput.householdHousingCount - 1, 0) }
+    : effectiveInput;
+  if (new994Detail?.isEligible) {
+    steps.push({
+      label: "농어촌·고향주택 소유주택 제외 (§99의4)",
+      formula: `주택 수 ${effectiveInput.householdHousingCount}채 − 농어촌주택등 1채 = ${exemptionJudgeInput.householdHousingCount}채로 보아 1세대1주택 판정`,
+      amount: 0,
+      legalBasis: new994Detail.legalBasis,
+    });
+  }
+
+  const exemptionResult = checkExemption(exemptionJudgeInput, parsedRates.oneHouseSpecialRules);
 
   // STEP 1a: 전액 비과세 시 조기 반환
   if (exemptionResult.isExempt) {
@@ -301,6 +321,7 @@ export function calculateTransferTax(
     return {
       isExempt: true,
       exemptReason: exemptionResult.exemptReason,
+      new994Detail, // §99의4 주택수 제외가 비과세 근거인 경우 카드 표시 (추징 경고 포함)
       warnings: warnings.length > 0 ? warnings : undefined,
       transferGain: 0,
       taxableGain: 0,
@@ -525,16 +546,18 @@ export function calculateTransferTax(
       : false;
 
   // STEP 4: 장기보유특별공제 (장기임대 특례율 포함 — §97의3·§97의4는 L-2' 블록)
+  // §99의4 eligible 시 exemptionJudgeInput(유효 주택수) 전달 — 표2 판정도 §89①3호 의제 체인
+  // (소령 §159의4 "그 밖의 규정에 따라 1세대 1주택으로 보는 주택 포함"). 중과 isSurchargeCase는 원본(R-D).
   const { deduction: longTermHoldingDeduction, rate: longTermHoldingRate, holdingPeriod, rental97LthdDetail } =
-    calcLongTermHoldingDeduction(taxableGain, effectiveInput, parsedRates.longTermHoldingRules, isSurchargeCase, suspendedResult, parsedRates.longTermRentalRules, splitDetail);
+    calcLongTermHoldingDeduction(taxableGain, exemptionJudgeInput, parsedRates.longTermHoldingRules, isSurchargeCase, suspendedResult, parsedRates.longTermRentalRules, splitDetail);
   const holdingPeriodStr = holdingPeriod.years > 0 || holdingPeriod.months > 0
     ? `보유기간 ${holdingPeriod.years}년 ${holdingPeriod.months}개월`
     : "";
-  // 1세대1주택 특례 여부에 따라 계산식 분리 표시
+  // 1세대1주택 특례 여부에 따라 계산식 분리 표시 (LTHD 계산 입력과 동일 기준 — §99의4 반영)
   const residenceYearsForStep = Math.floor(effectiveInput.residencePeriodMonths / 12);
   const isOneHouseSpecial =
-    effectiveInput.isOneHousehold &&
-    effectiveInput.householdHousingCount === 1 &&
+    exemptionJudgeInput.isOneHousehold &&
+    exemptionJudgeInput.householdHousingCount === 1 &&
     residenceYearsForStep >= 2 &&
     longTermHoldingDeduction > 0;
   const lthdFormulaRate = isOneHouseSpecial
@@ -769,6 +792,7 @@ export function calculateTransferTax(
     selfFarmingReductionDetail,
     rental97LthdDetail,
     rental97TaxDetail,
+    new994Detail,
     penaltyDetail,
     new993Detail: new993FinalResult,
     transferBurdenedGiftBreakdown,

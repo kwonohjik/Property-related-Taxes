@@ -168,7 +168,33 @@ export type RentalReductionFormVariant =
       /** 건설임대(1호) / 매입임대(2호) */
       rental972Type: "construction" | "purchase" | "";
       isNationalHousing: boolean;
-    } & RentalCommonFormFields);
+    } & RentalCommonFormFields)
+  // ── §99의4 농어촌·고향주택 — 주택수 제외 (2026-06-11) ──
+  | {
+      type: "new_99_4_rural";
+      /** 농어촌주택 취득일 (YYYY-MM-DD) — 시한·3년 보유·취득순서 판정 */
+      ruralHouseAcquisitionDate: string;
+      /** 취득 당시 주택+부속토지 기준시가 합계 (원) — 3억(한옥 4억) 한도 */
+      ruralHouseStdPrice: string;
+      /** 령⑭ 지자체 등록 한옥 — 한도 4억 */
+      isRegisteredHanok: boolean;
+      /** ③ 일반주택과 같은/연접 읍·면·동 — ON이면 배제 */
+      isAdjacentArea: boolean;
+      /** ①1호가목 소재지 요건 — 사용자 확인 */
+      meetsLocationRequirement: boolean;
+    }
+  | {
+      type: "new_99_4_hometown";
+      ruralHouseAcquisitionDate: string;
+      ruralHouseStdPrice: string;
+      isRegisteredHanok: boolean;
+      /** ③ 일반주택과 같은/연접 시 — ON이면 배제 */
+      isAdjacentArea: boolean;
+      /** ①2호나목 소재지 요건 — 사용자 확인 */
+      meetsLocationRequirement: boolean;
+      /** ①2호가목·령⑥ 고향 요건 (등록기준지/거주 10년) */
+      meetsHometownRequirement: boolean;
+    };
 
 export type ReductionType = AssetReductionForm["type"];
 
