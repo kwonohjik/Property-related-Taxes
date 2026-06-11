@@ -8,6 +8,7 @@
 import { useState } from "react";
 import { BuildingStdPriceForm } from "@/components/calc/building-std-price/BuildingStdPriceForm";
 import { BuildingStdPriceResultCard } from "@/components/calc/building-std-price/BuildingStdPriceResultCard";
+import { HomeButton } from "@/components/calc/shared/HomeButton";
 import type { BuildingStandardPriceResult } from "@/lib/tax-engine/building-standard-price";
 
 export default function BuildingStandardPricePage() {
@@ -17,6 +18,9 @@ export default function BuildingStandardPricePage() {
 
   return (
     <main className="mx-auto max-w-[63rem] px-4 py-6">
+      <div className="mb-3 flex justify-end">
+        <HomeButton confirmMessage="홈으로 이동하면 현재 입력 중인 값이 사라집니다.&#10;계속하시겠습니까?" />
+      </div>
       <header className="mb-5">
         <h1 className="text-xl font-bold">건물 기준시가 계산기</h1>
         <p className="mt-1 text-sm text-slate-500">
