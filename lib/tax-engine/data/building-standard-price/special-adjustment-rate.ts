@@ -108,6 +108,50 @@ export const STRUCTURAL_SAFETY_RATE: Readonly<Record<31 | 32 | 33 | 34 | 35 | 36
 
 /** VII-37 화재·지진 등 멸실: 정상적으로 사용되는 면적비율을 조정률로 적용(0~1 → ×100%) */
 
+/**
+ * 조정율 특성 번호(1~37) → 표시 라벨(인쇄·적용요령용, 축약). 산식 무관 표시 전용.
+ * ⚠️ 번호 #1(지붕)은 카테고리 라벨 — 입력에서 실제 재료(징크·기와 등)를 구분하지 않으므로 대표 라벨로 표시.
+ */
+export const ADJUSTMENT_FEATURE_LABEL: Readonly<Record<number, string>> = Object.freeze({
+  1: "기와·징크·아스팔트싱글 등 지붕",
+  2: "패널지붕",
+  3: "함석·천막·초가 등 지붕",
+  4: "5층 이하",
+  5: "6~10층",
+  6: "11~15층",
+  7: "16~20층",
+  8: "21층 이상",
+  9: "연면적 1천㎡ 미만",
+  10: "연면적 1천~5천㎡",
+  11: "연면적 5천~1만㎡",
+  12: "연면적 1만~5만㎡",
+  13: "연면적 5만㎡ 이상",
+  14: "지능형 3·4등급",
+  15: "지능형 1·2등급",
+  16: "단독주택 264~331㎡",
+  17: "단독주택 331㎡ 이상",
+  18: "공동주택 149~215㎡",
+  19: "공동주택 215㎡ 이상",
+  20: "상가 1층",
+  21: "상가 2층",
+  22: "5층이하 건물 지하1층",
+  23: "5층이하 건물 지하2층 이하",
+  24: "주차장·기계실·보일러실 등",
+  25: "주택 간이부속건물",
+  26: "개축 1회",
+  27: "개축 2회 이상",
+  28: "무벽 1/4초과~2/4",
+  29: "무벽 2/4~3/4",
+  30: "무벽 3/4 이상",
+  31: "구조안전진단 B급",
+  32: "구조안전진단 C급",
+  33: "구조안전진단 D급",
+  34: "구조안전진단 E급",
+  35: "철거대상(사용)",
+  36: "철거대상(미사용)",
+  37: "화재·멸실 정상사용면적비율",
+});
+
 // ── 구간 판정 헬퍼 (실제값 → 지수) ──
 
 /** 최고층수(지하·옥탑 제외) → 지수 */
@@ -119,6 +163,15 @@ export function resolveMaxFloorsRate(maxFloors: number): number {
   return rate;
 }
 
+/** 최고층수 → 적용 번호(4~8) */
+export function resolveMaxFloorsNo(maxFloors: number): number {
+  let no: number = MAX_FLOORS_RATE[0].no;
+  for (const b of MAX_FLOORS_RATE) {
+    if (maxFloors >= b.minFloors) no = b.no;
+  }
+  return no;
+}
+
 /** 연면적(㎡) → 지수 */
 export function resolveGrossAreaRate(grossArea: number): number {
   let rate = GROSS_AREA_RATE[0].rate;
@@ -126,6 +179,23 @@ export function resolveGrossAreaRate(grossArea: number): number {
     if (grossArea >= b.minArea) rate = b.rate;
   }
   return rate;
+}
+
+/** 연면적(㎡) → 적용 번호(9~13) */
+export function resolveGrossAreaNo(grossArea: number): number {
+  let no: number = GROSS_AREA_RATE[0].no;
+  for (const b of GROSS_AREA_RATE) {
+    if (grossArea >= b.minArea) no = b.no;
+  }
+  return no;
+}
+
+/** 무벽면적비율(0~1) → 적용 번호(28~30) 또는 미적용(undefined) */
+export function resolveWallessNo(ratio: number): 28 | 29 | 30 | undefined {
+  if (ratio >= 0.75) return 30;
+  if (ratio >= 0.5) return 29;
+  if (ratio > 0.25) return 28;
+  return undefined;
 }
 
 /**

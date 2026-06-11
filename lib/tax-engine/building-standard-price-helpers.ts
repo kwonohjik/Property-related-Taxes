@@ -37,8 +37,12 @@ import {
   REMODEL_COUNT_RATE,
   STRUCTURAL_SAFETY_RATE,
   resolveMaxFloorsRate,
+  resolveMaxFloorsNo,
   resolveGrossAreaRate,
+  resolveGrossAreaNo,
   resolveWallessRate,
+  resolveWallessNo,
+  ADJUSTMENT_FEATURE_LABEL,
   describeLocationBucket,
   resolveUsageLabel,
   STRUCTURE_META,
@@ -309,71 +313,126 @@ export function calcSameYearTransferStdPrice(
  * 부동소수 누적 회피: 적용 지수(정수)를 분자에 곱하고 분모 100^k로 마지막에 환산.
  * @returns 1.0 기준 배율(미적용 = 1.0)
  */
-export function calcSpecialAdjustmentRate(
+/** 조정율 선택 항목 — 적용 구분별 선택된 번호(들)와 지수(정수, 100 기준) */
+interface AdjustmentSelection {
+  nos: number[];
+  rate: number;
+}
+
+/**
+ * 조정율 구분별 선택(단일 출처). I~VII 각 구분의 적용 규칙대로 선택 항목을 산출.
+ * calcSpecialAdjustmentRate(지수곱)·describeSpecialAdjustment(라벨) 양쪽이 이 결과를 공유 → 드리프트 방지.
+ */
+function selectSpecialAdjustment(
   features: SpecialAdjustmentFeatures,
   structureIndex: number,
   floorArea: number,
   ctx: AdjustmentContext,
-): number {
-  const appliedRates: number[] = []; // 각 구분 적용 지수(정수, 100 기준)
+): AdjustmentSelection[] {
+  const sel: AdjustmentSelection[] = [];
+  const pickMax = (c: { no: number; rate: number }[]) => c.reduce((a, b) => (b.rate > a.rate ? b : a));
+  const pickMin = (c: { no: number; rate: number }[]) => c.reduce((a, b) => (b.rate < a.rate ? b : a));
 
   // I 지붕재료: 구조지수 < 100 일 때만
   if (structureIndex < 100 && features.roofMaterial !== undefined) {
-    appliedRates.push(ROOF_MATERIAL_RATE[features.roofMaterial]);
+    sel.push({ nos: [features.roofMaterial], rate: ROOF_MATERIAL_RATE[features.roofMaterial] });
   }
 
   // II 최고층수/연면적/지능형: 해당 항목 중 가장 높은 지수 1개
-  const groupII: number[] = [];
-  // 최고층수: 주거용은 아파트만 적용(isResidential && !isApartment → 미적용)
+  const groupII: { no: number; rate: number }[] = [];
   if (features.maxFloors !== undefined && (!ctx.isResidential || ctx.isApartment)) {
-    groupII.push(resolveMaxFloorsRate(features.maxFloors));
+    groupII.push({ no: resolveMaxFloorsNo(features.maxFloors), rate: resolveMaxFloorsRate(features.maxFloors) });
   }
-  // 연면적: 주거용 미적용
   if (!ctx.isResidential && floorArea > 0) {
-    groupII.push(resolveGrossAreaRate(floorArea));
+    groupII.push({ no: resolveGrossAreaNo(floorArea), rate: resolveGrossAreaRate(floorArea) });
   }
   if (features.intelligentBuildingGrade !== undefined) {
-    groupII.push(INTELLIGENT_BUILDING_RATE[features.intelligentBuildingGrade]);
+    groupII.push({
+      no: features.intelligentBuildingGrade === "1-2" ? 15 : 14,
+      rate: INTELLIGENT_BUILDING_RATE[features.intelligentBuildingGrade],
+    });
   }
-  if (groupII.length > 0) appliedRates.push(Math.max(...groupII));
+  if (groupII.length > 0) {
+    const w = pickMax(groupII);
+    sel.push({ nos: [w.no], rate: w.rate });
+  }
 
   // III 단독/공동주택: 해당 지수 1개
   if (features.houseTypeTier !== undefined) {
-    appliedRates.push(HOUSE_TYPE_RATE[features.houseTypeTier]);
+    sel.push({ nos: [features.houseTypeTier], rate: HOUSE_TYPE_RATE[features.houseTypeTier] });
   }
 
   // IV 상가·부속: 가장 낮은 지수 1개. 20~23 + 24·25 동시 해당이면 60
   const hasCommercialFloor = features.commercialFloor !== undefined;
   const hasAncillary = features.ancillaryParking !== undefined;
   if (hasCommercialFloor && hasAncillary) {
-    appliedRates.push(COMMERCIAL_WITH_ANCILLARY_RATE);
+    sel.push({ nos: [features.commercialFloor!, features.ancillaryParking!], rate: COMMERCIAL_WITH_ANCILLARY_RATE });
   } else {
-    const groupIV: number[] = [];
-    if (features.commercialFloor !== undefined) groupIV.push(COMMERCIAL_FLOOR_RATE[features.commercialFloor]);
-    if (features.ancillaryParking !== undefined) groupIV.push(ANCILLARY_RATE[features.ancillaryParking]);
-    if (groupIV.length > 0) appliedRates.push(Math.min(...groupIV));
+    const groupIV: { no: number; rate: number }[] = [];
+    if (features.commercialFloor !== undefined)
+      groupIV.push({ no: features.commercialFloor, rate: COMMERCIAL_FLOOR_RATE[features.commercialFloor] });
+    if (features.ancillaryParking !== undefined)
+      groupIV.push({ no: features.ancillaryParking, rate: ANCILLARY_RATE[features.ancillaryParking] });
+    if (groupIV.length > 0) {
+      const w = pickMin(groupIV);
+      sel.push({ nos: [w.no], rate: w.rate });
+    }
   }
 
   // V 개축(일부): 해당 지수 1개
   if (features.remodelCount !== undefined) {
-    appliedRates.push(REMODEL_COUNT_RATE[features.remodelCount]);
+    sel.push({ nos: [features.remodelCount], rate: REMODEL_COUNT_RATE[features.remodelCount] });
   }
 
   // VI 무벽건물: 무벽면적비율 구간 판정(미적용 시 100)
   if (features.wallessRatio !== undefined) {
     const r = resolveWallessRate(features.wallessRatio);
-    if (r !== ADJUSTMENT_RATE_BASE) appliedRates.push(r);
+    const no = resolveWallessNo(features.wallessRatio);
+    if (r !== ADJUSTMENT_RATE_BASE && no !== undefined) sel.push({ nos: [no], rate: r });
   }
 
   // VII 구조진단/철거: 가장 낮은 지수 1개. 37=정상사용면적비율(0~1 → ×100%)
-  const groupVII: number[] = [];
-  if (features.structuralSafety !== undefined) groupVII.push(STRUCTURAL_SAFETY_RATE[features.structuralSafety]);
-  if (features.normalUseRatio !== undefined) groupVII.push(Math.round(features.normalUseRatio * 100));
-  if (groupVII.length > 0) appliedRates.push(Math.min(...groupVII));
+  const groupVII: { no: number; rate: number }[] = [];
+  if (features.structuralSafety !== undefined)
+    groupVII.push({ no: features.structuralSafety, rate: STRUCTURAL_SAFETY_RATE[features.structuralSafety] });
+  if (features.normalUseRatio !== undefined)
+    groupVII.push({ no: 37, rate: Math.round(features.normalUseRatio * 100) });
+  if (groupVII.length > 0) {
+    const w = pickMin(groupVII);
+    sel.push({ nos: [w.no], rate: w.rate });
+  }
 
-  if (appliedRates.length === 0) return 1.0;
+  return sel;
+}
+
+export function calcSpecialAdjustmentRate(
+  features: SpecialAdjustmentFeatures,
+  structureIndex: number,
+  floorArea: number,
+  ctx: AdjustmentContext,
+): number {
+  const sel = selectSpecialAdjustment(features, structureIndex, floorArea, ctx);
+  if (sel.length === 0) return 1.0;
   // 분자=정수 지수곱, 분모=100^k (부동소수 누적 회피)
-  const numerator = appliedRates.reduce((acc, r) => acc * r, 1);
-  const denom = 100 ** appliedRates.length;
+  const numerator = sel.reduce((acc, s) => acc * s.rate, 1);
+  const denom = 100 ** sel.length;
   return numerator / denom;
+}
+
+/**
+ * 조정율 적용 특성 설명(인쇄·적용요령용). 예 "1. 기와·징크 등 지붕 & 4. 5층 이하".
+ * calcSpecialAdjustmentRate와 동일 선택(selectSpecialAdjustment) 기반 → 산식과 항상 일치.
+ * 적용 특성 없으면 undefined.
+ */
+export function describeSpecialAdjustment(
+  features: SpecialAdjustmentFeatures,
+  structureIndex: number,
+  floorArea: number,
+  ctx: AdjustmentContext,
+): string | undefined {
+  const sel = selectSpecialAdjustment(features, structureIndex, floorArea, ctx);
+  if (sel.length === 0) return undefined;
+  return sel
+    .map((s) => s.nos.map((no) => `${no}. ${ADJUSTMENT_FEATURE_LABEL[no] ?? ""}`).join(" & "))
+    .join(" & ");
 }

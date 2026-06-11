@@ -208,6 +208,8 @@ export interface BuildingStdPriceApplyNotes {
   location?: string;
   /** 잔가율 — "그룹, 신축연도, 경과". 예 "II그룹, 2004년 신축, 19년 경과" */
   residual?: string;
+  /** 조정률 — 적용 특성. 예 "1. 기와·징크 등 지붕 & 4. 5층 이하" (상증 특성 모드만). 직접입력 시 undefined */
+  adjustment?: string;
 }
 
 /** 공동주택 고시 전 취득 환산 결과(산출근거 echo) */
