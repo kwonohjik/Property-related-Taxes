@@ -36,6 +36,8 @@ export interface InheritanceTaxResultViewProps {
   onBack: () => void;
   /** 1단계로 이동 (입력값 보존) */
   onGoToFirst?: () => void;
+  /** 특정 입력 단계(0~4)로 이동해 수정 (입력값 보존) — 결과 화면 "입력 수정" 칩 */
+  onEditStep?: (step: number) => void;
   showLoginPrompt?: boolean;
   /** 상속인·수유자·영리법인 배열 — HeirAllocationSummaryTable 표시용 */
   heirs?: Heir[];

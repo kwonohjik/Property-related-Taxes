@@ -11,9 +11,9 @@
  * Step 5: 세액공제 입력 → 결과
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft } from "lucide-react";
-import { StepIndicator } from "@/components/calc/StepIndicator";
+import { StepIndicator, type StepStatus } from "@/components/calc/StepIndicator";
 import { ResetButton } from "@/components/calc/shared/ResetButton";
 import { HomeButton } from "@/components/calc/shared/HomeButton";
 import { InheritanceTaxResultView } from "@/components/calc/results/InheritanceTaxResultView";
@@ -149,41 +149,71 @@ function formatInheritanceApiError(data: { error?: string; issues?: ApiIssue[] }
 // 단계별 유효성 검사
 // ============================================================
 
-function validateStep(step: number, form: FormState): string | null {
+/**
+ * 한 단계에서 발견되는 모든 차단 오류를 수집한다(첫 오류에서 멈추지 않음).
+ *
+ * - handleNext: 진행 차단 + 오류 전부를 한 번에 표시(두더지잡기식 1건씩 노출 제거).
+ * - stepStatuses: 각 단계 완료/주의 배지 산정 — 오류 0건이면 "complete".
+ *
+ * 부수효과 없는 순수 함수(form만 의존) — StepIndicator 상태 계산에서 5단계 전부
+ * 매 렌더 호출되므로 입력 규모가 큰 항목(비상장주식 V2)도 가벼운 검증만 수행.
+ */
+function collectStepErrors(step: number, form: FormState): string[] {
+  const errors: string[] = [];
   if (step === 0) {
-    if (!form.deathDate) return "상속개시일(사망일)을 입력하세요.";
+    if (!form.deathDate) errors.push("상속개시일(사망일)을 입력하세요.");
     if (form.heirs.length === 0)
-      return "상속인·수유자를 1명 이상 등록하세요. (협의분할·법정상속분 안분의 기준)";
+      errors.push(
+        "상속인·수유자를 1명 이상 등록하세요. (협의분할·법정상속분 안분의 기준)",
+      );
   }
   if (step === 1) {
     const total = form.estateItems.length + form.stockItems.length;
-    if (total === 0) return "상속재산을 1개 이상 입력하세요.";
-    // 비상장주식 V2 입력 검증 — 진행 차단
-    // ctx.evaluationDateFallback = deathDate — display fallback과 동일 fallback 인식 (CLAUDE.md ⑧)
-    const evalCtx = { evaluationDateFallback: form.deathDate || undefined };
-    for (const item of [...form.estateItems, ...form.stockItems]) {
-      const e = validateUnlistedStockV2(item, evalCtx);
-      if (e) return e;
+    if (total === 0) {
+      errors.push("상속재산을 1개 이상 입력하세요.");
+    } else {
+      // 비상장주식 V2 입력 검증 — 진행 차단
+      // ctx.evaluationDateFallback = deathDate — display fallback과 동일 fallback 인식 (CLAUDE.md ⑧)
+      const evalCtx = { evaluationDateFallback: form.deathDate || undefined };
+      for (const item of [...form.estateItems, ...form.stockItems]) {
+        const e = validateUnlistedStockV2(item, evalCtx);
+        if (e) errors.push(e);
+      }
     }
   }
   if (step === 2) {
     // 방안 C — 협의분할 ON 모드일 때만 항목 검증
     if (form.debtItems !== undefined) {
       if (form.debtItems.length === 0) {
-        return "협의분할 모드 ON — 채무·공과·장례비 항목을 1개 이상 추가하거나 토글을 끄세요.";
-      }
-      for (const [idx, di] of form.debtItems.entries()) {
-        if (!di.name.trim()) {
-          return `채무·공과·장례비 ${idx + 1}번째 항목 — 채권자/내용을 입력하세요.`;
-        }
-        if (!Number.isFinite(di.amount) || di.amount <= 0) {
-          return `채무·공과·장례비 "${di.name}" 항목 — 금액을 0보다 큰 값으로 입력하세요.`;
-        }
-        // 협의분할 합계 ≠ 금액 차단 (기존 validateDebtItemAllocations 동일 규칙)
-        if (di.heirAllocations && di.heirAllocations.length > 0 && di.category !== "funeral") {
-          const sum = di.heirAllocations.reduce((s, a) => s + a.amount, 0);
-          if (sum !== di.amount) {
-            return `채무 "${di.name}" 협의분할 합계 ${sum.toLocaleString()}원 ≠ 금액 ${di.amount.toLocaleString()}원`;
+        errors.push(
+          "협의분할 모드 ON — 채무·공과·장례비 항목을 1개 이상 추가하거나 토글을 끄세요.",
+        );
+      } else {
+        for (const [idx, di] of form.debtItems.entries()) {
+          // 이름 미입력 항목도 금액·분할 오류를 식별할 수 있게 순번 라벨 사용
+          const label = di.name.trim() || `${idx + 1}번째 항목`;
+          if (!di.name.trim()) {
+            errors.push(
+              `채무·공과·장례비 ${idx + 1}번째 항목 — 채권자/내용을 입력하세요.`,
+            );
+          }
+          if (!Number.isFinite(di.amount) || di.amount <= 0) {
+            errors.push(
+              `채무·공과·장례비 "${label}" 항목 — 금액을 0보다 큰 값으로 입력하세요.`,
+            );
+          }
+          // 협의분할 합계 ≠ 금액 차단 (기존 validateDebtItemAllocations 동일 규칙)
+          if (
+            di.heirAllocations &&
+            di.heirAllocations.length > 0 &&
+            di.category !== "funeral"
+          ) {
+            const sum = di.heirAllocations.reduce((s, a) => s + a.amount, 0);
+            if (sum !== di.amount) {
+              errors.push(
+                `채무 "${label}" 협의분할 합계 ${sum.toLocaleString()}원 ≠ 금액 ${di.amount.toLocaleString()}원`,
+              );
+            }
           }
         }
       }
@@ -194,16 +224,20 @@ function validateStep(step: number, form: FormState): string | null {
     if (form.installmentEnabled) {
       const years = parseInt(form.installmentYears, 10);
       if (!Number.isFinite(years) || years < 1 || years > 10) {
-        return "연부연납 희망 기간은 1~10년(일반분 상한, §71②1나)으로 입력하세요.";
+        errors.push(
+          "연부연납 희망 기간은 1~10년(일반분 상한, §71②1나)으로 입력하세요.",
+        );
       }
       const rate = parseFloat(form.installmentFutureRate);
       if (!Number.isFinite(rate) || rate < 0) {
-        return "연부연납 미래 회차 가산율은 0 이상으로 입력하세요.";
+        errors.push("연부연납 미래 회차 가산율은 0 이상으로 입력하세요.");
       }
     }
     // R-1 분납·연부연납 배타 (§70② 단서) — UI disabled 1차 차단 + 방어
     if (form.splitPaymentEnabled && form.installmentEnabled) {
-      return "연부연납(§71)과 분납(§70②)은 동시에 신청할 수 없습니다. 하나만 선택하세요.";
+      errors.push(
+        "연부연납(§71)과 분납(§70②)은 동시에 신청할 수 없습니다. 하나만 선택하세요.",
+      );
     }
     // 물납 (§73) — 활성 시 보정액·희망액 음수 차단(빈 문자열 허용, 허용한도 초과는 경고만)
     if (form.paymentInKindEnabled) {
@@ -211,11 +245,20 @@ function validateStep(step: number, form: FormState): string | null {
         parseAmount(form.paymentInKindIneligibleAmount) < 0 ||
         parseAmount(form.paymentInKindRequestedAmount) < 0
       ) {
-        return "물납 관리·처분 부적당 제외액·희망 물납액은 0 이상으로 입력하세요.";
+        errors.push(
+          "물납 관리·처분 부적당 제외액·희망 물납액은 0 이상으로 입력하세요.",
+        );
       }
     }
   }
-  return null;
+  return errors;
+}
+
+/** 수집된 오류를 오류 박스용 문자열로 — 2건 이상이면 불릿 목록(whitespace-pre-line 렌더). */
+function formatStepErrors(errors: string[]): string {
+  return errors.length === 1
+    ? errors[0]
+    : errors.map((e) => `• ${e}`).join("\n");
 }
 
 // ============================================================
@@ -229,6 +272,13 @@ export function InheritanceTaxForm() {
   const [warnings, setWarnings] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<InheritanceTaxResult | null>(null);
+  // 오류 박스 — 표시될 때 시야로 스크롤(긴 Step4에서 하단 오류를 놓치지 않도록)
+  const errorRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (error && errorRef.current) {
+      errorRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [error]);
 
   const { activeClientId } = useProfessionalStore();
 
@@ -310,9 +360,9 @@ export function InheritanceTaxForm() {
     setForm((prev) => pruneOrphanHeirReferences({ ...prev, heirs }));
 
   const handleNext = () => {
-    const err = validateStep(step, form);
-    if (err) {
-      setError(err);
+    const errs = collectStepErrors(step, form);
+    if (errs.length > 0) {
+      setError(formatStepErrors(errs));
       return;
     }
     setError(null);
@@ -322,6 +372,18 @@ export function InheritanceTaxForm() {
       handleCalculate();
     }
   };
+
+  // 단계별 완료/주의 배지 — 오류 0건이면 complete(✓), 지나친 단계에 오류 있으면 attention(!),
+  // 아직 도달 전이면 neutral(번호). collectStepErrors와 동일 규칙으로 handleNext 차단과 일관.
+  const stepStatuses = useMemo<StepStatus[]>(
+    () =>
+      STEPS.map((_, i) => {
+        const hasError = collectStepErrors(i, form).length > 0;
+        if (hasError) return i < step ? "attention" : "neutral";
+        return i <= step ? "complete" : "neutral";
+      }),
+    [form, step],
+  );
 
   const handleBack = () => {
     setError(null);
@@ -542,6 +604,7 @@ export function InheritanceTaxForm() {
           onReset={handleReset}
           onBack={() => { setResult(null); setStep(STEPS.length - 1); }}
           onGoToFirst={() => { setResult(null); setStep(0); }}
+          onEditStep={(s) => { setResult(null); setStep(s); }}
           heirs={form.heirs}
           debtItems={form.debtItems}
           estateItems={[...form.estateItems, ...form.stockItems]}
@@ -598,6 +661,7 @@ export function InheritanceTaxForm() {
           steps={[...STEPS]}
           current={step}
           onStepClick={(i) => setStep(i)}
+          stepStatus={stepStatuses}
           className="!mb-0"
         />
       </div>
@@ -625,7 +689,11 @@ export function InheritanceTaxForm() {
       </div>
 
       {error && (
-        <div className="rounded-md bg-destructive/10 border border-destructive/30 px-4 py-2.5 text-sm text-destructive whitespace-pre-line">
+        <div
+          ref={errorRef}
+          data-testid="inheritance-step-error"
+          className="rounded-md bg-destructive/10 border border-destructive/30 px-4 py-2.5 text-sm text-destructive whitespace-pre-line"
+        >
           {error}
         </div>
       )}
