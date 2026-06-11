@@ -21,6 +21,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import {
   getCategoryGroup,
   pickPreservedFields,
@@ -118,36 +119,26 @@ export function CategoryChangeDialog({
             </span>
           </p>
 
-          <fieldset className="space-y-1">
-            <legend className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <div className="space-y-1">
+            <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
               변경할 카테고리
-            </legend>
-            {availableCategories.map((cat) => {
-              const isCurrent = cat === currentCategory;
-              const isSelected = cat === newCategory;
-              return (
-                <label
-                  key={cat}
-                  className={`flex items-center gap-2 text-xs cursor-pointer px-2 py-1 rounded ${
-                    isSelected ? "bg-indigo-50 dark:bg-indigo-900/20" : ""
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="newCategory"
-                    value={cat}
-                    checked={isSelected}
-                    onChange={() => setNewCategory(cat)}
-                    data-testid={`category-change-radio-${cat}-${item.id}`}
-                  />
-                  <span className={isCurrent ? "text-gray-500" : ""}>
-                    {CATEGORY_LABELS[cat]}
-                    {isCurrent && " (현재)"}
-                  </span>
-                </label>
-              );
-            })}
-          </fieldset>
+            </p>
+            <RadioCardGroup
+              name="newCategory"
+              tone="sky"
+              layout="stack"
+              value={newCategory}
+              onChange={(v) => setNewCategory(v as SupportedCategory)}
+              options={availableCategories.map((cat) => ({
+                value: cat,
+                label:
+                  cat === currentCategory
+                    ? `${CATEGORY_LABELS[cat]} (현재)`
+                    : CATEGORY_LABELS[cat],
+                testId: `category-change-radio-${cat}-${item.id}`,
+              }))}
+            />
+          </div>
 
           {/* 그룹 내 변경 — emerald hint */}
           {!isCrossGroup && !isSameCategory && (
