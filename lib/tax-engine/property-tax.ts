@@ -5,11 +5,11 @@
  *   DB 직접 호출 없음 — 세율 데이터는 매개변수로 전달
  *
  * 계산 순서:
- * 1. calcTaxBase()        — 공정시장가액비율 × 공시가격 → 천원 절사 (§110)
+ * 1. calcTaxBase()        — 공정시장가액비율 × 공시가격 (§110, 시행령 §109 — 2026 1세대1주택 43~45%)
  * 2. calcHousingTax()     — 주택 누진세율 4구간 / 1세대1주택 특례 (§111①1, §111③)
  * 3. calcBuildingTax()    — 건축물 일반 0.25% / 골프·오락 4% (§111①2)
- * 4. applyTaxCap()        — 세부담상한 105·110·130% / 토지 150% (§122)
- * 5. calcSurtax()         — 지방교육세 20% + 도시지역분 0.14% + 지역자원시설세 (§151, §112, §146)
+ * 4. applyTaxCap()        — 세부담상한 150% (주택 미적용 — §122 단서)
+ * 5. calcSurtax()         — 지방교육세 20% + 도시지역분 0.14% + 지역자원시설세 (§151, §112, §146③)
  * 6. calculatePropertyTax() — 메인 엔트리, 서브엔진 stub 포함
  *
  * ─── 종부세 연동 ───
@@ -18,7 +18,7 @@
  *   determinedTax → 종부세 재산세공제 입력
  */
 
-import { applyRate, truncateToThousand } from "./tax-utils";
+import { applyRate } from "./tax-utils";
 import { PROPERTY, PROPERTY_CONST, PROPERTY_CAL, COMPREHENSIVE_LAND } from "./legal-codes";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import {
@@ -72,9 +72,11 @@ function getFairMarketRatio(
 // ============================================================
 
 /**
- * 재산세 과세표준 계산 (지방세법 §110)
+ * 재산세 과세표준 계산 (지방세법 §110, 시행령 §109)
  *
  * - 주택: 공시가격 × 60%
+ *   · 2026년 과세 1세대1주택: 공시가격 구간별 43%(3억 이하)·44%(6억 이하)·45%(6억 초과)
+ *     — 시행령 §109①2호 단서. 공시가격 9억 초과 주택 포함 (특례세율 §111의2와 별개)
  * - 토지·건축물: 공시가격 × 70%
  * - 지방세법상 과세표준 절사 규정 없음 — 원 단위
  */
@@ -82,6 +84,7 @@ export function calcTaxBase(
   publishedPrice: number,
   objectType: PropertyTaxInput["objectType"],
   rates?: TaxRatesMap,
+  opts?: { isOneHousehold?: boolean; taxYear?: number },
 ): { taxBase: number; fairMarketRatio: number; legalBasis: string } {
   if (publishedPrice < 0) {
     throw new TaxCalculationError(
@@ -91,6 +94,26 @@ export function calcTaxBase(
   }
 
   const isHousing = objectType === "housing";
+
+  // 시행령 §109①2호 단서 — 2026년 납세의무 성립 1세대1주택 구간별 비율 (법령 명시값, DB보다 우선)
+  if (
+    isHousing &&
+    opts?.isOneHousehold === true &&
+    opts.taxYear === PROPERTY_CONST.ONE_HOUSE_FMR_YEAR
+  ) {
+    const fairMarketRatio =
+      publishedPrice <= PROPERTY_CONST.ONE_HOUSE_FMR_BRACKET_1
+        ? PROPERTY_CONST.ONE_HOUSE_FMR_RATIO_1
+        : publishedPrice <= PROPERTY_CONST.ONE_HOUSE_FMR_BRACKET_2
+          ? PROPERTY_CONST.ONE_HOUSE_FMR_RATIO_2
+          : PROPERTY_CONST.ONE_HOUSE_FMR_RATIO_3;
+    return {
+      taxBase: applyRate(publishedPrice, fairMarketRatio),
+      fairMarketRatio,
+      legalBasis: PROPERTY.FAIR_MARKET_RATIO_ONE_HOUSE,
+    };
+  }
+
   // DB rates 우선, fallback → 내부 상수 (정부 매년 고시 대응)
   const fairMarketRatio = getFairMarketRatio(
     rates,
@@ -236,15 +259,14 @@ export function calcBuildingTax(
 /**
  * 세부담상한 적용 (지방세법 §122)
  *
- * - 주택: 공시가격 기준 3억/6억 구간별 105·110·130%
- * - 토지·건축물: 150%
- * - 전년도 세액 미입력 시: 상한 미적용 + warnings 추가
+ * - 토지·건축물·선박·항공기: 직전 연도 재산세액 상당액의 150%
+ * - 주택: 적용하지 아니함 (§122 단서 — 주택 세부담상한 폐지, 과세표준상한제 §110의2로 대체)
+ * - 전년도 세액 미입력 시 (비주택): 상한 미적용 + warnings 추가
  *
- * @returns { determinedTax, capRate, warnings }
+ * @returns { determinedTax, taxCapRate, warnings }
  */
 export function applyTaxCap(
   calculatedTax: number,
-  publishedPrice: number,
   objectType: PropertyTaxInput["objectType"],
   previousYearTax?: number,
 ): {
@@ -254,6 +276,22 @@ export function applyTaxCap(
   legalBasis: string;
 } {
   const warnings: string[] = [];
+
+  // §122 단서: 주택은 세부담상한 적용 배제
+  if (objectType === "housing") {
+    if (previousYearTax !== undefined && previousYearTax > 0) {
+      warnings.push(
+        `주택은 세부담상한이 적용되지 않습니다 (${PROPERTY.TAX_CAP} 단서). ` +
+        "입력한 전년도 납부세액은 계산에 사용되지 않습니다.",
+      );
+    }
+    return {
+      determinedTax: calculatedTax,
+      taxCapRate: 1,
+      warnings,
+      legalBasis: PROPERTY.TAX_CAP,
+    };
+  }
 
   if (previousYearTax === undefined || previousYearTax <= 0) {
     warnings.push(
@@ -268,21 +306,8 @@ export function applyTaxCap(
     };
   }
 
-  let capRate: number;
-
-  if (objectType === "housing") {
-    if (publishedPrice <= PROPERTY_CONST.TAX_CAP_BRACKET_1) {
-      capRate = PROPERTY_CONST.TAX_CAP_RATE_1;  // 105%
-    } else if (publishedPrice <= PROPERTY_CONST.TAX_CAP_BRACKET_2) {
-      capRate = PROPERTY_CONST.TAX_CAP_RATE_2;  // 110%
-    } else {
-      capRate = PROPERTY_CONST.TAX_CAP_RATE_3;  // 130%
-    }
-  } else {
-    capRate = PROPERTY_CONST.TAX_CAP_RATE_LAND;  // 150%
-  }
-
-  const capLimit = Math.floor(previousYearTax * capRate);
+  const capRate = PROPERTY_CONST.TAX_CAP_RATE_LAND; // 150%
+  const capLimit = applyRate(previousYearTax, capRate);
   const determinedTax = Math.min(calculatedTax, capLimit);
 
   return { determinedTax, taxCapRate: capRate, warnings, legalBasis: PROPERTY.TAX_CAP };
@@ -292,22 +317,43 @@ export function applyTaxCap(
 // P1-08: calcSurtax — 부가세 합산
 // ============================================================
 
-/** 지역자원시설세 누진 구간 (건축물 시가표준액 기준, 지방세법 §146②) */
-const REGIONAL_RESOURCE_BRACKETS = [
-  { max: 600_000_000,     rate: 0.00004, deduction: 0 },
-  { max: 1_300_000_000,   rate: 0.00005, deduction: 6_000 },
-  { max: 2_600_000_000,   rate: 0.00006, deduction: 19_000 },
-  {                       rate: 0.00007, deduction: 45_000 },
+/** 소방분 지역자원시설세 초과누진 구간 */
+interface ResourceTaxBracket {
+  /** 구간 상한 (원). undefined = 최고 구간 */
+  upTo?: number;
+  /** 직전 구간까지의 누계세액 (법정 표 기재값) */
+  base: number;
+  /** 구간 초과금액에 적용하는 세율 분자 (10,000분의 N) */
+  perTenThousand: number;
+}
+
+/**
+ * 소방분 지역자원시설세 6구간 초과누진 (건축물 시가표준액 기준, 지방세법 §146③1호)
+ *
+ * 600만원 이하 4/10,000부터 6,400만원 초과 12/10,000까지.
+ * base = 직전 구간 상한까지의 법정 누계세액 (예: 1,300만 초과 구간 5,900원).
+ */
+const REGIONAL_RESOURCE_BRACKETS: ResourceTaxBracket[] = [
+  { upTo: 6_000_000,  base: 0,      perTenThousand: 4 },
+  { upTo: 13_000_000, base: 2_400,  perTenThousand: 5 },
+  { upTo: 26_000_000, base: 5_900,  perTenThousand: 6 },
+  { upTo: 39_000_000, base: 13_700, perTenThousand: 8 },
+  { upTo: 64_000_000, base: 24_100, perTenThousand: 10 },
+  {                   base: 49_100, perTenThousand: 12 },
 ];
 
 function calcRegionalResourceTax(standardPrice: number): number {
+  let lowerBound = 0;
   for (const bracket of REGIONAL_RESOURCE_BRACKETS) {
-    if (bracket.max === undefined || standardPrice <= bracket.max) {
-      return applyRate(standardPrice, bracket.rate) - bracket.deduction;
+    if (bracket.upTo === undefined || standardPrice <= bracket.upTo) {
+      // "초과금액의 10,000분의 N" — 분수 정수 연산 (applyRate의 소수 곱은 1원 오차 발생)
+      const excess = standardPrice - lowerBound;
+      return bracket.base + Math.floor((excess * bracket.perTenThousand) / 10_000);
     }
+    lowerBound = bracket.upTo;
   }
-  const last = REGIONAL_RESOURCE_BRACKETS[REGIONAL_RESOURCE_BRACKETS.length - 1];
-  return applyRate(standardPrice, last.rate) - last.deduction;
+  /* istanbul ignore next — 마지막 구간 upTo가 undefined이므로 도달 불가 */
+  return 0;
 }
 
 /**
@@ -387,10 +433,15 @@ export function calculatePropertyTax(
   const legalBasis: string[] = [PROPERTY.TAX_BASE, PROPERTY.TAX_BASE_DATE];
   const targetDate =
     input.targetDate ?? new Date().toISOString().slice(0, 10);
+  const taxYear = parseInt(targetDate.slice(0, 4), 10);
 
-  // ── Step 1: 과세표준 계산 (DB rates 전달 → 공정시장가액비율 DB 우선) ──
+  // ── Step 1: 과세표준 계산 (DB rates 전달 → 공정시장가액비율 DB 우선,
+  //            2026 1세대1주택은 시행령 §109①2호 단서 구간별 비율 우선) ──
   const { taxBase, fairMarketRatio, legalBasis: taxBaseLegal } =
-    calcTaxBase(input.publishedPrice, input.objectType, rates);
+    calcTaxBase(input.publishedPrice, input.objectType, rates, {
+      isOneHousehold: input.isOneHousehold,
+      taxYear,
+    });
   legalBasis.push(taxBaseLegal);
 
   // ── Step 2: 세율 적용 ──
@@ -519,7 +570,6 @@ export function calculatePropertyTax(
         // 세부담상한 (150%)
         const capResult = applyTaxCap(
           separatedTax,
-          input.publishedPrice,
           input.objectType,
           input.previousYearTax,
         );
@@ -641,10 +691,9 @@ export function calculatePropertyTax(
     }
   }
 
-  // ── Step 3: 세부담상한 ──
+  // ── Step 3: 세부담상한 (주택은 §122 단서로 미적용) ──
   const capResult = applyTaxCap(
     calculatedTax,
-    input.publishedPrice,
     input.objectType,
     input.previousYearTax,
   );

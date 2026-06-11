@@ -50,6 +50,15 @@ export function Step2Separated({ form, onChange }: Props) {
           />
         </div>
       )}
+
+      <div className="rounded-lg border border-amber-200 bg-amber-50/70 p-3">
+        <p className="text-xs text-amber-800">
+          대중형·간이 골프장 부속토지는 분리과세 대상이 아닙니다 (지방세법
+          §106①3호 — 회원제 골프장만 해당). 영업용 건축물 부속토지 요건을
+          충족하면 &ldquo;토지 분류&rdquo; 단계에서 별도합산과세대상으로
+          입력하세요.
+        </p>
+      </div>
     </div>
   );
 }

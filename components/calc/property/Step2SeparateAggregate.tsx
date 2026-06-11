@@ -1,6 +1,7 @@
 "use client";
 
-import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
+import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
+import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ZONING_DISTRICT_LABELS, type FormState } from "./shared";
@@ -35,11 +36,11 @@ export function Step2SeparateAggregate({ form, onChange }: Props) {
       {/* 토지 면적 */}
       <div className="space-y-1">
         <label className="text-sm font-medium">토지 면적 (㎡)</label>
-        <CurrencyInput
-          label="토지 면적"
+        <DecimalInput
           value={form.saLandArea}
           onChange={(v) => onChange({ saLandArea: v })}
-          placeholder="면적 입력"
+          placeholder="면적 입력 (소수점 가능)"
+          unit="㎡"
         />
         <p className="text-xs text-muted-foreground">
           공시가격 ÷ 면적 = 개별공시지가(원/㎡)로 자동 환산됩니다.
@@ -59,11 +60,11 @@ export function Step2SeparateAggregate({ form, onChange }: Props) {
       {!form.saIsFactory && (
         <div className="space-y-1">
           <label className="text-sm font-medium">건물 바닥면적 (㎡)</label>
-          <CurrencyInput
-            label="건물 바닥면적"
+          <DecimalInput
             value={form.saBuildingFloorArea}
             onChange={(v) => onChange({ saBuildingFloorArea: v })}
-            placeholder="면적 입력"
+            placeholder="면적 입력 (소수점 가능)"
+            unit="㎡"
           />
           <p className="text-xs text-muted-foreground">
             기준면적 = 건물 바닥면적 × 용도지역 배율 (지방세법 시행령 §101②)
@@ -75,11 +76,11 @@ export function Step2SeparateAggregate({ form, onChange }: Props) {
       {form.saIsFactory && (
         <div className="space-y-1">
           <label className="text-sm font-medium">공장입지기준면적 (㎡)</label>
-          <CurrencyInput
-            label="공장입지기준면적"
+          <DecimalInput
             value={form.saFactoryStandardArea}
             onChange={(v) => onChange({ saFactoryStandardArea: v })}
-            placeholder="면적 입력"
+            placeholder="면적 입력 (소수점 가능)"
+            unit="㎡"
           />
           <p className="text-xs text-muted-foreground">
             산업집적활성화법상 공장입지기준면적 이내: 별도합산, 초과: 종합합산
@@ -99,12 +100,9 @@ export function Step2SeparateAggregate({ form, onChange }: Props) {
       {form.saDemolished && (
         <div className="space-y-1">
           <label className="text-sm font-medium">철거일</label>
-          <input
-            type="text"
+          <DateInput
             value={form.saDemolishedDate}
-            onChange={(e) => onChange({ saDemolishedDate: e.target.value })}
-            placeholder="YYYY-MM-DD"
-            className="w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            onChange={(v) => onChange({ saDemolishedDate: v })}
           />
           <p className="text-xs text-muted-foreground">
             철거일부터 과세기준일(6월 1일)까지 6개월 이내이면 별도합산 유지 특례 적용
