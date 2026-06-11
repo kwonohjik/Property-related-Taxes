@@ -118,6 +118,7 @@ export function EstateBodyRealEstate({
   valuationDate,
   showCollateralDeductToggle,
   hasCohabitantChild = false,
+  mode = "inheritance",
 }: VariantBodyProps) {
   const cat = item.category as
     | "real_estate_land"
@@ -283,7 +284,7 @@ export function EstateBodyRealEstate({
 
       </EstateBodySection>
 
-      {/* 담보·임대 (§66 하한·§14 공제·§23의2) — 평가방식과 직교, 상시 노출 (D-3) */}
+      {/* 담보·임대 (§66 하한·§14 공제·§23의2·§47①) — 평가방식과 직교, 상시 노출 (D-3) */}
       <CollateralLeaseFields
         item={item}
         set={set}
@@ -291,6 +292,7 @@ export function EstateBodyRealEstate({
         showCollateralDeductToggle={showCollateralDeductToggle}
         showCohabitToggle={showLeaseDeposit}
         hasCohabitantChild={hasCohabitantChild}
+        mode={mode}
       />
     </div>
   );
@@ -309,6 +311,8 @@ interface RealEstateAdvancedFieldsProps {
   showCohabitToggle: boolean;
   /** 동거 자녀 존재 여부 — 미존재 시 체크 disabled */
   hasCohabitantChild: boolean;
+  /** 증여 모드 여부 — §47① 부담부증여 채무인수 입력·§47③ 안내 노출 분기 */
+  mode: "inheritance" | "gift";
 }
 
 // ============================================================
@@ -404,24 +408,35 @@ function CollateralLeaseFields({
   showCollateralDeductToggle,
   showCohabitToggle,
   hasCohabitantChild,
+  mode,
 }: RealEstateAdvancedFieldsProps) {
   // 담보·임대 토글 — 관련 값/설정이 하나라도 있으면 초기 ON(비파괴). mount 1회.
-  // isCohabitantHouse·deductSecuredClaimAsDebt 포함: 설정 켜진 채 접혀 숨겨지는 사고 방지(R-1).
+  // isCohabitantHouse·deductSecuredClaimAsDebt·assumedDebtForGift 포함: 설정 켜진 채 접혀 숨겨지는 사고 방지(R-1).
   const [open, setOpen] = useState(
     () =>
       (item.leaseDeposit ?? 0) > 0 ||
       (item.monthlyRent ?? 0) > 0 ||
       (item.mortgageAmount ?? 0) > 0 ||
       (item.creditGuaranteeAmount ?? 0) > 0 ||
+      (item.assumedDebtForGift ?? 0) > 0 ||
       item.deductSecuredClaimAsDebt === true ||
+      item.burdenedGiftDebtConfirmed === true ||
       item.isCohabitantHouse === true,
   );
   return (
     <ToggleCard
       tone="amber"
       size="sm"
-      title="담보·임대 (§66 평가 하한 · §14 채무공제)"
-      description="임대보증금·저당권·신용보증·§14 자동공제·§23의2 — 해당 시 펼쳐 입력"
+      title={
+        mode === "gift"
+          ? "담보·임대 (§66 평가 하한 · §47① 채무인수)"
+          : "담보·임대 (§66 평가 하한 · §14 채무공제)"
+      }
+      description={
+        mode === "gift"
+          ? "임대보증금·저당권·§47① 수증자 채무인수 — 해당 시 펼쳐 입력"
+          : "임대보증금·저당권·신용보증·§14 자동공제·§23의2 — 해당 시 펼쳐 입력"
+      }
       checked={open}
       onCheckedChange={setOpen}
     >
@@ -430,7 +445,11 @@ function CollateralLeaseFields({
         <FieldCard
           label="임대보증금 (세입자 있는 경우)"
           unit="원"
-          hint="평가액에서 차감됨"
+          hint={
+            mode === "gift"
+              ? "§66 임대료환산 평가 하한에 사용됩니다. §47① 수증자 채무인수 차감은 아래 별도 입력란에 입력하세요."
+              : "평가액에서 차감됨"
+          }
         >
           <CurrencyInput
             label="임대보증금 (세입자 있는 경우)"
@@ -465,7 +484,11 @@ function CollateralLeaseFields({
       <FieldCard
         label="저당권 등에 의해 담보된 채권액"
         unit="원"
-        hint="평가기준일 현재 실제 채무 잔액(설정액 아님). §66 — 평가액이 더 크면 평가액으로 평가(차감 아님). 피상속인 채무이면 아래 토글로 §14 자동공제 가능."
+        hint={
+          mode === "gift"
+            ? "평가기준일 현재 실제 채무 잔액(설정액 아님). §66 MAX 평가 하한에 사용됩니다 (차감 아님). §47① 수증자 채무인수 차감은 아래 별도 입력란에 입력하세요."
+            : "평가기준일 현재 실제 채무 잔액(설정액 아님). §66 — 평가액이 더 크면 평가액으로 평가(차감 아님). 피상속인 채무이면 아래 토글로 §14 자동공제 가능."
+        }
       >
         <CurrencyInput
           label="저당권 등에 의해 담보된 채권액"
@@ -493,6 +516,45 @@ function CollateralLeaseFields({
           disabled={(item.mortgageAmount ?? 0) === 0}
         />
       </FieldCard>
+
+      {/* §47① 부담부증여 수증자 인수 채무액 — 증여 모드 전용 */}
+      {mode === "gift" && (
+        <FieldCard
+          label="수증자 인수 채무액 (§47①)"
+          unit="원"
+          hint="수증자가 실제로 인수한 채무액. 증여세 과세가액에서 차감됩니다 (상증법 §47①). §66 평가용 저당권·임대보증금과 별개 — 같은 금액을 양쪽에 입력해도 됩니다."
+        >
+          <CurrencyInput
+            label="수증자 인수 채무액 (§47①)"
+            value={item.assumedDebtForGift != null ? String(item.assumedDebtForGift) : ""}
+            onChange={(v) => set({ assumedDebtForGift: parseAmount(v) || undefined })}
+            placeholder="없으면 빈칸"
+            hideLabel
+            hideUnit
+          />
+        </FieldCard>
+      )}
+
+      {/* §47③ 객관적 입증 토글 — 증여 모드 + 채무 입력 시 노출 */}
+      {mode === "gift" && (item.assumedDebtForGift ?? 0) > 0 && (
+        <ToggleCard
+          tone="amber"
+          size="sm"
+          title="채무 인수 사실 객관적 입증 가능 (§47③)"
+          description="배우자·직계존비속 간 부담부증여는 채무 인수를 원칙적으로 증여로 추정하지 않습니다. 금융기관 확인서 등 객관적 증빙이 있는 경우 ON으로 표시하세요."
+          checked={item.burdenedGiftDebtConfirmed ?? false}
+          onCheckedChange={(v) => set({ burdenedGiftDebtConfirmed: v || undefined })}
+        />
+      )}
+
+      {/* §47③ amber 안내 — 증여 모드 + 채무>0 시 항상 표시 (관계 불문) */}
+      {mode === "gift" && (item.assumedDebtForGift ?? 0) > 0 && (
+        <div className="rounded-md border border-amber-200 bg-amber-50/70 dark:border-amber-700 dark:bg-amber-900/20 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
+          <strong>§47③ 주의</strong> — 배우자·직계존비속 간 부담부증여의 채무 인수는 원칙적으로
+          증여로 추정하지 않습니다. 채무 이전이 객관적으로 입증된 경우에만 과세가액에서 차감됩니다.
+          (상증법 §47③, 금융기관 확인서류 등 입증 서류 보관 필요)
+        </div>
+      )}
 
       {/* §14 자동공제 토글 */}
       {showCollateralDeductToggle && (
