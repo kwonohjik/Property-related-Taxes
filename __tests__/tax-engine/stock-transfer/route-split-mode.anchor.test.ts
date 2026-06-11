@@ -103,4 +103,76 @@ describe("LO-PRE-1: route.ts split 모드 — API 경로 회귀 보호", () => {
     expect(json.result.acquisitionPrice).toBe(12_400_000);
     expect(json.result.transferPrice).toBe(21_600_000); // 1200 × 18000
   });
+
+  // ============================================================
+  // 다자산(aggregate) 경로 7필드 보존 회귀 (route buildEngineInput 단일화)
+  // 발견: 단건/다자산 매핑 중복으로 buildEngineInput에서 7필드 silent strip
+  //   (isOnMarketTransaction·lentSharesCount·pefIndirectSharesCount·
+  //    judgmentDateOverride·judgmentBasis·acqFaceValueOnly·acqFaceValuePerShare)
+  // 검증: isOnMarketTransaction=false(장외)가 aggregate 경로에서 엔진까지 전파되어
+  //   비과세(strip 시 default true→장내 비과세)가 아닌 과세(장외)로 분류되는지.
+  // ============================================================
+  it("LO-PRE-2: aggregate 경로 isOnMarketTransaction=false 보존 — 장외 과세(비과세 strip 회귀)", async () => {
+    const item = {
+      // KOSPI 비대주주 + 중소기업 — 장내면 비과세, 장외면 나목 1) 10% 과세
+      marketType: "kospi",
+      isMajorShareholder: false,
+      selfShareRatio: 0.001,
+      selfMarketCap: 100_000_000,
+      isLargestShareholderGroup: false,
+      combinedShareRatio: 0,
+      combinedMarketCap: 0,
+      priorYearEndDate: "2024-12-31",
+      isQualifyingBlockShareholder: false,
+      isHeavyRealEstateForRate: false,
+      isHeavyRealEstateForValuation: false,
+      isSmallMediumEnterprise: true,
+      isMidsizeEnterprise: false,
+      isListedSmallShareholder: false,
+      isVentureCompany: false,
+      isKOTCTrading: false,
+      // ★ strip 대상 7필드 중 가장 관찰 가능 — 장외 거래 명시
+      isOnMarketTransaction: false,
+      acquisitionDate: "2022-01-10",
+      transferDate: "2025-07-01",
+      shareCount: 1000,
+      totalIssuedShares: 100_000_000,
+      acquisitionCause: "purchase",
+      transferPriceMode: "actual",
+      transferActualInputMode: "per_share",
+      perShareTransferPrice: 20000,
+      acquisitionMode: "actual",
+      perShareAcquisitionPrice: 10000,
+      acquiredBeforeListing: false,
+      tradingHaltAtTransfer: false,
+      bookLost: false,
+      expenseMode: "actual",
+      filingType: "preliminary",
+      filingDate: "2025-08-31",
+      isElectronicFiling: false,
+      filingViolation: "none",
+      isFraudulent: false,
+      isInternationalTransaction: false,
+      realEstateGroupBasicDeductionUsed: 0,
+    };
+
+    const req = new Request("http://localhost/api/calc/stock-transfer", {
+      method: "POST",
+      body: JSON.stringify({ items: [item], deductionMode: "each_item" }),
+      headers: { "Content-Type": "application/json", "x-forwarded-for": "127.0.0.1" },
+    });
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const res = await POST(req as any);
+    expect(res.status).toBe(200);
+    const json = await res.json();
+
+    // 장외 거래 보존 → 비과세 아님, 나목 1) 중소기업 10% 과세
+    const item0 = json.result.items[0];
+    expect(item0.taxCategory).toBe("listed_off_market_non_major");
+    // 양도차익 = 20,000,000 - 10,000,000 = 10,000,000
+    // 과세표준 = 10,000,000 - 기본공제 2,500,000 = 7,500,000
+    // 산출세액 = 7,500,000 × 10% = 750,000
+    expect(item0.calculatedTax).toBe(750_000);
+  });
 });

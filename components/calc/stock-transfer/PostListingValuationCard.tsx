@@ -113,7 +113,7 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
               hideUnit
               value={form.transferDatePriceAvg1Month}
               onChange={(v) => onChange({ transferDatePriceAvg1Month: v })}
-              placeholder="8,659"
+              placeholder="양도일 직전 1개월 종가평균 (1주당)"
             />
           </FieldCard>
         )}

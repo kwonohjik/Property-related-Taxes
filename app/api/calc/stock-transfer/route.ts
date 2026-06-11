@@ -117,112 +117,9 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // 엔진 input 조립
-  const engineInput: StockTransferInput = {
-    marketType: coerced.marketType as StockTransferInput["marketType"],
-    isMajorShareholder: coerced.isMajorShareholder as boolean,
-    selfShareRatio: coerced.selfShareRatio as number,
-    selfMarketCap: coerced.selfMarketCap as number,
-    isLargestShareholderGroup: coerced.isLargestShareholderGroup as boolean,
-    combinedShareRatio: coerced.combinedShareRatio as number,
-    combinedMarketCap: coerced.combinedMarketCap as number,
-    priorYearEndDate: coerced.priorYearEndDate as Date,
-
-    isQualifyingBlockShareholder: coerced.isQualifyingBlockShareholder as boolean,
-    isHeavyRealEstateForRate: coerced.isHeavyRealEstateForRate as boolean,
-    isHeavyRealEstateForValuation: coerced.isHeavyRealEstateForValuation as boolean,
-
-    isSmallMediumEnterprise: coerced.isSmallMediumEnterprise as boolean,
-    isMidsizeEnterprise: coerced.isMidsizeEnterprise as boolean,
-    isListedSmallShareholder: coerced.isListedSmallShareholder as boolean,
-    isVentureCompany: coerced.isVentureCompany as boolean,
-    isKOTCTrading: coerced.isKOTCTrading as boolean,
-    isOnMarketTransaction: coerced.isOnMarketTransaction as boolean,
-    // F-15·F-16 (2026-05-19) §157 2013.2.15.~ — 대차/사모펀드 자동 가산
-    lentSharesCount: coerced.lentSharesCount as number,
-    pefIndirectSharesCount: coerced.pefIndirectSharesCount as number,
-    // F-09/F-10/F-14/F-23 (2026-05-19) — 판정 기준일 override
-    judgmentDateOverride: coerced.judgmentDateOverride as Date | undefined,
-    judgmentBasis: coerced.judgmentBasis as "merger" | "split" | "split_new_entity" | "incorporation" | undefined,
-
-    acquisitionDate: coerced.acquisitionDate as Date,
-    transferDate: coerced.transferDate as Date,
-    shareCount: coerced.shareCount as number,
-    totalIssuedShares: coerced.totalIssuedShares as number,
-
-    acquisitionCause: coerced.acquisitionCause as StockTransferInput["acquisitionCause"],
-    decedentAcquisitionDate: coerced.decedentAcquisitionDate as Date | undefined,
-    donorAcquisitionDate: coerced.donorAcquisitionDate as Date | undefined,
-    preMergerAcquisitionDate: coerced.preMergerAcquisitionDate as Date | undefined,
-
-    cumulativeTransferRatio: coerced.cumulativeTransferRatio as number | undefined,
-
-    transferPriceMode: coerced.transferPriceMode as StockTransferInput["transferPriceMode"],
-    transferActualInputMode: coerced.transferActualInputMode as StockTransferInput["transferActualInputMode"],
-    perShareTransferPrice: coerced.perShareTransferPrice as number | undefined,
-    transferTotalPrice: coerced.transferTotalPrice as number | undefined,
-    exchangePropertyValue: coerced.exchangePropertyValue as number | undefined,
-    exchangeDebtRelief: coerced.exchangeDebtRelief as number | undefined,
-    exchangeCash: coerced.exchangeCash as number | undefined,
-
-    acquisitionMode: coerced.acquisitionMode as StockTransferInput["acquisitionMode"],
-    perShareAcquisitionPrice: coerced.perShareAcquisitionPrice as number | undefined,
-
-    transferDatePriceAvg1Month: coerced.transferDatePriceAvg1Month as number | undefined,
-    acquisitionDatePriceAvg1Month: coerced.acquisitionDatePriceAvg1Month as number | undefined,
-    transferStdInputMode: coerced.transferStdInputMode as "direct" | "daily" | undefined,
-    listingDate: coerced.listingDate as Date | undefined,
-    listingDatePriceAvg1Month: coerced.listingDatePriceAvg1Month as number | undefined,
-    acquiredBeforeListing: coerced.acquiredBeforeListing as boolean,
-    postListingDetail: coerced.postListingDetail as import("@/lib/tax-engine/stock-transfer/types/stock-transfer.types").PostListingDetailInput | undefined,
-    tradingHaltAtTransfer: coerced.tradingHaltAtTransfer as boolean,
-
-    transferYearNetIncomePerShare: coerced.transferYearNetIncomePerShare as number | undefined,
-    transferYearNetAssetPerShare: coerced.transferYearNetAssetPerShare as number | undefined,
-    listingYearNetIncomePerShare: coerced.listingYearNetIncomePerShare as number | undefined,
-    listingYearNetAssetPerShare: coerced.listingYearNetAssetPerShare as number | undefined,
-    acquisitionYearNetIncomePerShare: coerced.acquisitionYearNetIncomePerShare as number | undefined,
-    acquisitionYearNetAssetPerShare: coerced.acquisitionYearNetAssetPerShare as number | undefined,
-
-    bookLost: coerced.bookLost as boolean,
-    faceValuePerShare: coerced.faceValuePerShare as number | undefined,
-
-    // [사례 49] 취득시 장부분실 액면가 + 양도시 §165④ 보충 평가
-    acqFaceValueOnly: coerced.acqFaceValueOnly as boolean | undefined,
-    acqFaceValuePerShare: coerced.acqFaceValuePerShare as number | undefined,
-
-    netAssetOnlyReason: coerced.netAssetOnlyReason as StockTransferInput["netAssetOnlyReason"],
-
-    expenseMode: coerced.expenseMode as StockTransferInput["expenseMode"],
-    actualExpenses: coerced.actualExpenses as number | undefined,
-
-    filingType: coerced.filingType as StockTransferInput["filingType"],
-    filingDate: coerced.filingDate as Date,
-    isElectronicFiling: coerced.isElectronicFiling as boolean,
-    filingViolation: coerced.filingViolation as StockTransferInput["filingViolation"],
-    isFraudulent: coerced.isFraudulent as boolean,
-    isInternationalTransaction: coerced.isInternationalTransaction as boolean,
-
-    // R-1' 매매사례가액
-    acquisitionMarketSamplePrice: coerced.acquisitionMarketSamplePrice as number | undefined,
-    acquisitionMarketSampleDate: coerced.acquisitionMarketSampleDate as Date | undefined,
-    acquisitionMarketSampleCounterparty: coerced.acquisitionMarketSampleCounterparty as string | undefined,
-    transferMarketSamplePrice: coerced.transferMarketSamplePrice as number | undefined,
-    transferMarketSampleDate: coerced.transferMarketSampleDate as Date | undefined,
-    transferMarketSampleCounterparty: coerced.transferMarketSampleCounterparty as string | undefined,
-
-    // R-2 자본조정
-    capitalAdjustments: coerced.capitalAdjustments as StockTransferInput["capitalAdjustments"],
-
-    realEstateGroupBasicDeductionUsed: coerced.realEstateGroupBasicDeductionUsed as number,
-
-    // ── split 모드 (분할 매수·분할 양도 + lots-only 모드 합성) ──
-    // ⑭ 동기화 지점 — TypeScript 미감지, grep 자가 점검 필수
-    acquisitionLots: coerced.acquisitionLots as StockTransferInput["acquisitionLots"],
-    transferLots: coerced.transferLots as StockTransferInput["transferLots"],
-    costAllocationMethod: coerced.costAllocationMethod as StockTransferInput["costAllocationMethod"],
-    specificMatchings: coerced.specificMatchings as StockTransferInput["specificMatchings"],
-  };
+  // 엔진 input 조립 — 단건·다자산 공통 매핑(buildEngineInput) 단일 진실 사용.
+  // (과거 단건/다자산 인라인 중복으로 7필드 silent strip 발생 → 단일화로 근본 차단)
+  const engineInput: StockTransferInput = buildEngineInput(coerced);
 
   try {
     const result = calculateStockTransferTax(engineInput);
@@ -255,6 +152,13 @@ function buildEngineInput(coerced: Record<string, unknown>): StockTransferInput 
     isListedSmallShareholder: coerced.isListedSmallShareholder as boolean,
     isVentureCompany: coerced.isVentureCompany as boolean,
     isKOTCTrading: coerced.isKOTCTrading as boolean,
+    isOnMarketTransaction: coerced.isOnMarketTransaction as boolean,
+    // F-15·F-16 (2026-05-19) §157 2013.2.15.~ — 대차/사모펀드 자동 가산
+    lentSharesCount: coerced.lentSharesCount as number,
+    pefIndirectSharesCount: coerced.pefIndirectSharesCount as number,
+    // F-09/F-10/F-14/F-23 (2026-05-19) — 판정 기준일 override
+    judgmentDateOverride: coerced.judgmentDateOverride as Date | undefined,
+    judgmentBasis: coerced.judgmentBasis as "merger" | "split" | "split_new_entity" | "incorporation" | undefined,
     acquisitionDate: coerced.acquisitionDate as Date,
     transferDate: coerced.transferDate as Date,
     shareCount: coerced.shareCount as number,
@@ -289,6 +193,9 @@ function buildEngineInput(coerced: Record<string, unknown>): StockTransferInput 
     acquisitionYearNetAssetPerShare: coerced.acquisitionYearNetAssetPerShare as number | undefined,
     bookLost: coerced.bookLost as boolean,
     faceValuePerShare: coerced.faceValuePerShare as number | undefined,
+    // [사례 49] 취득시 장부분실 액면가 + 양도시 §165④ 보충 평가
+    acqFaceValueOnly: coerced.acqFaceValueOnly as boolean | undefined,
+    acqFaceValuePerShare: coerced.acqFaceValuePerShare as number | undefined,
     netAssetOnlyReason: coerced.netAssetOnlyReason as StockTransferInput["netAssetOnlyReason"],
     expenseMode: coerced.expenseMode as StockTransferInput["expenseMode"],
     actualExpenses: coerced.actualExpenses as number | undefined,

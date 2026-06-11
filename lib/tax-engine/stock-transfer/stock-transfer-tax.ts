@@ -456,7 +456,6 @@ function calculateStockTransferTaxInternal(input: StockTransferInput): StockTran
   }
 
   let rateResult: ReturnType<typeof applyStockTaxRate>;
-  let splitModeMixedRate = false;
   if (lotMatchingDetail) {
     // split 모드 — sub-lot별 안분 + 세율 적용 + 합산
     const splitTax = calcSplitModeTax(
@@ -465,7 +464,6 @@ function calculateStockTransferTaxInternal(input: StockTransferInput): StockTran
       classification.taxCategory,
       input.isSmallMediumEnterprise,
     );
-    splitModeMixedRate = splitTax.isMixedRate;
     // appliedRate echo — 혼합 시 0 (UI에서 "혼합" 라벨), 단일 시 첫 sub-lot 세율 또는 비대주주 단일 세율
     const firstNonZeroRate = lotMatchingDetail.matched.find((m) => m.appliedRate > 0)?.appliedRate ?? 0;
     rateResult = {
@@ -641,9 +639,11 @@ export function calculateStockTransferTaxAggregate(
     const electronicFilingCredit = items.some((r) => r.electronicFilingCredit > 0)
       ? 20_000
       : 0;
+    // 결정세액 10원 미만 절사 — 단건 finalizeStockTax·aggregate 분기와 대칭
+    // (구성요소가 모두 10배수라 현재 실수치 불변이나, 향후 변경 대비 정합 유지)
     const totalFinalTax = Math.max(
       0,
-      totalCalculatedTax + totalUnderReportPenalty - electronicFilingCredit,
+      floorTen(totalCalculatedTax + totalUnderReportPenalty - electronicFilingCredit),
     );
     const totalLocalIncomeTax = Math.floor((totalCalculatedTax * 0.10) / 10) * 10;
 
@@ -776,7 +776,7 @@ export function calculateStockTransferTaxAggregate(
 
   const totalFinalTax = Math.max(
     0,
-    Math.floor((totalCalculatedTax + totalUnderReportPenalty - electronicFilingCredit) / 10) * 10,
+    floorTen(totalCalculatedTax + totalUnderReportPenalty - electronicFilingCredit),
   );
   const totalLocalIncomeTax = Math.floor((totalCalculatedTax * 0.10) / 10) * 10;
 
