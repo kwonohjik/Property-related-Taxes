@@ -61,9 +61,13 @@ export {
   REMODEL_COUNT_RATE,
   WALLESS_RATE,
   STRUCTURAL_SAFETY_RATE,
+  ADJUSTMENT_FEATURE_LABEL,
   resolveMaxFloorsRate,
+  resolveMaxFloorsNo,
   resolveGrossAreaRate,
+  resolveGrossAreaNo,
   resolveWallessRate,
+  resolveWallessNo,
 } from "./special-adjustment-rate";
 
 // D3 용도지수

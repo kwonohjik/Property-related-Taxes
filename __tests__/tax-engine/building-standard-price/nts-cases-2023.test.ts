@@ -150,6 +150,16 @@ describe("적용요령 echo(applyNotes) — 인쇄 서식용", () => {
       residual: "II그룹, 2004년 신축, 19년 경과", // 철골조=II그룹(40년) — 잔가율표 "모든 건물"
     });
   });
+
+  it("조정률 특성(징크지붕+5층이하) — 적용요령 문자열 + 산식 일치", () => {
+    const v = calcBuildingStandardPrice({
+      taxType: "inheritance_gift", floorArea: 75.3, builtYear: 2004, valuationYear: 2023,
+      valuation: { structureKey: "steel_frame", usageNo: 6, landPricePerM2: 1_450_000 },
+      specialFeatures: { roofMaterial: 1, maxFloors: 1 }, // 징크(#1, 율100) + 5층이하(#4, 율90)
+    }).valuation;
+    expect(v?.adjustmentRate).toBe(0.9); // 100×90/100² = 0.9 (selectSpecialAdjustment 단일출처)
+    expect(v?.applyNotes?.adjustment).toBe("1. 기와·징크·아스팔트싱글 등 지붕 & 4. 5층 이하");
+  });
 });
 
 describe("NTS 공식 계산사례 2023 — 단일 시점 일반 건물 13건", () => {

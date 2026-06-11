@@ -37,7 +37,12 @@ function buildRows(bd: BuildingStdPriceBreakdown, floorArea: number): Row[] {
     { label: "잔가율", value: String(bd.residualRate), note: n.residual ? `(${n.residual})` : undefined },
   ];
   if (bd.adjustmentRate !== undefined) {
-    rows.push({ label: "조정률", value: bd.adjustmentRate.toFixed(2), note: "(건물 특성 적용)", bold: true });
+    rows.push({
+      label: "조정률",
+      value: bd.adjustmentRate.toFixed(2),
+      note: n.adjustment ? `(${n.adjustment})` : "(직접 입력)",
+      bold: true,
+    });
   }
   rows.push({ label: "㎡당 가액", value: `${fmt(bd.pricePerM2 ?? 0)}원`, note: "(천원미만 절사)" });
   if (bd.acqBaseRate !== undefined) {

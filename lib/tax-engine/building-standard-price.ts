@@ -23,6 +23,7 @@ import {
   calcAcqBaseBreakdown,
   calcSameYearTransferStdPrice,
   calcSpecialAdjustmentRate,
+  describeSpecialAdjustment,
   weightedAvgLandPrice,
   calcApartmentConversion,
 } from "./building-standard-price-helpers";
@@ -181,6 +182,16 @@ export function calcBuildingStandardPrice(
         remodelYear: input.remodelYear,
         isInheritanceGift: true,
       });
+      // 조정율 특성 설명 echo(인쇄·적용요령용) — 특성 모드만(직접입력은 undefined)
+      if (input.manualAdjustmentRate == null && input.specialFeatures && valuation.applyNotes) {
+        const structureIndex = resolveStructureIndex(year, point.structureKey) ?? 0;
+        valuation.applyNotes.adjustment = describeSpecialAdjustment(
+          input.specialFeatures,
+          structureIndex,
+          input.floorArea,
+          { isResidential: !!input.isResidentialUse, isApartment: !!input.isApartmentUse },
+        );
+      }
     }
     return { valuation, warnings, legalBasis: LEGAL_BASIS };
   }
