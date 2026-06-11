@@ -1,5 +1,5 @@
 /**
- * 조특법 §97의4 — 장기임대주택 장기보유특별공제 추가율 (Phase 2 — ⚠️ R-3 일부 미확정)
+ * 조특법 §97의4 — 장기임대주택 장기보유특별공제 추가율 (R-3 확정·활성)
  *
  * 효과: §95② 보유기간별 공제율에 임대기간별 추가율을 "가산" (§97의3의 대체와 다름).
  *       단, §95① 단서(미등기 양도 등) 해당 시 적용 배제 (§97의4① 단서).
@@ -10,9 +10,11 @@
  * - 령 §97의4②: 임대기간 계산은 령 §97⑤1호·3호·5호 준용 — 사업자등록+임대사업자등록(또는
  *   공공주택사업자 지정)하고 임대하는 날부터 개시
  *
- * ⚠️ R-3: 추가공제율 표 수치는 법 본문 내장 표인데 법제처 API 응답에서 표 데이터가 누락되어
- *   원문 대조 미완 (plan §7). 아래 표는 매핑 감사 문서(transfer-reduction-mapping-audit.md §4.1)
- *   기재값 — 원문 확정 전까지 metadata.isFullyImplemented = false (UI 비활성) 유지.
+ * R-3 확정 (2026-06-11): 추가공제율 표 — 6~7년 2% / 7~8년 4% / 8~9년 6% / 9~10년 8% / 10년↑ 10%.
+ *   매핑 감사 문서(transfer-reduction-mapping-audit.md §4.1) 기재값 = 사용자(세무 전문가) 제공값
+ *   일치 확인 → metadata.isFullyImplemented = true (UI 활성).
+ *   ⚠️ 법 본문 내장 표가 법제처 API 응답 누락(별표 NOT_FOUND)으로 KoreanLaw 원문 직접 인용은
+ *   추후 보강 — followup.plan.md §R-3.
  */
 
 import { TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
@@ -25,8 +27,8 @@ import {
 import type { Rental97EvaluationInput, Rental97IneligibleReason, Rental97Result } from "./types";
 
 /**
- * 임대기간별 추가공제율 표 (⚠️ R-3 — 원문 표 미확정, 매핑 감사 문서 기재값).
- * [임대 연수 하한(이상), 추가율]
+ * 임대기간별 추가공제율 표 (R-3 확정 — 사용자 제공 = 매핑 감사 기재값 일치).
+ * [임대 연수 하한(이상), 추가율] — 6년 2% / 7년 4% / 8년 6% / 9년 8% / 10년 10%
  */
 export const RENTAL_97_4_ADDITIONAL_RATE_TABLE: ReadonlyArray<readonly [number, number]> = [
   [10, 0.10],

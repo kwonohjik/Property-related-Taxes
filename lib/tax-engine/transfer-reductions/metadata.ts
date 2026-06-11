@@ -123,7 +123,9 @@ export const REDUCTION_METADATA: Record<TransferReductionId, ReductionMetadata> 
     // 2026-06-11 정정: §97의3(대체)과 달리 §97의4는 보유기간 공제율에 "가산" — 별도 effectCategory
     effectCategory: "long_term_holding_additional",
     uiLabel: "§97의4 — 장특공제 추가율",
-    effectLabel: "장특공제 추가 2~10% (6~10년+ 임대) — 추가율 표 원문 확인 중",
+    effectLabel: "장특공제 추가율 가산 (6년 2% ~ 10년 10%)",
+    // R-3 확정 (2026-06-11): 추가율 표 = 사용자 제공값 = 코드 기재값 일치 → 활성화
+    isFullyImplemented: true,
   },
   rental_97_5: {
     id: "rental_97_5",

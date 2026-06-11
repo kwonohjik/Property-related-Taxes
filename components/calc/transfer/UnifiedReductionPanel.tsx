@@ -28,6 +28,7 @@ import { Rental973InputForm } from "@/components/calc/transfer/rental/Rental973I
 import { Rental975InputForm } from "@/components/calc/transfer/rental/Rental975InputForm";
 import { Rental97MainInputForm } from "@/components/calc/transfer/rental/Rental97MainInputForm";
 import { Rental972InputForm } from "@/components/calc/transfer/rental/Rental972InputForm";
+import { Rental974InputForm } from "@/components/calc/transfer/rental/Rental974InputForm";
 import {
   REDUCTION_METADATA,
   ALL_REDUCTION_IDS,
@@ -525,6 +526,14 @@ function GroupCategorySection({
                     <Rental972InputForm
                       value={rentalForm}
                       onChange={(patch) => onUpdateRentalVariant("rental_97_2", patch as Partial<RentalReductionFormVariant>)}
+                    />
+                  )}
+                  {/* §97의4 입력 폼 */}
+                  {id === "rental_97_4" && rentalForm && rentalForm.type === "rental_97_4" && (
+                    <Rental974InputForm
+                      value={rentalForm}
+                      onChange={(patch) => onUpdateRentalVariant("rental_97_4", patch as Partial<RentalReductionFormVariant>)}
+                      transferDate={transferDate}
                     />
                   )}
                 </ToggleCard>
