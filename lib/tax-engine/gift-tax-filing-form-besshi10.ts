@@ -71,7 +71,10 @@ function deriveRelationDeductionSplit(
 function derivePriorGiftAddition(
   r: Omit<GiftTaxResult, "besshi10Rows">,
 ): number {
-  const netCurrent = Math.max(0, r.grossGiftValue - r.exemptAmount);
+  // §47① 채무인수 차감 후 netCurrentGiftValue 역산 (debtAssumed echo 활용)
+  // netCurrent = grossGiftValue − exemptAmount − debtAssumed (§47① 차감분)
+  const debtAssumed = r.debtAssumed ?? 0;
+  const netCurrent = Math.max(0, r.grossGiftValue - r.exemptAmount - debtAssumed);
   return Math.max(0, r.aggregatedGiftValue - netCurrent);
 }
 

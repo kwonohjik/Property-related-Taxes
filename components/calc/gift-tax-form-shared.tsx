@@ -266,6 +266,21 @@ export function validateStep(step: number, form: FormState): string | null {
     if (needsName.some((it) => !it.name.trim())) {
       return "모든 증여재산에 자산명을 입력하세요.";
     }
+    // §47① 채무인수액 > 재산평가액 경고 (차단 아님 — §47① 입증 후 허용 가능, 엔진 음수가드 위임)
+    const realEstateItems = form.giftItems.filter((it) =>
+      it.category.startsWith("real_estate")
+    );
+    for (let i = 0; i < realEstateItems.length; i++) {
+      const it = realEstateItems[i];
+      const debtForGift = it.assumedDebtForGift ?? 0;
+      if (debtForGift > 0) {
+        const valuation =
+          it.marketValue ?? it.appraisedValue ?? it.similarSalesValue ?? it.standardPrice ?? 0;
+        if (valuation > 0 && debtForGift > valuation) {
+          return `${it.name.trim() || `재산 ${i + 1}`}: 채무인수액(${debtForGift.toLocaleString()}원)이 평가액(${valuation.toLocaleString()}원)을 초과합니다. 입력값을 확인하세요. (과세가액 0으로 처리됩니다)`;
+        }
+      }
+    }
   }
   if (step === 2) {
     // 사전증여 입력 시 동일인 그룹·⑤·⑦ 필수 (UI ↔ validate 모순 방지)

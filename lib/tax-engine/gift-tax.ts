@@ -98,6 +98,27 @@ export function calcGiftTax(
   }
 
   // ─────────────────────────────────────────────
+  // STEP 2.5: §47① 부담부증여 채무인수 합산
+  //   법령: 상증법 §47① — "증여재산에 담보된 채무로서 수증자가 인수한 금액을 뺀 금액"
+  //   자산별 assumedDebtForGift 합산 → 음수 가드
+  // ─────────────────────────────────────────────
+  const assumedDebtTotal = Math.max(
+    0,
+    input.giftItems.reduce(
+      (sum, item) => sum + (item.assumedDebtForGift ?? 0),
+      0,
+    ),
+  );
+  if (assumedDebtTotal > 0) {
+    allBreakdown.push({
+      label: "부담부증여 수증자 인수 채무 ②",
+      amount: -assumedDebtTotal,
+      lawRef: GIFT_LAW.TAXABLE_VALUE,
+      note: "§47① — 과세가액에서 차감",
+    });
+  }
+
+  // ─────────────────────────────────────────────
   // STEP 3: §47 ② 동일인 합산 (donor 그룹화)
   // ─────────────────────────────────────────────
   const priorAggregation = aggregatePriorGiftsForGift(
@@ -109,7 +130,19 @@ export function calcGiftTax(
   allWarnings.push(...priorAggregation.warnings);
   allLaws.add(GIFT_LAW.AGGREGATION_SAME_PERSON);
 
-  const netCurrentGiftValue = Math.max(0, grossGiftValue - exemptAmount);
+  // §47① 채무인수 차감 후 순 과세가액 산출 (음수 불가)
+  const netCurrentGiftValue = Math.max(
+    0,
+    grossGiftValue - exemptAmount - assumedDebtTotal,
+  );
+
+  // 채무가 재산가액을 초과하면 경고
+  if (assumedDebtTotal > 0 && assumedDebtTotal >= grossGiftValue - exemptAmount) {
+    allWarnings.push(
+      "채무인수액이 증여재산가액(비과세 차감 후)을 초과하여 과세가액을 0으로 처리합니다.",
+    );
+  }
+
   const aggregatedGiftValue =
     netCurrentGiftValue + priorAggregation.totalAmount;
 
@@ -255,7 +288,7 @@ export function calcGiftTax(
   const bracketLabel = formatBracketRate(taxBase, brackets);
   const filingFormRows = buildFilingFormRows({
     grossGiftValue,
-    debtAmount: 0, // 현행 증여세는 채무 미지원
+    debtAmount: assumedDebtTotal, // §47① 부담부증여 채무인수액
     priorTotal: priorAggregation.totalAmount,
     totalDeduction,
     taxBase,
@@ -311,7 +344,7 @@ export function calcGiftTax(
     publicInterestExclusion: 0,
     publicTrustExclusion: 0,
     disabledTrustExclusion: 0,
-    debtAssumed: 0,
+    debtAssumed: assumedDebtTotal, // §47① 부담부증여 채무인수액 (0이면 0 echo)
     disasterLossDeduction: 0,
     appraisalFeeDeduction: appraisalFee.total,
     appraisalFeeDetail: appraisalFee,

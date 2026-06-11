@@ -402,6 +402,14 @@ export function GiftTaxResultView({
               deduction
             />
           )}
+          {(result.debtAssumed ?? 0) > 0 && (
+            <Row
+              label="부담부증여 채무인수 차감 (§47①)"
+              value={`- ${formatKRW(result.debtAssumed ?? 0)}`}
+              sub
+              deduction
+            />
+          )}
           {result.aggregatedGiftValue > result.grossGiftValue && (
             <Row
               label="10년 합산 증여가액"
