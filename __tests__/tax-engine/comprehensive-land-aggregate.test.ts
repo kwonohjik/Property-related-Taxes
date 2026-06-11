@@ -10,6 +10,9 @@ import {
   applyAggregateLandTaxCap,
   calculateAggregateLandTax,
 } from "../../lib/tax-engine/comprehensive-tax";
+import {
+  calcComprehensiveAggregateLandStdTax,
+} from "../../lib/tax-engine/comprehensive-land-aggregate";
 import { COMPREHENSIVE_LAND_CONST } from "../../lib/tax-engine/legal-codes";
 import type { AggregateLandTaxInput } from "../../lib/tax-engine/types/comprehensive.types";
 
@@ -138,13 +141,42 @@ describe("applyAggregateLandTaxCap — 세부담 상한 150%", () => {
 // 통합 계산
 // ============================================================
 
+describe("calcComprehensiveAggregateLandStdTax — 종합합산 재산세 표준세율 산출세액", () => {
+  // SA01: 0 → 0
+  it("SA01: 과세표준 0 → 0", () => {
+    expect(calcComprehensiveAggregateLandStdTax(0)).toBe(0);
+  });
+
+  // SA02: 2,000만 (5천만 이하 구간 0.2%)
+  it("SA02: 과세표준 2,000만 → 40,000원 (0.2%)", () => {
+    expect(calcComprehensiveAggregateLandStdTax(20_000_000)).toBe(40_000);
+  });
+
+  // SA03: 7,000만 (5천만~1억 구간 0.3% - 5만)
+  it("SA03: 과세표준 7,000만 → 160,000원 (0.3% - 50,000)", () => {
+    // 7,000만 × 0.003 - 50,000 = 210,000 - 50,000 = 160,000
+    expect(calcComprehensiveAggregateLandStdTax(70_000_000)).toBe(160_000);
+  });
+
+  // SA04: 사례10 ⑥ 검증 — 재산세 과표 12.6억
+  it("SA04: 과세표준 12.6억 (사례10 ⑥) → 6,050,000원 (0.5% - 250,000)", () => {
+    // 1,260,000,000 × 0.005 - 250,000 = 6,300,000 - 250,000 = 6,050,000
+    expect(calcComprehensiveAggregateLandStdTax(1_260_000_000)).toBe(6_050_000);
+  });
+});
+
 describe("calculateAggregateLandTax — 통합 계산", () => {
-  // T19: 공시지가 10억 단일 토지 전체 흐름
-  it("T19: 공시지가 10억 전체 흐름 — 과세표준 5억, 산출세액 500만", () => {
+  // T19: 공시지가 10억 단일 토지 전체 흐름 — 법정 산식(§4의3) 기준으로 재산정
+  it("T19: 공시지가 10억 전체 흐름 — §4의3 법정 안분 공제 검증", () => {
+    // 재산세 과표 7억, 재산세 3,250,000원
+    // 종부세 과표 5억
+    // ⑤ = floor(500,000,000 × 70 × 5 / 100_000) = 1,750,000
+    // ⑥ = 7억 × 0.5% - 250,000 = 3,500,000 - 250,000 = 3,250,000
+    // 공제 = floor(3,250,000 × 1,750,000 / 3,250,000) = 1,750,000
     const input: AggregateLandTaxInput = {
       totalOfficialValue: 1_000_000_000,
       propertyTaxBase: 700_000_000,  // 10억 × 70%
-      propertyTaxAmount: 3_250_000,  // 재산세 부과세액
+      propertyTaxAmount: 3_250_000,
       previousYearTotalTax: undefined,
     };
 
@@ -153,11 +185,9 @@ describe("calculateAggregateLandTax — 통합 계산", () => {
     expect(result.isSubjectToTax).toBe(true);
     expect(result.taxBase).toBe(500_000_000);
     expect(result.calculatedTax).toBe(5_000_000);
-    // 비율 안분: 5억/7억 = 0.714..., creditAmount = floor(3,250,000 × 5억 / 7억) = 2,321,428
-    expect(result.propertyTaxCredit.ratio).toBeCloseTo(5 / 7, 4);
-    expect(result.propertyTaxCredit.creditAmount).toBe(
-      Math.floor(safeMultiplyThenDivide(3_250_000, 500_000_000, 700_000_000)),
-    );
+    // §4의3 법정 산식 공제액: 1,750,000원
+    expect(result.propertyTaxCredit.creditAmount).toBe(1_750_000);
+    expect(result.determinedTax).toBe(3_250_000); // 5,000,000 - 1,750,000
     // 세부담 상한 없음 (전년도 미입력)
     expect(result.taxCap).toBeUndefined();
     // 농특세 = 결정세액 × 20%
@@ -177,14 +207,33 @@ describe("calculateAggregateLandTax — 통합 계산", () => {
     expect(result.ruralSpecialTax).toBe(0);
     expect(result.totalTax).toBe(0);
   });
+
+  // YA-5T (종합합산): 국세청 사례10 실측 anchor
+  // 출처: 국세청 종합부동산세 계산 사례집 사례10 (2022)
+  it("YA-5T: 사례10 종합합산 — 공제 4,361,983원, 결정세액 8,638,017원", () => {
+    // 공시지가: 서초구 나대지 4.3억 + 송파구 토지 3.7억 + 10억 = 18억원
+    // 재산세 과표: 18억 × 70% = 12.6억원
+    // 재산세 부과세액: 1,255,000 + 4,545,000 = 5,800,000원
+    // 종부세 과표: (18억 - 5억) × 100% = 13억원
+    // 산출세액: 13억 × 1% = 13,000,000원
+    // ⑤ = floor(1,300,000,000 × 70 × 5 / 100_000) = 4,550,000원
+    // ⑥ = 12.6억 × 0.5% - 250,000 = 6,050,000원
+    // 공제 = floor(5,800,000 × 4,550,000 / 6,050,000) = 4,361,983원
+    const input: AggregateLandTaxInput = {
+      totalOfficialValue: 1_800_000_000,
+      propertyTaxBase: 1_260_000_000,  // 18억 × 70%
+      propertyTaxAmount: 5_800_000,    // 1,255,000 + 4,545,000
+      previousYearTotalTax: undefined,
+    };
+
+    const result = calculateAggregateLandTax(input);
+
+    expect(result.taxBase).toBe(1_300_000_000);       // (18억 - 5억) × 100%
+    expect(result.calculatedTax).toBe(13_000_000);    // 13억 × 1%
+    expect(result.propertyTaxCredit.creditAmount).toBe(4_361_983);   // 사례10 확인값
+    expect(result.determinedTax).toBe(8_638_017);                    // 13,000,000 - 4,361,983
+    expect(result.taxCap).toBeUndefined();
+    expect(result.ruralSpecialTax).toBe(Math.floor(8_638_017 * 0.2));
+  });
 });
 
-// 헬퍼 (테스트용)
-function safeMultiplyThenDivide(a: number, b: number, c: number): number {
-  if (c === 0) return 0;
-  const product = a * b;
-  if (Math.abs(product) > Number.MAX_SAFE_INTEGER) {
-    return Number(BigInt(Math.floor(a)) * BigInt(Math.floor(b)) / BigInt(Math.floor(c)));
-  }
-  return Math.floor(product / c);
-}

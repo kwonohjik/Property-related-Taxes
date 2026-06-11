@@ -8,7 +8,7 @@ import {
   truncateToTenThousand,
   safeMultiplyThenDivide,
 } from "./tax-utils";
-import { COMPREHENSIVE_LAND_CONST } from "./legal-codes";
+import { COMPREHENSIVE_LAND_CONST, PROPERTY_CONST } from "./legal-codes";
 import type {
   AggregateLandTaxInput,
   AggregateLandTaxResult,
@@ -109,35 +109,91 @@ export function applyAggregateLandTaxCap(
 }
 
 // ============================================================
-// 비율 안분 공제 (T-08 공통 헬퍼 — 토지분에서도 사용)
+// 재산세 표준세율 산출세액 계산 (⑥ 계산용)
 // ============================================================
 
+/**
+ * 종합합산 토지 재산세 표준세율 산출세액 계산 (지방세법 §111①1호 가목)
+ *
+ * 세율표:
+ *   ≤ 5,000만원: 0.2%
+ *   ≤ 1억원:     0.3% - 50,000원
+ *   > 1억원:     0.5% - 250,000원   ← 종부세 대상 고액은 이 구간
+ *
+ * ⑥(총표준세율재산세) 계산에 사용 — applyRate()로 분수 정수 연산 보장.
+ */
+export function calcComprehensiveAggregateLandStdTax(propertyTaxBase: number): number {
+  if (propertyTaxBase <= 0) return 0;
+  const B1 = PROPERTY_CONST.COMPREHENSIVE_BRACKET_1;  // 5,000만원
+  const B2 = PROPERTY_CONST.COMPREHENSIVE_BRACKET_2;  // 1억원
+  if (propertyTaxBase <= B1) {
+    return applyRate(propertyTaxBase, PROPERTY_CONST.COMPREHENSIVE_RATE_1);
+  } else if (propertyTaxBase <= B2) {
+    return applyRate(propertyTaxBase, PROPERTY_CONST.COMPREHENSIVE_RATE_2) -
+      PROPERTY_CONST.COMPREHENSIVE_DEDUCTION_2;
+  } else {
+    return applyRate(propertyTaxBase, PROPERTY_CONST.COMPREHENSIVE_RATE_3) -
+      PROPERTY_CONST.COMPREHENSIVE_DEDUCTION_3;
+  }
+}
+
+// ============================================================
+// 비율 안분 공제 (종합부동산세법 시행령 §4의3)
+// ============================================================
+
+/**
+ * 종합합산 토지 재산세 비율 안분 공제 (종합부동산세법 시행령 §4의3)
+ *
+ * 법정 산식:
+ *   공제액 = ⓐ × (⑤ ÷ ⑥)
+ *
+ *   ⓐ = 재산세 부과세액 (입력 propertyTaxAmount)
+ *   ⑤ = 종부세 과세표준 × 재산세 FMR(70%) × 최고세율(0.5%)  [누진공제 없음]
+ *       분수 정수: taxBase × 70 × 5 / 100_000
+ *       (×0.005 float 직접 곱 시 floor 1원 부족 방지 — feedback_applyrate_fractional)
+ *   ⑥ = 재산세 과세표준 전체에 대한 표준세율 산출세액
+ *       = calcComprehensiveAggregateLandStdTax(propertyTaxBase)
+ *
+ * 사례10 (2022) 실측:
+ *   ⑤ = 13억 × 70% × 0.5% = 4,550,000
+ *   ⑥ = 18억 × 70% × 0.5% − 250,000 = 6,050,000
+ *   ⓐ = 5,800,000
+ *   공제 = 5,800,000 × 4,550,000 / 6,050,000 = 4,361,983
+ *
+ * @param propertyTaxAmount  - ⓐ: 실제 부과 재산세 합계
+ * @param numeratorStdTaxEq  - ⑤: 종부세 과표분 표준세율 재산세 상당액
+ * @param denominatorStdTax  - ⑥: 재산세 과표 전체 표준세율 산출세액
+ * @param calculatedTax      - 공제 상한 (산출세액)
+ */
 function calcLandPropertyTaxCreditProration(
   propertyTaxAmount: number,
-  comprehensiveTaxBase: number,
-  propertyTaxBase: number,
+  numeratorStdTaxEq: number,
+  denominatorStdTax: number,
   calculatedTax: number,
 ): PropertyTaxCredit {
-  if (propertyTaxBase === 0) {
+  if (denominatorStdTax === 0) {
     return {
       totalPropertyTax: propertyTaxAmount,
       propertyTaxBase: 0,
-      comprehensiveTaxBase,
+      comprehensiveTaxBase: 0,
       ratio: 0,
       creditAmount: 0,
     };
   }
 
-  const ratio = Math.min(comprehensiveTaxBase / propertyTaxBase, 1.0);
+  const ratio = Math.min(numeratorStdTaxEq / denominatorStdTax, 1.0);
   const creditRaw = Math.floor(
-    safeMultiplyThenDivide(propertyTaxAmount, comprehensiveTaxBase, propertyTaxBase),
+    safeMultiplyThenDivide(propertyTaxAmount, numeratorStdTaxEq, denominatorStdTax),
   );
   const creditAmount = Math.min(creditRaw, calculatedTax);
 
   return {
     totalPropertyTax: propertyTaxAmount,
-    propertyTaxBase,
-    comprehensiveTaxBase,
+    // 하위 호환 필드: 법정 산식 전환 후 의미 변경
+    // propertyTaxBase → denominatorStdTax (총 표준세율 재산세 산출세액)
+    // comprehensiveTaxBase → numeratorStdTaxEq (종부세 과표분 표준세율 재산세 상당액)
+    propertyTaxBase: denominatorStdTax,
+    comprehensiveTaxBase: numeratorStdTaxEq,
     ratio,
     creditAmount,
   };
@@ -198,10 +254,26 @@ export function calculateAggregateLandTax(
   const { calculatedTax, appliedRate, progressiveDeduction } =
     calcAggregateLandTaxAmount(taxBase);
 
+  // ── 재산세 비율 안분 공제 (종합부동산세법 시행령 §4의3) ──
+  //
+  // ⑤ = 종부세 과표 × 재산세FMR(70%) × 종합합산 최고세율(0.5%)  [누진공제 없음]
+  //   = taxBase × 70 × 5 / 100_000
+  //   (×0.005 float 직접 곱 시 floor 1원 부족 — feedback_applyrate_fractional)
+  //
+  // ⑥ = 재산세 과표 전체에 대한 종합합산 표준세율 산출세액
+  //   = calcComprehensiveAggregateLandStdTax(propertyTaxBase)
+  //   (누진공제 포함: 1억 초과 → 과표×0.5% - 250,000)
+  const landFMR = PROPERTY_CONST.FAIR_MARKET_RATIO_LAND_BUILDING; // 0.70
+  // landFMR = 70/100, 최고세율 = 5/1000 → 합산 분수: ×70×5/100_000
+  const numeratorStdTaxEq = Math.floor(
+    (taxBase * Math.round(landFMR * 100) * 5) / 100_000,
+  );
+  const denominatorStdTax = calcComprehensiveAggregateLandStdTax(propertyTaxBase);
+
   const credit = calcLandPropertyTaxCreditProration(
     propertyTaxAmount,
-    taxBase,
-    propertyTaxBase,
+    numeratorStdTaxEq,
+    denominatorStdTax,
     calculatedTax,
   );
   const comprehensiveTaxAfterCredit = Math.max(
