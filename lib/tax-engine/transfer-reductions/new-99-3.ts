@@ -134,7 +134,9 @@ export interface New993HouseCountExclusionInput {
 // 시기 상수 (조특법 §99의3 ① 본문 + 1호)
 // ============================================================================
 
-const D = (s: string) => new Date(s + "T00:00:00");
+// UTC 자정 파싱 — API 경유 입력(new Date("YYYY-MM-DD") = UTC midnight)과 동일 기준.
+// "T00:00:00" 로컬 자정은 KST 서버에서 9시간 어긋나 경계일 오판 (unsold-hybrid-p5 D()와 통일).
+const D = (s: string) => new Date(s);
 
 const PERIOD_START = D("2001-05-23");
 const PERIOD_END = D("2003-06-30");

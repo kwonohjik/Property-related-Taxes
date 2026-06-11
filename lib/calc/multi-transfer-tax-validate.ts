@@ -4,7 +4,18 @@
 
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { MultiTransferFormData, PropertyItem } from "@/lib/stores/multi-transfer-tax-store";
+import { ALL_INCOME_DEDUCTION_IDS } from "@/lib/tax-engine/transfer-reductions/income-deduction-router";
 import { validateStep } from "./transfer-tax-validate";
+
+/**
+ * 다건 합산 엔진(`calculateTransferTaxAggregate`)이 미지원하는 감면 조문 집합 (2026-06-12 리뷰 H-1).
+ *
+ * 차감형(income_deduction)·세액감면형(tax_amount)·세율특칙(§98 flat 20%·§98의3계 단기 배제)은
+ * 단건 엔진의 STEP 4.6·7·8 내부에서 적용되는데, aggregate가 `income = taxableGain − lthd`로
+ * 양도소득금액을 재산정하고 세율군을 재계산하면서 차감·감면·농특세·세율특칙이 전부 소실된다
+ * (probe 실측: 단건 17,254,000 vs 다건 94,897,000). 침묵 오산보다 명시 차단이 안전.
+ */
+const MULTI_UNSUPPORTED_REDUCTION_TYPES: ReadonlySet<string> = new Set(ALL_INCOME_DEDUCTION_IDS);
 
 /** 단건 자산의 필수 입력 완성도 검사 (0~100 정수) */
 export function calcPropertyCompletion(form: PropertyItem["form"]): number {
@@ -74,6 +85,17 @@ export function validateMultiSupportedMode(form: PropertyItem["form"]): string |
   }
   if (a.hasSeperateLandAcquisitionDate) {
     return "토지·건물 취득일 분리(§166⑥)는 단건 계산기에서만 지원됩니다.";
+  }
+  // 차감형·세액감면형·세율특칙 감면 (§98~§99의2 미분양·신축 시리즈) — 다건 합산 미지원 (H-1)
+  const blockedReduction = (a.reductions ?? []).find((r) =>
+    MULTI_UNSUPPORTED_REDUCTION_TYPES.has(r.type),
+  );
+  if (blockedReduction) {
+    return "미분양·신축주택 감면(조특법 §98~§99의2 시리즈)은 단건 계산기에서만 지원됩니다. 합산 계산에서는 차감·세액감면이 반영되지 않습니다.";
+  }
+  // 모드 2 — 보유 감면주택 주택수 제외(§89①3호 의제)도 단건 전용
+  if ((form.specialHouseExclusions?.length ?? 0) > 0) {
+    return "보유 감면주택 주택수 제외(§89①3호 의제)는 단건 계산기에서만 지원됩니다.";
   }
   if ((form.assets?.length ?? 0) > 1) {
     return "한 건 내 다자산 일괄양도는 단건 계산기에서만 지원됩니다.";

@@ -25,6 +25,7 @@ import { Rental97DetailCard } from "./Rental97DetailCard";
 import { New994DetailCard } from "./New994DetailCard";
 import { Unsold989DetailCard } from "./Unsold989DetailCard";
 import { IncomeDeductionDetailCard } from "./IncomeDeductionDetailCard";
+import { SpecialHouseExclusionDetailCard } from "./SpecialHouseExclusionDetailCard";
 
 interface Props {
   result: TransferTaxResult;
@@ -50,7 +51,9 @@ export function ReductionDetailCards({ result }: Props) {
     !!result.unsold986Detail ||
     !!result.unsold982Detail ||
     !!result.unsold984Detail ||
-    !!result.unsold98Detail;
+    !!result.unsold98Detail ||
+    !!(result.specialHouseExclusionDetail &&
+      result.specialHouseExclusionDetail.entries.length > 0);
 
   if (!hasAny) return null;
 
@@ -121,6 +124,11 @@ export function ReductionDetailCards({ result }: Props) {
       {result.unsold98Detail && (
         <IncomeDeductionDetailCard kind="unsold_98" result={result.unsold98Detail} />
       )}
+      {/* P5 모드 2 — 보유 감면주택 주택수 제외 (2026-06-12 리뷰 H-2) */}
+      {result.specialHouseExclusionDetail &&
+        result.specialHouseExclusionDetail.entries.length > 0 && (
+          <SpecialHouseExclusionDetailCard detail={result.specialHouseExclusionDetail} />
+        )}
     </>
   );
 }

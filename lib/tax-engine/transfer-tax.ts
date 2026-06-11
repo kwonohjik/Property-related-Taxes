@@ -6,7 +6,7 @@
  *
  * P0-2 원칙: 세율 × 금액 곱셈은 반드시 applyRate() 사용.
  */
-import { TRANSFER, NBL, TRANSFER_REDUCTION_ARTICLE } from "./legal-codes";
+import { TRANSFER, NBL } from "./legal-codes";
 import {
   applyRate,
   isSurchargeSuspended,
@@ -58,14 +58,12 @@ import {
   calcLongTermHoldingDeduction,
   calcBasicDeduction,
   runCommercialBuildingStep,
-  buildMultiHouseSurchargeDetail,
   type CommercialBuildingStepResult,
 } from "./transfer-tax-helpers";
 import { calculateBuildingPenalty, calcTax, handleMultiParcelBranch } from "./transfer-tax-rate-calc";
 import { finalizeTransferTax, resolveLTHDStartDate, buildTransferResultDetails } from "./transfer-tax-finalize";
 import { isRedevelopmentActive, calculateRedevelopmentTax } from "./transfer-tax-redevelopment";
 import { calcCarryoverScenarios } from "./transfer-tax-carryover";
-import type { TransferBurdenedGiftBreakdown } from "./types/transfer-burdened-gift.types";
 import { runBurdenedGiftStep } from "./transfer-tax-burdened-gift-step";
 import { resolveAcquisitionOverride, type TransferTaxAcquisitionOptions } from "./transfer-tax-acquisition-override";
 export type { TransferTaxAcquisitionOptions } from "./transfer-tax-acquisition-override";
@@ -161,12 +159,18 @@ export function calculateTransferTax(
 
   // STEP 0.45: 차감형 감면주택(§99의3·§99·§98의8) 중과 배제 선판정 — 소령 §167의3①5호·§167의10①2호.
   // 적격 시 양도 주택에 isTaxSpecialExemption 주입 → 기존 중과 엔진 경로로 배제 (D-11 자동화).
-  const surchargeExclusionByReduction = resolveSurchargeExclusionByReduction(workingInput.reductions, {
-    transferDate: workingInput.transferDate,
-    acquisitionDate: workingInput.acquisitionDate,
-    assetContractDate: workingInput.assetContractDate,
-    transferPrice: workingInput.transferPrice,
-    standardPriceAtTransfer: workingInput.standardPriceAtTransfer,
+  //
+  // 입력은 원본 `input` 기준 — STEP 4.6 본판정(resolveIncomeDeduction(input, ...))과 동일하게 맞춘다.
+  // 감면 요건의 "취득일·5년 보유"는 양도자가 그 주택을 실제 취득한 날 기준이다. 이월과세(소득세법
+  // §97의2①)는 "양도차익 계산상 필요경비(취득가액)"만 증여자 취득 당시 금액으로 의제할 뿐 취득시기를
+  // 의제하지 않으므로(보유기간 승계는 §95④·§104② 별도 명문, 감면 5년에는 미적용), workingInput의
+  // 증여자 취득일(carryover.ts donorAcquisitionDate)로 감면을 판정하면 선판정·본판정이 어긋난다 (리뷰 M-2).
+  const surchargeExclusionByReduction = resolveSurchargeExclusionByReduction(input.reductions, {
+    transferDate: input.transferDate,
+    acquisitionDate: input.acquisitionDate,
+    assetContractDate: input.assetContractDate,
+    transferPrice: input.transferPrice,
+    standardPriceAtTransfer: input.standardPriceAtTransfer,
   });
 
   // STEP 0.5: 다주택 중과세 판정 (houses[] 제공 + 주택 수 산정 규칙 로드 완료 시)

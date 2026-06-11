@@ -309,7 +309,7 @@ describe("§99의3 — Case 12: ②항 1세대1주택 신축 주택수 제외", 
 
   it("다른 주택을 2007.12.31 정확히 양도 → 경계값 true", () => {
     const input = makeBaseInput({
-      otherHouseTransferDate: new Date("2007-12-31T00:00:00"),
+      otherHouseTransferDate: new Date("2007-12-31"),
     });
     const r = evaluateNew993(input);
     expect(r.isExcludedFromHouseCountFor1H1H).toBe(true);
@@ -317,7 +317,7 @@ describe("§99의3 — Case 12: ②항 1세대1주택 신축 주택수 제외", 
 
   it("다른 주택을 2008.1.1 이후 양도 → 신축 주택수 제외 X (false)", () => {
     const input = makeBaseInput({
-      otherHouseTransferDate: new Date("2008-01-01T00:00:00"),
+      otherHouseTransferDate: new Date("2008-01-01"),
     });
     const r = evaluateNew993(input);
     expect(r.isExcludedFromHouseCountFor1H1H).toBe(false);
