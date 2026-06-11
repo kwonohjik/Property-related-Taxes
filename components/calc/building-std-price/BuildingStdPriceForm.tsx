@@ -13,6 +13,7 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
+import { DateInput } from "@/components/ui/date-input";
 import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
 import { AddressSearch, type AddressValue } from "@/components/ui/address-search";
 import { BuildingStructureSelect } from "./BuildingStructureSelect";
@@ -27,7 +28,9 @@ import {
   availableYears,
   toEngineInput,
   validateBuildingStdPriceForm,
+  buildNtsReportContext,
 } from "@/lib/calc/building-std-price-form";
+import { buildNtsReportModel, type NtsReportModel } from "@/lib/calc/nts-report-adapter";
 import {
   calcBuildingStandardPrice,
   type BuildingStandardPriceResult,
@@ -35,7 +38,12 @@ import {
 import { listStructureOptions, listUsageOptions } from "@/lib/tax-engine/data/building-standard-price";
 
 interface Props {
-  onResult: (result: BuildingStandardPriceResult | null, floorArea: number, error: string | null) => void;
+  onResult: (
+    result: BuildingStandardPriceResult | null,
+    floorArea: number,
+    error: string | null,
+    report: NtsReportModel | null,
+  ) => void;
 }
 
 /** 연도 Select — 명시 라벨(SelectValue 단독 금지) */
@@ -149,8 +157,15 @@ export function BuildingStdPriceForm({ onResult }: Props) {
 
   const sameYear = f.taxType === "transfer" && f.acquisitionYear !== "" && f.acquisitionYear === f.transferYear;
   const valYear = f.valuationYear ? parseInt(f.valuationYear, 10) : undefined;
+  // 조정률 모달용 구조지수 — 평가시점 구조 선택값에서 도출(I 지붕재료는 구조지수 100 미만만 활성). 미선택 = 0
+  const valStructureIndex = useMemo(() => {
+    if (valYear === undefined || Number.isNaN(valYear) || !f.valStructureKey) return 0;
+    return listStructureOptions(valYear).find((o) => o.key === f.valStructureKey)?.index ?? 0;
+  }, [valYear, f.valStructureKey]);
   const apartmentConv = f.taxType === "transfer" && f.apartmentConversionMode;
-  const composite = f.taxType === "inheritance_gift" && f.compositeMode;
+  const composite = f.compositeMode && !isMech && !apartmentConv;
+  // 양도 복합 — 취득시 용도지수표 기준 연도(≤2000=2001)
+  const acqUsageYear = acqIndexYear;
   // 연면적 입력 불요: 복합구조(부분별)·공동주택 환산(자체 연면적)
   const hideFloorArea = composite || apartmentConv;
   // 건물 기본 면적 표시 조건 — 둘 다 보일 때만 한 행에 배치
@@ -160,14 +175,15 @@ export function BuildingStdPriceForm({ onResult }: Props) {
   const handleCalc = () => {
     const err = validateBuildingStdPriceForm(f);
     if (err) {
-      onResult(null, 0, err);
+      onResult(null, 0, err, null);
       return;
     }
     try {
       const result = calcBuildingStandardPrice(toEngineInput(f));
-      onResult(result, parseFloat(f.floorArea.replace(/,/g, "")) || 0, null);
+      const report = buildNtsReportModel(buildNtsReportContext(f), result);
+      onResult(result, parseFloat(f.floorArea.replace(/,/g, "")) || 0, null, report);
     } catch (e) {
-      onResult(null, 0, e instanceof Error ? e.message : "계산 오류");
+      onResult(null, 0, e instanceof Error ? e.message : "계산 오류", null);
     }
   };
 
@@ -196,7 +212,7 @@ export function BuildingStdPriceForm({ onResult }: Props) {
         description="해당 연도 고시 단가 × 경과연수별 잔가율(고시 내용연수) × 주차대수로 산정(구조·용도·위치지수·조정률 미적용). 단가·내용연수는 연도별로 다릅니다(예: 2025년 6,000,000원·30년 / 2001년 5,000,000원·20년)."
       >
         <FieldCard label="주차대수" hint="기계식 주차대수">
-          <DecimalInput value={f.parkingLotCount} onChange={(v) => set("parkingLotCount", v)} unit="대" placeholder="예: 50" />
+          <DecimalInput value={f.parkingLotCount} onChange={(v) => set("parkingLotCount", v)} unit="대" placeholder="기계식 주차대수" />
         </FieldCard>
       </ToggleCard>
 
@@ -241,7 +257,7 @@ export function BuildingStdPriceForm({ onResult }: Props) {
       {/* ① 건물 기본 */}
       <SectionCard num={1} title="건물 기본" tone="sky">
         <FieldCard label="신축연도" hint="준공·사용승인 연도">
-          <DecimalInput value={f.builtYear} onChange={(v) => set("builtYear", v)} placeholder="예: 2010" thousandSeparator={false} />
+          <DecimalInput value={f.builtYear} onChange={(v) => set("builtYear", v)} placeholder="신축연도 (4자리)" thousandSeparator={false} />
         </FieldCard>
         {showFloorArea && showLandArea ? (
           <div className="grid grid-cols-2 gap-2">
@@ -266,6 +282,16 @@ export function BuildingStdPriceForm({ onResult }: Props) {
             )}
           </>
         )}
+        {!isMech && (
+          <div className="grid grid-cols-2 gap-2">
+            <FieldCard label="지상 층수" hint="계산서 표기용(선택)" className="sm:grid-cols-[88px_1fr]">
+              <DecimalInput value={f.floorsAbove} onChange={(v) => set("floorsAbove", v)} unit="층" thousandSeparator={false} />
+            </FieldCard>
+            <FieldCard label="지하 층수" hint="계산서 표기용(선택)" className="sm:grid-cols-[88px_1fr]">
+              <DecimalInput value={f.floorsBelow} onChange={(v) => set("floorsBelow", v)} unit="층" thousandSeparator={false} />
+            </FieldCard>
+          </div>
+        )}
         {f.taxType === "inheritance_gift" && (
           <FieldCard label="리모델링·대수선 연도" hint="입력 시 잔가율을 리모델링 연도 기준 적용(선택)">
             <DecimalInput value={f.remodelYear} onChange={(v) => set("remodelYear", v)} placeholder="해당없음" thousandSeparator={false} />
@@ -286,12 +312,15 @@ export function BuildingStdPriceForm({ onResult }: Props) {
                 }
               />
             </FieldCard>
+            <FieldCard label="취득일" hint="계산서 일자 표기용(선택)">
+              <DateInput value={f.acquisitionEventDate} onChange={(v) => set("acquisitionEventDate", v)} />
+            </FieldCard>
             {acqIndexYear === 2001 && !apartmentConv && (
               <p className="rounded-md bg-violet-50 px-2.5 py-1.5 text-xs text-violet-700">
                 2000년 이전 취득 — 2001.1.1 ㎡당 금액 × 산정기준율로 환산됩니다. 구조·용도는 2001년 지수표 기준입니다.
               </p>
             )}
-            {!isMech && !apartmentConv && (
+            {!isMech && !apartmentConv && !composite && (
               <>
                 <FieldCard label="취득당시 구조">
                   <BuildingStructureSelect year={acqIndexYear} value={f.acqStructureKey} onChange={(v) => set("acqStructureKey", v)} />
@@ -299,21 +328,45 @@ export function BuildingStdPriceForm({ onResult }: Props) {
                 <FieldCard label="취득당시 용도">
                   <BuildingUsageSelect year={acqIndexYear} value={f.acqUsageNo} onChange={(v) => set("acqUsageNo", v)} />
                 </FieldCard>
-                <LandPriceLookupField
-                  pricePerSqm={f.acqLandPrice}
-                  onPricePerSqmChange={(v) => set("acqLandPrice", v)}
-                  area={landArea}
-                  jibun={jibun}
-                  referenceDate={landRefDate(f.acquisitionYear)}
-                  label="취득당시 ㎡당 개별공시지가"
-                  hint="여러 필지면 면적 가중평균한 ㎡당 가액"
-                />
               </>
+            )}
+            {!isMech && !apartmentConv && (
+              <LandPriceLookupField
+                pricePerSqm={f.acqLandPrice}
+                onPricePerSqmChange={(v) => set("acqLandPrice", v)}
+                area={landArea}
+                jibun={jibun}
+                referenceDate={landRefDate(f.acquisitionYear)}
+                label="취득당시 ㎡당 개별공시지가"
+                hint="여러 필지면 면적 가중평균한 ㎡당 가액"
+              />
             )}
           </SectionCard>
 
+          {/* 양도 복합구조 토글 — 층·구역별 구조·용도 상이(취득/양도 2시점 부분별) */}
+          {!isMech && !apartmentConv && (
+            <ToggleCard
+              checked={f.compositeMode}
+              onCheckedChange={(v) => set("compositeMode", v)}
+              title="복합구조 (층·구역별 구조·용도 상이)"
+              tone="violet"
+              variant="card"
+              description="층·구역마다 구조·용도가 다른 건물을 각 부분 독립 계산 후 합산합니다. 취득시·양도시 용도를 시점별로 선택합니다(양도 조정률 미적용). 부속시설은 전 부분 면적비율로 안분합니다."
+            >
+              <CompositePartsSection
+                year={f.transferYear ? parseInt(f.transferYear, 10) : undefined}
+                acqYear={acqUsageYear}
+                forTransfer
+                parts={f.compositeParts}
+                onPartsChange={(parts) => set("compositeParts", parts)}
+                ancillaryAreas={f.ancillaryAreas}
+                onAncillaryChange={(a) => set("ancillaryAreas", a)}
+              />
+            </ToggleCard>
+          )}
+
           {/* 공동주택 고시 전 취득 환산 토글 — 일반 2시점 흐름 대체 */}
-          {!isMech && (
+          {!isMech && !composite && (
             <ToggleCard
               checked={f.apartmentConversionMode}
               onCheckedChange={(v) => set("apartmentConversionMode", v)}
@@ -341,7 +394,16 @@ export function BuildingStdPriceForm({ onResult }: Props) {
                 onChange={(v) => changeYearWithGuard("transferYear", "transStructureKey", "transUsageNo", v)}
               />
             </FieldCard>
-            {!isMech && (
+            <FieldCard label="양도일" hint="계산서 일자 표기용(선택)">
+              <DateInput value={f.eventDate} onChange={(v) => set("eventDate", v)} />
+            </FieldCard>
+            {sameYear && !isMech && (
+              <p className="rounded-md bg-rose-50 px-2.5 py-1.5 text-xs text-rose-700">
+                취득연도와 같은 해 양도 — 양도당시 기준시가는 아래 §164⑧ 환산으로 산정되므로 양도당시
+                구조·용도·공시지가 입력이 필요 없습니다.
+              </p>
+            )}
+            {!isMech && !sameYear && !composite && (
               <>
                 <FieldCard label="양도당시 구조">
                   <BuildingStructureSelect
@@ -357,15 +419,17 @@ export function BuildingStdPriceForm({ onResult }: Props) {
                     onChange={(v) => set("transUsageNo", v)}
                   />
                 </FieldCard>
-                <LandPriceLookupField
-                  pricePerSqm={f.transLandPrice}
-                  onPricePerSqmChange={(v) => set("transLandPrice", v)}
-                  area={landArea}
-                  jibun={jibun}
-                  referenceDate={landRefDate(f.transferYear)}
-                  label="양도당시 ㎡당 개별공시지가"
-                />
               </>
+            )}
+            {!isMech && !sameYear && (
+              <LandPriceLookupField
+                pricePerSqm={f.transLandPrice}
+                onPricePerSqmChange={(v) => set("transLandPrice", v)}
+                area={landArea}
+                jibun={jibun}
+                referenceDate={landRefDate(f.transferYear)}
+                label="양도당시 ㎡당 개별공시지가"
+              />
             )}
           </SectionCard>
 
@@ -399,7 +463,7 @@ export function BuildingStdPriceForm({ onResult }: Props) {
                 </FieldCard>
               )}
               <FieldCard label="보유월수" hint="초일 산입, 1개월 미만 = 1개월">
-                <DecimalInput value={f.holdingMonths} onChange={(v) => set("holdingMonths", v)} unit="개월" placeholder="예: 6" thousandSeparator={false} />
+                <DecimalInput value={f.holdingMonths} onChange={(v) => set("holdingMonths", v)} unit="개월" placeholder="보유월수" thousandSeparator={false} />
               </FieldCard>
               <FieldCard label="기준시가 조정월수" hint="전기~취득 기준시가 결정일 전일의 월수(연 1회 고시 = 12)">
                 <DecimalInput value={f.adjustMonths} onChange={(v) => set("adjustMonths", v)} unit="개월" thousandSeparator={false} />
@@ -415,12 +479,26 @@ export function BuildingStdPriceForm({ onResult }: Props) {
       {f.taxType === "inheritance_gift" && (
         <>
           <SectionCard num={2} title="평가 시점" tone="emerald">
+            <RadioCardGroup
+              name="inheritanceGiftKind"
+              tone="violet"
+              layout="inline"
+              value={f.inheritanceGiftKind}
+              onChange={(v) => set("inheritanceGiftKind", v as BuildingStdPriceFormState["inheritanceGiftKind"])}
+              options={[
+                { value: "inheritance", label: "상속세" },
+                { value: "gift", label: "증여세" },
+              ]}
+            />
             <FieldCard label="상속·증여 연도">
               <YearSelect
                 years={yearOpts}
                 value={f.valuationYear}
                 onChange={(v) => changeYearWithGuard("valuationYear", "valStructureKey", "valUsageNo", v)}
               />
+            </FieldCard>
+            <FieldCard label="상속·증여일" hint="계산서 일자 표기용(선택)">
+              <DateInput value={f.eventDate} onChange={(v) => set("eventDate", v)} />
             </FieldCard>
             {!isMech && (
               <>
@@ -437,8 +515,8 @@ export function BuildingStdPriceForm({ onResult }: Props) {
                     year={valYear}
                     parts={f.compositeParts}
                     onPartsChange={(parts) => set("compositeParts", parts)}
-                    sharedFacilityArea={f.sharedFacilityArea}
-                    onSharedFacilityAreaChange={(v) => set("sharedFacilityArea", v)}
+                    ancillaryAreas={f.ancillaryAreas}
+                    onAncillaryChange={(a) => set("ancillaryAreas", a)}
                   />
                 </ToggleCard>
 
@@ -556,7 +634,7 @@ export function BuildingStdPriceForm({ onResult }: Props) {
       <AdjustmentRateModal
         open={adjOpen}
         onOpenChange={setAdjOpen}
-        structureIndex={0}
+        structureIndex={valStructureIndex}
         floorArea={parseFloat(f.floorArea.replace(/,/g, "")) || 0}
         isResidential={f.isResidentialUse}
         isApartment={f.isApartmentUse}
