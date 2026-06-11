@@ -33,6 +33,13 @@ function boolOrUndef(v: boolean): boolean | undefined {
   return v ? true : undefined;
 }
 
+/** 두 날짜(YYYY-MM-DD) 중 빠른 날 — 한쪽만 있으면 그 값 (지방세법 §20 취득시기) */
+function earlierDateStr(a: string | undefined, b: string | undefined): string | undefined {
+  if (!a) return b;
+  if (!b) return a;
+  return a < b ? a : b;
+}
+
 // ============================================================
 // [P3] ownedHouses[] FormState → HouseCountInput 변환
 // ============================================================
@@ -390,6 +397,8 @@ export function buildAcquisitionTaxBody(form: FormState): Record<string, unknown
         prevShareRatio: prevRatio !== undefined ? prevRatio / 100 : 0,
         newShareRatio:  newRatio  !== undefined ? newRatio  / 100 : 0,
         isListed: form.deemedMajorIsListed ?? false,
+        // 법인 설립 시 발행 주식 취득 (지방세법 §7⑤ 괄호 — 취득으로 보지 아니함)
+        ...(form.deemedMajorIsFoundingShare ? { isFoundingShare: true } : {}),
       },
     };
 
@@ -403,6 +412,8 @@ export function buildAcquisitionTaxBody(form: FormState): Record<string, unknown
   if (isDeemedLand) {
     const prevSv = parseAmount(form.deemedLandPrevStandardValue ?? "");
     const newSv  = parseAmount(form.deemedLandNewStandardValue ?? "");
+    const lcd = strOrUndef(form.deemedLandChangeDate ?? "");        // 사실상 변경 완료일
+    const lrd = strOrUndef(form.deemedLandRegistrationDate ?? "");  // 공부 등록일
 
     body.deemedInput = {
       landCategory: {
@@ -410,33 +421,38 @@ export function buildAcquisitionTaxBody(form: FormState): Record<string, unknown
         newCategory:       (form.deemedLandNewCategory ?? "대") as import("@/lib/tax-engine/types/acquisition.types").LandCategory,
         prevStandardValue: prevSv ?? 0,
         newStandardValue:  newSv  ?? 0,
+        // 엔진 취득시기 안내 경고 생성용 (acquisition-deemed.ts)
+        ...(lcd ? { actualChangeDate: lcd } : {}),
+        ...(lrd ? { registrationDate: lrd } : {}),
       },
     };
 
-    // 지목변경일 → balancePaymentDate에 매핑 (취득시기 결정 로직 활용)
-    const lcd = form.deemedLandChangeDate
-      ? strOrUndef(form.deemedLandChangeDate)
-      : undefined;
-    if (lcd) body.balancePaymentDate = lcd;
+    // 취득시기 = 사실상 변경 완료일과 공부 등록일 중 빠른 날 (시행령 §20⑩)
+    // → balancePaymentDate에 매핑 (엔진 timing이 deemedAcquisitionDate로 사용)
+    const earliest = earlierDateStr(lcd, lrd);
+    if (earliest) body.balancePaymentDate = earliest;
   }
 
   if (isDeemedReno) {
     const prevSv = parseAmount(form.deemedRenovationPrevStandardValue ?? "");
     const newSv  = parseAmount(form.deemedRenovationNewStandardValue ?? "");
+    const rend = strOrUndef(form.deemedRenovationDate ?? "");                 // 사용승인일(개수 완료일)
+    const raud = strOrUndef(form.deemedRenovationActualUsageDate ?? "");      // 사실상 사용개시일
 
     body.deemedInput = {
       renovation: {
         renovationType:    form.deemedRenovationType ?? "structural_change",
         prevStandardValue: prevSv ?? 0,
         newStandardValue:  newSv  ?? 0,
+        // 엔진 취득시기 안내 경고 생성용 (acquisition-deemed.ts)
+        ...(rend ? { usageApprovalDate: rend } : {}),
+        ...(raud ? { actualUsageDate: raud } : {}),
       },
     };
 
-    // 개수 완료일 → balancePaymentDate에 매핑
-    const rend = form.deemedRenovationDate
-      ? strOrUndef(form.deemedRenovationDate)
-      : undefined;
-    if (rend) body.balancePaymentDate = rend;
+    // 취득시기 = 사용승인일과 사실상 사용개시일 중 빠른 날 (지방세법 §20)
+    const earliest = earlierDateStr(rend, raud);
+    if (earliest) body.balancePaymentDate = earliest;
   }
 
   return body;

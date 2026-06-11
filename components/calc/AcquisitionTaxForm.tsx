@@ -17,7 +17,11 @@ import { StepIndicator } from "@/components/calc/StepIndicator";
 import { AcquisitionTaxResultView } from "@/components/calc/results/AcquisitionTaxResultView";
 import { callAcquisitionTaxAPI } from "@/lib/calc/acquisition-tax-api";
 import { useAutoSaveCalculation } from "@/lib/storage/use-auto-save-calculation";
-import { runAcquisitionManualSave, formatAcquisitionSaveMessage } from "@/components/calc/acquisition-tax-save-handler";
+import {
+  runAcquisitionManualSave,
+  formatAcquisitionSaveMessage,
+  type AcquisitionForm,
+} from "@/components/calc/acquisition-tax-save-handler";
 import { useRecordCount } from "@/components/calc/shared/save-handler-builders";
 import { SaveButton } from "@/components/calc/shared/SaveButton";
 import { SaveToast, type SaveToastMessage } from "@/components/calc/shared/SaveToast";
@@ -118,7 +122,7 @@ export function AcquisitionTaxForm() {
     setSaveMessage(null);
     try {
       const outcome = await runAcquisitionManualSave({
-        form: form as unknown as Record<string, unknown>,
+        form: form as unknown as AcquisitionForm,
         result,
         clientId: activeClientId ?? null,
       });

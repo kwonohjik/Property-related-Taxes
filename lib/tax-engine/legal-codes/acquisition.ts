@@ -17,6 +17,8 @@ export const ACQUISITION = {
   TAXABLE_OBJECTS:      "지방세법 §7",
   /** 지방세법 §7④⑤ — 간주취득 (지목변경·과점주주). 현행은 §7로 통합(§7의2 폐지) */
   DEEMED_ACQUISITION:   "지방세법 §7",
+  /** 지방세법 §7⑤ 괄호 — 법인설립 시 발행 주식 취득으로 과점주주가 된 경우 취득으로 보지 아니함 */
+  DEEMED_FOUNDING_EXEMPT: "지방세법 §7⑤",
   /** 지방세법 §9 — 비과세 (국가·신탁반환·묘지 등) */
   NON_TAXABLE:          "지방세법 §9",
 

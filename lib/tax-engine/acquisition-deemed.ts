@@ -68,7 +68,9 @@ export function assessMajorShareholder(
     };
   }
 
-  // ② 합병·분할로 인한 주식 취득 — 비과세 (지방세법 §9②)
+  // ② 합병·분할로 인한 주식 취득 — 과세 제외 처리 (형식적 취득)
+  // ※ 포괄 비과세 명문 규정 없음 — 지특법 §57의2⑤(부실금융기관 인수·출자전환·
+  //   지주회사·주식의 포괄적 교환 등) 한정 면제. UI 입력 경로 미노출.
   if (isMergerOrSplitShare) {
     return {
       isSubjectToTax: false,
@@ -76,12 +78,15 @@ export function assessMajorShareholder(
       prevShareRatio,
       newShareRatio,
       taxableRatio: 0,
-      legalBasis: ACQUISITION.NON_TAXABLE,
-      warnings: [`법인 합병·분할로 인한 주식 취득은 과점주주 간주취득 과세 대상에서 제외됩니다 (${ACQUISITION.NON_TAXABLE}).`],
+      legalBasis: ACQUISITION.DEEMED_ACQUISITION,
+      warnings: [
+        "법인 합병·분할로 인한 주식 취득은 과점주주 간주취득 과세 대상에서 제외 처리됩니다. " +
+        "다만 포괄 면제 명문 규정은 없으므로 지방세특례제한법 §57의2⑤ 등 개별 면제 요건 해당 여부를 확인하세요.",
+      ],
     };
   }
 
-  // ③ 법인 설립 시 주식 취득 — 비과세 (지방세법 §9③)
+  // ③ 법인 설립 시 주식 취득 — 취득으로 보지 아니함 (지방세법 §7⑤ 괄호)
   if (isFoundingShare) {
     return {
       isSubjectToTax: false,
@@ -89,8 +94,8 @@ export function assessMajorShareholder(
       prevShareRatio,
       newShareRatio,
       taxableRatio: 0,
-      legalBasis: ACQUISITION.NON_TAXABLE,
-      warnings: [`법인 설립 시 주식 취득은 과점주주 간주취득 과세 대상에서 제외됩니다 (${ACQUISITION.NON_TAXABLE}).`],
+      legalBasis: ACQUISITION.DEEMED_FOUNDING_EXEMPT,
+      warnings: [`법인 설립 시 발행 주식 취득으로 과점주주가 된 경우 취득으로 보지 아니합니다 (${ACQUISITION.DEEMED_FOUNDING_EXEMPT}).`],
     };
   }
 

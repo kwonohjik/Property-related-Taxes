@@ -186,21 +186,11 @@ export function determineTaxableObject(
 }
 
 // ============================================================
-// 취득 해당 여부 판단 보조 함수 (지방세법 §6)
+// 물건 유형 보조 함수
 // ============================================================
-
-/**
- * 취득으로 보지 않는 경우 — 지방세법 §6 단서
- *
- * 환매권 행사·법인 합병·협의분할은 등기 형식상 취득이 있더라도
- * 실질 취득으로 보지 않아 취득세 과세 제외 (지방세법 §6①단서).
- */
-export function isNonAcquisition(
-  acquisitionCause: AcquisitionCause
-): boolean {
-  return (["redemption", "corporate_merger", "consensual_division"] as AcquisitionCause[])
-    .includes(acquisitionCause);
-}
+// ※ 과거 isNonAcquisition(환매·법인합병·협의분할 "비취득") 함수는 제거됨 —
+//   지방세법 §6에는 해당 비취득 단서가 존재하지 않으며(KoreanLaw 실측),
+//   환매·합병·공유물분할은 §15① 세율특례 과세 대상(specialRateType 입력)이다.
 
 /**
  * 부동산 유형 여부 확인

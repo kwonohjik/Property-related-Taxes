@@ -6,24 +6,15 @@
  * 취득가액이 6억~9억 구간일 때 적용 세율을 그래프로 표시.
  * SVG 진행 바 + 산식 풀이 + 결과값 highlight.
  *
- * 산식: 세율 = (취득가액 × 2 / 300,000,000 - 3) / 100
- * 정밀도: 소수점 5자리 (0.01667 → 1.667%)
+ * 표시 세율은 엔진 결과(appliedRate prop)를 단일 진실로 사용 —
+ * UI 자체 선형보간 산식 재구현 금지 (구간 경계 상수는 legal-codes import).
  */
+
+import { ACQUISITION_CONST } from "@/lib/tax-engine/legal-codes";
 
 interface Props {
   acquisitionValue: number;
   appliedRate: number;
-}
-
-// 선형보간 산식 — 엔진과 동일 로직 (표시 전용)
-function calcLinearRate(value: number): number {
-  // (value × 2 / 3억 - 3) / 100 → 소수점 5자리
-  const rate = (value * 2 / 300_000_000 - 3) / 100;
-  return Math.round(rate * 100000) / 100000;
-}
-
-function formatRate(rate: number): string {
-  return (rate * 100).toFixed(5).replace(/\.?0+$/, "") + "%";
 }
 
 function formatKRW(v: number): string {
@@ -31,10 +22,8 @@ function formatKRW(v: number): string {
 }
 
 export function LinearInterpolationGraph({ acquisitionValue, appliedRate }: Props) {
-  const MIN = 600_000_000;
-  const MAX = 900_000_000;
-  const MIN_RATE = 0.01;
-  const MAX_RATE = 0.03;
+  const MIN = ACQUISITION_CONST.HOUSING_BRACKET_LOW;   // 6억
+  const MAX = ACQUISITION_CONST.HOUSING_BRACKET_HIGH;  // 9억
 
   // 0~1 진행률 (클램핑)
   const progress = Math.max(0, Math.min(1, (acquisitionValue - MIN) / (MAX - MIN)));
@@ -50,9 +39,12 @@ export function LinearInterpolationGraph({ acquisitionValue, appliedRate }: Prop
   const dotX = PAD_L + TRACK_W * progress;
   const dotY = BAR_Y + BAR_H / 2;
 
-  // 산식 풀이용
+  // 산식 풀이용 — 최종 세율은 엔진 appliedRate, 중간항은 산식 입력값의 산술 표시
   const ratePercent = (appliedRate * 100).toFixed(5).replace(/\.?0+$/, "");
-  const numeratorStr = (acquisitionValue / 100_000_000 * 2).toFixed(4).replace(/\.?0+$/, "");
+  // 취득가액 × 2 ÷ 3억 (산식의 괄호 안 첫 항)
+  const numeratorStr = (acquisitionValue * 2 / 300_000_000).toFixed(5).replace(/\.?0+$/, "");
+  // (첫 항 − 3) = 세율 × 100 — 엔진 반올림 값과 일치하도록 appliedRate에서 도출
+  const bracketStr = (appliedRate * 100).toFixed(5).replace(/\.?0+$/, "");
 
   return (
     <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-2">
@@ -138,7 +130,7 @@ export function LinearInterpolationGraph({ acquisitionValue, appliedRate }: Prop
         <p>세율 = (취득가액 × 2 ÷ 3억 − 3) ÷ 100</p>
         <p>
           = ({numeratorStr} − 3) ÷ 100
-          {" "}= {((acquisitionValue * 2 / 300_000_000 - 3)).toFixed(5).replace(/\.?0+$/, "")} ÷ 100
+          {" "}= {bracketStr} ÷ 100
         </p>
         <p className="font-semibold text-foreground">
           = {ratePercent}% (소수점 5자리)

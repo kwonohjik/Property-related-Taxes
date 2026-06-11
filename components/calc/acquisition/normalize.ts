@@ -247,6 +247,9 @@ export function normalizeAcquisitionForm(
     deemedMajorIsListed: typeof legacy.deemedMajorIsListed === "boolean"
       ? (legacy.deemedMajorIsListed as boolean)
       : INITIAL_FORM.deemedMajorIsListed,
+    deemedMajorIsFoundingShare: typeof legacy.deemedMajorIsFoundingShare === "boolean"
+      ? (legacy.deemedMajorIsFoundingShare as boolean)
+      : INITIAL_FORM.deemedMajorIsFoundingShare,
     deemedMajorCorporateAssetValue:
       (legacy.deemedMajorCorporateAssetValue as string) ?? INITIAL_FORM.deemedMajorCorporateAssetValue,
     deemedMajorPrevShareRatio:
@@ -263,6 +266,8 @@ export function normalizeAcquisitionForm(
       (legacy.deemedLandNewCategory as string) ?? INITIAL_FORM.deemedLandNewCategory,
     deemedLandChangeDate:
       (legacy.deemedLandChangeDate as string) ?? INITIAL_FORM.deemedLandChangeDate,
+    deemedLandRegistrationDate:
+      (legacy.deemedLandRegistrationDate as string) ?? INITIAL_FORM.deemedLandRegistrationDate,
     deemedLandPrevStandardValue:
       (legacy.deemedLandPrevStandardValue as string) ?? INITIAL_FORM.deemedLandPrevStandardValue,
     deemedLandNewStandardValue:
@@ -274,6 +279,8 @@ export function normalizeAcquisitionForm(
       ?? INITIAL_FORM.deemedRenovationType,
     deemedRenovationDate:
       (legacy.deemedRenovationDate as string) ?? INITIAL_FORM.deemedRenovationDate,
+    deemedRenovationActualUsageDate:
+      (legacy.deemedRenovationActualUsageDate as string) ?? INITIAL_FORM.deemedRenovationActualUsageDate,
     deemedRenovationPrevStandardValue:
       (legacy.deemedRenovationPrevStandardValue as string) ?? INITIAL_FORM.deemedRenovationPrevStandardValue,
     deemedRenovationNewStandardValue:

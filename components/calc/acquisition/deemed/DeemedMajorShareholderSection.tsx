@@ -8,6 +8,7 @@ import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { TaxHelp } from "@/components/calc/inputs/TaxHelp";
+import { getBasicRate } from "@/lib/tax-engine/acquisition-tax-rate";
 import type { FormState } from "../shared";
 
 interface Props {
@@ -16,11 +17,18 @@ interface Props {
 }
 
 function formatKRW(amount: number): string {
-  return amount.toLocaleString("ko-KR") + "원";
+  return amount.toLocaleString("ko-KR");
 }
+
+// 과점주주 간주취득 세율 — 엔진 단일 진실 (2%)
+const DEEMED_RATE = getBasicRate("building", "deemed_major_shareholder", 0).rate;
+const DEEMED_RATE_LABEL = `${(DEEMED_RATE * 100).toFixed(1).replace(/\.0$/, "")}%`;
 
 export function DeemedMajorShareholderSection({ form, set }: Props) {
   const isListed = form.deemedMajorIsListed ?? false;
+  const isFounding = form.deemedMajorIsFoundingShare ?? false;
+  /** 비과세 확정 케이스 — 상장법인 또는 설립 시 취득 (§7⑤) */
+  const isExemptCase = isListed || isFounding;
 
   // 과세 미리보기 계산
   const corpVal = parseAmount(form.deemedMajorCorporateAssetValue ?? "") ?? 0;
@@ -30,7 +38,7 @@ export function DeemedMajorShareholderSection({ form, set }: Props) {
   const deemedBase = corpVal > 0 && taxableRatioPct > 0
     ? Math.floor(corpVal * taxableRatioPct / 100)
     : 0;
-  const showPreview = !isListed && corpVal > 0 && newR > prevR;
+  const showPreview = !isExemptCase && corpVal > 0 && newR > prevR;
 
   return (
     <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-3">
@@ -70,6 +78,20 @@ export function DeemedMajorShareholderSection({ form, set }: Props) {
         </div>
       </ToggleCard>
 
+      {/* 법인 설립 시 발행 주식 취득 — §7⑤ 괄호 비과세 */}
+      <ToggleCard
+        tone="rose"
+        title="법인 설립 시 발행 주식 취득"
+        description="법인설립 시 발행하는 주식·지분 취득으로 과점주주가 된 경우 취득으로 보지 아니함 (지방세법 §7⑤)"
+        checked={isFounding}
+        onCheckedChange={(v) => set("deemedMajorIsFoundingShare", v)}
+      >
+        <div className="rounded-md bg-rose-100 px-3 py-2 text-sm text-rose-800">
+          설립 시 취득은 과점주주 간주취득에서 제외됩니다 (지방세법 §7⑤ 괄호).
+          설립 이후 증자·양수로 지분율이 증가하는 경우에만 과세 대상입니다.
+        </div>
+      </ToggleCard>
+
       {/* 법인 보유 자산 시가표준액 */}
       <div>
         <CurrencyInput
@@ -77,7 +99,7 @@ export function DeemedMajorShareholderSection({ form, set }: Props) {
           value={form.deemedMajorCorporateAssetValue ?? ""}
           onChange={(v) => set("deemedMajorCorporateAssetValue", v)}
           placeholder="금액 입력 (원)"
-          disabled={isListed}
+          disabled={isExemptCase}
         />
         <p className="text-xs text-muted-foreground mt-1">
           법인이 보유한 토지·건물 등 과세대상 자산의 시가표준액 합계 (§7의2① 본문)
@@ -92,7 +114,7 @@ export function DeemedMajorShareholderSection({ form, set }: Props) {
           onChange={(v) => set("deemedMajorPrevShareRatio", v)}
           placeholder="0 ~ 100 (신규 진입이면 0)"
           unit="%"
-          disabled={isListed}
+          disabled={isExemptCase}
         />
         <p className="text-xs text-muted-foreground mt-1">
           이미 보유 중인 지분 비율. 신규 진입이면 0 입력
@@ -107,7 +129,7 @@ export function DeemedMajorShareholderSection({ form, set }: Props) {
           onChange={(v) => set("deemedMajorNewShareRatio", v)}
           placeholder="50 초과여야 과점주주"
           unit="%"
-          disabled={isListed}
+          disabled={isExemptCase}
         />
         <p className="text-xs text-muted-foreground mt-1">
           과점주주 요건: 주주 1인 + 특수관계인 지분 합계 50% 초과 (§7의2①)
@@ -122,7 +144,7 @@ export function DeemedMajorShareholderSection({ form, set }: Props) {
         <DateInput
           value={form.deemedMajorShareholderDate ?? ""}
           onChange={(v) => set("deemedMajorShareholderDate", v)}
-          disabled={isListed}
+          disabled={isExemptCase}
         />
         <p className="text-xs text-muted-foreground mt-1">
           주식·지분 취득으로 과점주주 기준(50% 초과)에 달한 날
@@ -140,7 +162,7 @@ export function DeemedMajorShareholderSection({ form, set }: Props) {
             간주취득 과세표준 = {formatKRW(corpVal)} × {taxableRatioPct.toFixed(2)}% = {formatKRW(deemedBase)}
           </p>
           <p className="font-medium text-amber-800">
-            예상 취득세 = {formatKRW(deemedBase)} × 2% = {formatKRW(Math.floor(deemedBase * 0.02))}
+            예상 취득세 = {formatKRW(deemedBase)} × {DEEMED_RATE_LABEL} = {formatKRW(Math.floor(deemedBase * DEEMED_RATE))}
           </p>
           <p className="text-xs text-amber-600">* 농어촌특별세·지방교육세 별도</p>
         </div>

@@ -92,11 +92,12 @@ export type AcquisitionCause =
   // ④ 간주취득
   | "deemed_major_shareholder" // 과점주주
   | "deemed_land_category"     // 지목변경
-  | "deemed_renovation"        // 건물 개수(改修)
-  // ⑤ 비취득 (지방세법 §6 단서 — 취득세 과세 제외)
-  | "redemption"               // 환매권 행사 (§6①단서1)
-  | "corporate_merger"         // 법인 합병 (§6①단서2)
-  | "consensual_division";     // 협의분할 (§6①단서3)
+  | "deemed_renovation";       // 건물 개수(改修)
+// ※ 환매(§15①1호)·법인합병(§15①3호)·공유물분할(§15①4호)은 별도 취득 원인이
+//   아니라 §15 세율특례 과세 대상 — specialRateType으로 입력한다.
+//   (과거 "redemption"·"corporate_merger"·"consensual_division" 비취득 3종은
+//   지방세법 §6에 해당 단서가 존재하지 않는 법령 드리프트로 확인되어 제거,
+//   KoreanLaw 지방세법 §6·§15 실측 2026-06-11)
 
 /**
  * 취득자 유형
@@ -152,13 +153,15 @@ export interface DeemedAcquisitionInput {
     newShareRatio: number;          // 취득 후 지분율 (0~1)
     isListed: boolean;              // 상장법인 여부 (상장이면 §9① 비과세)
     /**
-     * 합병·분할로 인한 주식 취득 여부 (지방세법 §9② — 비과세)
-     * 법인 합병·분할 절차에서 취득하는 주식은 과점주주 간주취득 과세 대상 제외
+     * 합병·분할로 인한 주식 취득 여부 — 과세 제외 처리 (형식적 취득)
+     * ※ 일반 비과세 명문 규정은 없음 — 지특법 §57의2⑤은 부실금융기관 인수·
+     *   출자전환·지주회사·주식의 포괄적 교환(조특법 §38) 등 한정 사례 면제.
+     *   포괄 면제 근거 불명확으로 UI 입력 경로 미노출 (API 직접 입력만 가능).
      */
     isMergerOrSplitShare?: boolean;
     /**
-     * 법인 설립 시 주식 취득 여부 (지방세법 §9③ — 비과세)
-     * 법인을 최초 설립하면서 취득하는 주식은 과점주주 간주취득 과세 대상 제외
+     * 법인 설립 시 주식 취득 여부 (지방세법 §7⑤ 괄호 — 취득으로 보지 아니함)
+     * 법인설립 시에 발행하는 주식·지분을 취득함으로써 과점주주가 된 경우 비과세
      */
     isFoundingShare?: boolean;
   };

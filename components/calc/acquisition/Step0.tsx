@@ -233,6 +233,15 @@ export function Step0({
           checked={form.isInstallmentAcquisition ?? false}
           onCheckedChange={(v) => {
             set("isInstallmentAcquisition", v);
+            if (v && (form.installments ?? []).length === 0) {
+              // ON 진입 시 초기 3행(계약금·중도금·잔금) 시딩 — 이벤트 핸들러에서
+              // 처리 (useEffect → store 미러링 금지 정책)
+              set("installments", [
+                { id: crypto.randomUUID(), label: "계약금", paymentDate: "", amount: "" },
+                { id: crypto.randomUUID(), label: "중도금", paymentDate: "", amount: "" },
+                { id: crypto.randomUUID(), label: "잔금",   paymentDate: "", amount: "" },
+              ]);
+            }
             if (!v) {
               set("installmentContractDate", "");
             }

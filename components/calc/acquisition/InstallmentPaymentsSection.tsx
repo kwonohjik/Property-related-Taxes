@@ -12,7 +12,7 @@
  * - 회차 합계 표시
  */
 
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { DateInput } from "@/components/ui/date-input";
 
@@ -62,17 +62,8 @@ function updateRow(
 // ============================================================
 
 export function InstallmentPaymentsSection({ installments, contractDate, onChange }: Props) {
-  // 마운트 시 빈 배열이면 초기 3행(계약금·중도금·잔금) 자동 생성
-  useEffect(() => {
-    if (installments.length === 0) {
-      onChange([
-        { id: crypto.randomUUID(), label: "계약금", paymentDate: "", amount: "" },
-        { id: crypto.randomUUID(), label: "중도금", paymentDate: "", amount: "" },
-        { id: crypto.randomUUID(), label: "잔금",   paymentDate: "", amount: "" },
-      ]);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // mount 시 1회만
+  // 초기 3행(계약금·중도금·잔금) 시딩은 Step0 연부취득 토글 ON 핸들러에서 수행
+  // (useEffect → store 미러링 금지 정책 — 마운트 부수효과 제거)
 
   // 합계 및 기간 계산
   const { total, isUnder2Years, firstDate, lastDate } = useMemo(() => {

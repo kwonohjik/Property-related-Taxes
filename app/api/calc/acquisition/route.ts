@@ -61,7 +61,9 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const input = parsed.data as AcquisitionTaxInput;
+  // 스키마(acquisition-input.ts)가 엔진 입력 타입과 1:1 미러임을 컴파일 타임에
+  // 보장하므로 캐스팅 없이 그대로 대입한다 (⑭ — 침묵 strip 방지 가드).
+  const input: AcquisitionTaxInput = parsed.data;
 
   // ─────────────────────────────────────────────
   // 4. 순수 엔진 계산 (DB 쿼리 없음 — Pure Engine)
