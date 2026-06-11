@@ -46,6 +46,8 @@ export function buildGiftTaxInput(form: FormState): GiftTaxInput {
     marriageExemption: parseAmount(form.marriageExemption) || undefined,
     birthExemption: parseAmount(form.birthExemption) || undefined,
     priorUsedDeduction: parseAmount(form.priorUsedDeduction) || undefined,
+    // §53의2③ 기공제 누적 — 3중 패턴: 빈값/0이면 undefined → 엔진 기본(기공제 0) 유지
+    priorUsedMarriageBirthDeduction: parseAmount(form.priorUsedMarriageBirthDeduction) || undefined,
   };
 
   const creditInput: GiftTaxCreditInput = {
@@ -72,6 +74,8 @@ export function buildGiftTaxInput(form: FormState): GiftTaxInput {
     // G-M2b: isGenerationSkip → donor === "grandparent" 자동 파생
     isGenerationSkip: form.donor === "grandparent",
     isMinorDonee: form.isMinorDonee,
+    // §57① 단서 — donor=grandparent 일 때만 전송, 그 외 undefined strip (3중 패턴)
+    isSubstituteGift: form.donor === "grandparent" ? (form.isSubstituteGift || undefined) : undefined,
     deductionInput,
     creditInput,
     // 감정평가수수료 공제 (§55①·시행령 §46의2 → §20의3 준용)

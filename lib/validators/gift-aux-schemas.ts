@@ -21,6 +21,12 @@ export const giftDeductionInputSchema = z.object({
   marriageExemption: z.number().min(0).max(100_000_000).optional(),
   birthExemption: z.number().min(0).max(100_000_000).optional(),
   priorUsedDeduction: z.number().nonnegative().optional(),
+  /**
+   * §53의2③ 수증자 통산 기공제액 (혼인+출산 합산 한도 1억).
+   * 엔진이 min(priorUsed, 1억) 가드를 처리하므로 Zod max 적용 안 함
+   * (1억 초과 입력도 엔진에서 안전 처리, validation은 UI ⑧에서).
+   */
+  priorUsedMarriageBirthDeduction: z.number().min(0).optional(),
 });
 
 // ============================================================

@@ -41,6 +41,7 @@ function makeForm(overrides: Partial<FormState> = {}): FormState {
     donor: "father",
     isGenerationSkip: false,
     isMinorDonee: false,
+    isSubstituteGift: false,
     giftItems: [],
     stockItems: [],
     exemptionItems: [],
@@ -48,6 +49,7 @@ function makeForm(overrides: Partial<FormState> = {}): FormState {
     marriageExemption: "",
     birthExemption: "",
     priorUsedDeduction: "",
+    priorUsedMarriageBirthDeduction: "",
     isFiledOnTime: true,
     foreignTaxPaid: "",
     specialTreatment: "",
@@ -297,5 +299,74 @@ describe("buildGiftTaxInput() — ④ 지점 변환 anchor (G-H3)", () => {
     const form = makeForm({ donor: "grandparent", isGenerationSkip: false });
     const result = buildGiftTaxInput(form);
     expect(result.isGenerationSkip).toBe(true); // 파생 결과 true
+  });
+
+  // ─────── GA-A: §57① 단서 isSubstituteGift 3중 패턴 검증 ───────
+
+  it("[GA-A1] donor=grandparent + isSubstituteGift=true → isSubstituteGift=true 전송", () => {
+    const form = makeForm({ donor: "grandparent", isSubstituteGift: true });
+    const result = buildGiftTaxInput(form);
+    expect(result.isSubstituteGift).toBe(true);
+  });
+
+  it("[GA-A2] donor=grandparent + isSubstituteGift=false → undefined strip (false는 엔진 기본과 동일)", () => {
+    // false || undefined = undefined → 엔진 기본 동작(할증 적용) 유지
+    const form = makeForm({ donor: "grandparent", isSubstituteGift: false });
+    const result = buildGiftTaxInput(form);
+    expect(result.isSubstituteGift).toBeUndefined();
+  });
+
+  it("[GA-A3] donor=father + isSubstituteGift=true → undefined strip (grandparent 아닌 경우 강제 strip)", () => {
+    // 3중 패턴: donor !== grandparent이면 폼 값과 무관하게 undefined
+    const form = makeForm({ donor: "father", isSubstituteGift: true });
+    const result = buildGiftTaxInput(form);
+    expect(result.isSubstituteGift).toBeUndefined();
+  });
+
+  it("[GA-A4] donor=mother + isSubstituteGift=true → undefined strip", () => {
+    const form = makeForm({ donor: "mother", isSubstituteGift: true });
+    const result = buildGiftTaxInput(form);
+    expect(result.isSubstituteGift).toBeUndefined();
+  });
+
+  it("[GA-A5] donor=spouse + isSubstituteGift=true → undefined strip", () => {
+    const form = makeForm({ donor: "spouse", isSubstituteGift: true });
+    const result = buildGiftTaxInput(form);
+    expect(result.isSubstituteGift).toBeUndefined();
+  });
+
+  // ─────── GA-B: §53의2③ priorUsedMarriageBirthDeduction 3중 패턴 검증 ───────
+
+  it("[GA-B1] priorUsedMarriageBirthDeduction 빈문자열 → deductionInput.priorUsedMarriageBirthDeduction=undefined", () => {
+    const form = makeForm({ priorUsedMarriageBirthDeduction: "" });
+    const result = buildGiftTaxInput(form);
+    expect(result.deductionInput.priorUsedMarriageBirthDeduction).toBeUndefined();
+  });
+
+  it("[GA-B2] priorUsedMarriageBirthDeduction '0' → deductionInput.priorUsedMarriageBirthDeduction=undefined", () => {
+    // parseAmount('0') = 0, 0 || undefined = undefined → 엔진 기본(기공제 0) 유지
+    const form = makeForm({ priorUsedMarriageBirthDeduction: "0" });
+    const result = buildGiftTaxInput(form);
+    expect(result.deductionInput.priorUsedMarriageBirthDeduction).toBeUndefined();
+  });
+
+  it("[GA-B3] priorUsedMarriageBirthDeduction '60,000,000' → deductionInput.priorUsedMarriageBirthDeduction=60_000_000", () => {
+    const form = makeForm({ priorUsedMarriageBirthDeduction: "60,000,000" });
+    const result = buildGiftTaxInput(form);
+    expect(result.deductionInput.priorUsedMarriageBirthDeduction).toBe(60_000_000);
+  });
+
+  it("[GA-B4] priorUsedMarriageBirthDeduction '100,000,000' → 1억 그대로 전송 (엔진 가드 위임)", () => {
+    // 1억 초과는 엔진에서 min 가드 처리. UI는 전송만.
+    const form = makeForm({ priorUsedMarriageBirthDeduction: "100,000,000" });
+    const result = buildGiftTaxInput(form);
+    expect(result.deductionInput.priorUsedMarriageBirthDeduction).toBe(100_000_000);
+  });
+
+  it("[GA-B5] priorUsedMarriageBirthDeduction '120,000,000' → 1.2억 그대로 전송 (엔진 가드 위임)", () => {
+    // UI 차단 없음 — 엔진이 min(1.2억, 1억)=1억으로 처리
+    const form = makeForm({ priorUsedMarriageBirthDeduction: "120,000,000" });
+    const result = buildGiftTaxInput(form);
+    expect(result.deductionInput.priorUsedMarriageBirthDeduction).toBe(120_000_000);
   });
 });

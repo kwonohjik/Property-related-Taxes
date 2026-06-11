@@ -15,7 +15,7 @@ import type {
 } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { ExemptionCheckedItem } from "@/lib/tax-engine/exemption-evaluator";
 import type { AppraisalFeeFormFields } from "@/lib/calc/appraisal-fee-form";
-import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
+import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
@@ -45,6 +45,12 @@ export interface FormState extends AppraisalFeeFormFields {
    */
   isGenerationSkip: boolean;
   isMinorDonee: boolean;
+  /**
+   * §57① 단서 — 증여자(조부모)의 최근친 직계비속(부·모)이 이미 사망하여
+   * 그 사망자의 최근친 직계비속(손자녀)이 증여받는 경우 세대생략 할증 배제.
+   * donor === "grandparent" 일 때만 UI 노출·API 전송. 기타 donor이면 undefined로 strip.
+   */
+  isSubstituteGift: boolean;
   // Step 1
   giftItems: EstateItem[];
   stockItems: EstateItem[];
@@ -55,6 +61,11 @@ export interface FormState extends AppraisalFeeFormFields {
   marriageExemption: string;
   birthExemption: string;
   priorUsedDeduction: string;
+  /**
+   * §53의2③ 수증자 통산 기공제액 — 과거 다른 증여에서 이미 공제받은 혼인·출산 공제 합계.
+   * CurrencyInput 규약에 따라 string 타입. parseAmount → number | undefined 변환은 API 변환 ④에서.
+   */
+  priorUsedMarriageBirthDeduction: string;
   isFiledOnTime: boolean;
   foreignTaxPaid: string;
   specialTreatment: "" | "startup" | "family_business";
@@ -73,6 +84,7 @@ export const INITIAL_FORM: FormState = {
   donor: "father",
   isGenerationSkip: false,
   isMinorDonee: false,
+  isSubstituteGift: false,
   giftItems: [],
   stockItems: [],
   exemptionItems: [],
@@ -80,6 +92,7 @@ export const INITIAL_FORM: FormState = {
   marriageExemption: "",
   birthExemption: "",
   priorUsedDeduction: "",
+  priorUsedMarriageBirthDeduction: "",
   isFiledOnTime: true,
   foreignTaxPaid: "",
   specialTreatment: "",
@@ -235,6 +248,8 @@ export function validateStep(step: number, form: FormState): string | null {
   if (step === 0) {
     if (!form.giftDate) return "증여일을 입력하세요.";
     if (!form.donor) return "증여자를 선택하세요.";
+    // §57① 단서 (isSubstituteGift): donor !== "grandparent"이면 UI가 토글 미노출.
+    // API 변환(④)에서 undefined strip되므로 여기서 추가 검증 불필요 — 3중 패턴 준수.
   }
   if (step === 1) {
     if (form.giftItems.length + form.stockItems.length === 0) {
@@ -273,6 +288,15 @@ export function validateStep(step: number, form: FormState): string | null {
         }
       }
     }
+  }
+  if (step === 3) {
+    // §53의2③ 기공제액 — 엔진이 min(입력값, 1억) 가드를 처리하므로 UI 단계에서는 차단하지 않음.
+    // 단, 음수 입력은 의미 없으므로 차단.
+    const cumUsed = parseAmount(form.priorUsedMarriageBirthDeduction);
+    if (cumUsed < 0) {
+      return "이미 공제받은 혼인·출산 공제액은 0원 이상이어야 합니다.";
+    }
+    // 1억 초과 입력은 엔진 가드(min 처리)로 안전 처리됨 — UI 차단 없음 (모순 방지)
   }
   return null;
 }
@@ -346,6 +370,16 @@ export function Step0({
           <p className="text-[11px] text-rose-700 bg-rose-50/70 rounded px-2 py-1">
             조부모→손자녀 증여 — 세대생략 §57 할증 30% (또는 미성년+20억 초과 시 40%) 자동 적용됩니다.
           </p>
+        )}
+        {/* §57① 단서 — donor=grandparent 선택 시에만 노출 */}
+        {form.donor === "grandparent" && (
+          <ToggleCard
+            tone="rose"
+            title="§57① 단서 — 증여자의 최근친 직계비속 사망 (할증 배제)"
+            description="증여자(조부모)의 최근친 직계비속(부·모)이 이미 사망하여, 그 사망자의 최근친 직계비속(손자녀)이 증여받은 경우. 이 경우 세대생략 할증(30%·40%)이 적용되지 않습니다. (상증법 §57① 단서)"
+            checked={form.isSubstituteGift}
+            onCheckedChange={(v) => set({ isSubstituteGift: v })}
+          />
         )}
         {(form.donor === "father" || form.donor === "mother") && (
           <p className="text-[11px] text-violet-600">
@@ -485,6 +519,14 @@ export function Step3({
             value={form.birthExemption}
             onChange={(v) => set({ birthExemption: v })}
             hint="최대 1억원"
+            placeholder="없으면 빈칸"
+          />
+          {/* §53의2③ 수증자 통산 기공제액 — 과거 다른 증여에서 이미 혼인·출산 공제를 받은 경우 */}
+          <CurrencyInput
+            label="이미 공제받은 혼인·출산 공제액 (§53의2③)"
+            value={form.priorUsedMarriageBirthDeduction}
+            onChange={(v) => set({ priorUsedMarriageBirthDeduction: v })}
+            hint="과거 다른 증여에서 §53의2 공제를 받은 금액 합계 (없으면 빈칸). 수증자 기준 통산 한도 1억."
             placeholder="없으면 빈칸"
           />
         </div>
