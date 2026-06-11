@@ -212,6 +212,13 @@ test("공시지가 자동조회 — 소재지+연도 입력 후 조회 버튼 �
   await expect(page.getByText("600,000,000")).toBeVisible();
 });
 
+test("계산기 → 홈으로 네비게이션 버튼", async ({ page }) => {
+  await page.goto(URL);
+  page.on("dialog", (d) => d.accept()); // 이동 확인 다이얼로그 수락
+  await page.getByRole("button", { name: "홈으로 이동" }).click();
+  await expect(page).not.toHaveURL(/building-standard-price/);
+});
+
 test("홈 링크 → 건물 기준시가 계산기 진입", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("link", { name: /건물 기준시가 계산기/ }).click();
