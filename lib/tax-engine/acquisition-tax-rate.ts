@@ -10,21 +10,16 @@
  * - 원시취득: 2.8%
  * + 농어촌특별세 + 지방교육세 계산
  *
- * [Phase 4] 부가세 정밀화는 acquisition-tax-additional.ts로 분리.
- * calcTaxWithAdditional은 내부적으로 calcAdditionalTaxesFull을 호출하는 래퍼.
+ * calcTaxWithAdditional은 calcRuralSpecialTax·calcLocalEducationTax를 직접 호출한다
+ * (농특세·지방교육세 산식은 이 파일 내 정의).
  */
 
 import { ACQUISITION, ACQUISITION_CONST } from "./legal-codes";
 import type {
-  AcquisitionTaxInput,
   TaxRateDecision,
   PropertyObjectType,
   AcquisitionCause,
 } from "./types/acquisition.types";
-import {
-  calcAdditionalTaxesFull,
-  type SurchargeBranchForEdu,
-} from "./acquisition-tax-additional";
 
 // ============================================================
 // 주택 선형보간 세율 (지방세법 §11①1의2)
@@ -263,17 +258,21 @@ export function calcRuralSpecialTax(input: AdditionalTaxInput): number {
   }
 
   // 세율 2% 이하 → 0원 (정수 비교 — 부동소수점 오차 방지)
-  const ratePoints = Math.round(input.appliedRate * 10000); // 만분율(bps) 정수
-  const standardRatePoints = 200; // 2% = 200 bps
+  // 10만분율(5자리) 사용: 선형보간 세율(소수점 5자리)의 2% 초과분이 0.5bps처럼
+  // 1bps 미만일 수 있어, 만분율(4자리)로 반올림하면 초과분이 통째로 누락된다
+  // (예: 0.02005 → 만분율 200 = 2% 판정 오류 → 농특세 0원). 10만분율은 2005로 보존.
+  const RATE_SCALE = 100_000;
+  const ratePoints = Math.round(input.appliedRate * RATE_SCALE); // 10만분율 정수
+  const standardRatePoints = Math.round(ACQUISITION_CONST.RURAL_STANDARD_RATE * RATE_SCALE); // 2% = 2,000
 
   if (ratePoints <= standardRatePoints) {
     return 0;
   }
 
   // 농특세 = (적용세율 - 2%) × 과세표준 × 10%
-  // bps 정수 연산으로 부동소수점 오차 방지
-  const excessRatePoints = ratePoints - standardRatePoints; // 초과분 bps
-  const excessTax = Math.floor(input.taxBase * excessRatePoints / 10000);
+  // 10만분율 정수 연산으로 부동소수점 오차 방지
+  const excessRatePoints = ratePoints - standardRatePoints; // 초과분 (10만분율)
+  const excessTax = Math.floor(input.taxBase * excessRatePoints / RATE_SCALE);
   const ruralTax = Math.floor(excessTax * ACQUISITION_CONST.RURAL_SURCHARGE_RATE);
   return ruralTax;
 }
@@ -379,8 +378,19 @@ export function calcBurdenedGiftTax(
   gratuitousTax: number;
 } {
   // 유상 부분: 매매세율 — 세율 구간 판정은 전체 취득가액 기준 (지방세법 § 취득가액 기준 세율 결정)
-  const { rate: onerousRate } = getBasicRate(propertyType, "purchase", acquisitionValue);
-  const onerousTax = Math.floor(onerousTaxBase * onerousRate);
+  const { rate: onerousRate, isLinearInterpolation } = getBasicRate(propertyType, "purchase", acquisitionValue);
+
+  let onerousTax: number;
+  if (isLinearInterpolation) {
+    // 6~9억 선형보간 구간: 세율 = (전체×2 − 9억)/300억. 이를 5자리 float로 반올림해
+    // 곱하면 유상분에서 최대 ~2,300원 과소(납세자 유리하나 법령 불일치).
+    // 유상분 × 전체기준 보간세율을 BigInt로 정밀 계산 (linearInterpolationRate와 동일 분수).
+    // isLinearInterpolation=true ⇒ 6억<acquisitionValue<9억 ⇒ (전체×2−9억)>3억>0 (음수 없음).
+    const numerator = BigInt(onerousTaxBase) * (BigInt(acquisitionValue) * 2n - 900_000_000n);
+    onerousTax = Number(numerator / 30_000_000_000n);
+  } else {
+    onerousTax = Math.floor(onerousTaxBase * onerousRate);
+  }
 
   // 무상 부분: 증여세율 3.5%
   const gratuitousTax = Math.floor(gratuitousTaxBase * 0.035);

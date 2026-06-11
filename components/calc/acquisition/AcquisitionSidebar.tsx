@@ -11,8 +11,60 @@ import { useMemo } from "react";
 import { WizardSidebar } from "@/components/calc/shared/WizardSidebar";
 import type { WizardSidebarStep, WizardSidebarSummaryItem } from "@/components/calc/shared/WizardSidebar";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { linearInterpolationRate, getBasicRate } from "@/lib/tax-engine/acquisition-tax-rate";
+import { SURCHARGE_RATES } from "@/lib/tax-engine/acquisition-surcharge/multi-house";
+import { ACQUISITION_CONST } from "@/lib/tax-engine/legal-codes";
+import type { PropertyObjectType, AcquisitionCause } from "@/lib/tax-engine/types/acquisition.types";
 import type { FormState } from "./shared";
 import { STEPS, isDeemedAcquisitionCause } from "./shared";
+
+// ============================================================
+// 예상 세율 라벨 — 세율·임계는 전부 엔진 export 단일 진실
+// (UI 자체 세율 매트릭스 재구현 금지 정책)
+// ============================================================
+
+function pct(rate: number): string {
+  return `${(rate * 100).toFixed(3).replace(/\.?0+$/, "")}%`;
+}
+
+/** 주택 유상취득 예상 세율 라벨 — 중과 임계·선형보간 모두 엔진 값 사용 */
+function estimateHousingRateLabel(
+  acqValue: number,
+  houseCount: number,
+  regulated: boolean,
+  isCorp: boolean,
+): string {
+  if (isCorp) return `${pct(SURCHARGE_RATES.CORP)} (법인 중과)`;
+  if (regulated && houseCount >= 3) return `${pct(SURCHARGE_RATES.MULTI_HOUSE_12)} (조정 3주택+)`;
+  if (regulated && houseCount === 2) return `${pct(SURCHARGE_RATES.MULTI_HOUSE_8)} (조정 2주택)`;
+  if (!regulated && houseCount >= 4) return `${pct(SURCHARGE_RATES.MULTI_HOUSE_12)} (비조정 4주택+)`;
+  if (!regulated && houseCount >= 3) return `${pct(SURCHARGE_RATES.MULTI_HOUSE_8)} (비조정 3주택)`;
+  const rate = linearInterpolationRate(acqValue);
+  const isInterpolated =
+    acqValue > ACQUISITION_CONST.HOUSING_BRACKET_LOW &&
+    acqValue < ACQUISITION_CONST.HOUSING_BRACKET_HIGH;
+  return isInterpolated ? `${pct(rate)} (선형보간)` : pct(rate);
+}
+
+/** 비주택 예상 세율 라벨 — 엔진 getBasicRate 단일 진실 */
+function estimateNonHousingRateLabel(form: FormState, acqValue: number): string | null {
+  if (!["land", "land_farmland", "building"].includes(form.propertyType)) return null;
+  const { rate } = getBasicRate(
+    form.propertyType as PropertyObjectType,
+    form.acquisitionCause as AcquisitionCause,
+    acqValue,
+  );
+  return pct(rate);
+}
+
+/** 간주취득 세율 — 엔진 getBasicRate 단일 진실 (개수 2.8%·지목변경/과점주주 2%) */
+function deemedBasicRate(form: FormState): number {
+  return getBasicRate(
+    form.propertyType as PropertyObjectType,
+    form.acquisitionCause as AcquisitionCause,
+    0,
+  ).rate;
+}
 
 // ============================================================
 // 합계 계산 순수 함수
@@ -33,6 +85,8 @@ export interface AcquisitionSummary {
   isInstallment?: boolean;
   /** 연부 회차 수 */
   installmentCount?: number;
+  /** 간주취득 기본세율 (엔진 getBasicRate — 개수 2.8%·지목변경/과점주주 2%) */
+  deemedRate?: number;
 }
 
 /**
@@ -54,6 +108,14 @@ export function computeAcquisitionSummary(form: FormState): AcquisitionSummary {
         deemedType: "과점주주", deemedTaxBase: null,
       };
     }
+    if (form.deemedMajorIsFoundingShare) {
+      return {
+        acquisitionValue: null, standardValue: null, houseCountAfter: null,
+        isRegulated: false, isCorporation: false,
+        estimatedBaseRate: "비과세 (설립 시 취득, §7⑤)",
+        deemedType: "과점주주", deemedTaxBase: null,
+      };
+    }
     const corpVal = parseAmount(form.deemedMajorCorporateAssetValue ?? "") ?? 0;
     const prevR   = parseFloat(form.deemedMajorPrevShareRatio ?? "0") / 100;
     const newR    = parseFloat(form.deemedMajorNewShareRatio  ?? "0") / 100;
@@ -61,11 +123,12 @@ export function computeAcquisitionSummary(form: FormState): AcquisitionSummary {
     const deemedBase = corpVal > 0 && taxableRatio > 0
       ? Math.floor(corpVal * taxableRatio)
       : null;
+    const rate = deemedBasicRate(form);
     return {
       acquisitionValue: null, standardValue: null, houseCountAfter: null,
       isRegulated: false, isCorporation: false,
-      estimatedBaseRate: deemedBase ? "2% (간주취득)" : null,
-      deemedType: "과점주주", deemedTaxBase: deemedBase,
+      estimatedBaseRate: deemedBase ? `${pct(rate)} (간주취득)` : null,
+      deemedType: "과점주주", deemedTaxBase: deemedBase, deemedRate: rate,
     };
   }
 
@@ -73,11 +136,12 @@ export function computeAcquisitionSummary(form: FormState): AcquisitionSummary {
     const prevSv = parseAmount(form.deemedLandPrevStandardValue ?? "") ?? 0;
     const newSv  = parseAmount(form.deemedLandNewStandardValue  ?? "") ?? 0;
     const deemedBase = newSv > prevSv ? newSv - prevSv : null;
+    const rate = deemedBasicRate(form);
     return {
       acquisitionValue: null, standardValue: null, houseCountAfter: null,
       isRegulated: false, isCorporation: false,
-      estimatedBaseRate: deemedBase ? "2% (간주취득)" : null,
-      deemedType: "지목변경", deemedTaxBase: deemedBase,
+      estimatedBaseRate: deemedBase ? `${pct(rate)} (간주취득)` : null,
+      deemedType: "지목변경", deemedTaxBase: deemedBase, deemedRate: rate,
     };
   }
 
@@ -85,11 +149,13 @@ export function computeAcquisitionSummary(form: FormState): AcquisitionSummary {
     const prevSv = parseAmount(form.deemedRenovationPrevStandardValue ?? "") ?? 0;
     const newSv  = parseAmount(form.deemedRenovationNewStandardValue  ?? "") ?? 0;
     const deemedBase = newSv > prevSv ? newSv - prevSv : null;
+    // 건물 개수는 원시취득 2.8% (§11①3호) — 지목변경·과점주주 2%와 상이
+    const rate = deemedBasicRate(form);
     return {
       acquisitionValue: null, standardValue: null, houseCountAfter: null,
       isRegulated: false, isCorporation: false,
-      estimatedBaseRate: deemedBase ? "2% (간주취득)" : null,
-      deemedType: "건물 개수", deemedTaxBase: deemedBase,
+      estimatedBaseRate: deemedBase ? `${pct(rate)} (간주취득)` : null,
+      deemedType: "건물 개수", deemedTaxBase: deemedBase, deemedRate: rate,
     };
   }
 
@@ -110,32 +176,18 @@ export function computeAcquisitionSummary(form: FormState): AcquisitionSummary {
     const acqValue = installmentTotal > 0 ? installmentTotal : null;
     const stdValue = parseAmount(form.standardValue) || null;
 
-    // 예상 세율 (주택 유상거래 기준)
+    // 예상 세율 (주택 유상거래 기준) — 엔진 단일 진실
     let estimatedBaseRate: string | null = null;
     if (form.propertyType === "housing" && acqValue) {
-      const isCorp = form.acquiredBy === "corporation";
       const houseCount = parseInt(form.houseCountAfter) > 0 ? parseInt(form.houseCountAfter) : 1;
-      const regulated = form.isRegulatedArea;
-      if (isCorp) {
-        estimatedBaseRate = "12% (법인 중과)";
-      } else if (regulated && houseCount >= 3) {
-        estimatedBaseRate = "12% (조정 3주택+)";
-      } else if (regulated && houseCount === 2) {
-        estimatedBaseRate = "8% (조정 2주택)";
-      } else if (!regulated && houseCount >= 4) {
-        estimatedBaseRate = "12% (비조정 4주택+)";
-      } else if (!regulated && houseCount >= 3) {
-        estimatedBaseRate = "8% (비조정 3주택)";
-      } else if (acqValue <= 600_000_000) {
-        estimatedBaseRate = "1%";
-      } else if (acqValue >= 900_000_000) {
-        estimatedBaseRate = "3%";
-      } else {
-        const rate = (acqValue * 2 / 300_000_000 - 3) / 100;
-        estimatedBaseRate = `${(rate * 100).toFixed(3)}% (선형보간)`;
-      }
-    } else if (form.propertyType === "land" || form.propertyType === "land_farmland" || form.propertyType === "building") {
-      estimatedBaseRate = "4%";
+      estimatedBaseRate = estimateHousingRateLabel(
+        acqValue,
+        houseCount,
+        form.isRegulatedArea,
+        form.acquiredBy === "corporation",
+      );
+    } else {
+      estimatedBaseRate = estimateNonHousingRateLabel(form, acqValue ?? 0);
     }
 
     return {
@@ -165,39 +217,17 @@ export function computeAcquisitionSummary(form: FormState): AcquisitionSummary {
   const stdValue = parseAmount(form.standardValue) || null;
   const hcnt = parseInt(form.houseCountAfter) > 0 ? parseInt(form.houseCountAfter) : null;
 
-  // 대략적인 세율 미리보기 (주택 유상거래 기준)
+  // 대략적인 세율 미리보기 (주택 유상거래 기준) — 엔진 단일 진실
   let estimatedBaseRate: string | null = null;
   if (form.propertyType === "housing" && acqValue) {
-    const isCorp = form.acquiredBy === "corporation";
-    const houseCount = hcnt ?? 1;
-    const regulated = form.isRegulatedArea;
-
-    if (isCorp) {
-      estimatedBaseRate = "12% (법인 중과)";
-    } else if (regulated && houseCount >= 3) {
-      estimatedBaseRate = "12% (조정 3주택+)";
-    } else if (regulated && houseCount === 2) {
-      estimatedBaseRate = "8% (조정 2주택)";
-    } else if (!regulated && houseCount >= 4) {
-      estimatedBaseRate = "12% (비조정 4주택+)";
-    } else if (!regulated && houseCount >= 3) {
-      estimatedBaseRate = "8% (비조정 3주택)";
-    } else if (acqValue <= 600_000_000) {
-      estimatedBaseRate = "1%";
-    } else if (acqValue >= 900_000_000) {
-      estimatedBaseRate = "3%";
-    } else {
-      const rate = (acqValue * 2 / 300_000_000 - 3) / 100;
-      estimatedBaseRate = `${(rate * 100).toFixed(3)}% (선형보간)`;
-    }
-  } else if (form.propertyType === "land" || form.propertyType === "land_farmland" || form.propertyType === "building") {
-    if (form.acquisitionCause === "inheritance" || form.acquisitionCause === "inheritance_farmland") {
-      estimatedBaseRate = form.propertyType === "land_farmland" ? "2.3%" : "2.8%";
-    } else if (form.acquisitionCause === "gift") {
-      estimatedBaseRate = "3.5%";
-    } else {
-      estimatedBaseRate = "4%";
-    }
+    estimatedBaseRate = estimateHousingRateLabel(
+      acqValue,
+      hcnt ?? 1,
+      form.isRegulatedArea,
+      form.acquiredBy === "corporation",
+    );
+  } else {
+    estimatedBaseRate = estimateNonHousingRateLabel(form, acqValue ?? 0);
   }
 
   return {
@@ -235,6 +265,7 @@ export function AcquisitionSidebar({ form, currentStep, onStepClick }: Props) {
     form.propertyType,
     form.acquisitionCause,
     form.deemedMajorIsListed,
+    form.deemedMajorIsFoundingShare,
     form.deemedMajorCorporateAssetValue,
     form.deemedMajorPrevShareRatio,
     form.deemedMajorNewShareRatio,
@@ -263,13 +294,18 @@ export function AcquisitionSidebar({ form, currentStep, onStepClick }: Props) {
   if (summary.deemedType) {
     summaryItems.push({ label: "간주취득 유형", value: summary.deemedType });
 
-    if (summary.estimatedBaseRate === "비과세 (상장법인)") {
-      summaryItems.push({ label: "판정", value: "비과세 (상장법인)", highlight: true });
-    } else if (summary.deemedTaxBase !== null && summary.deemedTaxBase !== undefined && summary.deemedTaxBase > 0) {
+    if (summary.estimatedBaseRate?.startsWith("비과세")) {
+      summaryItems.push({ label: "판정", value: summary.estimatedBaseRate, highlight: true });
+    } else if (
+      summary.deemedTaxBase !== null &&
+      summary.deemedTaxBase !== undefined &&
+      summary.deemedTaxBase > 0 &&
+      summary.deemedRate !== undefined
+    ) {
       summaryItems.push({ label: "과세표준 (차액)", value: summary.deemedTaxBase });
       summaryItems.push({
-        label: "예상 취득세 (2%)",
-        value: Math.floor(summary.deemedTaxBase * 0.02),
+        label: `예상 취득세 (${pct(summary.deemedRate)})`,
+        value: Math.floor(summary.deemedTaxBase * summary.deemedRate),
         highlight: true,
       });
     }

@@ -6,6 +6,7 @@
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { DateInput } from "@/components/ui/date-input";
 import { TaxHelp } from "@/components/calc/inputs/TaxHelp";
+import { getBasicRate } from "@/lib/tax-engine/acquisition-tax-rate";
 import { selectCls } from "../shared";
 import { LAND_CATEGORY_OPTIONS } from "../shared";
 import type { FormState } from "../shared";
@@ -16,8 +17,12 @@ interface Props {
 }
 
 function formatKRW(amount: number): string {
-  return amount.toLocaleString("ko-KR") + "원";
+  return amount.toLocaleString("ko-KR");
 }
+
+// 지목변경 간주취득 세율 — 엔진 단일 진실 (2%)
+const DEEMED_RATE = getBasicRate("land", "deemed_land_category", 0).rate;
+const DEEMED_RATE_LABEL = `${(DEEMED_RATE * 100).toFixed(1).replace(/\.0$/, "")}%`;
 
 export function DeemedLandCategorySection({ form, set }: Props) {
   const prevSv = parseAmount(form.deemedLandPrevStandardValue ?? "") ?? 0;
@@ -113,7 +118,7 @@ export function DeemedLandCategorySection({ form, set }: Props) {
                 과세표준 = 변경 후 {formatKRW(newSv)} - 변경 전 {formatKRW(prevSv)} = {formatKRW(diff)}
               </p>
               <p className="font-medium text-sky-800">
-                예상 취득세 = {formatKRW(diff)} × 2% = {formatKRW(Math.floor(diff * 0.02))}
+                예상 취득세 = {formatKRW(diff)} × {DEEMED_RATE_LABEL} = {formatKRW(Math.floor(diff * DEEMED_RATE))}
               </p>
             </>
           ) : (
@@ -125,17 +130,32 @@ export function DeemedLandCategorySection({ form, set }: Props) {
         </div>
       )}
 
-      {/* 지목변경일 */}
+      {/* 사실상 지목변경 완료일 */}
       <div>
         <p className="text-sm font-medium mb-1">
-          지목변경일 <span className="text-muted-foreground font-normal text-xs">(선택)</span>
+          사실상 지목변경 완료일 <span className="text-muted-foreground font-normal text-xs">(선택)</span>
         </p>
         <DateInput
           value={form.deemedLandChangeDate ?? ""}
           onChange={(v) => set("deemedLandChangeDate", v)}
         />
         <p className="text-xs text-muted-foreground mt-1">
-          지목 변경 등기 완료일. 신고기한 기산점 (60일 이내)
+          토지의 형질변경 등 사실상 지목이 변경된 날
+        </p>
+      </div>
+
+      {/* 공부 지목 변경 등록일 */}
+      <div>
+        <p className="text-sm font-medium mb-1">
+          공부(公簿) 지목 변경 등록일 <span className="text-muted-foreground font-normal text-xs">(선택)</span>
+        </p>
+        <DateInput
+          value={form.deemedLandRegistrationDate ?? ""}
+          onChange={(v) => set("deemedLandRegistrationDate", v)}
+        />
+        <p className="text-xs text-muted-foreground mt-1">
+          지적공부상 지목이 변경 등록된 날. 사실상 변경 완료일과 둘 중 빠른 날이
+          취득시기이며 신고기한(60일)의 기산점이 됩니다 (지방세법 §20)
         </p>
       </div>
     </div>

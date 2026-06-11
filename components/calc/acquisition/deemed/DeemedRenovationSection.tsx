@@ -7,6 +7,7 @@ import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInp
 import { DateInput } from "@/components/ui/date-input";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { TaxHelp } from "@/components/calc/inputs/TaxHelp";
+import { getBasicRate } from "@/lib/tax-engine/acquisition-tax-rate";
 import type { FormState } from "../shared";
 
 interface Props {
@@ -15,8 +16,13 @@ interface Props {
 }
 
 function formatKRW(amount: number): string {
-  return amount.toLocaleString("ko-KR") + "원";
+  return amount.toLocaleString("ko-KR");
 }
+
+// 건물 개수 간주취득 세율 — 엔진 단일 진실. 개수는 원시취득에 해당하여 2.8%
+// (§11①3호, anchor: deemed-renovation-rate.anchor.test.ts — 지목변경·과점주주 2%와 상이)
+const DEEMED_RATE = getBasicRate("building", "deemed_renovation", 0).rate;
+const DEEMED_RATE_LABEL = `${(DEEMED_RATE * 100).toFixed(1).replace(/\.0$/, "")}%`;
 
 export function DeemedRenovationSection({ form, set }: Props) {
   const prevSv = parseAmount(form.deemedRenovationPrevStandardValue ?? "") ?? 0;
@@ -108,7 +114,7 @@ export function DeemedRenovationSection({ form, set }: Props) {
                 과세표준 = 개수 후 {formatKRW(newSv)} - 개수 전 {formatKRW(prevSv)} = {formatKRW(diff)}
               </p>
               <p className="font-medium text-violet-800">
-                예상 취득세 = {formatKRW(diff)} × 2% = {formatKRW(Math.floor(diff * 0.02))}
+                예상 취득세 = {formatKRW(diff)} × {DEEMED_RATE_LABEL} = {formatKRW(Math.floor(diff * DEEMED_RATE))}
               </p>
             </>
           ) : (
@@ -120,17 +126,32 @@ export function DeemedRenovationSection({ form, set }: Props) {
         </div>
       )}
 
-      {/* 개수 완료일 */}
+      {/* 개수 완료일 (사용승인일) */}
       <div>
         <p className="text-sm font-medium mb-1">
-          개수 완료일 <span className="text-muted-foreground font-normal text-xs">(선택)</span>
+          개수 완료일 (사용승인일) <span className="text-muted-foreground font-normal text-xs">(선택)</span>
         </p>
         <DateInput
           value={form.deemedRenovationDate ?? ""}
           onChange={(v) => set("deemedRenovationDate", v)}
         />
         <p className="text-xs text-muted-foreground mt-1">
-          구조변경·용도변경·대수선 완료일. 신고기한 기산점 (60일 이내)
+          구조변경·용도변경·대수선의 사용승인일
+        </p>
+      </div>
+
+      {/* 사실상 사용개시일 */}
+      <div>
+        <p className="text-sm font-medium mb-1">
+          사실상 사용개시일 <span className="text-muted-foreground font-normal text-xs">(선택)</span>
+        </p>
+        <DateInput
+          value={form.deemedRenovationActualUsageDate ?? ""}
+          onChange={(v) => set("deemedRenovationActualUsageDate", v)}
+        />
+        <p className="text-xs text-muted-foreground mt-1">
+          사용승인 전에 실제 사용을 개시한 경우 입력. 사용승인일과 둘 중 빠른 날이
+          취득시기이며 신고기한(60일)의 기산점이 됩니다 (지방세법 §20)
         </p>
       </div>
     </div>

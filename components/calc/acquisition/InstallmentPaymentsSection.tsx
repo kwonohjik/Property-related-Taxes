@@ -12,7 +12,8 @@
  * - 회차 합계 표시
  */
 
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
+import { differenceInMonths, parseISO } from "date-fns";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { DateInput } from "@/components/ui/date-input";
 
@@ -62,17 +63,8 @@ function updateRow(
 // ============================================================
 
 export function InstallmentPaymentsSection({ installments, contractDate, onChange }: Props) {
-  // 마운트 시 빈 배열이면 초기 3행(계약금·중도금·잔금) 자동 생성
-  useEffect(() => {
-    if (installments.length === 0) {
-      onChange([
-        { id: crypto.randomUUID(), label: "계약금", paymentDate: "", amount: "" },
-        { id: crypto.randomUUID(), label: "중도금", paymentDate: "", amount: "" },
-        { id: crypto.randomUUID(), label: "잔금",   paymentDate: "", amount: "" },
-      ]);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // mount 시 1회만
+  // 초기 3행(계약금·중도금·잔금) 시딩은 Step0 연부취득 토글 ON 핸들러에서 수행
+  // (useEffect → store 미러링 금지 정책 — 마운트 부수효과 제거)
 
   // 합계 및 기간 계산
   const { total, isUnder2Years, firstDate, lastDate } = useMemo(() => {
@@ -87,11 +79,9 @@ export function InstallmentPaymentsSection({ installments, contractDate, onChang
     const first = sorted[0].paymentDate;
     const last = sorted[sorted.length - 1].paymentDate;
 
-    // 2년 검증: contractDate 기준 또는 첫 회차 기준
+    // 2년 검증: contractDate 기준 또는 첫 회차 기준 (date-fns로 월·윤년 경계 정확 처리)
     const refDate = contractDate || first;
-    const refMs = new Date(refDate).getTime();
-    const lastMs = new Date(last).getTime();
-    const diffMonths = (lastMs - refMs) / (1000 * 60 * 60 * 24 * 30.44);
+    const diffMonths = differenceInMonths(parseISO(last), parseISO(refDate));
 
     return {
       total: sumTotal,
@@ -169,7 +159,7 @@ export function InstallmentPaymentsSection({ installments, contractDate, onChang
                 onChange={(e) =>
                   onChange(updateRow(installments, row.id, { label: e.target.value }))
                 }
-                placeholder='예: "계약금", "중도금", "잔금"'
+                placeholder="회차 명칭 (선택)"
                 className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </div>

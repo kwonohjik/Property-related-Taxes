@@ -2,23 +2,26 @@
 
 import {
   makeRunManualSave,
-  formatSaveMessage,
-  buildAutoSaveToast,
   useRecordCount,
   type ManualSaveOutcome,
 } from "@/components/calc/shared/save-handler-builders";
+import type { FormState } from "@/components/calc/acquisition/shared";
 
-interface AcquisitionForm {
-  acquisitionPrice?: string;
-  standardValue?: string;
-  balancePaymentDate?: string;
-  registrationDate?: string;
-  contractDate?: string;
-  [k: string]: unknown;
-}
+/**
+ * FormState에서 Pick으로 파생 — 폼 키가 변경/삭제되면 여기서 tsc가 실패한다.
+ * (2026-06 리뷰 R1: 존재하지 않는 `acquisitionPrice` 키 참조로 빈 폼 오판 →
+ *  취득가액만 입력한 폼의 수동 저장이 거부되던 버그의 재발 방지 가드)
+ */
+export type AcquisitionForm = Partial<
+  Pick<
+    FormState,
+    "reportedPrice" | "standardValue" | "balancePaymentDate" | "registrationDate" | "contractDate"
+  >
+> &
+  Record<string, unknown>;
 
 export function isAcquisitionFormEmpty(form: AcquisitionForm): boolean {
-  const noPrice = !form.acquisitionPrice || form.acquisitionPrice === "";
+  const noPrice = !form.reportedPrice || form.reportedPrice === "";
   const noStdValue = !form.standardValue || form.standardValue === "";
   const noDate =
     (!form.balancePaymentDate || form.balancePaymentDate === "") &&

@@ -29,7 +29,6 @@ import {
   assessMultiHouseSurcharge,
   assessGiftSurcharge,
   assessTemporaryTwoHouse,
-  SURCHARGE_RATES,
 } from "./multi-house";
 import {
   calcLuxurySurchargeRate,
@@ -38,9 +37,7 @@ import {
 } from "./luxury";
 import {
   isBurdenedGiftExcluded,
-  resolveEffectiveCause,
   getBurdenedGiftExclusionMessage,
-  assessCorpHouseSurcharge,
 } from "./corp-house";
 
 // ============================================================
@@ -419,13 +416,18 @@ export function assessSurcharge(input: SurchargeCheckInput): ExtendedSurchargeDe
 /**
  * 공시가격 저가 주택 중과 배제 여부 (기존 API 호환 — 단일 인자)
  *
- * @deprecated 신규 코드에서는 isExemptFromSurcharge_LowValue(value, isMetro, isUrbanRegen) 사용 권장
+ * @deprecated 신규 코드에서는 isExemptFromSurcharge_LowValue(value, isMetro, isUrbanRegen) 사용 권장.
+ *
+ * ⚠️ 이 Legacy 함수는 수도권 1억 단일 기준만 적용한다. 비수도권 주택(시행령 §28의2 1호
+ * 나목 — 2억 이하 배제)에 호출하면 1.5억~2억 구간을 잘못 false(중과)로 판정한다.
+ * 비수도권 케이스는 반드시 V2(isExemptFromSurcharge_LowValue)에 isMetropolitanRegion=false를
+ * 전달할 것. (엔진 내부 경로는 이미 V2 사용 — 외부 직접 호출자만 주의)
  */
 export function isExemptFromSurcharge_LowValueLegacy(
   standardValue: number,
   isInUrbanRegenerationArea = false
 ): boolean {
-  // 구 API: 1억 기준, 정비구역 배제 옵션만
+  // 구 API: 수도권 1억 기준만, 정비구역 배제 옵션만 (비수도권 2억 미반영 — 위 경고 참조)
   const THRESHOLD = 100_000_000;
   if (isInUrbanRegenerationArea) return false;
   return standardValue <= THRESHOLD;

@@ -136,7 +136,7 @@ function OwnedHouseCard({
                 className="block w-full rounded border border-input px-2 py-1 text-sm"
                 value={house.shareInInheritance}
                 onChange={(e) => set("shareInInheritance", e.target.value)}
-                placeholder="0.5"
+                placeholder="지분 (0~1)"
               />
             </div>
             <div>
@@ -146,7 +146,7 @@ function OwnedHouseCard({
                 className="block w-full rounded border border-input px-2 py-1 text-sm"
                 value={house.maxShareInInheritors}
                 onChange={(e) => set("maxShareInInheritors", e.target.value)}
-                placeholder="0.5"
+                placeholder="지분 (0~1)"
               />
             </div>
           </div>
@@ -188,7 +188,7 @@ function OwnedHouseCard({
             className="block w-full rounded border border-input px-2 py-1 text-sm"
             value={house.ownershipShare}
             onChange={(e) => set("ownershipShare", e.target.value)}
-            placeholder="0.5"
+            placeholder="지분율 (0~1)"
           />
         </div>
         <ToggleCard
@@ -272,8 +272,6 @@ export function Step2({
     const arr = form.ownedHouses.filter((_, i) => i !== idx);
     set("ownedHouses", arr);
   };
-
-  const houseCount = parseInt(form.houseCountAfter) || 1;
 
   return (
     <div className="space-y-4">
@@ -366,45 +364,6 @@ export function Step2({
           + 보유 주택 추가
         </button>
       </div>
-
-      {/* 입주권·분양권·오피스텔 */}
-      {houseCount >= 2 && (
-        <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-3">
-          <div className="flex items-center gap-2">
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-[10px] font-bold text-sky-800 select-none">2</span>
-            <p className="text-xs font-semibold text-sky-700">입주권·분양권·오피스텔</p>
-          </div>
-          <div className="grid grid-cols-3 gap-2">
-            <div>
-              <label className="text-xs text-muted-foreground block mb-1">조합원입주권</label>
-              <input
-                type="number" min="0"
-                className="block w-full rounded border border-input px-2 py-1 text-sm"
-                value={form.redevelopmentRights}
-                onChange={(e) => set("redevelopmentRights", e.target.value)}
-              />
-            </div>
-            <div>
-              <label className="text-xs text-muted-foreground block mb-1">주택분양권</label>
-              <input
-                type="number" min="0"
-                className="block w-full rounded border border-input px-2 py-1 text-sm"
-                value={form.housingSubscriptionRights}
-                onChange={(e) => set("housingSubscriptionRights", e.target.value)}
-              />
-            </div>
-            <div>
-              <label className="text-xs text-muted-foreground block mb-1">주거형 오피스텔</label>
-              <input
-                type="number" min="0"
-                className="block w-full rounded border border-input px-2 py-1 text-sm"
-                value={form.residentialOffices}
-                onChange={(e) => set("residentialOffices", e.target.value)}
-              />
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* 세대 별도 인정 — violet */}
       <ToggleCard

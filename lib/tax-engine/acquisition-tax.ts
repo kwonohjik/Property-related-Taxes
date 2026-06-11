@@ -27,7 +27,6 @@ import {
   calcLinearInterpolationTax,
   calcTaxWithAdditional,
   calcBurdenedGiftTax,
-  linearInterpolationRate,
 } from "./acquisition-tax-rate";
 import { assessSurcharge, resolveFinalRate } from "./acquisition-tax-surcharge";
 import {
@@ -47,7 +46,6 @@ import type {
   AcquisitionTaxResult,
   AcquisitionCalculationStep,
   BurdenedGiftBreakdown,
-  DeemedAcquisitionInput,
   DeemedMajorShareholderResult,
 } from "./types/acquisition.types";
 import type {
@@ -394,7 +392,9 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
   const totalTax = acquisitionTax + additional.ruralSpecialTax + additional.localEducationTax;
 
   // ── Step 8: 감면 적용 — 중복배제 패턴 (지방세특례제한법 §180) ──
-  // 후보 감면 배열에 각 감면을 독립 계산 후 푸시 → 납세자 유리 1건 선택
+  // 동일 과세대상·동일 세목(취득세)에 둘 이상 지방세 특례 적용 시 감면되는 세액이 큰 것 1건만.
+  // (취득세·재산세는 조특법 §127이 아닌 지특법 §180이 근거 — KoreanLaw 2026-06-11 확인)
+  // 후보 감면 배열에 각 감면을 독립 계산 후 푸시 → 감면세액 큰 1건 선택
 
   interface ReductionCandidate {
     amount: number;

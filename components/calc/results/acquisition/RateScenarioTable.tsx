@@ -7,6 +7,9 @@
  * 조정지역 × 비조정지역 × 법인 매트릭스 표시
  */
 
+import { linearInterpolationRate } from "@/lib/tax-engine/acquisition-tax-rate";
+import { SURCHARGE_RATES } from "@/lib/tax-engine/acquisition-surcharge/multi-house";
+import { ACQUISITION_CONST } from "@/lib/tax-engine/legal-codes";
 import type { AcquisitionTaxResult } from "@/lib/tax-engine/types/acquisition.types";
 
 interface Props {
@@ -24,14 +27,19 @@ interface ScenarioRow {
 }
 
 // ============================================================
-// 세율 표 데이터 생성
+// 세율 표 데이터 생성 — 세율·임계는 엔진 export 단일 진실
 // ============================================================
 
+function pctLabel(rate: number): string {
+  return `${(rate * 100).toFixed(5).replace(/\.?0+$/, "")}%`;
+}
+
 function getHousingBaseRateLabel(value: number): string {
-  if (value <= 600_000_000) return "1%";
-  if (value >= 900_000_000) return "3%";
-  const rate = ((value * 2 / 300_000_000 - 3) / 100 * 100).toFixed(5).replace(/\.?0+$/, "");
-  return `${rate}% (선형보간)`;
+  const rate = linearInterpolationRate(value); // 경계 1%·3% 포함 (엔진)
+  const isInterpolated =
+    value > ACQUISITION_CONST.HOUSING_BRACKET_LOW &&
+    value < ACQUISITION_CONST.HOUSING_BRACKET_HIGH;
+  return isInterpolated ? `${pctLabel(rate)} (선형보간)` : pctLabel(rate);
 }
 
 function buildScenarioRows(
@@ -41,9 +49,12 @@ function buildScenarioRows(
   acqValue: number,
 ): ScenarioRow[] {
   const baseRateLabel = getHousingBaseRateLabel(acqValue);
-  const currentRate = (result.appliedRate * 100).toFixed(5).replace(/\.?0+$/, "") + "%";
   const currentSurcharge = result.rateType === "surcharge_regulated";
   const currentCorp = result.rateType === "surcharge_corporate";
+
+  const rate8 = pctLabel(SURCHARGE_RATES.MULTI_HOUSE_8);
+  const rate12 = pctLabel(SURCHARGE_RATES.MULTI_HOUSE_12);
+  const rateCorp = pctLabel(SURCHARGE_RATES.CORP);
 
   const rows: ScenarioRow[] = [
     {
@@ -54,38 +65,36 @@ function buildScenarioRows(
     },
     {
       label: "2주택 (일시적 X)",
-      regulated: "8%",
+      regulated: rate8,
       nonRegulated: baseRateLabel,
       isCurrent: false,
     },
     {
       label: "3주택",
-      regulated: "12%",
-      nonRegulated: "8%",
+      regulated: rate12,
+      nonRegulated: rate8,
       isCurrent: false,
     },
     {
       label: "4주택 이상",
-      regulated: "12%",
-      nonRegulated: "12%",
+      regulated: rate12,
+      nonRegulated: rate12,
       isCurrent: false,
     },
     {
       label: "법인 (주택)",
-      regulated: "12%",
-      nonRegulated: "12%",
+      regulated: rateCorp,
+      nonRegulated: rateCorp,
       isCurrent: currentCorp,
     },
   ];
 
-  // 현재 적용 세율 행 강조
+  // 현재 적용 세율 행 강조 (임계 비교도 엔진 상수)
   if (currentSurcharge) {
-    const rate = (result.appliedRate * 100).toFixed(0) + "%";
-    // 현재 적용 세율에 해당하는 행 찾아서 강조
-    if (result.appliedRate === 0.08) {
+    if (result.appliedRate === SURCHARGE_RATES.MULTI_HOUSE_8) {
       const idx = rows.findIndex(r => r.label === "2주택 (일시적 X)");
       if (idx >= 0) rows[idx] = { ...rows[idx], isCurrent: true };
-    } else if (result.appliedRate === 0.12) {
+    } else if (result.appliedRate === SURCHARGE_RATES.MULTI_HOUSE_12) {
       const idx = rows.findIndex(r => r.label === "3주택");
       if (idx >= 0) rows[idx] = { ...rows[idx], isCurrent: true };
     }

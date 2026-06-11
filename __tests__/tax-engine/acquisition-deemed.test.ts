@@ -9,10 +9,10 @@
  * 2. 토지 지목변경: 시가표준액 증가분 과세
  * 3. 건물 개수: 시가표준액 증가분 과세
  *
- * 비과세 케이스 (§9):
- * - 상장법인 주식 취득 (§9①)
- * - 합병·분할로 인한 주식 취득 (§9②)
- * - 법인 설립 시 주식 취득 (§9③)
+ * 비과세·과세제외 케이스:
+ * - 유가증권·코스닥 상장법인 주식 취득 (과점주주 정의 제외 — 지방세기본법 §46·시행령 §24①, 코넥스 제외 대상 아님)
+ * - 합병·분할로 인한 주식 취득 (형식적 취득 제외 처리 — 포괄 면제 명문 없음, 지특법 §57의2⑤ 한정 면제)
+ * - 법인 설립 시 주식 취득 (지방세법 §7⑤ 괄호 — 취득으로 보지 아니함)
  */
 
 import { describe, it, expect } from "vitest";
@@ -29,7 +29,7 @@ import { calcAcquisitionTax } from "../../lib/tax-engine/acquisition-tax";
 // ============================================================
 
 describe("assessMajorShareholder — 과점주주 간주취득", () => {
-  it("상장법인: 비과세 (§9①)", () => {
+  it("유가증권·코스닥 상장법인: 비과세 (지방세기본법 §46)", () => {
     const result = assessMajorShareholder({
       corporateAssetValue: 1_000_000_000,
       prevShareRatio: 0.3,
@@ -40,11 +40,29 @@ describe("assessMajorShareholder — 과점주주 간주취득", () => {
     expect(result.deemedTaxBase).toBe(0);
     expect(result.taxableRatio).toBe(0);
     expect(result.warnings[0]).toContain("상장법인");
+    // 근거 정정: §9①(국가·신탁 비과세) 아닌 과점주주 정의 제외 (지방세기본법 §46)
+    expect(result.legalBasis).toContain("지방세기본법 §46");
+    expect(result.warnings[0]).toContain("코넥스");
   });
 
-  // ── 신규: §9② 합병·분할로 인한 주식 취득 비과세 ──
-  it("합병으로 인한 주식 취득 — §9② 비과세 (anchor)", () => {
-    // 법인 합병 절차에서 주식 취득 → 과점주주 요건 충족해도 비과세
+  it("코넥스 상장법인 과점주주: 과세 (isListed=false 입력 — 시행령 §24① 증권시장 미포함)", () => {
+    // 코넥스는 지방세기본법 §46 제외 증권시장(유가증권·코스닥)에 해당하지 않으므로
+    // 사용자가 isListed=false로 입력하면 일반 과점주주로 과세된다.
+    const result = assessMajorShareholder({
+      corporateAssetValue: 1_000_000_000,
+      prevShareRatio: 0,
+      newShareRatio: 0.6,
+      isListed: false, // 코넥스는 제외 대상 아님 → false
+    });
+    expect(result.isSubjectToTax).toBe(true);
+    // 최초 과점주주: 취득 후 전체 지분율(60%) 과세
+    expect(result.taxableRatio).toBeCloseTo(0.6, 10);
+    expect(result.deemedTaxBase).toBe(600_000_000);
+  });
+
+  // ── 합병·분할로 인한 주식 취득 — 과세 제외 처리 (형식적 취득) ──
+  it("합병으로 인한 주식 취득 — 과세 제외 처리 (anchor)", () => {
+    // 법인 합병 절차에서 주식 취득 → 과점주주 요건 충족해도 과세 제외 처리
     const result = assessMajorShareholder({
       corporateAssetValue: 5_000_000_000,   // 50억 법인 자산
       prevShareRatio: 0.0,
@@ -55,11 +73,11 @@ describe("assessMajorShareholder — 과점주주 간주취득", () => {
     expect(result.isSubjectToTax).toBe(false);
     expect(result.deemedTaxBase).toBe(0);
     expect(result.taxableRatio).toBe(0);
-    expect(result.legalBasis).toContain("§9");
+    expect(result.legalBasis).toContain("§7");
     expect(result.warnings[0]).toContain("합병·분할");
   });
 
-  it("분할로 인한 주식 취득 — §9② 비과세", () => {
+  it("분할로 인한 주식 취득 — 과세 제외 처리", () => {
     // 이미 과점주주(60%)인데 추가 취득해도 분할 취득이면 비과세
     const result = assessMajorShareholder({
       corporateAssetValue: 2_000_000_000,
@@ -73,8 +91,8 @@ describe("assessMajorShareholder — 과점주주 간주취득", () => {
     expect(result.warnings[0]).toContain("합병·분할");
   });
 
-  // ── 신규: §9③ 법인 설립 시 주식 취득 비과세 ──
-  it("법인 설립 시 주식 취득 — §9③ 비과세 (anchor)", () => {
+  // ── 법인 설립 시 주식 취득 — 취득으로 보지 아니함 (지방세법 §7⑤ 괄호) ──
+  it("법인 설립 시 주식 취득 — §7⑤ 비과세 (anchor)", () => {
     // 법인 설립 과정에서 취득 → 과점주주 요건 충족해도 비과세
     const result = assessMajorShareholder({
       corporateAssetValue: 1_000_000_000,
@@ -86,7 +104,7 @@ describe("assessMajorShareholder — 과점주주 간주취득", () => {
     expect(result.isSubjectToTax).toBe(false);
     expect(result.deemedTaxBase).toBe(0);
     expect(result.taxableRatio).toBe(0);
-    expect(result.legalBasis).toContain("§9");
+    expect(result.legalBasis).toContain("§7⑤");
     expect(result.warnings[0]).toContain("법인 설립");
   });
 

@@ -7,6 +7,8 @@
  * Phase 5-UI: FormState 18 필드 → ~78 필드 확장
  */
 
+import { validateAcquisitionCrossFields } from "@/lib/calc/acquisition-tax-validate";
+
 // ============================================================
 // 상수 레이블
 // ============================================================
@@ -259,14 +261,8 @@ export interface FormState {
   farmlandLocationDistance: string;
 
   // ─── [P3] 주택 수 정교화 ───
-  /** 보유 주택 카드 배열 */
+  /** 보유 주택 카드 배열 (입주권·분양권·오피스텔은 카드의 propertyType으로 입력) */
   ownedHouses: OwnedHouseInfo[];
-  /** 조합원입주권 수 */
-  redevelopmentRights: string;
-  /** 주택분양권 수 */
-  housingSubscriptionRights: string;
-  /** 주거형 오피스텔 수 (1억 초과만 카운트) */
-  residentialOffices: string;
   /** 신탁재산 위탁자 보유 주택 수 */
   trustedHouseCount: string;
 
@@ -302,9 +298,11 @@ export interface FormState {
   /** 사실상 사용 개시일 (YYYY-MM-DD) — 사용승인 이전 실거주 시 취득시기로 봄 */
   actualUsageDate?: string;
 
-  // ─── [간주취득] 과점주주 (지방세법 §7의2①) — 5개 필드 ───
+  // ─── [간주취득] 과점주주 (지방세법 §7의2①) — 6개 필드 ───
   /** 상장법인 여부 (true이면 비과세) */
   deemedMajorIsListed?: boolean;
+  /** 법인 설립 시 발행 주식 취득 여부 (지방세법 §7⑤ 괄호 — 취득으로 보지 아니함) */
+  deemedMajorIsFoundingShare?: boolean;
   /** 법인 보유 과세대상 자산 시가표준액 합계 (CurrencyInput 문자열) */
   deemedMajorCorporateAssetValue?: string;
   /** 취득 전 지분율 (0~100 %, DecimalInput 문자열) */
@@ -319,8 +317,10 @@ export interface FormState {
   deemedLandPrevCategory?: string;
   /** 변경 후 지목 */
   deemedLandNewCategory?: string;
-  /** 지목변경일 (YYYY-MM-DD) */
+  /** 사실상 지목변경 완료일 (YYYY-MM-DD) */
   deemedLandChangeDate?: string;
+  /** 공부(公簿) 지목 변경 등록일 (YYYY-MM-DD) — 사실상 변경일과 빠른 날이 취득시기 (시행령 §20⑩) */
+  deemedLandRegistrationDate?: string;
   /** 변경 전 시가표준액 (CurrencyInput 문자열) */
   deemedLandPrevStandardValue?: string;
   /** 변경 후 시가표준액 (CurrencyInput 문자열) */
@@ -329,8 +329,10 @@ export interface FormState {
   // ─── [간주취득] 건물 개수 (지방세법 §7의2③) — 5개 필드 ───
   /** 개수 유형 */
   deemedRenovationType?: "structural_change" | "use_change" | "major_repair";
-  /** 개수 완료일 (YYYY-MM-DD) */
+  /** 개수 완료일(사용승인일) (YYYY-MM-DD) */
   deemedRenovationDate?: string;
+  /** 사실상 사용개시일 (YYYY-MM-DD) — 사용승인일과 빠른 날이 취득시기 (지방세법 §20) */
+  deemedRenovationActualUsageDate?: string;
   /** 개수 전 시가표준액 (CurrencyInput 문자열) */
   deemedRenovationPrevStandardValue?: string;
   /** 개수 후 시가표준액 (CurrencyInput 문자열) */
@@ -431,9 +433,6 @@ export const INITIAL_FORM: FormState = {
 
   // P3 주택 수
   ownedHouses: [],
-  redevelopmentRights: "0",
-  housingSubscriptionRights: "0",
-  residentialOffices: "0",
   trustedHouseCount: "0",
 
   // P3 공유지분
@@ -459,6 +458,7 @@ export const INITIAL_FORM: FormState = {
 
   // 간주취득 — 과점주주
   deemedMajorIsListed: undefined,
+  deemedMajorIsFoundingShare: undefined,
   deemedMajorCorporateAssetValue: undefined,
   deemedMajorPrevShareRatio: undefined,
   deemedMajorNewShareRatio: undefined,
@@ -468,12 +468,14 @@ export const INITIAL_FORM: FormState = {
   deemedLandPrevCategory: undefined,
   deemedLandNewCategory: undefined,
   deemedLandChangeDate: undefined,
+  deemedLandRegistrationDate: undefined,
   deemedLandPrevStandardValue: undefined,
   deemedLandNewStandardValue: undefined,
 
   // 간주취득 — 건물 개수
   deemedRenovationType: undefined,
   deemedRenovationDate: undefined,
+  deemedRenovationActualUsageDate: undefined,
   deemedRenovationPrevStandardValue: undefined,
   deemedRenovationNewStandardValue: undefined,
 
@@ -532,7 +534,7 @@ export function validateStep(step: number, form: FormState): string | null {
 
     // 간주취득 유형별 유효성 검증
     if (form.acquisitionCause === "deemed_major_shareholder") {
-      if (!form.deemedMajorIsListed) {
+      if (!form.deemedMajorIsListed && !form.deemedMajorIsFoundingShare) {
         // 비상장법인: 자산·지분율 필수
         if (!form.deemedMajorCorporateAssetValue)
           return "법인 보유 자산 시가표준액을 입력하세요.";
@@ -544,7 +546,7 @@ export function validateStep(step: number, form: FormState): string | null {
         if (next <= 50)
           return "취득 후 지분율이 50% 이하이면 과점주주 요건 미충족입니다.";
       }
-      // 상장법인이면 검증 없이 통과 (비과세 처리)
+      // 상장법인·설립 시 취득(§7⑤)이면 검증 없이 통과 (비과세 처리)
     }
 
     if (form.acquisitionCause === "deemed_land_category") {
@@ -569,7 +571,9 @@ export function validateStep(step: number, form: FormState): string | null {
       return "취득 후 보유 주택 수를 입력하세요.";
     }
   }
-  return null;
+
+  // ⑧ cross-field 검증 (lib/calc/acquisition-tax-validate.ts) — 단계 공통 위임
+  return validateAcquisitionCrossFields(step, form);
 }
 
 // ============================================================

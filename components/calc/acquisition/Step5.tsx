@@ -141,7 +141,7 @@ export function Step5({
               <DecimalInput
                 value={form.farmingYears}
                 onChange={(v) => set("farmingYears", v)}
-                placeholder="2 이상"
+                placeholder="영농 종사 연수"
                 unit="년"
               />
             </div>
@@ -150,7 +150,7 @@ export function Step5({
               <DecimalInput
                 value={form.farmlandArea}
                 onChange={(v) => set("farmlandArea", v)}
-                placeholder="면적 한도 20,000㎡"
+                placeholder="취득 농지 면적"
                 unit="㎡"
               />
             </div>
@@ -196,7 +196,7 @@ export function Step5({
             <DecimalInput
               value={form.acquisitionOwnershipShare}
               onChange={(v) => set("acquisitionOwnershipShare", v)}
-              placeholder="0.5"
+              placeholder="취득 지분율 (단독이면 1)"
               unit=""
             />
           </div>
