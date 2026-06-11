@@ -21,7 +21,9 @@ type Detail =
   | { kind: "unsold_99_2"; result: UnsoldHybridResult }
   | { kind: "unsold_98_3"; result: UnsoldHybridResult }
   | { kind: "unsold_98_5"; result: UnsoldHybridResult }
-  | { kind: "unsold_98_6"; result: UnsoldHybridResult };
+  | { kind: "unsold_98_6"; result: UnsoldHybridResult }
+  | { kind: "unsold_98_2"; result: UnsoldHybridResult }
+  | { kind: "unsold_98_4"; result: UnsoldHybridResult };
 
 const TITLES: Record<Detail["kind"], string> = {
   new_99: "§99 — 신축주택 양도소득세 감면 (IMF 1차)",
@@ -31,10 +33,13 @@ const TITLES: Record<Detail["kind"], string> = {
   unsold_98_3: "§98의3 — 미분양주택 과세특례 (서울 밖, 100%·과밀 60%)",
   unsold_98_5: "§98의5 — 수도권 밖 미분양 과세특례 (인하율별 60/80/100%)",
   unsold_98_6: "§98의6 — 준공후미분양주택 과세특례 (50%)",
+  unsold_98_2: "§98의2 — 지방 미분양주택 과세특례 (장특 표2·기본세율)",
+  unsold_98_4: "§98의4 — 비거주자 주택취득 과세특례 (10%)",
 };
 
 const HYBRID_KINDS: ReadonlyArray<string> = [
   "unsold_98_7", "unsold_99_2", "unsold_98_3", "unsold_98_5", "unsold_98_6",
+  "unsold_98_2", "unsold_98_4",
 ];
 
 export function IncomeDeductionDetailCard({ kind, result }: Detail) {
@@ -42,6 +47,9 @@ export function IncomeDeductionDetailCard({ kind, result }: Detail) {
   // P2·P3 하이브리드 — 5년 내 양도 = 세액감면 경로 (소득금액 차감 아님)
   const isHybrid = HYBRID_KINDS.includes(kind);
   const isTaxAmountMode = isHybrid && (result as UnsoldHybridResult).effectCategory === "tax_amount";
+  // §98의2 특칙 전용 (감면세액 없음) / §98의4 중과 배제 비대상 (소령 §167의3①5호 비열거)
+  const isSpecialOnly = isHybrid && (result as UnsoldHybridResult).effectCategory === "lthd_rate_special";
+  const showSurchargeNote = kind !== "unsold_98_4";
   const isRuralExempt = isHybrid && (result as UnsoldHybridResult).ruralSurtaxExempt;
   const hybridRatePct = isHybrid
     ? Math.round((result as UnsoldHybridResult).taxReductionRate * 100)
@@ -70,11 +78,15 @@ export function IncomeDeductionDetailCard({ kind, result }: Detail) {
       <div className="flex items-center gap-2 flex-wrap">
         <p className="text-sm font-semibold text-emerald-900 dark:text-emerald-200">{title}</p>
         <span className="text-xs rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 px-2 py-0.5 font-medium">
-          {result.isWithin5Years
-            ? isTaxAmountMode
-              ? `취득 후 5년 이내 — ${hybridRatePct}% 세액감면`
-              : "취득 후 5년 이내 양도"
-            : "취득 후 5년 경과 양도"}
+          {isSpecialOnly
+            ? "특칙 적용 — 장특 표2·기본세율"
+            : kind === "unsold_98_4"
+              ? "10% 세액감면 (5년 구분 없음)"
+              : result.isWithin5Years
+                ? isTaxAmountMode
+                  ? `취득 후 5년 이내 — ${hybridRatePct}% 세액감면`
+                  : "취득 후 5년 이내 양도"
+                : "취득 후 5년 경과 양도"}
         </span>
         {kind === "new_99" && (result as New99Result).redevelopedVariantApplied && (
           <span className="text-xs rounded-full bg-violet-100 text-violet-800 dark:bg-violet-950/40 dark:text-violet-300 px-2 py-0.5 font-medium">
@@ -92,16 +104,18 @@ export function IncomeDeductionDetailCard({ kind, result }: Detail) {
             )}
           </div>
         ))}
-        <div className="border-t border-emerald-200 dark:border-emerald-800/40 pt-1.5 flex items-baseline justify-between">
-          <span className="text-xs font-semibold text-emerald-900 dark:text-emerald-200">
-            {isTaxAmountMode ? `감면세액 (산출세액의 ${hybridRatePct}%)` : "과세대상소득금액에서 차감한 양도소득금액"}
-          </span>
-          <span className="text-sm font-bold text-emerald-900 dark:text-emerald-100 font-mono tabular-nums">
-            {isTaxAmountMode
-              ? (result as UnsoldHybridResult).reductionAmount.toLocaleString()
-              : result.reducibleTransferIncome.toLocaleString()}
-          </span>
-        </div>
+        {!isSpecialOnly && (
+          <div className="border-t border-emerald-200 dark:border-emerald-800/40 pt-1.5 flex items-baseline justify-between">
+            <span className="text-xs font-semibold text-emerald-900 dark:text-emerald-200">
+              {isTaxAmountMode ? `감면세액 (산출세액의 ${hybridRatePct}%)` : "과세대상소득금액에서 차감한 양도소득금액"}
+            </span>
+            <span className="text-sm font-bold text-emerald-900 dark:text-emerald-100 font-mono tabular-nums">
+              {isTaxAmountMode
+                ? (result as UnsoldHybridResult).reductionAmount.toLocaleString()
+                : result.reducibleTransferIncome.toLocaleString()}
+            </span>
+          </div>
+        )}
       </div>
 
       {result.ruralSurtax > 0 && (
@@ -121,8 +135,10 @@ export function IncomeDeductionDetailCard({ kind, result }: Detail) {
       )}
 
       <p className="text-[10px] text-emerald-700 dark:text-emerald-400">
-        근거 조문: {result.legalBasis} · 본 감면 주택 양도 시 다주택 중과세율은 적용되지 않습니다
-        (소득세법 시행령 §167의3①5호·§167의10①2호)
+        근거 조문: {result.legalBasis}
+        {showSurchargeNote
+          ? " · 본 감면 주택 양도 시 다주택 중과세율은 적용되지 않습니다 (소득세법 시행령 §167의3①5호·§167의10①2호)"
+          : " · 다주택 중과 배제 대상이 아닙니다 (소득세법 시행령 §167의3①5호 비열거)"}
       </p>
     </div>
   );

@@ -428,6 +428,23 @@ export function migrateAsset(raw: unknown): AssetForm {
           ...r,
         };
       }
+      // P4 §98의2·§98의4 (2026-06-12): 구 stub 데이터 본 필드 누락 보정 (③)
+      if (r && r.type === "unsold_98_2") {
+        return {
+          contractDate982: "",
+          isNonCapitalUnsold982: false,
+          isFirstOrFcfsContract982: false,
+          ...r,
+        };
+      }
+      if (r && r.type === "unsold_98_4") {
+        return {
+          contractDate984: "",
+          isNonResidentNoPe984: false,
+          isNotUnsold983House984: false,
+          ...r,
+        };
+      }
       // P3 §98의3·§98의5·§98의6 (2026-06-12): 구 stub 데이터 본 필드 누락 보정 (③)
       if (r && r.type === "unsold_98_3") {
         return {

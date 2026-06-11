@@ -189,6 +189,16 @@ export {
   type Unsold986Input,
 } from "./unsold-hybrid-p3";
 
+// ── P4 (2026-06-12): §98의2 (특칙 전용) + §98의4 (비거주자 10%) ──
+export {
+  evaluateUnsold982,
+  evaluateUnsold984,
+  table2HoldingRate,
+  UNSOLD_98_4_RATE,
+  type Unsold982Input,
+  type Unsold984Input,
+} from "./unsold-hybrid-p4";
+
 /**
  * 23개 조문 통합 stub evaluator. Phase 1 단계는 모두 isEligible:false 반환.
  * 시한 외 케이스는 명시적 사유, 시한 내 케이스는 "구현 예정" 사유.

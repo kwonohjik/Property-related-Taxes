@@ -137,7 +137,13 @@ export type TransferReductionStub =
       _phase1Stub?: true }
   // 미분양 §98 시리즈 + §99의2
   | { type: "unsold_98";         _phase1Stub?: true }
-  | { type: "unsold_98_2";       _phase1Stub?: true }
+  // §98의2 — P4 본격 구현 (2026-06-12): 특칙 전용 본 필드
+  | { type: "unsold_98_2";
+      contractDate982?: Date;
+      isResident982?: boolean;
+      isNonCapitalUnsold982?: boolean;
+      isFirstOrFcfsContract982?: boolean;
+      _phase1Stub?: true }
   // §98의3 — P3 본격 구현 (2026-06-12): 하이브리드 본 필드 (Date — route mapper ⑭ 변환)
   | { type: "unsold_98_3";
       region?: "metropolitan" | "non_metropolitan"; // Phase 1 stub 호환
@@ -159,7 +165,12 @@ export type TransferReductionStub =
       standardPriceAt5Years983?: number;
       standardPriceAtTransfer983?: number;
       _phase1Stub?: true }
-  | { type: "unsold_98_4";       _phase1Stub?: true }
+  // §98의4 — P4 본격 구현 (2026-06-12): 비거주자 10% 본 필드
+  | { type: "unsold_98_4";
+      contractDate984?: Date;
+      isNonResidentNoPe984?: boolean;
+      isNotUnsold983House984?: boolean;
+      _phase1Stub?: true }
   // §98의5 — P3 본격 구현 (2026-06-12)
   | { type: "unsold_98_5";
       priceReductionRate?: number; // Phase 1 stub 호환
