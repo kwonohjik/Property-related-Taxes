@@ -61,7 +61,14 @@ export {
   evaluateRental97TaxAmount,
   type Rental97EngineContext,
 } from "./rental-97-router";
-export { evaluateRental973, RENTAL_97_3_OVERRIDE_RATE, RENTAL_97_3_MANDATORY_YEARS } from "./rental-97-3";
+export {
+  evaluateRental973,
+  RENTAL_97_3_OVERRIDE_RATE,
+  RENTAL_97_3_OVERRIDE_RATE_8YEAR,
+  RENTAL_97_3_MANDATORY_YEARS,
+  RENTAL_97_3_MANDATORY_YEARS_8YEAR,
+  RENTAL_97_3_PRE_2023_REG_CUTOFF,
+} from "./rental-97-3";
 export { evaluateRental974, getRental974AdditionalRate, RENTAL_97_4_ADDITIONAL_RATE_TABLE } from "./rental-97-4";
 export { evaluateRental975, RENTAL_97_5_REGISTRATION_MONTHS } from "./rental-97-5";
 export { evaluateRental97Main } from "./rental-97-main";

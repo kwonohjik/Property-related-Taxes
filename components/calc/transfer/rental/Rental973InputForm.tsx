@@ -56,6 +56,16 @@ export function Rental973InputForm({ value, onChange, transferDate }: Props) {
     [value.rentalStartDate, transferDate],
   );
 
+  // 등록일별 공제율 안내 (R-1: 2022.12.31 이전 등록분 8년 50% 경과규정) — store 미기록
+  const rateGuide = useMemo(() => {
+    if (!value.registrationDate) return null;
+    const reg = new Date(value.registrationDate);
+    if (isNaN(reg.getTime())) return null;
+    return reg.getTime() < new Date("2023-01-01").getTime()
+      ? "2022.12.31 이전 등록 — 8년↑ 50% / 10년↑ 70%"
+      : "2023.1.1 이후 등록 — 10년↑ 70%만";
+  }, [value.registrationDate]);
+
   return (
     <div className="mt-2 ml-4 space-y-3">
       {/* ① 등록·신분 */}
@@ -173,15 +183,18 @@ export function Rental973InputForm({ value, onChange, transferDate }: Props) {
       <div className="rounded-lg border border-emerald-200 bg-emerald-100/60 p-3 space-y-1">
         <p className="text-xs font-semibold text-emerald-800">자동 산출 (참고용, 저장 안 됨)</p>
         <div className="flex items-center justify-between text-xs">
-          <span className="text-muted-foreground">의무임대기간</span>
-          <span className="font-mono font-medium text-emerald-900">10년</span>
+          <span className="text-muted-foreground">등록일별 적용 공제율</span>
+          <span className="font-mono font-medium text-emerald-900">
+            {rateGuide ?? "등록일 입력 시 표시"}
+          </span>
         </div>
         <div className="flex items-center justify-between text-xs">
           <span className="text-muted-foreground">양도일 기준 임대기간 (임대개시일→양도일)</span>
           <span className="font-mono font-medium text-emerald-900">{rentalDuration}</span>
         </div>
         <p className="text-[10px] text-emerald-700">
-          ※ 공실 차감 후 실제 유효임대기간은 엔진이 계산합니다.
+          ※ 2022.12.31 이전 등록분은 8년 이상 50%, 10년 이상 70%. 2023.1.1 이후 등록분은 10년 이상 70%만 적용됩니다.
+          공실 차감 후 실제 유효임대기간은 엔진이 계산합니다.
         </p>
       </div>
     </div>

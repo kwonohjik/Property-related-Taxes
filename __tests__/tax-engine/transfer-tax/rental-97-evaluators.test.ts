@@ -40,8 +40,27 @@ describe("§97의3 evaluateRental973", () => {
     }
   });
 
-  it("케이스 #10: 9년 임대 → 기간 미달 불적용", () => {
-    const r = evaluateRental973(base973({ rentalStartDate: new Date("2015-07-01"), registrationDate: new Date("2015-07-01") }));
+  it("케이스 #10: 9년 임대 + 2022.12.31 이전 등록 → 8년 50% 경과규정 적용 (R-1)", () => {
+    const r = evaluateRental973(base973({
+      acquisitionDate: new Date("2015-07-01"),
+      rentalStartDate: new Date("2015-07-01"),
+      registrationDate: new Date("2015-07-01"),
+    }));
+    expect(r.isEligible).toBe(true);
+    if (r.isEligible && "overrideRate" in r) {
+      expect(r.overrideRate).toBe(0.5); // 8~10년 구간 → 50%
+      expect(r.eligibleRentalYears).toBeGreaterThanOrEqual(8);
+      expect(r.eligibleRentalYears).toBeLessThan(10);
+    }
+  });
+
+  it("케이스 #10b: 9년 임대 + 2023.1.1 이후 등록 → 기간 미달 불적용 (8년 유형 폐지, R-1)", () => {
+    const r = evaluateRental973(base973({
+      acquisitionDate: new Date("2023-06-01"),
+      rentalStartDate: new Date("2023-06-01"),
+      registrationDate: new Date("2023-06-01"),
+      transferDate: new Date("2032-05-01"),
+    }));
     expect(r.isEligible).toBe(false);
     if (!r.isEligible) {
       expect(r.ineligibleReasons.some((x) => x.code === "RENTAL_PERIOD_SHORT")).toBe(true);

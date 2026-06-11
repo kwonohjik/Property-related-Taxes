@@ -9,7 +9,7 @@
 - **R-5 확정**: 령 §97의3③ — ①5% 증액 제한 ②**국민주택규모 이하**(설계에 없던 요건 — `isNationalHousingScale` 입력 추가) ③10년 ④기준시가 합계 6억/수도권 밖 3억 (임대개시일 당시). 4요건 전부 evaluator 구현.
 - **R-2 확정**: §97의5 **면적 요건 없음** — 설계의 `exclusiveAreaSqm` 제거 (케이스 #22 삭제).
 - **F-1 확정**: §97의2① "양도소득세를 면제" = 세액 단계 100% (tax_amount).
-- **R-1 미확정 유지**: 8년 50% 경과규정 미구현 — 10년 미달 시 불적용 사유에 "구법 경과규정은 부칙 확인 필요" 안내.
+- **R-1 확정 (2026-06-11, followup §R-1)**: 등록일별 공제율 — 등록 ~2022.12.31: 8년↑ 50% / 10년↑ 70%, 등록 2023.1.1~: 10년↑ 70%만(2022 세법개정). `rental-97-3.ts` 등록일 분기 구현(`overrideRate` 동적). 출처: 사용자 제공 + 세법개정. KoreanLaw 연혁 본문 `NOT_FOUND`로 부칙 직접인용 추후 보강.
 - **R-3 미확정 유지**: §97의4 추가율 표는 법 본문 내 표가 API 응답에서 누락 — 표 상수(`RENTAL_97_4_ADDITIONAL_RATE_TABLE`) + evaluator 구현하되 `isFullyImplemented=false` (UI 라디오 비활성·폼 미작성).
 - 공실 6개월 간주 출처 확정: 령 §97의5①1호 (케이스 #25 ⚠️ 해소).
 
@@ -47,7 +47,7 @@
 | 10 | §97의3 — 9년 임대 → 기간 미달 불적용 | §97의3①1호 ✅ | 동상 | `rental-97-3.test.ts` | ☐ |
 | 11 | §97의3 — 임대료 증액 위반 신고 → 불적용 | §97의3①2호 ✅ | 동상 | `rental-97-3.test.ts` | ☐ |
 | 12 | §97의3 — 2020.7.11 이후 단기→장기 변경 신고분 → 제외 | §97의3① 괄호 ✅ | 동상 | `rental-97-3.test.ts` | ☐ |
-| 13 | §97의3 — 8년 경과규정 케이스 (⚠️ R-1 확정 후 행 확정/삭제) | §97의3 부칙 ⚠️ | R-1 | `rental-97-3.test.ts` | ☐ |
+| 13 | §97의3 — 등록일별 8년 50% / 10년 70% (R-1 확정) — C-1~C-5 + 케이스 #10/#10b | §97의3 부칙 ✅ | R-1 ✅ | `rental-97-3-r1-registration.test.ts`·`rental-97-evaluators.test.ts` | ☑ |
 | 14 | §97의3 — 기준시가 한도 초과 (⚠️ R-5 확정 후 행 확정/삭제) | §97의3 령 ⚠️ | R-5 | `rental-97-3.test.ts` | ☐ |
 | 15 | §97의4 — 6~7년 임대 → 장특 추가 2%p (⚠️ R-3 수치 확정 후) | §97의4 ⚠️ R-3 | 법정 표 직접 | `rental-97-4.test.ts` | ☐ |
 | 16 | §97의4 — 10년+ → 추가 10%p·일반공제율과 합산 | §97의4 ⚠️ R-3 | 동상 | `rental-97-4.test.ts` | ☐ |
@@ -133,7 +133,7 @@ export interface Rental97IneligibleReason { code: string; message: string; legal
 /** §97의3·§97의4 — 장특공제 단계(STEP 4) 반영 */
 export interface RentalLthdEffect {
   effectCategory: "long_term_holding_special" | "long_term_holding_additional";
-  overrideRate?: number;      // §97의3: 0.70 (R-1 확정 시 0.50 경과 분기 추가)
+  overrideRate?: number;      // §97의3: 0.70(10년↑) / 0.50(등록 ~2022.12.31 + 8~10년, R-1 확정) — 동적
   additionalRate?: number;    // §97의4: 0.02~0.10 (R-3 확정 수치)
   eligibleRentalYears: number;
 }
@@ -164,7 +164,7 @@ export type Rental97Result =
 3. 유효임대기간 = `calculateEffectiveRentalPeriod(rentalStartDate, transferDate, vacancyPeriods)` — 공실 180일+ 구간만 차감 (레거시 이식, ⚠️ 180일 기준의 령 출처 확인)
 4. 임대료 검증 — `rentHistory` 제공 시 `validateRentIncrease`(전월세 환산 포함), 미제공 시 `rentIncreaseViolated` 신고값
 5. 효과 산출:
-   - §97의3: `overrideRate = 0.70` (R-1 확정 시 등록일 분기)
+   - §97의3: `overrideRate` 동적 — 10년↑ 0.70 / (등록 ~2022.12.31) 8~10년 0.50 (R-1 확정, cutoff 2023-01-01)
    - §97의4: `additionalRate = 표[유효임대연수구간]` (R-3 수치)
    - §97/§97의2/§97의5: `reductionAmount = applyRate(calculatedTax, rate)` — `Math.round` 금지
 
@@ -191,7 +191,7 @@ export type Rental97Result =
 ## 테스트 약속
 
 - 케이스 인벤토리 26행 전부 anchor. 수치 anchor는 **양도연도 §55·§95 법정 산식 직접 계산** (외부 자료 추종 금지). B-1 = 36,185,000원 (plan §6 P2 — 35% 구간·누진공제 15,440,000 검산 완료).
-- ⚠️ 행(13·14·15·16·22·25)은 R-1·R-2·R-3 확정 전 `it.todo` 등록 — 확정 즉시 활성.
+- ⚠️ 행(15·16·25)은 R-3 등 확정 전 `it.todo` 등록 — 확정 즉시 활성. (행 13=R-1 ✅ 활성, 14=R-5 ✅, 22=R-2 삭제)
 - 레거시 신구 비교: P2 완료 시 동일 입력(10년 임대) 구 산식(세액 50%) vs 신 산식(장특 70%) 결과 차이를 보고서에 수치 기재 (numeric 영향 공개).
 - 회귀: `npm test` 전체 + `rental-housing-reduction.test.ts` 기존 26 케이스 P4 이관 전까지 유지.
 

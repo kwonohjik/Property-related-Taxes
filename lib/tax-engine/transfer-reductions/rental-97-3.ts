@@ -14,10 +14,14 @@
  *   3. 임대개시일부터 10년 이상 임대
  *   4. 주택+부속토지 기준시가 합계가 임대개시일 당시 6억(수도권 밖 3억) 이하
  * - ②: §97의4와 중복 적용 불가
- * - 70% 적용 범위: 임대기간 중 발생 양도차익 한정 — 기준시가 안분 (령 §97의3⑤)
+ * - 70%/50% 적용 범위: 임대기간 중 발생 양도차익 한정 — 기준시가 안분 (령 §97의3⑤)
  *
- * ⚠️ R-1 (계획서 §7): 2020.12.29 개정 전 8년 등록분 경과규정(8년 50%)은 부칙 원문 미확보로
- *    미구현 — 현행 10년 70%만 적용. 8년 케이스는 불적용 사유로 안내.
+ * R-1 (등록일별 공제율 — 2022 세법개정):
+ * - 등록 ~2022.12.31: 8년 이상 임대 50% / 10년 이상 임대 70%
+ * - 등록 2023.1.1~  : 10년 이상 임대 70%만 (8년 유형 50% 폐지)
+ * - 현행 §97의3① 본문은 10년 70% 단일 (law.go.kr 2026-06-11 확인). 8년 50%는 경과규정.
+ * ⚠️ 출처: 사용자(세무 전문가) 제공 + 2022 세법개정 부칙. KoreanLaw 연혁 본문·부칙 직접조회는
+ *    도구 미지원(efYd·연혁 MST NOT_FOUND)으로 부칙 조항 직접 인용은 추후 보강 — followup.plan.md §R-1.
  */
 
 import { TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
@@ -34,11 +38,20 @@ import type { Rental97EvaluationInput, Rental97IneligibleReason, Rental97Result 
 const OFFICIAL_PRICE_LIMIT_CAPITAL = 600_000_000;
 const OFFICIAL_PRICE_LIMIT_NON_CAPITAL = 300_000_000;
 
-/** §97의3 장특공제율 특례 (①항 본문 — 100분의 70) */
+/** §97의3 장특공제율 특례 — 10년 이상 임대 (①항 본문 — 100분의 70) */
 export const RENTAL_97_3_OVERRIDE_RATE = 0.7;
 
-/** §97의3 의무임대기간 (①1호·령 §97의3③3호 — 10년) */
+/** R-1: 2022.12.31 이전 등록분 8년 이상 임대 경과규정 특례율 (100분의 50) */
+export const RENTAL_97_3_OVERRIDE_RATE_8YEAR = 0.5;
+
+/** §97의3 의무임대기간 — 10년 (①1호·령 §97의3③3호. 70% 기준) */
 export const RENTAL_97_3_MANDATORY_YEARS = 10;
+
+/** R-1: 2022.12.31 이전 등록분 8년 50% 경과규정 최소 임대기간 */
+export const RENTAL_97_3_MANDATORY_YEARS_8YEAR = 8;
+
+/** R-1: 8년 50% 경과규정 적용 등록일 상한 — 이 날짜 미만(=~2022.12.31) 등록만. 2023.1.1~ 등록은 10년 70%만 */
+export const RENTAL_97_3_PRE_2023_REG_CUTOFF = new Date("2023-01-01");
 
 export function evaluateRental973(input: Rental97EvaluationInput): Rental97Result {
   const legalBasis = TRANSFER_REDUCTION_ARTICLE.RENTAL_97_3;
@@ -126,20 +139,31 @@ export function evaluateRental973(input: Rental97EvaluationInput): Rental97Resul
     });
   }
 
-  // 6) 10년 이상 임대 (①1호·령 ③3호)
+  // 6) 임대기간 + 등록일별 공제율 (R-1: 2022.12.31 이전 등록분 8년 50% 경과규정)
+  //    · 등록 ~2022.12.31: 8년↑ 50% / 10년↑ 70%
+  //    · 등록 2023.1.1~  : 10년↑ 70%만 (8년 유형 폐지)
   let eligibleRentalYears = 0;
+  let overrideRate = RENTAL_97_3_OVERRIDE_RATE; // 10년 70% 기본
   if (input.rentalStartDate) {
     eligibleRentalYears = calculateEffectiveRentalPeriod(
       input.rentalStartDate,
       input.transferDate,
       input.vacancyPeriods ?? [],
     );
-    if (eligibleRentalYears < RENTAL_97_3_MANDATORY_YEARS) {
+    const isPre2023Registration =
+      input.registrationDate !== undefined &&
+      input.registrationDate.getTime() < RENTAL_97_3_PRE_2023_REG_CUTOFF.getTime();
+
+    if (eligibleRentalYears >= RENTAL_97_3_MANDATORY_YEARS) {
+      overrideRate = RENTAL_97_3_OVERRIDE_RATE; // 10년↑ → 70% (등록일 무관)
+    } else if (isPre2023Registration && eligibleRentalYears >= RENTAL_97_3_MANDATORY_YEARS_8YEAR) {
+      overrideRate = RENTAL_97_3_OVERRIDE_RATE_8YEAR; // 2022.12.31 이전 등록 + 8~10년 → 50%
+    } else {
       reasons.push({
         code: "RENTAL_PERIOD_SHORT",
-        message:
-          `임대기간 ${eligibleRentalYears}년 — 10년 이상 계속 임대 요건 미달 (§97의3①1호). ` +
-          `2020.12.29 개정 전 등록분의 구법(8년) 경과규정 해당 여부는 부칙 확인이 필요합니다.`,
+        message: isPre2023Registration
+          ? `임대기간 ${eligibleRentalYears}년 — 2022.12.31 이전 등록분은 8년 이상(50%) 또는 10년 이상(70%) 임대 요건 미달 (§97의3①1호).`
+          : `임대기간 ${eligibleRentalYears}년 — 2023.1.1 이후 등록분은 10년 이상 계속 임대 요건 미달 (§97의3①1호). 8년 50% 경과규정은 2022.12.31 이전 등록분에 한합니다.`,
         legalBasis,
       });
     }
@@ -183,7 +207,7 @@ export function evaluateRental973(input: Rental97EvaluationInput): Rental97Resul
     isEligible: true,
     legalBasis,
     effectCategory: "long_term_holding_special",
-    overrideRate: RENTAL_97_3_OVERRIDE_RATE,
+    overrideRate, // 동적: 10년↑ 0.7 / (등록 ~2022.12.31) 8~10년 0.5
     rentalGainRatio,
     eligibleRentalYears,
   };
