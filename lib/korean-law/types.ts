@@ -509,6 +509,60 @@ export interface ArticleDiff {
 }
 
 // ────────────────────────────────────────────────────────────────────────────
+// v3 — 판례 생사 확인 (cite_check)
+// ────────────────────────────────────────────────────────────────────────────
+
+/** 대상 판례를 인용한 후속 판례 1건 */
+export interface CitingCase {
+  caseNo: string;
+  title: string;
+  court: string;
+  date: string;
+  /** 전원합의체 여부 (판례 변경은 주로 전합) */
+  isEnBanc: boolean;
+  /** 본문 조회용 ID */
+  id: string;
+  /** 대법원 등 본문 제공 출처 여부 */
+  hasFullText: boolean;
+}
+
+/** 후속 판례에서 감지된 변경·폐기 신호 1건 */
+export interface ChangeSignal {
+  citingCaseNo: string;
+  citingDate: string;
+  /** 신호 유형 라벨 ("판례 변경 선언" 등) */
+  label: string;
+  /** 신호가 발견된 본문 발췌 */
+  excerpt: string;
+}
+
+/**
+ * 판례 생사 상태. 단정 금지 — "폐기됨"이 아니라 "검토 필요"의 위계.
+ *   review_needed: 변경·폐기 신호 또는 미확인 전원합의체 후속 → 전문 확인 필요
+ *   no_signal:     후속 인용은 있으나 신호 미감지 (현행 유지 확정은 아님)
+ *   no_citations:  법제처 수록 범위 내 후속 인용 없음
+ */
+export type CiteCheckStatus = "review_needed" | "no_signal" | "no_citations";
+
+export interface CiteCheckResult {
+  caseNo: string;
+  /** 후속 인용 총수 (하급심 포함) */
+  citingCount: number;
+  /** 본문까지 스캔한 대법원 판례 수 */
+  scannedCount: number;
+  /** 감지된 변경·폐기 신호 */
+  signals: ChangeSignal[];
+  /** 전원합의체이나 본문 미확보로 스캔 못한 후속 판례 (수동 확인 권장) */
+  enBancUnscanned: CitingCase[];
+  status: CiteCheckStatus;
+}
+
+export const citeCheckInputSchema = z.object({
+  caseNo: z.string().min(1).max(50),
+});
+export type CiteCheckInput = z.infer<typeof citeCheckInputSchema>;
+
+// ────────────────────────────────────────────────────────────────────────────
 // 5. 에러 envelope
 // ────────────────────────────────────────────────────────────────────────────
 
