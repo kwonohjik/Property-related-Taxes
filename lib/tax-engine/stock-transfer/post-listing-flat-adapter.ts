@@ -14,7 +14,7 @@
  */
 
 import {
-  calcMonthlyClosingAverage,
+  calcClosingAvgWithEvent,
   calcNetIncomePerShare,
   calcNetAssetPerShare,
   calcUnlistedPerShareWeighted,
@@ -43,6 +43,7 @@ export interface PostListingFlatForm {
   listingPriceClosing?: string[];         // 원 (CurrencyInput parse 결과 또는 string)
   listingPriceBasisDate?: string;         // YYYY-MM-DD
   listingPriceHasIncrease?: boolean;
+  listingPriceIncreaseDate?: string;      // [B-5] 증자·합병 발생일 YYYY-MM-DD
 
   // 순손익 — 상장연도 (18 필드)
   niAddRow1Listing?: string;
@@ -224,6 +225,7 @@ export function adaptFlatToPostListingDetail(
     closes,
     basisDate: form.listingPriceBasisDate ?? "",
     hasIncrease: form.listingPriceHasIncrease === true,
+    increaseDate: form.listingPriceIncreaseDate ?? "", // [B-5] 증자·합병 발생일
   };
 
   // listing 측 — 두 모드 모두 채움
@@ -345,7 +347,7 @@ export function adaptFlatToApiBody(
 
   // 종가 평균 자동 계산
   const closingAvg = detail.closing
-    ? calcMonthlyClosingAverage(detail.closing.dates, detail.closing.closes).avg
+    ? calcClosingAvgWithEvent(detail.closing).avg
     : toNumber(form.listingDatePriceAvg1Month);
 
   // 상장연도 1주당 순손익가치·순자산가치 자동 합성
@@ -419,7 +421,7 @@ export function buildPostListingFromDetail(
   }
 
   const closingAvg = detail.closing
-    ? calcMonthlyClosingAverage(detail.closing.dates, detail.closing.closes).avg
+    ? calcClosingAvgWithEvent(detail.closing).avg
     : 0;
   const listingNI = detail.netIncome?.listing
     ? calcNetIncomePerShare(detail.netIncome.listing).perShareValue

@@ -47,6 +47,16 @@ export function PostListingDetailCard({ result }: PostListingDetailCardProps) {
             <strong>{post.detail.closing.avg.toLocaleString()}</strong>
           </p>
         )}
+        {post.capitalEventTruncation && (
+          <div className="rounded-md border border-rose-200 bg-rose-50/60 px-2 py-1.5 my-1 space-y-0.5 text-rose-800">
+            <p className="font-medium">증자·합병 기간 조정 (상증령 §52의2② · §63①1가목 준용 해석)</p>
+            <p>
+              발생일 {post.capitalEventTruncation.eventDate} — 상장일~발생일 전일 종가만 평균 (포함{" "}
+              {post.capitalEventTruncation.includedDays}거래일 · 제외 {post.capitalEventTruncation.excludedDays}일)
+            </p>
+            <p className="text-amber-700">ⓘ 명문·예규 미확정 해석 적용</p>
+          </div>
+        )}
         <p>
           상장연도 1주당 가중평균 ={" "}
           <strong>{post.listingYearPerShareValue.toLocaleString()}</strong>

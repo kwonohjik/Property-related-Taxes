@@ -187,6 +187,7 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
     listingPriceClosing: Array.isArray(d.listingPriceClosing) ? (d.listingPriceClosing as string[]) : [],
     listingPriceBasisDate: strField("listingPriceBasisDate"),
     listingPriceHasIncrease: boolField("listingPriceHasIncrease", defaults.listingPriceHasIncrease),
+    listingPriceIncreaseDate: strField("listingPriceIncreaseDate"),
     // 순손익 — 상장연도 (18 필드)
     niAddRow1Listing: strField("niAddRow1Listing"), niAddRow2Listing: strField("niAddRow2Listing"),
     niAddRow3Listing: strField("niAddRow3Listing"), niAddRow4Listing: strField("niAddRow4Listing"),

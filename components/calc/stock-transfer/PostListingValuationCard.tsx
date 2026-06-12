@@ -26,6 +26,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { calcUnlistedPerShareWeighted } from "@/lib/tax-engine/stock-transfer/stock-valuation-post-listing";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 import { PostListingClosingPriceTable, autoFillDates, dayOfWeek } from "./PostListingClosingPriceTable";
+import { PostListingCapitalEventSection } from "./PostListingCapitalEventSection";
 import { TransferDate1MonthClosingPriceTable } from "./TransferDate1MonthClosingPriceTable";
 import { KiwoomAutoFetchButton } from "./KiwoomAutoFetchButton";
 import { KiwoomPostListingAutoFetchButton } from "./KiwoomPostListingAutoFetchButton";
@@ -263,6 +264,7 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
               onFill={onChange}
             />
             <PostListingClosingPriceTable form={form} onChange={onChange} />
+            <PostListingCapitalEventSection form={form} onChange={onChange} />
             <PostListingNetIncomeStatement form={form} onChange={onChange} mode={mode} />
             <PostListingNetAssetStatement form={form} onChange={onChange} mode={mode} />
 

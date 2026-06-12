@@ -100,6 +100,7 @@ export const postListingDetailSchema = z.object({
     closes: z.array(z.number()).default([]),
     basisDate: z.string().default(""),
     hasIncrease: z.boolean().default(false),
+    increaseDate: z.string().optional(), // [B-5] 증자·합병 발생일
   }).optional(),
   netIncome: z.object({
     listing: niYearSchema,

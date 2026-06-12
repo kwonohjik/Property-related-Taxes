@@ -85,6 +85,83 @@ export function calcMonthlyClosingAverage(
 }
 
 /**
+ * [B-5] 증자·합병 기간 조정 종가평균 (상증령 §52의2②2호 — §99①3·§63①1가목 준용 해석)
+ *
+ * 상장일 이후 1개월(forward 윈도우) 종가평균 산정 중 증자·합병 발생 시,
+ * 사유 발생일 이전(전일까지) 종가만 평균(발생일·이후 제외). 환산주식수 아닌 기간 절단.
+ *
+ * ★ §165⑤ proxy 적용은 해석 — 명문·예규 미확인(사용자 결정 2026-06-13).
+ *   윈도우 밖 발생일·절단 후 0건은 전체 평균 + warning(자동 fallback 금지 → 절단만 미적용).
+ *
+ * @returns avg(절단 후) · tradingDays · truncation(발동 시) · warning(C-3·C-5)
+ */
+export function calcClosingAvgWithEvent(closing: {
+  dates: string[];
+  closes: number[];
+  basisDate: string;
+  hasIncrease: boolean;
+  increaseDate?: string;
+}): {
+  avg: number;
+  sum: number;
+  tradingDays: number;
+  truncation?: { eventDate: string; includedDays: number; excludedDays: number };
+  warning?: string;
+} {
+  const base = calcMonthlyClosingAverage(closing.dates, closing.closes);
+  if (!closing.hasIncrease || !closing.increaseDate) {
+    return { avg: base.avg, sum: base.sum, tradingDays: base.tradingDays }; // C-1
+  }
+
+  const event = closing.increaseDate;
+  // §52의2②2호 (forward 윈도우): 상장일 ~ 발생일 전일. date < event 인 거래일만.
+  // YYYY-MM-DD 고정 포맷 → 문자열 사전식 비교 = 날짜순(Date 객체·timezone 함정 회피).
+  const keptDates: string[] = [];
+  const keptCloses: number[] = [];
+  let excluded = 0;
+  for (let i = 0; i < closing.dates.length; i++) {
+    const d = closing.dates[i];
+    const c = closing.closes[i];
+    if (!d || typeof c !== "number" || c <= 0) continue; // 빈 셀(주말·휴일)
+    if (d < event) {
+      keptDates.push(d);
+      keptCloses.push(c);
+    } else {
+      excluded += 1; // 발생일 당일·이후
+    }
+  }
+
+  // C-3: 발생일이 윈도우 밖(이후 종가 없음 = 제외 0) → 절단 무효, 전체 평균 + warning
+  if (excluded === 0) {
+    return {
+      avg: base.avg,
+      sum: base.sum,
+      tradingDays: base.tradingDays,
+      warning:
+        "증자·합병 발생일이 종가 윈도우(상장일 이후 1개월) 밖이거나 이후 종가가 없어 기간 조정이 적용되지 않았습니다.",
+    };
+  }
+
+  const trunc = calcMonthlyClosingAverage(keptDates, keptCloses);
+  // C-5: 절단 후 거래일 0(모든 종가가 발생일 당일·이후) → 전체 평균 + warning
+  if (trunc.tradingDays <= 0) {
+    return {
+      avg: base.avg,
+      sum: base.sum,
+      tradingDays: base.tradingDays,
+      warning: "증자·합병 발생일 이전 종가가 없어 기간 조정이 적용되지 않았습니다.",
+    };
+  }
+
+  return {
+    avg: trunc.avg,
+    sum: trunc.sum,
+    tradingDays: trunc.tradingDays,
+    truncation: { eventDate: event, includedDays: trunc.tradingDays, excludedDays: excluded }, // C-2
+  };
+}
+
+/**
  * H-02 — 1주당 순손익가치 (상증령 §54 동치)
  * netIncomeAmount = sum(addA) − sum(subB)
  * perShareIncome = floor(netIncomeAmount / shareCount)
@@ -199,10 +276,18 @@ export function calcPostListingConversion(input: StockTransferInput): PostListin
 
   // Round 4 H-04 — full/listing_only 모드: nested PostListingDetailInput에서 산출된 중간값 echo
   let detailExtended = detailBase as NonNullable<PostListingValuationResult["detail"]>;
+  // [B-5] 증자·합병 기간 절단 echo (상증령 §52의2②2호) — 발동 시만 채움
+  let capitalEventTruncation: PostListingValuationResult["capitalEventTruncation"];
   if (postListingDetail && postListingDetail.unlistedDetailMode !== "simple") {
-    const closing = postListingDetail.closing
-      ? calcMonthlyClosingAverage(postListingDetail.closing.dates, postListingDetail.closing.closes)
+    // [B-5] calcClosingAvgWithEvent — 절단 평균 + truncation/warning 동시 산출
+    const closingResult = postListingDetail.closing
+      ? calcClosingAvgWithEvent(postListingDetail.closing)
       : undefined;
+    const closing = closingResult
+      ? { tradingDays: closingResult.tradingDays, sum: closingResult.sum, avg: closingResult.avg }
+      : undefined;
+    if (closingResult?.truncation) capitalEventTruncation = closingResult.truncation;
+    if (closingResult?.warning) warnings.push(closingResult.warning);
     const niListing = postListingDetail.netIncome?.listing
       ? calcNetIncomePerShare(postListingDetail.netIncome.listing)
       : undefined;
@@ -254,6 +339,7 @@ export function calcPostListingConversion(input: StockTransferInput): PostListin
       monthlyAccrualApplied: false,
       appliedRules,
       warnings,
+      capitalEventTruncation,
       detail: detailExtended,
     };
   }
@@ -319,6 +405,7 @@ export function calcPostListingConversion(input: StockTransferInput): PostListin
         monthlyAccrualApplied: false,
         appliedRules,
         warnings,
+        capitalEventTruncation,
         detail: detailExtended,
       };
     }
@@ -354,6 +441,7 @@ export function calcPostListingConversion(input: StockTransferInput): PostListin
     totalAcquisitionPrice,
     monthlyAccrualApplied,
     monthlyAccrualDetail,
+    capitalEventTruncation,
     appliedRules,
     warnings,
     detail: detailExtended,
