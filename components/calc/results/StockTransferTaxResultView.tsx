@@ -281,7 +281,7 @@ export function StockTransferTaxResultView({
           </div>
           <div className="divide-y divide-emerald-100">
             <ResultRow label="양도가액" value={result.transferPrice} />
-            <ResultRow label="취득가액" value={result.acquisitionPrice} />
+            <ResultRow label={result.swapApplied ? "취득가액 (환산 — 차감 제외)" : "취득가액"} value={result.acquisitionPrice} />
             <ResultRow label="필요경비" value={result.expenses} />
             <ResultRow label="양도소득금액" value={result.transferIncome} highlight />
             <ResultRow label="기본공제" value={result.basicDeduction} />
@@ -383,7 +383,7 @@ export function StockTransferTaxResultView({
         <div className="bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-600">계산 결과</div>
         <div className="divide-y divide-slate-100">
           <ResultRow label="양도가액" value={result.transferPrice} />
-          <ResultRow label="취득가액" value={result.acquisitionPrice} />
+          <ResultRow label={result.swapApplied ? "취득가액 (환산 — 차감 제외)" : "취득가액"} value={result.acquisitionPrice} />
           <ResultRow label="필요경비" value={result.expenses} />
           <ResultRow label="양도소득금액" value={result.transferIncome} highlight />
           <ResultRow label="기본공제" value={result.basicDeduction} />

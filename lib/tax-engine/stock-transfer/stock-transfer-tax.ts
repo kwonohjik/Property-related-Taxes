@@ -444,19 +444,36 @@ export function calculateStockTransferTaxInternal(input: StockTransferInput): St
 
   // ──────────────────────────────────────────────────────────
   // STEP 4: 필요경비
-  //   ★ Bug-B 정정: 환산취득가 모드는 시행령 §163⑥4에 따라 개산공제(취득기준시가×1%) 강제
-  //   사용자가 expenseMode="actual"로 두어도 환산 모드에서는 무시되고 개산공제만 적용.
-  //   (§97② 단서 swap은 KoreanLaw 검증 후 후속 PR 검토 — 본 PR에서는 미적용)
+  //   환산취득가 모드 본문: 시행령 §163⑥4 개산공제(취득기준시가×1%) (§97②2호 본문)
+  //   [B-2] 단서: (환산취득가+개산공제) < (자본적지출+양도비) → 후자를 필요경비 전체로 대체 (§97②2호 단서)
+  //     소령 §163⑫ → §176의2②1호(주식 환산 명시) → §97①1나목 "환산취득가액으로 하는 경우" 해당.
+  //     sale_case는 usedEstimatedAcquisition 미설정이라 본 게이트 미진입 (구조적 배제).
   // ──────────────────────────────────────────────────────────
   let expenses = 0;
+  let swapApplied = false;
+  let swapComparison: StockTransferResult["swapComparison"];
   const { expenseMode } = input;
 
   if (usedEstimatedAcquisition && estimatedDeduction !== undefined && estimatedDeduction > 0) {
-    expenses = estimatedDeduction;
-    if (expenseMode === "actual" && (input.actualExpenses ?? 0) > 0) {
+    const directSide = input.actualExpenses ?? 0; // 자본적지출 + 양도비 합계 (expenseMode 무관)
+    const estimatedSide = acquisitionPrice + estimatedDeduction; // 가목 = 환산취득가 + 개산공제
+    if (directSide > estimatedSide) {
+      // 단서 발동 — "적은 경우" 문리상 동률(==)은 본문
+      swapApplied = true;
+      expenses = directSide;
+      swapComparison = { estimatedSide, directSide, chosen: "direct" };
+      appliedRules.push("§97②단서swap");
       warnings.push(
-        "환산취득가 모드에서는 §163⑥4 개산공제(취득기준시가×1%)가 자동 적용됩니다 — 실비 입력값은 무시됩니다."
+        "§97②2호 단서 적용 — (환산취득가+개산공제)보다 실제 필요경비(자본적지출+양도비)가 커 후자를 필요경비로 합니다. 양도차익 계산에서 환산취득가는 차감되지 않습니다."
       );
+    } else {
+      expenses = estimatedDeduction;
+      if (directSide > 0) {
+        swapComparison = { estimatedSide, directSide, chosen: "estimated" };
+        warnings.push(
+          "환산취득가 모드 — §97②2호 단서 비교 결과 (환산취득가+개산공제)가 입력 실비 이상이므로 본문(개산공제)을 적용합니다."
+        );
+      }
     }
   } else if (expenseMode === "actual") {
     expenses = input.actualExpenses ?? 0;
@@ -466,8 +483,11 @@ export function calculateStockTransferTaxInternal(input: StockTransferInput): St
 
   // ──────────────────────────────────────────────────────────
   // STEP 5: 양도소득금액
+  //   [B-2] swap 시 가목(환산취득가+개산공제) 전체가 나목으로 대체 → 취득가액 차감 제외
   // ──────────────────────────────────────────────────────────
-  const transferIncome = transferPrice - acquisitionPrice - expenses;
+  const transferIncome = swapApplied
+    ? transferPrice - expenses
+    : transferPrice - acquisitionPrice - expenses;
 
   // ──────────────────────────────────────────────────────────
   // STEP 6: 기본공제 §103②
@@ -578,6 +598,8 @@ export function calculateStockTransferTaxInternal(input: StockTransferInput): St
     usedEstimatedAcquisition,
     estimatedBase,
     estimatedDeduction,
+    swapApplied,
+    swapComparison,
 
     valuationDetail,
     marketSampleDetail,
