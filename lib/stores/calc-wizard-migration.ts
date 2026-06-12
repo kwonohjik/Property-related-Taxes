@@ -10,7 +10,7 @@ import {
   makeDefaultAsset,
   migrateAsset,
 } from "./calc-wizard-store";
-import { derivePenaltyFields } from "@/lib/calc/filing-deadline";
+import { derivePenaltyFields, isAllBurdenedGift } from "@/lib/calc/filing-deadline";
 
 /** ParcelListInput 마이그레이션 — store에서 분리된 헬퍼 */
 function migrateParcel(p: unknown): ParcelFormItem {
@@ -288,10 +288,12 @@ export function migrateLegacyForm(
   };
   // 로드 시점 가산세 cross-field 보정 (effect→store 미러링 제거 후 마이그레이션에서 1회 파생).
   // 레거시 데이터가 양도일·신고일은 있으나 가산세 필드가 기본값일 때 신고기한 초과분 자동 반영.
+  // 부담부증여 양도는 §105①3호 3개월 기한 적용.
   const penaltyPatch = derivePenaltyFields(
     merged.transferDate,
     merged.filingDate,
     merged,
+    isAllBurdenedGift(merged.assets),
   );
   return { ...merged, ...penaltyPatch };
 }

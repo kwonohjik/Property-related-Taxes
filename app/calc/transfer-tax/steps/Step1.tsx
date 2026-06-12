@@ -11,7 +11,7 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
 import { CompanionAssetsSection } from "@/components/calc/transfer/CompanionAssetsSection";
 import { BundledSaleModeToggle } from "@/components/calc/transfer/CompanionSaleModeBlock";
-import { getFilingDeadline, isFilingOverdue } from "@/lib/calc/filing-deadline";
+import { getFilingDeadline, isFilingOverdue, isAllBurdenedGift } from "@/lib/calc/filing-deadline";
 
 // ============================================================
 // Step 1: 자산 목록
@@ -57,7 +57,9 @@ export function Step1({
     }
   }
 
-  const filingOverdue = isFilingOverdue(form.transferDate, form.filingDate);
+  // §105①3호 — 전 자산 부담부증여 양도는 예정신고 기한 3개월 (일반·혼합은 2개월)
+  const burdenedGiftDeadline = isAllBurdenedGift(form.assets);
+  const filingOverdue = isFilingOverdue(form.transferDate, form.filingDate, burdenedGiftDeadline);
 
   return (
     <div className="space-y-6">
@@ -74,7 +76,7 @@ export function Step1({
             hint="잔금 청산일 또는 등기 접수일 중 빠른 날"
             warning={
               filingOverdue
-                ? `⚠ 신고기한(${getFilingDeadline(form.transferDate)})을 지났습니다 — 가산세 자동 적용`
+                ? `⚠ 신고기한(${getFilingDeadline(form.transferDate, burdenedGiftDeadline)})을 지났습니다 — 가산세 자동 적용`
                 : undefined
             }
           >
@@ -87,7 +89,9 @@ export function Step1({
             label="신고일"
             hint={
               form.transferDate
-                ? `신고기한: ${getFilingDeadline(form.transferDate)} (양도월 말일 + 2개월)`
+                ? burdenedGiftDeadline
+                  ? `신고기한: ${getFilingDeadline(form.transferDate, true)} (양도월 말일 + 3개월 — 부담부증여 §105①3호)`
+                  : `신고기한: ${getFilingDeadline(form.transferDate)} (양도월 말일 + 2개월)`
                 : "양도일 입력 시 신고기한이 표시됩니다"
             }
           >
