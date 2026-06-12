@@ -71,13 +71,16 @@ export interface LawArticle {
 
 interface HoItem {
   호번호: string;
-  호내용: string;
+  /** 문자열·배열·중첩배열 가변 (표가 포함된 호는 중첩배열로 옴) */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  호내용: any;
   목?: MokItem | MokItem[];
 }
 
 interface MokItem {
   목번호: string;
-  목내용: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  목내용: any;
 }
 
 interface HangItem {
@@ -94,6 +97,8 @@ interface LawServiceUnit {
   /** 문자열 또는 배열 또는 중첩배열 (XML→JSON 변환에 따라 구조 가변) */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   조문내용?: any;
+  /** 괄호 안 제목만 (예: "세율"). 헤더 "제N조(세율)" 와 별개로 API가 제공. */
+  조문제목?: string;
   조문여부?: string;
   조문참고자료?: string;
   /** XML→JSON 변환 시 단일=객체, 복수=배열로 올 수 있음 */
@@ -106,9 +111,9 @@ interface LawServiceUnit {
  * - (string|string[])[] → 재귀적으로 평탄화
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function normalizeContent(raw: any): string {
+export function normalizeContent(raw: any): string {
   if (!raw) return "";
-  if (typeof raw === "string") return raw.trim();
+  if (typeof raw === "string") return stripImgTags(raw).trim();
   if (Array.isArray(raw)) {
     return raw
       .map((item) => normalizeContent(item))
@@ -117,6 +122,15 @@ function normalizeContent(raw: any): string {
       .trim();
   }
   return String(raw).trim();
+}
+
+/**
+ * 조문 본문에 인라인으로 섞인 `<img ...>` / `</img>` 태그 제거.
+ * 법제처는 세율표 등 표를 이미지(flDownload)로 내려주는데, 다운로드 불가 링크라
+ * 화면에 raw 태그가 노출된다. 표의 텍스트 표현(박스 문자)은 보존한다.
+ */
+export function stripImgTags(s: string): string {
+  return s.replace(/<\/?img[^>]*>/gi, "");
 }
 
 /**
@@ -197,14 +211,26 @@ function extractUnitText(unit: LawServiceUnit): string {
     const hangText = normalizeContent(hang.항내용);
     if (hangText) parts.push(hangText);
     for (const ho of normalizeArray(hang.호)) {
-      if (ho.호내용) parts.push(ho.호내용);
+      // 호내용은 표 포함 시 중첩배열 → normalizeContent로 평탄화(콤마 뭉갬·img 방지).
+      const hoText = normalizeContent(ho.호내용);
+      if (hoText) parts.push(hoText);
       for (const mok of normalizeArray(ho.목)) {
-        if (mok.목내용) parts.push(mok.목내용);
+        const mokText = normalizeContent(mok.목내용);
+        if (mokText) parts.push(mokText);
       }
     }
   }
 
   return parts.join("\n");
+}
+
+/**
+ * "제55조(세율) ..." → "세율". 헤더 괄호 안 제목만 추출.
+ * 매칭 실패(괄호 없는 조문 등) 시 빈 문자열.
+ */
+export function parseTitleFromHeader(headerLine: string): string {
+  const m = headerLine.match(/^제\d+조(?:의\d+)?\s*\(([^)]+)\)/);
+  return m ? m[1].trim() : "";
 }
 
 /**
@@ -322,9 +348,11 @@ export async function fetchArticle(
   const fullText = extractUnitText(unit);
   if (!fullText) return null;
 
-  // 제목 추출: 조문내용에서 첫 번째 줄 (normalizeContent로 처리)
+  // 제목: API의 조문제목(괄호 안 "세율"만) 우선. 없으면 헤더 "제N조(제목)"에서 괄호 추출,
+  // 그것도 없으면 첫 줄 → articleNo. (헤더 전체를 title로 쓰면 본문 첫 줄과 중복 표시됨)
+  const cleanTitle = typeof unit.조문제목 === "string" ? unit.조문제목.trim() : "";
   const titleLine = normalizeContent(unit.조문내용).split("\n")[0] ?? "";
-  const title = titleLine || articleNo;
+  const title = cleanTitle || parseTitleFromHeader(titleLine) || titleLine || articleNo;
 
   const result: LawArticle = {
     title,
