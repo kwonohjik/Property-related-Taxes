@@ -46,6 +46,33 @@ function buildDateStr(year: string, month: string, day: string): string {
   return "";
 }
 
+/**
+ * 해당 연·월의 실제 말일. 연도 미완성(4자리 미만) 시에는 윤년 가능성을
+ * 허용해 2월=29, 그 외는 달력 고정값 — 연도 완성 시점에 재클램핑된다.
+ */
+function maxDayFor(year: string, month: string): number {
+  const m = parseInt(month, 10);
+  if (!Number.isFinite(m) || m < 1) return 31;
+  if (year.length === 4) {
+    return new Date(parseInt(year, 10), m, 0).getDate();
+  }
+  if (m === 2) return 29;
+  return [4, 6, 9, 11].includes(m) ? 30 : 31;
+}
+
+/**
+ * 일(day) 입력값을 1 ~ 해당 월 말일 범위로 클램핑.
+ * 2자리 완성 입력만 보정 — 1자리는 입력 진행 중("3" → "30")이므로 보류.
+ * "00" 같은 0 이하 완성 입력은 "01"로 보정 (Invalid Date 차단).
+ */
+function clampDay(day: string, year: string, month: string): string {
+  if (day.length !== 2) return day;
+  const n = parseInt(day, 10);
+  if (n < 1) return "01";
+  const max = maxDayFor(year, month);
+  return n > max ? String(max).padStart(2, "0") : day;
+}
+
 export function DateInput({ value, onChange, onBlur, className, disabled }: DateInputProps) {
   const parsed = parseDateStr(value);
   const [year, setYear] = useState(parsed.year);
@@ -86,24 +113,35 @@ export function DateInput({ value, onChange, onBlur, className, disabled }: Date
 
   function handleYearChange(e: React.ChangeEvent<HTMLInputElement>) {
     const v = e.target.value.replace(/\D/g, "").slice(0, 4);
+    // 연도 완성 시 기존 일(day) 재클램핑 — 예: 2월 29 입력 후 평년으로 연도 변경.
+    // 1자리 day는 입력 진행 중이므로 보존 (parseDateStr 선행 0 제거 정책과 일관).
+    const newDay = v.length === 4 && day.length === 2 ? clampDay(day, v, month) : day;
     setYear(v);
-    emitChange(buildDateStr(v, month, day));
+    if (newDay !== day) setDay(newDay);
+    emitChange(buildDateStr(v, month, newDay));
     if (v.length === 4) monthRef.current?.focus();
   }
 
   function handleMonthChange(e: React.ChangeEvent<HTMLInputElement>) {
     const v = e.target.value.replace(/\D/g, "").slice(0, 2);
     const num = parseInt(v, 10);
-    const corrected = v.length === 2 && num > 12 ? "12" : v;
+    const corrected =
+      v.length === 2 ? (num > 12 ? "12" : num < 1 ? "01" : v) : v;
+    // 월 변경 시 기존 일(day) 재클램핑 — 예: 1월 31 입력 후 월을 2로 변경.
+    // 1자리 day는 입력 진행 중이므로 보존.
+    const newDay =
+      corrected.length === 2 && day.length === 2
+        ? clampDay(day, year, corrected)
+        : day;
     setMonth(corrected);
-    emitChange(buildDateStr(year, corrected, day));
+    if (newDay !== day) setDay(newDay);
+    emitChange(buildDateStr(year, corrected, newDay));
     if (corrected.length === 2) dayRef.current?.focus();
   }
 
   function handleDayChange(e: React.ChangeEvent<HTMLInputElement>) {
     const v = e.target.value.replace(/\D/g, "").slice(0, 2);
-    const num = parseInt(v, 10);
-    const corrected = v.length === 2 && num > 31 ? "31" : v;
+    const corrected = clampDay(v, year, month);
     setDay(corrected);
     emitChange(buildDateStr(year, month, corrected));
   }

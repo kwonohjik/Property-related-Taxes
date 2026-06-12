@@ -22,6 +22,7 @@ import {
 } from "./CompanionAssetCardNewConstruction";
 import { CompanionLandNatureBlock } from "./CompanionLandNatureBlock";
 import { CompanionAcquisitionCauseSection } from "./CompanionAcquisitionCauseSection";
+import { getAssetDateOrderError } from "@/lib/calc/transfer-tax-validate-asset";
 import { TransferModeBlock } from "./TransferModeBlock";
 import { CommercialBuildingBlock } from "./CommercialBuildingBlock";
 import { GeneralBuildingBlock } from "./GeneralBuildingBlock";
@@ -106,6 +107,10 @@ export function CompanionAssetCard({
   // ── 부수토지 일체과세 자동 분기 배지 판정 (별도 훅 — useEffect 금지) ──
   const showUnifiedBadge = useUnifiedRateBadge(asset, primaryAsset, transferDate);
 
+  // ── 날짜 순서 실시간 경고 — 입력 직후 즉시 표시 (차단은 "다음" 시점 동일 규칙) ──
+  // validateAssetEntry와 단일 진실 공유 (getAssetDateOrderError) — 규칙 복제 금지
+  const dateOrderWarning = getAssetDateOrderError(asset, transferDate);
+
   return (
     <div
       data-asset-card-index={index}
@@ -119,6 +124,12 @@ export function CompanionAssetCard({
       {errorMessage && (
         <p className="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-xs font-medium text-destructive">
           {errorMessage}
+        </p>
+      )}
+      {/* 실시간 날짜 순서 경고 — 차단 배너(errorMessage)와 중복 시 차단 배너 우선 */}
+      {dateOrderWarning && !errorMessage && (
+        <p className="rounded-md border border-amber-300 bg-amber-50/80 px-3 py-2 text-xs font-medium text-amber-800 dark:border-amber-600 dark:bg-amber-950/40 dark:text-amber-300">
+          {dateOrderWarning} 날짜를 확인해 주세요.
         </p>
       )}
       <div className="flex items-center justify-between">

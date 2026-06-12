@@ -6,7 +6,8 @@ import type { ReactNode } from "react";
 export interface WizardSidebarStep {
   label: string;
   description?: string;
-  status: "done" | "active" | "todo";
+  /** "attention": 지나친 단계에 필수 입력 누락 — amber ! 표시 (오류 일괄 검증 연동) */
+  status: "done" | "active" | "todo" | "attention";
   onClick?: () => void;
 }
 
@@ -37,6 +38,14 @@ function StepRow({ step }: { step: WizardSidebarStep }) {
     <span className="flex items-center gap-2">
       {step.status === "done" && (
         <span className="text-primary font-medium">✓</span>
+      )}
+      {step.status === "attention" && (
+        <span
+          className="text-amber-500 font-bold dark:text-amber-400"
+          aria-label="입력 필요"
+        >
+          !
+        </span>
       )}
       <span className={step.status === "todo" ? "text-muted-foreground" : undefined}>
         {step.label}
