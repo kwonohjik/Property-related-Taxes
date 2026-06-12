@@ -318,6 +318,14 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
             }
           }
         }
+
+        // [B-5] 증자·합병 기간 조정 (상증령 §52의2②) — hasIncrease ON 시 발생일 필수 (full/listing_only)
+        // simple 모드는 closing 테이블 부재 → 게이트. 자동 fallback 금지(미입력 차단).
+        if (form.listingPriceHasIncrease && detailMode !== "simple") {
+          if (isEmpty(form.listingPriceIncreaseDate)) {
+            errors.push({ field: "listingPriceIncreaseDate", message: "증자·합병 발생일을 입력하세요 (상증령 §52의2② 기간 조정)", severity: "error" });
+          }
+        }
       }
     } else {
       // 비상장 보충적 평가

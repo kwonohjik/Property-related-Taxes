@@ -35,6 +35,16 @@ export type PostListingValuationResult = {
   appliedRules: string[];
   warnings: string[];
 
+  /**
+   * [B-5] 증자·합병 기간 절단 발동 echo (상증령 §52의2②2호 — 결과 카드 표시).
+   * 미발동(hasIncrease 무·윈도우 밖·절단 후 0건) 시 undefined. C-3·C-5 안내는 warnings[].
+   */
+  capitalEventTruncation?: {
+    eventDate: string;
+    includedDays: number;
+    excludedDays: number;
+  };
+
   /** Round 4 H-04 — full/listing_only 모드의 상세 산출 echo */
   detail?: {
     /** 종가 1개월 평균 계산 결과 (full 모드 또는 listing_only 모드) */

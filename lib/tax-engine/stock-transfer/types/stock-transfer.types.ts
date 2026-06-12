@@ -309,8 +309,10 @@ export type PostListingDetailInput = {
     closes: number[];
     /** 평가기준일 YYYY-MM-DD (자동 = 상장일 또는 상장일 + 1일) */
     basisDate: string;
-    /** 증자·합병 여부 (default false, 환산주식수 후속 PR 신호) */
+    /** [B-5] 평가기간 중 증자·합병 발생 여부 (상증령 §52의2②2호 기간 절단 — 환산주식수 아님) */
     hasIncrease: boolean;
+    /** [B-5] 증자·합병 발생일 YYYY-MM-DD — hasIncrease=true 시 필수. 이 날짜 이전 종가만 평균(발생일·이후 제외) */
+    increaseDate?: string;
   };
 
   /** 순손익 계산서 — PDF 24행 (16 데이터행 × 2열 + 보조 4) */

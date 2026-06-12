@@ -33,7 +33,7 @@
 | B-2 | **§97② 단서 swap (주식)** ✅**완료(PR-ε)** | **판정: 적용**(소령 §163⑫→§176의2②1호 주식 환산 명시 축자). STEP 4 swap 비교(가목 환산+개산 vs 나목 자본지출+양도비)·STEP 5 차익 분기·api ④ silent strip 해제·결과 카드. anchor 8+E2E 1. 부수: B-1③ 주석·types 800분리 | 완료 |
 | B-3 | **진정 이동평균법** ✅**완료(PR-ζ)** | `matchMovingAvg` 신규 — 단가는 매도 시점별 이동평균(잔고 가중평균)·보유기간(§104②)은 FIFO lot startDate 하이브리드. echo=마지막 매도 적용 단가(단일 매도=총평균, LO-2 불변). 법인세령 §74①1마 표준 참조. 라벨 3곳·"원"·미리보기 dual-truth 정정. anchor 6+E2E 1 | 완료 |
 | B-4 | **§165⑨ 본체** ✅**완료(PR-η)** | 비상장 환산 양도·취득 기준시가 동일(동일 사업연도) → §81④ 1호 월할로 양도기준시가 상향(취득→양도 보유월수). 신규 top-level `unlistedSameBizYearToggle`(monthlyAccrualToggle는 PostListingDetailInput 중첩이라 별개)·공유 헬퍼 `apply-81-4-accrual.ts` 추출(post-listing 사례48 회귀 0)·실효 범위 비상장만(§81④ 1호 사업연도 모수, 상장은 2호 warning). anchor 10+E2E 1 | 완료 |
-| B-5 | **§165⑤ 종가평균 증자·합병 환산 보정** | `types/stock-transfer.types.ts:293` `closing.hasIncrease` — "default false, 환산주식수 후속 PR 신호". 신호 필드만 존재, 보정 산식 미구현 | 상장일 이후 1개월 종가평균 산정 시 증자·합병 발생 분 환산주식수 보정 — 준용 산식 KoreanLaw 선판정 필수 | 중 |
+| B-5 | **§165⑤ 종가평균 증자·합병 기간 조정** ✅**완료(PR-θ)** | **메커니즘 정정: 환산주식수 아닌 기간 절단**(상증령 §52의2②2호 — §99①3→§63①1가목 준용). 상장일 이후 1개월 종가평균 중 증자·합병 발생 시 발생일 이전 종가만 평균(forward 윈도우=2호). `calcClosingAvgWithEvent` 래퍼(3 호출부+비과세 자동 커버)·신규 발생일 입력 1·`hasIncrease` dead→활성. **★§165⑤ proxy 적용은 해석(명문·예규 미확인 — 사용자 결정)·결과 카드 disclosure**. anchor 7+E2E 1 | 완료 |
 
 ### Track C — 거래정지 §165③ 파생 (PR #150 memory 기록분)
 
@@ -58,7 +58,7 @@ PR-β  A-1 단건 개별법 (엔진 0줄)    │ ✅완료(본 시리즈) — UI
 PR-γ  A-2 분할+자본조정 ←──────────┘ ✅완료(본 시리즈) — applyCapitalAdjustmentsToLots
 PR-δ  C-1 취득일 거래정지           ✅완료 — 혼합 환산 + acquisitionSideOnly UI
 PR-ε  B-2 §97② swap 판정      ✅완료 — 적용 판정·STEP4 swap 비교·api strip 해제
-이후  B-3 ✅완료 → B-4 ✅완료(PR-η) → C-2 → B-5 → C-3 → B-1①② → D-2 (수요·빈도 낮은 순)
+이후  B-3 ✅완료 → B-4 ✅완료(PR-η) → B-5 ✅완료(PR-θ) → C-2 → C-3 → B-1①② → D-2 (수요·빈도 낮은 순)
 ```
 
 - **A-1을 최우선 기능 PR로 권고**: 사용자에게 disabled 라디오로 상시 노출 중 + 엔진 기지원이라 UI·배선만으로 완결(저위험).

@@ -225,7 +225,8 @@ export interface StockTransferFormData {
   listingPriceDates: string[];                            // YYYY-MM-DD × 32
   listingPriceClosing: string[];                          // 원 (CurrencyInput parse 값 string) × 32
   listingPriceBasisDate: string;                          // 평가기준일 (자동 = 상장일)
-  listingPriceHasIncrease: boolean;                       // 증자·합병 (default false)
+  listingPriceHasIncrease: boolean;                       // [B-5] 증자·합병 발생 (default false)
+  listingPriceIncreaseDate: string;                       // [B-5] 증자·합병 발생일 (§52의2②2호 절단)
 
   // 순손익 — 상장연도 (18 필드, PDF 행 1~16 + 보조 2)
   niAddRow1Listing: string; niAddRow2Listing: string; niAddRow3Listing: string; niAddRow4Listing: string;
@@ -546,6 +547,7 @@ export function createInitialStockFormData(): StockTransferFormData {
     listingPriceClosing: [],
     listingPriceBasisDate: "",
     listingPriceHasIncrease: false,
+    listingPriceIncreaseDate: "",
     niAddRow1Listing: "", niAddRow2Listing: "", niAddRow3Listing: "", niAddRow4Listing: "",
     niSubRow5Listing: "", niSubRow6Listing: "", niSubRow7Listing: "", niSubRow8Listing: "",
     niSubRow9Listing: "", niSubRow10Listing: "", niSubRow11Listing: "", niSubRow12Listing: "",
