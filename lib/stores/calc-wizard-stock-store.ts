@@ -306,6 +306,10 @@ export interface StockTransferFormData {
   etTotalFaceValue: string;
   /** [B-1②b] 5년 이내 미양도 재입국 거주자 §118의17①1호 (환급/취소 정보성) */
   etReenteredWithin5Years: boolean;
+  /** [B-1②a] 납부유예 이자상당액 — 유예 일수 (§178의12③) */
+  etDeferralInterestDays: string;
+  /** [B-1②a] 1일당 이자율 (소수, 국기령 §43의3② 연도별 변동 — 사용자 입력) */
+  etDeferralInterestDailyRate: string;
 
   // ── PR-4A 해외주식 전용 필드 (§94①3 다목 + §118의2~§118의8) ──
   // 활성 조건: marketType === "foreign_stock"
@@ -596,6 +600,8 @@ export function createInitialStockFormData(): StockTransferFormData {
     etHasFiledHoldingsReport: false,
     etTotalFaceValue: "",
     etReenteredWithin5Years: false,
+    etDeferralInterestDays: "",
+    etDeferralInterestDailyRate: "",
 
     // ── PR-4A 해외주식 전용 초기값 (② 동기화 지점) ──
     yearsResidentInKorea: "",

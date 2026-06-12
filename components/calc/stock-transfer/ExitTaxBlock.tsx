@@ -265,9 +265,22 @@ export function ExitTaxBlock({ form, onChange }: ExitTaxBlockProps) {
             />
           </FieldCard>
           <div className="rounded-lg border border-sky-200 bg-sky-50/60 px-3 py-2 text-xs text-sky-700 leading-relaxed">
-            이자상당액 = 유예 세액 × 유예 일수 × 일정 이율 (§178의10 참조).
-            실제 이자는 결과 화면에서 안내됩니다.
+            이자상당액 = 유예 세액 × 유예 일수 × 1일당 이자율 (§118의16④·시행령 §178의12③).
+            아래 일수·이자율 입력 시 산출되며, 미입력 시 결과 화면에 안내만 표시됩니다.
           </div>
+          <FieldCard label="납부유예 일수" hint="유예 시작 ~ 실제 납부일 일수 (정보성 산출용)">
+            <DecimalInput
+              value={form.etDeferralInterestDays}
+              onChange={(v) => onChange({ etDeferralInterestDays: v })}
+              unit="일"
+            />
+          </FieldCard>
+          <FieldCard label="1일당 이자율" hint="국세기본법 시행령 §43의3②(연도별 변동) — 소수 입력 (예: 0.000022 = 1일 10만분의 22)">
+            <DecimalInput
+              value={form.etDeferralInterestDailyRate}
+              onChange={(v) => onChange({ etDeferralInterestDailyRate: v })}
+            />
+          </FieldCard>
         </div>
       </ToggleCard>
 

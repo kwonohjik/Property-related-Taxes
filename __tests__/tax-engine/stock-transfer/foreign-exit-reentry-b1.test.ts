@@ -61,3 +61,32 @@ describe("B-1②b 재전입 환급 §118의17①1호", () => {
     expect(r.reentryRefund!.amount).toBe(r.incomeTax);
   });
 });
+
+describe("B-1②a 납부유예 이자상당액 §118의16④·§178의12③", () => {
+  it("B1-INTEREST-0 (baseline): 일수·이자율 미입력 → deferralInterest 미산출(안내만)", () => {
+    const r = calculateExitTax(base({ deferralRequested: true, deferralReason: "none" }));
+    expect(r.deferralInterest).toBeUndefined();
+    expect(r.deferralInterestNote).toContain("§178의12③");
+  });
+
+  it("B1-INTEREST-1: 유예세액 × 일수 × 1일당 이자율 = floor 산출", () => {
+    const r = calculateExitTax(
+      base({
+        deferralRequested: true,
+        deferralReason: "none",
+        deferralInterestDays: 365,
+        deferralInterestDailyRate: 0.000022,
+      }),
+    );
+    // deferredTaxAmount = incomeTax. 이자상당액 = floor(유예세액 × 365 × 0.000022)
+    expect(r.deferralInterest).toBe(Math.floor(r.deferredTaxAmount * 365 * 0.000022));
+    expect(r.deferralInterest).toBeGreaterThan(0);
+  });
+
+  it("B1-INTEREST-2: 납부유예 미신청 시 일수·이자율 입력해도 미산출", () => {
+    const r = calculateExitTax(
+      base({ deferralRequested: false, deferralInterestDays: 365, deferralInterestDailyRate: 0.000022 }),
+    );
+    expect(r.deferralInterest).toBeUndefined();
+  });
+});
