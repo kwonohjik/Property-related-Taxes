@@ -32,6 +32,13 @@ interface EstimatedUnlistedBlockProps {
    * 상장+거래정지 조합에서 선택 시 silent 미반영 방지.
    */
   simpleOnly?: boolean;
+  /**
+   * [C-1] 취득일 거래정지 — 취득측 입력 전용 모드 (simpleOnly보다 좁음).
+   * 렌더: 순자산 단독 사유 라디오 + 취득연도 NI/NA + 취득기준시가 미리보기만.
+   * 양도연도 섹션·양도 미리보기·full(V2)·사례 49 전부 숨김 (양도측은 1개월 종가평균 유지).
+   * acqFaceValueOnly 잔존값 무시·무조건 렌더 (validate 필수와 모순 차단 — 3중 정합).
+   */
+  acquisitionSideOnly?: boolean;
 }
 
 const NET_ASSET_ONLY_REASON_OPTIONS = [
@@ -58,12 +65,12 @@ const NET_ASSET_ONLY_REASON_OPTIONS = [
   },
 ];
 
-export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false }: EstimatedUnlistedBlockProps) {
+export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acquisitionSideOnly = false }: EstimatedUnlistedBlockProps) {
   const netAssetOnlyReason = form.netAssetOnlyReason || "";
   const isNetAssetOnly = netAssetOnlyReason !== "";
   const isHeavyRE = form.isHeavyRealEstateForValuation;
-  // 3중 패턴 default — store factory와 일치 (default: "simple"). simpleOnly 시 강제 simple.
-  const mode = simpleOnly ? "simple" : (form.unlistedValuationMode || "simple");
+  // 3중 패턴 default — store factory와 일치 (default: "simple"). simpleOnly·acquisitionSideOnly 시 강제 simple.
+  const mode = simpleOnly || acquisitionSideOnly ? "simple" : (form.unlistedValuationMode || "simple");
 
   // full 모드 — adapter가 계산한 4 값을 미리보기에 주입 (UI·adapter 단일 진실)
   const fullReduced = useMemo(() => {
@@ -115,8 +122,9 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false }: E
   const shareCountNum = parseInt(form.shareCount || "0", 10);
 
   // 취득기준시가 미리보기 — full 모드에서도 동일 + [M-4] 사례 49 시 액면가 직접 표시
+  // [C-1] acquisitionSideOnly에서는 acqFaceValueOnly 잔존값 무시 (보충평가 산식으로만 표시)
   const acquisitionStdPricePreview = useMemo(() => {
-    if (acqFaceValueOnly && acqFaceValuePerShareNum > 0 && shareCountNum > 0) {
+    if (!acquisitionSideOnly && acqFaceValueOnly && acqFaceValuePerShareNum > 0 && shareCountNum > 0) {
       return acqFaceValuePerShareNum;  // 1주당 액면가 직접 표시
     }
     const ni = mode === "full" && fullReduced
@@ -135,6 +143,7 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false }: E
     const naW = isHeavyRE ? 3 : 2;
     return Math.floor((ni * niW + na * naW) / 5);
   }, [
+    acquisitionSideOnly,
     acqFaceValueOnly,
     acqFaceValuePerShareNum,
     shareCountNum,
@@ -189,7 +198,7 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false }: E
         <p className="text-xs mt-1">
           {isNetAssetOnly
             ? "순자산가치 단독 평가 (§165④3) — 80% 하한 미적용"
-            : `가중평균 = (순손익가치 × ${niWeight} + 순자산가치 × ${naWeight}) ÷ 5 + 80% 하한`}
+            : `가중평균 = (순손익가치 × ${niWeight} + 순자산가치 × ${naWeight}) ÷ 5${acquisitionSideOnly ? "" : " + 80% 하한"}`}
         </p>
         <p className="text-xs text-fuchsia-600 mt-1">
           입력값: 순손익가치 = 1주당 순손익액 ÷ 10% (이미 반영된 값으로 입력)
@@ -197,8 +206,8 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false }: E
       </div>
 
       {/* [unlisted-direct-calc] 모드 토글 — simple(직접 입력) vs full(행-수준 계산) */}
-      {/* simpleOnly(거래정지 우회 등)에서는 full(V2)·사례49 숨김 — api 게이트 unlisted 한정 silent 미반영 방지 */}
-      {!simpleOnly && (
+      {/* simpleOnly(거래정지 우회 등)·acquisitionSideOnly(C-1)에서는 full(V2)·사례49 숨김 — api 게이트 unlisted 한정 silent 미반영 방지 */}
+      {!simpleOnly && !acquisitionSideOnly && (
       <>
       <FieldCard
         label="입력 방식"
@@ -279,8 +288,8 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false }: E
         </div>
       )}
 
-      {/* simple 모드 — 양도일 직전 사업연도 입력 (현행 UI 유지) */}
-      {mode === "simple" && (
+      {/* simple 모드 — 양도일 직전 사업연도 입력 (현행 UI 유지) · [C-1] acquisitionSideOnly 시 양도측 숨김 */}
+      {mode === "simple" && !acquisitionSideOnly && (
       <div>
         <p className="text-sm font-medium text-slate-700 mb-3">
           양도일 직전 사업연도 평가 (양도기준시가 산출용)
@@ -306,7 +315,8 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false }: E
       </div>
       )}
 
-      {/* 양도기준시가 미리보기 — simple·full 양 모드 공통 노출 */}
+      {/* 양도기준시가 미리보기 — simple·full 양 모드 공통 노출 · [C-1] acquisitionSideOnly 시 숨김 */}
+      {!acquisitionSideOnly && (
       <div>
         {/* 양도기준시가 미리보기 */}
         {transferStdPricePreview && (
@@ -329,9 +339,11 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false }: E
           </div>
         )}
       </div>
+      )}
 
-      {/* 취득일 직전 사업연도 입력 — simple 모드 + acqFaceValueOnly 비활성 시만 노출 */}
-      {mode === "simple" && !acqFaceValueOnly && (
+      {/* 취득일 직전 사업연도 입력 — simple 모드 + acqFaceValueOnly 비활성 시만 노출
+          [C-1] acquisitionSideOnly는 acqFaceValueOnly 잔존값 무시·무조건 렌더 (validate 필수와 모순 차단) */}
+      {mode === "simple" && (acquisitionSideOnly || !acqFaceValueOnly) && (
       <div>
         <p className="text-sm font-medium text-slate-700 mb-3">
           취득일 직전 사업연도 평가 (취득기준시가 산출용)
@@ -357,8 +369,8 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false }: E
       </div>
       )}
 
-      {/* [사례 49] simple 모드 + acqFaceValueOnly 활성 시 안내 배너 */}
-      {mode === "simple" && acqFaceValueOnly && (
+      {/* [사례 49] simple 모드 + acqFaceValueOnly 활성 시 안내 배너 — [C-1] acquisitionSideOnly 시 숨김 */}
+      {mode === "simple" && acqFaceValueOnly && !acquisitionSideOnly && (
         <p
           data-testid="eu-simple-acq-hidden-notice"
           className="rounded border border-amber-200 bg-amber-50/70 px-3 py-2 text-xs text-amber-800"
@@ -371,7 +383,7 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false }: E
       {acquisitionStdPricePreview !== null && (
         <div className="mt-2 rounded border border-sky-200 bg-sky-50/60 px-3 py-2 text-sm text-sky-700">
           취득기준시가 (1주당): {acquisitionStdPricePreview.toLocaleString()}원
-          {acqFaceValueOnly && (
+          {acqFaceValueOnly && !acquisitionSideOnly && (
             <span className="ml-2 text-xs text-amber-700">(액면가 — §99①4 후단)</span>
           )}
           <span className="ml-2 text-xs">
@@ -381,8 +393,8 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false }: E
         </div>
       )}
 
-      {/* [M-4 사례 49] 환산취득가 미리보기 카드 — acqFaceValueOnly 활성 시만 */}
-      {acqFaceValueOnly && conversionPreview !== null && transferStdPricePreview && (
+      {/* [M-4 사례 49] 환산취득가 미리보기 카드 — acqFaceValueOnly 활성 시만 ([C-1] acquisitionSideOnly 제외) */}
+      {acqFaceValueOnly && !acquisitionSideOnly && conversionPreview !== null && transferStdPricePreview && (
         <div
           data-testid="eu-conversion-preview"
           className="mt-2 rounded border border-fuchsia-200 bg-fuchsia-50/60 px-3 py-2 text-sm text-fuchsia-800 space-y-1"

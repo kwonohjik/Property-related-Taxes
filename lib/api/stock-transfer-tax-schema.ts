@@ -226,6 +226,8 @@ export const stockTransferInputSchema = z.object({
   // Round 4 — nested PostListingDetailInput (full/listing_only 모드)
   postListingDetail: postListingDetailSchema.optional(),
   tradingHaltAtTransfer: z.boolean(),
+  // [C-1] 취득일 거래정지 (소령 §165③ 후문 — 취득시 기준시가만 §165④ 보충 평가)
+  tradingHaltAtAcquisition: z.boolean().optional(),
 
   // 환산 — 비상장 보충적 평가 (3시점)
   transferYearNetIncomePerShare: z.number().optional(),
@@ -317,6 +319,16 @@ export function addStockRefines(
         code: z.ZodIssueCode.custom,
         path: ["filingViolation"],
         message: "부정행위·국제거래 가산세는 신고 위반(과소신고 또는 무신고)이 전제됩니다. 신고 위반 여부를 선택하세요.",
+      });
+    }
+
+    // [C-1 M-4] 취득일 거래정지 + 취득 후 상장 — 취득 당시 비상장이면 취득일 거래정지 개념 불성립
+    // (validate G-5 패턴과 동일 문구 — 기존 G-5는 validate만 차단·Zod 부재 = 기존 갭, 신규 필드만 완전 방어)
+    if (data.tradingHaltAtAcquisition && data.acquiredBeforeListing) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["tradingHaltAtAcquisition"],
+        message: "취득 당시 비상장 주식은 취득일 거래정지 대상이 아닙니다. 취득일 거래정지 토글 또는 취득 후 상장 토글을 해제하세요.",
       });
     }
 

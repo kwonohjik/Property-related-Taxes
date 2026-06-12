@@ -59,13 +59,22 @@ export function EstimatedValuationBreakdown({
   if (!detail) return null;
 
   const isTradingHaltBypass = result.appliedRules?.includes("거래정지우회");
+  const isHaltAcquisition = detail.method === "halt_acquisition_conversion";
 
   return (
     <div className="rounded-xl border border-amber-200 bg-amber-50/60 px-5 py-4 space-y-2">
-      <p className="font-semibold text-amber-800 text-sm">환산취득가 산식 분해 (소령 §165⑤)</p>
+      <p className="font-semibold text-amber-800 text-sm">
+        {isHaltAcquisition ? "환산취득가 산식 분해 (소령 §165③·§165④)" : "환산취득가 산식 분해 (소령 §165⑤)"}
+      </p>
       {isTradingHaltBypass && (
         <p className="text-xs text-rose-700">
           양도일 거래정지·관리종목 — 소령 §165③에 따라 1개월 종가평균 대신 비상장 보충 평가(§165④)로 환산했습니다.
+        </p>
+      )}
+      {isHaltAcquisition && (
+        <p className="text-xs text-rose-700">
+          취득일 거래정지·관리종목 — 소령 §165③에 따라 취득시 기준시가만 비상장 보충 평가(§165④)로
+          산정했습니다 (양도시 기준시가는 1개월 종가평균 유지).
         </p>
       )}
       <div className="space-y-1 text-xs text-amber-700 font-mono">
@@ -74,6 +83,24 @@ export function EstimatedValuationBreakdown({
             <p>1주당 취득기준시가 = {fmt(detail.finalPerShareValue)}</p>
             <p>
               취득가액 = {fmt(detail.finalPerShareValue)} × {shareCount.toLocaleString()}주 ={" "}
+              <strong>{fmt(result.acquisitionPrice)}</strong>
+            </p>
+          </>
+        )}
+        {isHaltAcquisition && detail.conversionAcqStdPerShare !== undefined && (
+          <>
+            {detail.netAssetOnlyReason ? (
+              <p>취득시 보충평가액 (1주당) = 순자산가치 단독 (§165④3) = {fmt(detail.conversionAcqStdPerShare)}</p>
+            ) : (
+              <p>
+                취득시 보충평가액 (1주당) = (순손익가치 {fmt(detail.niPerShare ?? 0)} × {detail.isHeavyRE ? 2 : 3} +
+                순자산가치 {fmt(detail.naPerShare ?? 0)} × {detail.isHeavyRE ? 3 : 2}) ÷ 5 ={" "}
+                {fmt(detail.conversionAcqStdPerShare)}
+              </p>
+            )}
+            <p>양도시 1개월 종가평균 (1주당) = {fmt(detail.conversionTransferStd ?? 0)}</p>
+            <p>
+              환산취득가 = 양도가액 × 취득시 보충평가액 ÷ 양도시 1개월 종가평균 ={" "}
               <strong>{fmt(result.acquisitionPrice)}</strong>
             </p>
           </>
@@ -139,6 +166,7 @@ const RULE_BADGE: Record<string, string> = {
   "80%하한미적용": "bg-fuchsia-50 text-fuchsia-600 border-fuchsia-200",
   "단기30%": "bg-rose-100 text-rose-700 border-rose-200",
   "거래정지우회": "bg-amber-100 text-amber-700 border-amber-200",
+  "취득일거래정지우회": "bg-amber-100 text-amber-700 border-amber-200",
   "KOTC중소중견비과세": "bg-emerald-100 text-emerald-700 border-emerald-200",
   "KOTC벤처비과세": "bg-emerald-100 text-emerald-700 border-emerald-200",
   "월할가산": "bg-sky-100 text-sky-700 border-sky-200",

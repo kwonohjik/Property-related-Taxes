@@ -492,6 +492,7 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
   // 취득 후 상장 + 거래정지 (3중 패턴)
   body.acquiredBeforeListing = form.acquiredBeforeListing;     // default: false
   body.tradingHaltAtTransfer = form.tradingHaltAtTransfer;     // default: false
+  body.tradingHaltAtAcquisition = form.tradingHaltAtAcquisition; // [C-1] default: false
 
   // [사례 49] 취득시 장부분실 액면가 + 양도시 §165④ 보충 평가 혼합
   // 활성 조건: marketType==="unlisted" + acquisitionMode==="estimated" + acqFaceValueOnly===true

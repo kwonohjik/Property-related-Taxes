@@ -186,6 +186,12 @@ export type StockTransferInput = {
   acquiredBeforeListing: boolean;
   /** 양도일 거래정지·관리종목 */
   tradingHaltAtTransfer: boolean;
+  /**
+   * [C-1] 취득일 거래정지·관리종목 (소령 §165③ 후문 "양도일ㆍ취득일 이전 1개월" — 취득 시점).
+   * true 시 취득시 기준시가만 §165④ 보충 평가(취득연도 NI/NA), 양도시 기준시가는 1개월 종가평균 유지.
+   * §165⑤ 비적용 판정(계산식이 상장일 기반 취득 후 상장 전제 — plan §1.2). optional — 기존 호출부 보존.
+   */
+  tradingHaltAtAcquisition?: boolean;
 
   // 환산 모드 — 비상장 보충적 평가 (3시점: 양도일·상장일·취득일 직전 사업연도)
   transferYearNetIncomePerShare?: number;
@@ -497,7 +503,8 @@ export type StockTransferResult = {
       | "face_value"
       | "acq_face_value_only"
       | "post_listing_conversion"
-      | "monthly_avg_listed";
+      | "monthly_avg_listed"
+      | "halt_acquisition_conversion";
     weightedAvgPerShare?: number;
     netAssetFloorApplied: boolean;
     netAssetFloorValue?: number;
@@ -516,15 +523,15 @@ export type StockTransferResult = {
     // ── [사례 49 GAP-D] FormulaCard 입력값 직접 노출 (역산 회피) ──
     /** [사례 49] 1주당 액면가 (input.acqFaceValuePerShare echo) */
     acqFaceValuePerShare?: number;
-    /** [사례 49] 1주당 순손익가치 (input.transferYearNetIncomePerShare echo) */
+    /** [사례 49] 1주당 순손익가치 (양도연도 echo) · [C-1] 취득연도 echo 겸용 */
     niPerShare?: number;
-    /** [사례 49] 1주당 순자산가치 (input.transferYearNetAssetPerShare echo) */
+    /** [사례 49] 1주당 순자산가치 (양도연도 echo) · [C-1] 취득연도 echo 겸용 */
     naPerShare?: number;
     /** [사례 49] 부동산과다보유 가중치 반전 (input.isHeavyRealEstateForValuation echo) */
     isHeavyRE?: boolean;
     /** [사례 49] 순자산 단독 사유 (input.netAssetOnlyReason echo) */
     netAssetOnlyReason?: string;
-    /** [사례 49] 취득기준시가 총액 (acqFaceValuePerShare × shareCount echo) */
+    /** [사례 49] 취득기준시가 총액 (acqFaceValuePerShare × shareCount) · [C-1] 보충평가 × shareCount 겸용 */
     acquisitionStdPriceTotal?: number;
   };
 
@@ -679,6 +686,7 @@ export type StockTransferResult = {
     | "80%하한미적용"
     | "단기30%"
     | "거래정지우회"
+    | "취득일거래정지우회"
     | "KOTC중소중견비과세"
     | "KOTC벤처비과세"
     | "월할가산"

@@ -35,6 +35,7 @@ import {
   calcUnlistedValuation,
   calcFaceValueTransferEstimated,
   calcTransferStdPriceForFaceValue,
+  calcAcquisitionStdPerShareSupplementary,
 } from "./stock-valuation-unlisted";
 import { applyStockTaxRate } from "./stock-transfer-rate-calc";
 import { finalizeStockTax } from "./stock-transfer-finalize";
@@ -346,6 +347,46 @@ export function calculateStockTransferTaxInternal(input: StockTransferInput): St
       warnings.push(...unlistedResult.warnings);
       for (const rule of unlistedResult.appliedRules) {
         warnings.push(rule); // 비타입 문자열 규칙은 warnings로 전달
+      }
+
+    } else if (input.tradingHaltAtAcquisition) {
+      // [C-1] 취득일 거래정지 — 취득시 기준시가만 §165④ 보충 평가 (소령 §165③ 후문, §165⑤ 비적용 판정)
+      // 분모(양도시)는 1개월 종가평균 유지. unlisted 분기 뒤 배치 = 상장만 도달 (M-5 가드)
+      appliedRules.push("취득일거래정지우회");
+      const acqSide = calcAcquisitionStdPerShareSupplementary(input);
+      const haltTransferStd = Math.floor(input.transferDatePriceAvg1Month ?? 0);
+      if (acqSide.perShare <= 0 || haltTransferStd <= 0) {
+        // division 가드 — validate 우회(엔진 직접 호출) 방어
+        acquisitionPrice = 0;
+        estimatedBase = 0;
+        warnings.push(
+          haltTransferStd <= 0
+            ? "양도일 직전 1개월 종가평균이 0 이하 — 환산취득가 산출 불가"
+            : "취득시 보충평가액이 0 이하 — 취득연도 순손익·순자산가치를 확인하세요",
+        );
+      } else {
+        // 환산취득가 = 양도가 × (취득 보충평가 / 양도 종가평균) — BigInt overflow 안전, 총액 floor 1회
+        acquisitionPrice = Number(
+          (BigInt(transferPrice) * BigInt(acqSide.perShare)) / BigInt(haltTransferStd),
+        );
+        estimatedBase = acqSide.perShare * shareCount; // §163⑥4 base
+      }
+      valuationDetail = {
+        method: "halt_acquisition_conversion",
+        netAssetFloorApplied: false, // 분자(취득기준시가) 80% 하한 미적용 관행
+        finalPerShareValue: acqSide.perShare,
+        conversionAcqStdPerShare: acqSide.perShare,
+        conversionTransferStd: haltTransferStd,
+        weightedAvgPerShare: Math.floor(acqSide.weightedRaw),
+        niPerShare: input.acquisitionYearNetIncomePerShare,
+        naPerShare: input.acquisitionYearNetAssetPerShare,
+        isHeavyRE: input.isHeavyRealEstateForValuation,
+        netAssetOnlyReason: input.netAssetOnlyReason,
+        acquisitionStdPriceTotal: acqSide.perShare * shareCount,
+      };
+      warnings.push(...acqSide.warnings);
+      for (const rule of acqSide.appliedRules) {
+        warnings.push(rule); // 비타입 문자열 규칙(법령 인용)은 warnings로 전달
       }
 
     } else {

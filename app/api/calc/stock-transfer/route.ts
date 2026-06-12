@@ -185,6 +185,7 @@ function buildEngineInput(coerced: Record<string, unknown>): StockTransferInput 
     acquiredBeforeListing: coerced.acquiredBeforeListing as boolean,
     postListingDetail: coerced.postListingDetail as import("@/lib/tax-engine/stock-transfer/types/stock-transfer.types").PostListingDetailInput | undefined,
     tradingHaltAtTransfer: coerced.tradingHaltAtTransfer as boolean,
+    tradingHaltAtAcquisition: coerced.tradingHaltAtAcquisition as boolean | undefined,
     transferYearNetIncomePerShare: coerced.transferYearNetIncomePerShare as number | undefined,
     transferYearNetAssetPerShare: coerced.transferYearNetAssetPerShare as number | undefined,
     listingYearNetIncomePerShare: coerced.listingYearNetIncomePerShare as number | undefined,

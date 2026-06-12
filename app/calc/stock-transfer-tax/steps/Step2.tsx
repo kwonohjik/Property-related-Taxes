@@ -374,6 +374,20 @@ export function Step2({ form, onChange }: Step2Props) {
                 <EstimatedUnlistedBlock form={form} onChange={onChange} simpleOnly />
               </ToggleCard>
 
+              {/* [C-1] 취득일 거래정지 — 양도정지 ON 시 숨김(양도정지 블록이 양·취 모두 수집), 취득후상장 ON 시 숨김(M-4) */}
+              {!form.tradingHaltAtTransfer && !form.acquiredBeforeListing && (
+                <ToggleCard
+                  checked={form.tradingHaltAtAcquisition}
+                  onCheckedChange={(v) => onChange({ tradingHaltAtAcquisition: v })}
+                  title="취득일 거래정지·관리종목 지정 (소령 §165③)"
+                  description="취득일 이전 1개월 내 거래정지·관리종목 기간이 포함되면 취득시 기준시가만 비상장 보충 평가로 환산합니다(양도시 기준시가는 1개월 종가평균 유지). ※ 관리종목이라도 적정 시가로 정상 매매 중이면(상증령 §52의2③ 단서) 토글을 켜지 마세요."
+                  tone="rose"
+                >
+                  {/* 취득측 보충 평가 — 취득연도 NI/NA + 순자산 단독 사유만 */}
+                  <EstimatedUnlistedBlock form={form} onChange={onChange} acquisitionSideOnly />
+                </ToggleCard>
+              )}
+
               {/* 일반 상장 환산 (시행령 §163⑨) — 거래정지·취득 후 상장 분기가 아닐 때만 노출 */}
               {!form.tradingHaltAtTransfer && !form.acquiredBeforeListing && (
                 <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-4 space-y-4">
@@ -388,14 +402,21 @@ export function Step2({ form, onChange }: Step2Props) {
                     onChange={(v) => onChange({ transferDatePriceAvg1Month: v })}
                     placeholder="양도일 직전 1개월 종가평균 (1주당)"
                   />
-                  <CurrencyInput
-                    label="취득시 1주당 기준시가 (취득일 직전 1개월 종가평균)"
-                    required
-                    hint="모법 §99①3 — 환산비율의 분자. 개산공제(§163⑥4) 산정 base"
-                    value={form.acquisitionDatePriceAvg1Month}
-                    onChange={(v) => onChange({ acquisitionDatePriceAvg1Month: v })}
-                    placeholder="취득일 직전 1개월 종가평균 (1주당)"
-                  />
+                  {/* [C-1] 취득정지 ON 시 분자(취득일 종가평균)는 법령상 무효 — 입력 숨김 (잔존값 엔진 미참조) */}
+                  {!form.tradingHaltAtAcquisition ? (
+                    <CurrencyInput
+                      label="취득시 1주당 기준시가 (취득일 직전 1개월 종가평균)"
+                      required
+                      hint="모법 §99①3 — 환산비율의 분자. 개산공제(§163⑥4) 산정 base"
+                      value={form.acquisitionDatePriceAvg1Month}
+                      onChange={(v) => onChange({ acquisitionDatePriceAvg1Month: v })}
+                      placeholder="취득일 직전 1개월 종가평균 (1주당)"
+                    />
+                  ) : (
+                    <p className="text-xs text-rose-700">
+                      취득시 기준시가는 위 토글의 비상장 보충 평가로 산정됩니다 (소령 §165③).
+                    </p>
+                  )}
                   <p className="text-xs text-emerald-700">
                     ※ 환산 모드에서는 시행령 §163⑥4에 따라 개산공제(취득기준시가 × 1%)가 자동
                     적용되며 실비 입력값은 무시됩니다.
@@ -404,7 +425,7 @@ export function Step2({ form, onChange }: Step2Props) {
               )}
 
               {/* 취득 후 상장 환산 (사례 48 핵심) — 거래정지 신규 진입 시 숨김(U1-1: 잔존 ON은 유지해 차단 메시지 실행 가능) */}
-              {(!form.tradingHaltAtTransfer || form.acquiredBeforeListing) && (
+              {((!form.tradingHaltAtTransfer && !form.tradingHaltAtAcquisition) || form.acquiredBeforeListing) && (
                 <PostListingValuationCard form={form} onChange={onChange} />
               )}
             </div>

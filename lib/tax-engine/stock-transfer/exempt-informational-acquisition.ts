@@ -22,6 +22,7 @@ import {
   calcUnlistedValuation,
   calcFaceValueTransferEstimated,
   calcTransferStdPriceForFaceValue,
+  calcAcquisitionStdPerShareSupplementary,
 } from "./stock-valuation-unlisted";
 
 export interface InformationalAcquisitionResult {
@@ -135,6 +136,28 @@ export function computeInformationalAcquisition(
             netAssetFloorValue: r.netAssetFloorValue,
             finalPerShareValue: r.perShareValue,
             weightedAvgPerShare: r.weightedAvgRaw !== undefined ? Math.floor(r.weightedAvgRaw) : undefined,
+          },
+        };
+      }
+      if (input.tradingHaltAtAcquisition) {
+        // [C-1] 취득일 거래정지 mirror — 본체 분기(stock-transfer-tax.ts)와 동일 산식
+        const acqSide = calcAcquisitionStdPerShareSupplementary(input);
+        const haltTransferStd = Math.floor(input.transferDatePriceAvg1Month ?? 0);
+        const haltAcqPrice =
+          acqSide.perShare > 0 && haltTransferStd > 0
+            ? Number((BigInt(transferPrice) * BigInt(acqSide.perShare)) / BigInt(haltTransferStd))
+            : 0;
+        return {
+          acquisitionPrice: haltAcqPrice,
+          usedEstimatedAcquisition: true,
+          estimatedBase: acqSide.perShare * shareCount,
+          postListingDetail: undefined,
+          valuationDetail: {
+            method: "halt_acquisition_conversion",
+            netAssetFloorApplied: false,
+            finalPerShareValue: acqSide.perShare,
+            conversionAcqStdPerShare: acqSide.perShare,
+            conversionTransferStd: haltTransferStd,
           },
         };
       }

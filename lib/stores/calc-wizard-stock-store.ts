@@ -171,6 +171,7 @@ export interface StockTransferFormData {
   listingDatePriceAvg1Month: string;     // 상장일 직전 1개월 평균 (원)
   acquiredBeforeListing: boolean;        // 3중 패턴 default: false
   tradingHaltAtTransfer: boolean;        // 3중 패턴 default: false
+  tradingHaltAtAcquisition: boolean;     // [C-1] 3중 패턴 default: false
 
   // ── 환산 — 비상장 보충적 평가 (3시점) ──
   transferYearNetIncomePerShare: string;
@@ -500,6 +501,7 @@ export function createInitialStockFormData(): StockTransferFormData {
     listingDatePriceAvg1Month: "",
     acquiredBeforeListing: false,        // 3중 패턴 default
     tradingHaltAtTransfer: false,        // 3중 패턴 default
+    tradingHaltAtAcquisition: false,     // [C-1] 3중 패턴 default
 
     transferYearNetIncomePerShare: "",
     transferYearNetAssetPerShare: "",
