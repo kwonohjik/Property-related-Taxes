@@ -42,6 +42,69 @@ describe("Query Router — 특정 조문 조회", () => {
   });
 });
 
+describe('Query Router — 특정 조문 조회 ("제" 생략)', () => {
+  it('"소득세법 77조" → get_law_text (제 생략)', () => {
+    const r = routeQuery("소득세법 77조");
+    expect(r.tool).toBe("get_law_text");
+    expect(r.params.lawName).toBe("소득세법");
+    expect(r.params.articleNo).toBe("제77조");
+    expect(r.confidence).toBe("high");
+    expect(r.targetTab).toBe("law");
+    expect(r.patternName).toBe("specific_article_no_je");
+  });
+
+  it('"소득세법 제77조" → 기존 specific_article 패턴 유지(회귀)', () => {
+    const r = routeQuery("소득세법 제77조");
+    expect(r.tool).toBe("get_law_text");
+    expect(r.params.articleNo).toBe("제77조");
+    expect(r.patternName).toBe("specific_article");
+  });
+
+  it('"소득세법 77조의2" → 가지번호 인식 (제 생략)', () => {
+    const r = routeQuery("소득세법 77조의2");
+    expect(r.tool).toBe("get_law_text");
+    expect(r.params.articleNo).toBe("제77조의2");
+    expect(r.patternName).toBe("specific_article_no_je");
+  });
+
+  it('"상증법 22조" → 알리아스 해석 + get_law_text', () => {
+    const r = routeQuery("상증법 22조");
+    expect(r.tool).toBe("get_law_text");
+    expect(r.params.lawName).toBe("상속세및증여세법");
+    expect(r.params.articleNo).toBe("제22조");
+  });
+
+  it('"소득세법77조" (무공백) → get_law_text', () => {
+    const r = routeQuery("소득세법77조");
+    expect(r.tool).toBe("get_law_text");
+    expect(r.params.lawName).toBe("소득세법");
+    expect(r.params.articleNo).toBe("제77조");
+  });
+
+  it('"지방세법 3조 개정" → 조문 조회가 개정추적보다 우선', () => {
+    const r = routeQuery("지방세법 3조 개정");
+    expect(r.tool).toBe("get_law_text");
+    expect(r.patternName).toBe("specific_article_no_je");
+  });
+
+  it('"예산 100조" → 법령명 접미사 없음 → fallback (오탐 가드)', () => {
+    const r = routeQuery("예산 100조");
+    expect(r.tool).toBe("search_law");
+    expect(r.patternName).toBe("fallback_search_law");
+  });
+
+  it('"1가구 2주택 조정" → fallback (숫자 시작·비조문)', () => {
+    const r = routeQuery("1가구 2주택 조정");
+    expect(r.tool).toBe("search_law");
+    expect(r.patternName).toBe("fallback_search_law");
+  });
+
+  it('"소득세법" 단독 → law_name_only 유지(조문 패턴 미오염)', () => {
+    const r = routeQuery("소득세법");
+    expect(r.patternName).toBe("law_name_only");
+  });
+});
+
 describe("Query Router — 개정/연혁", () => {
   it('"양도소득세 개정 이력" → amendment_track 체인', () => {
     const r = routeQuery("양도소득세 개정 이력");

@@ -48,7 +48,28 @@ const ROUTER_PATTERNS: Pattern[] = [
       return {
         tool: "get_law_text",
         params: { lawName, articleNo },
-        reason: `법령명 + 조문번호 패턴 매칭 → 해당 조문 직접 조회`,
+        reason: `법령명 + 조문번호 패턴 매칭 → 해당 조문 팝업 조회`,
+        targetTab: "law",
+        confidence: "high",
+      };
+    },
+  },
+
+  // 1-b. 특정 조문 조회 ("제" 생략) — "소득세법 77조", "상증법 22조의2"
+  //   "제"가 없으면 신호가 약하므로 좌측이 법령명 접미사(법·령·규칙 등)로 끝날 때만 매칭.
+  //   "예산 100조"·"1가구 2주택 조정" 류 오탐을 접미사 가드로 차단.
+  //   "제" 포함 입력은 priority 1 specific_article 이 먼저 처리하므로 본 패턴은 생략형 전용.
+  {
+    name: "specific_article_no_je",
+    priority: 2,
+    patterns: [/^([가-힣·\s]{1,28}?(?:법률|법|시행령|시행규칙|령|규칙|조례|규정))\s*(\d{1,4})\s*조(?:\s*의\s*(\d+))?/],
+    extract: (query, m) => {
+      const lawName = resolveLawAlias(m[1].trim());
+      const articleNo = m[3] ? `제${m[2]}조의${m[3]}` : `제${m[2]}조`;
+      return {
+        tool: "get_law_text",
+        params: { lawName, articleNo },
+        reason: `법령명 + 조문번호 패턴 매칭("제" 생략) → 해당 조문 팝업 조회`,
         targetTab: "law",
         confidence: "high",
       };

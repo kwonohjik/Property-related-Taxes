@@ -60,7 +60,7 @@ export function UnifiedSearchBar({
     }
   }
 
-  const examples = ["민법 제750조", "양도소득세 개정 이력", "관세 FTA 세율"];
+  const examples = ["소득세법 77조", "민법 제750조", "양도소득세 개정 이력", "관세 FTA 세율"];
 
   return (
     <div className="rounded-lg border bg-card p-3">
