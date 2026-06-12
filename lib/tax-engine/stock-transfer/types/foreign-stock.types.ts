@@ -60,7 +60,11 @@ export type ForeignStockInput = {
   yearsResidentInKorea: number;
 
   // ── 자산 분류 §157의3 ──
-  /** §157의3①1호: 외국법인 발행 주식 (true) / 해외상장 내국법인 DR (false — 후속 PR) */
+  /**
+   * §157의3 자산 분류 (분류 라벨 — 계산 무영향: 1·2호 모두 §94①3다목 국외주식 동일 과세).
+   *   true  = 1호 외국법인 발행 주식등
+   *   false = 2호 내국법인 발행 주식등(국외 예탁기관 DR §152의2 증권예탁증권 포함)으로서 해외 증권시장 상장
+   */
   isListedForeignCorp: boolean;
   /** 종목명 (표시용) */
   stockName: string;
