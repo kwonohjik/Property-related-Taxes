@@ -120,6 +120,9 @@ export const exitTaxInputSchema = z.object({
   // ── 보유현황 신고 §118의15 ──
   hasFiledHoldingsReport: z.boolean(),
   totalFaceValue: z.number().min(0).optional(),
+
+  // ── 재전입 환급 §118의17①1호 ──
+  reenteredWithin5Years: z.boolean().default(false),
 }).superRefine((d, ctx) => {
   // 납부유예 신청 시 사유 필수
   if (d.deferralRequested && d.deferralReason === "none") {

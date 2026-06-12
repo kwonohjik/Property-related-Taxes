@@ -116,6 +116,13 @@ export type ExitTaxInput = {
    * 사용자 입력 — 엔진은 totalFaceValue × 0.02 계산
    */
   totalFaceValue?: number;
+
+  // ── 재전입 환급 §118의17①1호 ──
+  /**
+   * 출국일부터 5년 이내 미양도 + 국내 재입국하여 거주자가 된 경우 (§118의17①1호).
+   * true 시 납부세액 환급(납부 완료) 또는 납부유예 취소(유예 중) 예정액 정보성 산출.
+   */
+  reenteredWithin5Years: boolean;
 };
 
 // ============================================================
@@ -197,6 +204,20 @@ export type ExitTaxResult = {
   // ── 가산세 ──
   /** §118의15 보유현황 미신고 가산세 */
   holdingsReportPenalty?: number;
+
+  // ── 재전입 환급 §118의17①1호 ──
+  /**
+   * 재입국(5년 이내 미양도 거주자) 시 환급/취소 정보성 산출 (reenteredWithin5Years=true 시).
+   * §118의17③: §118의15④ 미신고 가산세(holdingsReportPenalty)는 환급 제외.
+   */
+  reentryRefund?: {
+    /** 납부유예 중 → true(취소) / 납부 완료 → false(환급) */
+    isDeferralCancel: boolean;
+    /** 환급예정액 또는 취소액 (소득세 + 지방소득세 — 미신고 가산세 제외) */
+    amount: number;
+    /** 안내 (1년 이내 신청 §118의17①·가산세 환급 제외 ③) */
+    note: string;
+  };
 
   // ── 디버그 ──
   warnings: string[];

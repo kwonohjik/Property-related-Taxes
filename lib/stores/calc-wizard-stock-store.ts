@@ -304,6 +304,8 @@ export interface StockTransferFormData {
   etHasFiledHoldingsReport: boolean;
   /** 보유현황 미신고 가산세 계산용 액면금액 합계 (원) */
   etTotalFaceValue: string;
+  /** [B-1②b] 5년 이내 미양도 재입국 거주자 §118의17①1호 (환급/취소 정보성) */
+  etReenteredWithin5Years: boolean;
 
   // ── PR-4A 해외주식 전용 필드 (§94①3 다목 + §118의2~§118의8) ──
   // 활성 조건: marketType === "foreign_stock"
@@ -593,6 +595,7 @@ export function createInitialStockFormData(): StockTransferFormData {
     etDomesticSourceTaxWithheld: "",
     etHasFiledHoldingsReport: false,
     etTotalFaceValue: "",
+    etReenteredWithin5Years: false,
 
     // ── PR-4A 해외주식 전용 초기값 (② 동기화 지점) ──
     yearsResidentInKorea: "",

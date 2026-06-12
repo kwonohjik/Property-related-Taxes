@@ -445,6 +445,26 @@ export function calculateExitTax(input: ExitTaxInput): ExitTaxResult {
   const localIncomeTax = floorTen(taxForLocal * 0.1);
   appliedRules.push(STOCK_EXIT_TAX.LOCAL_TAX_103_3);
 
+  // ──────────────────────────────────────────────────────────
+  // STEP 8.5: 재전입 환급 §118의17①1호 (5년 이내 미양도 재입국 거주자)
+  //   납부유예 중 → 유예 세액 취소 / 납부 완료 → 환급(미신고 가산세는 환급 제외 ③)
+  // ──────────────────────────────────────────────────────────
+  let reentryRefund: ExitTaxResult["reentryRefund"];
+  if (input.reenteredWithin5Years) {
+    const isDeferralCancel = input.deferralRequested;
+    const refundIncomeTax = finalTaxAfterAdjustment ?? incomeTax;
+    // 취소(유예): 유예 소득세 / 환급(납부): 소득세 + 지방소득세. 미신고 가산세(§118의15④)는 §118의17③ 환급 제외.
+    const amount = isDeferralCancel ? deferredTaxAmount : refundIncomeTax + localIncomeTax;
+    reentryRefund = {
+      isDeferralCancel,
+      amount,
+      note: isDeferralCancel
+        ? "납부유예 중 재입국 — 유예 세액 취소 신청 (사유 발생일부터 1년 이내, §118의17①)"
+        : "재입국 — 납부세액 환급 신청 (사유 발생일부터 1년 이내, §118의17①). 보유현황 미신고 가산세(§118의15④)는 환급 제외(③).",
+    };
+    appliedRules.push(STOCK_EXIT_TAX.SECTION_118_17_REENTRY);
+  }
+
   return {
     taxCategory: "exit_tax",
     isLiable: true,
@@ -470,6 +490,8 @@ export function calculateExitTax(input: ExitTaxInput): ExitTaxResult {
     finalTaxAfterAdjustment,
 
     holdingsReportPenalty,
+
+    reentryRefund,
 
     warnings,
     appliedRules,

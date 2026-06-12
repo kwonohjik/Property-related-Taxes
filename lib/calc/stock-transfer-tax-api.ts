@@ -221,6 +221,9 @@ export function buildExitTaxApiBody(form: StockTransferFormData): Record<string,
 
     // ── 보유현황 신고 §118의15 ──
     hasFiledHoldingsReport: form.etHasFiledHoldingsReport,
+
+    // ── 재전입 환급 §118의17①1호 ──
+    reenteredWithin5Years: form.etReenteredWithin5Years,
   };
 
   // 경정청구용 실양도 — 입력값 있을 때만 포함 (자동 안분 fallback 금지)
