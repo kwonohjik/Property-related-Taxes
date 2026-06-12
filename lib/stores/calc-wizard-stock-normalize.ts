@@ -182,6 +182,7 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
     // ── 취득 후 상장 환산 PDF 사례 재현 (80 신규 필드 — Phase D~G) ──
     unlistedDetailMode: enumField("unlistedDetailMode", ["simple", "listing_only", "full"], defaults.unlistedDetailMode),
     monthlyAccrualToggle: boolField("monthlyAccrualToggle", defaults.monthlyAccrualToggle),
+    unlistedSameBizYearToggle: boolField("unlistedSameBizYearToggle", defaults.unlistedSameBizYearToggle),
     listingPriceDates: Array.isArray(d.listingPriceDates) ? (d.listingPriceDates as string[]) : [],
     listingPriceClosing: Array.isArray(d.listingPriceClosing) ? (d.listingPriceClosing as string[]) : [],
     listingPriceBasisDate: strField("listingPriceBasisDate"),

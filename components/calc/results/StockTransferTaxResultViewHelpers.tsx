@@ -120,6 +120,20 @@ export function EstimatedValuationBreakdown({
             80% 하한 발동: 가중평균 &lt; 순자산 × 80% → max(가중평균, {fmt(detail.netAssetFloorValue)})
           </p>
         )}
+        {detail.section1659Detail && (
+          <div className="mt-1 rounded border border-sky-200 bg-sky-50/60 px-2 py-1.5 text-sky-700 not-italic space-y-0.5">
+            <p className="font-semibold">§165⑨ 본체 — 양도·취득 기준시가 동일 → 소칙 §81④ 1호 월할 보정</p>
+            <p>
+              양도 기준시가 보정: {fmt(detail.section1659Detail.prior)} → {fmt(detail.section1659Detail.adjusted)}
+            </p>
+            <p>
+              직전 사업연도 평가 {fmt(detail.section1659Detail.prior)} + (직전 {fmt(detail.section1659Detail.prior)} − 전전{" "}
+              {fmt(detail.section1659Detail.prePrior)}) × {detail.section1659Detail.holdingMonths}개월 ÷{" "}
+              {detail.section1659Detail.priorBizYearMonths}개월
+            </p>
+            <p>양도 기준시가가 상향되어 양도차익이 발생합니다 (취득 기준시가는 불변).</p>
+          </div>
+        )}
       </div>
       {result.swapComparison && (
         <SwapComparisonBlock result={result} />

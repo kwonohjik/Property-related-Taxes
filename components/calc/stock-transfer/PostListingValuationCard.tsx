@@ -21,7 +21,6 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
-import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { DateInput } from "@/components/ui/date-input";
 // 엔진 단일 진실 — 평가액 동일 판정(토글 노출 조건) 재구현 금지 (dual-truth 회피)
 import { calcUnlistedPerShareWeighted } from "@/lib/tax-engine/stock-transfer/stock-valuation-post-listing";
@@ -33,6 +32,7 @@ import { KiwoomPostListingAutoFetchButton } from "./KiwoomPostListingAutoFetchBu
 import { PostListingNetIncomeStatement } from "./PostListingNetIncomeStatement";
 import { PostListingNetAssetStatement } from "./PostListingNetAssetStatement";
 import { PostListingFormulaPreview } from "./PostListingFormulaPreview";
+import { MonthlyAccrual81Section } from "./MonthlyAccrual81Section";
 
 interface PostListingValuationCardProps {
   form: StockTransferFormData;
@@ -289,40 +289,20 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
         <PostListingFormulaPreview form={form} />
 
         {/* §81④ 1호 월할 가산 토글 — 평가액 동일 시 노출 (simple은 동일 판정, full/listing_only는 무조건) */}
-        {showAccrualToggle && (
-          <ToggleCard
-            checked={form.monthlyAccrualToggle}
-            onCheckedChange={(v) => onChange({ monthlyAccrualToggle: v })}
-            title="같은 사업연도에 취득·상장 (소칙 §81④ 1호)"
-            description="취득일·상장일 직전 사업연도 평가액이 동일합니다. 같은 사업연도에 취득·상장했다면 ON — 직전·전전 사업연도 평가 차액을 보유월수로 안분해 상장일 평가액을 보정합니다. 아니면 OFF(§81④ 2호, 보정 없음)."
-            tone="rose"
-          >
-            <div className="space-y-3">
-              <CurrencyInput
-                label="전전사업연도 1주당 순손익가치"
-                hint="취득일이 속하는 사업연도의 전전사업연도 1주당 순손익가치 (원, §81④ 1호)"
-                value={form.prePriorYearNetIncomePerShare}
-                onChange={(v) => onChange({ prePriorYearNetIncomePerShare: v })}
-              />
-              <CurrencyInput
-                label="전전사업연도 1주당 순자산가치"
-                hint="취득일이 속하는 사업연도의 전전사업연도 1주당 순자산가치 (원, §81④ 1호)"
-                value={form.prePriorYearNetAssetPerShare}
-                onChange={(v) => onChange({ prePriorYearNetAssetPerShare: v })}
-              />
-              <FieldCard
-                label="직전사업연도의 월수"
-                hint="사업연도 변경 법인만 수정 (1~12, 기본 12). 보유월수는 취득일~상장일에서 자동 계산되며 1개월 미만은 1개월로 봅니다."
-              >
-                <DecimalInput
-                  value={form.priorBizYearMonths}
-                  onChange={(v) => onChange({ priorBizYearMonths: v })}
-                  unit="개월"
-                />
-              </FieldCard>
-            </div>
-          </ToggleCard>
-        )}
+        <MonthlyAccrual81Section
+          visible={showAccrualToggle}
+          checked={form.monthlyAccrualToggle}
+          onToggle={(v) => onChange({ monthlyAccrualToggle: v })}
+          prePriorNI={form.prePriorYearNetIncomePerShare}
+          prePriorNA={form.prePriorYearNetAssetPerShare}
+          priorBizYearMonths={form.priorBizYearMonths}
+          onChangePrePriorNI={(v) => onChange({ prePriorYearNetIncomePerShare: v })}
+          onChangePrePriorNA={(v) => onChange({ prePriorYearNetAssetPerShare: v })}
+          onChangePriorBizYearMonths={(v) => onChange({ priorBizYearMonths: v })}
+          title="같은 사업연도에 취득·상장 (소칙 §81④ 1호)"
+          description="취득일·상장일 직전 사업연도 평가액이 동일합니다. 같은 사업연도에 취득·상장했다면 ON — 직전·전전 사업연도 평가 차액을 보유월수로 안분해 상장일 평가액을 보정합니다. 아니면 OFF(§81④ 2호, 보정 없음)."
+          monthsHint="사업연도 변경 법인만 수정 (1~12, 기본 12). 보유월수는 취득일~상장일에서 자동 계산되며 1개월 미만은 1개월로 봅니다."
+        />
 
         {/* 거래정지 §165③ 토글은 Step2 상장 환산 분기 레벨로 이동·활성화 (엔진 분기 순서 일치) */}
       </div>

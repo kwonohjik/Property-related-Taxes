@@ -348,6 +348,27 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
           errors.push({ field: "naShareCountEUAcq", message: "취득연도 NA 사업연도말 발행주식수 필수 (full 모드)", severity: "error" });
         }
       }
+
+      // [B-4 §165⑨ 본체] 양도·취득 기준시가 동일 동일사업연도 토글 ON 시 (M-4 차단 / M-7 경고)
+      // post-listing(acquiredBeforeListing)의 monthlyAccrualToggle 블록과 별개 — 양도연도↔취득연도 비교
+      if (form.unlistedSameBizYearToggle) {
+        // M-4: 전전사업연도 평가 필수 (자동 fallback 금지 — 미입력 시 차단)
+        if (isEmpty(form.prePriorYearNetIncomePerShare)) {
+          errors.push({ field: "prePriorYearNetIncomePerShare", message: "전전사업연도 1주당 순손익가치를 입력하세요 (소칙 §81④ 1호 월할 가산)", severity: "error" });
+        }
+        if (isEmpty(form.prePriorYearNetAssetPerShare)) {
+          errors.push({ field: "prePriorYearNetAssetPerShare", message: "전전사업연도 1주당 순자산가치를 입력하세요 (소칙 §81④ 1호 월할 가산)", severity: "error" });
+        }
+        // M-7 경고: simple 모드 양도·취득 평가액 상이 시 토글 무의미 (full은 합성 산출 — 엔진 warning 위임)
+        if (valuationMode === "simple") {
+          const heavyRE = form.isHeavyRealEstateForValuation;
+          const transferEval = calcUnlistedPerShareWeighted(parseF(form.transferYearNetIncomePerShare), parseF(form.transferYearNetAssetPerShare), heavyRE);
+          const acqEval = calcUnlistedPerShareWeighted(parseF(form.acquisitionYearNetIncomePerShare), parseF(form.acquisitionYearNetAssetPerShare), heavyRE);
+          if (transferEval > 0 && transferEval !== acqEval) {
+            errors.push({ field: "unlistedSameBizYearToggle", message: "양도연도·취득연도 평가액이 달라 소칙 §81④ 월할 가산이 적용되지 않습니다. 토글을 해제하세요.", severity: "warning" });
+          }
+        }
+      }
     }
   } else if (acquisitionMode === "face_value") {
     if (form.acqFaceValueOnly === true) {

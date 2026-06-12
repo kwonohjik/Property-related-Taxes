@@ -32,7 +32,7 @@
 | B-1 | **해외주식·국외전출세 잔여 하위 갭** (본체는 기구현 — §0 참조) | ① 해외상장 내국법인 DR: `foreign-stock.types.ts:63` `isListedForeignCorp` false 경로 "후속 PR" 명시 ② exit-tax 스코프 외 3건: `exit-tax.ts:19-22` — §94①4다·라 기타자산 / §118의16④ 납부유예 이자상당액 / 납부유예 중 재입국 처리 ③ `MarketTypeBlock.tsx:6-10` stale 헤더 주석(코드-주석 드리프트) | ①②는 각자 KoreanLaw 선판정 후 개별 PR. ③은 차기 아무 PR에 부수 정정(주석 1블록) | ①② 중 / ③ 극소 |
 | B-2 | **§97② 단서 swap (주식)** ✅**완료(PR-ε)** | **판정: 적용**(소령 §163⑫→§176의2②1호 주식 환산 명시 축자). STEP 4 swap 비교(가목 환산+개산 vs 나목 자본지출+양도비)·STEP 5 차익 분기·api ④ silent strip 해제·결과 카드. anchor 8+E2E 1. 부수: B-1③ 주석·types 800분리 | 완료 |
 | B-3 | **진정 이동평균법** ✅**완료(PR-ζ)** | `matchMovingAvg` 신규 — 단가는 매도 시점별 이동평균(잔고 가중평균)·보유기간(§104②)은 FIFO lot startDate 하이브리드. echo=마지막 매도 적용 단가(단일 매도=총평균, LO-2 불변). 법인세령 §74①1마 표준 참조. 라벨 3곳·"원"·미리보기 dual-truth 정정. anchor 6+E2E 1 | 완료 |
-| B-4 | **§165⑨ 본체** (기준시가 방식에서 양도·취득 기준시가 동일 케이스) | grep 결과 구현·참조 0건 (§165⑨은 §81④ 위임 근거로만 인용됨) | KoreanLaw로 적용 요건 축자 확인 후 보정 평가 분기 추가 | 중 |
+| B-4 | **§165⑨ 본체** ✅**완료(PR-η)** | 비상장 환산 양도·취득 기준시가 동일(동일 사업연도) → §81④ 1호 월할로 양도기준시가 상향(취득→양도 보유월수). 신규 top-level `unlistedSameBizYearToggle`(monthlyAccrualToggle는 PostListingDetailInput 중첩이라 별개)·공유 헬퍼 `apply-81-4-accrual.ts` 추출(post-listing 사례48 회귀 0)·실효 범위 비상장만(§81④ 1호 사업연도 모수, 상장은 2호 warning). anchor 10+E2E 1 | 완료 |
 | B-5 | **§165⑤ 종가평균 증자·합병 환산 보정** | `types/stock-transfer.types.ts:293` `closing.hasIncrease` — "default false, 환산주식수 후속 PR 신호". 신호 필드만 존재, 보정 산식 미구현 | 상장일 이후 1개월 종가평균 산정 시 증자·합병 발생 분 환산주식수 보정 — 준용 산식 KoreanLaw 선판정 필수 | 중 |
 
 ### Track C — 거래정지 §165③ 파생 (PR #150 memory 기록분)
@@ -58,7 +58,7 @@ PR-β  A-1 단건 개별법 (엔진 0줄)    │ ✅완료(본 시리즈) — UI
 PR-γ  A-2 분할+자본조정 ←──────────┘ ✅완료(본 시리즈) — applyCapitalAdjustmentsToLots
 PR-δ  C-1 취득일 거래정지           ✅완료 — 혼합 환산 + acquisitionSideOnly UI
 PR-ε  B-2 §97② swap 판정      ✅완료 — 적용 판정·STEP4 swap 비교·api strip 해제
-이후  B-3 ✅완료 → C-2 → B-5 → B-4 → C-3 → B-1①② → D-2 (수요·빈도 낮은 순)
+이후  B-3 ✅완료 → B-4 ✅완료(PR-η) → C-2 → B-5 → C-3 → B-1①② → D-2 (수요·빈도 낮은 순)
 ```
 
 - **A-1을 최우선 기능 PR로 권고**: 사용자에게 disabled 라디오로 상시 노출 중 + 엔진 기지원이라 UI·배선만으로 완결(저위험).
