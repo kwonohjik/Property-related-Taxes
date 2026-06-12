@@ -18,6 +18,11 @@ export interface PropertyEntry {
   area: string;                    // 전용면적 (㎡)
   location: "metro" | "non_metro"; // 수도권 여부
   exclusionType: string;           // 합산배제 유형
+  // ── §8④ 1세대1주택자 의제 특례 (per-property) ──
+  section8para4Type: string;       // none | appurtenant_land_only | temporary_two_house | inherited_house | regional_low_price
+  newHouseAcquisitionDate: string; // §8④2호 신규주택 취득일 YYYY-MM-DD (검증용)
+  inheritanceOpenDate: string;     // §8④3호 상속개시일 YYYY-MM-DD (검증용)
+  inheritanceShareRatio: string;   // §8④3호 상속 지분율 % (검증용)
   // ── 소재지 (공시가격 조회용) ──
   jibun: string;                   // 지번 주소
   road: string;                    // 도로명 주소
@@ -110,6 +115,10 @@ function makeProperty(): PropertyEntry {
     area: "",
     location: "metro",
     exclusionType: "none",
+    section8para4Type: "none",
+    newHouseAcquisitionDate: "",
+    inheritanceOpenDate: "",
+    inheritanceShareRatio: "",
     jibun: "",
     road: "",
     building: "",
@@ -299,6 +308,16 @@ export const useComprehensiveWizardStore = create<ComprehensiveWizardState>()(
           // isJointOwnershipSpecialCase: 구 세션 복원 시 undefined → false 폴백 (3중 일치)
           state.formData.isJointOwnershipSpecialCase =
             state.formData.isJointOwnershipSpecialCase ?? false;
+          // §8④ per-property 신규 필드: 구 세션 복원 시 undefined → 기본값 (3중 일치)
+          if (Array.isArray(state.formData.properties)) {
+            state.formData.properties = state.formData.properties.map((p) => ({
+              ...p,
+              section8para4Type: p.section8para4Type ?? "none",
+              newHouseAcquisitionDate: p.newHouseAcquisitionDate ?? "",
+              inheritanceOpenDate: p.inheritanceOpenDate ?? "",
+              inheritanceShareRatio: p.inheritanceShareRatio ?? "",
+            }));
+          }
         }
       },
     },

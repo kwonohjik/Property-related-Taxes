@@ -109,10 +109,10 @@ describe("SC2: 1세대1주택 15억 / 70세 / 15년 보유 → 80% 세액공제"
     expect(result.oneHouseDeduction!.combinedRate).toBe(0.80);
     expect(result.oneHouseDeduction!.isMaxCapApplied).toBe(true);
 
-    // 공제 후 세액 = 산출세액 × (1 - 0.80) = 산출세액 × 20%
-    // (재산세 안분 공제 전 단계)
+    // GAP-1 (§9⑥⑧): 세액공제 base = 재산세 안분 공제 후 세액.
+    //   계산 순서 = 산출세액 → 재산세 안분 공제 → 1세대1주택 세액공제(공제율 80%) → 결정세액.
 
-    // 결정세액 > 0 (농특세, 재산세 안분 공제 후)
+    // 결정세액 ≥ 0 (재산세 안분 공제 + 80% 세액공제 후)
     expect(result.determinedHousingTax).toBeGreaterThanOrEqual(0);
 
     // 농특세 = floor(결정세액 × 20%)

@@ -155,6 +155,29 @@ export interface AggregationExclusionResult {
 }
 
 // ============================================================
+// 1-2. §8④ 1세대1주택자 의제 특례 유형 (종합부동산세법 §8④ 각 호)
+// ============================================================
+
+/**
+ * §8④ 1세대1주택자 의제 특례 유형 (per-property 지정)
+ *
+ * - none:                  특례 없음 (기본)
+ * - appurtenant_land_only: §8④1호 — 다른 주택의 부속토지(건물·토지 소유자 상이). 신청 불요.
+ *                          ★ 세율 주택 수에는 포함 (시행령 §4의3③3호 다목은 "무허가·무권원 부속토지" 전용 — R-8)
+ * - temporary_two_house:   §8④2호 — 일시적 2주택 (신규주택 취득 3년 이내, 령 §4의2①). §4의3③3호 라목 주택 수 제외(의제 성립 시).
+ * - inherited_house:       §8④3호 — 상속주택 (5년 미경과·지분 40%·지분공시 6억/3억 중 하나, 령 §4의2②).
+ *                          §4의3③3호 나목 주택 수 제외(의제 성립 무관 — 전제 없음).
+ * - regional_low_price:    §8④4호 — 지방 저가주택 (공시 4억 이하 + 수도권·광역시·세종 외 소재, 령 §4의2③).
+ *                          §4의3③3호 마목 주택 수 제외(의제 성립 시).
+ */
+export type Section8Para4Type =
+  | "none"
+  | "appurtenant_land_only"
+  | "temporary_two_house"
+  | "inherited_house"
+  | "regional_low_price";
+
+// ============================================================
 // 2. 주택분 종합부동산세 입력 타입
 // ============================================================
 
@@ -167,6 +190,12 @@ export interface ComprehensiveProperty {
   area?: number;                     // 전용면적 (㎡, 합산배제 판정 시 필요)
   location?: "metro" | "non_metro";  // 수도권 여부 (합산배제 판정 시 필요)
   exclusionType?: ExclusionType;     // 합산배제 유형 (미입력 시 "none")
+  /**
+   * §8④ 1세대1주택자 의제 특례 유형 (미입력 = "none").
+   * 의제 성립(일반주택 정확히 1채 + 특례주택 ≥ 1)·세액공제 안분(§9⑦⑨)·세율 주택 수 제외(령 §4의3③) 판정에 사용.
+   * 요건(취득일·상속개시일·지분율)은 UI·Zod 검증 전용 — 엔진은 유형 지정을 신뢰 (자동 요건 판정은 후속).
+   */
+  section8para4Type?: Section8Para4Type;
   rentalInfo?: RentalExclusionInput;
   otherInfo?: OtherExclusionInput;
 }
@@ -255,8 +284,16 @@ export interface OneHouseDeductionResult {
   seniorRate: number;         // 고령자 공제율 (0 | 0.2 | 0.3 | 0.4)
   longTermRate: number;       // 장기보유 공제율 (0 | 0.2 | 0.4 | 0.5)
   combinedRate: number;       // 합산 공제율 (최대 0.80)
-  deductionAmount: number;    // 공제 금액 (원, Math.floor)
+  deductionAmount: number;    // 공제 금액 (원, Math.floor) — GAP-1: 재산세 안분 공제 후 세액 기준 (§9⑥)
   isMaxCapApplied: boolean;   // 80% 상한 적용 여부
+  /**
+   * §8④ 의제 시 §9⑦⑨ 공시가격 안분 비율 echo (결과뷰 산식 표시용 — 미적용 시 undefined).
+   * deduction = floor(base × main/total × combinedRate)
+   */
+  apportionmentRatio?: {
+    mainHouseAssessedValue: number;  // 안분 분자 (특례주택 제외 공시 합산)
+    totalAssessedValue: number;      // 안분 분모 (전체 과세 공시 합산)
+  };
 }
 
 /**
@@ -393,6 +430,16 @@ export interface ComprehensiveTaxResult {
 
   // ── 1세대1주택 세액공제 (isOneHouseOwner=true 일 때만) ──
   oneHouseDeduction?: OneHouseDeductionResult;
+
+  /**
+   * §8④ 1세대1주택자 의제 적용 echo — 결과뷰 배지·안분 산식 표시용 (의제 성립 시만).
+   * appliedTypes: 적용 특례 유형 목록 (중복 제거) · mainHouseAssessedValue: 안분 분자 · excludedAssessedValue: 특례주택 공시 합산
+   */
+  section8para4Detail?: {
+    appliedTypes: Section8Para4Type[];
+    mainHouseAssessedValue: number;
+    excludedAssessedValue: number;
+  };
 
   // ── 재산세 비율 안분 공제 (핵심) ──
   propertyTaxCredit: PropertyTaxCredit;

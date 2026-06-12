@@ -192,7 +192,11 @@ describe("SC-B: 법인 §9②3호 — 단일세율·기본공제 0·상한 배�
 // ============================================================
 
 describe("SC-C: §10의2 부부 공동명의 특례 — 1세대1주택자 의제", () => {
-  it("SC-C1: 2024 특례 + 공시 15억 → 공제 12억 → 90만 → 신청인 71세·16년 보유 80% 캡 공제", () => {
+  // ★ GAP-1 (§9⑥⑧ 축자): 세액공제 base = 재산세 안분 공제 **후** 세액.
+  //   산출 900,000 → 재산세 안분 공제 432,000(creditRaw=⑤ 432,000, 상한 calculatedTax 미달)
+  //   → base 468,000 × 80% = 374,400 → 결정 93,600.
+  //   (구 코드는 세액공제를 먼저 적용해 잔액 180,000으로 재산세 공제가 capped되던 버그)
+  it("SC-C1: 2024 특례 + 공시 15억 → 산출 90만 → 재산세 공제 후 468,000 × 80% = 374,400 (GAP-1)", () => {
     const input: ComprehensiveTaxInput = {
       assessmentYear: 2024,
       isOneHouseOwner: false,
@@ -208,8 +212,10 @@ describe("SC-C: §10의2 부부 공동명의 특례 — 1세대1주택자 의제
     expect(result.basicDeduction).toBe(1_200_000_000);      // §8①1호 의제 (§10의2③)
     expect(result.taxBase).toBe(180_000_000);               // (15억 − 12억) × 60%
     expect(result.calculatedTax).toBe(900_000);             // 1.8억 × 0.5%
+    expect(result.propertyTaxCredit.creditAmount).toBe(432_000); // §9③ 재산세 안분 공제 (선적용)
     expect(result.oneHouseDeduction?.combinedRate).toBe(0.8); // 40%+50% → 80% 캡
-    expect(result.oneHouseDeduction?.deductionAmount).toBe(720_000);
+    expect(result.oneHouseDeduction?.deductionAmount).toBe(374_400); // floor(468,000 × 0.8)
+    expect(result.determinedHousingTax).toBe(93_600);       // 468,000 − 374,400
     expect(result.isJointOwnershipApplied).toBe(true);
   });
 
@@ -275,5 +281,203 @@ describe("SC-C: §10의2 부부 공동명의 특례 — 1세대1주택자 의제
     expect(result.basicDeduction).toBe(0);
     expect(result.isJointOwnershipApplied).toBe(false);
     expect(result.calculatedTax).toBe(32_400_000);
+  });
+});
+
+// ============================================================
+// D2: §8④ 1세대1주택자 의제 + §9⑦⑨ 공시가격 안분 + 주택 수 제외 (Phase D-2)
+//   §8④ 1~4호 · 령 §4의2(요건)·§4의3③3호(주택 수 제외 나·라·마목) — KoreanLaw 축자 (Phase 0)
+// ============================================================
+
+describe("D2: §8④ 1세대1주택자 의제 — 안분·주택 수 제외", () => {
+  // D2-1 (사례5 full, 국세청 2022 사례집 pdf11~13): 부부특례 §10의2 + §8④4호 지방저가
+  //   산출 2,280,000 → 재산세 안분 781,356 → base 1,498,644
+  //   → §9⑦ 안분 공제 floor(1,498,644 × 15억/17억 × 0.40) = 528,933 → 결정 969,711
+  it("D2-1 (사례5): §10의2 + §8④4호 지방저가 — 70세 → 안분 공제 528,933 → 결정 969,711", () => {
+    const result = calculateComprehensiveTax({
+      assessmentYear: 2022,
+      isOneHouseOwner: false,
+      isJointOwnershipSpecialCase: true,
+      birthDate: new Date("1952-01-01"),        // 70세 → 고령 40%
+      acquisitionDate: new Date("2018-01-01"),  // 4년 보유 → 장기 0%
+      properties: [
+        { propertyId: "p1", assessedValue: 1_500_000_000, exclusionType: "none" },
+        { propertyId: "p2", assessedValue: 200_000_000, location: "non_metro", exclusionType: "none", section8para4Type: "regional_low_price" },
+      ],
+    });
+
+    expect(result.basicDeduction).toBe(1_100_000_000); // 2022 1세대1주택 의제 11억
+    expect(result.calculatedTax).toBe(2_280_000);
+    expect(result.propertyTaxCredit.creditAmount).toBe(781_356);
+    expect(result.oneHouseDeduction?.seniorRate).toBe(0.4);
+    expect(result.oneHouseDeduction?.longTermRate).toBe(0);
+    expect(result.oneHouseDeduction?.apportionmentRatio).toEqual({
+      mainHouseAssessedValue: 1_500_000_000,
+      totalAssessedValue: 1_700_000_000,
+    });
+    expect(result.oneHouseDeduction?.deductionAmount).toBe(528_933); // floor(1,498,644 × 15억/17억 × 0.4)
+    expect(result.section8para4Detail?.appliedTypes).toEqual(["regional_low_price"]);
+    expect(result.determinedHousingTax).toBe(969_711);
+  });
+
+  // D2-2 (사례4, 국세청 2022 사례집 pdf9~10): §8④2호 일시적 2주택, 세액공제 대상 아님
+  //   공시 27억 → 의제 11억 → 과표 9.6억 → 산출 8,520,000 → 재산세 안분 2,055,876(floor) → 결정 6,464,124
+  it("D2-2 (사례4): §8④2호 일시적 2주택 — 산출 8,520,000 → 안분 공제 2,055,876 → 결정 6,464,124", () => {
+    const result = calculateComprehensiveTax({
+      assessmentYear: 2022,
+      isOneHouseOwner: false,
+      properties: [
+        { propertyId: "p1", assessedValue: 1_810_000_000, exclusionType: "none" },
+        { propertyId: "p2", assessedValue: 890_000_000, exclusionType: "none", section8para4Type: "temporary_two_house" },
+      ],
+    });
+
+    expect(result.basicDeduction).toBe(1_100_000_000); // §8④ 의제 11억
+    expect(result.calculatedTax).toBe(8_520_000);
+    expect(result.propertyTaxCredit.creditAmount).toBe(2_055_876); // PDF 2,055,877은 반올림 — 법령 floor
+    expect(result.oneHouseDeduction).toBeUndefined();  // 연령·보유 미입력 → 공제 없음
+    expect(result.isMultiHouseRateApplied).toBe(false); // 라목 제외 → 1채 → 일반세율
+    expect(result.section8para4Detail?.appliedTypes).toEqual(["temporary_two_house"]);
+    expect(result.determinedHousingTax).toBe(6_464_124);
+  });
+
+  // D2-3: §8④3호 상속주택 직접 산식 (사례집 부재 — 엔진 anchor)
+  //   2024, 12억(none)+6억(상속), 71세·16년. 의제 11→12억 → 과표 3.6억 → 산출 1,920,000
+  //   → 재산세 안분 716,487 → base 1,203,513 → §9⑦ 안분 floor(× 12억/18억 × 0.8) = 641,873 → 결정 561,640
+  it("D2-3: §8④3호 상속주택 — 안분 공제 641,873 (12억/18억) → 결정 561,640", () => {
+    const result = calculateComprehensiveTax({
+      assessmentYear: 2024,
+      isOneHouseOwner: false,
+      birthDate: new Date("1953-01-01"),
+      acquisitionDate: new Date("2008-01-01"),
+      properties: [
+        { propertyId: "p1", assessedValue: 1_200_000_000, exclusionType: "none" },
+        { propertyId: "p2", assessedValue: 600_000_000, exclusionType: "none", section8para4Type: "inherited_house" },
+      ],
+    });
+
+    expect(result.basicDeduction).toBe(1_200_000_000);
+    expect(result.calculatedTax).toBe(1_920_000);
+    expect(result.propertyTaxCredit.creditAmount).toBe(716_487);
+    expect(result.oneHouseDeduction?.apportionmentRatio).toEqual({
+      mainHouseAssessedValue: 1_200_000_000,
+      totalAssessedValue: 1_800_000_000,
+    });
+    expect(result.oneHouseDeduction?.deductionAmount).toBe(641_873);
+    expect(result.determinedHousingTax).toBe(561_640);
+  });
+
+  // D2-4: 상속주택 나목(무전제) 주택 수 제외 — 의제 미성립(일반 2채)이어도 세율 주택 수에서 제외
+  it("D2-4: 상속주택 나목 — 일반 2채 + 상속 1채 → rateHouseCount 2 → 중과 미적용 + 의제 미성립", () => {
+    const result = calculateComprehensiveTax({
+      assessmentYear: 2024,
+      isOneHouseOwner: false,
+      properties: [
+        { propertyId: "p1", assessedValue: 1_000_000_000, exclusionType: "none" },
+        { propertyId: "p2", assessedValue: 1_000_000_000, exclusionType: "none" },
+        { propertyId: "p3", assessedValue: 600_000_000, exclusionType: "none", section8para4Type: "inherited_house" },
+      ],
+    });
+
+    expect(result.isMultiHouseRateApplied).toBe(false);     // 상속 제외 → 2채 → 일반세율
+    expect(result.section8para4Detail).toBeUndefined();      // 일반주택 2채 → 의제 미성립
+  });
+
+  // D2-4b: 라·마목(지방저가) — 의제 성립 시만 제외
+  it("D2-4b: 지방저가 마목 — 일반 1채 + 지방저가 1채 → 의제 성립 + rateHouseCount 1 일반세율", () => {
+    const result = calculateComprehensiveTax({
+      assessmentYear: 2024,
+      isOneHouseOwner: false,
+      properties: [
+        { propertyId: "p1", assessedValue: 1_200_000_000, exclusionType: "none" },
+        { propertyId: "p2", assessedValue: 300_000_000, location: "non_metro", exclusionType: "none", section8para4Type: "regional_low_price" },
+      ],
+    });
+
+    expect(result.basicDeduction).toBe(1_200_000_000);      // 의제 성립 → 12억
+    expect(result.isMultiHouseRateApplied).toBe(false);
+    expect(result.section8para4Detail?.appliedTypes).toEqual(["regional_low_price"]);
+  });
+
+  // D2-5: §8④1호 부속토지 — 주택 수 포함(R-8) + §9⑦ 안분(1호도 안분 대상)
+  it("D2-5: §8④1호 부속토지 — 주택 수 포함 + 의제 성립 + 안분 15억/17억", () => {
+    const result = calculateComprehensiveTax({
+      assessmentYear: 2024,
+      isOneHouseOwner: false,
+      birthDate: new Date("1953-01-01"),
+      acquisitionDate: new Date("2008-01-01"),
+      properties: [
+        { propertyId: "p1", assessedValue: 1_500_000_000, exclusionType: "none" },
+        { propertyId: "p2", assessedValue: 200_000_000, exclusionType: "none", section8para4Type: "appurtenant_land_only" },
+      ],
+    });
+
+    expect(result.basicDeduction).toBe(1_200_000_000);      // 의제 성립 (일반 1채 + 1호)
+    expect(result.section8para4Detail?.appliedTypes).toEqual(["appurtenant_land_only"]);
+    expect(result.oneHouseDeduction?.apportionmentRatio).toEqual({
+      mainHouseAssessedValue: 1_500_000_000,                // 1호도 안분 분모/분자에서 제외 (§9⑦1호)
+      totalAssessedValue: 1_700_000_000,
+    });
+  });
+
+  // D2-6: 의제 oneHouseTreatment — 세액공제 미입력이어도 기본공제 12억 의제
+  it("D2-6: 지방저가 의제 — 세액공제 없이도 기본공제 12억 + section8para4Detail echo", () => {
+    const result = calculateComprehensiveTax({
+      assessmentYear: 2024,
+      isOneHouseOwner: false,
+      properties: [
+        { propertyId: "p1", assessedValue: 1_200_000_000, exclusionType: "none" },
+        { propertyId: "p2", assessedValue: 200_000_000, location: "non_metro", exclusionType: "none", section8para4Type: "regional_low_price" },
+      ],
+    });
+
+    expect(result.basicDeduction).toBe(1_200_000_000);
+    expect(result.oneHouseDeduction).toBeUndefined();       // 연령·보유 미입력
+    expect(result.section8para4Detail?.mainHouseAssessedValue).toBe(1_200_000_000);
+    expect(result.section8para4Detail?.excludedAssessedValue).toBe(200_000_000);
+  });
+
+  // D2-7: 법인 + §8④ 잔존 입력 → 의제 무시 (공제 0·detail 없음·count 제외 미적용)
+  it("D2-7: 법인 §9②3호 + §8④4호 잔존 → 의제 전부 무시", () => {
+    const result = calculateComprehensiveTax({
+      assessmentYear: 2024,
+      taxpayerType: "corporate_special",
+      isOneHouseOwner: false,
+      properties: [
+        { propertyId: "p1", assessedValue: 2_000_000_000, exclusionType: "none" },
+        { propertyId: "p2", assessedValue: 300_000_000, location: "non_metro", exclusionType: "none", section8para4Type: "regional_low_price" },
+      ],
+    });
+
+    expect(result.basicDeduction).toBe(0);                  // §8①2호
+    expect(result.section8para4Detail).toBeUndefined();     // 법인 의제 무시
+    expect(result.oneHouseDeduction).toBeUndefined();
+    expect(result.appliedRate).toBe(0.027);                 // 23억 × 60% = 13.8억 × 2.7%
+    expect(result.calculatedTax).toBe(37_260_000);
+  });
+
+  // D2-8: 합산배제 주택의 §8④ 태그는 무시 (excludedIdSet 우선) — 단일 일반주택으로 처리
+  it("D2-8: 합산배제(미분양) 주택에 §8④ 태그 → 배제 우선 → 의제 미성립 (기본공제 9억)", () => {
+    const result = calculateComprehensiveTax({
+      assessmentYear: 2024,
+      isOneHouseOwner: false,
+      properties: [
+        { propertyId: "p1", assessedValue: 1_500_000_000, exclusionType: "none" },
+        {
+          propertyId: "p2",
+          assessedValue: 400_000_000,
+          area: 80,
+          location: "non_metro",
+          exclusionType: "unsold_housing",
+          section8para4Type: "regional_low_price",   // 태그가 있어도 합산배제 우선
+          otherInfo: { isFirstSale: true, recruitmentNoticeDate: "2021-01-01", acquisitionDate: "2022-03-01" },
+        },
+      ],
+    });
+
+    expect(result.aggregationExclusion.excludedCount).toBe(1); // p2 합산배제 인정
+    expect(result.includedAssessedValue).toBe(1_500_000_000);  // 배제 후 15억만
+    expect(result.section8para4Detail).toBeUndefined();         // 배제 주택의 §8④ 태그 무시 → 의제 미성립
+    expect(result.basicDeduction).toBe(900_000_000);           // 일반 1주택(비1세대1주택) 9억
   });
 });

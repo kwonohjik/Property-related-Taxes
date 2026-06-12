@@ -205,6 +205,8 @@ function HousingTaxBaseSection({
                 ? "1세대1주택"
                 : result.isJointOwnershipApplied
                 ? "부부 공동명의 특례 (1세대1주택 의제)"
+                : result.section8para4Detail
+                ? "§8④ 1세대1주택자 의제"
                 : "일반"
             } ${formatKRW(result.basicDeduction)})`}
             amount={result.basicDeduction}
@@ -255,6 +257,17 @@ function HousingTaxSection({
     if (result.taxpayerType === "corporate_public")
       return "§9②2호 공익법인등 — §9①각호 세율";
     if (result.isJointOwnershipApplied) return "§10의2 부부 공동명의 특례";
+    if (result.section8para4Detail) {
+      const TYPE_LABEL: Record<string, string> = {
+        appurtenant_land_only: "§8④1호 부속토지",
+        temporary_two_house: "§8④2호 일시적 2주택",
+        inherited_house: "§8④3호 상속주택",
+        regional_low_price: "§8④4호 지방 저가주택",
+      };
+      return result.section8para4Detail.appliedTypes
+        .map((t) => TYPE_LABEL[t] ?? t)
+        .join(" · ");
+    }
     if (result.isMultiHouseRateApplied) {
       return parseInt(result.assessmentDate.slice(0, 4)) <= 2022
         ? "다주택 중과세율 적용 (조정대상지역 2주택 또는 3주택 이상 — 구 §9①3호)"
@@ -284,7 +297,25 @@ function HousingTaxSection({
           badge={getCalculatedTaxBadge()}
         />
 
-        {/* 1세대1주택 세액공제 */}
+        {/* 재산세 비율 안분 공제 (GAP-1: 세액공제보다 선적용 — §9③) */}
+        <div className="pl-4 py-2 text-sm text-muted-foreground space-y-0.5">
+          <div className="flex justify-between">
+            <span>재산세 부과세액</span>
+            <span>{formatKRW(propertyTaxCredit.totalPropertyTax)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>안분 비율 (종부세 과세표준분 표준세율 재산세 ÷ 전체 표준세율 재산세)</span>
+            <span>{formatRate(propertyTaxCredit.ratio)}</span>
+          </div>
+        </div>
+        <TaxRow
+          label="재산세 비율 안분 공제"
+          amount={-propertyTaxCredit.creditAmount}
+          sub
+          badge="시행령 §4의3"
+        />
+
+        {/* 1세대1주택 세액공제 (재산세 공제 후 세액 기준 — §9⑥⑧) */}
         {oneHouseDeduction && oneHouseDeduction.deductionAmount > 0 && (
           <>
             <div className="pl-4 py-2 text-sm text-muted-foreground">
@@ -305,33 +336,26 @@ function HousingTaxSection({
                 </span>
                 <span>{formatRate(oneHouseDeduction.combinedRate)}</span>
               </div>
+              {/* §8④ 의제 시 §9⑦⑨ 공시가격 안분 (echo — UI 재계산 금지) */}
+              {oneHouseDeduction.apportionmentRatio && (
+                <div className="flex justify-between mt-0.5">
+                  <span>
+                    1주택분 안분 (
+                    {formatKRW(oneHouseDeduction.apportionmentRatio.mainHouseAssessedValue)} ÷{" "}
+                    {formatKRW(oneHouseDeduction.apportionmentRatio.totalAssessedValue)})
+                  </span>
+                  <span>§9⑦⑨</span>
+                </div>
+              )}
             </div>
             <TaxRow
               label="1세대1주택 세액공제"
               amount={-oneHouseDeduction.deductionAmount}
               sub
-              badge="§9②"
+              badge={oneHouseDeduction.apportionmentRatio ? "§9⑤~⑨ (§8④ 안분)" : "§9⑤~⑨"}
             />
           </>
         )}
-
-        {/* 재산세 비율 안분 공제 */}
-        <div className="pl-4 py-2 text-sm text-muted-foreground space-y-0.5">
-          <div className="flex justify-between">
-            <span>재산세 부과세액</span>
-            <span>{formatKRW(propertyTaxCredit.totalPropertyTax)}</span>
-          </div>
-          <div className="flex justify-between">
-            <span>안분 비율 (종부세 과세표준분 표준세율 재산세 ÷ 전체 표준세율 재산세)</span>
-            <span>{formatRate(propertyTaxCredit.ratio)}</span>
-          </div>
-        </div>
-        <TaxRow
-          label="재산세 비율 안분 공제"
-          amount={-propertyTaxCredit.creditAmount}
-          sub
-          badge="시행령 §4의3"
-        />
 
         {/* 세부담 상한 */}
         {taxCap && (
