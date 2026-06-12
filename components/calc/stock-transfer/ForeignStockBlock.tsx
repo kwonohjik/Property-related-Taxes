@@ -202,7 +202,7 @@ export function ForeignStockBlock({ form, onChange }: ForeignStockBlockProps) {
 
         <ToggleCard
           title="외국법인 발행 주식"
-          description="§157의3①1호: 외국법인이 발행한 주식 여부"
+          description="ON = §157의3 1호(외국법인 발행 주식). OFF = §157의3 2호(내국법인 발행 주식·국외 예탁기관 DR §152의2, 해외 증권시장 상장). 두 경우 모두 §94①3다목 국외주식으로 동일 과세 — 분류 표시용."
           checked={form.isListedForeignCorp}
           onCheckedChange={(v) => onChange({ isListedForeignCorp: v })}
           tone="sky"
