@@ -143,6 +143,22 @@ export async function callComprehensiveApi(
           }))
       : undefined;
 
+  // 세부담상한 capMode 파생 (3중 패턴)
+  const capMode = formData.previousYearCapMode ?? "direct";
+
+  // previousYearAuto: 자동 모드일 때만 구성 (직접 모드는 undefined — 상호배타)
+  // 날짜는 문자열 그대로 전송 — route.ts Zod coerceDates가 Date 변환 담당
+  const previousYearAuto =
+    !isCorporate && capMode === "auto" && formData.previousYearAutoAssessedValue
+      ? {
+          assessedValue: parseAmount(formData.previousYearAutoAssessedValue),
+          isOneHouseOwner: formData.previousYearAutoIsOneHouse,
+          // 생년월일·취득일은 기본정보에서 재사용 (중복 입력 금지)
+          birthDate: formData.birthDate || undefined,
+          acquisitionDate: formData.acquisitionDate || undefined,
+        }
+      : undefined;
+
   // taxpayerType·isCorporate는 함수 상단에서 파생 (§8④ strip과 공유 — 3중 일치)
   const body = {
     assessmentYear: parseInt(formData.assessmentYear) || new Date().getFullYear(),
@@ -155,9 +171,13 @@ export async function callComprehensiveApi(
       : (formData.isJointOwnershipSpecialCase ?? false),  // ③ normalize fallback (3중 일치)
     birthDate: isCorporate ? undefined : formData.birthDate || undefined,
     acquisitionDate: isCorporate ? undefined : formData.acquisitionDate || undefined,
-    previousYearTotalTax: formData.previousYearTotalTax
-      ? parseAmount(formData.previousYearTotalTax) || undefined
-      : undefined,
+    // 직접 모드 시만 previousYearTotalTax 전송, 자동 모드 시 strip (Zod 상호배타)
+    previousYearTotalTax:
+      capMode === "direct" && formData.previousYearTotalTax
+        ? parseAmount(formData.previousYearTotalTax) || undefined
+        : undefined,
+    // 자동 모드 시만 previousYearAuto 전송 (⑬ body spread)
+    previousYearAuto,
     properties,
     landAggregate,
     landSeparate,

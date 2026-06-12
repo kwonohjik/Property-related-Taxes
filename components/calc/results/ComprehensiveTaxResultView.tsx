@@ -16,7 +16,7 @@
  */
 
 import type { ComprehensiveTaxResult } from "@/lib/tax-engine/types/comprehensive.types";
-import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
+import { formatKRW, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { useState, useMemo } from "react";
 import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPanel";
 import { PrintSection } from "@/components/calc/results/shared/PrintSection";
@@ -24,6 +24,8 @@ import {
   COMPREHENSIVE_PRINT_SECTIONS,
   type ComprehensivePrintSectionId,
 } from "@/lib/print/comprehensive-print-sections";
+import { useComprehensiveWizardStore } from "@/lib/stores/comprehensive-wizard-store";
+import { ComprehensiveFilingFormSection } from "@/components/calc/results/comprehensive-filing";
 
 // ============================================================
 // 포맷 헬퍼
@@ -546,6 +548,19 @@ export function ComprehensiveTaxResultView({ result, savedId }: Props) {
     () => new Set()
   );
 
+  // 서식 표시용 store 값 (landArea·buildingArea·previousYearTotalTax)
+  // 서식 전용 — 엔진 계산에는 미영향
+  const { formData } = useComprehensiveWizardStore();
+  // 첫 번째 주택의 landArea를 서식 표시용으로 사용 (사례12 단일 주택 기준)
+  const filingLandArea = formData.properties[0]?.landArea ?? "";
+  const filingBuildingArea = formData.properties[0]?.area ?? "";
+  // 직접입력 모드일 때만 previousYearTotalTaxDirect 전달
+  const capMode = formData.previousYearCapMode ?? "direct";
+  const previousYearTotalTaxDirect =
+    capMode === "direct" && formData.previousYearTotalTax
+      ? parseAmount(formData.previousYearTotalTax) || undefined
+      : undefined;
+
   // 선택 항목 서버 PDF 다운로드 (PR-E). savedId(로그인+저장) 있을 때만 활성.
   async function handlePrintPdf(pdfSections: string[]) {
     if (!savedId || pdfSections.length === 0) return;
@@ -581,6 +596,11 @@ export function ComprehensiveTaxResultView({ result, savedId }: Props) {
     if (result.separateLandTax) s.add("separate-land");
     s.add("grand-total");
     if (result.warnings.length > 0) s.add("warnings");
+    // 서식 4종 — 항상 가용 (taxCap·previousYearEquivalent 조건은 ComprehensiveFilingFormSection 내부 게이팅)
+    s.add("filing-form-main");
+    s.add("filing-form-buppyo3");
+    if (result.taxCap) s.add("filing-form-buppyo5");
+    if (result.previousYearEquivalent) s.add("filing-form-buppyo5sub");
     return s;
   }, [result]);
 
@@ -636,6 +656,19 @@ export function ComprehensiveTaxResultView({ result, savedId }: Props) {
       {/* 총 납부세액 */}
       <PrintSection id="grand-total" selectedIds={selectedPrintIds}>
         <GrandTotalSection result={result} />
+      </PrintSection>
+
+      {/* 신고서 서식 4종 (2022년판)
+          인쇄 선택: 4개 id 중 하나라도 선택되면 컨테이너 표시.
+          ComprehensiveFilingFormSection 내부에서 개별 서식 조건부 표시.
+          PrintSection data-print-id는 인쇄 필터용 — 화면에서는 항상 노출. */}
+      <PrintSection id="filing-form-main" selectedIds={selectedPrintIds}>
+        <ComprehensiveFilingFormSection
+          result={result}
+          landArea={filingLandArea}
+          buildingArea={filingBuildingArea}
+          previousYearTotalTaxDirect={previousYearTotalTaxDirect}
+        />
       </PrintSection>
 
       {/* 과세기준일 및 법령 정보 */}

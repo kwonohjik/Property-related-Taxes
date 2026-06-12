@@ -21,6 +21,7 @@ import { StepIndicator } from "@/components/calc/StepIndicator";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { callComprehensiveApi } from "@/lib/calc/comprehensive-api";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { PropertyListInput } from "@/components/calc/PropertyListInput";
 import { ExclusionInfoInput } from "@/components/calc/ExclusionInfoInput";
 import { ComprehensiveTaxResultView } from "@/components/calc/results/ComprehensiveTaxResultView";
@@ -320,14 +321,72 @@ function Step5TaxCap() {
 
       {/* 전년도 세액 — corporate_special(상한 미적용)은 숨김 */}
       {!isCorporateSpecial && (
-        <div className="space-y-2">
-          <CurrencyInput
-            label="전년도 총세액 (선택)"
-            value={formData.previousYearTotalTax}
-            onChange={(v) => updateFormData({ previousYearTotalTax: v })}
-            placeholder="0"
-            hint="전년도 종합부동산세 + 재산세 합계 (농특세 제외). 미입력 시 세부담 상한 계산 생략."
+        <div className="space-y-4">
+          {/* 입력 방식 선택 */}
+          <RadioCardGroup
+            name="previousYearCapMode"
+            tone="sky"
+            layout="inline"
+            value={formData.previousYearCapMode ?? "direct"}
+            onChange={(v) => updateFormData({ previousYearCapMode: v as "direct" | "auto" })}
+            options={[
+              {
+                value: "direct",
+                label: "전년도 총세액 직접 입력",
+                description: "재산세·종부세 고지서에서 확인한 합계액 입력",
+                testId: "cap-mode-direct",
+              },
+              {
+                value: "auto",
+                label: "직전연도 공시가격으로 자동 계산",
+                description: "공시가격 입력 시 엔진이 상당액 자동 산출 (§10의2 준용)",
+                testId: "cap-mode-auto",
+              },
+            ]}
           />
+
+          {/* 직접 입력 모드 */}
+          {(formData.previousYearCapMode ?? "direct") === "direct" && (
+            <div className="space-y-2">
+              <CurrencyInput
+                label="전년도 총세액 (선택)"
+                value={formData.previousYearTotalTax}
+                onChange={(v) => updateFormData({ previousYearTotalTax: v })}
+                placeholder="0"
+                hint="전년도 종합부동산세 + 재산세 합계 (농특세 제외). 미입력 시 세부담 상한 계산 생략."
+              />
+            </div>
+          )}
+
+          {/* 자동 계산 모드 */}
+          {formData.previousYearCapMode === "auto" && (
+            <div className="rounded-md border border-sky-200 bg-sky-50/40 p-3 space-y-3">
+              <p className="text-xs font-semibold text-sky-700">직전연도 공시가격 정보</p>
+
+              <CurrencyInput
+                label="직전연도 공시가격 합계 (원)"
+                value={formData.previousYearAutoAssessedValue}
+                onChange={(v) => updateFormData({ previousYearAutoAssessedValue: v })}
+                placeholder="0"
+                required
+                hint="직전연도 6월 1일 기준 보유 주택 공시가격 합계"
+              />
+
+              <ToggleCard
+                tone="violet"
+                title="직전연도 1세대1주택자"
+                description="직전연도에 1세대1주택 특례를 적용받은 경우 켜세요"
+                checked={formData.previousYearAutoIsOneHouse}
+                onCheckedChange={(v) => updateFormData({ previousYearAutoIsOneHouse: v })}
+              />
+
+              <div className="rounded-md bg-muted/30 border px-3 py-2 text-xs text-muted-foreground">
+                <p>생년월일·취득일은 기본정보(1단계)에서 자동으로 사용됩니다.</p>
+                <p className="mt-0.5">직전연도 다주택인 경우 직접입력 방식을 사용해 주세요.</p>
+              </div>
+            </div>
+          )}
+
           <div className="rounded-md bg-muted/30 border px-4 py-3 text-xs text-muted-foreground">
             <p className="font-medium mb-1">세부담 상한 계산 방식</p>
             {showMultiHouseCap ? (
@@ -415,6 +474,15 @@ export default function ComprehensiveTaxPage() {
 
     if (currentStep < STEPS.length - 1) {
       setStep(currentStep + 1);
+      return;
+    }
+
+    // Step 5 (마지막 단계) — 자동 모드 필수 입력 validation (⑧ 동기화)
+    const taxpayerType = formData.taxpayerType ?? "individual";
+    const isCorporateSpecial = taxpayerType === "corporate_special";
+    const capMode = formData.previousYearCapMode ?? "direct";
+    if (!isCorporateSpecial && capMode === "auto" && !formData.previousYearAutoAssessedValue) {
+      setError("자동 계산 모드에서는 직전연도 공시가격 합계를 입력해야 합니다.");
       return;
     }
 
