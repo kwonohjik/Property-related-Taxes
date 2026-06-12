@@ -88,6 +88,14 @@ export function Step1Basic() {
   const params = getComprehensiveParams(selectedYear);
   // 법인 여부 파생 (dual-truth 금지 — 별도 isCorporate store 필드 없음)
   const isCorporate = formData.taxpayerType !== "individual";
+  // §8④ 의제 지정 주택 존재 여부 (Step2에서 지정 — 개인 전용). 1세대1주택·부부특례 미선택이어도 의제로 공제 적용.
+  const hasSection8para4 =
+    !isCorporate &&
+    formData.properties.some(
+      (p) => (p.section8para4Type ?? "none") !== "none" && p.exclusionType === "none",
+    );
+  const showSection8para4CreditInput =
+    hasSection8para4 && !formData.isOneHouseOwner && !formData.isJointOwnershipSpecialCase;
 
   function handleYearChange(year: string) {
     updateFormData({ assessmentYear: year });
@@ -304,6 +312,43 @@ export function Step1Basic() {
             </p>
           </div>
         </ToggleCard>
+      )}
+
+      {/* §8④ 의제 단독 적용 시(1세대1주택·부부특례 미선택) — 세액공제 입력 */}
+      {showSection8para4CreditInput && (
+        <div className="rounded-md border border-violet-200 bg-violet-50/60 p-4 space-y-3">
+          <div className="space-y-1">
+            <p className="text-sm font-semibold text-violet-800">
+              §8④ 1세대1주택자 의제 적용 — 자동으로 1세대1주택자로 계산
+            </p>
+            <p className="text-xs text-violet-900">
+              2단계에서 §8④ 특례주택을 지정하셨습니다(일반주택 1채와 함께 보유 시 의제 성립).
+              고령자·장기보유 세액공제를 위해 본인(신청인)의 생년월일·취득일을 입력하세요. 산출세액은 일반주택 공시가격으로 안분됩니다.
+            </p>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium">생년월일 (고령자 세액공제용)</label>
+            <DateInput
+              value={formData.birthDate}
+              onChange={(v) => updateFormData({ birthDate: v })}
+            />
+            <p className="text-xs text-muted-foreground">
+              만 60세 이상: 20%, 65세: 30%, 70세: 40% (최대 80% 합산)
+            </p>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium">최초 취득일 (장기보유 세액공제용)</label>
+            <DateInput
+              value={formData.acquisitionDate}
+              onChange={(v) => updateFormData({ acquisitionDate: v })}
+            />
+            <p className="text-xs text-muted-foreground">
+              5년 이상: 20%, 10년: 40%, 15년: 50% (고령자공제 합산 최대 80%)
+            </p>
+          </div>
+        </div>
       )}
     </div>
   );

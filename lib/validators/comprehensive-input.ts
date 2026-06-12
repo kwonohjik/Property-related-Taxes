@@ -130,34 +130,77 @@ const otherExclusionInfoSchema = z.object({
 // 개별 주택 입력 스키마
 // ============================================================
 
-export const comprehensivePropertySchema = z.object({
-  /** 주택 식별자 */
-  propertyId: z.string().min(1, { message: "propertyId가 필요합니다." }),
+/** §8④ 1세대1주택자 의제 특례 유형 */
+const section8para4TypeSchema = z.enum([
+  "none",
+  "appurtenant_land_only", // 1호 부속토지
+  "temporary_two_house",   // 2호 일시적 2주택
+  "inherited_house",       // 3호 상속주택
+  "regional_low_price",    // 4호 지방 저가주택
+]);
 
-  /** 공시가격 (원, 양의 정수) */
-  assessedValue: z
-    .number()
-    .int({ message: "공시가격은 원 단위 정수여야 합니다." })
-    .nonnegative({ message: "공시가격은 0원 이상이어야 합니다." }),
+export const comprehensivePropertySchema = z
+  .object({
+    /** 주택 식별자 */
+    propertyId: z.string().min(1, { message: "propertyId가 필요합니다." }),
 
-  /** 전용면적 (㎡, 합산배제 판정 시 필요) */
-  area: z
-    .number()
-    .positive()
-    .optional(),
+    /** 공시가격 (원, 양의 정수) */
+    assessedValue: z
+      .number()
+      .int({ message: "공시가격은 원 단위 정수여야 합니다." })
+      .nonnegative({ message: "공시가격은 0원 이상이어야 합니다." }),
 
-  /** 수도권 여부 (합산배제 판정 시 필요) */
-  location: z.enum(["metro", "non_metro"]).optional(),
+    /** 전용면적 (㎡, 합산배제 판정 시 필요) */
+    area: z
+      .number()
+      .positive()
+      .optional(),
 
-  /** 합산배제 유형 (미입력 시 "none" 처리) */
-  exclusionType: exclusionTypeSchema.optional(),
+    /** 수도권 여부 (합산배제 판정 시 필요) */
+    location: z.enum(["metro", "non_metro"]).optional(),
 
-  /** 임대주택 합산배제 상세 정보 */
-  rentalInfo: rentalExclusionInfoSchema.optional(),
+    /** 합산배제 유형 (미입력 시 "none" 처리) */
+    exclusionType: exclusionTypeSchema.optional(),
 
-  /** 기타 합산배제 상세 정보 */
-  otherInfo: otherExclusionInfoSchema.optional(),
-});
+    /** §8④ 1세대1주택자 의제 특례 유형 (미입력 시 "none") */
+    section8para4Type: section8para4TypeSchema.optional(),
+
+    /** §8④2호 신규주택 취득일 (YYYY-MM-DD) — UI·검증 전용 (엔진 미전달, 령 §4의2① 3년) */
+    newHouseAcquisitionDate: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, { message: "YYYY-MM-DD 형식이어야 합니다." })
+      .optional(),
+
+    /** §8④3호 상속개시일 (YYYY-MM-DD) — UI·검증 전용 (령 §4의2② 5년) */
+    inheritanceOpenDate: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, { message: "YYYY-MM-DD 형식이어야 합니다." })
+      .optional(),
+
+    /** §8④3호 상속 지분율 (%, 0~100) — UI·검증 전용 (령 §4의2②2호 40% 이하) */
+    inheritanceShareRatio: z
+      .number()
+      .min(0, { message: "지분율은 0% 이상이어야 합니다." })
+      .max(100, { message: "지분율은 100% 이하여야 합니다." })
+      .optional(),
+
+    /** 임대주택 합산배제 상세 정보 */
+    rentalInfo: rentalExclusionInfoSchema.optional(),
+
+    /** 기타 합산배제 상세 정보 */
+    otherInfo: otherExclusionInfoSchema.optional(),
+  })
+  .refine(
+    // ⑧ §8④4호 지방 저가주택은 수도권·광역시·세종 외 소재 (령 §4의2③2호) — location 차단 (안정 요건).
+    //   공시 기준액(현행 4억)은 2022 귀속 축자 불가 → 금액 비차단(엔진 신뢰 입력·UI 안내), 후속 자동판정.
+    (v) =>
+      !(v.section8para4Type === "regional_low_price" && v.location === "metro"),
+    {
+      message:
+        "§8④4호 지방 저가주택은 수도권·광역시·특별자치시 외 지역(비수도권)에 소재해야 합니다.",
+      path: ["section8para4Type"],
+    },
+  );
 
 // ============================================================
 // 종합합산 토지 입력 스키마

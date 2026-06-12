@@ -13,7 +13,19 @@
 import { parseAmount, formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { AddressSearch, type AddressValue } from "@/components/ui/address-search";
 import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { DateInput } from "@/components/ui/date-input";
+import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import type { PropertyEntry } from "@/lib/stores/comprehensive-wizard-store";
+
+// §8④ 1세대1주택자 의제 특례 유형
+type Section8Para4Type =
+  | "none"
+  | "appurtenant_land_only"
+  | "temporary_two_house"
+  | "inherited_house"
+  | "regional_low_price";
 
 // ============================================================
 // 합산배제 유형 레이블
@@ -42,6 +54,8 @@ const EXCLUSION_TYPE_OPTIONS: [string, string][] = [
 
 interface Props {
   properties: PropertyEntry[];
+  /** 법인 여부 — 법인은 §8④ 의제 비노출 (Step1 매트릭스와 동일 정책) */
+  isCorporate?: boolean;
   onAdd: () => void;
   onRemove: (id: string) => void;
   onUpdate: (id: string, data: Partial<PropertyEntry>) => void;
@@ -55,12 +69,14 @@ function PropertyCard({
   index,
   property,
   canRemove,
+  isCorporate,
   onRemove,
   onUpdate,
 }: {
   index: number;
   property: PropertyEntry;
   canRemove: boolean;
+  isCorporate: boolean;
   onRemove: () => void;
   onUpdate: (data: Partial<PropertyEntry>) => void;
 }) {
@@ -201,6 +217,101 @@ function PropertyCard({
           </p>
         )}
       </div>
+
+      {/* §8④ 1세대1주택자 의제 특례 — 개인 + 합산배제 미신청 주택만 */}
+      {!isCorporate && property.exclusionType === "none" && (
+        <ToggleCard
+          tone="violet"
+          title="§8④ 1세대1주택자 의제 특례"
+          description="다른 일반주택 1채와 함께 보유 시, 이 주택을 1세대1주택자 계산에 포함(기본공제 12억·세액공제)하되 산출세액은 공시가격으로 안분합니다 (신청 9.16~30, 1호 부속토지는 신청 불요)"
+          checked={(property.section8para4Type ?? "none") !== "none"}
+          onCheckedChange={(v) =>
+            onUpdate(
+              v
+                ? { section8para4Type: "temporary_two_house" }
+                : {
+                    section8para4Type: "none",
+                    newHouseAcquisitionDate: "",
+                    inheritanceOpenDate: "",
+                    inheritanceShareRatio: "",
+                  },
+            )
+          }
+        >
+          <RadioCardGroup<Section8Para4Type>
+            name={`s84-${property.id}`}
+            tone="violet"
+            layout="stack"
+            value={(property.section8para4Type as Section8Para4Type) || "temporary_two_house"}
+            onChange={(v) => onUpdate({ section8para4Type: v })}
+            options={[
+              {
+                value: "temporary_two_house",
+                label: "일시적 2주택 (§8④2호)",
+                description: "1주택 양도 전 신규주택 취득 — 취득일부터 3년 이내 (령 §4의2①)",
+                testId: `s84-temporary-${property.id}`,
+              },
+              {
+                value: "inherited_house",
+                label: "상속주택 (§8④3호)",
+                description: "상속개시 5년 미경과 / 지분 40% 이하 / 지분 공시 6억(비수도권 3억) 이하 중 하나 (령 §4의2②)",
+                testId: `s84-inherited-${property.id}`,
+              },
+              {
+                value: "regional_low_price",
+                label: "지방 저가주택 (§8④4호)",
+                description: "공시가격 4억원 이하 + 수도권·광역시·특별자치시 외 소재 (령 §4의2③)",
+                hint:
+                  property.location === "metro"
+                    ? "현재 '수도권'으로 설정되어 선택할 수 없습니다 — 비수도권 주택만 해당"
+                    : undefined,
+                disabled: property.location === "metro",
+                testId: `s84-regional-${property.id}`,
+              },
+              {
+                value: "appurtenant_land_only",
+                label: "다른 주택의 부속토지 (§8④1호)",
+                description: "건물·토지 소유자가 다른 경우 — 신청 불요(당연 적용). 세율 주택 수에는 포함됩니다",
+                testId: `s84-appurtenant-${property.id}`,
+              },
+            ]}
+          />
+
+          {/* 2호 — 신규주택 취득일 */}
+          {property.section8para4Type === "temporary_two_house" && (
+            <div className="space-y-1.5">
+              <label className="block text-sm font-medium">신규주택 취득일</label>
+              <DateInput
+                value={property.newHouseAcquisitionDate}
+                onChange={(v) => onUpdate({ newHouseAcquisitionDate: v })}
+              />
+              <p className="text-xs text-muted-foreground">
+                과세기준일 현재 취득일부터 3년 이내여야 합니다 (령 §4의2①)
+              </p>
+            </div>
+          )}
+
+          {/* 3호 — 상속개시일 + 지분율 */}
+          {property.section8para4Type === "inherited_house" && (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium">상속개시일</label>
+                <DateInput
+                  value={property.inheritanceOpenDate}
+                  onChange={(v) => onUpdate({ inheritanceOpenDate: v })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium">상속 지분율 (%)</label>
+                <DecimalInput
+                  value={property.inheritanceShareRatio}
+                  onChange={(v) => onUpdate({ inheritanceShareRatio: v })}
+                />
+              </div>
+            </div>
+          )}
+        </ToggleCard>
+      )}
     </div>
   );
 }
@@ -209,7 +320,7 @@ function PropertyCard({
 // 메인 컴포넌트
 // ============================================================
 
-export function PropertyListInput({ properties, onAdd, onRemove, onUpdate }: Props) {
+export function PropertyListInput({ properties, isCorporate = false, onAdd, onRemove, onUpdate }: Props) {
   const totalAssessedValue = properties.reduce(
     (sum, p) => sum + parseAmount(p.assessedValue),
     0,
@@ -224,6 +335,7 @@ export function PropertyListInput({ properties, onAdd, onRemove, onUpdate }: Pro
           index={index}
           property={property}
           canRemove={properties.length > 1}
+          isCorporate={isCorporate}
           onRemove={() => onRemove(property.id)}
           onUpdate={(data) => onUpdate(property.id, data)}
         />

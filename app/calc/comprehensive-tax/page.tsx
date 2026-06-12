@@ -98,6 +98,7 @@ function Step2Properties() {
       </div>
       <PropertyListInput
         properties={formData.properties}
+        isCorporate={(formData.taxpayerType ?? "individual") !== "individual"}
         onAdd={addProperty}
         onRemove={removeProperty}
         onUpdate={updateProperty}

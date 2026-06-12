@@ -10,9 +10,10 @@
  *   Step 2. 기본공제 차감 (9억/12억)
  *   Step 3. 공정시장가액비율 적용 (60%)
  *   Step 4. 과세표준 → 만원 미만 절사
- *   Step 5. 누진세율 7단계 → 산출세액
- *   Step 6. 1세대1주택 세액공제 (고령자 + 장기보유, 최대 80%)
- *   Step 7. 재산세 비율 안분 공제 (핵심!)
+ *   Step 5. 누진세율 7단계 → 산출세액 (§8④ 의제·주택 수 제외 반영)
+ *   Step 6. 재산세 비율 안분 공제 (§9③ — 핵심!)            ★ GAP-1: 세액공제보다 선적용
+ *   Step 7. 1세대1주택 세액공제 (고령자 + 장기보유, 최대 80%, §9⑥⑧)
+ *           — §8④ 의제 시 §9⑦⑨ 공시가격 안분 적용
  *   Step 8. 세부담 상한 적용
  *   Step 9. 농어촌특별세 (결정세액 × 20%)
  *
@@ -118,8 +119,6 @@ export function calculateComprehensiveTax(
   // ── §10의2 부부 공동명의 1주택자 특례 — 1세대1주택자 의제 (§10의2③) ──
   // 법인이면 무시. isOneHouseOwner와 상호배타는 Zod refine이 차단 (방어적 OR 처리).
   const isJointApplied = !isCorporate && input.isJointOwnershipSpecialCase === true;
-  // 1세대1주택자 취급 여부 (기본공제 §8①1호 + 세액공제 §9⑤~⑨ 공통 게이트)
-  const oneHouseTreatment = !isCorporate && (input.isOneHouseOwner || isJointApplied);
 
   // ── Step 0: 합산배제 판정 ──
   const propertiesForExclusion: PropertyForExclusion[] = input.properties.map((p) => ({
@@ -196,6 +195,51 @@ export function calculateComprehensiveTax(
   const totalAssessedValue = totalAssessedValueFromLoop;
   const includedAssessedValue = totalAssessedValue - aggregationExclusion.totalExcludedValue;
 
+  // ── §8④ 1세대1주택자 의제 특례 (per-property section8para4Type) ──
+  //   합산배제(§8②) 주택은 §8④ 대상 아님 → excludedIdSet 제외 (D2-8). 의제는 개인 전용.
+  const excludedIdSet = new Set(
+    aggregationExclusion.propertyResults
+      .filter((r) => r.isExcluded)
+      .map((r) => r.propertyId),
+  );
+  const s84Properties = input.properties.filter(
+    (p) => (p.section8para4Type ?? "none") !== "none" && !excludedIdSet.has(p.propertyId),
+  );
+  // 일반주택(특례 미지정·합산배제 제외) 수
+  const normalHouseCount = aggregationExclusion.includedCount - s84Properties.length;
+  // §8④ 의제 성립: 법 §8④ 본문 "1주택과 … 함께 소유" — 일반주택 정확히 1채 + 특례주택 ≥ 1 (개인 전용).
+  //   지정만으로 의제하지 않음 (13단계 STEP 6 #5).
+  const isSection8para4Applied =
+    !isCorporate && s84Properties.length > 0 && normalHouseCount === 1;
+  if (!isCorporate && s84Properties.length > 0 && normalHouseCount !== 1) {
+    warnings.push(
+      "§8④ 1세대1주택자 의제는 일반주택 1채와 특례주택을 함께 소유한 경우에만 적용됩니다. 현재 구성은 의제 요건 미충족으로 의제는 미적용됩니다(상속주택 등 시행령 §4의3③ 주택 수 제외는 별도 적용).",
+    );
+  }
+  // 1세대1주택자 취급 여부 (기본공제 §8①1호 + 세액공제 §9⑤~⑨ 공통 게이트)
+  const oneHouseTreatment =
+    !isCorporate && (input.isOneHouseOwner || isJointApplied || isSection8para4Applied);
+  // §8④ 특례주택 공시 합산 (§9⑦⑨ 안분 분자 = includedAssessedValue − 이 값)
+  const excludedAssessedValueS84 = s84Properties.reduce(
+    (s, p) => s + p.assessedValue,
+    0,
+  );
+  // 세율 주택 수 (령 §4의3③3호): 나목(상속) 무전제 제외 · 라마목(2·4호) 의제 성립 시 제외
+  //   1호(부속토지)·법인은 미제외 (R-8·R-9). 가목(합산배제)은 includedCount에서 이미 빠짐.
+  const s84InheritedCount = s84Properties.filter(
+    (p) => p.section8para4Type === "inherited_house",
+  ).length;
+  const s84ConditionalCount = s84Properties.filter(
+    (p) =>
+      p.section8para4Type === "temporary_two_house" ||
+      p.section8para4Type === "regional_low_price",
+  ).length;
+  const rateHouseCount = isCorporate
+    ? aggregationExclusion.includedCount
+    : aggregationExclusion.includedCount -
+      s84InheritedCount -
+      (isSection8para4Applied ? s84ConditionalCount : 0);
+
   // ── 연도별 세법 파라미터 로드 (과세귀속연도 기준) ──
   const yearParams = getComprehensiveParams(input.assessmentYear);
   if (!isComprehensiveYearSupported(input.assessmentYear)) {
@@ -233,7 +277,7 @@ export function calculateComprehensiveTax(
   //   정의한 것과 동일 축 — Phase 0 축자 확인)
   const useMultiRate = isMultiHouseRate(
     input.assessmentYear,
-    aggregationExclusion.includedCount,
+    rateHouseCount, // §8④ 의제·상속주택 주택 수 제외 반영 (령 §4의3③3호) — R-8·R-9
     input.isMultiHouseInAdjustedArea ?? false,
   );
 
@@ -266,30 +310,8 @@ export function calculateComprehensiveTax(
     isMultiHouseRateApplied = useMultiRate;
   }
 
-  // ── Step 6: 1세대1주택 세액공제 ──
-  let oneHouseDeduction: OneHouseDeductionResult | undefined = undefined;
-  let taxAfterOneHouseDeduction = calculatedTax;
-
-  if (
-    // 1세대1주택 세액공제(§9⑤~⑨) — 개인 1세대1주택 또는 §10의2 부부 특례(신청인 기준, 령 §5의2⑧)
-    oneHouseTreatment &&
-    isSubjectToHousingTax &&
-    input.birthDate &&
-    input.acquisitionDate
-  ) {
-    oneHouseDeduction = applyOneHouseDeduction(
-      calculatedTax,
-      input.birthDate,
-      input.acquisitionDate,
-      assessmentDate,
-    );
-    taxAfterOneHouseDeduction = Math.max(
-      calculatedTax - oneHouseDeduction.deductionAmount,
-      0,
-    );
-  }
-
-  // ── Step 7: 재산세 비율 안분 공제 (종합부동산세법 시행령 §4의3) ──
+  // ── Step 6: 재산세 비율 안분 공제 (종합부동산세법 §9③·시행령 §4의3) ──
+  //   ★ GAP-1: §9⑥⑧ "제1항·제3항·제4항에 따라 산출된 세액" → 재산세 공제(§9③)를 세액공제(§9⑥)보다 선적용.
   //
   // ⑤ = 종부세 과세표준 × 재산세FMR(60%) × 0.4% (주택 최고세율, 누진공제 없음)
   //   = taxBase × PROPERTY_CONST.FAIR_MARKET_RATIO_HOUSING × 0.004
@@ -313,15 +335,60 @@ export function calculateComprehensiveTax(
     includedAssessedValue,
     false, // 일반 표준세율 강제 — 특례세율 배제
   ).tax;
-  // ⓐ = totalPropertyTaxAmount (부과세액 합계)
+  // ⓐ = totalPropertyTaxAmount (부과세액 합계). 공제 상한 = 산출세액(calculatedTax — §9③ 공제는 산출세액에서)
   const propertyTaxCredit = calculatePropertyTaxCreditProration(
     totalPropertyTaxAmount,
     numeratorStdTaxEq,
     denominatorStdTax,
-    taxAfterOneHouseDeduction,
+    calculatedTax,
   );
+  const taxAfterPropertyCredit = Math.max(
+    calculatedTax - propertyTaxCredit.creditAmount,
+    0,
+  );
+
+  // ── Step 7: 1세대1주택 세액공제 (§9⑤~⑨ — 재산세 공제 후 세액 기준) ──
+  //   §8④ 의제 시 §9⑦⑨ 공시가격 안분: 공제 = floor(base × main/total × 합산공제율).
+  let oneHouseDeduction: OneHouseDeductionResult | undefined = undefined;
+  let section8para4Detail: ComprehensiveTaxResult["section8para4Detail"] = undefined;
+
+  if (
+    // 1세대1주택 세액공제(§9⑤~⑨) — 개인 1세대1주택·§10의2 부부 특례·§8④ 의제 (신청인 기준, 령 §5의2⑧)
+    oneHouseTreatment &&
+    isSubjectToHousingTax &&
+    input.birthDate &&
+    input.acquisitionDate
+  ) {
+    // §8④ 의제 성립 시만 안분 (일반 1세대1주택·부부특례는 비율 1 — 안분 생략)
+    const apportionment =
+      isSection8para4Applied && excludedAssessedValueS84 > 0
+        ? {
+            mainHouseAssessedValue: includedAssessedValue - excludedAssessedValueS84,
+            totalAssessedValue: includedAssessedValue,
+          }
+        : undefined;
+    oneHouseDeduction = applyOneHouseDeduction(
+      taxAfterPropertyCredit,
+      input.birthDate,
+      input.acquisitionDate,
+      assessmentDate,
+      apportionment,
+    );
+  }
+
+  // §8④ 의제 echo (성립 시 — 결과뷰 배지·안분 산식)
+  if (isSection8para4Applied) {
+    section8para4Detail = {
+      appliedTypes: Array.from(
+        new Set(s84Properties.map((p) => p.section8para4Type ?? "none")),
+      ),
+      mainHouseAssessedValue: includedAssessedValue - excludedAssessedValueS84,
+      excludedAssessedValue: excludedAssessedValueS84,
+    };
+  }
+
   const comprehensiveTaxAfterCredit = Math.max(
-    taxAfterOneHouseDeduction - propertyTaxCredit.creditAmount,
+    taxAfterPropertyCredit - (oneHouseDeduction?.deductionAmount ?? 0),
     0,
   );
 
@@ -405,6 +472,7 @@ export function calculateComprehensiveTax(
     calculatedTax,
     isMultiHouseRateApplied,
     oneHouseDeduction,
+    section8para4Detail,
     propertyTaxCredit,
     taxCap,
     determinedHousingTax,

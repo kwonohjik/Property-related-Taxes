@@ -45,13 +45,36 @@ export async function callComprehensiveApi(
   formData: ComprehensiveFormData,
 ): Promise<ComprehensiveTaxResult> {
 
+  // ④ 법인 여부 파생 — 법인은 §8④ 의제 미적용 (3중 패턴: 엔진 1차·API strip 2차)
+  const taxpayerType = formData.taxpayerType ?? "individual";
+  const isCorporate = taxpayerType !== "individual";
+
   const properties = formData.properties.map((p) => {
+    // §8④ 유형: 법인 시 strip. "none"은 undefined로 (엔진 기본값과 일치)
+    const s84Type =
+      !isCorporate && p.section8para4Type && p.section8para4Type !== "none"
+        ? p.section8para4Type
+        : undefined;
     const base = {
       propertyId: p.id,
       assessedValue: parseAmount(p.assessedValue),
       area: p.area ? parseFloat(p.area) : undefined,
       location: p.location,
       exclusionType: p.exclusionType !== "none" ? p.exclusionType : undefined,
+      section8para4Type: s84Type,
+      // §8④ 요건 필드 — Zod 검증 통과용 (엔진 미사용). 4호는 요건 입력 없음
+      newHouseAcquisitionDate:
+        s84Type === "temporary_two_house" && p.newHouseAcquisitionDate
+          ? p.newHouseAcquisitionDate
+          : undefined,
+      inheritanceOpenDate:
+        s84Type === "inherited_house" && p.inheritanceOpenDate
+          ? p.inheritanceOpenDate
+          : undefined,
+      inheritanceShareRatio:
+        s84Type === "inherited_house" && p.inheritanceShareRatio
+          ? parseFloat(p.inheritanceShareRatio)
+          : undefined,
     };
 
     // 임대주택 합산배제 상세
@@ -120,11 +143,7 @@ export async function callComprehensiveApi(
           }))
       : undefined;
 
-  // ④ 법인 여부 파생 — taxpayerType 기준 (dual-truth 금지: 별도 isCorporate 필드 없음)
-  // fallback을 먼저 적용해야 구버전 sessionStorage(undefined)가 법인으로 오판되지 않음 (3중 일치)
-  const taxpayerType = formData.taxpayerType ?? "individual";
-  const isCorporate = taxpayerType !== "individual";
-
+  // taxpayerType·isCorporate는 함수 상단에서 파생 (§8④ strip과 공유 — 3중 일치)
   const body = {
     assessmentYear: parseInt(formData.assessmentYear) || new Date().getFullYear(),
     taxpayerType,                                         // ⑬ body spread

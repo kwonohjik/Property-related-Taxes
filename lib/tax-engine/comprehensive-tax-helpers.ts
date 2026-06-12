@@ -57,18 +57,51 @@ export function getLongTermRate(
 
 /**
  * 1세대1주택 세액공제 계산 (T-06) — 합산 최대 80% 상한
+ *
+ * ★ GAP-1 (§9⑥⑧ 축자): 공제 base는 "제1항·제3항·제4항에 따라 산출된 세액" —
+ *   §9③(재산세 비율 안분 공제) 적용 **후** 세액이다. 호출부(comprehensive-tax.ts)가
+ *   재산세 안분 공제 후 세액(taxAfterPropertyCredit)을 첫 인자로 전달한다.
+ *
+ * ★ GAP-2 (§9⑦⑨): §8④ 1세대1주택자 의제 시 각 호 산출세액(공시가격합계액으로 안분)을
+ *   base에서 제외 → 공제 = floor(base × main/total × 합산공제율). apportionment 전달 시 적용.
+ *   분수 정수 연산: floor(base × round(rate×100) × main / (total × 100)) — 단일 floor (safeMultiplyThenDivide BigInt).
+ *
+ * @param taxAfterPropertyCredit - 재산세 비율 안분 공제 후 세액 (§9⑥ "제3항에 따라 산출된 세액")
+ * @param apportionment          - §8④ 의제 시 §9⑦⑨ 공시가격 안분 (미전달 시 비율 1 — 일반 1세대1주택·부부특례)
  */
 export function applyOneHouseDeduction(
-  calculatedTax: number,
+  taxAfterPropertyCredit: number,
   birthDate: Date,
   acquisitionDate: Date,
   assessmentDate: Date,
+  apportionment?: {
+    mainHouseAssessedValue: number;
+    totalAssessedValue: number;
+  },
 ): OneHouseDeductionResult {
   const seniorRate = getSeniorRate(birthDate, assessmentDate);
   const longTermRate = getLongTermRate(acquisitionDate, assessmentDate);
   const combined = seniorRate + longTermRate;
   const combinedRate = Math.min(combined, COMPREHENSIVE_CONST.ONE_HOUSE_MAX_CREDIT_RATE);
-  const deductionAmount = Math.floor(calculatedTax * combinedRate);
+
+  let deductionAmount: number;
+  let apportionmentRatio: OneHouseDeductionResult["apportionmentRatio"];
+  if (apportionment && apportionment.totalAssessedValue > 0) {
+    // §9⑦⑨ 안분: floor(base × round(rate×100) × main / (total × 100))
+    // base × round(rate×100)은 안전(수백만 × ≤80) → safeMultiplyThenDivide가 main 곱에서 BigInt fallback
+    const rateInt = Math.round(combinedRate * 100); // 0.8 → 80, 0.4 → 40
+    deductionAmount = safeMultiplyThenDivide(
+      taxAfterPropertyCredit * rateInt,
+      apportionment.mainHouseAssessedValue,
+      apportionment.totalAssessedValue * 100,
+    );
+    apportionmentRatio = {
+      mainHouseAssessedValue: apportionment.mainHouseAssessedValue,
+      totalAssessedValue: apportionment.totalAssessedValue,
+    };
+  } else {
+    deductionAmount = Math.floor(taxAfterPropertyCredit * combinedRate);
+  }
 
   return {
     seniorRate,
@@ -76,6 +109,7 @@ export function applyOneHouseDeduction(
     combinedRate,
     deductionAmount,
     isMaxCapApplied: combined > COMPREHENSIVE_CONST.ONE_HOUSE_MAX_CREDIT_RATE,
+    apportionmentRatio,
   };
 }
 

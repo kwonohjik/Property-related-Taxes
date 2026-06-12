@@ -83,6 +83,9 @@ function toEngineInput(
       area: p.area,
       location: p.location,
       exclusionType: p.exclusionType ?? "none",
+      // ⑭ §8④ 의제 유형 (요건 필드 newHouseAcquisitionDate·inheritanceOpenDate·inheritanceShareRatio는
+      //    UI·Zod 검증 전용 — 엔진 input에 없으므로 매핑하지 않음)
+      section8para4Type: p.section8para4Type ?? "none",
       rentalInfo,
       otherInfo,
     };
