@@ -2,6 +2,7 @@
 
 import { MARKERS, findMarker, type MarkerMeta } from "@/lib/korean-law/markers";
 import type { ChainSection } from "@/lib/korean-law/types";
+import { LawDiffView } from "./LawDiffView";
 
 /**
  * 체인 섹션 렌더러.
@@ -98,6 +99,8 @@ export function SectionView({ section }: { section: ChainSection }) {
           ))}
         </ul>
       )}
+
+      {section.diff && <LawDiffView diff={section.diff} />}
     </section>
   );
 }

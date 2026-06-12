@@ -25,6 +25,12 @@ export { getDecisionText } from "./client-decisions-text";
 
 export { getAnnexes } from "./client-annexes";
 
+export { getApplicableLaw } from "./applicable-law";
+
+export { checkPrecedentStatus } from "./cite-check";
+
+export { buildImpactMap } from "./impact-map";
+
 export { resolveLawAlias, isAlias } from "./aliases";
 export type {
   LawSearchItem,

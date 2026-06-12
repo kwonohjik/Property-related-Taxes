@@ -195,7 +195,9 @@ export type RouterTool =
   | "get_decision_text"
   | "get_annexes"
   | "run_chain"
-  | "verify_citations";
+  | "verify_citations"
+  | "applicable_law"
+  | "impact_map";
 
 export interface RouteResult {
   tool: RouterTool;
@@ -274,7 +276,7 @@ export const CHAIN_LABELS: Record<ChainType, string> = {
  * 체인 결과 단위 섹션. UI는 각 섹션을 탭·카드로 표현.
  */
 export interface ChainSection {
-  kind: "laws" | "articles" | "decisions" | "annexes" | "citations" | "note";
+  kind: "laws" | "articles" | "decisions" | "annexes" | "citations" | "note" | "diff";
   heading: string;
   laws?: LawSearchItem[];
   articles?: LawArticleResult[];
@@ -282,6 +284,8 @@ export interface ChainSection {
   annexes?: AnnexItem[];
   citations?: Array<{ raw: string; valid: boolean; lawName?: string; articleNo?: string; reason?: string }>;
   note?: string;
+  /** kind "diff" — 조문 신구대조 (amendment_track 체인) */
+  diff?: ArticleDiff;
 }
 
 export interface ChainResult {
@@ -400,6 +404,198 @@ export const chainInputSchema = z.object({
   rawText: z.string().optional(),
 });
 export type ChainInput = z.infer<typeof chainInputSchema>;
+
+// ────────────────────────────────────────────────────────────────────────────
+// v3 — 행위시법 판단 (applicable_law)
+// ────────────────────────────────────────────────────────────────────────────
+
+/**
+ * 법령 버전 1건 — 법제처 `lawSearch.do?target=eflaw` 응답의 (MST, 시행일자) 쌍.
+ * 같은 MST가 단계 시행으로 여러 시행일자 행을 가질 수 있어 쌍 단위로 다룬다.
+ */
+export interface LawVersionEntry {
+  /** 법령일련번호 */
+  mst: string;
+  /** 시행일자 YYYYMMDD */
+  efYd: string;
+  /** 공포일자 YYYYMMDD */
+  ancYd: string;
+  /** 공포번호 */
+  ancNo: string;
+  /** 제개정구분명 (일부개정·전부개정·타법개정 등) */
+  rrCls: string;
+  /** 현행연혁코드 (현행 | 연혁 | 시행예정) */
+  statusLabel: string;
+}
+
+/** 부칙 발췌 1건 — 특정 공포번호 부칙에서 추린 적용례·경과조치 라인 */
+export interface TransitionExcerpt {
+  ancNo: string;
+  /** 부칙 공포일자 YYYYMMDD */
+  ancYd: string;
+  lines: string[];
+  /**
+   * 발췌 라인이 조회 조문(제N조)을 직접 언급하는지.
+   * true = 해당 조문 전용 경과규정 / false = 그 밖의 일반 경과조치(참고용).
+   * 세금 앱 정확성: 조문 무관 경과규정을 해당 조문에 적용되는 것처럼 오인시키지 않기 위함.
+   */
+  articleSpecific: boolean;
+}
+
+/** 행위시법 판단 결과 */
+export interface ApplicableLawResult {
+  lawName: string;
+  articleNo: string;
+  /** 기준일 YYYYMMDD */
+  baseDate: string;
+  /** 기준일에 시행 중이던 버전 */
+  version: LawVersionEntry;
+  /** 그 버전의 조문 본문 (조문 미존재 시 null) */
+  article: { title: string; fullText: string } | null;
+  /** 오늘 기준 현행 버전 (식별 실패 시 null) */
+  currentVersion: LawVersionEntry | null;
+  /** 적용 버전이 곧 현행 버전인지 */
+  isCurrentVersion: boolean;
+  /** 적용 시점 조문 본문이 현행과 동일한지 (비교 실패 시 null) */
+  sameAsCurrentText: boolean | null;
+  /** 기준일 이후 ~ 오늘 사이 시행된 개정 버전들 (경과규정 추적 대상) */
+  laterVersions: LawVersionEntry[];
+  /** 부칙 적용례·경과조치 발췌 */
+  transitionExcerpts: TransitionExcerpt[];
+  /** 법제처 현행 조문 링크 */
+  sourceUrl: string;
+}
+
+export const applicableLawInputSchema = z.object({
+  lawName: z.string().min(1).max(100).refine(
+    (v) => HANGUL_OR_KNOWN_EN.test(v),
+    "법령명은 한글로 입력해 주세요."
+  ),
+  articleNo: z.string().min(1).max(30).describe("예: '제89조', '89', '18의2'"),
+  baseDate: z
+    .string()
+    .regex(/^\d{4}[-./]?\d{1,2}[-./]?\d{1,2}$/, "기준일 형식 오류: YYYYMMDD 또는 YYYY-MM-DD"),
+});
+export type ApplicableLawInput = z.infer<typeof applicableLawInputSchema>;
+
+// ────────────────────────────────────────────────────────────────────────────
+// v3 — 두 시점 신구대조 (time_travel)
+// ────────────────────────────────────────────────────────────────────────────
+
+/** 라인 단위 diff 1줄 — 추가/삭제/유지 */
+export interface DiffLine {
+  kind: "add" | "remove" | "keep";
+  text: string;
+}
+
+/** 한 시점의 조문 스냅샷 */
+export interface ArticleSnapshot {
+  version: LawVersionEntry;
+  title: string;
+  fullText: string;
+}
+
+/** 조문 신구대조 결과 */
+export interface ArticleDiff {
+  lawName: string;
+  articleNo: string;
+  /** 이전(과거) 시점 스냅샷 — 조문 미존재 시 null */
+  before: ArticleSnapshot | null;
+  /** 이후(최신) 시점 스냅샷 — 조문 미존재 시 null */
+  after: ArticleSnapshot | null;
+  /** before → after 라인 diff */
+  diff: DiffLine[];
+  /** 본문이 동일한지 (둘 다 존재하고 변경 없음) */
+  identical: boolean;
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// v3 — 판례 생사 확인 (cite_check)
+// ────────────────────────────────────────────────────────────────────────────
+
+/** 대상 판례를 인용한 후속 판례 1건 */
+export interface CitingCase {
+  caseNo: string;
+  title: string;
+  court: string;
+  date: string;
+  /** 전원합의체 여부 (판례 변경은 주로 전합) */
+  isEnBanc: boolean;
+  /** 본문 조회용 ID */
+  id: string;
+  /** 대법원 등 본문 제공 출처 여부 */
+  hasFullText: boolean;
+}
+
+/** 후속 판례에서 감지된 변경·폐기 신호 1건 */
+export interface ChangeSignal {
+  citingCaseNo: string;
+  citingDate: string;
+  /** 신호 유형 라벨 ("판례 변경 선언" 등) */
+  label: string;
+  /** 신호가 발견된 본문 발췌 */
+  excerpt: string;
+}
+
+/**
+ * 판례 생사 상태. 단정 금지 — "폐기됨"이 아니라 "검토 필요"의 위계.
+ *   review_needed: 변경·폐기 신호 또는 미확인 전원합의체 후속 → 전문 확인 필요
+ *   no_signal:     후속 인용은 있으나 신호 미감지 (현행 유지 확정은 아님)
+ *   no_citations:  법제처 수록 범위 내 후속 인용 없음
+ */
+export type CiteCheckStatus = "review_needed" | "no_signal" | "no_citations";
+
+export interface CiteCheckResult {
+  caseNo: string;
+  /** 후속 인용 총수 (하급심 포함) */
+  citingCount: number;
+  /** 본문까지 스캔한 대법원 판례 수 */
+  scannedCount: number;
+  /** 감지된 변경·폐기 신호 */
+  signals: ChangeSignal[];
+  /** 전원합의체이나 본문 미확보로 스캔 못한 후속 판례 (수동 확인 권장) */
+  enBancUnscanned: CitingCase[];
+  status: CiteCheckStatus;
+}
+
+export const citeCheckInputSchema = z.object({
+  caseNo: z.string().min(1).max(50),
+});
+export type CiteCheckInput = z.infer<typeof citeCheckInputSchema>;
+
+// ────────────────────────────────────────────────────────────────────────────
+// v3 — 조문 영향 그래프 (impact_map)
+// ────────────────────────────────────────────────────────────────────────────
+
+/** 영향 그래프의 한 도메인 그룹 (역방향 인용) */
+export interface ImpactGroup {
+  domain: DecisionDomain;
+  label: string;
+  /** 이 조문을 본문에 인용한 결정 상위 N건 */
+  items: DecisionSearchItem[];
+  /** 해당 도메인 전체 인용 수 (표시 N건과 별개) */
+  totalCount: number;
+}
+
+/** 조문 영향 그래프 결과 */
+export interface ImpactMapResult {
+  lawName: string;
+  articleNo: string;
+  /** 검색에 사용한 인용 표기 (예: "소득세법 제89조") */
+  citationQuery: string;
+  groups: ImpactGroup[];
+  /** 전 도메인 합산 인용 수 */
+  totalCitations: number;
+}
+
+export const impactMapInputSchema = z.object({
+  lawName: z.string().min(1).max(100).refine(
+    (v) => HANGUL_OR_KNOWN_EN.test(v),
+    "법령명은 한글로 입력해 주세요."
+  ),
+  articleNo: z.string().min(1).max(30),
+});
+export type ImpactMapInput = z.infer<typeof impactMapInputSchema>;
 
 // ────────────────────────────────────────────────────────────────────────────
 // 5. 에러 envelope

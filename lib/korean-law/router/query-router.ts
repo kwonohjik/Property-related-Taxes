@@ -37,6 +37,79 @@ interface Pattern {
 // ────────────────────────────────────────────────────────────────────────────
 
 const ROUTER_PATTERNS: Pattern[] = [
+  // 0. 행위시법 — "2021년 시행 소득세법 89조", "2020.5.1 당시 소득세법 제89조"
+  //    조문 패턴(priority 1·2)보다 먼저 평가해야 시점 표현이 선점되지 않는다.
+  //    날짜(연도/YYYY.MM.DD) + (시행|당시|기준|적용|현재) 신호 + 법령명(접미사) + 조문번호 모두 필요.
+  {
+    name: "applicable_law",
+    priority: 0,
+    // normalizeLawSearchText가 "2020.5.1" → "2020 5 1" 로 점을 공백 치환하므로
+    // 월·일은 공백 구분으로 매칭(연도만 있으면 YYYY0101).
+    patterns: [
+      /(\d{4})(?:\s+(\d{1,2})\s+(\d{1,2}))?\s*년?\s*(?:에)?\s*(?:시행|당시|기준|적용|현재)[^가-힣\d]*([가-힣·\s]{1,28}?(?:법률|법|시행령|시행규칙|령|규칙|조례|규정))\s*제?\s*(\d{1,4})\s*조(?:\s*의\s*(\d+))?/,
+    ],
+    extract: (query, m) => {
+      const year = m[1];
+      const mon = m[2] ? m[2].padStart(2, "0") : "01";
+      const day = m[3] ? m[3].padStart(2, "0") : "01";
+      const baseDate = `${year}${mon}${day}`;
+      const lawName = resolveLawAlias(m[4].trim());
+      const articleNo = m[6] ? `제${m[5]}조의${m[6]}` : `제${m[5]}조`;
+      return {
+        tool: "applicable_law",
+        params: { lawName, articleNo, baseDate },
+        reason: `시점(${year}.${mon}.${day}) + 법령명 + 조문번호 → 행위시법(당시 시행 조문) 조회`,
+        targetTab: "law",
+        confidence: "high",
+      };
+    },
+  },
+
+  // 0-b. 조문 개정 신구대조 — "소득세법 89조 개정", "상증법 제22조 신구대조"
+  //    법령명 + 조문번호 + (개정|신구대조|연혁) 모두 있으면 조문 팝업 대신
+  //    개정 추적 체인(최근 개정 전후 diff)으로 라우팅. 조문번호를 query에 보존해야
+  //    체인이 신구대조를 산출할 수 있다(extractPrimaryTerm은 조문을 버림).
+  {
+    name: "amendment_article",
+    priority: 0,
+    patterns: [
+      /([가-힣·\s]{1,28}?(?:법률|법|시행령|시행규칙|령|규칙|조례|규정))\s*제?\s*(\d{1,4})\s*조(?:\s*의\s*(\d+))?[^가-힣]*(?:.*?)?(개정|신구대조|연혁|변경\s*이력)/,
+    ],
+    extract: (query, m) => {
+      const lawName = resolveLawAlias(m[1].trim());
+      const articleNo = m[3] ? `제${m[2]}조의${m[3]}` : `제${m[2]}조`;
+      return {
+        tool: "run_chain",
+        params: { type: "amendment_track", query: `${lawName} ${articleNo}` },
+        reason: `법령명 + 조문번호 + 개정 키워드 → 개정 추적 체인(최근 개정 신구대조)`,
+        chainType: "amendment_track",
+        targetTab: "chain",
+        confidence: "high",
+      };
+    },
+  },
+
+  // 0-c. 조문 영향 분석 — "소득세법 89조 영향", "상증법 제22조 파급"
+  //    법령명 + 조문번호 + (영향|파급) → 인용 역추적(조문 모달 + 영향 분석 자동 실행).
+  {
+    name: "impact_map",
+    priority: 0,
+    patterns: [
+      /([가-힣·\s]{1,28}?(?:법률|법|시행령|시행규칙|령|규칙|조례|규정))\s*제?\s*(\d{1,4})\s*조(?:\s*의\s*(\d+))?[^가-힣]*(?:.*?)?(영향|파급|인용\s*현황)/,
+    ],
+    extract: (query, m) => {
+      const lawName = resolveLawAlias(m[1].trim());
+      const articleNo = m[3] ? `제${m[2]}조의${m[3]}` : `제${m[2]}조`;
+      return {
+        tool: "impact_map",
+        params: { lawName, articleNo },
+        reason: `법령명 + 조문번호 + 영향 키워드 → 조문 인용 역추적(영향 그래프)`,
+        targetTab: "law",
+        confidence: "high",
+      };
+    },
+  },
+
   // 1. 특정 조문 조회 — "민법 제750조", "소득세법 제89조의2"
   {
     name: "specific_article",

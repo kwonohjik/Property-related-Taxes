@@ -22,6 +22,7 @@ import {
 } from "./client";
 import { verifyCitations } from "./verify-citations";
 import { detectScenarios, runScenarios } from "./scenarios";
+import { compareLatestAmendment, extractLawAndArticle } from "./time-travel";
 import { formatMarkerMessage } from "./markers";
 import type {
   ChainInput,
@@ -222,11 +223,11 @@ const disputePrep: Runner = async ({ query }) => {
 };
 
 // ────────────────────────────────────────────────────────────────────────────
-// 체인 5. 개정 추적 (현재 단일 법령의 공포일만 제공 — Phase 2에서 확장)
+// 체인 5. 개정 추적 (공포 이력 + 판례 타임라인 + 조문 식별 시 최근 개정 신구대조)
 // ────────────────────────────────────────────────────────────────────────────
 
 const amendmentTrack: Runner = async ({ query }) => {
-  return [
+  const sections: ChainSection[] = [
     await secOrSkip("공포 이력 (최신 5건)", async () => ({
       kind: "laws",
       heading: "공포 이력 (최신 5건)",
@@ -236,12 +237,36 @@ const amendmentTrack: Runner = async ({ query }) => {
       const p = await searchDecisions(query, "prec", 1, 5);
       return { kind: "decisions", heading: "관련 판례 타임라인", decisions: p.items };
     }),
-    {
-      kind: "note",
-      heading: "안내",
-      note: "개정 전문 대조는 Phase 2에서 제공 예정. 현재는 공포일자 기준 최신 순 목록.",
-    },
   ];
+
+  // 쿼리에서 "법령명 + 조문번호"가 식별되면 최근 개정 전후 신구대조 추가.
+  // (없으면 조문 특정 불가 → 타임라인까지만 제공)
+  const target = extractLawAndArticle(query);
+  if (target) {
+    sections.push(
+      await secOrSkip(
+        `최근 개정 신구대조: ${target.lawName} ${target.articleNo}`,
+        async () => {
+          const diff = await compareLatestAmendment(target.lawName, target.articleNo);
+          if (!diff) return null; // 개정 이력 없음 → NOT_FOUND 마커
+          return {
+            kind: "diff",
+            heading: `최근 개정 신구대조: ${diff.lawName} ${diff.articleNo}`,
+            diff,
+          };
+        },
+        { notFoundIfEmpty: false }
+      )
+    );
+  } else {
+    sections.push({
+      kind: "note",
+      heading: "신구대조 안내",
+      note: "조문을 함께 입력하면 최근 개정 전후 본문 대조를 제공합니다. (예: \"소득세법 89조 개정\")",
+    });
+  }
+
+  return sections;
 };
 
 // ────────────────────────────────────────────────────────────────────────────

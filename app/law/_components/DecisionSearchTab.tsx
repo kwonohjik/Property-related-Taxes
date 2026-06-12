@@ -14,6 +14,7 @@ import { parseDateRange } from "@/lib/korean-law/date-parser";
 import { HighlightedText } from "./HighlightedText";
 import { RefLawChip } from "./RefLawChip";
 import { RefPrecedentChip } from "./RefPrecedentChip";
+import { CitePrecedentStatus } from "./CitePrecedentStatus";
 
 const PAGE_SIZE = 10;
 
@@ -52,6 +53,7 @@ export function DecisionSearchTab({
   const [totalCount, setTotalCount] = useState(0);
   const [page, setPage] = useState(1);
   const [detail, setDetail] = useState<DecisionText | null>(null);
+  const [detailCaseNo, setDetailCaseNo] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searched, setSearched] = useState(false);
@@ -175,9 +177,12 @@ export function DecisionSearchTab({
     }
   }
 
-  async function openDetail(id: string, full = false) {
+  async function openDetail(id: string, full = false, caseNo?: string) {
     setLoading(true);
     setError(null);
+    // 본문 미제공('국세법령정보시스템' 등) 응답은 caseNo를 비워 반환하므로,
+    // 클릭한 검색 결과의 사건번호를 보존해 생사 확인(cite-check)에 활용.
+    if (caseNo !== undefined) setDetailCaseNo(caseNo);
     try {
       const url =
         `/api/law/decision-text?id=${encodeURIComponent(id)}&domain=${domain}` +
@@ -384,7 +389,7 @@ export function DecisionSearchTab({
                     <div className="flex shrink-0 gap-1">
                       {it.id && (
                         <button
-                          onClick={() => openDetail(it.id)}
+                          onClick={() => openDetail(it.id, false, it.caseNo)}
                           className="rounded border px-2 py-1 text-xs hover:bg-accent"
                         >
                           본문
@@ -437,6 +442,11 @@ export function DecisionSearchTab({
                   </span>
                 )}
               </p>
+            )}
+            {detail.domain === "prec" && (detail.caseNo || detailCaseNo) && (
+              <div className="pt-1">
+                <CitePrecedentStatus caseNo={detail.caseNo || detailCaseNo} />
+              </div>
             )}
           </header>
 

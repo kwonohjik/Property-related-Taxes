@@ -22,6 +22,63 @@ describe("Query Router — 패턴 레지스트리", () => {
     expect(ROUTER_PATTERN_NAMES).toContain("penalty_action");
     expect(ROUTER_PATTERN_NAMES).toContain("search_decisions");
     expect(ROUTER_PATTERN_NAMES).toContain("annex");
+    expect(ROUTER_PATTERN_NAMES).toContain("applicable_law");
+  });
+});
+
+describe("Query Router — 행위시법 (applicable_law)", () => {
+  it('"2021년 시행 소득세법 89조" → applicable_law, baseDate YYYY0101', () => {
+    const r = routeQuery("2021년 시행 소득세법 89조");
+    expect(r.tool).toBe("applicable_law");
+    expect(r.patternName).toBe("applicable_law");
+    expect(r.params.lawName).toBe("소득세법");
+    expect(r.params.articleNo).toBe("제89조");
+    expect(r.params.baseDate).toBe("20210101");
+    expect(r.confidence).toBe("high");
+    expect(r.targetTab).toBe("law");
+  });
+
+  it('"2020.5.1 당시 소득세법 제89조" → 점 날짜(정규화 후 공백) 처리', () => {
+    const r = routeQuery("2020.5.1 당시 소득세법 제89조");
+    expect(r.tool).toBe("applicable_law");
+    expect(r.params.baseDate).toBe("20200501");
+  });
+
+  it('"2022년 당시 상증법 22조" → 별칭 해석', () => {
+    const r = routeQuery("2022년 당시 상증법 22조");
+    expect(r.tool).toBe("applicable_law");
+    expect(r.params.lawName).toBe("상속세및증여세법");
+    expect(r.params.baseDate).toBe("20220101");
+  });
+
+  it('시점신호 없는 "소득세법 제89조" → applicable_law 아님(기존 유지)', () => {
+    const r = routeQuery("소득세법 제89조");
+    expect(r.tool).toBe("get_law_text");
+    expect(r.patternName).toBe("specific_article");
+  });
+
+  it('"2021년 양도소득세 개정"(시점신호 없음) → amendment_track 유지', () => {
+    const r = routeQuery("2021년 양도소득세 개정");
+    expect(r.chainType).toBe("amendment_track");
+  });
+});
+
+describe("Query Router — 조문 영향 분석 (impact_map)", () => {
+  it('"소득세법 89조 영향" → impact_map', () => {
+    const r = routeQuery("소득세법 89조 영향");
+    expect(r.tool).toBe("impact_map");
+    expect(r.patternName).toBe("impact_map");
+    expect(r.params.lawName).toBe("소득세법");
+    expect(r.params.articleNo).toBe("제89조");
+  });
+  it('"상증법 제22조 파급" → 별칭 해석 + impact_map', () => {
+    const r = routeQuery("상증법 제22조 파급");
+    expect(r.tool).toBe("impact_map");
+    expect(r.params.lawName).toBe("상속세및증여세법");
+  });
+  it('"소득세법 89조"(키워드 없음) → impact_map 아님', () => {
+    const r = routeQuery("소득세법 89조");
+    expect(r.tool).toBe("get_law_text");
   });
 });
 
@@ -81,10 +138,13 @@ describe('Query Router — 특정 조문 조회 ("제" 생략)', () => {
     expect(r.params.articleNo).toBe("제77조");
   });
 
-  it('"지방세법 3조 개정" → 조문 조회가 개정추적보다 우선', () => {
+  it('"지방세법 3조 개정" → 조문+개정 키워드 → 신구대조 체인 (v3 Phase B 동작 변경)', () => {
+    // PR#148 시점: 조문 조회 우선(get_law_text). v3 Phase B에서 "조문 + 개정" 조합은
+    // amendment_article(priority 0)이 선점 → 최근 개정 신구대조 체인으로 라우팅(조문 보존).
     const r = routeQuery("지방세법 3조 개정");
-    expect(r.tool).toBe("get_law_text");
-    expect(r.patternName).toBe("specific_article_no_je");
+    expect(r.tool).toBe("run_chain");
+    expect(r.patternName).toBe("amendment_article");
+    expect(r.params.query).toContain("제3조");
   });
 
   it('"예산 100조" → 법령명 접미사 없음 → fallback (오탐 가드)', () => {
