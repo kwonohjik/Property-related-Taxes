@@ -16,6 +16,7 @@
  */
 
 import type { ComprehensiveBracket } from "../types/comprehensive.types";
+import { PROPERTY_CONST } from "../legal-codes";
 
 export interface ComprehensiveYearParams {
   /** 과세귀속연도 (assessmentYear). "default" = 2023 이상 현행 */
@@ -181,6 +182,27 @@ export function getComprehensiveParams(assessmentYear: number): ComprehensiveYea
 /** 지원 연도 여부 (2021 미만은 미지원 — 엔진 warnings용) */
 export function isComprehensiveYearSupported(assessmentYear: number): boolean {
   return assessmentYear >= COMPREHENSIVE_MIN_SUPPORTED_YEAR;
+}
+
+/**
+ * 재산세 비율 안분 공제(§9③·시행령 §4의3)의 재산세 공정시장가액비율 — 연도·1세대1주택 분기.
+ *
+ * 지방세법 시행령 §109①2호 단서 (KoreanLaw 행위시법 축자 확정):
+ *   - 2022년도 1세대1주택(시가표준액 9억 초과 포함): 100분의 45 (제32747호, 단일 비율)
+ *   - 그 외 (2021·2023~ 또는 다주택·법인): 100분의 60 (본문)
+ *   ※ 2026년도 구간별 43/44/45는 종부세 안분에서 비대상(12억 공제로 종부세 비과세 영역) — 본문 60% 유지.
+ *
+ * @param assessmentYear 과세귀속연도
+ * @param isOneHouseSingle 1세대1주택자이면서 주택 수가 정확히 1채 (재산세 특례 게이트와 동일)
+ */
+export function getPropertyFmrForProration(
+  assessmentYear: number,
+  isOneHouseSingle: boolean,
+): number {
+  if (assessmentYear === PROPERTY_CONST.ONE_HOUSE_FMR_2022_YEAR && isOneHouseSingle) {
+    return PROPERTY_CONST.ONE_HOUSE_FMR_2022_RATIO; // 0.45
+  }
+  return PROPERTY_CONST.FAIR_MARKET_RATIO_HOUSING; // 0.60
 }
 
 /**

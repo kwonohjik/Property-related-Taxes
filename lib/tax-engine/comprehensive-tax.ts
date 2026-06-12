@@ -25,11 +25,12 @@
  */
 
 import { applyRate, truncateToTenThousand } from "./tax-utils";
-import { COMPREHENSIVE_CONST, PROPERTY_CONST } from "./legal-codes";
+import { COMPREHENSIVE_CONST } from "./legal-codes";
 import {
   getComprehensiveParams,
   isComprehensiveYearSupported,
   isMultiHouseRate,
+  getPropertyFmrForProration,
   COMPREHENSIVE_MIN_SUPPORTED_YEAR,
 } from "./data/comprehensive-historical";
 import { calculatePropertyTax, calcHousingTax } from "./property-tax";
@@ -313,11 +314,16 @@ export function calculateComprehensiveTax(
   // ── Step 6: 재산세 비율 안분 공제 (종합부동산세법 §9③·시행령 §4의3) ──
   //   ★ GAP-1: §9⑥⑧ "제1항·제3항·제4항에 따라 산출된 세액" → 재산세 공제(§9③)를 세액공제(§9⑥)보다 선적용.
   //
-  // ⑤ = 종부세 과세표준 × 재산세FMR(60%) × 0.4% (주택 최고세율, 누진공제 없음)
-  //   = taxBase × PROPERTY_CONST.FAIR_MARKET_RATIO_HOUSING × 0.004
-  //   분수 정수: taxBase × 60 × 4 / (100 × 1000)  = taxBase × 240 / 100_000
+  // ⑤ = 종부세 과세표준 × 재산세FMR × 0.4% (주택 최고세율, 누진공제 없음)
+  //   = taxBase × propertyFMR × 0.004 (분수 정수: taxBase × round(FMR×100) × 4 / 100_000)
   //   (× 0.004 float 직접 곱 시 floor 1원 부족 — memory feedback_applyrate_fractional_rate_one_won_error)
-  const propertyFMR = PROPERTY_CONST.FAIR_MARKET_RATIO_HOUSING; // 0.60
+  //
+  // ★ 재산세 FMR 연도·1세대1주택 분기 (지방세법 시행령 §109①2호 단서):
+  //   2022 1세대1주택(주택 1채) = 45%, 그 외 60%. 게이트는 재산세 부과(:169 isOneHousehold)와 동일 —
+  //   ⓐ(부과)와 ⑤⑥(표준세율 상당액)의 FMR 정합 보장 (사례12 ⑤=432,000·⑥=2,070,000).
+  const isOneHouseSingleForFmr =
+    !isCorporate && input.isOneHouseOwner && input.properties.length === 1;
+  const propertyFMR = getPropertyFmrForProration(input.assessmentYear, isOneHouseSingleForFmr);
   // 0.004 = 4/1000, propertyFMR = 60/100 → 합산 numerator = taxBase × 60 × 4 / 100_000
   const numeratorStdTaxEq = Math.floor(
     (taxBase * Math.round(propertyFMR * 100) * 4) / 100_000,
