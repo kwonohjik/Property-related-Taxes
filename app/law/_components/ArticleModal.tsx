@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { LawArticleResult } from "@/lib/korean-law/types";
 import { CurrentLawBadge } from "./LawCurrencyBadge";
 import { ArticleImpactMap } from "./ArticleImpactMap";
+import { LawArticleBody } from "./LawArticleBody";
 
 /**
  * 참조조문 칩 클릭 시 자동 로드되는 조문 본문 모달.
@@ -104,9 +105,7 @@ export function ArticleModal({
         )}
         {!loading && !error && article && (
           <>
-            <pre className="whitespace-pre-wrap text-sm leading-relaxed">
-              {article.fullText}
-            </pre>
+            <LawArticleBody text={article.fullText} />
             {article.sourceUrl && (
               <a
                 href={article.sourceUrl}

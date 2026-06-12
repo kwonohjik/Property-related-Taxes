@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { DateInput } from "@/components/ui/date-input";
 import type { ApplicableLawResult } from "@/lib/korean-law/types";
+import { LawArticleBody } from "./LawArticleBody";
 
 /**
  * 행위시법(applicable_law) 패널 — 기준일에 시행 중이던 조문 + 현행 대비 + 부칙 경과규정.
@@ -161,9 +162,9 @@ function ApplicableLawResultCard({ result }: { result: ApplicableLawResult }) {
       </header>
 
       {result.article ? (
-        <pre className="whitespace-pre-wrap rounded bg-muted/30 p-3 text-sm leading-relaxed">
-          {result.article.fullText}
-        </pre>
+        <div className="rounded bg-muted/30 p-3">
+          <LawArticleBody text={result.article.fullText} />
+        </div>
       ) : (
         <p className="rounded-md border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-900 dark:border-yellow-900/40 dark:bg-yellow-900/10 dark:text-yellow-200">
           해당 버전에서 조문 본문을 찾지 못했습니다 (조문 신설·이동 가능).
