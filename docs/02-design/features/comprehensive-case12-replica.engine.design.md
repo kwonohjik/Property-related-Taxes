@@ -94,8 +94,11 @@ export interface PreviousYearEquivalentResult {
 // ComprehensiveYearParams에 추가:
 //   /** 재산세 비율안분·ⓐ 계산용 재산세 FMR (§4의3). [기본 60%, 1주택 특례는 별도 필드] */
 //   propertyFmrGeneral: number;            // 전 연도 0.60
-//   propertyFmrOneHouse?: number;          // 2022 = 0.45 (사례12 실측). 2021 없음(60%).
-//                                          // 2023+: §109의2 KoreanLaw 확정 후 (M-13 보류 — 미확정 시 미설정=60%)
+//   propertyFmrOneHouse?: number;          // 2022 = 0.45 — 지방세법 시행령 §109①2호 단서 (제32747호,
+//                                          //   시행 2022.6.30, "2022년도… 1세대 1주택… 100분의 45" 단일 비율,
+//                                          //   KoreanLaw 행위시법 @2022.7.20 축자 확정). 2021 미설정(=60%, @2022.6.1판 확정).
+//                                          // 2023+: 연도별 단서 재개정 구조(현행 단서는 "2026년도" 43/44/45 구간)
+//                                          //   — 2023년분은 @2023 행위시법 확인 후 (M-13 보류 — 미확정 시 미설정=60%)
 
 export function getPropertyFmrForProration(year: number, isOneHouseOwner: boolean): number;
 // = params.propertyFmrOneHouse(있고 isOneHouseOwner) ?? params.propertyFmrGeneral
@@ -121,11 +124,14 @@ export function getPropertyFmrForProration(year: number, isOneHouseOwner: boolea
     standalonePropertyTax = denominatorStdTax            // 동일 과표·표준세율 → 2,070,000
     if (직전연도 상당액 존재) ⓐ = min(standalonePropertyTax, floor(prevPropertyTaxEquiv × capPct / 100))
     else                      ⓐ = standalonePropertyTax
-    ※ Min의 정체 = **2022년 당시 지방세법 §122 주택 세부담상한** (재해석 — E-2):
-       구간 105%(공시 3억 이하)/110%(3~6억)/130%(6억 초과) — capPct는 공시가격 구간 분기.
+    ※ Min의 근거 (KoreanLaw 축자 확정 — 2026-06-12):
+       1차 근거 = 종부세법 §9③ 괄호 "(…지방세법 §122에 따라 세부담 상한을 적용받는 경우에는
+       그 상한을 적용받는 세액)" + 2022.6.1 행위시법 지방세법 §122 단서 — 주택(법인 제외)
+       105%(공시 3억 이하)/110%(3~6억)/**130%(6억 초과)** — capPct는 공시가격 구간 분기.
        사례12: 15억 > 6억 → 130%. 현행 property-tax.ts는 §122 단서(주택 배제, :263 — 현행법)라
-       미지원 → 과세연도 ≤2022 한정으로 comprehensive 쪽에서 적용. 2023+ 과세연도는 Min 생략
-       (주택 상한 폐지·과표상한제 §110의2 대체). 구간·연도 경계는 KoreanLaw §122 신구대조 P1 확정.
+       미지원 → comprehensive 쪽에서 적용. **적용 경계 확정: ≤2023** (주택상한 폐지 시행 2024.1.1,
+       법 제19230호). 2024+ 분은 경과조치(시행 전 과세 주택 2028.12.31까지 종전 규정 — 부칙 §15)
+       이슈로 v1 보류 — Min 생략 + 경고 (D-8).
     ※ 현행 totalPropertyTaxAmount(calculatePropertyTax 합계)는 ⓐ에서 제외 —
       물건별 재산세 echo·totalPropertyTax(참고 표시)에만 유지. property-tax.ts 무변경.
 ```
@@ -148,6 +154,10 @@ calcPreviousYearEquivalent(auto: PreviousYearAutoInput, currentYear: number): Pr
   반환 total = ⑦ + ⑫
 검산(사례12): ④ 285,000,000 → ⑥ 1,710,000 → ⑦ 2,730,000 → ⑧ 684,000 → ⑩ 684,000
              → ⑪ 50% = 513,000 → ⑫ 513,000 → total 3,243,000  ✓
+법령 정합 (시행령 §5② 축자 확정 — KoreanLaw 2026-06-12): 직전연도 상당액은 직전연도 지방세법
+(§110③ 과표상한·§111③ 탄력·§112①2호 도시지역분 **제외**) + 직전연도 종부세법(§10 제외) 적용,
+1세대1주택자는 **직전연도 과세기준일 현재 연령·보유기간** — 본 설계의 기준일 재판정과 일치.
+(인용 정정: 세부담상한 시행령은 §5의3(토지)이 아니라 **§5(주택)**)
 ```
 
 연령·보유 공제율 함수는 기존 1세대1주택 공제 로직에서 **기준일 인자화로 추출 재사용** (dual-truth 금지 — `feedback_ui_engine_dual_truth_avoidance`).
@@ -185,10 +195,11 @@ applyTaxCap(taxBeforeCap, ⓐ, prevTotal, capRate)
 | D-1 | ~~M-04 cappedTax 산식~~ | **해소** — `applyTaxCap` 실측 완료 (`comprehensive-tax-helpers.ts:128~150`), M-04 기대값 0 확정 |
 | D-2 | ⓐ 전환(G-3)이 사례13(합산배제 혼재)·토지분 안분에 주는 영향 | 주택분만 변경 — 토지분 `propertyTaxCredit`는 별도 경로로 무영향 (`comprehensive-land-aggregate.ts` — **grep 확인 필요**) |
 | D-3 | Min 130%의 "직전연도 재산세" 베이스 — 자동 모드는 상당액(⑦) 사용, 고지서 override 미제공 (v1 단순화 — 탄력세율 없음 전제) | 채택. 리스크 §plan 11 기재 |
-| D-4 | §4의2 vs §4의3 조문 드리프트 | P1 KoreanLaw 확정 후 타입·엔진 주석 통일 |
+| D-4 | ~~§4의2 vs §4의3 조문 드리프트~~ | **해소** — §4의3이 정답 (KoreanLaw 축자: §4의3 = 공제 재산세 계산식, §4의2 = 1세대1주택자 범위). Do에서 `comprehensive.types.ts:312` 주석 정정 |
 | D-5 | 직전연도 공제 기준 연도별 차이(2021 추가공제 11억 병기 양식) | `getComprehensiveParams(py)` 데이터가 이미 보유 — 신규 분기 불필요 |
 | D-6 | ⓐ 표준세율 직접 계산의 한계 — §9③ 법문은 "부과된 세액"이나, 특례세율(1주택 공시 9억 이하 0.05%p 인하) 미반영 | 채택·한계 명시: 특례세율 대상(9억 이하 1주택)은 1주택 공제 11~12억으로 **종부세 비과세** → 실영향 희박. 사례12(15억, 특례 비대상)와 정합 |
 | D-7 | §122 상한 구간(105/110/130%)은 물건별 공시가격 기준 — 합산 베이스 단일 구간은 다물건 시 부정확 | v1: 단일 물건(사례12) 정합 우선. 다물건+직전연도 자동 모드 조합은 경고 메시지 + 직접입력 유도 |
+| D-8 | 2024+ 과세연도의 ⓐ Min — §122 주택상한 폐지(2024.1.1) + 경과조치(시행 전 과세 주택 2028.12.31까지 종전 규정) | v1 보류: 2024+ Min 생략 + 경고. 경과조치 정밀 지원은 후속 (**확인 필요**) |
 
 ---
 
@@ -203,6 +214,22 @@ applyTaxCap(taxBeforeCap, ⓐ, prevTotal, capRate)
 | `__tests__/tax-engine/comprehensive-case12.test.ts` 신규 | ~300줄 | fixture + anchor 14건 |
 
 ---
+
+## 7.5 Pre-Do anchor 실측 결과 (2026-06-12 — C12-A1·A2 실행 완료)
+
+`__tests__/tax-engine/comprehensive-case12.test.ts` (현재 `describe.skip` — red 커밋 금지, 커밋 1에서 해제):
+
+| 항목 | 현행 실측 | 정답 (PDF) | 판정 |
+|---|---|---|---|
+| ⓑ comprehensiveTaxBase | 576,000 | 432,000 | G-1 실증 (60% 고정) |
+| ⓒ propertyTaxBase | 2,970,000 | 2,070,000 | G-2 실증 |
+| ⓐ totalPropertyTax | 2,970,000 | 2,070,000 | G-3 실증 |
+| ⓓ creditAmount | 576,000 | 432,000 | 파생 |
+| 세액공제 (70%) | 604,800 | 705,600 | rate 분기는 정확 — base만 오차 |
+| 결정세액 / 농특세 | 259,200 / 51,840 | 302,400 / 60,480 | −43,200 / −8,640 |
+| calculatedTax·taxBase·basicDeduction | 1,440,000 / 2.4억 / 11억 | 동일 | ✓ 통과 (갭 없음) |
+
+**환류 판정**: 설계 §3·§4 예측과 전 항목 일치 → **디자인 수정 불필요**, Do 진입 가능.
 
 ## 8. 회귀 전략
 
