@@ -343,6 +343,11 @@ export function Step2({ form, onChange }: Step2Props) {
                     onCostMethodChange={(method) =>
                       onChange({ costAllocationMethod: method })
                     }
+                    specificMatchings={form.specificMatchings}
+                    onMatchingsChange={(matchings) =>
+                      onChange({ specificMatchings: matchings })
+                    }
+                    transferShareCount={parseInt(form.shareCount || "0", 10)}
                   />
                 </>
               )}

@@ -11,6 +11,7 @@
  */
 
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
+import { SYNTH_SINGLE_TRANSFER_ID } from "@/lib/stores/calc-wizard-stock-store";
 import { adaptFlatToApiBody } from "@/lib/tax-engine/stock-transfer/post-listing-flat-adapter";
 import {
   adaptUnlistedFlatToApiBody,
@@ -391,13 +392,24 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
           : parseIntOrUndef(form.perShareTransferPrice) ?? 0;
       body.transferLots = [
         {
-          id: "__synth_single_transfer__",
+          id: SYNTH_SINGLE_TRANSFER_ID,
           transferDate: form.transferDate,
           shareCount: syntheticShareCount,
           perShareTransferPrice: syntheticPerShareTransferPrice,
         },
       ];
-      // specificMatchings는 본 모드 미지원 (Zod refine + UI disabled 차단)
+      // [A-1] 개별법(specific): 합성 단일 매도 lot에 대한 매수 lot별 배정 매핑.
+      //   transferLotId는 합성 sentinel로 강제(폼 값 무시) — UI는 acquisitionLotId·shareCount만 입력.
+      //   shareCount > 0 행만 전송. 합계 검증은 Zod isSplit 무결성 체크(매도=합성 1건)·validate가 담당.
+      if ((form.costAllocationMethod || "fifo") === "specific") {
+        body.specificMatchings = form.specificMatchings
+          .map((m) => ({
+            transferLotId: SYNTH_SINGLE_TRANSFER_ID,
+            acquisitionLotId: m.acquisitionLotId,
+            shareCount: parseIntOrUndef(m.shareCount) ?? 0,
+          }))
+          .filter((m) => m.shareCount > 0);
+      }
       // ⑪ acquisitionDate fallback — 가장 오래된 lot 일자 (legacy 호환)
       const oldestLotDate = form.acquisitionLots
         .map((l) => l.acquisitionDate)

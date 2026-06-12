@@ -6,10 +6,10 @@
  * Step2 취득가액 섹션 `acquisitionActualInputMode === "lots"` 시 노출.
  * SplitLotsBlock의 acquisition lot 부분만 추출한 sub-component:
  *   - 매도 lot 행렬 미포함 (단일 양도는 폼 전역 transferDate/shareCount/perShareTransferPrice)
- *   - specific 매칭 행렬 미포함 (transferLots 의존 제거)
- *   - 산정방법 specific 옵션 disabled (본 PR 범위 외)
+ *   - 산정방법 fifo·이동평균법·개별법(specific) 모두 지원 (A-1)
+ *   - 개별법: 합성 단일 매도(SYNTH_SINGLE_TRANSFER_ID)에 대한 매수 lot별 배정 수량 입력
  *
- * 합성 transferLot은 API 변환(`stock-transfer-tax-api.ts`)에서 자동 생성.
+ * 합성 transferLot·specificMatchings의 transferLotId는 API 변환(`stock-transfer-tax-api.ts`)에서 강제.
  */
 
 import { useMemo } from "react";
@@ -29,7 +29,9 @@ import {
 } from "@/components/ui/select";
 import {
   createEmptyAcquisitionLot,
+  SYNTH_SINGLE_TRANSFER_ID,
   type AcquisitionLotForm,
+  type SpecificMatchingForm,
   type StockTransferFormData,
 } from "@/lib/stores/calc-wizard-stock-store";
 import { ACQ_CAUSE_LABEL } from "@/components/calc/stock-transfer/SplitLotsBlock";
@@ -39,6 +41,11 @@ interface AcquisitionLotsMatrixProps {
   onChange: (lots: AcquisitionLotForm[]) => void;
   costAllocationMethod: StockTransferFormData["costAllocationMethod"];
   onCostMethodChange: (method: StockTransferFormData["costAllocationMethod"]) => void;
+  /** 개별법(specific) 매수 lot별 배정 — 합성 단일 매도 기준 (A-1) */
+  specificMatchings: SpecificMatchingForm[];
+  onMatchingsChange: (matchings: SpecificMatchingForm[]) => void;
+  /** 양도 주식수 (폼 전역) — 개별법 배정 합계 일치 검증 표시용 */
+  transferShareCount: number;
 }
 
 export function AcquisitionLotsMatrix({
@@ -46,6 +53,9 @@ export function AcquisitionLotsMatrix({
   onChange,
   costAllocationMethod,
   onCostMethodChange,
+  specificMatchings,
+  onMatchingsChange,
+  transferShareCount,
 }: AcquisitionLotsMatrixProps) {
   const summary = useMemo(() => {
     const totalAcq = lots.reduce((s, l) => s + parseInt(l.shareCount || "0", 10), 0);
@@ -60,15 +70,47 @@ export function AcquisitionLotsMatrix({
     };
   }, [lots]);
 
+  const isSpecific = costAllocationMethod === "specific";
+
+  // 개별법 배정 합계 (specific 모드 표시용)
+  const allocSum = useMemo(
+    () => specificMatchings.reduce((s, m) => s + parseInt(m.shareCount || "0", 10), 0),
+    [specificMatchings],
+  );
+
+  // 매수 lot별 배정 수량 read/write — specificMatchings를 acquisitionLotId 키로 upsert
+  const getAlloc = (lotId: string) =>
+    specificMatchings.find((m) => m.acquisitionLotId === lotId)?.shareCount ?? "";
+  const setAlloc = (lotId: string, value: string) => {
+    const others = specificMatchings.filter((m) => m.acquisitionLotId !== lotId);
+    if (value.trim() === "" || parseInt(value, 10) === 0 || Number.isNaN(parseInt(value, 10))) {
+      onMatchingsChange(others);
+      return;
+    }
+    const next: SpecificMatchingForm = {
+      transferLotId: SYNTH_SINGLE_TRANSFER_ID,
+      acquisitionLotId: lotId,
+      shareCount: value,
+    };
+    onMatchingsChange([...others, next]);
+  };
+
   const addLot = () => onChange([...lots, createEmptyAcquisitionLot()]);
   const updateLot = (idx: number, patch: Partial<AcquisitionLotForm>) =>
     onChange(lots.map((l, i) => (i === idx ? { ...l, ...patch } : l)));
-  const deleteLot = (idx: number) => onChange(lots.filter((_, i) => i !== idx));
+  const deleteLot = (idx: number) => {
+    const deleted = lots[idx];
+    onChange(lots.filter((_, i) => i !== idx));
+    // cascade: 삭제된 lot의 개별법 배정 제거
+    if (deleted) {
+      onMatchingsChange(specificMatchings.filter((m) => m.acquisitionLotId !== deleted.id));
+    }
+  };
 
   return (
     <div className="space-y-4">
-      {/* 산정방법 — specific disabled */}
-      <FieldCard label="산정방법" hint="양도 단건 모드에서는 fifo / 이동평균법만 지원">
+      {/* 산정방법 — fifo·이동평균법·개별법 모두 지원 (A-1) */}
+      <FieldCard label="산정방법" hint="개별법 선택 시 매수 lot별 배정 수량을 직접 지정">
         <RadioCardGroup
           name="costAllocationMethod_acq"
           value={costAllocationMethod ?? "fifo"}
@@ -89,12 +131,27 @@ export function AcquisitionLotsMatrix({
             {
               value: "specific",
               label: "개별법",
-              description: "양도 단건 모드는 지원하지 않습니다 (후속 PR)",
-              disabled: true,
+              description: "매수 lot별 매도 배정 수량을 직접 지정 (입증 가능 시)",
             },
           ]}
         />
       </FieldCard>
+
+      {/* 개별법 배정 합계 안내 */}
+      {isSpecific && (
+        <div
+          className={`rounded-lg border p-3 text-sm ${
+            allocSum === transferShareCount && transferShareCount > 0
+              ? "border-emerald-200 bg-emerald-50/60 text-emerald-800"
+              : "border-rose-200 bg-rose-50/60 text-rose-800"
+          }`}
+        >
+          개별법: 각 매수 lot에 배정한 수량의 합계가 양도 주식수와 일치해야 합니다.
+          <span className="ml-1 font-semibold">
+            배정 합계 {allocSum.toLocaleString()} / 양도 {transferShareCount.toLocaleString()}주
+          </span>
+        </div>
+      )}
 
       {/* 매수 lot 행 목록 */}
       <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-4 space-y-3">
@@ -174,6 +231,18 @@ export function AcquisitionLotsMatrix({
                   value={lot.perShareAcquisitionPrice}
                   onChange={(v) => updateLot(idx, { perShareAcquisitionPrice: v })}
                 />
+                {isSpecific && (
+                  <FieldCard
+                    label="이 양도에 배정 수량"
+                    hint="이 매수 lot에서 양도한 주식수 (개별법)"
+                  >
+                    <DecimalInput
+                      value={getAlloc(lot.id)}
+                      onChange={(v) => setAlloc(lot.id, v)}
+                      thousandSeparator
+                    />
+                  </FieldCard>
+                )}
                 {lot.acquisitionCause === "inheritance" && (
                   <FieldCard label="피상속인 취득일" hint="§104②1 보유기간 기산점">
                     <DateInput

@@ -152,11 +152,28 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
           });
         }
       }
+      // [A-1] 개별법(specific): 합성 단일 매도에 대한 매수 lot별 배정 합계 = 양도 주식수
       if (form.costAllocationMethod === "specific") {
-        errors.push({
-          field: "costAllocationMethod",
-          message: "취득 다건 입력 모드에서는 개별법(specific)을 지원하지 않습니다",
-          severity: "error",
+        const transferShareCount = parseI(form.shareCount);
+        const matchSum = form.specificMatchings.reduce((s, m) => s + parseI(m.shareCount), 0);
+        if (matchSum !== transferShareCount) {
+          errors.push({
+            field: "specificMatchings",
+            message: `개별법: 매수 lot별 배정 합계(${matchSum})가 양도 주식수(${transferShareCount})와 일치해야 합니다`,
+            severity: "error",
+          });
+        }
+        // 매수 lot별 배정 ≤ lot 보유 수량
+        form.specificMatchings.forEach((m) => {
+          const lot = form.acquisitionLots.find((l) => l.id === m.acquisitionLotId);
+          const alloc = parseI(m.shareCount);
+          if (lot && alloc > parseI(lot.shareCount)) {
+            errors.push({
+              field: "specificMatchings",
+              message: `개별법: 매수 lot에 배정한 수량(${alloc})이 해당 lot 보유 수량(${parseI(lot.shareCount)})을 초과합니다`,
+              severity: "error",
+            });
+          }
         });
       }
     } else {
