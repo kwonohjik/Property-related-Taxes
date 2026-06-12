@@ -26,7 +26,7 @@ import {
 
 export type { PrintChannel, GroupCheckState };
 
-/** 선택 가능 leaf 7종 (오타 방지·exact 매칭) */
+/** 선택 가능 leaf 11종 (오타 방지·exact 매칭) */
 export type ComprehensivePrintSectionId =
   | "aggregation-exclusion"
   | "housing-tax-base"
@@ -34,7 +34,11 @@ export type ComprehensivePrintSectionId =
   | "aggregate-land"
   | "separate-land"
   | "grand-total"
-  | "warnings";
+  | "warnings"
+  | "filing-form-main"
+  | "filing-form-buppyo3"
+  | "filing-form-buppyo5"
+  | "filing-form-buppyo5sub";
 
 /** 종부세 leaf로 좁힌 제네릭 타입 (shared 재사용) */
 export type ComprehensivePrintSectionNode = GenericNode<ComprehensivePrintSectionId>;
@@ -81,6 +85,32 @@ export const COMPREHENSIVE_PRINT_SECTIONS: ComprehensivePrintSectionGroup[] = [
     label: "기타",
     children: [
       { id: "warnings", label: "경고", channel: SCREEN },
+    ],
+  },
+  {
+    id: "group:filing-forms",
+    label: "신고서 서식 (2022년판)",
+    children: [
+      {
+        id: "filing-form-main",
+        label: "종합부동산세 신고서",
+        channel: SCREEN,
+      },
+      {
+        id: "filing-form-buppyo3",
+        label: "과세표준 계산명세서 (별지 3호서식 부표)",
+        channel: SCREEN,
+      },
+      {
+        id: "filing-form-buppyo5",
+        label: "세부담상한초과세액 계산명세서 (별지 5호서식)",
+        channel: SCREEN,
+      },
+      {
+        id: "filing-form-buppyo5sub",
+        label: "직전연도 종합부동산세상당액 계산서 (부표)",
+        channel: SCREEN,
+      },
     ],
   },
 ];
