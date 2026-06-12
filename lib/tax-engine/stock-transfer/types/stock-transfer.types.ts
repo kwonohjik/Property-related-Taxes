@@ -206,13 +206,21 @@ export type StockTransferInput = {
   acquisitionYearNetIncomePerShare?: number;
   acquisitionYearNetAssetPerShare?: number;
 
-  // 소칙 §81④ 1호 월할 가산 (§165⑤ 후단 준용 — 취득·상장 평가액 동일 + 동일 사업연도)
+  // 소칙 §81④ 1호 월할 가산 — 전전연도·월수 입력은 두 경로 공용:
+  //   ① §165⑤ 후단 준용 (취득 후 상장, monthlyAccrualToggle·PostListingDetailInput 중첩)
+  //   ② §165⑨ 본체 (비상장 환산 양도·취득 기준시가 동일, unlistedSameBizYearToggle 아래)
   /** 취득일이 속하는 사업연도의 전전사업연도 1주당 순손익가치 (전 모드 직접 입력) */
   prePriorYearNetIncomePerShare?: number;
   /** 전전사업연도 1주당 순자산가치 */
   prePriorYearNetAssetPerShare?: number;
   /** 직전사업연도의 월수 (1~12, 미입력 시 12 — 사업연도 변경 법인 대응) */
   priorBizYearMonths?: number;
+  /**
+   * [B-4 §165⑨ 본체] 비상장 환산에서 양도·취득 기준시가 동일 시 동일 사업연도 취득·양도(§81④ 1호) 토글.
+   * true + 전전연도 입력 시 양도 당시 기준시가를 §81④ 월할 상승분으로 보정(취득→양도 보유월수).
+   * PostListingDetailInput.monthlyAccrualToggle(준용·상장)과 별개 — weighted_avg 경로 전용. default false.
+   */
+  unlistedSameBizYearToggle?: boolean;
 
   /** 장부분실 §99①4 (face_value 모드 — 양/취 모두 액면가) */
   bookLost: boolean;
@@ -549,6 +557,22 @@ export type StockTransferResult = {
     netAssetOnlyReason?: string;
     /** [사례 49] 취득기준시가 총액 (acqFaceValuePerShare × shareCount) · [C-1] 보충평가 × shareCount 겸용 */
     acquisitionStdPriceTotal?: number;
+    /**
+     * [B-4 §165⑨ 본체] 양도·취득 기준시가 동일 → §81④ 1호 월할로 양도기준시가 보정 발동 시 echo.
+     * 미발동(M-1·M-3·M-6) 시 undefined.
+     */
+    section1659Detail?: {
+      /** 동일 기준시가 (= 보정 전 양도기준시가 = 취득기준시가) */
+      prior: number;
+      /** 전전 사업연도 평가 */
+      prePrior: number;
+      /** 보유월수 (취득→양도, 절상) */
+      holdingMonths: number;
+      /** 직전 사업연도 월수 */
+      priorBizYearMonths: number;
+      /** 보정된 양도기준시가 (= 환산 분모) */
+      adjusted: number;
+    };
   };
 
   // 매매사례가액 detail (R-1' — sale_case 강화)

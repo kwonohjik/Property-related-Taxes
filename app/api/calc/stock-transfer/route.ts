@@ -196,6 +196,8 @@ function buildEngineInput(coerced: Record<string, unknown>): StockTransferInput 
     prePriorYearNetIncomePerShare: coerced.prePriorYearNetIncomePerShare as number | undefined,
     prePriorYearNetAssetPerShare: coerced.prePriorYearNetAssetPerShare as number | undefined,
     priorBizYearMonths: coerced.priorBizYearMonths as number | undefined,
+    // [B-4 §165⑨ 본체] 명시 매핑 필수 (⑭ silent strip 방지)
+    unlistedSameBizYearToggle: coerced.unlistedSameBizYearToggle as boolean | undefined,
     bookLost: coerced.bookLost as boolean,
     faceValuePerShare: coerced.faceValuePerShare as number | undefined,
     // [사례 49] 취득시 장부분실 액면가 + 양도시 §165④ 보충 평가

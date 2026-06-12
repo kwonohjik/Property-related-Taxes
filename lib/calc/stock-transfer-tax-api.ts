@@ -456,6 +456,8 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
     if (ppNA !== undefined) body.prePriorYearNetAssetPerShare = ppNA;
     const pbm = parseIntOrUndef(form.priorBizYearMonths);
     if (pbm !== undefined) body.priorBizYearMonths = pbm; // 미입력 시 엔진 ?? 12 fallback
+    // [B-4 §165⑨ 본체] 비상장 환산 양도·취득 기준시가 동일 동일사업연도 토글 (top-level bool)
+    body.unlistedSameBizYearToggle = form.unlistedSameBizYearToggle === true;
   } else if (acquisitionMode === "face_value") {
     const faceVal = parseIntOrUndef(form.faceValuePerShare);
     if (faceVal !== undefined) body.faceValuePerShare = faceVal;

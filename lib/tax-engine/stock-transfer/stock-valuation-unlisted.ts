@@ -30,6 +30,7 @@ import {
   STOCK_FLOOR_80_PCT,
   STOCK_LOSS_GAIN_DISCOUNT_RATE,
 } from "@/lib/tax-engine/legal-codes/stock";
+import { calcAccrualMonths, apply81_4Accrual } from "./apply-81-4-accrual";
 
 // ============================================================
 // 평가 결과 타입
@@ -62,6 +63,16 @@ export interface UnlistedValuationResult {
   netAssetValue?: number;
   /** 순자산 단독 사유 (netAssetOnlyReason 전달) */
   netAssetOnlyReason?: StockTransferInput["netAssetOnlyReason"];
+  /**
+   * [B-4 §165⑨ 본체] 양도·취득 기준시가 동일 → §81④ 1호 월할 보정 발동 시 echo (미발동 undefined).
+   */
+  section1659Detail?: {
+    prior: number;
+    prePrior: number;
+    holdingMonths: number;
+    priorBizYearMonths: number;
+    adjusted: number;
+  };
   warnings: string[];
   appliedRules: string[];
 }
@@ -430,16 +441,72 @@ export function calcUnlistedValuation(
   const acquisitionStdPricePerShare = Math.floor(acquisitionWeightedRaw);
   const acquisitionStdPriceTotal = acquisitionStdPricePerShare * shareCount;
 
-  // ─── 환산취득가 = 양도가 × (취득기준시가 / 양도기준시가) ───
+  // ─── [B-4 §165⑨ 본체] 양도·취득 기준시가 동일 시 §81④ 1호 월할 보정 ───
+  // 양도 당시 기준시가 == 취득 당시 기준시가(= 동일 사업연도 취득·양도)인 경우,
+  // 양도 당시 기준시가를 §81④ 월할 상승분으로 교체(취득 당시 기준시가는 불변).
+  // 보정 대상은 환산 분모(transferStd)뿐 — 분자(acqStd)·개산공제 base 불변.
+  let appliedTransferStd = transferStdPricePerShare;
+  let section1659Detail: UnlistedValuationResult["section1659Detail"];
+  const equalStd =
+    transferStdPricePerShare === acquisitionStdPricePerShare && transferStdPricePerShare > 0;
+
+  if (equalStd && input.unlistedSameBizYearToggle === true) {
+    const hasPrePrior =
+      typeof input.prePriorYearNetIncomePerShare === "number" &&
+      typeof input.prePriorYearNetAssetPerShare === "number";
+    if (hasPrePrior) {
+      // 전전 사업연도 평가 — 본 경로의 연혁 가중치(niWeight·naWeight) 그대로 (prior와 일관)
+      const prePrior = Math.floor(
+        niWeight === 0
+          ? input.prePriorYearNetAssetPerShare!
+          : calcWeightedAvgPerShare(
+              input.prePriorYearNetIncomePerShare!,
+              input.prePriorYearNetAssetPerShare!,
+              niWeight,
+              naWeight,
+            ),
+      );
+      const holdingMonths = calcAccrualMonths(input.acquisitionDate, transferDate); // 본체: 양도일 종점
+      const priorBizYearMonths = input.priorBizYearMonths ?? 12;
+      const { adjusted } = apply81_4Accrual(
+        transferStdPricePerShare,
+        prePrior,
+        holdingMonths,
+        priorBizYearMonths,
+      );
+      if (adjusted > 0) {
+        appliedTransferStd = adjusted;
+        appliedRules.push(STOCK.ENFORCEMENT_DECREE_165_9_MAIN);
+        appliedRules.push(STOCK.ENFORCEMENT_RULE_81_4_MONTHLY_ACCRUAL);
+        section1659Detail = {
+          prior: transferStdPricePerShare,
+          prePrior,
+          holdingMonths,
+          priorBizYearMonths,
+          adjusted,
+        };
+      } else {
+        warnings.push("§81④ 보정 평가액이 0 이하입니다. 보정 미적용.");
+      }
+    }
+    // 전전연도 미입력은 validate에서 차단 — 엔진 도달 시 보정 미적용(방어)
+  } else if (equalStd && input.unlistedSameBizYearToggle !== true) {
+    // M-3: 동일 기준시가이나 동일 사업연도 아님(§81④ 2호) — 보정 없음
+    warnings.push(
+      "§165⑨ — 양도·취득 기준시가가 동일하나 동일 사업연도 취득·양도가 아닙니다(§81④ 2호). 양도차익이 0 이하일 수 있습니다.",
+    );
+  }
+
+  // ─── 환산취득가 = 양도가 × (취득기준시가 / 보정 후 양도기준시가) ───
   // 정수 정밀도: 곱셈 먼저 (overflow 방지는 BigInt 사용)
   let totalAcquisitionPrice: number;
-  if (acquisitionStdPricePerShare === 0 || transferStdPricePerShare === 0) {
+  if (acquisitionStdPricePerShare === 0 || appliedTransferStd === 0) {
     totalAcquisitionPrice = 0;
     warnings.push("취득기준시가 또는 양도기준시가가 0입니다. 환산취득가 = 0.");
   } else {
     // BigInt로 overflow 방지
     const numerator = BigInt(transferPrice) * BigInt(acquisitionStdPricePerShare);
-    const denominator = BigInt(transferStdPricePerShare);
+    const denominator = BigInt(appliedTransferStd);
     totalAcquisitionPrice = Number(numerator / denominator);
   }
 
@@ -453,6 +520,7 @@ export function calcUnlistedValuation(
     weightedAvgRaw: transferWeightedRaw,
     netIncomeValue: transferNi,
     netAssetValue: transferNa,
+    section1659Detail,
     warnings,
     appliedRules,
   };

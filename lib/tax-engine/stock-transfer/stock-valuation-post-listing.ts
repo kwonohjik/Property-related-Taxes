@@ -38,7 +38,6 @@
  *   취득가액         = 5,824 × 5,000 = 29,120,000
  */
 
-import { differenceInMonths, addMonths } from "date-fns";
 import type {
   StockTransferInput,
   PostListingValuationResult,
@@ -46,6 +45,10 @@ import type {
   NAYear,
 } from "./types/stock-transfer.types";
 import { STOCK } from "@/lib/tax-engine/legal-codes/stock";
+import { calcAccrualMonths, apply81_4Accrual } from "./apply-81-4-accrual";
+
+// §81④ 월할 헬퍼는 apply-81-4-accrual.ts로 추출(본체·준용 공용). import 경로 보존 위해 re-export.
+export { calcAccrualMonths } from "./apply-81-4-accrual";
 
 // 본 모듈에서 사용하는 PostListingValuationResult는 types/stock-transfer.types.ts에서 단일 정의 (Phase C4 통합).
 // detail 필드는 단순 환산(simple 모드)에서는 채우지 않음 — full/listing_only는 buildPostListingFromDetail(C6)에서 채움.
@@ -141,16 +144,6 @@ export function calcUnlistedPerShareWeighted(
     ? (netIncomeValue * 2) / 5 + (netAssetValue * 3) / 5
     : (netIncomeValue * 3) / 5 + (netAssetValue * 2) / 5;
   return Math.floor(weighted);
-}
-
-/**
- * §81④ 보유월수 — 취득일부터 상장일까지의 개월수.
- * "1개월 미만의 월수는 1개월로 본다"(소칙 §81④ 본문) → 끝수 절상, 최소 1개월.
- */
-export function calcAccrualMonths(acquisitionDate: Date, listingDate: Date): number {
-  const fullMonths = differenceInMonths(listingDate, acquisitionDate);
-  const hasRemainder = addMonths(acquisitionDate, fullMonths) < listingDate;
-  return Math.max(1, fullMonths + (hasRemainder ? 1 : 0));
 }
 
 /**
@@ -311,10 +304,8 @@ export function calcPostListingConversion(input: StockTransferInput): PostListin
     const holdingMonths = calcAccrualMonths(input.acquisitionDate, input.listingDate!);
     const priorBizYearMonths = input.priorBizYearMonths ?? 12;
     const prior = acquisitionYearPerShareValue; // 트리거상 분자·분모 원값 동일
-    // 분수 정수 연산 1회 floor — 음수 차이(C-5)도 방향 일관
-    const adjusted = Math.floor(
-      (prior * priorBizYearMonths + (prior - prePrior) * holdingMonths) / priorBizYearMonths,
-    );
+    // §81④ 1호 산식 공유 헬퍼 (분수 단일 floor — 음수 차이 C-5 방향 일관)
+    const { adjusted } = apply81_4Accrual(prior, prePrior, holdingMonths, priorBizYearMonths);
 
     if (adjusted <= 0) {
       // C-6: 보정 평가액 0 이하 → 환산 불가 (보정 미발동)

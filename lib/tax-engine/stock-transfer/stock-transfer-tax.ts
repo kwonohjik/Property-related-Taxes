@@ -337,12 +337,17 @@ export function calculateStockTransferTaxInternal(input: StockTransferInput): St
         isHeavyRE: input.isHeavyRealEstateForValuation,
         netAssetOnlyReason: unlistedResult.netAssetOnlyReason,
         acquisitionStdPriceTotal: unlistedResult.acquisitionStdPriceTotal,
+        // [B-4 §165⑨ 본체] 양도·취득 기준시가 동일 월할 보정 echo
+        section1659Detail: unlistedResult.section1659Detail,
       };
       if (unlistedResult.netAssetFloorApplied) {
         appliedRules.push("80%하한");
       }
       if (unlistedResult.netAssetOnlyReason) {
         appliedRules.push("80%하한미적용");
+      }
+      if (unlistedResult.section1659Detail) {
+        appliedRules.push("월할가산");
       }
       warnings.push(...unlistedResult.warnings);
       for (const rule of unlistedResult.appliedRules) {
@@ -401,6 +406,14 @@ export function calculateStockTransferTaxInternal(input: StockTransferInput): St
         // ★ Bug-A 정정: 환산 후 1주당 취득가 (기존: 양도시 기준시가 그대로 = 잘못된 값)
         finalPerShareValue: listedResult.perShareAcquisitionPrice,
       };
+      // [B-4 M-8 §165⑨] 상장 종가평균 양도·취득 동일 — §81④ 2호(보정 없음) 정보성 안내.
+      // §81④ 1호 산식은 사업연도 기준시가 모수라 상장(§99①3 종가평균) 미적용.
+      if (
+        listedResult.perShareTransferStdPrice > 0 &&
+        listedResult.perShareTransferStdPrice === listedResult.perShareAcquisitionStdPrice
+      ) {
+        warnings.push("§165⑨ — 상장 양도·취득 종가평균이 동일합니다(§81④ 2호, 보정 없음).");
+      }
     }
 
   } else if (acquisitionMode === "sale_case") {

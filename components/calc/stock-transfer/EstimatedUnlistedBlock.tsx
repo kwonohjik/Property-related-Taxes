@@ -20,6 +20,7 @@ import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInp
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 import { EstimatedUnlistedNetIncomeStatement } from "./EstimatedUnlistedNetIncomeStatement";
 import { EstimatedUnlistedNetAssetStatement } from "./EstimatedUnlistedNetAssetStatement";
+import { MonthlyAccrual81Section } from "./MonthlyAccrual81Section";
 import { adaptUnlistedFlatToApiBody } from "@/lib/tax-engine/stock-transfer/unlisted-flat-adapter";
 import { UNLISTED_MESSAGES } from "@/lib/tax-engine/stock-transfer/unlisted-messages";
 
@@ -391,6 +392,30 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
             {shareCountNum.toLocaleString()}주 × 1%)
           </span>
         </div>
+      )}
+
+      {/* [B-4 §165⑨ 본체] 양도·취득 기준시가 동일 시 §81④ 1호 월할 가산 — 활성 우선 노출
+          (acquisitionSideOnly·acqFaceValueOnly 트랙 제외 · 엔진 equal 판정과 동일하게 미리보기 값 비교) */}
+      {!acquisitionSideOnly && !acqFaceValueOnly && (
+        <MonthlyAccrual81Section
+          visible={
+            transferStdPricePreview !== null &&
+            acquisitionStdPricePreview !== null &&
+            transferStdPricePreview.perShare > 0 &&
+            transferStdPricePreview.perShare === acquisitionStdPricePreview
+          }
+          checked={form.unlistedSameBizYearToggle}
+          onToggle={(v) => onChange({ unlistedSameBizYearToggle: v })}
+          prePriorNI={form.prePriorYearNetIncomePerShare}
+          prePriorNA={form.prePriorYearNetAssetPerShare}
+          priorBizYearMonths={form.priorBizYearMonths}
+          onChangePrePriorNI={(v) => onChange({ prePriorYearNetIncomePerShare: v })}
+          onChangePrePriorNA={(v) => onChange({ prePriorYearNetAssetPerShare: v })}
+          onChangePriorBizYearMonths={(v) => onChange({ priorBizYearMonths: v })}
+          title="같은 사업연도에 취득·양도 (소칙 §81④ 1호)"
+          description="양도일·취득일 직전 사업연도 평가액이 동일합니다. 같은 사업연도에 취득·양도했다면 ON — 직전·전전 사업연도 평가 차액을 보유월수(취득→양도)로 안분해 양도일 기준시가를 보정합니다. 아니면 OFF(§81④ 2호, 보정 없음)."
+          monthsHint="사업연도 변경 법인만 수정 (1~12, 기본 12). 보유월수는 취득일~양도일에서 자동 계산되며 1개월 미만은 1개월로 봅니다."
+        />
       )}
 
       {/* [M-4 사례 49] 환산취득가 미리보기 카드 — acqFaceValueOnly 활성 시만 ([C-1] acquisitionSideOnly 제외) */}
