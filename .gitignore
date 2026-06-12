@@ -34,6 +34,9 @@ yarn-error.log*
 .env*
 !.env.local.example
 
+# git worktree 동시작업 보조 파일 (scripts/wt-new.sh)
+.wt-ports
+
 # vercel
 .vercel
 
