@@ -7,6 +7,8 @@
 
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 import type { StockValidationError } from "./stock-transfer-tax-validate";
+// 엔진 단일 진실 — 평가액 동일 판정 재구현 금지 (dual-truth 회피)
+import { calcUnlistedPerShareWeighted } from "@/lib/tax-engine/stock-transfer/stock-valuation-post-listing";
 
 function isEmpty(s: string | undefined): boolean {
   return !s || s.trim() === "";
@@ -209,6 +211,26 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
             if (isEmpty(form.naAssetTotalRow1Acq)) errors.push({ field: "naAssetTotalRow1Acq", message: "취득연도 자산총계를 입력하세요", severity: "error" });
             if (isEmpty(form.naLiabTotalRow8Acq)) errors.push({ field: "naLiabTotalRow8Acq", message: "취득연도 부채총계를 입력하세요", severity: "error" });
             if (isEmpty(form.naShareCountAcq)) errors.push({ field: "naShareCountAcq", message: "취득연도 순자산 주식수를 입력하세요", severity: "error" });
+          }
+        }
+
+        // 소칙 §81④ 1호 월할 가산 — 토글 ON 시 (C-4 차단 / C-7 경고)
+        if (form.monthlyAccrualToggle) {
+          // C-4: 전전사업연도 평가 필수 (자동 fallback 금지 — 미입력 시 차단)
+          if (isEmpty(form.prePriorYearNetIncomePerShare)) {
+            errors.push({ field: "prePriorYearNetIncomePerShare", message: "전전사업연도 1주당 순손익가치를 입력하세요 (소칙 §81④ 1호 월할 가산)", severity: "error" });
+          }
+          if (isEmpty(form.prePriorYearNetAssetPerShare)) {
+            errors.push({ field: "prePriorYearNetAssetPerShare", message: "전전사업연도 1주당 순자산가치를 입력하세요 (소칙 §81④ 1호 월할 가산)", severity: "error" });
+          }
+          // C-7 경고: simple 모드 평가액 상이 시 토글 무의미 (full/listing_only는 합성 산출 — 엔진 warning에 위임)
+          if (detailMode === "simple") {
+            const heavyRE = form.isHeavyRealEstateForValuation;
+            const listEval = calcUnlistedPerShareWeighted(parseF(form.listingYearNetIncomePerShare), parseF(form.listingYearNetAssetPerShare), heavyRE);
+            const acqEval = calcUnlistedPerShareWeighted(parseF(form.acquisitionYearNetIncomePerShare), parseF(form.acquisitionYearNetAssetPerShare), heavyRE);
+            if (listEval > 0 && listEval !== acqEval) {
+              errors.push({ field: "monthlyAccrualToggle", message: "취득연도·상장연도 평가액이 달라 소칙 §81④ 월할 가산이 적용되지 않습니다. 토글을 해제하세요.", severity: "warning" });
+            }
           }
         }
       }

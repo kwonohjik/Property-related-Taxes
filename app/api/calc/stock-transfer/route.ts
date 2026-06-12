@@ -191,6 +191,10 @@ function buildEngineInput(coerced: Record<string, unknown>): StockTransferInput 
     listingYearNetAssetPerShare: coerced.listingYearNetAssetPerShare as number | undefined,
     acquisitionYearNetIncomePerShare: coerced.acquisitionYearNetIncomePerShare as number | undefined,
     acquisitionYearNetAssetPerShare: coerced.acquisitionYearNetAssetPerShare as number | undefined,
+    // 소칙 §81④ 1호 월할 가산 (전전사업연도 평가 + 직전사업연도 월수)
+    prePriorYearNetIncomePerShare: coerced.prePriorYearNetIncomePerShare as number | undefined,
+    prePriorYearNetAssetPerShare: coerced.prePriorYearNetAssetPerShare as number | undefined,
+    priorBizYearMonths: coerced.priorBizYearMonths as number | undefined,
     bookLost: coerced.bookLost as boolean,
     faceValuePerShare: coerced.faceValuePerShare as number | undefined,
     // [사례 49] 취득시 장부분실 액면가 + 양도시 §165④ 보충 평가

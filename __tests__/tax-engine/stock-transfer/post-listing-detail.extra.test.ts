@@ -65,12 +65,126 @@ function baseInput(): StockTransferInput {
 }
 
 // ============================================================
+// A-MA — 소칙 §81④ 1호 월할 보정 (PR-2 Pre-Do anchor)
+// 설계: docs/02-design/features/stock-transfer-monthly-accrual-81-4.engine.design.md §5
+// 공통: listingAvg 8,001 · 직전(취득=상장) NI 50,000/NA 5,000 → 가중평균 32,000
+// ============================================================
+
+describe("A-MA — 소칙 §81④ 1호 월할 보정 (§165⑤ 후단 준용)", () => {
+  function accrualInput(): StockTransferInput {
+    return {
+      ...baseInput(),
+      acquisitionDate: new Date("2024-03-15"),
+      listingDate: new Date("2024-10-20"), // 7개월 + 끝수 5일 → m=8 (1개월 미만 절상)
+      listingYearNetIncomePerShare: 50_000,
+      listingYearNetAssetPerShare: 5_000,
+      acquisitionYearNetIncomePerShare: 50_000,
+      acquisitionYearNetAssetPerShare: 5_000,
+      prePriorYearNetIncomePerShare: 40_000, // 전전 가중평균 = 24,000 + 1,600 = 25,600
+      prePriorYearNetAssetPerShare: 4_000,
+      postListingDetail: { unlistedDetailMode: "simple", monthlyAccrualToggle: true },
+    };
+  }
+
+  it("A-MA-1: 1호 보정 기본 — adjusted 36,266 · m 8 · final 7,059 · 총 35,295,000", () => {
+    const result = calcPostListingConversion(accrualInput());
+    expect(result.monthlyAccrualApplied).toBe(true);
+    // adjusted = floor((32,000×12 + (32,000−25,600)×8) / 12) = floor(435,200/12) = 36,266
+    expect(result.monthlyAccrualDetail?.prePriorYearPerShareValue).toBe(25_600);
+    expect(result.monthlyAccrualDetail?.holdingMonths).toBe(8);
+    expect(result.monthlyAccrualDetail?.adjustedListingYearPerShareValue).toBe(36_266);
+    // final = floor(8,001 × 32,000 / 36,266) = 7,059
+    expect(result.finalPerShareValue).toBe(7_059);
+    expect(result.totalAcquisitionPrice).toBe(35_295_000);
+  });
+
+  it("A-MA-2(=C-2): 평가 동일 + 토글 OFF → 2호 보정 없음 (PL-MONTHLY-1로 갈음 — 중복 회피)", () => {
+    // 2호 동작은 PL-MONTHLY-1에서 검증. 여기서는 accrualInput에서 토글만 끄면 final이 8,001로 복귀함을 확인.
+    const result = calcPostListingConversion({
+      ...accrualInput(),
+      postListingDetail: { unlistedDetailMode: "simple", monthlyAccrualToggle: false },
+    });
+    expect(result.monthlyAccrualApplied).toBe(false);
+    expect(result.finalPerShareValue).toBe(8_001); // ratio 1
+  });
+
+  it("A-MA-3: 1개월 미만 절상 — 취득 06-01 → 상장 06-20 → m=1 · adjusted 32,533 · final 7,869", () => {
+    const result = calcPostListingConversion({
+      ...accrualInput(),
+      acquisitionDate: new Date("2024-06-01"),
+      listingDate: new Date("2024-06-20"), // 0개월 + 끝수 19일 → m=1
+    });
+    expect(result.monthlyAccrualApplied).toBe(true);
+    expect(result.monthlyAccrualDetail?.holdingMonths).toBe(1);
+    // adjusted = floor((32,000×12 + 6,400×1) / 12) = floor(390,400/12) = 32,533
+    expect(result.monthlyAccrualDetail?.adjustedListingYearPerShareValue).toBe(32_533);
+    // final = floor(8,001 × 32,000 / 32,533) = 7,869
+    expect(result.finalPerShareValue).toBe(7_869);
+  });
+
+  it("A-MA-4: C-5 하락(전전>직전) — adjusted 26,666 · final 9,601 (>8,001, 법문 그대로)", () => {
+    const result = calcPostListingConversion({
+      ...accrualInput(),
+      prePriorYearNetIncomePerShare: 62_500, // 전전 가중평균 = 37,500 + 2,500 = 40,000 (> 직전 32,000)
+      prePriorYearNetAssetPerShare: 6_250,
+    });
+    expect(result.monthlyAccrualApplied).toBe(true);
+    expect(result.monthlyAccrualDetail?.prePriorYearPerShareValue).toBe(40_000);
+    // adjusted = floor((32,000×12 + (32,000−40,000)×8) / 12) = floor(320,000/12) = 26,666
+    expect(result.monthlyAccrualDetail?.adjustedListingYearPerShareValue).toBe(26_666);
+    // final = floor(8,001 × 32,000 / 26,666) = 9,601
+    expect(result.finalPerShareValue).toBe(9_601);
+  });
+
+  it("A-MA-5: C-6 보정 평가액 ≤ 0 → 환산 불가 (applied=false, final 0)", () => {
+    const result = calcPostListingConversion({
+      ...accrualInput(),
+      // 전전 극단 상승 → (직전−전전) 큰 음수 → adjusted ≤ 0
+      // 직전 32,000, m=8, d=12 → adjusted = floor((384,000 + (32,000−prePrior)×8)/12)
+      // adjusted ≤ 0 위해 prePrior ≥ 32,000 + 384,000/8 = 80,000 → NI 125,000(가중 75,000)+NA... 80,000 만들기
+      prePriorYearNetIncomePerShare: 133_333, // 가중 ≈ 80,000 (79,999.8 floor 79,999) — 경계 위로
+      prePriorYearNetAssetPerShare: 5_000,
+    });
+    // prePrior = floor(133,333×3/5 + 5,000×2/5) = floor(79,999.8 + 2,000) = 81,999
+    // adjusted = floor((384,000 + (32,000−81,999)×8)/12) = floor((384,000−399,992)/12) = floor(−1332.6) = −1333 ≤ 0
+    expect(result.monthlyAccrualApplied).toBe(false);
+    expect(result.finalPerShareValue).toBe(0);
+    expect(result.warnings.some((w) => w.includes("0 이하"))).toBe(true);
+  });
+
+  it("A-MA-6: C-7 평가 상이 + 토글 ON → 본칙 환산 불변 + warning", () => {
+    const result = calcPostListingConversion({
+      ...accrualInput(),
+      acquisitionYearNetIncomePerShare: 44_520, // 평가액을 상장연도와 다르게
+      acquisitionYearNetAssetPerShare: 4_348,
+    });
+    expect(result.monthlyAccrualApplied).toBe(false);
+    // 본칙: acq 가중 = floor(44,520×3/5 + 4,348×2/5) = floor(26,712 + 1,739.2) = 28,451
+    //       listing 가중 = 32,000 → final = floor(8,001 × 28,451 / 32,000) = 7,113
+    expect(result.finalPerShareValue).toBe(7_113);
+    expect(result.warnings.some((w) => w.includes("달라") && w.includes("§81④"))).toBe(true);
+  });
+
+  it("A-MA-7: C-4 토글 ON + 전전 미입력 → 보정 미적용 + warning (applied=false)", () => {
+    const result = calcPostListingConversion({
+      ...accrualInput(),
+      prePriorYearNetIncomePerShare: undefined,
+      prePriorYearNetAssetPerShare: undefined,
+    });
+    expect(result.monthlyAccrualApplied).toBe(false);
+    expect(result.finalPerShareValue).toBe(8_001); // 보정 미적용 → ratio 1
+    expect(result.warnings.some((w) => w.includes("입력되지 않아"))).toBe(true);
+  });
+});
+
+// ============================================================
 // PL-MONTHLY (3건) — §81④ 월할 가산 발동
 // ============================================================
 
-describe("PL-MONTHLY — 시행규칙 §81④ 월할 가산 (Case 5)", () => {
-  it("PL-MONTHLY-1 — 취득연도 평가 = 상장연도 평가인 동일값 입력 시 monthlyAccrualApplied=true", () => {
-    // 양 연도 가중평균이 같으면 monthlyAccrualApplied = true
+describe("PL-MONTHLY — 시행규칙 §81④ 2호 (토글 OFF — 보정 없음)", () => {
+  // PR-2 재산정 (의미 재정의): monthlyAccrualApplied = "1호 보정 발동"(토글 필요).
+  // 토글 미설정 → §81④ 2호 → applied=false, 단 2호 안내 warning("§81④") 포함.
+  it("PL-MONTHLY-1 — 평가액 동일 + 토글 OFF → 2호 적용(applied=false), ratio 1·final 8,001 유지", () => {
     const result = calcPostListingConversion({
       ...baseInput(),
       listingYearNetIncomePerShare: 50_000,
@@ -78,8 +192,8 @@ describe("PL-MONTHLY — 시행규칙 §81④ 월할 가산 (Case 5)", () => {
       acquisitionYearNetIncomePerShare: 50_000,
       acquisitionYearNetAssetPerShare: 5_000,
     });
-    expect(result.monthlyAccrualApplied).toBe(true);
-    // 가중평균 같음 → ratio = 1 → finalPerShareValue = listingAvg
+    expect(result.monthlyAccrualApplied).toBe(false); // 토글 OFF → 1호 보정 미발동
+    // 2호: 상장일 평가액 그대로 → ratio = 1 → finalPerShareValue = listingAvg
     expect(result.conversionRatio).toBe(1);
     expect(result.finalPerShareValue).toBe(8_001);
   });
@@ -95,7 +209,7 @@ describe("PL-MONTHLY — 시행규칙 §81④ 월할 가산 (Case 5)", () => {
     expect(result.monthlyAccrualApplied).toBe(false);
   });
 
-  it("PL-MONTHLY-3 — warnings에 §81④ 안내 메시지 포함", () => {
+  it("PL-MONTHLY-3 — 평가액 동일 + 토글 OFF → 2호 안내 warning(§81④) 포함", () => {
     const result = calcPostListingConversion({
       ...baseInput(),
       listingYearNetIncomePerShare: 10_000,
@@ -103,9 +217,9 @@ describe("PL-MONTHLY — 시행규칙 §81④ 월할 가산 (Case 5)", () => {
       acquisitionYearNetIncomePerShare: 10_000,
       acquisitionYearNetAssetPerShare: 10_000,
     });
-    expect(result.monthlyAccrualApplied).toBe(true);
+    expect(result.monthlyAccrualApplied).toBe(false); // 토글 OFF
     const hasMonthlyHint = result.warnings.some((w) => w.includes("§81④") || w.includes("월할"));
-    expect(hasMonthlyHint).toBe(true);
+    expect(hasMonthlyHint).toBe(true); // 2호 안내 메시지에 "§81④" 포함
   });
 });
 

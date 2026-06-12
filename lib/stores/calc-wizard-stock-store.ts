@@ -178,6 +178,10 @@ export interface StockTransferFormData {
   listingYearNetAssetPerShare: string;
   acquisitionYearNetIncomePerShare: string;
   acquisitionYearNetAssetPerShare: string;
+  // 소칙 §81④ 1호 월할 가산 (전전사업연도 평가 + 직전사업연도 월수)
+  prePriorYearNetIncomePerShare: string;
+  prePriorYearNetAssetPerShare: string;
+  priorBizYearMonths: string;
 
   // ── 장부분실 §99①4 ──
   bookLost: boolean;                     // 3중 패턴 default: false
@@ -502,6 +506,9 @@ export function createInitialStockFormData(): StockTransferFormData {
     listingYearNetAssetPerShare: "",
     acquisitionYearNetIncomePerShare: "",
     acquisitionYearNetAssetPerShare: "",
+    prePriorYearNetIncomePerShare: "",
+    prePriorYearNetAssetPerShare: "",
+    priorBizYearMonths: "12", // §81④ 직전사업연도 월수 default
 
     bookLost: false,                     // 3중 패턴 default
     faceValuePerShare: "",

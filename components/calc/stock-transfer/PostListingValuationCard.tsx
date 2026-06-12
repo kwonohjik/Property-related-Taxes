@@ -21,7 +21,10 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { DateInput } from "@/components/ui/date-input";
+// 엔진 단일 진실 — 평가액 동일 판정(토글 노출 조건) 재구현 금지 (dual-truth 회피)
+import { calcUnlistedPerShareWeighted } from "@/lib/tax-engine/stock-transfer/stock-valuation-post-listing";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 import { PostListingClosingPriceTable, autoFillDates, dayOfWeek } from "./PostListingClosingPriceTable";
 import { TransferDate1MonthClosingPriceTable } from "./TransferDate1MonthClosingPriceTable";
@@ -38,6 +41,23 @@ interface PostListingValuationCardProps {
 
 export function PostListingValuationCard({ form, onChange }: PostListingValuationCardProps) {
   const mode = form.unlistedDetailMode || "simple";
+
+  // §81④ 토글 노출 조건 — simple 모드는 4필드 가중평균이 동일할 때만 노출(활성 우선),
+  // full/listing_only는 합성 산출이라 무조건 노출(엔진 C-7이 평가 상이 시 무시 처리).
+  // 동일 판정은 엔진 헬퍼 단일 진실 (PostListingFormulaPreview와 동일 패턴).
+  const heavyRE = form.isHeavyRealEstateForValuation;
+  const simpleListingEval = calcUnlistedPerShareWeighted(
+    parseAmount(form.listingYearNetIncomePerShare),
+    parseAmount(form.listingYearNetAssetPerShare),
+    heavyRE,
+  );
+  const simpleAcqEval = calcUnlistedPerShareWeighted(
+    parseAmount(form.acquisitionYearNetIncomePerShare),
+    parseAmount(form.acquisitionYearNetAssetPerShare),
+    heavyRE,
+  );
+  const showAccrualToggle =
+    mode !== "simple" || (simpleListingEval > 0 && simpleListingEval === simpleAcqEval);
 
   // Enter 키 → 다음 입력 셀로 포커스 이동 (카드 내 순회).
   // 하위 컴포넌트(NetIncome/NetAsset/ClosingPriceTable)가 이미 자체 handler에서 preventDefault한 경우 패스.
@@ -268,15 +288,40 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
         {/* 환산 미리보기 — Preview 컴포넌트 (P2 G-02·G-05 분리) */}
         <PostListingFormulaPreview form={form} />
 
-        {/* §81④ 월할 가산 토글 (Round 4 D-10 — full/listing_only에서만 노출) */}
-        {mode !== "simple" && (
+        {/* §81④ 1호 월할 가산 토글 — 평가액 동일 시 노출 (simple은 동일 판정, full/listing_only는 무조건) */}
+        {showAccrualToggle && (
           <ToggleCard
             checked={form.monthlyAccrualToggle}
             onCheckedChange={(v) => onChange({ monthlyAccrualToggle: v })}
-            title="§81④ 월할 가산 (취득일·상장일 평가 동일 시)"
-            description="동일 사업연도 케이스 — 직전·전전 사업연도 기준시가 + 보유월수 가산"
+            title="같은 사업연도에 취득·상장 (소칙 §81④ 1호)"
+            description="취득일·상장일 직전 사업연도 평가액이 동일합니다. 같은 사업연도에 취득·상장했다면 ON — 직전·전전 사업연도 평가 차액을 보유월수로 안분해 상장일 평가액을 보정합니다. 아니면 OFF(§81④ 2호, 보정 없음)."
             tone="rose"
-          />
+          >
+            <div className="space-y-3">
+              <CurrencyInput
+                label="전전사업연도 1주당 순손익가치"
+                hint="취득일이 속하는 사업연도의 전전사업연도 1주당 순손익가치 (원, §81④ 1호)"
+                value={form.prePriorYearNetIncomePerShare}
+                onChange={(v) => onChange({ prePriorYearNetIncomePerShare: v })}
+              />
+              <CurrencyInput
+                label="전전사업연도 1주당 순자산가치"
+                hint="취득일이 속하는 사업연도의 전전사업연도 1주당 순자산가치 (원, §81④ 1호)"
+                value={form.prePriorYearNetAssetPerShare}
+                onChange={(v) => onChange({ prePriorYearNetAssetPerShare: v })}
+              />
+              <FieldCard
+                label="직전사업연도의 월수"
+                hint="사업연도 변경 법인만 수정 (1~12, 기본 12). 보유월수는 취득일~상장일에서 자동 계산되며 1개월 미만은 1개월로 봅니다."
+              >
+                <DecimalInput
+                  value={form.priorBizYearMonths}
+                  onChange={(v) => onChange({ priorBizYearMonths: v })}
+                  unit="개월"
+                />
+              </FieldCard>
+            </div>
+          </ToggleCard>
         )}
 
         {/* 거래정지 토글 (Round 4 C-06 — 후속 PR 예정) */}

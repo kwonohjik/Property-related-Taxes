@@ -150,6 +150,10 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
     listingYearNetAssetPerShare: strField("listingYearNetAssetPerShare"),
     acquisitionYearNetIncomePerShare: strField("acquisitionYearNetIncomePerShare"),
     acquisitionYearNetAssetPerShare: strField("acquisitionYearNetAssetPerShare"),
+    // §81④ 1호 — 전전연도 평가는 "" 정상(optional), 월수는 default "12" 보존 (legacy 폼 fallback)
+    prePriorYearNetIncomePerShare: strField("prePriorYearNetIncomePerShare"),
+    prePriorYearNetAssetPerShare: strField("prePriorYearNetAssetPerShare"),
+    priorBizYearMonths: strField("priorBizYearMonths") || defaults.priorBizYearMonths,
     bookLost: boolField("bookLost", defaults.bookLost),
     faceValuePerShare: strField("faceValuePerShare"),
     netAssetOnlyReason: enumField("netAssetOnlyReason", ["liquidation_or_owner_death", "no_business_or_short_or_closed", "stock_holding_company", "remaining_term_under_3y", ""], ""),
