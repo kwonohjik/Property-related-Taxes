@@ -9,10 +9,13 @@ export function LawSearchTab({
   initialQuery,
   initialArticleNo,
   autoSearch,
+  inlineArticleAutoLoad = true,
 }: {
   initialQuery?: string;
   initialArticleNo?: string;
   autoSearch?: number;
+  /** 라우팅으로 조문번호가 들어왔을 때 인라인으로 자동 조회할지. 팝업 표시 경로에서는 false로 억제. */
+  inlineArticleAutoLoad?: boolean;
 } = {}) {
   const [query, setQuery] = useState(initialQuery ?? "소득세법");
   const [articleNo, setArticleNo] = useState(initialArticleNo ?? "제89조");
@@ -56,7 +59,8 @@ export function LawSearchTab({
     if (initialQuery) setQuery(initialQuery);
     if (initialArticleNo) {
       setArticleNo(initialArticleNo);
-      if (initialQuery) void openArticleWith(initialQuery, initialArticleNo);
+      // 팝업 표시 경로(inlineArticleAutoLoad=false)에서는 입력칸 prefill만 하고 인라인 조회는 생략.
+      if (initialQuery && inlineArticleAutoLoad) void openArticleWith(initialQuery, initialArticleNo);
     } else if (initialQuery) {
       void searchWith(initialQuery);
     }
